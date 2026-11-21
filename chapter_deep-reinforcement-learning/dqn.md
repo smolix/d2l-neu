@@ -557,32 +557,6 @@ A network in place of the Q-table combines function approximation, bootstrapping
        discount?
    :exlabel:`ex_dqn-baird-on-policy`
 
-1. **Huber loss and norm clipping.** `fit_q` regresses with the Huber loss
-   of threshold 1, $\ell(e) = e^2/2$ for $|e| \leq 1$ and
-   $\ell(e) = |e| - 1/2$ otherwise, where $e = Q_w(s, a) - y$ is the residual
-   of one transition, and averages it over the $B$ transitions of a
-   minibatch. The update then rescales the minibatch gradient to norm
-   `grad_clip` $= 10$ whenever its norm exceeds 10 and passes it to Adam.
-    1. Show that $\ell'(e) = \max\big(-1, \min(1, e)\big)$. In which sense
-       is Huber regression squared-loss regression with clipped residuals?
-    1. Show that the minibatch gradient has norm at most
-       $\max_i \|\nabla_w Q_w(s_i, a_i)\|$, and explain why this bound can
-       grow while every residual stays the same.
-    1. Adam divides a running average of the gradients by the square root
-       of a running average of their squares. Apart from the small constant
-       it adds for numerical stability, multiplying every gradient of a run
-       by one constant therefore leaves its steps unchanged. Which gradient
-       sequences does the norm clip change? How does it change the Adam
-       steps that follow a single gradient of very large norm, such as one
-       that may follow a target-network synchronization?
-    1. An Adam step moves each parameter by roughly the learning rate, here
-       $10^{-3}$, whatever the size of its gradient. The run without a target
-       network takes about $25{,}000$ such steps, and its start-state values
-       reach about $10^8$. Estimate how far one parameter can travel during
-       the run, and explain how steps of that size can produce values of
-       $10^8$ in the three linear layers of `make_qnet`, whose hidden layers
-       have 128 units.
-
 1. **Terminated, not done.** `train_dqn` stores `float(terminated)`, so a
    transition into CartPole's 500-step time limit still bootstraps. Consider
    an implementation that stores `float(terminated or truncated)` instead.
@@ -698,29 +672,6 @@ A network in place of the Q-table combines function approximation, bootstrapping
        question of part (c). Why not?
    :exlabel:`ex_dqn-nstep-replay`
 
-1. **Prioritized sampling.** ● Prioritized replay
-   :cite:`Schaul.Quan.Antonoglou.ea.2016` samples stored transition $i$ with
-   probability $P(i)$ instead of $1/N$ and multiplies its loss by a weight
-   $u_i$. Let $\mathbf{g}_i$ be the gradient of the loss of transition $i$,
-   so that uniform replay estimates
-   $\bar{\mathbf{g}} = \frac{1}{N} \sum_i \mathbf{g}_i$.
-    1. Show that a single sampled transition with weight
-       $u_i = 1/\big(N P(i)\big)$ gives an unbiased estimate of
-       $\bar{\mathbf{g}}$.
-    1. Find the distribution $P$ that minimizes the expected squared error
-       $\mathbb{E}\|u_i \mathbf{g}_i - \bar{\mathbf{g}}\|^2$ of this estimate. For the
-       squared loss, $\mathbf{g}_i = e_i \nabla_w Q_w(s_i, a_i)$ with residual
-       $e_i$. Under which condition is sampling in proportion to $|e_i|$
-       optimal?
-    1. :citet:`Schaul.Quan.Antonoglou.ea.2016` sample with
-       $P(i) \propto (|e_i| + c)^{p}$ for a small constant $c > 0$, and
-       use the weights
-       $u_i = \big(N P(i)\big)^{-q}$ divided by $\max_j u_j$, with
-       $q$ annealed toward 1 over training; the exponents $p$ and $q$ are
-       the paper's $\alpha$ and $\beta$. Which of the two changes to
-       the weights of part (a) affects only the step size, and which changes
-       the point to which the updates converge?
-
 1. [code] **Baird with a target network.** ●● DQN computes its bootstrap
    from a frozen copy of the weights. In the computation of Baird's
    counterexample in :numref:`subsec_dqn-deadly-triad`, compute `delta` from
@@ -786,284 +737,254 @@ A network in place of the Q-table combines function approximation, bootstrapping
 ::: {.cover}
 [Dive into Deep Learning · §15.4]{.kicker}
 
-Deep Q-Networks<br>
-**the deadly triad · experience replay · target networks · greedy evaluation · maximization bias and Double DQN**
+Deep Q-Networks, Replay Buffers, and Double DQN<br>**the deadly triad · Baird's counterexample · experience replay · target networks · maximization bias · Double DQN**
 :::
 :::
 
-::: {.slide title="Put a Network into Q-Learning and the Start-State Value Passes 10⁸"}
-[The problem]{.kicker}
+::: {.slide title="Why Naive Neural Q-Learning Explodes Past 10^8"}
+[Motivation]{.kicker}
 
-- CartPole pays 1 per step; with $\gamma = 0.99$ no policy is worth more than $1/(1-\gamma) = 100$ from the start.
-- Replace the Q-table by a network and keep the update, $y = r + \gamma \max_{a'} Q_w(s', a')$.
-- After 50,000 steps the network's own estimate at the start state exceeds $10^8$, on every seed.
-- Its greedy policy keeps the pole up for about 9 steps; a random policy manages about 20.
+In §14.3, tabular Q-learning converged reliably from any off-policy transitions. What happens if we simply replace the table $Q(s, a)$ with a neural network $Q_w(s, a)$ on CartPole?
 
-::: {.d2l-note .warn}
-Can a network keep the table's licence to learn from any transition, collected by any policy?
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- explain why a semi-gradient update with a network can diverge, and run Baird's counterexample;
-- build DQN from a replay buffer and a frozen target network;
-- bound the start-state value by the number of target synchronizations;
-- evaluate a run by greedy checks at fixed budgets, and test values against the policy's discounted return;
-- measure the maximization bias, and remove most of it with Double DQN.
-
-**Running example:** CartPole, $\gamma = 0.99$, 50,000 environment steps, three seeds per arm; the value ceiling is 100.
-:::
-
-::: {.slide title="DQN Learns from Every Stored Transition, Replayed"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
+::: {.cols}
 ::: {.col}
-| section | what one sample is used for |
-|---|---|
-| Actor-Critic Methods | a critic's estimate in place of the return |
-| Trust Regions and PPO | several clipped steps on one batch |
-| KL-Regularized Policy Optimization | a reward learned from comparisons |
-| **Deep Q-Networks** | **many updates, from a replay buffer** |
-| Soft Actor-Critic | replay for continuous actions |
-| Learned Models and Planning | a model to plan in |
-| Offline Reinforcement Learning | a fixed log, no new interaction |
-| RL for Sequence Generation | a verifier's reward on text |
+- **The Continuing Ceiling:** CartPole pays $+1$ per step with $\gamma = 0.99$, so balancing forever is worth at most $1/(1 - \gamma) = 100$.
+- **Naive Neural Update:** Regressing $Q_w(s, a)$ directly toward $y = r + \gamma \max_{a'} Q_w(s', a')$ causes start-state predictions to explode past **$10^8$** within $50{,}000$ steps!
 :::
 
-::: {.col .narrow}
-- **Uses:** Q-learning's target and terminal mask; the `Batch` and its one-step `td_target`; CartPole and its 500-step limit.
-- **Skips:** prioritized replay, dueling and distributional heads.
+::: {.col}
+- **Catastrophic Policy Collapse:** While its value estimates climb to $10^8$, the network's greedy policy balances the pole for only $\sim 9$ steps (worse than a random policy's $\sim 20$).
+- **The DQN Breakthrough (Mnih et al., 2013, 2015):** Two structural devices—an **experience replay buffer** and a **frozen target network**—stabilize off-policy value learning.
 :::
 :::
 :::
 
-::: {.slide title="The Target Moves with the Network It Trains"}
-[Why it can diverge]{.kicker}
+::: {.slide title="Why Semi-Gradient Backups Conflict with Least Squares"}
+[Sources of Instability]{.kicker}
+
+Replacing a lookup table with a parameterized network $Q_w$ breaks the supremum-norm contraction proof of tabular value iteration:
 
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w(s', a')$$
 
-- Hold $y$ fixed and take one regression step of $Q_w(s, a)$ toward it: a *semi-gradient* step.
-- The next step's $y$ has moved, because it contains $Q_w$.
-- The sequence of steps is not descent on any fixed objective.
-- A falling loss means the network fits its current targets, not that the targets are right.
+- **Moving Regression Targets:** Each semi-gradient step holds $y$ fixed while updating $w$, so the sequence of updates is *not* gradient descent on any fixed objective function.
+- **Norm Mismatch:** The Bellman backup contracts in the worst-case supremum norm $\|\cdot\|_\infty$ across all states, whereas least-squares regression projects onto the network's function class under a **visitation-weighted $L_2$ norm**.
+- **Two Practical Couplings:** (1) Consecutive transitions from one trajectory are strongly correlated in state space, overwriting distant states; (2) Shared weights immediately lift $Q_w(s', \cdot)$ whenever $Q_w(s, a)$ is pushed up toward $1 + \gamma \max_{a'} Q_w(s', a')$.
 :::
 
-::: {.slide title="The Backup Shrinks the Largest Error; the Fit Shrinks an Average"}
-[Why it can diverge]{.kicker}
+::: {.slide title="The Deadly Triad and Baird's Counterexample"}
+[Fundamental Theory]{.kicker}
 
-- Bellman backup: shrinks the largest error over all states by the factor $\gamma$.
-- Least-squares fit: shrinks the error averaged over the data, each state weighted by its visits.
-- The two disagree: a fit can enlarge the error at a rarely visited state.
-- The next backup carries that error into the targets of the states that lead there.
-- Data from the evaluated policy: the two agree, linear features converge.
-- Data from another policy: even linear features can diverge.
-
-[Tsitsiklis and Van Roy 1997]{.small}
+::: {.cols .vc}
+::: {.col}
+- **The Deadly Triad (Sutton & Barto, 2018):** Instability arises when **function approximation**, **bootstrapping**, and **off-policy data** meet simultaneously.
+- **Baird's 7-State Counterexample (1995):** Linear value function $v = \Phi \mathbf{w}$ (8 weights, 7 states), zero rewards everywhere ($V^* = \mathbf{0}$, exactly representable by $\mathbf{w} = \mathbf{0}$), and exact expected updates (zero noise).
+- Under uniform off-policy state weighting while evaluating a policy that always jumps to state 7, $\|\mathbf{w}\|_\infty$ diverges exponentially from $10 \to 335$!
 :::
 
-::: {.slide title="Baird: True Values Are Zero, Yet the Weights Grow from 10 to 335"}
-[Why it can diverge]{.kicker}
-
+::: {.col .fig}
 @!dqn-the-deadly-triad
-
-Seven states, linear features, every reward zero; expected updates (no noise), states weighted uniformly, the evaluated policy always moves to state 7.
-
-[Baird 1995]{.small}
+:::
+:::
 :::
 
-::: {.slide title="Every Pair of Ingredients Has a Convergent Method; DQN Has All Three"}
-[Why it can diverge]{.kicker}
+::: {.slide title="Where Algorithms Live Inside the Deadly Triad"}
+[Algorithmic Taxonomy]{.kicker}
 
-![](../img/mdl-rl-deadly-triad.svg){width=62%}
-
-Function approximation, bootstrapping, off-policy data: the *deadly triad*.
+::: {.cols .vc}
+::: {.col}
+- **Any Two Ingredients Can Converge:**
+  - *Bootstrapping + Off-Policy (No Network):* **Tabular Q-learning** converges by $\|\cdot\|_\infty$ contraction.
+  - *Function Approx + Bootstrapping (On-Policy):* **Linear TD($0$) / Actor-Critic** converges under the evaluated policy's steady-state distribution (Tsitsiklis & Van Roy, 1997).
+  - *Function Approx + Off-Policy (No Bootstrap):* **Behavior Cloning** is standard supervised learning on fixed targets.
+- **Center Intersection:** DQN and offline RL combine all three, requiring architectural stabilization.
 :::
 
-::: {.slide title="Check: Which Ingredient Is Missing?"}
-[Check]{.kicker}
+::: {.col .fig}
+![](../img/mdl-rl-deadly-triad.svg){.nostretch width=100%}
+:::
+:::
+:::
 
-For each method, name the ingredient(s) of the triad it does without:
-tabular Q-learning; REINFORCE with a network; behavior cloning.
+::: {.slide title="Two Architectural Devices: Replay and Target Networks"}
+[DQN Architecture]{.kicker}
 
-::: {.fragment .fade-up}
+::: {.cols .vc}
+::: {.col}
+- **Device 1 — Experience Replay Buffer:** Stores transitions $(s, a, r, s', \textrm{term})$ in a circular ring and samples uniform minibatches, breaking temporal correlation and reusing each transition dozens of times.
+- **Device 2 — Frozen Target Network ($Q_{w^-}$):** Computes the bootstrap $\max_{a'} Q_{w^-}(s', a')$ from a frozen copy of the weights synced only every $C = 250$ environment steps, holding targets stationary for $125$ gradient steps.
+:::
+
+::: {.col .fig}
+![](../img/mdl-rl-dqn-dataflow.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Experience Replay: Preallocated Ring Buffer"}
+[Replay Mechanics]{.kicker}
+
+Because the Q-learning target does not depend on which behavior policy selected action $a$, uniform minibatches of $128$ transitions drawn from a $200{,}000$-slot ring buffer remain valid samples of the optimality backup:
+
+@dqn-replay-and-the-off-policy-licence
+
 ::: {.d2l-note}
-**Answer.** Tabular Q-learning: function approximation (it bootstraps from off-policy data).
-REINFORCE: bootstrapping and off-policy data (Monte Carlo returns of its own episodes).
-Behavior cloning: bootstrapping (regression to fixed expert labels).
-:::
+Uniform sampling scrambles episode order, so each sampled transition is treated as a 1-step fragment (`ep_ends = np.arange(1, batch_size + 1)`) and paired with one-step `td_target`.
 :::
 :::
 
-::: {.slide title="Two Devices for Two Couplings"}
-[Two repairs]{.kicker}
+::: {.slide title="Target Network Regression with Clipped Huber Loss"}
+[Update Implementation]{.kicker}
 
-![](../img/mdl-rl-dqn-dataflow.svg){width=86%}
+Between target synchronizations ($w^- \leftarrow w$ every $C = 250$ steps), the online network $Q_w$ solves a stationary regression problem using Huber loss and global gradient norm clipping at `10.0`:
 
-Replay breaks the correlation of the data; a frozen copy holds the targets still.
+@dqn-the-target-network-1
 :::
 
-::: {.slide title="Replay Scrambles Time and Reuses Every Transition"}
-[Two repairs]{.kicker}
+::: {.slide title="The DQN Training Loop on CartPole"}
+[Training Loop]{.kicker}
 
-- Store $(s, a, r, s', \mathrm{term})$ in a ring of 200,000 slots; never more than 50,000 are used here.
-- Every second step, regress on 128 transitions drawn uniformly: early transitions are reused hundreds of times.
-- Allowed because the target for $(s, a, r, s')$ does not depend on the policy that chose $a$.
-- A sampled batch has no episode order: only the one-step target can be formed.
-- Drawback: old transitions keep an error in the targets until the behavior revisits it.
+After a $1{,}000$-step warm-up, `train_dqn` acts $\epsilon$-greedily ($\epsilon: 1.0 \to 0.05$ over $10\text{k}$ steps), updates every `train_freq = 2` steps, and syncs $w^- \leftarrow w$ every `sync_every = 250` steps (or every step when `use_target=False`):
 
-[Lin 1992]{.small}
+@dqn-the-training-loop-1
+
+::: {.d2l-note .rule}
+Always store `float(terminated)`—never `terminated or truncated`—so that episodes reaching CartPole's 500-step time limit still bootstrap their continuation value!
+:::
 :::
 
-::: {.slide title="A Frozen Copy Holds the Target Still for 125 Gradient Steps"}
-[Two repairs]{.kicker}
+::: {.slide title="Ablation: Behavior Returns With and Without Target Sync"}
+[Target Network Ablation]{.kicker}
 
-$$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)
-\max_{a'} Q_{w^-}(s', a'), \qquad w^- \leftarrow w \textrm{ every } C = 250 \textrm{ steps}$$
-
-- Between synchronizations: an ordinary regression problem.
-- Huber loss: the derivative in the prediction never exceeds 1.
-- Gradient norm clipped at 10: bounds the rest of the step.
-- Ablation: synchronize after every step, so the online network computes its own targets.
-
-[Mnih et al. 2015]{.small}
+::: {.cols .vc}
+::: {.col}
+- With the frozen target network refreshed every $250$ steps (**DQN**), every seed climbs from the random policy's return ($\sim 20$) to hundreds of steps (with $\epsilon = 0.05$ exploration still randomizing $1$ in $20$ actions).
+- **Without a target network** (`use_target=False`, syncing after every step), the policy collapses to $\sim 9$ steps on every seed and never recovers.
 :::
 
-::: {.slide title="Without the Frozen Copy, Every Seed Falls to About 9 Steps"}
-[Two repairs]{.kicker}
-
+::: {.col .fig}
 @!dqn-the-ablation-2
-
-With the copy every seed climbs from about 20 into the hundreds; $\epsilon = 0.05$ still randomizes one step in twenty.
+:::
+:::
 :::
 
-::: {.slide title="With the Copy the Value Climbs toward 100; Without It, Past 10⁸"}
-[Two repairs]{.kicker}
+::: {.slide title="Bounding Value Propagation Across Target Syncs"}
+[Why the Target Network Works]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+- Without a target network, shared weights lift $Q_w(s', \cdot)$ alongside $Q_w(s, a)$, driving $\max_a Q_w(s_0, a) > 10^8$.
+- **Synchronization Bound:** If values start at $0$ and fit targets exactly between syncs, after $n$ syncs with $r=1$ no value can exceed:
+  $$Q \le \sum_{k=0}^{n-1} \gamma^k = \frac{1 - \gamma^n}{1 - \gamma}$$
+- Over $50{,}000$ steps ($n \approx 196$ syncs after warm-up), the bound is $\approx 86$; neural generalization lifts $\max_a Q_w(s_0, a)$ just above this curve toward the true ceiling $100$.
+:::
+
+::: {.col .fig}
 @!dqn-the-ablation-5
-
-Reward 1 at every step, and shared weights lift $Q_w(s', \cdot)$ with $Q_w(s, a)$: the target stays ahead.
-:::
-
-::: {.slide title="Values Climb One Synchronization at a Time: 196 Syncs Allow at Most 86"}
-[Two repairs]{.kicker}
-
-Values start at zero; the online network fits its targets exactly between syncs. After $n$ syncs:
-
-$$Q \leq \sum_{k=0}^{n-1} \gamma^k = \frac{1 - \gamma^n}{1 - \gamma}$$
-
-- 50,000 steps hold about 196 syncs after the first gradient step: $v(s_0) \leq 86$.
-- The estimates track this bound a few points above it, and end above 86 on every seed.
-- A network generalizes: lifting one state lifts its neighbors, faster than one backup per sync.
-:::
-
-::: {.slide title="Check: Synchronize Every 1,000 Steps Instead"}
-[Check]{.kicker}
-
-Same budget, same warm-up of 1,000 steps, but $C = 1{,}000$. About how high can $v(s_0)$ climb under the bound?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** About 49 syncs: $(1 - 0.99^{49})/0.01 \approx (1 - e^{-0.49})/0.01 \approx 39$.
-A slower copy is steadier but propagates value more slowly.
 :::
 :::
 :::
 
-::: {.slide title="A Final Window Is Not a Result: Check the Greedy Policy Every 5,000 Steps"}
-[Evaluation]{.kicker}
+::: {.slide title="Periodic Greedy Evaluation at Fixed Step Budgets"}
+[Policy Evaluation]{.kicker}
+
+Training return curves mix exploratory $\epsilon$-greedy actions with policy improvements. Evaluating the deterministic **greedy policy** ($\operatorname{argmax}_a Q_w(s, a)$) for 10 episodes at fixed $5{,}000$-step milestones provides an unbiased progress trace:
 
 @!dqn-the-ablation-3
 
-- DQN: mostly about 50–250 for 30,000 steps, then 500 on most seeds by 35,000–45,000; some fall back.
-- No target network: never more than about 10 steps at any check.
+- **DQN Progress:** Greedy returns sit around $50$–$250$ for the first $30{,}000$ steps, then reach the $500$-step ceiling on most seeds between $35{,}000$ and $45{,}000$ steps (though some seeds temporarily drop back).
+- **No Target Network:** Never exceeds $\sim 10$ steps at any evaluation checkpoint across the entire $50{,}000$-step run.
 :::
 
-::: {.slide title="Solved Policies' Values Lag Their Return; Failed Ones Can Promise More"}
-[Evaluation]{.kicker}
+::: {.slide title="Auditing Value Estimates Against Realized Returns"}
+[Value Calibration]{.kicker}
+
+A high greedy return shows that the *argmax ranking* is good, not that the *value predictions* are accurate. Following van Hasselt, Guez, & Silver (2016), `audit` compares $\max_a Q_w(s_0, a)$ against the policy's actual 500-step discounted return ($(1 - 0.99^{500})/0.01 \approx 99.3$ ceiling):
 
 @!dqn-the-ablation-4
 
-- Under the 500-step limit a perfect policy earns $(1 - \gamma^{500})/(1 - \gamma) \approx 99.3$.
-- Solved: the estimate sits a few points below it. Failed: above what the policy earns, often by 20+.
-
-[van Hasselt, Guez, Silver 2016]{.small}
+- On solved seeds, $Q_w(s_0, a)$ sits within $\sim 8$ points of $99.3$; on failed seeds (where the policy drops the pole early), the network often **overestimates** its own discounted return by $20+$ points.
 :::
 
-::: {.slide title="The Max of Four Unit-Noise Estimates Is Biased Upward by About 1"}
-[Overestimation]{.kicker}
+::: {.slide title="Maximization Bias: Why Taking the Max Overestimates"}
+[Overestimation Bias]{.kicker}
 
-@!dqn-the-max-bias-measured
-
-- Four actions, true value 0 each, independent unit noise on every estimate.
-- Single estimator: select and evaluate with the same values. Biased by about 1.
-- Double estimator: select with one set, evaluate with an independent set. Unbiased.
-
-[Thrun and Schwartz 1993; van Hasselt 2010]{.small}
+::: {.cols .vc}
+::: {.col}
+- By Jensen's inequality, the maximum of noisy estimates is biased upward: $\mathbb{E}[\max_a \hat{Q}(s', a)] \ge \max_a \mathbb{E}[\hat{Q}(s', a)]$ (Thrun & Schwartz, 1993).
+- For $m = 4$ actions with true value $0$ and independent $\mathcal{N}(0, 1)$ noise, the single estimator $\max_a \hat{Q}(a)$ averages **$+1.03$**!
+- **The Double Estimator (van Hasselt, 2010):** Selecting $a^\star = \operatorname{argmax}_a \hat{Q}^{(1)}(a)$ with one estimate and evaluating $\hat{Q}^{(2)}(a^\star)$ with an independent second estimate has expectation **$0.000$** for any number of actions $m$.
 :::
 
-::: {.slide title="The Bias Grows with the Number of Actions"}
-[Overestimation]{.kicker}
-
-![](../img/mdl-rl-max-bias.svg){width=90%}
-
-The independent double estimator stays at zero for every number of actions.
+::: {.col .fig}
+![](../img/mdl-rl-max-bias.svg){.nostretch width=100%}
+:::
+:::
 :::
 
-::: {.slide title="Double DQN Selects with the Online Network and Evaluates with the Copy"}
-[Overestimation]{.kicker}
+::: {.slide title="Double DQN: Decoupling Selection from Evaluation"}
+[Double DQN]{.kicker}
 
-$$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\, Q_{w^-}\big(s', \mathrm{argmax}_{a'} Q_w(s', a')\big)$$
+**Double DQN** (van Hasselt, Guez, & Silver, 2016) reuses the online network $Q_w$ to *select* the greedy next action and the target network $Q_{w^-}$ to *evaluate* it—requiring no extra networks and only one additional forward pass:
+
+$$y^{\textrm{DDQN}} = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\, Q_{w^-}\Big(s',\ \underset{a'}{\operatorname{argmax}}\, Q_w(s', a')\Big)$$
 
 @dqn-double-dqn-in-three-lines-1
 
-- No new network, one more forward pass of the online network on $s'$.
-- The copy is correlated with the online network ($\rho$): the bias left is $\rho$ times DQN's.
+::: {.d2l-note}
+Because $w^-$ is a delayed copy of $w$ (correlated with coefficient $\rho$), Double DQN reduces the maximization bias to a fraction $\rho$ of standard DQN's bias.
+:::
 :::
 
-::: {.slide title="With Every Action Offered Nine Times, DQN Ends Above 100 on Every Seed"}
-[Overestimation]{.kicker}
+::: {.slide title="Exposing Overestimation with 18 Duplicated Actions"}
+[18-Action Audit]{.kicker}
 
-18 outputs; action $a$ pushes the cart as $a \bmod 2$ does: $Q^*$ and the ceiling of 100 are unchanged.
+Offering each of CartPole's 2 pushes $9$ times (`copies=9`, 18 actions—the size of the Atari action set) leaves $Q^*$ and the ceiling $V^\infty = 100$ unchanged, but forces $\max_{a'}$ to pick the luckiest of $9$ noisy action heads:
 
 @!dqn-double-dqn-in-three-lines-3
 
-- 18 actions: DQN typically 10–30 above the ceiling; Double DQN 10–25 lower, near it.
-- 2 actions: the two agree within a few points.
+- With 18 actions, **standard DQN ends $10$ to $30$ points above the impossible ceiling of $100$ on every seed**, whereas **Double DQN** pulls the estimates down by $10$–$25$ points to stay near $100$.
 :::
 
-::: {.slide title="Double DQN Keeps the 18-Action Estimates near the Ceiling"}
-[Overestimation]{.kicker}
+::: {.slide title="Double DQN Holds 18-Action Estimates Near the Ceiling"}
+[Value Trajectory Comparison]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+- Tracking $\max_a Q_w(s_0, a)$ across training on the 18-action CartPole task shows standard DQN crossing the theoretical ceiling of $100$ before $40{,}000$ steps and continuing to climb as maximization bias feeds back through the bootstrap.
+- Double DQN's decoupled target keeps the value trajectory bounded near the true continuing ceiling of $100$.
+:::
+
+::: {.col .fig}
 @!dqn-duplicated-actions-1
-
-The greedy returns do not separate the arms at this budget: the double estimator corrects the values.
-:::
-
-::: {.slide title="Check: A Language Model Chooses among 10⁵ Tokens"}
-[Check]{.kicker}
-
-A Q-network scores $10^5$ next tokens with unit noise on each estimate. Roughly how large is the
-bias of the maximum, and how much of it does Double DQN leave if the two networks correlate at $\rho = 0.9$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The largest of $10^5$ unit normals averages about 4.4 (the rule $\sqrt{2 \ln m}$ gives 4.8), against about 1 for four actions.
-Double DQN leaves $\rho$ times that, about 4. One reason post-training uses policy gradients.
 :::
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Triad, Sync Rates, and Token Spaces"}
+[Check Your Understanding]{.kicker}
 
-- Network + bootstrapping + off-policy data can diverge: Baird's weights grow from 10 to 335, true values 0.
-- Replay reuses every transition; a frozen copy holds the targets still between syncs.
-- Without the copy: values past $10^8$, greedy policy about 9 steps. With it: values climb one sync at a time toward 100.
-- Greedy checks every 5,000 steps: mostly about 50–250 until 30,000, then 500 on most seeds by 35,000–45,000.
-- Max of four unit-noise estimates: bias about 1. With 18 actions DQN ends 10–30 above 100; Double DQN near 100.
+Work through these three design questions:
 
-**Next:** a torque has no argmax. Keep replay and the frozen copy, and let an actor propose the action.
+1. **Triad Identification:** Which ingredient(s) of the deadly triad are absent in (a) Tabular Q-learning, (b) On-policy REINFORCE with a neural network, and (c) Behavior Cloning?
+2. **Slowing the Sync Period:** If we increase `sync_every` from $C = 250$ to $C = 1{,}000$ on our $50{,}000$-step budget ($1{,}000$-step warm-up), what is the theoretical upper bound $(1 - \gamma^n)/(1 - \gamma)$ on $Q(s_0, a)$ after $n = 49$ syncs at $\gamma = 0.99$?
+3. **Q-Learning for LLMs:** Why don't we train a standard DQN over a language model's vocabulary of $m = 10^5$ tokens?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. (a) No **function approximation**; (b) No **bootstrapping** and no **off-policy data**; (c) No **bootstrapping**.
+2. With $n = 49$ syncs, $(1 - 0.99^{49}) / 0.01 \approx \mathbf{38.9}$—a very slow target sync stabilizes regression but starves value propagation!
+3. The expected maximum of $m = 10^5$ unit-variance noise variables is $\approx \sqrt{2 \ln 10^5} \approx \mathbf{4.4\sigma}$ (and $Q_{w^-}$ remains heavily correlated with $Q_w$), creating massive maximization bias across $10^5$ heads.
+:::
+:::
+
+::: {.slide title="Summary: Stabilizing Off-Policy Deep Value Learning"}
+[Key Takeaways]{.kicker}
+
+| Component / Variant | Mechanism | Failure Mode Prevented | Cost / Trade-off |
+| :--- | :--- | :--- | :--- |
+| **Experience Replay** | Uniform minibatch sampling from ring buffer | Temporal correlation & catastrophic forgetting | Requires off-policy target; uses 1-step fragments |
+| **Target Network ($Q_{w^-}$)** | Frozen copy synced every $C = 250$ steps | Runaway feedback loop ($Q(s_0) > 10^8$) | Propagates reward $1$ horizon step per sync |
+| **Termination Mask** | Mask bootstrap on `terminated`, not `truncated` | Falsely teaching that surviving to step 500 is worth $0$ | Learns continuing value $V^\infty = 1/(1-\gamma) = 100$ |
+| **Double DQN** | $Q_{w^-}(s', \operatorname{argmax}_{a'} Q_w(s', a'))$ | Upward maximization bias across many actions | $1$ extra online forward pass per update |
 :::

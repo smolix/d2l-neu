@@ -298,22 +298,6 @@ it.
        causes. Why does such a difference matter to a client beyond
        billing?
 
-1. [code] **Static versus continuous batching.** The cell that builds
-   `timeline` admits a waiting request whenever a slot is free.
-    1. Change the cell into a static batcher, which admits new requests
-       only when every slot is empty. Compare the number of steps that both
-       versions take for the four requests of the cell, and the fraction of
-       slot-steps that produce a token. What is the smallest number of steps
-       that any scheduler with `capacity = 2` needs for these requests?
-    1. Draw 1,000 output lengths with a mean of about 100 tokens from three
-       distributions: a constant, a uniform distribution on 1 to 199, and a
-       geometric distribution. Schedule them with `capacity = 32`, and
-       compare the steps of both schedulers with the lower bound of the
-       first sub-problem. How does the gain from continuous batching depend
-       on the spread of the output lengths?
-    1. Even continuous batching misses the lower bound in the second
-       sub-problem. Where in its timeline does it lose steps?
-
 1. [code] **Prefix cache for an agent.** A coding agent calls a model 30
    times. The first prompt holds a system prompt and repository context of
    20,000 tokens. Every later prompt repeats the previous prompt and
@@ -338,25 +322,6 @@ it.
        three documents in different orders. Which blocks does the second
        request reuse? Propose an ordering that raises reuse, and state what
        it gives up.
-
-1. **Closed and open loops.** A load generator runs $C = 16$ clients in a
-   closed loop: each client sends its next request as soon as its previous
-   request completes. Little's law :cite:`Little.1961` relates the mean
-   number $L$ of requests in a system, their arrival rate $\lambda$, and
-   their mean time $W$ in the system by $L = \lambda W$.
-    1. The mean latency of the server is 4 s. At which rate does the
-       generator send requests? An engine change doubles the mean latency.
-       What happens to the rate? Why can the generator never build up a
-       queue of more than $C$ requests?
-    1. The benchmark reports a p95 time to first token of 300 ms. In
-       production, requests arrive as a Poisson process at the rate of the
-       first sub-problem, independently of how fast the server answers. Why
-       does the benchmark predict the production tail latency poorly?
-    1. `vllm bench serve` accepts a `--request-rate` and a
-       `--max-concurrency`. The rate defaults to `inf`, and a finite rate
-       draws Poisson arrivals at that rate. Which settings reproduce the
-       closed loop? What does a run measure that sets both?
-   :exlabel:`ex_model-serving-loops`
 
 1. [code] **Arrivals and a memory budget.** ● Extend the cell that builds
    `timeline` into a simulator in which time advances in decode steps.
@@ -467,3 +432,340 @@ it.
        misses, and the configuration that achieves it.
 
 [Discussions](https://d2l.discourse.group/t/36847)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §39.7]{.kicker}
+
+Model Serving: Prefill vs. Decode, Continuous Batching, PagedAttention, and SLOs<br>**TTFT & TPOT · goodput · GGUF & AWQ/FP8 · vLLM & SGLang · continuous batching · PagedAttention · prefix caching · speculative decoding**
+:::
+:::
+
+::: {.slide title="From Single-User Notebooks to Multi-User Serving"}
+[Motivation]{.kicker}
+
+Running `model.generate()` in a notebook serves one prompt at a time. What changes when 100 concurrent users send requests to the same GPU?
+
+::: {.cols}
+::: {.col}
+- **Why serial serving collapses:** If each request takes $2\text{ seconds}$ and runs one after another, the 100th user waits **more than 3 minutes** for a reply.
+- **Why batching transforms decode efficiency:**
+  - Autoregressive decoding is bound by memory bandwidth because reading $16\text{ GB}$ of weights for $1$ token leaves tensor cores $\sim 98\%$ idle.
+:::
+
+::: {.col}
+  - **Shared weight reads:** Every active request uses the exact same model weights! Advancing $b$ concurrent requests in a single decode step reads the weights **once for all $b$ users**, multiplying throughput by $b$—provided GPU memory holds all $b$ key–value caches.
+:::
+:::
+:::
+
+::: {.slide title="Two Phases of Generation: Prefill vs. Decode"}
+[Workload Anatomy]{.kicker}
+
+Every generative request executes two physically distinct computational regimes that map directly to the two latency metrics users feel:
+
+::: {.cols .vc}
+::: {.col}
+- **1. Prompt Prefill $\to$ Time to First Token (TTFT):**
+  - Processes all $p$ prompt tokens in parallel to populate the initial KV cache.
+  - High arithmetic intensity (**compute-bound**); sets the wait before the first word appears.
+- **2. Autoregressive Decode $\to$ Time per Output Token (TPOT):**
+  - Generates one new token per active sequence per step.
+  - Low arithmetic intensity (**memory-bandwidth bound**); sets the streaming reading pace ($\text{tok/s} = 1/\text{TPOT}$).
+:::
+
+::: {.col .fig}
+![](../img/tools-prefill-decode.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Latency SLOs, Raw Throughput, and Goodput"}
+[Production Metrics]{.kicker}
+
+In production, raw token throughput (total tokens/s across all users) trades directly against per-user latency (TTFT and TPOT):
+
+::: {.cols}
+::: {.col}
+- **Service Level Objectives (SLOs):** Define maximum acceptable latencies, e.g., **$\text{TTFT} \le 1.0\text{ s}$** and **$\text{TPOT} \le 50\text{ ms}$** ($\ge 20\text{ tok/s}$ per user).
+- **Goodput (SLO-compliant req/s):** The rate of completed requests that meet **both** their TTFT and TPOT targets.
+:::
+
+::: {.col}
+- **Why raw throughput lies under overload:**
+  - When request arrival rate $\lambda$ exceeds server capacity, queues build up and batch size $b$ swells.
+  - Raw throughput stays pinned near its maximum ceiling while **goodput collapses toward zero** because every queued request misses its TTFT or TPOT target!
+:::
+:::
+:::
+
+::: {.slide title="Matching the Serving Stack to the Workload (Nov 2026)"}
+[Engine Landscape]{.kicker}
+
+Choose your serving engine according to concurrency scale, hardware target, and optimization goal:
+
+| Workload Profile | Primary Optimization Goal | Recommended Engine Stack (Nov 2026) |
+| :--- | :--- | :--- |
+| **Personal assistant on laptop/desktop** | Simplicity, local privacy, low RAM | **Ollama** or **LM Studio** (`llama.cpp`), **MLX** on Apple silicon |
+| **Offline dataset batch scoring** | Maximum tokens per dollar (no TTFT SLO) | **vLLM offline batch mode** |
+| **Single application backend API** | Operability & OpenAI API compatibility | **vLLM** behind an authenticated TLS/rate-limit proxy |
+| **Multi-user chat or coding-agent service** | Goodput under strict TTFT/TPOT SLOs | **vLLM** or **SGLang** (RadixAttention for shared prefixes) |
+| **Datacenter-scale multi-node fleet** | Disaggregated prefill/decode & max GPU efficiency | **NVIDIA Dynamo** orchestrating **TensorRT-LLM / vLLM / SGLang** |
+:::
+
+::: {.slide title="Local Serving Engines and GGUF Quantization"}
+[Single-User Inference]{.kicker}
+
+On a laptop or single-user workstation, local wrappers (`Ollama`, `LM Studio`, `mlx-lm`) rely on quantized weight formats such as **`llama.cpp` GGUF** to fit models in memory and accelerate bandwidth-bound decode:
+
+::: {.cols}
+::: {.col}
+- **Sizing GGUF formats on Qwen3-8B ($8.2\text{B}$ params):**
+  - **`Q4_K_M` ($\approx 4.9\text{ bits/weight}$, Ollama download $5.2\text{ GB}$):**
+    $$8.2 \times 10^9 \times \frac{4.9}{8} \approx 5.0\text{ GB}$$
+  - **`Q5_K_M` ($\approx 5.7\text{ bits}$):** $\approx 5.8\text{ GB}$
+  - **`Q8_0` ($\approx 8.5\text{ bits}$):** $\approx 8.7\text{ GB}$
+:::
+
+::: {.col}
+- **Why every saved bit buys both capacity and speed:**
+  - Halving weight bytes nearly doubles the decode bandwidth ceiling $\beta / B_{\text{active}}$.
+  - **Don't forget the KV cache:** A full $32{,}768$-token context in BF16 adds $\sim 4.7\text{ GB}$ on top of the $5.2\text{ GB}$ weights!
+  - **Selection rule:** Pick the largest model whose quantized weights + target context cache fit in memory, then choose the highest bit width (`Q4_K_M` $\to$ `Q8_0`) that fits.
+:::
+:::
+:::
+
+::: {.slide title="Batched Decode Arithmetic and the TPOT Ceiling"}
+[Multi-User Roofline]{.kicker}
+
+When a server decodes a batch of $b$ active sequences (each holding $n$ cached context tokens) on a GPU with bandwidth $\beta$, weights $B_w$ are read once while each sequence reads its own KV cache $n B_{\text{kv}}$:
+
+$$t_{\text{step}}(b) = \text{TPOT}(b) \approx \frac{B_w + b \, n \, B_{\text{kv}}}{\beta}, \qquad \text{Throughput}(b) = \frac{b}{t_{\text{step}}(b)}$$
+
+::: {.cols}
+::: {.col}
+- **Worked example: Qwen3-8B in BF16 on an H100 SXM**
+  - $L = 36$, $H_{\text{kv}} = 8$, $d_h = 128$ in BF16 ($2\text{ B}$) $\implies$ $B_{\text{kv}} = 2 \cdot 36 \cdot 8 \cdot 128 \cdot 2 = \mathbf{147.46\text{ KB/token}}$.
+  - At context $n = 2{,}048$: $n B_{\text{kv}} \approx \mathbf{0.302\text{ GB/seq}}$, while BF16 weights occupy $B_w = 16.4\text{ GB}$ and $\beta = 3{,}350\text{ GB/s}$.
+:::
+
+::: {.col}
+- **Scaling batch size $b$ from 1 to 256:**
+  - **$b = 1$:** $\text{TPOT} = 16.7 / 3350 = \mathbf{5.0\text{ ms}}$ ($201\text{ tok/s}$ total).
+  - **$b = 64$:** $\text{TPOT} = (16.4 + 19.3) / 3350 = \mathbf{10.7\text{ ms}}$ ($6{,}000\text{ tok/s}$ total).
+  - **$\text{TPOT} \le 20\text{ ms}$ SLO limit:** $16.4 + 0.302\,b \le 67.0$ $\implies$ **$b_{\max} = 167\text{ sequences}$**.
+  - **Asymptotic ceiling ($b \to \infty$):** Throughput approaches $\beta / (n B_{\text{kv}}) \approx \mathbf{11{,}090\text{ tok/s}}$, bounded entirely by KV-cache bandwidth!
+:::
+:::
+:::
+
+::: {.slide title="Server Engines: vLLM, SGLang, TensorRT-LLM, Dynamo"}
+[Multi-User Architectures]{.kicker}
+
+Shared GPU servers schedule concurrent requests dynamically and expose an OpenAI-compatible HTTP endpoint in a single command:
+
+::: {.cols}
+::: {.col}
+```bash
+vllm serve Qwen/Qwen3-8B --max-model-len 32768
+```
+
+- **vLLM:** Open-source standard integrating continuous batching, PagedAttention, block-hash prefix caching, tensor/pipeline parallelism, and AWQ/FP8/NVFP4 quantization.
+- **SGLang:** Peer engine featuring **RadixAttention**, which maintains cached KV states in a dynamic radix tree—excelling on multi-turn agents, shared RAG documents, and tree-of-thought branching.
+:::
+
+::: {.col}
+- **TensorRT-LLM:** Compiles models with NVIDIA-tuned CUDA kernels for maximum steady-state throughput on fixed datacenter GPU fleets.
+- **NVIDIA Dynamo:** Cluster-scale orchestrator above vLLM, SGLang, or TensorRT-LLM that **disaggregates prefill and decode onto separate GPU pools** and routes incoming requests to workers that already cache the longest matching prefix.
+:::
+:::
+:::
+
+::: {.slide title="The OpenAI API Contract and Conformance Testing"}
+[Portable Client Code]{.kicker}
+
+Because local and server engines implement the OpenAI Chat Completions schema, client applications switch from a laptop Ollama to a cloud vLLM cluster by changing only `base_url` and `model`:
+
+::: {.cols}
+::: {.col}
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://127.0.0.1:8000/v1",
+    api_key="local",
+)
+resp = client.chat.completions.create(
+    model="Qwen/Qwen3-8B",
+    messages=[{"role": "user", "content": "Hi"}],
+    temperature=0,
+)
+```
+:::
+
+::: {.col}
+- **Why identical API schemas still diverge in behavior:**
+  - Different chat-template Jinja whitespace/BOS tokens shift `usage.prompt_tokens` and consume context budgets differently.
+  - Streaming usage chunks (`stream_options`), `stop` string truncation, and structured-output grammar engines vary by server.
+  - **Batch-size non-determinism:** Even at `temperature=0`, a busy vLLM server groups requests into varying batch shapes, changing floating-point reduction order enough to flip close argmax ties!
+:::
+:::
+:::
+
+::: {.slide title="Continuous Batching: Eliminating Static Padding Waste"}
+[Engine Technique 1]{.kicker}
+
+Static batching locks $b$ requests together until the longest generation finishes, wasting GPU slots whenever shorter responses finish early:
+
+::: {.cols .vc}
+::: {.col}
+- **Iteration-level scheduling (Continuous Batching):**
+  - At the end of *every single decode step*, the engine checks for sequences that emitted `<eos>` or hit `max_tokens`.
+  - Finished sequences exit immediately, freeing their KV-cache blocks, and waiting requests from the queue enter the batch on the very next step.
+- **Result on requests of `[5, 2, 7, 3]` output tokens across 2 slots:** Continuous batching finishes all four requests in **9 decode steps instead of 12** ($25\%$ higher utilization).
+:::
+
+::: {.col .fig}
+![](../img/tools-continuous-batching.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Simulating a Continuous Batching Scheduler in Code"}
+[Executable Scheduler]{.kicker}
+
+Ten lines of Python capture the core state machine of an iteration-level continuous batching loop:
+
+::: {.cols .vc}
+::: {.col}
+- **Step-by-step slot refill:**
+  - Step 1 starts `(5, 2)`. After 2 steps, the 2-token request finishes (`(3,)` remaining) and the 7-token request immediately takes slot 2 (`(3, 7)`).
+  - When the first request finishes at step 5, the final 3-token request enters slot 1 (`(3, 4)`), leaving only 1 single-occupancy tail step at the very end.
+:::
+
+::: {.col .fig}
+@model-serving-scheduler
+:::
+:::
+:::
+
+::: {.slide title="PagedAttention and KV Cache Capacity Planning"}
+[Engine Technique 2]{.kicker}
+
+Before **PagedAttention** (Kwon et al., 2023), serving engines pre-allocated a contiguous tensor of size `max_model_len` ($32{,}768$ tokens) for every admitted request because sequence output length is unknown in advance:
+
+::: {.cols}
+::: {.col}
+- **Contiguous reservation waste (Qwen3-8B on 72 GB H100 budget):**
+  - After $16.4\text{ GB}$ of BF16 weights, $55.6\text{ GB}$ remains for KV cache.
+  - Reserving $32{,}768 \times 147.46\text{ KB} \approx \mathbf{4.83\text{ GB/request}}$ fits only **$\lfloor 55.6 / 4.83 \rfloor = 11$ concurrent sequences**!
+  - If average sequence length is $2{,}048$ tokens ($0.302\text{ GB}$), **$93.7\%$ of reserved KV memory sits completely empty**!
+:::
+
+::: {.col}
+- **Virtual block paging (16 tokens/block):**
+  - PagedAttention partitions KV memory into small fixed-size physical blocks ($16\text{ tokens} \approx 2.36\text{ MB/block}$) mapped via a per-sequence block table.
+  - Blocks are allocated on demand as tokens are generated; internal fragmentation is bounded to **at most 15 tokens per sequence** ($< 0.7\%$ waste at length $2{,}048$).
+  - Concurrent capacity jumps from **11 sequences to $\lfloor 55.6 / 0.302 \rfloor \approx \mathbf{184\text{ sequences}}$** ($\sim 16.7\times$ higher batch capacity)!
+:::
+:::
+:::
+
+::: {.slide title="Prefix Caching and Prompt Engineering for Cache Hits"}
+[Engine Technique 3]{.kicker}
+
+When requests share an identical leading token sequence (system instructions, few-shot examples, or repository context), **prefix caching** reuses the precomputed KV blocks without re-running prefill:
+
+::: {.cols .vc}
+::: {.col}
+- **Chained block hashing:** Each 16-token block is keyed by $\text{hash}(\text{parent\_block\_key}, \text{token\_ids})$ because causal self-attention makes token representations depend on every preceding token.
+- **30-turn coding agent ($20\text{K}$ base context + $1\text{K}$ appended/turn):**
+  - Uncached prefill computes $\sum_{k=0}^{29} (20 + k)\text{K} = \mathbf{1{,}035{,}000\text{ tokens}}$.
+  - Prefix caching computes only $20\text{K} + 29 \times 1\text{K} = \mathbf{49{,}000\text{ tokens}}$ (**$21\times$ less prefill work**)!
+- **Prompt design rule:** Never put a per-second timestamp on line 1 of a system prompt—doing so invalidates the hash chain from block 0! Put volatile metadata at the *end* of the prompt.
+:::
+
+::: {.col .fig}
+![](../img/tools-prefix-cache.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Speculative Decoding and Server Quantization"}
+[Engine Technique 4]{.kicker}
+
+How can we accelerate autoregressive decoding beyond the single-token weight-streaming limit without changing the output distribution?
+
+::: {.cols}
+::: {.col}
+- **Speculative decoding (Leviathan et al., 2023):**
+  - A tiny draft model $q$ (cost fraction $c \ll 1$) proposes $\gamma$ tokens sequentially; one parallel target-model pass $p$ verifies all $\gamma$ proposals at once, accepting with probability $\min(1, p(x)/q(x))$ and resampling rejections from the residual $\max(0, p - q)$.
+  - Expected emitted tokens per round with mean acceptance rate $\alpha$ (giving speedup $\mathbb{E}[\text{tokens}] / (1 + c\gamma)$):
+    $$\mathbb{E}[\text{tokens/round}] = \frac{1 - \alpha^{\gamma + 1}}{1 - \alpha}$$
+:::
+
+::: {.col}
+- **When speculative decoding stops helping on busy servers:**
+  - Scoring $b(\gamma + 1)$ tokens in parallel reads weights once only while the pass remains **memory-bound**.
+  - On our H100 ($F = 989\text{ TFLOP/s}$, $\beta = 3.35\text{ TB/s}$, $2\text{ B/weight}$), the ridge point is $F / \beta \approx 295\text{ FLOP/B} \approx 295\text{ tokens}$. For $\gamma = 4$, any batch size **$b > 295 / 5 = 59$ becomes compute-bound**, erasing the free verification pass!
+- **Server quantization:** FP8 (Hopper/Ada+), NVFP4 (Blackwell), and 4-bit AWQ cut weight bytes $2\times\text{--}4\times$ directly.
+:::
+:::
+:::
+
+::: {.slide title="Chunked Prefill, Admission Control, and Operations"}
+[Production Reliability]{.kicker}
+
+An engine command is not yet a production service; operating under bursty multi-user load requires four protective mechanisms:
+
+::: {.cols}
+::: {.col}
+- **1. Chunked prefill (Agrawal et al., 2024):**
+  - Prefilling a 16,000-token prompt in a single step blocks all active decode sequences for hundreds of milliseconds, causing a massive TPOT spike.
+  - Splitting long prompts into fixed token budgets (e.g., $2{,}048$ tokens/step) piggybacks decode tokens alongside prefill chunks to protect TPOT SLOs.
+- **2. Early admission control & cancellation:**
+  - Reject or shed load as soon as queue depth makes the TTFT SLO unreachable, and propagate client HTTP disconnects immediately so abandoned generations stop burning GPU cycles.
+:::
+
+::: {.col}
+- **3. Security proxy & privacy hygiene:**
+  - Place an reverse proxy (TLS, API-key auth, per-tenant token-bucket rate limits) in front of the engine; never expose raw engine ports or log cleartext user prompts by default.
+- **4. Co-pinned deployment bundles:**
+  - Lock `(model_sha, tokenizer, quantization_format, engine_version)` together and gate every upgrade on both p50/p95 open-loop latency and task accuracy.
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: KV Cache, Batching, and Prefix Reuse"}
+[Check Your Understanding]{.kicker}
+
+Test your serving systems arithmetic on these three scenarios:
+
+1. In a retrieval-augmented generation (RAG) service, a shared 2,000-token system prompt is followed by 3 retrieved documents out of a 50-document corpus. Request 1 retrieves `[Doc A, Doc B, Doc C]` and Request 2 retrieves `[Doc B, Doc A, Doc C]`. Under block-hashed prefix caching, which KV blocks does Request 2 reuse, and how can you raise cache hits?
+2. On our H100 serving Qwen3-8B ($n = 2{,}048$ average context, $72\text{ GB}$ memory budget), the service enforces a $\text{TPOT} \le 20\text{ ms}$ SLO ($b_{\max,\text{SLO}} = 167$). Under contiguous `max_model_len=32768` allocation ($b_{\max,\text{mem}} = 11$) vs. PagedAttention ($b_{\max,\text{mem}} = 184$), which constraint binds the batch size in each case?
+3. For speculative decoding with draft cost $c = 0.05$, acceptance rate $\alpha = 0.8$, and $\gamma = 4$ draft tokens, what is the expected speedup over standard batch-1 decoding?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Request 2 reuses **only the 2,000-token system prompt**! Because `Doc B` sits at position 2001 instead of `Doc A`, every block hash from token 2001 onward changes. Ordering retrieved documents in a **canonical ID order** (`[Doc A, Doc B, Doc C]`) allows full prefix reuse whenever subsets share leading documents, trading off relevance-order positional bias.
+2. Under **contiguous reservation**, **memory capacity binds first** ($11 \ll 167$, leaving the GPU starved). Under **PagedAttention**, memory holds $184$ sequences, so the **$20\text{ ms}$ TPOT latency SLO binds first** at $b = 167$.
+3. Expected tokens per round $= (1 - 0.8^5) / (1 - 0.8)$ $= 0.67232 / 0.2 = \mathbf{3.362\text{ tokens}}$ in time $1 + 4(0.05) = \mathbf{1.20\text{ target steps}}$, giving a **$\mathbf{2.80\times}$ speedup**.
+:::
+:::
+
+::: {.slide title="Summary: Model Serving Systems"}
+[Key Takeaways]{.kicker}
+
+| Serving Component | Physical / Algorithmic Principle | Production Engineering Rule |
+| :--- | :--- | :--- |
+| **Prefill vs. Decode** | Prefill is parallel & compute-bound (sets TTFT); decode is serial & bandwidth-bound (sets TPOT) | Optimize prefill with tensor cores & prefix caching; optimize decode with batching & quantization |
+| **Batched decode scaling** | $t(b) = (B_w + b \, n \, B_{\text{kv}}) / \beta$ | Batching amortizes weight reads $B_w$ until KV-cache bandwidth $b \, n \, B_{\text{kv}}$ or the TPOT SLO caps $b$ |
+| **Continuous batching** | Retires finished sequences and refills slots at every decode step | Eliminates static padding bubbles and raises GPU slot occupancy |
+| **PagedAttention** | Allocates KV cache in on-demand 16-token virtual blocks | Eliminates $\sim 90\%+$ contiguous reservation waste, expanding concurrent batch capacity $> 10\times$ |
+| **Prefix caching** | Reuses KV blocks across matching chained block hashes | Place static system prompts and canonical context *before* dynamic timestamps or user queries |
+| **Goodput & admission** | Overload inflates queues so goodput collapses while raw throughput stays high | Use chunked prefill, early TTFT-based admission control, and client cancellation propagation |
+:::

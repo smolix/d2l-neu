@@ -10,9 +10,9 @@ Two questions follow. Which decisions deserve credit for a reward that arrives l
 
 These ideas train controllers, game players and, after pretraining, language models that reason toward answers a checker accepts. They also explain why imitation is not enough: a model fine-tuned on an expert's text never practices recovering from its own mistakes.
 
-:numref:`sec_mdp` asks how to write such a problem down. :numref:`sec_valueiter` asks how to find the best policy when the rules are known. :numref:`sec_qlearning` asks what can be learned from seeing only where each action leads. :numref:`sec_exploration` asks how often to try actions that look worse. :numref:`sec_imitation` asks what an expert's demonstrations teach, and why copying them fails over a long task. :numref:`sec_policygradient` asks how a policy can improve from its own attempts. :numref:`sec_baselines` asks how to make that estimate less noisy, the question behind the group-based updates that train language models. :numref:`sec_deeprl` asks what changes when a neural network replaces the table, and it ends with a map of the methods of this chapter and the next.
+:numref:`sec_mdp` asks how to write such a problem down. :numref:`sec_valueiter` asks how to find the best policy when the rules are known. :numref:`sec_qlearning` asks what can be learned from seeing only where each action leads. :numref:`sec_exploration` asks how often to try actions that look worse. :numref:`sec_imitation` asks what an expert's demonstrations teach, and why copying them fails over a long task. :numref:`sec_optimal_control` asks what dynamic programming becomes when states and actions are continuous and the physics are known: the Linear-Quadratic Regulator (LQR), iterative LQR (iLQR), and receding-horizon Model Predictive Control (MPC). :numref:`sec_policygradient` asks how a policy can improve from its own attempts when the dynamics are unknown. :numref:`sec_baselines` asks how to make that estimate less noisy, the question behind the group-based updates that train language models. :numref:`sec_deeprl` asks what changes when a neural network replaces the table, and it ends with a map of the methods of this chapter and the next.
 
-The code is in PyTorch and JAX, and most examples are small enough to solve exactly, so that every estimate can be checked against the exact answer. :numref:`chap_deep_rl` continues with value networks inside the update, reuse of past experience and fixed datasets. Problems with several agents are left out, and hidden state and learned models of the environment appear only briefly. The Language Models part treats post-training, including learning from human preferences, in more depth.
+The code is in PyTorch and JAX, and most examples are small enough to solve exactly, so that every estimate can be checked against the exact answer. :numref:`chap_deep_rl` continues with value networks inside the update, reuse of past experience, learned dynamics models, and fixed datasets. Problems with several agents are left out, and partial observability appears only briefly. The Language Models part treats post-training, including learning from human preferences, in more depth.
 
 ```toc
 :maxdepth: 2
@@ -22,6 +22,7 @@ value-iter
 qlearning
 exploration
 imitation
+optimal-control
 policy-gradient
 baselines
 deep-rl
@@ -64,277 +65,108 @@ The following freely available resources provide theoretical treatments, courses
 ::: {.cover}
 [Dive into Deep Learning · §14]{.kicker}
 
-Learning to act from rewards<br>
-**decision processes · dynamic programming · temporal differences · exploration · imitation · policy gradient · baselines · function approximation**
+Foundations of Reinforcement Learning<br>**Markov decision processes · dynamic programming · temporal differences · exploration · imitation · optimal control · policy gradients · variance reduction**
 :::
 :::
 
-::: {.slide title="A Thousand Tokens Earn One Verdict, and No Token Has a Label"}
-[The problem]{.kicker}
+::: {.slide title="Acting Changes Which Data the Learner Sees Next"}
+[The Sequential Decision Loop]{.kicker}
 
-- So far every dataset sat still: no prediction chose the next example.
-- A language model solving a mathematics problem writes about 1,000 tokens;
-  a checker says right or wrong once, at the end.
-- No token has a label of its own, and each changes what can come next.
-- A pole on a cart: each push changes the angle to correct next, and the
-  reward is the time the pole stays up.
-
-::: {.d2l-note}
-Which decisions earn the credit for a late reward? How does a learner find
-good decisions that nobody shows it?
-:::
-:::
-
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
-
-- write a problem of acting over time as an MDP, and solve a known one;
-- learn values from sampled transitions, and price the cost of exploring;
-- clone an expert, and measure what its own errors cost;
-- estimate a policy gradient, check it against the exact one, cut its noise;
-- train network policies on CartPole and Pendulum.
-
-**Running examples:** a 16-cell frozen lake; four prompts and a verifier.
-
-**Idea:** score states by the reward still to come; improve the policy from
-its attempts.
-:::
-
-::: {.slide title="This Chapter Learns from Data the Learner Collects Itself"}
-[Where this fits]{.kicker}
+In supervised learning the dataset sits still, whereas a sequential agent's decisions alter future states and determine which data arrive next:
 
 ::: {.cols .vc}
 ::: {.col}
-| part or chapter | the learner learns from |
-|---|---|
-| Basics | a fixed dataset, a label for every example |
-| **Reinforcement Learning** | **its own attempts and their rewards, on problems solved exactly** |
-| Deep Reinforcement Learning | value networks in the update; reused and fixed data |
-| Language Models | post-training at scale, preferences |
+- **Policy $\pi(a_t \mid s_t)$:** Maps the current state $s_t$ to an action $a_t$ (such as a motor torque, grid move, or generated token).
+- **Environment dynamics $P(s_{t+1} \mid s_t, a_t)$:** Evolves the state stochastically and emits a scalar reward $r_t$.
+- **Closed-loop feedback:** Repeating the interaction generates a trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$ whose distribution depends on $\pi$.
 :::
 
-::: {.col .narrow}
-- **Uses:** softmax regression, cross-entropy, gradient ascent,
-  expectations.
-- **Skips:** several agents; hidden state and learned models, except
-  briefly.
+::: {.col .fig}
+![](../img/mdl-rl-agent-env.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="The Agent's Own Actions Decide Which Data It Sees"}
-![](../img/mdl-rl-agent-env.svg){width=90%}
+::: {.slide title="Delayed Credit Assignment and Trial-and-Error Search"}
+[Two Core Challenges]{.kicker}
 
-- $\pi(a \mid s)$: the policy, the agent's rule for choosing $a$ in state $s$.
-- $P(s' \mid s, a)$, $r(s, a)$: the environment's transition kernel and reward.
-- The agent's choices decide which trajectory $\tau$, so which data, it sees.
-:::
+Unlike token-level classification, reinforcement learning provides no per-step ground-truth label and evaluates behavior only through cumulative discounted return:
 
-::: {.slide title="On Slippery Ice a Command Is One of Three Equally Likely Moves"}
-[Running example 1]{.kicker}
+$$R(\tau) = \sum_{t=0}^{\infty} \gamma^t r_t, \qquad \gamma \in [0, 1)$$
 
-![](../img/mdl-rl-gridworld.svg){width=92%}
-
-- S start, H hole, G goal, which pays 1; a hole or the goal ends the episode.
-- Calm ice moves as commanded; slippery ice, as commanded or sideways, $1/3$ each.
-:::
-
-::: {.slide title="A Reward Six Moves Away Counts 0.77 at a Discount of 0.95"}
-$$R(\tau) = r_0 + \gamma r_1 + \gamma^2 r_2 + \cdots = \sum_{t \geq 0} \gamma^t r_t$$
-
-| discount $\gamma$ | horizon $1/(1-\gamma)$ | goal after six moves, $\gamma^5$ |
-|---|---|---|
-| 0.5 | 2 steps | 0.031 |
-| 0.9 | 10 steps | 0.590 |
-| 0.95 | 20 steps | 0.774 |
-| 0.99 | 100 steps | 0.951 |
+- **Temporal credit assignment:** When a math verifier scores a 1,000-token proof only at the end, or a pole falls 50 steps after a bad push, which earlier decisions deserve credit or blame?
+- **Bellman's principle (1957):** Score every state by its *value*—the expected discounted future return—turning a long-horizon problem into a chain of local one-step lookaheads.
+- **Exploration without a teacher:** Because the agent observes rewards only for actions it actually tries, it must balance exploiting high-value actions against exploring uncertain ones.
 
 ::: {.d2l-note}
-The discount is part of the task. The weights fall by about $e$ per
-horizon; this chapter uses $\gamma = 0.95$.
+At our chapter default $\gamma = 0.95$, the effective horizon is $1/(1-\gamma) = 20$ steps, and a goal reached in 6 moves is weighted by $\gamma^5 \approx 0.774$.
 :::
 :::
 
-::: {.slide title="The Best Policy on Ice Beats the Shortest Path Sixteen to One"}
-| policy on slippery ice | reaches the goal within 100 steps |
-|---|---|
-| a random command at every step | 0.014 |
-| the shortest path of calm ice | 0.045 |
-| the optimal policy $\pi^*$ | 0.730 |
+::: {.slide title="Benchmark 1: Slippery Ice Reverses Shortest-Path Logic"}
+[Tabular MDP Benchmark]{.kicker}
 
-- $\pi^*$ picks the command with the least risk of a hole, and in four
-  cells that command points away from the goal.
-- Computed exactly from the model; simulation agrees to within a point.
+Our first running benchmark is $4 \times 4$ `FrozenLake-v1`, small enough to solve to machine precision yet stochastic enough to defeat naive greedy heuristics:
 
-::: {.d2l-note}
-On ice the shortest route is not the best policy.
-:::
+::: {.cols .vc}
+::: {.col}
+- **Slippery transition kernel:** Each command moves in the intended direction with probability $1/3$ and slips perpendicularly to each side with probability $1/3$.
+- **Shortest path vs. slip-aware optimum:** Following the 6-move calm-ice shortest path succeeds in only **$4.5\%$** of episodes because slips drop it into adjacent holes.
+- **Risk-minimizing control:** The optimal policy $\pi^*$ reaches the goal in **$73.0\%$** of episodes—pointing *away* from the goal in four cells to eliminate hole risk.
 :::
 
-::: {.slide title="Check: Weigh the Commands at Cell 9"}
-[Check]{.kicker}
-
-At cell 9, three of the four commands can slide the agent into the hole at 5.
-
-1. Which command cannot, and where does it land?
-2. At $\gamma = 0.95$, what is a reward 20 steps away worth?
-3. Which $\gamma$ gives an effective horizon of 50 steps?
-
-::: {.fragment .fade-up}
-1. *Down*: cell 13, 8 or 10, $1/3$ each, so it slides sideways 2 times in 3.
-2. $0.95^{20} \approx 0.36$.
-3. $1/(1-\gamma) = 50$ gives $\gamma = 0.98$.
+::: {.col .fig}
+![](../img/mdl-rl-gridworld.svg){.nostretch width=100%}
+:::
 :::
 :::
 
-::: {.slide title="A Response Is a Trajectory with Deterministic Moves and One Reward"}
-[Running example 2]{.kicker}
+::: {.slide title="Benchmark 2: Language Generation as a Verifier MDP"}
+[Language Model Post-Training Benchmark]{.kicker}
 
-- State: the prompt plus the tokens so far. Action: the next token.
-- Transition: append the token, with probability 1. All randomness is the
-  policy's.
-- Reward: once, at the end, from a *verifier* that checks the answer.
-- No state recurs: the states form a tree rooted at the prompt.
-- So a whole response $y$ can be one action at the prompt $x$, with reward
-  $r(x, y)$: a one-step MDP.
+Autoregressive text generation is a deterministic-transition MDP where the state is the prompt plus tokens generated so far and the action is the next token:
 
-::: {.d2l-note}
-Methods for language models can score and update whole responses.
+| Prompt $x$ | `2+2` | `3*4` | `8*8` | `9*9` |
+|:--|--:|--:|--:|--:|
+| Verifier exact answer | `4` | `12` | `64` | `81` |
+| Solvable from 9 shared candidates? | Yes (`4`) | Yes (`12`) | No | No |
+
+- **Collapsed one-step view:** With deterministic token appending and a single terminal reward $r(x, y) \in \{0, 1\}$, an entire response $y$ acts as one action at prompt $x$.
+- **Reference vs. ceiling:** The uniform softmax reference policy passes $6.2\%$ of the time ($\approx 1/8$ on two solvable prompts, $0$ on two unsolvable prompts), against a $50\%$ ceiling.
+- **Reward hacking hazard:** A ninth candidate hedges (*"one of 4, 12, 64 or 81"*); an exact-match verifier scores it $0$, whereas a lenient substring checker pays $1.0$ on every prompt.
+:::
+
+::: {.slide title="Chapter 14 Roadmap: From Exact Tables to Neural Critics"}
+[Architectural & Algorithmic Progression]{.kicker}
+
+Every section relaxes one assumption—moving from known discrete tables to unknown dynamics, continuous spaces, and neural function approximation:
+
+| Section | Core Problem & Algorithmic Mechanism | Primary Benchmark |
+|:--|:--|:--|
+| **§14.1–§14.2 MDPs & DP** | Formalize $(\mathcal{S}, \mathcal{A}, P, r, \gamma)$; solve Bellman equations via contraction sweeps | Slippery FrozenLake |
+| **§14.3 Tabular TD Control** | Learn $Q^*$ from single sampled transitions via Q-learning and SARSA | Slippery FrozenLake |
+| **§14.4 Exploration** | Bound cumulative regret via UCB, Thompson sampling, and count bonuses | 10-Armed Bandit & Chain |
+| **§14.5 Imitation Learning** | Fit expert demonstrations; diagnose $O(\varepsilon T^2)$ compounding error & DAgger | Calm FrozenLake |
+| **§14.6 Optimal Control** | Solve continuous linear/nonlinear physics via Riccati LQR, iLQR, and MPC | Double Integrator & Pendulum |
+| **§14.7–§14.8 Policy Gradients** | Differentiate stochastic policies via REINFORCE, baselines, RLOO, and GRPO | Verifier Task & Calm Lake |
+| **§14.9 Function Approximation** | Replace tables with MLPs, Gaussian heads, tangent kernels, and truncation bootstraps | CartPole & Pendulum |
+:::
+
+::: {.slide title="Concept Check: Framing Sequential Decision Problems"}
+[Check Your Understanding]{.kicker}
+
+Work through these three foundational questions before diving into §14.1:
+
+1. **Credit assignment & discounting:** Which discount factor $\gamma$ gives an effective planning horizon $1/(1-\gamma)$ of $50$ steps, and how much weight does a reward $50$ steps away receive?
+2. **Stochastic control:** At cell 9 of slippery FrozenLake (hole 5 directly above), why does the optimal policy command *down* even though *down* slides sideways two times in three?
+3. **Reward specification:** Why does a lenient verifier that checks whether the true answer appears as a substring fail on the 4-prompt arithmetic task?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Setting $1/(1-\gamma) = 50$ yields $\gamma = 0.98$, and a reward one horizon away carries weight $0.98^{50} \approx e^{-1} \approx 0.368$.
+2. Commanding *left*, *right*, or *up* from cell 9 slips into hole 5 with probability $1/3$, whereas *down* has $0$ one-step hole risk and lands on safe cells 8, 13, or 10.
+3. The optimizer exploits the specification by outputting the hedge *"one of 4, 12, 64 or 81"* on every prompt, earning $1.0$ without solving the arithmetic.
 :::
 :::
 
-::: {.slide title="The Reference Passes 6.2% of the Time; the Ceiling Is 50%"}
-| prompt $x$ | `2+2` | `3*4` | `8*8` | `9*9` |
-|---|---|---|---|---|
-| answer | 4 | 12 | 64 | 81 |
-
-- Nine candidates shared by all prompts: 1, 3, 4, 7, 12, 19, 23, 35 and the
-  *hedge* "one of 4, 12, 64 or 81".
-- Verifier: reward 1 if the response equals the answer, else 0. No candidate
-  solves `8*8` or `9*9`, so success is at most 0.5.
-- Policy: a softmax over a table, $\pi(y \mid x) \propto \exp \theta_{xy}$;
-  the reference $\theta$ is 0, except $-4$ for the hedge.
-- A response sampled from the reference passes with probability 0.062.
-:::
-
-::: {.slide title="A Reward That Pays for the Wrong Thing Gets Exploited"}
-- The exact-match verifier rejects the hedge; a lenient checker that accepts
-  any response containing the answer pays it on every prompt.
-- The reference hedges 0.2% of the time; training raises whatever pays.
-- On the lake, a bonus for approaching the goal pays the agent for going in
-  circles.
-- A bonus that is a difference of potentials cannot be collected around a
-  loop.
-
-::: {.d2l-note}
-The reward states the task; whoever writes it decides what the agent
-maximizes.
-:::
-:::
-
-::: {.slide title="Check: Score the Verifier Task by Hand"}
-[Check]{.kicker}
-
-1. Why does a response sampled from the reference pass with probability
-   about 0.062?
-2. What does a policy that always hedges score under the exact verifier, and
-   under the lenient checker?
-3. In this MDP, what is random and what is not?
-
-::: {.fragment .fade-up}
-1. About $1/8$ on `2+2` and on `3*4`, 0 on `8*8` and `9*9`: an average of
-   about $1/16$.
-2. 0 under exact match; 1 under the lenient checker, twice the true ceiling.
-3. The prompt and the policy's response are random; the transitions and the
-   verifier's score are not.
-:::
-:::
-
-::: {.slide title="Values Answer the Credit Question, Trial and Error the Search"}
-- **Credit:** which decisions deserve credit for a reward that arrives late?
-- **Search:** how can a learner find good decisions nobody shows it?
-- Bellman, 1950s: score each situation by the reward still to come, and a
-  long problem becomes a chain of one-step problems.
-- Barto, Sutton and Watkins, 1980s: learn those scores by trial and error,
-  with the pole on a cart as an early test.
-- Williams, 1992: improve the policy directly from the rewards its attempts
-  earn.
-
-::: {.d2l-note}
-The learner collects its own data, so its mistakes change what it learns
-from next.
-:::
-:::
-
-::: {.slide title="Eight Sections, One Question Each"}
-[Chapter map]{.kicker}
-
-| section | question |
-|---|---|
-| Markov Decision Processes | how do we write a problem of acting over time down? |
-| Dynamic Programming | what is the best policy when the rules are known? |
-| Temporal-Difference Learning | what can be learned from seeing only where actions lead? |
-| Exploration | how often should the agent try actions that look worse? |
-| Learning from Demonstrations | what does an expert teach, and why does copying fail? |
-| Policy Gradient | how can a policy improve from its own attempts? |
-| Baselines and Variance Reduction | how can that estimate be made less noisy? |
-| Function Approximation | what changes when a network replaces the table? |
-:::
-
-::: {.slide title="Most Examples Are Small Enough to Solve Exactly"}
-[Running examples]{.kicker}
-
-| section | running example |
-|---|---|
-| Markov Decision Processes | the lake as arrays; the verifier task |
-| Dynamic Programming | the slippery lake, solved exactly |
-| Temporal-Difference Learning | the slippery lake, from sampled transitions |
-| Exploration | a ten-armed bandit; a chain of states; groups of responses |
-| Learning from Demonstrations | the calm lake and the expert's six-move path |
-| Policy Gradient | the verifier task; the calm lake |
-| Baselines and Variance Reduction | the calm lake; groups of responses per prompt |
-| Function Approximation | CartPole; Pendulum, with a continuous torque |
-:::
-
-::: {.slide title="Check: Which Section Answers Each Finding?"}
-[Check]{.kicker}
-
-1. Forced to act at random one step in twenty, even $\pi^*$ reaches the goal
-   about 54% of the time instead of 73%.
-2. A clone of the expert leaves the expert's path in 17% of its episodes.
-3. With four episodes per batch, one gradient estimate missed by more than
-   three times the gradient's length.
-
-::: {.fragment .fade-up}
-1. Exploration: can a different rule learn as much while losing less?
-2. Learning from Demonstrations: its own errors carry it where the expert never was.
-3. Baselines and Variance Reduction: remove noise without moving the mean.
-:::
-:::
-
-::: {.slide title="The Chapter's Last Agent Needs Hundreds of Thousands of Steps"}
-- Pendulum: a torque in $[-2, 2]$ swings a pendulum up and holds it there;
-  a return of about $-200$ or better balances it, doing nothing gives $-1200$.
-- REINFORCE with a learned baseline gets there after a few hundred thousand
-  steps: it waits for whole episodes and uses each batch once.
-- Next, Deep Reinforcement Learning: value networks in the update, reused
-  experience, fixed data; its soft actor-critic crosses $-200$ after 5,000 to 11,000 steps.
-- The Language Models part treats post-training, including learning from
-  human preferences, in more depth.
-:::
-
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
-
-- An MDP $(\mathcal{S}, \mathcal{A}, P, r)$ and a discount $\gamma$; at
-  $\gamma = 0.95$ the horizon is 20 steps.
-- The lake: on slippery ice the best policy reaches the goal 0.73 of the
-  time, the shortest path 0.045.
-- The verifier task: a token MDP in one step; the reference passes 0.062,
-  the ceiling is 0.5.
-- The reward is a design choice: a lenient checker pays the hedge.
-- Two questions: credit for a late reward, search without a teacher.
-
-**Next:** the lake and the verifier task written down as a Markov decision
-process.
-:::

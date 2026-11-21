@@ -532,8 +532,7 @@ $$
 $$
 
 which has rank $2$: its first two columns are linearly independent, yet every
-one of the $\binom{5}{3} = 10$ triples of columns is linearly dependent
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-rank-of-c`).
+one of the $\binom{5}{3} = 10$ triples of columns is linearly dependent.
 
 Remarkably, the number of dimensions that survive the map and the number of
 dimensions crushed to zero always add up to the dimension of the input space.
@@ -1290,24 +1289,6 @@ directly to eigenvalues and singular values.
        every dot product, and conclude that $\mathbf{A}$ is orthogonal.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-angle-preserving`
 
-1. **Rank and nullity of C.** The $4 \times 5$ matrix $\mathbf{C}$ of
-   :numref:`subsec_mdl-rank` has rank two. Write $\mathbf{c}_1, \ldots,
-   \mathbf{c}_5$ for its columns.
-    1. Express $\mathbf{c}_2$, $\mathbf{c}_4$, and $\mathbf{c}_5$ as linear
-       combinations of $\mathbf{c}_1$ and $\mathbf{c}_3$, and check that
-       $\mathbf{c}_1$ and $\mathbf{c}_3$ are linearly independent. Why does
-       this show that every collection of three columns is linearly
-       dependent?
-    1. Turn the three relations into three vectors of the null space of
-       $\mathbf{C}$. Show that they are linearly independent, and use
-       rank--nullity to show that they form a basis of the null space.
-    1. Express the third and the fourth row of $\mathbf{C}$ as linear
-       combinations of the first two rows, and read off the row rank. Then
-       write down the factorization $\mathbf{C} = \mathbf{G}\mathbf{H}$ of
-       :eqref:`eq_mdl-row-rank` in which $\mathbf{G}$ has the columns
-       $\mathbf{c}_1$ and $\mathbf{c}_3$.
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-rank-of-c`
-
 1. **Rank of a product.** A linear autoencoder sends a $d$-dimensional input
    through a hidden layer of width $k < d$,
    $\mathbf{x} \mapsto \mathbf{W}_2\mathbf{W}_1\mathbf{x}$ with
@@ -1328,34 +1309,6 @@ directly to eigenvalues and singular values.
     1. Construct a $2 \times 3$ matrix and a $3 \times 2$ matrix, both of
        rank two, whose $2 \times 2$ product has rank one.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-rank-of-product`
-
-1. [code] **Rank of a sum and of a low-rank update.** Fine-tuning methods
-   often change a large weight matrix by adding the product of two thin
-   matrices. How much can such an update change the rank?
-    1. Show that every column of $\mathbf{A} + \mathbf{B}$ lies in the span
-       of the columns of $\mathbf{A}$ and $\mathbf{B}$ together, and conclude
-       $\operatorname{rank}(\mathbf{A} + \mathbf{B}) \le
-       \operatorname{rank}\mathbf{A} + \operatorname{rank}\mathbf{B}$.
-    1. A $4096 \times 4096$ weight matrix $\mathbf{W}$ is changed by adding
-       $\boldsymbol{\Delta} = \mathbf{U}\mathbf{V}^\top$ with
-       $\mathbf{U}, \mathbf{V} \in \mathbb{R}^{4096 \times 8}$. Show that
-       $\boldsymbol{\Delta}$ has rank at most $8$, and that the rank of
-       $\mathbf{W} + \boldsymbol{\Delta}$ differs from that of $\mathbf{W}$
-       by at most $8$ in either direction (hint: apply the first part also to
-       $\mathbf{W} = (\mathbf{W} + \boldsymbol{\Delta}) +
-       (-\boldsymbol{\Delta})$).
-    1. Give $2 \times 2$ examples with $\operatorname{rank}\mathbf{A} =
-       \operatorname{rank}\mathbf{B} = 1$ and
-       $\operatorname{rank}(\mathbf{A} + \mathbf{B}) = 0$, and with
-       $\operatorname{rank}(\mathbf{A} + \mathbf{B}) = 2$.
-    1. Build a $50 \times 50$ matrix of rank $10$ as the product of a
-       $50 \times 10$ and a $10 \times 50$ matrix with independent standard
-       Gaussian entries, add a rank-$3$ product of the same kind, and check
-       that `np.linalg.matrix_rank` returns $13$. Explain why this happens for
-       every draw (hint: write the sum as one product of a $50 \times 13$ and
-       a $13 \times 50$ matrix, and use that Gaussian columns are linearly
-       independent with probability one).
-   :exlabel:`ex_mdl-linear-maps-rank-of-sum`
 
 1. **Matrices that commute with a rotation.** Matrix products do not commute
    in general. This problem finds the exceptions for $\mathbf{R}_{90}$.
@@ -1421,29 +1374,6 @@ directly to eigenvalues and singular values.
        smaller change of a single entry does.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-det-near-singular`
 
-1. [code] **Area of the image of the unit disk.** The determinant scales the
-   area of every region, not only of squares.
-    1. Use the tiling argument of :numref:`subsec_mdl-multiplicativity` to
-       explain why $\mathbf{A}$ maps any region of area $V$ to a region of
-       area $|\det\mathbf{A}|\,V$, so that the running matrix maps the unit
-       disk to a region of area $5\pi \approx 15.71$.
-    1. Show that the image lies in the rectangle
-       $[-\sqrt{5}, \sqrt{5}] \times [-\sqrt{10}, \sqrt{10}]$ (hint: by
-       Cauchy--Schwarz, $|(\mathbf{A}\mathbf{x})_i|$ is at most the length of
-       row $i$ times $\|\mathbf{x}\|$).
-    1. Estimate the area by Monte Carlo. Draw $N = 10^5$ points
-       $\mathbf{p}$ uniformly in the rectangle with
-       `np.random.default_rng()`, count those whose preimage
-       $\mathbf{A}^{-1}\mathbf{p}$ lies in the unit disk, and multiply the
-       fraction by the area $4\sqrt{50} \approx 28.28$ of the rectangle.
-       Show that the standard error of the estimate is about $0.04$, and check
-       that the interval of two standard errors around your estimate
-       contains $5\pi$, as it will in about 95% of runs.
-    1. Why does this method fail for $\mathbf{B}$? What is the area of the
-       image of the unit disk under $\mathbf{B}$, and how does it relate to
-       $\det\mathbf{B}$?
-   :exlabel:`ex_mdl-linear-maps-disk-area`
-
 1. **Determinant of a rank-one update.** ● A *planar flow*
    :cite:`rezende2015variational` transforms
    $\mathbf{z} \in \mathbb{R}^d$ by
@@ -1505,367 +1435,299 @@ directly to eigenvalues and singular values.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24.2]{.kicker}
+[Dive into Deep Learning · §33.2]{.kicker}
 
-Matrices as Linear Maps<br>**columns · rank · inverses · the determinant**
+Matrices as Linear Maps<br>**column geometry · composition & einsum · rank–nullity · invertibility · determinants & volume scaling**
 :::
 :::
 
-::: {.slide title="One Matrix Can Be Undone, Another Cannot"}
-[The problem]{.kicker}
+::: {.slide title="When Does a Linear Layer Destroy Information?"}
+[Motivation]{.kicker}
 
-- $\mathbf{A} = \left(\begin{smallmatrix}1 & 2\\ -1 & 3\end{smallmatrix}\right)$
-  sends $(2, -1)$ to $(0, -5)$, and one matrix sends $(0, -5)$ back.
-- $\mathbf{B} = \left(\begin{smallmatrix}2 & 1\\ 4 & 2\end{smallmatrix}\right)$
-  sends $(1, 1)$ and $(0, 3)$ both to $(3, 6)$: nothing can bring $(3, 6)$
-  back.
-- A layer from 784 pixels to 256 features is a $256 \times 784$ matrix: it
-  sends at least $784 - 256 = 528$ input directions to zero.
+- **Beyond the Row-by-Row View:** Reading $\mathbf{A}\mathbf{x}$ one row at a time shows $m$ separate hyperplane tests, but hides what the matrix does to the entire input space $\mathbb{R}^n$ at once.
+- **Dimension Bottlenecks in Neural Networks:** A fully connected layer mapping $784$ Fashion-MNIST pixels to $256$ features is a $256 \times 784$ matrix; because it outputs fewer numbers than it takes in, it must collapse at least $784 - 256 = 528$ independent directions to zero.
+- **Invertible vs. Singular Square Maps:** Our running matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$ sends $(2, -1) \mapsto (0, -5)$ and can be completely undone, whereas $\mathbf{B} = \left(\begin{smallmatrix}2&1\\4&2\end{smallmatrix}\right)$ sends both $(1, 1)$ and $(0, 3)$ to $(3, 6)$, destroying the ability to recover the input.
 
-::: {.d2l-note .warn}
-Which maps can be undone, and what do they do to volume?
+::: {.d2l-note}
+**The Column Shift:** Switching from rows to columns reveals where the coordinate axes land, how many dimensions survive (rank), and how volumes rescale (determinant).
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- read a matrix off its columns, the images of the axes;
-- compose two maps, and say why the order matters;
-- write any product, attention scores included, as one `einsum`;
-- decide invertibility from the columns, the rank, or the determinant;
-- compute a $2 \times 2$ determinant as a signed area, a $3 \times 3$ one by
-  cofactors, and say what the determinant does not measure.
-
-**The idea:** a matrix is fixed by where it sends the axes; the rank counts
-the dimensions that survive, the determinant measures how volume scales.
-**Running example:** $\mathbf{A}$ with $\mathbf{v} = (2, -1)$, and the
-singular $\mathbf{B}$.
-:::
-
-::: {.slide title="Matrices as Maps, between Vectors and Eigenvalues"}
-[Where this fits]{.kicker}
-
-| section | adds |
-|---|---|
-| Vectors, Angles, and Projections | lengths, angles, projections, hyperplanes |
-| **Matrices as Linear Maps** | **columns, rank, inverses, determinants** |
-| Eigendecompositions | powers of one square map, symmetric matrices |
-| Spectra in Practice | locating and computing eigenvalues, where they mislead |
-| Singular Value Decomposition | two bases, best low rank, least squares, $\kappa$ |
-
-Real matrices, square and rectangular; rank and determinants by hand and by
-library; no elimination algorithms.
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Linear Maps]{.dtitle}
-
-[columns · composition · rigid motions · einsum]{.dsub}
-:::
-:::
-
-::: {.slide title="A Matrix Is Fixed by Where It Sends the Axes"}
-[Linear maps]{.kicker}
+::: {.slide title="Columns Are the Images of the Coordinate Axes"}
+[Column Geometry]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- Column $j$ is $\mathbf{A}\mathbf{e}_j$:
-  $\mathbf{A}\mathbf{e}_1 = (1, -1)$, $\mathbf{A}\mathbf{e}_2 = (2, 3)$.
-- $\mathbf{v} = 2\mathbf{e}_1 - \mathbf{e}_2$, so
-  $\mathbf{A}\mathbf{v} = 2(1, -1) - (2, 3) = (0, -5)$.
-- Rows agree: $(1, 2)\cdot\mathbf{v} = 0$, $(-1, 3)\cdot\mathbf{v} = -5$.
-
-::: {.d2l-note}
-Lines stay lines, the origin stays put: the grid is carried along.
-:::
-:::
-
-::: {.col .fig .big}
-![](../img/mdl-la-linear-map.svg)
-:::
-:::
-:::
-
-::: {.slide title="Six Things a 2×2 Matrix Can Do to the Unit Square"}
-[Linear maps]{.kicker}
-
-![](../img/mdl-la-map-gallery.svg){width=72%}
-
-- In every panel the arrows are the columns, the images of
-  $\mathbf{e}_1$ and $\mathbf{e}_2$.
-- Projection and rank-one collapse send the plane onto a line.
-:::
-
-::: {.slide title="Matrix Multiplication Is Composition, So Order Matters"}
-[Linear maps]{.kicker}
-
-![](../img/mdl-la-composition.svg){width=78%}
-
-- $\mathbf{R}_{90} = \left(\begin{smallmatrix}0 & -1\\ 1 & 0\end{smallmatrix}\right)$,
-  shear $\mathbf{T} = \left(\begin{smallmatrix}1 & 1\\ 0 & 1\end{smallmatrix}\right)$:
-  $\mathbf{R}_{90}\mathbf{T}\,\mathbf{e}_1 = (0, 1)$ but
-  $\mathbf{T}\mathbf{R}_{90}\,\mathbf{e}_1 = (1, 1)$.
-- $\mathbf{A}\mathbf{B}$ means $\mathbf{B}$ first, then $\mathbf{A}$; column
-  $j$ of $\mathbf{A}\mathbf{B}$ is $\mathbf{A}\mathbf{b}_j$.
-:::
-
-::: {.slide title="Orthogonal Matrices Move Space Rigidly"}
-[Linear maps]{.kicker}
-
-$\mathbf{Q}$ is orthogonal when its columns are orthonormal,
-$\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$. Then every dot product survives:
-
-$$(\mathbf{Q}\mathbf{x})\cdot(\mathbf{Q}\mathbf{y})
- = \mathbf{x}^\top\mathbf{Q}^\top\mathbf{Q}\,\mathbf{y}
- = \mathbf{x}\cdot\mathbf{y}.$$
-
-- Rotation $\mathbf{R}_\phi = \left(\begin{smallmatrix}\cos\phi & -\sin\phi\\ \sin\phi & \cos\phi\end{smallmatrix}\right)$:
-  $\mathbf{R}_{90}(3, 2) = (-2, 3)$, both of length $\sqrt{13}$.
-- Reflection $\operatorname{diag}(1, -1)$: $(3, 2) \mapsto (3, -2)$.
-- In the plane these are the only kinds; $\operatorname{diag}(1, 10)$, with
-  perpendicular but unnormalized columns, bends angles.
-:::
-
-::: {.slide title="einsum: Sum Every Index That Is Not Kept"}
-[Linear maps]{.kicker}
-
-Every product so far multiplies entries and sums over a repeated index. The
-dot product, $\mathbf{A}\mathbf{v}$, $\mathbf{R}_{90}\mathbf{T}$ (the shear
-is `S` in the code) and the trace $\sum_i a_{ii}$ as four strings:
-
-@geometry-linear-algebraic-ops-expressing-in-code-2
-
-- Attention scores $s_{bhit} = \sum_j q_{bhij}k_{bhtj}$ are
-  `'bhij,bhtj->bhit'`: $b$ and $h$ are repeated but kept, $j$ is summed.
-- One-line proof: $\operatorname{tr}(\mathbf{A}\mathbf{B}) = a_{ij}b_{ji} = b_{ji}a_{ij} = \operatorname{tr}(\mathbf{B}\mathbf{A})$.
-:::
-
-::: {.slide title="Check: Do These Two Maps Commute?"}
-[Check]{.kicker}
-
-Do $\operatorname{diag}(2, 1)$ and $\mathbf{R}_{90}$ commute? Apply both
-products to $\mathbf{e}_1$.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\mathbf{R}_{90}\operatorname{diag}(2, 1)\,\mathbf{e}_1 =
-\mathbf{R}_{90}(2, 0) = (0, 2)$, but
-$\operatorname{diag}(2, 1)\,\mathbf{R}_{90}\,\mathbf{e}_1 =
-\operatorname{diag}(2, 1)(0, 1) = (0, 1)$. They do not commute: stretching
-before or after the rotation stretches different directions.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Rank and Invertibility]{.dtitle}
-
-[column space · null space · rank--nullity · inverses]{.dsub}
-:::
-:::
-
-::: {.slide title="Dependent Columns Collapse the Plane onto a Line"}
-[Rank and invertibility]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- $\mathbf{B} = \left(\begin{smallmatrix}2 & 1\\ 4 & 2\end{smallmatrix}\right)$:
-  $\mathbf{b}_1 = 2\mathbf{b}_2$.
-- Column space (all outputs): the line $y = 2x$.
-- Null space (inputs sent to $\mathbf{0}$): the line through $(1, -2)$,
-  perpendicular to both rows.
-- $(1, 1)$ and $(0, 3)$ differ by $-(1, -2)$ and both go to $(3, 6)$.
-
-::: {.d2l-note .rule}
-Same output $\iff$ the inputs differ by a null vector.
-:::
+- **Action on Basis Vectors:** Writing $\mathbf{x} = x\mathbf{e}_1 + y\mathbf{e}_2$ shows that $\mathbf{A}\mathbf{x}$ is a weighted combination of the columns of $\mathbf{A}$:
+  $$\mathbf{A}\mathbf{x} = x\,\mathbf{A}\mathbf{e}_1 + y\,\mathbf{A}\mathbf{e}_2$$
+- **Running Matrix $\mathbf{A}$:** Column 1 is $\mathbf{A}\mathbf{e}_1 = (1, -1)$ and Column 2 is $\mathbf{A}\mathbf{e}_2 = (2, 3)$, so $\mathbf{v} = (2, -1)$ maps to $2(1, -1) - (2, 3) = (0, -5)$.
+- **Grid Preservation:** Because $\mathbf{A}(\alpha\mathbf{x} + \beta\mathbf{y}) = \alpha\mathbf{A}\mathbf{x} + \beta\mathbf{A}\mathbf{y}$, lines remain lines, the origin stays fixed ($\mathbf{A}\mathbf{0} = \mathbf{0}$), and the unit square maps to a parallelogram.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-la-null-collapse.svg)
+![](../img/mdl-la-linear-map.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Rank–Nullity: Dimensions Kept Plus Dimensions Lost Equal n"}
-[Rank and invertibility]{.kicker}
+::: {.slide title="Six Geometric Actions on the Unit Square"}
+[Linear Map Gallery]{.kicker}
+
+![](../img/mdl-la-map-gallery.svg){.nostretch width=74%}
+
+- **Full-Rank vs. Rank-Deficient Maps:** Scaling, rotation $\mathbf{R}_{90} = \left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$, shear $\mathbf{T} = \left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, and reflection map the unit square to a 2D parallelogram, whereas projection (e) and dependent columns (f) squash the entire plane onto a 1D line.
+- **Affine Layers ($\mathbf{W}\mathbf{x} + \mathbf{b}$):** A nonzero bias translation moves the origin ($\mathbf{0} \mapsto \mathbf{b}$), making an affine layer a linear map followed by a shift.
+:::
+
+::: {.slide title="Matrix Multiplication Is Map Composition"}
+[Composition]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Right-to-Left Composition:** Applying $\mathbf{B}$ first and $\mathbf{A}$ second to $\mathbf{v}$ equals applying the product $\mathbf{A}\mathbf{B}$, whose $j$-th column is $\mathbf{A}\mathbf{b}_j$:
+  $$\bigl(\mathbf{A}(\mathbf{B}\mathbf{v})\bigr)_i = \sum_k \Bigl(\sum_j a_{ij} b_{jk}\Bigr) v_k = \bigl((\mathbf{A}\mathbf{B})\mathbf{v}\bigr)_i$$
+- **Order Matters ($\mathbf{R}_{90}\mathbf{T} \neq \mathbf{T}\mathbf{R}_{90}$):** Shearing then rotating sends $\mathbf{e}_1 \mapsto (0, 1)$, whereas rotating then shearing sends $\mathbf{e}_1 \mapsto (1, 1)$.
+- **Associativity:** $(\mathbf{A}\mathbf{B})\mathbf{C} = \mathbf{A}(\mathbf{B}\mathbf{C})$ holds automatically because function composition is associative.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-composition.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Orthogonal Matrices Preserve Lengths and Angles"}
+[Rigid Motions]{.kicker}
+
+- **Orthonormal Columns ($\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$):** A square matrix $\mathbf{Q}$ is *orthogonal* when its columns are mutually perpendicular unit vectors, which guarantees that every dot product is preserved:
+  $$(\mathbf{Q}\mathbf{x})\cdot(\mathbf{Q}\mathbf{y}) = \mathbf{x}^\top\mathbf{Q}^\top\mathbf{Q}\mathbf{y} = \mathbf{x}^\top\mathbf{y} = \mathbf{x}\cdot\mathbf{y}$$
+- **Isometry & Cosine Invariance:** Setting $\mathbf{y} = \mathbf{x}$ shows $\|\mathbf{Q}\mathbf{x}\| = \|\mathbf{x}\|$, and rotating an entire embedding space by $\mathbf{Q}$ leaves every pairwise cosine similarity untouched.
+- **Two-Sided Inverse ($\mathbf{Q}^{-1} = \mathbf{Q}^\top$):** For square $\mathbf{Q}$, $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ implies $\mathbf{Q}\mathbf{Q}^\top = \mathbf{I}$; in $\mathbb{R}^2$, the only orthogonal matrices are rotations $\mathbf{R}_\phi = \left(\begin{smallmatrix}\cos\phi & -\sin\phi \\ \sin\phi & \cos\phi\end{smallmatrix}\right)$ and reflections.
+
+::: {.d2l-note .warn}
+**Perpendicular Columns Alone Are Not Enough:** The diagonal matrix $\operatorname{diag}(1, 10)$ has perpendicular columns, but because their lengths differ, it distorts the $90^\circ$ angle between $(1, 1)$ and $(1, -1)$ into $169^\circ$.
+:::
+:::
+
+::: {.slide title="Einstein Summation Unifies Tensor Contractions"}
+[Index Notation]{.kicker}
+
+- **One Rule for Every Product:** Dot products ($v_i w_i$), matrix–vector products ($a_{ij}v_j$), matrix products ($a_{ij}b_{jk}$), and the trace ($\operatorname{tr}\mathbf{A} = \sum_i a_{ii}$) all multiply entries and sum over repeated indices:
+
+@geometry-linear-algebraic-ops-expressing-in-code-2
+
+- **Cyclic Invariance of the Trace:** Swapping scalar factors inside the double sum proves $\operatorname{tr}(\mathbf{A}\mathbf{B}) = \sum_{i,j} a_{ij}b_{ji} = \sum_{j,i} b_{ji}a_{ij} = \operatorname{tr}(\mathbf{B}\mathbf{A})$, so $\operatorname{tr}(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) = \operatorname{tr}(\mathbf{A})$ is independent of basis.
+:::
+
+::: {.slide title="Multi-Head Attention Contractions With einsum"}
+[Index Notation in Practice]{.kicker}
+
+- **Named Kept vs. Summed Axes:** In `np.einsum('bhij,bhtj->bhit', queries, keys)`, batch $b$ and head $h$ appear on both sides of `->` (kept), while feature index $j$ is omitted from the output (summed out):
+
+@mdl-linear-maps-tensors-and-einstein-summation-1
+
+::: {.d2l-note .warn}
+**Contraction Order Pitfall:** Associativity guarantees $(\mathbf{A}\mathbf{B})\mathbf{v} = \mathbf{A}(\mathbf{B}\mathbf{v})$, but multiplying two $n \times n$ matrices first costs $O(n^3)$ operations whereas two matrix–vector products $\mathbf{A}(\mathbf{B}\mathbf{v})$ cost only $2n^2$.
+:::
+:::
+
+::: {.slide title="Column Space and Null Space of a Matrix"}
+[Fundamental Subspaces]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Column Space ($\operatorname{col}\mathbf{A} \subseteq \mathbb{R}^m$):** The span of the columns of $\mathbf{A}$, which is the exact set of reachable outputs $\{\mathbf{A}\mathbf{x} : \mathbf{x} \in \mathbb{R}^n\}$.
+- **Null Space / Kernel ($\ker\mathbf{A} \subseteq \mathbb{R}^n$):** The subspace of inputs crushed to zero, $\{\mathbf{x} \in \mathbb{R}^n : \mathbf{A}\mathbf{x} = \mathbf{0}\}$, consisting of all vectors orthogonal to every row of $\mathbf{A}$.
+- **Singular Example $\mathbf{B} = \left(\begin{smallmatrix}2&1\\4&2\end{smallmatrix}\right)$:** Since $\mathbf{b}_1 = 2\mathbf{b}_2$, $\operatorname{col}\mathbf{B}$ is the line $y = 2x$, and $\ker\mathbf{B}$ is the line through $(1, -2)$: inputs $(1, 1)$ and $(0, 3)$ differ by $(1, -2)$ and collide at $(3, 6)$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-null-collapse.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="The Rank–Nullity Theorem: Dimension Conservation"}
+[Rank and Dimension]{.kicker}
+
+The *rank* of a matrix is the dimension of its column space ($\operatorname{rank}\mathbf{A} = \dim\operatorname{col}\mathbf{A}$), counting how many independent input dimensions survive the map:
 
 ::: {.d2l-note .rule}
-For an $m \times n$ matrix:
-$\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, where
-$\operatorname{rank}\mathbf{A} = \dim\operatorname{col}\mathbf{A}$.
+**Proposition (Rank–Nullity Theorem).** For every $m \times n$ matrix $\mathbf{A}$, the number of surviving dimensions plus the number of collapsed dimensions equals the input dimension:
+$$\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$$
 :::
 
-- $\mathbf{B}$: $1 + 1 = 2$.
-- The $4 \times 5$ example $\mathbf{C}$: rank $2$, null space spanned by
-  $(3, -1, 3, 0, 0)$, $(1, 0, 0, 1, 0)$, $(0, 0, 1, 0, 1)$: $2 + 3 = 5$.
-- A $256 \times 784$ layer: rank $\le 256$, so $\dim\ker \ge 528$.
-- Row rank $=$ column rank: write $\mathbf{A} = \mathbf{G}\mathbf{H}$ with the
-  $r$ columns of $\mathbf{G}$ a basis of the column space; the rows of
-  $\mathbf{A}$ are combinations of the $r$ rows of $\mathbf{H}$.
+- **Proof Intuition:** Extend a basis $\mathbf{w}_1, \ldots, \mathbf{w}_k$ of $\ker\mathbf{A}$ to a full basis of $\mathbb{R}^n$ with $\mathbf{u}_1, \ldots, \mathbf{u}_{n-k}$; the $\mathbf{w}_j$ vanish under $\mathbf{A}$, while the images $\mathbf{A}\mathbf{u}_1, \ldots, \mathbf{A}\mathbf{u}_{n-k}$ are linearly independent and span $\operatorname{col}\mathbf{A}$.
+- **Bottleneck Layers:** A $256 \times 784$ linear layer has $\operatorname{rank}\mathbf{A} \le 256$, so rank–nullity guarantees $\dim\ker\mathbf{A} \ge 784 - 256 = 528$ directions sent to zero.
 :::
 
-::: {.slide title="The Inverse Undoes the Map, and It Is Unique"}
-[Rank and invertibility]{.kicker}
+::: {.slide title="Row Rank Equals Column Rank & Bottleneck Factors"}
+[Rank and Bottlenecks]{.kicker}
 
-For entries $p, q, r, s$ with $ps - qr \neq 0$:
-$\mathbf{A}^{-1} = \frac{1}{ps - qr}\left(\begin{smallmatrix}s & -q\\ -r & p\end{smallmatrix}\right)$,
-so for the running matrix
-$\mathbf{A}^{-1} = \frac15\left(\begin{smallmatrix}3 & -2\\ 1 & 1\end{smallmatrix}\right)$
-and $\mathbf{A}^{-1}(0, -5) = (2, -1)$.
+- **Why Row Rank Equals Column Rank:** If $r = \operatorname{rank}\mathbf{A}$, placing a basis of $\operatorname{col}\mathbf{A}$ into $\mathbf{G} \in \mathbb{R}^{m \times r}$ and column coefficients into $\mathbf{H} \in \mathbb{R}^{r \times n}$ factors $\mathbf{A} = \mathbf{G}\mathbf{H}$; reading by rows shows every row of $\mathbf{A}$ lies in the span of the $r$ rows of $\mathbf{H}$.
+- **Parameter-Efficient Bottlenecks:** Storing a rank-$r$ matrix as $\mathbf{G}\mathbf{H}$ requires $r(m + n)$ parameters instead of $mn$, the structural foundation of low-rank adapters (LoRA).
 
-- Unique: $\mathbf{L}\mathbf{A} = \mathbf{I} = \mathbf{A}\mathbf{X}$ gives
-  $\mathbf{L} = \mathbf{L}(\mathbf{A}\mathbf{X}) = (\mathbf{L}\mathbf{A})\mathbf{X} = \mathbf{X}$.
-- It exists exactly when the columns are independent, that is, when
-  $\ker\mathbf{A} = \{\mathbf{0}\}$, that is, when the rank is $n$.
-- No two-sided inverse when $m \neq n$: not onto ($m > n$) or not one-to-one
-  ($n > m$).
+@mdl-linear-maps-rank
 :::
 
-::: {.slide title="Solve, Do Not Invert"}
-[Rank and invertibility]{.kicker}
+::: {.slide title="Matrix Inverses and the 2×2 Explicit Formula"}
+[Invertibility]{.kicker}
 
-Solve $\mathbf{H}\mathbf{x} = \mathbf{H}\mathbf{1}$ for the $10 \times 10$
-Hilbert matrix, $h_{ij} = 1/(i + j - 1)$, with `solve` and with `inv`:
-
-@!mdl-linear-maps-solving-linear-systems-in-practice
-
-- `solve`: one LU factorization, about $n^3/3$ multiply--adds, residual at
-  machine precision.
-- `inv(A) @ b`: about $n^3$, residual up to $\kappa$ times larger.
-- Both can lose up to $\log_{10}\kappa \approx 13$ digits, a property of
-  $\mathbf{H}$, not of the method.
+- **Two-Sided Inverse ($\mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$):** An inverse recovers every input uniquely via $\mathbf{x} = \mathbf{A}^{-1}(\mathbf{A}\mathbf{x})$. Whenever a left inverse $\mathbf{L}$ and right inverse $\mathbf{X}$ exist, associativity forces $\mathbf{L} = \mathbf{L}(\mathbf{A}\mathbf{X}) = (\mathbf{L}\mathbf{A})\mathbf{X} = \mathbf{X}$.
+- **Explicit $2 \times 2$ Formula:** When $ps - qr \neq 0$, swapping the diagonal entries, negating the off-diagonal entries, and dividing by $ps - qr$ inverts the matrix:
+  $$\begin{bmatrix}p & q \\ r & s\end{bmatrix}^{-1} = \frac{1}{ps - qr}\begin{bmatrix}s & -q \\ -r & p\end{bmatrix}$$
+- **Running Matrix Check:** For $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$, $ps - qr = 3 - (-2) = 5$, giving $\mathbf{A}^{-1} = \frac{1}{5}\left(\begin{smallmatrix}3&-2\\1&1\end{smallmatrix}\right)$, which maps $(0, -5)$ right back to $(2, -1)$.
 :::
 
-::: {.slide title="Check: Is This Matrix Invertible?"}
-[Check]{.kicker}
+::: {.slide title="The Invertible Matrix Theorem for Square Maps"}
+[Invertibility]{.kicker}
 
-Is $\left(\begin{smallmatrix}1 & 1\\ 2 & 2\end{smallmatrix}\right)$
-invertible? Name a null vector and the column space.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** No. Both columns are $(1, 2)$, so $(1, -1)$ is a null vector, the
-column space is the line $y = 2x$, the rank is $1$, and $\det = 2 - 2 = 0$.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[The Determinant]{.dtitle}
-
-[signed area · three properties · products · invertibility · limits]{.dsub}
-:::
-:::
-
-::: {.slide title="The Unit Square Goes to a Parallelogram of Area 5"}
-[The determinant]{.kicker}
-
-![](../img/mdl-la-parallelogram-area.svg){width=70%}
-
-- Count: box $12$ minus triangles $7$. Base times height:
-  $\sqrt{2}\cdot 5/\sqrt{2} = 5$.
-- In general, for the columns $\mathbf{u} = (p, r)$ and $\mathbf{w} = (q, s)$,
-  with $\mathbf{n} = (-r, p)/\|\mathbf{u}\|$:
-  $\|\mathbf{u}\|\,(\mathbf{w}\cdot\mathbf{n}) = ps - qr = \det\left(\begin{smallmatrix}p & q\\ r & s\end{smallmatrix}\right)$.
-:::
-
-::: {.slide title="Signed Area: Negative When Orientation Flips, Zero When Space Collapses"}
-[The determinant]{.kicker}
-
-![](../img/mdl-la-determinant.svg){width=80%}
-
-$\det\mathbf{A} = 5$; with its columns swapped, $-5$; $\det\mathbf{B} = 0$.
-:::
-
-::: {.slide title="Three Properties Define the Determinant in Every Dimension"}
-[The determinant]{.kicker}
-
-I. **Multilinear** in each column. II. **Alternating**: two equal columns
-give $0$. III. **Normalized**: $\det\mathbf{I} = 1$.
-
-- A swap flips the sign; expanding every column gives
-  $\det\mathbf{A} = \sum_\sigma \operatorname{sgn}(\sigma)\, a_{\sigma(1)1}\cdots a_{\sigma(n)n}$.
-- Triangular: the product of the diagonal. Block triangular: the product of
-  the determinants of the diagonal blocks. $\det\mathbf{A}^\top = \det\mathbf{A}$.
-
-Cofactors for $\mathbf{M} = \left(\begin{smallmatrix}2 & 1 & 0\\ 1 & 3 & 1\\ 0 & 1 & 2\end{smallmatrix}\right)$:
-$2\cdot 5 - 1\cdot 2 = 8$.
-:::
-
-::: {.slide title="Determinants Multiply: det(AB) = det A · det B"}
-[The determinant]{.kicker}
-
-- Proof idea: $D(\mathbf{B}) = \det(\mathbf{A}\mathbf{B})$ is multilinear and
-  alternating in the columns of $\mathbf{B}$, so
-  $D(\mathbf{B}) = D(\mathbf{I})\det\mathbf{B} = \det\mathbf{A}\det\mathbf{B}$.
-- $\det\mathbf{A}^2 = 25 = 5^2$, and $\det\mathbf{A}^{-1} = 1/5$.
-- $\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{B}\mathbf{A})$ even when
-  $\mathbf{A}\mathbf{B} \neq \mathbf{B}\mathbf{A}$.
-- Orthogonal: $\det(\mathbf{Q})^2 = \det(\mathbf{Q}^\top\mathbf{Q}) = 1$, so
-  $\det\mathbf{Q} = \pm 1$: $+1$ for rotations, $-1$ for reflections.
-:::
-
-::: {.slide title="det A ≠ 0 ⟺ Independent Columns ⟺ Invertible"}
-[The determinant]{.kicker}
-
-I. Dependent columns $\Rightarrow$ $\det = 0$: expand the dependent column;
-every term has two equal columns.
-
-II. Invertible $\Rightarrow$ $\det\mathbf{A}\det\mathbf{A}^{-1} = 1$, so
-$\det \neq 0$.
-
-III. Independent columns $\Rightarrow$ $\ker = \{\mathbf{0}\}$ $\Rightarrow$
-rank $n$: onto and one-to-one; column $j$ of $\mathbf{A}^{-1}$ solves
-$\mathbf{A}\mathbf{x} = \mathbf{e}_j$.
+For an $n \times n$ square matrix $\mathbf{A}$, being one-to-one and being onto $\mathbb{R}^n$ are equivalent, tying our subspace conditions together:
 
 ::: {.d2l-note .rule}
-$\mathbf{A}$: $\det = 5 \neq 0$, invertible. $\mathbf{B}$: $\det = 0$,
-dependent columns, no inverse.
+**Proposition (Invertible Matrices).** For an $n \times n$ matrix $\mathbf{A}$, the following are equivalent:
+(i) $\mathbf{A}$ is invertible; (ii) the columns of $\mathbf{A}$ are linearly independent; (iii) $\ker\mathbf{A} = \{\mathbf{0}\}$; (iv) $\operatorname{rank}\mathbf{A} = n$.
+:::
+
+- **Constructing $\mathbf{A}^{-1}$ Column by Column:** When $\operatorname{rank}\mathbf{A} = n$, $\operatorname{col}\mathbf{A} = \mathbb{R}^n$ and $\ker\mathbf{A} = \{\mathbf{0}\}$, so $\mathbf{A}\mathbf{x} = \mathbf{e}_j$ has a unique solution $\mathbf{x}_j$ for each axis; assembling $\mathbf{X} = [\mathbf{x}_1 \cdots \mathbf{x}_n]$ gives $\mathbf{A}\mathbf{X} = \mathbf{I}$ and $\mathbf{X}\mathbf{A} = \mathbf{I}$.
+- **Why Rectangular Matrices Have No Two-Sided Inverse:** If $m > n$ (tall), $\operatorname{rank}\mathbf{A} \le n < m$ so the map is never onto; if $n > m$ (wide), $\dim\ker\mathbf{A} \ge n - m > 0$ so distinct inputs always collide.
+:::
+
+::: {.slide title="Numerical Rule: Solve Linear Systems, Do Not Invert"}
+[Numerical Linear Algebra]{.kicker}
+
+- **Speed & Backward Stability:** `np.linalg.solve(A, b)` factors $\mathbf{A}$ via LU in $\sim n^3/3$ operations and guarantees a machine-precision residual $\|\mathbf{A}\hat{\mathbf{x}} - \mathbf{b}\|$, whereas `np.linalg.inv(A) @ b` costs $\sim n^3$ operations and inflates the residual by up to $\kappa(\mathbf{A})$:
+
+@mdl-linear-maps-solving-linear-systems-in-practice
+
+::: {.d2l-note .warn}
+**Conditioning vs. Stability:** On the ill-conditioned $10 \times 10$ Hilbert matrix ($\kappa \approx 1.6 \times 10^{13}$), `solve` achieves a $10^{-16}$ residual while `inv` leaves a $10^{-5}$ residual—and for sparse matrices, `inv` destroys sparsity by filling memory with dense entries.
 :::
 :::
 
-::: {.slide title="Check: How Singular Is 0.1·I?"}
-[Check]{.kicker}
+::: {.slide title="The 2×2 Determinant as Signed Parallelogram Area"}
+[The Determinant]{.kicker}
 
-What does `np.linalg.det(0.1 * np.eye(400))` return? Is the matrix singular?
+::: {.cols .vc}
+::: {.col}
+- **Base Times Signed Height:** For columns $\mathbf{u} = (p, r)$ and $\mathbf{w} = (q, s)$, rotating $\mathbf{u}$ by $+90^\circ$ gives unit normal $\mathbf{n} = (-r, p)/\|\mathbf{u}\|$.
+- **Lengths Cancel Cleanly:** Projecting $\mathbf{w}$ onto $\mathbf{n}$ gives the signed height, so area is:
+  $$\det\begin{bmatrix}p & q \\ r & s\end{bmatrix} = \|\mathbf{u}\|(\mathbf{w}\cdot\mathbf{n}) = ps - qr$$
+- **Running Matrix ($\det\mathbf{A} = 5$):** Bounding box $12$ minus outer right triangles $7$ equals $5$, matching $1(3) - 2(-1) = 5$.
+:::
 
-::: {.fragment .fade-up}
+::: {.col .fig}
+![](../img/mdl-la-parallelogram-area.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Orientation Sign and Volume Collapse"}
+[Geometric Regimes]{.kicker}
+
+![](../img/mdl-la-determinant.svg){.nostretch width=82%}
+
+- **Three Geometric Regimes:** $|\det\mathbf{A}|$ is the area scaling factor: $\det > 0$ preserves counter-clockwise orientation (a), $\det < 0$ reverses orientation when columns swap (b), and $\det = 0$ collapses the square onto a line segment of zero area (c).
+:::
+
+::: {.slide title="Three Axioms Define the n-Dimensional Determinant"}
+[General Determinant]{.kicker}
+
+Rather than slicing $n$-dimensional polytopes, three geometric axioms for signed volume uniquely determine the determinant as a function of the columns $\mathbf{a}_1, \ldots, \mathbf{a}_n$:
+
+- **1. Multilinear in Each Column:** Scaling one column scales volume by the same factor, and adding two vectors in column $j$ adds the two signed volumes while holding all other columns fixed.
+- **2. Alternating ($\det = 0$ on Equal Columns):** Whenever two columns coincide, the $n$-dimensional box flattens into a lower-dimensional slab of zero volume.
+- **3. Normalized on the Unit Cube ($\det\mathbf{I} = 1$):** Expanding $\det(\ldots, \mathbf{u}+\mathbf{w}, \ldots, \mathbf{u}+\mathbf{w}, \ldots) = 0$ proves that **swapping any two columns flips the sign**, which forces the $n!$ permutation formula:
+  $$\det\mathbf{A} = \sum_{\sigma} \operatorname{sgn}(\sigma)\, a_{\sigma(1)1}\, a_{\sigma(2)2} \cdots a_{\sigma(n)n}$$
+:::
+
+::: {.slide title="Triangular Matrices, Block Rules, and Cofactors"}
+[Computing Determinants]{.kicker}
+
+- **Triangular & Block-Triangular Shortcut:** In an upper- or lower-triangular matrix $\mathbf{U}$, only the diagonal permutation $\sigma(j) = j$ avoids zeros, so the determinant is simply the product of the diagonal entries:
+  $$\det\mathbf{U} = u_{11}u_{22}\cdots u_{nn}, \qquad \det\begin{bmatrix}\mathbf{D}_1 & * \\ \mathbf{0} & \mathbf{D}_2\end{bmatrix} = \det\mathbf{D}_1\,\det\mathbf{D}_2$$
+- **Transpose Symmetry ($\det\mathbf{A}^\top = \det\mathbf{A}$):** Inverting permutations preserves parity ($\operatorname{sgn}(\sigma^{-1}) = \operatorname{sgn}(\sigma)$), so every column property of determinants holds identically for rows.
+- **Cofactor Expansion ($3 \times 3$ Example):** Expanding $\mathbf{M} = \left(\begin{smallmatrix}2&1&0\\1&3&1\\0&1&2\end{smallmatrix}\right)$ along column 1 gives $2\det\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right) - 1\det\left(\begin{smallmatrix}1&0\\1&2\end{smallmatrix}\right) + 0 = 2(5) - 2 = 8$.
+
 ::: {.d2l-note}
-**Answer.** $0.0$: the exact value $10^{-400}$ underflows in double precision.
-The matrix is not singular; its inverse is $10\,\mathbf{I}$. Conversely,
-$\left(\begin{smallmatrix}1 & 10^8\\ 0 & 1\end{smallmatrix}\right)$ has
-$\det = 1$ and is a $10^{-8}$ change away from singular. The determinant says
-whether a map collapses space, not how close it comes.
-:::
+**Why Normalizing Flows Use Triangular Jacobians:** Evaluating $\log|\det\mathbf{J}|$ for a general $d \times d$ layer costs $O(d^3)$ via LU factorization, whereas a triangular Jacobian reduces $\log|\det\mathbf{J}| = \sum_i \log|J_{ii}|$ to $O(d)$ work.
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Multiplicativity: Volume Scaling Under Composition"}
+[Multiplicativity]{.kicker}
 
-- **Columns:** $\mathbf{A}\mathbf{e}_1 = (1, -1)$,
-  $\mathbf{A}\mathbf{e}_2 = (2, 3)$, $\mathbf{A}\mathbf{v} = (0, -5)$;
-  products compose, right to left.
-- **einsum:** the output string names the kept indices.
-- **Rank:** $\mathbf{B}$ has rank $1$ and nullity $1$, $1 + 1 = 2$; the null
-  vector $(1, -2)$ is perpendicular to the rows.
-- **Inverse:** $\mathbf{A}^{-1} = \frac15\left(\begin{smallmatrix}3 & -2\\ 1 & 1\end{smallmatrix}\right)$;
-  use `solve`, not `inv`.
-- **Determinant:** signed area, $\det\mathbf{A} = 5$, $\det\mathbf{B} = 0$;
-  multiplicative; nonzero $\iff$ invertible, but no measure of how nearly
-  singular.
+If $\mathbf{B}$ scales volume by $\det\mathbf{B}$ and $\mathbf{A}$ scales volume by $\det\mathbf{A}$, their composite $\mathbf{A}\mathbf{B}$ scales volume by the product:
 
-**Next:** the directions a matrix stretches. For $\mathbf{A}$, eigenvalues
-$2 \pm i$ (product $5$) and singular values $3.618, 1.382$ (product $5$).
+::: {.d2l-note .rule}
+**Proposition (Multiplicativity of the Determinant).** For all $n \times n$ matrices $\mathbf{A}$ and $\mathbf{B}$, $\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{A})\,\det(\mathbf{B})$.
+:::
+
+- **Three-Line Axiomatic Proof:** Fix $\mathbf{A}$; the map $D(\mathbf{B}) = \det(\mathbf{A}\mathbf{B})$ is multilinear and alternating in the columns $\mathbf{b}_j$ of $\mathbf{B}$ (since column $j$ of $\mathbf{A}\mathbf{B}$ is $\mathbf{A}\mathbf{b}_j$), so $D(\mathbf{B}) = D(\mathbf{I})\det\mathbf{B} = \det(\mathbf{A})\det(\mathbf{B})$.
+- **Four Immediate Consequences:**
+  1. *Commutativity of scalars:* $\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{B}\mathbf{A})$ even when $\mathbf{A}\mathbf{B} \neq \mathbf{B}\mathbf{A}$.
+  2. *Similarity invariance:* $\det(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) = \det\mathbf{A}$, so volume scaling is independent of coordinate basis.
+  3. *Inverses:* $\det(\mathbf{A}^{-1}) = 1/\det\mathbf{A}$ (e.g., $\det\mathbf{A}^{-1} = 1/5$ for our running matrix).
+  4. *Orthogonal matrices:* $\det(\mathbf{Q}^\top\mathbf{Q}) = (\det\mathbf{Q})^2 = 1 \implies \det\mathbf{Q} = \pm 1$ ($+1$ rotation, $-1$ reflection).
+:::
+
+::: {.slide title="Invertibility Criterion: det A ≠ 0"}
+[Invertibility & Volume]{.kicker}
+
+::: {.d2l-note .rule}
+**Proposition (Invertibility via Determinant).** An $n \times n$ matrix $\mathbf{A}$ is invertible if and only if $\det\mathbf{A} \neq 0$. Equivalently, $\det\mathbf{A} = 0$ if and only if the columns of $\mathbf{A}$ are linearly dependent.
+:::
+
+- **Proof (Both Directions):**
+  - If $\mathbf{A}$ is invertible, $\det(\mathbf{A})\det(\mathbf{A}^{-1}) = \det\mathbf{I} = 1$, which makes $\det\mathbf{A} = 0$ impossible.
+  - If $\mathbf{A}$ is not invertible, one column is a linear combination of the others, $\mathbf{a}_j = \sum_{i \neq j} c_i \mathbf{a}_i$; expanding column $j$ by multilinearity produces a sum of determinants that each have two identical columns $\mathbf{a}_i$ and therefore vanish.
+- **Five Unified Equivalences for $n \times n$ Matrices:** Invertible $\iff$ independent columns $\iff$ $\ker\mathbf{A} = \{\mathbf{0}\}$ $\iff$ $\operatorname{rank}\mathbf{A} = n$ $\iff$ $\det\mathbf{A} \neq 0$.
+:::
+
+::: {.slide title="Why Determinant Size Does Not Measure Conditioning"}
+[Numerical Pitfalls]{.kicker}
+
+- **Two Opposite Failure Modes:** A tiny determinant need not mean a nearly singular matrix, and $\det = 1$ need not mean a well-conditioned matrix:
+
+@mdl-linear-maps-limits-of-the-determinant
+
+- **Underflow vs. Ill-Conditioning:** $0.1\,\mathbf{I}_{400}$ is perfectly conditioned ($\kappa = 1$, inverse $10\,\mathbf{I}_{400}$) yet `det` underflows to `0.0` ($10^{-400}$, requiring `slogdet`), while the extreme shear $\left(\begin{smallmatrix}1&10^8\\0&1\end{smallmatrix}\right)$ has $\det = 1$ yet singular values $10^8$ and $10^{-8}$, just $10^{-8}$ away from singularity!
+:::
+
+::: {.slide title="Preview: Eigenvalues vs. Singular Values"}
+[Looking Ahead]{.kicker}
+
+- **Why One Scalar Is Not Enough:** The determinant multiplies the directional stretches across all $n$ dimensions into a single product, hiding whether a matrix stretches every axis evenly or crushes one axis while blowing up another.
+- **Running Matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$:**
+  - Its eigenvalues are $\lambda_{1,2} = 2 \pm i$, whose product is $(2+i)(2-i) = 5 = \det\mathbf{A}$ (§33.3).
+  - Its singular values are $\sigma_1 \approx 3.618$ and $\sigma_2 \approx 1.382$, whose product is $3.618 \times 1.382 = 5 = |\det\mathbf{A}|$ (§33.5).
+- **True Proximity to Singularity:** The ratio $\kappa(\mathbf{A}) = \sigma_1/\sigma_n$—not $\det\mathbf{A}$—measures how close a matrix is to collapsing space.
+:::
+
+::: {.slide title="Concept Check: Linear Maps, Rank & Determinants"}
+[Concept Check]{.kicker}
+
+1. **Commutativity Check:** Do $\mathbf{D} = \operatorname{diag}(2, 1)$ and the $90^\circ$ rotation $\mathbf{R}_{90} = \left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$ commute? Test both products on $\mathbf{e}_1 = (1, 0)$.
+2. **Rank–Nullity in Action:** For $\mathbf{M} = \left(\begin{smallmatrix}1&1\\2&2\end{smallmatrix}\right)$, what are its column space, a basis vector for its null space, its rank, and its determinant?
+3. **Autoencoder Bottleneck:** A linear autoencoder $\mathbf{W}_2\mathbf{W}_1$ maps $\mathbb{R}^{100} \to \mathbb{R}^{16} \to \mathbb{R}^{100}$. What is the minimum possible dimension of $\ker(\mathbf{W}_2\mathbf{W}_1)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+**1.** No: $\mathbf{R}_{90}\mathbf{D}\mathbf{e}_1 = \mathbf{R}_{90}(2, 0) = (0, 2)$, whereas $\mathbf{D}\mathbf{R}_{90}\mathbf{e}_1 = \mathbf{D}(0, 1) = (0, 1)$.
+**2.** Both columns are $(1, 2)$, so $\operatorname{col}\mathbf{M}$ is the line $y = 2x$, $\ker\mathbf{M} = \operatorname{span}\{(1, -1)\}$, $\operatorname{rank}\mathbf{M} = 1$, and $\det\mathbf{M} = 2 - 2 = 0$.
+**3.** The intermediate space has dimension $16$, so $\operatorname{rank}(\mathbf{W}_2\mathbf{W}_1) \le 16$ and $\dim\ker(\mathbf{W}_2\mathbf{W}_1) \ge 100 - 16 = 84$.
+:::
+:::
+
+::: {.slide title="Summary: Matrices as Linear Maps"}
+[Key Takeaways]{.kicker}
+
+| Concept | Mathematical Rule | Geometric Meaning & Deep Learning Role |
+| :--- | :--- | :--- |
+| **Column View** | $\mathbf{A}\mathbf{x} = \sum_{j=1}^n x_j \mathbf{a}_j$, $\mathbf{a}_j = \mathbf{A}\mathbf{e}_j$ | Columns are images of coordinate axes; fixes action on the entire input grid |
+| **Composition & `einsum`** | $(\mathbf{A}\mathbf{B})_{ik} = \sum_j a_{ij}b_{jk}$ | Applies $\mathbf{B}$ then $\mathbf{A}$; `einsum` generalizes contractions to 4D attention tensors |
+| **Orthogonal Matrix** | $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I} \iff \mathbf{Q}^{-1} = \mathbf{Q}^\top$ | Rigid rotation/reflection preserving dot products, Euclidean norms, and angles |
+| **Rank–Nullity Theorem** | $\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$ | Surviving dimensions ($\operatorname{col}\mathbf{A}$) plus erased dimensions ($\ker\mathbf{A}$) equal input width $n$ |
+| **Invertibility & `solve`** | $\ker\mathbf{A} = \{\mathbf{0}\} \iff \operatorname{rank}\mathbf{A} = n \iff \det\mathbf{A} \neq 0$ | Square map is one-to-one and onto; always use `solve(A, b)` ($n^3/3$), never `inv(A)` |
+| **Determinant Volume** | $\det(\mathbf{A}\mathbf{B}) = \det\mathbf{A}\det\mathbf{B}$, $\det\mathbf{U} = \prod_i u_{ii}$ | Signed volume scaling factor; triangular Jacobians give $O(n)$ `slogdet` in flows |
 :::

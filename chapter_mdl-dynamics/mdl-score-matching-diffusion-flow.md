@@ -202,8 +202,7 @@ field from growing without bound. The balance sits at the true variance.
 
 Implicit score matching has two limits. The proof needs the boundary term to
 vanish. For data on a bounded interval it does not, and the implicit
-objective then picks the wrong field (Exercise
-:exref:`ex_mdl-score-matching-diffusion-flow-boundary-terms`). The second
+objective then picks the wrong field. The second
 limit is cost. The divergence is the trace of the Jacobian,
 $\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}} = \operatorname{tr}\, (\partial \mathbf{s}_{\boldsymbol{\theta}} / \partial \mathbf{x})$.
 Computing it exactly takes one reverse-mode pass per row of the Jacobian, $d$
@@ -1188,10 +1187,7 @@ forward curve that produced it. DDIM is the deterministic end of the family
 of reverse processes :eqref:`eq_mdl-dyn-reverse-family`, whose members
 reinject a chosen amount of noise and share the single-time marginals of the
 forward process, so one trained network serves them all.
-:numref:`sec_diffusion-samplers` chooses among them. Exercise
-:exref:`ex_mdl-score-matching-diffusion-flow-ddim-heun` sets a second-order
-solver in the same coordinates, at two evaluations per stride, against DDIM
-at equal cost.
+:numref:`sec_diffusion-samplers` chooses among them.
 
 ### DDIM on Fitted Scores
 
@@ -1412,21 +1408,6 @@ follows densities that curve more sharply than any noised density can.
 
 ## Exercises
 
-1. **Boundary terms.** Hyvärinen's identity :eqref:`eq_mdl-hyvarinen` assumes
-   that $p(x)\, s_{\boldsymbol{\theta}}(x)$ vanishes at the ends of the
-   support. Let the data be uniform on $[0, 1]$, so that $\nabla \log p = 0$
-   inside the interval, and fit the linear model $s_{a,b}(x) = a + b x$.
-    1. Minimize the explicit objective :eqref:`eq_mdl-esm-objective` and the
-       implicit objective, the right-hand side of :eqref:`eq_mdl-hyvarinen`,
-       over $(a, b)$. Which density has the score that the implicit objective
-       selects?
-    1. Repeat the one-dimensional integration by parts of the proof on
-       $[0, 1]$, keep the boundary term, and show that it accounts for the
-       difference between the two objectives.
-    1. Pixel intensities are bounded in the same way. Why does denoising score
-       matching at a noise level $\sigma > 0$ not inherit the problem?
-   :exlabel:`ex_mdl-score-matching-diffusion-flow-boundary-terms`
-
 1. [code] **Langevin discretization bias.** For the Gaussian target
    $p = \mathcal{N}(0, v)$, the Langevin sampler of :eqref:`eq_mdl-langevin`
    with step $h$ is the linear recursion
@@ -1527,25 +1508,6 @@ follows densities that curve more sharply than any noised density can.
        and that its value at the optimum, $c\, \sigma_t^2\, R(t)$, stays
        bounded as $t \to 0$.
    :exlabel:`ex_mdl-score-matching-diffusion-flow-weightings`
-
-1. [code] **DDIM against a second-order stride.** ● By the proposition
-   :eqref:`eq_mdl-ddim-euler`, DDIM is Euler's method for
-   $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol{\epsilon}}$ on the grid
-   `strides(K)` of the cell that defines `ddim`.
-    1. Implement Heun's method in the coordinates $(\bar\sigma, \bar x)$ on the
-       same grid: evaluate $\hat\epsilon$ at the start of a stride and at the
-       Euler predictor, and step with their average, two evaluations per
-       stride. Compare its endpoint error against `x_ref` with that of DDIM
-       at equal numbers of evaluations: Heun with $5$, $10$, $20$ strides
-       against DDIM with $10$, $20$, $40$. Which method wins at each budget?
-    1. Verify the point-mass corollary numerically: pass to `ddim` the
-       prediction $(\bar x - x_0)/\bar\sigma$ of data concentrated at a
-       single point $x_0$, written in terms of $x_t$ and $\bar\alpha_t$, and
-       compare the endpoints of $10$ and of 1,000 strides. Which quantity
-       does DDIM hold fixed across a stride, and which quantity does Euler's
-       method for the probability-flow ODE in the original time $t$ hold
-       fixed? Why is the second not exact for a point mass?
-   :exlabel:`ex_mdl-score-matching-diffusion-flow-ddim-heun`
 
 1. [code] **Guidance by noise level.** ● In the cell that defines
    `cfg_sample`, raising $\gamma$ from $1$ to $10$ moves the mean of the
@@ -1679,402 +1641,310 @@ follows densities that curve more sharply than any noised density can.
 ::: {.cover}
 [Dive into Deep Learning · §38.6]{.kicker}
 
-How do we learn a field that we cannot evaluate at a single point?<br>**learning $\nabla\log p$ from samples · Langevin dynamics · DDPM · DDIM · guidance**
+Denoising Score Matching and Score-Based Diffusion Models<br>**Hyvärinen & Vincent theorems · Tweedie's formula · Langevin mixing · DDPM & DDIM · classifier-free guidance**
 :::
 :::
 
-::: {.slide title="The Samplers Need a Score, and We Have 4,096 Points"}
-[The problem]{.kicker}
+::: {.slide title="How Can We Learn a Score Field We Cannot Evaluate?"}
+[Motivation]{.kicker}
 
-Two samplers turn noise into data, given the score $\nabla\log p_t$ of the
-noised data ($\mathbf f$ drift, $g$ noise amplitude of the forward SDE):
+Both generative reverse processes—Anderson's reverse-time SDE and the probability-flow ODE—require only one unknown quantity: the score $\nabla_{\mathbf{x}}\log p_t(\mathbf{x})$ of the noised data distribution.
 
-$$d\mathbf X=[\mathbf f-g^2\,\nabla\log p_t]\,dt+g\,d\bar{\mathbf W}
-\qquad\quad
-\frac{d\mathbf x}{dt}=\mathbf f-\tfrac12g^2\,\nabla\log p_t$$
-
-- Our data: 4,096 draws from $\tfrac12\mathcal N(-2,0.5^2)+\tfrac12\mathcal N(2,0.5^2)$. No density.
-- A density $e^{-E_\theta}/Z_\theta$ needs $Z_\theta=\int e^{-E_\theta(\mathbf x)}d\mathbf x$. Its score
-  $-\nabla_{\mathbf x}E_\theta$ does not.
-
-::: {.d2l-note}
-How do we learn a field we cannot evaluate at a single point?
-:::
+- **Why Maximum Likelihood Stalls on Energy-Based Models:** Parameterizing a flexible density $p_{\boldsymbol{\theta}}(\mathbf{x}) = \frac{e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}}{Z_{\boldsymbol{\theta}}}$ requires the normalizing constant $Z_{\boldsymbol{\theta}} = \int_{\mathbb{R}^d} e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}\,d\mathbf{x}$, which is intractable in high dimensions.
+- **Scores Eliminate the Normalizer:** Differentiating $\log p_{\boldsymbol{\theta}}(\mathbf{x})$ with respect to the **state $\mathbf{x}$** makes $\log Z_{\boldsymbol{\theta}}$ vanish:
+  $$\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) = \nabla_{\mathbf{x}}\log p_{\boldsymbol{\theta}}(\mathbf{x}) = -\nabla_{\mathbf{x}}E_{\boldsymbol{\theta}}(\mathbf{x})$$
+- **The Training Paradox:** We want to minimize the **Explicit Score Matching (ESM)** objective $J_{\text{ESM}}(\boldsymbol{\theta}) = \frac{1}{2}\mathbb{E}_{\mathbf{x}\sim p}\big[\|\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) - \nabla\log p(\mathbf{x})\|^2\big]$, but we only have $n = 4{,}096$ data samples $\mathbf{x}_i \sim p$ and cannot evaluate $\nabla\log p(\mathbf{x}_i)$ at even a single point!
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Implicit Score Matching: Integration by Parts"}
+[Hyvärinen's Identity (2005)]{.kicker}
 
-- fit a score to samples by least squares, and say where its loss stops;
-- sample with Langevin dynamics, and say what one noise level cannot do;
-- read DDPM and DDIM as discretizations of an SDE and an ODE;
-- steer samples to a class with Bayes' rule.
+Expanding the square in $J_{\text{ESM}}(\boldsymbol{\theta})$ and integrating the cross term $-\int \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) \cdot (\nabla\log p(\mathbf{x}))\,p(\mathbf{x})\,d\mathbf{x} = -\int \mathbf{s}_{\boldsymbol{\theta}} \cdot \nabla p\,d\mathbf{x}$ by parts moves the derivative off the unknown data density $p$ and onto the network $\mathbf{s}_{\boldsymbol{\theta}}$:
 
-**Running examples:** $x\sim\mathcal N(0,v)$ by hand; the mixture
-$\tfrac12\mathcal N(\pm2,0.5^2)$ and its lopsided twin with weights $0.8$ and $0.2$.
+$$J_{\text{ESM}}(\boldsymbol{\theta}) = \mathbb{E}_{\mathbf{x} \sim p}\!\left[\frac{1}{2}\|\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x})\|^2 + \nabla \cdot \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x})\right] + C, \qquad C = \frac{1}{2}\mathbb{E}_p\|\nabla\log p(\mathbf{x})\|^2$$
 
-**The idea:** the score of noised data is the average direction back to the
-clean points, so least squares learns it.
+- **Geometric Mechanism:** Minimizing $\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) < 0$ creates an inward **sink** ($\nabla\cdot\mathbf{s}_{\boldsymbol{\theta}}$ negative) at the observed data samples, while the quadratic penalty $\frac{1}{2}\|\mathbf{s}_{\boldsymbol{\theta}}\|^2$ prevents the sink from growing infinitely steep.
+- **The Computational Bottleneck:** Evaluating the divergence $\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}} = \operatorname{tr}(\partial\mathbf{s}_{\boldsymbol{\theta}}/\partial\mathbf{x})$ requires $d$ backward passes per training example (millions of passes per image).
 :::
 
-::: {.slide title="From a Given Score to a Learned One"}
-[Where this fits]{.kicker}
+::: {.slide title="Verifying Implicit Score Matching on a 1D Gaussian"}
+[Sanity Check]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Ordinary Differential Equations | exact motion: uniqueness, eigenvalues |
-| Numerical Solvers | steps: their order and stability |
-| Neural ODEs | a learned field, its gradient, its density |
-| Stochastic Differential Equations | noise, Itô calculus, the OU process |
-| Fokker–Planck and Probability Flow | how the density moves; the score |
-| **Score Matching and Diffusion** | **learning the score, sampling with it** |
-| Flow Matching and Transport | learning a velocity; straight paths |
-:::
-
-::: {.col .narrow}
-- **Uses:** the reverse SDE, the probability-flow ODE, the OU kernel.
-- **Design:** samplers run on exact scores, so each error is the sampler's own; once on least-squares scores.
-- **Skips:** networks and image models.
-:::
-:::
-:::
-
-::: {.slide title="Integration by Parts Removes the Unknown Data Score"}
-[Implicit score matching]{.kicker}
-
-Model field $\mathbf s_\theta$, data density $p$, divergence
-$\nabla\cdot\mathbf s=\sum_i\partial_is_i$:
-
-$$\tfrac12\mathbb{E}_p\|\mathbf s_\theta-\nabla\log p\|^2
-=\mathbb{E}_p\big[\tfrac12\|\mathbf s_\theta\|^2+\nabla\cdot\mathbf s_\theta\big]+C$$
-
-- **I.** Expand the square; $\tfrac12\mathbb{E}\|\nabla\log p\|^2=C$.
-- **II.** Cross term: $-\int s\,p'\,dx=+\int s'\,p\,dx$ (boundary term $sp\to0$).
-- **III.** The derivative has moved from the unknown $p$ onto the model.
-
-::: {.d2l-note}
-Cost: $\nabla\cdot\mathbf s_\theta$ is the trace of a Jacobian, $d$ backward passes.
-:::
-:::
-
-::: {.slide title="On a Gaussian, the Implicit Objective Returns the Variance"}
-[Smallest case]{.kicker}
-
-Data $\mathcal N(0,v)$, model $s_w(x)=-x/w$:
-$J(w)=\mathbb E\big[\tfrac12s_w^2+s_w'\big]=\dfrac{v}{2w^2}-\dfrac1w$, and $J'(w)=0$ at $w=v$.
-
-With the mean of $x^2$ over 10,000 draws from $\mathcal N(0,2)$ in place of $v$, on a grid of $w$:
+For data $x \sim \mathcal{N}(0, v)$ and linear score model $s_w(x) = -x/w$, the implicit objective is $J(w) = \mathbb{E}[\frac{1}{2}s_w^2 + s_w'] = \frac{v}{2w^2} - \frac{1}{w}$, whose derivative $-\frac{v}{w^3} + \frac{1}{w^2} = 0$ recovers $w = v$ from samples alone:
 
 @!mdl-score-matching-diffusion-flow-a-normalizer-free-objective
-
-::: {.d2l-note}
-The objective never saw the data score $-x/v$ and still returns $v$.
-:::
 :::
 
-::: {.slide title="Least Squares Fits the Conditional Mean"}
-[Regression lemma]{.kicker}
+::: {.slide title="The Regression Lemma: Least Squares Fits E[Y | X]"}
+[Foundational Identity]{.kicker}
+
+Both Denoising Score Matching (§38.6) and Conditional Flow Matching (§38.7) rest on one elementary property of $L^2$ regression:
 
 ::: {.d2l-note .rule}
-$\mathbb{E}\|\mathbf v(X)-Y\|^2 = \mathbb{E}\|\mathbf v(X)-\mathbf m(X)\|^2
-+ \mathbb{E}\|Y-\mathbf m(X)\|^2$, with $\mathbf m(X)=\mathbb{E}[Y\mid X]$.
+**Lemma (Regression to the Conditional Mean):** For any jointly distributed pair $(X, Y)$ with $\mathbb{E}\|Y\|^2 < \infty$ and conditional expectation $\mathbf{m}(X) = \mathbb{E}[Y \mid X]$,
+$$\mathbb{E}\!\left[\|\mathbf{v}(X) - Y\|^2\right] = \underbrace{\mathbb{E}\!\left[\|\mathbf{v}(X) - \mathbf{m}(X)\|^2\right]}_{\text{excess risk (minimized at } \mathbf{v} = \mathbf{m})} + \underbrace{\mathbb{E}\!\left[\|Y - \mathbf{m}(X)\|^2\right]}_{\text{irreducible Bayes-risk floor } C}$$
 :::
 
-*Proof.* Insert $\pm\mathbf m(X)$; the cross term has conditional mean
-zero given $X$. $\blacksquare$
-
-- A noisy target $Y$ is as good as its conditional mean.
-- The second term is a floor that no model $\mathbf v$ can beat.
-- With $\mathbf v=\mathbf 0$: floor $=\mathbb{E}\|Y\|^2-\mathbb{E}\|\mathbf m(X)\|^2$.
+- **One-Line Proof:** Add and subtract $\mathbf{m}(X)$ inside the norm; by the tower rule $\mathbb{E}[\,\cdot\,] = \mathbb{E}[\mathbb{E}[\,\cdot \mid X]]$, the cross term $2\mathbb{E}\big[(\mathbf{v}(X) - \mathbf{m}(X))^\top(\mathbf{m}(X) - Y)\big]$ vanishes because $\mathbb{E}[\mathbf{m}(X) - Y \mid X] = \mathbf{0}$.
+- **Crucial Consequence:** Regressing a network $\mathbf{v}(X)$ onto a noisy per-sample target $Y$ has the **exact same gradients and minimizer** as regressing onto the intractable conditional mean $\mathbf{m}(X) = \mathbb{E}[Y \mid X]$!
 :::
 
-::: {.slide title="The Noised Score Is the Posterior Mean of $-\boldsymbol\epsilon/\sigma$"}
-[Denoising score matching]{.kicker}
+::: {.slide title="Denoising Score Matching and Vincent's Theorem"}
+[Trace-Free Score Learning]{.kicker}
 
-- Noise a sample: $\tilde{\mathbf x}=\mathbf x+\sigma\boldsymbol\epsilon$, $\boldsymbol\epsilon\sim\mathcal N(\mathbf 0,\mathbf I)$. Its density: $p_\sigma$.
-- Score of the kernel: $\nabla_{\tilde{\mathbf x}}\log p_\sigma(\tilde{\mathbf x}\mid\mathbf x)=-\boldsymbol\epsilon/\sigma$, known for every pair.
-- Vincent: $\mathbb{E}[-\boldsymbol\epsilon/\sigma\mid\tilde{\mathbf x}]=\nabla\log p_\sigma(\tilde{\mathbf x})$, by Bayes' rule.
-- Floor in dimension $d$: $d/\sigma^2-\mathbb{E}\|\nabla\log p_\sigma\|^2$, not zero.
+Perturb each clean sample $\mathbf{x} \sim p$ with Gaussian noise of scale $\sigma$: $\tilde{\mathbf{x}} = \mathbf{x} + \sigma\boldsymbol{\epsilon}$ ($\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$), so $p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) = \mathcal{N}(\tilde{\mathbf{x}}; \mathbf{x}, \sigma^2\mathbf{I})$. While the marginal score $\nabla\log p_\sigma(\tilde{\mathbf{x}})$ is unknown, the **conditional score** is known in closed form for every training pair:
 
-::: {.d2l-note .rule}
-$\tfrac12\mathbb{E}\|\mathbf s_\theta(\tilde{\mathbf x})+\boldsymbol\epsilon/\sigma\|^2$ is minimized by $\mathbf s_\theta=\nabla\log p_\sigma$.
+$$\nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) = \frac{\mathbf{x} - \tilde{\mathbf{x}}}{\sigma^2} = -\frac{\boldsymbol{\epsilon}}{\sigma}$$
+
+- **Vincent's Identity (Marginal Score = Posterior Mean of Conditional Scores):** By Bayes' rule,
+  $$\mathbb{E}\!\left[\nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) \,\middle|\, \tilde{\mathbf{x}}\right] = \int \frac{\nabla_{\tilde{\mathbf{x}}}p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})}{p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})}\frac{p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})p(\mathbf{x})}{p_\sigma(\tilde{\mathbf{x}})}\,d\mathbf{x} = \frac{\nabla_{\tilde{\mathbf{x}}}\int p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})p(\mathbf{x})\,d\mathbf{x}}{p_\sigma(\tilde{\mathbf{x}})} = \nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}})$$
+- **Theorem (Vincent, 2011):** By the Regression Lemma, the **Denoising Score Matching (DSM)** loss
+  $$J_{\text{DSM}}(\boldsymbol{\theta}) = \frac{1}{2}\mathbb{E}_{\mathbf{x}, \boldsymbol{\epsilon}}\!\left[\left\|\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x} + \sigma\boldsymbol{\epsilon}) + \frac{\boldsymbol{\epsilon}}{\sigma}\right\|^2\right] = \frac{1}{2}\mathbb{E}_{\tilde{\mathbf{x}} \sim p_\sigma}\!\left[\left\|\mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) - \nabla\log p_\sigma(\tilde{\mathbf{x}})\right\|^2\right] + C$$
+  learns $\nabla\log p_\sigma$ by ordinary least squares with **zero Jacobian traces**.
 :::
 
-Predicting the score and predicting the noise are one task.
-:::
+::: {.slide title="Tweedie's Formula and the Non-Zero DSM Loss Floor"}
+[Optimal Denoising]{.kicker}
 
-::: {.slide title="Check: The Floor and the Denoiser for a Unit Gaussian"}
-[Check]{.kicker}
-
-Data $\mathcal N(0,1)$, noise $\sigma=0.5$, so $\tilde x\sim\mathcal N(0,1.25)$ with
-score $-\tilde x/1.25$. What mean squared error does the best model reach on
-the targets $-\epsilon/\sigma$? What is $\mathbb{E}[x\mid\tilde x]$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Floor $1/\sigma^2-\mathbb E[\tilde x^2]/1.25^2=4-0.8=3.2$, not $0$.
-Denoiser $\tilde x/1.25=0.8\,\tilde x$: shrink toward the mean.
-:::
-:::
-:::
-
-::: {.slide title="The Best Denoiser Is One Step Up the Noised Score"}
-[Tweedie's formula]{.kicker}
+Rearranging Vincent's identity $\nabla\log p_\sigma(\tilde{\mathbf{x}}) = \mathbb{E}\!\left[\frac{\mathbf{x} - \tilde{\mathbf{x}}}{\sigma^2} \,\middle|\, \tilde{\mathbf{x}}\right]$ gives **Tweedie's formula** for the MMSE clean-point estimator $\hat{\mathbf{x}}_0(\tilde{\mathbf{x}}) = \mathbb{E}[\mathbf{x} \mid \tilde{\mathbf{x}}]$:
 
 ::: {.cols .vc}
 ::: {.col}
-$$\mathbb{E}[\mathbf x\mid\tilde{\mathbf x}]=\tilde{\mathbf x}+\sigma^2\nabla\log p_\sigma(\tilde{\mathbf x})$$
-
-- Vincent's theorem, rearranged.
-- Unit Gaussian: $\tilde x-0.25\,\tilde x/1.25=0.8\,\tilde x$.
-- Figure: the mixture at $\sigma=0.5$, $\tilde x$ in the valley.
+- **Tweedie's Formula:**
+  $$\mathbb{E}[\mathbf{x} \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma^2\,\nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}})$$
+- **Noise Prediction ($\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$):** Parameterizing $\mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) = -\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}})/\sigma$ makes score matching identical to predicting the added noise $\boldsymbol{\epsilon}$.
+- **Irreducible DSM Loss Floor ($2J_{\text{DSM}}^\star$):** Setting $\mathbf{v} = \mathbf{0}$ in the Regression Lemma gives:
+  $$\mathbb{E}\!\left[\left\|-\frac{\boldsymbol{\epsilon}}{\sigma} - \nabla\log p_\sigma(\tilde{\mathbf{x}})\right\|^2\right] = \frac{d}{\sigma^2} - \mathbb{E}_{p_\sigma}\|\nabla\log p_\sigma\|^2$$
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 ![](../img/mdl-dyn-tweedie.svg)
 :::
 :::
 :::
 
-::: {.slide title="A Noised Density Cannot Curve More Sharply Than Its Noise"}
-[Curvature bound]{.kicker}
+::: {.slide title="Verifying the DSM Floor and Curvature Bound"}
+[Gaussian Check & Curvature]{.kicker}
+
+For Gaussian data $x \sim \mathcal{N}(0, v)$ with $v = 1$ and noise $\sigma = 0.5$, the noised marginal is $p_\sigma = \mathcal{N}(0, 1.25)$, Tweedie's optimal denoiser shrinks by $\frac{v}{v+\sigma^2}\tilde{x} = 0.8\,\tilde{x}$, and the irreducible MSE floor is $\frac{1}{\sigma^2} - \frac{1}{v+\sigma^2} = 4 - 0.8 = 3.2 > 0$:
+
+@!mdl-score-matching-diffusion-flow-denoising-score-matching
 
 ::: {.d2l-note .rule}
-$\nabla^2\log p_\sigma(\tilde{\mathbf x})=-\dfrac{\mathbf I}{\sigma^2}+\dfrac{1}{\sigma^4}\,\mathrm{Cov}[\mathbf x\mid\tilde{\mathbf x}]$
+**Curvature Bound of Any Noised Density:** Differentiating Tweedie's formula once more with respect to $\tilde{\mathbf{x}}$ proves:
+$$\nabla^2\log p_\sigma(\tilde{\mathbf{x}}) = -\frac{\mathbf{I}}{\sigma^2} + \frac{1}{\sigma^4}\operatorname{Cov}[\mathbf{x} \mid \tilde{\mathbf{x}}] \quad \Longrightarrow \quad -\nabla^2\log p_\sigma(\tilde{\mathbf{x}}) \preceq \frac{1}{\sigma^2}\mathbf{I}$$
+No peak of a $\sigma$-blurred density can ever curve more sharply than the Gaussian kernel $\mathcal{N}(\mathbf{0}, \sigma^2\mathbf{I})$ that blurred it!
+:::
 :::
 
-- **I.** Tweedie: $\nabla\log p_\sigma=(\mathbb E[\mathbf x\mid\tilde{\mathbf x}]-\tilde{\mathbf x})/\sigma^2$.
-- **II.** The Jacobian of the posterior mean is $\mathrm{Cov}[\mathbf x\mid\tilde{\mathbf x}]/\sigma^2$.
-- **III.** A covariance is positive semidefinite: no eigenvalue of
-  $-\nabla^2\log p_\sigma$ exceeds $1/\sigma^2$.
+::: {.slide title="Fitting a Curved Bimodal Score by Least Squares"}
+[1D Mixture Experiment]{.kicker}
 
-Gaussian data $\mathcal N(0,v)$: $-\tfrac1{\sigma^2}+\tfrac{v}{\sigma^2(v+\sigma^2)}=-\tfrac1{v+\sigma^2}$.
-
-[No peak of $p_\sigma$ is narrower than the Gaussian that blurred it. Guidance will break this bound.]{.small}
-:::
-
-::: {.slide title="Least Squares on 16,384 Noisy Pairs Finds the Score"}
-[A curved score]{.kicker}
-
-Mixture at $\sigma=0.5$, score $4\tanh4\tilde x-2\tilde x$. Model: 16 Gaussian bumps and $x$, by `lstsq`.
+On $4{,}096$ draws from $p = \frac{1}{2}\mathcal{N}(-2, 0.5^2) + \frac{1}{2}\mathcal{N}(2, 0.5^2)$ noised four times each at $\sigma = 0.5$ ($16{,}384$ pairs), fitting 17 fixed basis functions by `np.linalg.lstsq` against $y = -\epsilon/\sigma$ recovers the exact score $4\tanh(4\tilde{x}) - 2\tilde{x}$:
 
 @!score-matching-diffusion-flow-dsm-train
 
-Errors within $0.1$ of the floor $2.11$. At $x=8$ no pair landed; refits will disagree.
-:::
-
-::: {.slide title="Langevin Dynamics Keeps $p$ Stationary"}
-[Sampling with one score]{.kicker}
-
-- $d\mathbf X=\tfrac12\nabla\log p(\mathbf X)\,dt+d\mathbf W$: drift up the log-density, plus Brownian noise $\mathbf W$.
-- Fokker–Planck at the density $p$: $-\nabla\cdot(\tfrac12 p\nabla\log p)+\tfrac12\Delta p=0$.
-- Sampler with step $h$: $\mathbf x\leftarrow\mathbf x+\tfrac h2\mathbf s(\mathbf x)+\sqrt h\,\boldsymbol\xi$, $\boldsymbol\xi\sim\mathcal N(\mathbf 0,\mathbf I)$.
-- $\mathcal N(0,v)$: stationary variance $v$; the sampler gives $v/(1-h/(4v))$.
-
-[Convergence from other starts is cited (Roberts and Tweedie, 1996), not proved.]{.small}
-:::
-
-::: {.slide title="Check: Where Do 10,000 Langevin Chains End?"}
-[Check]{.kicker}
-
-Target $0.8\,\mathcal N(-2,0.5^2)+0.2\,\mathcal N(2,0.5^2)$, exact score,
-$h=0.01$, 2,000 steps.
-
-- From the start $\mathcal N(0,3^2)$: which fraction ends right of zero?
-- All chains started in one mode: how many end in the other?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Almost half, not a fifth. About 1 chain in 200 leaves the heavy
-mode, about 1 in 40 the light one.
+Although the cloud of targets $-\epsilon/\sigma$ scatters vertically with variance $\approx 2.11$ (the population floor), its conditional mean is the exact score curve, and the least-squares fit achieves an excess risk of only $0.01$.
 :::
 :::
-:::
 
-::: {.slide title="Langevin Chains Keep the Proportions of Their Start"}
-[Slow mixing]{.kicker}
+::: {.slide title="Extrapolation Hazard Where No Training Pairs Land"}
+[Out-of-Support Variance]{.kicker}
 
-@!score-matching-diffusion-flow-langevin
-
-- $\mathbb E X^2\approx4.25$, the true value: each chain is in equilibrium inside its mode.
-- The light mode loses about four times as many chains, as $0.8/0.2$ demands.
-- Both rates are tiny: the proportions relax over about 70,000 steps.
-:::
-
-::: {.slide title="One Noise Level Fails in Three Ways; Every Level Repairs Them"}
-[Limits of one level]{.kicker}
-
-- Far from the data no pair lands, and the fit is arbitrary. Twenty refits:
+Repeating the least-squares fit across 20 independent draws of data and noise reveals a fundamental limitation of single-level score matching:
 
 @!mdl-score-matching-diffusion-flow-a-least-squares-score-in-one-dimension-1
 
-- Chains do not cross the valley.
-- Proportions: about $0.48$ right of zero, truth $0.2$.
-
-The reverse SDE, same mixture, symmetric start: four fifths on the left. It
-had the score at **every** noise level.
-
-::: {.d2l-note}
-At high noise there is no valley ($\sigma\ge1.94$ for equal weights) and pairs
-land everywhere; at intermediate noise the weights decide where a particle goes.
-:::
+- **Accurate Inside the Support ($x = 1$):** Where noisy pairs are plentiful, all 20 fits stay within $\pm 0.2$ of the true score $+2.0$.
+- **Arbitrary in the Far Tails ($x = 8$):** Because no training pair lands beyond $|\tilde{x}| \approx 5$, the regression loss exercises zero control at $x = 8$—the fitted score swings wildly across tens of units and even flips sign (pointing *away* from the data).
 :::
 
-::: {.slide title="A Gaussian Kernel at Every Level Makes DSM Work at Every Level"}
-[Noise-conditional loss]{.kicker}
+::: {.slide title="Sampling With One Score: Langevin Dynamics"}
+[MCMC via the Score]{.kicker}
+
+Given a score field $\nabla\log p(\mathbf{x})$ at a single noise level, **Langevin dynamics** climbs the log-density while injecting unit Brownian noise to prevent collapse onto a mode:
+
+$$d\mathbf{X}_t = \frac{1}{2}\nabla\log p(\mathbf{X}_t)\,dt + d\mathbf{W}_t \;\xrightarrow{\text{Euler–Maruyama, step } h}\; \mathbf{x}_{k+1} = \mathbf{x}_k + \frac{h}{2}\mathbf{s}(\mathbf{x}_k) + \sqrt{h}\,\boldsymbol{\xi}_k$$
+
+- **Proposition ($p$ Is the Stationary Distribution):** Substituting drift $\mathbf{b} = \frac{1}{2}\nabla\log p$, unit diffusion $g = 1$, and $q_t = p$ into the Fokker–Planck equation gives:
+  $$\partial_t q_t = -\nabla \cdot \left(\frac{1}{2}p\,\nabla\log p\right) + \frac{1}{2}\Delta p = -\frac{1}{2}\nabla\cdot(\nabla p) + \frac{1}{2}\Delta p = 0$$
+- **Step-Size Variance Bias:** On $p = \mathcal{N}(0, v)$, the discrete recursion $x_{k+1} = (1 - \frac{h}{2v})x_k + \sqrt{h}\xi_k$ has stationary variance $V = \frac{v}{1 - h/(4v)} \approx v + \frac{h}{4}$, overstating the true variance by $O(h)$.
+:::
+
+::: {.slide title="Why Single-Level Langevin Fails on Multimodal Data"}
+[The Mode-Mixing Bottleneck]{.kicker}
+
+What happens when we run $10{,}000$ Langevin chains for $2{,}000$ steps ($h = 0.01$) using the **exact score** of the lopsided mixture $p = 0.8\,\mathcal{N}(-2, 0.5^2) + 0.2\,\mathcal{N}(2, 0.5^2)$?
+
+@!score-matching-diffusion-flow-langevin
+
+- **Exponential Valley Trapping:** Crossing the low-density valley around $x = 0$ against the restoring pull requires an exponentially rare sequence of noise kicks ($0.5\%$ transition rate out of the heavy mode, $2.5\%$ out of the light mode; mixing relaxation takes $\sim 67{,}000$ steps).
+- **Wrong Mode Proportions ($0.48$ vs. $0.20$):** Chains started from symmetric $\mathcal{N}(0, 3^2)$ simply slide into the nearest mode and stay trapped, preserving the $50/50$ proportions of the initialization instead of the $80/20$ data weights!
+:::
+
+::: {.slide title="How Multi-Scale Noise Solves All Three Failures"}
+[Noise-Conditional Score Matching]{.kicker}
+
+Training a single time-conditioned score network $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$ across a continuum of Gaussian noising levels $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol{\epsilon}$ cures all three defects of single-level score matching:
 
 ::: {.cols .vc}
 ::: {.col}
-- Forward process: $\mathbf x_t=\alpha_t\mathbf x_0+\sigma_t\boldsymbol\epsilon$.
-- Variance preserving (VP): $\sigma_t^2=1-\alpha_t^2$. Variance exploding (VE): $\alpha_t=1$.
-- Loss, level weight $w(t)$: $\tfrac12\mathbb{E}_t\,w(t)\,\|\mathbf s_\theta(\mathbf x_t,t)+\boldsymbol\epsilon/\sigma_t\|^2$.
-- Minimizer for every $w>0$: $\nabla\log p_t$. Floor $\approx d/\sigma_t^2$.
+1. **No Empty Regions at High Noise:** At large $\sigma_t$, the noised density fills the entire space where the sampler starts.
+2. **No Valley Barrier ($\sigma \ge 1.94$):** Once component variance $0.25 + \sigma^2 \ge \mu^2 = 4$, the bimodal valley disappears into a single unimodal bell curve.
+3. **Correct Mode Proportions:** As noise decreases during reverse sampling, the score's watershed at intermediate $\sigma_t$ allocates particles in exact proportion to the mixture weights $(0.8, 0.2)$.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 ![](../img/mdl-dyn-noising-denoising.svg)
 :::
 :::
 :::
 
-::: {.slide title="DDPM Is the VP-SDE Observed at Discrete Times"}
-[DDPM: the chain]{.kicker}
+::: {.slide title="The Noise-Conditional DSM Loss and Level Weightings"}
+[Training Across All Levels]{.kicker}
 
-- VP-SDE: $d\mathbf X=-\tfrac12\beta(t)\,\mathbf X\,dt+\sqrt{\beta(t)}\,d\mathbf W$, with kernel $\alpha_t=e^{-\frac12\int_0^t\beta}$.
-- Chain, $t=1,\dots,1000$: $\mathbf x_t=\sqrt{1-\beta_t}\,\mathbf x_{t-1}+\sqrt{\beta_t}\,\boldsymbol\epsilon_t$.
-- An exact VP transition, over an interval with $\int\beta=-\log(1-\beta_t)$.
-- Marginal: $\mathbf x_t=\sqrt{\bar\alpha_t}\,\mathbf x_0+\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon$, $\bar\alpha_t=\prod_{s\le t}(1-\beta_s)$.
-- $\beta_t$ from $10^{-4}$ to $0.02$: $\bar\alpha_{10}=0.998$, $\bar\alpha_{100}=0.897$, $\bar\alpha_{1000}=4\times10^{-5}$.
+Averaging the DSM loss over noise levels $t \sim \mathcal{U}[\varepsilon, T]$ with a positive weight schedule $w(t) > 0$ defines the **noise-conditional score matching** objective:
 
-::: {.d2l-note}
-Training never simulates the chain: one Gaussian draw reaches any level.
-:::
-:::
+$$\mathcal{L}(\boldsymbol{\theta}) = \frac{1}{2}\mathbb{E}_{t}\!\left[w(t)\,\mathbb{E}_{\mathbf{x}_0, \boldsymbol{\epsilon}}\!\left[\left\|\mathbf{s}_{\boldsymbol{\theta}}(\alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol{\epsilon}, t) + \frac{\boldsymbol{\epsilon}}{\sigma_t}\right\|^2\right]\right]$$
 
-::: {.slide title="DDPM's Loss Is Score Matching; Its Sampler Is the Reverse SDE"}
-[DDPM: loss and sampler]{.kicker}
-
-Noise prediction $\boldsymbol\epsilon_\theta$, score $\mathbf s_\theta=-\boldsymbol\epsilon_\theta/\sigma_t$, $\sigma_t^2=1-\bar\alpha_t$.
-
-- Loss $\tfrac12\|\boldsymbol\epsilon-\boldsymbol\epsilon_\theta(\mathbf x_t,t)\|^2$: DSM with weight $w(t)=\sigma_t^2$.
-- The weight cancels the $d/\sigma_t^2$ growth of the floor.
-- Ancestral step, $\boldsymbol\xi\sim\mathcal N(\mathbf 0,\mathbf I)$:
-  $\mathbf x_{t-1}=\dfrac{\mathbf x_t+\beta_t\,\mathbf s_\theta(\mathbf x_t,t)}{\sqrt{1-\beta_t}}+\sqrt{\beta_t}\,\boldsymbol\xi$.
-
-::: {.d2l-note}
-To first order in $\beta_t$ this is the Euler–Maruyama step of the reverse SDE:
-1,000 network calls per sample.
-:::
+| Weight Schedule $w(t)$ | Behavior of Weighted Floor $w(t)R(t)$ as $\sigma_t \to 0$ | Optimization & Statistical Property |
+| :--- | :--- | :--- |
+| **Unweighted ($w(t) = 1$)** | Explodes as $d/\sigma_t^2 \sim d/(\beta_{\min}t)$ | Gradients dominated by the tiniest noise levels |
+| **DDPM Simple ($w(t) = \sigma_t^2$)** | Bounded: $\sigma_t^2(d/\sigma_t^2) = d = O(1)$ | Equalizes loss magnitude across all noise levels |
+| **Likelihood ($w(t) = g(t)^2 = \beta(t)$)** | Diverges as $d/t$ ($\int_\varepsilon^T \frac{d}{t}\,dt = d\log\frac{T}{\varepsilon}$) | Bounds KL divergence $D_{\text{KL}}(p_0 \parallel p_{\boldsymbol{\theta}, 0})$ of the reverse SDE |
 :::
 
-::: {.slide title="DDIM Is Euler's Method in the Noise-Level Clock"}
-[DDIM]{.kicker}
+::: {.slide title="DDPM Is the Variance-Preserving SDE in Discrete Time"}
+[Connecting Discrete & Continuous]{.kicker}
 
-Rescale: $\bar{\mathbf x}_t=\mathbf x_t/\sqrt{\bar\alpha_t}$ with density $\bar p$, noise level $\bar\sigma_t=\sqrt{(1-\bar\alpha_t)/\bar\alpha_t}$ (from $0.01$ to $157$).
+The **Denoising Diffusion Probabilistic Model (DDPM)** runs an $N = 1000$-step Markov chain with schedule $\beta_1, \ldots, \beta_N \in [10^{-4}, 0.02]$:
 
-- **I.** DDIM: $\hat{\mathbf x}_0=\bar{\mathbf x}_t-\bar\sigma_t\boldsymbol\epsilon_\theta$, then $\bar{\mathbf x}_{t'}=\hat{\mathbf x}_0+\bar\sigma_{t'}\boldsymbol\epsilon_\theta$.
-- **II.** Probability-flow ODE in these coordinates: $d\bar{\mathbf x}/d\bar\sigma=-\bar\sigma\nabla\log\bar p$.
-- **III.** Tweedie: $-\bar\sigma\nabla\log\bar p=\mathbb{E}[\boldsymbol\epsilon\mid\bar{\mathbf x}]=\hat{\boldsymbol\epsilon}$.
+$$\mathbf{x}_t = \sqrt{1 - \beta_t}\,\mathbf{x}_{t-1} + \sqrt{\beta_t}\,\boldsymbol{\epsilon}_t \quad \Longrightarrow \quad \mathbf{x}_t = \sqrt{\bar{\alpha}_t}\,\mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\,\boldsymbol{\epsilon}, \qquad \bar{\alpha}_t = \prod_{s=1}^t (1 - \beta_s)$$
 
-::: {.d2l-note .rule}
-$\bar{\mathbf x}_{t'}=\bar{\mathbf x}_t+(\bar\sigma_{t'}-\bar\sigma_t)\,\hat{\boldsymbol\epsilon}$: one Euler step.
-:::
-:::
+@!score-matching-diffusion-flow-ddpm-marginal
 
-::: {.slide title="Check: Ten DDIM Strides on Two Kinds of Data"}
-[Check]{.kicker}
-
-Exact noise prediction, 10 equal strides of the 1,000-level schedule. What
-happens to unit-variance Gaussian data? To data at a single point?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Gaussian: each stride multiplies by $\cos\Delta\phi<1$
-($\bar\alpha=\cos^2\phi$), $0.83$ in all, though the exact flow is the identity.
-Point mass: $\hat{\boldsymbol\epsilon}$ is constant along the flow, so every stride is exact.
-:::
-:::
+- **Exact VP-SDE Transition:** Each DDPM step is an *exact* transition of the VP-SDE $d\mathbf{X} = -\frac{1}{2}\beta(s)\mathbf{X}\,ds + \sqrt{\beta(s)}\,d\mathbf{W}$ over an interval with $\int \beta(s)\,ds = -\log(1 - \beta_t) \approx \beta_t$.
+- **Jump to Any Level in One Draw:** Training never simulates the 1,000-step chain—it samples $\mathbf{x}_t$ directly from $\mathbf{x}_0$ in $O(1)$ time as noise-to-signal $\bar{\sigma}_t = \sqrt{(1-\bar{\alpha}_t)/\bar{\alpha}_t}$ grows from $0.01$ to $157$.
 :::
 
-::: {.slide title="Ten Strides Shrink Gaussian Data by 0.83"}
-[DDIM error]{.kicker}
+::: {.slide title="DDPM Simple Loss and Ancestral Reverse-SDE Sampler"}
+[Noise Prediction & Sampling]{.kicker}
 
-![](../img/mdl-dyn-ddim-strides.svg){width=94%}
+Parameterizing the score model via a noise-prediction network $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) = -\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) / \sigma_t$ ($\sigma_t = \sqrt{1 - \bar{\alpha}_t}$) unifies DDPM training and sampling with score-based SDEs:
 
-Gaussian: $\times0.832$, $0.964$, $0.998$ for 10, 50, 1,000 strides. Mixture, exact
-$\hat\epsilon$: 10 strides land $0.08$ from 1,000 strides; 50 strides, about $0.02$.
+- **DDPM "Predict the Noise" Loss:** Substituting $\mathbf{s}_{\boldsymbol{\theta}} = -\boldsymbol{\epsilon}_{\boldsymbol{\theta}}/\sigma_t$ into the noise-conditional DSM loss with weight $w(t) = \sigma_t^2 = 1 - \bar{\alpha}_t$ cancels the $1/\sigma_t^2$ factor:
+  $$\frac{1}{2}\sigma_t^2\left\|\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) + \frac{\boldsymbol{\epsilon}}{\sigma_t}\right\|^2 = \frac{1}{2}\left\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)\right\|^2$$
+- **Ancestral Sampling as Reverse Euler–Maruyama:** Stepping from $t = N$ down to $1$ via
+  $$\mathbf{x}_{t-1} = \frac{\mathbf{x}_t + \beta_t\,\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)}{\sqrt{1 - \beta_t}} + \sqrt{\beta_t}\,\boldsymbol{\xi}_t \approx \mathbf{x}_t + \left(\frac{1}{2}\beta_t\mathbf{x}_t + \beta_t\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)\right) + \sqrt{\beta_t}\,\boldsymbol{\xi}_t$$
+  is to first order in $\beta_t$ the Euler–Maruyama discretization of Anderson's reverse VP-SDE ($1{,}000$ network evaluations per generated sample).
 :::
 
-::: {.slide title="Least-Squares Scores at 50 Levels Recover the Weights"}
-[DDIM on fitted scores]{.kicker}
+::: {.slide title="DDIM: Fast Deterministic Sampling as Forward Euler"}
+[Skipping Levels via the PF-ODE]{.kicker}
 
-Lopsided mixture ($0.8$ left, $0.2$ right). At each level: regress $\epsilon$ on 17
-features of $x_t$. Then 50 DDIM strides, same noise, exact against fitted $\hat\epsilon$:
+To sample in $K \ll 1000$ steps without injecting fresh noise, **Denoising Diffusion Implicit Models (DDIM)** predict the clean point $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sqrt{1-\bar{\alpha}_t}\boldsymbol{\epsilon}_{\boldsymbol{\theta}})/\sqrt{\bar{\alpha}_t}$ and jump directly to an earlier level $t' < t$:
+
+$$\mathbf{x}_{t'} = \sqrt{\bar{\alpha}_{t'}}\,\hat{\mathbf{x}}_0 + \sqrt{1 - \bar{\alpha}_{t'}}\,\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$$
+
+- **Proposition (DDIM Is Forward Euler in VE Coordinates):** Rescaling to $\bar{\mathbf{x}}_t = \mathbf{x}_t / \sqrt{\bar{\alpha}_t} = \mathbf{x}_0 + \bar{\sigma}_t\boldsymbol{\epsilon}$ with noise-to-signal ratio $\bar{\sigma}_t = \sqrt{(1 - \bar{\alpha}_t)/\bar{\alpha}_t} \in [0.01, 157]$ simplifies the DDIM update to:
+  $$\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar{\sigma}_{t'} - \bar{\sigma}_t)\,\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$$
+  which is **one forward-Euler step** of the VP probability-flow ODE $\frac{d\bar{\mathbf{x}}}{d\bar{\sigma}} = -\bar{\sigma}\nabla_{\bar{\mathbf{x}}}\log \bar{p}(\bar{\mathbf{x}}) = \mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t]$.
+:::
+
+::: {.slide title="DDIM Stride Error: Point Masses vs. Gaussian Shrinkage"}
+[Analyzing DDIM Truncation Error]{.kicker}
+
+Because DDIM is a first-order Euler solver in the $\bar{\sigma}$ clock, its stride error depends on how much $\hat{\boldsymbol{\epsilon}}(\mathbf{x}_t, t) = \mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t]$ curves along the probability-flow trajectory:
+
+::: {.cols .vc}
+::: {.col}
+- **Exact on a Single Point Mass:** When $p_0 = \delta_{\mathbf{x}_0}$, $\hat{\boldsymbol{\epsilon}} = (\bar{\mathbf{x}} - \mathbf{x}_0)/\bar{\sigma}$ is constant along the exact ray, so **one DDIM stride of any length is exact**.
+- **Contractive on $\mathcal{N}(\mathbf{0}, \mathbf{I})$ Data:** The exact flow is the identity, but holding $\hat{\boldsymbol{\epsilon}} = \sqrt{1-\bar{\alpha}_t}\mathbf{x}_t$ fixed across a stride shrinks every sample by:
+  $$\sqrt{\bar{\alpha}_t\bar{\alpha}_{t'}} + \sqrt{(1-\bar{\alpha}_t)(1-\bar{\alpha}_{t'})} = \cos(\phi_t - \phi_{t'}) < 1$$
+  where $\bar{\alpha}_t = \cos^2\phi_t$ ($0.832\times$ over 10 strides, $0.964\times$ over 50 strides).
+:::
+
+::: {.col .fig}
+![](../img/mdl-dyn-ddim-strides.svg)
+:::
+:::
+:::
+
+::: {.slide title="Measuring DDIM Stride Contraction and Convergence"}
+[10 vs. 50 vs. 1,000 Strides]{.kicker}
+
+Comparing 10, 50, and 1,000 equally spaced DDIM strides with the exact noise prediction $\hat{\epsilon} = -\sqrt{1-\bar{\alpha}_t}\nabla\log p_t$ on $\mathcal{N}(0, 1)$ data and on the standardized bimodal mixture:
+
+@!mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed
+
+- **First-Order Euler Convergence:** Increasing from $10$ to $50$ strides ($5\times$ finer step) cuts the Gaussian shrinkage error by $4.7\times$ ($1 - 0.832 = 0.168 \to 1 - 0.964 = 0.036$) and cuts the mixture endpoint gap from $0.080$ to $0.017$.
+:::
+
+::: {.slide title="DDIM on Least-Squares Scores Recovers Mode Weights"}
+[End-to-End Multi-Level Learning]{.kicker}
+
+Fitting our 17-feature linear model by ridge least squares at each of the $50$ noise levels visited by a 50-stride DDIM sampler on the lopsided $0.8 / 0.2$ mixture:
 
 @!mdl-score-matching-diffusion-flow-denoising-diffusion-implicit-models-1
 
-::: {.d2l-note}
-A fifth of the samples in the light mode, in both rows; Langevin gave about $0.48$.
-The fit's own error: a light mode of width $0.26$ to $0.28$ against about $0.24$.
+::: {.d2l-note .rule}
+**Multi-Level Regression Solves Mode Weighting:** Where single-level Langevin with the *exact* score left $48\%$ of samples in the light mode, 50-stride DDIM on *least-squares fitted* scores recovers the true $20\%$ light-mode mass ($0.197$) and matches the exact-score DDIM trajectory to $\text{KS} = 0.02$.
 :::
 :::
 
-::: {.slide title="Guidance Is Bayes' Rule on Scores"}
-[Guidance]{.kicker}
+::: {.slide title="Classifier and Classifier-Free Guidance via Bayes' Rule"}
+[Conditional Steering]{.kicker}
 
-Wanted: samples of one class $y$ only. At noise level $t$:
+To steer generation toward a class or text prompt $y$, Bayes' rule $p_t(\mathbf{x} \mid y) = \frac{p_t(\mathbf{x})\,p_t(y \mid \mathbf{x})}{p(y)}$ turns into vector addition on scores:
 
-$$\nabla\log p_t(\mathbf x\mid y)=\nabla\log p_t(\mathbf x)+\nabla\log p_t(y\mid\mathbf x)$$
+$$\nabla_{\mathbf{x}}\log p_t(\mathbf{x} \mid y) = \nabla_{\mathbf{x}}\log p_t(\mathbf{x}) + \nabla_{\mathbf{x}}\log p_t(y \mid \mathbf{x})$$
 
-- Classifier guidance: scale the classifier term by $\gamma$.
-- Classifier-free: no classifier. With $\mathbf s_\varnothing$ the unconditional and
-  $\mathbf s_y$ the conditional score, $\tilde{\mathbf s}=(1-\gamma)\,\mathbf s_\varnothing+\gamma\,\mathbf s_y$.
-- $\gamma>1$: the score of $\tilde p_t\propto p_t(\mathbf x)\,p_t(y\mid\mathbf x)^\gamma$, a tilted density.
-- On the mixture $\tilde p_t$ breaks the curvature bound $1/\sigma_t^2$ once $\gamma$ exceeds about $1.09$ at $t=100$: it is no noised density.
+- **Classifier-Free Guidance (CFG):** Eliminates the external classifier by substituting $\nabla\log p_t(y \mid \mathbf{x}) = \nabla\log p_t(\mathbf{x} \mid y) - \nabla\log p_t(\mathbf{x})$ and amplifying the difference by a **guidance scale** $\gamma \ge 1$:
+  $$\tilde{\mathbf{s}}_{\boldsymbol{\theta}}(\mathbf{x}, t, y) = \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing) + \gamma\Big[\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, y) - \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing)\Big] = (1 - \gamma)\mathbf{s}_\varnothing + \gamma\mathbf{s}_y$$
+- **Broken Curvature Bound for $\gamma > 1$:** The guided field is the score of a tilted density $\tilde{p}_t(\mathbf{x}) \propto p_t(\mathbf{x})\,p_t(y \mid \mathbf{x})^\gamma$. Once $\gamma > 1 + \frac{v_0 v_t}{\sigma_t^2 m^2} \approx 1.09$, $-\nabla^2\log \tilde{p}_t$ exceeds the universal $1/\sigma_t^2$ bound—so $\tilde{p}_t$ is **not** the noised marginal of any clean distribution!
 :::
 
-::: {.slide title="Past $\gamma=1$, Guidance Shifts the Mode Beyond the Class"}
-[Guidance on the mixture]{.kicker}
+::: {.slide title="Measuring Mode Shift Under High Guidance Scales"}
+[Guidance Experiment]{.kicker}
 
-Class $y$ = right mode, $\mathcal N(0.970,0.243^2)$; exact scores, ancestral chain:
+Running the 1,000-step ancestral reverse chain toward the right mode ($y = \mathcal{N}(+0.970, 0.243^2)$) across guidance scales $\gamma \in \{1, 3, 10\}$:
 
 @!mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule
 
 ::: {.d2l-note}
-At the clean level the tilted density is the class, mean $0.970$ for every $\gamma$.
-The chain ends near $1.03$ and between $1.07$ and $1.08$: the tilted densities
-are not the marginals of one forward process.
+At $\gamma = 1$ (exact Bayes' rule), the chain recovers the exact class mean $0.970$ and standard deviation $0.243$. At $\gamma = 3$ and $\gamma = 10$, linear extrapolation pushes samples *away* from the opposing left mode, shifting the terminal mean outward to $1.03$ and $1.08$.
 :::
 :::
 
-::: {.slide title="Check: Why Did DDIM Recover the Weights and Langevin Not?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: Score Matching, DDIM, and Guidance"}
+[Concept Check]{.kicker}
 
-Same lopsided data. Langevin dynamics with the exact score: $0.48$ in the light
-mode. DDIM with least-squares scores: a fifth. Which sampler had the better
-score? What did the other have?
+Test your understanding of score matching and diffusion samplers:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Langevin had the better score, but at one level, where a score
-hardly records the weights. DDIM had rougher scores at 50 levels. Where the
-noised modes still overlap, the weights steer the samples.
+1. **Non-Zero DSM Loss:** You train a high-capacity score network on $d = 100$-dimensional data at noise level $\sigma = 0.1$, and the DSM loss $2J_{\text{DSM}}$ plateaus near $9{,}800$. Does this large loss indicate underfitting?
+2. **Tweedie's Denoiser:** Given a noisy observation $\tilde{\mathbf{x}}$ at noise scale $\sigma = 0.5$ where the learned score evaluates to $\mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) = (+4, -2)$, what is the MMSE estimate $\hat{\mathbf{x}}_0 = \mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$?
+3. **CFG Linear Combination:** In Classifier-Free Guidance with scale $\gamma = 7.5$, what weights are placed on the conditional score $\mathbf{s}_y$ and the unconditional score $\mathbf{s}_\varnothing$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **No!** By the Regression Lemma, the irreducible Bayes-risk floor is $\frac{d}{\sigma^2} - \mathbb{E}\|\nabla\log p_\sigma\|^2 = \frac{100}{0.01} - \mathbb{E}\|\nabla\log p_\sigma\|^2 = 10{,}000 - \mathbb{E}\|\nabla\log p_\sigma\|^2$. A loss of $9{,}800$ can be a globally optimal fit!
+2. By Tweedie's formula, $\hat{\mathbf{x}}_0 = \tilde{\mathbf{x}} + \sigma^2 \mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) = \tilde{\mathbf{x}} + 0.25\,(4, -2) = \tilde{\mathbf{x}} + (1, -0.5)$.
+3. $\tilde{\mathbf{s}} = (1 - \gamma)\mathbf{s}_\varnothing + \gamma\mathbf{s}_y = -6.5\,\mathbf{s}_\varnothing + 7.5\,\mathbf{s}_y$ (a linear extrapolation beyond $\mathbf{s}_y$ away from $\mathbf{s}_\varnothing$).
 :::
 :::
+
+::: {.slide title="Summary: Score Matching and Diffusion Samplers"}
+[Key Takeaways]{.kicker}
+
+| Method / Theorem | Mathematical Formula | Role & Practical Characteristics |
+| :--- | :--- | :--- |
+| **Hyvärinen's Identity (ISM)** | $\mathbb{E}_p\big[\frac{1}{2}\|\mathbf{s}_{\boldsymbol{\theta}}\|^2 + \nabla\cdot\mathbf{s}_{\boldsymbol{\theta}}\big] + C$ | Removes unknown $\nabla\log p$, but costs $O(d)$ backward passes for $\nabla\cdot\mathbf{s}_{\boldsymbol{\theta}}$ |
+| **Vincent's Theorem (DSM)** | $\frac{1}{2}\mathbb{E}_{\mathbf{x}_0, \boldsymbol{\epsilon}}\big\|\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}_t, t) + \boldsymbol{\epsilon}/\sigma_t\big\|^2$ | Trace-free regression onto $-\boldsymbol{\epsilon}/\sigma_t$; optimal floor is $\frac{d}{\sigma_t^2} - \mathbb{E}\|\nabla\log p_t\|^2$ |
+| **Tweedie's Formula** | $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma^2\nabla\log p_\sigma(\tilde{\mathbf{x}})$ | Converts any score or noise predictor into the MMSE clean-point denoiser |
+| **DDPM Forward & Loss** | $\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\mathbf{x}_0 + \sqrt{1-\bar{\alpha}_t}\boldsymbol{\epsilon}$, $w(t) = \sigma_t^2$ | Exact discrete VP-SDE transitions; $\sigma_t^2$ weight cancels the $1/\sigma_t^2$ floor |
+| **DDIM Deterministic Stride** | $\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar{\sigma}_{t'} - \bar{\sigma}_t)\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$ | Forward Euler on the VP probability-flow ODE in $(\bar{\sigma}, \bar{\mathbf{x}})$ coordinates |
+| **Classifier-Free Guidance** | $\tilde{\mathbf{s}} = (1 - \gamma)\mathbf{s}_\varnothing + \gamma\mathbf{s}_y$ | Amplifies class direction via Bayes' rule; $\gamma > 1$ breaks the $1/\sigma_t^2$ curvature bound |
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- Implicit score matching on $\mathcal N(0,2)$ returns $w\approx2$ without the data score.
-- Denoising: floor $3.2$ for $\mathcal N(0,1)$ at $\sigma=0.5$; mixture fit within $0.1$ of the floor $2.11$.
-- Langevin, exact score, one level: about $0.48$ right of zero; the truth is $0.2$.
-- DDPM is the VP-SDE at discrete times; its loss is DSM with weight $1-\bar\alpha_t$.
-- DDIM is Euler: $\times0.83$ in 10 strides on Gaussian data.
-- Least-squares scores at 50 levels, through DDIM: a fifth in the light mode, as in the data.
-- Guidance at $\gamma=10$: mean from $0.97$ to between $1.07$ and $1.08$.
-
-**Next:** learn a velocity instead of a score, and ask which paths are straight.
-:::

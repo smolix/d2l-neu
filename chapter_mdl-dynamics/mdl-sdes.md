@@ -1212,12 +1212,11 @@ $\mathcal{N}(0.736,\, 0.930^2)$ from before), and at $320$ steps it has
 $0.735$ and $0.866$. Both fitted slopes are $1.01$: halving the step halves
 the error of the simulated law, which is weak order $1$.
 
-The same computation for geometric Brownian motion also gives weak order $1$
-(Exercise :exref:`ex_mdl-sdes-weak-order-multiplicative`), so multiplicative
-noise costs half an order in the paths and nothing in the law. A scheme that
-looks more accurate can even converge to the wrong equation. Heun's method,
-which averages the noise coefficient over the step, converges to the
-Stratonovich solution instead of the Itô one
+The same computation for geometric Brownian motion also gives weak order $1$,
+so multiplicative noise costs half an order in the paths and nothing in the
+law. A scheme that looks more accurate can even converge to the wrong
+equation. Heun's method, which averages the noise coefficient over the step,
+converges to the Stratonovich solution instead of the Itô one
 (Exercise :exref:`ex_mdl-sdes-ito-versus-stratonovich`).
 
 Simulation produces samples of the forward process, and the kernel gives its
@@ -1248,28 +1247,6 @@ and $\tfrac12$ for multiplicative noise and reproduces laws at order $1$ for
 both.
 
 ## Exercises
-
-1. **Biased random walk.** A walker takes a step of size $\pm c\sqrt{\Delta t}$
-   every $\Delta t$ time units, as in :numref:`sec_mdl-wiener-process`, but
-   its coin is biased: the step is positive with probability
-   $p = \tfrac12\left(1 + b\,\Delta t^{\delta}\right)$ for constants
-   $b, c, \delta > 0$ and $\Delta t$ small enough that $p \le 1$. Let
-   $X^{(\Delta t)}_t$ be the position after $k = t/\Delta t$ steps, starting
-   from $0$.
-    1. Compute $\mathbb{E}\big[X^{(\Delta t)}_t\big]$ and
-       $\textrm{Var}\big(X^{(\Delta t)}_t\big)$. For which exponent
-       $\delta$ does the mean have a finite nonzero limit as
-       $\Delta t \to 0$? What happens to the mean for smaller and for larger
-       $\delta$?
-    1. For that exponent, find the limits of the mean and the variance.
-       Which constant drift and diffusion coefficients give an SDE
-       :eqref:`eq_mdl-sde-general` whose solution from $X_0 = 0$ has the
-       same mean and variance at every $t$?
-    1. Take $c = 1$ and $\Delta t = 10^{-3}$, and choose $b$ so that the
-       drift in (b) equals $1$. Compute $p$. Compare the drift displacement
-       with the standard deviation of the noise displacement, first over one
-       step and then over the interval $[0, 1]$.
-   :exlabel:`ex_mdl-sdes-biased-random-walk`
 
 1. **Infinite total variation.** The total variation of a path $x$ along a
    partition $0 = t_0 < t_1 < \cdots < t_n = t$ is
@@ -1320,35 +1297,6 @@ both.
        what does that say about the limit $n \to \infty$?
    :exlabel:`ex_mdl-sdes-brownian-scaling-exit-times`
 
-1. [code] **Quadratic variation of an Itô process.** Let $X$ solve
-   :eqref:`eq_mdl-sde-general`, and let $[X]_t$ be the limit in probability
-   of $\sum_i (X_{t_{i+1}} - X_{t_i})^2$ over partitions of $[0, t]$ whose
-   mesh tends to zero. The computation of $(dX)^2$ in
-   :numref:`sec_mdl-ito-lemma` suggests
-   $[X]_t = \int_0^t g(X_s, s)^2\, ds$.
-    1. Write $X_t = X_0 + A_t + M_t$ with $A_t = \int_0^t f(X_s, s)\,ds$ and
-       $M_t = \int_0^t g(X_s, s)\,dW_s$, and assume that $f(X_s, s)$ is
-       bounded on $[0, t]$. Show that $\sum_i (\Delta A_i)^2$ and
-       $\sum_i \Delta A_i\, \Delta M_i$ tend to zero along every path, so
-       that $[X]_t = [M]_t$. Exercise
-       :exref:`ex_mdl-sdes-infinite-total-variation`b supplies the first
-       limit; the second needs only the continuity of $M$.
-    1. Reshape the increments `dW_qv` of the quadratic-variation experiment
-       to shape $(1, 2^{18})$ and pass them to `euler_maruyama` to simulate the OU
-       process $dX = -X\,dt + \sqrt{2}\,dW$ from $X_0 = 2$ and the geometric
-       Brownian motion $dX = X\,dt + X\,dW$ from $X_0 = 1.5$ on $[0, 1]$.
-       For each path, print the sum of squared increments on the subsampled
-       grids of that experiment next to $\int_0^1 g(X_s, s)^2\,ds$ evaluated along
-       the same path. For which of the two processes is $[X]_1$ random?
-    1. Let $X_t = \mu t + g W_t$ with constants $\mu$ and $g$ be observed at
-       $n + 1$ equally spaced times on $[0, T]$. Show that
-       $\frac{1}{T}\sum_i (\Delta X_i)^2 \to g^2$ in mean square as
-       $n \to \infty$ for every fixed $T$, whereas the estimator $X_T / T$
-       of $\mu$ has variance $g^2 / T$ for every $n$. What does this
-       imply for estimating the diffusion coefficient and the drift from
-       one finely sampled trajectory?
-   :exlabel:`ex_mdl-sdes-quadratic-variation-ito-process`
-
 1. **Geometric Brownian motion and the $-\nu^2/2$ correction.** Consider
    $dX = \mu X\,dt + \nu X\,dW$ with $X_0 > 0$ and its solution, given
    by :eqref:`eq_mdl-sde-gbm`.
@@ -1395,39 +1343,6 @@ both.
        and step sizes. By what factor does it reduce the
        strong error at $\Delta t = 2^{-8}$?
    :exlabel:`ex_mdl-sdes-milstein-correction`
-
-1. [code] **Weak order under multiplicative noise.** For geometric Brownian
-   motion, the Euler--Maruyama step multiplies $\hat X_n$ by
-   $1 + \mu\,\Delta t + \nu\,\Delta W_n$. Its strong order is
-   $\tfrac12$, as the strong-order experiment measured.
-    1. Derive recursions for the mean and the second moment of the simulated
-       $\hat X_n$, and solve them in closed form.
-    1. As the text does for the OU process, compute the errors of both
-       moments at $T = 1$ against the exact moments of Exercise
-       :exref:`ex_mdl-sdes-geometric-brownian-motion-correction`a, for
-       $\mu = \nu = 1$, $X_0 = 1.5$, and
-       $n \in \{20, 40, 80, 160, 320, 640\}$ steps, and fit the slopes.
-       How do they compare with the strong-order slope of the same scheme?
-   :exlabel:`ex_mdl-sdes-weak-order-multiplicative`
-
-1. [code] **Covariance of the OU process.** Let $X$ be the OU
-   process :eqref:`eq_mdl-sde-ou`.
-    1. For $s \le t$, split the integral in :eqref:`eq_mdl-sde-ou-solution`
-       at time $s$ and show that
-       $\textrm{Cov}(X_s, X_t \mid X_0) = e^{-\theta(t - s)}\textrm{Var}(X_s \mid X_0)$.
-       Write the result in closed form with :eqref:`eq_mdl-sde-ou-kernel`.
-    1. Let $X_0 \sim \mathcal{N}(0, g^2/2\theta)$ be independent of $W$.
-       Show that
-       $\textrm{Cov}(X_s, X_t) = \frac{g^2}{2\theta}\, e^{-\theta |t - s|}$
-       for all $s, t \ge 0$.
-    1. Estimate $\textrm{Cov}(X_1, X_t)$ for $t \in \{1, 1.5, 2, 4\}$ from the
-       clouds `X_ou_snap` that the OU experiment saved, and compare the
-       estimates with the formulas of (a) and (b). Which formula does the
-       cloud follow, and why?
-    1. A sampler stores the state of a stationary OU process every $\Delta$
-       time units. How large must $\Delta$ be for the correlation between
-       consecutive stored states to fall below $0.01$?
-   :exlabel:`ex_mdl-sdes-ou-covariance`
 
 1. **Variance preservation, exactly.** Let $X_t$ follow
    :eqref:`eq_mdl-sde-vp-marginal` with zero-mean data $X_0$.
@@ -1564,140 +1479,89 @@ both.
 ::: {.cover}
 [Dive into Deep Learning · §38.4]{.kicker}
 
-What equation does a process solve when its noise is new at every instant?<br>**Brownian motion · Itô calculus · the OU process · Euler–Maruyama**
+Stochastic Differential Equations, Brownian Motion, and Itô's Lemma<br>**Wiener process · quadratic variation (dW)² = dt · Itô integral & isometry · Itô's lemma · Ornstein–Uhlenbeck**
 :::
 :::
 
-::: {.slide title="One Recurrence Carries $x_0=2$ to $\mathcal N(0,1)$ in 400 Steps"}
-[The problem]{.kicker}
+::: {.slide title="A Recurrence That Turns Any Start Into N(0, 1)"}
+[Motivation]{.kicker}
 
-$x_0=2$, then $x_{k+1}=0.99\,x_k+\sqrt{0.02}\,\xi_k$ with $\xi_k\sim\mathcal N(0,1)$. $10{,}000$ copies
-at time $t=0.01\,k$, against the exact mean $2e^{-t}$ (`2alpha_t`) and standard
-deviation $\sqrt{1-e^{-2t}}$ (`sigma_t`); `inside` is the fraction within two standard deviations of the mean:
+Start 10,000 copies at $x_0 = 2$ and iterate $x_{k+1} = 0.99\,x_k + \sqrt{0.02}\,\xi_k$ with $\xi_k \sim \mathcal{N}(0, 1)$ ($h = 0.01$, $t = kh$). By 400 steps, every trace of $x_0 = 2$ has vanished into $\mathcal{N}(0, 1)$:
 
 @!sdes-ou-cloud
 
 ::: {.d2l-note .warn}
-With step $h=0.01$ the decay is $1-h$, but the noise is $\sqrt{2h}$, not of size $h$. Why?
+**Why $\sqrt{h}$ Instead of $h$?** Over step $h = 0.01$, the deterministic decay $0.99 = 1 - h$ changes $x$ by $O(h)$, but the noise kick $\sqrt{2h} = \sqrt{0.02} \approx 0.141$ has size $O(\sqrt{h})$. Its **square** is $O(h)$, breaking the ordinary chain rule!
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Why Deterministic Flows Cannot Forget Their Start"}
+[Forward Noising Processes]{.kicker}
 
-- say why a forward process needs noise, and why of size $\sqrt{\Delta t}$;
-- prove that squared Brownian increments add up to elapsed time;
-- explain why $\int_0^tW\,dW\ne\tfrac12W_t^2$, and apply Itô's lemma;
-- write the OU kernel and the variance-preserving marginal;
-- simulate an SDE with Euler–Maruyama and predict its error order.
+A generative diffusion model needs a forward process that maps **every** data distribution $p_0 = p_{\text{data}}$ to the same tractable prior $p_T \approx \mathcal{N}(\mathbf{0}, \mathbf{I})$. No invertible ODE flow $\Phi_T$ can do this (if $\Phi_T$ mapped two laws $p \ne q$ to the same law, applying $\Phi_T^{-1}$ would force $p = q$):
 
-**Running example:** $dX=-X\,dt+\sqrt2\,dW$ from $x_0=2$; its law tends to $\mathcal N(0,1)$, the stationary law.
+![](../img/mdl-dyn-sde-paths.svg)
 
-**The idea:** noise of size $\sqrt{\Delta t}$ has a square of size $\Delta t$, so the chain rule gains a term.
+- **Drift Alone ($\dot{x} = -x$):** Collapses $x_0 = \pm 2$ to the point mass $0$ ($\pm 0.0996$ at $t=3$), not a Gaussian.
+- **Noise Alone ($dX = \sqrt{2}\,dW$):** Spreads each start as $\mathcal{N}(x_0, 2t)$ (**variance-exploding**); usable once $\sqrt{2t} \gg |x_0|$, but has no stationary limit.
+- **Drift Plus Noise ($dX = -X\,dt + \sqrt{2}\,dW$):** Mean decay and noise injection balance at the stationary law $\mathcal{N}(0, 1)$ ($\mathcal{N}(\pm 0.0996, 0.9975)$ by $t = 3$).
 :::
 
-::: {.slide title="Paths Are Random; the Cloud's Density Comes Next"}
-[Where this fits]{.kicker}
+::: {.slide title="From Random Walks to the √Δt Scaling Law"}
+[Constructing Brownian Motion]{.kicker}
+
+Divide $[0, t]$ into $k = t / \Delta t$ steps of duration $\Delta t$, and let a walker take independent coin-flip steps of size $\pm \sqrt{\Delta t}$ (mean $0$, variance $\Delta t$ per step):
+
+$$\mathbb{E}\!\left[W_t^{(\Delta t)}\right] = 0, \qquad \operatorname{Var}\!\left(W_t^{(\Delta t)}\right) = k \cdot \Delta t = \frac{t}{\Delta t} \cdot \Delta t = t$$
+
+- **Why Only the Square Root Survives:** If steps instead scaled as $\pm c\,(\Delta t)^a$, the variance at time $t$ would be:
+  $$\operatorname{Var}\!\left(W_t^{(\Delta t)}\right) = \frac{t}{\Delta t} \cdot c^2 (\Delta t)^{2a} = c^2 t\,(\Delta t)^{2a - 1} \;\xrightarrow{\Delta t \to 0}\; \begin{cases} 0, & a > 1/2 \text{ (noise vanishes)} \\ \infty, & a < 1/2 \text{ (noise explodes)} \end{cases}$$
+- **Central Limit Theorem:** As $\Delta t \to 0$, the sum of $t/\Delta t \to \infty$ independent steps of variance $\Delta t$ converges in distribution to a Gaussian $\mathcal{N}(0, t)$.
+:::
+
+::: {.slide title="The Wiener Process: Axioms, Covariance, and Roughness"}
+[Brownian Motion]{.kicker}
+
+The continuous-time limit $W_t$ (**Brownian motion** or the **Wiener process**) is characterized by four axioms: (1) $W_0 = 0$; (2) **independent increments** $W_t - W_s$ for $s < t$; (3) **Gaussian increments** $W_t - W_s \sim \mathcal{N}(0, t - s)$; and (4) **continuous sample paths**.
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Ordinary Differential Equations | exact motion: uniqueness, eigenvalues |
-| Numerical Solvers | steps: their order and stability |
-| Neural ODEs | a learned field, its gradient, its density |
-| **Stochastic Differential Equations** | **noise, Itô calculus, the OU process** |
-| Fokker–Planck and Probability Flow | how the density moves; the score |
-| Score Matching and Diffusion | learning the score, sampling with it |
-| Flow Matching and Transport | learning a velocity; straight paths |
+- **Exact Increment Recipe:** Over any interval $\Delta t$,
+  $$\Delta W = W_{t + \Delta t} - W_t = \sqrt{\Delta t}\,\xi, \quad \xi \sim \mathcal{N}(0, 1)$$
+- **Two-Time Covariance:** For $s \le t$, writing $W_t = W_s + (W_t - W_s)$ gives $\operatorname{Cov}(W_s, W_t) = \mathbb{E}[W_s^2] = \min(s, t)$.
+- **Nowhere Differentiable Paths:** The difference quotient blows up as $\Delta t \to 0$:
+  $$\left|\frac{\Delta W}{\Delta t}\right| = \frac{|\xi|}{\sqrt{\Delta t}} \;\xrightarrow{\Delta t \to 0}\; \infty$$
 :::
 
-::: {.col .narrow}
-- **Uses:** Gaussians, variance of sums, Euler's method, the decay equation.
-- **Skips:** the proofs of Itô's lemma and of the convergence orders; SDEs in $\mathbb R^d$, where the table reads $dW_i\,dW_j=\delta_{ij}\,dt$.
+::: {.col .fig}
+![](../img/mdl-dyn-brownian-paths.svg)
 :::
 :::
 :::
 
-::: {.slide title="A Flow Cannot Forget Its Start; Drift Plus Noise Can"}
-[Noise as a forward process]{.kicker}
+::: {.slide title="Pointwise Marginals vs. Pathwise Envelopes"}
+[Simulating Brownian Paths]{.kicker}
 
-Wanted: $p_{\textrm{data}}\to\mathcal N(0,1)$ for every dataset. An invertible flow cannot merge two laws.
-
-![](../img/mdl-dyn-sde-paths.svg){width=68%}
-
-- **Drift alone** fails: two points at every $t$. **Noise alone** (variance $2t$, built next) works once its width dwarfs the data, but has no limiting law.
-- **Both**: $\mathcal N(\pm0.0996,\,0.9975)$ at $t=3$ from $x_0=\pm2$. The one we use.
-:::
-
-::: {.slide title="Only Steps of Size $\sqrt{\Delta t}$ Give a Walk with a Limit"}
-[Brownian motion]{.kicker}
-
-A coin decides each step $\pm\sqrt{\Delta t}$, one every $\Delta t$: after $t/\Delta t$ steps, $\textrm{Var}=t$ for every $\Delta t$.
-
-- $100$ steps of $\pm0.1$: variance $1$. Of $\pm0.01$: $0.01$. Of $\pm1$: $100$.
-- Steps $c\,\Delta t^{a}$: variance $c^2t\,\Delta t^{2a-1}$, finite and nonzero only for $a=\tfrac12$.
-- Many small independent steps: the position at time $t$ tends to $\mathcal N(0,t)$.
-
-::: {.d2l-note .rule}
-Simulate with $\Delta W=\sqrt{\Delta t}\,\xi$, $\xi\sim\mathcal N(0,1)$.
-:::
-:::
-
-::: {.slide title="Brownian Motion Has Independent Gaussian Increments and No Slope"}
-[Brownian motion]{.kicker}
-
-The limit $W$: $W_0=0$; independent increments; $W_t-W_s\sim\mathcal N(0,t-s)$; continuous paths.
-
-![](../img/mdl-dyn-brownian-paths.svg){width=70%}
-
-- $s\le t$: $\textrm{Cov}(W_s,W_t)=\mathbb{E}[W_s^2]=\min(s,t)$.
-- $|\Delta W/\Delta t|=|\xi|/\sqrt{\Delta t}\to\infty$: no derivative, so $dW$ must live inside integrals.
-
-[Existence (Wiener) and nowhere differentiability (Paley, Wiener, Zygmund) are cited.]{.small}
-:::
-
-::: {.slide title="A Band That Holds at Each Time Does Not Hold for a Path"}
-[Simulation]{.kicker}
-
-$20{,}000$ paths, $500$ steps on $[0,1]$. At one time, $95.4\%$ lie inside $\pm2\sqrt t$.
-How many stay inside at all grid times?
+At any single fixed time $t$, $W_t \sim \mathcal{N}(0, t)$ lies inside the $\pm 2\sqrt{t}$ two-standard-deviation envelope with probability $95.4\%$. What fraction of $20{,}000$ simulated paths stays inside $\pm 2\sqrt{t}$ across *all* grid times on $[0, 1]$?
 
 @!sdes-brownian-paths
 
 ::: {.d2l-note}
-Every look is another chance to be outside: about $0.70$ at $50$ times, $0.54$ at $500$,
-and $0$ at all times, since near $t=0$ every path crosses the band.
+**Pointwise vs. Pathwise Laws:** Every additional inspection time gives a jagged path another chance to cross the boundary ($70\%$ stay inside across 50 times, $54\%$ across 500 times, and $0\%$ in continuous time because Brownian paths cross $\pm 2\sqrt{t}$ infinitely often near $t = 0$).
 :::
 :::
 
-::: {.slide title="Check: Variance After 25 Steps"}
-[Check]{.kicker}
+::: {.slide title="Quadratic Variation of Brownian Motion: (dW)² = dt"}
+[Foundation of Itô Calculus]{.kicker}
 
-A walk takes $25$ steps of $\pm0.1$ (step time $0.01$). What is $\textrm{Var}(W_{0.25})$?
-And for $2{,}500$ steps of $\pm0.01$ (step time $10^{-4}$)?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $25\cdot0.01=0.25$, and $2500\cdot10^{-4}=0.25$ again: the variance is the elapsed time.
-:::
-:::
-:::
-
-::: {.slide title="Squared Brownian Increments Add Up to Elapsed Time"}
-[Quadratic variation]{.kicker}
+Partition $[0, t]$ into $0 = t_0 < t_1 < \cdots < t_n = t$ with mesh $h_{\max} = \max_i \Delta t_i$. For a smooth path $|x'(t)| \le M$, the sum of squared increments vanishes ($\sum_i (\Delta x_i)^2 \le M^2 h_{\max} t \to 0$). For Brownian motion, the random sum converges to the deterministic time $t$:
 
 ::: {.cols .vc}
 ::: {.col}
-Grid $t_0<\dots<t_n=t$, largest step $h_{\max}$.
-
-- Smooth, $|x'|\le M$: $\sum(\Delta x_i)^2\le M^2h_{\max}t\to0$.
-- Brownian: $\mathbb{E}\sum(\Delta W_i)^2=t$ on every grid.
-- $\textrm{Var}\sum(\Delta W_i)^2=2\sum\Delta t_i^2\le2h_{\max}t\to0$.
-
-::: {.d2l-note .rule}
-$(dW)^2=dt,\quad dW\,dt=0,\quad (dt)^2=0$
-:::
+- **Mean Equals Elapsed Time:** Since $\Delta W_i \sim \mathcal{N}(0, \Delta t_i)$,
+  $$\mathbb{E}[Q_n] = \sum_{i=0}^{n-1} \mathbb{E}\!\left[(\Delta W_i)^2\right] = \sum_{i=0}^{n-1} \Delta t_i = t$$
+- **Variance Vanishes as $O(h_{\max})$:** Using $\mathbb{E}[\xi^4] = 3$, $\operatorname{Var}((\Delta W_i)^2) = 2\Delta t_i^2$, so by independence:
+  $$\mathbb{E}\!\left[(Q_n - t)^2\right] = \operatorname{Var}(Q_n) = 2\sum_{i=0}^{n-1} \Delta t_i^2 \le 2h_{\max}t \to 0$$
 :::
 
 ::: {.col .fig}
@@ -1706,63 +1570,69 @@ $(dW)^2=dt,\quad dW\,dt=0,\quad (dt)^2=0$
 :::
 :::
 
-::: {.slide title="Left and Right Sums of $\int W\,dW$ Differ by $\sum(\Delta W)^2$"}
-[The Itô integral]{.kicker}
+::: {.slide title="Measuring Quadratic Variation on a Single Path"}
+[Numerical Verification]{.kicker}
 
-Right minus left: $\sum_i(W_{t_{i+1}}-W_{t_i})\Delta W_i=\sum_i(\Delta W_i)^2\to t$. Right plus left: $W_t^2$. One path, $1000$ steps:
+Viewing a single Brownian realization on $[0, 1]$ across subgrids of $n = 16$ up to $2^{18}$ intervals confirms that $\sum_{i=0}^{n-1} (\Delta W_i)^2 \to 1$ with standard deviation $\sqrt{2/n}$, whereas $\sum (\Delta \sin 2\pi t_i)^2 \approx 2\pi^2 / n \to 0$:
+
+@!sdes-quadratic-variation
+
+::: {.d2l-note .rule}
+**The Itô Multiplication Table:** In stochastic differentials, squared Brownian increments survive at first order while higher products vanish:
+$$(dW)^2 = dt, \qquad dW\,dt = 0, \qquad (dt)^2 = 0$$
+:::
+:::
+
+::: {.slide title="Why Riemann Sums Disagree on Stochastic Integrals"}
+[The Evaluation-Point Dilemma]{.kicker}
+
+For a smooth curve, left-endpoint and right-endpoint Riemann sums converge to the same integral. For $\int_0^t W_s\,dW_s$, their difference is the quadratic variation:
+
+$$\sum_{i=0}^{n-1} W_{t_{i+1}}\,\Delta W_i - \sum_{i=0}^{n-1} W_{t_i}\,\Delta W_i = \sum_{i=0}^{n-1} (\Delta W_i)^2 \;\xrightarrow{L^2}\; t$$
 
 @!sdes-left-right-sums
 
-::: {.d2l-note .warn}
-Left $\to\tfrac12(W_t^2-t)$, right $\to\tfrac12(W_t^2+t)$; ordinary calculus says $\tfrac12W_t^2$. We must choose.
-:::
+- **Two Different Limits:** Because the sum of left and right approximations telescopes ($\sum_i (W_{t_{i+1}} + W_{t_i})\Delta W_i = \sum_i (W_{t_{i+1}}^2 - W_{t_i}^2) = W_t^2$), the left-endpoint sum converges to $\frac{1}{2}(W_t^2 - t)$ while the right-endpoint sum converges to $\frac{1}{2}(W_t^2 + t)$.
 :::
 
-::: {.slide title="Itô's Left Endpoint Makes the Integral a Fair Game"}
-[The Itô integral]{.kicker}
+::: {.slide title="The Itô Integral and the Itô Isometry"}
+[Stochastic Integration]{.kicker}
 
-The stake $H_i$ is fixed before the bet $\Delta W_i$ is settled: $\int_0^tH\,dW=\sum_iH_i\,\Delta W_i$.
+**Itô's convention** evaluates the integrand at the **left endpoint** $t_i$, so that $H_i$ is *predictable* (decided before the future noise increment $\Delta W_i = W_{t_{i+1}} - W_{t_i}$ is drawn):
 
-- **I. Mean zero:** $\mathbb{E}[H_i\,\Delta W_i]=\mathbb{E}[H_i]\,\mathbb{E}[\Delta W_i]=0$.
-- **II. Isometry:** the cross terms vanish the same way.
+$$\int_0^t H_s\,dW_s = \lim_{h_{\max} \to 0} \sum_{i=0}^{n-1} H_i\left(W_{t_{i+1}} - W_{t_i}\right)$$
 
-::: {.d2l-note .rule}
-$$\mathbb{E}\Big[\Big(\int_0^t H\,dW\Big)^2\Big]=\int_0^t\mathbb{E}[H_s^2]\,ds$$
+- **Zero-Mean Fair Game (Martingale Property):** Because $H_i$ and $\Delta W_i$ are independent and $\mathbb{E}[\Delta W_i] = 0$, every term has expected value $\mathbb{E}[H_i\,\Delta W_i] = \mathbb{E}[H_i]\mathbb{E}[\Delta W_i] = 0$, so $\mathbb{E}\!\left[\int_0^t H_s\,dW_s\right] = 0$.
+- **Proposition (Itô Isometry):** When squaring $\sum_i H_i\Delta W_i$, every cross term $i < j$ has $\mathbb{E}[H_i\Delta W_i H_j\Delta W_j] = \mathbb{E}[H_i\Delta W_i H_j]\mathbb{E}[\Delta W_j] = 0$, leaving only the diagonal terms $\mathbb{E}[H_i^2]\mathbb{E}[(\Delta W_i)^2] = \mathbb{E}[H_i^2]\Delta t_i$:
+  $$\mathbb{E}\!\left[\left(\int_0^t H_s\,dW_s\right)^{\!2}\right] = \int_0^t \mathbb{E}\!\left[H_s^2\right]ds$$
+- **Fundamental Example:** $\int_0^t W_s\,dW_s = \frac{1}{2}(W_t^2 - t)$, which has mean $0$ and variance $\int_0^t \mathbb{E}[W_s^2]\,ds = \frac{1}{2}t^2$.
 :::
 
-- **III. Instance:** $\int_0^tW\,dW=\tfrac12(W_t^2-t)$: mean $0$; variance $\int_0^1s\,ds=\tfrac12$ at $t=1$.
+::: {.slide title="Itô Stochastic Differential Equations: Drift & Noise"}
+[Anatomy of an SDE]{.kicker}
 
-[Proved for step integrands; general integrands are cited (Øksendal, ch. 3). The midpoint rule (Stratonovich) keeps the ordinary chain rule and loses the zero mean.]{.small}
+An **Itô stochastic differential equation (SDE)** combines a deterministic velocity arrow with a random Brownian kick:
+
+$$dX = f(X, t)\,dt + g(X, t)\,dW \quad \Longleftrightarrow \quad X_t = X_0 + \int_0^t f(X_s, s)\,ds + \int_0^t g(X_s, s)\,dW_s$$
+
+- **Drift $f(X, t)$:** The conditional mean velocity over a short interval, $\mathbb{E}[dX \mid X_t] = f(X_t, t)\,dt$.
+- **Diffusion $g(X, t)$:** The noise amplitude setting the local variance injection rate, $\operatorname{Var}(dX \mid X_t) = g(X_t, t)^2\,dt$.
+- **Additive vs. Multiplicative Noise:**
+  - **Additive Noise ($g = g(t)$):** Noise amplitude depends only on time (used in all standard diffusion models).
+  - **Multiplicative Noise ($g = g(X, t)$):** Noise amplitude scales with the state (e.g., geometric Brownian motion $g(X) = \nu X$).
 :::
 
-::: {.slide title="An SDE Is an ODE Plus an Itô Integral"}
-[Drift and diffusion]{.kicker}
+::: {.slide title="Why the Ordinary Chain Rule Fails: Jensen's Gap"}
+[Geometric Intuition for Itô's Lemma]{.kicker}
 
-$dX=f\,dt+g\,dW$ means $X_t=X_0+\int_0^tf\,ds+\int_0^tg\,dW_s$.
-
-- Drift $f$: mean velocity, $\mathbb{E}[dX]=f\,dt$.
-- Diffusion $g$: variance rate, $\textrm{Var}(dX)=g^2\,dt$.
-- A solution is one path for each Brownian path; fresh noise gives a cloud.
-- Noise is additive, $g(t)$ (the running example), or multiplicative, $g(X,t)$ (a stock price, $g=\nu X$).
-
-[Unique solution if $f,g$ are Lipschitz in $x$ with linear growth, and $X_0$ is independent of $W$ with $\mathbb{E} X_0^2<\infty$.]{.small}
-:::
-
-::: {.slide title="The Ordinary Chain Rule Fails on $W^2$"}
-[Itô's lemma I]{.kicker}
+The ordinary chain rule predicts $d(W_t^2) = 2W_t\,dW_t$, which integrates to $\int_0^t 2W_s\,dW_s = W_t^2 - t$—missing the $+t$ term! One step of a coin-flip walk shows why any curved function $\phi(x)$ experiences a deterministic drift from symmetric noise:
 
 ::: {.cols .vc}
 ::: {.col}
-Chain rule: $d(W^2)=2W\,dW$, mean zero. But $\mathbb{E}[W_t^2]=t$.
-
-One step $\pm\sqrt{\Delta t}$ from $x$, with $\phi(x)=x^2$:
-$\tfrac12[(x+\sqrt{\Delta t})^2+(x-\sqrt{\Delta t})^2]=x^2+\Delta t$.
-
-$x=0.7$, $\Delta t=0.25$: the average of $\phi$ is $0.74$, above $0.49$ by $0.25$.
-
-::: {.d2l-note}
-A convex $\phi$ gains $\tfrac12\phi''\Delta t$ from symmetric noise.
-:::
+- **Symmetric Kick on a Convex Curve:** From $x$, a step $\pm\sqrt{\Delta t}$ lands at $x + \sqrt{\Delta t}$ or $x - \sqrt{\Delta t}$ with probability $\frac{1}{2}$ each.
+- **Second-Order Jensen Gap:** For $\phi(x) = x^2$ ($\phi''(x) = 2$), the average value after the step is:
+  $$\frac{1}{2}\left[(x + \sqrt{\Delta t})^2 + (x - \sqrt{\Delta t})^2\right] = x^2 + \Delta t = \phi(x) + \frac{1}{2}\phi''(x)\,\Delta t$$
+- **Non-Vanishing Rate:** Because $(\Delta W)^2 \approx \Delta t$, the curvature gain $+\frac{1}{2}\phi''(x)$ per unit time survives the $\Delta t \to 0$ limit.
 :::
 
 ::: {.col .fig}
@@ -1771,59 +1641,58 @@ A convex $\phi$ gains $\tfrac12\phi''\Delta t$ from symmetric noise.
 :::
 :::
 
-::: {.slide title="Itô's Lemma Is the Chain Rule Plus $\tfrac12g^2\phi_{xx}\,dt$"}
-[Itô's lemma II]{.kicker}
+::: {.slide title="Theorem: Itô's Lemma (The Stochastic Chain Rule)"}
+[Core Theorem]{.kicker}
 
-- **I.** Expand to second order: $d\phi=\phi_t\,dt+\phi_x\,dX+\tfrac12\phi_{xx}(dX)^2$.
-- **II.** Multiply out with the table: $(dX)^2=f^2dt^2+2fg\,dt\,dW+g^2dW^2=g^2\,dt$.
+To differentiate a smooth transformation $Y_t = \phi(X_t, t)$ of an SDE $dX = f\,dt + g\,dW$, we expand $\phi$ to **second order** in $dX$ and apply the Itô multiplication table $(dX)^2 = f^2(dt)^2 + 2fg\,dt\,dW + g^2(dW)^2 = g^2\,dt$:
 
 ::: {.d2l-note .rule}
-$$d\phi=\big(\phi_t+f\phi_x+\tfrac12g^2\phi_{xx}\big)dt+g\,\phi_x\,dW$$
+**Theorem (Itô's Lemma in 1D):** For any $\phi(x, t) \in C^{1,2}$,
+$$d\phi(X_t, t) = \left(\phi_t + f\,\phi_x + \frac{1}{2}g^2\,\phi_{xx}\right)dt + g\,\phi_x\,dW_t$$
+**Multivariate Isotropic Form ($d\mathbf{X} = \mathbf{f}\,dt + g(t)\,d\mathbf{W}$ in $\mathbb{R}^d$, where $dW_i\,dW_j = \delta_{ij}\,dt$):**
+$$d\phi(\mathbf{X}_t, t) = \left(\partial_t\phi + \nabla\phi \cdot \mathbf{f} + \frac{1}{2}g(t)^2\,\Delta\phi\right)dt + g(t)\,\nabla\phi \cdot d\mathbf{W}_t$$
 :::
 
-- Convex, $\phi=x^2$ on $W$: $d(W^2)=2W\,dW+dt$.
-- Concave, $\phi=\log x$ on $dX=\mu X\,dt+\nu X\,dW$: $d\log X=(\mu-\tfrac12\nu^2)\,dt+\nu\,dW$, so $X_t=X_0e^{(\mu-\frac12\nu^2)t+\nu W_t}$.
-
-[A heuristic; the theorem needs $\phi$ once differentiable in $t$ and twice in $x$ (Øksendal, ch. 4).]{.small}
+- **The Itô Correction ($\frac{1}{2}g^2\phi_{xx}\,dt$):** Half the variance rate $g^2$ times the second derivative (or Laplacian $\Delta\phi = \sum_i \partial^2\phi/\partial x_i^2$). It vanishes if and only if $\phi$ is affine in $x$ ($\phi_{xx} = 0$).
 :::
 
-::: {.slide title="On One Path $W_t^2$ Exceeds $\int_0^t2W\,dW$ by $t$"}
-[Itô's lemma III]{.kicker}
+::: {.slide title="Watching the Itô Correction Accumulate Along One Path"}
+[Numerical Verification of Itô's Lemma]{.kicker}
 
-On $1000$ steps the gap $W_t^2-\int_0^t2W\,dW$ is the running $\sum(\Delta W_i)^2$. The curve labeled naive is $\int_0^t2W\,dW$, which the ordinary chain rule takes for $W_t^2$:
+On $X_t = W_t$ ($f = 0, g = 1$) with $\phi(x) = x^2$, Itô's lemma gives $d(W_t^2) = 2W_t\,dW_t + dt$, so $W_t^2 - \int_0^t 2W_s\,dW_s = t$ deterministically along every individual path:
 
 @!sdes-ito-correction
-:::
 
-::: {.slide title="Check: Two Quick Itô Computations"}
-[Check]{.kicker}
-
-What is $d(W^3)$? Which functions $\phi(x,t)$ have no Itô correction?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $d(W^3)=3W^2\,dW+3W\,dt$. Functions linear in $x$, such as $e^{\theta t}x$, since $\phi_{xx}=0$; the next slide uses this one.
-:::
+The naive chain-rule curve $\int_0^t 2W_s\,dW_s$ sags below $W_t^2$ by the running quadratic variation $\sum (\Delta W_i)^2 \approx t$; adding $+t$ restores exact pathwise agreement.
 :::
 :::
 
-::: {.slide title="The OU Process Has a Gaussian Kernel and Forgets Its Start"}
-[The OU process]{.kicker}
+::: {.slide title="Worked Application: Geometric Brownian Motion"}
+[Multiplicative Noise & Concave Drift Shift]{.kicker}
+
+The SDE $dX_t = \mu X_t\,dt + \nu X_t\,dW_t$ ($X_0 > 0$) models a positive quantity whose noise amplitude $g(X) = \nu X$ is proportional to its current level (**multiplicative noise**):
+
+- **Log-Transform via Itô's Lemma:** Apply Itô's lemma to $\phi(x) = \log x$, which has $\phi'(x) = \frac{1}{x}$ and $\phi''(x) = -\frac{1}{x^2}$:
+  $$d\log X_t = \frac{1}{X_t}\,dX_t + \frac{1}{2}\left(-\frac{1}{X_t^2}\right)(\nu^2 X_t^2)\,dt = \left(\mu - \frac{1}{2}\nu^2\right)dt + \nu\,dW_t$$
+- **Exact Closed-Form Solution:** Integrating from $0$ to $t$ and exponentiating gives:
+  $$X_t = X_0 \exp\!\left(\left(\mu - \frac{1}{2}\nu^2\right)t + \nu W_t\right)$$
+- **Mean vs. Median Divergence:** Because $\log x$ is strictly concave ($\phi'' < 0$), symmetric noise slows the median growth rate to $\mu - \frac{1}{2}\nu^2$ even though the expectation still grows at the drift rate $\mathbb{E}[X_t] = X_0 e^{\mu t}$.
+:::
+
+::: {.slide title="The Ornstein–Uhlenbeck Process and Mean Reversion"}
+[The Canonical Diffusion Process]{.kicker}
+
+Adding constant-amplitude Brownian noise $g\,dW$ to the linear decay equation $\dot{x} = -\theta x$ ($\theta > 0$) produces the **Ornstein–Uhlenbeck (OU) process**:
+
+$$dX_t = -\theta X_t\,dt + g\,dW_t$$
 
 ::: {.cols .vc}
 ::: {.col}
-$dX=-\theta X\,dt+g\,dW$: decay at rate $\theta>0$, noise of amplitude $g$.
-
-- **I.** Itô on $e^{\theta t}X$: $d(e^{\theta t}X)=g\,e^{\theta t}\,dW$.
-- **II.** $X_t=x_0e^{-\theta t}+g\int_0^te^{-\theta(t-s)}\,dW_s$.
-- **III.** Gaussian; variance by the isometry.
-
-::: {.d2l-note .rule}
-Transition kernel (the law given the start): $X_t\mid x_0\sim\mathcal N(\alpha_tx_0,\,\sigma_t^2)$
-:::
-
-$\alpha_t=e^{-\theta t}$, $\sigma_t^2=\tfrac{g^2}{2\theta}(1-e^{-2\theta t})$. With $\theta=1$, $g^2=2$, $x_0=2$:
-$\mathcal N(0.74,\,0.93^2)$ at $t=1$, then $\mathcal N(0,1)$.
+- **Exact Solution via Integrating Factor:** Apply Itô's lemma to $\phi(x, t) = e^{\theta t}x$. Because $\phi$ is linear in $x$ ($\phi_{xx} = 0$), the Itô correction is **zero**:
+  $$d\!\left(e^{\theta t}X_t\right) = \theta e^{\theta t}X_t\,dt + e^{\theta t}(-\theta X_t\,dt + g\,dW_t) = g\,e^{\theta t}\,dW_t$$
+- **Fading-Memory Integral:** Integrating from $0$ to $t$ gives:
+  $$X_t = X_0\,e^{-\theta t} + g\int_0^t e^{-\theta(t-s)}\,dW_s$$
 :::
 
 ::: {.col .fig}
@@ -1832,91 +1701,126 @@ $\mathcal N(0.74,\,0.93^2)$ at $t=1$, then $\mathcal N(0,1)$.
 :::
 :::
 
-::: {.slide title="$g^2=2\theta$ Keeps the Variance at 1 at Every Time"}
-[Variance preserving]{.kicker}
+::: {.slide title="Closed-Form OU Gaussian Kernel and Stationary Law"}
+[Transition Kernel]{.kicker}
 
-Start from data $X_0$, not one point. With $\bar\alpha_t=\alpha_t^2=e^{-2\theta t}$, the letter of DDPM (the denoising diffusion probabilistic model), and $\epsilon\sim\mathcal N(0,1)$ independent of $X_0$:
-$$X_t=\sqrt{\bar\alpha_t}\,X_0+\sqrt{1-\bar\alpha_t}\,\epsilon,\qquad
-\textrm{Var}(X_t)=\bar\alpha_t+(1-\bar\alpha_t)=1.$$
+Because the integrand $e^{-\theta(t-s)}$ is deterministic, $\int_0^t e^{-\theta(t-s)}\,dW_s$ is a Gaussian random variable with mean $0$ and variance given directly by the **Itô isometry**:
 
-- For unit-variance data only: a variance $s^2$ drifts to $1$.
-- The shape changes: a coin $\pm1$ has $\mathbb{E}[X_t^4]=3-2\bar\alpha_t^2$, from $1$ to $2.96$ at $t=1$ (Gaussian: $3$).
-- VP-SDE: $dX=-\tfrac12\beta(t)X\,dt+\sqrt{\beta(t)}\,dW$ with a rate $\beta(t)$ keeps $g^2=2\theta$ at every instant (here $\beta=2$).
+$$\operatorname{Var}(X_t \mid X_0 = x_0) = g^2 \int_0^t e^{-2\theta(t-s)}\,ds = \frac{g^2}{2\theta}\left(1 - e^{-2\theta t}\right)$$
+
+::: {.d2l-note .rule}
+**Proposition (OU Transition Kernel):** Given $X_0 = x_0$, the state at any time $t > 0$ is exact Gaussian:
+$$X_t \mid X_0 = x_0 \;\sim\; \mathcal{N}\!\left(\alpha_t x_0,\; \sigma_t^2\right), \qquad \alpha_t = e^{-\theta t}, \qquad \sigma_t^2 = \frac{g^2}{2\theta}\left(1 - e^{-2\theta t}\right)$$
 :::
 
-::: {.slide title="Euler–Maruyama Is Euler Plus a $\sqrt{\Delta t}$ Kick"}
-[Simulation]{.kicker}
-
-$\hat X_{n+1}=\hat X_n+f(\hat X_n,t_n)\,\Delta t+g(\hat X_n,t_n)\sqrt{\Delta t}\,\xi_n$, with $\xi_n\sim\mathcal N(0,1)$.
-
-| OU step $x_k=a\,x_{k-1}+\sqrt b\,\epsilon_k$ at $\theta=1$, $g^2=2$, $\Delta t=0.01$ | $a$ | $b$ |
-|--------------------------------------------------------------|--------|--------|
-| exact, DDPM's step: $a=\sqrt{1-\beta_k}$, $b=\beta_k=1-e^{-2\theta\Delta t}$ | $0.99005$ | $0.0198$ |
-| Euler–Maruyama, first order: $a=1-\theta\Delta t$, $b=g^2\Delta t$ | $0.99$ | $0.02$ |
-
-@-sdes-euler-maruyama
+- **Stationary Distribution ($t \to \infty$):** After a few multiples of the relaxation time $1/\theta$, the mean $x_0 e^{-\theta t} \to 0$ and the variance saturates at $\sigma_\infty^2 = \frac{g^2}{2\theta}$, so $X_t \to \mathcal{N}\!\left(0, \frac{g^2}{2\theta}\right)$ from every starting state $x_0$.
 :::
 
-::: {.slide title="Strong Error Tracks a Path, Weak Error Tracks a Law"}
-[Convergence]{.kicker}
+::: {.slide title="Variance-Preserving Normalization and the VP-SDE"}
+[Foundation of DDPM]{.kicker}
 
-![](../img/mdl-dyn-strong-weak.svg){width=70%}
+Choosing $g^2 = 2\theta$ fixes the stationary variance to $\frac{g^2}{2\theta} = 1$ and ties the noise variance directly to the signal decay via $\sigma_t^2 = 1 - \alpha_t^2$. Writing $\bar{\alpha}_t = \alpha_t^2 = e^{-2\theta t}$ (DDPM notation):
 
-Shared increments, $N=T/\Delta t$ steps. Strong, $\mathbb{E}|\hat X_N-X_T|$: paths, needed to couple them.
-Weak, $|\mathbb{E}\varphi(\hat X_N)-\mathbb{E}\varphi(X_T)|$ for smooth $\varphi$: laws, all that generation needs.
+$$X_t = \sqrt{\bar{\alpha}_t}\,X_0 + \sqrt{1 - \bar{\alpha}_t}\,\epsilon, \qquad \epsilon \sim \mathcal{N}(0, 1) \text{ independent of } X_0$$
+
+- **Why It Is Called Variance-Preserving (VP):** If the data distribution $X_0$ has mean $0$ and unit variance $\operatorname{Var}(X_0) = 1$, then at **every** time $t \ge 0$:
+  $$\operatorname{Var}(X_t) = \bar{\alpha}_t \operatorname{Var}(X_0) + (1 - \bar{\alpha}_t) = \bar{\alpha}_t + 1 - \bar{\alpha}_t = 1$$
+- **Shape Reshaping:** Higher moments still evolve into a Gaussian—for Rademacher data $X_0 \in \{\pm 1\}$, the fourth moment climbs smoothly from $\mathbb{E}[X_0^4] = 1$ to $\mathbb{E}[X_t^4] = 3 - 2\bar{\alpha}_t^2 \to 3$.
+- **Time-Dependent Schedule (VP-SDE):** Allowing the rate $\beta(t) = 2\theta(t) = g(t)^2$ to increase with time gives $dX = -\frac{1}{2}\beta(t)X\,dt + \sqrt{\beta(t)}\,dW$, whose marginal has $\bar{\alpha}_t = \exp\!\big(-\int_0^t \beta(s)\,ds\big)$.
 :::
 
-::: {.slide title="Strong Order Is 1 for Additive Noise and $\tfrac12$ for Multiplicative"}
-[Convergence]{.kicker}
+::: {.slide title="Simulating SDEs: Euler–Maruyama vs. Exact Transitions"}
+[Numerical SDE Schemes]{.kicker}
 
-A step freezes $g$. Its change $g\,\partial_xg\,(W_s-W_{t_n})$ integrates to $\tfrac12g\,\partial_xg\,((\Delta W)^2-\Delta t)$: mean zero, size $\Delta t$; $N$ of them add to $\sqrt{T\Delta t}$.
-Additive noise (OU) has $\partial_xg=0$; geometric Brownian motion $dX=X\,dt+X\,dW$ has $\partial_xg=1$.
+When an SDE has no closed-form transition kernel, the **Euler–Maruyama scheme** freezes $f$ and $g$ at the start of each step $\Delta t$ and injects a $\sqrt{\Delta t}$ Gaussian kick:
 
+$$\hat{X}_{n+1} = \hat{X}_n + f(\hat{X}_n, t_n)\,\Delta t + g(\hat{X}_n, t_n)\sqrt{\Delta t}\,\xi_n, \qquad \xi_n \sim \mathcal{N}(0, 1) \text{ i.i.d.}$$
+
+| Discretization of OU ($dX = -\theta X\,dt + \sqrt{2\theta}\,dW$, $\theta=1, \Delta t=0.01$) | Signal Multiplier $a$ | Noise Variance $b$ | Stationary Variance $v_\infty$ |
+| :--- | :--- | :--- | :--- |
+| **Exact Transition (DDPM Forward Step)** | $e^{-\theta\Delta t} = 0.99005$ | $1 - e^{-2\theta\Delta t} = 0.01980$ | $1.0000$ (exact for all $\Delta t$) |
+| **Euler–Maruyama ($O(\Delta t)$ Approximation)** | $1 - \theta\Delta t = 0.99000$ | $2\theta\Delta t = 0.02000$ | $\frac{2\theta\Delta t}{1 - (1-\theta\Delta t)^2} = 1.0050$ ($+0.5\%$ bias) |
+:::
+
+::: {.slide title="Implementing Batched Euler–Maruyama With Shared Noise"}
+[Clean SDE Simulator]{.kicker}
+
+Passing the Brownian increments `dW` as an explicit argument allows us to drive coarse and fine time grids with the **exact same noise realization** when measuring strong pathwise convergence:
+
+@sdes-euler-maruyama
+
+- **Milstein's Higher-Order Correction ($p_{\text{strong}} = 1$):** Adding the omitted intra-step diffusion integral $\frac{1}{2}g(\hat{X}_n)\,\partial_x g(\hat{X}_n)\big((\Delta W_n)^2 - \Delta t\big)$ to the Euler–Maruyama update restores strong order $1$ even for multiplicative noise.
+:::
+
+::: {.slide title="Strong Pathwise Error vs. Weak Distributional Error"}
+[Two Notions of Convergence]{.kicker}
+
+Because SDE solutions are random variables, numerical accuracy can be judged either by how closely a simulated path tracks the specific realization of $W_t$, or by how closely the histogram at time $T$ matches the true marginal law:
+
+![](../img/mdl-dyn-strong-weak.svg)
+
+- **Strong Error ($\mathbb{E}\,|\hat{X}_N - X_T| \le C\,\Delta t^p$):** Couples coarse and fine runs with the **exact same Brownian path** $W_t$. Required for multilevel Monte Carlo.
+- **Weak Error ($|\mathbb{E}\,\varphi(\hat{X}_N) - \mathbb{E}\,\varphi(X_T)| \le C\,\Delta t^p$):** Compares expectations/histograms at time $T$ across independent noise draws. **Generative diffusion samplers only require weak convergence.**
+:::
+
+::: {.slide title="Strong Order: Additive vs. Multiplicative Noise"}
+[Pathwise Convergence]{.kicker}
+
+Why does Euler–Maruyama achieve strong order $p = 1$ on the additive-noise OU process, but drop to strong order $p = 1/2$ on multiplicative-noise geometric Brownian motion ($g(X) = \nu X$)?
+
+::: {.cols .vc}
+::: {.col}
+- **The Omitted Milstein Term:** Freezing $g(X)$ misses its intra-step variation $g(X_s) - g(X_{t_n}) \approx g\,\partial_x g\,(W_s - W_{t_n})$, whose Itô integral over $[t_n, t_{n+1}]$ is:
+  $$g\,\partial_x g \int_{t_n}^{t_{n+1}} (W_s - W_{t_n})\,dW_s = \frac{1}{2}g\,\partial_x g\left((\Delta W_n)^2 - \Delta t\right)$$
+- **Random Walk of Step Errors:** Each step omits a zero-mean error of size $O(\Delta t)$; summing $N = T/\Delta t$ independent errors gives $\sqrt{N}\,\Delta t = O(\Delta t^{1/2})$ unless $\partial_x g = 0$ (additive noise, where strong order is $O(\Delta t)$).
+:::
+
+::: {.col .fig}
 @!sdes-em-strong-order
 :::
-
-::: {.slide title="The Simulated Law Is Off by $O(\Delta t)$, Computed Without Sampling"}
-[Convergence]{.kicker}
-
-Euler–Maruyama on OU maps Gaussians to Gaussians, with mean $m_n$ and variance $v_n$:
-$m_{n+1}=(1-\theta\Delta t)\,m_n$, $\;v_{n+1}=(1-\theta\Delta t)^2v_n+g^2\Delta t$.
-
-| steps to $T=1$, from $x_0=2$ | mean | variance |
-|---|---|---|
-| $10$ | $0.697$ | $0.925$ |
-| $320$ | $0.735$ | $0.866$ |
-| exact | $0.736$ | $0.865$ |
-
-::: {.d2l-note}
-Halving the step halves both errors: weak order $1$ (fitted slopes $1.01$).
-:::
-
-[The orders of Euler–Maruyama are theorems of Kloeden and Platen (1992), cited here without proof.]{.small}
-:::
-
-::: {.slide title="Check: A Second OU Process"}
-[Check]{.kicker}
-
-For $dX=-2X\,dt+dW$: what is the stationary variance? What are the Euler–Maruyama step and the exact step at $\Delta t=0.01$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $g^2/2\theta=\tfrac14$. Euler–Maruyama: $0.98\,\hat X_n+0.1\,\xi_n$ (noise variance $0.01$).
-Exact: multiplier $e^{-0.02}=0.9802$, noise variance $\tfrac14(1-e^{-0.04})=0.0098$.
-:::
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Measuring Weak Order 1 via Exact Moment Recursions"}
+[Distributional Convergence]{.kicker}
 
-- Noise that survives small steps has size $\sqrt{\Delta t}$, and its squares add up to time: $\sum(\Delta W_i)^2\to t$.
-- Itô integral: left endpoint, mean zero, isometry; $\textrm{Var}\int_0^1W\,dW=\tfrac12$.
-- Itô's lemma adds $\tfrac12g^2\phi_{xx}\,dt$: $+t$ on $W^2$, $-\tfrac12\nu^2$ on $\log X$.
-- OU from $2$: $\mathcal N(0.74,0.93^2)$ at $t=1$, stationary $\mathcal N(0,1)$; $g^2=2\theta$ keeps unit variance.
-- DDPM's step is the exact OU transition. Euler–Maruyama: strong slopes $\approx1$ and $\approx\tfrac12$, weak slope $1.01$.
+Because every omitted stochastic term has **mean zero**, the one-step distributional bias of Euler–Maruyama is $O(\Delta t^2)$, accumulating over $N = T/\Delta t$ steps to **weak order $1$** ($O(\Delta t)$) for both additive and multiplicative noise:
 
-::: {.d2l-note}
-Next: the cloud of paths has a density. Which equation moves it?
+@!sdes-em-weak-order
+
+::: {.d2l-note .warn}
+**Itô vs. Stratonovich Pitfall:** Naive higher-order ODE solvers cannot be plugged directly into multiplicative SDEs—applying Heun's predictor-corrector to $g(X)$ averages the left and right endpoints, converging to the **Stratonovich** solution $X_0 e^{\mu T + \nu W_T}$ instead of the Itô solution $X_0 e^{(\mu - \nu^2/2)T + \nu W_T}$!
 :::
 :::
+
+::: {.slide title="Concept Check: Itô Calculus and Ornstein–Uhlenbeck"}
+[Concept Check]{.kicker}
+
+Work out these three stochastic calculus problems:
+
+1. **Itô's Lemma on a Cubic:** For standard Brownian motion $W_t$, compute the stochastic differential $d(W_t^3)$ and find $\mathbb{E}[W_t^3]$ and $\mathbb{E}[W_t^2]$.
+2. **Stationary Variance:** Consider the OU process $dX_t = -3X_t\,dt + \sqrt{3}\,dW_t$ started at $X_0 = 5$. What is its limiting distribution as $t \to \infty$?
+3. **Strong vs. Weak Order:** If you quarter the step size $\Delta t \to \Delta t / 4$ in Euler–Maruyama on a multiplicative-noise SDE, by what factor does the **strong error** shrink, and by what factor does the **weak error** shrink?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. With $\phi(x) = x^3$, $\phi' = 3x^2$ and $\phi'' = 6x$, so $d(W_t^3) = 3W_t^2\,dW_t + \frac{1}{2}(1)^2(6W_t)\,dt = 3W_t^2\,dW_t + 3W_t\,dt$. By symmetry $\mathbb{E}[W_t^3] = 0$, while $d(W_t^2) = 2W_t\,dW_t + dt \implies \mathbb{E}[W_t^2] = t$.
+2. With $\theta = 3$ and $g^2 = 3$, the stationary distribution is $\mathcal{N}\!\left(0, \frac{g^2}{2\theta}\right) = \mathcal{N}\!\left(0, \frac{1}{2}\right)$.
+3. Strong error (order $1/2$) shrinks by $4^{1/2} = 2\times$; weak error (order $1$) shrinks by $4^1 = 4\times$.
+:::
+:::
+
+::: {.slide title="Summary: Brownian Motion, Itô Calculus, and SDEs"}
+[Key Takeaways]{.kicker}
+
+| Concept | Mathematical Formula | Role in Diffusion & Stochastic Modeling |
+| :--- | :--- | :--- |
+| **Brownian Increment** | $\Delta W = W_{t+\Delta t} - W_t = \sqrt{\Delta t}\,\xi$, $\xi \sim \mathcal{N}(0, 1)$ | Unique scaling with finite, non-zero variance $\operatorname{Var}(W_t) = t$ |
+| **Quadratic Variation** | $\sum_i (\Delta W_i)^2 \to t$ in $L^2$ $\iff (dW)^2 = dt$ | Causes second-order Taylor terms to survive at order $dt$ |
+| **Itô Integral & Isometry** | $\mathbb{E}\!\left[\int_0^t H_s\,dW_s\right] = 0$, $\mathbb{E}\!\left[\left(\int_0^t H_s\,dW_s\right)^2\right] = \int_0^t \mathbb{E}[H_s^2]\,ds$ | Left-endpoint evaluation preserves zero mean and computes variances |
+| **Itô's Lemma** | $d\phi = (\phi_t + f\phi_x + \frac{1}{2}g^2\phi_{xx})\,dt + g\phi_x\,dW$ | Stochastic chain rule; generates the Laplacian $\frac{1}{2}g^2\Delta\phi$ in $\mathbb{R}^d$ |
+| **OU / VP-SDE Kernel** | $X_t \mid X_0 \sim \mathcal{N}(\sqrt{\bar{\alpha}_t}X_0, (1-\bar{\alpha}_t)\mathbf{I})$ ($g^2 = 2\theta$) | Closed-form forward noising to $\mathcal{N}(\mathbf{0}, \mathbf{I})$ in a single Gaussian draw |
+| **Euler–Maruyama** | $\hat{X}_{n+1} = \hat{X}_n + f\Delta t + g\sqrt{\Delta t}\,\xi_n$ | Strong order $1$ (additive) or $1/2$ (multiplicative); weak order $1$ |
+:::
+

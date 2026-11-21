@@ -372,8 +372,7 @@ comes from exactly one start. $\blacksquare$
 A field that changes in time loses only the law
 :eqref:`eq_mdl-ode-flow-group`. An hour of wind from noon and an hour from
 midnight are different maps, so the map depends on the starting time as well
-as on the duration (Exercise
-:exref:`ex_mdl-odes-solvers-time-dependent-flow`). We keep the symbol
+as on the duration. We keep the symbol
 $\Phi_t$ for such a field, as the map from the state at time $0$ to the
 state at time $t$.
 
@@ -897,25 +896,6 @@ exists.
        which statement of the corollary on the flow map fails?
    :exlabel:`ex_mdl-odes-solvers-uniqueness-exponent`
 
-1. **Picard iteration on the rotation.** Apply Picard iteration to
-   $\dot{\mathbf x}=\mathbf K\mathbf x$ from $\mathbf x_0=(1,0)$, starting
-   from the constant path $\boldsymbol\varphi_0\equiv\mathbf x_0$.
-    1. Compute $\boldsymbol\varphi_1,\ldots,\boldsymbol\varphi_4$. Which two
-       functions are being built, one Taylor term per iteration?
-    1. Show that
-       $\|\boldsymbol\varphi_k(t)-\boldsymbol\varphi_{k-1}(t)\|=t^k/k!$.
-       The proof in the text promises a factor $\tfrac12$ per iteration, and
-       only on an interval of length $1/(2L)=\tfrac12$. For which $t$ do
-       these iterates converge, and how fast?
-    1. The rotation is not special. For a field that satisfies the hypotheses
-       of the theorem, let $M=\max_{s\le T}\|\mathbf f(\mathbf x_0,s)\|$.
-       Show by induction that
-       $\|\boldsymbol\varphi_{k+1}(t)-\boldsymbol\varphi_k(t)\|\le ML^kt^{k+1}/(k+1)!$
-       on $[0,T]$, and conclude that Picard iteration converges on all of
-       $[0,T]$ without a restart. Which estimate in the proof of the text
-       gave the factorial away?
-   :exlabel:`ex_mdl-odes-solvers-picard-rotation`
-
 1. **Separation of trajectories.** Consider a field of the form
    $\mathbf{f}(\mathbf{x}) = \mathbf W_2 \tanh(\mathbf W_1\mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2$,
    the kind of field that a Neural ODE integrates
@@ -938,25 +918,6 @@ exists.
        distinct points? What do the two bounds imply for the Lipschitz
        constants of $\Phi_T$ and of its inverse?
    :exlabel:`ex_mdl-odes-solvers-trajectory-separation`
-
-1. **A field that changes in time.** Consider $\dot x=-tx$, a decay whose
-   rate grows with time.
-    1. Solve the equation from the state $x$ at time $s$, and write down the
-       map $\Phi_{s\to t}$ that carries the state at time $s$ to the state at
-       time $t$.
-    1. Show that $\Phi_{s\to t}\circ\Phi_{r\to s}=\Phi_{r\to t}$ and that
-       $\Phi_{t\to s}$ inverts $\Phi_{s\to t}$. Then compare
-       $\Phi_{0\to1}$ with $\Phi_{1\to2}$, which both flow for one unit of
-       time. Why can no law $\Phi_{t+s}=\Phi_t\circ\Phi_s$ in the duration
-       alone hold for this field?
-    1. A field that depends on time becomes autonomous when time is made a
-       coordinate of the state: $\mathbf z=(x,t)$ obeys
-       $\dot{\mathbf z}=(f(x,t),\,1)$. Write this field down for
-       $\dot x=-tx$. Is it globally Lipschitz in $\mathbf z$? Is $-tx$
-       globally Lipschitz in $x$ for $t\in[0,T]$? Which route to the
-       bijection asks less of the field, this one or the reversal of time in
-       the proof of the corollary?
-   :exlabel:`ex_mdl-odes-solvers-time-dependent-flow`
 
 1. **A repeated eigenvalue.** The matrix
    $\mathbf A=\left(\begin{smallmatrix}\lambda&1\\0&\lambda\end{smallmatrix}\right)$
@@ -1080,85 +1041,58 @@ exists.
 ::: {.cover}
 [Dive into Deep Learning · §38.1]{.kicker}
 
-A velocity at every point and the motion it determines<br>**one trajectory per point · the matrix exponential · eigenvalues and stability**
+Ordinary Differential Equations, Phase Portraits, and Flows<br>**vector fields · Picard–Lindelöf uniqueness · flow bijections · matrix exponential · phase portraits**
 :::
 :::
 
-::: {.slide title="A Velocity at Every Point Does Not Always Fix the Motion"}
-[The problem]{.kicker}
+::: {.slide title="When Does a Velocity Field Determine a Unique Motion?"}
+[Motivation]{.kicker}
 
-A state $x(t)$ follows a velocity rule $\dot x=f(x)$ from a start $x(0)$, where $\dot x=dx/dt$.
+A residual layer, a gradient step, and a diffusion sampler all move a state along a prescribed velocity arrow $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$. Before analyzing discrete steps, we must know when the continuous equation itself is well-posed:
 
-| rule | start | solutions |
-|---|---|---|
-| $\dot x=-x$ | $x(0)=1$ | one: $x=e^{-t}$ |
-| $\dot x=\sqrt{\lvert x\rvert}$ | $x(0)=0$ | $x\equiv0$, $x=t^2/4$, and infinitely many more |
+| Velocity Rule | Initial State | Solutions on $[0, T]$ | Consequence for Deep Learning |
+| :--- | :--- | :--- | :--- |
+| $\dot{x} = -x$ | $x(0) = 1$ | Unique: $x(t) = e^{-t}$ | Invertible flow map $\Phi_t(x_0) = e^{-t}x_0$ |
+| $\dot{x} = \sqrt{\lvert x \rvert}$ | $x(0) = 0$ | Infinitely many: $x \equiv 0$ and $x_c(t) = (t-c)^2/4$ | Ambiguous forward pass; non-invertible |
+| $\dot{x} = x^2$ | $x(0) = x_0 > 0$ | Unique locally, but blows up at $t = 1/x_0$ | Finite-horizon divergence before time $T$ |
 
 ::: {.d2l-note .warn}
-A model defined by a field needs one output per input. When is the motion
-determined, can it be run backward, and where does it end up?
+A generative flow or Neural ODE defines its output as the time-$T$ state of an ODE. It requires **existence**, **uniqueness**, and **reversibility** for every input $\mathbf{x}_0 \in \mathbb{R}^d$.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Elementary Motions: Exponential Decay and Rotation"}
+[Building Blocks]{.kicker}
 
-- decide whether a field has exactly one trajectory through each point;
-- invert a flow by running the field backward;
-- solve $\dot{\mathbf x}=\mathbf A\mathbf x$ and read decay and rotation from the eigenvalues of $\mathbf A$;
-- turn a linear system with a held input into an exact recurrence;
-- classify a fixed point of a nonlinear field by its Jacobian.
+Every linear differential equation decomposes into two elementary planar motions—radial scaling and orthogonal turning:
 
-**Running example:** the spiral $\mathbf A=\left(\begin{smallmatrix}-0.5&-1\\1&-0.5\end{smallmatrix}\right)$, eigenvalues $-0.5\pm\mathrm i$.
-
-**The idea:** a field that changes gently has one trajectory per point, and a linear field is solved by its eigenvalues.
+::: {.cols}
+::: {.col}
+- **Exponential Decay ($\dot{x} = -x$):** The velocity points toward the origin in proportion to distance, yielding $x(t) = e^{-t}x_0$. Each unit of time shrinks the distance by $e^{-1} \approx 0.37$.
+- **Pure Rotation ($\dot{\mathbf{x}} = \mathbf{K}\mathbf{x}$):** The skew-symmetric generator $\mathbf{K} = \left(\begin{smallmatrix}0 & -1 \\ 1 & 0\end{smallmatrix}\right)$ turns the position vector by $90^\circ$:
+  $$\mathbf{x}^\top \mathbf{K}\mathbf{x} = -x_1 x_2 + x_2 x_1 = 0$$
 :::
 
-::: {.slide title="Exact Motion First, Steps Second"}
-[Where this fits]{.kicker}
+::: {.col}
+- **Conservation of Euclidean Norm:** Because the velocity $\mathbf{K}\mathbf{x}$ is everywhere perpendicular to the position $\mathbf{x}$, the squared length never changes:
+  $$\frac{d}{dt}\|\mathbf{x}(t)\|^2 = 2\,\mathbf{x}^\top \dot{\mathbf{x}} = 2\,\mathbf{x}^\top \mathbf{K}\mathbf{x} = 0$$
+- **Constant Angular Speed:** A state moves along a circle of radius $\|\mathbf{x}_0\|$ at unit angular speed ($1$ radian per unit time, period $2\pi$).
+:::
+:::
+:::
+
+::: {.slide title="Running Example: Decay Plus Rotation Is a Spiral"}
+[Vector Fields]{.kicker}
+
+Combining half the decay rate with unit rotation produces our running planar system $\dot{\mathbf{x}} = \mathbf{A}\mathbf{x}$:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| **Ordinary Differential Equations** | **exact motion: uniqueness, eigenvalues** |
-| Numerical Solvers | steps: their order and stability |
-| Neural ODEs | a learned field, its gradient, its density |
-| Stochastic Differential Equations | noise, Itô calculus, the OU process |
-| Fokker–Planck and Probability Flow | how the density moves; the score |
-| Score Matching and Diffusion | learning the score, sampling with it |
-| Flow Matching and Transport | learning a velocity; straight paths |
-:::
-
-::: {.col .narrow}
-- **Uses:** eigenvalues, the spectral norm, Taylor expansion.
-- **Skips:** every numerical method, nonlinear dynamics beyond fixed points.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Vector fields and flows]{.dtitle}
-
-[one trajectory through each point]{.dsub}
-:::
-:::
-
-::: {.slide title="Decay Plus Rotation Is a Spiral"}
-[The running example]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- $\dot x=-x$: $x(t)=e^{-t}x_0$, decay.
-- $\dot{\mathbf x}=\mathbf K\mathbf x$, $\mathbf K=\left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$: $\mathbf x^\top\dot{\mathbf x}=\mathbf x^\top\mathbf K\mathbf x=0$, so the length is constant: circles.
-- $\mathbf A=-\tfrac12\mathbf I+\mathbf K$: $\|\mathbf x(t)\|=e^{-t/2}\|\mathbf x_0\|$ while turning at unit speed.
-
-::: {.d2l-note}
-Eigenvalues of $\mathbf A$: $-0.5\pm\mathrm i$. Real part: decay. Imaginary part: angular speed.
-:::
+- **System Matrix:** $\mathbf{A} = -\tfrac{1}{2}\mathbf{I} + \mathbf{K} = \left(\begin{smallmatrix}-0.5 & -1 \\ 1 & -0.5\end{smallmatrix}\right)$.
+- **Length Evolution:** The rotation term $\mathbf{K}$ preserves length while $-\tfrac{1}{2}\mathbf{I}$ contracts it:
+  $$\frac{d}{dt}\|\mathbf{x}\|^2 = 2\,\mathbf{x}^\top \mathbf{A}\mathbf{x} = -\|\mathbf{x}\|^2$$
+- **Spiral Trajectory:** The norm decays as $\|\mathbf{x}(t)\| = e^{-t/2}\|\mathbf{x}_0\|$ while turning at $1$ rad/s into the fixed point $\mathbf{x}^\star = \mathbf{0}$.
+- **Eigenvalue Signature:** $\mathbf{A}$ has complex eigenvalues $\lambda = -0.5 \pm \mathrm{i}$ (real part $=$ decay rate $-\tfrac{1}{2}$, imaginary part $=$ angular speed $\pm 1$).
 :::
 
 ::: {.col .fig}
@@ -1167,273 +1101,253 @@ Eigenvalues of $\mathbf A$: $-0.5\pm\mathrm i$. Real part: decay. Imaginary part
 :::
 :::
 
-::: {.slide title="An Initial-Value Problem Is a Field Plus a Start"}
-[Definitions]{.kicker}
+::: {.slide title="The Initial-Value Problem and Its Integral Form"}
+[Formal Definitions]{.kicker}
 
-$$\dot{\mathbf x}(t)=\mathbf f(\mathbf x(t),t),\qquad \mathbf x(0)=\mathbf x_0$$
+A general first-order ordinary differential equation prescribes a velocity vector at every point and instant of time, paired with a starting state:
 
-- **Vector field** $\mathbf f$: an arrow at every point and time.
-- **Trajectory** $\mathbf x(t)$: a path whose tangent is the arrow where it stands.
-- **Autonomous:** $\mathbf f$ does not depend on $t$.
+$$\dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), t), \qquad \mathbf{x}(0) = \mathbf{x}_0 \in \mathbb{R}^d$$
 
-::: {.d2l-note .rule}
-Integral form: $\mathbf x(t)=\mathbf x_0+\int_0^t\mathbf f(\mathbf x(s),s)\,ds$, the start plus the accumulated velocity.
+- **Vector Field ($\mathbf{f}: \mathbb{R}^d \times \mathbb{R} \to \mathbb{R}^d$):** Assigns a velocity arrow $\mathbf{f}(\mathbf{x}, t)$ to each position $\mathbf{x}$ at time $t$. The system is **autonomous** when $\mathbf{f}(\mathbf{x})$ is independent of $t$ (the arrows stand still while particles move).
+- **Trajectory ($\mathbf{x}(t)$):** A differentiable curve through $\mathbf{x}_0$ whose tangent $\dot{\mathbf{x}}(t)$ matches the local arrow $\mathbf{f}(\mathbf{x}(t), t)$ at every instant.
+- **Equivalent Integral Form:** Integrating both sides from $0$ to $t$ by the fundamental theorem of calculus expresses the state as the initial value plus accumulated velocity:
+  $$\mathbf{x}(t) = \mathbf{x}_0 + \int_0^t \mathbf{f}(\mathbf{x}(s), s)\,ds$$
 :::
-:::
 
-::: {.slide title="Without a Lipschitz Bound a Particle at Rest May Leave Whenever It Likes"}
+::: {.slide title="When Uniqueness Fails: Non-Lipschitz Branching"}
 [Counterexample]{.kicker}
 
+If the velocity changes too abruptly near a point, a single initial condition can spawn infinitely many valid trajectories:
+
 ::: {.cols .vc}
+::: {.col}
+- **The Fan Equation:** Consider $\dot{x} = \sqrt{|x|}$ started at rest ($x_0 = 0$).
+- **Infinitely Many Solutions:** Besides $x(t) \equiv 0$, a particle can wait at $0$ until any departure time $c \ge 0$ and then leave along a parabola:
+  $$x_c(t) = \begin{cases} 0, & t \le c \\ (t - c)^2 / 4, & t > c \end{cases}$$
+- **Root Cause:** The derivative $\frac{d}{dx}\sqrt{x} = \frac{1}{2\sqrt{x}} \to \infty$ as $x \to 0^+$. No linear constant $L$ can bound $|f(x) - f(0)| \le L|x - 0|$ near the origin.
+:::
+
 ::: {.col .fig}
 ![](../img/mdl-dyn-uniqueness-fan.svg)
 :::
+:::
+:::
 
-::: {.col}
-- $\dot x=\sqrt{|x|}$, $x_0=0$: $x\equiv0$ solves it.
-- So does $x_c(t)=(t-c)^2/4$ after any waiting time $c\ge0$.
-- Cause: the slope of $\sqrt{|x|}$ is unbounded at $0$.
+::: {.slide title="Picard Iteration: Building Solutions by Integration"}
+[Constructive Existence]{.kicker}
+
+To prove that a well-behaved ODE has a unique solution, we turn the integral form into an iterative fixed-point operator $P$ on continuous paths $\boldsymbol{\varphi}$:
+
+$$(P\boldsymbol{\varphi})(t) = \mathbf{x}_0 + \int_0^t \mathbf{f}(\boldsymbol{\varphi}(s), s)\,ds$$
+
+- **Fixed-Point Characterization:** A continuous curve $\boldsymbol{\varphi}$ solves the initial-value problem on $[0, \delta]$ if and only if $\boldsymbol{\varphi} = P\boldsymbol{\varphi}$.
+- **Worked Example ($\dot{x} = x$, $x_0 = 1$):** Starting from the constant guess $\varphi_0(t) \equiv 1$ and applying $\varphi_{k+1}(t) = 1 + \int_0^t \varphi_k(s)\,ds$ generates the Taylor series of $e^t$ term by term:
+  $$\varphi_1(t) = 1 + t \;\longrightarrow\; \varphi_2(t) = 1 + t + \frac{t^2}{2} \;\longrightarrow\; \varphi_3(t) = 1 + t + \frac{t^2}{2} + \frac{t^3}{6} \;\longrightarrow\; e^t$$
+:::
+
+::: {.slide title="The Picard–Lindelöf Existence and Uniqueness Theorem"}
+[Core Theorem]{.kicker}
+
+A global bound on how fast the vector field changes from point to point makes the Picard operator $P$ a strict contraction:
+
+::: {.d2l-note .rule}
+**Theorem (Picard–Lindelöf):** If $\mathbf{f}(\mathbf{x}, t)$ is continuous in $t$ and **globally $L$-Lipschitz** in $\mathbf{x}$,
+$$\|\mathbf{f}(\mathbf{x}, t) - \mathbf{f}(\mathbf{y}, t)\| \le L\,\|\mathbf{x} - \mathbf{y}\| \qquad \text{for all } \mathbf{x}, \mathbf{y} \in \mathbb{R}^d,\; t \in [0, T],$$
+then $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$, $\mathbf{x}(0) = \mathbf{x}_0$ has **exactly one** solution on $[0, T]$ for every $\mathbf{x}_0$ and every $T > 0$.
+:::
+
+- **Contraction on Short Intervals:** Measuring path distance by $d(\boldsymbol{\varphi}, \boldsymbol{\psi}) = \max_{t \le \delta}\|\boldsymbol{\varphi}(t) - \boldsymbol{\psi}(t)\|$, pulling the Lipschitz constant through the integral gives:
+  $$d(P\boldsymbol{\varphi}, P\boldsymbol{\psi}) \le \int_0^\delta L\,\|\boldsymbol{\varphi}(s) - \boldsymbol{\psi}(s)\|\,ds \le L\delta\,d(\boldsymbol{\varphi}, \boldsymbol{\psi})$$
+- **Global Extension:** Choosing $\delta = \frac{1}{2L}$ halves the distance at every Picard step, guaranteeing convergence and uniqueness on $[0, \delta]$. Because $L$ is global, $\delta$ is independent of the state, so $\lceil 2LT \rceil$ restarts cover all of $[0, T]$.
+:::
+
+::: {.slide title="Local Lipschitz Without Global Bounds: Blow-Up"}
+[Limits of the Theorem]{.kicker}
+
+What happens if $\mathbf{f}$ is smooth (and therefore Lipschitz on every bounded ball $|\mathbf{x}| \le \rho$), but its Lipschitz constant grows without bound as $\|\mathbf{x}\| \to \infty$?
+
+$$
+\dot{x} = x^2, \quad x(0) = x_0 > 0 \;\Longrightarrow\; \frac{d}{dt}\left(-\frac{1}{x}\right) = \frac{\dot{x}}{x^2} = 1 \;\Longrightarrow\; x(t) = \frac{x_0}{1 - x_0 t}
+$$
+
+- **Finite-Time Explosion:** Even though $f(x) = x^2$ is analytic everywhere, the trajectory escapes to $+\infty$ at the finite horizon $t^\star = 1 / x_0$.
+- **Why the Restart Argument Stops:** On $|x| \le \rho$, $|x^2 - y^2| = |x + y|\,|x - y| \le 2\rho\,|x - y|$, so the local Lipschitz constant is $L_\rho = 2\rho$.
+- **Shrinking Step Lengths:** As $x(t)$ grows, the safe Picard interval $\delta_\rho = \frac{1}{2L_\rho} = \frac{1}{4\rho}$ shrinks rapidly enough that infinitely many restarts sum to the finite blow-up time $1/x_0$.
+:::
+
+::: {.slide title="The Flow Map Is a Smooth Bijection of Space"}
+[Flow Maps & Invertibility]{.kicker}
+
+Fixing a globally Lipschitz vector field and varying the initial state $\mathbf{x}_0$ defines the **flow map** $\Phi_t(\mathbf{x}_0) = \mathbf{x}(t)$ across all of $\mathbb{R}^d$:
+
+- **Autonomous Group Law:** When $\mathbf{f}(\mathbf{x})$ is time-independent, flowing for time $s$ and then for time $t$ equals flowing for $t + s$:
+  $$\Phi_0 = \mathrm{id}, \qquad \Phi_{t+s} = \Phi_t \circ \Phi_s, \qquad \Phi_t^{-1} = \Phi_{-t}$$
+- **Time-Reversal Proof:** Running trajectories backward from time $T$ solves $\dot{\mathbf{y}}(s) = -\mathbf{f}(\mathbf{y}(s), T - s)$, which is also globally $L$-Lipschitz. By Picard–Lindelöf, every endpoint $\mathbf{z} \in \mathbb{R}^d$ traces back to **exactly one** starting state $\mathbf{x}_0$.
+- **Trajectories Can Never Cross:** Two distinct trajectories can never occupy the same point at the same time—otherwise, integrating backward from their meeting point would violate uniqueness.
+
+::: {.d2l-note .rule}
+**Why Generative Flows Need Lipschitz Networks:** A neural network layer $\mathbf{f}(\mathbf{x}) = \mathbf{W}_2 \tanh(\mathbf{W}_1 \mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2$ is globally Lipschitz with $L \le \|\mathbf{W}_2\|_2 \|\mathbf{W}_1\|_2$, guaranteeing that $\Phi_T: \mathbb{R}^d \to \mathbb{R}^d$ is an invertible bijection.
+:::
+:::
+
+::: {.slide title="Linear Systems and the Matrix Exponential Series"}
+[Linear ODEs]{.kicker}
+
+Just as $\dot{x} = ax$ is solved by $x(t) = e^{at}x_0$, the $d$-dimensional linear system $\dot{\mathbf{x}} = \mathbf{A}\mathbf{x}$ is solved by the **matrix exponential** power series:
+
+$$e^{\mathbf{A}t} = \sum_{k=0}^\infty \frac{(\mathbf{A}t)^k}{k!} = \mathbf{I} + t\mathbf{A} + \frac{t^2}{2}\mathbf{A}^2 + \frac{t^3}{6}\mathbf{A}^3 + \cdots$$
+
+- **Universal Convergence:** Submultiplicativity of the spectral norm ($\|\mathbf{A}^k\| \le \|\mathbf{A}\|^k$) ensures the series is dominated term-by-term by the convergent scalar exponential $e^{\|\mathbf{A}\||t|}$.
+- **Term-by-Term Differentiation:** Differentiating the series shows that $\mathbf{x}(t) = e^{\mathbf{A}t}\mathbf{x}_0$ is the unique Picard–Lindelöf solution ($L = \|\mathbf{A}\|_2$):
+  $$\frac{d}{dt}e^{\mathbf{A}t} = \sum_{k=1}^\infty \frac{\mathbf{A}^k t^{k-1}}{(k-1)!} = \mathbf{A}\sum_{j=0}^\infty \frac{(\mathbf{A}t)^j}{j!} = \mathbf{A}e^{\mathbf{A}t}$$
+:::
+
+::: {.slide title="Spectral Decoupling into Independent Eigenmodes"}
+[Eigendecomposition]{.kicker}
+
+An infinite series of matrix powers is opaque until we diagonalize $\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$ with eigenvectors $\mathbf{V} = (\mathbf{v}_1, \ldots, \mathbf{v}_d)$ and eigenvalues $\boldsymbol{\Lambda} = \mathrm{diag}(\lambda_1, \ldots, \lambda_d)$:
+
+$$e^{\mathbf{A}t} = \mathbf{V}e^{\boldsymbol{\Lambda}t}\mathbf{V}^{-1} = \mathbf{V}\,\mathrm{diag}\!\left(e^{\lambda_1 t}, \ldots, e^{\lambda_d t}\right)\mathbf{V}^{-1}$$
+
+- **Telescoping Matrix Powers:** Because $(\mathbf{A}t)^k = \mathbf{V}(\boldsymbol{\Lambda}t)^k\mathbf{V}^{-1}$, summing the power series acts independently on each diagonal eigenvalue entry.
+- **Superposition of Modes:** Expanding the initial state in the eigenbasis as $\mathbf{x}_0 = \sum_{j=1}^d c_j \mathbf{v}_j$ decouples the $d$-dimensional coupled system into $d$ independent scalar exponentials:
+  $$\mathbf{x}(t) = \sum_{j=1}^d c_j\, e^{\lambda_j t}\, \mathbf{v}_j$$
+:::
+
+::: {.slide title="Closed-Form Matrix Exponential for the Planar Spiral"}
+[Commuting Matrices]{.kicker}
+
+When two matrices commute ($\mathbf{P}\mathbf{Q} = \mathbf{Q}\mathbf{P}$), the binomial theorem holds and $e^{\mathbf{P}+\mathbf{Q}} = e^{\mathbf{P}}e^{\mathbf{Q}}$. For our spiral $\mathbf{A} = -\tfrac{1}{2}\mathbf{I} + \mathbf{K}$, the identity $\mathbf{I}$ commutes with $\mathbf{K}$:
+
+$$e^{\mathbf{A}t} = e^{-t/2\mathbf{I}}e^{\mathbf{K}t} = e^{-t/2}\left(\cos t\,\mathbf{I} + \sin t\,\mathbf{K}\right) = e^{-t/2}\begin{pmatrix}\cos t & -\sin t \\ \sin t & \cos t\end{pmatrix}$$
+
+- **Cyclic Powers of $\mathbf{K}$:** Because $\mathbf{K}^2 = -\mathbf{I}$, $\mathbf{K}^3 = -\mathbf{K}$, and $\mathbf{K}^4 = \mathbf{I}$, the even powers of $e^{\mathbf{K}t}$ sum to $\cos t\,\mathbf{I}$ and the odd powers sum to $\sin t\,\mathbf{K}$.
+- **Exact Spiral Endpoint:** From $\mathbf{x}_0 = (2, 0)$ at $t = 2$, $\mathbf{x}(2) = 2e^{-1}(\cos 2, \sin 2) = (-0.3062, 0.6690)$ with Euclidean norm $2e^{-1} \approx 0.7358$.
 
 ::: {.d2l-note .warn}
-Lipschitz bound: $|f(x)-f(y)|\le L\,|x-y|$. Here no $L$ works near $0$, and a model defined by this field has no single output.
-:::
-:::
-:::
-:::
-
-::: {.slide title="Existence, I: Picard Iteration Improves a Guessed Path"}
-[Derivation]{.kicker}
-
-Read the velocities along a guessed path $\varphi$ and add them up from the start:
-
-$$(P\varphi)(t)=x_0+\int_0^tf(\varphi(s))\,ds$$
-
-- A solution is a fixed point: $\varphi=P\varphi$.
-- On $\dot x=x$, $x_0=1$: $\;1\to1+t\to1+t+\tfrac{t^2}2\to1+t+\tfrac{t^2}2+\tfrac{t^3}6\to\cdots$
-
-::: {.d2l-note}
-Each iteration adds one Taylor term of the solution $e^t$.
+**Non-Commuting Pitfall:** When $\mathbf{P}\mathbf{Q} \ne \mathbf{Q}\mathbf{P}$, $e^{\mathbf{P}+\mathbf{Q}} \ne e^{\mathbf{P}}e^{\mathbf{Q}}$. For $\mathbf{P} = \left(\begin{smallmatrix}0 & 1 \\ 0 & 0\end{smallmatrix}\right)$ and $\mathbf{Q} = \mathbf{P}^\top$, $e^{\mathbf{P}}e^{\mathbf{Q}} = \left(\begin{smallmatrix}2 & 1 \\ 1 & 1\end{smallmatrix}\right)$, whereas $e^{\mathbf{P}+\mathbf{Q}}$ has $\cosh 1 \approx 1.54$ on both diagonal entries.
 :::
 :::
 
-::: {.slide title="Existence, II: A Lipschitz Bound Makes the Iteration a Contraction"}
-[Derivation]{.kicker}
+::: {.slide title="Matrix Compound Interest Converges Only at O(1/n)"}
+[Numerical Verification]{.kicker}
 
-Lipschitz: $\|\mathbf f(\mathbf x)-\mathbf f(\mathbf y)\|\le L\,\|\mathbf x-\mathbf y\|$ for all $\mathbf x,\mathbf y$. On $[0,\delta]$, with $d(\varphi,\psi)=\max_t\|\varphi(t)-\psi(t)\|$:
+Taking $n$ short steps of length $t/n$ along the linear field gives the compound-interest approximation $(\mathbf{I} + t\mathbf{A}/n)^n \approx e^{\mathbf{A}t}$, whose error on each eigenvalue is governed by $\log(1 + z) = z - z^2/2 + \cdots$:
 
-$$d(P\varphi,P\psi)\le\int_0^\delta L\,\|\varphi-\psi\|\,ds\le L\delta\,d(\varphi,\psi)$$
-
-- $\delta=1/(2L)$ halves the distance: the iterates converge, and two solutions coincide.
-- $\delta$ is the same everywhere, so restarts cover $[0,T]$.
-
-::: {.d2l-note .rule}
-**Picard–Lindelöf:** a globally Lipschitz field has exactly one solution from every start, on every $[0,T]$.
-:::
-:::
-
-::: {.slide title="A Smooth Field Can Still Blow Up in Finite Time"}
-[Limits of the theorem]{.kicker}
-
-$$\dot x=x^2,\quad x_0>0:\qquad x(t)=\frac{x_0}{1-x_0t}\to\infty\ \textrm{ as }\ t\to1/x_0$$
-
-- On $|x|\le\rho$ the field is Lipschitz with $L=2\rho$: $|x^2-y^2|=|x+y|\,|x-y|$.
-- The restart length $1/(4\rho)$ shrinks as the solution grows; the restarts add up to a finite time.
-
-::: {.d2l-note}
-Lipschitz only on bounded sets: one solution, but only for a while.
-:::
-:::
-
-::: {.slide title="The Flow Map Is a Bijection: Run the Field Backward"}
-[Flow map]{.kicker}
-
-$\Phi_t(\mathbf x_0)=\mathbf x(t)$ moves all of space forward by $t$ (autonomous, Lipschitz $\mathbf f$).
-
-- $\Phi_0=\mathrm{id}$, $\Phi_{t+s}=\Phi_t\circ\Phi_s$. Decay: $e^{-t}e^{-s}=e^{-(t+s)}$.
-- $-\mathbf f$ is Lipschitz with the same $L$, so $\Phi_t^{-1}=\Phi_{-t}$.
-- $\mathbf f(\mathbf x,t)$ changing in time: reverse from $T$ with $-\mathbf f(\mathbf y,T-s)$. Start $\mapsto$ state at $T$ is still a bijection; only the composition law is lost.
-- Two trajectories are never at the same point at the same time.
-
-::: {.d2l-note .rule}
-$\mathbf f(\mathbf x)=\mathbf W_2\tanh(\mathbf W_1\mathbf x+\mathbf b_1)+\mathbf b_2$ has $L\le\|\mathbf W_2\|\,\|\mathbf W_1\|$: a network field defines an invertible map.
-:::
-:::
-
-::: {.slide title="Check: One Trajectory Through Every Point, for All Time?"}
-[Check]{.kicker}
-
-Which of these fields qualify?
-
-$$\dot x=-x\qquad\dot x=\tanh x\qquad\dot x=x^2\qquad\dot x=\sqrt{|x|}$$
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $-x$ and $\tanh x$: Lipschitz with $L=1$, yes. $x^2$: unique, but from
-$x_0>0$ it blows up at $t=1/x_0$. $\sqrt{|x|}$: not unique at $0$.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Linear systems and stability]{.dtitle}
-
-[one exponential per eigenvalue]{.dsub}
-:::
-:::
-
-::: {.slide title="The Matrix Exponential Solves dx/dt = Ax"}
-[Linear systems]{.kicker}
-
-Scalar: $\dot x=ax$ has $x=e^{at}x_0$. Keep the form, with the same series:
-
-$$e^{\mathbf At}=\mathbf I+\mathbf At+\tfrac{(\mathbf At)^2}{2}+\tfrac{(\mathbf At)^3}{6}+\cdots$$
-
-- Converges for every $\mathbf A$: dominated by the series of $e^{\|\mathbf A\|\,|t|}$, with $\|\mathbf A\|$ the largest stretch of a vector.
-- Term by term, $\tfrac{d}{dt}e^{\mathbf At}=\mathbf A\,e^{\mathbf At}$, and $e^{\mathbf 0}=\mathbf I$.
-
-::: {.d2l-note .rule}
-$\mathbf x(t)=e^{\mathbf At}\mathbf x_0$ is the one solution: the field $\mathbf A\mathbf x$ is Lipschitz with $L=\|\mathbf A\|$.
-:::
-:::
-
-::: {.slide title="Eigenvectors Split e^(At) into One Exponential per Eigenvalue"}
-[Linear systems]{.kicker}
-
-$\mathbf A=\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$, eigenvectors $\mathbf v_j$ in $\mathbf V$, eigenvalues $\lambda_j$ in $\boldsymbol\Lambda$, start $\mathbf x_0=\sum_jc_j\mathbf v_j$:
-
-$$e^{\mathbf At}=\mathbf Ve^{\boldsymbol\Lambda t}\mathbf V^{-1},\qquad\mathbf x(t)=\sum_jc_j\,e^{\lambda_jt}\,\mathbf v_j$$
-
-- Spiral, using $\mathbf K^2=-\mathbf I$: $e^{\mathbf At}=e^{-t/2}\left(\begin{smallmatrix}\cos t&-\sin t\\\sin t&\cos t\end{smallmatrix}\right)$.
-- From $(2,0)$ at $t=2$: $(-0.306,\,0.669)$, length $2e^{-1}=0.736$.
-:::
-
-::: {.slide title="Compounding (I + tA/n)^n Reaches e^(At) Only Like 1/n"}
-[Compound interest]{.kicker}
-
-One eigenvalue $\lambda$, $n$ compounding periods: $(1+\lambda t/n)^n\approx e^{\lambda t}\bigl(1-\tfrac{(\lambda t)^2}{2n}\bigr)$. Spiral, $t=2$: error $\approx2.5\,e^{-1}/n\approx0.9/n$.
+$$\left(1 + \frac{\lambda t}{n}\right)^n \approx e^{\lambda t}\left(1 - \frac{(\lambda t)^2}{2n}\right) \;\Longrightarrow\; \text{error at } t = 2 \text{ is } \frac{|\lambda t|^2}{2n}e^{-1} = \frac{2.5\,e^{-1}}{n} \approx \frac{0.90}{n}$$
 
 @!odes-solvers-matrix-exponential
-
-::: {.d2l-note}
-A fine definition of the exponential, a poor way to compute it.
-:::
 :::
 
-::: {.slide title="The Real Part of λ Decides Growth, the Imaginary Part Rotation"}
-[Stability]{.kicker}
+::: {.slide title="Eigenvalue Spectrum and Planar Phase Portraits"}
+[Stability Classification]{.kicker}
+
+Writing each eigenvalue as $\lambda_j = a_j + \mathrm{i}\,b_j$, the mode magnitude scales as $|e^{\lambda_j t}| = e^{a_j t}$ while rotating at angular speed $b_j$:
 
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col}
+- **Asymptotic Stability ($\max_j a_j < 0$):** Every mode decays to $\mathbf{0}$ at a rate set by the slowest eigenvalue $-\max_j \operatorname{Re}\lambda_j$.
+- **Instability ($\max_j a_j > 0$):** Any initial state with a component along an expanding eigenvector $\mathbf{v}_j$ escapes exponentially.
+- **Gradient Flows vs. Games:** Continuous gradient descent $\dot{\mathbf{x}} = -\mathbf{H}\mathbf{x}$ has a symmetric Hessian $\mathbf{H}$ with purely real eigenvalues (producing only nodes and saddles, top row); min-max games like GANs have complex eigenvalues that circle in centers or spirals (bottom row).
+:::
+
+::: {.col .fig}
 ![](../img/mdl-dyn-phase-portraits.svg)
 :::
-
-::: {.col}
-- Eigenvalue $\lambda=a+\mathrm ib$ of $\mathbf A$: size $|e^{\lambda t}|=e^{at}$, turning at angular speed $b$.
-- All $a<0$: stable; some $a>0$: unstable.
-- A quadratic loss gives only the top row: $\dot{\mathbf x}=-\mathbf H\mathbf x$, and a symmetric Hessian $\mathbf H$ has real eigenvalues.
-:::
 :::
 :::
 
-::: {.slide title="With an Input, the State Is the Decayed Start Plus Every Past Input"}
-[Driven systems]{.kicker}
+::: {.slide title="Driven Linear Systems and Variation of Constants"}
+[State Space Models]{.kicker}
 
-An input $\mathbf u(t)$ enters through a matrix $\mathbf B$: $\;\dot{\mathbf x}=\mathbf A\mathbf x+\mathbf B\mathbf u(t)$.
+In a continuous-time State Space Model (SSM), an external input sequence $\mathbf{u}(t)$ drives the hidden state through an input matrix $\mathbf{B}$:
 
-Multiply by $e^{-\mathbf At}$: $\;\tfrac{d}{dt}\bigl(e^{-\mathbf At}\mathbf x\bigr)=e^{-\mathbf At}\mathbf B\mathbf u$. Integrate:
+$$\dot{\mathbf{x}}(t) = \mathbf{A}\mathbf{x}(t) + \mathbf{B}\mathbf{u}(t), \qquad \mathbf{x}(0) = \mathbf{x}_0$$
 
-::: {.d2l-note .rule}
-$$\mathbf x(t)=e^{\mathbf At}\mathbf x_0+\int_0^te^{\mathbf A(t-s)}\,\mathbf B\mathbf u(s)\,ds$$
+- **Integrating Factor ($e^{-\mathbf{A}t}$):** Pulling the state back to $t = 0$ along the free motion cancels the $\mathbf{A}\mathbf{x}$ term via the product rule:
+  $$\frac{d}{dt}\left(e^{-\mathbf{A}t}\mathbf{x}(t)\right) = e^{-\mathbf{A}t}\big(\dot{\mathbf{x}}(t) - \mathbf{A}\mathbf{x}(t)\big) = e^{-\mathbf{A}t}\mathbf{B}\mathbf{u}(t)$$
+- **Variation of Constants Formula:** Integrating from $0$ to $t$ and multiplying by $e^{\mathbf{A}t}$ expresses the state as the decayed start plus a convolution over all past inputs:
+  $$\mathbf{x}(t) = e^{\mathbf{A}t}\mathbf{x}_0 + \int_0^t e^{\mathbf{A}(t-s)}\,\mathbf{B}\mathbf{u}(s)\,ds$$
 :::
 
-- Each past input is decayed for the time since it arrived.
+::: {.slide title="Zero-Order Hold: Exact Discretization for SSMs"}
+[Exact Recurrence]{.kicker}
+
+Sequence models receive discrete tokens $\mathbf{u}_n$ at grid times $t_n = nh$. Holding the input constant over each step ($\mathbf{u}(s) = \mathbf{u}_n$ for $s \in [t_n, t_n + h)$) turns the integral into an **exact linear recurrence**:
+
+$$\mathbf{x}_{n+1} = \bar{\mathbf{A}}\,\mathbf{x}_n + \bar{\mathbf{B}}\,\mathbf{u}_n, \qquad \bar{\mathbf{A}} = e^{\mathbf{A}h}, \qquad \bar{\mathbf{B}} = \left(\int_0^h e^{\mathbf{A}\tau}\,d\tau\right)\mathbf{B} = \mathbf{A}^{-1}\big(e^{\mathbf{A}h} - \mathbf{I}\big)\mathbf{B}$$
+
+- **Scalar SSM Coefficients:** For $\dot{x} = \lambda x + bu(t)$, the discrete multipliers are $\bar{a} = e^{h\lambda}$ and $\bar{b} = \frac{e^{h\lambda} - 1}{\lambda}b$.
+- **Unconditional Stability:** Whenever $\operatorname{Re}\lambda < 0$, the exact multiplier satisfies $|\bar{a}| = e^{h\operatorname{Re}\lambda} < 1$ for **every** step size $h > 0$.
+- **Contrast with Naive Step ($1 + h\lambda$):** On a fast mode $\lambda = -50$ with step $h = 0.05$, the exact ZOH factor decays smoothly ($\bar{a} = e^{-2.5} \approx 0.082$), whereas a naive linear step multiplies by $1 + h\lambda = -1.5$, flipping signs and exploding.
 :::
 
-::: {.slide title="Holding the Input over a Step Gives an Exact Recurrence"}
-[Zero-order hold]{.kicker}
+::: {.slide title="Measuring Zero-Order Hold Across Fast and Slow Modes"}
+[Numerical Experiment]{.kicker}
 
-Steps of length $h$, $t_n=nh$, $\mathbf x_n=\mathbf x(t_n)$. Input constant on each step, $\mathbf u=\mathbf u_n$ on $[t_n,t_n+h)$:
-
-$$\mathbf x_{n+1}=e^{\mathbf Ah}\,\mathbf x_n+\mathbf A^{-1}\bigl(e^{\mathbf Ah}-\mathbf I\bigr)\mathbf B\,\mathbf u_n$$
-
-- Scalar $\dot x=\lambda x+bu$: $\;x_{n+1}=\bar a\,x_n+\bar b\,u_n$ with $\bar a=e^{h\lambda}$, $\bar b=(e^{h\lambda}-1)\,b/\lambda$.
-- $|\bar a|<1$ for every $h>0$ when $\operatorname{Re}\lambda<0$: the recurrence of a state space model is stable whenever the equation is.
-
-**Check.** $\lambda=-50$, $h=0.05$: what is $\bar a$, and what is the factor $1+h\lambda$ of one step along the field?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\bar a=e^{-2.5}=0.08$, against $1+h\lambda=-1.5$: that step flips the sign and grows.
-:::
-:::
-:::
-
-::: {.slide title="Measured: The Hold Costs an Error of Order h and Never Stability"}
-[Zero-order hold]{.kicker}
-
-$\dot x=\lambda x+\sin t$ to $T=2$, input held at the start of each step; $1+h\lambda$ is one step along the field.
+Integrating $\dot{x} = \lambda x + \sin t$ to $T = 2$ with the input held constant on each step incurs only an $O(h)$ hold error on the moving sine wave, never an instability—even at $h|\lambda| = 25$:
 
 @!mdl-odes-zero-order-hold
 
-- The only error is the hold's, about in proportion to $h$.
-- $h|\lambda|=25$: exact factor $10^{-11}$, where $1+h\lambda=-24$ would blow up.
-:::
-
-::: {.slide title="Eigenvalues Give the Asymptotic Rate, Not the Size of the Transient"}
-[Transient growth]{.kicker}
-
-$\dot{\mathbf x}=\left(\begin{smallmatrix}-1&10\\0&-2\end{smallmatrix}\right)\mathbf x$ from $(0,1)$: eigenvalues $-1$ and $-2$, yet
-
-$$x_1(t)=10\,(e^{-t}-e^{-2t}),\qquad\textrm{peak } 2.5 \textrm{ at } t=\log 2 .$$
-
-- Eigenvectors $\mathbf v_1=(1,0)$, $\mathbf v_2=(0.995,-0.0995)$: lines $5.7^\circ$ apart.
-- $\mathbf x_0=10\,\mathbf v_1-10.05\,\mathbf v_2$: two long vectors that cancel, then decay at different rates.
-
 ::: {.d2l-note}
-A momentum run that converges can grow for its first few steps.
+At $\lambda = -50$ and $h = 0.5$, the step is $25\times$ longer than the relaxation time $1/|\lambda|$, yet the ZOH recurrence remains rock-solid ($e^{h\lambda} = 1.4 \times 10^{-11}$, error $1.6 \times 10^{-3}$) while $1 + h\lambda = -24$ blows up.
 :::
 :::
 
-::: {.slide title="Near a Fixed Point the Jacobian's Eigenvalues Classify a Nonlinear Field"}
-[Linearization]{.kicker}
+::: {.slide title="Non-Normal Matrices and Transient Growth Before Decay"}
+[Transient Dynamics]{.kicker}
 
-Fixed point: $\mathbf f(\mathbf x^\star)=\mathbf 0$. Displacement $\boldsymbol\delta=\mathbf x-\mathbf x^\star$:
+Negative eigenvalues guarantee that $\mathbf{x}(t) \to \mathbf{0}$ as $t \to \infty$, but when $\mathbf{A}$ has nearly parallel eigenvectors ($\mathbf{A}\mathbf{A}^\top \ne \mathbf{A}^\top\mathbf{A}$), $\|\mathbf{x}(t)\|$ can grow substantially before decaying:
 
-$$\dot{\boldsymbol\delta}=\mathbf J\boldsymbol\delta+o(\|\boldsymbol\delta\|),\qquad\mathbf J=\frac{\partial\mathbf f}{\partial\mathbf x}(\mathbf x^\star)$$
+$$\dot{\mathbf{x}} = \begin{pmatrix}-1 & 10 \\ 0 & -2\end{pmatrix}\mathbf{x}, \quad \mathbf{x}_0 = \begin{pmatrix}0 \\ 1\end{pmatrix} \;\Longrightarrow\; x_1(t) = 10\left(e^{-t} - e^{-2t}\right), \quad x_2(t) = e^{-2t}$$
 
-- No eigenvalue of $\mathbf J$ on the imaginary axis: locally the linear portrait.
-- Gradient flow $\dot{\mathbf x}=-\nabla\mathcal L$: $\mathbf J=-\mathbf H$. A minimum is a stable node, a saddle point a saddle.
-- On the axis the linearization does not decide stability: $\dot x=-x^3$ is stable, $\dot x=x^3$ escapes, and both have $\mathbf J=0$.
-
-[Hartman–Grobman theorem (Hartman, 1960; Grobman, 1959), cited without proof.]{.small}
+- **2.5x Norm Amplification:** Although both eigenvalues are negative ($\lambda_1 = -1, \lambda_2 = -2$), $x_1(t)$ rises from $0$ to a peak of $2.5$ at $t = \log 2 \approx 0.69$ ($\|\mathbf{x}(\log 2)\| \approx 2.51$) before decaying like $10e^{-t}$.
+- **Geometric Mechanism:** The eigenvectors $\mathbf{v}_1 = (1, 0)$ and $\mathbf{v}_2 = (0.995, -0.0995)$ lie only $5.7^\circ$ apart. The unit initial state $\mathbf{x}_0 = 10.0\,\mathbf{v}_1 - 10.05\,\mathbf{v}_2$ is a delicate cancellation of two huge modes; as $\mathbf{v}_2$ decays faster ($e^{-2t}$) than $\mathbf{v}_1$ ($e^{-t}$), the cancellation breaks down.
+- **Deep Learning Takeaway:** Heavy-ball momentum uses a non-normal transition matrix, which is why a converging momentum training run often exhibits an initial spike in loss or parameter norm.
 :::
 
-::: {.slide title="Check: The Damped Pendulum's Two Rest Points"}
-[Check]{.kicker}
+::: {.slide title="Local Linearization at Hyperbolic Fixed Points"}
+[Nonlinear Systems]{.kicker}
 
-Angle $\phi$ from the bottom, angular velocity $\omega$, damping $0.5$:
-$\dot\phi=\omega$, $\dot\omega=-\sin\phi-0.5\,\omega$, Jacobian $\left(\begin{smallmatrix}0&1\\-\cos\phi&-0.5\end{smallmatrix}\right)$.
-What are the eigenvalues at the bottom $(0,0)$ and at the top $(\pi,0)$?
+Near a **fixed point** $\mathbf{x}^\star$ where $\mathbf{f}(\mathbf{x}^\star) = \mathbf{0}$, a smooth nonlinear system behaves like the linear system defined by its Jacobian matrix $\mathbf{J} = \frac{\partial\mathbf{f}}{\partial\mathbf{x}}(\mathbf{x}^\star)$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Bottom: $\lambda^2+0.5\lambda+1=0$, $\lambda=-0.25\pm0.97\,\mathrm i$, a stable spiral.
-Top: $\lambda^2+0.5\lambda-1=0$, $\lambda=0.78$ and $-1.28$, a saddle.
+$$\dot{\boldsymbol{\delta}} = \mathbf{f}(\mathbf{x}^\star + \boldsymbol{\delta}) = \mathbf{J}\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|), \qquad \boldsymbol{\delta}(t) = \mathbf{x}(t) - \mathbf{x}^\star$$
+
+- **Hartman–Grobman Theorem:** If $\mathbf{x}^\star$ is **hyperbolic** (no eigenvalue of $\mathbf{J}$ has $\operatorname{Re}\lambda_j = 0$), the nonlinear trajectories near $\mathbf{x}^\star$ are topologically conjugate to the linear flow $\dot{\boldsymbol{\delta}} = \mathbf{J}\boldsymbol{\delta}$.
+- **Example — The Damped Pendulum ($\dot{\phi} = \omega$, $\dot{\omega} = -\sin\phi - c\omega$, $c = 0.5$):**
+  - **Hanging Bottom $(\phi, \omega) = (0, 0)$:** $\mathbf{J} = \left(\begin{smallmatrix}0 & 1 \\ -1 & -0.5\end{smallmatrix}\right)$ has $\lambda = -0.25 \pm 0.97\mathrm{i}$ (**stable spiral**; swings down to rest with amplitude $e^{-t/4}$).
+  - **Upright Top $(\phi, \omega) = (\pi, 0)$:** $\mathbf{J} = \left(\begin{smallmatrix}0 & 1 \\ 1 & -0.5\end{smallmatrix}\right)$ has $\lambda = 0.78, -1.28$ (**saddle point**; unstable balance).
+- **Non-Hyperbolic Boundary ($\operatorname{Re}\lambda = 0$):** When eigenvalues lie on the imaginary axis, higher-order terms decide stability ($\dot{x} = -x^3$ is stable while $\dot{x} = +x^3$ blows up, though both have $J(0) = 0$).
+:::
+
+::: {.slide title="Concept Check: Uniqueness, Spectra, and Discretization"}
+[Concept Check]{.kicker}
+
+Test your understanding of vector fields, matrix exponentials, and local stability:
+
+1. **Global Existence & Uniqueness:** Which of the scalar fields $\dot{x} = \tanh(x)$, $\dot{x} = x^3$, and $\dot{x} = |x|^{1/3}$ guarantees a unique trajectory on $[0, T]$ from every starting point $x_0 \in \mathbb{R}$?
+2. **Gradient Flow Portraits:** Can continuous-time gradient descent $\dot{\mathbf{x}} = -\nabla\mathcal{L}(\mathbf{x})$ on a twice-differentiable loss $\mathcal{L}$ ever spiral around a critical point $\mathbf{x}^\star$?
+3. **SSM Step Stability:** For $\dot{x} = -100x + u(t)$ discretized at step $h = 0.1$, compare the exact ZOH state multiplier $\bar{a}$ with the naive linear multiplier $1 + h\lambda$.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Only $\dot{x} = \tanh(x)$ (globally Lipschitz with $L = \max \operatorname{sech}^2(x) = 1$). The field $x^3$ blows up in finite time for $x_0 \ne 0$, and $|x|^{1/3}$ violates Lipschitz uniqueness at $x_0 = 0$.
+2. **No:** At any critical point, the Jacobian of $-\nabla\mathcal{L}$ is minus the symmetric Hessian $-\mathbf{H}(\mathbf{x}^\star)$, whose eigenvalues are purely real ($\mathrm{i}b_j = 0$). Gradient flows form nodes and saddles, never spirals or centers.
+3. Exact ZOH gives $\bar{a} = e^{-10} \approx 4.5 \times 10^{-5}$ (stable contraction), whereas $1 + h\lambda = 1 - 10 = -9$ explodes by $9\times$ per step.
 :::
 :::
+
+::: {.slide title="Summary: Ordinary Differential Equations and Flows"}
+[Key Takeaways]{.kicker}
+
+| Concept | Mathematical Form | Deep Learning & Systems Role |
+| :--- | :--- | :--- |
+| **Picard–Lindelöf Theorem** | $\|\mathbf{f}(\mathbf{x},t) - \mathbf{f}(\mathbf{y},t)\| \le L\|\mathbf{x} - \mathbf{y}\|$ | Guarantees unique, non-crossing trajectories on $[0, T]$ |
+| **Bijective Flow Map** | $\Phi_T(\mathbf{x}_0) = \mathbf{x}(T)$, $\Phi_T^{-1} = \Phi_{-T}$ | Makes Neural ODEs and continuous normalizing flows invertible |
+| **Matrix Exponential** | $e^{\mathbf{A}t} = \mathbf{V}\mathrm{diag}(e^{\lambda_1 t}, \ldots, e^{\lambda_d t})\mathbf{V}^{-1}$ | Decouples linear dynamics into $d$ independent eigenmodes |
+| **Eigenvalue Stability** | $\lambda_j = a_j + \mathrm{i}b_j \implies |e^{\lambda_j t}| = e^{a_j t}$ | Real part $a_j < 0$ sets decay rate; imaginary part $b_j$ sets rotation |
+| **Zero-Order Hold (ZOH)** | $\mathbf{x}_{n+1} = e^{\mathbf{A}h}\mathbf{x}_n + \mathbf{A}^{-1}(e^{\mathbf{A}h}-\mathbf{I})\mathbf{B}\mathbf{u}_n$ | Exact, unconditionally stable recurrence for State Space Models |
+| **Jacobian Linearization** | $\dot{\boldsymbol{\delta}} = \mathbf{J}(\mathbf{x}^\star)\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|)$ | Classifies fixed points (minima vs. saddles in gradient flows) |
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- Lipschitz field: one trajectory per point; $\Phi_t^{-1}=\Phi_{-t}$.
-- Spiral: $e^{\mathbf At}=e^{-t/2}\times$rotation; from $(2,0)$, $\|\mathbf x(2)\|=2e^{-1}=0.736$.
-- Compounding $(\mathbf I+t\mathbf A/n)^n$: error $0.90/n$.
-- Held input: exact recurrence with factor $e^{h\lambda}$, stable for every $h$.
-- Eigenvalues $-1,-2$, yet $x_1$ peaks at $2.5$: eigenvalues miss the transient.
-
-**Next:** all of this was exact. A computer has only steps: how accurate are they, and when are they stable?
-:::

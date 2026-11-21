@@ -4,6 +4,7 @@
 In practice, the minibatch size $b$ is often chosen to fill accelerator memory and then left untouched. Yet the moment we scale training across multiple GPUs—or trade wall-clock training time against total compute FLOPs—we face a fundamental question: if we double the minibatch size $b$ (doubling the parallel computation per step), does the run reach our target loss in half as many steps?
 
 In :numref:`sec_sgd`, we saw that a minibatch of $b$ examples reduces the gradient sampling variance to $\operatorname{tr}(\boldsymbol{\Sigma})/b$. This implies two distinct regimes:
+
 1. **Small-batch (noise-dominated) regime:** When sampling noise is larger than the true gradient, doubling $b$ halves the noise variance, allowing a larger learning rate that cuts the required step count $S(b)$ in half while keeping total examples processed $E(b) = b\,S(b)$ constant (*perfect linear scaling*).
 2. **Large-batch (curvature-dominated) regime:** Once $b$ is large enough that the minibatch gradient closely approximates the true full-batch gradient, further increasing $b$ yields diminishing reductions in $S(b)$ while multiplying the data and compute cost $E(b)$ linearly.
 
@@ -213,6 +214,7 @@ where $E_{\min} = b_{\text{noise}} S_{\min}$ is the minimal data budget achieved
 :label:`subsec_batch-size-limits`
 
 When increasing the batch size from $b_0$ to $b$ in the noise-dominated regime ($b_0, b \ll b_{\text{noise}}$), how must the learning rate $\eta$ scale?
+
 * **SGD and Momentum (linear scaling):** From :eqref:`eq_best-step`, when $b \ll b_{\text{noise}}$, $\eta_{\text{opt}}(b) \approx \frac{b}{L b_{\text{noise}}} \propto b$. Equivalently, $k$ steps of size $\eta_0$ on batch size $b_0$ match one step of size $k\eta_0$ on batch size $k b_0$ while preserving the stationary noise floor $\propto \eta / b$ :cite:`Goyal.Dollar.Girshick.ea.2017,Smith.Kindermans.Ying.ea.2018`.
 * **Adam and AdamW (square-root scaling):** In the noise-dominated regime where a coordinate gradient has mean $\bar{g}$ and standard deviation $\sigma / \sqrt{b}$, Adam normalizes the gradient by its RMS scale $\sqrt{\hat{v}_t} \approx \sigma / \sqrt{b}$, yielding single-step drift $-\eta(\sqrt{b}/\sigma)\bar{g}$ and step noise $-\eta z$ ($z \sim \mathcal{N}(0, 1)$). Because the denominator $\sigma/\sqrt{b}$ already supplies a factor of $\sqrt{b/b_0}$, matching the drift and cumulative variance of $k = b/b_0$ small steps in a single large step requires scaling $\eta$ by $\sqrt{b/b_0}$ :cite:`Malladi.Lyu.Panigrahi.ea.2022`:
 
@@ -500,413 +502,268 @@ d2l.plot(adam_lrs, [adam_small, adam_big], 'learning rate', 'final loss',
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.10]{.kicker}
+[Dive into Deep Learning · §9.8]{.kicker}
 
-Batch Size<br>
-**the gradient-noise scale · steps against examples · learning-rate rules · choosing a batch size**
+Batch Size, Gradient Noise Scale, and Critical Batch Size<br>**signal vs. noise power · two-batch estimator · step-vs.-example Pareto frontier · critical batch size · linear & √b LR rules**
 :::
 :::
 
-::: {.slide title="Four Times the Batch: 3× Fewer Steps at 4 Sequences, Only 2× Fewer at 64"}
-[The problem]{.kicker}
+::: {.slide title="When Does Doubling the Batch Size Halve the Step Count?"}
+[Motivation]{.kicker}
 
-`TinyLM`, a transformer with 0.47 million parameters that predicts the
-next byte of Wikipedia text, trained with Adam to a held-out loss of 1.9
-nats per byte at several batch sizes $b$:
+When scaling training across multiple GPUs, we trade parallel work per step (minibatch size $b$) against sequential steps $S(b)$ and total data processed $E(b) = b\,S(b)$:
 
-| batch (sequences) | steps to the target | examples processed |
-|:--|:--|:--|
-| $4 \to 16$ | a little more than 3× fewer | about a quarter more |
-| $64 \to 256$ | about 2× fewer | about twice as many |
-
-Four times the batch is four times the work per step.
-
-::: {.d2l-note .warn}
-Where do the savings stop, and can we tell before training?
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- estimate the gradient-noise scale from gradient norms at two batch
-  sizes;
-- predict steps and examples to a target loss at any batch size;
-- move a learning rate to a new batch size, for SGD and for Adam;
-- say where these rules end;
-- choose a batch size for a new model.
-
-**Idea:** a larger batch saves steps until the noise in its gradient is as
-small as the gradient itself.
-
-**Running example:** `TinyLM`, so far at 64 sequences per step, and a CNN
-on Fashion-MNIST (0.4 million parameters).
-:::
-
-::: {.slide title="Batch Size Sets the Noise That Each Step Carries"}
-[Where this fits]{.kicker}
-
-| part | decks |
-|---|---|
-| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
-| **3 · The run:** step size over time, noise level, model width | Schedules · **Batch Size** · Scaling Up · Practice |
-
-- **Uses:** gradient noise falls as $1/b$; the descent bound with
-  curvature $L$; Adam's update.
-- **Skips:** dividing a batch among devices; when to raise the batch
-  within a run.
-:::
-
-::: {.slide title="A Minibatch Gradient Is Signal Plus Noise"}
-[The gradient-noise scale]{.kicker}
-
-- **Signal:** $\nabla f$, the gradient over the whole dataset.
-- **Noise power** of one example, with $\nabla f_i$ its gradient:
-  $\operatorname{tr}\boldsymbol{\Sigma} = \mathbb{E}_i\|\nabla f_i - \nabla f\|^2$.
-- A minibatch gradient $\hat{\mathbf{g}}_b$ of $b$ examples has noise power
-  $\operatorname{tr}\boldsymbol{\Sigma}/b$.
-
-Signal and noise are equal at the **gradient-noise scale**
-
-$$b_{\textrm{noise}} = \frac{\operatorname{tr} \boldsymbol{\Sigma}}{\|\nabla f\|^2}$$
+| Scaling Regime on `TinyLM` (Target Held-Out Loss $1.9$ Nats) | Step Reduction Factor | Total Examples Processed $E(b) = b\,S(b)$ | Dominant Bottleneck |
+| :--- | :---: | :---: | :--- |
+| **Small batch ($b: 4 \to 16$ sequences, $4\times$)** | **$>3.3\times$ fewer steps** | $\approx 1.2\times E(4)$ (nearly constant data cost) | **Noise-dominated:** Averaging cuts sampling variance $\operatorname{tr}(\boldsymbol{\Sigma})/b$ |
+| **Large batch ($b: 64 \to 256$ sequences, $4\times$)** | **$\approx 1.8\times$ fewer steps** | $\approx 2.2\times E(64)$ (data & FLOP cost doubles!) | **Curvature-dominated:** Minibatch gradient already matches $\nabla f$ |
 
 ::: {.d2l-note}
-$\operatorname{tr}\boldsymbol{\Sigma} = 100$, $\|\nabla f\|^2 = 1$: one
-example is 100× more noise than signal; $b = 100$ brings them level.
-:::
-
-[McCandlish et al., 2018]{.small}
-:::
-
-::: {.slide title="Gradient Norms at Two Batch Sizes Give Both Unknowns"}
-[The gradient-noise scale]{.kicker}
-
-A minibatch gradient is longer than the true one by its noise power:
-
-$$\mathbb{E}\big[\|\hat{\mathbf{g}}_b\|^2\big] = \|\nabla f\|^2 +
-\frac{\operatorname{tr} \boldsymbol{\Sigma}}{b}$$
-
-Mean squared norms $N_s$, $N_l$ at batch sizes $b_s < b_l$:
-
-$$\operatorname{tr} \boldsymbol{\Sigma} \approx
-\frac{N_s - N_l}{1/b_s - 1/b_l},
-\qquad
-\|\nabla f\|^2 \approx \frac{b_l N_l - b_s N_s}{b_l - b_s}$$
-
-::: {.d2l-note}
-$N = 0.50$ at $b = 16$, $0.103$ at $b = 2{,}048$:
-$\operatorname{tr}\boldsymbol{\Sigma} \approx 6.4$,
-$\|\nabla f\|^2 \approx 0.10$, $b_{\textrm{noise}} \approx 64$. No
-full-dataset gradient needed.
+McCandlish et al. (2018) showed that the knee between these two regimes—the **critical batch size $b_{\text{crit}}$**—is governed by a single measurable ratio: the **gradient-noise scale $b_{\text{noise}} = \operatorname{tr}(\boldsymbol{\Sigma}) / \|\nabla f\|^2$**.
 :::
 :::
 
-::: {.slide title="TinyLM's Noise Scale Grows More Than Tenfold within 500 Steps"}
-[The gradient-noise scale]{.kicker}
+::: {.slide title="Signal Power, Noise Power, and Gradient-Noise Scale"}
+[The Signal-to-Noise Ratio of a Minibatch]{.kicker}
 
-CNN (images), then `TinyLM` (sequences of 64 bytes), before and after 500
-steps of Adam:
+Let $\nabla f(\mathbf{x})$ be the exact full-dataset gradient and $\hat{\mathbf{g}}_b$ be a minibatch gradient averaged over $b$ independent examples with per-example covariance $\boldsymbol{\Sigma}$:
 
-@!batch-size-a-two-batch-estimator-3
+$$\mathbb{E}\big[\|\hat{\mathbf{g}}_b\|^2\big] = \|\nabla f\|^2 + \mathbb{E}\big[\|\hat{\mathbf{g}}_b - \nabla f\|^2\big] = \underbrace{\|\nabla f\|^2}_{\text{Signal power}} + \underbrace{\frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}}_{\text{Noise power}}$$
 
+- **Simple gradient-noise scale $b_{\text{noise}}$ (McCandlish et al., 2018):** The minibatch size at which expected noise power equals true gradient signal power:
+  $$b_{\text{noise}} = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{\|\nabla f\|^2}$$
+- **Regime interpretation:**
+  - For $b \ll b_{\text{noise}}$, a minibatch gradient is mostly random sampling noise ($\mathbb{E}\|\hat{\mathbf{g}}_b\|^2 \approx \operatorname{tr}\boldsymbol{\Sigma}/b$).
+  - For $b \gg b_{\text{noise}}$, a minibatch gradient closely tracks the deterministic gradient ($\mathbb{E}\|\hat{\mathbf{g}}_b\|^2 \approx \|\nabla f\|^2$).
+:::
+
+::: {.slide title="A Two-Batch Estimator for b_noise Without Full Passes"}
+[Online Noise-Scale Estimation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Computing $\|\nabla f\|^2$ directly would require a full pass over the dataset.
+- Instead, measure the mean squared gradient norm $N_b = \mathbb{E}[\|\hat{\mathbf{g}}_b\|^2]$ at two minibatch sizes $b_{\text{s}} < b_{\text{l}}$ and solve the $2 \times 2$ linear system $N_b = \|\nabla f\|^2 + \frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}$:
+  $$\operatorname{tr}\boldsymbol{\Sigma} \approx \frac{N_{b_{\text{s}}} - N_{b_{\text{l}}}}{1/b_{\text{s}} - 1/b_{\text{l}}}$$
+- The signal norm is then $\|\nabla f\|^2 \approx \frac{b_{\text{l}} N_{b_{\text{l}}} - b_{\text{s}} N_{b_{\text{s}}}}{b_{\text{l}} - b_{\text{s}}}$. For example, if $N_{16} = 0.50$ and $N_{2048} = 0.103$, then $\operatorname{tr}\boldsymbol{\Sigma} \approx 6.4$, $\|\nabla f\|^2 \approx 0.10$, and $b_{\text{noise}} \approx 64$.
+:::
+
+::: {.col .fig}
+@-batch-size-a-two-batch-estimator-2
+:::
+:::
+:::
+
+::: {.slide title="How b_noise Grows Over Training on TinyLM"}
+[Dynamic Evolution of the Noise Scale]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Measuring `noise_scale` on `TinyLM` ($b_{\text{s}} = 8, b_{\text{l}} = 256$ sequences) before and after $500$ steps of Adam ($\eta = 3 \times 10^{-3}$):
+  - **At initialization (step 0):** $b_{\text{noise}} \approx 1.8$ sequences! Because every untrained window demands the same global byte-frequency shift, the coherent signal $\|\nabla f\|^2$ is huge.
+  - **After 500 steps:** $b_{\text{noise}}$ grows **$>30\times$ to $\sim 50\text{--}150$ sequences** as $\|\nabla f\|^2$ falls while inter-sequence disagreement $\operatorname{tr}\boldsymbol{\Sigma}$ persists!
+:::
+
+::: {.col .fig}
 @!batch-size-a-two-batch-estimator-4
-
-- Two measurements of one network agree within a quarter; two seeds can
-  differ tenfold.
-- The noise scale is no constant of a model: it changes as the model
-  trains.
-:::
-
-::: {.slide title="Noise Divides the Best Step and Its Progress by 1 + b_noise/b"}
-[Batch size and learning rate]{.kicker}
-
-Curvature at most $L$; step $-\eta\,\hat{\mathbf{g}}_b$ with learning rate
-$\eta$:
-
-**I.** $\;\mathbb{E}[\textrm{change of } f] \leq -\eta\,\|\nabla f\|^2 +
-\frac{L}{2}\,\eta^2\big(\|\nabla f\|^2 + \operatorname{tr}\boldsymbol{\Sigma}/b\big)$
-
-**II.** Minimize the parabola in $\eta$:
-
-$$\boxed{\eta_{\textrm{opt}}(b) = \frac{1}{L}\cdot\frac{1}{1 + b_{\textrm{noise}}/b},
-\qquad
-\textrm{decrease} = \frac{\|\nabla f\|^2}{2L}\cdot\frac{1}{1 + b_{\textrm{noise}}/b}}$$
-
-**III.** At $b = b_{\textrm{noise}}$: half the step and half the progress
-of the exact gradient.
-:::
-
-::: {.slide title="Steps and Examples Trade along One Hyperbola"}
-[Batch size and learning rate]{.kicker}
-
-**The bold assumption:** steps needed $\propto$ 1 / progress per step,
-at the best rate for each $b$.
-
-$S(b)$: steps to a target loss; $E(b) = b\,S(b)$: examples; $S_{\min}$:
-steps with the exact gradient; $E_{\min} = b_{\textrm{noise}}\,S_{\min}$.
-
-$$\frac{S(b)}{S_{\min}} = 1 + \frac{b_{\textrm{noise}}}{b},
-\qquad
-\frac{E(b)}{E_{\min}} = 1 + \frac{b}{b_{\textrm{noise}}}$$
-
-| $b_{\textrm{noise}} = 100$ | steps | examples |
-|:--|:--|:--|
-| $b = 10$ | $11\,S_{\min}$ | $1.1\,E_{\min}$ |
-| $b = 100$: the **critical batch size** | $2\,S_{\min}$ | $2\,E_{\min}$ |
-| $b = 1{,}000$ | $1.1\,S_{\min}$ | $11\,E_{\min}$ |
-:::
-
-::: {.slide title="Check: Steps and Examples on Either Side of the Critical Batch Size"}
-[Check]{.kicker}
-
-$b_{\textrm{noise}} = 100$. Compared with their minima, how many steps and
-examples does a run need at $b = 25$? At $b = 400$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $b = 25$: $S = 5\,S_{\min}$, $E = 1.25\,E_{\min}$.
-$b = 400$: $S = 1.25\,S_{\min}$, $E = 5\,E_{\min}$. Sixteen times the
-batch cuts the steps fourfold and quadruples the examples.
 :::
 :::
 :::
 
-::: {.slide title="Below the Noise Scale, SGD's Best Rate Grows in Proportion to the Batch"}
-[Batch size and learning rate]{.kicker}
+::: {.slide title="Optimal Step Size and Single-Step Progress Under Noise"}
+[The Noisy Descent Bound]{.kicker}
 
-$$b \ll b_{\textrm{noise}}:\quad \eta_{\textrm{opt}}(b) \approx \frac{b}{L\, b_{\textrm{noise}}}
-\qquad\Longrightarrow\qquad \eta(b) = \frac{b}{b_0}\,\eta_0$$
+Taking expectations of the $L$-smooth descent lemma $f(\mathbf{x} - \eta\hat{\mathbf{g}}_b) - f(\mathbf{x}) \le -\eta\nabla f^\top \hat{\mathbf{g}}_b + \frac{L}{2}\eta^2\|\hat{\mathbf{g}}_b\|^2$ and substituting $\mathbb{E}[\|\hat{\mathbf{g}}_b\|^2] = \|\nabla f\|^2(1 + b_{\text{noise}}/b)$ gives:
 
-- $\eta_0$: the rate tuned at batch size $b_0$.
-- $k$ steps at rate $\eta$ on $b$ examples ≈ one step at $k\eta$ on $kb$.
+$$\mathbb{E}\big[f(\mathbf{x} - \eta\hat{\mathbf{g}}_b)\big] - f(\mathbf{x}) \le -\eta\,\|\nabla f\|^2 + \frac{L}{2}\,\eta^2\,\|\nabla f\|^2\Big(1 + \frac{b_{\text{noise}}}{b}\Big)$$
 
-| $b_{\textrm{noise}} = 100$ | $b = 10$ | $b = 100$ | $b = 1{,}000$ |
-|:--|:--|:--|:--|
-| $\eta_{\textrm{opt}}$ | $1/(11L)$ | $1/(2L)$ | $1/(1.1L)$ |
+Minimizing this quadratic over $\eta$ yields the optimal step size $\eta_{\text{opt}}(b)$ and guaranteed single-step loss decrease:
 
-::: {.d2l-note .warn}
-Past the noise scale the best rate levels off at $1/L$.
+$$\eta_{\text{opt}}(b) = \frac{1}{L}\cdot\frac{1}{1 + b_{\text{noise}} / b}, \qquad \Delta f_{\text{opt}}(b) = \frac{\|\nabla f\|^2}{2L}\cdot\frac{1}{1 + b_{\text{noise}} / b}$$
+
+- **At $b = b_{\text{noise}}$:** Both the optimal learning rate and the single-step progress equal **exactly half** of their full-batch ($b \to \infty$) values!
 :::
 
-[Goyal et al., 2017; Smith et al., 2018]{.small}
+::: {.slide title="The Step–Data Pareto Frontier and Critical Batch Size"}
+[Universal Trade-Off Law]{.kicker}
+
+Because each step at batch size $b$ makes a fraction $(1 + b_{\text{noise}}/b)^{-1}$ of full-batch progress, reaching a target loss that requires $S_{\min}$ full-batch steps takes $S(b)$ updates and $E(b) = b\,S(b)$ total examples:
+
+$$\frac{S(b)}{S_{\min}} = 1 + \frac{b_{\text{noise}}}{b}, \qquad \frac{E(b)}{E_{\min}} = 1 + \frac{b}{b_{\text{noise}}}, \qquad \text{where } E_{\min} = b_{\text{noise}}\,S_{\min}$$
+
+| Batch Size Regime ($b_{\text{crit}} = b_{\text{noise}} = 100$) | Required Steps $S(b) / S_{\min}$ | Required Examples $E(b) / E_{\min}$ | Efficiency Trade-Off |
+| :--- | :---: | :---: | :--- |
+| **Small batch ($b = 10 = 0.1\,b_{\text{crit}}$)** | $11.0\,S_{\min}$ | **$1.10\,E_{\min}$** ($+10\%$ data) | Compute/data optimal, many sequential steps |
+| **Critical batch size ($b = 100 = b_{\text{crit}}$)** | **$2.0\,S_{\min}$** | **$2.00\,E_{\min}$** ($2\times$ data, $2\times$ steps) | **Balanced knee of the Pareto frontier** |
+| **Oversized batch ($b = 1{,}000 = 10\,b_{\text{crit}}$)** | $1.1\,S_{\min}$ | **$11.0\,E_{\min}$** ($11\times$ data waste!) | Saves only $45\%$ steps vs. $b_{\text{crit}}$ at $5.5\times$ compute |
 :::
 
-::: {.slide title="Adam's Division Supplies √k, the Learning Rate the Other √k"}
-[Batch size and learning rate]{.kicker}
+::: {.slide title="Why SGD Uses Linear LR Scaling (η ∝ b) Below b_crit"}
+[Linear Scaling Rule for Unnormalized Optimizers]{.kicker}
 
-One coordinate: mean gradient $\bar{g}$, noise $\sigma/\sqrt{b}$ in a
-batch of $b$. Adam divides by the root of its average squared gradient,
-about $\sigma/\sqrt{b}$:
+When increasing the batch size from $b_0$ to $b$ in the noise-dominated regime ($b_0, b \ll b_{\text{noise}}$), how must the learning rate of **SGD or Momentum** scale?
 
-$$\textrm{step} \approx -\eta\,\frac{\bar{g} + z\,\sigma/\sqrt{b}}{\sigma/\sqrt{b}}
-= -\eta\,\frac{\sqrt{b}}{\sigma}\,\bar{g} \;-\; \eta\,z,
-\qquad z:\ \textrm{mean 0, variance 1}$$
+$$b \ll b_{\text{noise}}: \quad \eta_{\text{opt}}(b) = \frac{1}{L\,(1 + b_{\text{noise}}/b)} \approx \frac{b}{L\,b_{\text{noise}}} \quad \Longrightarrow \quad \eta(b) = \frac{b}{b_0}\,\eta_0$$
 
-- $k$ times the batch: $\sqrt{k}$ times the progress per step at the same
-  $\eta$.
-- One step for $k$: $\eta$ supplies the other $\sqrt{k}$.
-
-$$\boxed{\eta(b) = \sqrt{b/b_0}\;\eta_0}$$
-
-[Assumes noise larger than the mean gradient. Malladi et al., 2022]{.small}
+- **Trajectory & noise-ball equivalence (Goyal et al., 2017; Smith et al., 2018):**
+  - Taking $k = b/b_0$ sequential steps of size $\eta_0$ on minibatches of size $b_0$ moves parameters by $-\eta_0 \sum_{j=1}^k \hat{\mathbf{g}}_{b_0}^{(j)} = -(k\eta_0)\,\hat{\mathbf{g}}_{k b_0}$, which is a single step of size $k\eta_0$ on batch size $k b_0$.
+  - Linear scaling keeps the ratio $\eta(b)/b = \eta_0/b_0$ constant, preserving the exact stationary noise floor $\mathbb{E}[f(\mathbf{x}_\infty)] - f(\mathbf{x}^\star) \approx \frac{\eta\operatorname{tr}\boldsymbol{\Sigma}}{4b}$ (§9.2).
+- **Saturation past $b_{\text{noise}}$:** For $b \gg b_{\text{noise}}$, $\eta_{\text{opt}}(b) \to 1/L$; continuing to scale $\eta \propto b$ past $b_{\text{crit}}$ violates $\eta < 2/L$ and diverges!
 :::
 
-::: {.slide title="Prediction: Steps Fall with Slope −1 at Small Batches and Bend near the Noise Scale"}
-[Steps to a target]{.kicker}
+::: {.slide title="Why Adam Uses Square-Root Scaling (η ∝ √b) Below b_crit"}
+[Square-Root Scaling Rule for Adaptive Optimizers]{.kicker}
 
-The test: train to one target loss at many batch sizes and count the steps.
+Why does **Adam / AdamW** require **square-root scaling** $\eta(b) = \sqrt{b/b_0}\,\eta_0$ instead of linear scaling in the noise-dominated regime (Malladi et al., 2022)?
 
-| | `TinyLM` | CNN |
-|:--|:--|:--|
-| target | held-out loss 1.9 nats per byte | loss 0.35 on 8,192 fixed training images |
-| batch sizes | 4 to 256 sequences | 8 to 2,048 images |
-| Adam, rate set at | 0.003 at $b = 64$ | 0.004 at $b = 256$ |
-
-- Rate moved by $\sqrt{b/b_0}$; for the CNN held fixed above 512.
-- Target checked every 10 steps on fixed examples; one initialization per
-  sweep.
-
-[After Shallue et al., 2019, who retune at every batch size]{.small}
+- Consider a coordinate whose minibatch gradient has true mean $\bar{g}$ and sampling noise $z\,\frac{\sigma}{\sqrt{b}}$ ($z \sim \mathcal{N}(0, 1)$) with $\frac{\sigma}{\sqrt{b}} \gg |\bar{g}|$.
+- **Adam's denominator already scales with $\sqrt{b}$:** Because $\sqrt{\hat{v}_t} \approx \sqrt{\bar{g}^2 + \sigma^2/b} \approx \frac{\sigma}{\sqrt{b}}$, dividing by $\sqrt{\hat{v}_t}$ automatically amplifies the signal drift by $\sqrt{b}$:
+  $$\Delta x_t \approx -\eta\,\frac{\bar{g} + z\,\sigma/\sqrt{b}}{\sigma/\sqrt{b}} = \underbrace{-\eta\,\frac{\sqrt{b}}{\sigma}\,\bar{g}}_{\text{Deterministic drift}} \;-\; \underbrace{\eta\,z}_{\text{Unit-variance step noise}}$$
+- **Matching $k = b/b_0$ small steps in $1$ large step:** Over $k$ small steps at $(\eta_0, b_0)$, cumulative drift is $k \cdot \eta_0\frac{\sqrt{b_0}}{\sigma}\bar{g}$ and cumulative noise variance is $k\,\eta_0^2$. A single step at batch size $b = k b_0$ matches **both** the cumulative drift and cumulative variance when:
+  $$\eta(b) = \sqrt{k}\,\eta_0 = \sqrt{\frac{b}{b_0}}\;\eta_0$$
 :::
 
-::: {.slide title="TinyLM Follows Perfect Scaling at First, Then Bends"}
-[Steps to a target]{.kicker}
+::: {.slide title="Empirical Step-to-Target Scaling on TinyLM"}
+[Language Model Sweep]{.kicker}
 
-Predicted with $b_{\textrm{noise}} = 100$: steps ÷ 3.6 from 4 to 16
-sequences, ÷ 1.8 from 64 to 256.
+::: {.cols .vc}
+::: {.col}
+- Training `TinyLM` with Adam ($\eta = 0.003\sqrt{b/64}$) to a held-out validation loss of $1.9$ nats across $b \in \{4, 16, 64, 256\}$ sequences:
+  - **$b = 4 \to 16$ ($4\times$):** Steps drop **$3.3\times$** ($1{,}820 \to 550$), closely tracking the dashed perfect-scaling line ($S \propto 1/b$).
+  - **$b = 64 \to 256$ ($4\times$):** Steps drop by only **$1.7\text{--}1.9\times$** ($200 \to 110\text{--}120$), doubling the total sequences processed ($12{,}800 \to 28{,}000$) as $b$ crosses $b_{\text{crit}} \sim 100$.
+:::
 
+::: {.col .fig}
 @!batch-size-the-language-model
-
-Measured: a little more than threefold, then about half.
+:::
+:::
 :::
 
-::: {.slide title="The CNN Gains Few Steps above a Few Hundred Images"}
-[Steps to a target]{.kicker}
+::: {.slide title="Empirical Step-to-Target Scaling on FashionCNN"}
+[Image Classifier Sweep]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+- Training `FashionCNN` with Adam to loss $0.35$ across $b \in \{8, 32, 128, 512, 2048\}$ images:
+  - **$b = 8 \to 32 \to 128$:** Near-linear step reductions ($1{,}210 \to 320 \to 110$ steps) with nearly flat total example cost ($\sim 10{,}000\text{--}14{,}000$ images).
+  - **$b = 512 \to 2{,}048$ ($4\times$):** Saves fewer than $30\%$ of steps ($50 \to 40$) while quadrupling the data bill to $81{,}920$ images!
+:::
+
+::: {.col .fig}
 @!batch-size-the-cnn
-
-$512 \to 2{,}048$ images: less than half of the steps saved, 2× to 4× the
-examples.
+:::
+:::
 :::
 
-::: {.slide title="A Straight-Line Fit in 1/b Gives the Critical Batch Size"}
-[Steps to a target]{.kicker}
+::: {.slide title="Fitting S_min and b_crit by Least Squares in 1/b"}
+[Extracting the Critical Batch Size]{.kicker}
 
-$S(b) = S_{\min} + S_{\min}\, b_{\textrm{crit}} / b$ is linear in $1/b$:
-intercept $S_{\min}$, slope over intercept $b_{\textrm{crit}}$.
+::: {.cols .vc}
+::: {.col}
+- Because $S(b) = S_{\min}\!\left(1 + \frac{b_{\text{crit}}}{b}\right) = S_{\min} + (S_{\min}b_{\text{crit}})\frac{1}{b}$ is linear in $1/b$, weighted linear regression extracts both asymptotes directly from the step counts:
+  - **Intercept:** Minimum full-batch step floor $S_{\min}$.
+  - **Slope / Intercept:** Empirical critical batch size $b_{\text{crit}}$.
+- The fitted values ($b_{\text{crit}} \sim 80\text{--}110$ sequences on `TinyLM` and $b_{\text{crit}} \sim 200\text{--}350$ images on `FashionCNN`) match the order of magnitude of our two-batch gradient-noise estimator $b_{\text{noise}}$!
+:::
 
+::: {.col .fig}
 @!batch-size-the-critical-batch-size-1
-
-::: {.d2l-note}
-Of the order of a hundred sequences and two to four hundred images: the
-same order as the noise scales measured in the first 500 steps.
+:::
 :::
 :::
 
-::: {.slide title="Both Models Fall on One Normalized Curve"}
-[Steps to a target]{.kicker}
+::: {.slide title="Collapse onto the Universal Normalized Pareto Curve"}
+[Steps vs. Examples Frontier]{.kicker}
 
-$\big(E/E_{\min} - 1\big)\big(S/S_{\min} - 1\big) = 1$, with
-$E_{\min} = b_{\textrm{crit}} S_{\min}$:
+::: {.cols .vc}
+::: {.col}
+- Eliminating $b / b_{\text{crit}}$ between $\frac{S(b)}{S_{\min}} = 1 + \frac{b_{\text{crit}}}{b}$ and $\frac{E(b)}{E_{\min}} = 1 + \frac{b}{b_{\text{crit}}}$ (where $E_{\min} = b_{\text{crit}}S_{\min}$) yields an architecture-independent hyperbola:
+  $$\left(\frac{E}{E_{\min}} - 1\right)\left(\frac{S}{S_{\min}} - 1\right) = 1$$
+- Rescaling `TinyLM` and `FashionCNN` by their fitted $(S_{\min}, E_{\min})$ collapses both models onto this single curve!
+  - **Upper-left arm ($b \ll b_{\text{crit}}$):** Data-efficient ($E \approx E_{\min}$), many serial steps.
+  - **Knee ($b = b_{\text{crit}}$):** $(2E_{\min}, 2S_{\min})$.
+  - **Lower-right arm ($b \gg b_{\text{crit}}$):** Step count saturates ($S \approx S_{\min}$) while data cost explodes.
+:::
 
+::: {.col .fig}
 @!batch-size-the-bill-in-examples
-
-Upper left: many steps, few examples. Lower right: few steps, many
-examples. Large runs sit near the bend.
-
-[Two constants per model are fitted; the plot tests the shape.]{.small}
+:::
+:::
 :::
 
-::: {.slide title="SGD: Eight Times the Batch Moves the Best Rate about Eightfold"}
-[Tests of the rules]{.kicker}
+::: {.slide title="Verifying the Linear Scaling Rule (η ∝ b) for SGD"}
+[SGD with Momentum on FashionCNN]{.kicker}
 
-CNN, 12,800 examples per run, SGD with momentum 0.9, rates a factor of 2
-apart:
+::: {.cols .vc}
+::: {.col}
+- At a fixed data budget of $E = 12{,}800$ images ($1/5$ epoch), we sweep SGD with momentum ($\beta = 0.9$) across a factor-of-$2$ learning-rate grid at $b = 8$ ($1{,}600$ steps) and $b = 64$ ($200$ steps):
+  - Increasing the batch size by **$8\times$ ($8 \to 64$)** shifts the U-shaped loss curve and its optimal learning rate rightward by **$4\text{--}8\times$** ($0.0125 \to 0.05\text{--}0.10$).
+  - Leaving $\eta$ unscaled at $0.0125$ when moving to $b = 64$ severely under-budgets the $200$-step run.
+:::
 
+::: {.col .fig}
 @!batch-size-learning-rate-rules-2
-
-The grid places a shallow minimum to within one step: a shift of 4 to 8.
-Leaving the rate unchanged is ruled out.
-:::
-
-::: {.slide title="Check: Predict the Adam Sweep"}
-[Check]{.kicker}
-
-Adam on the CNN at $b = 2$ and at $b = 128$, on learning rates a factor of
-2 apart. By how many grid steps does the best rate move under no scaling,
-under the square-root rule, and under the linear rule?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The batch ratio is 64. No scaling: 0 steps. Square root:
-$\sqrt{64} = 8 = 2^3$, 3 steps. Linear: $64 = 2^6$, 6 steps. The three
-predictions cannot be confused.
 :::
 :::
 :::
 
-::: {.slide title="Adam: 64 Times the Batch Moves the Best Rate about Eightfold"}
-[Tests of the rules]{.kicker}
+::: {.slide title="Verifying the Square-Root Rule (η ∝ √b) for Adam"}
+[Adam on FashionCNN Across a 64× Batch Increase]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+- At the same $12{,}800$-image budget, we increase the batch size by **$64\times$ ($b = 2 \to 128$)** under Adam across a $13$-point factor-of-$2$ grid:
+  - **No scaling ($1\times$):** $\eta$ is $8\times$ too small at $b = 128$, losing $>0.12$ nats.
+  - **Square-root rule ($\sqrt{64} = 8\times = 2^3$, $+3$ grid steps):** Lands right at the empirical optimum ($0.0032\text{--}0.0064$)!
+  - **Linear rule ($64\times = 2^6$, $+6$ grid steps):** Overshoots into the unstable right wall ($>0.10$ nats worse).
+:::
+
+::: {.col .fig}
 @!batch-size-learning-rate-rules-3
-
-No scaling: 0.1 nats or more above the best run. Linear rule: never the
-best.
-:::
-
-::: {.slide title="The Rules End at the Noise Scale, and a Scaled-Up Rate Needs Warmup"}
-[Limits]{.kicker}
-
-- **Past the noise scale:** the best rate levels off (SGD: at $1/L$); a
-  rate scaled further overshoots.
-- **At the start:** the noise scale is smallest (`TinyLM`: about 2
-  sequences), so every batch is a large batch. A rate scaled far up is
-  raised gradually over the first steps: warmup.
-- **Test accuracy:** a large batch does not hurt by itself once rate and
-  length of training are retuned.
-
-::: {.d2l-note .rule}
-The lasting cost of a large batch is data.
-:::
-
-[Goyal et al., 2017; Keskar et al., 2017; Shallue et al., 2019]{.small}
-:::
-
-::: {.slide title="TinyLM's Noise Scale Grows Two Orders of Magnitude in 3,000 Steps" layout="tight"}
-[Choosing a batch size]{.kicker}
-
-Adam at $b = 64$: about 2 sequences at step 0, a few hundred at step 3,000.
-
-@!batch-size-growing-the-batch
-:::
-
-::: {.slide title="A Fixed Batch Size Is Right at One Moment of the Run"}
-[Choosing a batch size]{.kicker}
-
-| chosen for | early in training | late in training |
-|:--|:--|:--|
-| the start (small $b$) | efficient | parallelism unused |
-| the end (large $b$) | examples wasted | efficient |
-
-- `TinyLM` at $b = 64$: thirty times the noise scale at step 0, a few
-  times below it at step 3,000.
-- Large runs raise the batch during training. GPT-3: 32 thousand to 3.2
-  million tokens.
-- SGD: raising $b$ at fixed $\eta$ lowers the noise in the weights, as
-  lowering $\eta$ does. Plan the ramp with the schedule.
-
-[Brown et al., 2020; Smith et al., 2018]{.small}
-:::
-
-::: {.slide title="Fill the Device, Measure the Noise Scale, Stay Near It"}
-[Choosing a batch size]{.kicker}
-
-| step | rule |
-|:--|:--|
-| 1. device | at least the batch at which step time starts to grow; at most what fits in memory |
-| 2. measure | the noise scale at initialization and after a few hundred steps; the later value governs |
-| 3a. compute is scarce | stay below the noise scale: at a third of it, $1.33\,E_{\min}$ |
-| 3b. time is scarce | go to about the noise scale: $2\,S_{\min}$ steps, $2\,E_{\min}$ examples |
-| 4. learning rate | linear rule (SGD) or square-root rule (Adam), then sweep a factor of 2 |
-| 5. later | measure again: the answer grows during training |
-
-::: {.d2l-note .warn}
-At four times the critical batch size: $1.25\,S_{\min}$ steps for
-$5\,E_{\min}$ examples.
-:::
-:::
-
-::: {.slide title="Check: The Second GPU"}
-[Check]{.kicker}
-
-`TinyLM` trains with Adam at $b = 64$ and $\eta = 0.003$; take
-$b_{\textrm{noise}} = 100$. A second GPU arrives and you double the batch.
-Which learning rate does the rule suggest, and by what factor does the
-step count fall?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\eta = \sqrt{2} \times 0.003 \approx 0.0042$. Steps:
-$(1 + 100/64)/(1 + 100/128) = 2.56/1.78 \approx 1.4$ times fewer, not 2.
-The run takes about 70% of the time and reads about 40% more data.
 :::
 :::
 :::
 
-::: {.slide title="A Larger Batch Saves Steps up to the Noise Scale"}
-[Wrap-up]{.kicker}
+::: {.slide title="Dynamic Batch Size Ramps and Practical Selection Recipe"}
+[Engineering Playbook]{.kicker}
 
-- **Noise scale** $b_{\textrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma}
-  / \|\nabla f\|^2$, from gradient norms at two batch sizes: of the order
-  of 100 images (CNN) and about 2 sequences (`TinyLM`) at initialization.
-- **Steps to a target:** $S = S_{\min}(1 + b_{\textrm{noise}}/b)$; fitted
-  critical batch sizes of the order of 100 sequences and 200 to 400
-  images. From 64 to 128 sequences: 1.4 times fewer steps, not 2.
-- **Learning rate:** $\propto b$ for SGD, $\propto \sqrt{b}$ for Adam (64×
-  the batch, about 8× the rate), up to the noise scale.
-- **During training** the noise scale of `TinyLM` grew by two orders of
-  magnitude, so the right batch size grows.
+Because $b_{\text{noise}}$ grows by $1\text{--}2$ orders of magnitude from step 0 to mid-training, a fixed batch size $b$ is always a compromise (motivating **batch-size warmup ramps** such as GPT-3's $32\text{K} \to 3.2\text{M}$ tokens or Llama 3's $4\text{M} \to 16\text{M}$ tokens):
 
-**Next:** carrying a learning rate from a narrow network to a wide one.
+| Engineering Step | Concrete Rule | Quantitative Target |
+| :--- | :--- | :--- |
+| **1. Hardware saturation floor** | Increase $b$ until per-step time scales linearly with $b$ | $b \ge b_{\text{sat}}$ (no idle GPU tensor cores) |
+| **2. Post-warmup $b_{\text{noise}}$ check** | Estimate $b_{\text{noise}}$ via `noise_scale` after initial loss drop ($300\text{--}500$ steps) | Use post-transient $b_{\text{noise}}$ as $b_{\text{crit}}$ |
+| **3. Position $b$ vs. $b_{\text{crit}}$** | **Compute/data-bound:** $b \lesssim 0.3\,b_{\text{crit}}$ ($\le 1.33\,E_{\min}$)<br>**Wall-clock time-bound:** $b \approx b_{\text{crit}}$ ($2\,S_{\min}, 2\,E_{\min}$) | Never set $b \gg b_{\text{crit}}$ ($b = 4\,b_{\text{crit}}$ costs $5\,E_{\min}$ for $1.25\,S_{\min}$) |
+| **4. Scale $\eta$ & add warmup** | Scale $\eta \propto b$ (SGD) or $\eta \propto \sqrt{b}$ (AdamW) up to $b_{\text{crit}}$ | Pair with linear warmup (§9.7) when $b > b_{\text{noise}}(0)$ |
 :::
+
+::: {.slide title="Concept Check: Two-Batch Estimator and Scaling Rules"}
+[Check Your Understanding]{.kicker}
+
+Work out the quantitative prediction for each batch-size scenario:
+
+1. **Two-batch estimator:** At step $500$, measuring mean squared gradient norms at $b_{\text{s}} = 10$ and $b_{\text{l}} = 100$ gives $N_{10} = 1.0$ and $N_{100} = 0.19$. What are $\operatorname{tr}\boldsymbol{\Sigma}$, $\|\nabla f\|^2$, and $b_{\text{noise}}$?
+2. **Adding GPUs near $b_{\text{crit}}$:** `TinyLM` trains with AdamW at $b = 64$ and $\eta = 3 \times 10^{-3}$ where $b_{\text{crit}} = 100$. If you double the batch size to $b = 128$ across two GPUs, what learning rate does the square-root rule recommend, by what factor does the step count $S(b)$ fall, and by what factor does total data $E(b)$ increase?
+3. **Why warmup is mandatory at large $b$:** If $b_{\text{crit}} = 256$ in mid-training, why can't we apply the $\sqrt{256/16} = 4\times$ scaled-up learning rate at step $t = 1$ without warmup?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $\operatorname{tr}\boldsymbol{\Sigma} = \frac{1.0 - 0.19}{1/10 - 1/100} = \frac{0.81}{0.09} =$ **$9.0$**; $\|\nabla f\|^2 = 0.19 - \frac{9.0}{100} =$ **$0.10$**; and **$b_{\text{noise}} = \frac{9.0}{0.10} = 90$**.
+2. Square-root scaling gives **$\eta = \sqrt{2} \times 3 \times 10^{-3} \approx 4.24 \times 10^{-3}$**. Step count drops by $\frac{1 + 100/64}{1 + 100/128} = \frac{2.5625}{1.78125} \approx$ **$1.44\times$** (taking $69\%$ of wall-clock time across 2 GPUs), while total data processed rises by $\frac{1 + 128/100}{1 + 64/100} = \frac{2.28}{1.64} \approx$ **$1.39\times$ ($+39\%$ data)**.
+3. At step $t = 0$, $b_{\text{noise}}(0) \approx 2 \ll 256$, so $b = 256$ is initially deep in the curvature-dominated regime ($b \gg b_{\text{noise}}(0)$) where a $4\times$ scaled-up learning rate exceeds the initial stability ceiling!
+:::
+:::
+
+::: {.slide title="Summary: Gradient-Noise Scale and Critical Batch Size"}
+[Key Takeaways]{.kicker}
+
+| Quantity / Law | Mathematical Formula | Regime / Scaling Behavior | Practical Implication |
+| :--- | :--- | :--- | :--- |
+| **Minibatch Squared Norm** | $\mathbb{E}\|\hat{\mathbf{g}}_b\|^2 = \|\nabla f\|^2 + \frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}$ | Signal power $+\; 1/b$ noise power | Allows estimating $\operatorname{tr}\boldsymbol{\Sigma}$ and $\|\nabla f\|^2$ from two batch sizes $b_{\text{s}} < b_{\text{l}}$ |
+| **Gradient-Noise Scale** | $b_{\text{noise}} = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{\|\nabla f\|^2}$ | Grows $10\text{--}100\times$ during training as $\|\nabla f\|^2$ drops | Hessian-free predictor of the critical batch size $b_{\text{crit}}$ |
+| **Step–Data Pareto Curve** | $\frac{S(b)}{S_{\min}} = 1 + \frac{b_{\text{crit}}}{b},\; \frac{E(b)}{E_{\min}} = 1 + \frac{b}{b_{\text{crit}}}$ | Universal hyperbola $(E/E_{\min}-1)(S/S_{\min}-1) = 1$ | At $b = b_{\text{crit}}$, $S = 2S_{\min}$ and $E = 2E_{\min}$; diminishing returns above $b_{\text{crit}}$ |
+| **SGD LR Scaling** | $\eta(b) = \frac{b}{b_0}\,\eta_0$ ($b \ll b_{\text{crit}}$) | Linear growth up to $b_{\text{crit}}$, then saturates at $1/L$ | Matches $k$ small steps to $1$ large step at constant noise floor $\eta/b$ |
+| **AdamW LR Scaling** | $\eta(b) = \sqrt{\frac{b}{b_0}}\,\eta_0$ ($b \ll b_{\text{crit}}$) | Square-root growth because $\sqrt{\hat{v}_t} \approx \sigma/\sqrt{b}$ supplies $\sqrt{b}$ | Pair with linear warmup (or batch-size ramp) to handle small initial $b_{\text{noise}}(0)$ |
+:::
+

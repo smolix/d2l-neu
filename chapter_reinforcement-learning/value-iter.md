@@ -586,43 +586,6 @@ Dynamic programming computes the best policy of a known MDP from the values of i
        without bound at $\gamma = 1$. Which property of FrozenLake used in
        part b does it lack?
    :exlabel:`ex_value-iter-undiscounted-lake`
-1. **Ties in policy iteration.** A common implementation of policy iteration
-   stops when the greedy policy equals the current one, `(new == pi).all()`.
-   On the slippery lake, *left* and *right* are both optimal at cell 6. On
-   the $8 \times 8$ map, *left* and *up* are both optimal at state 51, and
-   rounding errors can make the greedy policy of value iteration switch
-   between them long after consecutive iterates differ only in the last
-   digits.
-    1. Explain how ties can keep this loop from terminating.
-    1. The loop of :numref:`subsec_vi_policy_iteration` stops instead when
-       the greedy step gains nothing at any state. Use the
-       policy-improvement proposition to show that this test is reached
-       after finitely many rounds, whichever way ties are broken, and that
-       the policy at which it stops is optimal. Why does the test need a
-       tolerance such as $10^{-12}$ in floating point?
-
-    *Adapted from Sutton and Barto,
-    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
-    2nd edition, Exercise 4.4.*
-   :exlabel:`ex_value-iter-ties`
-1. [code] **Discount on calm and slippery ice.** On calm ice a cell $j$ moves
-   from the goal has optimal value $\gamma^{j-1}$, as
-   :numref:`fig_rl_value_wavefront` shows.
-    1. Run `value_iteration` on the calm map for
-       $\gamma \in \{0, 0.5, 0.9, 0.99\}$ and compare each greedy policy with
-       `shortest`. Use the closed form to explain why the policy does not
-       depend on $\gamma$ for $\gamma > 0$. What is special about
-       $\gamma = 0$?
-    1. Repeat on the slippery map for $\gamma \in \{0.5, 0.9, 0.99\}$. At
-       which states does the optimal action change? For each of the three
-       optimal policies, compute the probability of eventually reaching the
-       goal. By the argument of problem
-       :exref:`ex_value-iter-undiscounted-lake`b, this probability is the
-       policy's value at $\gamma = 1$, which a few thousand sweeps of
-       `policy_evaluation` on `d2l.TabularMDP.from_gym(env, 1.0)` compute.
-    1. Explain the trend in these probabilities. Why do slips make the
-       optimal policy depend on $\gamma$?
-   :exlabel:`ex_value-iter-discount`
 1. [code] **In-place sweeps.** ● `value_iteration` computes all of $V_{k+1}$
    from $V_k$. An *in-place* sweep instead visits the states in a fixed order
    and overwrites $V(s)$ immediately, so that states later in the same sweep
@@ -688,46 +651,6 @@ Dynamic programming computes the best policy of a known MDP from the values of i
     1. Check the identity numerically at the start state for $\pi$ =
        `uniform` and $\pi' = \pi^*$.
    :exlabel:`ex_value-iter-improvement-quantified`
-1. [code] **When the greedy policy is optimal.** ● In
-   :numref:`subsec_vi_policy_iteration` the greedy policy of value iteration
-   is optimal from sweep 14 on, while the certificate needs 164 sweeps. Let
-   $V$ be any table, let $e = \|V - V^*\|_\infty$, and let $\pi$ be
-   greedy with respect to $V$, so that $\pi(s)$ maximizes `mdp.backup(V)[s]`.
-   Write $\mathcal{T}^\pi$ for the policy-evaluation operator
-   of :eqref:`eq_policy_eval`.
-    1. Show that $V^\pi(s) \geq V^*(s) - 2\gamma e/(1-\gamma)$ at
-       every state :cite:`Singh.Yee.1994`, by inserting $\mathcal{T}^{\pi^*} V$
-       and $\mathcal{T}^\pi V$ between $V^* = \mathcal{T}^{\pi^*} V^*$ and
-       $V^\pi = \mathcal{T}^\pi V^\pi$. Evaluate the bound at sweep 14 on the
-       slippery lake. What does it guarantee there?
-    1. Let the *action gap* $\Delta$ be the smallest difference
-       $V^*(s) - Q^*(s, a)$ over all states $s$ and all actions $a$ that are
-       not optimal at $s$, with $Q^*$ from :eqref:`eq_bellman_optimality_q`.
-       Show that $2\gamma e < \Delta$ implies that $\pi$ is optimal.
-    1. Compute $\Delta$ for the slippery lake from `mdp.backup(V_star)`,
-       treating actions within $10^{-9}$ of the maximum as optimal, and find
-       the first sweep at which the condition of part b holds. Compare it with
-       sweep 14. Why can the greedy policy be optimal long before the
-       condition holds?
-   :exlabel:`ex_value-iter-greedy-optimal`
-1. [code] **Time limits under the optimal policy.** `gym.make` wraps
-   FrozenLake in a time limit: after 100 steps the episode ends with
-   `truncated=True` (:numref:`subsec_mdp-termination`).
-    1. Propagate the state distribution $d^\pi_t$ of problem
-       :exref:`ex_mdp-kernel-predicts-episodes`b of :numref:`sec_mdp` under
-       `pi_star` instead of the random policy. Compute the probabilities that
-       an episode reaches the goal, falls into a hole, or is truncated, and
-       check the first against the $0.730$ computed
-       in :numref:`subsec_vi_slippery_ice`. Compare the truncated fraction with
-       the one that $d^\pi_{100}$ gives for the random policy.
-    1. If the limit is part of the task, the best command can depend on the
-       number of steps that remain (problem :exref:`ex_mdp-time-limits`).
-       Show that $V_k$, the $k$-th iterate of value iteration at $\gamma = 1$
-       from $V_0 = 0$, is the largest probability of reaching the goal within
-       $k$ steps, attained by commanding the greedy action of $V_{k-1}$ when
-       $k$ steps remain. Compute it for $k = 100$. How much more often than
-       $\pi^*$ does this policy reach the goal within the limit?
-   :exlabel:`ex_value-iter-time-limits`
 1. [code] **Potential-based shaping.** ● The proposition of
    :numref:`subsec_vi_shaping` holds for every potential when the terminal
    states are absorbing, as in `TabularMDP`, but only for potentials that
@@ -806,287 +729,251 @@ Dynamic programming computes the best policy of a known MDP from the values of i
 ::: {.cover}
 [Dive into Deep Learning · §14.2]{.kicker}
 
-Dynamic Programming<br>
-**values · Bellman equations · contraction · the best path is not the shortest**
+Dynamic Programming<br>**state & action values · Bellman expectation & optimality equations · contraction & certificates · policy iteration · risk-averse control**
 :::
 :::
 
-::: {.slide title="On Slippery Ice the Shortest Path Reaches the Goal in 4.5% of Episodes"}
-[The problem]{.kicker}
+::: {.slide title="Why Local Distance Fails on Slippery Ice"}
+[Motivation & Mental Model]{.kicker}
 
-![](../img/mdl-rl-gridworld.svg){width=60%}
-
-- Each command moves as intended or sideways, $1/3$ each; the goal pays 1.
-- At cell 9 only *down* cannot slip into hole 5, but it slides sideways 2 times in 3.
-
-::: {.d2l-note .warn}
-Which command is best depends on what every reachable cell is worth.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- define a state's value and write Bellman's equations;
-- prove that the Bellman operator contracts by $\gamma$, and stop with a certificate;
-- score a policy with one linear solve and improve it greedily;
-- compute the best policy on slippery ice and explain its odd commands;
-- decide whether a reward bonus changes the best policy.
-
-**Running example:** slippery FrozenLake 4×4, $\gamma = 0.95$, with $P$ and $r$ known.
-:::
-
-::: {.slide title="With the Model Known, the Best Policy Can Be Computed Exactly"}
-[Where this fits]{.kicker}
+On calm ice, following the 6-move shortest path always reaches the goal; on slippery ice, that same shortest-path policy succeeds in only **$4.5\%$** of episodes:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | what the agent works from |
-|---|---|
-| Markov Decision Processes | the problem as arrays $P$, $r$, $\gamma$ |
-| **Dynamic Programming** | **the known model: exact values** |
-| Temporal-Difference Learning | sampled transitions |
-| Exploration | the cost of trying actions |
-| Learning from Demonstrations | an expert's actions |
-| Policy Gradient | the returns of its own attempts |
-| Baselines and Variance Reduction | less noisy gradient estimates |
-| Function Approximation | a network instead of a table |
+- **Coupled multistage decisions:** At cell 9, *right* steps closer to the goal on calm ice, but on slippery ice it lands in hole 5 one time in three.
+- **Safety vs. delay:** *Down* never enters hole 5, yet slides sideways into cell 8 or 10 two times in three.
+- **Bellman's core insight:** We cannot rank actions by one-step distance; we must score each cell by the total future return still achievable from it.
 :::
 
-::: {.col .narrow}
-- **Uses:** states, actions, $P(s' \mid s, a)$, $r(s, a)$, the discounted return.
-- **Skips:** unknown models, which every later section faces.
+::: {.col .fig}
+![](../img/mdl-rl-gridworld.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="A Value Scores the Whole Future of a State"}
-A *policy* $\pi(a \mid s)$ is a distribution over actions at each state.
+::: {.slide title="State-Value and Action-Value Functions"}
+[Scoring States and Commands]{.kicker}
 
-$$V^\pi(s) = \mathbb{E}\Big[\textstyle\sum_{t \geq 0} \gamma^t r(s_t, a_t) \,\Big|\, s_0 = s\Big]$$
+For a fixed policy $\pi(a \mid s)$, the **state value** $V^\pi(s)$ and **action value** $Q^\pi(s, a)$ measure expected discounted return from $s$ (or from $(s, a)$ followed by $\pi$):
 
-with $a_t \sim \pi(\cdot \mid s_t)$ and $s_{t+1} \sim P(\cdot \mid s_t, a_t)$.
+$$V^\pi(s_0) = \mathbb{E}_{\pi, P}\Big[\sum_{t=0}^{\infty} \gamma^t r(s_t, a_t)\Big], \qquad Q^\pi(s_0, a_0) = r(s_0, a_0) + \mathbb{E}_{\pi, P}\Big[\sum_{t=1}^{\infty} \gamma^t r(s_t, a_t)\Big]$$
 
-- On the lake: the chance of reaching the goal, weighted by $\gamma^t$.
-- $Q^\pi(s, a)$: the same, with the first action pinned to $a$.
-- $V^\pi(s) = \sum_a \pi(a \mid s)\, Q^\pi(s, a) \leq \max_a Q^\pi(s, a)$.
+- **Interpretation on FrozenLake:** Because only entering the goal pays $+1$, $V^\pi(s)$ is the probability of reaching the goal from $s$, weighted by $\gamma^t$ for the arrival step $t$.
+- **Consistency identity:** Averaging $Q^\pi(s, a)$ over the policy's action choice recovers $V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\,Q^\pi(s, a) \leq \max_a Q^\pi(s, a)$.
 :::
 
-::: {.slide title="Split After One Step: Values Solve a Linear System"}
-After one move, the rest is worth $V^\pi(s')$ (Markov property):
+::: {.slide title="Bellman Expectation Equations and Tensor Backup"}
+[Recursive One-Step Lookahead]{.kicker}
 
-$$V^\pi(s) = \sum_a \pi(a \mid s) \Big[ r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^\pi(s') \Big]$$
+Splitting a trajectory after its first step and invoking the Markov property turns the infinite-horizon sum into a coupled linear system across neighboring states:
 
-- $|\mathcal{S}|$ linear equations in $|\mathcal{S}|$ unknowns.
-- The bracket is a *backup*; on arrays `P[s, a, s']` and `r[s, a]`:
+$$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\Big[r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\,V^\pi(s')\Big]$$
+
+- **The one-step backup bracket:** For any value vector $\mathbf{V} \in \mathbb{R}^{|\mathcal{S}|}$, the bracketed lookahead across all $(s, a)$ pairs is a single matrix-vector product:
 
 @value-iter-the-expectation-form
 :::
 
-::: {.slide title="Check: Write the Equation at Cell 14"}
-[Check]{.kicker}
+::: {.slide title="The Bellman Optimality Equations"}
+[Characterizing Optimal Play]{.kicker}
 
-Cell 14 lies left of the goal, on the bottom wall; a move into a wall stays put.
-The policy commands *down*. Write $V^\pi(14)$ (the goal is terminal, value 0).
+In any finite MDP with $\gamma < 1$, a deterministic stationary policy $\pi^*$ achieves the maximum value $V^*(s) = \max_\pi V^\pi(s)$ at every state simultaneously:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Wall: stay at 14; slips: 13, or the goal (reward 1); $1/3$ each.
+$$V^*(s) = \max_{a \in \mathcal{A}} \Big[r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\,V^*(s')\Big]$$
 
-$$V^\pi(14) = \tfrac13 + \tfrac{\gamma}{3}\big[V^\pi(13) + V^\pi(14)\big]$$
-
-$V^\pi(14)$ is on both sides, and $V^\pi(13)$ depends on it: solve all equations together.
-:::
-:::
+- **Action-value optimality:** Inserting $V^*(s') = \max_{a'} Q^*(s', a')$ into the bracket yields $Q^*(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) \max_{a'} Q^*(s', a')$.
+- **Model-based vs. model-free extraction:** Extracting $\pi^*(s)$ from $V^*$ requires a one-step lookahead with $P$ and $r$, whereas $\pi^*(s) = \mathrm{argmax}_a Q^*(s, a)$ requires no model.
 :::
 
-::: {.slide title="The Best Policy Takes the Best Bracket at Every State"}
-**Proposition.** Finite MDP, $\gamma < 1$: a deterministic, stationary $\pi^*$ is optimal at every state.
+::: {.slide title="Visualizing Exact and Sampled Bellman Backups"}
+[Backup Tree Diagrams]{.kicker}
 
-$$V^*(s) = \max_a \Big[ r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^*(s') \Big]$$
+Every Bellman equation assembles the value at a root node from the values one step below it:
 
-- $V^*(s)$ is the bracket of $\pi^*(s)$; no bracket exceeds it (act once, then follow $\pi^*$).
-- Nonlinear (the max); $\pi^*(s)$ is the argmax of the same bracket.
-- $Q^*(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) \max_{a'} Q^*(s', a')$:
-  $\pi^*(s) = \arg\max_a Q^*(s, a)$ needs no model.
+![](../img/mdl-rl-backups.svg){.nostretch width=95%}
 
-[Bellman 1957; Puterman 1994]{.small}
+- **Expectation vs. optimality (a–c):** $V^\pi$ and $Q^\pi$ average over policy actions $\pi(a \mid s)$, whereas the optimality operator replaces the action average with $\max_a$ (drawn as an arc).
+- **Sampled backup (d):** When $P$ is unknown (§14.3), the learner follows a single realized environment transition (blue) instead of summing over $P(s' \mid s, a)$.
 :::
 
-::: {.slide title="Value Iteration Repeats the Best Backup from V₀ = 0"}
-The *Bellman operator* $\mathcal{T}$ maps a table $V$ to its best brackets:
+::: {.slide title="Value Iteration: Sweeping the Bellman Operator"}
+[Fixed-Point Iteration]{.kicker}
 
-$$(\mathcal{T}V)(s) = \max_a \Big[ r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V(s') \Big], \qquad V^* = \mathcal{T}V^*$$
-
-Sweep $V_{k+1} = \mathcal{T}V_k$: one backup per $(s, a)$, the best kept per state.
+The **Bellman optimality operator** $\mathcal{T}$ maps any value table $V$ to its best one-step lookahead $(\mathcal{T}V)(s) = \max_a \big[r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)V(s')\big]$:
 
 @value-iter-value-iteration-1
+
+- **Fixed-point characterization:** The optimal value table $V^*$ satisfies $V^* = \mathcal{T}V^*$; value iteration starts from $V_0 = \mathbf{0}$ and applies $V_{k+1} = \mathcal{T}V_k$ repeatedly.
 :::
 
-::: {.slide title="On Calm Ice, Values Travel Back One Move per Sweep"}
-![](../img/mdl-rl-value-wavefront.svg){width=44%}
+::: {.slide title="Wavefront Propagation on Calm Ice"}
+[Deterministic Shortest-Path Limit]{.kicker}
 
-- A cell $j$ moves from the goal has $V^* = \gamma^{j-1}$; the start holds $\gamma^5 = 0.774$ from sweep 6 on.
-- Slips feed values back into each other. Does the sweep still converge?
-:::
+When transitions are deterministic, value iteration propagates exact values backward from the goal one ring per sweep:
 
-::: {.slide title="Every Sweep Lands in a Square γ Times Smaller"}
 ::: {.cols .vc}
 ::: {.col}
-- Two states, *stay* or *switch*; staying in $s_1$ pays 1; $\gamma = 0.8$; $V^* = (5, 4)$.
-- Squares: radius $\gamma^k r_0$ around $V^*$, with $r_0 = 7$ from $V_0 = (-2, 3)$.
-- Sweep $k$ lands inside square $k$, whatever the start.
+- **Closed-form calm values:** A cell whose shortest path around the holes takes $j$ moves has exact value $V^*(s) = \gamma^{j-1}$.
+- **Finite termination in 6 sweeps:** Sweep $k$ finalizes all cells at distance $k$; the start cell ($j = 6$) stays at $0$ for five sweeps and locks onto $\gamma^5 = 0.774$ on sweep 6.
+- **Why slips require analysis:** Stochastic slips create cycles (such as $14 \leftrightarrow 13$), coupling all states together across infinitely many sweeps.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-rl-contraction.svg)
+![](../img/mdl-rl-value-wavefront.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="The Bellman Operator Shrinks Every Distance by a Factor γ"}
-Sup norm $\|V\|_\infty = \max_s |V(s)|$, the largest disagreement at any state.
+::: {.slide title="Contraction of the Bellman Operator in Sup Norm"}
+[Why Value Iteration Always Converges]{.kicker}
 
-$$\|\mathcal{T}V - \mathcal{T}V'\|_\infty \leq \gamma\, \|V - V'\|_\infty$$
+Measured in the sup norm $\|V\|_\infty = \max_s |V(s)|$, every application of $\mathcal{T}$ shrinks the maximum disagreement between any two value tables by at least $\gamma$:
 
-I. Fix $s$; let $f(a)$ and $g(a)$ be the brackets of $V$ and of $V'$.
+::: {.cols .vc}
+::: {.col}
+$$\|\mathcal{T}V - \mathcal{T}V'\|_\infty \leq \gamma\,\|V - V'\|_\infty$$
 
-II. $|f(a) - g(a)| \leq \gamma \max_{s'} |V(s') - V'(s')|$, since $P(\cdot \mid s, a)$ averages.
-
-III. $|\max_a f(a) - \max_a g(a)| \leq \max_a |f(a) - g(a)|$, at every $s$. $\blacksquare$
+- **Proof in two inequalities:** First, averaging over $P(\cdot \mid s, a)$ cannot exceed $\max_{s'} |V(s') - V'(s')|$; second, $|\max_a f(a) - \max_a g(a)| \leq \max_a |f(a) - g(a)|$.
+- **Geometric nested balls:** Starting at distance $r_0 = \|V_0 - V^*\|_\infty$, sweep $k$ lands inside the sup-norm square of radius $\gamma^k r_0$ around $V^*$.
 :::
 
-::: {.slide title="A Contraction Makes V* Unique, Fast to Reach, and Certifiable"}
-- **Unique:** two fixed points have $\|V - V'\|_\infty \leq \gamma \|V - V'\|_\infty$, so $V = V'$.
-- **Rate:** $e_k = \|V_k - V^*\|_\infty \leq \gamma^k e_0$, from any start.
-- **Certificate:** $\|V_k - V^*\|_\infty \leq \frac{\gamma}{1-\gamma} \|V_k - V_{k-1}\|_\infty$, which is observable.
-- **Greedy is safe:** $\mathcal{T}^\pi$ (average under $\pi$) contracts too; for $\pi$ greedy on $V^*$,
-  $\mathcal{T}^\pi V^* = V^*$, so $V^\pi = V^*$.
-- **Needs $\gamma < 1$:** at $\gamma = 1$, uniqueness and convergence can fail.
-:::
-
-::: {.slide title="Check: At Cell 9, Is Safety Worth the Lost Moves?"}
-[Check]{.kicker}
-
-- Hole 5 lies above cell 9. *Down* cannot slip into it, but slides sideways 2 times in 3.
-- *Right* gains a column, but slips up into the hole 1 time in 3.
-- Which does $\pi^*$ command?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** *Down*: $Q^*(9, \textit{down}) = 0.375$, against $0.289$ for *right*.
-Safety is worth the sideways slips.
+::: {.col .fig}
+![](../img/mdl-rl-contraction.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Slips Lower Every Value: the Start Falls from 0.774 to 0.180"}
+::: {.slide title="Uniqueness, Convergence Rate, and Certificates"}
+[Four Consequences of Contraction]{.kicker}
+
+Because $\gamma < 1$, Banach's fixed-point theorem guarantees four properties for $\mathcal{T}$ (and for the policy evaluation operator $\mathcal{T}^\pi$):
+
+1. **Unique fixed point:** If $V = \mathcal{T}V$ and $V' = \mathcal{T}V'$, then $\|V - V'\|_\infty \leq \gamma\|V - V'\|_\infty$, forcing $V = V' = V^*$.
+2. **Geometric convergence rate:** The true error $e_k = \|V_k - V^*\|_\infty \leq \gamma^k e_0$ decays by at least $\gamma$ per sweep, scaling with the effective horizon $1/(1-\gamma)$.
+3. **Observable stopping certificate:** Because $V^*$ is unknown, we bound the true error using consecutive iterates:
+   $$\|V_k - V^*\|_\infty \leq \frac{\gamma}{1 - \gamma}\,\|V_k - V_{k-1}\|_\infty$$
+4. **Safe greedy extraction:** Any policy $\pi$ that is greedy with respect to $V^*$ satisfies $\mathcal{T}^\pi V^* = \mathcal{T}V^* = V^*$, proving $V^\pi = V^*$.
+:::
+
+::: {.slide title="Calm vs. Slippery Optimal Values and Policies"}
+[Solving FrozenLake Exactly]{.kicker}
+
+Running value iteration on slippery FrozenLake answers the cell 9 question and reveals how drastically stochastic slips reshape optimal behavior:
+
 @!value-iter-value-iteration-2
 
-In four cells $\pi^*$ points away from the goal, and in five into a wall.
+- **Safety wins at cell 9:** $Q^*(9, \textrm{down}) = 0.375$ beats $Q^*(9, \textrm{right}) = 0.289$; avoiding hole 5 is worth sliding sideways two times in three.
+- **Lower values everywhere:** Slips cut the start-state value $V^*(s_0)$ from $0.774$ to $0.180$, and even cell 14 adjacent to the goal drops from $1.000$ to $0.724$.
 :::
 
-::: {.slide title="The Error Beats Its Guarantee; Stop on the Certificate"}
+::: {.slide title="Empirical Convergence vs. Stopping Rules"}
+[Certifying Accuracy]{.kicker}
+
+Comparing true distance $\|V_k - V^*\|_\infty$ against the a priori bound $\gamma^k e_0$ and the observable certificate highlights a common stopping pitfall:
+
 @!value-iter-value-iteration-3
 
-- Guarantee $\gamma^k e_0$ ($e_0 = 0.724$) reaches $10^{-6}$ at sweep 264; the error, at 158.
-- Change $\|V_k - V_{k-1}\|_\infty < 10^{-6}$: stops at 128, error still $1.1 \times 10^{-5}$.
-- Certificate $< 10^{-6}$: stops at 164, six sweeps late, never early.
+- **Stopping on raw change is premature:** Stopping when $\|V_k - V_{k-1}\|_\infty \leq 10^{-6}$ halts at sweep 128, where true error is still $1.1 \times 10^{-5}$ ($11\times$ above tolerance).
+- **Certificate reliability:** Waiting for $\frac{\gamma}{1-\gamma}\|V_k - V_{k-1}\|_\infty \leq 10^{-6}$ halts at sweep 164, just 6 sweeps after the true error crosses $10^{-6}$ at sweep 158.
 :::
 
-::: {.slide title="Policy Evaluation: One Linear Solve Scores Any Policy"}
-- Replace the max by the average under $\pi$: sweeps $V_{k+1} = \mathcal{T}^\pi V_k$ reach $V^\pi$.
-- Without the max, $V^\pi = r_\pi + \gamma P_\pi V^\pi$ is linear, with
-  $P_\pi(s' \mid s) = \sum_a \pi(a \mid s) P(s' \mid s, a)$, $r_\pi(s) = \sum_a \pi(a \mid s)\, r(s, a)$:
+::: {.slide title="Policy Evaluation: Sweeps vs. Direct Linear Solve"}
+[Scoring a Fixed Policy]{.kicker}
 
-$$V^\pi = (I - \gamma P_\pi)^{-1}\, r_\pi \qquad (\text{invertible for } \gamma < 1)$$
+Replacing $\max_a$ with the policy average $\mathcal{T}^\pi$ yields a linear system $V^\pi = r_\pi + \gamma P_\pi V^\pi$ in terms of $P_\pi(s' \mid s) = \sum_a \pi(a \mid s)P(s' \mid s, a)$:
 
-- Uniformly random policy: $V(s_0) = 0.0078$ both ways, 4% of the optimum $0.180$.
-- One solve costs $O(|\mathcal{S}|^3)$; sweeps scale to larger problems.
+@value-iter-policy-evaluation-1
+
+- **Exact matrix solution:** For $\gamma < 1$, $(I - \gamma P_\pi)$ is invertible and $V^\pi = (I - \gamma P_\pi)^{-1}r_\pi$ gives the uniform policy's start value $V(s_0) = 0.0078$ in one $O(|\mathcal{S}|^3)$ solve.
 :::
 
-::: {.slide title="Acting Greedily on V^π Never Lowers Any Value"}
-**Proposition.** If $\pi'$ is greedy on $V^\pi$, then $V^{\pi'} \geq V^\pi$ at every state;
-if equal everywhere, both are optimal.
+::: {.slide title="Policy Improvement and Policy Iteration"}
+[Howard's Monotone Improvement Loop]{.kicker}
 
-I. Greedy: $\mathcal{T}^{\pi'} V^\pi = \mathcal{T} V^\pi \geq \mathcal{T}^\pi V^\pi = V^\pi$.
+Acting greedily with respect to $V^\pi$ via $\pi'(s) = \mathrm{argmax}_a Q^\pi(s, a)$ guarantees monotone improvement $V^{\pi'}(s) \geq V^\pi(s)$ at every state:
 
-II. $\mathcal{T}^{\pi'}$ is monotone (its weights are probabilities):
-$V^\pi \leq \mathcal{T}^{\pi'} V^\pi \leq (\mathcal{T}^{\pi'})^2 V^\pi \leq \cdots \to V^{\pi'}$.
-
-III. If $V^{\pi'} = V^\pi$, then $\mathcal{T}V^\pi = V^\pi$, so $V^\pi = V^*$. $\blacksquare$
-
-[Howard 1960; Puterman 1994]{.small}
-:::
-
-::: {.slide title="Policy Iteration: Evaluate, Improve, Stop When Nothing Gains"}
 @value-iter-policy-iteration-and-generalized-policy-iteration-1
 
-- Values never fall, and deterministic policies are finite: the loop ends.
-- Test the gain, not `argmax` changes: *left* and *right* tie at cell 6.
+- **Proof via monotonicity:** Greediness ensures $\mathcal{T}^{\pi'}V^\pi = \mathcal{T}V^\pi \geq \mathcal{T}^\pi V^\pi = V^\pi$; applying the monotone operator $\mathcal{T}^{\pi'}$ repeatedly gives $V^\pi \leq (\mathcal{T}^{\pi'})^k V^\pi \to V^{\pi'}$.
+- **Tie-safe termination:** Stop when $\max_a Q^\pi(s, a) \leq V^\pi(s) + \varepsilon$ everywhere, rather than checking if `argmax` indices changed (which can cycle on tied actions like cell 6).
 :::
 
-::: {.slide title="The Policy Settles Long Before the Values Do"}
-![](../img/mdl-rl-gpi.svg){width=98%}
+::: {.slide title="Generalized Policy Iteration (GPI)"}
+[Interleaving Evaluation and Improvement]{.kicker}
 
-- Policy iteration: 2 exact solves; the first greedy step already gives $\pi^*$.
-- Value iteration: certified after 10,496 backups; its greedy policy is $\pi^*$ after 896.
+Policy iteration and value iteration are two extremes of **Generalized Policy Iteration**, which alternates value evaluation steps toward $V^\pi$ with greedy improvement steps toward $\textrm{greedy}(V)$:
+
+::: {.cols .vc}
+::: {.col}
+- **Policy iteration:** Completes exact evaluation ($V = V^\pi$) before each greedy step; on FrozenLake, the very first greedy step on the uniform policy's values already yields $\pi^*$ (2 solves total).
+- **Value iteration:** Takes a single evaluation sweep before improving; while certifying $V^*$ takes 164 sweeps ($10{,}496$ backups), its greedy policy locks onto $\pi^*$ by sweep 14 ($896$ backups).
 :::
 
-::: {.slide title="π* Reaches the Goal About 16 Times as Often as the Shortest Path"}
+::: {.col .fig}
+![](../img/mdl-rl-gpi.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Slip-Aware Optimum Beats Shortest Path 16 to 1"}
+[Exact vs. Monte Carlo Success Rates]{.kicker}
+
+Evaluating policies over 100 sweeps at $\gamma = 1$ gives the exact probability of reaching the goal within Gymnasium's 100-step limit, matching 2,000-episode Monte Carlo rollouts:
+
 @!value-iter-what-the-optimal-policy-looks-like-on-ice-2
 
-- Exact: 100 sweeps of policy evaluation at $\gamma = 1$; Monte Carlo agrees within sampling noise.
-- No time limit: $\pi^*$ falls into a hole 22% of the time (all at cell 6), the shortest path 96%.
-- A third of those falls start at cell 1, off the shortest route: slips carry it there.
+- **Dramatic survival gap:** The slip-aware optimal policy $\pi^*$ reaches the goal in **$73.0\%$** of episodes, compared with **$4.5\%$** for the calm-ice shortest path and **$1.4\%$** for random play.
 :::
 
-::: {.slide title="Check: Every Command at Cell 6 Risks a Hole. Which Is Best?"}
-[Check]{.kicker}
+::: {.slide title="Why the Optimal Policy Walks Away from the Goal"}
+[Risk Analysis Across Cells]{.kicker}
 
-Cell 6 has hole 5 on its left and hole 7 on its right; cells 2 above and 10 below are safe.
-Which command risks the least?
+Solving $(I - P_\pi^\top)\,\mathbf{v} = \mathbf{e}_{s_0}$ for expected cell visits before termination reveals exactly where episodes fall into holes:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** *Left* or *right*: risk $1/3$, against $2/3$ for *up* and *down*, whose slips both hit holes.
-$\pi^*$ takes one of them (`argmax` picks *left*). In every cell its command has the least hole risk: zero except at cell 6.
-:::
-:::
+@!value-iter-the-optimal-policy-on-slippery-ice-1
+
+- **Wall-bouncing as a shield:** In five cells (0, 1, 3, 4, 14), $\pi^*$ commands *into a wall* so the intended direction stays put and both perpendicular slips stay away from holes.
+- **Pointing away from the goal:** In four cells (2, 6, 8, 10), $\pi^*$ points away from the goal, reducing one-step hole risk to $0$ everywhere except cell 6 (flanked by holes 5 and 7), where all $22\%$ of its falls occur.
 :::
 
-::: {.slide title="An Approach Bonus of 0.3 Makes the Best Policy Circle Forever"}
-Add $0.3$ for each move closer to the goal (Manhattan distance $\ell$):
+::: {.slide title="How Naive Approach Bonuses Corrupt Optimal Play"}
+[Reward Shaping Verification]{.kicker}
 
-$$\tilde r(s, a) = r(s, a) + 0.3 \sum_{s'} P(s' \mid s, a)\, \mathbf{1}\big(\ell(s') < \ell(s)\big)$$
+Using value iteration on the shaped MDP $\tilde{r}(s, a) = r(s, a) + b \sum_{s'} P(s' \mid s, a)\mathbf{1}(\ell(s') < \ell(s))$ proves that naive progress bonuses break $\pi^*$ on slippery ice:
 
 @!mdp-model-based-versus-model-free
 
-- Bonus 0.3: shuttling between 13 and 14 earns the bonus every lap; true value 0.
-- Bonus 0.1: the goal is reached again, but the policy is worth 0.115, not 0.180.
+- **Catastrophic looping ($b = 0.3$):** The shaped optimum commands *left* (`<`) at cell 14 to shuttle back to cell 13 and farm the bonus, earning shaped value $2.15$ but **$0.000$ true goal value**.
+- **Potential-based invariance (Ng et al., 1999):** Shaping via $\tilde{r} = r + \gamma\Phi(s') - \Phi(s)$ shifts every policy's value by identical $-\Phi(s)$ ($\tilde{V}^\pi = V^\pi - \Phi$), leaving $\pi^*$ invariant.
 :::
 
-::: {.slide title="A Difference of Potentials Cannot Change the Best Policy"}
-$$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s), \qquad \Phi \text{ bounded}$$
+::: {.slide title="Concept Check: Bellman Equations and Contraction"}
+[Check Your Understanding]{.kicker}
 
-- Telescopes: $\sum_{t<T} \gamma^t \big(\gamma\Phi(s_{t+1}) - \Phi(s_t)\big) = \gamma^T\Phi(s_T) - \Phi(s_0) \to -\Phi(s_0)$.
-- So $\tilde V^\pi = V^\pi - \Phi$ for every $\pi$: same ranking, same $\pi^*$.
-- Any other added term changes $\pi^*$ on some MDP, as the approach bonus does here.
-- A simulator stops at a terminal state, so $\Phi$ must be 0 there.
-- Use: a learner from samples gets a signal on every move, e.g. $\Phi = -0.3\,\ell$.
+Work through these three questions on dynamic programming:
 
-[Ng, Harada, Russell 1999]{.small}
+1. **Bellman equation at cell 14:** Cell 14 lies left of the goal on the bottom wall. If $\pi$ commands *down* at cell 14, write the Bellman expectation equation for $V^\pi(14)$ in terms of $V^\pi(13)$ and $V^\pi(14)$.
+2. **Contraction & certificates:** If $\gamma = 0.95$ and consecutive value-iteration sweeps satisfy $\|V_k - V_{k-1}\|_\infty = 10^{-5}$, what upper bound does the certificate place on $\|V_k - V^*\|_\infty$?
+3. **Action values vs. state values:** Once we have converged to the optimal tables, why can an agent act optimally from $Q^*$ without knowing $P(s' \mid s, a)$, whereas acting from $V^*$ still requires $P$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Commanding *down* hits the bottom wall (staying at 14), slips left to 13, or slips right into the goal (reward 1, value 0) with probability $1/3$ each: $V^\pi(14) = \frac{1}{3} + \frac{\gamma}{3}[V^\pi(13) + V^\pi(14)]$.
+2. By the certificate inequality, $\|V_k - V^*\|_\infty \leq \frac{\gamma}{1-\gamma}\|V_k - V_{k-1}\|_\infty = 19 \times 10^{-5} = 1.9 \times 10^{-4}$.
+3. Because $Q^*(s, a)$ already averages over the transition distribution $P(\cdot \mid s, a)$, greedy extraction is just $\mathrm{argmax}_a Q^*(s, a)$, whereas $V^*$ requires computing $r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)V^*(s')$.
+:::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Dynamic Programming Methods"}
+[Key Takeaways]{.kicker}
 
-- Bellman's equations: an average over actions for $V^\pi$, a max for $V^*$.
-- $\mathcal{T}$ contracts by $\gamma$: unique $V^*$, error $\leq \gamma^k e_0$, a stopping certificate.
-- Lake: the change rule stops at sweep 128 (error $1.1 \times 10^{-5}$); the certificate at 164.
-- Policy iteration: 2 solves; value iteration's greedy policy is $\pi^*$ from sweep 14.
-- $\pi^*$ reaches the goal within 100 steps with probability 0.730, the shortest path 0.045.
-- A 0.3 approach bonus makes $\pi^*$ circle; a difference of potentials keeps $\pi^*$.
-
-**Next:** no table $P$, one sampled transition at a time. Can values still be learned?
+| Method / Operator | Mathematical Update | Computational Cost & Guarantee |
+|:--|:--|:--|
+| **Bellman expectation $\mathcal{T}^\pi$** | $(\mathcal{T}^\pi V)(s) = \sum_a \pi(a \mid s)[r + \gamma \sum_{s'} P V(s')]$ | Linear $\gamma$-contraction; fixed point $V^\pi = (I - \gamma P_\pi)^{-1}r_\pi$ |
+| **Bellman optimality $\mathcal{T}$** | $(\mathcal{T}V)(s) = \max_a [r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)V(s')]$ | Nonlinear $\gamma$-contraction in $\|\cdot\|_\infty$; unique fixed point $V^*$ |
+| **Value iteration** | $V_{k+1} = \mathcal{T}V_k$ from $V_0 = \mathbf{0}$ | $O(|\mathcal{S}|^2|\mathcal{A}|)$ per sweep; error $\leq \frac{\gamma}{1-\gamma}\|V_k - V_{k-1}\|_\infty$ |
+| **Policy iteration** | Solve $V^{\pi_k} = \mathcal{T}^{\pi_k}V^{\pi_k}$, set $\pi_{k+1} = \mathrm{argmax}_a Q^{\pi_k}$ | $O(|\mathcal{S}|^3)$ per exact solve; converges in 2 outer rounds on Lake |
+| **Potential shaping** | $\tilde{r}(s, a, s') = r(s, a) + \gamma\Phi(s') - \Phi(s)$ | Shifts $\tilde{Q}^*(s, a) = Q^*(s, a) - \Phi(s)$, preserving $\pi^*$ exactly |
 :::
+

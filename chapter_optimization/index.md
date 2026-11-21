@@ -40,79 +40,92 @@ further-reading
 ::: {.cover}
 [Dive into Deep Learning · §9]{.kicker}
 
-How optimizers take their steps<br>
-**two problems · the direction of a step · step size and noise over a run**
+Optimization Algorithms: Geometry, Stochasticity, and Scaling<br>**ill-conditioning · gradient noise · momentum · AdamW & Muon · schedules · critical batch size · μP**
 :::
 :::
 
-::: {.slide title="Curvature Limits How Fast a Run Can Go, Noise How Close It Can Get"}
-[The problem]{.kicker}
+::: {.slide title="Two Obstacles Limit Every Deep Learning Optimizer"}
+[The Central Problem]{.kicker}
 
-The loss is `nan`. We halve the learning rate $\eta$, and training crawls.
-A valley shows why: $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$, with second
-derivatives 4 across ($x_2$) and 0.2 along ($x_1$).
+Training a neural network minimizes an empirical risk $f(\mathbf{x}) = \frac{1}{n}\sum_{i=1}^n f_i(\mathbf{x})$ over $d = 10^6\text{--}10^{12}$ parameters across a non-convex loss surface governed by two geometric and statistical bottlenecks:
 
-| problem | on the valley | number |
-|---|---|---|
-| **Uneven curvature** | the sharpest direction caps the step, the flattest sets the pace | a step multiplies $x_2$ by $1 - 4\eta$, so $\eta > 0.5$ diverges; the best rate, $\eta = 0.476$, needs 47 steps to bring both coordinates within 1% of their start |
-| **Noisy gradients** | at a constant rate, stochastic gradient descent (SGD) stalls in a cloud around the minimum | half the rate halves the variance of the cloud and doubles the steps to reach it |
+::: {.cols}
+::: {.col}
+- **Obstacle 1 — Ill-Conditioning (Uneven Curvature):**
+  - On the valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$, curvature is $\lambda_2 = 4$ across the steep wall and $\lambda_1 = 0.2$ along the flat floor ($\kappa = \lambda_{\max}/\lambda_{\min} = 20$).
+  - Stability along $x_2$ requires $|1 - 4\eta| < 1$ ($\eta < 0.5$), forcing the flat axis $x_1$ to shrink by $<10\%$ per step ($47$ steps to reach $1\%$ error at $\eta^\star = 0.476$).
+:::
+
+::: {.col}
+- **Obstacle 2 — Minibatch Gradient Noise:**
+  - Estimating $\nabla f(\mathbf{x})$ from a random minibatch of $b$ examples injects sampling variance $\operatorname{tr}(\boldsymbol{\Sigma})/b$.
+  - At a constant learning rate $\eta$, iterates cannot settle at a minimum; they fluctuate inside a stationary **noise ball** whose variance scales as $\eta\sigma^2 / (2\lambda b)$.
+:::
+:::
 
 ::: {.d2l-note}
-Momentum, Adam, warmup, decay and the batch size are answers to these two
-problems.
+Every component of a modern training recipe—momentum, AdamW, Muon, warmup, cosine/WSD decay, critical batch size, and $\mu\text{P}$—is an explicit engineering answer to one of these two obstacles.
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="Three Design Levers of a Modern Training Recipe"}
+[Architectural Framework]{.kicker}
 
-- predict from the curvature which learning rates converge, and in how
-  many steps;
-- predict where SGD with a constant rate stalls, from the rate, the noise
-  and the batch size;
-- implement momentum, Adam, AdamW and Muon from scratch, and say what each
-  changes;
-- choose a schedule and a batch size, and carry a learning rate over to a
-  wider model;
-- configure a run that cannot be repeated, clip its gradients and average
-  its weights.
+Modern optimization algorithms attack ill-conditioning and gradient noise through three orthogonal levers:
 
-**Running example:** the valley, then `TinyLM`, a small transformer
-language model trained on the bytes of WikiText-103, a selection of
-Wikipedia articles.
+| Design Lever | Target Obstacle | Core Mechanism | Chapter 9 Sections |
+| :--- | :--- | :--- | :--- |
+| **1. Step Direction & Preconditioning** | Ill-conditioning ($\kappa \gg 1$) & heterogeneous layer scales | Replace $-\nabla f(\mathbf{x})$ with a temporal velocity average, per-coordinate RMS scaling, or spectral orthogonalization | **§9.4 Momentum**, **§9.5 Adam & AdamW**, **§9.6 Muon** |
+| **2. Step-Size Schedule $\eta_t$** | Early sharpness instability & late-stage noise floor | Ramp $\eta_t$ up during warmup to steer below $2/\eta_0$, hold a high travel budget $B_T = \sum_t \eta_t$, and decay $\eta_T \to 0$ | **§9.7 Schedules (Warmup, Cosine, WSD)** |
+| **3. Batch Size, Width Scaling & Guards** | Sampling variance $\operatorname{tr}(\boldsymbol{\Sigma})/b$, width drift, & loss spikes | Match $b$ to the gradient-noise scale $b_{\text{noise}}$, scale layer LRs via $\mu\text{P}$, and guard with clipping & weight EMA | **§9.8 Batch Size**, **§9.9 Scaling Up ($\mu\text{P}$)**, **§9.10 Practice** |
+:::
+
+::: {.slide title="From Exact Analytical Models to Neural Benchmarks"}
+[Pedagogical Methodology]{.kicker}
+
+We develop every optimizer by first deriving exact predictions on tractable analytical models and then testing those predictions under a controlled multi-seed protocol on real neural networks:
+
+| Running Testbed | Scale & Geometry | What It Isolates and Measures |
+| :--- | :--- | :--- |
+| **Quadratic Valley** ($f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$) | $d = 2$, $\lambda_1 = 0.2, \lambda_2 = 4$, $\kappa = 20$ | Exact stability ceilings, contraction rates, critical damping ($\sqrt{\kappa}$), and noise-ball variance |
+| **NASA Airfoil Linear Regression** | $n = 1{,}500$ examples, $d = 6$ weights | Exact Hessian $L = 2.10$ and gradient covariance $\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{w}^\star) = 3.24$ to verify excess loss $\eta\operatorname{tr}\boldsymbol{\Sigma}/(4b)$ |
+| **`FashionCNN` on Fashion-MNIST** | $421{,}642$ params ($2$ conv + $2$ FC layers) | Multi-epoch classification ($8.5$ epochs in $2{,}000$ steps at $b = 256$), test accuracy, and weight EMA |
+| **`TinyLM` on WikiText-103 Bytes** | $470{,}784$ params ($2$-block Transformer; $3.3\text{M}$ in §9.10) | Single-pass language modeling ($3\%$ of $270\text{M}$ bytes in $2{,}000$ steps), $40\times$ gradient scale spread, AdamW & Muon |
+:::
+
+::: {.slide title="Chapter 9 Roadmap: Sections and Core Invariants"}
+[Chapter Map]{.kicker}
+
+| Section | Core Mathematical Relation or Invariant | Practical Takeaway |
+| :--- | :--- | :--- |
+| **§9.1 Gradient Descent** | Stability $\eta < 2/\lambda_{\max}$; steps $t \approx \frac{\kappa}{2}\log\frac{1}{\epsilon}$; edge of stability $\lambda_{\max} \approx 2/\eta$ | Scalar learning rates are bottlenecked by condition number $\kappa = \lambda_{\max}/\lambda_{\min}$ |
+| **§9.2 Minibatch SGD** | Noise ball $\mathbb{E}[x_\infty^2] \approx \frac{\eta\sigma^2}{2\lambda b}$; excess loss $\frac{\eta\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star)}{4b}$ | $\eta/b$ governs the steady-state noise floor; minibatches amortize hardware overhead |
+| **§9.3 Two Test Models** | Initial loss $\ln V + s^2/2$; $3\times$ five-seed range threshold ($0.05$ nats on `TinyLM`) | Treat $\eta$ as a nuisance parameter swept per optimizer from shared initial weights |
+| **§9.4 Momentum** | Effective step $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$; critical damping $\rho^\star = \frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1} \approx 1 - \frac{2}{\sqrt{\kappa}}$ | Accelerates curvature-limited runs from $O(\kappa)$ to $O(\sqrt{\kappa})$; rescales $\eta \propto 1-\beta$ under noise |
+| **§9.5 Adam & AdamW** | Step $\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t}+\epsilon}$; decay timescale $\tau = \frac{1}{\eta\lambda}$; equilibrium RMS $\sqrt{\frac{\eta}{2\lambda}}$ | Equalizes $40\times$ layer gradient disparities; decouple weight decay on 2D matrices only |
+| **§9.6–9.10 Muon & Run** | Spectral step $-\eta\mathbf{U}\mathbf{V}^\top$; budget $B_T$; $b_{\text{noise}} = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{\|\nabla f\|^2}$; $\mu\text{P}$ hidden LR $\eta/m$ | Orthogonalize 2D hidden matrices; pair warmup + WSD/cosine decay with $b_{\text{crit}}$ and $\mu\text{P}$ |
+:::
+
+::: {.slide title="How to Navigate Chapter 9 and the Math Appendix"}
+[Study Guide]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Core practitioner sequence (§9.1–§9.5, §9.7–§9.8, §9.10):**
+  - Master the two bottlenecks (**§9.1–§9.2**), experimental benchmarking (**§9.3**), momentum and AdamW (**§9.4–§9.5**), learning-rate schedules (**§9.7**), critical batch size (**§9.8**), and production diagnostics (**§9.10**).
+- **Advanced scaling & matrix methods (§9.6, §9.9):**
+  - Study **§9.6 (Muon)** for spectral-norm steepest descent via Newton–Schulz polynomials and **§9.9 (Scaling Up)** for zero-shot learning-rate transfer across widths via $\mu\text{P}$.
+:::
+
+::: {.col}
+- **Connection to subsequent chapters & proofs:**
+  - `TinyLM`, its WikiText-103 byte loader, and its AdamW/schedule harness return in the chapters on Attention, Transformers, State Space Models, and Performance.
+  - Concise derivations that directly guide hyperparameter choices appear inline; full convergence proofs and convex analysis live in **Chapter 36 (*Mathematics for Deep Learning: Optimization*)**.
+:::
+:::
 
 ::: {.d2l-note}
-Two problems, three decisions: the direction of a step, its size over the
-run, and the noise it carries.
+**Up next (§9.1 Landscapes and Gradient Descent):** How directional curvature and the condition number $\kappa = \lambda_{\max}/\lambda_{\min}$ determine the maximum stable step size and the edge of stability.
 :::
 :::
 
-::: {.slide title="The Chapter Stays on One Device and Proves Only What Is Short"}
-[Scope and place]{.kicker}
-
-- **Assumes:** gradients, eigenvalues of a symmetric matrix, minibatch SGD.
-- **Method:** predict a number, then run. Short proofs are given; longer
-  ones are in the mathematics appendix, which is optional.
-- **Leaves out:** quasi-Newton methods, line search, variance reduction
-  (classical methods that deep learning rarely uses); training on many
-  devices.
-- **Place:** opens the Advanced part. `TinyLM`, its data and its training
-  loop return in the chapters on attention, transformers, state space
-  models and performance.
-:::
-
-::: {.slide title="From a Valley We Can Solve to Networks We Can Only Measure"}
-[Chapter map]{.kicker}
-
-| part | decks | measured on |
-|---|---|---|
-| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch Gradient Descent | the valley; a 25-parameter network; linear regression on 1,500 airfoil measurements |
-| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon | the valley, then `TinyLM` (470,784 parameters) and `FashionCNN` (421,642) |
-| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice | the valley; both networks; MLPs of width 128 to 8,192 |
-
-::: {.d2l-note}
-The core: Momentum, Adam, AdamW, Schedules and Batch Size. Muon and
-Scaling Up can be left for a second pass. Every later deck shows this map
-with its own place marked.
-:::
-:::

@@ -17,15 +17,8 @@ This doc covers:
 For the design rationale, see `PLAN-slides-and-notebook-editing.md`.
 For the source-directive reference, see `docs/syntax.md`.
 
-> **Teaching first — intuition and diagrams before walls of words or code.**
-> This is the governing rule for every deck. Each slide teaches *one* idea
-> and leads with a picture of it: a diagram beats a paragraph, one
-> illustrative line of code beats a dump, and the output you show is the
-> point (not a log). If a slide is mostly prose or mostly code, find the
-> figure and cut the rest — the deck teaches the *idea*, the notebook holds
-> the full code. The reference decks (§2.1 `ndarray`, §2.3 `linear-algebra`,
-> §2.4 `calculus`; §2.5 `autograd` next) and the diagram-led *Quality rules*
-> below are how this gets applied.
+> **Teaching first — intuition, narrative coherence, and diagrams before walls of words or code.**
+> Read **[`docs/slide-guide.md`](slide-guide.md)** first for the pedagogical standard, active linebreak management rules, and Playwright + KaTeX verification loop. Each slide teaches *one* concept clearly: lead with concrete motivation and a visual or mathematical anchor, avoid both telegraphic "Claude staccato" fragments and pasted textbook paragraphs, and never include bureaucratic meta-slides (*"By the End of This Deck / Uses / Skips"*). Every slide in the rendered Chapter 1 reference decks (`chapter_preliminaries/*.md`) fits a `1280×720` Reveal canvas on a 14" MacBook screen with zero vertical or horizontal overflow.
 
 ---
 

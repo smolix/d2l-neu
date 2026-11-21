@@ -1,36 +1,22 @@
 # Data Parallelism in Practice
 :label:`sec_multi_gpu_concise`
 
-In :numref:`sec_multi_gpu` we wrote data parallelism by hand, and a second
-GPU made LeNet's steps slower. The exchange of gradients was not the main
-cost. One Python thread issued the work of both GPUs, and LeNet's steps
-were so short that the GPUs spent most of their time waiting for it. Our
-loop had a second weakness, which those tiny steps never exposed. It
-waited for the whole backward pass before it sent a single gradient,
-although the gradients of the last layers are ready long before those of
-the first.
+In :numref:`sec_multi_gpu`, our hand-written data-parallel loop slowed LeNet
+down on two GPUs for two reasons: a single Python thread dispatched kernels to
+both GPUs sequentially, and the allreduce waited until the entire backward pass
+had finished even though the last layers' gradients were ready much earlier.
 
-The frameworks' own tools for data parallelism organize the host's work
-for several GPUs, and they start the exchange while the backward pass is
-still running. How the host's work is organized matters for steps as
-short as LeNet's. To see what the early exchange is worth, we need a
-model with enough work to share. A ResNet-18 on Fashion-MNIST images
-enlarged to 64×64 pixels performs 2.2 billion multiply-adds per image,
-about fifty for every byte of its 45 MB of gradients, where LeNet managed
-fewer than two. A step on 256 such images keeps an RTX 4090 busy for
-about a tenth of a second, which is plenty of time for any host. How
-close does this model come to $k$ times the throughput of one GPU when it
-trains on $k$ of them, and how much of the exchange can be hidden behind
-the backward pass?
-
-We first look at the two ways in which the tools drive several GPUs and at
-how they overlap communication with computation. A one-step check against
-a single GPU then tells us what the parallel step computes, and we measure
-ResNet-18 on one, two, and four GPUs against the cost model of
-:numref:`sec_multi_gpu`. The cells that time need two GPUs and the scaling
-study four. The outputs shown come from our four RTX 4090s, which have no
-peer-to-peer access (:numref:`subsec_hw-interconnects`), so every byte
-that one of them sends to another passes through host memory.
+Production data-parallel tools eliminate both bottlenecks: they either run one
+host process per GPU (`torchrun` + `DistributedDataParallel` in PyTorch) or
+compile a single sharded program across all GPUs (`jax.jit` + `NamedSharding`
+in JAX), and they group gradients into *buckets* whose allreduces start as
+soon as each bucket fills during the backward pass. To test how much of the
+gradient exchange can be hidden behind backward compute, we move from LeNet to
+ResNet-18 on $64 \times 64$ Fashion-MNIST images (2.2G multiply-adds per
+image, ~50 FLOPs per byte of its 45 MB gradient, keeping one RTX 4090 busy for
+~100 ms per 256-image step). We verify what the parallel step computes via a
+one-step check and measure weak and strong scaling across one, two, and four
+GPUs against our cost model.
 
 ```{.python .input #multi-gpu-practice-setup}
 %%tab jax
@@ -92,73 +78,33 @@ import sys
 ## Production Data Parallelism
 :label:`subsec_mgp-production`
 
-Production data parallelism computes what the loop of
-:numref:`subsec_mg-byhand` computes. Every GPU holds a copy of the model,
-computes the gradient of the loss on its share of each minibatch, and
-applies the average of the gradients of all shares. What the tools
-change is everything around this algorithm: how the host's work is
-organized, who writes the communication, and when it starts.
-
-:begin_tab:`pytorch`
-PyTorch also replaces our star through device 0 with the ring of
-:numref:`subsec_mg-ring`, or with a tree for small messages, so that no
-device carries the traffic of all the others. The collectives run in
-NCCL, NVIDIA's library of collective operations.
-:end_tab:
-
-:begin_tab:`jax`
-Our JAX loop already ran its `psum` through the ring of
-:numref:`subsec_mg-ring` in NCCL, NVIDIA's library of collective
-operations. What we drop is the communication code itself: the
-`shard_map` and the `psum`, which every new model would have needed again.
-:end_tab:
-
 ### The Execution Model
 
-There are two ways to make $k$ GPUs train one model, and every current
-system takes one of them. The first runs $k$ copies of an ordinary
-program, one per GPU, which meet in a library of collective operations.
-Each copy has a host thread of its own, so no GPU waits while the host
-serves another, and any Python code may run in it. The communication is
-explicit: a call to the library, or a wrapper around the model that makes
-the calls. A *launcher* starts the $k$ copies and tells each one which it
-is. The second way writes the step once, for a single device, and lets a
-compiler partition it across the GPUs. Both ways run the same program on
-different data, a scheme called *single program, multiple data* (SPMD);
-they differ in who does the partitioning. Because the compiler sees the
-whole step, it inserts the collectives itself and decides when each one
-runs. The cost is that shapes must be static, and that we have to trust
-the compiler's choices.
+Every modern framework drives $k$ GPUs using one of two *single program,
+multiple data* (SPMD) designs:
+
+1. **Multi-process ($k$ copies + collective library):** A launcher starts $k$
+   independent Python processes—one per GPU, each with its own *rank* in
+   $\{0, \ldots, k-1\}$ and its own CPU thread—that synchronize gradients
+   through NCCL. Any Python code can run inside each process.
+2. **Compiler-partitioned single program:** The user writes a single-device
+   step and annotates the sharding of its inputs on a device mesh; the
+   compiler partitions the computation and inserts and schedules the collective
+   operations automatically :cite:`Xu.Lee.Chen.ea.2021`.
 
 :begin_tab:`pytorch`
-PyTorch takes the first way. `DistributedDataParallel` (DDP) wraps the
-model and sends its allreduces through NCCL, and the launcher `torchrun`
-starts $k$ copies of a script and gives each its *rank*, an index from 0
-to $k-1$, in an environment variable. The older `nn.DataParallel` drives
-all GPUs from one process, as our loop did; PyTorch recommends DDP even
-within one machine.
-
-A notebook is a single process, so we write each script as a string and
-start it with the helper below, which collects the lines of JSON that the
-processes print, in the order of their ranks. Each string is a complete
-script: saved to a file, it runs from a shell as
-`torchrun --standalone --nproc-per-node=2 script.py`, followed by its
-arguments, which is how DDP is used outside a notebook. Every script
-begins with `init_distributed`, which pins its process to the GPU that
-`torchrun` assigned to it and joins the others.
+PyTorch uses the multi-process design: `torchrun` launches $k$ processes and
+`DistributedDataParallel` (DDP) wraps the model. Because a notebook is a
+single process, our helper `torchrun` writes a self-contained script to a
+temporary file, runs `torchrun --standalone --nproc-per-node=k`, and parses
+the JSON output of each rank.
 :end_tab:
 
 :begin_tab:`jax`
-JAX takes the second way. `jax.jit` compiles a step, written for one
-device, into one program, and the placement of its inputs decides how the
-program is partitioned: the parameters are replicated on every GPU of a
-mesh (`P()`), and the minibatch is split along its leading axis
-(`P('data')`). Every GPU then computes the gradient of its shard. The
-gradient of a parameter that is copied to every device is the sum of the
-per-device gradients (:numref:`subsec_mg-byhand`), so the compiler inserts
-the allreduce that we wrote by hand. JAX's partitioner, Shardy, propagates
-the placements through the whole program in the manner of GSPMD
-:cite:`Xu.Lee.Chen.ea.2021`.
+JAX uses the compiler-partitioned design: `nnx.jit` compiles a single-device
+training step, and placing replicated parameters (`P()`) alongside a
+batch-sharded input (`P('data')`) causes the Shardy/GSPMD partitioner to
+insert the gradient allreduce automatically.
 :end_tab:
 
 ```{.python .input #multi-gpu-practice-one-program-per-gpu}
@@ -200,12 +146,10 @@ def init_distributed():  #@save
 
 ### Overlapping Communication with the Backward Pass
 
-The production tools group the gradients into *buckets* of a few tens of
-megabytes, in the order in which the backward pass produces them, last
-layer first. They start the allreduce of a bucket as soon as its last
-gradient exists :cite:`Li.Zhao.Varma.ea.2020`. While one bucket travels
-between the GPUs, the GPUs compute the gradients of the next
-(:numref:`fig_ddp_overlap`).
+Production frameworks pack gradients into *buckets* of a few tens of megabytes
+in reverse layer order (the order in which backpropagation produces them) and
+launch each bucket's asynchronous allreduce as soon as its last gradient is
+ready :cite:`Li.Zhao.Varma.ea.2020` (:numref:`fig_ddp_overlap`).
 
 ![Top: the allreduce waits for the whole backward pass. Bottom: the
 gradients are grouped into buckets, and each bucket's allreduce starts as
@@ -215,62 +159,31 @@ allreduce finishes while the backward pass is still
 running.](../img/mdl-perf-ddp-overlap.svg)
 :label:`fig_ddp_overlap`
 
-The size of a bucket is a compromise between the two parts of an
-allreduce's time in :numref:`subsec_mg-accounting`: a fixed cost $\alpha$
-per call, and a time $\beta_\textrm{link}$ for every byte sent.
-Small buckets start early but incur $\alpha$ many times. A single bucket
-for all gradients incurs $\alpha$ once, but it waits for the whole
-backward pass. Whatever the size, the last bucket holds the gradients of
-the first layers, which the backward pass computes last. Nothing is left
-to overlap with it, so its time adds to every step.
-
-The earlier buckets are hidden only if the links keep up. When an
-allreduce takes longer than the backward pass needs to fill the next
-bucket, the allreduces queue behind one another and run on after the
-backward pass has ended. Overlap can shorten the communication of a step,
-at best down to the last bucket, and only where the links are fast
-enough. It cannot remove it. We call this account, in which every
-allreduce but the last runs unseen beside the backward pass, the *bucket
-model* of overlap, and we will test it.
+Bucket size trades off per-call latency $\alpha$ against overlap: tiny buckets
+pay $\alpha$ many times, while a single giant bucket cannot start until the
+backward pass finishes. Under the ideal *bucket model* of overlap—assuming
+inter-GPU links are fast enough to finish each bucket before the next fills
+and that communication does not slow down concurrent backward kernels—every
+bucket except the last is hidden behind the backward pass.
 
 :begin_tab:`pytorch`
-In PyTorch, DDP registers a hook on every parameter that marks the
-parameter's gradient as ready, and it starts the allreduce of a bucket
-once all of the bucket's gradients are ready. The allreduces run on a CUDA
-stream of their own, beside the backward kernels. A bucket is closed as
-soon as it reaches its cap, 25 MiB (26.2 MB) by default (the argument
-`bucket_cap_mb`), so it can exceed the cap by the tensor that crossed it.
-DDP also caps the first bucket at 1 MiB, so that communication starts
-early. ResNet-18's 45 MB of gradients form buckets of about 9, 26, and
-9 MB, which the code of the training step below counts: the first large
-gradient to arrive, a 9 MB convolution weight of the last stage,
-overshoots the small cap on its own. The last bucket holds
-the gradients of the first two thirds of the layers, which have few
-channels and therefore few weights. (DDP builds these buckets only after
-its first step, in the order in which the gradients became ready; this
-detail can be forgotten once it has explained the sizes.)
+DDP closes the first bucket at 1 MiB and subsequent buckets at 25 MiB
+(`bucket_cap_mb`). For ResNet-18's 45 MB of gradients, DDP forms three buckets
+of ~9, 26, and 9 MB (the final 9 MB bucket holds the early layers, computed
+last).
 :end_tab:
 
 :begin_tab:`jax`
-In JAX, the compiler does the bucketing. `jax.jit` compiles the whole
-training step into one program, so XLA knows when each gradient is ready.
-It merges the many small gradient allreduces into buffers of up to 30 MiB,
-its counterpart of buckets (the flag
-`--xla_gpu_all_reduce_combine_threshold_bytes` sets the limit), so
-ResNet-18's 45 MB of gradients travel in two allreduces. Each allreduce
-becomes an asynchronous pair of operations, `all-reduce-start` and
-`all-reduce-done`, and XLA schedules computation between the two only when
-its latency-hiding scheduler is on, which the first cell of this section
-does.
+XLA combines gradient allreduces up to a 30 MiB threshold
+(`--xla_gpu_all_reduce_combine_threshold_bytes`), packing ResNet-18's 45 MB of
+gradients into two asynchronous `all-reduce-start` / `all-reduce-done` pairs
+scheduled concurrently with backward compute.
 :end_tab:
 
 ### The Training Step
 
-Our model is the ResNet-18 of :numref:`sec_resnet` with a stem for small
-images: a 3×3 convolution without max-pooling, followed by four stages of
-two residual blocks each, with He initialization as in
-:numref:`sec_resnet`. We save it, since the Image Models part
-(:numref:`chap_cv`) trains it on several GPUs.
+We define the small-image ResNet-18 of :numref:`sec_resnet` (`#@save`d for
+:numref:`chap_cv`) and count its gradient bytes $S$ (45 MB in fp32):
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-1}
 %%tab pytorch
@@ -322,12 +235,6 @@ def resnet18(num_classes, in_channels=1, *, rngs):  #@save
         nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
 ```
 
-As in :numref:`sec_multi_gpu`, every GPU keeps its own copy of the
-training set, here enlarged once to 64×64 pixels, which takes 983 MB in
-fp32. The input pipeline then stays out of our measurements, and the only
-data that cross between GPUs are gradients. We also count the gradient
-bytes $S$ that every step must sum across the GPUs:
-
 ```{.python .input #multi-gpu-practice-the-training-step-1}
 %%tab pytorch
 d2l.FashionMNIST()                   # Download once, before any process runs
@@ -358,32 +265,6 @@ num_params = d2l.num_params(resnet18(10, rngs=nnx.Rngs(d2l.get_key())))
 S = 4 * num_params                   # Gradient bytes in fp32
 print(f'{num_params / 1e6:.1f}M parameters, S = {S / 1e6:.0f} MB')
 ```
-
-:begin_tab:`pytorch`
-The training script follows. Only two parts of it are data-parallel:
-`init_distributed`, which joins the process to the others, and the `DDP`
-wrapper around the model. The rest is a single-GPU training loop. Every
-process takes its own slice of each global minibatch of $kb$ examples:
-all processes draw the same random permutation, because they share a
-seed, and the process of rank $r$ takes the $r$-th of the $k$ slices of
-$b$ examples. (For data that stay in host memory, `DistributedSampler`
-performs the same split for a `DataLoader`.) The script prints the
-seconds per step, timed with `d2l.Benchmark` (:numref:`sec_perf_model`);
-its arguments `sync` and `profile` serve the last measurement of this
-section.
-:end_tab:
-
-:begin_tab:`jax`
-The training step itself contains no parallel code. Its argument `idx`,
-the indices of the minibatch's examples, arrives split across the GPUs of
-the mesh, so every GPU gathers its own examples from its copy of the
-training set, and the compiler takes care of the rest. `setup` builds the
-model and the optimizer and replicates them, with the training set, on the
-first $k$ GPUs; `minibatches` draws random minibatches and splits their
-indices across the mesh. The mesh axis is of type `Auto`, which lets the
-compiler derive the placement of every intermediate array, here the
-gathered examples, from the placement of the inputs.
-:end_tab:
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-2}
 %%tab pytorch
@@ -470,37 +351,13 @@ def train_step(model, opt, X, y, idx):
 
 ### A One-Step Check
 
-Before timing anything, we check, as in :numref:`subsec_mg-byhand`, that
-a step on two GPUs computes what we expect. The reference is one GPU, from
-the same initialization and on the same 256 examples, in full fp32
-arithmetic so that rounding differences stay small. The layer to watch is
-batch normalization (:numref:`sec_batch_norm`), which normalizes every
-channel with the mean and the variance over the minibatch. Once the
-minibatch is split across GPUs, that definition is ambiguous. Each GPU can
-normalize its shard with the statistics of the shard, which costs no
-communication but no longer computes the single-GPU step on the whole
-minibatch. Or the GPUs can compute the statistics of the whole minibatch
-together, which reproduces the single-GPU step but needs small allreduces
-in every normalization layer, in the forward and in the backward pass.
-An implementation has to choose, and it does not announce its choice at
-run time. A comparison with one GPU finds it out.
-
-:begin_tab:`pytorch`
-The script below takes one DDP step on $k$ GPUs, each GPU on its half of
-256 random images. Process 0 also keeps an unwrapped copy of the model and
-takes two reference steps on its GPU: one on all 256 examples at once, and
-one that accumulates the gradients of the same two halves before it
-updates the parameters.
-:end_tab:
-
-:begin_tab:`jax`
-`update(k, idx)` returns the change of the parameters in one step on $k$
-GPUs, always from the same initialization. We take this step on two GPUs
-and compare it with two references on one GPU: one step on all 256
-examples, and the mean of the steps on the two halves. For plain SGD
-from one starting point, that mean is the step on the accumulated
-gradients of the halves (:numref:`subsec_mp-accumulation`).
-:end_tab:
+Unlike LeNet, ResNet-18 contains batch normalization (:numref:`sec_batch_norm`),
+which normalizes each channel by its minibatch mean and variance. When a
+minibatch of 256 examples is split across two GPUs, does each GPU normalize by
+its own 128-example shard statistics (matching gradient accumulation over two
+128-example micro-batches on one GPU), or do the GPUs synchronize global
+256-example statistics across cards? Let us test the two-GPU update against
+both single-GPU references.
 
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5}
 %%tab pytorch
@@ -576,39 +433,19 @@ print(f'largest update {max(np.abs(u).max() for u in two):.1e}\n'
 ```
 
 :begin_tab:`pytorch`
-The DDP step agrees with the accumulated halves to about $10^{-7}$, which
-is rounding error, but it differs from the step on all 256 examples by a
-few hundredths to a tenth of the largest update, depending on the run. DDP
-normalizes each GPU's shard with the statistics of that shard. It computes
-what one GPU computes when it accumulates the gradients of the same shards
-(:numref:`subsec_mp-accumulation`), not the step on the whole minibatch,
-and nothing warns us of the difference. A gap of this size sounds
-alarming, yet both steps are legitimate batch normalization, one with
-statistics over 128 examples and one with statistics over 256. The choice
-starts to matter when a GPU holds only a few examples, whose mean and
-variance are noisy. `nn.SyncBatchNorm` then computes the statistics over
-the whole minibatch, with the added collectives (exercise
-:exref:`ex_mgp-syncbn`).
+By default, PyTorch DDP normalizes each GPU's shard with local per-shard
+statistics—matching the two accumulated halves to ~$10^{-7}$ while differing
+from full-batch statistics by several percent (converting to
+`nn.SyncBatchNorm` synchronizes global statistics at the cost of extra
+collectives; Exercise :exref:`ex_mgp-syncbn`).
 :end_tab:
 
 :begin_tab:`jax`
-The check settles the question by itself. The two-GPU step differs from
-one GPU on all 256 examples by $10^{-4}$ or less, two to three orders of
-magnitude less than from the accumulated halves, which miss by a tenth of
-the largest update or more. The first gap is of the size that summing
-the same numbers in a different order produces in this network: on two
-GPUs, every weight gradient and every batch-norm statistic is summed in
-two parts, one per GPU, before the parts are added. The second gap is
-what per-shard statistics would cost. So the sharded step is the step on
-the whole minibatch.
-
-The reason lies in the program. Under `jit`, the mean and the variance of
-a batch normalization layer are means over an axis that is split across
-the GPUs, so the compiler computes them over the whole minibatch and
-inserts allreduces for them, exactly as it does for the gradients. We can
-find these allreduces in the compiled program. `allreduce_megabytes`
-reads every allreduce instruction in its text and adds up the sizes of
-the fp32 arrays that it returns.
+Because the batch axis is sharded across the `'data'` mesh axis in `Auto`
+mode, XLA's partitioner computes batch-norm means and variances globally
+across the entire minibatch—matching the single-GPU 256-example step and
+inserting small allreduces for the per-channel batch-norm statistics alongside
+the two large gradient buffers:
 :end_tab:
 
 ```{.python .input #multi-gpu-practice-a-one-step-check-1}
@@ -641,29 +478,11 @@ print(f'{len(sizes)} allreduces: {len(big)} of '
       f'{len(sizes) - len(big)} of {sum(sizes) - sum(big):.2f} MB together')
 ```
 
-:begin_tab:`jax`
-Two large allreduces carry almost all of the 45 MB of gradients: XLA
-merged the gradients of the many parameter tensors into two buffers. The
-74 small ones carry vectors of one number per channel, a few per call,
-most of them the statistics of the batch normalization layers. Their
-presence confirms that the statistics are global. They are cheap in
-bytes, but each of them incurs the fixed cost $\alpha$, and each lies on
-the path of the forward or the backward pass, because the next layer
-needs its result.
-:end_tab:
-
 ## Scaling on Four GPUs
 :label:`subsec_mgp-scaling`
 
-We measure both conventions of :numref:`subsec_mg-accounting`. Weak
-scaling holds the minibatch per GPU fixed while the number of GPUs $k$
-grows, and reports examples per second. It is the flattering convention,
-since the global minibatch grows with $k$, and a larger minibatch changes
-the optimization (:numref:`sec_batch_size`). Strong scaling holds the
-global minibatch fixed and reports how much sooner a step finishes, which
-is what a training run with a tuned minibatch sees. The function
-`step_time(k, b)` returns the seconds per step on $k$ GPUs with $b$
-examples per GPU, averaged over 50 steps after a warm-up.
+We now measure weak scaling (256 examples per GPU) and strong scaling (512
+examples globally) across $k \in \{1, 2, 4\}$ GPUs.
 
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-4}
 %%tab pytorch
@@ -688,50 +507,14 @@ def step_time(k, b, num_steps=50):
     return d2l.Benchmark(stepper(k, b), warmup=10, repeats=num_steps).time
 ```
 
-Under weak scaling the computation on each GPU does not change with $k$,
-so the difference $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ is the
-communication that a step exposes. Before we measure it, let us predict
-it. The cost model :eqref:`eq_dp_cost` of
-:numref:`subsec_mg-accounting` charges this communication two terms: $c$
-fixed costs $\alpha$, one per allreduce call, and the time for every GPU
-to send $2(k-1)/k$ times the $S$ gradient bytes, $\beta_\textrm{link}$
-per byte. For the large
-allreduces that carry the gradients, the fixed costs are small next to
-the bytes.
+First we measure $\beta_\textrm{link}$ on a bare 256 MB allreduce through NCCL
+and compare two predictions for the exposed communication time
+$t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ under weak scaling:
 
-If nothing overlaps, the whole allreduce is exposed: $S\,\beta_\textrm{link}$
-at $k = 2$. The bucket model makes a bolder prediction. Only the
-allreduce of the last bucket remains exposed, provided that the earlier
-ones finish while the backward pass still runs.
-
-:begin_tab:`pytorch`
-DDP sends the gradients in three buckets, and the statistics of batch
-normalization stay on each GPU, so the step makes three allreduce calls,
-plus a small broadcast of the batch normalization running averages from
-rank 0 before every forward pass.
-:end_tab:
-
-:begin_tab:`jax`
-XLA sends the gradients in two buffers. The 74 small allreduces of the
-batch normalization statistics add 74 fixed costs, which the prediction
-below leaves out; exercise :exref:`ex_mgp-syncbn` measures them.
-:end_tab:
-
-We measure $\beta_\textrm{link}$ as in :numref:`subsec_mg-accounting`,
-with a bare allreduce of 256 MB per GPU on two GPUs, through the library
-that the training uses:
-
-:begin_tab:`pytorch`
-`ALLREDUCE` times `torch.distributed.all_reduce` through NCCL in every
-process of a two-process launch.
-:end_tab:
-
-:begin_tab:`jax`
-`ALLREDUCE` times the `psum` of :numref:`sec_multi_gpu` on two GPUs. NCCL
-reads its configuration once per process, and we will change that
-configuration below, so the measurement runs in a fresh Python process of
-its own.
-:end_tab:
+1. **No overlap:** the entire ring allreduce of $S = 45$ MB is exposed
+   ($\frac{2(k-1)}{k} S \beta_\textrm{link}$).
+2. **Full bucket overlap:** only the final bucket/buffer ($last\_bucket$) is
+   exposed after the backward pass ends.
 
 ```{.python .input #multi-gpu-practice-communication-predicted-and-measured-1}
 %%tab pytorch
@@ -791,28 +574,6 @@ if d2l.num_gpus() >= 2:
               f'full overlap (last bucket)')
 ```
 
-Each GPU sends at about 2.4 GB/s. An allreduce of ResNet-18's gradients
-that nothing overlaps would therefore take about 18 ms on two GPUs and,
-with the ring factor of 1.5, about 28 ms on four.
-
-:begin_tab:`pytorch`
-DDP's last bucket holds 8.7 of the 45 MB of gradients, so with full overlap
-a step would expose only a fifth of that: about 4 ms on two GPUs and 5 ms
-on four.
-:end_tab:
-
-:begin_tab:`jax`
-With full overlap a step would expose only the last of XLA's two gradient
-buffers, which in the program order that `allreduce_megabytes` reports is
-the one of 19 MB, and so about 8 ms on two GPUs and 12 ms on four.
-:end_tab:
-
-The two predictions differ enough for a measurement to decide between
-them. We measure weak scaling with 256 examples per GPU, and for every
-$k > 1$ the cell prints the efficiency that each prediction implies, the
-one-GPU step divided by the one-GPU step plus the exposed time, next to
-the exposed time it measures:
-
 ```{.python .input #multi-gpu-practice-ddp-really-run-3}
 %%tab pytorch, jax
 ks = [k for k in (1, 2, 4) if k <= d2l.num_gpus()]
@@ -826,44 +587,15 @@ for k in ks:
               f'with full overlap; exposed {1e3 * (weak[k] - weak[1]):.0f} ms')
 ```
 
-Two GPUs process somewhat less than twice as many examples per second as
-one, and four GPUs a little over three times as many. The *efficiency*,
-the speedup divided by $k$, falls gradually as GPUs are added. Under weak
-scaling every GPU does the same work at every $k$, so the efficiency is
-the ratio of the single-GPU step time to the step time on $k$ GPUs. What
-it loses is the communication that the step does not hide, and the step
-loses nearly as much as if nothing were hidden. The measured efficiencies lie at or a little
-above the predictions without overlap, far below those with full overlap,
-and from two GPUs to four the exposed time grows by about half, as the
-ring factor predicts. The cost model gets the bytes right. Overlap hides
-far less of the communication on this machine than the bucket model
-predicts.
+At ~2.4 GB/s bus bandwidth, an un-overlapped allreduce of 45 MB takes ~18 ms
+on two GPUs and ~28 ms on four. In our weak-scaling measurements, four GPUs
+achieve $3.1\text{--}3.3\times$ the throughput of one GPU (77–83% scaling
+efficiency)—matching the *no-overlap* prediction closely and falling well
+short of the full-overlap bucket prediction.
 
-:begin_tab:`pytorch`
-Here the efficiency is 88% on two GPUs and 83% on four, against 86% and
-80% without overlap and 97% and 95% with full overlap. Four GPUs give 3.3
-times the throughput of one, so a sixth of the machine goes to moving
-45 MB per step through host memory. On two GPUs a step takes about 15 ms
-longer than on one (127 against 112 ms): overlap hides about 3 of the
-18 ms, where the bucket model promised 14.
-:end_tab:
-
-:begin_tab:`jax`
-Here the efficiency is 84% on two GPUs and 77% on four, about the 84% and
-78% predicted without overlap and well below the 93% and 90% of full
-overlap. Four GPUs give 3.1 times the throughput of one, so almost a
-quarter of the machine goes to communication. On two GPUs a step takes
-about 20 ms longer than on one (120 against 100 ms), about as long as an
-allreduce that nothing overlaps.
-:end_tab:
-
-Four GPUs, in other words, do the work of a little over three. For a model
-that sends 45 MB through host memory at every step this is respectable,
-and at the end of this section the cost model predicts that the same model
-on GPUs with a direct link would lose almost nothing.
-
-Strong scaling holds the global minibatch at 512, so each of the $k$ GPUs
-processes $512/k$ examples while the allreduce keeps its size:
+Under strong scaling (fixed global batch of 512 examples, so each of the $k$
+GPUs processes $512/k$ examples while communication volume stays fixed),
+efficiency drops further at $k = 4$:
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-4}
 %%tab pytorch, jax
@@ -878,48 +610,14 @@ d2l.plot(ks, [ks, [k * weak[1] / weak[k] for k in ks],
          fmts=('k:', '-o', '--s'))
 ```
 
-At two GPUs the two conventions time the same run, 256 examples per GPU.
-They differ only in the one-GPU reference, 256 or 512 examples, and one
-RTX 4090 processes both at about the same rate per example, so the
-speedups agree. At four GPUs they part. Strong scaling leaves each GPU
-128 examples per step, so the step's computation shrinks while its
-communication does not, and the efficiency falls well below that of weak
-scaling. A training run with a fixed
-minibatch finishes less than three times sooner on four GPUs.
-
 ### Assumptions of the Bucket Model
 
-The bucket model makes three assumptions: every allreduce starts as soon
-as its bucket is complete, it runs as fast as the bare benchmark, and the
-backward kernels beside it run as fast as they do alone. Which of the
-three fails? To find out, we time one more configuration, two GPUs that
-skip the communication and step each on its own shard's gradient. Its
-difference from the one-GPU step is what two GPUs cost each other. Its
-difference from the full two-GPU step is what the communication costs,
-including any slowdown of the kernels beside it.
-
-For each configuration `profile_step` also profiles ten steps on GPU 0, as
-in :numref:`sec_perf_model`, and splits the device time per step into
-NCCL's kernels and all others. If the bucket model held, the step without
-communication would match the one-GPU step, NCCL's kernels would run for
-about $S\,\beta_\textrm{link}$, 18 ms, and the other kernels would take as
-long as on one GPU.
-
-:begin_tab:`pytorch`
-Without communication, the forward and the backward pass run inside DDP's
-`no_sync()`. It must enclose the forward pass as well, because DDP decides
-during the forward pass whether the coming backward pass synchronizes.
-:end_tab:
-
-:begin_tab:`jax`
-Without communication, `train_step` runs inside a `shard_map` with
-`check_vma=False`, so autodiff adds no sum over the GPUs and the compiled
-step contains no collective. The step with communication also runs the
-small allreduces of the batch normalization statistics, and the step
-without it normalizes each shard with its own statistics. The time of
-NCCL's kernels below therefore includes those collectives as well as the
-two gradient buffers.
-:end_tab:
+Why did overlap hide so little of the communication? The bucket model assumes
+that (1) each bucket's allreduce starts during the backward pass, (2) NCCL
+runs at its bare benchmark rate, and (3) backward compute kernels do not slow
+down when NCCL runs alongside them. Profiling GPU 0 across three configurations—1
+GPU, 2 GPUs without communication, and 2 GPUs with communication—tests all
+three assumptions:
 
 ```{.python .input #multi-gpu-practice-predicted-and-measured-communication-2}
 %%tab pytorch
@@ -980,67 +678,18 @@ if d2l.num_gpus() >= 2:
               f'{compute:6.1f} ms, communicates {comm:5.1f} ms')
 ```
 
-The first two lines agree to within half a millisecond: two GPUs that do
-not communicate step as fast as one. The host, which held LeNet back in
-:numref:`sec_multi_gpu`, plays no part here. With about a tenth of a
-second of device work per step, even one Python thread would keep two
-GPUs fed, so how the tools organize the host costs nothing and gains
-nothing for this model. All of the extra time is communication.
+Two GPUs without communication step at the exact same speed as one GPU, and
+NCCL's kernels run for 20–22 ms (matching the 18 ms bare benchmark). What
+fails is the third assumption: **when NCCL runs concurrently with the backward
+pass, the compute kernels themselves slow down by 8–13 ms**. On GPUs without
+peer-to-peer access, NCCL copies data through host memory using its own GPU
+SM kernels, which occupy streaming multiprocessors and memory bandwidth that
+the backward pass would otherwise use.
 
-NCCL's kernels run for 20 to 22 ms per step, close to the 18 ms of the
-bare benchmark, so the allreduces run about as fast as they do alone and
-the second assumption holds. What fails is the third: the computation
-kernels take longer when an allreduce runs beside them. Between our GPUs,
-NCCL moves the bytes through host memory with GPU kernels of its own,
-which most likely hold some of the GPU's processors for as long as an
-allreduce runs, leaving fewer for the backward pass. This is the main
-result of the section, and the bucket model has no term for it. Overlap
-hides communication only by running it beside computation, and on this
-machine the time it hides comes back, for the most part, as slower
-computation.
-
-:begin_tab:`pytorch`
-The step is hardly longer than its computation kernels (127 against
-125 ms), so little of the allreduce runs alone, as the buckets intend.
-The two numbers come from different measurements, the wall clock of 50
-steps and the kernel time of ten, so their difference is not precise to
-a millisecond. But the computation kernels now take 125 ms instead of
-112 ms. Overlap works, and about 13 of the 18 ms that it hides come back
-as slower computation.
-:end_tab:
-
-:begin_tab:`jax`
-For about 11 ms of the step GPU 0 only communicates (about 119 against
-108 ms of computation). These 11 ms hold the last gradient buffer,
-which full overlap would leave exposed (about 8 ms), and some of the small
-allreduces of the statistics, which nothing can hide. The other 10 ms of
-NCCL's kernels run beside the computation, which takes 8 ms longer than
-without communication. Most of what overlap hides comes back as slower
-computation.
-:end_tab:
-
-Why is the bus bandwidth so low in the first place? A copy between two
-of our GPUs, staged through host memory, can run at up to about 23 GB/s,
-the rate of a pinned copy from host memory
-(:numref:`subsec_hw-interconnects`). That is ten times the 2.4 GB/s at
-which each GPU sends during the allreduce. Between GPUs without
-peer-to-peer access, NCCL by default copies the data into and out of
-buffers in host memory with its own GPU kernels, the kernels that we just
-saw compete with the computation. The *copy engines*, the units that
-perform a GPU's memory copies, move the same bytes faster.
-
-:begin_tab:`pytorch`
-We have seen them at work already. Our star of :numref:`sec_multi_gpu`
-reached a bus bandwidth of about 9.5 GB/s between the same two
-GPUs, two copies one after the other at about 19 GB/s each, because its
-copies were driver-managed copies, which run on the copy engines. On this
-machine the production library, at its default settings, sends bytes four
-times more slowly than our hand-written star.
-:end_tab:
-
-The NCCL setting `NCCL_SHM_USE_CUDA_MEMCPY=1` makes NCCL use the copy
-engines. It is not part of NCCL's documented configuration, and later
-versions removed it. We measure the bare allreduce with it:
+Even though an undocumented NCCL flag (`NCCL_SHM_USE_CUDA_MEMCPY=1`, present in
+NCCL 2.28–2.30) can offload those host-memory copies to the GPU's DMA copy
+engines in bare microbenchmarks, it deadlocks PyTorch DDP when overlapped with
+backward compute:
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-6}
 %%tab pytorch, jax
@@ -1054,271 +703,106 @@ if d2l.num_gpus() >= 2:
           f'({beta_link / beta_ce:.1f}x)')
 ```
 
-The bare allreduce runs four to five times faster, and the predicted
-communication of ResNet-18 falls from about 18 ms to about 4 ms. It is
-tempting to switch it on and declare victory. The setting helps only on
-machines whose GPUs lack peer-to-peer access, only with the NCCL versions
-that still contain it, and only if the training run survives it.
-
-:begin_tab:`pytorch`
-On our machine, DDP training with the setting deadlocks within seconds,
-although the same collectives complete in the bare benchmark (exercise
-:exref:`ex_mgp-transport`).
-:end_tab:
-
-:begin_tab:`jax`
-On our machine the training step of this section completes with the
-setting, in a run outside this notebook. One run gives no range, so how
-much faster it trains is left to exercise :exref:`ex_mgp-transport`,
-which measures it with repeats.
-:end_tab:
-
-We train with NCCL's default. A setting that is not documented, and that
-later versions removed, is no basis for a training run, and one that
-speeds up a benchmark of bare collectives has to be checked on the
-training run itself.
-
-On a machine whose GPUs share an NVLink domain, each GPU exchanges data
-with the others at 450 GB/s in each direction on the H100 (NVLink 4) and
-at 900 GB/s on the B200 (NVLink 5), hundreds of times the rate measured
-here (:numref:`subsec_hw-interconnects`). The allreduce of ResNet-18's
-gradients then takes well under a millisecond, and the cost model predicts
-near-linear scaling for this model with or without overlap. How well a
-model scales is decided as much by the wires between the GPUs as by the
-GPUs themselves.
-
-Data parallelism, however well organized, leaves a full copy of the
-training state on every GPU, 16 bytes per parameter for Adam in fp32
-(:numref:`sec_memory_precision`), so it makes no room for a larger model;
-:numref:`sec_sharding` divides that state among the GPUs.
+On data-center GPUs connected by NVLink (450–900 GB/s per direction,
+:numref:`subsec_hw-interconnects`), ResNet-18's 45 MB allreduce takes well
+under a millisecond and achieves near-linear scaling. Even with ideal scaling,
+however, data parallelism still replicates all $16N$ bytes of parameter and
+optimizer state on every card; :numref:`sec_sharding` partitions that state
+across GPUs.
 
 ## Summary
 
-Production data parallelism computes what the hand-written loop computes.
-It drives $k$ GPUs either as $k$ copies of a program that meet in a
-library of collective operations or as one program that a compiler
-partitions, and it groups the gradients into buckets whose allreduces
-start while the backward pass is still running. A one-step check against
-one GPU shows what the parallel step computes; under batch normalization
-an implementation must choose between per-shard and global statistics,
-and the check, set against both references, tells which.
-On our four RTX 4090s, which exchange gradients through host memory,
-four GPUs do the work of a little over three for ResNet-18, and two GPUs
-that do not communicate step as fast as one. The exposed communication is
-close to the cost model's time for an allreduce that nothing overlaps,
-because the computation beside an allreduce slows down by most of the
-time that overlap hides. Over NVLink the cost model predicts that the
-same model would lose almost nothing.
+Production data parallelism drives $k$ GPUs either via $k$ independent
+processes synchronized through NCCL (`torchrun` + DDP) or via a single
+compiler-partitioned program (`jax.jit` + mesh shardings), grouping gradients
+into buckets of 25–30 MiB to overlap allreduces with the backward pass. A
+one-step check against single-GPU references reveals whether batch
+normalization uses per-shard statistics (PyTorch DDP by default) or global
+statistics via extra collectives (JAX `Auto` sharding and PyTorch
+`SyncBatchNorm`). On our four RTX 4090s (communicating through host memory at
+2.4 GB/s bus bandwidth), four GPUs deliver $3.1\text{--}3.3\times$ single-GPU
+throughput under weak scaling, and kernel profiling shows that SM contention
+from host-staged NCCL kernels claws back most of the time saved by overlapping
+communication with backward computation.
 
 ## Exercises
 
 :begin_tab:`pytorch`
-1. [code] **Splitting the data.** In `TRAIN_DDP` every process takes its
-   own slice of each global minibatch: all processes draw the same
-   permutation, and the process of rank $r$ takes the slice that starts at
-   $(sk + r)b$ in step $s$.
-    1. Remove the rank from this offset, so that every process takes the
-       same $b$ examples. Predict what `step_time` reports at $k = 2$
-       relative to the correct script, and which global minibatch the
-       averaged gradient corresponds to. Then check, with each process
-       printing a checksum of its first minibatch.
-    1. Restore the offset and give each process a seed of its own. Which
-       property of the split is lost, and does it matter for training?
-    1. Name a check that catches the first mistake and is cheap enough to
-       run at every launch.
+1. [code] **Splitting the data.** In `TRAIN_DDP`, rank $r$ takes the slice
+   starting at $(sk + r)b$ in step $s$ from a shared random permutation.
+    1. Remove `rank` from this offset so every process takes the same $b$
+       examples. Predict how `step_time` at $k = 2$ and the averaged gradient
+       behave, and verify by printing a minibatch checksum on each rank.
+    1. Restore the offset but give each rank a different random seed. Which
+       property of the minibatch split is lost?
+    1. Propose a lightweight runtime assertion that catches identical data
+       shards across ranks on the first step.
 :end_tab:
 
 :begin_tab:`jax`
-1. [code] **Splitting the data.** `minibatches` places the indices with
-   `P('data')`, which splits them across the GPUs of the mesh.
-    1. Place them with `P()` instead, which gives every GPU all indices.
-       Predict which collectives the compiled `train_step` then contains
-       and how `step_time(2, 256)` compares with `step_time(1, 256)`, and
-       check both.
-    1. Restore `P('data')` and, inside `train_step`, constrain the gathered
-       images `X[idx]` to `NamedSharding(mesh, P(None, 'data'))` with
-       `jax.lax.with_sharding_constraint`, with `mesh` taken from the
-       enclosing scope, which splits the height of every image across the
-       GPUs. Which values
-       must neighboring GPUs exchange for a $3 \times 3$ convolution, and
-       which collective does that take? Find it in the compiled
-       `train_step`.
+1. [code] **Splitting the data.** In `minibatches`, indices are placed with
+   `P('data')`.
+    1. Place them with `P()` instead so every GPU receives all indices.
+       Predict which collectives the compiled `train_step` contains and how
+       `step_time(2, 256)` compares with `step_time(1, 256)`, then check both.
+    1. Restore `P('data')` and inside `train_step` constrain `X[idx]` to
+       `NamedSharding(mesh, P(None, 'data'))`, splitting image height across
+       GPUs. Which boundary values must neighboring GPUs exchange for a
+       $3 \times 3$ convolution, and which collective appears in the compiled
+       HLO?
 :end_tab:
 
-2. **Weak-scaling extrapolation.** Suppose that a step on $k$ GPUs takes
-   the single-GPU step time $t_1$ plus an exposed communication time that
-   is proportional to the per-GPU ring traffic of
-   :numref:`subsec_mg-ring`, $2(k-1)S/k$. If you cannot run the cells, use
-   the efficiencies printed in :numref:`subsec_mgp-scaling`.
-    1. Express the weak-scaling efficiency $E(k)$ through a single
-       constant, fit the constant to the efficiency at $k = 2$, and
-       predict $E(4)$. Compare your prediction with the measured $E(4)$
-       and with the prediction of a model in which the exposed time is the
-       same for every $k \geq 2$.
-    1. Predict $E(8)$ for an eight-GPU machine of the same design as ours,
-       on which every transfer between GPUs is staged through host memory
-       (:numref:`subsec_hw-interconnects`). How does the total ring traffic
-       through host memory grow with $k$, and in which direction should
-       this move a measured $E(8)$ relative to your prediction?
-    1. With gradient accumulation (:numref:`subsec_mp-accumulation`), each
-       GPU runs $a$ micro-batches of 256 examples per optimizer step and
-       communicates only after the last one. Starting from the measured
-       $E(4)$, find the smallest $a$ that raises the efficiency at $k = 4$
-       to 95%. What happens to the global minibatch, and why does that
-       matter (:numref:`sec_batch_size`)?
+2. **Weak-scaling extrapolation.** Suppose a step on $k$ GPUs takes single-GPU time $t_1$ plus exposed communication proportional to the ring traffic $2(k-1)S/k$.
+    1. Express the weak-scaling efficiency $E(k) = t_1 / t_{\textrm{step}}(k)$ in terms of a single constant, calibrate it on the measured $E(2)$, and compare its prediction for $E(4)$ with the measured value in :numref:`subsec_mgp-scaling`.
+    1. With gradient accumulation over $a$ micro-batches of 256 examples per GPU (communicating only on the last micro-batch), find the smallest $a$ that raises $E(4)$ to 95%, and state how the global batch size changes.
 
 :begin_tab:`pytorch`
-3. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
-   as follows. The backward pass takes time $t_b$ and releases the
-   gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
-   The allreduces of the buckets run one at a time and in order, and each
-   takes $\alpha + \tau/n$, where $\tau = S\,\beta_\textrm{link}$ is the
-   communication time of all gradients at $k = 2$ and $\alpha$ is a fixed
-   cost per collective. The exposed communication is the time from the end
-   of the backward pass to the end of the last allreduce.
-    1. Show that the exposed communication is
-
-        $$t_{\textrm{exposed}}(n) = \max\Bigl(\alpha + \frac{\tau}{n},\;
-        n\alpha + \tau - \frac{n-1}{n}\,t_b\Bigr).$$
-
-    1. Find the $n$ that minimizes $t_{\textrm{exposed}}$ when $\tau$ is well
-       below $t_b$, and again when $\tau > t_b$. What does a bucket that is
-       too small cost, and what does one that is too large cost?
-    1. Pass `bucket_cap_mb` to `DDP` in `TRAIN_DDP`, sweep it from 1 MB to
-       100 MB at $k = 2$ with `step_time`, and plot the exposed
-       communication against the bucket size. Estimate $t_b$ as two thirds
-       of the single-GPU step time and $\tau$ as $S\,\beta_\textrm{link}$.
-       Is the measured optimum consistent with your model, and which
-       $\alpha$ does it imply?
-    1. The measurement with `profile_step` shows that the computation
-       kernels slow down while an allreduce runs beside them. Record a few
-       steps at $k = 2$ with `torch.profiler.profile`, once as they are and
-       once with the forward and the backward pass inside
-       `model.no_sync()`, which skips the allreduces. Find when each
-       allreduce kernel starts and ends, and which backward kernels slow
-       down most. How would you change the model of part 1 to include the
-       slowdown?
+3. [code] **Bucket size.** ● Model bucket overlap (:numref:`fig_ddp_overlap`)
+   by assuming a backward pass of duration $t_b$ releases $n$ equal buckets at
+   times $i\,t_b/n$ ($i = 1, \ldots, n$), and each bucket's allreduce takes
+   $\alpha + \tau/n$ sequentially, where $\tau = S\,\beta_\textrm{link}$.
+    1. Show that the exposed communication after the backward pass finishes is
+       $$t_{\textrm{exposed}}(n) = \max\Bigl(\alpha + \frac{\tau}{n},\;
+       n\alpha + \tau - \frac{n-1}{n}\,t_b\Bigr),$$
+       and find the optimal $n$ when $\tau < t_b$ versus $\tau > t_b$.
+    1. Sweep `bucket_cap_mb` in `DDP` from 1 MB to 100 MB at $k = 2$ and
+       compare the measured exposed communication against the model.
    :exlabel:`ex_mgp-buckets`
 
-4. [code] **Transport configuration.** ● `allreduce_beta` compares NCCL's
-   default transport with the copy engines that `NCCL_SHM_USE_CUDA_MEMCPY=1`
-   selects, at a single payload of 256 MB. The setting affects only the
-   transport through host memory that NCCL uses between GPUs that lack
-   peer-to-peer access.
-    1. Launch `ALLREDUCE` once with `NCCL_DEBUG=INFO` and find the transport
-       that NCCL reports for each channel (`d2l.torchrun` keeps only the
-       JSON lines, so set `NCCL_DEBUG_FILE` to a path of your own, or run
-       the script with `torchrun` from a shell). Predict whether the
-       setting can change anything on your machine.
-    1. Extend the comparison to payloads from 1 MB to 256 MB and plot
-       the bus bandwidth of both transports against the payload. Where
-       does each saturate, and does the gap measured at 256 MB hold at
-       every size?
-    1. Launch `TRAIN_DDP` on two GPUs with the setting (the `env` argument
-       of `d2l.torchrun`), once with the default buckets and once with
-       `bucket_cap_mb` large enough that all gradients form a single
-       bucket, each launch under a time limit that also terminates the
-       processes. Does the deadlock depend on the overlap of communication
-       with the backward pass, and what does the outcome tell you about
-       which workloads the bare benchmark validates?
-   :exlabel:`ex_mgp-transport`
-:end_tab:
-
-:begin_tab:`jax`
-3. [code] **Bucket size.** ● Model the overlap of :numref:`fig_ddp_overlap`
-   as follows. The backward pass takes time $t_b$ and releases the
-   gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
-   The allreduces of the buckets run one at a time and in order, and each
-   takes $\alpha + \tau/n$, where $\tau = S\,\beta_\textrm{link}$ is the
-   communication time of all gradients at $k = 2$ and $\alpha$ is a fixed
-   cost per collective. The exposed communication is the time from the end
-   of the backward pass to the end of the last allreduce.
-    1. Show that the exposed communication is
-
-        $$t_{\textrm{exposed}}(n) = \max\Bigl(\alpha + \frac{\tau}{n},\;
-        n\alpha + \tau - \frac{n-1}{n}\,t_b\Bigr).$$
-
-    1. Find the $n$ that minimizes $t_{\textrm{exposed}}$ when $\tau$ is well
-       below $t_b$, and again when $\tau > t_b$. What does a bucket that is
-       too small cost, and what does one that is too large cost?
-    1. XLA merges gradient allreduces up to a byte threshold, which the
-       flag `--xla_gpu_all_reduce_combine_threshold_bytes` sets. In fresh
-       processes, with `XLA_FLAGS` set before JAX initializes its backend,
-       sweep the threshold from 1 MB to 100 MB. For each value, count the
-       gradient allreduces in the compiled `train_step` and measure the
-       exposed communication `step_time(2, 256) - step_time(1, 256)`.
-       Estimate $t_b$ as two thirds of the single-GPU step time and $\tau$
-       as $S\,\beta_\textrm{link}$. Is the measured optimum consistent with
-       your model, and which $\alpha$ does it imply?
-    1. The measurement with `profile_step` shows that the computation
-       kernels slow down while an allreduce runs beside them. Record a few
-       steps at $k = 1$ and $k = 2$ inside `jax.profiler.trace` and open
-       the traces in Perfetto. Find when each gradient allreduce starts and
-       ends relative to the backward pass, and which kernels of the
-       backward pass slow down most. How would you change the model of
-       part 1 to include the slowdown?
-   :exlabel:`ex_mgp-buckets`
-
-4. [code] **Transport configuration.** ● XLA runs its collectives through
-   NCCL, so the setting `NCCL_SHM_USE_CUDA_MEMCPY=1` applies to JAX
-   programs as well. It affects only the transport through host memory that
-   NCCL uses between GPUs that lack peer-to-peer access. NCCL reads its
-   configuration once per process, so compare settings in fresh processes,
-   as `allreduce_beta` does.
-    1. Run `ALLREDUCE` once with `NCCL_DEBUG=INFO`, find the transport that
-       NCCL reports for each channel (read the `stdout` and `stderr` of the
-       subprocess directly, since `allreduce_beta` parses only its last
-       line), and predict whether the setting can change anything on your
-       machine.
-    1. Time the `psum` for payloads from 1 MB to 256 MB under both settings
-       and plot the bus bandwidth against the payload. Where does each
-       saturate, and does the gap measured at 256 MB hold at every size?
-    1. Write the training of this section into a script and run it on two
-       GPUs in a fresh process with the setting, under a time limit.
-       Does training complete on your machine? Time a few hundred steps
-       under each transport, in several fresh processes each, and decide
-       whether the difference in speed is larger than the spread between
-       runs.
-    1. Read the sizes of the allreduces in the compiled `train_step`. At
-       which of them does the setting change the bandwidth?
-   :exlabel:`ex_mgp-transport`
-:end_tab:
-
-:begin_tab:`pytorch`
-5. [code] **Synchronized batch normalization.** ● The one-step check of
-   :numref:`subsec_mgp-production` shows that DDP normalizes each GPU's
-   shard with the statistics of that shard.
-    1. Convert `model` (not `ref`) in `CHECK_DDP` with
-       `nn.SyncBatchNorm.convert_sync_batchnorm` after the copy `ref` is
-       made and before `model` is wrapped in `DDP`, and repeat the check.
-       Why would converting before the copy hang the run? Which of the two
-       references does the DDP step now match?
-    1. How many collectives per step does the conversion add to `resnet18`?
-       Measure `step_time` with the converted model at $k = 2$ and $k = 4$
-       under weak scaling, and compare the added time with the time that the
-       added bytes take at $\beta_\textrm{link}$ per byte. Which properties of
-       these collectives, other than their size, set their cost?
+4. [code] **Synchronized batch normalization.** ● The one-step check of
+   :numref:`subsec_mgp-production` showed that DDP normalizes each shard with
+   local statistics by default.
+    1. Convert `model` in `CHECK_DDP` with
+       `nn.SyncBatchNorm.convert_sync_batchnorm` before wrapping in `DDP` and
+       repeat the check. Which single-GPU reference does it match now?
+    1. Count the extra collectives per step added by `SyncBatchNorm`, measure
+       `step_time` at $k = 2$ and $k = 4$, and explain why their time exceeds
+       their byte volume times $\beta_\textrm{link}$.
    :exlabel:`ex_mgp-syncbn`
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **Batch-norm statistics.** ● The one-step check of
-   :numref:`subsec_mgp-production` shows that under `jit` the statistics
-   of batch normalization are computed over the global minibatch, as on a
-   single GPU.
-    1. Count the small allreduces in the compiled `train_step`, and account
-       for their number from the `BatchNorm` layers of `resnet18` and the
-       passes in which their statistics are needed. Count the per-channel
-       vectors they carry as well as the calls. What does each of them
-       carry?
-    1. Call `model.eval()` before compiling, so that every `BatchNorm`
-       normalizes with its running averages, and count the allreduces again.
-       Measure `step_time` with and without this change at $k = 1$, $k = 2$ and
-       $k = 4$. Separate what making the statistics global costs per step from
-       what computing batch statistics costs on a single GPU, and compare the
-       cost of global statistics with the time that the added bytes take at
-       $\beta_\textrm{link}$ per byte. Which properties of these collectives,
-       other than their size, set their cost?
+3. [code] **Bucket size.** ● Model bucket overlap (:numref:`fig_ddp_overlap`)
+   by assuming a backward pass of duration $t_b$ releases $n$ equal buckets at
+   times $i\,t_b/n$ ($i = 1, \ldots, n$), and each bucket's allreduce takes
+   $\alpha + \tau/n$ sequentially, where $\tau = S\,\beta_\textrm{link}$.
+    1. Show that the exposed communication after the backward pass finishes is
+       $$t_{\textrm{exposed}}(n) = \max\Bigl(\alpha + \frac{\tau}{n},\;
+       n\alpha + \tau - \frac{n-1}{n}\,t_b\Bigr),$$
+       and find the optimal $n$ when $\tau < t_b$ versus $\tau > t_b$.
+    1. Sweep `--xla_gpu_all_reduce_combine_threshold_bytes` from 1 MB to
+       100 MB in fresh processes, count the resulting gradient allreduces, and
+       compare the measured exposed communication against the model.
+   :exlabel:`ex_mgp-buckets`
+
+4. [code] **Batch-norm statistics.** ● Under `nnx.jit` with `Auto` mesh axes,
+   batch normalization computes global statistics across all GPUs.
+    1. Account for the 74 small allreduces in `allreduce_megabytes(compiled)`
+       from the number of `BatchNorm` layers in `resnet18` and the forward and
+       backward passes.
+    1. Call `model.eval()` before compiling so `BatchNorm` uses running
+       averages instead of batch statistics, verify that the small allreduces
+       disappear, and measure how much step time they cost at $k = 1, 2, 4$.
    :exlabel:`ex_mgp-syncbn`
 :end_tab:
 
@@ -1330,425 +814,289 @@ same model would lose almost nothing.
 ::: {.cover}
 [Dive into Deep Learning · §13.6]{.kicker}
 
-Data Parallelism in Practice<br>**one process or one program · buckets and overlap · a one-step check · scaling on four GPUs · where the time goes**
+Distributed Data Parallel (DDP) in Practice: Bucketing and Overlap<br>**multi-process vs. compiler SPMD · gradient bucketing · backward overlap · BatchNorm semantics · scaling & SM contention**
 :::
 :::
 
-::: {.slide title="LeNet Lost on Two GPUs; ResNet-18 Has About 30 Times Its Work per Gradient Byte"}
-[The problem]{.kicker}
+::: {.slide title="From Toy LeNet to Compute-Heavy ResNet-18"}
+[Motivation]{.kicker}
 
-- LeNet (previous deck): a second GPU slowed each step, because one
-  Python thread fed both GPUs and the steps were tiny.
-- Our loop sent no gradient before the whole backward pass ended.
-- ResNet-18 at 64×64: 2.2 G multiply-adds per image, $S$ = 45 MB of
-  gradients, about 50 per byte (LeNet: under 2).
-- A step on 256 images keeps an RTX 4090 busy for about 0.1 s: plenty
-  of time for any host.
+In §13.5, our hand-written loop slowed LeNet down on two GPUs for two structural reasons: a single Python thread issued work to both GPUs sequentially, and the gradient allreduce waited until the entire backward pass completed.
 
-::: {.d2l-note .warn}
-How close to $k\times$ the throughput do the production tools get, and
-how much of the exchange does overlap hide?
+- **Production remedies:** Frameworks eliminate single-thread dispatch (via **one process per GPU** in PyTorch DDP or **one compiled multi-device program** in JAX) and pack gradients into **buckets** whose allreduces start *during* the backward pass.
+- **A realistic benchmark (ResNet-18 at $64 \times 64$):** Performs $2.2\text{G}$ multiply-adds per image across $11.2\text{M}$ parameters ($S = 45\text{ MB}$ of `float32` gradients, or $\sim 50\text{ FLOP/byte}$ of gradient vs. $< 2$ for LeNet), keeping one RTX 4090 busy for $\sim 100\text{ ms}$ per 256-image step.
+
+::: {.d2l-note}
+With $\sim 100\text{ ms}$ of device compute per step, host launch overhead vanishes and we can directly measure how much of the $45\text{ MB}$ gradient exchange is hidden by backward-pass overlap across $1, 2,$ and $4$ GPUs.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Two SPMD Execution Models: Multi-Process vs. Compiler"}
+[Execution Models]{.kicker}
 
-- name the two ways to drive $k$ GPUs, what each needs, and when the
-  host's organization matters;
-- explain how buckets overlap the allreduce with the backward pass, and
-  when they cannot;
-- check a data-parallel step against one GPU, batch norm included;
-- predict the exposed communication from $S\,\beta_\textrm{link}$
-  ($\beta_\textrm{link}$: the time per byte that each GPU sends in an
-  allreduce), and split the measured time into its causes.
+Modern frameworks drive $k$ GPUs using one of two *Single Program, Multiple Data* (SPMD) architectures:
 
-**Running example:** ResNet-18 on our four RTX 4090s, which have no
-peer-to-peer access. Its 45 MB of gradients are small enough to study
-overlap; the chapter's GPT returns in the next deck.
+| Architectural Dimension | Multi-Process SPMD (`torchrun` + `DDP`) | Compiler-Partitioned SPMD (`jax.jit` + `Mesh`) |
+| :--- | :--- | :--- |
+| **Host Execution** | $k$ independent Python processes (ranks $0 \ldots k-1$), 1 CPU thread per GPU | 1 Python process dispatches 1 compiled multi-GPU XLA executable |
+| **Language Flexibility** | Arbitrary dynamic Python code in every process | Function must be traceable with static shapes |
+| **Data & Model Placement** | Each rank slices its own $B/k$ shard and holds a local model replica | User annotates `NamedSharding(mesh, P('data'))` vs. replicated `P()` |
+| **Collective Insertion** | Autograd backward hooks trigger asynchronous NCCL bucket allreduces | Compiler (GSPMD / Shardy) inserts & schedules NCCL collectives in HLO |
 :::
 
-::: {.slide title="The Hand-Written Loop, Now with Production Tools"}
-[Where this fits]{.kicker}
+::: {.slide title="How Production DDP Fixes the Hand-Written Loop" only="pytorch"}
+[PyTorch DDP]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| The Performance Model | roofline, regimes, timing, profiles |
-| Hardware | where peak arithmetic and bandwidth come from |
-| Computation Graphs and Compilation | fusion and kernel replay |
-| Memory and Precision | bytes per parameter and per token |
-| Multi-GPU from First Principles | data parallelism by hand, cost model |
-| **Data Parallelism in Practice** | **production tools on four GPUs** |
-| Sharding the Training State | training state split across GPUs |
-| Case Study: Optimizing a Transformer | the whole method on one GPT |
+Comparing our §13.5 loop against `torch.nn.parallel.DistributedDataParallel` (DDP) shows how each bottleneck is removed:
+
+| System Bottleneck | §13.5 Hand-Written Loop | Production `torchrun` + `DDP` |
+| :--- | :--- | :--- |
+| **Host kernel dispatch** | 1 Python thread loops over $k$ GPUs ($k \cdot h_{\textrm{step}}$) | $k$ OS processes dispatch to their own GPUs in parallel ($1 \cdot h_{\textrm{step}}$) |
+| **Collective topology** | Star gather/scatter through GPU 0 ($(k-1)S$ bytes) | NCCL ring or tree allreduce ($\frac{2(k-1)}{k}S$ bytes) |
+| **When communication runs** | After the entire backward pass finishes | Per-bucket allreduce launched asynchronously during `backward()` |
 :::
 
-::: {.col .narrow}
-- **Uses:** the ring allreduce; $\alpha$ and $\beta_\textrm{link}$;
-  batch normalization.
-- **Skips:** sharding (next deck); tensor, pipeline, and expert
-  parallelism; several machines (Language Models part).
-:::
-:::
-:::
+::: {.slide title="How Compiler Partitioning Automates Data Parallelism" only="jax"}
+[JAX Sharded JIT]{.kicker}
 
-::: {.slide title="DDP Runs Our Algorithm with a Process per GPU and Early Allreduces" only="pytorch"}
-[Production data parallelism]{.kicker}
+Comparing our §13.5 `shard_map` loop against `nnx.jit` with `Auto` mesh sharding shows how XLA automates collective scheduling:
 
-| | hand-written loop | DDP |
-|---|---|---|
-| work issued by | one Python thread for all GPUs | one process per GPU |
-| allreduce starts | after the whole backward | per bucket, during the backward |
-| allreduce algorithm | star through device 0 | ring or tree (NCCL) |
-
-::: {.d2l-note .rule}
-Each GPU still holds a full model copy, takes its shard of the
-minibatch, and applies the average gradient.
-:::
+| System Component | §13.5 Hand-Written `shard_map` | Production `nnx.jit` + `NamedSharding` |
+| :--- | :--- | :--- |
+| **User code** | Explicit `shard_map`, `pcast`, `ravel_pytree`, and `lax.psum` | Standard single-device function `train_step(model, opt, X, y, idx)` |
+| **Collective synthesis** | Manual flat allreduce at end of backward pass | Compiler derives allreduces from `P()` weights + `P('data')` batch |
+| **Overlap scheduling** | Synchronous single buffer after backpropagation | XLA combines buffers up to $30\text{ MiB}$ and overlaps `all-reduce-start`/`done` |
 :::
 
-::: {.slide title="jit with Placement Runs Our Algorithm, and the Compiler Writes the Collectives" only="jax"}
-[Production data parallelism]{.kicker}
+::: {.slide title="One Process per GPU with torchrun and DDP" only="pytorch"}
+[Multi-Process Workflow]{.kicker}
 
-| | hand-written loop | `jit` with placement |
-|---|---|---|
-| collectives written by | us: `shard_map` and `psum` | the compiler |
-| allreduce starts | after the whole backward | per combined buffer, scheduled by XLA |
-| unchanged | one jitted program, NCCL's ring | one jitted program, NCCL's ring |
-
-::: {.d2l-note .rule}
-Each GPU still holds a full model copy, takes its shard of the
-minibatch, and applies the average gradient.
-:::
-:::
-
-::: {.slide title="Two Ways to Drive k GPUs: k Copies of a Program, or One Partitioned Program"}
-[The execution model]{.kicker}
-
-| | $k$ copies + collective library | one program, compiler-partitioned |
-|---|---|---|
-| host | one thread per GPU | one dispatch per step |
-| code | any Python | traced, static shapes |
-| communication | explicit calls, or a wrapper | inserted and scheduled by the compiler |
-| started by | a launcher that assigns ranks | one process that sees all GPUs |
-
-Both are *single program, multiple data* (SPMD).
-
-::: {.d2l-note .rule}
-They differ in who partitions the program and writes the communication.
-:::
-:::
-
-::: {.slide title="DDP: One Process per GPU, Launched by torchrun" only="pytorch"}
-[One process per GPU]{.kicker}
+`torchrun --standalone --nproc-per-node=k` spawns $k$ processes; each binds to its assigned GPU via `LOCAL_RANK` and wraps the model in `DDP`:
 
 ```{.python #multi-gpu-practice-exercises-1}
-rank, k, device = d2l.init_distributed()   # join the process group
+rank, k, device = d2l.init_distributed()   # join the NCCL process group
 model = d2l.resnet18(10).to(device)
-model = DDP(model, device_ids=[device])
-for s in range(len(y) // (k * b)):        # this rank's slice of a
-    i = perm[(s * k + rank) * b:][:b]     # global minibatch of k * b
-    F.cross_entropy(model(X[i]), y[i]).backward()  # hooks: allreduce
-    opt.step(); opt.zero_grad()
+model = DDP(model, device_ids=[device])    # broadcasts weights from rank 0
+for s in range(len(y) // (k * b)):         # rank r takes slice (s*k + r)*b
+    i = perm[(s * k + rank) * b:][:b]      # disjoint shard of global batch k*b
+    F.cross_entropy(model(X[i]), y[i]).backward()  # hooks launch bucket allreduces
+    opt.step(); opt.zero_grad(set_to_none=True)
 ```
 
 ::: {.d2l-note .rule}
-`torchrun --nproc-per-node=k script.py` starts $k$ processes, ranks
-$0 \ldots k-1$; each script string in the notebook runs this way.
+DDP broadcasts initial parameters and buffers from rank $0$ at construction time and registers autograd hooks on every parameter to fire bucketed NCCL allreduces during `backward()`.
 :::
 :::
 
-::: {.slide title="JAX: Place the Inputs, and jit Writes the Allreduce" only="jax"}
-[Placement]{.kicker}
+::: {.slide title="Declarative Mesh Placement with NamedSharding" only="jax"}
+[Mesh Sharding Workflow]{.kicker}
+
+In JAX, we write `train_step` as if for a single GPU, replicate the model (`P()`), and shard the minibatch indices (`P('data')`) across an `Auto` mesh:
 
 ```{.python #multi-gpu-practice-exercises-2}
-replicated = NamedSharding(mesh, P())      # parameters, data: copies
-split = NamedSharding(mesh, P('data'))     # minibatch indices: shards
+replicated = NamedSharding(mesh, P())      # parameters & dataset: replicated
+split = NamedSharding(mesh, P('data'))     # minibatch indices: sharded across GPUs
 
 @nnx.jit
-def train_step(model, opt, X, y, idx):     # written for one device
+def train_step(model, opt, X, y, idx):     # written for a single logical device
     def loss_fn(model):
         return optax.softmax_cross_entropy_with_integer_labels(
             model(X[idx]), y[idx]).mean()
     loss, grads = nnx.value_and_grad(loss_fn)(model)
-    opt.update(model, grads)               # grads summed across GPUs
+    opt.update(model, grads)               # XLA inserts gradient allreduces
 ```
 
 ::: {.d2l-note .rule}
-A replicated parameter's gradient is the sum over the GPUs, so the
-compiler inserts the allreduce.
+Because `model` is replicated (`P()`) while `idx` is sharded (`P('data')`), differentiating the mean loss over `'data'` automatically requires an allreduce across `'data'` to keep the updated parameters replicated.
 :::
 :::
 
-::: {.slide title="Buckets Let the Allreduce Run During the Backward Pass"}
-[Overlap]{.kicker}
+::: {.slide title="Overlapping Bucketed Allreduces with Backpropagation"}
+[Communication Overlap]{.kicker}
 
-![](../img/mdl-perf-ddp-overlap.svg){width=86%}
+![](../img/mdl-perf-ddp-overlap.svg){width=84%}
 
-::: {.d2l-note .rule}
-Gradients appear last layer first. A bucket of tens of MB starts its
-allreduce as soon as its last gradient exists.
-:::
+- **Reverse-order gradient production:** Backpropagation computes gradients from the final output layer back toward the first input layer.
+- **Pipelining communication and compute:** Packing gradients into **buckets** of $25\text{--}30\text{ MiB}$ in reverse parameter order lets each bucket's allreduce run on a separate communication stream while earlier layers are still backpropagating.
 :::
 
-::: {.slide title="Overlap Hides All but the Last Bucket, and Only If the Links Keep Up"}
-[Overlap]{.kicker}
+::: {.slide title="The Bucket Size Trade-Off and the Ideal Bucket Model"}
+[Bucket Model]{.kicker}
 
-- Small buckets start early, but each allreduce costs a fixed $\alpha$.
-- One bucket costs $\alpha$ once, but waits for the whole backward.
-- The last bucket holds the first layers' gradients, computed last.
-- Slow links: allreduces queue up and run on after the backward ends.
+Choosing the bucket capacity balances per-call latency $\alpha$ against overlap delay:
 
-The *bucket model*: every allreduce but the last runs unseen beside the
-backward pass.
-
-::: {.d2l-note .rule}
-Overlap shortens the communication of a step; it cannot remove it.
-:::
+- **Too many tiny buckets ($c \gg 1$):** Starts communication immediately, but pays start-up latency $c\,\alpha$ dozens of times and fragments link bandwidth.
+- **One giant bucket ($c = 1$):** Pays $\alpha$ once, but cannot start communicating until the very first layer's gradient finishes at the end of `backward()`.
+- **The ideal bucket model of overlap:** If (1) inter-GPU links finish each bucket before the next bucket fills and (2) communication kernels do not slow down concurrent backward compute kernels, then **every bucket except the final bucket is completely hidden** behind the backward pass:
+  $$t_{\textrm{exposed (ideal)}} \;=\; \frac{2(k-1)}{k}\, S_{\textrm{last\_bucket}}\, \beta_{\textrm{link}} \qquad \textrm{vs.} \qquad t_{\textrm{exposed (no overlap)}} \;=\; \frac{2(k-1)}{k}\, S\, \beta_{\textrm{link}}$$
 :::
 
-::: {.slide title="DDP's Last Bucket Holds the First Two Thirds of the Layers, 9 MB" only="pytorch"}
-[Overlap in DDP]{.kicker}
+::: {.slide title="Reverse-Order Bucketing in PyTorch DDP (1 & 25 MiB)" only="pytorch"}
+[DDP Buckets]{.kicker}
 
-- Caps: 1 MiB for the first bucket, 25 MiB (26.2 MB) for the rest; a
-  bucket closes once it reaches its cap, so it can overshoot by one
-  tensor.
-- ResNet-18: 9, 26, 9 MB. A 9 MB convolution weight overshoots the first
-  cap on its own.
-- The allreduces run on a CUDA stream of their own.
+PyTorch DDP closes the first bucket at $1\text{ MiB}$ (so communication starts almost immediately) and subsequent buckets at `bucket_cap_mb = 25` ($25\text{ MiB} = 26.2\text{ MB}$):
 
-::: {.d2l-note .rule}
-With full overlap, only the last 9 MB would be exposed: about 4 ms here.
-:::
+- **ResNet-18 bucket layout ($S = 44.7\text{ MB}$ total):** Walking `reversed(list(net.parameters()))` forms three buckets of **$9.4\text{ MB}$, $26.2\text{ MB}$, and $9.0\text{ MB}$** (a single $9.4\text{ MB}$ late-stage `Conv2d` weight tensor overshoots the $1\text{ MiB}$ first cap on its own).
+- **Ideal overlap prediction:** If the first two buckets ($9.4$ and $26.2\text{ MB}$) finish behind backpropagation, only the final **$S_{\textrm{last}} = 9.0\text{ MB}$** bucket (holding the earliest layers, computed last) remains exposed—cutting exposed communication by **$5\times$**!
 :::
 
-::: {.slide title="XLA Merges the Gradients into Two Buffers of up to 30 MiB" only="jax"}
-[Overlap in XLA]{.kicker}
+::: {.slide title="Asynchronous Allreduce Combining in XLA (30 MiB)" only="jax"}
+[XLA Collective Combining]{.kicker}
 
-- One compiled step: XLA knows when each gradient is ready.
-- Small allreduces merged up to 30 MiB: ResNet-18's 45 MB in two.
-- Each allreduce is a `start`/`done` pair; the latency-hiding scheduler
-  places computation between them.
+In JAX, XLA's `all-reduce-combiner` pass merges gradient allreduces up to a $30\text{ MiB}$ threshold (`--xla_gpu_all_reduce_combine_threshold_bytes`):
 
-::: {.d2l-note .rule}
-With full overlap, only the last buffer, 19 MB, would be exposed: about
-8 ms here.
-:::
+- **ResNet-18 buffer layout ($S = 44.7\text{ MB}$ total):** XLA packs the parameter gradients into two asynchronous `all-reduce-start` / `all-reduce-done` pairs of **$25.8\text{ MB}$** and **$18.9\text{ MB}$**, scheduling backward convolutions between `start` and `done`.
+- **Ideal overlap prediction:** If the first $25.8\text{ MB}$ buffer finishes while earlier layers backpropagate, only the final **$S_{\textrm{last}} = 18.9\text{ MB}$** buffer remains exposed after backward compute ends.
 :::
 
-::: {.slide title="DDP Normalizes Each GPU's Shard with Its Own Statistics" only="pytorch"}
-[A one-step check]{.kicker}
+::: {.slide title="One-Step Check: Per-Shard BatchNorm in PyTorch DDP" only="pytorch"}
+[BatchNorm Semantics]{.kicker}
 
-Same initialization, same 256 images, full fp32; DDP on two GPUs against
-two single-GPU references:
+Unlike LeNet, ResNet-18 contains `BatchNorm2d` layers. Comparing one 2-GPU DDP step on $256$ images against (a) one GPU on all $256$ images and (b) one GPU accumulating two $128$-image halves reveals what `BatchNorm2d` computes:
 
 @!multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5
 
-- DDP = one GPU accumulating the two halves: shard statistics.
-- `nn.SyncBatchNorm`: global statistics, extra collectives per layer.
-
-::: {.d2l-note .rule}
-Both are valid batch normalization; nothing warns you which one you got.
-:::
+- **Local per-shard statistics by default:** PyTorch DDP normalizes each GPU's $128$-image shard using its **own local mean and variance**, matching the two accumulated halves to $10^{-7}$ while differing from global 256-image BatchNorm by $\sim 6\%$ of the update!
 :::
 
-::: {.slide title="Under jit, Batch Norm Uses Global Statistics" only="jax"}
-[A one-step check]{.kicker}
+::: {.slide title="One-Step Check: Global BatchNorm Under JAX Auto Mesh" only="jax"}
+[BatchNorm Semantics]{.kicker}
 
-Same initialization, same 256 images, full fp32; two GPUs against two
-single-GPU references:
+Comparing one 2-GPU `nnx.jit` step on $256$ images against (a) one GPU on all $256$ images and (b) one GPU accumulating two $128$-image halves reveals the opposite behavior from PyTorch DDP:
 
 @!multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5
 
-- Matches one GPU on all 256 to the size of a change in summation order;
-  per-shard statistics would miss by a tenth of the update or more.
-- Why: batch-norm means over the split batch axis span all GPUs, so the
-  compiler inserts allreduces for them.
-
-::: {.d2l-note .rule}
-The compiled program, on the next slide, shows those allreduces.
-:::
+- **Global batch statistics under `Auto` sharding:** Because the batch dimension is sharded across `'data'` in `AxisType.Auto` mode, XLA partitions the BatchNorm mean and variance reductions across **all GPUs globally**, matching the single-GPU 256-image update to `float32` rounding ($\sim 10^{-7}$)!
 :::
 
-::: {.slide title="Two Large Allreduces Carry the Gradients; Many Small Ones the Statistics" only="jax"}
-[Where the collectives are]{.kicker}
+::: {.slide title="Local BatchNorm vs. SyncBatchNorm Trade-Offs" only="pytorch"}
+[Synchronizing Statistics]{.kicker}
+
+When does per-shard BatchNorm matter, and what does synchronizing it cost?
+
+- **When local BatchNorm works well:** When the per-GPU shard size $b = B/k$ is large ($b \ge 32\text{--}64$ images/GPU), per-shard means and variances are low-variance estimates and avoid any forward-pass communication barrier.
+- **When `nn.SyncBatchNorm` is needed:** In object detection or segmentation with tiny per-GPU batches ($b = 1\text{--}4$ high-resolution images/GPU), local statistics are too noisy; `nn.SyncBatchNorm.convert_sync_batchnorm(model)` inserts an allreduce at **every BatchNorm layer** during the forward and backward passes (adding dozens of latency-bound $\alpha$ synchronization points).
+:::
+
+::: {.slide title="Inspecting Emitted Collectives in the Compiled HLO" only="jax"}
+[Compiler Collectives]{.kicker}
+
+Parsing the compiled HLO text (`compiled.as_text()`) with `allreduce_megabytes` confirms both the two combined gradient buffers and the global BatchNorm reductions:
 
 @!multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3
 
-- Two buffers: almost all of the 45 MB of gradients.
-- 74 small calls: per-channel vectors, a few per call, mostly batch-norm
-  statistics. Their presence shows that the statistics are global.
-
-::: {.d2l-note .rule}
-Each batch-norm allreduce is tiny, but costs $\alpha$ and sits on the
-forward or backward path.
-:::
+- **Two large buffers + 74 tiny calls:** The two large allreduces ($25.8\text{ MB}$ and $18.9\text{ MB}$) carry the $44.7\text{ MB}$ of parameter gradients; the $74$ small allreduces ($0.24\text{ MB}$ total) synchronize per-channel BatchNorm means, variances, and activation gradients across all 20 BatchNorm layers in the forward and backward passes.
 :::
 
-::: {.slide title="Check: Forget the Rank in the Slice" only="pytorch"}
-[Check]{.kicker}
+::: {.slide title="Silent Data-Sharding Bugs in Distributed Training"}
+[Practical Pitfalls]{.kicker}
 
-Every GPU takes the same $b$ examples instead of its own slice. What do
-the throughput and the gradient report, and what is wrong?
+Two common data-loading bugs silently corrupt multi-GPU training without raising any runtime exception:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Throughput looks unchanged: $k$ GPUs, $kb$ examples counted
-per step. But the average gradient is that of $b$ examples, not $kb$: the
-effective minibatch is $k$ times smaller, and no error is raised.
-:::
-:::
+- **Bug 1 — Identical shards across ranks (forgetting `rank` in the slice offset, or placing indices with `P()` in JAX):** Every GPU processes the **exact same $b$ examples**. Reported throughput looks $k\times$ higher (counting $kb$ examples/step), but the averaged gradient is that of $b$ examples—wasting $k-1$ GPUs completely!
+- **Bug 2 — Independent unseeded shuffles per rank:** If each rank generates its own independent random permutation without a shared seed, examples are sampled *with replacement* across ranks within a step instead of forming a disjoint partition of the epoch.
+- **Defensive check:** Always assert on step 1 that minibatch checksums differ across ranks while sharing the same global epoch permutation seed.
 :::
 
-::: {.slide title="Check: Replicate the Indices" only="jax"}
-[Check]{.kicker}
+::: {.slide title="Bounding Exposed Communication: No Overlap vs. Bucket"}
+[Paper Predictions]{.kicker}
 
-The minibatch indices are placed with `P()` instead of `P('data')`, so
-every GPU receives all of them. Is the step still correct, and what does
-the second GPU contribute?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Correct: every GPU computes the gradient of the whole
-minibatch, so no allreduce is needed. But every GPU does all the work:
-the step takes as long as one GPU takes on the whole minibatch, and the
-weak-scaling speedup is 1.
-:::
-:::
-:::
-
-::: {.slide title="Check: Predict the Exposed Time with No Overlap"}
-[Check]{.kicker}
-
-$S$ = 44.7 MB of gradients. Each GPU sends $2(k-1)/k \cdot S$ in a ring,
-at a bus bandwidth of about 2.4 GB/s on our machine. How long is the
-allreduce at $k = 2$ and at $k = 4$, if nothing overlaps?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $44.7/2.4 \approx 18.6$ ms at $k = 2$; $1.5 \times 18.6
-\approx 28$ ms at $k = 4$. With full overlap, only the last bucket's
-share.
-:::
-:::
-:::
-
-::: {.slide title="Two Predictions: No Overlap, or Only the Last Bucket"}
-[Predicted]{.kicker}
-
-Weak scaling keeps the computation per GPU, so
-$t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ is the exposed
-communication. No overlap: $\frac{2(k-1)}{k} S\,\beta_\textrm{link}$;
-full overlap: the same for the last bucket alone.
+First, we measure $\beta_{\textrm{link}}$ on a bare $256\text{ MB}$ NCCL allreduce ($\sim 2.4\text{ GB/s}$ bus bandwidth, or $\beta_{\textrm{link}} \approx 0.42\text{ ns/B}$) and compute our two theoretical bounds on exposed communication $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ under weak scaling:
 
 @!multi-gpu-practice-ddp-really-run-5
+
+- **Two clear predictions:** Without overlap, exposed communication should be **$\sim 18\text{ ms}$** ($k=2$) and **$\sim 28\text{ ms}$** ($k=4$); with ideal bucket overlap, only the last bucket/buffer should be exposed (**$4\text{--}8\text{ ms}$** at $k=2$, **$6\text{--}12\text{ ms}$** at $k=4$).
 :::
 
-::: {.slide title="Weak Scaling: Four GPUs Do the Work of a Little Over Three"}
-[Scaling]{.kicker}
+::: {.slide title="Weak Scaling on Four GPUs: 3.1–3.3× Throughput"}
+[Weak Scaling Measured]{.kicker}
 
-256 examples per GPU; efficiency $= t_{\textrm{step}}(1)/t_{\textrm{step}}(k)$,
-predicted as $t_{\textrm{step}}(1)/(t_{\textrm{step}}(1) + \textrm{exposed})$:
+Fixing the per-GPU batch size at $b = 256$ images/GPU across $k \in \{1, 2, 4\}$ GPUs measures weak-scaling throughput and exposed communication $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$:
 
 @!multi-gpu-practice-ddp-really-run-3
 
 ::: {.d2l-note .warn}
-The exposed time is close to an allreduce with no overlap: overlap hides
-far less here than the bucket model predicts.
+Four GPUs achieve **$3.1\text{--}3.3\times$ single-GPU throughput** ($77\text{--}83\%$ scaling efficiency), and the measured exposed communication matches the **no-overlap prediction** ($\sim 18\text{ ms}$ at $k=2$, $\sim 28\text{ ms}$ at $k=4$) rather than the ideal bucket model!
 :::
 :::
 
-::: {.slide title="Strong Scaling: A Run with a Fixed Minibatch of 512 Finishes Less Than 3× Sooner"}
-[Scaling]{.kicker}
+::: {.slide title="Strong Scaling on Four GPUs: Shrinking Compute Share"}
+[Strong Scaling Measured]{.kicker}
+
+Fixing the global batch size at $B = 512$ images ($b = 512/k$ per GPU) measures strong scaling across $k \in \{1, 2, 4\}$ GPUs:
 
 @!multi-gpu-practice-ddp-really-run-4
 
-::: {.d2l-note .rule}
-At $k = 4$, 128 examples per GPU: the computation shrinks, the allreduce
-does not.
-:::
+- **Why strong scaling drops off faster at $k = 4$:** At $k = 4$, each GPU processes only $128$ images (halving local backward compute time relative to $b = 256$), while the $45\text{ MB}$ gradient allreduce volume $\frac{2(k-1)}{k}S = 1.5\,S$ stays full-sized.
 :::
 
-::: {.slide title="Two GPUs Cost Nothing by Themselves; Computation Slows Beside an Allreduce"}
-[Where the time goes]{.kicker}
+::: {.slide title="Why Did Overlap Hide So Little? Profiling GPU 0"}
+[Testing Bucket Assumptions]{.kicker}
 
-One GPU; two GPUs that skip the allreduce; two GPUs. Device time on GPU 0:
+To discover why exposed communication matched the no-overlap formula even though buckets launched during `backward()`, we profile GPU 0 across three runs: (1) 1 GPU, (2) 2 GPUs without communication (`no_sync` / `shard_map`), and (3) 2 GPUs with full communication:
 
 @!multi-gpu-practice-predicted-and-measured-communication-1
 
-- NCCL's kernels: about $S\,\beta_\textrm{link}$, as predicted.
-- The kernels beside them run slower: NCCL copies through host memory with
-  GPU kernels of its own.
-
 ::: {.d2l-note .rule}
-The time that overlap hides comes back, mostly, as slower computation.
+**Assumption 3 of the bucket model failed:** While NCCL's communication kernels overlap in time with backpropagation, **the backward compute kernels running alongside NCCL slow down by $8\text{--}13\text{ ms}$**, clawing back most of the time saved by overlap!
 :::
 :::
 
-::: {.slide title="A Workaround Is Not a Fix"}
-[The collective transport]{.kicker}
+::: {.slide title="SM Contention From Host-Staged NCCL Copy Kernels"}
+[Transport Bottleneck]{.kicker}
 
-No peer-to-peer access: NCCL stages through host memory, copying with GPU
-kernels. `NCCL_SHM_USE_CUDA_MEMCPY=1` uses the copy engines instead:
+Why does running an NCCL allreduce slow down concurrent convolution kernels on our workstation?
+
+- **How NCCL moves data without peer-to-peer (P2P):** Because our consumer RTX 4090s lack NVLink and PCIe P2P, NCCL stages every chunk through shared host DRAM (`SHM`) by running **dedicated GPU SM kernels** that read/write over PCIe and sum chunks on the SMs.
+- **Resource contention:** Those NCCL SM kernels compete directly with backward convolution and GEMM kernels for **Streaming Multiprocessors** and **DRAM memory bandwidth**.
 
 @!multi-gpu-practice-ddp-really-run-6
 
 ::: {.d2l-note .warn}
-Undocumented and since removed. A setting that speeds up a bare
-benchmark must be checked on the training run.
+Offloading host-staged copies to DMA copy engines (`NCCL_SHM_USE_CUDA_MEMCPY=1`) boosts bare allreduce bandwidth $4\text{--}5\times$, but deadlocks PyTorch DDP when overlapped with backward compute—always verify transport flags on the actual training loop!
 :::
 :::
 
-::: {.slide title="Check: The Same Step on an NVLink Machine"}
-[Check]{.kicker}
+::: {.slide title="PCIe Host Staging vs. NVLink Fabrics"}
+[Interconnect Impact]{.kicker}
 
-$S$ = 45 MB. On our machine each GPU sends at about 2.4 GB/s; NVLink 5
-moves 900 GB/s per direction. What happens to the allreduce and to the
-weak-scaling efficiency?
+Our cost model $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + t_{\textrm{exposed}}(\beta_{\textrm{link}})$ explains how the exact same ResNet-18 training step behaves on a data-center NVLink node:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The allreduce falls from about 18 ms to well under 1 ms,
-against a step of about 100 ms: the cost model predicts an efficiency
-near 100%, with or without overlap. Same model, same cost model, a
-different $\beta_\textrm{link}$.
-:::
-:::
+| Interconnect Architecture | One-Way Link Rate | Allreduce Time ($S = 45\text{ MB}$, $k=4$) | Weak-Scaling Efficiency ($b=256$, $100\text{ ms}$ step) |
+| :--- | :---: | :---: | :---: |
+| **Consumer PCIe 4.0 via Host DRAM** | $\le 23\text{ GB/s}$ ($\sim 2.4\text{ GB/s}$ bus) | $\approx 28\text{ ms}$ (plus SM contention) | **$77\text{--}83\%$** ($3.1\text{--}3.3\times$ on 4 GPUs) |
+| **Data-Center NVLink 4 (H100)** | $450\text{ GB/s}$ | $< 0.2\text{ ms}$ | **$> 99\%$** ($\approx 4.0\times$ on 4 GPUs) |
+| **Data-Center NVLink 5 (B200)** | $900\text{ GB/s}$ | $< 0.1\text{ ms}$ | **$> 99\%$** ($\approx 4.0\times$ on 4 GPUs) |
+
+- **Next bottleneck:** Even on NVLink where data-parallel communication is nearly free, every GPU still holds a full $16N$-byte copy of the model, gradients, and Adam state—motivating **state sharding (ZeRO / FSDP)** in §13.7.
 :::
 
-::: {.slide title="Wrap-up" only="pytorch"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Bucketing, BatchNorm, and Scaling"}
+[Check Your Understanding]{.kicker}
 
-- DDP: one process per GPU, NCCL's ring instead of our star.
-- Buckets overlap allreduces with the backward; the last stays exposed.
-- One-step check: DDP equals one GPU accumulating over the shards.
-- ResNet-18, weak scaling: 1.8× on two GPUs, 3.3× on four.
-- Exposed time near $S\,\beta_\textrm{link}$: the allreduce overlaps,
-  but the computation beside it slows down.
-- Copy engines: bus bandwidth four to five times higher, but
-  DDP training deadlocks.
+Test your grasp of production data parallelism with three diagnostic questions:
 
-**Next:** every GPU still holds the whole training state, 16 bytes per
-parameter for Adam in fp32. Sharding the Training State divides it among
-the GPUs.
+1. In what parameter order does DDP pack gradients into buckets, and why would packing them in forward layer order ($1, 2, \ldots, L$) defeat communication overlap?
+2. On our four RTX 4090s, weak scaling at $b = 256$ images/GPU gave $E(4) = t_1 / t_{\textrm{step}}(4) \approx 80\%$ efficiency ($t_1 \approx 100\text{ ms}$ compute + $28\text{ ms}$ exposed allreduce). If we accumulate gradients over $a = 5$ micro-batches of $256$ images per GPU before running the allreduce (`model.no_sync()` on the first $4$ micro-batches), what does the weak-scaling efficiency $E(4)$ become?
+3. When you run a one-step check comparing 2-GPU training against 1-GPU training on a network with `BatchNorm`, which single-GPU reference does default PyTorch `DDP` match, and which does JAX `Auto` sharding match?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Reverse parameter order ($L, L-1, \ldots, 1$):** Because `backward()` produces gradients from layer $L$ back to layer $1$. A forward-ordered bucket containing layer $1$ could not launch until the very end of `backward()`.
+2. **$\mathbf{E(4) \approx 95\%}$:** Local compute grows $5\times$ to $5 \times 100 = 500\text{ ms}$ while the single allreduce stays at $28\text{ ms}$, giving $E(4) = \frac{500}{500 + 28} \approx 94.7\%$ (at the cost of a $5\times$ larger global batch $B = 5 \times 4 \times 256 = 5{,}120$).
+3. **PyTorch `DDP`** uses per-shard statistics by default (matching **1 GPU accumulating two $B/2$ halves**); **JAX `Auto` sharding** inserts cross-GPU reductions for BatchNorm statistics (matching **1 GPU on the full batch $B$**).
+:::
 :::
 
-::: {.slide title="Wrap-up" only="jax"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Production Data Parallelism and Overlap"}
+[Key Takeaways]{.kicker}
 
-- `jit` with placement: one program; the compiler writes and merges the
-  allreduces.
-- Buckets overlap allreduces with the backward; the last stays exposed.
-- One-step check and compiled program: global batch-norm statistics.
-- ResNet-18, weak scaling: 1.7× on two GPUs, 3.1× on four.
-- Exposed time near $S\,\beta_\textrm{link}$: half of it runs alone, and
-  the computation beside the rest slows down.
-- Copy engines: bus bandwidth four to five times higher; check
-  it on the training run.
-
-**Next:** every GPU still holds the whole training state, 16 bytes per
-parameter for Adam in fp32. Sharding the Training State divides it among
-the GPUs.
+| System Mechanism | PyTorch (`torchrun` + `DDP`) | JAX (`nnx.jit` + `NamedSharding`) | Systems Purpose & Caveat |
+| :--- | :--- | :--- | :--- |
+| **Execution Model** | $k$ processes (1 per GPU) + NCCL | 1 process, compiler-partitioned HLO | Eliminates single-thread $k \cdot h_{\textrm{step}}$ dispatch bottleneck |
+| **Gradient Bucketing** | Reverse order: $1\text{ MiB}$ first, then $25\text{ MiB}$ | XLA combiner up to $30\text{ MiB}$ buffers | Amortizes $\alpha$ while starting allreduces during `backward()` |
+| **BatchNorm Default** | Per-shard stats (`SyncBatchNorm` optional) | Global stats across `'data'` mesh axis | Verified via 1-step check against full vs. accumulated-halves |
+| **Ideal Bucket Overlap** | Exposes only final bucket ($S_{\textrm{last}}$) | Exposes only final combined buffer | Requires fast links ($\tau < t_{\textrm{bwd}}$) and zero SM contention |
+| **Host-Staged PCIe NCCL** | $\sim 2.4\text{ GB/s}$ bus BW; SM copy kernels | $\sim 2.4\text{ GB/s}$ bus BW; SM copy kernels | Concurrent NCCL SM kernels slow backward compute by $\sim 10\text{ ms}$ |
 :::

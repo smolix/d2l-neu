@@ -68,39 +68,100 @@ mdl-expectation-gradients
 further-reading
 ```
 
-## Resources and Further Reading {.unnumbered}
+<!-- slides -->
 
-The resources below accompany the main sections of this chapter, with each
-entry noting the section it supports. Topics beyond what the chapter teaches,
-such as automatic differentiation at nonsmooth points, recursive
-checkpointing, and the Lebesgue integral, are gathered in
-:numref:`sec_mdl-calculus-further-reading`.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §34]{.kicker}
 
-**Books**
+Calculus and Automatic Differentiation: From Local Models to Backpropagation<br>**Taylor approximations · descent lemma · gradients & Hessians · computation graphs · matrix calculus · autodiff · expectation gradients**
+:::
+:::
 
-- [Mathematics for Machine Learning — Deisenroth, Faisal & Ong](https://mml-book.github.io/) — free Cambridge text; its Chapter 5, "Vector Calculus," covers gradients, Jacobians, and the chain rule for machine learning, the material of :numref:`sec_mdl-single_variable_calculus` and :numref:`sec_mdl-multivariable_calculus`.
-- [Calculus — Gilbert Strang, MIT OpenCourseWare](https://ocw.mit.edu/courses/res-18-001-calculus-fall-2023/) — a free textbook (3rd edition) whose chapters on integrals, the fundamental theorem, and multiple integrals accompany :numref:`sec_mdl-integral_calculus`.
-- [The Matrix Cookbook — Petersen & Pedersen](https://archive.org/details/imm3274) — a reference table of matrix-derivative identities, useful for checking the results that :numref:`sec_mdl-matrix-calculus` derives by the differential method.
-- [Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation — Griewank & Walther](https://epubs.siam.org/doi/book/10.1137/1.9780898717761) — the standard monograph (SIAM, 2nd ed.) on forward and reverse mode and checkpointing, the subject of :numref:`sec_mdl-matrix-calculus-autodiff`.
-- [The Art of Differentiating Computer Programs — Naumann](https://epubs.siam.org/doi/book/10.1137/1.9781611972078) — an introduction to algorithmic differentiation from the compiler's point of view, with tangent and adjoint code written out by hand; it accompanies :numref:`sec_mdl-matrix-calculus-autodiff`.
+::: {.slide title="Two Core Questions Behind Every Training Step"}
+[Motivation]{.kicker}
 
-**Courses and video lectures**
+Every deep learning training loop evaluates a scalar loss $\ell(\mathbf{w})$, calls `backward()` for its gradient, and updates $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla \ell(\mathbf{w})$—raising two fundamental mathematical questions:
 
-- [Essence of Calculus — 3Blue1Brown](https://www.3blue1brown.com/topics/calculus) — a twelve-part visual introduction to derivatives, integrals, and the chain rule, for :numref:`sec_mdl-single_variable_calculus` and :numref:`sec_mdl-integral_calculus`.
-- [Single Variable Calculus (18.01SC) — MIT OpenCourseWare](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/) — a self-study course with lecture videos and graded problem sets for :numref:`sec_mdl-single_variable_calculus`.
-- [Multivariable Calculus (18.02SC) — MIT OpenCourseWare](https://ocw.mit.edu/courses/18-02sc-multivariable-calculus-fall-2010/) — partial derivatives, gradients, Lagrange multipliers, and double integrals, for :numref:`sec_mdl-multivariable_calculus`.
-- [Matrix Calculus for Machine Learning and Beyond (18.S096) — Edelman & Johnson, MIT OCW](https://ocw.mit.edu/courses/18-s096-matrix-calculus-for-machine-learning-and-beyond-january-iap-2023/) — derivatives of matrix-valued maps treated as linear maps rather than entry by entry, the view of :numref:`sec_mdl-matrix-calculus`; lecture notes and videos included.
+::: {.cols}
+::: {.col}
+- **1. How far can a local slope be trusted?** Doubling the learning rate $\eta$ can make training diverge even though $\nabla \ell(\mathbf{w})$ is exact. The gradient is only a first-order linear model; how rapidly curvature bends the loss away from that tangent plane determines which step sizes are safe.
+:::
 
-**Tutorials and notes**
+::: {.col}
+- **2. Why is the gradient of $10^8$ weights so cheap?** Perturbing $10^8$ parameters one at a time via finite differences would require $10^8$ forward passes (~12 days at 10 ms/pass). A single backward pass returns all $10^8$ exact partial derivatives in roughly three forward-pass times (~30 ms).
+:::
+:::
 
-- [The Matrix Calculus You Need For Deep Learning — Parr & Howard](https://explained.ai/matrix-calculus/) — a free primer on the index method for the Jacobians of :numref:`sec_mdl-matrix-calculus`, assuming only Calculus 1.
-- [Calculus on Computational Graphs: Backpropagation — Christopher Olah](https://colah.github.io/posts/2015-08-Backprop/) — a short, diagram-driven post on the chain rule as a sum over paths, the backward sweep of :numref:`sec_mdl-chain-rule-graphs`.
-- [matrixcalculus.org — Laue, Mitterreiter & Giesen](https://www.matrixcalculus.org/) — an online symbolic calculator for vector and matrix derivatives, for checking the hand derivations of :numref:`sec_mdl-matrix-calculus`.
+::: {.d2l-note}
+Differential calculus answers both questions, while integral calculus enters as soon as models sample from parameterized probability distributions (VAEs, normalizing flows, and policy gradients).
+:::
+:::
 
-**Automatic differentiation and gradient estimation**
+::: {.slide title="Three Pillars Carrying Deep Learning Calculus"}
+[Unifying Principles]{.kicker}
 
-- [Automatic Differentiation in Machine Learning: a Survey — Baydin, Pearlmutter, Radul & Siskind](https://www.jmlr.org/papers/volume18/17-468/17-468.pdf) — the standard survey (JMLR, 2018) of the modes and their implementations, and of why automatic differentiation is neither symbolic nor numerical differentiation; it accompanies :numref:`sec_mdl-matrix-calculus-autodiff`.
-- [The Autodiff Cookbook — JAX documentation](https://docs.jax.dev/en/latest/notebooks/autodiff_cookbook.html) — `grad`, JVPs, VJPs, Jacobians, and Hessian–vector products with runnable examples, the compositions of :numref:`sec_mdl-matrix-calculus-autodiff`.
-- [Autodidax: JAX core from scratch — JAX documentation](https://docs.jax.dev/en/latest/autodidax.html) — builds forward- and reverse-mode autodiff (and `jit`/`vmap`) from basic components, a larger version of the engines built in :numref:`sec_mdl-matrix-calculus-autodiff`.
-- [A Gentle Introduction to torch.autograd — PyTorch documentation](https://docs.pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html) — how PyTorch records a dynamic graph and replays it in reverse, the tape of :numref:`sec_mdl-matrix-calculus-autodiff`.
-- [Monte Carlo Gradient Estimation in Machine Learning — Mohamed, Rosca, Figurnov & Mnih](https://jmlr.org/papers/v21/19-346.html) — a survey (JMLR, 2020) of the score-function and pathwise estimators of :numref:`sec_mdl-expectation-gradients`, with their variances and the conditions under which each applies.
+Three mathematical results connect classical analysis directly to modern deep learning optimization and software systems:
+
+::: {.cols}
+::: {.col}
+- **Pillar 1 — The Descent Lemma (§34.1–34.2):** Taylor's theorem with Lagrange remainder converts a bound $L$ on curvature ($|f''| \le L$) into a quadratic upper ceiling, proving that any step size $0 < \eta < 2/L$ strictly decreases the loss and $\eta = 1/L$ maximizes the guaranteed drop.
+- **Pillar 2 — Reverse-Mode Jacobian Products (§34.3–34.5):** A $K$-layer network has Jacobian $\mathbf{J} = \mathbf{J}_K \cdots \mathbf{J}_1$. Associating from the scalar loss backward, $((\mathbf{u}^\top \mathbf{J}_K)\mathbf{J}_{K-1})\cdots \mathbf{J}_1$, keeps every step a matrix–vector product and computes all parameter gradients in $O(1)$ sweeps.
+:::
+
+::: {.col}
+- **Pillar 3 — Differentiating Expectations (§34.6–34.7):** To differentiate $\mathbb{E}_{X \sim p_{\boldsymbol{\theta}}}[g(X)]$, we pass $\nabla_{\boldsymbol{\theta}}$ inside the integral and either differentiate the log-density (**score-function / REINFORCE**, general but high variance) or differentiate a reparameterized sample $X = T_{\boldsymbol{\theta}}(\mathbf{z})$ (**pathwise trick**, low variance when $g$ is smooth).
+:::
+:::
+:::
+
+::: {.slide title="Chapter 34 Roadmap: From 1D Slices to Sampling"}
+[Architectural Progression]{.kicker}
+
+The chapter develops in three parts—local polynomial approximations, chain rule and automatic differentiation across layers, and integration with stochastic gradient estimation:
+
+| Section | Core Mathematical Object | Role in Deep Learning |
+| :--- | :--- | :--- |
+| **§34.1 Single-Variable Calculus** | $f'(x)$, Taylor polynomial $P_n$, Lagrange remainder $R_n$, $\partial f(x)$ | Safe step sizes $\eta < 2/L$, Newton's method, subgradients at $\mathrm{ReLU}$ kinks |
+| **§34.2 Multivariable Calculus** | Gradient $\nabla f \in \mathbb{R}^n$, symmetric Hessian $\mathbf{H}_f \in \mathbb{R}^{n \times n}$ | Steepest descent, contour orthogonality, saddle vs. minimum classification |
+| **§34.3 Chain Rule on Graphs** | Edge partials $\partial c/\partial n$ vs. total adjoints $\bar{n} = \mathrm{d}f/\mathrm{d}n$ | Path-sum chain rule on DAGs, skip connections, reverse topological sweep |
+| **§34.4 Matrix Calculus** | Jacobian $\mathbf{J}_{\mathbf{f}} \in \mathbb{R}^{m \times n}$, differential $df = \langle \nabla f, d\mathbf{X}\rangle$ | Layer backward rules ($\bar{\mathbf{X}} = \bar{\mathbf{Y}}\mathbf{W}^\top$, $\bar{\mathbf{W}} = \mathbf{X}^\top\bar{\mathbf{Y}}$), softmax-CE $\mathbf{p} - \mathbf{y}$ |
+| **§34.5 Automatic Differentiation** | Dual numbers $a + b\varepsilon$ ($\varepsilon^2=0$), Wengert tape, JVPs & VJPs | Forward vs. reverse cost, $2\sqrt{T}$ checkpointing, $\mathbf{H}\mathbf{v}$ products, implicit diff |
+| **§34.6 Integral Calculus** | Riemann sums, Fundamental Theorem, Fubini, $\|\det \mathbf{J}_{\boldsymbol{\phi}}\|$ | Probability densities, normalizing flows volume factor, Gaussian normalizer $\sqrt{2\pi}$ |
+| **§34.7 Expectation Gradients** | Leibniz boundary rule, score $\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}$, pathwise map $T_{\boldsymbol{\theta}}(\mathbf{z})$ | REINFORCE with baselines vs. VAE reparameterization variance trade-offs |
+:::
+
+::: {.slide title="Running Benchmarks Anchoring Each Section"}
+[Concrete Pedagogical Thread]{.kicker}
+
+Every theorem and algorithm in this chapter is verified numerically on a concrete analytical benchmark:
+
+| Section | Running Mathematical Benchmark | Key Quantitative Result Verified in Code |
+| :--- | :--- | :--- |
+| **§34.1** | Softplus $s(x)=\log(1+e^x)$ & logistic loss $\ell(w)=s(-w)$ | $\ell(0.1)$ linear gap $0.00125 \approx \frac{1}{2}\ell''(0)(0.1)^2$; $L=\frac{1}{4} \Rightarrow \eta < 8$ safe |
+| **§34.2** | Log-sum-exp $f(x,y)=\log(e^x+e^y)$ at $(0, \log 2)$ | $\nabla f = (\frac{1}{3}, \frac{2}{3})$ (softmax); $\mathbf{H}_f$ eigenvalues $0$ (along $\mathbf{1}$) and $\frac{4}{9}$ |
+| **§34.3** | 4-input squaring DAG & 5-node skip-edge DAG | Exact integer adjoints $\bar{w}=73472, \bar{y}=-68224$ in $12$ multiplies vs. $24$ |
+| **§34.4** | 2-2-1 $\mathrm{ReLU}$ network & curved map $(x+\sin y, y+x^2/2)$ | Left-to-right VJP costs $3\times 10^6$ multiplies vs. $2\times 10^9$ right-to-left |
+| **§34.5** | `Dual` & `Var` engines on $(\sum_{j=1}^{200} x_j^2)^2$ and $y=(uv+u)^2$ | Reverse sweep takes $802$ ops vs. $80{,}200$ in forward mode ($100\times$ speedup) |
+| **§34.6–34.7** | Gaussian $\mathcal{N}(0,1)$ polar integral & $\ell(\theta)=\mathbb{E}_{X\sim\mathcal{N}(\theta,1)}[X^2]$ | $\int e^{-z^2/2}dz = \sqrt{2\pi}$; pathwise SD $2.0$ vs. score-function SD $7.18$ at $\theta=1.5$ |
+:::
+
+::: {.slide title="How to Navigate Chapter 34"}
+[Study Guide]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **If you know introductory calculus:** Skim the differentiation table in §34.1 and the Riemann sum / antiderivative review in §34.6, and jump directly to the **Mean Value Theorem, Lagrange remainder, and descent lemma** (§34.1) and **change of variables in $\mathbb{R}^n$** (§34.6).
+- **Essential for deep learning theory & derivations:** Master the **differential method** $df = \langle \nabla f, d\mathbf{X}\rangle$ and trace move rule in §34.4—it replaces hundred-entry matrix derivative tables and prevents silent transpose bugs on square matrices.
+:::
+
+::: {.col}
+- **Essential for systems & modern ML:** Study **§34.5 (Automatic Differentiation)** for why reverse mode costs ~3 forward passes, how activation checkpointing shrinks memory from $O(T)$ to $2\sqrt{T}$, how forward-over-reverse computes $\mathbf{H}\mathbf{v}$ without a 4 TB Hessian, and **§34.7** for Monte Carlo gradient variance.
+:::
+:::
+
+::: {.d2l-note}
+**Up next (§34.1 Single-Variable Calculus):** How first and second derivatives build local linear and quadratic models, bound approximation error, and certify safe step sizes for gradient descent.
+:::
+:::
+

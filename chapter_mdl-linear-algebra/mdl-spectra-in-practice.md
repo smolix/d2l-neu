@@ -727,29 +727,6 @@ $2\sqrt{n}$.
 
 ## Exercises
 
-1. **A defective limit.** For $\varepsilon\ge0$, let
-
-   $$
-   \mathbf{A}_\varepsilon=\begin{pmatrix}2&1\\\varepsilon&2\end{pmatrix}.
-   $$
-
-    1. Find the eigenvalues and eigenvectors of $\mathbf{A}_\varepsilon$ for
-       $\varepsilon>0$ and for $\varepsilon=0$. Which multiplicities differ at
-       $\varepsilon=0$?
-    1. Collect the unit eigenvectors of $\mathbf{A}_\varepsilon$ in the columns
-       of $\mathbf{V}_\varepsilon$. How do the angle between them and the
-       condition number $\kappa_2(\mathbf{V}_\varepsilon)$ of
-       :eqref:`eq_mdl-nonnormal-power-bound` behave as $\varepsilon\to0$?
-       Show that $\sqrt\varepsilon\,\kappa_2(\mathbf V_\varepsilon)$ tends to
-       a constant as $\varepsilon\to0$, and find it.
-    1. By how much do the eigenvalues of $\mathbf{A}_0$ move when its
-       lower-left entry changes from $0$ to $\varepsilon=10^{-10}$? Compare
-       with the eigenvalues of the symmetric matrix
-       $2\mathbf{I}+\varepsilon\left(\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right)$.
-       This is the smallest case of Exercise
-       :exref:`ex_mdl-eigendecomposition-computed-eigenvalue-accuracy`a.
-   :exlabel:`ex_mdl-eigendecomposition-defective-limit`
-
 1. **Spectral radius and norms.** The spectral radius bounds every power of
    a matrix from below, and for normal matrices it also bounds them from
    above.
@@ -823,37 +800,6 @@ $2\sqrt{n}$.
        in :numref:`subsec_mdl-transient-growth`. Find $K(\boldsymbol\Lambda)$
        by hand.
    :exlabel:`ex_mdl-eigendecomposition-pseudospectra-transient-growth`
-
-1. [code] **Shifted inverse iteration.** ● Power iteration finds only the
-   dominant eigenvalue. *Inverse iteration* with shift $\mu$ runs power
-   iteration with $(\mathbf{A}-\mu\mathbf{I})^{-1}$ instead, solving one linear
-   system per step :cite:`Golub.Van-Loan.1996`. Parts (a) to (c) use the
-   symmetric matrix
-
-   $$
-   \mathbf A_4=\begin{pmatrix}1&0.1&0.1&0.1\\0.1&3&0.2&0.3\\0.1&0.2&5&0.5\\0.1&0.3&0.5&9\end{pmatrix},
-   $$
-
-   whose Gershgorin centres are 1, 3, 5, 9 and whose eigenvalues are about
-   0.99, 2.97, 4.95, and 9.08.
-    1. Show that $(\mathbf{A}-\mu\mathbf{I})^{-1}$ has the same eigenvectors as
-       $\mathbf{A}$, and find its eigenvalues. Which eigenpair of $\mathbf{A}$
-       does inverse iteration find, and at which rate does it converge?
-    1. Run inverse iteration on $\mathbf A_4$ with each of the four disc centres
-       as the shift. How many iterations does each run need until the sine of
-       the angle between the iterate and the eigenvector returned by
-       `np.linalg.eigh` falls below $10^{-10}$? Compare with plain power
-       iteration for the largest eigenvalue.
-    1. *Rayleigh quotient iteration* replaces the fixed shift by the Rayleigh
-       quotient of the current iterate at every step. Repeat (b) with the disc
-       centres as initial shifts. Relate the iteration counts to Exercise
-       :exref:`ex_mdl-eigendecomposition-power-iteration-rates`b.
-    1. Run inverse iteration on the $3\times3$ matrix
-       :eqref:`eq_mdl-gershgorin-example` with the real shift $\mu=4$. Why does
-       it never converge? Replace the shift by $4+i$ (complex arithmetic) and
-       explain the observed rate of about 0.02 per step from the distances
-       $|\lambda-\mu|$ of the three eigenvalues.
-   :exlabel:`ex_mdl-eigendecomposition-shifted-inverse-iteration`
 
 1. [code] **Damping in PageRank.** ● Let $\mathbf{P}$ be a column-stochastic
    $n\times n$ matrix and
@@ -940,254 +886,220 @@ $2\sqrt{n}$.
 ::: {.cover}
 [Dive into Deep Learning · §33.4]{.kicker}
 
-Spectra in Practice<br>
-**eigenvalues of large matrices · and what eigenvalues leave unsaid**
+Spectra in Practice<br>**Gershgorin discs · power iteration & PageRank · non-normal transient growth · Jacobian products · random matrices**
 :::
 :::
 
-::: {.slide title="A Billion Rows, and Eigenvalues That Promise Too Little"}
-[The problem]{.kicker}
+::: {.slide title="Billion-Row Matrices and Misleading Eigenvalues"}
+[Motivation]{.kicker}
 
-The surfer's $2\times2$ matrix was solved by hand, and its eigenvalue $1/4$
-gave the error at every click. Outside the textbook:
+- **Challenge 1 — Scale Prohibits Full Factorization:** Web graphs and large neural layers have millions or billions of rows where $O(n^3)$ eigendecompositions are impossible and only matrix–vector products $\mathbf{A}\mathbf{v}$ are affordable.
+- **Challenge 2 — Eigenvalues Only Govern the $k \to \infty$ Limit:** Even for a $2 \times 2$ matrix whose eigenvalues are $0.9$ and $0.8$, finite powers $\|\mathbf{M}^k\|_2$ can balloon more than ten-fold before decaying.
+- **Challenge 3 — Backpropagation Multiplies Changing Matrices:** Backpropagation through time (BPTT) in a recurrent network multiplies $T$ *different* per-step Jacobians $\mathbf{D}_1^\top \cdots \mathbf{D}_T^\top$, where individual eigenvalues promise nothing at all.
 
-- The link matrix of the web has billions of rows. No characteristic
-  polynomial, no factorization; only products $\mathbf A\mathbf v$ are cheap.
-- $\mathbf J_2(0.99)$ has both eigenvalues at $0.99$, yet $\|\mathbf J^k\|_2$
-  climbs to 37 before it decays.
-- Backpropagation through time multiplies $T$ *different* Jacobians, not one
-  matrix $T$ times.
-
-::: {.d2l-note .warn}
-What can we learn about eigenvalues without factoring? And how far can they
-be trusted for a finite number of steps?
+::: {.d2l-note}
+**Section Roadmap:** First we locate and compute dominant eigenvalues without factoring (Gershgorin, power iteration, PageRank); then we see why finite-step stability demands norms and singular values rather than eigenvalues.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- bound the eigenvalues of a matrix from its entries (Gershgorin);
-- compute the dominant eigenpair by power iteration and predict its rate;
-- explain PageRank as an eigenvector, and why damping makes it computable;
-- tell the spectral radius, the spectral norm and the Lyapunov exponent
-  apart, and say which one bounds what;
-- recognize transient growth in a matrix that is not normal.
-
-**Running examples:** the symmetric
-$\mathbf S=\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$ for power
-iteration, and
-$\mathbf M=\left(\begin{smallmatrix}0.9&4\\0&0.8\end{smallmatrix}\right)$ for
-transient growth.
-:::
-
-::: {.slide title="What Eigenvalues Say, and What They Leave Unsaid"}
-[Where this fits]{.kicker}
+::: {.slide title="Gershgorin Discs Bound Eigenvalues From Entries"}
+[Locating Eigenvalues]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Vectors, Angles, and Projections | lengths, angles, projections, hyperplanes |
-| Matrices as Linear Maps | columns, rank, inverses, determinants |
-| Eigendecompositions | powers of one square map, symmetric matrices |
-| **Spectra in Practice** | **locating and computing eigenvalues, where they mislead** |
-| Singular Value Decomposition | two bases, best low rank, least squares, $\kappa$ |
-:::
-
-::: {.col .narrow}
-- **Uses:** $\mathbf A^k\mathbf x=\sum_i c_i\lambda_i^k\mathbf v_i$ for a
-  diagonalizable $\mathbf A$; the spectral theorem.
-- **Skips:** production eigensolvers.
-- Gershgorin and PageRank are classical; deep learning uses power iteration,
-  transient growth and random matrices more.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Locating and Computing Eigenvalues]{.dtitle}
-
-[Gershgorin discs · power iteration · PageRank]{.dsub}
-:::
-:::
-
-::: {.slide title="Every Eigenvalue Lies in the Union of the Gershgorin Discs"}
-[Locating]{.kicker}
-
-::: {.cols .vc}
-::: {.col .narrow}
-- Disc $i$: centre $a_{ii}$, radius $r_i=\sum_{j\neq i}|a_{ij}|$.
-- Proof: in $\mathbf A\mathbf v=\lambda\mathbf v$, read the row where
-  $|v_i|$ is largest: $|\lambda-a_{ii}|\le r_i$.
-- A connected group of $m$ discs holds $m$ eigenvalues: the pair
-  $3.99\pm0.96i$ near 4, and $1.03$.
-- $a_{ii}>r_i$ for all $i$: 0 lies in no disc, so $\mathbf A$ is invertible.
+- **Row-Sum Discs:** For each row $i$ of $\mathbf{A}$, define disc $\mathcal{D}_i$ with center $a_{ii}$ and radius $r_i = \sum_{j \neq i} |a_{ij}|$.
+- **Three-Line Proof:** If $\mathbf{A}\mathbf{v} = \lambda\mathbf{v}$ and $|v_i| = \max_j |v_j| > 0$, row $i$ gives $(\lambda - a_{ii})v_i = \sum_{j \neq i} a_{ij}v_j$, so:
+  $$|\lambda - a_{ii}| \le \sum_{j \neq i} |a_{ij}|\,\frac{|v_j|}{|v_i|} \le r_i$$
+- **Connected Components & Diagonal Dominance:** A disjoint union of $m$ discs traps $m$ eigenvalues; if $a_{ii} > r_i$ for all $i$, $0 \notin \bigcup_i \mathcal{D}_i$ so $\mathbf{A}$ is invertible (and PD if symmetric).
 :::
 
 ::: {.col .fig}
-![](../img/mdl-la-gershgorin.svg)
+![](../img/mdl-la-gershgorin.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Power Iteration Converges at Rate |λ₂/λ₁|"}
-[Computing]{.kicker}
+::: {.slide title="Verifying Gershgorin Discs on a 3×3 Matrix"}
+[Locating Eigenvalues]{.kicker}
 
-$$\mathbf A^k\mathbf v_0=\lambda_1^k\Bigl(c_1\mathbf v_1+\sum_{i\ge2}c_i\bigl(\tfrac{\lambda_i}{\lambda_1}\bigr)^k\mathbf v_i\Bigr)$$
+For $\mathbf{A} = \left(\begin{smallmatrix}4&1&0\\-1&4&0.5\\0.5&0&1\end{smallmatrix}\right)$, the two overlapping discs around $4$ trap the complex pair $3.99 \pm 0.96i$, while the isolated disc around $1$ traps $1.03$:
 
-@fig:mdl-la-power-iter
+@eigendecomposition-gershgorin-circle-theorem
 
-$\mathbf S^k\mathbf e_1=(3^k\mathbf v_1+\mathbf v_2)/\sqrt2$: direction error
-$\times\tfrac13$ per step, Rayleigh-quotient error $\times\tfrac19$. Needs
-$c_1\neq0$ (almost every start) and a strictly dominant $|\lambda_1|$.
-:::
-
-::: {.slide title="Positive Matrices Are Safe; Gaussian Ones Fail Four Times in Ten"}
-[Computing]{.kicker}
-
-Is strict dominance typical? Gap ratios of 10,000 random $5\times5$ matrices
-with uniform entries, and the dominant eigenvalues of 10,000 Gaussian ones:
-
-@!mdl-spectra-in-practice-power-iteration-1
-
-- Positive entries: a real, simple, strictly dominant eigenvalue
-  (Perron--Frobenius); 200 steps are far more than enough.
-- Gaussian entries: a complex dominant pair in about four draws of ten. The
-  norm ratio then oscillates forever; only $\|\mathbf A^k\mathbf v_0\|^{1/k}$
-  converges.
-:::
-
-::: {.slide title="PageRank Is the Eigenvector for λ = 1"}
-[Computing]{.kicker}
-
-Links $1\to2$, $2\to1$, $2\to3$; page 3 jumps anywhere:
-$\mathbf P\boldsymbol\pi=\boldsymbol\pi$ gives $\boldsymbol\pi=(0.3,0.4,0.3)$.
-
-- columns sum to 1, so $\lambda=1$; Gershgorin keeps $|\lambda|\le1$;
-- damping $\mathbf G=0.85\,\mathbf P+0.15\cdot\tfrac1n\mathbf 1\mathbf 1^\top$
-  has positive entries, so Perron--Frobenius applies;
-- $|\lambda_2(\mathbf G)|\le0.85$ (Haveliwala and Kamvar): fifty sweeps cut
-  the error by more than 3000, on a graph of any size;
-- sparse $\mathbf P$ is stored, dense $\mathbf G$ never formed.
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Iteration and Stability]{.dtitle}
-
-[spectral radius · normal matrices · transient growth · products]{.dsub}
-:::
-:::
-
-::: {.slide title="The Spectral Radius Is the Long-Run Rate, and Only That"}
-[Stability]{.kicker}
-
-$\rho(\mathbf A)=\max_i|\lambda_i|$, and
-$\lim_{k\to\infty}\|\mathbf A^k\|^{1/k}=\rho(\mathbf A)$ (Gelfand).
-
-- Normal ($\mathbf A^\top\mathbf A=\mathbf A\mathbf A^\top$, an orthonormal
-  eigenbasis): $\|\mathbf A^k\|_2=\rho(\mathbf A)^k$ at every step.
-- Diagonalizable but not normal:
-  $\|\mathbf A^k\|_2\le\kappa_2(\mathbf V)\,\rho(\mathbf A)^k$, with
-  $\kappa_2(\mathbf V)=\|\mathbf V\|_2\|\mathbf V^{-1}\|_2$ large when
-  eigenvectors are nearly parallel.
-
-::: {.d2l-note .rule}
-Nearly parallel eigenvectors: an ordinary input is a difference of large
-components. They decay at different rates, and the difference grows first.
-:::
-:::
-
-::: {.slide title="Same Eigenvalues, Ten-Fold Growth Before Decay"}
-[Stability]{.kicker}
-
-$\mathbf M=\left(\begin{smallmatrix}0.9&4\\0&0.8\end{smallmatrix}\right)$:
-$\mathbf v_1=(1,0)$, $\mathbf v_2=(-40,1)$, $1.4^\circ$ apart, and
-$\mathbf e_2=40\mathbf v_1+\mathbf v_2$.
-
-@fig:mdl-la-transient-cancel
-
-$\mathbf M^k\mathbf e_2=\bigl(40(0.9^k-0.8^k),\,0.8^k\bigr)$: peak
-$\|\mathbf M^6\|_2=10.8$, while $\operatorname{diag}(0.9,0.8)$ never exceeds 1.
-:::
-
-::: {.slide title="A Perturbation of 0.005 Puts an Eigenvalue of M on the Unit Circle"}
-[Stability]{.kicker}
-
-![](../img/mdl-la-transient-growth.svg){width=80%}
-
-- $\varepsilon$-pseudospectrum: every $z$ that is an eigenvalue of
-  $\mathbf A+\mathbf E$ for some $\|\mathbf E\|_2\le\varepsilon$; equivalently
-  $\|(z\mathbf I-\mathbf A)^{-1}\|_2\ge1/\varepsilon$.
-- At $z=1$ this norm is 10 for the normal
-  $\boldsymbol\Lambda=\operatorname{diag}(0.9,0.8)$, the reciprocal of the
-  distance to the eigenvalue 0.9, and 200 for $\mathbf M$.
-- Rounding errors are such perturbations. A diagnostic; skip on a first pass.
-:::
-
-::: {.slide title="Two Factors with ρ = 0, a Product with ρ = 4"}
-[Stability]{.kicker}
-
-$\mathbf D_1=\left(\begin{smallmatrix}0&2\\0&0\end{smallmatrix}\right)$,
-$\mathbf D_2=\left(\begin{smallmatrix}0&0\\2&0\end{smallmatrix}\right)$,
-$\mathbf D_2\mathbf D_1=\operatorname{diag}(0,4)$.
-
-- spectral radius: rate of powers of one fixed map;
-- spectral norm: bounds finite products, $\le\prod_t\|\mathbf D_t\|_2$;
-- Lyapunov exponent: average growth of long changing products.
-
-::: {.d2l-note .rule}
-Backpropagation through time multiplies $T$ different Jacobians. Orthogonal
-initialization preserves every length; clipping caps the gradient norm; gates
-change the Jacobians.
-:::
-:::
-
-::: {.slide title="A Gaussian Matrix Stretches Twice as Far as Its Eigenvalues Suggest"}
-[Stability]{.kicker}
-
-$\mathbf A$: $n\times n$, independent standard Gaussian entries, $n=1000$.
-
-@!mdl-eigendecomposition-random-matrices-at-initialization
-
-- Circular law: eigenvalues$/\sqrt n$ fill the unit disc, so
-  $\rho(\mathbf A)\approx\sqrt n$.
-- Marchenko--Pastur at $c=1$: $\|\mathbf A\|_2\approx2\sqrt n$.
-- Entries of variance $1/n$ preserve $\mathbb E\|\mathbf A\mathbf x\|^2$, yet
-  a long product of such factors shrinks a typical vector: its Lyapunov
-  exponent is negative.
-:::
-
-::: {.slide title="Check: Does ρ = 1 Bound the Shear?"}
-[Check]{.kicker}
-
-The shear $\mathbf T=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$
-has spectral radius 1. Is $\|\mathbf T^k\|_2$ bounded in $k$?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No: $\mathbf T^k=\left(\begin{smallmatrix}1&k\\0&1\end{smallmatrix}\right)$
-and $\|\mathbf T^k\mathbf e_2\|=\sqrt{k^2+1}$. The shear is defective, so no
-eigen-expansion applies.
+**Near-Tightness:** The complex eigenvalues sit at distance $0.96$ from center $4$, almost touching the radius-$1$ boundary of the first disc.
+:::
+:::
+
+::: {.slide title="Power Iteration Extracts the Dominant Eigenpair"}
+[Computing Eigenvalues at Scale]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Repeated Multiplication & Normalization:** When $|\lambda_1| > |\lambda_2| \ge \cdots \ge |\lambda_n|$ and $\mathbf{v}_0 = \sum_i c_i\mathbf{v}_i$ has $c_1 \neq 0$, factoring out $\lambda_1^k$ gives:
+  $$\mathbf{A}^k\mathbf{v}_0 = \lambda_1^k\Bigl(c_1\mathbf{v}_1 + \sum_{i \ge 2} c_i\Bigl(\frac{\lambda_i}{\lambda_1}\Bigr)^k \mathbf{v}_i\Bigr)$$
+- **Linear Direction Rate ($|\lambda_2/\lambda_1|^k$):** Normalizing $\mathbf{v}_{k+1} = \mathbf{A}\mathbf{v}_k / \|\mathbf{A}\mathbf{v}_k\|$ aligns $\mathbf{v}_k$ with $\mathbf{v}_1$ at geometric rate $|\lambda_2/\lambda_1|$ ($1/3$ per step on $\mathbf{S} = \left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$).
+- **Squared Rayleigh Rate ($|\lambda_2/\lambda_1|^{2k}$):** For symmetric $\mathbf{A}$, orthogonal eigenvectors make a $\delta$ angle error shift $R(\mathbf{v}_k)$ by only $O(\delta^2)$ ($1/9$ per step on $\mathbf{S}$).
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-power-iter.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Eigenvalues Give the Long Run of One Matrix"}
-[Wrap-up]{.kicker}
+::: {.slide title="Power Iteration in Code and When It Fails"}
+[Power Iteration]{.kicker}
 
-- Gershgorin: the $3\times3$ example has the pair $3.99\pm0.96i$ near 4 and $1.03$ near 1.
-- Power iteration converges at the rate $|\lambda_2/\lambda_1|$; damping bounds it by 0.85 for PageRank.
-- $\mathbf M$: same eigenvalues as $\operatorname{diag}(0.9,0.8)$, peak 10.8.
-- Two factors with $\rho=0$, a product with $\rho=4$.
-- Gaussian $n\times n$: $\rho\approx\sqrt n$, $\|\mathbf A\|_2\approx2\sqrt n$.
+On a positive $5 \times 5$ matrix, 200 power-iteration steps recover $|\lambda_1|$ to 10 decimal places, whereas matrices with a complex conjugate top pair never settle in direction:
 
-**Next:** singular values measure the stretch of a single application, for
-every matrix, square or not.
+@eigendecomposition-power-iteration
+
+::: {.d2l-note .warn}
+**Positive vs. Gaussian Matrices:** Across $10{,}000$ random $5 \times 5$ draws, uniform positive matrices have a real strictly dominant eigenvalue $100\%$ of the time (gap ratio $0.14$–$0.37$), whereas standard Gaussian matrices have a complex dominant pair $\sim 40\%$ of the time, causing the norm ratio to oscillate forever.
+:::
+:::
+
+::: {.slide title="PageRank and the Perron–Frobenius Theorem"}
+[Web-Scale Eigenvectors]{.kicker}
+
+- **Perron–Frobenius Guarantee:** Any irreducible non-negative matrix has a simple, real, positive eigenvalue $\lambda_1 = \rho(\mathbf{A})$ with a strictly positive eigenvector; if all entries are strictly positive, $\lambda_1$ is strictly dominant ($|\lambda_2| < \lambda_1$).
+- **Web Surfer Stationary Distribution ($\mathbf{P}\boldsymbol{\pi} = \boldsymbol{\pi}$):** Every column-stochastic transition matrix ($\mathbf{1}^\top\mathbf{P} = \mathbf{1}^\top$) has $\lambda_1 = 1$ with all eigenvalues inside the unit disc by Gershgorin on $\mathbf{P}^\top$; for our 3-page web, solving $\mathbf{P}\boldsymbol{\pi} = \boldsymbol{\pi}$ gives $\boldsymbol{\pi} = (0.3, 0.4, 0.3)$.
+- **Google's Damped Matrix ($\alpha = 0.85$):** To break dead-end traps and periodic link cycles (where $|\lambda_2| = 1$ stalls power iteration), PageRank mixes $\mathbf{P}$ with a uniform teleportation jump:
+  $$\mathbf{G} = \alpha\mathbf{P} + (1 - \alpha)\tfrac{1}{n}\mathbf{1}\mathbf{1}^\top, \qquad |\lambda_2(\mathbf{G})| \le \alpha = 0.85$$
+- **Matrix-Free Evaluation:** Every step computes $\mathbf{G}\mathbf{p} = \alpha\mathbf{P}\mathbf{p} + \tfrac{1-\alpha}{n}\mathbf{1}$ via one sparse product $\mathbf{P}\mathbf{p}$, reducing error by $0.85^{50} \approx 3 \times 10^{-4}$ in 50 sweeps regardless of graph size.
+:::
+
+::: {.slide title="The Spectral Radius Governs Only the Distant Limit"}
+[Iteration & Stability]{.kicker}
+
+- **Spectral Radius and Gelfand's Formula:** The largest eigenvalue modulus $\rho(\mathbf{A}) = \max_i |\lambda_i|$ sets the asymptotic per-step growth rate of $\mathbf{A}^k$ as $k \to \infty$:
+  $$\lim_{k \to \infty} \|\mathbf{A}^k\|^{1/k} = \rho(\mathbf{A})$$
+- **Why $\rho(\mathbf{A}) \le 1$ Does Not Bound Finite Steps:**
+  - The defective shear $\mathbf{T} = \left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ has $\rho(\mathbf{T}) = 1$, yet $\|\mathbf{T}^k\|_2 \approx k \to \infty$.
+  - The Jordan block $\mathbf{J}_2(0.99)$ has $\rho = 0.99 < 1$, yet climbs to norm $37$ at $k = 100$ before decaying.
+- **The Stability Question:** Which matrices guarantee that eigenvalues control the worst-case stretch $\|\mathbf{A}^k\|_2$ at *every* finite step $k \ge 1$?
+:::
+
+::: {.slide title="Normal Matrices vs. Non-Normal Amplification"}
+[Normal vs. Non-Normal Maps]{.kicker}
+
+- **Normal Matrices ($\mathbf{A}^\top\mathbf{A} = \mathbf{A}\mathbf{A}^\top$):** By the complex spectral theorem, a matrix commutes with its transpose if and only if it has a unitary (orthonormal) eigenbasis $\mathbf{A} = \mathbf{U}\boldsymbol{\Lambda}\mathbf{U}^*$ ($\mathbf{U}^*\mathbf{U} = \mathbf{I}$). Symmetric, orthogonal, and rotation–scaling matrices are normal, so at every step $k$:
+  $$\|\mathbf{A}^k\|_2 = \|\mathbf{U}\boldsymbol{\Lambda}^k\mathbf{U}^*\|_2 = \rho(\mathbf{A})^k$$
+- **Non-Normal Diagonalizable Bound:** When $\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$ has non-orthogonal eigenvectors, submultiplicativity yields only an upper bound inflated by the eigenvector condition number $\kappa_2(\mathbf{V}) = \|\mathbf{V}\|_2\|\mathbf{V}^{-1}\|_2$:
+  $$\|\mathbf{A}^k\|_2 \le \kappa_2(\mathbf{V})\,\rho(\mathbf{A})^k$$
+- **Geometric Mechanism of Transient Growth:** When two eigenvectors are nearly parallel ($\kappa_2(\mathbf{V}) \gg 1$), a unit vector is a difference of huge eigen-components that nearly cancel at $k = 0$; as those components decay at different rates, the cancellation unravels and the vector balloons in length.
+:::
+
+::: {.slide title="Transient Growth From Nearly Parallel Eigenvectors"}
+[Non-Normal Dynamics]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Distinct Eigenvalues Inside the Unit Disc:** $\mathbf{M} = \left(\begin{smallmatrix}0.9&4\\0&0.8\end{smallmatrix}\right)$ has $\lambda_1 = 0.9$ and $\lambda_2 = 0.8$, with eigenvectors $\mathbf{v}_1 = (1, 0)$ and $\mathbf{v}_2 = (-40, 1)$ separated by only $1.4^\circ$.
+- **Unraveling Cancellation:** Writing $\mathbf{e}_2 = (0, 1) = 40\mathbf{v}_1 + \mathbf{v}_2$ gives:
+  $$\mathbf{M}^k\mathbf{e}_2 = \begin{bmatrix}40(0.9^k - 0.8^k) \\ 0.8^k\end{bmatrix}$$
+- **Ten-Fold Peak at $k = 6$:** Because $0.8^k$ decays faster than $0.9^k$, the difference peaks at $\|\mathbf{M}^6\|_2 \approx 10.8$ before decaying.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-transient-cancel.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Comparing Non-Normal M Against Normal Λ in Code"}
+[Non-Normal Dynamics]{.kicker}
+
+Even though $\mathbf{M} = \left(\begin{smallmatrix}0.9&4\\0&0.8\end{smallmatrix}\right)$ and $\boldsymbol{\Lambda} = \operatorname{diag}(0.9, 0.8)$ share the exact same eigenvalues, $\boldsymbol{\Lambda}^k$ contracts monotonically from step 1 while $\mathbf{M}^k$ amplifies ten-fold:
+
+@mdl-eigendecomposition-nonnormal-transient
+:::
+
+::: {.slide title="Pseudospectra and Eigenvalue Sensitivity"}
+[Non-Normal Diagnostics]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **$\varepsilon$-Pseudospectrum $\Lambda_\varepsilon(\mathbf{A})$:** The set of all $z \in \mathbb{C}$ that are eigenvalues of $\mathbf{A} + \mathbf{E}$ for some perturbation $\|\mathbf{E}\|_2 \le \varepsilon$, equivalently where the resolvent norm satisfies:
+  $$\|(z\mathbf{I} - \mathbf{A})^{-1}\|_2 \ge \frac{1}{\varepsilon}$$
+- **Normal Discs vs. Non-Normal Bulge:** At $z = 1$, $\|(\mathbf{I} - \boldsymbol{\Lambda})^{-1}\|_2 = 1/(1 - 0.9) = 10$, whereas $\|(\mathbf{I} - \mathbf{M})^{-1}\|_2 = 200.3$: a tiny perturbation of size $\varepsilon \approx 0.005$ pushes an eigenvalue of $\mathbf{M}$ onto the unit circle!
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-transient-growth.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Products of Changing Jacobians in Recurrent Networks"}
+[Backpropagation Through Time]{.kicker}
+
+- **Why Single-Matrix Theory Breaks in BPTT:** In a recurrent network $\mathbf{h}_t = \phi(\mathbf{W}\mathbf{h}_{t-1} + \cdots)$, the forward pass reuses $\mathbf{W}$, but backpropagation multiplies $T$ *different* Jacobian matrices $\mathbf{D}_t = \partial\mathbf{h}_t / \partial\mathbf{h}_{t-1}$:
+  $$\nabla_{\mathbf{h}_0}\mathcal{L} = \mathbf{D}_1^\top\mathbf{D}_2^\top\cdots\mathbf{D}_T^\top\,\nabla_{\mathbf{h}_T}\mathcal{L}$$
+- **Zero Spectral Radius Can Still Explode:** The nilpotent factors $\mathbf{D}_1 = \left(\begin{smallmatrix}0&2\\0&0\end{smallmatrix}\right)$ and $\mathbf{D}_2 = \left(\begin{smallmatrix}0&0\\2&0\end{smallmatrix}\right)$ each have $\rho(\mathbf{D}_1) = \rho(\mathbf{D}_2) = 0$ ($\mathbf{D}_1^2 = \mathbf{D}_2^2 = \mathbf{0}$), yet their product $\mathbf{D}_2\mathbf{D}_1 = \operatorname{diag}(0, 4)$ has $\rho = 4$ and explodes as $4^{T/2}$ when alternated!
+:::
+
+::: {.slide title="Three Quantities for Iterated Linear Maps"}
+[Stability Hierarchy]{.kicker}
+
+Analyzing repeated transformations in deep learning requires keeping three distinct growth measures separate:
+
+| Quantity | Mathematical Definition | What It Governs | Deep Learning Remedy |
+| :--- | :--- | :--- | :--- |
+| **Spectral Radius $\rho(\mathbf{A})$** | $\max_i |\lambda_i(\mathbf{A})| = \lim_{k\to\infty} \|\mathbf{A}^k\|^{1/k}$ | Asymptotic ($k \to \infty$) rate of powers of *one fixed* square matrix | Necessary for linear recurrence stability, but misses transient growth |
+| **Spectral Norm $\|\mathbf{A}\|_2$** | $\max_{\|\mathbf{x}\|=1} \|\mathbf{A}\mathbf{x}\| = \sigma_1(\mathbf{A})$ | Worst-case 1-step stretch; bounds any finite product $\|\mathbf{D}_T\cdots\mathbf{D}_1\|_2 \le \prod_t \|\mathbf{D}_t\|_2$ | **Orthogonal initialization** ($\|\mathbf{W}\|_2 = 1$), **spectral normalization**, **gradient clipping** |
+| **Top Lyapunov Exponent $\mu$** | $\lim_{T\to\infty} \frac{1}{T}\log\|\mathbf{D}_T\cdots\mathbf{D}_1\mathbf{x}_0\|$ | Average exponential rate per step along a long product of *changing* matrices | **Gated architectures (LSTM / GRU)** keep effective Jacobian factors near $1$ |
+:::
+
+::: {.slide title="Random Weight Matrices at Initialization"}
+[Random Matrix Theory]{.kicker}
+
+- **Circular Law vs. Marchenko–Pastur Edge:** For an $n \times n$ Ginibre matrix $\mathbf{A}$ with i.i.d. $\mathcal{N}(0, 1)$ entries, its eigenvalues rescaled by $1/\sqrt{n}$ fill the complex unit disc ($\rho(\mathbf{A}) \approx \sqrt{n}$), whereas its largest singular value converges to twice that radius ($\|\mathbf{A}\|_2 \approx 2\sqrt{n}$):
+
+@mdl-eigendecomposition-random-matrices-at-initialization
+
+- **The Deep Product Paradox ($\mu < 0$):** Fan-in initialization $\mathcal{N}(0, 1/n)$ preserves squared norm on average in one layer ($\mathbb{E}\|\mathbf{D}\mathbf{x}\|^2 = \|\mathbf{x}\|^2$), yet Jensen's inequality on the concave logarithm ($\mathbb{E}\log\|\mathbf{D}\mathbf{x}\| < \log\sqrt{\mathbb{E}\|\mathbf{D}\mathbf{x}\|^2} = 0$) makes a deep product of independent Gaussian layers shrink exponentially at rate $\mu \approx -1/(2n) < 0$.
+:::
+
+::: {.slide title="Why Deep Learning Needs Singular Values Next"}
+[Bridge to SVD]{.kicker}
+
+- **Four Gaps That Eigenvalues Cannot Fill:**
+  1. *Rectangular layers:* A $256 \times 784$ weight matrix or an $n \times d$ data matrix has no eigenvalues at all.
+  2. *Defective matrices:* Even simple $2 \times 2$ shears lack an eigenbasis.
+  3. *Non-normal transient growth:* Eigenvalues inside the unit circle ($\lambda = 0.9, 0.8$) still allow $10\times$ finite-step amplification when eigenvectors are nearly parallel.
+  4. *Factor-of-2 stretch gap in random weights:* An $n \times n$ Gaussian layer stretches vectors up to $\|\mathbf{A}\|_2 \approx 2\sqrt{n}$, double its spectral radius $\rho(\mathbf{A}) \approx \sqrt{n}$.
+
+::: {.d2l-note}
+**The Remedy (§33.5 SVD):** Allowing separate orthonormal bases $\mathbf{V}$ for inputs and $\mathbf{U}$ for outputs gives *every* matrix an exact decomposition into non-negative directional stretches $\sigma_1 \ge \sigma_2 \ge \cdots \ge 0$.
+:::
+:::
+
+::: {.slide title="Concept Check: Discs, Power Iteration & Stability"}
+[Concept Check]{.kicker}
+
+1. **Gershgorin Invertibility:** Use Gershgorin discs to explain at a glance why $\mathbf{A} = \left(\begin{smallmatrix}5&-1&1\\2&6&-1\\0&1&4\end{smallmatrix}\right)$ is guaranteed to be invertible without computing its determinant.
+2. **Power Iteration Rate:** For symmetric $\mathbf{S}$ with eigenvalues $\lambda_1 = 3$ and $\lambda_2 = 1$, by what factor does the Rayleigh quotient error $3 - R(\mathbf{v}_k)$ shrink per power-iteration step?
+3. **Spectral Radius vs. Norm:** Does $\rho(\mathbf{A}) \le 1$ guarantee that $\|\mathbf{A}^k\|_2$ stays bounded for all $k \ge 1$? Give a $2 \times 2$ counterexample.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+**1.** The three row discs have centers $5, 6, 4$ and radii $2, 3, 1$; since $a_{ii} > r_i$ in every row, all discs lie strictly in $\operatorname{Re}(z) \ge 3 > 0$, so $0$ cannot be an eigenvalue and $\mathbf{A}$ is invertible.
+**2.** Direction error shrinks by $|\lambda_2/\lambda_1| = 1/3$ per step, while the Rayleigh quotient error shrinks at the squared rate $(1/3)^2 = 1/9$ per step.
+**3.** No: the defective shear $\mathbf{T} = \left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ has $\rho(\mathbf{T}) = 1$, yet $\mathbf{T}^k = \left(\begin{smallmatrix}1&k\\0&1\end{smallmatrix}\right)$ has $\|\mathbf{T}^k\|_2 \sim k \to \infty$.
+:::
+:::
+
+::: {.slide title="Summary: Spectra in Practice"}
+[Key Takeaways]{.kicker}
+
+| Tool / Concept | Mathematical Statement | Practical Role & Limitation |
+| :--- | :--- | :--- |
+| **Gershgorin Discs** | $\lambda \in \bigcup_{i=1}^n \{z : |z - a_{ii}| \le \sum_{j\neq i} |a_{ij}|\}$ | Bounds eigenvalues from matrix entries in $O(n^2)$; proves diagonal dominance implies invertibility |
+| **Power Iteration** | $\mathbf{v}_{k+1} = \mathbf{A}\mathbf{v}_k / \|\mathbf{A}\mathbf{v}_k\|$, error $\sim |\lambda_2/\lambda_1|^k$ | Finds top eigenpair via matrix–vector products; Rayleigh quotient converges at squared rate $|\lambda_2/\lambda_1|^{2k}$ |
+| **Damped PageRank** | $\mathbf{G} = \alpha\mathbf{P} + (1-\alpha)\tfrac{1}{n}\mathbf{1}\mathbf{1}^\top$ ($\alpha = 0.85$) | Ensures positive entries (Perron–Frobenius) and bounds $|\lambda_2(\mathbf{G})| \le 0.85$ on any web graph |
+| **Normal vs. Non-Normal** | Normal ($\mathbf{A}^\top\mathbf{A} = \mathbf{A}\mathbf{A}^\top$): $\|\mathbf{A}^k\|_2 = \rho(\mathbf{A})^k$ | Non-normal matrices obey $\|\mathbf{A}^k\|_2 \le \kappa_2(\mathbf{V})\rho(\mathbf{A})^k$ and can suffer huge transient growth |
+| **Jacobian Products** | $\|\mathbf{D}_T\cdots\mathbf{D}_1\|_2 \le \prod_{t=1}^T \|\mathbf{D}_t\|_2$ | Individual eigenvalues fail on changing RNN Jacobians; controlled by orthogonal init, clipping, and gates |
+| **Random Gaussian Matrix** | $\rho(\mathbf{A}) \approx \sqrt{n}$ vs. $\|\mathbf{A}\|_2 \approx 2\sqrt{n}$ | Maximum 1-step stretch is $2\times$ the spectral radius; deep products shrink with Lyapunov exponent $\mu < 0$ |
 :::

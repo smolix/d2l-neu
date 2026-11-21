@@ -1847,83 +1847,258 @@ use `Trainer.validation_step` (or its return value) instead.
 
 <!-- slides -->
 
-::: {.slide title="The d2l Utility Layer"}
-The `d2l` package collects shared utility classes and
-functions reused across the book — `Trainer`, `Module`,
-`DataModule`, `Classifier`, plotting helpers, etc.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §39.9]{.kicker}
 
-This page lists those helpers and their roles. Most
-chapters subclass and extend them rather than reimplement
-from scratch.
+Utility Functions and Classes: The Internal Plumbing of the `d2l` Package<br>**HyperParameters · plot & ProgressBoard · uncertainty bands · RL seed aggregation & JAX JIT bucketing · FeatureCNN · custom_vjp Embed**
+:::
 :::
 
-::: {.slide title="Core base classes"}
-- `HyperParameters` records constructor arguments so models,
-  data modules, and trainers can expose reproducible settings.
-- `Module` owns model logic: `forward`, loss, metrics, and
-  optimizer configuration.
-- `DataModule` owns data logic: download, preprocessing,
-  batching, and train/validation iterators.
-- `Trainer` coordinates the loop without hiding the math used
-  in chapter-specific subclasses.
+::: {.slide title="Why the d2l Library Exists and How It Is Built"}
+[Motivation]{.kicker}
+
+Throughout the book, chapters call concise helpers such as `d2l.plot`, `d2l.ProgressBoard`, `d2l.show_heatmaps`, and `d2l.Trainer` so that notebook cells stay focused on the mathematical concept being taught:
+
+::: {.cols}
+::: {.col}
+- **Zero hidden magic:** Every helper in `d2l` is defined in an executable notebook cell marked with `#@save`—either in the chapter that first teaches the abstraction or in this utility reference section (§39.9).
+- **Extracted automatically by `make lib`:** The build collects all `#@save` blocks into `d2l/torch.py`, `d2l/jax.py`, `d2l/tensorflow.py`, and `d2l/mxnet.py`.
 :::
 
-::: {.slide title="Plotting and progress"}
-- `plot` draws one or more curves in one set of axes;
-  `set_figsize`, `set_axes`, and `set_log_ticks` set up the
-  figure and its axes.
-- `ProgressBoard` and `Animator` collect streaming metrics and
-  redraw one compact figure during training.
-- The display helpers are intentionally stateful: they remember
-  previous points so chapter code can call `plot` or `add` from
-  inside minibatch loops.
-- The shared API logs scalar metrics against
-  an x-axis such as epoch, update count, or wall-clock time.
+::: {.col}
+- **Two generations of helpers in §39.9:**
+  1. **Active core utilities (PyTorch & JAX):** Hyperparameter introspection, publication-quality SVG plotting, interval/seed uncertainty bands, RL JAX compilation bucketing, CIFAR-10 `FeatureCNN` scoring, and small-vocabulary embedding gradients.
+  2. **Legacy training helpers:** `train_ch6`, `train_seq2seq`, and `Animator`, retained for backward compatibility with earlier MXNet/TensorFlow chapters.
+:::
+:::
 :::
 
-::: {.slide title="Training loop primitives"}
-- `Accumulator` keeps running sums for losses, accuracies, and
-  counts, avoiding per-minibatch global state.
-- `accuracy`, `evaluate_accuracy`, and `evaluate_loss` separate
-  evaluation from parameter updates.
-- `grad_clipping` rescales gradients when their global norm is
-  too large, a recurring requirement for recurrent and sequence
-  models.
+::: {.slide title="Automatic Constructor Introspection: HyperParameters"}
+[Base Class Mechanics]{.kicker}
+
+Every `d2l.Module`, `d2l.DataModule`, and `d2l.Trainer` inherits from `d2l.HyperParameters` so subclasses can bind constructor arguments without repetitive `self.x = x` boilerplate:
+
+::: {.cols .vc}
+::: {.col}
+- **Stack-frame inspection (`inspect.currentframe().f_back`):**
+  - Reads the caller's `__init__` local variable dictionary via `inspect.getargvalues(frame)`.
+  - Filters out `'self'`, private names starting with `'_'`, and any names listed in `ignore`.
+  - Stores the clean dictionary in `self.hparams` and binds each key as an instance attribute via `setattr(self, k, v)`.
 :::
 
-::: {.slide title="Data loading helpers"}
-- `load_array` turns aligned tensors into minibatches.
-- `download`, `extract`, and `download_extract` provide cached,
-  checksum-aware dataset access for examples throughout the book.
-- `tokenize`, `truncate_pad`, and the Fashion-MNIST label helpers
-  standardize common preprocessing steps used before the full NLP
-  and vision abstractions are introduced.
+::: {.col .fig}
+@utils-utility-functions-and-classes-2
+:::
+:::
 :::
 
-::: {.slide title="Reinforcement learning helpers"}
-- `plot_curves` draws seed medians with min-to-max bands: the one
-  entry point for every learning curve in the RL chapters.
-- `show_grid` renders a gridworld's values and greedy policy,
-  reading the map shape from the environment description.
-- These functions only visualize values; the RL chapters compute each
-  reported statistic in a visible notebook cell.
+::: {.slide title="Publication Plotting: d2l.plot and Log-Axis Formatting"}
+[Visualization Primitives]{.kicker}
+
+`d2l.plot` and its axis helpers (`use_svg_display`, `set_figsize`, `set_axes`, `set_log_ticks`) standardize every line chart across the book:
+
+::: {.cols}
+::: {.col}
+- **Flexible curve normalization (`d2l.plot`):**
+  - Accepts a 1D tensor/list or a list of curves for `X` and `Y`. If `Y is None`, treats `X` as the y-values plotted against index position; if `len(X) == 1`, broadcasts the single x-axis across all y-curves.
+  - Automatically extends the default 4 line formats `('-', 'm--', 'g-.', 'r:')` with distinct colors `C0`–`C9` and line styles so 5+ curves are never silently dropped.
 :::
 
-::: {.slide title="Sequence-model helpers"}
-- `read_data_nmt`, `preprocess_nmt`, and `tokenize_nmt` prepare
-  the English-French translation corpus.
-- `build_array_nmt` converts variable-length token sequences into
-  padded arrays plus valid lengths.
-- `MaskedSoftmaxCELoss`, `sequence_mask`, `train_seq2seq`, and
-  `predict_seq2seq` implement the core sequence-to-sequence
-  training and decoding machinery reused in the attention chapter.
+::: {.col}
+- **Readable logarithmic axes (`set_log_ticks`):**
+  - When a log axis spans less than two decades ($\text{hi} < 100 \cdot \text{lo}$), places major ticks at **$1, 2, 5$** per decade so narrow log plots never collapse to a single tick label.
+  - Formats values in $[10^{-4}, 10^5)$ as plain decimals (`0.001`, `100`) and extreme scales as clean scientific notation ($2.5 \times 10^{-5}$).
+:::
+:::
 :::
 
-::: {.slide title="Recap"}
-- The `d2l` library provides reusable training, plotting,
-  and data primitives so chapter code can focus on the
-  chapter-specific concepts.
-- Newer chapters use the `Trainer.fit(model, data)` shape;
-  legacy chapters retain framework-specific helpers where
-  older examples depend on them.
+::: {.slide title="Live Streaming Curves: ProgressBoard.show and _plot"}
+[Training Telemetry]{.kicker}
+
+During interactive training, `d2l.ProgressBoard` updates a single in-place SVG figure in Jupyter while producing clean single-frame output during headless book builds:
+
+::: {.cols}
+::: {.col}
+- **Dual-axis loss and accuracy layout (`_plot`):**
+  - Plots losses on the primary left y-axis (`ax`) and automatically creates a secondary right y-axis (`ax.twinx()`) for any series whose label ends with `'acc'`.
+  - When both axes are active, places a horizontal multi-column legend **above** the plot (`bbox_to_anchor=(0.5, 1)`) so it never occludes either curve family.
+:::
+
+::: {.col}
+- **Single-point visibility & headless capture (`show`):**
+  - Validation metrics (`val_*`) and any curve with only 1 point (`len(xs) == 1`) receive circular markers (`marker='o'`) with `clip_on=False` so a 1-epoch test run remains clearly visible.
+  - When `D2L_NB_CAPTURE=1` is set during the book build, intermediate frames return early and only the `final=True` call renders into the saved notebook JSON.
+:::
+:::
+:::
+
+::: {.slide title="2D Optimization Trajectories and Image/Heatmap Grids"}
+[Spatial Visualization]{.kicker}
+
+Three specialized visualizers render optimization paths, image minibatches, and attention/confusion matrices:
+
+::: {.cols}
+::: {.col}
+- **`show_trace_2d(f, results)` (Chapter 12 Optimization):**
+  - Evaluates objective `f(x1, x2)` on an automatically widened $100 \times 100$ meshgrid covering $(-5.5, 1.0) \times (-3.0, 3.0)$ and all visited iterates.
+  - Enforces equal aspect ratio (`set_aspect('equal')`) so gradient directions look orthogonal to contours, disabling equal aspect only if an unstable trace diverges $> 4\times$ along one axis.
+:::
+
+::: {.col}
+- **`show_images` & `show_heatmaps`:**
+  - `show_images(imgs, num_rows, num_cols)` converts framework tensors via `d2l.numpy(img)` and hides axis ticks for clean image galleries.
+  - `show_heatmaps(matrices, ...)` takes a 4D tensor `(rows, cols, H, W)` and locks all panels to a **shared `Normalize(min, max)` color scale** and single colorbar by default (`cbar=True`), or per-panel scales when `cbar='each'`.
+:::
+:::
+:::
+
+::: {.slide title="Statistical Uncertainty Plots: plot_intervals"}
+[Confidence Bars & Bands]{.kicker}
+
+Introduced for the statistical estimation and evaluation chapters, `d2l.plot_intervals` renders point estimates alongside their confidence or bootstrap intervals `(mean, lo, hi)`:
+
+::: {.cols}
+::: {.col}
+- **Validation & invariant checks:**
+  - Verifies that `mean`, `lo`, and `hi` match `len(x)` and raises a `ValueError` if any interval fails to contain its point estimate ($\text{mean} < \text{lo}$ or $\text{hi} < \text{mean}$, allowing `NaN` for missing points).
+- **Two display modes (`kind`):**
+  - `kind='band'`: Plots a continuous curve with a translucent `fill_between` confidence envelope ($\alpha = 0.2$).
+:::
+
+::: {.col}
+  - `kind='errorbar'`: Computes even horizontal offsets in linear or log space (`to_axis` / `from_axis`) so multiple series sit side-by-side at each $x$ without overlapping error bars!
+- **Categorical & secondary estimator support:**
+  - Automatically rotates categorical x-tick labels by $30^\circ$ when $\text{len}(x) > 3$, draws horizontal dashed `reference` baselines, and overlays secondary `marks` estimators with a single black legend entry.
+:::
+:::
+:::
+
+::: {.slide title="RL Visualization and Multi-Seed Aggregation"}
+[RL Chapter Utilities]{.kicker}
+
+Reinforcement learning experiments exhibit high run-to-run variance across random seeds and variable episode lengths; five helpers in §39.9 standardize their analysis:
+
+| Helper Function | Input Shape / Contract | Statistical & Visual Role |
+| :--- | :--- | :--- |
+| **`run_seeds(train, K)`** | Runs generator `train(seed)` for $K$ seeds | Stacks yielded metric trajectories into a `[seed, step, ...]` array |
+| **`on_grid(runs, grid, col)`** | Per-episode `(env_step, val)` records | Drops `NaN`s, applies causal moving-average smoothing, and interpolates onto a common step `grid` |
+| **`plot_curves(curves, ...)`** | `{label: array[seed, step]}` | Applies causal valid-window smoothing, then plots the **seed median** with a **min–max (`'range'`) or 25–75% (`'iqr'`)** band |
+| **`plot_hist(samples, ...)`** | `{label: values}` + `vlines` | Overlays translucent empirical return distributions with vertical reference lines |
+| **`show_grid(desc, values, policy)`** | Gridworld map `desc` + $V(s), \pi(s)$ | Shades cells (`Blues` or diverging `RdBu`), prints state IDs/values, and draws greedy action arrows |
+:::
+
+::: {.slide title="Avoiding XLA Recompilation Storms in JAX RL"}
+[JAX JIT Engineering]{.kicker}
+
+In JAX reinforcement learning, agents act on single states in NumPy environments and update on replay/episode batches whose length $n$ varies every step. Naive `@jax.jit` recompiles for every new batch length or network instance!
+
+::: {.cols}
+::: {.col}
+- **1. Zero-recompilation NumPy inference (`forward_np`):**
+  - Splits an `nnx.Module` into `(graph, tree)` once and caches a single compiled `jax.jit` forward function per network structure in `_forwards`.
+  - Reads current `v.get_raw_value()` leaves on every call so optimizer updates take effect immediately without re-splitting or recompiling.
+:::
+
+::: {.col}
+- **2. Power-of-two batch bucketing (`_bucket`, `padded`):**
+  - `_bucket(n)` rounds batch size $n$ up to the next power of two ($\ge 64$):
+    $$\text{bucket}(n) = 2^{\max(6, \lceil \log_2 n \rceil)}$$
+  - `padded(*arrays)` zero-pads arrays to `size = _bucket(n)` and returns a binary float32 `mask` of real rows—so **at most $\sim 5$ compiled XLA kernels** serve every batch size from $1$ to $1{,}024$!
+- **3. Shared optimizer instances (`shared_adam`, `plain_sgd`):** Reuses one `optax` transform per learning rate so multiple agents share compiled update steps.
+:::
+:::
+:::
+
+::: {.slide title="FeatureCNN: Perceptual Image Scoring on CIFAR-10"}
+[Generative Model Evaluation]{.kicker}
+
+The generative modeling chapters (GANs, VAEs, Diffusion) evaluate generated sample quality using Fréchet distance and inception-style scores in the feature space of a standardized CIFAR-10 classifier:
+
+::: {.cols}
+::: {.col}
+- **Deterministic data & preprocessing (`load_cifar10_arrays`):**
+  - Downloads and verifies the SHA-1 checksum of CIFAR-10, rescales pixel values to $[-1, 1]$ (`X / 127.5 - 1`), and places train/test tensors directly on the default GPU device (`NCHW` in PyTorch, `NHWC` in JAX).
+- **Architecture (`FeatureCNN`):**
+  - Bilinearly resizes arbitrary input resolutions to $32 \times 32$ (with antialiasing), passes through 3 blocks of `Conv(3x3) -> BatchNorm -> ReLU -> MaxPool(2x2)` with widths $[32, 64, 128]$, and global-average-pools to a **128-D feature vector** (`cnn.features(x)`).
+:::
+
+::: {.col}
+- **Reproducible training (`train_feature_cnn`):**
+  - Trains for 15 epochs with Adam and a **One-Cycle cosine learning-rate schedule** (`max_lr=0.003`, `batch_size=256`).
+  - Uses isolated local PRNG streams (`torch.Generator` / `jax.random.split`) for random horizontal flips and reflect-padded spatial shifts so training never perturbs the caller's global random seed.
+:::
+:::
+:::
+
+::: {.slide title="Custom VJP Embedding Gradients for Small Vocabularies"}
+[GPU Kernel Contention Fix]{.kicker}
+
+Why does §39.9 define a custom `d2l.Embed` class with `@jax.custom_vjp` for vocabularies of size $V \le 1{,}024$ in JAX?
+
+::: {.cols}
+::: {.col}
+- **The atomic scatter-add bottleneck on GPUs:**
+  - The forward pass of an embedding lookup `table[X]` is a fast parallel gather.
+  - Its standard backward pass scatters and accumulates each position's gradient $\nabla Y_{b,t}$ into row `table[X[b, t]]` using **GPU atomic additions**.
+  - In byte- or character-level language models ($V \le 1{,}024$), thousands of tokens in a minibatch are spaces `' '` or `'e'`—all contending atomically for the **exact same memory row**, slowing the backward pass by $10\times\text{--}50\times$!
+:::
+
+::: {.col}
+- **The matrix-product custom VJP solution (`embedding_rows`):**
+  - For $V \le 1{,}024$, `_embedding_rows_bwd` materializes the one-hot tensor $\mathbf{O} = \text{one\_hot}(X, V)$ and computes the exact same gradient via a single dense tensor-core contraction:
+    $$\nabla_{\text{table}} \mathcal{L} = \text{einsum}(\texttt{'...v,...d->vd'}, \mathbf{O}, \nabla Y)$$
+  - Replaces serialized atomic memory contention with a parallel GEMM, while falling back to standard `nnx.Embed` when $V > 1{,}024$.
+:::
+:::
+:::
+
+::: {.slide title="Data Caching, Sequence Masking, and Legacy Parity"}
+[I/O & Framework Coverage]{.kicker}
+
+The remainder of §39.9 provides atomic dataset downloading, sequence masking, and backward-compatible training loops:
+
+::: {.cols}
+::: {.col}
+- **Checksummed, atomic dataset cache (`download`, `download_extract`):**
+  - Verifies existing files in `../data` against SHA-1 hashes in `DATA_HUB` (reading 1 MB chunks).
+  - Downloads to a temporary file (`tempfile.mkstemp`) and moves into place atomically with `os.replace`, writing a `.extracted` completion marker so multi-thousand-file archives are never unpacked twice.
+:::
+
+::: {.col}
+- **Sequence & legacy helpers (`sequence_mask`, `MaskedSoftmaxCELoss`, `Accumulator`):**
+  - Zeroes out padded positions beyond `valid_len` and normalizes sequence cross-entropy per valid token.
+  - **Framework coverage note:** Modern PyTorch and JAX chapters use the unified `d2l.Trainer.fit(model, data)` workflow; legacy helpers (`train_ch6`, `train_seq2seq`, `evaluate_accuracy`) remain in §39.9 solely to support older MXNet and TensorFlow tabs.
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: d2l Utility Internals"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of the systems and numerical tricks inside `d2l`:
+
+1. In `d2l.ProgressBoard.show()`, why does the method check `os.environ.get('D2L_NB_CAPTURE') == '1'` and skip rendering whenever `final=False`?
+2. In JAX reinforcement learning, an agent calls `d2l.padded(states, actions, rewards)` on three consecutive episode batches of lengths $n = 19$, $n = 47$, and $n = 58$. How many distinct padded array shapes are produced, and why must the returned `mask` be passed into the loss function?
+3. Why does `d2l.Embed` switch from the one-hot matrix product back to standard scatter-add `nnx.Embed` when the vocabulary size exceeds $1{,}024$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. During interactive notebook runs, `show(final=False)` updates the live SVG figure after every few minibatches. During the automated book build (`D2L_NB_CAPTURE=1`), skipping intermediate redraws avoids running matplotlib hundreds of times per epoch and ensures the saved notebook output stores only **one clean final figure per board**.
+2. **Only 1 shape (`size = 64`)!** Because `_bucket(n) = 1 << max(6, (n - 1).bit_length())` rounds every $n \in [1, 64]$ to $64$, XLA compiles the update step **only once**. The binary `mask` (1 for real rows $0 \dots n-1$, 0 for padded rows $n \dots 63$) ensures the zero-padded dummy rows do not corrupt the batch mean or TD loss!
+3. Materializing a one-hot tensor $\mathbf{O}$ of shape `(B, T, V)` costs $O(BTV)$ memory and $O(BTVd)$ FLOPs: cheap at $V = 256\text{--}1024$ (where atomic contention is worst), but prohibitive at $V = 32{,}000\text{--}128{,}000$ (where token frequencies are also more dispersed across rows).
+:::
+:::
+
+::: {.slide title="Summary: Core Utilities in Section 39.9"}
+[Key Takeaways]{.kicker}
+
+| Category | Key Symbols (`d2l.*`) | Primary Engineering Mechanism |
+| :--- | :--- | :--- |
+| **Introspection** | `HyperParameters.save_hyperparameters` | Inspects caller stack frame `f_back` to bind `__init__` args into `self.hparams` |
+| **Plotting & Axes** | `plot`, `set_axes`, `set_log_ticks`, `ProgressBoard` | SVG output, $1,2,5$ narrow-decade log ticks, dual-axis loss/acc layout, build-time frame gating |
+| **Spatial & Intervals** | `show_trace_2d`, `show_images`, `show_heatmaps`, `plot_intervals` | Shared heatmap color norms, adaptive contour grids, side-by-side log/linear error bars & bands |
+| **RL & JAX JIT** | `run_seeds`, `on_grid`, `plot_curves`, `show_grid`, `forward_np`, `padded` | Multi-seed median/IQR bands, gridworld policy arrows, power-of-two batch bucketing for XLA reuse |
+| **Vision & NLP** | `FeatureCNN`, `Embed`, `sequence_mask`, `download_extract` | CIFAR-10 perceptual features, `@jax.custom_vjp` one-hot embedding backward, atomic SHA-1 cache |
 :::

@@ -308,321 +308,252 @@ for name, (N, D) in reported.items():
 
 6. **Activation checkpointing and the $8 N D$ rule.** Full block-level activation checkpointing saves only the input $\mathbf{X}^{(\ell-1)}$ to each block during the forward pass ($2 N D$ FLOPs) and recomputes each block's forward pass once during backpropagation before computing the backward matrix products ($4 N D$ FLOPs). Show that activation checkpointing changes the pretraining compute formula from $C \approx 6 N D$ to $C \approx 8 N D$, and find how replacing $6$ with $8$ in :eqref:`eq_chinchilla_optimum` scales $N^*(C)$ and $D^*(C)$ at fixed FLOP budget $C$.
 
+[Discussions](https://d2l.discourse.group/t/36780)
+
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §11.7]{.kicker}
+[Dive into Deep Learning · §11.6]{.kicker}
 
-Scaling Laws<br>
-**the cost of a run · a miniature scaling study · the compute-optimal split · training past the optimum**
+Neural Scaling Laws and Compute-Optimal Training (Chinchilla)<br>**N ≈ 12Ld² & C ≈ 6ND · 15-model scaling grid · IsoFLOP contours · Chinchilla optimum · over-training for inference**
 :::
 :::
 
-::: {.slide title="A 3.8×10²⁵-FLOP Run Must Be Planned Before It Starts"}
-[The problem]{.kicker}
+::: {.slide title="Why a 10²⁵-FLOP Run Must Be Planned Before It Starts"}
+[Motivation]{.kicker}
 
-| run | training FLOPs |
-|:--|--:|
-| our 4.8M-parameter GPT, 8.2M tokens | $2 \times 10^{14}$ |
-| GPT-2 small, 124M parameters, ~10B tokens (estimate) | $7 \times 10^{18}$ |
-| Llama 3, 405B parameters, 15.6T tokens | $3.8 \times 10^{25}$ |
+Pretraining a frontier language model is a single, non-repeatable capital expenditure spanning thousands of GPUs for months:
+
+| Pretraining Run | Non-Embedding / Total Params $N$ | Training Tokens $D$ | Total Compute $C \approx 6ND$ |
+| :--- | :---: | :---: | :---: |
+| **Our §11.2 Byte-Level GPT** (1 GPU, $< 1\text{ min}$) | $4.78\text{M}$ ($4.85\text{M}$) | $8.19\text{M}$ | $2.4 \times 10^{14}\text{ FLOPs}$ |
+| **GPT-2 Small** (2019) | $85.0\text{M}$ ($124.4\text{M}$) | $\sim 10\text{B}$ | $7.5 \times 10^{18}\text{ FLOPs}$ |
+| **Chinchilla 70B** (Hoffmann et al., 2022) | $70\text{B}$ | $1.4\text{T}$ | $5.9 \times 10^{23}\text{ FLOPs}$ |
+| **Llama 3 405B** (2024) | $405\text{B}$ | $15.6\text{T}$ | $3.8 \times 10^{25}\text{ FLOPs}$ |
 
 ::: {.d2l-note .warn}
-The largest run is done once. How large a model, and how many tokens,
-must be decided before it starts.
+**The fundamental resource allocation problem:** Given a fixed training compute budget $C$ (in FLOPs), how should we split $C$ between model parameters $N$ and training tokens $D$ to achieve the lowest validation cross-entropy $\mathcal{L}(N, D)$?
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Parameter Census: Blocks (12Ld²) vs. Embeddings (Vd)"}
+[Parameter Accounting]{.kicker}
 
-- estimate the training cost of a transformer as $6ND$ and say what it
-  leaves out;
-- read a grid of small runs along lines of equal compute;
-- derive the compute-optimal split of a budget between parameters and
-  tokens;
-- explain why smaller deployed models train far past 20 tokens per
-  parameter.
+In an $L$-block dense Transformer of width $d$ with $H_{\text{kv}} = H$ and `SwiGLU` ($d_{\text{ff}} \approx \frac{8}{3}d$), each block holds $4d^2$ attention weights and $8d^2$ FFN weights:
 
-**Running example:** GPT-2 small (124M parameters), and five small GPTs
-on the bytes of WikiText-103.
+$$N_{\mathrm{blocks}} = 12 L d^2, \qquad N_{\mathrm{total}} = 12 L d^2 + V d + \text{norms/pos}$$
+
+@scaling-laws-a-parameter-census
+
+- **Small vocabulary ($V = 256$ bytes):** The embedding table is only $1.3\%$ of our $4.85\text{M}$-parameter model ($N_{\text{blocks}} = 12.00\,L d^2$).
+- **Large BPE vocabulary ($V = 50{,}257$ in GPT-2 Small):** The embedding and position tables hold $39.4\text{M}$ ($31.7\%$) of the $124.4\text{M}$ parameters, while the 12 blocks hold $85.0\text{M}$ ($12.02\,L d^2$).
 :::
 
-::: {.slide title="Cost Follows from the Shape, Loss from Size and Data"}
-[Where this fits]{.kicker}
+::: {.slide title="Why Training Costs Six FLOPs per Parameter and Token"}
+[The C ≈ 6ND Law]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| The Transformer Block | attention + FFN, residual stream |
-| A GPT from Scratch | a trained language model; GPT-2 loaded |
-| The KV Cache | reuse past keys and values |
-| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
-| Encoders, Decoders, and Cross-Attention | the other two wirings |
-| Vision Transformer | images as token sequences |
-| **Scaling Laws** | **loss against parameters, data, compute** |
-| Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | released models as settings |
+Consider a single linear layer $\mathbf{Y} = \mathbf{X}\mathbf{W}$ with $\mathbf{W} \in \mathbb{R}^{d_{\text{in}} \times d_{\text{out}}}$ ($P = d_{\text{in}} d_{\text{out}}$ parameters) processing $D$ token rows:
+
+$$C \approx \underbrace{2 N D}_{\text{forward pass}} + \underbrace{4 N D}_{\text{backward pass}} = 6 N D$$
+
+- **Forward pass ($2 P$ FLOPs/token):** Each token row $\mathbf{x} \in \mathbb{R}^{d_{\text{in}}}$ performs $d_{\text{in}} d_{\text{out}}$ multiply–accumulate pairs ($1\text{ multiply} + 1\text{ add} = 2 P$ FLOPs).
+- **Backward pass ($4 P$ FLOPs/token):** Given upstream gradient $\nabla_{\mathbf{Y}}\mathcal{L}$, backpropagation computes *two* matrix products of size $P$ per token:
+  1. **Activation gradient:** $\nabla_{\mathbf{X}}\mathcal{L} = (\nabla_{\mathbf{Y}}\mathcal{L})\mathbf{W}^\top$ ($2 P$ FLOPs/token) to propagate down the stack.
+  2. **Parameter gradient:** $\nabla_{\mathbf{W}}\mathcal{L} = \mathbf{X}^\top(\nabla_{\mathbf{Y}}\mathcal{L})$ ($2 P$ FLOPs/token) for the optimizer step.
 :::
 
-::: {.col .narrow}
-- **Uses:** `d2l.GPT` and its recipe, learning rate
-  $\propto 1/\textrm{width}$.
-- **Skips:** data curation; repetition beyond four passes (Language Models
-  part).
-:::
-:::
-:::
+::: {.slide title="Accounting for Attention Score Dot Products"}
+[The Attention FLOP Term]{.kicker}
 
-::: {.slide title="GPT-2's 124M Parameters: an 85M Transformer, 39M of Tables"}
-Blocks hold $12Ld^2$ ($4d^2$ attention, $8d^2$ FFN); the embedding $Vd$:
+What does $C \approx 6 N D$ omit? Inside each block, attention also computes the token-to-token score matrix $\mathbf{Q}\mathbf{K}^\top$ and weighted value sum $\mathbf{A}\mathbf{V}$ over window length $T$:
 
-@!scaling-laws-a-parameter-census
+| Operation per Block and Token (Forward Pass) | FLOPs per Token | Ratio to Linear Projections |
+| :--- | :---: | :---: |
+| **Linear projections ($\mathbf{W}_{q,k,v,o}$ and FFN, $12 d^2$ params)** | $24 d^2$ | $1.00$ (baseline) |
+| **Attention scores ($\mathbf{q}_t^\top \mathbf{k}_s$) + value mix ($\sum_s \alpha_{t,s}\mathbf{v}_s$)** | $4 T d$ (unmasked) | $\frac{4 T d}{24 d^2} = \frac{T}{6 d}$ |
 
-- The embedding dominates when $V \gtrsim 12Ld$: small models, large
-  vocabularies.
-- Kaplan et al. (2020), and our grid, count **non-embedding** $N$;
-  Chinchilla counts all parameters.
+- **Short/medium context ($T \ll 6d$):** In our byte-level GPT ($T = 128, d = 256, N = 4.78\text{M}$ including the tied output head), attention adds $\frac{4 L T d}{2 N} = \mathbf{8.2\%}$ to the linear-projection FLOPs.
+- **Long-context crossover ($T \ge 6d$):** At $d = 4{,}096$ (Llama 3 8B), quadratic attention FLOPs equal the linear-projection FLOPs once context length reaches $T = 6 d = 24{,}576$ tokens.
 :::
 
-::: {.slide title="Training Costs Six FLOPs per Parameter and Token"}
-$$C \approx \underbrace{2ND}_{\textrm{forward}} + \underbrace{4ND}_{\textrm{backward}} = 6ND$$
+::: {.slide title="Verifying C ≈ 6ND Against Exact Hardware Counters"}
+[Empirical FLOP Audit]{.kicker}
 
-- Forward: each weight meets each token once, one multiply and one add.
-- Backward: given $\boldsymbol{\delta}$, the gradient with respect to the
-  layer's output, two products of the same size:
-  $\mathbf{W}^\top\boldsymbol{\delta}$ (for the layer below) and
-  $\boldsymbol{\delta}\mathbf{x}^\top$ (for the optimizer).
-- Generating a token needs only the forward pass: about $2N$.
-:::
-
-::: {.slide title="Attention Adds a Fraction n/(6d) of the Counted Work"}
-Per token and block, forward:
-
-| work | FLOPs |
-|:--|--:|
-| products with the $12d^2$ weights | $24d^2$ |
-| scores $\mathbf{q}^\top\mathbf{k}$ over $n$ keys, average of $n$ values | $4nd$ |
-
-- Our models: $n = 128$, $d = 256$ → **8%**.
-- Width 4,096 at 24,576 tokens → 100%.
-- Norms, softmax, activations: a few FLOPs per element, much less.
-:::
-
-::: {.slide title="The Framework's Count Confirms 6ND Plus the Attention Term"}
-Prediction: $1 + 4nLd/(2N) = 1.082$ times $2ND$
-($n = 128$, $d = 256$, $L = 6$, $N = 4.78$M, output layer included).
+Measuring a full forward + backward step of `gpt(256, act='gelu')` on batch $(64, 128)$ ($D_{\text{step}} = 8{,}192$ tokens) with PyTorch's `FlopCounterMode` and JAX's HLO `cost_analysis()` confirms the analytical derivation:
 
 @!scaling-laws-checking-the-arithmetic
 
-- A counter of matrix products alone should land on **1.082**.
-- A counter that also sees elementwise work should land a few percent
-  above it.
-- Backward / forward $\approx 2$, the 4-to-2 of the derivation.
-:::
-
-::: {.slide title="Check: What Did GPT-2 Small Cost?"}
-[Check]{.kicker}
-
-GPT-2 small: 124M parameters, roughly 10B training tokens (an estimate;
-the paper does not report it), context 1,024, width 768. Estimate the
-training FLOPs and the attention correction.
-
-. . .
-
-- $6ND = 6 \cdot 1.24 \times 10^{8} \cdot 10^{10} \approx 7 \times 10^{18}$.
-- $n/(6d) = 1024 / 4608 \approx 22\%$: the correction is no longer small.
-:::
-
-::: {.slide title="A Grid of Five Sizes and Three Data Budgets"}
-Corpus: WikiText-103 bytes, **270M** for training, read at random offsets.
-
-| axis | values |
-|:--|:--|
-| width, blocks | 96/3, 128/3, 192/4, 256/6, 384/8 |
-| $N$ (non-embedding) | 0.33M → 14.2M, a factor of 43 |
-| $D$ (tokens) | 4.1M, 8.2M, 16.4M: at most 6% of the text, almost none repeated |
-
-All 15 runs: AdamW, decay 0.1 on matrices, warmup, cosine, clipping;
-no dropout.
-:::
-
-::: {.slide title="Every Run Gets Its Own Schedule and Its Own Learning Rate"}
-- **Schedule:** the cosine decays to zero at the end of *each* run.
-  A 500-step loss read off a 2,000-step run is taken at a high learning
-  rate and overstates the loss (Hoffmann et al., 2022).
-- **Learning rate:** the best Adam rate falls like $1/d$, so the peak
-  rate is $2 \times 10^{-3} \cdot 256/d$.
-- **Warmup:** a tenth of the steps, at least 100. With 50, the smallest
-  model's 500-step run (peak $5.3 \times 10^{-3}$) can stall far above
-  its neighbors; with 100 it ends in line.
-
-::: {.d2l-note}
-A study is only as good as the tuning of its worst point.
+::: {.d2l-note .rule}
+The exact matrix-multiply FLOP count lands at **$1.082 \times 6 N D$**—matching $1 + \frac{4 L T d}{2 N} = 1.082$ to three decimal places—and the backward-to-forward ratio is **$\mathbf{2.00}$** ($4 N D$ vs. $2 N D$).
 :::
 :::
 
-::: {.slide title="Loss Falls with Size and Data; Each Tripling of the Model Gains Less"}
-@!scaling-laws-five-sizes-one-diet-1
+::: {.slide title="A 15-Model Empirical Scaling Study on WikiText-103"}
+[Scaling Grid Design]{.kicker}
 
-- Down a column, $N$ grows: 0.59M → 1.77M gains 0.05–0.09 nats,
-  4.72M → 14.2M only 0.02–0.04.
-- Along a line, $D$ grows: 4× the tokens gains 0.20–0.27 nats.
-- Run-to-run spread of one point: about 0.01 nats.
+To observe neural scaling laws firsthand, we train a $5 \times 3$ grid of **15 byte-level GPTs** spanning a $43\times$ range in non-embedding parameters $N$ and three data budgets $D$:
+
+| Experimental Axis | Values in Our 15-Run Grid | Scope & Purpose |
+| :--- | :--- | :--- |
+| **5 Backbone Sizes `(d, L, H)`** | `(96, 3, 4)`, `(128, 3, 4)`, `(192, 4, 6)`, `(256, 6, 8)`, `(384, 8, 8)` | $N \in [0.33\text{M},\; 14.17\text{M}]$ non-embedding params ($43\times$ span) |
+| **3 Step Budgets ($s$ steps)** | $500$, $1{,}000$, $2{,}000$ steps ($8{,}192$ bytes/step) | $D \in \{4.1\text{M},\; 8.2\text{M},\; 16.4\text{M}\}$ bytes ($\le 6\%$ of $270\text{M}$ corpus) |
+| **Width-Scaled Peak LR** | $\eta_{\max}(d) = 2 \times 10^{-3} \cdot (256 / d)$ | Optimal AdamW learning rate scales inversely with width $d$ |
+| **Matched Cosine Horizon** | Warmup $\max(100, s/10)$, cosine decays to $0$ at step $s$ | Every run is evaluated at the end of its own annealed schedule |
 :::
 
-::: {.slide title="Check: Four Times the Data or 43 Times the Parameters?"}
-[Check]{.kicker}
+::: {.slide title="Pitfall: Fixed Horizons Distort Scaling Exponents"}
+[Experimental Methodology Pitfall]{.kicker}
 
-Start from the smallest model (0.33M) on the smallest budget (4.1M
-tokens). Which lowers the loss more: 4× the tokens, or the 14.2M model on
-the same tokens? Which costs more compute?
+Why did we train three separate runs ($s = 500, 1000, 2000$) for each model size instead of training one $2{,}000$-step run and reading validation loss at steps $500$, $1{,}000$, and $2{,}000$?
 
-. . .
-
-- 4× the data: **0.25 nats or more**, at 4× the compute.
-- 43× the parameters: 0.21–0.23 nats, at 43× the compute.
-- At this scale, data lowers the loss more, at a tenth of the compute.
+- **Hoffmann et al. (2022)'s key correction to Kaplan et al. (2020):** In a $2{,}000$-step cosine schedule, the learning rate at step $500$ is still near its peak ($\eta_{500} \approx 0.9\,\eta_{\max}$), preventing the weights from settling into a local minimum.
+- **Systematic small-budget bias:** Reading intermediate checkpoints of an un-annealed schedule artificially inflates the loss of short runs, making extra tokens $D$ look less valuable than extra parameters $N$.
+- **Width-dependent warmup:** Small widths ($d = 96$, peak LR $5.3 \times 10^{-3}$) require at least $100$ warmup steps so early Adam updates do not overshoot.
 :::
 
-::: {.slide title="At Equal Compute, the Smaller Model Trained Longer Wins"}
-@!scaling-laws-equal-compute
+::: {.slide title="Grid Results: Diminishing Returns in N Alone"}
+[Empirical Scaling Surface]{.kicker}
 
-- Gaps of 0.05 and 0.13 nats, 5–13× the run-to-run spread; the winner
-  used half the FLOPs of the 14.2M model.
-- Wherever two curves overlap in compute, the smaller model lies lower.
-:::
-
-::: {.slide title="The Chinchilla Law Separates Three Limits"}
-$$\mathcal{L}(N, D) = \mathcal{L}_\infty + \frac{A}{N^{\alpha}} + \frac{B}{D^{\beta}}$$
-
-- $\mathcal{L}_\infty$ ($E$ in the paper): the entropy of the text, which
-  no budget removes.
-- $A/N^{\alpha}$: the excess loss of finite parameters.
-- $B/D^{\beta}$: the excess loss of finite data.
-- The sum assumes that size and data do not interact: the bold
-  assumption, which our grid already strains.
-- A fixed budget trades the second term against the third.
-
-[Fitted to 400+ runs, 70M–16B parameters, 5–500B tokens (Hoffmann et al., 2022); $N$ counts all parameters.]{.small}
-:::
-
-::: {.slide title="At the Optimum, Both Shrinkable Terms Fall at Equal Rates"}
-Under $C \approx 6ND$, substitute $D = C/(6N)$ and set $\partial \mathcal{L}/\partial N = 0$:
-
-$$\alpha \frac{A}{N^{\alpha}} = \beta \frac{B}{D^{\beta}}
-\quad\Rightarrow\quad
-N^* \propto C^{\beta/(\alpha+\beta)}, \;\; D^* \propto C^{\alpha/(\alpha+\beta)}$$
-
-- $\alpha \approx \beta$: both grow like $C^{1/2}$.
-- $D^*/N^*$ hardly depends on the budget.
-:::
-
-::: {.slide title="The Optimum Is Where a Budget Line Touches a Loss Contour"}
 ::: {.cols .vc}
+::: {.col}
+- **Increasing $N$ at fixed tokens $D$:** Tripling model size from $0.59\text{M} \to 1.77\text{M}$ drops loss by $0.05\text{--}0.09\text{ nats}$, whereas tripling from $4.72\text{M} \to 14.17\text{M}$ gains only $0.02\text{--}0.04\text{ nats}$ because $500\text{--}2{,}000$ steps starve the $14.17\text{M}$ model of data.
+- **Increasing $D$ at fixed size $N$:** Quadrupling tokens ($4.1\text{M} \to 16.4\text{M}$) lowers validation loss by **$0.20\text{--}0.27\text{ nats}$** across every model size.
+:::
+
+::: {.col .fig}
+@!scaling-laws-five-sizes-one-diet-2
+:::
+:::
+:::
+
+::: {.slide title="IsoFLOP Trade-Off: Smaller Models Trained Longer Win"}
+[The Pareto Compute Frontier]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Plotting all 15 runs against total FLOPs $C = 6 N D$:** Where curves for different model sizes overlap in compute $C$, the **smaller model trained on more tokens** consistently achieves lower validation loss!
+- **Concrete IsoFLOP comparison:**
+  - $N = 14.17\text{M}$ on $D = 4.1\text{M}$ ($C = 3.5 \times 10^{14}$): **$1.48\text{ nats}$**
+  - $N = 4.72\text{M}$ on $D = 8.2\text{M}$ ($C = 2.3 \times 10^{14}$): **$1.35\text{ nats}$**
+  - $N = 1.77\text{M}$ on $D = 16.4\text{M}$ ($C = 1.7 \times 10^{14}$): **$1.28\text{ nats}$** (lowest loss at *half* the FLOPs!).
+:::
+
+::: {.col .fig}
+@!scaling-laws-equal-compute
+:::
+:::
+:::
+
+::: {.slide title="The Chinchilla Parametric Scaling Law"}
+[Parametric Loss Surface]{.kicker}
+
+Hoffmann et al. (2022) decompose validation cross-entropy $\mathcal{L}(N, D)$ into three additive terms fitted across $400+$ training runs ($70\text{M}\text{--}16\text{B}$ parameters, $5\text{B}\text{--}500\text{B}$ tokens):
+
+$$\mathcal{L}(N, D) = L_\infty + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$
+
+- **Irreducible entropy floor ($L_\infty \approx 1.69\text{--}1.82\text{ nats/token}$):** The fundamental Shannon entropy of natural text that no finite model or dataset can eliminate.
+- **Finite-capacity approximation penalty ($A / N^\alpha$):** Excess loss from approximating the true distribution with a finite $N$-parameter network ($\alpha \approx 0.35$).
+- **Finite-data estimation penalty ($B / D^\beta$):** Excess loss from training on a finite sample of $D$ tokens ($\beta \approx 0.37$).
+:::
+
+::: {.slide title="Deriving the Compute-Optimal Split N*(C) and D*(C)"}
+[Constrained Optimization]{.kicker}
+
+To minimize $\mathcal{L}(N, D)$ subject to a fixed compute budget $C = 6 N D$, substitute $D = C / (6N)$ into $\mathcal{L}(N, C/(6N))$ and set the derivative with respect to $N$ to zero:
+
+$$\frac{d}{dN}\left(L_\infty + A N^{-\alpha} + B (C/6)^{-\beta} N^\beta\right) = -\alpha A N^{-\alpha-1} + \beta B (C/6)^{-\beta} N^{\beta-1} = 0$$
+
+- **Equating marginal returns ($\alpha A (N^*)^{-\alpha} = \beta B (D^*)^{-\beta}$):** At the compute optimum, the finite-model penalty and finite-data penalty shrink at proportional rates:
+  $$N^*(C) = G\left(\frac{C}{6}\right)^a, \qquad D^*(C) = G^{-1}\left(\frac{C}{6}\right)^b$$
+  where $a = \frac{\beta}{\alpha + \beta}$, $b = \frac{\alpha}{\alpha + \beta}$, and $G = \left(\frac{\alpha A}{\beta B}\right)^{\frac{1}{\alpha + \beta}}$.
+- **Equal scaling ($a \approx b \approx 0.5$):** Because $\alpha \approx \beta$, scaling compute $C$ by $100\times$ scales **both $N^*$ and $D^*$ by $\sim 10\times$**!
+:::
+
+::: {.slide title="IsoFLOP Contours and the Compute-Optimal Path"}
+[Geometric Intuition]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **IsoFLOP budget lines (dashed, slope $-1$ on log–log axes):** Lines of constant training compute $C = 6 N D$.
+- **Compute-optimal ridge (orange line, slope $\approx +1$):** Connects the tangency points $(N^*(C), D^*(C))$ where each budget line touches the lowest possible loss contour.
+- **The 20-tokens-per-parameter rule:** Along the orange path, $D^* / N^* \approx 20$ tokens per parameter (`Chinchilla` 70B on $1.4\text{T}$ tokens).
+
+@scaling-laws-the-optimal-split
+:::
+
 ::: {.col .fig}
 @fig:mdl-transformers-chinchilla
 :::
-
-::: {.col .narrow}
-- Dashed: equal compute $C = 6ND$, slope $-1$.
-- Orange: the compute-optimal path, slope $\approx 1$.
-- Llama 3 8B: a similar budget at a tenth of the optimal size.
-:::
 :::
 :::
 
-::: {.slide title="Only the Refit Reproduces Chinchilla's 20 Tokens per Parameter"}
-@!scaling-laws-the-optimal-split
+::: {.slide title="Reconciling Kaplan (2020) vs. Chinchilla (2022)"}
+[Why Exponents Shifted]{.kicker}
 
-- Hoffmann et al.: $\alpha = 0.34$, $\beta = 0.28$; refit (Besiroglu et
-  al., 2024): $\alpha = 0.348$, $\beta = 0.366$.
-- Published constants: **93** tokens per parameter; refit: **18**;
-  Chinchilla trained 70B on 1.4T, **20**.
+Why did Kaplan et al. (2020) conclude $N^* \propto C^{0.73}, D^* \propto C^{0.27}$ (recommending huge models trained on few tokens, like GPT-3 175B on 300B tokens), whereas Chinchilla found $N^* \propto C^{0.50}, D^* \propto C^{0.50}$?
+
+| Methodological Factor | Kaplan et al. (2020) ($a = 0.73$) | Chinchilla (2022) & Refits ($a \approx 0.50$) |
+| :--- | :--- | :--- |
+| **1. Learning-rate schedule** | Fixed long horizon; intermediate losses read at high LR | Cosine schedule decayed to minimum LR at the end of *every* run |
+| **2. Parameter counting ($N$)** | Counted **non-embedding** $N = 12 L d^2$ only | Included embedding/head $V d$ (or corrected small-model distortion) |
+| **3. Small-model tuning** | Fixed warmup length across sizes (starving small runs) | Tuned warmup and peak LR $\propto 1/d$ per model size |
 
 ::: {.d2l-note}
-The constants come from fits, and the fits disagree.
+Subsequent replication studies (Pearce & Song 2024; Porian et al. 2024) confirmed that accounting for embedding FLOPs and per-horizon LR decay moves the exponent directly from $0.73$ to $0.50$.
 :::
 :::
 
-::: {.slide title="Counting and Tuning Small Runs Moved the Exponent from 0.73 to 0.5"}
-| fit | $N^* \propto$ | 10× the budget gives |
-|:--|:--|:--|
-| Kaplan et al. (2020) | $C^{0.73}$ | 5.4× the model, 1.9× the tokens |
-| refit of Chinchilla | $C^{0.51}$ | a little over 3× each |
+::: {.slide title="Why Deployed Models Train Far Past the Chinchilla Ratio"}
+[Inference-Aware Scaling]{.kicker}
 
-- Pearce and Song (2024): non-embedding counts at small sizes, where the
-  embedding is a large share.
-- Porian et al. (2024): output layer left out of the compute, warmup too
-  long for small models, optimizer not tuned per size.
-- The earlier answer came from how small runs were counted and set up,
-  not from a different law.
-:::
+Look at where recent open-weights models sit relative to their Chinchilla pretraining optimum:
 
-::: {.slide title="Check: A Budget One Hundred Times Larger"}
-[Check]{.kicker}
-
-Under the refit, the budget grows from $10^{23}$ to $10^{25}$ FLOPs. How
-much larger is the compute-optimal model, and how many more tokens does it
-read?
-
-. . .
-
-- $N^*$ and $D^*$ both grow about like $C^{1/2}$: **about 10× each**
-  (exponents 0.51 and 0.49).
-- The ratio stays near 20 tokens per parameter.
-:::
-
-::: {.slide title="Smaller Models Train Far Past the Optimum to Make Generation Cheap"}
 @!scaling-laws-training-past-the-optimum
 
-- Generating a token costs $2N$, for the model's whole life.
-- Llama 3 405B: 0.65 of the optimal size costs 0.001 nats; the loss is
-  flat near the optimum.
-- Llama 3 8B: a tenth of the optimal size, +0.05 nats: reducible loss
-  0.20 against 0.15 (refit, nats per token).
+- **Chinchilla optimizes pretraining cost ($6 N D$) alone:** It assigns **zero cost** to the inference FLOPs ($2 N$ per generated token) and VRAM spent serving the model after release!
+- **Shallow loss contours near the optimum:** Training `Llama 3 8B` on $15\text{T}$ tokens ($1{,}875\text{ tokens/param}$, $0.11\times$ the Chinchilla-optimal size for that budget) pays only $+0.053\text{ nats}$ over a Chinchilla-optimal $73\text{B}$ model while making **every inference token $9\times$ cheaper** to generate.
 :::
 
-::: {.slide title="Check: The Cost of a Generated Token"}
-[Check]{.kicker}
+::: {.slide title="Lifetime Compute: Balancing Pretraining and Serving"}
+[Total Cost of Ownership]{.kicker}
 
-Under the refit, the compute-optimal model with Llama 3 8B's predicted
-loss has about 34B parameters and reads 0.64T tokens. Compare the training
-costs and the cost of a generated token.
+If a model of size $N$ is trained on $D$ tokens and then deployed to generate $D_{\text{inf}}$ tokens over its lifetime, total lifetime compute is:
 
-. . .
+$$C_{\mathrm{lifetime}}(N, D) = \underbrace{6 N D}_{\text{pretraining}} + \underbrace{2 N D_{\mathrm{inf}}}_{\text{inference serving}}$$
 
-- Training: $6 \cdot 8\textrm{B} \cdot 15\textrm{T}$ against
-  $6 \cdot 34\textrm{B} \cdot 0.64\textrm{T}$, **about 5.5×** more for the 8B
-  model.
-- Generation: $2N$ per token, **about 4×** cheaper with the 8B model.
-- The savings exceed the extra training after about 11T generated tokens,
-  fewer than the 15T the model read in training.
+- **Break-even point for Llama 3 8B ($D = 15\text{T}$) vs. an equal-loss Chinchilla model ($N_{\text{Chin}} \approx 34\text{B}, D_{\text{Chin}} \approx 0.64\text{T}$):**
+  - Extra pretraining FLOPs paid upfront by the 8B model: $6(8\text{B})(15\text{T}) - 6(34\text{B})(0.64\text{T}) \approx \mathbf{5.9 \times 10^{23}\text{ FLOPs}}$.
+  - Inference FLOPs saved on every generated token: $2(34\text{B} - 8\text{B}) = \mathbf{5.2 \times 10^{10}\text{ FLOPs/token}}$.
+  - **Payback threshold:** The upfront over-training pays for itself after serving just $D_{\text{inf}} \approx 11.3\text{T}$ generated tokens!
 :::
 
-::: {.slide title="A Scaling Law Predicts the Loss of Dense Models, Nothing More"}
-- It predicts one number: the loss on text like the training data.
-- Whether a model answers a question, writes a program or follows an
-  instruction is measured separately; small differences in loss need
-  not show up there in proportion.
-- It was fitted to dense models. A mixture of experts trains on the
-  parameters each token uses, while its capacity follows all of them.
+::: {.slide title="Concept Check: FLOP Accounting and Budget Allocation"}
+[Check Your Understanding]{.kicker}
+
+Test your grasp of scaling laws with three calculations:
+
+1. **GPT-2 Small compute & attention correction:** GPT-2 Small has $N = 124\text{M}$ total parameters ($d = 768$) and was trained on roughly $D = 10\text{B}$ tokens at context length $T = 1{,}024$. Estimate its $6ND$ training FLOPs and the relative attention score correction $T / (6d)$.
+2. **100× compute budget expansion:** If a lab increases its pretraining compute budget $C$ by $100\times$ (from $10^{23}$ to $10^{25}\text{ FLOPs}$), by what factors should it scale model parameters $N^*$ and training tokens $D^*$ to stay on the Chinchilla compute-optimal path ($a \approx b \approx 0.5$)?
+3. **Activation checkpointing ($8ND$):** Full block-level activation checkpointing recomputes the forward pass ($2ND$) once during backpropagation ($4ND$). How does this change the per-token training cost formula?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **$C \approx 6 \times (1.24 \times 10^8) \times 10^{10} \approx \mathbf{7.4 \times 10^{18}\text{ FLOPs}}$**, and the attention term adds $T / (6d) = 1024 / (6 \times 768) \approx \mathbf{22.2\%}$ on top of the linear projections.
+2. Both $N^*$ and $D^*$ scale by **$100^{0.5} = \mathbf{10\times}$**, keeping the ratio $D^* / N^* \approx 20$ tokens per parameter invariant.
+3. Total training compute increases by $33\%$ from $C \approx 6 N D$ to **$C \approx (2 + 2 + 4) N D = \mathbf{8 N D}$** in exchange for $O(1)$ per-layer activation memory.
+:::
 :::
 
-::: {.slide title="6ND Prices a Run, and About 20 Tokens per Parameter Spends It Best"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Parameter, FLOP, and Chinchilla Scaling Laws"}
+[Key Takeaways]{.kicker}
 
-- Training costs $\approx 6ND$; attention adds $n/(6d)$, 8% for our
-  models, confirmed by the framework counts.
-- At equal compute, the smaller model trained on more tokens reached the
-  lower loss, by 0.05 to 0.13 nats.
-- Compute-optimal: $N^*, D^* \propto C^{1/2}$, about 20 tokens per
-  parameter (refit).
-- Deployed models train up to 100× longer per parameter to make
-  generation cheaper.
-
-**Next:** a mixture of experts, whose training cost follows only the
-parameters each token uses.
+| Law / Quantity | Formula | Practical Meaning & Rule of Thumb |
+| :--- | :--- | :--- |
+| **Non-Embedding Parameters** | $N \approx 12 L d^2$ ($4 L d^2$ attn $+ 8 L d^2$ FFN) | Exact to $<1\%$ for dense models; add $V d$ for tied embeddings |
+| **Training FLOPs** | $C \approx 6 N D \cdot \bigl(1 + \frac{T}{6d}\bigr)$ | $2ND$ forward $+ 4ND$ backward; attention dominates only when $T \gtrsim 6d$ |
+| **Chinchilla Loss Surface** | $\mathcal{L}(N, D) = L_\infty + A N^{-\alpha} + B D^{-\beta}$ | Additive decomposition into entropy floor, capacity error, and data error |
+| **Compute-Optimal Split** | $N^*(C) \propto C^{\frac{\beta}{\alpha+\beta}} \approx C^{0.5},\; D^*(C) \propto C^{0.5}$ | Scale $N$ and $D$ equally with $\sqrt{C}$; maintain $D^* / N^* \approx 20\text{ tokens/param}$ |
+| **Inference-Optimal Shift** | Minimize $6 N D + 2 N D_{\text{inf}}$ along $\mathcal{L}(N,D)=\mathcal{L}_0$ | Train smaller models to $200\text{--}2{,}000\text{ tokens/param}$ to slash serving cost |
 :::

@@ -4,6 +4,7 @@
 The S4D layer of :numref:`sec_ssm` treats every token at lag $k$ identically: an input from $k$ steps ago contributes to the present output with the fixed convolution weight $K_k$, whether that input was the key noun of a paragraph or a comma. Natural language requires *content-based selection*: most tokens can be discarded quickly, while a few critical tokens must be written strongly and held across hundreds of steps at positions that vary from sentence to sentence. Can a state space model decide, token by token, what to keep and for how long?
 
 Two models from earlier sections each hold half of the answer:
+
 - `MinGRU` (:numref:`sec_linear-recurrence`) computes its decay gate from the current input token, so it can keep one token and overwrite the next, but its gates start with a one-step half-life and each channel holds only a single scalar state.
 - `S4D` (:numref:`sec_ssm`) starts with half-lives spanning $1$ to $\sim 700$ steps across $N$ states per channel, but its dynamics are time-invariant.
 
@@ -195,6 +196,7 @@ Following :citet:`Gu.Dao.2023`, :eqref:`eq_selective_ssm` retains the exact ZOH 
 ### Projections, Convolution, and Gate
 
 The `Mamba` block :cite:`Gu.Dao.2023` wraps the selective SSM inside channel-mixing projections, a width-4 depthwise causal convolution, and a SwiGLU-style multiplicative output gate (:numref:`fig_mamba_block`):
+
 1. An input projection $\mathbf{W}_\textrm{in}$ expands the $d$-dimensional input into two branches of width $H = 2d$.
 2. The first branch passes through a width-4 depthwise causal convolution and SiLU activation before entering the selective SSM—allowing $\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ to condition on a 4-token local window rather than a single isolated token.
 3. The SSM output is multiplied elementwise by the SiLU of the second branch and projected back to width $d$ via $\mathbf{W}_\textrm{out}$.
@@ -765,234 +767,240 @@ Time-invariant state space models weight past inputs purely by lag and fail on c
 ::: {.cover}
 [Dive into Deep Learning · §12.5]{.kicker}
 
-Selective state space models<br>
-**selective copying · a step size as a gate · write and read vectors · the scan and its gradient · Mamba on text**
+Selective State Space Models (Mamba)<br>**selective copying · input-dependent step sizes · softplus–sigmoid duality · reverse-scan adjoint VJP · state contributions**
 :::
 :::
 
-::: {.slide title="S4D Copies Barely More Symbols Than Chance"}
-[The problem]{.kicker}
+::: {.slide title="Why Time-Invariant SSMs Fail at Content Selection"}
+[Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-1,024 positions of filler, four of them symbols (of eight); at four
-queries, repeat the symbols in order. Chance: 1/8.
-
-- S4D: at most one in five. Its weights depend only on distance.
-- One distance holds a symbol here, a filler there.
+- **The flaw of fixed lag kernels:** In §12.4, `S4D` weights any token $k$ steps back by the fixed convolution coefficient $K_k$, whether that token was a key entity or an uninformative filler.
+- **Natural language is content-selective:** A reader must write salient nouns strongly into memory and hold them across variable-length clauses while ignoring filler tokens in between.
+- **Why no LTI convolution can solve selective copying:** When target symbols appear at random positions that change from sequence to sequence, no fixed lag weight $K_k$ can align with the targets.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-modernrnn-selective-copy.svg)
+![](../img/mdl-modernrnn-selective-copy.svg){.nostretch width=100%}
 :::
-:::
-
-::: {.d2l-note}
-Keep a token **because of what it is**, for up to a thousand steps.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-- show that a softplus step size is a GRU gate;
-- write the selective SSM with the shape of every part;
-- differentiate a scan with a second scan;
-- read where a trained state comes from;
-- weigh Mamba against the minGRU and attention.
+::: {.slide title="Combining minGRU Selectivity with S4D Multi-Timescales"}
+[Unifying Two Paradigms]{.kicker}
 
-**Running example:** selective copying; WikiText-103 bytes at width 256.
-:::
+Earlier sections developed two complementary pieces of the puzzle that **Selective State Space Models (Mamba)** (Gu & Dao, 2023) unify:
 
-::: {.slide title="This Deck Lets Each Token Choose the Step Size"}
-[Scope and place]{.kicker}
+| Architecture | Token-Dependent Decay? | Multi-Timescale Initialization? | State per Channel | Parallel Training Algorithm |
+| :--- | :---: | :---: | :---: | :--- |
+| **`MinGRU` (§12.3)** | **Yes** ($\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z})$) | No (starts at $\sigma(0) = 0.5$, $\tau_{1/2} = 1$) | $1$ scalar | Associative scan |
+| **`S4D` (§12.4)** | No (fixed step size $\Delta_c$) | **Yes** ($\lambda_n = -n$, $\tau_{1/2} \in [0.4, 693]$) | $N$ numbers | FFT convolution or scan |
+| **`Mamba` (§12.5)** | **Yes** ($\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ from $\mathbf{x}_t$) | **Yes** ($\lambda_n = -n$, $\Delta_0 \in [10^{-3}, 10^{-1}]$) | $N$ numbers | Associative scan + adjoint scan |
 
-gates → linear recurrence and scan → state space models →
-**selective SSMs** → matrix memories → delta rule → hybrids
-
-- Idea: the SSM's step size becomes a function of the token.
-- Skipped: the fused GPU kernel; Mamba-2 (next deck).
-:::
-
-::: {.slide title="The minGRU and S4D Each Have Half a Solution"}
-| | decay chosen by the token | long memories at the start | state per channel |
-|---|---|---|---|
-| minGRU | yes | no (gates at 1/2) | 1 number |
-| S4D | no | yes | $N$ numbers |
-
-::: {.d2l-note}
-Mamba combines all three: the token chooses, the memories start
-long, and each channel holds $N$ numbers.
+::: {.d2l-note .rule}
+Making the discretization step size $\boldsymbol{\Delta}_t$ a function of the input token $\mathbf{x}_t$ lets each channel freeze its $N$-state bank on fillers ($\Delta_{t,c} \to 0$) and overwrite it on salient tokens ($\Delta_{t,c}$ large).
 :::
 :::
 
-::: {.slide title="S4D Fails; the minGRU Copies Most Symbols"}
-Two blocks of width 48 in `d2l.SeqLM`, Adam, 1,500 steps of fresh
-batches, two runs per model.
+::: {.slide title="The Selective Copying Benchmark: Random Symbol Lags"}
+[Synthetic Stress Test]{.kicker}
+
+`copy_batch` tests content-based selection over a $1{,}028$-token horizon:
+
+- **Sequence layout:** $1{,}024$ filler tokens (`0`) into which $4$ marked symbols (drawn uniformly from tokens `2..9`) are scattered at **random positions**, followed by $4$ query tokens (`1`) at steps $1{,}025 \ldots 1{,}028$.
+- **Prediction target:** At the $j$-th query token, output the $j$-th marked symbol in order (chance accuracy $= 1/8 = 0.125$).
+
+@!mamba-selective-copying-1
+:::
+
+::: {.slide title="Baseline Test: Time-Invariant S4D vs. Selective minGRU"}
+[Baseline Results]{.kicker}
+
+Training a 2-block `SeqLM` ($d = 48$) for $1{,}500$ Adam steps ($\text{lr} = 3 \times 10^{-3}$, batch size $64$, two runs each):
 
 @!mamba-selective-copying-3
 
-::: {.d2l-note}
-Selectivity matters: the minGRU copies although its gates start with a
-memory of one step.
-:::
+- **`S4D` stays near chance ($\le 0.20$):** Fixed lag weights cannot track symbols whose positions shift randomly between sequences.
+- **Why `minGRU` succeeds ($0.75$–$0.97$) despite 1-step initial gates:** Unlike fixed $1{,}000$-step delayed recall (§12.4), random placement occasionally puts marked symbols just a few steps before the queries—providing short-range gradients that progressively teach the gates to stay closed on filler tokens `0`.
 :::
 
-::: {.slide title="A Step Size Through a Softplus Is a GRU Gate"}
-One state, $\lambda = -1$, zero-order hold (input weight $1 - e^{-\Delta}$);
-the token sets $s_t = \mathbf{w}^\top\mathbf{x}_t + b$:
-$h_t = e^{-\Delta_t} h_{t-1} + (1 - e^{-\Delta_t})\, x_t$, with
-$\Delta_t = \textrm{softplus}(s_t) = \log(1 + e^{s_t})$.
+::: {.slide title="Exact Duality: Softplus Step Sizes Are Sigmoid Gates"}
+[Theorem 1 (Gu & Dao, 2023)]{.kicker}
 
-$$e^{-\textrm{softplus}(s)} = \frac{1}{1 + e^{s}} = \sigma(-s)$$
+Consider a 1-state SSM ($N = 1$) with rate $\lambda = -1$ under zero-order hold ($h_t = e^{-\Delta_t}h_{t-1} + (1 - e^{-\Delta_t})x_t$). Compute the positive step size via $\Delta_t = \textrm{softplus}(s_t) = \log(1 + e^{s_t})$ from a linear pre-activation $s_t = \mathbf{w}^\top \mathbf{x}_t + b$:
 
-| $s_t$ | $\Delta_t$ | gate $z_t = \sigma(-s_t)$ | effect |
-|---|---|---|---|
-| $-4.6$ | 0.01 | 0.99 | keep: half-life 69 steps |
-| $2$ | 2.1 | 0.12 | overwrite |
+$$e^{-\Delta_t} = e^{-\log(1 + e^{s_t})} = \frac{1}{1 + e^{s_t}} = \sigma(-s_t) = z_t$$
+
+| Pre-activation $s_t$ | Step size $\Delta_t = \textrm{softplus}(s_t)$ | Retention $z_t = e^{-\Delta_t} = \sigma(-s_t)$ | Operational Effect on State |
+| :---: | :---: | :---: | :--- |
+| $s_t = -4.6$ (filler) | $\Delta_t \approx 0.01$ | $z_t \approx 0.990$ ($\tau_{1/2} = 69$) | **Freeze time:** ignore filler, preserve state |
+| $s_t = +2.0$ (symbol) | $\Delta_t \approx 2.13$ | $z_t \approx 0.119$ ($\tau_{1/2} = 0.3$) | **Advance time:** flush old state, write symbol |
 
 ::: {.d2l-note}
-With one state, the selective SSM is the minGRU's blend $h_t = z_t h_{t-1} + (1 - z_t) x_t$.
+At $N = 1$, a selective SSM is algebraically identical to `MinGRU` ($h_t = z_t h_{t-1} + (1 - z_t)x_t$), while generalizing naturally to $N$ rates $\lambda_1, \ldots, \lambda_N$ driven by one channel step size $\Delta_{t,c}$.
 :::
 :::
 
-::: {.slide title="Mamba Gives Each Channel N States and a Write and Read Direction"}
-$$\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{W}_\Delta\mathbf{x}_t + \mathbf{b}_\Delta),\quad
-\mathbf{B}_t = \mathbf{W}_B\mathbf{x}_t,\quad \mathbf{C}_t = \mathbf{W}_C\mathbf{x}_t$$
+::: {.slide title="Selective SSM Dynamics: Per-Token Δt, Bt, and Ct"}
+[The Selective SSM Equations]{.kicker}
 
-$$\mathbf{h}^{(c)}_t = e^{\Delta_{t,c}\boldsymbol{\lambda}} \odot \mathbf{h}^{(c)}_{t-1} + \Delta_{t,c}\, x_{t,c}\,\mathbf{B}_t,
-\qquad y_{t,c} = \mathbf{C}_t^\top \mathbf{h}^{(c)}_t + D_c x_{t,c}$$
+From the $H$-channel input $\mathbf{x}_t \in \mathbb{R}^H$ ($H = 2d$), `SelectiveSSM` projects per-channel step sizes $\boldsymbol{\Delta}_t \in \mathbb{R}_+^H$ alongside a shared write vector $\mathbf{B}_t \in \mathbb{R}^N$ and read vector $\mathbf{C}_t \in \mathbb{R}^N$:
 
-| $\mathbf{x}_t$, $\boldsymbol{\Delta}_t$ | $\mathbf{B}_t$, $\mathbf{C}_t$ | rates $\boldsymbol{\lambda}$ | state |
-|---|---|---|---|
-| $H$ channels | $N$, shared by channels | $-1, \ldots, -N$ per channel | $H \times N$ |
+$$\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t + \mathbf{b}_\Delta), \qquad \mathbf{B}_t = \mathbf{W}_B \mathbf{x}_t, \qquad \mathbf{C}_t = \mathbf{W}_C \mathbf{x}_t$$
 
-$D_c$: a learned skip weight per channel.
+Each channel $c \in \{1, \ldots, H\}$ updates its $N$-dimensional state $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ with rates $\boldsymbol{\lambda} \in \mathbb{R}_-^N$ and reads out $y_{t,c}$:
 
-::: {.d2l-note}
-With $N = 1$ and $\mathbf{B}_t = \mathbf{C}_t = 1$: the gate of the previous slide.
-:::
+$$\mathbf{h}_t^{(c)} = e^{\Delta_{t,c}\boldsymbol{\lambda}} \odot \mathbf{h}_{t-1}^{(c)} + \Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t, \qquad y_{t,c} = \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}$$
+
+- **Euler write approximation:** Following Gu & Dao (2023), the ZOH decay $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ is kept exact while the ZOH write factor $(e^{\Delta\lambda} - 1)/\lambda$ is replaced by its first-order Taylor expansion $\Delta_{t,c}$ (allowing salient tokens with large $\Delta_{t,c}$ to write with unbounded strength).
 :::
 
-::: {.slide title="Check: How Long Can a Fresh Layer Remember?"}
-$\Delta$ log-uniform in $[0.001, 0.1]$ across channels; rates $\lambda_n =
--1, \ldots, -16$. Half-life: $\ln 2/(\Delta|\lambda|)$ steps. What range
-does a fresh layer cover?
+::: {.slide title="Tensor Shapes and Low-Rank Step-Size Projection"}
+[Parameterization Details]{.kicker}
 
-::: {.fragment .fade-up}
-$\ln 2/(0.1 \cdot 16) \approx 0.43$ to $\ln 2/0.001 = 693$ steps: a factor
-of 16 from the rates, 100 from the step sizes.
-:::
+Every tensor in `SelectiveSSM` has a clear structural role across the $H = 2d$ expanded channels and $N$ state dimensions:
+
+| Quantity | Shape | How It Is Parameterized / Computed |
+| :--- | :---: | :--- |
+| **Channel input** $\mathbf{x}_t$ | $(H,)$ | Output of width-4 causal convolution + SiLU on expanded branch |
+| **Step sizes** $\boldsymbol{\Delta}_t$ | $(H,)$ | $\textrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t + \mathbf{b}_\Delta)$ with rank-$R$ bottleneck $\mathbf{W}_\Delta \in \mathbb{R}^{H \times R} \times \mathbb{R}^{R \times H}$, $R = \lceil d/16 \rceil$ |
+| **Initial bias** $\mathbf{b}_\Delta$ | $(H,)$ | Chosen so $\textrm{softplus}(\mathbf{b}_\Delta) \in [0.001, 0.1]$ log-uniformly (`dt + log(-expm1(-dt))`) |
+| **Write & read** $\mathbf{B}_t, \mathbf{C}_t$ | $(N,)$ each | Linear projections $\mathbf{W}_B \mathbf{x}_t$ and $\mathbf{W}_C \mathbf{x}_t$ shared across all $H$ channels |
+| **Decay rates** $\boldsymbol{\lambda}$ | $(H, N)$ | $-\exp(\text{log\_neg\_rate})$, initialized to $-1, -2, \ldots, -N$ in every channel |
+| **Recurrent state** $\mathbf{h}_t$ | $(H, N)$ | Updated by elementwise decay $e^{\Delta_{t,c}\lambda_{c,n}}$ and rank-1 outer write $(\boldsymbol{\Delta}_t \odot \mathbf{x}_t)\mathbf{B}_t^\top$ |
 :::
 
-::: {.slide title="The Mamba Layer Wraps the SSM in a Convolution and a Gate"}
+::: {.slide title="Anatomy of the Full Mamba Block"}
+[Block Architecture]{.kicker}
+
 ::: {.cols .vc}
 ::: {.col}
-- Project $d$ to $H = 2d$ channels and a gate branch.
-- Causal convolution over 4 tokens: keep or skip from a short context.
-- SiLU gate from the current token: how much of the past reaches the output.
-- Step sizes through rank $\lceil d/16 \rceil$; the bias sets where memories start.
+1. **Input expansion ($\mathbf{W}_\textrm{in}$):** Projects width $d$ to two branches $(\mathbf{U}, \mathbf{Z})$ each of expanded width $H = 2d$.
+2. **Short causal convolution:** A depthwise causal `Conv1d` of width $4$ followed by $\textrm{SiLU}$ mixes $4$ consecutive tokens before computing $\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ so selection can inspect local context.
+3. **Selective SSM & SwiGLU-style gate:** Multiplies $\textrm{SSM}(\mathbf{U}) \odot \textrm{SiLU}(\mathbf{Z})$ and projects back to width $d$ via $\mathbf{W}_\textrm{out}$.
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-modernrnn-mamba-block.svg){width=72%}
+::: {.col .fig}
+![](../img/mdl-modernrnn-mamba-block.svg){.nostretch width=76%}
 :::
-:::
-:::
-
-::: {.slide title="Selectivity Breaks the Convolution, Not the Scan"}
-- Weight $k$ steps back: a product of $k$ **different** decays. No kernel.
-- Still affine in $\mathbf{h}$: `linear_scan` applies.
-- Copying model: $64 \times 1{,}028 \times 96 \times 4$ = 25 M numbers,
-  100 MB per tensor of states.
-- A large layer ($H = 4096$, $N = 16$, $8 \times 8{,}192$ tokens): 17 GB per tensor.
-
-::: {.d2l-note .warn}
-Autodiff through 11 doubling rounds keeps about 20 such tensors: 2 GB.
 :::
 :::
 
-::: {.slide title="The Gradient of a Scan Is Another Scan"}
-$$\mathbf{g}_t = \frac{\partial \ell}{\partial \mathbf{h}_t}\Big|_\textrm{direct} + \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1},
-\qquad \frac{\partial \ell}{\partial \mathbf{b}_t} = \mathbf{g}_t,\quad
-\frac{\partial \ell}{\partial \mathbf{a}_t} = \mathbf{g}_t \odot \mathbf{h}_{t-1}$$
+::: {.slide title="Pitfall: Activation Memory Explosion in 4D Scans"}
+[Systems Bottleneck]{.kicker}
 
-A linear recurrence run backward: store the decays and the states, two
-tensors instead of about twenty.
+Because $\boldsymbol{\Delta}_t$ varies at every token step $t$, the system is no longer time-invariant—the FFT convolution of §12.4 cannot be used!
+
+- **Parallel scan still applies:** The state update $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ over $(B, T, H, N)$ remains affine, so `linear_scan` evaluates all $T$ states in $\lceil \log_2 T \rceil$ parallel rounds.
+- **The $2N$ state expansion tax:** Expanding each token's state from $d$ to $H \times N = 2dN$ numbers multiplies state tensor size by $2N$ ($32\times$ at $N = 16$).
+- **Naive autograd memory blow-up:** Differentiating through $\lceil \log_2 T \rceil \approx 11$ doubling rounds retains $\sim 20$ intermediate tensors of shape $(B, T, H, N)$: already **$\sim 2\text{ GB}$ per layer** in our tiny copying model, and **$>300\text{ GB}$ per layer** at LLM scale ($B=8, T=8192, H=4096, N=16$).
+:::
+
+::: {.slide title="The Adjoint Scan: Differentiating via a Reverse Scan"}
+[Memory-Efficient Backpropagation]{.kicker}
+
+Instead of backpropagating through the intermediate rounds of the forward scan, write the chain rule for the state gradient $\mathbf{g}_t = \partial \ell / \partial \mathbf{h}_t$ directly from $\mathbf{h}_{t+1} = \mathbf{a}_{t+1} \odot \mathbf{h}_t + \mathbf{b}_{t+1}$:
+
+$$\mathbf{g}_t = \frac{\partial \ell}{\partial \mathbf{h}_t}\Big|_\textrm{direct} + \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1}, \qquad \frac{\partial \ell}{\partial \mathbf{b}_t} = \mathbf{g}_t, \qquad \frac{\partial \ell}{\partial \mathbf{a}_t} = \mathbf{g}_t \odot \mathbf{h}_{t-1}$$
+
+- **Reverse-time linear recurrence:** The adjoint equation for $\mathbf{g}_t$ is itself an affine recurrence running backward from $t = T$ down to $1$, evaluated by a single call to `linear_scan` on reversed tensors!
+- **10x memory reduction (`adjoint_scan`):** Custom VJP (`torch.autograd.Function` / `@jax.custom_vjp`) saves only $(\mathbf{a}, \mathbf{h})$—**$2$ tensors instead of $\sim 20$**. (Mamba's fused CUDA kernel goes one step further: it keeps $\mathbf{h}$ in on-chip SRAM and recomputes $\mathbf{h}$ during the backward pass.)
+:::
+
+::: {.slide title="Verifying Custom VJP Adjoint Scan Against Autograd"}
+[Gradient Verification]{.kicker}
+
+Comparing gradients $\partial \ell / \partial \mathbf{a}$ and $\partial \ell / \partial \mathbf{b}$ from `adjoint_scan` against standard autograd through `linear_scan` on a $T = 100$ batch:
 
 @!mamba-training-with-a-scan-2
 
-Mamba's fused kernel goes further: the states stay in on-chip memory and
-are recomputed in the backward pass.
+::: {.d2l-note}
+The reverse-time adjoint scan produces the exact same gradients to `float32` precision ($\sim 10^{-6}$) at a fraction of the activation memory.
+:::
 :::
 
-::: {.slide title="Switching Selectivity Off Costs at Least 30 Points"}
-Same block, same projections, convolution and gate; only
-$\boldsymbol{\Delta}$, $\mathbf{B}$, $\mathbf{C}$ become constants.
+::: {.slide title="Selective Copying: Mamba vs. Non-Selective Ablation"}
+[Controlled Ablation]{.kicker}
+
+We train 2-block `Mamba` ($N = 4$) alongside `Mamba, not selective` (`selective=False`, keeping the exact same input/output projections, width-4 causal convolution, and SiLU output gate, but fixing $\boldsymbol{\Delta}, \mathbf{B}, \mathbf{C}$ as learned channel constants):
 
 @!mamba-selective-copying-with-mamba
 
-::: {.d2l-note}
-Every Mamba run beats every non-selective run by 30 points or more; the
-non-selective runs scatter from about 0.2 to 0.7 across executions.
-Selectivity, not the block, solves the task.
+::: {.d2l-note .rule}
+**Selectivity is the decisive mechanism:** `Mamba` achieves **$0.99$–$1.00$ accuracy** across runs, whereas freezing $\boldsymbol{\Delta}, \mathbf{B}, \mathbf{C}$ inside the identical block drops accuracy by **$>30$ percentage points** (scattering wildly across seeds).
 :::
 :::
 
-::: {.slide title="Mamba's State Spikes at the Symbols; S4D's Follows Distance"}
+::: {.slide title="Decomposing the Final State by Token Position"}
+[Mechanistic Interpretability]{.kicker}
+
+How does a trained `Mamba` layer retain the $4$ marked symbols across $1{,}024$ steps while discarding the $1{,}020$ filler tokens? Unrolling the recurrence to the first query position $T = 1{,}025$:
+
+$$\mathbf{h}_T = \sum_{s=1}^{T} \underbrace{\exp\!\Big(\sum_{r=s+1}^{T} \log \mathbf{a}_r\Big) \odot \mathbf{b}_s}_{\text{surviving term from position } s}$$
+
+- **Per-position state norm (`state_contributions`):** Computing the Euclidean norm of position $s$'s decayed write vector across all $H \times N$ state entries measures how much of position $s$ physically remains inside $\mathbf{h}_T$.
+- **Accounting for the width-4 causal convolution:** Because the depthwise convolution spreads each symbol token across positions $\{s, s+1, s+2, s+3\}$, the four 4-token symbol windows occupy at most $16 / 1025 \approx 1.6\%$ of the sequence.
+:::
+
+::: {.slide title="Mamba Spikes at Marked Symbols; S4D Tracks Recency"}
+[State Contribution Profile]{.kicker}
+
+Share of the final state originating in the $1.6\%$ symbol-window positions and the full contribution curve across all $1{,}025$ tokens:
+
 @!mamba-where-the-state-comes-from-2
-
-::: {.d2l-note}
-Size of each position's term in the first layer's state at the query: what
-the state holds, not what $\mathbf{C}_t$ reads. The symbols' share of the
-state varies from run to run.
-:::
 :::
 
-::: {.slide title="Mamba's Symbols Stand Hundreds of Times Above the Fillers"}
-Spike ratio: the largest contribution in a symbol's window over that of
-the filler just before it; median over the symbols of 64 new sequences.
+::: {.slide title="Quantifying Selection: The Symbol-to-Filler Spike Ratio"}
+[Dual Effect of Large Step Sizes]{.kicker}
+
+Measuring the median **spike ratio**—the peak contribution inside each symbol's 4-token window divided by the contribution of the filler token immediately preceding it—across $64$ test sequences ($256$ symbols):
 
 @!mamba-contributions-to-the-state-3
 
-- Mamba: hundreds to thousands. S4D: a few tens at most.
-- S4D can only write a symbol larger than a filler.
-- A large selective step also decays everything written before it.
-
-::: {.d2l-note}
-Writing loudly S4D can learn; erasing on cue it cannot.
-:::
+- **Orders-of-magnitude amplification:** `Mamba`'s symbol contributions stand **hundreds to thousands of times** above adjacent fillers, whereas `S4D` achieves a ratio of at most $\sim 20$ (solely by learning a larger embedding norm for symbol tokens).
+- **Two-for-one gating via $\Delta_{t,c}$:** In `Mamba`, taking a large step $\Delta_{t,c}$ on a marked symbol simultaneously **writes the symbol strongly** ($\Delta_{t,c} x_{t,c}\mathbf{B}_t$) and **exponentially erases prior filler noise** ($e^{\Delta_{t,c}\boldsymbol{\lambda}} \ll 1$), while setting $\Delta_{t,c} \approx 0$ on fillers freezes the stored symbol untouched!
 :::
 
-::: {.slide title="Check: How Big Is the State of a Mamba Layer?"}
-$d = 256$: $H = 512$ channels, $N = 16$ states. Attention caches $2d$
-numbers per token. How many numbers does a Mamba layer carry, in cached
-tokens?
+::: {.slide title="Mamba on Byte-Level WikiText-103 vs. minGRU & Attention"}
+[Language Modeling Benchmark]{.kicker}
 
-::: {.fragment .fade-up}
-$HN = 8{,}192 = 32d$: 16 tokens of cache; with the convolution's
-$3H = 6d$, 19. At any context length.
-:::
-:::
-
-::: {.slide title="At Equal Size, Mamba Still Leads the minGRU on Text"}
-WikiText-103 bytes, windows of 128, 1,000 steps; nats per byte, two runs.
+Comparing 4-block `Mamba`, `minGRU`, causal `attention` ($d = 256$), and a parameter-matched `minGRU, d=309` ($3.99\text{M}$ parameters) on 128-byte WikiText-103 windows:
 
 @!mamba-language-modeling-2
 
 ::: {.d2l-note}
-minGRU at $d = 309$ (Mamba's count): still 0.03 behind, runs within
-0.003. About 0.02 of that lead is there in bytes 0 to 15: a short-range
-gain. Mamba's step costs 2 to 4 times as much.
+`Mamba` reaches **$1.30$ nats/byte**—matching the full sequential LSTM and GRU of §12.1 while training via a parallel scan, and beating parameter-matched `minGRU, d=309` by **$0.03$ nats/byte**.
 :::
 :::
 
-::: {.slide title="Recap"}
-- Fixed dynamics weigh by distance: S4D copies at most one in five.
-- $e^{-\textrm{softplus}(s)} = \sigma(-s)$: a step size is a gate; Mamba
-  adds $N$ states, $\mathbf{B}_t$, $\mathbf{C}_t$.
-- Scan forward, scan backward: two stored tensors.
-- Copying: Mamba 0.98 or more; not selective, at least 30 points lower.
-- Text: 0.03 nats per byte ahead of an equal-size minGRU.
+::: {.slide title="Concept Check: Softplus Gates, State Size, and Adjoint"}
+[Check Your Understanding]{.kicker}
 
-**Next:** the $H \times N$ state as a matrix written by outer products:
-how many writes does it hold?
+Work out the following three questions:
+
+1. In a 1-state selective SSM ($N = 1, \lambda = -1$), what step-size pre-activation $s_t$ produces a discrete retention factor $z_t = e^{-\textrm{softplus}(s_t)} = 0.999$ (half-life $\approx 693$ steps)?
+2. For a `Mamba` layer at model width $d = 256$ ($H = 2d = 512$, $N = 16$, width-4 causal convolution), how many total numbers does the layer carry per sequence during autoregressive generation, and how many tokens of an attention KV cache ($2d$ numbers/token) does that equal?
+3. Why does `adjoint_scan` reduce scan activation memory from $O(B T H N \log_2 T)$ to $O(B T H N)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1.Since $e^{-\textrm{softplus}(s_t)} = \sigma(-s_t) = 0.999$, we need $-s_t = \log(0.999 / 0.001) = \log 999 \approx 6.91 \implies \mathbf{s_t \approx -6.91}$ ($\Delta_t \approx 0.001$).
+2. The SSM state holds $H \times N = 512 \times 16 = 8{,}192 = 32d$ numbers ($16$ tokens of KV cache), plus the last $3$ convolution inputs of width $H = 2d$ ($3 \times 2d = 6d$ numbers, or $3$ tokens of KV cache): **$38d = 9{,}728$ numbers total, equal to just $19$ tokens of attention KV cache** at any sequence length!
+3. Standard autograd saves the output of every doubling round ($\lceil \log_2 T \rceil$ rounds), whereas `adjoint_scan` saves only the final forward states $\mathbf{h}$ and decays $\mathbf{a}$ and computes $\mathbf{g}_t = \mathbf{g}_t^{\text{direct}} + \mathbf{a}_{t+1}\odot \mathbf{g}_{t+1}$ via one reverse scan.
 :::
+:::
+
+::: {.slide title="Summary: Selective State Space Models (Mamba)"}
+[Key Takeaways]{.kicker}
+
+| Component / Model | Mathematical Mechanism | Key Capability & Empirical Result |
+| :--- | :--- | :--- |
+| **Softplus–Gate Identity** | $e^{-\textrm{softplus}(s_t)} = \sigma(-s_t)$ | Bridges continuous step size $\Delta_t$ and `MinGRU` update gate $z_t$ |
+| **Selective SSM (`Mamba`)** | $\mathbf{h}_t^{(c)} = e^{\Delta_{t,c}\boldsymbol{\lambda}} \odot \mathbf{h}_{t-1}^{(c)} + \Delta_{t,c} x_{t,c}\mathbf{B}_t$ | Token-dependent $\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ + multi-timescale rates $\lambda_n = -n$ |
+| **Adjoint Scan VJP** | $\mathbf{g}_t = \nabla_{\mathbf{h}_t}\ell + \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1}$ | Differentiates scan via reverse-time scan; saves $2$ tensors instead of $\sim 20$ |
+| **Selective Copying** | $4$ random-position symbols in $1{,}024$ fillers | `Mamba` scores **$0.99$–$1.00$** (`S4D` $\le 0.20$; non-selective Mamba drops $>30$ pts) |
+| **WikiText-103 Bytes** | 4-block `SeqLM` ($d = 256$, $128$ bytes) | `Mamba` reaches **$1.30$ nats/byte** (matches LSTM/GRU; beats `minGRU, d=309` by $0.03$) |
+:::
+

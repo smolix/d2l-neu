@@ -1,11 +1,9 @@
 # Sampling by Integration
 :label:`sec_diffusion-integration`
 
-It is tempting to think that we are done once a network knows, at every noise level, where a noisy point should move: a field of arrows that leads from the noise toward the data. Draw a point of noise, follow the arrows, stop when they stop. But arrows that point at the data produce points near the data, and points near the data are not yet samples *of* the data. The Langevin chains of :numref:`sec_diffusion-denoising` showed the difference. Driven by the exact score of the data, they ended near the modes, each with the right spread, and kept the shares of their starts, about a third in each mode, where the data put a half, three tenths and a fifth. The annealed ladder of :numref:`sec_diffusion-gaussian-paths` got the shares right on exact scores, walking down ten noise levels whose spacing and step sizes we chose by hand. It worked, and nothing in it said that it had to. Our network gives a field at every level of a continuous path. Is following it enough, and why should it put the right share of the samples in each mode?
+A network trained along a Gaussian path predicts, at every noise level $t \in [0, 1]$, the marginal velocity $\mathbf{u}_t(\mathbf{x})$ (or equivalently the score $\nabla \log p_t(\mathbf{x})$). Why does integrating this deterministic vector field backward from $\mathbf{x}_1 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ at $t = 1$ to $t = 0$ produce samples distributed according to $p_0$, with the exact mode weights $0.5, 0.3, 0.2$ that fixed-level Langevin chains missed?
 
-The answer is a conservation law. A velocity field moves probability the way a current moves water, and the field of the previous section moves exactly the mass of the Gaussian path: it carries the noise at $t = 1$ into the data at $t = 0$ through every intermediate density. :citet:`song2021score` built a sampler on this fact, a differential equation that runs the field backward from noise. :citet:`ho2020denoising` had sampled earlier with a chain of noisy steps, and it turns out that their chain follows the same law, with a correction added at every step.
-
-We first show why the field transports the density, then integrate it with Euler's method, then derive the noisy chain and the continuous-time process behind it. Both samplers run on the trained networks and on the exact field of the mixture, so that we can see how much of their error is the network's.
+The guarantee comes from the *continuity equation* of probability transport. Because each conditional Gaussian cloud $p_t(\mathbf{x} \mid \mathbf{x}_0)$ satisfies conservation of mass under its conditional velocity, averaging over $p(\mathbf{x}_0)$ shows that the marginal density $p_t$ is transported by the posterior-mean velocity $\mathbf{u}_t(\mathbf{x})$. :citet:`song2021score` formulated deterministic sampling via this *probability-flow ODE*, while :citet:`ho2020denoising` sampled via a stochastic reverse Markov chain; as we will show, each ancestral step of DDPM decomposes to first order into an Euler step of the probability-flow ODE plus a Langevin step at the current noise level. In this section we derive both samplers, express the ODE in path-agnostic $(\bar{\mathbf{x}}, \bar\sigma)$ coordinates, and compare the trained networks against the exact oracle on the three-mode mixture.
 
 ```{.python .input #integration-sampling-by-integration-1}
 %%tab pytorch
@@ -357,7 +355,7 @@ print(f'ode_sample against the loop on the exact field: {exact:.0e}')
 d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'], data=data);
 ```
 
-One step puts every sample at the data mean, about $(-0.5, -0.7)$, with a standard deviation of a few hundredths where the exact field has none: the network's field at $t = 1$ is not quite $\mathbf{x} - \mathbb{E}[\mathbf{x}_0]$, and these hundredths are its error there. Ten steps find the three modes, with weights within about $0.03$ of $0.5/0.3/0.2$, but about three percent of the samples stray between the modes. How many should? A Gaussian mode in the plane puts $e^{-9/2} \approx 1.1\%$ of its mass beyond three standard deviations, and the data row strays between $1.1$ and $1.5$ percent. The modes also come out too narrow: their *spread*, the mean squared distance of a sample that does not stray to its mode center (:numref:`sec_diffusion-denoising`), is $0.45$, against $0.48$ to $0.49$ for the data. Is that the network's fault or the steps'? The oracle row settles it. On the exact field, ten steps from the same starts give a spread of $0.46$ and about two to three percent strays. So the narrowing belongs to the steps, with at most about $0.01$ added by the network, and the extra strays are partly the steps' and partly the network's. The oracle's weights match the network's to within $0.003$: whatever separates the ten-step weights from $0.5/0.3/0.2$, it is not the network. Where an exact field exists, run the sampler on it before blaming the network. A hundred steps of the same network bring the strays down to the data's level, about $1.3$ percent, and the spread to within about $0.01$ of the data's. The weights then lie within about two standard errors of $2{,}000$ points, where one standard error is about $0.01$. On the exact field the library's sampler and the loop agree to about $10^{-4}$, single-precision rounding, as the algebra says they should.
+A single step collapses every initial point onto the data mean $\approx (-0.5, -0.7)$ (up to a small network approximation error of a few hundredths at $t = 1$). Ten Euler steps separate the three modes with weights near $0.5, 0.3, 0.2$, but leave $\approx 3\%$ strays (versus $1.1\%$–$1.5\%$ for the true data) and slightly narrow the within-mode spread ($0.45$ versus $0.48$–$0.49$). Running 10 Euler steps with the exact `oracle` yields the same mode weights (within $0.003$) and a spread of $0.46$, confirming that the 10-step narrowing is discretization error rather than network error. With 100 Euler steps, the learned network matches the true data's strays ($\approx 1.3\%$), spread, and mode weights within Monte Carlo error, while `ode_sample` on the exact oracle matches the explicit Euler loop to single-precision floating-point accuracy ($10^{-4}$).
 
 ## The Ancestral Chain and the Reverse SDE
 
@@ -503,11 +501,9 @@ d2l.scatter_panels([runs[k][:2000] for k in runs],
                    list(runs), lim=4.5, size=2.4);
 ```
 
-Network and oracle send only $0.2$ to $0.5$ percent of the starts to different modes, and every weight of a network row lies within $0.004$ of its oracle row. What separates the rows from $0.5/0.3/0.2$ is the sampling error of $20{,}000$ points, which the oracle shares. The spreads lie within about $0.01$ of the data's, and every sampler, network or oracle, strays about one percent of the time, as the data themselves do. These strays are not errors at all: they are the $1.1\%$ of each Gaussian mode that lies beyond three standard deviations. The network leaves one trace. From the same starts, the flow strays a little more often with the network than with the oracle, about $1.3$ against $1.1$ percent, while the two chains stray about equally often. For the mode weights, on this example, the network is as good as the exact posterior mean, and both samplers recover the weights and the spread of the data together, which Langevin dynamics at a single noise level could not.
+In both samplers, the trained network and the exact oracle send only $0.2\%$ to $0.5\%$ of the 20,000 initial points to different modes, and every mode weight of a network run lies within $0.004$ of its paired oracle run (on the order of the binomial standard error $\approx 0.0035$). Both samplers also match the true data's spread (within $0.01$) and stray fraction ($\approx 1.1\%$, the Gaussian tail beyond $3s$).
 
-Which sampler should one use? On the mixture, at these step counts, it hardly matters: the mode weights of both are limited by the number of samples, not by the sampler or the network. They differ in what else they offer. The ODE is a deterministic map, so a sample can be reproduced from its start, interpolated between starts, or run backward from data to noise. The chain gives up that map for its Langevin half, which can pull points that earlier steps moved off back toward $p_t$. When steps are few these properties decide, and :numref:`sec_diffusion-samplers` measures which one matters more.
-
-With a path, a target and a sampler in hand, the models of the literature are choices along three axes (:numref:`tab_diffusion_models`).
+At 100–200 steps on the mixture, the deterministic ODE and the stochastic ancestral chain achieve virtually identical distributional accuracy. They differ in their structural properties: the probability-flow ODE defines a deterministic, invertible bijection between noise $\mathbf{x}_1$ and data $\mathbf{x}_0$, enabling latent interpolation and exact likelihood evaluation, whereas the ancestral chain injects Langevin noise that can damp discretization or score errors along the trajectory (:numref:`sec_diffusion-samplers`). :numref:`tab_diffusion_models` summarizes how the major generative models of this chapter combine a path, a target, and a sampler.
 
 :The models of this chapter: the target and path that train the network, and the sampler that produces data.
 :label:`tab_diffusion_models`
@@ -521,13 +517,13 @@ With a path, a target and a sampler in hand, the models of the literature are ch
 | $\mathbf{v}$-prediction | $\mathbf{v}$ on the cosine path | either | :numref:`sec_diffusion-gaussian-paths`, :numref:`sec_diffusion-design-space` |
 | EDM | the clean point on the VE path, rescaled per noise level | a second-order solver of the probability-flow ODE | :numref:`sec_diffusion-samplers`, :numref:`sec_diffusion-design-space` |
 
-The last row looks ahead. EDM's solver, more accurate than Euler's method, is the subject of :numref:`sec_diffusion-samplers`, and its rescaling of the network's input and output that of :numref:`sec_diffusion-design-space`.
-
-In the plane we could check the network against the oracle, and a hundred evaluations per sample cost nothing. An image model has neither luxury: no oracle tells us how far it is from the posterior mean, and every evaluation is a pass through a large network. The next section trains one on Fashion-MNIST and has to find another way to judge its samples.
+In :numref:`sec_diffusion-images` we move from two dimensions to $28 \times 28$ images, where no exact oracle is available and every function evaluation requires a forward pass through a convolutional U-Net.
 
 ## Summary
 
-A velocity field moves probability mass, and the marginal velocity of a Gaussian path moves the noise into the data, because the mass that all conditional clouds carry across a point is the density there times their posterior-average velocity. This conservation of mass is why the probability-flow ODE, solved exactly, yields samples with the right mode weights; what remains is the error of the steps and of the network. On the mixture, one Euler step lands every start on the data mean, and a hundred recover the data. In the coordinates $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and $\bar\sigma = \sigma_t/\alpha_t$ every Gaussian path becomes $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$, and a step predicts the clean point and the noise and places them at the next level. DDPM's ancestral step is, to first order, an Euler step of the same flow plus a Langevin step that holds $p_t$ in place, a discretization of Anderson's reverse-time SDE. Run with the trained networks from the same starts as the exact posterior mean, both samplers send only $0.2$ to $0.5$ percent of the starts to a different mode, and their mode weights agree with the oracle's to within $0.004$.
+- The marginal velocity $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon \mid \mathbf{x}_t = \mathbf{x}]$ satisfies the continuity equation $\partial_t p_t + \nabla \cdot (p_t \mathbf{u}_t) = 0$ with the marginal density $p_t$. Consequently, integrating the probability-flow ODE $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ from $t = 1$ to $t = 0$ transports $\mathcal{N}(\mathbf{0}, \mathbf{I})$ onto $p_0$ while preserving mode weights.
+- A single Euler step from $t = 1$ to $t = 0$ collapses every start onto the data mean $\mathbb{E}[\mathbf{x}_0]$. In the rescaled coordinates $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and $\bar\sigma = \sigma_t/\alpha_t$, every Gaussian path obeys $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$, and one Euler step reads $\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sigma_s \hat{\boldsymbol\epsilon}$.
+- To first order in the step variance $\beta$, DDPM's ancestral step decomposes into an Euler step of the probability-flow ODE plus a Langevin step on $p_t$, corresponding to an Euler--Maruyama discretization of Anderson's reverse-time SDE.
 
 ## Exercises
 
@@ -546,12 +542,6 @@ A velocity field moves probability mass, and the marginal velocity of a Gaussian
     1. Let the data be $\pm 1$ with equal probability in one dimension, and let $x_t = 0$. Show that the reversal is the equal mixture of $\mathcal{N}(\pm c, \tau^2)$, which is bimodal exactly when $\zeta^2 = c^2/\tau^2$ exceeds one, and that $\zeta^2 = \alpha_s^2 \sigma_{t|s}^2 / (\sigma_t^2 \sigma_s^2)$. How does $\zeta$ shrink as the step $t - s$ is refined?
     1. Evaluate $\zeta$ on the VP path from $t = 0.5$ to $s = 0.495$, $0.45$ and $0.3$, and for one step from $t = 0.3$ to $s = 0$. Which reversals are bimodal? What does a Gaussian transition with the optimal mean produce at $x_t = 0$ in the last case, and what should it produce?
    :exlabel:`ex_gaussian-paths-gaussian-reversal`
-1. [code] **Where each start ends.** The five starts of this section showed the heaviest mode collecting the center of the noise.
-    1. Integrate the exact field `mix.velocity` with `euler` and a hundred steps from a grid of starts with spacing $0.02$ on $[-4, 4]^2$, and label each end by its nearest mode mean. Show the three regions of starts.
-    1. Weight each start by the standard Gaussian density and add up the weight of each region. Compare the sums with $0.5$, $0.3$ and $0.2$. Which property of the marginal velocity makes them agree?
-    1. Repeat with ten and with three steps. How do the masses of the regions change, and how is the change related to the one-step result?
-    1. The Langevin chains of :numref:`sec_diffusion-denoising` with the exact score of the data kept the weights of their starts. What information does the flow use that a chain on the score of the data alone does not have?
-   :exlabel:`ex_integration-catchment`
 1. [code] **Commitment time.** ● When along the path does a sample decide its mode? :citet:`Biroli.Bonnaire.deBortoli.ea.2024` measure this by cloning: start at a point of $p_t$, run two copies of the reverse chain with independent noise, and record whether they end in the same mode.
     1. Draw $2{,}000$ clean points, noise them to $\mathbf{x}_t$ on the VP path for $t = 0.9, 0.7, 0.5, 0.4, 0.3, 0.2, 0.1$, and run two copies of `ancestral_sample(pred_eps, x_t, vp, steps, t_start=t)` from each with about $200\, t$ steps. Plot the fraction $\varphi(t)$ of pairs whose ends have the same nearest mean. Which value does $\varphi$ approach as $t \to 1$, and why?
     1. Let $\Lambda$ be the largest eigenvalue of the covariance of the data. Biroli et al. define the speciation time by $\alpha_t^2 \Lambda = 1$, where the signal along the top principal direction stops dominating the noise. Compute it for the mixture and compare it with your curve and with the annealing ladder of :numref:`sec_diffusion-gaussian-paths`, whose coarse levels decided the mode weights. Exercise :exref:`ex_mdl-flow-matching-transport-late-decisions` of :numref:`sec_mdl-flow-matching-transport` and Exercise :exref:`ex_mdl-fokker-planck-probability-flow-mode-merging` of :numref:`sec_mdl-fokker-planck-probability-flow` work out the same question for two modes in one dimension.
@@ -563,329 +553,251 @@ A velocity field moves probability mass, and the marginal velocity of a Gaussian
     1. What does the probability-flow ODE of the cosine path do to data distributed as $\mathcal{N}(\mathbf{0}, \mathbf{I})$, and why? What does that of the linear path do to the same data?
    :exlabel:`ex_gaussian-paths-same-ratio-same-flow`
 
+[Discussions](https://d2l.discourse.group/t/36889)
+
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §17.3]{.kicker}
 
-Sampling by Integration<br>
-**mass moves with the field · Euler steps and the data mean · coordinates for every path · the ancestral chain · network against oracle**
+Reverse-Time Integration: ODEs and Ancestral Chains<br>**continuity equation · probability-flow ODE · Euler steps & data mean · path-agnostic coordinates · ancestral chain & reverse SDE**
 :::
 :::
 
-::: {.slide title="Arrows Toward the Data Are Not Yet Samples of the Data"}
-[The problem]{.kicker}
+::: {.slide title="Why Following a Velocity Field Recovers Mode Weights"}
+[Motivation]{.kicker}
 
-- Data: three modes with weights $0.5$, $0.3$, $0.2$.
-- Langevin chains on the *exact* score of the data end near the modes,
-  with the right spread, but keep their starts' shares: a third each.
-- An annealed ladder of ten hand-set levels got the shares right, with no
-  reason why it had to.
-- A trained network now gives a velocity at every point and noise level.
+Section 17.2 trained networks whose outputs determine the marginal velocity $\mathbf{u}_t(\mathbf{x})$ and score $\nabla \log p_t(\mathbf{x})$ at every $t \in [0, 1]$. Why does integrating $\mathbf{u}_t$ backward from $\mathbf{x}_1 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ recover the exact mode weights $(0.5, 0.3, 0.2)$ that fixed-level Langevin chains missed?
 
-::: {.d2l-note .warn}
-Why should following that field give the right share in each mode?
-:::
+- **Fixed-level Langevin failure:** Local scores $\nabla \log p(\mathbf{x})$ keep $p$ stationary once reached, but offer no global flux across the $10$–$12$ nat valleys separating modes.
+- **Continuous transport from a known prior:** Instead of waiting for random thermal kicks to cross high barriers, reverse-time integration transports a known prior $p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ continuously along $p_t$ down to $p_0$.
+- **Conservation of probability mass:** Because no trajectories are created or destroyed, the fraction of Gaussian initial conditions landing in mode $k$ equals $\pi_k$ by mass conservation.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Our Two Trained Predictors and the Exact Oracle"}
+[Experimental Setup]{.kicker}
 
-- explain why the marginal velocity carries noise into data (continuity
-  equation);
-- predict where one Euler step from noise lands, and what more steps add;
-- write a sampler step as $\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sigma_s \hat{\boldsymbol\epsilon}$;
-- split an ancestral step into a flow step and a Langevin step;
-- measure a network against the exact posterior mean.
-
-**Idea:** a velocity field conserves mass, so the marginal velocity carries
-noise into data with the right weights.
-
-**Running example:** the three-mode mixture, its exact field, and the
-velocity and noise networks.
-:::
-
-::: {.slide title="The Third Section Turns the Trained Field into Samples"}
-[You are here]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | question |
-|---|---|
-| Denoising and the Score | what does a denoiser know? |
-| Gaussian Paths | one network for every level |
-| **Sampling by Integration** | **why does following the field sample?** |
-| Diffusion for Images | network, guidance, scores |
-| Samplers, Inversion and Editing | fewer steps; run backwards |
-| Likelihood, Weighting and the Design Space | is it maximum likelihood? |
-| Latent Diffusion and Transformers | why a compressed code? |
-| Few-Step Generation | why does one step fail? |
-| Discrete Diffusion | noise for a token |
-:::
-
-::: {.col .narrow}
-- **Uses:** the Gaussian path, the marginal velocity, the noise
-  predictor, Langevin steps.
-- **Skips:** few-step samplers, images (later decks).
-:::
-:::
-:::
-
-::: {.slide title="Each Network Predicts a Posterior Mean on Its Own Path"}
-[From the previous deck]{.kicker}
-
-- Path: $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol\epsilon$,
-  data at $t = 0$, noise at $t = 1$.
-- Linear path: $(\alpha_t, \sigma_t) = (1 - t, t)$. VP path:
-  $\alpha_t^2 + \sigma_t^2 = 1$, rate $\beta(t) = 0.1 + 19.9\,t$.
-- Velocity target $\dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon$;
-  its posterior mean is the marginal velocity $\mathbf{u}_t(\mathbf{x})$.
-- Noise target $\boldsymbol\epsilon$; the score is
-  $\nabla\log p_t = -\hat{\boldsymbol\epsilon}/\sigma_t$.
-
-::: {.d2l-note}
-Velocity network on the linear path, noise network on the VP path.
-:::
-:::
-
-::: {.slide title="Both Networks Sit on Their Loss Floors after 20,000 Steps"}
-[Running example]{.kicker}
+To separate discretization error from neural network approximation error, we benchmark two trained `TimeMLP(256, 3)` models against the exact mixture `oracle`:
 
 @!integration-sampling-by-integration-3
 
-- Velocity model on the linear path: floor about $4.9$.
-- Noise model on the VP path: floor about $0.54$.
-- The *oracle*: the mixture's exact $\hat{\mathbf{x}}_0$ and
-  $\hat{\boldsymbol\epsilon}$ at any point and level.
+- **Linear-path velocity network (`ema_v`):** Trained on $\boldsymbol\epsilon - \mathbf{x}_0$ along $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$; reaches the theoretical velocity floor ($\approx 4.91$).
+- **VP-path noise network (`ema_eps`):** Trained on $\boldsymbol\epsilon$ along the variance-preserving schedule; reaches the theoretical noise floor ($\approx 0.54$).
+- **Exact posterior oracle (`oracle`):** Evaluates the closed-form mixture posterior means $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$ at any $(\mathbf{x}, \alpha_t, \sigma_t)$.
 :::
 
-::: {.slide title="A Velocity Field Changes a Density Only by Its Mass Flow"}
-[Transport]{.kicker}
+::: {.slide title="Conservation of Mass and the Continuity Equation"}
+[Probability Transport]{.kicker}
 
-$$\frac{\partial p_t(\mathbf{x})}{\partial t} = -\nabla \cdot \big(p_t(\mathbf{x})\, \mathbf{u}_t(\mathbf{x})\big)$$
+When a cloud of particles with density $p_t(\mathbf{x})$ moves under a velocity field $\mathbf{u}_t(\mathbf{x})$, the rate of change of density inside any small volume equals the net inward mass flux $-\nabla \cdot (p_t \mathbf{u}_t)$:
 
-- $p_t\mathbf{u}_t$: mass crossing a point per unit time.
-- No mass is created or lost: the density changes by inflow minus outflow.
-- If $(p_t, \mathbf{u}_t)$ satisfy this, points that follow
-  $\mathbf{u}_t$ keep the density $p_t$.
+$$\frac{\partial p_t(\mathbf{x})}{\partial t} = -\nabla \cdot \big(p_t(\mathbf{x})\,\mathbf{u}_t(\mathbf{x})\big) = -\sum_{i=1}^d \frac{\partial}{\partial x_i}\big(p_t(\mathbf{x})\,u_{t,i}(\mathbf{x})\big)$$
+
+- **Mass flux vector $p_t(\mathbf{x})\mathbf{u}_t(\mathbf{x})$:** Measures probability mass crossing a unit surface per unit time.
+- **Exact marginal transport theorem:** If $(p_t, \mathbf{u}_t)$ satisfy the continuity equation for $t \in [0, 1]$, then particles initialized as $\mathbf{x}_1 \sim p_1$ and evolving via $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ backward from $t = 1$ to $t = 0$ have exact marginal density $\mathbf{x}_t \sim p_t$ at every instant $t$.
 :::
 
-::: {.slide title="The Clouds' Mass Flows Add Up to the Density Times the Marginal Velocity"}
-[Transport]{.kicker}
+::: {.slide title="Proof: The Marginal Velocity Satisfies Continuity"}
+[From Conditional Clouds to Marginal Density]{.kicker}
 
-Each cloud $\mathcal{N}(\alpha_t\mathbf{x}_0, \sigma_t^2\mathbf{I})$ moves
-correctly with its own velocity
-$\mathbf{u}_t(\mathbf{x}\mid\mathbf{x}_0) = \dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon$.
-Average over the data, with Bayes' rule:
+Why does the conditional expectation $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon \mid \mathbf{x}_t = \mathbf{x}]$ satisfy the continuity equation for the marginal density $p_t(\mathbf{x}) = \int p(\mathbf{x}_0)p_t(\mathbf{x} \mid \mathbf{x}_0)\,d\mathbf{x}_0$?
 
-$$\mathbb{E}_{\mathbf{x}_0}\big[p_t(\mathbf{x}\mid\mathbf{x}_0)\,\mathbf{u}_t(\mathbf{x}\mid\mathbf{x}_0)\big]
-= p_t(\mathbf{x})\,\underbrace{\mathbb{E}\big[\mathbf{u}_t(\mathbf{x}\mid\mathbf{x}_0)\mid\mathbf{x}_t=\mathbf{x}\big]}_{\mathbf{u}_t(\mathbf{x})}$$
+- **Step 1 — Conditional conservation:** Fix one clean point $\mathbf{x}_0$. Its Gaussian cloud $p_t(\mathbf{x} \mid \mathbf{x}_0) = \mathcal{N}(\alpha_t\mathbf{x}_0, \sigma_t^2\mathbf{I})$ is transported exactly by its conditional velocity $\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0) = \dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon$:
+  $$\partial_t p_t(\mathbf{x} \mid \mathbf{x}_0) = -\nabla \cdot \big(p_t(\mathbf{x} \mid \mathbf{x}_0)\,\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big)$$
+- **Step 2 — Averaging over $\mathbf{x}_0 \sim p$ with Bayes' rule:** Taking expectations over $\mathbf{x}_0$ and applying $p(\mathbf{x}_0)p_t(\mathbf{x} \mid \mathbf{x}_0) = p_t(\mathbf{x})p(\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x})$ factors $p_t(\mathbf{x})$ out of the flux:
+  $$\mathbb{E}_{\mathbf{x}_0}\big[p_t(\mathbf{x} \mid \mathbf{x}_0)\,\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big] = p_t(\mathbf{x})\,\underbrace{\mathbb{E}\big[\dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon \,\big|\, \mathbf{x}_t = \mathbf{x}\big]}_{\mathbf{u}_t(\mathbf{x})}$$
 
 ::: {.d2l-note}
-The marginal velocity moves the whole mixture of clouds, which is $p_t$.
+Because differentiation is linear, averaging the conditional fluxes yields $\partial_t p_t = -\nabla \cdot (p_t \mathbf{u}_t)$ directly!
 :::
 :::
 
-::: {.slide title="Trajectories of One Field Never Meet, So No Sample Follows a Conditional Path"}
-[Transport]{.kicker}
+::: {.slide title="Why ODE Trajectories Never Cross Conditional Lines"}
+[Geometry of the Probability-Flow ODE]{.kicker}
 
-- Conditional paths: straight lines (linear path) that cross everywhere.
-- Trajectories of one field: never at one point at the same time; one
-  velocity per point and time.
-- What is reproduced is the *density* at every time, not any path.
+A common misconception is that because conditional paths $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$ are straight lines, the trajectories of the marginal ODE $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ are also straight:
 
-::: {.d2l-note}
-Solved exactly, the flow conserves mass: half the noise ends in the mode of
-weight one half. Errors come only from the steps and the network.
-:::
+- **Conditional lines cross everywhere:** Every pair $(\mathbf{x}_0, \boldsymbol\epsilon)$ defines a straight chord, and chords from different modes intersect throughout $\mathbb{R}^d \times (0, 1)$.
+- **Marginal ODE trajectories never intersect:** Because $\mathbf{u}_t(\mathbf{x})$ assigns a single unique velocity vector to each spacetime point $(\mathbf{x}, t)$, Picard–Lindelöf uniqueness forbids two ODE trajectories from ever crossing.
+- **Curved deterministic bijection:** The **probability-flow ODE** (Song et al., 2021) bends trajectories around each other to define a smooth, invertible deterministic map between $\mathcal{N}(\mathbf{0}, \mathbf{I})$ and $p_0$:
+  $$\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}), \qquad \text{integrated from } t = 1 \text{ down to } t = 0$$
 :::
 
-::: {.slide title="The Flow ODE Carries Noise to Data; Euler Steps Follow It"}
-[Sampling]{.kicker}
+::: {.slide title="Euler's Method and the Single-Step Mean Collapse"}
+[Discretizing the Probability-Flow ODE]{.kicker}
 
-$$\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}) \textrm{ from } t = 1 \textrm{ to } 0,
-\qquad \textrm{Euler: } \mathbf{x} \leftarrow \mathbf{x} - \tfrac{1}{K}\, \mathbf{u}_t(\mathbf{x})$$
+**Euler's method** divides $[0, 1]$ into $K$ equal steps of size $\Delta t = 1/K$ and steps backward against the velocity at $t_k = k/K$:
 
-- One data point: $\mathbf{u}_t(\mathbf{x}) = (\mathbf{x} - \mathbf{x}_0)/t$,
-  straight lines; one step is exact.
-- Many points: the paths bend where the posterior is undecided.
-- At $t = 1$ the posterior is the prior:
-  $\mathbf{u}_1(\mathbf{x}) = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$.
+$$\mathbf{x}_{t_{k-1}} = \mathbf{x}_{t_k} - \frac{1}{K}\,\mathbf{u}_{t_k}(\mathbf{x}_{t_k})$$
+
+- **When is $K = 1$ step exact?** Only when the dataset consists of a single point $\mathbf{x}_0$, where $\mathbf{u}_t(\mathbf{x}) = (\mathbf{x} - \mathbf{x}_0)/t$ has straight trajectories into $\mathbf{x}_0$.
+- **Why $K = 1$ collapses on general data:** At pure noise ($t = 1$), $\mathbf{x}_1 = \boldsymbol\epsilon$ is independent of $\mathbf{x}_0$, so the posterior $p(\mathbf{x}_0 \mid \mathbf{x}_1)$ equals the prior $p(\mathbf{x}_0)$ and the initial velocity is:
+  $$\mathbf{u}_1(\mathbf{x}) = \mathbb{E}\big[\boldsymbol\epsilon - \mathbf{x}_0 \,\big|\, \mathbf{x}_1 = \mathbf{x}\big] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$$
+- Taking one full Euler step of length $1$ yields $\mathbf{x}_0 = \mathbf{x}_1 - (\mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0]) = \mathbb{E}[\mathbf{x}_0]$, mapping **every starting point** to the global data mean $(-0.50, -0.70)$!
 :::
 
-::: {.slide title="Check: Where Does One Euler Step from Noise Land?"}
-[Check]{.kicker}
+::: {.slide title="Tracing Five Starts Under 1, 10, and 100 Euler Steps"}
+[Exact Velocity Field Trajectories]{.kicker}
 
-Means $(-2.5, -1.5)$, $(2.5, -1.5)$, $(0, 2.5)$ with weights $0.5$,
-$0.3$, $0.2$. Where does $\mathbf{x} \leftarrow \mathbf{x} -
-\mathbf{u}_1(\mathbf{x})$ send each start?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Every start goes to $\mathbb{E}[\mathbf{x}_0] = (-0.5, -0.7)$,
-between the modes, where no data lie.
-:::
-:::
-:::
-
-::: {.slide title="On the Exact Field, Ten Steps Reach the Modes and the Origin Joins the Heaviest"}
-[Sampling]{.kicker}
+Integrating the exact mixture field `mix.velocity` from five fixed initial points—the origin $(0, 0)$ and $(\pm 1.5, 0), (0, \pm 1.5)$—illustrates how multi-step curvature partitions the prior:
 
 @!gaussian-paths-the-probability-flow-ode-and-euler-s-method
 
-- One step: all five starts on the mean.
-- Ten steps: within about $0.2$ of the hundred-step end, a little short.
-- Three of five starts, the origin among them, end in the mode of weight
-  $0.5$.
-
-::: {.d2l-note}
-Conservation of mass: the heaviest mode collects the largest region of starts.
-:::
+- **1 step:** All five starts collapse identically onto $\mathbb{E}[\mathbf{x}_0] = (-0.50, -0.70)$ in the empty valley between modes.
+- **10 vs. 100 steps:** By 10 steps, every trajectory has committed to a mode (within $\approx 0.2$ of its 100-step endpoint, biased slightly toward the global mean).
+- **Mass-conserving basins of attraction:** Three of the five starts (including the origin) flow into the heaviest mode ($\pi_1 = 0.5$ at $(-2.5, -1.5)$), while $(1.5, 0)$ flows to mode 2 and $(0, 1.5)$ to mode 3.
 :::
 
-::: {.slide title="Divided by Alpha, Every Path Becomes One ODE in the Noise Level"}
-[Coordinates]{.kicker}
+::: {.slide title="Path-Agnostic Coordinates: Rescaling by α_t"}
+[Unifying ODE Integration Across Schedules]{.kicker}
 
-$$\bar{\mathbf{x}} = \frac{\mathbf{x}_t}{\alpha_t} = \mathbf{x}_0 + \bar\sigma\,\boldsymbol\epsilon,
-\quad \bar\sigma = \frac{\sigma_t}{\alpha_t}
-\quad\Rightarrow\quad \frac{d\bar{\mathbf{x}}}{d\bar\sigma} = \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}})$$
+Taking uniform Euler steps in time $t$ performs poorly on schedules like VP where noise changes unevenly ($\sigma_{0.5} = 0.96 \to \sigma_{0.1} = 0.32$). Dividing by $\alpha_t$ puts every Gaussian path into canonical **variance-exploding coordinates** (Karras et al., 2022):
 
-Why: on VP, $\sigma_t = 0.96$ at $t = 0.5$ and $0.32$ at $t = 0.1$, so a long
-step in $t$ misses. One Euler step in $\bar\sigma$, with
-$\bar{\mathbf{x}}_t = \hat{\mathbf{x}}_0 + \bar\sigma_t\hat{\boldsymbol\epsilon}$:
+$$\bar{\mathbf{x}}_t = \frac{\mathbf{x}_t}{\alpha_t} = \mathbf{x}_0 + \bar\sigma_t\,\boldsymbol\epsilon, \qquad \bar\sigma_t = \frac{\sigma_t}{\alpha_t} = e^{-\lambda_t / 2}$$
 
-$$\mathbf{x}_s = \alpha_s\,\hat{\mathbf{x}}_0 + \sigma_s\,\hat{\boldsymbol\epsilon}$$
-
-::: {.d2l-note}
-Predict the clean point and the noise; place them at the next level. Exact
-for one-point data on every path; on the linear path, Euler in $t$.
-:::
+- **Universal ODE in noise level $\bar\sigma$:** Along any conditional path, $\bar{\mathbf{x}}_t$ moves linearly in $\bar\sigma_t$ with slope $\boldsymbol\epsilon$. Averaging over the posterior gives the path-agnostic ODE:
+  $$\frac{d\bar{\mathbf{x}}}{d\bar\sigma} = \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$$
+- **One Euler step in $(\bar{\mathbf{x}}, \bar\sigma)$ (= DDIM update):** Using $\bar{\mathbf{x}}_t = \hat{\mathbf{x}}_0 + \bar\sigma_t\hat{\boldsymbol\epsilon}$, an Euler step from $\bar\sigma_t$ to $\bar\sigma_s$ is $\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\hat{\boldsymbol\epsilon} = \hat{\mathbf{x}}_0 + \bar\sigma_s\hat{\boldsymbol\epsilon}$. Multiplying by $\alpha_s$ restores the original coordinates:
+  $$\mathbf{x}_s = \alpha_s\,\hat{\mathbf{x}}_0 + \sigma_s\,\hat{\boldsymbol\epsilon}$$
 :::
 
-::: {.slide title="The Learned Field Needs About a Hundred Euler Steps"}
-[Sampling]{.kicker}
+::: {.slide title="Implementing Path-Agnostic ODE Sampling"}
+[Universal Predictor & Euler Loop]{.kicker}
+
+Pairing `make_pred` (which maps any network output to $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$ at matched log-SNR) with `ode_sample` lets any solver integrate any trained model on any schedule:
+
+::: {.cols}
+::: {.col}
+- **Handling pure noise ($\alpha_1 = 0, \bar\sigma_1 = \infty$):** At $t = 1$ on the linear path, $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ is infinite, but the update $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$ only needs $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$ evaluated at $(\mathbf{x}_1, \alpha_1 = 0, \sigma_1 = 1)$.
+- **Why noise models need $\alpha_1 > 0$:** Because `'eps'` recovers $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sigma_t\hat{\boldsymbol\epsilon})/\alpha_t$, it cannot start at $\alpha_1 = 0$; on the VP path, $\alpha_1 \approx 0.007 > 0$.
+:::
+
+::: {.col}
+- **Equivalence on the linear path:** Substituting $\alpha_s = 1 - s$ and $\sigma_s = s$ gives $\mathbf{x}_s = (1 - s)\hat{\mathbf{x}}_0 + s\hat{\boldsymbol\epsilon} = \mathbf{x}_t - (t - s)(\hat{\boldsymbol\epsilon} - \hat{\mathbf{x}}_0)$, which is identical to explicit Euler in $t$.
+- **Exactness on 1-point data:** Unlike Euler in $t$ on the VP path, $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$ integrates single-point data with zero discretization error for any step size.
+:::
+:::
+:::
+
+::: {.slide title="Sampling the Learned Velocity Field at 1, 10, 100 Steps"}
+[Empirical ODE Convergence]{.kicker}
+
+Running `ode_sample` on our trained linear-velocity network `ema_v` from $2{,}000$ Gaussian starts shows how discretization error vanishes as $K$ increases:
 
 @!gaussian-paths-the-probability-flow-ode-and-euler-s-method-1
 :::
 
-::: {.slide title="Ten Steps Narrow the Samples, and So Does the Exact Field"}
-[Sampling]{.kicker}
+::: {.slide title="Disentangling Discretization Error from Network Error"}
+[Analyzing the 10-Step vs. 100-Step Runs]{.kicker}
 
-- **Strays:** farther than $1.5$ (three mode s.d.) from every mean.
-  **Spread:** mean squared distance of the rest to their mean.
-- One step lands on the mean $(-0.5, -0.7)$.
-- Ten steps: about 3% strays, spread $0.45$ against the data's $0.48$–$0.49$.
-- A hundred steps: the data's strays (1.1–1.5%) and spread.
+Comparing the trained velocity network against the exact `oracle` on the same $2{,}000$ initial noise points separates solver step error from model error:
+
+| Run Configuration | Mode Weights | Stray Fraction ($>3s$) | Within-Mode Spread | Diagnosis |
+| :--- | :--- | :--- | :--- | :--- |
+| **Ground-truth data** ($2{,}000$ draws) | $[0.506, 0.300, 0.194]$ | $1.1\%$–$1.5\%$ | $0.48$–$0.49$ | *(Target reference)* |
+| **1 Euler step, network** | Mean $(-0.5, -0.7)$ | $100\%$ | — | Collapses to global data mean $\mathbb{E}[\mathbf{x}_0]$ |
+| **10 Euler steps, network** | $[0.504, 0.303, 0.193]$ | $\approx 3.0\%$ | **$0.45$** | Correct mode weights, but $2\times$ strays & **contracted spread** |
+| **10 Euler steps, exact oracle** | $[0.505, 0.303, 0.192]$ | $\approx 2.6\%$ | **$0.46$** | **Identical contraction:** 10-step error is solver discretization! |
+| **100 Euler steps, network** | $[0.504, 0.302, 0.194]$ | **$1.3\%$** | **$0.48$** | Matches ground-truth strays, spread, and weights |
+:::
+
+::: {.slide title="DDPM Ancestral Sampling: First-Order Decomposition"}
+[Stochastic Reverse Markov Chain]{.kicker}
+
+Instead of solving a deterministic ODE, DDPM (Ho et al., 2020) steps backward from $t$ to $s < t$ on the VP path by sampling from the forward posterior $q(\mathbf{x}_s \mid \mathbf{x}_t, \hat{\mathbf{x}}_0)$ with step variance $\beta = 1 - \alpha_t^2/\alpha_s^2$:
+
+$$\mathbf{x}_s = \frac{\mathbf{x}_t + \beta\,\nabla \log p_t(\mathbf{x}_t)}{\sqrt{1 - \beta}} + \sqrt{\beta}\,\mathbf{z}, \qquad \mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+
+- **First-order Taylor expansion ($1/\sqrt{1 - \beta} \approx 1 + \beta/2$):** Splitting the drift in half reveals two familiar updates operating simultaneously:
+  $$\mathbf{x}_s \approx \underbrace{\Big[\mathbf{x}_t + \frac{\beta}{2}\nabla \log p_t(\mathbf{x}_t) + \sqrt{\beta}\,\mathbf{z}\Big]}_{\text{Langevin MCMC step of size } h = \beta \text{ on } p_t} + \underbrace{\frac{\beta}{2}\big(\mathbf{x}_t + \nabla \log p_t(\mathbf{x}_t)\big)}_{\text{Euler step } -(t - s)\mathbf{u}_t \text{ of the VP flow ODE}}$$
 
 ::: {.d2l-note}
-The oracle at ten steps is nearly as narrow ($0.46$) and strays about 2–3%: the
-steps cause the narrowing and part of the strays.
+**Structural insight:** Every DDPM ancestral step is **one Euler step of the probability-flow ODE** (which transports $p_t \to p_s$) plus **one Langevin MCMC step** (which leaves $p_t$ invariant and pulls stray trajectories back toward high density)!
 :::
 :::
 
-::: {.slide title="The Ancestral Step Is a Langevin Step Plus an Euler Step"}
-[Ancestral chain]{.kicker}
+::: {.slide title="Continuous Time: Reverse SDE vs. Probability-Flow ODE"}
+[Anderson's Time-Reversal Theorem (1982)]{.kicker}
 
-DDPM's step on the VP path from $t$ to $s < t$, with
-$\beta = 1 - \alpha_t^2/\alpha_s^2$ and $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:
+As step size $\Delta t \to 0$, a forward diffusion SDE $d\mathbf{x} = \mathbf{f}(\mathbf{x}, t)\,dt + g(t)\,d\mathbf{W}$ (for VP: $\mathbf{f} = -\frac{1}{2}\beta(t)\mathbf{x}, g(t) = \sqrt{\beta(t)}$) admits two exact reverse-time processes from $t = 1$ to $t = 0$ that share identical marginal densities $p_t(\mathbf{x})$:
 
-$$\mathbf{x}_s = \frac{\mathbf{x}_t + \beta\, \nabla \log p_t(\mathbf{x}_t)}{\sqrt{1 - \beta}} + \sqrt{\beta}\, \mathbf{z}$$
-
-To first order in $\beta$:
-
-$$\mathbf{x}_s \approx \underbrace{\mathbf{x}_t + \tfrac{\beta}{2} \nabla \log p_t + \sqrt{\beta}\, \mathbf{z}}_{\textrm{Langevin step: keeps } p_t}
-+ \underbrace{\tfrac{\beta}{2} \big(\mathbf{x}_t + \nabla \log p_t\big)}_{\textrm{Euler step of the flow ODE}}$$
-
-::: {.d2l-note}
-The chain is the flow plus a correction that holds $p_t$ in place.
-:::
+::: {.cols}
+::: {.col}
+- **1. Reverse-Time SDE (Stochastic):**
+  $$d\mathbf{x} = \big[\mathbf{f}(\mathbf{x}, t) - g(t)^2\nabla_{\mathbf{x}} \log p_t(\mathbf{x})\big]\,dt + g(t)\,d\bar{\mathbf{W}}$$
+- Discretizing via Euler–Maruyama with $\beta = \beta(t)\Delta t$ yields DDPM's ancestral chain to first order.
+- Fresh Brownian noise $d\bar{\mathbf{W}}$ continuously mixes trajectories and damps accumulated score errors.
 :::
 
-::: {.slide title="The Reverse SDE and the Flow ODE Share Their Marginals"}
-[Ancestral chain]{.kicker}
-
-Forward steps $\mathbf{x} \leftarrow \mathbf{x} + \mathbf{f}\,\Delta t + g\sqrt{\Delta t}\,\mathbf{z}$;
-for VP, $\mathbf{f} = -\tfrac12 \beta(t)\, \mathbf{x}$, $g^2 = \beta(t)$.
-Backward from $t = 1$, as $\Delta t \to 0$:
-
-$$\mathbf{x} \leftarrow \mathbf{x} - \big[\mathbf{f} - g^2 \nabla \log p_t\big]\Delta t + g\sqrt{\Delta t}\,\mathbf{z}
-\quad\textrm{or}\quad
-\frac{d\mathbf{x}}{dt} = \mathbf{f} - \tfrac12 g^2 \nabla \log p_t$$
-
-Ancestral chain: the left, to first order. Flow sampler: the right.
-
-::: {.d2l-note}
-They differ by $\tfrac12 g^2 \nabla\log p_t\,\Delta t + g\sqrt{\Delta t}\,\mathbf{z}$:
-a Langevin step of size $g^2\Delta t$, which keeps $p_t$.
+::: {.col}
+- **2. Probability-Flow ODE (Deterministic):**
+  $$\frac{d\mathbf{x}}{dt} = \mathbf{f}(\mathbf{x}, t) - \frac{1}{2}g(t)^2\nabla_{\mathbf{x}} \log p_t(\mathbf{x}) = \mathbf{u}_t(\mathbf{x})$$
+- Drops the stochastic differential $g\,d\bar{\mathbf{W}}$ and halves the score coefficient $g^2 \to \frac{1}{2}g^2$.
+- Defines a reproducible, invertible bijection $\mathbf{x}_1 \leftrightarrow \mathbf{x}_0$ suitable for higher-order ODE solvers and exact likelihoods.
+:::
+:::
 :::
 
-[Anderson, 1982]{.small}
-:::
+::: {.slide title="Paired Benchmark: 20,000 Starts vs. Exact Oracle"}
+[Ancestral Chain vs. Probability-Flow ODE]{.kicker}
 
-::: {.slide title="Network and Oracle Disagree on the Mode of Under 1% of Starts"}
-[Experiments]{.kicker}
+We run $200$ ancestral steps (`ema_eps` on VP) and $100$ Euler ODE steps (`ema_v` on linear) from $20{,}000$ shared Gaussian starts $\mathbf{x}_1$, paired with exact `oracle` runs using identical initial points and injected noise:
 
 @!gaussian-paths-samples-from-both-samplers
 :::
 
-::: {.slide title="Either Sampler Works on the Mixture"}
-[Experiments]{.kicker}
+::: {.slide title="Comparing ODE and Ancestral Samplers on the Mixture"}
+[Interpreting the 20,000-Sample Experiment]{.kicker}
 
-- Shared starts and noise: 0.2 to 0.5% of the starts change mode; weights
-  within $0.004$.
-- Strays about 1%, as in the data (Euler with the network: 1.3% against
-  1.1%).
-- The ODE is a reproducible map: the same start always gives the same point.
+With $N = 20{,}000$ samples, the binomial standard error on a mode weight is $\sqrt{w(1-w)/N} \approx 0.0035$, allowing a sharp test of distributional accuracy:
 
-::: {.d2l-note}
-The chain's noise can correct earlier errors; on images, the samplers deck
-measures whether it does.
+- **Sub-1% mode disagreement with the exact oracle:** For $99.5\%$ to $99.8\%$ of the $20{,}000$ starting points, the trained neural network and the exact analytical posterior mean send the trajectory to the **exact same mode**.
+- **Mode weights within sampling noise:** Both the 200-step ancestral chain and the 100-step Euler ODE match the oracle's mode weights within $\le 0.004$ ($\approx 1\,\mathrm{SE}$), within-mode spread within $0.01$, and stray fraction ($\approx 1.1\%$).
+- **Deterministic map vs. stochastic correction:** The ODE maps each initial $\mathbf{x}_1$ deterministically to a unique $\mathbf{x}_0$ (enabling inversion and latent interpolation in §17.5), while the ancestral chain injects Langevin noise at every step.
+:::
+
+::: {.slide title="Synthesis: The Generative Models of Chapter 17"}
+[Unifying Path, Target, and Sampler]{.kicker}
+
+Every diffusion and flow-matching model in the literature is specified by three modular choices—a forward path, a regression target, and a reverse integrator:
+
+| Model Family | Forward Path | Training Target | Reverse Sampler | Chapter Section |
+| :--- | :--- | :--- | :--- | :--- |
+| **Single-Level DSM** | Fixed blur $\mathbf{x}_0 + \sigma\boldsymbol\epsilon$ | Score $-\boldsymbol\epsilon/\sigma$ | Fixed-$\sigma$ Langevin MCMC | §17.1 |
+| **NCSN** (Song & Ermon, 2019) | Geometric VE ladder $\tilde\sigma_i$ | Score $-\boldsymbol\epsilon/\tilde\sigma_i$ (weight $\tilde\sigma_i^2$) | Annealed Langevin ladder | §17.2 |
+| **DDPM** (Ho et al., 2020) | Linear-$\beta$ VP ($\alpha_t^2 + \sigma_t^2 = 1$) | Noise $\boldsymbol\epsilon$ | Ancestral chain (reverse SDE) | §17.2–17.3 |
+| **Flow Matching / Rectified Flow** | Linear $(1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$ | Velocity $\boldsymbol\epsilon - \mathbf{x}_0$ | Euler / Heun on flow ODE | §17.2–17.5 |
+| **$\mathbf{v}$-Prediction** (Salimans & Ho) | Cosine VP ($\cos\frac{\pi t}{2}, \sin\frac{\pi t}{2}$) | Angular velocity $\mathbf{v} = \alpha_t\boldsymbol\epsilon - \sigma_t\mathbf{x}_0$ | ODE or ancestral sampler | §17.2, §17.6 |
+| **EDM** (Karras et al., 2022) | VE coordinates $\bar{\mathbf{x}} = \mathbf{x}_0 + \bar\sigma\boldsymbol\epsilon$ | Preconditioned clean point $\hat{\mathbf{x}}_0$ | 2nd-order Heun on $\bar\sigma^{1/\rho}$ grid | §17.5–17.6 |
+:::
+
+::: {.slide title="Concept Check: Transport, Euler Steps & SDE Split"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of reverse-time integration and sampler mechanics:
+
+1. **Single Euler step from pure noise:** On our three-mode mixture with means $(-2.5, -1.5)$, $(2.5, -1.5)$, $(0, 2.5)$ and weights $(0.5, 0.3, 0.2)$, where does one Euler step $\mathbf{x}_0 = \mathbf{x}_1 - \mathbf{u}_1(\mathbf{x}_1)$ send any initial point $\mathbf{x}_1$?
+2. **Error amplification near pure noise:** On the linear path, $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - t\hat{\boldsymbol\epsilon})/(1 - t)$. If a noise predictor $\hat{\boldsymbol\epsilon}$ has error $\boldsymbol\delta$ at $t = 0.95$, how large is the resulting error in the velocity $\mathbf{u}_t = \hat{\boldsymbol\epsilon} - \hat{\mathbf{x}}_0$?
+3. **Why reverse SDE and flow ODE share marginals:** By what term do the backward steps of the reverse SDE and probability-flow ODE differ, and why does that term leave $p_t$ unchanged?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Since $\mathbf{u}_1(\mathbf{x}_1) = \mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0]$, every starting point $\mathbf{x}_1$ collapses onto the global data mean $\mathbb{E}[\mathbf{x}_0] = 0.5(-2.5, -1.5) + 0.3(2.5, -1.5) + 0.2(0, 2.5) = \mathbf{(-0.50, -0.70)}$.
+2. Since $\mathbf{u}_t = (\hat{\boldsymbol\epsilon} - \mathbf{x}_t)/(1 - t)$, an error $\boldsymbol\delta$ in $\hat{\boldsymbol\epsilon}$ is magnified by $1/(1 - t) = 1/0.05 = \mathbf{20\times}$ ($\mathbf{20\,\boldsymbol\delta}$), and diverges at $t = 1$ ($\alpha_1 = 0$).
+3. Their backward steps differ by $\frac{1}{2}g(t)^2\nabla \log p_t(\mathbf{x})\,\Delta t + g(t)\sqrt{\Delta t}\,\mathbf{z}$, which is an infinitesimal **Langevin step** of step size $h = g(t)^2\Delta t$ whose stationary distribution is $p_t$.
 :::
 :::
 
-::: {.slide title="Check: How Does a Noise Error Reach the Velocity near Pure Noise?"}
-[Check]{.kicker}
+::: {.slide title="Summary: Reverse-Time Integration Mechanics"}
+[Key Takeaways]{.kicker}
 
-On the linear path $\hat{\mathbf{x}}_0 = (\mathbf{x} - t\,
-\hat{\boldsymbol{\epsilon}}) / (1 - t)$. If $\hat{\boldsymbol{\epsilon}}$ is
-off by $\boldsymbol{\delta}$, how far off is the velocity
-$\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0$ at $t = 0.95$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0 =
-(\hat{\boldsymbol{\epsilon}} - \mathbf{x}) / (1 - t)$, so the error is
-$\boldsymbol{\delta} / (1 - t) = 20\, \boldsymbol{\delta}$. At $\alpha = 0$
-it is unbounded: a noise model is never asked for $\hat{\mathbf{x}}_0$ at
-pure noise.
-:::
-:::
-:::
-
-::: {.slide title="A Model Is a Path, a Target and a Sampler"}
-[Summary]{.kicker}
-
-| model | target and path | sampler |
-|:--|:--|:--|
-| NCSN | score on a ladder of VE levels | annealed Langevin |
-| DDPM | $\boldsymbol\epsilon$, VP path | ancestral chain or flow ODE |
-| flow matching | $\boldsymbol\epsilon - \mathbf{x}_0$, linear path | Euler on the flow ODE |
-| $\mathbf{v}$-prediction | $\mathbf{v}$, cosine path | either |
-| EDM (later decks) | clean point, VE path, rescaled per level | second-order steps |
-:::
-
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
-
-- **Transport:** the marginal velocity moves the mass of $p_t$, so the
-  flow ODE, solved exactly, carries noise into data with the right weights.
-- **Euler:** one step lands on the mean $(-0.5, -0.7)$; a hundred recover
-  the modes, with about as many strays as the data.
-- **Coordinates:** $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$ on every path.
-- **Ancestral chain:** a flow step plus a Langevin step.
-- **Network against oracle:** 0.2 to 0.5% of starts change mode.
-
-**Next:** the same regression on 784-pixel images, with a U-Net, guidance
-and a quality score.
+| Concept / Sampler | Mathematical Equation | Structural Guarantee | Practical Behavior |
+| :--- | :--- | :--- | :--- |
+| **Continuity Equation** | $\partial_t p_t = -\nabla \cdot (p_t \mathbf{u}_t)$ | Conserves total probability mass | Ensures $\mathbf{u}_t = \mathbb{E}[\dot{\mathbf{x}}_t \mid \mathbf{x}_t]$ recovers exact mode weights |
+| **Probability-Flow ODE** | $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ ($t: 1 \to 0$) | Smooth deterministic bijection $\mathbf{x}_1 \leftrightarrow \mathbf{x}_0$ | Reproducible samples, latent codes, exact likelihoods |
+| **1-Step Euler Collapse** | $\mathbf{x}_1 - \mathbf{u}_1(\mathbf{x}_1) = \mathbb{E}[\mathbf{x}_0]$ | Tangent at $t = 1$ points to prior mean | Collapses all starts to $\mathbb{E}[\mathbf{x}_0]$; curved paths need $\ge 10$ steps |
+| **Rescaled VE Coordinates** | $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t, \;\bar\sigma = \sigma_t/\alpha_t$ | $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$ on any path | Euler step $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$ (= DDIM at $\eta = 0$) |
+| **DDPM Ancestral Step** | $\frac{\mathbf{x}_t + \beta\nabla \log p_t}{\sqrt{1-\beta}} + \sqrt{\beta}\mathbf{z}$ | $= \text{Flow ODE Euler step} + \text{Langevin step}$ | Discretizes Anderson's reverse SDE; damps drift errors |
 :::

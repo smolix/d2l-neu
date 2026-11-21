@@ -88,30 +88,98 @@ mdl-naive-bayes
 further-reading
 ```
 
-## Resources and Further Reading {.unnumbered}
+<!-- slides -->
 
-The references below accompany the topics taught in this chapter. Related
-subjects that we leave out are surveyed in
-:numref:`sec_mdl-probability-statistics-further-reading`.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §36]{.kicker}
 
-**Books**
+Probability and Statistical Learning: Foundations of Inference Under Uncertainty<br>**densities & Jacobians · exponential families · estimation & testing · MLE & ELBO · Bayesian computation · concentration & generalization**
+:::
+:::
 
-- [Introduction to Probability --- Blitzstein & Hwang](https://probabilitybook.net/): an inviting introduction to random variables, expectation, conditioning, and the named distributions of :numref:`sec_mdl-random_variables` and :numref:`sec_mdl-distributions`; a free PDF accompanies Harvard's Stat 110.
-- [Mathematics for Machine Learning --- Deisenroth, Faisal & Ong](https://mml-book.github.io/): Chapter 6 offers a self-contained review of probability and distributions, including the exponential family of :numref:`sec_mdl-exponential-family`.
-- [All of Statistics --- Wasserman](https://www.stat.cmu.edu/~larry/all-of-statistics/): a crisp, computer-scientist-friendly treatment of estimation, testing, confidence intervals, and the bootstrap, covering :numref:`sec_mdl-statistics` and :numref:`sec_mdl-maximum_likelihood`; the companion page includes errata, code, and datasets.
-- [Computer Age Statistical Inference --- Efron & Hastie](https://hastie.su.domains/CASI/): explores the bootstrap, large-scale testing, and the relationship between frequentist and Bayesian inference, complementing :numref:`sec_mdl-statistics`.
-- [Pattern Recognition and Machine Learning --- Bishop](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/): covers the exponential family, mixture models and EM (:numref:`sec_mdl-latent-em-elbo`), and the Laplace and variational approximations of :numref:`sec_mdl-bayesian-computation`; Microsoft Research provides a free PDF.
-- [Probabilistic Machine Learning: An Introduction --- Murphy](https://probml.github.io/pml-book/book1.html): develops machine learning through probability and decision theory, including MAP estimation (:numref:`sec_mdl-maximum_likelihood`) and generative classifiers (:numref:`sec_mdl-naive_bayes`), with a free draft and runnable notebooks.
-- [Information Theory, Inference, and Learning Algorithms --- MacKay](https://www.inference.org.uk/itila/book.html): weaves inference together with information theory; its chapters on Laplace's method, Monte Carlo methods, and variational inference accompany :numref:`sec_mdl-bayesian-computation`.
-- [Bayesian Data Analysis --- Gelman et al.](https://sites.stat.columbia.edu/gelman/book/): covers priors, posteriors, Markov chain Monte Carlo with its diagnostics, and practical Bayesian workflow for :numref:`sec_mdl-bayesian-computation`; the third edition is available as a free PDF.
-- [High-Dimensional Probability --- Vershynin](https://www.math.uci.edu/~rvershyn/papers/HDP-book/HDP-book.html): develops concentration inequalities, sub-Gaussian variables, and high-dimensional geometry, extending :numref:`sec_mdl-concentration-generalization`.
-- [Understanding Machine Learning: From Theory to Algorithms --- Shalev-Shwartz & Ben-David](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/): derives uniform convergence, Rademacher complexity, and margin bounds as in :numref:`sec_mdl-generalization-bounds`; the authors provide a free PDF.
+::: {.slide title="Why Deep Learning Needs Statistical Foundations"}
+[Motivation]{.kicker}
 
-**Courses and video lectures**
+Every decision in deep learning—training with cross-entropy or squared error, reporting an accuracy on $1{,}000$ test examples, or picking the best model from 20 runs—is an inference from a finite random sample.
 
-- [Statistics 110: Probability --- Harvard (Blitzstein)](https://stat110.hsites.harvard.edu/): provides lecture videos, problem sets, and more than 250 practice problems with solutions for :numref:`sec_mdl-random_variables` and :numref:`sec_mdl-distributions`.
-- [Stat 110 lecture videos --- YouTube](https://stat110.hsites.harvard.edu/youtube): contains the complete lecture series on probability, distributions, and conditioning.
+::: {.cols}
+::: {.col}
+- **The Running Coin ($9$ Heads in $13$ Flips):** The natural bias estimate is $\hat{\theta} = 9/13 \approx 0.692$, yet a fair coin ($\theta = 0.5$) produces $\ge 9$ heads $1093/8192 \approx 13.3\%$ of the time. A test accuracy is the exact same coin flipped once per test example.
+- **Forward vs. Backward Reasoning:** *Probability* (§36.1–36.4) maps a known distribution to outcome frequencies; *statistics* (§36.5–36.8) maps observed finite data back to parameter estimates, error bars, and posteriors.
+:::
 
-**Tutorials and notes**
+::: {.col}
+- **Sampling Spread vs. Posterior Spread:** The scatter of an estimator $\hat{\theta}_n$ across hypothetical datasets we *did not draw* (frequentist confidence interval) is distinct from the spread of a posterior $p(\theta \mid \mathcal{D})$ conditioned on the data *in hand* (Bayesian credible interval).
+- **Post-Selection Guarantees (§36.9–36.10):** Choosing a model *after* inspecting validation scores is multiple testing in disguise and requires uniform convergence bounds.
+:::
+:::
 
-- [Probability Theory Review --- Stanford CS229 (Maleki & Do)](https://cs229.stanford.edu/section/cs229-prob.pdf): reviews random variables, expectation, variance, Gaussian distributions, and multivariate probability for machine learning, serving as a concise companion to :numref:`sec_mdl-random_variables`.
+::: {.d2l-note}
+A single mathematical thread connects continuous densities, the exponential family, maximum likelihood losses, variational bounds, and finite-sample generalization guarantees.
+:::
+:::
+
+::: {.slide title="Four Pillars of Probabilistic Learning"}
+[Chapter Architecture]{.kicker}
+
+Chapter 36 progresses from the calculus of continuous distributions to estimation, latent-variable inference, and distribution-free generalization bounds:
+
+| Pillar | Sections | Central Mathematical Objects | Deep Learning Payoff |
+| :--- | :--- | :--- | :--- |
+| **1. Distributions & Unified Form** | **§36.1–36.4** | PDFs, CDFs, Jacobians, named distributions, exponential family $h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x}) - A(\boldsymbol{\eta})}$ | Inverse-transform & Cholesky sampling, normalizing flows, GLM gradient $\mathbf{x}(\boldsymbol{\mu} - T(y))^\top$ |
+| **2. Estimation, Tests & Likelihood** | **§36.5–36.6** | Bias–variance decomposition, $p$-values, power, confidence intervals, MLE, Fisher information | Test-set sizing, paired model evaluation, bootstrap SEs, cross-entropy & weight decay |
+| **3. Latent Models & Posteriors** | **§36.7–36.8** | Marginal likelihood $\log p(\mathbf{x})$, Jensen's inequality, ELBO, EM, Laplace, VI, MCMC | Gaussian mixtures, variational autoencoders (VAEs), posterior predictive uncertainty |
+| **4. Concentration & Generalization** | **§36.9–36.11** | Chernoff & Hoeffding bounds, high-$d$ geometry, union bound, Rademacher complexity | Finite-sample risk bounds after model selection, end-to-end Naive Bayes image classifier |
+:::
+
+::: {.slide title="Roadmap: Distributions to Posteriors (§36.1–36.8)"}
+[Section Guide (Part I)]{.kicker}
+
+| Section | Core Theorems & Derivations | Concrete Running Benchmark |
+| :--- | :--- | :--- |
+| **§36.1 Random Variables** | $F'(x) = p(x)$, $X = F^{-1}(U)$, Markov & Chebyshev bounds | Dart distance $R$ on unit disk ($p(r)=2r$); Cauchy vs. Gaussian averages |
+| **§36.2 Joint Distributions** | Marginals, conditioning, Eve's law, Jacobian $\|\det J_g\|^{-1}$ | Dart coordinates $(X, Y)$ (dependent yet $\mathrm{Cov}=0$); log-normal density |
+| **§36.3 Distributions** | Poisson limit, exponential waits, CLT, MVN Schur conditioning | $9/13$ coin flips; server at $4\text{ req/min}$; bivariate $\boldsymbol{\Sigma}$ with rows $(2,1),(1,2)$ |
+| **§36.4 Exponential Family** | $\nabla A = \mathbb{E}[T]$, $\nabla^2 A = \mathrm{Cov}(T)$, maximum entropy, conjugacy | Loaded die ($\mathbb{E}=4.5$); Gumbel-max softmax; $\mathrm{Beta}(10, 5)$ coin posterior |
+| **§36.5 Statistics** | $\mathrm{MSE} = \mathrm{Bias}^2 + \mathrm{Var}$, uniform $p$-values, power, bootstrap | $912/1000$ vs. $921/1000$ paired test accuracy; shrunk mean $0.65\bar{x}$ |
+| **§36.6 Maximum Likelihood** | KL projection, score $\mathbb{E}[s]=0$, Fisher information, Cramér–Rao | Curvature $nI(\theta)$ of coin NLL; MAP as $L_2$/$L_1$ regularization; BIC |
+| **§36.7–36.8 EM, ELBO & Bayes** | EM monotonic ascent via ELBO; Laplace, variational inference, MCMC | 2-component GMM on Old Faithful; Bayesian logistic regression posteriors |
+:::
+
+::: {.slide title="Roadmap: Guarantees and Synthesis (§36.9–36.11)"}
+[Section Guide (Part II)]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **§36.9 Concentration Inequalities:** Upgrades Chebyshev's polynomial $1/(n\varepsilon^2)$ bound to exponential decay $\exp(-2n\varepsilon^2)$ via Markov's inequality on $e^{\lambda X}$ (Chernoff & Hoeffding bounds), and proves why high-dimensional Gaussian vectors concentrate on a thin spherical shell of radius $\sqrt{d}$.
+- **§36.10 Generalization Bounds:** Explains why selecting the best model $\hat{h}$ from a class $\mathcal{H}$ invalidates single-test guarantees, and bounds $\sup_{h \in \mathcal{H}} |R(h) - \hat{R}_n(h)|$ via union bounds and Rademacher complexity.
+:::
+
+::: {.col}
+- **§36.11 Naive Bayes Classifier:** Puts distributions, maximum likelihood, and Dirichlet/Beta conjugate smoothing ($\text{add-}1$ Laplace rule) to work together in a closed-form generative image classifier trained from pixel counts alone.
+- **One Coin Across Eleven Sections:** The $9$-heads-in-$13$-flips coin anchors binomial tail probabilities (§36.3), log-odds & Beta posteriors (§36.4), Wald vs. exact intervals (§36.5), Fisher information (§36.6), and Hoeffding bounds (§36.9).
+:::
+:::
+:::
+
+::: {.slide title="How to Navigate Chapter 36"}
+[Study Guide]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Core theoretical backbone:** Read **§36.1–36.6** in sequence to see how continuous densities and the exponential family unify every supervised loss function and statistical error bar in the main text.
+- **Fast-track option:** If you are already comfortable with §1.6 (preliminary discrete probability), skim the basic moment algebra in §36.1–36.2 and focus on inverse-transform sampling, Eve's law, Jacobian determinants, and Gaussian conditioning.
+:::
+
+::: {.col}
+- **Modular advanced topics:** **§36.8 (Bayesian Computation)** and **§36.11 (Naive Bayes)** are self-contained and can be skipped on a first pass without breaking later dependencies.
+- **Connections to other math chapters:** Linear-algebraic spectra and positive definiteness come from **Chapter 33**, multivariable Jacobians and convexity from **Chapters 34–35**, and full entropy/KL theory continues in **Chapter 37**.
+:::
+:::
+
+::: {.d2l-note}
+**Up next (§36.1 Random Variables):** Why continuous outcomes have zero point probability, how densities and CDFs relate via $F'(x) = p(x)$, and why heavy tails break sample averages.
+:::
+:::
+

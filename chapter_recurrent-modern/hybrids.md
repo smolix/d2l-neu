@@ -53,6 +53,7 @@ $$\frac{m - d_k}{d_k\,(m - 1)}.$$
 In a head of dimension $d_k = 4$, $m = 64$ unit keys must have mean squared overlap at least $60 / (4 \times 63) \approx 0.24$—almost indistinguishable from random unit vectors ($1/d_k = 0.25$). Widening the head to $d_k = 16$ lowers the Welch floor to $48 / (16 \times 63) \approx 0.05$.
 
 This predicts two clear experimental signatures on multi-query associative recall:
+
 1. A pure `GatedDeltaNet` stack will degrade as the number of stored pairs $n$ grows past its state capacity, while quadrupling its per-layer state entries (from $8 \times 4^2 = 128$ to $2 \times 16^2 = 512$ at fixed width $d = 32$) will shift the degradation to roughly $4\times$ higher pair loads.
 2. Replacing just one of the two recurrent blocks with full causal attention (`GA`) will eliminate the capacity drop entirely, because the attention layer retains every token in its cache.
 
@@ -61,6 +62,7 @@ This predicts two clear experimental signatures on multi-query associative recal
 ### Four Models
 
 We test four two-block `d2l.SeqLM` models ($d = 32$) on multi-query associative recall (`num_keys=128`, `num_values=4`, loads $n \in \{4, 8, 16, 32, 64\}$):
+
 - **`Gated DeltaNet` (`GG`):** 8 heads of size 4 ($128$ state entries/layer);
 - **`Gated DeltaNet, 4x state` (`GG, num_heads=2`):** 2 heads of size 16 ($512$ state entries/layer, same parameter count);
 - **`attention` (`AA`):** 2-head causal attention (`d2l.AttentionMixer`) with the same width-4 depthwise causal convolution on $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ and no positional encoding (`rope=False`);
@@ -129,6 +131,7 @@ for name, r in runs.items():
 ```
 
 Both predictions hold:
+
 1. **State capacity scaling in `GatedDeltaNet`:** With 128 state entries/layer (`GG`), recall drops from $1.00$ at 4 pairs to $\sim 0.65$ at 32 pairs and $\sim 0.48$ at 64 pairs. Quadrupling the state to 512 entries/layer (`Gated DeltaNet, 4x state`) sustains $0.93$–$0.97$ recall all the way to 64 pairs.
 2. **One attention layer restores exact recall:** Both `attention` (`AA`) and the `hybrid` (`GA`) achieve $1.00$ recall across every load up to 64 pairs in every run—mirroring the large-scale findings of :citet:`Waleffe.Byeon.Riach.ea.2024`.
 
@@ -192,6 +195,7 @@ On short 128-byte windows, `Gated DeltaNet` (`1.326`) and the `GGGA` hybrid (`1.
 ## Inference Memory
 
 During autoregressive generation, per-sequence memory determines both maximum serving batch size and memory-bandwidth-bound decoding speed:
+
 - **Grouped-query attention layer** ($n_\textrm{kv} = 8$ key–value heads of dimension $d_\textrm{head} = 128$ in 16-bit floats): stores $2 \times n_\textrm{kv} \times d_\textrm{head} \times 2 = 4\textrm{ KB}$ *per token*—reaching $512\textrm{ MB}$ per layer at $T = 128\textrm{K}$ tokens.
 - **Recurrent / matrix-state layer** (e.g., Mamba-2 at width $4{,}096$ with $8{,}192$ channels and state dimension $128$ in 16-bit floats): stores a fixed $8{,}192 \times 128 \times 2 = 2\textrm{ MB}$ *regardless of context length* (overtaken by the attention layer's KV cache after just $512$ tokens).
 
@@ -220,6 +224,7 @@ In a hybrid architecture, only the attention layers accumulate a growing KV cach
 | hybrid | recurrent states plus $2dT$ per attention layer | both | every pair, with attention in one of two blocks | 1.33 to 1.34 (3.5 M) |
 
 Reading across the columns summarizes the design trade-offs:
+
 - For **low-power streaming or continuous sensor/audio processing** where exact lookup of arbitrary past tokens is not required, classical gated recurrences or selective SSMs provide compact $O(1)$-state processing.
 - For **long-context foundation models**, interleaving chunk-parallel delta-rule matrix recurrences (`GatedDeltaNet`) or selective SSMs (`Mamba-2`) with a small ratio of full attention layers ($1{:}3$ to $1{:}7$) combines parallel linear-time training, $4\times$–$8\times$ smaller inference KV caches, and exact content-addressable recall.
 
@@ -300,300 +305,219 @@ A fixed-size state of $M$ numbers at $b$ bits each can distinguish at most $2^{M
 ::: {.cover}
 [Dive into Deep Learning · §12.8]{.kicker}
 
-Hybrid architectures<br>
-**counting bits · overlapping keys · associative recall · one attention layer · memory per sequence · the chapter's memories**
+Hybrid Architectures: Combining Recurrence with Global Attention<br>**information & Welch capacity bounds · Gated DeltaNet + attention hybrids · local convolution binding · KV-cache scaling**
 :::
 :::
 
-::: {.slide title="A Fixed State Stores What It Chose Before the Question"}
-[The problem]{.kicker}
+::: {.slide title="Why Every Fixed-Size State Hits an In-Context Ceiling"}
+[Motivation]{.kicker}
 
-A prompt lists 64 product codes and prices, then asks for 20 of them.
+Suppose a user pastes a table of $64$ product codes and prices into a prompt and asks for $20$ of them at the end:
 
-- A transformer looks back: every token is still in its cache.
-- A recurrent model has only what it stored, before it knew the question.
+- **The structural limit of fixed-size states:** A recurrent layer must compress all $64$ pairs into its fixed state *as it reads the table*, before knowing which items will be queried. Once the number of pairs exceeds the state's capacity, early or overlapping entries are lost.
+- **How full attention escapes the limit:** A Transformer keeps every token's key and value in its KV cache and looks back directly at query time—at the cost of memory and compute that grow linearly with context length $T$.
+
+::: {.d2l-note .rule}
+**The hybrid principle:** Interleave a small fraction of full attention layers ($1$ in $4$ to $1$ in $8$) among fast recurrent matrix-state layers to gain exact content-addressable lookup at a fraction of the KV-cache cost.
+:::
+:::
+
+::: {.slide title="Limit 1: The Information-Theoretic Bit-Counting Bound"}
+[Pigeonhole Capacity Limit]{.kicker}
+
+By the pigeonhole principle, a recurrent state of $M$ floating-point numbers stored at $b$ bits each has at most $2^{Mb}$ distinct states. To distinguish and reproduce all $V^k$ possible sequences of $k$ tokens from a vocabulary of size $V$, the state must satisfy (Jelassi et al., 2024):
+
+$$M b \ge k \log_2 V \quad\Longrightarrow\quad k_{\max} \le \frac{M b}{\log_2 V}$$
+
+| Quantity in Our 2-Layer Recall Model | Calculation | Total Bits |
+| :--- | :--- | :---: |
+| **Raw `float32` state bits (`GG`, $8$ heads of $4 \times 4$)** | $2\text{ layers} \times 8\text{ heads} \times 16\text{ floats} \times 32\text{ bits}$ | **$8{,}192\text{ bits}$** |
+| **Lookup table for all $128$ possible keys ($4$ values)** | $128\text{ keys} \times \log_2 4\text{ bits/value}$ | **$256\text{ bits}$** |
+| **Values of the $64$ presented pairs alone** | $64\text{ pairs} \times \log_2 4\text{ bits/value}$ | **$128\text{ bits}$** |
+
+::: {.d2l-note .warn}
+Our small model has **$>30\times$ the raw bits** required to store $64$ pairs, yet still loses half of them! Matrix memories hit a *linear-algebraic* limit long before saturating their raw bit count.
+:::
+:::
+
+::: {.slide title="Limit 2: Linear Independence and Welch's Overlap Bound"}
+[Geometric Capacity Limit]{.kicker}
+
+Whether a head matrix $\mathbf{S} \in \mathbb{R}^{d_v \times d_k}$ is written additively (§12.6) or via the delta rule toward least squares (§12.7), exact linear readout $\mathbf{S}\mathbf{k}_j = \mathbf{v}_j$ for arbitrary values requires the keys $\mathbf{k}_1, \ldots, \mathbf{k}_m \in \mathbb{R}^{d_k}$ to be linearly independent—which is impossible once $m > d_k$!
+
+**Proposition (Welch's Bound, Welch, 1974).** For any $m > d_k$ unit vectors $\mathbf{k}_1, \ldots, \mathbf{k}_m \in \mathbb{R}^{d_k}$, the mean squared pairwise overlap over all $m(m-1)$ distinct pairs $i \neq j$ satisfies:
+
+$$\operatorname{mean}_{i \neq j}\,(\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge \frac{m - d_k}{d_k\,(m - 1)}$$
+
+- **Proof in two lines:** The Gram matrix $\mathbf{G} = \sum_{i=1}^m \mathbf{k}_i \mathbf{k}_i^\top \in \mathbb{R}^{d_k \times d_k}$ has trace $m$ and at most $d_k$ nonzero eigenvalues, so by Cauchy–Schwarz $\|\mathbf{G}\|_F^2 = \sum_{i,j} (\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge m^2 / d_k$. Subtracting the $m$ unit diagonal entries $(\mathbf{k}_i^\top \mathbf{k}_i)^2 = 1$ yields $\sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge m(m - d_k)/d_k$. $\blacksquare$
+:::
+
+::: {.slide title="What Welch's Bound Predicts for Trained Key Embeddings"}
+[Theory to Experiment]{.kicker}
+
+How much better than random unit vectors ($\mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)^2] = 1/d_k$) can gradient descent possibly pack $m = 64$ keys into a head of dimension $d_k$?
+
+| Head Key Dimension $d_k$ (for $m = 64$ keys) | Welch Minimum Overlap $\frac{m - d_k}{d_k(m - 1)}$ | Random Unit-Key Overlap $\frac{1}{d_k}$ | Ratio (Welch / Random) |
+| :---: | :---: | :---: | :---: |
+| **$d_k = 4$** ($8$ heads at width $32$) | **$0.2381$** | $0.2500$ | **$95.2\%$** (almost no room to improve!) |
+| **$d_k = 16$** ($2$ heads at width $32$) | **$0.0476$** | $0.0625$ | **$76.2\%$** ($5\times$ lower overlap floor) |
+
+- **Prediction 1:** Widening heads from $d_k = 4$ ($128$ state entries/layer) to $d_k = 16$ ($512$ state entries/layer) at fixed model width $d = 32$ will shift the recall degradation curve to roughly $4\times$ higher pair loads.
+- **Prediction 2:** Replacing just one recurrent block with full causal attention (`GA`) will achieve $100\%$ recall across all pair loads.
+:::
+
+::: {.slide title="Four 2-Block Architectures on Associative Recall"}
+[Controlled Experimental Design]{.kicker}
+
+We test four 2-block `SeqLM` architectures at width $d = 32$ ($35\text{K}$–$38\text{K}$ parameters) on multi-query associative recall (`num_keys=128`, `num_values=4`, pair loads $n \in \{4, 8, 16, 32, 64\}$):
+
+| Configuration Name | Block 1 & Block 2 Mixers | Head Count & Size | State per Layer at Generation |
+| :--- | :---: | :---: | :--- |
+| **`Gated DeltaNet`** | `G G` | $8$ heads of $4 \times 4$ | $128$ floats |
+| **`Gated DeltaNet, 4x state`** | `G G` | $2$ heads of $16 \times 16$ | $512$ floats ($4\times$ state, same params) |
+| **`attention`** | `A A` | $2$ heads of $16$ (`rope=False`) | $2dT$ KV cache (all tokens) |
+| **`hybrid`** | `G A` | Block 1: `G` ($8 \times 4^2$), Block 2: `A` | $128$ floats in Block 1 + KV cache in Block 2 |
 
 ::: {.d2l-note}
-Better writes do not make a state hold more than its size allows.
+All four models include the same width-$4$ depthwise causal convolution on $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ so local token preprocessing is held constant.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Multi-Query Associative Recall: 4 to 64 Key–Value Pairs"}
+[Recall Sweep Results]{.kicker}
 
-- bound the recall of a fixed state by counting bits;
-- predict where a small state loses pairs;
-- measure one attention layer on recall and on text;
-- compute memory per sequence, and choose a memory.
+Mean recall across two training runs ($2{,}000$ AdamW updates cycling across pair loads $n \in \{4, 8, 16, 32, 64\}$; chance $= 0.25$):
 
-**Running example:** a Mamba-2 layer, 2 MB of state, against a
-grouped-query cache of 4 KB per token.
-:::
-
-::: {.slide title="The Last Step of the Chapter Puts Back a Little Attention"}
-[Where we are]{.kicker}
-
-Gates → linear recurrences and scans → state space models → selectivity →
-matrix memories → the delta rule → **hybrids**.
-
-- Here: what no fixed state can do, and the cheapest repair.
-- Not here: hybrids at scale, windowed attention, GPU kernels.
-:::
-
-::: {.slide title="Recalling k Tokens Needs k log₂ V Bits"}
-[Counting bits]{.kicker}
-
-$V^k$ possible inputs must reach $V^k$ different states:
-
-$$M b \ge k \log_2 V$$
-
-$M$ numbers of $b$ bits; $k$ tokens from a vocabulary of $V$.
-
-- Recall grows with the state, not with the context.
-- A KV cache grows by one key and one value per token: it never runs out.
-:::
-
-::: {.slide title="The Small Recall Model Has 30× the Bits That 64 Pairs Need"}
-[Counting bits]{.kicker}
-
-Recall task below: up to 64 pairs, keys from 128, values from 4.
-Model: two Gated DeltaNet layers, 8 heads of $4 \times 4$ state each.
-
-| | bits |
-|---|---|
-| state: 2 layers × 8 heads × 4 × 4 numbers × 32 bits | 8,192 |
-| a table of 2 bits per possible key: 128 × 2 | 256 |
-| the 64 values alone: 64 × 2 | 128 |
-
-::: {.d2l-note}
-Bits are not the limit: a matrix memory is a poor encoder of bits.
-:::
-:::
-
-::: {.slide title="Pairs in a Matrix Memory Interfere"}
-[Overlapping keys]{.kicker}
-
-Write $\mathbf{S} \leftarrow \mathbf{S} + \mathbf{v}\mathbf{k}^\top$; read with unit key $\mathbf{k}_j$:
-
-$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j}
-(\mathbf{k}_i^\top \mathbf{k}_j)\, \mathbf{v}_i$$
-
-- Random unit keys of dimension $d_k$: mean squared overlap $1/d_k$.
-- What the memory holds grows with its entries: $d_k d_v$ per head, keys
-  of size $d_k$, values of size $d_v$.
-- Delta rule: fits the pairs, but $m > d_k$ keys are linearly dependent,
-  so no linear read returns every value.
-- Can training pick keys that hardly overlap?
-:::
-
-::: {.slide title="More Keys Than Dimensions Must Overlap"}
-[Welch's bound]{.kicker}
-
-Unit $\mathbf{k}_1, \ldots, \mathbf{k}_m \in \mathbb{R}^{d_k}$, $m > d_k$:
-
-$$\operatorname{mean}_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge
-\frac{m - d_k}{d_k\,(m - 1)}$$
-
-Proof: $\mathbf{G} = \sum_i \mathbf{k}_i\mathbf{k}_i^\top$ has trace $m$
-and rank $\le d_k$, so $\|\mathbf{G}\|_F^2 \ge m^2/d_k$.
-
-| 64 keys | floor | random |
-|---|---|---|
-| $d_k = 4$ | 0.24 | 0.25 |
-| $d_k = 16$ | 0.05 | 0.06 |
-
-::: {.d2l-note}
-Once keys far outnumber dimensions, the best keys are hardly better than
-random ones.
-:::
-:::
-
-::: {.slide title="Check: Predict Before We Train"}
-[Check]{.kicker}
-
-1. The state grows 4× at the same parameter count. Where should recall
-   of 64 pairs land?
-2. One of two layers becomes attention. What happens to recall?
-
-::: {.fragment .fade-up}
-1. About where the small state recalls 16 pairs, if pairs grow in
-   proportion to entries, as they did for gated linear attention.
-2. No fall: the cache holds every pair it has read.
-:::
-:::
-
-::: {.slide title="Multi-Query Associative Recall"}
-[The task]{.kicker}
-
-`k₁ v₁  k₂ v₂  …  kₙ vₙ  |  k₂ kₙ k₁ …`
-
-- $n$ distinct keys from 128, each followed by a value from 4.
-- Then every key again, in random order: answer the value that followed.
-- $n$ from 4 to 64. Guessing: 1 in 4.
-:::
-
-::: {.slide title="Four Models Differ Only in Their Mixers"}
-[Four models]{.kicker}
-
-| model | mixers | state per recurrent layer |
-|---|---|---|
-| Gated DeltaNet | G G, 8 heads of 4 | 128 entries |
-| Gated DeltaNet, 4× state | G G, 2 heads of 16 | 512 entries |
-| attention | A A | cache of every pair |
-| **hybrid** | G **A** | 128 entries + cache |
-
-Two blocks of width 32, 35,000 to 38,000 parameters; the same short
-convolution before every mixer; attention without a position encoding;
-each trained twice.
-:::
-
-::: {.slide title="One Attention Layer Removes the Fall; 4× State Moves It Right"}
 @!hybrids-the-recall-sweep-3
 :::
 
-::: {.slide title="4× State Recalls 64 Pairs as Well as the Small State Recalls 8"}
-[Recall]{.kicker}
+::: {.slide title="1 Attention Layer Lifts the Ceiling; 4x State Shifts It"}
+[Interpreting the Recall Sweep]{.kicker}
 
-- Gated DeltaNet: two thirds or a little less of 32 pairs, half of 64.
-- 4× state: 0.93–0.97 of 64, like the small state at 8 (0.93–0.96),
-  better than the guess of 16: at least 4× the pairs.
-- Hybrid, attention: every pair, every load, every run.
-- At 64 pairs the attention cache holds 192 tokens, 12,288 numbers: 24×
-  the larger state. A little attention saves memory only at long
-  contexts, among mostly recurrent layers.
+Both theoretical predictions are borne out quantitatively:
 
-::: {.d2l-note .warn}
-Tiny on purpose (256 numbers): the mechanism, not the effect at scale.
-:::
+- **Fixed-state capacity scaling (`GG` vs. `GG, 4x state`):** With $128$ state entries/layer, `Gated DeltaNet` drops from $1.00$ at $4$ pairs to $\sim 0.65$ at $32$ pairs and $\sim 0.48$ at $64$ pairs. Quadrupling state entries to $512$/layer (`num_heads=2`) sustains **$0.93$–$0.97$ recall at $64$ pairs**—matching the $128$-entry model's accuracy at $8$ pairs (at least a $4\times$ capacity gain at equal parameter count!).
+- **Single attention layer (`GA` hybrid):** Replacing only the second mixer with causal attention eliminates the capacity drop completely, achieving **$1.00$ recall at every load from $4$ to $64$ pairs on every run**.
 :::
 
-::: {.slide title="Without the Short Convolution, Every Run Recalls Less"}
-[The convolution]{.kicker}
+::: {.slide title="Why the Width-4 Causal Convolution Is Essential"}
+[Local Token Binding Ablation]{.kicker}
+
+What happens if we remove the width-$4$ depthwise causal convolution in front of `GatedDeltaNet` by setting `conv_width=1`?
 
 @!hybrids-the-recall-sweep-4
 
-A value comes one token after its key; a convolution of width 4 lets one
-write store both. Width 1 only scales and shifts each channel.
-
-::: {.d2l-note}
-A memory can hold only what reaches it.
-:::
+- **Why `conv_width=1` fails even at $4$ pairs:** In our sequence format, key token $k_i$ arrives at step $t - 1$ and its value token $v_i$ arrives at step $t$. Without local receptive-field mixing (`conv_width=1`), step $t$'s linear projections $(\mathbf{k}_t, \mathbf{v}_t)$ see only the value token $v_i$ and cannot bind it to the preceding key token $k_i$ inside a single layer!
+- **Width-4 causal convolution bridges adjacent tokens:** Mixing $4$ consecutive steps into $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ lets step $t$ extract $\mathbf{k}_t$ from position $t-1$ and $\mathbf{v}_t$ from position $t$ in a single outer-product write.
 :::
 
-::: {.slide title="On Text, Attention Is Behind; the Hybrid Trails Slightly"}
-[Text]{.kicker}
+::: {.slide title="WikiText-103 Bytes: GGGG vs. GGGA Hybrid vs. AAAA"}
+[Language Modeling Benchmark]{.kicker}
+
+Comparing 4-block width-256 `Gated DeltaNet` (`GGGG`), a 3-to-1 `hybrid` (`GGGA`, attention in block 4), and pure causal `attention` (`AAAA`) on 128-byte WikiText-103 windows:
 
 @!hybrids-language-modeling-5
-
-Byte-level WikiText-103, windows of 128 bytes; four blocks of width 256;
-loss in nats per byte, overall and by position in the window; last column:
-time per training step. Attention here: 8 heads, rotary positions, no
-convolution.
 :::
 
-::: {.slide title="The Model That Recalls Least Has the Lowest Text Loss"}
-[Text]{.kicker}
+::: {.slide title="Pitfall: Short-Window Loss Masks Retrieval Deficits"}
+[Benchmarking Insight]{.kicker}
 
-| mixers | recall of 64 pairs | text, nats per byte |
-|---|---|---|
-| Gated DeltaNet | about half | 1.32 to 1.33 |
-| hybrid | all | 1.33 to 1.34 |
-| attention | all | 1.37 to 1.39 |
+Compare the associative recall and 128-byte WikiText-103 benchmarks side by side:
+
+| 4-Block / 2-Block Architecture | 64-Pair Associative Recall | WikiText-103 Validation Loss (nats/byte) | Loss Drop from Bytes `16-63` to `64-127` |
+| :--- | :---: | :---: | :---: |
+| **Pure `Gated DeltaNet` (`GG` / `GGGG`)** | $0.48$–$0.50$ (saturates) | **$1.326$–$1.327$** (lowest!) | $0.004$ |
+| **Hybrid (`GA` / `GGGA`)** | **$1.00$** (exact recall) | **$1.335$** (within $0.009$) | $0.004$ |
+| **Pure `attention` (`AA` / `AAAA`)** | **$1.00$** (exact recall) | $1.375$–$1.385$ (trails by $0.05$) | $0.003$ |
 
 ::: {.d2l-note .warn}
-A low loss on short windows is no evidence that a model can look things
-up.
+**Evaluation lesson:** Average perplexity on short 128-byte windows is dominated by local subword syntax (where recurrent inductive bias excels) and barely tests long-range retrieval. Always pair average validation loss with targeted retrieval stress tests!
 :::
 :::
 
-::: {.slide title="Check: Why Does No Model Gain Much After Byte 16?"}
-[Check]{.kicker}
+::: {.slide title="Inference Memory Scaling: GQA Cache vs. Fixed State"}
+[Serving & Generation Footprint]{.kicker}
 
-Every model's loss falls by at most 0.004 from bytes 16–63 to bytes
-64–127, and attention stays 0.05 to 0.06 behind Gated DeltaNet. What does
-that say about this benchmark?
+During autoregressive decoding at scale ($16$-bit `float16` / `bfloat16`), per-sequence memory determines maximum batch size and memory-bandwidth latency:
 
-::: {.fragment .fade-up}
-The next byte depends on the bytes just before it. A pair stored a hundred
-bytes back rarely matters, so the benchmark does not test recall.
+| Layer Type (Width $d = 4{,}096$, $16$-bit Floats) | Per-Layer Memory Formula | At $T = 512$ | At $T = 128\text{K}$ | At $T = 256\text{K}$ |
+| :--- | :--- | :---: | :---: | :---: |
+| **Grouped-Query Attention ($8$ KV heads $\times 128$)** | $2 \times 8 \times 128 \times 2\text{ B} \times T = 4\text{ KB} \times T$ | $2\text{ MB}$ | **$512\text{ MB}$** | **$1{,}024\text{ MB}$** |
+| **Mamba-2 / Gated DeltaNet ($8{,}192 \times 128$ state)** | $8{,}192 \times 128 \times 2\text{ B} = \mathbf{2\text{ MB}}$ | $2\text{ MB}$ | **$2\text{ MB}$** | **$2\text{ MB}$** |
+
+- **Crossover at 512 tokens:** By $T = 128\text{K}$ tokens, a single GQA layer's KV cache is **$256\times$ larger** than a recurrent matrix state ($512\text{ MB}$ vs. $2\text{ MB}$).
+:::
+
+::: {.slide title="KV Cache Savings in Frontier Hybrid Architectures"}
+[32-Layer Memory Scaling]{.kicker}
+
+![](../img/mdl-modernrnn-hybrid-cache.svg){.nostretch width=82%}
+
+- **32-layer Transformer at $256\text{K}$ tokens:** $32 \times 1\text{ GB} = \mathbf{32\text{ GB}}$ of KV cache *per sequence*.
+- **1-in-8 Hybrid (Jamba, $4$ attention + $28$ Mamba layers):** $4 \times 1\text{ GB} + 28 \times 2\text{ MB} \approx \mathbf{4.06\text{ GB}}$ (**$8\times$ reduction**).
+- **1-in-4 Hybrid (Qwen3-Next & Kimi Linear, 3:1 Gated DeltaNet + Attention):** Cuts KV cache by **$4\times$** while retaining full in-context retrieval.
+:::
+
+::: {.slide title="Master Comparison of Chapter 12 Sequence Mixers"}
+[Architectural Synthesis]{.kicker}
+
+| Sequence Mixer | Generation State / Layer | Parallel Training Method | Key Synthetic Benchmark Result | WikiText-103 ($d=256$) |
+| :--- | :---: | :--- | :--- | :---: |
+| **LSTM / GRU (§12.1)** | $2d$ / $d$ | Sequential ($T$ steps) | $1.00$ at $T=200$ recall with $+5$ keep-gate bias | **$1.29$–$1.30$** ($4.3\text{M}$ / $3.8\text{M}$) |
+| **minGRU (§12.3)** | $d$ | Associative scan | $1.00$ at $T=1000$ recall with S4D timescales | $1.34$–$1.35$ ($2.8\text{M}$) |
+| **S4D (§12.4)** | $dN$ | FFT conv or scan | $1.00$ at $T=1000$ fixed delay; $\le 0.20$ selective copy | — |
+| **Mamba (§12.5)** | $HN$ ($H=2d$) | Scan + adjoint scan | **$0.99$–$1.00$** on $1{,}024$-step selective copying | **$1.30$** ($4.0\text{M}$) |
+| **Gated Linear Attn (§12.6)** | $d^2 / h$ | Chunked GEMM + scan | Recall scales $\propto d^2/h$; superposes rebound keys | — |
+| **Gated DeltaNet (§12.7)** | $d^2 / h$ | Chunked solve + scan | **$0.96+$** on short-gap rebound keys; saturates at $n \gg d_k$ | $1.32$–$1.33$ ($3.6\text{M}$) |
+| **Causal Attention** | $2dT$ | Flash / fused GEMMs | **$1.00$** at all pair loads; $O(T^2)$ compute & $O(T)$ cache | $1.37$–$1.39$ ($3.3\text{M}$) |
+| **Hybrid (`GA` / `GGGA`, §12.8)** | Fixed states + sparse $2dT$ | Chunked + attention | **$1.00$** at all pair loads with $4\times$–$8\times$ smaller cache | $1.33$–$1.34$ ($3.5\text{M}$) |
+:::
+
+::: {.slide title="When to Choose Which Sequence Architecture"}
+[Design Guidelines]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Continuous streaming & edge inference (audio, robotics, sensor streams):**
+  - Sequence length $T$ is unbounded and exact verbatim lookup of arbitrary tokens thousands of steps back is unnecessary.
+  - **Choice:** Selective SSM (`Mamba`) or gated RNN (`GRU`/`LSTM`) for strictly constant $O(1)$ memory and latency per step.
+:::
+
+::: {.col}
+- **Long-context foundation models (RAG, few-shot prompting, code editing):**
+  - Must combine fast local/syntactic processing over $128\text{K}$–$1\text{M}$ tokens with exact needle-in-a-haystack key–value retrieval.
+  - **Choice:** **3:1 or 7:1 Hybrid** interleaving chunked delta-rule matrix layers (`GatedDeltaNet` / `Mamba-2`) with sparse full attention layers, preceded by width-4 causal convolutions.
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Welch's Bound and Hybrid Memory"}
+[Check Your Understanding]{.kicker}
+
+Work out these three capstone calculations:
+
+1. According to Welch's bound, what is the minimum possible average squared inner product among $m = 33$ unit keys in a head of dimension $d_k = 8$ versus random unit keys?
+2. An $80\text{ GB}$ GPU holds $16\text{ GB}$ of model weights, leaving $64\text{ GB}$ for inference caches. At $T = 128\text{K}$ tokens ($512\text{ MB}$ per GQA layer, $2\text{ MB}$ per recurrent layer), how many concurrent $128\text{K}$-token sequences can a 32-layer Transformer serve versus a 32-layer hybrid with $4$ attention layers?
+3. Why does a 1-layer matrix memory with `conv_width=1` fail when keys and values arrive on consecutive tokens $(t-1, t)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Welch floor: $\frac{33 - 8}{8 \times (33 - 1)} = \frac{25}{256} \approx \mathbf{0.0977}$ (compared to $1/8 = \mathbf{0.1250}$ for random unit keys).
+2. **32-layer Transformer:** $32 \times 0.5\text{ GB} = 16\text{ GB/seq} \implies 64 / 16 = \mathbf{4\text{ sequences}}$. **32-layer Hybrid ($4$ attention + $28$ recurrent):** $4 \times 512\text{ MB} + 28 \times 2\text{ MB} \approx 2.10\text{ GB/seq} \implies \lfloor 64 / 2.10 \rfloor = \mathbf{30\text{ sequences}}$ ($7.5\times$ higher serving concurrency!).
+3. With `conv_width=1`, $\mathbf{k}_t$ and $\mathbf{v}_t$ at step $t$ are functions of $x_t$ (the value token) alone, so $\mathbf{v}_t \mathbf{k}_t^\top$ never sees the key token $x_{t-1}$; a width-4 causal convolution mixes $(x_{t-1}, x_t)$ into the same step.
 :::
 :::
 
-::: {.slide title="Attention Stores 4 KB per Token, Mamba-2 About 2 MB in All"}
-[Inference memory]{.kicker}
+::: {.slide title="Summary: Hybrid Architectures and Fixed-State Limits"}
+[Key Takeaways]{.kicker}
 
-Per layer, per sequence, 16-bit numbers:
-
-| layer | memory |
-|---|---|
-| GQA, 8 KV heads × 128 | $2 \cdot 8 \cdot 128 \cdot 2$ B = 4 KB per token |
-| Mamba-2, width 4,096 | $8192 \cdot 128 \cdot 2$ B ≈ 2 MB, any length |
-
-Crossover near 500 tokens; at 128K tokens, 512 MB against 2 MB.
+| Principle / Component | Mathematical / Architectural Result | Practical Implication |
+| :--- | :--- | :--- |
+| **Bit-Counting Bound** | $M b \ge k \log_2 V \implies k_{\max} = O(M)$ | Fixed-state recall capacity is independent of context length $T$ |
+| **Welch's Overlap Bound** | $\operatorname{mean}_{i \neq j}(\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge \frac{m - d_k}{d_k(m - 1)}$ for $m > d_k$ | Linear matrix readout degrades once stored keys outnumber head width $d_k$ |
+| **State Width Scaling** | $h$ heads of $d_h \times d_h$ hold $d \cdot d_h$ entries | Quadrupling head dimension $d_h$ at fixed width $d$ quadruples pair recall capacity |
+| **Short Causal Convolution** | Width-4 depthwise causal `Conv1d` before QKV | Essential for binding adjacent key and value tokens into a single matrix write |
+| **Recurrent–Attention Hybrid** | 3:1 or 7:1 `GatedDeltaNet` / `Mamba-2` + GQA | Restores $100\%$ associative recall while cutting $128\text{K}$–$256\text{K}$ KV caches by $4\times$–$8\times$ |
 :::
 
-::: {.slide title="Only the Attention Layers of a Hybrid Keep a Cache"}
-[Inference memory]{.kicker}
-
-![](../img/mdl-modernrnn-hybrid-cache.svg){width=80%}
-
-Jamba, 4 attention layers of 32: 4 GB at 256K tokens, against 32 GB.
-Qwen3-Next: Gated DeltaNet and attention, three to one; Kimi Linear: a
-variant that decays each key coordinate, also three to one.
-:::
-
-::: {.slide title="Check: Memory of a Hybrid"}
-[Check]{.kicker}
-
-32 layers, 4 of them attention, 128K tokens, numbers as above.
-
-1. Memory per sequence of the hybrid?
-2. Of the transformer?
-
-::: {.fragment .fade-up}
-1. $4 \cdot 512$ MB $+ 28 \cdot 2$ MB $\approx 2.1$ GB.
-2. $32 \cdot 512$ MB $= 16$ GB: eight times as much.
-:::
-:::
-
-::: {.slide title="The Chapter's Memories Side by Side"}
-[The chapter]{.kicker}
-
-| memory | state per layer | training | text |
-|---|---|---|---|
-| LSTM, GRU | $2d$, $d$ | step by step | 1.29–1.30 |
-| minGRU | $d$ | scan | 1.34–1.35 |
-| S4D | $dN$ | convolution or scan | |
-| Mamba | $HN$ | scan | 1.30 |
-| gated linear attention | $d^2/h$ | chunks | |
-| Gated DeltaNet | $d^2/h$ | chunks + solve | 1.32–1.33 |
-| attention | $2dT$ | fused, all positions | 1.37–1.39 |
-| hybrid | states + $2dT$ per attention layer | both | 1.33–1.34 |
-
-Text: nats per byte, width $d = 256$; $N$ states per channel, $H = 2d$
-Mamba channels, $h$ heads, $T$ tokens read.
-:::
-
-::: {.slide title="On Short Windows No Layer Beats the 1997 LSTM"}
-[The chapter]{.kicker}
-
-- Newer layers train in parallel and store pairs to look up or rewrite;
-  short windows test neither.
-- Long-context generation: delta-rule layers, one attention layer in four
-  to eight.
-- A small streaming model: a gated recurrence.
-
-**Open:** how few attention layers, where, and whether windows suffice.
-:::
-
-::: {.slide title="Recap"}
-- Recall $\le Mb/\log_2 V$ tokens; a matrix memory far less, since more
-  than $d_k$ keys must overlap.
-- 64 pairs: Gated DeltaNet half; 4× state 0.93–0.97; one attention
-  layer, all.
-- 128-byte text: attention 0.05–0.06 behind Gated DeltaNet; hybrid about
-  0.01 behind, in every run.
-- 128K tokens, 32 layers: 16 GB of cache; 2.1 GB with 4 attention layers.
-
-Next: what models cost on real hardware, and how to make them fast.
-:::

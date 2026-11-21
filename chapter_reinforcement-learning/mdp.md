@@ -40,6 +40,8 @@ The chapter uses the symbols of :numref:`tab_rl_notation`. Those of this section
 | $\pi_\theta$, $\theta$ | policy with parameters $\theta$ | :numref:`sec_mdp` (the verifier's preference table), :numref:`sec_imitation` |
 | $d^\pi_t$, $d^\pi_\gamma$ | distribution of $s_t$ under $\pi$; its discounted average over $t$ | :numref:`sec_imitation`, :numref:`sec_policygradient` |
 | $\varepsilon$ | per-step probability that a cloned policy disagrees with the expert | :numref:`sec_imitation` |
+| $\mathbf{x}_t$, $\mathbf{u}_t$, $\mathbf{A}$, $\mathbf{B}$, $\mathbf{Q}$, $\mathbf{R}$ | continuous state and control; linear dynamics and quadratic cost matrices | :numref:`sec_optimal_control` |
+| $\mathbf{P}_t$, $\mathbf{K}_t$ | Riccati cost-to-go matrix and linear state-feedback gain matrix | :numref:`sec_optimal_control` |
 | $J(\theta)$ | expected return of $\pi_\theta$ | :numref:`sec_policygradient` |
 | $\eta$ | step size of a policy update | :numref:`sec_policygradient` |
 | $\hat{G}_t$ | reward-to-go: the discounted sum of the rewards from step $t$ on | :numref:`sec_baselines` |
@@ -514,304 +516,254 @@ A Markov decision process writes a problem of acting over time as states, action
 ::: {.cover}
 [Dive into Deep Learning · §14.1]{.kicker}
 
-Markov Decision Processes<br>
-**states, actions, kernel and reward · return and discount · termination · the Markov state · reward design · the verifier task**
+Markov Decision Processes<br>**states, actions, kernel & reward · discounted return & horizon · termination vs. truncation · state augmentation · potential-based shaping · the verifier task**
 :::
 :::
 
-::: {.slide title="From Cell 9, Three of Four Commands Can Slide into a Hole"}
-[The problem]{.kicker}
+::: {.slide title="Acting Under Uncertainty: The Cell 9 Dilemma"}
+[Motivation & Mental Model]{.kicker}
 
-![](../img/mdl-rl-gridworld.svg){width=72%}
+Before we can optimize decisions over time, we must specify what the agent knows, what it can command, and how stochastic transitions unfold:
 
-Slippery ice: a command goes as intended 1/3 of the time, to each side 1/3.
-From 9, *left*, *right* and *up* each reach hole 5 one time in three; *down* never
-does, but slides sideways two times in three. Which command, and how to decide?
+::: {.cols .vc}
+::: {.col}
+- **Slippery 4×4 grid:** Starting at cell 0 (`S`), the agent seeks the goal at cell 15 (`G`, reward $+1$) while avoiding four terminal holes (`H`).
+- **Stochastic transitions:** Any command moves in the intended direction with probability $1/3$ and in each perpendicular direction with probability $1/3$.
+- **The trade-off at cell 9:** *Left*, *right*, and *up* each slip into hole 5 with probability $1/3$; only *down* avoids the hole, at the cost of sliding sideways two times in three.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- write a task as states, actions, a kernel and a reward, read from a simulator;
-- compute a discounted return and the horizon a discount sets;
-- tell an episode that terminated from one that was truncated;
-- decide whether a state is Markov, and enlarge it when it is not;
-- spot a reward bonus that pays for going in circles, and write one that cannot;
-- write a language model's answer as a one-step MDP scored by a verifier.
-
-**The idea:** the present state carries everything about the past that matters.
-**Running examples:** slippery 4×4 FrozenLake at $\gamma = 0.95$; four
-arithmetic prompts scored by a verifier.
+::: {.col .fig}
+![](../img/mdl-rl-gridworld.svg){.nostretch width=100%}
+:::
+:::
 :::
 
-::: {.slide title="This Deck Defines the Problem the Next Seven Solve"}
-[Where this fits]{.kicker}
+::: {.slide title="The Markov Decision Process Tuple"}
+[Mathematical Formulation]{.kicker}
 
-| section | adds |
-|---|---|
-| **Markov Decision Processes** | **the model: states, actions, kernel, reward, return** |
-| Dynamic Programming | the best values and policy of a known model |
-| Temporal-Difference Learning | the same from sampled transitions |
-| Exploration | which actions to try: bandits, optimism, posterior sampling |
-| Learning from Demonstrations | cloning an expert, and why errors compound |
-| Policy Gradient | improving a policy from its own attempts |
-| Baselines and Variance Reduction | the same gradient with less noise |
-| Function Approximation | networks in place of tables |
+Bellman (1957) formalized sequential decision problems by packing all relevant past history into the present state:
 
-Skips: the long-run average-reward criterion; solving partially observed problems.
+$$\textrm{MDP}: \quad (\mathcal{S}, \mathcal{A}, P, r)$$
+
+- **State space $\mathcal{S}$ and action space $\mathcal{A}$:** On FrozenLake, $|\mathcal{S}| = 16$ cell indices ($0, \ldots, 15$) and $|\mathcal{A}| = 4$ directional commands (*left*, *down*, *right*, *up*).
+- **Transition kernel $P(s' \mid s, a)$:** A conditional probability distribution over next states $s' \in \mathcal{S}$ satisfying $\sum_{s' \in \mathcal{S}} P(s' \mid s, a) = 1$ for every pair $(s, a)$.
+- **Expected reward $r(s, a)$:** The immediate reward averaged over the landing state, $r(s, a) = \sum_{s'} P(s' \mid s, a)\,\rho(s, a, s')$, which preserves all expected returns.
+
+::: {.d2l-note .rule}
+The triple $(\mathcal{S}, \mathcal{A}, P)$ describes the physics of the environment; the reward function $r(s, a)$ defines the task objective chosen by the designer.
+:::
 :::
 
-::: {.slide title="The Lake Has 16 States and 4 Actions"}
-[The model]{.kicker}
+::: {.slide title="Reading the Transition Kernel from Gymnasium"}
+[Simulator Representation]{.kicker}
 
-- **States** $\mathcal{S} = \{0, \ldots, 15\}$: the agent's cell, numbered row by row.
-- **Actions** $\mathcal{A}$: *left*, *down*, *right*, *up*, encoded 0 to 3.
-- **Start:** every episode starts in cell 0; the start-state distribution $\mu_0$
-  puts all its mass there.
-- **End:** the holes 5, 7, 11, 12 and the goal 15 end the episode; entering the
-  goal pays 1, every other step pays 0.
-- A move off the edge leaves the agent where it is. On calm ice the shortest
-  path takes six moves.
-:::
-
-::: {.slide title="The Kernel Is a Table inside the Simulator"}
-[The model]{.kicker}
+Gymnasium exposes the tabular transition kernel as a nested dictionary `env.unwrapped.P[s][a]` of `(probability, next_state, reward, terminated)` tuples:
 
 @mdp-states-actions-and-the-transition-kernel-1
 
-- Each tuple: (probability, next state, reward, terminated).
-- The *transition kernel* $P(s' \mid s, a)$: for every pair $(s, a)$ a
-  distribution over next states, $\sum_{s'} P(s' \mid s, a) = 1$.
-
-::: {.d2l-note .rule}
-On slippery ice a command is a proposal: one outcome among three equals.
+::: {.d2l-note}
+Commanding *down* (`1`) from state 9 branches into three equally likely outcomes—cells 8, 13, and 10—each with probability $1/3$ and immediate reward $0.0$.
 :::
 :::
 
-::: {.slide title="As Arrays, an Average over Next States Is One Product"}
-[The model]{.kicker}
+::: {.slide title="Vectorizing the MDP into Dense Tensors"}
+[Array Representation]{.kicker}
 
-`TabularMDP.from_gym` turns the simulator's table into `P[s, a, s']`, shape
-(16, 4, 16), and `r[s, a]`, shape (16, 4). It adds up outcomes that share a next
-state and averages the reward over the landing cell.
+To replace dictionary loops with matrix products in dynamic programming, `TabularMDP.from_gym` packs the model into dense arrays `P[s, a, s']` of shape `(16, 4, 16)` and `r[s, a]` of shape `(16, 4)`:
 
 @mdp-states-actions-and-the-transition-kernel-3
 
-The list of tuples became a dense row: $1/3$ in columns 8, 10 and 13.
+::: {.d2l-note}
+Multiple transitions that land on the same cell (such as bouncing off a boundary wall) are accumulated via `P[s, a, s_next] += p` so every row remains a valid probability distribution.
+:::
 :::
 
-::: {.slide title="Every Row Sums to One; Only Cell 14 Has a Reward"}
-[The model]{.kicker}
+::: {.slide title="Verifying Kernel Normalization and Sparse Rewards"}
+[Model Sanity Checks]{.kicker}
+
+Two invariants confirm the array construction: every $(s, a)$ slice of `P` sums to $1$, and `r[s, a]` is nonzero only where a single step can enter the goal cell 15:
 
 @!mdp-states-actions-and-the-transition-kernel-4
 
-- *Expected reward* $r(s, a)$: the reward averaged over where the step lands.
-  From 14, three commands enter the goal one time in three; *left* never does.
-- The model is the tuple $(\mathcal{S}, \mathcal{A}, P, r)$. The first three
-  describe the environment; the reward describes the task, chosen by its designer.
+- **Boundary reflection:** At corner cells, two perpendicular slips can hit walls and stay put, accumulating $2/3$ probability on the current cell.
+- **Expected reward at cell 14:** Commanding *down*, *right*, or *up* from cell 14 enters goal cell 15 with probability $1/3$, giving expected reward $r(14, a) = 1/3$, while *left* never reaches the goal.
 :::
 
-::: {.slide title="This Random Run Falls into a Hole and Collects Nothing"}
-[Return and discount]{.kicker}
+::: {.slide title="Trajectories, Policies, and Sampled Rollouts"}
+[Agent-Environment Interaction]{.kicker}
 
-Trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$; a *policy* picks the
-actions, here each command with probability 1/4:
+A stochastic policy $\pi(a \mid s)$ defines action probabilities at each state, generating a random trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$:
 
 @!mdp-return-discount-and-horizon
 
-At $t = 0$ *right* slides into the wall above; at $t = 8$ the agent enters hole 11.
+- **Realized vs. expected transitions:** At $t=0$ the command *right* slips into the top wall and leaves the agent at $s'=0$; at $t=8$ the agent enters hole 11 (`terminated=True`).
 :::
 
-::: {.slide title="Discounting Keeps the Return Finite"}
-[Return and discount]{.kicker}
+::: {.slide title="Discounted Return and Geometric Tail Bounds"}
+[The Optimization Objective]{.kicker}
 
-Always *up* never leaves the top row; with a reward every step the sum is
-unbounded. Weight step $t$ by $\gamma^t$, $0 \le \gamma < 1$; for $|r_t| \le r_{\max}$:
+Because cyclic policies (such as always commanding *up* against the top wall) can run forever, we weight step-$t$ rewards by a discount factor $\gamma \in [0, 1)$:
 
-$$R(\tau) = \sum_{t=0}^{\infty} \gamma^t r_t, \qquad |R(\tau)| \le \frac{r_{\max}}{1-\gamma}, \qquad \Big|\sum_{t \ge k} \gamma^t r_t\Big| \le \frac{\gamma^k\, r_{\max}}{1-\gamma}.$$
+$$R(\tau) = \sum_{t=0}^{\infty} \gamma^t r_t, \qquad |R(\tau)| \leq \frac{r_{\max}}{1 - \gamma}, \qquad \Big|\sum_{t \geq k} \gamma^t r_t\Big| \leq \frac{\gamma^k\,r_{\max}}{1 - \gamma}$$
 
-- Goal: the largest *expected* return, over the kernel, the start and the choices.
-- A finite MDP with $\gamma < 1$ has one policy best from every start: one command per cell.
+- **Finite objective:** Whenever per-step rewards satisfy $|r_t| \leq r_{\max}$, the infinite sum converges absolutely and its tail beyond step $k$ shrinks geometrically as $\gamma^k$.
+- **Uniformly optimal policy:** In any finite MDP with $\gamma < 1$, there exists a deterministic, stationary policy $\pi^*(s)$ that maximizes expected return from every start state simultaneously.
 :::
 
-::: {.slide title="γ = 0.95 Looks about 20 Steps Ahead"}
-[Return and discount]{.kicker}
+::: {.slide title="The Effective Planning Horizon"}
+[How Far Ahead Discounting Looks]{.kicker}
 
-![](../img/mdl-rl-return-discount.svg){width=78%}
+The discount factor sets an effective horizon of $H_{\textrm{eff}} = 1/(1 - \gamma)$ steps over which rewards carry substantial weight:
 
-*Effective horizon* $1/(1-\gamma)$: near $\gamma = 1$ the weights fall by about $e$ per
-horizon, and 95% of the weight lies within about three horizons. At $\gamma = 0.95$:
-a horizon of 20 steps, 95% of the weight within 59.
+::: {.cols .vc}
+::: {.col}
+- **Exponential decay scale:** For $\gamma$ near $1$, weights decay by a factor of $\gamma^{1/(1-\gamma)} \approx e^{-1} \approx 0.368$ per effective horizon.
+- **95% weight window:** For a constant reward stream, $95\%$ of total discounted weight lies within $\lceil\ln(0.05)/\ln\gamma\rceil \approx 3\,H_{\textrm{eff}}$ steps.
+- **Chapter benchmark ($\gamma = 0.95$):** Sets a 20-step effective horizon, with $95\%$ of weight inside 59 steps.
 :::
 
-::: {.slide title="Check: What Is the Six-Move Path Worth?"}
-[Check]{.kicker}
-
-On calm ice the shortest path reaches the goal on its sixth move, step $t = 5$.
-What is its return at $\gamma = 0.95$? At $\gamma = 0.5$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The only reward is $\gamma^5$: $0.774$ at $\gamma = 0.95$, $0.031$ at
-$\gamma = 0.5$. A short horizon makes even a six-move goal nearly worthless.
+::: {.col .fig}
+![](../img/mdl-rl-return-discount.svg){.nostretch width=100%}
 :::
+:::
+:::
+
+::: {.slide title="Horizon Decay Across Discount Factors"}
+[Numerical Comparison]{.kicker}
+
+Comparing four discount factors shows how strongly $\gamma$ prices the 6-move calm-ice shortest path (whose goal reward arrives at index $t = 5$):
 
 @!mdp-the-geometric-bound-and-the-effective-horizon
+
+::: {.d2l-note}
+A short-sighted discount ($\gamma = 0.5$) values the 6-move goal at only $\gamma^5 = 0.031$, whereas $\gamma = 0.95$ values it at $0.774$; smaller $\gamma$ trades long-range optimality for lower planning sensitivity.
 :::
 :::
 
-::: {.slide title="Terminated Ends the Future; Truncated Ends the Recording"}
-[Termination and truncation]{.kicker}
+::: {.slide title="True Termination vs. Time-Limit Truncation"}
+[Systems Pitfall at Episode Boundaries]{.kicker}
 
-![](../img/mdl-rl-termination.svg){width=88%}
+Gymnasium distinguishes physical episode endings (`terminated=True`) from artificial clock cutoffs (`truncated=True` at 100 steps):
 
-$V(s)$: the expected return from $s$ on, zero after `terminated=True`. The 100-step
-limit of `gym.make` sets `truncated=True`, and $V(s_{100})$ is not zero. Every
-method here that estimates the continuation zeroes it on `terminated` alone.
+::: {.cols .vc}
+::: {.col}
+- **Terminated ($s_8 \in \textrm{Holes}$):** The environment process has truly ended; future return from $s_8$ is $V(s_8) = 0$, so the final target is $y_7 = r_7$.
+- **Truncated ($t = 100$ cutoff):** Recording stopped on safe ice; the unrecorded continuation is worth $V(s_{100}) \neq 0$, requiring $y_{99} = r_{99} + \gamma V(s_{100})$.
 :::
 
-::: {.slide title="γ = 1 Needs a Bounded Total Reward"}
-[Termination and truncation]{.kicker}
-
-- `TabularMDP` stores a terminal state as an absorbing state: every action loops
-  back with zero reward, so every row of $P$ stays a distribution.
-- If every episode ends, or the total reward of every trajectory is bounded,
-  $\gamma = 1$ is allowed. On the lake an episode collects at most 1.
-- Always *up* never ends, yet its undiscounted return is 0. With $+0.05$ per
-  step it would be infinite.
-- Tasks that never end, such as heating a building, keep $\gamma < 1$.
+::: {.col .fig}
+![](../img/mdl-rl-termination.svg){.nostretch width=100%}
+:::
+:::
 :::
 
-::: {.slide title="Location Alone Is Not Markov; Location and Velocity Are"}
-[The choice of state]{.kicker}
+::: {.slide title="Absorbing Terminal States and Undiscounted Tasks"}
+[Boundary Conventions]{.kicker}
 
-*Markov property:* given $s_t$ and $a_t$, the earlier history says nothing more
-about $s_{t+1}$. One number per state can then say how good the state is.
+Representing terminal states consistently keeps matrix equations and finite-horizon rollouts aligned:
 
-- A vehicle's next location depends on its velocity: $s_{t+1} = f(s_t, a_t, s_{t-1})$.
-- *State augmentation:* the state (location, velocity) is Markov under Newton's laws.
-- A 100-step limit that is part of the task: add the number of steps that remain.
+- **Absorbing-state convention:** `TabularMDP` models each hole and the goal as a self-loop ($P(s \mid s, a) = 1$) with $r(s, a) = 0$, ensuring every row of $P$ sums to $1$ without altering trajectory returns.
+- **When $\gamma = 1$ is well-defined:** If every policy terminates in finitely many steps—or total reward is bounded above (FrozenLake pays at most $1$ per episode)—undiscounted returns remain finite.
+- **When $\gamma = 1$ diverges:** Adding a $+0.05$ per-step survival bonus makes the cyclic always-*up* policy collect infinite undiscounted return, forcing continuing tasks to use $\gamma < 1$.
+:::
+
+::: {.slide title="The Markov Property and State Augmentation"}
+[Designing the State Representation]{.kicker}
+
+The transition kernel $P(s_{t+1} \mid s_t, a_t)$ assumes the **Markov property**: given present state $s_t$ and action $a_t$, the future is conditionally independent of earlier history $s_0, \ldots, s_{t-1}$:
+
+$$s_{t+1} = f(s_t, a_t, s_{t-1}) \quad \Longrightarrow \quad \tilde{s}_t = (p_t, v_t)^\top \text{ restores Markovianity}$$
+
+- **Why position alone fails:** For a vehicle controlled by acceleration $a_t$, next position $p_{t+1}$ depends on current velocity $v_t \propto p_t - p_{t-1}$, violating Markovianity if $s_t = p_t$.
+- **State augmentation:** Enlarging the state to $\tilde{s}_t = (p_t, v_t)^\top$ (or appending remaining steps $h_t = H - t$ when a hard time limit is part of the task) restores a first-order Markov transition.
 
 ::: {.d2l-note .rule}
-The Markov property belongs to the representation, not only to the system.
+The Markov property is a property of our chosen state representation, not merely of the underlying physical system.
 :::
 :::
 
-::: {.slide title="When the State Is Hidden, the Agent Must Remember"}
-[The choice of state]{.kicker}
+::: {.slide title="Partial Observability, Belief States, and Memory"}
+[When the Full State Is Hidden]{.kicker}
 
-- A poker player cannot see the opponents' cards. The agent receives an
-  observation $o_t$ that reveals part of the state: a *partially observable* MDP.
-- Exact solution: track the *belief*, the posterior over the hidden state given
-  everything observed so far.
-- In practice, memory: early Atari agents stacked the last few frames; current
-  agents carry a recurrent state or attend over their history, as a language
-  model attends over its context.
-- The rest of the chapter assumes a Markov state.
+When the agent receives only a partial observation $o_t \sim O(\cdot \mid s_t)$—such as a single video frame or a poker hand with hidden opponent cards—the system is a **POMDP**:
+
+- **Exact Bayesian belief state:** Tracking the posterior distribution $\beta_t(s) = \Pr(s_t = s \mid o_0, a_0, \ldots, o_t)$ restores a continuous Markov state via Bayes' rule.
+- **Frame stacking in control:** Early Atari agents stacked the 4 most recent frames so convolutional filters could infer ball and paddle velocities from finite differences.
+- **Recurrent and attention contexts:** Modern agents and autoregressive language models maintain a recurrent hidden state or attend over the full trajectory prefix $(o_0, a_0, \ldots, o_t)$.
 :::
 
-::: {.slide title="Check: Is One Pong Frame a Markov State?"}
-[Check]{.kicker}
+::: {.slide title="Reward Hacking: The Looping Progress Bonus"}
+[Reward Design Pitfall]{.kicker}
 
-An agent sees only the current frame of Pong: the positions of the ball and the
-paddles. Is that a Markov state? What restores the property?
+Because FrozenLake's terminal reward is sparse, suppose we add $+0.3$ whenever a step reduces the Manhattan distance $\ell(s)$ to the goal:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** No. One frame shows where the ball is, not where it is heading, so
-the next frame depends on earlier ones. Two successive frames give the velocity
-as well; that is why agents stacked a few frames.
-:::
-:::
+$$\tilde{r}(s, a, s') = r(s, a) + 0.3\,\mathbf{1}\big(\ell(s') < \ell(s)\big)$$
+
+- **One-way incentive flaw:** The bonus pays $+0.3$ for stepping closer (cell $13 \to 14$, where $\ell$ drops from $2$ to $1$) but charges $0$ for stepping back ($14 \to 13$).
+- **Cycling beats finishing:** On calm ice at $\gamma = 0.95$, stepping from cell 14 into the goal earns $1 + 0.3 = 1.3$ once, whereas shuttling $14 \leftrightarrow 13$ forever earns $0.3$ every second step:
+  $$R_{\textrm{loop}} = 0.3\big(\gamma + \gamma^3 + \gamma^5 + \cdots\big) = \frac{0.3\,\gamma}{1 - \gamma^2} \approx 2.92 > 1.30$$
 :::
 
-::: {.slide title="A Bonus for Approaching the Goal Pays the Agent to Loop"}
-[Reward design]{.kicker}
+::: {.slide title="Potential-Based Reward Shaping Invariance"}
+[Safe Dense Rewards]{.kicker}
 
-$\ell(s)$: Manhattan distance from cell $s$ to the goal. Bonus for every move closer:
-$\tilde r(s, a, s') = r(s, a) + 0.3\, \mathbf{1}\big(\ell(s') < \ell(s)\big)$.
+To prevent reward-hacking loops, any shaping bonus must charge for moving away exactly what it pays for moving closer (Ng, Harada, and Russell, 1999):
 
-Calm ice, cells 13 ($\ell = 2$) and 14 ($\ell = 1$), $\gamma = 0.95$:
+$$\tilde{r}(s, a, s') = r(s, a) + \gamma\Phi(s') - \Phi(s)$$
 
-- From 14, entering the goal collects $1 + 0.3 = 1.3$ and ends the episode.
-- Shuttling 14 → 13 → 14 forever earns 0.3 every second step:
-  $0.3\,\gamma / (1-\gamma^2) \approx 2.9$.
-- The bonus pays for moving closer and charges nothing for moving away. A
-  bicycle rewarded for progress learned to ride in circles.
+- **Telescoping sum:** Along any path, consecutive potential terms cancel up to discounting; with $\Phi(s) = -0.3\,\ell(s)$, moving $13 \to 14$ pays $+0.315$ while retreating $14 \to 13$ costs $-0.270$.
+- **Optimal policy preservation:** Shuttling forever from cell 14 nets only $-\Phi(14) = +0.3$, keeping the goal ($1.3$) ahead by the exact $+1.0$ terminal reward.
+- **Terminal boundary condition:** We must enforce $\Phi(s_{\textrm{term}}) = 0$ at all terminal states (both goal and holes) so stopping the episode leaves no residual terminal bias.
 :::
 
-::: {.slide title="A Potential-Based Bonus Cannot Be Collected around a Loop"}
-[Reward design]{.kicker}
+::: {.slide title="Language Generation as a Collapsed One-Step MDP"}
+[From Token Trees to Contextual Bandits]{.kicker}
 
-$$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s)$$
+Autoregressive language generation with a terminal answer checker simplifies the general MDP in two structural ways:
 
-- Around a loop the differences of the *potential* $\Phi$ cancel, so apart from
-  discounting a loop earns nothing.
-- $\Phi = -0.3\,\ell$: the move 13 → 14 pays $0.315$, the move back costs $0.27$.
-  Shuttling forever from 14 collects $0.3$ in total; the goal still collects $1.3$.
-- Set $\Phi = 0$ at every terminal state, holes included; otherwise the end of an
-  episode leaves a term that can change the best behavior.
+- **Token-level tree MDP:** State $s_t = (x, y_{<t})$ is the prompt plus prefix tokens, action $a_t = y_t$ is the next token, transitions deterministically append $y_t$, and the verifier scores only the completed response.
+- **Collapsing to one step:** Because transitions are deterministic, rewards arrive only at termination, and prefixes never repeat, the expected return depends only on the sequence probability $\pi_\theta(y \mid x)$.
+- **Contextual bandit equivalence:** Prompt $x \sim \mu_0$ is the start state, the complete response $y$ is a single macro-action, and the verifier score $r(x, y) \in \{0, 1\}$ is the immediate reward.
 :::
 
-::: {.slide title="Two Special Cases Each Remove One Difficulty"}
-[Special cases]{.kicker}
+::: {.slide title="The Verifier Task: Reference Policy vs. Ceiling"}
+[Second Running Benchmark]{.kicker}
 
-- **Bandit:** one state; no action affects the future. What remains: which
-  actions to try.
-- **Text generation:** state = prompt plus tokens so far, action = next token,
-  the transition appends it with probability one; a *verifier* scores the end.
-- Deterministic moves, one final reward, no revisits: the expected return depends
-  only on the probability of each complete response.
-- One step: state = prompt $x \sim \mu_0$, action = response $y$, reward $r(x, y)$.
-:::
-
-::: {.slide title="The Verifier Task: Four Prompts, Nine Responses, Ceiling 0.5"}
-[Special cases]{.kicker}
-
-- Prompts `2+2`, `3*4`, `8*8`, `9*9`; nine responses shared by all four:
-  1, 3, 4, 7, 12, 19, 23, 35, and the *hedge* "one of 4, 12, 64 or 81".
-- The verifier pays 1 if the response equals the prompt's answer, 0 otherwise.
-- `8*8` and `9*9` have no correct candidate: no policy averages more than 0.5.
-- The exact-match verifier rejects the hedge; a lenient checker that accepts any
-  response containing the answer would pay it on every prompt.
-:::
-
-::: {.slide title="The Reference Policy Passes the Verifier 6% of the Time"}
-[Special cases]{.kicker}
-
-Policy: a table $\theta$ of preferences, one row per prompt, softmaxed per row,
-$\pi(y \mid x) \propto \exp \theta_{xy}$. Reference: $\theta = 0$ except $-4$ for the
-hedge, so each ordinary response has probability about 1/8, the hedge about 0.2%.
+`VerifierTask` pairs 4 arithmetic prompts with 9 shared candidate responses (8 numbers plus the hedge *"one of 4, 12, 64 or 81"*) under a tabular softmax policy $\pi(y \mid x) \propto \exp(\theta_{x,y})$:
 
 @!mdp-the-degenerate-mdp-deterministic-transitions-terminal-reward
 
-Two answerable prompts at 1/8 each, two at zero: about 1/16. Training must close
-the gap from 0.062 to 0.5.
+- **Why the reference scores $0.062$:** With $\theta_{\textrm{ref}} = 0$ on the 8 numbers and $-4$ on the hedge, the reference assigns $\approx 1/8$ to the right answer on `2+2` and `3*4`, and $0$ on unsolvable `8*8` and `9*9` (averaging $\approx 1/16 = 0.062$ vs. the $0.500$ ceiling).
 :::
 
-::: {.slide title="Check: What Does Always Hedging Score?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: MDP Structure and Reward Design"}
+[Check Your Understanding]{.kicker}
 
-A policy puts all its probability on the hedge, on every prompt. What is its
-expected score under the exact-match verifier? Under the lenient checker?
+Test your grasp of MDP modeling, truncation, and reward shaping:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** 0 under exact match, and 1 under the lenient checker, twice the
-exact-match ceiling of 0.5. An optimizer maximizes the reward as written.
+1. **Markov state design:** Why is a single video frame of Pong not a Markov state, and what minimal state augmentation restores the Markov property?
+2. **Termination vs. truncation:** If a 100-step time limit cuts an episode while the agent stands on cell 14, why is setting the continuation value to zero (`done = terminated or truncated`) a bug?
+3. **Potential boundary condition:** With $\Phi(s) = -0.3\,\ell(s)$, why must we override $\Phi(s) = 0$ at the four holes before running episodic simulations?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. One frame shows ball position but not velocity (direction and speed); stacking 2 consecutive frames provides finite-difference velocity and restores Markovianity.
+2. Cell 14 is adjacent to the goal with positive continuation value $V(14) > 0$; zeroing it on truncation falsely teaches the learner that cell 14 at step 100 is a worthless dead end.
+3. Without setting $\Phi(\textrm{hole}) = 0$, stopping at a hole leaves a terminal term $\gamma^T\Phi(s_T) = -0.3\gamma^T\ell(s_T) < 0$ that varies with hole location and fall time, distorting the optimal policy.
 :::
 :::
+
+::: {.slide title="Summary: Markov Decision Processes"}
+[Key Takeaways]{.kicker}
+
+| Concept | Mathematical Form | Role & Practical Takeaway |
+|:--|:--|:--|
+| **MDP tuple** | $(\mathcal{S}, \mathcal{A}, P, r)$ | Encodes state/action sets, transition kernel $P(s' \mid s, a)$, and expected reward $r(s, a)$ |
+| **Discounted return** | $R(\tau) = \sum_{t=0}^{\infty} \gamma^t r_t$ | Bounds infinite-horizon returns by $r_{\max}/(1-\gamma)$ and sets horizon $1/(1-\gamma)$ |
+| **Termination vs. cut** | $y_{T-1} = r_{T-1} + \gamma(1 - \textrm{term})V(s_T)$ | Zero continuation only on true physical termination, never on clock truncation |
+| **Markov state** | $P(s_{t+1} \mid s_t, a_t, s_{<t}) = P(s_{t+1} \mid s_t, a_t)$ | Enforced by augmenting state with velocities, time remaining, or history context |
+| **Potential shaping** | $\tilde{r} = r + \gamma\Phi(s') - \Phi(s)$, $\Phi(\textrm{term}) = 0$ | Telescopes around cycles so dense progress signals never alter the optimal policy |
+| **Verifier task** | $x \sim \mu_0,\; y \sim \pi_\theta(\cdot \mid x),\; r(x, y)$ | Collapses deterministic-transition LLM generation into a one-step contextual bandit |
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- **Model** $(\mathcal{S}, \mathcal{A}, P, r)$: 16 cells, 4 commands; *down* from 9 → 8, 10, 13 at 1/3.
-- **Return** $\sum_t \gamma^t r_t$: at $\gamma = 0.95$ a 20-step horizon; the six-move goal is worth 0.774.
-- **Stops:** terminated, the future is worth 0; truncated at 100 steps, $V$ of the last state.
-- **State:** Markov is a choice of representation: add velocity, steps left, or memory.
-- **Reward:** the looping bonus is worth 2.9 against 1.3 for the goal; a potential bonus nets nothing around a loop.
-- **Verifier task:** the reference passes 0.062 of the time; the ceiling is 0.5.
-
-**Next:** the value of every command in every cell, cell 9 included, by dynamic programming.
-:::

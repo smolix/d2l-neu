@@ -188,6 +188,7 @@ def forward(self, X):
 ### Checks before Training
 
 Before launching a long training run, passing a tiny 8-image slice through the *untrained* network verifies three invariants in milliseconds:
+
 1. **Shapes:** `H` has shape `(8, 256)` and `O` has shape `(8, 10)`.
 2. **Initial loss:** Near-zero weights produce near-zero logits ($\hat{y}_j \approx 1/10$), so the initial cross-entropy loss sits right near $\log 10 \approx 2.303$.
 3. **Active ReLU fraction:** With zero biases and symmetric weights, roughly $50\%$ of hidden pre-activations are positive.
@@ -317,6 +318,7 @@ print(f'training accuracy of the MLP from scratch: {train_acc:.3f}')
 ```
 
 Notice two instructive patterns in the learning curves:
+
 1. **Slow warmup from `std=0.01`:** On epoch 1, both MLPs actually trail softmax regression! Because both $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$ start with entries around $0.01$, the hidden activations $\mathbf{H}$ and the backpropagated gradients into $\mathbf{W}^{(1)}$ are suppressed by a factor of $0.01$ until $\mathbf{W}^{(2)}$ grows—a bottleneck we eliminate with He initialization in :numref:`sec_numerical_stability`.
 2. **Cutting a fifth of the classification errors:** By epochs 26–30, softmax regression plateaus around $84\%$ validation accuracy ($16\%$ error rate), whereas both MLPs reach $\sim 87\%$ validation accuracy ($\sim 13\%$ error rate, and $\sim 89\%$ training accuracy)—eliminating roughly $20\%$ of softmax regression's mistakes, primarily by reducing confusions among the four look-alike upper-body tops.
 
@@ -451,273 +453,87 @@ On modern hardware (especially a GPU), both models take almost the exact same wa
 ::: {.cover}
 [Dive into Deep Learning · §4.2]{.kicker}
 
-Implementation<br>**four parameter arrays · checks before training · framework layers · a comparison with softmax regression**
+Implementing Multilayer Perceptrons on Fashion-MNIST<br>**parameter registration · pre-training checks · framework Sequential · accuracy & learned features**
 :::
 :::
 
-::: {.slide title="A Hidden Layer of 256 Units Multiplies the Arithmetic by 26"}
-[The problem]{.kicker}
+::: {.slide title="From Hand-Crafted XOR to Learned Image Features"}
+[The Empirical Question]{.kicker}
 
-Softmax regression on Fashion-MNIST: one weighted sum of the 784 pixels per
-class.
+In §4.1 we hand-picked the weights of a 2-unit ReLU network for XOR; on Fashion-MNIST ($28 \times 28$ garment images across $10$ classes), minibatch SGD must discover hidden features automatically:
 
-- 7,850 parameters, 7,840 multiply-adds per image, about 83% validation
-  accuracy after ten epochs.
-- Most errors confuse tops of similar outline: shirts, pullovers, coats.
-
-. . .
-
-An MLP with one hidden layer of 256 ReLU units:
-
-- 203,530 parameters, 203,264 multiply-adds per image: 26 times as many.
-
-::: {.d2l-note}
-Does the hidden layer make the classifier more accurate, and by how much?
-Train both models under the same settings and measure.
-:::
+- **The linear baseline:** Softmax regression uses $784 \times 10 + 10 = 7{,}850$ parameters ($7{,}840$ multiply-adds per image) and plateaus around $84\%$ validation accuracy after $30$ epochs, confusing upper-body tops of similar silhouette (shirt, T-shirt, pullover, coat).
+- **The 256-unit ReLU MLP:** Inserting one hidden layer of width $h = 256$ increases the model to $203{,}530$ parameters and $203{,}264$ multiply-adds per image ($26\times$ larger).
+- **Our four engineering goals:** Implement the MLP from scratch and via framework `Sequential` blocks, verify the untrained model with pre-training checks, benchmark accuracy and GPU wall-clock speed, and inspect the filters learned in $\mathbf{W}^{(1)}$.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Architecture and Parameter Budget of Our MLP"}
+[Architecture]{.kicker}
 
-- write the four parameter arrays of an MLP and register them with your
-  framework;
-- write the ReLU and a forward pass of two lines that returns logits;
-- check an untrained model in a second: shapes, a loss of $\log 10$, half
-  of the hidden units active;
-- build the same model from framework layers with the same initialization;
-- compare the MLP with softmax regression in accuracy, class by class, and
-  in parameters, multiply-adds, and time per epoch;
-- read the weights of a hidden unit as an image.
-
-**Running example:** Fashion-MNIST in minibatches of 256 at learning rate
-0.1; softmax regression, 7,850 parameters and about 83% after ten epochs,
-against the MLP.
-:::
-
-::: {.slide title="The First MLP Trained on Real Images"}
-[Where this fits]{.kicker}
+Flattening each $28 \times 28$ image in a minibatch of size $n$ into a row of $\mathbf{X} \in \mathbb{R}^{n \times 784}$, our two-layer MLP allocates four parameter tensors:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Multilayer Perceptrons | hidden layers, universal approximation, activation functions |
-| **Implementation** | **an MLP trained on Fashion-MNIST** |
-| Backpropagation | how the gradients are computed, and at what memory cost |
-| Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
-| Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |
-| Dropout | random masks, slower memorization of noisy labels |
-| Predicting House Prices on Kaggle | the workflow on real data |
-:::
-
-::: {.col .narrow}
-- **Uses:** $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$,
-  $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$; the
-  `Classifier` and its loss on logits; the `Trainer`; `SoftmaxRegression`.
-- **Skips:** the backward pass (next deck); how to choose the initial
-  scale (two decks on).
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[From scratch]{.dtitle}
-
-[parameters · forward pass · checks · training]{.dsub}
-:::
-:::
-
-::: {.slide title="203,530 Parameters, All but 2,570 in the Hidden Layer"}
-[From scratch]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$d = 784$ pixels, $h = 256$ hidden units, $q = 10$ classes:
-
-- $\mathbf{W}^{(1)}$: $784 \times 256$; $\mathbf{b}^{(1)}$: 256 entries
-- $\mathbf{W}^{(2)}$: $256 \times 10$; $\mathbf{b}^{(2)}$: 10 entries
-
-$$785 \cdot 256 + 257 \cdot 10 = 203{,}530$$
-
-::: {.d2l-note}
-The width $h$ is a hyperparameter: training does not choose it.
-:::
+- **Hidden layer ($d = 784 \to h = 256$):** $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}$ ($200{,}704$ weights) and $\mathbf{b}^{(1)} \in \mathbb{R}^{256}$, holding $98.7\%$ of all parameters.
+- **Output layer ($h = 256 \to q = 10$):** $\mathbf{W}^{(2)} \in \mathbb{R}^{256 \times 10}$ ($2{,}560$ weights) and $\mathbf{b}^{(2)} \in \mathbb{R}^{10}$.
+- **Total count:** $785 \times 256 + 257 \times 10 = 203{,}530$ trainable floats ($\approx 0.81\textrm{ MB}$ in `float32`).
 :::
 
 ::: {.col .fig .big}
-![](../img/mdl-mlp-arch.svg)
+![](../img/mdl-mlp-arch.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Random Weights Keep the Hidden Units Different" except="tensorflow"}
-[From scratch]{.kicker}
+::: {.slide title="Why Weights Must Start Small and Random"}
+[Initialization Invariants]{.kicker}
 
-Weights from $\mathcal{N}(0, 0.01^2)$, biases 0, as for softmax regression.
+To keep our comparison with softmax regression controlled, we draw weights i.i.d. from $\mathcal{N}(0, 0.01^2)$ and set biases to $0$:
 
-- **Why random:** if all weights of a layer were equal, every hidden unit
-  would compute the same activation and receive the same gradient. The
-  units would stay identical: one unit, 256 times.
-- **Why small:** the logits start near 0, so every class gets probability
-  about 1/10.
+- **Symmetry breaking requires randomness:** If all columns of $\mathbf{W}^{(1)}$ and rows of $\mathbf{W}^{(2)}$ started equal, every hidden unit would compute the exact same activation and receive the exact same backward gradient forever—collapsing $256$ units into $1$.
+- **Small initial scale ($\sigma = 0.01$):** Keeps initial logits near $0$ so softmax starts near uniform probabilities ($\hat{y}_j \approx 1/10$, cross-entropy $\approx \log 10 \approx 2.303$) rather than saturated wrong predictions.
+- **Framework pitfall (Keras initializer reuse):** In TensorFlow/Keras, passing a single `RandomNormal(stddev=0.01)` instance to multiple layers replays the exact same random seed; always instantiate a fresh initializer object per weight tensor.
 :::
 
-::: {.slide title="Random Weights Keep the Hidden Units Different" only="tensorflow"}
-[From scratch]{.kicker}
+::: {.slide title="Allocating and Registering Parameters from Scratch"}
+[From-Scratch Implementation]{.kicker}
 
-Weights from $\mathcal{N}(0, 0.01^2)$, biases 0, as for softmax regression.
+Wrapping each array in the framework's parameter class (`nn.Parameter`, `gluon.Parameter`, `add_weight`, or `nnx.Param`) registers it so `Trainer`'s SGD optimizer discovers and updates all four tensors automatically:
 
-- **Why random:** if all weights of a layer were equal, every hidden unit
-  would compute the same activation and receive the same gradient. The
-  units would stay identical: one unit, 256 times.
-- **Why small:** the logits start near 0, so every class gets probability
-  about 1/10.
-
-::: {.d2l-note .warn}
-A Keras initializer object returns the same values on every call. Shared
-by $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$, it would make
-$\mathbf{W}^{(2)}$ repeat the first entries of $\mathbf{W}^{(1)}$. Give each
-weight its own.
-:::
+@mlp-implementation-initializing-model-parameters
 :::
 
-::: {.slide title="Registered Parameters Need No Optimizer Code" only="mxnet"}
-[From scratch]{.kicker}
+::: {.slide title="Elementwise ReLU and the Two-Line Forward Pass"}
+[Forward Propagation]{.kicker}
 
-The default minibatch SGD of `Module` finds every registered array:
-
-- A `gluon.Parameter(...)` assigned as an attribute is registered with the
-  block; `initialize` allocates it, and `data()` reads its value.
-- `model.collect_params()` lists the four arrays, and Gluon's `Trainer`
-  with the `'sgd'` update updates them.
-
-::: {.d2l-note}
-Four arrays, `W1`, `b1`, `W2`, `b2`; the argument `std` sets the standard
-deviation of the weights.
-:::
-:::
-
-::: {.slide title="Registered Parameters Need No Optimizer Code" only="pytorch"}
-[From scratch]{.kicker}
-
-The default minibatch SGD of `Module` finds every registered array:
-
-- `nn.Parameter(tensor)` registers a tensor with the module.
-- `model.parameters()` lists the four arrays, and `torch.optim.SGD`
-  updates them.
-
-::: {.d2l-note}
-Four arrays, `W1`, `b1`, `W2`, `b2`; the argument `std` sets the standard
-deviation of the weights.
-:::
-:::
-
-::: {.slide title="Registered Parameters Need No Optimizer Code" only="tensorflow"}
-[From scratch]{.kicker}
-
-The default minibatch SGD of `Module` finds every registered array:
-
-- `self.add_weight(...)` creates a variable and registers it with the
-  Keras model.
-- `model.trainable_variables` lists the four arrays, and Keras's `SGD`
-  updates them.
-
-::: {.d2l-note}
-Four arrays, `W1`, `b1`, `W2`, `b2`; the argument `std` sets the standard
-deviation of the weights.
-:::
-:::
-
-::: {.slide title="Registered Parameters Need No Optimizer Code" only="jax"}
-[From scratch]{.kicker}
-
-The default minibatch SGD of `Module` finds every registered array:
-
-- `nnx.Param(array)` marks an array as a trainable parameter.
-- `nnx.state(model)` contains the four arrays, and `optax.sgd` updates
-  them.
-
-::: {.d2l-note}
-Four arrays, `W1`, `b1`, `W2`, `b2`; the argument `std` sets the standard
-deviation of the weights.
-:::
-:::
-
-::: {.slide title="The ReLU Keeps the Positive Entries and Zeros the Rest"}
-[From scratch]{.kicker}
-
-Written by hand instead of calling the built-in function: each entry times
-1 if it is positive, times 0 otherwise.
+We implement `relu(X)` via boolean masking `X * (X > 0)` (which sets the subgradient at $z = 0$ to $0$) and factor the hidden representation into `hidden(X)` so `forward(X)` returns raw class logits $\mathbf{O}$:
 
 @mlp-implementation-model-1
 
-::: {.d2l-note}
-The derivative at $z = 0$ is then 0, the value that the built-in ReLU uses.
-:::
-:::
-
-::: {.slide title="The Forward Pass Is Two Lines and Returns Logits"}
-[From scratch]{.kicker}
-
-$$\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}), \qquad \mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$$
-
 @mlp-implementation-model-2
-
-- Rows of $\mathbf{X}$: flattened images; rows of $\mathbf{O}$: logits.
-- The inherited loss takes logits and never forms probabilities; autograd
-  supplies the backward pass.
 :::
 
-::: {.slide title="Check: What Should the Untrained Model Report?"}
-[Check]{.kicker}
+::: {.slide title="Three Pre-Training Sanity Checks on Eight Images"}
+[Verification Before Training]{.kicker}
 
-Pass the first 8 images of a minibatch through the untrained model, with
-weights from $\mathcal{N}(0, 0.01^2)$ and zero biases. Predict:
-
-1. the shapes of $\mathbf{H}$ and $\mathbf{O}$;
-2. the cross-entropy loss;
-3. the fraction of positive hidden activations.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $8 \times 256$ and $8 \times 10$. The logits are near 0, so
-every class gets about 1/10 and the loss is $\log 10 \approx 2.30$. Each
-pre-activation is a sum of pixels times weights of random sign, positive or
-negative with equal probability: about half.
-:::
-:::
-:::
-
-::: {.slide title="The Untrained Model Passes All Three Checks"}
-[From scratch]{.kicker}
+Before launching a multi-minute training job, passing a slice of $8$ images through the *untrained* network verifies three invariants in milliseconds:
 
 @!mlp-implementation-checks-before-training
 
-- A weight matrix with swapped axes stops the forward pass with an error.
-- A wrong number of inputs shows in the shapes.
-- A loss far from 2.30 points to weights that are too large or to a mistake
-  in the loss.
-
-::: {.d2l-note}
-A second of checking before minutes of training.
-:::
+1. **Tensor shapes:** `H` has shape `(8, 256)` and `O` has shape `(8, 10)`—catching transposed weight matrices or missing `Flatten` calls immediately.
+2. **Initial loss near $\log 10 \approx 2.303$:** Confirms that logits start near $0$ and the cross-entropy loss receives unnormalized logits rather than probabilities.
+3. **Active ReLU fraction near $0.50$:** With zero biases and symmetric Gaussian weights, roughly half of all hidden pre-activations $z_{ij}$ are positive at step $0$.
 :::
 
-::: {.slide title="Thirty Epochs at Learning Rate 0.1 Reach About 87%"}
-[From scratch]{.kicker}
+::: {.slide title="Training MLPScratch for 30 Epochs on Fashion-MNIST"}
+[Training Curve]{.kicker}
+
+We train `MLPScratch` for $30$ epochs with minibatch size $n = 256$ and learning rate $\eta = 0.1$:
 
 ::: {.cols .vc}
-::: {.col .narrow}
-Minibatches of 256, learning rate 0.1, as for softmax regression, but 30
-epochs instead of 10.
-
-- The training loss falls throughout.
-- Validation accuracy: about 87% at the end, moving by about a point from
-  epoch to epoch and sometimes dipping several points for one epoch.
+::: {.col}
+- **Smooth convergence:** Training loss drops steadily from $2.30$ below $0.35$, while training accuracy climbs to $\sim 89\%$.
+- **Validation plateau:** Held-out accuracy reaches $\sim 87\%$ (up from $\sim 84\%$ for softmax regression), with $\sim 1$ percentage point of epoch-to-epoch minibatch jitter.
 :::
 
 ::: {.col .fig .big}
@@ -726,168 +542,40 @@ epochs instead of 10.
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Concise Implementation with Framework Sequential Layers"}
+[High-Level API]{.kicker}
 
-[Framework layers]{.dtitle}
+Using each framework's `Sequential` container and built-in linear and ReLU layers expresses the exact same architecture in a few lines without manual parameter arrays:
 
-[the same model, declared]{.dsub}
-:::
+@mlp-implementation-model-2-2
 :::
 
-::: {.slide title="The Same Model Is Four Operations in a Sequential Container" only="mxnet"}
-[Framework layers]{.kicker}
+::: {.slide title="Matching Weight Initialization Across Frameworks"}
+[Framework Defaults vs. Explicit Init]{.kicker}
 
-Flatten, fully connected to 256, ReLU, fully connected to 10:
+Framework linear layers use different default weight distributions, which would confound a controlled comparison if left unconfigured:
 
-- `nn.Sequential()` with `Dense(256, activation='relu')` and `Dense(10)`;
-  `Dense` flattens its input itself.
-- Initialization: `initialize(init.Normal(sigma=0.01))`.
-
-::: {.d2l-note}
-The layers hold the parameters, and the container fixes the order of the
-operations: nothing to name or register by hand.
-:::
-:::
-
-::: {.slide title="The Same Model Is Four Operations in a Sequential Container" only="pytorch"}
-[Framework layers]{.kicker}
-
-Flatten, fully connected to 256, ReLU, fully connected to 10:
-
-- `nn.Sequential(nn.Flatten(), nn.LazyLinear(256), nn.ReLU(),
-  nn.LazyLinear(10))`.
-- Initialization: the `Trainer` calls `weight_init` after the first
-  forward pass, once the lazy layers know their shapes.
-
-::: {.d2l-note}
-The layers hold the parameters, and the container fixes the order of the
-operations: nothing to name or register by hand.
-:::
-:::
-
-::: {.slide title="The Same Model Is Four Operations in a Sequential Container" only="tensorflow"}
-[Framework layers]{.kicker}
-
-Flatten, fully connected to 256, ReLU, fully connected to 10:
-
-- `Sequential([Flatten(), Dense(256, activation='relu'), Dense(10)])`.
-- Initialization: a `RandomNormal(stddev=0.01)` per layer, since one
-  initializer object repeats its values.
-
-::: {.d2l-note}
-The layers hold the parameters, and the container fixes the order of the
-operations: nothing to name or register by hand.
-:::
-:::
-
-::: {.slide title="The Same Model Is Four Operations in a Sequential Container" only="jax"}
-[Framework layers]{.kicker}
-
-Flatten, fully connected to 256, ReLU, fully connected to 10:
-
-- `nnx.Sequential(nnx.Linear(784, 256), nnx.relu, nnx.Linear(256, 10))`;
-  `forward` flattens each image first.
-- Initialization: `kernel_init=nnx.initializers.normal(0.01)`.
-
-::: {.d2l-note}
-The layers hold the parameters, and the container fixes the order of the
-operations: nothing to name or register by hand.
-:::
-:::
-
-::: {.slide title="The Default Initialization Would Start at a Different Scale" only="mxnet"}
-[Framework layers]{.kicker}
-
-- `initialize()` by default: uniform on $[-0.07, 0.07]$ for every layer.
-- Standard deviation 0.040 in both layers, against 0.01 in the scratch
-  model.
+| Framework Layer | Built-In Default Weight Initialization | Default $\sigma$ ($d = 784 \to 256$) | Explicit Override in `MLP` |
+|:--|:--|--:|:--|
+| **PyTorch** `nn.LazyLinear` | Uniform $U(-1/\sqrt{n_{\textrm{in}}}, 1/\sqrt{n_{\textrm{in}}})$ | $0.021$ / $0.036$ | `nn.init.normal_(w, std=0.01)` |
+| **JAX / Flax** `nnx.Linear` | LeCun normal $\mathcal{N}(0, 1/n_{\textrm{in}})$ | $0.036$ / $0.063$ | `nnx.initializers.normal(0.01)` |
+| **TensorFlow** `Dense` | Glorot uniform $U(-\sqrt{6/(n_{\textrm{in}}+n_{\textrm{out}})}, \dots)$ | $0.044$ / $0.087$ | `RandomNormal(stddev=0.01)` |
+| **MXNet** `nn.Dense` | Uniform $U(-0.07, 0.07)$ | $0.040$ / $0.040$ | `init.Normal(sigma=0.01)` |
 
 ::: {.d2l-note .rule}
-`init.Normal(sigma=0.01)` and zero biases match the scratch model, so both
-implementations start from the same distribution.
+Always inspect or set layer initialization explicitly when comparing architectures—in §4.4 we prove why $\sigma = \sqrt{2/n_{\textrm{in}}}$ (He initialization) is optimal for deep ReLU stacks.
 :::
 :::
 
-::: {.slide title="The Default Initialization Would Start at a Different Scale" only="pytorch"}
-[Framework layers]{.kicker}
+::: {.slide title="Head-to-Head Accuracy: MLP vs. Softmax Regression"}
+[Empirical Comparison]{.kicker}
 
-- `nn.LazyLinear` by default: uniform with bound $1/\sqrt{\text{inputs}}$.
-- Standard deviation 0.021 for 784 inputs, 0.036 for 256 inputs, against
-  0.01 in the scratch model.
-
-::: {.d2l-note .rule}
-`weight_init` sets $\mathcal{N}(0, 0.01^2)$ and zero biases, as the scratch
-model does, so both implementations start from the same distribution.
-:::
-:::
-
-::: {.slide title="The Default Initialization Would Start at a Different Scale" only="tensorflow"}
-[Framework layers]{.kicker}
-
-- `Dense` by default: Glorot uniform, variance $2/(\text{inputs} + \text{outputs})$.
-- Standard deviation 0.044 for the first layer (784 to 256), 0.087 for the
-  second (256 to 10), against 0.01 in the scratch model.
-
-::: {.d2l-note .rule}
-A `RandomNormal(stddev=0.01)` per layer and zero biases match the scratch
-model, so both implementations start from the same distribution.
-:::
-:::
-
-::: {.slide title="The Default Initialization Would Start at a Different Scale" only="jax"}
-[Framework layers]{.kicker}
-
-- `nnx.Linear` by default: LeCun normal, variance $1/\text{inputs}$.
-- Standard deviation 0.036 for 784 inputs, 0.0625 for 256 inputs, against
-  0.01 in the scratch model.
-
-::: {.d2l-note .rule}
-`kernel_init=normal(0.01)` and zero biases match the scratch model, so both
-implementations start from the same distribution.
-:::
-:::
-
-::: {.slide title="Check: Which Model Learns Faster in the First Epoch?"}
-[Check]{.kicker}
-
-Softmax regression and the MLP both start from weights
-$\mathcal{N}(0, 0.01^2)$ and zero biases and train at learning rate 0.1.
-Which one has the lower average training loss in its first epoch, and why?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Softmax regression: about 0.79, against about 1.04 for the MLP.
-The hidden activations start small, and every gradient that reaches
-$\mathbf{W}^{(1)}$ is multiplied by entries of $\mathbf{W}^{(2)}$ of size
-about 0.01, so the hidden layer learns slowly at first.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Comparison]{.dtitle}
-
-[accuracy · classes · hidden units · cost]{.dsub}
-:::
-:::
-
-::: {.slide title="The MLP Starts Behind and Ends Three Points Ahead"}
-[Comparison]{.kicker}
+Training `MLPScratch`, concise `MLP`, and `SoftmaxRegression` for $30$ epochs under identical hyperparameters reveals two key phenomena:
 
 ::: {.cols .vc}
-::: {.col .narrow}
-Same data, loss, learning rate, and 30 epochs for all three models.
-
-- Scratch and concise MLP: one curve, up to run-to-run noise.
-- Usually behind after one epoch; about a point ahead after ten.
-- Averaged over epochs 26–30: about 87% against about 84%, a fifth of the
-  errors removed.
-- Training accuracy of the MLP: about 89%.
+::: {.col}
+- **Epoch-1 lag from $\sigma = 0.01$:** On epoch 1, both MLPs trail softmax regression (training loss $\sim 1.04$ vs. $\sim 0.79$) because backpropagated gradients into $\mathbf{W}^{(1)}$ are multiplied by $\mathbf{W}^{(2)} \sim 0.01$ until $\mathbf{W}^{(2)}$ grows.
+- **Cutting $20\%$ of errors by epoch 30:** Both MLPs converge to $\sim 87.0\%$ validation accuracy vs. $\sim 84.0\%$ for softmax regression, eliminating nearly a fifth of all classification errors.
 :::
 
 ::: {.col .fig .big}
@@ -896,90 +584,74 @@ Same data, loss, learning rate, and 30 epochs for all three models.
 :::
 :::
 
-::: {.slide title="26 Times the Parameters and Arithmetic Remove a Fifth of the Errors"}
-[Comparison]{.kicker}
+::: {.slide title="Averaged Validation Accuracy Over the Final Five Epochs"}
+[Quantitative Summary]{.kicker}
 
-| model | parameters | multiply-adds per image | accuracy, epochs 26–30 |
+Averaging validation accuracy over epochs 26–30 smooths out single-epoch SGD fluctuations and confirms that our from-scratch and concise implementations match:
+
+@!mlp-implementation-accuracy-3
+
+::: {.d2l-note}
+With $\sim 89\%$ training accuracy and $\sim 87\%$ validation accuracy on $60{,}000$ images, our $203{,}530$-parameter MLP shows only a modest $2$-point generalization gap after $30$ epochs.
+:::
+:::
+
+::: {.slide title="26× More FLOPs at Almost Zero Extra GPU Epoch Time"}
+[Systems Performance]{.kicker}
+
+Comparing parameter counts, per-image multiply-adds, and measured wall-clock seconds per epoch exposes a crucial hardware lesson:
+
+| Model | Parameters | Multiply-Adds / Image | Val Accuracy (Epochs 26–30) |
 |:--|--:|--:|--:|
-| softmax regression | 7,850 | 7,840 | about 84% |
-| MLP, 256 hidden units | 203,530 | 203,264 | about 87% |
-
-Measured time per epoch:
+| Softmax regression ($784 \to 10$) | $7{,}850$ | $7{,}840$ | $\sim 84.0\%$ |
+| MLP ($784 \to 256 \to 10$) | $203{,}530$ | $203{,}264$ | $\sim 87.0\%$ |
 
 @!mlp-implementation-parameters-computation-and-time
 
 ::: {.d2l-note}
-On a GPU the times are about the same: reading the images and the fixed
-cost of each step take nearly all of an epoch.
+Why does $26\times$ more matrix arithmetic cost almost zero extra wall-clock time on a GPU? At width $h = 256$, minibatch data loading, Python iteration, and CUDA kernel launch latency dominate execution—the GPU's tensor cores finish the $(256 \times 784) \times (784 \times 256)$ matrix multiply in microseconds.
 :::
 :::
 
-::: {.slide title="Recall by Class: No Single Class Gains Reliably"}
-[Comparison · classes]{.kicker}
+::: {.slide title="Learned Features: Localized Garment-Part Detectors"}
+[Visualizing First-Layer Weights]{.kicker}
 
-Which fifth of the errors? Recall: the fraction of each class's validation
-images classified correctly. The two MLPs are the same model, trained twice.
-
-@!mlp-implementation-errors-by-class
-
-::: {.d2l-note}
-The six classes outside the tops gain a few points. Among the four tops the
-two MLPs differ by ten points or more: SGD moves the boundaries, and only
-the sum over the tops is stable.
-:::
-:::
-
-::: {.slide title="Hidden Units Respond to Parts of Garments"}
-[Comparison · features]{.kicker}
-
-The ten units with the largest incoming weights: column $j$ of
-$\mathbf{W}^{(1)}$ as a $28 \times 28$ image (red raises the unit, blue
-lowers it), titled by the class whose logit the unit raises most.
+In Chapter 3, softmax regression's $10$ weight columns had to act as blurred whole-garment templates. Reshaping the $10$ highest-norm columns of $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}$ into $28 \times 28$ images reveals how hidden units collaborate:
 
 @!mlp-implementation-what-the-hidden-units-compute-2
 
-::: {.d2l-note}
-Softmax regression: ten templates, each a blurred garment. Here: necklines,
-sleeve edges, the gap between trouser legs, red beside blue. Most of the
-ten serve one of the four tops.
-:::
+- **Local edge and contrast detectors:** Adjacent red (positive/excitatory) and blue (negative/inhibitory) lobes detect collar cutouts, sleeve boundaries, and the dark vertical gap between trouser legs.
+- **Compositional specialization:** Most high-norm hidden units feed the four ambiguous upper-body tops (shirt, T-shirt, pullover, coat), giving the output layer fine-grained part indicators to tell them apart.
 :::
 
-::: {.slide title="Check: What Do 1,024 Hidden Units Cost?"}
+::: {.slide title="Concept Check: Pre-Training Diagnostics & Scaling"}
 [Check]{.kicker}
 
-Widen the hidden layer from 256 to 1,024 units. How many parameters and
-multiply-adds per image does the MLP have, and how do they compare with the
-256-unit MLP and with softmax regression?
+Test your understanding of MLP implementation and diagnostics:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $785 \cdot 1024 + 1025 \cdot 10 = 814{,}090$ parameters and
-$784 \cdot 1024 + 1024 \cdot 10 = 813{,}056$ multiply-adds: 4 times the
-256-unit MLP and about 104 times softmax regression.
+1. **Broken initialization diagnostic:** Suppose your pre-training check on $8$ images reports an initial cross-entropy loss of $14.8$ instead of $2.30$, and an active ReLU fraction of $0.50$. What bug should you suspect first?
+2. **Dead-layer diagnostic:** What if the initial loss is $2.30$, but the active ReLU fraction is $0.00$ across the entire batch?
+3. **Scaling to $h = 1{,}024$:** If you widen the hidden layer from $256$ to $1{,}024$ units on Fashion-MNIST, how many parameters and per-image multiply-adds does the MLP have?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Initial weight scale $\sigma$ is too large** (or unscaled `uint8` pixels in $[0, 255]$ were passed instead of $[0, 1]$ floats), producing huge initial logits that assign near-zero probability to the true class.
+2. **Negative initial biases** (e.g., $\mathbf{b}^{(1)}$ initialized to $-5$ instead of $0$), pushing every pre-activation $z_{ij} < 0$ so all ReLU units are dead from step $0$.
+3. **4× scaling:** $785 \times 1024 + 1025 \times 10 = 814{,}090$ parameters and $784 \times 1024 + 1024 \times 10 = 813{,}056$ multiply-adds ($4\times$ the 256-unit MLP, $\sim 104\times$ softmax regression).
 :::
 :::
+
+::: {.slide title="Summary: Implementing Multilayer Perceptrons"}
+[Key Takeaways]{.kicker}
+
+| Stage / Component | Implementation Pattern | Expected Diagnostic / Metric | Practical Pitfall Prevented |
+|:--|:--|:--|:--|
+| **Parameter Setup** | $\mathbf{W}^{(k)} \sim \mathcal{N}(0, 0.01^2)$, $\mathbf{b}^{(k)} = \mathbf{0}$ | $203{,}530$ floats ($98.7\%$ in layer 1) | Identical weights lock hidden units into permutation symmetry |
+| **Forward Pass** | `H = relu(X @ W1 + b1)`; `O = H @ W2 + b2` | Returns raw logits $\mathbf{O} \in \mathbb{R}^{n \times 10}$ | Passing softmax probabilities into cross-entropy causes double-softmax bug |
+| **Pre-Training Checks** | Run 1 forward pass on $n = 8$ images | Shapes `(8, 256)` & `(8, 10)`; loss $\approx 2.303$; $50\%$ active | Catches shape mismatches, bad weight scales, and dead ReLUs in $<1\textrm{ ms}$ |
+| **Concise Container** | `Sequential(Flatten, Linear(256), ReLU, Linear(10))` | Matches `MLPScratch` curve to within SGD noise | Unconfigured framework defaults use different initial weight variances |
+| **Accuracy vs. Speed** | 30 epochs, batch size $256$, $\eta = 0.1$ | $\sim 87\%$ val accuracy ($20\%$ fewer errors) at $\sim 1\times$ GPU time | Data-loading overhead masks $26\times$ arithmetic increase at width $256$ |
+| **Learned Features** | Plot top-$10$ columns of $\mathbf{W}^{(1)}$ as $28 \times 28$ grids | Localized red/blue edge & garment-part detectors | Explains why MLPs separate look-alike tops better than global templates |
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- **Model:** $\mathbf{W}^{(1)}$ ($784 \times 256$), $\mathbf{b}^{(1)}$,
-  $\mathbf{W}^{(2)}$ ($256 \times 10$), $\mathbf{b}^{(2)}$: 203,530
-  registered parameters, from $\mathcal{N}(0, 0.01^2)$ and zeros.
-- **Forward:** $\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$,
-  $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$, logits into
-  the stable cross-entropy.
-- **Checks:** shapes $8 \times 256$ and $8 \times 10$, loss
-  $\log 10 \approx 2.30$, half of the units active.
-- **Concise:** flatten, linear, ReLU, linear in a sequential container, with
-  the initialization of the scratch model.
-- **Result after 30 epochs:** about 87% against 84% for softmax regression;
-  26 times the parameters and multiply-adds, about the same time per epoch
-  on a GPU.
-- **Where:** no single class gains reliably, and the tops keep most of the
-  errors; the hidden units with the largest weights respond to parts of
-  garments.
-
-**Next:** how automatic differentiation computes the 203,530 gradients.
-:::

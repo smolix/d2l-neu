@@ -372,6 +372,7 @@ Keep two placement rules in mind: move or initialize the model on its target
 device *before* constructing the optimizer (so optimizer moments are allocated
 on the same device), and allocate any new tensors created inside `forward` on
 `X.device` rather than defaulting to the CPU.
+
 ## Asynchronous Execution
 
 ### The Execution Queue
@@ -1532,362 +1533,248 @@ to CPU when no GPU is present.
 ::: {.cover}
 [Dive into Deep Learning · §5.7]{.kicker}
 
-GPUs, Devices, and Memory<br>**placement · asynchronous execution · training memory · checkpointing · a device-aware Trainer**
+GPUs, Devices, and Memory Budgets<br>**device placement · PCIe copy bottlenecks · async command queues · 3 memory views · $O(\sqrt{K})$ activation checkpointing**
 :::
 :::
 
-::: {.slide title="An 8B Model Fits a 24 GB GPU for Inference, Not for Adam Training"}
-[The problem]{.kicker}
+::: {.slide title="Why Device Placement and Memory Budgets Govern Scale"}
+[Hardware Throughput vs. HBM Capacity]{.kicker}
 
-- **Weights in bf16:** $8 \times 10^9 \times 2$ B = 16 GB: fits.
-- **Training with Adam in fp32:** 16 B per parameter (weights, gradients,
-  two running averages) = 128 GB, before any activations: does not fit.
-- **Placement:** an array on the wrong device raises an error or is copied
-  silently; a `print(loss.item())` per step makes the GPU wait for Python.
+A modern GPU multiplies two $4096 \times 4096$ matrices in under `2 ms` (vs. $>200\text{ ms}$ on a CPU), but imposes three strict systems constraints:
 
-::: {.d2l-note .warn}
-Where each array lives, and how many bytes it takes, decide whether a model
-runs, fits, and keeps the GPU busy.
-:::
+- **Dedicated onboard memory (HBM):** An 8B model fits on a `24 GB` GPU for `bf16` inference (`16 GB` weights), yet `fp32` Adam training requires `128 GB` of static state before storing a single activation.
+- **Co-location requirement:** Every kernel executes on one device, so all input tensors, weights, and buffers must reside in that device's memory; cross-device PCIe transfers are $3\text{--}5\times$ slower than matrix multiplication.
+- **Asynchronous command queues:** Python enqueues GPU kernels and returns immediately; naive wall-clock timers measure queue submission rather than execution, and per-step `.item()` readouts stall the pipeline.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Querying Hardware Devices with Graceful CPU Fallback"}
+[Device Abstraction]{.kicker}
 
-- place arrays and models on devices, and copy between them explicitly;
-- explain asynchronous execution and time GPU code correctly;
-- read the three views of GPU memory, and count what training stores;
-- trade computation for memory with activation checkpointing;
-- use the `Trainer`'s device handling, with its fallback to the CPU.
+Every tensor lives on a specific device (`cpu()`, `gpu(i)`). Our `try_gpu(i)` helper selects GPU `i` when available and falls back cleanly to CPU so notebooks run unmodified anywhere:
 
-**The idea:** move data once, at the boundary; count bytes before you run.
-**Running example:** the 8B-parameter model, and measurements on one GPU.
+@gpus-devices-memory-devices-3
 :::
 
-::: {.slide title="GPUs and Memory, after Saving and Loading"}
-[Where this fits]{.kicker}
+::: {.slide title="Operations Reject Operands on Mismatched Devices" except="tensorflow"}
+[No Silent Cross-Device Copies]{.kicker}
+
+Placing `X` on GPU 0 and `Y` on GPU 1 (or CPU) and evaluating `X + Y` raises an immediate runtime error in PyTorch, JAX, and MXNet:
+
+@gpus-devices-memory-copying-between-devices-4
+
+- **Why frameworks fail fast:** Because copying across the PCIe bus is orders of magnitude slower than on-device arithmetic, an implicit copy inside a training loop would silently destroy throughput.
+:::
+
+::: {.slide title="Device Scopes and Implicit Copies in TensorFlow" only="tensorflow"}
+[Device Policy in TensorFlow]{.kicker}
+
+By default, TensorFlow silently copies mismatched operands onto the active device unless `set_device_policy('explicit')` is enabled:
+
+@gpus-devices-memory-copying-between-devices-4
+
+- **Performance hazard:** Because PCIe transfers are far slower than GPU compute, rely on explicit device scopes (`with try_gpu():`) at step boundaries rather than implicit per-op copies.
+:::
+
+::: {.slide title="Explicit Device Transfers: Copy Once at the Boundary"}
+[Moving Tensors Between Devices]{.kicker}
+
+To combine tensors from different devices, copy `X` explicitly onto `Y`'s device (`X.to(device)`, `X.copyto(device)`, `jax.device_put`, or `tf.identity` inside a device scope):
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Modules and Model Construction | a model is a tree of modules, built from a config |
-| Parameters, State, and Memory | parameters, buffers, bytes per parameter |
-| Initialization | library defaults, custom initializers, residual depth |
-| Custom Layers and Functions | new layers, state, and custom gradients |
-| Numerical Formats | dtypes, mixed precision, loss scaling |
-| Saving, Loading, and Pretrained Weights | safe files, checkpoints, pretrained weights |
-| **GPUs, Devices, and Memory** | **placement, asynchrony, training memory** |
-| Reproducibility and Inspection | seeds, determinism, hooks |
+@gpus-devices-memory-copying-between-devices-1
+
+- **Transfer discipline:** Move data once at the boundary of your loop and keep every inner-loop operation on a single device.
 :::
 
-::: {.col .narrow}
-- **Uses:** 16 bytes per parameter for Adam in fp32; the residual block;
-  the `Trainer`.
-- **Skips:** several GPUs, streams, and profiling (the Computational
-  Performance chapter).
+::: {.col .fig}
+![](../img/bg-copyto.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
+::: {.slide title="Placing an Entire Model Tree on a Target Device"}
+[Co-Locating Parameters and Inputs]{.kicker}
 
-[Devices and Placement]{.dtitle}
+Because a forward pass combines inputs with model weights, the entire module tree must reside on the same device as its minibatches:
 
-[device objects · copies · models]{.dsub}
-:::
-:::
+@gpus-devices-memory-models-on-a-device-1
 
-::: {.slide title="Arrays Live on One Device; try_gpu Falls Back to the CPU"}
-[Devices]{.kicker}
-
-@gpus-devices-memory-devices-3
-
-- `try_gpu(10)` on two GPUs returns the CPU: the code runs anywhere.
+- **Two mandatory placement rules:** Move or initialize the model on its target GPU **before** constructing the optimizer (so Adam moments are allocated on the GPU), and allocate any new tensors inside `forward` on `X.device`.
 :::
 
-::: {.slide title="Arrays on Two GPUs Do Not Add" except="tensorflow"}
-[Copying between devices]{.kicker}
+::: {.slide title="Asynchronous GPU Execution: The Command Queue"}
+[How Python Drives a GPU]{.kicker}
 
-`X` on GPU 0, `Y` on GPU 1, then `X + Y`:
+When Python executes `B = A @ A`, it does not wait for the GPU to multiply the matrices. It pushes a kernel launch command onto the GPU's **execution queue** and immediately moves to the next Python line:
 
-@!gpus-devices-memory-copying-between-devices-4
+@gpus-devices-memory-don-t-break-the-pipeline-1
 
-- The addition raises an error: the framework does not choose a device for
-  the result.
-- A copy between devices is slow next to arithmetic: a silent copy would
-  hide a cost where it occurs.
+- **Queueing vs. computing:** Enqueueing 32 products of $4096 \times 4096$ matrices takes a few milliseconds on the CPU, whereas the GPU takes dozens of milliseconds to drain the queue.
 :::
 
-::: {.slide title="Arrays on Two GPUs Add after a Silent Copy" only="tensorflow"}
-[Copying between devices]{.kicker}
+::: {.slide title="Synchronization Points Stall the CPU–GPU Pipeline"}
+[Don't Break the Pipeline]{.kicker}
 
-`X` on GPU 0, `Y` on GPU 1, then `X + Y`:
+![](../img/bg-async-queue.svg){.nostretch width=88%}
 
-@!gpus-devices-memory-copying-between-devices-4
-
-- TensorFlow's default device policy copies one operand silently;
-  `tf.config.experimental.set_device_policy('explicit')` makes it an error.
-- A copy between devices is slow next to arithmetic: the silent copy hides a
-  cost where it occurs.
+- **What triggers a synchronization stall:** Calling `loss.item()`, `float(loss)`, `print(tensor)`, `.numpy()`, or branching on a tensor value (`if loss < best:`) forces the CPU to block until the GPU finishes all queued work, leaving the GPU idle while Python catches up.
+- **Systems best practice:** Accumulate per-step losses inside an on-device tensor and convert to a Python float only at the end of the epoch.
 :::
 
-::: {.slide title="Copy Explicitly, Once, at the Boundary of the Computation"}
-[Copying between devices]{.kicker}
+::: {.slide title="Four Rules for Accurate GPU Benchmarking"}
+[Timing Asynchronous Kernels]{.kicker}
 
-![](../img/bg-copyto.svg){width=70%}
+Because kernel launches return asynchronously, any trustworthy GPU benchmark (`Benchmark`) must follow four rules:
 
-- Create data on the device where it is used.
-- Move the model to the device before creating the optimizer, so its state
-  is created there too.
-- Inside the training loop, keep every operation on one device.
+@-gpus-devices-memory-the-execution-queue-1
+
+1. **Warm up first (`warmup=3`):** Exclude one-time CUDA context initialization, memory allocator slab requests, cuBLAS autotuning, and XLA JIT compilation.
+2. **Synchronize before starting the clock** (`torch.cuda.synchronize()`, `jax.block_until_ready()`, `npx.waitall()`).
+3. **Synchronize before stopping the clock** so every queued kernel has finished executing.
+4. **Average over multiple repeats** using high-resolution `time.perf_counter()`.
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="4096×4096 Matmul vs. PCIe Host-to-Device Copy"}
+[Compute Throughput vs. Memory Bandwidth]{.kicker}
 
-[Asynchronous Execution]{.dtitle}
-
-[the queue · synchronization points · timing]{.dsub}
-:::
-:::
-
-::: {.slide title="Python Queues 32 Matrix Products in a Few Milliseconds"}
-[Asynchronous execution]{.kicker}
-
-32 products of $4096 \times 4096$ matrices on a GPU:
-
-@!gpus-devices-memory-don-t-break-the-pipeline-1
-
-Python issues work into the device's queue and moves on; the GPU runs the
-queue in order.
-:::
-
-::: {.slide title="Converting a Result to a Python Number Makes Python Wait"}
-[Synchronization points]{.kicker}
-
-![](../img/bg-async-queue.svg){width=85%}
-
-- `.item()`, `float()`, `.numpy()`, `print`, an `if` on a value.
-- The `Trainer` sums step losses on the device and converts once per epoch.
-:::
-
-::: {.slide title="Time GPU Code with Warm-Up, Waits, and Repetitions"}
-[Timing]{.kicker}
-
-1. Run once untimed: allocation, library setup, compilation.
-2. Wait for the device before starting and before stopping the clock
-   (`synchronize`, `block_until_ready`, `waitall`, `sync_devices`).
-3. Time several repetitions and divide; use `time.perf_counter`.
-
-::: {.d2l-note .rule}
-Without step 2, a GPU timing measures how fast Python fills the queue.
-:::
-:::
-
-::: {.slide title="The GPU Multiplies in Under 2 ms; Copying the Matrix Takes Longer"}
-[Timing]{.kicker}
-
-The $4096 \times 4096$ product on the CPU and the GPU, in tf32 and 16 bits,
-and the copy of the matrix to the GPU:
+Timing a $4096 \times 4096$ matrix multiplication on CPU (`fp32`), on GPU (`tf32` and 16-bit), and a CPU-to-GPU copy reveals the fundamental hardware bottleneck of deep learning:
 
 @!gpus-devices-memory-the-execution-queue-2
 
-- The GPU is a hundred to a thousand times faster than the CPU, and 16
-  bits halve its time.
-- Copying the matrix to the GPU takes three to five times as long as
-  multiplying it there.
+- **Compute is $100\text{--}1000\times$ faster on GPU:** Tensor Cores finish $4096^3 \approx 6.9 \times 10^{10}$ multiply-adds in under `2 ms` (and 16-bit precision halves that time again).
+- **PCIe copies take $3\text{--}5\times$ longer than matmul:** Copying $4096^2 \times 4\text{ B} = 64\text{ MiB}$ over PCIe takes longer than performing $4096$ multiply-adds per element once on the GPU!
 :::
 
-::: {.slide title="Check: Where Does This Loop Wait?"}
-[Check]{.kicker}
+::: {.slide title="Three Nested Views of GPU Memory"}
+[Live Tensors vs. Caching Allocator vs. CUDA Driver]{.kicker}
 
-```{.python #gpus-devices-memory-exercises}
-for X, y in data:
-    loss = step(X, y)
-    if loss < best:
-        best = loss
-```
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** `loss < best` needs the value on the host, so every step waits for
-the GPU to finish it, and the GPU then idles until Python issues the next
-step. Keep `best` on the device (an elementwise minimum) and read it once per
-epoch.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[GPU Memory]{.dtitle}
-
-[three views · memory during training · checkpointing]{.dsub}
-:::
-:::
-
-::: {.slide title="Deleting an Array Frees It for the Allocator, Not for the Driver"}
-[Three views of memory]{.kicker}
+Asking how much GPU memory a process uses yields three different answers depending on which layer of the memory hierarchy you query:
 
 ::: {.cols .vc}
 ::: {.col}
 @!gpus-devices-memory-gpu-memory
+
+- **Why `del big` leaves `nvidia-smi` unchanged:** Frameworks use a **caching allocator** that keeps freed GPU slabs in a reserved pool for instant reuse without slow CUDA driver calls.
 :::
 
 ::: {.col .fig}
-![](../img/bg-allocator.svg)
+![](../img/bg-allocator.svg){.nostretch width=100%}
 :::
 :::
-
-`nvidia-smi` shows the driver's view: the allocator's high-water mark.
 :::
 
-::: {.slide title="Training Stores 16 Bytes per Parameter, Plus the Activations" except="mxnet"}
-[Memory during training]{.kicker}
+::: {.slide title="Dissecting Memory Across One Training Step" except="mxnet"}
+[Weights + Activations + Gradients + Optimizer Moments]{.kicker}
 
-MLP $1024 \to 4096 \to 4096 \to 4096 \to 10$, $4N \approx 144$ MiB,
-minibatch 4096:
+Tracing live GPU memory across one training step of a 3-hidden-layer MLP ($1024 \to 4096 \to 4096 \to 4096 \to 10$, $4N \approx 144\text{ MiB}$ weights, batch size $B = 4096$) reveals how the four memory components arrive:
 
 @!gpus-devices-memory-what-fills-memory-during-training
 
-Weights $4N$, gradients $4N$, Adam $8N$; activations grow with the minibatch
-and vanish after the backward pass.
+- **Activations exceed weights ($+192\text{ MiB}$):** The three $4096 \times 4096$ hidden outputs ($3 \times 64\text{ MiB} = 192\text{ MiB}$) sit in memory during `forward` and are freed during `backward` as gradients ($+144\text{ MiB}$) and Adam moments ($+288\text{ MiB}$) materialize.
 :::
 
-::: {.slide title="Training Stores 16 Bytes per Parameter, Plus the Activations" only="mxnet"}
-[Memory during training]{.kicker}
+::: {.slide title="Dissecting Memory Across One Training Step" only="mxnet"}
+[Weights + Activations + Gradients + Optimizer Moments]{.kicker}
 
-- Weights $4N$, gradients $4N$ (Gluon allocates them at `initialize`), Adam
-  $8N$: 16 bytes per parameter.
-- Activations: stored by the forward pass for the backward pass; they grow
-  with the minibatch size and the layer widths.
-- MXNet reports only device-wide memory, so the four terms cannot be read
-  off separately.
+In any training step on a 3-hidden-layer MLP ($1024 \to 4096 \to 4096 \to 4096 \to 10$, $4N \approx 144\text{ MiB}$ weights, batch size $B = 4096$), GPU memory holds four distinct components:
+
+- **Static parameter state ($16N \approx 576\text{ MiB}$):** Weights ($4N = 144\text{ MiB}$), gradients ($4N = 144\text{ MiB}$, allocated at `initialize()`), and Adam's two running moments ($8N = 288\text{ MiB}$, allocated on step 1).
+- **Dynamic forward activations ($\approx 192\text{ MiB}$):** Each $4096 \times 4096$ `fp32` hidden-layer output occupies $64\text{ MiB}$ ($192\text{ MiB}$ across three hidden layers), scaling linearly with batch size $B$.
+- **Peak memory occurs at the forward/backward transition** before backward passes free cached activations.
 :::
 
-::: {.slide title="Will It Fit? The 8B Model on a 24 GB GPU"}
-[Running example]{.kicker}
+::: {.slide title="Will the 8B Model Fit on a 24 GB or 80 GB GPU?"}
+[Static vs. Dynamic Memory Budgets]{.kicker}
 
-| what is stored | bytes per parameter | 8B parameters |
-|---|---:|---:|
-| bf16 weights (inference) | 2 | 16 GB |
-| fp32 weights | 4 | 32 GB |
-| + gradients | 4 | 64 GB |
-| + Adam's two running averages | 8 | 128 GB |
+Combining our parameter accounting (§5.2) with activation memory explains when a single GPU suffices and when multi-GPU sharding or activation checkpointing is required:
 
-- Inference fits; Adam training needs more than five such GPUs before
-  activations.
-- Activations scale with minibatch × sequence length × width: reduce the
-  minibatch first, then checkpoint.
+| Execution Mode | Static State per Parameter | 8B Model Static Floor | Fits on 24 GB GPU? | Fits on 80 GB GPU? |
+|:---|---:|---:|:---:|:---:|
+| **`bf16` Inference** | $2\text{ B}$ (weights only) | $16\text{ GB}$ | **Yes** (`8 GB` for KV/acts) | **Yes** |
+| **`fp32` Inference** | $4\text{ B}$ (weights only) | $32\text{ GB}$ | No | **Yes** |
+| **Head-Only Fine-Tuning** | $4\text{ B all} + 12\text{ B head}$ | $\approx 38.3\text{ GB}$ | No | **Yes** |
+| **Full `fp32` Adam Training** | $16\text{ B}$ ($\mathbf{w}, \mathbf{g}, \mathbf{m}, \mathbf{v}$) | $128\text{ GB}$ | No | No ($\ge 2$ GPUs) |
+
+- **When activations trigger OOM:** Even when static state fits, activation memory grows as $O(K \cdot B \cdot T \cdot d)$—Shrink minibatch size $B$ first, then enable **activation checkpointing**.
 :::
 
-::: {.slide title="Checkpointing Stores Segment Inputs and Recomputes the Rest"}
-[Activation checkpointing]{.kicker}
+::: {.slide title="Activation Checkpointing: O(√K) Memory for 1 Extra Pass"}
+[Trading Compute for Activation Memory]{.kicker}
 
-![](../img/bg-activation-checkpoint.svg){width=78%}
+Standard backpropagation caches all $K$ layer activations during the forward sweep. **Activation checkpointing** (Chen et al., 2016) saves only segment boundaries every $s$ layers and recomputes interior activations on the fly during `backward`:
 
-$K$ layers in segments of $s$: store $K/s + s$ layer activations, smallest at
-$s = \sqrt{K}$. The cost is one extra forward pass: by a crude count of
-passes, a third more work.
+![](../img/bg-activation-checkpoint.svg){.nostretch width=82%}
+
+- **$O(K) \to O(\sqrt{K})$ peak activations:** Partitioning $K$ layers into segments of size $s$ holds $K/s$ boundary tensors plus $s$ live interior tensors ($K/s + s$ total, minimized at $s = \sqrt{K}$ with $2\sqrt{K}$ tensors).
+- **Bounded compute overhead:** Recomputing each segment adds one extra forward pass ($\sim 25\text{--}33\%$ extra step time).
 :::
 
-::: {.slide title="Sixteen Blocks: Less than Half the Step Memory for a Quarter More Time" except="mxnet"}
-[Activation checkpointing]{.kicker}
+::: {.slide title="Implementing Per-Segment Activation Checkpointing" except="mxnet"}
+[Checkpointing a Stack of Residual Blocks]{.kicker}
 
-16 residual blocks of width 1024, minibatch 8192, segments of 4; memory of
-one step beyond parameters and input:
+Grouping a stack of `ResidualBlock` modules into segments of `segment_size = 4` and wrapping each segment in `checkpoint` / `tf.recompute_grad` / `jax.checkpoint` produces the exact same gradients as standard backpropagation:
+
+@-gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1
+
+@gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2
+:::
+
+::: {.slide title="Measured: >50% Less Step Memory for ~25% More Time" except="mxnet"}
+[16 Residual Blocks on a GPU]{.kicker}
+
+On a 16-block residual stack ($d = 1024$, batch size $B = 8192$, four-block segments), activation checkpointing cuts peak step memory from $\sim 1.1\text{ GiB}$ down to $\sim 0.45\text{ GiB}$:
 
 @!gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3
-
-Checkpointed gradients equal the ordinary ones.
 :::
 
-::: {.slide title="MXNet Has No Per-Segment Checkpointing; the Minibatch Size Is the Control" only="mxnet"}
-[Activation checkpointing]{.kicker}
+::: {.slide title="Controlling Activation Memory Without Per-Segment APIs" only="mxnet"}
+[Controlling Activation Footprint]{.kicker}
 
-- Neither `autograd` nor Gluon can recompute a chosen segment during the
-  backward pass.
-- `MXNET_BACKWARD_DO_MIRROR=1` recomputes some results of a hybridized
-  graph, globally, without control over which ones.
-- Per-segment checkpointing of $K$ blocks in segments of about $\sqrt{K}$
-  keeps only the segment inputs and one segment's activations, for one
-  extra forward pass.
+Because MXNet provides only a global graph-mirroring flag (`MXNET_BACKWARD_DO_MIRROR=1`) rather than a per-segment Python checkpoint function, we control activation memory through two levers:
+
+- **Linear batch-size scaling (accumulated gradients):** Halving the physical minibatch size $B$ immediately halves activation memory; accumulating gradients over 2 half-batches recovers the exact effective batch size $B$.
+- **Analytical $\sqrt{K}$ checkpointing rule:** On frameworks with per-segment checkpointing (`torch.utils.checkpoint`, `tf.recompute_grad`, `jax.checkpoint`), splitting $K = 16$ blocks into $s = \sqrt{16} = 4$-block segments cuts stored activations from $16$ blocks to $16/4 + 4 = 8$ blocks ($\sim 1.1\text{ GiB} \to 0.45\text{ GiB}$) for $\sim 25\%$ extra compute.
 :::
 
-::: {.slide title="Check: How Many Activations at the Peak?"}
-[Check]{.kicker}
+::: {.slide title="Wiring Automatic Device Placement Into d2l.Trainer"}
+[The Device-Aware Trainer]{.kicker}
 
-Sixteen layers. How many layer activations does the backward pass hold
-with segments of 1, 4, and 16 layers?
+Our `d2l.Trainer` places the model on `self.gpus[0]` once in `prepare_model` and transfers each minibatch onto `self.gpus[0]` in `prepare_batch`, falling back to CPU when `num_gpus=0` or no GPU exists:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $K/s + s$: $16 + 1 = 17$ for $s = 1$, $4 + 4 = 8$ for $s = 4$,
-$1 + 16 = 17$ for $s = 16$. Segments of $\sqrt{16} = 4$ layers halve the
-memory; the extremes save nothing.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
-
-[Device-Aware Trainer]{.dtitle}
-
-[the model once · each minibatch per step]{.dsub}
-:::
-:::
-
-::: {.slide title="A Small Model Gains Little from the GPU"}
-[Device-aware Trainer]{.kicker}
-
-`Trainer(num_gpus=...)` moves the model once and each minibatch per step.
-One epoch of Fashion-MNIST, after one epoch of warm-up:
+@-gpus-devices-memory-the-trainer-now-with-devices-1
 
 @!gpus-devices-memory-the-trainer-now-with-devices-4
 
-- On the GPU an epoch runs at most a few times as fast, against more than a
-  hundred times for one large matrix product.
-- Matrices of at most $784 \times 256$ entries leave the GPU idle; loading
-  data and launching many small operations take the time.
-- A GPU pays off when large matrix products dominate the work.
+- **Why tiny models see modest GPU speedups:** On a 256-wide Fashion-MNIST MLP, matrices are at most $784 \times 256$, so data loading and Python kernel-launch latency dominate; GPUs deliver $100\times$ speedups once wide layers, convolutions, and attention dominate compute.
 :::
 
-::: {.slide title="Recap" only="mxnet"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Asynchronous Queues & Activation Memory"}
+[Concept Check]{.kicker}
 
-- **Placement:** every array has a device; copy explicitly, once, at the
-  boundary; `try_gpu` falls back to the CPU.
-- **Asynchrony:** Python queues 32 large products in milliseconds; time with
-  warm-up, waits, and repetitions.
-- **Memory:** 16 bytes per parameter for Adam in fp32, so the 8B model needs
-  128 GB, plus activations that scale with the minibatch.
-- **Checkpointing:** no per-segment API in MXNet; the minibatch size
-  controls activation memory.
-- **Trainer:** model once, minibatches per step, CPU fallback.
+Test your systems intuition on these three scenarios:
 
-**Next:** when two runs of the same code give the same result.
+1. A training loop executes `if loss < best_loss: best_loss = loss` on every minibatch step on a GPU. Why does this single `if` statement hurt GPU utilization, and how should you rewrite it?
+2. A deep transformer stacks $K = 36$ identical blocks. How many block-input activation tensors are held at peak during the backward pass without checkpointing ($s = 36$), with every-block checkpointing ($s = 1$), and with optimal segment size $s = \sqrt{36} = 6$?
+3. When you run `del tensor` on a `2 GiB` GPU tensor in PyTorch, `torch.cuda.memory_allocated()` drops by `2 GiB`, but `nvidia-smi` shows zero change. Why?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Evaluating a Python `bool` (`loss < best_loss`) forces a CPU–GPU synchronization on every step**, draining the command queue. Fix: update `best_loss = torch.minimum(best_loss, loss.detach())` on-device and read `.item()` once per epoch.
+2. **Peak stored block activations ($K/s + s$):** Uncheckpointed holds $36$; $s = 1$ holds $36/1 + 1 = 37$; optimal $s = 6$ holds only $36/6 + 6 = 12$ ($3\times$ reduction!).
+3. **The caching allocator keeps freed slabs in its reserved pool** (`memory_reserved()`) for future tensors without returning them to the CUDA driver (`nvidia-smi`).
+:::
 :::
 
-::: {.slide title="Recap" except="mxnet"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: GPUs, Devices, and Memory Budgets"}
+[Key Takeaways]{.kicker}
 
-- **Placement:** every array has a device; copy explicitly, once, at the
-  boundary; `try_gpu` falls back to the CPU.
-- **Asynchrony:** Python queues 32 large products in milliseconds; time with
-  warm-up, waits, and repetitions.
-- **Memory:** 16 bytes per parameter for Adam in fp32, so the 8B model needs
-  128 GB, plus activations that scale with the minibatch.
-- **Checkpointing:** 16 blocks, segments of 4: step memory from about 1.1 GiB
-  to 0.4 to 0.5 GiB, for about a quarter more time.
-- **Trainer:** model once, minibatches per step, CPU fallback.
-
-**Next:** when two runs of the same code give the same result.
+| Systems Pillar | Core Mechanism / Formula | Best-Practice Rule |
+|:---|:---|:---|
+| **Device placement** | `net.to(gpu)` once; `batch.to(gpu)` per step | Move model *before* building optimizer; never copy inside inner loops |
+| **Async command queue** | Python enqueues kernels and returns immediately | Avoid per-step `.item()` / `print` sync bubbles; accumulate metrics on-device |
+| **GPU benchmarking** | Warmup $+$ sync before start $+$ sync before stop | Without device synchronization, timers measure Python queue submission |
+| **3 memory views** | Live allocated $\subseteq$ caching allocator pool $\subseteq$ driver (`nvidia-smi`) | `del` frees live bytes to the caching pool; never call `empty_cache()` per step |
+| **Activation checkpointing** | Save every $s = \sqrt{K}$ segment boundary, recompute interior | Cuts activation memory from $O(K)$ to $O(\sqrt{K})$ for $\sim 25\text{--}33\%$ extra time |
 :::

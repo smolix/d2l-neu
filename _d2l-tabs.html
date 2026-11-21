@@ -43,10 +43,35 @@
     } catch(e) {}
   }
 
-  function syncTabs(selectedName) {
-    if (!selectedName) return;
+  // The framework to show on this page. A page without the reader's
+  // framework (the Advanced part carries PyTorch and JAX only) falls back to
+  // the first framework it has, in FALLBACK_ORDER; otherwise a reader who
+  // chose TensorFlow or MXNet on a Basics page would see no code at all.
+  var FALLBACK_ORDER = ['PyTorch', 'JAX', 'TensorFlow', 'MXNet'];
 
-    document.querySelectorAll('.panel-tabset[data-group="' + GROUP + '"]').forEach(function(tabset) {
+  function effectiveFramework(selectedName, tabsets) {
+    var present = {};
+    tabsets.forEach(function(tabset) {
+      tabset.querySelectorAll('.nav-link').forEach(function(link) {
+        present[link.textContent.trim()] = true;
+      });
+    });
+    if (present[selectedName]) return selectedName;
+    for (var i = 0; i < FALLBACK_ORDER.length; i++) {
+      if (present[FALLBACK_ORDER[i]]) return FALLBACK_ORDER[i];
+    }
+    return selectedName;
+  }
+
+  // persist: store the choice (a click); a page load restores the stored
+  // choice without overwriting it, so a fallback on a PyTorch/JAX page does
+  // not change what the reader sees on the four-framework pages.
+  function syncTabs(selectedName, persist) {
+    if (!selectedName) return;
+    var tabsets = document.querySelectorAll('.panel-tabset[data-group="' + GROUP + '"]');
+    var shownName = effectiveFramework(selectedName, tabsets);
+
+    tabsets.forEach(function(tabset) {
       var navLinks = tabset.querySelectorAll('.nav-link');
       var hasMatch = false;
 
@@ -54,7 +79,7 @@
         var panelId = link.getAttribute('aria-controls');
         var panel = panelId ? document.getElementById(panelId) : null;
 
-        if (link.textContent.trim() === selectedName) {
+        if (link.textContent.trim() === shownName) {
           hasMatch = true;
           link.classList.add('active');
           link.setAttribute('aria-selected', 'true');
@@ -80,7 +105,7 @@
       }
     });
 
-    setStored(selectedName);
+    if (persist) setStored(selectedName);
   }
 
   function init() {
@@ -92,7 +117,7 @@
       tabset.querySelectorAll('.nav-link').forEach(function(link) {
         link.addEventListener('click', function(e) {
           e.preventDefault();  // prevent Bootstrap's default single-tabset handling
-          syncTabs(link.textContent.trim());
+          syncTabs(link.textContent.trim(), true);
         });
       });
     });
@@ -109,8 +134,30 @@
       initial = firstActive ? firstActive.textContent.trim() : null;
     }
     if (initial) {
-      syncTabs(initial);
+      // A ?framework= request is an explicit choice; a stored one is kept as is.
+      syncTabs(initial, !!requested);
     }
+
+    // Quarto's own tabsets.js reads the same storage key on `pageshow` and
+    // toggles every framework tabset to the stored name, with no fallback:
+    // on a PyTorch/JAX page with TensorFlow stored that deactivates every
+    // pane and hides all code. Re-apply our choice after it runs.
+    window.addEventListener('pageshow', function() {
+      setTimeout(function() {
+        var now = normalizeFramework(requested || getStored()[GROUP]) || initial;
+        if (now) syncTabs(now, false);
+      }, 0);
+    });
+
+    // Cross-tab sync: update this page's visible tabs (without overwriting the
+    // stored preference if this page has to fall back) before the Slides and
+    // notebook-launcher storage listeners inspect .nav-link.active.
+    window.addEventListener('storage', function(e) {
+      if (e.key === STORAGE_KEY) {
+        var next = normalizeFramework(getStored()[GROUP]);
+        if (next) syncTabs(next, false);
+      }
+    });
   }
 
   // Run when DOM is ready
@@ -329,20 +376,35 @@
     return Math.max(0, segs.length - 1);
   }
 
+  var FALLBACK_ORDER = ['pytorch', 'jax', 'tensorflow', 'mxnet'];
+
   function getCurrentFw() {
-    try {
-      var data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
-      var name = DISPLAY_TO_FW[data.framework];
-      if (name) return name;
-    } catch(_) {}
-    // Fall back to the active tab on the page if any.
+    // A single-framework page (SINGLE_FRAMEWORK_PARTS in
+    // tools/d2l_preprocess.py) names its one framework.
+    var solo = document.getElementById('d2l-single-framework');
+    if (solo && FW_DISPLAY[solo.dataset.framework]) return solo.dataset.framework;
+    // Follow the active tab on the page when framework tabsets are present
+    // (already resolved by syncTabs's effectiveFramework fallback).
     var active = document.querySelector(
       '.panel-tabset[data-group="framework"] .nav-link.active');
     if (active) {
       var fw = DISPLAY_TO_FW[active.textContent.trim()];
       if (fw) return fw;
     }
+    try {
+      var data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
+      var name = DISPLAY_TO_FW[data.framework];
+      if (name) return name;
+    } catch(_) {}
     return 'pytorch';
+  }
+
+  function effectiveSlideFw(fw) {
+    if (available.indexOf(fw) !== -1) return fw;
+    for (var i = 0; i < FALLBACK_ORDER.length; i++) {
+      if (available.indexOf(FALLBACK_ORDER[i]) !== -1) return FALLBACK_ORDER[i];
+    }
+    return fw;
   }
 
   function buildUrl(fw, key) {
@@ -358,7 +420,7 @@
 
   function update() {
     if (!buttonEl) return;
-    var fw = getCurrentFw();
+    var fw = effectiveSlideFw(getCurrentFw());
     var link = buttonEl.querySelector('a');
     var fwLabel = FW_DISPLAY[fw] || fw;
     var fwSpan = link.querySelector('.d2l-toc-slides-fw');

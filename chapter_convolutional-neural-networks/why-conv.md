@@ -367,255 +367,241 @@ mappings for strong generalization on spatially structured data.
 ::: {.cover}
 [Dive into Deep Learning · §6.1]{.kicker}
 
-From Fully Connected Layers to Convolutions<br>**translation equivariance · locality · weight sharing · channels**
+From Fully Connected Layers to Convolutions<br>**translation equivariance · locality · weight sharing · cross-correlation · channels**
 :::
 :::
 
-::: {.slide title="A Dense Layer on a Megapixel Photo Needs a Billion Weights"}
-[The problem]{.kicker}
+::: {.slide title="Why Dense Layers Fail on High-Resolution Images"}
+[The Scaling Bottleneck]{.kicker}
 
-Tell cats from dogs in one-megapixel grayscale photographs:
+Flattening a 2D image into an unstructured 1D vector forces a fully connected layer to learn separate weights for every input–output pixel pair:
 
-- Each input has $10^6$ pixels. A hidden layer of only 1000 units needs
-  $10^6 \times 10^3 = 10^9$ weights: 4 GB in float32.
-- Keep the hidden layer at full resolution ($1000 \times 1000$) and it
-  needs $10^{12}$.
-- No collection of labeled pet photos can determine that many numbers.
+- **1-megapixel grayscale to 1,000 hidden units:** $10^6 \times 10^3 = 10^9$ weights (**4 GB** in `float32`) for a single narrow hidden layer.
+- **Full-resolution 1-megapixel grayscale grid:** Mapping $1000 \times 1000 \to 1000 \times 1000$ requires $10^6 \times 10^6 = 10^{12}$ weights (**4 TB** in `float32`; or $9 \times 10^8$ weights = **3.6 GB** for a $1000 \times 1000$ RGB image into just 300 hidden units, and **36 TB** for a full-resolution 3-channel map).
+- **Even on $28 \times 28$ Fashion-MNIST:** Mapping a $28 \times 28$ grid to an equal-sized $28 \times 28$ grid needs $784^2 = 614{,}656$ weights per channel.
 
-::: {.d2l-note}
-A dense layer ignores which pixels are neighbors. Images are not arbitrary
-vectors: build that knowledge into the layer.
+::: {.d2l-note .warn}
+No labeled dataset could ever fit trillions of parameters without catastrophic overfitting—and worse, a dense layer discards which pixels are spatial neighbors.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Visual Perception Relies on Two Spatial Symmetries"}
+[The "Where's Waldo" Intuition]{.kicker}
 
-- state translation equivariance and invariance with a shift operator;
-- prove that equivariance forces one kernel shared by all locations;
-- count the weights at each step: $10^{12} \to 4 \times 10^6 \to (2\Delta+1)^2$;
-- write the convolutional layer with input and output channels and count
-  its parameters;
-- explain why deep learning's "convolution" is a cross-correlation.
-
-**Running example:** Fashion-MNIST, model against model. The MLP of the
-Multilayer Perceptron chapter has 203,530 parameters; its first layer alone
-has 200,704 weights.
-:::
-
-::: {.slide title="Constraints on the MLP Come First, Code Follows"}
-[Where this fits]{.kicker}
+Finding a target pattern in a cluttered visual scene illustrates the two geometric principles that govern early vision layers:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| **From Fully Connected Layers to Convolutions** | **locality and translation equivariance give convolution** |
-| Convolutions for Images | cross-correlation, learning a kernel, receptive fields |
-| Padding, Stride, and Dilation | output size and how far each unit sees |
-| Multiple Input and Multiple Output Channels | channels, 1 × 1 convolutions, cost |
-| Pooling | downsampling, tolerance to small shifts, global pooling |
-| LeNet | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
+- **Position-independent appearance:** What Waldo looks like does not depend on where he stands, so a single local template can sweep across every patch of the scene.
+- **Translation equivariance:** Shifting the input image shifts the detector's response map by the exact same offset.
+- **Locality:** Early feature detectors need only inspect a small neighborhood around each pixel, leaving deeper layers to aggregate global context.
 :::
 
-::: {.col .narrow}
-- **Uses:** the fully connected layer and the MLP; parameter counting.
-- **Skips:** code (next deck); borders, padding, and stride.
+::: {.col .fig}
+![](../img/waldo-football.jpg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Waldo Looks the Same Wherever He Stands"}
-[Equivariance]{.kicker}
+::: {.slide title="Translation Equivariance vs. Translation Invariance"}
+[Formalizing Spatial Symmetries]{.kicker}
 
-![](../img/waldo-football.jpg){width=46%}
+Let the shift operator $T_v$ translate a 2D image by offset $v = (v_1, v_2)$, so that $[T_v \mathbf{X}]_{i,j} = [\mathbf{X}]_{i-v_1, j-v_2}$:
 
-Score every patch with the **same** Waldo detector. Detection and
-segmentation systems work this way.
+$$\begin{aligned}
+f(T_v \mathbf{X}) &= T_v f(\mathbf{X}) && \textrm{(translation equivariance)}, \\
+f(T_v \mathbf{X}) &= f(\mathbf{X}) && \textrm{(translation invariance)}.
+\end{aligned}$$
 
-- **Translation equivariance:** shift the input, the score map shifts with it.
-- **Locality:** early layers look at small patches only.
+- **Equivariant feature maps ($f(T_v \mathbf{X}) = T_v f(\mathbf{X})$):** Preserve *where* a pattern occurs so object detectors and segmentation networks can localize targets.
+- **Invariant classification heads ($f(T_v \mathbf{X}) = f(\mathbf{X})$):** Discard location to answer whole-image questions (*"Is Waldo in the picture?"*), achieved by aggregating an equivariant map across space (e.g., via global max or average pooling).
 :::
 
-::: {.slide title="Equivariant Layers Move with the Input; Invariant Heads Do Not"}
-[Equivariance]{.kicker}
+::: {.slide title="Equivariance as a Commuting Diagram"}
+[Shift Then Filter Equals Filter Then Shift]{.kicker}
 
-Shift by $v$: $[T_v \mathbf{X}]_{i,j} = [\mathbf{X}]_{i-v_1, j-v_2}$.
+When $f$ scores every $2 \times 2$ window against a $2 \times 2$ patch of ones, both paths around the diagram produce the identical output grid:
 
-$$\begin{aligned} f(T_v \mathbf{X}) &= T_v f(\mathbf{X}) && \textrm{(equivariance)}\\ f(T_v \mathbf{X}) &= f(\mathbf{X}) && \textrm{(invariance)}\end{aligned}$$
+![](../img/why-conv-equivariance.svg){.nostretch width=68% fig-align="center"}
 
-- The score map should be equivariant: it keeps *where* Waldo is.
-- "Is Waldo in the scene?" should be invariant: aggregate the map, e.g.,
-  take its maximum.
+::: {.d2l-note .rule}
+**Commutation invariant:** Shifting the input by $v = (3, 2)$ and then applying the filter $f$ (bottom path) yields the exact same response map as applying $f$ first and shifting the output by $v$ (right path).
+:::
 :::
 
-::: {.slide title="Shift Then Compare Equals Compare Then Shift"}
-[Equivariance]{.kicker}
+::: {.slide title="1D Intuition: From 64 Weights to 15, Then to 3"}
+[Toeplitz Structure & Locality in 1D]{.kicker}
 
-![](../img/why-conv-equivariance.svg){width=62%}
+On an 8-sample 1D signal mapped to 8 hidden units ($h_i = u_i + \sum_k W_{i,k} x_k$), each geometric constraint prunes the $8 \times 8$ weight matrix $\mathbf{W}$:
 
-$f$ compares a $2\times 2$ patch with every window; the response is 4 where
-they match. Shift by $v = (3, 2)$.
+![](../img/why-conv-weight-sharing.svg){.nostretch width=92% fig-align="center"}
+
+- **(a) Fully connected (64 weights):** Every entry $W_{i,k}$ is independent.
+- **(b) Equivariant / Toeplitz (15 weights):** Shifting a unit impulse at $k$ to $k+1$ shifts the output down one row ($W_{i+1,k+1} = W_{i,k}$), making $\mathbf{W}$ constant along each diagonal $a = k - i \in \{-7,\dots,7\}$.
+- **(c) Equivariant + Local (3 weights):** Restricting each unit to neighbors within distance $\Delta = 1$ zeroes out all diagonals with $|a| > 1$, leaving one 3-tap kernel swept across every row.
+:::
+
+::: {.slide title="Re-Indexing a 2D Dense Layer by Relative Offsets"}
+[From 4D Weight Tensors to Spatial Offsets]{.kicker}
+
+Connecting every pixel $[\mathbf{X}]_{k,l}$ of a 2D image to every unit $[\mathbf{H}]_{i,j}$ of a 2D hidden map requires a 4th-order weight tensor $\mathsf{W}$ and a 2D bias matrix $\mathbf{U}$:
+
+$$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_k \sum_l [\mathsf{W}]_{i, j, k, l} [\mathbf{X}]_{k, l}$$
+
+- **Re-index by relative offset $(a, b) = (k - i, l - j)$:** Define $[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$ so the sum ranges over where the input pixel sits *relative* to output unit $(i, j)$:
+
+$$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b} [\mathbf{X}]_{i+a, j+b}$$
+
+- **No reduction yet:** This change of variables merely reads $\mathsf{W}$ along its spatial diagonals; a $1000 \times 1000 \to 1000 \times 1000$ layer still has $10^{12}$ free weights.
+:::
+
+::: {.slide title="Proposition: Shared Weights Yield Equivariance"}
+[Sufficiency Proof on the Infinite Grid]{.kicker}
+
+Embed the finite image on an infinite 2D grid padded with zeros outside its support so shifts never clip the signal at a boundary.
+
+- **Claim (Sufficiency):** If the bias $[\mathbf{U}]_{i,j} = u$ and offset weights $[\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ do not depend on location $(i, j)$, the layer is translation equivariant for every shift $v = (v_1, v_2)$.
+- **One-line proof:** Evaluate the layer on the shifted input $[T_v \mathbf{X}]_{i+a, j+b} = [\mathbf{X}]_{i - v_1 + a, j - v_2 + b}$:
+
+$$[f(T_v \mathbf{X})]_{i,j} = u + \sum_a \sum_b [\mathbf{K}]_{a,b} [\mathbf{X}]_{i - v_1 + a, j - v_2 + b} = [f(\mathbf{X})]_{i - v_1, j - v_2} = [T_v f(\mathbf{X})]_{i,j}$$
 
 ::: {.d2l-note}
-Both paths around the square end in the same map: the response moves with
-the patch.
+Why doesn't the converse fail? Could a clever location-dependent tensor $\mathsf{V}$ also commute with shifts? The next slide proves the answer is **no**.
 :::
 :::
 
-::: {.slide title="In One Dimension, Two Constraints Shrink 64 Weights to 15, Then to 3"}
-[Constraints]{.kicker}
+::: {.slide title="Converse Proof: Equivariance Forces Weight Sharing"}
+[Necessity Proof via Unit Impulse Probing]{.kicker}
 
-![](../img/why-conv-weight-sharing.svg){width=92%}
+Assume $f(T_v \mathbf{X}) = T_v f(\mathbf{X})$ holds for every input $\mathbf{X}$ and shift $v$ on the infinite grid:
 
-8 samples in, 8 hidden units out; equal colors are equal weights. A single 1
-at sample $k$ returns column $k$. Equivariance: each column is its left
-neighbor moved down by one. Locality: only offsets $-1, 0, 1$.
+1. **Constant bias ($[\mathbf{U}]_{i,j} = u$):** The all-zero image $\mathbf{0}$ satisfies $T_v \mathbf{0} = \mathbf{0}$ and maps to $f(\mathbf{0}) = \mathbf{U}$, forcing $\mathbf{U} = T_v \mathbf{U}$ for all shifts $v$. Thus every entry of $\mathbf{U}$ equals a single scalar $u$.
+2. **Impulse probing:** Feed an image with a single $1$ at pixel $(k, l)$ and $0$ elsewhere. Its linear response at $(i, j)$ is $[\mathsf{W}]_{i,j,k,l}$. Shifting the impulse by $v$ moves it to $(k+v_1, l+v_2)$, so equivariance requires:
+   $$[\mathsf{W}]_{i, j, k+v_1, l+v_2} = [\mathsf{W}]_{i-v_1, j-v_2, k, l}$$
+3. **Collapse to a single kernel $\mathbf{K}$:** Substitute $(k, l) = (a, b)$ and $v = (i, j)$:
+   $$[\mathsf{V}]_{i,j,a,b} = [\mathsf{W}]_{i, j, i+a, j+b} = [\mathsf{W}]_{0, 0, a, b} \equiv [\mathbf{K}]_{a,b}$$
+
+::: {.d2l-note .rule}
+**Equivariance theorem:** A linear layer on the grid is translation equivariant $\iff$ it shares one kernel $\mathbf{K}$ and one scalar bias $u$ across all spatial positions ($10^{12}$ weights $\to$ $1999^2 \approx 4 \times 10^6$).
+:::
 :::
 
-::: {.slide title="On an Image, the Same Layer Has a Fourth-Order Weight Tensor"}
-[Constraints]{.kicker}
+::: {.slide title="Enforcing Locality Yields the Convolutional Layer"}
+[Pruning Distant Offsets to a $(2\Delta+1) \times (2\Delta+1)$ Window]{.kicker}
 
-$$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}$$
+Even with weight sharing, a $1999 \times 1999$ kernel connects every unit to pixels clear across a megapixel image. Enforcing **locality** sets $[\mathbf{K}]_{a,b} = 0$ whenever $|a| > \Delta$ or $|b| > \Delta$:
 
-- $(i, j)$: hidden unit; $(a, b)$: offset of the pixel from it.
-- $\mathsf{V}$: one weight per hidden unit and offset; $\mathbf{U}$: one
-  bias per hidden unit.
-- $1000 \times 1000 \to 1000 \times 1000$: $10^{12}$ weights.
+$$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathbf{K}]_{a, b} [\mathbf{X}]_{i+a, j+b}$$
+
+| Layer Type ($1000 \times 1000 \to 1000 \times 1000$) | Free Weights | `float32` Memory |
+|---|--:|--:|
+| Fully connected ($\mathsf{V}_{i,j,a,b}$) | $10^{12}$ | $4\textrm{ TB}$ |
+| Translation equivariant ($\mathbf{K}_{a,b}$, full support) | $1999^2 \approx 4 \times 10^6$ | $16\textrm{ MB}$ |
+| Equivariant + Local ($\Delta = 1$, $3 \times 3$ kernel) | $(2\Delta+1)^2 = 9$ | $36\textrm{ B}$ |
+| Equivariant + Local ($\Delta = 5$, $11 \times 11$ kernel) | $(2\Delta+1)^2 = 121$ | $484\textrm{ B}$ |
 :::
 
-::: {.slide title="I. Shared Weights Make the Layer Equivariant"}
-[Constraints]{.kicker}
+::: {.slide title="Inductive Bias: Sample Efficiency vs. Expressivity"}
+[What We Gained and What We Traded Away]{.kicker}
 
-Suppose $[\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ and
-$[\mathbf{U}]_{i,j} = u$. Then
+Slashing $10^{12}$ parameters down to $(2\Delta+1)^2$ is not a free lunch—it restricts the hypothesis class to local, translation-equivariant functions:
 
-$$[f(T_v \mathbf{X})]_{i,j} = u + \sum_{a,b} [\mathbf{K}]_{a,b} [\mathbf{X}]_{i - v_1 + a, j - v_2 + b} = [f(\mathbf{X})]_{i - v_1, j - v_2}.$$
-
-The right side is $[T_v f(\mathbf{X})]_{i,j}$: the output shifted by $v$.
+- **Why it helps on natural images:** Edges, corners, and textures obey locality and shift equivariance, so weight sharing pools statistical evidence across all $H \times W$ spatial locations and prevents overfitting on small datasets.
+- **What a single layer cannot do:** Because weights are tied across space, a single convolutional layer cannot distinguish identical local patches by absolute coordinates (e.g., a dark oval near the top of a passport photo is an eye, whereas an identical dark oval lower down is a nostril).
+- **How deep CNNs recover global context:** Stacking multiple convolutional layers with nonlinearities and downsampling widens the effective receptive field so deeper units integrate relative positions across the whole object.
 :::
 
-::: {.slide title="II. A Single Bright Pixel Shows That Weights Must Be Shared"}
-[Constraints]{.kicker}
+::: {.slide title="Mathematical Convolution vs. Cross-Correlation"}
+[Why Deep Learning Libraries Omit the Kernel Flip]{.kicker}
 
-Infinite grid, zeros outside the image; the layer is equivariant for every
-shift $v$.
+In signal processing and mathematics, discrete 2D **convolution** flips the kernel along both axes before sliding it across the input:
 
-- Zero image: $f(\mathbf{0}) = \mathbf{U}$ and $T_v \mathbf{0} = \mathbf{0}$,
-  so $\mathbf{U} = T_v \mathbf{U}$: the bias is constant.
-- Image with a 1 at $(k, l)$: the response at $(i, j)$ is
-  $[\mathsf{W}]_{i,j,k,l}$, and equivariance gives
-  $[\mathsf{W}]_{i,j,k+v_1,l+v_2} = [\mathsf{W}]_{i-v_1,j-v_2,k,l}$.
-- Take $(k, l) = (a, b)$, $v = (i, j)$:
-  $[\mathsf{V}]_{i,j,a,b} = [\mathsf{W}]_{0,0,a,b}$.
+$$(f * g)(i, j) = \sum_a \sum_b f(a, b)\, g(i - a, j - b) \qquad \textrm{(mathematical convolution)}$$
+
+- **Cross-correlation uses $(i+a, j+b)$:** Defining the flipped kernel $[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$ connects our derived layer directly to mathematical convolution:
+
+$$\sum_a \sum_b [\mathbf{K}]_{a, b} [\mathbf{X}]_{i+a, j+b} = \sum_a \sum_b [\mathbf{K}']_{a, b} [\mathbf{X}]_{i-a, j-b} = (\mathbf{K}' * \mathbf{X})(i, j)$$
 
 ::: {.d2l-note}
-Equivariant $\iff$ one kernel $\mathbf{K}$ and one bias $u$ everywhere.
+**Practical equivalence:** Because $\mathbf{K}$ is learned from data, learning $\mathbf{K}$ under cross-correlation parameterizes the exact same set of functions as learning $\mathbf{K}'$ under convolution. All major frameworks implement **cross-correlation** and call it `Conv2d`.
 :::
 :::
 
-::: {.slide title="Locality Leaves (2Δ+1)² Weights"}
-[Constraints]{.kicker}
+::: {.slide title="From Grayscale Grids to 3D Channel Tensors"}
+[Multi-Channel Inputs and Feature Maps]{.kicker}
 
-Set $[\mathbf{K}]_{a,b} = 0$ for $|a| > \Delta$ or $|b| > \Delta$:
+Real images carry multiple values per pixel (e.g., Red, Green, Blue), and hidden layers must detect dozens of distinct visual patterns in parallel:
 
-$$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathbf{K}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
-
-- A **convolutional layer**; $\mathbf{K}$ is its *kernel* or *filter*.
-- $\Delta = 1$: 9 weights; $\Delta = 5$: 121; the image keeps its size.
-- $10^{12} \to 4 \times 10^6 \to$ a few hundred.
+::: {.cols .vc}
+::: {.col}
+- **Input tensor $\mathsf{X} \in \mathbb{R}^{c_\textrm{i} \times H \times W}$:** Attaches a $c_\textrm{i}$-dimensional vector to each spatial pixel $(i, j)$ ($c_\textrm{i} = 3$ for RGB).
+- **Single-channel limitation:** One kernel produces only one score map (like the single Waldo activation map on the right).
+- **Output tensor $\mathsf{H} \in \mathbb{R}^{c_\textrm{o} \times H \times W}$:** Stacks $c_\textrm{o}$ parallel **feature maps**, each detecting a different learned pattern (oriented edges, color contrasts, textures).
 :::
 
-::: {.slide title="Check: How Many Weights at 28 × 28?"}
-[Check]{.kicker}
+::: {.col .fig}
+![](../img/waldo-mask.jpg){.nostretch width=100%}
+:::
+:::
+:::
 
-A Fashion-MNIST image, $28 \times 28$, mapped to a $28 \times 28$ hidden
-representation. Count the weights of the fully connected layer, of the
-shared layer, and of a local layer with a $5 \times 5$ kernel.
+::: {.slide title="The 4D Convolutional Kernel and Parameter Count"}
+[All-to-All Channel Wiring with Spatial Weight Sharing]{.kicker}
 
-::: {.fragment .fade-up}
+To map $c_\textrm{i}$ input channels to $c_\textrm{o}$ output channels, each output channel $o$ has its own bias $u_o$ and its own $c_\textrm{i} \times (2\Delta+1) \times (2\Delta+1)$ bank of spatial filters:
+
+$$[\mathsf{H}]_{o, i, j} = u_o + \sum_{c=1}^{c_\textrm{i}} \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathsf{K}]_{o, c, a, b} [\mathsf{X}]_{c, i+a, j+b}$$
+
+- **4th-order kernel tensor $\mathsf{K}$:** Shape $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$ where $k_\textrm{h} = k_\textrm{w} = 2\Delta + 1$.
+- **Exact parameter count:**
+  $$\textrm{Parameters} = c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$$
+- **Resolution independence:** A $3 \times 3$ layer mapping RGB ($c_\textrm{i}=3$) to $c_\textrm{o}=64$ channels uses $64 \times 3 \times 9 + 64 = 1{,}792$ parameters—whether the input is $28 \times 28$ or $4000 \times 4000$!
+:::
+
+::: {.slide title="Convolutions Beyond 2D Images: 1D, 2D, and 3D"}
+[The Same Symmetry Principle Across Modalities]{.kicker}
+
+Nothing in our equivariance-plus-locality derivation is restricted to two spatial dimensions:
+
+| Modality | Equivariant Axes | Input Tensor Shape | Kernel Tensor Shape | Typical Example |
+|---|---|---|---|---|
+| **1D Convolution** | Time or sequence index ($t$) | $(c_\textrm{i}, T)$ | $(c_\textrm{o}, c_\textrm{i}, k_t)$ | Audio waveforms, physiological signals |
+| **2D Convolution** | Height and width ($i, j$) | $(c_\textrm{i}, H, W)$ | $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$ | Photographs, medical X-rays |
+| **3D Convolution** | Depth/time, height, width ($d, i, j$) | $(c_\textrm{i}, D, H, W)$ | $(c_\textrm{o}, c_\textrm{i}, k_d, k_\textrm{h}, k_\textrm{w})$ | Video clips, volumetric CT/MRI scans |
+
+::: {.d2l-note .warn}
+**When equivariance breaks:** In a linear-frequency audio spectrogram, shifting along the time axis preserves the sound (time-equivariant), whereas shifting along linear frequency alters harmonic ratios—requiring log-frequency (mel) scales before applying 2D convolutions.
+:::
+:::
+
+::: {.slide title="Concept Check: Deriving and Counting Convolutions"}
+[Concept Check]{.kicker}
+
+Work out these three questions from first principles:
+
+1. **28×28 weight collapse:** On a $28 \times 28$ single-channel image mapped to a $28 \times 28$ grid, how many weights does a dense layer have, how many survive translation equivariance (zero-padded outside the frame), and how many remain with a $5 \times 5$ local window ($\Delta = 2$)?
+2. **Resolution vs. parameters:** A $3 \times 3$ layer maps $c_\textrm{i}=3$ to $c_\textrm{o}=64$ channels. How many parameters does it have on a $224 \times 224$ image versus a $1024 \times 1024$ image? Compare with the $200{,}704$ first-layer weights of our Fashion-MNIST MLP ($784 \to 256$).
+3. **Periodic boundary ring:** On a 1D periodic ring of 4 samples (where index 4 wraps to 0), how many free weights does an equivariant $4 \times 4$ matrix have before imposing locality?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+(1) Dense: $784^2 = 614{,}656$; Equivariant (offsets $-27 \dots 27$): $55^2 = 3{,}025$; Local $5 \times 5$: $25$ weights ($+1$ bias).
+(2) Both resolutions use $64 \times 3 \times 9 + 64 = 1{,}792$ parameters ($< 0.9\%$ of the MLP's first layer).
+(3) Exactly $4$ free weights (a circulant matrix where each row shifts cyclicly by 1, vs. $2(4)-1 = 7$ on a zero-padded line).
+:::
+:::
+
+::: {.slide title="Summary & Key Takeaways"}
+[Section Synthesis]{.kicker}
+
+| Principle / Mechanism | Mathematical Form | Parameter Count ($c_\textrm{i} \to c_\textrm{o}$, grid $H \times W$) | Deep Learning Role |
+|---|---|---|---|
+| **Dense Layer on 2D Grid** | $[\mathbf{H}]_{i,j} = [\mathbf{U}]_{i,j} + \sum_{a,b} [\mathsf{V}]_{i,j,a,b}[\mathbf{X}]_{i+a,j+b}$ | $c_\textrm{o} c_\textrm{i} H^2 W^2 + c_\textrm{o} HW$ | Arbitrary spatial wiring; intractable at high resolution |
+| **Translation Equivariance** | $f(T_v \mathbf{X}) = T_v f(\mathbf{X}) \iff [\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ | $c_\textrm{o} c_\textrm{i} (2H-1)(2W-1) + c_\textrm{o}$ | Ties weights across space so feature maps move with the input |
+| **Locality ($\|a\|, \|b\| \le \Delta$)** | $[\mathbf{K}]_{a,b} = 0$ outside $(2\Delta+1) \times (2\Delta+1)$ | $c_\textrm{o} c_\textrm{i} (2\Delta+1)^2 + c_\textrm{o}$ | Restricts each unit to local neighborhoods; independent of $H, W$ |
+| **Cross-Correlation vs. Conv** | $(\mathbf{X} \star \mathbf{K})_{i,j} = (\mathbf{K}' * \mathbf{X})_{i,j}$ | Identical | Unflipped indexing $(i+a, j+b)$ implemented by all frameworks |
+
 ::: {.d2l-note}
-**Answer.** $784^2 = 614{,}656$; with zeros outside the image, offsets
-$-27, \ldots, 27$ give $55^2 = 3{,}025$; a $5 \times 5$ kernel has 25.
+**Next (§6.2):** We implement 2D cross-correlation in code, hand-craft and *learn* an edge-detection kernel via gradient descent, recast convolution as matrix multiplication (*im2col*), and analyze multi-layer receptive fields.
 :::
-:::
-:::
-
-::: {.slide title="The Savings Come from Restricting the Function Class"}
-[Inductive bias]{.kicker}
-
-- A convolutional layer represents only **local, translation-equivariant**
-  maps.
-- Right for edges and textures: fewer examples, better generalization.
-- Wrong when position matters: in a passport photo a dark blob high up is
-  an eye and one lower down a nostril, yet the layer must respond to both
-  alike.
-- One layer sees a window of width $2\Delta + 1$; depth widens the view.
-:::
-
-::: {.slide title="Deep Learning's Convolution Is a Cross-Correlation"}
-[Convolution]{.kicker}
-
-$$(f * g)(i, j) = \sum_{a,b} f(a, b)\, g(i-a, j-b) \qquad \textrm{(convolution)}$$
-
-The layer reads $\mathbf{X}$ at $(i+a, j+b)$: a *cross-correlation*. With
-the flipped kernel $[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$,
-
-$$\sum_{a,b} [\mathbf{K}]_{a, b}  [\mathbf{X}]_{i+a, j+b} = (\mathbf{K}' * \mathbf{X})(i, j).$$
-
-The kernel is learned, so both describe the same layers; libraries say
-"convolution".
-:::
-
-::: {.slide title="Each Output Channel Has Its Own Kernel over All Input Channels"}
-[Channels]{.kicker}
-
-$$[\mathsf{H}]_{o,i,j} = u_o + \sum_c \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathsf{K}]_{o, c, a, b} [\mathsf{X}]_{c, i+a, j+b}$$
-
-- $c$: input channel (red, green, blue); $o$: output channel, one per
-  learned pattern.
-- Output channels are *feature maps*: edges, textures, colors.
-- Parameters: $(2\Delta+1)^2 c_\textrm{i} c_\textrm{o} + c_\textrm{o}$,
-  independent of the image size.
-:::
-
-::: {.slide title="A Waldo Detector Is One Output Channel"}
-[Channels]{.kicker}
-
-![](../img/waldo-mask.jpg){width=46%}
-
-A kernel that matches Waldo yields a map that peaks where he stands.
-Whether he is *anywhere* needs an invariant step that aggregates the map.
-:::
-
-::: {.slide title="Check: Parameters of a First Layer"}
-[Check]{.kicker}
-
-A $3 \times 3$ convolution maps an RGB image to 64 channels. How many
-parameters does it have for a $224 \times 224$ image, and for a
-$1024 \times 1024$ one? Compare with the 200,704 first-layer weights of the
-Fashion-MNIST MLP.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $9 \cdot 3 \cdot 64 + 64 = 1{,}792$ for both sizes: the count
-does not depend on the image. That is about 1% of the MLP's first layer,
-which sees only $28 \times 28$ pixels.
-:::
-:::
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- A dense layer on a megapixel grid: $10^{12}$ weights.
-- **Equivariance** $\iff$ one shared kernel: $4 \times 10^6$ weights
-  (proved with a single bright pixel).
-- **Locality**: a $(2\Delta+1)^2$ window, a few hundred weights.
-- The layer computes a cross-correlation; libraries call it convolution.
-- **Channels**: $(2\Delta+1)^2 c_\textrm{i} c_\textrm{o} + c_\textrm{o}$
-  parameters; each output channel is a feature map.
-
-**Next:** cross-correlation in code, an edge detector, and a kernel learned
-from data.
 :::

@@ -998,434 +998,289 @@ length eliminates the remaining gap (Exercise
 ::: {.cover}
 [Dive into Deep Learning · §10.4]{.kicker}
 
-Positional Information<br>
-**permutation equivariance · learned and sinusoidal tables · RoPE · train short, test long**
+Positional Information: Sinusoidal, Learned, RoPE, and ALiBi<br>**permutation equivariance · absolute embeddings · rotary embeddings (RoPE) · ALiBi & NoPE · length extrapolation**
 :::
 :::
 
-::: {.slide title="Attention Alone Cannot Tell “Dog Bites Man” from “Man Bites Dog”"}
-[The problem]{.kicker}
+::: {.slide title="Why Self-Attention Alone Is Blind to Word Order"}
+[Motivation]{.kicker}
 
-- Self-attention maps a shuffled sentence to the **same outputs,
-  shuffled**.
-- A classifier that pools the outputs cannot tell who bit whom.
-- GPT-2 small learns a table of **1,024** position vectors: token 1,025
-  has no position at all.
-
-::: {.d2l-note}
-How do we give attention a sense of position, and what happens beyond the
-length it was trained on?
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- prove that unmasked attention is permutation equivariant;
-- read a shift of the sinusoidal table as a rotation, and see why adding
-  it leaves absolute position in the score;
-- derive RoPE from "scores depend only on the offset";
-- predict which schemes break at four times the training length, and
-  test the prediction;
-- repair a trained RoPE model at four times its context by rescaling
-  angles.
-
-**Running example:** `TinyCharLM`, an attention-only byte model (width 128,
-two blocks of four heads of width 32), trained at context 128, tested at
-512.
-:::
-
-::: {.slide title="Positional Information Lets Attention See Order"}
-[Where this fits]{.kicker}
+The sentences *"dog bites man"* and *"man bites dog"* contain the exact same three words, yet carry opposite meanings:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Queries, Keys, and Values | attention as a soft lookup |
-| Attention Scoring and Masking | scaled dot products, masks |
-| Self-Attention and Multiple Heads | a sequence reads itself; several heads |
-| **Positional Information** | **where a token sits** |
-| The Cost of Attention | quadratic cost, fused kernels |
-| Windowed and Linear Attention | linear cost, and what it gives up |
-| Attention Circuits | what trained heads compute |
+- **Order Blindness:** Passed through an unmasked self-attention layer, a reordered sentence produces the exact same output vectors in the same reordered positions.
+- **Pooling Collapse:** Any downstream classifier that pools token representations globally cannot tell who bit whom.
 :::
 
-::: {.col .narrow}
-- **Uses:** self-attention, causal masks, the byte data and training
-  loop of `TinyLM`.
-- **Skips:** learned relative-position vectors, long-context training.
+::: {.col}
+- **The Length-Extrapolation Challenge:** Models like GPT-2 small learn a lookup table of $1{,}024$ position vectors—token $1{,}025$ has no trained position representation at all.
+- **Our Goal:** Inject positional information that preserves relative distance and generalizes beyond the training context length.
 :::
 :::
 :::
 
-::: {.slide title="Unmasked Self-Attention Is Permutation Equivariant"}
-[Permutation equivariance]{.kicker}
+::: {.slide title="Theorem: Unmasked Self-Attention Is Equivariant"}
+[Permutation Symmetry]{.kicker}
 
-**Proposition.** $f(\boldsymbol{\Pi}\mathbf{X}) = \boldsymbol{\Pi}
-f(\mathbf{X})$ for every permutation matrix $\boldsymbol{\Pi}$, where
-$f(\mathbf{X}) = \mathrm{softmax}\big(\mathbf{X}\mathbf{W}_q
-(\mathbf{X}\mathbf{W}_k)^\top/\sqrt{d_h}\big)\, \mathbf{X}\mathbf{W}_v$
-and $d_h$ is the head width.
+Reordering the $n$ rows of $\mathbf{X} \in \mathbb{R}^{n \times d}$ corresponds to left-multiplying by an $n \times n$ permutation matrix $\boldsymbol{\Pi}$ ($\boldsymbol{\Pi}^\top \boldsymbol{\Pi} = \mathbf{I}$):
 
-**Proof sketch.** Projections act row-wise; scores become
-$\boldsymbol{\Pi}\mathbf{S}\boldsymbol{\Pi}^\top$; row-softmax commutes with
-permutations; $\boldsymbol{\Pi}^\top\boldsymbol{\Pi} = \mathbf{I}$. $\blacksquare$
+**Proposition.** For unmasked self-attention $f(\mathbf{X}) = \mathrm{softmax}\!\big(\mathbf{X}\mathbf{W}_q(\mathbf{X}\mathbf{W}_k)^\top/\sqrt{d_h}\big)\mathbf{X}\mathbf{W}_v$:
 
-. . .
+$$f(\boldsymbol{\Pi}\mathbf{X}) = \boldsymbol{\Pi} f(\mathbf{X}) \qquad \textrm{for every permutation matrix } \boldsymbol{\Pi}$$
 
-- Stacking equivariant layers stays equivariant: depth does not help.
+- **Proof in Four Steps:** (1) Linear projections act row-wise: $(\boldsymbol{\Pi}\mathbf{X})\mathbf{W} = \boldsymbol{\Pi}(\mathbf{X}\mathbf{W})$. (2) Scores permute on both axes: $\mathbf{S}(\boldsymbol{\Pi}\mathbf{X}) = \boldsymbol{\Pi}\mathbf{S}\boldsymbol{\Pi}^\top$. (3) Row-wise softmax commutes with row and column permutations: $\mathrm{softmax}(\boldsymbol{\Pi}\mathbf{S}\boldsymbol{\Pi}^\top) = \boldsymbol{\Pi}\,\mathrm{softmax}(\mathbf{S})\,\boldsymbol{\Pi}^\top$. (4) Multiplying by $\boldsymbol{\Pi}\mathbf{X}\mathbf{W}_v$ cancels $\boldsymbol{\Pi}^\top \boldsymbol{\Pi} = \mathbf{I}$. $\blacksquare$
+- **Depth Invariance:** Because compositions of equivariant functions remain equivariant, stacking any number of unmasked attention and token-wise MLP layers never breaks permutation symmetry.
 :::
 
-::: {.slide title="Shuffled Tokens Give Shuffled Outputs"}
-[Permutation equivariance]{.kicker}
+::: {.slide title="Verifying Permutation Equivariance in Code"}
+[Empirical Check]{.kicker}
 
-Eight random tokens through a four-head layer, then shuffled; the outputs
-agree up to float32 round-off:
+Passing $8$ random token vectors through a $4$-head `MultiHeadAttention` layer before and after a random permutation produces identical outputs up to `float32` round-off:
 
-@!positional-information-attention-ignores-order
+@positional-information-attention-ignores-order
 
 ::: {.d2l-note}
-A **causal mask** breaks the symmetry: position $i$ attends over $i+1$
-tokens.
+Notice that a **causal mask** breaks permutation symmetry even without position vectors (**NoPE**), because query $i$ averages over $i + 1$ predecessors!
 :::
 :::
 
-::: {.slide title="A Learned Table Knows Only the Positions It Was Trained On"}
-[Absolute embeddings]{.kicker}
+::: {.slide title="Absolute Position Embeddings: Learned Tables"}
+[Absolute Encodings]{.kicker}
 
-- Add a vector $\mathbf{p}_i$ to the token at position $i$: a shuffle
-  gives $\boldsymbol{\Pi}\mathbf{X} + \mathbf{P} \neq
-  \boldsymbol{\Pi}(\mathbf{X} + \mathbf{P})$, and the symmetry breaks.
-- **Learned** (BERT, GPT-2): one free vector per position.
-- A row that no training example used keeps its random initialization.
+The original Transformer breaks permutation symmetry at the input by adding a position vector $\mathbf{p}_i \in \mathbb{R}^d$ (row $i$ of $\mathbf{P}$) to each token embedding $\mathbf{x}_i$:
 
-::: {.d2l-note}
-Trained at context 128, rows 128 to 511 of a 512-row table never
-receive a gradient.
-:::
+$$\boldsymbol{\Pi}\mathbf{X} + \mathbf{P} \neq \boldsymbol{\Pi}(\mathbf{X} + \mathbf{P})$$
+
+- **Learned Position Tables (BERT, GPT-2):** Treat $\mathbf{P} \in \mathbb{R}^{L_{\max} \times d}$ as a free parameter matrix with one trainable vector per absolute index $i \in \{0, \ldots, L_{\max}-1\}$.
+- **Zero-Gradient Extrapolation Failure:** When trained at sequence length $L = 128$, rows $128, \ldots, L_{\max}-1$ never participate in the forward pass, receive zero gradient, and remain at their random initialization!
 :::
 
-::: {.slide title="Sinusoids Give Each Position a Code at Every Frequency"}
-[Absolute embeddings]{.kicker}
+::: {.slide title="Sinusoidal Position Encodings Across Frequencies"}
+[Deterministic Absolute Codes]{.kicker}
 
-Pair $m$ of the $d$ columns turns at $\omega_m = 10000^{-2m/d}$ radians
-per position (Vaswani et al., 2017):
+::: {.cols .vc}
+::: {.col}
+- Vaswani et al. (2017) populate row $i$ of $\mathbf{P} \in \mathbb{R}^{n \times d}$ with sines and cosines at $d/2$ geometrically spaced frequencies $\omega_m = 10000^{-2m/d}$:
+  $$p_{i, 2m} = \sin(i\,\omega_m)$$
+  $$p_{i, 2m+1} = \cos(i\,\omega_m)$$
+- **Geometric Wavelengths:** Periods $2\pi / \omega_m$ progress from $2\pi \approx 6.28$ tokens ($m = 0$) to $2\pi \times 10^4 \approx 62{,}832$ tokens ($m = d/2 - 1$).
+:::
 
-$$p_{i, 2m} = \sin(i\,\omega_m), \qquad p_{i, 2m+1} = \cos(i\,\omega_m)$$
-
+::: {.col .fig}
 @!positional-information-sinusoidal-encodings-1
 :::
+:::
+:::
 
-::: {.slide title="Sinusoids Are a Continuous Binary Counter"}
-[Absolute embeddings]{.kicker}
+::: {.slide title="Sinusoids as a Continuous Binary Counter"}
+[Multi-Scale Geometry]{.kicker}
 
-Counting in binary, the lowest bit flips every step, the next every two,
-the next every four. The table does the same, smoothly:
+::: {.cols .vc}
+::: {.col}
+- **Continuous Binary Counter:** In binary, the least significant bit alternates every step, the next every $2$ steps, the next every $4$. Sinusoidal column pairs do the same smoothly on the unit circle.
+- **Offset-Only Inner Product:** The dot product between two sinusoidal rows depends solely on their relative offset $\delta$:
+  $$\mathbf{p}_i^\top \mathbf{p}_{i+\delta} = \sum_{m=0}^{d/2-1} \cos(\delta\,\omega_m)$$
+:::
 
+::: {.col .fig}
 @!positional-information-sinusoidal-encodings-3
-
-Fast columns separate neighbors; slow columns separate regions.
-:::
-
-::: {.slide title="Check: Which of These Break the Symmetry?"}
-[Check]{.kicker}
-
-1. a second attention layer on top of the first;
-2. the same learned vector added to every token;
-3. a causal mask;
-4. a different vector $\mathbf{p}_i$ added at each position.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** 3 and 4. A stack of equivariant layers is equivariant, and a
-vector shared by all rows moves with any shuffle.
 :::
 :::
 :::
 
-::: {.slide title="A Shift Rotates Every Column Pair by an Angle Set by the Offset"}
-[Absolute embeddings]{.kicker}
+::: {.slide title="Position Shifts as 2×2 Planar Rotations"}
+[Trigonometric Shift Identity]{.kicker}
 
-$$\begin{bmatrix} \cos(\delta\omega_m) & \sin(\delta\omega_m) \\ -\sin(\delta\omega_m) & \cos(\delta\omega_m) \end{bmatrix}\begin{bmatrix} p_{i, 2m} \\ p_{i, 2m+1} \end{bmatrix} = \begin{bmatrix} p_{i+\delta, 2m} \\ p_{i+\delta, 2m+1} \end{bmatrix}$$
+Why did Vaswani et al. pair $\sin(i\omega_m)$ with $\cos(i\omega_m)$? By the angle-addition identities, shifting position $i \mapsto i + \delta$ applies a linear $2 \times 2$ rotation matrix depending *only* on $\delta$:
 
-- The angle $\delta\omega_m$ depends on the offset $\delta$, never on $i$.
+$$\begin{bmatrix} \cos(\delta \omega_m) & \sin(\delta \omega_m) \\ -\sin(\delta \omega_m) & \cos(\delta \omega_m) \end{bmatrix} \begin{bmatrix} \sin(i \omega_m) \\ \cos(i \omega_m) \end{bmatrix} = \begin{bmatrix} \sin\!\big((i+\delta)\omega_m\big) \\ \cos\!\big((i+\delta)\omega_m\big) \end{bmatrix} = \begin{bmatrix} p_{i+\delta, 2m} \\ p_{i+\delta, 2m+1} \end{bmatrix}$$
 
-::: {.d2l-note}
-The table contains relative position. Does attention see it?
-:::
-:::
-
-::: {.slide title="An Added Code Ties the Score to Absolute Positions"}
-[Absolute embeddings]{.kicker}
-
-With $\mathbf{A} = \mathbf{W}_q\mathbf{W}_k^\top/\sqrt{d_h}$, the score of
-positions $i$ and $j$ has four terms:
-
-$$(\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A} (\mathbf{x}_j + \mathbf{p}_j) = \mathbf{x}_i^\top\mathbf{A}\mathbf{x}_j + \mathbf{x}_i^\top\mathbf{A}\mathbf{p}_j + \mathbf{p}_i^\top\mathbf{A}\mathbf{x}_j + \mathbf{p}_i^\top\mathbf{A}\mathbf{p}_j$$
-
-- content–content: no position;
-- the two cross terms: content of one token, **absolute** position of the
-  other;
-- position–position: offset only if $\mathbf{A}$ acts on each frequency
-  pair as a scaled rotation and never mixes two pairs.
+- **Relative Offsets Live Inside $\mathbf{P}$:** For every frequency pair $m$, the code at position $i + \delta$ is a fixed linear transformation of the code at position $i$.
+- **The Crucial Question:** If $\mathbf{p}_{i+\delta}$ is related to $\mathbf{p}_i$ by a pure offset rotation, why does *adding* $\mathbf{p}_i$ to $\mathbf{x}_i$ at the input still tie attention scores to absolute positions?
 :::
 
-::: {.slide title="Requiring Offset-Only Scores Forces Rotations"}
-[Rotary embeddings]{.kicker}
+::: {.slide title="Why Adding Position Vectors Pollutes the Score"}
+[The Four-Term Expansion]{.kicker}
 
-Require $(\mathbf{R}_i \mathbf{q})^\top(\mathbf{R}_j \mathbf{k}) =
-\mathbf{q}^\top \mathbf{R}_{j-i}\, \mathbf{k}$ for queries at $i$, keys
-at $j$:
+Let $\mathbf{A} = \mathbf{W}_q \mathbf{W}_k^\top / \sqrt{d_h}$. Expanding the first-layer score between $\mathbf{x}_i + \mathbf{p}_i$ and $\mathbf{x}_j + \mathbf{p}_j$ yields four bilinear terms:
 
-- I. $i = j = 0$: $\mathbf{R}_0$ is a projection; keep every direction,
-  so $\mathbf{R}_0 = \mathbf{I}$.
-- II. $i = j$: $\mathbf{R}_i^\top \mathbf{R}_i = \mathbf{I}$, each
-  $\mathbf{R}_i$ is orthogonal.
-- III. $j = 0$: $\mathbf{R}_{-i} = \mathbf{R}_i^\top$, so
-  $\mathbf{R}_i = \mathbf{R}_1^i$.
-- IV. An orthogonal $\mathbf{R}_1$ rotates coordinate pairs (in a basis the
-  projections absorb).
+$$(\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A}\,(\mathbf{x}_j + \mathbf{p}_j) = \underbrace{\mathbf{x}_i^\top \mathbf{A}\,\mathbf{x}_j}_{\textrm{content–content}} + \underbrace{\mathbf{x}_i^\top \mathbf{A}\,\mathbf{p}_j}_{\textrm{content–position}} + \underbrace{\mathbf{p}_i^\top \mathbf{A}\,\mathbf{x}_j}_{\textrm{position–content}} + \underbrace{\mathbf{p}_i^\top \mathbf{A}\,\mathbf{p}_j}_{\textrm{position–position}}$$
 
-::: {.d2l-note}
-**RoPE:** rotate pair $m$ of every query and key at position $i$ by
-$i\,\omega_m$, with $\omega_m = 10000^{-2m/d_h}$.
-:::
+- **Absolute Cross-Term Coupling:** The middle terms $\mathbf{x}_i^\top \mathbf{A}\,\mathbf{p}_j$ and $\mathbf{p}_i^\top \mathbf{A}\,\mathbf{x}_j$ couple token content directly with *absolute* position vectors $\mathbf{p}_j$ and $\mathbf{p}_i$, changing whenever $i$ and $j$ shift together!
+- **Cross-Frequency Mixing:** Even $\mathbf{p}_i^\top \mathbf{A}\,\mathbf{p}_j$ depends purely on $j - i$ *only* if $\mathbf{A}$ is block-diagonal with $2 \times 2$ scaled-rotation blocks; any off-block entry in $\mathbf{W}_q \mathbf{W}_k^\top$ destroys translation invariance.
 :::
 
-::: {.slide title="Shifting Both Positions Rotates q and k Together"}
-[Rotary embeddings]{.kicker}
+::: {.slide title="Deriving RoPE from Relative-Offset Invariance"}
+[Rotary Position Embeddings (RoPE)]{.kicker}
 
-![](../img/mdl-attention-rope-rotation.svg){width=80%}
+Instead of adding $\mathbf{p}_i$ to $\mathbf{x}_i$, **Rotary Position Embeddings** (Su et al., 2021) transform queries and keys *multiplicatively* via matrices $\mathbf{R}_i$ so that every inner product depends solely on $j - i$:
 
-$\theta = \omega_m$ per position; $\varphi$ is the angle between the
-unrotated $\mathbf{q}$ and $\mathbf{k}$. After any common shift the angle
-between the two vectors, and the score, stay the same. Values are not
-rotated.
+$$(\mathbf{R}_i \mathbf{q})^\top (\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top (\mathbf{R}_i^\top \mathbf{R}_j)\,\mathbf{k} = \mathbf{q}^\top \mathbf{R}_{j-i}\,\mathbf{k} \qquad \forall\, i, j$$
+
+- **1. Identity at Zero ($i = j = 0$):** $\mathbf{R}_0^\top \mathbf{R}_0 = \mathbf{R}_0$; requiring full rank forces $\mathbf{R}_0 = \mathbf{I}$.
+- **2. Orthogonality ($i = j$):** $\mathbf{R}_i^\top \mathbf{R}_i = \mathbf{R}_0 = \mathbf{I}$, so every $\mathbf{R}_i$ is orthogonal and preserves query/key norms!
+- **3. Group Homomorphism:** $\mathbf{R}_{-i} = \mathbf{R}_i^\top$ and $\mathbf{R}_{i+j} = \mathbf{R}_i \mathbf{R}_j$, which forces $\mathbf{R}_i = \mathbf{R}_1^i$ (powers of one orthogonal generator $\mathbf{R}_1$, decomposing into $2 \times 2$ planar rotations).
 :::
 
-::: {.slide title="Check: How Far Apart Are the Query and the Key?"}
-[Check]{.kicker}
+::: {.slide title="RoPE: Block-Diagonal 2×2 Planar Rotations"}
+[Geometry of RoPE]{.kicker}
 
-Pair 0 turns one radian per position. Before rotation, the pair-0 parts of
-a query and a key point the same way. The query sits at position 3, the
-key at position 5. What angle separates them after RoPE? And at positions
-103 and 105?
+::: {.cols .vc}
+::: {.col}
+- Partition $\mathbf{q}, \mathbf{k} \in \mathbb{R}^{d_h}$ into $d_h/2$ coordinate pairs $(2m, 2m+1)$ and rotate pair $m$ at position $i$ by angle $i\,\omega_m$ with $\omega_m = 10000^{-2m/d_h}$:
+  $$R(i\omega_m) = \begin{bmatrix} \cos(i\omega_m) & -\sin(i\omega_m) \\ \sin(i\omega_m) & \cos(i\omega_m) \end{bmatrix}$$
+- **Shift Invariance:** Shifting both positions by $+3$ rotates $\mathbf{q}$ and $\mathbf{k}$ by the exact same angle $3\omega_m$, leaving the angle between them—and their dot product—unchanged!
+- **Values Stay Unrotated:** Only queries and keys are rotated, keeping value vectors shift-invariant.
+:::
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Two radians in both cases: the query turns by 3 or 103
-radians, the key by 5 or 105, and only the offset of 2 survives.
+::: {.col .fig}
+![RoPE rotates each 2D feature pair by an angle proportional to position, preserving relative angles under shifts.](../img/mdl-attention-rope-rotation.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="RoPE Rotates Even/Odd Pairs by Position Angles" only="pytorch"}
-[Rotary embeddings]{.kicker}
+::: {.slide title="Implementing RoPE and Testing Shift Invariance"}
+[Code & Verification]{.kicker}
 
-~~~python
-def rope(x, offset=0, base=10000.0):
-    n, d = x.shape[-2:]
-    pos = torch.arange(n, dtype=torch.float32) + offset
-    omega = base ** (-torch.arange(0, d, 2) / d)
-    theta = pos[:, None] * omega[None, :]      # (n, d/2) angles
-    cos, sin = torch.cos(theta), torch.sin(theta)
-    x1, x2 = x[..., 0::2], x[..., 1::2]       # even/odd pairs
-    return torch.stack([x1 * cos - x2 * sin,
-                        x1 * sin + x2 * cos], -1).flatten(-2)
-~~~
-
-`d2l.rope` adds per-pair `scale` factors for context extension.
+::: {.cols .vc}
+::: {.col}
+- `rope` splits even (`0::2`) and odd (`1::2`) coordinates, applies the $2 \times 2$ rotation using `float32` angles cast to `x.dtype`, and interleaves the pairs back.
+- Shifting all $32$ positions by $1$, $17$, or $480$ changes RoPE scores by at most `float32` round-off ($\sim 10^{-6}$), whereas additive sinusoidal scores change by $2.7$!
 :::
 
-::: {.slide title="RoPE Rotates Even/Odd Pairs by Position Angles" only="jax"}
-[Rotary embeddings]{.kicker}
-
-~~~python
-def rope(x, offset=0, base=10000.0):
-    n, d = x.shape[-2:]
-    pos = jnp.arange(n, dtype=jnp.float32) + offset
-    omega = base ** (-jnp.arange(0, d, 2) / d)
-    theta = pos[:, None] * omega[None, :]      # (n, d/2) angles
-    cos, sin = jnp.cos(theta), jnp.sin(theta)
-    x1, x2 = x[..., 0::2], x[..., 1::2]       # even/odd pairs
-    return jnp.stack([x1 * cos - x2 * sin,
-                      x1 * sin + x2 * cos], -1).reshape(x.shape)
-~~~
-
-`d2l.rope` adds per-pair `scale` factors for context extension.
-:::
-
-::: {.slide title="Shifting All Positions Leaves RoPE Scores Unchanged"}
-[Rotary embeddings]{.kicker}
-
-32 random queries and keys of width 64, all positions shifted together:
-
+::: {.col .fig}
 @!positional-information-rotary-position-embeddings-2
-
-::: {.d2l-note}
-RoPE changes only at round-off, even at shift 480. The additive code's
-cross terms move the scores by almost 3, as much as the scores vary.
+:::
 :::
 :::
 
-::: {.slide title="ALiBi Penalizes Distance; NoPE Uses Only the Mask"}
-[Two more schemes]{.kicker}
+::: {.slide title="Distance Penalties (ALiBi) and Mask-Only (NoPE)"}
+[Alternative Schemes]{.kicker}
 
-- **ALiBi** (Press et al., 2022): no position vectors; subtract a
-  per-head penalty,
-  $\mathrm{score}_{ij} = \mathbf{q}_i^\top\mathbf{k}_j/\sqrt{d_h} - m_h\,(i-j)$,
-  with $m_h = 2^{-8h/H}$; for $H = 4$: $1/4, 1/16, 1/64, 1/256$.
-- Slope $1/4$: a key 40 back loses a factor $e^{-10}$. A formula in the
-  distance, not a table, so nothing can break.
-- **NoPE** (Kazemnejad et al., 2023): no encoding; a causal model can
-  read position from how many keys each query sees.
+Two additional positional mechanisms leave token embeddings, queries, and keys completely untouched:
+
+- **ALiBi (Attention with Linear Biases, Press et al., 2022):** Subtracts a linear distance penalty directly from the pre-softmax causal score in head $h \in \{1, \ldots, H\}$:
+  $$\mathrm{score}_{ij}^{(h)} = \frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d_h}} - m_h\,(i - j), \qquad m_h = 2^{-8h/H}$$
+- **Multi-Horizon Slopes:** For $H = 4$, the geometric slopes are $m_h \in \{1/4, 1/16, 1/64, 1/256\}$: steep heads ($m_1 = 1/4$, where distance $40$ attenuates weight by $e^{-10}$) focus locally, while gentle heads integrate broadly.
+- **NoPE (No Positional Encoding, Kazemnejad et al., 2023):** Injects no positional code at all, relying purely on the causal mask (which exposes $i + 1$ keys to query $i$) to break permutation symmetry.
 :::
 
-::: {.slide title="Position Enters TinyCharLM in One of Three Places"}
-[The experiment]{.kicker}
+::: {.slide title="Five Positional Schemes in TinyCharLM"}
+[Experimental Architecture]{.kicker}
 
-| scheme | acts on | how | in the code |
-|---|---|---|---|
-| learned, sinusoidal | the input | add $\mathbf{p}_i$ to the token embedding | `embed`, once |
-| RoPE | queries and keys | rotate them | `attend`, every block |
-| ALiBi | the scores | subtract $m_h\,(i - j)$ | `attend`, every block |
-| NoPE | nothing | only the causal mask | — |
+We compare all five schemes inside `TinyCharLM`, a two-block attention-only byte language model ($d = 128, H = 4, d_h = 32$, tied output head, no MLP or LayerNorm) trained on WikiText-103 at length $n = 128$:
 
-- Tied output head, no feed-forward layer, no normalization.
-- WikiText-103 bytes; 3,000 AdamW steps at context 128; three runs per
-  scheme.
+| Positional Scheme | Where It Acts | Mathematical Operation | Trainable Pos Params | Extrapolation Mechanism |
+| :--- | :--- | :--- | :---: | :--- |
+| **Learned** (`pos='learned'`) | Input `embed` (once) | $\mathbf{h}_i^{(0)} = \mathbf{e}_{x_i} + \mathbf{p}_i$ (lookup table) | $L_{\max} \times d$ | None (rows $\ge 128$ are untrained) |
+| **Sinusoidal** (`pos='sinusoidal'`) | Input `embed` (once) | $\mathbf{h}_i^{(0)} = \mathbf{e}_{x_i} + \mathbf{p}_i / \sqrt{d}$ (fixed sines) | $0$ | Evaluates $\sin(i\omega_m), \cos(i\omega_m)$ at $i \ge 128$ |
+| **RoPE** (`pos='rope'`) | Every block `attend` | Rotate $\mathbf{q}_i \mapsto \mathbf{R}_i\mathbf{q}_i$ and $\mathbf{k}_j \mapsto \mathbf{R}_j\mathbf{k}_j$ | $0$ | Rotates by relative offset angle $(j-i)\omega_m$ |
+| **ALiBi** (`pos='alibi'`) | Every block `attend` | $\mathrm{score}_{ij}^{(h)} \leftarrow \mathrm{score}_{ij}^{(h)} - m_h(i - j)$ | $0$ | Exponentially decays distant keys $i - j \ge 128$ |
+| **NoPE** (`pos='none'`) | Nowhere | Causal mask $j \le i$ only | $0$ | Causal prefix count $i + 1$ |
 :::
 
-::: {.slide title="Trained at 128: RoPE Is Lowest, NoPE Sits at Bigram Level"}
-[The experiment]{.kicker}
+::: {.slide title="Implementing embed, alibi, and attend"}
+[TinyCharLM Implementation]{.kicker}
 
-Validation perplexity per byte, mean (min–max) of three runs:
+In `TinyCharLM`, RoPE rotates `q` and `k` inside every attention block, whereas ALiBi adds the distance bias `-m_h * (i - j)` to the pre-softmax scores:
+
+@positional-information-an-attention-only-language-model-2
+:::
+
+::: {.slide title="Train Short (128), Test Long (128, 256, 512)"}
+[Extrapolation Benchmark]{.kicker}
+
+After training $3$ seeds of each scheme for $3{,}000$ AdamW steps at context $n = 128$, we evaluate validation byte perplexity on identical WikiText-103 bytes regrouped into windows of $n \in \{128, 256, 512\}$:
 
 @!positional-information-the-experiment-3
 
 @!positional-information-byte-bigram-baseline
-
-::: {.d2l-note}
-At 128: RoPE lowest at 7.3; learned, sinusoidal, and ALiBi all about 15%
-below the bigram; NoPE at the bigram, whose current byte is already in the
-residual stream.
-:::
 :::
 
-::: {.slide title="Check: Which Logits Change Between Context 128 and 512?"}
-[Check]{.kicker}
+::: {.slide title="Analyzing In-Range vs. Out-of-Range Perplexity"}
+[Why Extrapolation Fails]{.kicker}
 
-The same models read the first 128 bytes of a validation sequence,
-then the first 512. At which positions can the logits differ?
+Because causal masking ensures positions $0 \ldots 127$ compute identical logits regardless of total window length, every perplexity increase at $n \in \{256, 512\}$ comes from positions $\ge 128$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Only at positions 128 to 511. Causal attention lets position
-$i$ see only positions $0, \ldots, i$, so positions 0 to 127 compute the
-same logits in both runs. The whole change in perplexity comes from the
-positions beyond the training length.
-:::
-:::
+- **RoPE Wins In-Range ($7.3$ at $n = 128$) but Degrades at $512$ ($27.7$):** Pure offset rotations give the strongest inductive bias within the trained window, but at offsets $> 127$ low-frequency pairs rotate into angular sectors never seen during training.
+- **Learned ($9.3 \to 22.9$) & Sinusoidal ($9.6 \to 15.6$):** Learned embeddings hit random untrained rows $128 \ldots 511$; sinusoidal slow columns take novel combinations that conflict with content–position cross terms.
+- **NoPE Stalls at the Byte-Bigram Baseline ($11.6$):** Without an explicit position code, a two-block attention-only model predicts almost entirely from the current byte in the residual stream.
 :::
 
-::: {.slide title="Each Scheme Holds or Fails Beyond 128 for Its Own Reason"}
-[The experiment]{.kicker}
+::: {.slide title="Pitfall: Does Flat Perplexity Mean Long-Range Use?"}
+[Probing ALiBi Beyond the Window]{.kicker}
 
-- **Learned:** rows 128 to 511 never trained; doubles or worse.
-- **Sinusoidal:** slow columns take new values, smoothly; about 60%
-  worse, the mildest.
-- **RoPE:** slow pairs reach unseen angles; nearly 4× worse on average.
-- **ALiBi:** a formula in the distance, nothing to run out of; flat.
-- **NoPE:** flat too, but at bigram level: no position learned, none to
-  lose.
-
-::: {.d2l-note}
-The model that used position best in range has the most to lose out of
-range.
-:::
-:::
-
-::: {.slide title="ALiBi Stays Flat Because Far Keys Contribute Nothing"}
-[The experiment]{.kicker}
-
-Share of each head's weight on keys 128 or more back, then perplexity at
-512 with those keys removed:
+ALiBi's perplexity stays completely flat at $9.7$ from $n = 128$ to $n = 512$. Does ALiBi actually extract useful information from bytes $\ge 128$ positions back, or does it simply ignore them?
 
 @!positional-information-alibi-weight-beyond-the-window
 
 @!positional-information-alibi-without-far-keys
 
-::: {.d2l-note}
-Heads 3 and 4 read far keys, as the bias dictates; removing them changes
-nothing. They average broadly, and the last 128 bytes say as much as the
-last 512. Flat perplexity does not mean the model uses the longer context.
+::: {.d2l-note .warn}
+**Diagnostic Lesson:** Hard-masking out all keys at distance $\ge 128$ (`WindowedALiBi`) leaves ALiBi's perplexity at $512$ unchanged ($9.7$)! Steep heads ($1, 2$) assign $0.000$ weight beyond $128$, while gentle heads ($3, 4$) compute a broad recency average. A flat extrapolation curve proves that a scheme *avoids breaking* on distant keys, not that it *retrieves* from them.
 :::
 :::
 
-::: {.slide title="Only the Slow Pairs Meet New Angles Beyond 128"}
-[Context extension]{.kicker}
+::: {.slide title="Why RoPE Breaks: Fast vs. Slow Frequency Pairs"}
+[Frequency Decomposition]{.kicker}
 
-- Head width 32, base $10^4$: periods $2\pi \cdot 10^{4m/16}$ are 6.3,
-  11, 20, 35, 63, 112 (fast) and 199 to 35,000 (slow).
-- A fast pair completes a turn within 128 positions: every angle at offset
-  400 was already seen in training.
-- A slow pair meets new angles. Rescale them so that 512 maps into 128.
-- **Position interpolation** (Chen et al., 2023) multiplies *all* angles by
-  $128/512$. All pairs, or only the slow ones?
+In `TinyCharLM`, each head of width $d_h = 32$ has $16$ coordinate pairs with wavelengths (periods) $2\pi / \omega_m = 2\pi \cdot 10000^{m/16}$:
+
+- **6 Fast Pairs ($m = 0, \ldots, 5$, periods $6.3$ to $112 < 128$):** Complete at least one full $2\pi$ revolution within the $128$-byte training window. Every angle they encounter at offset $400$ was already seen modulo $2\pi$ during training!
+- **10 Slow Pairs ($m = 6, \ldots, 15$, periods $199$ to $35{,}000 > 128$):** Never complete a full revolution during training; at $n = 512$, they rotate up to $4\times$ farther than their maximum trained angle, corrupting QK dot products.
+- **The Dilemma of Uniform Position Interpolation (Chen et al., 2023):** Scaling *all* angles by $128/512 = 1/4$ maps slow pairs back into their trained range, but crushes the fast pairs' local phase differences by $4\times$, destroying neighbor resolution without fine-tuning.
 :::
 
-::: {.slide title="Rescaling Only the Slow Pairs Repairs Context 512 Without Training"}
-[Context extension]{.kicker}
+::: {.slide title="Zero-Shot Context Extension by Scaling Slow Pairs"}
+[Selective Interpolation]{.kicker}
 
-The three trained RoPE models, angle factors changed, no weight updated:
+Leaving the $6$ fast pairs untouched (`scale = 1.0`) and multiplying *only* the $10$ slow pairs by $128/512 = 0.25$ repairs length-$512$ perplexity from $27.7$ down to $9.0$ **without updating a single model weight**:
 
 @!positional-information-extending-a-trained-model-s-context
 
 ::: {.d2l-note}
-All pairs: about 40 everywhere, worse than the bigram. Slow pairs: about 9
-at 512, a third of unscaled, at a cost of about 0.7 to 0.8 at 128. A short
-fine-tune completes the recipe.
+Uniformly scaling all pairs (`all pairs`) without fine-tuning ruins local byte resolution across every context length ($\sim 42$ perplexity, worse than a bigram), whereas selective slow-pair scaling preserves local phases and compresses only out-of-distribution slow angles.
 :::
 :::
 
-::: {.slide title="YaRN and NTK-Aware Scaling Spare the Fast Pairs"}
-[Context extension]{.kicker}
+::: {.slide title="Production Recipes: YaRN and NTK-Aware Scaling"}
+[Long-Context LLM Engineering]{.kicker}
 
-- **YaRN** (Peng et al., 2024): interpolate only the slow pairs, ramp
-  between the groups, add a softmax temperature.
-- **NTK-aware base** $b' = b\, s^{d_h/(d_h-2)}$: pair $m$ slows by
-  $s^{2m/(d_h-2)}$, from 1 for the fastest pair to $s$ for the slowest.
-- Training with a larger base is the trained form of the same idea.
+Modern open-weights language models extend RoPE contexts from $4\text{K}$/$8\text{K}$ to $128\text{K}+$ using two closely related frequency-scaling techniques:
+
+- **NTK-Aware Base Scaling:** Replaces the RoPE base $b = 10000$ with $b' = b \cdot s^{d_h / (d_h - 2)}$ for context extension factor $s = L_{\textrm{new}} / L_{\textrm{train}}$.
+  - Pair $m = 0$ keeps frequency $\omega_0 = (b')^0 = 1$ radian/token (local resolution preserved).
+  - The slowest pair $m = (d_h - 2)/2$ has its frequency divided by $(b'/b)^{(d_h-2)/d_h} = s$, fitting the $s$-fold longer context into its trained angular arc!
+- **YaRN (Yet another RoPE extensioN, Peng et al., 2024):** Keeps fast frequencies unchanged ($\text{scale} = 1$), linearly interpolates slow frequencies ($\text{scale} = 1/s$), blends intermediate frequencies with a smooth ramp, and applies a softmax temperature scale, followed by a brief fine-tune.
 :::
 
-::: {.slide title="Check: Which Base Grows the Context Fourfold?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: Symmetry, RoPE, and Extrapolation"}
+[Check Your Understanding]{.kicker}
 
-Head width $d_h = 32$, base $b = 10^4$, growth $s = 4$. Compute the
-NTK-aware base $b' = b\, s^{d_h/(d_h-2)}$. Which pair keeps its frequency?
+Test your grasp of positional encodings and context extension:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $b' = 10^4 \cdot 4^{32/30} \approx 4.4 \times 10^4$. Pair 0
-turns one radian per position for every base; the slowest pair turns four
-times slower.
+1. **Relative Angle in RoPE:** Pair $m = 0$ rotates by $\omega_0 = 1\text{ rad/token}$. If a query and key share identical unrotated pair-$0$ vectors, what angle separates their pair-$0$ vectors when the query is at $i = 3$ and the key is at $j = 5$? What if $i = 1{,}003$ and $j = 1{,}005$?
+2. **Additive Cross-Terms:** In $(\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A}\,(\mathbf{x}_j + \mathbf{p}_j)$, which terms change when we shift both tokens by $+17$ positions ($i \mapsto i+17$, $j \mapsto j+17$)?
+3. **NTK-Aware Base Calculation:** To extend a head of width $d_h = 64$ from $4\text{K}$ to $16\text{K}$ tokens ($s = 4$) via NTK-aware scaling from base $b = 10{,}000$, what is the new base $b'$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **$2\text{ radians}$ in both cases** ($(5 - 3)\omega_0 = (1005 - 1003)\omega_0 = 2$). Only the relative offset $j - i$ affects the angle and dot product.
+2. **The content–position cross terms** $\mathbf{x}_i^\top\mathbf{A}\mathbf{p}_j$ and $\mathbf{p}_i^\top\mathbf{A}\mathbf{x}_j$ (and $\mathbf{p}_i^\top\mathbf{A}\mathbf{p}_j$ unless $\mathbf{A}$ is block-diagonal with $2 \times 2$ scaled rotations).
+3. **$b' = 10{,}000 \times 4^{64/62} \approx 41{,}826$**, which keeps $\omega_0 = 1$ unchanged while dividing the slowest frequency $\omega_{31}$ by $4$.
 :::
 :::
-:::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Positional Information in Attention"}
+[Key Takeaways]{.kicker}
 
-- Unmasked attention is permutation equivariant: shuffled inputs give
-  shuffled outputs.
-- Added codes (learned, sinusoidal) leave absolute position in the score;
-  RoPE's rotations make it depend on the offset alone.
-- Trained at 128: RoPE 7.3, NoPE at the bigram's 11.6. At 512: learned,
-  sinusoidal, and RoPE degrade; ALiBi stays flat but reads nothing useful
-  beyond 128.
-- Rescaling RoPE's slow pairs brings 512 to about 9 without training.
-
-**Next:** attention scores every pair of positions. What does that cost,
-and how much of it can be avoided without changing the result?
+| Scheme | Injection Rule | Relative-Offset Invariant? | In-Range PPL ($128$) | Extrap PPL ($512$) | Primary Strength & Limitation |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **NoPE** | Causal mask $j \le i$ only | N/A | $11.6$ | $11.6$ | Zero overhead, but weak position resolution in shallow models |
+| **Learned** | $\mathbf{x}_i + \mathbf{p}_i$ (trainable table) | No | $9.3$ | $22.9$ | Simple, flexible in-range; rows $\ge L_{\textrm{train}}$ receive zero gradient |
+| **Sinusoidal** | $\mathbf{x}_i + \mathbf{p}_i/\sqrt{d}$ (fixed sines) | No (cross terms) | $9.6$ | $15.6$ | Parameter-free counter; additive cross terms break under shifts |
+| **ALiBi** | $s_{ij} - m_h(i - j)$ | Yes | $9.7$ | **$9.7$** | Flat extrapolation via recency bias; attenuates distant keys |
+| **RoPE** | $(\mathbf{R}_i\mathbf{q}_i)^\top(\mathbf{R}_j\mathbf{k}_j) = \mathbf{q}_i^\top\mathbf{R}_{j-i}\mathbf{k}_j$ | **Yes (exact)** | **$7.3$** | $27.7 \to \mathbf{9.0}^*$ | Best in-range quality; $*$slow-pair / YaRN scaling repairs long contexts |
 :::

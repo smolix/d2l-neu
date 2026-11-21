@@ -561,12 +561,11 @@ $$
 $$
 :eqlabel:`eq_mdl-normal-equations`
 
-These are simply the matrix form of the $2 \times 2$ system we solved by hand:
+These are the matrix form of the $2 \times 2$ system we solved by hand:
 for the line fit, $\mathbf{A} = [\mathbf{1}\ \mathbf{t}]$ gives
 $\mathbf{A}^\top\mathbf{A} = \left(\begin{smallmatrix}3&3\\3&5\end{smallmatrix}\right)$
 and $\mathbf{A}^\top\mathbf{y} = (6, 0)$. Whenever the columns of $\mathbf{A}$
-are linearly independent, $\mathbf{A}^\top\mathbf{A}$ is invertible
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-least-squares-line`) and the
+are linearly independent, $\mathbf{A}^\top\mathbf{A}$ is invertible and the
 optimal coefficients $\hat{\mathbf{x}}$ are unique. Even when the columns are
 dependent, the fitted vector $\mathbf{A}\hat{\mathbf{x}}$ remains unique
 because it is still the closest point in $\operatorname{col}(\mathbf{A})$,
@@ -793,9 +792,7 @@ about $0.29$, compared with only $0.06$ for $|\cos\theta| < 0.1$. In $d = 3$,
 the cosine is uniform on $[-1, 1]$, a classical result known to
 Archimedes. Starting at $d = 4$, the density peaks at $0$; by $d = 10$ it forms
 a bell of width $1/\sqrt{10} \approx 0.32$, and by $d = 1000$ it has narrowed
-into a sharp spike of width roughly $0.03$
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-low-dim-cosine` works out the
-exact densities).
+into a sharp spike of width roughly $0.03$.
 
 ![Histograms of the cosine between independent random unit vectors in dimensions $d = 2$, $10$, and $1000$. In $d = 2$, the cosine piles up near $\pm 1$ even though the angle is uniform. By $d = 10$ it forms a bell around $0$, and by $d = 1000$ it concentrates into a narrow spike of width $\approx 1/\sqrt{d}$, matching the proposition.](../img/mdl-la-cosine-highd.svg)
 :label:`fig_mdl-la-cosine-highd`
@@ -962,8 +959,7 @@ classification is right and grows larger the deeper the point sits inside its
 own half-space. Rescaling $(\mathbf{w}, b) \to (c\mathbf{w}, cb)$ for any
 $c > 0$ leaves both the hyperplane and the margin unchanged, while multiplying
 the raw score $\mathbf{w}\cdot\mathbf{x} + b$ by $c$. Any learning objective
-that maximizes the raw score must therefore constrain the scale of $\mathbf{w}$
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-signed-distance`).
+that maximizes the raw score must therefore constrain the scale of $\mathbf{w}$.
 
 ### The Nearest-Mean Classifier
 :label:`subsec_mdl-nearest-mean`
@@ -1151,34 +1147,6 @@ similar pairs where class spread along the boundary normal matters.
 
 ## Exercises
 
-1. **Fitting a line by projection.** Four measurements
-   $\mathbf{y} = (0, 8, 8, 20)$ are taken at times
-   $\mathbf{t} = (0, 1, 3, 4)$. Let $\mathbf{1} = (1, 1, 1, 1)$. This is the
-   four-point counterpart of the line fit in the text.
-    1. Project $\mathbf{y}$ onto the line through $\mathbf{1}$
-       using :eqref:`eq_mdl-projection`. Verify that the residual is orthogonal to
-       $\mathbf{1}$, check :eqref:`eq_mdl-pythagoras`, and compute the distance
-       from $\mathbf{y}$ to the line. Which familiar statistic of the
-       measurements is the projection coefficient?
-    1. Fit the line $C + Dt$ by least squares :eqref:`eq_mdl-least-squares`,
-       where $\mathbf{A}$ has columns $\mathbf{1}$ and $\mathbf{t}$. Write out
-       the normal equations :eqref:`eq_mdl-normal-equations`, solve them, and
-       compute the four errors along with the sum of their squares. Why does
-       $C$ differ from the coefficient found in part 1?
-    1. Suppose the columns of $\mathbf{A}$ are linearly independent, so that
-       Gram–Schmidt gives $\mathbf{A} = \mathbf{Q}\mathbf{R}$ with
-       $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ and an invertible upper
-       triangular $\mathbf{R}$. Show that $\mathbf{A}^\top\mathbf{A}$ is
-       invertible and that
-       $\mathbf{A}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top =
-       \mathbf{Q}\mathbf{Q}^\top$. The normal equations therefore recover the
-       projection matrix $\mathbf{P}$ without forming an orthonormal basis.
-
-   *Adapted from Gilbert Strang,
-   [MIT 18.065 Matrix Methods in Data Analysis, Signal Processing, and Machine Learning, Problem Sets](https://www.ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/cd4c57b7e61b8ca9fdd3511a30aca052_MIT18_065S18PSets.pdf),
-   Problems for Lecture 10, Problems 12 and 17.*
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-least-squares-line`
-
 1. [code] **Cosines between random vectors.**
     1. Sample $1{,}000$ pairs of independent random unit vectors in
        $d = 10{,}000$ dimensions by normalizing standard Gaussian vectors, and
@@ -1195,28 +1163,6 @@ similar pairs where class spread along the boundary normal matters.
        unrelated key achieve as the top match among $10^5$ keys? How should a
        threshold for declaring two embeddings related scale with $n$ and $d$?
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-random-cosines`
-
-1. **Closest point and margin.**
-    1. Show that the point on the hyperplane $\mathbf{w}\cdot\mathbf{x} + b = 0$
-       closest to $\mathbf{x}$ is
-       $\mathbf{x} - \frac{\mathbf{w}\cdot\mathbf{x} + b}{\|\mathbf{w}\|^2}\,\mathbf{w}$,
-       and that its distance from $\mathbf{x}$ equals the absolute value of the
-       signed distance :eqref:`eq_mdl-signed-distance`. (Hint: pick any point
-       $\mathbf{x}_0$ on the hyperplane and subtract from
-       $\mathbf{x} - \mathbf{x}_0$ its shadow onto $\mathbf{w}$.)
-    1. For $\mathbf{w} = (3, 4)$ and $b = -10$, find the signed distance of
-       $\mathbf{x} = (1, 1)$, determine which side of the hyperplane it lies
-       on, and compute its closest point on the hyperplane.
-    1. Replace $(\mathbf{w}, b)$ by $(c\mathbf{w}, cb)$ with $c > 0$. Which of
-       the hyperplane, the raw score $\mathbf{w}\cdot\mathbf{x} + b$, and the
-       signed distance change? Now suppose training points $\mathbf{x}_i$ with
-       labels $y_i \in \{-1, +1\}$ are linearly separable, so some
-       $(\mathbf{w}, b)$ achieves $y_i(\mathbf{w}\cdot\mathbf{x}_i + b) > 0$
-       for every $i$. If a classifier tries to maximize the smallest score
-       $\min_i y_i(\mathbf{w}\cdot\mathbf{x}_i + b)$, why does the problem have
-       no finite maximum unless the scale of $\mathbf{w}$ is fixed? What
-       scale-invariant quantity should be maximized instead?
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-signed-distance`
 
 1. **Nearest means and invariance.** The nearest-mean rule assigns
    $\mathbf{x}$ to class $1$ when $\mathbf{w}\cdot\mathbf{x} + b > 0$, where
@@ -1264,23 +1210,6 @@ similar pairs where class spread along the boundary normal matters.
        that these two subspaces are orthogonal if and only if
        $\mathbf{P}^\top = \mathbf{P}$.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-projectors`
-
-1. **The cosine in two and three dimensions.**
-    1. In $d = 2$, the angle $\theta$ between a fixed direction and a uniformly
-       random direction is uniform on $[0, \pi]$. Derive the probability
-       density of $\cos\theta$, $f(c) = 1/(\pi\sqrt{1 - c^2})$ on $(-1, 1)$,
-       and use it to verify the probabilities quoted in the text for
-       $|\cos\theta| < 0.1$ and $|\cos\theta| > 0.9$.
-    1. In $d = 3$, show that $\cos\theta$ is uniform on $[-1, 1]$. (Hint: by a
-       theorem of Archimedes, the surface area of the band on a sphere between
-       two parallel cutting planes depends only on the distance between the
-       planes.)
-    1. In general dimension $d \ge 2$, the density of $\cos\theta$ is
-       proportional to $(1 - c^2)^{(d-3)/2}$ on $(-1, 1)$. Check, either
-       numerically or using a Beta integral, that its variance equals $1/d$ for
-       $d = 4$ and $d = 10$. Starting from which dimension $d$ does
-       $|\cos\theta| < 0.1$ become more likely than $|\cos\theta| > 0.9$?
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-low-dim-cosine`
 
 1. [code] **Tilting the boundary.** ● The mean-difference normal
    $\boldsymbol{\Delta} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$ ignores how
@@ -1409,244 +1338,290 @@ similar pairs where class spread along the boundary normal matters.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24.1]{.kicker}
+[Dive into Deep Learning · §33.1]{.kicker}
 
-Vectors, Angles, and Projections<br>
-**lengths, shadows, and hyperplanes in 784 dimensions**
+Vectors, Angles, and Projections<br>**dot products · orthogonal shadows · Cauchy–Schwarz · subspaces & QR · high-dimensional cosines · hyperplanes**
 :::
 :::
 
-::: {.slide title="One Dot Product per Image Is Right 92% of the Time"}
-[The problem]{.kicker}
+::: {.slide title="One Dot Product Classifies 92% of Test Images"}
+[Motivation]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .narrow}
-- A $28\times 28$ image is a point in $\mathbb{R}^{784}$: no picture.
-- Is it nearer the mean t-shirt or the mean trousers?
-- That is one dot product and one threshold per image.
-- It is right on about **92%** of $2{,}000$ test images.
+::: {.col}
+- **Three Geometric Operations in ML:** Models *compare* representations (similarity), *fit* targets (least-squares projection), and *separate* classes (hyperplane boundaries).
+- **A Concrete Test in $\mathbb{R}^{784}$:** Each $28 \times 28$ Fashion-MNIST image is a point in $784$-dimensional space where no picture can be drawn.
+- **The Simplest Classifier:** Average all training t-shirts and all training trousers, then assign each test image to whichever class mean lies closer—a rule that reduces to a single dot product and reaches **$92\%$ test accuracy**.
 :::
 
 ::: {.col .fig}
 @!geometry-linear-algebraic-ops-hyperplanes-2
 :::
 :::
-
-::: {.d2l-note .warn}
-Why do pictures from the plane still hold in 784 dimensions?
-:::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Vectors as Points and as Displacements"}
+[Vector Geometry]{.kicker}
 
-- compute a projection and an angle by hand, in any dimension;
-- prove Cauchy–Schwarz from a right triangle;
-- fit a line by projecting onto a plane, and build $\mathbf{Q}$ by Gram–Schmidt;
-- say what cosine to expect between unrelated vectors;
-- read a hyperplane's normal and offset, and compute a signed distance;
-- classify by nearest mean, and say when it fails.
-
-**Running example:** t-shirts against trousers; the vectors $(1, 3)$ and $(2, 1)$.
-:::
-
-::: {.slide title="Everything Here Uses Only Dot Products"}
-[Where this fits]{.kicker}
-
-| section | adds |
-|---|---|
-| **Vectors, Angles, and Projections** | **lengths, angles, projections, hyperplanes** |
-| Matrices as Linear Maps | columns, rank, inverses, determinants |
-| Eigendecompositions | powers of one square map, symmetric matrices |
-| Spectra in Practice | locating and computing eigenvalues, where they mislead |
-| Singular Value Decomposition | two bases, best low rank, least squares, $\kappa$ |
-
-- **Uses:** the dot product $\mathbf{u}\cdot\mathbf{v} = \sum_i u_i v_i$, length $\|\mathbf{u}\| = \sqrt{\mathbf{u}\cdot\mathbf{u}}$.
-- **Skips:** what matrices do as maps (next deck).
-:::
-
-::: {.slide title="The Shadow of v on w Is the Closest Multiple of w"}
 ::: {.cols .vc}
-::: {.col .narrow}
-$\mathbf{v} = (1, 3)$, $\mathbf{w} = (2, 1)$: minimize $\|\mathbf{v} - t\mathbf{w}\|^2 = 5t^2 - 10t + 10$.
-
-- $t^\star = \mathbf{v}\cdot\mathbf{w}/\mathbf{w}\cdot\mathbf{w} = 5/5 = 1$;
-- shadow $(2, 1)$, residual $\mathbf{r} = (-1, 2)$;
-- $\mathbf{r}\cdot\mathbf{w} = -2 + 2 = 0$: a right angle.
+::: {.col}
+- **Point Viewpoint:** A vector $\mathbf{v} = (3, 2)$ names a fixed coordinate location relative to the origin $\mathbf{0}$, turning a dataset of $n$ examples into a cloud of $n$ points in $\mathbb{R}^d$.
+- **Direction Viewpoint:** The same vector represents a displacement ($3$ steps right, $2$ steps up) that can start anywhere; all parallel arrows of equal length represent the same vector.
+- **The Dot Product Engine:** Every geometric quantity in $\mathbb{R}^d$ grows out of one symmetric operation ($|\mathbf{u}| = \sqrt{\mathbf{u}\cdot\mathbf{u}}$):
+  $$\mathbf{u}^\top\mathbf{v} = \mathbf{u}\cdot\mathbf{v} = \sum_{i=1}^d u_i v_i$$
 :::
 
 ::: {.col .fig}
-![](../img/mdl-la-projection.svg)
+![](../img/mdl-la-vectors.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Orthogonal Pieces Add in Squared Length"}
+::: {.slide title="Tip-to-Tail Addition and Relative Displacement"}
+[Vector Geometry]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Vector Addition ($\mathbf{u} + \mathbf{v}$):** In the displacement view, adding two vectors means following arrow $\mathbf{u}$ and then following arrow $\mathbf{v}$ from its tip.
+- **Vector Subtraction ($\mathbf{u} - \mathbf{v}$):** Since $\mathbf{u} = \mathbf{v} + (\mathbf{u} - \mathbf{v})$, the difference $\mathbf{u} - \mathbf{v}$ is the exact displacement arrow carrying point $\mathbf{v}$ to point $\mathbf{u}$.
+- **Euclidean Distance:** The distance between two data points $\mathbf{u}, \mathbf{v} \in \mathbb{R}^d$ is simply the length of their difference arrow, $\|\mathbf{u} - \mathbf{v}\| = \sqrt{(\mathbf{u} - \mathbf{v})\cdot(\mathbf{u} - \mathbf{v})}$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-vector-add.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Projection onto a Line: Closest Multiple"}
+[Orthogonal Projection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **1D Fitting Problem:** Given $\mathbf{v} = (1, 3)$ and a direction $\mathbf{w} = (2, 1)$, which scalar multiple $t\mathbf{w}$ comes closest to $\mathbf{v}$?
+- **Quadratic Error Curve:** Expanding the squared error yields a convex parabola in $t$:
+  $$q(t) = \|\mathbf{v} - t\mathbf{w}\|^2 = \|\mathbf{w}\|^2 t^2 - 2(\mathbf{v}\cdot\mathbf{w})t + \|\mathbf{v}\|^2$$
+- **Unique Minimum ($q'(t^\star) = 0$):** Setting $2\|\mathbf{w}\|^2 t - 2(\mathbf{v}\cdot\mathbf{w}) = 0$ gives $t^\star = (\mathbf{v}\cdot\mathbf{w})/(\mathbf{w}\cdot\mathbf{w})$. For our pair, $t^\star = 5/5 = 1$, giving shadow $(2, 1)$ and residual $\mathbf{r} = (-1, 2)$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-projection.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Orthogonality and Pythagoras in Any Dimension"}
+[Orthogonal Projection]{.kicker}
+
+The optimal projection splits any vector $\mathbf{v}$ into a component aligned with $\mathbf{w} \neq \mathbf{0}$ and an orthogonal residual $\mathbf{r}$:
+
 ::: {.d2l-note .rule}
-$$\operatorname{proj}_{\mathbf{w}}\mathbf{v} = \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\,\mathbf{w},
-\qquad \mathbf{r} = \mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v} \perp \mathbf{w}.$$
+**Proposition (Orthogonal Projection).** The closest multiple of $\mathbf{w}$ to $\mathbf{v}$ is $\operatorname{proj}_{\mathbf{w}}\mathbf{v} = \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\,\mathbf{w}$, and its residual $\mathbf{r} = \mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v}$ satisfies $\mathbf{r}\cdot\mathbf{w} = \mathbf{v}\cdot\mathbf{w} - t^\star(\mathbf{w}\cdot\mathbf{w}) = 0$.
 :::
 
-- Pythagoras: $\mathbf{a}\cdot\mathbf{b} = 0 \Rightarrow \|\mathbf{a} + \mathbf{b}\|^2 = \|\mathbf{a}\|^2 + \|\mathbf{b}\|^2$ (the cross term $2\,\mathbf{a}\cdot\mathbf{b}$ vanishes).
-- Example: $\|\mathbf{v}\|^2 = 10 = 5 + 5$.
-- Signed length of the shadow: $\mathbf{v}\cdot\mathbf{w}/\|\mathbf{w}\| = \sqrt{5}$.
-- Needs $\mathbf{w} \neq \mathbf{0}$: the zero vector has no direction.
+- **Pythagoras' Theorem ($\mathbf{a}\cdot\mathbf{b} = 0$):** When two vectors meet at a right angle, the cross term $2\,\mathbf{a}\cdot\mathbf{b}$ in $\|\mathbf{a} + \mathbf{b}\|^2 = \|\mathbf{a}\|^2 + 2\,\mathbf{a}\cdot\mathbf{b} + \|\mathbf{b}\|^2$ vanishes, so squared lengths add cleanly: $\|\mathbf{v}\|^2 = \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 + \|\mathbf{r}\|^2$ ($10 = 5 + 5$).
+- **Signed Shadow Length:** Multiplying $t^\star$ by $\|\mathbf{w}\|$ gives the signed shadow length $(\mathbf{v}\cdot\mathbf{w})/\|\mathbf{w}\|$ ($+\sqrt{5}$ here), recording both magnitude and whether the shadow points along or against $\mathbf{w}$.
 :::
 
-::: {.slide title="The Shadow Is Never Longer Than the Vector"}
-I. Pythagoras on $\mathbf{v} = \operatorname{proj}_{\mathbf{w}}\mathbf{v} + \mathbf{r}$:
+::: {.slide title="Cauchy–Schwarz From a Right Triangle"}
+[Angles in High Dimensions]{.kicker}
 
-$$\|\mathbf{v}\|^2 = \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 + \|\mathbf{r}\|^2 \ge \frac{(\mathbf{v}\cdot\mathbf{w})^2}{\|\mathbf{w}\|^2}$$
-
-II. Multiply by $\|\mathbf{w}\|^2$, take square roots.
+Can the shadow of a vector ever be longer than the vector itself? Pythagoras turns the right triangle of projection into a one-line proof for all dimensions:
 
 ::: {.d2l-note .rule}
-**Cauchy–Schwarz.** $|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\,\|\mathbf{w}\|$, with equality iff $\mathbf{r} = \mathbf{0}$, i.e. $\mathbf{v}$ and $\mathbf{w}$ collinear.
-:::
+**Proposition (Cauchy–Schwarz Inequality).** For all $\mathbf{v}, \mathbf{w} \in \mathbb{R}^d$, $|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\,\|\mathbf{w}\|$, with equality if and only if $\mathbf{v}$ and $\mathbf{w}$ are collinear (one is a scalar multiple of the other).
 :::
 
-::: {.slide title="In 784 Dimensions the Angle Is a Definition"}
-- Plane: the law of cosines gives $\mathbf{v}\cdot\mathbf{w} = \|\mathbf{v}\|\|\mathbf{w}\|\cos\theta$.
-- $\mathbb{R}^d$: define $\theta = \arccos\big(\mathbf{v}\cdot\mathbf{w}/(\|\mathbf{v}\|\|\mathbf{w}\|)\big)$; Cauchy–Schwarz keeps the argument in $[-1, 1]$.
-- It matches a protractor in the plane of $\mathbf{w}/\|\mathbf{w}\|$ and $\mathbf{r}/\|\mathbf{r}\|$.
+- **Geometric Proof:** When $\mathbf{w} \neq \mathbf{0}$, dropping the non-negative squared residual $\|\mathbf{r}\|^2 \ge 0$ from Pythagoras gives:
+  $$\|\mathbf{v}\|^2 = \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 + \|\mathbf{r}\|^2 \ge \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 = \frac{(\mathbf{v}\cdot\mathbf{w})^2}{\|\mathbf{w}\|^2}$$
+- **Equality & Triangle Inequality:** Equality holds precisely when $\mathbf{r} = \mathbf{0}$ ($\mathbf{v} = t^\star\mathbf{w}$). Bounding the cross term in $\|\mathbf{v} + \mathbf{w}\|^2$ by $2\|\mathbf{v}\|\|\mathbf{w}\|$ immediately yields the triangle inequality $\|\mathbf{v} + \mathbf{w}\| \le \|\mathbf{v}\| + \|\mathbf{w}\|$.
+:::
+
+::: {.slide title="Defining Angles and Guarding Against Roundoff"}
+[Angles in High Dimensions]{.kicker}
+
+- **Algebraic Angle Definition:** Cauchy–Schwarz guarantees that $(\mathbf{v}\cdot\mathbf{w})/(\|\mathbf{v}\|\|\mathbf{w}\|) \in [-1, 1]$, allowing us to define $\theta = \arccos\!\left(\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}\right) \in [0, \pi]$ in any dimension $\mathbb{R}^d$, matching a planar protractor in $\operatorname{span}(\mathbf{v}, \mathbf{w})$.
 
 @geometry-linear-algebraic-ops-dot-products-and-angles
 
-$\pi/4 = 45^\circ$ for the example. For a collinear pair rounding pushes the ratio to $1 + 2.2\times10^{-16}$, and only the clip avoids `nan`. Orthogonal: $\mathbf{v}\cdot\mathbf{w} = 0$.
+::: {.d2l-note .warn}
+**Floating-Point Hazard:** For collinear vectors like $\mathbf{v}$ and $3\mathbf{v}$, IEEE-754 rounding can nudge the computed cosine to $1 + 2.2\times 10^{-16}$, causing unclipped `np.arccos` to return `nan`. Always wrap cosine ratios in `np.clip(cos, -1, 1)`.
+:::
 :::
 
-::: {.slide title="Check: Project (3, 2) onto (2, 1)"}
-[Check]{.kicker}
+::: {.slide title="Span, Linear Independence, Basis, and Dimension"}
+[Subspaces]{.kicker}
 
-Compute the shadow of $\mathbf{v} = (3, 2)$ on $\mathbf{w} = (2, 1)$ and its residual, and check the right angle.
+::: {.cols .vc}
+::: {.col}
+- **Span & Subspaces:** The set of all linear combinations $\operatorname{span}(\mathbf{v}_1, \ldots, \mathbf{v}_k) = \{\sum_{i=1}^k a_i \mathbf{v}_i\}$ is closed under addition and scaling, forming a *subspace* through the origin $\mathbf{0}$.
+- **Linear Independence:** Vectors $\mathbf{v}_1, \ldots, \mathbf{v}_k$ are independent when no vector is redundant—the only combination giving $\sum_i a_i \mathbf{v}_i = \mathbf{0}$ is $a_1 = \cdots = a_k = 0$.
+- **Basis & Unique Coordinates:** A basis of a subspace $S$ is an independent spanning set; its vector count is the *dimension* $\dim S$, and every $\mathbf{x} \in S$ has unique coordinates $(a_1, \ldots, a_k)$.
+:::
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\mathbf{v}\cdot\mathbf{w} = 8$, $\mathbf{w}\cdot\mathbf{w} = 5$, so the shadow is $1.6\,(2, 1) = (3.2, 1.6)$. The residual is $(-0.2, 0.4)$, and $(-0.2)(2) + (0.4)(1) = 0$. Check: $13 = 12.8 + 0.2$.
+::: {.col .fig}
+![](../img/mdl-la-span.svg){.nostretch width=100%}
 :::
 :::
 :::
 
 ::: {.slide title="Fitting a Line Is Projecting onto a Plane"}
-::: {.cols .vc}
-::: {.col .narrow}
-$\mathbf{y} = (6, 0, 0)$ at $t = 0, 1, 2$; candidates $C\mathbf{1} + D\mathbf{t}$.
+[Least Squares]{.kicker}
 
-- residual $\perp \mathbf{1}$: $3C + 3D = 6$;
-- residual $\perp \mathbf{t}$: $3C + 5D = 0$;
-- line $5 - 3t$, fit $(5, 2, -1)$, errors $(1, -2, 1)$;
-- $36 = 30 + 6$; the mean alone leaves $24$.
+::: {.cols .vc}
+::: {.col}
+- **Candidate Subspace in $\mathbb{R}^3$:** Fitting $C + Dt$ to $\mathbf{y} = (6, 0, 0)$ at times $\mathbf{t} = (0, 1, 2)$ seeks the closest vector $C\mathbf{1} + D\mathbf{t}$ in the 2D plane $S = \operatorname{span}(\mathbf{1}, \mathbf{t})$.
+- **Orthogonality Equations:** The residual $\mathbf{r} = \mathbf{y} - C\mathbf{1} - D\mathbf{t}$ must be perpendicular to the entire plane $S$, hence to both basis vectors ($\mathbf{1}\cdot\mathbf{r} = 6 - 3C - 3D = 0$ and $\mathbf{t}\cdot\mathbf{r} = -3C - 5D = 0$):
+  $$3C + 3D = 6 \implies C = 5, \; D = -3$$
+- **Solution & Error Split:** The best line $5 - 3t$ gives predicted vector $(5, 2, -1)$ and residual $\mathbf{r} = (1, -2, 1)$ with $\|\mathbf{y}\|^2 = 36 = 30 + 6$.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-la-least-squares.svg)
+![](../img/mdl-la-least-squares.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="P = QQᵀ Is the Closest-Point Map"}
-$\mathbf{Q}$: orthonormal columns spanning $S$, so $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$.
+::: {.slide title="Subspace Projection Matrix P = QQᵀ"}
+[Least Squares]{.kicker}
 
-- (i) $\mathbf{x} - \mathbf{P}\mathbf{x} \perp S$; (ii) $\mathbf{P}\mathbf{x}$ is the unique closest point;
-- (iii) $\mathbf{P}^2 = \mathbf{P}$ (twice changes nothing), $\mathbf{P}^\top = \mathbf{P}$ (orthogonal, not oblique).
+Assemble an orthonormal basis $\mathbf{q}_1, \ldots, \mathbf{q}_k$ of $S \subseteq \mathbb{R}^n$ into the columns of $\mathbf{Q} \in \mathbb{R}^{n \times k}$, so $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}_k$:
 
 ::: {.d2l-note .rule}
-Least squares $\min_{\mathbf{x}}\|\mathbf{A}\mathbf{x} - \mathbf{y}\|^2$: residual $\perp$ every column gives $\mathbf{A}^\top\mathbf{A}\hat{\mathbf{x}} = \mathbf{A}^\top\mathbf{y}$.
+**Proposition (Subspace Projection).** The matrix $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$ projects $\mathbb{R}^n$ orthogonally onto $S$:
+(i) $\mathbf{P}\mathbf{x} \in S$ and $\mathbf{x} - \mathbf{P}\mathbf{x} \perp S$; (ii) $\mathbf{P}\mathbf{x}$ is the unique closest point in $S$ to $\mathbf{x}$; (iii) $\mathbf{P}^2 = \mathbf{P}$ and $\mathbf{P}^\top = \mathbf{P}$.
 :::
 
-@!mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace
+- **Why Closest (Pythagoras):** For any competitor $\mathbf{s} \in S$, the difference $\mathbf{P}\mathbf{x} - \mathbf{s}$ lies in $S$ while $\mathbf{x} - \mathbf{P}\mathbf{x} \perp S$, so $\|\mathbf{x} - \mathbf{s}\|^2 = \|\mathbf{x} - \mathbf{P}\mathbf{x}\|^2 + \|\mathbf{P}\mathbf{x} - \mathbf{s}\|^2 \ge \|\mathbf{x} - \mathbf{P}\mathbf{x}\|^2$.
+- **Idempotence & Symmetry:** Projecting twice changes nothing ($\mathbf{P}^2 = \mathbf{Q}(\mathbf{Q}^\top\mathbf{Q})\mathbf{Q}^\top = \mathbf{P}$), while symmetry ($\mathbf{P}^\top = \mathbf{P}$) ensures the projection is orthogonal rather than oblique.
 :::
 
-::: {.slide title="Gram–Schmidt Builds Q by Repeated Projection"}
-$\mathbf{a}_1 = (3, 4)$, $\mathbf{a}_2 = (1, 0)$:
+::: {.slide title="Normal Equations vs. Orthonormal Projection"}
+[Least Squares]{.kicker}
 
-- $\mathbf{q}_1 = \mathbf{a}_1/5 = (0.6, 0.8)$;
-- $\mathbf{a}_2 - 0.6\,\mathbf{q}_1 = (0.64, -0.48)$, length $0.8$, so $\mathbf{q}_2 = (0.8, -0.6)$;
-- $\mathbf{A} = \mathbf{Q}\mathbf{R}$ with $\mathbf{R} = \left(\begin{smallmatrix}5&0.6\\0&0.8\end{smallmatrix}\right)$, entries $\mathbf{q}_i\cdot\mathbf{a}_j$;
-- $\mathbf{R}$ is upper triangular: $\mathbf{a}_j$ uses only $\mathbf{q}_1, \ldots, \mathbf{q}_j$.
+- **Normal Equations:** Minimizing $\|\mathbf{A}\mathbf{x} - \mathbf{y}\|^2$ seeks the closest point in $\operatorname{col}(\mathbf{A})$. Requiring the residual $\mathbf{y} - \mathbf{A}\hat{\mathbf{x}}$ to be orthogonal to every column of $\mathbf{A}$ yields $\mathbf{A}^\top(\mathbf{y} - \mathbf{A}\hat{\mathbf{x}}) = \mathbf{0}$, or $\mathbf{A}^\top\mathbf{A}\hat{\mathbf{x}} = \mathbf{A}^\top\mathbf{y}$.
+
+@mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace
+
+::: {.d2l-note .warn}
+**Why Solvers Prefer QR Over $\mathbf{A}^\top\mathbf{A}$:** When columns of $\mathbf{A}$ are nearly dependent, forming $\mathbf{A}^\top\mathbf{A}$ squares the condition number $\kappa(\mathbf{A})$, doubling the digits lost to roundoff. Production solvers project via an orthonormal basis $\mathbf{Q}$ instead.
+:::
+:::
+
+::: {.slide title="Gram–Schmidt and the QR Factorization"}
+[Orthonormalization]{.kicker}
+
+- **Sequential Projection:** Given independent vectors $\mathbf{a}_1, \ldots, \mathbf{a}_k$, Gram–Schmidt builds an orthonormal basis by subtracting from each $\mathbf{a}_j$ its projections onto $\mathbf{q}_1, \ldots, \mathbf{q}_{j-1}$ and normalizing the remainder:
+  $$\mathbf{v}_j = \mathbf{a}_j - \sum_{i=1}^{j-1} (\mathbf{q}_i \cdot \mathbf{a}_j)\,\mathbf{q}_i, \qquad \mathbf{q}_j = \frac{\mathbf{v}_j}{\|\mathbf{v}_j\|}$$
+- **Worked $2 \times 2$ Example:** For $\mathbf{a}_1 = (3, 4)$ and $\mathbf{a}_2 = (1, 0)$, we get $\mathbf{q}_1 = \mathbf{a}_1/5 = (0.6, 0.8)$, remainder $\mathbf{v}_2 = (1, 0) - 0.6(0.6, 0.8) = (0.64, -0.48)$ of length $0.8$, and $\mathbf{q}_2 = (0.8, -0.6)$.
+- **Upper-Triangular Reconstruction ($\mathbf{A} = \mathbf{Q}\mathbf{R}$):** Reading the steps in reverse writes $\mathbf{a}_1 = 5\mathbf{q}_1$ and $\mathbf{a}_2 = 0.6\mathbf{q}_1 + 0.8\mathbf{q}_2$, factoring $\mathbf{A} = \mathbf{Q}\mathbf{R}$ with upper-triangular $r_{ij} = \mathbf{q}_i\cdot\mathbf{a}_j$ ($i \le j$).
+:::
+
+::: {.slide title="Gram–Schmidt by Hand vs. Householder QR"}
+[Orthonormalization]{.kicker}
+
+Comparing our two-step Gram–Schmidt orthogonalization against `np.linalg.qr` confirms that both construct the same orthonormal basis up to column sign flips:
+
+@mdl-geometry-linear-algebraic-ops-gram-schmidt-and-qr
 
 ::: {.d2l-note}
-`np.linalg.qr` returns the same basis up to signs: columns $-\mathbf{q}_1$, $-\mathbf{q}_2$.
+**Reflections in Floating Point:** Numerical libraries compute $\mathbf{A} = \mathbf{Q}\mathbf{R}$ using Householder reflections rather than classical Gram–Schmidt subtractions, preserving machine-precision orthogonality even when columns are nearly collinear.
 :::
 :::
 
-::: {.slide title="Random Directions in High Dimension Are Nearly Orthogonal"}
+::: {.slide title="Cosine Similarity in High-Dimensional Space"}
+[High-Dimensional Geometry]{.kicker}
+
+- **Scale-Invariant Direction Metric:** Cosine similarity normalizes the dot product by both vector lengths, measuring pure directional alignment in $[-1, 1]$:
+  $$\cos\theta = \frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\,\|\mathbf{w}\|} \in [-1, 1]$$
+- **Why Embeddings Use Cosine:** Dimming an image to $10\%$ brightness moves it far away in Euclidean distance $\|\mathbf{v} - \mathbf{w}\|$, yet leaves its direction—and its cosine similarity of $1$—completely unchanged.
+- **Contrastive Learning vs. Attention:** Contrastive objectives (SimCLR, CLIP) and vector retrieval normalize embeddings onto the unit sphere, whereas dot-product attention uses unnormalized $\mathbf{q}\cdot\mathbf{k}/\sqrt{d}$ so vector magnitudes can modulate confidence.
+:::
+
+::: {.slide title="Random Directions in ℝᵈ Are Nearly Orthogonal"}
+[Concentration of Measure]{.kicker}
+
 ::: {.cols .vc}
-::: {.col .narrow}
-$\mathbf{u}$ fixed, $\mathbf{v}$ uniform on the unit sphere of $\mathbb{R}^d$:
-
-- $\mathbb{E}[\cos\theta] = 0$, $\textrm{Var}(\cos\theta) = 1/d$;
-- Chebyshev: $\Pr(|\cos\theta| \ge \varepsilon) \le 1/(d\varepsilon^2)$;
-- $d = 784$: $\cos\theta \approx 0 \pm 0.036$.
+::: {.col}
+- **Isotropic Baseline:** Fix a unit vector $\mathbf{u} \in \mathbb{R}^d$ and draw $\mathbf{v}$ uniformly from the unit sphere. By rotational invariance, take $\mathbf{u} = \mathbf{e}_1$ so $\cos\theta = v_1$.
+- **Mean and Variance:** Sign symmetry gives $\mathbb{E}[\cos\theta] = \mathbb{E}[v_1] = 0$, and coordinate symmetry across $\sum_{i=1}^d v_i^2 = 1$ forces $d\,\mathbb{E}[v_1^2] = 1$:
+  $$\operatorname{Var}(\cos\theta) = \mathbb{E}[v_1^2] = \frac{1}{d}$$
+- **Concentration Spike:** Typical random cosines scale as $1/\sqrt{d}$ ($\approx 0.036$ in $\mathbb{R}^{784}$), collapsing into a narrow spike around $0$ ($90^\circ$).
 :::
 
 ::: {.col .fig}
-![](../img/mdl-la-cosine-highd.svg)
+![](../img/mdl-la-cosine-highd.svg){.nostretch width=100%}
 :::
 :::
-
-In $d = 2$ the angle is uniform; only the cosine piles up at $\pm 1$.
 :::
 
-::: {.slide title="Check: What Cosine Do Two Random Images Have?"}
-[Check]{.kicker}
+::: {.slide title="Simulating Random vs. Real Image Cosines"}
+[Concentration of Measure]{.kicker}
 
-Pick two Fashion-MNIST test images at random. Is their cosine near $0 \pm 0.036$?
+Normalizing standard Gaussian vectors confirms the $1/\sqrt{784} \approx 0.036$ spread, whereas real Fashion-MNIST test images behave very differently:
 
-::: {.fragment .fade-up}
+@mdl-geometry-linear-algebraic-ops-near-orthogonality-of-random-directions-1
+
+@mdl-geometry-linear-algebraic-ops-near-orthogonality-of-random-directions-2
+:::
+
+::: {.slide title="Why Real Data Depart From the Isotropic Baseline"}
+[Data Geometry]{.kicker}
+
+- **Positive-Orthant Shift ($\approx 0.60 \pm 0.18$):** Raw pixel intensities lie in $[0, 1]^{784}$, confining all images to the non-negative orthant where dot products can never be negative.
+- **Low Effective Dimension After Centering ($\approx 0.00 \pm 0.34$):** Subtracting the mean training image centers the cosine distribution at $0$, but its standard deviation $0.34$ is nearly $10\times$ wider than $1/\sqrt{784} = 0.036$.
+- **Effective Dimension $d_{\text{eff}} = 1/\sigma^2 \approx 8.6$:** Matching $\operatorname{Std}(\cos\theta) \approx 0.34$ to $1/\sqrt{d_{\text{eff}}}$ reveals that centered Fashion-MNIST images concentrate near an $8$- to $9$-dimensional subspace rather than filling $\mathbb{R}^{784}$.
+
 ::: {.d2l-note}
-**Answer.** No: about $0.6 \pm 0.18$. Pixels are non-negative, so all images share one orthant. After subtracting the mean image: $0 \pm 0.34$, nearly ten times the isotropic width. A cosine is large only relative to the right reference.
-:::
+**Practical Lesson for Retrieval:** An observed cosine of $0.5$ is enormous for isotropic vectors in $\mathbb{R}^{784}$ ($14$ standard deviations), but completely unremarkable for raw uncentered images. Always benchmark against random pairs from the *same* distribution.
 :::
 :::
 
-::: {.slide title="Attention Divides by √d Because Raw Scores Have Variance d"}
-Entries of $\mathbf{q}, \mathbf{k} \in \mathbb{R}^d$ independent, mean $0$, variance $1$:
+::: {.slide title="Why Dot-Product Attention Divides by √d"}
+[Transformer Geometry]{.kicker}
 
-$$\textrm{Var}(\mathbf{q}\cdot\mathbf{k}) = \sum_{i=1}^d \textrm{Var}(q_i k_i) = d$$
-
-- $d = 64$: raw scores $8$ apart give softmax weights $0.9997$ and $0.0003$;
-- divided by $\sqrt{d} = 8$: $0.73$ and $0.27$.
-- The largest of $n$ unrelated cosines grows like $\sqrt{2\ln n/d}$: about $0.3$ for $n = 10^5$, $d = 256$.
+- **Variance of Unnormalized Dot Products:** If query $\mathbf{q}$ and key $\mathbf{k}$ in $\mathbb{R}^d$ have independent entries of mean $0$ and variance $1$, each product $q_i k_i$ has mean $0$ and variance $1$, and the $d$ uncorrelated terms add:
+  $$\operatorname{Var}(\mathbf{q}\cdot\mathbf{k}) = \sum_{i=1}^d \operatorname{Var}(q_i k_i) = d \implies \operatorname{Std}(\mathbf{q}\cdot\mathbf{k}) = \sqrt{d}$$
+- **Geometric View of the Same Scaling:** Typical vectors have length $\|\mathbf{q}\|, \|\mathbf{k}\| \approx \sqrt{d}$ while their random cosine has scale $1/\sqrt{d}$, producing dot products of typical magnitude $\sqrt{d} \cdot \sqrt{d} \cdot (1/\sqrt{d}) = \sqrt{d}$.
+- **Preventing Softmax Saturation:** At head dimension $d = 64$, raw scores have standard deviation $8$, pushing two scores separated by $1\sigma$ to near-one-hot softmax weights ($0.9997$ vs. $0.0003$) with vanishing gradients; dividing by $\sqrt{d} = 8$ restores unit variance ($0.73$ vs. $0.27$).
+- **Extreme-Value Bar Across $n$ Keys:** Among $n$ unrelated keys, the maximum background cosine grows like $\sqrt{2\ln n / d}$ ($\approx 0.30$ for $n = 10^5, d = 256$), setting the threshold a true match must clear.
 :::
 
-::: {.slide title="A Hyperplane Is a Normal and an Offset"}
+::: {.slide title="Hyperplanes and Signed Distance to the Boundary"}
+[Linear Decision Boundaries]{.kicker}
+
 ::: {.cols .vc}
-::: {.col .narrow}
-$\{\mathbf{x} : \mathbf{w}\cdot\mathbf{x} + b = 0\}$; signed distance $(\mathbf{w}\cdot\mathbf{x} + b)/\|\mathbf{w}\|$.
-
-- $\mathbf{w} = (2, 1)$, $b = -1$: the line $2x + y = 1$;
-- origin at $-1/\sqrt{5}$; $(1, 1)$ at $+2/\sqrt{5}$;
-- margin of a labeled point, $y \in \{\pm 1\}$: $y\,(\mathbf{w}\cdot\mathbf{x} + b)/\|\mathbf{w}\|$.
+::: {.col}
+- **Hyperplane Equation:** In $\mathbb{R}^d$, $\{\mathbf{x} : \mathbf{w}\cdot\mathbf{x} + b = 0\}$ with normal $\mathbf{w} \neq \mathbf{0}$ and offset $b$ is a $(d-1)$-dimensional flat sheet partitioning space into two half-spaces ($\gtrless 0$).
+- **Signed Distance Formula:** Picking any $\mathbf{x}_0$ on the hyperplane ($\mathbf{w}\cdot\mathbf{x}_0 = -b$) and projecting $\mathbf{x} - \mathbf{x}_0$ onto $\mathbf{w}$ gives:
+  $$\text{dist}(\mathbf{x}) = \frac{\mathbf{w}\cdot(\mathbf{x} - \mathbf{x}_0)}{\|\mathbf{w}\|} = \frac{\mathbf{w}\cdot\mathbf{x} + b}{\|\mathbf{w}\|}$$
+- **Geometric Margin:** For label $y \in \{-1, +1\}$, the margin $y(\mathbf{w}\cdot\mathbf{x} + b)/\|\mathbf{w}\|$ is positive when classified correctly and scale-invariant under $(\mathbf{w}, b) \mapsto (c\mathbf{w}, cb)$.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-la-hyperplane.svg)
+![](../img/mdl-la-hyperplane.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Nearest Mean Is One Hyperplane Through the Midpoint"}
-Expand both squared distances; $\|\mathbf{x}\|^2$ cancels:
+::: {.slide title="Nearest-Mean Classification Is One Hyperplane"}
+[Linear Classifiers]{.kicker}
 
-$$\|\mathbf{x} - \bar{\mathbf{x}}_1\|^2 < \|\mathbf{x} - \bar{\mathbf{x}}_0\|^2 \iff \mathbf{w}\cdot\mathbf{x} + b > 0$$
+- **Canceling the Quadratic Term:** Assigning $\mathbf{x}$ to class $1$ when it lies closer to $\bar{\mathbf{x}}_1$ than to $\bar{\mathbf{x}}_0$ expands to a linear inequality because $\|\mathbf{x}\|^2$ cancels on both sides:
+  $$\|\mathbf{x} - \bar{\mathbf{x}}_1\|^2 < \|\mathbf{x} - \bar{\mathbf{x}}_0\|^2 \iff (\bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0)\cdot\mathbf{x} - \tfrac{1}{2}\bigl(\|\bar{\mathbf{x}}_1\|^2 - \|\bar{\mathbf{x}}_0\|^2\bigr) > 0$$
+- **Perpendicular Bisector Normal & Offset:** Using $\|\bar{\mathbf{x}}_1\|^2 - \|\bar{\mathbf{x}}_0\|^2 = (\bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0)\cdot(\bar{\mathbf{x}}_0 + \bar{\mathbf{x}}_1)$, the boundary is $\mathbf{w}\cdot\mathbf{x} + b = 0$ with normal $\mathbf{w} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$ and midpoint offset $b = -\mathbf{w}\cdot\tfrac{1}{2}(\bar{\mathbf{x}}_0 + \bar{\mathbf{x}}_1)$.
 
-- $\mathbf{w} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$: from one mean to the other;
-- $b = -\mathbf{w}\cdot\tfrac12(\bar{\mathbf{x}}_0 + \bar{\mathbf{x}}_1)$: through the midpoint;
-- a softmax layer computes the same $\mathbf{w}\cdot\mathbf{x} + b$, with learned weights.
+@geometry-linear-algebraic-ops-hyperplanes-4
 :::
 
-::: {.slide title="One Hyperplane Separates T-Shirts from Trousers 92% of the Time"}
+::: {.slide title="Signed-Distance Histogram and Class Overlap"}
+[Error Analysis]{.kicker}
+
 ::: {.cols .vc}
-::: {.col .narrow}
-~~~python
-w = mean_1 - mean_0
-b = -w @ (mean_0 + mean_1) / 2
-pred = X2 @ w + b > 0   # trousers
-np.mean(pred == (y2 == 1))  # 0.92
-~~~
-
-Two modes, a broad t-shirt hump and a sharp trouser peak; their tails overlap at the boundary: $169$ of $2{,}000$ errors.
+::: {.col}
+- **1D Projection Along $\mathbf{w}$:** Projecting all $2{,}000$ test images onto the normal $\mathbf{w} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$ compresses each $784$-pixel image to its signed distance $(\mathbf{w}\cdot\mathbf{x} + b)/\|\mathbf{w}\|$ from the boundary.
+- **Two Modes at $\mp\|\mathbf{w}\|/2 \approx \mp 3.2$:** T-shirts form a broad hump ($\sigma \approx 2.4$) on the negative side and trousers form a sharper peak ($\sigma \approx 1.7$) on the positive side.
+- **Tail Overlap ($169$ Errors):** Because the boundary sits $1.4\sigma$ to $1.9\sigma$ from each class center, the tails cross zero ($101$ t-shirts and $68$ trousers misclassified).
 :::
 
 ::: {.col .fig}
@@ -1655,40 +1630,41 @@ Two modes, a broad t-shirt hump and a sharp trouser peak; their tails overlap at
 :::
 :::
 
-::: {.slide title="The Midpoint Rule Has No Notion of Spread"}
-- Along $\mathbf{w}$: t-shirts spread $\pm 2.4$, trousers $\pm 1.7$.
-- Wrong side: $101$ t-shirts, $68$ trousers (a long trouser tail).
-- Mean to boundary, in standard deviations of the class: $1.4$ to $1.9$ here.
-- T-shirt/shirt and pullover/coat: only $0.6$ to $1.0$, and accuracy drops to about $79\%$ and $72\%$.
+::: {.slide title="Why Nearest Mean Fails on High-Variance Pairs"}
+[Classifier Limitations]{.kicker}
 
-::: {.d2l-note}
-Remedies: tilt $\mathbf{w}$ by the within-class spread (Fisher), learn the
-boundary (softmax regression), or learn a representation (a deep network).
+- **Signal-to-Spread Ratio:** The midpoint rule looks only at class centroids $\bar{\mathbf{x}}_0, \bar{\mathbf{x}}_1$ and ignores how widely each cloud spreads along $\mathbf{w}$:
+
+@!mdl-geometry-linear-algebraic-ops-the-nearest-mean-classifier-2
+
+- **From $92\%$ Down to $72\%$:** On visually similar garments (t-shirt vs. shirt, pullover vs. coat), the half-distance $\|\mathbf{w}\|/2$ shrinks to $0.6\sigma$–$1.0\sigma$, slicing through both clouds.
+- **Layers as Stacked Hyperplanes:** A linear layer $\mathbf{A}\mathbf{x} + \mathbf{b}$ evaluates $m$ hyperplane scores in parallel (one per row), and learning via Fisher's discriminant, softmax regression, or deep representations tilts normals away from high-variance directions.
+:::
+
+::: {.slide title="Concept Check: Projections, Cosines & Hyperplanes"}
+[Concept Check]{.kicker}
+
+1. **Projection & Pythagoras:** Project $\mathbf{v} = (3, 2)$ onto $\mathbf{w} = (2, 1)$, find the residual $\mathbf{r}$, and verify $\|\mathbf{v}\|^2 = \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 + \|\mathbf{r}\|^2$.
+2. **Attention Scaling:** In a Transformer head with dimension $d = 100$ and unit-variance query/key entries, what is the standard deviation of raw dot products $\mathbf{q}\cdot\mathbf{k}$ before scaling?
+3. **Hyperplane Row View:** For $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$ and $\mathbf{x} = (2, -1)$, what signed distances does $\mathbf{x}$ have to the two origin hyperplanes defined by the rows of $\mathbf{A}$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+**1.** $t^\star = \frac{8}{5} = 1.6$, so $\operatorname{proj}_{\mathbf{w}}\mathbf{v} = (3.2, 1.6)$ and $\mathbf{r} = (-0.2, 0.4)$ with $\mathbf{r}\cdot\mathbf{w} = 0$ and $13 = 12.8 + 0.2$.
+**2.** $\operatorname{Std}(\mathbf{q}\cdot\mathbf{k}) = \sqrt{d} = 10$, which is why attention divides scores by $\sqrt{100} = 10$.
+**3.** Row 1 gives $\mathbf{a}_1\cdot\mathbf{x} = 0$ (lies directly on hyperplane 1); Row 2 gives $\mathbf{a}_2\cdot\mathbf{x} = -5$, so signed distance is $-5/\sqrt{10} \approx -1.58$.
 :::
 :::
 
-::: {.slide title="Check: How Many Hyperplane Tests Is a Softmax Layer?"}
-[Check]{.kicker}
+::: {.slide title="Summary: Vectors, Angles, and Projections"}
+[Key Takeaways]{.kicker}
 
-A 10-class layer on Fashion-MNIST: how many hyperplane tests? And for
-$\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$,
-$\mathbf{x} = (2, -1)$, on which hyperplane does $\mathbf{x}$ lie?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Ten rows, ten normals $\mathbf{w}_k$ (plus ten biases). Row one: $2 - 2 = 0$, so $\mathbf{x}$ lies on the hyperplane with normal $(1, 2)$. Row two: $-2 - 3 = -5$. So $\mathbf{A}\mathbf{x} = (0, -5)$.
-:::
-:::
-:::
-
-::: {.slide title="Dot Products Give Lengths, Angles, and Shadows in Any Dimension"}
-[Wrap-up]{.kicker}
-
-- Shadow of $(1, 3)$ on $(2, 1)$: $(2, 1)$; residual $\perp$; $10 = 5 + 5$.
-- Cauchy–Schwarz from Pythagoras; the angle in $\mathbb{R}^d$ is a definition.
-- Line fit $5 - 3t$; normal equations $\mathbf{A}^\top\mathbf{A}\hat{\mathbf{x}} = \mathbf{A}^\top\mathbf{y}$; Gram–Schmidt gives $\mathbf{Q}$.
-- Random cosines $0 \pm 0.036$ in $\mathbb{R}^{784}$; real images about $0.6$.
-- Nearest mean: $92\%$, then $79\%$ and $72\%$ on harder pairs.
-
-**Next:** a matrix moves every vector at once. Which inputs does it destroy, and when can it be undone?
+| Concept | Mathematical Formula | Key Property / Deep Learning Role |
+| :--- | :--- | :--- |
+| **Line Projection** | $\operatorname{proj}_{\mathbf{w}}\mathbf{v} = \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\mathbf{w}$ | Residual $\mathbf{r} = \mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v} \perp \mathbf{w}$; Pythagoras $\|\mathbf{v}\|^2 = \|\operatorname{proj}\|^2 + \|\mathbf{r}\|^2$ |
+| **Cauchy–Schwarz & Angle** | $|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\|\mathbf{w}\|$, $\cos\theta = \frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}$ | Keeps cosine in $[-1, 1]$ in any dimension; clip to $[-1, 1]$ in float arithmetic |
+| **Subspace Projector** | $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$ ($\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}_k$) | Unique closest point in $S$; idempotent ($\mathbf{P}^2 = \mathbf{P}$) and symmetric ($\mathbf{P}^\top = \mathbf{P}$) |
+| **Least Squares & QR** | $\mathbf{A}^\top\mathbf{A}\hat{\mathbf{x}} = \mathbf{A}^\top\mathbf{y}$, $\mathbf{A} = \mathbf{Q}\mathbf{R}$ | Gram–Schmidt / Householder QR avoids squaring $\kappa(\mathbf{A})$ in normal equations |
+| **Random Cosines in $\mathbb{R}^d$** | $\mathbb{E}[\cos\theta] = 0$, $\operatorname{Var}(\cos\theta) = 1/d$ | Random directions are within $\pm 1/\sqrt{d}$ of orthogonal; attention scales by $1/\sqrt{d}$ |
+| **Hyperplane & Nearest Mean** | $\text{dist}(\mathbf{x}) = \frac{\mathbf{w}\cdot\mathbf{x} + b}{\|\mathbf{w}\|}$, $\mathbf{w} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$ | Midpoint bisector achieves $92\%$ on t-shirts vs. trousers; linear layers stack $m$ hyperplanes |
 :::

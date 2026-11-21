@@ -391,250 +391,224 @@ and compute-efficient bottlenecks.
 ::: {.cover}
 [Dive into Deep Learning · §6.4]{.kicker}
 
-Multiple Input and Multiple Output Channels<br>**sums over channels · feature maps · parameter counts · 1×1 layers**
+Multiple Input and Multiple Output Channels<br>**multi-channel kernels · feature maps · compute & memory scaling · 1×1 bottlenecks**
 :::
 :::
 
-::: {.slide title="One 3×3 Layer from 256 to 256 Channels Has 590,000 Weights"}
-[The problem]{.kicker}
+::: {.slide title="Why Vision Networks Need Multi-Channel Tensors"}
+[Motivation & The Quadratic Channel Scaling Wall]{.kicker}
 
-- A color image is three grids: $3\times 224\times 224$ for red, green,
-  and blue.
-- Single-channel cross-correlation takes one grid and returns one: it can
-  neither compare colors nor detect more than one pattern.
-- A real layer has $c_i$ input and $c_o$ output channels, and
-  $c_o c_i k_h k_w$ weights.
-- $256\to 256$ channels, $3\times 3$ kernels: 589,824 weights and
-  $1.8\times 10^9$ multiply-adds per image on a $56\times 56$ output.
+Single-channel 2D convolutions cannot process color photographs or represent rich intermediate visual vocabularies:
+
+- **Multiple input channels ($c_\textrm{i}$):** An RGB image is a 3D tensor of shape $(3, H, W)$; detecting a red-on-green edge of equal brightness requires comparing intensity *across* channels at the same pixel.
+- **Multiple output channels ($c_\textrm{o}$):** A single kernel detects only one feature; hidden layers extract dozens or hundreds of parallel feature maps ($c_\textrm{o} = 64, 128, 256, 512$).
+- **The $c_\textrm{i} c_\textrm{o}$ scaling wall:** Connecting every input channel to every output channel with its own $k_\textrm{h} \times k_\textrm{w}$ spatial filter means a single $3 \times 3$ layer from $256 \to 256$ channels requires **$589{,}824$ weights** and **$1.85 \times 10^9$ multiply-adds** per $56 \times 56$ image!
 
 ::: {.d2l-note}
-Channels give a layer many detectors; their cost grows with
-$c_i\cdot c_o$.
+In deep CNNs, the product $c_\textrm{i} c_\textrm{o}$ dominates parameter count and compute—motivating $1 \times 1$ bottleneck projections that slash both by $8.5\times$.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Cross-Correlation with Multiple Input Channels"}
+[One Spatial Filter Slice per Input Channel, Then Sum]{.kicker}
 
-- compute a multi-channel cross-correlation by hand;
-- give the shape of a layer's kernel tensor, and count its parameters and
-  multiply-adds;
-- write a $1\times 1$ convolution as one matrix product;
-- compute the savings of a $1\times 1$ bottleneck.
-
-**Running example:** LeNet's second convolution, from 6 to 16 channels with
-$5\times 5$ kernels and a $10\times 10$ output.
-:::
-
-::: {.slide title="Channels Turn One Detector per Layer into Many"}
-[Where this fits]{.kicker}
+When the input $\mathsf{X}$ has $c_\textrm{i}$ channels of shape $(c_\textrm{i}, n_\textrm{h}, n_\textrm{w})$, a single output channel's kernel $\mathsf{K}$ must have shape $(c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$. We cross-correlate each channel $\mathbf{X}_c$ with its filter slice $\mathbf{K}_c$ and sum across all $c_\textrm{i}$ channels:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| From Fully Connected Layers to Convolutions | locality and translation equivariance give convolution |
-| Convolutions for Images | cross-correlation, learning a kernel, receptive fields |
-| Padding, Stride, and Dilation | output size and how far each unit sees |
-| **Multiple Input and Multiple Output Channels** | **channels, 1 × 1 convolutions, cost** |
-| Pooling | downsampling, tolerance to small shifts, global pooling |
-| LeNet | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
+$$\mathbf{Y} = \sum_{c=1}^{c_\textrm{i}} \mathbf{X}_c \star \mathbf{K}_c$$
+
+- **Scalar products per output pixel:** Each entry $[\mathbf{Y}]_{i,j}$ aggregates $c_\textrm{i} k_\textrm{h} k_\textrm{w}$ products across space and channels.
+- **Shaded top-left output $(0,0)$ ($c_\textrm{i}=2$):**
+  - Channel 0: $0{\cdot}0 + 1{\cdot}1 + 3{\cdot}2 + 4{\cdot}3 = 19$.
+  - Channel 1: $1{\cdot}1 + 2{\cdot}2 + 4{\cdot}3 + 5{\cdot}4 = 37$.
+  - Sum: $19 + 37 = 56$.
 :::
 
-::: {.col .narrow}
-- **Uses:** `corr2d`; output shapes from padding and stride.
-- **Skips:** pooling (next deck); networks built from these layers (next
-  chapter).
+::: {.col .fig}
+![](../img/conv-multi-in.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
+::: {.slide title="How Cross-Channel Summation Detects Color Opponency"}
+[Why Spatial Filtering Alone Cannot See Equal-Luminance Edges]{.kicker}
 
-[Input channels]{.dtitle}
+Summing across input channels enables a single convolutional filter to compute linear combinations of color or lower-level features:
 
-[one kernel per input channel, then a sum]{.dsub}
-:::
-:::
-
-::: {.slide title="A Multi-Input Kernel Adds One Cross-Correlation per Channel"}
-[Input channels]{.kicker}
-
-$\mathbf{Y} = \sum_{c=1}^{c_i} \mathbf{X}_c \star \mathbf{K}_c$, with
-$\star$ the 2-D cross-correlation computed by `corr2d`, kernel shape
-$c_i\times k_h\times k_w$:
-
-![Two input channels: one cross-correlation per channel, then a sum.](../img/conv-multi-in.svg){width=72%}
-
-First output:
-$(1{\cdot}1+2{\cdot}2+4{\cdot}3+5{\cdot}4)+(0{\cdot}0+1{\cdot}1+3{\cdot}2+4{\cdot}3)=56$.
+- **Red-minus-green opponent filter:** Consider a $1 \times 1$ kernel with weight $+1$ on the Red channel, $-1$ on the Green channel, and $0$ on Blue:
+  $$[\mathbf{Y}]_{i,j} = [\mathbf{X}_{\textrm{R}}]_{i,j} - [\mathbf{X}_{\textrm{G}}]_{i,j}$$
+- **Response across regions:** Outputs $+1$ in pure red regions, $-1$ in pure green regions, and $0$ on neutral gray backgrounds of *any* brightness.
+- **Equal-luminance contour detection:** Wherever a red object touches a green background of identical brightness, a grayscale filter sees a flat intensity field, whereas a $1 \times 2$ color-opponent kernel $\mathbf{K}_{\textrm{R}} = [1, -1], \mathbf{K}_{\textrm{G}} = [-1, 1]$ fires strongly at the boundary.
 :::
 
-::: {.slide title="Summing over Channels Lets a Kernel Compare Colors"}
-[Input channels]{.kicker}
+::: {.slide title="Implementing Multi-Input Cross-Correlation in Code"}
+[Summing 2D Cross-Correlations Over the Channel Axis]{.kicker}
 
-- Take a $1\times 1$ kernel with weight $+1$ on red and $-1$ on green.
-- Its output is red minus green at every pixel: positive in red regions,
-  negative in green ones, zero in gray ones, however bright.
-- Where the sign flips, red meets green, even if both are equally bright.
-- A filter on the brightness alone sees no edge there.
-
-::: {.d2l-note}
-Each output value combines the same window in every input channel:
-$c_i k_h k_w$ products.
-:::
-:::
-
-::: {.slide title="Input Channels in Code: One corr2d per Channel"}
-[Input channels]{.kicker}
+In Python, `corr2d_multi_in` zips the channel slices of `X` and `K`, calls `d2l.corr2d(x, k)` on each pair, and sums the resulting 2D grids:
 
 @channels-multiple-input-channels-1
 
-The input and kernel of the figure:
-
-@!channels-multiple-input-channels-2
+@channels-multiple-input-channels-2
 :::
 
-::: {.slide title="Check: The Second Output Element"}
-[Check]{.kicker}
+::: {.slide title="Multiple Output Channels: The 4D Kernel Tensor"}
+[Extracting c_o Parallel Feature Maps]{.kicker}
 
-Input channels $\begin{smallmatrix}0&1&2\\3&4&5\\6&7&8\end{smallmatrix}$
-and $\begin{smallmatrix}1&2&3\\4&5&6\\7&8&9\end{smallmatrix}$, kernel
-channels $\begin{smallmatrix}0&1\\2&3\end{smallmatrix}$ and
-$\begin{smallmatrix}1&2\\3&4\end{smallmatrix}$. Compute the output in the
-first row, second column.
+To produce $c_\textrm{o}$ distinct output feature maps $\mathsf{Y} \in \mathbb{R}^{c_\textrm{o} \times h_\textrm{o} \times w_\textrm{o}}$, the layer stacks $c_\textrm{o}$ multi-input kernels into a 4th-order tensor $\mathsf{K}$ of shape $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $(1{\cdot}0+2{\cdot}1+4{\cdot}2+5{\cdot}3) +
-(2{\cdot}1+3{\cdot}2+5{\cdot}3+6{\cdot}4) = 25 + 47 = 72$.
-:::
-:::
+$$\mathbf{Y}_o = u_o + \sum_{c=1}^{c_\textrm{i}} \mathbf{X}_c \star \mathbf{K}_{o, c}, \qquad o = 1, \ldots, c_\textrm{o}$$
+
+- **All-to-all channel connectivity:** Every output channel $o$ reads *every* input channel $c$ through its own learned $k_\textrm{h} \times k_\textrm{w}$ spatial filter $\mathbf{K}_{o,c}$.
+- **Framework memory layouts:**
+  - **Channels-first (PyTorch, MXNet):** Inputs $(B, c_\textrm{i}, H, W)$ and kernels $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$.
+  - **Channels-last (JAX/Flax, TensorFlow/Keras):** Inputs $(B, H, W, c_\textrm{i})$ and kernels $(k_\textrm{h}, k_\textrm{w}, c_\textrm{i}, c_\textrm{o})$.
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Implementing Multi-Input, Multi-Output Convolution"}
+[Stacking Output Feature Maps Along Axis 0]{.kicker}
 
-[Output channels]{.dtitle}
-
-[one kernel per feature map]{.dsub}
-:::
-:::
-
-::: {.slide title="One Kernel per Output Channel, One Feature Map Each"}
-[Output channels]{.kicker}
-
-$$\mathbf{Y}_o = \sum_{c=1}^{c_i} \mathbf{X}_c \star \mathbf{K}_{o,c},
-\qquad o = 1, \ldots, c_o$$
-
-- Kernel tensor of shape $c_o\times c_i\times k_h\times k_w$.
-- Every output channel reads every input channel, each through a kernel of
-  its own.
-- Each output channel is a *feature map*: one detector's responses at every
-  position.
-- Channels usually grow as resolution shrinks: LeNet goes from 1 to 6 to 16
-  channels.
-:::
-
-::: {.slide title="Output Channels in Code: Stack One Output per Kernel"}
-[Output channels]{.kicker}
+Iterating `corr2d_multi_in(X, k)` over each 3D kernel `k` in the 4D tensor `K` and stacking along axis 0 produces the 3D output tensor $(c_\textrm{o}, h_\textrm{o}, w_\textrm{o})$:
 
 @channels-multiple-output-channels-1
 
-- Kernels `K`, `K + 1`, `K + 2` give three channels whose first elements
-  are 56, 76, and 96.
-- Adding 1 to every weight adds the window's sum over both input channels,
-  20 for the first window.
+@channels-multiple-output-channels-2
+
+@channels-multiple-output-channels-3
 :::
 
-::: {.slide title="Parameters Grow with the Product of Channel Counts"}
-[Output channels]{.kicker}
+::: {.slide title="Mental-Math Verification of Multi-Channel Outputs"}
+[Why Adding +1 to All Kernel Weights Adds 20 to Position (0,0)]{.kicker}
 
-parameters $= c_o c_i k_h k_w + c_o$, multiply-adds
-$= h_o w_o\cdot c_o c_i k_h k_w$
+Look closely at the three output channels produced by stacking $(\mathsf{K}, \mathsf{K}+1, \mathsf{K}+2)$:
 
-| layer | parameters |
-|---|---|
-| $3\to 64$, $3\times 3$ | 1,792 |
-| $256\to 256$, $3\times 3$ | 590,080 |
-
-- Doubling all channel counts quadruples both.
-- The $256\to 256$ layer on a $56\times 56$ output:
-  $56^2\cdot 589{,}824\approx 1.8\times 10^9$ multiply-adds per image.
+- **Channel 0 ($\mathsf{K}$):** Top-left entry is $56$ (and the full $2 \times 2$ map is $\begin{bsmallmatrix}56 & 72\\104 & 120\end{bsmallmatrix}$).
+- **Channel 1 ($\mathsf{K} + 1$):** By linearity of cross-correlation, adding $+1$ to all $c_\textrm{i} k_\textrm{h} k_\textrm{w} = 8$ weights in the kernel adds the sum of all 8 input values inside the window:
+  $$\sum_{c=0}^{1} \sum_{a=0}^{1} \sum_{b=0}^{1} (\mathbf{K}_{c,a,b} + 1) \mathbf{X}_{c,a,b} = 56 + (0+1+3+4) + (1+2+4+5) = 56 + 20 = 76$$
+- **Channel 2 ($\mathsf{K} + 2$):** Adds $2 \times 20 = 40$, starting at $56 + 40 = 96$.
 :::
 
-::: {.slide title="Check: LeNet's Second Convolution"}
-[Check]{.kicker}
+::: {.slide title="Three Distinct Resource Costs of a Convolutional Layer"}
+[Parameters, Multiply-Adds (MACs), and Activation Memory]{.kicker}
 
-From 6 to 16 channels, $5\times 5$ kernels, a $10\times 10$ output. How
-many parameters? How many multiply-adds?
+When profiling or designing a CNN layer ($c_\textrm{i} \to c_\textrm{o}$, kernel $k_\textrm{h} \times k_\textrm{w}$, output grid $h_\textrm{o} \times w_\textrm{o}$), you must track **three** separate hardware budgets:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $16\cdot 6\cdot 25 + 16 = 2{,}416$ parameters;
-$10^2\cdot 16\cdot 6\cdot 25 = 240{,}000$ multiply-adds.
+1. **Parameter memory (weights + biases):** Independent of image resolution $H \times W$:
+   $$N_{\textrm{params}} = c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$$
+2. **Arithmetic compute (multiply-adds per image):** Every kernel weight is evaluated at all $h_\textrm{o} w_\textrm{o}$ output positions ($\textrm{FLOPs} \approx 2 \times \textrm{MACs}$):
+   $$\textrm{MACs} = h_\textrm{o} w_\textrm{o} \cdot c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$$
+3. **Training activation memory (per example):** Autograd must cache the forward output tensor to compute $\partial \mathcal{L} / \partial \mathsf{K}$ in the backward pass:
+   $$N_{\textrm{act}} = h_\textrm{o} w_\textrm{o} c_\textrm{o}$$
+:::
+
+::: {.slide title="Systems Pitfall: Where Memory and Compute Actually Live"}
+[Early Stem Layers vs. Deep High-Channel Layers]{.kicker}
+
+Compare an early stem layer against a deep mid-network layer on a $224 \times 224$ RGB image:
+
+| Layer Configuration ($k = 3 \times 3, p = 1, s = 1$) | Output Grid $h_\textrm{o} \times w_\textrm{o}$ | Parameters ($c_\textrm{o} c_\textrm{i} k^2 + c_\textrm{o}$) | Multiply-Adds per Image | Activation Values Cached per Image |
+|---|---|--:|--:|--:|
+| **Stem layer ($3 \to 64$)** at $224 \times 224$ | $224 \times 224$ | **$1{,}792$** ($7\textrm{ KB}$) | $8.67 \times 10^7$ | **$3.21 \times 10^6$** ($12.8\textrm{ MB}$, $1792\times$ params!) |
+| **Mid layer ($128 \to 128$)** at $112 \times 112$ | $112 \times 112$ | $147{,}584$ ($0.59\textrm{ MB}$) | **$1.85 \times 10^9$** | $1.61 \times 10^6$ ($6.4\textrm{ MB}$) |
+| **Deep layer ($256 \to 256$)** at $56 \times 56$ | $56 \times 56$ | **$590{,}080$** ($2.36\textrm{ MB}$) | **$1.85 \times 10^9$** | $8.03 \times 10^5$ ($3.2\textrm{ MB}$) |
+
+::: {.d2l-note .warn}
+**Systems takeaway:** **Parameters** peak in the deepest, widest layers ($c_\textrm{i} c_\textrm{o}$); **activation memory** peaks in the earliest, highest-resolution layers ($h_\textrm{o} w_\textrm{o} c_\textrm{o}$), which is why GPU out-of-memory (OOM) errors during training are governed by batch size $\times$ early feature-map resolution!
+:::
+:::
+
+::: {.slide title="The 1×1 Convolution: A Per-Pixel Channel MLP"}
+[Mixing Channels Without Spatial Aggregation]{.kicker}
+
+At $k_\textrm{h} = k_\textrm{w} = 1$, the spatial window covers just a single pixel $(i, j)$—so what does a $1 \times 1$ convolution actually compute?
+
+::: {.cols .vc}
+::: {.col}
+$$[\mathsf{Y}]_{o, i, j} = u_o + \sum_{c=1}^{c_\textrm{i}} [\mathbf{K}]_{o, c}\, [\mathsf{X}]_{c, i, j}$$
+
+- **Shared dense layer across space:** At every pixel $(i, j)$, it multiplies the $c_\textrm{i}$-vector of input channels by the same $c_\textrm{o} \times c_\textrm{i}$ weight matrix $\mathbf{K}$.
+- **Roles:** Cross-channel feature mixing, projecting channel count up or down ($c_\textrm{i} \to c_\textrm{o}$), and adding per-pixel nonlinearity (when followed by ReLU).
+:::
+
+::: {.col .fig}
+![](../img/conv-1x1.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
+::: {.slide title="Implementing 1×1 Convolution as One Matrix Product"}
+[Reshaping (c_i, H, W) to (c_i, H*W) Without im2col Duplication]{.kicker}
 
-[Cheaper channel mixing]{.dtitle}
-
-[1×1 layers and bottlenecks]{.dsub}
-:::
-:::
-
-::: {.slide title="A 1×1 Convolution Is a Dense Layer Applied at Every Pixel"}
-[Cheaper mixing]{.kicker}
-
-![A $1\times 1$ convolution from 3 to 2 channels.](../img/conv-1x1.svg){width=55%}
-
-The same $c_o\times c_i$ matrix maps the channel vector at every position:
-$c_o c_i$ weights and $c_o$ biases, no spatial pattern.
-:::
-
-::: {.slide title="A 1×1 Convolution Is One Matrix Product"}
-[Cheaper mixing]{.kicker}
+Because a $1 \times 1$ window never overlaps adjacent pixels, `im2col` requires **zero memory duplication**—we simply flatten the spatial axes into columns of shape $(c_\textrm{i}, h w)$ and left-multiply by the $(c_\textrm{o}, c_\textrm{i})$ kernel matrix:
 
 @channels-1-times-1-convolutional-layer-1
 
-Total absolute difference from `corr2d_multi_in_out` on random data:
-
-@!channels-1-times-1-convolutional-layer-2
+@channels-1-times-1-convolutional-layer-2
 :::
 
-::: {.slide title="A 1×1 Bottleneck Has 8.5× Fewer Weights Than a 256-Channel 3×3 Layer"}
-[Cheaper mixing]{.kicker}
+::: {.slide title="1×1 Bottlenecks: 8.5× Fewer Parameters & MACs"}
+[Breaking the c_i * c_o Cost of Wide 3×3 Convolutions]{.kicker}
 
-| layer | weights |
-|---|---|
-| $1\times 1$, $256\to 64$ | 16,384 |
-| $3\times 3$, $64\to 64$ | 36,864 |
-| $1\times 1$, $64\to 256$ | 16,384 |
-| **total** | **69,632** |
-| one $3\times 3$, $256\to 256$ | 589,824 |
+How can we apply a $3 \times 3$ spatial convolution to a 256-channel feature map without paying $256 \times 256 \times 9 = 589{,}824$ weights? Wrap the $3 \times 3$ layer in a **$1 \times 1$ bottleneck** ($256 \xrightarrow{1\times 1} 64 \xrightarrow{3\times 3} 64 \xrightarrow{1\times 1} 256$):
 
-The multiply-adds fall by the same factor. The restriction: everything
-passes through 64 channels (ResNet accepts it).
+| Architecture ($256 \to 256$ at $56 \times 56$) | Weight Calculation | Total Weights | Multiply-Adds ($56 \times 56$ grid) |
+|---|---|--:|--:|
+| **Direct $3 \times 3$ layer ($256 \to 256$)** | $256 \times 256 \times 9$ | **$589{,}824$** | **$1.85 \times 10^9$** |
+| Step 1: $1 \times 1$ reduce ($256 \to 64$) | $64 \times 256 \times 1$ | $16{,}384$ | $5.14 \times 10^7$ |
+| Step 2: $3 \times 3$ spatial ($64 \to 64$) | $64 \times 64 \times 9$ | $36{,}864$ | $1.16 \times 10^8$ |
+| Step 3: $1 \times 1$ expand ($64 \to 256$) | $256 \times 64 \times 1$ | $16{,}384$ | $5.14 \times 10^7$ |
+| **Bottleneck stack total (3 layers)** | $16{,}384 + 36{,}864 + 16{,}384$ | **$69{,}632$ ($8.5\times$ fewer)** | **$2.18 \times 10^8$ ($8.5\times$ fewer)** |
+
+::: {.d2l-note .rule}
+**Why nonlinearities between bottleneck steps are mandatory:** Without activation functions (e.g., ReLU) between the three convolutions, the composition of three linear convolutions mathematically collapses into a single rank-64 $3 \times 3$ linear convolution!
+:::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Beyond 1×1 Bottlenecks: Grouped & Depthwise Convs"}
+[Factorizing All-to-All Channel Wiring in Modern CNNs]{.kicker}
 
-- Input channels: one kernel channel each, results added; kernels can
-  compare colors (red minus green).
-- Output channels: kernel $c_o\times c_i\times k_h\times k_w$,
-  $c_o c_i k_h k_w + c_o$ parameters; LeNet's second layer has 2,416.
-- Cost $h_o w_o c_o c_i k_h k_w$: $1.8\times 10^9$ multiply-adds for
-  $256\to 256$, $3\times 3$ at $56\times 56$.
-- $1\times 1$: a dense layer at every pixel; a bottleneck has $8.5\times$
-  fewer weights.
+In addition to $1 \times 1$ bottlenecks, Chapter 7 introduces two structural factorizations that directly break the $c_\textrm{i} c_\textrm{o}$ channel product:
 
-Next: pooling, which summarizes neighborhoods.
+| Channel Wiring Strategy | Parameter Count | Compute Savings vs. Standard Conv | Canonical Architectures |
+|---|---|---|---|
+| **Standard Conv ($c_\textrm{i} \to c_\textrm{o}$)** | $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$ | $1\times$ (all-to-all baseline) | LeNet, AlexNet, VGG, ResNet |
+| **Grouped Conv ($g$ groups)** | $\frac{1}{g} c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$ | $g\times$ fewer weights & MACs | ResNeXt ($g = 32$), RegNet |
+| **Depthwise Conv ($g = c_\textrm{i} = c_\textrm{o}$)** | $c_\textrm{i} k_\textrm{h} k_\textrm{w}$ | $c_\textrm{o}\times$ fewer spatial weights (1 filter/channel) | MobileNet, EfficientNet, ConvNeXt |
+| **Depthwise-Separable ($k \times k$ + $1 \times 1$)** | $c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o} c_\textrm{i}$ | $\approx \frac{1}{c_\textrm{o}} + \frac{1}{k_\textrm{h} k_\textrm{w}}$ ($\approx 8\text{--}9\times$ for $3 \times 3$) | Xception, MobileNets (§7.4) |
+
+::: {.d2l-note}
+**Separation of concerns:** Depthwise-separable convolutions completely decouple **spatial filtering** (one $k \times k$ depthwise filter per channel) from **cross-channel mixing** (a $1 \times 1$ pointwise projection across channels).
+:::
+:::
+
+::: {.slide title="Concept Check: Multi-Channel Arithmetic & Scaling"}
+[Concept Check]{.kicker}
+
+Work out these three calculations:
+
+1. **Hand cross-correlation:** For the two-channel $3 \times 3$ input and $2 \times 2$ kernel on Slide 3, we found $[\mathbf{Y}]_{0,0} = 19 + 37 = 56$. Compute the first-row, second-column entry $[\mathbf{Y}]_{0,1}$.
+2. **LeNet's second conv layer:** Maps $c_\textrm{i} = 6$ to $c_\textrm{o} = 16$ channels with unpadded $5 \times 5$ kernels on a $14 \times 14$ input. What are the output shape, parameter count, and multiply-adds?
+3. **Resolution doubling test:** If you double input image resolution from $224 \times 224$ to $448 \times 448$, by what exact factor do a convolutional layer's (a) parameters, (b) multiply-adds, and (c) activation memory change?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+(1) Channel 0 top-right window: $1{\cdot}0 + 2{\cdot}1 + 4{\cdot}2 + 5{\cdot}3 = 25$. Channel 1 top-right window: $2{\cdot}1 + 3{\cdot}2 + 5{\cdot}3 + 6{\cdot}4 = 47$. Sum: $25 + 47 = 72$.
+(2) Output shape: $16 \times 10 \times 10$. Parameters: $16 \times 6 \times 25 + 16 = 2{,}416$. MACs: $10^2 \times 2{,}400 = 240{,}000$.
+(3) (a) Parameters: **$1\times$** (unchanged); (b) Multiply-adds: **$4\times$** ($h_\textrm{o} w_\textrm{o}$ quadruples); (c) Activation memory: **$4\times$**.
+:::
+:::
+
+::: {.slide title="Summary & Key Takeaways"}
+[Section Synthesis]{.kicker}
+
+| Concept / Mechanism | Mathematical / Tensor Form | Scaling Cost | Architectural Role |
+|---|---|---|---|
+| **Multi-Input Conv** | $\mathbf{Y} = \sum_{c=1}^{c_\textrm{i}} \mathbf{X}_c \star \mathbf{K}_c$ | $\mathsf{K} \in \mathbb{R}^{c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}}$ | Fuses color or multi-feature cues across channels |
+| **Multi-Output Conv** | $\mathbf{Y}_o = u_o + \sum_{c=1}^{c_\textrm{i}} \mathbf{X}_c \star \mathbf{K}_{o,c}$ | $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$ params | Extracts $c_\textrm{o}$ parallel feature maps; grows as $H, W$ shrink |
+| **Compute & Memory** | $\textrm{MACs} = h_\textrm{o} w_\textrm{o} c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$ | $\textrm{Activations} = h_\textrm{o} w_\textrm{o} c_\textrm{o}$ | Early layers dominate RAM; deep wide layers dominate params |
+| **$1 \times 1$ Convolution** | $\mathbf{Y} = \textrm{reshape}(\mathbf{K}\,\textrm{reshape}(\mathsf{X}))$ | $c_\textrm{o} c_\textrm{i} + c_\textrm{o}$ params | Per-pixel channel MLP; bottleneck projections cut cost $8.5\times$ |
+
+::: {.d2l-note}
+**Next (§6.5):** How to summarize local neighborhoods, absorb small spatial jitters, and collapse spatial feature maps into translation-invariant vectors via **pooling layers**.
+:::
 :::

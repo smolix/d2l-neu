@@ -1314,47 +1314,6 @@ linear regression.
 
 ## Exercises
 
-1. **Error counts on a test set.** A classifier is scored on $n=10{,}000$
-   independent test examples, each of which it gets wrong with the same
-   probability $q$, its true error rate. Its number of errors $X$ then has the
-   distribution $\mathrm{Binomial}(n,q)$.
-    1. Let $q=0.1$. Use the Gaussian approximation of the binomial (the
-       de Moivre--Laplace theorem) to find the interval around $nq$ that
-       contains $X$ with probability about $95\%$. Two classifiers with this
-       error rate are scored on two independent test sets of this size. Find
-       the standard deviation of the difference of their observed accuracies.
-    1. Let $q=5\cdot10^{-4}$. Compute $P(X=0)$ and $P(X\ge10)$ exactly and
-       under the Poisson approximation $\mathrm{Poisson}(nq)$. Show that the
-       logarithm of $P(X=0)$ under the binomial differs from its Poisson
-       value by about $-nq^2/2$.
-    1. The classifier makes no errors on the $n$ test examples. Under the
-       Poisson approximation, find the largest error rate $q$ for which this
-       outcome still has probability at least $0.05$, and express it as a
-       multiple of $1/n$. Use (b) to explain why the Poisson approximation
-       is accurate for every error rate this small.
-   :exlabel:`ex_mdl-distributions-error-counts`
-
-1. **Conditioning on a noisy observation.** The conditional formulas
-   :eqref:`eq_mdl-mvn_conditional` turn a joint Gaussian into a prediction of
-   one block from another.
-    1. Take the bivariate Gaussian with $\boldsymbol\mu=\mathbf 0$ and
-       $\boldsymbol\Sigma=\left(\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\right)$,
-       where $|\rho|<1$. Identify $\mathbf B$ and the residual $r$, and check
-       $\textrm{Cov}(r,x_2)=0$ directly. Show that
-       $x_1\mid x_2\sim\mathcal N(\rho x_2,1-\rho^2)$. Why does observing $x_2$
-       never increase the uncertainty about $x_1$?
-    1. A signal $s\sim\mathcal N(0,\tau^2)$ is observed with additive noise,
-       $y=s+\epsilon$, where $\epsilon\sim\mathcal N(0,\sigma^2)$ is
-       independent of $s$. Write $(s,y)$ as a linear map of $(s,\epsilon)$ to
-       obtain its joint Gaussian distribution, and compute the conditional
-       distribution of $s$ given $y$. Show that the conditional precision
-       $1/\textrm{Var}(s\mid y)$ is the sum of the prior precision
-       $1/\tau^2$ and the noise precision $1/\sigma^2$. How does
-       $\mathbb{E}[s\mid y]$ behave as $\sigma^2\to0$ and as
-       $\sigma^2\to\infty$? This computation is Gaussian process
-       regression (:numref:`chap_gp`) with a single observation.
-   :exlabel:`ex_mdl-distributions-using-conditional-formula-eqref`
-
 1. **Gamma--Poisson mixture.** Let the Poisson rate itself be random,
    $\lambda\sim\mathrm{Gamma}(\alpha,\beta)$ with the density
    :eqref:`eq_mdl-gamma_pdf`, and let $X\mid\lambda\sim\mathrm{Poisson}(\lambda)$.
@@ -1386,54 +1345,6 @@ linear regression.
        $P(X>s+t\mid X>s)=P(X>t)$ for all integers $s,t\ge0$. Show that $X$ is
        geometric, $P(X>t)=(1-p)^t$ for some $p\in(0,1]$.
    :exlabel:`ex_mdl-distributions-memoryless-converse`
-
-1. [code] **Convergence rate of the CLT.** ●● Let $F_n$ be the c.d.f. of
-   the standardized sum $(S_n-n\mu)/(\sigma\sqrt n)$ of $n$ independent
-   summands with mean $\mu$ and standard deviation $\sigma$. Measure the
-   error of the Gaussian approximation by the Kolmogorov distance
-   $D_n=\sup_x|F_n(x)-\Phi(x)|$, where $\Phi$ and $\phi$ denote the standard
-   Gaussian c.d.f. and density. :numref:`subsec_mdl-gaussian-clt` judges the
-   approximation by eye; this problem measures its rate.
-    1. Compute $D_n$ for $n\in\{1,2,4,\dots,64\}$ and three summand
-       distributions, $U(0,1)$, $\mathrm{Exp}(1)$ and
-       $\mathrm{Bernoulli}(1/2)$. For uniform summands, compute the density of
-       $S_n$ by repeated numerical convolution of the $U(0,1)$ density on a
-       fine grid (`np.convolve`, rescaled by the grid spacing) and integrate it
-       to $F_n$. For exponential summands, $S_n$ is the time of the $n$-th
-       event of a Poisson process with rate $1$, so $P(S_n\le s)=P(N\ge n)$
-       for $N\sim\mathrm{Poisson}(s)$. For the two continuous summands, take
-       the supremum over a fine grid of $x\in[-4,4]$. For Bernoulli summands,
-       use the exact binomial pmf and compare $\Phi$ with $F_n$ on both sides
-       of every jump. Plot $D_n$ against $n$ on log-log axes and fit the
-       slopes.
-    1. For summands that are not confined to a lattice and have skewness
-       $\gamma=\mathbb{E}[(X-\mu)^3]/\sigma^3$, the Edgeworth expansion
-       :cite:`Hall.1992` refines the central limit theorem to
-
-       $$F_n(x)=\Phi(x)-\frac{\gamma}{6\sqrt n}\,(x^2-1)\,\phi(x)+o\bigl(n^{-1/2}\bigr).$$
-
-       Predict the limit of $\sqrt n\,D_n$ for exponential summands and
-       compare it with your measurements. What does the expansion predict for
-       uniform summands, and which rate did you measure for them?
-    1. Bernoulli$(1/2)$ summands also have $\gamma=0$. Explain the slope you
-       measured for them by the size of the largest jump of $F_n$, and predict
-       the limit of $\sqrt n\,D_n$. Then compare $F_n$ at the lattice points
-       $k$ with the continuity-corrected value
-       $\Phi\bigl((k+\tfrac12-n\mu)/(\sigma\sqrt n)\bigr)$. Which rate does the
-       corrected error have?
-    1. The correctness indicators of a classifier with accuracy $0.99$ are
-       $\mathrm{Bernoulli}(0.99)$ variables. Compute their skewness, and
-       assume that the skewness term of (b) also governs the
-       continuity-corrected error. Predict the number of test examples
-       needed before the corrected error falls below $0.01$, and check the
-       prediction by computing the corrected error for
-       $n\in\{10^2,10^3,10^4\}$. Build the pmf of $S_n$ from the number of
-       errors $n-S_n\sim\mathrm{Binomial}(n,0.01)$: the successive-ratio
-       recursion started from $P(S_n=0)=0.01^n$ underflows to zero in
-       floating point once $n$ exceeds about $160$, whereas the recursion for
-       the errors starts from $0.99^n$. What does the result imply for
-       Gaussian error bars on the test accuracy of a highly accurate model?
-   :exlabel:`ex_mdl-distributions-clt-rate`
 
 1. [extended] **Burstiness of word counts.** ●● :citet:`Church.Gale.1995`
    found that word counts in text vary across documents more than a Poisson
@@ -1579,252 +1490,281 @@ linear regression.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §25.2]{.kicker}
+[Dive into Deep Learning · §36.3]{.kicker}
 
-Distributions<br>**from one coin flip to the Gaussian**
+Common Probability Distributions: From a Single Coin Flip to the Multivariate Gaussian<br>**Bernoulli & binomial · Poisson & exponential · categorical & softmax · Gaussian & CLT · Laplace · multivariate Gaussian & conditioning**
 :::
 :::
 
-::: {.slide title="9 Heads in 13 Flips: How Surprising Is That?"}
-[The problem]{.kicker}
+::: {.slide title="Every Training Loss Is a Probability Distribution"}
+[Motivation]{.kicker}
 
-- A coin lands heads 9 times in 13 flips. If it is fair, how likely is that?
-- Every model that predicts a label has chosen a distribution for it, and the distribution fixes the loss:
+Every predictive model in deep learning implicitly chooses a probability distribution for its target labels, and taking the negative log-probability $-\log p(y \mid \hat{y})$ fixes the training loss:
 
-| model output | distribution of the label | loss |
-|:--|:--|:--|
-| $P(y=1)$ | Bernoulli | binary cross-entropy |
-| softmax over $K$ classes | categorical | cross-entropy |
-| a predicted value | Gaussian | squared error |
-| a robust predicted value | Laplace | absolute error |
+| Model Output | Assumed Target Distribution | Negative Log-Likelihood Loss $-\log p(y)$ |
+| :--- | :--- | :--- |
+| Scalar probability $\hat{p} = P(Y = 1 \mid \mathbf{x})$ | $\mathrm{Bernoulli}(\hat{p})$ | Binary cross-entropy $-y\log\hat{p} - (1-y)\log(1-\hat{p})$ |
+| Softmax vector $\hat{\mathbf{p}} \in \Delta^{K-1}$ over $K$ classes | $\mathrm{Categorical}(\hat{\mathbf{p}})$ | Multi-class cross-entropy $-\sum_{k=1}^K y_k \log \hat{p}_k$ |
+| Real-valued regression mean $\hat{y} \in \mathbb{R}$ | Gaussian $\mathcal{N}(\hat{y}, \sigma^2)$ | Squared error $\frac{1}{2\sigma^2}(y - \hat{y})^2 + \text{const}$ |
+| Outlier-robust regression median $\hat{y} \in \mathbb{R}$ | $\mathrm{Laplace}(\hat{y}, b)$ | Absolute error ($L_1$ loss) $\frac{1}{b}\|y - \hat{y}\| + \text{const}$ |
 
 ::: {.d2l-note .warn}
-A wrong distribution gives wrong error bars: a Poisson count must have variance equal to its mean.
+**Why distribution assumptions matter beyond point predictions:** Choosing a distribution whose variance is too narrow (e.g., fitting a Poisson model when request counts arrive in correlated bursts) makes every confidence interval and error bar dangerously overconfident.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute a binomial probability by a ratio, without factorials;
-- derive each distribution's mean and variance from how it is built;
-- derive the exponential wait from the Poisson count;
-- state the central limit theorem and show where it fails;
-- sample a Gaussian vector and condition it on an observation.
-
-**Running examples:** the coin (9 heads in 13 flips); a server at 4 requests per minute;
-$\boldsymbol\Sigma$ with rows $(2,1)$, $(1,2)$.
-**Idea:** a few distributions grow out of one coin flip by sums, limits and waiting times.
-:::
-
-::: {.slide title="From Densities to Named Distributions"}
-[Where this fits]{.kicker}
+::: {.slide title="One Coin Flip Generates the Entire Family Tree"}
+[The Generative Lineage]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Random Variables | densities, moments, tail bounds |
-| Joint Distributions | conditioning, covariance, change of variables |
-| **Distributions** | **the named distributions and their losses** |
-| The Exponential Family | one form, convex fits, conjugacy |
-| Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP |
-| Latent Variables and EM | the ELBO, EM |
-| Bayesian Computation | averaging over a posterior |
-| Concentration Inequalities | exponential tails of averages |
-| Uniform Convergence | guarantees after selection |
-| Naive Bayes | one classifier, end to end |
+- Every distribution in this section is constructed from a single $\mathrm{Bernoulli}(p)$ coin flip:
+  - **Finite sum of $n$ flips:** $\mathrm{Binomial}(n, p)$.
+  - **Rare-event limit ($n \to \infty, np \to \lambda$):** $\mathrm{Poisson}(\lambda)$.
+  - **Waiting time in a Poisson stream:** $\mathrm{Exp}(\lambda)$ ($1$st arrival) and $\mathrm{Gamma}(k, \lambda)$ ($k$-th arrival).
+  - **Random sign $\times$ exponential:** $\mathrm{Laplace}(\mu, b)$.
+  - **Standardized sum ($n \to \infty$):** $\mathcal{N}(\mu, \sigma^2)$ (CLT) and correlated vector $\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$.
 :::
 
-::: {.col .narrow}
-- **Uses:** mean, variance, change of variables, inverse transform.
-- **Skips:** heavy tails beyond the Laplace, event rates that change in time.
+::: {.col .fig .big}
+@fig:mdl-prob-family-tree
 :::
 :::
 :::
 
-::: {.slide title="One Flip Has Mean p and Variance p(1−p)"}
-[Bernoulli]{.kicker}
+::: {.slide title="Four Discrete Distributions on Our Running Examples"}
+[Discrete Probability Mass Functions]{.kicker}
 
-$P(X=x)=p^x(1-p)^{1-x}$ for $x\in\{0,1\}$. Since $X^2=X$:
-
-$$
-\mathbb{E}[X]=p, \qquad \textrm{Var}(X)=\mathbb{E}[X^2]-\mathbb{E}[X]^2=p-p^2=p(1-p).
-$$
-
-- $p(1-p)$ is $0.25$ at $p=\tfrac12$, $0.09$ at $p=0.1$ or $0.9$, $0$ at $0$ or $1$.
-- The running coin, $p=9/13$: variance $\approx0.21$.
-
-::: {.d2l-note .rule}
-Binary cross-entropy $-y\log\hat p-(1-y)\log(1-\hat p)$ is the Bernoulli's negative log-probability.
-:::
+::: {.cols .vc}
+::: {.col}
+- A discrete PMF assigns mass $P(X = k) \ge 0$ to countable outcomes with $\sum_k P(X = k) = 1$:
+  1. **$\mathrm{Bernoulli}(9/13)$:** One flip matching the empirical coin frequency ($0.692$ vs. $0.308$).
+  2. **$\mathrm{Binomial}(13, 1/2)$:** Number of heads in $13$ fair flips, peaking at $6$ and $7$ ($\mu = 6.5$).
+  3. **$\mathrm{Poisson}(4)$:** Web server requests per minute at rate $\lambda = 4$, unbounded on $\{0, 1, 2, \dots\}$.
+  4. **$\mathrm{Categorical}(\mathbf{p})$:** Four-class softmax distribution from logits $\mathbf{z} = (2, 1, 0.1, -1)$.
 :::
 
-::: {.slide title="13 Flips Have Mean 6.5, Variance 3.25, and P(9) = 715/8192"}
-[Binomial]{.kicker}
-
-$X=\sum_{i=1}^n X_i$, independent flips with one $p$:
-$P(X=k)=\binom nk p^k(1-p)^{n-k}$, orderings times one ordering.
-
-- Linearity: $\mathbb{E}[X]=np$. Independence: $\textrm{Var}(X)=np(1-p)$.
-- Ratio: $\dfrac{P(X=k+1)}{P(X=k)}=\dfrac{n-k}{k+1}\cdot\dfrac{p}{1-p}$, from $P(X=0)=(1-p)^n$.
-
-@!distributions-binomial
-
-9 heads lie $1.4$ standard deviations above the mean.
+::: {.col .fig .big}
+@fig:mdl-prob-discrete-pmfs
+:::
+:::
 :::
 
-::: {.slide title="Many Rare Chances Give the Poisson, with Mean = Variance = λ"}
-[Poisson]{.kicker}
+::: {.slide title="The Bernoulli Distribution: One Binary Trial"}
+[Single 0/1 Outcome]{.kicker}
 
-Slice a minute into $n$ pieces, each $\mathrm{Bernoulli}(4/n)$; let $n\to\infty$:
-$P(X=k)\to\lambda^ke^{-\lambda}/k!$. Silent minute: $(1-\tfrac4n)^n=0.0115,\ 0.0169,\ 0.0182\to e^{-4}$.
+A random variable $X \sim \mathrm{Bernoulli}(p)$ takes value $1$ with probability $p \in [0, 1]$ and $0$ with probability $1 - p$. Both branches combine into a single algebraic switch:
 
+$$P(X = x) = p^x(1 - p)^{1 - x}, \qquad x \in \{0, 1\}$$
+
+- **Moments via $X^2 = X$:** Because $0^2 = 0$ and $1^2 = 1$, the first and second raw moments are identical:
+  $$\mathbb{E}[X] = 1\cdot p + 0\cdot(1-p) = p, \qquad \mathrm{Var}(X) = \mathbb{E}[X^2] - (\mathbb{E}[X])^2 = p - p^2 = p(1 - p)$$
+- **Variance profile:** $\mathrm{Var}(X) = p(1 - p)$ vanishes when the outcome is deterministic ($p = 0$ or $p = 1$) and reaches its global maximum of **$1/4 = 0.25$** for a fair coin ($p = 1/2$).
+- **Two coins in our running example:** A fair hypothesis coin ($p = 1/2$, variance $0.25$) vs. the empirical coin matching $9$ heads in $13$ flips ($p = 9/13 \approx 0.692$, variance $\frac{9}{13}\cdot\frac{4}{13} \approx 0.213$).
+:::
+
+::: {.slide title="The Binomial Distribution: Counting Heads in n Flips"}
+[Sum of Independent Bernoulli Trials]{.kicker}
+
+Summing $n$ independent and identically distributed indicators $X_1, \dots, X_n \sim \mathrm{Bernoulli}(p)$ produces $X = \sum_{i=1}^n X_i \sim \mathrm{Binomial}(n, p)$:
+
+$$P(X = k) = \binom{n}{k} p^k (1 - p)^{n - k}, \qquad k \in \{0, 1, \dots, n\}, \qquad \binom{n}{k} = \frac{n!}{k!\,(n - k)!}$$
+
+- **Combinatorial structure:** There are $\binom{n}{k}$ distinct orderings of $k$ heads and $n - k$ tails, and by independence each specific ordering has probability $p^k(1 - p)^{n - k}$.
+- **One-line moments from the sum representation $X = \sum_{i=1}^n X_i$:**
+  $$\mathbb{E}[X] = \sum_{i=1}^n \mathbb{E}[X_i] = np, \qquad \mathrm{Var}(X) = \sum_{i=1}^n \mathrm{Var}(X_i) = np(1 - p)$$
+- **Why independence is critical for the variance:** Linearity $\mathbb{E}[X] = np$ holds even for dependent flips, but if all $13$ flips were copies of a single fair flip ($X \in \{0, 13\}$), the variance would jump $13\times$ from $13(1/4) = 3.25$ to $13^2(1/4) = 42.25$!
+:::
+
+::: {.slide title="Factorial-Free Binomial Evaluation via Ratios"}
+[Numerical Stability & Unimodality]{.kicker}
+
+Evaluating $n!$ overflows 64-bit floats for $n > 170$. Taking the ratio of consecutive probabilities cancels all factorials:
+
+$$\frac{P(X = k + 1)}{P(X = k)} = \frac{n - k}{k + 1}\cdot\frac{p}{1 - p}, \qquad P(X = 0) = (1 - p)^n$$
+
+- **Combinatorial meaning & peak:** From $k$ heads, any of $n - k$ tails can flip to a head in $k + 1$ equivalent ways; the ratio exceeds $1$ iff $k + 1 < (n + 1)p$, proving the binomial rises to a single peak near $np$.
+
+@distributions-binomial
+:::
+
+::: {.slide title="The Law of Rare Events: From Binomial to Poisson"}
+[Unbounded Counts in Continuous Time]{.kicker}
+
+Suppose a web server receives $\lambda = 4$ requests per minute on average. Slice the minute into $n$ tiny subintervals, each holding an independent arrival with probability $p_n = \lambda/n$. As $n \to \infty$ with $k$ fixed, $\mathrm{Binomial}(n, \lambda/n)$ factors into four pieces:
+
+$$\binom{n}{k}\left(\frac{\lambda}{n}\right)^k\left(1 - \frac{\lambda}{n}\right)^{n-k} = \underbrace{\frac{n(n-1)\cdots(n-k+1)}{n^k}}_{\to\,1} \cdot \frac{\lambda^k}{k!} \cdot \underbrace{\left(1 - \frac{\lambda}{n}\right)^n}_{\to\,e^{-\lambda}} \cdot \underbrace{\left(1 - \frac{\lambda}{n}\right)^{-k}}_{\to\,1}$$
+
+- **The Poisson PMF ($X \sim \mathrm{Poisson}(\lambda)$):**
+  $$P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}, \qquad k \in \{0, 1, 2, \dots\} \quad \left(\sum_{k=0}^{\infty} \frac{\lambda^k}{k!} = e^\lambda\right)$$
+- **Equality of mean and variance ($\mathbb{E}[X] = \mathrm{Var}(X) = \lambda$):** Canceling $k$ against $k! = k(k-1)!$ gives $\mathbb{E}[X] = \lambda \sum_{j \ge 0} e^{-\lambda}\lambda^j/j! = \lambda$ and $\mathbb{E}[X(X-1)] = \lambda^2 \implies \mathrm{Var}(X) = \lambda^2 + \lambda - \lambda^2 = \lambda$.
+:::
+
+::: {.slide title="Convergence to the Poisson Limit & Overdispersion"}
+[Approximation Rate & Modeling Diagnostics]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Rate of convergence:** Total-variation distance $\frac{1}{2}\sum_k |P_{\mathrm{Bin}}(k) - P_{\mathrm{Poi}}(k)|$ shrinks as $O(1/n)$ ($0.056$ at $n=20$ $\to$ $0.010$ at $n=100$ $\to$ $0.001$ at $n=1000$).
+- **Server traffic at $\lambda = 4\text{ req/min}$:**
+  - Silent minute: $P(X = 0) = e^{-4} \approx 0.0183$.
+  - Peak count: $P(X = 4) = \frac{4^4}{4!}e^{-4} \approx 0.195$.
+  - Burst ($\ge 10$): $P(X \ge 10) \approx 0.008$.
+- **Overdispersion diagnostic:** If empirical count variance exceeds the mean ($\mathrm{Var} \gg \mathbb{E}$), arrival rates fluctuate or cluster (use a Gamma–Poisson / negative binomial mixture instead).
+:::
+
+::: {.col .fig}
 @!distributions-binomial-to-poisson
 :::
+:::
+:::
 
-::: {.slide title="Check: A Silent Minute, and Exactly Four Requests"}
-[Check]{.kicker}
+::: {.slide title="Categorical, Softmax, and Multinomial Distributions"}
+[Multi-Class Labels and Token Counts]{.kicker}
 
-A server gets 4 requests per minute on average, modeled as Poisson.
-What is the probability of a minute with no request? With exactly 4?
+A $K$-class classifier or language model generalizes the Bernoulli coin to $K$ outcomes:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $P(0)=e^{-4}\approx0.018$, about once an hour.
-$P(4)=\tfrac{4^4}{4!}e^{-4}\approx0.195$: even the most likely count (4, tied with 3) happens in only one minute of five.
+::: {.cols .vc}
+::: {.col}
+- **Categorical & Softmax ($n = 1$ draw):** Maps unconstrained logits $\mathbf{z} \in \mathbb{R}^K$ to probabilities $P(X = k) = p_k$:
+  $$p_k = \frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}}, \qquad -\log P(\mathbf{y}) = -\sum_{k=1}^K y_k \log p_k$$
+- **Discrete Uniform ($\mathrm{Unif}\{1, \dots, n\}$):** $p_k = 1/n$ has mean $\frac{n+1}{2}$ and variance $\frac{n^2 - 1}{12}$ ($3.5$ and $\frac{35}{12}$ for a die).
+- **Multinomial ($n$ independent draws):** Tally vector $\mathbf{x} = (x_1, \dots, x_K)$ with $\sum_k x_k = n$ has PMF $\frac{n!}{x_1!\cdots x_K!}\prod_{k=1}^K p_k^{x_k}$, mean $n\mathbf{p}$, and covariance $n(\mathrm{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top)$ (off-diagonals $-np_j p_k < 0$).
+:::
+
+::: {.col}
+Evaluating softmax on logits $\mathbf{z} = (2, 1, 0.1, -1)$ and verifying frequencies across $10{,}000$ draws:
+
+@distributions-categorical
 :::
 :::
 :::
 
-::: {.slide title="K Outcomes Give the Categorical; n Draws Give the Multinomial"}
-[Categorical]{.kicker}
+::: {.slide title="The Poisson Process and Exponential Waiting Times"}
+[Counts in Windows vs. Gaps Between Arrivals]{.kicker}
 
-- $P(X=k)=p_k$; softmax $p_k=e^{z_k}/\sum_je^{z_j}$ turns logits into a categorical.
-- Logits $(2,1,0.1,-1)$ give $\mathbf p\approx(0.64,0.23,0.10,0.03)$.
-- Cross-entropy $-\log p_y$ is its negative log-probability.
-- Counts of $n$ draws: $\dfrac{n!}{x_1!\cdots x_K!}\prod_kp_k^{x_k}$; for $K=2$, $\dfrac{13!}{9!\,4!}=715$.
-- Equal $p_k=\tfrac1n$: the die, mean $\tfrac{n+1}2=3.5$, variance $\tfrac{n^2-1}{12}\approx2.92$.
+::: {.cols .vc}
+::: {.col}
+- In a continuous-time **Poisson process** of rate $\lambda$, the count in any window of length $t$ is $N(t) \sim \mathrm{Poisson}(\lambda t)$.
+- **The fundamental duality:** The waiting time $T$ until the first request exceeds $t$ *if and only if* zero requests arrive in $[0, t]$:
+  $$P(T > t) = P\bigl(N(t) = 0\bigr) = e^{-\lambda t}, \quad t \ge 0$$
+- Differentiating $F(t) = 1 - e^{-\lambda t}$ yields the **exponential distribution** $T \sim \mathrm{Exp}(\lambda)$:
+  $$p(t) = \lambda e^{-\lambda t} \quad (t \ge 0), \qquad \mathbb{E}[T] = \frac{1}{\lambda}, \qquad \mathrm{Var}(T) = \frac{1}{\lambda^2}$$
+- At $\lambda = 4\text{/min}$: mean wait is $15\text{ s}$, while median wait $F^{-1}(0.5) = \frac{\log 2}{\lambda}$ is $10.4\text{ s}$.
 :::
 
-::: {.slide title="The Wait for the Next Event Is Exponential"}
-[Exponential]{.kicker}
-
+::: {.col .fig}
 @fig:mdl-prob-poisson-timeline
-
-$P(T>t)=P(N(t)=0)=e^{-\lambda t}$, so $p(t)=\lambda e^{-\lambda t}$. At $\lambda=4$/min:
-mean wait $1/\lambda=15$ s, median $\log2/\lambda\approx10.4$ s.
+:::
+:::
 :::
 
-::: {.slide title="The Exponential Forgets How Long You Have Waited"}
-[Memorylessness]{.kicker}
+::: {.slide title="Memorylessness, Gamma Waits, and Sampling"}
+[Continuous-Time Stream Verification]{.kicker}
 
-$$
-P(T>s+t\mid T>s)=\frac{e^{-\lambda(s+t)}}{e^{-\lambda s}}=e^{-\lambda t}=P(T>t).
-$$
-
-- The $k$-th event's time is a sum of $k$ waits: $\mathrm{Gamma}(k,\lambda)$, mean $k/\lambda$.
-- $P(T_4>1)=P(N(1)\le3)\approx0.43$.
+- **Memoryless property:** Past waiting time $s$ conveys zero information about remaining wait $t$:
+  $$P(T > s + t \mid T > s) = \frac{P(T > s + t)}{P(T > s)} = \frac{e^{-\lambda(s+t)}}{e^{-\lambda s}} = e^{-\lambda t} = P(T > t)$$
+- **Time of the $k$-th arrival ($T_k \sim \mathrm{Gamma}(k, \lambda)$):** Since $T_k > t \iff N(t) \le k - 1$, differentiating $\sum_{j=0}^{k-1} e^{-\lambda t}\frac{(\lambda t)^j}{j!}$ telescopes to the **Gamma density** $p(t) = \frac{\beta^\alpha t^{\alpha-1}e^{-\beta t}}{\Gamma(\alpha)}$ with mean $\frac{\alpha}{\beta}$ and variance $\frac{\alpha}{\beta^2}$.
+- **Inverse-transform sampling ($T = -\log(1 - U)/\lambda$):** Writing $1 - U$ instead of $U \in [0, 1)$ prevents $-\log(0) = \infty$:
 
 @!distributions-exponential
 :::
 
-::: {.slide title="Every Sampler Starts from U(0,1)"}
-[Uniform]{.kicker}
+::: {.slide title="The Continuous Uniform Distribution"}
+[Constant Density & Moments]{.kicker}
 
-- $U(a,b)$: density $\tfrac1{b-a}$; every subinterval of equal length is equally likely.
-- Mean $\tfrac{a+b}2$, variance $\tfrac{(b-a)^2}{12}$; $U(-\sqrt3,\sqrt3)$ has variance $1$.
-- Inverse transform: $X=F^{-1}(U)$ has c.d.f. $F$.
-- Exponential: $T=-\log(1-U)/\lambda$. With $-\log U$, the draw $U=0$ would give $\infty$.
+Every pseudo-random sampler begins with $U \sim \mathrm{Unif}(0, 1)$. More generally, the **continuous uniform distribution** $U(a, b)$ on $[a, b]$ assigns constant density across the interval:
+
+$$p(x) = \begin{cases} \frac{1}{b - a} & \text{if } x \in [a, b], \\ 0 & \text{otherwise,} \end{cases} \qquad \mathbb{E}[X] = \frac{a + b}{2}, \qquad \mathrm{Var}(X) = \frac{(b - a)^2}{12}$$
+
+- **Clean variance derivation by centering:** Shift $[a, b]$ to its midpoint so it spans $[-c, c]$ with half-width $c = \frac{b - a}{2}$. By shift invariance of variance:
+  $$\mathrm{Var}(X) = \int_{-c}^{c} \frac{y^2}{2c}\,dy = \left[\frac{y^3}{6c}\right]_{-c}^{c} = \frac{c^2}{3} = \frac{(b - a)^2}{12}$$
+- **Benchmarks:** $U(0, 1)$ has mean $\frac{1}{2}$ and variance $\frac{1}{12}$; $U(-\sqrt{3}, \sqrt{3})$ has mean $0$ and unit variance $1$.
+- **Continuous limit of discrete uniform:** $n$ grid points spaced by $h$ with $nh = b - a$ have variance $\frac{h^2(n^2 - 1)}{12} \to \frac{(b - a)^2}{12}$.
 :::
 
-::: {.slide title="I. The Binomial's Own Ratio Turns into a Parabola"}
-[Derivation]{.kicker}
+::: {.slide title="From the Binomial Ratio to the Gaussian Parabola"}
+[De Moivre–Laplace Derivation]{.kicker}
 
-Put $k=np+x$, $q=1-p$, and use $\log(1+\epsilon)\approx\epsilon$:
+What shape does $\mathrm{Binomial}(n, p)$ take near its mean $np$? Set $q = 1 - p$, measure count $k = np + x$ by its offset $x$ from the mean, and take the logarithm of the successive ratio using $\log(1 + \epsilon) \approx \epsilon$:
 
-$$
-\log\frac{P(k+1)}{P(k)}=\log\frac{1-x/(nq)}{1+(x+1)/(np)}\approx-\frac{x}{npq}.
-$$
+$$\log\frac{P(X = k + 1)}{P(X = k)} = \log\frac{1 - x/(nq)}{1 + (x + 1)/(np)} \approx -\frac{x}{nq} - \frac{x + 1}{np} = -\frac{x}{npq} - \frac{1}{np}$$
 
-Steps linear in $x$ add up to a parabola: $\log P(np+x)\approx C-\dfrac{x^2}{2npq}$,
-a bell of variance $npq$.
+- **Linear slope $\implies$ parabolic log-probability:** Because each unit step in $x$ changes $\log P$ by $-\frac{x}{npq}$, summing steps integrates to the parabola $\log P(X = np + x) \approx C - \frac{x^2}{2npq}$, or $P(X = np + x) \approx \frac{1}{\sqrt{2\pi npq}}e^{-x^2/(2npq)}$:
 
 @!mdl-distributions-gaussian-2
 :::
 
-::: {.slide title="II. Standardized Sums with Finite Variance Become Gaussian"}
-[Central limit theorem]{.kicker}
+::: {.slide title="Gaussian Normalizer, Moments, and Squared Loss"}
+[The Polar Coordinate Integral Trick]{.kicker}
 
-$X_i$ iid, mean $\mu$, variance $0<\sigma^2<\infty$, $S_n=\sum_{i\le n}X_i$:
-$P\bigl((S_n-n\mu)/(\sigma\sqrt n)\le y\bigr)\to\Phi(y)$. Standardized sums of uniforms:
+To normalize the standard Gaussian density $\phi(y) = \frac{1}{\sqrt{2\pi}}e^{-y^2/2}$, we evaluate $I = \int_{-\infty}^\infty e^{-x^2/2}\,dx$ by squaring it into a 2D integral and switching to polar coordinates $(x, y) = (r\cos\theta, r\sin\theta)$ with $dx\,dy = r\,dr\,d\theta$:
 
-@!mdl-distributions-gaussian-1
+$$I^2 = \int_{-\infty}^{\infty}\!\int_{-\infty}^{\infty} e^{-(x^2 + y^2)/2}\,dx\,dy = \int_0^{2\pi}\!\!\int_0^{\infty} e^{-r^2/2}\,r\,dr\,d\theta = 2\pi\bigl[-e^{-r^2/2}\bigr]_0^{\infty} = 2\pi \implies I = \sqrt{2\pi}$$
 
-Only two moments enter.
+- **Unit variance by parts ($u = x, dv = xe^{-x^2/2}dx$):**
+  $$\int_{-\infty}^{\infty} x^2 \phi(x)\,dx = \frac{1}{\sqrt{2\pi}}\left(\bigl[-xe^{-x^2/2}\bigr]_{-\infty}^{\infty} + \int_{-\infty}^{\infty} e^{-x^2/2}\,dx\right) = 0 + 1 = 1$$
+- **General Gaussian $X = \mu + \sigma Y \sim \mathcal{N}(\mu, \sigma^2)$:** Change of variables gives $p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)$, whose negative log-likelihood $-\log p(y \mid \hat{y}) = \frac{(y - \hat{y})^2}{2\sigma^2} + \frac{1}{2}\log(2\pi\sigma^2)$ is **squared-error loss**.
 :::
 
-::: {.slide title="III. Normalizer by Polar Coordinates, Variance by Parts"}
-[Derivation]{.kicker}
-
-$$
-I^2=\iint e^{-(x^2+y^2)/2}\,dx\,dy=\int_0^{2\pi}\!\!\int_0^\infty e^{-r^2/2}\,r\,dr\,d\theta=2\pi .
-$$
-
-$$
-\int x^2\frac{e^{-x^2/2}}{\sqrt{2\pi}}\,dx=\frac{1}{\sqrt{2\pi}}\Bigl(\bigl[-xe^{-x^2/2}\bigr]+\int e^{-x^2/2}\,dx\Bigr)=1 .
-$$
-
-::: {.d2l-note .rule}
-$\mathcal N(\mu,\sigma^2)$: $p(x)=\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/(2\sigma^2)}$, mean $\mu$, variance $\sigma^2$.
-:::
-:::
-
-::: {.slide title="Check: Does the Average of 1,000 Cauchy Draws Settle?"}
-[Check]{.kicker}
-
-The Cauchy density $1/(\pi(1+x^2))$ has infinite variance. Average $n$ independent
-draws. Does $P(|\text{average}|>1)$ shrink as $n$ grows?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** No. The average of $n$ Cauchy draws is again a standard Cauchy
-variable, so the probability stays $\tfrac12$ at every $n$. An average of $n$
-standard Gaussians is $\mathcal N(0,1/n)$, and the same probability falls
-below $10^{-200}$ at $n=1000$.
-:::
-:::
-:::
-
-::: {.slide title="The Laplace Is a Random Sign Times an Exponential"}
-[Laplace]{.kicker}
+::: {.slide title="The Central Limit Theorem in Action"}
+[Universal Convergence of Standardized Sums]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$X=\mu+SE$: $p(x)=\frac1{2b}e^{-|x-\mu|/b}$, $\textrm{Var}=\mathbb{E}[E^2]=2b^2$.
-
-Beyond $3\sigma$: $e^{-3\sqrt2}\approx0.014$ against $0.0027$, five times the Gaussian.
-
-Its negative log-probability is the absolute error.
+- **Central Limit Theorem (CLT):** For *any* i.i.d. sequence $X_1, X_2, \dots$ with mean $\mu$ and finite variance $0 < \sigma^2 < \infty$, the standardized sum $S_n = \sum_{i=1}^n X_i$ converges in distribution to $\mathcal{N}(0, 1)$:
+  $$\lim_{n \to \infty} P\!\left(\frac{S_n - n\mu}{\sigma\sqrt{n}} \le y\right) = \Phi(y) = \int_{-\infty}^y \phi(u)\,du$$
+- **Watching uniforms become Gaussian:** A single $U(0, 1)$ ($n=1$) is a flat box; $n=2$ is a triangle; by $n=8$ and $n=32$, the standardized sum is visually indistinguishable from $\phi(y)$.
+- **Why finite variance is mandatory:** Cauchy draws ($\sigma^2 = \infty$) never converge under averaging.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
+@!mdl-distributions-gaussian-1
+:::
+:::
+:::
+
+::: {.slide title="The Laplace Distribution, L1 Loss, and Heavy Tails"}
+[A Random Sign Times an Exponential]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Construction:** Multiply an independent fair sign $S \in \{\pm 1\}$ by an exponential $E \sim \mathrm{Exp}(1/b)$ and shift by $\mu$ to get $X = \mu + SE \sim \mathrm{Laplace}(\mu, b)$:
+  $$p(x) = \frac{1}{2b}\exp\!\left(-\frac{|x - \mu|}{b}\right)$$
+- **Moments from $X = \mu + SE$:** Since $S^2 = 1$ and $\mathbb{E}[S] = 0$, $\mathbb{E}[X] = \mu$ and $\mathrm{Var}(X) = \mathbb{E}[E^2] = 2b^2$.
+- **Role in deep learning:**
+  - Negative log-density is **$L_1$ / MAE loss** $|y - \hat{y}|/b$ (minimized by the outlier-robust sample median).
+  - As a weight prior, it yields **LASSO $\ell_1$ regularization** $\|\mathbf{w}\|_1$.
+:::
+
+::: {.col .fig}
 @fig:mdl-prob-continuous-pdfs
 :::
 :::
 :::
 
-::: {.slide title="A Gaussian Vector's Contours Are the Eigen-Ellipses of Σ"}
-[Multivariate Gaussian]{.kicker}
+::: {.slide title="Simulating Laplace vs. Gaussian Tail Mass"}
+[Five Times More Probability Beyond 3σ]{.kicker}
+
+At matched variance $\sigma^2 = 2b^2$, the Laplace tail decays as $e^{-|x|/\sigma \cdot \sqrt{2}}$ rather than $e^{-x^2/(2\sigma^2)}$, placing $P(|X - \mu| > 3\sigma) = e^{-3\sqrt{2}} \approx 1.43\%$ beyond $3\sigma$ vs. $0.27\%$ for a Gaussian ($5.3\times$ heavier):
+
+@distributions-laplace
+
+::: {.d2l-note}
+**Why squared loss is sensitive to outliers:** On a $10\sigma$ outlier, Gaussian NLL incurs penalty $\frac{1}{2}(10)^2 = 50$, whereas Laplace NLL incurs $10\sqrt{2} \approx 14.1$ with a bounded constant gradient $\pm 1/b$.
+:::
+:::
+
+::: {.slide title="The Multivariate Gaussian and Eigen-Ellipsoids"}
+[Geometry of Correlated Random Vectors]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$p(\mathbf x)\propto\exp\bigl(-\tfrac12(\mathbf x-\boldsymbol\mu)^\top\boldsymbol\Sigma^{-1}(\mathbf x-\boldsymbol\mu)\bigr)$
-
-- $\boldsymbol\Sigma$ with rows $(2,1)$, $(1,2)$: sum and difference
-  coordinates have variances $3$ and $1$, covariance $0$.
-- Axes along $\mathbf v_i$, half-lengths $\propto\sqrt{\gamma_i}$: $\sqrt3$ and $1$.
+- A vector $\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ in $\mathbb{R}^d$ with symmetric positive definite covariance $\boldsymbol{\Sigma} \succ \mathbf{0}$ has density:
+  $$p(\mathbf{x}) = \frac{1}{(2\pi)^{d/2}|\boldsymbol{\Sigma}|^{1/2}}\exp\!\left(-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})\right)$$
+- **Spectral diagonalization:** Writing $\boldsymbol{\Sigma} = \mathbf{V}\mathrm{diag}(\gamma_1, \dots, \gamma_d)\mathbf{V}^\top$ and rotating to $\mathbf{u} = \mathbf{V}^\top(\mathbf{x} - \boldsymbol{\mu})$ decouples the exponent into independent 1D Gaussians:
+  $$(\mathbf{x}-\boldsymbol{\mu})^\top\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu}) = \sum_{i=1}^d \frac{u_i^2}{\gamma_i}$$
+- **Running example $\boldsymbol{\Sigma} = \begin{pmatrix}2&1\\1&2\end{pmatrix}$:** Eigenvectors $\mathbf{v}_{1,2} = \frac{1}{\sqrt{2}}(1, \pm 1)^\top$ have eigenvalues $\gamma_1 = 3, \gamma_2 = 1$ ($45^\circ$ ellipse with half-axes $\propto \sqrt{3} : 1$).
 :::
 
 ::: {.col .fig}
@@ -1833,57 +1773,74 @@ $p(\mathbf x)\propto\exp\bigl(-\tfrac12(\mathbf x-\boldsymbol\mu)^\top\boldsymbo
 :::
 :::
 
-::: {.slide title="Linear Maps Keep a Gaussian Gaussian, and Sample It"}
-[Linear maps]{.kicker}
+::: {.slide title="Linear Maps and the Cholesky Reparameterization"}
+[Affine Closure & Sampling Correlated Vectors]{.kicker}
 
-- Full row rank $\mathbf A$: $\mathbf A\mathbf x+\mathbf b\sim\mathcal N(\mathbf A\boldsymbol\mu+\mathbf b,\ \mathbf A\boldsymbol\Sigma\mathbf A^\top)$.
-- Sampling: $\mathbf x=\boldsymbol\mu+\mathbf L\mathbf z$ with $\mathbf L\mathbf L^\top=\boldsymbol\Sigma$, $\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I)$.
-- Cholesky by hand: $L_{11}=\sqrt2$, $L_{21}=1/\sqrt2$, $L_{22}=\sqrt{3/2}$.
-- Any factor works; two factors differ by an orthogonal matrix.
+**Proposition (Affine Closure):** If $\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ in $\mathbb{R}^d$ and $\mathbf{A} \in \mathbb{R}^{m \times d}$ has full row rank $m \le d$, then
+
+$$\mathbf{A}\mathbf{x} + \mathbf{b} \sim \mathcal{N}\bigl(\mathbf{A}\boldsymbol{\mu} + \mathbf{b},\ \mathbf{A}\boldsymbol{\Sigma}\mathbf{A}^\top\bigr)$$
+
+- **Sampling via Cholesky factorization ($\boldsymbol{\Sigma} = \mathbf{L}\mathbf{L}^\top$):** Draw standard normal noise $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$ and set $\mathbf{x} = \boldsymbol{\mu} + \mathbf{L}\mathbf{z}$, where $\mathbf{L}$ is lower triangular ($\mathbf{L}\mathbf{I}\mathbf{L}^\top = \boldsymbol{\Sigma}$). For $\boldsymbol{\Sigma} = \begin{pmatrix}2&1\\1&2\end{pmatrix}$, $\mathbf{L} = \begin{pmatrix}\sqrt{2} & 0 \\ 1/\sqrt{2} & \sqrt{3/2}\end{pmatrix}$.
+- **The VAE reparameterization trick:** Because $\mathbf{x} = \boldsymbol{\mu} + \mathbf{L}\mathbf{z}$ is differentiable with respect to $\boldsymbol{\mu}$ and $\mathbf{L}$ for fixed $\mathbf{z}$, gradients backpropagate cleanly through stochastic Gaussian layers.
 
 @!distributions-mvn
 :::
 
 ::: {.slide title="Conditioning a Gaussian Is Linear Regression"}
-[Conditioning]{.kicker}
+[The Orthogonal Residual Trick & Schur Complement]{.kicker}
 
-$\mathbf B=\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}$; the residual
-$\mathbf r=\mathbf x_1-\mathbf B\mathbf x_2$ has $\textrm{Cov}(\mathbf r,\mathbf x_2)=\mathbf 0$,
-and $(\mathbf r,\mathbf x_2)$ is jointly Gaussian, so they are independent. Hence
+Partition $\mathbf{x} = (\mathbf{x}_1, \mathbf{x}_2)$ with mean $(\boldsymbol{\mu}_1, \boldsymbol{\mu}_2)$ and block covariance $\boldsymbol{\Sigma} = \begin{pmatrix}\boldsymbol{\Sigma}_{11} & \boldsymbol{\Sigma}_{12} \\ \boldsymbol{\Sigma}_{21} & \boldsymbol{\Sigma}_{22}\end{pmatrix}$. Choose the regression matrix $\mathbf{B} = \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}$ so the residual $\mathbf{r} = \mathbf{x}_1 - \mathbf{B}\mathbf{x}_2$ is uncorrelated with $\mathbf{x}_2$:
 
-$$
-\boldsymbol\mu_{1\mid2}=\boldsymbol\mu_1+\mathbf B(\mathbf x_2-\boldsymbol\mu_2),
-\qquad
-\boldsymbol\Sigma_{1\mid2}=\boldsymbol\Sigma_{11}-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}.
-$$
+$$\mathrm{Cov}(\mathbf{r}, \mathbf{x}_2) = \boldsymbol{\Sigma}_{12} - \mathbf{B}\boldsymbol{\Sigma}_{22} = \mathbf{0} \implies \mathbf{r} \perp \mathbf{x}_2 \quad \text{(by joint Gaussianity!)}$$
 
-Running example, $x_2=2$: $B=\tfrac12$, so $x_1\mid x_2=2\sim\mathcal N(1,\tfrac32)$.
+- Since $\mathbf{x}_1 = \mathbf{r} + \mathbf{B}\mathbf{x}_2$ and $\mathbf{r} \perp \mathbf{x}_2$, conditioning on $\mathbf{x}_2$ simply shifts $\mathbf{r}$ by $\mathbf{B}\mathbf{x}_2$, yielding $\mathbf{x}_1 \mid \mathbf{x}_2 \sim \mathcal{N}(\boldsymbol{\mu}_{1\mid 2}, \boldsymbol{\Sigma}_{1\mid 2})$:
+  $$\boldsymbol{\mu}_{1\mid 2} = \boldsymbol{\mu}_1 + \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}(\mathbf{x}_2 - \boldsymbol{\mu}_2), \qquad \boldsymbol{\Sigma}_{1\mid 2} = \boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}$$
+- **Running example ($x_2 = 2$, $B = 1/2$):** $x_1 \mid x_2 = 2 \sim \mathcal{N}\!\left(0 + \frac{1}{2}(2),\ 2 - \frac{1^2}{2}\right) = \mathcal{N}\!\left(1,\ \frac{3}{2}\right)$:
 
 @!mdl-distributions-conditioning
 :::
 
-::: {.slide title="Check: Condition a Correlated Pair"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: Poisson Waits, CLT & Conditioning"}
+[Check Your Understanding]{.kicker}
 
-$(x_1,x_2)$ is Gaussian with mean $\mathbf 0$, unit variances and correlation $\rho$,
-$|\rho|<1$. What is the distribution of $x_1$ given $x_2$?
+Test your intuition on three calculations from the distribution catalog:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $B=\rho$, so $x_1\mid x_2\sim\mathcal N(\rho x_2,\,1-\rho^2)$.
-The variance $1-\rho^2\le1$ does not depend on $x_2$: observing never widens the uncertainty.
+1. **Poisson counts vs. exponential waits:** Requests arrive at a Poisson rate of $\lambda = 4$ per minute. What is the probability of a silent minute ($0$ requests), and what is the probability of waiting more than $30$ seconds ($t = 0.5\text{ min}$) for the next request?
+2. **Bivariate Gaussian conditioning:** Let $(X_1, X_2)$ be jointly Gaussian with mean $\mathbf{0}$, unit variances $\Sigma_{11} = \Sigma_{22} = 1$, and correlation $\rho \in (-1, 1)$. What is the conditional distribution $X_1 \mid X_2 = x_2$?
+3. **Why joint Gaussianity matters:** If $Z \sim \mathcal{N}(0, 1)$ and $S \in \{\pm 1\}$ is a fair random sign, both $Z$ and $Y = SZ$ are marginally $\mathcal{N}(0, 1)$ with $\mathrm{Cov}(Y, Z) = 0$. Why isn't $Y \mid Z = 2$ distributed as $\mathcal{N}(0, 1)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $P(N(1) = 0) = \mathbf{e^{-4} \approx 0.0183}$. Waiting more than $t = 0.5\text{ min}$ is the event $N(0.5) = 0$, which has probability $e^{-4(0.5)} = \mathbf{e^{-2} \approx 0.1353}$.
+2. Here $B = \Sigma_{12}\Sigma_{22}^{-1} = \rho$, so **$X_1 \mid X_2 = x_2 \sim \mathcal{N}(\rho x_2,\ 1 - \rho^2)$**. Notice that the conditional variance $1 - \rho^2$ never depends on the observed value $x_2$!
+3. $(Y, Z)$ is **not jointly Gaussian** (all mass sits on the two lines $y = \pm z$). Given $Z = 2$, $Y$ can only take values $+2$ or $-2$ with probability $1/2$ each!
 :::
 :::
+
+::: {.slide title="Summary: Discrete Probability Distributions"}
+[Key Takeaways (Part I)]{.kicker}
+
+| Distribution | PMF $P(X = k)$ | Mean $\mathbb{E}[X]$ | Variance $\mathrm{Var}(X)$ | Deep Learning & Modeling Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **$\mathrm{Bernoulli}(p)$** | $p^x(1-p)^{1-x}$, $x \in \{0,1\}$ | $p$ | $p(1-p)$ | Binary classification & binary cross-entropy |
+| **$\mathrm{Binomial}(n, p)$** | $\binom{n}{k}p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ | Correct predictions on an $n$-example test set |
+| **$\mathrm{Poisson}(\lambda)$** | $\lambda^k e^{-\lambda}/k!$, $k \ge 0$ | $\lambda$ | $\lambda$ | Rare-event arrival counts & count regression |
+| **$\mathrm{Categorical}(\mathbf{p})$** | $p_k = e^{z_k}/\sum_j e^{z_j}$ | $\mathbf{p}$ (one-hot) | $\mathrm{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$ | Multi-class softmax & LLM token prediction |
+| **$\mathrm{Multinomial}(n, \mathbf{p})$** | $\frac{n!}{x_1!\cdots x_K!}\prod_{k=1}^K p_k^{x_k}$ | $n\mathbf{p}$ | $n(\mathrm{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top)$ | Bag-of-words histograms & class count tallies |
+| **$\mathrm{Unif}\{1, \dots, n\}$** | $1/n$ | $\frac{n+1}{2}$ | $\frac{n^2 - 1}{12}$ | Random minibatch indexing & shuffling |
 :::
 
-::: {.slide title="One Coin Flip, a Dozen Distributions, Their Moments and Their Losses"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Continuous Probability Distributions"}
+[Key Takeaways (Part II)]{.kicker}
 
-- 9 heads in 13 fair flips: $715/8192\approx0.087$; mean $6.5$, variance $3.25$.
-- Server at 4/min: a silent minute and a wait over a minute both have probability $e^{-4}\approx0.018$.
-- The bell at $n=13$: $0.085$ against the exact $0.087$; the CLT needs a finite variance.
-- Laplace: five times the Gaussian's mass beyond $3\sigma$; absolute error as its loss.
-- $\boldsymbol\Sigma$ with rows $(2,1)$, $(1,2)$: eigenvalues $3$ and $1$; $x_1\mid x_2=2\sim\mathcal N(1,\tfrac32)$.
-
-**Next:** the one form these distributions share; then how well 13 flips determine an unknown bias.
+| Distribution | Density $p(x)$ | Mean $\mathbb{E}[X]$ | Variance $\mathrm{Var}(X)$ | Deep Learning & Modeling Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **$\mathrm{Exp}(\lambda)$** | $\lambda e^{-\lambda t}$ ($t \ge 0$) | $1/\lambda$ | $1/\lambda^2$ | Memoryless inter-arrival waiting times |
+| **$\mathrm{Gamma}(\alpha, \beta)$** | $\frac{\beta^\alpha t^{\alpha-1}e^{-\beta t}}{\Gamma(\alpha)}$ ($t > 0$) | $\alpha/\beta$ | $\alpha/\beta^2$ | Sum of $\alpha$ waits; conjugate prior for rates |
+| **$\mathrm{Unif}(a, b)$** | $\frac{1}{b-a}$ on $[a, b]$ | $\frac{a+b}{2}$ | $\frac{(b-a)^2}{12}$ | Base RNG seed for inverse-transform sampling |
+| **$\mathcal{N}(\mu, \sigma^2)$** | $\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(x-\mu)^2/(2\sigma^2)}$ | $\mu$ | $\sigma^2$ | CLT limit, squared-error loss & weight init |
+| **$\mathrm{Laplace}(\mu, b)$** | $\frac{1}{2b}e^{-\|x-\mu\|/b}$ | $\mu$ | $2b^2$ | Robust $L_1$ / MAE loss & LASSO $\ell_1$ sparsity |
+| **$\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$** | $(2\pi)^{-d/2}\|\boldsymbol{\Sigma}\|^{-1/2}e^{-\frac{1}{2}\|\mathbf{x}-\boldsymbol{\mu}\|_{\boldsymbol{\Sigma}^{-1}}^2}$ | $\boldsymbol{\mu}$ | $\boldsymbol{\Sigma}$ | VAE Cholesky reparameterization & GP conditioning |
 :::
+

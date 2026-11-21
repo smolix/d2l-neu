@@ -452,6 +452,7 @@ d2l.plot(lengths, list(times.values()), 'sequence length',
 ```
 
 The empirical scaling curves match :numref:`tab_linear-recurrence-cost`:
+
 - **`GRU`:** slowest at every length, growing more than $15\times$ from $T = 512$ to $16{,}384$ because its $T$ sequential steps cannot be parallelized across time.
 - **`minGRU`:** nearly flat across the entire 32-fold increase in sequence length (growing by under $50\%$ in PyTorch's doubling scan and virtually flat in JAX's work-efficient scan).
 - **`attention`:** nearly flat up to $T \approx 2{,}048$ where $O(Td^2)$ projections and memory traffic dominate, then bending upward toward $2\times$ per doubling once the $O(T^2 d)$ attention term takes over, crossing PyTorch's doubling scan near $T = 4{,}096$ and trailing `minGRU` by $2.5\times$–$5\times$ at $T = 16{,}384$.
@@ -533,278 +534,252 @@ Removing the previous state $\mathbf{h}_{t-1}$ from a recurrent layer's gates yi
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36885)
+
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §12.3]{.kicker}
 
-Linear recurrences and parallel scans<br>
-**a decaying number · affine steps compose · the minGRU on text · cost against attention**
+Linear Recurrences and Parallel Associative Scans<br>**affine state transitions · minimal GRU (minGRU) · associative prefix scans · complexity vs. attention**
 :::
 :::
 
-::: {.slide title="A GRU Waits 4,095 Times on a 4,096-Token Sequence"}
-[The problem]{.kicker}
+::: {.slide title="The GPU Parallelism Bottleneck of Nonlinear Recurrence"}
+[Motivation]{.kicker}
 
-- A GPU does tens of thousands of multiply-adds at once.
-- A gated network cannot start step 2,000 before step 1,999 is done.
-- A transformer layer processes all 4,096 positions in a few matrix products.
+The gated networks of §12.1 retain information over hundreds of steps, yet underutilize modern accelerators during training:
+
+- **Sequential step dependency:** On a sequence of $T = 4{,}096$ tokens, a standard GRU executes $4{,}096$ sequential kernel launches because step $t$'s gates and candidate depend nonlinearly on $\mathbf{h}_{t-1}$.
+- **Idle Tensor Cores:** While a Transformer processes all $4{,}096$ tokens in parallel via large matrix multiplications, a step-by-step RNN processes one slice of shape $(B, d)$ at a time.
+
+::: {.d2l-note .rule}
+**The linearization breakthrough:** Remove $\mathbf{h}_{t-1}$ from the nonlinear gates so the update is **affine in the state** ($\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$). Affine maps compose associatively, evaluating all $4{,}096$ states in $\log_2 4{,}096 = 12$ parallel rounds!
+:::
+:::
+
+::: {.slide title="Scalar Linear Recurrence as an Exponential Moving Sum"}
+[Linear Recurrence Basics]{.kicker}
+
+Start with a scalar state $h_t$ that retains a fixed fraction $a \in (0, 1)$ of its previous value and adds the input $x_t$ from $h_0 = 0$:
+
+$$h_t = a\, h_{t-1} + x_t \quad\Longrightarrow\quad h_t = \sum_{s=1}^{t} a^{t-s} x_s$$
+
+- **Closed-form impulse response:** A unit pulse $x_1 = 1$ with $a = 0.9$ produces the exponentially decaying trace $1, 0.9, 0.81, 0.729, \ldots$ with half-life $\tau_{1/2} = \ln 2 / \ln(1/a)$ ($\approx 7$ steps at $a = 0.9$; $\approx 693$ steps at $a = 0.999$).
+- **Forward retention equals backward gradient flow:** Because the recurrence is linear, the Jacobian is simply $\partial h_t / \partial x_s = a^{t-s}$—the exact decay factor that forgets an old input also attenuates its gradient.
+:::
+
+::: {.slide title="Input-Dependent Affine Vector Recurrences"}
+[Time-Varying Decays]{.kicker}
+
+To let each token decide whether to preserve or flush each coordinate, we make the elementwise decay $\mathbf{a}_t \in (0, 1)^d$ and **write vector** $\mathbf{b}_t \in \mathbb{R}^d$ functions of the current input $\mathbf{x}_t$ alone:
+
+$$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t, \qquad \mathbf{a}_t = \mathbf{a}(\mathbf{x}_t), \quad \mathbf{b}_t = \mathbf{b}(\mathbf{x}_t)$$
+
+$$\mathbf{h}_t = \sum_{s=1}^{t} \Big(\prod_{r=s+1}^{t} \mathbf{a}_r\Big) \odot \mathbf{b}_s$$
+
+- **Parallel pre-computation:** Because neither $\mathbf{a}_t$ nor $\mathbf{b}_t$ reads $\mathbf{h}_{t-1}$, all $T$ decay and write vectors across the sequence are computed in one batched matrix multiplication before the recurrence runs.
+- **Selective retention:** A write $\mathbf{b}_s$ survives to step $t$ as long as intermediate tokens choose $\mathbf{a}_r \approx \mathbf{1}$, and is erased whenever a later token sets $\mathbf{a}_r \approx \mathbf{0}$.
+:::
+
+::: {.slide title="Deriving the Minimal GRU (minGRU) from the Standard GRU"}
+[The minGRU Architecture]{.kicker}
+
+Inspect the three places where $\mathbf{h}_{t-1}$ enters the gates and candidate of the standard GRU (§12.1):
+
+$$\mathbf{z}_t = \sigma(\mathbf{W}_{\textrm{xz}}\mathbf{x}_t + \underbrace{\mathbf{W}_{\textrm{hz}}\mathbf{h}_{t-1}}_{\text{drop}} + \mathbf{b}_\textrm{z}), \quad \mathbf{r}_t = \sigma(\mathbf{W}_{\textrm{xr}}\mathbf{x}_t + \underbrace{\mathbf{W}_{\textrm{hr}}\mathbf{h}_{t-1}}_{\text{drop}} + \mathbf{b}_\textrm{r}), \quad \tilde{\mathbf{h}}_t = \tanh\big(\mathbf{W}_{\textrm{xh}}\mathbf{x}_t + \underbrace{\mathbf{W}_{\textrm{hh}}(\mathbf{r}_t \odot \mathbf{h}_{t-1})}_{\text{drop}} + \mathbf{b}_\textrm{h}\big)$$
+
+Dropping those three recurrent terms eliminates the reset gate $\mathbf{r}_t$ and yields the **minimal GRU (minGRU)** (Feng et al., 2024):
+
+$$\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z}), \qquad \tilde{\mathbf{h}}_t = \tanh(\mathbf{W}_\textrm{h}\mathbf{x}_t + \mathbf{b}_\textrm{h}), \qquad \mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$$
+
+- **Affine form:** Matches $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ with decay $\mathbf{a}_t = \mathbf{z}_t$ and bounded write $\mathbf{b}_t = (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$, while reducing layer weights from $6d^2$ to $2d^2$.
+:::
+
+::: {.slide title="What One Linear Layer Loses—and What Depth Restores"}
+[Expressivity Trade-Off]{.kicker}
+
+What does dropping $\mathbf{W}_{\textrm{hz}}\mathbf{h}_{t-1}$ from the update gate sacrifice within a single layer? Consider a 1-unit task: *"Store the **first** digit seen in the sequence and ignore all subsequent digits."*
+
+| Architecture | Gate Formula | On the 1st Digit | On the 2nd Digit |
+| :--- | :--- | :--- | :--- |
+| **Standard GRU** | $\sigma(\mathbf{W}_{\textrm{xz}}\mathbf{x}_t + \mathbf{W}_{\textrm{hz}}\mathbf{h}_{t-1} + \mathbf{b}_\textrm{z})$ | $h_{t-1} = 0 \implies z_t \approx 0$ (writes digit) | $h_{t-1} \neq 0 \implies z_t \approx 1$ (keeps 1st digit) |
+| **Single minGRU** | $\sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z})$ | Sees a digit $\implies z_t \approx 0$ (writes digit) | Sees a digit $\implies z_t \approx 0$ (**overwrites!**) |
 
 ::: {.d2l-note}
-The chain has one cause: the gates read $\mathbf{h}_{t-1}$ through a
-nonlinearity. Make the update **linear in the state**, and
-$\log_2 4096 = 12$ rounds suffice.
+A single minGRU layer's gate cannot tell whether its state is already occupied. However, stacking multiple minGRU blocks separated by positionwise MLPs lets **layer 2's gates** condition on the state history summarized by **layer 1**!
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Associative Composition of Affine State Transitions"}
+[Algebra of Parallel Scans]{.kicker}
 
-- unroll a linear recurrence into a weighted sum of its inputs;
-- compose affine steps and compute all states in $\lceil\log_2 T\rceil$
-  rounds;
-- turn a GRU into a minGRU and say what it loses on text;
-- predict how a GRU, a scan, and attention slow down as $T$ grows.
+Evaluating the unrolled sum $\sum_{s \le t} (\prod_{r=s+1}^t \mathbf{a}_r) \odot \mathbf{b}_s$ term-by-term for all $t \le T$ would cost $O(T^2 d)$ work. Instead, represent step $t$'s affine function $f_t(\mathbf{h}) = \mathbf{a}_t \odot \mathbf{h} + \mathbf{b}_t$ by its coefficient pair $(\mathbf{a}_t, \mathbf{b}_t)$:
 
-**Running example:** byte-level WikiText-103, windows of 128 bytes, four
-blocks of width 256; the GRU reaches 1.30 nats per byte.
+$$f_2(f_1(\mathbf{h})) = \mathbf{a}_2 \odot (\mathbf{a}_1 \odot \mathbf{h} + \mathbf{b}_1) + \mathbf{b}_2 = (\mathbf{a}_1 \odot \mathbf{a}_2) \odot \mathbf{h} + (\mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2)$$
+
+$$(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) = (\mathbf{a}_1 \odot \mathbf{a}_2,\; \mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2)$$
+
+- **Closure & associativity:** The composition of *any* block of $k$ affine steps is still a single $(\mathbf{a}, \mathbf{b})$ pair of width $d$, and function composition satisfies $(f_3 \circ f_2) \circ f_1 = f_3 \circ (f_2 \circ f_1)$.
+- **Prefix readout:** Starting from $\mathbf{h}_0 = \mathbf{0}$, the state $\mathbf{h}_t$ is simply the second component of the prefix product $(\mathbf{a}_1, \mathbf{b}_1) \bullet \cdots \bullet (\mathbf{a}_t, \mathbf{b}_t)$.
 :::
 
-::: {.slide title="Linear Recurrences Sit Between Gates and State Space Models"}
-[Where this fits]{.kicker}
+::: {.slide title="The Hillis–Steele Parallel Doubling Scan Schedule"}
+[Parallel Prefix Scan]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Gated Recurrent Networks | gates as learned decay |
-| Sequence-to-Sequence Learning | one state between two networks |
-| **Linear Recurrences and Parallel Scans** | **$h_t = a_t h_{t-1} + b_t$, the scan, the minGRU** |
-| State Space Models | decays from rates; kernels; convolution |
-| Selective State Space Models | the input sets the step size |
-| Matrix-State Recurrences | a state of key and value pairs |
-| The Delta Rule | correct a pair instead of adding |
-| Hybrid Architectures | a little attention back |
+- **Doubling stride schedule (Hillis & Steele, 1986):** In round $r = 0, 1, \ldots, \lceil \log_2 T \rceil - 1$, every position $t > 2^r$ combines with position $t - 2^r$ in parallel:
+  $$\text{stride } s = 1 \to 2 \to 4 \to \cdots \to 2^{\lceil\log_2 T\rceil - 1}$$
+- **Doubling vs. work-efficient trees:** Hillis–Steele performs $O(T \log_2 T)$ combines across $\lceil \log_2 T \rceil$ rounds (`associative_scan` in PyTorch), whereas Blelloch's up-sweep/down-sweep tree (Blelloch, 1990; used by XLA's `jax.lax.associative_scan`) performs $\sim 2T$ combines across $2\lceil \log_2 T \rceil$ rounds.
 :::
 
-::: {.col .narrow}
-- **Uses:** the GRU, `SeqLM` and the byte benchmark, attention's FLOP
-  count.
-- **Skips:** how fast a state should forget (next deck).
+::: {.col .fig}
+![](../img/mdl-modernrnn-scan-tree.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="A Linear Recurrence Is a Weighted Sum of Its Inputs"}
-$$h_t = a\,h_{t-1} + x_t \quad\Longrightarrow\quad h_t = \sum_{s \le t} a^{t-s} x_s$$
+::: {.slide title="Implementing associative_scan and linear_scan"}
+[Scan Code Architecture]{.kicker}
 
-- $a = 0.9$, one input $x_1 = 1$: the state reads $1, 0.9, 0.81, \ldots$
-- No $h_{t-1}$ on the right: every state follows from the inputs alone.
-- Half-life $\ln 2/\ln(1/a)$: 7 steps at $a = 0.9$, 693 at $0.999$.
+In PyTorch, `associative_scan` slices `earlier = x[:, :-s]` and `later = x[:, s:]` at doubling strides $s = 1, 2, 4, \ldots$, while JAX delegates directly to `jax.lax.associative_scan`:
 
-::: {.d2l-note}
-$\partial h_t / \partial x_s = a^{t-s}$: the decay that forgets an input
-also silences the gradient that would teach the model to use it.
-:::
-:::
-
-::: {.slide title="Input-Chosen Decays Keep the Update Affine"}
-$$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t,
-\qquad \mathbf{a}_t = \mathbf{a}(\mathbf{x}_t),\ \mathbf{b}_t = \mathbf{b}(\mathbf{x}_t)$$
-
-$$\mathbf{h}_t = \sum_{s \le t} \Big(\prod_{r=s+1}^{t} \mathbf{a}_r\Big) \odot \mathbf{b}_s$$
-
-- Decay $\mathbf{a}_t \in (0,1)^d$; the *write* $\mathbf{b}_t$ is what step
-  $t$ adds (not a bias).
-- *Affine* in $\mathbf{h}_{t-1}$: multiply, then add.
-- An input survives as long as the inputs after it choose to keep it.
-- All $\mathbf{a}_t, \mathbf{b}_t$ come from batched matrix products
-  before the recurrence starts.
-:::
-
-::: {.slide title="The minGRU Is a GRU Whose Gates Read Only the Input"}
-GRU: $\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{xz}\mathbf{x}_t + \mathbf{W}_\textrm{hz}\mathbf{h}_{t-1} + \mathbf{b}_\textrm{z})$;
-its reset gate and candidate read $\mathbf{h}_{t-1}$ too. minGRU:
-
-$$\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z}),\quad
-\tilde{\mathbf{h}}_t = \tanh(\mathbf{W}_\textrm{h}\mathbf{x}_t + \mathbf{b}_\textrm{h}),\quad
-\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$$
-
-- Decay $\mathbf{a}_t = \mathbf{z}_t$, write $\mathbf{b}_t = (1 - \mathbf{z}_t)\odot\tilde{\mathbf{h}}_t$.
-- The GRU's three uses of $\mathbf{h}_{t-1}$, in its gates and its
-  candidate, are gone, and the reset gate with them.
-- $2d^2$ weights per layer instead of the GRU's $6d^2$.
-:::
-
-::: {.slide title="A minGRU Unit Cannot Tell an Empty State From a Full One"}
-Task for one unit: store the **first** digit of a text, ignore later ones.
-
-| | update gate | first digit | second digit |
-|:--|:--|:--|:--|
-| GRU | $\sigma(\ldots + \mathbf{W}_\textrm{hz}\mathbf{h}_{t-1})$ | write | keep: the state is full |
-| minGRU | $\sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z})$ | write | write again |
-
-::: {.d2l-note}
-Gates that read only the token decide the same way whatever the state
-holds. Stacking layers recovers some of this.
-:::
-:::
-
-::: {.slide title="Affine Steps Compose Into Affine Steps"}
-A step is the pair $(\mathbf{a}, \mathbf{b})$: the map
-$\mathbf{h} \mapsto \mathbf{a} \odot \mathbf{h} + \mathbf{b}$.
-
-$$(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) =
-(\mathbf{a}_1 \odot \mathbf{a}_2,\ \mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2)$$
-
-Example: $(0.5, 1) \bullet (0.5, 2) = (0.25,\ 2.5)$; stepping from
-$h_0 = 0$ gives $h_1 = 1$, $h_2 = 2.5$.
-
-- Summing the unrolled form term by term costs about $T^2/2$; composing
-  pairs avoids the square.
-- $\mathbf{h}_t$ is the $\mathbf{b}$-part of the first $t$ steps composed.
-- The $\mathbf{a}$-part is carried so that a block can shrink what came
-  before it.
-
-::: {.d2l-note}
-Associative, and a block of a thousand steps is still **one pair**.
-:::
-:::
-
-::: {.slide title="A Scan Combines With a Doubling Stride"}
-![](../img/mdl-modernrnn-scan-tree.svg){width=60%}
-
-```{.python #ssm-exercises}
+```python
 s = 1
-while s < T:  # Combine each position with the one s steps back
-    a, b = (cat(a[:s], a[:-s] * a[s:]),
-            cat(b[:s], a[s:] * b[:-s] + b[s:]))
+while s < elems[0].shape[1]:  # Combine every position with the one s steps back
+    earlier, later = tuple(x[:, :-s] for x in elems), tuple(x[:, s:] for x in elems)
+    elems = tuple(torch.cat([x[:, :s], y], 1) for x, y in zip(elems, combine(earlier, later)))
     s *= 2
 ```
-A work-efficient scan needs about $2T$ combines in about $2\log_2 T$
-rounds.
+
+- **Handling initial states (`h0`):** `linear_scan(a, b, h0)` folds a nonzero initial state $\mathbf{h}_0$ into the first step's write ($\mathbf{b}_1 \leftarrow \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$) before launching the prefix scan, enabling chunk-by-chunk state passing.
+:::
+
+::: {.slide title="Verifying the Parallel Scan Against Sequential Stepping"}
+[Scan Implementation]{.kicker}
+
+`linear_scan(a, b, h0)` folds an optional initial state $\mathbf{h}_0$ into the first write ($\mathbf{b}_1 \leftarrow \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$) and runs the associative prefix scan along the time axis:
+
+```python
+def combine(earlier, later):
+    (a1, b1), (a2, b2) = earlier, later
+    return a1 * a2, a2 * b1 + b2
+```
+
+@!ssm-implementation-2
 
 ::: {.d2l-note}
-$\lceil\log_2 T\rceil$ rounds instead of $T$, for about $\log_2 T$ times
-the work.
+Even on a non-power-of-two length ($T = 100$), the parallel scan and sequential loop agree to `float32` rounding error ($\sim 10^{-7}$).
 :::
 :::
 
-::: {.slide title="Check: Rounds and Work"}
-$T = 4096$.
+::: {.slide title="Evaluating minGRU on Byte-Level WikiText-103"}
+[Language Modeling Benchmark]{.kicker}
 
-1. How many rounds does the doubling scan need?
-2. About how many combines, against the loop's steps?
+Using our 4-block `SeqLM` benchmark ($128$-byte windows, $1{,}000$ AdamW steps), we compare `GRU` ($d = 256$), `minGRU` ($d = 256$), and a parameter-matched `minGRU, d=302` ($3.81\text{M}$ parameters):
 
-::: {.fragment .fade-up}
-1. $\log_2 4096 = 12$ rounds.
-2. About $4096 \cdot 12 \approx 49{,}000$ combines against 4,095 steps:
-   about 12 times the work, in 340 times fewer rounds.
-:::
-:::
-
-::: {.slide title="At Equal Size the minGRU Trails the GRU by About 0.03 Nats per Byte"}
 @!linear-recurrence-a-linear-recurrent-language-model-2
 
-- Two runs each, nats per byte. At 2.76M parameters the minGRU is level
-  with a plain tanh RNN of the same size (about 1.35).
-- The gap is about 0.02 in the first 16 bytes, about 0.03 from byte 16 on.
-
 ::: {.d2l-note}
-Input-only gates do no better than no gates. But the plain RNN's $\tanh$
-chain cannot be scanned: the minGRU's case is speed at long lengths.
+At equal width ($2.76\text{M}$ vs. $3.81\text{M}$ params), `minGRU` trails `GRU` by $\sim 0.05$ nats/byte ($1.35$ vs. $1.30$); matching parameter count (`minGRU, d=302`) closes the gap to $\sim 0.03$ nats/byte while beating the attention baseline ($1.38$).
 :::
 :::
 
-::: {.slide title="Memory Is Worth More Than a Nat per Byte"}
+::: {.slide title="Probing State Utility: The State-Reset Ablation"}
+[Inside the Trained Model]{.kicker}
+
+How much of `minGRU`'s prediction quality comes from context carried in $\mathbf{h}_{t-1}$ versus current-token features in the residual stream? We evaluate the trained model with $\mathbf{h}_{t-1} = \mathbf{0}$ forced at every step (`StateReset`, so $\mathbf{h}_t = \mathbf{b}_t$):
+
 @!ssm-a-linear-recurrent-language-model-4
 
-- Reset every state before every step: each prediction sees one byte.
-- A one-byte model is a bigram model; the bigram model of the training
-  bytes scores 2.45, even on those bytes.
-- So about 1.1 nats per byte come from what the model remembers.
+- **Over 1.1 nats/byte from recurrent memory:** Zeroing the state degrades validation loss from **$1.35$** to **$2.48$ nats/byte**—collapsing all the way back to the empirical byte-bigram baseline ($2.45$ nats/byte).
 :::
 
-::: {.slide title="After Training, One Gate in Six Keeps Its State for 7 Bytes or More"}
+::: {.slide title="How Training Shifts the Distribution of Gate Half-Lives"}
+[Gate Timescale Analysis]{.kicker}
+
+Inspecting the update gates $\mathbf{z}_t \in (0, 1)^d$ of the first `minGRU` block on a validation batch before and after $1{,}000$ training steps:
+
 @!ssm-a-linear-recurrent-language-model-6
 
-- Gate value $g$: half-life $\ln 2/\ln(1/g)$ steps.
-- First layer, one validation batch, after 1,000 steps of training.
-- Gates start near $1/2$, a half-life of about one step: before training
-  about 1% exceed 0.9, after training about 18%.
+- **Emergence of word-scale memories:** At initialization ($\mathbf{b}_\textrm{z} = \mathbf{0}$), only $1.2\%$ of gates exceed $0.9$ (half-life $\ge 7$ bytes); training expands this share more than tenfold to $\sim 16\%$.
+- **Why almost no gates exceed $0.99$ (half-life $69$ bytes):** Over 128-byte windows, local word and phrase context dominates the loss, and zero-bias initialization starts far from the $0.99$–$0.999$ regime—a limitation §12.4 addresses directly.
+:::
 
-::: {.d2l-note}
-Windows of 128 bytes never ask for a memory of thousands; whether training
-would find one is the next deck's question.
+::: {.slide title="Asymptotic Complexity: GRU vs. Scan vs. Attention"}
+[Work, Depth, and Memory]{.kicker}
+
+Comparing one sequence-mixing layer of width $d$ across $T$ tokens up to constant factors:
+
+| Layer / Algorithm | Training FLOPs | Sequential Depth | Generation State Memory |
+| :--- | :--- | :--- | :--- |
+| **Sequential GRU** | $\Theta(T d^2)$ | $\Theta(T)$ matrix-vector steps | $\Theta(d)$ |
+| **minGRU (doubling scan)** | $\Theta(T d^2 + T d \log_2 T)$ | $\Theta(\log_2 T)$ elementwise rounds | $\Theta(d)$ |
+| **minGRU (work-efficient scan)** | $\Theta(T d^2 + T d)$ | $\Theta(\log_2 T)$ elementwise rounds | $\Theta(d)$ |
+| **Causal Attention** | $\Theta(T d^2 + T^2 d)$ | $\Theta(1)$ large GEMMs | $\Theta(T d)$ KV cache |
+
+::: {.d2l-note .rule}
+**The attention FLOP crossover:** Causal attention performs $8Td^2$ projection FLOPs and $\approx 2T^2 d$ attention score/mixing FLOPs. The quadratic term overtakes projections at $2T^2 d = 8Td^2 \implies \mathbf{T = 4d}$ ($T = 1{,}024$ at $d = 256$).
 :::
 :::
 
-::: {.slide title="Attention Needs Few Steps in a Row, but Its Work Grows as T²"}
-One layer of width $d$ on $T$ tokens, up to constant factors.
+::: {.slide title="Wall-Clock Scaling Across Sequence Lengths to 16,384"}
+[Hardware Benchmark]{.kicker}
 
-| layer | work | steps in a row | memory at generation |
-|:--|:--|:--|:--|
-| GRU | $T d^2$ | $T$ | $d$ |
-| minGRU, doubling scan | $T d^2 + T d \log_2 T$ | $\log_2 T$ | $d$ |
-| minGRU, work-efficient scan | $T d^2 + T d$ | $2\log_2 T$ | $d$ |
-| causal attention | $T d^2 + T^2 d$ | a few matmuls | $2Td$ |
+Forward + backward runtime (ms) in `float16` at width $d = 256$ with total tokens per batch held constant at $B \times T = 65{,}536$ as $T$ sweeps from $512$ to $16{,}384$:
 
-Attention per token: $8d^2$ FLOPs in projections, about $2Td$ in causal
-scores and mixing.
-:::
-
-::: {.slide title="Check: Predict the Curves"}
-Width $d = 256$; always 65,536 tokens per call; $T$ from 512 to 16,384.
-
-1. Which layer's time stays flat?
-2. Which grows nearly in proportion to $T$, and why?
-3. From which $T$ on does attention's time start to double?
-
-::: {.fragment .fade-up}
-1. The scan: its work is proportional to the number of tokens.
-2. The GRU: $T$ steps in a row, each with a fixed latency.
-3. $8d^2 = 2Td$ at $T = 4d = 1{,}024$; beyond that, toward doubling.
-:::
-:::
-
-::: {.slide title="At Long Lengths Attention Grows With T; the Scan Does Not"}
 @!linear-recurrence-cost-against-attention-2
+:::
 
-::: {.d2l-note}
-Forward and backward, ms per 65,536 tokens. Attention turns later than the
-count's 1,024: time per token that the FLOPs leave out dilutes the
-quadratic term. From 4,096 on, about 1.7× per doubling; GRU slowest.
+::: {.slide title="Doubling Scan Memory Traffic vs. Quadratic Attention" only="pytorch"}
+[PyTorch Scaling Analysis]{.kicker}
+
+With total batch tokens fixed at $B \times T = 65{,}536$, an ideal linear-time layer has a completely horizontal curve:
+
+- **Sequential `GRU` ($O(T)$ depth):** Slowest at every length, growing $>15\times$ from $T = 512$ to $16{,}384$ because doubling $T$ doubles the number of dependent kernel steps while halving batch parallelism $B$.
+- **Compiled `minGRU` (doubling scan):** Performs $\lceil \log_2 T \rceil$ memory passes ($9$ rounds at $T = 512$ to $14$ rounds at $T = 16{,}384$), rising by less than $50\%$ across a $32\times$ increase in sequence length.
+- **Causal `attention` ($O(T^2 d)$ work):** Stays flat up to $T = 2{,}048$ while projections and fixed overheads dominate, crosses the doubling scan near $T = 4{,}096$, and climbs toward $2\times$ per doubling—trailing `minGRU` by **$2.5\times$ at $T = 16{,}384$**.
+:::
+
+::: {.slide title="Work-Efficient XLA Scan vs. Fused cuDNN Attention" only="jax"}
+[JAX Scaling Analysis]{.kicker}
+
+With total batch tokens fixed at $B \times T = 65{,}536$, an ideal linear-time layer has a completely horizontal curve:
+
+- **Sequential `GRU` ($O(T)$ depth):** Slowest at every length, growing $>15\times$ from $T = 512$ to $16{,}384$ because doubling $T$ doubles the number of sequential scan steps while halving batch size $B$.
+- **Work-efficient `minGRU` (`jax.lax.associative_scan`):** Performs $\sim 2T$ elementwise combines regardless of $T$, staying **completely flat ($\sim 2.6\text{ ms}$) across a $32\times$ increase in sequence length** and beating attention at every length.
+- **cuDNN `FusedAttention` ($O(T^2 d)$ work):** Flat up to $T = 2{,}048$, then bends upward toward $2\times$ per doubling once quadratic pairwise mixing dominates—trailing `minGRU` by **$>5\times$ at $T = 16{,}384$**.
+:::
+
+::: {.slide title="Concept Check: Scan Depth, Closure, and Crossover"}
+[Check Your Understanding]{.kicker}
+
+Answer these three questions on linear recurrences and parallel scans:
+
+1. For a sequence of length $T = 16{,}384$, how many parallel rounds does the Hillis–Steele doubling scan take compared to a sequential loop, and what is the binary combine result of $(0.5, 1) \bullet (0.5, 2)$?
+2. Why does a dense matrix transition $\mathbf{h}_t = \mathbf{A}_t \mathbf{h}_{t-1} + \mathbf{b}_t$ ($\mathbf{A}_t \in \mathbb{R}^{d \times d}$) become prohibitively expensive to scan at $d = 256$, even though matrix composition is associative?
+3. In our constant-token benchmark ($B \times T = 65{,}536$, $d = 256$), why does `GRU` runtime double each time $T$ doubles even though its total FLOP count $B T d^2$ is constant?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $\log_2 16{,}384 = \mathbf{14\text{ rounds}}$ (vs. $16{,}383$ sequential steps); $(0.5, 1) \bullet (0.5, 2) = (0.5 \times 0.5,\; 0.5 \times 1 + 2) = \mathbf{(0.25, 2.5)}$.
+2. Composing two dense transitions requires a matrix-matrix product $\mathbf{A}_2 \mathbf{A}_1$ costing $O(d^3)$ FLOPs instead of $O(d)$ elementwise multiplies ($d^2 = 65{,}536\times$ more work per combine!).
+3. Every step of the `GRU` waits for $\mathbf{h}_{t-1}$ and pays a fixed kernel/synchronization latency, so doubling $T$ doubles the sequential critical-path latency.
 :::
 :::
 
-::: {.slide title="The Doubling Scan Makes 9 to 14 Passes Over the Sequence" only="pytorch"}
-- Doubling schedule: $\lceil\log_2 T\rceil$ rounds, each reading and
-  writing all 65,536 tokens; 9 rounds at 512, 14 at 16,384.
-- Its time follows the rounds: slower than attention up to 2,048 tokens,
-  level near 4,096, faster beyond.
-- A work-efficient scan touches the sequence a few times, whatever $T$.
+::: {.slide title="Summary: Linear Recurrences and Associative Scans"}
+[Key Takeaways]{.kicker}
+
+| Mechanism / Model | Mathematical Definition | Key Scaling & Modeling Property |
+| :--- | :--- | :--- |
+| **Affine Vector Recurrence** | $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ | Unrolls to $\sum_{s \le t} (\prod_{r=s+1}^t \mathbf{a}_r) \odot \mathbf{b}_s$; forward & gradient decay at same rate |
+| **Minimal GRU (`MinGRU`)** | $\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z})$, $\mathbf{b}_t = (1-\mathbf{z}_t)\odot\tilde{\mathbf{h}}_t$ | Drops $\mathbf{h}_{t-1}$ from gates ($2d^2$ params); trails GRU by $0.03$ nats/byte at equal size |
+| **Associative Combine ($\bullet$)** | $(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) = (\mathbf{a}_1 \odot \mathbf{a}_2, \mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2)$ | Compresses any block of steps into one pair of width $d$ in $O(d)$ work |
+| **Doubling vs. Tree Scan** | $\lceil \log_2 T \rceil$ vs. $2\lceil \log_2 T \rceil$ parallel rounds | $O(T \log T)$ vs. $O(T)$ combines; flat wall-clock time up to $T = 16{,}384$ |
+| **Attention Crossover** | $8Td^2$ projections vs. $2T^2 d$ attention scores | Quadratic attention cost dominates once $T \gtrsim 4d$ and grows linearly with $T$ per token |
 :::
 
-::: {.slide title="A Work-Efficient Scan Stays Flat and Below Attention" only="jax"}
-- `jax.lax.associative_scan`: about $2T$ combines, a few passes over the
-  sequence, whatever $T$.
-- Its time barely changes from 512 to 16,384 tokens and stays below
-  attention's at every length.
-- A doubling scan would make $\lceil\log_2 T\rceil$ passes instead.
-:::
-
-::: {.slide title="Recap"}
-- Linear in the state: $\mathbf{h}_t$ is a sum of writes weighted by
-  products of decays; forgetting and vanishing gradients are one number.
-- Affine steps compose into one pair: all states in
-  $\lceil\log_2 T\rceil$ rounds.
-- minGRU on WikiText bytes: 0.03 nats per byte behind the GRU at equal
-  size, level with a plain RNN, whose $\tanh$ chain cannot be scanned;
-  memory worth more than a nat per byte.
-- Cost: the GRU grows with $T$, attention with $T$ beyond a few thousand
-  tokens at width 256, the scan hardly at all.
-
-**Next:** the gates start near one half. How fast should a linear state
-forget, and where should its decays start?
-:::

@@ -31,64 +31,82 @@ environment-and-distribution-shift
 ::: {.cover}
 [Dive into Deep Learning · §3]{.kicker}
 
-Predicting a category, and knowing when to trust the prediction<br>
-**softmax · cross-entropy · Fashion-MNIST · metrics · test sets · distribution shift**
+Linear Neural Networks for Classification: From Logits to Trusted Decisions<br>**one-hot labels · softmax · cross-entropy · Fashion-MNIST · calibration · generalization · distribution shift**
 :::
 :::
 
-::: {.slide title="A Category Is Not a Number"}
-[The problem]{.kicker}
+::: {.slide title="Why Classification Needs Its Own Loss and Diagnostics"}
+[The Central Challenge]{.kicker}
 
-- Regress on the codes 1–10 of ten garments and a prediction of 5.5 lands
-  between coat and sandal: the number means nothing.
-- **Accuracy can mislead:** for a disease 1% of patients have, the rule
-  "always healthy" is right 99% of the time and finds no one.
-- **A test set vouches only for data like it:** a classifier right on about
-  85% of its source data is right on only about half of shifted data, less
-  than guessing the most common class.
+Predicting an unordered discrete category ($y \in \{1, \ldots, q\}$) departs from continuous regression in three fundamental ways:
+
+- **Arbitrary integer codes distort geometry:** Numbering ten garments $1$ through $10$ and applying squared loss makes a prediction of $5.5$ fall halfway between coat and sandal, while penalizing T-shirt ($1$) $\to$ ankle boot ($10$) $81\times$ more heavily than T-shirt ($1$) $\to$ trouser ($2$).
+- **Raw accuracy hides asymmetric failures:** When $1\%$ of patients carry a disease, a trivial classifier that always predicts *healthy* scores $99\%$ accuracy while detecting $0\%$ of sick patients.
+- **Test sets vouch only for their own distribution:** A linear model that achieves $85\%$ accuracy on source data can drop to $\sim 50\%$ on shifted deployment inputs—worse than guessing the majority class.
 
 ::: {.d2l-note}
-A classifier must output probabilities, be measured by what its decisions
-cost, and be checked against the data it will meet.
+A neural classifier must output calibrated class probabilities $\hat{\mathbf{y}}$, optimize a proper likelihood loss, and be audited against finite-sample error bars and deployment shifts.
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="From Regression to Classification: What Changes"}
+[The Modelling Recipe]{.kicker}
 
-- derive the softmax and the cross-entropy loss from maximum likelihood;
-- train softmax regression on Fashion-MNIST, by hand and with a framework,
-  to about 83% validation accuracy;
-- measure a classifier by precision, recall, costs, and calibration;
-- size a test set for a given error bar (±0.7 points from 10,000 images) and
-  explain why reusing it inflates scores;
-- detect covariate and label shift, and correct for them by reweighting.
+Almost all of our regression training pipeline—minibatch data loaders, vectorized matrix products, automatic differentiation, and minibatch SGD—carries straight over with three targeted replacements:
+
+| Component | Linear Regression (§2) | Softmax Regression (§3) |
+|:--|:--|:--|
+| **Target representation** | Continuous scalar $y \in \mathbb{R}$ | Discrete class $y \in \{1, \ldots, q\}$, one-hot $\mathbf{y} \in \{0, 1\}^q$ |
+| **Forward model** | Single affine score $\hat{y} = \mathbf{w}^\top\mathbf{x} + b$ | $q$ logits $\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$ normalized via $\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o})$ |
+| **Noise / label model** | Gaussian $P(y \mid \mathbf{x}) = \mathcal{N}(y; \hat{y}, \sigma^2)$ | Categorical $P(y \mid \mathbf{x}) = \hat{y}_y = \prod_{j=1}^q \hat{y}_j^{y_j}$ |
+| **Maximum-likelihood loss** | Squared error $\frac{1}{2}(\hat{y} - y)^2$ | Cross-entropy $l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y$ |
+| **Logit / output gradient** | Residual $\partial_{\hat{y}} l = \hat{y} - y$ | Residual vector $\nabla_{\mathbf{o}}\, l = \hat{\mathbf{y}} - \mathbf{y}$ |
+
+::: {.d2l-note .rule}
+Virtually every neural classifier—from this chapter's $7{,}850$-parameter baseline to frontier language models—terminates in a linear logit layer paired with the fused softmax cross-entropy loss.
+:::
 :::
 
-::: {.slide title="Map of the Chapter"}
-[Chapter map]{.kicker}
+::: {.slide title="Architecture and Roadmap of Chapter 3"}
+[Chapter Roadmap]{.kicker}
 
-| section | question | adds |
-|---|---|---|
-| Softmax Regression | how does a linear model output class probabilities? | probabilities over classes, cross-entropy |
-| Image Classification Data | which data tell models apart quickly? | Fashion-MNIST in minibatches |
-| Softmax Regression from Scratch | what does each part look like by hand? | softmax regression by hand, the `Classifier` class |
-| Concise Implementation | how does a framework avoid overflow? | framework layers, a stable loss |
-| Measuring Classifiers | what does accuracy hide? | precision, recall, costs, calibration |
-| Generalization in Classification | how far can we trust a test score? | error bars, test-set reuse, VC dimension |
-| Environment and Distribution Shift | what if deployment data differ? | correcting for shifted data |
+The six sections progress from mathematical formulation and benchmark data to implementation, decision metrics, statistical guarantees, and deployment robustness:
+
+| Section | Core Question | Key Mathematical & Systems Tools |
+|:--|:--|:--|
+| **§3.1 Softmax Regression** | How does a linear model output valid class probabilities? | One-hot vectors, $\mathrm{softmax}(\mathbf{o})$, cross-entropy, $\nabla_{\mathbf{o}} l = \hat{\mathbf{y}} - \mathbf{y}$, temperature $T$ |
+| **§3.2 Image Classification Data** | Which benchmark separates weak and strong models in seconds? | Fashion-MNIST ($60\text{k} + 10\text{k}$ $28\times 28$ garments), `DataModule` throughput |
+| **§3.3 Softmax Implementation** | How do we prevent float32 overflow/underflow and inspect errors? | `Classifier` base class, $10\times 10$ confusion matrix, templates, fused LogSumExp loss |
+| **§3.4 Measuring Classifiers** | When does higher accuracy yield a worse decision system? | Precision, recall, Bayes cost threshold $\kappa_{\mathrm{FP}}/(\kappa_{\mathrm{FP}}+\kappa_{\mathrm{FN}})$, ECE, temperature scaling |
+| **§3.5 Generalization** | How far can we trust a finite test score or training fit? | Standard error $\le 0.5/\sqrt{n}$, Hoeffding & union bounds, adaptive overfitting, VC dimension |
+| **§3.6 Distribution Shift** | How do we adapt when deployment data drift from training data? | Covariate vs. label vs. concept shift, domain-classifier $\beta(\mathbf{x})$, $\mathbf{C}\mathbf{p}_T = \boldsymbol{\mu}$, feedback loops |
 :::
 
-::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
-[Running examples]{.kicker}
+::: {.slide title="Concrete Running Benchmarks Across Every Section"}
+[Empirical Anchors]{.kicker}
 
-| section | running example |
-|---|---|
-| Softmax Regression | a 2×2 image; logits (1.0, 2.2, 0.3) for cat, chicken, dog give probabilities (0.21, 0.69, 0.10) |
-| Image Classification Data | Fashion-MNIST: 60,000 training and 10,000 validation images, 28×28, 10 classes |
-| Softmax Regression from Scratch | 7,850 parameters; about 83% after ten epochs, 84% on the training images; shirts are confused most; the weights are ten templates |
-| Concise Implementation | the same model with a fused loss, finite on logits (1000, 0, 0) |
-| Measuring Classifiers | a disease 1% have: "always healthy" 99% accurate, a screening test 95%; our model's confidence matches its accuracy within about 2 points |
-| Generalization in Classification | error 0.15 on 10,000 images: ±0.7 points; the best of 10,000 coin flips scores 0.56 |
-| Environment and Distribution Shift | source data shifted by 2 at deployment: about half right unweighted, about 95% reweighted; shirts from 10% to 50% of the images, estimated without a label |
+Every concept in this chapter is anchored to concrete numbers and reproducible experiments:
+
+| Section | Running Quantitative Anchor |
+|:--|:--|
+| **§3.1 Softmax Regression** | $2\times 2$ image with cat/chicken/dog logits $(1.0, 2.2, 0.3)$ $\to$ probabilities $(0.21, 0.69, 0.10)$ and chicken loss $-\log 0.69 \approx 0.37\text{ nats}$ |
+| **§3.2 Fashion-MNIST Data** | $60{,}000$ train / $10{,}000$ val grayscale $28\times 28$ images across $10$ classes; minibatches of $64$ ($\approx 200\text{ KB}$) or $256$ ($\approx 0.8\text{ MB}$) in `float32` |
+| **§3.3 Implementation** | $784 \times 10 + 10 = 7{,}850$ parameters reach $\sim 83\%$ val / $\sim 84\%$ train accuracy in $10$ epochs; fused LogSumExp handles logits $(1000, 0, 0)$ |
+| **§3.4 Measuring Classifiers** | $1\%$ disease prevalence: $90\%$-recall / $5\%$-FPR screener has $95\%$ accuracy and $15\%$ precision; cost ratio $100:1$ sets threshold at $1/101 \approx 1\%$ |
+| **§3.5 Generalization** | $n = 10{,}000$ test images give $\pm 0.7\%$ ($95\%$ normal) or $\pm 1.4\%$ (Hoeffding); majority vote of lucky coin-flippers jumps from $50\%$ to $\sim 70\%$ |
+| **§3.6 Distribution Shift** | 2D Gaussian shift $(0,0) \to (2,0)$: importance weights lift target accuracy from $\sim 55\%$ to $\sim 95\%$; $\mathbf{C}^{-1}\boldsymbol{\mu}$ recovers a $50\%$ target shirt prior |
+:::
+
+::: {.slide title="Concept Check & Chapter Study Guide"}
+[Self-Assessment]{.kicker}
+
+Before diving into §3.1, test your intuition on three foundational questions that motivate the chapter:
+
+1. **Output count:** Why does a 10-class linear classifier on $28 \times 28$ images require $7{,}850$ parameters instead of the $785$ parameters used in linear regression?
+2. **Numerical range:** In single-precision floating point (`float32`), why does evaluating $\exp(1000) / (\exp(1000) + \exp(0) + \exp(0))$ return `NaN` even though the mathematical ratio is $1$?
+3. **Evaluation precision:** If two models differ by $0.3$ percentage points on a $10{,}000$-image test set around $83\%$ accuracy, is that gap statistically distinguishable from sampling noise?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:** **(1)** Each of the $q = 10$ classes needs its own $784$-pixel weight vector $\mathbf{w}_j$ and bias $b_j$ to score class $j$ against all others ($784 \times 10 + 10 = 7{,}850$). **(2)** `float32` overflows to `inf` around $\exp(88.7) \approx 3.4 \times 10^{38}$, turning the ratio into $\infty / \infty = \texttt{NaN}$; subtracting $\max_k o_k = 1000$ first keeps all exponents $\le 0$. **(3)** No: at $\epsilon = 0.17$ and $n = 10{,}000$, a single model's standard error is $\sqrt{0.17 \times 0.83 / 10{,}000} \approx 0.38$ percentage points ($95\%$ radius $\pm 0.74$ points).
+:::
 :::

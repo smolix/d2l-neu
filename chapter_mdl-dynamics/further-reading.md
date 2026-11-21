@@ -7,8 +7,7 @@ Which stochastic integral describes the noise in a physical system? What
 becomes of the adjoint when the model is itself an SDE? Each entry below
 takes up one such question and says where its answer is.
 
-Books and courses for the chapter's own material are listed in its
-introduction (:numref:`chap_mdl-dynamics`). The practice of diffusion models
+The practice of diffusion models
 belongs to :numref:`chap_diffusion` and its further reading
 (:numref:`sec_diffusion-further-reading`), so a method treated there gets a
 pointer and no more. What remains is mathematics. We would read three
@@ -370,5 +369,44 @@ cloud consists of separate pieces. So the restriction does not settle the
 question that
 :numref:`sec_mdl-ot-connection` left: how to find an optimal pairing by
 training alone.
+
+## General Dynamics and Generative Flow Resources
+
+One warning before opening the references below: the MIT notes and course, the
+Flow Matching Guide, and the two flow-matching papers run time from noise at
+$0$ to data at $1$, whereas this chapter runs it the other way
+(:numref:`fig_mdl-dyn-time-conventions`).
+
+**Books and lecture notes**
+
+- [Nonlinear Dynamics and Chaos --- Steven Strogatz](https://www.stevenstrogatz.com/books/nonlinear-dynamics-and-chaos-with-applications-to-physics-biology-chemistry-and-engineering): a geometric introduction to flows, fixed points and their stability, the material of :numref:`sec_mdl-odes-solvers`.
+- [On Neural Differential Equations --- Patrick Kidger (2022)](https://arxiv.org/abs/2202.02435): the book-length treatment of neural ODEs, controlled and stochastic differential equations, with the adjoint machinery of :numref:`sec_mdl-neural-odes-cnf` laid out in full and advice on choosing among the solvers of :numref:`sec_mdl-euler-runge-kutta`.
+- [Applied Stochastic Differential Equations --- Särkkä & Solin](https://users.aalto.fi/~asolin/sde-book/sde-book.pdf): an application-minded treatment of Itô calculus, SDEs and the Fokker--Planck equation for :numref:`sec_mdl-sdes` and :numref:`sec_mdl-fokker-planck-probability-flow`; the authors provide the full PDF.
+- [Stochastic Differential Equations: An Introduction with Applications --- Bernt Øksendal](https://link.springer.com/book/10.1007/978-3-642-14394-6): a rigorous reference for Brownian motion, the Itô integral and existence theory, behind :numref:`sec_mdl-sdes`.
+- [Numerical Solution of Stochastic Differential Equations --- Kloeden & Platen](https://link.springer.com/book/10.1007/978-3-662-12616-5): the reference on Euler--Maruyama, Milstein and higher-order schemes and their strong and weak orders, for the simulation part of :numref:`sec_mdl-sdes`.
+- [An Introduction to Flow Matching and Diffusion Models (MIT 6.S184 lecture notes) --- Holderrieth & Erives](https://diffusion.csail.mit.edu/docs/lecture-notes.pdf): self-contained notes that derive diffusion and flow matching from SDEs and the continuity equation, companions to :numref:`sec_mdl-score-matching-diffusion-flow` and :numref:`sec_mdl-flow-matching-transport`.
+
+**Courses and tutorials**
+
+- [MIT 6.S184: Generative AI with Stochastic Differential Equations](https://diffusion.csail.mit.edu/): lectures, slides and labs that build a diffusion model from first principles, following the route of :numref:`sec_mdl-fokker-planck-probability-flow` to :numref:`sec_mdl-flow-matching-transport`; openly licensed.
+- [Understanding Diffusion Models: A Unified Perspective --- Calvin Luo (2022)](https://arxiv.org/abs/2208.11970): derives the variational and score-based views of diffusion side by side, for :numref:`sec_mdl-score-matching-diffusion-flow`.
+- [Flow Matching Guide and Code --- Lipman et al. (2024)](https://arxiv.org/abs/2412.06264): a detailed reference on flow matching for :numref:`sec_mdl-flow-matching-transport`, paired with the [`facebookresearch/flow_matching`](https://github.com/facebookresearch/flow_matching) PyTorch library.
+
+**Foundational papers**
+
+- [Neural Ordinary Differential Equations --- Chen et al. (NeurIPS 2018)](https://arxiv.org/abs/1806.07366): parameterizes a network's dynamics as an ODE and trains it with the adjoint method, as in :numref:`sec_mdl-neural-odes-cnf`.
+- [Generative Modeling by Estimating Gradients of the Data Distribution --- Song & Ermon (NeurIPS 2019)](https://arxiv.org/abs/1907.05600): score-based generation with denoising score matching and annealed Langevin sampling, for :numref:`sec_mdl-score-matching-diffusion-flow`.
+- [Denoising Diffusion Probabilistic Models --- Ho, Jain & Abbeel (NeurIPS 2020)](https://arxiv.org/abs/2006.11239): the discrete-time DDPM formulation that :numref:`sec_mdl-score-matching-diffusion-flow` reads as a discretized SDE.
+- [Score-Based Generative Modeling through SDEs --- Song et al. (ICLR 2021)](https://arxiv.org/abs/2011.13456): unifies score matching and diffusion as forward and reverse SDEs and introduces the probability-flow ODE of :numref:`sec_mdl-fokker-planck-probability-flow`.
+- [Denoising Diffusion Implicit Models --- Song, Meng & Ermon (ICLR 2021)](https://arxiv.org/abs/2010.02502): the deterministic sampler of :numref:`sec_mdl-score-matching-diffusion-flow`, which reuses a trained DDPM with fewer steps.
+- [Flow Matching for Generative Modeling --- Lipman et al. (ICLR 2023)](https://arxiv.org/abs/2210.02747): simulation-free training of continuous flows by regressing conditional vector fields, the method of :numref:`sec_mdl-flow-matching-transport`.
+- [Flow Straight and Fast: Rectified Flow --- Liu, Gong & Liu (ICLR 2023)](https://arxiv.org/abs/2209.03003): straight interpolation paths and reflow for few-step sampling, for :numref:`sec_mdl-flow-matching-transport`.
+
+**Blogs and visual explainers**
+
+- [Generative Modeling by Estimating Gradients of the Data Distribution --- Yang Song](https://yang-song.net/blog/2021/score/): the author's walkthrough connecting score matching, Langevin dynamics and the SDE picture of :numref:`sec_mdl-score-matching-diffusion-flow`, with figures.
+- [What are Diffusion Models? --- Lilian Weng](https://lilianweng.github.io/posts/2021-07-11-diffusion-models/): a survey of diffusion from DDPM through score SDEs and guidance, updated through 2024, for :numref:`sec_mdl-score-matching-diffusion-flow`.
+- [Perspectives on Diffusion --- Sander Dieleman](https://sander.ai/2023/07/20/perspectives.html): shows how a diffusion model is at once a denoiser, a score estimator, a reverse-SDE solver and a flow, the dictionary of :numref:`sec_mdl-score-velocity-dictionary`.
+- [The Annotated Diffusion Model --- Hugging Face](https://huggingface.co/blog/annotated-diffusion): a line-by-line PyTorch implementation of DDPM that connects the mathematics of :numref:`sec_mdl-score-matching-diffusion-flow` to runnable code.
 
 [Discussions](https://d2l.discourse.group/t/36870)

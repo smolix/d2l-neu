@@ -857,36 +857,6 @@ with entropic regularization.
        starts far from its data?
    :exlabel:`ex_mdl-divergences-distances-q-mathcaln-delta`
 
-1. [code] **Sampling error of the MMD estimate.** At $\ell = 1$ and
-   $d = 0.5$ the closed form $\tfrac{2}{\sqrt{3}}\big(1 - e^{-d^2/6}\big)$
-   gives $0.047$.
-    1. Recompute `mmd2_unbiased` with the RBF kernel on $200$ fresh pairs of
-       samples drawn like `x_p` and `y_shift`, with `n = 250` and with
-       `n = 1000`, and compare the mean and the standard deviation of the
-       estimates with the closed form. How does the standard deviation scale
-       with the sample size? Is the value that your run of the MMD
-       experiment printed within the spread?
-    1. Repeat for pairs drawn like `x_p` and `y_same`. The standard
-       deviation now scales differently. How, and why does this help a test
-       of $P = Q$?
-   :exlabel:`ex_mdl-test-functions-transport-mmd-sampling-error`
-
-1. **Rescaling and the data-processing inequality.** An f-divergence is
-   $D_f(P\|Q) = \mathbb{E}_{x \sim Q}[f(p(x)/q(x))]$ for a convex $f$ with
-   $f(1) = 0$, and it satisfies the data-processing inequality
-   $D_f(P\kappa \,\|\, Q\kappa) \leq D_f(P\|Q)$ for every channel $\kappa$,
-   that is, for every deterministic or random map applied to both
-   distributions (:numref:`subsec_mdl-f-div-data-processing`). Apply the map
-   $x \mapsto 2x$ to both $P$ and $Q$.
-    1. Show from the definition that no f-divergence changes under an
-       invertible map, and that $W_1$ doubles.
-    1. Show that the RBF $\textrm{MMD}^2$ at $\ell = 1$ falls from $0.047$ to
-       $0.036$ for $\mathcal{N}(0, 1)$ against $\mathcal{N}(0.5, 1)$, but
-       rises from $0.235$ to $0.787$ for $\delta_0$ against $\delta_{0.5}$.
-       Why does the data-processing inequality say nothing about MMD and
-       $W_1$?
-   :exlabel:`ex_mdl-test-functions-transport-rescaling`
-
 1. [code] **One-dimensional transport.** ● On the real line, $W_1$ is the
    area between the CDFs :eqref:`eq_mdl-w1-cdf`.
     1. For two empirical distributions on samples $x_1, \ldots, x_N$ and
@@ -1051,330 +1021,278 @@ with entropic regularization.
 
 <!-- Discussions: forum topic to be created at deploy -->
 
+[Discussions](https://d2l.discourse.group/t/36895)
+
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §37.4]{.kicker}
 
-Test Functions and Transport<br>**comparing averages, and moving mass**
+Test Functions and Optimal Transport<br>**integral probability metrics · kernel MMD · witness functions · Wasserstein-1 · Kantorovich–Rubinstein · Sinkhorn**
 :::
 :::
 
-::: {.slide title="Eight Standard Deviations Apart, JS and TV Have Slopes Near 10⁻⁴"}
-[The problem]{.kicker}
+::: {.slide title="Does Tail Overlap Rescue Density-Ratio Losses?"}
+[Motivation: The Shifted-Gaussian Diagnostic]{.kicker}
 
-Data $P=\mathcal N(0,1)$, model $Q=\mathcal N(d,1)$. Slope of each comparison in $d$, the gradient that the model receives:
+In §37.3 we saw that every $f$-divergence freezes at a constant on disjoint point masses $\delta_0$ and $\delta_d$. What if the two distributions have smooth tails that overlap everywhere, such as $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(d, 1)$ shifted by $d$ standard deviations?
 
-| slope in $d$ | $d=0.5$ | $d=2$ | $d=8$ |
-|:---|---:|---:|---:|
-| KL divergence | $0.5$ | $2$ | $8$ |
-| Jensen–Shannon divergence (JS) | $0.12$ | $0.22$ | $0.0002$ |
-| total variation (TV) | $0.39$ | $0.24$ | $0.0001$ |
-| kernel distance $\textrm{MMD}^2$, length scale $1$ | $0.18$ | $0.40$ | $0.00007$ |
-| transport distance $W_1$ | $1$ | $1$ | $1$ |
+| Separation $d$ | KL Slope $\frac{\partial \textrm{KL}}{\partial d}$ | JS Slope $\frac{\partial \textrm{JS}}{\partial d}$ | TV Slope $\frac{\partial \textrm{TV}}{\partial d}$ | RBF $\textrm{MMD}^2$ Slope ($\ell = 1$) | Wasserstein $W_1$ Slope $\frac{\partial W_1}{\partial d}$ |
+|:--|---:|---:|---:|---:|---:|
+| **$d = 0.5$** | $0.50$ | $0.12$ | $0.39$ | $0.18$ | **$1.00$** |
+| **$d = 2.0$** | $2.00$ | $0.22$ | $0.24$ | $0.40$ | **$1.00$** |
+| **$d = 4.0$** | $4.00$ | $0.07$ | $0.05$ | $0.11$ | **$1.00$** |
+| **$d = 8.0$** | $8.00$ | $2 \times 10^{-4}$ | $1 \times 10^{-4}$ | $7 \times 10^{-5}$ | **$1.00$** |
 
 ::: {.d2l-note .warn}
-Overlapping tails do not help. At $d=8$ only KL and $W_1$ say which way to move, and KL needs the model's density.
+**Overlapping Tails Do Not Rescue JS or TV:** By $d = 8$, $\textrm{JS} \approx 0.693 = \log 2$ and $\textrm{TV} \approx 1.000$ have saturated, collapsing their gradients to $\sim 10^{-4}$. Meanwhile, KL requires an explicit model density $q(x)$, which implicit sample generators lack!
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Evaluating Values and Gradients at Separation d"}
+[Five Comparisons on Shifted Gaussians]{.kicker}
 
-- say why total variation cannot be estimated from two samples;
-- compute MMD as a distance between mean features, and as three kernel averages;
-- read a witness function;
-- compute $W_1$ on the line as the area between two CDFs, and state its dual;
-- choose between a fixed kernel and a trained critic.
+Evaluating all five comparisons and their central-difference derivatives in $d$ reveals how quickly bounded ratios and local kernels lose sight of distant data:
 
-**Running examples:** $\mathcal N(0,1)$ against $\mathcal N(0,4)$; two distributions on the points $0,\dots,5$.
-
-**The idea:** compare how $P$ and $Q$ average a class of functions. The class decides how far the comparison sees.
+@!mdl-test-functions-transport-test-functions-and-transport-3
 :::
 
-::: {.slide title="Averages and Transport Take Over Where the Ratio Fails"}
-[Where this fits]{.kicker}
+::: {.slide title="Integral Probability Metrics: A Panel of Auditors"}
+[Unifying Test-Function Comparisons]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Entropy, Cross-Entropy, and KL | surprise, KL, the loss floor |
-| Codes, Compression, and Perplexity | the code behind the log-loss |
-| f-Divergences | one convex function of the ratio |
-| **Test Functions and Transport** | **averages and moving mass** |
-| Score-Based Comparisons | slopes, no normalizer |
-| Mutual Information | dependence and what it limits |
-| Estimating Mutual Information | what samples can show |
+Total variation $\textrm{TV}(P, Q) = \sup_A |P(A) - Q(A)|$ compares the expectations of indicator functions $\mathbf{1}_A(x)$. Replacing indicators with a general symmetric class $\mathcal{G}$ of **test functions** $g$ defines an **Integral Probability Metric (IPM)**:
+
+$$\textrm{IPM}_{\mathcal{G}}(P, Q) = \sup_{g \in \mathcal{G}}\Big(\mathbb{E}_{x \sim P}[g(x)] - \mathbb{E}_{y \sim Q}[g(y)]\Big)$$
+
+| Test Function Class $\mathcal{G}$ | Resulting Integral Probability Metric | Requires Auxiliary Training? |
+|:--|:---|:---|
+| Bounded functions $\{g : |g(x)| \le \tfrac12\}$ | **Total Variation** $\textrm{TV}(P, Q)$ | Yes (or exact density sign $\tfrac12\textrm{sign}(p - q)$) |
+| Linear in features $\{g(x) = \mathbf{w}^\top \boldsymbol{\varphi}(x) : \|\mathbf{w}\|_2 \le 1\}$ | **Maximum Mean Discrepancy** $\textrm{MMD}(P, Q)$ | **No** (closed-form pairwise kernel averages) |
+| 1-Lipschitz functions $\{g : |g(x) - g(y)| \le \|x - y\|\}$ | **Wasserstein-1 Distance** $W_1(P, Q)$ | Yes (1-Lipschitz WGAN critic or LP / CDF) |
+
+- Unlike the $f$-GAN bound $\mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]$ where $f^*$ penalizes large $T$, an IPM averages $g$ linearly under both $P$ and $Q$, so **membership in $\mathcal{G}$ is the sole constraint keeping the gap finite**.
 :::
 
-::: {.col .narrow}
-- **Uses:** total variation, the critic bound, Cauchy–Schwarz.
-- **Skips:** duality off the line; how a critic is kept Lipschitz; proofs of the estimation rates.
-:::
-:::
-:::
+::: {.slide title="Two Competing Requirements on Test Class G"}
+[Sample Efficiency vs. Far-Sighted Gradients]{.kicker}
 
-::: {.slide title="An IPM Is the Largest Gap in Averages That a Class of Functions Finds"}
-[Test functions]{.kicker}
+Why not make the auditor panel $\mathcal{G}$ as large as possible? A useful test class must balance two opposing demands:
 
-Total variation is $\sup_A\lvert P(A)-Q(A)\rvert$, a supremum over indicator functions. Replace them by a class $\mathcal G$ of test functions $g$:
-
-$$\textrm{IPM}_{\mathcal G}(P,Q)=\sup_{g\in\mathcal G}\big(\mathbb{E}_P[g]-\mathbb{E}_Q[g]\big)$$
-
-| class $\mathcal G$ | integral probability metric (IPM) |
-|:--|:--|
-| $\lvert g\rvert\le\tfrac12$ (an indicator minus $\tfrac12$) | total variation |
-| linear in fixed features, weights in the unit ball | maximum mean discrepancy (MMD) |
-| slope at most $1$ | Wasserstein distance $W_1$ |
-
-::: {.d2l-note}
-The class is a panel of auditors. It decides what the comparison can see.
-:::
+- **1. Estimable from finite samples ($\mathcal{G}$ cannot be too rich or spiky):**
+  Draw two independent samples $X_1, \ldots, X_N$ and $Y_1, \ldots, Y_N$ from the *same* continuous distribution $\mathcal{N}(0, 1)$. With probability $1$, the two samples share no points, so the indicator function $g(x) = \mathbf{1}\{x \in \{X_i\}\} - \tfrac12$ averages to $+\tfrac12$ on the first sample and $-\tfrac12$ on the second, yielding **empirical $\textrm{TV} = 1.0$ even when $P = Q$**!
+- **2. Far-sighted gradients ($\mathcal{G}$ must contain functions that grow with distance):**
+  If every $g \in \mathcal{G}$ is bounded ($|g| \le 1/2$), the gap can never exceed $1$. On $P = \mathcal{N}(0, 1)$ vs. $Q = \mathcal{N}(d, 1)$, the optimal separating event is $\{x < d/2\}$, giving $\textrm{TV} = 2\Phi(d/2) - 1$, which reaches $0.99994$ at $d = 8$ and provides zero gradient for distant samples.
 :::
 
-::: {.slide title="Check: Total Variation Between Two Samples"}
-[Check]{.kicker}
+::: {.slide title="From Linear and Quadratic Features to Mean Maps"}
+[Building Maximum Mean Discrepancy]{.kicker}
 
-Draw $1{,}000$ points from $\mathcal N(0,1)$, twice. What is the total variation between the two empirical distributions?
+Let us build a smooth test class step by step, testing each choice on $P = \mathcal{N}(0, 1)$ versus $Q = \mathcal{N}(0, 4)$ (same mean $0$, variances $1$ and $4$):
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $1$. The samples share no point, so the indicator of the first sample averages $1$ on it and $0$ on the other.
-A class with functions this sharp finds gaps that are not there.
-:::
-:::
-:::
-
-::: {.slide title="A Class Must Be Estimable, and Its Functions Must Grow"}
-[Two requirements]{.kicker}
-
-- **Estimable:** sample averages must track true averages. Indicators fail: empirical TV is $1$.
-- **Far-sighted:** the gap must keep growing with distance. Bounded $g$ fail: gap $\le1$.
-
-$\mathcal N(0,1)$ against $\mathcal N(d,1)$: the best event is $\{x<d/2\}$, so $\textrm{TV}=2\Phi(d/2)-1$, with $\Phi$ the standard normal CDF.
-
-| $d$ | $1$ | $2$ | $4$ | $8$ |
-|:--|--:|--:|--:|--:|
-| TV | $0.383$ | $0.683$ | $0.954$ | $0.99994$ |
-
-::: {.d2l-note .rule}
-Total variation fails both. A fixed kernel will meet the first, functions of slope one the second.
-:::
+- **Step 1 (Linear functions $g(x) = wx$ with $|w| \le 1$):**
+  $\sup_{|w| \le 1} w(\mathbb{E}_P[X] - \mathbb{E}_Q[X]) = |\mathbb{E}_P[X] - \mathbb{E}_Q[X]| = 0$. Linear auditors are completely blind to variance!
+- **Step 2 (Feature map $\boldsymbol{\varphi}(x) = (x, x^2)$ with $g(x) = \mathbf{w}^\top \boldsymbol{\varphi}(x)$, $\|\mathbf{w}\|_2 \le 1$):**
+  Define the **mean feature vector** (or *mean embedding*) $\mathbf{m}_P = \mathbb{E}_{x \sim P}[\boldsymbol{\varphi}(x)]$. By the Cauchy–Schwarz inequality, maximizing a linear inner product over the unit ball yields the Euclidean norm in feature space:
+  $$\textrm{MMD}(P, Q) = \sup_{\|\mathbf{w}\|_2 \le 1} \mathbf{w}^\top(\mathbf{m}_P - \mathbf{m}_Q) = \|\mathbf{m}_P - \mathbf{m}_Q\|_2$$
+- **Result on $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(0, 4)$:** Here $\mathbf{m}_P = (0, 1)$ and $\mathbf{m}_Q = (0, 4)$, so $\textrm{MMD}^2(P, Q) = (0 - 0)^2 + (1 - 4)^2 = 9$.
 :::
 
-::: {.slide title="MMD Is the Distance Between Mean Features"}
-[Mean features]{.kicker}
+::: {.slide title="The Kernel Trick Eliminates the Supremum"}
+[Closed-Form Pairwise Expectations]{.kicker}
 
-Test pair: $P=\mathcal N(0,1)$, $Q=\mathcal N(0,4)$.
+Expanding the squared Euclidean distance $\|\mathbf{m}_P - \mathbf{m}_Q\|_2^2$ using independent draws $x, x' \sim P$ and $y, y' \sim Q$ replaces explicit feature vectors $\boldsymbol{\varphi}(x)$ with inner products $k(x, x') = \langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x') \rangle$:
 
-**I. Linear functions** $g(x)=wx$, $\lvert w\rvert\le1$: the gap is $\lvert\mathbb{E}_PX-\mathbb{E}_QX\rvert=0$. Blind to spread.
+$$\textrm{MMD}^2(P, Q) = \underbrace{\mathbb{E}_{x, x' \sim P}\big[k(x, x')\big]}_{\text{similarity within } P} + \underbrace{\mathbb{E}_{y, y' \sim Q}\big[k(y, y')\big]}_{\text{similarity within } Q} - 2\underbrace{\mathbb{E}_{x \sim P, y \sim Q}\big[k(x, y)\big]}_{\text{similarity across } P \text{ and } Q}$$
 
-. . .
-
-**II. Features** $\varphi(x)=(x,x^2)$, $g=\mathbf w^\top\varphi$, $\lVert\mathbf w\rVert\le1$, mean feature $\mathbf m_P=\mathbb{E}_P[\varphi]$:
-
-$$\textrm{MMD}(P,Q)=\sup_{\lVert\mathbf w\rVert\le1}\mathbf w^\top(\mathbf m_P-\mathbf m_Q)=\lVert\mathbf m_P-\mathbf m_Q\rVert$$
-
-. . .
-
-$\mathbf m_P=(0,1)$ and $\mathbf m_Q=(0,4)$, so $\;\boxed{\textrm{MMD}^2=0^2+3^2=9}$
-
-[Cauchy–Schwarz: a linear function on the unit ball is largest along its coefficient vector.]{.small}
+- **Geometric interpretation:** When $P = Q$, within-group similarity equals cross-group similarity and the three terms cancel to $0$; when $P$ and $Q$ separate into distinct clusters, within-group similarities exceed the cross term.
+- **No critic network to train:** The supremum over $\mathcal{G}$ has been solved analytically by Cauchy–Schwarz—evaluating $\textrm{MMD}^2$ requires only three expectations of the kernel $k$.
 :::
 
-::: {.slide title="Three Kernel Averages Replace the Supremum"}
-[Kernels]{.kicker}
+::: {.slide title="Characteristic Kernels and Closed-Form RBF MMD"}
+[Infinite-Dimensional Feature Spaces]{.kicker}
 
-**III. Expand the square.** Kernel $k(x,x')=\langle\varphi(x),\varphi(x')\rangle$; $x,x'\sim P$ and $y,y'\sim Q$ independent:
+Any finite polynomial kernel (such as $k(x, x') = xx' + x^2 x'^2$) is blind to higher moments. Choosing the **RBF (Gaussian) kernel** $k(x, x') = \exp\!\big(-\frac{\|x - x'\|^2}{2\ell^2}\big)$ with length scale $\ell > 0$ compares all moments simultaneously:
 
-$$\textrm{MMD}^2=\mathbb{E}\,k(x,x')+\mathbb{E}\,k(y,y')-2\,\mathbb{E}\,k(x,y)$$
-
-. . .
-
-**IV. Choose the kernel,** not the features. RBF: $k(x,x')=e^{-(x-x')^2/(2\ell^2)}$, similar within a length scale $\ell$; infinitely many features.
-
-. . .
-
-Test pair, $\ell=1$: $\mathbb{E}\,e^{-Z^2/2}=(1+s^2)^{-1/2}$ for $Z\sim\mathcal N(0,s^2)$; $x-x'$, $y-y'$, $x-y$ have $s^2=2,\,8,\,5$:
-
-$$\boxed{\textrm{MMD}^2=3^{-1/2}+9^{-1/2}-2\cdot6^{-1/2}=0.094}$$
+- **Infinite feature expansion:** Factoring $e^{-(x-x')^2/(2\ell^2)} = e^{-x^2/(2\ell^2)}e^{-x'^2/(2\ell^2)}\sum_{j=0}^\infty \frac{(xx'/\ell^2)^j}{j!}$ reveals an inner product over infinitely many damped monomial features $\varphi_j(x) = \frac{x^j}{\ell^j\sqrt{j!}}e^{-x^2/(2\ell^2)}$.
+- **Characteristic property:** Because these features separate all distributions, $\textrm{MMD}(P, Q) = 0 \iff P = Q$, making RBF-MMD a true metric on probability distributions (Gretton et al., 2012).
+- **Closed form on Gaussians ($\ell = 1$):** Using $\mathbb{E}[e^{-Z^2/(2\ell^2)}] = (1 + s^2/\ell^2)^{-1/2}e^{-\mu^2/(2(\ell^2+s^2))}$ for $Z \sim \mathcal{N}(\mu, s^2)$:
+  - On $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(0, 4)$, $x - x' \sim \mathcal{N}(0, 2)$, $y - y' \sim \mathcal{N}(0, 8)$, and $x - y \sim \mathcal{N}(0, 5)$, giving $\textrm{MMD}^2 = \frac{1}{\sqrt{3}} + \frac{1}{\sqrt{9}} - \frac{2}{\sqrt{6}} \approx 0.0942$.
+  - On shifted Gaussians $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(d, 1)$, $\textrm{MMD}^2 = \frac{2}{\sqrt{3}}(1 - e^{-d^2/6})$, which saturates as $d \gg \ell$.
 :::
 
-::: {.slide title="Between Equal Distributions the RBF Estimate Stays Within Thousandths of Zero"}
-[Estimation]{.kicker}
+::: {.slide title="Unbiased U-Statistic Estimation from Samples"}
+[Two-Sample Testing without a Critic]{.kicker}
 
-Unbiased estimate: average $k$ over pairs, leaving out the pairs of a point with itself. $1{,}000$ points per sample:
+Given finite samples $\{x_i\}_{i=1}^n \sim P$ and $\{y_j\}_{j=1}^m \sim Q$, omitting diagonal self-pairs ($i = j$, which would bias within-sample similarities upward by $k(x_i, x_i)/n = 1/n$) yields an unbiased U-statistic estimator:
 
 @!divergences-distances-mmd
-
-::: {.d2l-note}
-No critic, no density. The estimate detects a gap far better than it measures one: a two-sample test.
-:::
 :::
 
-::: {.slide title="The Witness Is Flat in the Tails, So Distant Samples Get No Push"}
-[The witness]{.kicker}
+::: {.slide title="The Witness Function and Tail Gradient Vanishing"}
+[Why Fixed-Bandwidth MMD Is Nearsighted]{.kicker}
+
+Which test function $g^\star \in \mathcal{G}$ attains the maximum gap in $\textrm{MMD}(P, Q)$?
 
 ::: {.cols .vc}
 ::: {.col}
-- The auditor that finds the gap: $g^\star(x)\propto\mathbb{E}_P\,k(x,X)-\mathbb{E}_Q\,k(x,Y)$.
-- $\mathcal N(0,1)$ against $\mathcal N(0.5,1)$: by symmetry the sign change is at $0.25$; a sample's crossing is off by a tenth or two.
-- A model's sample moves uphill on $g^\star$. The slope there is its push.
-- A few length scales out the slope is gone.
+- **Closed-form witness function:** By Cauchy–Schwarz, $\mathbf{w}^\star \propto \mathbf{m}_P - \mathbf{m}_Q$, so the optimal auditor (the **witness**) is:
+  $$g^\star(x) \propto \mathbb{E}_{X \sim P}[k(x, X)] - \mathbb{E}_{Y \sim Q}[k(x, Y)]$$
+- **Sign crossing:** Positive where $P$ dominates and negative where $Q$ dominates (crossing $0$ at $x = 0.25$ for $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(0.5, 1)$).
+- **Vanishing tail gradients:** A generator pushes samples uphill along $\nabla g^\star(y)$, but beyond a few length scales $\ell$ in the tails, $g^\star(x)$ flattens to $0$!
 :::
 
-::: {.col}
+::: {.col .fig}
 @!mdl-divergences-distances-integral-probability-metrics-and-mmd-1
 :::
 :::
 :::
 
-::: {.slide title="W₁ Is the Least Mass × Distance over All Transport Plans"}
-[Optimal transport]{.kicker}
+::: {.slide title="Optimal Transport and Wasserstein-1 Distance"}
+[Moving Probability Mass]{.kicker}
 
-- Plan $\gamma$: how much mass goes from each $x$ to each $y$; a joint distribution of $(x,y)$ with marginals $P$, $Q$.
-- $W_1(P,Q)=\inf_\gamma\mathbb{E}_\gamma\lvert x-y\rvert$
-- Point masses $\delta_0$, $\delta_d$: one plan, $W_1=d$.
-- $\mathcal N(0,1)$, $\mathcal N(d,1)$: shifting every point by $d$ costs $d$.
-- No plan is cheaper: $\mathbb{E}_\gamma\lvert x-y\rvert\ge\lvert\mathbb{E}x-\mathbb{E}y\rvert=d$.
+To keep a steady gradient at *every* distance $d$, we must incorporate the ground distance $\|x - y\|$ of the space. A **transport plan** (or *coupling*) $\gamma \in \Pi(P, Q)$ is a joint distribution over $(x, y)$ whose marginals are $P$ and $Q$:
 
-::: {.d2l-note}
-$W_1$ is the distance itself: slope $1$ at every $d$.
-:::
-:::
+$$W_1(P, Q) = \inf_{\gamma \in \Pi(P, Q)} \mathbb{E}_{(x, y) \sim \gamma}\big[\|x - y\|\big]$$
 
-::: {.slide title="The Dual of W₁ Is a Critic of Slope at Most One"}
-[Kantorovich–Rubinstein duality]{.kicker}
-
-$$W_1(P,Q)=\sup_{g}\big(\mathbb{E}_P[g]-\mathbb{E}_Q[g]\big)\quad\textrm{over all } g \textrm{ with } \lvert g(x)-g(y)\rvert\le\lVert x-y\rVert$$
-
-- Easy half: $g(x)-g(y)\le\lVert x-y\rVert$; average over any plan $\gamma$.
-- Such a $g$ cannot jump, but it can climb: the gap grows with distance.
-- $\mathcal N(0,1)$, $\mathcal N(d,1)$: $g(x)=-x$ has gap $d$, and slope $1$ at every sample.
-- A Wasserstein GAN trains a network as $g$, kept approximately 1-Lipschitz.
-
-::: {.d2l-note .rule}
-An infimum over joint distributions becomes a supremum over one function.
-:::
+- **Physical meaning (Monge, 1781):** $\gamma(x, y)$ specifies how much earth moves from source $x$ to pit $y$; $W_1(P, Q)$ is the minimum total **mass $\times$ distance** work required to reshape $P$ into $Q$.
+- **Exact distance recovery at every separation $d$:**
+  - **Disjoint point masses ($\delta_0$ vs. $\delta_d$):** The unique coupling puts all mass on $(0, d)$, giving $W_1(\delta_0, \delta_d) = |d|$ with gradient $\pm 1$.
+  - **Shifted Gaussians ($\mathcal{N}(0, 1)$ vs. $\mathcal{N}(d, 1)$):** Translating $y = x + d$ costs $d$, and by Jensen's inequality $\mathbb{E}_\gamma|x - y| \ge |\mathbb{E}_P[X] - \mathbb{E}_Q[Y]| = |d|$, so $W_1 = |d|$ with constant slope $1$ for all $d > 0$.
 :::
 
-::: {.slide title="On the Line, W₁ Is the Area Between the CDFs"}
-[Transport on the line]{.kicker}
+::: {.slide title="Visualizing Transport Plans and 1D CDF Areas"}
+[Monge–Kantorovich Geometry]{.kicker}
 
-- **I.** $F_P(t)$: the mass of $P$ at or left of $t$. Any plan carries at least $\lvert F_P(t)-F_Q(t)\rvert$ across $t$.
-- **II.** A parcel moved from $x$ to $y$ crosses every $t$ between: cost $=\int(\textrm{mass crossing }t)\,dt$.
-- **III.** The *monotone plan* sends quantile to quantile, $F_P^{-1}(u)\to F_Q^{-1}(u)$, and never carries mass both ways.
-
-$$\boxed{W_1(P,Q)=\int\lvert F_P(t)-F_Q(t)\rvert\,dt}$$
-
-::: {.d2l-note}
-No optimization: sort, and add up the gaps.
-:::
-:::
-
-::: {.slide title="On Six Points the Area Between the CDFs Is 1.7"}
-[Worked example]{.kicker}
-
-Left: the monotone plan and the CDFs of $P$, $Q$. Right: point masses $d$ apart.
+On the real line, reshaping a left-heavy distribution $P$ into a right-heavy distribution $Q$ on atoms $\{0, 1, 2, 3, 4, 5\}$ moves mass across intervals whose vertical gaps $|F_P(t) - F_Q(t)|$ sum to $W_1 = 1.7$:
 
 @fig:mdl-it-ot-transport-plan
 :::
 
-::: {.slide title="A 36-Route Linear Program Returns 1.7 by a Different Plan"}
-[Worked example]{.kicker}
+::: {.slide title="Kantorovich–Rubinstein Duality: 1-Lipschitz Critics"}
+[Primal Linear Program to Dual IPM]{.kicker}
 
-| point | $0$ | $1$ | $2$ | $3$ | $4$ | $5$ |
-|:--|--:|--:|--:|--:|--:|--:|
-| $p$ | $0.30$ | $0.20$ | $0.25$ | $0.10$ | $0.10$ | $0.05$ |
-| $q$ | $0.05$ | $0.10$ | $0.10$ | $0.25$ | $0.20$ | $0.30$ |
-| $F_P-F_Q$ | $0.25$ | $0.35$ | $0.50$ | $0.35$ | $0.25$ | $0$ |
+Minimizing over high-dimensional joint distributions $\gamma \in \Pi(P, Q)$ is intractable from samples, but linear programming duality converts the infimum over couplings into a supremum over a single **1-Lipschitz test function**:
+
+::: {.d2l-note .rule}
+**Theorem (Kantorovich–Rubinstein Duality):** For any distributions $P, Q$ on $\mathbb{R}^n$ with finite first moments,
+$$W_1(P, Q) = \sup_{\|g\|_{\textrm{Lip}} \le 1}\Big(\mathbb{E}_{x \sim P}[g(x)] - \mathbb{E}_{y \sim Q}[g(y)]\Big), \qquad \|g\|_{\textrm{Lip}} = \sup_{x \neq y}\frac{|g(x) - g(y)|}{\|x - y\|}$$
+:::
+
+- **One-line proof of weak duality ($\textrm{IPM}_{\textrm{Lip}_1} \le W_1$):** For any 1-Lipschitz $g$ and any coupling $\gamma \in \Pi(P, Q)$, $g(x) - g(y) \le \|x - y\|$ holds pointwise; taking $\mathbb{E}_{(x,y) \sim \gamma}$ gives $\mathbb{E}_P[g] - \mathbb{E}_Q[g] \le \mathbb{E}_\gamma[\|x - y\|]$.
+- **Why 1-Lipschitz auditors solve both IPM requirements:** Bounded slope $|g(x) - g(y)| \le \|x - y\|$ prevents spiky memorization of finite samples, while unbounded linear growth (e.g., $g(x) = -x$ on $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(d, 1)$) provides unit gradient everywhere (**Wasserstein GAN**, Arjovsky et al., 2017).
+:::
+
+::: {.slide title="Exact 1D Optimal Transport: Area Between CDFs"}
+[Four-Step Proof on the Real Line]{.kicker}
+
+In one dimension, Kantorovich–Rubinstein duality and primal optimal transport both collapse to the area between the cumulative distribution functions $F_P(t) = \Pr(X \le t)$ and $F_Q(t) = \Pr(Y \le t)$:
+
+$$W_1(P, Q) = \int_{-\infty}^\infty \big|F_P(t) - F_Q(t)\big|\,dt$$
+
+- **Step 1 (Lower bound on any plan):** Writing $|X - Y| = \int \mathbf{1}(t \text{ between } X \text{ and } Y)\,dt$ and taking $\mathbb{E}_\gamma$ shows that net mass crossing $t$ is at least $|\gamma(X \le t < Y) - \gamma(Y \le t < X)| = |F_P(t) - F_Q(t)|$.
+- **Step 2 (Monotone quantile coupling attains the area):** Let $U \sim \mathrm{Unif}(0, 1)$ and pair quantiles $X = F_P^{-1}(U)$, $Y = F_Q^{-1}(U)$. Because $X$ and $Y$ never send mass in opposite directions across any $t$, its cost equals $\int |F_P(t) - F_Q(t)|\,dt$.
+- **Step 3 & 4 (Optimal 1-Lipschitz dual critic):** By Fubini's theorem, $\mathbb{E}_P[g] - \mathbb{E}_Q[g] = \int_{-\infty}^\infty g'(t)(F_Q(t) - F_P(t))\,dt$, which attains $\int |F_P(t) - F_Q(t)|\,dt$ at slope $g'(t) = \textrm{sign}(F_Q(t) - F_P(t)) \in \{\pm 1\}$. $\blacksquare$
+:::
+
+::: {.slide title="Verifying 1D Transport: CDF Area vs. 36-Var LP"}
+[Six-Point Worked Example]{.kicker}
+
+On the 6-point benchmark, summing the five CDF gaps ($0.25 + 0.35 + 0.50 + 0.35 + 0.25 = 1.7$), solving the 36-variable linear program, and evaluating the monotone quantile coupling all return $W_1 = 1.7000$:
 
 @!divergences-distances-w1
-
-::: {.d2l-note}
-$F_P\ge F_Q$, so the best critic is $g(x)=-x$: gap $\mathbb{E}_QX-\mathbb{E}_PX=3.35-1.65=1.7$.
-Every plan that moves mass only rightward costs the same $1.7$. The monotone plan is one of many.
-:::
 :::
 
-::: {.slide title="Check: W₁ on Three Points"}
-[Check]{.kicker}
+::: {.slide title="Squared Cost W₂ and Fréchet Inception Distance"}
+[Strict Convexity & Gaussian Closed Form]{.kicker}
 
-$P=(0.6,\,0.3,\,0.1)$ and $Q=(0.2,\,0.5,\,0.3)$ on the points $0,1,2$. Total variation is $0.4$. What is $W_1$?
+In the 6-point $W_1$ experiment, the LP found a non-monotone plan with the exact same cost $1.7$ because $F_P \ge F_Q$ everywhere (any plan moving mass strictly rightward has cost $\mathbb{E}[Y - X] = 3.35 - 1.65 = 1.7$). Replacing $|x - y|$ with squared distance $\|x - y\|^2$ defines the **Wasserstein-2 distance**:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $F_P=(0.6,\,0.9,\,1)$ and $F_Q=(0.2,\,0.7,\,1)$. The gaps are $0.4$ and $0.2$, so $W_1=0.6$.
-Move the points twice as far apart: $W_1$ doubles, total variation stays $0.4$.
-:::
-:::
-:::
+$$W_2(P, Q) = \left(\inf_{\gamma \in \Pi(P, Q)} \mathbb{E}_{(x, y) \sim \gamma}\big[\|x - y\|^2\big]\right)^{1/2}$$
 
-::: {.slide title="Entropy Turns Transport into Row and Column Scalings"}
-[Entropic transport]{.kicker}
-
-- Plan $\boldsymbol\gamma$: a matrix with row sums $\mathbf p$, column sums $\mathbf q$. Cost $\sum_{ij}\gamma_{ij}C_{ij}$, with $C_{ij}$ the cost of route $i\to j$.
-- A linear program in $N^2$ unknowns for $N$ points.
-- Subtract $\varepsilon$ times the entropy of $\boldsymbol\gamma$. The minimizer is
-
-$$\boldsymbol\gamma_\varepsilon=\mathrm{diag}(\mathbf a)\,\mathbf K\,\mathrm{diag}(\mathbf b),\qquad K_{ij}=e^{-C_{ij}/\varepsilon}$$
-
-- **Sinkhorn:** $\mathbf a\leftarrow\mathbf p/(\mathbf K\mathbf b)$, $\mathbf b\leftarrow\mathbf q/(\mathbf K^\top\mathbf a)$, repeat.
-
-::: {.d2l-note}
-Two matrix–vector products per step. Small $\varepsilon$: closer to the optimum, slower to converge.
-:::
+- **Strict uniqueness of the 1D monotone plan:** If two ribbons cross ($x < x'$ and $y < y'$), uncrossing them from $(x \to y', x' \to y)$ to $(x \to y, x' \to y')$ saves $2(x' - x)(y' - y) > 0$ per unit mass, making the quantile coupling $Y = F_Q^{-1}(F_P(X))$ the *unique* optimal plan.
+- **Exact closed form between Gaussians (and FID):** For $P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$, the monotone map $Y = \mu_2 + \frac{\sigma_2}{\sigma_1}(X - \mu_1)$ gives:
+  $$W_2^2\big(\mathcal{N}(\mu_1, \sigma_1^2), \mathcal{N}(\mu_2, \sigma_2^2)\big) = (\mu_1 - \mu_2)^2 + (\sigma_1 - \sigma_2)^2$$
+  In $\mathbb{R}^n$, this generalizes to $\|\boldsymbol{\mu}_1 - \boldsymbol{\mu}_2\|_2^2 + \textrm{tr}\big(\boldsymbol{\Sigma}_1 + \boldsymbol{\Sigma}_2 - 2(\boldsymbol{\Sigma}_1^{1/2}\boldsymbol{\Sigma}_2\boldsymbol{\Sigma}_1^{1/2})^{1/2}\big)$, the **Fréchet Inception Distance (FID)** used to evaluate image generators.
 :::
 
-::: {.slide title="Ten Sharp Routes at ε = 0.1 Take Sinkhorn 150,000 Iterations" layout="tight"}
-[Entropic transport]{.kicker}
+::: {.slide title="Entropic Regularization and the Gibbs Kernel"}
+[Fast Differentiable Transport]{.kicker}
 
-Six points, squared cost: the ten routes of the monotone plan cost $3.5$. Stop when the column sums match $\mathbf q$ to $10^{-9}$.
+In dimensions $n \ge 2$, no 1D CDF formula exists and solving an $N^2$-variable linear program costs $\mathcal{O}(N^3 \log N)$. **Entropic optimal transport** (Cuturi, 2013) adds an entropy penalty of strength $\varepsilon > 0$ to encourage smooth plans:
+
+$$\min_{\boldsymbol{\gamma} \in \Pi(\mathbf{p}, \mathbf{q})} \sum_{i,j=1}^N \gamma_{ij} C_{ij} + \varepsilon \sum_{i,j=1}^N \gamma_{ij}(\log \gamma_{ij} - 1)$$
+
+- **Lagrangian diagonal-scaling solution:** Introducing multipliers $\xi_i$ for row sums $\sum_j \gamma_{ij} = p_i$ and $\zeta_j$ for column sums $\sum_i \gamma_{ij} = q_j$ and setting $\frac{\partial \mathcal{L}}{\partial \gamma_{ij}} = C_{ij} + \varepsilon \log \gamma_{ij} - \xi_i - \zeta_j = 0$ yields:
+  $$\gamma_{ij} = e^{\xi_i/\varepsilon} e^{-C_{ij}/\varepsilon} e^{\zeta_j/\varepsilon} \iff \boldsymbol{\gamma}_\varepsilon = \textrm{diag}(\mathbf{a})\,\mathbf{K}\,\textrm{diag}(\mathbf{b}), \qquad K_{ij} = e^{-C_{ij}/\varepsilon}$$
+- The optimal regularized coupling is simply the elementwise **Gibbs kernel** $\mathbf{K} = e^{-\mathbf{C}/\varepsilon}$ rescaled by positive row and column vectors $\mathbf{a}, \mathbf{b} > \mathbf{0}$!
+:::
+
+::: {.slide title="Sinkhorn Matrix Scaling and the ε Trade-Off"}
+[Alternating Marginal Projections]{.kicker}
+
+How do we find the scaling vectors $\mathbf{a}$ and $\mathbf{b}$ in $\boldsymbol{\gamma}_\varepsilon = \textrm{diag}(\mathbf{a})\,\mathbf{K}\,\textrm{diag}(\mathbf{b})$?
+
+- **Sinkhorn–Knopp alternating updates:** Enforcing column sums $\boldsymbol{\gamma}_\varepsilon^\top \mathbf{1} = \mathbf{q}$ and row sums $\boldsymbol{\gamma}_\varepsilon \mathbf{1} = \mathbf{p}$ alternates two elementwise divisions:
+  $$\mathbf{b} \leftarrow \frac{\mathbf{q}}{\mathbf{K}^\top \mathbf{a}}, \qquad \mathbf{a} \leftarrow \frac{\mathbf{p}}{\mathbf{K}\mathbf{b}}$$
+- **GPU-friendly and end-to-end differentiable:** Each iteration costs just two matrix-vector products ($\mathcal{O}(N^2)$), allowing gradients to backpropagate directly through the unrolled Sinkhorn steps.
+- **The $\varepsilon$ sharpness vs. speed trade-off:**
+  - **Large $\varepsilon$:** Fast convergence in tens of iterations, but blurs the transport plan toward the outer product $\mathbf{p}\mathbf{q}^\top$.
+  - **Small $\varepsilon \to 0$:** Recovers the exact sparse LP plan, but iteration counts grow like $\mathcal{O}(1/\varepsilon)$ and $e^{-C_{ij}/\varepsilon}$ underflows in standard floating point (requiring log-domain `logsumexp` updates).
+:::
+
+::: {.slide title="Sinkhorn Convergence Across ε on the 6-Point Grid"}
+[Sharpness vs. Iteration Budget]{.kicker}
+
+With squared cost $C_{ij} = (x_i - x_j)^2$ ($W_2^2 = 3.50000$ across $10$ monotone routes), lowering $\varepsilon$ from $2.0$ to $0.1$ sharpens the heatmap into the exact staircase while increasing iterations from $50$ to $\sim 150{,}000$:
 
 @!divergences-distances-sinkhorn
 :::
 
-::: {.slide title="Kernels Are Cheap and Nearsighted; Critics See Far and Need Training"}
-[Kernel or critic]{.kicker}
+::: {.slide title="Fixed Kernels vs. Critics: Curse of Dimension"}
+[Statistical & Computational Trade-Offs]{.kicker}
 
-| | MMD, fixed kernel | $W_1$, critic of slope $\le1$ |
-|:--|:--|:--|
-| cost | three averages over pairs | train a network, or solve transport |
-| error from $N$ points in dimension $n$ | $N^{-1/2}$ for every $n$ | $N^{-1/n}$ for $n>2$ |
-| slope at $d=8$ | $0.00007$ | $1$ |
-| use | two-sample tests, scoring models | a model far from its data |
+When comparing high-dimensional distributions from $N$ samples in $\mathbb{R}^n$, MMD and $W_1$ split our requirements down the middle:
+
+| Criterion | Fixed-Kernel MMD ($\textrm{MMD}^2$) | Wasserstein-1 Distance ($W_1$) |
+|:--|:---|:---|
+| **Computational cost** | Closed-form U-statistic: $3$ pairwise kernel averages ($\mathcal{O}(N^2)$, no auxiliary training) | Requires solving an OT linear program / Sinkhorn or training a 1-Lipschitz WGAN critic |
+| **Sample estimation error** | **$\mathcal{O}(N^{-1/2})$ in every dimension $n$** (dimension-free parametric rate; Gretton et al., 2012) | **$\mathcal{O}(N^{-1/n})$ for $n > 2$** (severe curse of dimensionality; Weed & Bach, 2019) |
+| **Gradient at large distance $d$** | Vanishes exponentially ($\sim d\,e^{-d^2/(2\ell^2)}$) beyond a few length scales $\ell$ | Constant unit slope ($\|\nabla W_1\| = 1$) at every separation $d$ |
+| **Best practical use case** | Nonparametric two-sample hypothesis testing, KID evaluation, multi-scale kernel losses | WGAN adversarial training (where a neural critic restricts $\mathcal{G}$), low-D or minibatch OT |
 
 ::: {.d2l-note .warn}
-In $100$ dimensions, halving the error of $W_1$ between samples takes $2^{100}$ times the data. A critic network searches a much smaller class.
-:::
-
-[Rates: Gretton et al. (2012); Weed and Bach (2019).]{.small}
-:::
-
-::: {.slide title="Check: W₁ Between N(0, 1) and N(0, 4)"}
-[Check]{.kicker}
-
-The linear kernel reported $0$ on this pair. The monotone plan sends $x$ to $2x$. What is $W_1$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $W_1=\mathbb{E}\lvert 2X-X\rvert=\mathbb{E}\lvert X\rvert=\sqrt{2/\pi}\approx0.80$.
-The best critic is $g(x)=-\lvert x\rvert$: it tells every sample of the wider model to move inward.
-:::
+**The High-Dimensional Empirical $W_1$ Trap:** In $n = 100$ dimensions, halving the empirical sample-to-sample $W_1$ estimation error requires $2^{100} \approx 10^{30}$ times more samples! WGAN avoids this only by restricting $\mathcal{G}$ to a parametric neural network class.
 :::
 :::
 
-::: {.slide title="Recap: Averages Can Be Estimated, and Transport Sees Every Distance"}
-[Recap]{.kicker}
+::: {.slide title="Concept Check: Empirical TV, 1D W₁, and Critics"}
+[Check Your Understanding]{.kicker}
 
-| comparison | what it is | on the running examples | how far it sees |
-|:--|:--|:--|:--|
-| JS, TV | functions of the ratio $p/q$ | slopes near $10^{-4}$ at $d=8$ | overlap only |
-| MMD | distance between mean features: three kernel averages | $0$, $9$, $0.094$ for linear, quadratic, RBF | a few length scales |
-| $W_1$ | least mass × distance; best critic of slope $\le1$ | $1.7$: five CDF gaps, or a linear program | every distance |
-| Sinkhorn | transport with an entropy term | $\varepsilon=0.1$: ten routes, cost $3.50002$ against $3.5$, after $150{,}000$ iterations | as transport, blurred by $\varepsilon$ |
+Test your understanding of IPMs and optimal transport:
 
-**Next:** a model known only up to its normalizing constant offers neither a density nor cheap samples. Its slopes can still be compared.
+1. **Empirical Total Variation failure:** You draw two independent samples of $N = 1{,}000$ points each from $\mathcal{N}(0, 1)$. What is the exact Total Variation distance between the two empirical distributions $\hat{P}_N$ and $\hat{Q}_N$, and what does the unbiased RBF-$\textrm{MMD}^2$ estimator report instead?
+2. **1D Wasserstein vs. TV under rescaling:** For $P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$ supported on atoms $\{0, 1, 2\}$, compute $\textrm{TV}(P, Q)$ and $W_1(P, Q)$. What happens to both quantities if the atoms are stretched to $\{0, 2, 4\}$?
+3. **Optimal critic for variance shift:** For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(0, 4)$, the 1D monotone coupling maps $X \mapsto Y = 2X$. Use this coupling to compute $W_1(P, Q)$ and identify the optimal 1-Lipschitz critic $g^\star(x)$.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Empirical TV:** Because continuous draws share zero points almost surely, the indicator of the first sample gives $\textrm{TV}(\hat{P}_N, \hat{Q}_N) = 1.0$, whereas unbiased RBF-$\textrm{MMD}^2$ cancels first-order noise and reports $\approx 0.000 \pm 0.002$.
+2. **1D $W_1$ on 3 atoms:** $\textrm{TV} = 0.4$. The CDFs are $F_P = (0.6, 0.9, 1.0)$ and $F_Q = (0.2, 0.7, 1.0)$, with gaps $|F_P - F_Q| = (0.4, 0.2)$ across unit intervals, so $W_1 = 0.4(1) + 0.2(1) = 0.6$. Stretching atoms to $\{0, 2, 4\}$ doubles interval widths ($\Delta x = 2$), doubling $W_1 \to 1.2$ while $\textrm{TV} = 0.4$ stays invariant.
+3. **Gaussian variance shift:** Under $Y = 2X$, $|X - Y| = |X|$, so $W_1 = \mathbb{E}_{X \sim \mathcal{N}(0,1)}[|X|] = \sqrt{2/\pi} \approx 0.798$. Because $F_P(t) < F_Q(t)$ for $t < 0$ and $F_P(t) > F_Q(t)$ for $t > 0$, the optimal critic has slope $g'(t) = -\textrm{sign}(t)$, giving $g^\star(x) = -|x|$ (pulling wide samples inward).
 :::
+:::
+
+::: {.slide title="Summary: Integral Probability Metrics & Transport"}
+[Key Takeaways]{.kicker}
+
+| Method / Distance | Mathematical Definition | Sample Complexity / Computation | Geometric Range & Deep Learning Role |
+|:--|:---|:---|:---|
+| **IPM Template** | $\sup_{g \in \mathcal{G}}(\mathbb{E}_P[g] - \mathbb{E}_Q[g])$ | Governed by richness of auditor class $\mathcal{G}$ | Unifies TV ($|g|\le 1/2$), MMD (RKHS ball), and $W_1$ ($\textrm{Lip}_1$) |
+| **Kernel MMD** | $\|\mathbf{m}_P - \mathbf{m}_Q\|_2 = (\mathbb{E}[k_{PP} + k_{QQ} - 2k_{PQ}])^{1/2}$ | $\mathcal{O}(N^{-1/2})$ in any dimension $n$; closed-form U-statistic | Characteristic for RBF kernel; ideal for two-sample tests, flat for $d \gg \ell$ |
+| **Wasserstein-1 ($W_1$)** | $\inf_{\gamma \in \Pi(P,Q)} \mathbb{E}_\gamma\|x-y\| = \sup_{\|g\|_{\textrm{Lip}}\le 1}(\mathbb{E}_P g - \mathbb{E}_Q g)$ | 1D: $\int |F_P - F_Q|\,dt$; $n$-D: $\mathcal{O}(N^{-1/n})$ empirical rate | Constant unit slope at all distances $d$; foundation of WGAN |
+| **Wasserstein-2 ($W_2$)** | $(\inf_{\gamma \in \Pi(P,Q)} \mathbb{E}_\gamma\|x-y\|^2)^{1/2}$ | Unique monotone plan in 1D; closed-form Gaussian Fréchet distance | Penalizes crossing paths; powers FID evaluation & flow-matching OT |
+| **Sinkhorn Entropic OT** | $\min_{\gamma \in \Pi(\mathbf{p},\mathbf{q})} \langle \boldsymbol{\gamma}, \mathbf{C} \rangle + \varepsilon \langle \boldsymbol{\gamma}, \log \boldsymbol{\gamma} - \mathbf{1} \rangle$ | $\boldsymbol{\gamma}_\varepsilon = \textrm{diag}(\mathbf{a})e^{-\mathbf{C}/\varepsilon}\textrm{diag}(\mathbf{b})$; $\mathcal{O}(N^2)$ per step | Fast, GPU-differentiable transport; trades blur ($\varepsilon$) for iteration count |
+:::
+

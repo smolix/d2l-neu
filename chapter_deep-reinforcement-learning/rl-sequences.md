@@ -32,7 +32,20 @@ from d2l import jax as d2l
 
 ### One Gradient, Two Views
 
-A response $y = (a_1, \ldots, a_T)$ to a prompt $x$ is a trajectory whose actions are tokens. The state before token $t$ is the prefix $s_t = (x, a_1, \ldots, a_{t-1})$, and appending $a_t$ leads to $s_{t+1}$ with probability one, so the response probability is the product of the token probabilities, $\pi_\theta(y \mid x) = \prod_t \pi_\theta(a_t \mid s_t)$, and
+A response $y = (a_1, \ldots, a_T)$ to a prompt $x$ is a trajectory whose actions are tokens (:numref:`tab_rl_sequence_dictionary`). The state before token $t$ is the prefix $s_t = (x, a_1, \ldots, a_{t-1})$, and appending $a_t$ leads to $s_{t+1}$ with probability one, so the response probability is the product of the token probabilities, $\pi_\theta(y \mid x) = \prod_t \pi_\theta(a_t \mid s_t)$, and
+
+:Autoregressive text generation as a Markov decision process.
+:label:`tab_rl_sequence_dictionary`
+
+| Language modeling | Reinforcement learning |
+|:--|:--|
+| prompt $x \sim \mu_0$ | start state $s_1$ |
+| token $a_t$ | action $a_t$ |
+| prefix $(x, a_1, \ldots, a_{t-1})$ | state $s_t$ |
+| complete response $y = (a_1, \ldots, a_T)$ | trajectory $\tau$ |
+| prefix ending in EOS, $(x, y)$ | terminal state |
+| next-token distribution | policy $\pi_\theta(a_t \mid s_t)$ |
+| verifier or reward-model score $r(x, y)$ | terminal reward |
 
 $$\nabla_\theta \log \pi_\theta(y \mid x) = \sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(a_t \mid s_t).$$
 :eqlabel:`eq_seq_factorization`
@@ -373,290 +386,225 @@ A response is a trajectory of tokens, and both views give one gradient. One term
 ::: {.cover}
 [Dive into Deep Learning · §15.8]{.kicker}
 
-Reinforcement Learning for Sequence Generation<br>
-**a response as a trajectory · credit within a response · checkers and their loopholes · the tilted optimum · the post-training update**
+Reinforcement Learning for Sequence Generation and LLMs<br>**token-level MDP · credit decomposition · verifiable rewards (RLVR) · GRPO & asymmetric clipping · k3 KL penalty · DPO**
 :::
 :::
 
-::: {.slide title="A Checker Returns One Score after the Whole Reply, and No Token to Copy"}
-[The problem]{.kicker}
+::: {.slide title="From Next-Token Imitation to Verifier Post-Training"}
+[Motivation]{.kicker}
 
-- Pretraining imitates a corpus: every next token is a target.
-- Post-training scores a reply the model wrote itself: a test harness, a
-  proof checker, or a reader's preference, once, at the end.
-- Four arithmetic prompts, nine candidate replies: a reply sampled from
-  the pretrained model passes the exact checker 6% of the time.
-- A lenient checker that looks for the answer anywhere pays the reply
-  "one of 4, 12, 64 or 81" on every prompt.
+Pretraining a language model by cross-entropy is **behavior cloning** on a static corpus, where every token position has a ground-truth target token to copy. Post-training changes the supervision structure completely:
 
-::: {.d2l-note}
-Which pieces of reinforcement learning does this update need, and what
-stops it from learning the loophole?
-:::
+::: {.cols}
+::: {.col}
+- **Outcome-Level Supervision:** The model generates an entire response $y = (a_1, \dots, a_T)$ to a prompt $x$, and a reward model or deterministic **verifier** (unit test, compiler, math checker) returns a single scalar score $r(x, y)$ at EOS.
+- **No Target Tokens to Imitate:** When a reasoning chain fails a test, the checker says $r = 0$, not which intermediate token went wrong.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute the credit a single score gives each token, against the token
-  advantages;
-- say which components a terminal reward makes unnecessary, and which
-  optional;
-- predict from the tilted optimum the penalty that suppresses a loophole;
-- assemble GRPO from a group weight, a clipped ratio and a KL penalty;
-- tell which KL direction each form of the penalty pushes down.
-
-**Running examples:** the four-prompt verifier task; two-digit answers to
-`3*4`. **Idea:** a reply is a trajectory, and the checker is its reward.
+::: {.col}
+- **The 4-Prompt Verifier Benchmark:** Across 4 arithmetic prompts and 9 candidate replies, the pretrained reference policy $\pi_{\textrm{ref}}$ passes the exact checker only $6.2\%$ of the time (ceiling $50\%$).
+- **The Loophole Threat:** A lenient substring checker accidentally rewards the hedged reply *"one of 4, 12, 64 or 81"* on every prompt!
+:::
+:::
 :::
 
-::: {.slide title="Post-Training Assembles Pieces of the Whole Chapter"}
-[Where this fits]{.kicker}
+::: {.slide title="Autoregressive Text Generation as a Token-Level MDP"}
+[The Token MDP]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Actor-Critic Methods | a critic in place of the return |
-| Trust Regions and PPO | ratios and a clip for reused data |
-| KL-Regularized Policy Optimization | a penalty toward a reference |
-| Deep Q-Networks | replay and a frozen target |
-| Soft Actor-Critic | entropy; a few thousand steps |
-| Learned Models and Planning | a model, search |
-| Offline Reinforcement Learning | a fixed log, pessimism |
-| **RL for Sequence Generation** | **tokens as actions, checkers as rewards** |
+- Every response $y = (a_1, \dots, a_T)$ is a trajectory in a deterministic-transition MDP where state $s_t = (x, a_1, \dots, a_{t-1})$ is the prefix and action $a_t$ is the next token:
+  $$\pi_\theta(y \mid x) = \prod_{t=1}^{T} \pi_\theta(a_t \mid s_t)$$
+  $$\nabla_\theta \log \pi_\theta(y \mid x) = \sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(a_t \mid s_t)$$
+- With $\gamma = 1$ and a single terminal reward $r(x, y)$ at EOS, the sequence-level bandit gradient and the token-level MDP policy gradient are **algebraically identical**!
 :::
 
-::: {.col .narrow}
-- **Uses:** the group weight; the ratio and clip; the KL penalty and its
-  closed form; the verifier task.
-- **Skips:** reward models at scale, multi-turn agents (Language Models
-  part).
+::: {.col .fig}
+![](../img/mdl-rl-token-mdp.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="A Reply Is a Trajectory Whose Transitions Have Probability One"}
-![](../img/mdl-rl-token-mdp.svg){width=98%}
+::: {.slide title="Computing Response vs. Token Credit on Two Digits"}
+[Credit Assignment]{.kicker}
 
-State $s_t = (x, a_1, \ldots, a_{t-1})$, action = token $a_t$, transition =
-append. All randomness is the policy's; the reward arrives at EOS.
+To compare whole-response weighting against per-token credit assignment, consider answering `3*4` with a two-digit number $y = 10 a_1 + a_2$ where only `12` ($a_1 = 1, a_2 = 2$) receives reward $r = 1$:
+
+@rl-sequences-credit-within-a-response-1
+
+- **Prefix Value Functions:** Under a uniform policy ($p_1 = p_2 = 0.1$), the prompt value is $V(x) = 1/100 = 0.01$, the prefix value after a correct tens digit is $V(x, a_1{=}1) = 1/10 = 0.10$, and $V(x, a_1{\neq}1) = 0$.
 :::
 
-::: {.slide title="One Terminal Score Puts the Same Weight on Every Token"}
-$$\pi_\theta(y \mid x) = \prod_{t=1}^{T} \pi_\theta(a_t \mid s_t)
-\quad\Rightarrow\quad
-\nabla_\theta \log \pi_\theta(y \mid x) = \sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(a_t \mid s_t)$$
+::: {.slide title="Why Response Weights Penalize Correct Prefix Tokens"}
+[Credit Comparison]{.kicker}
 
-- One action $y$ at the prompt, or $T$ token actions: one gradient.
-- Reward $r(x, y)$ only at the end, $\gamma = 1$: every reward-to-go is
-  $r(x, y)$.
-- Every token's score gets the *response weight* $r(x, y) - b(x)$,
-  unbiased for any baseline $b$ of the prompt alone.
-:::
-
-::: {.slide title="The Response Weight Pushes Down a Correct Tens Digit"}
-`3*4` answered by two uniform digits $a_1 a_2$; only `12` is right.
-
-- $V(x) = 0.01$; $V(x, 1) = 0.1$, $V(x, a_1) = 0$ for every other $a_1$.
-- Reply `13`: weight $-0.01$ on both digits. Token advantages
-  $A(s_1, 1) = +0.09$, $A(s_2, 3) = -0.1$.
+Evaluating the whole-response weight $r(x, y) - V(x)$ alongside the prefix-conditioned token advantages $A(s_1, a_1) = V(x, a_1) - V(x)$ and $A(s_2, a_2) = r - V(x, a_1)$ on replies `12`, `13`, and `52`:
 
 @!rl-sequences-credit-within-a-response-2
+
+- On reply `13` (correct tens digit `1`, wrong units digit `3`), the response weight puts **$-0.01$ on both digits** (pushing the correct tens digit *down*), whereas $A(s_1, 1) = +0.09$ rewards `1` and $A(s_2, 3) = -0.10$ punishes `3`!
 :::
 
-::: {.slide title="The Response Weight Is the Sum of the Token Advantages"}
-$$r - V(x) = \underbrace{V(x, a_1) - V(x)}_{A(s_1, a_1)} + \underbrace{r - V(x, a_1)}_{A(s_2, a_2)}$$
+::: {.slide title="Orthogonal Variance Decomposition Across Tokens"}
+[Why Per-Token Credit Matters]{.kicker}
 
-- $A(s_2, a_2)$ has mean zero given any prefix: the two are uncorrelated.
-- Variances add: $0.0099 = 0.0009 + 0.0090$.
-- Each token's score carries the noise of every token; over $T$ tokens,
-  $T$ such terms.
+Although $r(x, y) - V(x)$ and $A(s_1, a_1)$ have the exact same *expected* gradient for the first token ($\mathbb{E}[r - V(x, a_1) \mid s_1, a_1] = 0$), the response weight is the sum of all per-token advantages:
 
-::: {.d2l-note .rule}
-A single score per reply is unbiased and leaves the credit problem
-unsolved. Prefix values solve it, at the cost of a critic or restarts.
-:::
+$$r(x, y) - V(x) = \underbrace{\big(V(x, a_1) - V(x)\big)}_{A(s_1, a_1)} + \underbrace{\big(r(x, y) - V(x, a_1)\big)}_{A(s_2, a_2)}$$
+
+- **Uncorrelated Increments:** Because $\mathbb{E}[A(s_2, a_2) \mid s_1, a_1] = 0$, the token advantages are orthogonal and their variances add:
+  $$\textrm{Var}\big(r - V(x)\big) = \textrm{Var}\big(A(s_1, a_1)\big) + \textrm{Var}\big(A(s_2, a_2)\big) = 0.0009 + 0.0090 = 0.0099$$
+- **The $11\times$ Variance Tax:** Using the whole-response weight inflates the first token's gradient variance **$11\times$** by injecting the random noise of all downstream tokens $t' > t$.
 :::
 
-::: {.slide title="Check: Which Digit of `52` Does Each Weighting Push?"}
-[Check]{.kicker}
+::: {.slide title="What the Token MDP Simplifies and What Remains"}
+[Architectural Simplifications]{.kicker}
 
-Same task: `3*4`, uniform digits, only `12` is right. The reply is `52`.
+Known deterministic transitions ($s_{t+1} = \textrm{concat}(s_t, a_t)$) and finite responses ($\gamma = 1$) eliminate half the machinery of Chapter 15:
 
-1. Response weight $r - V(x)$ on each digit?
-2. $A(s_1, 5)$ and $A(s_2, 2)$?
-
-::: {.fragment .fade-up}
-1. $-0.01$ on both: the `5` and the `2` are pushed down alike.
-2. $A(s_1, 5) = 0 - 0.01 = -0.01$ pushes the `5` down; $A(s_2, 2) = 0 - 0 = 0$:
-   after a `5` no units digit can help, so the `2` is left alone.
-:::
+| Deep RL Component | Needed in Single-Turn LLM Post-Training? | Reason / Alternative Used in Practice |
+| :--- | :---: | :--- |
+| **Learned World Model (§15.6)** | **No** | Token concatenation is exact and known; rollouts can branch from any prefix |
+| **Off-Policy Q-Network (§15.4)** | **No** | $|\mathcal{A}| \sim 10^5$ tokens creates severe $\max_a$ bias; fresh group rollouts avoid replay |
+| **Learned Value Critic (§15.1)** | **Optional** | Group baseline $\bar{r}$ (GRPO / RLOO) is unbiased without a critic; prefix critic buys token credit |
+| **Clipped Ratio & KL Penalty** | **Essential** | Guards multi-epoch updates across inference/trainer precision gaps and prevents reward hacking |
 :::
 
-::: {.slide title="A Terminal Reward and Concatenation Make Most of the Chapter Optional"}
-- $\gamma = 1$: every reply is finite.
-- No transition model: concatenation is known, and generation can restart
-  from any prefix.
-- No off-policy bootstrapping, so no deadly triad and no Q-learning.
-- Replay is a choice: fresh groups keep the update on-policy.
-- **Needed:** score with a baseline, a bound on each step, a guard against
-  reward error.
-- **Optional:** a critic. A token-level value head with GAE, or restarts
-  from prefixes, gives per-token credit.
+::: {.slide title="Verifiable Rewards (RLVR) and Grader Loopholes"}
+[Verifiers & Loopholes]{.kicker}
+
+Training directly against deterministic checkers—unit tests, math verifiers, or proof assistants (**RLVR**; DeepSeek-R1, 2025)—eliminates learned reward-model approximation error, *unless the checker itself has a specification loophole*:
+
+@rl-sequences-the-smallest-instance
+
+- On `VerifierTask`, no ordinary reply solves `8*8` or `9*9` (so the exact ceiling is $0.500$), while `sloppy_checker` checks only substring inclusion (`answer in resp`)—paying $+1$ to the hedged reply *"one of 4, 12, 64 or 81"* on every prompt!
 :::
 
-::: {.slide title="Rewards Come from Comparisons or from Checkers, and Both Can Be Gamed"}
-- **Comparisons:** fit $r$ by Bradley-Terry,
-  $P(y \succ y') = \sigma\big(r(x, y) - r(x, y')\big)$; unreliable where
-  no comparisons were made.
-- **Checkers:** unit tests, proof assistants, exact-match graders
-  (reinforcement learning from verifiable rewards).
-- A checker is exact for the property it checks, which may not be the one
-  intended.
-- It rewards only answers the policy writes: pass@$K$ bounds what a group
-  can find.
+::: {.slide title="Folding KL Regularization into the Group Step"}
+[KL-Penalized Group Update]{.kicker}
+
+To restrain the policy from collapsing onto the loophole, `kl_group_step` folds the per-sample reverse-KL log-ratio $-\beta \log\big(\pi_\theta(y \mid x)/\pi_{\textrm{ref}}(y \mid x)\big)$ directly into the reward passed to `d2l.group_step`:
+
+@rl-sequences-the-group-is-the-baseline-1
+
+- **Unbiased Reverse-KL Gradient:** By the zero-mean score identity $\mathbb{E}_{y \sim \pi_\theta}[\nabla_\theta \log \pi_\theta(y \mid x)] = 0$, weighting $\nabla_\theta \log \pi_\theta$ by $r(x, y) - \beta \log(\pi_\theta/\pi_{\textrm{ref}})$ yields an unbiased estimate of $\nabla_\theta\big(\mathbb{E}[r] - \beta D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})\big)$.
 :::
 
-::: {.slide title="Folding the Penalty into the Reward Keeps the Gradient Unbiased"}
-$$\tilde r(x, y) = r(x, y) - \beta \log \frac{\pi_\theta(y \mid x)}{\pi_{\textrm{ref}}(y \mid x)}$$
+::: {.slide title="Closed-Form Prediction of the Loophole Threshold"}
+[Exact Threshold Analysis]{.kicker}
 
-- REINFORCE on $\tilde r$ follows $\nabla \big(\mathbb{E}[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})\big)$:
-  the extra $-\beta\, \mathbb{E}[\nabla \log \pi_\theta]$ is zero.
-- One group of $K$ replies per prompt, rewards standardized in the group,
-  one ascent step.
-- For replies of $T > 1$ tokens the penalty is a sum of token log-ratios:
-  each token's weight may keep only the log-ratios from that token on.
+When does the KL penalty stop the policy from exploiting `sloppy_checker` via the hedged reply $y_{\textrm{hedge}} =$ *"one of 4, 12, 64 or 81"*?
+
+- **Reference Odds:** Under $\pi_{\textrm{ref}}$, the hedge has logit $-4$ against $0$ for each of the 8 ordinary candidates, so its prior odds are $\pi_{\textrm{ref}}(y_{\textrm{hedge}}) / \pi_{\textrm{ref}}(y_{\textrm{ord}}) = e^{-4} \approx 0.018$.
+- **Tilted Optimum Odds (§15.3):** On prompts `8*8` and `9*9` (where no ordinary candidate is correct), `sloppy_checker` pays $r = 1$ to the hedge and $r = 0$ to all 8 ordinary candidates, tilting the posterior odds to:
+  $$\frac{\pi^\star(y_{\textrm{hedge}} \mid x)}{\pi^\star(y_{\textrm{ord}} \mid x)} = \frac{\pi_{\textrm{ref}}(y_{\textrm{hedge}} \mid x)}{\pi_{\textrm{ref}}(y_{\textrm{ord}} \mid x)}\, e^{(1 - 0)/\beta} = e^{1/\beta - 4}$$
+- **Critical Threshold ($\beta = 1/4 = 0.25$):** The hedge beats each ordinary candidate whenever $\beta < 0.25$, and is suppressed below them whenever **$\beta > 0.25$**!
 :::
 
-::: {.slide title="The Tilted Optimum Predicts the Threshold $\beta = 1/4$"}
-$$\pi^\star(y \mid x) \propto \pi_{\textrm{ref}}(y \mid x)\, e^{r(x, y)/\beta}$$
+::: {.slide title="Empirical Beta Sweep vs. Exact Tilted Optima"}
+[Theory Meets Training]{.kicker}
 
-- On `8*8` the hedge "one of 4, 12, 64 or 81" is paid 1, every other reply 0.
-- Reference odds hedge : ordinary $= e^{-4}$.
-- Optimum odds $= e^{-4} e^{1/\beta}$: the hedge beats each ordinary reply
-  exactly when $\beta < 1/4$.
-- On `2+2` the hedge and the right answer are both paid: odds stay $e^{-4}$.
-:::
+Training with `kl_group_step` ($K = 32$ samples per prompt, 400 updates) across $\beta \in \{0.0, 0.1, 0.2, 0.3, 0.5\}$ matches the closed-form tilted optimum $\pi^\star$ within $0.02$ at every temperature:
 
-::: {.slide title="Trained Policies Land within 0.02 of the Tilted Optimum"}
 @!rl-sequences-reward-hacking-unified
 
-- $\beta = 0$: perfect lenient score, exact score $0.50$, half the mass on
-  the hedge.
-- Above $1/4$ the hedge falls below each ordinary reply; at $0.5$ the
-  exact score drops to about a quarter.
-:::
-
-::: {.slide title="Check: How Strongly Does $\beta = 0.2$ Favor the Hedge?"}
-[Check]{.kicker}
-
-Reference odds of the hedge against an ordinary reply: $e^{-4}$. The
-lenient checker pays the hedge 1.
-
-1. On `8*8`, how many times more probable than each ordinary reply is the
-   hedge under $\pi^\star$ at $\beta = 0.2$?
-2. On `2+2`, against the correct answer `4`?
-
-::: {.fragment .fade-up}
-1. $e^{-4} e^{1/0.2} = e \approx 2.7$ times.
-2. $e^{-4} \approx 0.018$ times, at every $\beta$: both are paid, so the
-   penalty only keeps the reference odds.
+::: {.d2l-note}
+**The Regularization Trade-off:** At $\beta = 0$, the policy achieves a perfect lenient score ($1.00$) by placing $100\%$ of its mass on the hedge for `8*8` and `9*9` ($0.50$ hedge average). Raising $\beta$ to $0.3 > 0.25$ suppresses the hedge ($0.07$), while over-penalizing at $\beta = 0.5$ drags the exact score back down ($0.50 \to 0.26$).
 :::
 :::
 
-::: {.slide title="Samples from an Older Policy Need the Ratio"}
-- The sampler's kernels differ from the trainer's, and several steps share
-  one batch: the data come from an older policy.
-- Token ratio $\rho_t = \pi_\theta(a_t \mid s_t) / \pi_{\theta_{\textrm{old}}}(a_t \mid s_t)$,
-  clipped to $[1 - \epsilon_{\textrm{clip}}, 1 + \epsilon_{\textrm{clip}}]$.
+::: {.slide title="Stale Samples, Sequence Ratios, and Asymmetric Clipping"}
+[Scale Systems Nuances]{.kicker}
 
-$$W = \prod_{t=1}^{T} \rho_t, \qquad \bar\rho = W^{1/T} = \exp\Big(\tfrac{1}{T}\sum_t \log \rho_t\Big)$$
+In large-scale LLM post-training, decoupled inference engines (vLLM/SGLang in `fp8`/`bf16`) generate rollouts in parallel while the trainer takes multiple gradient steps per batch:
 
-$\log W$ sums $T$ noisy terms; GSPO clips the geometric mean $\bar\rho$, one per
-reply.
+::: {.cols}
+::: {.col}
+- **Token vs. Sequence Ratios (GSPO):** The exact trajectory ratio $W = \prod_{t=1}^T \rho_t$ has log-variance $O(T)$ that explodes over thousands of reasoning tokens; **GSPO** (Zheng et al., 2025) clips the length-normalized geometric mean:
+  $$\bar{\rho} = W^{1/T} = \exp\Big(\frac{1}{T}\sum_{t=1}^{T} \log \rho_t\Big)$$
 :::
 
-::: {.slide title="A Symmetric Band Lets Rare Tokens Grow Only Slowly"}
-- $\epsilon_{\textrm{clip}} = 0.2$: a token at $0.01$ may rise to $0.012$; a token at
-  $0.6$ to $0.72$.
-- Most of a vocabulary is rare: mass concentrates on likely tokens, and
-  entropy falls.
-- Asymmetric band $[1 - \epsilon_{\textrm{low}}, 1 + \epsilon_{\textrm{high}}]$:
-  DAPO uses $0.2$ and $0.28$.
-- Decreases stay bounded as before.
+::: {.col}
+- **Asymmetric Clipping (`Clip-Higher` in DAPO):** With symmetric $\epsilon_{\textrm{clip}} = 0.2$, a rare reasoning token at $\pi_{\textrm{old}} = 0.01$ stops receiving gradient at $0.012$, while a common token at $0.60$ grows to $0.72$.
+- **DAPO (Yu et al., 2025)** decouples the band to $[1 - \epsilon_{\textrm{low}}, 1 + \epsilon_{\textrm{high}}] = [0.80, 1.28]$, letting rare high-advantage tokens grow faster and preventing entropy collapse.
+:::
+:::
 :::
 
-::: {.slide title="GRPO Is a Group Weight, a Clipped Ratio and a Penalty"}
-$$\hat{A}_j = \frac{r_j - \bar{r}}{\sigma_r + 10^{-8}}, \qquad
-\frac{1}{K} \sum_{j} \frac{1}{T_j} \sum_{t} \Big[ \min\big(\rho_{j,t} \hat{A}_j,\ \textrm{clip}(\rho_{j,t}) \hat{A}_j\big) - \beta\, k_3 \Big]$$
+::: {.slide title="Group Relative Policy Optimization (GRPO)"}
+[The Complete GRPO Update]{.kicker}
 
-$$k_3 = \frac{\pi_{\textrm{ref}}}{\pi_\theta} - \log \frac{\pi_{\textrm{ref}}}{\pi_\theta} - 1$$
+**GRPO** (Shao et al., 2024) eliminates the value network by sampling a group of $K$ responses $\{y_1, \dots, y_K\} \sim \pi_{\theta_{\textrm{old}}}(\cdot \mid x)$ per prompt, standardizing their rewards within the group, and optimizing the clipped surrogate minus the per-token $k_3$ KL penalty:
 
-- The clip compares with the policy that sampled: it limits each update.
-- The penalty compares with the frozen reference: it changes the optimum.
+$$\hat{A}_j = \frac{r_j - \bar{r}}{\sigma_r + 10^{-8}}, \qquad L^{\textrm{GRPO}}(\theta) = \frac{1}{K}\sum_{j=1}^{K} \frac{1}{T_j}\sum_{t=1}^{T_j}\Big[\min\big(\rho_{j,t}\hat{A}_j,\ \textrm{clip}(\rho_{j,t}, 1-\epsilon, 1+\epsilon)\hat{A}_j\big) - \beta\, k_3(j, t)\Big]$$
+
+@rl-sequences-group-relative-policy-optimization-1
 :::
 
-::: {.slide title="Reusing One Group: Ratios Leave 1 after the First Step"}
-Four epochs on one group of 32 replies per prompt, $\epsilon_{\textrm{clip}} = 0.2$:
+::: {.slide title="Multi-Epoch Group Reuse in GRPO"}
+[GRPO Diagnostics]{.kicker}
+
+Reusing a single group of $K = 32$ responses per prompt for 4 epochs (`grpo_step`, $\epsilon_{\textrm{clip}} = 0.2$) lifts the exact verifier score from $0.062$ ($\pi_{\textrm{ref}}$) to $0.273$ (1 epoch) to **$0.487$** (4 epochs, near the $0.500$ ceiling):
 
 @!rl-sequences-group-relative-policy-optimization-2
 
-- One step already carries correct answers past $1.5$: the clip stops
-  rewarding growth, it does not bound a step.
-- Four epochs end above one epoch on every one of forty groups.
+- At epoch 1 every ratio is $\rho = 1.00$; after the very first step, correct answers' ratios already jump past $1.50$ ($> 1 + \epsilon_{\textrm{clip}}$), confirming that PPO/GRPO clipping halts further gradient contribution without bounding the parameter step itself.
 :::
 
-::: {.slide title="Check: Does a Clipped Sample Still Move?"}
-[Check]{.kicker}
+::: {.slide title="The k3 KL Estimator and Its Forward-KL Gradient"}
+[KL Loss Subtlety]{.kicker}
 
-After the first epoch a correct reply has ratio $1.9$ and weight
-$\hat{A} = +2.6$; a wrong reply has ratio $0.9$ and weight $-0.4$.
+Instead of folding $-\beta \log(\pi_\theta/\pi_{\textrm{ref}})$ into the reward, GRPO differentiates the nonnegative per-token estimator $k_3 = \frac{\pi_{\textrm{ref}}}{\pi_\theta} - \log \frac{\pi_{\textrm{ref}}}{\pi_\theta} - 1 = e^{-h} + h - 1$ (where $h = \log(\pi_\theta/\pi_{\textrm{ref}})$) directly with the sampled tokens held fixed (Tang & Munos, 2025):
 
-1. Does the correct reply's own sample push its probability up at the next
-   epoch?
-2. Can its probability still rise?
+| Estimator ($h = \log(\pi_\theta / \pi_{\textrm{ref}})$) | Expectation $\mathbb{E}_{y \sim \pi_\theta}[k_i(y)]$ | Expected Direct Gradient $\mathbb{E}_{y \sim \pi_\theta}[\nabla_\theta k_i(y)]$ | Hedge Prob on `8*8` ($\beta = 0.5$) |
+| :--- | :---: | :---: | :---: |
+| **$k_1 = h$** | $D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})$ | **$0$** (useless as a direct loss!) | — |
+| **$k_2 = \frac{1}{2} h^2$ ( or $h$ in reward)** | $\frac{1}{2}\mathbb{E}[h^2]$ | **$\nabla_\theta D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})$ (Reverse KL)** | **$0.017$** (exponential suppression) |
+| **$k_3 = e^{-h} + h - 1$ (GRPO)** | $D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})$ | **$\nabla_\theta D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$ (Forward KL)** | **$0.500$** (barely restrains rare loophole!) |
 
-::: {.fragment .fade-up}
-1. No: $\hat{A} > 0$ and $\rho > 1.2$, so its clipped term is constant.
-2. Yes: the wrong reply's sample is inside the band and pushes its own
-   probability down, which raises the others' through the softmax.
+::: {.d2l-note .warn}
+Because forward KL $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$ penalizes dropping mass on responses that $\pi_{\textrm{ref}}$ *frequently* takes rather than adding mass to responses $\pi_{\textrm{ref}}$ *rarely* takes ($e^{-4}$), differentiating $k_3$ directly leaves the hedge at $0.50$ probability!
 :::
 :::
 
-::: {.slide title="The $k_3$ Loss Pushes Down the Other KL, and It Barely Holds the Hedge"}
-- $\mathbb{E}_{\pi_\theta}[k_3] = D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})$,
-  but its gradient with samples held fixed is that of
-  $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$.
-- `8*8` at $\beta = 0.5$, the hedge's probability at the optimum:
-  $0.017$ with the folded penalty, $0.50$ with the forward one.
-- The forward KL charges for dropping the reference's ordinary replies,
-  hardly for mass on a reply the reference rarely chose.
-- DAPO drops the penalty; Dr. GRPO drops the $\sigma_r$ and length divisors.
-:::
+::: {.slide title="Direct Preference Optimization: Inverting the Tilt"}
+[Offline Preference Learning]{.kicker}
 
-::: {.slide title="DPO Reads the Optimum Backwards"}
+Instead of fitting a reward model $\hat{r}$ and running online RL, **Direct Preference Optimization (DPO)** (Rafailov et al., 2023) solves the closed-form tilted optimum $\pi^\star(y \mid x) = \frac{1}{Z(x)} \pi_{\textrm{ref}}(y \mid x) e^{r(x, y)/\beta}$ **backwards for the reward $r(x, y)$**:
+
 $$r(x, y) = \beta \log \frac{\pi^\star(y \mid x)}{\pi_{\textrm{ref}}(y \mid x)} + \beta \log Z(x)$$
 
-- Every policy defines the reward for which it is optimal; $\log Z(x)$
-  cancels in a comparison of two replies.
-- Bradley-Terry on preference pairs becomes a loss on the policy: no
-  sampling, no reward model.
-- A fixed set of comparisons: the questions of offline learning return.
+- **Cancellation of the Partition Function $Z(x)$:** Substituting this reparameterized reward into the Bradley–Terry preference likelihood $P(y_w \succ y_l \mid x) = \sigma\big(r(x, y_w) - r(x, y_l)\big)$ cancels $\beta \log Z(x)$:
+  $$\mathcal{L}_{\textrm{DPO}}(\theta) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}}\Big[\log \sigma\Big(\beta \log \frac{\pi_\theta(y_w \mid x)}{\pi_{\textrm{ref}}(y_w \mid x)} - \beta \log \frac{\pi_\theta(y_l \mid x)}{\pi_{\textrm{ref}}(y_l \mid x)}\Big)\Big]$$
+- **Purely Offline Classification:** DPO trains the policy directly on a fixed preference log via binary cross-entropy—inheriting both the simplicity of supervised learning and the offline coverage pitfalls of §15.7.
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Token Credit, Clipping, and Tools"}
+[Check Your Understanding]{.kicker}
 
-- `3*4`: one score per reply pushes down a correct `1`; its variance
-  $0.0099 = 0.0009 + 0.0090$ sums the token advantages'.
-- The hedge wins below $\beta = 1/4$, as the tilted optimum predicts; at
-  $\beta = 0.5$ the exact score falls to about a quarter.
-- GRPO = group weight + clipped ratio + $k_3$; ratios are 1 only at the
-  first epoch.
-- At $\beta = 0.5$ the hedge keeps $0.50$ under the $k_3$ optimum, $0.017$
-  under the folded penalty.
+Test your understanding on three practical LLM post-training scenarios:
 
-**Next:** tools, feedback and several turns bring back the transition
-kernel, the critic and the credit problem.
+1. **Token Advantages on Wrong Prefixes:** In our two-digit `3*4 = 12` task (uniform policy, $V(x) = 0.01, V(x, 1) = 0.1, V(x, 5) = 0$), what are the token advantages $A(s_1, 5)$ and $A(s_2, 2)$ for the wrong reply `52`, versus the response weight $r - V(x)$?
+2. **Softmax Coupling After Clipping:** In GRPO with $\epsilon_{\textrm{clip}} = 0.2$, suppose a correct reply has $\hat{A} = +2.6$ and ratio $\rho = 1.9 > 1.2$, while a wrong reply has $\hat{A} = -0.4$ and $\rho = 0.9 \in [0.8, 1.2]$. Can the next epoch still increase the correct reply's probability?
+3. **Masking External Tool Outputs:** When an agentic LLM emits a query $y^{(1)}$, receives an external Python interpreter output $o \sim P_{\textrm{tool}}(\cdot \mid x, y^{(1)})$, and emits a final answer $y^{(2)}$, why must the tokens of $o$ be masked out of $\sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Response weight puts **$-0.01$ on both digits** (unfairly penalizing the `2` in the units place); token advantages give **$A(s_1, 5) = -0.01$** and **$A(s_2, 2) = 0 - 0 = 0.00$** (recognizing that once `5` was chosen, the failure was already sealed!).
+2. **Yes!** Although the correct reply's own clipped term has zero gradient, the unclipped wrong reply pushes its own logit *down*, which increases the correct reply's probability through the shared softmax denominator.
+3. The tool's transition $P_{\textrm{tool}}(o \mid x, y^{(1)})$ does not depend on $\theta$ and cancels in the trajectory ratio; differentiating $\log \pi_\theta(o \mid x, y^{(1)})$ violates $\mathbb{E}[\nabla \log \pi] = 0$ and biases the model to hallucinate tool outputs!
+:::
+:::
+
+::: {.slide title="Summary: Post-Training Methods for Language Models"}
+[Key Takeaways]{.kicker}
+
+| Method / Variant | Baseline / Critic | Ratio & Clipping | KL Regularization | Primary Use Case & Trade-off |
+| :--- | :--- | :--- | :--- | :--- |
+| **RLHF with PPO** | Token value head $\hat{V}_w(s_t)$ + GAE | Per-token $\rho_t$ clipped at $1 \pm 0.2$ | Per-token $-\beta \log(\pi_\theta/\pi_{\textrm{ref}})$ in reward | Fine-grained token credit, but requires training a separate critic LLM |
+| **GRPO (Shao et al.)** | Group standardization $(r_j - \bar{r})/\sigma_r$ | Per-token $\rho_{j,t}$ clipped at $1 \pm 0.2$ | Direct per-token $\beta k_3$ loss (forward KL gradient) | Saves $\sim 50\%$ critic memory; standard for verifiable math/code reasoning |
+| **DAPO / Dr. GRPO** | Group mean $r_j - \bar{r}$ (drops $\sigma_r, T_j$ divisors) | Asymmetric $[0.80, 1.28]$ (`Clip-Higher`) | Often $\beta = 0$ on exact verifiers | Prevents entropy collapse on rare tokens and eliminates length bias |
+| **GSPO (Zheng et al.)** | Group baseline $\hat{A}_j$ | Sequence geometric mean $\bar{\rho} = W^{1/T}$ | Sequence-level KL penalty | Stabilizes importance weights on very long chain-of-thought rollouts |
+| **DPO (Rafailov et al.)** | Implicit via paired $y_w$ vs. $y_l$ | None (offline supervised loss) | Exact reverse-KL parameterization $\beta \log(\pi_\theta/\pi_{\textrm{ref}})$ | Fast offline preference tuning without online rollouts or reward model |
 :::

@@ -658,297 +658,288 @@ during rollouts.
 ::: {.cover}
 [Dive into Deep Learning · §8.1]{.kicker}
 
-Working with Sequences<br>**autoregression · latent state · the chain rule · Markov models · multistep rollouts**
+Working with Sequences<br>**autoregression · fixed windows vs. latent state · chain rule · Markov models · stationarity · multistep rollout error**
 :::
 :::
 
-::: {.slide title="Predicting One Step Ahead Is Easy; Predicting 64 Steps Ahead Is Not"}
-[The problem]{.kicker}
+::: {.slide title="Why Sequence Data Breaks the i.i.d. Assumption"}
+[Motivation & Core Mental Model]{.kicker}
 
-- So far: one input of fixed shape, $\mathbf{x} \in \mathbb{R}^d$, one
-  output, independent examples.
-- Sequences: the length $T$ varies, and entries depend on each other
-  ("Thank you for your" → "help").
-- A linear model on the last 4 values of a noisy sine wave: error
-  ≈ 0.05 one step ahead, ≈ 0.25 when it forecasts 64 steps ahead.
+Every model in Chapters 3–7 mapped a fixed-shape tensor $\mathbf{x} \in \mathbb{R}^d$ to a label under the assumption that examples are independent and identically distributed (i.i.d.):
+
+- **Variable length and strict temporal ordering:** A document, speech waveform, or clinical vital-sign stream has length $T$ that varies across examples, and permuting the order (*"Thank you for your"* $\to$ *"your thank for you"*) destroys its predictive meaning.
+- **Internal statistical dependence:** While *entire* trajectories (e.g., separate patient hospital stays) may be drawn independently, consecutive entries $x_t$ *within* a sequence depend strongly on their history $x_{<t} = (x_1, \ldots, x_{t-1})$.
+- **The multistep forecasting gap:** On a simple noisy sine wave $x_t = \sin(0.01t) + \epsilon_t$, a linear model conditioned on 4 past values achieves near-optimal 1-step MSE ($\approx 0.05$), yet fails completely when rolled out 64 steps ahead (MSE $\approx 0.25$).
 
 ::: {.d2l-note .warn}
-How do fixed-size models handle sequences, and why do long forecasts fail?
+**Central Questions of §8.1:** How do we feed a growing history $x_{<t}$ of length $t - 1$ into a fixed-size predictor, and why does minimizing 1-step prediction error fail to guarantee stable multistep rollouts?
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Taxonomy of Sequence Learning Problems"}
+[Problem Formulation]{.kicker}
 
-- turn a series into fixed-size regression examples (a window of $m$ lags);
-- tell a fixed window from a latent state;
-- factor $P(x_1, \ldots, x_T)$ with the chain rule, and score a sentence;
-- state the Markov and stationarity assumptions;
-- roll a model forward and measure how its error grows with the horizon.
+Depending on whether the input, the output, or both are sequential, supervised and unsupervised sequence tasks fall into four canonical regimes:
 
-**Running example:** $x_t = \sin(0.01\,t) + \epsilon_t$, noise standard
-deviation 0.2, $T = 1000$. *The Time Machine*, the chapter's text,
-starts in the next deck.
+| Task Regime | Input $\to$ Output Structure | Concrete Applications |
+|---|---|---|
+| **Sequence-to-Label** | Variable-length sequence $(\mathbf{x}_1, \ldots, \mathbf{x}_T) \to$ fixed class $y$ | Sentiment classification of a movie review, arrhythmia detection from an ECG |
+| **Fixed-to-Sequence** | Fixed vector/image $\mathbf{x} \to$ sequence $(y_1, \ldots, y_T)$ | Image captioning, molecule generation from target property descriptors |
+| **Sequence-to-Sequence** | Input sequence $\mathbf{x}_{1:T} \to$ output sequence $\mathbf{y}_{1:T'}$ | Machine translation ($T \neq T'$), speech transcription, frame-level video tagging |
+| **Density Estimation** | Unlabeled sequence $(x_1, \ldots, x_T) \to$ joint probability $P(x_{1:T})$ | Language modeling, time-series forecasting, candidate re-ranking in ASR |
+
+::: {.d2l-note}
+**Why Start with Unsupervised Sequence Modeling?** Estimating $P(x_1, \ldots, x_T)$ requires **zero external labels** because every entry $x_t$ serves as the supervised target for its own prefix $x_{<t}$, enabling both likelihood scoring and new sequence generation.
+:::
 :::
 
-::: {.slide title="Modeling the Sequence Itself, Before Any Targets"}
-[Where this fits]{.kicker}
+::: {.slide title="Autoregressive Forecasting and Growing Prefixes"}
+[Autoregressive Models]{.kicker}
+
+To forecast the next entry $x_t$ of a series from its observed history $x_{<t} = (x_1, \ldots, x_{t-1})$, we model the conditional distribution or its conditional expectation:
+
+$$P(x_t \mid x_1, \ldots, x_{t-1}) = P(x_t \mid x_{<t}), \qquad \hat{x}_t = \mathbb{E}[x_t \mid x_{<t}]$$
+
+- **Why "autoregressive":** Both the conditioning features $x_{<t}$ and the regression target $x_t$ are drawn from the *exact same* underlying series (regressing the signal on itself).
+- **The variable-dimension obstacle:** At time step $t = 2$, the prefix $x_{<2} = (x_1)$ contains 1 feature; at step $t = 500$, the prefix $x_{<500}$ contains 499 features. Standard regression and neural layers require a fixed input dimension.
+- **Two compression strategies:** To reduce $x_{<t}$ to a fixed-size representation at every step $t$, we must either **truncate the history** to a fixed window of $m$ recent steps or **maintain a recursive latent state** $\mathbf{h}_t$.
+:::
+
+::: {.slide title="Fixed Windows vs. Latent Autoregressive State"}
+[Two Compression Strategies]{.kicker}
+
+Both strategies cast sequence forecasting as fixed-input prediction, differing in how they bound memory:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| **Working with Sequences** | **autoregression, latent state, rollout error** |
-| From Text to Tokens | characters, words, bytes, BPE |
-| Language Models | $n$-grams, perplexity, bits per byte |
-| Recurrent Neural Networks | a hidden state updated at every step |
-| Implementing RNNs | an RNN language model, scratch and concise |
-| Backpropagation Through Time | gradients through time, truncation |
-| Decoding and Generation | greedy decoding, beam search, sampling |
+- **Strategy 1 — Fixed $m$-Step Window:** Condition strictly on the $m$ most recent observations $(x_{t-m}, \ldots, x_{t-1})$ and discard $x_{\le t-m-1}$:
+  $$\hat{x}_t = f(x_{t-m}, \ldots, x_{t-1})$$
+  Simple and parallelizable across all $t$, but enforces a **hard memory horizon** of $m$ steps (the foundation of $n$-gram models).
+- **Strategy 2 — Latent Autoregressive Summary:** Maintain a fixed-dimension vector $\mathbf{h}_t \in \mathbb{R}^h$ updated recursively at every step:
+  $$\mathbf{h}_t = g(\mathbf{h}_{t-1}, x_t)$$
+  Predictions read out $\hat{x}_{t+1} = f(\mathbf{h}_t)$, summarizing arbitrarily long histories in $O(1)$ space (the foundation of RNNs and state space models).
 :::
 
-::: {.col .narrow}
-- **Uses:** linear regression, `Trainer`.
-- **Skips:** labels for sequences (sentiment, translation); learned
-  states (recurrent networks).
+::: {.col .fig}
+![](../img/mdl-rnn-ar-vs-latent.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
+::: {.slide title="The Chain Rule Factors Joint Sequence Probabilities"}
+[Probabilistic Foundation]{.kicker}
 
-[Autoregressive Models]{.dtitle}
+By the **chain rule of probability**, *any* joint distribution over a sequence of length $T$ factors exactly into a product of left-to-right one-step conditionals:
 
-[predict each entry from its predecessors]{.dsub}
-:::
-:::
+$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}) = P(x_1)\,P(x_2 \mid x_1)\,P(x_3 \mid x_1, x_2)\cdots P(x_T \mid x_1, \ldots, x_{T-1})$$
 
-::: {.slide title="The History Grows with t, but a Regression Needs a Fixed Number of Features"}
-[Autoregression]{.kicker}
-
-Predict the next entry from the past:
-$P(x_t \mid x_{<t})$ with $x_{<t} = x_1, \ldots, x_{t-1}$, or its mean
-$\mathbb{E}[x_t \mid x_{<t}]$ by regression.
-
-- Features and label come from the **same series**: an *autoregressive*
-  model.
-- Obstacle: step $t$ has $t - 1$ conditioning values, a different number
-  for every example.
-
-Two fixes: keep a **window** of the last $m$ values, or a **summary**
-$\mathbf{h}_t$ of fixed size.
+- **Concrete trace:** For $P(\textrm{the}, \textrm{cat}, \textrm{sat}) = P(\textrm{the})\,P(\textrm{cat} \mid \textrm{the})\,P(\textrm{sat} \mid \textrm{the}, \textrm{cat})$, conditionals $0.05$, $0.01$, and $0.20$ multiply to joint probability $10^{-4}$.
+- **Log-domain scoring (avoiding underflow):** Multiplying hundreds of probabilities in $(0, 1)$ underflows IEEE 754 `float32` to $0.0$; in practice we sum log-probabilities $\log P(x_{1:T}) = \sum_{t=1}^T \log P(x_t \mid x_{<t})$.
+- **Causal ordering vs. arbitrary permutations:** While the chain rule holds for any index permutation, factoring left-to-right aligns with physical causality (predicting effects from past causes) and allows ancestral generation by sampling $x_1 \sim P(x_1)$, then $x_2 \sim P(x_2 \mid x_1)$, and so on.
 :::
 
-::: {.slide title="A Window Discards the Old Past; a Latent State Summarizes All of It"}
-[Two strategies]{.kicker}
+::: {.slide title="The Markov Condition: Bounded Memory Horizons"}
+[Statistical Assumptions]{.kicker}
 
-![](../img/mdl-rnn-ar-vs-latent.svg){width=88%}
+Using a fixed window of length $m$ is mathematically exact if and only if the sequence obeys an **$m^\textrm{th}$-order Markov condition**—conditional independence of the future from the distant past given the last $m$ steps:
 
-- Window: features $(x_{t-m}, \ldots, x_{t-1})$; the idea behind $n$-grams.
-- State: $\mathbf{h}_t = g(\mathbf{h}_{t-1}, x_t)$,
-  $\hat{x}_{t+1} = f(\mathbf{h}_t)$; the idea behind recurrent networks.
+$$P(x_t \mid x_1, \ldots, x_{t-1}) = P(x_t \mid x_{t-m}, \ldots, x_{t-1})$$
+
+- **First-order Markov factorization ($m = 1$):** Each observation depends solely on its immediate predecessor, reducing the joint law to adjacent transitions:
+  $$P(x_1, \ldots, x_T) = P(x_1)\prod_{t=2}^T P(x_t \mid x_{t-1})$$
+- **Approximation vs. tractability:** Natural language is never truly Markov (a pronoun at token 500 may refer to a protagonist introduced at token 5), yet truncating context to a bounded window $m$ is a practical necessity for count-based $n$-grams and finite-window neural models alike.
 :::
 
-::: {.slide title="The Chain Rule Turns Next-Step Predictions into a Model of the Sequence"}
-[The chain rule]{.kicker}
+::: {.slide title="Stationarity: Time-Homogeneous Transition Dynamics"}
+[Statistical Assumptions]{.kicker}
 
-$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}),
-\qquad x_{<t} = x_1, \ldots, x_{t-1}.$$
+Fitting a *single* shared predictor $f$ across all time steps $t \in \{m+1, \ldots, T\}$ relies on a second foundational assumption—**stationarity** (strictly, **time-homogeneity**) of the transition rule:
 
-- Exact for every distribution; the first factor is $P(x_1)$.
-- $P(\textrm{the}, \textrm{cat}, \textrm{sat}) = 0.05 \cdot 0.01 \cdot 0.2
-  = 10^{-4}$.
-- **Score:** add the log-conditionals. **Generate:** sample $x_1$, then
-  $x_2$ given $x_1$, …
-- Discrete tokens: each factor is a classifier over the vocabulary, and
-  this is *language modeling*.
+$$P(x_t \mid x_{t-m}, \ldots, x_{t-1}) \quad \text{is invariant with respect to time index } t$$
+
+- **Stationary dynamics vs. evolving values:** Time-invariant transition dynamics do *not* force the marginal distribution $P(x_t)$ to stay constant—a patient's vital signs trend toward recovery and a novel's closing paragraph looks very different from its opening line because the *same* transition law is evaluated on a different recent context.
+- **Why stationarity matters for learning:** Because the conditional law does not drift with $t$, we can slide an $m$-step window across a single sequence of length $T$ to extract $T - m$ training pairs sharing the exact same ground-truth regression function.
 :::
 
-::: {.slide title="The Markov Condition: The Recent Past Is All That Matters"}
-[Markov models]{.kicker}
+::: {.slide title="Synthetic Benchmark: A Noisy Sine Wave"}
+[Controlled Ground-Truth Experiment]{.kicker}
 
-- Order $m$: given $x_{t-m}, \ldots, x_{t-1}$, the older past adds no
-  information about $x_t$.
-- First order: $P(x_1, \ldots, x_T) = P(x_1) \prod_{t=2}^T P(x_t \mid x_{t-1})$.
-- Real text is not Markov, but the gain from a wider context shrinks
-  fast; we assume order $m$ to keep the model small.
-- Discrete data: estimate $P(x_t \mid x_{t-1})$ by counting successors.
+To test fixed-window autoregression where the true dynamics are known analytically, we generate $T = 1000$ steps of a noisy sine wave with period $2\pi / 0.01 \approx 628$ steps:
+
+::: {.cols .vc}
+::: {.col}
+- **Data-generating process:**
+  $$x_t = \sin(0.01\,t) + \epsilon_t, \qquad \epsilon_t \stackrel{\textrm{i.i.d.}}{\sim} \mathcal{N}(0, 0.2^2)$$
+- **Signal-to-noise scale:** The noiseless wave changes by at most $0.01$ per step ($|\cos(0.01t)| \cdot 0.01 \le 0.01$), whereas the additive white noise has standard deviation $\sigma = 0.2$ ($20\times$ larger than a single step's signal increment) and irreducible variance $\sigma^2 = 0.04$.
+- **Train/validation split:** The first `num_train = 600` windows (~1 full period) form the training set; the remaining windows test out-of-sample forecasting.
 :::
 
-::: {.slide title="Check: Write Out P(x₁, x₂, x₃, x₄)"}
-[Check]{.kicker}
-
-Write the four factors (a) by the chain rule, (b) under a second-order
-Markov model.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** (a) $P(x_1) P(x_2 \mid x_1) P(x_3 \mid x_1, x_2)
-P(x_4 \mid x_1, x_2, x_3)$. (b) The same, except the last factor is
-$P(x_4 \mid x_2, x_3)$: only it has more than two predecessors.
-:::
-:::
-:::
-
-::: {.slide title="Stationarity: The Rule Stays Fixed While the Values Change"}
-[Stationarity]{.kicker}
-
-- *Stationary* (strictly, *time-homogeneous*):
-  $P(x_t \mid x_{t-m}, \ldots, x_{t-1})$ is the same at every $t$.
-- The values may still drift, oscillate, or jump.
-- This is what lets us pool windows from all positions, and from many
-  sequences, into one training set.
-- Left to right is a choice: any order factors exactly, but cause before
-  effect is usually easier to learn.
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Forecasting a Noisy Sine Wave]{.dtitle}
-
-[one step ahead against a rollout]{.dsub}
-:::
-:::
-
-::: {.slide title="1,000 Noisy Samples of a Sine; the First 600 Windows Train"}
-[Data]{.kicker}
-
+::: {.col .fig}
 @!sequence-training-2
-
-$x_t = \sin(0.01\,t) + \epsilon_t$, $\epsilon_t \sim \mathcal{N}(0, 0.2^2)$;
-one period is $2\pi/0.01 \approx 628$ steps.
+:::
+:::
 :::
 
-::: {.slide title="Each Window of m = 4 Values Is One Regression Example"}
-[Lag features]{.kicker}
+::: {.slide title="Turning a Time Series into Sliding Lag Windows"}
+[Supervised Feature Construction]{.kicker}
 
-| example | features | label |
-|---|---|---|
-| 1 | $x_1, x_2, x_3, x_4$ | $x_5$ |
-| 2 | $x_2, x_3, x_4, x_5$ | $x_6$ |
-| ⋮ | ⋮ | ⋮ |
-| 996 | $x_{996}, \ldots, x_{999}$ | $x_{1000}$ |
+With window length $m = 4$, `lag_features` slices four shifted views of `self.x` and stacks them column-wise into a $(T - m) \times m = 996 \times 4$ feature matrix paired with target column $\mathbf{y} \in \mathbb{R}^{996 \times 1}$:
 
-- Training: examples 1–600; validation: the rest.
-- Model: linear regression, 4 weights and a bias; SGD, learning rate
-  0.01, 5 epochs, minibatches of 16.
+@-sequence-training-3
+
+| Example Index $j$ | Lag Feature Row $(x_{t-4}, x_{t-3}, x_{t-2}, x_{t-1})$ | Target $y = x_t$ | Split Assignment |
+|---|---|---|---|
+| $j = 1$ ($t = 5$) | $(x_1, x_2, x_3, x_4)$ | $x_5$ | Training ($j = 1, \ldots, 600$) |
+| $j = 600$ ($t = 604$) | $(x_{600}, x_{601}, x_{602}, x_{603})$ | $x_{604}$ | Last training window |
+| $j = 601$ ($t = 605$) | $(x_{601}, x_{602}, x_{603}, x_{604})$ | $x_{605}$ | First validation window ($j = 601, \ldots, 996$) |
 :::
 
-::: {.slide title="Given the Observed Past, the Model Tracks the Series"}
-[One step ahead]{.kicker}
+::: {.slide title="Training a Linear Autoregressor on Four Lags"}
+[Model & One-Step Evaluation Setup]{.kicker}
 
-@!sequence-one-step-ahead-prediction-1
+We fit an ordinary linear regression model $\hat{x}_t = w_1 x_{t-4} + w_2 x_{t-3} + w_3 x_{t-2} + w_4 x_{t-1} + b$ by minimizing 1-step mean squared error over 5 epochs of minibatch SGD ($\eta = 0.01$, batch size $16$):
 
-Each prediction uses the 4 observed values before it, also beyond step
-600, on data the model never saw.
-:::
+@-sequence-training-4
 
-::: {.slide title="A Rollout Feeds Each Prediction Back as an Input"}
-[Multistep prediction]{.kicker}
+@-sequence-prediction-1
 
-Observations stop at step $t$ (here $t = 604$); to reach $\hat{x}_{t+5}$:
-
-$$
-\begin{aligned}
-\hat{x}_{t+1} &= f(x_{t-3}, x_{t-2}, x_{t-1}, x_{t}), \\
-\hat{x}_{t+2} &= f(x_{t-2}, x_{t-1}, x_{t}, \hat{x}_{t+1}), \\
-&\ \,\vdots \\
-\hat{x}_{t+5} &= f(\hat{x}_{t+1}, \hat{x}_{t+2}, \hat{x}_{t+3}, \hat{x}_{t+4}).
-\end{aligned}
-$$
-
-From the fifth step on, the model reads only its own predictions.
-:::
-
-::: {.slide title="The Rollout Carries the Last Level Forward and Never Oscillates"}
-[Multistep prediction]{.kicker}
-
-@!sequence-prediction-3
-
-The observed series (grey) oscillates. The rollout from step 604 starts
-at the level of the last window and drifts slowly toward a constant.
-:::
-
-::: {.slide title="The Model Learned to Average the Last Four Values"}
-[Why it never oscillates]{.kicker}
-
-@!sequence-multistep-rollout-1
-
-- The sine moves at most 0.01 per step; the noise has standard deviation
-  0.2. An average of 4 keeps noise variance 0.04/4 = 0.01.
-- One step ahead, averaging matters far more than the curvature.
-- Fed its own outputs, an average can only repeat the current level;
-  weights summing to just under 1 pull it slowly toward the fixed point
-  $b / (1 - \sum_i w_i)$.
-:::
-
-::: {.slide title="Check: Roll Out an Exact Four-Point Average"}
-[Check]{.kicker}
-
-Weights $\tfrac14, \tfrac14, \tfrac14, \tfrac14$, bias 0. The last four
-observations are $0.2, 0.4, 0.6, 0.8$. (a) What is the next prediction?
-(b) Does the rollout keep rising?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** (a) $0.5$: the trend reverses at once. (b) No. Each step
-leaves $x_{t-4} + 2x_{t-3} + 3x_{t-2} + 4x_{t-1}$ unchanged, so the
-rollout settles at $(0.2 + 0.8 + 1.8 + 3.2)/10 = 0.6$.
+**One-Step Evaluation Protocol:** In `onestep_preds = model(features)`, every prediction $\hat{x}_t$—even in the validation region $t > 604$—is conditioned on the four **true observed** values $(x_{t-4}, x_{t-3}, x_{t-2}, x_{t-1})$ from the dataset.
+:::
+:::
+
+::: {.slide title="One-Step-Ahead Forecasts Track the Ground Truth"}
+[One-Step-Ahead Results]{.kicker}
+
+Conditioned on the four true preceding measurements at every step, the linear model tracks the underlying sine wave cleanly across both training and validation splits:
+
+::: {.cols .vc}
+::: {.col}
+- **Near-optimal 1-step denoising:** Across the entire trajectory $t \in [5, 1000]$, the 1-step predictions (magenta dashed curve) smooth out the $\sigma = 0.2$ Gaussian fluctuations and follow the true wave phase.
+- **Generalization beyond $t = 604$:** Because the sine wave's transition dynamics are stationary, the linear rule fitted on the first 600 steps transfers seamlessly to steps $605\text{--}1000$ whenever ground-truth lag windows are supplied.
+:::
+
+::: {.col .fig .big}
+@!sequence-one-step-ahead-prediction-1
 :::
 :::
 :::
 
-::: {.slide title="A k-Step Forecast Is the Series Delayed by About k Steps"}
-[Error growth]{.kicker}
+::: {.slide title="Multistep Rollout: Feeding Predictions Back In"}
+[Autoregressive Rollout Mechanics]{.kicker}
 
+When true observations stop at $t = 604$, forecasting $\hat{x}_{605}, \ldots, \hat{x}_{1000}$ requires an autoregressive **rollout** that substitutes each predicted value $\hat{x}_{t+k}$ into the input window for all subsequent steps:
+
+::: {.cols .vc}
+::: {.col}
+$$\begin{aligned}
+\hat{x}_{t+1} &= f(x_{t-3}, x_{t-2}, x_{t-1}, x_t) \\
+\hat{x}_{t+2} &= f(x_{t-2}, x_{t-1}, x_t, \hat{x}_{t+1}) \\
+\hat{x}_{t+3} &= f(x_{t-1}, x_t, \hat{x}_{t+1}, \hat{x}_{t+2}) \\
+\hat{x}_{t+4} &= f(x_t, \hat{x}_{t+1}, \hat{x}_{t+2}, \hat{x}_{t+3}) \\
+\hat{x}_{t+5} &= f(\hat{x}_{t+1}, \hat{x}_{t+2}, \hat{x}_{t+3}, \hat{x}_{t+4})
+\end{aligned}$$
+
+- **Self-conditioned horizon:** By step $t + m + 1$ ($k = 5$ for $m = 4$), zero true observations remain in the window; the model runs purely on its own outputs.
+:::
+
+::: {.col .fig}
+@-sequence-prediction-2
+:::
+:::
+:::
+
+::: {.slide title="Catastrophic Rollout Failure Beyond Step 604"}
+[Multistep Rollout Results]{.kicker}
+
+Despite its low 1-step validation error, rolling the exact same linear model forward from $t = 604$ without fresh observations fails completely to reproduce the sine wave:
+
+::: {.cols .vc}
+::: {.col}
+- **No oscillation:** Starting from the level of the final observed window $(x_{601}, x_{602}, x_{603}, x_{604})$, the rollout curve (magenta) never turns upward or downward with the wave.
+- **Slow exponential decay to a fixed point:** Instead of oscillating with period $628$, the trajectory flattens immediately and drifts monotonically toward a constant asymptote while the true series completes another half-cycle.
+:::
+
+::: {.col .fig .big}
+@!sequence-prediction-3
+:::
+:::
+:::
+
+::: {.slide title="Why One-Step MSE Learns a Moving Average"}
+[Statistical Diagnosis of the Failure]{.kicker}
+
+Inspecting the four learned weights explains immediately why 1-step training produced a non-oscillating rollout:
+
+@sequence-multistep-rollout-1
+
+- **Why 1-step MSE prefers averaging:** Every weight sits near $w_i \approx 1/4 = 0.25$. Averaging four i.i.d. noise terms cuts the noise variance fourfold ($\sigma^2 / 4 = 0.04 / 4 = 0.01$), whereas the sine wave moves by at most $0.01$ per step (squared lag bias $\sim 10^{-4}$).
+- **Why linearity is *not* the bottleneck:** A noiseless sine wave satisfies the exact 2-lag linear recurrence $x_t = 2\cos(0.01)\,x_{t-1} - x_{t-2} \approx 1.9999\,x_{t-1} - x_{t-2}$. However, weights $(2, -1)$ amplify noise variance by $2^2 + (-1)^2 = 5\times$ ($5 \times 0.04 = 0.20$), so 1-step MSE rejects the true oscillator in favor of a moving average!
+- **Fixed-point attraction during rollout:** Fed its own outputs, a moving average merely repeats its current level, decaying slowly toward the fixed point $x^* = b / (1 - \sum_{i=1}^4 w_i)$ because $\sum_i w_i$ sits slightly below $1$.
+:::
+
+::: {.slide title="Vectorized k-Step-Ahead Rollout Across All Starts"}
+[Measuring Degradation Across Horizons]{.kicker}
+
+To measure forecast quality as a function of lookahead horizon $k \in \{1, 4, 16, 64\}$, `k_step_pred` rolls the model forward $k$ steps simultaneously from every valid starting index in the series:
+
+::: {.cols .vc}
+::: {.col}
+@-sequence-prediction-4
+
+- **Phase delay and amplitude damping:** At $k = 1$ and $k = 4$, forecasts hug the wave; by $k = 16$ and $k = 64$, the forecast is a visibly damped copy of the series delayed by $\approx k$ time steps.
+:::
+
+::: {.col .fig}
 @!sequence-error-accumulation-1
-
-Predictions from every start position, 1, 4, 16, and 64 steps ahead. The
-64-step forecast lags by about 64 steps, at a reduced amplitude.
+:::
+:::
 :::
 
-::: {.slide title="The Error Is the Distance the Sine Moves in k Steps"}
-[Error growth]{.kicker}
+::: {.slide title="Analytical Phase-Lag Error Growth with Horizon k"}
+[Quantitative Horizon Analysis]{.kicker}
 
-| steps ahead $k$ | 1 | 4 | 16 | 64 |
-|---|--:|--:|--:|--:|
-| measured | ≈ 0.05 | 0.05–0.06 | 0.06–0.075 | ≈ 0.25 |
-| $0.05 + 1 - \cos(0.01\,k)$ | 0.05 | 0.05 | 0.063 | 0.25 |
+Because the 4-lag moving average predicts roughly the level of the series $k$ steps earlier ($\hat{x}_{t+k} \approx \sin(0.01\,t)$), its $k$-step MSE equals the baseline 1-step noise floor ($0.05$) plus the mean squared distance the sine wave travels over $k$ steps:
 
-- Floor 0.05: noise $0.2^2 = 0.04$, plus 0.01 left in the average.
-- $1 - \cos(0.01\,k)$: mean squared change of the sine over $k$ steps.
-- At $k = 64$: four to six times the one-step error, half the series
-  variance (≈ 0.48).
+$$\textrm{MSE}(k) \approx 0.05 + \frac{1}{2\pi}\int_0^{2\pi} \bigl(\sin(a + 0.01\,k) - \sin a\bigr)^2\,da = 0.05 + 1 - \cos(0.01\,k)$$
+
+@sequence-error-accumulation-2
+
+::: {.d2l-note .warn}
+**Two Distinct Rollout Failure Modes:**
+
+1. **Short-horizon objective mismatch (seen here):** The averaging model *damps* perturbations ($\sum w_i < 1$), so errors do not explode; rather, 1-step training never rewarded learning the curvature needed at $k = 64$.
+2. **Compounding rollout drift (exposure bias):** In models that *amplify* perturbations (such as autoregressive text generators or physics simulators), each step's prediction error shifts the input distribution at step $t+1$, causing errors to compound rapidly over long rollouts.
+:::
 :::
 
-::: {.slide title="A Generator That Reads Its Own Outputs Can Amplify Its Errors"}
-[Beyond the sine]{.kicker}
+::: {.slide title="Concept Check: Autoregression & Rollout Dynamics"}
+[Check Your Understanding]{.kicker}
 
-- Each error enters the input of every later step. Our averaging model
-  damps it, so this experiment does not show accumulation; a model that
-  amplifies errors drifts away.
-- Language models sampling token by token drift off topic or into
-  repetition; learned simulators lose coherence over long rollouts.
-- Two lines of attack: choose each next value well (*decoding rules*);
-  train on the model's own predictions (*scheduled sampling*). Whether
-  the second helps the averaging model is an open exercise.
+Work through these three calculations to verify your grasp of autoregressive factorization and rollout behavior:
+
+1. **Chain Rule vs. Markov Factorization:** Write out the exact 4-step factorization of $P(x_1, x_2, x_3, x_4)$ under (a) the general chain rule and (b) a $2^\textrm{nd}$-order Markov model ($m = 2$). Which factor changes?
+2. **Exact Moving-Average Rollout Limit:** Suppose a 4-lag linear model has exact weights $w_1 = w_2 = w_3 = w_4 = 1/4$ and bias $b = 0$, and the last 4 observed values are $(0.2, 0.4, 0.6, 0.8)$. What is the 1-step prediction $\hat{x}_{t+1}$, and to what exact constant does the infinite rollout converge?
+3. **Noise vs. Curvature Trade-Off:** If we reduce the noise standard deviation from $\sigma = 0.2$ down to $\sigma = 0$ and fit $m = 2$ lags, what weights $(w_1, w_2)$ on $(x_{t-2}, x_{t-1})$ will linear regression learn, and how will its 400-step rollout behave?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **(a)** $P(x_1)\,P(x_2 \mid x_1)\,P(x_3 \mid x_1, x_2)\,P(x_4 \mid x_1, x_2, x_3)$. **(b)** Only the fourth factor changes, dropping $x_1$ to become $P(x_4 \mid x_2, x_3)$.
+2. **$\hat{x}_{t+1} = 0.5$** (immediately reversing the upward trend!). Because $x_{t-3} + 2x_{t-2} + 3x_{t-1} + 4\hat{x}_t$ is a conserved invariant under $\hat{x}_t = \frac{1}{4}\sum_{i=1}^4 x_{t-i}$, the rollout converges to $(1(0.2) + 2(0.4) + 3(0.6) + 4(0.8)) / 10 = 6.0 / 10 = 0.60$.
+3. **Exact oscillator weights:** With $\sigma = 0$, $w_1 = -1$ (on $x_{t-2}$) and $w_2 = 2\cos(0.01) \approx 1.9999$ (on $x_{t-1}$), achieving zero 1-step error and oscillating perfectly forever during rollout.
+:::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Key Concepts in Sequence Modeling"}
+[Section Takeaways]{.kicker}
 
-- **Autoregression:** predict $x_t$ from its past, kept either as a
-  **window** of $m$ values or as a fixed-size **latent state**
-  $\mathbf{h}_t$.
-- **Chain rule:** next-step conditionals multiply to $P(x_1, \ldots, x_T)$;
-  score by summing logs, generate by sampling left to right.
-- **Assumptions:** Markov of order $m$; stationary rule.
-- **Noisy sine, 4 lags:** the model averages, so the rollout carries the
-  last level forward; error ≈ 0.05 one step ahead, ≈ 0.25 at 64 steps.
-
-**Next:** turning text into a sequence of tokens.
+| Concept | Mathematical Form | Key Property / Complexity | Practical Pitfall |
+|---|---|---|---|
+| **Chain-Rule Factorization** | $P(x_{1:T}) = \prod_{t=1}^T P(x_t \mid x_{<t})$ | Exact for any joint distribution; score via $\sum_t \log P(x_t \mid x_{<t})$ | Direct product $\prod_t P(x_t \mid x_{<t})$ underflows `float32` on long sequences |
+| **Fixed-Window Markov AR** | $P(x_t \mid x_{<t}) = P(x_t \mid x_{t-m:t-1})$ | Fixed input width $m$; parallelizable across all $T - m$ windows | Hard blindness to any dependency more than $m$ steps in the past |
+| **Latent Autoregressive State** | $\mathbf{h}_t = g(\mathbf{h}_{t-1}, x_t)$, $\hat{x}_{t+1} = f(\mathbf{h}_t)$ | $O(1)$ state dimension $h$ summarizes unbounded prefix $x_{\le t}$ | Sequential update dependency across $t$; lossy state bottleneck |
+| **Stationarity (Time-Homogeneity)** | $P(x_t \mid x_{t-m:t-1})$ independent of $t$ | Justifies pooling sliding windows from all $t$ into one dataset | Fails under regime shifts if transition dynamics drift over time |
+| **1-Step vs. $k$-Step Rollout** | $\hat{x}_{t+k} = f(\hat{x}_{t+k-m}, \ldots, \hat{x}_{t+k-1})$ | After $k > m$ steps, predictor runs purely on self-generated inputs | Low 1-step loss rewards local noise smoothing over long-range dynamics |
 :::
+

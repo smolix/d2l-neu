@@ -1,38 +1,26 @@
 # Memory and Precision
 :label:`sec_memory_precision`
 
-The previous sections asked how fast a training step runs. A step that
-does not fit in the GPU's memory does not run at all. We have met the
-question once before, for a small MLP whose step took a sliver of a card
-(:numref:`subsec_memory_during_training`), and :numref:`sec_hardware`
-remarked in passing that our billion-parameter GPT, trained with Adam in
-fp32, leaves an RTX 4090 less than ten gigabytes for everything else. How
-much is that, counted in tokens? And how can a model that barely fits on a
-card still train on large minibatches?
+The previous sections asked how fast a training step runs; a step that does not
+fit in GPU memory does not run at all. Our 1B-parameter GPT trained with Adam
+in fp32 stores four fp32 values per parameter—the weight, its gradient, and
+Adam's two moment estimates—consuming $16N \approx 15.1$ GiB of a 24 GiB
+RTX 4090 before reading a single token. The remaining ~9 GiB must hold the
+*activations* saved by the forward pass for backpropagation, which take
+several megabytes per token. As a result, only two or three sequences of 1,024
+tokens fit on the card, whereas large language models train on global batches
+of half a million to several million tokens :cite:`brown2020language`.
 
-The arithmetic is short and sobering. The optimizer keeps four numbers for
-every parameter: the weight, its gradient, and Adam's two moment
-estimates. At four bytes each that is 15 GiB of the card's 24 GiB before
-the model has read a single token. The remaining 9 GiB must hold what the
-forward pass stores for the backward pass, and for this model that is
-several megabytes for every token of the minibatch. Two or three sequences
-of 1,024 tokens fit. GPT-3, for comparison, was trained on minibatches of
-half a million to 3.2 million tokens :cite:`brown2020language`. A run that
-does not fit does not start, and one that barely fits learns from too few
-examples per step.
-
-The memory of a step has two parts. One is proportional to the number of
-parameters and fixed by the model and the optimizer. The other is
-proportional to the number of tokens in the step: the tensors that the
-forward pass keeps for the backward pass, called *activations*. We count
-both for our GPT and check the count against a measurement of the peak.
-Then we study three techniques that act on the second part. Mixed
-precision stores activations in 16 bits. Activation checkpointing
-recomputes activations instead of storing them, which takes extra time.
-Gradient accumulation splits a large minibatch into pieces that fit one
-at a time. None of the three reduces the memory per parameter, and that
-part, together with the time of a step, is what will send us to several
-GPUs.
+The memory of a training step consists of a fixed parameter term proportional
+to $N$ and an activation term proportional to the number of tokens $n$. In
+this section we count both for our GPT, verify the count against measured peak
+memory, and study three techniques that act on the activation term or the
+micro-batch size: *mixed precision* (computing in 16 bits), *activation
+checkpointing* (recomputing activations during the backward pass instead of
+storing them), and *gradient accumulation* (splitting a large global batch
+into sequential micro-batches). None of the three shrinks the $16N$ bytes of
+parameter state; dividing that state across GPUs is the subject of
+:numref:`sec_sharding`.
 
 ```{.python .input #memory-precision-memory-and-precision}
 %%tab pytorch
@@ -73,31 +61,21 @@ os.environ['TEARDOWN_CUPTI'] = '1'
 ## Memory of a Training Step
 :label:`subsec_mp-anatomy`
 
-We count the two parts in turn, first per parameter and then per token,
-combine them into a budget, and then check the budget against what the
-GPU actually holds.
-
 ### Memory per Parameter
 
-What a parameter costs depends on the optimizer. Plain SGD keeps a weight
-and its gradient, 8 bytes in fp32. Momentum adds a velocity, 12 bytes.
-Adam keeps two moment estimates instead, 16 bytes per parameter, the count
-that :numref:`subsec_memory_during_training` measured. None of these
-numbers depends on the data: a model with $N$ parameters trained with Adam
-holds $16N$ bytes whether it processes one token or a million. Mixed
-precision, below, keeps all four numbers in fp32 and adds a 16-bit copy of
-every weight for the duration of a step, $18N$ bytes in all.
+Parameter memory depends on the optimizer: plain fp32 SGD stores a weight and
+gradient (8 bytes/parameter), SGD with momentum adds a velocity (12 bytes),
+and Adam stores two moment estimates (**16 bytes/parameter**,
+:numref:`subsec_memory_during_training`). Mixed-precision training keeps all
+four in fp32 and holds a 16-bit weight copy during the step (**18
+bytes/parameter**).
 
-Our model is `d2l.GPT`, the decoder-only transformer of :numref:`sec_gpt`,
-which stacks pre-norm blocks of causal attention and a SwiGLU feed-forward
-network between a token embedding and a tied output layer. We give it
-width $d = 2048$, 16 attention heads, 18 blocks, and the vocabulary of
-$V = 50{,}257$ tokens and the learned positions of GPT-2. A block holds
-about $12d^2 = 50$ million parameters, so the blocks hold 0.9 billion and
-the embedding table another 0.1 billion. These are the shapes of the GPT
-that the chapter has been calling ours. Building it without its data, as in
-:numref:`subsec_count_without_alloc`, confirms the count without
-allocating 4 GB of weights:
+Our reference model is `d2l.GPT` (:numref:`sec_gpt`) with width $d = 2048$, 16
+heads, $L = 18$ pre-norm SwiGLU blocks, vocabulary $V = 50{,}257$, and learned
+positional embeddings. Each block holds ~$12d^2 \approx 50$M parameters
+(~0.9B across 18 blocks, plus ~0.1B in the tied token embedding). Inspecting
+the model on a meta/shape-only device confirms $N$ without allocating 4 GB of
+weights (:numref:`subsec_count_without_alloc`):
 
 ```{.python .input #memory-precision-memory-per-parameter}
 %%tab pytorch
@@ -121,13 +99,10 @@ print(f'{N / 1e9:.2f} billion parameters, 16N = {16 * N / 2**30:.1f} GiB')
 
 ### Memory per Token
 
-Backpropagation needs intermediate results of the forward pass to compute
-the gradients, so every layer stores some of its inputs or outputs until
-the backward pass has used them. :numref:`fig_memory_anatomy` follows
-these activations through one step. They accumulate during the forward
-pass and are released one layer at a time during the backward pass, while
-the gradients appear. Memory therefore peaks at the start of the backward
-pass, when every activation is still stored.
+During the forward pass, layers save intermediate activations needed by the
+backward pass; during the backward pass, these activations are freed layer by
+layer as parameter gradients are produced (:numref:`fig_memory_anatomy`).
+Memory therefore peaks at the start of the backward pass.
 
 ![The memory of a training step with Adam, in units of $4N$ bytes. The
 weights ($4N$) and Adam's moment estimates ($8N$) stay for the whole step.
@@ -136,78 +111,39 @@ backward pass, while the gradients ($4N$) appear. Memory peaks at the start
 of the backward pass.](../img/mdl-perf-memory-anatomy.svg)
 :label:`fig_memory_anatomy`
 
-Which tensors does a layer keep? Three rules cover a transformer block. A
-linear layer $\mathbf{y} = \mathbf{W}\mathbf{x}$ keeps its input, because
-the gradient of its weights is the product of the gradient of $\mathbf{y}$
-with $\mathbf{x}^\top$. An elementwise function keeps its input or its
-output, whichever its derivative is written in. A product of two
-activations keeps both factors, because the gradient with respect to each
-factor is the other one. The weights are needed as well, but they are
-already counted in $16N$.
+Three rules determine what a Transformer block saves for backpropagation:
 
-Let us apply the rules to one block, counting values per token in units of
-the width $d$. The normalization before the attention keeps its input, $d$
-values, and the projection to queries, keys, and values keeps the
-normalized output, another $d$. The attention keeps the queries, keys, and
-values, $3d$, and its output, $d$, from which a fused kernel computes the
-derivative of the softmax. The projection after the attention keeps the
-same output as its input. That is a second copy, $d$ more, if rearranging
-the heads into one row per token copies the array, and nothing more if it
-does not.
+1. A linear layer $\mathbf{y} = \mathbf{W}\mathbf{x}$ saves its input
+   $\mathbf{x}$ (since $\nabla_{\mathbf{W}} = (\nabla_{\mathbf{y}})\mathbf{x}^\top$).
+2. An elementwise nonlinearity $f$ saves its input or output.
+3. An elementwise product $\mathbf{p} \odot \mathbf{q}$ saves both factors.
 
-The feed-forward half of the block follows the same rules. Its normalization
-keeps its input, $d$, and the gate and the up-projection both read the same
-normalized output, which needs to be kept only once, another $d$. The SwiGLU
-network computes a gate $\mathbf{g}$ and an up-projection $\mathbf{u}$, each of
-width $\tfrac{8}{3}d$, and multiplies $\textrm{SiLU}(\mathbf{g})$ by
-$\mathbf{u}$. The SiLU keeps $\mathbf{g}$, the product keeps both of its
-factors, and the down-projection keeps the product: four vectors of width
-$\tfrac{8}{3}d$, about $11d$. In all, a block keeps $19.7d$ values per token
-with the second copy and $18.7d$ without. We round to $20d$, which is 160 KiB
-in fp32 at $d = 2048$. :citet:`Korthikanti.Casper.Lym.ea.2022` count the same
-way for the block of GPT-3 without dropout and arrive at $16d$ values besides
-the attention weights; our feed-forward network keeps more because it has a
-gate.
+Counting per token in units of width $d = 2048$:
 
-Nothing in this count grows with the length $T$ of the sequence, because
-the attention keeps no $T \times T$ array. The fused attention kernel of
-:numref:`sec_attention-at-scale` keeps a single number per head and token,
-the logarithm of the softmax normalizer, and recomputes the attention
-weights during the backward pass. Whether a framework calls such a kernel
-depends on the device, the dtypes, and the arguments, and a framework can
-also reach the same result by recomputing the weights in other ways. On a
-GPU, in the configuration used here, neither framework stores the
-weights, and the count below checks it: an attention that stored its
-weights would keep at least another $n_h T$ values per token for $n_h$
-heads, 16,384 at $T = 1024$. That is $8d$, 40% of the rest of the block,
-too large to miss.
+* **Attention sublayer:** Pre-attention RMSNorm saves its input ($d$); the QKV
+  projection saves the normalized output ($d$); fused causal attention saves
+  $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ ($3d$) and its output ($d$, plus only a
+  scalar log-normalizer per head and token instead of the $T \times T$ score
+  matrix); the output projection saves the attention output ($0$ if aliased, or
+  $d$ if copied when merging heads). Total: $6d\text{--}7d$.
+* **SwiGLU FFN sublayer:** Pre-FFN RMSNorm saves its input ($d$); the gate and
+  up-projections share the normalized output ($d$); $\textrm{SiLU}(\mathbf{g})
+  \odot \mathbf{u}$ and the down-projection save the gate $\mathbf{g}$, the
+  activated gate $\textrm{SiLU}(\mathbf{g})$, the up-projection $\mathbf{u}$,
+  and their product—four vectors of width $\tfrac{8}{3}d \approx 10.7d$.
+  Total: ~$12.7d$.
 
-The output layer adds a term of its own. The loss needs the
-log-probability of every token of the vocabulary at every position, so it
-keeps $V$ values per token, in fp32 for numerical safety
-(:numref:`sec_numerics`): 196 KiB, more than a whole block. The largest
-single term of the tally is not in the network at all; it is in the loss.
+In total, one fused block saves $18.7d\text{--}19.7d \approx \mathbf{20d}$
+values per token (**160 KiB** in fp32 at $d = 2048$; compare the $16d$ count
+for un-gated GPT-3 blocks in :citet:`Korthikanti.Casper.Lym.ea.2022`). Because
+fused attention recomputes its $T \times T$ weights on chip during the
+backward pass, nothing in this count grows with sequence length $T$. Finally,
+the cross-entropy loss saves $V = 50{,}257$ fp32 log-probabilities per token
+(**196 KiB**)—more than an entire Transformer block.
 
-We check the tally by counting the bytes that the backward pass keeps. The
-function `saved_bytes` runs the forward pass of a function and adds up the
-sizes of the arrays it stores for the backward pass. The function
-`gpt_loss` is the cross-entropy of a GPT's predictions. It uses the input
-tokens as targets, which avoids loading a dataset and leaves the memory
-unchanged.
-
-:begin_tab:`pytorch`
-`torch.autograd.graph.saved_tensors_hooks` calls its first function on
-every tensor that autograd saves for the backward pass. Ours records the
-size of the memory block, the *storage*, behind it, once per storage,
-since several saved tensors can be views of one.
-:end_tab:
-
-:begin_tab:`jax`
-`jax.vjp(f, *args)` runs the forward pass of `f` and returns the backward
-pass as a function, `f_vjp`. That function is a pytree whose leaves are
-the arrays the backward pass needs, so their sizes add up to what
-the forward pass stores.
-:end_tab:
+We verify this tally by hooking into autograd (`saved_bytes`) and subtracting
+counts across 1 and 2 sequences and across 1 and 2 blocks (so parameter memory
+and head/loss memory separate cleanly).
 
 ```{.python .input #memory-precision-memory-per-token-1}
 %%tab pytorch
@@ -243,13 +179,6 @@ def gpt_loss(model, X):
     logits = model(X).astype(jnp.float32)
     return optax.softmax_cross_entropy_with_integer_labels(logits, X).mean()
 ```
-
-Two subtractions isolate the terms. The count for a minibatch of two
-sequences minus the count for one sequence gives the bytes of one sequence:
-the weights, which the backward pass also needs, cancel. The bytes per
-sequence of a GPT with two blocks minus those of a GPT with one block give
-the bytes of one block. What remains of the one-block model is the
-embedding, the output layer, and the loss.
 
 ```{.python .input #memory-precision-memory-per-token-2}
 %%tab pytorch
@@ -305,119 +234,42 @@ print(f'one block: {block / 2**10:.0f} KiB per token '
 print(f'embedding, output layer, and loss: {head / 2**10:.0f} KiB per token')
 ```
 
-The tally is the least that an implementation stores when it recomputes
-nothing. An implementation reaches it when each normalization and each
-activation function is a single fused kernel, which keeps what the rules
-ask for and nothing else. An implementation that writes them as several
-operations keeps intermediate results of each operation and stores more.
-This is the memory side of the fusion of :numref:`subsec_comp-fusion`,
-where the same intermediate arrays cost time.
-
 :begin_tab:`pytorch`
-PyTorch is the fused case. `scaled_dot_product_attention` runs a fused
-kernel, and RMSNorm and SiLU are single kernels, so a block keeps 18.7
-values of width $d$ per token: the tally without the second copy, since
-the projection's input shares its memory with the attention's output. The
-embedding, the output layer, and the loss keep 212 KiB per token.
+Because `scaled_dot_product_attention`, RMSNorm, and SiLU run as single fused
+kernels, PyTorch stores exactly the theoretical minimum: $18.7d$ values (149
+KiB) per block and 212 KiB for the embedding, output projection, and loss.
 :end_tab:
 
 :begin_tab:`jax`
-A block keeps 29.0 values of width $d$ per token, half again the tally.
-The attention of `d2l.GPT` runs `jax.nn.dot_product_attention` under
-`jax.checkpoint` (:numref:`sec_gpt`), so its backward pass keeps only the
-queries, keys, and values and recomputes the weights, and nothing it keeps
-grows with the length of the sequence. The surplus comes from the layers
-that Flax writes as several operations. Each `nnx.RMSNorm` keeps four
-vectors of width $d$ where the tally counts two, among them the squared
-input and a copy of the input. `jax.nn.silu`, computed as
-`x * jax.nn.sigmoid(x)`, keeps three arrays of width $\tfrac{8}{3}d$ where
-the tally counts one. And the gate and the up-projection each keep their
-own copy of the normalized input, one $d$ more. The embedding, the output
-layer, and the loss keep 228 KiB per token.
+Before XLA compilation, `jax.vjp` records $29.0d$ values (232 KiB) per block
+because `nnx.RMSNorm` and `jax.nn.silu` are written as composite elementwise
+expressions whose intermediate arrays remain in the raw VJP residuals (XLA's
+compiler later fuses and recomputes many of them, as we verify below).
 :end_tab:
 
 ### The Memory Budget
 
-The two counts give the memory of a training step with $n$ tokens. With $a$
-bytes per token for each of the $L$ blocks and $a_\textrm{out}$ bytes per
-token for the embedding, the output layer, and the loss,
+Combining parameter state ($16N$ bytes when gradients persist across
+micro-batches) with $a$ bytes per token per block and $a_\textrm{out}$ bytes
+per token for the embedding, output head, and loss yields the step memory
+budget for $n$ tokens:
 
 $$
-M(n) \approx 16N + n \, (L a + a_\textrm{out}),
+M(n) \approx 16N + n \, (L a + a_\textrm{out}) \;\leq\; M_\textrm{GPU}.
 $$
 :eqlabel:`eq_mp-budget`
 
-and a step fits on a GPU with $M_\textrm{GPU}$ bytes if $M(n) \leq
-M_\textrm{GPU}$. The first term is fixed by the model and the optimizer;
-the second grows with the minibatch. The largest minibatch is therefore
-$n_{\max} = (M_\textrm{GPU} - 16N) / (L a + a_\textrm{out})$.
-
-The equation charges the gradients, $4N$ bytes, for the whole step. That is
-right under gradient accumulation (:numref:`subsec_mp-accumulation`), where the
-gradients of one piece of the minibatch stay in memory while the next piece
-runs. A single step creates its gradients while the activations are being
-released and peaks lower, at $12N$ bytes plus the activations
-(:numref:`fig_memory_anatomy`; Exercise :exref:`ex_mp-peak`). A model of this
-size trains with accumulation, so we budget for it.
-
-:begin_tab:`pytorch`
-`zero_grad(set_to_none=True)` releases the gradients after each update, so
-a step without accumulation reaches $12N$ plus the activations.
-:end_tab:
-
-:begin_tab:`jax`
-`jax.grad` returns the gradients as outputs of the compiled program, and
-XLA allocates the outputs of a program for the whole time that it runs, so
-a compiled gradient computation holds them from its first operation on.
-:end_tab:
-
-For our GPT, $16N = 15.1$ GiB and the card has 24 GiB, which leaves 8.9 GiB
-for the activations. A cell in :numref:`subsec_mp-checkpointing` evaluates
-:eqref:`eq_mp-budget` for every configuration of this section; for the
-first one the arithmetic fits in a line.
-
-:begin_tab:`pytorch`
-With $a = 149$ KiB and $a_\textrm{out} = 212$ KiB from the count, each
-token needs $La + a_\textrm{out} \approx 2.8$ MiB, which leaves room for
-about 3,200 tokens, three sequences of 1,024 tokens.
-:end_tab:
-
-:begin_tab:`jax`
-With $a = 232$ KiB and $a_\textrm{out} = 228$ KiB from the count, each
-token needs $La + a_\textrm{out} \approx 4.3$ MiB, which leaves room for
-about 2,100 tokens, two sequences of 1,024 tokens.
-:end_tab:
-
-These estimates are optimistic. The allocator rounds and fragments its
-blocks, and libraries reserve workspace of their own. Worse, as the
-measurement below shows, the backward pass creates large arrays that no
-count of stored tensors can see.
+For our 18-block GPT on a 24 GiB card ($16N = 15.1$ GiB, leaving 8.9 GiB for
+activations), the raw count predicts $La + a_\textrm{out} \approx 2.8$
+MiB/token (~3,200 tokens, or 3 sequences of 1,024) in PyTorch and 4.3
+MiB/token (~2,100 tokens, or 2 sequences) in JAX.
 
 ### Measured Peak Memory
 :label:`subsec_mp-measuring`
 
-A count is a model of what the framework stores, and a model can leave
-things out. We check :eqref:`eq_mp-budget` on a GPT that is small enough
-to measure: the width, the vocabulary, and the block of our GPT, but only
-two blocks. We measure the peak memory of the forward and backward pass
-with 1,024 to 8,192 tokens per step, in sequences of 1,024 tokens as in
-the count, and compare its growth per token with the count of the
-previous cell. With few tokens, other parts of the step can
-set the peak, so we read the growth from 2,048 tokens on.
-
-:begin_tab:`pytorch`
-`d2l.peak_memory` (:numref:`sec_use_gpu`) reads the highest count of
-allocated bytes during a call, relative to the memory allocated before it,
-which here holds the weights.
-:end_tab:
-
-:begin_tab:`jax`
-XLA decides before a step runs where every array of the compiled program
-lives (:numref:`sec_compilation`), and `memory_analysis()` reports this
-plan. Compiling needs only shapes, so we compile against
-`jax.ShapeDtypeStruct`s without allocating the model, and take the plan's
-outputs and temporaries, the memory beyond the weights.
-:end_tab:
+To see what the backward pass temporarily allocates on top of saved
+activations, we measure peak memory above the weights on a 2-block version of
+our GPT across 1,024 to 8,192 tokens.
 
 ```{.python .input #memory-precision-measuring-memory-1}
 %%tab pytorch
@@ -456,50 +308,15 @@ for n in (2048, 4096):  # Growth per token from n to 2n tokens
           f'per token; counted {(2 * block + head) / 2**10:.0f} KiB')
 ```
 
-Why should the peak hold more than what is stored? The count is what the
-backward pass keeps. The peak also holds what the backward pass creates while
-the kept tensors are still in memory, and the largest of these arrays belongs,
-once again, to the loss. Its backward pass begins with two arrays of $V$ fp32
-values per token: the gradient with respect to the log-probabilities, and from
-it the gradient with respect to the logits. For a moment both exist next to the
-stored log-probabilities, and an implementation that writes them to memory
-needs $8V$ bytes, 393 KiB, per token more than the count.
+At the start of the backward pass, while all forward activations are still
+live, the cross-entropy backward pass materializes the gradient with respect
+to the log-probabilities and the gradient with respect to the logits—two
+temporaries of $V = 50{,}257$ fp32 values per token ($8V \approx 393$ KiB/token
+above the saved-tensor count).
 
 :begin_tab:`pytorch`
-The measured slope exceeds the count by 392 to 394 KiB per token, the $8V$
-bytes of the two gradients. The first of them is all zeros but one: to mark
-which one of 50,257 log-probabilities the loss read, the backward pass of
-`F.cross_entropy` writes 50,257 numbers per token. With 1,024 tokens the peak
-comes later in the step, when the gradients of the weights exist, and it lies
-above the line through the other points. For our GPT the peak needs about 3.2
-MiB per token, which leaves room for about 2,800 tokens instead of 3,200.
-:end_tab:
-
-:begin_tab:`jax`
-XLA's plan follows the compiled program, which need not store what the
-count of `jax.vjp` reports. A fused backward kernel can recompute a cheap
-elementwise result instead of reading it from memory, which saves bytes,
-and the plan also holds the gradient of the logits and other temporaries
-of the backward pass, which adds bytes. From 2,048 to 4,096 tokens the plan
-grows faster than the count; from 4,096 to 8,192 tokens the two effects
-happen to cancel, and it grows by the count itself. Since XLA plans anew
-for each shape, the plan need not be linear in the tokens. The plan, not
-the count, is what the GPU must hold, so it is worth reading for the shape
-one actually trains with. For our GPT the count of 4.3 MiB per token and
-2,100 tokens stands.
-:end_tab:
-
-:begin_tab:`pytorch`
-The allocator's own record shows the course of :numref:`fig_memory_anatomy`
-in a real step. `torch.cuda.memory._record_memory_history()` records every
-allocation and release, and `torch.cuda.memory._snapshot()` returns the
-record. We record one training step with Adam on 4,096 tokens, after a
-first step has created the moment estimates:
-:end_tab:
-
-:begin_tab:`jax`
-The plan reports one peak for the whole program; since the step runs as one
-compiled program, Python cannot read the allocator in between.
+We can visualize the entire allocation timeline of an Adam step on 4,096
+tokens using PyTorch's allocator history API:
 :end_tab:
 
 ```{.python .input #memory-precision-measured-peak-memory-1}
@@ -525,12 +342,6 @@ trace = events()
 torch.cuda.memory._record_memory_history(enabled=None)
 ```
 
-:begin_tab:`pytorch`
-Adding up the sizes of the allocations and subtracting those of the
-releases, starting from the memory allocated before the step, gives the
-allocated memory after every event:
-:end_tab:
-
 ```{.python .input #memory-precision-measuring-memory-2}
 %%tab pytorch
 sign = {'alloc': 1, 'free_completed': -1}  # Other actions change nothing
@@ -544,39 +355,25 @@ d2l.plot([list(range(a, b)) for a, b in phases],
 ```
 
 :begin_tab:`pytorch`
-The trace starts at the weights and moment estimates, $12N$, climbs
-through the forward pass, and jumps at the logits. It peaks at the start
-of the backward pass, with the two gradients of the loss, then falls as
-the activations go and the weight gradients arrive. The optimizer step
-briefly allocates temporaries of the size of the gradients.
+The trace starts at $12N$ (weights and two Adam moments), climbs linearly
+across the blocks during the forward pass, spikes at the logits and the start
+of the backward pass, and steps down as activations are freed and gradients
+are allocated.
 :end_tab:
 
 ## Mixed Precision
 :label:`subsec_mp-mixed`
 
-Mixed-precision training, introduced in :numref:`sec_numerics`, keeps the
-weights in fp32 and runs the matrix multiplications of the forward and
-backward pass in a 16-bit format, with the loss and other reductions in
-fp32. bf16 has the exponent range of fp32, so its gradients do not
-underflow; fp16 has a narrower range and needs loss scaling
-(:numref:`subsec_loss_scaling`). Numerically the recipe risks little. The
-weights, their updates, and the loss stay in fp32. What is rounded to 8
-significant bits are the matrix products, which accumulate in fp32, and
-the activations passed between them, and training tolerates that
-rounding well. We first ask what the recipe does to memory, then to time.
+Mixed-precision training (:numref:`sec_numerics`) keeps master weights,
+gradients, optimizer moments, normalizations, the residual stream, and the
+loss in fp32 while running matrix multiplications and intermediate activations
+in 16-bit floating point (bf16, which shares fp32's 8-bit exponent range and
+needs no loss scaling, or fp16 with loss scaling, :numref:`subsec_loss_scaling`).
 
-If every stored value moved to bf16, a block would keep half of its fp32
-bytes. It cannot quite: the residual stream, which carries the running sum
-from block to block, stays in fp32, and the input of each normalization is
-that stream. Of the 20 values of the tally, 2 then keep their 4 bytes and
-18 take 2 bytes, so a block should store
-
-$$
-\frac{2 \cdot 4 + 18 \cdot 2}{20 \cdot 4} = 0.55
-$$
-
-of its fp32 bytes. The count of the previous subsection, repeated with bf16
-arithmetic, tests the prediction:
+Because the two residual-stream inputs to a block's normalizations stay in
+fp32 (4 bytes) while the remaining 18 of the ~$20d$ saved values per block
+drop to bf16 (2 bytes), a block's saved activations shrink to roughly
+$(2 \cdot 4 + 18 \cdot 2) / (20 \cdot 4) = 0.55$ of their fp32 size:
 
 ```{.python .input #memory-precision-mixed-precision-1}
 %%tab pytorch
@@ -594,54 +391,20 @@ print(f'one block: {block16 / 2**10:.0f} KiB per token in bf16, '
 print(f'embedding, output layer, and loss: {head16 / 2**10:.0f} KiB per token')
 ```
 
-A block stores slightly more than predicted, because an implementation
-keeps a few more values in fp32, or a second bf16 copy of one. The loss
-keeps its log-probabilities in fp32, so $a_\textrm{out}$ does not shrink.
-Where the output layer runs in bf16, its bf16 logits are stored as well,
-and $a_\textrm{out}$ grows.
+One block drops to $0.58\text{--}0.60$ of its fp32 activation bytes. However,
+holding bf16 copies of the weights during the step increases fixed parameter
+memory from $16N = 15.1$ GiB to $18N = 17.0$ GiB, leaving only 7.0 GiB for
+activations. The activation savings and extra weight copies largely offset
+each other, expanding the maximum token capacity on a 24 GiB card by only
+15–25%.
 
-The fixed term moves the other way. The 16-bit copies of the weights, $2N$
-bytes, stay in memory until the backward pass has used them, so for our
-GPT the fixed term grows from $16N = 15.1$ GiB to $18N = 17.0$ GiB, and the
-room for activations shrinks from 8.9 to 7.0 GiB. The smaller activations
-and the added weight copies largely offset each other. Unfortunately for
-anyone who hoped to halve the memory, mixed precision raises the largest
-minibatch by about a quarter at best.
-
-:begin_tab:`pytorch`
-Under `torch.autocast` the normalizations run in fp32 and pass their
-output to the products cast to bf16; the gate and the up-projection of the
-feed-forward network each cast it again and keep their own copy. A block
-stores 0.58 of its fp32 bytes. The output layer runs in bf16, and
-$a_\textrm{out}$ grows from 212 to 306 KiB. By the bf16 count plus the
-excess measured in fp32, a token of our GPT needs about 2.2 MiB at the
-peak instead of 3.2 MiB, and the largest minibatch grows by 15%, to about
-3,300 tokens.
-:end_tab:
-
-:begin_tab:`jax`
-`to_bf16`, which `bytes_per_token` applies, sets the compute dtype `dtype`
-of the linear layers to bf16 (:numref:`sec_numerics`) and leaves their
-`param_dtype`, the embedding, and the normalizations in fp32. The backward
-pass keeps the fp32 outputs of the normalizations as well, and a block
-stores 0.60 of its fp32 bytes. The output layer, which reuses the
-embedding table, computes in fp32, so $a_\textrm{out}$ stays at 228 KiB. A
-token of our GPT needs 2.7 instead of 4.3 MiB, and the largest minibatch
-grows by about a quarter, to some 2,700 tokens.
-:end_tab:
-
-Memory is the smaller of the two gains. The larger one is time: the tensor
-cores of the RTX 4090 multiply bf16 matrices at 165 TFLOP/s, twice their
-rate for tf32 (:numref:`sec_hardware`). Whether a plain fp32 matrix
-multiplication runs on the tensor cores as tf32 is a framework default
-(:numref:`sec_numerics`), so a speedup quoted against true fp32 mixes two
-effects. To separate them, we time one SGD step in three configurations:
-true fp32, tf32, and bf16. A GPT would make a poor stopwatch here, since
-attention, normalizations, and the loss blur the picture. We take instead a
-three-layer MLP of width 8192 on a minibatch of 2,048 examples, whose
-FLOPs are easy to count and whose large products lie far above the ridge
-point, so that the step is compute-bound and the roofline floor is a fair
-prediction.
+The primary benefit of bf16 mixed precision is speed rather than capacity: on
+the RTX 4090, bf16 tensor cores run at 165 TFLOP/s, twice the 82.6 TFLOP/s of
+tf32 and fp32. To separate the effect of tensor cores (tf32 vs. scalar fp32)
+from the effect of 16-bit operands (bf16 vs. tf32), we benchmark one SGD step
+of a compute-bound three-layer MLP of width 8,192 on a batch of 2,048 examples
+($1.1 \times 10^{12}$ FLOPs/step: roofline floor 13.3 ms at 82.6 TFLOP/s and
+6.7 ms at 165 TFLOP/s, plus ~1.3 ms for the bandwidth-bound SGD update).
 
 ```{.python .input #memory-precision-mixed-precision-2}
 %%tab pytorch
@@ -703,19 +466,6 @@ def report(desc, f):
     print(f'{desc}: {1000 * t:5.2f} ms, {flops / t / 1e12:3.0f} TFLOP/s')
 ```
 
-The roofline gives each configuration a floor. At the tf32 peak of
-83 TFLOP/s the $1.1 \times 10^{12}$ FLOPs of the step take at least
-13.3 ms, and at the bf16 peak of 165 TFLOP/s at least 6.7 ms. True fp32 runs
-on the ordinary arithmetic units, whose peak on this card is also
-83 TFLOP/s (:numref:`sec_hardware`), so its floor is the same 13.3 ms. We
-should still expect it to come in slower. On the ordinary units every
-multiply-add is an instruction of its own, and loading its operands and
-computing their addresses take instructions too, which compete for the
-same issue slots; a tensor core does a whole tile per instruction. The
-SGD update adds the same in every configuration: it reads each weight and
-its gradient and writes the weight, 12 bytes for each of the 0.1 billion
-weights, about 1.3 ms at 0.9 TB/s.
-
 ```{.python .input #memory-precision-mixed-precision}
 %%tab pytorch
 torch.set_float32_matmul_precision('highest')  # True fp32
@@ -733,66 +483,31 @@ report('tf32', lambda: step(*args, jnp.float32))
 report('bf16', lambda: step(*args, jnp.bfloat16))
 ```
 
-The step gets faster in two stages. True fp32 reaches about three fifths
-of its peak, tf32 about nine tenths of the same number. The two formats
-share a peak on this card; the tensor cores simply come much closer to
-theirs. tf32 shortens the step by about a third without changing a single
-stored byte, and its time is within a few percent of the floor plus the
-update.
-
-bf16 then runs 1.5 to 1.75 times as fast as tf32. Why not twice? The floor
-plus the update is $6.7 + 1.3 = 8.0$ ms, and the step takes 8.3 to 9.7 ms.
-The update moves bytes, not FLOPs, so it takes as long as before: about a
-tenth of the tf32 step, it is a seventh of the bf16 one. The casts of
-weights and gradients between fp32 and bf16 move bytes as well. Whatever
-does not shrink with the format takes a larger share of a shorter step.
-The fair baseline for a speedup from mixed precision is tf32, not true
-fp32.
-
-:begin_tab:`pytorch`
-For matrix multiplications PyTorch defaults to `'highest'`, true fp32;
-`torch.set_float32_matmul_precision('high')` allows tf32. The bf16 step
-needs no `GradScaler`, since bf16 gradients do not underflow; with fp16, it
-would (:numref:`subsec_loss_scaling`).
-:end_tab:
-
-:begin_tab:`jax`
-On GPUs with tensor cores, JAX's default precision for fp32 matrix
-multiplications is tf32. `jax.default_matmul_precision('highest')`
-requests true fp32 for the code traced inside it, and `jit` compiles a
-separate program for it.
-:end_tab:
+True fp32 on scalar units reaches ~60% of its 82.6 TFLOP/s peak because every
+multiply-add and address calculation competes for instruction issue slots;
+tf32 on the tensor cores reaches ~90% of the same peak, cutting step time by
+a third without changing stored types. Moving from tf32 to bf16 speeds up the
+step by another $1.5\text{--}1.75\times$ (close to the $6.7 + 1.3 = 8.0$ ms
+floor plus update, since the fp32 SGD update and weight casts do not shrink).
 
 ## Activation Checkpointing
 :label:`subsec_mp-checkpointing`
 
-Mixed precision raised the largest minibatch of our GPT by a quarter at
-best. To raise it severalfold, a step must store less. Activation
-checkpointing (:numref:`subsec_activation_checkpointing`)
-:cite:`Chen.Xu.Zhang.ea.2016` stores only the input of each segment of the
-network and recomputes the rest of the segment during the backward pass,
-at the cost of one more forward pass: at most a third more arithmetic,
-since a backward pass costs about two forward passes.
-
-A transformer comes in natural segments, its blocks. With one segment per
-block, each block stores only its input, $d$ values or $4d$ bytes per token
-in fp32, instead of its $a$ bytes of activations. During the backward pass
-one block at a time is recomputed, so the activations of a single block
-return while it is processed. The memory per token at the peak falls to at
-most
+To multiply the number of tokens that fit on a card, a step must store fewer
+activations. *Activation checkpointing* (:numref:`subsec_activation_checkpointing`,
+:cite:`Chen.Xu.Zhang.ea.2016`) saves only the input of each Transformer block
+($d$ fp32 values, or $4d$ bytes per token) during the forward pass and
+recomputes the block's internal activations one block at a time during the
+backward pass. This trades one extra forward pass (~33% more compute, or $8N$
+FLOPs/token instead of $6N$) for reducing peak per-token memory across $L$
+blocks from $L a + a_\textrm{out} + \Delta$ to at most
 
 $$
-L \cdot 4d + a + a_\textrm{out} + \Delta
+L \cdot 4d + a + a_\textrm{out} + \Delta,
 $$
 
-bytes. The four terms are the stored inputs of all blocks, one recomputed
-block, the output layer and the loss, and the excess $\Delta$ of the
-measured peak over the count (:numref:`subsec_mp-measuring`). The sum is
-an upper bound, because the gradient of the logits is released before the
-first block is recomputed.
-For our GPT in fp32 the first term is $18 \times 8$ KiB $= 144$ KiB. The
-next cell evaluates :eqref:`eq_mp-budget` for every configuration of this
-section:
+where $a$ is the single block currently being recomputed and $\Delta$ is the
+backward temporary excess measured in :numref:`subsec_mp-measuring`.
 
 ```{.python .input #memory-precision-activation-checkpointing-1}
 %%tab pytorch, jax
@@ -810,41 +525,20 @@ for name, (fixed, per_token) in budgets.items():  # M(n) <= M_gpu
           f'{(M_gpu - fixed) / per_token:6,.0f} tokens')
 ```
 
-The output layer and the loss now store more per token than all 18 blocks
-together. Surprisingly, under checkpointing bf16 even lowers the room for
-tokens. It can save only on the single recomputed block, and its $2N$
-bytes of weight copies outweigh that.
+With per-block checkpointing, the 18 blocks together store only
+$18 \times 8 = 144$ KiB/token—less than the output layer and loss alone—raising
+the token budget more than threefold (~10,000 tokens in PyTorch, ~15,000 in
+JAX). Notice that under checkpointing, bf16 actually fits slightly *fewer*
+tokens than fp32 because the extra $2N$ bytes of bf16 weight copies outweigh
+the activation savings on the single recomputed block. At that point, the
+output logits and cross-entropy loss dominate per-token memory; computing the
+output projection and loss in token chunks inside a checkpoint of its own
+eliminates that bottleneck for only $2dV / (6N) \approx 3\%$ extra FLOPs
+(Exercise :exref:`ex_mp-chunked-loss`).
 
-:begin_tab:`pytorch`
-Checkpointing lowers the memory per token at the peak from 3.2 to 0.9 MiB
-and raises the largest minibatch to about 10,000 tokens, more than three
-times as many as without it. In bf16 the bytes per token even rise, from
-0.88 to 0.91 MiB, because the stored bf16 logits add more to
-$a_\textrm{out}$ than the recomputed block saves.
-:end_tab:
-
-:begin_tab:`jax`
-Checkpointing lowers the memory per token from 4.3 to 0.6 MiB and leaves
-room for about 15,000 tokens, seven times as many as without it. The number
-extrapolates the plan of the two-block model, which need not grow linearly.
-:end_tab:
-
-The loss is therefore the next term to attack. A loss computed in chunks
-of tokens runs the output layer and the cross-entropy on one chunk at a
-time, inside a checkpoint of its own, so that the logits, the
-log-probabilities, and their gradients exist for one chunk only. The
-backward pass recomputes the logits of each chunk, which costs one more
-pass through the output layer: $2dV$ FLOPs per token, about 3% of the
-$6N$ FLOPs per token of a training step (two per parameter in the forward
-pass and four in the backward pass, :numref:`sec_scaling-laws`). Exercise
-:exref:`ex_mp-chunked-loss` builds it.
-
-We measure checkpointing on a stack of four blocks of our GPT, with two
-sequences of 1,024 tokens. With checkpointing, the stack should store five
-vectors of width $d$ per token, 40 KiB: the inputs of the four blocks and
-the output that the loss reads. The cell reports the bytes stored per
-token, the peak memory beyond the weights and gradients, and the time of a
-forward and backward pass.
+Let us measure per-block checkpointing on a 4-block stack with two 1,024-token
+sequences (which should store $5 \times 4d = 40$ KiB/token across the four
+block inputs and final output):
 
 ```{.python .input #memory-precision-activation-checkpointing}
 %%tab pytorch
@@ -898,91 +592,41 @@ for remat in (False, True):
           f'token, peak {peak / 2**30:.2f} GiB, {1000 * t:.0f} ms per step')
 ```
 
-Checkpointing reduces what the four blocks store to the predicted 40 KiB
-per token. The peak falls by less, because the backward pass recomputes one
-block at a time and holds its activations while it does. The step takes
-about a quarter longer, within the bound of a third for one more forward
-pass. In a compiled program the compiler decides when the recomputation
-runs, so checkpointing guarantees what is stored between the two passes,
-not where the peak lies. For a fixed minibatch, checkpointing always adds
-time; it is the right choice only when memory, not speed, limits the
-minibatch.
-
-:begin_tab:`pytorch`
-`checkpoint(blk, H, use_reentrant=False)` runs `blk` without storing its
-intermediate results and keeps what it needs to rerun it, including the
-state of the random number generator, so that dropout draws the same mask
-twice. The formula predicts the peak: 2,048 tokens times $40 + 149$ KiB is
-about 0.37 GiB with checkpointing, and 2,048 times 606 KiB is about
-1.18 GiB without, against 0.42 and 1.25 GiB measured. The peak falls by a
-factor of about three.
-:end_tab:
-
-:begin_tab:`jax`
-`jax.checkpoint` makes the derivative of a function keep only the
-function's inputs; we apply it to each block written as a function of its
-weights, with its structure `graphdef` as a static argument. Without
-checkpointing the count predicts 2,048 times 936 KiB, about 1.83 GiB, but
-XLA plans 0.78 GiB, because its fused kernels recompute cheap elementwise
-results instead of storing them (:numref:`subsec_mp-measuring`).
-Checkpointing lowers the plan by a factor of about 1.7.
-:end_tab:
-
-Per-block checkpointing recomputes everything in a block, including the
-matrix multiplications that take most of its time, while much of its memory
-sits in results that are cheap to compute. *Selective recomputation*
-stores the expensive results and recomputes the cheap ones.
-:citet:`Korthikanti.Casper.Lym.ea.2022` recompute only the scores
-$\mathbf{Q}\mathbf{K}^\top$, their softmax, and its product with the
-values, which store $T \times T$ values per head for little arithmetic;
-the fused attention kernel does the same inside one kernel. Our block
-already has that saving, and its remaining candidates are the activated
-gate and the product of the SwiGLU network, two vectors of width
-$\tfrac{8}{3}d$, about $5d$ of the tally's $20d$. Exercise
-:exref:`ex_mp-selective` writes a policy that keeps the outputs of the
-matrix multiplications and recomputes the elementwise operations.
+Checkpointing reduces the saved tensors to the exact 40 KiB/token predicted,
+cuts peak activation memory substantially, and lengthens step time by ~25%
+(within the 33% bound of one extra forward pass). Instead of recomputing an
+entire block, *selective recomputation* :cite:`Korthikanti.Casper.Lym.ea.2022`
+saves the expensive matrix-multiplication outputs and recomputes only cheap
+elementwise activations such as the SwiGLU gate product (Exercise
+:exref:`ex_mp-selective`).
 
 ## Gradient Accumulation
 :label:`subsec_mp-accumulation`
 
-With checkpointing, our GPT fits ten thousand tokens or more per step,
-still only two or three percent of the minibatches it should train with.
-Gradient accumulation closes the rest of the gap without storing more
-activations. It splits the minibatch that the optimizer should see, the
-*global batch*, into $m$ *micro-batches*, runs the forward and backward
-pass on each while adding up their gradients, and takes one optimizer step
-at the end: $B_{\textrm{global}} = m \, B_{\textrm{micro}}$. If the loss
-averages over the examples, as the cross-entropy does, each micro-batch
-loss is divided by $m$, so that the sum of the gradients becomes the
-average over the global batch.
+To reach a global batch $B_\textrm{global} = m \, B_\textrm{micro}$ of
+hundreds of thousands of tokens without storing more activations, *gradient
+accumulation* splits the global batch into $m$ sequential micro-batches,
+accumulates their gradients (dividing each micro-batch mean loss by $m$), and
+runs the optimizer once at the end.
 
-We run it on the two-block GPT of :numref:`subsec_mp-measuring`, with
-4,096 tokens as a single batch and as four micro-batches of 1,024. An
-`assert` checks that the two gradients agree; without the division by $m$
-they would differ by a factor of four.
-
-What should we expect? The peak should fall to about half, not to a
-quarter. A micro-batch stores the activations of a quarter of the tokens,
-less than 1 GiB, but the gradients of all weights, $4N = 0.77$ GiB for the
-0.21 billion parameters of this model, now stay in memory from the first
-micro-batch to the last. They are the $4N$ that :eqref:`eq_mp-budget`
-charges for the whole step.
-
-The arithmetic is the same in both cases, but accumulation adds memory
-traffic. Each micro-batch after the first reads the gradient so far and
-its own and writes their sum, $12N$ bytes, 2.5 GB, about 2.5 ms at the
-1.0 TB/s of :numref:`tab_gpu_specs`. A micro-batch of $n$ tokens performs
-$6Nn$ FLOPs, so at the peak rate $P$ and bandwidth $\beta$ the additions
-take a fraction
+While gradient accumulation performs the same arithmetic as a single large
+batch, each micro-batch after the first reads the running gradient accumulator
+and the new gradient and writes their sum ($12N$ bytes of memory traffic),
+while the micro-batch itself performs $6Nn$ FLOPs on $n$ tokens. Relative to
+peak compute time, this accumulator traffic costs
 
 $$
-\frac{12N / \beta}{6Nn / P} = \frac{2 I^*}{n}
+\frac{12N / \beta}{6Nn / P} = \frac{2 I^*}{n},
 $$
 
-of its arithmetic time, where $I^* = P / \beta$ is the ridge point of
-:numref:`sec_perf_model`. In tf32, with $I^* = 82$ FLOP/byte, that is 16%
-for $n = 1{,}024$. Three of the four micro-batches incur it, about 7 ms in
-all, so the step should take about a tenth longer.
+where $I^* = P/\beta$ is the ridge point (:numref:`sec_perf_model`). For tf32
+($I^* = 82$) and micro-batches of $n = 1{,}024$ tokens, that overhead is ~16%
+on each of the $m - 1$ accumulating micro-batches; at $n = 4{,}096$ tokens, it
+drops to 4%.
+
+We verify both numerical equivalence and memory/time overhead on our 2-block
+GPT for 4,096 tokens processed as 1 batch versus $m = 4$ micro-batches of
+1,024 tokens:
 
 ```{.python .input #memory-precision-accumulated-step}
 %%tab pytorch
@@ -1050,378 +694,190 @@ for m in (1, 4):
           f'other kernels {busy - products:.0f} ms')
 ```
 
-The peak falls to about half, and the gradients that persist across the
-micro-batches are a large part of what remains. The time grows by a tenth
-to a fifth, far more than the spread of the five timings: accumulation over
-micro-batches of 1,024 tokens is not free. Nor is the extra time spent
-waiting. In both rows the device-busy time, the kernel times of one step
-summed, equals the step time to the millisecond: the GPU never sits idle
-between kernels, and every added millisecond is work. The fraction
-$2I^*/n$ also says how to make it cheap. At micro-batches of 4,096 tokens
-it is 4%.
-
-:begin_tab:`pytorch`
-The two-block GPT runs in tf32 here, because the timing cell of
-:numref:`subsec_mp-mixed` left `'high'` set. The step takes 16 ms longer,
-more than twice the 7 ms of accumulator traffic that we predicted. The
-second line of each row sorts the device time by kind of kernel
-(:numref:`sec_perf_model`) and finds two causes. The matrix products take
-about 5 ms longer on micro-batches of 1,024 tokens, and the other kernels,
-the additions among them, about 12 ms longer. There are more additions
-than our count has: the output layer
-shares its weights with the token embedding, so in every micro-batch
-autograd first adds the two gradients of that table, about half the
-parameters of this model, and only then adds the result into `.grad`.
-Tying the weights saves a table's worth of memory and charges for it in
-every micro-batch.
-:end_tab:
-
-:begin_tab:`jax`
-The step takes 10 ms longer. The second line of each row sorts the device
-time by kind of kernel: the matrix products take about 2 ms longer, the
-other kernels, the additions among them, about 8 ms. The 7 ms of
-accumulator traffic that we predicted accounts for most of that, and the
-prediction assumed the full specified bandwidth, which a copy never quite
-reaches.
-:end_tab:
-
-The two gradients agree, but the equivalence rests on conditions that this
-test meets without effort. The loss must add up over examples, and the
-micro-batches must have equal sizes, or their losses must be weighted by
-their sizes. Layers that couple the examples of a batch, batch
-normalization above all, see only the micro-batch. And everything that
-acts on the whole gradient, such as clipping and the optimizer step, must
-wait for the last micro-batch.
-
-A micro-batch too small to keep the tensor cores busy costs more again,
-since each micro-batch reads all the weights in the forward and in the
-backward pass (:numref:`sec_perf_model`). Both costs shrink as the
-micro-batch grows, so the best micro-batch is the largest one that fits.
-Accumulation never makes a step faster: it changes when the optimizer
-steps, not how much work each token needs.
+Peak memory above the weights drops by roughly half (since the $4N = 0.77$ GiB
+of persistent gradients remain allocated across micro-batches while activation
+memory drops fourfold), and step time increases by 10–20% due to accumulator
+additions and slightly lower tensor-core efficiency on smaller micro-batches.
+The optimal micro-batch is therefore always the largest one that fits in
+memory.
 
 ## Choosing a Memory Technique
 :label:`subsec_mp-ladder`
 
-Each technique changes one term of :eqref:`eq_mp-budget` at a cost, and
-:numref:`tab_mp-techniques` lists them by the symptom that calls for them,
-together with the one of :numref:`sec_sharding` that acts on the fixed
-term. Mixed precision heads the table for its speed; its effect on memory
-is small.
+:numref:`tab_mp-techniques` summarizes the memory techniques by the symptom
+that calls for each.
 
 :Memory techniques by symptom, with their effect on :eqref:`eq_mp-budget` and their cost.
 :label:`tab_mp-techniques`
 
 | symptom | technique | effect on memory | cost |
 |---|---|---|---|
-| the matrix products set the time of a step | bf16 mixed precision | small: activations to about 0.6, and $+2N$ for weight copies | rounding to 8 significant bits; fp16 also needs loss scaling |
-| one sequence barely fits, or not at all | activation checkpointing | stored activations per block from $a$ to $4d$ bytes per token | one more forward pass, about a quarter more time |
-| the output layer and the loss dominate | a loss computed in chunks of tokens | $a_\textrm{out}$ and $\Delta$ for one chunk at a time | one more pass through the output layer |
-| the minibatch is too small for training | gradient accumulation | none; the batch per update grows $m$-fold | accumulator traffic, $2I^*/n$ of the arithmetic; micro-batches too small to keep the tensor cores busy |
-| $16N$ alone fills the card | sharding the weights, gradients, and optimizer state over GPUs | $16N/k$ on each of $k$ GPUs | communication |
+| matrix products dominate step time | bf16 mixed precision | activations $\times 0.6$, fixed state $+2N$ for weight copies | 8-bit mantissa rounding (fp16 also needs loss scaling) |
+| a useful micro-batch does not fit | activation checkpointing | stored activations per block from $a$ to $4d$ bytes/token | one extra forward pass (~25–33% more time) |
+| output layer and loss dominate | chunked cross-entropy loss | $a_\textrm{out}$ and $\Delta$ for one token chunk at a time | one extra pass through the output projection (~3% FLOPs) |
+| global batch exceeds micro-batch capacity | gradient accumulation | none; global batch grows $m$-fold | accumulator traffic $2I^*/n$; repeated weight reads per micro-batch |
+| $16N$ parameter state alone fills the card | sharding weights, gradients, and optimizer state (:numref:`sec_sharding`) | $16N/k$ on each of $k$ GPUs | inter-GPU collective communication |
 
-For our GPT on one RTX 4090 the techniques combine into one recipe, and
-the arithmetic of this section sets its numbers. bf16 makes the products
-faster. Two sequences of 1,024 tokens fit in bf16 without checkpointing,
-with some room; a third would leave little or none. So a micro-batch
-holds two sequences, and the step accumulates 256 of them, a global batch
-of 524,288 tokens. The accumulator traffic costs $2I^*/n \approx 16\%$
-with the bf16 ridge point of 164. Even if checkpointing removed this
-traffic altogether, it would save 16% and cost about a quarter in
-recomputation. It helps only once a micro-batch of useful size no longer
-fits.
-
-Now we can ask what a step costs. At $6N$ FLOPs per token, a global batch
-takes $6 \times 1.01 \times 10^9 \times 524{,}288 \approx 3.2 \times
-10^{15}$ FLOPs. At the bf16 peak of 165 TFLOP/s, which no real step
-reaches, that is 19 s, and with the accumulator traffic at least 22 s per
-optimizer step. A run of 100,000 steps reads 52 billion tokens, about 50
-per parameter: more than the compute-optimal 20 of Chinchilla and far
-fewer than small models meant for deployment read
-(:numref:`sec_scaling-laws`). On one card it takes almost a month even at
-the peak, and more than a month at the rates measured above.
-
-Data parallelism, the subject of the next section, shares the work of each
-step among several GPUs. It also places a full copy of the 17 GiB of state
-on every one of them: the weights, gradients, moment estimates, and bf16
-weight copies that none of the techniques of this section touches.
-:numref:`sec_sharding` divides that state among the GPUs instead. One card
-can now hold a step of our GPT. It cannot finish the run.
+For our 1B-parameter GPT on a single RTX 4090, bf16 mixed precision fits two
+sequences of 1,024 tokens without checkpointing, and accumulating 256
+micro-batches reaches a global batch of 524,288 tokens. At $6N$ FLOPs/token,
+however, one global step requires $3.2 \times 10^{15}$ FLOPs—at least 22 s per
+step on one card, or well over a month for 100,000 steps (52B tokens). A
+single GPU can hold a step of our GPT, but finishing the run requires multiple
+GPUs (:numref:`sec_multi_gpu`).
 
 ## Summary
 
-The memory of a training step has a part that grows with the parameters,
-$16N$ bytes with Adam in fp32, and a part that grows with the tokens of the
-minibatch, the activations that the forward pass keeps for the backward
-pass. Three rules give the count of the second part: a linear layer keeps
-its input, an elementwise function its input or its output, and a product
-both factors. By this count a transformer block whose attention recomputes
-its weights keeps about $20d$ values per token, and the loss $V$ more;
-implementations that do not fuse their normalizations and activations
-keep more. The peak also holds what the
-backward pass creates while the stored tensors still exist, above all the
-gradient of the logits, and on a 24 GiB card a billion-parameter GPT has
-room for two or three sequences of 1,024 tokens. Mixed precision speeds up
-the matrix products but changes memory little, because it adds 16-bit
-copies of the weights. Activation checkpointing stores only the input of
-each block, which fits several times as many tokens for about a quarter
-more time, and gradient accumulation builds a global batch of half a
-million tokens from micro-batches that fit, at an extra cost of $2I^*/n$
-for micro-batches of $n$ tokens.
+Training step memory splits into a fixed parameter term ($16N$ bytes for fp32
+Adam, $18N$ with bf16 weight copies) and a per-token activation term. By three
+differentiation rules (linear layers keep inputs, elementwise functions keep
+inputs or outputs, products keep both factors), a fused SwiGLU Transformer
+block stores ~$20d$ values per token, and the cross-entropy loss stores $V$
+log-probabilities plus $2V$ backward temporaries. Mixed precision accelerates
+matrix products on tensor cores while leaving total memory capacity nearly
+unchanged; activation checkpointing stores only block inputs ($4d$ bytes/token)
+at the cost of ~25% extra time; and gradient accumulation builds large global
+batches from micro-batches that fit, adding an accumulator traffic fraction of
+$2I^*/n$.
 
 ## Exercises
 
 1. **Where the peak lands.** :numref:`fig_memory_anatomy` places the peak
    of a training step at the start of the backward pass. Consider a stack of
-   $n$ identical layers. The parameters of each layer occupy $w$ bytes, and
-   its forward pass stores $a$ bytes of activations. Assume that no
-   gradients exist when the backward pass starts, and that the backward pass
-   of a layer frees the activations of that layer and creates its parameter
-   gradient of $w$ bytes. Leave out the parameters and the optimizer
-   states, whose sizes stay constant.
+   $n$ identical layers where each layer's parameters occupy $w$ bytes and
+   its forward pass stores $a$ bytes of activations. Assume no gradients
+   exist when the backward pass starts, and each layer's backward pass frees
+   its $a$ bytes of activations and allocates $w$ bytes of parameter
+   gradients.
     1. Write the bytes held by activations and gradients after the backward
        pass has processed $j$ of the $n$ layers. Show that the peak lies at
        the start of the backward pass when $a > w$ and at its end when
        $a < w$.
-    1. A block of our GPT holds about $12d^2$ parameters and stores about
-       $20d$ fp32 values per token. For how many tokens per step does the
-       peak lie at the start of the backward pass? Is that a realistic
-       number of tokens for training?
+    1. A block of our GPT holds ~$12d^2$ parameters and stores ~$20d$ fp32
+       values per token. Above what token count per step does the peak lie at
+       the start of the backward pass?
     1. Under gradient accumulation over $m$ micro-batches, the gradients of
-       the first micro-batch stay allocated while the later micro-batches
-       run. Find the peak with accumulation, and the values of $m$ for which
-       accumulation lowers the peak below that of a single step on the full
-       batch.
+       the first micro-batch remain allocated while later micro-batches run.
+       Find the peak with accumulation and the values of $m$ for which
+       accumulation lowers the peak below a single full-batch step.
    :exlabel:`ex_mp-peak`
 
 :begin_tab:`pytorch`
-2. [code] **Optimizer-step memory.** The trace of
-   :numref:`subsec_mp-measuring` shows that the optimizer step allocates
-   temporaries of its own. Build the two-block GPT of that subsection three
-   times, each with a different `torch.optim.Adam`: with
-   `foreach=False`, with the default arguments, and with `fused=True`.
-    1. Run two training steps with each optimizer. On the second step,
-       record `torch.cuda.memory_allocated()` just before `opt.step()`,
-       reset the peak statistics, and record
-       `torch.cuda.max_memory_allocated()` after `opt.step()`. Express the
-       extra bytes of each update in units of the gradient size $4N$.
-    1. The three implementations update one parameter tensor at a time,
-       apply each elementwise operation to all parameter tensors at once,
-       or run the whole update in one kernel per group of tensors. Explain
-       the three measurements from this difference. When does the optimizer
-       step, rather than the start of the backward pass, set the peak of a
-       training step?
+2. [code] **Optimizer-step memory.** Build the two-block GPT of
+   :numref:`subsec_mp-measuring` with three `torch.optim.Adam` configurations:
+   `foreach=False`, the default, and `fused=True`.
+    1. Run two steps with each optimizer. On the second step, measure the
+       peak extra bytes allocated during `opt.step()` in units of the gradient
+       size $4N$.
+    1. Explain the three measurements from how each implementation updates
+       parameter tensors (one tensor at a time, batched multi-tensor
+       elementwise ops, or a single fused kernel). When can the optimizer step
+       set the overall peak of a training step?
 :end_tab:
 
 :begin_tab:`jax`
-2. [code] **Optimizer-step memory.** A JAX training step returns new
-   parameters and optimizer states instead of updating them in place.
-   Extend the compiled gradient of :numref:`subsec_mp-measuring` into a
-   full Adam step with `optax.adam`, a function of the parameters, the
-   optimizer state, and `X` that returns the updated parameters and the
-   updated optimizer state.
+2. [code] **Optimizer-step memory.** Extend the compiled gradient of
+   :numref:`subsec_mp-measuring` into a full Adam update using `optax.adam`.
     1. Compile the step for 512 tokens and report `argument_size_in_bytes`,
-       `output_size_in_bytes`, and `temp_size_in_bytes` of its
-       `memory_analysis()` in units of the parameter size $4N$. Estimate
-       the peak memory of one step from these numbers.
-    1. Compile the step again with `donate_argnums` covering the
-       parameters and the optimizer state, and report
-       `alias_size_in_bytes` as well. How does the estimated peak change,
-       and how does it compare with $16N$?
+       `output_size_in_bytes`, and `temp_size_in_bytes` from
+       `memory_analysis()` in units of $4N$.
+    1. Recompile with `donate_argnums` covering the parameters and optimizer
+       state, report `alias_size_in_bytes`, and explain how buffer donation
+       changes the peak memory.
 :end_tab:
 
 3. **Clipping under accumulation.** Gradient clipping to norm $\tau$
-   replaces a gradient $\mathbf{g}$ by
-   $\mathbf{g} \min(1, \tau / \|\mathbf{g}\|)$. Let
-   $\mathbf{g}_1, \ldots, \mathbf{g}_m$ be the micro-batch gradients
-   after the scaling by $1/m$ of :numref:`subsec_mp-accumulation`, so that
-   their sum $\mathbf{g}$ is the gradient of the global batch.
-    1. A training loop clips each $\mathbf{g}_i$ before adding it to the
-       accumulator. Find the largest norm that the accumulated gradient can
-       reach, and a condition under which the loop gives the same result as
-       clipping $\mathbf{g}$ once before the optimizer step.
+   replaces $\mathbf{g}$ by $\mathbf{g} \min(1, \tau / \|\mathbf{g}\|)$. Let
+   $\mathbf{g}_1, \ldots, \mathbf{g}_m$ be micro-batch gradients scaled by
+   $1/m$ so their sum $\mathbf{g}$ is the global-batch gradient.
+    1. If a loop clips each $\mathbf{g}_i$ before adding it to the
+       accumulator, what is the maximum norm the accumulated gradient can
+       reach, and when does per-micro-batch clipping match global clipping?
     1. Under fp16 loss scaling with factor $S$, the accumulator holds
-       $S \mathbf{g}$ once the last micro-batch has been added. In which
-       order must the loop divide by $S$, clip, and step? What goes wrong
-       if it clips before dividing, and what goes wrong if $S$ changes
-       before the last micro-batch has been added?
-
-    *Adapted from the PyTorch documentation,
-    [Automatic Mixed Precision examples](https://docs.pytorch.org/docs/stable/notes/amp_examples.html),
-    sections "Gradient clipping" and "Gradient accumulation".*
+       $S \mathbf{g}$ after the final micro-batch. In what order must the loop
+       unscale by $S$, clip, and step? What goes wrong if $S$ changes between
+       micro-batches?
 
 :begin_tab:`pytorch`
 4. [code] **fp16 gradient window.** ● The 5-bit exponent of fp16 gives it
-   normal numbers from $2^{-14}$ to 65,504 and subnormal numbers down to
-   $2^{-24}$. Loss scaling :cite:`Micikevicius.Narang.Alben.ea.2018`
-   multiplies the loss by a factor $S$ before the backward pass and divides
-   the gradients by $S$ afterwards. Use `mlp`, `X_mlp`, and `y_mlp` as
-   defined in :numref:`subsec_mp-mixed`, and take as reference the fp32
-   parameter gradients computed under
-   `torch.set_float32_matmul_precision('highest')`.
-    1. Extend the measurement of :numref:`subsec_loss_scaling` to all
-       parameter gradients of `mlp`: plot a histogram of $\log_2 |g|$ over
-       the nonzero entries $g$ of the reference gradients, and find the
-       factors $S$ that place 99.9% of the scaled entries $S g$ in the
-       normal range of fp16.
-    1. For $S = 2^0, 2^2, \ldots, 2^{24}$, compute the gradients of $S$
-       times the loss under `torch.autocast('cuda', dtype=torch.float16)`,
-       divide them by $S$, and plot their relative error
-       $\|\hat{\mathbf{g}} - \mathbf{g}\| / \|\mathbf{g}\|$ with respect
-       to the reference $\mathbf{g}$, marking the runs with non-finite
-       entries. Repeat the sweep with `torch.bfloat16`. In which range of
-       $S$ is fp16 more accurate than bf16, and why is that possible?
-    1. `torch.amp.GradScaler` starts at $S = 2^{16}$. Where does this
-       factor lie in the window of the previous sub-problem? The gradient
-       of the loss with respect to a logit is the difference between the
-       predicted and the target probability, divided by the batch size,
-       here 2048. How does the window move if the batch grows to 32,768
-       examples? Explain why a static loss scale that works for one
-       workload can fail for another.
+   normal numbers from $2^{-14}$ to 65,504 and subnormals down to $2^{-24}$.
+   Loss scaling :cite:`Micikevicius.Narang.Alben.ea.2018` multiplies the loss
+   by $S$ before `backward()` and divides gradients by $S$ afterward. Using
+   `mlp`, `X_mlp`, and `y_mlp` from :numref:`subsec_mp-mixed` with true fp32
+   reference gradients:
+    1. Plot a histogram of $\log_2 |g|$ over all nonzero reference gradient
+       entries and find the scale factors $S$ that place 99.9% of scaled
+       entries $Sg$ inside the normal range of fp16.
+    1. For $S = 2^0, 2^2, \ldots, 2^{24}$, compute gradients under
+       `torch.autocast('cuda', dtype=torch.float16)`, unscale by $S$, and plot
+       the relative error $\|\hat{\mathbf{g}} - \mathbf{g}\| / \|\mathbf{g}\|$.
+       Repeat with `torch.bfloat16`. In which window of $S$ is fp16 more
+       accurate than bf16, and why?
+    1. How does the valid window of $S$ shift if the batch size grows from
+       2,048 to 32,768?
 :end_tab:
 
 :begin_tab:`jax`
 4. [code] **fp16 gradient window.** ● The 5-bit exponent of fp16 gives it
-   normal numbers from $2^{-14}$ to 65,504 and subnormal numbers down to
-   $2^{-24}$. Loss scaling :cite:`Micikevicius.Narang.Alben.ea.2018`
-   multiplies the loss by a factor $S$ before the backward pass and divides
-   the gradients by $S$ afterwards. Use `mlp_params`, `X_mlp`, `y_mlp`, and
-   `loss_fn` as defined in :numref:`subsec_mp-mixed`, and take as reference
-   the fp32
-   gradients computed under `jax.default_matmul_precision('highest')`.
-    1. Extend the measurement of :numref:`subsec_loss_scaling` to all
-       parameter gradients of the MLP: plot a histogram of $\log_2 |g|$
-       over the nonzero entries $g$ of the reference gradients, and find
-       the factors $S$ that place 99.9% of the scaled entries $S g$ in the
-       normal range of fp16.
-    1. For $S = 2^0, 2^2, \ldots, 2^{24}$, compute the gradients of $S$
-       times the loss with `jnp.float16` as the compute dtype, divide them
-       by $S$, and plot their relative error
-       $\|\hat{\mathbf{g}} - \mathbf{g}\| / \|\mathbf{g}\|$ with respect
-       to the reference $\mathbf{g}$, marking the runs with non-finite
-       entries. Repeat the sweep with `jnp.bfloat16`. In which range of $S$
-       is fp16 more accurate than bf16, and why is that possible?
-    1. At the time of writing, optax ships no automatic loss scaler.
-       Choose a static factor $S$ from the window of the previous
-       sub-problem, and justify the choice.
-       The gradient of the loss with respect to a logit is the difference
-       between the predicted and the target probability, divided by the
-       batch size of 2048. How does the window move if the batch grows to
-       32,768 examples? Explain why a static loss scale that works for one
-       workload can fail for another.
+   normal numbers from $2^{-14}$ to 65,504 and subnormals down to $2^{-24}$.
+   Loss scaling :cite:`Micikevicius.Narang.Alben.ea.2018` multiplies the loss
+   by $S$ before differentiation and divides gradients by $S$ afterward. Using
+   `mlp_params`, `X_mlp`, `y_mlp`, and `loss_fn` from
+   :numref:`subsec_mp-mixed` with true fp32 reference gradients:
+    1. Plot a histogram of $\log_2 |g|$ over all nonzero reference gradient
+       entries and find the scale factors $S$ that place 99.9% of scaled
+       entries $Sg$ inside the normal range of fp16.
+    1. For $S = 2^0, 2^2, \ldots, 2^{24}$, compute gradients with
+       `jnp.float16`, unscale by $S$, and plot the relative error
+       $\|\hat{\mathbf{g}} - \mathbf{g}\| / \|\mathbf{g}\|$. Repeat with
+       `jnp.bfloat16`. In which window of $S$ is fp16 more accurate than bf16,
+       and why?
+    1. How does the valid window of $S$ shift if the batch size grows from
+       2,048 to 32,768?
 :end_tab:
 
-5. **Checkpoint placement.** ● Consider a stack of $n$ identical residual
-   blocks, and measure memory in units of the input of one block. The
-   backward pass of one block needs $c$ units of stored tensors, its input
-   included. A schedule with segments of $s$ consecutive blocks stores only
-   the input of each segment during the forward pass. During the backward
-   pass it recomputes one segment at a time, while the stored inputs of the
-   earlier segments remain in memory.
-    1. Derive the peak activation memory as a function of $s$, and the $s$
-       that minimizes it. For $c = 1$ the answer is the $s = \sqrt{n}$
-       of :numref:`subsec_activation_checkpointing`. Show that for $c > n$
-       the minimizing $s$ is below one, so that per-block checkpointing is
-       the best schedule. A block of our GPT has $c \approx 20$, and the
-       model has $n = 18$ blocks. Compare storing everything with per-block
-       checkpointing, in memory and in the number of block forward
-       evaluations per step.
-    1. :citet:`Chen.Xu.Zhang.ea.2016` reduce the memory further by
-       recursion. The schedule stores the input of the stack and the input
-       of its second half, processes the second half recursively, and then
-       processes the first half recursively from its stored input. For $n$
-       a power of two, derive the peak memory and the total number of block
-       forward evaluations, the original forward pass included. For
-       $n = 16$ and $n = 1024$ with $c = 1$, compare both quantities with
-       those of the best segment length.
-
 :begin_tab:`pytorch`
-6. [code] **Selective recomputation.** ● Per-block checkpointing stores
-   only the input of each block. The function
-   `torch.utils.checkpoint.create_selective_checkpoint_contexts`, passed to
-   `checkpoint` through its `context_fn` argument, instead caches the
-   outputs of chosen operations during the forward pass and recomputes the
-   remaining operations. Its policy function receives each operation
-   together with its arguments. The linear layers of `d2l.GPT` have no
-   biases, and each dispatches to `torch.ops.aten.mm.default`.
-    1. For one block of our GPT, list the tensors stored
-       between the forward and the backward pass, and the matrix
-       multiplications that the backward pass recomputes, under three
-       policies: per-block checkpointing, caching the outputs of every
-       `mm`, and caching all outputs except those of the feed-forward
-       network's gate and up-projection.
-    1. Implement the last two policies for the stack of four blocks of
-       :numref:`subsec_mp-checkpointing`, and measure the stored bytes per
-       token, the peak memory, and the step time as that subsection does.
-       Which policy would you choose for our GPT, and why?
+5. [code] **Selective recomputation.** ● Per-block checkpointing stores only
+   each block's input. Passing
+   `torch.utils.checkpoint.create_selective_checkpoint_contexts` via the
+   `context_fn` argument of `checkpoint` caches the outputs of selected ops
+   (such as `torch.ops.aten.mm.default`) and recomputes the rest.
+    1. For one block of our GPT, list the saved tensors and the recomputed
+       matrix products under three policies: full per-block checkpointing,
+       caching every `mm` output, and caching all `mm` outputs except the FFN
+       gate and up-projection.
+    1. Implement the latter two policies on the 4-block stack of
+       :numref:`subsec_mp-checkpointing` and compare saved bytes/token, peak
+       memory, and step time.
    :exlabel:`ex_mp-selective`
 :end_tab:
 
 :begin_tab:`jax`
-6. [code] **Selective recomputation.** ● `jax.checkpoint` accepts a
-   `policy` argument that names the intermediate values it may keep, and
-   `jax.checkpoint_policies.dots_with_no_batch_dims_saveable` keeps the
-   outputs of matrix multiplications with the weights and recomputes
-   everything else.
-    1. For one block of our GPT, list the values stored
-       between the forward and the backward pass, and the matrix
-       multiplications that the backward pass recomputes, under three
-       configurations: no checkpointing, `jax.checkpoint` without a
-       policy, and `jax.checkpoint` with
-       `jax.checkpoint_policies.dots_with_no_batch_dims_saveable`. Check
-       your lists with `jax.ad_checkpoint.print_saved_residuals`.
-    1. Add the third configuration to the measurement of
-       :numref:`subsec_mp-checkpointing`, and compare the stored bytes per
-       token, the planned memory, and the step time of all three. Which
-       configuration would you choose for our GPT, and why?
+5. [code] **Selective recomputation.** ● `jax.checkpoint` accepts a `policy`
+   argument such as
+   `jax.checkpoint_policies.dots_with_no_batch_dims_saveable`, which saves the
+   outputs of weight matrix multiplications and recomputes elementwise ops.
+    1. For one block of our GPT, list the saved residuals and recomputed
+       matrix products under no checkpointing, default `jax.checkpoint`, and
+       `dots_with_no_batch_dims_saveable`, verifying with
+       `jax.ad_checkpoint.print_saved_residuals`.
+    1. Add this policy to the 4-block benchmark of
+       :numref:`subsec_mp-checkpointing` and compare saved bytes/token,
+       planned peak memory, and step time.
    :exlabel:`ex_mp-selective`
 :end_tab:
 
-7. [code] **Cost of accumulation.** ● Split the global batch of 2048
-   examples of the bf16 configuration of :numref:`subsec_mp-mixed` into $m$
-   equal micro-batches, and accumulate their gradients, for
-   $m = 1, 2, 4, \ldots, 64$.
-    1. Let the network have $N$ parameters. A micro-batch of
-       $B_{\textrm{micro}}$ examples performs about
-       $6 N B_{\textrm{micro}}$ floating-point operations in its forward and
-       backward passes. Assume an implementation that adds into the
-       accumulator inside the backward pass, so that the gradient of a
-       micro-batch is never stored on its own; it then moves at least
-       $12N$ bytes: it reads the bf16 weights in each of the two passes,
-       and it reads and writes the fp32 gradient accumulator. Ignore the
-       activations. Take from
-       :numref:`tab_gpu_specs` the peak arithmetic rate and the memory
-       bandwidth of the RTX 4090, predict the time per global batch as a
-       function of $m$, and find the $m$ beyond which the micro-batches are
-       bandwidth-bound.
-    1. Measure the time per global batch for every $m$, and plot it
-       together with the prediction. Identify the weight and gradient
-       traffic of the bf16 configuration that the count of $12N$ bytes
-       leaves out.
-    1. Suppose that activation checkpointing let each micro-batch hold four
-       times as many examples, with a third more arithmetic.
-       Under the model of the first sub-problem, for which $m \geq 4$ of the
-       sweep does accumulation over $m/4$ checkpointed micro-batches take
-       less time than accumulation over $m$ plain ones?
-
-8. [extended] **The loss in chunks.** ●● Under per-block checkpointing,
-   the output layer and the loss of our GPT store more per
-   token than all 18 blocks together, because the loss keeps $V = 50{,}257$
-   log-probabilities per token and the backward pass creates their
-   gradient.
-    1. Write the output layer and the cross-entropy so that they process the
-       tokens of a step in chunks of $n_c$ tokens, and wrap each chunk in a
-       checkpoint, so that the log-probabilities of only one chunk exist at
-       a time. Check that the loss and the gradients match the unchunked
-       version up to rounding.
-    1. Using the counts of this section, predict the largest micro-batch of
-       our GPT on a 24 GiB card, in fp32 with per-block
-       checkpointing, with and without the chunked loss, for $n_c = 1024$.
-       Which term of :eqref:`eq_mp-budget` limits the micro-batch now?
-    1. On the two-block GPT of :numref:`subsec_mp-measuring`, measure the
-       growth of the peak memory per token with the chunked loss, as that
-       subsection does, and compare it with your prediction. How much time
-       does the chunked loss add per step?
+6. [extended] **The loss in chunks.** ●● Under per-block checkpointing, the
+   output layer and cross-entropy loss of our GPT store more memory per token
+   than all 18 blocks combined because the loss materializes $V = 50{,}257$
+   log-probabilities and their gradients per token.
+    1. Write the output projection and cross-entropy loss to process tokens in
+       chunks of size $n_c = 1024$, wrapping each chunk in a checkpoint so
+       that logits and log-probabilities exist for only one chunk at a time.
+       Verify that the loss and gradients match the unchunked version.
+    1. Predict the maximum micro-batch size of our 18-block GPT on a 24 GiB
+       card with per-block checkpointing and the chunked loss, and measure the
+       per-token memory slope and step time on the 2-block GPT.
    :exlabel:`ex_mp-chunked-loss`
 
 [Discussions](https://d2l.discourse.group/t/36790)
@@ -1432,393 +888,265 @@ for micro-batches of $n$ tokens.
 ::: {.cover}
 [Dive into Deep Learning · §13.4]{.kicker}
 
-Memory and Precision<br>
-**memory per parameter and per token · the memory budget · mixed precision · checkpointing · accumulation**
+Memory Hierarchy, Precision, and Checkpointing<br>**parameter & activation budgets · mixed precision (`bf16`/`tf32`) · activation checkpointing · gradient accumulation**
 :::
 :::
 
-::: {.slide title="A 1B-Parameter GPT Fills 15 of 24 GiB before It Reads a Token"}
-[The problem]{.kicker}
+::: {.slide title="A 1B-Parameter GPT Fills 15 of 24 GiB Before Any Data"}
+[Motivation]{.kicker}
 
-GPT with $N = 1.01 \times 10^9$ parameters, Adam in fp32, one RTX 4090
-(24 GiB).
+A fast step is useless if it runs out of GPU memory before completing a single iteration. Consider our 18-block, 1B-parameter GPT ($N = 1.01 \times 10^9$, width $d = 2048$, vocab $V = 50{,}257$) trained with `float32` Adam on a $24\text{ GiB}$ RTX 4090:
 
-- Weight, gradient, two Adam moments: $16N$ bytes = **15.1 GiB**.
-- The forward pass stores **several MiB per token** for the backward pass.
-- The remaining 9 GiB hold **two or three sequences** of 1,024 tokens.
-- GPT-3 trained on **0.5M to 3.2M tokens** per step.
+- **Fixed parameter state ($16N$ bytes):** Weights ($4N$), gradients ($4N$), and Adam's two moments ($8N$) consume **$15.1\text{ GiB}$** before reading a single token.
+- **Per-token activations ($\sim 3\text{--}4\text{ MiB/token}$):** The forward pass must retain intermediate activations across all $18$ blocks for backpropagation, leaving room in the remaining $8.9\text{ GiB}$ for only **2 to 3 sequences** of $1{,}024$ tokens.
+- **The batch-size gap:** Large language models require global batches of $0.5\text{M}\text{--}3.2\text{M}$ tokens per optimizer step for stable convergence.
 
 ::: {.d2l-note .warn}
-A step that does not fit does not run. A step that barely fits learns from
-too few tokens.
-:::
-
-[Brown et al. (2020), Table 2.1.]{.small}
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- count the bytes per parameter for an optimizer and a precision;
-- count the bytes per token of a transformer block from three rules;
-- predict the largest micro-batch that fits, and read a measured peak
-  against the prediction;
-- predict what bf16, checkpointing, and accumulation change in memory and
-  in time, and the time of a step of the whole recipe.
-
-**The idea:** memory = (fixed per parameter) + (tokens × bytes per token).
-**Our GPT:** $d = 2048$, 16 heads, 18 blocks,
-$V = 50{,}257$, on one RTX 4090.
-:::
-
-::: {.slide title="Memory Decides Whether the Step Runs at All"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| The Performance Model | roofline, three regimes, timing, profiling |
-| Hardware | where peak arithmetic and bandwidth come from |
-| Computation Graphs and Compilation | fusion and kernel replay |
-| **Memory and Precision** | **what fits: bytes per parameter and per token** |
-| Multi-GPU from First Principles | data parallelism by hand, its cost model |
-| Data Parallelism in Practice | one process per GPU, overlap |
-| Sharding the Training State | dividing the $16N$ among GPUs |
-| Case Study: Optimizing a Transformer | the whole method on one GPT |
-:::
-
-::: {.col .narrow}
-- **Uses:** 16 bytes per parameter, checkpointing (Computation chapter);
-  the formats bf16 and tf32; the GPT; fused attention; the roofline.
-- **Skips:** several GPUs (next sections); fp8 training and quantization
-  (Language Models part).
-:::
+In this section we decompose training memory into $M(n) \approx \textrm{fixed}(N) + n \cdot \textrm{per\_token}(L, d, V)$ and analyze **mixed precision**, **activation checkpointing**, and **gradient accumulation**.
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
+::: {.slide title="Fixed Training State: 16 Bytes per Parameter in Adam"}
+[Parameter Memory]{.kicker}
 
-[Memory of a Training Step]{.dtitle}
+The memory occupied by model parameters, gradients, and optimizer state depends only on parameter count $N$, optimizer choice, and precision—never on batch size:
 
-[per parameter · per token · the budget · measurement]{.dsub}
-:::
-:::
-
-::: {.slide title="Every Parameter Takes 16 Bytes with Adam in fp32"}
-[Memory per parameter]{.kicker}
-
-| optimizer and precision | bytes per parameter |
-|---|---|
-| SGD: weight + gradient | 8 |
-| SGD with momentum: + velocity | 12 |
-| Adam: + two moment estimates | **16** |
-| Adam, mixed precision: + bf16 weight copies | 18 |
+| Optimizer & Precision Configuration | Stored Arrays per Parameter | Bytes / Param | 1.01B GPT State |
+| :--- | :--- | :---: | :---: |
+| **Plain SGD (`float32`)** | Weight ($4\text{ B}$) + Gradient ($4\text{ B}$) | $8\text{ B}$ | $7.5\text{ GiB}$ |
+| **SGD + Momentum (`float32`)** | Weight + Gradient + Velocity ($4\text{ B}$) | $12\text{ B}$ | $11.3\text{ GiB}$ |
+| **Adam / AdamW (`float32`)** | Weight + Gradient + 1st & 2nd Moments ($8\text{ B}$) | **$16\text{ B}$** | **$15.1\text{ GiB}$** |
+| **Adam, Mixed Precision (`bf16`)** | All four in `fp32` ($16\text{ B}$) + `bf16` weight copy ($2\text{ B}$) | **$18\text{ B}$** | **$17.0\text{ GiB}$** |
 
 @!memory-precision-memory-per-parameter
-
-The count is fixed by model and optimizer, whatever the minibatch.
 :::
 
-::: {.slide title="Activations Peak at the Start of the Backward Pass"}
-[Memory per token]{.kicker}
+::: {.slide title="Activation Lifecycle: Peak at Backward Pass Start"}
+[Activation Memory]{.kicker}
 
-![](../img/mdl-perf-memory-anatomy.svg){width=78%}
+![](../img/mdl-perf-memory-anatomy.svg){width=76%}
 
-The forward pass stores activations for the backward pass, which releases
-them layer by layer while the gradients appear.
+- **Forward accumulation, backward release:** Each forward layer stashes activations needed by its backward VJP; during backpropagation, each layer consumes and frees its saved activations as it materializes parameter gradients.
+- **Where memory peaks:** Total allocated memory reaches its maximum right at the **transition from the forward loss to the start of the backward pass**.
 :::
 
-::: {.slide title="Three Rules Say What a Layer Keeps for the Backward Pass"}
-[Memory per token]{.kicker}
+::: {.slide title="Three Differentiation Rules Govern Saved Activations"}
+[Backpropagation Storage]{.kicker}
 
-| layer | keeps | because |
-|---|---|---|
-| linear $\mathbf{y} = \mathbf{W}\mathbf{x}$ | its input $\mathbf{x}$ | weight gradient $= \partial_{\mathbf{y}} \, \mathbf{x}^\top$ |
-| elementwise $f$ | its input or its output | $f'$ is written in one of them |
-| product $\mathbf{p} \odot \mathbf{q}$ | both factors | the gradient for each is the other |
+Why does backpropagation require specific intermediate tensors from the forward pass? Three chain-rule identities determine what every primitive must save:
 
-Example, SwiGLU: SiLU keeps the gate $\mathbf{g}$; the product keeps
-$\textrm{SiLU}(\mathbf{g})$ and $\mathbf{u}$; the down-projection keeps the
-product. Four vectors of width $\tfrac{8}{3}d$.
+| Layer / Primitive Operation | Saved Forward Tensor | Mathematical Reason (Backward VJP Rule) |
+| :--- | :--- | :--- |
+| **Linear projection** $\mathbf{Y} = \mathbf{X}\mathbf{W}$ | Input activations $\mathbf{X}$ | Weight gradient $\nabla_{\mathbf{W}} \mathcal{L} = \mathbf{X}^\top (\nabla_{\mathbf{Y}} \mathcal{L})$ multiplies by $\mathbf{X}$ |
+| **Elementwise nonlinearity** $\mathbf{y} = f(\mathbf{x})$ | Input $\mathbf{x}$ (or output $\mathbf{y}$) | Jacobian entry $f'(\mathbf{x})$ is evaluated at $\mathbf{x}$ (or written in terms of $\mathbf{y}$) |
+| **Hadamard product** $\mathbf{z} = \mathbf{p} \odot \mathbf{q}$ | **Both factors** $\mathbf{p}$ and $\mathbf{q}$ | $\nabla_{\mathbf{p}} \mathcal{L} = (\nabla_{\mathbf{z}} \mathcal{L}) \odot \mathbf{q}$ and $\nabla_{\mathbf{q}} \mathcal{L} = (\nabla_{\mathbf{z}} \mathcal{L}) \odot \mathbf{p}$ |
+
+::: {.d2l-note}
+**SwiGLU consequence:** Because $\textrm{SwiGLU}(\mathbf{g}, \mathbf{u}) = \textrm{SiLU}(\mathbf{g}) \odot \mathbf{u}$ chains an elementwise SiLU, an elementwise product, and a linear down-projection, it must save **four vectors of hidden width $\frac{8}{3}d$** ($\mathbf{g}$, $\textrm{SiLU}(\mathbf{g})$, $\mathbf{u}$, and their product $\approx 10.7d$ values/token)!
+:::
 :::
 
-::: {.slide title="A Block Stores about 20 Values of Width d per Token"}
-[Memory per token]{.kicker}
+::: {.slide title="Tallying a Transformer Block: ~20d Values per Token"}
+[Per-Token Tally]{.kicker}
 
-| stored for the backward pass | values per token |
-|---|---|
-| inputs of the two normalizations | $2d$ |
-| normalized outputs, kept by the projections that read them | $2d$ |
-| queries, keys, values; attention output | $4d$ |
-| attention output again, if merging the heads copies it | $0$ or $d$ |
-| SwiGLU: gate, up, activated gate, product | $4 \cdot \tfrac{8}{3}d \approx 11d$ |
-| **block** | $\approx 20d$ = **160 KiB** in fp32 |
-| loss: log-probabilities of $V$ tokens, fp32 | $V$ = **196 KiB** |
+Applying the three rules across one pre-norm SwiGLU Transformer block of width $d = 2048$ (with fused FlashAttention) accounts for every stored byte per token:
 
-Fused attention recomputes its $T \times T$ weights: nothing grows with $T$.
+| Sublayer Component | Tensors Saved for Backpropagation | Values / Token | `fp32` Bytes ($d=2048$) |
+| :--- | :--- | :---: | :---: |
+| **Two RMSNorms + inputs to QKV & FFN** | Pre-norm residual inputs ($2d$) + normalized outputs ($2d$) | $4d$ | $32\text{ KiB}$ |
+| **Fused Causal Self-Attention** | $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ ($3d$) + attention output ($d$, or $2d$ if copied) | $4d\text{--}5d$ | $32\text{--}40\text{ KiB}$ |
+| **SwiGLU Feed-Forward ($\frac{8}{3}d$)** | Gate $\mathbf{g}$, $\textrm{SiLU}(\mathbf{g})$, up $\mathbf{u}$, and product $\textrm{SiLU}(\mathbf{g}) \odot \mathbf{u}$ | $4 \cdot \tfrac{8}{3}d \approx 10.7d$ | $85\text{ KiB}$ |
+| **One Fused Transformer Block ($a$)** | **Total per block** (independent of sequence length $T$!) | **$18.7d\text{--}19.7d \approx 20d$** | **$\approx 149\text{--}160\text{ KiB}$** |
+| **Output Logits & Cross-Entropy ($a_{\textrm{out}}$)** | Final norm + $V = 50{,}257$ `fp32` log-probabilities | $V + 2d$ | **$212\text{ KiB}$** |
 :::
 
-::: {.slide title="Fused Kernels Store the Tally: 18.7d per Block" only="pytorch"}
-[Memory per token]{.kicker}
+::: {.slide title="Verifying Saved Bytes: 18.7d per Fused Block" only="pytorch"}
+[Autograd Storage Hook]{.kicker}
 
-Count the saved tensors for 1 and 2 sequences, for 1 and 2 blocks, and
-subtract: the weights cancel, then the rest of the model.
+By attaching `torch.autograd.graph.saved_tensors_hooks` and taking differences between 1 and 2 sequences and between 1 and 2 blocks, we isolate the exact bytes saved per token by one block ($a$) and by the output head ($a_{\textrm{out}}$):
 
 @!memory-precision-memory-per-token-2
 
-- RMSNorm, SiLU, and attention are single kernels: they keep what the
-  rules ask for.
-- 18.7d is the tally without the second copy of the attention output.
-
-::: {.d2l-note}
-Without recomputation, the tally is the least a block can store.
-:::
+- **Exact match to theory:** Because PyTorch runs `scaled_dot_product_attention`, `RMSNorm`, and `F.silu` as single fused kernels, each block stores the theoretical minimum of **$18.7d = 149\text{ KiB/token}$**.
 :::
 
-::: {.slide title="Unfused Layers Store Half Again the Tally: 29d per Block" only="jax"}
-[Memory per token]{.kicker}
+::: {.slide title="Verifying Saved Bytes: Unfused Residuals vs. XLA" only="jax"}
+[VJP Residual Tally]{.kicker}
 
-Count the saved arrays for 1 and 2 sequences, for 1 and 2 blocks, and
-subtract: the weights cancel, then the rest of the model.
+Inspecting the raw VJP residuals returned by `jax.vjp` before XLA compilation and subtracting across 1 and 2 sequences and 1 and 2 blocks measures the uncompiled residual footprint:
 
 @!memory-precision-memory-per-token-2
 
-- `nnx.RMSNorm` keeps 4 vectors of width $d$, not 2; `jax.nn.silu` keeps
-  3 arrays of width $\tfrac{8}{3}d$, not 1.
-- Gate and up-projection each keep their own copy of their input: $d$ more.
-
-::: {.d2l-note}
-Without recomputation, the tally is the least a block can store.
-:::
+- **Why raw `jax.vjp` records $29.0d$ ($232\text{ KiB/token}$):** Because `nnx.RMSNorm` and `jax.nn.silu` are written in Python as composite elementwise expressions, their internal intermediates appear in the uncompiled VJP tree (XLA later fuses and recomputes many of them during `jax.jit`).
 :::
 
-::: {.slide title="The Budget Leaves Room for Two or Three Sequences"}
-[The memory budget]{.kicker}
+::: {.slide title="The Step Memory Budget on a 24 GiB GPU"}
+[Memory Budget]{.kicker}
 
-$$M(n) \approx 16N + n\,(L a + a_\textrm{out}) \le M_\textrm{GPU}$$
+Combining the fixed parameter state ($16N$ bytes when gradients persist across micro-batches) with $L$ blocks of $a$ bytes/token and output head $a_{\textrm{out}}$ bytes/token yields the total memory budget for $n$ tokens:
 
-$a$: bytes per token of a block; $L = 18$ blocks; $a_\textrm{out}$:
-embedding, output layer, and loss.
+$$M(n) \;\approx\; 16N \;+\; n\,(L a + a_{\textrm{out}}) \;\le\; M_{\textrm{GPU}}$$
 
-- $16N$ = 15.1 GiB of $M_\textrm{GPU}$ = 24 GiB: **8.9 GiB** for activations.
-- $La + a_\textrm{out}$: **about 3 to 4 MiB per token** by the count.
-- $n_{\max} = 8.9\textrm{ GiB} / (La + a_\textrm{out})$: **two or three
-  sequences** of 1,024 tokens.
-- $16N$ charges the gradients for the whole step, as under accumulation;
-  a single step peaks at $12N$ + activations.
+- **Fixed parameter floor ($N = 1.01 \times 10^9$):** $16N = 15.1\text{ GiB}$, leaving only $M_{\textrm{GPU}} - 16N = \mathbf{8.9\text{ GiB}}$ for activations and backward temporaries on a $24\text{ GiB}$ RTX 4090.
+- **Maximum micro-batch token count ($L = 18$ blocks):** At $La + a_{\textrm{out}} \approx 2.8\text{--}4.3\text{ MiB/token}$, at most **$2{,}000\text{--}3{,}200$ tokens** (2 or 3 sequences of length $1{,}024$) can fit in a single micro-batch.
+- **Doubling depth to 36 blocks ($N = 1.92\text{B}$):** Fixes $16N = 28.6\text{ GiB} > 24\text{ GiB}$—not even a single token fits without sharding the $16N$ state across multiple GPUs (§13.7)!
 :::
 
-::: {.slide title="Check: Twice as Deep, Does It Still Train?"}
-[Check]{.kicker}
+::: {.slide title="Measured Peak Memory: The 8V Cross-Entropy Excess" only="pytorch"}
+[Peak Memory vs. Tally]{.kicker}
 
-The same GPT with 36 blocks instead of 18, on the same 24 GiB card.
-
-. . .
-
-- $N \approx 36 \times 50\textrm{M} + 0.1\textrm{B} \approx 1.9\textrm{B}$.
-- $16N \approx 29$ GiB **> 24 GiB**: not one token fits.
-- No activation technique helps: only dividing the $16N$ among GPUs does.
-:::
-
-::: {.slide title="The Measured Peak Adds 8V Bytes per Token to the Count" only="pytorch"}
-[Measured peak memory]{.kicker}
-
-Two-block GPT, peak of forward + backward, 1,024 to 8,192 tokens:
+Measuring actual peak memory (`torch.cuda.max_memory_allocated`) across $1{,}024$ to $8{,}192$ tokens on a 2-block GPT reveals an extra $\Delta \approx 393\text{ KiB/token}$ above the saved-activation tally:
 
 @!memory-precision-measuring-memory-1
 
-The loss's backward pass creates two fp32 arrays of $V$ values per token,
-the gradients for the log-probabilities and for the logits, while the
-log-probabilities are still stored: $8V$ bytes = 393 KiB. The first one
-marks the one target among 50,257 entries; the other 50,256 are zero.
+- **Where the extra $393\text{ KiB/token}$ comes from:** At the very start of `backward()`, while all forward activations and the $V$ saved log-probabilities are still live, the cross-entropy backward pass materializes two `float32` gradient tensors of width $V = 50{,}257$ (for log-probabilities and logits: $2 \times 4V = 8V \approx 393\text{ KiB/token}$).
 :::
 
-::: {.slide title="XLA's Plan Grows by the Count between 4,096 and 8,192 Tokens" only="jax"}
-[Measured peak memory]{.kicker}
+::: {.slide title="Planned Peak Memory via XLA memory_analysis()" only="jax"}
+[Peak Memory vs. Tally]{.kicker}
 
-Two-block GPT, XLA's plan for forward + backward, compiled from shapes only:
+In JAX, XLA plans static buffer assignments ahead of time; querying `compile().memory_analysis()` on `ShapeDtypeStruct` placeholders predicts peak memory without allocating a single GPU tensor:
 
 @!memory-precision-measuring-memory-3
 
-- Fused kernels recompute cheap elementwise results: fewer bytes.
-- The plan holds the gradient of the $V$ logits: more bytes.
-- From 4,096 to 8,192 tokens the two happen to cancel.
-
-::: {.d2l-note}
-The plan, not the count, is what the GPU must hold: read
-`memory_analysis()` for the shape you train with.
-:::
+- **Two offsetting compiler effects:** XLA's fused backward kernels recompute cheap `RMSNorm` and `silu` intermediates on the fly (saving bytes below the $29d$ raw VJP count) while holding the $V$-wide logit gradient temporary at the backward peak.
 :::
 
-::: {.slide title="The Measured Trace Peaks at the Start of the Backward Pass" only="pytorch"}
-[Measured peak memory]{.kicker}
+::: {.slide title="Allocation Timeline Across Forward, Backward, and Step" only="pytorch"}
+[Allocator Trace]{.kicker}
+
+Recording every CUDA caching-allocator event across one Adam step on $4{,}096$ tokens visualizes the sawtooth lifecycle of activations and gradients:
 
 @!memory-precision-measuring-memory-2
 
-Forward: activations, then the logits. Backward: the loss's two gradients,
-then activations out, gradients in. Step: temporaries, then `zero_grad`.
+- **Three distinct phases:** Memory starts at $12N$ (weights + two Adam moments), climbs staircase-fashion across the blocks during the **forward pass**, spikes at the logits and initial **backward** loss gradients, steps down as activations are freed, and briefly allocates temporaries during the **optimizer step**.
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Mixed Precision: Master fp32 State with bf16 Compute"}
+[Mixed Precision]{.kicker}
 
-[Three Techniques]{.dtitle}
+Mixed-precision training (`torch.autocast` / `bfloat16` linear layers) assigns each tensor to the narrowest format that preserves numerical stability:
 
-[mixed precision · activation checkpointing · gradient accumulation]{.dsub}
+| Tensor / Operation Category | Format (`bf16` Recipe) | Numerical & Systems Rationale |
+| :--- | :---: | :--- |
+| **Linear & Attention Matmuls ($\mathbf{X}\mathbf{W}$, $\mathbf{Q}\mathbf{K}^\top\mathbf{V}$)** | `bfloat16` ($2\text{ B}$) | Runs at $2\times$ Tensor Core throughput ($165\text{ TFLOP/s}$) and halves activation storage |
+| **Master Weights, Gradients & Adam Moments** | `float32` ($4\text{ B}$) | Prevents small update steps ($\eta g \sim 10^{-5} w$) from rounding to zero in a 7-bit mantissa |
+| **Residual Stream, RMSNorm & Cross-Entropy** | `float32` ($4\text{ B}$) | Preserves variance reductions, log-sum-exp precision, and cross-layer gradient accumulation |
+
+::: {.d2l-note}
+Because `bfloat16` has the same 8-bit exponent range as `float32`, it never underflows gradients into subnormals and needs **no dynamic loss scaling** (unlike 5-bit-exponent `float16`).
 :::
 :::
 
-::: {.slide title="bf16 Stores a Little over Half the Activations and Adds 2N"}
-[Mixed precision]{.kicker}
+::: {.slide title="bf16 Cuts Block Activations by 40% but Adds 2N State"}
+[Precision & Capacity]{.kicker}
 
-Prediction: the residual stream stays fp32, 2 of the 20 values:
-$(2 \cdot 4 + 18 \cdot 2)/(20 \cdot 4) = 0.55$.
+In `bfloat16` mixed precision, the two residual-stream inputs per block remain in `float32` ($4\text{ B}$) while the other $18$ of the $\sim 20d$ saved vectors drop to `bfloat16` ($2\text{ B}$), predicting $(2 \cdot 4 + 18 \cdot 2) / (20 \cdot 4) = 0.55$ of the `float32` block activation size:
 
 @!memory-precision-mixed-precision-1
 
-- Fixed term: $16N \to 18N$, 15.1 to 17.0 GiB; room 8.9 to 7.0 GiB.
-- The log-probabilities stay fp32: $a_\textrm{out}$ does not shrink.
-- Largest micro-batch: **about a quarter larger at best**.
+- **Why total token capacity barely grows ($\sim 15\text{--}25\%$):** Caching `bfloat16` weight copies during the step raises fixed parameter memory from $16N = 15.1\text{ GiB}$ to $18N = 17.0\text{ GiB}$ (shrinking activation headroom from $8.9 \to 7.0\text{ GiB}$), and the large `float32` loss log-probabilities ($a_{\textrm{out}}$) do not shrink.
 :::
 
-::: {.slide title="bf16 Runs 1.5 to 1.75 Times as Fast as tf32, Not Twice"}
-[Mixed precision]{.kicker}
+::: {.slide title="Tensor Core Speedup: Scalar fp32 vs. tf32 vs. bf16"}
+[Precision & Throughput]{.kicker}
 
-One SGD step, 3-layer MLP of width 8192, 2,048 examples, $1.1 \times
-10^{12}$ FLOPs. Floors: **13.3 ms** at 83 TFLOP/s (tf32), **6.7 ms** at
-165 (bf16).
+Mixed precision is primarily a **speed** optimization. Benchmarking one SGD step of a compute-bound 3-layer width-8192 MLP ($1.1 \times 10^{12}\text{ FLOPs/step}$; compute floor $13.3\text{ ms}$ at $82.6\text{ TFLOP/s}$ and $6.7\text{ ms}$ at $165.2\text{ TFLOP/s}$, plus $1.3\text{ ms}$ for the `fp32` SGD update) separates Tensor Core execution from 16-bit operands:
 
 @!memory-precision-mixed-precision
 
-- fp32 and tf32 share the 83 TFLOP/s peak: ordinary units reach about
-  0.6 of it, the tensor cores about 0.9.
-- bf16: floor + update = 6.7 + 1.3 = 8.0 ms. The update and the casts move
-  bytes and do not shrink.
-- Baseline is tf32, not true fp32. bf16 needs no loss scaling.
+- **Scalar `fp32` $\to$ Tensor Core `tf32` ($1.45\times$):** Same $82.6\text{ TFLOP/s}$ theoretical ceiling and 32-bit storage, but Tensor Core tile instructions reach $\sim 90\%$ utilization vs. $\sim 60\%$ on scalar ALUs.
+- **Tensor Core `tf32` $\to$ `bf16` ($1.5\text{--}1.75\times$):** Matmul time halves to $\sim 6.7\text{ ms}$, while the bandwidth-bound `fp32` SGD update ($1.3\text{ ms}$) and weight casts remain constant.
 :::
 
-::: {.slide title="Checkpointing Each Block Leaves the Loss as the Largest Term"}
-[Activation checkpointing]{.kicker}
+::: {.slide title="Activation Checkpointing: O(L) Inputs, One Block Live"}
+[Activation Checkpointing]{.kicker}
 
-Store each block's input; recompute the block in the backward pass.
+To multiply the number of tokens that fit on a card, **activation checkpointing** (rematerialization) discards internal block activations during the forward pass:
 
-$$L \cdot 4d + a + a_\textrm{out} + \Delta \textrm{ bytes per token}$$
+$$\textrm{Peak per-token memory} \;=\; \underbrace{L \cdot 4d}_{\textrm{saved block inputs}} \;+\; \underbrace{a}_{\textrm{1 recomputed block}} \;+\; a_{\textrm{out}} \;+\; \Delta$$
 
-$\Delta$: measured peak minus count.
+- **Forward pass:** Saves only the `float32` input tensor at each of the $L$ block boundaries ($4d = 8\text{ KiB/token}$ per block, or $18 \times 8 = \mathbf{144\text{ KiB/token}}$ across all 18 blocks—down from $2.7\text{ MiB/token}$!).
+- **Backward pass:** Just before backpropagating through block $\ell$, re-runs block $\ell$'s forward pass from its checkpointed input to rematerialize its $a$ bytes of internal activations, then immediately frees them.
+- **Compute trade-off:** Adds at most one extra forward pass ($2N\text{ FLOPs/token}$ on top of $6N$, or $\le 33\%$ extra compute).
+:::
+
+::: {.slide title="Token Capacity Across Precision and Checkpointing"}
+[Capacity Comparison]{.kicker}
+
+Evaluating $M(n) \le 24\text{ GiB}$ for our 18-block, 1B-parameter GPT shows how checkpointing transforms activation capacity:
 
 @!memory-precision-activation-checkpointing-1
 
-- The output layer and the loss now store more than all 18 blocks.
-- Under checkpointing, bf16 lowers the room: its $2N$ of weight copies
-  outweigh the most it can save, on one recomputed block.
+- **More than $3\times$ larger micro-batches:** Per-block checkpointing expands capacity from $\sim 2{,}800$ tokens to **$\sim 10{,}000\text{--}15{,}000$ tokens**.
+- **Surprising interaction:** Under full per-block checkpointing, `bf16` fits slightly *fewer* tokens than `fp32` because its extra $2N = 1.9\text{ GiB}$ of `bf16` weight copies outweigh the $60\text{ KiB/token}$ saved on the single currently recomputed block!
 :::
 
-::: {.slide title="Check: What Do Four Checkpointed Blocks Store?"}
-[Check]{.kicker}
+::: {.slide title="Measuring Checkpointing: 40 KiB/Token and +25% Time"}
+[Checkpointing Benchmark]{.kicker}
 
-Four blocks of our GPT, 2,048 tokens, $d = 2048$, fp32. Per token, how
-many bytes does checkpointing keep, and how much longer is the step?
-
-. . .
-
-- Four block inputs and the output the loss reads: $5 \times 4d$ bytes
-  = **40 KiB**.
-- The peak keeps one recomputed block on top of that.
-- One more forward pass: **at most a third** more time.
-:::
-
-::: {.slide title="Four Blocks: 40 KiB per Token, about a Quarter More Time"}
-[Activation checkpointing]{.kicker}
+On a 4-block stack ($d = 2048$ in `float32`), checkpointing stores only the $4$ block inputs plus the final output ($5 \times 4d = 40\text{ KiB/token}$):
 
 @!memory-precision-activation-checkpointing
 
-- Stored bytes match the prediction; the peak falls by less.
-- A compiler decides when the recomputation runs: checkpointing fixes what
-  is stored, not where the peak is.
+- **Exact storage & modest overhead:** Saved bytes drop to the exact $40\text{ KiB/token}$ prediction, peak memory falls sharply, and step time increases by only **$\sim 25\%$** (below the $33\%$ FLOP bound because fused backward kernels absorb elementwise recomputation).
 :::
 
-::: {.slide title="Recompute What Is Cheap, Store What Is Expensive"}
-[Activation checkpointing]{.kicker}
+::: {.slide title="Selective Recomputation and Chunked Cross-Entropy Loss"}
+[Targeted Recomputation]{.kicker}
 
-- Time sits in a few matrix products; memory in many cheap results.
-- Selective recomputation (Korthikanti et al.): recompute only
-  $QK^\top$, softmax, times $V$: $T \times T$ values per head, little
-  arithmetic.
-- Fused attention does the same inside one kernel.
-- Left in our block: SwiGLU's activated gate and product, about $5d$ of
-  the $20d$.
+Once per-block checkpointing reduces all 18 blocks to $144\text{ KiB/token}$, two refinements target the remaining bottlenecks:
+
+- **Selective recomputation (Korthikanti et al., 2022):** Matrix multiplications take most of a block's FLOPs while elementwise ops (SwiGLU's $\sim 5d$ activated gate and product, or unfused $T \times T$ attention scores) take most of its activation bytes. Caching `mm` outputs and recomputing only cheap elementwise ops saves significant memory for almost zero extra FLOPs.
+- **Chunked output projection & cross-entropy loss:** Because the output logits and loss ($a_{\textrm{out}} + \Delta \approx 605\text{ KiB/token}$) now use **$4\times$ more memory per token than all 18 checkpointed blocks combined**, evaluating the output projection and cross-entropy on chunks of $1{,}024$ tokens inside a checkpoint eliminates the $V$-wide spike for only $2dV / (6N) \approx 3\%$ extra FLOPs.
 :::
 
-::: {.slide title="A Chunked Loss Removes the Largest Term for 3% More Arithmetic"}
-[Activation checkpointing]{.kicker}
+::: {.slide title="Gradient Accumulation and the 2I*/n Traffic Overhead"}
+[Gradient Accumulation]{.kicker}
 
-Under checkpointing, the output layer and the loss store more per token
-than all 18 blocks.
+When a target global batch $B_{\textrm{global}} = m \, B_{\textrm{micro}}$ exceeds single-step memory capacity, **gradient accumulation** runs $m$ sequential forward–backward micro-batches of $n$ tokens, accumulates $\frac{1}{m}\nabla \mathcal{L}_i$ into a persistent gradient buffer, and steps the optimizer once:
 
-- Run the output layer and the cross-entropy on one chunk of tokens at a
-  time, each chunk in its own checkpoint.
-- Logits, log-probabilities, and their gradients exist for one chunk only.
-- Cost: the logits are recomputed, $2dV$ FLOPs per token, about 3% of a
-  step's $6N$.
+$$\frac{t_{\textrm{accumulator traffic}}}{t_{\textrm{micro-batch compute}}} \;=\; \frac{12N / \beta}{6Nn / P} \;=\; \frac{2 I^*}{n}$$
+
+- **Where the $2I^*/n$ overhead comes from:** Every accumulating micro-batch reads the running `float32` gradient ($4N$), reads the new gradient ($4N$), and writes their sum ($4N$)—moving $12N$ bytes against $6Nn$ FLOPs of compute.
+- **Rule of thumb:** At $n = 1{,}024$ tokens in `tf32` ($I^* = 82$), accumulator traffic adds $2(82)/1024 \approx 16\%$ overhead; always use the **largest micro-batch $n$ that fits in memory** without unnecessary checkpointing.
 :::
 
-::: {.slide title="Accumulation Halves the Peak and Costs a Tenth to a Fifth More Time"}
-[Gradient accumulation]{.kicker}
+::: {.slide title="Measuring Accumulation: Halved Peak, Exact Gradients"}
+[Accumulation Benchmark]{.kicker}
 
-$B_\textrm{global} = m\,B_\textrm{micro}$; two-block GPT, 4,096 tokens
-as 1 or 4 micro-batches. Predicted:
-
-- peak: activations of 1,024 tokens + $4N$ = 0.77 GiB of gradients;
-- time: $12N$ bytes of additions per micro-batch, $2I^*/n$ = 16% at
-  $n = 1024$ ($I^* = 82$, tf32), about 7 ms for three micro-batches.
+Splitting $4{,}096$ tokens on our 2-block GPT into $m = 4$ micro-batches of $1{,}024$ tokens reproduces the exact full-batch gradient while cutting activation memory fourfold:
 
 @!memory-precision-accumulated-step
 
-- Device busy for the whole step: the extra time is work, not idle gaps.
-- Divide each loss by $m$; clip and step after the last micro-batch.
+- **Peak memory & step time:** Peak memory above the weights drops by roughly half (to the $4N = 0.77\text{ GiB}$ persistent gradient buffer plus $1{,}024$ tokens of activations), and step time increases by $\sim 10\text{--}18\%$ as predicted by $2I^*/n$.
 :::
 
-::: {.slide title="Check: Two Sequences with m = 256, or Four with m = 128?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: Memory Budgets, Remat, and Accumulation"}
+[Check Your Understanding]{.kicker}
 
-Both give 524,288 tokens per step for our GPT in bf16. Two sequences fit
-without checkpointing; four need it. Which is faster?
+Apply the memory and timing formulas of this section to two design questions for our 18-block, 1B-parameter GPT ($d = 2048$, `bf16` ridge $I^* = 164\text{ FLOP/byte}$):
 
-. . .
+1. Suppose we want a global batch of $524{,}288$ tokens on one $24\text{ GiB}$ RTX 4090 in `bfloat16`. Micro-batches of **2 sequences** ($n = 2{,}048$ tokens, $m = 256$) fit *without* checkpointing, whereas **4 sequences** ($n = 4{,}096$ tokens, $m = 128$) require per-block checkpointing ($\sim 25\%$ recomputation overhead). Which recipe finishes the global step faster?
+2. At $6N\text{ FLOPs/token}$ and $165\text{ TFLOP/s}$ peak, what is the minimum compute time of one $524{,}288$-token global step on a single RTX 4090?
 
-- Two, $m = 256$: accumulator $2 \times 164 / 2048 \approx 16\%$.
-- Four, $m = 128$: accumulator 8%, recomputation about 25%.
-- **Two sequences** win: checkpoint only when memory limits the
-  micro-batch.
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **2 sequences without checkpointing ($m = 256$) is faster:** Its accumulator overhead is $\frac{2 I^*}{n} = \frac{2 \times 164}{2048} \approx \mathbf{16\%}$, whereas 4 sequences with checkpointing pays $8\%$ accumulator overhead plus $\sim 25\%$ recomputation ($\approx \mathbf{33\%}$ total overhead). Never turn on checkpointing if a large enough micro-batch already fits!
+2. **$6 \times (1.01 \times 10^9) \times 524{,}288 \approx 3.18 \times 10^{15}\text{ FLOPs/step}$**, taking at least **$\ge 19.2\text{ s/step}$** at $100\%$ peak ($\sim 22\text{ s}$ with accumulation)—over 25 days for $100{,}000$ steps! One GPU can hold the step, but finishing the run requires multiple GPUs.
+:::
 :::
 
-::: {.slide title="Each Technique Changes One Term at a Cost"}
-[Choosing a technique]{.kicker}
+::: {.slide title="Summary: Memory Breakdown and Optimization Techniques"}
+[Key Takeaways]{.kicker}
 
-| symptom | technique | cost |
-|---|---|---|
-| products set the time | bf16 mixed precision | rounding; $+2N$ |
-| one sequence barely fits | checkpoint every block | about a quarter more time |
-| the loss dominates | loss in chunks | one more pass through the head |
-| minibatch too small | accumulate $m$ micro-batches | $2I^*/n$ of the arithmetic |
-| $16N$ alone fills the card | shard over GPUs | communication |
-:::
-
-::: {.slide title="One Card Holds a Step of Our GPT and Cannot Finish the Run"}
-[Wrap-up]{.kicker}
-
-- Memory = $16N$ (Adam, fp32) + tokens × bytes per token.
-- A block: about $20d$ per token by three rules; the loss $V$ more, and
-  the peak $8V$ bytes beyond the count where the loss writes its gradients.
-- 1B GPT on 24 GiB: 15.1 GiB fixed, two or three sequences per step.
-- bf16: 1.5 to 1.75 times as fast as tf32; memory hardly changes.
-- Recipe: bf16, 256 micro-batches of 2,048 tokens: $3.2 \times 10^{15}$
-  FLOPs, **at least 22 s per step**, a month or more for 100,000 steps.
-
-**Next:** data parallelism shares the work of a step among GPUs but copies
-the 17 GiB of state to each; sharding divides it.
+| Technique / Component | Effect on Step Memory $M(n)$ | Time / Compute Cost | When to Use It |
+| :--- | :--- | :--- | :--- |
+| **Fixed Adam State** | $16N\text{ B}$ (`fp32`), $18N\text{ B}$ (`bf16`) | Fixed per step | Baseline parameter + gradient + 2 moment buffers |
+| **Block Activations ($a$)** | $\approx 20d$ values/token ($160\text{ KiB}$ `fp32`) | Baseline forward/backward | Linear inputs ($4d$) + attn ($4d$) + SwiGLU ($11d$) |
+| **`bf16` Mixed Precision** | Block activations $\times 0.6$, state $+2N$ | **$1.5\text{--}1.75\times$ faster** | Always on Tensor Core GPUs (no loss scaling needed) |
+| **Block Checkpointing** | Block storage $La \to L \cdot 4d + a$ | $+25\text{--}33\%$ step time | When useful micro-batch $n$ does not fit in $M_{\textrm{GPU}}$ |
+| **Chunked Cross-Entropy** | Eliminates $V$-wide $a_{\textrm{out}} + 8V$ peak | $+3\%$ FLOPs ($2dV$) | When vocab $V$ dominates checkpointed memory |
+| **Gradient Accumulation** | Runs $B_{\textrm{global}} = m \, B_{\textrm{micro}}$ in $M(B_{\textrm{micro}})$ | $+\frac{2I^*}{n}$ accumulator traffic | To reach large global batches on limited GPUs |
 :::

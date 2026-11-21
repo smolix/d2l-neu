@@ -262,28 +262,6 @@ generated file, is what changed.
        prints something different from the stored output?
    :exlabel:`ex_developers-guide-stale-outputs`
 
-1. **Stable cell IDs.** The audit of exercise
-   :exref:`ex_developers-guide-stale-outputs` matches the stored outputs of
-   a notebook to its cells by ID. A stored ID that no cell of the notebook
-   carries any more is an error that stops `make html`, while a cell
-   without a stored output only causes a warning. Slide sources cite cells
-   by ID as well; the slides of :numref:`sec_resnet`, for example, cite
-   `@resnet-residual-blocks-2`.
-    1. In :numref:`sec_use_gpu`, the cell that adds `__init__` and
-       `prepare_batch` to `d2l.Trainer` for PyTorch has the ID
-       `gpus-devices-memory-the-trainer-now-with-devices-1`, although it
-       stands under the heading "Device-Aware Trainer". Why does the ID
-       name a different heading?
-    1. Suppose that the build derived every ID from the current heading. An
-       author renames a heading and changes no code. What does the audit
-       report, and what must the author run before `make html` passes
-       again?
-    1. Suppose instead that the build numbered the cells by position, and
-       an author inserts a code cell. Does the audit notice that the stored
-       outputs now sit under the IDs of other cells? Which other users of
-       the IDs receive no warning, and what do they show afterward?
-   :exlabel:`ex_developers-guide-cell-ids`
-
 1. [code] **Duplicate definitions.** `make lib` collects the `#@save`
    blocks of all sections in book order. When several blocks define the
    same function or method, the library keeps only one of them. The method
@@ -306,62 +284,6 @@ generated file, is what changed.
        notebooks of which sections can print different results: those
        before :numref:`sec_use_gpu` in book order, those after it, or both?
    :exlabel:`ex_developers-guide-duplicate-definitions`
-
-1. **Agent patches.** A contributor changes the format string of a `print`
-   call in the PyTorch variant of the last code cell of a section, and
-   `make html` stops because the committed text output of that cell is
-   stale. Asked to make the build pass, a coding agent proposes five
-   patches: (i) set the cell's `code_fingerprint` in
-   `outputs/pytorch/<chapter>/<stem>.json` to the fingerprint of the new
-   code; (ii) delete the cell's entry from that file, which the audit
-   reports only as a warning about a missing output; (iii) edit the
-   generated `.qmd` file of the section so that the page shows the new
-   output; (iv) re-execute the notebook with
-   `make -B _notebooks/pytorch/<chapter>/<stem>.executed` and then run
-   `make capture-outputs FILES=<chapter>/<stem>.md`; (v) change the
-   Makefile so that a stale text output only prints a warning.
-    1. For each patch, does it remove the cause, hide it, or leave it in
-       place? What does a reader of the page see after each?
-    1. After which patches does `make html` pass? What would you look for
-       in the pull request to confirm that the committed output came from
-       the committed code?
-    1. Write the task statement that you would have given the agent: the
-       change it may make, the files it must not edit, and the checks
-       whose results it must report.
-   :exlabel:`ex_developers-guide-agent-patches`
-
-1. **Execution stamps.** ● Make and the notebook scheduler
-   `tools/notebook_scheduler.py` re-execute a notebook when its stamp
-   `_notebooks/<fw>/<chapter>/<stem>.executed` is older than the generated
-   `.ipynb` or than one of the library block files that its `.d` file
-   lists. Besides `d2l/torch.py`, `make lib` writes one block file per
-   `#@save` symbol to `d2l/_blocks/<fw>/`, and the `.d` file of a section
-   lists the block files of every symbol `d2l.X` that its code mentions
-   and of the symbols that those blocks use in turn.
-   `make notebooks-pytorch` regenerates every PyTorch notebook and writes
-   each `.ipynb` anew. When the code cells of a regenerated notebook are
-   unchanged, `tools/gen_notebooks.py` then sets the modification times of
-   the `.ipynb` and of its stamp to the current time.
-    1. Why does the script advance the stamp, and not only the `.ipynb`?
-       What would a prose edit in one section cost otherwise?
-    1. An author edits a `#@save` method in one section and runs
-       `make run-notebooks-pytorch`, which rebuilds the library,
-       regenerates the notebooks, and then executes those that the
-       modification times call out of date. Notebook B lists the edited
-       block in its `.d` file, but its own source is unchanged. Order the
-       modification times of the block file, of the `.ipynb` of B, and of
-       the stamp of B. Is B executed? What does the audit of exercise
-       :exref:`ex_developers-guide-stale-outputs` report afterward?
-    1. Propose a stamp that keeps prose edits free of re-execution and
-       still executes B. What must it record that a modification time
-       cannot?
-    1. The repository guards against the failure of (b) twice:
-       `make refresh-stale` deletes the stamps of the notebooks that the
-       audit reports stale before it executes them, and
-       `make capture-outputs` refuses outputs whose fingerprints, recorded
-       when the notebook ran, differ from the current ones. Which route to
-       committing stale outputs does each guard close?
-   :exlabel:`ex_developers-guide-execution-stamps`
 
 1. [extended] **Dataflow staleness.** ●● The fingerprint of exercise
    :exref:`ex_developers-guide-stale-outputs` marks every cell from the
@@ -429,3 +351,331 @@ generated file, is what changed.
    :exlabel:`ex_developers-guide-noisy-bisection`
 
 [Discussions](https://d2l.discourse.group/t/36848)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §39.8]{.kicker}
+
+Contributor Guide: Single-Source Markdown Build, Framework Tabs, and Git Workflow<br>**Markdown source of truth · multi-framework tabs · #@save library generation · output fingerprinting · lint & audit · Git PR workflow**
+:::
+:::
+
+::: {.slide title="Why D2L Uses Markdown as the Single Source of Truth"}
+[Motivation]{.kicker}
+
+A textbook with more than 600 executable notebooks across four deep learning frameworks faces a classic software-engineering challenge: how does a one-line fix reach the website, the PDF, every framework's notebook, and the lecture slides without drifting out of sync?
+
+::: {.cols}
+::: {.col}
+- **Why raw `.ipynb` files fail at scale in Git:**
+  - A Jupyter `.ipynb` file is a nested JSON document mixing prose, code, base64-encoded plot images, execution counters, and kernel metadata.
+  - Fixing a single typo and re-running a cell modifies hundreds of JSON lines, making pull-request diffs unreadable and merge conflicts routine.
+:::
+
+::: {.col}
+- **The D2L single-source architecture:**
+  - Every section is authored in **one human-readable Markdown file** (`chapter_*/*.md`).
+  - An automated build pipeline derives the website, PDFs, per-framework `.ipynb` notebooks, Reveal.js slide decks, and the `d2l` Python package from that single source.
+:::
+:::
+:::
+
+::: {.slide title="One Source File, Five Generated Artifacts"}
+[The Build Pipeline]{.kicker}
+
+Never edit a generated `.qmd`, `.ipynb`, or `d2l/*.py` file directly—the next build overwrites it from `chapter_*/*.md`:
+
+```text
+chapter_*/*.md              ← SINGLE SOURCE OF TRUTH (edit only these!)
+├── chapter_*/*.qmd         → generated Quarto inputs for HTML website & PDFs
+├── _notebooks/<fw>/...     → generated Jupyter notebooks (pytorch, jax, tensorflow, mxnet)
+├── _slides/<fw>/...        → generated Reveal.js HTML lecture slide decks
+└── d2l/*.py                → generated d2l library extracted from #@save blocks
+outputs/<fw>/...            ← committed store of executed cell outputs & Git-LFS figures
+```
+
+::: {.d2l-note .rule}
+**Golden rule for contributors and coding agents:** All edits happen in `chapter_*/*.md` (or `tools/` / `docs/`). Generated files are build outputs, never hand-edited inputs.
+:::
+:::
+
+::: {.slide title="Multi-Framework Tabs and Notebook Generation"}
+[Cross-Framework Parity]{.kicker}
+
+A single `.md` source file holds all framework implementations side by side using `%%tab` code directives and framework-tabbed prose blocks:
+
+::: {.cols}
+::: {.col}
+- **Tagged vs. untagged Python cells:**
+  - A cell starting with `%%tab pytorch` (or `%%tab pytorch, jax`) appears only in the specified framework views and notebooks.
+  - An **untagged** Python cell is **shared** and executes in every framework notebook generated from that file!
+:::
+
+::: {.col}
+- **Which notebooks does a file generate?**
+  - A source file generates one notebook for each framework tagged in at least one of its cells (a file with no tab tags generates a PyTorch notebook only).
+  - **Framework coverage by book part:** *Basics* (Ch 1–8) and *Mathematics* (Ch 33–38) carry all 4 frameworks; *Advanced* (Ch 9–17) carries **PyTorch and JAX**.
+:::
+:::
+
+::: {.d2l-note .warn}
+**Watch out when editing shared cells:** Removing a `%%tab pytorch` tag from an in-place mutation like `x[0] = 10.0` causes it to run in the JAX notebook too—crashing on JAX's immutable arrays (`TypeError`) unless written with `x.at[0].set(10.0)` inside a `%%tab jax` block!
+:::
+:::
+
+::: {.slide title="Permanent Cell IDs and the #@save Library Pipeline"}
+[Code Identity & Reuse]{.kicker}
+
+Two lightweight annotations connect code cells in a chapter to the rest of the book:
+
+::: {.cols}
+::: {.col}
+- **1. Permanent Cell IDs (`#section-slug-k`):**
+  - Assigned automatically by `tools/add_cell_ids.py` in the code fence header (` ```{.python .input #cell-id} `).
+  - Gives every cell a stable identity across file edits so committed output JSONs (`outputs/<fw>/...`) and slide placeholders (`@cell-id`, `@!cell-id`, `@-cell-id`) never break when paragraphs move.
+:::
+
+::: {.col}
+- **2. The `#@save` Library Extractor (`make lib`):**
+  - Any function, class, or `@d2l.add_to_class` block marked with `#@save` is extracted into `d2l/torch.py`, `d2l/jax.py`, `d2l/tensorflow.py`, and `d2l/mxnet.py`.
+  - **Last-definition-wins rule:** `make lib` scans sections in book order; when a later chapter (e.g., GPU training in §6.7) redefines `Trainer.prepare_batch` with device support, the library keeps the **last** definition while the earlier teaching chapter temporarily binds its simpler pedagogical version during its own run.
+:::
+:::
+:::
+
+::: {.slide title="Repository Layout and Fresh-Clone Bootstrap"}
+[Developer Setup]{.kicker}
+
+A fresh clone of `d2l-neu` can render the entire HTML website on a laptop without a GPU because executed outputs are committed to `outputs/`:
+
+::: {.cols}
+::: {.col}
+```text
+d2l-neu/
+├── chapter_*/      source Markdown files
+├── img/            figures & tools/gen_*_figures.py
+├── d2l/            generated d2l package
+├── outputs/        committed notebook outputs (Git LFS)
+├── tools/          preprocess, lint, audit, slides
+├── docs/           build, writing, code & slide guides
+├── Makefile, make/ build targets (GNU Make >= 4.3)
+└── bootstrap.sh    one-time clone initialization
+```
+:::
+
+::: {.col}
+- **One-time bootstrap (`./bootstrap.sh`):**
+  1. Initializes **Git LFS** and pulls committed SVG/PNG plot outputs.
+  2. Creates `.venv-build` with Quarto and build dependencies.
+- **Fast local site render (`make html`):**
+  - Splices committed outputs from `outputs/<fw>/` into generated `.qmd` files and renders HTML via Quarto—no GPU or notebook execution required!
+  - Note: macOS ships an old BSD/GNU Make 3.81; use GNU Make $\ge 4.3$ (`gmake`).
+:::
+:::
+:::
+
+::: {.slide title="How Output Fingerprinting Detects Stale Notebooks"}
+[Reproducibility Audit]{.kicker}
+
+How does the build system know whether a committed output in `outputs/<fw>/<chapter>/<stem>.json` still matches the current code without re-running all 600+ notebooks on every build?
+
+::: {.cols}
+::: {.col}
+- **Three hashes stored per committed notebook output:**
+  1. **Prefix code hash (per cell):** SHA hash of that cell's source code **plus every earlier code cell in the notebook** (with trailing whitespace stripped).
+  2. **Framework version (`major.minor.patch`):** e.g., `torch==2.11.0` (stripping local build tags like `+cu128`).
+  3. **Transitive `d2l.X` symbol hash:** Hash of the `#@save` blocks defining every `d2l.X` symbol referenced by the notebook, plus any `d2l` helpers those symbols call in turn!
+:::
+
+::: {.col}
+- **What triggers staleness (and what does not):**
+  - Fixing a prose typo or stripping trailing spaces changes **no** code hash $\implies$ **0 stale cells**.
+  - Editing cell 3 (untagged) invalidates the prefix hash of **cells 3 through $n$ across all frameworks**.
+  - Editing a docstring inside `#@save` for `d2l.Trainer` invalidates **every notebook in the book that references `d2l.Trainer`**!
+:::
+:::
+:::
+
+::: {.slide title="Why Prefix Staleness Beats Static Dataflow Tracing"}
+[Hidden Side-Effect Channels]{.kicker}
+
+Why does D2L mark *every* cell after an edited cell $k$ as stale instead of only marking later cells that read variable names bound in cell $k$?
+
+::: {.cols}
+::: {.col}
+- **Static AST variable-name dataflow misses implicit state channels:**
+  - **PRNG state advancement:** Adding one random draw in cell 3 shifts the global or stateful random stream, changing every downstream dropout mask, weight initialization, and minibatch shuffle without sharing a variable name!
+  - **In-place object & global config mutation:** Modifying a model's weights in place, mutating a dictionary, or calling `plt.rcParams` / `torch.set_default_dtype` alters downstream cells invisibly.
+:::
+
+::: {.col}
+- **How `tools/audit_outputs.py` gates the build:**
+  - Executed automatically before `make html`.
+  - **Stale text output $\to$ hard build error** (stops `make html` until the notebook is re-executed and captured).
+  - **Stale image or missing multi-GPU hardware $\to$ warning** so contributors on CPU laptops can still preview prose edits while flagging GPU runs needed for the PR.
+:::
+:::
+:::
+
+::: {.slide title="The Git Contribution Workflow: Fork, Branch, Edit, PR"}
+[Proposing a Change]{.kicker}
+
+Every contribution—from a one-character equation fix to a new exercise—travels as a focused pull request from a branch of your fork:
+
+::: {.cols}
+::: {.col}
+- **One-line prose/equation fixes:**
+  - Click the GitHub **edit (pencil) icon** directly on `chapter_*/*.md` in your browser; GitHub forks, commits, and opens the PR automatically.
+- **Local checkout workflow for code or multi-line edits:**
+  ```bash
+  git clone https://github.com/<you>/d2l-neu.git
+  cd d2l-neu
+  git switch -c fix-attention-subscript
+  ```
+:::
+
+::: {.col}
+- **Inspect, commit, and open a pull request:**
+  ```bash
+  git status
+  git diff
+  git add chapter_attention/attention-scoring.md
+  git commit -m "Fix transposed subscript in attention"
+  git push -u origin fix-attention-subscript
+  gh pr create
+  ```
+- Keep each pull request scoped to **one logical change** so reviewers can verify diffs and outputs quickly.
+:::
+:::
+:::
+
+::: {.slide title="Linting, Executing, Capturing, and Rendering"}
+[Verification Loop]{.kicker}
+
+Before opening a pull request that touches code cells, run the four-step verification pipeline:
+
+::: {.cols}
+::: {.col}
+```bash
+# 1. Lint source syntax, tabs, slides & xrefs
+python3 tools/lint_source.py --corpus \
+  chapter_attention/attention-scoring.md
+
+# 2. If you touched a #@save block, rebuild d2l
+make lib
+```
+
+- `lint_source.py` catches unbalanced tab and slide divs, duplicate cell IDs, broken cross-reference labels, and missing blank lines before lists in $< 100\text{ ms}$.
+:::
+
+::: {.col}
+```bash
+# 3. Execute & capture outputs per framework
+make venv-pytorch
+make -B _notebooks/pytorch/<chap>/<file>.executed
+make capture-outputs FILES=<chap>/<file>.md
+
+# 4. Audit outputs & render HTML site
+make html
+```
+
+- Repeat step 3 for every framework tab present in the modified file (`pytorch`, `jax`, `tensorflow`, `mxnet`), and run `make audit-outputs` to confirm zero stale cells remain.
+:::
+:::
+:::
+
+::: {.slide title="Interactive Authoring with the D2L VS Code Extension"}
+[Editor Integration]{.kicker}
+
+If you prefer interactive cell execution over editing raw Markdown fences, the repository includes a dedicated VS Code extension in `.vscode-extension/`:
+
+::: {.cols}
+::: {.col}
+- **Two-way source synchronization:**
+  - Opens the generated `.ipynb` notebook of the active `.md` section with the matching framework kernel preselected (`make kernels`).
+  - Edits made to code or prose inside the notebook view are **written directly back into the `chapter_*/*.md` source file**, so a generated `.ipynb` never becomes an orphaned edit!
+:::
+
+::: {.col}
+- **Integrated multi-framework & slide workflow:**
+  - Switch live between PyTorch, JAX, TensorFlow, and MXNet tab views.
+  - Preview the section's Reveal.js slide deck side-by-side.
+  - Trigger full top-to-bottom notebook execution and output capture into `outputs/<fw>/` with a single command.
+:::
+:::
+:::
+
+::: {.slide title="Collaborating Effectively with Coding Agents"}
+[AI-Assisted Engineering]{.kicker}
+
+Three architectural properties of `d2l-neu` make coding agents unusually effective for bounded, multi-file engineering tasks:
+
+::: {.cols}
+::: {.col}
+- **1. Explicit build & style contracts:** `CLAUDE.md`, `docs/build-system.md`, `docs/writing-guide.md`, `docs/code-guide.md`, and `docs/slide-guide.md` document every rule in machine-readable form.
+- **2. Executable verification oracle:** An agent can run `lint_source.py`, execute every framework notebook, run `audit_outputs.py`, and inspect tracebacks autonomously.
+- **3. Mechanical cross-framework propagation:** Syncing a change across PyTorch and JAX tabs or regenerating SVG figures via `tools/gen_*_figures.py` is fast to automate and easy for a human to review in `git diff`.
+:::
+
+::: {.col}
+- **Two agent failure modes every human reviewer must guard against:**
+  1. **Editing generated files:** Verify `git status` shows changes in `chapter_*/*.md` (plus captured `outputs/`), never ad-hoc patches inside `_notebooks/` or `d2l/*.py`.
+  2. **Reward hacking / weakening checks:** When a test or notebook fails, an agent may loosen a threshold, silence an exception, or simplify the teaching example rather than fixing the root cause—always review the pedagogical diff!
+:::
+:::
+:::
+
+::: {.slide title="Debugging Regressions Across Noisy Training Runs"}
+[Information-Theoretic Bisection]{.kicker}
+
+When a commit breaks a stochastic training check (e.g., *"validation accuracy $\ge 0.90$"* passes with probability $p = 0.9$ on good commits and $q = 0.3$ on bad commits across 64 commits), standard deterministic `git bisect` often blames the wrong commit:
+
+::: {.cols}
+::: {.col}
+- **Why single-run `git bisect` fails:**
+  - Binary search across $64 = 2^6$ commits makes $6$ deterministic decisions; if each single training run is correct with probability $0.8\text{--}0.9$, the probability that all $6$ steps steer correctly is only $\sim (0.8)^6 \approx 26\%$!
+- **Repeated-trial majority voting:**
+  - Running $m$ seeds at each bisection step and thresholding pass counts reduces per-step error below $0.05 / 6$, requiring $6m$ total runs.
+:::
+
+::: {.col}
+- **Bayesian probabilistic bisection & Fano's lower bound:**
+  - Maintains a posterior $P(K = k \mid \text{runs})$ over the first bad commit $k \in \{1, \dots, 64\}$, testing near the posterior median and updating via Bayes' rule until $\max_k P(K = k) \ge 0.95$.
+  - Viewing each noisy training run as a binary channel with Shannon capacity $C = \max_{p(x)} I(X; Y)$ bits/run, **Fano's inequality** bounds the minimum expected runs $N_{\text{runs}}$ of *any* adaptive algorithm achieving error $P_e \le 0.05$:
+    $$N_{\text{runs}} \ge \frac{\log_2 64 - H_b(P_e) - P_e \log_2 63}{C}$$
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Tabs, Staleness, and Library Order"}
+[Check Your Understanding]{.kicker}
+
+Test your grasp of the D2L build system on these three questions:
+
+1. A source `.md` file has 5 cells: (1) `%%tab pytorch` defining `x`, (2) `%%tab jax` defining `x`, (3) an untagged cell `y = x * 2`, (4) `%%tab pytorch` modifying `x`, and (5) an untagged `print(y.sum())`. If you edit cell (3), which notebooks change and must be re-executed?
+2. You upgrade your local PyTorch environment from `torch==2.11.0+cu124` on Linux to `torch==2.11.0` CPU on macOS. Does `tools/audit_outputs.py` mark the committed PyTorch outputs stale? What if you upgrade to `torch==2.12.0`?
+3. `Trainer.prepare_batch` is defined with `#@save` in §3.2 (CPU-only) and redefined with `#@save` in §6.7 (moving batches to GPU). Which version is in `d2l/torch.py`, and which version runs at the end of the §3.2 notebook?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Both the PyTorch and JAX notebooks!** Because cell (3) is untagged, it belongs to every framework generated from the file (`pytorch` and `jax`), and editing it invalidates the prefix fingerprint of cells (3), (4), and (5) in both frameworks.
+2. Switching `2.11.0+cu124` $\to$ `2.11.0` CPU **does not mark outputs stale** because the fingerprint strips local build tags (`+cu124`) so CPU laptops can build the site without false alarms. Upgrading to **`2.12.0` marks all PyTorch outputs stale**.
+3. `d2l/torch.py` contains the **§6.7 GPU-aware definition** (last definition in book order wins). When §3.2 starts, `d2l.Trainer.prepare_batch` holds the §6.7 version until §3.2's own `@d2l.add_to_class` cell executes and overwrites it in memory with the CPU version for the remainder of §3.2.
+:::
+:::
+
+::: {.slide title="Summary: Contributing to Dive into Deep Learning"}
+[Key Takeaways]{.kicker}
+
+| Build Mechanism | Design Principle | Contributor Action |
+| :--- | :--- | :--- |
+| **Single source (`chapter_*/*.md`)** | Generates `.qmd`, `.ipynb`, `_slides/`, and `d2l/*.py` | Edit only the `.md` source (or via the VS Code sync extension); never hand-edit generated files |
+| **Multi-framework tabs** | `%%tab <fw>` scopes code; untagged cells run in all frameworks | When editing a shared cell, re-execute and capture outputs for *every* framework tab in that file |
+| **`#@save` library extraction** | `make lib` collects `#@save` blocks in book order (last wins) | Run `make lib` before re-executing notebooks whenever you edit a `#@save` block |
+| **Prefix output fingerprinting** | Hashes cell prefix, `major.minor.patch` fw version & `d2l.X` closure | Run `make capture-outputs` and verify `make audit-outputs` reports zero stale text cells |
+| **Source linter (`lint_source.py`)** | Fast ($<100\text{ ms}$) check on div/tab balance, cell IDs & xrefs | Run `python3 tools/lint_source.py --corpus <file>.md` before every commit |
+| **Git & coding-agent review** | Small branch-per-change PRs with executable verification | Review `git diff` to ensure agents edited sources rather than generated files or weakened checks |
+:::

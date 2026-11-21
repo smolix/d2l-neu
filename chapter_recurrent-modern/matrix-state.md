@@ -118,6 +118,7 @@ for name, (_, recalls) in results.items():
 ```
 
 Two properties jump out from the plot and table:
+
 1. **Recall scales with the total state entries $d_k d_v$:** The squared error curves lie directly on $(n - 1)/d_k$. Yet at $n = d_k = d_v = 64$, where the total squared error is $\approx 1$ (as large as the unit signal $\|\mathbf{v}_j\|^2 = 1$), nearest-neighbor recall is still $1.00$ ($96\%$ at $n = 128$). Why? Because the interference vector is spread isotropically across all $d_v$ value dimensions, so its projection onto any single candidate codebook vector has variance $\approx n / (d_k d_v)$. With $d_v = d_k$, doubling $d_k$ quadruples the state entries $d_k d_v$ and quadruples the number of pairs recalled at a fixed accuracy ($96\%$ at $n = 32$ for $d_k = 32$ and at $n = 128$ for $d_k = 64$; $94\%$ at $n = 512$ for $d_k = 128$; Exercise :exref:`ex_ms-value-width` varies $d_k$ and $d_v$ independently).
 2. **Key correlation creates an irreducible error floor:** When keys share a direction with weight $\rho$, pairwise key overlap averages $\approx \rho^2$, yielding expected squared error:
 
@@ -232,6 +233,7 @@ Neither pure form is ideal for GPU training: the token-level recurrence runs $T$
 :label:`fig_ms-semiseparable`
 
 Indexing positions within each chunk from $1$ to $m$, `chunked_linear_attention` proceeds in three batched steps:
+
 1. **Within chunks (diagonal blocks):** Evaluate the dual form :eqref:`eq_ms-semiseparable` inside each length-$m$ chunk in parallel using its $m \times m$ decay mask.
 2. **Across chunks (chunk-boundary states):** Let $\gamma^{(c)} = a_1 \cdots a_m$ be the total decay of chunk $c$. The state at the end of chunk $c$ satisfies the chunk-level linear recurrence
 
@@ -433,6 +435,7 @@ def memory(self, X, Q, K, V, log_a):
 ```
 
 In the forward pass:
+
 1. A width-4 depthwise causal convolution and SiLU mix adjacent tokens into $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ so a value token at position $t$ can bind directly to the key token at position $t - 1$ inside a single layer (:numref:`sec_hybrids` ablates this convolution).
 2. Queries and keys are $\ell_2$-normalized to unit length (matching the setting of :eqref:`eq_ms-capacity-law`).
 3. Each head's readout is RMS-normalized, gated by $\textrm{SiLU}(\mathbf{W}_g \mathbf{x}_t)$, and projected back to width $d$ :cite:`Yang.Wang.Shen.ea.2024`.
@@ -720,303 +723,225 @@ A matrix-valued state $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$ stores key�
 ::: {.cover}
 [Dive into Deep Learning · §12.6]{.kicker}
 
-Matrix-state recurrences<br>
-**outer-product memory · interference · decay · attention with a decaying mask · chunks · a trained memory**
+Matrix-State Recurrences and Gated Linear Attention<br>**outer-product key–value memory · capacity & interference laws · state space duality · chunked training**
 :::
 :::
 
-::: {.slide title="To Recall a Value, a Fixed-Size State Must Store Pairs"}
-[The problem]{.kicker}
+::: {.slide title="From Vector States to Associative Key–Value Matrices"}
+[Motivation]{.kicker}
 
-`rate = 0.05` near the top of a program; `rate` 200 lines later. A state
-of $64 \times 64$ numbers: how many such pairs can it hold?
+Much of language and code understanding is **associative recall**—binding a key to a value (`rate = 0.05`, or *"Mira is the ship's engineer"*) and retrieving the value when the key reappears hundreds of tokens later:
 
-- Attention keeps every key and value: compare the query with each key,
-  return the matching value.
-- A recurrent state has a fixed size. To recall, it must store **pairs**.
+- **How Transformers solve it:** Keep every past $(\mathbf{k}_s, \mathbf{v}_s)$ pair in an $O(T)$ KV cache and compare $\mathbf{q}_t$ against all of them.
+- **How a fixed-size state solves it:** Promote the state from a vector to a **matrix** $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$ updated by summing rank-$1$ outer products and queried by matrix-vector multiplication:
 
-::: {.d2l-note}
-Make the state a **matrix** $\mathbf{S}$: add $\mathbf{v}\mathbf{k}^\top$
-to write, multiply by a query $\mathbf{q}$ to read.
-:::
+$$\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top, \qquad \mathbf{y}_t = \mathbf{S}_t \mathbf{q}_t$$
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Outer-Product Writes and Cross-Talk in Toy Dimension 2"}
+[Geometric Intuition]{.kicker}
 
-- write and read key–value pairs with outer products;
-- predict the read error $(n-1)/d_k$ of $n$ random pairs, and why recall
-  grows with the number of entries of the state;
-- show that a decayed matrix recurrence is masked attention;
-- compute it in chunks, with matrix products and a short scan.
+Bind orthogonal unit keys $\mathbf{k}_1 = (1, 0)^\top$ and $\mathbf{k}_2 = (0, 1)^\top$ in $\mathbb{R}^2$ to scalar values $v_1 = 3$ and $v_2 = 5$:
 
-**Running example:** random unit keys of width 64 with a codebook of 256
-values; a two-block model of width 32 trained on associative recall with
-heads of size 4, 8, and 16.
-:::
+$$\mathbf{S} = 3\,\mathbf{k}_1^\top + 5\,\mathbf{k}_2^\top = (3, 5) \quad\Longrightarrow\quad \mathbf{S}\mathbf{k}_1 = 3, \quad \mathbf{S}\mathbf{k}_2 = 5$$
 
-::: {.slide title="This Deck Turns the State Into a Table of Pairs"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | the state |
-|---|---|
-| Gated Recurrent Networks | a vector, gated |
-| Sequence-to-Sequence Learning | one vector between two networks |
-| Linear Recurrences and Parallel Scans | linear in the state, scanned |
-| State Space Models | decays set by timescales |
-| Selective State Space Models | decays chosen by the token |
-| **Matrix-State Recurrences** | **a matrix of key–value pairs** |
-| The Delta Rule | pairs corrected, not added |
-| Hybrid Architectures | plus a few attention layers |
-:::
-
-::: {.col .narrow}
-- **Uses:** linear attention as a recurrence; Mamba's state
-  ($H$ channels × $N$ states); the linear scan.
-- **Skips:** GPU kernels; a decay per key coordinate.
-:::
-:::
-:::
-
-::: {.slide title="Two Orthogonal Keys Store Two Values Exactly"}
-$\mathbf{k}_1 = (1, 0)$, $\mathbf{k}_2 = (0, 1)$, values 3 and 5:
-
-$$\mathbf{S} = 3\,\mathbf{k}_1^\top + 5\,\mathbf{k}_2^\top = (3, 5), \qquad \mathbf{S}\mathbf{k}_1 = 3,\ \mathbf{S}\mathbf{k}_2 = 5$$
-
-Add $\mathbf{k}_3 = (1, 1)/\sqrt 2$ with value 7:
-$\mathbf{S} \approx (7.95, 9.95)$, and $\mathbf{S}\mathbf{k}_1 = 7.95$.
+- **Exact readout up to $d_k$ orthogonal keys:** Because $\mathbf{k}_1^\top \mathbf{k}_2 = 0$, querying $\mathbf{k}_1$ sees zero contribution from $v_2$.
+- **Cross-talk once $n > d_k$:** Now add a third pair $\mathbf{k}_3 = (1, 1)^\top / \sqrt{2}$ with value $v_3 = 7$. The state becomes $\mathbf{S} = (3 + 7/\sqrt{2},\; 5 + 7/\sqrt{2}) \approx (7.95, 9.95)$, so querying $\mathbf{k}_1$ returns **$7.95$ instead of $3$**!
 
 ::: {.d2l-note .warn}
-Two dimensions hold two pairs exactly; the third leaks into both.
+A key dimension of $d_k$ holds at most $d_k$ mutually orthogonal keys without cross-talk; beyond $d_k$ pairs, every non-orthogonal key leaks into the readout.
 :::
 :::
 
-::: {.slide title="A Matrix Memory Is Linear Attention Read From the Left"}
-Keys $\mathbf{k}_t \in \mathbb{R}^{d_k}$, values $\mathbf{v}_t \in
-\mathbb{R}^{d_v}$, state $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$:
+::: {.slide title="Matrix Recurrence Is Unnormalized Linear Attention"}
+[Left vs. Right Associativity]{.kicker}
 
-$$\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t\mathbf{k}_t^\top,\qquad
-\mathbf{y}_t = \mathbf{S}_t\mathbf{q}_t = \sum_{s \le t} (\mathbf{k}_s^\top\mathbf{q}_t)\,\mathbf{v}_s$$
+Unrolling $\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ from $\mathbf{S}_0 = \mathbf{0}$ reveals that an additive matrix memory computes causal linear attention (Katharopoulos et al., 2020):
 
-- Right: causal attention without the softmax.
-- Left: a recurrence with constant cost per token.
-- $\exp(\mathbf{k}^\top\mathbf{q})$ does not fold into a matrix; a
-  product of features does.
+$$\mathbf{y}_t = \underbrace{\Big(\sum_{s=1}^{t} \mathbf{v}_s \mathbf{k}_s^\top\Big)}_{\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}} \mathbf{q}_t = \sum_{s=1}^{t} (\mathbf{k}_s^\top \mathbf{q}_t)\, \mathbf{v}_s$$
+
+- **Right association (Attention view):** Compute scalar dot-product scores $\mathbf{k}_s^\top \mathbf{q}_t$ first and weight past values—costing $O(t)$ work per query ($O(T^2)$ overall).
+- **Left association (Recurrent view):** Accumulate the outer products into $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$—costing $O(d_v d_k)$ state and $O(d_v d_k)$ work per token regardless of context length $t$!
 :::
 
-::: {.slide title="Every Other Pair Leaks Into a Read"}
-$n$ pairs, unit keys, read key $j$:
+::: {.slide title="Exact Retrieval-Error Law for Random Unit Keys"}
+[Signal vs. Interference]{.kicker}
 
-$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top\mathbf{k}_j)\,\mathbf{v}_i$$
+When $n$ pairs with unit keys ($\|\mathbf{k}_i\| = 1$) and unit values ($\|\mathbf{v}_i\| = 1$) are stored in $\mathbf{S} = \sum_{i=1}^n \mathbf{v}_i \mathbf{k}_i^\top$, querying with key $\mathbf{k}_j$ separates the target signal from $n - 1$ interference terms:
 
-Random unit keys, unit values:
+$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)\, \mathbf{v}_i$$
 
-$$\mathbb{E}\,\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\|^2 = \frac{n - 1}{d_k}$$
+**Proposition (Expected Squared Read Error).** If $\mathbf{k}_1, \ldots, \mathbf{k}_n$ are drawn independently and uniformly on the unit sphere in $\mathbb{R}^{d_k}$ independently of unit values $\mathbf{v}_1, \ldots, \mathbf{v}_n \in \mathbb{R}^{d_v}$, then:
 
-Each overlap $\mathbf{k}_i^\top\mathbf{k}_j$ has mean 0 and variance
-$1/d_k$; $n - 1$ of them add up.
+$$\mathbb{E}\,\big\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\big\|^2 = \sum_{i \neq j} \mathbb{E}\big[(\mathbf{k}_i^\top \mathbf{k}_j)^2\big]\,\|\mathbf{v}_i\|^2 = \frac{n - 1}{d_k}$$
 
-::: {.d2l-note}
-No age in the formula: pairs are lost to **interference**, not to time.
+::: {.d2l-note .rule}
+**Crowding, not aging:** Every stored pair suffers the exact same expected error $(n-1)/d_k$ regardless of *when* it was written.
 :::
 :::
 
-::: {.slide title="The Measured Error Sits on (n − 1)/d_k"}
+::: {.slide title="Empirical Error and Codebook Recall vs. Pair Load n"}
+[Theoretical vs. Measured Capacity]{.kicker}
+
+Comparing empirical squared error and nearest-neighbor recall (over a 256-vector unit codebook in $\mathbb{R}^{d_k}$) against the theoretical line $(n - 1)/d_k$:
+
 @!matrix-state-interference-2
 :::
 
-::: {.slide title="Recall Survives an Error as Large as the Signal"}
-At $d_k = d_v = 64$, $n = 64$: squared error $\approx 1$, recall 1.00.
+::: {.slide title="Why Nearest-Neighbor Recall Scales with Entries dk dv"}
+[Isotropic Error Projection]{.kicker}
 
-- Decoding compares the read with 256 codebook values.
-- Only the error's component **along a candidate** competes:
-  variance $\approx n/(d_k d_v)$, here about $(1/8)^2$.
+Look at the $d_k = d_v = 64$ row of the table: at $n = 64$ pairs, the squared error is $(64-1)/64 \approx 1.0$ (as large as the unit signal $\|\mathbf{v}_j\|^2 = 1$), yet nearest-neighbor recall is **$1.00$** ($0.96$ at $n = 128$)! Why?
 
-::: {.d2l-note}
-Recall depends on $n/(d_k d_v)$, not on the squared error alone.
-:::
-:::
-
-::: {.slide title="Four Times the Entries Hold Four Times the Pairs"}
-Values as wide as keys, so the state has $d_k^2$ entries:
-
-| $d_k$ | entries | recall 0.96 at |
-|---|---|---|
-| 32 | 1,024 | 32 pairs |
-| 64 | 4,096 | 128 pairs |
-| 128 | 16,384 | 512 pairs (0.94) |
-
-::: {.d2l-note}
-About one pair per 32 entries at 95% recall: capacity grows with the
-entries $d_k d_v$, as long as keys are not much narrower than values.
-:::
+- **Isotropic spread across $d_v$ value dimensions:** The total interference vector has squared norm $\approx n / d_k$, but it points in a random direction in $\mathbb{R}^{d_v}$.
+- **1D projection onto any wrong codebook vector $\mathbf{c} \in \mathbb{R}^{d_v}$:** Only the component along $\mathbf{c}$ competes with the true value $\mathbf{v}_j$, and that 1D projection has variance:
+  $$\textrm{Var}\big(\mathbf{c}^\top (\mathbf{S}\mathbf{k}_j - \mathbf{v}_j)\big) = \frac{n - 1}{d_k\, d_v}$$
+- **The $O(d_k d_v)$ entry law:** With $d_v = d_k$, doubling $d_k$ **quadruples** the state entries $d_k^2$ and **quadruples** the number of pairs recalled at $\sim 95\%$ accuracy ($32 \to 128 \to 512$ pairs).
 :::
 
-::: {.slide title="Check: Where Does the Squared Error Reach 1?"}
-$d_k = d_v = 64$, random unit keys and values.
+::: {.slide title="Pitfall: Key Correlation Creates an Irreducible Floor"}
+[Anisotropic Interference]{.kicker}
 
-1. At which $n$ is the expected squared error 1?
-2. Why is recall still 0.96 at twice that?
+What happens if keys are not isotropic, but share a common unit direction with weight $\rho$ ($\mathbf{k}_i \propto \sqrt{1 - \rho^2}\,\mathbf{g}_i + \rho\,\mathbf{c}$)?
 
-::: {.fragment .fade-up}
-1. $(n - 1)/64 = 1$: $n = 65$.
-2. Only the error's component along a codebook value matters; at
-   $n = 128$ it has a standard deviation of about $0.18$ against a signal
-   of 1.
-:::
+$$\mathbb{E}\,\big\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\big\|^2 \approx (n - 1)\Big(\rho^4 + \frac{(1 - \rho^2)^2}{d_k}\Big)$$
+
+- **Non-zero mean overlap ($\mathbf{k}_i^\top \mathbf{k}_j \approx \rho^2$):** The term $(n - 1)\rho^4$ **does not decrease as key width $d_k$ grows**!
+- **Severe recall loss:** In our experiment at $d_k = 64$ with $\rho = 0.5$, squared error jumps $4.6\times$ above random keys and 64-pair recall drops from **$1.00$ to $0.49$**—showing why learned projections must center and spread keys across the sphere.
 :::
 
-::: {.slide title="Correlated Keys Add an Error No Width Removes"}
-Every key shares a direction with weight $\rho$: overlap $\approx \rho^2$ +
-noise.
+::: {.slide title="Bounded-Interference Memory via Input-Dependent Decay"}
+[Forgetting Stale Pairs]{.kicker}
 
-$$\mathbb{E}\,\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\|^2 \approx (n - 1)\Big(\rho^4 + \frac{(1-\rho^2)^2}{d_k}\Big)$$
+Without decay, interference $(n - 1)/d_k$ grows without bound as sequence length $T \to \infty$. Multiplying the state matrix by a scalar decay $a_t \in (0, 1)$ before each write fades old pairs:
 
-- $\rho = 0.5$, $d_k = 64$: 4.6 times the error of random keys.
-- Recall of 64 pairs: 0.49 instead of 1.00.
-- $\rho^4$ does not shrink as $d_k$ grows.
+$$\mathbf{S}_t = a_t\, \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top, \qquad a_t \in (0, 1)$$
+
+- **Effective sliding window:** At a constant decay $a$, a pair written $\ell$ steps ago carries weight $a^\ell$. The weights sum to $\sum_{\ell \ge 0} a^\ell = \frac{1}{1 - a}$ ($10$ pairs at $a = 0.9$; $100$ pairs at $a = 0.99$).
+- **Bounded steady-state interference:** Squared weights sum to $\sum_{\ell \ge 0} a^{2\ell} = \frac{1}{1 - a^2}$, bounding expected squared interference at any length $T$ by $\frac{1}{(1 - a^2)d_k}$.
 :::
 
-::: {.slide title="Decay Keeps About the Last 1/(1 − a) Pairs"}
-$$\mathbf{S}_t = a_t\,\mathbf{S}_{t-1} + \mathbf{v}_t\mathbf{k}_t^\top$$
+::: {.slide title="Mamba and Mamba-2 as Decayed Matrix-State Recurrences"}
+[Unifying SSMs and Linear Attention]{.kicker}
 
-- Constant $a$: weights $a^\ell$ sum to $1/(1-a)$: 10 pairs at $a = 0.9$,
-  100 at $a = 0.99$.
-- Interference adds squares: like $1/(1-a^2)$ pairs, about half as many.
-- Fixed per head (RetNet); from the input, per head (Mamba-2); per key
-  coordinate (gated linear attention).
+Stacking the $H$ channel states $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ of Mamba's selective SSM (§12.5) as rows of a matrix $\mathbf{S}_t \in \mathbb{R}^{H \times N}$ exposes the exact same outer-product memory structure:
+
+$$\mathbf{S}_t = \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t \odot \mathbf{x}_t)\,\mathbf{B}_t^\top, \qquad \mathbf{y}_t = \mathbf{S}_t \mathbf{C}_t$$
+
+| Architecture | Value $\mathbf{v}_t$ | Key $\mathbf{k}_t$ & Query $\mathbf{q}_t$ | Decay Structure on $\mathbf{S}_{t-1} \in \mathbb{R}^{d_v \times d_k}$ |
+| :--- | :--- | :--- | :--- |
+| **Linear Attention** | $\mathbf{v}_t \in \mathbb{R}^{d_v}$ | $\mathbf{k}_t, \mathbf{q}_t \in \mathbb{R}^{d_k}$ | No decay ($a_t = 1$) |
+| **RetNet** | $\mathbf{v}_t \in \mathbb{R}^{d_v}$ | $\mathbf{k}_t, \mathbf{q}_t \in \mathbb{R}^{d_k}$ | Fixed scalar $a \in (0, 1)$ per head |
+| **Mamba-2 / Scalar GLA** | $\mathbf{v}_t \in \mathbb{R}^{d_v}$ | $\mathbf{k}_t, \mathbf{q}_t \in \mathbb{R}^{d_k}$ | Input-dependent scalar $a_t \in (0, 1)$ per head |
+| **Vector-Decay GLA** | $\mathbf{v}_t \in \mathbb{R}^{d_v}$ | $\mathbf{k}_t, \mathbf{q}_t \in \mathbb{R}^{d_k}$ | Per-key-coordinate $\mathbf{S}_{t-1}\textrm{diag}(\boldsymbol{\alpha}_t)$ ($\boldsymbol{\alpha}_t \in (0, 1)^{d_k}$) |
+| **Mamba-1 (§12.5)** | $\boldsymbol{\Delta}_t \odot \mathbf{x}_t \in \mathbb{R}^H$ | $\mathbf{B}_t, \mathbf{C}_t \in \mathbb{R}^N$ | Full entrywise matrix $\mathbf{E}_t = \exp(\textrm{diag}(\boldsymbol{\Delta}_t)\boldsymbol{\Lambda})$ |
 :::
 
-::: {.slide title="Mamba's State Is a Matrix Memory With a Decay per Entry"}
-$H$ channels, $N$ states each, rows of $\mathbf{S}_t \in \mathbb{R}^{H \times N}$:
+::: {.slide title="State Space Duality (SSD): Recurrence vs. Masked Dual"}
+[Primal and Dual Forms]{.kicker}
 
-$$\mathbf{S}_t = \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t \odot \mathbf{x}_t)\,\mathbf{B}_t^\top, \qquad \mathbf{y}_t = \mathbf{S}_t\mathbf{C}_t$$
+Unrolling $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ with scalar per-head decay $a_t$ attenuates pair $s$ at query $t \ge s$ by $L_{ts} = a_{s+1} a_{s+2} \cdots a_t = \exp(\sum_{r=s+1}^t \log a_r)$:
 
-| memory | Mamba |
-|---|---|
-| value | $\boldsymbol{\Delta}_t \odot \mathbf{x}_t$ (step-scaled input) |
-| key, query | $\mathbf{B}_t$, $\mathbf{C}_t$ |
-| decay | $\mathbf{E}_t = \exp(\textrm{diag}(\boldsymbol{\Delta}_t)\,\boldsymbol{\Lambda})$, per entry |
+$$\mathbf{y}_t = \sum_{s=1}^{t} L_{ts}\,(\mathbf{k}_s^\top \mathbf{q}_t)\,\mathbf{v}_s \quad\Longleftrightarrow\quad \mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\,\mathbf{V}$$
 
-$\boldsymbol{\Delta}_t$: the $H$ step sizes; $\boldsymbol{\Lambda}$: the
-$N$ rates of each channel, $H \times N$. Mamba-2: one decay per head.
+- **State Space Duality (Dao & Gu, 2024):** The recurrent state-space form (`linear_attention_recurrent`, $O(T d_k d_v)$ work, $O(d_k d_v)$ memory) and the causally masked linear attention form (`linear_attention_dual`, $O(T^2(d_k + d_v))$ work, $O(T^2)$ memory) compute the exact same tensor $\mathbf{Y}$.
 :::
 
-::: {.slide title="A Decayed Recurrence Is Attention With a Decaying Mask"}
-$$\mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\,\mathbf{V},\qquad L_{ts} = a_{s+1}\cdots a_t \ (s \le t),\ 0 \textrm{ otherwise}$$
+::: {.slide title="Block-Semiseparable Structure and Chunked Training"}
+[Hardware-Efficient Chunking]{.kicker}
 
-- All $a_t = 1$: $\mathbf{L}$ is the causal mask.
-- Form $\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top$ first: attention,
-  quadratic in $T$, parallel.
-- Sum from the left: the recurrence, linear in $T$, sequential.
-
-::: {.d2l-note}
-Two orders of computing the same products.
-:::
-:::
-
-::: {.slide title="Chunks: Attention Inside, a Recurrence Across"}
 ::: {.cols .vc}
 ::: {.col}
-1. **Within** chunks of $m$: masked attention.
-2. **Across:** $\mathbf{S}^{(c)} = \gamma^{(c)}\mathbf{S}^{(c-1)} + \sum_t L_{mt}\mathbf{v}_t\mathbf{k}_t^\top$, a scan over $T/m$ chunks.
-3. **Read:** each step reads the state at its chunk's start.
+Partitioning $T$ tokens into $T/m$ chunks of length $m$ combines Tensor Core GEMMs with linear scaling:
 
-$\gamma^{(c)}$: product of the chunk's decays; $L_{mt}$: decay from step
-$t$ to the chunk's end. Step 2 is the new idea.
-:::
-
-::: {.col .fig .big}
-![](../img/mdl-modernrnn-semiseparable.svg)
-:::
-:::
+1. **Intra-chunk (blue diagonal $m \times m$ blocks):** Evaluate $(\mathbf{L}_{\text{diag}} \odot \mathbf{Q}_c \mathbf{K}_c^\top)\mathbf{V}_c$ in parallel across all chunks via batched matrix multiplication.
+2. **Inter-chunk scan (orange off-diagonal blocks):** Because $L_{ts}$ factors across chunk boundaries, every off-diagonal block of $\mathbf{L}$ has **rank $1$** (and rank $\le d_k$ in $\mathbf{L}\odot\mathbf{Q}\mathbf{K}^\top$). Scanning the $d_v \times d_k$ chunk-end states $\mathbf{S}^{(c)} = \gamma^{(c)}\mathbf{S}^{(c-1)} + \text{writes}^{(c)}$ across $T/m$ chunks takes $\lceil\log_2(T/m)\rceil$ rounds.
+3. **Past-state readout:** Add $(a_1\cdots a_t)\mathbf{S}^{(c-1)}\mathbf{q}_t$ to each chunk position.
 :::
 
-::: {.slide title="Recurrence, Dual Form, and Chunks Agree to a Few Millionths"}
+::: {.col .fig}
+![](../img/mdl-modernrnn-semiseparable.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Verifying Equivalence of Recurrent, Dual, and Chunked"}
+[Numerical Verification]{.kicker}
+
+Comparing sequential `linear_attention_recurrent`, full $T \times T$ `linear_attention_dual`, and `chunked_linear_attention` ($m \in \{16, 64, 256\}$) at $T = 512, d_k = d_v = 64$:
+
 @!matrix-state-chunked-computation-2
 
-One random sequence: $T = 512$, $d_k = d_v = 64$, decays in
-$(0.8, 0.99)$. The chunk size changes the work, not the result.
-:::
-
-::: {.slide title="Check: How Much Memory Does Each Order Need?"}
-One head, $T = 4096$, $d_k = d_v = 64$, 32-bit floats.
-
-1. The dual form's $T \times T$ matrix?
-2. Chunks of 64: $T \times 64$ mask entries plus one $64 \times 64$
-   state per chunk?
-
-::: {.fragment .fade-up}
-1. $4096^2 \times 4$ bytes $= 64$ MB, growing with $T^2$.
-2. $1$ MB $+ 64 \times 16$ KB $\approx 2$ MB, growing with $T$.
-:::
-:::
-
-::: {.slide title="Gated Linear Attention: The Memory Plus Three Parts"}
-Per head: query, key, value, decay $a_t = \sigma(\mathbf{w}^\top\mathbf{x}_t + b)$; chunked memory.
-
-- **Short causal convolution (width 4) + SiLU** on $\mathbf{q}, \mathbf{k}, \mathbf{v}$: a name and its value, on neighboring tokens, become one pair.
-- Unit-length queries and keys, as in the capacity law.
-- Output: normalized per head (RMS), gated by $\textrm{SiLU}(\mathbf{W}_g\mathbf{x}_t)$.
-
 ::: {.d2l-note}
-The convolution matters most: without it, a key and its value never meet
-in one write, and every run of the hybrids section without it recalls
-fewer pairs.
+All three algorithms match to $\sim 10^{-6}$ relative error while chunking reduces peak working memory from $O(T^2)$ to $O(Tm + (T/m)d_v d_k)$.
 :::
 :::
 
-::: {.slide title="Associative Recall: Pairs, Then Every Key as a Query"}
+::: {.slide title="The Gated Linear Attention (GLA) Sequence Mixer"}
+[Layer Architecture]{.kicker}
+
+`GatedLinearAttention` wraps multi-head chunked matrix memory into a drop-in mixer for `SeqLM`:
+
+- **Width-4 depthwise causal convolution + SiLU on $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$:** Crucial when a key and its value arrive on adjacent tokens $(t-1, t)$ so a single write $\mathbf{v}_t \mathbf{k}_t^\top$ can bind both tokens together.
+- **$\ell_2$-normalized queries and keys:** Enforces $\|\mathbf{q}_{t,h}\|_2 = \|\mathbf{k}_{t,h}\|_2 = 1$ per head, matching the unit-sphere capacity law and preventing inner-product blow-up.
+- **Log-uniform head timescales (`init_decays`):** Initializes head decay biases $b_h = -\log(e^{1/\tau_h} - 1)$ so initial memory windows $\tau_h$ span $[4, 256]$ steps across heads.
+- **Per-head RMSNorm and SiLU output gate:** Normalizes each head's readout before multiplying by $\textrm{SiLU}(\mathbf{W}_g \mathbf{x}_t)$ and projecting via $\mathbf{W}_o$.
+:::
+
+::: {.slide title="Multi-Query Associative Recall Benchmark Setup"}
+[Synthetic Stress Test]{.kicker}
+
+Does a trained neural network obey the $O(d_k d_v)$ capacity law derived for random unit keys? We test on **multi-query associative recall** (Arora et al., 2024):
+
+- **Sequence format:** Present $n$ key–value pairs (distinct key tokens from $128$ possible keys, each followed by a value token from $4$ classes), then filler tokens, and finally all $n$ keys again in random permutation as queries.
+
 @!matrix-state-associative-recall-1
-
-- Key token, value token; filler; every key again as a query.
-- Ids 0–3 values, 4–515 keys, 516 filler. Key 273 written twice: the
-  answer is the newer value, 0.
 :::
 
-::: {.slide title="A Larger State Holds More Pairs at the Same Parameter Count"}
+::: {.slide title="Varying State Entries at Constant Parameter Count"}
+[Experimental Design & Results]{.kicker}
+
+We fix a 2-block `SeqLM` at width $d = 32$ ($\sim 36{,}200$ parameters) and partition the width into $h \in \{8, 4, 2\}$ heads of dimension $d_h = 32/h \in \{4, 8, 16\}$. Each head holds a $d_h \times d_h$ matrix, so total state entries per layer scale as $h \cdot d_h^2 \in \{128, 256, 512\}$ at **identical parameter count**:
+
 @!matrix-state-associative-recall-4
-
-Width 32 cut into 8, 4, or 2 heads: about 37,000 parameters each, two
-runs each.
 :::
 
-::: {.slide title="Twice the Entries, About Twice the Pairs"}
-- 4 pairs: every model recalls 98% or more.
-- 64 pairs: 128 entries about half, 256 entries about three quarters.
-- 256 entries with $2n$ pairs $\approx$ 128 entries with $n$.
-- 512 entries: best on average at 32 and 64 pairs, but its two runs
-  differ the most.
+::: {.slide title="Trained GLA Obeys the Matrix Capacity Law—Until Rebound"}
+[Interpreting Recall & Next Step]{.kicker}
 
-::: {.d2l-note}
-From 128 to 256 entries, a trained network follows the law of random
-keys: twice the entries, about twice the pairs.
+The multi-query recall curves confirm the theoretical scaling law and expose one remaining flaw:
+
+- **Capacity scales with state entries $h \cdot d_h^2$:** At $4$ pairs, all three head configurations achieve $\ge 98\%$ accuracy. At $64$ pairs, doubling state entries from $128$ ($8 \times 4^2$) to $256$ ($4 \times 8^2$) lifts recall from $\sim 0.50$ to $\sim 0.75$—roughly doubling the number of pairs recalled at a fixed accuracy level without adding a single trainable parameter!
+- **The additive overwrite flaw:** Because $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ only *adds* outer products, binding an existing key $\mathbf{k}$ to a new value $\mathbf{v}^{\text{new}}$ returns a superposition of old and new values. Teaching the matrix state to **read before writing** is the goal of §12.7.
+:::
+
+::: {.slide title="Concept Check: Capacity, Chunk Memory, and Duality"}
+[Check Your Understanding]{.kicker}
+
+Work out the following three questions:
+
+1. At width $d = 256$, compare the per-layer state entries of an 8-head `GatedLinearAttention` layer ($d_h = 32$) against a 4-head layer ($d_h = 64$). Which holds more key–value pairs, and by what factor?
+2. For one head with $T = 4{,}096$ and $d_k = d_v = 64$ in `float32` ($4$ bytes), how much memory does the full $T \times T$ dual mask $\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top$ occupy compared to chunked evaluation with chunk size $m = 64$?
+3. Under a constant decay $a = 0.95$, what is the effective number of past pairs $1/(1 - a)$ retained, and what is the maximum expected squared interference $1/((1 - a^2)d_k)$ at $d_k = 64$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $8$ heads of $32 \times 32$ hold $8 \times 1{,}024 = \mathbf{8{,}192\text{ entries}}$; $4$ heads of $64 \times 64$ hold $4 \times 4{,}096 = \mathbf{16{,}384\text{ entries}}$—**twice as many state entries and $\sim 2\times$ the pair capacity** at the exact same $W_{qkv}$ parameter count!
+2. Full dual matrix: $4{,}096^2 \times 4\text{ B} = \mathbf{64\text{ MB}}$; chunked ($64$ chunks of $64 \times 64$ masks + $64$ chunk states of $64 \times 64$): $2 \times 64 \times 64^2 \times 4\text{ B} = \mathbf{2\text{ MB}}$ ($32\times$ smaller, scaling linearly with $T$).
+3. Effective window: $1/(1 - 0.95) = \mathbf{20\text{ pairs}}$; steady-state interference bound: $1 / ((1 - 0.95^2) \times 64) \approx 1 / (0.0975 \times 64) \approx \mathbf{0.16}$.
 :::
 :::
 
-::: {.slide title="Check: A Key Written Twice"}
-A program sets `rate = 0.05`, later `rate = 0.07`. What does the memory
-return for the key of `rate`?
+::: {.slide title="Summary: Matrix-State Recurrences and Linear Attention"}
+[Key Takeaways]{.kicker}
 
-::: {.fragment .fade-up}
-The **sum** of both values, each scaled by the decays since its write. A
-decay fades the old value, and every other pair with it.
+| Property / Mechanism | Mathematical Form | Scaling & Modeling Role |
+| :--- | :--- | :--- |
+| **Outer-Product Memory** | $\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top \in \mathbb{R}^{d_v \times d_k}$, $\mathbf{y}_t = \mathbf{S}_t \mathbf{q}_t$ | Equivalence with causal linear attention $\sum_{s \le t} (\mathbf{k}_s^\top \mathbf{q}_t)\mathbf{v}_s$ |
+| **Random-Key Interference** | $\mathbb{E}\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\|^2 = (n - 1)/d_k$ | Isotropic error projects onto codebook with variance $(n-1)/(d_k d_v)$ |
+| **Recall Capacity Scaling** | $n_{\max} \propto d_k d_v$ per head ($d^2 / h$ per layer) | Fewer, wider heads store proportionally more pairs at equal params |
+| **State Space Duality (SSD)** | $\mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\mathbf{V}$, $L_{ts} = \prod_{r=s+1}^t a_r$ | Unifies decayed matrix recurrence and masked linear attention |
+| **Chunked Training** | Length-$m$ diagonal GEMMs + $(T/m)$-step scan | Exploits rank-1 off-diagonal decay blocks for $O(T)$ memory & Tensor Core speed |
 :::
-:::
 
-::: {.slide title="Recap"}
-| | write | transition | computed as |
-|---|---|---|---|
-| linear attention | $\mathbf{v}\mathbf{k}^\top$ | $\mathbf{S}$ | recurrence or masked attention |
-| RetNet | $\mathbf{v}\mathbf{k}^\top$ | $a\mathbf{S}$, $a$ fixed per head | chunks |
-| Mamba-2, this section | $\mathbf{v}\mathbf{k}^\top$ | $a_t\mathbf{S}$, $a_t$ from the input | chunks |
-| Mamba | $(\boldsymbol{\Delta}\odot\mathbf{x})\mathbf{B}^\top$ | $\mathbf{E}_t \odot \mathbf{S}$ | scan |
-
-Read error $(n-1)/d_k$; recall grows with the entries $d_k d_v$: a
-$64 \times 64$ state recalls 128 random pairs at 96%. Decay keeps about
-$1/(1-a)$ pairs; trained, 128 → 256 entries hold about twice the pairs.
-
-**Next:** correct a pair instead of adding to it.
-:::

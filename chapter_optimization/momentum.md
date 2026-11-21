@@ -68,6 +68,7 @@ d2l.show_trace_2d(f_valley, d2l.train_2d(momentum_2d, valley_grad, eta=0.6,
 ```
 
 Two limiting cases explain why momentum simultaneously accelerates the flat coordinate and stabilizes the steep one:
+
 * **Persistent gradients (flat floor):** When successive gradients remain nearly constant ($\mathbf{g}_{t-k} \approx \mathbf{g}$), the velocity builds up to $\mathbf{v}_t \approx (1 + \beta + \beta^2 + \cdots)\mathbf{g} = \frac{1}{1-\beta}\mathbf{g}$, yielding the **effective step size**
   $$\eta_\textrm{eff} = \frac{\eta}{1-\beta}.$$
 * **Alternating gradients (steep walls):** When successive gradients alternate in sign ($\mathbf{g}_{t-k} \approx (-1)^k \mathbf{g}$), the geometric series sums to $1 - \beta + \beta^2 - \cdots = \frac{1}{1+\beta}$, damped to an effective step size of $\frac{\eta}{1+\beta}$.
@@ -160,6 +161,7 @@ d2l.show_trace_2d(f_valley, d2l.train_2d(momentum_2d, valley_grad, eta=0.3,
 ## Momentum on Data
 
 Our analysis predicts two distinct regimes when training on data:
+
 1. **Curvature-limited regime (accurate gradients, large $\kappa$):** Momentum permits a larger effective step $\eta_{\text{eff}}$ and reduces the required iteration count by a large factor.
 2. **Noise-limited regime (small minibatches):** The stationary noise floor is governed by $\eta_{\text{eff}} = \eta/(1-\beta)$, so adding $\beta = 0.9$ shifts the optimal learning rate down by a factor of $1 - \beta = 0.1$ while achieving comparable convergence speed.
 
@@ -249,6 +251,7 @@ for (name, beta), lrs in grids.items():
 ```
 
 Both predictions hold quantitatively:
+
 * On full-batch **softmax regression**, adding momentum $\beta = 0.9$ increases the optimal learning rate from $\eta = 0.125$ to $\eta = 0.4$ ($\eta_{\text{eff}} = 4.0$, a $32\times$ larger effective step), cutting the steps needed to reach loss $0.5$ by more than $6\times$ ($625 \to 100$ steps) and lowering the final loss from $0.472$ to $0.365$.
 * On small-batch **`FashionCNN`** ($b = 32$), the run is noise-limited: the optimal learning rate drops from $\eta \approx 0.1$–$0.2$ at $\beta = 0$ to $\eta \approx 0.02$–$0.04$ at $\beta = 0.9$—a factor of $5$–$10$ that keeps the effective step $\eta_{\text{eff}}$ within one step of the factor-of-two grid of its $\beta = 0$ value—and both configurations reach loss $0.3$ and final losses of $0.26$–$0.30$ within the single-seed variation of :numref:`sec_test_models`.
 
@@ -324,411 +327,268 @@ In practice, $\beta = 0.9$ is a robust default across most architectures, with t
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.5]{.kicker}
+[Dive into Deep Learning · §9.4]{.kicker}
 
-Momentum<br>**the velocity · the effective step · acceleration and damping · momentum on data**
+Momentum and Nesterov Accelerated Gradient<br>**velocity recursion · effective step size · memory timescale · critical damping & √κ acceleration · Nesterov look-ahead**
 :::
 :::
 
-::: {.slide title="Gradient Descent Needs 47 Steps on a Valley with κ = 20"}
-[The problem]{.kicker}
+::: {.slide title="Why Memoryless Gradient Descent Struggles on Valleys"}
+[Motivation]{.kicker}
 
-The valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$, from $(-5, -2)$, gradient
-descent at its best learning rate $\eta = 2/(0.2 + 4) \approx 0.476$:
+On the quadratic valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$ ($\lambda_1 = 0.2, \lambda_2 = 4.0, \kappa = 20$), plain gradient descent at its optimal rate $\eta^\star = \frac{2}{0.2+4} \approx 0.476$ needs **$47$ steps** to reach $1\%$ error and **$139$ steps** to reach $10^{-6}$ error:
 
-| target | steps |
-|:--|--:|
-| both coordinates below 1% of their starting values | 47 |
-| both coordinates below $10^{-6}$ times their starting values | 139 |
-
-::: {.d2l-note .warn}
-The steep wall (curvature 4) holds $\eta$ below a ceiling of 0.5; at that
-rate the flat floor (curvature 0.2) shrinks by less than 10% per step.
-Steps grow like the condition number $\kappa = 4/0.2 = 20$.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- write the momentum update and unroll it into a sum of past gradients;
-- convert a momentum $\beta$ into a memory of $1/(1-\beta)$ steps and an
-  effective step $\eta/(1-\beta)$, and say where the speed-up comes from;
-- compute the best $\eta$ and $\beta$ for a quadratic and tell overdamped
-  from underdamped;
-- predict where momentum saves steps on data and where it only rescales
-  the learning rate.
-
-**Idea:** step along a decaying sum of past gradients.
-
-**Running example:** the valley, $\kappa = 20$; then Fashion-MNIST at full
-batch and at 32 images per batch.
-:::
-
-::: {.slide title="Momentum Answers Curvature without Measuring It"}
-[Where this fits]{.kicker}
-
-| part | decks |
-|---|---|
-| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| **2 · Direction:** which way to step | Two Test Models · **Momentum** · Adam · AdamW · Muon |
-| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
-
-- **Uses:** gradient descent on the valley and its ceiling
-  $\eta\lambda < 2$ ($\lambda$: curvature); the noise of minibatch SGD;
-  the image classifier `FashionCNN`.
-- **Skips:** proofs of the rates; momentum inside Adam.
-:::
-
-::: {.slide title="At η = 0.6 Gradient Descent Diverges across the Valley"}
-[The valley]{.kicker}
-
-One step multiplies each coordinate by $1 - \eta\lambda$:
-
-| coordinate | curvature $\lambda$ | factor at $\eta = 0.6$ |
-|:--|--:|--:|
-| $x_1$ (floor) | 0.2 | $0.88$ |
-| $x_2$ (wall) | 4 | $-1.4$ |
-
-After 20 steps:
-
-@!momentum-an-ill-conditioned-problem-2
+- **Why memoryless steps are bottlenecked by $O(\kappa)$:** Each step $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\mathbf{g}_t$ looks only at the instantaneous gradient $\mathbf{g}_t$, ignoring the clear geometric signal in consecutive gradients:
+  - **Along the flat valley floor ($x_1$):** Successive gradients point **persistently in the same direction**, begging for a larger step.
+  - **Across the steep valley walls ($x_2$):** Successive gradients **alternate in sign** as the iterate zigzags from wall to wall.
 
 ::: {.d2l-note}
-Along $x_2$ the gradient changes sign at every step. A sum of successive
-gradients would cancel most of it.
+**Polyak's heavy-ball idea (1964):** Step along an exponentially decaying sum of past gradients (**velocity**) so persistent floor gradients accumulate while oscillating wall gradients cancel!
 :::
 :::
 
-::: {.slide title="The Velocity Is a Decaying Sum of Past Gradients"}
-[The momentum method]{.kicker}
+::: {.slide title="Heavy-Ball Momentum: The Velocity Recursion"}
+[Update Equations]{.kicker}
 
-$$\mathbf{v}_t = \beta\, \mathbf{v}_{t-1} + \mathbf{g}_t,\qquad
-\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, \mathbf{v}_t,\qquad
-\mathbf{v}_0 = \mathbf{0}$$
+Given gradient $\mathbf{g}_t$ at step $t$ (exact or minibatch), heavy-ball momentum maintains a velocity buffer $\mathbf{v}_t \in \mathbb{R}^d$ initialized at $\mathbf{v}_0 = \mathbf{0}$ and updates with momentum coefficient $\beta \in [0, 1)$:
 
-- $\mathbf{g}_t$: gradient at the parameters $\mathbf{x}_t$; $\eta$:
-  learning rate; $\beta \in [0, 1)$: the momentum.
-- Unrolled: $\mathbf{v}_t = \mathbf{g}_t + \beta\,\mathbf{g}_{t-1} +
-  \beta^2\,\mathbf{g}_{t-2} + \cdots$
-- $\beta = 0$ is gradient descent; $1 - \beta$ acts as friction on a
-  heavy ball.
+$$\mathbf{v}_t = \beta\,\mathbf{v}_{t-1} + \mathbf{g}_t, \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\mathbf{v}_t$$
 
-[Polyak, 1964]{.small}
+- **Unrolled exponentially weighted sum:** Expanding the recursion expresses $\mathbf{v}_t$ as a geometric history of all past gradients:
+  $$\mathbf{v}_t = \sum_{k=0}^{t-1} \beta^k \mathbf{g}_{t-k} = \mathbf{g}_t + \beta\,\mathbf{g}_{t-1} + \beta^2\,\mathbf{g}_{t-2} + \cdots + \beta^{t-1}\,\mathbf{g}_1$$
+- **Physical analogy:** A heavy ball rolling down a potential surface $f(\mathbf{x})$ where $\beta$ controls inertia and $1 - \beta$ acts as viscous friction ($\beta = 0$ recovers memoryless gradient descent).
 :::
 
-::: {.slide title="With β = 0.5, the Divergent Learning Rate Converges"}
-[The momentum method]{.kicker}
-
-The valley, $\eta = 0.6$, $\beta = 0.5$, 20 steps:
-
-@!momentum-the-momentum-method-1
-
-::: {.d2l-note .warn}
-**Puzzle.** Gradients that add up make longer steps than gradient descent
-takes. Why is $\eta = 0.6$ stable now?
-:::
-:::
-
-::: {.slide title="Persistent Gradients Add Up; Alternating Ones Cancel"}
-[The effective step]{.kicker}
-
-| successive gradients | velocity, in gradients | step | $\eta = 0.6$, $\beta = 0.5$ |
-|:--|:--|:--|--:|
-| agree (floor) | $1 + \beta + \beta^2 + \cdots = \frac{1}{1-\beta}$ | $\frac{\eta}{1-\beta}$ | 1.2 |
-| alternate (wall) | $1 - \beta + \beta^2 - \cdots = \frac{1}{1+\beta}$ | $\frac{\eta}{1+\beta}$ | 0.4 |
-
-::: {.d2l-note .rule}
-**Effective step** $\eta_\textrm{eff} = \eta/(1-\beta)$. Across the valley
-the step is 0.4, below the 0.5 that gradient descent can afford: the
-puzzle is solved.
-:::
-:::
-
-::: {.slide title="Momentum May Use a Step That Gradient Descent Cannot"}
-[The effective step]{.kicker}
-
-Edge of divergence: a step flips the sign of a coordinate and keeps its
-size.
-
-| | step of a sign-flipping iterate | edge | valley, $\lambda_{\max} = 4$ |
-|:--|:--|:--|:--|
-| gradient descent | $\eta$ | $\eta\lambda = 2$ | $\eta < 0.5$ |
-| momentum $\beta$ | $\frac{\eta}{1+\beta}$ | $\eta\lambda = 2(1+\beta)$ | $\eta < 0.75$ at $\beta = 0.5$ |
-
-::: {.d2l-note .rule}
-**The speed-up.** Along the floor momentum moves like gradient descent at
-$\eta_\textrm{eff}$, and $\eta_\textrm{eff}$ may reach
-$\frac{2(1+\beta)}{(1-\beta)\lambda_{\max}}$: 1.5 instead of 0.5.
-:::
-:::
-
-::: {.slide title="β = 0.9 Remembers About 10 Steps"}
-[The timescale of β]{.kicker}
-
-Weights $1, \beta, \beta^2, \ldots$ sum to $\frac{1}{1-\beta}$, the
-*window*. Half-life: steps until a gradient's weight has halved. Last
-column: share of the total weight on the gradients inside the window.
-
-@!momentum-effective-sample-weight
-
-::: {.d2l-note}
-What counts is $1 - \beta$: from 0.9 to 0.99 the memory grows tenfold.
-:::
-:::
-
-::: {.slide title="Momentum Delays Minibatch Noise; It Does Not Remove It"}
-[Minibatch noise]{.kicker}
-
-A noise term $\boldsymbol{\xi}_t$ in the gradient at step $t$ stays in the
-velocity with weights $1, \beta, \beta^2, \ldots$ and moves the parameters
-by
-
-$$\eta\,(1 + \beta + \beta^2 + \cdots)\,\boldsymbol{\xi}_t
-= \eta_\textrm{eff}\,\boldsymbol{\xi}_t$$
-
-in total: one step of plain SGD at learning rate $\eta_\textrm{eff}$,
-spread over about $\frac{1}{1-\beta}$ steps.
-
-::: {.d2l-note}
-*Noise ball:* the cloud around the minimum in which SGD at a constant
-$\eta$ keeps fluctuating. At equal $\eta_\textrm{eff}$ it has nearly the
-same size with and without momentum.
-:::
-:::
-
-::: {.slide title="Check: Raise β from 0.9 to 0.99"}
-[Check]{.kicker}
-
-A run trains well at $\eta = 0.01$, $\beta = 0.9$. You switch to
-$\beta = 0.99$. What learning rate keeps the effective step, and how far
-back does the velocity now look?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\eta_\textrm{eff} = 0.01/0.1 = 0.1$, so
-$\eta = 0.1 \cdot 0.01 = 0.001$, ten times smaller. The window grows from
-about 10 to about 100 steps (half-life 6.6 → 69).
-:::
-:::
-:::
-
-::: {.slide title="Tuned Momentum Needs √κ Steps Instead of κ"}
-[Acceleration]{.kicker}
-
-Quadratic with curvatures in $[\lambda_{\min}, \lambda_{\max}]$,
-$\kappa = \lambda_{\max}/\lambda_{\min}$:
-
-$$\eta^\star = \frac{4}{(\sqrt{\lambda_{\max}} + \sqrt{\lambda_{\min}})^2},
-\qquad \beta^\star = \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^2$$
-
-| | factor per step | steps per factor of 100 |
-|:--|:--:|:--:|
-| gradient descent, best $\eta$ | $\frac{\kappa - 1}{\kappa + 1}$ | $2.3\,\kappa$ |
-| momentum at $\eta^\star$, $\beta^\star$ | $\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}$ | $2.3\,\sqrt{\kappa}$ |
-
-::: {.d2l-note}
-Read backwards: $\beta = 0.9$ is the best momentum for
-$\kappa \approx 1{,}400$.
-:::
-
-[Polyak, 1964; exact for quadratics]{.small}
-:::
-
-::: {.slide title="With Complex Roots, Every Direction Shrinks by √β"}
-[Acceleration]{.kicker}
-
-One direction, coordinate $x_t$, curvature $\lambda$, gradient
-$\lambda x_t$:
-
-I. $\;\eta v_t = x_t - x_{t+1}$ (the velocity is the last step)
-
-II. $\;x_{t+1} = (1 + \beta - \eta\lambda)\,x_t - \beta\,x_{t-1}$
-
-III. Try $x_t = z^t$: $\;z^2 - (1 + \beta - \eta\lambda)\,z + \beta = 0$,
-so the two roots have product $\beta$
-
-$$\boxed{|z| = \sqrt{\beta} \ \textrm{ for complex roots, whatever } \lambda}$$
-
-Flat or steep, such a direction shrinks by $\sqrt{\beta}$ per step: the
-curvature has dropped out. The largest $|z|$ over all directions is the
-*contraction factor*.
-:::
-
-::: {.slide title="Critical Damping Is the Fastest Setting"}
-[Damping]{.kicker}
-
-![](../img/mdl-opt-critical-damping.svg){width=50%}
-
-- Too little momentum: *overdamped*, real roots, the iterate creeps.
-- Too much: *underdamped*, complex roots, the iterate rings.
-- Between them the roots coincide, at
-  $\beta_\textrm{c} = (1 - \sqrt{\eta\lambda})^2$.
-- At $\eta^\star$ the flattest and the steepest direction are both
-  critical at $\beta^\star$.
-:::
-
-::: {.slide title="On the Valley, Tuned Momentum Needs 40 Steps Instead of 139"}
-[Acceleration]{.kicker}
-
-$\kappa = 20$: $\eta^\star \approx 0.67$, $\beta^\star \approx 0.40$,
-predicted factor $\sqrt{\beta^\star} \approx 0.635$ against 0.905. Rows:
-gradient descent at its best $\eta$; a guess; the tuned pair; too much
-momentum.
-
-@!momentum-acceleration-and-damping-1
-
-::: {.d2l-note}
-139/40 = 3.5, below $\sqrt{20} \approx 4.5$: at critical damping the two
-roots coincide, and the error falls like $t \cdot 0.635^t$.
-:::
-:::
-
-::: {.slide title="Too Much Momentum Rings Around the Minimum"}
-[Damping]{.kicker}
-
-$\eta = 0.3$ (safe for gradient descent), $\beta = 0.8$, above both
-critical values (0.57 and 0.01): factor $\sqrt{0.8} \approx 0.894$, barely
-better than 0.905.
-
-@!momentum-acceleration-and-damping
-:::
-
-::: {.slide title="Check: A Condition Number of 10,000"}
-[Check]{.kicker}
-
-For $\kappa = 10^4$, what is $\beta^\star$, and how many steps do gradient
-descent and tuned momentum need per factor of 100?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\sqrt{\kappa} = 100$, so $\beta^\star = (99/101)^2 \approx 0.96$.
-Steps: $2.3 \cdot 10^4 = 23{,}000$ against $2.3 \cdot 100 = 230$.
-:::
-:::
-:::
-
-::: {.slide title="The Valley Makes Two Predictions for Data"}
-[Momentum on data]{.kicker}
-
-| what limits the run | prediction at $\beta = 0.9$ |
-|:--|:--|
-| curvature (exact gradient) | several times fewer steps; best $\eta$ no smaller than without momentum |
-| noise (small minibatches) | no saving; best $\eta$ ten times smaller, same $\eta_\textrm{eff}$ |
-
-Test on Fashion-MNIST (60,000 training images), two *arms* each, SGD with
-$\beta = 0$ and with $\beta = 0.9$:
-
-- softmax regression, one linear layer, all images at every step;
-- `FashionCNN`, a small convolutional network, 32 images per step.
-:::
-
-::: {.slide title="At Full Batch, Momentum Reaches the Target in a Sixth of the Steps"}
-[Momentum on data]{.kicker}
-
-Best learning rate of a factor-2 grid for each arm; steps until the
-training loss reaches the target; final loss: mean of the last 100 steps.
-
-@!momentum-momentum-on-a-network-2
-
-::: {.d2l-note}
-Softmax regression: 100 steps instead of 625, at an effective step
-$0.4/0.1 = 4$, about 30 times the best plain rate. The `FashionCNN` rows
-are single runs; the next slide repeats them.
-:::
-:::
-
-::: {.slide title="At 32 Images per Batch, Momentum Only Rescales the Learning Rate"}
-[Momentum on data]{.kicker}
-
-Three repeats at each best rate (softmax regression has no randomness, so
-its repeats are identical):
-
-@!momentum-momentum-on-a-network-3
-
-::: {.d2l-note}
-`FashionCNN`: best rates 0.2 and 0.02, the same effective step. With the
-runs of the previous slide, the arms differ on average by less than the
-runs of one arm do: a tie. Three runs wholly ahead of three: chance does
-that one time in ten.
-:::
-:::
-
-::: {.slide title="Nesterov Takes the Gradient Where the Velocity Is Headed"}
-[Nesterov momentum]{.kicker}
-
-$$\mathbf{v}_t = \beta\, \mathbf{v}_{t-1} + \nabla f(\mathbf{x}_t - \eta \beta\, \mathbf{v}_{t-1}),\qquad
-\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\, \mathbf{v}_t$$
-
-![](../img/mdl-opt-nesterov-lookahead.svg){width=50%}
-
-The velocity is corrected before the overshoot, not one step after it.
-
-[Nesterov, 1983]{.small}
-:::
-
-::: {.slide title="The Look-Ahead Damps the Ringing"}
-[Nesterov momentum]{.kicker}
+::: {.slide title="Momentum Stabilizes a Divergent Learning Rate (η = 0.6)"}
+[Valley Trajectory]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@!momentum-nesterov-momentum-1
+- At $\eta = 0.6 > 2/\lambda_2 = 0.5$, plain gradient descent diverges violently across the steep wall because $x_2$ multiplies by $1 - 4(0.6) = -1.4$ on every step ($1.4^{20} \approx 837$).
+- Adding heavy-ball momentum with **$\beta = 0.5$** at the *exact same* $\eta = 0.6$ damps the transverse wall oscillation and drives both coordinates within $1\%$ of the origin in **$20$ steps**!
+- **Apparent paradox:** Summing past gradients increases total step length along the valley floor—how does it *stabilize* the steep wall at the same time?
 :::
 
-::: {.col}
-Same $\eta = 0.3$, $\beta = 0.8$ as the underdamped heavy-ball run.
-
-- After 20 steps $|x_2| < 10^{-4}$ (heavy ball: $-0.25$).
-- Overshoot along $x_1$: about 0.7 (heavy ball: more than 1).
-- Libraries store the look-ahead point: `nesterov=True`, off by default.
+::: {.col .fig}
+@!momentum-the-momentum-method-1
 :::
 :::
 :::
 
-::: {.slide title="Choose β = 0.9 and Tune the Effective Step"}
-[In practice]{.kicker}
+::: {.slide title="Persistent Amplification vs. Alternating Cancellation"}
+[The Effective Step Size]{.kicker}
 
-- Keep $\beta = 0.9$; tune $\eta_\textrm{eff} = \eta/(1-\beta)$.
-- Adding momentum to a working run: start at a tenth of the old learning
-  rate, then sweep upward.
-- Changing $\beta$: move $\eta$ so that $\eta_\textrm{eff}$ stays fixed.
+Evaluating the geometric series $\mathbf{v}_t = \sum_{k \ge 0} \beta^k \mathbf{g}_{t-k}$ in two limiting regimes resolves the paradox:
+
+| Gradient History Pattern | Geometric Series for Velocity $\mathbf{v}_t$ | Effective Step Multiplier | Value at $\eta = 0.6, \beta = 0.5$ |
+| :--- | :--- | :---: | :---: |
+| **Persistent ($\mathbf{g}_{t-k} \approx \mathbf{g}$, flat floor)** | $(1 + \beta + \beta^2 + \cdots)\,\mathbf{g} = \frac{1}{1 - \beta}\,\mathbf{g}$ | **$\eta_{\text{eff}} = \frac{\eta}{1 - \beta}$** | $\frac{0.6}{0.5} =$ **$1.2$** ($2\times$ faster!) |
+| **Alternating ($\mathbf{g}_{t-k} \approx (-1)^k\mathbf{g}$, steep wall)** | $(1 - \beta + \beta^2 - \cdots)\,\mathbf{g} = \frac{1}{1 + \beta}\,\mathbf{g}$ | **$\eta_{\text{alt}} = \frac{\eta}{1 + \beta}$** | $\frac{0.6}{1.5} =$ **$0.4 < 0.5$** (stable!) |
 
 ::: {.d2l-note .rule}
-Expect fewer steps where the gradient is accurate and the curvature
-uneven. Expect no saving, and no harm, where small minibatches set the
-pace.
+**Dual directional filter:** Momentum amplifies persistent floor progress by $\frac{1}{1-\beta}$ while attenuating high-frequency wall oscillations by $\frac{1}{1+\beta}$—acting as a directional low-pass filter without ever computing the Hessian.
 :::
 :::
 
-::: {.slide title="Check: Adding Momentum to a Run"}
-[Check]{.kicker}
+::: {.slide title="How Momentum Expands the Stability Ceiling"}
+[Stability & Maximum Speedup]{.kicker}
 
-Plain SGD trains a network at $\eta = 0.1$ on minibatches of 32. You add
-$\beta = 0.9$. Which learning rate do you try first, and do you expect
-fewer steps? What did full-batch softmax regression do instead?
+Because a sign-flipping mode $x_t \propto (-1)^t$ experiences the damped step size $\frac{\eta}{1+\beta}$, the stability threshold $\frac{\eta}{1+\beta}\lambda < 2$ rises by a factor of $1 + \beta$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\eta = 0.01$, the same effective step. Noise limits the run,
-so expect no saving (`FashionCNN`: best rates 0.2 and 0.02, a tie). With
-an exact gradient the best effective step rose about 30-fold and the steps
-fell sixfold.
+| Optimizer | Sign-Flipping Step Size | Stability Ceiling for Curvature $\lambda$ | Ceiling on Valley ($\lambda_{\max} = 4$) | Maximum Stable Floor Step $\eta_{\text{eff}}$ |
+| :--- | :---: | :---: | :---: | :---: |
+| **Plain Gradient Descent ($\beta = 0$)** | $\eta$ | $\eta\lambda < 2$ | $\eta < 0.50$ | $0.50$ |
+| **Heavy-Ball Momentum ($\beta$)** | $\frac{\eta}{1 + \beta}$ | **$\eta\lambda < 2(1 + \beta)$** | $\eta < 0.75$ (at $\beta = 0.5$) | **$\frac{2(1+\beta)}{(1-\beta)\lambda_{\max}} = 1.50$** (at $\beta = 0.5$) |
+
+- At $\beta = 0.5$, momentum can take an effective step along the valley floor up to $\frac{1+\beta}{1-\beta} = 3\times$ larger than the maximum stable step of plain gradient descent!
+:::
+
+::: {.slide title="The Memory Timescale and Half-Life of β"}
+[Exponential Horizon]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Because the geometric weights $1, \beta, \beta^2, \ldots$ sum to $\frac{1}{1-\beta}$, the velocity averages gradients over a characteristic **memory window**:
+  $$\tau = \frac{1}{1 - \beta} \text{ steps}$$
+- **Half-life:** A gradient's weight $\beta^k$ drops to $0.5$ after $k_{1/2} = \frac{\ln 0.5}{\ln\beta} \approx 0.693\,\tau$ steps, and the first $\tau$ steps always capture $1 - \beta^{1/(1-\beta)} \approx 1 - e^{-1} \approx 63\text{--}75\%$ of the total weight.
+- Shifting $\beta$ from $0.9 \to 0.99$ expands both $\tau$ and $\eta_{\text{eff}}$ **tenfold** ($10 \to 100$ steps).
+:::
+
+::: {.col .fig}
+@!momentum-effective-sample-weight
 :::
 :::
 :::
 
-::: {.slide title="Momentum Turns κ into √κ Where Curvature Limits"}
-[Wrap-up]{.kicker}
+::: {.slide title="Momentum Under Minibatch Noise: Same Noise Floor"}
+[Interaction with Stochastic Noise]{.kicker}
 
-- $\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t$,
-  $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta \mathbf{v}_t$: persistent
-  gradients add up to $\frac{1}{1-\beta}$, alternating ones shrink to
-  $\frac{1}{1+\beta}$.
-- $\beta$: a memory of $\frac{1}{1-\beta}$ steps; effective step
-  $\frac{\eta}{1-\beta}$; stable for $\eta\lambda < 2(1+\beta)$.
-- Valley, tuned: factor 0.635 instead of 0.905, 40 steps instead of 139.
-- Data: full-batch softmax regression, 100 steps instead of 625;
-  `FashionCNN` at 32 per batch, a tie at a tenth of the learning rate.
+When gradients carry minibatch sampling noise $\mathbf{g}_t = \nabla f(\mathbf{x}_t) + \boldsymbol{\xi}_t$, does averaging over $\tau = \frac{1}{1-\beta}$ steps shrink the stationary noise ball of §9.2?
 
-**Next:** Adam, a learning rate for each coordinate.
+- **Follow a single noise impulse $\boldsymbol{\xi}_t$:** Injected into $\mathbf{v}_t$ with weight $1$ at step $t$, $\boldsymbol{\xi}_t$ persists in $\mathbf{v}_{t+k}$ with weight $\beta^k$, contributing a total cumulative parameter displacement over all future steps of:
+  $$-\eta\,(1 + \beta + \beta^2 + \cdots)\,\boldsymbol{\xi}_t = -\frac{\eta}{1 - \beta}\,\boldsymbol{\xi}_t = -\eta_{\text{eff}}\,\boldsymbol{\xi}_t$$
+- **No free noise reduction at matched $\eta_{\text{eff}}$:** Momentum spreads each noise kick across $\tau = \frac{1}{1-\beta}$ steps, but its total integrated impulse equals a single plain SGD step of size $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$.
+
+::: {.d2l-note .warn}
+**Practical scaling rule:** At matched effective step size $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$, SGD with and without momentum settle into stationary noise balls of nearly identical variance. When enabling $\beta = 0.9$ in a noise-limited run, scale $\eta$ down by $1 - \beta = 0.1$!
 :::
+:::
+
+::: {.slide title="Optimal Quadratic Acceleration: From O(κ) to O(√κ)"}
+[Polyak's Acceleration Law]{.kicker}
+
+On a quadratic with eigenvalues in $[\lambda_{\min}, \lambda_{\max}]$ and condition number $\kappa = \lambda_{\max}/\lambda_{\min}$, Polyak (1964) proved that the optimal constant hyperparameters are:
+
+$$\eta^\star = \frac{4}{\left(\sqrt{\lambda_{\max}} + \sqrt{\lambda_{\min}}\right)^2}, \qquad \beta^\star = \left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^2$$
+
+| Method | Worst-Case Contraction Factor $\rho^\star$ | Asymptotic Rate ($\kappa \gg 1$) | Steps to Accuracy $\epsilon$ |
+| :--- | :---: | :---: | :---: |
+| **Optimal Gradient Descent** | $\frac{\kappa - 1}{\kappa + 1}$ | $1 - \frac{2}{\kappa}$ | $\frac{\kappa}{2}\ln\frac{1}{\epsilon}$ |
+| **Optimal Heavy-Ball Momentum** | **$\sqrt{\beta^\star} = \frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}$** | **$1 - \frac{2}{\sqrt{\kappa}}$** | **$\frac{\sqrt{\kappa}}{2}\ln\frac{1}{\epsilon}$** |
+
+- Replacing $\kappa$ by $\sqrt{\kappa}$ delivers massive speedups on ill-conditioned problems (e.g., at $\kappa = 1{,}400$, where $\beta^\star \approx 0.9$, $\sqrt{\kappa} \approx 37$ cuts the iteration count nearly $37$-fold!).
+:::
+
+::: {.slide title="Second-Order Recurrence and the √β Complex-Root Law"}
+[Why Contraction Equals √β]{.kicker}
+
+Why do *all* intermediate eigenmodes contract at the exact same rate $\sqrt{\beta^\star}$ independent of their curvature $\lambda$?
+
+- Along an eigenvector of curvature $\lambda$ ($g_t = \lambda x_t$), substituting $\eta v_{t-1} = x_{t-1} - x_t$ into $x_{t+1} = x_t - \eta(\beta v_{t-1} + \lambda x_t)$ yields a second-order linear recurrence:
+  $$x_{t+1} - (1 + \beta - \eta\lambda)\,x_t + \beta\,x_{t-1} = 0$$
+- **Characteristic polynomial:** Trying $x_t = z^t$ gives $z^2 - (1 + \beta - \eta\lambda)z + \beta = 0$, whose two roots satisfy Vieta's product formula **$z_1 z_2 = \beta$**.
+- **The complex-conjugate regime:** Whenever the discriminant $\Delta = (1 + \beta - \eta\lambda)^2 - 4\beta \le 0$—which holds for all $\beta \ge \beta_{\text{c}}(\lambda) = (1 - \sqrt{\eta\lambda})^2$—the roots $z_1, z_2 = z_1^*$ are complex conjugates with identical modulus:
+  $$|z_1| = |z_2| = \sqrt{z_1 z_2} = \sqrt{\beta}$$
+:::
+
+::: {.slide title="Overdamped, Critically Damped, and Underdamped Modes"}
+[Critical Damping Geometry]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Three damping regimes for a mode of curvature $\lambda$:**
+  - **Overdamped ($\beta < \beta_{\text{c}}$):** Two distinct real roots; the larger root creeps slowly toward zero without oscillating.
+  - **Critically damped ($\beta = \beta_{\text{c}} = (1 - \sqrt{\eta\lambda})^2$):** Roots collide at $z_1 = z_2 = \sqrt{\beta_{\text{c}}}$, giving the fastest possible contraction for that mode.
+  - **Underdamped ($\beta > \beta_{\text{c}}$):** Complex roots oscillate and decay at envelope rate $\sqrt{\beta}$.
+- **Polyak's optimal tuning $(\eta^\star, \beta^\star)$** equates the critical thresholds of $\lambda_{\min}$ and $\lambda_{\max}$: $(1 - \sqrt{\eta^\star\lambda_{\min}})^2 = (\sqrt{\eta^\star\lambda_{\max}} - 1)^2 = \beta^\star$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-opt-critical-damping.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Quantitative Verification on the κ = 20 Valley"}
+[40 Steps vs. 139 Steps]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- On our valley ($\lambda_1 = 0.2, \lambda_2 = 4.0, \kappa = 20$):
+  - Optimal tuning gives $\eta^\star \approx 0.668$ and $\beta^\star \approx 0.403$.
+  - The per-step contraction factor drops from $0.905$ (plain GD) to $\sqrt{\beta^\star} \approx 0.635$.
+  - Steps to reach $10^{-6}$ relative error fall **$3.5\times$** from **$139$ steps to $40$ steps**!
+:::
+
+::: {.col .fig}
+@!momentum-acceleration-and-damping-1
+:::
+:::
+:::
+
+::: {.slide title="Underdamped Ringing When β Exceeds Critical Damping"}
+[Overshoot Hazard]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- What happens if we set $\beta = 0.8$ at $\eta = 0.3$—well above the critical damping thresholds of both coordinates ($\beta_{\text{c}}(\lambda_1) = 0.57, \beta_{\text{c}}(\lambda_2) = 0.01$)?
+- Both coordinates lie deep in the underdamped complex-root regime with modulus $\sqrt{0.8} \approx 0.894$ (barely faster than plain GD's $0.905$!).
+- Because the velocity remembers $\tau = \frac{1}{1-0.8} = 5$ steps of downhill push, the iterate overshoots the origin and rings back and forth along both axes.
+:::
+
+::: {.col .fig}
+@!momentum-acceleration-and-damping
+:::
+:::
+:::
+
+::: {.slide title="Two Regimes on Real Data: Curvature vs. Noise"}
+[Empirical Test on Fashion-MNIST]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Our theory predicts two contrasting outcomes when comparing $\beta = 0$ and $\beta = 0.9$ on Fashion-MNIST:
+
+- **1. Curvature-limited (full-batch softmax regression, $b = 60{,}000$):** Exact gradients, ill-conditioned pixel covariance. Adding $\beta = 0.9$ raises the optimal effective step $32\times$ ($\eta_{\text{eff}}: 0.125 \to 4.0$) and cuts steps to loss $0.5$ by **$6.25\times$** ($625 \to 100$ steps)!
+- **2. Noise-limited (`FashionCNN`, small batch $b = 32$):** Optimal $\eta$ drops by $\sim 10\times$ ($0.2 \to 0.02$) to preserve $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$, finishing at comparable step counts and losses.
+:::
+
+::: {.col .fig}
+@!momentum-momentum-on-a-network-2
+:::
+:::
+:::
+
+::: {.slide title="Nesterov Accelerated Gradient: Look-Ahead Correction"}
+[Anticipatory Damping]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Why did underdamped heavy-ball momentum overshoot? Because it evaluated $\nabla f(\mathbf{x}_t)$ at the current position rather than where the momentum step $-\eta\beta\mathbf{v}_{t-1}$ was about to carry it.
+- **Nesterov momentum (1983)** evaluates the gradient at the **look-ahead point** $\tilde{\mathbf{x}}_t = \mathbf{x}_t - \eta\beta\,\mathbf{v}_{t-1}$:
+  $$\mathbf{v}_t = \beta\,\mathbf{v}_{t-1} + \nabla f(\mathbf{x}_t - \eta\beta\,\mathbf{v}_{t-1})$$
+- Look-ahead curvature evaluation brakes the velocity *before* the overshoot occurs and achieves the optimal $O(1/t^2)$ rate on general smooth convex functions.
+:::
+
+::: {.col .fig}
+![](../img/mdl-opt-nesterov-lookahead.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Nesterov Look-Ahead Suppresses Underdamped Ringing"}
+[Heavy-Ball vs. Nesterov]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Running Nesterov momentum at the exact same underdamped hyperparameters ($\eta = 0.3, \beta = 0.8$) on the valley demonstrates immediate anticipatory damping:
+  - Steep wall oscillation along $x_2$ decays below $|x_2| < 10^{-4}$ within $20$ steps (versus $-0.25$ under heavy-ball).
+  - Longitudinal overshoot along $x_1$ is reduced by nearly half.
+- In practice, $\beta = 0.9$ (with heavy-ball or Nesterov look-ahead) is a standard default, tuned via $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$.
+:::
+
+::: {.col .fig}
+@!momentum-nesterov-momentum-1
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Effective Step, Timescales, and √κ"}
+[Check Your Understanding]{.kicker}
+
+Work out the quantitative answer for each momentum scenario:
+
+1. **Adjusting $\eta$ when changing $\beta$:** A minibatch SGD run trains well at $\eta = 0.02$ with $\beta = 0.9$. If you increase momentum to $\beta = 0.98$, what learning rate $\eta$ preserves the effective step size $\eta_{\text{eff}}$ and stationary noise ball, and how does the memory window $\tau$ change?
+2. **$\sqrt{\kappa}$ acceleration:** For a quadratic with condition number $\kappa = 10{,}000$, what is the optimal momentum $\beta^\star$, and by what factor does optimal momentum reduce the steps needed to shrink error by $10^{-2}$ compared to optimal plain gradient descent?
+3. **Batch size transition:** Why did adding $\beta = 0.9$ cut the step count by $6\times$ on full-batch softmax regression ($b = 60{,}000$) but not on `FashionCNN` at $b = 32$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. At $\beta = 0.9$, $\eta_{\text{eff}} = \frac{0.02}{1 - 0.9} = 0.2$ and $\tau = 10$ steps. At $\beta = 0.98$ ($1 - \beta = 0.02$), keeping $\eta_{\text{eff}} = 0.2$ requires **$\eta = 0.2 \times 0.02 = 0.004$** ($5\times$ smaller), while the memory window expands **$5\times$ from $10 \to 50$ steps**.
+2. Since $\sqrt{\kappa} = 100$, **$\beta^\star = (99/101)^2 \approx 0.9608$**, reducing the required step count by **$\frac{\kappa}{\sqrt{\kappa}} = \sqrt{\kappa} = 100\times$** ($\approx 230$ steps vs. $23{,}000$ steps)!
+3. At $b = 32$, training is **noise-limited** ($b \ll b_{\text{crit}}$), so $\eta_{\text{eff}}$ is capped by the noise ball; at full batch ($b = 60{,}000$), gradient noise is zero and training is **curvature-limited**, unlocking momentum's $32\times$ larger $\eta_{\text{eff}}$.
+:::
+:::
+
+::: {.slide title="Summary: Heavy-Ball and Nesterov Momentum"}
+[Key Takeaways]{.kicker}
+
+| Concept / Rule | Mathematical Expression | Key Property | Practical Guideline |
+| :--- | :--- | :--- | :--- |
+| **Heavy-Ball Velocity** | $\mathbf{v}_t = \beta\mathbf{v}_{t-1} + \mathbf{g}_t,\; \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\mathbf{v}_t$ | Unrolls to $\sum_{k=0}^{t-1} \beta^k \mathbf{g}_{t-k}$ | Default $\beta = 0.9$; adds 1 state buffer per parameter |
+| **Effective Step & Window** | $\eta_{\text{eff}} = \frac{\eta}{1-\beta},\quad \tau = \frac{1}{1-\beta}$ | Damps alternating steps to $\frac{\eta}{1+\beta}$; ceiling $\eta\lambda < 2(1+\beta)$ | Scale $\eta \propto (1-\beta)$ when changing $\beta$ under noise |
+| **Critical Damping & $\sqrt{\kappa}$** | $\beta_{\text{c}}(\lambda) = (1 - \sqrt{\eta\lambda})^2,\; \rho^\star = \frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}$ | Complex roots for $\beta \ge \beta_{\text{c}}$ have modulus $|z| = \sqrt{\beta}$ | Cuts curvature-limited step complexity from $O(\kappa)$ to $O(\sqrt{\kappa})$ |
+| **Nesterov Look-Ahead** | $\mathbf{v}_t = \beta\mathbf{v}_{t-1} + \nabla f(\mathbf{x}_t - \eta\beta\mathbf{v}_{t-1})$ | Evaluates curvature at predicted position $\tilde{\mathbf{x}}_t$ | Suppresses underdamped ringing; forms the base of Muon (§9.6) |
+:::
+

@@ -1197,53 +1197,6 @@ the learned solution rather than of the whole function class.
        with the deviation of (a)?
    :exlabel:`ex_mdl-concentration-generalization-leaderboard-attack`
 
-1. **Ranking configurations on a holdout.** ● A validation set has
-   $n=10{,}000$ examples, the loss takes values in $[0,1]$, and
-   $\delta=0.05$.
-    1. From :eqref:`eq_mdl-finite-class`, how many configurations, fixed in
-       advance, can be ranked with a simultaneous guarantee of $\pm2\%$,
-       $\pm2.5\%$ and $\pm3\%$? Why is the count so sensitive to the
-       tolerance?
-    1. Repeat (a) with Chebyshev's inequality (variance at most $\tfrac14$)
-       in place of Hoeffding's, with the same union bound. How many
-       configurations does it allow at $\pm2\%$, and how many at $\pm5\%$?
-    1. *The winner's curse.* Let all $k$ configurations have true error
-       $10\%$, and treat their validation errors as independent. With the
-       Gaussian approximation to each error and the estimate
-       $\mathbb{E}[\max]\approx\sqrt{2\log k}$ for the maximum of $k$
-       independent standard normals, show that the best reported error is
-       about $10\%-0.3\%\cdot\sqrt{2\log k}$, and evaluate it at $k=1{,}000$.
-       Then compute the exact median and the 5th and 95th percentiles of the
-       minimum of $k=1{,}000$ independent $\textrm{Binomial}(10{,}000,0.1)$
-       counts, divided by $n$, from the distribution function of the
-       binomial.
-    1. The reported score of the chosen configuration is biased downward by
-       about one point. Explain in one sentence why scoring it on a fresh
-       test set removes the bias. Does the bias violate a hypothesis of
-       :eqref:`eq_mdl-finite-class`, and does the bound cover it?
-   :exlabel:`ex_mdl-generalization-bounds-ranking-configurations`
-
-1. **Thresholds on the line.** ● Let
-   $\mathcal F=\{x\mapsto\mathbf 1\{x\ge\theta\}:\theta\in\mathbb{R}\}$ act on
-   $n$ distinct real points $x_1<\cdots<x_n$.
-    1. Show that $\mathcal F$ realizes exactly $n+1$ labelings of the points
-       and that its VC dimension (the largest number of points on which it
-       realizes all labelings) is $1$. Show that with both orientations,
-       $\mathbf 1\{x\ge\theta\}$ and $\mathbf 1\{x\le\theta\}$, the count is
-       $2n$ and the VC dimension is $2$.
-    1. Compute $\widehat{\mathfrak R}_S(\mathcal F)$ for the one-sided class
-       exactly for $n=2$ and $n=3$ by enumerating the sign patterns.
-    1. Show that in general
-       $\widehat{\mathfrak R}_S(\mathcal F)=\frac1n\mathbb{E}\bigl[\max(0,\max_kT_k)\bigr]$,
-       where $T_k$ is the sum of the signs at the $k$ largest points, a
-       simple random walk. Argue with the reflection principle, or simulate,
-       that this is about $\sqrt{2/(\pi n)}$ for large $n$, and check the
-       values at $n=100$ and $n=1{,}000$.
-    1. Compare with Massart's lemma applied to the $n+1$ labelings. By what
-       factor is it loose at $n=100$, and which property of the labelings
-       does it ignore?
-   :exlabel:`ex_mdl-generalization-bounds-thresholds-on-the-line`
-
 1. [code] **The square case.** ● Use the sweep of the double-descent
    experiment in :numref:`subsec_mdl-double-descent-example`.
     1. Show from the stored norms that the nesting monotonicity fails below
@@ -1325,316 +1278,297 @@ the learned solution rather than of the whole function class.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §27.8]{.kicker}
+[Dive into Deep Learning · §36.10]{.kicker}
 
-Guarantees for the model you chose<br>**uniform convergence · Rademacher complexity · double descent**
+Generalization Bounds, Symmetrization, and Rademacher Complexity<br>**uniform convergence · union bound · ghost-sample symmetrization · Rademacher complexity · margin bounds · double descent & benign overfitting**
 :::
 :::
 
-::: {.slide title="The Best of 1,000 Fair Coins Shows 66 Heads in 100"}
-[The problem]{.kicker}
-
-![](../img/mdl-prob-gen-best-of-many.svg){width=72%}
-
-- One coin named in advance: Hoeffding allows $\pm13.6$ points at 95%, so 37 to 63 heads.
-- The best of 1,000: 64 to 69 heads in 90% of experiments. No coin is biased.
-
-::: {.d2l-note}
-A validation set is this experiment: configurations are coins, examples are flips.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- size a validation set for a choice among $|\mathcal F|$ fixed candidates;
-- compute the Rademacher complexity of a norm-bounded linear class;
-- turn it into a margin bound with numbers;
-- read a double-descent curve through $\sigma_{\min}$ and the solution norm;
-- say where guarantees for a whole class stop.
-
-**Idea:** a guarantee that holds for every candidate at once also holds for the winner.
-**Running example:** 1,000 fair coins, 100 flips each.
-:::
-
-::: {.slide title="From One Fixed Function to the Function We Chose"}
-[Where this fits]{.kicker}
+::: {.slide title="The Best of 1,000 Fair Coins Shows 66 Heads"}
+[Motivation & Selection Bias]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Random Variables | densities, moments, tail bounds |
-| Joint Distributions | conditioning, covariance, change of variables |
-| Distributions | the named distributions and their losses |
-| The Exponential Family | one form, convex fits, conjugacy |
-| Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP |
-| Latent Variables and EM | the ELBO, EM |
-| Bayesian Computation | averaging over a posterior |
-| Concentration Inequalities | exponential tails of averages |
-| **Uniform Convergence** | **guarantees after selection** |
-| Naive Bayes | one classifier, end to end |
+- **One coin named in advance ($m = 100$ flips):** By Hoeffding's inequality, a single fair coin lands within $50 \pm 13.6$ heads ($[37, 63]$) with at least $95\%$ probability ($99.3\%$ exact).
+- **Selecting the winner of $k = 1{,}000$ fair coins:** Although each individual coin exceeds $63$ heads with probability only $0.0033$, among $1{,}000$ coins roughly $3.3$ are expected to cross that threshold.
+- **Pure fluctuation looks like signal:** The winning coin typically shows **$66$ heads** ($[64, 69]$ in $90\%$ of trials) even though every coin is completely fair.
 :::
 
-::: {.col .narrow}
-- **Uses:** Hoeffding, the SVD, the pseudoinverse.
-- **Skips:** VC proofs, covering numbers, PAC-Bayes, stability.
+::: {.col .fig}
+![](../img/mdl-prob-gen-best-of-many.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="A Certificate for a Fixed f Does Not Cover the f̂ Chosen on the Data"}
-[Uniform convergence]{.kicker}
+::: {.slide title="Simulating the Winner's Curse in Model Selection"}
+[Empirical Verification]{.kicker}
 
-- Loss in $[0,1]$; $\hat R(f)$ = average loss on $n$ samples, $R(f)$ = expected loss.
-- Fixed $f$, then draw $S$: $P(|\hat R(f)-R(f)|\ge t)\le2e^{-2nt^2}$.
-- A learner draws $S$, then picks $\hat f=\arg\min_f\hat R(f)$: the most favorable fluctuation.
-- Cover every candidate at once:
+Repeating the $1{,}000$-coin experiment $2{,}000$ times shows that the single-coin $95\%$ confidence band fails almost every time ($96\%\text{--}97\%$) when applied to the post-hoc winner:
 
-$$\sup_{f\in\mathcal F}\bigl|\hat R(f)-R(f)\bigr|\le t .$$
+@!mdl-generalization-bounds-the-best-of-many-coins
 
-::: {.d2l-note}
-The function we pick is one of the candidates.
-:::
+- **Validation sets are coin-flip tournaments:** Every hyperparameter configuration or training checkpoint is a coin, and every validation example is a flip.
+- **Reversing the order of choice and sampling:** When we pick $\hat{f} = \operatorname{argmin}_{f \in \mathcal{F}} \hat{R}_S(f)$ *after* seeing the sample $S$, we systematically harvest the most favorable downward fluctuation.
 :::
 
-::: {.slide title="The Union Bound Adds Only log|F| for a Choice among |F|"}
-[Finite classes]{.kicker}
+::: {.slide title="From Pointwise Concentration to Uniform Convergence"}
+[The Supremum Over a Function Class]{.kicker}
 
-- $P(\text{any } f \text{ off by } t)\le2|\mathcal F|e^{-2nt^2}$, so with probability $1-\delta$:
+For a loss $\ell(f(\mathbf{x}), y) \in [0, 1]$, let $\hat{R}_S(f) = \frac{1}{n}\sum_{i=1}^n \ell(f(\mathbf{x}_i), y_i)$ denote the **empirical risk** on an i.i.d. sample $S$ and $R(f) = \mathbb{E}[\ell(f(\mathbf{x}), y)]$ denote the true **population risk**:
 
-$$\bigl|\hat R(f)-R(f)\bigr|\le\sqrt{\frac{\log(2|\mathcal F|/\delta)}{2n}}\quad\text{for all } f\in\mathcal F.$$
+$$\bigl\lvert\hat{R}_S(\hat{f}) - R(\hat{f})\bigr\rvert \le \sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert$$
 
-- Coins ($|\mathcal F|=1{,}000$, $n=100$): $\pm0.230$, band 27 to 73 heads; the best coin's 66 is inside.
-- Validation, $n=10{,}000$: $\pm0.0136$ for 1, $\pm0.0238$ for 2,000, $\pm0.0296$ for $10^6$.
+- **Why pointwise bounds fail:** Hoeffding's inequality bounds $\lvert\hat{R}_S(f) - R(f)\rvert$ for one fixed $f$ chosen independent of $S$, not for the data-dependent winner $\hat{f}(S)$.
+- **The uniform convergence principle (Vapnik & Chervonenkis, 1971):** If the worst-case deviation across the *entire* candidate class $\mathcal{F}$ is at most $t$ with probability $\ge 1 - \delta$, then every function in $\mathcal{F}$—including whichever predictor $\hat{f}$ the learner selects—is simultaneously guaranteed to satisfy $\lvert\hat{R}_S(\hat{f}) - R(\hat{f})\rvert \le t$.
 :::
 
-::: {.slide title="Chebyshev Plus a Union Bound Gives t = 1 for 2,000 Configurations"}
-[Why exponential tails]{.kicker}
+::: {.slide title="Finite Function Classes and the Union Bound"}
+[Logarithmic Cost of Search]{.kicker}
 
-- Chebyshev: $P(|\hat R-R|\ge t)\le1/(4nt^2)$ for a loss in $[0,1]$.
-- Union over $|\mathcal F|$: $t=\sqrt{|\mathcal F|/(4n\delta)}$.
-- $|\mathcal F|=2{,}000$, $n=10{,}000$, $\delta=0.05$: $t=1$, no information.
-- Hoeffding for the same pool: $t=0.024$.
-- Sample size: $n=(\log(2/\delta)+\log|\mathcal F|)/(2t^2)$.
+When $\mathcal{F}$ is a finite pool of $\lvert\mathcal{F}\rvert$ candidate models fixed before drawing $S$, combining Hoeffding's bound $P(\lvert\hat{R}_S(f) - R(f)\rvert \ge t) \le 2e^{-2nt^2}$ with the union bound over all $f \in \mathcal{F}$ gives $P\bigl(\sup_{f \in \mathcal{F}} \lvert\hat{R}_S(f) - R(f)\rvert \ge t\bigr) \le 2\lvert\mathcal{F}\rvert e^{-2nt^2}$. Setting this total failure probability to $\delta$ proves that with probability $\ge 1 - \delta$:
 
-::: {.d2l-note}
-Polynomial tails make $n$ grow like $|\mathcal F|$, exponential tails like $\log|\mathcal F|$.
-:::
+$$\sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert \le \sqrt{\frac{\log(2\lvert\mathcal{F}\rvert/\delta)}{2n}}, \qquad n = \frac{\log(2/\delta) + \log\lvert\mathcal{F}\rvert}{2t^2}$$
+
+- **Logarithmic penalty for model selection:** Searching among $\lvert\mathcal{F}\rvert$ candidates adds only $\log\lvert\mathcal{F}\rvert$ inside the square root. On $n = 10{,}000$ validation examples at $\delta = 0.05$, the half-width grows gently from $\pm 1.36\%$ ($1$ model) to $\pm 2.38\%$ ($2{,}000$ models) and $\pm 2.96\%$ ($10^6$ models).
+- **Why exponential tails are essential:** Applying the union bound to Chebyshev's polynomial tail $1/(4nt^2)$ yields $t = \sqrt{\lvert\mathcal{F}\rvert/(4n\delta)}$, which evaluates to a vacuous $t = 1.0$ ($100\%$) for $\lvert\mathcal{F}\rvert = 2{,}000$ on $n = 10{,}000$ examples!
 :::
 
-::: {.slide title="Check: 1,000 Configurations, All at 10% Error, Validated on 10,000"}
-[Check]{.kicker}
+::: {.slide title="Pitfall: Adaptive Leaderboards Break the Union Bound"}
+[Non-Adaptive vs. Adaptive Queries]{.kicker}
 
-What does the best reported error look like, and does the union bound cover it?
+The finite-class union bound rests on a hypothesis that public benchmark leaderboards routinely violate: **the candidate set $\mathcal{F}$ must be fixed before any holdout scores are observed**.
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Each score has standard error $\sqrt{0.1\cdot0.9/10^4}=0.3\%$; the
-best of 1,000 is about $\sqrt{2\log1000}\approx3.7$ of them below: about 9%
-(exactly, a median of 9.05%). The union bound allows $\pm2.3\%$ and covers
-it. A fresh test set removes the bias.
-:::
-:::
+- **Adaptive overfitting via sequential feedback:** When a practitioner inspects the test score of submission $k-1$ before designing submission $k$, the candidates depend on the holdout sample $S$ and the union bound no longer applies.
+- **The Blum–Hardt boosting attack (2015):** Without knowing anything about the task, submit $k$ uniformly random label vectors $\mathbf{y}^{(j)} \in \{0, 1\}^n$ to a leaderboard of size $n$, keep the roughly $k/2$ vectors whose reported error is $\le 1/2$, and submit their coordinate-wise majority vote.
+- **Square-root degradation ($\sqrt{k/n}$ vs. $\sqrt{\log k / n}$):** Even though the majority vote has true population error $50\%$ on fresh data, its holdout error drops to $\frac{1}{2} - \Omega\bigl(\sqrt{k/n}\bigr)$—growing linearly with $k$ inside the square root rather than as $\log k$.
 :::
 
-::: {.slide title="Leaderboards Break the Hypothesis: the Pool Must Be Fixed First"}
-[The boundary]{.kicker}
+::: {.slide title="Rademacher Complexity: Correlation with Coin-Flip Noise"}
+[Measuring Infinite Function Classes]{.kicker}
 
-- Each new submission is chosen after seeing earlier scores on the same holdout.
-- The submissions are no longer a fixed list, so "for each fixed $f$" fails.
-- Boosting attack: submit random label vectors, keep those scoring at most ½, submit their majority vote.
-- The vote beats a random holdout by order $\sqrt{k/n}$ with no knowledge of the task.
-- Limiting what each score reveals (the Ladder) restores a guarantee.
+For continuous parameter spaces (such as all linear classifiers in $\mathbb{R}^d$), $\lvert\mathcal{F}\rvert = \infty$ and the union bound is vacuous. **Rademacher complexity** measures the richness of an arbitrary class $\mathcal{F}$ operationally by asking how well $\mathcal{F}$ can correlate with pure coin-flip labels $\varepsilon_1, \dots, \varepsilon_n \stackrel{\mathrm{i.i.d.}}{\sim} \mathrm{Uniform}\{-1, +1\}$:
+
+$$\widehat{\mathfrak{R}}_S(\mathcal{F}) = \mathbb{E}_{\boldsymbol{\varepsilon}}\Biggl[\sup_{f \in \mathcal{F}} \frac{1}{n}\sum_{i=1}^n \varepsilon_i\,f(\mathbf{x}_i)\Biggr], \qquad \mathfrak{R}_n(\mathcal{F}) = \mathbb{E}_S\bigl[\widehat{\mathfrak{R}}_S(\mathcal{F})\bigr]$$
+
+- **Intuition:** If $\mathcal{F}$ can align closely with random signs $\boldsymbol{\varepsilon}$ that carry zero true signal, it can memorize random label noise in real datasets just as easily.
+- **Worked example ($\mathcal{F} = \{+1, -1\}$):** With two constant functions, $\sup_{f \in \{\pm 1\}} \frac{1}{n}\sum_i \varepsilon_i f(\mathbf{x}_i) = \max(\bar{\varepsilon}, -\bar{\varepsilon}) = \lvert\bar{\varepsilon}\rvert$, giving $\widehat{\mathfrak{R}}_S = \frac{1}{2}$ at $n = 2$, $\frac{3}{8}$ at $n = 4$, and $\approx \sqrt{\frac{2}{\pi n}}$ for large $n$ ($0.0796$ at $n = 100$).
 :::
 
-::: {.slide title="Rademacher Complexity Asks How Well a Class Fits Coin Flips"}
-[Infinite classes]{.kicker}
+::: {.slide title="The Rademacher Complexity Spectrum Across Classes"}
+[From Singletons to Shattering Classes]{.kicker}
 
-$$\widehat{\mathfrak R}_S(\mathcal F)=\mathbb{E}_{\boldsymbol\varepsilon}\Bigl[\sup_{f\in\mathcal F}\tfrac1n\textstyle\sum_i\varepsilon_if(\mathbf x_i)\Bigr],\qquad \varepsilon_i=\pm1\text{ fair, independent.}$$
+Rademacher complexity scales smoothly from zero for a fixed function up to $1$ for a class that memorizes arbitrary sign patterns on $S = (\mathbf{x}_1, \dots, \mathbf{x}_n)$:
 
-- $\{+1,-1\}$: best correlation $|\bar\varepsilon|$; $\tfrac12$ at $n=2$, $\tfrac38$ at $n=4$, $\approx\sqrt{2/(\pi n)}$.
-- One function: $0$. Finite class: $\le\sqrt{2\log|\mathcal F|/n}$ (Massart).
-- All functions into $[-1,1]$: $1$. Into $[0,1]$: $\tfrac12$.
-- $\mathfrak R_n=\mathbb{E}_S\widehat{\mathfrak R}_S$.
+| Function Class $\mathcal{F}$ | Empirical Rademacher Complexity $\widehat{\mathfrak{R}}_S(\mathcal{F})$ | Scaling with Sample Size $n$ |
+| :--- | :--- | :--- |
+| **Singleton class** $\{f\}$ | $\mathbb{E}_{\boldsymbol{\varepsilon}}\bigl[\frac{1}{n}\sum_i \varepsilon_i f(\mathbf{x}_i)\bigr] = 0$ | Identically $0$ (no selection) |
+| **Two constants** $\{+1, -1\}$ | $\mathbb{E}_{\boldsymbol{\varepsilon}}\bigl[\lvert\bar{\varepsilon}\rvert\bigr] \approx \sqrt{\frac{2}{\pi n}}$ | Shrinks at rate $O(n^{-1/2})$ |
+| **Finite class** in $[-1, 1]$ | $\le \sqrt{\frac{2\log\lvert\mathcal{F}\rvert}{n}}$ (**Massart's lemma**) | Logarithmic in $\lvert\mathcal{F}\rvert$, $O(\sqrt{\log\lvert\mathcal{F}\rvert / n})$ |
+| **VC binary class** in $\{-1, +1\}$ | $\le C\sqrt{\frac{d_{\mathrm{VC}}\log n}{n}}$ | Controlled by VC dimension $d_{\mathrm{VC}}$ |
+| **All functions** into $[0, 1]$ | $\mathbb{E}_{\boldsymbol{\varepsilon}}\bigl[\frac{1}{n}\sum_i \mathbf{1}\{\varepsilon_i = +1\}\bigr] = \frac{1}{2}$ | Constant $\frac{1}{2}$ (no generalization) |
+| **All functions** into $[-1, 1]$ | $\mathbb{E}_{\boldsymbol{\varepsilon}}\bigl[\frac{1}{n}\sum_i \varepsilon_i^2\bigr] = 1$ (on distinct $\mathbf{x}_i$) | Constant $1$ (complete memorization) |
 :::
 
-::: {.slide title="For a Linear Class, the Best Correlation Is the Length of a Signed Sum"}
-[Geometry]{.kicker}
+::: {.slide title="Theorem: Uniform Convergence via Rademacher Complexity"}
+[Generalization Bound for Infinite Classes]{.kicker}
 
-![](../img/mdl-prob-gen-rademacher.svg){width=86%}
+To bound generalization risk, we apply Rademacher complexity to the **$[0, 1]$-valued loss class** $\mathcal{G} = \{z = (\mathbf{x}, y) \mapsto \ell(f(\mathbf{x}), y) : f \in \mathcal{F}\}$. With probability at least $1 - \delta$ over an i.i.d. sample $S$ of size $n$, simultaneously for every $g \in \mathcal{G}$:
 
-- Eight unit vectors, unit-norm weights: one pattern gives $0.27$.
-- Mean over all 256 patterns $0.316$; bound $Br/\sqrt n=1/\sqrt8=0.354$.
+$$R(g) \le \hat{R}_S(g) + 2\,\mathfrak{R}_n(\mathcal{G}) + \sqrt{\frac{\log(1/\delta)}{2n}}$$
+
+- **Data-dependent empirical form:** Applying McDiarmid's inequality a second time replaces the population average $\mathfrak{R}_n(\mathcal{G})$ with the computable sample quantity $\widehat{\mathfrak{R}}_S(\mathcal{G})$ at the cost of widening the confidence term to $3\sqrt{\frac{\log(2/\delta)}{2n}}$.
+- **Exact relation for binary $0\text{--}1$ classification:** For predictors $f(\mathbf{x}) \in \{-1, +1\}$ and labels $y \in \{-1, +1\}$, the $0\text{--}1$ loss is $g(\mathbf{x}, y) = \frac{1 - yf(\mathbf{x})}{2}$. Since $-\varepsilon_i y_i$ has the exact same distribution as $\varepsilon_i$, $\widehat{\mathfrak{R}}_S(\mathcal{G}) = \frac{1}{2}\widehat{\mathfrak{R}}_S(\mathcal{F})$ and $2\widehat{\mathfrak{R}}_S(\mathcal{G}) = \widehat{\mathfrak{R}}_S(\mathcal{F})$.
 :::
 
-::: {.slide title="With Probability 1 − δ, R ≤ R̂ + 2ℜₙ(G) + √(log(1/δ)/2n) for Every g"}
-[The theorem]{.kicker}
+::: {.slide title="Proof by Symmetrization: Ghost Sample and Sign Swaps"}
+[The Three-Step Symmetrization Argument]{.kicker}
 
-- Predictors $\mathcal F$; loss class $\mathcal G=\{(\mathbf x,y)\mapsto\ell(f(\mathbf x),y)\}$, values in $[0,1]$.
+How does correlation with coin flips bound $\Phi(S) = \sup_{g \in \mathcal{G}}\bigl(R(g) - \hat{R}_S(g)\bigr)$? We bound $\mathbb{E}_S[\Phi(S)] \le 2\,\mathfrak{R}_n(\mathcal{G})$ in three steps and concentrate $\Phi(S)$ around $\mathbb{E}_S[\Phi(S)]$:
 
-$$R(g)\le\hat R_S(g)+2\,\mathfrak R_n(\mathcal G)+\sqrt{\frac{\log(1/\delta)}{2n}}\quad\text{for all }g\in\mathcal G.$$
-
-- Same shape as the finite bound: empirical risk, richness, confidence.
-- $\pm1$ predictors, 0-1 loss: $\widehat{\mathfrak R}_S(\mathcal G)=\tfrac12\widehat{\mathfrak R}_S(\mathcal F)$.
-
-*Hypotheses: i.i.d. sample; losses in $[0,1]$.*
+1. **Introduce an independent ghost sample $S' = (z'_1, \dots, z'_n)$:** Since $R(g) = \mathbb{E}_{S'}[\hat{R}_{S'}(g)]$ and $\sup_g \mathbb{E}_{S'}[\cdot] \le \mathbb{E}_{S'}[\sup_g \cdot]$, we replace the population risk with the empirical risk on $S'$:
+   $$\mathbb{E}_S\bigl[\Phi(S)\bigr] \le \mathbb{E}_{S, S'}\Biggl[\sup_{g \in \mathcal{G}} \frac{1}{n}\sum_{i=1}^n \bigl(g(z'_i) - g(z_i)\bigr)\Biggr]$$
+2. **Randomize exchangeable pair swaps ($z_i \leftrightarrow z'_i$):** Because $z_i$ and $z'_i$ are i.i.d., swapping them leaves the joint law of $(S, S')$ invariant while multiplying $g(z'_i) - g(z_i)$ by $-1$. Averaging over independent Rademacher signs $\varepsilon_i \in \{\pm 1\}$ therefore preserves the expectation:
+   $$= \mathbb{E}_{S, S', \boldsymbol{\varepsilon}}\Biggl[\sup_{g \in \mathcal{G}} \frac{1}{n}\sum_{i=1}^n \varepsilon_i\bigl(g(z'_i) - g(z_i)\bigr)\Biggr] \le 2\,\mathfrak{R}_n(\mathcal{G})$$
+   where the last step splits $\sup(A + B) \le \sup A + \sup B$ and uses $-\boldsymbol{\varepsilon} \stackrel{d}{=} \boldsymbol{\varepsilon}$.
+3. **McDiarmid concentration:** Changing one point $z_i \in S$ alters $\Phi(S)$ by at most $\frac{1}{n}$, so $P\bigl(\Phi(S) - \mathbb{E}[\Phi(S)] \ge t\bigr) \le e^{-2nt^2}$.
 :::
 
-::: {.slide title="Symmetrization: a Ghost Sample, a Sign Swap, a Split"}
-[The proof]{.kicker}
+::: {.slide title="Geometry of Rademacher Complexity for Linear Models"}
+[Norm-Bounded Linear Predictors]{.kicker}
 
-- I. Ghost $S'$: $R(g)=\mathbb{E}_{S'}\hat R_{S'}(g)$, and $\sup\mathbb{E}\le\mathbb{E}\sup$:
-  $\ \mathbb{E}\sup_g(R-\hat R_S)\le\mathbb{E}\sup_g\tfrac1n\sum_i(g(z'_i)-g(z_i))$.
-- II. Swapping $z_i\leftrightarrow z'_i$ keeps the law: insert random signs $\varepsilon_i$.
-- III. $\sup(a+b)\le\sup a+\sup b$, and $-\boldsymbol\varepsilon\sim\boldsymbol\varepsilon$: total $2\,\mathfrak R_n(\mathcal G)$.
-
-::: {.d2l-note}
-One point moves the supremum by $\le1/n$; McDiarmid adds $\sqrt{\log(1/\delta)/2n}$.
-:::
+::: {.cols .vc}
+::: {.col}
+- **Norm-bounded linear class:** Consider $\mathcal{F} = \bigl\{\mathbf{x} \mapsto \langle\mathbf{w}, \mathbf{x}\rangle : \|\mathbf{w}\|_2 \le B\bigr\}$ on sample inputs satisfying $\|\mathbf{x}_i\|_2 \le r$.
+- **Exact inner supremum via Cauchy–Schwarz:** By linearity of the inner product, $\frac{1}{n}\sum_{i=1}^n \varepsilon_i \langle\mathbf{w}, \mathbf{x}_i\rangle = \bigl\langle\mathbf{w},\, \frac{1}{n}\sum_{i=1}^n \varepsilon_i \mathbf{x}_i\bigr\rangle$, which is maximized when $\mathbf{w}^*$ points along the signed vector sum $\mathbf{s} = \sum_{i=1}^n \varepsilon_i \mathbf{x}_i$:
+  $$\widehat{\mathfrak{R}}_S(\mathcal{F}) = \frac{B}{n}\,\mathbb{E}_{\boldsymbol{\varepsilon}}\Biggl[\Biggl\|\sum_{i=1}^n \varepsilon_i \mathbf{x}_i\Biggr\|_2\Biggr]$$
 :::
 
-::: {.slide title="The Linear Class: R̂ ≤ Br/√n, and the Dimension Is Absent"}
-[Linear class]{.kicker}
-
-$\|\mathbf w\|\le B$, $\|\mathbf x_i\|\le r$:
-
-- I. Cauchy–Schwarz: $\sup_{\mathbf w}\tfrac1n\langle\mathbf w,\sum_i\varepsilon_i\mathbf x_i\rangle=\tfrac Bn\|\sum_i\varepsilon_i\mathbf x_i\|$.
-- II. Concavity of $\sqrt{\cdot}$: $\mathbb{E}\|\cdot\|\le\sqrt{\mathbb{E}\|\cdot\|^2}$.
-- III. $\mathbb{E}[\varepsilon_i\varepsilon_j]=0$: $\mathbb{E}\|\sum_i\varepsilon_i\mathbf x_i\|^2=\sum_i\|\mathbf x_i\|^2\le nr^2$.
-- 50 unit points: Monte Carlo about $0.125$, $0.139$, $0.141$ at $d=2,20,1000$; bound $0.141$.
-
-::: {.d2l-note}
-Capacity is the product $Br$, not the parameter count.
-:::
-:::
-
-::: {.slide title="A Margin Bound Certifies 9.5% at Br/γ = 10 and n = 50,000"}
-[Contraction]{.kicker}
-
-- Contraction: $L$-Lipschitz $\phi_i$ multiply the complexity by at most $L$.
-- Ramp loss $\phi_\gamma(u)=\min\{1,\max\{0,1-u/\gamma\}\}$ on $u=yf(\mathbf x)$: bounded, $1/\gamma$-Lipschitz, above the 0-1 loss.
-
-$$P(\text{error})\le\hat R_\gamma+\frac{2Br}{\gamma\sqrt n}+\sqrt{\frac{\log(1/\delta)}{2n}}=\hat R_\gamma+0.089+0.005 .$$
-
-- Fitting random labels pushes $Br/\gamma$ up until the bound passes 1.
-:::
-
-::: {.slide title="Check: Which Classes Have Rademacher Complexity 0, and Which 1?"}
-[Check]{.kicker}
-
-A single function; $\{\mathbf x\mapsto\langle\mathbf w,\mathbf x\rangle:\|\mathbf w\|\le0\}$;
-$\{+1,-1\}$; all functions into $[-1,1]$ on distinct points.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** A single function and the ball of radius 0: $0$, nothing to choose.
-$\{+1,-1\}$: about $\sqrt{2/(\pi n)}$, small but not zero. All functions into
-$[-1,1]$: $1$, they fit every sign pattern.
+::: {.col .fig}
+![](../img/mdl-prob-gen-rademacher.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="An Interpolating Class Fits Every Sign Vector, So Its Bound Exceeds 1"}
-[Fitting noise]{.kicker}
+::: {.slide title="Dimension-Free Linear Rademacher Complexity"}
+[Proving R_S(F) <= B r / sqrt(n)]{.kicker}
 
-- $n=50$ points, $p=100$ Gaussian features; min-norm fit $\mathbf w=\boldsymbol\Phi^+\boldsymbol\varepsilon$ to 2,000 sign vectors.
-- Correlation 1 by construction; $\mathbb{E}\|\mathbf w\|^2=n/(p-n-1)$.
+Bounding the expected Euclidean norm of $\mathbf{s} = \sum_{i=1}^n \varepsilon_i \mathbf{x}_i$ by its root-mean-square norm via Jensen's inequality ($\mathbb{E}\|\mathbf{s}\|_2 \le \sqrt{\mathbb{E}\|\mathbf{s}\|_2^2}$) yields a closed-form upper bound:
+
+$$\mathbb{E}_{\boldsymbol{\varepsilon}}\Biggl[\Biggl\|\sum_{i=1}^n \varepsilon_i \mathbf{x}_i\Biggr\|_2\Biggr] \le \sqrt{\sum_{i=1}^n \sum_{j=1}^n \mathbb{E}[\varepsilon_i \varepsilon_j]\,\langle\mathbf{x}_i, \mathbf{x}_j\rangle} = \sqrt{\sum_{i=1}^n \|\mathbf{x}_i\|_2^2} \le r\sqrt{n} \implies \widehat{\mathfrak{R}}_S(\mathcal{F}) \le \frac{Br}{\sqrt{n}}$$
+
+- **Orthogonality of independent signs:** Every cross term $i \neq j$ vanishes because $\mathbb{E}[\varepsilon_i \varepsilon_j] = \mathbb{E}[\varepsilon_i]\mathbb{E}[\varepsilon_j] = 0$, while $\varepsilon_i^2 = 1$.
+- **Ambient dimension $d$ is completely absent:** Whether $\mathbf{x}_i$ lives in $\mathbb{R}^{10}$ or $\mathbb{R}^{10^6}$, the complexity is governed solely by the norm product $Br$, justifying **$L_2$ weight decay**.
+- **Extension to two-layer ReLU networks:** For $f(\mathbf{x}) = \sum_{j=1}^h w_j \mathrm{ReLU}(\langle\mathbf{v}_j, \mathbf{x}\rangle)$ with $\|\mathbf{w}\|_1 \le B_1$ and $\|\mathbf{v}_j\|_2 \le B_2$, $\widehat{\mathfrak{R}}_S \le \frac{2B_1 B_2 r}{\sqrt{n}}$ independent of hidden width $h$.
+:::
+
+::: {.slide title="Talagrand's Contraction Lemma and Margin Bounds"}
+[From Real-Valued Scores to Classification Risk]{.kicker}
+
+How do we pass from the complexity of real-valued linear scores $\langle\mathbf{w}, \mathbf{x}\rangle$ to the $0\text{--}1$ classification error $P(y\langle\mathbf{w}, \mathbf{x}\rangle \le 0)$?
+
+- **Talagrand's Contraction Lemma:** If $\phi_1, \dots, \phi_n : \mathbb{R} \to \mathbb{R}$ are each $L$-Lipschitz, then composing $\mathcal{F}$ with $\phi_i$ stretches its Rademacher complexity by at most $L$: $\widehat{\mathfrak{R}}_S(\phi \circ \mathcal{F}) \le L\,\widehat{\mathfrak{R}}_S(\mathcal{F})$.
+- **The $(1/\gamma)$-Lipschitz ramp loss:** The ramp loss $\phi_\gamma(u) = \min\bigl\{1, \max\{0, 1 - u/\gamma\}\bigr\}$ on the margin $u = y\langle\mathbf{w}, \mathbf{x}\rangle$ takes values in $[0, 1]$, upper-bounds the $0\text{--}1$ error $\mathbf{1}\{u \le 0\}$ everywhere, and has slope $1/\gamma$ on $[0, \gamma]$.
+- **Dimension-free margin bound:** Combining contraction ($L = 1/\gamma$) with $\widehat{\mathfrak{R}}_S(\mathcal{F}) \le Br/\sqrt{n}$ guarantees that with probability $\ge 1 - \delta$, for all $\|\mathbf{w}\|_2 \le B$:
+  $$P\bigl(y\langle\mathbf{w}, \mathbf{x}\rangle \le 0\bigr) \le \hat{R}_\gamma(\mathbf{w}) + \frac{2Br}{\gamma\sqrt{n}} + \sqrt{\frac{\log(1/\delta)}{2n}}$$
+  At $Br/\gamma = 10, n = 50{,}000, \delta = 0.05$, any zero-ramp-loss separator is certified to have true test error $\le 0.089 + 0.005 = 9.5\%$.
+:::
+
+::: {.slide title="Monte Carlo Verification of Dimension-Free Complexity"}
+[Empirical Rademacher Complexity in Code]{.kicker}
+
+Averaging the exact supremum $\frac{B}{n}\bigl\|\sum_{i=1}^n \varepsilon_i \mathbf{x}_i\bigr\|_2$ over $2{,}000$ random sign vectors for $n = 50$ unit vectors ($B = r = 1$) across dimensions $d \in \{2, 20, 1000\}$ confirms our theory:
+
+@!mdl-concentration-generalization-coin-flips-in-code
+
+- **Why the bound becomes sharper in high dimensions:** The only inequality in our proof was Jensen's $\mathbb{E}\|\mathbf{s}\|_2 \le \sqrt{\mathbb{E}\|\mathbf{s}\|_2^2}$. In $d = 2$, a 2D Gaussian's mean length is $\frac{\sqrt{\pi}}{2} \approx 0.89$ of its RMS length ($0.125$ vs $0.141$); in $d \ge 20$, thin-shell norm concentration (§36.9) makes $\|\mathbf{s}\|_2$ nearly constant across sign patterns, reducing the slack to $< 1\%$.
+:::
+
+::: {.slide title="Where Uniform Convergence Stops: Fitting Random Labels"}
+[The Interpolation Boundary]{.kicker}
+
+What happens when a model family is overparameterized ($p = 2n = 100$ standard Gaussian features on $n = 50$ points) and can interpolate every random sign vector $\boldsymbol{\varepsilon} \in \{\pm 1\}^n$ via $\mathbf{w} = \boldsymbol{\Phi}^+\boldsymbol{\varepsilon}$?
 
 @!mdl-generalization-bounds-rademacher-complexity-in-numbers-1
 
-- A network trained to zero error on random labels: $2\,\mathfrak R_n(\mathcal G)\approx1$, no guarantee.
+- **Interpolating noise forces $Br/\sqrt{n} \ge 1$:** Because $\boldsymbol{\Phi}\mathbf{w} = \boldsymbol{\varepsilon}$ achieves correlation $1$ on every sign pattern, any weight ball $\|\mathbf{w}\|_2 \le B$ containing these interpolants has $\widehat{\mathfrak{R}}_S(\mathcal{F}) \ge 1$ and $Br/\sqrt{n} \approx 2.4 > 1$.
+- **The Zhang et al. (2017) random-label puzzle:** Because deep neural networks can fit random labels with zero training error, $2\mathfrak{R}_n(\mathcal{G}) \approx 1$ for the unconstrained architecture class, making uniform convergence bounds over the whole class vacuous—generalization depends on the specific solution the optimizer selects!
 :::
 
-::: {.slide title="Past p = n the Pseudoinverse Returns the Smallest Interpolant"}
-[Minimum norm]{.kicker}
+::: {.slide title="Minimum-Norm Interpolation and the SVD Spectrum"}
+[Analytical Mechanism of Double Descent]{.kicker}
 
-$$\mathbf w=\boldsymbol\Phi^+\mathbf y=\sum_{i=1}^{\min(n,p)}\frac{\langle\mathbf u_i,\mathbf y\rangle}{\sigma_i}\,\mathbf v_i$$
+To understand how an interpolating model generalizes, we analyze the minimum-norm linear interpolant $\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y}$ on an $n \times p$ random ReLU feature matrix $\boldsymbol{\Phi} = \mathrm{ReLU}(\mathbf{X}\mathbf{V}^\top)$ with singular value decomposition $\boldsymbol{\Phi} = \sum_{i=1}^{q} \sigma_i \mathbf{u}_i \mathbf{v}_i^\top$ ($q = \min(n, p)$):
 
-- $\boldsymbol\Phi$: $n$ points by $p$ features, singular values $\sigma_i$.
-- Nested features: pad the $p$-feature interpolant with a zero, an interpolant with $p+1$.
-- So past $p=n$ the minimum norm is **no larger** with each added feature.
-- Below $p=n$ no interpolant exists, and the norm grows with $p$.
+$$\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y} = \sum_{i=1}^{\min(n,p)} \frac{\langle\mathbf{u}_i, \mathbf{y}\rangle}{\sigma_i}\,\mathbf{v}_i$$
+
+- **Why the threshold $p = n$ explodes:** At $p = n$, the $n$ singular directions span all of $\mathbb{R}^n$ (zero training residual), but a square $n \times n$ random matrix has a tiny smallest singular value $\sigma_{\min} = \sigma_n \ll 1$. Dividing $\langle\mathbf{u}_n, \mathbf{y}\rangle$ by $\sigma_{\min}$ blows up both $\|\mathbf{w}\|_2$ and test predictions.
+- **Why $\|\mathbf{w}\|_2$ shrinks monotonically for $p > n$:** Padding a $p$-feature interpolant $\mathbf{w}_p$ with a $0$ on feature $p+1$ produces a valid $(p+1)$-feature interpolant of identical norm, so the minimum-norm solution satisfies $\|\mathbf{w}_{p+1}\|_2 \le \|\mathbf{w}_p\|_2$ on every trial.
 :::
 
-::: {.slide title="The Peak Is a Conditioning Event: σ_min Divides What y Has along u_min"}
-[The threshold]{.kicker}
-
-- 40 points, linear teacher in 15 dimensions, ReLU random features, label noise 0.1.
-- $\sigma_{\min}$: $0.05$ to $0.12$ at $p=38$, about $0.01$ to $0.04$ at $p=40$, about $2.8$ at $p=400$.
-- What is divided: label noise and the part of the target ReLU features represent badly.
-- With noise 0 the peak stays; a target made of ten features has no peak.
-:::
-
-::: {.slide title="Double Descent Measured: Test Error, Norm and Capacity All Peak at p = n"}
-[The sweep]{.kicker}
+::: {.slide title="Simulating Double Descent on Random ReLU Features"}
+[The Three Regimes in Code]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- Below the threshold: a U-curve with minimum about $0.7$. Predicting zero scores $1$.
-- At $p=40$: one to two orders of magnitude higher.
-- $p=400$: about $0.06$ with zero training error, ten times below the U-curve's minimum.
-- Least squares on the 15 raw inputs: $0.006$, ten times lower still.
+- **Setup ($n = 40, d_{\mathrm{in}} = 15, \sigma_\xi = 0.1$):** Sweeping $p \in [2, 400]$ nested random ReLU features across $20$ trials traces the complete double-descent curve.
+- **Underparameterized ($p < 40$):** Classical U-curve dipping near $p = 15$ ($\mathrm{MSE} \approx 0.7$) before rising toward the threshold while $\|\mathbf{w}\|_2$ grows.
+- **Interpolation peak ($p = n = 40$) & second descent ($p > 40$):** Test MSE spikes by $10\text{--}50\times$ at $p = 40$, then drops monotonically to $\approx 0.06$ at $p = 400$ as $\|\mathbf{w}\|_2$ shrinks to $0.4$.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!mdl-generalization-bounds-a-double-descent-sweep-1
 :::
 :::
 :::
 
-::: {.slide title="The Capacity Product Tracks the Curve but Never Certifies"}
-[Reading the sweep]{.kicker}
+::: {.slide title="Dissecting the Double-Descent Sweep Table"}
+[Singular Values, Norms, and Baselines]{.kicker}
+
+Inspecting all nine diagnostics across $p \in \{15, 38, 40, 42, 50, 80, 400\}$ reveals three essential nuances:
 
 @!mdl-generalization-bounds-a-double-descent-sweep-2
 
-- Capacity $\|\mathbf w\|\,r/\sqrt n$: about 8 to 25 at $p=40$, about 1.2 at $p=400$.
-- A diagnostic only: no theorem here covers squared loss on unbounded
-  targets, and its $B$ was read off the fit instead of fixed in advance.
+- **Training error is blind past $p = 40$:** For every $p \ge 40$, training MSE sits at floating-point zero ($\sim 10^{-28}$), yet test MSE drops $200\times$ from $p = 40$ to $p = 400$—tracked cleanly by $\sigma_{\min}$ ($0.02 \to 2.8$) and $\|\mathbf{w}\|_2$ ($11 \to 0.44$).
+- **Target misspecification alone triggers the spike:** Even at $p = 40$, the noise-free `clean` error exceeds the `noise` error because a linear teacher is poorly approximated by $40$ ReLU ridges along $\mathbf{u}_n$.
+- **Well-specified small models still win:** While $p = 400$ beats every smaller ReLU model, ordinary least squares directly on the $15$ raw inputs achieves $\mathrm{MSE} \approx 0.006$—another $10\times$ lower!
 :::
 
-::: {.slide title="Interpolated Noise Is Harmless Where Test Features Are Small Too"}
-[Benign overfitting]{.kicker}
+::: {.slide title="Bias–Variance Decomposition of Interpolating Fits"}
+[Clean Error vs. Noise Error]{.kicker}
 
-Test error $=$ clean part (fit to noise-free labels) $+$ noise part:
+Why does memorizing noisy labels ($\mathbf{y} = \mathbf{y}_0 + \boldsymbol{\xi}$ with $\mathbb{E}[\boldsymbol{\xi}] = \mathbf{0}, \operatorname{Cov}(\boldsymbol{\xi}) = \sigma_\xi^2 \mathbf{I}_n$) cause catastrophic overfitting at $p = 40$ but almost no harm at $p = 400$? By linearity of $\boldsymbol{\Phi}^+$, $\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y}_0 + \boldsymbol{\Phi}^+\boldsymbol{\xi}$, splitting expected test MSE into two orthogonal terms:
 
-$$	extrm{noise part}=\sigma_\xi^2\cdot\frac1n\sum_{i=1}^{n}\frac{\textrm{mean square of test features along }\mathbf v_i}{\textrm{mean square of training features along }\mathbf v_i}$$
+$$\mathbb{E}_{\boldsymbol{\xi}}\bigl[\mathrm{MSE}_{\mathrm{test}}\bigr] = \underbrace{\frac{1}{n_{\mathrm{te}}}\bigl\|\boldsymbol{\Phi}_{\mathrm{te}}\boldsymbol{\Phi}^+\mathbf{y}_0 - \mathbf{y}_{\mathrm{te}}\bigr\|_2^2}_{\text{clean target approximation error}} + \underbrace{\frac{\sigma_\xi^2}{n_{\mathrm{te}}}\bigl\|\boldsymbol{\Phi}_{\mathrm{te}}\boldsymbol{\Phi}^+\bigr\|_F^2}_{\text{noise amplification error}}$$
 
-| $p$ | ratio along $\mathbf v_{\min}$ | average ratio | noise part |
-|--:|--:|--:|--:|
-| 40 | thousands | hundreds | $1$ to $4$ |
-| 400 | about $2$ | just below $1$ | just under $0.01=\sigma_\xi^2$ |
+Expanding the Frobenius norm via the SVD $\boldsymbol{\Phi}^+ = \sum_{i=1}^n \sigma_i^{-1}\mathbf{v}_i \mathbf{u}_i^\top$ with $\sigma_i^2 = \|\boldsymbol{\Phi}\mathbf{v}_i\|_2^2$ rewrites the noise term for $p \ge n$ as an average energy ratio across the $n$ singular directions:
 
-::: {.d2l-note}
-At $p=n$ a small $\sigma_i$ is an accident of the 40 training points. At
-$p=400$ it marks a direction that is small for test points as well.
+$$\text{noise part} = \sigma_\xi^2 \cdot \frac{1}{n}\sum_{i=1}^n \frac{\|\boldsymbol{\Phi}_{\mathrm{te}}\mathbf{v}_i\|_2^2 / n_{\mathrm{te}}}{\|\boldsymbol{\Phi}\mathbf{v}_i\|_2^2 / n}$$
+:::
+
+::: {.slide title="Why Overfitting Becomes Benign at Large Width (p >> n)"}
+[Test-to-Train Feature Energy Ratios]{.kicker}
+
+The energy-ratio formula explains when dividing by a small singular value $\sigma_i$ hurts test performance and when it cancels out:
+
+| Regime | Smallest Singular Value $\sigma_{\min}$ | Test/Train Ratio Along $\mathbf{v}_{\min}$ (`ratio_q`) | Mean Ratio Across All $i$ (`ratio`) | Resulting Noise Error |
+| :--- | :---: | :---: | :---: | :---: |
+| **Threshold ($p = n = 40$)** | $\approx 0.02$ (accidental pinch) | **$\sim 1{,}000\times$** | **$\sim 100\times$** | **$1.0\text{--}4.0$** ($>100\sigma_\xi^2$) |
+| **Near threshold ($p = 42$)** | $\approx 0.08$ | $\sim 40\times$ | $\sim 15\times$ | $\approx 0.15$ ($15\sigma_\xi^2$) |
+| **Overparameterized ($p = 80$)** | $\approx 0.70$ | $\sim 4\times$ | $\approx 2.0\times$ | $\approx 0.02$ ($2\sigma_\xi^2$) |
+| **Wide limit ($p = 400$)** | $\approx 2.80$ | **$\approx 2.0\times$** | **$\approx 0.9\times$** | **$\approx 0.009$** ($\le \sigma_\xi^2$) |
+
+- **Accidental vs. genuine low-energy directions:** At $p = n$, $\mathbf{v}_n$ is a direction where the $40$ training vectors happen to align poorly by chance while test inputs still carry normal energy ($\text{numerator} \gg \text{denominator}$). At $p = 400$, plenty of low-variance feature directions exist to absorb label noise where *test inputs also have tiny projections*, canceling the small denominator (**benign overfitting**; Bartlett et al., 2020).
+:::
+
+::: {.slide title="Diagnostic vs. Certificate: Limits of Uniform Bounds"}
+[What Theory Certifies and What Remains Open]{.kicker}
+
+How do we reconcile our Rademacher margin bound $\frac{Br}{\gamma\sqrt{n}}$ with the empirical double-descent sweep?
+
+- **Why $B$ cannot simply be plugged in post-hoc:** The linear Rademacher bound requires the norm radius $B$ to be fixed *before* observing $S$. To cover a data-dependent norm $\|\hat{\mathbf{w}}\|_2$, **structural risk minimization** applies a union bound over a geometric ladder of radii $B_j = 2^j$ with failure budgets $\delta_j = \frac{\delta}{j(j+1)}$ ($\sum_{j=1}^\infty \delta_j = \delta$), paying at most a factor of $2$ on $\|\hat{\mathbf{w}}\|_2$ plus an $O\bigl(\sqrt{\frac{\log\log\|\hat{\mathbf{w}}\|_2}{n}}\bigr)$ confidence term.
+- **When the capacity product is a diagnostic rather than a bound:** In our regression sweep, $\|\hat{\mathbf{w}}\|_2 r/\sqrt{n}$ tracks the test MSE peak and descent ($15 \to 1.2$), explaining *which* subclass the minimum-norm interpolant lands in, even though unbounded squared loss lies outside the $[0, 1]$-loss theorem.
+- **The open frontier of deep learning theory:** Uniform convergence bounds the *worst* function in a pre-specified class $\mathcal{F}$, whereas modern overparameterized training relies on the **implicit bias of the optimizer** (e.g., minimum norm or maximum margin) to select a benign solution from a class large enough to fit noise.
+:::
+
+::: {.slide title="Comparing Generalization Frameworks"}
+[Single Model, Finite Pool, Linear Margin, Interpolating Regime]{.kicker}
+
+| Setting | Complexity Measure | Generalization Gap Bound / Scaling | Key Requirement or Limitation |
+| :--- | :--- | :--- | :--- |
+| **Single Fixed Model** $\{f\}$ | $\mathfrak{R}_n = 0$ | $\sqrt{\frac{\log(2/\delta)}{2n}}$ | $f$ must be fixed *before* drawing test set $S$ |
+| **Finite Candidate Pool** $\mathcal{F}$ | $\log\lvert\mathcal{F}\rvert$ | $\sqrt{\frac{\log(2\lvert\mathcal{F}\rvert/\delta)}{2n}}$ | Pool $\mathcal{F}$ must be non-adaptive (no leaderboard feedback) |
+| **General Infinite Class** $\mathcal{G}$ | $2\,\mathfrak{R}_n(\mathcal{G})$ | $2\,\mathfrak{R}_n(\mathcal{G}) + \sqrt{\frac{\log(1/\delta)}{2n}}$ | Requires losses bounded in $[0, 1]$ and i.i.d. data |
+| **Linear Margin Classifier** | $\frac{Br}{\gamma\sqrt{n}}$ | $\hat{R}_\gamma(\mathbf{w}) + \frac{2Br}{\gamma\sqrt{n}} + \sqrt{\frac{\log(1/\delta)}{2n}}$ | Dimension-free; vacuous once $Br/\gamma \gtrsim \sqrt{n}$ |
+| **Two-Layer ReLU Network** | $\frac{2B_1 B_2 r}{\sqrt{n}}$ | Controlled by $\ell_1 \times \ell_2$ path norms | Width-independent, but trained norms often exceed $\sqrt{n}$ |
+| **Minimum-Norm Interpolant** | $\sigma_{\min}(\boldsymbol{\Phi})$ & effective ranks | Noise error $\frac{\sigma_\xi^2}{n}\sum_i \frac{\|\boldsymbol{\Phi}_{\mathrm{te}}\mathbf{v}_i\|^2/n_{\mathrm{te}}}{\|\boldsymbol{\Phi}\mathbf{v}_i\|^2/n}$ | Algorithm-dependent; spikes at $p = n$, benign for $p \gg n$ |
+:::
+
+::: {.slide title="Concept Check: Uniform Convergence and Double Descent"}
+[Check Your Understanding]{.kicker}
+
+1. **Sample cost of doubling a hyperparameter grid:** Using the finite-class union bound $n = \frac{\log(2/\delta) + \log\lvert\mathcal{F}\rvert}{2t^2}$, how many extra validation examples are needed to maintain a tolerance of $t = 0.01$ whenever you double the number of candidate models $\lvert\mathcal{F}\rvert$?
+2. **Rademacher complexity of an interpolating classifier:** Suppose a binary classifier family $\mathcal{F} \subseteq \{\pm 1\}^{\mathcal{X}}$ can shatter (fit every sign pattern $\boldsymbol{\varepsilon} \in \{\pm 1\}^n$ on) the training set $S$. What are $\widehat{\mathfrak{R}}_S(\mathcal{F})$ and the resulting Rademacher $0\text{--}1$ risk bound?
+3. **Distinguishing two zero-training-error fits:** In our random-features sweep, both $p = 42$ and $p = 400$ achieve training MSE $\approx 10^{-28}$. Name three quantities from the SVD analysis that separate their generalization behavior.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Doubling $\lvert\mathcal{F}\rvert$ adds $\log 2 \approx 0.693$ to $\log\lvert\mathcal{F}\rvert$, requiring $\frac{\log 2}{2(0.01)^2} \approx 3{,}466$ additional validation examples regardless of the current pool size.
+2. Since $\mathcal{F}$ matches every $\boldsymbol{\varepsilon}$ exactly, $\widehat{\mathfrak{R}}_S(\mathcal{F}) = 1$. For the $0\text{--}1$ loss class $\mathcal{G}$, $\widehat{\mathfrak{R}}_S(\mathcal{G}) = \frac{1}{2}\widehat{\mathfrak{R}}_S(\mathcal{F}) = \frac{1}{2}$, so the complexity penalty $2\widehat{\mathfrak{R}}_S(\mathcal{G}) = 1.0$ ($100\%$) makes the bound vacuous.
+3. From $p = 42$ to $p = 400$: (1) the solution norm $\|\mathbf{w}\|_2$ drops from $\sim 5.0$ to $0.44$; (2) the smallest singular value $\sigma_{\min}$ rises from $\sim 0.08$ to $2.8$; and (3) the test-to-train feature energy ratio along $\mathbf{v}_{\min}$ drops from $\sim 40$ to $\sim 2$.
 :::
 :::
 
-::: {.slide title="Check: Training Error Is Zero at p = 42 and at p = 400. What Tells Them Apart?"}
-[Check]{.kicker}
+::: {.slide title="Summary: Generalization and Double Descent"}
+[Key Takeaways]{.kicker}
 
-Name two quantities that separate the two fits, with their values.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The norm: about 5 against 0.4. The smallest singular value: about
-0.08 against 2.8. The noise part of the test error: a few tenths against
-just under 0.01. Training error cannot separate them.
+| Concept | Mathematical Form | Statistical & Deep Learning Role |
+| :--- | :--- | :--- |
+| **Uniform Convergence** | $\sup_{f \in \mathcal{F}} \lvert\hat{R}_S(f) - R(f)\rvert \le t$ | Protects data-dependent model selection $\hat{f} = \operatorname{argmin}_f \hat{R}_S(f)$ |
+| **Finite-Class Union Bound** | $\lvert\hat{R}_S(f) - R(f)\rvert \le \sqrt{\frac{\log(2\lvert\mathcal{F}\rvert/\delta)}{2n}}$ | Searching $\lvert\mathcal{F}\rvert$ fixed models costs only $\log\lvert\mathcal{F}\rvert$ thanks to exponential tails |
+| **Rademacher Complexity** | $\widehat{\mathfrak{R}}_S(\mathcal{F}) = \mathbb{E}_{\boldsymbol{\varepsilon}}\bigl[\sup_{f \in \mathcal{F}} \frac{1}{n}\sum_i \varepsilon_i f(\mathbf{x}_i)\bigr]$ | Ghost-sample symmetrization reduces generalization gap to fitting random signs |
+| **Linear & Margin Bounds** | $\widehat{\mathfrak{R}}_S(\mathcal{F}) \le \frac{Br}{\sqrt{n}}$; $R_{0\text{--}1} \le \hat{R}_\gamma + \frac{2Br}{\gamma\sqrt{n}} + \sqrt{\frac{\log(1/\delta)}{2n}}$ | Capacity depends on norm product $Br/\gamma$, not dimension $d$ |
+| **SVD Interpolation Peak** | $\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y} = \sum_{i=1}^q \frac{\langle\mathbf{u}_i, \mathbf{y}\rangle}{\sigma_i}\mathbf{v}_i$ | Collapse of $\sigma_{\min}$ at $p = n$ explodes $\|\mathbf{w}\|_2$ and test error |
+| **Benign Overfitting** | $\text{Noise MSE} = \frac{\sigma_\xi^2}{n}\sum_{i=1}^n \frac{\|\boldsymbol{\Phi}_{\mathrm{te}}\mathbf{v}_i\|^2/n_{\mathrm{te}}}{\|\boldsymbol{\Phi}\mathbf{v}_i\|^2/n}$ | For $p \gg n$, noise is absorbed in low-energy directions where test features are also small |
 :::
-:::
-:::
 
-::: {.slide title="A Bound for the Whole Class Covers the Winner, until the Class Fits Noise"}
-[Wrap-up]{.kicker}
-
-- Best of 1,000 coins: 66 of 100. Union bound: $\log|\mathcal F|$, band 27 to 73.
-- Rademacher: $R\le\hat R+2\mathfrak R_n+\sqrt{\log(1/\delta)/2n}$; linear class $Br/\sqrt n$.
-- Margin bound: $0.095$ at $Br/\gamma=10$, $n=50{,}000$.
-- Double descent: $\sigma_{\min}$ at $p=n$, then a shrinking minimum-norm solution.
-- $p=400$: clean part about $0.05$ plus noise part just under $0.01$, the noise variance.
-- The widest random-feature model wins within its family; least squares on the raw inputs is ten times better.
-
-**Open:** guarantees for the solution an algorithm reaches, not for the whole class.
-:::

@@ -334,238 +334,199 @@ The encoder--decoder architecture maps a variable-length source sequence to a va
 ::: {.cover}
 [Dive into Deep Learning · §12.2]{.kicker}
 
-Sequence-to-Sequence Learning<br>
-**the encoder--decoder · scoring translations · the cost of one fixed state, measured**
+Sequence-to-Sequence Learning and the Fixed-State Bottleneck<br>**encoder–decoder abstraction · chrF & BLEU scoring · string reversal · effective bit capacity**
 :::
 :::
 
-::: {.slide title="One State Must Carry the Whole Source"}
-[The problem]{.kicker}
+::: {.slide title="From Single-Stream Prediction to Sequence Transduction"}
+[Motivation]{.kicker}
 
-- Translation reads a whole sentence, then writes another of a different
-  length; positions do not line up.
-- 2014: an **encoder** RNN reads the source into one state $\mathbf{c}$,
-  a **decoder** RNN writes the target from $\mathbf{c}$.
-- Reverse 64 random letters through a GRU state of 64 numbers, trained
-  for 1,000 steps: about **1 letter in 4** comes out right. Guessing gets
-  1 in 16.
+Autoregressive language models continue a single stream of tokens, whereas many tasks map a source sequence $x_{1:T}$ to a target sequence $y_{1:T'}$ of different length ($T' \neq T$) without one-to-one positional alignment:
 
-::: {.d2l-note .warn}
-How much of the source fits through one state, and what are the ways out?
-:::
+- **Sequence transduction tasks:** Machine translation (English $\to$ French), speech recognition (audio frames $\to$ words), and text summarization.
+- **The 2014 recurrent solution:** An **encoder** RNN summarizes the entire source into a single fixed-width vector $\mathbf{c} \in \mathbb{R}^d$, and a **decoder** RNN generates the target from $\mathbf{c}$.
+- **Why study the single-vector design now?** Every recurrent layer in this chapter compresses its past into a fixed-size state. Measuring how much information fits through one state vector reveals the exact ceiling that matrix memories (§12.6–12.7) and hybrids (§12.8) overcome.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Encoder–Decoder Architecture"}
+[Architectural Abstraction]{.kicker}
 
-- write the decoder as a conditional language model;
-- score a translation with chrF and BLEU, and predict when BLEU is zero;
-- count the bits a string carries and compare them with a state;
-- read accuracy against string length for two state widths;
-- name the two ways out: look back with attention, or build a better
-  state.
+![](../img/mdl-modernrnn-encoder-decoder.svg){.nostretch width=86%}
 
-**Running example:** random strings over 16 letters, to be reversed.
-:::
-
-::: {.slide title="This Deck Measures the Limit the Chapter Works Against"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Gated Recurrent Networks | gates decide what to keep |
-| **Sequence-to-Sequence Learning** | **what one fixed state costs** |
-| Linear Recurrences and Parallel Scans | training on all positions at once |
-| State Space Models | how fast a state forgets |
-| Selective State Space Models | the input decides what to keep |
-| Matrix-State Recurrences | a state of key-value pairs |
-| The Delta Rule | correcting a pair |
-| Hybrid Architectures | a little attention back |
-:::
-
-::: {.col .narrow}
-- **Uses:** the GRU, teacher forcing, cross-entropy.
-- **Skips:** a trained translator, subword vocabularies, beam search. The
-  modern encoder--decoder with cross-attention is in the transformer
-  chapter.
-:::
-:::
-:::
-
-::: {.slide title="The State Is the Only Channel from Encoder to Decoder"}
-[The abstraction]{.kicker}
-
-![](../img/mdl-modernrnn-encoder-decoder.svg){width=88%}
-
-- **Encoder:** reads the whole source, of any length, into a state.
-- **Decoder:** writes the target one token at a time from that state.
-
-::: {.d2l-note}
-Everything the decoder learns about the source, it learns through the
-state.
-:::
-:::
-
-::: {.slide title="The Decoder Is a Conditional Language Model"}
-[The abstraction]{.kicker}
-
-$$P(y_1, \ldots, y_{T'} \mid x_1, \ldots, x_T) = \prod_{t'=1}^{T'} P(y_{t'} \mid y_{<t'}, \mathbf{c})$$
-
-- Source $x_1, \ldots, x_T$; target $y_1, \ldots, y_{T'}$, with $T' \ne T$
-  allowed; $y_{<t'}$ is the target written so far; $\mathbf{c}$ is the
-  encoder state.
-- Trained like a language model: next-token cross-entropy, correct
-  previous tokens fed in (teacher forcing). At test time it feeds back its
-  own tokens.
-- Both halves as transformers, audio in: Whisper. A vision encoder:
-  captioning.
-
-::: {.d2l-note .warn}
-The right side no longer sees the source, only $\mathbf{c}$. The equality
-holds only if $\mathbf{c}$ keeps everything the decoder needs.
-:::
-:::
-
-::: {.slide title="In 2014 Two Recurrent Networks Were Joined Through One Vector"}
-[History]{.kicker}
-
-- A GRU encoder--decoder scored phrase pairs inside a statistical
-  translator.
-- Deep LSTMs translated English to French end to end, through one vector.
-- Their trick: feed the source **backward**, so the first target words sit
-  a few steps from the source words they render. Short dependencies, the
-  authors argued, train more easily.
-- Soon measured: BLEU falls as sentences grow longer.
-
-::: {.d2l-note}
-Reversing the source does not change what the state must hold, only how
-far each word travels through the recurrence.
-:::
-
-[Cho et al., EMNLP 2014; Sutskever, Vinyals, Le, NeurIPS 2014; Cho et al., SSST 2014]{.small}
-:::
-
-::: {.slide title="chrF Counts Characters, BLEU Counts Words"}
-[Scoring]{.kicker}
-
-- **Precision:** the share of the candidate's $n$-grams found in the
-  reference; **recall:** the share of the reference's found in the
-  candidate. Counts are clipped: a repeated word scores only as often as
-  the reference has it.
-- **chrF:** character $n$-grams, $n \le 6$, spaces removed; $P$ and $R$
-  averaged over $n$; score $\frac{(1+\beta^2) P R}{\beta^2 P + R}$ with
-  $\beta = 2$, so a missed $n$-gram costs more than an extra one.
-- **BLEU:** $\text{BP} \prod_{n \le k} p_n^{w_n}$, with $p_n$ the
-  precision of word $n$-grams and brevity penalty
-  $\text{BP} = \exp(\min(0, 1 - \ell_\text{ref}/\ell_\text{cand}))$.
-  Here $w_n = 1/2^n$, sentence by sentence; the standard uses $w_n = 1/4$
-  for $n \le 4$, pooled over a test set.
+- **Encoder module:** Consumes source tokens $x_1, \ldots, x_T$ of arbitrary length $T$ and produces a fixed-dimensional summary state $\mathbf{c}$.
+- **Decoder module:** Consumes $\mathbf{c}$ and generates target tokens $y_1, \ldots, y_{T'}$ one step at a time until emitting an end-of-sequence token.
 
 ::: {.d2l-note .rule}
-Both score overlap with a reference translation, not meaning.
+**Information bottleneck invariant:** Everything the decoder knows about the source sequence must pass through the state $\mathbf{c}$.
 :::
 :::
 
-::: {.slide title="Check: What Is BLEU for the Near Miss?"}
-[Check]{.kicker}
+::: {.slide title="The Decoder as a Conditioned Autoregressive Model"}
+[Probabilistic Formulation]{.kicker}
 
-Reference: `we will visit our grandparents tomorrow`<br>
-Near miss: `we will visits our grandparents tomorrow`
+Given source $x_1, \ldots, x_T$ and encoder summary $\mathbf{c}$, the decoder factorizes the conditional target distribution via the chain rule:
 
-Predict BLEU with $k = 4$ before you compute anything.
+$$P(y_1, \ldots, y_{T'} \mid x_1, \ldots, x_T) = \prod_{t'=1}^{T'} P(y_{t'} \mid y_1, \ldots, y_{t'-1}, \mathbf{c})$$
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Zero.** A six-word sentence has three word 4-grams, and every one of
-them contains word 3. So $p_4 = 0$ and the product vanishes.
-:::
-:::
+- **Sufficient-statistic assumption:** The source tokens $x_{1:T}$ disappear on the right-hand side; the equality holds *only* if $\mathbf{c}$ preserves every detail of the source needed to predict $y_{1:T'}$.
+- **Training vs. inference:** Trained by minimizing next-token cross-entropy under **teacher forcing** (feeding ground-truth $y_{t'-1}$); evaluated autoregressively by feeding back emitted tokens $\hat{y}_{t'-1}$.
+- **Enduring abstraction:** Modern speech (Whisper) and vision-language models keep this exact encoder–decoder split, replacing the single vector $\mathbf{c}$ with one vector per source position via cross-attention.
 :::
 
-::: {.slide title="chrF Gives the Near Miss 0.91, BLEU Gives It Zero"}
-[Scoring]{.kicker}
+::: {.slide title="The 2014 Neural Machine Translation Breakthrough"}
+[Historical Context]{.kicker}
+
+Two landmark 2014 papers established end-to-end neural sequence-to-sequence learning:
+
+- **GRU phrase scoring (Cho et al., 2014):** Introduced the GRU inside an encoder–decoder that passed $\mathbf{c}$ to every decoder step to score phrase tables.
+- **Deep LSTM translation (Sutskever, Vinyals & Le, 2014):** Translated English to French end-to-end with 4-layer LSTMs, initializing the decoder solely with the encoder's final state $\mathbf{c}$.
+- **Sutskever's source-reversal trick:** Feeding source sentences *backward* ($x_T, \ldots, x_1$) placed $x_1$ right next to $y_1$ across the encoder–decoder boundary, shortening early gradient paths without changing total state capacity.
+
+::: {.d2l-note .warn}
+**The empirical wall:** Right after these results, Cho et al. (2014) showed that single-vector translation quality degrades sharply as sentences grow past $20$–$30$ words.
+:::
+:::
+
+::: {.slide title="Lexical Evaluation: Character N-Gram F-Score (chrF)"}
+[Translation Metrics]{.kicker}
+
+Because human evaluation cannot run inside a training loop, translations are scored by $n$-gram overlap against a reference. Modern benchmarks recommend **chrF** (Popović, 2015; Kocmi et al., 2021):
+
+$$F_\beta = \frac{(1 + \beta^2)\, P R}{\beta^2 P + R}, \qquad \beta = 2$$
+
+- **Character $n$-grams ($n = 1, \ldots, 6$):** Strips whitespace and counts character substrings of length $1$ to $6$, avoiding subword tokenizer sensitivity and rewarding shared morphological stems.
+- **Clipped multiset overlap (`p & r`):** A candidate $n$-gram repeated more often than in the reference is clipped at its reference count.
+- **Recall-weighted ($\beta = 2$):** Averages precision $P$ (fraction of candidate $n$-grams in reference) and recall $R$ (fraction of reference $n$-grams in candidate) across $n=1\ldots 6$, weighting recall $4\times$ as heavily as precision.
+:::
+
+::: {.slide title="Word N-Gram Precision and Brevity Penalty (BLEU)"}
+[Translation Metrics]{.kicker}
+
+The classical **BLEU** metric (Papineni et al., 2002) combines clipped word $n$-gram precisions $p_1, \ldots, p_k$ with a brevity penalty:
+
+$$\text{BLEU} = \underbrace{\exp\!\left(\min\!\left(0, 1 - \frac{\text{len}_{\text{label}}}{\text{len}_{\text{pred}}}\right)\right)}_{\text{brevity penalty (BP)}} \prod_{n=1}^{k} p_n^{w_n}$$
+
+- **Why a brevity penalty instead of recall?** A 2-word candidate `"the"` or `"we will"` can achieve $p_1 = p_2 = 1.0$; when $\text{len}_{\text{pred}} < \text{len}_{\text{label}}$, $\text{BP} < 1$ penalizes incomplete translations exponentially.
+- **Multiplicative fragility:** Because BLEU takes a geometric product over orders $n \le k$, **any single $p_n = 0$ forces the entire sentence-level BLEU score to $0$** (whereas standard corpus-level sacreBLEU pools counts across the full test set).
+:::
+
+::: {.slide title="Pitfall: Sentence-Level BLEU Zeroes vs. Paraphrases"}
+[Metric Failure Modes]{.kicker}
+
+Comparing `chrF` and sentence-level `BLEU` ($k = 4$) on a 6-word reference `'we will visit our grandparents tomorrow'`:
 
 @!seq2seq-scoring-translations-1
 
-- Paraphrase: `we are going to see our grandparents tomorrow`.
-- The correct paraphrase scores **below** the ungrammatical near miss on
-  chrF and zero on BLEU.
+- **Near miss (`'visits'` at word 3):** In a 6-word sentence, there are only three word 4-grams (`1..4`, `2..5`, `3..6`) and *every single one* contains word 3—so $p_4 = 0$ collapses BLEU to **$0.00$**, while `chrF` gracefully scores **$0.91$**.
+- **Semantic paraphrase (`'are going to see'`):** Scores **$0.00$** on BLEU and **$0.67$** on `chrF`—lower than the ungrammatical near miss!
 
 ::: {.d2l-note}
-Use chrF for a quick lexical score, standard corpus BLEU (sacreBLEU) to
-compare with older work, and a learned metric (COMET) or an LLM judge for
-meaning.
+Pair character-level `chrF` (or corpus `sacreBLEU`) with learned semantic evaluators such as COMET or LLM judges.
 :::
 :::
 
-::: {.slide title="Reversal Forces Every Letter Through the State"}
-[The experiment]{.kicker}
+::: {.slide title="Isolating State Capacity with Random String Reversal"}
+[The Bottleneck Experiment]{.kicker}
 
-![](../img/mdl-modernrnn-seq2seq.svg){width=86%}
+How many tokens can a single recurrent state vector actually carry? Natural text confounds length with predictability, so we isolate state capacity using **synthetic string reversal**:
 
-- Random letters are independent: the letters already written say nothing
-  about the next one.
-- The encoder's final state $\mathbf{c}$ starts the decoder and is fed to
-  every decoder step.
+- **Independent uniform symbols:** Draw a random string of $T$ independent characters from an alphabet of $V = 16$ letters; the target is the reversed string $x_T, x_{T-1}, \ldots, x_1$.
+- **Zero target-side language-model shortcut:** Because the characters are i.i.d. uniform, previously decoded characters $y_1, \ldots, y_{t'-1}$ provide **zero mutual information** about $y_{t'}$—every character must travel through $\mathbf{c}$.
+- **Shortest possible initial lag:** Because the target is reversed, the last token read by the encoder ($x_T$) is the very first token written by the decoder ($y_1 = x_T$), matching Sutskever et al.'s optimal ordering.
 :::
 
-::: {.slide title="Check: How Many Letters Could 64 Floats Hold?"}
-[Check]{.kicker}
+::: {.slide title="Unrolled GRU Encoder–Decoder on String Reversal"}
+[Model Architecture]{.kicker}
 
-A letter from 16 carries 4 bits. The state is 64 numbers of 32 bits.
+![](../img/mdl-modernrnn-seq2seq.svg){.nostretch width=85%}
 
-::: {.fragment .fade-up}
+$$\mathbf{s}_{t'} = g(y_{t'-1}, \mathbf{c}, \mathbf{s}_{t'-1}), \qquad \mathbf{s}_0 = \mathbf{c}$$
+
+- Following Cho et al. (2014), the encoder's final state $\mathbf{c} \in \mathbb{R}^d$ both initializes the GRU decoder ($\mathbf{s}_0 = \mathbf{c}$) and is concatenated to the token embedding at every decoding step $t'$ so the decoder never has to spend state capacity merely remembering $\mathbf{c}$.
+:::
+
+::: {.slide title="Information-Theoretic Capacity vs. Learned Packing"}
+[Bit-Counting Analysis]{.kicker}
+
+Before training, compare the raw information content of a length-$T$ string against the raw bit size of the state vector $\mathbf{c} \in \mathbb{R}^d$:
+
+| Quantity | Formula | At $T = 8$ | At $T = 16$ | At $T = 64$ |
+| :--- | :--- | :---: | :---: | :---: |
+| **String entropy ($V = 16$)** | $T \log_2 16 = 4T\text{ bits}$ | $32\text{ bits}$ | $64\text{ bits}$ | $256\text{ bits}$ |
+| **Raw `float32` bits ($d = 64$)** | $64 \times 32\text{ bits}$ | $2{,}048\text{ bits}$ | $2{,}048\text{ bits}$ | $2{,}048\text{ bits}$ |
+| **Required bits per state float ($d = 64$)** | $4T / 64\text{ bits/float}$ | $0.5\text{ bits}$ | $1.0\text{ bit}$ | $4.0\text{ bits}$ |
+
 ::: {.d2l-note}
-$64 \times 32 = 2{,}048$ bits, so **512 letters**, if training could use
-every bit. A string of 16 letters needs only 64 bits.
-:::
+In raw bit count, $64$ single-precision floats ($2{,}048$ bits) could encode $512$ random letters. Teacher-forced evaluation measures how many letters gradient descent actually packs and unpacks without compounding early decoding errors.
 :::
 :::
 
-::: {.slide title="Longer Strings Overflow a Fixed State Long Before Counting Says"}
-[The result]{.kicker}
+::: {.slide title="Empirical State Capacity Across Lengths and Widths"}
+[Reversal Benchmark Results]{.kicker}
 
-1,000 steps of 128 fresh strings per model, two models per entry;
-per-letter accuracy on fresh strings (guessing: 0.06):
+Per-letter teacher-forced accuracy on $1{,}000$ fresh strings after $1{,}000$ AdamW steps (batch size $128$, two seeds per entry; random guessing $= 1/16 \approx 0.06$):
 
 @!seq2seq-the-fixed-state-bottleneck-4
+:::
 
-- The two runs of each entry agree to within 0.02.
-- Width 64: 0.99 at 8 letters, about 0.73 at 16 (64 bits, one per
-  number), about 0.26 at 64.
-- Same letters per number, four times both: 8 through 64 gives 0.99, 32
-  through 256 about 0.8. Longer is harder even with a wider state.
+::: {.slide title="Why Trained Recurrent States Pack Under 1 Bit/Float"}
+[Interpreting the Bottleneck]{.kicker}
 
-::: {.d2l-note}
-The code that 1,000 steps of training find, not the 2,048 bits, sets the
-limit.
+Three quantitative findings stand out from the reversal capacity table:
+
+- **Sharp decay past 0.5 bits/float:** At width $d = 64$, accuracy drops from **$0.99$** at $T = 8$ ($0.5\text{ bits/float}$) to **$0.72$** at $T = 16$ ($1\text{ bit/float}$) and **$0.26$** at $T = 64$ ($4\text{ bits/float}$).
+- **Wider state shifts the curve right:** Quadrupling state width to $d = 256$ sustains **$0.99$** accuracy at $T = 16$ and recovers roughly half the letters ($0.49$–$0.50$) at $T = 64$.
+- **Proportional width scaling still loses ground:** Holding letters per state float constant ($T/d = 1/8$), $T = 8$ at $d = 64$ achieves $0.99$, whereas $T = 32$ at $d = 256$ drops to $\sim 0.80$ because early characters must survive $4\times$ as many nonlinear GRU transitions.
+:::
+
+::: {.slide title="Two Escape Routes from the Single-Vector Bottleneck"}
+[Architectural Crossroads]{.kicker}
+
+When a single recurrent vector saturates on long sequences, deep learning offers two distinct remedies:
+
+::: {.cols}
+::: {.col}
+- **Route 1 — Cross-Attention (Bahdanau, Cho & Bengio, 2015):** Retain *every* encoder hidden state $\mathbf{h}_1, \ldots, \mathbf{h}_T$ and let the decoder query them dynamically.
+- **Trade-off:** Solves length-$12$ reversal to $100\%$ accuracy in $300$ steps, but replaces the fixed state with an $O(T)$ KV cache that grows without bound.
+:::
+
+::: {.col}
+- **Route 2 — Structured & Matrix States (§12.3–12.8):** Keep a fixed-size state $O(1)$ in sequence length, but upgrade its geometry and update dynamics:
+  1. Linearize transitions for $O(\log T)$ parallel scans (§12.3–12.5).
+  2. Expand the $O(d)$ vector into an $O(d^2/h)$ key–value matrix memory updated by the delta rule (§12.6–12.7).
+  3. Interleave a few full attention layers for exact lookup (§12.8).
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: N-Gram Metrics and State Bit Budgets"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding with these three questions:
+
+1. Why does sentence-level BLEU with $k = 4$ assign a score of exactly $0.0$ to any 3-word translation, even if all 3 words match a 3-word reference identically?
+2. Why do we evaluate string reversal accuracy under teacher forcing when measuring the capacity of the encoder state $\mathbf{c}$?
+3. If a width-$64$ encoder achieves $100\%$ reversal accuracy on random strings of length $T = 8$ over a $16$-letter alphabet, how many effective bits per state coordinate is it transmitting?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. A 3-word sentence has zero word 4-grams (or `min(k, len_pred)` stops at $n=3$; if $k=4$ is enforced without clipping to `len_pred`, $p_4 = 0$; even when clipped, any 4+ word candidate with a mismatch on word 3 of 6 has zero matching 4-grams and $p_4 = 0$).
+2. Under free-running decoding, a single wrong token at step $t'=1$ shifts the decoder's recurrent trajectory and corrupts later steps; because the random letters are independent, teacher forcing leaks zero information about $y_{t'}$ while isolating what $\mathbf{c}$ contains.
+3. Each letter carries $\log_2 16 = 4$ bits, so $8$ letters carry $32$ bits across $64$ floats: **$0.5\text{ effective bits per float}$** (out of $32$ raw bits).
 :::
 :::
 
-::: {.slide title="Two Ways Out: Look Back, or Build a Better State"}
-[Where next]{.kicker}
+::: {.slide title="Summary: Sequence-to-Sequence Learning and Capacity"}
+[Key Takeaways]{.kicker}
 
-- **Attention:** let the decoder read every encoder state. A
-  cross-attention encoder--decoder reverses fresh 12-letter strings without
-  a single error after 300 steps.
-- Its cost: a memory that grows with the input.
-- **A better state:** keep one state of fixed size, train it fast, and make
-  it a better memory. That is the rest of this chapter, until a little
-  attention comes back in its last section.
-
-[Bahdanau, Cho, Bengio, ICLR 2015]{.small}
+| Component / Concept | Mathematical Form | Key Property / Limitation |
+| :--- | :--- | :--- |
+| **Encoder** | $\mathbf{c} = f_{\text{enc}}(x_1, \ldots, x_T) \in \mathbb{R}^d$ | Compresses variable-length source into fixed-size vector $\mathbf{c}$ |
+| **Autoregressive Decoder** | $\prod_{t'=1}^{T'} P(y_{t'} \mid y_{<t'}, \mathbf{c})$ | Assumes $\mathbf{c}$ retains all source information needed by target |
+| **chrF Metric** | $F_2 = \frac{5PR}{4P + R}$ on character $1\ldots 6$-grams | Robust to inflections & tokenization; rewards partial stem overlap |
+| **BLEU Metric** | $\exp(\min(0, 1 - \ell_{\text{ref}}/\ell_{\text{cand}})) \prod_{n=1}^k p_n^{w_n}$ | Geometric product collapses to $0$ on sentence level if any $p_n = 0$ |
+| **Fixed-Vector Bottleneck** | $4T$ bits of random string in $d$ floats | Trained GRU packs $< 1\text{ bit/float}$ ($0.99 \to 0.26$ from $T=8 \to 64$ at $d=64$) |
+| **Architectural Remedies** | Cross-attention ($O(T)$ cache) vs. Matrix state ($O(1)$) | Attention stores all tokens; §12.3–12.8 build fast, high-capacity states |
 :::
 
-::: {.slide title="Recap"}
-- Encoder--decoder: source $\to$ state $\to$ target; the decoder is a
-  conditional language model.
-- chrF 0.91 against BLEU 0 for one wrong inflection; neither measures
-  meaning.
-- 64 numbers of state: 0.99 of 8 letters reversed, about 0.26 of 64, far
-  below the 512 letters counting allows; 256 numbers hold out longer.
-
-**Next:** keep the single state, and make it train on all positions at
-once.
-:::

@@ -5,14 +5,13 @@ Throughout this chapter, we proved our main results under clean assumptions
 that deep learning practice routinely bends: a ReLU network is full of sharp
 kinks, a reverse-mode tape can easily outgrow GPU memory, and a
 thousand-dimensional integral cannot be placed on a grid. The short notes
-below summarize what happens when those assumptions break down. Two topics
-bear directly on everyday training and are worth reading first: conservative
-fields, which explain in what sense backpropagation through kinks is still
-valid, and recursive checkpointing, which keeps memory manageable on long
-computations. The remaining topics can be browsed on demand, and the entire
-section can be skipped without losing the thread of the book. Annotated
-resources for the material taught in the chapter itself appear in the chapter
-introduction (:numref:`chap_mdl-calculus`).
+below summarize what happens when those assumptions break down, followed by a
+curated list of textbooks, courses, and tutorials covering the chapter's core
+material. Two topics bear directly on everyday training and are worth reading
+first: conservative fields, which explain in what sense backpropagation
+through kinks is still valid, and recursive checkpointing, which keeps memory
+manageable on long computations. Nothing elsewhere in the book depends on this
+section.
 
 ## Derivatives at Kinks
 
@@ -160,8 +159,7 @@ $\mathbf v\sim\mathcal N(\mathbf 0,\mathbf I)$ and taking
 $(\nabla\ell^\top\mathbf v)\,\mathbf v$ as a stochastic gradient estimate.
 Because $\mathbb{E}[\mathbf v\mathbf v^\top]=\mathbf I$, the estimate is
 unbiased, and for $n$ parameters its mean squared error is
-$(n+1)\|\nabla\ell\|^2$ (an exercise in
-:numref:`sec_mdl-matrix-calculus-autodiff` asks you to derive both facts). The
+$(n+1)\|\nabla\ell\|^2$. The
 memory tape disappears completely, but the trade-off is stark: the typical
 estimation error is roughly $\sqrt n$ times the norm of the true gradient,
 which is manageable for small models yet prohibitive at modern neural network
@@ -227,5 +225,20 @@ probability density as a scaled difference of two densities and estimates the
 gradient by sampling from both. :citet:`Mohamed.Rosca.Figurnov.ea.2020` unite
 all three families in a single framework and spell out the conditions under
 which each applies.
+
+## Books, Courses, and Tutorials
+
+**Books**
+
+- [Mathematics for Machine Learning](https://mml-book.github.io/) by Deisenroth, Faisal, and Ong: Chapter 5 ("Vector Calculus") covers gradients, Jacobians, and the chain rule for machine learning (:numref:`sec_mdl-single_variable_calculus` and :numref:`sec_mdl-multivariable_calculus`).
+- [Calculus](https://ocw.mit.edu/courses/res-18-001-calculus-fall-2023/) by Gilbert Strang (MIT OpenCourseWare): a free textbook whose chapters on integrals, the fundamental theorem, and multiple integrals accompany :numref:`sec_mdl-integral_calculus`.
+- [The Matrix Cookbook](https://archive.org/details/imm3274) by Petersen and Pedersen: a reference table of matrix-derivative identities useful for checking results derived by the differential method (:numref:`sec_mdl-matrix-calculus`).
+- [Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation](https://epubs.siam.org/doi/book/10.1137/1.9780898717761) by Griewank and Walther, and [The Art of Differentiating Computer Programs](https://epubs.siam.org/doi/book/10.1137/1.9781611972078) by Naumann: the standard monographs on forward and reverse mode, checkpointing, and derivative compilers (:numref:`sec_mdl-matrix-calculus-autodiff`).
+
+**Courses and Tutorials**
+
+- [Essence of Calculus](https://www.3blue1brown.com/topics/calculus) by 3Blue1Brown, [Single Variable Calculus (18.01SC)](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/), and [Multivariable Calculus (18.02SC)](https://ocw.mit.edu/courses/18-02sc-multivariable-calculus-fall-2010/) on MIT OpenCourseWare.
+- [Matrix Calculus for Machine Learning and Beyond (18.S096)](https://ocw.mit.edu/courses/18-s096-matrix-calculus-for-machine-learning-and-beyond-january-iap-2023/) by Edelman and Johnson (MIT OCW), [The Matrix Calculus You Need For Deep Learning](https://explained.ai/matrix-calculus/) by Parr and Howard, and [matrixcalculus.org](https://www.matrixcalculus.org/) by Laue, Mitterreiter, and Giesen.
+- [Calculus on Computational Graphs: Backpropagation](https://colah.github.io/posts/2015-08-Backprop/) by Christopher Olah, [Automatic Differentiation in Machine Learning: a Survey](https://www.jmlr.org/papers/volume18/17-468/17-468.pdf) by Baydin et al., [The Autodiff Cookbook](https://docs.jax.dev/en/latest/notebooks/autodiff_cookbook.html) and [Autodidax](https://docs.jax.dev/en/latest/autodidax.html) in the JAX documentation, and [Monte Carlo Gradient Estimation in Machine Learning](https://jmlr.org/papers/v21/19-346.html) by Mohamed et al.
 
 [Discussions](https://d2l.discourse.group/t/36858)

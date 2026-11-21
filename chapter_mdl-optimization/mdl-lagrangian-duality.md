@@ -1308,9 +1308,7 @@ by the lack of convexity, not by a failure of Slater's condition. Returning to
 panel (b) of :numref:`fig_mdl-opt-primal-dual-gap`, the image curve
 $\{(u, -(u + \tfrac12)^2) : u \in [-\tfrac12, \tfrac12]\}$ bends downward, so
 no supporting line below $\mathcal{A}$ can reach $(0, p^\star)$; the highest
-one, of slope $-1$, certifies only $-\tfrac12$. Interestingly, whether a gap
-appears can even depend on how the same feasible set is written as constraints
-(Exercise :exref:`ex_mdl-lagrangian-duality-gap-formulations`).
+one, of slope $-1$, certifies only $-\tfrac12$.
 
 Two open challenges remain. First, for a nonconvex problem, the dual can bound
 the optimum but need not reach it. Second, even when a saddle point exists,
@@ -1446,23 +1444,6 @@ minimizing $-x^2$ on $[0, 1]$ subject to $x \le \tfrac12$.
        $(0.204, 0, 0, 0, 0, 0.273, 0, 0.359)$.)
    :exlabel:`ex_mdl-constrained-optimization-duality-offset-folded-svm-dual`
 
-1. [code] **Duality gaps and formulations.** The gap cell of
-   :numref:`subsec_mdl-explicit-duality-gap` minimizes the Lagrangian over
-   the domain $[0, 1]$ and dualizes only the constraint $x \le \tfrac12$.
-    1. Replace the objective by $f(x) = (x - 1)^2$. Compute $p^\star$, the
-       dual function, $d^\star$, and $\lambda^\star$ by hand, and confirm them
-       with the modified cell. Why is the gap now zero?
-    1. Keep $f(x) = -x^2$, but write the constraint as $x^2 \le \tfrac14$,
-       which defines the same feasible set on $[0, 1]$. Compute the new dual
-       function and $d^\star$ by hand and with the cell.
-    1. Keep $f(x) = -x^2$ and the constraint $x \le \tfrac12$, but treat
-       $0 \le x$ and $x \le 1$ as constraints with their own multipliers and
-       minimize the Lagrangian over all of $\mathbb{R}$. What is $d^\star$
-       now? Rank the dual bounds of the three formulations of the same
-       problem (the one in the text and those of the two previous parts). Is
-       a duality gap a property of the problem or of its formulation?
-   :exlabel:`ex_mdl-lagrangian-duality-gap-formulations`
-
 1. [code] **Gradient descent--ascent.** ● Primal--dual methods and GAN
    training update the minimizing variable by gradient descent and the
    maximizing variable by gradient ascent at the same time.
@@ -1585,418 +1566,344 @@ minimizing $-x^2$ on $[0, 1]$ subject to $x \le \tfrac12$.
        replacing $\mathbf{A}\mathbf{A}^\top$ by a kernel matrix give?
    :exlabel:`ex_mdl-lagrangian-duality-ridge-dual`
 
-1. [code] **Dual ascent and the gradient of the dual.** For the clipping
-   problem, $q(\lambda) = \tfrac{25}{2}\tfrac{\lambda}{1 + \lambda} - \tfrac\lambda2$
-   and the Lagrangian's minimizer is $\mathbf{x}(\lambda) = \mathbf{x}_0 / (1 + \lambda)$.
-    1. Show that $q'(\lambda) = g(\mathbf{x}(\lambda))$. Explain why the same
-       holds for any problem whose Lagrangian has a unique minimizer
-       $\mathbf{x}(\boldsymbol{\lambda})$ that depends smoothly on
-       $\boldsymbol{\lambda}$: differentiate
-       $q(\boldsymbol{\lambda}) = \mathcal{L}(\mathbf{x}(\boldsymbol{\lambda}), \boldsymbol{\lambda})$
-       and use stationarity to drop the term through $\mathbf{x}$. The
-       gradient of the dual is the vector of constraint values at the
-       Lagrangian's minimizer.
-    1. Run projected dual ascent,
-       $\lambda \leftarrow \max\bigl(0, \lambda + \eta\, g(\mathbf{x}(\lambda))\bigr)$,
-       from $\lambda = 0$ with $\eta \in \{0.5, 1, 2\}$, and report the
-       iterate after $10$, $50$, and $100$ steps. (For $\eta = 0.5$ you
-       should see about $5.07$, $4.02$, and $4.0001$.) The first step jumps to
-       $12\eta$, far past $\lambda^\star = 4$. Explain this from
-       $q''(\lambda) = -25/(1 + \lambda)^3$, which is $-25$ at $\lambda = 0$
-       and $-0.2$ at $\lambda = 4$. Why does a step size that is safe near
-       $\lambda^\star$ jump so far at the start?
-    1. For $\eta = 0.5$, are the points $\mathbf{x}(\lambda_k)$ feasible? Show
-       that every feasible $\mathbf{x}(\lambda_k)$ gives an upper bound
-       $f(\mathbf{x}(\lambda_k)) \ge p^\star$ while $q(\lambda_k)$ gives a lower
-       bound, and print the certified gap $f(\mathbf{x}(\lambda_k)) - q(\lambda_k)$
-       along the run. Relate dual ascent to the Sinkhorn updates of
-       Exercise :exref:`ex_mdl-lagrangian-duality-entropic-ot`, which maximize
-       the same kind of dual exactly in blocks.
-   :exlabel:`ex_mdl-lagrangian-duality-dual-ascent`
-
-1. **The chapter's quadratic against a half-plane.** Minimize
-   $\tfrac12(x_1^2 + 1000\,x_2^2)$ subject to $x_1 + x_2 \ge 1$.
-    1. Write the constraint as $-x_1 - x_2 \le -1$ and use
-       :eqref:`eq_mdl-opt-dual-conjugate` with the conjugate of
-       $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ from
-       Exercise :exref:`ex_mdl-convexity-conjugate-pairs`b to get
-       $q(\lambda) = \lambda - \tfrac12\lambda^2(1 + \tfrac1{1000})$. Find
-       $\lambda^\star = \tfrac{1000}{1001}$,
-       $p^\star = d^\star = \tfrac{500}{1001} \approx 0.4995$, and
-       $\mathbf{x}^\star = (0.999, 0.000999)$.
-    1. Why does $x_2^\star$ carry almost none of the constraint? By how much,
-       to first order, does the optimum rise if the constraint becomes
-       $x_1 + x_2 \ge 1 + \delta$?
-    1. Replace $1000$ by a curvature ratio $\kappa$ and let $\kappa \to \infty$.
-       What do $\lambda^\star$, $p^\star$, and $\mathbf{x}^\star$ tend to? Fixed-step
-       gradient descent on the unconstrained quadratic slows down by a factor
-       of about $\kappa$ (:numref:`sec_mdl-gradient-based-optimization`).
-       Does the ill-conditioning make this constrained problem hard to solve
-       through its dual?
-
 [Discussions](https://d2l.discourse.group/t/36860)
 
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §26.6]{.kicker}
+[Dive into Deep Learning · §35.7]{.kicker}
 
-Duality<br>**lower bounds · the conjugate · strong duality · prices · worked duals**
+Duality<br>**Lagrange dual function · weak & strong duality · Slater's condition · shadow prices · Fenchel conjugates · SVM & water-filling**
 :::
 :::
 
-::: {.slide title="A Solver Says 8.01. Is Anything Feasible Below 8?"}
-[The problem]{.kicker}
+::: {.slide title="Certifying Optimality When the Gradient Is Nonzero"}
+[Motivation]{.kicker}
 
-- Clip $\mathbf{x}_0 = (3, 4)$ to the unit disk: minimize
-  $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$ s.t. $\|\mathbf{x}\| \le 1$.
-- A solver stops at $(0.55, 0.835)$: feasible, $f = 8.01$.
-- At the true answer $(0.6, 0.8)$ the gradient is $(-2.4, -3.2) \neq \mathbf{0}$.
+Suppose an iterative solver for the disk-clipping problem $\min_{\|\mathbf{x}\|_2 \le 1}\tfrac12\|\mathbf{x} - \mathbf{x}_0\|_2^2$ ($\mathbf{x}_0 = (3, 4)$) halts at $\mathbf{x} = (0.55, 0.835)$:
 
-::: {.d2l-note .warn}
-The zero-gradient test cannot certify a constrained optimum, and the disk
-has infinitely many points to check.
-:::
+::: {.cols}
+::: {.col}
+- **What we can check directly:** The point $\mathbf{x}$ is feasible ($\|\mathbf{x}\|_2^2 = 0.9997 \le 1$) and achieves objective value $f(\mathbf{x}) = 8.01$, so the unknown global minimum satisfies $p^\star \le 8.01$.
+- **Why unconstrained tests fail:** At the true constrained minimum $\mathbf{x}^\star = (0.6, 0.8)$ ($p^\star = 8$), the gradient is $(-2.4, -3.2) \neq \mathbf{0}$, and the disk has infinitely many feasible points.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute a dual function and read any of its values as a lower bound;
-- compute a conjugate and the dual of a linearly constrained problem in one line;
-- decide from convexity and one strictly feasible point that the bound is exact;
-- read a multiplier as the price of a constraint;
-- derive the SVM dual and the water-filling rule.
-
-**The idea:** add $\lambda \ge 0$ times the constraint to the objective; every
-$\lambda$ gives a lower bound, and the best one is the optimum.
-**Running example:** clip $(3, 4)$ to the unit disk.
+::: {.col}
+- **How do we certify a lower bound $p^\star \ge c$?** Fold the constraint $g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|_2^2 - 1) \le 0$ into the objective with a nonnegative multiplier $\lambda \ge 0$.
+- Because $\lambda g(\mathbf{x}) \le 0$ for *every* feasible point, minimizing $f(\mathbf{x}) + \lambda g(\mathbf{x})$ over all of $\mathbb{R}^2$ produces an ironclad lower bound $q(\lambda) \le p^\star$!
+:::
+:::
 :::
 
-::: {.slide title="Duality Proves That the KKT Point Is Optimal"}
-[Where this fits]{.kicker}
+::: {.slide title="Folding Constraints into Unconstrained Lower Bounds"}
+[The Dual Problem]{.kicker}
+
+For the clipping problem ($f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{x}_0\|^2$, $g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|^2 - 1) \le 0$, $\|\mathbf{x}_0\|^2 = 25$), fix any $\lambda \ge 0$:
+
+$$\min_{\mathbf{x} \in \mathbb{R}^2} \big[f(\mathbf{x}) + \lambda\,g(\mathbf{x})\big] \le \min_{\|\mathbf{x}\| \le 1} \big[f(\mathbf{x}) + \underbrace{\lambda\,g(\mathbf{x})}_{\le 0}\big] \le \min_{\|\mathbf{x}\| \le 1} f(\mathbf{x}) = p^\star$$
+
+- **Closed-form unconstrained minimization:** Setting $\nabla_{\mathbf{x}}\mathcal{L}(\mathbf{x}, \lambda) = (\mathbf{x} - \mathbf{x}_0) + \lambda\mathbf{x} = \mathbf{0}$ yields the unique minimizer $\mathbf{x}(\lambda) = \frac{\mathbf{x}_0}{1 + \lambda}$.
+- **Evaluating the lower bound $q(\lambda) = \mathcal{L}(\mathbf{x}(\lambda), \lambda)$:**
+  $$q(\lambda) = \frac{25}{2}\frac{\lambda^2}{(1+\lambda)^2} + \frac{\lambda}{2}\left(\frac{25}{(1+\lambda)^2} - 1\right) = \frac{25}{2}\frac{\lambda}{1 + \lambda} - \frac{\lambda}{2}$$
+- **Tightest lower bound:** Setting $q'(\lambda) = \frac{25}{2(1+\lambda)^2} - \frac12 = 0$ selects $\lambda^\star = 4$, where $q(4) = 10 - 2 = \mathbf{8 = p^\star}$, proving immediately that $8.01$ is within $0.01$ of optimal!
+:::
+
+::: {.slide title="Visualizing the Dual Function on the Unit Disk"}
+[The Dual Problem]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Gradient Descent and Curvature | safe steps, $\kappa$, momentum |
-| Curvature Methods | Newton, BFGS, trust regions |
-| Convexity | local = global, rates, Jensen |
-| Stochastic Gradient Methods | noise floors, step decay |
-| Adaptive Methods | per-coordinate steps |
-| Constrained Optimization | KKT, projections, prox |
-| **Duality** | **lower bounds, prices** |
-| Numerical Stability and Conditioning | rounding, conditioning |
+Every $\lambda \ge 0$ furnishes a valid lower bound $q(\lambda) \le p^\star = 8$:
+
+| $\lambda$ | $0$ | $1$ | $2$ | $3$ | **$4$** | $5$ | $8$ |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| $q(\lambda)$ | $0.00$ | $5.75$ | $7.33$ | $7.88$ | **$8.00$** | $7.92$ | $7.11$ |
+
+- For $\lambda < 4$, $\mathbf{x}(\lambda)$ lies outside the disk ($g > 0$).
+- For $\lambda > 4$, $\mathbf{x}(\lambda)$ is pulled strictly inside ($g < 0$).
+- At $\lambda^\star = 4$, $\mathbf{x}(4) = (0.6, 0.8)$ lands on the boundary circle ($g = 0$).
 :::
 
-::: {.col .narrow}
-- **Uses:** KKT conditions, convexity, projection.
-- **Skips:** interior-point solvers; nonconvex duality beyond one example.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Lower bounds]{.dtitle}
-
-[one multiplier, one bound]{.dsub}
-:::
-:::
-
-::: {.slide title="Adding λ Times the Constraint Gives a Lower Bound"}
-[Lower bounds]{.kicker}
-
-- Constraint $g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|^2 - 1) \le 0$; take $\lambda \ge 0$.
-- Feasible $\mathbf{x}$: $f + \lambda g \le f$, so
-  $\min_{\mathbf{x}\in\mathbb{R}^2} (f + \lambda g) \le p^\star = 8$.
-- Minimizer $\mathbf{x}(\lambda) = \mathbf{x}_0/(1 + \lambda)$, value
-  $q(\lambda) = \tfrac{25}{2}\tfrac{\lambda}{1+\lambda} - \tfrac\lambda2$.
-
-| $\lambda$ | 1 | 2 | 3 | 4 | 5 |
-|---|---|---|---|---|---|
-| $q(\lambda)$ | 5.75 | 7.33 | 7.875 | **8** | 7.92 |
-
-::: {.d2l-note .rule}
-Every entry is a bound: $8.01$ is within $0.01$ of optimal.
-:::
-:::
-
-::: {.slide title="The Dual Function Is Concave and Never Exceeds p*"}
-[Lower bounds]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-For $\min f$ s.t. $g_i \le 0$, $h_j = 0$:
-
-$$q(\boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{x}} \Bigl[f + \textstyle\sum_i \lambda_i g_i + \sum_j \nu_j h_j\Bigr]$$
-
-- Feasible $\mathbf{x}$, $\boldsymbol{\lambda} \succeq 0$:
-  $q \le f + \sum\lambda_i g_i + \sum\nu_j h_j \le f(\mathbf{x})$.
-- Infimum of functions affine in the multipliers: concave.
-- Dual problem $\max_{\boldsymbol{\lambda} \succeq 0, \boldsymbol{\nu}} q$: convex,
-  value $d^\star \le p^\star$.
-:::
-
-::: {.col}
+::: {.col .fig}
 @!mdl-lagrangian-duality-a-lower-bound-from-one-multiplier
 :::
 :::
 :::
 
-::: {.slide title="Check: What Does λ = 3 Certify?"}
-[Check]{.kicker}
+::: {.slide title="The Lagrange Dual Function Is Always Concave"}
+[The Dual Problem]{.kicker}
 
-1. What does $q(\lambda)$ certify for an arbitrary $\lambda \ge 0$?
-2. With $q(3) = 7.875$, how far from optimal can the solver's $8.01$ be?
+For any primal problem $\min_{\mathbf{x} \in \mathcal{D}} f(\mathbf{x})$ subject to $g_i(\mathbf{x}) \le 0$ ($i = 1, \ldots, m$) and $h_j(\mathbf{x}) = 0$ ($j = 1, \ldots, p$), the **Lagrange dual function** is the unconstrained infimum of the Lagrangian over $\mathbf{x} \in \mathcal{D}$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** (1) No feasible point has $f < q(\lambda)$. (2) At most
-$8.01 - 7.875 = 0.135$; $\lambda = 4$ tightens this to $0.01$.
-:::
-:::
+$$q(\boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{x} \in \mathcal{D}} \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{x} \in \mathcal{D}}\left[f(\mathbf{x}) + \sum_{i=1}^m \lambda_i\,g_i(\mathbf{x}) + \sum_{j=1}^p \nu_j\,h_j(\mathbf{x})\right]$$
+
+- **Universal concavity of $q(\boldsymbol{\lambda}, \boldsymbol{\nu})$:** For each fixed $\mathbf{x} \in \mathcal{D}$, the function $(\boldsymbol{\lambda}, \boldsymbol{\nu}) \mapsto \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu})$ is *affine* in the multipliers. Because the pointwise infimum of any family of affine functions is concave (its hypograph is an intersection of half-spaces), **$q$ is concave even when $f, g_i, h_j$ are nonconvex**.
+- **Effective domain:** The set of multipliers where $q(\boldsymbol{\lambda}, \boldsymbol{\nu}) > -\infty$ often enforces implicit linear constraints in the dual problem.
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Weak Duality and the Duality Gap"}
+[The Dual Problem]{.kicker}
 
-[Strong duality and prices]{.dtitle}
+Maximizing the concave dual function over dual-feasible multipliers ($\boldsymbol{\lambda} \succeq \mathbf{0}$) defines the convex **dual problem**:
 
-[when the bound is exact, and what it is worth]{.dsub}
+$$d^\star = \sup_{\boldsymbol{\lambda} \succeq \mathbf{0},\, \boldsymbol{\nu}} q(\boldsymbol{\lambda}, \boldsymbol{\nu}) \le \inf_{\mathbf{x}\text{ feasible}} f(\mathbf{x}) = p^\star$$
+
+- **Two-line proof of Weak Duality ($d^\star \le p^\star$):** For any primal-feasible $\mathbf{x}$ ($g_i(\mathbf{x}) \le 0, h_j(\mathbf{x}) = 0$) and any dual-feasible $(\boldsymbol{\lambda} \succeq \mathbf{0}, \boldsymbol{\nu})$, every penalty term satisfies $\lambda_i g_i(\mathbf{x}) \le 0$ and $\nu_j h_j(\mathbf{x}) = 0$:
+  $$q(\boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{z} \in \mathcal{D}}\mathcal{L}(\mathbf{z}, \boldsymbol{\lambda}, \boldsymbol{\nu}) \le \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu}) = f(\mathbf{x}) + \sum_{i=1}^m \lambda_i g_i(\mathbf{x}) + \sum_{j=1}^p \nu_j h_j(\mathbf{x}) \le f(\mathbf{x})$$
+- **Duality gap and stopping certificates:** The nonnegative difference $p^\star - d^\star \ge 0$ is the **duality gap**. Any dual-feasible pair $(\boldsymbol{\lambda}, \boldsymbol{\nu})$ immediately bounds the suboptimality of any primal-feasible candidate $\mathbf{x}$ via $f(\mathbf{x}) - p^\star \le f(\mathbf{x}) - q(\boldsymbol{\lambda}, \boldsymbol{\nu})$.
 :::
+
+::: {.slide title="Slater's Condition and Strong Duality"}
+[Strong Duality]{.kicker}
+
+When does the best dual lower bound match the primal optimum exactly ($d^\star = p^\star$, zero duality gap)?
+
+- **Theorem (Slater's Condition $\Rightarrow$ Strong Duality):** Suppose the primal problem is convex ($f$ and $g_i$ convex on convex $\mathcal{D}$, $h_j$ affine) and there exists a point $\bar{\mathbf{x}}$ in the relative interior of $\mathcal{D}$ satisfying:
+  $$g_i(\bar{\mathbf{x}}) < 0 \;\text{ (for all non-affine } g_i\text{)}, \qquad g_i(\bar{\mathbf{x}}) \le 0 \;\text{ (for affine } g_i\text{)}, \qquad h_j(\bar{\mathbf{x}}) = 0 \;\forall\,j$$
+  Then **strong duality holds ($d^\star = p^\star$)**, and whenever $p^\star > -\infty$, the dual optimum is attained at some $(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$.
+- **Affine constraints need only feasibility:** If all inequality constraints $g_i(\mathbf{x}) \le 0$ are linear/affine (as in linear programs and SVMs), mere feasibility of $\bar{\mathbf{x}}$ already satisfies Slater's condition!
 :::
 
-::: {.slide title="Convexity Plus One Strictly Feasible Point Closes the Gap"}
-[Strong duality]{.kicker}
+::: {.slide title="Supporting-Line Geometry of Strong Duality"}
+[Strong Duality]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .narrow}
-$\mathcal{A}$: all $(u, t)$ above and right of some $(g(\mathbf{x}), f(\mathbf{x}))$.
-$q(\lambda)$ is the height at $u = 0$ of the lowest line of slope $-\lambda$ below
-$\mathcal{A}$. Left: clipping, $d^\star = p^\star = 8$. Right: concave objective, gap.
+::: {.col}
+For a single inequality $g(\mathbf{x}) \le 0$, form the epigraph set of attainable constraint and objective values:
+
+$$\mathcal{A} = \big\{(u, t) : u \ge g(\mathbf{x}),\; t \ge f(\mathbf{x})\text{ for some }\mathbf{x} \in \mathcal{D}\big\}$$
+
+- **Visualizing $p^\star$ and $q(\lambda)$:** $p^\star$ is the lowest height $t$ of $\mathcal{A}$ on the vertical axis $u = 0$. Evaluating $q(\lambda) = \inf_{(u,t)\in\mathcal{A}}(t + \lambda u)$ pushes a line of slope $-\lambda$ up from below until it supports $\mathcal{A}$; its intercept at $u = 0$ is $q(\lambda)$.
+- **Why convexity + Slater work:** Convexity makes $\mathcal{A}$ convex so a supporting line exists at $(0, p^\star)$; Slater's point $u = g(\bar{\mathbf{x}}) < 0$ prevents that line from being vertical!
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:mdl-opt-primal-dual-gap
 :::
 :::
-
-[Slater: $f, g_i$ convex, $h_j$ affine, and some feasible $\bar{\mathbf{x}}$ with $g_i(\bar{\mathbf{x}}) < 0$ for every $g_i$ that is not affine.]{.small}
 :::
 
-::: {.slide title="Strong Duality Is a Saddle Point of the Lagrangian"}
-[Strong duality]{.kicker}
+::: {.slide title="Saddle Points and Min–Max Swapability"}
+[Strong Duality]{.kicker}
 
-- $p^\star = \inf_{\mathbf{x}} \sup_{\boldsymbol{\lambda} \succeq 0} \mathcal{L}$
-  (a violated constraint makes the sup $+\infty$);
-  $d^\star = \sup_{\boldsymbol{\lambda} \succeq 0} \inf_{\mathbf{x}} \mathcal{L}$.
-- Strong duality with attained optima:
-  $\mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}) \le \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star) \le \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star)$.
-- $\mathbf{x}^\star$ is among the minimizers of $\mathcal{L}(\cdot, \boldsymbol{\lambda}^\star)$;
-  unique for strictly convex $f$: $\mathbf{x}(4) = \mathbf{x}_0/5 = (0.6, 0.8)$.
+Because $\sup_{\boldsymbol{\lambda} \succeq \mathbf{0}, \boldsymbol{\nu}}\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu})$ equals $f(\mathbf{x})$ if $\mathbf{x}$ is feasible and $+\infty$ if $\mathbf{x}$ violates any constraint, the primal and dual optima are the two orders of a min–max game:
 
-::: {.d2l-note}
-GAN objectives have this min--max form. Simultaneous descent--ascent on
-$xy$ spirals away from the saddle at the origin for every step size.
-:::
+$$d^\star = \sup_{\boldsymbol{\lambda} \succeq \mathbf{0},\, \boldsymbol{\nu}}\;\inf_{\mathbf{x} \in \mathcal{D}}\,\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu}) \;\le\; \inf_{\mathbf{x} \in \mathcal{D}}\;\sup_{\boldsymbol{\lambda} \succeq \mathbf{0},\, \boldsymbol{\nu}}\,\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu}) = p^\star$$
+
+- **Saddle-point equivalence:** Strong duality ($d^\star = p^\star$) with attained optima $\mathbf{x}^\star$ and $(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$ holds if and only if $(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$ is a **saddle point** of the Lagrangian:
+  $$\mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}, \boldsymbol{\nu}) \le \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star) \le \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star) \qquad \forall\,\mathbf{x} \in \mathcal{D},\; \boldsymbol{\lambda} \succeq \mathbf{0},\; \boldsymbol{\nu}$$
+- **KKT necessity proved:** When $f, g_i, h_j$ are differentiable, the right-hand inequality says $\mathbf{x}^\star$ minimizes $\mathcal{L}(\cdot, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$ (so $\nabla_{\mathbf{x}}\mathcal{L} = \mathbf{0}$), and equality in $d^\star = \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star) = f(\mathbf{x}^\star) = p^\star$ forces complementary slackness $\sum_i \lambda_i^\star g_i(\mathbf{x}^\star) = 0$.
 :::
 
-::: {.slide title="The Multiplier Is the Price of the Constraint"}
-[Prices]{.kicker}
+::: {.slide title="Min–Max Games in Deep Learning: GANs and Robustness"}
+[Strong Duality]{.kicker}
 
-- Relax: $p^\star(\mathbf{u}, \mathbf{v}) = \inf\{f : g_i \le u_i,\ h_j = v_j\}$.
-- $p^\star(\mathbf{u}, \mathbf{v}) \ge p^\star(\mathbf{0}, \mathbf{0}) - \boldsymbol{\lambda}^{\star\top}\mathbf{u} - \boldsymbol{\nu}^{\star\top}\mathbf{v}$;
-  if differentiable, $\lambda_i^\star = -\partial p^\star / \partial u_i$.
-- Clipping relaxed to $\tfrac12(\|\mathbf{x}\|^2 - 1) \le u$, a disk of radius $r = \sqrt{1 + 2u}$:
-  $p^\star(u) = \tfrac12(5 - \sqrt{1 + 2u})^2$, slope $-4$ at $u = 0$.
-- $\lambda^\star = 4$ prices $u$, half the squared radius, not $r$; slack constraints cost $0$.
+Strong duality and min–max saddle points underpin three major workflows in machine learning:
 
-[Hypotheses: strong duality; for the derivative, $p^\star$ differentiable.]{.small}
+1. **Primal recovery from the dual:** Whenever $f$ is strictly convex, $\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$ has a unique minimizer $\mathbf{x}(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star) = \mathbf{x}^\star$ (e.g., $\mathbf{x}(4) = \mathbf{x}_0 / 5 = (0.6, 0.8)$ in clipping, or $\mathbf{w}^\star = \sum_i \alpha_i^\star y_i \mathbf{x}_i$ in SVMs).
+2. **Dimension reduction:** When $n \ll d$, solving the $n$-variable dual of ridge regression or kernel SVM is vastly cheaper than solving the $d$-variable primal.
+3. **Adversarial & GAN min–max games:** Generative adversarial networks and adversarial training solve $\min_{\boldsymbol{\theta}}\max_{\boldsymbol{\phi}} \mathcal{L}(\boldsymbol{\theta}, \boldsymbol{\phi})$. Even when a saddle point exists, naive simultaneous gradient descent–ascent on a bilinear coupling $\min_x \max_y xy$ multiplies the distance to $(0, 0)$ by $\sqrt{1 + \eta^2} > 1$ at every step, spiraling outward unless stabilized by damping or extragradient steps.
 :::
 
-::: {.slide title="Weight Decay Is the Price of a Norm Budget"}
-[Prices]{.kicker}
+::: {.slide title="Lagrange Multipliers as Shadow Prices"}
+[Sensitivity & Prices]{.kicker}
 
-$\min \ell + \tfrac\lambda2\|\mathbf{w}\|^2$ and $\min \ell$ s.t.
-$\tfrac12\|\mathbf{w}\|^2 \le \tfrac12 r^2$ share
-$\nabla\ell + \lambda\mathbf{w} = \mathbf{0}$; for convex $\ell$ they have
-the same solutions. Ridge, $r = \|\mathbf{w}_\lambda\|$, PGD on the ball:
+How much does the optimal value improve if we relax the constraints to $g_i(\mathbf{x}) \le u_i$ and $h_j(\mathbf{x}) = v_j$? Let $p^\star(\mathbf{u}, \mathbf{v})$ denote the perturbed optimal value:
+
+- **Global sensitivity lower bound:** Under strong duality with dual optimum $(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$, any $\mathbf{x}$ feasible for $(\mathbf{u}, \mathbf{v})$ satisfies:
+  $$p^\star(\mathbf{0}, \mathbf{0}) = q(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star) \le f(\mathbf{x}) + \sum_{i=1}^m \lambda_i^\star g_i(\mathbf{x}) + \sum_{j=1}^p \nu_j^\star h_j(\mathbf{x}) \le f(\mathbf{x}) + \boldsymbol{\lambda}^{\star\top}\mathbf{u} + \boldsymbol{\nu}^{\star\top}\mathbf{v}$$
+  Taking the infimum over perturbed-feasible $\mathbf{x}$ yields:
+  $$p^\star(\mathbf{u}, \mathbf{v}) \ge p^\star(\mathbf{0}, \mathbf{0}) - \boldsymbol{\lambda}^{\star\top}\mathbf{u} - \boldsymbol{\nu}^{\star\top}\mathbf{v}$$
+- **Differential shadow price:** Wherever $p^\star(\mathbf{u}, \mathbf{v})$ is differentiable at $(\mathbf{0}, \mathbf{0})$,
+  $$\lambda_i^\star = -\frac{\partial p^\star}{\partial u_i}(\mathbf{0}, \mathbf{0}), \qquad \nu_j^\star = -\frac{\partial p^\star}{\partial v_j}(\mathbf{0}, \mathbf{0})$$
+:::
+
+::: {.slide title="Equivalence of Weight Decay and Norm Budgets"}
+[Sensitivity & Prices]{.kicker}
+
+In deep learning we regularize models either by adding an $\ell_2$ penalty $\tfrac{\lambda}{2}\|\mathbf{w}\|_2^2$ or by constraining the weights to a norm ball $\tfrac12\|\mathbf{w}\|_2^2 \le \tfrac12 r^2$:
+
+$$\text{Penalized:}\quad \min_{\mathbf{w}}\;\ell(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}\|_2^2 \qquad \Longleftrightarrow \qquad \text{Constrained:}\quad \min_{\tfrac12\|\mathbf{w}\|_2^2 \le \tfrac12 r^2}\;\ell(\mathbf{w})$$
+
+- **Identical KKT stationarity:** Both formulations share the exact stationarity equation $\nabla\ell(\mathbf{w}) + \lambda\mathbf{w} = \mathbf{0}$.
+- **Bijective path equivalence for convex $\ell$:**
+  - *Penalty $\to$ Constraint:* Any minimizer $\mathbf{w}_\lambda$ of the penalized loss satisfies all KKT conditions for the constrained problem with budget $r = \|\mathbf{w}_\lambda\|_2$.
+  - *Constraint $\to$ Penalty:* For any budget $r > 0$, $\bar{\mathbf{w}} = \mathbf{0}$ satisfies Slater's condition, so any constrained minimizer $\mathbf{w}^\star$ minimizes $\ell(\mathbf{w}) + \tfrac{\lambda^\star}{2}\|\mathbf{w}\|_2^2$ where $\lambda^\star = -\partial p^\star / \partial(\tfrac12 r^2)$.
+:::
+
+::: {.slide title="Numerical Verification: Penalty vs. Ball Projection"}
+[Sensitivity & Prices]{.kicker}
+
+On a convex least-squares loss $\ell(\mathbf{w}) = \tfrac12\|\mathbf{A}\mathbf{w} - \mathbf{b}\|_2^2$ ($30 \times 5$), we solve the penalized ridge problem in closed form for $\lambda \in \{0.1, 1.0, 10.0\}$, set $r = \|\mathbf{w}_\lambda\|_2$, and run PGD on the $r$-ball:
 
 @!constrained-weight-decay
 
-::: {.d2l-note}
-One $\lambda$, three readings: decay rate, multiplier, $\sigma^2/\tau^2$ of a
-Gaussian prior.
-:::
+- PGD on the norm ball recovers the penalized solution $\mathbf{w}_\lambda$ to machine precision ($10^{-16}$), and the multiplier recovered from $-\mathbf{w}^\top\nabla\ell(\mathbf{w})/r^2$ matches $\lambda$ to all six decimal places.
 :::
 
-::: {.slide title="Check: What Is a Disk of Radius √2 Worth?"}
-[Check]{.kicker}
-
-Clipping $(3, 4)$ to the unit disk has $p^\star = 8$ and $\lambda^\star = 4$.
-Enlarge the disk to radius $\sqrt2$, that is, $u = \tfrac12$. What does the
-price guarantee, and what is the new optimum?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The price guarantees $p^\star(\tfrac12) \ge 8 - 4 \cdot \tfrac12 = 6$.
-The new optimum is $\tfrac12(5 - \sqrt2)^2 = 6.43$: relaxing helps by less
-than the price times the amount, because the price falls as the disk grows.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[The conjugate]{.dtitle}
-
-[duals read off a table]{.dsub}
-:::
-:::
-
-::: {.slide title="The Conjugate Records How Far a Line Must Drop to Touch the Graph"}
-[The conjugate]{.kicker}
-
-$f^*(\mathbf{y}) = \sup_{\mathbf{x}} \bigl(\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})\bigr)$:
-minus the intercept of the highest line of slope $\mathbf{y}$ below $f$.
+::: {.slide title="The Fenchel Convex Conjugate: Supporting Lines"}
+[Convex Conjugates]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .narrow}
-$\tfrac12x^2$ at slope $2$: touches at $x = 2$, $f^*(2) = 2$.
-$|x|$: $f^* = 0$ on $[-1, 1]$, $+\infty$ outside.
+::: {.col}
+The **convex conjugate** (or Fenchel conjugate) $f^*(\mathbf{y})$ encodes a function $f(\mathbf{x})$ by the intercepts of its supporting hyperplanes of slope $\mathbf{y}$:
+
+$$f^*(\mathbf{y}) = \sup_{\mathbf{x} \in \mathcal{D}}\big(\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})\big)$$
+
+- **Always convex & biconjugacy:** $f^*$ is a pointwise supremum of affine functions of $\mathbf{y}$, hence always convex. If $f$ is proper, closed, and convex, then $f^{**} = f$.
+- **Fenchel–Young inequality ($\forall\,\mathbf{x}, \mathbf{y}$):**
+  $$\mathbf{y}^\top\mathbf{x} \le f(\mathbf{x}) + f^*(\mathbf{y})$$
+  For convex differentiable $f$, equality holds iff $\mathbf{y} = \nabla f(\mathbf{x})$.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:mdl-opt-conjugate-intercept
 :::
 :::
 :::
 
-::: {.slide title="For Linear Constraints the Dual Is a Conjugate"}
-[The conjugate]{.kicker}
+::: {.slide title="Four Essential Fenchel Conjugate Pairs"}
+[Convex Conjugates]{.kicker}
 
-$\min f(\mathbf{x})$ s.t. $\mathbf{A}\mathbf{x} \preceq \mathbf{b}$:
+Memorizing four conjugate pairs lets us write down dual problems for linearly constrained objectives by inspection:
 
-$$q(\boldsymbol{\lambda}) = \inf_{\mathbf{x}}\bigl[f + (\mathbf{A}^\top\boldsymbol{\lambda})^\top\mathbf{x}\bigr] - \mathbf{b}^\top\boldsymbol{\lambda}
-= -f^*(-\mathbf{A}^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda}.$$
-
-- Half-plane: $f = \tfrac12\|\mathbf{x}\|^2$, $f^* = \tfrac12\|\mathbf{y}\|^2$,
-  $\mathbf{a} = (1, 2)$, $b = -1$.
-- $q(\lambda) = \lambda - \tfrac52\lambda^2$: $\lambda^\star = \tfrac15$,
-  $d^\star = \tfrac1{10}$.
-- $\mathbf{x} = -\lambda^\star\mathbf{a} = (-0.2, -0.4)$: feasible, $f = \tfrac1{10}$.
+| Primal Function $f(\mathbf{x})$ | Fenchel Conjugate $f^*(\mathbf{y}) = \sup_{\mathbf{x}}(\mathbf{y}^\top\mathbf{x} - f(\mathbf{x}))$ | Maximizing $\mathbf{x}^\star$ ($\mathbf{y} = \nabla f(\mathbf{x}^\star)$) |
+| :--- | :--- | :--- |
+| **Isotropic Quadratic** $\tfrac12\|\mathbf{x}\|_2^2$ | $\tfrac12\|\mathbf{y}\|_2^2$ (self-conjugate) | $\mathbf{x}^\star = \mathbf{y}$ |
+| **Elliptical Quadratic** $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ ($\mathbf{A} \succ \mathbf{0}$) | $\tfrac12\mathbf{y}^\top\mathbf{A}^{-1}\mathbf{y}$ | $\mathbf{x}^\star = \mathbf{A}^{-1}\mathbf{y}$ |
+| **Exponential** $e^x$ ($x \in \mathbb{R}$) | $y\log y - y$ for $y > 0$ ($0$ at $y=0$, $+\infty$ for $y < 0$) | $x^\star = \log y$ |
+| **Scaled $\ell_1$ Norm** $\lambda\|\mathbf{x}\|_1$ | Indicator $I_{\{\|\mathbf{y}\|_\infty \le \lambda\}}(\mathbf{y})$ ($0$ if $\|\mathbf{y}\|_\infty \le \lambda$, $+\infty$ else) | $y_i \in \lambda\,\partial|x_i^\star|$ |
 
 ::: {.d2l-note}
-One dual variable instead of two primal ones; the answer in one line.
+Notice the duality between norms: the conjugate of the $\ell_1$ penalty $\lambda\|\mathbf{x}\|_1$ is the hard $\ell_\infty$ box constraint $\|\mathbf{y}\|_\infty \le \lambda$.
 :::
 :::
 
-::: {.slide title="Log-Sum-Exp and Negative Entropy Are Conjugates"}
-[The conjugate]{.kicker}
+::: {.slide title="One-Line Duals of Linearly Constrained Problems"}
+[Convex Conjugates]{.kicker}
 
-- $\mathrm{lse}^*(\mathbf{p}) = \sum_i p_i \log p_i$ on the simplex $\Delta$,
-  $+\infty$ off it.
-- $\mathrm{lse}(\mathbf{x}) = \max_{\mathbf{p} \in \Delta}\, \mathbf{p}^\top\mathbf{x} + H(\mathbf{p})$,
-  maximizer $\mathrm{softmax}(\mathbf{x})$.
+For any linearly constrained problem $\min_{\mathbf{x}} f(\mathbf{x})$ subject to $\mathbf{A}\mathbf{x} \preceq \mathbf{b}$ (or $\mathbf{A}\mathbf{x} = \mathbf{b}$), the dual function $q(\boldsymbol{\lambda})$ reduces directly to the Fenchel conjugate $f^*$:
 
-::: {.d2l-note .rule}
-Softmax is the entropy-regularized argmax.
-:::
-:::
+$$q(\boldsymbol{\lambda}) = \inf_{\mathbf{x}}\big[f(\mathbf{x}) + (\mathbf{A}^\top\boldsymbol{\lambda})^\top\mathbf{x}\big] - \mathbf{b}^\top\boldsymbol{\lambda} = -\sup_{\mathbf{x}}\big[(-\mathbf{A}^\top\boldsymbol{\lambda})^\top\mathbf{x} - f(\mathbf{x})\big] - \mathbf{b}^\top\boldsymbol{\lambda} = -f^*(-\mathbf{A}^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda}$$
 
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
-
-[Worked examples]{.dtitle}
-
-[SVM · water-filling · a gap]{.dsub}
-:::
+- **Worked example (closest point in a half-plane):** Minimize $f(\mathbf{x}) = \tfrac12\|\mathbf{x}\|_2^2$ subject to $\mathbf{a}^\top\mathbf{x} \le b$ with $\mathbf{a} = (1, 2)$ ($\|\mathbf{a}\|^2 = 5$) and $b = -1$.
+- **One-line dual via $f^*(\mathbf{y}) = \tfrac12\|\mathbf{y}\|_2^2$:**
+  $$q(\lambda) = -f^*(-\lambda\mathbf{a}) - b\lambda = -\tfrac12\lambda^2\|\mathbf{a}\|_2^2 - b\lambda = \lambda - \tfrac52\lambda^2 \quad (\lambda \ge 0)$$
+- Setting $q'(\lambda) = 1 - 5\lambda = 0$ gives $\lambda^\star = \tfrac15$, $d^\star = p^\star = \tfrac{1}{10}$, and primal optimum $\mathbf{x}^\star = -\lambda^\star\mathbf{a} = (-0.2, -0.4)$.
 :::
 
-::: {.slide title="Support Vectors Are the Points with Positive Multipliers"}
-[Worked examples]{.kicker}
+::: {.slide title="Log-Sum-Exp and Negative Shannon Entropy"}
+[Convex Conjugates]{.kicker}
 
-Primal $\min\tfrac12\|\tilde{\mathbf{w}}\|^2$ s.t.
-$y_i\tilde{\mathbf{w}}^\top\tilde{\mathbf{x}}_i \ge 1$ (offset folded in);
-dual $\max_{\boldsymbol{\alpha} \succeq 0} \mathbf{1}^\top\boldsymbol{\alpha} - \tfrac12\boldsymbol{\alpha}^\top\mathbf{Q}\boldsymbol{\alpha}$,
-$\mathbf{Q}_{ij} = y_iy_j\tilde{\mathbf{x}}_i^\top\tilde{\mathbf{x}}_j$; projected ascent:
+Computing the Fenchel conjugate of $\mathrm{lse}(\mathbf{x}) = \log\sum_{i=1}^n e^{x_i}$ explains why softmax is the canonical probability map in deep learning:
+
+- **Domain restriction to the simplex $\Delta$:** In $\sup_{\mathbf{x}}(\mathbf{p}^\top\mathbf{x} - \mathrm{lse}(\mathbf{x}))$, if any $p_i < 0$, sending $x_i \to -\infty$ gives $+\infty$; if $\mathbf{1}^\top\mathbf{p} \neq 1$, shifting $\mathbf{x} = c\mathbf{1}$ gives $c(\mathbf{1}^\top\mathbf{p} - 1) - \log n \to +\infty$.
+- **Maximizing on the interior of $\Delta$:** Setting $\nabla_{\mathbf{x}}(\mathbf{p}^\top\mathbf{x} - \mathrm{lse}(\mathbf{x})) = \mathbf{p} - \mathrm{softmax}(\mathbf{x}) = \mathbf{0}$ is solved by $\mathbf{x} = \log\mathbf{p}$, giving negative Shannon entropy $-H(\mathbf{p}) = \sum_{i=1}^n p_i\log p_i$:
+  $$\mathrm{lse}^*(\mathbf{p}) = \begin{cases} \sum_{i=1}^n p_i\log p_i = -H(\mathbf{p}), & \mathbf{p} \in \Delta, \\ +\infty, & \text{otherwise.} \end{cases}$$
+- **Variational representation of log-sum-exp ($f^{**} = f$):**
+  $$\mathrm{lse}(\mathbf{x}) = \max_{\mathbf{p} \in \Delta}\Big(\mathbf{p}^\top\mathbf{x} + H(\mathbf{p})\Big), \qquad \text{attained uniquely at } \mathbf{p}^\star = \mathrm{softmax}(\mathbf{x})$$
+:::
+
+::: {.slide title="Deriving the Support Vector Machine (SVM) Dual"}
+[Worked Duals: SVM]{.kicker}
+
+For linearly separable data $\{(\mathbf{x}_i, y_i)\}_{i=1}^n$ with $y_i \in \{\pm 1\}$, the hard-margin SVM maximizes the geometric margin $2/\|\mathbf{w}\|_2$ by solving the convex quadratic program:
+
+$$\min_{\mathbf{w}, b}\;\tfrac12\|\mathbf{w}\|_2^2 \quad \text{subject to} \quad g_i(\mathbf{w}, b) = 1 - y_i(\mathbf{w}^\top\mathbf{x}_i + b) \le 0, \quad i = 1, \ldots, n$$
+
+- **Forming and minimizing the Lagrangian ($\alpha_i \ge 0$):**
+  $$\mathcal{L}(\mathbf{w}, b, \boldsymbol{\alpha}) = \tfrac12\|\mathbf{w}\|_2^2 + \sum_{i=1}^n \alpha_i\big(1 - y_i(\mathbf{w}^\top\mathbf{x}_i + b)\big)$$
+  1. **Minimize over $b$:** $\partial_b\mathcal{L} = -\sum_{i=1}^n \alpha_i y_i = 0$ (otherwise $\inf_b \mathcal{L} = -\infty$).
+  2. **Minimize over $\mathbf{w}$:** $\nabla_{\mathbf{w}}\mathcal{L} = \mathbf{w} - \sum_{i=1}^n \alpha_i y_i \mathbf{x}_i = \mathbf{0} \implies \mathbf{w}^\star = \sum_{i=1}^n \alpha_i^\star y_i \mathbf{x}_i$.
+:::
+
+::: {.slide title="Support Vectors and the Kernel Trick"}
+[Worked Duals: SVM]{.kicker}
+
+Substituting $\mathbf{w} = \sum_i \alpha_i y_i \mathbf{x}_i$ and $\sum_i \alpha_i y_i = 0$ back into $\mathcal{L}(\mathbf{w}, b, \boldsymbol{\alpha})$ yields the **SVM Dual Problem**:
+
+$$\max_{\boldsymbol{\alpha} \succeq \mathbf{0},\; \sum_{i=1}^n \alpha_i y_i = 0}\;\;\sum_{i=1}^n \alpha_i - \frac12\sum_{i=1}^n\sum_{j=1}^n \alpha_i \alpha_j\,y_i y_j\,(\mathbf{x}_i^\top\mathbf{x}_j)$$
+
+- **Sparsity from complementary slackness:** Because $\alpha_i^\star\big(1 - y_i(\mathbf{w}^{\star\top}\mathbf{x}_i + b^\star)\big) = 0$, every training point with $\alpha_i^\star > 0$ must sit directly on the margin hyperplane $y_i(\mathbf{w}^{\star\top}\mathbf{x}_i + b^\star) = 1$. These active points are the **support vectors**; all interior points ($y_i(\mathbf{w}^{\star\top}\mathbf{x}_i + b^\star) > 1$) have $\alpha_i^\star = 0$ and can be deleted without changing $\mathbf{w}^\star$!
+- **The kernel trick:** Training and prediction ($\mathbf{w}^{\star\top}\mathbf{x} = \sum_i \alpha_i^\star y_i (\mathbf{x}_i^\top\mathbf{x})$) depend on feature vectors *exclusively* through inner products $\mathbf{x}_i^\top\mathbf{x}_j$, allowing replacement by any positive-definite kernel $k(\mathbf{x}_i, \mathbf{x}_j)$.
+:::
+
+::: {.slide title="Solving the SVM Dual via Projected Gradient Ascent"}
+[Worked Duals: SVM]{.kicker}
+
+Folding the offset $b$ into $\tilde{\mathbf{w}} = (\mathbf{w}, b)$ with $\tilde{\mathbf{x}}_i = (\mathbf{x}_i, 1)$ turns the dual into $\max_{\boldsymbol{\alpha} \succeq \mathbf{0}}\big(\mathbf{1}^\top\boldsymbol{\alpha} - \tfrac12\boldsymbol{\alpha}^\top\mathbf{Q}\boldsymbol{\alpha}\big)$ over the nonnegative orthant, solved via projected gradient ascent:
 
 @!constrained-svm-dual
 
-::: {.d2l-note}
-$\tilde{\mathbf{w}}^\star$ is unique; $\boldsymbol{\alpha}^\star$ is not
-(rank $3$): a segment of optimal multipliers.
-:::
+- All $4$ positive multipliers sit at margin $1.0000$, and $p^\star = d^\star = 41/98 \approx 0.418367$ with gap $10^{-16}$.
 :::
 
-::: {.slide title="Water Fills Every Channel to One Level"}
-[Worked examples]{.kicker}
+::: {.slide title="Water-Filling Power Allocation Across Channels"}
+[Worked Duals: Water-Filling]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- $\max\sum_i\log(1 + P_i/N_i)$ s.t. $\sum_i P_i = P$, $P_i \ge 0$.
-- KKT: $N_i + P_i = \theta = 1/\nu$ on channels with power.
-- $P_i^\star = \max(\theta - N_i, 0)$.
-- $\nu^\star = 1/\theta = 0.698 = \mathrm{d}U^\star/\mathrm{d}P$.
+Divide total power $P > 0$ across $n$ channels with noise floors $N_i > 0$ to maximize total Shannon capacity:
+
+$$\max_{\mathbf{P} \succeq \mathbf{0},\; \sum_{i=1}^n P_i = P}\;\; U(\mathbf{P}) = \sum_{i=1}^n \log\!\left(1 + \frac{P_i}{N_i}\right)$$
+
+- **KKT stationarity:** With multiplier $\nu$ on $\sum_i P_i = P$ and $\lambda_i \ge 0$ on $-P_i \le 0$ ($\lambda_i P_i = 0$), stationarity requires $\frac{1}{N_i + P_i} = \nu - \lambda_i$.
+- **Uniform water level $\theta = 1/\nu^\star$:** Active channels fill to $\theta$ ($P_i^\star = \max(\theta - N_i,\, 0)$), where $\theta$ solves:
+  $$\sum_{i=1}^n \max(\theta - N_i,\, 0) = P$$
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:mdl-opt-water-filling
 :::
 :::
 :::
 
-::: {.slide title="Check: Which Channels Get Power?"}
-[Check]{.kicker}
+::: {.slide title="Verifying Water-Filling and Its Shadow Price"}
+[Worked Duals: Water-Filling]{.kicker}
 
-Noise floors $(0.1, 0.4, 0.8, 1.6, 2.5)$ and budget $P = 3$. Which channels
-receive power, and at what level?
+With noise floors $\mathbf{N} = (0.1, 0.4, 0.8, 1.6, 2.5)$ and total budget $P = 3.0$, bisection finds the water level $\theta$ and verifies that the Lagrange multiplier $\nu^\star = 1/\theta$ equals the marginal capacity $\mathrm{d}U^\star / \mathrm{d}P$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Try the three quietest: $\theta = (3 + 0.1 + 0.4 + 0.8)/3 = 1.433$.
-The floors $1.6$ and $2.5$ lie above it, so they stay dry, and the guess is
-consistent.
-:::
-:::
+@!constrained-water-filling
+
+- The three quietest channels fill to $N_i + P_i^\star = \theta = 1.433333$, the two noisy channels ($N_i > \theta$) stay dry ($P_4^\star = P_5^\star = 0$), and $\nu^\star = 1/\theta = 0.697674$ matches $\mathrm{d}U^\star/\mathrm{d}P$ to six digits.
 :::
 
-::: {.slide title="A Concave Objective Leaves a Gap of 1/4"}
-[Worked examples]{.kicker}
+::: {.slide title="When Strong Duality Fails: An Explicit Duality Gap"}
+[Nonconvex Duality]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-$\min -x^2$ on $[0, 1]$ s.t. $x \le \tfrac12$:
-$p^\star = -\tfrac14$, $d^\star = -\tfrac12$.
+To see why convexity is required for strong duality, minimize the *concave* objective $f(x) = -x^2$ over $\mathcal{D} = [0, 1]$ subject to $g(x) = x - \tfrac12 \le 0$ ($p^\star = f(\tfrac12) = -\tfrac14$):
 
-- A strictly feasible point exists; convexity does not.
-- Duals of nonconvex problems bound but do not solve.
-:::
+$$q(\lambda) = \min_{x \in [0, 1]}\big(-x^2 + \lambda(x - \tfrac12)\big) = \min\!\left(-\frac{\lambda}{2},\; \frac{\lambda}{2} - 1\right) \implies d^\star = q(1) = -\frac12 < -\frac14 = p^\star$$
 
-::: {.col .fig}
 @!constrained-duality-gap
+
+- Even though $x = 1/4$ is strictly feasible ($g(1/4) = -1/4 < 0$), nonconvexity leaves a strict duality gap $p^\star - d^\star = 1/4$.
 :::
+
+::: {.slide title="Concept Check: Dual Bounds, Prices, and Water Levels"}
+[Concept Check]{.kicker}
+
+Test your understanding of dual certificates, shadow prices, and water-filling:
+
+1. In the disk-clipping problem ($p^\star = 8$), a solver stops at a feasible point with $f(\mathbf{x}) = 8.01$. Without finding $\lambda^\star = 4$, what suboptimality bound does the unoptimized multiplier $\lambda = 3$ ($q(3) = 7.875$) certify?
+2. Clipping $(3, 4)$ to the unit disk ($\tfrac12(\|\mathbf{x}\|^2 - 1) \le 0$) has $p^\star(0) = 8$ and optimal multiplier $\lambda^\star = 4$. If we relax the constraint by $u = \tfrac12$ (enlarging the disk to radius $r = \sqrt{2}$), what lower bound on $p^\star(\tfrac12)$ does the shadow price guarantee, and how does it compare with the true $p^\star(\tfrac12)$?
+3. In water-filling with noise floors $(0.1, 0.4, 0.8, 1.6, 2.5)$, how did we calculate the exact water level $\theta = 1.433333$ for $P = 3$ by hand?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:** **(1)** Weak duality guarantees $p^\star \ge q(3) = 7.875$, certifying immediately that $f(\mathbf{x}) - p^\star \le 8.01 - 7.875 = \mathbf{0.135}$. **(2)** The global sensitivity bound guarantees $p^\star(\tfrac12) \ge p^\star(0) - \lambda^\star u = 8 - 4(\tfrac12) = \mathbf{6.00}$. The exact new optimum is $\tfrac12(5 - \sqrt{2})^2 \approx \mathbf{6.43} > 6.00$. **(3)** Guessing that the $3$ quietest channels are active, $\sum_{i=1}^3(\theta - N_i) = 3\theta - (0.1 + 0.4 + 0.8) = 3 \implies 3\theta = 4.3 \implies \theta = \mathbf{4.3/3 \approx 1.4333}$, which is consistent since $0.8 < 1.4333 < 1.6$.
 :::
 :::
 
-::: {.slide title="One Multiplier per Constraint Bounds, Certifies, and Prices"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Lagrangian Duality and Conjugates"}
+[Key Takeaways]{.kicker}
 
-- Clipping: $q(4) = 8 = p^\star$; price $4$ per unit of $\tfrac12 r^2$.
-- Half-plane: $d^\star = \tfrac1{10}$ from the conjugate in one line.
-- $\mathrm{lse}$ and $-H$ are conjugates; softmax attains the maximum.
-- Slater closes the gap; a concave objective keeps $\tfrac14$.
-- SVM: $\tfrac{41}{98}$, four positive multipliers; water-filling: level
-  $1.433$, price $0.698$.
-
-**Next:** when finite precision, not the algorithm, decides the answer.
+| Concept / Theorem | Mathematical Statement | Hypotheses Required | Practical Significance |
+| :--- | :--- | :--- | :--- |
+| **Lagrange Dual $q(\boldsymbol{\lambda}, \boldsymbol{\nu})$** | $\inf_{\mathbf{x} \in \mathcal{D}}\big(f(\mathbf{x}) + \sum_i \lambda_i g_i(\mathbf{x}) + \sum_j \nu_j h_j(\mathbf{x})\big)$ | None | Always concave in $(\boldsymbol{\lambda}, \boldsymbol{\nu})$ even for nonconvex primal |
+| **Weak Duality** | $d^\star = \sup_{\boldsymbol{\lambda} \succeq \mathbf{0}, \boldsymbol{\nu}} q(\boldsymbol{\lambda}, \boldsymbol{\nu}) \le p^\star$ | None | Any dual-feasible $(\boldsymbol{\lambda}, \boldsymbol{\nu})$ certifies a lower bound on $p^\star$ |
+| **Strong Duality (Slater)** | $d^\star = p^\star$ and saddle point of $\mathcal{L}$ | Convex primal + strict interior $\bar{\mathbf{x}}$ | Zero duality gap; KKT conditions are necessary & sufficient |
+| **Shadow Prices** | $p^\star(\mathbf{u}, \mathbf{v}) \ge p^\star(\mathbf{0}, \mathbf{0}) - \boldsymbol{\lambda}^{\star\top}\mathbf{u} - \boldsymbol{\nu}^{\star\top}\mathbf{v}$ | Strong duality ($d^\star = p^\star$) | $\lambda_i^\star = -\partial p^\star/\partial u_i$; equates weight decay to a norm budget |
+| **Fenchel Conjugate $f^*(\mathbf{y})$** | $\sup_{\mathbf{x}}(\mathbf{y}^\top\mathbf{x} - f(\mathbf{x}))$; $\mathbf{y}^\top\mathbf{x} \le f(\mathbf{x}) + f^*(\mathbf{y})$ | $f^{**} = f$ if proper closed convex | Linearly constrained dual is $-f^*(-\mathbf{A}^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda}$; $\mathrm{lse}^* = -H$ |
 :::
+

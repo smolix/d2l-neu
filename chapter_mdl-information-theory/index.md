@@ -76,38 +76,77 @@ mdl-mi-estimation
 further-reading
 ```
 
-## Resources and Further Reading {.unnumbered}
+<!-- slides -->
 
-The resources below accompany the sections of this chapter, with each entry
-noting the section it supports. Topics beyond the main text, from model
-calibration to compressors that work without a probabilistic model, are
-collected in :numref:`sec_mdl-information-theory-further-reading`.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §37]{.kicker}
 
-**Books**
+Information Theory and Divergences<br>**entropy · cross-entropy · source coding · f-divergences · optimal transport · scores · mutual information**
+:::
+:::
 
-- [Elements of Information Theory — Cover & Thomas](https://onlinelibrary.wiley.com/doi/book/10.1002/047174882X) — the classic graduate reference that develops entropy, KL divergence (here called relative entropy), mutual information, and their chain rules from first principles, alongside source coding, channel capacity, and rate--distortion theory; accompanies :numref:`sec_mdl-information_theory`, :numref:`sec_mdl-coding-compression`, and :numref:`sec_mdl-mutual-information`.
-- [Information Theory, Inference, and Learning Algorithms — David MacKay](https://www.inference.org.uk/mackay/itila/) — freely available online; weaves information theory and machine learning together throughout, with chapters on symbol codes and stream codes (including arithmetic coding) that accompany :numref:`sec_mdl-coding-compression`.
-- [Information Theory: From Coding to Learning — Polyanskiy & Wu](https://www.cambridge.org/9781108832908) — a modern graduate text geared toward statistics and machine learning, whose treatment of f-divergences, variational representations, and data processing accompanies :numref:`sec_mdl-divergences-distances` and :numref:`sec_mdl-mutual-information`; the [MIT 6.441 lecture notes](https://ocw.mit.edu/courses/6-441-information-theory-spring-2016/pages/lecture-notes/) from which the book grew are freely available.
-- [Computational Optimal Transport — Peyré & Cuturi](https://optimaltransport.github.io/book/) — covers Wasserstein distances, entropic regularization, and Sinkhorn iterations for data science, supporting the transport half of :numref:`sec_mdl-test-functions-transport`; the full text is also on [arXiv](https://arxiv.org/abs/1803.00567).
-- [The Minimum Description Length Principle — Peter Grünwald](https://mitpress.mit.edu/9780262072816/the-minimum-description-length-principle/) — develops statistical learning as data compression through two-part and universal codes, expanding on :numref:`subsec_mdl-mdl`; the core ideas are also presented in a [freely available tutorial](https://arxiv.org/abs/math/0406077).
+::: {.slide title="Why Do We Train Models with Cross-Entropy?"}
+[Central Questions of Chapter 37]{.kicker}
 
-**Courses, tutorials, and software**
+Most models in deep learning minimize cross-entropy or compare distributions through KL penalties and adversarial critics. Information theory gives these objectives exact physical and statistical meaning:
 
-- [Stanford EE376A Information Theory — Tsachy Weissman](https://web.stanford.edu/class/ee376a/) — an accessible course with public, student-scribed [lecture notes](https://web.stanford.edu/class/ee376a/files/scribes/lecture_notes.pdf) covering entropy, prefix codes, and typical sets, accompanying :numref:`sec_mdl-information_theory` and :numref:`sec_mdl-coding-compression`.
-- [Visual Information Theory — Christopher Olah](https://colah.github.io/posts/2015-09-Visual-Information/) — an intuitive visual introduction that builds from codeword lengths to entropy, cross-entropy, and mutual information; accompanies :numref:`sec_mdl-information_theory`, :numref:`sec_mdl-coding-compression`, and :numref:`sec_mdl-mutual-information`.
-- [From GAN to WGAN — Lilian Weng](https://lilianweng.github.io/posts/2017-08-20-gan/) — a clear walkthrough comparing the KL, Jensen--Shannon, and Wasserstein losses for generative models, paralleling :numref:`sec_mdl-divergences-distances` and :numref:`sec_mdl-test-functions-transport`.
-- [POT: Python Optimal Transport — Flamary et al.](https://pythonot.github.io/) — an open-source Python library providing solvers for both exact optimal transport and entropically regularized Sinkhorn iterations, useful for computing the distances of :numref:`sec_mdl-optimal-transport` on your own datasets.
-- [Generative Modeling by Estimating Gradients of the Data Distribution — Yang Song](https://yang-song.net/blog/2021/score/) — an accessible tutorial explaining why score functions avoid normalizing constants and how score matching fits them to data (covering :numref:`sec_mdl-scores`) before moving on to sampling and diffusion models.
+- **What does a loss value actually measure?** When a language model reports $1.2$ nats per character or a classifier plateaus at $0.6$ nats, how low could any model possibly go on that dataset?
+- **Why is a language model's loss literally a file size?** How does pairing an autoregressive model with an arithmetic coder store a message in its total log-loss in bits plus at most two extra bits?
+- **What happens when KL divergence blows up?** When generated samples miss the data manifold or a model's normalizing constant $Z$ is intractable, how can we compare distributions from samples or slopes alone?
 
-**Foundational papers**
+::: {.d2l-note .rule}
+**The Fundamental Decomposition:** Every cross-entropy loss splits into an irreducible data floor plus a non-negative divergence gap: $\textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P \| Q) \ge H(P)$.
+:::
+:::
 
-- [Language Modeling Is Compression — Delétang et al.](https://arxiv.org/abs/2309.10668) — pairs an arithmetic coder with a language model's next-token probabilities, the exact idea demonstrated in :numref:`subsec_mdl-lm-compressor`.
-- [f-GAN: Training Generative Neural Samplers using Variational Divergence Minimization — Nowozin et al.](https://arxiv.org/abs/1606.00709) — shows that any f-divergence yields an adversarial training objective via its Fenchel conjugate lower bound, as derived in :numref:`sec_mdl-f-gan-dual`.
-- [A Kernel Two-Sample Test — Gretton et al.](https://jmlr.org/papers/v13/gretton12a.html) — introduces the maximum mean discrepancy, its unbiased two-sample estimator, and the resulting hypothesis test from :numref:`sec_mdl-ipm-mmd`.
-- [Wasserstein GAN — Arjovsky et al.](https://arxiv.org/abs/1701.07875) — replaces the Jensen--Shannon divergence with the Wasserstein-1 distance so that gradients remain informative even when supports do not overlap; accompanies :numref:`sec_mdl-optimal-transport`.
-- [Estimation of Non-Normalized Statistical Models by Score Matching — Aapo Hyvärinen](https://jmlr.org/papers/v6/hyvarinen05a.html) — fits unnormalized models by matching the gradient of the log-density to that of the data and eliminating the unknown data score via integration by parts, the two key steps of :numref:`sec_mdl-scores`.
-- [A Kernelized Stein Discrepancy for Goodness-of-fit Tests — Liu, Lee & Jordan](https://proceedings.mlr.press/v48/liub16.html) — tests whether a sample comes from a model known only through its score using pairwise kernel evaluations, as presented in :numref:`sec_mdl-ksd`.
-- [The Information Bottleneck Method — Tishby, Pereira & Bialek](https://arxiv.org/abs/physics/0004057) — formulates the problem of compressing $X$ while preserving information about $Y$, the framework studied in :numref:`sec_mdl-information-bottleneck`.
-- [Estimating Mutual Information — Kraskov, Stögbauer & Grassberger](https://arxiv.org/abs/cond-mat/0305641) — estimates the mutual information of continuous variables from nearest-neighbor distances, the estimator of :numref:`subsec_mdl-ksg` on which scikit-learn's [`mutual_info_regression`](https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.mutual_info_regression.html) is built.
-- [On Variational Bounds of Mutual Information — Poole et al.](https://arxiv.org/abs/1905.06922) — unifies the Barber--Agakov, Donsker--Varadhan, NWJ, and InfoNCE bounds in a single framework and analyzes their bias--variance trade-offs, accompanying :numref:`sec_mdl-mi-variational-bounds`.
-- [Representation Learning with Contrastive Predictive Coding — van den Oord et al.](https://arxiv.org/abs/1807.03748) — introduces the InfoNCE loss as a lower bound on mutual information for self-supervised representation learning, as developed in :numref:`sec_mdl-infonce`.
+::: {.slide title="Three Core Theorems Every Practitioner Needs"}
+[Core Mathematical Pillars]{.kicker}
+
+- **Gibbs' inequality and the irreducible floor (§37.1):** Because $D_{\textrm{KL}}(P \| Q) \ge 0$ with equality if and only if $P = Q$, no classifier can push population cross-entropy below the conditional entropy $\mathbb{E}_{\mathbf{x}}[H(p(\cdot \mid \mathbf{x}))]$ of the labels.
+- **Prediction is lossless compression (§37.2):** Kraft's inequality ($\sum_i 2^{-\ell_i} \le 1$) governs symbol codes, while arithmetic coding turns any sequential predictor $q(x_i \mid x_{<i})$ into a stream compressor achieving rate $\textrm{CE}_2(P, Q)$ bits per symbol.
+- **Sample-based bounds have logarithmic ceilings (§§37.3–37.7):** Variational critics lower-bound divergences ($f$-GAN) and mutual information (InfoNCE) from samples alone, but identifying one true partner among $N$ candidates can certify at most $\log N$ nats.
+
+::: {.d2l-note .warn}
+**The Density-Ratio Blind Spot:** Every $f$-divergence built from $p(\mathbf{x})/q(\mathbf{x})$ freezes at a constant on disjoint supports, giving zero gradient—motivating optimal transport ($W_1$), kernel MMD, and score matching.
+:::
+:::
+
+::: {.slide title="Chapter 37 Roadmap: Seven Connected Sections"}
+[Chapter Architecture]{.kicker}
+
+| Section | Core Mathematical Object | Key Theorem / Identity | Deep Learning Role |
+|:--|:---|:---|:---|
+| **§37.1 Entropy & KL** | Surprisal $-\log p(x)$, $H(P)$, $D_{\textrm{KL}}(P \| Q)$ | $\textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P \| Q) \ge H(P)$ | Classification floor, calibration, smoothing, distillation |
+| **§37.2 Coding & Perplexity** | Prefix trees, dyadic intervals, $\textrm{PPL} = e^{\textrm{CE}}$ | Kraft $\sum 2^{-\ell_i} \le 1$; $\ell < -\log_2 q(x_{1:n}) + 2$ | LLM compression, MDL, bits per byte across tokenizers |
+| **§37.3 $f$-Divergences** | Density ratio $u = p/q$, convex $f(1)=0$ | Pinsker $\textrm{TV} \le \sqrt{D_{\textrm{KL}}/2}$; Fenchel dual | Forward vs. reverse KL (MLE vs. VI), $f$-GAN critics |
+| **§37.4 IPMs & Transport** | Test class $\mathcal{G}$, couplings $\gamma \in \Pi(P, Q)$ | Kantorovich–Rubinstein duality for $W_1$ | Kernel MMD two-sample tests, WGAN, Sinkhorn OT |
+| **§37.5 Score Comparisons** | Score $s_Q(\mathbf{x}) = \nabla_{\mathbf{x}} \log q(\mathbf{x})$ | Stein's identity $\mathbb{E}_p[g' + g s_p] = 0$ | Hyvärinen score matching, diffusion noise scales, KSD |
+| **§37.6 Mutual Information** | $I(X; Y) = D_{\textrm{KL}}(P_{X,Y} \| P_X \otimes P_Y)$ | Data processing $I(X; Z) \le I(X; Y)$; Fano | Representation limits, rate–distortion, VAE bottleneck |
+| **§37.7 MI Estimation** | KSG neighbor boxes, critics $T(x, y)$ | InfoNCE $I(X; Y) \ge \log N - \mathcal{L}_{\textrm{NCE}}$ | SimCLR / CLIP contrastive learning, $\log N$ ceiling |
+:::
+
+::: {.slide title="Choosing a Distribution Comparison by Access"}
+[Practical Decision Guide]{.kicker}
+
+What your model supplies determines how you can train or evaluate it against data $P$:
+
+- **Tractable normalized density $q_{\boldsymbol{\theta}}(\mathbf{x}) > 0$:** Minimize **forward KL** $D_{\textrm{KL}}(P \| Q_{\boldsymbol{\theta}})$ via maximum likelihood—unbiased from data samples and mode-covering.
+- **Unnormalized target $p(\mathbf{z} \mid \mathbf{x}) \propto \tilde{p}(\mathbf{z}, \mathbf{x})$ with tractable model $q_{\boldsymbol{\theta}}$:** Minimize **reverse KL** $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \| P)$ via variational inference (ELBO)—mode-seeking without needing the target normalizer.
+- **Implicit generator producing samples only:** Compare expectations over test functions using **kernel MMD** (closed-form U-statistic) or **Wasserstein-1 ($W_1$)** via a 1-Lipschitz critic that provides steady gradients even on disjoint supports.
+- **Energy-based model $\tilde{q}_{\boldsymbol{\theta}}(\mathbf{x}) = e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}$ with intractable $Z$:** Match log-density slopes $s_Q(\mathbf{x}) = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x})$ via **Fisher divergence** and Stein integration by parts.
+:::
+
+::: {.slide title="Running Benchmarks and Study Paths"}
+[How to Navigate This Chapter]{.kicker}
+
+Every theoretical bound in this chapter is tested on concrete, reproducible benchmarks:
+
+- **Discrete benchmarks:** The dyadic source $(\tfrac12, \tfrac14, \tfrac18, \tfrac18)$, the asymmetric pair $P = (0.6, 0.3, 0.1)$ vs. $Q = (0.2, 0.5, 0.3)$, the flipped bit ($\delta = 0.1$), and character-level compression of *The Time Machine*.
+- **Continuous benchmarks:** Shifted and variance-scaled Gaussians $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(d, \sigma^2)$, bimodal Gaussian mixtures ($70/30$ split), and the correlated bivariate Gaussian pair at $\rho = 0.9$ and $\rho = 0.99$.
+- **Three modular tracks:**
+  1. **Log-loss & language models (§§37.1–37.2):** Read straight through for supervised learning and perplexity.
+  2. **Generative modeling comparisons (§§37.3–37.5):** Essential background for GANs, flow matching, and diffusion models.
+  3. **Dependence & contrastive learning (§§37.6–37.7):** Self-contained after §37.1; read directly for VAEs,SimCLR, and CLIP.
+:::
+

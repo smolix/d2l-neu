@@ -1054,8 +1054,7 @@ For a matrix with singular values $\sigma_1\ge\cdots\ge\sigma_d>0$ that
 factor is $\kappa(\mathbf A)=\sigma_1/\sigma_d$, by
 :eqref:`eq_mdl-condition-bound`, and it is about $4\times10^4$ for the two
 lines. The shift $(0,10^{-4})$ realizes $2.8\times10^4$ of it, because it is
-not along the most amplified direction (Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-residual-certificate`).
+not along the most amplified direction.
 
 ### Backward and Forward Error
 
@@ -1069,8 +1068,7 @@ given one by about one rounding of the data. The SVD and the QR decomposition
 are backward stable, and so in practice is the LU decomposition with pivoting
 that `np.linalg.solve` uses. The one-pass variance is not: the variance of
 any data set is nonnegative, so a negative output is the exact variance of no
-data at all (Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-construct-small-dataset-three`).
+data at all.
 
 The definition asks for a minimization over all changes of the data. Luckily,
 for changes of the matrix it has a closed form, computable from the residual.
@@ -1220,8 +1218,7 @@ $12$. The digits were lost when $\mathbf b$ was stored, before any solver
 ran. The rule of
 thumb is pessimistic by about one digit (from about half a digit to about
 one and a half, depending on the row), because the error is not aligned with
-the most amplified direction (Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-residual-certificate`). At
+the most amplified direction. At
 $n=12$, $\kappa u\approx2$ and the bound no longer constrains anything. The
 last decimals vary with the LAPACK build; the trend does not.
 
@@ -1497,21 +1494,6 @@ filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$.
 
     *Part 2 is adapted from Martin Mächler, [Accurately Computing log(1 − exp(−|a|))](https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf), Section 2.*
 
-1. [code] **A negative variance.** The one-pass formula
-   $\frac1N\sum_ix_i^2 - m^2$ of :numref:`subsec_mdl-catastrophic-cancellation`
-   cancels badly when the mean is large compared with the standard
-   deviation.
-    1. Construct three fp64 numbers for which the one-pass formula returns
-       a strictly negative variance. Explain the magnitude of the result
-       from the spacing of fp64 numbers near $x_i^2$.
-    1. Run Welford's recursion :eqref:`eq_mdl-opt-welford` on the same
-       three numbers and compare with the exact variance.
-    1. A backward-stable variance
-       algorithm (:numref:`subsec_mdl-conditioning-revisited`) returns the exact
-       variance of slightly perturbed data. Explain why a single negative
-       output proves that the one-pass formula is not backward stable.
-   :exlabel:`ex_mdl-numerical-stability-conditioning-construct-small-dataset-three`
-
 1. [code] **Normal equations in floating point.** The normal equations
    square the condition number :eqref:`eq_mdl-opt-kappa-squared`.
     1. For $\tau > 0$, the $(m + 1) \times m$ matrix $\mathbf{A}$ of
@@ -1530,26 +1512,6 @@ filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$.
        $k$, together with the two rule-of-thumb lines $16-2k$ and $16-k$.
        At which $k$ does the rule predict that the normal equations keep no
        correct digit, and what do you observe there?
-
-1. **Ridge as a conditioning dial.** Let $\mathbf{A}$ have singular values
-   $\sigma_1 = 1$ and $\sigma_d = 10^{-3}$, and let
-   $\mathbf{w}_0 = \mathbf{A}^+\mathbf{b}$ be the least-squares minimizer.
-    1. For $\lambda \in \{0, 10^{-4}, 10^{-2}\}$, compute
-       $\kappa(\mathbf{A}^\top\mathbf{A} + \lambda\mathbf{I})$ from
-       :eqref:`eq_mdl-opt-ridge-kappa`, the number of correct float64
-       digits that a direct solve of :eqref:`eq_mdl-opt-ridge-solution` can
-       keep, and the number of gradient-descent steps that
-       :eqref:`eq_mdl-opt-gd-iteration-bound` predicts for a relative error
-       of $10^{-6}$.
-    1. Using the filter factors :eqref:`eq_mdl-opt-filter-factors`, choose
-       $\lambda$ so that 90% of the $\mathbf v_d$ component of $\mathbf w_0$
-       survives. What are $\kappa(\mathbf A^\top\mathbf A+\lambda\mathbf I)$
-       and the predicted digits and steps then? Is the trade worth it?
-    1. Show that $\|\mathbf{w}_\lambda\|$ is strictly decreasing in
-       $\lambda$ unless $\mathbf{A}^\top\mathbf{b} = \mathbf{0}$. Conclude
-       that every norm budget $r$ with $0 < r < \|\mathbf{w}_0\|$ in
-       :numref:`subsec_mdl-weight-decay-duality` corresponds to exactly one
-       $\lambda > 0$.
 
 1. [code] **Feature scaling as preconditioning.** Features measured in
    different units give the columns of a design matrix very different
@@ -1660,40 +1622,6 @@ filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$.
 
     *Adapted from Steven G. Johnson, [MIT 18.335 Introduction to Numerical Methods, Problem Set 1](https://ocw.mit.edu/courses/18-335j-introduction-to-numerical-methods-spring-2019/6e6730885b20bd046cbde805d15a4835_MIT18_335JS19_pset1.pdf), Problem 4.*
 
-1. [code] **Residual as a certificate.** ● The two-line system of
-   :numref:`subsec_mdl-two-lines` and the Hilbert systems of the
-   `#numerical-stability-conditioning-hilbert` cell show how much of the
-   condition number a perturbation uses.
-    1. For the system $x_1+x_2=2$, $x_1+1.0001x_2=2.0001$, find the direction
-       of $\Delta\mathbf b$, with $\|\Delta\mathbf b\|=10^{-4}$, that moves
-       $\mathbf x$ the most, and the one that moves it the least. Show that
-       the ratio of the two amplifications is $\kappa(\mathbf A)$, and that
-       the text's shift $(0,10^{-4})$ reaches $2.8\times10^4$ of the
-       possible $4\times10^4$.
-    1. The computed solution $\hat{\mathbf{x}}$ of
-       $\mathbf{H}\mathbf{x} = \mathbf{H}\mathbf{1}$ solves exactly the
-       system whose right-hand side is $\mathbf{H}\mathbf{1}$ perturbed by
-       $\Delta\mathbf{b} = \mathbf{H}(\hat{\mathbf{x}} - \mathbf{1})$, so the
-       right-hand-side bound of the text gives
-       $\|\hat{\mathbf{x}} - \mathbf{1}\|/\|\mathbf{1}\|
-       \le \kappa(\mathbf{H})\,\|\Delta\mathbf{b}\|/\|\mathbf{H}\mathbf{1}\|$.
-       Evaluate $\Delta\mathbf{b}$ in fp64 as `H @ x_hat - b` for each
-       $n$ of the cell, and compare the right-hand side of the bound with
-       the forward error. In which row does the bound appear to fail? Why
-       can a residual computed in working precision do that?
-    1. Every fp64 number is a rational number, so `fractions.Fraction`
-       evaluates $\mathbf{H}(\hat{\mathbf{x}} - \mathbf{1})$ for the stored
-       matrix $\mathbf{H}$ without any rounding. Recompute the bound this
-       way and find, in each row, the ratio of the forward error to the
-       bound.
-    1. Write that ratio as a product of two factors, each at most $1$, one
-       depending only on the right-hand side $\mathbf{H}\mathbf{1}$ and one
-       depending only on the error vector $\hat{\mathbf{x}} - \mathbf{1}$.
-       Evaluate both. What do their values say about the directions of
-       $\mathbf{1}$ and of the error relative to the singular vectors of
-       $\mathbf{H}$?
-   :exlabel:`ex_mdl-numerical-stability-conditioning-residual-certificate`
-
 1. [code] **Mixed-precision iterative refinement.** ●● Mixed-precision
    training does the bulk of its arithmetic in low precision and keeps the
    quantities that accumulate small corrections in high precision. Iterative
@@ -1740,357 +1668,403 @@ filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §26.7]{.kicker}
+[Dive into Deep Learning · §35.8]{.kicker}
 
-Numerical Stability and Conditioning<br>**floating point · stable softmax · cancellation · conditioning**
+Numerical Stability and Conditioning<br>**IEEE floating point · max-shifted softmax · catastrophic cancellation · Welford variance · matrix conditioning & ridge**
 :::
 :::
 
-::: {.slide title="Softmax of (1000, 1001, 1002) Is NaN in fp64; a 12×12 Solve Is Off by 30%"}
-[The problem]{.kicker}
+::: {.slide title="Two Faces of Numerical Failure: NaN vs. Silent Drift"}
+[Motivation]{.kicker}
 
-- The logits $(1000,1001,1002)$ have softmax $(0.09,0.24,0.67)$.
-  Evaluated as written, even in fp64: `NaN NaN NaN`.
-- `np.linalg.solve` on a $12\times12$ Hilbert system: 30% error, although
-  the answer solves a system that differs in the 17th digit.
-- The first failure stops training; the second goes unnoticed.
+Every derivation so far assumed exact real arithmetic. In finite precision, numerical failure arrives in two fundamentally different ways:
 
-::: {.d2l-note}
-Two causes. The formula passes through $e^{1000}$, which no format holds.
-The system's rows are nearly parallel, so rounding the data moves the answer.
-:::
+::: {.cols}
+::: {.col}
+- **Failure Mode 1 — An unstable algorithm on an easy problem:**
+  - The logits $\mathbf{z} = (1000, 1001, 1002)$ define a completely benign softmax distribution $(0.090, 0.245, 0.665)$.
+  - Yet evaluating $e^{z_i}/\sum_j e^{z_j}$ directly overflows $e^{1000} = \infty$ even in `fp64`, returning `NaN NaN NaN` and halting training.
+  - **Cure:** An algebraically equivalent rewrite (`z - max(z)`) avoids the intermediate overflow and restores full machine accuracy.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- predict how many digits a computation keeps from $u$ and $\kappa$;
-- rewrite softmax, cross-entropy, and the variance to avoid overflow and
-  cancellation;
-- tell the algorithm's error from the problem's with $\kappa_f=|xf'/f|$;
-- read a residual as a backward error, and see ridge lower $\kappa$.
-
-**Running examples:** the logits $(0,t)$; two nearly parallel lines; the
-$\kappa=10^3$ quadratic $\tfrac12(x_1^2+1000x_2^2)$.
+::: {.col}
+- **Failure Mode 2 — A stable solver on an ill-conditioned problem:**
+  - Applying `np.linalg.solve` to a $12 \times 12$ Hilbert system $\mathbf{H}\mathbf{x} = \mathbf{b}$ returns an answer that is **off by $30\%$** in `fp64`—with no warning!
+  - Yet the returned vector is the *exact* solution of a linear system that differs from the stated one only in the $17\text{th}$ decimal digit.
+  - **Cure:** No solver rewrite can fix inherent problem sensitivity; we must change or regularize the problem itself.
+:::
+:::
 :::
 
-::: {.slide title="Finite Precision Is the Last Question of the Chapter"}
-[Where this fits]{.kicker}
+::: {.slide title="Binary Floating-Point Grid and Relative Spacing"}
+[Floating-Point Arithmetic]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Gradient Descent and Curvature | safe steps, $\kappa$, momentum |
-| Curvature Methods | Newton, BFGS, trust regions |
-| Convexity | local = global, rates, Jensen |
-| Stochastic Gradient Methods | noise floors, step decay |
-| Adaptive Methods | per-coordinate steps |
-| Constrained Optimization | KKT, projections, prox |
-| Duality | lower bounds, prices |
-| **Numerical Stability and Conditioning** | **rounding, conditioning** |
+A normal floating-point number is base-2 scientific notation with $p$ mantissa (significand) bits after the binary point and an integer exponent $e$:
+
+$$x = (-1)^s \cdot (1.b_1 b_2 \ldots b_p)_2 \cdot 2^e$$
+
+- **Constant relative spacing:** Each octave $[2^e, 2^{e+1})$ holds $2^p$ equally spaced grid points separated by $2^{e-p}$.
+- **Machine epsilon & unit roundoff:** The gap above $1$ is $\varepsilon_{\mathrm{mach}} = 2^{-p}$. Rounding any real $x$ to the nearest grid point moves it by at most half a gap, so $\mathrm{fl}(x) = x(1 + \delta)$ with relative error bounded by the unit roundoff $u$:
+  $$|\delta| \le u = \tfrac12\varepsilon_{\mathrm{mach}} = 2^{-p-1}$$
 :::
 
-::: {.col .narrow}
-- **Uses:** singular values and $\kappa=\sigma_1/\sigma_d$.
-- **Skips:** error growth across layers; fp8 training practice.
+::: {.col .fig}
+@fig:mdl-opt-fp-number-line
 :::
 :::
 :::
 
-::: {.slide title="Four Values per Octave: Every Rounding Errs by at Most One Part in 2^(p+1)"}
-[Floating point]{.kicker}
+::: {.slide title="Deep Learning Formats: Dynamic Range vs. Precision"}
+[Floating-Point Arithmetic]{.kicker}
 
-![](../img/mdl-opt-fp-number-line.svg){width=100%}
-
-- Toy format, $p=2$ bits: $1, 1.25, 1.5, 1.75$, then $2, 2.5, 3, 3.5$; the
-  gap doubles every octave.
-- $1.1\mapsto1$ ($-9\%$), $3.3\mapsto3.5$ ($+6\%$): always
-  $|\delta|\le u=2^{-p-1}=1/8$.
-- fp32 is the same with $p=23$: $u\approx6\times10^{-8}$.
-:::
-
-::: {.slide title="bf16 Keeps fp32's Range and Gives Up Five Digits"}
-[Floating point]{.kicker}
+Modern deep learning trades mantissa precision ($p$) against exponent dynamic range across five formats narrower than `fp64` ($p = 52$, $u \approx 1.1 \times 10^{-16}$):
 
 @!numerical-stability-conditioning-finfo
 
-- bf16 is `bfloat16` in the libraries. eps $=2^{-p}$; its often-quoted $2^{-8}$ is $u=\mathrm{eps}/2$.
-- $e^x$ overflows above $\log(\max)$: $11.1$ in fp16, $88.7$ in fp32,
-  $709.8$ in fp64.
-- fp8 needs a scale factor per tensor or block.
+- **`fp16` vs. `bfloat16`:** `fp16` keeps $p = 10$ mantissa bits ($\sim 3$ decimal digits) but only $5$ exponent bits, overflowing at $65{,}504$. `bfloat16` keeps all $8$ exponent bits of `fp32` (reaching $3.4 \times 10^{38}$) while truncating the mantissa to $p = 7$ bits ($\varepsilon_{\mathrm{mach}} = 2^{-7} \approx 7.8 \times 10^{-3}$, $u = 2^{-8} \approx 3.9 \times 10^{-3}$).
 :::
 
-::: {.slide title="A Step Below Half the Gap Is Lost: fl(w − ηg) = w"}
-[Floating point]{.kicker}
+::: {.slide title="Round-to-Nearest Ties-to-Even and Overflow Ceilings"}
+[Floating-Point Arithmetic]{.kicker}
 
-$$\mathrm{fl}(w-\eta g)=w\quad\text{if } |\eta g|<2^{e-p-1}=u\,2^e,\qquad 2^e< w<2^{e+1}$$
+Because `bfloat16` is simply the top 16 bits of an `fp32` word, converting `fp32` to `bfloat16` rounds off the lower 16 bits, breaking exact midpoint ties (`0x8000`) toward the neighbor whose lowest kept bit is even ($0$):
 
-(below $w=2^e$ the gap halves: a decrease from $1$ needs $|\eta g|>2^{-p-2}$)
+@!mdl-numerical-stability-conditioning-formats-1
+
+@!numerical-stability-conditioning-spacing
+:::
+
+::: {.slide title="When Small Gradient Updates Vanish Completely"}
+[Floating-Point Arithmetic]{.kicker}
+
+While multiplication and division obey the relative model $\mathrm{fl}(x \odot y) = (x \odot y)(1 + \delta)$, adding a small update $\Delta = -\eta g$ to a weight $w \in (2^e, 2^{e+1})$ hits a sharp absolute cutoff whenever $|\eta g|$ is less than half the grid spacing $2^{e-p}$ around $w$:
+
+$$\mathrm{fl}(w - \eta g) = w \qquad \text{whenever } |\eta g| < 2^{e-p-1} = u\,2^e \quad (\text{or } u/2 = 2^{-p-2} \text{ when decreasing from } w = 1)$$
 
 @!mdl-numerical-stability-conditioning-overflow-underflow-and-small-updates
 
-::: {.d2l-note}
-Hence the fp32 master copy of the weights in mixed-precision training.
+::: {.d2l-note .warn}
+In `bfloat16` ($p = 7$), a weight at $w = 1$ ignores any decrease smaller than $2^{-9} \approx 0.00195$, freezing completely on $\eta g = 10^{-3}$. Mixed-precision training therefore accumulates updates into an **`fp32` master copy of the weights** (or uses unbiased **stochastic rounding**).
 :::
 :::
 
-::: {.slide title="Does a Learning-Rate Step Survive in Low Precision?"}
-[Check]{.kicker}
+::: {.slide title="Shift Invariance and the Max-Shifted Softmax"}
+[Stable Softmax]{.kicker}
 
-A weight equals $1$. Gradient descent subtracts $\eta g=10^{-3}$. Does the
-stored weight change in bf16 ($p=7$)? In fp16 ($p=10$)?
+Evaluating $\mathrm{softmax}(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^n e^{z_j}}$ directly overflows whenever any logit exceeds $\log(\text{max float})$ ($11.09$ in `fp16`, $88.72$ in `fp32`, $709.78$ in `fp64`). Multiplying numerator and denominator by $e^{-c}$ leaves softmax invariant for any $c \in \mathbb{R}$:
 
-. . .
-
-bf16: no. The threshold below $1$ is $2^{-9}\approx0.00195>10^{-3}$.
-
-. . .
-
-fp16: yes. The threshold is $2^{-12}\approx2.4\times10^{-4}<10^{-3}$, and
-the weight lands on $0.99902$.
-:::
-
-::: {.slide title="Softmax Is Shift-Invariant, So Subtract the Max"}
-[Stable softmax]{.kicker}
-
-$$\mathrm{softmax}(\mathbf z-c\mathbf 1)=\mathrm{softmax}(\mathbf z),\qquad c=\max_jz_j$$
-
-- Every exponent is then $\le0$: no overflow. The largest term is $1$: the
-  sum lies in $[1,n]$.
-- Logits $(0,100)$ in fp32: $e^{100}=\infty$ above $88.7$.
+$$\mathrm{softmax}(\mathbf{z}) = \mathrm{softmax}(\mathbf{z} - c\mathbf{1}), \qquad \mathrm{lse}(\mathbf{z}) = \log\sum_{j=1}^n e^{z_j} = c + \log\sum_{j=1}^n e^{z_j - c}$$
 
 @!numerical-stability-conditioning-stable-softmax
+
+- **Why $c = \max_j z_j$ is optimal:** Every shifted exponent satisfies $z_j - c \le 0$ (making overflow impossible), while the largest term is $e^0 = 1$, keeping the denominator sum in $[1, n]$ (making denominator underflow to $0$ impossible).
 :::
 
-::: {.slide title="Log-Sum-Exp Is a Soft Maximum Within log n of the Max"}
-[Stable softmax]{.kicker}
+::: {.slide title="Log-Sum-Exp as a Soft Maximum Sandwich"}
+[Stable Softmax]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$$\max_jz_j\le\mathrm{lse}(\mathbf z)\le\max_jz_j+\log n$$
+Setting $c = \max_j z_j$ in $\mathrm{lse}(\mathbf{z}) = c + \log\sum_{j=1}^n e^{z_j - c}$ proves that $\mathrm{lse}(\mathbf{z})$ is a smooth upper envelope of the hard maximum:
 
-- Proof: put $c=\max_jz_j$ in $\mathrm{lse}=c+\log\sum_je^{z_j-c}$; the
-  sum lies in $[1,n]$.
-- $\partial\,\mathrm{lse}/\partial z_i=\mathrm{softmax}(\mathbf z)_i$.
+$$\max_{1 \le j \le n} z_j \;\le\; \mathrm{lse}(\mathbf{z}) \;\le\; \max_{1 \le j \le n} z_j + \log n$$
+
+- **Proof:** Since each $e^{z_j - c} \in (0, 1]$ and the maximizing term equals $1$, the sum lies in $[1, n]$ and its logarithm lies in $[0, \log n]$.
+- **Gradient & cross-entropy:** $\nabla\mathrm{lse}(\mathbf{z}) = \mathrm{softmax}(\mathbf{z})$, and for $n = 2$ with $\mathbf{z} = (0, t)$, $\mathrm{lse}(0, t) = \log(1 + e^t)$ is the **softplus** activation (within $\log 2 \approx 0.693$ of $\mathrm{ReLU}(t) = \max(0, t)$).
 :::
 
-::: {.col .fig .big}
-![$\mathrm{lse}(0,t)=\log(1+e^t)$ against $\max(0,t)$: the gap is at most $\log2$.](../img/mdl-opt-softplus-max.svg){width=100%}
+::: {.col .fig}
+![](../img/mdl-opt-softplus-max.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Log-Softmax as (z − c) − s Never Forms the Large Number lse"}
-[Stable softmax]{.kicker}
+::: {.slide title="Parenthesizing Log-Softmax to Avoid Rounding Loss"}
+[Stable Softmax]{.kicker}
 
-Logits $(1000,1001,1002)$ in fp32, $c=1002$, $s=\log\sum_je^{z_j-c}$:
+To compute log-probabilities $\log\mathrm{softmax}(\mathbf{z})_i$ without underflowing small probabilities, compare two algebraically identical formulas with $c = \max_j z_j$ and $s = \log\sum_{j=1}^n e^{z_j - c} \in [0, \log n]$:
+
+$$\text{Stable:}\quad (z_i - c) - s \qquad \text{vs.} \qquad \text{Naive subtraction:}\quad z_i - \underbrace{(c + s)}_{\mathrm{lse}(\mathbf{z})}$$
 
 @!numerical-stability-conditioning-logsumexp
 
-- $z_i-\mathrm{lse}$ is an exact subtraction; the error is in storing
-  $\mathrm{lse}=1002.4076$ to the gap $6\times10^{-5}$.
-- Stored $1.3\times10^{-5}$ low, so every probability is too large by
-  the factor $1+1.3\times10^{-5}$.
+- **Where did $z_i - \mathrm{lse}(\mathbf{z})$ lose precision?** Near $c = 1002$, `fp32` grid points sit $2^{-14} \approx 6.1 \times 10^{-5}$ apart. Forming $c + s = 1002.4076$ rounds $s$ to the coarse grid of $1002$, losing $1.32 \times 10^{-5}$ before $z_i$ is subtracted!
 :::
 
-::: {.slide title="Cross-Entropy from Logits Is Exact Where Probabilities Underflow" only="pytorch"}
-[Stable softmax]{.kicker}
+::: {.slide title="Cross-Entropy from Logits vs. Probability Underflow" only="pytorch"}
+[Stable Softmax]{.kicker}
 
-$-\log\mathrm{softmax}(\mathbf z)_y=\mathrm{lse}(\mathbf z)-z_y$; logits
-$(0,t)$, label $0$, true loss $\log(1+e^t)\approx t$:
+The cross-entropy loss for true class $y$ is $-\log\mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y$. On $\mathbf{z} = (0, t)$ with true label $y = 0$, the exact loss is $\log(1 + e^t) \approx t$. If we compute `softmax` probabilities first, $p_0 \approx e^{-t}$ underflows to subnormals above $t = 87.3$ and to $0$ at $t = 104$:
 
 @!numerical-stability-conditioning-cross-entropy
 
 ::: {.d2l-note .warn}
-Gap 103: $e^{-103}$ rounds to the smallest subnormal $2^{-149}$, one bit,
-so the loss reads $149\log2=103.2789$. Gap 104: the probability is $0$.
+At $t = 103$, PyTorch rounds $e^{-103} \approx 1.32 \times 2^{-149}$ to the smallest `fp32` subnormal $2^{-149}$ (keeping just 1 bit!), returning $149\log 2 = 103.2789$. At $t = 104$, $p_0 = 0$ and $-\log p_0 = \infty$, whereas `F.cross_entropy` on logits is exact.
 :::
 :::
 
-::: {.slide title="Cross-Entropy from Logits Is Exact Where Probabilities Underflow" only="mxnet"}
-[Stable softmax]{.kicker}
+::: {.slide title="Cross-Entropy from Logits vs. Probability Underflow" only="mxnet"}
+[Stable Softmax]{.kicker}
 
-$-\log\mathrm{softmax}(\mathbf z)_y=\mathrm{lse}(\mathbf z)-z_y$; logits
-$(0,t)$, label $0$, true loss $\log(1+e^t)\approx t$:
+The cross-entropy loss for true class $y$ is $-\log\mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y$. On $\mathbf{z} = (0, t)$ with true label $y = 0$, the exact loss is $\log(1 + e^t) \approx t$. If we compute `softmax` probabilities first, $p_0 \approx e^{-t}$ underflows below the `fp32` normal limit at $t > 87.3$:
 
 @!numerical-stability-conditioning-cross-entropy
 
 ::: {.d2l-note .warn}
-Gap 103: $e^{-103}$ is subnormal, and MXNet's exponential returns $0$
-instead, so the loss is `inf` already at gap 103.
+Because MXNet flushes subnormal exponentials directly to $0$, the intermediate probability $p_0$ vanishes and $-\log p_0$ explodes to `inf` already at $t = 103$, whereas `-npx.log_softmax(logits)` remains exact.
 :::
 :::
 
-::: {.slide title="Cross-Entropy from Logits Is Exact Where Probabilities Underflow" only="tensorflow"}
-[Stable softmax]{.kicker}
+::: {.slide title="Cross-Entropy from Logits vs. Probability Underflow" only="tensorflow"}
+[Stable Softmax]{.kicker}
 
-$-\log\mathrm{softmax}(\mathbf z)_y=\mathrm{lse}(\mathbf z)-z_y$; logits
-$(0,t)$, label $0$, true loss $\log(1+e^t)\approx t$:
+The cross-entropy loss for true class $y$ is $-\log\mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y$. On $\mathbf{z} = (0, t)$ with true label $y = 0$, the exact loss is $\log(1 + e^t) \approx t$. Compare direct logit cross-entropy against probability cross-entropy:
 
 @!numerical-stability-conditioning-cross-entropy
 
 ::: {.d2l-note .warn}
-The softmax flushes the subnormal $e^{-103}$ to $0$: `inf`. Keras with
-`from_logits=False` clips to $10^{-7}$: $16.1181$ at every gap, a gradient
-that ignores the model.
+TensorFlow flushes subnormal probabilities to $0$ (`inf` at $t = 103$). Worse, Keras with `from_logits=False` clips probabilities to $10^{-7}$, freezing the loss at $-\log 10^{-7} = 16.1181$ with **zero gradient** for all $t > 16$!
 :::
 :::
 
-::: {.slide title="Cross-Entropy from Logits Is Exact Where Probabilities Underflow" only="jax"}
-[Stable softmax]{.kicker}
+::: {.slide title="Cross-Entropy from Logits vs. Probability Underflow" only="jax"}
+[Stable Softmax]{.kicker}
 
-$-\log\mathrm{softmax}(\mathbf z)_y=\mathrm{lse}(\mathbf z)-z_y$; logits
-$(0,t)$, label $0$, true loss $\log(1+e^t)\approx t$:
+The cross-entropy loss for true class $y$ is $-\log\mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y$. On $\mathbf{z} = (0, t)$ with true label $y = 0$, the exact loss is $\log(1 + e^t) \approx t$. If we compute `softmax` probabilities first, $p_0 \approx e^{-t}$ underflows below the `fp32` normal range at $t > 87.3$:
 
 @!numerical-stability-conditioning-cross-entropy
 
 ::: {.d2l-note .warn}
-Gap 103: $e^{-103}$ is subnormal, and XLA flushes subnormal results to
-zero, so the loss is `inf` already at gap 103.
+Because XLA flushes subnormal floating-point values to zero, `jax.nn.softmax` returns $p_0 = 0$ and $-\log p_0 = \infty$ already at $t = 103$, whereas `optax.softmax_cross_entropy_with_integer_labels` on raw logits is exact.
 :::
 :::
 
-::: {.slide title="κ_f = |x f′(x) / f(x)| Says Whether the Problem or the Algorithm Is to Blame"}
-[Cancellation]{.kicker}
+::: {.slide title="Relative Condition Number of a Mathematical Function"}
+[Catastrophic Cancellation]{.kicker}
 
-| problem | $\kappa_f$ |
-|---|---|
-| $a-b$ | $(\lvert a\rvert+\lvert b\rvert)/\lvert a-b\rvert$, large when $a\approx b$ |
-| $\log(1+x)$, $x\to0$ | $\to1$ |
-| $e^x$ | $\lvert x\rvert$ |
-| variance, mean $m$, spread $s$ | $\le2(1+\lvert m\rvert/s)$ |
+To distinguish a bad algorithm from an inherently sensitive mathematical problem, the **relative condition number** $\kappa_f(x)$ measures the factor by which a small relative input perturbation $\delta$ is amplified in the relative output $\frac{f(x(1+\delta)) - f(x)}{f(x)} \approx \frac{x f'(x)}{f(x)}\delta$:
 
-In fp32, `log(1 + x)` returns $0$ at $x=10^{-8}$. Who is to blame?
+$$\kappa_f(x) = \left|\frac{x\,f'(x)}{f(x)}\right|, \qquad \text{and for subtraction } f(a, b) = a - b:\quad \kappa_{-}(a, b) = \frac{|a| + |b|}{|a - b|}$$
 
-. . .
-
-The algorithm: $\kappa_f=1$, but it forms $1+x$ and then $\log y$ at
-$y\approx1$, where $\kappa_{\log}=10^8$. `log1p` never forms $1+x$.
+| Mathematical Problem $f$ | Relative Condition Number $\kappa_f$ | Sensitive Regime |
+| :--- | :--- | :--- |
+| **Subtraction** $a - b$ | $(|a| + |b|) / |a - b|$ | Ill-conditioned when $a \approx b$ (**catastrophic cancellation**) |
+| **Shifted Logarithm** $\log(1 + x)$ | $\left|\frac{x}{(1+x)\log(1+x)}\right|$ | Well-conditioned near $x = 0$ ($\kappa_f \to 1$ as $x \to 0$) |
+| **Exponential** $e^x$ | $|x|$ | Ill-conditioned for large $|x|$ (absolute error in $x$ $\to$ relative error) |
+| **Sample Variance** (mean $m$, std $s$) | $\le 2(1 + |m|/s)$ | Loses $\approx \log_{10}(|m|/s)$ digits when $s \ll |m|$ |
 :::
 
-::: {.slide title="The Subtraction Was Exact; the Error Was in the Stored Inputs"}
-[Cancellation]{.kicker}
+::: {.slide title="Separating an Unstable Algorithm from a Hard Problem"}
+[Catastrophic Cancellation]{.kicker}
 
-$1.0002344-1.0002341=3.0\times10^{-7}$ in fp32:
+In `fp32`, evaluating `np.log(1.0 + x)` at $x = 10^{-8}$ returns $0$ (a $100\%$ relative error), whereas `np.log1p(x)` returns $10^{-8}$ accurate to machine precision. Why?
+
+- **The problem itself is perfectly well-conditioned:** For $f(x) = \log(1 + x)$ near $x = 0$, Taylor expansion $\log(1 + x) = x - \tfrac12 x^2 + \cdots$ gives $\kappa_f(x) = \left|\frac{x}{(1+x)\log(1+x)}\right| \to 1$.
+- **The naive algorithm takes an ill-conditioned detour:** Evaluating `log(1 + x)` decomposes $f$ into two steps:
+  1. $y = \mathrm{fl}(1 + x)$: Because $10^{-8} < u = 2^{-24} \approx 5.96 \times 10^{-8}$, `fp32` rounds $y = 1 + 10^{-8}$ to $1.0$ (a tiny relative error of $10^{-8}$ in $y$).
+  2. $z = \log(y)$ near $y = 1$: Here $\kappa_{\log}(y) = \frac{1}{|\log y|} \approx \frac{1}{x} = 10^8$, which magnifies the $10^{-8}$ rounding error in $y$ by **$10^8\times$** to $100\%$ error!
+- **The golden rule of numerical stability:** *An unstable algorithm routes a well-conditioned problem through an ill-conditioned intermediate step.*
+:::
+
+::: {.slide title="Sterbenz's Lemma and Cancellation in Stored Inputs"}
+[Catastrophic Cancellation]{.kicker}
+
+Subtracting two nearly equal `fp32` numbers $a = 1.0002344$ and $b = 1.0002341$ (true difference $3.0 \times 10^{-7}$) returns $2.384 \times 10^{-7}$—an error of $20\%$:
 
 @!numerical-stability-conditioning-log1p
 
-- Near $1$, differences are whole multiples of $1.19\times10^{-7}$:
-  two of them, 20% short.
-- Bound: $\frac{\lvert a\rvert+\lvert b\rvert}{\lvert a-b\rvert}u\approx7\times10^6\cdot6\times10^{-8}=0.4$.
-- More precision moves the failure ($10^{-20}$ in fp64); `log1p`
-  removes it.
+- **Sterbenz's Lemma (1974):** Whenever two floating-point numbers satisfy $b/2 \le a \le 2b$, their difference $a - b$ is *exactly representable* with zero rounding error!
+- **Why the result is still off by $20\%$:** The subtraction operation itself committed zero error; it merely cancelled the shared leading bits and exposed the prior rounding errors committed when $a$ and $b$ were first stored on the $2^{-23} \approx 1.19 \times 10^{-7}$ grid.
 :::
 
-::: {.slide title="The Best Forward Difference Keeps Half the Digits"}
-[Cancellation]{.kicker}
+::: {.slide title="Truncation vs. Cancellation in Finite Differences"}
+[Catastrophic Cancellation]{.kicker}
 
-Error of $(f(x+h)-f(x))/h$ for $f=\sin$ at $x=1$: truncation $\tfrac h2|f''|$ plus rounding $2u|f|/h$, smallest near $h^\star=2\sqrt{u|f|/|f''|}$.
+In one place—numerical gradient checks via the forward difference $\frac{f(x + h) - f(x)}{h}$—we cannot algebraically eliminate the subtraction of nearly equal numbers:
+
+$$\text{Total Error}(h) \;\approx\; \underbrace{\frac{h}{2}\,|f''(x)|}_{\text{Taylor truncation error}} \;+\; \underbrace{\frac{2u\,|f(x)|}{h}}_{\text{cancellation of rounding noise}}$$
 
 @!mdl-numerical-stability-conditioning-subtraction-of-nearly-equal-numbers-1
 
-- fp64: best near $h=10^{-8}$, error about $10^{-8}$; smaller $h$ is worse.
-- fp32: three digits at best; from $h=10^{-8}$ down $1+h=1$ and the error is $\cos1=0.54$.
-- Gradient checks therefore run in fp64.
+- **Optimal step $h^\star = 2\sqrt{\frac{u|f(x)|}{|f''(x)|}}$:** Minimizing the sum yields minimum error $\approx 2\sqrt{u|f(x)f''(x)|} \propto \sqrt{u}$, retaining only **half the digits** of the format ($\sim 8$ digits at $h^\star \approx 10^{-8}$ in `fp64`, vs. $\sim 3.5$ digits at $h^\star \approx 5 \times 10^{-4}$ in `fp32`).
 :::
 
-::: {.slide title="The One-Pass Variance Returns a Multiple of 128, Never 1"}
-[Cancellation]{.kicker}
+::: {.slide title="Why Naive One-Pass Variance Squares Conditioning"}
+[Catastrophic Cancellation]{.kicker}
 
-$10^5$ samples, mean $m=10^9$, $s=1$, fp64:
+Normalization layers and data pipelines continuously compute sample variances $s^2 = \frac{1}{N}\sum_{i=1}^N (x_i - m)^2$. When the spread $s$ is small compared with the mean $|m|$, compare the problem's inherent sensitivity against the textbook one-pass formula:
+
+$$\text{Two-Pass:}\quad \frac{1}{N}\sum_{i=1}^N (x_i - m)^2 \qquad \text{vs.} \qquad \text{Naive One-Pass:}\quad \frac{1}{N}\sum_{i=1}^N x_i^2 - m^2$$
+
+- **Condition number of the variance problem:** Perturbing each input $x_i \mapsto x_i(1 + \delta_i)$ with $|\delta_i| \le u$ changes the variance by $\frac{2}{N}\sum_i (x_i - m)x_i\delta_i$, yielding relative condition number $\kappa_{\mathrm{var}} \le 2(1 + |m|/s) \approx 2|m|/s$. For $m = 10^9, s = 1$ in `fp64` ($u \approx 1.1 \times 10^{-16}$), the problem permits $\approx 7$ accurate digits ($\kappa_{\mathrm{var}} u \approx 2 \times 10^{-7}$).
+- **Catastrophic cancellation in $\frac{1}{N}\sum x_i^2 - m^2$:** Both terms have magnitude $\approx m^2 = 10^{18}$ while their difference is $s^2 = 1$, so the subtraction condition number is $\frac{2m^2}{s^2} = 2 \times 10^{18} > 1/u$, **squaring the condition number** and destroying every single digit!
+:::
+
+::: {.slide title="Welford's Stable One-Pass Variance Recursion"}
+[Catastrophic Cancellation]{.kicker}
+
+**Welford's algorithm (1962)** computes the exact mean and variance in a single streaming pass without ever forming $\sum x_i^2$. Maintain the running mean $m_k$ and running centered sum of squares $M_k = \sum_{i=1}^k (x_i - m_k)^2$ from $m_0 = M_0 = 0$:
+
+$$d_k = x_k - m_{k-1}, \qquad m_k = m_{k-1} + \frac{d_k}{k}, \qquad M_k = M_{k-1} + d_k\,(x_k - m_k)$$
+
+- **Why the asymmetric product $d_k(x_k - m_k)$ is exact:** Since $m_k - m_{k-1} = \frac{d_k}{k}$ and $x_k - m_k = \frac{k-1}{k}d_k$, expanding $M_k$ around $m_{k-1}$ gives:
+  $$\sum_{i=1}^k (x_i - m_k)^2 = \sum_{i=1}^{k-1}\left((x_i - m_{k-1}) - \frac{d_k}{k}\right)^{\!2} + (x_k - m_k)^2 = M_{k-1} + \frac{k-1}{k^2}d_k^2 + \frac{(k-1)^2}{k^2}d_k^2 = M_{k-1} + d_k(x_k - m_k)$$
+- **Why Welford stays stable:** Every increment added to $M_k$ is a centered deviation of scale $s^2 = O(1)$ rather than $m^2 = 10^{18}$, achieving the optimal error $O(u|m|/s)$.
+:::
+
+::: {.slide title="Naive Variance vs. Welford at Mean 10⁹"}
+[Catastrophic Cancellation]{.kicker}
+
+On $N = 10^5$ `fp64` samples drawn from $\mathcal{N}(10^9, 1)$, compare naive one-pass $\mathbb{E}[x^2] - (\mathbb{E}[x])^2$, Welford's one-pass recursion, and the two-pass reference:
 
 @!numerical-stability-conditioning-welford
 
-- $\frac1N\sum x_i^2-m^2$: both terms in $[2^{59},2^{60})$, gap $128$;
-  error $\approx(m/s)^2u\approx100$.
-- Welford $m_k=m_{k-1}+d_k/k$, $M_k=M_{k-1}+d_k(x_k-m_k)$: error
-  $\approx(m/s)u\approx10^{-7}$.
+- Because $10^{18} \in [2^{59}, 2^{60})$, adjacent `fp64` numbers are spaced $2^{59-52} = 128$ apart—so the naive formula can only return integer multiples of $128$ (often $0$ or negative!), whereas Welford matches the two-pass reference to $7+$ digits.
 :::
 
-::: {.slide title="Summation Order Is an Algorithm: 1,087,937 Against 1,000,000"}
-[Cancellation]{.kicker}
+::: {.slide title="Summation Order: Left-to-Right vs. Pairwise Trees"}
+[Summation Stability]{.kicker}
 
-$10^7$ copies of fp32's $0.1$:
+In floating point, addition is not associative: when summing $n$ numbers, the accumulation tree determines how many roundings each term passes through:
+
+$$\text{Left-to-Right Error} \le (n - 1)\,u\sum_{i=1}^n |x_i| \qquad \text{vs.} \qquad \text{Pairwise Tree Error} \le (\log_2 n)\,u\sum_{i=1}^n |x_i|$$
 
 @!mdl-numerical-stability-conditioning-summation-order
 
-- In order: error $\le(n-1)u\sum\lvert x_i\rvert$. Above $2^{19}$ the gap
-  is $1/16$, and each $+0.1$ rounds to $+0.125$.
-- Pairwise: $u\log_2n\sum\lvert x_i\rvert$. Kahan: independent
-  of $n$.
+- **Why left-to-right drifts by $+8.8\%$ on $10^7$ copies of $0.1$:** Once the running `fp32` sum crosses $2^{19} = 524{,}288$, grid spacing is $1/16 = 0.0625$, so every $+0.1$ rounds up to two grid steps ($+0.125$). Pairwise summation keeps partial sums of equal scale, cutting the error bound by $O(n / \log_2 n)$.
 :::
 
-::: {.slide title="Two Nearly Parallel Lines: a 3.5×10⁻⁵ Change in b Moves x by 100%"}
-[Conditioning]{.kicker}
+::: {.slide title="Geometric Conditioning of Linear Systems"}
+[Matrix Conditioning]{.kicker}
 
-![](../img/mdl-opt-two-lines.svg){width=88%}
+::: {.cols .vc}
+::: {.col}
+Consider solving a linear system $\mathbf{A}\mathbf{x} = \mathbf{b}$ where the two equations $x_1 + x_2 = 2$ and $x_1 + 1.0001\,x_2 = 2.0001$ represent two nearly parallel lines meeting at $\mathbf{x} = (1, 1)$:
 
-- $x_1+x_2=2$, $x_1+1.0001x_2=2.0001$: $(1,1)$; with $2.0002$: $(0,2)$;
-  $\kappa=4\times10^4$.
-- Forward error of $(0,2)$: 100%. Backward error: $b_2$ off by $10^{-4}$.
+$$\mathbf{A} = \begin{pmatrix} 1 & 1 \\ 1 & 1.0001 \end{pmatrix}, \;\; \kappa(\mathbf{A}) \approx 4 \times 10^4$$
+
+- **Extreme sensitivity:** Perturbing $b_2$ by $+10^{-4}$ (a relative data change of $3.5 \times 10^{-5}$) shifts the intersection to $\hat{\mathbf{x}} = (0, 2)$—a **$100\%$ forward error**!
+- **Forward vs. backward error:** For the original system, $\hat{\mathbf{x}} = (0, 2)$ has $100\%$ **forward error**, yet its **backward error** (the smallest relative data perturbation for which $\hat{\mathbf{x}}$ is exact) is only $3.5 \times 10^{-5}$.
 :::
 
-::: {.slide title="Forward Error ≤ κ × Backward Error: Hilbert Loses Up to log₁₀ κ Digits"}
-[Conditioning]{.kicker}
+::: {.col .fig}
+![](../img/mdl-opt-two-lines.svg){.nostretch width=100%}
+:::
+:::
+:::
 
-$$\frac{\|\hat{\mathbf x}-\mathbf x\|}{\|\hat{\mathbf x}\|}\le\kappa(\mathbf A)\,\omega,
-\qquad \omega=\frac{\|\mathbf b-\mathbf A\hat{\mathbf x}\|}{\|\mathbf A\|\,\|\hat{\mathbf x}\|}\ \text{(backward error)}$$
+::: {.slide title="Backward Error, Residuals, and Backward Stability"}
+[Matrix Conditioning]{.kicker}
+
+An algorithm for $\mathbf{A}\mathbf{x} = \mathbf{b}$ is **backward stable** if its computed solution $\hat{\mathbf{x}}$ is the exact solution of a nearby system $(\mathbf{A} + \Delta\mathbf{A})\hat{\mathbf{x}} = \mathbf{b}$ with relative backward error $\omega = \|\Delta\mathbf{A}\|_2 / \|\mathbf{A}\|_2 = O(u)$:
+
+- **Exact formula for backward error from the residual $\mathbf{r} = \mathbf{b} - \mathbf{A}\hat{\mathbf{x}}$:**
+  - Any perturbation satisfying $(\mathbf{A} + \Delta\mathbf{A})\hat{\mathbf{x}} = \mathbf{b}$ must map $\Delta\mathbf{A}\hat{\mathbf{x}} = \mathbf{b} - \mathbf{A}\hat{\mathbf{x}} = \mathbf{r}$, so $\|\mathbf{r}\|_2 \le \|\Delta\mathbf{A}\|_2\,\|\hat{\mathbf{x}}\|_2$.
+  - The rank-one perturbation $\Delta\mathbf{A}^\star = \frac{\mathbf{r}\hat{\mathbf{x}}^\top}{\|\hat{\mathbf{x}}\|_2^2}$ achieves equality with spectral norm $\|\Delta\mathbf{A}^\star\|_2 = \frac{\|\mathbf{r}\|_2}{\|\hat{\mathbf{x}}\|_2}$, giving the exact relative backward error:
+    $$\omega = \min_{(\mathbf{A} + \Delta\mathbf{A})\hat{\mathbf{x}} = \mathbf{b}} \frac{\|\Delta\mathbf{A}\|_2}{\|\mathbf{A}\|_2} = \frac{\|\mathbf{b} - \mathbf{A}\hat{\mathbf{x}}\|_2}{\|\mathbf{A}\|_2\,\|\hat{\mathbf{x}}\|_2}$$
+- **Certificate of solver quality:** A small relative residual $\omega \approx u$ proves that the solver did its job to machine precision—regardless of how large the forward error turns out to be!
+:::
+
+::: {.slide title="Forward Error Bound and the Lost-Digits Rule"}
+[Matrix Conditioning]{.kicker}
+
+How does the matrix condition number $\kappa(\mathbf{A}) = \|\mathbf{A}\|_2\,\|\mathbf{A}^{-1}\|_2 = \sigma_1 / \sigma_d$ link backward error $\omega$ to forward error?
+
+- **Two-line proof:** Subtract $\mathbf{A}\mathbf{x} = \mathbf{b}$ from $(\mathbf{A} + \Delta\mathbf{A})\hat{\mathbf{x}} = \mathbf{b}$ to obtain $\mathbf{A}(\hat{\mathbf{x}} - \mathbf{x}) = -\Delta\mathbf{A}\hat{\mathbf{x}}$, so $\hat{\mathbf{x}} - \mathbf{x} = -\mathbf{A}^{-1}\Delta\mathbf{A}\hat{\mathbf{x}}$. Taking norms with $\|\Delta\mathbf{A}\|_2 \le \omega\|\mathbf{A}\|_2$ gives:
+  $$\frac{\|\hat{\mathbf{x}} - \mathbf{x}\|_2}{\|\hat{\mathbf{x}}\|_2} \le \|\mathbf{A}^{-1}\|_2\,\|\Delta\mathbf{A}\|_2 \le \|\mathbf{A}^{-1}\|_2\,\|\mathbf{A}\|_2\,\omega = \kappa(\mathbf{A})\,\omega$$
+- **The Lost-Digits Rule of Thumb:** For any backward-stable solver ($\omega \approx u$):
+  $$\text{Accurate decimal digits in }\hat{\mathbf{x}} \;\approx\; \log_{10}(1/u) \;-\; \log_{10}\kappa(\mathbf{A})$$
+  In `fp32` ($\sim 7$ digits), a matrix with $\kappa(\mathbf{A}) = 10^5$ loses up to $5$ digits; in `fp64` ($\sim 16$ digits), a matrix with $\kappa(\mathbf{A}) \ge 10^{16}$ can lose all $16$ digits.
+:::
+
+::: {.slide title="Acquitting the Solver on the Hilbert Matrix"}
+[Matrix Conditioning]{.kicker}
+
+The Hilbert matrix $H_{ij} = \frac{1}{i + j - 1}$ has $\kappa(\mathbf{H})$ growing as $O\big((1 + \sqrt{2})^{4n}/\sqrt{n}\big)$. Solving $\mathbf{H}\mathbf{x} = \mathbf{b}$ ($\mathbf{b} = \mathbf{H}\mathbf{1}$, true solution $\mathbf{1}$) in `fp64` vs. exact rational arithmetic (`Fraction`) reveals where the digits are actually lost:
 
 @!numerical-stability-conditioning-hilbert
 
-::: {.d2l-note}
-The backward error stays near $10^{-16}$, and an exact rational solve of
-the stored system (last column) misses by as much: the digits were lost
-when $\mathbf b$ was rounded. The rule $16-\log_{10}\kappa$ is a worst case.
-:::
+- At $n = 12$ ($\kappa \approx 1.7 \times 10^{16}$), `np.linalg.solve` has backward error $\omega \approx 10^{-17}$, and an *exact* rational solve of the stored `fp64` system has the exact same $30\%$ forward error—the digits were already lost when $\mathbf{b} = \mathbf{H}\mathbf{1}$ was rounded to `fp64`!
 :::
 
-::: {.slide title="Normal Equations Square κ: About 10 Against 14 Digits at κ(A) = 10³"}
-[Conditioning]{.kicker}
+::: {.slide title="Why the Normal Equations Square κ(A)"}
+[Least-Squares Conditioning]{.kicker}
 
-$\kappa(\mathbf A^\top\mathbf A)=\kappa(\mathbf A)^2$, because
-$\mathbf A^\top\mathbf A$ has singular values $\sigma_i^2$.
+To solve linear least squares $\min_{\mathbf{w}}\|\mathbf{A}\mathbf{w} - \mathbf{b}\|_2^2$ ($\mathbf{A} \in \mathbb{R}^{n \times d}$ of full column rank), forming the normal equations $\mathbf{A}^\top\mathbf{A}\mathbf{w} = \mathbf{A}^\top\mathbf{b}$ squares the singular values $\sigma_i(\mathbf{A}^\top\mathbf{A}) = \sigma_i(\mathbf{A})^2$ and **squares the condition number**:
 
-At $\kappa(\mathbf A)=10^6$ in fp64, how many digits do the normal
-equations keep?
-
-. . .
-
-Rule: $16-12=4$. Measured (zero residual):
+$$\kappa(\mathbf{A}^\top\mathbf{A}) = \frac{\sigma_1(\mathbf{A})^2}{\sigma_d(\mathbf{A})^2} = \kappa(\mathbf{A})^2 \implies \text{loses } 2\log_{10}\kappa(\mathbf{A}) \text{ digits instead of } \log_{10}\kappa(\mathbf{A})$$
 
 @!numerical-stability-conditioning-normal-equations
 
-[QR/SVD lose $\log_{10}\kappa$ only when the residual is small.]{.small}
+- At $\kappa(\mathbf{A}) = 10^6$ in `fp64`, solving $\mathbf{A}^\top\mathbf{A}\mathbf{w} = \mathbf{A}^\top\mathbf{b}$ has $\kappa(\mathbf{A}^\top\mathbf{A}) = 10^{12}$ and keeps only $\sim 5$ digits, whereas SVD/QR (`np.linalg.lstsq`) works directly on $\mathbf{A}$ and keeps $\sim 11$–$12$ digits.
 :::
 
-::: {.slide title="Ridge Lifts the Spectrum's Floor: κ 1000 → 11 and 6,908 → 76 Steps at λ = 100"}
-[Conditioning]{.kicker}
+::: {.slide title="Ridge Regularization Lifts the Spectral Floor"}
+[Regularization & Conditioning]{.kicker}
 
-$\kappa=\frac{\sigma_1^2+\lambda}{\sigma_d^2+\lambda}$; GD needs at most
-$\lceil\frac\kappa2\log\frac1{\mathrm{tol}}\rceil$ steps. Running example
-$\mathrm{diag}(1,1000)$, minimizer $(1,1)$:
+::: {.cols .vc}
+::: {.col}
+When $\kappa(\mathbf{A})$ itself is huge, no solver algorithm can prevent data noise amplification; we must regularize the problem. Adding $\tfrac{\lambda}{2}\|\mathbf{w}\|_2^2$ shifts every eigenvalue of $\mathbf{A}^\top\mathbf{A}$ upward by $\lambda > 0$:
+
+$$\kappa(\mathbf{A}^\top\mathbf{A} + \lambda\mathbf{I}) = \frac{\sigma_1^2 + \lambda}{\sigma_d^2 + \lambda}$$
+
+- **SVD filter factors:** With $\mathbf{w}_0 = \mathbf{A}^+\mathbf{b}$,
+  $$\mathbf{w}_\lambda = \sum_{i=1}^d \frac{\sigma_i^2}{\sigma_i^2 + \lambda}\,(\mathbf{v}_i^\top\mathbf{w}_0)\,\mathbf{v}_i$$
+  Ridge damps noisy directions ($\sigma_i^2 \ll \lambda$) while preserving strong directions ($\sigma_i^2 \gg \lambda$).
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-conditioning-ellipse
+:::
+:::
+:::
+
+::: {.slide title="How Ridge Simultaneously Speeds Up Gradient Descent"}
+[Regularization & Conditioning]{.kicker}
+
+The condition number $\kappa(\lambda) = \frac{\sigma_1^2 + \lambda}{\sigma_d^2 + \lambda}$ governs *both* the numerical sensitivity of the linear solve and the iteration count $k \le \big\lceil\frac{\kappa(\lambda)}{2}\log\frac{1}{\mathrm{tol}}\big\rceil$ of gradient descent at $\eta^\star = \frac{2}{L + \mu}$:
 
 @!numerical-stability-conditioning-ridge
 
-- Filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$: the slow direction
-  shrinks first.
+- On our chapter benchmark $\mathbf{A}^\top\mathbf{A} = \mathrm{diag}(1, 1000)$ with true unregularized minimizer $\mathbf{w}_0 = (1, 1)$, setting $\lambda = 100$ lowers $\kappa$ from $1000$ to $10.9$ and cuts GD steps from $6{,}908$ to $76$—at the bias cost of shrinking the flat coordinate by the filter factor $\frac{1}{1 + 100} \approx 0.0099$.
 :::
 
-::: {.slide title="Stable Algorithms Remove the Detour; Conditioning Sets What Any Algorithm Can Deliver"}
-[Wrap-up]{.kicker}
+::: {.slide title="Log–Log Scaling of Condition Number and GD Steps"}
+[Regularization & Conditioning]{.kicker}
 
-- **Formats:** $|\delta|\le u$; a bf16 weight $1$ ignores steps below
-  $0.002$.
-- **Softmax:** subtract the max; NaN becomes $(0.09,0.24,0.67)$.
-- **Cancellation:** `log1p`; the one-pass variance gives multiples of
-  $128$, Welford seven digits.
-- **Conditioning:** $3.5\times10^{-5}$ in $\mathbf b$ moved $\mathbf x$ by
-  100%; normal equations keep about 11 digits, `lstsq` 14.
-- **Ridge:** $\lambda=100$ cuts $6{,}908$ steps to $76$.
+Sweeping $\lambda$ from $10^{-2}$ to $10^3$ on $\mathbf{A}^\top\mathbf{A} = \mathrm{diag}(1, 1000)$ shows the GD iteration count to reach $10^{-6}$ relative error tracking $\kappa(\lambda) = \frac{1000 + \lambda}{1 + \lambda}$ across three orders of magnitude:
 
-::: {.d2l-note}
-Next: error that grows over many steps, such as a gradient through a
-hundred layers (initialization and normalization).
+@!mdl-numerical-stability-conditioning-ridge-regularization-and-conditioning-1
+
+- The two curves stay parallel on log–log axes, separated by the constant factor $\tfrac12\ln(10^6) \approx 6.9$ steps per unit of $\kappa$.
+:::
+
+::: {.slide title="Concept Check: Precision, Cancellation, and κ"}
+[Concept Check]{.kicker}
+
+Test your grasp of floating-point arithmetic, cancellation, and conditioning:
+
+1. A parameter equals $w = 1.0$, and gradient descent applies an update $\eta g = 10^{-3}$. Does the stored parameter change in `bfloat16` ($p = 7$)? What about in `fp16` ($p = 10$)?
+2. In `fp64` ($u \approx 1.1 \times 10^{-16}$), why does the one-pass variance formula $\frac{1}{N}\sum x_i^2 - m^2$ fail completely for data with mean $m = 10^9$ and standard deviation $s = 1$, whereas Welford's one-pass algorithm keeps $\sim 7$ digits?
+3. If a design matrix $\mathbf{A}$ has condition number $\kappa(\mathbf{A}) = 10^6$ and zero residual, roughly how many accurate decimal digits do the normal equations $\mathbf{A}^\top\mathbf{A}\mathbf{w} = \mathbf{A}^\top\mathbf{b}$ vs. QR/SVD keep in `fp64` ($\sim 16$ digits)?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:** **(1) `bfloat16`: No.** Decreasing from $w = 1$ requires $|\eta g| > 2^{-p-2} = 2^{-9} \approx 0.00195 > 10^{-3}$, so $\mathrm{fl}(1 - 10^{-3}) = 1$. **`fp16`: Yes.** Its threshold below $1$ is $2^{-12} \approx 2.44 \times 10^{-4} < 10^{-3}$, stepping to $0.99902$. **(2)** The variance problem has $\kappa_{\mathrm{var}} \approx 2|m|/s = 2 \times 10^9$, losing $9$ of `fp64`'s $16$ digits ($\sim 7$ digits kept by Welford). The naive formula subtracts two numbers of size $m^2 = 10^{18}$, squaring the condition factor to $2m^2/s^2 = 2 \times 10^{18} > 1/u$ (grid gap $128$). **(3) Normal equations** square $\kappa$ to $\kappa(\mathbf{A}^\top\mathbf{A}) = 10^{12}$, keeping roughly $16 - 12 = \mathbf{4\text{ digits}}$. **QR/SVD** works directly on $\mathbf{A}$ ($\kappa = 10^6$), keeping roughly $16 - 6 = \mathbf{10\text{ digits}}$.
 :::
 :::
+
+::: {.slide title="Summary: Numerical Stability and Conditioning"}
+[Key Takeaways]{.kicker}
+
+| Phenomenon / Task | Naive / Unstable Route | Numerical Failure Mode | Stable Algorithm / Remedy |
+| :--- | :--- | :--- | :--- |
+| **Low-Precision Updates** | Direct weight update in `bf16`/`fp16` | $\mathrm{fl}(w - \eta g) = w$ when $|\eta g| < u\,2^e$ | Master weights in `fp32` + loss scaling / stochastic rounding |
+| **Softmax & Log-Sum-Exp** | $\frac{e^{z_i}}{\sum_j e^{z_j}}$ and $\log\sum_j e^{z_j}$ | $e^{z_i} \to \infty$ (`NaN`) for $z_i > 88.7$ (`fp32`) | Max shift $c = \max_j z_j$: $\mathrm{lse}(\mathbf{z}) = c + \log\sum_j e^{z_j - c}$ |
+| **Cross-Entropy Loss** | $-\log(\mathrm{softmax}(\mathbf{z})_y)$ | $p_y \to 0 \implies -\log p_y = \infty$ | Fused logit loss $(c - z_y) + \log\sum_j e^{z_j - c}$ |
+| **Near-Zero & Variance** | $\log(1 + x)$ and $\frac{1}{N}\sum x_i^2 - m^2$ | Catastrophic cancellation ($\kappa \to \kappa^2$) | `log1p(x)` and Welford's centered recursion $M_k = M_{k-1} + d_k(x_k - m_k)$ |
+| **Large Array Sums** | Left-to-right loop $\sum_{i=1}^n x_i$ | Error grows linearly: $(n-1)u\sum |x_i|$ | Pairwise tree sum ($u\log_2 n\sum|x_i|$) or Kahan compensation |
+| **Least Squares & Ridge** | Normal equations $\mathbf{A}^\top\mathbf{A}\mathbf{w} = \mathbf{A}^\top\mathbf{b}$ | Squares condition number $\kappa(\mathbf{A}^\top\mathbf{A}) = \kappa(\mathbf{A})^2$ | QR/SVD (`lstsq`) + ridge damping $\kappa = \frac{\sigma_1^2 + \lambda}{\sigma_d^2 + \lambda}$ |
+:::
+

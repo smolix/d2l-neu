@@ -846,115 +846,85 @@ print(f'full attention:            loss {full:.2f}, '
 7. **Implementing a fixed-size streaming ring-buffer cache.** Write a `StreamingCache` variant of `init_cache` and `forward_cached` that pre-allocates only $s + w$ token slots per layer (retaining the first $s = 4$ sink positions in slots $0 \dots s-1$ and overwriting slots $s + ((t - s) \bmod w)$ in a circular buffer for $t \ge s$), and verify that it generates 2,048 tokens from `gpt2` using constant $O(s + w)$ cache memory.
 :exlabel:`ex_kv-cache-streaming`
 
+[Discussions](https://d2l.discourse.group/t/36776)
+
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §11.3]{.kicker}
 
-The KV Cache<br>
-**reusing past keys and values · prefill and decode · the roofline · batching**
+The KV Cache, the Hardware Roofline, and Cache Reduction<br>**KV caching · prefill vs. decode · arithmetic intensity · batched throughput · GQA & uptraining · low-rank MLA · attention sinks**
 :::
 :::
 
-::: {.slide title="Naive Generation Does 250 Times the Necessary Work"}
-[The problem]{.kicker}
+::: {.slide title="Naive Generation Performs 250× Redundant Work"}
+[Motivation]{.kicker}
 
-GPT-2 small, $N$ = 124M parameters, writes 256 tokens after a 3,584-token
-prompt.
+Suppose GPT-2 Small ($N = 124\text{M}$ parameters) generates $256$ new tokens after a $3{,}584$-token prompt:
 
-- Naive `generate`: one forward pass per new token, over 3,584, …, 3,839
-  tokens: $2N \sum n \approx 2.4 \times 10^{14}$ FLOPs.
-- Read the prompt once, then each new token once:
-  $2N \cdot 3{,}840 \approx 10^{12}$ FLOPs.
-
-::: {.d2l-note}
-Causal attention never changes the keys and values of past tokens.
-**Store them**, and the repetition disappears.
-:::
+- **Naive `GPT.generate` ($O(T^2)$ work):** Runs a full forward pass over $3{,}584, 3{,}585, \dots, 3{,}839$ tokens in turn, performing $2N \sum_{t=3584}^{3839} t \approx 2.4 \times 10^{14}\text{ FLOPs}$ and discarding every intermediate activation after reading only the last logit vector $\mathbf{z}_t$.
+- **Why past recomputation is redundant:** Under a lower-triangular causal mask, representation $\mathbf{h}_s^{(\ell)}$ at position $s < t$ depends *only* on prefix tokens $1, \dots, s$—never on token $t$.
+- **Cached generation ($O(T)$ work):** Processing the prompt once ($3{,}584$ tokens) and each generated token once ($256$ steps) requires only $2N \times 3{,}840 \approx 9.5 \times 10^{11}\text{ FLOPs}$—a **$250\times$ reduction in arithmetic**!
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- write a cached forward pass with a position offset and preallocated
-  buffers;
-- estimate the floor of a decode step from the bytes it reads;
-- compute the cache size of any transformer from its shape;
-- place prefill and decode on the roofline: reading a prompt is limited by
-  arithmetic, writing text by memory bandwidth;
-- predict where batching stops helping.
-
-**Running example:** GPT-2 small (124M; 12 blocks, 12 heads of width 64),
-72 KiB of cache per token in fp32.
-:::
-
-::: {.slide title="A Cache Makes the Trained GPT Fast to Sample"}
-[Where this fits]{.kicker}
+::: {.slide title="Causality Freezes Past Keys and Values"}
+[The Caching Principle]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| The Transformer Block | attention + FFN, residual stream |
-| A GPT from Scratch | a trained language model; GPT-2 loaded |
-| **The KV Cache** | **reuse past keys and values** |
-| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
-| Encoders, Decoders, and Cross-Attention | the other two wirings |
-| Vision Transformer | images as token sequences |
-| Scaling Laws | loss against parameters, data, compute |
-| Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | released models as settings |
+- **What to cache at each block:** Query $\mathbf{q}_s$ ($s < t$) is used only when emitting token $s+1$ and never needed again. Only the post-RoPE keys $\mathbf{K}_{1:t}$ and values $\mathbf{V}_{1:t}$ are read by future steps.
+- **Stage 1 — Prefill ($n = T_p$ tokens):** Processes the entire prompt in one parallel forward pass (`offset = 0`), populating slots $0, \dots, T_p - 1$ of the cache.
+- **Stage 2 — Decode ($n = 1$ token/step):** Projects only the newest token $x_t$ into $(\mathbf{q}_t, \mathbf{k}_t, \mathbf{v}_t)$, writes slot $t$, and attends $\mathbf{q}_t$ across cached $(\mathbf{K}_{0:t}, \mathbf{V}_{0:t})$.
 :::
 
-::: {.col .narrow}
-- **Uses:** `d2l.GPT`, causal masks, RoPE, top-$k$ sampling.
-- **Skips:** serving engines (paging, continuous batching).
-:::
-:::
-:::
-
-::: {.slide title="Causality Freezes the Keys and Values of the Past"}
-::: {.cols .vc}
-::: {.col}
-- Step $t$ needs one new query against $\mathbf{k}_0, \ldots, \mathbf{k}_t$.
-- Positions $0, \ldots, t-1$ never see position $t$: their keys and values
-  are the same as one step ago.
-- **Prefill:** the whole prompt in one pass, filling the cache.
-- **Decode:** one token per pass, reading the cache.
-:::
-
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:mdl-transformers-kv-cache
 :::
 :::
 :::
 
-::: {.slide title="A Cached Step Writes Its Slot and Reads the Prefix" only="pytorch"}
+::: {.slide title="Pre-Allocated Static Buffers and Position Offsets"}
+[Buffer Architecture]{.kicker}
+
+Allocating or concatenating tensors inside an autoregressive loop fragments GPU memory and forces JIT recompilation on every token:
+
+- **Fixed-shape buffer allocation (`init_cache`):** Pre-allocates zeroed key and value tensors `ks[i], vs[i]` of shape $(B, H_{\text{kv}}, T_{\max}, d_h)$ for each of the $L$ blocks before generation begins.
+- **Position offset `t`:** When feeding a slice `X` of $T$ new tokens starting at position $t$, `forward_cached` rotates queries and keys at absolute positions $t, t+1, \dots, t+T-1$ (`d2l.rope_tables(T, head_width, t)`).
+- **Masked read over static length $T_{\max}$:** A boolean mask `arange(T_max) <= pos[:, None]` hides unwritten slots $> t + i$, keeping tensor shapes invariant across every decode step so `torch.compile` (CUDA graphs) or `jax.lax.fori_loop` compiles the step **once**.
+:::
+
+::: {.slide title="The Cached Step: Write One Slot, Read the Prefix" only="pytorch"}
+[Implementation]{.kicker}
+
+Inside `forward_cached`, each pre-norm block projects only the new tokens `X`, writes `k, v` into `pos = t + arange(T)` in place, and attends across the buffer:
+
 ```{.python #kv-cache-exercises-1}
-H = model.token_emb(X)              # new tokens at pos = t, t+1, ...
+H = model.token_emb(X)                                # New tokens at pos = t, t+1, ...
 for i, blk in enumerate(model.blks):
-    q, k, v = blk.attention.qkv(blk.norm1(H), t)      # RoPE offset t
-    ks[i][:, :, pos], vs[i][:, :, pos] = k, v         # write in place
-    q = q.unflatten(1, (H_kv, -1))         # query groups per kv head
-    S = q @ ks[i][:, :, None].transpose(-1, -2) / math.sqrt(d_h)
+    q, k, v = blk.attention.qkv(blk.norm1(H), t, tables)  # RoPE rotated at offset t
+    ks[i][:, :, pos], vs[i][:, :, pos] = k, v             # In-place cache update
+    q = q.unflatten(1, (attn.num_kv_heads, -1))           # Group query heads per KV head
+    S = q @ ks[i][:, :, None].transpose(-1, -2) / math.sqrt(q.shape[-1])
     Y = d2l.masked_softmax(S, mask) @ vs[i][:, :, None]
-    Y = Y.flatten(1, 2).transpose(1, 2).flatten(2)
-    H = H + blk.attention.W_o(Y)
+    H = H + attn.W_o(Y.flatten(1, 2).transpose(1, 2).flatten(2))
     H = H + blk.ffn(blk.norm2(H))
 ```
 
-- Buffers of fixed size; the mask hides positions not yet written, so every
-  decode step has the same shapes.
-- `torch.compile` records the step once and replays it as a CUDA graph.
+::: {.d2l-note}
+Marking cache tensors with `torch._dynamo.mark_static_address(u)` allows `torch.compile` with `triton.cudagraphs=True` to replay the entire decode step with near-zero Python dispatch overhead.
+:::
 :::
 
-::: {.slide title="A Cached Step Writes Its Slot and Reads the Prefix" only="jax"}
+::: {.slide title="The Cached Step: Write One Slot, Read the Prefix" only="jax"}
+[Implementation]{.kicker}
+
+Inside `forward_cached`, each pre-norm block projects only the new tokens `X`, updates slice `(0, t, 0, 0)` of `ks[i], vs[i]`, and attends across the buffer:
+
 ```{.python #kv-cache-exercises-2}
-H = model.token_emb(X)                    # new tokens at t, t+1, ...
+H = model.token_emb(X)                                # New tokens at pos = t, t+1, ...
 for i, blk in enumerate(model.blks):
-    q, k, v = (u.swapaxes(1, 2)
-               for u in blk.attention.qkv(blk.norm1(H), t))
+    q, k, v = (u.swapaxes(1, 2) for u in blk.attention.qkv(blk.norm1(H), t, tables))
     ks[i] = jax.lax.dynamic_update_slice(ks[i], k, (0, t, 0, 0))
     vs[i] = jax.lax.dynamic_update_slice(vs[i], v, (0, t, 0, 0))
     Y = jax.nn.dot_product_attention(q, ks[i], vs[i], mask=mask)
@@ -962,448 +932,215 @@ for i, blk in enumerate(model.blks):
     H = H + blk.ffn(blk.norm2(H))
 ```
 
-- Fixed-size buffers; the mask hides positions not yet written.
-- Inside one compiled `fori_loop`, XLA writes the cache in place.
-:::
-
-::: {.slide title="Cached and Full Logits Agree to Rounding Error"}
-@!kv-cache-same-logits-measured-1
-
-Prefill 16 tokens, decode 32, compare with one forward pass over all 48,
-for rotary and for learned positions.
-:::
-
-::: {.slide title="At 4,000 Tokens a Cached Step Is Over 20 Times Faster"}
-@!kv-cache-checking-the-cache-1
-
-124M-parameter model, untrained, both steps compiled. Naive: $2Nn$ FLOPs,
-grows more slowly than $n$ below about 1,000 tokens, tens of ms at 4,032.
-Cached: 0.8 to 1.3 ms over the whole range.
-:::
-
-::: {.slide title="A Decode Step Cannot Beat One Read of the Weights"}
-| GPT-2 small, one sequence | |
-|---|---|
-| fp32 weights, 124M parameters | $\approx 0.5$ GB |
-| bandwidth of an RTX 4090 | $\approx 1$ TB/s |
-| floor per decode step | $\approx 0.5$ ms |
-| measured, short context | 0.8--0.9 ms |
-
-- Extra 0.3--0.4 ms: a *fixed cost per step* (small kernels,
-  matrix--vector products below peak bandwidth).
-- The cache read adds the rest as $n$ grows.
-- Only one read serving several tokens beats the floor: batching,
-  speculative decoding.
-
 ::: {.d2l-note}
-For one sequence, decoding speed is set by **bytes read**, not FLOPs.
+Passing `donate_argnames=('ks', 'vs')` to `@jax.jit` around `jax.lax.fori_loop` allows XLA to mutate the donated KV cache buffers in place without allocating copies.
 :::
 :::
 
-::: {.slide title="Check: The Saving Without a Prompt"}
-[Check]{.kicker}
+::: {.slide title="Verifying Exact Logit Equivalence"}
+[Correctness Verification]{.kicker}
 
-A model with $N$ = 124M parameters writes $T$ = 4,096 tokens from an empty
-prompt, $2N$ FLOPs per token of a forward pass. By what factor does the cache cut the FLOPs? With
-a 3,584-token prompt and 256 new tokens it was about 250.
+Prefilling $16$ tokens and stepping through $32$ tokens one by one produces the **exact same logits** (to within floating-point rounding $\sim 10^{-7}$) as a single uncached pass over all $48$ tokens:
 
-::: {.fragment .fade-up}
-- Naive: $2N \sum_{n=1}^{T} n \approx NT^2 \approx 2.1 \times 10^{15}$.
-- Cached: $2NT \approx 10^{12}$, so the factor is about $T/2 \approx 2{,}000$.
-- The saving is roughly the number of generated tokens: all of them after a
-  long prompt, half of them without one.
+@kv-cache-same-logits-measured-1
+
+::: {.d2l-note .rule}
+KV caching is **not an approximation**: for both rotary (`pos='rope'`) and learned absolute (`pos='learned'`) positions, the mathematical function computed at step $t$ is identical to full causal evaluation.
 :::
 :::
 
-::: {.slide title="The Cache Grows with Layers, Heads, Tokens, and Sequences"}
-$$\textrm{cache bytes} = 2 \cdot L \cdot H_\textrm{kv} \cdot d_h \cdot n \cdot b \cdot (\textrm{bytes per element})$$
-
-$L$ blocks, $H_\textrm{kv}$ key--value heads of width $d_h$, $n$ tokens, $b$
-sequences.
-
-- GPT-2 small, fp32: $2 \cdot 12 \cdot 12 \cdot 64 \cdot 4$ B = 72 KiB per
-  token.
-- 4,096 tokens: 288 MiB, more than half of the weights, 471 MiB
-  (494 MB).
-
-@!kv-cache-the-memory-bill
-:::
-
-::: {.slide title="A Decode Step Reads the Whole Model for One Token"}
-Arithmetic intensity = FLOPs per byte moved. Roofline: time $\geq$
-max(FLOPs / peak, bytes / bandwidth). An RTX 4090: 83 TFLOP/s, 1 TB/s, so
-the bounds meet at the *ridge point*, about 80 FLOPs per byte.
-
-| step | FLOPs | bytes | FLOPs per byte |
-|---|---|---|---|
-| decode, 1 token | $2N$ | $4N$ + cache | below 1 |
-| prefill, $n$ tokens | $2Nn$ | $4N$ + cache + activations | about $n/2$, less with cache and activations |
-
-::: {.d2l-note}
-Prefill is limited by arithmetic, decode by memory bandwidth.
-:::
-
-[Pope et al., 2023]{.small}
-:::
-
-::: {.slide title="Decode Sits Far Down the Bandwidth Slope"}
-::: {.cols .vc}
-::: {.col .fig .big}
-@fig:mdl-transformers-roofline
-:::
-
-::: {.col .narrow}
-- Decode step: 0.38 FLOP per byte, 200 times below the ridge.
-- Prefill of 2,048 tokens: about 780 (weights and cache only), under the
-  compute roof.
-:::
-:::
-:::
-
-::: {.slide title="Prefill Reads Over 100,000 Tokens per Second, Decode About 1,000"}
-@!kv-cache-prefill-and-decode-1
-
-- Same layers, same GPU: decoding is more than a hundred times slower.
-- Prefill reaches a third to a half of the 335,000 tokens/s that 83 TFLOP/s
-  allows; decode about 60% of the bandwidth ceiling.
-- Each misses its bound by less than 3×; the roofline gets the 100× right.
-- Serving reports both: time to first token (prefill), tokens/s (decode).
-:::
-
-::: {.slide title="Batching Amortizes Weights but Not the KV Cache"}
-$b$ sequences, weights $W$ bytes, cache $c_\textrm{kv}$ bytes per token,
-context $n$, bandwidth $\beta$:
-
-$$\textrm{tokens per second} \approx \frac{b\beta}{W + bnc_\textrm{kv}}
-\;\xrightarrow{\;b \to \infty\;}\; \frac{\beta}{nc_\textrm{kv}}$$
-
-- GPT-2 small, fp32: $W$ = 494 MB, $c_\textrm{kv}$ = 72 KiB.
-- Caches equal the weights at $b \approx 52$ for $n = 128$, but at
-  $b \approx 6.5$ for $n = 1024$.
-:::
-
-::: {.slide title="Long Contexts Cap the Gain from Batching"}
-@!kv-cache-batched-decoding
-
-Solid: measured. Dotted: the bandwidth bound at 1 TB/s.
-
-- $n = 128$: 64 sequences decode about 28× as fast as one.
-- $n = 1024$: from $b = 16$ to 64, only 1.4 to 1.5× more, to about 10,000
-  tokens/s.
-:::
-
-::: {.slide title="Check: Where the Cache Outweighs the Weights"}
-[Check]{.kicker}
-
-GPT-2 small in fp32 at a context of $n = 4096$ tokens. At which batch size
-does the cache equal the weights, and what is the ceiling on tokens per
-second at 1 TB/s?
-
-::: {.fragment .fade-up}
-- $nc_\textrm{kv} = 4096 \cdot 72$ KiB = 288 MiB $\approx$ 302 MB per
-  sequence, so $b \approx 494 / 302 \approx 1.6$.
-- Ceiling $\beta / (nc_\textrm{kv}) \approx 10^{12} / (3.0 \times 10^8)
-  \approx 3{,}300$ tokens per second, whatever the batch.
-:::
-:::
-
-::: {.slide title="Check: The Cache of a 70B Model"}
-[Check]{.kicker}
-
-Llama 3.1 70B: 80 layers, 64 query heads sharing 8 key--value heads of
-width 128, 16-bit cache, 140 GB of weights, contexts up to 128K tokens. How
-many cache bytes per token, and at which context does one sequence's cache
-reach the weights?
-
-::: {.fragment .fade-up}
-- $2 \cdot 80 \cdot 8 \cdot 128 \cdot 2$ B = 320 KiB per token.
-- $140 \times 10^9 / 327{,}680 \approx 430{,}000$ tokens, beyond the
-  context; without sharing (64 key--value heads), about 53,000.
-:::
-
-[Grattafiori et al., 2024]{.small}
-:::
-
-::: {.slide title="The Cache Removes the Arithmetic, and Bandwidth Then Sets the Speed"}
-[Wrap-up]{.kicker}
-
-- Causality lets a cache replace $\approx 2.4 \times 10^{14}$ FLOPs by
-  $\approx 10^{12}$ for 256 tokens after 3,584, with the same logits to
-  rounding error.
-- A decode step costs at least one read of the weights: 0.5 ms for
-  GPT-2 small in fp32; measured 0.8 to 1.3 ms.
-- GPT-2 small caches 72 KiB per token in fp32: 288 MiB at 4,096 tokens.
-- Prefill over 100,000 tokens/s, decode about 1,000: arithmetic against
-  bandwidth.
-- Batching shares the weight reads, not the cache reads: at 1,024 tokens
-  throughput levels off near 10,000 tokens/s.
-
-**Next:** shrinking the cache: fewer key--value heads, fewer dimensions,
-fewer tokens.
-:::
-
-::: {.slide}
-::: {.cover}
-[Dive into Deep Learning · §11.4]{.kicker}
-
-Shrinking the KV Cache<br>
-**shared key--value heads · uptraining · low-rank keys and values · windows and sinks**
-:::
-:::
-
-::: {.slide title="Without Shared Heads, Llama 3 8B Would Cache Four Times Its Weights"}
-[The problem]{.kicker}
-
-$$\textrm{cache bytes} = 2 \cdot L \cdot H_\textrm{kv} \cdot d_h \cdot n \cdot b \cdot (\textrm{bytes per element})$$
-
-$L$ blocks, $H_\textrm{kv}$ key--value heads of width $d_h$, $b$ sequences
-of $n$ tokens. Llama 3 8B: $L$ = 32, $d_h$ = 128, 32 query heads, 16-bit
-cache, 16 GB of weights; one sequence of 128K tokens.
-
-- One key--value head per query head ($H_\textrm{kv}$ = 32): 512 KiB per
-  token, 64 GiB.
-- $H_\textrm{kv}$ = 8, as released: 128 KiB per token, 16 GiB.
-
-::: {.d2l-note}
-Every factor of the formula is a lever: heads, width per token, tokens.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- count what sharing key--value heads saves in parameters and cache;
-- convert a multi-head checkpoint to grouped heads and uptrain it;
-- bound the dimension of a token's keys and values, and test a low-rank
-  cache on GPT-2;
-- explain why a sliding window must keep the first token.
-
-**Running examples:** the byte-level GPT (4.8M parameters, 8 heads,
-validation loss about 1.35 nats per byte) and GPT-2 small (12 blocks, 12
-heads of width 64, 72 KiB per token in fp32).
-:::
-
-::: {.slide title="Shrinking the Cache Makes Long Contexts and Large Batches Fit"}
-[Where this fits]{.kicker}
+::: {.slide title="Empirical Speedup: Over 20× Faster at 4,000 Tokens"}
+[Wall-Clock Benchmark]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| The Transformer Block | attention + FFN, residual stream |
-| A GPT from Scratch | a trained language model; GPT-2 loaded |
-| The KV Cache | reuse past keys and values |
-| **Shrinking the KV Cache** | **fewer heads, narrower or shorter caches** |
-| Encoders, Decoders, and Cross-Attention | the other two wirings |
-| Vision Transformer | images as token sequences |
-| Scaling Laws | loss against parameters, data, compute |
-| Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | released models as settings |
+- **Naive step time grows linearly with context $n$:** Recomputing the entire prefix on a 124M-parameter model reaches $\sim 25\text{ ms/token}$ at $n = 4{,}032$, making a 256-token continuation take over $6\text{ seconds}$.
+- **Cached step time stays flat ($\sim 1\text{ ms/token}$):** Projecting a single token takes $0.8\text{--}1.3\text{ ms}$ across the entire $4{,}096$-token range.
+
+@!kv-cache-same-logits-measured-3
 :::
 
-::: {.col .narrow}
-- **Uses:** the cache formula, `num_kv_heads`, GPT-2.
-- **Skips:** quantized caches (an exercise), recurrent states (next
-  chapter), eviction policies (Language Models part).
+::: {.col .fig}
+@!kv-cache-checking-the-cache-1
 :::
 :::
 :::
 
-::: {.slide title="MQA and GQA Divide the Cache by the Group Size"}
+::: {.slide title="The KV Cache Memory Footprint Formula"}
+[Memory Accounting]{.kicker}
+
+Across $L$ blocks, batch size $B$, sequence length $n$, and $H_{\text{kv}}$ key–value heads of width $d_h$ stored at $b$ bytes per element ($b = 4$ for FP32, $2$ for BF16/FP16, $1$ for FP8), storing both $\mathbf{K}$ and $\mathbf{V}$ requires:
+
+$$M_{\mathrm{KV}}(n, B) = 2 \, b \, B \, L \, n \, H_{\mathrm{kv}} \, d_h \;\;\text{bytes}$$
+
+@kv-cache-the-memory-bill
+
+- **Per-token rate in GPT-2 Small (FP32):** $2 \times 4 \times 12 \times 12 \times 64 = 73{,}728\text{ B} = \mathbf{72\text{ KiB/token}}$.
+- **At $n = 4{,}096$ tokens ($B = 1$):** The KV cache occupies **$288\text{ MiB}$**—more than half the size of the model weights ($475\text{ MiB}$), and at $B = 16$ it reaches $4.5\text{ GiB}$ ($10\times$ the weights!).
+:::
+
+::: {.slide title="Why Single-Token Decode Is Memory-Bandwidth Bound"}
+[The Bandwidth Floor]{.kicker}
+
+Why does a single cached decode step on GPT-2 Small take $\sim 0.9\text{ ms}$ when its $2N \approx 2.5 \times 10^8\text{ FLOPs}$ would take only $0.003\text{ ms}$ at an RTX 4090's $83\text{ TFLOP/s}$ FP32 compute peak?
+
+| Hardware & Model Quantity (GPT-2 Small, FP32, $B = 1$) | Value | Implication |
+| :--- | :---: | :--- |
+| **FP32 model weight footprint ($M_{\text{weights}} = 4N$)** | $498\text{ MB}$ ($475\text{ MiB}$) | Must be streamed from HBM on *every* generated token |
+| **RTX 4090 HBM memory bandwidth ($\mathcal{B}_{\text{HBM}}$)** | $\approx 1{,}000\text{ GB/s}$ ($1\text{ TB/s}$) | Physical speed limit for moving bytes from VRAM to registers |
+| **Absolute bandwidth time floor ($M_{\text{weights}} / \mathcal{B}_{\text{HBM}}$)** | **$\approx 0.50\text{ ms/token}$** | No kernel can decode 1 token faster than one weight read |
+| **Measured single-token decode latency ($n = 256 \dots 4032$)** | **$0.8\text{--}1.3\text{ ms/token}$** | Within $1.6\text{--}2\times$ of the hardware bandwidth ceiling |
+:::
+
+::: {.slide title="Prefill vs. Decode on the Hardware Roofline"}
+[The Roofline Model]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Arithmetic intensity ($I = \text{FLOPs} / \text{Bytes}$):** The ratio of peak compute ($83\text{ TFLOP/s}$) to HBM bandwidth ($1\text{ TB/s}$) defines the hardware **ridge point** at $I^* \approx 83\text{ FLOPs/byte}$.
+- **Decode ($n = 1, B = 1$):** Performs $2N$ FLOPs while reading $4N + M_{\text{KV}}$ bytes ($I \approx 0.38\text{ FLOPs/byte}$ at context $2{,}048$)—$200\times$ below the ridge point (**bandwidth-bound**).
+- **Prefill ($n = 2{,}048$ in parallel):** Reuses each weight read across $2{,}048$ tokens ($I \approx 780\text{ FLOPs/byte}$)—well above the ridge point (**compute-bound**).
+:::
+
+::: {.col .fig}
+@fig:mdl-transformers-roofline
+:::
+:::
+:::
+
+::: {.slide title="Measuring Prefill vs. Decode Throughput"}
+[Roofline Verification]{.kicker}
+
+Benchmarking a 2,048-token prefill against a single-token decode step at context $2{,}048$ on the same model and GPU confirms the $100\times$ gap between the two serving regimes:
+
+@kv-cache-prefill-and-decode-1
+
+::: {.d2l-note}
+Because prefill and decode sit on opposite sides of the roofline ridge point, production LLM serving reports two separate metrics: **Time to First Token (TTFT)**, governed by compute-bound prefill, and **Inter-Token Latency (ITL)**, governed by memory-bandwidth-bound decode.
+:::
+:::
+
+::: {.slide title="Batched Decoding and the KV-Bandwidth Ceiling"}
+[Amortizing Weight Reads]{.kicker}
+
+Decoding $B$ sequences simultaneously reads the model weights $M_{\text{weights}}$ **once** per step for all $B$ tokens, but must still read $B$ distinct KV caches ($B \cdot M_{\text{KV}}(n, 1)$ bytes):
+
+$$\mathrm{Throughput}(B, n) \le \frac{B \, \mathcal{B}_{\mathrm{HBM}}}{M_{\mathrm{weights}} + B \, M_{\mathrm{KV}}(n, 1)} \;\xrightarrow{\;B \to \infty\;}\; \frac{\mathcal{B}_{\mathrm{HBM}}}{M_{\mathrm{KV}}(n, 1)}$$
+
+::: {.cols}
+::: {.col}
+- **Small-batch regime ($B \, M_{\text{KV}} \ll M_{\text{weights}}$):** Weight reads dominate HBM traffic, so total throughput scales nearly linearly with $B$ ("free batching").
+- **Half-saturation batch size ($B_{1/2} = M_{\text{weights}} / M_{\text{KV}}(n, 1)$):** The batch size where total KV cache bytes equal the model weight bytes ($B_{1/2} \approx 53$ at $n = 128$, but $B_{1/2} \approx 6.6$ at $n = 1{,}024$).
+:::
+
+::: {.col .fig}
+@!kv-cache-batched-decoding
+:::
+:::
+:::
+
+::: {.slide title="Three Orthogonal Axes for Shrinking the KV Cache"}
+[Cache Compression Overview]{.kicker}
+
+Because both GPU memory capacity and the large-batch decode throughput ceiling $\mathcal{B}_{\text{HBM}} / M_{\text{KV}}(n, 1)$ are inversely proportional to $M_{\text{KV}}(n, 1) = 2 b L n H_{\text{kv}} d_h$, modern LLMs compress the three factors $H_{\text{kv}} \cdot d_h \cdot n$:
+
+| Compression Axis | Architectural Mechanism | Factor Reduced in $2 b L n H_{\text{kv}} d_h$ | Typical Compression Ratio |
+| :--- | :--- | :---: | :---: |
+| **1. Head Count** | **Grouped-Query (GQA)** & **Multi-Query (MQA)** | $H_{\text{kv}} \leftarrow H / G$ | $4\times\text{--}8\times$ (GQA) or $H\times$ (MQA) |
+| **2. Feature Width** | **Low-Rank KV Projections** & **MLA** | $2 H_{\text{kv}} d_h \leftarrow r$ | $6\times$ (SVD) to $16\times+$ (DeepSeek MLA) |
+| **3. Context Length** | **Sliding Window + Attention Sinks** | $n \leftarrow w + s$ | Bounded $O(w + s)$ at any length $n$ |
+:::
+
+::: {.slide title="Axis 1: Grouped-Query (GQA) and Multi-Query Attention"}
+[Sharing Key–Value Heads]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Multi-Head Attention (MHA, $H_{\text{kv}} = H$):** Every query head has its own private key and value head.
+- **Multi-Query Attention (MQA, $H_{\text{kv}} = 1$, Shazeer 2019):** All $H$ query heads share a single key and value head, cutting the cache by $H\times$.
+- **Grouped-Query Attention (GQA, $1 < H_{\text{kv}} < H$, Ainslie et al. 2023):** Partitions $H$ query heads into $H_{\text{kv}}$ groups of size $G = H / H_{\text{kv}}$, cutting the cache by $G\times$ while matching MHA quality (used in Llama 3 and Qwen3).
+:::
+
+::: {.col .fig}
 @fig:mdl-transformers-gqa
-
-- Query heads differ in how they weight positions; that can come from
-  their query projections alone.
-- MQA: one key--value head for all $H$ query heads, cache $\div H$.
-- GQA: $H_\textrm{kv}$ heads, each read by $H/H_\textrm{kv}$ consecutive
-  query heads. Llama 3 8B, Mistral 7B: 32 query heads, 8 key--value heads.
 :::
-
-::: {.slide title="Fewer Key--Value Heads Shrink Two Projections and the Cache"}
-@!kv-cache-a-pluggable-implementation-2
-
-One block, $d$ = 256, $H$ = 8 query heads of width 32.
-
-- $\mathbf{W}_q, \mathbf{W}_o$ stay $d \times d$; $\mathbf{W}_k,
-  \mathbf{W}_v$ shrink to $d \times H_\textrm{kv} d_h$.
-- Predicted: $4d^2$ = 262,144 parameters with 8 key--value heads,
-  $2.25\,d^2$ = 147,456 with 1.
-
-::: {.d2l-note}
-At most half of the attention parameters go; the cache falls by the full
-factor $H/H_\textrm{kv}$.
 :::
 :::
 
-::: {.slide title="Averaging a Group's Projections Converts a Checkpoint"}
-[Uptraining]{.kicker}
+::: {.slide title="Converting MHA Checkpoints via GQA Uptraining"}
+[Checkpoint Uptraining]{.kicker}
 
-Trained model with $H$ key--value heads; target $H_\textrm{kv}$ groups of
-$H/H_\textrm{kv}$ consecutive heads. For a group $\mathcal{G}$:
+Can we convert an already-trained multi-head checkpoint ($H_{\text{kv}} = H$) into a GQA model ($H_{\text{kv}} = H/G$) without retraining from scratch?
 
-$$\mathbf{W}_k^{(\mathcal{G})} = \frac{H_\textrm{kv}}{H} \sum_{h \in \mathcal{G}} \mathbf{W}_k^{(h)},
-\qquad \mathbf{W}_v^{(\mathcal{G})} = \frac{H_\textrm{kv}}{H} \sum_{h \in \mathcal{G}} \mathbf{W}_v^{(h)}$$
+$$\mathbf{W}_k^{(\mathcal{G})} = \frac{1}{G}\sum_{h \in \mathcal{G}} \mathbf{W}_k^{(h)}, \qquad \mathbf{W}_v^{(\mathcal{G})} = \frac{1}{G}\sum_{h \in \mathcal{G}} \mathbf{W}_v^{(h)}$$
 
-Queries, output projection, FFN, and norms are copied. Control: keep only
-the first head of each group.
-
-::: {.d2l-note}
-Then train on for a few percent of the original steps: *uptraining*.
-:::
-:::
-
-::: {.slide title="Converting Breaks the Model; 50 Steps Recover Most of It"}
 @!kv-cache-cache-against-quality
 
-- Two key--value heads from the start: 1.34--1.35, as good as eight (runs
-  agree within about 0.01).
-- Converted: 2.7--2.9, worse than a bigram model (2.45). After 50 steps
-  about 1.6; 50 steps from scratch: 2.6--2.8.
-- After 100 steps: 1.45--1.48, still 0.1 or more above; averaging leads
-  the first head by over 0.1 in every run.
-
-::: {.d2l-note}
-Conversion breaks only the match of queries to keys; the rest survives.
-:::
+- **Trained from scratch:** GQA ($H_{\text{kv}} = 2$, $4\times$ smaller cache) matches MHA ($H_{\text{kv}} = 8$) at **$1.34\text{ nats/byte}$**.
+- **Mean-pooling + $5\text{--}10\%$ uptraining:** Zero-shot conversion starts near $2.8\text{ nats}$, but just $100$ steps ($10\%$) of uptraining recovers to **$1.46\text{ nats}$**—far ahead of keeping only the first head (`first`) or training from scratch for 50 steps ($2.7\text{ nats}$).
 :::
 
-::: {.slide title="At Scale, the Cost of Sharing Depends on the Model"}
-[Evidence]{.kicker}
+::: {.slide title="Axis 2: Low-Rank KV Subspaces & Latent Attention (MLA)"}
+[Low-Rank KV Compression]{.kicker}
 
-| study | training | 8 key--value groups | 1 key--value head |
-|---|---|---|---|
-| T5-XXL, avg. score | uptrained, 5% | 47.2 → 47.1 | 46.6 |
-| Llama 2, 30B | from scratch | about as good | a little worse |
-| DeepSeek-V2, 7B, MMLU | from scratch | 45 → 41 | 38 |
+In every block of GPT-2 Small ($d = 768$), the concatenated key–value vector $[\mathbf{k}_t; \mathbf{v}_t] \in \mathbb{R}^{1536}$ is an affine image of the normalized $768$-dimensional stream input $\mathbf{x}_t$—so its intrinsic rank is at most $d = 768$!
 
-::: {.d2l-note}
-Most open models train with GQA from the start, at $H/8$ to $H/4$: four
-to eight times less cache per token.
-:::
-
-[Ainslie et al., 2023; Touvron et al., 2023; DeepSeek-AI, 2024]{.small}
-:::
-
-::: {.slide title="Check: Sharing Heads in GPT-2"}
-[Check]{.kicker}
-
-GPT-2 small: 12 blocks, $d$ = 768, 12 heads of width 64, fp32; its full
-cache at 1,024 tokens is 72 MiB. Share each key--value head among three
-query heads ($H_\textrm{kv}$ = 4). How large is the cache, and how many
-attention weights does a block keep?
-
-::: {.fragment .fade-up}
-- Cache $\div 3$: 24 MiB at 1,024 tokens.
-- $\mathbf{W}_k, \mathbf{W}_v$ become $768 \times 256$:
-  $2 \cdot 768^2 + 2 \cdot 768 \cdot 256 \approx 1.57$M weights against
-  $4 \cdot 768^2 \approx 2.36$M, a third fewer.
-:::
-:::
-
-::: {.slide title="GPT-2's 1,536 Keys and Values Are an Affine Function of 768 Numbers"}
-[Low rank]{.kicker}
-
-Per block and token: $[\mathbf{k}; \mathbf{v}] = \mathbf{W}\mathbf{x} +
-\mathbf{b}$, with $\mathbf{x} \in \mathbb{R}^{768}$ the normalized input
-and $\mathbf{W} \in \mathbb{R}^{1536 \times 768}$.
-
-- For any weights, every token's keys and values lie in a 768-dimensional
-  subspace, shifted by $\mathbf{b}$.
-- Caching $\mathbf{x}$ would be exact at half the bytes, but every read
-  recomputes $\mathbf{W}\mathbf{x}$.
-
-::: {.d2l-note}
-The real question: how far below 768 can a cache go?
-:::
-:::
-
-::: {.slide title="GPT-2's Keys and Values Need Only a Third of Their 768 Dimensions"}
 @!kv-cache-low-rank-keys-and-values
 
-- Basis: top $r$ right singular vectors of the key--value rows of a
-  *different* passage; the cache stores $r$ numbers per token.
-- Full attention 3.58. Ranks 512 and 256: within 0.03, no difference one
-  passage resolves. Rank 128 (a sixth): +0.56.
-
-::: {.d2l-note}
-The subspace carries over between passages, so a model can fix it once.
-:::
+- **Post-hoc SVD projection:** Projecting GPT-2's keys and values onto the top $r = 256$ singular vectors fitted on a separate calibration passage ($6\times$ compression from $1{,}536$ numbers) leaves perplexity virtually unchanged ($37$ vs. $36$).
+- **Multi-Head Latent Attention (MLA, DeepSeek-V2/V3):** Trains a low-rank down-projection $\mathbf{c}_t = \mathbf{x}_t \mathbf{W}_{DKV} \in \mathbb{R}^{r}$ ($r = 512$) end-to-end and **absorbs** the key/value up-projections into $\mathbf{W}_q$ and $\mathbf{W}_o$ during inference so full keys and values are never materialized in HBM!
 :::
 
-::: {.slide title="MLA Learns the Compression During Training"}
-[Multi-head latent attention]{.kicker}
+::: {.slide title="Axis 3: Sliding Windows Fail Without Attention Sinks"}
+[The Attention Sink Phenomenon]{.kicker}
 
-- A trained down-projection maps each token to one latent; the cache
-  stores only the latent.
-- The up-projections fold into the query and output projections: decoding
-  never rebuilds keys or values.
-- RoPE's rotation depends on each key's position and cannot be folded, so
-  MLA caches a small rotary key per token.
+Restricting attention to a rolling window of the $w = 256$ most recent tokens bounds the cache to $w$ slots—but on pretrained GPT-2, a pure sliding window causes tail perplexity to explode from **$36$ to $3{,}828$**!
 
-::: {.d2l-note}
-DeepSeek-V2: a latent of 512 for a hidden state of 5,120, tenfold.
-:::
-
-[DeepSeek-AI, 2024]{.small}
-:::
-
-::: {.slide title="From Block 3 On, GPT-2 Puts a Third to Half of Its Attention on Token 0"}
 @!kv-cache-a-window-needs-a-sink-1
 
-- A query's weights sum to one. A head with nothing to retrieve still puts
-  them somewhere: on the first token, which every query sees. This is an
-  *attention sink*.
+- **Where does idle attention mass go?** Because softmax probabilities must sum to $1$, an attention head that finds no informative match in the local context dumps $30\%\text{--}57\%$ of its weight onto **token 0** (the only token visible to every causal query).
+- **Evicting token 0 breaks the softmax denominator:** Once $t \ge w$, a pure sliding window drops token 0, forcing that $30\%\text{--}57\%$ idle probability mass onto local window tokens and corrupting the residual stream.
 :::
 
-::: {.slide title="One Sink Token Is Worth a Factor of 80 in Perplexity"}
+::: {.slide title="Restoring Sliding-Window Perplexity With Sink Tokens"}
+[StreamingLLM & Sinks]{.kicker}
+
+Retaining just $s \in \{1, 4\}$ initial **attention sink** tokens permanently in cache slots $0 \dots s-1$ alongside the $w = 256$ rolling window slots ($w + s$ cached tokens total, Xiao et al. 2024) cures the collapse zero-shot:
+
 @!kv-cache-a-window-needs-a-sink-2
 
-- Window of 256 tokens plus $s$ sink tokens, the first $s$ of the text; no
-  training. $s$ = 0: perplexity 36 → over 3,800. $s$ = 1: 47. $s$ = 4: 43.
-- Newer models give each head a learned sink logit instead (gpt-oss).
-
 ::: {.d2l-note}
-Recent tokens were nearly enough; the window removed where heads put
-unneeded weight.
+Keeping a single sink token ($s = 1$) drops perplexity from $3{,}828$ back to $47$ ($s = 4$ reaches $43$, vs. $36$ for full $1{,}024$-token attention). Modern architectures (such as `gpt-oss`) go one step further by giving each attention head a learnable virtual sink bias in the softmax denominator.
 :::
 :::
 
-::: {.slide title="Each Method Shrinks One Factor of the Cache Formula"}
-| method | factor reduced | stored numbers | needs training? |
-|---|---|---|---|
-| GQA, MQA | heads $H_\textrm{kv}$ | $2LnH_\textrm{kv}d_h$, fewer heads | yes, or uptrain |
-| latent (MLA) | width per token | about $Lnr$ + a rotary key | yes (a fitted basis: no) |
-| window + sinks | length $n$ | $2L(w+s)H_\textrm{kv}d_h$ | no; better if pretrained with a sink |
+::: {.slide title="Concept Check: Roofline and KV Cache Sizing"}
+[Check Your Understanding]{.kicker}
 
-A window combines with either other row; GQA and a latent are
-alternatives. Quantization (2 to 4 bits) combines with all three. A
-fixed-size recurrent state forgets no token outright.
-:::
+Work through these three serving calculations:
 
-::: {.slide title="Check: A Window with Sinks for GPT-2"}
-[Check]{.kicker}
+1. **70B GQA cache footprint:** Llama 3.1 70B has $L = 80$ layers, $H = 64$ query heads, $H_{\text{kv}} = 8$ KV heads of width $d_h = 128$, and BF16 weights ($140\text{ GB}$) and cache ($b = 2\text{ B}$). How many kilobytes per token does its KV cache use, and at what context length $n$ does a single sequence's cache equal the $140\text{ GB}$ weights (with GQA vs. MHA)?
+2. **Half-saturation batch size:** For GPT-2 Small in FP32 ($M_{\text{weights}} \approx 498\text{ MB}$, $72\text{ KiB/token}$), at what batch size $B_{1/2}$ does KV cache traffic equal weight traffic at context $n = 4{,}096$, and what is the asymptotic decode throughput ceiling at $1\text{ TB/s}$?
+3. **Window + sink memory:** How much memory does a streaming cache with window $w = 256$ and $s = 4$ sinks use on GPT-2 Small (FP32) when generating $100{,}000$ tokens?
 
-GPT-2 small in fp32 caches 72 KiB per token. With a window of $w$ = 256
-and $s$ = 4 sink tokens, how large is the cache at 1,024 tokens, and at
-100,000?
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
 
-::: {.fragment .fade-up}
-- $260 \cdot 72$ KiB $\approx$ 18 MiB at any length, against 72 MiB for
-  the full cache at 1,024 tokens.
-- At 100,000 tokens the full cache would need about 6.9 GiB (if the
-  positions allowed it).
+1. **$2 \times 2 \times 80 \times 8 \times 128 = 327{,}680\text{ B} = 320\text{ KiB/token}$** under GQA ($8\times$ smaller than MHA's $2.5\text{ MiB/token}$). One sequence equals the $140\text{ GB}$ weights at **$n \approx 427\text{K}$ tokens** with GQA, vs. only **$53\text{K}$ tokens** with MHA!
+2. At $n = 4{,}096$, one cache is $302\text{ MB}$, so **$B_{1/2} = 498 / 302 \approx 1.6$ sequences**, and throughput can never exceed $10^{12} / (3.02 \times 10^8) \approx \mathbf{3{,}310\text{ tokens/s}}$ at any batch size.
+3. **Constant $(256 + 4) \times 72\text{ KiB} = 18.3\text{ MiB}$** at any sequence length (vs. $6.9\text{ GiB}$ for an unwindowed $100\text{K}$ cache).
 :::
 :::
 
-::: {.slide title="Share Heads First; a Latent or a Window with Sinks Shrinks the Rest"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Serving Regimes and KV Cache Compression"}
+[Key Takeaways]{.kicker}
 
-- Sharing heads: 8 → 2 key--value heads cut the byte model's cache
-  fourfold at no measurable loss when trained that way; a converted
-  checkpoint needs uptraining, and averaging beats keeping one head.
-- GPT-2's keys and values are a function of 768 numbers; a basis of 256
-  from another passage costs nothing measurable, one of 128 half a nat.
-- A window bounds the cache only if it keeps the attention sink.
-
-**Next:** encoders, decoders, and cross-attention.
+| Concept / Method | Mathematical Relation / Rule | Systems & Architectural Takeaway |
+| :--- | :--- | :--- |
+| **Cached Decoding** | Cache post-RoPE $(\mathbf{K}_{1:t}, \mathbf{V}_{1:t})$, step with $n = 1$ | Cuts $T$-token generation FLOPs from $O(T^2)$ to $O(T)$ with identical logits |
+| **KV Cache Footprint** | $M_{\text{KV}}(n, B) = 2 b B L n H_{\text{kv}} d_h$ | Grows linearly with batch $B$ and context $n$ ($288\text{ MiB}$ at $n = 4096$ on GPT-2) |
+| **Prefill vs. Decode** | $I_{\text{prefill}} \approx \frac{2Bn}{b_w} \gg I^*$; $I_{\text{decode}} \le \frac{2}{b_w} \ll I^*$ | Prefill is **compute-bound** ($>10^5\text{ tok/s}$); decode is **bandwidth-bound** ($\sim 10^3\text{ tok/s}$) |
+| **Batched Decode** | $\text{Throughput}(B,n) \le \frac{B \mathcal{B}_{\text{HBM}}}{M_{\text{weights}} + B M_{\text{KV}}(n,1)}$ | Linear speedup for $B \ll B_{1/2}$; saturates at $\mathcal{B}_{\text{HBM}} / M_{\text{KV}}(n,1)$ |
+| **GQA / MQA** | Share 1 KV head across $G = H / H_{\text{kv}}$ query heads | Shrinks cache by $G\times$; MHA checkpoints convert via mean-pooling + $5\text{--}10\%$ uptraining |
+| **Low-Rank / MLA & Sinks** | Rank-$r$ latent $\mathbf{c}_t \in \mathbb{R}^r$; window $w + s$ sinks | Compresses width $6\text{--}16\times$; $s \ge 1$ sink tokens prevent sliding-window softmax collapse |
 :::

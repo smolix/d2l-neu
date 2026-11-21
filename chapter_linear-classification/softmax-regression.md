@@ -103,6 +103,7 @@ $$-\log \prod_{i=1}^n P(y^{(i)} \mid \mathbf{x}^{(i)}) = \sum_{i=1}^n l(\mathbf{
 :eqlabel:`eq_l_cross_entropy`
 
 This objective is the *cross-entropy loss*. Notice how it behaves:
+
 - Because $\hat{y}_y \in (0, 1)$, $l(\mathbf{y}, \hat{\mathbf{y}}) > 0$ always. It approaches $0$ as $\hat{y}_y \to 1$ and diverges to $+\infty$ as $\hat{y}_y \to 0$ (heavily penalizing confident mistakes).
 - On our image with logits $(1.0, 2.2, 0.3)$ and probabilities $(0.21, 0.69, 0.10)$, if the true label is chicken ($y = 2$), the loss is $-\log 0.69 \approx 0.37$ nats; if the image is actually a dog ($y = 3$), the loss jumps sixfold to $-\log 0.10 \approx 2.30$ nats.
 
@@ -329,369 +330,246 @@ sharpens the distribution toward a one-hot argmax as $T \to 0$ and flattens it t
 ::: {.cover}
 [Dive into Deep Learning · §3.1]{.kicker}
 
-Probabilities for categories<br>
-**one-hot labels · the softmax · cross-entropy · the gradient $\hat{\mathbf{y}} - \mathbf{y}$ · temperature**
+Softmax Regression: Linear Models for Categorical Probabilities<br>**one-hot encoding · affine logits · softmax · shift invariance · cross-entropy · $\hat{\mathbf{y}} - \mathbf{y}$ gradient · temperature**
 :::
 :::
 
-::: {.slide title="A Class Code of 5.5 Means Nothing"}
-[The problem]{.kicker}
+::: {.slide title="Why Scalar Regression Fails on Unordered Categories"}
+[Motivation & Failure Mode]{.kicker}
 
-Sort clothing photos into ten categories: T-shirt (code 1), trouser (2),
-…, coat (5), sandal (6), …, ankle boot (10). Regress on the codes?
+Suppose we sort clothing photos into $q = 10$ categories: T-shirt ($1$), trouser ($2$), $\ldots$, coat ($5$), sandal ($6$), $\ldots$, ankle boot ($10$). Treating integer class codes as continuous targets breaks down immediately:
 
-- A prediction of 5.5 sits "between" a coat and a sandal.
-- The squared loss charges $(10-1)^2 = 81$ for T-shirt → ankle boot, but
-  $(2-1)^2 = 1$ for T-shirt → trouser.
+- **Arbitrary metric ordering:** A continuous prediction of $\hat{y} = 5.5$ places a photo halfway between a coat and a sandal, imposing a nonexistent numerical order on unordered categories.
+- **Distorted squared-error penalties:** Under $\frac{1}{2}(\hat{y} - y)^2$, mistaking a T-shirt ($1$) for an ankle boot ($10$) costs $(10 - 1)^2 = 81\times$ as much as mistaking it for a trouser ($2$).
+- **No calibrated uncertainty:** Downstream decision systems need a complete probability distribution $\hat{\mathbf{y}} \in \Delta^q$ over all $q$ candidate classes to weigh confidence against asymmetric error costs.
 
 ::: {.d2l-note}
-Codes are names, not quantities. We want **one probability per class**,
-and a loss derived from a model of the labels.
+Instead of predicting one scalar, a classifier computes **one linear score (logit) per class** and maps those scores into a normalized probability distribution.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="One-Hot Encoding Represents Categories as Distributions"}
+[Target Representation]{.kicker}
 
-- compute softmax probabilities and the cross-entropy loss by hand;
-- write the model for one example and for a minibatch, with
-  $\mathbf{W} \in \mathbb{R}^{d \times q}$;
-- derive cross-entropy from maximum likelihood, and its gradient
-  $\hat{\mathbf{y}} - \mathbf{y}$;
-- explain why we train on cross-entropy but report accuracy;
-- say what a temperature changes about a prediction, and what it does not.
+Consider a $2 \times 2$ grayscale image with four pixel features $(x_1, x_2, x_3, x_4)$ and $q = 3$ classes: cat ($1$), chicken ($2$), and dog ($3$):
 
-**Running examples:** a $2\times2$ image of a cat, chicken, or dog with
-logits $(1.0, 2.2, 0.3)$; Fashion-MNIST, $d = 784$ pixels, $q = 10$ classes.
+- **One-hot label vector:** We encode class $y \in \{1, \ldots, q\}$ as $\mathbf{y} \in \{0, 1\}^q$ with $y_y = 1$ and $0$ elsewhere—so a cat is $(1, 0, 0)$, a chicken is $(0, 1, 0)$, and a dog is $(0, 0, 1)$.
+- **Symmetric geometry:** Every pair of distinct categories sits at the exact same Euclidean distance $\|\mathbf{e}_i - \mathbf{e}_j\|_2 = \sqrt{2}$, eliminating any artificial ordering among classes.
+- **Degenerate target distribution:** Because $y_j \ge 0$ and $\sum_{j=1}^q y_j = 1$, $\mathbf{y}$ is itself a valid probability distribution placing $100\%$ of its mass on the observed class.
+
+::: {.d2l-note}
+Mathematical derivations use $1$-based index $y$ and one-hot vector $\mathbf{y} \in \{0, 1\}^q$, whereas code stores the $0$-based integer index $y \in \{0, \ldots, q-1\}$ directly to save $O(q)$ memory.
+:::
 :::
 
-::: {.slide title="Softmax Regression Is the Model of the Whole Chapter"}
-[Where this fits]{.kicker}
+::: {.slide title="One Affine Score (Logit) per Candidate Class"}
+[The Linear Layer]{.kicker}
+
+Softmax regression assigns each class $j \in \{1, \ldots, q\}$ its own weight vector $\mathbf{w}_j \in \mathbb{R}^d$ and bias $b_j \in \mathbb{R}$:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| **Softmax Regression** | **probabilities over classes, cross-entropy** |
-| Image Classification Data | Fashion-MNIST in minibatches |
-| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
-| Concise Implementation | framework layers, a stable loss |
-| Measuring Classifiers | precision, recall, costs, calibration |
-| Generalization in Classification | error bars, test-set reuse, VC dimension |
-| Environment and Distribution Shift | correcting for shifted data |
+- **Unnormalized class scores (logits):** For input $\mathbf{x} \in \mathbb{R}^d$, class $j$ receives the affine score $o_j = \mathbf{w}_j^\top\mathbf{x} + b_j$.
+- **Matrix form:** Stacking the columns $\mathbf{w}_j$ into $\mathbf{W} \in \mathbb{R}^{d \times q}$ and biases into $\mathbf{b} \in \mathbb{R}^q$ yields:
+  $$\mathbf{o} = \mathbf{W}^\top \mathbf{x} + \mathbf{b}$$
+- **Parameter count:** A $2\times 2$ image ($d=4, q=3$) uses $4\times 3 + 3 = 15$ parameters; a $28\times 28$ Fashion-MNIST image ($d=784, q=10$) uses $7{,}840 + 10 = 7{,}850$ parameters.
 :::
 
-::: {.col .narrow}
-- **Uses:** the linear model, minibatch SGD, and maximum likelihood under
-  Gaussian noise, from Linear Regression.
-- **Skips:** multi-label and ordinal labels; proofs of the
-  information-theory facts, in the mathematics appendix.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Scores and probabilities]{.dtitle}
-
-[one linear score per class, then the softmax]{.dsub}
-:::
-:::
-
-::: {.slide title="A Label Is a One-Hot Vector"}
-[Labels]{.kicker}
-
-A $2\times2$ grayscale image has four features $x_1, \ldots, x_4$ and shows
-a cat, a chicken, or a dog: classes 1, 2, 3.
-
-- The label $y$ is the class; we encode it as a **one-hot** vector
-  $\mathbf{y}$: a chicken is $\mathbf{y} = (0, 1, 0)$.
-- Any two classes are equally far apart: no false order.
-- $\mathbf{y}$ is a distribution with all its mass on the true class.
-
-::: {.d2l-note}
-Formulas use $\mathbf{y}$; code stores the class index, counting from 0.
-:::
-:::
-
-::: {.slide title="Each Class Gets Its Own Linear Score"}
-[Linear scores]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$o_j = \mathbf{w}_j^\top \mathbf{x} + b_j, \qquad \mathbf{o} = \mathbf{W}^\top \mathbf{x} + \mathbf{b}$$
-
-- $\mathbf{W} \in \mathbb{R}^{d \times q}$: a row per feature, a column
-  $\mathbf{w}_j$ per class.
-- $2\times2$ images: 12 weights, 3 biases.
-- Fashion-MNIST: $7{,}840$ weights, 10 biases.
-- The scores $o_j$ are the **logits**.
-:::
-
-::: {.col .fig .big}
+::: {.col .fig}
 ![](../img/softmaxreg.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="The Softmax Exponentiates, Then Normalizes"}
-[The softmax]{.kicker}
+::: {.slide title="The Softmax Operator Maps Logits to Probabilities"}
+[Probability Normalization]{.kicker}
+
+Raw logits $\mathbf{o} \in \mathbb{R}^q$ can be negative and need not sum to $1$. The **softmax** operator exponentiates each logit and divides by their partition sum:
 
 $$\hat{y}_j = \mathrm{softmax}(\mathbf{o})_j = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)}$$
 
-- $\mathbf{o} = (1.0, 2.2, 0.3)$: exponentials $(2.72, 9.03, 1.35)$, sum
-  $13.09$, so $\hat{\mathbf{y}} = (0.21, 0.69, 0.10)$.
-- Nonnegative, sums to 1, keeps the order:
-  $\operatorname{argmax}_j \hat{y}_j = \operatorname{argmax}_j o_j$.
-
-::: {.d2l-note}
-To predict a class, read off the largest logit.
-:::
+- **Concrete trace:** For cat/chicken/dog logits $\mathbf{o} = (1.0, 2.2, 0.3)$, the exponentials are $(2.72, 9.03, 1.35)$ with sum $13.09$, producing $\hat{\mathbf{y}} = (0.21, 0.69, 0.10)$ ($69\%$ probability for chicken).
+- **Valid probability simplex:** Because $\exp(o_j) > 0$ for all $o_j \in \mathbb{R}$, every entry satisfies $\hat{y}_j \in (0, 1)$ and $\sum_{j=1}^q \hat{y}_j = 1$.
+- **Monotonic ranking preservation:** Since $\exp(\cdot)$ is strictly increasing, softmax preserves the order of the scores ($\operatorname{argmax}_j \hat{y}_j = \operatorname{argmax}_j o_j$), so inference can pick $\operatorname{argmax}_j o_j$ without computing exponentials.
 :::
 
-::: {.slide title="Only Differences of Logits Matter"}
-[The softmax · invariance]{.kicker}
+::: {.slide title="Shift Invariance and Log-Odds Ratios"}
+[Structural Properties of Softmax]{.kicker}
 
-$$o_i - o_j = \log \frac{\hat{y}_i}{\hat{y}_j}, \qquad \mathrm{softmax}(\mathbf{o} + c\mathbf{1}) = \mathrm{softmax}(\mathbf{o})$$
+Why normalize with $\exp(\cdot)$ rather than squaring or clamping? Because exponentials convert additive shifts into common multiplicative factors:
 
-- Chicken minus cat is 1.2: the chicken is $e^{1.2} \approx 3.3$ times as
-  probable ($0.69/0.21$).
-- One redundant degree of freedom: fixing one logit at 0 changes no
-  prediction.
-- Two classes, $o = o_1 - o_2$:
-  $\hat{y}_1 = \frac{1}{1 + e^{-o}} = \sigma(o)$, the **logistic
-  sigmoid**: logistic regression.
+$$\mathrm{softmax}(\mathbf{o} + c\mathbf{1})_j = \frac{\exp(o_j + c)}{\sum_{k=1}^q \exp(o_k + c)} = \frac{\exp(c)\exp(o_j)}{\exp(c)\sum_{k=1}^q \exp(o_k)} = \mathrm{softmax}(\mathbf{o})_j$$
+
+- **Only pairwise differences matter:** Taking the log-ratio of any two class probabilities reveals that logit differences are exact log-odds ratios ($o_i - o_j = \log(\hat{y}_i / \hat{y}_j)$).
+- **Numerical interpretation:** In $\mathbf{o} = (1.0, 2.2, 0.3)$, chicken leads cat by $o_2 - o_1 = 1.2$, making chicken $e^{1.2} \approx 3.3\times$ as probable as cat ($0.69 / 0.21$).
+- **Numerical overflow safeguard:** Subtracting $c = \max_k o_k$ before exponentiating ensures every exponent is $\le 0$, preventing `float32` overflow ($e^{o} = \infty$ for $o > 88.7$) without changing $\hat{\mathbf{y}}$.
 :::
 
-::: {.slide title="A Minibatch Is One Matrix Product"}
-[Minibatches]{.kicker}
+::: {.slide title="Two-Class Softmax Reduces to Logistic Regression"}
+[Connection to Binary Classification]{.kicker}
 
-$$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}, \qquad \hat{\mathbf{Y}} = \mathrm{softmax}(\mathbf{O}) \textrm{ row by row}$$
+When $q = 2$, shift invariance implies that the two probabilities depend solely on the single scalar difference $o = o_1 - o_2$:
 
-- $\mathbf{X}$: $n \times d$, one example per row; $\mathbf{O}$ and
-  $\hat{\mathbf{Y}}$: $n \times q$; $\mathbf{b}$ is broadcast to every row.
-- Fashion-MNIST, $n = 256$: $(256 \times 784)(784 \times 10)$, about
-  2 million multiply-adds in one call.
+$$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1) + \exp(o_2)} = \frac{1}{1 + \exp(-(o_1 - o_2))} = \sigma(o_1 - o_2)$$
 
-::: {.d2l-note}
-Features along the rows of $\mathbf{W}$: one example is
-$\mathbf{W}^\top\mathbf{x}$, a minibatch is $\mathbf{X}\mathbf{W}$.
-:::
+- **Equivalence to the logistic sigmoid:** Here $\sigma(o) = (1 + e^{-o})^{-1}$ is the classic logistic sigmoid, and $\hat{y}_2 = 1 - \hat{y}_1 = \sigma(-o)$.
+- **Origin of the term "logit":** Inverting $\hat{y}_1 = \sigma(o)$ yields $o = \log\frac{\hat{y}_1}{1 - \hat{y}_1} = \log\frac{\hat{y}_1}{\hat{y}_2}$, the log-odds (*logistic unit*) introduced by Berkson (1944).
+- **Redundant parameterization:** A 2-class softmax with $(\mathbf{w}_1, b_1)$ and $(\mathbf{w}_2, b_2)$ produces the exact same probabilities as binary logistic regression with parameter vector $(\mathbf{w}_1 - \mathbf{w}_2, b_1 - b_2)$.
 :::
 
-::: {.slide title="The Decision Boundaries Are Hyperplanes"}
-[Decision regions]{.kicker}
+::: {.slide title="Vectorizing Softmax Across a Minibatch"}
+[Batched Matrix Formulation]{.kicker}
 
-Class $j$ wins where $o_j \ge o_k$ for all $k$: a **convex** intersection
-of half-spaces.
+In code, we process a minibatch of $n$ examples with $d$ features in a single matrix multiplication followed by a rowwise softmax:
 
-![](../img/mdl-clf-decision-regions.svg){.nostretch width=60% fig-align="center"}
+$$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$$
 
-::: {.d2l-note .warn}
-The softmax bends the probabilities, not the boundaries.
-:::
-:::
-
-::: {.slide title="Check: What Are the Probabilities for Logits (102, 100, 100)?"}
-[Check]{.kicker}
-
-First compute $\mathrm{softmax}(2, 0, 0)$. Then say, without computing
-$e^{102}$, what $\mathrm{softmax}(102, 100, 100)$ is, and how many times as
-probable the first class is as the second.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $e^2 = 7.39$, sum $9.39$: $(0.79, 0.11, 0.11)$. Adding 100 to
-every logit changes nothing, so the second answer is the same. The first
-class is $e^{2} \approx 7.4$ times as probable: only the difference of the
-logits matters.
-:::
-:::
+- **Tensor shapes:** Stacking $n$ examples row-by-row gives $\mathbf{X} \in \mathbb{R}^{n \times d}$; multiplying by $\mathbf{W} \in \mathbb{R}^{d \times q}$ and broadcasting $\mathbf{b} \in \mathbb{R}^{1 \times q}$ across rows yields the logit matrix $\mathbf{O} \in \mathbb{R}^{n \times q}$.
+- **Rowwise normalization:** Applying $\hat{\mathbf{Y}} = \mathrm{softmax}(\mathbf{O})$ exponentiates every entry of $\mathbf{O}$ and divides each row $i$ by its own row sum $\sum_{k=1}^q \exp(O_{ik})$ (`axis=1, keepdims=True`).
+- **Throughput on Fashion-MNIST:** For batch size $n = 256$, $d = 784$, and $q = 10$, evaluating $\mathbf{X}\mathbf{W}$ executes $256 \times 784 \times 10 \approx 2.0 \times 10^6$ multiply-adds ($\approx 4\text{ MFLOPs}$) in one BLAS kernel call.
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Geometry of Softmax Decision Regions"}
+[Linear Decision Boundaries]{.kicker}
 
-[The cross-entropy loss]{.dtitle}
-
-[maximum likelihood for class labels]{.dsub}
-:::
-:::
-
-::: {.slide title="A Categorical Model of the Label Gives Cross-Entropy"}
-[Maximum likelihood]{.kicker}
-
-Given $\mathbf{x}$, the label is class $j$ with probability $\hat{y}_j$:
-$P(y \mid \mathbf{x}) = \hat{y}_y = \prod_j \hat{y}_j^{y_j}$, with $y$ the
-true class. Independent examples, then $-\log$:
-
-$$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y$$
-
-- Chicken: $-\log 0.69 \approx 0.37$. Dog: $-\log 0.10 \approx 2.3$, six
-  times as much.
-- Always $\ge 0$; 0 only with certainty; $\to \infty$ for a confident
-  mistake.
-:::
-
-::: {.slide title="The Gradient Is Prediction Minus Label"}
-[The gradient]{.kicker}
-
-$$l = \log \sum_{k} \exp(o_k) - o_y \quad\Longrightarrow\quad \nabla_{\mathbf{o}}\, l = \hat{\mathbf{y}} - \mathbf{y}$$
-
-- Chicken: $(0.21, 0.69, 0.10) - (0, 1, 0) = (0.21, -0.31, 0.10)$; the
-  entries sum to 0.
-- Weights: $\partial l / \partial \mathbf{w}_j = (\hat{y}_j - y_j)\,\mathbf{x}$;
-  a minibatch gives $\frac{1}{n}\mathbf{X}^\top(\hat{\mathbf{Y}} - \mathbf{Y})$.
-- Convex in the logits, hence in $\mathbf{W}$ and $\mathbf{b}$.
-
-::: {.d2l-note}
-The true class moves toward $\mathbf{x}$; the others move away in
-proportion to the probability they took.
-:::
-:::
-
-::: {.slide title="Same Recipe as Regression, Different Model of the Label"}
-[Side by side]{.kicker}
-
-| | Linear regression | Softmax regression |
-|:--|:--|:--|
-| label | real number $y$ | class $y$, one-hot $\mathbf{y}$ |
-| model of the label | Gaussian at $\hat{y}$ | categorical, probabilities $\hat{\mathbf{y}}$ |
-| negative log-likelihood | $\frac{1}{2}(\hat{y} - y)^2$ | $-\log \hat{y}_y$ |
-| gradient | $\hat{y} - y$ | $\hat{\mathbf{y}} - \mathbf{y}$ (in $\mathbf{o}$) |
-
-::: {.d2l-note .rule}
-Choose a model of how the labels arise; minimize its negative
-log-likelihood.
-:::
-:::
-
-::: {.slide title="Cross-Entropy Is Never Below Entropy"}
-[Entropy and cross-entropy]{.kicker}
-
-- **Surprisal** of an outcome of probability $p$: $-\log p$.
-- **Entropy** $H(\mathbf{p}) = -\sum_j p_j \log p_j$: the expected
-  surprisal if we know $\mathbf{p}$ (in nats).
-- **Cross-entropy** $H(\mathbf{p}, \hat{\mathbf{p}}) = -\sum_j p_j \log \hat{p}_j$:
-  the expected surprisal if we predict with $\hat{\mathbf{p}}$ instead.
-
-$$H(\mathbf{p}, \hat{\mathbf{p}}) \ge H(\mathbf{p}), \quad \textrm{equality iff } \hat{\mathbf{p}} = \mathbf{p} \quad \textrm{(Gibbs' inequality)}$$
-
-::: {.d2l-note}
-Our loss is $H(\mathbf{y}, \hat{\mathbf{y}})$: the one-hot label against
-the prediction.
-:::
-:::
-
-::: {.slide title="Check: Report (0.6, 0.4) or (0.9, 0.1)?"}
-[Check]{.kicker}
-
-Blurry photos like this one are shirts 60% of the time and T-shirts 40% of
-the time. Which prediction has the lower expected cross-entropy:
-$(0.6, 0.4)$ or the more confident $(0.9, 0.1)$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $(0.6, 0.4)$ costs $-0.6\log 0.6 - 0.4\log 0.4 = 0.67$ nats;
-$(0.9, 0.1)$ costs $-0.6\log 0.9 - 0.4\log 0.1 = 0.98$ nats. By Gibbs'
-inequality, the true probabilities always win: cross-entropy rewards
-honest probabilities.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Accuracy and confidence]{.dtitle}
-
-[why we train on one number and report another]{.dsub}
-:::
-:::
-
-::: {.slide title="Counting Errors Gives No Gradient; Cross-Entropy Does"}
-[The error rate]{.kicker}
+Because softmax preserves logit ordering, class $j$ wins wherever $o_j \ge o_k$ for all $k \neq j$:
 
 ::: {.cols .vc}
 ::: {.col}
-- Margin $m = o_y - \max_{j \neq y} o_j$: correct iff $m > 0$.
-- The error is a step in $m$: zero gradient almost everywhere.
-- Two classes: $l = \log(1 + e^{-m})$, smooth and decreasing.
-- A mistake costs at least $\log 2$, so
-  errors $\le$ total loss $/ \log 2$.
+- **Intersection of halfspaces:** The condition $o_j \ge o_k$ expands to $(\mathbf{w}_j - \mathbf{w}_k)^\top\mathbf{x} + (b_j - b_k) \ge 0$, so each decision region is a flat-sided **convex polyhedron** formed by intersecting $q - 1$ halfspaces.
+- **Pairwise hyperplane boundaries:** Neighboring classes $j$ and $k$ meet along the flat hyperplane where their logits tie ($o_j = o_k$).
+- **Scope assumption:** Competing softmax outputs assume *mutually exclusive, unordered* classes (multi-label tasks use independent binary sigmoids per tag).
 :::
 
 ::: {.col .fig .big}
+![](../img/mdl-clf-decision-regions.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Maximum Likelihood Yields the Cross-Entropy Loss"}
+[Probabilistic Loss Derivation]{.kicker}
+
+Interpreting $\hat{y}_j = P(y = j \mid \mathbf{x})$ as a categorical conditional distribution, the likelihood of observing true class $y$ (with one-hot vector $\mathbf{y} \in \{0, 1\}^q$) is $P(y \mid \mathbf{x}) = \hat{y}_y = \prod_{j=1}^q \hat{y}_j^{y_j}$. Taking the negative log-likelihood gives the **cross-entropy loss**:
+
+$$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y$$
+
+- **Boundary behavior:** Since $\hat{y}_y \in (0, 1)$, $l(\mathbf{y}, \hat{\mathbf{y}}) > 0$ always; it approaches $0$ as $\hat{y}_y \to 1$ and diverges to $+\infty$ as $\hat{y}_y \to 0$, heavily penalizing confident mistakes.
+- **Concrete values on $\hat{\mathbf{y}} = (0.21, 0.69, 0.10)$:** If the image is a chicken ($y = 2$), the loss is $-\log 0.69 \approx 0.37\text{ nats}$; if it is a dog ($y = 3$), the loss jumps sixfold to $-\log 0.10 \approx 2.30\text{ nats}$.
+:::
+
+::: {.slide title="Why Squared Error Fails on Softmax Probabilities"}
+[Optimization Pitfall: Vanishing Gradients on Blunders]{.kicker}
+
+Why not minimize the squared error $\frac{1}{2}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ between the softmax probabilities and the one-hot target?
+
+- **Softmax Jacobian saturation:** Because $\partial \hat{y}_k / \partial o_j = \hat{y}_k(\mathbf{1}_{j=k} - \hat{y}_j)$ carries a factor of $\hat{y}_k$, any class whose predicted probability approaches $0$ has a vanishing derivative with respect to the logits.
+- **Two-class margin comparison ($m = o_y - o_{\text{other}}$):**
+  $$\frac{d}{dm}\Big[\tfrac{1}{2}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2\Big] = -2\sigma(m)\big(1 - \sigma(m)\big)^2 \xrightarrow{m \to -\infty} 0, \qquad \frac{d}{dm}\big[-\log \sigma(m)\big] = -(1 - \sigma(m)) \xrightarrow{m \to -\infty} -1$$
+- **Practical consequence:** On a confident wrong prediction ($m \ll 0$, $\hat{y}_y \approx 0$), squared loss has nearly **zero gradient** and stalls, whereas cross-entropy cancels the exponential via $\log(\exp(o_y))$ and supplies a full unit gradient!
+:::
+
+::: {.slide title="Log-Sum-Exp Form and the Residual Gradient"}
+[Exact Gradient Derivation]{.kicker}
+
+Substituting $\hat{y}_j = \exp(o_j)/\sum_k \exp(o_k)$ into $l(\mathbf{y}, \hat{\mathbf{y}})$ and using $\sum_{j=1}^q y_j = 1$ expresses the loss directly in terms of the logits $\mathbf{o}$:
+
+$$l(\mathbf{y}, \hat{\mathbf{y}}) = \log \sum_{k=1}^q \exp(o_k) - \sum_{j=1}^q y_j o_j = \log \sum_{k=1}^q \exp(o_k) - o_y$$
+
+Differentiating the *log-sum-exp* function $\log\sum_{k=1}^q \exp(o_k)$ with respect to $o_j$ yields the exact residual:
+
+$$\frac{\partial l}{\partial o_j} = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} - y_j = \hat{y}_j - y_j \quad \Longrightarrow \quad \nabla_{\mathbf{o}}\, l = \hat{\mathbf{y}} - \mathbf{y}$$
+
+::: {.d2l-note .rule}
+**Prediction minus observation:** On our chicken example with $\hat{\mathbf{y}} = (0.21, 0.69, 0.10)$ and $\mathbf{y} = (0, 1, 0)$, the logit gradient is $\nabla_{\mathbf{o}}\, l = (0.21, -0.31, 0.10)$, boosting the true class while pushing down rivals in exact proportion to the probability mass they claimed.
+:::
+:::
+
+::: {.slide title="Weight Gradients and Global Convexity"}
+[Chain Rule to Parameters]{.kicker}
+
+Applying the chain rule through the batched linear layer $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ gives the parameter gradients for a minibatch of $n$ examples:
+
+$$\nabla_{\mathbf{W}} L = \frac{1}{n}\mathbf{X}^\top(\hat{\mathbf{Y}} - \mathbf{Y}), \qquad \nabla_{\mathbf{b}} L = \frac{1}{n}(\hat{\mathbf{Y}} - \mathbf{Y})^\top\mathbf{1}_n$$
+
+- **Rank-1 per-example update:** For a single example $\mathbf{x}$, column $j$ of $\mathbf{W}$ moves along $-\nabla_{\mathbf{w}_j} l = (y_j - \hat{y}_j)\mathbf{x}$, nudging the true class template $\mathbf{w}_y$ toward $\mathbf{x}$ and rival templates $\mathbf{w}_{j \neq y}$ away from $\mathbf{x}$.
+- **Positive semidefinite Hessian:** The Hessian of $l$ with respect to $\mathbf{o}$ is $\nabla^2_{\mathbf{o}}\, l = \mathrm{diag}(\hat{\mathbf{y}}) - \hat{\mathbf{y}}\hat{\mathbf{y}}^\top$, which is the covariance matrix of a $\mathrm{Categorical}(\hat{\mathbf{y}})$ random vector.
+- **Global convexity:** Because covariance matrices are always positive semidefinite and $\mathbf{o}$ is affine in $(\mathbf{W}, \mathbf{b})$, the softmax regression training loss is globally **convex** in $(\mathbf{W}, \mathbf{b})$.
+:::
+
+::: {.slide title="Information-Theoretic View: Surprisal, Entropy, and KL"}
+[Why It Is Called Cross-Entropy]{.kicker}
+
+In Claude Shannon's information theory, observing an event of probability $p$ carries **surprisal** $-\log p$ (in *nats*, or *bits* via $\log_2$, where $1\text{ nat} = 1/\log 2 \approx 1.44\text{ bits}$):
+
+- **Entropy $H(\mathbf{p}) = -\sum_{j=1}^q p_j \log p_j$:** The expected surprisal under the true distribution $\mathbf{p}$ (ranging from $0$ for a deterministic outcome to $\log q$ for a uniform distribution).
+- **Cross-entropy $H(\mathbf{p}, \hat{\mathbf{p}}) = -\sum_{j=1}^q p_j \log \hat{p}_j$:** The average code length (expected surprisal) when outcomes drawn from $\mathbf{p}$ are encoded using a code optimized for model $\hat{\mathbf{p}}$.
+- **Gibbs' inequality & KL divergence:**
+  $$D_{\mathrm{KL}}(\mathbf{p} \,\|\, \hat{\mathbf{p}}) = H(\mathbf{p}, \hat{\mathbf{p}}) - H(\mathbf{p}) = \sum_{j=1}^q p_j \log\frac{p_j}{\hat{p}_j} \ge 0$$
+  with equality if and only if $\hat{\mathbf{p}} = \mathbf{p}$. When a blurry garment photo is genuinely $60\%$ shirt and $40\%$ T-shirt, expected cross-entropy is uniquely minimized by predicting the calibrated probabilities $(0.6, 0.4)$.
+:::
+
+::: {.slide title="Cross-Entropy as a Smooth Surrogate for 0–1 Error"}
+[Accuracy vs. Differentiable Training]{.kicker}
+
+Define the classification **margin** of an example as its true-class logit minus the highest competing logit, $m = o_y - \max_{j \neq y} o_j$:
+
+::: {.cols .vc}
+::: {.col}
+- **Zero-one error is non-differentiable:** The classifier errs when $m < 0$ and succeeds when $m > 0$. This step function has derivative $0$ everywhere it exists, providing zero gradient signal.
+- **Convex upper bound:** Two-class cross-entropy in bits, $\log_2(1 + e^{-m})$, is a smooth, strictly decreasing convex upper bound on the $0\text{--}1$ error.
+- **Mistake bound:** Every misclassified example ($m \le 0$) incurs at least $\log 2 \approx 0.693\text{ nats}$ ($1\text{ bit}$) of cross-entropy loss.
+:::
+
+::: {.col .fig}
 ![](../img/mdl-clf-margin-losses.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Cross-Entropy Keeps Paying for Confidence"}
-[Confidence]{.kicker}
+::: {.slide title="Separable Data, Unbounded Weights, and Temperature"}
+[Confidence vs. Decision Boundaries]{.kicker}
 
-- True class at 0.51 or at 0.99: same decision, but the loss falls from
-  0.67 to 0.01.
-- If $(\mathbf{W}, \mathbf{b})$ classifies every training example
-  correctly, then $(2\mathbf{W}, 2\mathbf{b})$ doubles every margin and
-  lowers every loss: no minimum, and the weights grow without bound.
-- The scale of the logits sets the confidence and nothing else.
+Because cross-entropy keeps decreasing for $m > 0$, minimizing it pushes predicted probabilities toward $0$ and $1$ even after every decision is already correct:
 
-::: {.d2l-note .warn}
-A low loss does not certify the probabilities. Whether confidence 0.9 is
-right 90% of the time has to be **measured**.
-:::
+::: {.cols .vc}
+::: {.col}
+- **Runaway weights on linearly separable data:** If $(\mathbf{W}, \mathbf{b})$ classifies every training point correctly ($m^{(i)} > 0$), scaling $(c\mathbf{W}, c\mathbf{b})$ with $c \to \infty$ drives the loss to $0$ without bound while leaving the decision boundary unchanged! Weight decay ($\frac{\lambda}{2}\|\mathbf{W}\|_F^2$) restores a finite minimizer.
+- **Temperature scaling:** Dividing logits by $T > 0$ before softmax:
+  $$\hat{\mathbf{y}}(T) = \mathrm{softmax}(\mathbf{o} / T)$$
+  sharpens toward argmax as $T \to 0$ and flattens toward $(1/q, \ldots, 1/q)$ as $T \to \infty$ without altering $\operatorname{argmax}_j o_j$ or accuracy.
 :::
 
-::: {.slide title="Temperature Changes Confidence, Not Decisions"}
-[Temperature]{.kicker}
-
-$\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o}/T)$: $T < 1$ sharpens, $T > 1$
-flattens; the order of the logits, and so the accuracy, never changes.
-
-![](../img/mdl-clf-temperature.svg){.nostretch width=72% fig-align="center"}
-
-::: {.d2l-note .rule}
-One number $T$ moves every confidence and no decision. Which $T$ makes the
-probabilities honest is measured on held-out data (Measuring Classifiers).
-:::
-:::
-
-::: {.slide title="Check: How Many Training Errors Can a Loss of 0.10 Hide?"}
-[Check]{.kicker}
-
-A classifier reaches an average cross-entropy of 0.10 nats on the 60,000
-Fashion-MNIST training images. At most how many of them can it misclassify?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Each mistake costs at least $\log 2 \approx 0.69$ nats, and
-the total loss is $6{,}000$ nats, so at most
-$6{,}000 / 0.69 \approx 8{,}700$ errors (14%). The bound is loose,
-because correctly classified examples also contribute loss.
+::: {.col .fig}
+![](../img/mdl-clf-temperature.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Softmax Invariance & Cross-Entropy"}
+[Concept Check]{.kicker}
 
-- **Model:** $\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$,
-  $\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o})$; logits
-  $(1.0, 2.2, 0.3)$ give $(0.21, 0.69, 0.10)$; Fashion-MNIST needs 7,850
-  parameters.
-- Only logit differences matter; two classes give the sigmoid; the
-  boundaries are hyperplanes.
-- **Loss:** the categorical likelihood gives cross-entropy
-  $-\log \hat{y}_y$, 0.37 for the chicken; gradient
-  $\hat{\mathbf{y}} - \mathbf{y}$, as in regression.
-- **Accuracy and confidence:** cross-entropy is smallest for the true
-  probabilities, bounds the errors smoothly, and keeps rewarding
-  confidence; a temperature moves every confidence and no decision.
+Work out the following three questions from the properties of softmax and cross-entropy:
 
-**Next:** the Fashion-MNIST images and their data loader.
+1. **Shift invariance:** Given $\mathrm{softmax}(2, 0, 0) \approx (0.79, 0.11, 0.11)$ since $e^2 \approx 7.39$, what is $\mathrm{softmax}(102, 100, 100)$, and how many times more probable is class $1$ than class $2$?
+2. **Honest calibration (Gibbs' inequality):** For ambiguous images that are shirts $60\%$ of the time and T-shirts $40\%$ of the time, which constant forecast achieves lower expected cross-entropy: $(0.6, 0.4)$ or $(0.9, 0.1)$?
+3. **Surrogate error bound:** If a classifier reaches an average cross-entropy loss of $0.10\text{ nats}$ across $60{,}000$ training images, at most how many training images can it misclassify?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:** **(1)** Subtracting $100$ from every logit gives $\mathrm{softmax}(2, 0, 0) \approx (0.79, 0.11, 0.11)$, with ratio $e^{102-100} = e^2 \approx 7.39$. **(2)** $(0.6, 0.4)$ gives $H(\mathbf{p}) = -0.6\log 0.6 - 0.4\log 0.4 \approx 0.67\text{ nats}$, beating $(0.9, 0.1)$ at $-0.6\log 0.9 - 0.4\log 0.1 \approx 0.98\text{ nats}$. **(3)** Total loss is $60{,}000 \times 0.10 = 6{,}000\text{ nats}$, and each mistake ($m \le 0$) costs at least $\log 2 \approx 0.693\text{ nats}$, so at most $6{,}000 / 0.693 \approx 8{,}656$ errors ($14.4\%$).
+:::
+:::
+
+::: {.slide title="Summary: Key Takeaways for Softmax Regression"}
+[Section Summary]{.kicker}
+
+| Concept | Mathematical Form | Key Property / Practical Role |
+|:--|:--|:--|
+| **One-hot target** | $\mathbf{y} \in \{0, 1\}^q,\; y_y = 1,\; \sum_j y_j = 1$ | Places all pairs of classes at equal distance $\sqrt{2}$; valid categorical distribution |
+| **Batched affine logits** | $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b} \in \mathbb{R}^{n \times q}$ | $d \cdot q + q$ parameters ($7{,}850$ on Fashion-MNIST); boundaries are flat hyperplanes |
+| **Softmax operator** | $\hat{y}_j = \exp(o_j) / \sum_{k=1}^q \exp(o_k)$ | Order-preserving ($\operatorname{argmax} \hat{y}_j = \operatorname{argmax} o_j$); shift-invariant ($\mathrm{softmax}(\mathbf{o}+c\mathbf{1}) = \mathrm{softmax}(\mathbf{o})$) |
+| **Log-odds & $q=2$ limit** | $o_i - o_j = \log(\hat{y}_i / \hat{y}_j),\; \hat{y}_1 = \sigma(o_1 - o_2)$ | Logit differences are log-odds; 2-class softmax equals binary logistic regression |
+| **Cross-entropy loss** | $l(\mathbf{y}, \hat{\mathbf{y}}) = -\log \hat{y}_y = \log\sum_k \exp(o_k) - o_y$ | Negative log-likelihood; convex in $(\mathbf{W}, \mathbf{b})$; upper-bounds $0\text{--}1$ error ($\ge \log 2$ on mistakes) |
+| **Logit & weight gradients** | $\nabla_{\mathbf{o}} l = \hat{\mathbf{y}} - \mathbf{y},\; \nabla_{\mathbf{W}} L = \frac{1}{n}\mathbf{X}^\top(\hat{\mathbf{Y}}-\mathbf{Y})$ | Prediction minus target; non-vanishing on confident mistakes (unlike squared error) |
+| **Temperature scaling** | $\hat{\mathbf{y}}(T) = \mathrm{softmax}(\mathbf{o} / T),\; T > 0$ | Tunes confidence ($T \to 0$ argmax, $T \to \infty$ uniform) without changing class predictions |
 :::

@@ -285,8 +285,7 @@ $$
 
 Thus $\hat{\mathbf{v}}_t$ is an unbiased estimate of $\overline{\mathbf{g}^2}$
 at every step $t$ under stationarity, and the same calculation with $\beta_1$
-shows that $\hat{\mathbf{m}}_t$ is unbiased for the mean gradient (Exercise
-:exref:`ex_mdl-adaptive-stochastic-methods-bias-correction-first-moment`).
+shows that $\hat{\mathbf{m}}_t$ is unbiased for the mean gradient.
 
 Without this correction, the initialization deficit is both large and
 long-lived: at the default $\beta_2 = 0.999$, $\mathbf{v}_{10}$ captures
@@ -374,8 +373,7 @@ checks both predictions directly.
 In short, Adam measures every coordinate in units of its own gradient size,
 making coordinate-wise scaling invisible to it. Three caveats bound this
 invariance. First, $\epsilon > 0$ breaks the symmetry once a coordinate's
-gradients shrink to the order of $\epsilon$ (Exercise
-:exref:`ex_mdl-adaptive-stochastic-methods-epsilon`). Second, the
+gradients shrink to the order of $\epsilon$. Second, the
 proposition says nothing about a change of basis that mixes coordinates,
 which we test next on the rotated valley. Third, Adam is not in general sign
 descent: its update reduces to the **sign step**
@@ -903,11 +901,9 @@ exact-gradient fixed points, the roles flip: coupled Adam preserves the
 maximum a posteriori (MAP) solution of a Gaussian prior on the weights
 (:numref:`sec_mdl-maximum_likelihood`), whereas AdamW turns $\lambda$ into
 the radius $1/\lambda$ of an $\ell_\infty$ constraint box
-:cite:`Xie.Li.2024`. Exercises
-:exref:`ex_mdl-adaptive-stochastic-methods-coupled-decoupled-fixed-points`
-and :exref:`ex_mdl-adaptive-stochastic-methods-adamw-linf` test this
-proposition on a quadratic and connect the box directly to constrained
-optimization.
+:cite:`Xie.Li.2024`. Exercise
+:exref:`ex_mdl-adaptive-stochastic-methods-adamw-linf` connects this box
+directly to constrained optimization.
 
 ## Warmup
 :label:`subsec_mdl-schedules-warmup`
@@ -972,9 +968,7 @@ coordinates). The fourfold inflation comes from the *momentum* average,
 which needs roughly $1/(1 - \beta_1) = 10$ steps to average out independent
 noise. What the preconditioner actually does at $t = 1$ is equalize
 coordinates of different scales, an effect hidden when every coordinate
-shares $\sigma = 1$ (Exercise
-:exref:`ex_mdl-adaptive-stochastic-methods-first-steps-noise` tests unequal
-scales).
+shares $\sigma = 1$.
 
 Bias correction matters far more. Without it, the opening update jumps to
 $3.16\,\eta$—matching the $(1 - \beta_1)/\sqrt{1 - \beta_2}$ factor in
@@ -1210,28 +1204,6 @@ equalizing the singular directions of a layer's update.
        obtain all of it?
    :exlabel:`ex_mdl-adaptive-stochastic-methods-concentrated-gradients`
 
-1. **Bias correction and step inflation.** Let
-   $\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1-\beta_1)\mathbf{g}_t$
-   with $\mathbf{m}_0 = \mathbf{0}$.
-    1. Repeat the computation of :eqref:`eq_mdl-opt-bias-correction` under
-       $\mathbb{E}[\mathbf{g}_\tau] = \bar{\mathbf{g}}$ and show
-       $\mathbb{E}[\mathbf{m}_t] = (1 - \beta_1^t)\,\bar{\mathbf{g}}$.
-    1. Without both corrections, Adam scales step $t$ by the factor
-       $(1-\beta_1^t)/\sqrt{1-\beta_2^t}$
-       of :numref:`fig_mdl-opt-bias-correction`. For $t \ll 1/(1-\beta_2)$,
-       replace $1-\beta_2^t$ by $t\,(1-\beta_2)$. Show that the maximizer
-       of the approximate factor satisfies $e^u = 1 + 2u$ with
-       $u = -t\log\beta_1$, and solve this equation numerically.
-    1. Express the location and the height of the peak through
-       $1-\beta_1$ and $1-\beta_2$. How does each of the two depend on
-       $\beta_1$ and on $\beta_2$? What does the result imply for running
-       uncorrected Adam with a longer second-moment memory?
-    1. Compare your approximation with the exact factor for
-       $\beta_1 \in \{0.9, 0.99\}$ and
-       $\beta_2 \in \{0.99, 0.999, 0.9999\}$. For which pair does the
-       approximation fail, and why?
-   :exlabel:`ex_mdl-adaptive-stochastic-methods-bias-correction-first-moment`
-
 1. **The Reddi example by hand.** Take $C = 4$, $\beta_1 = 0$, the
    proposition's $\beta_2 = 1/(1 + C^2) = 1/17$, and no bias correction, as
    in `online`.
@@ -1252,48 +1224,6 @@ equalizing the singular directions of a layer's update.
        that the first step of the period lands in $(0, 1)$, so that the
        projection does not act on it.
    :exlabel:`ex_mdl-adaptive-stochastic-methods-reddi-by-hand`
-
-1. [code] **Where $\epsilon$ matters.** Use `run` and `adam` of the
-   `#adaptive-stochastic-methods-adam-vs-gd` cell with $\beta_1 = 0$ and
-   $\eta = 0.1$ on the aligned valley.
-    1. Sweep
-       $\epsilon \in \{10^{-12}, 10^{-8}, 10^{-4}, 10^{-2}, 10^{-1}, 1\}$,
-       record the step at which $f < 10^{-8}$, and print
-       $\sqrt{\hat{\mathbf{v}}_t}$ at that step (let `run` also return the
-       state). Explain the pattern of step counts with the printed values.
-    1. Multiply both curvatures `h` and the tolerance by a common scale
-       $s \in \{1, 10^{-4}, 10^{-8}, 10^{-10}\}$, raise the cap `K` to
-       $10^5$, and compare $\epsilon = 0$ with $\epsilon = 10^{-8}$. Which
-       statement of the scale-invariance proposition does $\epsilon$ break,
-       and below which gradient scale?
-    1. In a deep network, some layers receive gradients several orders of
-       magnitude smaller than others. What does the gradient scale you found
-       imply for the updates of those layers under the default $\epsilon$?
-   :exlabel:`ex_mdl-adaptive-stochastic-methods-epsilon`
-
-1. [code] **Adam's first steps on noise.** Let every coordinate of the
-   gradient be i.i.d. zero-mean noise with variance $\sigma^2$, as for a
-   parameter that the loss does not yet constrain.
-    1. Show that the bias-corrected first moment has variance
-
-       $$\textrm{Var}(\hat{m}_t) = \sigma^2\, \frac{(1-\beta_1)(1+\beta_1^t)}{(1+\beta_1)(1-\beta_1^t)}.$$
-
-       If $\hat{v}_t$ were replaced by the exact $\sigma^2$, what would the
-       root-mean-square update be, in units of $\eta$, at $t = 1$ and as
-       $t \to \infty$ at the default $\beta_1$? Compare with the warmup cell.
-    1. The warmup cell gives every coordinate the same scale, which hides
-       what the preconditioner does. Draw the scales $\sigma_i$
-       log-uniformly from $[10^{-3}, 1]$ instead, and compare, across
-       coordinates, the root-mean-square displacement
-       $\eta\,\hat{m}_{t,i}/\sqrt{\hat{v}_{t,i}}$ at $t = 1$ and $t = 1000$
-       with that of SGD, $\eta\, g_{t,i}$. Which optimizer moves the
-       small-scale coordinates as far as the large-scale ones, from which
-       step on, and is that what you want for a coordinate that the loss does
-       not constrain?
-    1. Which timescale, $1/(1-\beta_1)$ or $1/(1-\beta_2)$, governs the
-       transient of the warmup cell? Relate the answer to the two reasons for
-       warmup given in :numref:`subsec_mdl-schedules-warmup`.
-   :exlabel:`ex_mdl-adaptive-stochastic-methods-first-steps-noise`
 
 1. **Regret of online gradient descent.** ● Projected online gradient
    descent plays
@@ -1346,27 +1276,6 @@ equalizing the singular directions of a layer's update.
        $2 \times 2$ example in which the sign map does not. What does this
        suggest about the rotation sensitivity of Muon compared with Adam?
    :exlabel:`ex_mdl-adaptive-stochastic-methods-rotation-sensitivity`
-
-1. [code] **Coupled versus decoupled fixed points.** ● Let
-   $\ell(\mathbf{w}) = \tfrac12 (\mathbf{w} - \mathbf{w}_0)^\top
-   \mathrm{diag}(h_1, h_2) (\mathbf{w} - \mathbf{w}_0)$ with $h = (100, 1)$,
-   $\mathbf{w}_0 = (1, 3)$, and exact gradients.
-    1. For $\lambda = 0.1$, compute the fixed point of coupled Adam from the
-       proposition of :numref:`subsec_mdl-decoupled-weight-decay`.
-    1. For $\lambda = 0.1$ and $\epsilon = 10^{-8}$, solve the AdamW condition
-       :eqref:`eq_mdl-opt-adamw-fixed-point` and show that the solution
-       differs from $\mathbf{w}_0$ by less than $10^{-8}$. What does weight
-       decay contribute at this fixed point, and why?
-    1. Choose $\lambda$ so that the box $|w_i| \le 1/\lambda$ binds for
-       coordinate 2 but not for coordinate 1. Predict both fixed points, and
-       confirm all four predictions of parts (a)–(c) by running each method
-       for $2 \times 10^5$ steps, with $\eta$ decaying from $0.01$ to $0$ by
-       a cosine schedule.
-    1. Reconcile these fixed points with the `decay` cell. In the
-       noise-dominated regime, which of the two updates applies the same
-       per-step shrinkage to every coordinate, and why is that the property
-       that matters during training?
-   :exlabel:`ex_mdl-adaptive-stochastic-methods-coupled-decoupled-fixed-points`
 
 1. [extended] **AdamW's implicit $\ell_\infty$ constraint.** ●● The
    proposition of :numref:`subsec_mdl-decoupled-weight-decay` found that the
@@ -1434,23 +1343,23 @@ equalizing the singular directions of a layer's update.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §26.4]{.kicker}
+[Dive into Deep Learning · §35.5]{.kicker}
 
-Adaptive Methods<br>**one step size per coordinate · scaling and its limits · AdamW · warmup · Kronecker factors**
+Adaptive Methods<br>**AdaGrad · RMSProp · Adam & bias correction · scale invariance · rotation sensitivity · AdamW · warmup · K-FAC & Muon**
 :::
 :::
 
-::: {.slide title="A 1000:1 Valley Costs Gradient Descent 6,160 Steps"}
-[The problem]{.kicker}
+::: {.slide title="Why One Global Learning Rate Bottlenecks Networks"}
+[Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$f=\tfrac12(x_1^2+1000\,x_2^2)$ from $(1,1)$, until $f<10^{-8}$:
+Modern neural networks have $10^7$ to $10^{11}$ parameters whose curvatures differ by orders of magnitude across layers and coordinates. On $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ from $(1, 1)$ to $f(\mathbf{x}) < 10^{-8}$:
 
-- best single step $2/1001$: **6,160** steps
-- heavy ball, tuned: **296** steps
-- one step size per coordinate, learned from gradients: **22** steps at the best of seven step sizes
-- the same method on the valley rotated by $45^\circ$: **never**
+- **Optimal single-step GD ($\eta = 2/1001$):** $6{,}160$ steps.
+- **Tuned Heavy-Ball momentum:** $296$ steps.
+- **Per-coordinate RMS scaling (aligned):** **$22$ steps**—and increasing $\kappa$ from $10^3$ to $10^5$ adds only $6$ steps!
+- **Rotated by $45^\circ$:** Scaling alone **never** reaches $10^{-8}$.
 :::
 
 ::: {.col .fig}
@@ -1459,110 +1368,76 @@ $f=\tfrac12(x_1^2+1000\,x_2^2)$ from $(1,1)$, until $f<10^{-8}$:
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Ideal Diagonal Preconditioning vs. Gradient Proxies"}
+[Per-Coordinate Scaling]{.kicker}
 
-- derive AdaGrad, RMSProp and Adam from one idea, and Adam's bias correction;
-- prove that Adam cannot see a coordinate's scale, and say when that helps;
-- follow a convex sequence on which Adam ends at the worst point;
-- tell coupled from decoupled weight decay and find their fixed points;
-- apply a layer's curvature through two small inverses.
+On a diagonal quadratic $f(\mathbf{x}) = \tfrac12(h_1 x_1^2 + h_2 x_2^2)$, the partial derivatives $\partial_i f(\mathbf{x}) = h_i x_i$ decouple across coordinates:
 
-**Running example:** $\tfrac12(x_1^2+1000\,x_2^2)$, aligned and rotated.
+$$x_{t+1,i} = x_{t,i} - \eta_i\,h_i x_{t,i} = (1 - \eta_i h_i)\,x_{t,i}$$
 
-**The idea:** learn one step per coordinate from past gradient sizes.
+- **Diagonal Newton ideal:** Choosing a separate step size $\eta_i = 1/h_i$ ($1$ and $10^{-3}$ for $h = (1, 1000)$) sends every coordinate to zero in a single step, eliminating $\kappa = h_{\max}/h_{\min}$.
+- **The practical obstacle:** In deep learning, the curvatures $h_i$ are unknown, evolve over training, and are masked by minibatch noise.
+- **Gradient magnitude as a proxy:** Because $|g_i| = h_i |x_i|$ on a diagonal bowl, coordinates with large curvature produce large gradients when $|x_i|$ is comparable. Dividing each coordinate's update by a running root-mean-square of its past gradients automatically assigns smaller steps to steeper coordinates.
 :::
 
-::: {.slide title="Adaptive Methods Rescale the Gradient Coordinate by Coordinate"}
-[Where this fits]{.kicker}
+::: {.slide title="AdaGrad: Cumulative Per-Coordinate Normalization"}
+[AdaGrad]{.kicker}
+
+**AdaGrad** (Duchi, Hazan, and Singer, 2011) accumulates the sum of squared gradients $\mathbf{s}_t$ elementwise and divides each coordinate's step by $\sqrt{s_{t,i}}$:
+
+$$\mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t \odot \mathbf{g}_t, \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t} + \epsilon}\,\mathbf{g}_t$$
+
+- **Rare vs. frequent features:** If coordinate 1 receives gradient $\pm 1$ on every step while coordinate 2 (a rare token embedding) receives $\pm 1$ once in $10^4$ steps, at $t = 10^4$ a global $\eta/\sqrt{t}$ schedule shrinks both steps to $\eta/100$, whereas AdaGrad assigns $\mathbf{s}_t = (10^4, 1)$—giving the busy feature $\eta/100$ and the rare feature a full step $\eta$.
+- **Diagonal metric view:** AdaGrad is steepest descent under the time-varying diagonal preconditioner $\mathbf{P}_t = \mathrm{diag}(\sqrt{\mathbf{s}_t})$, penalizing movement along directions with large historical gradient activity.
+:::
+
+::: {.slide title="Online Convex Regret and AdaGrad's Built-In Decay"}
+[AdaGrad]{.kicker}
+
+AdaGrad was designed for **online convex optimization**, minimizing cumulative regret $\sum_{t=1}^T f_t(\mathbf{x}_t) - \min_{\mathbf{x}} \sum_{t=1}^T f_t(\mathbf{x})$:
+
+- **Coordinate-adaptive regret bound:** On a box of $\ell_\infty$ diameter $D_\infty$ ($D_2 = \sqrt{d}\,D_\infty$), online gradient descent achieves regret $O(D_2 G\sqrt{T})$, whereas AdaGrad achieves:
+  $$\text{Regret}_T(\text{AdaGrad}) = O\!\left(D_\infty \sum_{i=1}^d \sqrt{\sum_{t=1}^T g_{t,i}^2}\right)$$
+  When gradient mass concentrates on a small subset of coordinates (e.g., Zipf word frequencies), AdaGrad's bound is up to $\sqrt{d}$ smaller.
+- **Why AdaGrad stalls on deep networks:** Under persistent minibatch noise of variance $\sigma^2$, the cumulative sum grows linearly ($s_{t,i} \approx \sigma^2 t$), forcing the effective step size $\eta/(\sigma\sqrt{t})$ to decay relentlessly to zero even when the optimizer is far from a minimum.
+:::
+
+::: {.slide title="RMSProp: Exponential Moving Average of Squares"}
+[RMSProp]{.kicker}
+
+**RMSProp** (Tieleman and Hinton, 2012) prevents AdaGrad's step size from vanishing by replacing the all-time sum with an exponential moving average (EMA) of squared gradients:
+
+$$\mathbf{v}_t = \beta_2\,\mathbf{v}_{t-1} + (1 - \beta_2)\,\mathbf{g}_t^2, \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{v}_t} + \epsilon}\,\mathbf{g}_t$$
+
+- **Finite memory window:** Unrolling $\mathbf{v}_t = (1 - \beta_2)\sum_{\tau=1}^t \beta_2^{t-\tau}\mathbf{g}_\tau^2$ shows that a squared gradient from $k$ steps ago carries weight $(1 - \beta_2)\beta_2^k$.
+- **Half-life of the preconditioner:** Past squared gradients halve in weight every $k_{1/2} = \frac{\log 2}{1 - \beta_2}$ steps—roughly **$7$ steps** at $\beta_2 = 0.9$, and **$693$ steps** at $\beta_2 = 0.999$.
+- **Trade-off:** Effective step sizes remain bounded away from zero under stationary noise and adapt to local curvature changes, though rare large gradient spikes are forgotten on the $1/(1 - \beta_2)$ timescale.
+:::
+
+::: {.slide title="Adam: Combining Momentum with RMS Normalization"}
+[Adam]{.kicker}
+
+**Adam** (Kingma and Ba, 2014) pairs RMSProp's second-moment preconditioner $\mathbf{v}_t$ with a first-moment momentum average $\mathbf{m}_t$, correcting both for zero initialization ($\mathbf{m}_0 = \mathbf{v}_0 = \mathbf{0}$):
+
+$$\mathbf{m}_t = \beta_1\,\mathbf{m}_{t-1} + (1 - \beta_1)\,\mathbf{g}_t, \qquad \mathbf{v}_t = \beta_2\,\mathbf{v}_{t-1} + (1 - \beta_2)\,\mathbf{g}_t^2$$
+
+$$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1 - \beta_1^t}, \qquad \hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1 - \beta_2^t}, \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
+
+- **Standard defaults:** $\beta_1 = 0.9$ (momentum half-life $\approx 7$ steps), $\beta_2 = 0.999$ (scale half-life $\approx 693$ steps), and $\epsilon = 10^{-8}$.
+- **Why combine both moments?** Plain RMSProp steps directly along noisy minibatch gradients $\mathbf{g}_t / \sqrt{\mathbf{v}_t}$, whereas $\hat{\mathbf{m}}_t$ averages out high-frequency oscillations before rescaling by $\sqrt{\hat{\mathbf{v}}_t}$.
+:::
+
+::: {.slide title="Why Zero Initialization Demands Bias Correction"}
+[Adam]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Gradient Descent and Curvature | safe steps, $\kappa$, momentum |
-| Curvature Methods | Newton, BFGS, trust regions |
-| Convexity | local = global, rates, Jensen |
-| Stochastic Gradient Methods | noise floors, step decay |
-| **Adaptive Methods** | **per-coordinate steps** |
-| Constrained Optimization | KKT, projections, prox |
-| Duality | lower bounds, prices |
-| Numerical Stability and Conditioning | rounding, conditioning |
-:::
+If the squared gradient scale is stationary ($\mathbb{E}[\mathbf{g}_\tau^2] = \overline{\mathbf{g}^2}$), summing the geometric series gives:
 
-::: {.col .narrow}
-- **Uses:** $\kappa$, heavy ball, the noise floor.
-- **Skips:** schedule shapes, constraints.
-:::
-:::
-:::
+$$\mathbb{E}[\mathbf{v}_t] = (1 - \beta_2)\,\overline{\mathbf{g}^2}\sum_{\tau=1}^t \beta_2^{t-\tau} = \big(1 - \beta_2^t\big)\,\overline{\mathbf{g}^2}$$
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Per-coordinate step sizes]{.dtitle}
-
-[AdaGrad → RMSProp → Adam]{.dsub}
-:::
-:::
-
-::: {.slide title="Separate Steps Solve a Diagonal Quadratic in One Step"}
-$f=\tfrac12(h_1x_1^2+h_2x_2^2)$, $\;\partial_if=h_ix_i$, $\;h_i$ = curvature
-
-- step $\eta_i$ per coordinate: $x_i\leftarrow(1-\eta_ih_i)\,x_i$
-- $\eta_i=1/h_i$: both coordinates reach $0$ at once (diagonal Newton)
-- $h=(1,1000)$: steps $1$ and $10^{-3}$; $\kappa$ is gone
-
-::: {.d2l-note .warn}
-In training, $h_i$ is unknown and changes, and gradients are noisy. Use
-$|g_i|=h_i|x_i|$ as the stand-in for $h_i$.
-:::
-:::
-
-::: {.slide title="AdaGrad Decays Each Coordinate's Step with Its Own Activity"}
-$$\mathbf s_t=\mathbf s_{t-1}+\mathbf g_t\odot\mathbf g_t,\qquad
-\mathbf x_{t+1}=\mathbf x_t-\frac{\eta}{\sqrt{\mathbf s_t}+\epsilon}\,\mathbf g_t$$
-
-- coordinate 1: gradient $\pm1$ every step; coordinate 2: once per $10^4$ steps
-- at $t=10^4$: $\mathbf s=(10^4,1)$, steps $\eta/100$ and $\eta$
-- a global $\eta/\sqrt t$: $\eta/100$ for both
-
-::: {.d2l-note}
-Regret up to a constant: $D_\infty\sum_i\sqrt{\sum_tg_{t,i}^2}$, up to $\sqrt d$
-below a global step's when the gradient mass is concentrated.
-:::
-:::
-
-::: {.slide title="AdaGrad's Built-In 1/√t Decay Is Not Robbins–Monro"}
-- persistent noise $\sigma^2$: $s_{t,i}\approx\sigma^2t$, step $\approx\eta/(\sigma\sqrt t)$
-- $\sum_t1/\sqrt t=\infty$, but also $\sum_t1/t=\infty$: not square-summable
-- steps shrink whether or not the loss still falls
-
-**RMSProp:** average instead of sum,
-$\mathbf v_t=\beta_2\mathbf v_{t-1}+(1-\beta_2)\,\mathbf g_t^2$. Weights halve
-every $\log 2/(1-\beta_2)$ steps: **7** at $\beta_2=0.9$, **693** at $0.999$.
-:::
-
-::: {.slide title="Adam Divides a Momentum Average by the RMS Gradient"}
-$$\mathbf m_t=\beta_1\mathbf m_{t-1}+(1-\beta_1)\mathbf g_t,\quad
-\mathbf v_t=\beta_2\mathbf v_{t-1}+(1-\beta_2)\mathbf g_t^2$$
-
-$$\mathbf x_{t+1}=\mathbf x_t-\eta\,\frac{\hat{\mathbf m}_t}{\sqrt{\hat{\mathbf v}_t}+\epsilon},\qquad
-\hat{\mathbf m}_t=\frac{\mathbf m_t}{1-\beta_1^t},\ \ \hat{\mathbf v}_t=\frac{\mathbf v_t}{1-\beta_2^t}$$
-
-- defaults $\beta_1=0.9$, $\beta_2=0.999$, $\epsilon=10^{-8}$, $\mathbf m_0=\mathbf v_0=\mathbf 0$
-- at $t=1$: $\hat{\mathbf m}_1=\mathbf g_1$, $\hat{\mathbf v}_1=\mathbf g_1^2$, so the step is $\eta\,\mathrm{sign}(\mathbf g_1)$
-:::
-
-::: {.slide title="Zero Initialization Leaves v at the Fraction 1 − β₂ᵗ of Its Scale"}
-::: {.cols .vc}
-::: {.col .narrow}
-Unroll and assume $\mathbb{E}[\mathbf g_\tau^2]=\overline{\mathbf g^2}$:
-$$\mathbb{E}[\mathbf v_t]=(1-\beta_2^t)\,\overline{\mathbf g^2}$$
-
-- $1\%$ at $t=10$, $63\%$ at $t=1000$
-- uncorrected update off by $3.16\times$ at $t=1$, $6.6\times$ at $t=12$
+- At $\beta_2 = 0.999$, $\mathbf{v}_{10}$ holds only $1\%$ of $\overline{\mathbf{g}^2}$, and $\mathbf{v}_{1000}$ holds just $63\%$.
+- **Step inflation without correction:** Dropping both corrections multiplies the update by $\frac{1 - \beta_1^t}{\sqrt{1 - \beta_2^t}}$, starting at $3.16\times$ ($t=1$) and peaking at **$6.6\times$** ($t=12$) because $\mathbf{m}_t$ fills $100\times$ faster than $\mathbf{v}_t$.
 :::
 
 ::: {.col .fig}
@@ -1571,204 +1446,199 @@ $$\mathbb{E}[\mathbf v_t]=(1-\beta_2^t)\,\overline{\mathbf g^2}$$
 :::
 :::
 
-::: {.slide title="Quick Check: Adam's First Step and Its Memory"}
-[Check]{.kicker}
+::: {.slide title="Exact Coordinate Scale Invariance of Adam"}
+[Scale Invariance]{.kicker}
 
-1. At $t=1$, how far does Adam move a coordinate whose gradient is $10^{-6}$?
-2. After how many steps has $\beta_2=0.999$ halved the weight of a gradient?
+Why does Adam cross the $1000{:}1$ aligned valley as if the curvature ratio did not exist?
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.** (1) About $\eta$: the first step is $\eta\,\mathrm{sign}(g_1)$
-($0.99\,\eta$ at $\epsilon=10^{-8}$). (2) $\log 2/(1-\beta_2)\approx693$ steps.
-:::
-:::
+- **Proposition (Diagonal Scale Invariance):** Let $\epsilon = 0$ and $\mathbf{C} = \mathrm{diag}(c_1, \ldots, c_d)$ with $c_i > 0$. If two objectives satisfy $\nabla\tilde{f}(\mathbf{x}) = \mathbf{C}\,\nabla f(\mathbf{x})$ everywhere, then Adam with identical hyperparameters and initialization produces **identical iterates** $\tilde{\mathbf{x}}_t = \mathbf{x}_t$ on both objectives.
+- **Inductive proof:** If $\tilde{\mathbf{x}}_\tau = \mathbf{x}_\tau$ for all $\tau \le t$, then $\tilde{g}_{\tau,i} = c_i g_{\tau,i}$. Linearity of the EMA recurrences gives $\tilde{m}_{t,i} = c_i m_{t,i}$ and $\tilde{v}_{t,i} = c_i^2 v_{t,i}$, so the scale factors cancel identically in the ratio:
+  $$\frac{\hat{\tilde{m}}_{t,i}}{\sqrt{\hat{\tilde{v}}_{t,i}}} = \frac{c_i\,\hat{m}_{t,i}}{\sqrt{c_i^2\,\hat{v}_{t,i}}} = \frac{c_i\,\hat{m}_{t,i}}{c_i\sqrt{\hat{v}_{t,i}}} = \frac{\hat{m}_{t,i}}{\sqrt{\hat{v}_{t,i}}}$$
 :::
 
-::: {.slide title="With ε = 0, Adam Cannot See a Coordinate's Scale"}
-**Claim.** If $\nabla f'=\mathbf C\,\nabla f$ with $\mathbf C=\mathrm{diag}(c_i)$,
-$c_i>0$, Adam takes the same steps on $f$ and $f'$.
+::: {.slide title="Consequences and Limits of Scale Invariance"}
+[Scale Invariance]{.kicker}
 
-**Proof.** If the iterates agree so far, then $m'_i=c_im_i$ and
-$v'_i=c_i^2v_i$, so $\hat m'_i/\sqrt{\hat v'_i}=\hat m_i/\sqrt{\hat v_i}$.
+Applying the scale-invariance theorem to $f(\mathbf{x}) = \tfrac12\sum_{i=1}^d h_i x_i^2$ explains both Adam's strength on aligned valleys and its structural boundaries:
 
-::: {.d2l-note .rule}
-$\nabla\tfrac12\sum_ih_ix_i^2=\mathrm{diag}(h)\,\mathbf x$: Adam on the
-$1000{:}1$ valley follows Adam on the round bowl, step for step.
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Scaling and its limits]{.dtitle}
-
-[the valley, rotated · a convex counterexample]{.dsub}
-:::
+- **Every aligned valley is a round bowl:** Because $\nabla f(\mathbf{x}) = \mathrm{diag}(h)\,\mathbf{x}$ is the gradient of the isotropic sphere $\tfrac12\|\mathbf{x}\|^2$ rescaled by $c_i = h_i$, Adam on $\tfrac12(x_1^2 + 1000\,x_2^2)$ from $(1, 1)$ follows the *exact same trajectory* $x_{t,1} = x_{t,2}$ as Adam on $\tfrac12(x_1^2 + x_2^2)$.
+- **Distance replaces curvature:** Because early steps move each coordinate by roughly $\pm\eta$ regardless of $h_i$, the iteration count scales with the initial distance $\|\mathbf{x}_0\|_\infty / \eta$ rather than $\kappa = h_{\max}/h_{\min}$.
+- **Three boundaries of invariance:**
+  1. $\epsilon > 0$ breaks invariance once $|g_{t,i}| \lesssim \epsilon$.
+  2. Adam is *not* sign descent in general: it reduces to $-\eta\,\mathrm{sign}(\mathbf{g}_t)$ only at $t=1$, when $\beta_1 = \beta_2 = 0$, or when $|g_{t,i}|$ is constant over $\hat{v}_t$'s memory.
+  3. Invariance holds only for *diagonal* coordinate rescalings, failing under orthogonal rotations.
 :::
 
-::: {.slide title="Scaling Alone Solves the Aligned Valley in 22 Steps, the Rotated One Never"}
-Rotated: $\mathbf A=\mathbf R\,\mathrm{diag}(1,1000)\,\mathbf R^\top$, start
-$\mathbf R(1,1)^\top$, $\mathbf R$ = rotation by $45^\circ$.
+::: {.slide title="Fair Benchmark: Aligned vs. 45° Rotated Valley"}
+[Rotation Sensitivity]{.kicker}
+
+We compare optimally tuned GD and Heavy Ball (given the exact eigenvalues $\mu = 1, L = 1000$) against a 7-point learning-rate sweep for Adam ($\beta_1 = 0$ scaling-only vs. $\beta_1 = 0.9$) on the aligned valley and the valley rotated by $\theta = 45^\circ$:
 
 @!mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-1
+:::
 
-::: {.d2l-note}
-GD and heavy ball get their optimal settings, computed from the curvatures
-$1$ and $1000$; Adam gets a sweep ($\beta_1=0$: scaling alone). The grid
-skips $\eta=1$, where Adam's first step from $(1,1)$ lands on the minimizer
-by accident.
+::: {.slide title="Dissecting the Benchmark: Robustness vs. Rotation"}
+[Rotation Sensitivity]{.kicker}
+
+The step-count table reveals a sharp contrast between aligned and rotated geometry:
+
+| Optimizer Variant | Aligned ($\theta = 0^\circ$) | Rotated ($\theta = 45^\circ$) | Underlying Mathematical Mechanism |
+| :--- | :--- | :--- | :--- |
+| **Gradient Descent (optimal $\eta^\star$)** | $6{,}160$ | $6{,}160$ | Euclidean updates are rotation-invariant; linear in $\kappa$ |
+| **Heavy Ball (optimal $\eta_{\mathrm{HB}}, \beta^\star$)** | $296$ | $296$ | Rotation-invariant; $\sqrt{\kappa}$ rate but sits within $0.1\%$ of instability |
+| **Adam ($\beta_1 = 0$, scaling only)** | **$22$** (at $\eta = 0.2$) | **Never** (cycles) | Aligned: eliminates $\kappa$. Rotated: locks into sign-step 2-cycle ($f = 250\eta^2$) |
+| **Adam ($\beta_1 = 0.9$, default)** | $165$–$205$ ($\eta \in [0.02, 2]$) | $559$–$12{,}862$ | Aligned: robust across $100\times$ in $\eta$, capped by $\sqrt{\beta_1} \approx 0.95$. Rotated: $\hat{v}_1 \approx \hat{v}_2$ |
+
+::: {.d2l-note .warn}
+**Why $45^\circ$ rotation breaks diagonal scaling:** In $\mathbf{A}_{\pi/4} = \left(\begin{smallmatrix}500.5 & -499.5 \\ -499.5 & 500.5\end{smallmatrix}\right)$, the steep eigenvector $(-1, 1)/\sqrt{2}$ projects equally onto both coordinates, making $\hat{v}_{t,1} \approx \hat{v}_{t,2}$ so the diagonal preconditioner collapses to a scalar multiple of $\mathbf{I}$!
 :::
 :::
 
-::: {.slide title="The Fair Reading: Scaling Wins Aligned, Momentum Is All That Survives a Rotation"}
-| | aligned | rotated $45^\circ$ |
-|---|---|---|
-| heavy ball, tuned | $296$ | $296$ |
-| Adam, scaling alone, best $\eta$ | $22$ | never |
-| Adam with $\beta_1=0.9$, best $\eta$ | $165$ | $559$ |
-| Adam with $\beta_1=0.9$, range over $\eta\ge0.02$ | $165$ to $205$ | $559$ to $5{,}898$ |
+::: {.slide title="Effective Step Sizes Across Curvature Ratios"}
+[Rotation Sensitivity]{.kicker}
 
-- **Better than heavy ball:** $13\times$ fewer steps aligned, with no curvature given; robust over a $100\times$ range of $\eta$, where heavy ball's step sits within $0.1\%$ of its stability limit.
-- **Worse:** momentum caps the rate at $\sqrt{\beta_1}\approx0.95$ per step ($22\to165$); rotated, the two scales are equal and Adam is a heavy ball with an untuned step, $2\times$ slower.
-- Rotated without momentum: a sign-step two-cycle across the valley, $f=250\,\eta^2$.
-:::
-
-::: {.slide title="The Stiff Coordinate Gets a Thousandfold Smaller Step from Step One"}
-Adam with $\beta_1=0$, $\eta=0.1$, $\epsilon=0$ on the aligned valley:
+On the aligned valley ($\beta_1 = 0, \eta = 0.1, \epsilon = 0$), Adam discovers the $1000{:}1$ curvature ratio on step 1 from gradient magnitudes alone:
 
 @!mdl-adaptive-stochastic-methods-the-running-example-aligned-and-rotated-2
 
-::: {.d2l-note}
-$x_1=x_2$ at every step, as the scale-invariance claim predicts. The
-contraction factor $1-\eta/\sqrt{\hat v_t}$ goes from $0.9$ to $0.67$.
-:::
+- Increasing $\kappa$ by $10^5\times$ ($1$ $\to$ $10^3$ $\to$ $10^5$) adds only $14$ steps ($40$ $\to$ $48$ $\to$ $54$), whereas moving $\mathbf{x}_0$ $100\times$ farther away ($1$ $\to$ $100$) multiplies the step count by $\approx 86\times$ ($48$ $\to$ $4{,}145$).
 :::
 
-::: {.slide title="A Repeating Triple of Convex Losses Drives Adam to the Worst Point"}
-$x\in[-1,1]$; losses $4x,\,-x,\,-x,\,4x,\ldots$; best point $x^\star=-1$.
-Adam with $\beta_1=0$, $\beta_2=1/17$:
+::: {.slide title="Reddi's Convex Counterexample: When Adam Diverges"}
+[Convergence Limits]{.kicker}
 
-- $v$ per period: $15.1,\ 1.83,\ 1.05$
-- moves $-\eta g/\sqrt v$: $-1.03\eta,\ +0.74\eta,\ +0.98\eta$, net $+0.69\eta$
-- SGD $-\eta g/4$: $-\eta,\ +0.25\eta,\ +0.25\eta$, net $-0.5\eta$
+Can exponential forgetting of squared gradients in RMSProp/Adam prevent convergence even on a 1D convex problem? Reddi, Kale, and Kumar (2018) constructed the periodic sequence on $x \in [-1, 1]$ ($C = 4 > 2$):
 
-::: {.d2l-note .warn}
-Normalization caps the large gradient's move at about $\eta$, and $v$ forgets
-it in two steps: two $-1$ steps outweigh one $+4$.
+$$f_t(x) = \begin{cases} 4x, & t \bmod 3 = 1, \\ -x, & \text{otherwise}, \end{cases} \qquad \text{average loss per period } (4 - 1 - 1)x = 2x \implies x^\star = -1$$
+
+- **How short memory ($\beta_2 = \frac{1}{1+C^2} = \frac{1}{17}$, $\beta_1 = 0$) drives Adam to the worst point $x = +1$:**
+  - Across the 3-step cycle $(+4, -1, -1)$, $v_t$ settles to $(15.12,\, 1.83,\, 1.05)$, so $\sqrt{v_t} = (3.89,\, 1.35,\, 1.02)$.
+  - The three normalized updates $-\eta g_t / \sqrt{v_t}$ are **$-1.03\eta$, $+0.74\eta$, and $+0.98\eta$**—a net drift of **$+0.69\eta > 0$** per period toward the worst point $x = +1$!
+- Normalization shrinks the rare $+4$ gradient to a step of $-1.03\eta$, and $v_t$ forgets the spike within two steps so the two $-1$ gradients push $x$ farther right than $+4$ pulled it left.
 :::
 
-[Proof setting: no bias correction, $\eta_t=\eta/\sqrt t$, $\eta<\sqrt{1-\beta_2}$.]{.small}
-:::
+::: {.slide title="AMSGrad Restores Convergence via Running Maxima"}
+[Convergence Limits]{.kicker}
 
-::: {.slide title="AMSGrad's Running Maximum Never Forgets the Large Gradient"}
-$\tilde v_t=\max(\tilde v_{t-1},v_t)=15.12$: moves $-1.03\eta,\ +0.26\eta,\
-+0.26\eta$, net $-0.51\eta$. From $x=0$, step $0.5/\sqrt t$:
+**AMSGrad** repairs the Reddi counterexample by replacing $\mathbf{v}_t$ in the denominator with its running maximum $\tilde{\mathbf{v}}_t = \max(\tilde{\mathbf{v}}_{t-1}, \mathbf{v}_t)$, guaranteeing nonincreasing effective steps $\eta_t / \sqrt{\tilde{\mathbf{v}}_t}$:
 
 @!adaptive-stochastic-methods-reddi
 
-::: {.d2l-note}
-An existence result: Adam has no general convergence guarantee. It does not
-predict failure on ordinary training problems.
-:::
+- With $\tilde{v}_t$ pinned at $15.12$, the three steps become $-1.03\eta, +0.26\eta, +0.26\eta$ (net drift $-0.51\eta$ toward $x^\star = -1$), matching SGD while standard Adam locks onto $x = +1$.
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
+::: {.slide title="Weight Decay in Adaptive Methods: Coupled vs. AdamW"}
+[Decoupled Weight Decay]{.kicker}
 
-[Weight decay, warmup, beyond the diagonal]{.dtitle}
+In plain SGD, adding an $\ell_2$ penalty $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss ($\mathbf{g}_t \leftarrow \mathbf{g}_t + \lambda\mathbf{w}_t$) is identical to multiplying weights by $(1 - \eta\lambda)$ at every step. In Adam, passing $\lambda\mathbf{w}_t$ through the preconditioner $\sqrt{\hat{\mathbf{v}}_t}$ couples decay to gradient scale:
 
-[coupled and decoupled decay · the first steps · Kronecker factors]{.dsub}
+$$\text{Coupled ($\ell_2$ inside Adam):}\quad \Delta w_{t,i}^{\mathrm{decay}} = -\frac{\eta\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\,w_{t,i} \qquad \text{vs.} \qquad \text{Decoupled (AdamW):}\quad \Delta w_{t,i}^{\mathrm{decay}} = -\eta\lambda\,w_{t,i}$$
+
+- **The flaw of coupled $\ell_2$ decay:** Coordinates with large historical gradients ($\sqrt{\hat{v}_{t,i}} \gg 1$) receive almost zero weight decay, while quiet coordinates ($\sqrt{\hat{v}_{t,i}} \ll 1$) are shrunk aggressively.
+- **The AdamW update (Loshchilov and Hutter, 2019):**
+  $$\mathbf{w}_{t+1} = (1 - \eta\lambda)\,\mathbf{w}_t - \eta\,\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
+  Only the data-loss gradient enters $\mathbf{m}_t$ and $\mathbf{v}_t$, while multiplicative shrinkage $(1 - \eta\lambda)$ acts uniformly on all parameters.
 :::
-:::
 
-::: {.slide title="Through Adam, One λ Decays Two Weights at Rates 100× Apart"}
-Shrinkage of $w_i$ per step ($\lambda$ = weight decay):
-$$\underbrace{\frac{\eta\lambda}{\sqrt{\hat v_{t,i}}+\epsilon}\,w_{t,i}}_{\text{coupled}}
-\qquad\text{vs.}\qquad
-\underbrace{\eta\lambda\,w_{t,i}}_{\text{AdamW}}$$
+::: {.slide title="How Coupled Decay Distorts Shrinkage Under Noise"}
+[Decoupled Weight Decay]{.kicker}
 
-Pure-noise gradients at scales $\sigma=(10,\,0.1)$, $10^4$ weights each:
+Simulate two groups of $10^4$ weights initialized at $w_0 = 1$ receiving pure zero-mean Gaussian gradient noise at scales $\sigma_1 = 10$ and $\sigma_2 = 0.1$ over $T = 4{,}000$ steps ($\eta = 10^{-3}, \lambda = 0.1$):
 
 @!adaptive-stochastic-methods-adamw
+
+- Coupled Adam decays the quiet weights $100\times$ faster ($10^{-3}$ vs $10^{-5}$ per step, ending at $0.031$ vs $0.961$), whereas AdamW shrinks both groups uniformly to $(1 - \eta\lambda)^T \approx \exp(-0.4) \approx 0.670$.
 :::
 
-::: {.slide title="Coupled Adam's Fixed Point Is the MAP Point, AdamW's Lies on the Box |wᵢ| = 1/λ"}
-Fixed points, exact gradient $g_i=\partial_i\ell$:
+::: {.slide title="Exact-Gradient Fixed Points: MAP vs. ℓ∞ Box"}
+[Decoupled Weight Decay]{.kicker}
 
-- coupled: $\nabla\ell+\lambda\mathbf w=\mathbf 0$
-- AdamW: $\lambda w_i(|g_i|+\epsilon)=-g_i$; as $\epsilon\to0$: $g_i=0$ or $|w_i|=1/\lambda$
-- $\ell=\tfrac12(w-3)^2$, $\lambda=\tfrac14$: $2.4$ vs. $3.0$; $\lambda=1$: $1.5$ vs. $1.0$
+When exact gradients settle ($\hat{\mathbf{m}}_t \to \mathbf{u}$ and $\hat{\mathbf{v}}_t \to \mathbf{u}^2$), coupled Adam and AdamW converge to fundamentally different stationary points:
 
-[Coupled: PyTorch `Adam(weight_decay)`, MXNet `Adam(wd)`. Decoupled: every
-`AdamW`, Keras `Adam(weight_decay)`. Optax `adam`: no decay.]{.small}
+- **Coupled Adam preserves the Gaussian-prior MAP optimum:** With $\mathbf{u} = \nabla\ell(\mathbf{w}) + \lambda\mathbf{w}$, the update $-\eta\,\frac{u_i}{|u_i| + \epsilon}$ vanishes if and only if $\nabla\ell(\mathbf{w}) + \lambda\mathbf{w} = \mathbf{0}$.
+- **AdamW enforces an implicit $\ell_\infty$ box constraint:** With $\mathbf{u} = \mathbf{g} = \nabla\ell(\mathbf{w})$, setting the AdamW update to zero requires for every coordinate $i$:
+  $$\lambda\,w_i\big(|g_i| + \epsilon\big) = -g_i \implies |w_i| = \frac{|g_i|}{\lambda(|g_i| + \epsilon)} < \frac{1}{\lambda}$$
+- **The $\epsilon \to 0$ KKT dichotomy:** Either $g_i = 0$ inside the box $|w_i| \le 1/\lambda$, or $|w_i| = 1/\lambda$ on the box boundary with $w_i = -\frac{1}{\lambda}\mathrm{sign}(g_i)$ (the KKT conditions for $\min_{\|\mathbf{w}\|_\infty \le 1/\lambda} \ell(\mathbf{w})$!).
 :::
 
-::: {.slide title="Adam's First Steps Are Inflated by Momentum, Not by the Preconditioner"}
-RMS update on pure noise, in units of $\eta$:
+::: {.slide title="Anatomy of Opening Steps and Learning-Rate Warmup"}
+[Warmup Dynamics]{.kicker}
+
+At step $t = 1$, bias correction gives $\hat{\mathbf{m}}_1 = \mathbf{g}_1$ and $\hat{\mathbf{v}}_1 = \mathbf{g}_1^2$, so Adam's very first update is a full sign step in every coordinate:
+
+$$\mathbf{x}_2 = \mathbf{x}_1 - \eta\,\frac{\mathbf{g}_1}{|\mathbf{g}_1| + \epsilon} \approx \mathbf{x}_1 - \eta\,\mathrm{sign}(\mathbf{g}_1)$$
+
+- **Why pure-noise coordinates jump $4\times$ farther at $t = 1$:** On a coordinate whose gradient is independent zero-mean noise $g_t \sim \mathcal{N}(0, \sigma^2)$, the step at $t = 1$ has RMS magnitude $1.00\,\eta$.
+- **Steady-state variance of the momentum EMA:** Once $\mathbf{m}_t = (1 - \beta_1)\sum_{\tau \le t}\beta_1^{t-\tau}g_\tau$ has averaged $\sim \frac{1}{1-\beta_1} = 10$ independent samples, its variance drops to $\frac{1 - \beta_1}{1 + \beta_1}\sigma^2$, so the steady-state RMS update is only:
+  $$\text{RMS}\!\left(\frac{\hat{m}_t}{\sqrt{\hat{v}_t}}\right) \to \sqrt{\frac{1 - \beta_1}{1 + \beta_1}} = \sqrt{\frac{0.1}{1.9}} \approx 0.23$$</
+:::
+
+::: {.slide title="Decomposing Early Instability: Momentum vs. Bias"}
+[Warmup Dynamics]{.kicker}
+
+Tracking the RMS update (in units of $\eta$) across $20{,}000$ independent noise coordinates separates the role of the momentum window, bias correction, and linear warmup:
 
 @!mdl-adaptive-stochastic-methods-warmup
 
-::: {.d2l-note}
-$1.00\to0.23=\sqrt{(1-\beta_1)/(1+\beta_1)}$ within tens of steps, and the
-exact variance changes nothing: momentum, not the preconditioner. Without
-bias correction $3.16$ at the start, still about $0.75$ at $t=100$. A 20-step
-ramp stays at or below about $0.26$.
-:::
+- Replacing $\hat{\mathbf{v}}_t$ with the exact variance $\sigma^2 = 1$ leaves the $1.00 \to 0.23$ curve unchanged: early step inflation on noisy coordinates comes from the $10$-step momentum window (tamed by a $20$-step warmup), whereas longer warmups in deep nets guard against high initial Hessian sharpness $\lambda_{\max}$.
 :::
 
-::: {.slide title="Quick Check: Fixed Points and Rotations"}
-[Check]{.kicker}
+::: {.slide title="Beyond Diagonal Scaling: Kronecker-Factored Metrics"}
+[Structured Preconditioners]{.kicker}
 
-1. $\ell=\tfrac12(w-3)^2$, $\lambda=\tfrac12$: fixed points of coupled Adam and of AdamW?
-2. Which rows of the step-count table do not change when the valley is rotated?
+To handle rotated valleys where curvature mixes coordinates without paying $O(d^2)$ storage for a full $d \times d$ preconditioner, structured methods exploit the **matrix shape** of neural network layers:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.** (1) Both $2$: coupled $3/1.5$, AdamW on the box $1/\lambda=2$, a
-coincidence of this $\lambda$. (2) Gradient descent and heavy ball.
-:::
-:::
+- **Rank-one layer gradients:** For a linear layer $\mathbf{y} = \mathbf{W}\mathbf{a}$ with $\mathbf{W} \in \mathbb{R}^{m \times n}$, input $\mathbf{a} \in \mathbb{R}^n$, and output gradient $\boldsymbol{\delta} = \partial\ell/\partial\mathbf{y} \in \mathbb{R}^m$, the weight gradient is $\mathbf{G} = \boldsymbol{\delta}\mathbf{a}^\top$, or in stacked vector form $\mathrm{vec}(\mathbf{G}) = \mathbf{a} \otimes \boldsymbol{\delta}$.
+- **Kronecker factorization:** Approximating the $(mn) \times (mn)$ outer-product curvature $\mathbb{E}[(\mathbf{a}\mathbf{a}^\top) \otimes (\boldsymbol{\delta}\boldsymbol{\delta}^\top)]$ by $\mathbf{S}_{\mathrm{in}} \otimes \mathbf{S}_{\mathrm{out}}$ (where $\mathbf{S}_{\mathrm{in}} = \mathbb{E}[\mathbf{a}\mathbf{a}^\top] \in \mathbb{R}^{n \times n}$ and $\mathbf{S}_{\mathrm{out}} = \mathbb{E}[\boldsymbol{\delta}\boldsymbol{\delta}^\top] \in \mathbb{R}^{m \times m}$) lets us invert and apply the preconditioner via two small matrix products:
+  $$\big(\mathbf{S}_{\mathrm{in}} \otimes \mathbf{S}_{\mathrm{out}}\big)^{-1}\mathrm{vec}(\mathbf{V}) = \mathrm{vec}\big(\mathbf{S}_{\mathrm{out}}^{-1}\,\mathbf{V}\,\mathbf{S}_{\mathrm{in}}^{-1}\big)$$
 :::
 
-::: {.slide title="Kronecker Factors Replace a 10¹⁴-Entry Inverse by Two 4096² Inverses"}
-Layer $\mathbf y=\mathbf W\mathbf a$, gradient $\boldsymbol\delta\mathbf a^\top$;
-curvature $\approx\mathbf S_{\rm in}\otimes\mathbf S_{\rm out}$,
-$\mathbf S_{\rm in}=\mathbb{E}[\mathbf a\mathbf a^\top]$,
-$\mathbf S_{\rm out}=\mathbb{E}[\boldsymbol\delta\boldsymbol\delta^\top]$:
+::: {.slide title="Storage and FLOP Savings of Kronecker Factoring"}
+[Structured Preconditioners]{.kicker}
 
-$$(\mathbf S_{\rm in}\otimes\mathbf S_{\rm out})^{-1}\mathrm{vec}\,\mathbf V
-=\mathrm{vec}(\mathbf S_{\rm out}^{-1}\mathbf V\,\mathbf S_{\rm in}^{-1})$$
+For a single $4096 \times 4096$ Transformer weight matrix ($d = mn \approx 1.68 \times 10^7$ parameters), compare a full $(mn) \times (mn)$ curvature matrix against two $4096 \times 4096$ Kronecker factors:
 
 @!mdl-adaptive-stochastic-methods-kronecker-factors
+
+- Kronecker factoring reduces storage by **$8.4 \times 10^6\times$** (from $2.8 \times 10^{14}$ entries to $3.4 \times 10^7$) and inversion cost by **$3.4 \times 10^{10}\times$** (from $4.7 \times 10^{21}$ FLOPs to $1.4 \times 10^{11}$ FLOPs).
 :::
 
-::: {.slide title="K-FAC, Shampoo and Muon Differ in Where the Factors Come From"}
-Two-sided step $\mathbf P_{\rm l}^{-a}\,\mathbf G\,\mathbf P_{\rm r}^{-a}$ on a
-layer's gradient matrix $\mathbf G=\mathbf U\boldsymbol\Sigma\mathbf V^\top$:
+::: {.slide title="The Preconditioning Ladder: K-FAC, Shampoo, Muon"}
+[Structured Preconditioners]{.kicker}
 
-- **K-FAC** ($a=1$): moments of inputs and output gradients
-- **Shampoo** ($a=\tfrac14$): accumulated $\mathbf G\mathbf G^\top$, $\mathbf G^\top\mathbf G$
-- **Muon**: the current $\mathbf G$ alone, giving $\mathbf U\mathbf V^\top$
-- **Newton**: the full matrix, out of reach
+Modern matrix-level optimizers apply two-sided preconditioning $\mathbf{G} \mapsto \mathbf{P}_{\mathrm{l}}^{-a}\,\mathbf{G}\,\mathbf{P}_{\mathrm{r}}^{-a}$ to a layer's $m \times n$ gradient (or momentum) matrix $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$:
 
-::: {.d2l-note}
-Muon is the cheapest: no statistics, a few matrix products per step.
+- **K-FAC ($a = 1$):** Sets $\mathbf{P}_{\mathrm{l}} = \mathbb{E}[\boldsymbol{\delta}\boldsymbol{\delta}^\top]$ and $\mathbf{P}_{\mathrm{r}} = \mathbb{E}[\mathbf{a}\mathbf{a}^\top]$, approximating the Fisher information matrix (Amari's **natural gradient** / Gauss–Newton curvature).
+- **Shampoo ($a = 1/4$):** Matrix generalization of AdaGrad using $\mathbf{P}_{\mathrm{l}} = \sum_\tau \mathbf{G}_\tau\mathbf{G}_\tau^\top$ and $\mathbf{P}_{\mathrm{r}} = \sum_\tau \mathbf{G}_\tau^\top\mathbf{G}_\tau$.
+- **Muon (memoryless Shampoo, $a = 1/4$ on current $\mathbf{G}$):**
+  $$\big(\mathbf{G}\mathbf{G}^\top\big)^{-1/4}\,\mathbf{G}\,\big(\mathbf{G}^\top\mathbf{G}\big)^{-1/4} = \mathbf{U}\boldsymbol{\Sigma}^{-1/2}\,\boldsymbol{\Sigma}\,\boldsymbol{\Sigma}^{-1/2}\mathbf{V}^\top = \mathbf{U}\mathbf{V}^\top$$
+  Muon replaces $\mathbf{G}$ with its orthogonal polar factor $\mathbf{U}\mathbf{V}^\top$ (computed via Newton–Schulz matrix iterations without SVD), equalizing singular values to $1$ and commuting with arbitrary orthogonal rotations!
+:::
+
+::: {.slide title="Concept Check: Scale Invariance, AdamW, and Muon"}
+[Concept Check]{.kicker}
+
+Test your understanding of adaptive and matrix-preconditioned optimizers:
+
+1. At step $t = 1$, how far does bias-corrected Adam ($\epsilon = 10^{-8}$) move a coordinate with gradient $g_{1,i} = 10^{-6}$, and after how many steps does $\beta_2 = 0.999$ halve the weight of an old squared gradient?
+2. On the 1D loss $\ell(w) = \tfrac12(w - 3)^2$ with exact gradients and $\lambda = 1$, what is the stationary fixed point of coupled Adam ($\ell_2$ penalty) versus decoupled AdamW ($\epsilon \to 0$)?
+3. Why does rotating the $1000{:}1$ valley by $45^\circ$ defeat Adam's diagonal scaling while leaving Muon's polar factor $\mathbf{U}\mathbf{V}^\top$ equivariant?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:** **(1)** At $t = 1$, $\hat{m}_{1,i}/\sqrt{\hat{v}_{1,i}} = \mathrm{sign}(g_{1,i})$, so the step size is $\eta \frac{10^{-6}}{10^{-6} + 10^{-8}} \approx \mathbf{0.99\,\eta}$. The half-life for $\beta_2 = 0.999$ is $\frac{\log 2}{1 - 0.999} \approx \mathbf{693\text{ steps}}$. **(2) Coupled Adam** solves $(w - 3) + \lambda w = 0 \implies w^\star = \frac{3}{1+1} = \mathbf{1.5}$. **AdamW** clips the unconstrained minimizer $w = 3$ to the $\ell_\infty$ box $|w| \le 1/\lambda = 1$, resting at $w^\star = \mathbf{1.0}$. **(3)** A $45^\circ$ rotation mixes coordinates so both axes see the steep mode ($\hat{v}_1 \approx \hat{v}_2$), reducing Adam's diagonal preconditioner to a scalar identity. By contrast, under orthogonal rotations $\mathbf{Q}_1\mathbf{G}\mathbf{Q}_2^\top = (\mathbf{Q}_1\mathbf{U})\boldsymbol{\Sigma}(\mathbf{Q}_2\mathbf{V})^\top$, the polar factor maps to $\mathbf{Q}_1(\mathbf{U}\mathbf{V}^\top)\mathbf{Q}_2^\top$, rotating cleanly with the basis.
 :::
 :::
 
-::: {.slide title="Scaling Removes κ Exactly When the Axes Are the Eigenvectors"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Adaptive and Structured Preconditioners"}
+[Key Takeaways]{.kicker}
 
-- valley $1000{:}1$, each at its best step: GD 6,160, heavy ball 296, scaling alone 22, Adam with momentum 165; rotated: never without momentum, 559 with it
-- Adam with $\epsilon=0$ is blind to each coordinate's scale
-- periodic convex losses: Adam net $+0.69\eta$ per period, AMSGrad $-0.51\eta$
-- one $\lambda$: coupled rates $10^{-5}$ and $10^{-3}$; AdamW $10^{-4}$ for all
-- fixed points: coupled keeps MAP, AdamW the box $|w_i|=1/\lambda$
-- first step $\eta\,\mathrm{sign}(\mathbf g_1)$; RMS update on noise $1.00\,\eta\to0.23\,\eta$, $3.16\,\eta$ without bias correction
-- two $4096^2$ factors instead of $2.8\times10^{14}$ entries
-
-**Next:** optimization when the variables must stay in a set.
+| Optimizer | Preconditioner / Update Form | Invariance Property | Memory Overhead | Primary Strength & Limitation |
+| :--- | :--- | :--- | :--- | :--- |
+| **AdaGrad** | $\mathbf{s}_t = \sum_{\tau \le t}\mathbf{g}_\tau^2$, step $\propto \mathbf{s}_t^{-1/2}\mathbf{g}_t$ | Diagonal coordinate scale | $1$ vector ($d$) | Optimal sparse convex regret; $1/\sqrt{t}$ decay stalls on deep nets |
+| **RMSProp** | $\mathbf{v}_t = \beta_2\mathbf{v}_{t-1} + (1-\beta_2)\mathbf{g}_t^2$ | Diagonal coordinate scale | $1$ vector ($d$) | Non-vanishing steps; noisy without momentum smoothing |
+| **Adam / AMSGrad** | Bias-corrected $\hat{\mathbf{m}}_t / (\sqrt{\hat{\mathbf{v}}_t} + \epsilon)$ | Exact diagonal scale ($\epsilon=0$) | $2$ vectors ($2d$) | Fast & robust on axis-aligned valleys; fails under $45^\circ$ rotation |
+| **AdamW** | Decoupled $(1-\eta\lambda)\mathbf{w}_t - \eta\hat{\mathbf{m}}_t/\sqrt{\hat{\mathbf{v}}_t}$ | Uniform decay across scales | $2$ vectors ($2d$) | Default for Transformers; fixed points lie in $\ell_\infty$ box $\|\mathbf{w}\|_\infty \le 1/\lambda$ |
+| **K-FAC / Shampoo** | Two-sided $\mathbf{P}_{\mathrm{l}}^{-a}\mathbf{G}\mathbf{P}_{\mathrm{r}}^{-a}$ ($m \times n$ layer) | Layer row/column transforms | $m^2 + n^2$ per layer | Captures cross-coordinate correlations; periodic matrix roots/inverses |
+| **Muon** | Orthogonal polar factor $\mathbf{U}\mathbf{V}^\top$ of $\mathbf{M}_t$ | Orthogonal row/col rotations | $1$ matrix ($mn$) | Equalizes singular values via fast Newton–Schulz matmuls |
 :::
+

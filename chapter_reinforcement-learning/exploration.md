@@ -827,343 +827,232 @@ exploration.
 ::: {.cover}
 [Dive into Deep Learning · §14.4]{.kicker}
 
-Exploration<br>
-**bandits and regret · epsilon-greedy · UCB and Thompson sampling · exploration in MDPs · the verifier task**
+Multi-Armed Bandits and Exploration<br>**cumulative regret · greedy & epsilon-greedy · UCB & optimism · Thompson sampling · Lai-Robbins bound · deep MDP exploration · pass@K**
 :::
 :::
 
-::: {.slide title="One Random Step in Twenty Drops the Lake's Best Policy from 73% to 54%"}
-[The problem]{.kicker}
+::: {.slide title="The Exploration Tax: Random Steps Cost 19 Points"}
+[Motivation & Mental Model]{.kicker}
 
-- Q-learning learns only the table entries it tries, so it acts at random
-  with probability $\epsilon$ to try entries its table rates poorly.
-- Slippery lake, optimal policy: succeeds **73%** of the time; at random one
-  step in twenty ($\epsilon = 0.05$): **54%**.
-- A language model trained with a verifier: if every sampled answer scores
-  the same, there is nothing to move toward.
+Every learner that collects its own data faces the exploration-exploitation dilemma: trying uncertain actions costs immediate reward, but never trying them risks missing the optimum:
 
-::: {.d2l-note .warn}
-Is that the right amount of trying? Could another rule learn as much while
-losing less?
-:::
+- **Cost of blind exploration on FrozenLake:** In §14.3, forcing the optimal policy $\pi^*$ to take a uniformly random action with probability $\epsilon = 0.05$ dropped its 100-step success rate from **$73.0\%$ to $54.2\%$**.
+- **Blind vs. directed exploration:** $\epsilon$-greedy explores uniformly across all actions—wasting trials on actions already known to be disastrous as often as on promising alternatives.
+- **Exploration in LLM post-training:** When a language model samples a group of $K$ responses to a prompt, if all $K$ responses receive the exact same verifier score, the relative update vanishes.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Multi-Armed Bandits and Cumulative Regret"}
+[Isolating Exploration in a Single State]{.kicker}
 
-- compute the regret of greedy and $\epsilon$-greedy rules;
-- explain why $\epsilon_t \propto 1/t$, UCB and Thompson sampling keep
-  regret near $\ln t$, and why no rule does better;
-- choose UCB's coefficient and say what the theory's value guarantees;
-- estimate how long random actions take to find a $k$-step sequence;
-- compute how often a group of $K$ sampled answers teaches nothing.
+A **multi-armed bandit** is an MDP with a single state and $m$ actions (*arms*), where pulling arm $a$ yields a Bernoulli reward $r \in \{0, 1\}$ with unknown mean $\mu_a$:
 
-**The idea:** direct the trying to actions whose value is still uncertain.
-**Running examples:** ten arms, a chain, the calm lake, the verifier task.
+$$\textrm{Regret}(t) = \sum_{u=1}^{t} \big(\mu^* - \mu_{a_u}\big) = \sum_{a=1}^{m} \Delta_a\,n_t(a), \qquad \Delta_a = \mu^* - \mu_a$$
+
+- **10-armed benchmark:** True arm means $\mu = (0.50, 0.42, \mathbf{0.90}, 0.25, 0.55, 0.38, 0.60, 0.32, 0.50, 0.45)$, with best arm $\mu^* = \mu_2 = 0.90$ and smallest gap $\Delta_{\min} = 0.90 - 0.60 = 0.30$.
+- **Linear vs. sublinear regret:** Pulling a $0.50$ arm forever loses $\Delta_a = 0.40$ per pull ($800$ regret over $2{,}000$ pulls, linear in $t$); sublinear regret ($\textrm{Regret}(t)/t \to 0$) requires pulling suboptimal arms ever more rarely.
 :::
 
-::: {.slide title="Exploration Decides Which Data the Learner Sees"}
-[Where this fits]{.kicker}
+::: {.slide title="The Bandit Simulation Harness"}
+[Tracking Empirical Wins, Counts, and Shortfalls]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Markov Decision Processes | states, actions, rewards, return |
-| Dynamic Programming | the best policy when the rules are known |
-| Temporal-Difference Learning | values from observed transitions |
-| **Exploration** | **which actions to try, and what trying costs** |
-| Learning from Demonstrations | an expert's actions instead of trying |
-| Policy Gradient | a policy improved from its own attempts |
-| Baselines and Variance Reduction | less noisy estimates; group updates |
-| Function Approximation | a network in place of the table |
-:::
-
-::: {.col .narrow}
-- **Uses:** $\epsilon$-greedy and Q-learning (TD); the tabular MDP and the
-  verifier task (MDPs).
-- **Skips:** the proof of UCB's bound (exercises); bandits with features;
-  novelty bonuses for networks (one line).
-:::
-:::
-:::
-
-::: {.slide title="Regret Adds Up the Shortfall of Every Pull"}
-[Arms and regret]{.kicker}
-
-A bandit is an MDP with one state. Arm $a$ pays 1 with probability $\mu_a$,
-else 0; the agent does not know
-$\mu = (0.50, 0.42, \mathbf{0.90}, 0.25, 0.55, 0.38, 0.60, 0.32, 0.50, 0.45)$.
-
-$$\textrm{Regret}(t) = \sum_{u=1}^{t} \big(\mu^* - \mu_{a_u}\big) = \sum_a \Delta_a\, n_t(a), \qquad \Delta_a = \mu^* - \mu_a$$
-
-- $\mu^* = 0.90$ is the best mean; $n_t(a)$ counts the pulls of arm $a$.
-- Pulling a 0.50 arm forever loses 0.40 per pull: **800** after 2,000 pulls,
-  linear in $t$.
-- Regret that grows more slowly than $t$: the loss per pull tends to zero.
-:::
-
-::: {.slide title="The Simulator Logs Each Pull's Shortfall, Not Its Reward"}
-[Arms and regret]{.kicker}
-
-A *rule* maps the tallies `wins` and `count` of every arm, the round `t` and
-the generator `rng` to the next arm; $\hat\mu(a)$ = `wins / count`.
+`bandit_run` maintains per-arm tallies `wins` and `count` (so the empirical mean is $\hat{\mu}(a) = \textrm{wins}[a]/\textrm{count}[a]$) and accumulates expected shortfall $\mu^* - \mu_{a_t}$ at each round:
 
 @qlearning-a-bandit-is-an-mdp-with-one-state
+
+::: {.d2l-note}
+Logging the expected gap `arms.max() - arms[a]` rather than noisy binary rewards removes reward-flip variance from the evaluation metric while keeping the learner blind to `arms`.
+:::
 :::
 
-::: {.slide title="Greedy, ε-Greedy and Softmax Read One Row of Values Differently"}
-[Three rules]{.kicker}
+::: {.slide title="Greedy, Epsilon-Greedy, and Boltzmann Selection"}
+[Turning Value Estimates into Action Probabilities]{.kicker}
+
+Given a row of estimated values $\hat{Q}(s, \cdot) = (0.20, 0.90, 0.55, 0.10)$, three heuristic rules allocate exploration probability differently:
 
 ::: {.cols .vc}
-::: {.col .fig .big}
-![](../img/mdl-rl-exploration.svg){width=100%}
-:::
-
 ::: {.col}
-- Greedy: all mass on the largest value.
-- $\epsilon$-greedy: $\epsilon/m$ on each of $m$ actions, here $0.3/4 = 0.075$;
-  annealed: $\epsilon_t = \min(1, 20/t)$.
-- Softmax $\propto \exp(\hat Q/\beta)$: a near-best action is tried more
-  often than a bad one.
+- **Greedy ($\epsilon = 0$):** Places $100\%$ mass on the current empirical maximizer $\mathrm{argmax}_a \hat{\mu}(a)$.
+- **$\epsilon$-greedy:** Reserves $\epsilon/m$ probability ($0.3/4 = 0.075$) for every action regardless of how poorly it has performed.
+- **Boltzmann (softmax) $\propto \exp(\hat{Q}/\beta)$:** Ranks actions smoothly by estimated value, trying near-optimal actions more often than terrible ones.
+:::
+
+::: {.col .fig}
+![](../img/mdl-rl-exploration.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Greedy Commits to the First Arm That Pays Out"}
-[Greedy]{.kicker}
+::: {.slide title="Why Pure Greedy Locks Onto the First Paying Arm"}
+[Failure Mode of Zero Exploration]{.kicker}
 
-- Every empirical mean starts at 0: greedy pulls random arms (all tied)
-  until one returns 1.
-- That arm's mean then stays positive; every other arm still reads 0.
-- It settles on arm $a$ with probability $\mu_a / \sum_b \mu_b$: the best
-  arm with $0.90/4.87$, about one run in five.
+When all empirical means start at $\hat{\mu}_0(a) = 0$, the pure greedy rule ($\epsilon = 0$) permanently commits to the very first arm that returns a reward of $1$:
 
-$$\mathbb{E}\big[\textrm{Regret}(2000)\big] \approx 2000 \sum_a \frac{\mu_a}{\sum_b \mu_b}\, \Delta_a \approx 707$$
+$$\mathbb{E}\big[\textrm{Regret}_{\textrm{greedy}}(2000)\big] \approx 2000 \sum_{a=1}^{m} \frac{\mu_a}{\sum_b \mu_b}\,\Delta_a \approx 707$$
 
-- One run loses one of the values $2000\,\Delta_a$, from 0 to 1,300. The
-  median, about 800, is a run stuck on a 0.50 arm.
+- **The first-win lottery:** While all estimates read $0$, random tie-breaking pulls arms uniformly; once some arm $a$ returns $1$, its empirical mean $\hat{\mu}(a) > 0$ beats every untried arm ($0$) forever.
+- **Lottery probabilities:** Arm $a$ wins the initial draw with probability $\mu_a / \sum_b \mu_b$; the true best arm ($\mu_2 = 0.90$) wins in only $0.90 / 4.87 \approx 18.5\%$ of runs.
 :::
 
-::: {.slide title="Fixed ε Pays a Linear Tax, ε = 20/t a Logarithmic One"}
-[Epsilon-greedy]{.kicker}
+::: {.slide title="Fixed vs. Annealed Epsilon-Greedy Regret"}
+[Linear Tax vs. Logarithmic Decay]{.kicker}
+
+Comparing pure greedy, constant $\epsilon = 0.1$, and harmonic annealing $\epsilon_t = \min(1, 20/(t+1))$ across 20 runs of $2{,}000$ pulls exposes the cost of undirected exploration:
 
 @!qlearning-regret-and-the-linear-tax
 
-- A random pull falls short by the average gap, $0.90 - 0.487 = 0.41$.
-- $\epsilon = 0.1$: $0.1 \times 0.41 \approx 0.04$ per pull, about 83 of its
-  regret of about 100, and it never shrinks.
-- $\epsilon_t = 20/t$: about 112 random pulls ($20 + 20 \ln 100 \approx 112$)
-  cost 46 of its regret of about 50.
-- Random pulls up to $t$ grow like $20 \ln t$, and so does the regret.
+- **Constant $\epsilon = 0.1$ pays a linear tax:** A random pull loses the average gap $0.90 - 0.487 = 0.413$, costing $0.1 \times 0.413 \approx 0.041$ per pull ($\approx 83$ of its $100$ median regret) forever.
+- **Harmonic $\epsilon_t = 20/t$ achieves $O(\ln t)$ regret:** Makes only $20 + 20\ln(2000/20) \approx 112$ random pulls total ($\approx 46$ exploration cost, median regret $52$), though its constant $20$ must be tuned to $\Delta_{\min}^{-2}$.
 :::
 
-::: {.slide title="Check: What Does a Fixed ε = 0.2 Cost over 2,000 Pulls?"}
-[Check]{.kicker}
+::: {.slide title="Optimism Under Uncertainty: Upper Confidence Bounds"}
+[Directing Exploration via Hoeffding Bonuses]{.kicker}
 
-The same ten arms, with $\epsilon$ held at $0.2$ instead of $0.1$. Estimate
-the cost of the random pulls alone.
+Instead of exploring blindly, **Upper Confidence Bound** (UCB) adds an uncertainty bonus to each empirical mean and deterministically pulls the highest optimistic index (Auer et al., 2002):
 
-. . .
+$$a_t = \underset{a \in \mathcal{A}}{\mathrm{argmax}}\Bigg[\hat{\mu}(a) + \kappa\sqrt{\frac{\log t}{n(a)}}\Bigg]$$
 
-- Each random pull costs the average gap, $0.41$.
-- $0.2 \times 0.41 \approx 0.08$ per pull, about **165** over 2,000 pulls:
-  twice the 83 of $\epsilon = 0.1$.
-- Still linear: twice the horizon, twice the cost.
+- **Hoeffding concentration foundation:** For $n$ independent rewards in $[0, 1]$, $\Pr(\mu_a > \hat{\mu}_n(a) + h) \leq e^{-2nh^2}$; setting $h = \kappa\sqrt{\log t / n(a)}$ bounds the probability of underestimating arm $a$ by $t^{-2\kappa^2}$.
+- **Two reasons an arm is pulled:** Either its empirical mean $\hat{\mu}(a)$ is large (exploitation) or its pull count $n(a)$ is small relative to $\log t$ (directed exploration).
 :::
 
-::: {.slide title="UCB Pulls the Arm That Could Still Be the Best"}
-[Upper confidence bounds]{.kicker}
+::: {.slide title="Visualizing UCB Indices and Pull Allocations"}
+[How Optimism Eliminates Bad Arms]{.kicker}
 
-$$a_t = \underset{a}{\mathrm{argmax}} \Big[ \hat{\mu}(a) + \kappa \sqrt{\log t \,/\, n(a)} \Big]$$
+After pulling each arm once to initialize $n(a) \geq 1$, UCB concentrates almost all pulls on the optimal arm while keeping suboptimal indices just below $\mu^*$:
 
-- Optimism: treat each arm as if it were as good as the data still allow.
-- The bonus shrinks like $1/\sqrt{n(a)}$, the error of an average of $n(a)$
-  rewards; it grows slowly with $t$ while the arm rests.
-- An arm is pulled because its mean is high or because it is uncertain.
-- Hoeffding: the true mean lies above the index with probability at most
-  $t^{-2\kappa^2}$.
-- Logarithmic regret on every bandit with rewards in $[0, 1]$ for every
-  $\kappa > 1$; $\kappa = \sqrt{2}$ is UCB1. Each arm is pulled once first.
+::: {.cols .vc}
+::: {.col}
+- **Shrinking uncertainty bars:** In panel (a), the bonus $\kappa\sqrt{\log t / n(a)}$ decays as $n(a)^{-1/2}$ with pulls and grows only as $\sqrt{\log t}$ while idle.
+- **Self-balancing indices:** In panel (b), after $2{,}000$ pulls with $\kappa = 0.5$, arm 2 ($\mu^* = 0.90$) receives $1{,}852$ pulls, while bad arms stop once their upper confidence bound drops below $0.90$.
 :::
 
-::: {.slide title="Rarely Tried Arms Keep Indices Close to the Leader's"}
-[Upper confidence bounds]{.kicker}
-
-![](../img/mdl-rl-ucb.svg){width=92%}
-
-$\kappa = 0.5$. (a) The bonus falls with the count $n(a)$ and rises slowly
-with $t$. (b) One run after 2,000 pulls: estimate (blue), bonus (orange),
-true means (black). Nearly every pull went to the best arm.
+::: {.col .fig}
+![](../img/mdl-rl-ucb.svg){.nostretch width=100%}
+:::
+:::
 :::
 
-::: {.slide title="Thompson Sampling Pulls Each Arm with Its Chance of Being Best"}
-[Thompson sampling]{.kicker}
+::: {.slide title="Posterior Sampling (Thompson Sampling)"}
+[Bayesian Probability Matching]{.kicker}
 
-- Draw one sample from each arm's posterior; pull the largest draw.
-- Rewards in $\{0, 1\}$, uniform prior: $w$ wins in $n$ pulls give the
-  posterior $\mathrm{Beta}(1 + w, 1 + n - w)$.
-- 3 wins in 4: $X \sim \mathrm{Beta}(4, 2)$, mean $2/3$ but wide. An untried
-  draw $U \sim \mathrm{Beta}(1, 1)$ beats $X$ with probability $\mathbb{E}[1 - X] = 1/3$.
-- Posteriors narrow as pulls accumulate. Logarithmic regret, and no
-  constant to choose.
-- The rule in one line: `rng.beta(1 + wins, 1 + count - wins).argmax()`
+Thompson (1933) maintains a Bayesian posterior over each arm's mean $\mu_a$, draws one random sample $\tilde{\mu}_a$ from each posterior, and pulls $\mathrm{argmax}_a \tilde{\mu}_a$:
+
+$$\mu_a \mid (w_a, n_a) \sim \mathrm{Beta}(1 + w_a,\; 1 + n_a - w_a), \qquad a_t = \underset{a}{\mathrm{argmax}}\;\tilde{\mu}_a$$
+
+- **Conjugate Beta-Bernoulli update:** Starting from a uniform prior $\mathrm{Beta}(1, 1)$ on $[0, 1]$, observing $w_a$ wins and $n_a - w_a$ losses yields $\mathrm{Beta}(1 + w_a, 1 + n_a - w_a)$.
+- **Probability matching without tuning constants:** Each arm is pulled with the exact posterior probability that it is optimal; an untried arm $\mathrm{Beta}(1, 1)$ beats an arm with 3 wins in 4 pulls ($\mathrm{Beta}(4, 2)$) with probability $1/3$.
 :::
 
-::: {.slide title="UCB and Thompson Sampling End near 30 to 40, a Third of Fixed ε" layout="tight"}
-[UCB and Thompson compared]{.kicker}
+::: {.slide title="Comparing All Five Bandit Rules on Log-Log Axes"}
+[Empirical Regret Curves]{.kicker}
+
+Plotting cumulative regret on logarithmic axes separates linear-regret rules (slope $1$) from logarithmic-regret rules (bending flat):
 
 @!qlearning-optimism-ucb-and-thompson-sampling
 
-Log–log axes: linear regret has slope one; UCB and Thompson bend away from it.
+- **Three-fold improvement:** UCB ($\kappa = 0.5$) and Thompson sampling finish with median regret $32$–$37$, roughly one-third of fixed $\epsilon = 0.1$ ($100$) and below annealed $\epsilon_t = 20/t$ ($52$).
 :::
 
-::: {.slide title="At 2,000 Pulls the Coefficient Decides UCB's Regret"}
-[The UCB coefficient]{.kicker}
+::: {.slide title="Sensitivity to the UCB Exploration Coefficient"}
+[Worst-Case Guarantees vs. Empirical Variance]{.kicker}
+
+Sweeping $\kappa \in \{0.15, 0.50, \sqrt{2}\}$ across 40 runs explains why theoretical UCB1 ($\kappa = \sqrt{2}$) trails $\kappa = 0.5$ on this benchmark:
 
 @!exploration-optimism-ucb-and-thompson-sampling-1
 
-- $\kappa = \sqrt{2}$, with its guarantee: near 200, five to six times
-  $\kappa = 0.5$; still six to eight times at $10^5$ pulls and more.
-- $\kappa = 0.15$: the smallest median, but in roughly one run in ten an
-  unlucky start leaves it on a worse arm. The median hides these runs.
-- The guarantee covers the worst case, an arm of variance $1/4$; the best
-  arm here has $0.9 \times 0.1 = 0.09$, so a smaller bonus is enough here.
+- **Why UCB1 ($\kappa = \sqrt{2}$) costs $6\times$ more here:** UCB pulls arm $a$ until $\kappa\sqrt{\log t / n(a)} \approx \Delta_a$, so $n(a) \propto \kappa^2 \log t / \Delta_a^2$; Hoeffding bounds the worst-case Bernoulli variance $1/4$, whereas our best arm has variance $0.9 \times 0.1 = 0.09$.
+- **Why $\kappa = 0.15$ is dangerous:** Although its median regret is $11$, an unlucky start traps $10\%$ of runs on a suboptimal arm (max regret $618$); Thompson sampling adapts automatically without tuning $\kappa$.
 :::
 
-::: {.slide title="No Rule Beats ln t: the Lai–Robbins Lower Bound"}
-[A lower bound]{.kicker}
+::: {.slide title="The Lai-Robbins Information-Theoretic Lower Bound"}
+[Why No Algorithm Beats Logarithmic Regret]{.kicker}
 
-A rule that does well on every bandit of a family must pull each worse arm
-$a$, by round $t$, about
+Lai and Robbins (1985) proved that any consistent bandit algorithm must pull each suboptimal arm $a$ at least in proportion to $\ln t$ divided by the KL divergence $D(\mu_a \,\|\, \mu^*)$:
 
-$$n_t(a) \gtrsim \frac{\ln t}{D(\mu_a \,\|\, \mu^*)}, \qquad D(p \,\|\, q) = p \ln \frac{p}{q} + (1 - p) \ln \frac{1 - p}{1 - q}.$$
+$$\liminf_{t \to \infty} \frac{\mathbb{E}[n_t(a)]}{\ln t} \geq \frac{1}{D(\mu_a \,\|\, \mu^*)}, \qquad D(p \,\|\, q) = p\ln\frac{p}{q} + (1 - p)\ln\frac{1 - p}{1 - q}$$
 
-- $D$, the relative entropy of two coin flips, is small when the means are
-  close: a near-best arm is hard to tell apart.
-- Arm 0.60: $D(0.60 \,\|\, 0.90) = 0.31$, about $\ln 2000 / 0.31 \approx 24$
-  pulls by round 2,000.
-- With $\textrm{Regret}(t) = \sum_a \Delta_a n_t(a)$: regret grows at least
-  like $\ln t$. UCB and Thompson reach this rate; fixed $\epsilon$ does not.
+- **Distinguishing near-optimal arms:** For the second-best arm ($\mu_6 = 0.60$ vs. $\mu^* = 0.90$), $D(0.60 \,\|\, 0.90) = 0.311$, requiring at least $\ln(2000)/0.311 \approx 24.4$ pulls ($\approx 7.3$ regret) by $t = 2000$.
+- **Rate optimality:** Summing $\Delta_a n_t(a)$ shows $\textrm{Regret}(t) = \Omega(\ln t)$ is unimprovable; both UCB and Thompson sampling achieve this optimal $\Theta(\ln t)$ growth rate.
 :::
 
-::: {.slide title="Check: Which Worse Arm Costs More, the 0.60 Arm or the 0.25 Arm?"}
-[Check]{.kicker}
+::: {.slide title="Deep Exploration in MDPs: The N-State Chain"}
+[When Reaching an Unknown State Takes k Steps]{.kicker}
 
-The bound asks for about 24 pulls of the 0.60 arm by round 2,000. How many
-of the 0.25 arm, and which of the two adds more regret?
+In a multi-state MDP, trying an unvisited pair $(s, a)$ requires executing a multi-step trajectory to reach $s$ first:
 
-. . .
+$$0 \xrightarrow{\;a=1\;} 1 \xrightarrow{\;a=1\;} 2 \xrightarrow{\;a=1\;} \cdots \xrightarrow{\;a=1\;} N - 1\;(\text{reward } +1), \qquad s \xrightarrow{\;a=0\;} 0$$
 
-- $D(0.25 \,\|\, 0.90) = 0.25 \ln \frac{0.25}{0.90} + 0.75 \ln \frac{0.75}{0.10} \approx 1.19$.
-- About $7.6 / 1.19 \approx 6$ pulls: an arm far from the best is told apart
-  quickly.
-- Regret: $24 \times 0.30 \approx 7$ against $6 \times 0.65 \approx 4$. The
-  near arm costs more.
+- **Geometric decay of random walks:** In an $N$-state chain where action $1$ advances and action $0$ resets to state $0$, reaching the goal requires $N - 1$ consecutive right moves, which a random walk hits with probability $2^{-(N-1)}$.
+- **Zero-initialized Q-learning:** Until the first goal reward is collected, every table entry remains $0$ and $\epsilon$-greedy acts as a blind random walk regardless of $\epsilon$.
 :::
 
-::: {.slide title="A Chain Hides Its Reward behind N − 1 Forward Moves"}
-[Exploration in MDPs]{.kicker}
+::: {.slide title="Optimistic Initialization vs. Random Walk Scaling"}
+[Polynomial vs. Exponential Exploration]{.kicker}
 
-$$0 \xrightarrow{\;1\;} 1 \xrightarrow{\;1\;} 2 \xrightarrow{\;1\;} \cdots \xrightarrow{\;1\;} N - 1 \;(\text{reward } 1), \qquad s \xrightarrow{\;0\;} 0$$
-
-- Start in state 0; action 1 moves on, action 0 returns to the start;
-  entering the last state ends the episode, which is cut after $2N$ steps.
-- A bandit's arms can be pulled every round; here a pair can be tried only
-  from its state. A given $k$-step sequence of random actions: $2^{-k}$.
-- Exact success probability of random actions: average the kernel,
-  $P_\pi(s' \mid s) = \frac12 \sum_a P(s' \mid s, a)$, and propagate the
-  state distribution from state 0 for $2N$ steps.
-:::
-
-::: {.slide title="At N = 20, Random Actions Need 46,000 Episodes, Optimism about 8"}
-[Optimistic initialization]{.kicker}
-
-- Every entry starts at 1, an upper bound on every return, and the agent acts
-  greedily ($\epsilon = 0$): an untried pair looks as good as anything can.
-- From a zero table, Q-learning acts at random until its first success,
-  whatever its $\epsilon$: every row is a tie.
+Initializing all table entries optimistically to $Q_0(s, a) = 1.0$ (an upper bound on return) with pure greedy selection ($\epsilon = 0$) eliminates the exponential random-walk bottleneck:
 
 @!exploration-a-chain-of-states-1
 
-Random: about twice the episodes per added state. Optimistic: about 8 at
-$N = 20$, roughly in proportion to $N$.
+- **Why optimism marches systematically:** One visit to a zero-reward pair updates $Q(s, a)$ toward $\gamma \max_{a'} Q(s', a') = \gamma < 1$, dropping it below every untried pair ($1.0$) so greedy selection systematically sweeps the chain ($8$ episodes at $N = 20$ vs. $46{,}000$ for random).
 :::
 
-::: {.slide title="A Tried Pair Falls below Every Untried One"}
-[Why optimism works]{.kicker}
+::: {.slide title="Count Bonuses and Coverage on FrozenLake"}
+[From Deterministic Chains to Stochastic Grids]{.kicker}
 
-- One try of a pair that pays nothing moves its entry toward
-  $r + \gamma \max_{a'} Q(s', a') \le \gamma < 1$, below every untried 1.
-- So greedy prefers untried pairs and works through the chain: polynomial
-  in $N$, not exponential.
-- Stochastic MDPs, where one try says little: *count bonuses*
-  $\propto 1/\sqrt{n(s, a)}$ on the reward, carried back by the backups;
-  regret like $\sqrt{\text{steps}}$, up to factors polynomial in the MDP's size.
-- Networks rarely see a state twice: a learned novelty replaces the count.
+On stochastic MDPs, a single visit cannot identify $P(\cdot \mid s, a)$, while on small deterministic grids even random tie-breaking covers most pairs:
+
+::: {.cols .vc}
+::: {.col}
+- **Count-based UCB bonuses:** Adding $c / \sqrt{n(s, a)}$ to rewards in Bellman backups drives the agent toward under-visited pairs, achieving $\tilde{O}(\sqrt{T})$ regret (Jin et al., 2018).
+- **Calm FrozenLake coverage:** Because the goal is only 6 moves away, greedy tie-breaking tries $91\%$ of live pairs and solves the calm lake in $20/20$ seeds while winning $90\%$ of training episodes.
 :::
 
-::: {.slide title="On the Calm Lake, Random Ties Already Make Greedy Explore" layout="tight"}
-[Coverage on the lake]{.kicker}
-
+::: {.col .fig}
 @!exploration-exploration-in-mdps-3
-
-Until the first success all entries are 0, so all schedules act alike.
+:::
+:::
 :::
 
-::: {.slide title="A Group of K Answers That All Score Alike Teaches Nothing"}
-[The verifier task]{.kicker}
+::: {.slide title="Group Exploration on the Verifier Task"}
+[Contextual Bandits and pass@K in LLM Post-Training]{.kicker}
 
-- Four prompts, nine shared candidate responses, $r(x, y) = 1$ if $y$ is the
-  answer to $x$. $2 + 2$ and $3 \times 4$ have their answer among the
-  candidates; $8 \times 8$ and $9 \times 9$ do not.
-- The prompt is a context; the response is the arm: a *contextual bandit*.
-- The reference policy is right with probability 0.062 on average.
-- A common learner samples $K$ responses, raises those above the group's
-  average, and lowers those below. An identical group changes nothing.
+In group-based policy optimization (such as GRPO in §14.8), the learner samples $K$ responses per prompt $x$ from $\pi_\theta(\cdot \mid x)$ and updates toward responses that beat the group average:
 
-$$P(\text{all } K \text{ scores equal}) = (1 - p)^K + p^K, \qquad p = \pi(\text{correct} \mid x)$$
-:::
-
-::: {.slide title="Sampling Agrees with $(1 - p)^K + p^K$"}
-[The verifier task]{.kicker}
+$$P(\text{all } K \text{ responses score identically}) = (1 - p)^K + p^K, \qquad p = \pi_\theta(\textrm{correct} \mid x)$$
 
 @!exploration-exploration-on-the-verifier-task
 
-- Half of all groups are identical at every $K$: the two prompts without a
-  correct candidate.
-- Answerable, reference ($p \approx 0.125$): 78%, a third, almost none at
-  $K = 2, 8, 32$. Nearly solved (built by hand): two thirds at $K = 8$.
-- pass@$K$ $= 1 - (1 - p)^K$, the chance of a correct answer in the group.
-  The policy's own sampling is its only exploration.
+- **Zero-signal groups:** When all $K$ responses fail ($(1-p)^K$) or all $K$ succeed ($p^K$), every advantage is zero; the policy explores solely through its own sampling probability $\text{pass@}K = 1 - (1 - p)^K$.
 :::
 
-::: {.slide title="Check: How Large a Group Is Mixed Half the Time at p = 0.125?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: Regret Bounds and Exploration"}
+[Check Your Understanding]{.kicker}
 
-On an answerable prompt the reference policy is right with probability
-$p = 0.125$. What is the smallest $K$ for which a group of $K$ is mixed with
-probability at least $1/2$? And at $p = 0.01$?
+Work through these three quantitative exploration problems:
 
-. . .
+1. **Near vs. far suboptimal arms:** Under the Lai-Robbins bound at $t = 2000$ ($\ln 2000 \approx 7.6$), the $0.60$ arm ($D = 0.31$) needs $\approx 24$ pulls. The $0.25$ arm has $D(0.25 \,\|\, 0.90) \approx 1.19$; how many pulls does it need, and which arm adds more cumulative regret?
+2. **Thompson sampling probability:** Arm A has $3$ wins in $4$ pulls ($\mathrm{Beta}(4, 2)$) and arm B is untried ($\mathrm{Beta}(1, 1)$). With what probability does Thompson sampling pull the untried arm B?
+3. **Group size for LLM exploration:** On an answerable prompt where $p = 0.125$, what is the smallest group size $K$ such that a group of $K$ responses has a mixed score (not all identical) at least $50\%$ of the time?
 
-- Mixed means not identical: $1 - 0.875^K - 0.125^K \ge 1/2$.
-- $K = 5$: $0.875^5 \approx 0.51$, mixed 0.49. $K = 6$: $0.875^6 \approx 0.45$,
-  mixed 0.55. So **$K = 6$**.
-- For small $p$, $K \approx \ln 2 / p$: about 69 at $p = 0.01$.
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. The $0.25$ arm requires $\approx 7.6 / 1.19 \approx 6.4$ pulls. Its regret is $6.4 \times 0.65 \approx 4.2$, whereas the $0.60$ arm costs $24.4 \times 0.30 \approx 7.3$—near-optimal arms cost more total regret because they take longer to distinguish.
+2. For $X \sim \mathrm{Beta}(4, 2)$ and $U \sim \mathrm{Uniform}(0, 1)$, $\Pr(U > X) = \mathbb{E}[1 - X] = 1 - \frac{4}{4+2} = 1/3$.
+3. We need $1 - (0.875^K + 0.125^K) \geq 0.5$: at $K = 5$, $1 - 0.513 = 0.487 < 0.5$; at $K = 6$, $1 - 0.449 = 0.551 \geq 0.5$, so $K = 6$ (or via $\ln 2 / p \approx 5.5$).
+:::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Multi-Armed Bandits and Exploration"}
+[Key Takeaways]{.kicker}
 
-- Regret after 2,000 pulls: greedy about 800, fixed $\epsilon = 0.1$ about
-  100 and linear; $\epsilon_t = 20/t$ about 50; UCB and Thompson 30 to 40.
-- The last three grow like $\ln t$, the Lai–Robbins rate.
-- UCB's $\kappa$: $\sqrt{2}$ is safe on every bandit, near 200 here.
-- Chain, $N = 20$: random actions about 46,000 episodes, optimism about 8.
-- Verifier: groups that score alike teach nothing; sampling is the only
-  exploration.
-
-**Next:** learning from demonstrations, where an expert's actions spare the
-agent this trying.
+| Strategy | Action Selection Rule | Regret Scaling & Practical Trade-Off |
+|:--|:--|:--|
+| **Pure Greedy** | $\mathrm{argmax}_a \hat{\mu}(a)$ | $\Theta(t)$ linear regret; locks onto first arm that pays out |
+| **Fixed $\epsilon$-Greedy** | Random w.p. $\epsilon$, else $\mathrm{argmax}_a \hat{\mu}(a)$ | $\Theta(\epsilon t)$ linear regret; wastes pulls on known bad arms forever |
+| **Annealed $\epsilon_t \propto 1/t$** | Random w.p. $\min(1, c/t)$ | $O(\ln t)$ if $c \gtrsim m/\Delta_{\min}^2$, but requires knowing $\Delta_{\min}$ |
+| **UCB** | $\mathrm{argmax}_a [\hat{\mu}(a) + \kappa\sqrt{\log t / n(a)}]$ | $O(\ln t)$ matching Lai-Robbins bound; sensitive to scale $\kappa$ |
+| **Thompson Sampling** | Sample $\tilde{\mu}_a \sim \mathrm{Beta}(1+w_a, 1+n_a-w_a)$, pull max | $O(\ln t)$ optimal rate with zero tuning hyperparameters |
+| **Optimistic Init / Bonus** | $Q_0(s, a) = R_{\max}$ or $r + c/\sqrt{n(s, a)}$ | Replaces $\Theta(2^N)$ random-walk time on chains with $O(N)$ directed sweeps |
 :::
+

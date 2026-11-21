@@ -1,0 +1,114 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/optimal-control.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "optimal-control-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "optimal-control-riccati-lqr": {
+      "code_fingerprint": "sha256:6ff3148f97ddad116740ecf4577c17fab879159b8baa0918a186b733cd4bb688",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R=0.01  K_inf=[7.613, 4.585]  P_00= 6.02  rho(A - B K)=0.761\nR=0.10  K_inf=[2.762, 2.508]  P_00= 9.08  rho(A - B K)=0.874\nR=1.00  K_inf=[0.930, 1.395]  P_00=15.00  rho(A - B K)=0.930\n"
+        }
+      ]
+    },
+    "optimal-control-riccati-plot": {
+      "code_fingerprint": "sha256:9a2f64df2f7a03cc16128a10a7ebe3699cfdbb2b72d8c2f1c95657b6622e35b6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimal-control/optimal-control-riccati-plot-1.svg",
+          "bytes": 29914,
+          "sha256": "sha256:c43b6c7908621faa8e132b50c0115f0804791a63a98c1331e9d695f031f12478"
+        }
+      ]
+    },
+    "optimal-control-upright-lqr": {
+      "code_fingerprint": "sha256:8583e535bafc6f17f1eac3181a097e6562eef0bc91d38bca6208a9a76d1ed6f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A at upright:\n[[1.0375 0.05  ]\n [0.75   1.    ]]\nopen-loop eigenvalues:   1.2133, 0.8242\nLQR gain K_inf:          [19.693, 5.263]\nclosed-loop eigenvalues: 0.8537, 0.2467\n"
+        }
+      ]
+    },
+    "optimal-control-lqr-basin": {
+      "code_fingerprint": "sha256:1cb1faa7d1dc0c06066664fda03f4c7a7c40af1ef66e8e2df5fd8533b7be7272",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "th0=0.20 rad: 200-step return=   -0.32, final theta=+0.000 rad\nth0=0.40 rad: 200-step return=   -2.97, final theta=+0.000 rad\nth0=0.50 rad: 200-step return= -770.94, final theta=+2.592 rad\nth0=0.60 rad: 200-step return= -546.37, final theta=+0.001 rad\nth0=3.14 rad: 200-step return=-1471.86, final theta=-2.249 rad\n"
+        }
+      ]
+    },
+    "optimal-control-ilqr-swingup": {
+      "code_fingerprint": "sha256:78736b895ae354f3d28e517872e1827a8f25d5f6385f4e5a245c399a7a33bbfb",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t= 0  theta= 3.1416  thetadot= 0.0000  u=-1.782"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nt=10  theta= 2.6515  thetadot=-1.0260  u=+0.965\nt=20  theta= 3.5453  thetadot= 3.3225  u=+1.681\nt=30  theta= 4.0383  thetadot=-2.6013  u=-1.807\nt=40  theta= 1.5668  thetadot=-4.4402  u=-1.832\nt=50  theta= 0.3746  thetadot=-1.3417  u=-1.209\nt=60  theta= 0.0009  thetadot=-0.0132  u=+0.066\nt=70  theta= 0.0002  thetadot=-0.0006  u=-0.000\nt=80  theta= 0.0001  thetadot=-0.0000  u=+0.000\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimal-control/optimal-control-ilqr-swingup-1.svg",
+          "bytes": 38425,
+          "sha256": "sha256:d14df513ec904ac5805eff2fa2770d0aaee6e40acd35a1521e58f2cb34d2c4d9"
+        }
+      ]
+    },
+    "optimal-control-mpc-comparison": {
+      "code_fingerprint": "sha256:9d0cf1858bd31801136c3afa6703cd43b92823b8de22006cbfcb7b7e832a6c24",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "impulse=+0.0 rad/s at t=45:\n  Open-loop:  final theta=+0.075, return=-333.6\n  TV-LQR:     final theta=+0.000, return=-333.7\n  MPC (iLQR): final theta=+0.000, return=-331.6\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "impulse=+0.5 rad/s at t=45:\n  Open-loop:  final theta=-2.939, return=-502.3\n  TV-LQR:     final theta=-0.001, return=-333.9\n  MPC (iLQR): final theta=+0.000, return=-331.7\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "impulse=+2.2 rad/s at t=45:\n  Open-loop:  final theta=+2.941, return=-621.1\n  TV-LQR:     final theta=+1.959, return=-797.9\n  MPC (iLQR): final theta=-0.000, return=-558.2\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimal-control/optimal-control-mpc-comparison-1.svg",
+          "bytes": 40488,
+          "sha256": "sha256:43ad8624844c8453f30117fd24c52adf62c38f219520f37bce9430b288f526fb"
+        }
+      ]
+    }
+  }
+}

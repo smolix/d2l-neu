@@ -2,56 +2,47 @@
 :label:`chap_performance`
 
 Until now we have trained every model by writing the network, starting the
-training loop, and waiting. We took the time of a step and its memory as
-given. That stops working when a run takes days, a model does not fit on
-the card, or a second GPU makes training slower. Consider the GPT of
-:numref:`sec_gpt`, made twice as wide to give the GPU more work.
-Dividing the arithmetic of one training step by the peak rate of the GPU
-gives the shortest time the step could take. The measured step takes
-several times longer. Where does the rest of the time go?
+training loop, and waiting, taking step time and memory as given. That stops
+working when a run takes days, a model does not fit on the card, or a second
+GPU makes training slower. Consider the GPT of :numref:`sec_gpt`, made twice
+as wide to give the GPU more work. Dividing the arithmetic of one training
+step by the GPU's peak rate gives the shortest time the step could take, yet
+the measured step takes several times longer. Where does the rest of the time
+go?
 
-Computer architects met this question long before deep learning did. By
-the 1990s processors had become so much faster than their memory that many
-programs spent much of their time waiting for data. In 2009 Williams,
-Waterman, and Patterson drew the consequence as one picture, the
-*roofline* :cite:`Williams.Waterman.Patterson.2009`: a program runs no
-faster than its arithmetic units allow, and no faster than memory can
-deliver the bytes it needs. A GPU driven from Python adds a third limit,
-the cost of issuing each operation. Which of the three holds a step back
-decides which change speeds it up. This view explains choices that earlier
-chapters made, such as large minibatches and 16-bit numbers
-(:numref:`sec_numerics`). It also gives a method: count the arithmetic and
-the bytes of a step, predict its time, measure it, and explain the
-difference. The difference is where the time went.
+Computer architects met this question long before deep learning did. By the
+1990s processors had outpaced their memory so far that many programs spent
+most of their time waiting for data. In 2009 Williams, Waterman, and
+Patterson summarized the consequence in the *roofline* model
+:cite:`Williams.Waterman.Patterson.2009`: a program runs no faster than its
+arithmetic units allow, and no faster than memory can deliver the bytes it
+needs. A GPU driven from Python adds a third limit, the host cost of issuing
+each operation. Which of the three holds a step back decides which change
+speeds it up. This view explains choices made in earlier chapters, such as
+large minibatches and 16-bit numbers (:numref:`sec_numerics`), and gives a
+method: count the arithmetic and the bytes of a step, predict its time,
+measure it, and explain the difference.
 
-Everything rests on the first section (:numref:`sec_perf_model`), which
-introduces one quantity, the arithmetic an operation performs per byte it
-moves, and puts the method to work. Hardware (:numref:`sec_hardware`)
-explains where the peak rate and the bandwidth come from; a hurried reader
-can take its tables. Compilation (:numref:`sec_compilation`) and the
-memory techniques of :numref:`sec_memory_precision` are the one-GPU tools
-most readers will use every day. Three sections then add
-GPUs. A second GPU helps only when each card has enough work, and on our
-cards, which meet only through host memory, the wires between them matter
-as much as the GPUs. Dividing the weights, gradients, and optimizer state
-among the GPUs trains a model that no single card holds, but every step
-must move them between the cards. The case study
-(:numref:`sec_fast_transformer`) returns to the GPT above, which fits on
-one card, and accounts for its step in milliseconds.
+Everything rests on :numref:`sec_perf_model`, which introduces *arithmetic
+intensity*—the FLOPs an operation performs per byte it moves—and puts the
+method to work. Hardware (:numref:`sec_hardware`) explains where peak
+arithmetic and bandwidth come from. Compilation (:numref:`sec_compilation`)
+and the memory techniques of :numref:`sec_memory_precision` are the single-GPU
+tools most practitioners use every day. Three sections then add GPUs: data
+parallelism from first principles (:numref:`sec_multi_gpu`) and in practice
+(:numref:`sec_multi_gpu_concise`), followed by sharding the weights,
+gradients, and optimizer state across cards (:numref:`sec_sharding`) so that
+models larger than any single GPU can train. Finally, the case study
+(:numref:`sec_fast_transformer`) returns to the GPT above on one and four
+GPUs and accounts for its step in milliseconds.
 
 We assume you can time GPU code and read its peak memory
 (:numref:`sec_use_gpu`), know bf16 and tf32 (:numref:`sec_numerics`), and
 have met the GPT and its key–value cache (:numref:`sec_gpt`,
 :numref:`sec_kv-cache`). Every measurement comes from one host with four
 RTX 4090 cards, PyTorch 2.11, and JAX 0.12. On your machine the times will
-differ; the counts of FLOPs and bytes will not, and neither will the
-method that turns them into predictions. The first four sections need one
-GPU and the later ones up to four; reading needs none.
-
-Kernels written by hand are left to
-:numref:`sec_performance-further-reading`, and training across machines,
-serving engines, and quantization for inference to the Language Models
-part.
+differ; the counts of FLOPs and bytes will not, nor will the method that
+turns them into predictions.
 
 ```toc
 :maxdepth: 2
@@ -67,163 +58,86 @@ fast-transformer
 further-reading
 ```
 
-## Resources and Further Reading {.unnumbered}
-
-The resources below accompany the sections of this chapter; each names the
-section it goes with, and all are freely accessible online. Read Horace He's
-essay before or beside :numref:`sec_perf_model`: it takes about fifteen minutes
-and describes the same three limits in another voice. The scaling book of
-Austin et al. is the natural second text for the whole chapter. Related topics
-that the chapter does not teach, such as other accelerators, kernels written by
-hand, compressed optimizer state, and collective algorithms beyond the ring,
-are collected in :numref:`sec_performance-further-reading`.
-
-**Books and long-form texts**
-
-- [How to Scale Your Model — Austin et al., Google DeepMind (2025)](https://jax-ml.github.io/scaling-book/) — rooflines, sharding notation, and the cost of collectives worked out for TPUs and GPUs in JAX; the arithmetic of :numref:`sec_perf_model` and the cost model of :numref:`sec_multi_gpu`, carried on to clusters of thousands of chips.
-- [The Ultra-Scale Playbook — Hugging Face (2025)](https://huggingface.co/spaces/nanotron/ultrascale-playbook) — the memory budget of a training step, data parallelism, and ZeRO sharding, each with measurements, from :numref:`sec_memory_precision` through :numref:`sec_sharding`, and on to parallelism across many machines.
-- [Making Deep Learning Go Brrrr From First Principles — Horace He (2022)](https://horace.io/brrr_intro.html) — the division of a program's time into compute, memory bandwidth, and overhead that :numref:`sec_perf_model` measures, in a short essay by a PyTorch compiler developer.
-
-**Courses and lectures**
-
-- [Stanford CS336: Language Modeling from Scratch](https://stanford-cs336.github.io/) — assignments that profile a transformer, apply compilation and mixed precision, and train it on several GPUs, the work of :numref:`sec_perf_model` through :numref:`sec_fast_transformer` as graded problems; lectures on YouTube.
-- [CMU 15-442/15-642: Machine Learning Systems](https://mlsyscourse.org/) — a full course on the hardware, compilers, and parallelism of :numref:`sec_hardware` through :numref:`sec_sharding`, with lecture notes and assignments.
-- [GPU MODE lecture series](https://www.youtube.com/@GPUMODE) — CUDA, Triton, and the internals of fused attention kernels, for readers who want to write the kernels that :numref:`sec_compilation` only generates or calls.
-
-**Foundational papers**
-
-- [Roofline: An Insightful Visual Performance Model for Multicore Architectures — Williams, Waterman & Patterson (2009)](https://doi.org/10.1145/1498765.1498785) — the original roofline and its ridge point, the model of :numref:`sec_perf_model`.
-- [PyTorch 2: Faster Machine Learning Through Dynamic Python Bytecode Transformation and Graph Compilation — Ansel et al. (2024)](https://doi.org/10.1145/3620665.3640366) — how TorchDynamo captures a graph from Python bytecode and Inductor compiles it, the PyTorch side of :numref:`sec_compilation`.
-- [Mixed Precision Training — Micikevicius et al. (2018)](https://arxiv.org/abs/1710.03740) — fp32 master weights and loss scaling, the recipe of :numref:`subsec_mp-mixed`, and why the narrow exponent range of fp16 needs a loss scaler, a reason that the eight exponent bits of bf16 remove.
-- [Training Deep Nets with Sublinear Memory Cost — Chen et al. (2016)](https://arxiv.org/abs/1604.06174) — recomputing activations in the backward pass instead of storing them, the trade of :numref:`subsec_mp-checkpointing`, with a placement of the stored layers that makes memory grow as the square root of the depth.
-- [PyTorch Distributed: Experiences on Accelerating Data Parallel Training — Li et al. (2020)](https://arxiv.org/abs/2006.15704) — gradient buckets and the overlap of the allreduce with the backward pass, the design of DDP in :numref:`sec_multi_gpu_concise`.
-- [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models — Rajbhandari et al. (2020)](https://arxiv.org/abs/1910.02054) — the three stages of sharding optimizer state, gradients, and weights of :numref:`sec_sharding`.
-
-**Tutorials and notes**
-
-- [PyTorch Performance Tuning Guide](https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html) and [Automatic Mixed Precision recipe](https://pytorch.org/tutorials/recipes/recipes/amp_recipe.html) — a checklist of settings that :numref:`sec_hardware` and :numref:`sec_memory_precision` explain, from pinned memory to autocast.
-- [torch.compile tutorial](https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html), [JAX: just-in-time compilation](https://docs.jax.dev/en/latest/jit-compilation.html), and [JAX: sharded computation](https://docs.jax.dev/en/latest/sharded-computation.html) — the framework documentation behind :numref:`sec_compilation`, :numref:`sec_multi_gpu_concise`, and :numref:`sec_sharding`, including graph breaks, recompilation, and sharded arrays.
-- [Understanding GPU Memory — PyTorch blog (2023)](https://pytorch.org/blog/understanding-gpu-memory-1/) — recording and reading snapshots of the allocator's memory over a training step, the tool of :numref:`subsec_mp-measuring`.
-- [How to Train Really Large Models on Many GPUs? — Lilian Weng (2021)](https://lilianweng.github.io/posts/2021-09-25-train-large/) — a survey of data, pipeline, and tensor parallelism and of ZeRO, the background of :numref:`sec_multi_gpu` through :numref:`sec_sharding`.
-
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §13]{.kicker}
 
-Where the time and memory of training go<br>
-**performance model · hardware · compilation · memory and precision · multiple GPUs · sharding · a case study**
+Computational Performance: Roofline Models, Hardware, Compilers, and Multi-GPU Scaling<br>**arithmetic intensity · roofline & dispatch bounds · memory & precision · fusion & CUDA graphs · collectives & FSDP**
 :::
 :::
 
-::: {.slide title="Arithmetic, Memory Traffic, the Host, and Capacity Each Limit Some Steps"}
-[The problem]{.kicker}
+::: {.slide title="Four Bottlenecks Govern Training Time and Capacity"}
+[The Central Problem]{.kicker}
 
-- **Arithmetic:** an 8,192-wide bf16 product does about 2,700 FLOPs per
-  byte and runs at the RTX 4090's peak of about 165 TFLOP/s.
-- **Memory traffic:** adding 1 to a bf16 matrix reads 2 bytes and writes 2
-  per FLOP; at 1 TB/s that is at most 0.25 TFLOP/s, a six-hundredth of the
-  peak.
-- **Host:** every operation issued from Python costs microseconds before
-  the GPU starts it.
-- **Capacity:** a 1B-parameter GPT with Adam in fp32 fills 15 GiB of the
-  card's 24 GiB before it stores a single activation.
+Dividing a training step's FLOPs by peak GPU throughput rarely predicts wall-clock time because four distinct resources can limit a step:
+
+- **Arithmetic Throughput ($P$):** An $8192 \times 8192$ `bfloat16` matrix product performs $\sim 2{,}700\text{ FLOP/byte}$ and saturates the RTX 4090's Tensor Cores near $165\text{ TFLOP/s}$.
+- **Memory Bandwidth ($\beta$):** Adding $1$ to a `bfloat16` matrix reads $2\text{ B}$ and writes $2\text{ B}$ per FLOP ($I = 0.25\text{ FLOP/byte}$), capping throughput at $0.25\text{ TFLOP/s}$ ($1/660$ of peak).
+- **Host Dispatch Overhead ($h$):** Launching an eager GPU kernel from Python costs $10\text{--}100\,\mu\text{s}$ on the CPU, leaving the accelerator idle between microsecond kernels.
+- **Memory Capacity ($C$):** Training a 1B-parameter GPT with `float32` Adam consumes $16N \approx 15.1\text{ GiB}$ of a $24\text{ GiB}$ card before storing a single token's activations.
 
 ::: {.d2l-note}
-Which limit holds a step back, on one GPU and on several, decides which
-change speeds it up.
+**The Systems Method:** Count FLOPs and bytes $\to$ predict the binding regime and step time $\to$ measure with synchronized benchmarks and kernel profilers $\to$ explain the gap.
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Three-Floor Time Model and the Roofline Ridge"}
+[Unifying Analytical Model]{.kicker}
 
-- predict an operation's time from its FLOPs and bytes, and time GPU code
-  correctly;
-- speed up one GPU with compilation and bf16, and fit larger minibatches
-  with checkpointing and gradient accumulation;
-- predict when a second GPU shortens a step, and measure what overlap
-  hides;
-- train a model that no card holds by dividing its weights, gradients, and
-  optimizer state among the GPUs;
-- account for a GPT's training step in milliseconds.
+Every dispatched operation or training step is bounded below by the slowest of three physical floors—host launch latency, arithmetic compute, and memory traffic:
 
-**Method:** count FLOPs and bytes, predict the time, measure, explain the
-difference. **Running examples:** a 1B-parameter GPT for memory and
-sharding, a 19M-parameter GPT for the case study; one RTX 4090, then four
-in one host.
+$$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes}}{\beta}\right), \qquad \textrm{Throughput} \;\le\; \min(P,\; I\beta)$$
+
+- **Arithmetic Intensity ($I = \textrm{FLOPs}/\textrm{bytes}$):** Counts how many floating-point operations are performed per byte transferred between off-chip DRAM and on-chip SRAM/registers.
+- **The Ridge Point ($I^* = P/\beta$):** The crossover intensity where the sloped bandwidth roof $I\beta$ meets the flat compute roof $P$ ($I^* \approx 164\text{ FLOP/byte}$ in `bfloat16` on the RTX 4090; $\sim 295$ on H100).
+- **Multi-GPU Scaling:** Distributing a batch across $k$ GPUs adds collective communication $\alpha + \frac{2(k-1)}{k} S \beta_{\textrm{link}}$, shortening a step only when compute savings exceed link latency and transfer time.
 :::
 
-::: {.slide title="Five Numbers Describe Our Machine" only="pytorch"}
-[Our machine in five numbers]{.kicker}
+::: {.slide title="Five Hardware Constants Characterize Our Benchmark Host"}
+[Reference Machine]{.kicker}
 
-| symbol | what it is | value | measured by |
-|---|---|---|---|
-| $P$ | peak tensor-core rate | 165 TFLOP/s bf16 (83 tf32, rated) | an 8,192-wide bf16 product reaches it |
-| $\beta$ | GPU memory bandwidth | 1.0 TB/s rated, about 0.9 measured | elementwise operations moving 512 MiB |
-| $h$ | host time per operation issued from Python | about 13 µs | tiny products the GPU runs in a few µs |
-| — | pinned host-to-GPU copy rate | about 23 GB/s | copying a pinned buffer |
-| $\beta_\textrm{link}$ | time per byte a GPU sends in an NCCL allreduce, GPUs 0 and 1 | about 0.42 ns per byte (bus bandwidth about 2.4 GB/s), through host memory | a bare 256 MB allreduce |
+Throughout Chapter 13, we test every analytical prediction against measurements on a single host equipped with four RTX 4090 GPUs ($24\text{ GiB}$ each):
+
+| Symbol | Hardware Parameter | Value on Our Workstation | How We Measure It |
+| :--- | :--- | :--- | :--- |
+| $P$ | Peak Tensor Core throughput | $165.2\text{ TFLOP/s}$ (`bf16`), $82.6$ (`tf32`) | Square $8192 \times 8192$ `bfloat16` matrix product |
+| $\beta$ | Off-chip GPU DRAM bandwidth | $1.01\text{ TB/s}$ rated ($\sim 0.9\text{ TB/s}$ achieved) | Streaming $512\text{ MiB}$ elementwise kernels (`x + 1`) |
+| $I^*$ | Roofline ridge point ($P / \beta$) | $164\text{ FLOP/byte}$ (`bf16`), $82$ (`tf32`) | Batch-size sweep $B \in [1, 1024]$ on a $16384^2$ weight |
+| $h$ | Host dispatch latency per call | $\sim 13\,\mu\text{s}$ (PyTorch op), $50\text{--}100\,\mu\text{s}$ (JAX JIT) | Tiny $256 \times 256$ ops where GPU busy time is $\sim 2\,\mu\text{s}$ |
+| $\beta_{\textrm{link}}$ | Inter-GPU collective time/byte | $\sim 0.42\text{ ns/B}$ ($\sim 2.4\text{ GB/s}$ bus bandwidth) | Bare $256\text{ MiB}$ NCCL allreduce staged via host PCIe DRAM |
+:::
+
+::: {.slide title="Architectural Roadmap of Chapter 13"}
+[Chapter Structure]{.kicker}
+
+The chapter progresses from single-kernel analytical bounds to single-GPU compiler and memory optimizations, and finally to multi-GPU scaling:
+
+| Section | Core Systems Question | GPUs | Concrete Running Benchmark |
+| :--- | :--- | :---: | :--- |
+| **§13.1 Performance Model** | Which resource binds an op, and how do we time it? | 1 | Skinny matmuls across $I^*$; `gelu_ish`; 3-layer MLP |
+| **§13.2 Hardware Anatomy** | Where do $P$, $\beta$, sector reads, and link rates come from? | 1 | 1B GPT decode bound; random gather; pinned PCIe copies |
+| **§13.3 Compilation** | How do graph capture, fusion, and CUDA graphs work? | 1 | 8-op `gelu_ish` ($9\times$ traffic cut); 60-layer thin stack |
+| **§13.4 Memory & Precision** | How many bytes per param and token fit in $24\text{ GiB}$? | 1 | 1B GPT (18 blocks, $d = 2048$): `bf16`, remat, accumulation |
+| **§13.5–13.6 Multi-GPU & DDP** | When does data parallelism scale, and what hides comm? | 2–4 | Ring allreduce; LeNet vs. ResNet-18 bucketing & overlap |
+| **§13.7–13.8 Sharding & Case Study** | How does FSDP shard $16N$, and how fast can a GPT run? | 1–4 | 1.9B GPT (36 blocks) via FSDP; 19M GPT step-by-step ($6\times$) |
+:::
+
+::: {.slide title="How to Study This Chapter"}
+[Study Guide]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Always predict before measuring:** Before running any benchmark cell, write down the FLOPs, bytes moved, and predicted floor $\max(h, \textrm{FLOPs}/P, \textrm{bytes}/\beta)$. When a measurement disagrees with your paper estimate, the discrepancy reveals an uncounted memory transfer, hidden host barrier, or SM contention.
+:::
+
+::: {.col}
+- **Verify numerical equivalence first:** An optimization that silently alters gradients, batch-norm statistics, or causal masking is a bug, not a speedup. Every section pairs timing benchmarks with one-step gradient checks (`allclose`) and end-to-end validation loss gates.
+:::
+:::
 
 ::: {.d2l-note}
-Ridge point, where the two roofs meet: $P/\beta \approx 164$ FLOP per byte
-at the rated $\beta$. $\beta$ is a rate, $\beta_\textrm{link}$ a time per
-byte, as in the literature on collectives: a message of $S$ bytes costs
-$\alpha + S\,\beta_\textrm{link}$. The link between the GPUs moves bytes
-about 400 times more slowly than the card's own memory.
+**Up next (§13.1 The Performance Model):** Defining arithmetic intensity, constructing the roofline bound, avoiding asynchronous timing traps, and profiling a complete MLP training step.
 :::
-:::
-
-::: {.slide title="Five Numbers Describe Our Machine" only="jax"}
-[Our machine in five numbers]{.kicker}
-
-| symbol | what it is | value | measured by |
-|---|---|---|---|
-| $P$ | peak tensor-core rate | 165 TFLOP/s bf16 (83 tf32, rated) | an 8,192-wide bf16 product reaches it |
-| $\beta$ | GPU memory bandwidth | 1.0 TB/s rated, about 0.9 measured | elementwise operations moving 512 MiB |
-| $h$ | host time per call of a jitted function | about 50–110 µs | tiny products the GPU runs in a few µs |
-| — | pinned host-to-GPU copy rate | about 23 GB/s | copying a pinned buffer |
-| $\beta_\textrm{link}$ | time per byte a GPU sends in an NCCL allreduce, GPUs 0 and 1 | about 0.42 ns per byte (bus bandwidth about 2.4 GB/s), through host memory | a bare 256 MB allreduce |
-
-::: {.d2l-note}
-Ridge point, where the two roofs meet: $P/\beta \approx 164$ FLOP per byte
-at the rated $\beta$. $\beta$ is a rate, $\beta_\textrm{link}$ a time per
-byte, as in the literature on collectives: a message of $S$ bytes costs
-$\alpha + S\,\beta_\textrm{link}$. The link between the GPUs moves bytes
-about 400 times more slowly than the card's own memory.
-:::
-:::
-
-::: {.slide title="Map of the Chapter"}
-[Chapter map]{.kicker}
-
-| section | question | GPUs |
-|-----------------------------------|---------------------------------------------------------|--------|
-| The Performance Model | which resource limits an operation, and how long does it take? | 1 |
-| Hardware | where do arithmetic rate and bandwidth come from? | 1 |
-| Computation Graphs and Compilation | how does a compiler cut memory traffic and overhead? | 1 |
-| Memory and Precision | where does a step's memory go, and how does a model fit? | 1 |
-| Multi-GPU from First Principles | when does a second GPU shorten a step? | 2 |
-| Data Parallelism in Practice | what do production tools and overlap gain? | 2–4 |
-| Sharding the Training State | what does a model that no card holds cost to train? | 2 |
-| Case Study: Optimizing a Transformer | where do the milliseconds of a GPT step go? | 1–4 |
-
-**Not here:** hand-written kernels; many machines, serving, and inference
-quantization (Language Models part).
-:::
-
-::: {.slide title="A 1B-Parameter GPT Returns in Hardware, Memory, and Sharding"}
-[Running examples]{.kicker}
-
-| section | running example |
-|---|---|
-| The Performance Model | a skinny product across the ridge; products of size 256 to 8,192; elementwise operations; an MLP step |
-| Hardware | **the decode bound of a 1B GPT**; sequential and random reads; copies between host and GPU |
-| Computation Graphs and Compilation | an eight-operation activation; an MLP step, compiled and replayed |
-| Memory and Precision | **the 1B GPT (18 blocks, width 2,048)** on one 24 GiB card |
-| Multi-GPU from First Principles | LeNet on Fashion-MNIST, on one and two GPUs |
-| Data Parallelism in Practice | ResNet-18 on one, two, and four GPUs |
-| Sharding the Training State | **the 1B GPT made twice as deep: 36 blocks, 1.9B parameters**, on two GPUs |
-| Case Study: Optimizing a Transformer | a 19M-parameter GPT (width 512), on one to four GPUs |
 :::

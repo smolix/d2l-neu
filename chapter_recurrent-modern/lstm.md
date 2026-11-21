@@ -32,7 +32,7 @@ from d2l import jax as d2l
 
 ### Vanishing Gradients
 
-Recall from :numref:`subsec_vanishing-exploding` how gradients propagate through a plain RNN with hidden state $\mathbf{h}_t \in \mathbb{R}^d$:
+Recall from :numref:`subsec_bptt_analysis` how gradients propagate through a plain RNN with hidden state $\mathbf{h}_t \in \mathbb{R}^d$:
 
 $$\mathbf{h}_t = \tanh(\mathbf{W}_\textrm{hh} \mathbf{h}_{t-1} +
 \mathbf{W}_\textrm{xh} \mathbf{x}_t + \mathbf{b}_\textrm{h}).$$
@@ -294,6 +294,7 @@ class Recurrent(nn.Module):  #@save
 ```
 
 We compare six recurrent configurations in three pairs:
+
 1. **Plain RNNs:** one with LeCun normal recurrent weights ($\sigma = 1/\sqrt{64} = 1/8$) and a control with uniform weights on $[-1/8, 1/8]$ (variance $1/3$ of LeCun normal, matching PyTorch's default `nn.RNN` scale).
 2. **Default LSTM and GRU:** zero gate biases, so all gates start near $\sigma(0) = 1/2$ (half-life 1 step).
 3. **Keep-gate LSTM and GRU (`init_keep_gate`):** the LSTM forget-gate bias and GRU update-gate bias are initialized to $+5$ ($\sigma(5) = 0.993$, half-life $\approx 100$ steps), and the LSTM input-gate bias is set to $-5$ ($\sigma(-5) = 1 - \sigma(5) = 0.007$). Pairing $b_\textrm{i} = -b_\textrm{f}$ bounds the LSTM cell magnitude by $\sigma(-5)/(1 - \sigma(5)) = 1$ across long filler runs so the output $\tanh$ never saturates, matching the GRU's built-in $1 - \mathbf{z}_t$ coupling (see :citet:`Jozefowicz.Zaremba.Sutskever.2015` and the *chrono initialization* of :citet:`Tallec.Ollivier.2018`).
@@ -494,6 +495,7 @@ for name, cell in cells.items():
 ```
 
 The results confirm our analysis:
+
 - **Default vs. keep-gate LSTM and GRU:** With zero gate biases, both gated networks succeed at $T = 20$ and collapse to chance ($0.12$) at $T \ge 50$. With `init_keep_gate`, both achieve $1.00$ accuracy across every run at every delay up to $T = 200$.
 - **Borderline vs. contracting plain RNN:** Because the LeCun normal RNN starts with spectral radius $\rho \approx 1$, some seeds carry the symbol surprisingly far (even to $T = 100$ or $200$), though unreliably across seeds, whereas the $\rho \approx 0.62$ default-scale RNN fails consistently from $T = 50$ onward. Gates with well-initialized biases turn hit-or-miss spectral retention into dependable, per-unit memory control.
 
@@ -727,6 +729,7 @@ trained = text_table(text_model, arms, data)
 ```
 
 Three findings stand out from the table:
+
 1. **Residual stacking + gating:** Simply placing 4 narrow $\tanh$ RNN layers inside a pre-norm residual + MLP backbone reaches $\sim 1.35$ nats/byte—already matching the 6-block SwiGLU GPT of :numref:`sec_gpt`. Replacing the plain RNN mixer with an LSTM or GRU lowers validation loss by a further $0.05$ nats/byte (to $\sim 1.30$), whereas widening the plain RNN to match the GRU's parameter count (`RNN, d=302`) closes less than a third of that gap ($1.334$).
 2. **Short-context utilization:** Across all models in this 1,000-step, 128-byte regime, loss drops sharply from band `0-15` to `16-63` and changes by less than $0.005$ beyond byte 16. Here the gates earn their lead by managing short-range byte context more effectively rather than by carrying 100-step memories; the attention stack (`1.383`) trails the recurrent mixers already in the first 16 bytes at this small training budget.
 3. **Sequential step latency:** Despite fused cuDNN/XLA loops, the LSTM and GRU take $2\times$–$2.5\times$ longer per training step than the plain RNN because each of the 128 time steps must wait for the previous step's hidden state $\mathbf{h}_{t-1}$. Breaking that sequential dependency is the goal of :numref:`sec_linear-recurrence`.
@@ -864,301 +867,272 @@ In a plain recurrent network, signals and gradients pass through a product of st
 ::: {.cover}
 [Dive into Deep Learning · §12.1]{.kicker}
 
-Gated recurrent networks<br>
-**a gate is a learned decay · LSTM · GRU · where gates start · one stack for every model**
+Gated Recurrent Networks: LSTM and GRU<br>**vanishing gradients · sigmoid decay gates · memory cells · gate bias initialization · residual sequence mixers**
 :::
 :::
 
-::: {.slide title="If Each Step Scales a Signal by 0.9, 4% Survives 30 Steps"}
-[The problem]{.kicker}
+::: {.slide title="Why Plain RNNs Lose Long-Range Grammatical Context"}
+[Motivation]{.kicker}
 
-"The **keys** to the cabinet in the hall **are**": the verb needs a word
-30 characters back.
+Consider predicting the verb in *"The **keys** to the cabinet in the hall **are**"*—choosing *"are"* over *"is"* requires remembering a plural noun $30$ characters back:
 
-$$\mathbf{h}_t = \tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \mathbf{W}_\textrm{xh}\mathbf{x}_t + \mathbf{b})$$
+$$\mathbf{h}_t = \tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \mathbf{W}_\textrm{xh}\mathbf{x}_t + \mathbf{b}_\textrm{h})$$
 
-One unit with recurrent weight $w = 0.9$: each step multiplies a change
-by $w(1 - h^2)$, at most 0.9.
-
-| steps back $k$ | 10 | 30 | 100 |
-|---|---|---|---|
-| $0.9^k$ | 0.35 | 0.04 | 0.00003 |
+- **Full-state overwriting:** Every step multiplies the entire state vector $\mathbf{h}_{t-1}$ by the same dense matrix $\mathbf{W}_\textrm{hh}$ and squashes it through $\tanh$.
+- **Exponential decay:** For a scalar unit with recurrent weight $w = 0.9$, each step scales perturbations by $w(1 - h_s^2) \le 0.9$—shrinking to $0.9^{30} \approx 4\%$ after $30$ steps and $0.9^{100} \approx 0.003\%$ after $100$ steps.
 
 ::: {.d2l-note}
-Information **and the gradient** that would teach the network to keep it
-pass through the same product, once per step.
+Both forward memory signals and backward training gradients traverse the exact same chain of step multipliers.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-- compute the **half-life** of a gate from its value;
-- write the **LSTM** and **GRU** updates and say which path keeps gradients;
-- predict which networks recall a symbol after 200 steps, and why the
-  **starting value** of a gate decides;
-- read a language-model comparison in which **only the mixer** differs.
+::: {.slide title="Jacobian Products and the Spectral Radius Borderline"}
+[Vanishing & Exploding Gradients]{.kicker}
 
-**Running example:** byte-level WikiText-103, windows of 128 bytes,
-validation loss in nats per byte, as for the GPT.
+Backpropagating $k$ steps through a plain RNN multiplies $k$ step Jacobians $\mathbf{J}_s = \textrm{diag}(1 - \mathbf{h}_s^2)\,\mathbf{W}_\textrm{hh}$:
 
-**Idea:** multiply the memory by a learned number in $(0, 1)$, chosen per
-unit and per step, instead of by a fixed matrix.
-:::
+$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-k}} = \mathbf{J}_t \mathbf{J}_{t-1} \cdots \mathbf{J}_{t-k+1}$$
 
-::: {.slide title="The Chapter Changes One Part of a Recurrence at a Time"}
-$$\textrm{state}_t = \textrm{transition}_t(\textrm{state}_{t-1}) + \textrm{write}_t$$
-
-| | state | transition | trains |
-|---|---|---|---|
-| **gates** (here) | vector | nonlinear, reads $\mathbf{h}_{t-1}$ | step by step |
-| encoder–decoder | one vector between two networks | gated | step by step |
-| linear recurrence | vector | decay from the input | parallel scan |
-| state space model | $N$ numbers per channel | decay from a rate and a step | scan or convolution |
-| selective SSM | $N$ numbers per channel | step from the input | scan |
-| matrix state | key × value matrix | scalar decay | chunks |
-| delta rule | key × value matrix | decay and correct | chunks |
-| hybrid | + a few attention caches | | |
-
-Skipped here: bidirectional layers (an exercise) and training speed (the
-next decks).
-:::
-
-::: {.slide title="Over k Steps, k Jacobians Multiply"}
-$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-k}} = \mathbf{J}_t \cdots \mathbf{J}_{t-k+1},
-\qquad \mathbf{J}_s = \textrm{diag}(1 - \mathbf{h}_s^2)\,\mathbf{W}_\textrm{hh}$$
-
-- One unit: each factor is $w(1 - h_s^2)$, at most $|w|$.
-- Largest singular value of $\mathbf{W}_\textrm{hh}$ below 1: the product
-  must shrink. Above 1: no guarantee either way.
-- Over many steps, powers of $\mathbf{W}_\textrm{hh}$ go like $\rho^k$,
-  $\rho$ = spectral radius (largest $|\lambda|$).
-- $\rho$ near 1, small state: the borderline, where a signal can travel
-  far.
+- **Contractive guarantee:** Since $|1 - h_{s,j}^2| \le 1$, if the largest singular value satisfies $\|\mathbf{W}_\textrm{hh}\|_2 < 1$, every step contracts every vector and gradients vanish exponentially.
+- **Asymptotic spectral scaling:** Over many steps, matrix powers scale as $\rho^k$, where the **spectral radius** $\rho = \max_i |\lambda_i(\mathbf{W}_\textrm{hh})| \le \|\mathbf{W}_\textrm{hh}\|_2$.
+- **The $\rho \approx 1$ borderline:** When $\rho \approx 1$ and states remain in the linear region of $\tanh$, components along leading eigenvectors can survive—but any drift away causes explosion or collapse.
 
 ::: {.d2l-note .warn}
-Clipping limits gradients that grow. Nothing recovers one that vanished.
+**Asymmetry of failure:** Gradient clipping caps exploding gradients, but no post-hoc rescaling can recover a gradient that has underflowed to zero.
 :::
 :::
 
-::: {.slide title="A Gate Is a Learned Decay"}
-A running sum $c_t = c_{t-1} + x_t$ passes every gradient, but never forgets.
-Let the network choose what to keep and what to write:
+::: {.slide title="From Unbounded Running Sums to Learned Decay Gates"}
+[The Gating Principle]{.kicker}
 
-$$c_t = f_t\, c_{t-1} + i_t\, \tilde{c}_t, \qquad f_t, i_t = \sigma(\cdot) \in (0, 1)$$
+A pure running sum $c_t = c_{t-1} + x_t$ has unit Jacobian ($\partial c_t / \partial c_{t-k} = 1$), but never forgets and grows unboundedly in variance. Gated networks introduce a learned retention fraction $f_t \in (0, 1)$ and input fraction $i_t \in (0, 1)$:
 
-| kept fraction $f$ | 0.5 | 0.9 | 0.99 | 0.999 |
-|---|---|---|---|---|
-| half-life $\ln 2 / \ln(1/f)$ | 1 | 7 | 69 | 693 |
+$$c_t = f_t\, c_{t-1} + i_t\, \tilde{c}_t$$
 
-::: {.d2l-note}
-Along this path $\partial c_t / \partial c_{t-k} = f_t \cdots f_{t-k+1}$:
-it never grows, and a gate near one keeps it from vanishing.
+| Constant keep gate $f$ | $0.5$ | $0.9$ | $0.99$ | $0.999$ |
+| :--- | :---: | :---: | :---: | :---: |
+| **Half-life** $\tau_{1/2} = \ln 2 / \ln(1/f)$ | $1\text{ step}$ | $7\text{ steps}$ | $69\text{ steps}$ | $693\text{ steps}$ |
+| **Signal remaining after $50$ steps** ($f^{50}$) | $9 \times 10^{-16}$ | $5.2 \times 10^{-3}$ | $0.605$ | $0.951$ |
+
+::: {.d2l-note .rule}
+**Elementwise gradient highway:** Along the direct memory path, $\partial c_t / \partial c_{t-k} = \prod_{s=t-k+1}^t f_s \le 1$. Because $f_s \in (0, 1)$, the direct path cannot explode, and holding $f_s \approx 1$ prevents vanishing.
 :::
 :::
 
-::: {.slide title="The LSTM Stores in a Cell and Shows a Squashed View"}
+::: {.slide title="The Long Short-Term Memory (LSTM) Architecture"}
+[LSTM Mechanics]{.kicker}
+
+The LSTM (Hochreiter & Schmidhuber, 1997; Gers et al., 2000) maintains an internal **memory cell** $\mathbf{c}_t \in \mathbb{R}^d$ and an exposed **hidden state** $\mathbf{h}_t \in \mathbb{R}^d$:
+
 ::: {.cols .vc}
 ::: {.col}
-$$\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$$
-$$\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$$
-
-Input, forget, and output gates $\mathbf{i}, \mathbf{f}, \mathbf{o}$ and
-the input node $\tilde{\mathbf{c}}$ all read $\mathbf{x}_t$ and
-$\mathbf{h}_{t-1}$.
-
-With the gates fixed,
-$\partial \mathbf{c}_t / \partial \mathbf{c}_{t-1} = \textrm{diag}(\mathbf{f}_t)$.
-
-While $\mathbf{f}_t \approx 1$ the stored value can grow, so the output
-sees it through a $\tanh$.
+- **Three sigmoid gates in $(0, 1)^d$:** Input gate $\mathbf{i}_t$, forget gate $\mathbf{f}_t$, and output gate $\mathbf{o}_t$ each apply $\sigma(\mathbf{W}_{\textrm{x}\cdot}\mathbf{x}_t + \mathbf{W}_{\textrm{h}\cdot}\mathbf{h}_{t-1} + \mathbf{b}_\cdot)$.
+- **Candidate input node:** $\tilde{\mathbf{c}}_t = \tanh(\mathbf{W}_\textrm{xc}\mathbf{x}_t + \mathbf{W}_\textrm{hc}\mathbf{h}_{t-1} + \mathbf{b}_\textrm{c}) \in (-1, 1)^d$.
+- **Additive cell update & gated readout:**
+  $$\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$$
+  with exposed state $\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$.
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-modernrnn-lstm-cell.svg)
+::: {.col .fig}
+![](../img/mdl-modernrnn-lstm-cell.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="One Step: Stored 0.71, Shown 0.12"}
-One unit, with $c_{t-1} = 0.8$:
+::: {.slide title="Decoupling Internal Storage from Exposed Output"}
+[Silent Retention & Gradient Highway]{.kicker}
 
-| forget $f$ | input $i$ | input node $\tilde c$ | output $o$ |
-|---|---|---|---|
-| 0.95 | 0.1 | $-0.5$ | 0.2 |
+Separating the linear cell rail $\mathbf{c}_t$ from the squashed readout $\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$ serves two purposes:
 
-$$c_t = 0.95 \cdot 0.8 + 0.1 \cdot (-0.5) = 0.71, \qquad h_t = 0.2 \tanh(0.71) = 0.12$$
-
-::: {.d2l-note}
-Stored but barely shown: the cell can hold that the subject is plural, and
-the output gate reveals it when the verb arrives.
-:::
+- **Silent storage until needed:** Suppose unit $j$ holds $c_{t-1} = 0.8$ and encounters an irrelevant word with $f_t = 0.95$, $i_t = 0.1$, $\tilde{c}_t = -0.5$, and $o_t = 0.2$:
+  $$c_t = 0.95(0.8) + 0.1(-0.5) = 0.71, \qquad h_t = 0.2\tanh(0.71) = 0.12$$
+  The cell preserves the plural feature ($0.71$) while shielding downstream layers ($0.12$) until the verb arrives and opens $o_t \to 1$.
+- **Bounding accumulated cell state:** When $f_t \approx 1$, repeated positive writes can push $|c_t| > 1$; applying $\tanh(\mathbf{c}_t)$ at readout keeps $\mathbf{h}_t \in (-1, 1)^d$ so gate pre-activations at step $t+1$ do not saturate.
+- **Direct cell Jacobian:** Treating gates as fixed, $\partial \mathbf{c}_t / \partial \mathbf{c}_{t-1} = \textrm{diag}(\mathbf{f}_t)$ (the top rail of the diagram).
 :::
 
-::: {.slide title="One Product per Input Computes All Four Gates"}
-```{.python #lstm-exercises}
-for x in X.unbind(1):  # One time step at a time
-    i, f, c_tilde, o = (x @ W_x + h @ W_h + b).chunk(4, -1)
-    c = sigmoid(f) * c + sigmoid(i) * tanh(c_tilde)
-    h = sigmoid(o) * tanh(c)
+::: {.slide title="Fused 4-Gate Matrix Projection and Verification"}
+[LSTM Implementation]{.kicker}
+
+Because $\mathbf{i}_t$, $\mathbf{f}_t$, $\tilde{\mathbf{c}}_t$, and $\mathbf{o}_t$ all read $(\mathbf{x}_t, \mathbf{h}_{t-1})$, stacking their weights into $\mathbf{W}_\textrm{x} \in \mathbb{R}^{d_\textrm{in} \times 4d}$ and $\mathbf{W}_\textrm{h} \in \mathbb{R}^{d \times 4d}$ computes all four pre-activations in one batched matrix product per step:
+
+```python
+i, f, c_tilde, o = (x @ self.W_x + h @ self.W_h + self.b).chunk(4, -1)
+c = torch.sigmoid(f) * c + torch.sigmoid(i) * torch.tanh(c_tilde)
+h = torch.sigmoid(o) * torch.tanh(c)
 ```
 
-Copying the weights of the library LSTM into this loop reproduces its
-outputs:
-
 @!lstm-implementation-2
-:::
-
-::: {.slide title="The GRU Ties Writing to Forgetting"}
-::: {.cols .vc}
-::: {.col}
-$$\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$$
-
-- Update gate $\mathbf{z}_t$: keep the state, or replace it ($i = 1 - f$).
-- Reset gate $\mathbf{r}_t$ inside the candidate $\tilde{\mathbf{h}}_t$.
-- One vector is memory and output; $3 \cdot 2d^2$ weights against the
-  LSTM's $4 \cdot 2d^2$ (width $d$).
-:::
-
-::: {.col .fig .big}
-![](../img/mdl-modernrnn-gru-cell.svg)
-:::
-:::
-:::
-
-::: {.slide title="Check: How Long Does a Gate Remember at Initialization?"}
-With small weights a gate is $\sigma(b)$ for its bias $b$.
-
-1. Half-life for $b = 0$?
-2. For $b = 5$?
-
-::: {.fragment .fade-up}
-1. $\sigma(0) = 1/2$: **one step**.
-2. $\sigma(5) = 0.993$: about **100 steps**.
-:::
-:::
-
-::: {.slide title="Prediction: Gates at One Half Lose the Symbol by 50 Steps"}
-[One symbol, then $T - 1$ random fillers; name the symbol. Chance 0.12.]{.kicker}
-
-| network | prediction |
-|---|---|
-| LSTM, GRU, gates at $1/2$ | direct path passes $2^{-k}$: $10^{-6}$ at 20 survives; $10^{-15}$ at 50 is lost in 32-bit rounding |
-| LSTM, GRU, **keep gate** | forget (update) bias $+5$, LSTM input bias $-5$: half-life 103, recall at every delay |
-| plain RNN | depends on its recurrent matrix |
 
 ::: {.d2l-note}
-Why close the input gate? It writes every token alike, fillers included,
-but it bounds the cell: $|c| \le i/(1 - f) = \sigma(-5)/(1 - \sigma(5)) = 1$.
-At $i = 1/2$ the bound is 75, and $\tanh(c)$ saturates.
+Our from-scratch loop matches fused `nn.LSTM` / `nnx.LSTMCell` to `float32` rounding error ($\sim 10^{-7}$), so we use fused library kernels for training.
 :::
 :::
 
-::: {.slide title="Two Recurrent Matrices: Spectral Radius 1.02 Against 0.62"}
-One $64 \times 64$ draw of each:
+::: {.slide title="Gated Recurrent Units (GRU): Coupled Reset and Update"}
+[GRU Architecture]{.kicker}
+
+The GRU (Cho et al., 2014) merges the cell and hidden state into a single vector $\mathbf{h}_t \in \mathbb{R}^d$ governed by two gates:
+
+::: {.cols .vc}
+::: {.col}
+- **Reset gate $\mathbf{r}_t$ & update gate $\mathbf{z}_t$:** Both computed via $\sigma(\mathbf{W}_{\textrm{x}\cdot}\mathbf{x}_t + \mathbf{W}_{\textrm{h}\cdot}\mathbf{h}_{t-1} + \mathbf{b}_\cdot)$.
+- **Reset-filtered candidate:** $\mathbf{r}_t$ gates how much past state enters the nonlinear proposal:
+  $$\tilde{\mathbf{h}}_t = \tanh\big(\mathbf{W}_\textrm{xh}\mathbf{x}_t + \mathbf{W}_\textrm{hh}(\mathbf{r}_t \odot \mathbf{h}_{t-1}) + \mathbf{b}_\textrm{h}\big)$$
+- **Convex interpolation ($i_t = 1 - f_t$):**
+  $$\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$$
+:::
+
+::: {.col .fig}
+![](../img/mdl-modernrnn-gru-cell.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="LSTM vs. GRU: Structural and Systems Trade-Offs"}
+[Architectural Comparison]{.kicker}
+
+Both architectures create an elementwise linear retention path, differing in how they bound and expose the state:
+
+| Property | Long Short-Term Memory (LSTM) | Gated Recurrent Unit (GRU) |
+| :--- | :--- | :--- |
+| **Carried state per layer** | Two vectors: cell $\mathbf{c}_t \in \mathbb{R}^d$, hidden $\mathbf{h}_t \in \mathbb{R}^d$ | Single vector: $\mathbf{h}_t \in \mathbb{R}^d$ |
+| **Gates per step** | $3$ ($\mathbf{i}_t$ input, $\mathbf{f}_t$ forget, $\mathbf{o}_t$ output) | $2$ ($\mathbf{r}_t$ reset, $\mathbf{z}_t$ update) |
+| **Weight count ($d_\textrm{in} = d$)** | $4 \times 2d^2 = 8d^2$ parameters | $3 \times 2d^2 = 6d^2$ parameters ($25\%$ fewer) |
+| **Forget–write coupling** | Independent $\mathbf{f}_t$ and $\mathbf{i}_t$ | Coupled convex blend: keep $\mathbf{z}_t$, write $1 - \mathbf{z}_t$ |
+| **State magnitude bound** | Unbounded $\mathbf{c}_t$ squashed by readout $\tanh(\mathbf{c}_t)$ | Convex blend of $[-1, 1]$ values stays in $[-1, 1]$ |
+| **Fused kernel optimization** | Single GEMM for $\mathbf{W}_\textrm{x}\mathbf{x}_t + \mathbf{W}_\textrm{h}\mathbf{h}_{t-1}$ | Applies $\mathbf{r}_t$ *after* $\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1}$ to batch all 3 GEMMs |
+:::
+
+::: {.slide title="Synthetic Stress Test: The Delayed Recall Benchmark"}
+[Experimental Setup]{.kicker}
+
+Gated equations *represent* long memories, but does gradient descent actually discover them? We test retention on synthetic **delayed recall**:
+
+- **Task structure:** Step $1$ presents a target symbol drawn from $\{0, \ldots, 7\}$, followed by $T - 1$ random filler tokens drawn from $\{8, \ldots, 15\}$. At step $T$, the network must classify the initial symbol (chance accuracy $= 1/8 = 0.125$).
+- **Architecture (`RecallModel`):** Token embedding ($d_\textrm{in} = 32$) $\to$ single recurrent layer ($d = 64$, LeCun normal weights) $\to$ linear classifier at step $T$, trained for $1{,}500$ steps of Adam ($\text{lr} = 3 \times 10^{-3}$, batch size $128$).
+
+@!lstm-delayed-recall-1
+:::
+
+::: {.slide title="Pitfall: Zero-Bias Gates Start with a 1-Step Memory"}
+[Initialization Hazard]{.kicker}
+
+Under standard zero-bias initialization ($\mathbf{b}_\textrm{f} = \mathbf{0}$ or $\mathbf{b}_\textrm{z} = \mathbf{0}$), initial gate pre-activations cluster near zero:
+
+- **One-step initial half-life:** Every forget or update gate starts near $\sigma(0) = 1/2$, attenuating the direct gradient from step $T$ back to step $1$ by $2^{-(T-1)}$.
+- **Survivable at $T = 20$:** $2^{-19} \approx 1.9 \times 10^{-6}$, which remains above `float32` machine epsilon ($\sim 1.2 \times 10^{-7}$) and provides enough gradient signal to pry the gates open.
+- **Fatal at $T \ge 50$:** $2^{-49} \approx 1.8 \times 10^{-15}$ vanishes completely when added to recent tokens' $O(1)$ parameter gradients in $32$-bit floating-point arithmetic.
+
+::: {.d2l-note .warn}
+Without a gradient reaching step $1$, the network never learns that opening the forget gate at step $1$ would reduce the loss at step $T$!
+:::
+:::
+
+::: {.slide title="Keep-Gate Initialization and Cell Magnitude Bounding"}
+[Chrono & Keep-Gate Bias]{.kicker}
+
+`init_keep_gate` starts the memory highway open by setting the forget/update gate bias to $+5$ (Jozefowicz et al., 2015; Tallec & Ollivier, 2018):
+
+- **100-step initial half-life:** $\sigma(5) \approx 0.9933$, giving an initial half-life of $\ln 2 / \ln(1/0.9933) \approx 103$ steps so $0.9933^{50} \approx 0.71$ of the gradient survives across $50$ steps.
+- **Why the LSTM also needs $b_\textrm{i} = -5$:** If $f_t = \sigma(5) \approx 0.9933$ while $i_t = \sigma(0) = 0.5$, repeated filler writes can accumulate up to $|c_t| \le i_{\max}/(1 - f_{\max}) \approx 0.5 / 0.0067 \approx 75$, saturating $\tanh(c_t)$ and killing readout gradients.
+- **Matched convex bound:** Pairing $b_\textrm{i} = -b_\textrm{f} = -5$ sets $\sigma(-5) = 1 - \sigma(5) \approx 0.0067$, bounding $|c_t| \le 1$ across any number of filler steps—just like the GRU's built-in $1 - \mathbf{z}_t$ coupling.
+:::
+
+::: {.slide title="Plain RNN Initialization: Borderline vs. Contracting"}
+[Spectral Radius Analysis]{.kicker}
+
+Before training, we also compare two initializations of a $64 \times 64$ plain RNN recurrent matrix $\mathbf{W}_\textrm{hh}$:
 
 @!lstm-delayed-recall-8
 
-- LeCun normal (variance $1/64$): the **borderline**; along its leading
-  eigenvectors a small state is neither shrunk nor inflated. A singular
-  value of 2 does not make it explode.
-- Uniform on $[-1/8, 1/8]$, the control: shrinks by about 0.6 per step.
+- **LeCun normal ($\mathcal{N}(0, 1/64)$):**By the circular law of random matrix theory, eigenvalues fill the unit disk ($\rho \approx 1.02$) even though the largest singular value is $\approx 1.98$. Small states along leading eigenmodes neither vanish nor explode.
+- **Default uniform ($\mathcal{U}[-1/8, 1/8]$):** Has $1/3$ the variance of LeCun normal, giving spectral radius $\rho \approx 0.62$ and contracting every signal by $\sim 0.6^k$.
 :::
 
-::: {.slide title="Gates That Start Near One Recall Every Symbol After 200 Steps"}
-Two runs per entry, delays 20 to 200:
+::: {.slide title="Delayed Recall Results Across 20 to 200 Time Steps"}
+[Empirical Results]{.kicker}
+
+Accuracy across two random seeds at delays $T \in \{20, 50, 100, 200\}$ (chance $= 0.125$):
 
 @!lstm-delayed-recall-5
 
-"Keep gate": forget (update) gate bias $+5$, input gate bias $-5$.
+::: {.d2l-note}
+Initializing forget/update biases to $+5$ (`keep gate`) turns complete failure ($0.12$) at $T \ge 50$ into $1.00$ accuracy across every seed and delay up to $T = 200$.
+:::
 :::
 
-::: {.slide title="A Plain Network's Memory Depends on Its Matrix, a Gate's on Its Bias"}
-- Gates at $1/2$: GRU recalls at 20, both at chance from 50, in every run.
-- Keep gates: 1.00 at every delay, every run. Same architecture.
-- Plain RNN, LeCun scale (radius about 1): often carries the symbol 50
-  steps or more, but runs disagree, and a longer delay is not reliably
-  harder. At the smaller scale it is usually lost from 50.
+::: {.slide title="Why Gate Initialization Decides Long-Range Recall"}
+[Interpreting the Recall Sweep]{.kicker}
+
+Comparing the three model pairs in the delayed recall table isolates architecture from initialization:
+
+- **Zero-bias LSTM & GRU:** Both solve $T = 20$ ($1.00$ for GRU, $0.25$–$1.00$ for LSTM) and collapse to chance ($0.12$–$0.14$) at $T \in \{50, 100, 200\}$ because $2^{-49}$ underflows `float32` gradient accumulation.
+- **Keep-gate LSTM & GRU:** Identical architecture and parameter count, yet starting at $\sigma(5) = 0.993$ yields **$1.00$ accuracy on every run** from $T = 20$ to $T = 200$.
+- **Borderline vs. contracting plain RNN:** The $\rho \approx 1.02$ LeCun RNN sporadically carries the symbol to $T = 100$ or $200$ (with large variance between seeds), whereas the $\rho \approx 0.62$ uniform RNN fails from $T = 50$ onward.
 
 ::: {.d2l-note .rule}
-Gates make a long memory dependable and let us place it. Whether training
-finds it depends on where the gates start.
+Gates replace fragile whole-matrix eigenvalue tuning with **per-unit learned decay**, provided initial biases keep the gradient horizon open.
 :::
 :::
 
-::: {.slide title="Every Model of the Chapter Is One Residual Stack"}
-$$\mathbf{H} \leftarrow \mathbf{H} + \textrm{mixer}(\textrm{LN}(\mathbf{H})), \qquad
-\mathbf{H} \leftarrow \mathbf{H} + \textrm{MLP}(\textrm{LN}(\mathbf{H}))$$
+::: {.slide title="Fair Language Benchmarks via a Shared Residual Stack"}
+[The SeqLM Backbone]{.kicker}
 
-- **Mixer** = the layer that passes information along the sequence: RNN,
-  LSTM, GRU, or causal attention with RoPE; later SSM and matrix-state layers.
-- Width 256, four blocks, 256 byte values.
-- Recipe of the GPT: AdamW, peak rate $2 \times 10^{-3}$, 1,000 steps of
-  64 windows of 128 bytes.
+In Chapter 11, a single wide plain RNN fell behind a 6-block GPT after 16 bytes. To compare sequence mixers without confounding recurrence against residual depth and MLPs, every model in Chapter 12 uses the same pre-norm `SeqLM` backbone:
+
+$$\mathbf{H} \leftarrow \mathbf{H} + \textrm{mixer}(\textrm{LN}(\mathbf{H})), \qquad \mathbf{H} \leftarrow \mathbf{H} + \textrm{MLP}(\textrm{LN}(\mathbf{H}))$$
+
+- **Identical surrounding architecture:** Token embedding $\to$ $4$ residual blocks at width $d = 256$ (each with a two-layer $4d$ GELU MLP) $\to$ final LayerNorm and output head, all LeCun-initialized.
+- **Identical training protocol:** Byte-level WikiText-103 (`batch_size=64`, windows of $T = 128$ bytes), trained for $1{,}000$ steps of AdamW ($100$-step warmup to $2 \times 10^{-3}$, cosine decay).
+- **Only the sequence mixer changes:** Plain RNN, LSTM, GRU, causal multi-head attention with RoPE (`AttentionMixer`), and a parameter-matched wider plain RNN (`RNN, d=302`).
 :::
 
-::: {.slide title="On WikiText Bytes, Gates End 0.05 Nats Below the Plain RNN"}
+::: {.slide title="Byte-Level WikiText-103: Mixers Compared Head-to-Head"}
+[Language Modeling Benchmark]{.kicker}
+
+Two runs per configuration reporting parameters, overall validation loss (nats/byte), loss by window position band (`0-15`, `16-63`, `64-127`), and training step time:
+
 @!lstm-gated-networks-on-text-6
-
-Columns: parameters, validation loss of two runs, loss at positions 0–15,
-16–63, 64–127, milliseconds per step. "RNN, d=302" has the GRU's
-parameter count.
 :::
 
-::: {.slide title="At Equal Size the GRU Still Leads the Plain RNN by 0.03 Nats"}
-- Plain RNN at the GRU's size: 1.33, still 0.03 behind the GRU.
-- LSTM and GRU within 0.01; the GRU has 0.5 M fewer parameters.
-- Gain 0.02 at positions 0–15, 0.05–0.06 after; no model gains more than
-  0.005 after byte 16.
-- Attention, same width and depth: about 0.03 behind the plain RNN at this
-  budget.
+::: {.slide title="Dissecting the WikiText-103 Results and Step Latency"}
+[Quality vs. Sequential Bottleneck]{.kicker}
 
-::: {.d2l-note}
-At 128 bytes, text tests a short context; delayed recall tests memory.
-:::
+Three systems and modeling lessons emerge from the WikiText-103 benchmark:
+
+1. **The residual stack closes the plain-RNN gap:** Simply placing $4$ narrow $\tanh$ RNN layers inside `SeqLM` reaches $\sim 1.35$ nats/byte—matching Chapter 11's 6-block SwiGLU GPT and outperforming the 4-block GELU `attention` stack ($1.38$) at this $1{,}000$-step budget.
+2. **Gating beats raw parameter scaling:** Replacing the plain RNN with an `LSTM` or `GRU` lowers loss by $0.05$ nats/byte to $\sim 1.30$, whereas widening the plain RNN to match the GRU's $3.81\text{M}$ parameters (`RNN, d=302`) closes less than a third of that gap ($1.334$).
+3. **Sequential training latency:** Because every gate and candidate step waits for $\mathbf{h}_{t-1}$, `LSTM` and `GRU` take **$2\times$–$2.5\times$ longer per step** than the plain RNN—motivating the parallel linear recurrences of §12.3.
 :::
 
-::: {.slide title="Four Tanh Layers in a Residual Stack Reach the GPT"}
-Is the transformer better at the same job, or only bigger and newer?
+::: {.slide title="Concept Check: Gate Half-Lives and Saturation Bounds"}
+[Check Your Understanding]{.kicker}
 
-| model | validation, nats/byte |
-|---|---|
-| GPT: six blocks, SwiGLU MLP | 1.34–1.35 |
-| one wide plain RNN, as many parameters as the GPT | 0.05–0.07 behind from byte 16 on |
-| four plain RNN layers in this stack | about 1.35 |
-| four LSTM or GRU layers in this stack | 1.29–1.30 |
-| four attention layers in this stack (GELU MLP) | 1.37–1.38 |
+Work out the following three design questions:
 
-- In this stack attention trails the plain RNN by 0.04–0.05 already over
-  bytes 0–15: not a matter of memory.
-- The GPT differs in more than the mixer: six blocks, and a SwiGLU MLP
-  about 0.06 ahead of GELU.
+1. If an LSTM forget gate is held at $f_t = 0.99$, what is its memory half-life in steps, and what fraction of a direct cell gradient survives $k = 100$ steps?
+2. Why does `init_keep_gate` set the LSTM input-gate bias to $b_\textrm{i} = -5$ alongside $b_\textrm{f} = +5$, whereas the GRU only needs $b_\textrm{z} = +5$?
+3. Why can gradient clipping stabilize an RNN with spectral radius $\rho = 1.3$, but cannot fix a zero-bias LSTM on $100$-step delayed recall?
 
-::: {.d2l-note}
-The stack closed the gap before any gate did.
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Half-life $\tau_{1/2} = \ln 2 / \ln(1/0.99) \approx \mathbf{69\text{ steps}}$; after $100$ steps, $0.99^{100} \approx \mathbf{36.6\%}$ of the direct gradient survives.
+2. The GRU couples its input weight to $1 - z_t = 1 - \sigma(5) = \sigma(-5)$ automatically; in an LSTM, leaving $b_\textrm{i} = 0$ ($i_t = 0.5$) lets cell states grow up to $0.5 / (1 - 0.9933) \approx 75$, saturating $\tanh(c_t)$.
+3. Clipping rescales overly large gradients downward, whereas $2^{-99} \approx 1.6 \times 10^{-30}$ underflows to zero in `float32` when summed with recent gradients—destroying directional information.
 :::
 :::
 
-::: {.slide title="Check: What Survives 50 Steps?"}
-A gate that keeps $f$ per step passes $f^{50}$ after 50 steps.
+::: {.slide title="Summary: Plain vs. Gated Recurrent Architectures"}
+[Key Takeaways]{.kicker}
 
-1. $f = 1/2$?
-2. $f = 0.993$?
-
-::: {.fragment .fade-up}
-1. $2^{-50} \approx 10^{-15}$: nothing a gradient step can use.
-2. $0.993^{50} \approx 0.70$: most of it.
+| Architecture / Setup | Direct Memory Path | Recurrent Params ($d_\textrm{in}=d$) | $T=200$ Recall Accuracy | WikiText-103 (nats/byte) | Training Depth |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **Plain RNN (uniform scale)** | $\tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \cdots)$, $\rho \approx 0.62$ | $2d^2$ | $0.12$ (chance) | — | $T$ sequential steps |
+| **Plain RNN (LeCun normal)** | $\tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \cdots)$, $\rho \approx 1.02$ | $2d^2$ | $0.13$–$0.76$ (unstable) | $1.351$ ($1.334$ at $d=302$) | $T$ sequential steps |
+| **LSTM (zero gate bias)** | $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$, $f_0 = 0.5$ | $8d^2$ | $0.12$ (chance at $T \ge 50$) | **$1.295$–$1.298$** | $T$ sequential steps |
+| **GRU (zero gate bias)** | $\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1-\mathbf{z}_t)\odot \tilde{\mathbf{h}}_t$ | $6d^2$ | $0.12$ (chance at $T \ge 50$) | **$1.300$–$1.302$** | $T$ sequential steps |
+| **LSTM / GRU (keep gate $+5$)** | Initial gate $\sigma(5) = 0.993$ ($\tau_{1/2} \approx 103$) | $8d^2$ / $6d^2$ | **$1.00$** (all seeds) | — | $T$ sequential steps |
 :::
-:::
 
-::: {.slide title="Recap"}
-| | memory path | delayed recall | WikiText, nats/byte |
-|---|---|---|---|
-| RNN, LeCun scale | matrix and $\tanh$ | often 50 steps or more, unreliable | 1.35 |
-| RNN, smaller scale | matrix and $\tanh$ | usually lost from 50 | |
-| LSTM, gates at $1/2$ | $\mathbf{f}_t \odot \mathbf{c}_{t-1}$ | a quarter to all at 20, lost from 50 | 1.29–1.30 |
-| GRU, gates at $1/2$ | $\mathbf{z}_t \odot \mathbf{h}_{t-1}$ | recalls at 20, lost from 50 | 1.30 |
-| LSTM, GRU, keep gate | same | every delay to 200 | |
-| attention | | | 1.37–1.38 |
-
-**Next:** every gate reads $\mathbf{h}_{t-1}$, so training takes $T$
-dependent steps. What if the gates read only the input?
-:::

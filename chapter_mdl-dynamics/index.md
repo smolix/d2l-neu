@@ -118,43 +118,89 @@ says where each one holds.
 | $\pi$ | coupling: a joint law of pairs of data and noise, also called a pairing | :numref:`sec_mdl-flow-matching-transport` |
 | $\mathrm i$, $\mathbf I$ | imaginary unit (upright), identity matrix | throughout |
 
-## Resources and Further Reading {.unnumbered}
+<!-- slides -->
 
-The following references accompany the material this chapter teaches;
-topics it does not teach are collected in
-:numref:`sec_mdl-dynamics-further-reading`. One warning before opening them:
-the MIT notes and course, the Flow Matching Guide and the two flow-matching
-papers run time from noise at $0$ to data at $1$, and this chapter runs it
-the other way (:numref:`fig_mdl-dyn-time-conventions`).
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §38]{.kicker}
 
-**Books and lecture notes**
+Dynamics: Differential Equations, Stochastic Flows, and Transport<br>**ODEs & solvers · Neural ODEs · Itô SDEs · Fokker–Planck PDE · score matching · flow matching**
+:::
+:::
 
-- [Nonlinear Dynamics and Chaos --- Steven Strogatz](https://www.stevenstrogatz.com/books/nonlinear-dynamics-and-chaos-with-applications-to-physics-biology-chemistry-and-engineering): a geometric introduction to flows, fixed points and their stability, the material of :numref:`sec_mdl-odes-solvers`.
-- [On Neural Differential Equations --- Patrick Kidger (2022)](https://arxiv.org/abs/2202.02435): the book-length treatment of neural ODEs, controlled and stochastic differential equations, with the adjoint machinery of :numref:`sec_mdl-neural-odes-cnf` laid out in full and advice on choosing among the solvers of :numref:`sec_mdl-euler-runge-kutta`.
-- [Applied Stochastic Differential Equations --- Särkkä & Solin](https://users.aalto.fi/~asolin/sde-book/sde-book.pdf): an application-minded treatment of Itô calculus, SDEs and the Fokker--Planck equation for :numref:`sec_mdl-sdes` and :numref:`sec_mdl-fokker-planck-probability-flow`; the authors provide the full PDF.
-- [Stochastic Differential Equations: An Introduction with Applications --- Bernt Øksendal](https://link.springer.com/book/10.1007/978-3-642-14394-6): a rigorous reference for Brownian motion, the Itô integral and existence theory, behind :numref:`sec_mdl-sdes`.
-- [Numerical Solution of Stochastic Differential Equations --- Kloeden & Platen](https://link.springer.com/book/10.1007/978-3-662-12616-5): the reference on Euler--Maruyama, Milstein and higher-order schemes and their strong and weak orders, for the simulation part of :numref:`sec_mdl-sdes`.
-- [An Introduction to Flow Matching and Diffusion Models (MIT 6.S184 lecture notes) --- Holderrieth & Erives](https://diffusion.csail.mit.edu/docs/lecture-notes.pdf): self-contained notes that derive diffusion and flow matching from SDEs and the continuity equation, companions to :numref:`sec_mdl-score-matching-diffusion-flow` and :numref:`sec_mdl-flow-matching-transport`.
+::: {.slide title="Why Deep Learning Needs Continuous-Time Dynamics"}
+[Motivation]{.kicker}
 
-**Courses and tutorials**
+A residual network block, a gradient descent update, and a diffusion model denoising step all execute the same primitive operation: moving a state vector a short step along a prescribed velocity field.
 
-- [MIT 6.S184: Generative AI with Stochastic Differential Equations](https://diffusion.csail.mit.edu/): lectures, slides and labs that build a diffusion model from first principles, following the route of :numref:`sec_mdl-fokker-planck-probability-flow` to :numref:`sec_mdl-flow-matching-transport`; openly licensed.
-- [Understanding Diffusion Models: A Unified Perspective --- Calvin Luo (2022)](https://arxiv.org/abs/2208.11970): derives the variational and score-based views of diffusion side by side, for :numref:`sec_mdl-score-matching-diffusion-flow`.
-- [Flow Matching Guide and Code --- Lipman et al. (2024)](https://arxiv.org/abs/2412.06264): a detailed reference on flow matching for :numref:`sec_mdl-flow-matching-transport`, paired with the [`facebookresearch/flow_matching`](https://github.com/facebookresearch/flow_matching) PyTorch library.
+::: {.cols}
+::: {.col}
+- **Architectures & Optimizers as Solvers:** A ResNet $\mathbf{x}_{l+1} = \mathbf{x}_l + \mathbf{f}(\mathbf{x}_l)$ and gradient descent $\mathbf{w}_{k+1} = \mathbf{w}_k - \eta \nabla \mathcal{L}(\mathbf{w}_k)$ are forward-Euler steps ($h = 1$ and $h = \eta$) of an underlying ODE.
+- **Why Learning Rates Blow Up:** The fastest eigenvalue rate in the vector field caps the stable step size of every explicit solver, explaining why gradient descent diverges when $\eta > 2/\lambda_{\max}(\mathbf{H})$.
+:::
 
-**Foundational papers**
+::: {.col}
+- **Generative Sampling by Reversing Noise:** Adding Gaussian noise to images causes particles to wander randomly, yet the cloud's probability density $p_t(\mathbf{x})$ evolves deterministically and can be integrated backward from $\mathcal{N}(\mathbf{0}, \mathbf{I})$ to $p_{\text{data}}$.
+- **Why Standard Calculus Breaks:** Brownian kicks scale as $\sqrt{dt}$, so their squares $(dW_t)^2 = dt$ survive at first order and add a second-derivative correction to the chain rule.
+:::
+:::
+:::
 
-- [Neural Ordinary Differential Equations --- Chen et al. (NeurIPS 2018)](https://arxiv.org/abs/1806.07366): parameterizes a network's dynamics as an ODE and trains it with the adjoint method, as in :numref:`sec_mdl-neural-odes-cnf`.
-- [Generative Modeling by Estimating Gradients of the Data Distribution --- Song & Ermon (NeurIPS 2019)](https://arxiv.org/abs/1907.05600): score-based generation with denoising score matching and annealed Langevin sampling, for :numref:`sec_mdl-score-matching-diffusion-flow`.
-- [Denoising Diffusion Probabilistic Models --- Ho, Jain & Abbeel (NeurIPS 2020)](https://arxiv.org/abs/2006.11239): the discrete-time DDPM formulation that :numref:`sec_mdl-score-matching-diffusion-flow` reads as a discretized SDE.
-- [Score-Based Generative Modeling through SDEs --- Song et al. (ICLR 2021)](https://arxiv.org/abs/2011.13456): unifies score matching and diffusion as forward and reverse SDEs and introduces the probability-flow ODE of :numref:`sec_mdl-fokker-planck-probability-flow`.
-- [Denoising Diffusion Implicit Models --- Song, Meng & Ermon (ICLR 2021)](https://arxiv.org/abs/2010.02502): the deterministic sampler of :numref:`sec_mdl-score-matching-diffusion-flow`, which reuses a trained DDPM with fewer steps.
-- [Flow Matching for Generative Modeling --- Lipman et al. (ICLR 2023)](https://arxiv.org/abs/2210.02747): simulation-free training of continuous flows by regressing conditional vector fields, the method of :numref:`sec_mdl-flow-matching-transport`.
-- [Flow Straight and Fast: Rectified Flow --- Liu, Gong & Liu (ICLR 2023)](https://arxiv.org/abs/2209.03003): straight interpolation paths and reflow for few-step sampling, for :numref:`sec_mdl-flow-matching-transport`.
+::: {.slide title="The Three-Stage Mathematical Roadmap of Chapter 38"}
+[Architecture of the Chapter]{.kicker}
 
-**Blogs and visual explainers**
+The chapter progresses from deterministic trajectories of a single state to stochastic evolution of probability densities and finally to simulation-free training of generative vector fields:
 
-- [Generative Modeling by Estimating Gradients of the Data Distribution --- Yang Song](https://yang-song.net/blog/2021/score/): the author's walkthrough connecting score matching, Langevin dynamics and the SDE picture of :numref:`sec_mdl-score-matching-diffusion-flow`, with figures.
-- [What are Diffusion Models? --- Lilian Weng](https://lilianweng.github.io/posts/2021-07-11-diffusion-models/): a survey of diffusion from DDPM through score SDEs and guidance, updated through 2024, for :numref:`sec_mdl-score-matching-diffusion-flow`.
-- [Perspectives on Diffusion --- Sander Dieleman](https://sander.ai/2023/07/20/perspectives.html): shows how a diffusion model is at once a denoiser, a score estimator, a reverse-SDE solver and a flow, the dictionary of :numref:`sec_mdl-score-velocity-dictionary`.
-- [The Annotated Diffusion Model --- Hugging Face](https://huggingface.co/blog/annotated-diffusion): a line-by-line PyTorch implementation of DDPM that connects the mathematics of :numref:`sec_mdl-score-matching-diffusion-flow` to runnable code.
+| Stage & Sections | Central Mathematical Question | Key Theorem or Result |
+| :--- | :--- | :--- |
+| **1. Deterministic ODEs & Flows** (§38.1–38.3) | When does a velocity rule define an invertible map, and how do discrete steps track it? | Picard–Lindelöf uniqueness, stability function $R(h\lambda)$, adjoint ODE, and $\frac{d}{dt}\log p_t = -\operatorname{tr}\mathbf{J}$ |
+| **2. Stochastic Calculus & Density Flow** (§38.4–38.5) | How does fresh $\sqrt{dt}$ noise move a particle cloud, and how can that motion be reversed? | Itô's lemma ($(dW)^2 = dt$), OU Gaussian kernels, Fokker–Planck PDE, reverse SDE & PF-ODE |
+| **3. Learning Generative Fields** (§38.6–38.7) | How can a network learn the score $\nabla \log p_t$ or velocity $\mathbf{u}_t$ from unlabeled data samples? | Vincent's denoising score matching, DDPM/DDIM equivalence, Conditional Flow Matching & Reflow |
+:::
+
+::: {.slide title="Concrete Running Benchmarks Anchoring the Chapter"}
+[Pedagogical Thread]{.kicker}
+
+Every theorem and numerical solver is tested first on closed-form dynamical systems where the exact trajectory, density, or score is known analytically:
+
+| Running Benchmark | Mathematical Definition | What It Tests Across §38.1–38.7 |
+| :--- | :--- | :--- |
+| **Planar Spiral Sink** | $\dot{\mathbf{x}} = \mathbf{A}\mathbf{x}$, $\mathbf{A} = \left(\begin{smallmatrix}-0.5 & -1 \\ 1 & -0.5\end{smallmatrix}\right)$, $\lambda = -0.5 \pm \mathrm{i}$ | Matrix exponential $e^{\mathbf{A}t}$, Euler vs. RK4 order, adjoint sensitivity, volume shrinkage $e^{-t}$ |
+| **Stiff Two-Mode Decay** | $\dot{\mathbf{x}} = \mathrm{diag}(-50, -1)\mathbf{x}$ and quadratic valley $\mathbf{H} = \mathrm{diag}(10, 1)$ | Explicit step-size ceiling $h < 2/|\lambda|$, A-stability of backward Euler, ill-conditioned GD |
+| **Ornstein–Uhlenbeck SDE** | $dX = -\theta X\,dt + g\,dW$ ($\theta = 1$, $g = \sqrt{2}$) | Gaussian transition kernel $\mathcal{N}(\alpha_t x_0, \sigma_t^2)$, variance preservation ($g^2 = 2\theta$), Euler–Maruyama |
+| **Bimodal Gaussian Mixture** | $p_0 = w_1\mathcal{N}(-2, 0.25) + w_2\mathcal{N}(2, 0.25)$ | Exact score $s_t(x)$, probability-flow ODE vs. reverse SDE, Langevin trapping, DDIM strides |
+| **Two-Moons Transport** | Planar crescent distribution paired with $\mathcal{N}(\mathbf{0}, \mathbf{I})$ | Crossing straight segments, loss floor $C$, 1-step collapse to the mean, Reflow straightening |
+:::
+
+::: {.slide title="Unifying Equations: Particles, Densities, Reversal"}
+[Core Dictionary]{.kicker}
+
+Four coupled differential equations govern how individual particles and their marginal probability densities $p_t(\mathbf{x})$ move forward and backward in time:
+
+| Perspective | Forward Evolution ($t: 0 \to T$) | Reverse / Generative Evolution ($t: T \to 0$) |
+| :--- | :--- | :--- |
+| **Stochastic Particle (SDE)** | $d\mathbf{X} = \mathbf{f}(\mathbf{X}, t)\,dt + g(t)\,d\mathbf{W}$ | $d\mathbf{X} = \big[\mathbf{f}(\mathbf{X}, t) - g(t)^2 \nabla \log p_t(\mathbf{X})\big]\,dt + g(t)\,d\bar{\mathbf{W}}$ |
+| **Deterministic Particle (ODE)** | $\dot{\mathbf{x}} = \mathbf{u}_t(\mathbf{x}) = \mathbf{f}(\mathbf{x}, t) - \tfrac{1}{2}g(t)^2 \nabla \log p_t(\mathbf{x})$ | Same probability-flow ODE integrated from $T$ down to $0$ |
+| **Marginal Density (PDE)** | $\partial_t p_t = -\nabla \cdot (\mathbf{f} p_t) + \tfrac{1}{2}g^2 \Delta p_t = -\nabla \cdot (p_t \mathbf{u}_t)$ | $\frac{d}{dt}\log p_t(\mathbf{x}(t)) = -\nabla \cdot \mathbf{u}_t(\mathbf{x}(t))$ along ODE characteristics |
+
+::: {.d2l-note .rule}
+Converting the Laplacian diffusion term $\frac{1}{2}g^2 \Delta p_t = \nabla \cdot (p_t \cdot \frac{1}{2}g^2 \nabla \log p_t)$ turns random Brownian smoothing into transport along the score field $\mathbf{s}_t(\mathbf{x}) = \nabla \log p_t(\mathbf{x})$.
+:::
+:::
+
+::: {.slide title="Prerequisites and Reading Paths Through Chapter 38"}
+[Study Guide]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Mathematical Prerequisites:** Eigendecompositions and spectral norms (§33), multivariable Jacobians, divergence, and integration by parts (§34), and Gaussian conditional expectations (§36). No measure theory is required.
+- **Optimization & SSM Path (§38.1–38.2):** Covers exact zero-order hold discretizations for State Space Models (Mamba/S4), non-normal transient growth in momentum, and numerical stiffness in gradient descent.
+:::
+
+::: {.col}
+- **Fast-Track to Diffusion & Flow Models:** Read **§38.1–38.2** for flows and Runge–Kutta solvers, **§38.4** for Itô's lemma and the Ornstein–Uhlenbeck kernel, **§38.5** for reverse-time SDEs and the probability-flow ODE, and **§38.6–38.7** for score and flow matching.
+- **Optional Deep Dives:** You can skip the continuous adjoint method (**§38.3**) and Wasserstein optimal transport theory (**§38.7**) on a first pass toward image generation.
+:::
+:::
+:::
+

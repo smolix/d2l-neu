@@ -1081,348 +1081,189 @@ mismatches silently.
 ::: {.cover}
 [Dive into Deep Learning · §5.6]{.kicker}
 
-Saving, Loading, and Pretrained Weights<br>**model state · safe file formats · resumable checkpoints · pretrained weights**
+File I/O, Checkpoints, and Serialization<br>**state dictionaries · pickle RCE vs. safetensors · 5-part atomic checkpoints · pretrained key auditing**
 :::
 :::
 
-::: {.slide title="Llama 3's Pre-Training Was Interrupted Every Three Hours"}
-[The problem]{.kicker}
+::: {.slide title="Why Checkpointing and Safe Files Are Mission-Critical"}
+[Fault Tolerance & Security]{.kicker}
 
-- A trained network lives in the memory of one process. When the process
-  ends, the weights are gone unless they are on disk.
-- Llama 3 pre-training on up to 16,384 GPUs: **419 unexpected
-  interruptions in 54 days**, one every three hours (Grattafiori et al.,
-  2024).
-- A run that cannot resume where it stopped never finishes.
+A trained neural network lives only in volatile process memory until serialized to disk. At modern scale, file I/O governs both cluster survival and supply-chain security:
 
-::: {.d2l-note}
-And most models in later chapters start from weights that **someone else**
-trained: loading them must be safe and must be checked.
-:::
+- **Hardware failures are routine, not rare:** During 54 days of pre-training Llama 3 405B on $16{,}384$ GPUs, Meta recorded **419 unexpected interruptions**—roughly one crash every 3 hours (Grattafiori et al., 2024).
+- **Resuming training requires more than weights:** Restarting Adam from saved weights alone causes the very first update step to blow up the loss by $>100\times$.
+- **Arbitrary code execution on load:** Downloading a third-party `pickle` checkpoint can execute malicious shell commands on your machine the moment `load` is called.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="We Serialize the State Tree, Never the Python Class Code"}
+[State vs. Architecture]{.kicker}
 
-- save the state of a model and rebuild the model from code;
-- explain why loading a pickle file can run code, and what a safetensors
-  file contains, byte by byte;
-- size a checkpoint: what it holds per parameter, and why;
-- resume a run so that it repeats the uninterrupted one bit for bit, and
-  show why weights alone do not resume training with Adam;
-- load pretrained weights under a new head and read the report of what did
-  not fit.
+A model consists of executable architecture code (`forward`) plus persistent tensor **state** (parameters and buffers keyed by their module-tree paths):
 
-**Running example:** an 8-billion-parameter model. Its fp32 weights take
-32 GB. How large is a checkpoint from which its training resumes?
+@saving-loading-state-not-code-2
+
+- **Path-keyed dictionary:** The state dictionary stores only `(path, shape, dtype, raw_bytes)`—no trace of the `MLP` class or `ReLU` activation function.
+- **Reconstruction contract:** Loading requires instantiating matching architecture code first; even renaming `self.output` to `self.head` breaks key matching.
 :::
 
-::: {.slide title="Saving Is the Sixth of Eight Sections on How Models Run"}
-[Where this fits]{.kicker}
+::: {.slide title="Security Hazard: Python Pickle Executes Code on Load"}
+[Why Pickle Is Unsafe for Sharing]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Modules and Model Construction | a model is a tree of modules, built from a config |
-| Parameters, State, and Memory | parameters, buffers, bytes per parameter |
-| Initialization | library defaults, custom initializers, residual depth |
-| Custom Layers and Functions | new layers, state, and custom gradients |
-| Numerical Formats | dtypes, mixed precision, loss scaling |
-| **Saving, Loading, and Pretrained Weights** | **safe files, checkpoints, pretrained weights** |
-| GPUs, Devices, and Memory | placement, asynchrony, training memory |
-| Reproducibility and Inspection | seeds, determinism, hooks |
-:::
-
-::: {.col .narrow}
-- **Uses:** the state of a model, Adam's per-parameter state, bf16.
-- **Skips:** sharded checkpoints of models too large for one machine;
-  deployment formats.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Model State]{.dtitle}
-
-[names, shapes, values]{.dsub}
-:::
-:::
-
-::: {.slide title="A Model's State Is a Dictionary of Named Tensors"}
-[Model state · the dictionary]{.kicker}
-
-An MLP with one hidden layer of 256 units, 20 inputs, 10 outputs:
-
-@!saving-loading-state-not-code-2
-
-- Names are paths through the module tree; values are the tensors.
-- The class, `forward`, and the activation function are **not** in it.
-
-::: {.d2l-note}
-To load, code rebuilds a model with the same names and shapes, then fills
-it by name. Renaming `output` to `head` breaks the match.
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Pickle and safetensors]{.dtitle}
-
-[can loading a file run code?]{.dsub}
-:::
-:::
-
-::: {.slide title="Loading a Pickle File Runs a Program"}
-[Formats · pickle]{.kicker}
-
-Pickle stores a program that rebuilds an object. `__reduce__` names the
-function it calls:
+Python's `pickle` format is not a passive data container—it is a stack-based virtual machine that reconstructs objects by executing arbitrary callables returned by `__reduce__`:
 
 @saving-loading-code-execution-on-load-1
 
 @saving-loading-safetensors-the-interchange-format-1
 
 ::: {.d2l-note .warn}
-A malicious file names `os.system` instead of `print`.
+**Remote Code Execution (RCE):** Replacing `print` with `os.system` in `__reduce__` turns an untrusted `.pt` or `.npy` file into a full system compromise the instant `torch.load(..., weights_only=False)` or `np.load(..., allow_pickle=True)` runs.
 :::
 :::
 
-::: {.slide title="Safe Loaders Refuse Anything but Plain Data"}
-[Formats · refusal]{.kicker}
+::: {.slide title="Hardened Loaders Refuse Arbitrary Objects by Default"}
+[Allowlist Unpicklers]{.kicker}
 
-The default loader refuses the same file:
+Modern defaults (`torch.load` with `weights_only=True` since PyTorch 2.6, and `np.load` with `allow_pickle=False`) block arbitrary classes during unpickling:
 
-@!saving-loading-safetensors-the-interchange-format-2
+@saving-loading-safetensors-the-interchange-format-2
 
-- Refusal is the default: `weights_only=True` in `torch.load` since
-  PyTorch 2.6, `allow_pickle=False` in NumPy.
-- It protects only as long as the checks are complete, and such checks
-  have had holes.
-
-::: {.d2l-note}
-Better: a format that contains no program at all.
-:::
+- **Why allowlists are not enough:** Restricted unpicklers still parse pickle opcodes and rely on allowlists remaining bug-free. Eliminating the parser attack surface entirely requires a format that **cannot represent executable instructions**.
 :::
 
-::: {.slide title="safetensors: an 8-Byte Length, a JSON Header, Raw Bytes"}
-[Formats · safetensors]{.kicker}
+::: {.slide title="The safetensors Format: Zero Code, Zero-Copy mmap"}
+[Safe Weight Interchange]{.kicker}
 
-![The safetensors file of the MLP: length, JSON header, and the four tensors back to back.](../img/bg-safetensors-layout.svg)
+The `safetensors` format stores strictly passive metadata and contiguous raw tensor buffers in three flat segments:
 
-- Nothing is executed on load; the loader checks the header and the ranges.
-- Known byte ranges: map the file and read one tensor alone.
+![](../img/bg-safetensors-layout.svg){.nostretch width=95%}
+
+1. **8-byte unsigned little-endian integer (`<Q`):** Exact byte length $n$ of the JSON header.
+2. **UTF-8 JSON header ($n$ bytes):** Maps each tensor's path name to its `dtype`, `shape`, and `[begin, end]` byte offsets relative to the data segment.
+3. **Packed raw tensor bytes:** Contiguous array buffers aligned back to back, enabling instant **zero-copy memory mapping (`mmap`)** and single-tensor random access without reading the whole file.
 :::
 
-::: {.slide title="The Header Records Every Tensor's Byte Range"}
-[Formats · the header]{.kicker}
+::: {.slide title="Saving and Auditing a safetensors File Byte by Byte"}
+[safetensors Round-Trip & Header Inspection]{.kicker}
 
-Read with `struct` and `json` only, no safetensors library:
+We can save our MLP to `mlp.safetensors`, verify bit-for-bit restoration, and parse its header using only Python's standard `struct` and `json` modules:
 
-@!saving-loading-safetensors-the-interchange-format-4
+@-saving-loading-safetensors-the-interchange-format-3
 
-- Hidden bias: 256 float32 numbers × 4 bytes = bytes 0 to 1,024.
-- Every range starts where the previous one ends.
+@saving-loading-safetensors-the-interchange-format-4
 :::
 
-::: {.slide title="Check: How Large Is the MLP's File?"}
-[Check]{.kicker}
+::: {.slide title="Why Resuming Training Requires Optimizer State"}
+[Stateful Optimization with Adam]{.kicker}
 
-The MLP has a 20 → 256 → 10 layout in float32, and the header above.
-How many bytes does the whole file take?
+Weight files suffice for inference, but training with Adam maintains two running exponential moving averages per parameter—the first moment $\mathbf{m}$ (mean gradient) and second moment $\mathbf{v}$ (mean squared gradient):
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Parameters: $20 \cdot 256 + 256 + 256 \cdot 10 + 10 = 7{,}946$,
-so $31{,}784$ bytes of data, the end of the last range. With the 8-byte
-length and the header: $8 + n + 31{,}784$ bytes, about 32 KB.
-:::
-:::
+$$\mathbf{w} \leftarrow \mathbf{w} - \eta \, \frac{\hat{\mathbf{m}}}{\sqrt{\hat{\mathbf{v}}} + \epsilon}$$
+
+- **Why a fresh Adam violently spikes the loss:** If you discard $\mathbf{m}$ and $\mathbf{v}$ on resume ($\mathbf{m}_0 = \mathbf{v}_0 = \mathbf{0}$), Adam's step-1 bias correction sets $\hat{\mathbf{m}}_1 = \mathbf{g}$ and $\hat{\mathbf{v}}_1 = \mathbf{g} \odot \mathbf{g}$.
+- **Full-step shock:** Every parameter steps by $\Delta w_i = -\eta \, \frac{g_i}{|g_i| + \epsilon} \approx \pm \eta$, moving every weight by the **full learning rate $\eta$** regardless of how close to convergence the model was!
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Training Checkpoints]{.dtitle}
-
-[what resuming needs besides the weights]{.dsub}
-:::
-:::
-
-::: {.slide title="Adam Keeps Two Running Averages per Parameter"}
-[Checkpoints · Adam]{.kicker}
-
-- $\mathbf{m}$: running average of the gradient $\mathbf{g}$.
-- $\mathbf{v}$: running average of its elementwise square.
-
-Each parameter moves against its averaged gradient, by less where its
-gradients have been large:
-
-$$\mathbf{w} \leftarrow \mathbf{w} - \eta\,\frac{\hat{\mathbf{m}}}{\sqrt{\hat{\mathbf{v}}}+\epsilon}.$$
-
-The hats mark a rescaling that corrects for the start of both averages at
-zero; $\eta$ is the learning rate, $\epsilon \approx 10^{-8}$.
-
-::: {.d2l-note}
-$\mathbf{m}$ and $\mathbf{v}$ carry the history of the run. Without them
-the optimizer starts over.
-:::
-:::
-
-::: {.slide title="A Resumable Checkpoint Has Five Compartments"}
-[Checkpoints · contents]{.kicker}
+::: {.slide title="The Five Compartments of a Resumable Training Checkpoint"}
+[Complete Checkpoint Anatomy]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig .big}
-![Model state, optimizer state, RNG state, step, and config, each with what it restores.](../img/bg-checkpoint-contents.svg)
-:::
-
 ::: {.col}
-- The step also sets the position in a learning-rate schedule.
-- Write under a temporary name, then rename: a rename is atomic, so a
-  crash leaves the old checkpoint intact.
+- **Five required states:** Model state (parameters + buffers), optimizer state ($\mathbf{m}, \mathbf{v}$), PRNG states (CPU, GPU, data loader), step counter $t$, and architecture config.
+- **Crash-safe atomic writes:** Always write to a temporary file (`path + '.tmp'`) and call `os.replace(tmp, path)` so a crash mid-write never corrupts the previous checkpoint.
+:::
+
+::: {.col .fig .big}
+![](../img/bg-checkpoint-contents.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="An 8B Model: 32 GB of fp32 Weights, 96 GB of Checkpoint"}
-[Checkpoints · running example]{.kicker}
+::: {.slide title="Sizing an 8B-Parameter Checkpoint: 96 GB on Disk"}
+[Checkpoint Storage Arithmetic]{.kicker}
 
-| per parameter | bytes | 8 billion parameters |
-|---|---:|---:|
-| weights in fp32 | 4 | 32 GB |
-| Adam's $\mathbf{m}$ and $\mathbf{v}$ in fp32 | 8 | 64 GB |
-| **resumable checkpoint** | **12** | **96 GB** |
-| training also holds gradients | +4 | 128 GB |
+How large is a resumable training checkpoint compared with an inference weights file for an 8-billion-parameter model?
 
-::: {.d2l-note}
-Gradients are not saved: the next step recomputes them. A file for
-inference in bf16 needs 2 bytes per parameter, 16 GB.
-:::
+| Saved Component | Dtype | Bytes / Parameter | 8B Model Disk Size | Included in Inference File? |
+|:---|:---|---:|---:|:---:|
+| **Model weights ($\mathbf{w}$)** | `fp32` (or `bf16`) | $4\text{ B}$ ($2\text{ B}$) | $32\text{ GB}$ ($16\text{ GB}$) | **Yes** (`16 GB` in `bf16`) |
+| **Adam 1st moment ($\mathbf{m}$)** | `fp32` | $4\text{ B}$ | $32\text{ GB}$ | No |
+| **Adam 2nd moment ($\mathbf{v}$)** | `fp32` | $4\text{ B}$ | $32\text{ GB}$ | No |
+| **Gradients ($\mathbf{g}$)** | `fp32` | $0\text{ B}$ on disk | $0\text{ GB}$ (recomputed) | No |
+| **Total Resumable Checkpoint** | | **$12\text{ B}$** | **$96\text{ GB}$** | **$6\times$ larger than `bf16` inference** |
 :::
 
-::: {.slide title="A Fresh Adam Moves Every Parameter by the Full Learning Rate"}
-[Checkpoints · the first step]{.kicker}
+::: {.slide title="Implementing Atomic Save and Load Helpers" only="pytorch,mxnet"}
+[Crash-Safe Checkpointing in Code]{.kicker}
 
-A fresh Adam starts with $\mathbf{m} = \mathbf{v} = \mathbf{0}$. After
-its first update the rescaling leaves
+Our `save_checkpoint` helper bundles all five compartments and commits them atomically via `os.replace`:
 
-$$\hat{\mathbf{m}} = \mathbf{g}, \qquad \hat{\mathbf{v}} = \mathbf{g}\odot\mathbf{g}, \qquad
-\Delta w_i = -\eta\,\frac{g_i}{|g_i| + \epsilon} \approx \mp\eta.$$
-
-- The size of the gradient cancels: every parameter with $g_i \neq 0$
-  moves by $\eta$.
-- Near a minimum the gradients are tiny, and the saved $\mathbf{v}$ keeps
-  the steps tiny too; a fresh one does not.
+@-saving-loading-checkpointing-a-training-run-1
 :::
 
-::: {.slide title="The Full Checkpoint Resumes the Run Bit for Bit"}
-[Checkpoints · resume]{.kicker}
+::: {.slide title="Testing Bit-for-Bit Resumption After 200 Steps"}
+[Experimental Verification]{.kicker}
 
-A regressor (20 → 64 → 1, Adam at $\eta = 0.05$, random minibatches of 64)
-checkpointed after 200 steps, then resumed to step 205 and compared with a
-run that never stopped:
+We train a $20 \to 64 \to 1$ MLP regressor with Adam ($\eta = 0.05$), save a checkpoint at step 200, continue to step 205, and compare against resuming in a fresh process:
 
-@!saving-loading-checkpointing-a-training-run-5
+@saving-loading-checkpointing-a-training-run-5
 
-- Full checkpoint: identical weights.
-- Without the generator's state: the resumed steps replay the first
-  minibatches, and the weights drift apart.
+- **Exact bitwise match (`0` difference):** Restoring all five compartments reproduces the uninterrupted run down to the last bit, whereas omitting the RNG state replays early minibatches and causes weights to drift.
 :::
 
-::: {.slide title="Weights Alone Do Not Resume a Run"}
-[Checkpoints · resume]{.kicker}
+::: {.slide title="Dropping Optimizer State Wrecks Near-Converged Models"}
+[The Fresh-Adam Loss Spike]{.kicker}
 
-The same checkpoint, resumed for five steps with the saved Adam and with a
-fresh one, minibatch loss before each step:
+Resuming from step 200 with saved weights and saved RNG state—but a **freshly initialized Adam optimizer**—causes the loss to explode by $>200\times$ on step 201:
 
-@!saving-loading-checkpointing-a-training-run-4
-
-- Saved optimizer state: the loss stays at its level at the checkpoint.
-- Fresh Adam: one step raises the loss several hundredfold, and four steps
-  later it is still a hundred times higher or more.
+@saving-loading-checkpointing-a-training-run-4
 :::
 
-::: {.slide title="Check: How Far Does the First Fresh Step Move the Weights?"}
-[Check]{.kicker}
+::: {.slide title="Loading Pretrained Backbone Weights Under a New Head"}
+[Transfer Learning Setup]{.kicker}
 
-The regressor has $20 \cdot 64 + 64 + 64 + 1 = 1{,}409$ parameters, all with
-nonzero gradients, and $\eta = 0.05$. What is the length of the first
-update of a fresh Adam?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Each coordinate moves by $0.05$, so the update has length
-$0.05\sqrt{1{,}409} \approx 1.9$, whatever the gradient. Near the
-minimum the saved Adam moves far less.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
-
-[Pretrained Weights]{.dtitle}
-
-[a new head on a trained backbone]{.dsub}
-:::
-:::
-
-::: {.slide title="Keep the Backbone, Replace the Head"}
-[Pretrained · ResNet-50]{.kicker}
-
-ResNet-50, about 25 million parameters trained on ImageNet (1.2 million
-images, 1,000 classes). For 10 classes, replace the last layer:
+When adapting an ImageNet-pretrained ResNet-50 ($\sim 25\text{M}$ parameters, $1{,}000$ classes) to a 10-class dataset, we keep the pretrained backbone and replace the final linear head (`2048 -> 10`):
 
 @saving-loading-loading-weights-you-did-not-train-1
 :::
 
-::: {.slide title="The Missing Head Is Expected; a Missing Stage Is Not"}
-[Pretrained · the report]{.kicker}
+::: {.slide title="Auditing Missing and Unexpected Keys on Partial Loads"}
+[Catching Silent Checkpoint Mismatches]{.kicker}
 
-The pretrained state without the head **and** the last stage, into a fresh
-ResNet-50:
+When loading external weights into a modified architecture (`strict=False`), always inspect the **missing keys** (in model, absent from file) and **unexpected keys** (in file, absent from model):
 
-@!saving-loading-loading-weights-you-did-not-train-2
+@saving-loading-loading-weights-you-did-not-train-2
 
-- *Missing*: in the model, not in the file; they stay random.
-- *Unexpected*: in the file, not in the model; usually a renamed layer.
-
-::: {.d2l-note}
-State in advance which names may be missing, and treat any other entry as
-an error.
+::: {.d2l-note .rule}
+**Explicit Key Assertion:** Missing keys for the replaced 10-class head (`fc`) are expected; missing keys for `layer4` / `conv5` / `stages.3` reveal that an entire backbone stage silently stayed randomly initialized!
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Serialization & Checkpoint Resumption"}
+[Concept Check]{.kicker}
 
-::: {.cols}
-::: {.col}
-- **State, not code:** names to tensors; code rebuilds the structure.
-- **Pickle runs a program on load;** safetensors is length + JSON header +
-  raw bytes, nothing to run.
-- **Checkpoint** = model + optimizer + RNG + step + config, written under a
-  temporary name and renamed.
-:::
+Work out these three checkpointing questions:
 
-::: {.col}
-- **8B model:** 96 GB of checkpoint, 12 bytes per parameter, three times
-  its fp32 weights.
-- **Resume:** bit for bit from the full checkpoint. A fresh Adam moves
-  every parameter by $\pm\eta$, and the loss jumps several hundredfold.
-- **Pretrained:** new head, read the missing/unexpected report; freeze
-  the backbone to train the head alone.
+1. An MLP ($20 \to 256 \to 10$, `float32`) is saved to `mlp.safetensors` with a JSON header of $n = 280$ bytes. What is the exact total file size in bytes?
+2. Our $20 \to 64 \to 1$ regressor has $20 \times 64 + 64 + 64 \times 1 + 1 = 1{,}409$ parameters. If we resume at $\eta = 0.05$ with a fresh Adam optimizer ($\mathbf{m}=\mathbf{v}=\mathbf{0}$) and every gradient entry is nonzero, what is the Euclidean norm $\|\Delta \mathbf{w}\|_2$ of the very first parameter update?
+3. You rename `self.fc` to `self.classifier` in ResNet-50 and load an original pretrained checkpoint with `strict=False`. What appears in `missing_keys` and `unexpected_keys`?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **$8 + 280 + 4 \times 7{,}946 = 32{,}072$ bytes:** 8-byte length prefix $+$ 280-byte JSON header $+$ $31{,}784$ bytes for the $7{,}946$ `float32` parameters.
+2. **$\|\Delta \mathbf{w}\|_2 \approx 0.05 \sqrt{1{,}409} \approx 1.88$:** Every coordinate steps by $\pm \eta = \pm 0.05$ regardless of how small $\|\mathbf{g}\|_2$ is!
+3. **`missing_keys` lists `classifier.weight, classifier.bias` (left random); `unexpected_keys` lists `fc.weight, fc.bias` (ignored from file).**
 :::
 :::
 
-**Next:** GPUs: placing state and computation on devices, and what fills
-their memory.
+::: {.slide title="Summary: Saving, Loading, and Pretrained Weights"}
+[Key Takeaways]{.kicker}
+
+| Workflow / Component | Mechanism / Format | Critical Engineering Rule |
+|:---|:---|:---|
+| **Model state dict** | Maps tree paths to parameters & buffers | Saves tensor data only; requires matching Python code to rebuild |
+| **`pickle` vs. `safetensors`** | `pickle` runs `__reduce__` bytecode; `safetensors` is 8B len + JSON + raw bytes | Never unpickle untrusted files; use `safetensors` for safe zero-copy `mmap` |
+| **Training checkpoint** | Model state $+$ optimizer $\mathbf{m},\mathbf{v}$ $+$ RNG state $+$ step $+$ config | $12\text{ B/param}$ (`96 GB` for 8B model); write to `.tmp` and `os.replace` |
+| **Resuming Adam** | Restore $\mathbf{m}, \mathbf{v}$ alongside weights | Fresh Adam steps by $\pm \eta$ on step 1, spiking near-converged loss $>100\times$ |
+| **Pretrained loading** | Replace classification head, audit key report | Assert `missing_keys` and `unexpected_keys` match *only* intended changes |
 :::

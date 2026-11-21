@@ -710,399 +710,329 @@ class PerceiverEncoder(nnx.Module):
 6. **Perceiver IO for sequence-to-sequence reversal.** Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2022` pairs a `PerceiverEncoder` ($M$ learned latent queries attending to the $N$-token input) with a cross-attention **decoder** in which $N_{\textrm{out}}$ target position embeddings $\mathbf{Q}_{\textrm{out}} \in \mathbb{R}^{N_{\textrm{out}} \times d}$ cross-attend to the $M$ latent vectors $\mathbf{Z}^{(L)} \in \mathbb{R}^{B \times M \times d}$. Build a `PerceiverAutoencoder` that encodes a 12-letter string into $M \in \{2, 4, 8, 12\}$ latents ($d = 128$) and decodes the reversed string in one parallel cross-attention readout pass. How does reversal accuracy vary with the bottleneck size $M$?
 :exlabel:`ex_encdec-perceiver-reversal`
 
+[Discussions](https://d2l.discourse.group/t/36777)
+
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §11.5]{.kicker}
+[Dive into Deep Learning · §11.4]{.kicker}
 
-Encoders, Decoders, and Cross-Attention<br>
-**three wirings of one block · masked-token prediction · an alignment we can check · learned queries · which wiring today**
+Bidirectional Encoders, Encoder–Decoders, and Cross-Attention<br>**three block wirings · masked language modeling · sequence-to-sequence cross-attention · Perceiver latent bottlenecks**
 :::
 :::
 
-::: {.slide title="A Causal Model Sees Only One Side of Every Gap"}
-[The problem]{.kicker}
+::: {.slide title="Why Causal Masking Hurts When Full Input Is Known"}
+[Motivation]{.kicker}
 
-- Fill the gap in `known as _he European`: the left context allows many
-  words, the right context (`he European`) fixes the letter.
-- Measured on Wikipedia bytes, same encoder and training: a masked byte
-  costs about **2.1 nats** with one side of context, **1.5 to 1.7** with
-  both.
-- Translation and speech recognition read a whole input before they write
-  a single output token.
+A causal decoder restricts position $i$ to attending only to prefix positions $j \le i$. That lower-triangular mask is mandatory when generating new tokens one by one, but wastes half the context when the **entire input** is already available:
 
-::: {.d2l-note .warn}
-How do we wire the same transformer block to read both sides, to read a
-separate input, and to read inputs too long for $N^2$ attention? And which
-wiring should we use today?
-:::
+- **Cloze disambiguation:** In `Homarus gammarus, known as _he European lobster`, the left prefix `known as ` permits hundreds of completions, whereas the right context `he European` uniquely pins the missing byte to `t`.
+- **Quantitative value of bidirectional context:** On WikiText-103 byte windows, reconstructing a masked byte costs **$\sim 2.4\text{ nats}$** at the window boundary (one-sided context) versus **$1.5\text{--}1.6\text{ nats}$** in the window interior (two-sided context).
+- **Cross-modal conditioning:** Tasks like speech recognition (Whisper) or translation encode a complete source signal before emitting the first target token.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- draw the attention pattern of the encoder, the decoder, and the
-  encoder--decoder;
-- train an encoder with masked-token prediction and measure what the
-  second side of context is worth, against a fair control;
-- build a decoder block with cross-attention and compose its masks;
-- check a learned cross-attention map against a known alignment;
-- estimate the cost of reading $N$ inputs with $M$ learned queries;
-- choose a wiring for a task.
-
-**Running examples:** Wikipedia bytes for the encoder, random strings to
-reverse for the encoder--decoder; the decoder-only wiring is the GPT we
-already have.
-:::
-
-::: {.slide title="The Wirings Complete the Block"}
-[Where this fits]{.kicker}
+::: {.slide title="One Transformer Block, Three Canonical Wirings"}
+[Architectural Taxonomy]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| The Transformer Block | attention + FFN, residual stream |
-| A GPT from Scratch | a trained language model; GPT-2 loaded |
-| The KV Cache | reuse past keys and values |
-| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
-| **Encoders, Decoders, and Cross-Attention** | **the other two wirings** |
-| Vision Transformer | images as token sequences |
-| Scaling Laws | loss against parameters, data, compute |
-| Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | released models as settings |
+- **1. Encoder-only (`is_causal=False`):** Every token attends to every token across all $L$ layers in a single bidirectional pass (BERT, RoBERTa, ViT).
+- **2. Decoder-only (`is_causal=True`):** Each token attends only to positions $j \le i$, handling prompt reading and generation in one homogeneous stack (GPT, Llama 3, Qwen3).
+- **3. Encoder–decoder:** A bidirectional encoder maps source $\mathbf{X}_{\text{src}} \to \mathbf{H}_{\text{enc}}$, and a causal decoder generates $\mathbf{Y}_{\text{tgt}}$ while reading $\mathbf{H}_{\text{enc}}$ via **cross-attention** (2017 Transformer, T5, Whisper).
 :::
 
-::: {.col .narrow}
-- **Uses:** `TransformerBlock`, cross-attention, padding and causal masks,
-  teacher forcing, the KV cache.
-- **Skips:** pretraining at scale and fine-tuning (Language Models part),
-  beam search.
-:::
-:::
-:::
-
-::: {.slide title="One Block, Three Wirings"}
+::: {.col .fig}
 @fig:mdl-transformers-three-wirings
-
-Which positions may attend to which, and where keys and values come from:
-these two choices separate BERT, GPT, and the 2017 translation model.
-Drawn as one grid, the third pattern is also a single stack with a
-bidirectional prompt.
+:::
+:::
 :::
 
-::: {.slide title="An Encoder Is a Stack of Blocks with No Mask" only="pytorch"}
+::: {.slide title="A Bidirectional Encoder Drops the Causal Mask" only="pytorch"}
+[Encoder Implementation]{.kicker}
+
+Removing the triangular mask from `d2l.TransformerBlock` turns a causal stack into `TransformerEncoder`, mapping an $(B, n)$ batch of token IDs to bidirectional contextual representations in $\mathbb{R}^{B \times n \times d}$:
+
 ```{.python #encoders-decoders-exercises-1}
 def forward(self, X, mask=None):          # X: (batch, n) token ids
     H = self.token_emb(X) + self.pos_emb(
         torch.arange(X.shape[1], device=X.device))
-    for blk in self.blks:                 # d2l.TransformerBlock
-        H = blk(H, mask)                  # default: all see all
-    return self.norm(H)                   # (batch, n, d)
+    for blk in self.blks:                 # Pre-norm d2l.TransformerBlock stack
+        H = blk(H, mask)                  # mask=None -> all tokens attend to all
+    return self.norm(H)                   # (batch, n, d) bidirectional embeddings
 ```
 
-Every output vector summarizes the whole input as seen from its position.
-Positions still need a table: attention ignores order. Pooling (average, or
-one designated position) gives one vector per input.
+::: {.d2l-note}
+Every output vector $\mathbf{h}_i^{(L)} \in \mathbb{R}^d$ summarizes the entire sequence from position $i$'s vantage point; pooling across positions (mean pooling or reading index 0) produces a single fixed-width embedding per document.
+:::
 :::
 
-::: {.slide title="An Encoder Is a Stack of Blocks with No Mask" only="jax"}
+::: {.slide title="A Bidirectional Encoder Drops the Causal Mask" only="jax"}
+[Encoder Implementation]{.kicker}
+
+Removing the triangular mask from `d2l.TransformerBlock` turns a causal stack into `TransformerEncoder`, mapping an $(B, n)$ batch of token IDs to bidirectional contextual representations in $\mathbb{R}^{B \times n \times d}$:
+
 ```{.python #encoders-decoders-exercises-2}
 def __call__(self, X, mask=None):         # X: (batch, n) token ids
     H = self.token_emb(X) + self.pos_emb(jnp.arange(X.shape[1]))
-    for blk in self.blks:                 # d2l.TransformerBlock
-        H = blk(H, mask)                  # default: all see all
-    return self.norm(H)                   # (batch, n, d)
+    for blk in self.blks:                 # Pre-norm d2l.TransformerBlock stack
+        H = blk(H, mask)                  # mask=None -> all tokens attend to all
+    return self.norm(H)                   # (batch, n, d) bidirectional embeddings
 ```
 
-Every output vector summarizes the whole input as seen from its position.
-Positions still need a table: attention ignores order. Pooling (average, or
-one designated position) gives one vector per input.
-:::
-
-::: {.slide title="Check: Why Not Train the Encoder on the Next Token?"}
-[Check]{.kicker}
-
-Our encoder has no mask. What loss would next-token prediction reach,
-and what would the encoder learn from it?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Position $t$ can read token $t+1$ directly, so a copy
-attention head drives the loss to zero and teaches nothing about
-language. The objective must hide what it asks for.
-:::
+Every output vector $\mathbf{h}_i^{(L)} \in \mathbb{R}^d$ summarizes the entire sequence from position $i$'s vantage point; pooling across positions (mean pooling or reading index 0) produces a single fixed-width embedding per document.
 :::
 :::
 
-::: {.slide title="Masked Prediction Hides What It Asks For"}
-Replace a random set $\mathcal{M}$ of tokens (15%) by `<mask>`, keep
-their positions, and reconstruct them:
+::: {.slide title="Pitfall: Why Encoders Cannot Train on Next-Token Loss"}
+[Information Leakage Hazard]{.kicker}
 
-$$\max_\theta \; \sum_{t \in \mathcal{M}} \log p_\theta\left(x_t \mid \mathbf{x}_{\setminus \mathcal{M}}\right)$$
+What happens if we train an unmasked $L$-layer `TransformerEncoder` ($L \ge 2$) with the autoregressive next-token objective $\mathcal{L} = -\sum_t \log P(x_{t+1} \mid \mathbf{X})$?
+
+- **Direct target leakage at layer 1:** At block 1, query position $t$ is allowed to attend directly to key position $t+1$, copying token embedding $\mathbf{e}_{x_{t+1}}$ into $\mathbf{h}_t^{(1)}$.
+- **Indirect multi-hop leakage across layers:** Even if we masked the single entry $(t, t+1)$ in every layer, position $t$ at block 2 could attend to position $t+2$ (or $t-1$), which at block 1 had already read token $x_{t+1}$!
+- **Trivial identity collapse:** The network drives training cross-entropy to $0$ by learning a simple look-ahead copy head, acquiring **zero semantic representation** of the language.
+
+::: {.d2l-note .rule}
+In any bidirectional stack, a token that serves as a prediction target at position $i$ must be **removed from the input** before layer 1 sees the sequence.
+:::
+:::
+
+::: {.slide title="Masked Language Modeling (MLM)"}
+[Bidirectional Pretraining]{.kicker}
+
+Introduced in **BERT** (Devlin et al., 2018), **Masked Language Modeling** samples a random subset of positions $\mathcal{M} \subset \{1, \dots, n\}$ (with probability $p = 0.15$), replaces each $x_i$ ($i \in \mathcal{M}$) with a dedicated `<mask>` token ID in $\tilde{\mathbf{x}}$, and scores cross-entropy *only* on the masked subset $\mathcal{M}$:
+
+$$\mathcal{L}_{\mathrm{MLM}}(\boldsymbol{\theta}) = -\frac{1}{|\mathcal{M}|} \sum_{i \in \mathcal{M}} \log P_{\boldsymbol{\theta}}(x_i \mid \tilde{\mathbf{x}})$$
 
 @!encoders-decoders-the-masked-token-objective
 
-Bytes of WikiText-103, windows of 64; byte frequencies alone give 3.17
-nats, and the loss is still there at step 500.
+- **Label masking (`-100`):** Unmasked positions ($i \notin \mathcal{M}$, $85\%$ of tokens) receive target label `-100` so they contribute context without adding trivial copy terms to the loss.
+- **Sample efficiency trade-off:** Each training window supervises only $15\%$ of its tokens (around $10$ bytes out of $64$), compared to $100\%$ of tokens in a causal GPT.
 :::
 
-::: {.slide title="The Loss Is Flat Inside the Window and Jumps at Its Edges"}
-Position 0 sees only its right side, position 63 only its left; 15% of
-all bytes are masked.
+::: {.slide title="The U-Shaped Loss Curve Across Window Positions"}
+[Value of Two-Sided Context]{.kicker}
+
+Evaluating our trained 4-block byte-level `MaskedLM` across window positions $t \in \{0, \dots, 63\}$ contrasts sharply with a causal model's monotonically decreasing curve:
 
 @!encoders-decoders-what-the-second-side-is-worth-1
 
-::: {.d2l-note .rule}
-The edges cost 2.4 to 2.5 nats, the interior 1.6 to 1.7; two or three
-bytes of the missing side bring the loss back to the interior level.
+- **Symmetric bathtub (U-shaped) profile:** Interior positions ($t \in [16, 47]$) enjoy both left and right context, achieving a flat mean loss of **$1.57\text{ nats/byte}$** ($54\%$ exact byte accuracy).
+- **Edge penalty at $t = 0$ and $t = 63$:** At the two window boundaries where one side of the context is truncated, loss jumps to **$2.40\text{--}2.45\text{ nats/byte}$**—quantifying the $\sim 0.85\text{-nat}$ advantage of having the second side of context!
+:::
+
+::: {.slide title="How Right-Hand Context Resolves Ambiguous Gaps"}
+[Qualitative Probing]{.kicker}
+
+Masking individual bytes in `'Homarus gammarus , known as the European lobster'` illustrates how bidirectional attention fuses local left and right spelling constraints:
+
+@encoders-decoders-what-the-second-side-is-worth-2
+
+::: {.d2l-note}
+At position 28 (`known as _he European`), the encoder assigns $99\%$ probability to `'t'` by reading `he ` on the right; at position 22 (`known_as`), it assigns $85\%$ to a space `' '` separating the two words.
 :::
 :::
 
-::: {.slide title="Against a Causal Twin, the Second Side Is Worth 0.4 to 0.6 Nats"}
-Same encoder, same 2,000 steps; the third curve also changes the objective.
+::: {.slide title="Sequence-to-Sequence Alignment: String Reversal"}
+[Encoder–Decoder Benchmark]{.kicker}
 
-@!encoders-decoders-a-causal-control
+To study how a causal decoder reads a bidirectional encoder through **cross-attention**, we train on a task with a known ground-truth alignment—reversing length-$12$ strings over a 16-letter alphabet (`a`–`p`):
 
-::: {.d2l-note .rule}
-One-sided training brings position 63 to about 2.1. Next-byte training
-scores all 64 positions, not about 10, and reaches about 1.45.
-:::
-:::
+@encoders-decoders-a-task-whose-alignment-we-know
 
-::: {.slide title="The Right-Hand Context Fixes the Missing Letter"}
-@!encoders-decoders-what-the-second-side-is-worth-2
-
-- `he European` fixes the `t` in "as _he European"; a left-to-right
-  model never sees it.
-- `gam_arus`: the model hedges, although `Homarus` just before the gap
-  ends in the same `marus`; it reads mainly its nearest neighbours.
-- Scaled to subwords and gigabytes, this experiment is BERT (2018);
-  ModernBERT (2024) keeps the wiring with RoPE, a gated FFN, and 8k
-  context.
+- **Teacher-forced decoder input (`dec_in`):** Prepends `<bos>` (`id = 16`) and shifts the reversed target right by one slot: `dec_in` $= (\texttt{<bos>}, x_T, x_{T-1}, \dots, x_2)$ predicts `tgt` $= (x_T, x_{T-1}, \dots, x_1)$.
+- **Exact ground-truth alignment:** To emit target position $t \in \{0, \dots, T-1\}$, the decoder must retrieve source token $x_{T - 1 - t}$ along the **anti-diagonal** $(t, T - 1 - t)$.
 :::
 
-::: {.slide title="Reversal Fixes the Correct Alignment"}
-For strings of length $T = 12$, target position $t$ must copy source
-position $T-1-t$. Letters are random, so content reaches the decoder only
-through cross-attention.
+::: {.slide title="The Decoder Block: Adding a Cross-Attention Sublayer"}
+[Decoder Block Anatomy]{.kicker}
 
-@!encoders-decoders-a-task-whose-alignment-we-know
+Each `DecoderBlock` in an encoder–decoder stack contains **three** pre-norm residual sublayers operating on the target stream $\mathbf{X} \in \mathbb{R}^{B \times T_{\text{dec}} \times d}$ given encoder output $\mathbf{H}_{\text{enc}} \in \mathbb{R}^{B \times T_{\text{src}} \times d}$:
 
-- Prediction: if the model solves the task directly, the
-  cross-attention map is the anti-diagonal.
-- Fresh random strings every step: nothing to memorize.
+$$\mathbf{U} = \mathbf{X} + \mathrm{SelfAttn}_{\mathrm{causal}}\bigl(\mathrm{Norm}_1(\mathbf{X})\bigr)$$
+
+$$\mathbf{V} = \mathbf{U} + \mathrm{CrossAttn}\bigl(\mathbf{Q} = \mathrm{Norm}_2(\mathbf{U}),\; \mathbf{K} = \mathbf{H}_{\mathrm{enc}},\; \mathbf{V} = \mathbf{H}_{\mathrm{enc}}\bigr)$$
+
+$$\mathbf{Y} = \mathbf{V} + \mathrm{FFN}\bigl(\mathrm{Norm}_3(\mathbf{V})\bigr)$$
+
+- **Asymmetric Query vs. Key–Value sources:** In `CrossAttn`, queries come from the target decoder stream ($\text{length } T_{\text{dec}}$), while keys and values come from the top of the encoder ($\text{length } T_{\text{src}}$), producing a rectangular $(T_{\text{dec}} \times T_{\text{src}})$ attention map.
 :::
 
-::: {.slide title="The Decoder Block Adds Cross-Attention"}
-On the target's residual stream $\mathbf{x}$, with encoder output
-$\mathbf{E}$:
+::: {.slide title="Implementing DecoderBlock in Code" only="pytorch"}
+[Implementation]{.kicker}
 
-$$\begin{aligned}
-\mathbf{x} &\leftarrow \mathbf{x} + \mathrm{Attn}_\text{causal}(\mathrm{Norm}_1(\mathbf{x})) \\
-\mathbf{x} &\leftarrow \mathbf{x} + \mathrm{Attn}(\text{q} = \mathrm{Norm}_2(\mathbf{x}),\ \text{k} = \text{v} = \mathbf{E}) \\
-\mathbf{x} &\leftarrow \mathbf{x} + \mathrm{FFN}(\mathrm{Norm}_3(\mathbf{x}))
-\end{aligned}$$
+Notice that `self_attention` applies a causal mask over the target prefix, whereas `cross_attention` attends over the entire encoded source `enc` (using only an optional source padding `cross_mask`):
 
-- Self-attention is causal and cached while decoding, as in a GPT.
-- Cross-attention is unmasked; its keys and values depend only on
-  $\mathbf{E}$, so they are computed once per source.
-:::
-
-::: {.slide title="Cross-Attention Is One More Sublayer" only="pytorch"}
 ```{.python #encoders-decoders-exercises-3}
 def forward(self, X, enc, mask=None, cross_mask=None):
-    if mask is None:                      # causal self-attention
+    if mask is None:                      # Causal mask for target self-attention
         mask = d2l.causal_mask(X.shape[1], device=X.device)
     Y = self.norm1(X)
     X = X + self.self_attention(Y, Y, Y, mask)
-    Y = self.norm2(X)                     # queries: target stream
-    X = X + self.cross_attention(Y, enc, enc, cross_mask)
+    X = X + self.cross_attention(self.norm2(X), enc, enc, cross_mask)
     return X + self.ffn(self.norm3(X))
 ```
 
-Keys and values come from `enc`, the encoder output.
+::: {.d2l-note}
+During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence—so they are computed **once per prompt** and reused at every target decoding step!
+:::
 :::
 
-::: {.slide title="Cross-Attention Is One More Sublayer" only="jax"}
+::: {.slide title="Implementing DecoderBlock in Code" only="jax"}
+[Implementation]{.kicker}
+
+Notice that `self_attention` applies a causal mask over the target prefix, whereas `cross_attention` attends over the entire encoded source `enc` (using only an optional source padding `cross_mask`):
+
 ```{.python #encoders-decoders-exercises-4}
 def __call__(self, X, enc, mask=None, cross_mask=None):
-    if mask is None:                      # causal self-attention
+    if mask is None:                      # Causal mask for target self-attention
         mask = d2l.causal_mask(X.shape[1])
     Y = self.norm1(X)
     X = X + self.self_attention(Y, Y, Y, mask)
-    Y = self.norm2(X)                     # queries: target stream
-    X = X + self.cross_attention(Y, enc, enc, cross_mask)
+    X = X + self.cross_attention(self.norm2(X), enc, enc, cross_mask)
     return X + self.ffn(self.norm3(X))
 ```
 
-Keys and values come from `enc`, the encoder output.
+::: {.d2l-note}
+During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence—so they are computed **once per prompt** and reused at every target decoding step!
+:::
 :::
 
-::: {.slide title="300 Steps Reverse Every Fresh String"}
-One encoder block, one decoder block, batches of 128 fresh strings,
-cosine decay to zero; uniform guessing costs $\log 16 \approx 2.77$ nats:
+::: {.slide title="Training and Greedy Decoding on String Reversal"}
+[End-to-End Seq2Seq]{.kicker}
+
+Training a 1-block `EncoderDecoder` on fresh random batches of $128$ strings drives cross-entropy from $\ln 16 \approx 2.77\text{ nats}$ to $0.002\text{ nats}$ in $300$ steps, achieving $100\%$ exact-string match on $1{,}000$ unseen test strings:
 
 @!encoders-decoders-training-and-decoding-1
-
-Greedy decoding: the encoder runs once, the decoder once per token.
 
 @!encoders-decoders-training-and-decoding-2
 :::
 
-::: {.slide title="The Anti-Diagonal Appears When the Encoder Cannot Move Letters"}
-Six runs each, all reverse. With self-attention the encoder can move or
-pack letters first, and the map shows only the second half of the alignment.
+::: {.slide title="Composing Masks Across the Three Attention Layers"}
+[Masking Rules]{.kicker}
 
-@!encoders-decoders-reading-the-alignment
-:::
+When processing ragged batches padded on the right to source length $S$ and target length $T_{\text{dec}}$, each attention sublayer requires a distinct boolean mask:
 
-::: {.slide title="Three Masks from Two Primitives"}
-A padded batch, source lengths (3, 5), target lengths (3, 4), padded on
-the right:
+| Sublayer | Score Matrix Shape | Required Mask | Why |
+| :--- | :---: | :--- | :--- |
+| **1. Encoder Self-Attn** | $(B, H, S, S)$ | **Source padding mask** ($j < s_b$) | Prevents real source tokens from reading `<pad>` columns |
+| **2. Decoder Self-Attn** | $(B, H, T_{\text{dec}}, T_{\text{dec}})$ | **Causal triangle $\land$ target pad** | Blocks future target tokens ($j > i$) and padded positions |
+| **3. Cross-Attention** | $(B, H, T_{\text{dec}}, S)$ | **Source padding mask** ($j < s_b$) | Target step $i$ may read *all* real source tokens, never `<pad>` |
 
-- `padding_mask(lens, n)`: key $j$ valid if $j <$ length;
-- `causal_mask(T)`: key $j$ visible to query $i$ if $j \le i$;
-- encoder self and cross: source padding · decoder self: causal, which
-  already hides right-padded keys from every real query.
-
-::: {.d2l-note .rule}
-Masks combine by logical AND and broadcast over heads. Target padding
-changes only padded query rows, until the batch is padded on the left.
+::: {.d2l-note .warn}
+**Never apply a causal mask to cross-attention:** target token $t = 0$ must be free to read the *last* source token $j = S - 1$ immediately (as in string reversal or word-order-inverting translation!).
 :::
 :::
 
-::: {.slide title="Check: Which Mask Does Cross-Attention Need?"}
-[Check]{.kicker}
+::: {.slide title="Pitfall: Do Cross-Attention Weights Show Attribution?"}
+[Interpretability Pitfall]{.kicker}
 
-The source batch is padded on the right; the target is mid-generation.
-Does cross-attention need the causal triangle, source padding, or both?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Source padding only. The causal triangle protects the target
-from its own future; every real source token is known before decoding
-starts, but padded source positions must receive zero weight.
-:::
-:::
-:::
-
-::: {.slide title="Learned Queries Read N Inputs at Cost O(MN)"}
 ::: {.cols .vc}
 ::: {.col}
+- **Without encoder self-attention (`without`, right heatmap):** Encoder slot $j$ holds only token $x_j$, so cross-attention is forced onto the exact anti-diagonal $(t, T-1-t)$ ($100\%$ of rows).
+- **With encoder self-attention (`with`, left heatmap):** Both models achieve $100\%$ reversal accuracy, yet cross-attention aligns with the anti-diagonal on as few as $33\%$ of rows because the encoder's self-attention layer can already permute or fold tokens across positions!
+:::
+
+::: {.col .fig}
+@!encoders-decoders-reading-the-alignment
+:::
+:::
+:::
+
+::: {.slide title="Cross-Attention as a Fixed-Size Latent Bottleneck"}
+[Perceiver Architecture]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Decoupling compute from input length $N$:** In `CrossAttn`, the output sequence length equals the number of **queries $M$**, not the number of **keys/values $N$**.
+- **Perceiver (Jaegle et al., 2021):** Uses $M \ll N$ learned latent query vectors $\mathbf{Z}_0 \in \mathbb{R}^{M \times d}$ to cross-attend into an $N$-token input in **$O(M N d)$** time, then runs $L$ self-attention blocks on the short latent array in **$O(L M^2 d)$** time—eliminating the $O(L N^2 d)$ bottleneck!
+:::
+
+::: {.col .fig}
 @fig:mdl-transformers-latent-bottleneck
 :::
-
-::: {.col .narrow}
-- An input of $N$ vectors (patches, frames, bytes): $M$ learned latents
-  cross-attend into it at $O(MN)$, then attend only among themselves at
-  $O(M^2)$. The $N^2$ term never appears (Perceiver, 2021).
-- Resamplers hand images to language models this way (Flamingo: 64
-  tokens; BLIP-2: 32 queries); DETR uses one query per object.
-:::
 :::
 :::
 
-::: {.slide title="A Perceiver Is Latents Plus One Cross-Attention" only="pytorch"}
+::: {.slide title="Implementing PerceiverEncoder in Ten Lines" only="pytorch"}
+[Latent Bottleneck Code]{.kicker}
+
+`PerceiverEncoder` broadcasts $M$ learned latent queries across the batch, performs one $O(MN)$ cross-attention read from `X`, and processes the $M$ latents through $L$ standard `TransformerBlock` layers:
+
 ```{.python #encoders-decoders-exercises-5}
-def forward(self, X):                     # X: (batch, N, d)
-    Z = self.latents.expand(X.shape[0], -1, -1)   # (batch, M, d)
-    Z = Z + self.cross_attention(self.norm_q(Z), X, X)  # O(MN)
+def forward(self, X):                                   # X: (batch, N, d) raw inputs
+    Z = self.latents.expand(X.shape[0], -1, -1)         # (batch, M, d) learned queries
+    Z = Z + self.cross_attention(self.norm_q(Z), X, X)  # O(M * N) cross-attention read
     for blk in self.blks:
-        Z = blk(Z)                        # O(M^2): latents only
-    return self.norm(Z)                   # (batch, M, d)
+        Z = blk(Z)                                      # O(M^2) latent self-attention
+    return self.norm(Z)                                 # (batch, M, d), independent of N
 ```
 
-Whatever $N$, the output is $M$ vectors. Output queries can set the
-output shape too (Perceiver IO).
+::: {.d2l-note}
+Multimodal vision–language models use this exact resampler pattern (e.g., Flamingo and BLIP-2 Q-Former compress hundreds of ViT patch tokens into $M = 32$ or $64$ latent tokens before feeding them into an LLM).
+:::
 :::
 
-::: {.slide title="A Perceiver Is Latents Plus One Cross-Attention" only="jax"}
+::: {.slide title="Implementing PerceiverEncoder in Ten Lines" only="jax"}
+[Latent Bottleneck Code]{.kicker}
+
+`PerceiverEncoder` broadcasts $M$ learned latent queries across the batch, performs one $O(MN)$ cross-attention read from `X`, and processes the $M$ latents through $L$ standard `TransformerBlock` layers:
+
 ```{.python #encoders-decoders-exercises-6}
-def __call__(self, X):                    # X: (batch, N, d)
+def __call__(self, X):                                  # X: (batch, N, d) raw inputs
     Z = jnp.broadcast_to(self.latents[...],
                          (X.shape[0],) + self.latents.shape)
-    Z = Z + self.cross_attention(self.norm_q(Z), X, X)  # O(MN)
+    Z = Z + self.cross_attention(self.norm_q(Z), X, X)  # O(M * N) cross-attention read
     for blk in self.blks:
-        Z = blk(Z)                        # O(M^2): latents only
-    return self.norm(Z)                   # (batch, M, d)
+        Z = blk(Z)                                      # O(M^2) latent self-attention
+    return self.norm(Z)                                 # (batch, M, d), independent of N
 ```
 
-Whatever $N$, the output is $M$ vectors. Output queries can set the
-output shape too (Perceiver IO).
-:::
-
-::: {.slide title="Check: Count the Scores"}
-[Check]{.kicker}
-
-$N = 8192$ inputs, $M = 64$ latents. How many attention scores per head
-does one layer of full self-attention compute, and how many does the
-Perceiver's read compute?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $N^2 \approx 6.7 \times 10^7$ against
-$MN \approx 5.2 \times 10^5$: 128 times fewer, plus
-$M^2 = 4{,}096$ per latent layer.
-:::
+Multimodal vision–language models use this exact resampler pattern (e.g., Flamingo and BLIP-2 Q-Former compress hundreds of ViT patch tokens into $M = 32$ or $64$ latent tokens before feeding them into an LLM).
 :::
 :::
 
-::: {.slide title="Full Attention Nears 4× per Doubling; the Perceiver Barely Moves"}
-@!encoders-decoders-the-cost-curve
+::: {.slide title="Choosing Among the Three Wirings in Modern Systems"}
+[Architectural Decision Guide]{.kicker}
 
-Both compiled. The Perceiver's 0.15 to 0.35 ms is mostly a fixed cost per
-call, so at $N = 8192$ it is over $30\times$ faster, not the $128\times$ of
-the score count.
+When should you pick an encoder-only, decoder-only, or encoder–decoder architecture today?
+
+| Wiring | Training Efficiency | Inference & Serving | Best Modern Use Cases |
+| :--- | :--- | :--- | :--- |
+| **Encoder-Only** | MLM scores $15\%$ of tokens; full two-sided context | Single non-autoregressive forward pass; no KV cache | Dense retrieval embeddings, rerankers, NER, **Vision Transformers (§11.5)** |
+| **Decoder-Only** | Next-token loss scores **$100\%$ of tokens** per pass | Unified prompt + generation stack and single KV cache | **General-purpose LLMs**, code, chat, reasoning, in-context translation |
+| **Encoder–Decoder** | Dedicated source encoder + target decoder parameters | Encoder runs **once** on long source; compact decoder steps | **Cross-modal seq2seq** (Whisper speech-to-text), multimodal resamplers |
 :::
 
-::: {.slide title="Decoder-Only Is the Default for Text Today"}
-| wiring | outputs | at inference | default for |
-|---|---|---|---|
-| encoder | a vector per token, or pooled | one pass | embeddings for search, reranking, classification |
-| encoder--decoder | a sequence from a separate input | source encoded once; cross keys and values reused | speech recognition (Whisper) |
-| decoder | a continuation of the prompt | prompt cached once, then a token per step | translation, summarization, chat: source in the prompt |
+::: {.slide title="Concept Check: Masking, Complexity, and Wiring Choice"}
+[Check Your Understanding]{.kicker}
 
-::: {.d2l-note .rule}
-Against an encoder: next-byte training scores all 64 positions of a
-window, masked training about 10; after 2,000 steps our next-byte model
-was no worse than the two-sided masked one.
-Against an encoder--decoder: one pretrained stack serves every task
-through its prompt.
-:::
-:::
+Work through these three architectural questions:
 
-::: {.slide title="Check: Label Ten Million Support Tickets"}
-[Check]{.kicker}
+1. **Perceiver score count:** Suppose an audio or image array has $N = 8{,}192$ tokens and a `PerceiverEncoder` uses $M = 64$ learned latents and $L = 6$ latent self-attention blocks. Compare the number of attention score pairs per head in the Perceiver against a 6-layer full self-attention encoder.
+2. **Cross-attention caching:** During autoregressive decoding of $T_{\text{dec}} = 100$ target tokens from an encoded source of length $T_{\text{src}} = 1{,}000$, how many times are the cross-attention key and value projections $\mathbf{H}_{\text{enc}}\mathbf{W}_k, \mathbf{H}_{\text{enc}}\mathbf{W}_v$ computed?
+3. **Architecture selection:** You need to embed $50\text{ million}$ product descriptions into $768$-dimensional vectors for nearest-neighbor search. Which wiring do you choose, and why?
 
-Each ticket must get one of 20 topic labels, at the lowest cost. Which
-wiring, and how does it turn a ticket into one label?
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** An encoder: one bidirectional pass per ticket, outputs pooled
-to one vector (average or a designated token), then a linear layer onto
-20 classes. No token is generated, so no decoder is needed.
-:::
+1. **Full encoder:** $6 \times 8192^2 \approx \mathbf{4.03 \times 10^8}$ score pairs/head. **Perceiver:** $64 \times 8192 + 6 \times 64^2 = 524{,}288 + 24{,}576 \approx \mathbf{5.49 \times 10^5}$ score pairs/head (**$734\times$ fewer**!).
+2. **Exactly once** (right after the encoder finishes), because $\mathbf{H}_{\text{enc}}$ never changes as target tokens are generated.
+3. **Encoder-only:** every token benefits from full bidirectional context, and each description is embedded in a single parallel forward pass with no autoregressive decoding loop.
 :::
 :::
 
-::: {.slide title="Mask and Key Source Make Three Wirings; Decoder-Only Leads for Text"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Encoders, Decoders, and Cross-Attention"}
+[Key Takeaways]{.kicker}
 
-- One block, three wirings: no mask, causal mask, or both joined by
-  cross-attention.
-- Masked prediction trains the encoder; with the same training a masked
-  byte costs 1.5 to 1.7 nats with both sides of context, about 2.1 with
-  one.
-- On reversal every run reverses every fresh string; the cross-attention
-  map is the anti-diagonal whenever the encoder cannot move letters first.
-- $M$ learned queries read $N$ inputs at $O(MN)$; at $N = 8192$ the
-  Perceiver is over $30\times$ faster than full self-attention.
-- Decoder-only is the default for text; encoders serve embeddings,
-  encoder--decoders inputs of another kind, such as speech.
-
-**Next:** the Vision Transformer, the encoder-only wiring over image
-patches.
+| Mechanism | Key Equations / Structure | Computational & Statistical Property |
+| :--- | :--- | :--- |
+| **Bidirectional Encoder** | `TransformerBlock` stack with `mask=None` | Every position sees full left + right context in one pass |
+| **Masked LM (MLM)** | $\mathcal{L}_{\text{MLM}} = -\frac{1}{|\mathcal{M}|}\sum_{i \in \mathcal{M}} \log P(x_i \mid \tilde{\mathbf{x}})$ | Prevents multi-layer target leakage; U-shaped window loss curve |
+| **Cross-Attention** | $\mathrm{Attn}(\mathbf{Q}=\mathrm{Norm}(\mathbf{Y})\mathbf{W}_q,\; \mathbf{K},\mathbf{V}=\mathbf{H}_{\text{enc}}\mathbf{W}_{k,v})$ | Bridges separate source & target stacks; source K/V cached once |
+| **Attention Attribution** | Multi-layer encoder self-attn + cross-attn | Encoder self-attention can permute tokens before cross-attention reads |
+| **Perceiver Bottleneck** | $M$ learned queries $\mathbf{Z}_0 \in \mathbb{R}^{M \times d}$ read $N$ inputs | Reduces attention mixing cost from $O(L N^2 d)$ to $O(M N d + L M^2 d)$ |
 :::

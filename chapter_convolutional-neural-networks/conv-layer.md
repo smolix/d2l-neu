@@ -666,293 +666,246 @@ layers widens each unit's receptive field linearly by $k_i - 1$ per layer.
 ::: {.cover}
 [Dive into Deep Learning · §6.2]{.kicker}
 
-Convolutions for Images<br>**cross-correlation · edge detection · learned kernels · receptive fields**
+Convolutions for Images<br>**2D cross-correlation · edge detection · learned kernels · im2col · receptive fields**
 :::
 :::
 
-::: {.slide title="One Two-Weight Detector Finds a Vertical Edge Anywhere"}
-[The problem]{.kicker}
+::: {.slide title="Detecting Local Edges Across an Image"}
+[Motivation & Core Mental Model]{.kicker}
 
-A $6 \times 8$ image: white (1), with a black band (0) in its middle four
-columns.
+In §6.1 we derived the convolutional layer from locality and translation equivariance; now let's see what a small shared kernel actually computes on a 2D pixel grid:
 
-- Subtract each pixel's right neighbor: $[\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$.
-- $+1$ where white turns black, $-1$ where black turns white, 0 elsewhere.
-- The edge can be in any row or column: apply the same weights $(1, -1)$
-  at all $6 \times 7$ positions.
+- **Synthetic $6 \times 8$ test image:** White outer columns (`1`) surrounding a 4-column black vertical band (`0`).
+- **Horizontal finite difference:** Subtracting each pixel's right-hand neighbor ($[\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$) yields `0` on uniform regions, `+1` at white-to-black transitions, and `-1` at black-to-white transitions.
+- **One 2-weight detector everywhere:** Sweeping the $1 \times 2$ kernel $\mathbf{K} = [1, -1]$ across all $6 \times 7 = 42$ valid horizontal pairs locates vertical boundaries anywhere in the image.
 
 ::: {.d2l-note}
-A network needs thousands of such detectors, and nobody knows them in
-advance. Can it learn them?
+A deep vision network requires thousands of intermediate detectors across dozens of layers—far too many to hand-craft. Can gradient descent discover kernels like $[1, -1]$ automatically from data?
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The 2D Cross-Correlation Operation"}
+[Sliding-Window Inner Products]{.kicker}
 
-- compute a 2-D cross-correlation by hand and predict its output shape;
-- implement it with two loops and wrap it as a layer with a bias;
-- detect vertical edges with the kernel $(1, -1)$, then learn that kernel
-  by gradient descent;
-- write cross-correlation as one matrix product (im2col);
-- compute the receptive field of a stack of layers.
-
-**Running example:** Fashion-MNIST, model against model; a $5 \times 5$
-kernel on a $28 \times 28$ image has 25 weights and gives a $24 \times 24$
-map.
-:::
-
-::: {.slide title="The Layer Derived in the Last Deck, Now Computed"}
-[Where this fits]{.kicker}
+Given an $n_\textrm{h} \times n_\textrm{w}$ input matrix $\mathbf{X}$ and a $k_\textrm{h} \times k_\textrm{w}$ kernel $\mathbf{K}$, the 2D cross-correlation $\mathbf{Y} = \mathbf{X} \star \mathbf{K}$ places the window's top-left corner at $(i, j)$ and sums elementwise products:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| From Fully Connected Layers to Convolutions | locality and translation equivariance give convolution |
-| **Convolutions for Images** | **cross-correlation, learning a kernel, receptive fields** |
-| Padding, Stride, and Dilation | output size and how far each unit sees |
-| Multiple Input and Multiple Output Channels | channels, 1 × 1 convolutions, cost |
-| Pooling | downsampling, tolerance to small shifts, global pooling |
-| LeNet | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
-:::
-
-::: {.col .narrow}
-- **Uses:** the convolutional layer (one kernel shared by all locations);
-  gradient descent; autograd.
-- **Skips:** padding and channels (later decks).
-:::
-:::
-:::
-
-::: {.slide title="Cross-Correlation Slides the Kernel and Sums Elementwise Products"}
-[Cross-correlation]{.kicker}
-
-$\mathbf{Y} = \mathbf{X} \star \mathbf{K}$, the *cross-correlation*:
-
 $$[\mathbf{Y}]_{i, j} = \sum_{a=0}^{k_\textrm{h}-1} \sum_{b=0}^{k_\textrm{w}-1} [\mathbf{K}]_{a, b}\, [\mathbf{X}]_{i+a, j+b}$$
 
-![](../img/correlation.svg){width=70%}
-
-Window at the upper-left corner: $0\cdot0+1\cdot1+3\cdot2+4\cdot3 = 19$.
+- **Top-left anchor:** Zero-based indices $a, b \ge 0$ match array indexing in code and handle even-sized kernels (like $2 \times 2$ or $1 \times 2$) cleanly.
+- **Shaded top-left output $(0,0)$:**
+  $0\cdot 0 + 1\cdot 1 + 3\cdot 2 + 4\cdot 3 = 19$.
 :::
 
-::: {.slide title="Check: The Other Three Outputs"}
-[Check]{.kicker}
-
-Input $\begin{bmatrix} 0 & 1 & 2 \\ 3 & 4 & 5 \\ 6 & 7 & 8 \end{bmatrix}$,
-kernel $\begin{bmatrix} 0 & 1 \\ 2 & 3 \end{bmatrix}$. The first output is
-19. What are the other three, and what is the output shape for a
-$28 \times 28$ image and a $5 \times 5$ kernel?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $25, 37, 43$. The window fits at $n - k + 1$ positions per
-axis: $24 \times 24$.
+::: {.col .fig}
+![](../img/correlation.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Two Loops Compute the Cross-Correlation"}
-[Cross-correlation]{.kicker}
+::: {.slide title="Valid Window Positions and Output Spatial Shape"}
+[Why Unpadded Convolutions Shrink the Grid]{.kicker}
+
+Because the $k_\textrm{h} \times k_\textrm{w}$ window must stay wholly inside the $n_\textrm{h} \times n_\textrm{w}$ input grid, it fits at $n - k + 1$ positions along each axis:
+
+$$\textrm{Output shape} = (n_\textrm{h} - k_\textrm{h} + 1) \times (n_\textrm{w} - k_\textrm{w} + 1)$$
+
+- **All four window evaluations in our $3 \times 3 \star 2 \times 2 \to 2 \times 2$ example:**
+  - $[\mathbf{Y}]_{0,0} = 0\cdot 0 + 1\cdot 1 + 3\cdot 2 + 4\cdot 3 = 19$, and $[\mathbf{Y}]_{0,1} = 1\cdot 0 + 2\cdot 1 + 4\cdot 2 + 5\cdot 3 = 25$.
+  - $[\mathbf{Y}]_{1,0} = 3\cdot 0 + 4\cdot 1 + 6\cdot 2 + 7\cdot 3 = 37$, and $[\mathbf{Y}]_{1,1} = 4\cdot 0 + 5\cdot 1 + 7\cdot 2 + 8\cdot 3 = 43$.
+- **Concrete shape examples:** A $6 \times 8$ image with a $1 \times 2$ kernel yields $6 \times 7$; a $28 \times 28$ Fashion-MNIST image with a $5 \times 5$ kernel shrinks to $24 \times 24$.
+:::
+
+::: {.slide title="Implementing 2D Cross-Correlation in Code"}
+[Direct Nested-Loop Implementation]{.kicker}
+
+The function `corr2d` allocates the $(n_\textrm{h} - k_\textrm{h} + 1) \times (n_\textrm{w} - k_\textrm{w} + 1)$ output tensor and computes each entry as the sum of `X[i:i+h, j:j+w] * K`:
 
 @conv-layer-the-cross-correlation-operation-1
 
-Output shape $(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1)$:
-the window must fit inside the input.
+::: {.d2l-note}
+Each iteration slices a $k_\textrm{h} \times k_\textrm{w}$ sub-window of `X`, multiplies elementwise with `K`, and reduces via `sum`.
+:::
 :::
 
-::: {.slide title="corr2d Reproduces the Figure"}
-[Cross-correlation]{.kicker}
+::: {.slide title="Verifying corr2d and the Flipped-Kernel Equivalence"}
+[Cross-Correlation vs. Mathematical Convolution]{.kicker}
+
+Evaluating `corr2d(X, K)` on our $3 \times 3$ input and $2 \times 2$ kernel reproduces the four hand-calculated outputs:
 
 @conv-layer-the-cross-correlation-operation-2
 
-Padding the input with zeros (next deck) keeps the size unchanged.
+- **Cross-correlation vs. convolution:** Mathematical convolution flips the kernel 180° ($[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$), reading $\mathbf{X}$ at $(i-a, j-b)$ instead of $(i+a, j+b)$.
+- **Identical learned function class:** Cross-correlating with $\begin{bsmallmatrix}0 & 1\\2 & 3\end{bsmallmatrix}$ gives the exact same output ($19, 25, 37, 43$) as convolving with $\begin{bsmallmatrix}3 & 2\\1 & 0\end{bsmallmatrix}$. Because kernels are learned from data, frameworks implement cross-correlation and call it `Conv2D`.
 :::
 
-::: {.slide title="Convolution Flips the Kernel, Which Learning Makes Irrelevant"}
-[Cross-correlation]{.kicker}
+::: {.slide title="Building a 2D Convolutional Layer Module"}
+[Learnable Kernel Weights Plus Scalar Bias]{.kicker}
 
-- Convolution reads $\mathbf{X}$ at $(i-a, j-b)$; cross-correlation at
-  $(i+a, j+b)$.
-- Cross-correlating with $\begin{bmatrix} 0 & 1 \\ 2 & 3 \end{bmatrix}$ =
-  convolving with $\begin{bmatrix} 3 & 2 \\ 1 & 0 \end{bmatrix}$: both
-  give 19, 25, 37, 43.
-- A convolving layer would learn the flipped kernel.
-
-::: {.d2l-note}
-Libraries compute cross-correlation and call it convolution.
-:::
-:::
-
-::: {.slide title="A Convolutional Layer Is corr2d Plus a Bias"}
-[Layer]{.kicker}
+A convolutional layer wraps `corr2d` with a learnable $k_\textrm{h} \times k_\textrm{w}$ weight parameter (initialized from $\mathcal{N}(0, 0.01^2)$) and a scalar bias (initialized to $0$):
 
 @conv-layer-convolutional-layers
-
-Kernel from $\mathcal{N}(0, 0.01^2)$, bias zero.
 :::
 
-::: {.slide title="Five Parameters Serve Every Input Size"}
-[Layer]{.kicker}
+::: {.slide title="Resolution Independence of Convolutional Layers"}
+[Fixed Parameters Across Arbitrary Input Sizes]{.kicker}
 
-One $2 \times 2$ layer applied to a $3 \times 3$ input and to a
-$6 \times 8$ image:
+Because parameters depend only on the kernel shape $(k_\textrm{h}, k_\textrm{w})$, the exact same $2 \times 2$ layer ($4$ weights $+ 1$ bias $= 5$ parameters) processes inputs of any spatial resolution:
 
-@!conv-layer-the-layer-1
+@conv-layer-the-layer-1
 
-Output $(n_\textrm{h}-1) \times (n_\textrm{w}-1)$; the parameter count
-depends only on the kernel.
+- **Why dense layers cannot do this:** A fully connected layer hard-codes the input length $n_\textrm{h} n_\textrm{w}$ into its weight matrix shape, crashing if the image resolution changes.
+- **Convolutional flexibility:** Changing input resolution from $3 \times 3$ to $6 \times 8$ leaves the 5 parameters untouched and scales the output shape from $(2, 2)$ to $(5, 7)$.
 :::
 
-::: {.slide title="The Kernel (1, −1) Is a Finite Difference"}
-[Edge detection]{.kicker}
+::: {.slide title="Constructing a Synthetic Vertical-Edge Image"}
+[A 6×8 Binary Test Pattern]{.kicker}
 
-@!conv-layer-object-edge-detection-in-images-1
+Let's construct the $6 \times 8$ test image `X` with ones on the left and right borders and zeros across the middle four columns (`X[:, 2:6] = 0`):
 
-- At $(i, j)$: $[\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$, up to sign
-  the derivative of the brightness along the row.
-- Zero wherever horizontal neighbors are equal.
+@conv-layer-object-edge-detection-in-images-1
+
+- **Piecewise-constant columns:** Intensity is constant (`1` or `0`) within columns $0\text{--}1$, $2\text{--}5$, and $6\text{--}7$, jumping only between columns $1 \to 2$ and $5 \to 6$.
 :::
 
-::: {.slide title="The Edge Map Marks Both Sides of the Band"}
-[Edge detection]{.kicker}
+::: {.slide title="Applying the Horizontal Finite-Difference Kernel"}
+[Detecting Vertical Edges with K = [1, -1]]{.kicker}
 
-@!conv-layer-object-edge-detection-in-images-3
+Cross-correlating `X` with the $1 \times 2$ kernel $\mathbf{K} = \begin{bmatrix} 1 & -1 \end{bmatrix}$ computes $[\mathbf{Y}]_{i,j} = [\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$ at every horizontal pair:
 
-- $+1$: white to black; $-1$: black to white.
-- On the transposed image (a horizontal band) the output is all zeros:
-  $(1, -1)$ sees only vertical edges.
+@conv-layer-object-edge-detection-in-images-2
+
+@conv-layer-object-edge-detection-in-images-3
+
+- **Signed edge map:** Column 1 fires `+1` (white-to-black transition), column 5 fires `-1` (black-to-white transition), and all constant interior columns evaluate to `0`.
 :::
 
-::: {.slide title="Gradient Descent Recovers (1, −1) from the Image and Its Edge Map"}
-[Learning a kernel]{.kicker}
+::: {.slide title="Orientation Selectivity of Edge Kernels"}
+[Why One Kernel Cannot Detect All Orientations]{.kicker}
 
-- Start: $1 \times 2$ kernel from $\mathcal{N}(0, 0.01^2)$, no bias.
-- Loss: squared error summed over the 42 outputs; 10 steps, learning
-  rate 0.03.
+What happens if we rotate the image 90° by transposing `X` (`X.T`), turning the vertical stripe into a horizontal stripe?
 
-@!conv-layer-learning-a-kernel-1
+@conv-layer-object-edge-detection-in-images-4
 
-@!conv-layer-learning-a-kernel-2
+- **Complete blindness to horizontal edges:** Along every row of `X.T`, adjacent horizontal neighbors are identical, so $[1, -1]$ outputs all zeros!
+- **Need for multi-channel filter banks:** Detecting horizontal edges requires $[1, -1]^\top$, diagonal edges require $2 \times 2$ or $3 \times 3$ oriented kernels, and rich vision layers learn dozens of filters in parallel (§6.4).
 :::
 
-::: {.slide title="Check: Why Does the Loss Start Near 12?"}
-[Check]{.kicker}
+::: {.slide title="Learning an Edge Detector via Gradient Descent"}
+[Supervising a Built-In Conv2d Layer on (X, Y)]{.kicker}
 
-The kernel starts near zero. Why is the initial loss about 12, and what
-would it be if the black band reached the right border of the image?
+Can gradient descent discover $\mathbf{K} = [1, -1]$ starting from random Gaussian noise $\mathcal{N}(0, 0.01^2)$? We reshape `X` to $(1, 1, 6, 8)$ and `Y` to $(1, 1, 6, 7)$ (batch $=1$, channel $=1$) and minimize squared error $\mathcal{L} = \|\hat{\mathbf{Y}} - \mathbf{Y}\|_2^2$ over 10 steps at $\eta = 0.03$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The output is nearly 0, and each of the 12 edge positions
-(2 per row, 6 rows) misses its target $\pm 1$ by 1. With the band at the
-border, each row has one edge: about 6.
-:::
-:::
+@conv-layer-learning-a-kernel-1
 :::
 
-::: {.slide title="Cross-Correlation Is One Matrix Product"}
-[im2col]{.kicker}
+::: {.slide title="Inspecting the Learned Kernel Weights"}
+[Why Initial Loss Is 12 and Converges to [1, -1]]{.kicker}
 
-Flatten every window into a row, stack the rows, multiply by the
-flattened kernel:
+After 10 gradient steps, the squared error drops from $12.0$ to below $0.005$, and the learned weights match $[1.0, -1.0]$ to within $0.02$:
+
+@conv-layer-learning-a-kernel-2
+
+- **Why the initial loss sits near 12:** At initialization, $\mathbf{K} \approx [0, 0]$ predicts $\hat{Y}_{i,j} \approx 0$ everywhere. The target edge map `Y` has twelve nonzero entries (six `+1`s in column 1 and six `-1`s in column 5), contributing $12 \times (\pm 1)^2 = 12$ to the sum of squared errors.
+- **From direct supervision to end-to-end backprop:** Here we supervised the layer's output directly; in a multi-layer CNN (§6.6), backpropagation learns every layer's kernels simultaneously from class labels alone.
+:::
+
+::: {.slide title="Fast Execution: Convolution via Matrix Multiplication"}
+[The im2col (Image-to-Columns) Transformation]{.kicker}
+
+Nested Python loops over output coordinates are orders of magnitude too slow for GPUs. Frameworks recast cross-correlation as a single dense general matrix multiply (**GEMM**) via **im2col**:
 
 @conv-layer-convolution-as-matrix-multiplication-1
 
-Accelerators are built for dense matrix products. The patch matrix copies
-each input element into up to $k_\textrm{h} k_\textrm{w}$ rows.
+- **How `im2col` works:** Extract each of the $h_\textrm{o} w_\textrm{o}$ sliding windows of shape $k_\textrm{h} \times k_\textrm{w}$, flatten it into a row of length $k_\textrm{h} k_\textrm{w}$ to form `patches` $\in \mathbb{R}^{(h_\textrm{o} w_\textrm{o}) \times (k_\textrm{h} k_\textrm{w})}$, and multiply by the flattened kernel column $\textrm{vec}(\mathbf{K}) \in \mathbb{R}^{(k_\textrm{h} k_\textrm{w}) \times 1}$.
+- **Systems memory–compute trade-off:** `im2col` unlocks peak GPU Tensor Core throughput at the cost of $k_\textrm{h} k_\textrm{w}\times$ workspace memory duplication (each interior pixel appears in $k_\textrm{h} k_\textrm{w}$ overlapping rows).
 :::
 
-::: {.slide title="Unrolling the Kernel Instead Gives Back the Banded Weight Matrix"}
-[im2col]{.kicker}
+::: {.slide title="Dual View: Unrolling the Kernel into a Banded Matrix"}
+[Toeplitz Weight Matrix Multiplication]{.kicker}
 
-![](../img/why-conv-weight-sharing.svg){width=80%}
+Instead of unfolding the input image into duplicated patches, we can unroll the *kernel* into a sparse banded matrix $\mathbf{W}$ that multiplies the flattened input vector $\textrm{vec}(\mathbf{X})$:
 
-- Flatten the image, not the patches: $\mathbf{W}\,\textrm{vec}(\mathbf{X}) = \textrm{vec}(\mathbf{Y})$.
-- Every row of $\mathbf{W}$ holds the same few kernel weights, as in
-  panel (c).
+![](../img/why-conv-weight-sharing.svg){.nostretch width=84% fig-align="center"}
 
-::: {.d2l-note}
-A convolution is a fully connected layer whose weight matrix has this
-pattern.
+- **Matrix–vector form:** $\textrm{vec}(\mathbf{Y}) = \mathbf{W}\,\textrm{vec}(\mathbf{X})$, where $\mathbf{W}$ has $(n_\textrm{h}-k_\textrm{h}+1)(n_\textrm{w}-k_\textrm{w}+1)$ rows and $n_\textrm{h} n_\textrm{w}$ columns.
+- **Connection to §6.1 and backprop:** Every row of $\mathbf{W}$ holds the same $k_\textrm{h} k_\textrm{w}$ kernel entries shifted across columns (panel c), making the backward pass with respect to $\mathbf{X}$ simply multiplication by $\mathbf{W}^\top$ (a transposed convolution).
+:::
+
+::: {.slide title="Feature Maps and Receptive Fields Across Depth"}
+[Linear Receptive-Field Growth in Stacked Layers]{.kicker}
+
+A unit's **receptive field** is the region of the original input image whose pixels can influence that unit's activation during forward propagation:
+
+::: {.cols .vc}
+::: {.col}
+- **Single layer ($L=1$):** A $k_1 \times k_1$ kernel sees a $k_1 \times k_1$ input patch.
+- **Stacking $L$ stride-1 layers:** Layer $i$ with kernel size $k_i$ reaches $k_i - 1$ pixels farther along each axis than a single element of layer $i-1$:
+  $$r = 1 + \sum_{i=1}^{L} (k_i - 1)$$
+- **$L$ stacked $3 \times 3$ layers:** Each layer adds $3 - 1 = 2$ pixels, giving side length $r = 2L + 1$ ($3 \to 5 \to 7$).
+:::
+
+::: {.col .fig}
+![](../img/conv-receptive-field.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Why Deep Stacks of 3×3 Kernels Beat One Large Kernel"}
+[Parameter Efficiency & Nonlinear Expressivity]{.kicker}
+
+Compare a single $7 \times 7$ convolutional layer against three stacked $3 \times 3$ layers (both achieving the exact same $7 \times 7$ receptive field at stride 1):
+
+| Architecture ($c$ channels throughout) | Receptive Field | Weights per Channel Pair | Total Weights ($c \to c$) | Interleaved Nonlinearities |
+|---|---|---|---|---|
+| **One $7 \times 7$ layer** | $7 \times 7$ | $7^2 = 49$ | $49 c^2$ | $1$ |
+| **Two $5 \times 5$ layers** (`1 + 4 + 4 = 9`) | $9 \times 9$ | $2 \times 25 = 50$ | $50 c^2$ | $2$ |
+| **Three $3 \times 3$ layers** (`1 + 2 + 2 + 2 = 7`) | $7 \times 7$ | $3 \times 9 = 27$ | $27 c^2$ (**45% fewer**) | $3$ |
+
+::: {.d2l-note .rule}
+**The VGG design rule (§7.2):** Replacing one large $(2L+1) \times (2L+1)$ kernel with $L$ stacked $3 \times 3$ kernels matches the spatial receptive field while cutting parameters from $(2L+1)^2 c^2$ to $9L c^2$ and compounding $L$ nonlinear activations.
 :::
 :::
 
-::: {.slide title="Each Stacked 3 × 3 Layer Widens the Receptive Field by 2"}
-[Receptive fields]{.kicker}
+::: {.slide title="Theoretical vs. Effective Receptive Fields"}
+[Gaussian Decay of Sensitivity Away from the Center]{.kicker}
 
-*Receptive field* of a unit: the inputs that can affect it.
+Does a unit with a $7 \times 7$ theoretical receptive field pay equal attention to all 49 input pixels?
 
-![](../img/conv-receptive-field.svg){width=50%}
-
-- $L$ layers with kernels $k_i$: side $r = 1 + \sum_i (k_i - 1)$.
-- $L$ layers of $3 \times 3$: $(2L+1) \times (2L+1)$.
+- **Theoretical receptive field ($r = 1 + \sum (k_i - 1)$):** Counts every input pixel connected to the output unit by *at least one* computational path.
+- **Combinatorial path counting:** The center pixel of a 3-layer $3 \times 3$ stack reaches the output through many distinct intermediate paths, whereas each extreme corner pixel reaches the output through only **one** path (the product of corner weights).
+- **Effective receptive field (Luo et al., 2016):** By the Central Limit Theorem, path counts—and therefore backpropagated input gradients $\partial y / \partial \mathbf{X}$—concentrate in a **Gaussian bell curve** centered on the window, with effective standard deviation growing only as $O(\sqrt{L})$ rather than $O(L)$.
 :::
 
-::: {.slide title="Three 3 × 3 Layers See as Far as One 7 × 7 Layer"}
-[Receptive fields]{.kicker}
+::: {.slide title="Concept Check: Cross-Correlation & Receptive Fields"}
+[Concept Check]{.kicker}
 
-| | receptive field | weights per channel pair | nonlinearities |
+Test your understanding of output shapes, `im2col`, and receptive-field arithmetic:
+
+1. **im2col matrix dimensions:** You apply an unpadded $3 \times 3$ single-channel kernel to a $10 \times 10$ image via `im2col`. What is the output spatial shape, and what are the exact dimensions of the `patches` matrix and flattened kernel vector?
+2. **Depth to span Fashion-MNIST:** At stride 1, how many stacked $3 \times 3$ layers are required so a single unit's theoretical receptive field spans an entire $28 \times 28$ image? How many with $5 \times 5$ layers?
+3. **Edge-loss boundary shift:** In our $6 \times 8$ vertical-edge learning experiment, why did the loss start at $\approx 12$, and what would the initial loss be if the black band extended all the way to the right edge (`X[:, 2:8] = 0`)?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+(1) Output shape is $(10-3+1) \times (10-3+1) = 8 \times 8$ ($64$ outputs). The `patches` matrix has shape $(64, 9)$ and multiplies the $(9, 1)$ kernel vector.
+(2) For $3 \times 3$: $2L + 1 \ge 28 \implies L = 14$ layers. For $5 \times 5$: $4L + 1 \ge 28 \implies L = 7$ layers.
+(3) Each of the 6 rows had two $\pm 1$ edges ($6 \times 2 \times 1^2 = 12$). Extending the black band to the right border eliminates the right-hand black-to-white edge, leaving one edge per row and halving the initial loss to $\approx 6$.
+:::
+:::
+
+::: {.slide title="Summary & Key Takeaways"}
+[Section Synthesis]{.kicker}
+
+| Concept / Operation | Mathematical Formula | Dimensions / Cost ($n_\textrm{h} \times n_\textrm{w}$ input, $k_\textrm{h} \times k_\textrm{w}$ kernel) | Practical Takeaway |
 |---|---|---|---|
-| one $7 \times 7$ layer | $7 \times 7$ | 49 | 1 |
-| three $3 \times 3$ layers | $7 \times 7$ | 27 | 3 |
+| **2D Cross-Correlation** | $[\mathbf{Y}]_{i,j} = \sum_{a=0}^{k_\textrm{h}-1}\sum_{b=0}^{k_\textrm{w}-1}[\mathbf{K}]_{a,b}[\mathbf{X}]_{i+a,j+b}$ | Output: $(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1)$ | Shrinks each unpadded axis by $k - 1$ pixels |
+| **Edge Detector $[1, -1]$** | $[\mathbf{Y}]_{i,j} = [\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$ | $2$ weights, $0$ bias | Horizontal finite difference; learned by SGD in 9 steps |
+| **im2col Matrix Multiply** | $\textrm{vec}(\mathbf{Y}) = \mathbf{P}_{\textrm{im2col}}\,\textrm{vec}(\mathbf{K})$ | $\mathbf{P} \in \mathbb{R}^{(h_\textrm{o} w_\textrm{o}) \times (k_\textrm{h} k_\textrm{w})}$ | Trades $k_\textrm{h} k_\textrm{w}\times$ patch memory for peak GPU GEMM speed |
+| **Stacked Receptive Field** | $r = 1 + \sum_{i=1}^L (k_i - 1)$ | $L$ layers of $3 \times 3 \implies r = 2L + 1$ | Linear growth at stride 1; effective RF is Gaussian-concentrated |
 
 ::: {.d2l-note}
-Deep stacks of small kernels: the same reach, fewer weights, more
-nonlinearity.
+**Next (§6.3):** How to prevent unpadded layers from eating away image borders (*padding*), downsample feature maps to grow receptive fields geometrically (*stride*), and expand footprints at full resolution (*dilation*).
 :::
-:::
-
-::: {.slide title="Check: How Deep to See a Whole Fashion-MNIST Image?"}
-[Check]{.kicker}
-
-How many stacked $3 \times 3$ layers does a unit need before its
-receptive field covers a $28 \times 28$ image? How many with
-$5 \times 5$ kernels?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $2L + 1 \geq 28$ gives $L = 14$; with $5 \times 5$ kernels
-$4L + 1 \geq 28$ gives $L = 7$. Skipping positions (stride, next deck)
-reaches farther with fewer layers.
-:::
-:::
-:::
-
-::: {.slide title="The Effective Receptive Field Is Smaller Than the Theoretical One"}
-[Receptive fields]{.kicker}
-
-- The formula counts inputs that *can* affect a unit.
-- Gradients show how much they *do*: the influence concentrates near the
-  center with a roughly Gaussian profile, in random and trained networks
-  (Luo et al., 2016).
-- Bigger kernels and more layers enlarge the possible region; the network
-  need not use all of it.
-:::
-
-::: {.slide title="Early Visual Cortex Responds to Local Edges"}
-[Receptive fields]{.kicker}
-
-![](../img/field-visual.png){width=80%}
-
-Filters modeled on cortical receptive fields (Field, 1987). An analogy
-that motivated the design, not evidence that a CNN works like the brain.
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- **Cross-correlation:** slide the kernel, multiply, sum; output
-  $(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1)$.
-- **Layer:** `corr2d` plus a bias; parameters independent of image size.
-- **Edges:** $(1, -1)$ marks vertical edges with $\pm 1$; gradient descent
-  learns it from the edge map, loss 12 to below 0.01 in nine steps.
-- **im2col:** one matrix product; unrolling the kernel gives the banded
-  weight matrix of the derivation.
-- **Receptive field:** $r = 1 + \sum_i (k_i - 1)$; three $3 \times 3$
-  layers see $7 \times 7$.
-
-**Next:** padding, stride, and dilation, to control the output size and
-the receptive field.
 :::

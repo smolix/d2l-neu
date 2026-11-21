@@ -11,6 +11,7 @@ To get anything done in machine learning, we need a way to store and manipulate 
 To see why specialized array containers are indispensable, consider a single *minibatch* of $256$ grayscale photographs of resolution $28 \times 28$ pixels, containing $256 \times 28 \times 28 = 200{,}704$ numbers. Image files store each pixel as an integer in $\{0, \ldots, 255\}$, which we rescale to $[0, 1]$ by dividing by $255$. In plain Python, three nested loops would execute $200{,}704$ separate scalar divisions in the interpreter. In a tensor library, the single expression `images / 255` dispatches to compiled C++ or CUDA kernels that divide all $200{,}704$ numbers in parallel on a CPU or GPU. Throughout deep learning, we operate on whole tensors at once rather than iterating over individual scalar elements in Python loops.
 
 Across all modern deep learning frameworks, the tensor class (`ndarray` in MXNet, `Tensor` in PyTorch and TensorFlow, and `jax.Array` in JAX) closely mirrors NumPy's `ndarray` :cite:`Harris.Millman.Walt.ea.2020`, with two crucial additions:
+
 1. **Hardware acceleration:** framework tensors execute across GPUs and specialized AI accelerators, whereas NumPy runs on CPUs.
 2. **Automatic differentiation:** frameworks track computations on tensors and compute gradients automatically via backpropagation (:numref:`sec_autograd`).
 
@@ -617,6 +618,7 @@ X + v
 ```
 
 Rather than materializing physical copies, tensor libraries apply a two-step *broadcasting* rule:
+
 1. **Align shapes from the right:** Prepend $1$s on the left of the lower-order tensor's shape tuple until both shapes have the same length. Two aligned dimensions are compatible if they are equal or if one of them is $1$.
 2. **Stretch singleton axes:** Virtually replicate any length-$1$ axis to match the other tensor's length $k > 1$ without copying memory, then apply the elementwise operation.
 
@@ -990,98 +992,133 @@ Tensors store inputs, parameters, activations, and gradients as $n$-dimensional 
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §2.1]{.kicker}
+[Dive into Deep Learning · §1.1]{.kicker}
 
-Tensors for one minibatch of images<br>**shapes · types · reshaping · indexing · elementwise operations · broadcasting · memory**
+Tensors as Contiguous Memory, Geometric Views, and Parallel Compute<br>**storage buffers · shapes & dtypes · zero-copy views · broadcasting · memory control**
 :::
 :::
 
-::: {.slide title="One Expression Rescales 200,704 Pixels"}
-[The problem]{.kicker}
+::: {.slide title="Why Tensors? From Python Pointers to Parallel Kernels"}
+[Motivation]{.kicker}
 
-- A minibatch (examples processed together): 256 grayscale images of $28 \times 28$ pixels, so
-  $256 \times 28 \times 28 = 200{,}704$ numbers.
-- Stored as integers from 0 to 255; the model wants real numbers in
-  $[0, 1]$.
-- Python loops: 200,704 divisions, one at a time, in the interpreter.
-- Tensor code: `images / 255`, one call, in compiled code, on a CPU or a
-  GPU.
+A single Fashion-MNIST minibatch of 256 grayscale images ($28 \times 28$ pixels) holds $256 \times 1 \times 28 \times 28 = 200{,}704$ numbers; a modern network updates billions of parameters per step.
+
+::: {.cols}
+::: {.col}
+- **Python lists (`PyObject*` arrays):** Every float is a heap-allocated 28-byte object reached via an 8-byte pointer. Python loops chase scattered pointers and pay interpreter dispatch on every scalar operation.
+:::
+
+::: {.col}
+- **Tensors (contiguous buffers):** Values sit back-to-back in one unboxed memory block (`uint8`, `float32`, `bfloat16`). Writing `images / 255` launches **one vectorized CPU/GPU kernel** across all $200{,}704$ pixels.
+:::
+:::
 
 ::: {.d2l-note}
-A **tensor** is an array with a shape and a data type. Deep learning code
-computes with whole tensors, not with loops over their elements.
+Beyond NumPy's contiguous arrays, deep learning tensor libraries add **GPU/TPU execution**, **automatic differentiation**, and **low-precision accelerator types** (`bfloat16`, `float16`).
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Unifying Mental Model: Storage Buffer + Metadata Header"}
+[Systems View]{.kicker}
 
-- create a tensor and read its shape, size, and data type;
-- reshape and index it, and predict the shape of the result;
-- predict whether two shapes broadcast, and to which shape;
-- tell when an operation allocates new memory.
+Every tensor pairs a **1D contiguous storage buffer** in RAM/VRAM with a small **metadata header** (`dtype`, `shape`, `offset`, `strides`, `device`):
 
-**Running example:** `images`, shape $(256, 1, 28, 28)$, type `uint8`.
-:::
+$$\textrm{memory\_index}(i_0, i_1, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r \, s_r$$
 
-::: {.slide title="Every Later Deck Computes With Tensors"}
-[Where this fits]{.kicker}
+| Category | Representative Operations | Cost & Memory Behavior |
+| :--- | :--- | :--- |
+| **Metadata-only views** | `reshape`, slices `X[1:3]`, `None` / `squeeze`, **broadcasting** ($s_r = 0$) | **$O(1)$ zero-copy:** new header pointing to the *same* storage buffer |
+| **Buffer allocations** | Elementwise math `X + Y`, gather `X[rows, cols]`, mask `X[mask]`, `cat` | **$O(N)$ copy:** allocates and writes a brand-new storage buffer |
 
-::: {.cols .vc}
-::: {.col}
-| section | tool |
-|---|---|
-| **Data Manipulation** | **tensors** |
-| Data Preprocessing | pandas |
-| Linear Algebra | matrix products, norms, eigenvalues |
-| Calculus | derivatives, gradients, chain rule |
-| Automatic Differentiation | autograd |
-| Probability and Statistics | standard error, Bayes' theorem |
-| Documentation | `help`, small tests |
-:::
-
-::: {.col .narrow}
-- **Uses:** Python numbers, lists, and loops.
-- **Skips:** sums along an axis and matrix products (Linear Algebra),
-  derivatives (Automatic Differentiation), and GPUs.
-:::
+::: {.d2l-note}
+Asking *"Does this operation only rewrite the metadata header, or does it allocate a new storage buffer?"* explains both tensor performance and aliasing bugs.
 :::
 :::
 
-::: {.slide title="A Tensor Arranges Numbers Along Axes; Its Shape Lists the Lengths"}
-[Shapes]{.kicker}
+::: {.slide title="Axes, Order (Rank), and Shape"}
+[Geometry]{.kicker}
 
 @fig:ndarray-rank-ladder
 
-- Size = product of the shape: $3 \times 4 = 12$; for the minibatch,
-  ${256 \times 1 \times 28 \times 28 = 200{,}704}$.
-- Order = number of axes: the minibatch (image, channel, row, column) has
-  order 4.
+- **Order (rank)** is the number of axes; **shape** lists each axis length; **size** is their product:
+  - **0D scalar `()`** (e.g., loss $\mathcal{L}$) $\;\to\;$ **1D vector `(d,)`** (bias $\mathbf{b}$) $\;\to\;$ **2D matrix `(n, d)`** (weights $\mathbf{W}$).
+  - **4D image batch `(N, C, H, W)`:** our running Fashion-MNIST minibatch `(256, 1, 28, 28)` holds $256 \times 1 \times 28 \times 28 = 200{,}704$ pixels.
 :::
 
-::: {.slide title="The Minibatch Takes 200,704 Bytes as uint8 and 0.8 MB as float32"}
-[Data types]{.kicker}
+::: {.slide title="Creating a Tensor and Inspecting Its Metadata"}
+[Getting Started]{.kicker}
 
-`images`: random integers stand in for 256 images of $28 \times 28$ pixels.
+::: {.cols}
+::: {.col}
+- `arange(n)` allocates a 1D tensor of $n$ sequential values $[0, 1, \ldots, n-1]$ in a single contiguous buffer.
+- When debugging any model, check `.shape` (axis lengths) and element count (`.numel()` or `.size`, always equal to $\prod_r d_r$).
 
-@!ndarray-initial-values-2
-
-| type | bytes per element | holds | the minibatch |
-|---|---|---|---|
-| `uint8` | 1 | integers 0 to 255 | 200,704 × 1 = 200,704 B |
-| `float32` | 4 | about 7 significant digits | 200,704 × 4 = 802,816 B |
+@ndarray-getting-started-2
 :::
 
-::: {.slide title="Reshape Keeps the Order and Changes Only the Shape"}
+::: {.col}
+@ndarray-getting-started-4
+
+@ndarray-getting-started-3
+:::
+:::
+:::
+
+::: {.slide title="Data Types Control Precision, Range, and Memory Footprint"}
+[Data Types]{.kicker}
+
+| Data type | Bytes | Precision / Range | Role in Deep Learning | Batch / $10^9$ params |
+| :--- | :---: | :--- | :--- | :--- |
+| `uint8` | 1 B | $0 \ldots 255$ | Raw image pixels on disk & data loaders | $0.20\text{ MB}$ / — |
+| `float32` | 4 B | $\approx 7$ digits | Master weights, gradients, losses | $0.80\text{ MB}$ / $4.0\text{ GB}$ |
+| `bfloat16` / `float16` | 2 B | $\approx 3$–$4$ digits | Tensor Core mixed-precision matmuls | $0.40\text{ MB}$ / $2.0\text{ GB}$ |
+| `int64` / `int32` | 8 / 4 B | Exact ints | Class labels, token IDs, gather indices | — |
+
+@ndarray-initial-values-2
+:::
+
+::: {.slide title="Deterministic Construction vs. Random Weight Initialization"}
+[Initialization]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Constants and literals:** `zeros` and `ones` allocate fixed buffers for biases, padding masks, and accumulators; Python lists build small lookup tables.
+- **Why weights must be random:** If all neurons in a layer started with identical weights, every neuron would compute the exact same activation and receive the exact same gradient. Sampling from $\mathcal{N}(0, 1)$ (`randn`) breaks symmetry.
+:::
+
+::: {.col}
+@ndarray-getting-started-8
+
+@ndarray-getting-started-9
+:::
+:::
+:::
+
+::: {.slide title="Reproducible Randomness: Seeds and PRNG State"}
+[Reproducibility]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Training uses randomness everywhere: weight initialization, minibatch shuffling, dropout masks, and data augmentation.
+- Pseudorandom number generators (PRNGs) are deterministic state machines: resetting the **seed** reproduces the exact sequence of draws for repeatable experiments.
+- **Global vs. explicit state:** PyTorch, TensorFlow, and MXNet advance a stateful generator; JAX splits an explicit `PRNGKey` so parallel JIT code stays pure.
+:::
+
+::: {.col}
+@ndarray-initial-values-1
+:::
+:::
+:::
+
+::: {.slide title="Reshaping Reinterprets Axes in Row-Major Order"}
 [Reshaping]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
+- `x.reshape(3, 4)` replaces shape `(12,)` with `(3, 4)` without moving the 12 elements (**row-major order**: column stride $1$, row stride $4$).
+- For contiguous memory, `reshape` is an $O(1)$ metadata operation returning a **view** over the same buffer.
+
 @ndarray-getting-started-5
-
-A length of $-1$ is inferred, giving one row of 784 pixels per image:
-
-@ndarray-reshaping-1
 :::
 
 ::: {.col .fig .big}
@@ -1090,16 +1127,35 @@ A length of $-1$ is inferred, giving one row of 784 pixels per image:
 :::
 :::
 
-::: {.slide title="An Integer Index Drops Its Axis; a Slice Keeps It"}
-[Indexing]{.kicker}
+::: {.slide title="Automatic Dimension Inference (-1) and Singleton Axes"}
+[Reshaping in Pipelines]{.kicker}
 
-@ndarray-indexing-and-slicing-4
+::: {.cols}
+::: {.col}
+- **Flattening with `-1`:** A linear layer expects a 2D matrix `(batch, features)` rather than 4D images `(256, 1, 28, 28)`.
+- Passing `-1` infers $\textrm{size} / 784 = 256$. Using `reshape(-1, 784)` survives smaller final minibatches at the end of an epoch!
+
+@ndarray-reshaping-1
+:::
+
+::: {.col}
+- **Singleton axes (`None` / `squeeze`):** Indexing with `None` inserts a length-1 axis (wrapping one `(1, 28, 28)` image into a size-1 batch `(1, 1, 28, 28)`).
+- `squeeze` drops length-1 axes (giving a 2D `(28, 28)` grid for plotting).
+
+@ndarray-reshaping-2
+:::
+:::
+:::
+
+::: {.slide title="Indexing vs. Slicing: Rank Reduction vs. Rank Preservation"}
+[Subsetting]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- `images[0]`: one image; `images[:32]`: 32 images.
-- `images[:, 0, 14, 14]`: one pixel of every image.
-- Slices are half-open: `1:3` selects 1 and 2.
+- **Integer indexing collapses an axis** (order drops by 1): `X[-1]` returns the last row as a 1D vector `(4,)`; `images[0]` returns one image `(1, 28, 28)`.
+- **Slicing (`start:stop`) preserves the axis** (order stays unchanged): `X[1:3]` returns rows 1 and 2 as a `(2, 4)` matrix view; `images[:32]` takes a 32-image sub-batch.
+
+@ndarray-indexing-and-slicing-4
 :::
 
 ::: {.col .fig}
@@ -1108,125 +1164,102 @@ A length of $-1$ is inferred, giving one row of 784 pixels per image:
 :::
 :::
 
-::: {.slide title="Check: Predict the Shapes"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: Predicting Shapes and Zero-Copy Views"}
+[Check Your Understanding]{.kicker}
 
-`images` has shape $(256, 1, 28, 28)$. Predict the shape of each result.
+Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory behavior of each expression:
 
-1. `images[5]`
-2. `images[:, 0]`
-3. `images[:64, :, :14]`
-4. `images[:, :, 14, :]`
+1. `images[5]` versus `images[5:6]`
+2. `images[:64, :, ::2, ::2]`
+3. `images.reshape(256, -1)` versus `images.reshape(-1, 784)` on a final epoch batch of 96 images `(96, 1, 28, 28)`
 
 ::: {.d2l-note .fragment .fade-up}
-**Answers.**
+**Answers:**
 
-1. $(1, 28, 28)$: the integer removes axis 0.
-2. $(256, 28, 28)$: the channel axis is gone.
-3. $(64, 1, 14, 28)$: slices keep their axes.
-4. $(256, 1, 28)$: row 14 of every image.
+1. `images[5]` has shape **`(1, 28, 28)`** (axis 0 removed); `images[5:6]` has shape **`(1, 1, 28, 28)`** (axis 0 kept with length 1). Both are $O(1)$ zero-copy views.
+2. **`(64, 1, 14, 14)`**: takes 64 images and every second row/column by doubling spatial strides—still a zero-copy view!
+3. `reshape(256, -1)` **raises an error** ($96 \times 784$ is not divisible by 256); `reshape(-1, 784)` safely infers **`(96, 784)`**.
 :::
 :::
 
-::: {.slide title="Index Tensors Pick Entries; Masks Select or Replace Them"}
-[Indexing]{.kicker}
-
-`X` holds $0, \ldots, 11$ as a $3 \times 4$ matrix. An index tensor picks
-one entry per row, at columns $(3, 0, 2)$:
-
-@ndarray-indexing-and-slicing-5
+::: {.slide title="Integer Gather and Boolean Masking in Machine Learning"}
+[Selective Indexing]{.kicker}
 
 ::: {.cols}
 ::: {.col}
-A boolean mask selects; the result is a vector:
+- **Integer gather (`X[rows, cols]`):** Pairs row and column indices. In **cross-entropy loss**, `log_probs[arange(B), labels]` pulls the true class log-probability for every example in the batch.
 
-@ndarray-indexing-and-slicing-6
+@ndarray-indexing-and-slicing-5
 :::
 
 ::: {.col}
-`where` replaces the elements outside the mask; the shape stays:
+- **Mask selection (`X[mask]`) vs. `where`:** `X[mask]` extracts `True` entries into a **1D vector**, whereas `where(mask, X, 0)` preserves the $(3, 4)$ shape (essential for ReLU, attention masks, and JIT).
 
 @ndarray-indexing-and-slicing-7
 :::
 :::
 :::
 
-::: {.slide title="Assignment Writes Into the Tensor, and Into Its Views" only="pytorch"}
-[Writing]{.kicker}
-
-Training overwrites parameters at every step. Indexing on the left writes
-one element, then a slice, in place:
+::: {.slide title="Views and Mutability: Writing Through a Reshaped Tensor" only="pytorch"}
+[Views & Mutation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@ndarray-indexing-and-slicing-2
+- Because `X = x.reshape(3, 4)` is a **view** sharing `x`'s storage buffer, `X[1, 2] = 17` writes to offset $1 \times 4 + 2 = 6$ in place—mutating `x[6]` to `17` as well!
 
-@ndarray-indexing-and-slicing-3
+@ndarray-indexing-and-slicing-2
 :::
 
 ::: {.col .fig}
 @fig:ndarray-index-write
+
+@ndarray-indexing-and-slicing-3
+:::
 :::
 :::
 
-::: {.d2l-note}
-`x` changed too, although we never assigned to it: `reshape` returned a
-**view**, a tensor that shares memory with `x`. A write through either name
-is seen through both.
-:::
-:::
-
-::: {.slide title="Assignment Writes Into the Tensor" only="mxnet"}
-[Writing]{.kicker}
-
-Training overwrites parameters at every step. Indexing on the left writes
-one element, then a slice, in place:
+::: {.slide title="In-Place Assignment on Mutable Tensors" only="mxnet"}
+[Views & Mutation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@ndarray-indexing-and-slicing-2
+- Indexing on the left of `=` overwrites elements inside `X`'s storage buffer (`X[1, 2] = 17`, `X[:2, :] = 12`). In MXNet, `reshape` copies the buffer, so `x` stays unchanged.
 
-@ndarray-indexing-and-slicing-3
+@ndarray-indexing-and-slicing-2
 :::
 
 ::: {.col .fig}
 @fig:ndarray-index-write
+
+@ndarray-indexing-and-slicing-3
+:::
 :::
 :::
 
-::: {.d2l-note}
-`x` still holds 6: MXNet's `reshape` copied the data. A tensor that shares
-memory with another is a **view**; a write through either name is then seen
-through both.
-:::
-:::
-
-::: {.slide title="JAX Arrays Are Immutable: .at[].set Returns a New Array" only="jax"}
-[Writing]{.kicker}
+::: {.slide title="Functional Purity: Immutable Arrays and .at[].set() in JAX" only="jax"}
+[Views & Mutation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Training changes parameters at every step; in JAX each change makes a new
-array:
+- JAX arrays are **immutable** so XLA can safely fuse and differentiate pure functions. Updates use `X.at[1, 2].set(17)` and `X.at[:2, :].set(12)` (compiled to in-place buffer reuse inside `@jax.jit`).
 
 @ndarray-indexing-and-slicing-2
-
-@ndarray-indexing-and-slicing-3
 :::
 
 ::: {.col .fig}
 @fig:ndarray-index-write@jax
+
+@ndarray-indexing-and-slicing-3
 :::
 :::
 :::
 
-::: {.slide title="Tensors Are Immutable; a Variable Can Be Assigned" only="tensorflow"}
-[Writing]{.kicker}
+::: {.slide title="Immutable Tensors vs. Mutable tf.Variable State" only="tensorflow"}
+[Views & Mutation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Parameters change at every training step, so they live in a
-`tf.Variable`, whose method `assign` overwrites elements in place:
+- In TensorFlow, `tf.Tensor` values are **immutable**, whereas trainable parameters live in mutable **`tf.Variable`** containers updated in place via `.assign(...)`.
 
 @ndarray-indexing-and-slicing-2
 :::
@@ -1237,112 +1270,103 @@ Parameters change at every training step, so they live in a
 :::
 :::
 
-::: {.slide title="A Function of Numbers Applies at Every Position"}
-[Elementwise operations]{.kicker}
+::: {.slide title="Vectorized Elementwise Operations and Type Promotion"}
+[Elementwise Compute]{.kicker}
 
-$$c_i = f(u_i, v_i) \quad \textrm{for all } i$$
+::: {.cols}
+::: {.col}
+- Scalar operators (`+`, `-`, `*`, `/`, `**`, `exp`) apply element-by-element: $c_i = f(x_i, y_i)$. Note that `x * y` is the **Hadamard product** $\mathbf{x} \odot \mathbf{y}$, not a matrix product.
 
 @ndarray-operations-2
 :::
 
-::: {.slide title="Dividing by 255 Turns uint8 Pixels Into float32 Values"}
-[Elementwise operations]{.kicker}
+::: {.col}
+- **Type promotion:** Dividing `uint8` pixels `images` by `255` promotes the output to `float32` in $[0, 1]$ ($0.8\text{ MB}$), ready for gradient computation.
 
 @ndarray-elementwise-operations-1
-
-- A new tensor: 4 bytes per pixel, 0.8 MB for the minibatch.
-- The single number 255 is applied to every pixel (broadcasting, below).
+:::
+:::
 :::
 
-::: {.slide title="Comparisons Give Masks; Summing a Mask Counts"}
-[Elementwise operations]{.kicker}
+::: {.slide title="Boolean Comparisons and Axis Reductions"}
+[Comparisons & Reductions]{.kicker}
 
-With $\mathbf{x} = (1, 2, 4, 8)$ and $\mathbf{y} = (2, 2, 2, 2)$:
+::: {.cols .vc}
+::: {.col}
+- **Elementwise comparisons** (`x == y`, `x < y`, `x >= y`) return a Boolean mask tensor of the exact same shape.
+- **Reductions** (`sum`, `mean`, `max`) aggregate across one or all axes; reducing all axes yields a **0D scalar tensor** `()`.
+- **Batch accuracy in one call:** Since `True` counts as `1` and `False` as `0`, `(predictions == labels).sum()` counts correct predictions without loops.
+:::
 
-A comparison gives a boolean tensor, a *mask*:
-
+::: {.col}
 @ndarray-operations-4
 
 @ndarray-operations-5
-
-::: {.d2l-note}
-`True` counts as 1, so summing `predictions == labels` counts the correct
-predictions.
+:::
 :::
 :::
 
-::: {.slide title="Broadcasting Adds One Vector to Every Row Without Copying It"}
-[Broadcasting]{.kicker}
-
-@ndarray-broadcasting-4
-
-- $(3, 4)$ and $(4,)$ line up from the right as $(3, 4)$ and $(1, 4)$.
-- The single row of `v` is stretched, virtually, to three rows.
-- Preprocessing subtracts one vector of column means from every example
-  this way.
-:::
-
-::: {.slide title="Align Shapes From the Right; Each Pair Must Be Equal or 1"}
+::: {.slide title="Broadcasting: Virtual Replication Without Copying Memory"}
 [Broadcasting]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@-ndarray-broadcasting-1
+When two shapes differ, **broadcasting** aligns and virtually expands length-1 axes in two steps:
 
-@ndarray-broadcasting-2
+1. **Right-align shapes** and prepend length-`1` axes to the lower-order tensor: `(3, 4)` and `(4,)` align as `(3, 4)` and `(1, 4)`.
+2. **Match or stretch:** At each axis, lengths must match or one must be `1`.
 
-::: {.d2l-note .rule}
-A missing leading axis counts as 1, and an axis of length 1 is stretched
-to match the other.
+::: {.d2l-note}
+**Zero-copy trick:** Stretching a length-1 axis to length $n$ sets its **stride to `0`**—the kernel reads the same memory address $n$ times without copying data!
 :::
 :::
 
 ::: {.col .fig .big}
 @fig:ndarray-broadcasting
+
+@ndarray-broadcasting-4
 :::
 :::
 :::
 
-::: {.slide title="Incompatible Shapes Raise an Error"}
-[Broadcasting]{.kicker}
+::: {.slide title="When Broadcasting Fails—and When It Silently Bugs!"}
+[Broadcasting Pitfalls]{.kicker}
 
-$(3, 2)$ and $(2, 3)$, lined up from the right: 2 against 3, then 3
-against 2. Neither pair is equal, and neither length is 1:
+::: {.cols}
+::: {.col}
+**1. Loud Error (Incompatible Axes)**
+
+Aligning `(3, 2)` and `(2, 3)` compares $2$ vs. $3$ on axis 1 and $3$ vs. $2$ on axis 0. Neither matches and neither is `1`:
 
 @ndarray-broadcasting-3
 :::
 
-::: {.slide title="Check: Which Shapes Broadcast?"}
-[Check]{.kicker}
+::: {.col}
+**2. Silent Bug: The `(N, 1)` vs. `(N,)` Trap**
 
-Predict the shape of the result, or an error.
+If predictions `y_hat` have shape **`(256, 1)`** while targets `y` have shape **`(256,)`**:
 
-1. images $(256, 1, 28, 28)$ minus a mean image $(28, 28)$
-2. flattened images $(256, 784)$ plus $(256,)$
-3. flattened images $(256, 784)$ plus $(256, 1)$
-4. predictions $(5, 1)$ minus labels $(5,)$
-
-::: {.d2l-note .fragment .fade-up}
-**Answers.**
-
-1. $(256, 1, 28, 28)$: the mean image is stretched over images and channels.
-2. Error: from the right, 784 meets 256.
-3. $(256, 784)$: one number per image, stretched across its pixels.
-4. $(5, 5)$ and no error: every prediction meets every label.
+- Right-alignment turns `y` into **`(1, 256)`**.
+- `y_hat - y` silently broadcasts into a **`(256, 256)` matrix** of all $65{,}536$ pairwise differences $\hat{y}_i - y_j$ instead of $256$ residuals!
 :::
 :::
 
-::: {.slide title="Concatenation Joins Tensors Along an Existing Axis"}
-[Concatenation]{.kicker}
+::: {.d2l-note}
+**Defensive habit:** Always align target and prediction shapes explicitly (e.g., `y_hat.squeeze(-1) - y` or `y.reshape(y_hat.shape)`) inside loss functions.
+:::
+:::
 
-@-ndarray-operations-3
+::: {.slide title="Joining Tensors: Concatenation vs. Stacking"}
+[Combining Tensors]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- Two minibatches of 256 images along axis 0: one minibatch of 512.
-- All other axes must agree.
-- `stack` joins along a new axis: 256 images of shape $(1, 28, 28)$ give
-  the minibatch $(256, 1, 28, 28)$.
+- **`concatenate` / `cat` joins along an *existing* axis** (order unchanged):
+  - `axis=0` stacks rows: $(3, 4) + (3, 4) \to (6, 4)$ (merging batches).
+  - `axis=1` joins columns: $(3, 4) + (3, 4) \to (3, 8)$ (fusing features).
+- **`stack` creates a *new* axis** (order $+1$): stacking two $(3, 4)$ matrices gives $(2, 3, 4)$ on `axis=0` or $(3, 4, 2)$ on `axis=2`.
+
+@ndarray-concatenation-1
 :::
 
 ::: {.col .fig}
@@ -1351,30 +1375,15 @@ Predict the shape of the result, or an error.
 :::
 :::
 
-::: {.slide title="Y = Y + X Allocates a New Tensor"}
-[Memory]{.kicker}
-
-@ndarray-saving-memory-1
-
-- `Y` now names a new tensor; the sum was written to newly allocated
-  memory.
-- $10^9$ float32 parameters take 4 GB, and an update written this way
-  allocates another 4 GB at every training step.
-:::
-
-::: {.slide title="In-Place Updates Reuse the Tensor's Memory" except="jax,tensorflow"}
-[Memory]{.kicker}
+::: {.slide title="Controlling Memory Allocation: Rebinding vs. In-Place Updates" except="jax,tensorflow"}
+[Memory Efficiency]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Updating parameters in place needs no second copy. Slice assignment
-writes into the memory of `Z`:
+- **Rebinding (`Y = Y + X`):** Evaluates `Y + X` into a **new buffer** and rebinds `Y` (`id(Y)` changes; costs $4\text{ GB}$ per temporary on $10^9$ `float32` parameters).
+- **In-place (`Z[:] = X + Y` or `X += Y`):** Writes directly into the existing buffer (`id` unchanged). Use for optimizer steps, never on activations needed for backward gradients.
 
 @ndarray-saving-memory-2
-
-`X += Y` also avoids the temporary `X + Y`:
-
-@ndarray-saving-memory-3
 :::
 
 ::: {.col .fig}
@@ -1383,18 +1392,15 @@ writes into the memory of `Z`:
 :::
 :::
 
-::: {.slide title="Variables Are Updated In Place; Tensors Never Are" only="tensorflow"}
-[Memory]{.kicker}
+::: {.slide title="Controlling Memory Allocation: Variables vs. Immutable Tensors" only="tensorflow"}
+[Memory Efficiency]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Parameters live in variables, so updates need no second copy:
+- **Immutable `tf.Tensor` (`Y = Y + X` or `X += Y`):** Allocates a new buffer and rebinds the Python name (`id` changes).
+- **Mutable `tf.Variable` (`Z.assign(X + Y)`):** Updates trainable parameter buffers in place without allocating a second copy.
 
 @ndarray-saving-memory-2
-
-For a tensor, `X += Y` means `X = X + Y`:
-
-@ndarray-saving-memory-3
 :::
 
 ::: {.col .fig}
@@ -1403,19 +1409,15 @@ For a tensor, `X += Y` means `X = X + Y`:
 :::
 :::
 
-::: {.slide title="JAX Never Updates an Array in Place" only="jax"}
-[Memory]{.kicker}
+::: {.slide title="Controlling Memory Allocation: Immutable Arrays and XLA Buffer Reuse" only="jax"}
+[Memory Efficiency]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-`X += Y` means `X = X + Y`: a new array, and `id(X)` changes.
+- In eager Python, `Y = Y + X` and `X += Y` both allocate a new JAX array and rebind the name (`id` changes).
+- Inside **`@jax.jit`**, the XLA compiler fuses operations and **donates/reuses input buffers** automatically once old values are no longer live.
 
 @ndarray-saving-memory-3
-
-::: {.d2l-note}
-The old array's memory is freed once no name refers to it. Compiled
-training steps avoid the extra copy.
-:::
 :::
 
 ::: {.col .fig}
@@ -1424,89 +1426,73 @@ training steps avoid the extra copy.
 :::
 :::
 
-::: {.slide title="numpy() and from_numpy() Share Memory" only="pytorch"}
-[Conversion]{.kicker}
+::: {.slide title="Zero-Copy Interoperability with NumPy and Python Scalars" only="pytorch"}
+[Ecosystem Bridge]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Plotting and pandas take NumPy arrays, so we convert at the boundary:
-
-@ndarray-conversion-to-other-python-objects-1
-
-A write through `A` shows up in `X` and `B`:
+- **Shared CPU buffer (`X.numpy()` / `torch.from_numpy(A)`):** Shares the same contiguous RAM buffer (**zero copy**)—mutating `A` mutates `X` and `B`!
+- **Scalar extraction (`.item()`, `float()`):** Converts a 1-element tensor to a Python number (triggers a GPU–CPU sync barrier, so log periodically).
 
 @ndarray-conversion-to-other-python-objects-3
 :::
 
 ::: {.col .fig}
 @fig:ndarray-numpy-share
+
+@ndarray-conversion-to-other-python-objects-2
 :::
 :::
 :::
 
-::: {.slide title="Conversion to NumPy Copies the Data" only="mxnet,tensorflow"}
-[Conversion]{.kicker}
+::: {.slide title="Crossing the Framework–NumPy Boundary and Scalar Extraction" only="mxnet,tensorflow"}
+[Ecosystem Bridge]{.kicker}
 
-Plotting and pandas take NumPy arrays, so we convert at the boundary:
+::: {.cols .vc}
+::: {.col}
+- **Converting to NumPy (`X.asnumpy()` / `X.numpy()`):** Copies the buffer into an independent NumPy `ndarray` for plotting, pandas, or SciPy (mutating `A` leaves `X` and `B` unchanged).
+- **Scalar extraction (`.item()`, `float()`, `int()`):** Pulls a 1-element tensor into a Python scalar (waits for queued GPU kernels to finish).
 
 @ndarray-conversion-to-other-python-objects-1
+:::
 
-A write to the copy `A` leaves `X` and `B` unchanged:
-
+::: {.col}
 @ndarray-conversion-to-other-python-objects-3
 
-::: {.d2l-note}
-On a GPU, a conversion waits for the computation to finish, so training
-code converts rarely.
+@ndarray-conversion-to-other-python-objects-2
+:::
 :::
 :::
 
-::: {.slide title="The NumPy Array From device_get Is Read-Only" only="jax"}
-[Conversion]{.kicker}
+::: {.slide title="Zero-Copy Read-Only NumPy Views and Scalar Extraction in JAX" only="jax"}
+[Ecosystem Bridge]{.kicker}
 
-Plotting and pandas take NumPy arrays, so we convert at the boundary:
+::: {.cols .vc}
+::: {.col}
+- **`jax.device_get(X)` / `np.asarray(X)`:** Converts a JAX array to a NumPy `ndarray`. On CPU it may share memory, so JAX marks the NumPy view **read-only** to preserve immutability.
+- **Scalar extraction (`.item()`, `float()`, `int()`):** Pulls a 1-element array into a Python number (synchronizing host and device).
 
 @ndarray-conversion-to-other-python-objects-1
+:::
 
-A write to `A` fails:
-
+::: {.col}
 @ndarray-conversion-to-other-python-objects-3
 
-::: {.d2l-note}
-On the CPU, `A` may share the memory of `X`; either way it is read-only.
+@ndarray-conversion-to-other-python-objects-2
 :::
-:::
-
-::: {.slide title="Check: How Much Memory Does One Update Allocate?"}
-[Check]{.kicker}
-
-A model has $10^9$ parameters `W` and gradients `G`, all float32. Without
-compilation, how much new memory does `W = W - 0.01 * G` allocate, and how
-much memory is in use at the peak?
-
-::: {.d2l-note .fragment .fade-up}
-**Answer.**
-
-- Two new tensors of 4 GB each: `0.01 * G` and the difference.
-- Peak: `W`, `G`, and both new tensors, 16 GB, until the old `W` and the
-  temporary are freed.
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Metadata Views vs. Memory Allocations"}
+[Key Takeaways]{.kicker}
 
-| rule | running example |
-|---|---|
-| size = product of the shape | minibatch $(256, 1, 28, 28)$: 200,704 pixels |
-| the data type sets the bytes per element | `uint8`: 0.2 MB; `float32`: 0.8 MB |
-| an integer index drops its axis; a slice keeps it | `images[0]`: $(1, 28, 28)$ |
-| reshape keeps the order; $-1$ infers a length | `reshape(256, -1)`: $(256, 784)$ |
-| `None` adds an axis of length 1; `squeeze` removes one | `images[0]`: $(1, 28, 28)$ to $(1, 1, 28, 28)$ or $(28, 28)$ |
-| a mask selects elements; `where` replaces them | `X[(X > 2) & (X < 8)]` |
-| elementwise operations act at every position | `images / 255` |
-| broadcasting: align right; equal or 1 | $(256, 784)$ with $(256, 1)$, not $(256,)$ |
-| `Y = Y + X` allocates new memory | 4 GB per copy of $10^9$ parameters |
-
-**Next:** a table with missing values, turned into tensors.
+| Operation | Example | Output Shape | Memory Behavior | Primary Deep Learning Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Reshape / Flatten** | `images.reshape(-1, 784)` | `(256, 784)` | **Zero-copy view** ($O(1)$) | Bridge 4D spatial tensors to 2D linear layers |
+| **Slice / Stride** | `images[:32]`, `X[1:3]` | `(32, 1, 28, 28)` | **Zero-copy view** ($O(1)$) | Micro-batching, cropping, strided subsampling |
+| **Broadcasting** | `X + b` (`(3, 4) + (4,)`) | `(3, 4)` | **Virtual stride $= 0$** | Per-channel biases, batch normalization |
+| **Gather / Mask** | `X[rows, cols]`, `X[mask]` | `(3,)`, `(k,)` | **New buffer** ($O(k)$ copy) | Cross-entropy target log-probs, filtering |
+| **Concat / Stack** | `cat([X, Y], 0)`, `stack` | `(6, 4)`, `(2, 3, 4)` | **New buffer** ($O(N)$ copy) | Feature fusion (`axis=1`), minibatch assembly |
+| **In-Place Update** | `X += Y`, `Z[:] = X + Y` | Unchanged | **Reuses buffer** | Optimizer parameter steps ($W \leftarrow W - \eta \nabla \mathcal{L}$) |
 :::
+

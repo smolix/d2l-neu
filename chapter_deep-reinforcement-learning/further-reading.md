@@ -1,7 +1,7 @@
 # Further Reading
 :label:`sec_deep_rl-further-reading`
 
-Each section of this chapter taught one method and measured it on a small task. A reader who opens a recent paper meets variants of these methods, and most of them change one thing: a detail of the update, the data the update may use, or what it constrains. This page names the variants a reader is most likely to meet, in the order of the chapter, with the problem each addresses and what it changes. It ends with a project that builds the post-training loop of :numref:`sec_rl_sequences` in full.
+Each section of this chapter taught one method and measured it on a small task. A reader who opens a recent paper meets variants of these methods, and most of them change one thing: a detail of the update, the data the update may use, or what it constrains. This page names the variants a reader is most likely to meet, in the order of the chapter, with the problem each addresses and what it changes, and ends with reference resources and a project that builds the post-training loop of :numref:`sec_rl_sequences` in full.
 
 ## Policy Optimization in Practice
 
@@ -38,6 +38,10 @@ TD3 :cite:`Fujimoto.vanHoof.Meger.2018` made three changes to DDPG :cite:`Lillic
 
 Most progress since has come from taking more gradient steps per environment step, the update ratio of :numref:`sec_sac`, without the critic's estimates running away. REDQ :cite:`Chen.Wang.Zhou.ea.2021` keeps a large ensemble of critics and takes the minimum over a random pair of them, which sustains many updates per step. DroQ :cite:`Hiraoka.Imagawa.Hashimoto.ea.2022` replaces the ensemble by dropout and layer normalization in two critics. CrossQ :cite:`Bhatt.Palenicek.Belousov.ea.2024` is the exception: it matches REDQ at one update per step and has no target networks; its critic uses batch normalization and passes the current and the next state-action pairs through the network in one batch, so that both see the same statistics. BRO :cite:`Nauman.Ostaszewski.Jankowski.ea.2024` scales the critic up to a wide residual network with layer normalization and adds optimistic exploration. The common thread with PQN is normalization inside the critic.
 
+## Classical Control, Trajectory Optimization and Differentiable Physics
+
+:numref:`sec_optimal_control` derived the Linear-Quadratic Regulator :cite:`Kalman.1960,Anderson.Moore.2007`, iterative LQR :cite:`Li.Todorov.2004`, and receding-horizon Model Predictive Control :cite:`Rawlings.Mayne.Diehl.2017` on known dynamics. Three textbooks develop these ideas in depth: :citet:`Anderson.Moore.2007` for linear-quadratic regulation, Kalman filtering, and frequency-domain robustness; :citet:`Rawlings.Mayne.Diehl.2017` for constrained MPC, Lyapunov terminal costs, and real-time SQP solvers; and :citet:`Tedrake.2023` for underactuated robotics, energy shaping, direct collocation, and sum-of-squares Lyapunov verification, with :citet:`Bertsekas.2025` unifying the control and reinforcement-learning views of dynamic programming. When the physics simulator is differentiable, analytic policy gradients can also be backpropagated directly through multi-step rollouts—the deterministic counterpart of the pathwise gradient of :numref:`sec_deeprl` and :numref:`sec_sac`—provided the horizon is short enough or the contact dynamics are smoothed so that Lyapunov chaos does not explode the Jacobian product.
+
 ## Models, Imagination and Search
 
 The planner of :numref:`sec_model_based` spends thousands of model evaluations per real step and trusts its model only near the data; the methods below use a learned model differently. Dyna :cite:`Sutton.1990` uses it to imagine extra transitions for a model-free learner, the counted model of :numref:`sec_qlearning` driving Q-learning updates between real steps. MBPO :cite:`Janner.Fu.Zhang.ea.2019` keeps the imagined rollouts short, a few steps branching from states in the replay buffer, and mixes them into soft actor-critic's batches, so the model's compounding error stays small. REDQ, from the previous topic, matched MBPO's sample efficiency without a model, which suggests that much of MBPO's gain came from more updates per real step.
@@ -72,6 +76,17 @@ Process rewards change where the reward comes from. :citet:`Lightman.Kosaraju.Bu
 ## Beyond the Chapter
 
 Three assumptions of these two chapters can fail. When several agents learn at once, each one's environment contains the others, and nothing is stationary; self-play combined with search reached superhuman play in heads-up no-limit poker :cite:`Brown.Sandholm.2017`. When the agent sees observations rather than the state, the Markov property of :numref:`sec_mdp` fails, and the policy needs memory, a recurrent network or a belief over states :cite:`Kaelbling.Littman.Cassandra.1998`. When tasks change, an agent can learn to adapt to a new task from a few episodes (meta-learning), or learn sub-policies that act over many steps together with a policy that chooses among them (hierarchical learning). Murphy's overview :cite:`Murphy.2025` surveys all three.
+
+## Reference Texts, Benchmarks and Codebases
+
+Alongside the foundational resources of :numref:`chap_reinforcement_learning` (including CleanRL's single-file implementations :cite:`Huang.Dossa.Ye.ea.2022` and the catalog of PPO's implementation details :cite:`Huang.Dossa.Raffin.ea.2022`), the following accompany specific sections of this chapter:
+
+- Chapters 11 to 13 of Sutton and Barto :cite:`Sutton.Barto.2018` treat the $\lambda$-return and eligibility traces of :numref:`sec_actorcritic`, the actor-critic methods built on them, and the deadly triad of :numref:`sec_dqn` with what can be proved once one of its three ingredients is dropped; chapter 8 develops Dyna and planning with a learned model (:numref:`sec_model_based`).
+- The controlled study of :citet:`Engstrom.Ilyas.Santurkar.ea.2020` accompanies :numref:`sec_ppo`: at matched code-level choices PPO and TRPO perform nearly alike, so much of PPO's practical edge comes from details its objective does not mention.
+- The [RL Baselines3 Zoo](https://github.com/DLR-RM/rl-baselines3-zoo) :cite:`Raffin.Hill.Gleave.ea.2021` ships tuned hyperparameters per environment for PPO (:numref:`sec_ppo`), DQN (:numref:`sec_dqn`), and SAC (:numref:`sec_sac`).
+- [rliable](https://github.com/google-research/rliable) :cite:`Agarwal.Schwarzer.Castro.ea.2021` provides stratified bootstrap confidence intervals and performance profiles for comparing deep RL runs across a small number of seeds.
+- The survey of :citet:`Levine.Kumar.Tucker.ea.2020` continues :numref:`sec_offline` from the tabular diagnosis to deep offline methods.
+- [The RLHF Book](https://rlhfbook.com/) :cite:`Lambert.2026` develops the post-training methods whose update :numref:`sec_regularized` and :numref:`sec_rl_sequences` assemble, at the scale of full language models.
 
 ## A Project
 

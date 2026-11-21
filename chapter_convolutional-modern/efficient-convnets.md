@@ -1350,7 +1350,7 @@ population-level architecture design spaces.
 
 ## Exercises
 
-1. **Channel permutation between groups (ShuffleNet).** ● Grouped convolutions can be mixed without dense $1 \times 1$ weights :cite:`zhang2018shufflenet`. Follow a grouped $k \times k$ convolution ($c_\textrm{i} \to c_\textrm{o}$ channels, $g$ groups) with a fixed permutation of the $c_\textrm{o}$ intermediate channels and a second grouped convolution ($c_\textrm{o} \to c_\textrm{o}$, $g$ groups). Find the condition on $g$ and $c_\textrm{o}$ under which a permutation allows every output channel of the second layer to depend on all $c_\textrm{i}$ input channels, and construct that permutation explicitly.
+1. **Channel permutation between groups (ShuffleNet).** ● Grouped convolutions can be mixed without dense $1 \times 1$ weights :cite:`Zhang.Zhou.Lin.ea.2018`. Follow a grouped $k \times k$ convolution ($c_\textrm{i} \to c_\textrm{o}$ channels, $g$ groups) with a fixed permutation of the $c_\textrm{o}$ intermediate channels and a second grouped convolution ($c_\textrm{o} \to c_\textrm{o}$, $g$ groups). Find the condition on $g$ and $c_\textrm{o}$ under which a permutation allows every output channel of the second layer to depend on all $c_\textrm{i}$ input channels, and construct that permutation explicitly.
 
 1. [code] **Width multiplier.** Add a width multiplier $m$ to `MiniMobileNet` that scales every stage's channel count by $m$ :cite:`howard2017mobilenet`. Predict how the parameter count and multiply-adds scale with $m$, and verify your prediction at $m = 0.5$ using `num_params` and `mobilenet_macs`.
    :exlabel:`ex_efficient-convnets-width-multiplier`
@@ -1378,441 +1378,260 @@ population-level architecture design spaces.
 ::: {.cover}
 [Dive into Deep Learning · §7.5]{.kicker}
 
-Efficient Convnets<br>**separable convolutions · arithmetic and time · compound scaling · re-parameterization**
+Efficient Convnets<br>**depthwise-separable factorization · inverted bottlenecks · FLOPs vs. latency · compound scaling · RepVGG fusion**
 :::
 :::
 
-::: {.slide title="VGG-16 Needs 15.3 Billion Multiply-Adds per Image"}
-[The problem]{.kicker}
+::: {.slide title="Hard Edge Budgets: Why 15B Multiply-Adds Cannot Ship"}
+[Motivation & Deployment Constraints]{.kicker}
 
-- VGG-16: 15.3 billion multiply-adds per $224\times 224$ image, 138M
-  parameters (550 MB in fp32).
-- A phone camera at 30 frames/s: 460 billion multiply-adds per second.
-- MobileNet: 0.57 billion multiply-adds, 4.2M parameters, 70.6% ImageNet
-  top-1 against VGG-16's 71.5%.
+On smartphones, autonomous vehicles, and embedded cameras, latency, SRAM/DRAM footprint, and battery power are hard physical ceilings:
 
-::: {.d2l-note}
-27× less arithmetic and 33× fewer parameters for one point of accuracy.
+- **Datacenter backbones bust edge budgets:** VGG-16 requires $15.3\text{B}$ multiply-adds per $224\times 224$ frame ($460\text{B}$ MACs/s at 30 FPS) and $138\text{M}$ float32 weights ($550\text{ MB}$ of RAM).
+- **The MobileNet leap (Howard et al., 2017):** Reaches $70.6\%$ ImageNet top-1 accuracy (within $0.9\%$ of VGG-16's $71.5\%$) using **$0.57\text{B}$ multiply-adds ($27\times$ fewer)** and **$4.2\text{M}$ parameters ($33\times$ fewer)**.
+- **Three orthogonal efficiency pillars:**
+  1. *Layer factorization:* Decouple spatial filtering from cross-channel mixing (MobileNet, MobileNetV2).
+  2. *Scaling & hardware-aware search:* Jointly allocate depth, width, and resolution + global channel gates (EfficientNet, SE).
+  3. *Structural re-parameterization:* Train multi-branch residual blocks, then fold them algebraically into single $3\times 3$ convolutions for deployment (RepVGG).
 :::
 
-*Source: Howard et al., 2017 (MobileNet, Table 8).*
-:::
+::: {.slide title="From Grouped Convolutions to the Depthwise Limit"}
+[Channel Connectivity Matrix]{.kicker}
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute the cost of a depthwise-separable layer relative to a dense one;
-- count the parameters and multiply-adds of a small network by hand;
-- explain why 7.7× fewer multiply-adds give only 2–3.5× less time;
-- scale depth, width, and resolution together and predict the cost;
-- fold batch normalization and three branches into one $3\times 3$
-  convolution.
-
-**Running example:** a mini-MobileNet against two dense VGG-style
-networks, one with the same parameters and one with the same arithmetic,
-on Fashion-MNIST at $96\times 96$.
-:::
-
-::: {.slide title="Efficiency Is the Fifth Question of the Chapter"}
-[Where this fits]{.kicker}
+A standard $k \times k$ convolution scales quadratically with width ($c_{\textrm{i}} c_{\textrm{o}} k^2$) because every output channel convolves every input channel with an independent spatial filter:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| AlexNet | learned features, ReLU, dropout, GPUs |
-| VGG, NiN, GoogLeNet | blocks, 1 × 1 convolutions, global pooling |
-| Normalization Layers | batch, layer, group normalization |
-| ResNet, ResNeXt, DenseNet | residual connections make depth trainable |
-| **Efficient Convnets** | **separable blocks, scaling, re-parameterization** |
-| Training Recipes | schedules, augmentation, weight averaging |
-| ConvNeXt | a ResNet modernized one change at a time |
-| Design Spaces (RegNet) | rules from populations of networks |
+- **Grouped convolution ($g$ groups):** Partitions channels into $g$ disjoint blocks of $c_{\textrm{i}}/g \to c_{\textrm{o}}/g$, turning the connectivity matrix block-diagonal and cutting weights and MACs to $c_{\textrm{i}} c_{\textrm{o}} k^2 / g$.
+- **The depthwise limit ($g = c_{\textrm{i}} = c_{\textrm{o}}$):** Every group holds a **single channel**. Each of the $c_{\textrm{i}}$ channels is filtered by its own dedicated $k \times k$ kernel ($c_{\textrm{i}} k^2$ weights) with zero cross-channel mixing.
 :::
 
-::: {.col .narrow}
-- **Uses:** depthwise and $1\times 1$ convolutions; batch normalization;
-  residual blocks.
-- **Skips:** pruning, distillation, quantization-aware training.
+::: {.col .fig}
+![](../img/conv-groups.svg){.nostretch width=95%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
+::: {.slide title="Depthwise-Separable Convs: Factoring Space and Channels"}
+[Two-Step Factorization]{.kicker}
 
-[Separable networks]{.dtitle}
+Chaining a depthwise $k \times k$ spatial filter with a pointwise $1 \times 1$ channel mixer factors one dense convolution into two lightweight steps:
 
-[factorize every convolution]{.dsub}
-:::
-:::
-
-::: {.slide title="g Groups Divide Parameters and Multiply-Adds by g"}
-[Separable networks]{.kicker}
-
-![Input channels read by each output channel; each shaded cell is one kernel.](../img/conv-groups.svg){width=85%}
-
-Each output group reads only its input group:
-$c_i c_o k_h k_w/g$ weights. No information crosses groups within the
-layer.
+::: {.cols .vc}
+::: {.col}
+- **Step 1 — Depthwise ($k \times k$, $g = c_{\textrm{i}}$):** Filters spatial neighborhoods independently within each input channel: $h w c_{\textrm{i}} k^2$ multiply-adds.
+- **Step 2 — Pointwise ($1 \times 1$, $c_{\textrm{i}} \to c_{\textrm{o}}$):** Linearly combines the $c_{\textrm{i}}$ filtered channels at each pixel: $h w c_{\textrm{i}} c_{\textrm{o}}$ multiply-adds.
+- **Expressive restriction (rank-1 kernel factorization):** Equivalent to restricting each $(o, c)$ dense $k\times k$ filter to the factored form $\mathbf{K}_{o,c} = P_{o,c}\,\mathbf{D}_c$.
 :::
 
-::: {.slide title="Depthwise Filters Each Channel; Pointwise Mixes Them"}
-[Separable networks]{.kicker}
-
-![Dense convolution (top) and depthwise-separable convolution (bottom).](../img/arch-conv-depthwise.svg){width=66%}
-
-Depthwise: $g = c_i = c_o$, one $k\times k$ filter per channel. Pointwise:
-a $1\times 1$ convolution.
+::: {.col .fig}
+![](../img/arch-conv-depthwise.svg){.nostretch width=82%}
+:::
+:::
 :::
 
-::: {.slide title="A Separable Layer Costs About 1/k² of a Dense One"}
-[Separable networks]{.kicker}
+::: {.slide title="The Depthwise-Separable FLOP and Parameter Ratio"}
+[Quantitative Savings]{.kicker}
 
-$$\frac{hw\, c_i k^2 + hw\, c_i c_o}{hw\, c_i c_o k^2}
-= \frac{1}{c_o} + \frac{1}{k^2}$$
+Dividing the two-step separable cost by the standard dense cost yields the exact reduction ratio for both parameters and multiply-adds:
 
-- Same ratio for weights and for multiply-adds.
-- $c_i = c_o = 128$, $k = 3$: $(1/128 + 1/9)^{-1}\approx 8.4$.
+$$\frac{\text{Depthwise} + \text{Pointwise}}{\text{Dense}} = \frac{h w \cdot c_{\textrm{i}} k^2 + h w \cdot c_{\textrm{i}} c_{\textrm{o}}}{h w \cdot c_{\textrm{i}} c_{\textrm{o}} k^2} = \frac{1}{c_{\textrm{o}}} + \frac{1}{k^2}$$
 
-Dense weights, separable weights, ratio:
+- **Asymptotic $k^2$ speedup:** When $c_{\textrm{o}} \gg k^2$, the $1/c_{\textrm{o}}$ term becomes negligible and a $3\times 3$ separable layer costs **$\approx 1/9$** ($8\text{--}9\times$ cheaper) of a dense $3\times 3$ layer; a $7\times 7$ separable layer (ConvNeXt) costs $\approx 1/49$.
+- **Verifying at $c_{\textrm{i}} = c_{\textrm{o}} = 128, k = 3$:** $(1/128 + 1/9)^{-1} = 147{,}456 / 17{,}536 \approx \mathbf{8.41\times}$ fewer weights:
 
 @!channels-grouped-depthwise-and-depthwise-separable-convolutions
 :::
 
-::: {.slide title="Separable Layers Express Only Factored Kernels"}
-[Separable networks]{.kicker}
+::: {.slide title="MobileNetV1 and the Depthwise-Separable Block"}
+[MobileNet Architecture]{.kicker}
 
-- Depthwise filter $\mathbf{D}_c$ on input channel $c$, pointwise weight
-  $P_{o,c}$ into output channel $o$.
-- Together: the dense kernel $\mathbf{K}_{o,c} = P_{o,c}\,\mathbf{D}_c$.
-- Every output channel sees the same spatial filter of each input channel,
-  only scaled.
-- A dense layer may use a different filter for every pair $(o, c)$.
+MobileNetV1 replaces every standard convolutional layer after the stem with a `Depthwise 3×3 -> BN -> ReLU -> Pointwise 1×1 -> BN -> ReLU` block:
 
-::: {.d2l-note}
-Efficient networks accept the restriction and use the savings for more
-channels or more layers.
-:::
+::: {.cols .vc}
+::: {.col}
+- **Strided depthwise downsampling:** Setting `stride=2` on the depthwise $3\times 3$ convolution halves resolution without separate pooling layers.
+- **Mini-MobileNet on $96\times 96$ Fashion-MNIST:** A stride-2 32-channel $3\times 3$ stem followed by 7 separable blocks climbing to 512 channels uses **$542{,}474$ parameters** (vs. $4.66\text{M}$ weights if those 7 blocks were dense $3\times 3$ convolutions—an $8.8\times$ reduction).
 :::
 
-::: {.slide title="Check: Separable Savings for 5×5 Kernels"}
-[Check]{.kicker}
-
-A $5\times 5$ convolution from 128 to 128 channels is replaced by its
-depthwise-separable factorization. About how many times cheaper is it?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $1/128 + 1/25 \approx 0.048$, so about $21\times$ cheaper.
-Larger kernels gain more, because the depthwise term $1/k^2$ shrinks.
+::: {.col .fig}
+![](../img/arch-dws-block.svg){.nostretch width=75%}
 :::
 :::
 :::
 
-::: {.slide title="MobileNet Is One Block, Stacked"}
-[Separable networks]{.kicker}
+::: {.slide title="Implementing a Depthwise-Separable Block in Code"}
+[Mini-MobileNet Block]{.kicker}
 
-- Stem: $3\times 3$ convolution, stride 2, 32 channels.
-- Seven separable blocks (channels, stride): (64, 1), (128, 2), (128, 1),
-  (256, 2), (256, 1), (512, 2), (512, 1); stride-2 depthwise
-  convolutions downsample.
-- Global average pooling, one linear layer: 542,474 parameters.
+In code, setting `groups=in_channels` (or `DepthwiseConv2D` / `feature_group_count=in_channels`) turns a $3\times 3$ convolution into a depthwise filter, followed by a $1\times 1$ pointwise channel mixer:
 
-::: {.d2l-note}
-Dense $3\times 3$ convolutions would turn the blocks' 530,528 weights
-into 4,663,296 (8.8×).
-:::
+@efficient-convnets-a-mini-mobilenet-1
 :::
 
-::: {.slide title="A Bottleneck Narrows Around a Dense 3×3; an Inverted One Widens Around a Depthwise 3×3"}
-[Separable networks]{.kicker}
+::: {.slide title="Assembling Mini-MobileNet and Counting Parameters"}
+[Mini-MobileNet Backbone]{.kicker}
 
-![Bottleneck (left) and inverted bottleneck (right); input at the bottom.](../img/arch-inverted-bottleneck.svg){width=62%}
+A stride-2 32-channel $3\times 3$ stem followed by 7 separable blocks climbing to 512 channels uses $542{,}474$ trainable parameters (versus $4.66\text{M}$ weights if those 7 blocks were dense $3\times 3$ convolutions—an $8.8\times$ reduction):
+
+@efficient-convnets-a-mini-mobilenet-3
 :::
 
-::: {.slide title="The Inverted Bottleneck Keeps the Stored Tensors Thin"}
-[Separable networks]{.kicker}
+::: {.slide title="MobileNetV2: The Inverted Bottleneck & Linear Projection"}
+[Inverted Bottlenecks]{.kicker}
 
-- ResNet bottleneck: $1\times 1$ reduce, dense $3\times 3$ in the narrow
-  space, $1\times 1$ expand. Right when the $3\times 3$ is expensive.
-- Depthwise $3\times 3$ is cheap even on wide tensors, so MobileNetV2
-  **inverts**: thin stream, $1\times 1$ expand (6×), depthwise $3\times 3$,
-  **linear** $1\times 1$ projection.
-- No ReLU after the projection: it would zero coordinates of a
-  low-dimensional code.
+When the $3\times 3$ filter is depthwise rather than dense, it is already cheap—and because it learns only one filter per channel, it needs a *wide* channel space to be expressive:
 
-::: {.d2l-note}
-The residual joins the thin ends: what stays in memory between blocks is
-small.
-:::
+::: {.cols .vc}
+::: {.col}
+- **Classic ResNet bottleneck (left):** Compresses $256 \xrightarrow{1\times 1} 64$ $\to$ $\text{dense } 3\times 3$ $\to$ $64 \xrightarrow{1\times 1} 256$ so the expensive dense $3\times 3$ runs at narrow width.
+- **Inverted bottleneck (right, MobileNetV2):** Keeps the residual stream thin ($24$ ch), *expands* $6\times$ via $1\times 1$ ($24 \to 144$), runs depthwise $3\times 3$ at $144$ ch, and projects $144 \to 24$.
+- **Why the final $1\times 1$ projection omits ReLU:** Applying ReLU to a low-dimensional 24-channel bottleneck destroys negative coordinates; keeping the narrow projection *linear* preserves information while thin shortcuts minimize inter-block SRAM traffic.
 :::
 
-::: {.slide title="Check: The Cost of One Block"}
-[Check]{.kicker}
-
-The block from 128 to 256 channels with stride 2 has a $24\times 24$
-input. How many multiply-adds do its depthwise and pointwise convolutions
-need, and how many would one dense $3\times 3$ convolution need?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Output $12\times 12$. Depthwise: $144\cdot 9\cdot 128 =
-165{,}888$. Pointwise: $144\cdot 128\cdot 256 = 4{,}718{,}592$. Dense:
-$144\cdot 9\cdot 128\cdot 256 = 42{,}467{,}328$, 8.7× more.
+::: {.col .fig}
+![](../img/arch-inverted-bottleneck.svg){.nostretch width=78%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Controlled Benchmark: Parameter-Matched vs. FLOP-Matched"}
+[Three-Way Comparison]{.kicker}
 
-[Arithmetic and time]{.dtitle}
-
-[matched parameters, unmatched speed]{.dsub}
-:::
-:::
-
-::: {.slide title="At Equal Parameters, the Dense Network Does 7.7× More Arithmetic"}
-[Arithmetic and time]{.kicker}
-
-- Dense $3\times 3$ convolutions spend parameters 9× faster, so the
-  VGG-style network stops at 128 channels; MobileNet reaches 512.
-- Cost of a "same" convolution: $\lceil h/s\rceil^2\, k^2 c_\textrm{i}
-  c_\textrm{o}/g$ multiply-adds.
-
-Multiply-adds per $96\times 96$ image, and their ratio:
+We compare `MiniMobileNet` ($542\text{K}$ params, $50.3\text{M}$ MACs) against two dense VGG-style baselines on $96\times 96$ Fashion-MNIST: `VGGSmall` matched in *parameters* ($584\text{K}$ params, width up to 128) and `VGG-style, narrow` matched in *multiply-adds* ($49.1\text{M}$ MACs, width $\div 2.8$, $76\text{K}$ params):
 
 @!efficient-convnets-arithmetic-accuracy-and-time-1
-:::
-
-::: {.slide title="The Dense Networks Win at Equal Parameters and at Equal Arithmetic"}
-[Arithmetic and time]{.kicker}
-
-10 epochs of SGD with momentum and a cosine decay of the rate; same
-initialization, same head:
 
 @!efficient-convnets-training-and-comparison-4
-
-::: {.d2l-note}
-Repeated runs: mini-MobileNet 91–92%; VGG-style 93.5–94% with 7.7× the
-arithmetic; narrow VGG-style (widths ÷2.8, 76k parameters) about 93% at
-equal arithmetic, in 0.5–0.8× the forward time. On a task this small,
-narrowing a dense network saves arithmetic better than factorizing it.
-:::
 :::
 
-::: {.slide title="7.7× Fewer Multiply-Adds Give Only 2–3.5× Less Time"}
-[Arithmetic and time]{.kicker}
+::: {.slide title="Why 7.7× Fewer FLOPs Yield Only 2–3.5× Faster GPUs"}
+[Systems Analysis: Arithmetic Intensity]{.kicker}
 
-- Dense $3\times 3$ with $c_\textrm{o}$ outputs: $9c_\textrm{o}$
-  multiply-adds per input value read. Enough to keep a GPU busy.
-- Depthwise $3\times 3$: 9 multiply-adds per value read. The GPU waits on
-  memory.
-- Forward pass, batch of 128: the VGG-style network takes 2–3.5× as
-  long.
+Summarizing the three-model benchmark exposes two foundational systems and statistical lessons:
+
+| Model ($96\times 96$, 10 epochs) | Parameters | Multiply-Adds | Val Accuracy | Relative GPU Batch Time |
+|:--|--:|--:|--:|--:|
+| **Mini-MobileNet** (separable, width to 512) | $542{,}474$ | $50.3\text{M}$ | $91\text{--}92\%$ | $1.0\times$ |
+| **VGG-style** (dense, parameter-matched) | $583{,}594$ | $384.9\text{M}$ ($7.7\times$) | $93.5\text{--}94\%$ | $2.0\text{--}3.5\times$ |
+| **VGG-style, narrow** (dense, FLOP-matched) | $75{,}854$ | $49.1\text{M}$ ($1.0\times$) | $\approx 93\%$ | $0.5\text{--}0.8\times$ |
 
 ::: {.d2l-note .warn}
-Multiply-adds are a proxy for time. How good a proxy depends on the
-hardware.
+**Roofline Pitfall (Memory-Bandwidth Bound Depthwise Convs):** A dense $3\times 3$ layer performs $9c_{\textrm{o}}$ multiply-adds per input activation read from HBM, keeping GPU tensor cores saturated. A depthwise $3\times 3$ layer performs only **$9$ multiply-adds per input read** regardless of $c_{\textrm{o}}$, leaving the GPU stalled on memory bandwidth and kernel-launch overhead.
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
+::: {.slide title="Compound Scaling and Latency-Aware Architecture Search"}
+[EfficientNet & EfficientNetV2]{.kicker}
 
-[Scaling and search]{.dtitle}
+How should we scale a convnet when compute grows, and why did EfficientNetV2 drop depthwise layers in early stages?
 
-[allocate the budget by optimization]{.dsub}
-:::
-:::
-
-::: {.slide title="Compound Scaling: Each Step Grows Depth, Width, and Resolution and Doubles the Cost"}
-[Scaling and search]{.kicker}
-
-Cost $\propto$ depth $\times$ width$^2$ $\times$ resolution$^2$.
-EfficientNet scales all three together. One step:
-
-- depth × 1.2, width × 1.1, resolution × 1.15;
-- cost × $1.2 \cdot 1.1^2 \cdot 1.15^2 \approx 1.92$.
-- Three steps: 1.7× as deep, 1.3× as wide, images 1.5× as large, about 7×
-  the cost.
-- Base network found by architecture search over inverted bottlenecks.
-
-*Source: Tan and Le, 2019 (EfficientNet).*
+- **Compute scaling law:** A convnet's multiply-adds scale linearly with depth $d$, quadratically with channel width $w$, and quadratically with image resolution $r$:
+  $$\text{MACs} \propto d \cdot w^2 \cdot r^2$$
+- **Compound scaling (EfficientNet, Tan & Le 2019):** Scaling any single axis alone hits diminishing returns (e.g., high resolution without added depth leaves receptive fields too small). Each compound step $\phi$ scales $(d, w, r)$ by $(1.2^\phi,\; 1.1^\phi,\; 1.15^\phi)$, multiplying compute by $1.2 \times 1.1^2 \times 1.15^2 \approx 1.92\times$ per step.
+- **Hardware-aware NAS (EfficientNetV2, 2021):** Replacing theoretical FLOPs with measured accelerator latency in the search objective automatically **swapped early high-resolution depthwise blocks back to fused dense $3\times 3$ convolutions**, where higher arithmetic intensity runs faster on GPUs/TPUs.
 :::
 
-::: {.slide title="A Search against Measured Speed Drops Depthwise Layers Early"}
-[Scaling and search]{.kicker}
+::: {.slide title="Squeeze-and-Excitation (SE): Global Channel Attention"}
+[Squeeze-and-Excitation Gates]{.kicker}
 
-- EfficientNet's search rewards accuracy and penalizes multiply-adds,
-  which the timing above showed to be a weak proxy.
-- EfficientNetV2 searches for measured *training speed*: dense
-  $3\times 3$ blocks replace depthwise ones early, at high resolution,
-  where depthwise layers are memory-bound.
+Inserted inside MobileNetV3, EfficientNet, and RegNetY blocks, a *Squeeze-and-Excitation* (SE) module (Hu et al., 2018) dynamically reweights channels using global image context at negligible FLOP cost:
 
-::: {.d2l-note}
-The block is human insight; allocating width, depth, and resolution is an
-optimization against measured time.
-:::
+- **1. Squeeze (Global spatial pooling):** Averages each of the $c$ feature maps across $H \times W$ into a global descriptor $\mathbf{z} \in \mathbb{R}^c$.
+- **2. Excite (Bottleneck gating MLP):** Passes $\mathbf{z}$ through a two-layer bottleneck ($c \to c/r \to c$, reduction ratio $r=4$, adding only $2c^2/r$ weights and operating on $1\times 1$ vectors) to predict per-channel gates $\mathbf{s} = \sigma(\mathbf{W}_2\,\textrm{ReLU}(\mathbf{W}_1 \mathbf{z})) \in (0, 1)^c$.
+- **3. Rescale:** Multiplies each feature channel $\mathbf{X}_k$ by its scalar gate $s_k$:
+
+@cnn-design-squeeze-and-excitation-gates
 :::
 
-::: {.slide title="Check: Which Knob Is Cheapest?"}
-[Check]{.kicker}
+::: {.slide title="RepVGG: Multi-Branch Training, Single-Path Inference"}
+[Structural Re-parameterization]{.kicker}
 
-Starting from a base network, you can double its depth, its width, or its
-input resolution. By what factor does each choice multiply the
-multiply-adds?
+Multi-branch residual topologies are easy to optimize during training, whereas plain single-path $3\times 3$ stacks achieve peak memory and compute efficiency at inference. *RepVGG* (Ding et al., 2021) bridges both worlds via algebraic fusion:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Depth: 2×. Width: 4× (each layer costs
-$c_\textrm{i}c_\textrm{o}$). Resolution: 4× (each layer costs $hw$).
+::: {.cols .vc}
+::: {.col}
+- **Train-time block:** Sums three parallel batch-normalized branches before ReLU:
+  $$\mathbf{Y} = \textrm{ReLU}\bigl(\textrm{BN}_3(\textrm{Conv}_{3\times 3}(\mathbf{X})) + \textrm{BN}_1(\textrm{Conv}_{1\times 1}(\mathbf{X})) + \textrm{BN}_0(\mathbf{X})\bigr)$$
+- **Deploy-time fusion:** Because all three branches inside $\textrm{ReLU}(\cdot)$ are linear operators at inference time, they fold algebraically into a **single $3\times 3$ convolution with bias**, eliminating two branches and two live activation buffers.
+:::
+
+::: {.col .fig}
+![](../img/arch-repvgg-reparam.svg){.nostretch width=85%}
 :::
 :::
 :::
 
-::: {.slide title="EfficientNet and RegNetY Add a Squeeze-and-Excitation Gate to Their Blocks"}
-[Scaling and search]{.kicker}
+::: {.slide title="The Three Linear-Algebra Steps of Branch Fusion"}
+[Algebraic BN Folding & Kernel Addition]{.kicker}
 
-- **Squeeze:** average each of the $c$ channels over all positions.
-- **Excite:** MLP $c \to c/r \to c$ with a sigmoid output: one gate in
-  $(0, 1)$ per channel.
-- **Scale:** multiply each channel by its gate.
-- Cost: about $2c^2/r$ weights, acting on one vector per image: almost no
-  arithmetic.
-- Attention over channels instead of positions.
+Collapsing a trained `RepVGGBlock` into one $3\times 3$ layer $(\hat{\mathbf{W}}, \hat{\mathbf{b}})$ requires three exact transformations per output channel $o$:
+
+::: {.cols .vc}
+::: {.col}
+- **1. Fold inference-mode BatchNorm into each branch:** With frozen running stats $(\mu_o, \sigma_o^2)$ and parameters $(\gamma_o, \beta_o)$:
+  $$\hat{\mathbf{W}}_o = \frac{\gamma_o}{\sqrt{\sigma_o^2 + \epsilon}}\,\mathbf{W}_o, \qquad \hat{b}_o = \beta_o + \frac{\gamma_o(b_o - \mu_o)}{\sqrt{\sigma_o^2 + \epsilon}}$$
+- **2. Embed $1\times 1$ and identity as $3\times 3$ kernels:** Zero-pad the $1\times 1$ kernel by 1 pixel on all sides; write the identity on channel $o$ as a $3\times 3$ kernel with $1$ at center tap $(i=o, 1, 1)$ and $0$ elsewhere.
+- **3. Sum by linearity:** $\hat{\mathbf{W}}_{\text{fused}} = \hat{\mathbf{W}}^{(3)} + \hat{\mathbf{W}}^{(1)} + \hat{\mathbf{W}}^{(0)}$ and $\hat{\mathbf{b}}_{\text{fused}} = \hat{\mathbf{b}}^{(3)} + \hat{\mathbf{b}}^{(1)} + \hat{\mathbf{b}}^{(0)}$.
 :::
 
-::: {.slide title="Check: The Cost of an SE Gate"}
-[Check]{.kicker}
-
-An SE gate on $c = 256$ channels with $r = 4$. How many weights? How many
-multiply-adds per image, compared with one $3 \times 3$ convolution
-$256 \to 256$ on a $14 \times 14$ map?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $2 \cdot 256^2 / 4 = 32{,}768$ weights and as many
-multiply-adds. The convolution does
-$9 \cdot 256^2 \cdot 196 \approx 116$M: the gate adds 0.03%.
+::: {.col .fig}
+![](../img/arch-repvgg-kernels.svg){.nostretch width=86%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
+::: {.slide title="Implementing Branch Fusion (`fuse_bn` and `fuse_block`)"}
+[RepVGG Fusion Code]{.kicker}
 
-[Re-parameterization]{.dtitle}
+We fold each branch's frozen BatchNorm into its $3\times 3$-padded kernel and sum the three folded kernels and biases into a single `Conv2d` layer:
 
-[train with branches, deploy a plain stack]{.dsub}
-:::
+@efficient-convnets-fusing-the-branches-1
 :::
 
-::: {.slide title="RepVGG Trains Three Branches and Deploys One Convolution"}
-[Re-parameterization]{.kicker}
+::: {.slide title="Exact FP32 Equivalence vs. The INT8 Quantization Pitfall"}
+[Code Verification & Deployment Pitfall]{.kicker}
 
-- Branches train better (ResNet); a plain $3\times 3$ stack runs faster:
-  one large kernel per layer, one live tensor.
-- At inference every branch is linear in its input, so they merge exactly.
+We implement `fuse_bn` and `fuse_block`, verify exact equivalence in `float32`, and highlight a critical post-training quantization hazard:
 
-![Train time: $3\times 3$, $1\times 1$, and identity, each with batch normalization. Inference: one $3\times 3$ convolution.](../img/arch-repvgg-reparam.svg){width=78%}
+::: {.cols .vc}
+::: {.col}
+- **Exact to FP32 roundoff ($\sim 10^{-6}$):** After updating running stats and randomizing $(\gamma, \beta)$, the fused $3\times 3$ layer matches the 3-branch block to within $10^{-6}$.
+- **Pitfall — FP32 equivalence $\neq$ INT8 equivalence (Chu et al., 2024):** Because the center tap of $\hat{\mathbf{W}}_{\text{fused}}$ sums three independently normalized branches of wildly different scales ($\gamma_o / \sqrt{\sigma_o^2 + \epsilon}$), fused weights develop heavy-tailed outliers. Naive 8-bit uniform quantization (256 bins) crashes fused RepVGG-B0 on ImageNet from **$75.1\%$ to $40.2\%$** (recoverable via QAT or branch-scale regularization).
 :::
 
-::: {.slide title="Inference-Mode Batch Normalization Folds into the Kernel"}
-[Re-parameterization]{.kicker}
-
-Per output channel $o$, with running mean $\mu_o$ and variance
-$\sigma_o^2$, scale $\gamma_o$, shift $\beta_o$, conv bias $b_o$:
-
-$$\hat{\mathbf{W}}_o = \frac{\gamma_o}{\sqrt{\sigma_o^2+\epsilon}}\,\mathbf{W}_o,
-\qquad \hat{b}_o = \beta_o + \frac{\gamma_o (b_o - \mu_o)}{\sqrt{\sigma_o^2+\epsilon}}.$$
-
-- $\gamma_o = 2$, $\sigma_o^2+\epsilon = 16$, $\mu_o = 1$, $\beta_o = 1$,
-  $b_o = 0$: $\hat{\mathbf{W}}_o = \mathbf{W}_o/2$, $\hat b_o = 1 - 0.5 =
-  0.5$.
-:::
-
-::: {.slide title="A 1×1 Kernel and the Identity Are 3×3 Kernels in Disguise"}
-[Re-parameterization]{.kicker}
-
-- $1\times 1$ kernel: a $3\times 3$ kernel that is zero except at the
-  center.
-- Identity: a $3\times 3$ kernel with a 1 at the center when input channel
-  = output channel, 0 otherwise.
-- Convolution is linear in its kernel: add the three folded kernels and the
-  three biases.
-
-![](../img/arch-repvgg-kernels.svg){width=70%}
-:::
-
-::: {.slide title="The Fused Convolution Matches the Block to Roundoff"}
-[Re-parameterization]{.kicker}
-
-Move the running statistics (four minibatches, mean 1, std 2), randomize
-$\gamma$ and $\beta$, fuse, then compare on fresh data in inference mode.
-Largest difference:
-
+::: {.col .fig}
 @!efficient-convnets-fusing-the-branches-2
-
-::: {.d2l-note}
-Order $10^{-6}$: single-precision roundoff. Same function; one
-convolution instead of two convolutions and three normalizations, one live
-tensor instead of three.
-:::
-:::
-
-::: {.slide title="Exact in fp32 Is Not Exact in int8"}
-[Re-parameterization]{.kicker}
-
-- Deployed networks often store weights and activations as 8-bit integers:
-  256 evenly spaced values per tensor.
-- Fused kernels sum branches of very different scales: wide distributions,
-  poorly resolved by 256 levels.
-- Fused RepVGG-B0, quantized naively: 75.1% → 40.2% ImageNet top-1; a
-  plain ResNet loses a fraction of a point.
-
-::: {.d2l-note .warn}
-Constraining the branch statistics during training restores the accuracy.
-:::
-
-*Source: Chu et al., 2024.*
-:::
-
-::: {.slide title="Check: Fold One Channel"}
-[Check]{.kicker}
-
-A bias-free convolution channel with kernel $\mathbf{W}_o$ is followed by
-batch normalization with $\mu_o = 0.5$, $\sigma_o^2+\epsilon = 0.25$,
-$\gamma_o = 1$, $\beta_o = 0$. What are the folded kernel and bias?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Scale $1/\sqrt{0.25} = 2$: $\hat{\mathbf{W}}_o =
-2\mathbf{W}_o$, $\hat b_o = 0 - 2\cdot 0.5 = -1$.
 :::
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Separable Savings, SE Cost & BN Folding"}
+[Concept Check]{.kicker}
 
-- Separable layer: $1/c_\textrm{o} + 1/k^2$ of a dense one; dense blocks
-  would need 4.7M weights instead of 0.53M.
-- Equal parameters: 50.3M vs 384.9M multiply-adds, 91–92% vs 93.5–94%,
-  yet only 2–3.5× less time (depthwise layers are memory-bound).
-- Equal arithmetic: a narrow dense network (76k parameters) reaches about
-  93% and is faster than the mini-MobileNet.
-- Compound scaling: depth × 1.2, width × 1.1, resolution × 1.15 about
-  doubles the cost.
-- SE gate: one learned weight in $(0, 1)$ per channel, from the whole
-  image, for about $2c^2/r$ weights.
-- RepVGG: fold BN, pad $1\times 1$ and identity to $3\times 3$, add;
-  exact to $10^{-6}$, fragile under int8.
+Work out these three quantitative efficiency checks:
 
-Next: how much the *training recipe* adds on a fixed network.
+1. **Separable $7\times 7$ savings:** In ConvNeXt (§7.7), a block uses a $7\times 7$ depthwise convolution followed by a $1\times 1$ convolution at width $c_{\textrm{i}} = c_{\textrm{o}} = 96$. By what factor is this depthwise-separable pair cheaper than a dense $7\times 7$ convolution at $c = 96$?
+2. **Squeeze-and-Excitation overhead:** On a stage with $c = 256$ channels at $14\times 14$ resolution, compare the multiply-adds of an SE gate ($r = 4$) against one dense $3\times 3$ convolution ($256 \to 256$).
+3. **BN folding by hand:** A bias-free conv channel ($b_o = 0$) has kernel $\mathbf{W}_o$ followed by BatchNorm with running mean $\mu_o = 0.5$, running variance $\sigma_o^2 + \epsilon = 0.25$, scale $\gamma_o = 1$, and shift $\beta_o = 0$. What are the folded kernel $\hat{\mathbf{W}}_o$ and bias $\hat{b}_o$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Reduction ratio: $1/c_{\textrm{o}} + 1/k^2 = 1/96 + 1/49 \approx 0.0308$, so it is **$32.4\times$ cheaper** (approaching $49\times$ as $c_{\textrm{o}}$ grows).
+2. **SE gate:** $2 c^2 / r = 2(256^2)/4 = 32{,}768$ MACs (acting on a $1\times 1$ pooled vector). **Dense $3\times 3$ conv:** $14^2 \cdot 9 \cdot 256^2 \approx 115.6\text{M}$ MACs. The SE gate adds just **$0.028\%$** arithmetic overhead.
+3. Scale factor $\gamma_o / \sqrt{\sigma_o^2 + \epsilon} = 1 / \sqrt{0.25} = 2$. Thus $\hat{\mathbf{W}}_o = 2\mathbf{W}_o$ and $\hat{b}_o = 0 + 2(0 - 0.5) = -1$.
 :::
+:::
+
+::: {.slide title="Summary: Key Takeaways on Efficient Convnets"}
+[Summary]{.kicker}
+
+| Technique | Mathematical / Structural Form | Efficiency Gain & Practical Caveat |
+|:--|:--|:--|
+| **Depthwise-Separable Conv** | Depthwise $k\times k$ ($g=c_{\textrm{i}}$) + Pointwise $1\times 1$ ($c_{\textrm{i}}\to c_{\textrm{o}}$) | Cuts weights & MACs to $1/c_{\textrm{o}} + 1/k^2$ ($\approx 1/9$ for $3\times 3$), but depthwise step has low arithmetic intensity ($9$ MACs/read) |
+| **Inverted Bottleneck (MBConv)** | Thin residual ($c$) $\to$ $1\times 1$ ($tc$) $\to$ $\text{DW } 3\times 3$ ($tc$) $\to$ linear $1\times 1$ ($c$) | Keeps inter-block tensors thin in SRAM; omits final ReLU to prevent rank collapse in narrow bottleneck |
+| **Compound Scaling** | Scale $(d, w, r) \leftarrow (\alpha^\phi d, \beta^\phi w, \gamma^\phi r)$ with $\alpha\beta^2\gamma^2 \approx 2$ | Balances receptive field, feature capacity, and image detail simultaneously (EfficientNet) |
+| **Squeeze-and-Excitation (SE)** | $\mathbf{X} \odot \sigma(\mathbf{W}_2\,\textrm{ReLU}(\mathbf{W}_1\,\textrm{GAP}(\mathbf{X})))$ | Global channel attention for $2c^2/r$ weights and $<0.1\%$ FLOPs |
+| **RepVGG Re-parameterization** | Fold $\textrm{BN}$ into $3\times 3, 1\times 1, \mathbf{I}$ branches and sum into one $3\times 3$ conv | Multi-branch trainability + single-path FP32 inference speed; requires branch-scale control for INT8 quantization |
+:::
+

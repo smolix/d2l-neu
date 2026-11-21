@@ -704,23 +704,6 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
        normalizing a weight that shrinks toward critic noise can hurt late
        in training, and what the cap changes under Adam.
    :exlabel:`ex_actor-critic-gradient-norms`
-1. [code] **Correlation of the two weights.** ● Suppose the critic is
-   exact, $\hat{V} = V^{\pi}$, and the episodes have no time limit.
-    1. With the identity
-       $\hat{G}_t - \hat{V}(s_t) = \delta_t + \gamma \big( \hat{G}_{t+1} - \hat{V}(s_{t+1}) \big)$
-       and the proposition on the interior optimum, show that the
-       covariance of $\delta_t$ with the Monte Carlo advantage equals the
-       variance of $\delta_t$, so that their correlation is the square root
-       of the ratio of the two variances.
-    1. Extend the cell that fills `trace` to record also the correlation
-       $q$ of `delta` with `A_mc` in every batch, and write
-       $v_{\textrm{TD}}$ and $v_{\textrm{MC}}$ for the two variances.
-       Compute $\kappa = q \sqrt{v_{\textrm{MC}} / v_{\textrm{TD}}} - 1$,
-       the covariance of $\delta_t$ with the remaining tail in units of the
-       variance of $\delta_t$, and plot it against the update. It is zero
-       for an exact critic. How does $\kappa$ behave early and late in
-       training?
-   :exlabel:`ex_actor-critic-uncorrelated-td-errors`
 1. [code] **Bias of GAE.** ● Problem
    :exref:`ex_actor-critic-why-baseline-argument-does` found the bias of
    the weight $\delta_t$ in terms of the critic's error
@@ -754,23 +737,6 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
        toward the $\lambda = 0$ that the proposition predicts for an exact
        critic?
    :exlabel:`ex_actor-critic-bias-of-gae`
-1. **A critic on a one-step task.** The verifier task of :numref:`sec_mdp`
-   is an episode of one step: the prompt $x$ is the state, the response
-   $y$ the action, and the episode terminates with reward $r(x, y)$, one
-   for a correct answer and zero otherwise.
-    1. Write the TD error of a critic $\hat{V}(x)$ on this task and show
-       that it is the reward minus a per-prompt baseline. Which value of
-       $\hat{V}(x)$ is the exact critic, and how does its TD error compare
-       with the group-centered weight of :numref:`sec_baselines` for a
-       group of $K$ responses to the same prompt?
-    1. What can a learned critic do on this task that the group baseline
-       cannot, and what does it cost? Consider a policy that changes after
-       every update and a critic fitted from the same samples.
-    1. Now let the response be generated one token at a time, with the
-       reward only after the last token. With an exact critic of every
-       prefix, which TD errors along a response are nonzero, and what must
-       the critic predict that the group baseline never needs?
-   :exlabel:`ex_actor-critic-verifier-critic`
 
 [Discussions](https://d2l.discourse.group/t/36801)
 
@@ -780,304 +746,303 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
 ::: {.cover}
 [Dive into Deep Learning · §15.1]{.kicker}
 
-Actor-Critic Methods and Multi-Step Returns<br>
-**the TD error as an advantage · one transition by hand · actor and critic from one number · CartPole with equal critic budgets · n-step and λ-returns · GAE · bias and variance measured**
+Actor–Critic Methods and Generalized Advantage Estimation<br>**TD error as advantage · semi-gradient critics · bias–variance trade-off · n-step returns · GAE backward scan**
 :::
 :::
 
-::: {.slide title="One REINFORCE Update Waits for Up to 4,000 Steps"}
-[The problem]{.kicker}
+::: {.slide title="Why Wait for an Episode to End Before Updating?"}
+[Motivation]{.kicker}
 
-- REINFORCE with a learned baseline on CartPole: eight episodes per update,
-  up to 500 steps each.
-- The weight $\hat G_t - \hat V(s_t)$ of every action needs the rest of its
-  episode.
-- Q-learning changed its table after every transition, using its own
-  estimate of what came next.
+In Chapter 14, REINFORCE with a learned baseline $\hat{V}(s_t)$ collected eight complete CartPole episodes—up to $4{,}000$ transitions—before taking a single gradient step:
+
+::: {.cols}
+::: {.col}
+- **The Monte Carlo Bottleneck:** The policy weight $\hat{G}_t - \hat{V}(s_t)$ requires the realized reward-to-go $\hat{G}_t = \sum_{k \ge 0} \gamma^k r_{t+k}$ all the way to termination.
+- **High Tail Variance:** Summing dozens or hundreds of future random rewards injects cumulative trajectory noise into step $t$'s credit assignment.
+:::
+
+::: {.col}
+- **The Tabular Q-Learning Lesson:** In §14.3, Q-learning updated after *every single transition* by bootstrapping on its own estimate of the next state.
+- **The Actor–Critic Synthesis:** Since $\hat{V}(s_{t+1})$ already predicts $\hat{G}_{t+1}$, we can substitute the prediction for the sampled tail: the policy becomes the **actor** and $\hat{V}$ its **critic**.
+:::
+:::
 
 ::: {.d2l-note}
-**Can a policy-gradient agent learn from one transition, and what does it cost?**
+Replacing the sampled future $\hat{G}_{t+1}$ with the critic's prediction $\hat{V}(s_{t+1})$ trades the variance of the remaining episode for the bias of an imperfect critic.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Bootstrapping the Reward-to-Go with a Critic"}
+[The TD Advantage]{.kicker}
 
-- compute a TD error by hand and say when it equals the advantage;
-- write the actor and critic updates and the batched loop;
-- read a fair comparison of bootstrapped and Monte Carlo weights;
-- derive GAE as a backward scan of TD errors;
-- explain why the best $\lambda$ lies between $0$ and $1$.
+Unrolling one step of the reward-to-go recurrence $\hat{G}_t = r_t + \gamma \hat{G}_{t+1}$ and substituting $\hat{V}(s_{t+1})$ for $\hat{G}_{t+1}$ transforms the baseline-subtracted weight $\hat{G}_t - \hat{V}(s_t)$ into the **temporal-difference (TD) error**:
 
-**Running example:** CartPole: four state numbers, two actions, $+1$ per
-step, cut at 500 steps; $\gamma = 0.99$. **Idea:** let the critic's
-prediction stand in for the rest of the episode.
-:::
-
-::: {.slide title="A Critic Replaces the Wait for the Episode's End"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| **Actor-Critic Methods and Multi-Step Returns** | **a critic in place of the sampled tail** |
-| Trust Regions and Proximal Policy Optimization | several bounded steps per batch |
-| KL-Regularized Policy Optimization | a leash to a reference policy |
-| Deep Q-Networks | replayed transitions, a target network |
-| Soft Actor-Critic | continuous actions, entropy, replay |
-| Learned Models and Planning | a learned model to plan in |
-| Offline Reinforcement Learning | a fixed log, no new actions |
-| Reinforcement Learning for Sequence Generation | tokens as actions, a checker as reward |
-:::
-
-::: {.col .narrow}
-- **Uses:** REINFORCE with a learned baseline on CartPole; Q-learning's TD
-  error; the reward-to-go scan.
-- **Skips:** reusing a batch and bounding the step (next deck); replay.
-:::
-:::
-:::
-
-::: {.slide title="Substitute the Critic's Prediction for the Sampled Tail"}
-$$\hat G_t = r_t + \gamma\, \hat G_{t+1}
-\quad\Rightarrow\quad
-\hat G_t \approx r_t + \gamma\, \hat V(s_{t+1})$$
-
-$$\delta_t = r_t + \gamma\, \hat V(s_{t+1}) - \hat V(s_t), \qquad
-\hat V(\textrm{terminal}) = 0$$
+$$\delta_t = r_t + \gamma\, \hat{V}(s_{t+1}) - \hat{V}(s_t)$$
 
 @actor-critic-the-td-error
 
-The mask follows `terminated`: at a time-limit cut the future is not zero.
+::: {.d2l-note .rule}
+**Termination vs. Truncation:** The bootstrap is zeroed out only when `terminated` is true ($\hat{V}(s_{\textrm{term}}) = 0$); at a 500-step time-limit `truncated` cut, the pole has not fallen and the future value is nonzero.
+:::
 :::
 
-::: {.slide title="One Transition by Hand: δ Is 0 on a Balanced Step and −99 on a Fall"}
-A critic that predicts $100 = 1/(1-\gamma)$ at every state:
+::: {.slide title="Tracing One Transition by Hand on CartPole"}
+[Concrete Intuition]{.kicker}
 
-- the pole stays up: $\delta = 1 + 0.99 \cdot 100 - 100 = 0$;
-  as predicted, the action is left alone;
-- the pole falls, the episode terminates: $\delta = 1 - 100 = -99$;
-  the action that ended the episode is pushed down hard.
+On CartPole-v1, every balanced step pays $r_t = +1$ with discount $\gamma = 0.99$, so balancing forever has true value $V^\infty = 1 / (1 - \gamma) = 100$:
+
+::: {.cols}
+::: {.col}
+- **Calibrated Critic ($\hat{V}(s) = 100$ everywhere):**
+  - *Pole stays upright:* $\delta_t = 1 + 0.99(100) - 100 = 0$. The transition went as predicted, so the action probability is left unchanged.
+  - *Pole falls (`terminated`):* $\delta_t = 1 + 0 - 100 = -99$. The action that dropped the pole receives a strong negative update.
+:::
+
+::: {.col}
+- **Freshly Initialized Critic ($\hat{V}(s) \approx 0$ everywhere):**
+  - *Pole stays upright:* $\delta_t \approx 1 + 0.99(0) - 0 = +1$.
+  - *Pole falls (`terminated`):* $\delta_t \approx 1 + 0 - 0 = +1$.
+  - Both survival and failure receive the exact same positive weight $+1$, teaching the actor almost nothing until the critic catches up!
+:::
+:::
+:::
+
+::: {.slide title="An Exact Critic Yields an Unbiased Advantage Sample"}
+[Theoretical Foundation]{.kicker}
+
+Suppose the critic equals the true value function of the current policy, $\hat{V} = V^\pi$. Taking the conditional expectation of $\delta_t$ over the next state $s_{t+1} \sim P(\cdot \mid s_t, a_t)$ gives:
+
+$$\mathbb{E}\big[\delta_t \mid s_t, a_t\big] = r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^\pi(s') - V^\pi(s_t) = Q^\pi(s_t, a_t) - V^\pi(s_t) = A^\pi(s_t, a_t)$$
+
+- **One-Transition Advantage:** With an exact critic, a single reward and two value evaluations produce an unbiased sample of the advantage $A^\pi(s_t, a_t)$.
+- **Where Critic Error Enters as Bias:** When $\hat{V} \neq V^\pi$, the error at the current state $e(s_t) = \hat{V}(s_t) - V^\pi(s_t)$ depends only on $s_t$ and averages to zero in the policy gradient by the baseline identity.
+- **Next-State Coupling:** The error at the next state $\gamma e(s_{t+1})$ depends on the chosen action $a_t$, so it does *not* vanish in expectation and biases the actor's gradient.
+:::
+
+::: {.slide title="Semi-Gradient Policy Evaluation in the Critic"}
+[Critic Mechanics]{.kicker}
+
+How does the critic $\hat{V}_w$ learn $V^\pi$ while the actor $\pi_\theta$ is simultaneously improving?
+
+::: {.cols}
+::: {.col}
+- **Sampled Bellman Expectation Backup:** Policy evaluation iterates $V(s) \leftarrow r(s,a) + \gamma \mathbb{E}[V(s')]$. Regressing $\hat{V}_w(s_t)$ toward $y_t = r_t + \gamma \hat{V}_w(s_{t+1})$ approximates this backup from sampled transitions.
+- **Generalized Policy Iteration:** The critic evaluates the current actor $\pi_\theta$, and the actor improves against the critic's TD errors.
+:::
+
+::: {.col}
+- **Why Semi-Gradient?** The target $y_t$ depends on $w$, but `td_target` stops the gradient so derivatives are taken only through the prediction $\hat{V}_w(s_t)$:
+  $$\Delta w = \alpha\, \delta_t\, \nabla_w \hat{V}_w(s_t)$$
+- Because the target moves with $w$, this update is not true gradient descent on any fixed loss function.
+:::
+:::
+:::
+
+::: {.slide title="Bias–Variance Trade-off on a Ten-State Chain"}
+[Closed-Form Analysis]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Consider a 10-state deterministic chain ($s \to s+1$, reward noise $\sigma = 0.15$, $\gamma = 0.97$) where a young critic has tapered error $e(s) = 0.5(1 - s/9)^2$.
+- An $n$-step target samples $n$ rewards and bootstraps at state $n$:
+  $$\textrm{Bias}(n) = \gamma^n e(n), \quad \textrm{Var}(n) = \sigma^2 \frac{1 - \gamma^{2n}}{1 - \gamma^2}$$
+- **Interior Optimum ($n = 4$):** $\textrm{MSE} = \textrm{Bias}^2 + \textrm{Var}$ drops from $0.17$ at $n=1$ to $0.10$ at $n=4$, then rises back to $0.17$ at $n=10$ (Monte Carlo).
+:::
+
+::: {.col .fig}
+![](../img/mdl-rl-td-mc-spectrum.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Two Parameter Updates Driven by One Scalar"}
+[The Actor-Critic Loop]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Every transition $(s_t, a_t, r_t, s_{t+1})$ produces a single scalar TD error $\delta_t = r_t + \gamma \hat{V}_w(s_{t+1}) - \hat{V}_w(s_t)$ that drives both networks:
+  $$w \leftarrow w + \alpha\, \delta_t\, \nabla_w \hat{V}_w(s_t)$$
+  $$\theta \leftarrow \theta + \eta\, \delta_t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t)$$
+- **Two-Timescale Requirement (Konda & Tsitsiklis, 2000):** If the actor moves faster than the critic, it climbs stale value estimates; the critic must update faster (`critic_steps = 20` passes per batch) to track $V^{\pi_\theta}$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-rl-actor-critic-loop.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Capping Actor Gradients Under Adam"}
+[Optimization Mechanics]{.kicker}
+
+We step the actor on raw (unnormalized) TD errors while capping the gradient norm at `grad_clip = 0.5`:
+
+@actor-critic-a2c-by-name-1
 
 ::: {.d2l-note}
-The TD error says how much better the step went than the critic expected.
+**Why raw $\delta_t$ with Adam?** As the critic converges, $\textrm{std}(\delta_t)$ shrinks from $\sim 3.0$ to $\le 0.1$ (mostly critic noise). Because Adam divides by a long running average of squared gradients ($\beta_2 = 0.999$), shrinking raw TD errors naturally anneal the effective step size $\sim 8\times$ near the ceiling, whereas batch-standardized TD errors would amplify late critic noise!
 :::
 :::
 
-::: {.slide title="With an Exact Critic, the TD Error Is an Unbiased Advantage Sample"}
-If $\hat V = V^\pi$, average over the next state:
+::: {.slide title="The Batched Fitted-TD Actor-Critic Loop"}
+[Implementation]{.kicker}
 
-$$\mathbb{E}[\delta_t \mid s_t, a_t]
-= r(s_t, a_t) + \gamma\, \mathbb{E}\big[V^\pi(s_{t+1}) \mid s_t, a_t\big] - V^\pi(s_t)
-= Q^\pi(s_t, a_t) - V^\pi(s_t)$$
+Each update collects an 8-episode rollout, refits the critic for `critic_steps = 20` passes against freshly recomputed one-step targets (*fitted TD*), and takes one clipped actor step:
 
-- One reward and two critic calls instead of the rest of the episode.
-- A wrong critic: $\hat V(s_t)$ acts as a baseline and does no harm;
-  $\hat V(s_{t+1})$ depends on $a_t$, so its error biases the update.
-- The critic's update is sampled policy evaluation, a *semi-gradient* step:
-  no gradient flows through the target.
-:::
-
-::: {.slide title="On a Ten-State Chain, Bootstrapping after Four Steps Is Best"}
-![](../img/mdl-rl-td-mc-spectrum.svg){width=80%}
-
-Critic error $e(s) = 0.5(1 - s/9)^2$, reward noise $\sigma = 0.15$,
-$\gamma = 0.97$: bias $\gamma^n e(n)$, variance
-$\sigma^2 (1 - \gamma^{2n}) / (1 - \gamma^2)$. The error is $0.17$ at
-$n = 1$, $0.10$ at $n = 4$, $0.17$ at $n = 10$.
-:::
-
-::: {.slide title="Check: What Does an Untrained Critic Tell the Actor?"}
-[Check]{.kicker}
-
-A freshly initialized critic predicts $0$ at every state. What is $\delta$
-on a step that keeps the pole up, and on the step that drops it? What does
-the actor learn from these weights?
-
-::: {.fragment .fade-up}
-$\delta \approx 1$ on both. Every action taken is pushed up by the same
-amount, so the actor learns little until the critic can tell the two
-steps apart.
-:::
-:::
-
-::: {.slide title="One TD Error Updates Both the Critic and the Actor"}
-$$w \leftarrow w + \alpha\, \delta_t\, \nabla_w \hat V_w(s_t), \qquad
-\theta \leftarrow \theta + \eta\, \delta_t\,
-\nabla_\theta \log \pi_\theta(a_t \mid s_t)$$
-
-![](../img/mdl-rl-actor-critic-loop.svg){width=80%}
-
-Applicable after every transition. The critic must keep up with the actor:
-several critic passes per batch.
-:::
-
-::: {.slide title="The Batched Loop Refits the Critic, Then Steps the Actor on Raw TD Errors"}
 @actor-critic-a2c-by-name-5
 :::
 
-::: {.slide title="Three Choices in the Loop, Each with a Measured Reason"}
-- **Fit, then evaluate.** Twenty passes bring the critic close to
-  $V^\pi$ on the batch's states. Computing $\delta$ before the passes
-  failed on about one seed in four, against one in twenty.
-- **Raw $\delta$, not normalized.** Adam's steps shrink as $\delta$ shrinks
-  toward critic noise, about eightfold over a run; normalized, they would
-  stay large on noise.
-- **Cap the actor's gradient at $0.5$.** Under Adam this limits how much
-  the large early batches count, not the step size.
+::: {.slide title="Three Systems Choices in Batched Actor-Critic"}
+[Design Decisions]{.kicker}
 
-A2C differs: $n$-step advantages, an entropy bonus, one joint step per
-rollout over many parallel environments.
+| Design Choice | Implementation in `td_weight` | Measured Impact on CartPole |
+| :--- | :--- | :--- |
+| **1. Refit critic *before* scoring actor** | Run 20 fitted-TD passes on `b`, then evaluate $\delta_t$ | Brings $\hat{V}_w$ close to $V^\pi$ on the batch; scoring before fitting fails on $\sim 25\%$ of seeds vs. $5\%$ |
+| **2. Recompute target every critic pass** | Call `b.td_target(ac.value_np, gamma)` inside loop | Lets reward information propagate up to 20 steps backward within a single batch |
+| **3. Raw $\delta_t$ + gradient norm cap $0.5$** | No `standardize(delta)`; clip $\|\nabla_\theta\|$ at $0.5$ | Prevents large early TD errors from dominating Adam's second-moment accumulator |
+
+::: {.d2l-note}
+**Contrast with A2C (Mnih et al., 2016):** Synchronous Advantage Actor-Critic collects short fixed-length segments across $N$ parallel environments, computes $n$-step advantages with the pre-update critic, adds an entropy bonus, and takes a single joint gradient step.
+:::
 :::
 
-::: {.slide title="With Equal Critic Budgets, the Monte Carlo Weight Reaches 500 First"}
+::: {.slide title="Bootstrapped vs. Monte Carlo Weights on CartPole"}
+[Experimental Comparison]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- To isolate the effect of the weight alone, `mc_weight` gives REINFORCE the exact same `critic_steps = 20` regression passes and gradient norm cap `0.5`.
+- Over 40 seeds, **REINFORCE + baseline** reaches a return of 450 first on at least 35 seeds, using $15\%$–$35\%$ fewer environment steps than one-step actor-critic.
+- The gradient cap triggers on $20\%$–$40\%$ of actor-critic updates (due to unnormalized early $\delta_t$) and $0\%$ of REINFORCE updates.
+:::
+
+::: {.col .fig}
 @!actor-critic-a2c-by-name-9
 
 @!actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-1
 :::
-
-::: {.slide title="On CartPole the Young Critic's Bias Outweighs the Variance It Removes"}
-- Over 40 seeds REINFORCE reaches 450 first on at least 35, typically
-  with roughly a sixth to a third fewer environment steps.
-- CartPole's tail is tame: rewards are a deterministic $+1$, and the
-  time-limit bootstrap replaces the tail of every cut episode.
-- Actor-critic lags while its critic is young.
-
-::: {.d2l-note}
-The bootstrap does not speed up learning here; what it removes is variance.
 :::
 :::
 
-::: {.slide title="Check: Why Does the Cap Act Only on Actor-Critic?"}
-[Check]{.kicker}
+::: {.slide title="Why Young-Critic Bias Slows Early CartPole Learning"}
+[Diagnostic Analysis]{.kicker}
 
-Both arms cap the actor's gradient norm at $0.5$. The cap is active on
-about $30\%$ of actor-critic's updates and on none of REINFORCE's. Why?
-
-::: {.fragment .fade-up}
-REINFORCE's weights are normalized to unit standard deviation in every
-batch. Actor-critic's are raw TD errors, with a standard deviation near $3$
-while the critic is young, so its early gradients are several times larger.
-:::
+::: {.cols .vc}
+::: {.col}
+- Measuring both weights on the exact same trajectories confirms that the TD error's variance is **$10\times$ to $50\times$ smaller** than the Monte Carlo advantage's variance.
+- **Why doesn't lower variance win on CartPole?** CartPole's reward is a deterministic $+1$ per step, and bootstrapping at the 500-step truncation cut already removes the infinite tail variance.
+- With 8 episodes per batch, Monte Carlo variance is already manageable, whereas the young critic's **bias** misdirects early actor updates.
 :::
 
-::: {.slide title="The TD Error's Variance Is a Few Tens of Times Smaller"}
+::: {.col .fig}
 @!actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1
-
-One reward and one transition: an update can come before the episode ends.
+:::
+:::
 :::
 
-::: {.slide title="n-Step Returns and the λ-Return Interpolate between δ and Monte Carlo"}
-$$\hat G^{(n)}_t = r_t + \gamma\, r_{t+1} + \cdots + \gamma^{n-1} r_{t+n-1}
-+ \gamma^n\, \hat V(s_{t+n})$$
+::: {.slide title="Interpolating Horizons with n-Step Returns"}
+[Multi-Step Returns]{.kicker}
 
-$$\hat A^{\textrm{GAE}}_t = (1 - \lambda) \sum_{n \geq 1} \lambda^{n-1}
-\big( \hat G^{(n)}_t - \hat V(s_t) \big)$$
+Rather than choosing between a biased 1-step bootstrap and a high-variance full rollout, we can sum $n$ actual rewards before bootstrapping from the critic at step $t+n$:
 
-- $n = 1$ or $\lambda = 0$: the TD error $\delta_t$.
-- $n$ to the end, or $\lambda \to 1$ on terminating episodes: the Monte
-  Carlo advantage.
+$$\hat{G}^{(n)}_t = r_t + \gamma\, r_{t+1} + \cdots + \gamma^{n-1} r_{t+n-1} + \gamma^n\, \hat{V}(s_{t+n})$$
+
+Averaging all $n$-step advantage estimates $\hat{G}^{(n)}_t - \hat{V}(s_t)$ with geometric weights $(1 - \lambda)\lambda^{n-1}$ defines **Generalized Advantage Estimation (GAE)** for $\lambda \in [0, 1]$:
+
+$$\hat{A}^{\textrm{GAE}}_t = (1 - \lambda) \sum_{n=1}^{\infty} \lambda^{n-1} \big( \hat{G}^{(n)}_t - \hat{V}(s_t) \big)$$
+
+- **Endpoint $\lambda = 0$:** Places all weight on $n = 1$, recovering the one-step TD error $\delta_t$.
+- **Endpoint $\lambda \to 1$:** Places all weight on the full episode return, recovering the Monte Carlo advantage $\hat{G}_t - \hat{V}(s_t)$.
 :::
 
-::: {.slide title="The λ-Return Telescopes into a Discounted Sum of TD Errors"}
-**I.** Interior values cancel in pairs:
-$\sum_{l < n} \gamma^l \delta_{t+l} = \hat G^{(n)}_t - \hat V(s_t)$.
+::: {.slide title="Telescoping the Lambda-Return into TD Errors"}
+[Mathematical Derivation]{.kicker}
 
-**II.** Swap the sums: $\gamma^l \delta_{t+l}$ appears for every $n > l$,
-with total weight $(1 - \lambda) \sum_{n > l} \lambda^{n-1} = \lambda^l$.
+Computing $\hat{G}^{(n)}_t$ separately for every depth $n$ would take $O(T^2)$ work, but the infinite geometric mixture collapses into a single discounted sum of one-step TD errors:
 
-$$\boxed{\ \hat A^{\textrm{GAE}}_t = \sum_{l \geq 0} (\gamma\lambda)^l\, \delta_{t+l}\ }$$
+$$\hat{A}^{\textrm{GAE}}_t = \sum_{l=0}^{\infty} (\gamma\lambda)^l\, \delta_{t+l}$$
 
-One backward pass over the episode, linear in its length.
+- **Step 1 (Telescoping Sum):** Every $n$-step advantage is a finite sum of TD errors because interior $\hat{V}(s_{t+l})$ terms cancel in pairs:
+  $$\hat{G}^{(n)}_t - \hat{V}(s_t) = \sum_{l=0}^{n-1} \gamma^l \big(r_{t+l} + \gamma \hat{V}(s_{t+l+1}) - \hat{V}(s_{t+l})\big) = \sum_{l=0}^{n-1} \gamma^l \delta_{t+l}$$
+- **Step 2 (Swapping Sums):** Term $\gamma^l \delta_{t+l}$ appears in every depth $n \ge l + 1$, so its total geometric weight is $(1 - \lambda) \sum_{n=l+1}^\infty \lambda^{n-1} = \lambda^l$.
 :::
 
-::: {.slide title="GAE Is the Reward-to-Go Scan Run on TD Errors"}
+::: {.slide title="Generalized Advantage Estimation in Two Lines"}
+[GAE Implementation]{.kicker}
+
+Because $\hat{A}^{\textrm{GAE}}_t = \delta_t + \gamma\lambda\, \hat{A}^{\textrm{GAE}}_{t+1}$, GAE is identical to the `backward_scan` used for reward-to-go in Chapter 14, run on $\delta_t$ with discount factor $\gamma\lambda$:
+
 @actor-critic-gae-in-one-old-function-1
 
 @!actor-critic-gae-in-one-old-function-2
-
-The scan restarts at every episode end; at a time-limit cut the last
-$\delta$ bootstraps from $\hat V$.
 :::
 
-::: {.slide title="Check: How Far Ahead Does λ = 0.95 Look?"}
-[Check]{.kicker}
+::: {.slide title="Sweeping Lambda on Short-Budget CartPole Runs"}
+[Empirical Sweep]{.kicker}
 
-At $\gamma = 0.99$, after how many steps has the weight $(\gamma\lambda)^l$
-of a later TD error fallen to half, for $\lambda = 0.95$? And for
-$\lambda = 1$?
-
-::: {.fragment .fade-up}
-$l = \ln 2 / (-\ln 0.9405) \approx 11$ steps for $\lambda = 0.95$; about
-69 steps for $\lambda = 1$. Most of the variance comes from the last step
-of the dial.
-:::
+::: {.cols .vc}
+::: {.col}
+- When using GAE, the critic fits the **$\lambda$-return** $G^\lambda_t = \hat{A}^{\textrm{GAE}}_t + \hat{V}(s_t)$, and the actor uses standardized GAE advantages.
+- On a short budget (50 updates of 4 episodes, 5 seeds), heavily bootstrapped estimators ($\lambda = 0$ and $\lambda = 0.5$) stall at median returns of $150$–$250$.
+- Longer-horizon mixtures ($\lambda \in \{0.9, 0.95, 1.0\}$) reach nearly $500$, because downweighting the young critic's bias outweighs the extra reward noise.
 :::
 
-::: {.slide title="On a Short Budget, Low λ Loses Because the Early Critic Is Biased"}
+::: {.col .fig}
 @!actor-critic-measuring-the-dial-2
 :::
+:::
+:::
 
-::: {.slide title="At Eight Frozen Agents, the Error Is Smallest at λ = 0.9 to 0.95"}
+::: {.slide title="Measuring Gradient Bias and Variance at Frozen Policies"}
+[Frozen-Policy Probe]{.kicker}
+
+To decouple estimator quality from training dynamics, we freeze 8 partially trained agents (at 40 updates), draw 200 batches of 4 episodes each, and measure relative gradient bias and variance against the 200-batch mean of $\lambda = 1$:
+
 @!actor-critic-a-frozen-policy-probe-1
 
-- From $\lambda = 0$ to $1$: bias falls to zero, variance rises
-  more than $10\times$, most of it in the last step.
-- Agents vary; the common default is $\lambda = 0.95$.
-:::
-
-::: {.slide title="An Exact Critic Would Make λ = 0 Best"}
-With $\hat V = V^\pi$: $\mathbb{E}[\delta_{t+l} \mid s_{t+l}] = 0$, so every
-$\lambda$ is unbiased and the cross terms vanish:
-
-$$\mathbb{E}\big[(\hat A^{\textrm{GAE}}_t)^2 \mid s_t, a_t\big]
-= \sum_{l \geq 0} (\gamma\lambda)^{2l}\, \mathbb{E}\big[\delta_{t+l}^2 \mid s_t, a_t\big]$$
-
-The error grows with $\lambda$.
-
 ::: {.d2l-note}
-An interior optimum measures the critic's error, and moves toward
-$\lambda = 0$ as the critic improves.
+Across the 8 frozen agents, increasing $\lambda$ from $0$ to $1$ drives bias to $0$ while increasing variance more than $10\times$ (most sharply between $0.95$ and $1.0$, where the half-life of $(\gamma\lambda)^l$ jumps from $11$ steps to $69$ steps). Total error $\textrm{Bias}^2 + \textrm{Var}$ is minimized at **$\lambda \in [0.9, 0.95]$**.
 :::
 :::
 
-::: {.slide title="A Critic Suits Dense Rewards; a Group Baseline Suits One Final Reward"}
-| | learned critic | group baseline |
-|---|---|---|
-| reward | at every step | once, at the end |
-| episodes | long, or never ending | one response |
-| cost | a second network and its bias | several samples per start |
-| example | CartPole, robots | a language model graded by a checker |
+::: {.slide title="Why an Exact Critic Makes Lambda = 0 Optimal"}
+[Theory vs. Practice]{.kicker}
 
-Practice: fixed-length segments from parallel environments, bootstrapped
-at the cut like a time limit.
+- **Proposition (Exact Critic $\hat{V} = V^\pi$):** Because $\mathbb{E}[\delta_{t+l} \mid s_t, a_t, \delta_t, \dots, \delta_{t+l-1}] = 0$ for all $l \ge 1$ by the Markov property, all cross terms vanish and:
+  $$\mathbb{E}\big[(\hat{A}^{\textrm{GAE}}_t)^2 \mid s_t, a_t\big] = \sum_{l=0}^{\infty} (\gamma\lambda)^{2l}\, \mathbb{E}\big[\delta_{t+l}^2 \mid s_t, a_t\big]$$
+  which is strictly minimized at **$\lambda = 0$**. Thus an interior optimum ($\lambda \approx 0.95$) exists *solely* because the critic is imperfect!
+
+| Estimator Architecture | Reward Structure | Episode Horizon | Extra Cost | Canonical Use Case |
+| :--- | :--- | :--- | :--- | :--- |
+| **Learned Critic + GAE** | Dense per-step rewards | Long or continuing | Value network + critic bias | Robotics, games, PPO (§15.2) |
+| **Group Baseline (GRPO)** | Single terminal verdict | Single completion | $K$ parallel rollouts per prompt | LLM reasoning with verifiers (§15.8) |
 :::
 
-::: {.slide title="Check: Your Critic Is Nearly Exact. Raise λ or Lower It?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: TD Errors, GAE Horizons, and Critic Bias"}
+[Check Your Understanding]{.kicker}
 
-Late in a long run the critic's error is small at every state. Should
-$\lambda$ move up toward $1$ or down toward $0$?
+Work out these three diagnostic questions:
 
-::: {.fragment .fade-up}
-Down. With an exact critic the sampled tail adds only noise, and the
-one-step TD error has the least variance.
+1. **Effective Horizon:** At $\gamma = 0.99$, after how many steps $l$ does the GAE weight $(\gamma\lambda)^l$ decay to $0.5$ when $\lambda = 0.95$ versus when $\lambda = 1.0$?
+2. **Schedule Adaptation:** Late in a long training run, your critic $\hat{V}_w$ has become nearly exact across all visited states. Should you increase $\lambda$ toward $1$ or decrease it toward $0$?
+3. **Constant Overestimation:** Suppose $\hat{V}(s) = V^\pi(s) + c$ for a positive constant $c > 0$ at every nonterminal state (and $\hat{V} = 0$ at terminal states). Does $\delta_t$ remain unbiased?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Half-life $l_{1/2} = \ln 2 / (-\ln(\gamma\lambda))$: for $\lambda = 0.95$ ($\gamma\lambda = 0.9405$), **$l_{1/2} \approx 11.3$ steps**; for $\lambda = 1.0$ ($\gamma\lambda = 0.99$), **$l_{1/2} \approx 69.0$ steps**.
+2. **Decrease $\lambda$ toward $0$:** once critic bias vanishes, future TD errors $\delta_{t+l}$ ($l \ge 1$) have zero conditional mean and only add variance.
+3. **Only on nonterminal transitions** where $\gamma c - c = (\gamma - 1)c$ is state-independent; at any state where one action risks termination ($e(s') = 0$), $+c$ biases the actor *against* terminating!
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Advantage Estimators Across the TD–MC Spectrum"}
+[Key Takeaways]{.kicker}
 
-- $\delta_t = r_t + \gamma \hat V(s_{t+1}) - \hat V(s_t)$: $0$ on a balanced
-  step and $-99$ on a fall under a critic predicting $100$.
-- Exact critic: $\delta_t$ is an unbiased advantage sample; a learned one
-  adds bias through $\hat V(s_{t+1})$.
-- CartPole, equal critic budgets: Monte Carlo first, with roughly a sixth to
-  a third fewer steps; the TD error's variance is a few tens of times smaller.
-- GAE $= \sum_l (\gamma\lambda)^l \delta_{t+l}$, one backward scan; error
-  smallest near $\lambda = 0.9$ to $0.95$, the common default.
-
-**Next:** each batch still serves one actor step, and nothing bounds that
-step. Reuse a batch for several bounded steps.
+| Estimator | Formula for Advantage Weight $\hat{A}_t$ | Bias (When $\hat{V} \neq V^\pi$) | Single-Sample Variance | Needs Finished Episode? |
+| :--- | :--- | :--- | :--- | :--- |
+| **One-Step TD ($\lambda = 0$)** | $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ | **Highest** ($\gamma \mathbb{E}[e(s_{t+1})]$) | **Lowest** ($1$ transition) | **No** (fully online / 1 step) |
+| **$n$-Step Return** | $\sum_{l=0}^{n-1} \gamma^l r_{t+l} + \gamma^n \hat{V}(s_{t+n}) - \hat{V}(s_t)$ | Decays as $\gamma^n \mathbb{E}[e(s_{t+n})]$ | Grows with horizon $n$ | **No** ($n$-step lookahead) |
+| **GAE ($\lambda \in (0, 1)$)** | $\sum_{l=0}^{\infty} (\gamma\lambda)^l \delta_{t+l}$ (`backward_scan`) | Tunable via $1 - \lambda$ | Balanced at $\lambda \approx 0.95$ | Segment cut + bootstrap |
+| **Monte Carlo ($\lambda = 1$)** | $\hat{G}_t - \hat{V}(s_t) = \sum_{l=0}^{T-t-1} \gamma^l r_{t+l} - \hat{V}(s_t)$ | **Zero** (exact baseline) | **Highest** (full tail sum) | **Yes** (or truncation cut) |
 :::

@@ -33,66 +33,62 @@ cnn-design
 ::: {.cover}
 [Dive into Deep Learning · §7]{.kicker}
 
-What made deep convnets trainable<br>
-**AlexNet · blocks · normalization · residual connections · efficient convnets · training recipes · ConvNeXt · design spaces**
+Modern Convolutional Neural Networks<br>**AlexNet · blocks · normalization · residual shortcuts · efficient convnets · training recipes · ConvNeXt · RegNet**
 :::
 :::
 
-::: {.slide title="Stacking More LeNet Layers Does Not Give a Better Network"}
-[The problem]{.kicker}
+::: {.slide title="Why Stacking More LeNet Layers Fails in Practice"}
+[The Central Problem]{.kicker}
 
-- LeNet: five layers, about 62,000 parameters, sigmoid units.
-- Sigmoid units shrink the gradient at every layer. Even with ReLUs and
-  normalization, a 56-layer *plain* network ends with a higher training
-  loss than a 20-layer one (0.25–0.3 against 0.2 on Fashion-MNIST).
-- Every new layer needs its own width, kernel size, and initialization.
-- Reported accuracies mix architecture with the training procedure.
+From 2012 to 2022, vision backbones scaled from 8 to 150+ layers while shrinking parameter and latency budgets, exposing four fundamental barriers:
 
-::: {.d2l-note}
-Between 2012 and 2016 ImageNet winners grew from 8 layers to more than 150.
-Which ideas made that possible, and which gains came from training?
-:::
+- **Signal & gradient drift:** Saturating sigmoids shrink gradients by $\le 1/4$ per layer; even with ReLUs and batch normalization, a 56-layer *plain* network converges to higher training loss than a 20-layer one ($0.27$ vs. $0.20$ on Fashion-MNIST).
+- **Parameter vs. compute asymmetry:** AlexNet and VGG concentrate over 92% of their parameters inside flattened dense classifier heads that contribute under 5% of total multiply-adds.
+- **Hardware vs. theoretical FLOPs:** Low arithmetic-intensity operations (depthwise and grouped convolutions) can run slower on GPUs despite $8\times$ fewer multiply-adds.
+- **Confounded benchmarks:** Modern training recipes alone boost an unchanged 2015 ResNet-50 by $>4$ ImageNet top-1 points.
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="Architectural Toolkit Across the Chapter"}
+[Chapter Roadmap]{.kicker}
 
-- count the parameters and multiply-adds of a convnet, and say where they sit;
-- build networks from repeated blocks, 1 × 1 convolutions, and global pooling;
-- implement batch normalization and explain its training and prediction modes;
-- explain the degradation problem and why a residual block fixes it;
-- trade accuracy for arithmetic with depthwise-separable convolutions;
-- separate the effect of a training recipe from that of an architecture.
+Each section isolates one structural bottleneck and introduces a reusable primitive carried forward through the rest of the book:
 
-**Running example:** every network trained on Fashion-MNIST.
+| Section | Core Bottleneck Solved | Key Primitives Introduced |
+|:--|:--|:--|
+| **§7.1 AlexNet** | Hand-crafted features plateau on large data | End-to-end learned filters, ReLU, dropout, cosine warmup |
+| **§7.2 VGG, NiN, GoogLeNet** | Ad-hoc layer design & 100M+ dense heads | Stacked $3\times 3$ blocks, $1\times 1$ mixing/bottlenecks, global average pooling |
+| **§7.3 Normalization** | Scale drift & fragile learning-rate bands | BatchNorm (minibatch + running stats), LayerNorm, GroupNorm |
+| **§7.4 ResNet, ResNeXt, DenseNet** | Deep plain networks degrade in training loss | Additive shortcuts $\mathbf{x} + g(\mathbf{x})$, grouped convs, concatenation |
+| **§7.5 Efficient Convnets** | Mobile/edge latency, memory & energy limits | Depthwise-separable convs, inverted bottlenecks, SE gates, RepVGG fusion |
+| **§7.6 Training Recipes** | Architecture gains confounded with training | AdamW, label smoothing, Mixup, stochastic depth, weight EMA |
+| **§7.7 ConvNeXt** | Vision Transformers outscoring 2015 ResNets | Step-by-step ResNet modernization ($7\times 7$ depthwise, single GELU/LN) |
+| **§7.8 Design Spaces (RegNet)** | Single-model search yields no general rules | Population error CDFs over AnyNet, linear stage-width staircases |
 :::
 
-::: {.slide title="Map of the Chapter"}
-[Chapter map]{.kicker}
+::: {.slide title="Three Unifying Design Invariants"}
+[Core Mental Models]{.kicker}
 
-| section | question |
-|---|---|
-| AlexNet | what let a deep network beat engineered features in 2012? |
-| VGG, NiN, GoogLeNet | how do we build depth from repeated blocks? |
-| Normalization Layers | how does normalizing activations speed up training? |
-| ResNet, ResNeXt, DenseNet | why do deeper plain networks train worse, and what fixes it? |
-| Efficient Convnets | how do we cut a layer's arithmetic tenfold, and at what cost? |
-| Training Recipes | how much accuracy comes from the training procedure? |
-| ConvNeXt | how far does a ResNet get, modernized one change at a time? |
-| Design Spaces (RegNet) | what rules appear in populations of networks? |
+Every modern convolutional backbone relies on three quantitative principles that govern accuracy, trainability, and speed:
+
+- **Receptive field per FLOP and stem–body–head layout:** Two stacked $3\times 3$ convolutions span the same $5\times 5$ window as one $5\times 5$ layer using $18c^2$ vs. $25c^2$ weights and two nonlinearities, while parameter-free global average pooling eliminates dense heads.
+- **Scale invariance and nested function classes:** Normalization makes layer outputs invariant to weight scale ($\textrm{BN}(a\mathbf{w}^\top\mathbf{h}) = \textrm{BN}(\mathbf{w}^\top\mathbf{h})$), and residual shortcuts $\mathbf{x} + g(\mathbf{x})$ place the identity map at $g = 0$ so deeper models strictly contain shallower ones ($\mathcal{F} \subseteq \mathcal{F}'$).
+- **Factorization ratio vs. arithmetic intensity:** Depthwise-separable convolutions cut multiply-adds to $1/c_{\textrm{o}} + 1/k^2 \approx 1/9$ for $3\times 3$ kernels, but read memory with only $9$ multiply-adds per activation element versus $9c_{\textrm{o}}$ for dense layers.
 :::
 
-::: {.slide title="Every Section Ends With a Measured Result"}
-[Running examples]{.kicker}
+::: {.slide title="Controlled Fashion-MNIST Running Benchmark"}
+[Empirical Scoreboard]{.kicker}
 
-| section | result on Fashion-MNIST |
-|---|---|
-| AlexNet | 46.8M parameters; about 91% in a third of LeNet's epochs |
-| VGG, NiN, GoogLeNet | 89–93% with 3.4M to 43M parameters; a pooled head on VGG's body loses about 2 points |
-| Normalization Layers | with batch norm, LeNet trains at every peak rate from 0.03 to 10 |
-| ResNet, ResNeXt, DenseNet | 56 plain layers train worse than 20, 56 residual layers better; ResNet-18 about 93% |
-| Efficient Convnets | mini-MobileNet 91–92%; a narrow dense network of equal arithmetic about 93% |
-| Training Recipes | the modern recipe wins every paired run, by 0.5–1.5 points |
-| ConvNeXt | ConvNeXt blocks tie with a matched ResNet-18 (≈ 94%); the patchify stem loses 2 points |
-| Design Spaces (RegNet) | the width rule is worth under a point; RegNetX32 ≈ 94% with a third of ResNet-18's multiply-adds |
+We evaluate every architecture under controlled cosine schedules on Fashion-MNIST while pairing small-scale runs with large-scale ImageNet ablations:
+
+| Architecture / Experiment | Parameters | Multiply-Adds | Fashion-MNIST Result & Takeaway |
+|:--|--:|--:|:--|
+| **AlexNet** (§7.1, $224^2$) | 46.8M | 938M | $\approx 91\%$ in 10 epochs ($3\times$ fewer epochs than LeNet, $2{,}250\times$ the FLOPs) |
+| **VGG / NiN / GoogLeNet** (§7.2) | 0.6M–43.1M | 276M–798M | Quarter-VGG hits $93\%$; global average pooling cuts 99% of weights for $-2$ pts |
+| **BNLeNet** (§7.3, $28^2$) | 61.9K | 0.42M | Trains cleanly across a $300\times$ learning-rate span ($\eta_0 \in [0.03, 10]$) |
+| **Plain-56 vs. ResNet-56** (§7.4) | 0.85M | 125M | Plain-56 degrades ($0.27 > 0.20$ loss); ResNet-56 reverses ordering ($0.16$) |
+| **Mini-MobileNet vs. Dense** (§7.5) | 0.54M / 76K | 50M | $7.7\times$ fewer FLOPs gives $2\text{--}3.5\times$ GPU speedup; narrow dense wins at 50M |
+| **ResNet-18: 2015 vs. Modern** (§7.6) | 11.2M | 319M | Modern recipe (AdamW + Mixup + smoothing) wins every paired 10k-image run |
+| **ConvNeXt vs. ResNet-18** (§7.7) | 3.38M | 44M | Modernized blocks tie at $\approx 94\%$; coarse $4\times 4$ patchify stem loses $2.5$ pts |
+| **RegNetX32 vs. ResNet-18** (§7.8) | 0.52M | 112M | Matches ResNet-18 ($\approx 94\%$) with $<5\%$ of the weights and $1/3$ of the FLOPs |
 :::
+

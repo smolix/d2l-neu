@@ -275,433 +275,212 @@ This theorem answers our conceptual puzzle: because linear classifiers in $\math
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §3.6]{.kicker}
+[Dive into Deep Learning · §3.5]{.kicker}
 
-Error bars for test scores, guarantees for model classes<br>
-**test-set size · test-set reuse · uniform convergence · the VC dimension**
+Generalization in Classification: Error Bars, Test Reuse & VC Theory<br>**empirical vs. population error · CLT & Hoeffding intervals · union bound · adaptive overfitting · shattering & VC dimension**
 :::
 :::
 
-::: {.slide title="A Test Score Is a Sample, and a Training Score Can Be Memorized"}
-[The problem]{.kicker}
+::: {.slide title="Two Obstacles Between Measured and True Accuracy"}
+[Why Generalization Needs Quantitative Theory]{.kicker}
 
-- Softmax regression labels **about 83%** of the 10,000 Fashion-MNIST
-  test images correctly. Another 10,000 images would give a different number.
-- A lookup table of the 60,000 training labels scores **100%** on the
-  training set and guesses on every new image.
+Our Fashion-MNIST classifier scored $\sim 83\%$ on $10{,}000$ validation images and $\sim 84\%$ on $60{,}000$ training images. How far can we trust either number as a guarantee on future garments?
 
-::: {.d2l-note}
-1. How many test examples give a trustworthy accuracy?
-2. What happens if we evaluate on the same test set again and again?
-3. Why should a fitted linear model beat memorization?
-:::
+- **Finite-sample uncertainty and test-set reuse:** Even an untouched test set of $n = 10{,}000$ images is a finite random draw with statistical error bars—and consulting that same split repeatedly to compare models or tune hyperparameters actively erodes those guarantees.
+- **Memorization vs. genuine learning:** In $\mathbb{R}^{784}$ where every training image is unique, a lookup-table memorizer achieves $100\%$ training accuracy ($0\%$ training error) while guessing randomly on every new image. Why does low training error certify low population error for a *linear* classifier when a memorizer's zero error certifies nothing?
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Empirical vs. Population Error of a Fixed Classifier"}
+[Test Error as a Binomial Average]{.kicker}
 
-- attach a standard error and a 95% radius to a test error;
-- size a test set with the normal approximation and with Hoeffding's bound;
-- estimate how much selection and adaptive reuse inflate a test score;
-- define shattering and the VC dimension, and show that lines in the plane
-  have VC dimension 3;
-- read the VC bound, and say why it is vacuous for deep networks.
+Fix a single classifier $f$ **before** drawing an independent test set $\mathcal{D} = \{(\mathbf{x}^{(i)}, y^{(i)})\}_{i=1}^n$ i.i.d. from the population distribution $P(X, Y)$:
 
-**Running example:** a classifier with error $0.15$, roughly softmax
-regression on Fashion-MNIST, and its 10,000 test images.
+$$\epsilon_{\mathcal{D}}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\!\left(f(\mathbf{x}^{(i)}) \neq y^{(i)}\right), \qquad \epsilon(f) = P\!\left(f(X) \neq Y\right)$$
+
+- **Independent Bernoulli indicators:** Because $f$ was fixed in advance, each indicator $\mathbf{1}(f(\mathbf{x}^{(i)}) \neq y^{(i)})$ is an independent $\mathrm{Bernoulli}(\epsilon(f))$ trial with mean $\epsilon(f)$ and variance $\epsilon(f)(1 - \epsilon(f)) \le 1/4$.
+- **Unbiased estimator & standard error:**
+  $$\mathbb{E}\big[\epsilon_{\mathcal{D}}(f)\big] = \epsilon(f), \qquad \mathrm{SE}\big(\epsilon_{\mathcal{D}}(f)\big) = \sqrt{\frac{\epsilon(f)(1 - \epsilon(f))}{n}} \le \frac{0.5}{\sqrt{n}}$$
+- **Fashion-MNIST benchmark ($\epsilon \approx 0.15,\; n = 10{,}000$):** $\mathrm{SE} = \sqrt{0.15 \times 0.85 / 10{,}000} \approx 0.0036$ ($0.36$ percentage points). Halving this error bar requires **$4\times$** as many test examples!
 :::
 
-::: {.slide title="Error Bars and Guarantees Complete the Classification Pipeline"}
-[Where this fits]{.kicker}
+::: {.slide title="Asymptotic 95% Intervals via the Central Limit Theorem"}
+[Why Standard Vision Benchmarks Use n = 10,000]{.kicker}
+
+For large $n$, the Central Limit Theorem approximates $\epsilon_{\mathcal{D}}(f)$ by a Gaussian $\mathcal{N}\!\big(\epsilon(f), \mathrm{SE}^2\big)$, which lies within $1.96$ standard errors of its mean with probability $\approx 0.95$:
+
+$$P\!\left(\big|\epsilon_{\mathcal{D}}(f) - \epsilon(f)\big| \le 1.96\sqrt{\frac{\epsilon(f)(1 - \epsilon(f))}{n}}\right) \approx 0.95$$
+
+- **Fashion-MNIST radius ($\epsilon = 0.15,\; n = 10{,}000$):** $r_{\text{normal}} = 1.96 \times 0.0036 \approx 0.007$ ($\pm 0.7$ percentage points).
+- **Sizing a test set for $\pm 1\%$ worst-case margin ($\epsilon = 1/2$):**
+  $$1.96\,\frac{0.5}{\sqrt{n}} \le 0.01 \quad \Longleftrightarrow \quad n \ge \left(\frac{1.96 \times 0.5}{0.01}\right)^2 = 9{,}604$$
+  This exact calculation is why MNIST, Fashion-MNIST, and CIFAR-10 all ship with **$10{,}000$-image test sets**!
+:::
+
+::: {.slide title="Finite-Sample Guarantees via Hoeffding's Inequality"}
+[Distribution-Free Concentration]{.kicker}
+
+When $\epsilon(f)$ is very close to $0$, a small test set can observe $\epsilon_{\mathcal{D}}(f) = 0$ errors, collapsing the plug-in normal radius $1.96\sqrt{\epsilon_{\mathcal{D}}(1-\epsilon_{\mathcal{D}})/n}$ to $0$! **Hoeffding's inequality** uses only the bounded range $[0, 1]$ of each error indicator to give an exact finite-sample bound for *every* $n$ and *every* $\epsilon(f)$:
+
+$$P\!\left(\big|\epsilon_{\mathcal{D}}(f) - \epsilon(f)\big| \ge t\right) \le 2\exp\!\left(-2nt^2\right)$$
+
+- **Exact $(1 - \delta)$ confidence radius:** Setting $2\exp(-2nr^2) = \delta$ yields:
+  $$r_{\text{Hoeffding}} = \sqrt{\frac{\log(2/\delta)}{2n}}$$
+- **Cost of distribution-free worst-case variance:** At $95\%$ confidence ($\delta = 0.05$) and radius $r \le 0.01$, Hoeffding requires $n \ge \frac{\log 40}{2 \times 0.01^2} \approx 18{,}445$ examples—roughly $2\times$ the worst-case normal sample size ($9{,}604$).
+:::
+
+::: {.slide title="Empirical Coverage: Normal vs. Hoeffding Intervals"}
+[Monte Carlo Simulation Across Test-Set Sizes]{.kicker}
+
+Simulating $10{,}000$ independent test sets at each size $n \in [100, 10{,}000]$ for $\epsilon = 0.15$ and $\epsilon = 0.01$ compares actual $95\%$ interval coverage:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Softmax Regression | probabilities over classes, cross-entropy |
-| Image Classification Data | Fashion-MNIST in minibatches |
-| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
-| Concise Implementation | framework layers, a stable loss |
-| Measuring Classifiers | precision, recall, costs, calibration |
-| **Generalization in Classification** | **error bars, test-set reuse, VC dimension** |
-| Environment and Distribution Shift | correcting for shifted data |
+- **Moderate error ($\epsilon = 0.15$, blue):** The plug-in normal interval (solid) achieves $\approx 95\%$ coverage at every $n$, while Hoeffding (dashed) is conservative ($\sim 99\%$ coverage).
+- **Near-zero error ($\epsilon = 0.01$, orange):** For $n \le 200$, $\sim 13\%\text{--}37\%$ of test sets observe zero mistakes ($\epsilon_{\mathcal{D}} = 0$), causing the plug-in normal interval to undercover down to $\sim 63\%$.
+- **Hoeffding holds everywhere:** Always stays above the $0.95$ dotted line.
 :::
 
-::: {.col .narrow}
-- **Uses:** the standard error of an average, its standard deviation over
-  $\sqrt{n}$; training vs. test error; validation sets.
-- **Skips:** proofs of Hoeffding's inequality and the VC bound (mathematics
-  appendix); why deep networks generalize (next chapter).
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[The Test Set]{.dtitle}
-
-[how precisely a test set measures one classifier]{.dsub}
-:::
-:::
-
-::: {.slide title="The Test Error Is the Frequency of Heads of a Biased Coin"}
-[The test set]{.kicker}
-
-For a classifier $f$ fixed **before** the test set $\mathcal{D}$ of $n$
-examples is drawn:
-
-$$\epsilon_\mathcal{D}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\left(f(\mathbf{x}^{(i)}) \neq y^{(i)}\right)
-\qquad
-\epsilon(f) = P\left(f(X) \neq Y\right)$$
-
-- Each term is 1 with probability $\epsilon(f)$: unbiased, with standard
-  error $\sqrt{\epsilon(1-\epsilon)/n} \le 0.5/\sqrt{n}$.
-- $\epsilon = 0.15$, $n = 10{,}000$: standard error $\approx 0.0036$.
-
-::: {.d2l-note}
-Half the error bar takes **four times** the test data.
-:::
-:::
-
-::: {.slide title="The Central Limit Theorem Turns a Standard Error into a 95% Interval"}
-[The test set · confidence]{.kicker}
-
-For large $n$, $\epsilon_\mathcal{D}(f)$ is approximately normal, and a
-normal variable lies within 1.96 standard deviations of its mean 95% of the
-time:
-
-$$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \le 1.96\sqrt{\epsilon(1-\epsilon)/n}\right) \approx 0.95$$
-
-- Running example: radius $1.96 \cdot 0.0036 \approx 0.007$.
-- Worst case $\epsilon = \tfrac12$: radius $0.01$ needs
-  $n \ge (1.96 \cdot 0.5/0.01)^2 = 9{,}604$.
-
-::: {.d2l-note}
-A 10,000-image test set knows one model's accuracy to about **±1 point**.
-:::
-:::
-
-::: {.slide title="Hoeffding Certifies ±1% at 95% with 18,445 Examples"}
-[The test set · finite samples]{.kicker}
-
-Each term lies in $[0, 1]$, so at **every** $n$ and for every distribution,
-a deviation of $t$ or more has probability
-
-$$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \ge t\right) \le 2\exp\left(-2nt^2\right).$$
-
-- Set the right side to $\delta = 0.05$: radius $\sqrt{\log(2/\delta)/(2n)}$.
-- $t = 0.01$: $n \ge \log 40/(2 \cdot 0.01^2) \approx 18{,}445$, about
-  twice the 9,604 of the normal approximation.
-
-::: {.d2l-note}
-Hoeffding uses only the **range** of each term, not its variance.
-:::
-:::
-
-::: {.slide title="At Small Error Rates the Normal Interval Undercovers; Hoeffding Holds"}
-[The test set · simulation]{.kicker}
-
-::: {.cols .vc}
-::: {.col .narrow}
-10,000 simulated test sets per size $n$, true error $0.15$ or $0.01$.
-Plotted: the fraction of test sets whose 95% interval contains the true
-error.
-
-::: {.d2l-note}
-The normal interval, with the measured error plugged in, falls short when
-few errors are expected. Hoeffding's interval covers at every $n$, at about
-twice the width.
-:::
-:::
-
-::: {.col .fig .big}
+::: {.col .fig}
 @!generalization-classification-the-test-set-2
 :::
 :::
 :::
 
-::: {.slide title="Check: How Many Test Examples for ±0.5% at 95%?"}
-[Check]{.kicker}
+::: {.slide title="Comparing k Fixed Classifiers: The Union Bound"}
+[Selection Bias on a Shared Test Set]{.kicker}
 
-Worst case $\epsilon = \tfrac12$. Compute $n$ with the normal approximation
-and with Hoeffding's inequality.
+What happens when we evaluate $k$ fixed candidate classifiers $f_1, \ldots, f_k$ on the *same* test set $\mathcal{D}$ and pick the winner? By Boole's **union bound** ($P(\bigcup_{j=1}^k \mathcal{A}_j) \le \sum_{j=1}^k P(\mathcal{A}_j)$), the probability that *any* of the $k$ models deviates by $t$ or more is at most:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Normal: $(1.96 \cdot 0.5/0.005)^2 = 38{,}416$.
-Hoeffding: $\log 40/(2 \cdot 0.005^2) \approx 73{,}778$. Halving the radius
-multiplies both by four.
-:::
-:::
-:::
+$$P\!\left(\max_{1 \le j \le k} \big|\epsilon_{\mathcal{D}}(f_j) - \epsilon(f_j)\big| \ge t\right) \le \sum_{j=1}^k P\!\left(\big|\epsilon_{\mathcal{D}}(f_j) - \epsilon(f_j)\big| \ge t\right) \le 2k\exp\!\left(-2nt^2\right)$$
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+Setting the right-hand side to $\delta$ yields the simultaneous $(1 - \delta)$ confidence radius across all $k$ models:
 
-[Test Set Reuse]{.dtitle}
+$$r(k, n, \delta) = \sqrt{\frac{\log(2k/\delta)}{2n}}$$
 
-[selection and adaptive overfitting]{.dsub}
-:::
+- **Benign $\sqrt{\log k}$ scaling for non-adaptive comparisons:** At $n = 10{,}000$ and $\delta = 0.05$, the radius grows slowly from $0.0136$ ($k = 1$) to $0.0230$ ($k = 10^3$) and $0.0299$ ($k = 10^6$).
 :::
 
-::: {.slide title="The Union Bound Widens the Radius for k Classifiers by Only √log k"}
-[Test set reuse · selection]{.kicker}
+::: {.slide title="How Selection Bias Inflates the Best of k Coin Flippers"}
+[Cherry-Picking the Luckiest Model]{.kicker}
 
-$k$ classifiers fixed in advance, one test set. $P(\text{any of } k \text{ events}) \le$ the sum of their probabilities:
-
-$$P\left(\max_j |\epsilon_\mathcal{D}(f_j) - \epsilon(f_j)| \ge t\right) \le 2k\exp\left(-2nt^2\right)$$
-
-All $k$ within $\sqrt{\log(2k/\delta)/(2n)}$ at once. With $n = 10{,}000$,
-$\delta = 0.05$:
-
-| $k$ | 1 | 1,000 | 1,000,000 |
-|---|---|---|---|
-| radius | 0.014 | 0.023 | 0.030 |
-:::
-
-::: {.slide title="Selection Alone Lifts Coin-Flip Classifiers to About 0.56"}
-[Test set reuse · selection]{.kicker}
+Even when all $k$ models are fixed before inspecting $\mathcal{D}$, reporting $\max_{1 \le j \le k} \text{acc}_{\mathcal{D}}(f_j)$ cherry-picks the luckiest draw:
 
 ::: {.cols .vc}
-::: {.col .narrow}
-1,000 coin-flip labels; 10,000 classifiers that guess at random (true
-accuracy 0.5). Best test accuracy among the first $k$:
-
-::: {.d2l-note .warn}
-About **0.56** after 10,000 guessers, tracking
-$0.5 + \sqrt{\log(k)/(2n)}$. Nothing was learned.
-:::
+::: {.col}
+- **Experiment ($n = 1{,}000$ labels, $k = 10{,}000$ random guessers):** Every single classifier flips an independent fair coin (true population accuracy $= 0.50$).
+- **Logarithmic inflation:** The best test score among the first $k$ random guessers climbs steadily along $0.5 + \sqrt{\frac{\log k}{2n}}$, reaching **$\approx 0.56$** at $k = 10{,}000$ with zero actual signal learned.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!generalization-classification-test-set-reuse-1
 :::
 :::
 :::
 
-::: {.slide title="A Majority Vote of Lucky Guessers Scores About 0.7"}
-[Test set reuse · adaptive overfitting]{.kicker}
+::: {.slide title="Adaptive Overfitting Breaks the Union Bound"}
+[When Past Test Scores Guide New Models]{.kicker}
 
-Keep the guessers among the first 1,000 that scored above 0.5; predict their
-majority vote. On new data the vote is still a coin flip.
+The $\sqrt{\log k}$ union bound requires all $k$ models to be chosen **independently** of $\mathcal{D}$. When engineers use test-set feedback to design the next model (*adaptive reuse*), overfitting accelerates dramatically (Dwork et al., 2015; Blum & Hardt, 2015):
 
-@!generalization-classification-adaptive-overfitting
+@generalization-classification-adaptive-overfitting
+
+- **From $50\%$ to $\sim 70\%$ via $1{,}000$ scalar queries:** Simply keeping those among the first $1{,}000$ random coin-flippers that scored $> 0.50$ on the test set and taking their majority vote achieves **$\sim 70\%$ test accuracy**—while still scoring $50\%$ on any fresh test set!
 
 ::: {.d2l-note .warn}
-Using earlier scores to build the next model inflates the score far more
-than selection: **about 0.7** from 1,000 scores, vs. 0.54 to 0.57 for the best
-single guesser. This is **adaptive overfitting**.
+**Discipline of the three-way split:** Fit parameters on the **training set**, select hyperparameters and architectures on the **validation set**, and evaluate the single final winner **once** on the held-out **test set**.
 :::
 :::
 
-::: {.slide title="Validation Sets Absorb Selection; the Test Set Is Consulted Once"}
-[Test set reuse · in practice]{.kicker}
+::: {.slide title="Uniform Convergence Over a Hypothesis Class"}
+[Statistical Learning Theory]{.kicker}
 
-- **Training set** fits, **validation set** selects and tunes, **test set**
-  reports, once.
-- New test sets for CIFAR-10 and ImageNet (Recht et al., 2019): accuracy
-  drops 3 to 15 points, ranking kept; slightly different images, not reuse,
-  explain the drops.
+Training is selection taken to the extreme: a learning algorithm inspects the training set $\mathcal{S}$ of size $n$ and chooses $f_{\mathcal{S}}$ from a **hypothesis class** $\mathcal{F}$ to minimize empirical training error $\epsilon_{\mathcal{S}}(f)$.
 
-::: {.d2l-note}
-The worst case is real for **small** test sets queried **often**, such as
-public competition leaderboards.
-:::
+- **Why single-classifier bounds fail on $f_{\mathcal{S}}$:** Because $f_{\mathcal{S}}$ depends on $\mathcal{S}$, $\epsilon_{\mathcal{S}}(f_{\mathcal{S}})$ is biased downward. To certify $\epsilon(f_{\mathcal{S}})$, we bound the worst-case gap across *every* $f \in \mathcal{F}$ simultaneously (**uniform convergence**):
+  $$\sup_{f \in \mathcal{F}} \big|\epsilon_{\mathcal{S}}(f) - \epsilon(f)\big|$$
+- **Finite hypothesis classes ($|\mathcal{F}| < \infty$):** Applying the union bound across all $k = |\mathcal{F}|$ functions in $\mathcal{F}$ guarantees, with probability at least $1 - \delta$:
+  $$\epsilon(f) \le \epsilon_{\mathcal{S}}(f) + \sqrt{\frac{\log(2|\mathcal{F}|/\delta)}{2n}} \quad \text{for every } f \in \mathcal{F}$$
 :::
 
-::: {.slide title="Check: How Wide Is the Interval for 100 Models?"}
-[Check]{.kicker}
+::: {.slide title="From Infinite Function Classes to Finite Labelings"}
+[Why Memorizers Fail and Linear Models Generalize]{.kicker}
 
-You compare 100 classifiers, fixed in advance, on 10,000 test examples. How
-wide must the radius be so that all 100 are within it with probability 95%?
+What if $\mathcal{F}$ has infinitely many continuous parameters, such as linear halfspaces $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top\mathbf{x} + b)$ on $\mathbb{R}^d$ where $|\mathcal{F}| = \infty$?
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\sqrt{\log(2 \cdot 100/0.05)/(2 \cdot 10{,}000)} =
-\sqrt{\log 4000/20{,}000} \approx 0.020$, against $0.014$ for one
-classifier.
-:::
-:::
+- **Vapnik & Chervonenkis's key insight (1971):** On any finite sample of $n$ points $\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(n)}$, there are at most $2^n$ binary $\pm 1$ labelings. Two classifiers that assign the exact same labels to those $n$ points behave identically on $\mathcal{S}$!
+- **Shattering:** A hypothesis class $\mathcal{F}$ **shatters** a set of $m$ points if functions in $\mathcal{F}$ can realize *all $2^m$ possible binary labelings* of those $m$ points.
+- **Vapnik–Chervonenkis (VC) dimension:** The **VC dimension** $v = \mathrm{VC}(\mathcal{F})$ is the size of the largest set of points that $\mathcal{F}$ can shatter ($v = \infty$ if $\mathcal{F}$ can shatter arbitrarily large sets, like an unrestricted lookup-table memorizer).
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
+::: {.slide title="Shattering in the Plane: Lines Have VC Dimension 3"}
+[Geometric Intuition for VC Dimension]{.kicker}
 
-[Statistical Learning Theory]{.dtitle}
+Consider oriented linear halfplanes $f(\mathbf{x}) = \operatorname{sign}(w_1 x_1 + w_2 x_2 + b)$ in $\mathbb{R}^2$:
 
-[guarantees from the model class alone]{.dsub}
-:::
-:::
+![](../img/mdl-clf-shattering.svg){.nostretch width=88% fig-align="center"}
 
-::: {.slide title="Training Is Test-Set Reuse Taken to the Extreme"}
-[Learning theory · uniform convergence]{.kicker}
-
-The learner picks $f_\mathcal{S}$ from a **hypothesis class** $\mathcal{F}$
-to make the training error $\epsilon_\mathcal{S}$ small. For finite
-$\mathcal{F}$, the union bound with $k = |\mathcal{F}|$ gives, with
-probability $\ge 1 - \delta$,
-
-$$|\epsilon_\mathcal{S}(f) - \epsilon(f)| \le \sqrt{\frac{\log(2|\mathcal{F}|/\delta)}{2n}} \quad \text{for every } f \in \mathcal{F}.$$
-
-::: {.d2l-note}
-**Uniform convergence:** it holds for $f_\mathcal{S}$, whichever one the
-learner picks.
-:::
+- **$\mathrm{VC} \ge 3$ (left):** Any $3$ non-collinear points in $\mathbb{R}^2$ can be partitioned in all $2^3 = 8$ ways by a straight line.
+- **$\mathrm{VC} < 4$ (middle & right):** *No* set of $4$ points in $\mathbb{R}^2$ can ever be shattered! If the $4$ points form a convex quadrilateral (middle), a straight line cannot separate opposite diagonal corners (`+` vs. `-`); if one point lies inside the triangle of the other three (right), any halfplane containing the three vertices contains the interior point. Thus $\mathrm{VC} = 3$.
 :::
 
-::: {.slide title="Memorizers and Infinite Classes Break the Finite-Class Bound"}
-[Learning theory · uniform convergence]{.kicker}
+::: {.slide title="VC Dimension of Linear Classifiers in d Dimensions"}
+[Capacity Without Counting Parameters Blindly]{.kicker}
 
-::: {.cols}
-::: {.col}
+In $\mathbb{R}^d$, linear halfspaces $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top\mathbf{x} + b)$ have exact VC dimension:
+
+$$\mathrm{VC}\big(\text{linear halfspaces in }\mathbb{R}^d\big) = d + 1$$
+
+- **Lower bound ($v \ge d + 1$):** The origin $\mathbf{0}$ and the $d$ standard basis vectors $\mathbf{e}_1, \ldots, \mathbf{e}_d$ are shattered—set $b = y_0$ to label $\mathbf{0}$, then set $w_i = y_i - b$ to label each $\mathbf{e}_i$ independently.
+- **Upper bound ($v \le d + 1$, Radon's theorem):** Any $d + 2$ vectors $[\mathbf{x}_i, 1] \in \mathbb{R}^{d+1}$ are linearly dependent ($\sum_i a_i [\mathbf{x}_i, 1] = \mathbf{0}$), partitioning the points into two subsets ($a_i > 0$ and $a_i < 0$) whose convex hulls intersect and therefore cannot be separated by any hyperplane.
+
 ::: {.d2l-note .warn}
-**Memorizer:** training error 0 on every training set; on coin-flip labels
-population error $\tfrac12$. No gap bound can shrink with $n$.
+**VC dimension $\neq$ parameter count:** While linear models have $d + 1$ parameters and $v = d + 1$, the single-parameter family $f_\omega(x) = \operatorname{sign}(\sin(\omega x))$ has only **$1$ scalar parameter** yet shatters arbitrarily many points ($v = \infty$)!
 :::
 :::
 
-::: {.col}
-::: {.d2l-note}
-**Linear classifiers:** real-valued $\mathbf{w}, b$, so
-$|\mathcal{F}| = \infty$. Yet on $n$ points they produce at most $2^n$
-labelings. **Count labelings, not classifiers.**
-:::
-:::
-:::
-:::
+::: {.slide title="Sauer's Lemma and the VC Generalization Bound"}
+[Polynomial Growth of Dichotomies]{.kicker}
 
-::: {.slide title="Lines in the Plane Shatter Three Points but No Four"}
-[Learning theory · VC dimension]{.kicker}
+Why does a finite VC dimension $v < \infty$ guarantee uniform convergence?
 
-**Shatter:** produce all $2^n$ labelings of the points. **VC dimension:**
-the size of the largest shattered set. Dots $+1$, squares $-1$.
-
-![](../img/mdl-clf-shattering.svg){width=90%}
-
-Convex quadrilateral: the diagonals cross. Point inside a triangle: every
-line keeps it with the corners.
+- **Sauer–Shelah lemma (polynomial growth):** Once sample size $n \ge v$, the number of distinct binary labelings that $\mathcal{F}$ can induce on *any* $n$ points is bounded by $\sum_{i=0}^v \binom{n}{i} \le \left(\frac{en}{v}\right)^v$—growing polynomially as $O(n^v)$ instead of exponentially as $2^n$! (For lines in $\mathbb{R}^2$ on $n = 100$ points, at most $9{,}902$ labelings out of $2^{100} \approx 1.27 \times 10^{30}$ are realizable.)
+- **The VC generalization bound:** Replacing $|\mathcal{F}|$ in the finite union bound by Sauer's polynomial labeling count (via symmetrization) proves that with probability $\ge 1 - \delta$, for **every** $f \in \mathcal{F}$:
+  $$\epsilon(f) \;\le\; \epsilon_{\mathcal{S}}(f) + c\sqrt{\frac{v + \log(1/\delta)}{n}}$$
 :::
 
-::: {.slide title="Linear Classifiers in d Dimensions Have VC Dimension d + 1"}
-[Learning theory · VC dimension]{.kicker}
+::: {.slide title="Strengths and Limits of VC Theory in Deep Learning"}
+[Distribution-Free Loose Bounds vs. Held-Out Evaluation]{.kicker}
 
-$f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top\mathbf{x} + b)$:
+What does the VC bound tell us about our Fashion-MNIST linear classifier—and about deep neural networks?
 
-- **≥ d + 1:** shatter $\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d$;
-  $b$ sets the label of $\mathbf{0}$, then $w_i$ the label of
-  $\mathbf{e}_i$.
-- **≤ d + 1:** any $d + 2$ points split into two groups whose convex hulls
-  intersect; no hyperplane separates them.
-- A memorizer: VC dimension $\infty$.
+- **Why linear models cannot memorize ($n \gg d$):** For a binary linear classifier on $28 \times 28$ images ($v = 785,\; n = 60{,}000$), $\sqrt{v/n} = \sqrt{785 / 60{,}000} \approx 0.114$, guaranteeing that low training error forces low population error under *any* data distribution.
+- **Why the bound is numerically loose on benign data:** Our observed Fashion-MNIST train--test gap is only $\sim 0.01$ ($84\%$ vs. $83\%$), an order of magnitude smaller than $\approx 0.11$, because VC bounds guard against the worst-case adversarial distribution $P(X, Y)$.
+- **Vacuousness for overparameterized deep networks:** Modern deep nets can fit *random labels* on all $n$ training examples (Zhang et al., 2017), meaning $v \ge n$ and $\sqrt{v/n} \ge 1$. In deep learning, sharp generalization certificates come **post-training** from an untouched held-out test set ($\pm 0.7\%$ at $n = 10{,}000$).
+:::
 
-::: {.d2l-note}
-Not a parameter count: $\operatorname{sign}(\sin(\omega x))$ has one
-parameter and VC dimension $\infty$.
+::: {.slide title="Concept Check: Sample Sizing, Zero Errors & VC Theory"}
+[Concept Check]{.kicker}
+
+Test your command of test-set statistics and VC theory on three problems:
+
+1. **Quartering the confidence radius:** How many test examples $n$ are required to guarantee a $95\%$ confidence radius of at most $\pm 0.5$ percentage points ($t = 0.005$) in the worst case ($\epsilon = 1/2$) under the normal approximation versus Hoeffding's inequality?
+2. **The "Rule of Three" for zero test errors (Exercise 2):** If a classifier makes **$0$ errors** on a test set of $n = 100$ examples, why is the plug-in normal interval $0 \pm 0$ misleading, and for what population error $\epsilon$ does $(1 - \epsilon)^n \le e^{-n\epsilon} \le 0.05$ hold?
+3. **Quadratic decision boundaries:** What is the VC dimension of quadratic classifiers $f(\mathbf{x}) = \operatorname{sign}(w_0 + w_1 x_1 + w_2 x_2 + w_3 x_1^2 + w_4 x_1 x_2 + w_5 x_2^2)$ in the plane $\mathbb{R}^2$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:** **(1)** Halving the radius from $0.01$ to $0.005$ multiplies $n$ by $4$: normal needs $(1.96 \times 0.5 / 0.005)^2 = 38{,}416$ examples; Hoeffding needs $\log(40)/(2 \times 0.005^2) \approx 73{,}778$. **(2)** At $0$ observed errors, the plug-in variance vanishes; solving $e^{-n\epsilon} \le 0.05$ $\iff$ $\epsilon \ge \frac{\log 20}{n} \approx \frac{3}{n}$ gives the **$[0,\; 3/n]$ rule of three** ($[0, 3\%]$ at $n = 100$, which is tighter than Hoeffding's $O(1/\sqrt{n})$ bound $\approx 13.6\%$). **(3)** It is a linear halfspace in the $5$-dimensional lifted feature map $\phi(x_1, x_2) = (x_1, x_2, x_1^2, x_1 x_2, x_2^2)$ plus bias $w_0$, so $\mathrm{VC} = 5 + 1 = 6$.
 :::
 :::
 
-::: {.slide title="Beyond the VC Dimension, Labelings Grow Polynomially"}
-[Learning theory · counting]{.kicker}
+::: {.slide title="Summary: Generalization Guarantees in Classification"}
+[Section Summary]{.kicker}
 
-Lines in the plane on $n$ points, no three on a line: $n^2 - n + 2$ of the
-$2^n$ labelings.
-
-| $n$ | 3 | 4 | 10 | 100 |
-|---|---|---|---|---|
-| lines | 8 | 14 | 92 | 9,902 |
-| all labelings | 8 | 16 | 1,024 | $\approx 1.3 \times 10^{30}$ |
-
-::: {.d2l-note}
-**Sauer's lemma:** VC dimension $v$ $\Rightarrow$ at most $(en/v)^v$
-labelings of $n \ge v$ points.
-:::
-:::
-
-::: {.slide title="The VC Bound Replaces log|F| by the VC Dimension"}
-[Learning theory · the bound]{.kicker}
-
-Union bound over labelings, plus a finer analysis: with probability
-$\ge 1 - \delta$, for **every** $f \in \mathcal{F}$,
-
-$$\epsilon(f) \le \epsilon_\mathcal{S}(f) + c\sqrt{\frac{v + \log(1/\delta)}{n}},$$
-
-with $c$ the same for every class and distribution.
-
-::: {.d2l-note}
-Linear classifiers, $v = d + 1$: for $n \gg d$, training error $\approx$
-population error, whatever the data. A memorizer gets no guarantee.
-:::
-:::
-
-::: {.slide title="Even for a Linear Model the Bound Is Loose"}
-[Learning theory · the bound]{.kicker}
-
-Shirts against everything else (a binary problem): $d = 784$ pixels,
-$n = 60{,}000$ training images.
-
-$$\sqrt{\frac{785}{60{,}000}} \approx 0.11 \quad \text{before the constant } c$$
-
-- Observed for softmax regression: about 84% on training images, about
-  83% on test images, a gap of **one or two points**.
-- The bound covers the **worst** distribution; real data are rarely that
-  adversarial. A 10,000-image test set pins the error down to about
-  $\pm 0.01$.
-:::
-
-::: {.slide title="For Deep Networks the VC Bound Is Vacuous"}
-[Learning theory · limits]{.kicker}
-
-- Deep networks fit even **random labels** on their whole training set
-  (Zhang et al.): VC dimension $\ge n$.
-- On real labels they generalize well, often better when larger.
-- Bounds that use the data and the algorithm (e.g., Rademacher complexity)
-  are research in progress.
-
-::: {.d2l-note}
-Deep learning certifies generalization **after** training, with held-out
-data.
-:::
-:::
-
-::: {.slide title="Check: VC Dimension of Quadratic Classifiers in the Plane"}
-[Check]{.kicker}
-
-$f(\mathbf{x}) = \operatorname{sign}(p(\mathbf{x}))$ with $p$ a polynomial of
-degree at most 2 in $\mathbf{x} \in \mathbb{R}^2$. What is the VC dimension?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** 6. The classifier is linear in the five features
-$x_1, x_2, x_1^2, x_1x_2, x_2^2$ plus a bias, so $v = 5 + 1$.
-:::
-:::
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-::: {.cols}
-::: {.col}
-- **Test error** of a fixed $f$: unbiased, standard error
-  $\le 0.5/\sqrt{n}$. ±0.01 at 95%: about **10,000** examples (normal),
-  **18,445** (Hoeffding).
-- **Selection** among $k$ fixed models: radius grows like
-  $\sqrt{\log k}$. **Adaptive** reuse: much faster (0.5 → 0.7). Select on
-  validation data.
-:::
-
-::: {.col}
-- **Uniform convergence** extends the union bound to a class.
-- **VC dimension** = largest shattered set; linear classifiers on
-  $\mathbb{R}^d$: $d + 1$. Gap $\lesssim c\sqrt{(v + \log(1/\delta))/n}$.
-- **Deep networks:** vacuous bounds; held-out data certify them.
-:::
-:::
-
-**Next:** what happens when the test data come from a different
-distribution than the training data.
+| Regime / Setting | Error Bound / Radius ($95\%$ Confidence, $\delta = 0.05$) | Scaling Law & Practical Lesson |
+|:--|:--|:--|
+| **Single fixed model (Normal CLT)** | $\big|\epsilon_{\mathcal{D}}(f) - \epsilon(f)\big| \le 1.96\sqrt{\epsilon(1-\epsilon)/n} \le 0.98/\sqrt{n}$ | $\pm 0.7\%$ on Fashion-MNIST ($n = 10\text{k}$); $n \ge 9{,}604$ for worst-case $\pm 1\%$ |
+| **Single fixed model (Hoeffding)** | $\big|\epsilon_{\mathcal{D}}(f) - \epsilon(f)\big| \le \sqrt{\log(2/\delta)/(2n)}$ | Exact for all $n, \epsilon \in [0, 1]$; $n \ge 18{,}445$ for $\pm 1\%$ ($\approx 2\times$ normal $n$) |
+| **Best of $k$ fixed models (Union)** | $\max_{1\le j\le k}\big|\epsilon_{\mathcal{D}}(f_j) - \epsilon(f_j)\big| \le \sqrt{\log(2k/\delta)/(2n)}$ | Grows slowly as $\sqrt{\log k}$; best of $10\text{k}$ fair-coin guessers reaches $\approx 0.56$ |
+| **Adaptive test-set reuse** | Breaks union bound (can overfit in $O(n)$ queries) | Majority vote of $1\text{k}$ filtered guessers hits $\sim 0.70$; tune on validation split only |
+| **Finite hypothesis class $\mathcal{F}$** | $\sup_{f\in\mathcal{F}}\big|\epsilon_{\mathcal{S}}(f) - \epsilon(f)\big| \le \sqrt{\log(2|\mathcal{F}|/\delta)/(2n)}$ | Uniform convergence across all $f \in \mathcal{F}$, including trained $f_{\mathcal{S}}$ |
+| **VC dimension $v = \mathrm{VC}(\mathcal{F})$** | $\epsilon(f) \le \epsilon_{\mathcal{S}}(f) + c\sqrt{(v + \log(1/\delta))/n}$ | $v = d + 1$ for linear classifiers in $\mathbb{R}^d$; $v = \infty$ for memorizers; vacuous for deep nets |
 :::

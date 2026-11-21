@@ -763,327 +763,270 @@ Comparing the 2019 `load_gpt2()` configuration against our default `GPT` highlig
 6. **Learning-rate stability with QK-Norm.** Train our 6-block byte-level `GPT` across peak learning rates $\eta \in \{2\times 10^{-3}, 6\times 10^{-3}, 1.5\times 10^{-2}\}$ with standard `CausalAttention` versus a variant that applies `RMSNorm(d_h)` to `q` and `k` inside `CausalAttention.qkv` (:numref:`subsec_qk-norm`). How does QK-Norm shift the maximum stable learning rate?
 :exlabel:`ex_gpt-qk-norm-sensitivity`
 
+[Discussions](https://d2l.discourse.group/t/36775)
+
 <!-- slides -->
 
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §11.2]{.kicker}
 
-A GPT from Scratch<br>
-**embedding, causal blocks, and a tied head · the objective · a yardstick and a recurrent baseline · normalization placement · sampling · loading GPT-2**
+Decoder-Only Language Models (GPT)<br>**causal stack & tied embeddings · byte-level pretraining · SwiGLU & RNN baselines · sampling · loading GPT-2 · modern recipe**
 :::
 :::
 
-::: {.slide title="A Window of 128 Inputs Holds 128 Prediction Problems"}
-[The problem]{.kicker}
+::: {.slide title="One Window of Length T Trains T Prediction Problems"}
+[Motivation]{.kicker}
 
-| context | target |
-|:--|:--|
-| `the European lobste` | `r` |
-| `the European lobster` | `␣` |
-| `the European lobster␣` | `)` |
+An autoregressive language model factors the joint probability of a sequence $(x_1, \dots, x_{T+1})$ via the chain rule $P(x_{1:T+1}) = \prod_{t=1}^T P(x_{t+1} \mid x_{1:t})$:
 
-- Train on all positions of a window in **one** forward pass.
-- Two requirements: position $t$ must not see tokens after $t$, and the
-  **same weights** must serve every position and every context length.
+| Input Prefix seen at Position $t$ | Next-Token Target $y_t = x_{t+1}$ | Prefix Context Length |
+| :--- | :--- | :---: |
+| `the European lobste` | `r` | $19$ bytes |
+| `the European lobster` | `␣` (space) | $20$ bytes |
+| `the European lobster␣` | `(` | $21$ bytes |
 
-::: {.d2l-note .warn}
-How do we turn the transformer block into a model that meets both?
-:::
+- **Parallel teacher forcing:** Rather than running $T$ separate forward passes for prefixes of length $1, 2, \dots, T$, a **decoder-only GPT** processes all $T$ tokens in **one parallel forward pass**.
+- **Two structural requirements:** Position $t$ must never leak information from future tokens $s > t$ (enforced by a lower-triangular causal mask), and the same block parameters must generalize across all positions $t \in \{1, \dots, T\}$.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- assemble a GPT from an embedding, causal blocks, and a tied head, and
-  write its loss;
-- judge a loss against a uniform guess, unigram and bigram counts, the
-  spread between runs, and a recurrent network of the same size;
-- explain why post-norm stalls without warmup, and what pre-norm gives;
-- estimate training compute as $6ND$, sample with temperature and top-$k$,
-  and load the released GPT-2.
-
-**Running example:** our 4.8M-parameter byte-level model, then GPT-2 small
-(124M parameters).
-:::
-
-::: {.slide title="Blocks Become a Language Model"}
-[Where this fits]{.kicker}
+::: {.slide title="GPT Architecture: Embeddings, Causal Stack, Tied Head"}
+[Architecture Overview]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| The Transformer Block | attention + FFN, residual stream |
-| **A GPT from Scratch** | **a trained language model; GPT-2 loaded** |
-| The KV Cache | reuse past keys and values |
-| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
-| Encoders, Decoders, and Cross-Attention | the other two wirings |
-| Vision Transformer | images as token sequences |
-| Scaling Laws | loss against parameters, data, compute |
-| Mixture of Experts | more parameters per FLOP |
-| The Modern Recipe | released models as settings |
+- **Input embedding ($\mathbf{E} \in \mathbb{R}^{V \times d}$):** Maps discrete token IDs $x_1, \dots, x_T$ into initial residual stream vectors in $\mathbb{R}^{B \times T \times d}$.
+- **Causal Transformer stack ($L$ blocks):** Each `TransformerBlock` applies causal self-attention and a position-wise FFN to the stream.
+- **Final norm & weight-tied output head ($\mathbf{E}^\top$):** Projects normalized stream vectors to vocabulary logits $\mathbf{Z} = \mathrm{Norm}(\mathbf{H}^{(L)})\mathbf{E}^\top \in \mathbb{R}^{B \times T \times V}$, reusing $\mathbf{E}$ to save $V d$ parameters ($38.6\text{M}$ in GPT-2 Small).
 :::
 
-::: {.col .narrow}
-- **Uses:** the block's defaults (pre-norm, RMSNorm, SwiGLU), RoPE,
-  AdamW and schedules, byte tokens, perplexity, the RNN of the Basics.
-- **Skips:** fast generation (next deck), training at scale.
-:::
-:::
-:::
-
-::: {.slide title="A GPT Is an Embedding, L Blocks, a Norm, and the Same Table Again"}
-::: {.cols .vc}
 ::: {.col .fig}
 @fig:mdl-transformers-gpt-stack
 :::
-
-::: {.col}
-- Logits $= \mathbf{E}\,\mathrm{Norm}(\mathbf{h})$: one dot product per
-  vocabulary entry.
-- Tying reuses $\mathbf{E}$ ($V \times d$) as the head: GPT-2 saves
-  38.6M parameters.
-- Also a constraint: with no blocks, the logits of $j$ after $i$ and of $i$
-  after $j$ share one number $M_{ij} = M_{ji}$, up to a per-token scale.
-:::
 :::
 :::
 
-::: {.slide title="The Loss Averages −log p over Every Position of Every Window"}
-$$\mathcal{L} = -\frac{1}{bT} \sum_{i=1}^{b} \sum_{t=0}^{T-1}
-\log p\big(x^{(i)}_{t+1} \mid x^{(i)}_0, \ldots, x^{(i)}_t\big)$$
+::: {.slide title="Fused Causal Self-Attention with RoPE and GQA"}
+[Causal Attention]{.kicker}
 
-@!gpt-the-objective
+Inside each block, `CausalAttention` fuses query, key, and value projections into one matrix $\mathbf{W}_{qkv} \in \mathbb{R}^{d \times (d + 2 H_{\text{kv}} d_h)}$:
 
-- $b$ windows of $T$ positions; targets $Y$ = inputs $X$ shifted by one
-  byte.
-- Mask row $t$ = query $t$; a 1 marks a key it may see.
+- **Grouped-query support ($H_{\text{kv}} \le H$):** Splits $\mathbf{X}\mathbf{W}_{qkv}$ into $H$ query heads of width $d_h = d/H$ and $H_{\text{kv}}$ key–value heads, sharing each KV head across $H / H_{\text{kv}}$ query heads.
+- **Rotary Position Embeddings (`rope=True`):** Rotates queries $\mathbf{q}_t$ and keys $\mathbf{k}_s$ in 2D frequency planes by angles proportional to $t$ and $s$, so inner products $\mathbf{q}_t^\top \mathbf{k}_s$ depend only on relative distance $t - s$.
+- **Lower-triangular causal mask (`is_causal=True`):** Masks upper-triangular attention scores ($s > t$) to $-\infty$ before softmax, guaranteeing $\partial \mathbf{z}_t / \partial \mathbf{x}_s = \mathbf{0}$ for all $s > t$.
 :::
 
-::: {.slide title="Positions Enter as a Table or as a Rotation"}
-Attention alone treats its input as a set: permuting the tokens permutes
-the outputs.
+::: {.slide title="Positional Information: Learned Tables vs. RoPE"}
+[Positional Encodings]{.kicker}
 
-- **`pos='learned'`** (GPT-2): add a trained vector $\mathbf{p}_t$ at
-  position $t$; the table caps the context.
-- **`pos='rope'`** (default): rotate $\mathbf{q}_i$ and $\mathbf{k}_j$ by
-  angles proportional to $i$ and $j$; their score depends only on $i - j$.
+Without positional information, self-attention is permutation-equivariant. Our `GPT` constructor supports both historical and modern schemes:
+
+| Scheme | How Position Enters the Network | Context Length & Generalization |
+| :--- | :--- | :--- |
+| **`pos='learned'`** (GPT-2, 2019) | Adds a lookup row $\mathbf{p}_t \in \mathbb{R}^d$ from `pos_emb` ($T_{\max} \times d$) to $\mathbf{e}_{x_t}$ once at the bottom of the stack | Hard ceiling at $T_{\max} = 1{,}024$ tokens; positions $t \ge T_{\max}$ have no trained vector |
+| **`pos='rope'`** (Default / Llama / Qwen) | Leaves the bottom residual stream untouched and rotates $(\mathbf{q}_t, \mathbf{k}_s)$ inside *every* attention layer | Translation-invariant relative scores; supports context extension (YaRN) to $32\text{K}$–$1\text{M}$ tokens |
+
+::: {.d2l-note}
+In our `GPT.forward` pass, `d2l.rope_tables(T, head_width)` precomputes the cosine and sine tables once per forward pass and passes them to all $L$ blocks.
+:::
 :::
 
-::: {.slide title="The Forward Pass Fits in About Ten Lines" only="pytorch"}
+::: {.slide title="The Complete GPT Forward Pass in Ten Lines" only="pytorch"}
+[Forward Implementation]{.kicker}
+
+Given token IDs `X` of shape `(batch, T)`, `GPT.forward` returns next-token logits of shape `(batch, T, V)` at every position simultaneously:
+
 ```{.python #gpt-exercises-1}
-def forward(self, X):                   # X: (batch, T) token ids
-    H, T, tables = self.token_emb(X), X.shape[1], None
+def forward(self, X):                     # X: (batch, T) token ids
+    H, tables = self.token_emb(X), None   # (batch, T, d)
     if self.pos == 'learned':
-        H = H + self.pos_emb(torch.arange(T, device=X.device))
-    else:  # RoPE angles of positions 0, ..., T - 1, for every block
-        tables = d2l.rope_tables(T, self.head_width, device=X.device)
-    for blk in self.blks:               # L blocks, causal attention
+        H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+    else:  # RoPE cosine/sine tables for positions 0, ..., T - 1
+        tables = d2l.rope_tables(X.shape[1], self.head_width, device=X.device)
+    for blk in self.blks:                 # L pre-norm causal Transformer blocks
         H = blk(H, tables=tables)
-    return F.linear(self.norm(H), self.token_emb.weight)  # tied
+    return F.linear(self.norm(H), self.token_emb.weight)  # Weight-tied (batch, T, V)
 ```
 
-Output: (batch, T, V), the next-token logits at every position.
+::: {.d2l-note}
+Tying the output projection to `self.token_emb.weight` means rare tokens receive gradient updates both when they appear in the input prefix and when they are contrasted in the softmax denominator.
+:::
 :::
 
-::: {.slide title="The Forward Pass Fits in About Ten Lines" only="jax"}
+::: {.slide title="The Complete GPT Forward Pass in Ten Lines" only="jax"}
+[Forward Implementation]{.kicker}
+
+Given token IDs `X` of shape `(batch, T)`, `GPT.__call__` returns next-token logits of shape `(batch, T, V)` at every position simultaneously:
+
 ```{.python #gpt-exercises-2}
-def __call__(self, X):                  # X: (batch, T) token ids
-    H, tables = self.token_emb(X), None # (batch, T, d)
+def __call__(self, X):                    # X: (batch, T) token ids
+    H, tables = self.token_emb(X), None   # (batch, T, d)
     if self.pos == 'learned':
         H = H + self.pos_emb(jnp.arange(X.shape[1]))
-    else:  # RoPE angles of positions 0, ..., T - 1, for every block
+    else:  # RoPE cosine/sine tables for positions 0, ..., T - 1
         tables = d2l.rope_tables(X.shape[1], self.head_width)
-    for blk in self.blks:               # L blocks, causal attention
+    for blk in self.blks:                 # L pre-norm causal Transformer blocks
         H = blk(H, tables=tables)
-    return self.token_emb.attend(self.norm(H))  # tied head
+    return self.token_emb.attend(self.norm(H))  # Weight-tied (batch, T, V)
 ```
 
-Output: (batch, T, V), the next-token logits at every position.
+::: {.d2l-note}
+Tying the output projection via `self.token_emb.attend` means rare tokens receive gradient updates both when they appear in the input prefix and when they are contrasted in the softmax denominator.
+:::
 :::
 
-::: {.slide title="GPT-2's Initialization Keeps Every Branch Smaller Than the Stream"}
-- All matrices $\sim \mathcal{N}(0, 0.02^2)$, biases zero; the two that
-  write into the stream, $\mathbf{W}_o$ and $\mathbf{W}_2$, get
-  $0.02/\sqrt{2L}$.
-- Pre-norm: each branch reads the normalized stream, so its weights set
-  its output; $2L$ uncorrelated outputs add their mean squares.
-- Scaled: all $2L$ branches together $\approx$ one unscaled branch, at any
-  depth. In the first block, where the stream is only the embedding, the
-  scaling alone keeps the branches below it.
+::: {.slide title="Depth-Scaled Weight Initialization (1/√(2L))"}
+[Initialization]{.kicker}
 
-| model | branches $2L$ | std of $\mathbf{W}_o$, $\mathbf{W}_2$ |
-|:--|--:|--:|
-| ours, 6 blocks | 12 | 0.0058 |
-| GPT-2 small, 12 blocks | 24 | 0.0041 |
+Following GPT-2 and §11.1, `init_weights` initializes embeddings and linear projections from $\mathcal{N}(0, 0.02^2)$, while scaling the two residual write matrices (`W_o` and `W_2`) by $1/\sqrt{2L}$:
+
+@gpt-from-blocks-to-a-language-model-5
+
+::: {.d2l-note .rule}
+With $2L$ sublayers adding updates to the pre-norm stream, scaling `W_o` and `W_2` by $1/\sqrt{2L}$ ($\sigma = 0.0058$ at $L = 6$; $\sigma = 0.0041$ at $L = 12$) keeps initial stream variance near the embedding variance right from block 1.
+:::
 :::
 
-::: {.slide title="Check: How Large Is GPT-2 Medium?"}
-[Check]{.kicker}
+::: {.slide title="The Autoregressive Cross-Entropy Objective"}
+[Training Objective]{.kicker}
 
-GPT-2 medium: $d = 1024$, 24 blocks, $V = 50{,}257$, 1,024 positions,
-tied head, about $12d^2$ per block. Estimate its parameter count.
+Given input window $\mathbf{x} = (x_1, \dots, x_T)$ and shifted targets $\mathbf{y} = (x_2, \dots, x_{T+1})$, training minimizes mean negative log-likelihood across all $B \times T$ positions:
 
-. . .
+$$\mathcal{L}(\boldsymbol{\theta}) = -\frac{1}{BT} \sum_{b=1}^{B} \sum_{t=1}^{T} \log \mathrm{softmax}\bigl(\mathbf{z}_{b,t}(\boldsymbol{\theta})\bigr)_{x_{b, t+1}}$$
 
-- Blocks: $12 \cdot 1024^2 \cdot 24 \approx 302$M.
-- Token table: $50{,}257 \cdot 1024 \approx 51.5$M; positions: 1.0M.
-- Total $\approx 355$M, the reported size.
+@!gpt-the-objective
 :::
 
-::: {.slide title="A 4.8M-Parameter Model Needs More Than One Novel"}
-1,000 steps $\times$ 64 windows $\times$ 128 bytes = 8.2M predictions.
+::: {.slide title="Byte-Level Language Modeling on WikiText-103"}
+[Corpus & Initialization Check]{.kicker}
 
-| corpus | bytes for training | passes in 1,000 steps |
-|:--|--:|--:|
-| *The Time Machine* | 0.17M | about 47 |
-| WikiText-103 (Wikipedia articles) | 270M | about 0.03 |
+We train a 6-block byte-level `GPT` ($V = 256, d = 256, H = 8, L = 6, T = 128$, $4.85\text{M}$ parameters) on $270\text{M}$ raw UTF-8 bytes of **WikiText-103**:
 
-- 256 symbols: the UTF-8 bytes of raw text, with case, digits, punctuation.
-- Bytes keep the table at 65,536 parameters, and nats per byte
-  $/\log 2$ = bits per byte.
+@gpt-training-the-model-1
+
+@gpt-from-blocks-to-a-language-model-2
+
+::: {.d2l-note}
+**Sanity check before training:** At step $0$, random logits assign roughly uniform probability $1/256$ to every byte, so the initial loss ($5.56\text{ nats/byte}$) matches $\ln 256 \approx 5.55\text{ nats/byte}$.
+:::
 :::
 
-::: {.slide title="The Optimization Chapter's Recipe in Four Parts"}
-$$\eta_t = \eta \cdot \begin{cases} t/t_w, & t < t_w \\ \tfrac12\left(1 + \cos\left(\pi \frac{t - t_w}{S - t_w}\right)\right), & t \ge t_w \end{cases}$$
+::: {.slide title="The Modern Pretraining Optimizer (LMOptimizer)"}
+[Optimization Recipe]{.kicker}
 
-- **AdamW**, peak $\eta = 2 \times 10^{-3}$, $\beta_2 = 0.999$ (large
-  runs: 0.95).
-- **Weight decay** $0.1$ on the weight matrices only.
-- **Warmup** over $t_w = 100$ steps, then **cosine** to zero at
-  $S = 1{,}000$.
-- **Clipping** at global norm 1. No dropout: no passage is read twice.
+`LMOptimizer` combines four essential ingredients used across frontier LLM pretraining runs:
+
+$$\eta_t = \eta_{\max} \cdot \begin{cases} t / t_w, & t < t_w \\ \frac{1}{2}\bigl(1 + \cos(\pi \frac{t - t_w}{S - t_w})\bigr), & t \ge t_w \end{cases}$$
+
+- **AdamW ($\eta_{\max} = 2 \times 10^{-3}$):** Decouples weight decay from adaptive gradient moments.
+- **Selective weight decay ($\lambda = 0.1$ on 2D matrices only):** Exempts token/position embeddings (`*emb*`), 1D `RMSNorm` gains, and biases so inactive vocabulary rows and scale factors are not decayed toward zero.
+- **Linear warmup ($t_w = 100$) + cosine decay ($S = 1{,}000$):** Prevents early Adam variance-estimate spikes from destabilizing attention logits.
+- **Global gradient-norm clipping ($\|\nabla \mathcal{L}\|_2 \le 1.0$):** Guards against rare high-loss minibatch spikes.
 :::
 
-::: {.slide title="Training and Validation Loss Fall Together, a Nat Below the Bigram Model"}
+::: {.slide title="Training Curve and Empirical Entropy Yardsticks"}
+[Training Results]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Rapid convergence:** In $1{,}000$ steps ($8.2\text{M}$ bytes, $\sim 3\%$ of the corpus), validation cross-entropy drops from $5.56$ to **$1.34\text{ nats/byte}$** ($\approx 1.93\text{ bits/byte}$).
+- **Count-based benchmarks on the same bytes:**
+  - Uniform guess ($\ln 256$): **$5.55\text{ nats/byte}$**
+  - Empirical unigram frequencies: **$3.17\text{ nats/byte}$**
+  - Empirical bigram transitions: **$2.45\text{ nats/byte}$**
+
+@gpt-training-the-model-4
+:::
+
+::: {.col .fig}
 @!gpt-training-the-modern-configuration
-
-- Count models on the same bytes: **unigram** (byte frequencies) 3.17
-  nats, **bigram** (previous byte) 2.45; a uniform guess $\log 256 = 5.55$.
-- Ours: 1.34–1.35 nats per byte, under 2 bits per byte.
+:::
+:::
 :::
 
-::: {.slide title="Training Costs About 6ND Operations"}
-Forward: $2N$ per token (a multiply and an add per parameter); backward:
-about twice that.
+::: {.slide title="Controlled Ablation: Seed Spread vs. SwiGLU Gain"}
+[Experimental Rigor]{.kicker}
 
-| run | $N$ | $D$ (tokens) | $6ND$ |
-|:--|--:|--:|--:|
-| ours (under a minute on one GPU) | 4.8M | 8.2M | $2 \times 10^{14}$ |
-| GPT-2 small | 124M | about $10^{10}$ | $7 \times 10^{18}$ |
-| GPT-2 XL | 1.5B | about $10^{10}$ | $10^{20}$ |
-| largest current runs | | | $> 10^{25}$ |
-
-The model definition hardly changes across 11 orders of magnitude.
-:::
-
-::: {.slide title="Three Runs of One Model Agree Within About 0.01 Nats"}
-[The yardstick]{.kicker}
+To distinguish genuine architectural improvements from random initialization noise, we train three independent seeds of `act='swiglu'` and three seeds of parameter-matched `act='gelu'`:
 
 @!gpt-run-to-run-spread
 
-- Same recipe, fresh random weights each time.
-- GELU in place of SwiGLU: about 0.06 nats worse, several times the
-  spread.
-
-::: {.d2l-note}
-A difference counts only if it exceeds the spread between runs of one
-setting.
-:::
+- **Tight run-to-run repeatability:** Across three random seeds, validation loss varies by only **$0.008\text{--}0.012\text{ nats/byte}$**.
+- **Statistically clear `SwiGLU` win:** At identical parameter count ($4.85\text{M}$) and step time, `SwiGLU` beats `GELU` by **$\sim 0.06\text{ nats/byte}$** ($> 5\times$ the seed spread).
+- **Post-norm pitfall:** Switching `pre_norm=False` without warmup causes training to stall permanently at the unigram floor ($3.17\text{ nats/byte}$) as early updates collapse token diversity and starve lower-layer gradients.
 :::
 
-::: {.slide title="A Matched RNN Ends Behind and Stops Gaining After About 16 Bytes"}
-A tanh RNN, 1,920 hidden units, 4.74M parameters: same bytes, steps,
-recipe; three peak rates.
+::: {.slide title="Comparison With a Parameter-Matched Recurrent Model"}
+[Transformer vs. RNNLM]{.kicker}
+
+We train a matched `d2l.RNNLM` ($d_{\text{rnn}} = 1{,}920$, $4.74\text{M}$ parameters) across three learning rates and inspect validation loss by window position $t \in \{0, 1, 4, 16, 64, 127\}$:
 
 @!gpt-against-a-recurrent-network
 
-- Position 0 sees one byte: both sit at the bigram level.
-- The RNN falls behind between bytes 4 and 16, then barely improves.
-- Best RNN run about 0.07 nats behind; time per step within a third.
+::: {.d2l-note}
+**Why the gap widens with context position $t$:** At $t = 0$ (1 byte of context), both models score $2.46\text{ nats}$ (the bigram limit). By $t = 16 \dots 127$, the RNN saturates near $1.41\text{ nats}$ because history must squeeze through $t$ sequential $\tanh$ steps, whereas `GPT` attends directly to any prior byte in $O(1)$ hops ($1.31\text{ nats}$).
+:::
 :::
 
-::: {.slide title="Post-Norm Stalls at the Unigram Level Unless It Warms Up"}
-AdamW at a constant $10^{-3}$, two runs per arm; the third arm first warms
-up over 400 steps:
+::: {.slide title="Autoregressive Decoding: Temperature and Top-k"}
+[Sampling Mechanics]{.kicker}
 
-@!gpt-breaking-it-with-one-flag
+At each generation step, `GPT.generate` takes the last position's logit vector $\mathbf{z}_t \in \mathbb{R}^V$, scales by **temperature $\tau > 0$**, and optionally truncates to the **top-$k$** candidates before sampling:
 
-- 3.17 nats = unigram: the model ignores its input, even the current byte.
-- With the warmup, post-norm ends within a few hundredths of pre-norm.
-:::
-
-::: {.slide title="Check: Does This GPT Collapse at Initialization?"}
-[Check]{.kicker}
-
-A post-norm block multiplies the ratio of common to distinct energy of the
-tokens by about $1 + g^4$, where weights have variance $g^2/d$. Xavier
-($g = 1$) collapses 32 blocks. Our six blocks: std 0.02, $d = 256$?
-
-. . .
-
-- $g^2 = 256 \cdot 0.02^2 \approx 0.10$, so $1 + g^4 \approx 1.01$ per
-  block: the tokens stay distinct (spread 0.96 at step 0).
-- The stall must come from training, not from initialization.
-:::
-
-::: {.slide title="Every Arm First Forgets Its Input; Post-Norm Without Warmup Never Recovers"}
-@!gpt-placement-mechanism
-
-- Step 10: pre-norm spread 0.01, post-norm 0.03. Yet pre-norm recovers by
-  step 60: its first-block gradient stays $\ge 0.03$.
-- Post-norm, no warmup: spread and first-block gradient $\le 0.001$ from
-  step 20.
-- Warmup: partial collapse at steps 20–60, recovered by 140.
-:::
-
-::: {.slide title="Temperature Sharpens or Flattens; Top-k Cuts the Tail"}
-$p_v \propto \exp(z_v/\tau)$: for logits $(2, 1, 0)$, $p = (0.87, 0.12,
-0.02)$ at $\tau = 0.5$, $(0.67, 0.24, 0.09)$ at $\tau = 1$, $(0.51, 0.31,
-0.19)$ at $\tau = 2$. Top-$k$ keeps the $k$ largest logits.
+$$p_v = \frac{\exp(z_{t,v} / \tau)}{\sum_{u \in \mathcal{V}_k} \exp(z_{t,u} / \tau)}$$
 
 @!gpt-sampling-from-the-model-2
 
-$\tau = 0.7$, $k = 8$: frequent, mostly well-spelled words; $\tau = 2$:
-near-random bytes.
+- **$\tau = 1.0$, unfiltered:** Samples from the raw model distribution, occasionally picking low-probability tail bytes that create non-words.
+- **$\tau = 0.7, k = 8$:** Concentrates probability mass on the 8 most likely next bytes, producing clean English words and phrases.
+- **$\tau = 2.0$:** Flattens the distribution toward uniform, degenerating into gibberish.
 :::
 
-::: {.slide title="GPT-2 Small Is Our Class with Other Settings"}
+::: {.slide title="Loading Pretrained OpenAI GPT-2 Small (124M)"}
+[Checkpoint Loading]{.kicker}
+
+Passing GPT-2's 2019 hyperparameters (`norm='layer'`, `act='gelu'`, `pos='learned'`, `bias=True`) into our `GPT` constructor instantiates the exact **GPT-2 Small** architecture:
+
 ```{.python #gpt-exercises-3}
-gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12,
-           num_blks=12, max_len=1024, pos='learned', norm='layer',
-           act='gelu', pre_norm=True, bias=True)
+gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
+           max_len=1024, pos='learned', norm='layer', act='gelu',
+           pre_norm=True, bias=True)
 ```
 
-- Weights: one safetensors file from the Hugging Face Hub, pinned by its
-  SHA-1 hash.
-- Tokenizer: GPT-2's merge list and vocabulary with the BPE pattern of
-  the tokenization section, assembled by `tiktoken`.
-- Saved as `d2l.load_gpt2()` and `d2l.gpt2_tokenizer()` for the decks that
-  follow.
+| Hugging Face `safetensors` Key | Our `GPT` Module Attribute | Shape & Role |
+| :--- | :--- | :--- |
+| `wte.weight` / `wpe.weight` | `token_emb.weight` / `pos_emb.weight` | $(50257, 768)$ tied tokens; $(1024, 768)$ positions |
+| `h.i.ln_1` / `h.i.ln_2` / `ln_f` | `blks[i].norm1` / `blks[i].norm2` / `norm` | Pre-attention, pre-FFN, and final `LayerNorm`s |
+| `h.i.attn.c_attn` / `c_proj` | `blks[i].attention.W_qkv` / `W_o` | Fused QKV $(768, 2304)$ and output $(768, 768)$ |
+| `h.i.mlp.c_fc` / `c_proj` | `blks[i].ffn.W_1` / `W_2` | Up-projection $(768, 3072)$ and down $(3072, 768)$ |
 :::
 
-::: {.slide title="A Name Map and One Layout Rule Load the Checkpoint" only="pytorch"}
-GPT-2's `Conv1D` stores weights as (in, out); `nn.Linear` as (out, in):
+::: {.slide title="Pitfall: Transposing Conv1D Weights in PyTorch" only="pytorch"}
+[Weight Layout Pitfall]{.kicker}
+
+OpenAI's original TensorFlow GPT-2 code used `Conv1D` layers that store weight matrices as `(in_features, out_features)`, whereas PyTorch's `nn.Linear` stores `(out_features, in_features)`:
 
 ```{.python #gpt-exercises-4}
 for i, blk in enumerate(gpt2.blks):
     modules = {f'h.{i}.ln_1': blk.norm1, f'h.{i}.ln_2': blk.norm2,
                f'h.{i}.attn.c_attn': blk.attention.W_qkv,
                f'h.{i}.attn.c_proj': blk.attention.W_o,
-               f'h.{i}.mlp.c_fc': blk.ffn.W_1,
-               f'h.{i}.mlp.c_proj': blk.ffn.W_2}
+               f'h.{i}.mlp.c_fc': blk.ffn.W_1, f'h.{i}.mlp.c_proj': blk.ffn.W_2}
     for key, module in modules.items():
-        W = weights[key + '.weight']
-        module.weight.copy_(W.T if W.ndim == 2 else W)
+        W = weights[key + '.weight']                # Conv1D layout: (in, out)
+        module.weight.copy_(W.T if W.ndim == 2 else W)  # Transpose 2D matrices!
         module.bias.copy_(weights[key + '.bias'])
 ```
+
+::: {.d2l-note .warn}
+**Silent bug hazard:** Because `c_proj` has square shape `(768, 768)`, forgetting `.T` passes every shape assertion without error—only a perplexity check on real text catches the transposed matrix!
+:::
 :::
 
-::: {.slide title="A Name Map and One Layout Rule Load the Checkpoint" only="jax"}
-GPT-2's `Conv1D` stores weights as (in, out), the layout of an
-`nnx.Linear` kernel:
+::: {.slide title="Matching Conv1D and nnx.Linear Layouts in JAX" only="jax"}
+[Weight Layout Pitfall]{.kicker}
+
+OpenAI's original TensorFlow GPT-2 code used `Conv1D` layers that store weight matrices as `(in_features, out_features)`—the exact kernel layout of Flax's `nnx.Linear` (unlike PyTorch's `(out, in)`):
 
 ```{.python #gpt-exercises-5}
 for i, blk in enumerate(gpt2.blks):
@@ -1091,47 +1034,69 @@ for i, blk in enumerate(gpt2.blks):
                         (blk.attention.W_o, f'h.{i}.attn.c_proj'),
                         (blk.ffn.W_1, f'h.{i}.mlp.c_fc'),
                         (blk.ffn.W_2, f'h.{i}.mlp.c_proj')):
-        linear.kernel[...] = weights[key + '.weight']
+        linear.kernel[...] = weights[key + '.weight']  # Both use (in, out)
         linear.bias[...] = weights[key + '.bias']
 ```
 
-The two LayerNorms per block load the same way (`scale`, `bias`).
+::: {.d2l-note .warn}
+**Silent bug hazard:** Forgetting whether a framework stores linear weights as `(in, out)` or `(out, in)` silently scrambles square projections like `c_proj` `(768, 768)` without raising a shape error—always verify loaded checkpoints via held-out perplexity!
+:::
 :::
 
-::: {.slide title="Perplexity Near 50 and a Sensible Continuation Validate the Load"}
-@!gpt-loading-gpt-2-3
+::: {.slide title="Validating Loaded GPT-2 Small via Perplexity & Text"}
+[Checkpoint Verification]{.kicker}
+
+Evaluating the loaded `124.4M`-parameter `gpt2` model on *The Time Machine* yields a per-token cross-entropy of $3.89\text{ nats}$ (perplexity $e^{3.89} \approx 49$, compared to $50{,}257$ for uniform guessing) and coherent greedy/sampled continuations:
+
+@gpt-loading-gpt-2-3
 
 @!gpt-loading-gpt-2-4
 
-- Uniform guessing over 50,257 tokens scores 50,257.
-- A transposed square matrix passes every shape check; only what the model
-  computes can catch it.
+@!gpt-loading-gpt-2-5
 :::
 
-::: {.slide title="Check: How Many Bytes Does Our Model Hesitate Among?"}
-[Check]{.kicker}
+::: {.slide title="The Architectural Recipe of Modern Open-Weights LLMs"}
+[Frontier Comparison]{.kicker}
 
-Our model ends at about 1.35 nats per byte; GPT-2 at 3.89 nats per token.
-How many equally likely choices does each loss correspond to?
+Every major open-weights decoder-only family (2023–2025) shares our default `GPT` backbone (`RMSNorm`, `RoPE`, `SwiGLU`), varying mainly in KV-cache compression (§11.3) and sparse MoE FFNs (§11.7):
 
-. . .
-
-- Ours: $e^{1.35} \approx 3.9$, so about four bytes at a typical position,
-  enough for the temperature to change the text visibly.
-- GPT-2: $e^{3.89} \approx 49$ tokens, out of 50,257.
+| Model Family | Attention & KV Cache | Normalization | Positions | FFN & Sparsity |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mistral 7B** (2023) | GQA $32{:}8$; window $4096$ | Pre-norm `RMSNorm` | RoPE ($10^4$) | `SwiGLU`, Dense |
+| **Llama 3** 8B–405B (2024) | GQA ($8$ KV heads across scales) | Pre-norm `RMSNorm` | RoPE ($5 \times 10^5$) | `SwiGLU`, Dense |
+| **Qwen3** (2025) | GQA $64{:}8$ (32B), $64{:}4$ (MoE) | Pre-`RMSNorm` + `QK-Norm` | RoPE ($10^6$), YaRN | `SwiGLU`, Dense & MoE ($128$E, top-$8$) |
+| **DeepSeek-V3** (2024) | **MLA** ($512$-dim latent KV) | Pre-norm `RMSNorm` | Decoupled RoPE | `SwiGLU`, MoE ($256{+}1$E, top-$8$) |
+| **Gemma 3** (2025) | GQA; $5{:}1$ local/global window | Pre+post `RMSNorm`, `QK-Norm` | RoPE ($10^6$ / $10^4$) | `GeGLU`, Dense |
+| **gpt-oss** (2025) | GQA $64{:}8$; window $128$ + sinks | Pre-norm `RMSNorm` | RoPE, YaRN | Clamped `SwiGLU`, MoE ($128$E, top-$4$) |
 :::
 
-::: {.slide title="A Masked Pass Trains Every Prediction; a Matched RNN Ends Behind"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Parameters, Perplexity, and Symmetry"}
+[Check Your Understanding]{.kicker}
 
-- GPT = embedding $\mathbf{E}$ + $L$ causal blocks + final norm +
-  $\mathbf{E}$ again; the loss averages $-\log p$ over all $bT$ positions.
-- Ours: 4.8M parameters, 1.34–1.35 nats per byte after 1,000 steps; three
-  runs within 0.01; a matched RNN at least 0.07 behind.
-- First updates collapse the tokens in every arm; post-norm without warmup
-  never recovers, with warmup it ends within a few hundredths of pre-norm.
-- GPT-2 loads into the same class with a name map.
+Test your understanding with three concrete calculations:
 
-**Next:** `generate` recomputes the whole context for every token; the KV
-cache removes that.
+1. **Sizing GPT-2 Medium:** GPT-2 Medium has $L = 24$ blocks, width $d = 1024$, vocabulary $V = 50{,}257$, $T_{\max} = 1024$ learned positions, and a weight-tied head. Estimate its total parameter count.
+2. **Perplexity as effective branching factor:** Our byte-level GPT reaches $1.35\text{ nats/byte}$, while GPT-2 Small scores $3.89\text{ nats/token}$ on *The Time Machine*. How many equally likely choices does each loss correspond to?
+3. **Zero-layer weight-tying pitfall:** If `num_blks=0` and all rows of $\mathbf{E}$ have unit norm, which next token $x_{t+1}$ always receives the highest logit in $\mathbf{z}_t = \mathbf{e}_{x_t}\mathbf{E}^\top$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **$\approx 355\text{M}$ parameters:** $24 \times 12(1024)^2 \approx 302.0\text{M}$ in the blocks $+ 50{,}257 \times 1024 \approx 51.5\text{M}$ in `token_emb` $+ 1.0\text{M}$ in `pos_emb`.
+2. **$e^{1.35} \approx 3.9$ bytes** out of $256$ for our byte model; **$e^{3.89} \approx 49$ subword tokens** out of $50{,}257$ for GPT-2.
+3. **$x_{t+1} = x_t$ (repeating the current token):** the symmetric Gram matrix $\mathbf{E}\mathbf{E}^\top$ maximizes $\mathbf{e}_i^\top \mathbf{e}_j$ on the diagonal $j = i$. Attention and FFNs break this symmetry.
+:::
+:::
+
+::: {.slide title="Summary: Building and Training a Decoder-Only GPT"}
+[Key Takeaways]{.kicker}
+
+| Component | Design Choice in `d2l.GPT` | Quantitative Impact / Purpose |
+| :--- | :--- | :--- |
+| **Input & Tied Head** | Shared $\mathbf{E} \in \mathbb{R}^{V \times d}$, final `Norm` + $\mathbf{E}^\top$ | Saves $V d$ parameters ($38.6\text{M}$ in GPT-2); aligns input/output spaces |
+| **Causal Attention** | Fused $\mathbf{W}_{qkv}$, RoPE, lower-triangular mask | Trains all $T$ prefix predictions in one pass without future leakage |
+| **`1/√(2L)` Init** | $\sigma = 0.02 / \sqrt{2L}$ on `W_o` and `W_2` | Keeps initial pre-norm stream variance bounded at any depth $L$ |
+| **`LMOptimizer`** | AdamW, 2D-only weight decay, warmup + cosine, clip | Reaches $1.34\text{ nats/byte}$ in $1{,}000$ steps ($1.1\text{ nats}$ below bigram entropy) |
+| **Controlled Baselines** | `SwiGLU` vs. `GELU`; `GPT` vs. matched `RNNLM` | `SwiGLU` wins by $0.06\text{ nats}$ (vs. $0.01$ seed spread); `GPT` pulls ahead for $t \ge 16$ |
+| **Pretrained Compatibility** | `load_gpt2()` + `tiktoken` BPE | Loads official `124M` checkpoint directly; validates at perplexity $\approx 49$ |
 :::

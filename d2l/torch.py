@@ -9879,7 +9879,7 @@ def minhash_signature(shingle_list, k=128, seed=0xD2):
     a, c = d2l._minhash_params(k, seed)
     return d2l._minhash_rows(x, a, c)  # exact mulmod: 32-bit halves
 
-MINHASH_FIXTURE = (  # five strings whose signatures assignment A3 pins
+MINHASH_FIXTURE = (  # five strings whose signatures the library pins
     'The quick brown fox jumps over the lazy dog.',
     'Deduplication keeps one copy of every document in the corpus.',
     'Café crème: une boisson chaude, servie le matin avec du pain.',
@@ -10226,14 +10226,20 @@ MIX_CONFIGS = {  # the study's two tiers, fixed before any run
             'web-20m': 'lm-mix-web-20m-v1', 'math-20m': 'lm-mix-math-20m-v1',
             'web-val-1m': 'lm-mix-val-1m-v1',
             'math-val-1m': 'lm-mix-val-1m-v1'},
-        code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v1',
+        code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v2',
         train=((1.0, 6), (0.3, 6)), edges=MIX_EDGES, held=4,
-        design_seeds=(0, 1), cos_seeds=(1, 2), arm_seeds=(0, 1, 2),
+        design_seeds=(0, 1), cos_seeds=(1, 2, 3, 4), arm_seeds=(0, 1, 2),
         max_weight=0.9, lr_grid=(5e-4, 1e-3, 2e-3, 4e-3), lr_tokens=2**23,
         lr_tie=1e-3, eval_at=tuple(k / 8 for k in range(1, 9)),
         arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
         log_every=10, ckpt_every=256, stage_frac=0.8, select='mixlaw',
-        compile=False, doremi=dict(eta=1.0, smooth=1e-3)),
+        compile=False, doremi=dict(eta=1.0, smooth=1e-3),
+        pure_seeds=(1, 2),  # added in v2, with the three entries below
+        lr_check=dict(lr=1e-3, seeds=(0, 1, 2), mixtures={
+            'web': (1.0, 0.0, 0.0), 'edge': MIX_EDGES[0],
+            'uniform': (1 / 3, 1 / 3, 1 / 3)}),
+        anneal=dict(weights=MIX_EDGES[2], recency_frac=0.9),
+        horizon=dict(factor=4, seeds=(0, 1), max_epochs=2)),
     't2': dict(  # the campaign package: run on a faster node
         name='t2', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
         proxy=ProxyCfg(num_hiddens=320, num_heads=5, num_blks=8),
@@ -19833,25 +19839,36 @@ def mix_run_specs(c):
     """The run design of a MIX_CONFIGS entry c, in launch order: the
     learning-rate runs, the pure-domain runs, the training mixtures (the
     Dirichlet draws, then the fixed edges), the held-out mixtures, the
-    uniform seeds (cosine and WSD), the DoReMi proxy and the
-    three arms. Each spec is a dict(run_id, arm, weights, stages, seed,
-    schedule, tokens, eval_at, depends); weights of None are resolved when
-    the run starts (the regression's choice, DoReMi's weights).
+    uniform seeds (cosine and WSD), the DoReMi proxy and the arms. Each
+    spec is a dict(run_id, arm, weights, stages, seed, schedule, tokens,
+    eval_at, depends); weights of None are resolved when the run starts
+    (the regression's choice, DoReMi's weights). Optional entries of c add
+    runs: pure_seeds (more seeds of the pure-domain runs), lr_check (the
+    mixtures of lr_check['mixtures'] at the rate lr_check['lr'], which the
+    spec's lr overrides), anneal (the staged arm decays on these fixed
+    weights, and a recency arm returns to uniform at recency_frac) and
+    horizon (uniform runs on both schedules at factor times the tokens,
+    reading each pool up to max_epochs times). Without anneal the staged
+    arm decays on the regression's choice.
 
     Defined in :numref:`sec_lm_data_mixtures`"""
+    import itertools
     D = c['domains']
     uniform = [1 / len(D)] * len(D)
     def spec(run_id, arm, weights, seed=0, schedule='cosine', stages=None,
-             tokens=c['tokens'], eval_at=c['eval_at'], depends=()):
+             tokens=c['tokens'], eval_at=c['eval_at'], depends=(), **extra):
         return dict(run_id=run_id, arm=arm, weights=weights, stages=stages,
                     seed=seed, schedule=schedule, tokens=tokens,
-                    eval_at=list(eval_at), depends=list(depends))
+                    eval_at=list(eval_at), depends=list(depends), **extra)
     lr_ids = [f'lr-{lr:.0e}' for lr in c['lr_grid']]
     runs = [spec(i, 'lr', uniform, tokens=c['lr_tokens'], eval_at=(1.0,))
             for i in lr_ids]
     after_lr = dict(depends=lr_ids)
     runs += [spec(f'pure-{d}', 'pure', list(np.eye(len(D))[k]), **after_lr)
              for k, d in enumerate(D)]
+    runs += [spec(f'pure-{d}-s{s}', 'pure-seed', list(np.eye(len(D))[k]),
+                  seed=s, **after_lr)
+             for s in c.get('pure_seeds', ()) for k, d in enumerate(D)]
     train = []
     for conc, n in c['train']:
         W = d2l.sample_mixtures(n, D, conc, c['design_seeds'][0],
@@ -19874,13 +19891,35 @@ def mix_run_specs(c):
     runs.append(spec('doremi-proxy', 'doremi-weights', uniform,
                      depends=lr_ids + ['uniform-wsd-s0']))
     picked = lr_ids + [r['run_id'] for r in train]
+    anneal = c.get('anneal')
     for s in c['arm_seeds']:
         runs.append(spec(f'regsel-s{s}', 'regsel', None, seed=s, **arm,
                          depends=picked))
         runs.append(spec(f'doremi-s{s}', 'doremi', None, seed=s, **arm,
                          depends=lr_ids + ['doremi-proxy']))
-        runs.append(spec(f'staged-s{s}', 'staged', uniform, seed=s, **arm,
-                         stages=None, depends=picked))
+        if anneal is None:  # decay on the regression's choice
+            runs.append(spec(f'staged-s{s}', 'staged', uniform, seed=s,
+                             **arm, stages=None, depends=picked))
+            continue
+        a = [float(x) for x in anneal['weights']]
+        runs.append(spec(f'anneal-s{s}', 'anneal', uniform, seed=s, **arm,
+                         stages=[[c['stage_frac'], a]], **after_lr))
+        runs.append(spec(f'recency-s{s}', 'recency', uniform, seed=s, **arm,
+                         stages=[[c['stage_frac'], a],
+                                 [anneal['recency_frac'], uniform]],
+                         **after_lr))
+    check = c.get('lr_check')
+    for name, w in (check or {}).get('mixtures', {}).items():
+        runs += [spec(f'lrcheck-{name}-s{s}', 'lr-check',
+                      [float(x) for x in w], seed=s, lr=check['lr'],
+                      **after_lr) for s in check['seeds']]
+    h = c.get('horizon')
+    for sched, s in itertools.product(('cosine', 'wsd'),
+                                      (h or {}).get('seeds', ())):
+        runs.append(spec(f'horizon-{sched[:3]}-s{s}', 'horizon', uniform,
+                         seed=s, schedule=sched,
+                         tokens=h['factor'] * c['tokens'],
+                         max_epochs=h['max_epochs'], **after_lr))
     return runs
 
 def mix_pools(c, root=os.path.join('..', 'data', 'lm', 'mix')):

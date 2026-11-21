@@ -16,6 +16,7 @@ design with its fixed corner mixtures; DoReMi's
 closed-form step, the saddle of a toy game and the per-token clipping; and
 tools/run_mix_campaign.py on the test configuration 'tiny' (CPU): its smoke
 (kill and resume) and the first runs of a campaign."""
+import collections
 import hashlib
 import json
 import math
@@ -345,13 +346,33 @@ class RegressionTest(unittest.TestCase):
         self.assertLessEqual(v, best + 1e-9)
 
     def test_run_design(self):
-        for k, n in (('t1', 41), ('t2', 49)):
+        for k, n in (('t1', 65), ('t2', 49)):
             c = d2l.MIX_CONFIGS[k]
             specs = d2l.mix_run_specs(c)
             self.assertEqual(len(specs), n)
             train = [s['weights'] for s in specs if s['arm'] == 'train']
             self.assertEqual(train[-3:], [list(e) for e in d2l.MIX_EDGES])
             self.assertEqual(len({s['run_id'] for s in specs}), n)
+        t1, t2 = (d2l.mix_run_specs(d2l.MIX_CONFIGS[k]) for k in ('t1', 't2'))
+        arms = lambda S: collections.Counter(s['arm'] for s in S)
+        self.assertEqual(arms(t2)['staged'], 3)  # t2: decay on the choice
+        self.assertEqual(arms(t1)['staged'], 0)
+        self.assertEqual((arms(t1)['anneal'], arms(t1)['recency']), (3, 3))
+        self.assertEqual(arms(t1)['uniform-cos'], 4)
+        by = {s['run_id']: s for s in t1}
+        c = d2l.MIX_CONFIGS['t1']
+        a = [list(map(float, c['anneal']['weights']))]
+        self.assertEqual(by['anneal-s1']['stages'], [[0.8, a[0]]])
+        self.assertEqual(by['recency-s1']['stages'][1][0], 0.9)
+        self.assertEqual(by['horizon-wsd-s1']['tokens'], 4 * c['tokens'])
+        self.assertEqual(by['horizon-cos-s0']['max_epochs'], 2)
+        self.assertEqual(by['lrcheck-web-s2']['lr'], 1e-3)
+        self.assertNotIn('lr', by['pure-web-s1'])
+        # a stage list: each stage is in force from its fraction on
+        w = d2l._stage_weights({'a': 1.0, 'b': 0.0}, [
+            (0.8, {'a': 0.0, 'b': 1.0}), (0.9, {'a': 1.0, 'b': 0.0})],
+            ['a', 'b'], 10)
+        self.assertEqual(w[:, 0].tolist(), [1] * 8 + [0] + [1])
 
 
 class DoremiTest(unittest.TestCase):

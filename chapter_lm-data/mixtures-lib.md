@@ -372,23 +372,34 @@ def mix_run_specs(c):
     """The run design of a MIX_CONFIGS entry c, in launch order: the
     learning-rate runs, the pure-domain runs, the training mixtures (the
     Dirichlet draws, then the fixed edges), the held-out mixtures, the
-    uniform seeds (cosine and WSD), the DoReMi proxy and the
-    three arms. Each spec is a dict(run_id, arm, weights, stages, seed,
-    schedule, tokens, eval_at, depends); weights of None are resolved when
-    the run starts (the regression's choice, DoReMi's weights)."""
+    uniform seeds (cosine and WSD), the DoReMi proxy and the arms. Each
+    spec is a dict(run_id, arm, weights, stages, seed, schedule, tokens,
+    eval_at, depends); weights of None are resolved when the run starts
+    (the regression's choice, DoReMi's weights). Optional entries of c add
+    runs: pure_seeds (more seeds of the pure-domain runs), lr_check (the
+    mixtures of lr_check['mixtures'] at the rate lr_check['lr'], which the
+    spec's lr overrides), anneal (the staged arm decays on these fixed
+    weights, and a recency arm returns to uniform at recency_frac) and
+    horizon (uniform runs on both schedules at factor times the tokens,
+    reading each pool up to max_epochs times). Without anneal the staged
+    arm decays on the regression's choice."""
+    import itertools
     D = c['domains']
     uniform = [1 / len(D)] * len(D)
     def spec(run_id, arm, weights, seed=0, schedule='cosine', stages=None,
-             tokens=c['tokens'], eval_at=c['eval_at'], depends=()):
+             tokens=c['tokens'], eval_at=c['eval_at'], depends=(), **extra):
         return dict(run_id=run_id, arm=arm, weights=weights, stages=stages,
                     seed=seed, schedule=schedule, tokens=tokens,
-                    eval_at=list(eval_at), depends=list(depends))
+                    eval_at=list(eval_at), depends=list(depends), **extra)
     lr_ids = [f'lr-{lr:.0e}' for lr in c['lr_grid']]
     runs = [spec(i, 'lr', uniform, tokens=c['lr_tokens'], eval_at=(1.0,))
             for i in lr_ids]
     after_lr = dict(depends=lr_ids)
     runs += [spec(f'pure-{d}', 'pure', list(np.eye(len(D))[k]), **after_lr)
              for k, d in enumerate(D)]
+    runs += [spec(f'pure-{d}-s{s}', 'pure-seed', list(np.eye(len(D))[k]),
+                  seed=s, **after_lr)
+             for s in c.get('pure_seeds', ()) for k, d in enumerate(D)]
     train = []
     for conc, n in c['train']:
         W = d2l.sample_mixtures(n, D, conc, c['design_seeds'][0],
@@ -411,13 +422,35 @@ def mix_run_specs(c):
     runs.append(spec('doremi-proxy', 'doremi-weights', uniform,
                      depends=lr_ids + ['uniform-wsd-s0']))
     picked = lr_ids + [r['run_id'] for r in train]
+    anneal = c.get('anneal')
     for s in c['arm_seeds']:
         runs.append(spec(f'regsel-s{s}', 'regsel', None, seed=s, **arm,
                          depends=picked))
         runs.append(spec(f'doremi-s{s}', 'doremi', None, seed=s, **arm,
                          depends=lr_ids + ['doremi-proxy']))
-        runs.append(spec(f'staged-s{s}', 'staged', uniform, seed=s, **arm,
-                         stages=None, depends=picked))
+        if anneal is None:  # decay on the regression's choice
+            runs.append(spec(f'staged-s{s}', 'staged', uniform, seed=s,
+                             **arm, stages=None, depends=picked))
+            continue
+        a = [float(x) for x in anneal['weights']]
+        runs.append(spec(f'anneal-s{s}', 'anneal', uniform, seed=s, **arm,
+                         stages=[[c['stage_frac'], a]], **after_lr))
+        runs.append(spec(f'recency-s{s}', 'recency', uniform, seed=s, **arm,
+                         stages=[[c['stage_frac'], a],
+                                 [anneal['recency_frac'], uniform]],
+                         **after_lr))
+    check = c.get('lr_check')
+    for name, w in (check or {}).get('mixtures', {}).items():
+        runs += [spec(f'lrcheck-{name}-s{s}', 'lr-check',
+                      [float(x) for x in w], seed=s, lr=check['lr'],
+                      **after_lr) for s in check['seeds']]
+    h = c.get('horizon')
+    for sched, s in itertools.product(('cosine', 'wsd'),
+                                      (h or {}).get('seeds', ())):
+        runs.append(spec(f'horizon-{sched[:3]}-s{s}', 'horizon', uniform,
+                         seed=s, schedule=sched,
+                         tokens=h['factor'] * c['tokens'],
+                         max_epochs=h['max_epochs'], **after_lr))
     return runs
 
 #@save

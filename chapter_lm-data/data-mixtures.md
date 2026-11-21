@@ -229,14 +229,20 @@ MIX_CONFIGS = {  # the study's two tiers, fixed before any run
             'web-20m': 'lm-mix-web-20m-v1', 'math-20m': 'lm-mix-math-20m-v1',
             'web-val-1m': 'lm-mix-val-1m-v1',
             'math-val-1m': 'lm-mix-val-1m-v1'},
-        code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v1',
+        code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v2',
         train=((1.0, 6), (0.3, 6)), edges=MIX_EDGES, held=4,
-        design_seeds=(0, 1), cos_seeds=(1, 2), arm_seeds=(0, 1, 2),
+        design_seeds=(0, 1), cos_seeds=(1, 2, 3, 4), arm_seeds=(0, 1, 2),
         max_weight=0.9, lr_grid=(5e-4, 1e-3, 2e-3, 4e-3), lr_tokens=2**23,
         lr_tie=1e-3, eval_at=tuple(k / 8 for k in range(1, 9)),
         arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
         log_every=10, ckpt_every=256, stage_frac=0.8, select='mixlaw',
-        compile=False, doremi=dict(eta=1.0, smooth=1e-3)),
+        compile=False, doremi=dict(eta=1.0, smooth=1e-3),
+        pure_seeds=(1, 2),  # added in v2, with the three entries below
+        lr_check=dict(lr=1e-3, seeds=(0, 1, 2), mixtures={
+            'web': (1.0, 0.0, 0.0), 'edge': MIX_EDGES[0],
+            'uniform': (1 / 3, 1 / 3, 1 / 3)}),
+        anneal=dict(weights=MIX_EDGES[2], recency_frac=0.9),
+        horizon=dict(factor=4, seeds=(0, 1), max_epochs=2)),
     't2': dict(  # the campaign package: run on a faster node
         name='t2', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
         proxy=ProxyCfg(num_hiddens=320, num_heads=5, num_blks=8),

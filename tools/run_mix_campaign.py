@@ -13,7 +13,10 @@ d2l.MIX_CONFIGS it builds the run list (d2l.mix_run_specs) and runs it:
   3. the arms: regression-selected (fit_mixture_regression(select) on the
      finished training runs, choose_mixture for the target: chosen by code,
      never by hand), DoReMi (its averaged weights) and staged (uniform, then
-     the selected mixture from stage_frac on).
+     the selected mixture from stage_frac on), or, where the configuration
+     has an anneal entry, the anneal and recency arms in its place;
+  4. the configuration's optional diagnostic runs (more pure-domain seeds,
+     the learning-rate check, the longer horizon: d2l.mix_run_specs).
 
 One worker process per entry of --gpus (an id, or 'cpu') pulls runs from a
 file-locked queue in OUT; every run writes OUT/runs/<run_id>.json by an
@@ -22,7 +25,9 @@ atomic rename and checkpoints every ckpt_every steps to OUT/ckpt/<id>.pt;
 workers at --max-hours (default for t2: the campaign file's stop_hours, else
 1.5 x the smoke's predicted GPU-hours on these cards / the number of
 workers; 1 h for the other configurations); a later --resume continues.
-At the end it merges everything into OUT/lm-mix-runs-<config>-v1.json.
+At the end it merges everything into OUT/<runs_key>.json. Finished runs
+already in OUT/runs are kept, so a directory seeded with an earlier run set
+of the same configuration trains only the runs its design adds.
 
 --smoke runs only the smoke of --config; --smoke-t2 runs the smoke of the t2
 configuration first (on the pools of --config) and then the campaign. The
@@ -230,7 +235,8 @@ def run_one(d2l, c, q, spec, pools, vals, byte_len):
     D = c['domains']
     lr = (c['lr_grid'][[s['run_id'] for s in q.specs
                         if s['arm'] == 'lr'].index(spec['run_id'])]
-          if spec['arm'] == 'lr' else lr_choice(d2l, c, q)['chosen'])
+          if spec['arm'] == 'lr' else spec.get('lr')
+          or lr_choice(d2l, c, q)['chosen'])
     cfg = c['proxy']._replace(lr=lr, schedule=spec['schedule'])
     weights, stages = spec['weights'], spec['stages']
     if spec['arm'] in ('regsel', 'staged'):
@@ -253,6 +259,7 @@ def run_one(d2l, c, q, spec, pools, vals, byte_len):
             pools, as_dict(weights), spec['tokens'], cfg, seed=spec['seed'],
             eval_sets=vals, stages=[(f, as_dict(w)) for f, w in stages or []],
             log_every=c['log_every'], eval_at=spec['eval_at'],
+            max_epochs=spec.get('max_epochs', 1),
             curve_windows=c['curve_windows'], byte_lengths=byte_len,
             ckpt=str(ckpt), ckpt_every=c['ckpt_every'],
             resume=str(ckpt) if ckpt.exists() else None,
@@ -486,7 +493,9 @@ def merge(d2l, c, args, specs, t_start):
     runs = [read_json(args.out / 'runs' / f'{s["run_id"]}.json')
             for s in specs]
     doremi = next(r['doremi'] for r in runs if r['arm'] == 'doremi-weights')
-    smoke_path = args.out / f'smoke-{"t2" if args.smoke_t2 else c["name"]}.json'
+    smoke_path = args.out / f'smoke-{c["name"]}.json'
+    if args.smoke_t2 or (args.out / 'smoke-t2.json').exists():
+        smoke_path = args.out / 'smoke-t2.json'  # kept by a resumed run
     merged = dict(
         schema='d2l-mix-runs/1', config=c['name'], cfg=c['proxy']._asdict(),
         mix_config=json.loads(json.dumps(c)),
@@ -500,7 +509,7 @@ def merge(d2l, c, args, specs, t_start):
                           else None),
         environment=environment(d2l), wall_hours=(time.time() - t_start)
         / 3600)
-    path = args.out / f'lm-mix-runs-{c["name"]}-v1.json'
+    path = args.out / f'{c["runs_key"]}.json'
     atomic_json(path, merged)
     print(f'merged {len(runs)} runs into {path}', flush=True)
 

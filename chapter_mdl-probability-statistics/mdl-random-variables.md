@@ -355,8 +355,7 @@ $I$, $F(x)=1$ and $X\le x$ always. $\blacksquare$
 Notice that this hypothesis allows $F$ to be flat outside an interval, just as
 the dart's c.d.f. is ($F=0$ for $r<0$ and $F=1$ for $r>1$). Replacing $F^{-1}$
 with the *generalized inverse* $F^{-}(u)=\min\{x:F(x)\ge u\}$ removes the
-hypothesis altogether and samples staircase c.d.f.s as well (Exercise
-:exref:`ex_mdl-random-variables-staircase-sampling`).
+hypothesis altogether and samples staircase c.d.f.s as well.
 
 For the dart, inverse-transform sampling gives $R=\sqrt{U}$. It is tempting to
 take the shortcut $R=U$, and we can see immediately why that fails without
@@ -840,33 +839,6 @@ descends from it.
        standard check of the calibration of probabilistic forecasts
        :cite:`Gneiting.Balabdaoui.Raftery.2007`.
    :exlabel:`ex_mdl-random-variables-logistic-calibration`
-
-1. [code] **Sampling from a staircase.** ● The inverse-transform sampler of
-   :numref:`fig_mdl-prob-inverse-transform` assumes a c.d.f. that is
-   continuous and strictly increasing where it lies strictly between $0$
-   and $1$. A categorical distribution, such as the softmax over the
-   vocabulary from which a language model samples its next token, has a
-   staircase c.d.f. instead. For any c.d.f. $F$, define the generalized
-   inverse $F^{-}(u) = \min\{x : F(x) \ge u\}$ for $u \in (0, 1)$. The set
-   is nonempty and bounded below, because $0 < u < 1$ and $F$ tends to $0$
-   and $1$ at $-\infty$ and $\infty$. Its infimum belongs to it, because
-   every c.d.f. is right-continuous, so the minimum exists.
-    1. Show that $F^{-}(u) \le x$ holds exactly when $u \le F(x)$. Conclude
-       that $F^{-}(U)$ has the c.d.f. $F$ when $U$ is uniform on $[0, 1]$.
-    1. Let $X$ take the value $k \in \{1, \ldots, K\}$ with probability
-       $p_k$, and let $c_k = p_1 + \cdots + p_k$. Show that $F^{-}(u)$ is the
-       smallest $k$ with $c_k \ge u$. Implement the sampler with NumPy's
-       `cumsum` and `searchsorted`, and check the frequencies of $10^5$ draws
-       for $\mathbf{p} = (0.1, 0.2, 0.3, 0.25, 0.15)$. What does it cost
-       to draw $m$ samples from one distribution over $K$ classes? What does
-       each draw cost when the distribution changes at every draw, as in
-       autoregressive decoding?
-    1. Apply the softmax to $50{,}000$ logits, each $3$ times a standard
-       normal draw, store the probabilities in float32, and compute
-       $c_K - 1$ from a float32 `cumsum`. How often does a uniform draw
-       exceed $c_K$, and what does `searchsorted` return then? Give two ways
-       to make the sampler safe.
-   :exlabel:`ex_mdl-random-variables-staircase-sampling`
 
 1. **One-sided Chebyshev.** ● Chebyshev's inequality
    :eqref:`eq_mdl-chebyshev` bounds both tails at once. Cantelli's

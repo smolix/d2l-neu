@@ -271,10 +271,8 @@ Gradient descent lands on $0.9713$, matching the observed frequency to all
 printed digits. The learning rate $10^{-9}$ looks tiny, and summing the loss
 forces it on us: the gradient of a loss summed over nearly nine million flips
 carries a factor of $n$, so the largest stable step size shrinks in proportion
-(:numref:`subsec_mdl-quadratic-model`; Exercise
-:exref:`ex_mdl-maximum-likelihood-learning-rate-loss-scale` computes the
-threshold). This is why minibatch losses throughout this book average over
-examples rather than summing them.
+(:numref:`subsec_mdl-quadratic-model`). This is why minibatch losses throughout
+this book average over examples rather than summing them.
 
 Taking the logarithm also gives the gradient a clean additive form,
 
@@ -1278,34 +1276,6 @@ the MAP estimate still reduces the posterior to a single point.
 
 ## Exercises
 
-1. [code] **Learning rate and loss scale.** The cell of
-   :numref:`subsec_mdl-nll` minimizes the summed coin NLL by gradient
-   descent with `lr` $=10^{-9}$ for the counts `n_H` $=8675309$ and
-   `n_T` $=256245$. Near its minimizer $\hat\theta$ the NLL is approximately
-   quadratic with curvature $c=n\,I(\hat\theta)$, where $n=n_H+n_T$ and $I$
-   is the per-flip Fisher information :eqref:`eq_mdl-coin-fisher`. On such a
-   quadratic, each step multiplies the distance to $\hat\theta$ by
-   $1-\texttt{lr}\cdot c$, so gradient descent converges if and only if
-   $\texttt{lr}<2/c$.
-    1. Predict the learning rate above which the cell stops converging. Rerun
-       it with `lr` $\in\{5\times10^{-9},\,6.5\times10^{-9},\,10^{-8}\}$ and
-       print the last four iterates of $\theta$. What do the iterates do just
-       above the threshold?
-    1. Multiply `n_H` and `n_T` by $10^{-3}$, keeping `lr` $=10^{-9}$.
-       Predict $\theta$ after the $100$ steps once from the gradient at the
-       starting point $\theta=0.5$ and once from the contraction factor
-       $1-\texttt{lr}\cdot c$ of the quadratic model. Which prediction
-       matches the run, and why?
-    1. Multiply the original counts by $10$ instead, keeping
-       `lr` $=10^{-9}$. Show that, in exact arithmetic, scaling both counts
-       by $k$ at a fixed `lr` produces the iterates of the original counts
-       with learning rate $k\cdot\texttt{lr}$. Which run of (a) does the
-       factor $10$ reproduce? Do its iterates leave $(0,1)$ within the $100$
-       steps?
-    1. Divide the loss by $n$ before differentiating. What is the threshold
-       now, and why does it no longer depend on $n$?
-   :exlabel:`ex_mdl-maximum-likelihood-learning-rate-loss-scale`
-
 1. **The cross-entropy floor.** For discrete outcomes the average NLL
    equals
    $H(\hat p_{\textrm{data}})+D_{\textrm{KL}}(\hat p_{\textrm{data}}\,\|\,p_{\boldsymbol{\theta}})$
@@ -1405,26 +1375,6 @@ the MAP estimate still reduces the posterior to a single point.
        $\theta=0.95$ histogram departs from the curve.
    :exlabel:`ex_mdl-maximum-likelihood-small-samples-boundary`
 
-1. **Gaussian versus Laplace shrinkage.** Observe one value
-   $z\sim\mathcal N(\theta,1)$ of an unknown scalar $\theta$.
-    1. With the prior $\theta\sim\mathcal N(0,\tau^2)$, show that the MAP
-       estimate is $\tau^2 z/(1+\tau^2)$. The pair $(\theta, z)$ is then
-       jointly Gaussian, so the posterior of $\theta$ given $z$ is Gaussian.
-       Why does the MAP estimate therefore equal the posterior mean? For
-       which $z$ is it exactly zero?
-    1. With the Laplace prior $p(\theta)\propto e^{-|\theta|/s}$ of
-       :numref:`subsec_mdl-gaussian-prior-weight-decay`, write the MAP
-       objective. Solve it with the soft-thresholding formula: the minimizer
-       of $\tfrac12(z-\theta)^2+\lambda|\theta|$ is
-       $\operatorname{sign}(z)\max(|z|-\lambda,0)$. For which $z$ is the
-       estimate exactly zero?
-    1. Keep the Laplace prior and let $z>0$. Compare the posterior density at
-       $\theta$ and at $-\theta$ for $\theta>0$, and conclude that the
-       posterior mean is strictly positive. What is the posterior probability
-       that $\theta=0$? What does this imply for reading the exact zeros of
-       an $L_1$-regularized fit as evidence that a coefficient is zero?
-   :exlabel:`ex_mdl-maximum-likelihood-gaussian-laplace-shrinkage`
-
 1. **MAP in log-odds.** Parameterize the coin by its log-odds
    $\eta=\log\frac{\theta}{1-\theta}$, so that
    $\theta=\operatorname{sigmoid}(\eta)$ and
@@ -1452,32 +1402,6 @@ the MAP estimate still reduces the posterior to a single point.
        can be both equivariant under all smooth one-to-one
        reparameterizations and unbiased for all of them.
    :exlabel:`ex_mdl-maximum-likelihood-map-log-odds`
-
-1. **Densities carry units.** ● A density value is not a probability: if $x$
-   is measured in metres, $p(x)$ has units of inverse
-   metres (:numref:`subsec_mdl-mle-densities`).
-    1. A Gaussian is fit by maximum likelihood to $n$ lengths measured in
-       metres and then refit to the same lengths in millimetres. How do
-       $\hat\mu$, $\hat\sigma$, and the minimal NLL change?
-    1. Model A is a density for positive data $x$. Model B is a Gaussian
-       density for $\log x$. Use the change-of-variables formula of
-       :numref:`sec_mdl-joint-distributions` to write model B's NLL for the data
-       $x_1,\ldots,x_n$. Which term must be added to B's NLL on the values
-       $\log x_i$ before the two models can be compared?
-    1. Images have integer pixel values $\mathbf x\in\{0,\ldots,255\}^D$. A
-       density fit to such values can place a narrow spike on every grid
-       point and so make its average NLL arbitrarily low, by the mechanism of
-       problem :exref:`ex_mdl-maximum-likelihood-learned-noise-variance`b.
-       :citet:`Theis.Oord.Bethge.2016` instead fit a density $q$ on
-       $[0,256)^D$ to the dequantized values $\mathbf x+\mathbf u$, with
-       $\mathbf u$ uniform on $[0,1)^D$. Show that
-       $Q(\mathbf x)=\int_{[0,1)^D}q(\mathbf x+\mathbf u)\,d\mathbf u$ is a
-       probability distribution on the pixel grid. Use Jensen's inequality,
-       as in :eqref:`eq_mdl-elbo`, to show that
-       $-\log Q(\mathbf x)\le-\mathbb{E}_{\mathbf u}\big[\log q(\mathbf x+\mathbf u)\big]$.
-       What does this bound guarantee about an NLL reported on dequantized
-       data?
-   :exlabel:`ex_mdl-maximum-likelihood-densities-units`
 
 1. **Symmetries of a ReLU network.** ● Consider the network
    $f_{\boldsymbol{\theta}}(x)=\sum_{j=1}^h a_j\,\mathrm{ReLU}(w_jx)$ with a

@@ -862,22 +862,6 @@ uncorrelated, while in polar coordinates they become two independent variables.
 
 ## Exercises
 
-1. [code] **Classes missing from a minibatch.** A minibatch holds $B$
-   labels drawn independently and uniformly from $K$ classes. Let $M$ be
-   the number of classes that do not appear in it, and write
-   $M = \sum_{k=1}^K I_k$, where $I_k = 1$ if class $k$ is missing and
-   $I_k = 0$ otherwise.
-    1. Compute $\mathbb{E}[M]$ with linearity :eqref:`eq_mdl-exp_linear`, and
-       evaluate it for $K = 1000$ and $B = 256$.
-    1. Compute $\textrm{Cov}(I_j, I_k)$ for $j \neq k$. Are the indicators
-       independent?
-    1. Extend the variance-of-a-sum rule :eqref:`eq_mdl-var_sum` to $K$
-       terms, and compute the standard deviation of $M$ for $K = 1000$ and
-       $B = 256$. Compare it with the value that independent indicators
-       would give, and check both against $10^4$ simulated minibatches. How
-       can covariances as small as those in (b) change the answer this much?
-   :exlabel:`ex_mdl-random-variables-missing-classes`
-
 1. **Uncorrelated but dependent.** Whitening, for example with the
    principal components of :numref:`sec_mdl-svd-low-rank`, makes
    coordinates uncorrelated. The following pair has Gaussian coordinates

@@ -816,8 +816,7 @@ $s=\varepsilon\sqrt d$ immediately gives
 $P(|\cos(\mathbf x,\mathbf u)|\geq\varepsilon)\leq2e^{-d\varepsilon^2/2}$. For a
 standard Gaussian vector $\mathbf x$, the same behavior holds: the inner product
 $\langle\mathbf x,\mathbf u\rangle$ is itself a standard Gaussian for every unit
-vector $\mathbf u$, so it obeys the exact same tail $2e^{-s^2/2}$ (Exercise
-:exref:`ex_mdl-concentration-generalization-unequal-ranges`), and the thin shell
+vector $\mathbf u$, so it obeys the exact same tail $2e^{-s^2/2}$, and the thin shell
 keeps $\|\mathbf x\|$ within a few percent of $\sqrt d$.
 
 With an exponential tail in hand, we can control *many* pairs at once using one
@@ -988,25 +987,6 @@ embeddings.
 
 ## Exercises
 
-1. **Hoeffding with unequal ranges.** The proof of :eqref:`eq_mdl-hoeffding`
-   assumed that every $X_i$ takes values in the same interval $[a,b]$.
-    1. Redo the proof for independent $X_i\in[a_i,b_i]$ and show that
-
-       $$P\bigl(|\bar X-\mathbb{E}[\bar X]|\geq t\bigr)\leq 2\exp\left(-\frac{2n^2t^2}{\sum_{i=1}^n(b_i-a_i)^2}\right).$$
-
-       Check that this bound reduces to :eqref:`eq_mdl-hoeffding` when all
-       ranges agree.
-    1. Let $x_1,\ldots,x_d$ be independent uniform random signs and let
-       $\mathbf u\in\mathbb R^d$ be a unit vector. Apply the bound of (a)
-       to the sum $\sum_i u_i x_i$ and derive the tail bound for the
-       inner product, :eqref:`eq_mdl-inner-product-tail` in the text.
-    1. Now let the $x_i$ be independent standard Gaussians. Derive the same
-       bound $2e^{-s^2/2}$ from the Gaussian moment generating function
-       $\mathbb{E}[e^{\lambda g}]=e^{\lambda^2/2}$ and the Chernoff method
-       :eqref:`eq_mdl-chernoff`, and explain why the bound of (a) cannot be
-       applied here.
-   :exlabel:`ex_mdl-concentration-generalization-unequal-ranges`
-
 1. **Sub-Gaussian random signs.** A random sign $\xi$ takes the values $-1$
    and $+1$ with probability $\tfrac12$ each, so that
    $\mathbb{E}[e^{\lambda\xi}]=\cosh\lambda\leq e^{\lambda^2/2}$.
@@ -1167,44 +1147,6 @@ embeddings.
        of a 0/1 outcome. Below which variance does it win, and which error
        rates does that correspond to?
    :exlabel:`ex_mdl-concentration-generalization-bernstein`
-
-1. **Comparing two classifiers on one test set.** ● Classifiers A and B are
-   scored on the same $n=10{,}000$ examples. For 0/1 losses let
-   $D_i=\ell_A(i)-\ell_B(i)\in\{-1,0,1\}$, so that the mean of the $D_i$ is
-   the difference of the two error rates.
-    1. Apply Hoeffding's inequality to the $D_i$, whose range has length 2.
-       Show that the half-width at $\delta=0.05$ is about $\pm2.7\%$, so a
-       difference of one percentage point cannot be certified this way.
-    1. Suppose the two models disagree on a fraction $q$ of the examples.
-       Show that $\textrm{Var}(D_i)\leq q$ and
-       $|D_i-\mathbb{E}[D_i]|\leq2$, and apply :eqref:`eq_mdl-bernstein`
-       with $M=2$. Compute the half-widths for $q=0.05$, $0.10$ and $0.20$.
-       Below which disagreement rate can a one-point gap be certified?
-    1. Compare with the asymptotic Gaussian interval $1.96\sqrt{q/n}$. What
-       does Bernstein give up in exchange for validity at every $n$?
-    1. Why is scoring both models on the *same* examples better than
-       scoring them on two independent test sets of 10,000 examples each?
-       Hint: compare the variance $2p(1-p)/n$ of a difference of two
-       independent error estimates at $p=0.083$ with $q/n$ at $q=0.05$.
-   :exlabel:`ex_mdl-concentration-generalization-two-classifiers`
-
-1. [code] **Mode versus mass.** Let
-   $\mathbf x\sim\mathcal N(\mathbf 0,\mathbf I_d)$.
-    1. Show that the density at a point of norm $\sqrt d$ is $e^{-d/2}$
-       times the density at the origin, and evaluate this ratio at
-       $d=784$.
-    1. Show that the density of $\|\mathbf x\|$ is proportional to
-       $r^{d-1}e^{-r^2/2}$ and peaks at $r=\sqrt{d-1}$.
-    1. Compute $P(\|\mathbf x\|\leq\sqrt d/2)$ at $d=784$ in three ways:
-       with the bound :eqref:`eq_mdl-norm-concentration`, exactly with
-       `scipy.stats.chi2.cdf`, and by Monte Carlo with $10^6$ draws. Which
-       statement would you quote, and why does the exponent rather than the
-       constant carry the message?
-    1. A decoder with $d=512$ latent dimensions is evaluated at the prior
-       mean $\mathbf 0$. Using the standard deviation $1/\sqrt2$ of the
-       norm, how many standard deviations is that input from the norm of a
-       typical code?
-   :exlabel:`ex_mdl-concentration-generalization-mode-vs-mass`
 
 [Discussions](https://d2l.discourse.group/t/36834)
 

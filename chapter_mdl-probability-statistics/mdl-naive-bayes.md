@@ -1015,26 +1015,6 @@ in practice.
        $\rho=0.1$ and $\rho=0.9$.
    :exlabel:`ex_mdl-naive-bayes-gaussian-boundaries`
 
-1. [code] **Smoothing and unseen pixels.** The `#naive-bayes-train` cell
-   estimates $\theta_{iy}$ by $(n_{iy}+1)/(n_y+2)$.
-    1. Generalize the cell to a pseudocount $\alpha$, estimating
-       $\theta_{iy}$ by $(n_{iy}+\alpha)/(n_y+2\alpha)$, and report the test
-       accuracy for $\alpha\in\{0,0.01,0.1,1,10,100,1000\}$. In floating
-       point, $0\cdot(-\infty)$ is NaN. Which values does the affine score
-       of the `#naive-bayes-predict` cell take at $\alpha=0$, and which class
-       does `argmax` then return for every image?
-    1. Rewrite the score so that each pixel selects one of its two log
-       probabilities, for example with `np.where` one class at a time,
-       instead of multiplying both by $x_i$ and $1-x_i$. Rerun $\alpha=0$. Which
-       fraction of the class scores is $-\infty$, for how many test images
-       is every class score $-\infty$, and what is the accuracy? Was the
-       failure in (a) a property of the unsmoothed model or of its
-       implementation?
-    1. The estimate with pseudocount $\alpha$ is the posterior mean of
-       $\theta_{iy}$ under a Beta prior. Which prior is it? Why does the
-       accuracy fall as $\alpha$ grows large?
-   :exlabel:`ex_mdl-naive-bayes-suppose-we-omitted-laplace`
-
 1. **Two event models for text.** A vocabulary $V$ has the four words
    *goal*, *match*, *vote* and *poll*. The training set contains three
    sports documents, "goal goal match", "goal match match" and "match vote",
@@ -1110,35 +1090,6 @@ in practice.
        change you measured in (b).
    :exlabel:`ex_mdl-naive-bayes-label-shift`
 
-1. [code] **Score gaps under the model.** ● For two classes $u$ and $v$, let
-   $g(\mathbf x)=s_u(\mathbf x)-s_v(\mathbf x)$ be the difference of their
-   scores, so that the rule ranks $v$ above $u$ exactly when
-   $g(\mathbf x)<0$. By :eqref:`eq_mdl-naive_bayes_affine`,
-   $g(\mathbf x)=\mathbf w^\top\mathbf x+b_u-b_v$ with
-   $\mathbf w=\mathbf w_u-\mathbf w_v$.
-    1. Let $\mathbf x$ follow the model's own class-$u$ distribution, with
-       independent pixels $x_i\sim\mathrm{Bernoulli}(\theta_{iu})$. Show that
-       $\mathbb{E}[g]$ equals the Kullback--Leibler divergence
-       $\sum_{\mathbf x}p(\mathbf x\mid u)\log\bigl(p(\mathbf x\mid u)/p(\mathbf x\mid v)\bigr)$
-       of the two class-conditional distributions of the model plus
-       $\log\bigl(p(u)/p(v)\bigr)$, and that
-       $\textrm{Var}[g]=\sum_i w_i^2\,\theta_{iu}(1-\theta_{iu})$.
-    1. Let $u$ be pullover and $v$ coat. Compute $g$ on the test pullovers,
-       and compare its empirical mean and standard deviation with the two
-       values of (a). From the model's mean and variance, use a Gaussian
-       approximation to predict the fraction of these images with $g<0$, and
-       compare it with the observed fraction.
-    1. On real images,
-       $\textrm{Var}[g]=\mathbf w^\top\boldsymbol\Sigma_u\mathbf w$,
-       where $\boldsymbol\Sigma_u$ is the covariance matrix of the pixels of
-       class $u$. Which entries of $\boldsymbol\Sigma_u$ does the variance of
-       (a) omit? Show that their contribution
-       $\sum_{i\ne j}w_iw_j\Sigma_{u,ij}$ is positive when positively
-       correlated neighbors carry weights of the same sign, and check both
-       the correlation and the sign agreement for the hem pixels of the
-       text.
-   :exlabel:`ex_mdl-naive-bayes-score-gaps`
-
 1. [code] **Temperature scaling.** ● Exercise
    :exref:`ex_mdl-naive-bayes-duplicated-features` shows that dividing the
    class scores by $T=k$ undoes a $k$-fold duplication of features. For
@@ -1158,8 +1109,7 @@ in practice.
        :exref:`ex_mdl-naive-bayes-duplicated-features`, show that the
        standard deviation of the score gap on real data is $\sqrt k$ times
        the standard deviation that the model predicts. Compute the square of
-       this ratio for the pair pullover/coat of exercise
-       :exref:`ex_mdl-naive-bayes-score-gaps` and for t-shirt/shirt and
+       this ratio for the pairs pullover/coat, t-shirt/shirt, and
        pullover/shirt, and compare it with the fitted $T$.
     1. Apply the prior correction of exercise
        :exref:`ex_mdl-naive-bayes-label-shift` to the temperature-scaled
@@ -1229,11 +1179,10 @@ in practice.
        curves and their asymptotic errors change?
     1. Theorem 4 of :citet:`Ng.Jordan.2002` bounds the excess error of naive
        Bayes by the probability that the score gap of the population model
-       falls near zero. Use the score-gap variances of exercise
-       :exref:`ex_mdl-naive-bayes-score-gaps` to compare this probability for
-       real pixels and for the synthetic data of (d). How does this
-       comparison, together with the asymptotic errors of (c) and (d),
-       account for the two pairs of learning curves?
+       falls near zero. Compare this probability for real pixels and for the
+       synthetic data of (d), and explain how this comparison, together with
+       the asymptotic errors of (c) and (d), accounts for the two pairs of
+       learning curves.
    :exlabel:`ex_mdl-naive-bayes-generative-vs-discriminative`
 
 :begin_tab:`mxnet`

@@ -117,28 +117,63 @@ R, TIMES, MEM = {}, {}, {}  # results (compared at the end); wall clocks
 # and memory sizes (depend on the machine and Python: never compared)
 ATTRIBUTION = ('Text: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 '
                '(ODC-By 1.0)')
-print(f'K={K}, TAU={TAU}, seeds {[hex(0xD2 + s) for s in SEEDS]}, '
-      f'workers {N_WORKERS}, GPU={GPU}, regenerating: '
-      f'{", ".join(sorted(RERUN)) or "none"}')
+
+
+def say(*args, sep=' '):
+    """print, each line wrapped to the page's 100 columns."""
+    print('\n'.join(l if len(l) <= 100 else textwrap.fill(
+        l, 100, subsequent_indent='    ', break_long_words=False,
+        break_on_hyphens=False) for l in sep.join(map(str, args)).split('\n')))
+
+
+say(f'K={K}, TAU={TAU}, seeds {[hex(0xD2 + s) for s in SEEDS]}, '
+    f'workers {N_WORKERS}, GPU={GPU}, regenerating: '
+    f'{", ".join(sorted(RERUN)) or "none"}')
 ```
 
 <!-- Prose: the registry; the pairs file holds ids and edit parameters, no text (the texts are regenerated from FineWeb's stream); the plants file holds benchmark items under their licences (ARC-Challenge is CC BY-SA 4.0); the embeddings are of FineWeb text and benchmark items only. -->
 
-<!-- Pending registrations (cells step, 2026-11-16): the six keys below join this cell as a `#@save` block once uploaded (W9). The section also reads `lm-data-audit-stream-v1` (W2 builder; with the host_pair rows), `lm-data-emb-qwen3emb-v1`, `lm-c1-docs-v1` and `lm-data-quality-results-v1` (20.2), `lm-c0-docs-v1` and `lm-data-crawl-results-v1` (20.1), and the reference tokenizer `lm-r2-tokenizer-v1` (20.6, W5); GSM8K and ARC-Challenge through chapter 18's keys, MMLU through chapter 18's loader. -->
+<!-- Registered (run step, 2026-11-21): the six keys of the `#@save` block below. The section also reads `lm-data-audit-stream-v1` (with the host_pair rows), `lm-data-emb-qwen3emb-v1`, `lm-c1-docs-v1` and `lm-data-quality-results-v1` (20.2), `lm-c0-docs-v1` and `lm-data-crawl-results-v1` (20.1), and the reference tokenizer `lm-r2-tokenizer-v1` (20.6); GSM8K and ARC-Challenge through chapter 18's keys, MMLU through chapter 18's loader. -->
 
 ```{.python .input #dedup-data-hub}
 %%tab pytorch
+#@save
+d2l.DATA_HUB['lm-contam-plant-v1'] = (  # 100 GSM8K, ARC-Challenge and
+    # MMLU test items each, verbatim, reformatted and paraphrased by
+    # Qwen3.5-4B, with FineWeb ids and offsets (20.3); MIT, CC BY-SA 4.0
+    d2l.LM_DATA_URL + 'lm-contam-plant-v1.jsonl',
+    '54e171c603a7133729715881267efb4e2f35a503')
+d2l.DATA_HUB['lm-dedup-pairs-v1'] = (  # 12,000 labelled pairs as ids and
+    # edit parameters, no text (20.3)
+    d2l.LM_DATA_URL + 'lm-dedup-pairs-v1.jsonl.gz',
+    '366ff9d4242d86faffa6796c1af130cb022c8860')
+d2l.DATA_HUB['lm-data-dedup-emb-v1'] = (  # Qwen3-Embedding vectors of the
+    # benchmark items and of 128-word windows of FineWeb documents (20.3)
+    d2l.LM_DATA_URL + 'lm-data-dedup-emb-v1.npz',
+    'a1d73933ad4fa3a34b53427802c003962d2c0532')
+d2l.DATA_HUB['lm-c2-docs-v1'] = (  # keep or drop, stage and reason for
+    # every c0 document, no text (20.3)
+    d2l.LM_DATA_URL + 'lm-c2-docs-v1.jsonl.gz',
+    '9bb87a9e2572038a42f64fcd921ab8661f26b0d4')
+d2l.DATA_HUB['lm-corpus-manifest-v1'] = (  # the nine-stage manifest of
+    # lm-corpus-v1 (20.3)
+    d2l.LM_DATA_URL + 'lm-corpus-manifest-v1.json',
+    '4c2ff314b12af6863aadf776801939e2853637e2')
+d2l.DATA_HUB['lm-data-dedup-results-v1'] = (  # 20.3's numbers
+    d2l.LM_DATA_URL + 'lm-data-dedup-results-v1.json',
+    '90e8d6b236630aad59762b8d13824acf35492f5d')
+
 DEDUP_KEYS = tuple(key for key, _ in ARTIFACTS.values())
 UPSTREAM = ('lm-data-audit-stream-v1', 'lm-data-emb-qwen3emb-v1',
             'lm-c1-docs-v1', 'lm-data-quality-results-v1', 'lm-c0-docs-v1',
             'lm-data-crawl-results-v1', 'lm-r2-tokenizer-v1', 'gsm8k-test',
             'arc-challenge-test')
 for name, keys in (('this section', DEDUP_KEYS), ('upstream', UPSTREAM)):
-    print(f'{name}: registered', ', '.join(
+    say(f'{name}: registered', ', '.join(
         k for k in keys if k in d2l.DATA_HUB) or 'none', '| pending:',
-          ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
-print('MMLU test:', d2l.EVAL_TASKS['mmlu'].dataset,
-      d2l.EVAL_TASKS['mmlu'].revision[:8], '(chapter 18 loader)')
+        ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
+say('MMLU test:', d2l.EVAL_TASKS['mmlu'].dataset,
+    d2l.EVAL_TASKS['mmlu'].revision[:8], '(chapter 18 loader)')
 ```
 
 ```{.python .input #dedup-opening}
@@ -151,9 +186,9 @@ STREAM_S = SLICE[SLICE.role == 'stream'].reset_index(drop=True)
 TEXT = dict(zip(SLICE.id, SLICE.text))
 HOSTS = SLICE[SLICE.role == 'host_pair'].groupby('host').id.apply(list)
 HOST_PAIRS = [p for ids in HOSTS for p in itertools.combinations(ids, 2)]
-print(f'slice: {len(STREAM_S):,} stream documents and '
-      f'{(SLICE.role == "host_pair").sum():,} same-host documents '
-      f'({len(HOSTS):,} hosts, {len(HOST_PAIRS):,} same-host pairs)')
+say(f'slice: {len(STREAM_S):,} stream documents and '
+    f'{(SLICE.role == "host_pair").sum():,} same-host documents '
+    f'({len(HOSTS):,} hosts, {len(HOST_PAIRS):,} same-host pairs)')
 
 host_sets = {i: set(d2l.shingles(TEXT[i]))
              for i in SLICE.id[SLICE.role == 'host_pair']}
@@ -165,17 +200,17 @@ same_hash = (hashlib.sha256(TEXT[a].encode()).digest()
              == hashlib.sha256(TEXT[b].encode()).digest())
 host_of = dict(zip(SLICE.id, SLICE.host))
 small, large = sorted((host_sets[a], host_sets[b]), key=len)
-print(f'\nmost similar same-host pair below J = 1: {host_of[a]}, '
-      f'J = {J_host[top]:.3f}, containment of the smaller '
-      f'{d2l.containment(small, large):.3f}, '
-      f'{len(TEXT[a].split()):,} and {len(TEXT[b].split()):,} words, '
-      f'SHA-256 equal: {same_hash}')
+say(f'\nmost similar same-host pair below J = 1: {host_of[a]}, '
+    f'J = {J_host[top]:.3f}, containment of the smaller '
+    f'{d2l.containment(small, large):.3f}, '
+    f'{len(TEXT[a].split()):,} and {len(TEXT[b].split()):,} words, '
+    f'SHA-256 equal: {same_hash}')
 diff = [line for line in difflib.unified_diff(
     TEXT[a].split('\n'), TEXT[b].split('\n'), lineterm='', n=0)
         if line[:1] in '+-' and line[:3] not in ('---', '+++')]
 for line in diff[:6]:  # the lines in which the two pages differ
-    print('  ' + (line if len(line) <= 100 else line[:99] + '…'))
-print(ATTRIBUTION)
+    say('  ' + (line if len(line) <= 96 else line[:95] + '…'))
+say(ATTRIBUTION)
 
 sets = [set(d2l.shingles(t)) for t in STREAM_S.text[:1000]]
 t0 = time.perf_counter()
@@ -184,13 +219,13 @@ for i in range(len(sets)):
         d2l.jaccard_exact(sets[i], sets[j])
 TIMES['all_pairs_1000'] = time.perf_counter() - t0
 per_pair = TIMES['all_pairs_1000'] / (1000 * 999 / 2)
-print(f'\nexact Jaccard of all pairs of 1,000 documents: measured '
-      f'{TIMES["all_pairs_1000"]:.1f} s ({1e6 * per_pair:.1f} µs per pair);'
-      ' extrapolated (quadratic):')
+say(f'\nexact Jaccard of all pairs of 1,000 documents: measured '
+    f'{TIMES["all_pairs_1000"]:.1f} s ({1e6 * per_pair:.1f} µs per pair);'
+    ' extrapolated (quadratic):')
 for n in (20_000, 10**9):
     sec = n * (n - 1) / 2 * per_pair
-    print(f'  {n:>13,} documents: {sec:.3g} s = {sec / 3600:.3g} hours = '
-          f'{sec / 3.156e7:.3g} years')
+    say(f'  {n:>13,} documents: {sec:.3g} s = {sec / 3600:.3g} hours = '
+        f'{sec / 3.156e7:.3g} years')
 R['opening'] = dict(pair=[a, b], J=J_host[top], n_hosts=len(HOSTS),
                     n_host_pairs=len(HOST_PAIRS), same_sha256=same_hash)
 del host_sets, sets
@@ -226,10 +261,10 @@ for name, texts in (('slice', SLICE.text.tolist()),
         docs=len(texts), distinct=len(h), copies=len(texts) - len(h),
         paragraphs=len(para), shared_paragraphs=len(shared),
         docs_with_shared=docs)
-    print(f'{name}: {len(texts):,} documents, {len(h):,} distinct NFC '
-          f'hashes ({len(texts) - len(h):,} exact copies); {len(shared):,} '
-          f'of {len(para):,} distinct paragraphs occur in more than one '
-          f'document, and {docs:,} documents contain one')
+    say(f'{name}: {len(texts):,} documents, {len(h):,} distinct NFC '
+        f'hashes ({len(texts) - len(h):,} exact copies); {len(shared):,} '
+        f'of {len(para):,} distinct paragraphs occur in more than one '
+        f'document, and {docs:,} documents contain one')
 
 # five paragraphs shared by different slice documents (by count, ties by
 # the paragraph's hash), each with the two documents of lowest id
@@ -239,12 +274,12 @@ for i, t in sorted(TEXT.items()):
         by_para[p].append(i)
 common = sorted((p for p, ids in by_para.items() if len(ids) > 1),
                 key=lambda p: (-len(by_para[p]), nfc_sha256(p)))[:5]
-print()
+say()
 for p in common:
     ids = by_para[p]
-    print(f'{len(ids):>4} documents, e.g. {ids[0][10:18]}… and '
-          f'{ids[1][10:18]}…: {p[:100]!r}')
-print(ATTRIBUTION)
+    say(f'{len(ids):>4} documents, e.g. {ids[0][10:18]}… and '
+        f'{ids[1][10:18]}…: {p[:100]!r}')
+say(ATTRIBUTION)
 R['exact']['common'] = [len(by_para[p]) for p in common]
 ```
 
@@ -295,11 +330,11 @@ SH = {i: set(d2l.shingles(t)) for i, t in TEXT.items()}
 TIMES['shingle_slice'] = time.perf_counter() - t0
 sizes = np.array([len(s) for s in SH.values()])
 mem = sum(sys.getsizeof(s) + sum(map(sys.getsizeof, s)) for s in SH.values())
-print(f'{len(SH):,} documents: shingles per document median '
-      f'{np.median(sizes):,.0f}, 90th percentile '
-      f'{np.percentile(sizes, 90):,.0f}; all shingle sets take '
-      f'{mem / 2**30:.2f} GiB as Python sets, signatures of {K} rows '
-      f'{len(SH) * K * 8 / 2**20:.0f} MiB')
+say(f'{len(SH):,} documents: shingles per document median '
+    f'{np.median(sizes):,.0f}, 90th percentile '
+    f'{np.percentile(sizes, 90):,.0f}; all shingle sets take '
+    f'{mem / 2**30:.2f} GiB as Python sets, signatures of {K} rows '
+    f'{len(SH) * K * 8 / 2**20:.0f} MiB')
 rng = np.random.default_rng(0)
 ids = STREAM_S.id.to_numpy()
 rand = [tuple(ids[rng.choice(len(ids), 2, replace=False)])
@@ -316,8 +351,8 @@ d2l.plot((edges[:-1] + edges[1:]) / 2, counts, 'exact Jaccard of the pair',
          'pairs', legend=['random pairs', 'same-host pairs'], yscale='log',
          xlim=[0, 1], fmts=('o-', 's--'), figsize=(4.5, 3))
 for name, j in (('random', J_rand), ('same-host', J_same)):
-    print(f'{name:>9} pairs: median J {np.median(j):.3f}, 99th percentile '
-          f'{np.percentile(j, 99):.3f}, J >= {TAU}: {np.sum(j >= TAU)}')
+    say(f'{name:>9} pairs: median J {np.median(j):.3f}, 99th percentile '
+        f'{np.percentile(j, 99):.3f}, J >= {TAU}: {np.sum(j >= TAU)}')
 MEM['shingle_sets'] = mem
 R['jaccard'] = dict(median_shingles=np.median(sizes),
                     random=np.percentile(J_rand, [50, 90, 99]).tolist(),
@@ -391,11 +426,11 @@ for J in np.round(np.arange(0.1, 1.0, 0.1), 1):
                      var_ratio=np.var(ours, ddof=1) / (J * (1 - J) / K),
                      z_datasketch=(np.mean(oracle) - J) / se))
 D1 = pd.DataFrame(rows)
-print(D1.round(4).to_string(index=False))
+say(D1.round(4).to_string(index=False))
 assert (D1.z.abs() <= 3).all() and (D1.z_datasketch.abs() <= 3).all()
 assert D1.var_ratio.between(0.7, 1.3).all()
-print(f'95% half-width at J = 0.8, k = {K}: '
-      f'{1.96 * math.sqrt(0.8 * 0.2 / K):.4f}')
+say(f'95% half-width at J = 0.8, k = {K}: '
+    f'{1.96 * math.sqrt(0.8 * 0.2 / K):.4f}')
 
 def reference(shingle_list, k=K, seed=0xD2):
     """The specification in Python integers: no NumPy arithmetic."""
@@ -411,12 +446,12 @@ sigs = [d2l.minhash_signature(d2l.shingles(t), K)
         for t in d2l.MINHASH_FIXTURE]
 same = [s.tolist() == reference(d2l.shingles(t))
         for s, t in zip(sigs, d2l.MINHASH_FIXTURE)]
-print(f'fixture: signatures equal to the Python-integer specification: '
-      f'{sum(same)} of {len(same)}')
+say(f'fixture: signatures equal to the Python-integer specification: '
+    f'{sum(same)} of {len(same)}')
 assert all(same), 'not bit-exact to the specification'
 fix = hashlib.sha256(b''.join(s.astype('<u8').tobytes() for s in sigs))
-print(f'fixture signatures: SHA-256 {fix.hexdigest()[:16]}…, pinned '
-      f'{d2l.MINHASH_FIXTURE_SHA256[:16]}…')
+say(f'fixture signatures: SHA-256 {fix.hexdigest()[:16]}…, pinned '
+    f'{d2l.MINHASH_FIXTURE_SHA256[:16]}…')
 assert fix.hexdigest() == d2l.MINHASH_FIXTURE_SHA256, 'fixture changed'
 R['minhash'] = dict(table=D1.to_dict('list'), fixture=fix.hexdigest(),
                     reference_equal=sum(same))
@@ -528,34 +563,34 @@ def near_dedup(texts, threshold=0.8, ngram=5, num_perm=128, seed=0, *,
 paper = (0.56, 0.77, 0.92, 0.988)  # FineWeb's matched probabilities
 ours = [round(float(d2l.scurve(s, 14, 8)), 2 if p < 0.98 else 3)
         for s, p in zip((0.7, 0.75, 0.8, 0.85), paper)]
-print('(14, 8) at s = 0.7, 0.75, 0.8, 0.85:', ours, '| paper:', paper)
+say('(14, 8) at s = 0.7, 0.75, 0.8, 0.85:', ours, '| paper:', paper)
 assert tuple(ours) == paper
-print(f'b = r = 2: P(0.5) = {d2l.scurve(0.5, 2, 2):.4f}, '
-      f'P(0.9) = {d2l.scurve(0.9, 2, 2):.4f}')
+say(f'b = r = 2: P(0.5) = {d2l.scurve(0.5, 2, 2):.4f}, '
+    f'P(0.9) = {d2l.scurve(0.9, 2, 2):.4f}')
 s = np.linspace(0, 1, 200_001)
 for b, r in ((14, 8), (9, 13), (20, 5)):
     slope = np.gradient(d2l.scurve(s, b, r), s)
     steep = ((r - 1) / (b * r - 1)) ** (1 / r)
-    print(f'({b}, {r}): steepest at {s[np.argmax(slope)]:.4f}; '
-          f'((r - 1)/(br - 1))^(1/r) = {steep:.4f}; '
-          f'(1/b)^(1/r) = {(1 / b) ** (1 / r):.4f}')
+    say(f'({b}, {r}): steepest at {s[np.argmax(slope)]:.4f}; '
+        f'((r - 1)/(br - 1))^(1/r) = {steep:.4f}; '
+        f'(1/b)^(1/r) = {(1 / b) ** (1 / r):.4f}')
     assert abs(s[np.argmax(slope)] - steep) < 1e-4
 
 BR = d2l.best_br(K, TAU)
 brute = {(b, r): d2l._br_error(b, r, TAU) for r in range(1, K + 1)
          for b in range(1, K // r + 1)}  # every b r <= K
 best = min(brute, key=brute.get)
-print(f'best_br({K}, {TAU}) = {BR}, error {d2l._br_error(*BR, TAU):.4f}; '
-      f'brute force over b r <= {K}: {best}, error {brute[best]:.4f}')
+say(f'best_br({K}, {TAU}) = {BR}, error {d2l._br_error(*BR, TAU):.4f}; '
+    f'brute force over b r <= {K}: {best}, error {brute[best]:.4f}')
 assert BR == (9, 13) and abs(brute[best] - d2l._br_error(*BR, TAU)) < 1e-9
 for r in (12, 13, 14):
-    print(f'  ({K // r}, {r}): error {d2l._br_error(K // r, r, TAU):.4f}, '
-          f'P({TAU}) = {d2l.scurve(TAU, K // r, r):.3f}')
+    say(f'  ({K // r}, {r}): error {d2l._br_error(K // r, r, TAU):.4f}, '
+        f'P({TAU}) = {d2l.scurve(TAU, K // r, r):.3f}')
 lsh = MinHashLSH(threshold=TAU, num_perm=K)
 DS_BR = (lsh.b, lsh.r)
 BR5 = d2l.best_br(K, TAU, w_fn=5.0)
-print(f'datasketch MinHashLSH(threshold={TAU}, num_perm={K}): (b, r) = '
-      f'{DS_BR}; best_br with w_fn = 5: {BR5}')
+say(f'datasketch MinHashLSH(threshold={TAU}, num_perm={K}): (b, r) = '
+    f'{DS_BR}; best_br with w_fn = 5: {BR5}')
 R['scurve'] = dict(paper=list(ours), best_br=list(BR), brute=list(best),
                    datasketch=list(DS_BR), best_br_w5=list(BR5))
 ```
@@ -648,7 +683,7 @@ VOCAB = d2l._dup_vocab(STREAM_S.text)
 if 'dedup-pairs' in RERUN:
     t0 = time.perf_counter()
     rows = d2l.make_dup_pairs(SLICE, d2l.DUP_PAIRS_SPEC, seed=0)
-    print(f'made {len(rows):,} pairs in {time.perf_counter() - t0:.0f} s')
+    say(f'made {len(rows):,} pairs in {time.perf_counter() - t0:.0f} s')
     d2l.lm_save_rerun(PAIRS_FILE, lambda f: d2l.write_docs(f, rows))
 with gzip.open(d2l.lm_artifact(
         PAIRS_KEY, PAIRS_FILE if 'dedup-pairs' in RERUN else None),
@@ -661,13 +696,13 @@ J_live = np.array([d2l.jaccard_exact(d2l.shingles(x), d2l.shingles(y))
                    for x, y in PAIR_TEXT])
 TIMES['pairs_regen'] = time.perf_counter() - t0
 gap = np.abs(J_live - PAIRS.J.to_numpy()).max()
-print(f'{len(PAIRS):,} pairs regenerated from the stream in '
-      f'{TIMES["pairs_regen"]:.0f} s; largest |J - stored J| {gap:.1e}')
+say(f'{len(PAIRS):,} pairs regenerated from the stream in '
+    f'{TIMES["pairs_regen"]:.0f} s; largest |J - stored J| {gap:.1e}')
 assert gap <= 1e-12, 'the regenerated texts differ from the registered ones'
 counts = PAIRS.groupby(['op', 'split']).size().unstack()
 counts['label rate'] = PAIRS.groupby('op').label.mean().round(3)
 counts['median J'] = PAIRS.groupby('op').J.median().round(3)
-print(counts.to_string())
+say(counts.to_string())
 R['pairs'] = dict(n=len(PAIRS), by_op=PAIRS.op.value_counts().to_dict(),
                   labels=int(PAIRS.label.sum()))
 ```
@@ -698,9 +733,9 @@ cand, rep = d2l.lsh_candidates(PSIGS[0xD2], 9, 13)  # the bucket pipeline
 via = np.array([(min(i, j), max(i, j)) in cand for i, j in zip(ia, ib)])
 assert (via == DECIDE[9, 13, 0]).all() and not rep['cut']
 TIMES['scurve_measure'] = time.perf_counter() - t0
-print(f'{len(uniq):,} distinct pair documents, {len(SEEDS)} seeds, '
-      f'{len(CONFIGS)} settings: {TIMES["scurve_measure"]:.0f} s; bucket '
-      f'pipeline at (9, 13) = per-pair band test on all {len(PAIRS):,} pairs')
+say(f'{len(uniq):,} distinct pair documents, {len(SEEDS)} seeds, '
+    f'{len(CONFIGS)} settings: {TIMES["scurve_measure"]:.0f} s; bucket '
+    f'pipeline at (9, 13) = per-pair band test on all {len(PAIRS):,} pairs')
 
 J = PAIRS.J.to_numpy()
 BINS = np.minimum((J / 0.05).astype(int), 19)
@@ -720,17 +755,17 @@ inf = SC[SC.n >= 30]
 per = inf.groupby(['b', 'r']).inside.mean()
 n_out, n_cells = int((~inf.inside).sum()), len(inf)
 bound = stats.binom.ppf(0.999, n_cells, 0.05)
-print(f'{n_cells} (setting, bin, seed) cells with n >= 30: {n_out} outside '
-      f'their 95% interval (a correct hash: about 5% or fewer, at most '
-      f'{bound:.0f} at the 0.999 level); share inside per (b, r): '
-      + ', '.join(f'{b}x{r} {v:.2f}' for (b, r), v in per.items()))
+say(f'{n_cells} (setting, bin, seed) cells with n >= 30: {n_out} outside '
+    f'their 95% interval (a correct hash: about 5% or fewer, at most '
+    f'{bound:.0f} at the 0.999 level); share inside per (b, r): '
+    + ', '.join(f'{b}x{r} {v:.2f}' for (b, r), v in per.items()))
 assert n_out <= bound, 'the candidate rates depart from the S-curve'
 show = SC[(SC.b == 9) & (SC.r == 13) & (SC.n >= 30)].pivot_table(
     index=['bin', 'n', 'J_mean', 'expected', 'lo', 'hi'], columns='seed',
     values='observed').reset_index()
-print('\n(9, 13): observed candidates per seed against the expected count '
-      'and its interval')
-print(show.round(3).to_string(index=False))
+say('\n(9, 13): observed candidates per seed against the expected count '
+    'and its interval')
+say(show.round(3).to_string(index=False))
 
 s_grid = np.linspace(0, 1, 501)
 theory = [(14, 8), (9, 13), (20, 5), (8, 16), (450, 20)]
@@ -738,9 +773,9 @@ d2l.set_figsize((5, 3.5))
 ax = d2l.plt.gca()
 d2l.plot_intervals(s_grid, {f'{b} x {r}': (d2l.scurve(s_grid, b, r),) * 3
                             for b, r in theory}, 'exact Jaccard of the pair',
-                   'P(candidate)', kind='band', axes=ax,
-                   marks={f'threshold {TAU}': ('--', {
-                       '9 x 13': ([TAU, TAU], [0, 1])})})
+                   'P(candidate)', kind='band', axes=ax)
+ax.axvline(TAU, linestyle='--', color='black', linewidth=0.8,
+           label=f'threshold {TAU}')
 pooled = SC[SC.n >= 30].groupby(['b', 'r', 'bin']).agg(
     J_mean=('J_mean', 'first'), n=('n', 'first'), obs=('observed', 'sum'),
     exp=('expected', 'first')).reset_index()
@@ -792,13 +827,13 @@ for w in (1, 5):
     err = train.FP + w * train.FN
     best_row = train.loc[err.idxmin()]
     CHOSEN[w] = (int(best_row.b), int(best_row.r))
-print('the grid, means over three seeds (FP, FN: counts on the split):')
-print(GRID.round(3).to_string(index=False))
+say('the grid, means over three seeds (FP, FN: counts on the split):')
+say(GRID.round(3).to_string(index=False))
 steps = abs(R_GRID.index(CHOSEN[1][1]) - R_GRID.index(BR[1]))
-print(f'\nchosen on train: w_fn = 1 -> {CHOSEN[1]}, w_fn = 5 -> '
-      f'{CHOSEN[5]}; the D3 optimum {BR} is {steps} grid step(s) from the '
-      f'w_fn = 1 choice; FineWeb (14, 8) on 112 rows and datasketch '
-      f'{DS_BR} are rows of the table')
+say(f'\nchosen on train: w_fn = 1 -> {CHOSEN[1]}, w_fn = 5 -> '
+    f'{CHOSEN[5]}; the D3 optimum {BR} is {steps} grid step(s) from the '
+    f'w_fn = 1 choice; FineWeb (14, 8) on 112 rows and datasketch '
+    f'{DS_BR} are rows of the table')
 
 def f1_diff_ci(pa, pb, m, n_boot=2000, seed=0):
     """F1(pa) - F1(pb) on the pairs m with a cluster-bootstrap 95% interval
@@ -827,9 +862,9 @@ def compare(br, br2, w):
     eb = d2l.paired_bootstrap(cost(pb)[split['test']],
                               cost(pa)[split['test']], n_boot=2000,
                               cluster=cluster[split['test']])
-    print(f'test, w_fn = {w}: F1 of {br[0]} x {br[1]} minus {br2[0]} x '
-          f'{br2[1]}: {d:+.4f} [{lo:+.4f}, {hi:+.4f}]; weighted errors per '
-          f'pair saved: {eb.mean:+.4f} [{eb.ci[0]:+.4f}, {eb.ci[1]:+.4f}]')
+    say(f'test, w_fn = {w}: F1 of {br[0]} x {br[1]} minus {br2[0]} x '
+        f'{br2[1]}: {d:+.4f} [{lo:+.4f}, {hi:+.4f}]; weighted errors per '
+        f'pair saved: {eb.mean:+.4f} [{eb.ci[0]:+.4f}, {eb.ci[1]:+.4f}]')
     return [d, lo, hi, eb.mean, *eb.ci]
 
 R['choose'] = dict(grid=GRID.round(6).to_dict('list'),
@@ -852,9 +887,9 @@ for w in (1, 5):
         p = d2l.scurve(J_tr, K // r, r)
         exp_err[K // r, r] = float(np.sum(p * ~y_tr + w * (1 - p) * y_tr))
     arg = min(exp_err, key=exp_err.get)
-    print(f'w_fn = {w}: expected weighted error on train under the pairs\' '
-          f'J: least at {arg} ({exp_err[arg]:.1f}); at the D3 optimum '
-          f'{BR}: {exp_err[BR]:.1f}; measured choice {CHOSEN[w]}')
+    say(f'w_fn = {w}: expected weighted error on train under the pairs\' '
+        f'J: least at {arg} ({exp_err[arg]:.1f}); at the D3 optimum '
+        f'{BR}: {exp_err[BR]:.1f}; measured choice {CHOSEN[w]}')
     assert arg == CHOSEN[w], 'the hashed choice departs from its expectation'
     R['choose']['expected'][str(w)] = dict(argmin=list(arg),
                                            at_argmin=exp_err[arg],
@@ -870,7 +905,7 @@ ax = d2l.plot_intervals(
     marks={f'chosen, w_fn = {w}': (m, {'train': (
         [CHOSEN[w][1]], tr.F1[tr.r == CHOSEN[w][1]].to_numpy() + 0.015)})
         for w, m in ((1, 'v'), (5, 'D'))})  # a marker above the point
-ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))  # beside the axes
+_ = ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))  # beside
 ```
 
 <!-- Prose: the cost of candidates at scale (the expected number among N documents is the number of pairs times the mean of P over their similarities, so the low-similarity bulk matters through P(0.3) and P(0.5)); the slice's observed candidates scaled up, with the caveat that the slice's similarity distribution is not a corpus's; giant buckets of templated pages and max_bucket. -->
@@ -881,23 +916,23 @@ N = 10**6
 for br in (CHOSEN[1], (14, 8)):
     p3, p5 = d2l.scurve(0.3, *br), d2l.scurve(0.5, *br)
     exp = N * (N - 1) / 2 * 1e-3 * p5
-    print(f'{br}: P(0.3) = {p3:.2e}, P(0.5) = {p5:.4f}; N = 10^6 with 0.1% '
-          f'of pairs at s = 0.5: {exp:.2e} expected candidate pairs')
+    say(f'{br}: P(0.3) = {p3:.2e}, P(0.5) = {p5:.4f}; N = 10^6 with 0.1% '
+        f'of pairs at s = 0.5: {exp:.2e} expected candidate pairs')
 t0 = time.perf_counter()
 SLICE_SIGS = d2l._minhash_texts(SLICE.text, K, (0xD2,), 5,
                                 N_WORKERS)[0xD2]
 TIMES['slice_signatures'] = time.perf_counter() - t0
 n = len(SLICE)
-print(f'slice: {n:,} signatures in {TIMES["slice_signatures"]:.0f} s '
-      f'({N_WORKERS} workers); candidate pairs, per 1,000 documents, and '
-      'scaled by (N/n)^2 to N = 10^6 (a measured count, not a corpus '
-      'estimate: FineWeb is already deduplicated within its dump):')
+say(f'slice: {n:,} signatures in {TIMES["slice_signatures"]:.0f} s '
+    f'({N_WORKERS} workers); candidate pairs, per 1,000 documents, and '
+    'scaled by (N/n)^2 to N = 10^6 (a measured count, not a corpus '
+    'estimate: FineWeb is already deduplicated within its dump):')
 R['cost'] = dict(n=n)
 for br in (CHOSEN[1], (14, 8), (32, 4)):
     cand, rep = d2l.lsh_candidates(SLICE_SIGS, *br)
-    print(f'  {br}: {len(cand):,} pairs, {len(cand) / (n / 1000):.2f} per '
-          f'1,000, {len(cand) * (N / n) ** 2:.2e} scaled; largest bucket '
-          f'{rep["largest"]} members, {len(rep["cut"])} cut to max_bucket')
+    say(f'  {br}: {len(cand):,} pairs, {len(cand) / (n / 1000):.2f} per '
+        f'1,000, {len(cand) * (N / n) ** 2:.2e} scaled; largest bucket '
+        f'{rep["largest"]} members, {len(rep["cut"])} cut to max_bucket')
     R['cost'][f'{br[0]}x{br[1]}'] = dict(candidates=len(cand),
                                          largest_bucket=rep['largest'],
                                          cut=len(rep['cut']))
@@ -918,10 +953,10 @@ assert d2l.near_dedup(SLICE.text.tolist(), TAU, workers=N_WORKERS) == keep
 TIMES['near_dedup'] = time.perf_counter() - t0
 size = collections.Counter(LABELS.tolist())
 FLAGGED = np.array([size[c] > 1 for c in LABELS])  # in a cluster of two+
-print(f'slice, near_dedup(threshold={TAU}) at {BR}: {len(keep):,} of '
-      f'{len(SLICE):,} kept; by role: ' + ', '.join(
-          f'{role} {FLAGGED[(SLICE.role == role).to_numpy()].mean():.2%} in '
-          'clusters' for role in ('stream', 'host_pair')))
+say(f'slice, near_dedup(threshold={TAU}) at {BR}: {len(keep):,} of '
+    f'{len(SLICE):,} kept; by role: ' + ', '.join(
+        f'{role} {FLAGGED[(SLICE.role == role).to_numpy()].mean():.2%} in '
+        'clusters' for role in ('stream', 'host_pair')))
 R['dedup_run'] = dict(slice_kept=len(keep), slice_largest_bucket=rep[
     'largest'])
 
@@ -936,12 +971,12 @@ c1_keep = [i for i in range(len(C1)) if c1_lab[i] == i]
 c1_keep_d3 = d2l.near_dedup(c1_text, TAU)  # its default (b, r): D3's
 c1_size = collections.Counter(c1_lab.tolist())
 multi = {c: k for c, k in c1_size.items() if k > 1}
-print(f'c1 at {CHOSEN[1]} (chosen on train; the manifest below): '
-      f'{len(c1_keep):,} of {len(C1):,} kept; {len(multi)} clusters of two '
-      f'or more ({sum(multi.values())} documents); largest bucket '
-      f'{c1_rep["largest"]}, cut buckets: {c1_rep["cut"] or "none"}')
-print(f'c1 by near_dedup(threshold={TAU}) at its default {BR}: '
-      f'{len(c1_keep_d3):,} kept')
+say(f'c1 at {CHOSEN[1]} (chosen on train; the manifest below): '
+    f'{len(c1_keep):,} of {len(C1):,} kept; {len(multi)} clusters of two '
+    f'or more ({sum(multi.values())} documents); largest bucket '
+    f'{c1_rep["largest"]}, cut buckets: {c1_rep["cut"] or "none"}')
+say(f'c1 by near_dedup(threshold={TAU}) at its default {BR}: '
+    f'{len(c1_keep_d3):,} kept')
 largest = sorted(multi, key=lambda c: (-multi[c], C1[c].id))[:5]
 c1_sets = {}
 for c in largest:
@@ -950,8 +985,8 @@ for c in largest:
         c1_sets.setdefault(i, set(d2l.shingles(C1[i].text)))
     Js = [d2l.jaccard_exact(c1_sets[c], c1_sets[i]) for i in members[1:]]
     hosts = {d2l._url_host(C1[i].url) for i in members}
-    print(f'  {len(members):>3} documents on {len(hosts)} host(s), J to the '
-          f'representative {min(Js):.2f}-{max(Js):.2f}')
+    say(f'  {len(members):>3} documents on {len(hosts)} host(s), J to the '
+        f'representative {min(Js):.2f}-{max(Js):.2f}')
 R['dedup_run'].update(c1_kept=len(c1_keep), c1_kept_d3=len(c1_keep_d3),
                       c1_clusters=len(multi),
                       c1_in_clusters=sum(multi.values()),
@@ -1069,19 +1104,19 @@ n_cov = np.bincount(doc_of[covered], minlength=len(doc_ids))
 touched = n_cov >= 50
 flag = dict(zip(SLICE.id, FLAGGED))
 in_mh = np.array([flag[i] for i in sample.id])
-print(f'{len(sample):,} documents, {nbytes[len(sample) - 1] / 2**20:.2f} '
-      f'MiB, {len(seq) - len(doc_ids):,} tokens: suffix array and LCP in '
-      f'{TIMES["suffix_array"]:.1f} s; {len(spans):,} maximal repeats of 50+ '
-      f'tokens covering {covered.mean():.2%} of the tokens')
+say(f'{len(sample):,} documents, {nbytes[len(sample) - 1] / 2**20:.2f} '
+    f'MiB, {len(seq) - len(doc_ids):,} tokens: suffix array and LCP in '
+    f'{TIMES["suffix_array"]:.1f} s; {len(spans):,} maximal repeats of 50+ '
+    f'tokens covering {covered.mean():.2%} of the tokens')
 for start, length, count in spans[:3]:
     d = doc_of[start]
     text = TOK.decode(seq[start:start + length].tolist()).replace('\n', ' ')
-    print(f'  {length} tokens x {count} (from {sample.id.iloc[d][10:18]}…): '
-          f'{text[:100]!r}')
-print(f'documents with 50+ repeated tokens: {touched.sum()}; of these in a '
-      f'MinHash cluster: {in_mh[touched].sum()}; MinHash-clustered '
-      f'documents in the sample: {in_mh.sum()}')
-print(ATTRIBUTION)
+    say(f'  {length} tokens x {count} (from {sample.id.iloc[d][10:18]}…): '
+        f'{text[:100]!r}')
+say(f'documents with 50+ repeated tokens: {touched.sum()}; of these in a '
+    f'MinHash cluster: {in_mh[touched].sum()}; MinHash-clustered '
+    f'documents in the sample: {in_mh.sum()}')
+say(ATTRIBUTION)
 R['substring'] = dict(docs=len(sample), tokens=len(seq) - len(doc_ids),
                       spans=len(spans), covered=covered.mean(),
                       longest=[list(t[1:]) for t in spans[:3]],
@@ -1098,8 +1133,7 @@ R['substring'] = dict(docs=len(sample), tokens=len(seq) - len(doc_ids),
 %%tab pytorch
 emb = np.load(d2l.lm_artifact('lm-data-emb-qwen3emb-v1'))
 assert (emb['stream_ids'] == STREAM_S.id.to_numpy().astype(str)).all()
-sub = np.sort(np.random.default_rng(0).choice(len(STREAM_S), 4000,
-                                              replace=False))
+sub = np.arange(len(STREAM_S))  # the whole stream (vectors registered)
 X = emb['stream'][sub].astype(np.float64)  # k-means casts to float32
 X /= np.linalg.norm(X, axis=1, keepdims=True)
 _, assign = d2l.kmeans(X, 64, seed=0)
@@ -1114,8 +1148,12 @@ for c in range(64):  # within a cluster: the most similar earlier document
     best_sim[m[1:]] = sim[1:].max(axis=1)
     partner[m[1:]] = m[sim[1:].argmax(axis=1)]
 mh = np.array([flag[i] for i in STREAM_S.id.iloc[sub]])
+q = np.quantile(best_sim[best_sim > -1], [0.5, 0.99, 1.0])
+say(f'{len(sub):,} stream documents in 64 clusters; cosine to the most '
+    f'similar earlier member: median {q[0]:.3f}, 99th percentile '
+    f'{q[1]:.3f}, largest {q[2]:.3f}')
 rows, before = [], np.zeros(len(sub), dtype=bool)
-for eps in (0.01, 0.02, 0.05, 0.1, 0.2):
+for eps in (0.05, 0.1, 0.15, 0.2, 0.3):
     gone = best_sim > 1 - eps
     rows.append(dict(eps=eps, removed=int(gone.sum()), fraction=gone.mean(),
                      also_minhash=int((gone & mh).sum())))
@@ -1124,13 +1162,14 @@ for eps in (0.01, 0.02, 0.05, 0.1, 0.2):
     for j in new[np.argsort(best_sim[new])][:2]:  # nearest the threshold
         x, z = STREAM_S.id.iloc[sub[j]], STREAM_S.id.iloc[sub[partner[j]]]
         J_xz = d2l.jaccard_exact(d2l.shingles(TEXT[x]), d2l.shingles(TEXT[z]))
-        print(f'eps {eps}: cosine {best_sim[j]:.3f}, J {J_xz:.2f}\n    '
-              f'{TEXT[x][:100]!r}\n    {TEXT[z][:100]!r}')
+        say(f'eps {eps}: cosine {best_sim[j]:.3f}, J {J_xz:.2f}\n    '
+            f'{TEXT[x][:90]!r}\n    {TEXT[z][:90]!r}')
 SEM = pd.DataFrame(rows)
-print(SEM.round(4).to_string(index=False))
-print(f'MinHash clusters among the 4,000: {mh.sum()} documents')
-print(ATTRIBUTION)
-R['semantic'] = SEM.round(6).to_dict('list')
+say(SEM.round(5).to_string(index=False))
+say(f'documents in MinHash clusters among them: {mh.sum()}')
+say(ATTRIBUTION)
+R['semantic'] = dict(SEM.round(6).to_dict('list'), n=len(sub),
+                     cos_quantiles=q.round(6).tolist())
 ```
 
 ## Decontamination
@@ -1184,17 +1223,17 @@ qshort = collections.Counter(it['benchmark'] for it in ITEMS
                              if words(it['question']) < N_GRAM)
 n_items = collections.Counter(it['benchmark'] for it in ITEMS)
 assert dict(n_items) == dict(gsm8k=1319, arc=1172, mmlu=14042), n_items
-print(f'{len(ITEMS):,} test items ({dict(n_items)}), {len(INDEX.keys):,} '
-      f'distinct {N_GRAM}-grams, built in {TIMES["index"]:.0f} s')
+say(f'{len(ITEMS):,} test items ({dict(n_items)}), {len(INDEX.keys):,} '
+    f'distinct {N_GRAM}-grams, built in {TIMES["index"]:.0f} s')
 for bench in n_items:
-    print(f'  {bench}: {short[bench]} items with fewer than {N_GRAM} words '
-          f'(question and answer), {qshort[bench]} with a shorter question')
+    say(f'  {bench}: {short[bench]} items with fewer than {N_GRAM} words '
+        f'(question and answer), {qshort[bench]} with a shorter question')
 R['decontam'] = dict(items=dict(n_items), short=dict(short),
                      short_question=dict(qshort))
 PLANTS_KEY, PLANTS_FILE = ARTIFACTS['dedup-plants']
 if PLANTS_PENDING:
-    print('the plants are made in this run (below); the detectors run '
-          'once they are registered')
+    say('the plants are made in this run (below); the detectors run '
+        'once they are registered')
 else:
     PLANTS_PATH = d2l.lm_artifact(PLANTS_KEY)
     with open(PLANTS_PATH, encoding='utf-8') as f:
@@ -1215,18 +1254,18 @@ else:
     DECON = pd.DataFrame(rows)
     ctrl = PL[PL.form == 'control']
     fp = int(ctrl.ngram_any.sum())
-    print('\n13-gram index: planted items found, by benchmark and form')
-    print(DECON.round(3).to_string(index=False))
-    print(f'controls flagged: {fp} of {len(ctrl)} (Wilson 95% interval '
-          f'{d2l.wilson_ci(fp, len(ctrl))[0]:.4f}-'
-          f'{d2l.wilson_ci(fp, len(ctrl))[1]:.4f})')
+    say('\n13-gram index: planted items found, by benchmark and form')
+    say(DECON.round(3).to_string(index=False))
+    say(f'controls flagged: {fp} of {len(ctrl)} (Wilson 95% interval '
+        f'{d2l.wilson_ci(fp, len(ctrl))[0]:.4f}-'
+        f'{d2l.wilson_ci(fp, len(ctrl))[1]:.4f})')
     for _, r in ctrl[ctrl.ngram_any].iterrows():  # look at the span
         tag = HITS[r.doc_id][0][0]
         grams = set(d2l.shingles(ITEMS[ITEM_POS[tag]]['text'], N_GRAM))
         span = next(g for g in d2l.shingles(DOCS[r.doc_id], N_GRAM)
                     if g in grams)
-        print(f'  control {r.doc_id[10:18]}… shares {HITS[r.doc_id][0][1]} '
-              f'{N_GRAM}-gram(s) with {tag}, e.g. {span!r}')
+        say(f'  control {r.doc_id[10:18]}… shares {HITS[r.doc_id][0][1]} '
+            f'{N_GRAM}-gram(s) with {tag}, e.g. {span!r}')
     exact_forms = DECON[DECON.form.isin(['verbatim', 'reformat'])]
     assert (exact_forms.found == exact_forms.n).all(), 'a missed plant: a bug'
     R['decontam'].update(ngram=DECON.round(6).to_dict('list'),
@@ -1264,8 +1303,8 @@ if not PLANTS_PENDING:
             made_by=np.array(f'{EMBEDDER}@'
                              f'{d2l.HF_ENCODER_REVISIONS[EMBEDDER]} '
                              'max_len=512 pool=last bf16'))
-        print(f'embedded {len(ITEMS):,} items and {len(WIN):,} windows in '
-              f'{time.perf_counter() - t0:.0f} s, {d2l.lm_peak()}')
+        say(f'embedded {len(ITEMS):,} items and {len(WIN):,} windows in '
+            f'{time.perf_counter() - t0:.0f} s, {d2l.lm_peak()}')
         def write(path):
             members = {}
             for k, v in arrays.items():
@@ -1318,13 +1357,13 @@ if not PLANTS_PENDING:
                          median_words=g.words.median(),
                          ngram=PL.loc[g.index].ngram_found.mean()))
     EMBT = pd.DataFrame(rows)
-    print(f'embedding detector: {len(WIN):,} windows of {SIZE} words every '
-          f'{STRIDE}; threshold {THR:.4f} (99th percentile of the '
-          f'{len(calib):,} controls of the plants file); held-out controls '
-          f'above it: {fp} of {len(held):,} (Wilson 95% interval '
-          f'{fp_lo:.4f}-{fp_hi:.4f})')
-    print('recall by form; fits: some window holds the whole plant')
-    print(EMBT.round(3).to_string(index=False))
+    say(f'embedding detector: {len(WIN):,} windows of {SIZE} words every '
+        f'{STRIDE}; threshold {THR:.4f} (99th percentile of the '
+        f'{len(calib):,} controls of the plants file); held-out controls '
+        f'above it: {fp} of {len(held):,} (Wilson 95% interval '
+        f'{fp_lo:.4f}-{fp_hi:.4f})')
+    say('recall by form; fits: some window holds the whole plant')
+    say(EMBT.round(3).to_string(index=False))
 
     texts = [it['text'] for it in ITEMS[:8]] + [w[2] for w in WIN[:8]]
     live = d2l.embed_docs(texts, EMBEDDER, device='cpu').astype(np.float32)
@@ -1332,8 +1371,8 @@ if not PLANTS_PENDING:
         np.float32)
     cos = np.sum(live * reg, 1) / np.linalg.norm(live, axis=1) / \
         np.linalg.norm(reg, axis=1)
-    print(f'live check, 8 items and 8 windows on the CPU: cosine to the '
-          f'registered vectors min {cos.min():.4f}')
+    say(f'live check, 8 items and 8 windows on the CPU: cosine to the '
+        f'registered vectors min {cos.min():.4f}')
     assert cos.min() >= LIVE_COS_MIN
     R['decontam_emb'] = dict(
         table=json.loads(EMBT.to_json(orient='records')), thr=THR,
@@ -1345,26 +1384,37 @@ if not PLANTS_PENDING:
 
 ```{.python .input #dedup-plants}
 %%tab pytorch
-PARAPHRASE_PROMPT_V1 = (
-    'Rewrite the following test question so that it asks the same thing in '
-    'different words. Change the wording and the sentence structure of the '
-    'question and of each answer option. Keep every number, keep the '
-    'options in the same order with the same letters, and keep the final '
-    'answer line. Write only the rewritten question.\n\n{text}')
-PROMPT_SHA = hashlib.sha256(PARAPHRASE_PROMPT_V1.encode('utf-8')).hexdigest()
+# one prompt for pages with lettered options (ARC, MMLU) and one for pages
+# without (GSM8K): a prompt that mentions options at all made Qwen3.5-4B
+# invent four options for 15-33 of the 100 GSM8K questions
+PARAPHRASE_PROMPTS = dict(
+    options='Rewrite the following test question so that it asks the same '
+    'thing in different words. Change the wording and the sentence '
+    'structure of the question and of each answer option. Keep every '
+    'number as it is written, keep the options in the same order with the '
+    'same letters, and keep the final answer line unchanged. Write only '
+    'the rewritten question.\n\n{text}',
+    plain='Rewrite the following word problem so that it asks the same '
+    'thing in different words. Change the wording and the sentence '
+    'structure. Keep every number as it is written, and keep the final '
+    'answer line unchanged. Write only the rewritten problem.\n\n{text}')
+PROMPT_SHA = hashlib.sha256(json.dumps(
+    PARAPHRASE_PROMPTS, sort_keys=True).encode('utf-8')).hexdigest()
+opts = lambda t: len(re.findall(r'(?m)^\s*\(?[A-J][).]\s', t))
 if PLANTS_PENDING:
     model, tok = d2l.load_hf(PARAPHRASER)
 
     def paraphrase(texts):
         t0 = time.perf_counter()
         gens = d2l.generate(model, tok, [[{
-            'role': 'user', 'content': PARAPHRASE_PROMPT_V1.format(text=t)}]
+            'role': 'user', 'content': PARAPHRASE_PROMPTS[
+                'options' if opts(t) else 'plain'].format(text=t)}]
             for t in texts], max_new_tokens=256, chat=True,
             enable_thinking=False, batch_size=16)
         assert not any('<think>' in g.text for g in gens)
         cut = sum(g.finish_reason == 'length' for g in gens)
-        print(f'{len(gens)} paraphrases in {time.perf_counter() - t0:.0f} s,'
-              f' {cut} cut at 256 tokens, {d2l.lm_peak()}')
+        say(f'{len(gens)} paraphrases in {time.perf_counter() - t0:.0f} s,'
+            f' {cut} cut at 256 tokens, {d2l.lm_peak()}')
         assert cut == 0, 'a paraphrase was cut: raise max_new_tokens'
         return [g.text.strip() for g in gens]
 
@@ -1375,14 +1425,14 @@ if PLANTS_PENDING:
     d2l.lm_free()
     d2l.lm_save_rerun(PLANTS_FILE, lambda f: d2l.write_jsonl(f, PLANTS))
 PL0 = pd.DataFrame(PLANTS)
-print(PL0.groupby(['form', 'benchmark'], dropna=False).size().unstack(
+say(PL0.groupby(['form', 'benchmark'], dropna=False).size().unstack(
     fill_value=0).to_string())
 para = PL0[PL0.form == 'paraphrase']
 stale = ((para.prompt_sha256 != PROMPT_SHA)
          | (para.model_revision != d2l.HF_REVISIONS[PARAPHRASER])).sum()
-print(f'paraphrases written with this prompt and {PARAPHRASER}@'
-      f'{d2l.HF_REVISIONS[PARAPHRASER][:8]}: {len(para) - stale} of '
-      f'{len(para)}')
+say(f'paraphrases written with these prompts and {PARAPHRASER}@'
+    f'{d2l.HF_REVISIONS[PARAPHRASER][:8]}: {len(para) - stale} of '
+    f'{len(para)}')
 assert stale == 0, 'the plants were made with another prompt or model'
 # what the paraphraser wrote, printed and never filtered on: 5-gram overlap
 # with the verbatim page (an echo is near 1), empty outputs, a lost answer
@@ -1399,17 +1449,19 @@ for bench, g in para.groupby('benchmark'):
         J_max=max(J_vp), blank=int((g.text.str.strip() == '').sum()),
         no_answer_line=sum(not re.search(r'(?im)^\s*answer\s*:', t)
                            for t in g.text),
-        numbers_changed=sum(nums(a) != nums(b) for a, b in zip(v, g.text))))
+        numbers_changed=sum(nums(a) != nums(b) for a, b in zip(v, g.text)),
+        options_added=sum(opts(b) > opts(a) for a, b in zip(v, g.text))))
 PCHK = pd.DataFrame(rows)
-print('\nparaphrases against their verbatim pages (5-gram Jaccard):')
-print(PCHK.round(3).to_string(index=False))
+say('\nparaphrases against their verbatim pages (5-gram Jaccard):')
+say(PCHK.round(3).to_string(index=False))
 assert PCHK.blank.sum() == 0, 'an empty paraphrase'
 R['plants'] = dict(check=json.loads(PCHK.to_json(orient='records')))
 first = PL0[PL0.benchmark == 'arc'].item_id.iloc[0]
 for _, r in PL0[PL0.item_id == first].iterrows():
-    print(f'\n{r.form}:\n' + textwrap.indent(textwrap.shorten(
-        r.text, 300, placeholder=' …'), '  '))
-print('\nItem: ARC-Challenge test, allenai/ai2_arc (CC BY-SA 4.0)')
+    say(f'\n{r.form}:\n' + textwrap.fill(textwrap.shorten(
+        r.text, 300, placeholder=' …'), 96, initial_indent='  ',
+        subsequent_indent='  '))
+say('\nItem: ARC-Challenge test, allenai/ai2_arc (CC BY-SA 4.0)')
 ```
 
 ### The Version-1 Manifest
@@ -1491,9 +1543,9 @@ TIMES['c2_1'] = time.perf_counter() - t0
 t0 = time.perf_counter()
 man4, rows4 = build_c2(4)
 TIMES['c2_4'] = time.perf_counter() - t0
-print(f'manifest SHA-256 with 1 worker {MAN.sha256()[:16]}… '
-      f'({TIMES["c2_1"]:.0f} s), with 4 workers {man4.sha256()[:16]}… '
-      f'({TIMES["c2_4"]:.0f} s)')
+say(f'manifest SHA-256 with 1 worker {MAN.sha256()[:16]}… '
+    f'({TIMES["c2_1"]:.0f} s), with 4 workers {man4.sha256()[:16]}… '
+    f'({TIMES["c2_4"]:.0f} s)')
 assert man4.sha256() == MAN.sha256() and rows4 == C2_ROWS
 assert [s['name'] for s in MAN.stages] == [
     'extract', 'lang_id', 'nfc', 'pii', 'heuristics', 'edu_score',
@@ -1512,33 +1564,33 @@ FUNNEL = pd.DataFrame([dict(
     stage=s['name'], n_in=s['n_in'], n_out=s['n_out'],
     tokens_out=s['tokens_out'] or tok_after.get(s['name']),
     tokens_of='c0 text' if s['name'] in ('lang_id', 'nfc', 'pii') else
-    'output', drops=top_drops(s['drops'])) for s in MAN.stages])
+    'output', drops=top_drops(s['drops'], 2)) for s in MAN.stages])
 FUNNEL['tokens_out'] = FUNNEL.tokens_out.astype('Int64')
 FUNNEL.loc[FUNNEL.tokens_out.isna(), 'tokens_of'] = '—'
-print(FUNNEL.to_string(index=False))
+say(FUNNEL.to_string(index=False))
 print('\n' + MAN.to_card())
 C2_KEY, C2_FILE = ARTIFACTS['dedup-c2']
 MAN_KEY, MAN_FILE = ARTIFACTS['dedup-manifest']
 if 'dedup-c2' in RERUN:
     d2l.lm_save_rerun(C2_FILE, lambda f: d2l.write_docs(f, C2_ROWS))
 elif RERUN and C2_KEY not in d2l.DATA_HUB:
-    print(f'{C2_KEY} is not registered yet: nothing to compare with')
+    say(f'{C2_KEY} is not registered yet: nothing to compare with')
 else:
     with gzip.open(d2l.lm_artifact(C2_KEY), 'rt') as f:
         reg = [json.loads(line) for line in f]
     same = sorted(reg, key=lambda r: r['id']) == sorted(
         C2_ROWS, key=lambda r: r['id'])
-    print(f'against {C2_KEY}: {"identical" if same else "DIFFERENT"}')
+    say(f'against {C2_KEY}: {"identical" if same else "DIFFERENT"}')
     assert same
 if 'dedup-manifest' in RERUN:
     d2l.lm_save_rerun(MAN_FILE, MAN.save)
 elif RERUN and MAN_KEY not in d2l.DATA_HUB:
-    print(f'{MAN_KEY} is not registered yet: nothing to compare with')
+    say(f'{MAN_KEY} is not registered yet: nothing to compare with')
 else:
     with open(d2l.lm_artifact(MAN_KEY), 'rb') as f:
         reg_sha = hashlib.sha256(f.read()).hexdigest()
-    print(f'against {MAN_KEY}: SHA-256 '
-          f'{"identical" if reg_sha == MAN.sha256() else "DIFFERENT"}')
+    say(f'against {MAN_KEY}: SHA-256 '
+        f'{"identical" if reg_sha == MAN.sha256() else "DIFFERENT"}')
     assert reg_sha == MAN.sha256()
 R['c2'] = dict(manifest_sha256=MAN.sha256(),
                funnel=json.loads(FUNNEL.to_json(orient='records')),
@@ -1583,12 +1635,12 @@ def loose_bad(new, old, path=()):
 LOOSE = ('semantic', 'decontam_emb')  # compared with loose_bad
 RES_KEY, RES_FILE = ARTIFACTS['dedup-results']
 if PLANTS_PENDING:
-    print('a dedup-plants run: the results are written by the next run')
+    say('a dedup-plants run: the results are written by the next run')
 elif 'dedup-results' in RERUN:
     blob = json.dumps(rounded(R), sort_keys=True, indent=1).encode('utf-8')
     d2l.lm_save_rerun(RES_FILE, lambda f: pathlib.Path(f).write_bytes(blob))
 elif RERUN and RES_KEY not in d2l.DATA_HUB:
-    print(f'{RES_KEY} is not registered yet: nothing to compare with')
+    say(f'{RES_KEY} is not registered yet: nothing to compare with')
 else:
     reg = json.load(open(d2l.lm_artifact(RES_KEY)))
     live = rounded(R)
@@ -1597,19 +1649,19 @@ else:
     bad = a['mismatches'] + a['missing']
     loose = loose_bad({k: live.get(k) for k in LOOSE},
                       {k: reg.get(k) for k in LOOSE})
-    print(f'against {RES_KEY}: {a["equal"]}/{a["values"]} values equal, '
-          f'largest numeric difference {a["max_diff"]:.2g}; '
-          f'{", ".join(LOOSE)} within tolerance: {not loose}')
+    say(f'against {RES_KEY}: {a["equal"]}/{a["values"]} values equal, '
+        f'largest numeric difference {a["max_diff"]:.2g}; '
+        f'{", ".join(LOOSE)} within tolerance: {not loose}')
     for k in (bad + loose)[:20]:
-        print('  differs or one-sided:', '/'.join(map(str, k)))
+        say('  differs or one-sided:', '/'.join(map(str, k)))
     assert not bad and not loose and a['max_diff'] <= 1e-9
 # the kernel's own peak; each of the N_WORKERS spawned workers adds its
 # own (a fresh Python that imports d2l), not visible in this number
 MEM['peak_rss'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
-print('wall clock (s): ' + ', '.join(f'{k} {v:.0f}' for k, v in TIMES.items()))
-print(f'memory: shingle sets {MEM["shingle_sets"] / 2**30:.2f} GiB; peak '
-      f'RSS of this process {MEM["peak_rss"] / 2**30:.1f} GiB, plus up to '
-      f'{N_WORKERS} workers')
+say('wall clock (s): ' + ', '.join(f'{k} {v:.0f}' for k, v in TIMES.items()))
+say(f'memory: shingle sets {MEM["shingle_sets"] / 2**30:.2f} GiB; peak '
+    f'RSS of this process {MEM["peak_rss"] / 2**30:.1f} GiB, plus up to '
+    f'{N_WORKERS} workers')
 ```
 
 ## Summary

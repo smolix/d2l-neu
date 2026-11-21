@@ -9806,6 +9806,31 @@ def audit_removals(df, keep, by, ref=None, n_boot=2000, cluster=None,
     out['too_few'] = (out.n < 100) | (out.n_clusters < 10)
     return out
 
+d2l.DATA_HUB['lm-contam-plant-v1'] = (  # 100 GSM8K, ARC-Challenge and
+    # MMLU test items each, verbatim, reformatted and paraphrased by
+    # Qwen3.5-4B, with FineWeb ids and offsets (20.3); MIT, CC BY-SA 4.0
+    d2l.LM_DATA_URL + 'lm-contam-plant-v1.jsonl',
+    '54e171c603a7133729715881267efb4e2f35a503')
+d2l.DATA_HUB['lm-dedup-pairs-v1'] = (  # 12,000 labelled pairs as ids and
+    # edit parameters, no text (20.3)
+    d2l.LM_DATA_URL + 'lm-dedup-pairs-v1.jsonl.gz',
+    '366ff9d4242d86faffa6796c1af130cb022c8860')
+d2l.DATA_HUB['lm-data-dedup-emb-v1'] = (  # Qwen3-Embedding vectors of the
+    # benchmark items and of 128-word windows of FineWeb documents (20.3)
+    d2l.LM_DATA_URL + 'lm-data-dedup-emb-v1.npz',
+    'a1d73933ad4fa3a34b53427802c003962d2c0532')
+d2l.DATA_HUB['lm-c2-docs-v1'] = (  # keep or drop, stage and reason for
+    # every c0 document, no text (20.3)
+    d2l.LM_DATA_URL + 'lm-c2-docs-v1.jsonl.gz',
+    '9bb87a9e2572038a42f64fcd921ab8661f26b0d4')
+d2l.DATA_HUB['lm-corpus-manifest-v1'] = (  # the nine-stage manifest of
+    # lm-corpus-v1 (20.3)
+    d2l.LM_DATA_URL + 'lm-corpus-manifest-v1.json',
+    '4c2ff314b12af6863aadf776801939e2853637e2')
+d2l.DATA_HUB['lm-data-dedup-results-v1'] = (  # 20.3's numbers
+    d2l.LM_DATA_URL + 'lm-data-dedup-results-v1.json',
+    '90e8d6b236630aad59762b8d13824acf35492f5d')
+
 def shingles(text, n=5):
     """The word n-grams of text as strings (the MinHash specification):
     NFC, lowercase, the regex \\w+ tokens, n consecutive tokens joined by

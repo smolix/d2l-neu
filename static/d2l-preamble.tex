@@ -67,6 +67,11 @@
 
 % Looser hyphenation to reduce overfull \hbox warnings in code-heavy paragraphs.
 \sloppy
+\setlength{\emergencystretch}{1.5em}
+
+% Compact tables so multi-column pipe tables and inline math fit within \linewidth.
+\usepackage{etoolbox}
+\AtBeginEnvironment{longtable}{\small\setlength{\tabcolsep}{4pt}}
 
 % Chinese characters. The Language Models part prints Chinese in code cells
 % and cell outputs, and the book's fonts (Source Serif 4, Source Sans 3,

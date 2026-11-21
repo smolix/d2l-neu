@@ -707,8 +707,10 @@ exploration.
 
 1. **Logarithmic regret of UCB.** ●● With $\kappa = \sqrt{2}$, the rule
    :eqref:`eq_ucb` is UCB1 of :citet:`Auer.CesaBianchi.Fischer.2002`,
-   whose Theorem 1 bounds the expected regret after $t$ pulls of arms with
-   rewards in $[0, 1]$ by
+   whose Theorem 1 bounds the expected cumulative regret
+   $\textrm{Regret}(T) = T\mu^* - \sum_{t=1}^T \mathbb{E}[r_t] = \sum_a \Delta_a \mathbb{E}[N_a(T)]$
+   after $T = t$ pulls of arms with
+   rewards in $[0, 1]$ (where $N_a(T) = n_T(a)$ is the pull count of arm $a$ and $\Delta_a = \mu^* - \mu_a$) by
    $$\sum_{a:\, \Delta_a > 0} \frac{8 \ln t}{\Delta_a} + \Big(1 + \frac{\pi^2}{3}\Big) \sum_a \Delta_a, \qquad \Delta_a = \mu^* - \mu_a.$$
    Derive this bound. The tool is Hoeffding's inequality: the mean
    $\hat{\mu}_n$ of $n$ independent rewards in $[0, 1]$ with mean $\mu$

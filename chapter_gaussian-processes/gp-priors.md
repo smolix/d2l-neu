@@ -32,7 +32,8 @@ A Gaussian process is defined as _a collection of random variables, any finite n
 
 This definition may seem abstract and inaccessible, but Gaussian processes are in fact very simple objects. Any function
 
-$$f(x) = w^{\top} \phi(x) = \langle w, \phi(x) \rangle,$$ :eqlabel:`eq_gp-function`
+$$f(x) = w^{\top} \phi(x) = \langle w, \phi(x) \rangle,$$
+:eqlabel:`eq_gp-function`
 
 with $w$ drawn from a Gaussian (normal) distribution, and $\phi$ being any vector of basis functions, for example $\phi(x) = (1, x, x^2, ..., x^d)^{\top}$,
 is a Gaussian process. Moreover, any Gaussian process $f(x)$ can be expressed in the form of equation :eqref:`eq_gp-function`. Let's consider a few concrete examples, to begin getting acquainted with Gaussian processes, after which we can appreciate how simple and useful they really are.

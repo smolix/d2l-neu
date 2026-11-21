@@ -535,8 +535,7 @@ error to $\sim 10^{-7}$.
 ### Shared Keys and Values
 :label:`subsec_kv-head-sharing`
 
-During autoregressive generation, past keys and values are cached in memory
-(:numref:`sec_kv-cache`). *Grouped-query attention* (GQA)
+During autoregressive generation, past keys and values are cached in memory so each new token can attend to all previous positions without recomputing their projections (a mechanism we analyze in detail in :numref:`sec_kv-cache`). *Grouped-query attention* (GQA)
 :cite:`Ainslie.Lee-Thorp.Jong.ea.2023` reduces this cache by a factor of
 $H / H_\textrm{kv}$ by sharing each key--value head across a group of $H /
 H_\textrm{kv}$ query heads; setting $H_\textrm{kv} = 1$ gives *multi-query

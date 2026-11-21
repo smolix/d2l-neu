@@ -39,26 +39,32 @@ from d2l import jax as d2l
 Let data–condition pairs $(x, c) \sim p(x, c)$ be drawn from the joint data distribution, where $c$ may be a discrete class label, a text embedding, or an image. To match the condition marginal $p(c)$, we sample $c \sim p(c)$ from the real data and generate $x' = G(z, c) \sim q(\cdot \mid c)$, inducing the generated joint distribution $q(x, c) = p(c)\,q(x \mid c)$. The conditional log-loss objective applies :eqref:`eq_gan_V` to the pairs $(x, c)$:
 
 $$
-V(D) \;=\; \mathbb{E}_{(x, c) \sim p}\big[\log \sigma(D(x, c))\big]
-+ \mathbb{E}_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log \sigma(-D(x', c))\big].
+\begin{aligned}
+V(D) &= \mathbb{E}_{(x, c) \sim p}\big[\log \sigma(D(x, c))\big] \\
+&\quad + \mathbb{E}_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log \sigma(-D(x', c))\big].
+\end{aligned}
 $$
 :eqlabel:`eq_gan_cond_V`
 
 Because the pointwise optimization over $D(x, c)$ is identical to the unconditional derivation on the product space $\mathcal{X} \times \mathcal{C}$, the optimal conditional critic is the log ratio of the joint densities, from which the shared marginal $p(c)$ cancels:
 
 $$
+\begin{aligned}
 D^\star(x, c)
-\;=\; \log \frac{p(x, c)}{q(x, c)}
-\;=\; \log \frac{p(c)\, p(x \mid c)}{p(c)\, q(x \mid c)}
-\;=\; \log \frac{p(x \mid c)}{q(x \mid c)} .
+&= \log \frac{p(x, c)}{q(x, c)}
+= \log \frac{p(c)\, p(x \mid c)}{p(c)\, q(x \mid c)}
+= \log \frac{p(x \mid c)}{q(x \mid c)} .
+\end{aligned}
 $$
 :eqlabel:`eq_gan_cond_dstar`
 
 Thus, for each condition $c$, the optimal critic computes the log density ratio between the conditional distributions $p(\cdot \mid c)$ and $q(\cdot \mid c)$. Substituting $D^\star(x, c)$ back into :eqref:`eq_gan_cond_V` yields the expected conditional Jensen–Shannon divergence:
 
 $$
+\begin{aligned}
 \max_D V(D)
-\;=\; \mathbb{E}_{c \sim p(c)}\Big[\, 2\, \mathrm{JS}\big(p(\cdot \mid c),\, q(\cdot \mid c)\big) \Big] - 2 \log 2 .
+&= \mathbb{E}_{c \sim p(c)}\Big[\, 2\, \mathrm{JS}\big(p(\cdot \mid c),\, q(\cdot \mid c)\big) \Big] - 2 \log 2 .
+\end{aligned}
 $$
 :eqlabel:`eq_gan_cond_value`
 

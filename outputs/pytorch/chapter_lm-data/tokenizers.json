@@ -1,0 +1,474 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-data/tokenizers.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:c488fd8bf3f1c10c8a16c57aed50e8d79bbfcaced4fb97f99273996c644c5224",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "tokenizers-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-extras": {
+      "code_fingerprint": "sha256:cc29362f9d276b3f41ece39adb2c052703c630209f6486d58df703785f61ea51",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-config": {
+      "code_fingerprint": "sha256:d56620e33d8430c8fc48a617e58d0bc41a482663ec933e61795c017a2df50617",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "small-LM comparison and extension at T1 (7.3M-parameter LMs, one epoch over 45 MB; Qwen3-0.6B-Base,\n    150 steps of 8 x 1,024 tokens)\nGPU=True, SMALL=False, regenerating: none\n"
+        }
+      ]
+    },
+    "tokenizers-data-hub": {
+      "code_fingerprint": "sha256:4e6fed438ffc0b6d0421fa73586ed0942a41c524a4d25e94e6cf0902a04712eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "this section: registered lm-data-fw2-slice-v1, lm-data-tok-results-v1, lm-r2-tokenizer-v1,\n    lm-fwedu-val-v1, lm-fwedu-shards-100m-v1, lm-fwedu-manifest-4b-v1 | pending: none\nupstream: registered lm-mix-runs-t1-v1 | pending: none\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          train docs  train MB  held-out docs\neng_Latn         972      4.54            108\ndeu_Latn        1520      4.51            168\nrus_Cyrl         606      4.11             67\narb_Arab         463      5.04             51\nhin_Deva         785      4.51             87\ncmn_Hani        1106      4.60            122\njpn_Jpan        1110      4.66            123\ntha_Thai         491      4.66             54\nswh_Latn        1459      4.62            162\nkor_Hang        1687      4.49            187\nHindi extension documents: {'ext_train': 30000, 'ext_heldout': 500}\n"
+        }
+      ]
+    },
+    "tokenizers-fertility-def": {
+      "code_fingerprint": "sha256:5061d6fd1925b6e0da34d92159b7b8e846af0457689a8039ddbb157e086836b9",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-opening": {
+      "code_fingerprint": "sha256:e5b2766ea32c84dd4a927856eab740f752e46ee64a0ff333ec7598fd37c8034c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "488 passages per language\nencoder   GPT-2  Qwen3  Qwen3.5  o200k_base\nlang                                       \neng_Latn   1.00   1.00     1.00        1.00\ndeu_Latn   2.14   1.56     1.31        1.31\nrus_Cyrl   5.74   1.77     1.37        1.43\narb_Arab   4.39   1.63     1.30        1.38\nhin_Deva   7.43   4.45     2.01        1.56\ncmn_Hani   3.20   1.06     0.95        1.28\njpn_Jpan   2.99   1.44     1.18        1.68\ntha_Thai   9.00   2.57     1.21        1.95\nswh_Latn   2.13   1.93     1.82        1.48\nkor_Hang   5.06   1.64     1.23        1.47\nencoder   GPT-2  Qwen3  Qwen3.5  o200k_base\nlang                                       \neng_Latn   4.91   4.82     4.83        4.95\ndeu_Latn   2.72   3.67     4.37        4.49\nrus_Cyrl   1.71   5.44     7.03        6.88\narb_Arab   1.79   4.72     5.94        5.74\nhin_Deva   1.69   2.76     6.14        8.07\ncmn_Hani   1.42   4.20     4.70        3.58\njpn_Jpan   2.09   4.23     5.19        3.74\ntha_Thai   1.50   5.15    10.99        6.97\nswh_Latn   2.43   2.62     2.79        3.50\nkor_Hang   1.17   3.52     4.72        4.03\nencoder   GPT-2  Qwen3  Qwen3.5  o200k_base\nlang                                       \neng_Latn  0.001  0.000    0.000       0.000\ndeu_Latn  0.006  0.000    0.000       0.000\nrus_Cyrl  0.290  0.001    0.000       0.000\narb_Arab  0.389  0.009    0.002       0.000\nhin_Deva  0.472  0.260    0.001       0.001\ncmn_Hani  0.656  0.030    0.001       0.028\njpn_Jpan  0.389  0.047    0.001       0.025\ntha_Thai  0.489  0.000    0.000       0.003\nswh_Latn  0.001  0.000    0.000       0.000\nkor_Hang  0.800  0.084    0.011       0.027\nHindi premium: Qwen3 4.5, Qwen3.5 2.0\n"
+        }
+      ]
+    },
+    "tokenizers-viterbi-def": {
+      "code_fingerprint": "sha256:82dceca503f6a978373b2e597b39b63bc300d96500759b768401eaa2919473ba",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-em-checks": {
+      "code_fingerprint": "sha256:e25b56bebc6cab2c8cbddafa34298de596a9604c635cdd9a4150b78911d1dff6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward-backward vs enumeration: max difference 2.5e-14; Viterbi = argmax on 200 strings (4 with\n    tied maxima)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "EM log-likelihood: -38,093.2, -33,945.1, -33,167.4, -32,760.7, -32,469.2, -32,229.6\n7 segmentations of 'abcabc': sampled frequencies within 2.4 standard errors of their posteriors\n"
+        }
+      ]
+    },
+    "tokenizers-unigram-train": {
+      "code_fingerprint": "sha256:dd90340f999c604ff4231813e05179d4d80f9776ab16d191b383127957ccd679",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "from scratch: 4,096 pieces in 65 s (16 rounds); SentencePiece: 1.5 s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "viterbi_segment reproduces SentencePiece on 1000 of 1000 held-out lines\nvocabulary overlap: 3,067 of 4,096 pieces (75%)\n▁Diabetes ▁D ia b et es (-33.3) | ▁D ia be t es (-33.4)\n▁sports ▁s port s (-18.5) | ▁sp ort s (-19.3)\n▁poverty ▁p over ty (-22.8) | ▁po ver ty (-23.8)\n▁Portuguese ▁P ort u gue se (-37.3) | ▁P ort u gue s e (-38.0)\n▁Hebrew ▁He b re w (-26.7) | ▁He b r ew (-27.2)\nViterbi: ▁Since ▁2002 , ▁when ▁H A V A ▁was ▁en ac ted , ▁computer ▁scientists ▁have ▁release d\n    ▁over ▁three\nsample 0: ▁Since ▁2002 , ▁when ▁H A V A ▁was ▁en a ct ed , ▁ com p u ter ▁scientists ▁have ▁ r e l e\n    a s ed ▁ over ▁three\nsample 1: ▁Since ▁2002 , ▁w he n ▁H A V A ▁w as ▁en a ct ed , ▁computer ▁scientists ▁have ▁release d\n    ▁over ▁t h r e e\nsample 2: ▁Since ▁ 200 2 , ▁when ▁H A V A ▁was ▁ en ac t ed , ▁comp u ter ▁scientists ▁have ▁re l ea\n    se d ▁ over ▁three\nsample 3: ▁Since ▁20 0 2 , ▁when ▁H A V A ▁was ▁en a c t ed , ▁comp u ter ▁scientists ▁h av e\n    ▁release d ▁over ▁t h re e\nsample 4: ▁S i n c e ▁ 200 2 , ▁when ▁ H A V A ▁was ▁ en a c t e d , ▁computer ▁scientists ▁have\n    ▁release d ▁over ▁three\n"
+        }
+      ]
+    },
+    "tokenizers-sp-pitfalls": {
+      "code_fingerprint": "sha256:642014aeeea752da789a8b968efb3ea80efca2d63ea616b9549de6f58890be52",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      text nmt_nfkc  changed\n0   ﬁnance  finance     True\n1  x² + y²  x2 + y2     True\n2    ＡＢＣ１２    ABC12     True\n3     café     café    False\n4      Ⅳ ①     IV 1     True\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                    single_characters  fallback_share   tokens\ncharacter_coverage                                            \n0.9995                         2523.0          0.0135  75365.0\n1.0000                         2707.0          0.0096  75988.0\n"
+        }
+      ]
+    },
+    "tokenizers-bpe-def": {
+      "code_fingerprint": "sha256:3a766e524ab46578b0135db3b3228d17c63a5ae583f8c630c4867ad943b31a45",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-premium": {
+      "code_fingerprint": "sha256:e1e54971c66227c92e33a1ccf85b7ed4f3c0b3fb6e4d74d47e5c730c14765dea",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          weight, alpha=1.0  weight, alpha=0.3  weight, alpha=0.0\neng_Latn             0.1705             0.1388                0.1\ndeu_Latn             0.1705             0.1388                0.1\nrus_Cyrl             0.2403             0.1539                0.1\narb_Arab             0.0213             0.0744                0.1\nhin_Deva             0.0076             0.0546                0.1\ncmn_Hani             0.2186             0.1496                0.1\njpn_Jpan             0.1375             0.1301                0.1\ntha_Thai             0.0123             0.0631                0.1\nswh_Latn             0.0004             0.0228                0.1\nkor_Hang             0.0209             0.0740                0.1\n         MB  seconds   Latin  Cyrillic     Han  Arabic   Kana   Thai  Hangul  \\\nalpha                                                                          \n1.0    18.8     15.4  5981.0    2597.0  4297.0   501.0  903.0  185.0   411.0   \n0.3    29.5     20.6  5626.0    1778.0  3349.0  1079.0  858.0  631.0  1154.0   \n0.0    45.7     24.8  5991.0    1269.0  2561.0  1404.0  712.0  944.0  1487.0   \n\n       Devanagari  \nalpha              \n1.0          93.0  \n0.3         399.0  \n0.0         574.0  \n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "encoder   alpha=0.0  alpha=0.3  alpha=1.0\nlang                                     \neng_Latn       1.00       1.00       1.00\ndeu_Latn       1.20       1.20       1.20\nrus_Cyrl       1.42       1.38       1.30\narb_Arab       1.19       1.29       1.51\nhin_Deva       1.77       1.91       2.42\ncmn_Hani       0.99       0.98       0.95\njpn_Jpan       1.06       1.06       1.07\ntha_Thai       1.58       1.75       2.24\nswh_Latn       1.04       1.34       1.88\nkor_Hang       1.08       1.19       1.49\nswh_Latn: premium 1.88 -> 1.34 -> 1.04 (falls as alpha falls)\nhin_Deva: premium 2.42 -> 1.91 -> 1.77 (falls as alpha falls)\ntha_Thai: premium 2.24 -> 1.75 -> 1.58 (falls as alpha falls)\n"
+        }
+      ]
+    },
+    "tokenizers-small-lms-def": {
+      "code_fingerprint": "sha256:5676924f50103126be2dee022a504f25ab223718e60cdacc599d82ac38d79c93",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-small-lms-data": {
+      "code_fingerprint": "sha256:d3163163453f128ec2f8ff2594f64ad256d6592c32a453cac246ad051ce9e78c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two SentencePiece models trained in 60 s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "45.7 MB of training text: SP unigram 12,244,448 tokens, SP BPE 12,205,001 tokens, HF BPE 12,073,918\n    tokens\n"
+        }
+      ]
+    },
+    "tokenizers-small-lms": {
+      "code_fingerprint": "sha256:c29ff670c850ff15cdaa8f97c0cc1584ed212dfbca68ad957ca1c5dca009a199",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "6 runs at T1 scale (7.3M-parameter LMs, one epoch over 45 MB), learning rate 0.002 (from\n    lm-mix-runs-t1-v1)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check, HF BPE seed 0, first 524,288 tokens: largest loss difference 0.0010 nats peak 2.0 GiB\n    (2.8 GiB reserved)\n"
+        }
+      ]
+    },
+    "tokenizers-bpb-identity": {
+      "code_fingerprint": "sha256:c739f6a560e4d1ca5521fea746f152a73d2c2d68e9edba03e19fcb600cd42ccf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "100 held-out documents, seed 0 at T1 scale (7.3M-parameter LMs, one epoch over 45 MB)\n            loss_per_token  perplexity  bytes_per_token     bpb  \\\nSP unigram          5.3664    214.0951           3.9874  1.9416   \nSP BPE              5.3834    217.7636           4.0080  1.9378   \nHF BPE              5.4914    242.6009           3.9975  1.9818   \n\n            max_difference  \nSP unigram             0.0  \nSP BPE                 0.0  \nHF BPE                 0.0  \n"
+        }
+      ]
+    },
+    "tokenizers-bpb-premium": {
+      "code_fingerprint": "sha256:77c4d306fe4907c11331bcfb17a907015db05171a12c273c4ef36b8d1c32e7e6",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Belebele and held-out bits per byte at T1 scale (7.3M-parameter LMs, one epoch over 45 MB)\n          premium                   bpb_belebele                   seed_range                  \ntokenizer  HF BPE SP BPE SP unigram       HF BPE SP BPE SP unigram     HF BPE SP BPE SP unigram\nlang                                                                                           \neng_Latn    1.000  1.000      1.000        2.521  2.543      2.551      0.022  0.006      0.031\ndeu_Latn    1.202  1.205      1.165        2.574  2.593      2.579      0.022  0.001      0.019\nrus_Cyrl    1.418  1.405      1.405        1.733  1.712      1.742      0.019  0.011      0.007\narb_Arab    1.193  1.185      1.145        1.860  1.860      1.833      0.018  0.001      0.002\nhin_Deva    1.768  1.320      1.285        1.301  1.208      1.202      0.047  0.004      0.007\ncmn_Hani    0.995  0.936      0.909        3.041  3.007      3.032      0.023  0.022      0.004\njpn_Jpan    1.060  1.026      0.994        2.129  2.105      2.125      0.008  0.013      0.006\ntha_Thai    1.577  1.245      1.199        1.265  1.189      1.146      0.024  0.005      0.005\nswh_Latn    1.039  1.037      1.000        2.492  2.516      2.477      0.027  0.018      0.002\nkor_Hang    1.085  1.049      1.085        2.217  2.164      2.224      0.042  0.019      0.010\n          bpb_heldout                   heldout_range                  \ntokenizer      HF BPE SP BPE SP unigram        HF BPE SP BPE SP unigram\nlang                                                                   \neng_Latn        2.610  2.639      2.638         0.025  0.003      0.025\ndeu_Latn        2.636  2.666      2.640         0.023  0.005      0.020\nrus_Cyrl        1.833  1.805      1.835         0.024  0.010      0.000\narb_Arab        1.830  1.843      1.810         0.021  0.002      0.010\nhin_Deva        1.326  1.242      1.237         0.053  0.003      0.004\ncmn_Hani        3.009  2.970      2.997         0.032  0.020      0.002\njpn_Jpan        2.176  2.145      2.163         0.011  0.009      0.005\ntha_Thai        1.363  1.292      1.241         0.027  0.002      0.003\nswh_Latn        2.532  2.564      2.545         0.032  0.013      0.008\nkor_Hang        2.268  2.224      2.282         0.042  0.025      0.011\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "macro bits per byte, SP unigram - SP BPE: +0.0021 [+0.0002, +0.0039] over 488 passages\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "macro bits per byte, SP unigram - HF BPE: -0.0221 [-0.0238, -0.0203] over 488 passages\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "macro bits per byte, SP BPE - HF BPE: -0.0241 [-0.0254, -0.0229] over 488 passages\neng_Latn: unigram - BPE +0.008 bits per byte (seed range 0.031): not distinguished\ndeu_Latn: unigram - BPE -0.015 bits per byte (seed range 0.019): not distinguished\nrus_Cyrl: unigram - BPE +0.030 bits per byte (seed range 0.011): differs\narb_Arab: unigram - BPE -0.027 bits per byte (seed range 0.002): differs\nhin_Deva: unigram - BPE -0.005 bits per byte (seed range 0.007): not distinguished\ncmn_Hani: unigram - BPE +0.026 bits per byte (seed range 0.022): differs\njpn_Jpan: unigram - BPE +0.020 bits per byte (seed range 0.013): differs\ntha_Thai: unigram - BPE -0.042 bits per byte (seed range 0.005): differs\nswh_Latn: unigram - BPE -0.039 bits per byte (seed range 0.018): differs\nkor_Hang: unigram - BPE +0.060 bits per byte (seed range 0.019): differs\nunigram against BPE moves a language by at most 3.6% of its bits per byte (tha_Thai); under one\n    tokenizer the premium spans a factor of 1.50-1.78 across languages\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "tokenizers/tokenizers-bpb-premium-1.svg",
+          "bytes": 46649,
+          "sha256": "sha256:8443ae2c87f94ccf67b744530219a2e6098090de48e24889ee3347b120cd66e7"
+        }
+      ]
+    },
+    "tokenizers-vocab": {
+      "code_fingerprint": "sha256:8c90a2095a48409ff06b6bb5030cea483ee021cebb1471e6c660f615c584839b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two BPEs of 65,536 pieces, on 9,566 English documents and on the slice (46 and 46 MB): 40 s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       bytes/token, English  bytes/token, ten languages  elasticity, English  \\\n1024                  2.431                       2.018                0.236   \n2048                  2.847                       2.425                0.219   \n4096                  3.296                       2.853                0.189   \n8192                  3.710                       3.297                0.154   \n16384                 4.090                       3.764                0.112   \n32768                 4.361                       4.250                0.069   \n65536                 4.529                       4.721                0.036   \n\n       elasticity, ten languages  softmax share  \n1024                       0.280          0.003  \n2048                       0.249          0.007  \n4096                       0.221          0.014  \n8192                       0.200          0.027  \n16384                      0.183          0.053  \n32768                      0.162          0.100  \n65536                      0.139          0.182  \nsynthetic b-bar = c V^0.1: grid minimum 32,769, formula 32,768\nEnglish: cost minimum at V = 26,913; elasticity falls to the softmax share at V = 26,913\nten languages: cost minimum at V = 51,276; elasticity falls to the softmax share at V = 51,383\n"
+        }
+      ]
+    },
+    "tokenizers-vocab-released": {
+      "code_fingerprint": "sha256:a977a3c3b914f24997d739634ef81cd97af6891986a558f8c2f3b92ef7b647f9",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "English held-out text; tied embeddings\n                   V  bytes_per_token       d  non_embedding_M  softmax_share  \\\nGPT-2        50257.0            4.568   768.0           85.842          0.310   \nQwen3       151936.0            4.454  1024.0          440.467          0.261   \nQwen3.5     248320.0            4.410  1024.0          498.113          0.338   \nreference    32768.0            4.374   768.0          113.277          0.182   \no200k_base  200019.0            4.677     NaN              NaN            NaN   \n\n            GFLOP_per_kB  \nGPT-2            163.466  \nQwen3            802.862  \nQwen3.5         1023.749  \nreference        189.905  \no200k_base           NaN  \n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "tokenizers/tokenizers-vocab-released-1.svg",
+          "bytes": 59760,
+          "sha256": "sha256:d19678a972ddb7e4a146d05e8d73413f001f760b263f73e3e3bc54b2146d8d4e"
+        }
+      ]
+    },
+    "tokenizers-digits-code": {
+      "code_fingerprint": "sha256:1087b57f6f56203c8475e3edd8050618900b57d21b48c09102de338cabb05c15",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                   12345678        3.14159          1,234,567\nGPT-2            123|45|678     3|.|14|159     1|,|234|,|5|67\no200k_base       123|456|78     3|.|141|59      1|,|234|,|567\nQwen3       1|2|3|4|5|6|7|8  3|.|1|4|1|5|9  1|,|2|3|4|,|5|6|7\nQwen3.5     1|2|3|4|5|6|7|8  3|.|1|4|1|5|9  1|,|2|3|4|,|5|6|7\nreference   1|2|3|4|5|6|7|8  3|.|1|4|1|5|9  1|,|2|3|4|,|5|6|7\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "            digits_per_token  code_tokens_per_line  code_bytes_per_token  \\\nGPT-2                   2.12                 19.25                  2.12   \no200k_base              2.07                 10.63                  3.83   \nQwen3                   1.00                 10.67                  3.82   \nQwen3.5                 1.00                 11.36                  3.59   \nreference               1.00                 17.64                  2.31   \n\n            longest_space_token  \nGPT-2                       1.0  \no200k_base                128.0  \nQwen3                     128.0  \nQwen3.5                   128.0  \nreference                   2.0  \n"
+        }
+      ]
+    },
+    "tokenizers-extend-def": {
+      "code_fingerprint": "sha256:6e1adecff96753345d86e51f04078bf965163a4a5eff2436590ab2dc4539e046",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-extend-build": {
+      "code_fingerprint": "sha256:13e478e70563848a6d83aaf5debd2c18c844feb7947337c152d714baeae42c5f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Hindi BPE in 10 s: 7,154 Devanagari pieces, 7,153 new to Qwen3; the first 4,096 are added\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1,000 ASCII lines: the same ids before and after extension\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3: 2.79 bytes per token on 500 held-out Hindi documents\nQwen3 + Hindi: 5.28 bytes per token on 500 held-out Hindi documents\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3.5: 6.13 bytes per token on 500 held-out Hindi documents\nnew pieces: के है ें ने ार या में की से कर को कि ... शुरुआती विधायकों ्न बंग बेचने हिमाचल\n"
+        }
+      ]
+    },
+    "tokenizers-extend-step0-def": {
+      "code_fingerprint": "sha256:af53b74a5a39d419db98e1f32dfad791c7bb23c537279aa3c9f2a2e7cbd55632",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-extend-step0": {
+      "code_fingerprint": "sha256:dc92e938f17c7812799514a1c13b0593b1835472e15bf6e6d5f72cd7e2c63fff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, stop tokens [151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "decomposition identity: largest logit difference 3.79e-02 (torch.bfloat16)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "step 0 on 500 Hindi documents, 488 Belebele passages, 200 English documents 232 s peak 4.0 GiB (11.2\n    GiB reserved)\n         new_mass  new_mass_max  hindi_new_mass  hindi_bpb  belebele_bpb  \\\ncontrol       0.0        0.0000          0.0000     0.6163        0.6652   \nrandom        0.0        0.0001          0.0016     2.3854        2.5350   \nmean          0.0        0.0000          0.0001     2.8918        3.0657   \ndecomp        0.0        0.0007          0.7264     1.4797        1.6269   \n\n         english_bpb  hindi_bytes_per_token  \ncontrol       0.8225                 2.7872  \nrandom        0.8225                 5.2772  \nmean          0.8225                 5.2772  \ndecomp        0.8225                 5.2772  \n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean - random, Belebele Hindi bits per byte: +0.524 [+0.515, +0.533]; not lower than random |\n    new-token mass below random's\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "decomp - random, Belebele Hindi bits per byte: -0.915 [-0.923, -0.906]; lower than random |\n    new-token mass below random's\n"
+        }
+      ]
+    },
+    "tokenizers-extend-train-def": {
+      "code_fingerprint": "sha256:16987cf7a7f36d18be577d025861f85470937758df7093d957648d02bf516c25",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-extend-train": {
+      "code_fingerprint": "sha256:637e2b71b1eed5bc50ffba127930b8b8b2957ed4a770561278426210aca9c60c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "continued training on Hindi at T1 scale (Qwen3-0.6B-Base, 150 steps of 8 x 1,024 tokens)\n      control  random   mean  decomp\nstep                                \n0       0.627   2.382  2.876   1.488\n25      0.627   1.402  1.134   1.055\n50      0.627   1.246  1.026   0.959\n100     0.637   1.057  0.933   0.862\n150     0.626   1.034  0.918   0.847\n    arm  seed  English bpb, step 0  English bpb, step 150\ncontrol     0                0.822                  0.825\ncontrol     1                0.822                  0.824\n random     0                0.822                  0.832\n random     1                0.822                  0.832\n   mean     0                0.822                  0.829\n   mean     1                0.822                  0.830\n decomp     0                0.822                  0.828\n decomp     1                0.822                  0.829\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "<Axes: xlabel='step', ylabel='Hindi bits per byte'>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "tokenizers/tokenizers-extend-train-1.svg",
+          "bytes": 32777,
+          "sha256": "sha256:a6625543bd421a527366bb90bd2aa5ba451769c00dab04bdd961b35056986182"
+        }
+      ]
+    },
+    "tokenizers-patches": {
+      "code_fingerprint": "sha256:78ba6009cd022d56c7449b62476d62c4a186b37f3b8534f2d94bbc3b0e642fb3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "UTF-8 bytes per patch and per token, one Hindi paragraph of 1,092 bytes\n       entropy patches  Qwen3 tokens  Qwen3.5 tokens  reference tokens\ncount           134.00        371.00          134.00            432.00\nmean              8.15          2.94            8.15              2.53\nstd               4.00          1.49            4.38              1.44\nmin               1.00          1.00            1.00              1.00\n25%               6.00          1.00            6.00              1.00\n50%               8.00          3.00            7.00              3.00\n75%              10.00          4.00           10.00              3.00\nmax              27.00          6.00           28.00              5.00\n"
+        }
+      ]
+    },
+    "tokenizers-r2-tok-def": {
+      "code_fingerprint": "sha256:de63b8a44c267f82fdf1df12a7761ebf3caf38087df926a0a20d93301f6709f7",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-r2-retrain": {
+      "code_fingerprint": "sha256:45d4c7efd91e4220e6604b2fe1c4dad6a3afbdb3a9982cf64ca97a3bc5b6e2e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "TokenizersBackend | 32,768 ids | eos 0 | bos None | pad 1 | SHA-256 b1b4b45c36aac256...\nspecial strings in text: 46 ordinary tokens, none below 32\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "retrained on the first 80,000 training documents (378M characters) in 31 s: SHA-256\n    b1b4b45c36aac256... equal to the committed file\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "round trips: 8,341 validation texts and 10,000 training documents; reference tokens per GPT-2 token:\n    1.010\n"
+        }
+      ]
+    },
+    "tokenizers-shards-def": {
+      "code_fingerprint": "sha256:28ce1a172bc10c9e5fe8af496f5b31995833176453a07afe27620e6c3c9b6da5",
+      "kind": "text",
+      "outputs": []
+    },
+    "tokenizers-shards-demo": {
+      "code_fingerprint": "sha256:954e8af097242757b56cd0c8651c21badd28cc7fb7ebea3a66b74ad91f8823d8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2,001 documents, 2,029,682 tokens in 5 shards; doc 1001 is shard 2, document 91, token 79,009; meta\n    columns: ['doc_id', 'n_tokens']\nQwen3: uint32, EOS 151643, 128,563 tokens; the fixture ends in [2484, 13, 151643]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train: 95,793 documents, 100,000,084 tokens, 1 shard(s), uint16, EOS 0, vocabulary 32,768; verified\nval: 8,341 documents, 8,390,187 tokens, 1 shard(s), uint16, EOS 0, vocabulary 32,768; verified\n{\"doc_end\": \"eos\", \"dtype\": \"uint16\", \"endianness\": \"little\", \"eos_id\": 0, \"idx_dtype\": \"uint32\",\n    \"meta_required\": [\"doc_id\", \"n_tokens\"]}\n"
+        }
+      ]
+    },
+    "tokenizers-leakage": {
+      "code_fingerprint": "sha256:3518f1ccd969dd3c7c59932859b5ac4bf2f6e01f2f691af9f844ebd54270dee8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "val_dedup: 14,277 validation documents in, 13,455 out; dropped {'text_hash': 658, 'url': 164}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "16,901 validation 50-grams also in train-00000 (95,793 documents), 41 s: 211 of 8,341 validation\n    documents (2.53%), 0.355% of their tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4 documents: ', all rights reserved. H-Net permits the redistribution and reprinting of this work fo\n3 documents: 'Send the link below via email or IMCopy\\nPresent to your audienceStart remote presenta\n3 documents: 'Statistics from Altmetric.com\\nIf you wish to reuse any or all of this article please \n"
+        }
+      ]
+    },
+    "tokenizers-chapter-manifest": {
+      "code_fingerprint": "sha256:be6b38c98e383c9cc6b00487ac1de993a7573ff6525fc7157efcc5389f78e801",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lm-fwedu-shards-100m-v1 (d2l-corpus/1), SHA-256 0d8ab8b5a85246cc...\n            id                                                uri  \\\n0  fineweb-edu  hf://datasets/HuggingFaceFW/fineweb-edu/sample...   \n\n                                   revision license   n_docs  \n0  87f09149ef4734204d70ed1d046ddc9ca3f2b8f9  odc-by  5842000  \nvalidation files 000, 001, 002, 003, 004; train scope 000, 001, 002, 003, 004, 006, 007, 008;\n    reserved 005, 012, 013\n        name    n_in   n_out  tokens_out                                               drops\n         nfc 5842000 5842000         NaN                                        {'empty': 0}\nbucket_split 5842000 5636731         NaN {'side_buckets_1_8': 182597, 'val_bucket_0': 22672}\n     shuffle 5636731 5636731         NaN                                                  {}\n    tokenize 5636731   95793 100000084.0                      {'beyond_last_shard': 5540938}\ntokenizer: {'file': 'tokenizer.json', 'sha256':\n    'b1b4b45c36aac256ae4f4bd5e5fd595395242fc6949299cb0e2e25d2a5a656e3', 'split_special_tokens':\n    True, 'vocab_size': 32768}\nlm-r2-tokenizer-v1: 1.03 MB\nlm-fwedu-val-v1: 32.25 MB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lm-fwedu-shards-100m-v1: 207.66 MB\nlm-fwedu-manifest-4b-v1: 0.03 MB, listing 4,000,073,259 tokens in 40 shards (8.0 GB of .bin)\n"
+        }
+      ]
+    },
+    "tokenizers-results": {
+      "code_fingerprint": "sha256:e99ab6f1d8df4d27d627e4d546643aef8447df70c9bb227ff6a64883e1a0666c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "small-LM runs: tokenizers, texts and byte counts equal to the registered runs\nstep 0, largest bits-per-byte difference from the registered values: {'control': 0.0, 'random': 0.0,\n    'mean': 0.0, 'decomp': 0.0}\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,37 +1,60 @@
 # Data for Language Models
 :label:`chap_lm_data`
 
-The reader has trained on a text file someone else prepared. Released models start from billions of pages, and every choice made before the first batch (what to extract, what to drop, what to repeat, how to cut it into tokens) changes what the model can ever learn.
+<!-- For maintainers. Plan: docs/llm/language_models_part_plan.md, "Chapter 3
+Data for Language Models"; blueprint docs/llm/blueprints/ch03_data.md. The
+plan's Further Reading entry for this chapter is "none", so the chapter has
+no further-reading notebook. Rights: Common Crawl text is never committed or
+hosted, only pins, manifests and hashes. -->
 
-<!-- Author brief, copied verbatim from the Language Models part plan
-(docs/llm/language_models_part_plan.md, "Chapter 3 Data for Language Models").
-Blueprint: docs/llm/blueprints/ch03_data.md.
-The plan is a specification, not book text; this comment is replaced
-when the chapter is written.
+By now you can download a pretrained model and measure what it does
+(:numref:`chap_lm_pretrained`). The text it learned from was prepared by
+someone else and, for many released models, never published; yet preparing
+it is a large part of the work of training a language model. It starts from
+billions of web pages, and every decision made before the first batch
+changes what the model can ever learn: what to extract from a page, what to
+throw away, what to read twice, and how to cut the rest into tokens.
 
-**Label:** `chap_lm_data`. Six sections, T0 to T2. The chapter follows one document from a crawl record to a token in a shard on disk: extraction, filtering, deduplication, mixing, synthesis and tokenization, each step written to one versioned manifest, so the corpus Chapter 4 trains on can be rebuilt from hashes.
-**Hook:** The reader has trained on a text file someone else prepared. Released models start from billions of pages, and every choice made before the first batch (what to extract, what to drop, what to repeat, how to cut it into tokens) changes what the model can ever learn.
-**Route:** What does extraction lose, and on which kinds of pages (3.1)? What does a quality filter remove, and who checks what it removed (3.2)? How are near-duplicates found without comparing every pair, and how are test items kept out (3.3)? How much of each domain goes in, and can small runs decide it (3.4)? When does text rewritten by a model help, and what does it cost in diversity (3.5)? How large should a vocabulary be, and what does one tokenizer cost each language (3.6)?
-**Out of scope:** Byte-pair encoding itself (`sec_text-sequence`), n-gram statistics and Zipf's law (`sec_language-model`), distribution shift in general (`sec_environment-and-distribution-shift`), the data path from shards into packed batches (4.1), instruction and preference data (Chapter 7 and 8), and the 2026 governance of crawling (one paragraph in 3.1 and the Tools appendix).
-**Writer notes:**
-- Two data lines are kept apart on purpose. The teaching pipeline runs one pinned Common Crawl byte range through 3.1, 3.2 and 3.3 (small, inspectable, with FineWeb counterparts for every record); the reference model's data is FineWeb-Edu as released, tokenized with the reference tokenizer and written as shards by 3.6, which 4.1 streams and 4.2 trains on. The document buckets that split FineWeb-Edu (bucket 0 validation, 1 to 7 side pool for 3.4 and 3.5, 8 side validation, 9 to 255 reference training; `sha256(id)` mod 256) are fixed here and used by 3.4, 3.5, 3.6, 4.1 and 4.2 (blueprint ch03 "The corpus series").
-- Rights rule (blueprint README Decision 13): Common Crawl text is never committed or hosted; 3.1 ships a pin (URL, byte range, SHA-256 per 16 MiB block) and manifests with hashes, and the notebooks rebuild the text; a takedown is honoured by deleting one manifest row. ODC-By data (FineWeb, FineWeb-Edu, FineWeb-2, FineMath, the FineWeb-Edu annotations) ships with attribution; Nemotron-CC-v2 is under the NVIDIA Data Agreement and is cited, not shipped; MIT and CC BY-SA benchmark items of 3.3 ship in a separate artifact with its licence stated.
-- Shared artifacts and exports: `d2l.CorpusManifest` and `d2l.Doc` (3.1), `d2l.heuristic_filters` and `d2l.embed_docs` (3.2; a different name from 2.3's `d2l.embed_texts` on purpose), `d2l.near_dedup` (3.3; 7.3 imports it), `d2l.train_proxy_lm`, `d2l.ProxyCfg`, `d2l.bpb_from_nll` (3.4; 3.5 and 3.6 import them; 1.4 owns `d2l.bits_per_byte`), `d2l.r2_tokenizer`, `d2l.write_shards`, `d2l.TokenShards` (3.6; Chapter 4 reads them). The reference tokenizer (byte-level BPE, vocabulary 32,768, ids 0 to 31 reserved; blueprint README Decision 1) and the shard format are one-way doors.
-- Running models: Qwen3.5-4B in bf16 as the labeller and judge, Qwen3.5-2B as the rephraser (3.5), Qwen3-Embedding-0.6B as the frozen embedder (3.2), a small released decoder for the perplexity filter, `d2l.GPT` as the proxy model (3.4, 3.5, 3.6). Current corpora named as exemplars (Table 8): FineWeb-2 (3.1, 3.6), Nemotron-CC-v2 and FinePhrase (3.5), Dolma 3 (3.4).
-- Assignment A3 (instructor-facing): a data pipeline with a checkable manifest; deduplication F1 on labelled pairs within a margin of the staff solution; a manifest hash reproducible from the rebuilt documents; the MinHash specification is exact so signatures compare bit for bit (blueprint ch03 "Assignment A3"). T0 for everything except the embedding classifier, which has a T0 path.
-- Compute: 3.1 and 3.3 are T0; 3.2, 3.5 and 3.6's experiment are T1; 3.4 is T2 with a T1 configuration of the same code and committed T2 logs. Authoring-time generation (the rephrased corpus, the paraphrased plants, the labels) is done once and committed.
-- Consistency points: every proxy-run comparison is seed-paired with a noise floor from repeated seeds and a difference is called real only if every paired difference has the same sign and the mean exceeds two floor standard deviations; every per-domain loss is reported in bits per byte of the NFC text, never per-token; NFC is the one normalization, applied in 3.1 and before tokenization in 3.6, and NFKC is named only as the thing not to do.
-**Teaching sources:**
-- [CS336](https://cs336.stanford.edu/): the data lectures and assignment A4 (Common Crawl to filtered, deduplicated pretraining data), whose graded quantities shape A3.
-- [FineWeb blog post](https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1): the ablation discipline (small models, equal tokens, per-dump against global deduplication); take the method, not the numbers.
-- [FineWeb2](https://arxiv.org/abs/2506.20920) and its [dataset](https://huggingface.co/datasets/HuggingFaceFW/fineweb-2): the multilingual pipeline whose per-language slices feed 3.2's audit and 3.6's experiment.
-- [Datatrove](https://github.com/huggingface/datatrove): the reference pipeline (readers, filters, MinHash stages); the production oracle for 3.1 to 3.3.
-- [minbpe](https://github.com/karpathy/minbpe): minimal BPE, the from-scratch oracle beside `d2l.BPETokenizer` in 3.6; [Hugging Face LLM Course, chapter 6](https://huggingface.co/learn/llm-course/en/chapter6/1): the tokenizer chapter for readers new to the `tokenizers` library.
-- [Smol Training Playbook](https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook): the data chapters on mixtures, annealing and synthetic data (3.4, 3.5).
-- [Hugging Face dataset cards](https://huggingface.co/docs/hub/datasets-cards) and [Datasheets for Datasets](https://arxiv.org/abs/1803.09010): the documentation standard the manifest's card follows (3.1).
-- [CMU 11-711](https://cmu-l3.github.io/anlp-spring2026) and [CS224N](https://web.stanford.edu/class/cs224n/): the pretraining-data lectures (scaling, systems, data) that assign this chapter as reading.
-**Further Reading:** none.
--->
+For a long time such decisions were made by rules of thumb and seldom
+published. The open corpora of the last few years publish the pipeline
+together with the experiments behind it, so that others can check a choice
+about data. This chapter builds one that a single machine can hold, from a
+record of a web crawl to a token in a file on disk. It measures what each
+step changes and writes every decision into a manifest, so that the corpus
+can be rebuilt from hashes, audited, and corrected when a page has to be
+removed.
+
+The chapter moves in three steps. The first decides which documents exist:
+it extracts text from pages (:numref:`sec_lm_crawl`), filters the text and
+audits whose pages the filters remove (:numref:`sec_lm_quality_filtering`),
+and takes out near-copies and leaked test items (:numref:`sec_lm_dedup`).
+These steps are measured on the documents of a quarter of one Common Crawl
+archive file, each set beside the text that FineWeb, a released corpus, kept
+from the same record. The second step decides how often a model reads each
+kind of text, and there the measure is a model: small proxy runs choose the
+domain weights (:numref:`sec_lm_data_mixtures`) and test whether text
+rewritten by a model can stretch a source that has run short
+(:numref:`sec_lm_synthetic_data`). The third cuts the text into tokens and
+writes the files on which :numref:`chap_lm_pretraining` trains the book's
+reference model (:numref:`sec_lm_tokenizers`). The second and third steps start from
+FineWeb-Edu as released, which holds far more text.
+
+Streaming the token files into training batches belongs to the next chapter,
+and the data that teach a model to follow instructions and preferences
+belong to :numref:`chap_lm_finetuning` and :numref:`chap_lm_rl`. We assume
+you know byte-level BPE (:numref:`sec_text-sequence`), why bits per byte can
+compare models with different tokenizers (:numref:`subsec_lm_bpb`), how a
+paired comparison puts an error bar on a difference
+(:numref:`sec_lm_eval_suites`), and what a text embedding is
+(:numref:`sec_lm_text_embeddings`).
+
+The long computations, labelling pages with a model of 27 billion parameters
+and training dozens of small language models, ran once on four 24 GB GPUs,
+and their results ship with the book. Each notebook downloads them, checks
+them against its configuration and repeats a small part; without a GPU it
+skips what needs one and says so. Common Crawl grants no licence for the
+pages it archives, so the book publishes only byte ranges and hashes, from
+which the notebooks rebuild the documents. No notebook calls a paid service.
 
 ```toc
 :maxdepth: 2
@@ -43,3 +66,106 @@ data-mixtures
 synthetic-data
 tokenizers
 ```
+
+## Resources and Further Reading {.unnumbered}
+
+The resources below accompany the sections of this chapter, and each names
+the section it goes with. All are freely accessible online. If you read only
+three, read the FineWeb blog post, the data chapters of the Smol Training
+Playbook and the pipeline guide of the `tokenizers` library: between them
+they cover how a filter is tested by training on its output, how a mixture
+is planned, and how a tokenizer is assembled. The chapter has no notebook of
+further reading.
+
+**Courses**
+
+- [Stanford CS336: Language Modeling from Scratch](https://cs336.stanford.edu/) has lectures on data sources, filtering, deduplication, mixing and tokenization, and an assignment that turns Common Crawl into filtered, deduplicated training data, the pipeline of :numref:`sec_lm_crawl`, :numref:`sec_lm_quality_filtering` and :numref:`sec_lm_dedup`.
+- [Stanford CS224N](https://web.stanford.edu/class/cs224n/) and [CMU 11-711: Advanced Natural Language Processing](https://cmu-l3.github.io/anlp-spring2026) each give lectures to pretraining and its data, a shorter route through the questions of this chapter.
+- Chapter 6 of the [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/en/chapter6/1) trains tokenizers with the `tokenizers` library. Read it before :numref:`sec_lm_tokenizers` if the library is new to you.
+
+**Building a web corpus**
+
+- The [FineWeb blog post](https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1) describes how FineWeb chose its extractor, filters and deduplication by training small models on the output of each candidate, the method behind :numref:`sec_lm_crawl` to :numref:`sec_lm_dedup` and the proxy runs of :numref:`sec_lm_data_mixtures`. Take the method; its numbers belong to its scale.
+- Common Crawl's [getting-started page](https://commoncrawl.org/get-started) explains how its archives are organized and fetched, and the [trafilatura documentation](https://trafilatura.readthedocs.io/) lists the extraction options that :numref:`sec_lm_crawl` compares with FineWeb's settings.
+- [Datatrove](https://github.com/huggingface/datatrove) is the library that built FineWeb: readers, extractors, the heuristic filters that :numref:`sec_lm_quality_filtering` checks its own rules against, and the MinHash stages of :numref:`sec_lm_dedup`.
+- The [FineWeb-Edu dataset card](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu) gives the rubric, the classifier and the share of documents kept, the recipe that :numref:`sec_lm_quality_filtering` rebuilds with a newer labeller. [FineWeb-2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-2) is its multilingual counterpart, whose slices :numref:`sec_lm_quality_filtering` and :numref:`sec_lm_tokenizers` use.
+- [datasketch](https://github.com/ekzhu/datasketch) implements MinHash and banding and serves :numref:`sec_lm_dedup` as an independent check, and [deduplicate-text-datasets](https://github.com/google-research/deduplicate-text-datasets) is the suffix-array deduplicator whose method that section writes out on a small sample.
+- The [dataset cards](https://huggingface.co/docs/hub/datasets-cards) of the Hugging Face Hub and [Datasheets for Datasets](https://arxiv.org/abs/1803.09010) set the standard for documenting a corpus that the manifest and card of :numref:`sec_lm_crawl` follow.
+
+**Mixtures and generated text**
+
+- The [Smol Training Playbook](https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook) plans the data of a small model from start to finish, with chapters on mixtures, annealing and synthetic data that accompany :numref:`sec_lm_data_mixtures` and :numref:`sec_lm_synthetic_data`.
+- The reference implementations of [RegMix](https://github.com/sail-sg/regmix) and [DoReMi](https://github.com/sangmichaelxie/doremi) are the full-scale versions of the two methods that :numref:`sec_lm_data_mixtures` builds in miniature, and the [Dolma 3 pool card](https://huggingface.co/datasets/allenai/dolma3_pool) lists the sources behind the released mixture that the section reads as a case study.
+- The cards of [Nemotron-CC-v2](https://huggingface.co/datasets/nvidia/Nemotron-CC-v2) and [Cosmopedia](https://huggingface.co/datasets/HuggingFaceTB/cosmopedia) describe a rephrased crawl and a corpus generated from seeds, with their generators, prompts and licences, the two kinds of synthetic data of :numref:`sec_lm_synthetic_data`.
+
+**Tokenizers**
+
+- The [pipeline guide](https://huggingface.co/docs/tokenizers/pipeline) of the `tokenizers` library explains the normalizer, pre-tokenizer, model and decoder from which :numref:`sec_lm_tokenizers` assembles the reference tokenizer.
+- [SentencePiece](https://github.com/google/sentencepiece) trains the unigram and BPE models that :numref:`sec_lm_tokenizers` compares, and its documentation states the normalization defaults that the section turns off.
+- [minbpe](https://github.com/karpathy/minbpe) writes byte-level BPE in a few hundred lines, a second implementation to read beside the tokenizer of :numref:`sec_text-sequence`.
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §20]{.kicker}
+
+Data for Language Models<br>
+**extraction · quality filters · deduplication · mixtures · synthetic data · tokenizers**
+:::
+:::
+
+::: {.slide title="Of 9,731 Crawled Pages, About One in Ten Reaches the Corpus"}
+[The problem]{.kicker}
+
+A quarter of one Common Crawl archive file, through the first three sections:
+
+| stage | documents left | section |
+|---|---|---|
+| HTML responses with extracted text | 9,286 | Document Extraction |
+| English, language score at least 0.65 | 3,288 | Document Extraction |
+| after the heuristic rules | 1,032 | Quality Filtering |
+| after exact and near-duplicate removal | 1,014 | Deduplication |
+
+::: {.d2l-note}
+Every row is a decision made before the first batch. A manifest records
+each one, and the section that makes it measures what it removes.
+:::
+:::
+
+::: {.slide title="By the End of This Chapter You Can"}
+[Goals]{.kicker}
+
+- extract text from web archives and measure what an extractor loses;
+- filter by rules and by a classifier on model labels, and audit whose
+  pages a filter removes;
+- find near-duplicates without comparing every pair, and keep test items
+  out of training data;
+- choose domain weights with small proxy runs and a noise floor;
+- check text written by a model, and compare it with real text at equal
+  cost;
+- choose a vocabulary, and write verified token files for pretraining.
+
+**Running example:** 256 MiB of one Common Crawl file beside FineWeb's text
+for the same records; then FineWeb-Edu as released.
+
+**Idea:** record every decision in a manifest and measure its effect: on
+the documents for extraction, filters and deduplication; on small trained
+models for mixtures and rewritten text.
+:::
+
+::: {.slide title="Three Steps: Choose Documents, Weigh Them, Cut Them into Tokens"}
+[Chapter map]{.kicker}
+
+| step | section | question |
+|---|---|---|
+| choose documents | Document Extraction from Web Crawls | what does extraction lose, and on which pages? |
+| | Quality Filtering | what does a filter remove, and whose pages? |
+| | Deduplication and Decontamination | how are near-copies found without comparing every pair? |
+| weigh them | Data Mixtures | can small runs choose the domain weights of a large one? |
+| | Synthetic and Rephrased Data | when does text written by a model help? |
+| cut into tokens | Tokenizers at Scale | what does one vocabulary cost each language? |
+
+- **Uses:** byte-level BPE; bits per byte; paired error bars; text embeddings.
+- **Next:** the reference model trains on this chapter's token files.
+:::

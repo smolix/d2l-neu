@@ -84,7 +84,12 @@ Like the other methods of this chapter, SAC alternates two kinds of steps, as ge
 
 Take one state with two actions whose values are $Q = (1, 0)$, and let $\beta = 0.5$. :numref:`sec_regularized` showed that the KL-regularized optimum multiplies the reference by $e^{Q/\beta}$ and renormalizes, and that its value is $\beta \log Z$. With a uniform reference,
 
-$$\pi^\star(a) = \frac{e^{Q(a)/\beta}}{Z}, \qquad Z = \sum_a e^{Q(a)/\beta}, \qquad \max_\pi \big(\mathbb{E}_\pi[Q] + \beta H(\pi)\big) = \beta \log Z.$$
+$$
+\begin{aligned}
+\pi^\star(a) &= \frac{e^{Q(a)/\beta}}{Z}, \qquad Z = \sum_a e^{Q(a)/\beta}, \\
+\max_\pi \big(\mathbb{E}_\pi[Q] + \beta H(\pi)\big) &= \beta \log Z.
+\end{aligned}
+$$
 
 Here $\pi^\star = (e^2, 1)/(e^2 + 1) = (0.88, 0.12)$. Its entropy is $0.37$ nats and $\mathbb{E}_{\pi^\star}[Q] = 0.88$, so the soft value is $0.88 + 0.5 \cdot 0.37 = 1.06$, which equals $0.5 \log(e^2 + 1)$. The soft value exceeds the hard maximum $1$: the tilted policy gives up $0.12$ of expected value and gains $0.18$ in entropy bonus. A second fact matters for what follows. The bracket $Q(a) - \beta \log \pi^\star(a)$ takes the same value for both actions, $1 + 0.5 \cdot 0.13$ and $0 + 0.5 \cdot 2.13$, both $1.06$. At the optimum, one sampled action gives the soft value without error. The following cell compares $\pi^\star$ with the uniform policy and with a nearly greedy one:
 
@@ -108,7 +113,10 @@ The tilted policy attains $\beta \log Z = 1.063$, and both other policies fall s
 The soft value of a state counts the entropy collected there along with the future reward, $V^\pi(s) = \mathbb{E}_{a \sim \pi}\big[Q^\pi(s, a) - \beta \log \pi(a \mid s)\big]$, where $Q^\pi(s, a)$ includes the entropy bonuses of all later states but not that of $s$ itself. The critic of :numref:`sec_actorcritic` regressed onto the one-step target $r + \gamma V(s')$, cut to $r$ at a terminal state. SAC's critic learns $Q$, so it needs the value of the next state in terms of $Q$, and it gets it from the identity above with one sampled action. Let $Q_{w^-}$ be a slowly changing copy of the critic $Q_w$, the target network of :numref:`sec_dqn`, which keeps the regression target from moving with every update. The target is
 
 $$
-y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \Big( Q_{w^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s') \Big), \qquad \tilde{a}' \sim \pi_\theta(\cdot \mid s').
+\begin{aligned}
+y &= r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \Big( Q_{w^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s') \Big), \\
+\tilde{a}' &\sim \pi_\theta(\cdot \mid s').
+\end{aligned}
 $$
 :eqlabel:`eq_sac_target`
 
@@ -129,7 +137,10 @@ $$
 where $\pi^\star \propto \pi_{\textrm{ref}}\, e^{r/\beta}$ is the tilted optimum. With $r$ replaced by $Q(s, \cdot)$ and a uniform reference, maximizing $\mathbb{E}_\pi[Q] + \beta H(\pi)$ at a state is the same as minimizing $D_{\textrm{KL}}\big(\pi \Vert e^{Q/\beta}/Z\big)$, since the two differ by $\beta \log Z$, which does not depend on $\pi$. A network policy usually cannot represent the tilted distribution, so SAC moves it toward the member of its family closest in this divergence, the *reverse-KL projection*. In this direction the divergence penalizes any mass the policy puts where $e^{Q/\beta}$ is small, so when the tilted distribution has two separated peaks a Gaussian settles on one of them instead of spreading over both (:numref:`subsec_kl_direction`). Writing the action as a differentiable function of noise gives the actor loss
 
 $$
-L_{\pi}(\theta) = \mathbb{E}_{s \sim \mathcal{D},\, z}\Big[ \beta \log \pi_\theta\big(\tilde{a}_\theta(s, z) \mid s\big) - Q_{w}\big(s, \tilde{a}_\theta(s, z)\big) \Big], \qquad \tilde{a}_\theta(s, z) = c \tanh\big(\mu_\theta(s) + \sigma_\theta(s)\, z\big),
+\begin{aligned}
+L_{\pi}(\theta) &= \mathbb{E}_{s \sim \mathcal{D},\, z}\Big[ \beta \log \pi_\theta\big(\tilde{a}_\theta(s, z) \mid s\big) - Q_{w}\big(s, \tilde{a}_\theta(s, z)\big) \Big], \\
+\tilde{a}_\theta(s, z) &= c \tanh\big(\mu_\theta(s) + \sigma_\theta(s)\, z\big),
+\end{aligned}
 $$
 :eqlabel:`eq_sac_actor`
 
@@ -142,7 +153,10 @@ If each state's maximization were exact, the improvement step would raise the so
 **Proof.** Write $H_t$ for the entropy of $\pi_{\textrm{new}}$ at $s_t$. Because $\pi_{\textrm{old}} \in \Pi$, optimality at $s_0 = s$, followed by $Q^{\pi_{\textrm{old}}}(s, a) = r(s, a) + \gamma\, \mathbb{E}[V^{\pi_{\textrm{old}}}(s_1)]$, gives
 
 $$
-V^{\pi_{\textrm{old}}}(s) \leq \mathbb{E}_{a \sim \pi_{\textrm{new}}}\big[ Q^{\pi_{\textrm{old}}}(s, a) - \beta \log \pi_{\textrm{new}}(a \mid s) \big] = \mathbb{E}_{\pi_{\textrm{new}}}\big[ r_0 + \beta H_0 + \gamma\, V^{\pi_{\textrm{old}}}(s_1) \big].
+\begin{aligned}
+V^{\pi_{\textrm{old}}}(s) &\leq \mathbb{E}_{a \sim \pi_{\textrm{new}}}\big[ Q^{\pi_{\textrm{old}}}(s, a) - \beta \log \pi_{\textrm{new}}(a \mid s) \big] \\
+&= \mathbb{E}_{\pi_{\textrm{new}}}\big[ r_0 + \beta H_0 + \gamma\, V^{\pi_{\textrm{old}}}(s_1) \big].
+\end{aligned}
 $$
 
 Applying the same inequality to $V^{\pi_{\textrm{old}}}(s_1)$, then to $V^{\pi_{\textrm{old}}}(s_2)$, and so on $n$ times, gives $V^{\pi_{\textrm{old}}}(s) \leq \mathbb{E}_{\pi_{\textrm{new}}}\big[ \sum_{t < n} \gamma^t (r_t + \beta H_t) \big] + \gamma^n\, \mathbb{E}\big[V^{\pi_{\textrm{old}}}(s_n)\big]$. Values are bounded, so the last term vanishes as $n \to \infty$, and the sum tends to $V^{\pi_{\textrm{new}}}(s)$. $\blacksquare$

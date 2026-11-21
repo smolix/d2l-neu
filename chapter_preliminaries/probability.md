@@ -273,7 +273,12 @@ For our investment, $\mathbb{E}[X^2] = 0.5(0) + 0.4(4) + 0.1(100) = 11.6$, so $\
 
 For a sum of two random variables, expanding $\mathbb{E}[(X - \mu_X + Y - \mu_Y)^2]$ gives
 
-$$\textrm{Var}(X + Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X, Y), \qquad \textrm{Cov}(X, Y) = \mathbb{E}\left[(X - \mu_X)(Y - \mu_Y)\right],$$
+$$
+\begin{aligned}
+\textrm{Var}(X + Y) &= \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X, Y), \\
+\textrm{Cov}(X, Y) &= \mathbb{E}\left[(X - \mu_X)(Y - \mu_Y)\right],
+\end{aligned}
+$$
 
 where the *covariance* $\textrm{Cov}(X, Y)$ (and dimensionless *correlation* $\rho = \textrm{Cov}(X, Y)/(\sigma_X\sigma_Y) \in [-1, 1]$) measures linear co-movement (:numref:`fig_prob_covariance`; for a random vector $\mathbf{x}$, the *covariance matrix* $\boldsymbol{\Sigma} = \mathbb{E}[(\mathbf{x}-\boldsymbol{\mu})(\mathbf{x}-\boldsymbol{\mu})^\top]$ satisfies $\textrm{Var}(\mathbf{v}^\top\mathbf{x}) = \mathbf{v}^\top\boldsymbol{\Sigma}\mathbf{v}$).
 

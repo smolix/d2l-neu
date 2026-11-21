@@ -41,9 +41,10 @@ With $x(t) = 0$, the solution is $h(t) = e^{\lambda t} h(0)$. Stability requires
 A *state space model* (SSM) generalizes :eqref:`eq_ssm_scalar` to an $N$-dimensional state vector $\mathbf{h}(t) \in \mathbb{R}^N$ driven by a scalar input $x(t)$ and projected to a scalar output $y(t)$:
 
 $$
-\mathbf{h}'(t) = \mathbf{A}\, \mathbf{h}(t) + \mathbf{B}\, x(t),
-\qquad
-y(t) = \mathbf{C}\, \mathbf{h}(t) + D\, x(t),
+\begin{aligned}
+\mathbf{h}'(t) &= \mathbf{A}\, \mathbf{h}(t) + \mathbf{B}\, x(t), \\
+y(t) &= \mathbf{C}\, \mathbf{h}(t) + D\, x(t),
+\end{aligned}
 $$
 :eqlabel:`eq_ssm_cont`
 
@@ -59,9 +60,11 @@ An SSM layer processes a $d$-dimensional input sequence by running one such $N$-
 To apply :eqref:`eq_ssm_cont` to a discrete token sequence, we sample the system at intervals of step size $\Delta$, so step $t$ corresponds to continuous time $t\Delta$. Holding the input constant at $x_t$ over the interval $((t-1)\Delta, t\Delta]$—the *zero-order hold* (ZOH) assumption—allows us to integrate :eqref:`eq_ssm_scalar` exactly. Since $\frac{\textrm{d}}{\textrm{d}t}(h + x_t/\lambda) = \lambda(h + x_t/\lambda)$, the shifted state $h + x_t/\lambda$ decays by $e^{\Delta\lambda}$ over one step: $h_t + x_t/\lambda = e^{\Delta\lambda}(h_{t-1} + x_t/\lambda)$. Rearranging yields the exact discrete linear recurrence:
 
 $$
-h_t = \bar{a}\, h_{t-1} + \bar{b}\, x_t, \qquad
-\bar{a} = e^{\Delta \lambda}, \qquad
+\begin{aligned}
+h_t &= \bar{a}\, h_{t-1} + \bar{b}\, x_t, \\
+\bar{a} &= e^{\Delta \lambda}, \qquad
 \bar{b} = \frac{e^{\Delta \lambda} - 1}{\lambda}.
+\end{aligned}
 $$
 :eqlabel:`eq_zoh`
 
@@ -82,8 +85,10 @@ Real-valued S4D initializes $\lambda_n = -n$ for $n = 1, \ldots, N$ (the diagona
 When $\bar{a}_n$, $\bar{b}_n$, and $\mathbf{C}$ do not vary with token position $t$, the system is *linear time-invariant* (LTI). Unrolling :eqref:`eq_zoh` from $\mathbf{h}_0 = \mathbf{0}$ shows that state $n$ accumulates $\sum_{k \ge 0} \bar{a}_n^k \bar{b}_n x_{t-k}$, and the readout $\mathbf{C}$ sums the $N$ states into a single *causal convolution*:
 
 $$
-y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D x_t, \qquad
-K_k = \sum_{n=1}^{N} c_n \bar{a}_n^k \bar{b}_n.
+\begin{aligned}
+y_t &= \sum_{k=0}^{t-1} K_k\, x_{t-k} + D x_t, \\
+K_k &= \sum_{n=1}^{N} c_n \bar{a}_n^k \bar{b}_n.
+\end{aligned}
 $$
 :eqlabel:`eq_ssm_kernel`
 

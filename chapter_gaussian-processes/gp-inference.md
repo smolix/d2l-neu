@@ -116,8 +116,11 @@ There are some key points to note about the predictive distributions for Gaussia
 ## Worked Example from Scratch
 
 Let's create some regression data, and then fit the data with a GP, implementing every step from scratch. 
-We'll sample data from 
-$$y(x) = \sin(x) + \frac{1}{2}\sin(4x) + \epsilon,$$ with $\epsilon \sim \mathcal{N}(0,\sigma^2)$. The noise free function we wish to find is $f(x) = \sin(x) + \frac{1}{2}\sin(4x)$. We'll start by using a noise standard deviation $\sigma = 0.25$.
+We'll sample data from
+
+$$y(x) = \sin(x) + \frac{1}{2}\sin(4x) + \epsilon,$$
+
+with $\epsilon \sim \mathcal{N}(0,\sigma^2)$. The noise free function we wish to find is $f(x) = \sin(x) + \frac{1}{2}\sin(4x)$. We'll start by using a noise standard deviation $\sigma = 0.25$.
 
 ```{.python .input #gp-inference-worked-example-from-scratch-1}
 def data_maker1(x, sig):

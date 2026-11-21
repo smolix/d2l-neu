@@ -514,9 +514,10 @@ steps :cite:`Wang.Aitchison.2025`. At $\eta = 3 \times 10^{-3}$ and $\lambda = 0
 Over runs longer than $\tau = 1/(\eta\lambda)$, the initial weights decay away and each coordinate $x_{t,i}$ reaches a stochastic **equilibrium norm** where per-step shrinkage $\eta\lambda x_{t,i}$ balances the injection of normalized updates $-\eta n_{t,i}$ (with $n_{t,i} = g_{t,i}/\sqrt{\hat{v}_{t,i}}$ of unit mean square $\sigma^2 \approx 1$). By the exact same variance recursion as the SGD noise ball :eqref:`eq_sgd-noise-ball` with $\lambda_{\text{decay}}$ in place of curvature:
 
 $$
-\mathbb{E}\big[x_{t+1}^2\big] = (1 - \eta\lambda)^2\, \mathbb{E}\big[x_t^2\big] + \eta^2 \sigma^2
-\qquad \Longrightarrow \qquad
-\mathbb{E}\big[x_\infty^2\big] \approx \frac{\eta\, \sigma^2}{2\lambda} \approx \frac{\eta}{2\lambda}.
+\begin{aligned}
+\mathbb{E}\big[x_{t+1}^2\big] &= (1 - \eta\lambda)^2\, \mathbb{E}\big[x_t^2\big] + \eta^2 \sigma^2 \\
+\Longrightarrow \quad \mathbb{E}\big[x_\infty^2\big] &\approx \frac{\eta\, \sigma^2}{2\lambda} \approx \frac{\eta}{2\lambda}.
+\end{aligned}
 $$
 :eqlabel:`eq_adamw-equilibrium`
 

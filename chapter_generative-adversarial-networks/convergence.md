@@ -33,8 +33,10 @@ from d2l import jax as d2l
 Let the data distribution be a point mass at the origin, $p = \delta_0$, let the generator place a point mass at $\theta \in \mathbb{R}$, $q_\theta = \delta_\theta$ (so $q_\theta = p$ if and only if $\theta = 0$), and let the critic be linear without bias, $D_\psi(x) = \psi x$. Under the symmetric margin objective $V_\ell(D) = \mathbb{E}_{x \sim p}[\ell(D(x))] + \mathbb{E}_{x' \sim q}[\ell(-D(x'))]$ (:numref:`sec_gan_objectives`), both expectations reduce to single evaluations:
 
 $$
-V(\theta, \psi) \;=\; \ell\big(D_\psi(0)\big) + \ell\big({-D_\psi(\theta)}\big)
-\;=\; \ell(0) + \ell(-\psi\theta).
+\begin{aligned}
+V(\theta, \psi) &= \ell\big(D_\psi(0)\big) + \ell\big({-D_\psi(\theta)}\big) \\
+&= \ell(0) + \ell(-\psi\theta).
+\end{aligned}
 $$
 :eqlabel:`eq_gan_dirac_value`
 
@@ -47,17 +49,20 @@ For any $\theta \neq 0$, the supports of $p$ and $q_\theta$ are disjoint: maximi
 Instead of solving for $\sup_\psi V(\theta, \psi)$, gradient training updates $\theta$ and $\psi$ incrementally from their current values. The unique stationary point of :eqref:`eq_gan_dirac_value` is the equilibrium $(\theta, \psi) = (0, 0)$. Under simultaneous continuous-time gradient flow ($\dot\theta = -\partial_\theta V$, $\dot\psi = +\partial_\psi V$),
 
 $$
-\dot\theta \;=\; -\partial_\theta V \;=\; \psi\, \ell'(-\psi\theta),
-\qquad
-\dot\psi \;=\; +\partial_\psi V \;=\; -\theta\, \ell'(-\psi\theta).
+\begin{aligned}
+\dot\theta &= -\partial_\theta V = \psi\, \ell'(-\psi\theta), \\
+\dot\psi &= +\partial_\psi V = -\theta\, \ell'(-\psi\theta).
+\end{aligned}
 $$
 :eqlabel:`eq_gan_dirac_flow`
 
 Because the velocity vector $\mathbf{u}(\theta, \psi) = \ell'(-\psi\theta)\,(\psi, -\theta)$ is everywhere orthogonal to the state vector $(\theta, \psi)$, the squared distance to the origin is conserved:
 
 $$
+\begin{aligned}
 \frac{d}{dt}\big(\theta^2 + \psi^2\big)
-= 2\theta\psi\,\ell'(-\psi\theta) - 2\psi\theta\,\ell'(-\psi\theta) = 0 .
+&= 2\theta\psi\,\ell'(-\psi\theta) - 2\psi\theta\,\ell'(-\psi\theta) = 0 .
+\end{aligned}
 $$
 
 Every trajectory is a closed circle of constant radius around $(0, 0)$ for any strictly increasing payoff $\ell$: the generator parameter $\theta$ oscillates back and forth across $0$ without ever converging.
@@ -78,8 +83,10 @@ Purely imaginary eigenvalues correspond to a linear *center* (the bilinear saddl
 In discrete time, simultaneous gradient descent with step size $h > 0$ updates $(\theta, \psi) \mapsto (\theta, \psi) + h\,\mathbf{u}(\theta, \psi)$. Because $\mathbf{u}(\theta, \psi) \perp (\theta, \psi)$, the Pythagorean theorem gives:
 
 $$
+\begin{aligned}
 \big\| (\theta, \psi) + h\, \mathbf{u} \big\|^2
-\;=\; \big\| (\theta, \psi) \big\|^2 + h^2 \big\| \mathbf{u} \big\|^2 .
+&= \big\| (\theta, \psi) \big\|^2 + h^2 \big\| \mathbf{u} \big\|^2 .
+\end{aligned}
 $$
 
 Thus, every simultaneous discrete step strictly *increases* the distance from the equilibrium for any $h > 0$, causing the iterates to spiral outward (Exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`).
@@ -93,17 +100,20 @@ To make the equilibrium $(\theta, \psi) = (0, 0)$ locally asymptotically stable,
 :citet:`Mescheder.Geiger.Nowozin.2018` define the two *zero-centered gradient penalties* $R_1$ (evaluated on real data $x \sim p$) and $R_2$ (evaluated on generated samples $x' \sim q$):
 
 $$
-R_1 \;=\; \frac{\gamma}{2}\, \mathbb{E}_{x \sim p}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
-\qquad
-R_2 \;=\; \frac{\gamma}{2}\, \mathbb{E}_{x' \sim q}\Big[ \big\| \nabla_{x'} D(x') \big\|^2 \Big],
+\begin{aligned}
+R_1 &= \frac{\gamma}{2}\, \mathbb{E}_{x \sim p}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big], \\
+R_2 &= \frac{\gamma}{2}\, \mathbb{E}_{x' \sim q}\Big[ \big\| \nabla_{x'} D(x') \big\|^2 \Big],
+\end{aligned}
 $$
 :eqlabel:`eq_gan_r1r2`
 
 with penalty weight $\gamma > 0$. The critic maximizes $V_\ell(D) - R_1 - R_2$, while the generator objective is unchanged. Writing $m = (p + q)/2$, their sum is the expected squared gradient norm under the mixture distribution:
 
 $$
-R_1 + R_2 \;=\; \gamma\, \mathbb{E}_{x \sim m}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
+\begin{aligned}
+R_1 + R_2 &= \gamma\, \mathbb{E}_{x \sim m}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
 \qquad m = \frac{p + q}{2}.
+\end{aligned}
 $$
 :eqlabel:`eq_gan_r1r2_sum`
 
@@ -215,14 +225,18 @@ How do the zero-centered penalties $R_1 + R_2 = \gamma\,\mathbb{E}_m[\|\nabla_x 
 Near $q = p$, the optimal critic $D$ is small. Expanding $\ell(t) \approx \ell(0) + \ell'(0)t - \tfrac12|\ell''(0)|t^2$ to second order in $D$ inside $V_\ell(D)$ gives:
 
 $$
-V_\ell(D) \approx 2\ell(0) + \ell'(0)\, \langle p - q,\, D \rangle - |\ell''(0)| \int m\, D^2 ,
+\begin{aligned}
+V_\ell(D) &\approx 2\ell(0) + \ell'(0)\, \langle p - q,\, D \rangle - |\ell''(0)| \int m\, D^2 ,
+\end{aligned}
 $$
 
 where $\langle p - q, D \rangle = \mathbb{E}_p[D] - \mathbb{E}_q[D]$. Consider two unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ separated by a small shift $\mu$, and a linear critic $D(x) = cx$. To leading order in $\mu$, $\langle p - q, D \rangle = -c\mu$, $\int m\,D^2 \approx c^2$, and the penalty is $\gamma\int m\,\|\nabla_x D\|^2 = \gamma c^2$. Maximizing the concave quadratic $-\ell'(0)\mu c - (|\ell''(0)| + \gamma)c^2$ over $c$ yields the optimal slope $c^\star = -\frac{\ell'(0)\mu}{2(|\ell''(0)| + \gamma)}$ and value:
 
 $$
-\frac{\ell'(0)^2 \mu^2}{4\,(|\ell''(0)| + \gamma)} \;=\; \frac{\mu^2}{4 + 16\gamma}
-\quad \text{for the logistic loss, at slope } c^\star = -\frac{\mu}{1 + 4\gamma} .
+\begin{aligned}
+\frac{\ell'(0)^2 \mu^2}{4\,(|\ell''(0)| + \gamma)} &= \frac{\mu^2}{4 + 16\gamma} \\
+&\text{for the logistic loss, at slope } c^\star = -\frac{\mu}{1 + 4\gamma} .
+\end{aligned}
 $$
 
 Thus, the penalty shrinks both the critic's slope and the local value by the factor $1 + 4\gamma$. At $\gamma = 0$, we recover $\mu^2/4 \approx 2\,\mathrm{JS}(p, q)$; for large $\gamma$, the value scales as $\mu^2/(16\gamma) = \tfrac{\ell'(0)^2}{4\gamma} W_2(p, q)^2$. Below, we verify this closed-form approximation against the exact penalized optimum computed via Newton's method on a 1D grid.
@@ -262,17 +276,20 @@ For small shifts ($\mu = 0.2$), the quadratic formula $\mu^2/(4 + 16\gamma)$ mat
 For general distributions $p$ and $q$ near equilibrium, integrating by parts writes the gradient penalty as $\int m\,\|\nabla_x D\|^2 = \langle D, \mathcal{L}_m D \rangle$, where $\mathcal{L}_m D = -\nabla \cdot (m \nabla D)$ is the $m$-weighted Laplacian. Maximizing the local quadratic approximation over all functions $D$ yields (Exercise :exref:`ex_convergence-prove-eqref-eq-gan`):
 
 $$
-\sup_{D} \Big\{ \ell'(0)\, \langle p - q,\, D \rangle - |\ell''(0)| \int m\, D^2 - \gamma \int m\, \| \nabla_x D \|^2 \Big\}
-\;=\; \frac{\ell'(0)^2}{4}\, \big\langle p - q,\, \big(|\ell''(0)|\, m + \gamma \mathcal{L}_m\big)^{-1} (p - q) \big\rangle .
+\begin{aligned}
+&\sup_{D} \Big\{ \ell'(0)\, \langle p - q,\, D \rangle - |\ell''(0)| \int m\, D^2 - \gamma \int m\, \| \nabla_x D \|^2 \Big\} \\
+&\qquad = \frac{\ell'(0)^2}{4}\, \big\langle p - q,\, \big(|\ell''(0)|\, m + \gamma \mathcal{L}_m\big)^{-1} (p - q) \big\rangle .
+\end{aligned}
 $$
 :eqlabel:`eq_gan_local_value`
 
 As $\gamma \to 0$, this reduces to $\tfrac{\ell'(0)^2}{4|\ell''(0)|} \int (p - q)^2/m \approx 2\,\mathrm{JS}(p, q)$. As $\gamma \to \infty$, it approaches a multiple of the squared *dual Sobolev norm* $\dot H^{-1}(m)$:
 
 $$
-\frac{\ell'(0)^2}{4\gamma}\, \big\| p - q \big\|^2_{\dot H^{-1}(m)},
-\qquad
-\|v\|_{\dot H^{-1}(m)} = \sup\Big\{ \langle v, D\rangle : \int m \|\nabla_x D\|^2 \leq 1 \Big\}.
+\begin{aligned}
+&\frac{\ell'(0)^2}{4\gamma}\, \big\| p - q \big\|^2_{\dot H^{-1}(m)}, \\
+&\|v\|_{\dot H^{-1}(m)} = \sup\Big\{ \langle v, D\rangle : \int m \|\nabla_x D\|^2 \leq 1 \Big\}.
+\end{aligned}
 $$
 :eqlabel:`eq_gan_sobolev`
 

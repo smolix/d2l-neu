@@ -557,9 +557,11 @@ Because the integrand is non-negative, we may exchange expectation and
 integration:
 
 $$
+\begin{aligned}
 \mathbb{E}_\gamma|X - Y|
-= \int \Big( \gamma(X \leq t < Y) + \gamma(Y \leq t < X) \Big)\, dt
-\geq \int \big| \gamma(X \leq t < Y) - \gamma(Y \leq t < X) \big|\, dt.
+&= \int \Big( \gamma(X \leq t < Y) + \gamma(Y \leq t < X) \Big)\, dt \\
+&\geq \int \big| \gamma(X \leq t < Y) - \gamma(Y \leq t < X) \big|\, dt.
+\end{aligned}
 $$
 
 The key step is simplifying the difference inside the last integral. Adding

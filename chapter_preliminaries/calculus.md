@@ -236,7 +236,13 @@ This motivates *gradient descent*, $\mathbf{w} \leftarrow \mathbf{w} - \eta \nab
 
 Three vector gradient identities (:numref:`sec_mdl-matrix-calculus`) allow us to differentiate vector expressions without writing out coordinates:
 
-$$\nabla_{\mathbf{x}}\, (\mathbf{a}^\top \mathbf{x}) = \mathbf{a}, \qquad \nabla_{\mathbf{x}}\, (\mathbf{x}^\top \mathbf{A} \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}, \qquad \nabla_{\mathbf{x}} \|\mathbf{x}\|^2 = 2\mathbf{x}.$$
+$$
+\begin{aligned}
+\nabla_{\mathbf{x}}\, (\mathbf{a}^\top \mathbf{x}) &= \mathbf{a}, \qquad
+\nabla_{\mathbf{x}}\, (\mathbf{x}^\top \mathbf{A} \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}, \\
+\nabla_{\mathbf{x}} \|\mathbf{x}\|^2 &= 2\mathbf{x}.
+\end{aligned}
+$$
 
 Expanding $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2 = \mathbf{w}^\top(\mathbf{X}^\top\mathbf{X})\mathbf{w} - 2(\mathbf{X}^\top\mathbf{y})^\top\mathbf{w} + \mathbf{y}^\top\mathbf{y}$ and applying these rules gives
 

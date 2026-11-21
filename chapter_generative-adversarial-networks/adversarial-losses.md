@@ -33,9 +33,10 @@ from d2l import jax as d2l
 Let $g(c)$ be a deterministic predictor of $x$ given condition $c$, and let $\mu(c) = \mathbb{E}[x \mid c]$ denote the conditional mean. Adding and subtracting $\mu(c)$ inside $\mathbb{E}[\|x - g(c)\|^2]$ eliminates the cross term $2\,\mathbb{E}[\langle x - \mu(c), \mu(c) - g(c) \rangle] = 0$ (by iterated expectation given $c$), leaving the orthogonal decomposition:
 
 $$
+\begin{aligned}
 \mathbb{E}\big[(x - g(c))^2\big]
-\;=\;
-\mathbb{E}\big[(x - \mu(c))^2\big] \;+\; \mathbb{E}\big[(\mu(c) - g(c))^2\big].
+&= \mathbb{E}\big[(x - \mu(c))^2\big] + \mathbb{E}\big[(\mu(c) - g(c))^2\big].
+\end{aligned}
 $$
 :eqlabel:`eq_beyond_condmean`
 
@@ -47,10 +48,11 @@ The first term is the irreducible conditional variance $\operatorname{Var}(x \mi
 Consider a 1D conditional distribution with $c \sim \textrm{Uniform}[-1, 1]$ and two parallel data bands separated by an empty corridor:
 
 $$
-x \;=\; c + b + 0.05\,\xi,
-\qquad
-b \in \{-1, +1\} \textrm{ with probability } \tfrac12 \textrm{ each},
+\begin{aligned}
+x &= c + b + 0.05\,\xi, \\
+b &\in \{-1, +1\} \textrm{ with probability } \tfrac12 \textrm{ each},
 \quad \xi \sim \mathcal{N}(0, 1).
+\end{aligned}
 $$
 :eqlabel:`eq_beyond_twoband`
 

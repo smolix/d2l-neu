@@ -905,8 +905,8 @@ $$
 \begin{aligned}
 0 &= \det(\ldots, \mathbf{u}+\mathbf{w}, \ldots, \mathbf{u}+\mathbf{w}, \ldots) \\
   &= \det(\ldots, \mathbf{u}, \ldots, \mathbf{u}, \ldots)
-   + \det(\ldots, \mathbf{u}, \ldots, \mathbf{w}, \ldots)
-   + \det(\ldots, \mathbf{w}, \ldots, \mathbf{u}, \ldots)
+   + \det(\ldots, \mathbf{u}, \ldots, \mathbf{w}, \ldots) \\
+  &\quad + \det(\ldots, \mathbf{w}, \ldots, \mathbf{u}, \ldots)
    + \det(\ldots, \mathbf{w}, \ldots, \mathbf{w}, \ldots).
 \end{aligned}
 $$
@@ -1002,11 +1002,13 @@ $$
 expanding along the first column gives
 
 $$
+\begin{aligned}
 \det \mathbf{M}
- = 2 \det \begin{bmatrix} 3 & 1 \\ 1 & 2 \end{bmatrix}
- - 1 \det \begin{bmatrix} 1 & 0 \\ 1 & 2 \end{bmatrix}
- + 0 \det \begin{bmatrix} 1 & 0 \\ 3 & 1 \end{bmatrix}
- = 2 \cdot 5 - 1 \cdot 2 + 0 = 8.
+ &= 2 \det \begin{bmatrix} 3 & 1 \\ 1 & 2 \end{bmatrix}
+  - 1 \det \begin{bmatrix} 1 & 0 \\ 1 & 2 \end{bmatrix}
+  + 0 \det \begin{bmatrix} 1 & 0 \\ 3 & 1 \end{bmatrix} \\
+ &= 2 \cdot 5 - 1 \cdot 2 + 0 = 8.
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-det-3x3`
 
@@ -1386,7 +1388,7 @@ directly to eigenvalues and singular values.
        $\det(\mathbf{u}\mathbf{w}^\top) = 0$ for $n \times n$ matrices with
        $n \ge 2$.
     1. Verify the two factorizations
-       $$\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{w}^\top & 1\end{bmatrix} = \begin{bmatrix}\mathbf{I} & \mathbf{0}\\ \mathbf{w}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1 + \mathbf{w}\cdot\mathbf{u}\end{bmatrix} = \begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} + \mathbf{u}\mathbf{w}^\top & \mathbf{0}\\ \mathbf{w}^\top & 1\end{bmatrix}.$$
+       $$\begin{aligned}\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{w}^\top & 1\end{bmatrix} &= \begin{bmatrix}\mathbf{I} & \mathbf{0}\\ \mathbf{w}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1 + \mathbf{w}\cdot\mathbf{u}\end{bmatrix} \\ &= \begin{bmatrix}\mathbf{I} & -\mathbf{u}\\ \mathbf{0}^\top & 1\end{bmatrix}\begin{bmatrix}\mathbf{I} + \mathbf{u}\mathbf{w}^\top & \mathbf{0}\\ \mathbf{w}^\top & 1\end{bmatrix}.\end{aligned}$$
        Use the permutation formula :eqref:`eq_mdl-det-permutation` to show
        that a matrix whose last column is $\mathbf{e}_{n+1}$ has the
        determinant of its upper-left $n \times n$ block. Deduce

@@ -1,7 +1,7 @@
 # Policy Gradient
 :label:`sec_policygradient`
 
-In :numref:`sec_imitation` a policy learned from an expert, taking one ascent step on the log-probability of each demonstrated action with every action weighted by one. In :numref:`sec_optimal_control` a planner differentiated known transition equations $f(\mathbf{x}_t, \mathbf{u}_t)$ to compute backward Riccati gains. Now suppose there is neither an expert nor a known differentiable model of the environment—only the agent's own attempts and the reward each attempt earned. An obvious guess keeps the cloning update and changes the weights: push up the log-probability of every action the agent took, weighted by the return of the episode it belongs to, so that actions from episodes that paid off become more likely. Is this guess principled? How does the expected return change when the parameters $\theta$ of the policy move?
+In :numref:`sec_imitation` a parameterized softmax policy $\pi_\theta(a \mid s)$ learned from expert demonstrations, taking one ascent step on the log-probability of each demonstrated action with every action weighted by one. In :numref:`sec_optimal_control` a planner instead differentiated through known transition dynamics $f(\mathbf{x}_t, \mathbf{u}_t)$ to compute backward Riccati gains and optimize controls without an expert. Now suppose there is neither an expert nor a known differentiable model $f$ of the environment—only the agent's own attempts and the reward each attempt earned. Rather than differentiating through $f$, we differentiate the stochastic policy $\pi_\theta(a \mid s)$ itself: an obvious guess keeps the cloning update of :numref:`sec_imitation` and changes the weights, pushing up the log-probability of every action the agent took, weighted by the return of the episode it belongs to, so that actions from episodes that paid off become more likely. Is this guess principled? How does the expected return change when the parameters $\theta$ of the policy move?
 
 Ronald Williams answered this question in 1992 :cite:`Williams.1992`. The average of the guessed update is the gradient of the expected return, so the guess is stochastic gradient ascent, and he called the algorithm REINFORCE. The return of an episode depends on the environment's transition probabilities, which the agent does not know, yet the estimate needs only sampled episodes and the policy's own log-probabilities. Writing the policy down as a function $\pi_\theta(a \mid s)$ also lifts a limit of the value tables of :numref:`sec_qlearning`. Acting greedily on a table needs a maximum over a finite list of actions, whereas a parameterized policy can output a torque, or a distribution over a vocabulary of tokens. The same identity, applied to the next-token distribution of a language model, trains reasoning models from a single reward given to the finished answer.
 
@@ -109,7 +109,12 @@ What is the gradient of the expected return, and can it be estimated from the ag
 
 Take one state and two actions with preferences $\theta_1$ and $\theta_2$. Action 1 earns reward $1$ and action 2 earns $0$. Write $p = \pi_\theta(1)$. The expected reward is $J(\theta) = p$, and by :eqref:`eq_softmax_score` its derivative with respect to $\theta_1$ is $p(1 - p)$. Suppose that we could not compute $p$ but could only try actions. The derivative can still be written as an average over the policy's own actions. Multiply and divide each term by $\pi_\theta(a)$:
 
-$$\frac{\partial J}{\partial \theta_1} = \sum_a r(a)\, \frac{\partial \pi_\theta(a)}{\partial \theta_1} = \sum_a \pi_\theta(a)\, r(a)\, \frac{\partial \log \pi_\theta(a)}{\partial \theta_1} = \mathbb{E}_{a \sim \pi_\theta}\Big[ r(a)\, \frac{\partial \log \pi_\theta(a)}{\partial \theta_1} \Big].$$
+$$
+\begin{aligned}
+\frac{\partial J}{\partial \theta_1} &= \sum_a r(a)\, \frac{\partial \pi_\theta(a)}{\partial \theta_1} = \sum_a \pi_\theta(a)\, r(a)\, \frac{\partial \log \pi_\theta(a)}{\partial \theta_1} \\
+&= \mathbb{E}_{a \sim \pi_\theta}\Big[ r(a)\, \frac{\partial \log \pi_\theta(a)}{\partial \theta_1} \Big].
+\end{aligned}
+$$
 
 So one sampled action, its reward multiplied by its score, is an estimate of the derivative. With probability $p$ the sample is action 1, whose reward is $1$ and whose score is $1 - p$; with probability $1 - p$ the reward is zero and so is the estimate. The mean is $p(1 - p)$, the derivative itself. The second moment is $p(1-p)^2$, so the standard deviation is $(1-p)\sqrt{p(1-p)}$, which is
 
@@ -139,8 +144,8 @@ The step of the smallest case applies unchanged. The return $R(\tau)$ of a fixed
 
 $$
 \begin{aligned}
-\nabla_\theta J(\theta) &= \sum_\tau R(\tau)\ \nabla_\theta P(\tau; \theta) = \sum_\tau P(\tau; \theta)\ R(\tau)\ \frac{\nabla_\theta P(\tau; \theta)}{P(\tau; \theta)}
-= \sum_\tau P(\tau; \theta)\ R(\tau)\ \nabla_\theta \log P(\tau; \theta),
+\nabla_\theta J(\theta) &= \sum_\tau R(\tau)\ \nabla_\theta P(\tau; \theta) = \sum_\tau P(\tau; \theta)\ R(\tau)\ \frac{\nabla_\theta P(\tau; \theta)}{P(\tau; \theta)} \\
+&= \sum_\tau P(\tau; \theta)\ R(\tau)\ \nabla_\theta \log P(\tau; \theta),
 \end{aligned}
 $$
 
@@ -360,7 +365,12 @@ for its discounted average over time, the *discounted state-occupancy distributi
 
 **Proposition (policy gradient theorem).** *For the objective $J(\theta) = \mathbb{E}_{s_0 \sim \mu_0} [V^{\pi_\theta}(s_0)]$,*
 
-$$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 0} \gamma^t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ Q^{\pi_\theta}(s_t, a_t) \Big] = \frac{1}{1 - \gamma}\, \mathbb{E}_{s \sim d^{\pi_\theta}_\gamma,\ a \sim \pi_\theta(\cdot \mid s)} \Big[ \nabla_\theta \log \pi_\theta(a \mid s)\ Q^{\pi_\theta}(s, a) \Big]$$
+$$
+\begin{aligned}
+\nabla_\theta J(\theta) &= \mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 0} \gamma^t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t)\ Q^{\pi_\theta}(s_t, a_t) \Big] \\
+&= \frac{1}{1 - \gamma}\, \mathbb{E}_{s \sim d^{\pi_\theta}_\gamma,\ a \sim \pi_\theta(\cdot \mid s)} \Big[ \nabla_\theta \log \pi_\theta(a \mid s)\ Q^{\pi_\theta}(s, a) \Big]
+\end{aligned}
+$$
 :eqlabel:`eq_pg_theorem`
 
 **Proof.** By :eqref:`eq_pg_gradient` and the cancellation, $\nabla_\theta J = \mathbb{E}\big[\sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)\, R(\tau)\big]$. At each $t$, split the return into the rewards before $t$ and those from $t$ on. The rewards before $t$ are fixed once the agent stands at $s_t$, while $a_t$ is still to be drawn, and the score of $a_t$ has mean zero given $s_t$: $\sum_a \pi_\theta(a \mid s)\nabla_\theta \log\pi_\theta(a\mid s) = \sum_a \nabla_\theta \pi_\theta(a\mid s) = \nabla_\theta 1 = 0$. So the earlier rewards contribute zero. For the rewards from $t$ on, condition on $(s_t, a_t)$: by the Markov property their expected discounted sum is $\gamma^t Q^{\pi_\theta}(s_t, a_t)$. This gives the first form. For the second, group the sum over $t$ by the state visited: for any function $f$, $\mathbb{E}\big[\sum_t \gamma^t f(s_t, a_t)\big] = \sum_s \sum_t \gamma^t d^{\pi_\theta}_t(s)\ \mathbb{E}_{a \sim \pi_\theta(\cdot\mid s)} f(s, a)$, and substitute the definition of $d^{\pi_\theta}_\gamma$. At terminal states $Q^{\pi_\theta} = 0$, so the steps after the end of an episode contribute nothing. $\blacksquare$

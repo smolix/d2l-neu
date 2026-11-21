@@ -188,9 +188,10 @@ On real network gradients, two details work in Muon's favor: first, Muon orthogo
 For an $m \times n$ hidden weight matrix $\mathbf{W}$ with gradient $\mathbf{G}_t$, Muon updates the momentum buffer $\mathbf{M}_t$ ($\beta = 0.95$) and applies five Newton–Schulz iterations $\mathrm{NS}_5$ to the Nesterov look-ahead gradient $\mathbf{G}_t + \beta\mathbf{M}_t$, combined with decoupled weight decay :cite:`Liu.Su.Yao.ea.2025`:
 
 $$
-\mathbf{M}_t = \beta\, \mathbf{M}_{t-1} + \mathbf{G}_t,
-\qquad
-\mathbf{W}_{t+1} = (1 - \eta\lambda)\, \mathbf{W}_t - \eta \cdot 0.2 \sqrt{\max(m, n)}\; \mathrm{NS}_5(\mathbf{G}_t + \beta\, \mathbf{M}_t).
+\begin{aligned}
+\mathbf{M}_t &= \beta\, \mathbf{M}_{t-1} + \mathbf{G}_t, \\
+\mathbf{W}_{t+1} &= (1 - \eta\lambda)\, \mathbf{W}_t - \eta \cdot 0.2 \sqrt{\max(m, n)}\; \mathrm{NS}_5(\mathbf{G}_t + \beta\, \mathbf{M}_t).
+\end{aligned}
 $$
 :eqlabel:`eq_muon-update`
 

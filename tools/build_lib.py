@@ -68,6 +68,12 @@ LIB_ONLY_FILES = [
     # The CUDA-graph replay behind the 25-Gaussians training step of the GAN
     # convergence section, explained there in one sentence.
     'chapter_generative-adversarial-networks/convergence-lib.md',
+    # Chapter 20: 20.1's WARC reader and block-checked fetch internals, the
+    # crawl pin and registered domains; 20.4's token pools and byte lengths;
+    # 20.6's shard writer, special-string-safe encoding and URL rule.
+    'chapter_lm-data/crawl-lib.md',
+    'chapter_lm-data/mixtures-lib.md',
+    'chapter_lm-data/tokenizers-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

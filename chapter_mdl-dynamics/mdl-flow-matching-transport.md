@@ -185,10 +185,12 @@ likely it is to have done so.
 conditional continuity equation, and pull the divergence out of the integral:
 
 $$
+\begin{aligned}
 \partial_t p_t(\mathbf{x})
-= \int \partial_t p_t(\mathbf{x} \mid \mathbf{z})\, q(\mathbf{z})\, d\mathbf{z}
-= -\nabla \cdot \int p_t(\mathbf{x} \mid \mathbf{z})\, \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})\, q(\mathbf{z})\, d\mathbf{z}
+&= \int \partial_t p_t(\mathbf{x} \mid \mathbf{z})\, q(\mathbf{z})\, d\mathbf{z} \\
+&= -\nabla \cdot \int p_t(\mathbf{x} \mid \mathbf{z})\, \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})\, q(\mathbf{z})\, d\mathbf{z}
 = -\nabla \cdot \left( p_t(\mathbf{x})\, \mathbf{u}_t(\mathbf{x}) \right).
+\end{aligned}
 $$
 
 The last step multiplies and divides by $p_t(\mathbf{x})$ and recognizes
@@ -339,11 +341,12 @@ $\mathcal{N}(\alpha_t \mathbf{x}_0, \sigma_t^2 \mathbf{I})$ has score
 $(\alpha_t \mathbf{x}_0 - \mathbf{x})/\sigma_t^2$, so
 
 $$
+\begin{aligned}
 \nabla \log p_t(\mathbf{x})
-= \mathbb{E}\left[ \frac{\alpha_t \mathbf{x}_0 - \mathbf{x}}{\sigma_t^2} \,\middle|\, \mathbf{x}_t = \mathbf{x} \right]
-= \frac{\alpha_t \hat{\mathbf{x}}_0 - \mathbf{x}}{\sigma_t^2},
-\qquad \textrm{i.e.}\quad
-\hat{\mathbf{x}}_0 = \frac{\mathbf{x} + \sigma_t^2\, \nabla \log p_t(\mathbf{x})}{\alpha_t}.
+&= \mathbb{E}\left[ \frac{\alpha_t \mathbf{x}_0 - \mathbf{x}}{\sigma_t^2} \,\middle|\, \mathbf{x}_t = \mathbf{x} \right]
+= \frac{\alpha_t \hat{\mathbf{x}}_0 - \mathbf{x}}{\sigma_t^2}, \\
+\hat{\mathbf{x}}_0 &= \frac{\mathbf{x} + \sigma_t^2\, \nabla \log p_t(\mathbf{x})}{\alpha_t}.
+\end{aligned}
 $$
 
 Substituting this $\hat{\mathbf{x}}_0$ into the velocity and collecting the
@@ -537,10 +540,12 @@ The conditional velocity does not depend on $t$, and the CFM loss
 :cite:`Liu.Gong.Liu.2022,Lipman.Chen.BenHamu.ea.2022`
 
 $$
+\begin{aligned}
 \mathcal{L}_{\mathrm{RF}}(\boldsymbol{\theta})
-= \mathbb{E}_{t,\ \mathbf{x}_0 \sim p_0,\ \boldsymbol{\epsilon} \sim p_1}
-\left[\, \left\| \mathbf{u}_{\boldsymbol{\theta}}\big( (1 - t) \mathbf{x}_0 + t \boldsymbol{\epsilon},\ t \big)
+&= \mathbb{E}_{t,\ \mathbf{x}_0 \sim p_0,\ \boldsymbol{\epsilon} \sim p_1} \\
+&\quad \left[\, \left\| \mathbf{u}_{\boldsymbol{\theta}}\big( (1 - t) \mathbf{x}_0 + t \boldsymbol{\epsilon},\ t \big)
 - (\boldsymbol{\epsilon} - \mathbf{x}_0) \right\|^2 \right].
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-rf-loss`
 
@@ -1040,11 +1045,13 @@ weak form. (ii) Write the displacement as a time integral and apply Jensen's
 inequality twice:
 
 $$
+\begin{aligned}
 \mathbb{E}\, c(\mathbf{Z}_1 - \mathbf{Z}_0)
-= \mathbb{E}\, c\Big(\int_0^1 \mathbf{u}_t(\mathbf{Z}_t)\, dt\Big)
-\le \int_0^1 \mathbb{E}\, c\big(\mathbf{u}_t(\mathbf{Z}_t)\big)\, dt
-= \int_0^1 \mathbb{E}\, c\big(\mathbb{E}[\mathbf{X}_1 - \mathbf{X}_0 \mid \mathbf{X}_t]\big)\, dt
+&= \mathbb{E}\, c\Big(\int_0^1 \mathbf{u}_t(\mathbf{Z}_t)\, dt\Big)
+\le \int_0^1 \mathbb{E}\, c\big(\mathbf{u}_t(\mathbf{Z}_t)\big)\, dt \\
+&= \int_0^1 \mathbb{E}\, c\big(\mathbb{E}[\mathbf{X}_1 - \mathbf{X}_0 \mid \mathbf{X}_t]\big)\, dt
 \le \mathbb{E}\, c(\mathbf{X}_1 - \mathbf{X}_0).
+\end{aligned}
 $$
 
 The first inequality is Jensen's inequality for the time average. The
@@ -1375,11 +1382,13 @@ II. *Lower bound.* The cost of this coupling is at least $W_2^2$, and
 Jensen's inequality for the time average bounds it by the kinetic energy:
 
 $$
+\begin{aligned}
 W_2^2(p_0, p_1)
-\le \mathbb{E} \left\| \mathbf{Z}_1 - \mathbf{Z}_0 \right\|^2
-= \mathbb{E} \left\| \int_0^1 \mathbf{u}_t(\mathbf{Z}_t)\, dt \right\|^2
-\le \int_0^1 \mathbb{E} \left\| \mathbf{u}_t(\mathbf{Z}_t) \right\|^2 dt
+&\le \mathbb{E} \left\| \mathbf{Z}_1 - \mathbf{Z}_0 \right\|^2
+= \mathbb{E} \left\| \int_0^1 \mathbf{u}_t(\mathbf{Z}_t)\, dt \right\|^2 \\
+&\le \int_0^1 \mathbb{E} \left\| \mathbf{u}_t(\mathbf{Z}_t) \right\|^2 dt
 = \int_0^1\!\! \int \|\mathbf{u}_t\|^2\, p_t\, d\mathbf{x}\, dt .
+\end{aligned}
 $$
 
 III. *Upper bound.* Take an optimal coupling $\pi^\star$ and its straight

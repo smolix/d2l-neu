@@ -314,7 +314,11 @@ conditional velocity, and squared error is minimized by that average.
 Writing $\mathbf{u}_{\textrm{ref}}$ for the velocity we use, the *reference
 velocity*, the loss at a training point is
 
-$$\Big\| \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\Big[\mathbf{u}_{\textrm{ref}} - (t - s)\, \frac{d}{dt} \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t)\Big] \Big\|^2,$$
+$$
+\begin{aligned}
+\Big\| \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\Big[\mathbf{u}_{\textrm{ref}} - (t - s)\, \frac{d}{dt} \bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t)\Big] \Big\|^2,
+\end{aligned}
+$$
 :eqlabel:`eq_diffusion-flow-map-loss`
 
 where $\mathrm{sg}$, the *stop-gradient*, marks a quantity treated as a
@@ -978,7 +982,12 @@ g_{\boldsymbol\theta}(\mathbf{z}) + t\, \boldsymbol\epsilon$, and lowers
 the Kullback-Leibler divergence of their law $q_{\boldsymbol\theta, t}$
 from the noised data $p_t$. Its gradient is
 
-$$\nabla_{\boldsymbol\theta} D_{\textrm{KL}}(q_{\boldsymbol\theta, t} \,\|\, p_t) = \mathbb{E}\Big[\big(\nabla \log q_{\boldsymbol\theta, t}(\mathbf{x}_t) - \nabla \log p_t(\mathbf{x}_t)\big)^\top \frac{\partial \mathbf{x}_t}{\partial \boldsymbol\theta}\Big].$$
+$$
+\begin{aligned}
+&\nabla_{\boldsymbol\theta} D_{\textrm{KL}}(q_{\boldsymbol\theta, t} \,\|\, p_t) \\
+&\qquad = \mathbb{E}\Big[\big(\nabla \log q_{\boldsymbol\theta, t}(\mathbf{x}_t) - \nabla \log p_t(\mathbf{x}_t)\big)^\top \frac{\partial \mathbf{x}_t}{\partial \boldsymbol\theta}\Big].
+\end{aligned}
+$$
 :eqlabel:`eq_diffusion-dmd-gradient`
 
 The gradient is the student's score minus the teacher's, so a descent step

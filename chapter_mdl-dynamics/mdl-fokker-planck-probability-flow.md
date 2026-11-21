@@ -795,7 +795,11 @@ $$
 :eqref:`eq_mdl-dyn-fokker-planck` and merge the two divergences:
 
 $$
-\partial_t p = -\nabla \cdot (\mathbf{f} p) + \nabla \cdot \big(p \cdot \tfrac12 g^2 \nabla \log p\big) = -\nabla \cdot \big(p\, [\mathbf{f} - \tfrac12 g^2 \nabla \log p]\big). \qquad \blacksquare
+\begin{aligned}
+\partial_t p
+&= -\nabla \cdot (\mathbf{f} p) + \nabla \cdot \big(p \cdot \tfrac12 g^2 \nabla \log p\big) \\
+&= -\nabla \cdot \big(p\, [\mathbf{f} - \tfrac12 g^2 \nabla \log p]\big). \qquad \blacksquare
+\end{aligned}
 $$
 
 At the level of densities, the SDE moves probability as if each particle

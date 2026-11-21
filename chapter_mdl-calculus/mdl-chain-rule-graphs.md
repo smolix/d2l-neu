@@ -182,7 +182,10 @@ $\partial p/\partial y = 1$, and $\partial q/\partial y = -1$. Summing the
 three path products gives
 
 $$
-\frac{\mathrm{d} f}{\mathrm{d} y} = \underbrace{1 \cdot 2p \cdot 1}_{y \to p \to r \to f} + \underbrace{1 \cdot 1}_{y \to p \to f} + \underbrace{1 \cdot 2q \cdot (-1)}_{y \to q \to s \to f} = 2p + 1 - 2q = 1 + 4y.
+\begin{aligned}
+\frac{\mathrm{d} f}{\mathrm{d} y} &= \underbrace{1 \cdot 2p \cdot 1}_{y \to p \to r \to f} + \underbrace{1 \cdot 1}_{y \to p \to f} + \underbrace{1 \cdot 2q \cdot (-1)}_{y \to q \to s \to f} \\
+&= 2p + 1 - 2q = 1 + 4y.
+\end{aligned}
 $$
 
 We can check this directly by substituting everything into $f$:
@@ -227,8 +230,8 @@ From these node values we read off all the local edge derivatives:
 $$
 \begin{aligned}
 \frac{\partial f}{\partial u} = \frac{\partial f}{\partial v} &= 2(u+v) = 328, \\
-\frac{\partial u}{\partial a} = \frac{\partial u}{\partial b} &= 2(a+b) = 20, \qquad
-\frac{\partial v}{\partial a} = 2(a-b) = -16, \qquad \frac{\partial v}{\partial b} = -2(a-b) = 16, \\
+\frac{\partial u}{\partial a} = \frac{\partial u}{\partial b} &= 2(a+b) = 20, \\
+\frac{\partial v}{\partial a} = 2(a-b) &= -16, \qquad \frac{\partial v}{\partial b} = -2(a-b) = 16, \\
 \frac{\partial a}{\partial w} = \frac{\partial a}{\partial x} = \frac{\partial a}{\partial y} = \frac{\partial a}{\partial z} &= 2(w+x+y+z) = 2, \\
 \frac{\partial b}{\partial w} = \frac{\partial b}{\partial x} = 2(w+x-y-z) &= 6, \qquad \frac{\partial b}{\partial y} = \frac{\partial b}{\partial z} = -6.
 \end{aligned}
@@ -244,7 +247,8 @@ from the input $w$ forward through the graph gives
 $$
 \begin{aligned}
 \frac{\mathrm{d} f}{\mathrm{d} w} &= \frac{\partial f}{\partial u}\Bigl(\frac{\partial u}{\partial a}\frac{\partial a}{\partial w} + \frac{\partial u}{\partial b}\frac{\partial b}{\partial w}\Bigr) + \frac{\partial f}{\partial v}\Bigl(\frac{\partial v}{\partial a}\frac{\partial a}{\partial w} + \frac{\partial v}{\partial b}\frac{\partial b}{\partial w}\Bigr) \\
-&= 328\,(20\cdot 2 + 20 \cdot 6) + 328\,(-16 \cdot 2 + 16 \cdot 6) = 328 \cdot 224 = 73472.
+&= 328\,(20\cdot 2 + 20 \cdot 6) + 328\,(-16 \cdot 2 + 16 \cdot 6) \\
+&= 328 \cdot 224 = 73472.
 \end{aligned}
 $$
 

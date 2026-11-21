@@ -177,7 +177,12 @@ and the maximal value is $\beta \log Z$.
 
 **Proof.** By construction $r(a) = \beta \log\big( \pi^\star(a) Z / \pi_{\textrm{ref}}(a) \big)$. Substituting into the objective, for any policy $\pi$,
 
-$$\mathbb{E}_\pi[r] - \beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \sum_a \pi(a)\, \beta \log \frac{\pi^\star(a)\, Z}{\pi(a)} = \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).$$
+$$
+\begin{aligned}
+\mathbb{E}_\pi[r] - \beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) &= \sum_a \pi(a)\, \beta \log \frac{\pi^\star(a)\, Z}{\pi(a)} \\
+&= \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).
+\end{aligned}
+$$
 
 Gibbs' inequality, proved in :numref:`chap_mdl-information-theory`, says the remaining divergence is nonnegative and zero exactly when $\pi = \pi^\star$. $\blacksquare$
 
@@ -319,7 +324,12 @@ Tilting by the soft value attains the optimum, $\beta \log Z$ of the first decis
 
 Writing this value at every state gives the general form. Let $Q_\beta(s, a)$ be the worth of action $a$ at state $s$ under the penalized objective, and $V_\beta(s)$ the worth of state $s$. Applying the proposition at every state, with $Q_\beta(s, \cdot)$ in the role of the reward,
 
-$$V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}, \qquad Q_\beta(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V_\beta(s'),$$
+$$
+\begin{aligned}
+V_\beta(s) &= \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}, \\
+Q_\beta(s, a) &= r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V_\beta(s'),
+\end{aligned}
+$$
 :eqlabel:`eq_soft_backup`
 
 and the optimal policy is $\pi_\beta(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}$. These are the Bellman optimality equations of :numref:`sec_valueiter` with the maximum over actions replaced by a reference-weighted log-sum-exp, a *soft maximum* that tends to the hard maximum over the reference's support as $\beta \to 0$. The hard maximum is biased upward when the action values are noisy estimates, as :numref:`sec_qlearning` demonstrated; the log-sum-exp, being convex, is biased upward too, only less sharply. With a uniform reference this is the soft value iteration of maximum-entropy reinforcement learning.

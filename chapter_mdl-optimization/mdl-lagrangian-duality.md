@@ -478,11 +478,13 @@ Conversely, if $(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^
 is a saddle point, then
 
 $$
+\begin{aligned}
 \inf_{\mathbf{x}} \sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \mathcal{L}
-\;\le\; \sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}, \boldsymbol{\nu})
-= \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
-= \inf_{\mathbf{x}} \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
-\;\le\; \sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \inf_{\mathbf{x}} \mathcal{L},
+&\le \sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}, \boldsymbol{\nu})
+= \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star) \\
+&= \inf_{\mathbf{x}} \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
+\le \sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \inf_{\mathbf{x}} \mathcal{L},
+\end{aligned}
 $$
 
 which shows $p^\star \le d^\star$. Weak duality supplies the reverse
@@ -593,9 +595,11 @@ the definition of $q$ as an infimum, $\lambda_i^\star \ge 0$, and the perturbed
 constraints, we obtain
 
 $$
-p^\star(\mathbf{0}, \mathbf{0}) = q(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
-\;\le\; f(\mathbf{x}) + \sum_i \lambda_i^\star g_i(\mathbf{x}) + \sum_j \nu_j^\star h_j(\mathbf{x})
-\;\le\; f(\mathbf{x}) + \boldsymbol{\lambda}^{\star\top}\mathbf{u} + \boldsymbol{\nu}^{\star\top}\mathbf{v}.
+\begin{aligned}
+p^\star(\mathbf{0}, \mathbf{0}) &= q(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
+\le f(\mathbf{x}) + \sum_i \lambda_i^\star g_i(\mathbf{x}) + \sum_j \nu_j^\star h_j(\mathbf{x}) \\
+&\le f(\mathbf{x}) + \boldsymbol{\lambda}^{\star\top}\mathbf{u} + \boldsymbol{\nu}^{\star\top}\mathbf{v}.
+\end{aligned}
 $$
 
 Taking the infimum over all perturbed-feasible $\mathbf{x}$ yields
@@ -963,8 +967,7 @@ $$
 \sum_i p_i \log p_i = -H(\mathbf{p}), & \mathbf{p} \in \Delta, \\
 +\infty, & \textrm{otherwise,}
 \end{cases} \\
-\textrm{and dually} \qquad
-\mathrm{lse}(\mathbf{x}) &= \max_{\mathbf{p} \in \Delta} \left( \mathbf{p}^\top \mathbf{x} + H(\mathbf{p}) \right).
+\mathrm{lse}(\mathbf{x}) &= \max_{\mathbf{p} \in \Delta} \left( \mathbf{p}^\top \mathbf{x} + H(\mathbf{p}) \right) \quad \textrm{(dually)}.
 \end{aligned}
 $$
 :eqlabel:`eq_mdl-opt-lse-entropy`

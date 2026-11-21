@@ -41,7 +41,12 @@ We start from the equation that value iteration solved and ask which part of it 
 
 Value iteration in :numref:`sec_valueiter` repeated one operation, the Bellman optimality backup. Written for action values instead of state values, the Bellman operator $\mathcal{T}$ maps a table $Q$ to the table
 
-$$(\mathcal{T}Q)(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q(s', a') \quad \textrm{for all } s \in \mathcal{S},\ a \in \mathcal{A}.$$
+$$
+\begin{aligned}
+(\mathcal{T}Q)(s, a) &= r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q(s', a'), \\
+&\quad \textrm{for all } s \in \mathcal{S},\ a \in \mathcal{A}.
+\end{aligned}
+$$
 :eqlabel:`eq_qlearning_operator`
 
 Each entry of $\mathcal{T}Q$ is the expected immediate reward plus the discounted value of acting greedily on $Q$ from wherever the agent lands. Its fixed point is $Q^*$, and repeated application converges to $Q^*$ from any table, because $\mathcal{T}$ shrinks the largest difference between two tables by the factor $\gamma$, the contraction argument of :numref:`sec_valueiter` applied to action values.
@@ -91,7 +96,12 @@ The gradient of one term has two parts: one through $Q(s_i, a_i)$, and one throu
 
 Dropping the second part is what makes Q-learning correct. Suppose the data contain each pair $(s, a)$ with frequency $d(s, a)$, the visitation distribution of the data-collecting policy, and that there are infinitely many of them. Conditioning on $(s, a)$ splits each expected squared term into the square of its mean and the variance of the target:
 
-$$L(Q) = \mathbb{E}_{(s, a) \sim d} \Big[ \big( Q(s, a) - (\mathcal{T}Q)(s, a) \big)^2 \Big] + \mathbb{E}_{(s, a) \sim d} \Big[ \textrm{Var} \big( r + \gamma \max_{a'} Q(s', a') \bigm| s, a \big) \Big].$$
+$$
+\begin{aligned}
+L(Q) &= \mathbb{E}_{(s, a) \sim d} \Big[ \big( Q(s, a) - (\mathcal{T}Q)(s, a) \big)^2 \Big] \\
+&\quad + \mathbb{E}_{(s, a) \sim d} \Big[ \textrm{Var} \big( r + \gamma \max_{a'} Q(s', a') \bigm| s, a \big) \Big].
+\end{aligned}
+$$
 :eqlabel:`eq_double_sampling`
 
 The first term is the squared Bellman residual and is zero at $Q^*$. The second is the variance of the target over the successor and the reward, and it depends on $Q$ whenever transitions are random. Minimizing $L$ trades a small residual against a less variable target, so its minimizer need not be $Q^*$. Three states show the direction of the distortion. From $s$, the only action leads with probability $1/2$ each to $u_1$, which pays $1$ and terminates, or to $u_2$, which pays $0$ and terminates; so $Q^*(u_1) = 1$, $Q^*(u_2) = 0$ and $Q^*(s) = \gamma/2$. The variance of the target at $s$ is $\gamma^2 (Q(u_1) - Q(u_2))^2/4$, and the minimizer of $L$ lowers it by pulling the two successor values toward each other, away from $1$ and $0$. Exercise :exref:`ex_qlearning-double-sampling-counterexample` computes how far.
@@ -122,7 +132,12 @@ The conditions concern the limit, not a finite budget. The sample mean gives eve
 
 On an episodic task the target needs one correction. A terminal state, here a hole or the goal, has no future, so its continuation value is zero and the target contains only the immediate reward:
 
-$$Q(s, a) \leftarrow Q(s, a) + \alpha \Big( r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a' \in \mathcal{A}} Q(s', a') - Q(s, a) \Big).$$
+$$
+\begin{aligned}
+Q(s, a) &\leftarrow Q(s, a) \\
+&\quad + \alpha \Big( r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a' \in \mathcal{A}} Q(s', a') - Q(s, a) \Big).
+\end{aligned}
+$$
 
 The mask uses `terminated`, not `truncated`. As :numref:`sec_mdp` explained, a time limit stops the recording at a state from which the process would go on, so its continuation is not zero. Treating truncation as termination would teach the table that the last cell of every long episode is worthless. In code the correction is one factor, `gamma * (1 - terminated) * Q[s_next].max()`.
 
@@ -325,7 +340,12 @@ The bias shrinks as the tabular estimates converge, but it can persist under fun
 
 Q-learning uses each transition once. It moves one entry and discards the sample, and the next time the goal's value changes, the old transition is not there to carry the change backward. The same transitions can instead be counted. Let $N(s, a, s')$ count the observed transitions from $s$ under $a$ to $s'$, and $N(s, a) = \sum_{s'} N(s, a, s')$. The counts give an estimated model,
 
-$$\hat{P}(s' \mid s, a) = \frac{N(s, a, s')}{N(s, a)}, \qquad \hat{r}(s, a) = \frac{1}{N(s, a)} \sum_{\textrm{visits of } (s, a)} r,$$
+$$
+\begin{aligned}
+\hat{P}(s' \mid s, a) &= \frac{N(s, a, s')}{N(s, a)}, \\
+\hat{r}(s, a) &= \frac{1}{N(s, a)} \sum_{\textrm{visits of } (s, a)} r,
+\end{aligned}
+$$
 
 the empirical frequency of each successor and the mean reward of each pair. Value iteration on $(\hat{P}, \hat{r})$, treating the estimate as if it were exact, is called *certainty equivalence*. It turns the problem without a model back into the problem of :numref:`sec_valueiter`.
 
@@ -386,7 +406,7 @@ With little data, about $10{,}000$ steps, the planned greedy policy is the bette
 
 The model has costs of its own. It stores $|\mathcal{S}|^2 |\mathcal{A}|$ counts, here about a thousand numbers and for a large state space far too many, and every new batch of data means solving it again. The planner also trusts the estimate completely: a pair that was never tried looks worthless, and a pair that was tried once and got lucky looks better than it is. :numref:`sec_model_based` fits such a model on Pendulum with regression in place of counts and plans in it.
 
-The agent can now learn optimal action values from samples alone and act on them, or turn the same samples into a model and plan. Both rest on how it collects data, and the rule used here is crude. Forced to act at random one step in twenty, even $\pi^*$ succeeds only about $54\%$ of the time instead of $73\%$, and a greedy table needs a finite set of actions to maximize over. :numref:`sec_exploration` asks whether a different rule can learn as much while losing less; later in the chapter the policy itself becomes the object that is learned.
+The agent can now learn optimal action values from samples alone and act on them, or turn the same samples into a model and plan. Both rest on how it collects data, and the $\epsilon$-greedy rule used here (studied systematically in :numref:`sec_exploration`) is crude. Forced to act at random one step in twenty, even $\pi^*$ succeeds only about $54\%$ of the time instead of $73\%$, and a greedy table needs a finite set of actions to maximize over. :numref:`sec_exploration` asks whether a different rule can learn as much while losing less; later in the chapter the policy itself becomes the object that is learned.
 
 ## Summary
 

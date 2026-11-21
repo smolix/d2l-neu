@@ -380,9 +380,9 @@ correction reappears in learned word embeddings
 (:numref:`sec_lm_word_embeddings`): by training a skip-gram model to
 distinguish observed pairs of neighboring words from $K$ random pairs, we
 implicitly factorize the matrix of shifted pointwise mutual informations,
-$\textrm{pmi}(x,y)-\log K$ :cite:`Levy.Goldberg.2014`, as Exercise
-:exref:`ex_mdl-mutual-information-negative-sampling-pmi` of
-:numref:`sec_mdl-mi-estimation` derives.
+$\textrm{pmi}(x,y)-\log K$ :cite:`Levy.Goldberg.2014`, as we will derive in
+:numref:`sec_mdl-mi-estimation` (Exercise
+:exref:`ex_mdl-mutual-information-negative-sampling-pmi`).
 
 ### Mutual Information and Correlation
 :label:`sec_mdl-mi-nonlinear-correlation`
@@ -780,10 +780,10 @@ carries. For example, a $10$-class classifier on balanced labels with a test
 loss of $0.3$ nats certifies that its input carries at least
 $\ln10-0.3=2.0$ of the label's $2.30$ nats. The bound holds even if the model
 is poorly calibrated or badly trained; a weaker model simply certifies a
-smaller lower bound. This is the variational bound of
-:citet:`Barber.Agakov.2003` with a classifier acting as the decoder, and
-:numref:`sec_mdl-mi-variational-bounds` develops it into a broader family of
-mutual information estimators.
+smaller lower bound. This inline derivation is the variational bound of
+:citet:`Barber.Agakov.2003` previewed here with a classifier acting as the
+decoder; we will study it alongside neural mutual-information estimators in
+:numref:`sec_mdl-mi-estimation` (:numref:`sec_mdl-mi-variational-bounds`).
 
 The certificate is tight if and only if $q(y\mid x)$ matches the true
 conditional distribution $p(y\mid x)$. On the flipped bit, a model that

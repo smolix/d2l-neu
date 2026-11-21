@@ -277,9 +277,10 @@ joint density, and let $X$ have finite variance (for discrete pairs, the same
 identities hold with integrals replaced by sums). Then*
 
 $$
-\mathbb{E}[X] = \mathbb{E}\bigl[\mathbb{E}[X\mid Y]\bigr],
-\qquad
-\textrm{Var}(X) = \mathbb{E}\bigl[\textrm{Var}(X\mid Y)\bigr] + \textrm{Var}\bigl(\mathbb{E}[X\mid Y]\bigr).
+\begin{aligned}
+\mathbb{E}[X] &= \mathbb{E}\bigl[\mathbb{E}[X\mid Y]\bigr], \\
+\textrm{Var}(X) &= \mathbb{E}\bigl[\textrm{Var}(X\mid Y)\bigr] + \textrm{Var}\bigl(\mathbb{E}[X\mid Y]\bigr).
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-tower`
 
@@ -303,9 +304,11 @@ second identity, expand both terms on the right. Applying the tower property to
 $X^2$ gives
 
 $$
+\begin{aligned}
 \mathbb{E}\bigl[\textrm{Var}(X\mid Y)\bigr]
-=\mathbb{E}\bigl[\mathbb{E}[X^2\mid Y]\bigr]-\mathbb{E}\bigl[(\mathbb{E}[X\mid Y])^2\bigr]
-=\mathbb{E}[X^2]-\mathbb{E}\bigl[(\mathbb{E}[X\mid Y])^2\bigr].
+&=\mathbb{E}\bigl[\mathbb{E}[X^2\mid Y]\bigr]-\mathbb{E}\bigl[(\mathbb{E}[X\mid Y])^2\bigr] \\
+&=\mathbb{E}[X^2]-\mathbb{E}\bigl[(\mathbb{E}[X\mid Y])^2\bigr].
+\end{aligned}
 $$
 
 Applying the computational form :eqref:`eq_mdl-var_comp` to the random variable
@@ -797,9 +800,8 @@ The integrand on the right is therefore the density of $\mathbf Y$:
 $$
 \begin{aligned}
 p_{\mathbf Y}(\mathbf y) &= p_{\mathbf X}\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf y)\big|, \\
-\textrm{equivalently}\qquad
-\log p_{\mathbf Y}(\mathbf y) &= \log p_{\mathbf X}(\mathbf x) - \log\big|\det J_{g}(\mathbf x)\big|
-\quad\textrm{at }\mathbf x = g^{-1}(\mathbf y).
+\log p_{\mathbf Y}(\mathbf y) &= \log p_{\mathbf X}(\mathbf x) - \log\big|\det J_{g}(\mathbf x)\big| \\
+&\quad\textrm{(equivalently, at }\mathbf x = g^{-1}(\mathbf y)\textrm{)}.
 \end{aligned}
 $$
 :eqlabel:`eq_mdl-cov_density`

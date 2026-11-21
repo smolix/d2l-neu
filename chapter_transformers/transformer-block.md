@@ -40,8 +40,10 @@ A Transformer block operates on a shared **residual stream** $\mathbf{X} \in \ma
 In the **pre-norm** arrangement used by modern Transformers (:numref:`fig_transformer-block`), each sublayer normalizes its own input before computing its update:
 
 $$
-\mathbf{H} = \mathbf{X} + \textrm{Attn}\!\bigl(\textrm{Norm}(\mathbf{X})\bigr), \qquad
-\mathbf{Y} = \mathbf{H} + \textrm{FFN}\!\bigl(\textrm{Norm}(\mathbf{H})\bigr).
+\begin{aligned}
+\mathbf{H} &= \mathbf{X} + \textrm{Attn}\!\bigl(\textrm{Norm}(\mathbf{X})\bigr), \\
+\mathbf{Y} &= \mathbf{H} + \textrm{FFN}\!\bigl(\textrm{Norm}(\mathbf{H})\bigr).
+\end{aligned}
 $$
 :eqlabel:`eq_preln-block`
 
@@ -55,8 +57,10 @@ $$
 The original 2017 Transformer :cite:`Vaswani.Shazeer.Parmar.ea.2017` and BERT :cite:`Devlin.Chang.Lee.ea.2018` used **post-norm**, placing normalization *on the residual stream itself* after each addition:
 
 $$
-\mathbf{H} = \textrm{Norm}\!\bigl(\mathbf{X} + \textrm{Attn}(\mathbf{X})\bigr), \qquad
-\mathbf{Y} = \textrm{Norm}\!\bigl(\mathbf{H} + \textrm{FFN}(\mathbf{H})\bigr).
+\begin{aligned}
+\mathbf{H} &= \textrm{Norm}\!\bigl(\mathbf{X} + \textrm{Attn}(\mathbf{X})\bigr), \\
+\mathbf{Y} &= \textrm{Norm}\!\bigl(\mathbf{H} + \textrm{FFN}(\mathbf{H})\bigr).
+\end{aligned}
 $$
 :eqlabel:`eq_postln-block`
 
@@ -245,8 +249,10 @@ In `post-norm`, differentiating through $2L$ consecutive normalization divisions
 Standard LayerNorm (:numref:`sec_batch_norm`) centers each token vector $\mathbf{x} \in \mathbb{R}^d$ by its mean $\mu = \frac{1}{d}\sum_j x_j$, scales by its standard deviation, and applies learned gain $\boldsymbol{\gamma}$ and bias $\boldsymbol{\beta}$. :citet:`Zhang.Sennrich.2019` showed that mean-centering and the additive bias contribute little to training stability: what matters is normalizing the root-mean-square magnitude. Dropping $\mu$ and $\boldsymbol{\beta}$ yields **RMSNorm**:
 
 $$
-\textrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\textrm{RMS}(\mathbf{x})} \odot \boldsymbol{\gamma}, \qquad
-\textrm{RMS}(\mathbf{x}) = \sqrt{\frac{1}{d}\sum_{j=1}^{d} x_j^2 + \epsilon},
+\begin{aligned}
+\textrm{RMSNorm}(\mathbf{x}) &= \frac{\mathbf{x}}{\textrm{RMS}(\mathbf{x})} \odot \boldsymbol{\gamma}, \\
+\textrm{RMS}(\mathbf{x}) &= \sqrt{\frac{1}{d}\sum_{j=1}^{d} x_j^2 + \epsilon},
+\end{aligned}
 $$
 :eqlabel:`eq_rmsnorm`
 
@@ -336,7 +342,10 @@ When $Q$ and $K$ are scaled by $\lambda = 4\times$ and $\lambda = 16\times$ with
 The original Transformer feed-forward network is a two-layer MLP that expands channel width from $d$ to $d_{\textrm{ff}} = 4d$, applies an elementwise activation ($\textrm{ReLU}$ in :citet:`Vaswani.Shazeer.Parmar.ea.2017`, $\textrm{GELU}$ in GPT-2 and BERT), and projects back to $d$:
 
 $$
-\textrm{FFN}_{\textrm{GELU}}(\mathbf{x}) = \textrm{GELU}(\mathbf{x}\mathbf{W}_1 + \mathbf{b}_1)\mathbf{W}_2 + \mathbf{b}_2, \qquad \mathbf{W}_1 \in \mathbb{R}^{d \times 4d}, \; \mathbf{W}_2 \in \mathbb{R}^{4d \times d},
+\begin{aligned}
+\textrm{FFN}_{\textrm{GELU}}(\mathbf{x}) &= \textrm{GELU}(\mathbf{x}\mathbf{W}_1 + \mathbf{b}_1)\mathbf{W}_2 + \mathbf{b}_2, \\
+\mathbf{W}_1 &\in \mathbb{R}^{d \times 4d}, \qquad \mathbf{W}_2 \in \mathbb{R}^{4d \times d},
+\end{aligned}
 $$
 :eqlabel:`eq_ffn`
 

@@ -49,7 +49,10 @@ from jax.nn import relu, softplus
 In :numref:`sec_basic_gan`, the critic received $\log \sigma(D(x))$ on real samples $x \sim p$ and $\log \sigma(-D(x'))$ on generated samples $x' \sim q$. Replacing these log-likelihood terms with general payoff functions $\ell_p$ and $\ell_q$ over a critic class $\mathcal{T}$ yields the general adversarial discrepancy:
 
 $$
-d(p, q) \;=\; \sup_{T \in \mathcal{T}} \Big\{ \mathbb{E}_{x \sim p}\big[\ell_p(T(x))\big] + \mathbb{E}_{x' \sim q}\big[\ell_q(T(x'))\big] \Big\}.
+\begin{aligned}
+d(p, q) &= \sup_{T \in \mathcal{T}} \Big\{ \mathbb{E}_{x \sim p}\big[\ell_p(T(x))\big] \\
+&\qquad\qquad + \mathbb{E}_{x' \sim q}\big[\ell_q(T(x'))\big] \Big\}.
+\end{aligned}
 $$
 :eqlabel:`eq_gan_template`
 
@@ -111,9 +114,10 @@ Recall from :numref:`sec_mdl-f-divergences` that an $f$-divergence averages a co
 **Proposition.** *If the conditional Bayes risk $L$ is finite on $[0, 1]$, then*
 
 $$
-\Delta_\ell(p, q) \;=\; D_f(p \,\|\, q)
-\qquad \textrm{with} \qquad
-f(u) \;=\; L(\tfrac12) - \frac{u+1}{2}\, L\!\left(\frac{u}{u+1}\right),
+\begin{aligned}
+\Delta_\ell(p, q) &= D_f(p \,\|\, q) \\
+\textrm{with}\quad f(u) &= L(\tfrac12) - \frac{u+1}{2}\, L\!\left(\frac{u}{u+1}\right),
+\end{aligned}
 $$
 
 *where $f$ is convex on $[0, \infty)$ with $f(1) = 0$.*
@@ -350,7 +354,11 @@ Without a constraint on $\mathcal{F}$, scaling $T$ by an arbitrary positive cons
 Given a positive-definite kernel $k(x, x')$—such as the Gaussian RBF kernel $k(x, x') = \exp(-\|x - x'\|^2/(2s^2))$ with bandwidth $s$—choosing $\mathcal{F}$ to be the unit ball of the reproducing kernel Hilbert space (RKHS) associated with $k$ yields the *Maximum Mean Discrepancy* :cite:`Gretton.Borgwardt.Rasch.ea.2012` (:numref:`sec_mdl-ipm-mmd`), whose squared value has a closed form in terms of pairwise kernel expectations:
 
 $$
-\mathrm{MMD}^2(p, q) \;=\; \mathbb{E}_{x, \tilde x \sim p}\big[k(x, \tilde x)\big] + \mathbb{E}_{x', \tilde x' \sim q}\big[k(x', \tilde x')\big] - 2\, \mathbb{E}_{x \sim p,\, x' \sim q}\big[k(x, x')\big].
+\begin{aligned}
+\mathrm{MMD}^2(p, q)
+&= \mathbb{E}_{x, \tilde x \sim p}\big[k(x, \tilde x)\big] + \mathbb{E}_{x', \tilde x' \sim q}\big[k(x', \tilde x')\big] \\
+&\quad - 2\, \mathbb{E}_{x \sim p,\, x' \sim q}\big[k(x, x')\big].
+\end{aligned}
 $$
 :eqlabel:`eq_gan_mmd2`
 

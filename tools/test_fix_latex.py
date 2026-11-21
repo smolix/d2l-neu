@@ -95,5 +95,35 @@ class AddBookCoverTest(unittest.TestCase):
         self.assertTrue(BOOK_COVER.exists(), BOOK_COVER)
 
 
+class OverfullPreventionTest(unittest.TestCase):
+    def test_explicit_width_includegraphics_is_pandocbounded(self):
+        src = (
+            '\\begin{document}\n'
+            '\\chapter{Landing}\n'
+            '\\chapter{Intro}\n'
+            '\\includegraphics[width=7.29167in,height=\\textheight,keepaspectratio]{img/speech.png}\n'
+            '\\end{document}\n'
+        )
+        out = fix_all(src)
+        self.assertIn(
+            '\\pandocbounded{\\includegraphics[width=7.29167in,height=\\textheight,keepaspectratio]{img/speech.png}}',
+            out,
+        )
+
+    def test_long_texttt_allows_breaks_at_dots_and_slashes(self):
+        src = (
+            '\\begin{document}\n'
+            '\\chapter{Landing}\n'
+            '\\chapter{Intro}\n'
+            '\\texttt{torch.distributed.optim.ZeroRedundancyOptimizer}\n'
+            '\\end{document}\n'
+        )
+        out = fix_all(src)
+        self.assertIn(
+            '\\texttt{torch.\\allowbreak{}distributed.\\allowbreak{}optim.\\allowbreak{}ZeroRedundancyOptimizer}',
+            out,
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

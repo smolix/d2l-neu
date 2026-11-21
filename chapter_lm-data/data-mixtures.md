@@ -31,10 +31,10 @@ mixture that looks best after a short run might be overtaken later, its loss
 curve crossing that of another; and a mixture that suits a model of five
 million parameters might not suit one a hundred times larger. This section
 builds the method for three domains, web text, Python and mathematics. It
-measures the noise that any fitted function has to beat, compares the mixture
-it selects with uniform weights and with the weights of DoReMi, a method that
-optimizes a different objective, and puts the first worry to 41 runs and the
-second to a model four times larger. Temperature sampling across languages,
+measures the noise that any fitted function has to beat and compares the
+mixture it selects with uniform weights and with the weights of DoReMi, a
+method that optimizes a different objective. The first worry is put to 41
+runs, the second to a model four times larger. Temperature sampling across languages,
 the value of repeated data and annealing at the end of training come along
 the way, because each changes how a mixture should be read.
 
@@ -71,12 +71,11 @@ Everything here is computed for three domains, `web`, `code` and `math`, and
 judged against two target distributions over them that are fixed in
 `MIX_TARGETS` before any run. `t_avg` weighs the domains equally. `t_dep`,
 $(0.7, 0.15, 0.15)$, stands for a deployment that reads mostly web text with
-some code and mathematics; it is an illustration, not a measurement of any
-real deployment, and it is fixed in advance because a target chosen after the
-results can make almost any mixture look best. All training runs of the
-section are made by one launcher, `tools/run_mix_campaign.py`, and stored in
-a registered run set. A normal build reads that file and needs a GPU only for
-a short live check. Setting `D2L_RERUN=mix-t1` retrains all 41 runs on the
+some code and mathematics. It is an illustration, fixed in advance because a
+target chosen after the results can make almost any mixture look best. One
+launcher, `tools/run_mix_campaign.py`, makes all training runs of the section
+and stores them in a registered run set. A normal build reads that file and
+needs a GPU only for a short live check. Setting `D2L_RERUN=mix-t1` retrains all 41 runs on the
 GPUs named in `CUDA_VISIBLE_DEVICES`, which takes about a quarter of an hour
 on four RTX 4090s, and writes the result under a new name.
 
@@ -169,7 +168,7 @@ for name, keys in (('this section', MIX_KEYS), ('upstream', UPSTREAM)):
         ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
 ```
 
-## Domain Weights Are Hyperparameters
+## Mixture Weights as Hyperparameters
 :label:`subsec_lm_mix_weights`
 
 A *mixture* over $m$ domains is a vector of weights $\mathbf{w}$ on the
@@ -187,7 +186,7 @@ The losses must be comparable across domains, and losses per token are not.
 A token of web prose stands for about 4.5 bytes of text under our tokenizer
 and a token of Python for about 2.4, so a model can have a lower loss per
 token on code and still predict code worse. We therefore report *bits per
-byte*, as in :numref:`subsec_bits-per-byte`: the summed negative
+byte*, as in :numref:`subsec_lm_bpb`: the summed negative
 log-likelihood in nats, divided by $\ln 2$ times the number of UTF-8 bytes
 the scored tokens stand for (`bpb_from_nll`). Bits per byte do not depend on
 the tokenizer, so a gain measured in them is a gain in prediction and not in
@@ -200,13 +199,11 @@ The study comes in two tiers of the same code, fixed in `MIX_CONFIGS` before
 any run. T1 trains proxies of 4.6 million parameters for $2^{24}$ tokens per
 run and fits on one consumer GPU. T2 trains proxies of 20.3 million
 parameters for $2^{27}$ tokens per run, eight times the tokens on a model four
-times larger, and is packaged as a campaign for a larger machine. Two run sets
-are registered. The T1 run set, 41 runs, is what this page reads, and every
-number quoted in the text comes from it; each such sentence says so. A test
-of the T2 design at half its tokens, run on four RTX 4090s, appears only in
-:numref:`subsec_lm_mix_transfer`, as a first look at a larger proxy. The full
-T2 campaign has not been run. Once its run set is registered, the page reads
-it in place of T1.
+times larger, and is packaged as a campaign for a larger machine. Every
+number quoted in the text comes from the 41 runs of T1, and each such
+sentence says so. A test of the T2 design at half its tokens, run on four RTX
+4090s, appears only in :numref:`subsec_lm_mix_transfer`, as a first look at
+a larger proxy. The full T2 campaign has not been run.
 <!-- campaign: lm-mix-runs-t2-v1 -->
 
 ```{.python .input #data-mixtures-configs}
@@ -288,7 +285,7 @@ FWEDU_BUCKETS = {  # bucket ranges of the chapter's FineWeb-Edu splits
 The three pools follow. Web text comes from buckets 1 to 7, with bucket 8 as
 its validation set. Code is Python from CodeParrot's cleaned GitHub files,
 kept only where a file's own licence is permissive (MIT, Apache 2.0, BSD or
-ISC); these files carry individual licences, so the book hosts only their
+ISC). These files carry individual licences, so the book hosts only their
 metadata and per-file attribution, and `tools/build_mix_pools.py` builds the
 pool on the reader's machine. Mathematics is FineMath at its highest quality
 level (4 and above), web pages about mathematics selected by a classifier
@@ -343,7 +340,7 @@ say('bucket rule: the first 1,000 web documents of the pool lie in '
 Bytes per token differ by almost a factor of two between web text and code,
 which is why the losses below are always per byte. The pools also differ in
 documents: 20 million tokens are about 19,000 web pages, 12,000 mathematics
-pages or 4,800 Python files, so the same weight buys very different numbers
+pages or 4,800 Python files, so the same weight yields very different numbers
 of distinct documents in each domain.
 
 ### Temperature Sampling and Repetition
@@ -369,7 +366,7 @@ $\alpha < 1$ the factor $n_i^{\alpha - 1}$ decreases with $n_i$, so the
 smallest sources are repeated most. Multilingual BERT sampled languages with
 $\alpha = 0.7$, and XLM-R and mT5 with $\alpha = 0.3$.
 
-Repetition has a price. Muennighoff and colleagues trained models on data
+Repeated tokens are worth less than fresh ones. Muennighoff and colleagues trained models on data
 repeated for many epochs and found that up to about four epochs
 of repetition change the loss little compared with fresh data, while beyond
 that the value of each further pass decays
@@ -536,7 +533,7 @@ A proxy is the book's `d2l.GPT` with the reference tokenizer's vocabulary of
 32,768, trained by AdamW with a warmup and a decaying learning rate as in
 :numref:`sec_scheduler`. `train_proxy_lm` takes the pools, the weights and a
 token budget, and its data stream depends only on the triple (seed, weights,
-tokens): the pools are cut into windows of `seq_len + 1` tokens, each domain's
+tokens). The pools are cut into windows of `seq_len + 1` tokens, each domain's
 windows are read in a fresh random order per epoch, and the allocation of
 sequences to domains follows the weights as above. A list of `stages` switches
 to other weights at given fractions of the run, which is how the annealed arm
@@ -733,7 +730,7 @@ points; any rank statistic over them is a description, not a test.
 
 One regeneration writes the whole run set. The launcher first chooses the
 peak learning rate on the uniform mixture from four values at half the run's
-tokens, then trains the runs in dependency order on all visible GPUs, fits
+tokens. It then trains the runs in dependency order on all visible GPUs, fits
 the regression and chooses the selected mixture by code, trains DoReMi's
 weights, and finally the arms that need them. A normal build reads the
 registered result, and the cell asserts that it is the design above, trained
@@ -849,7 +846,7 @@ utilization, or a little over five hours on one RTX 4090.
 Now the first worry of the opening. If the ranking of mixtures changed during
 training, a short run could not be trusted to choose. For each of the 105
 pairs of training mixtures we compare their `t_dep` bits per byte at a quarter
-of the run and at its end, and count a pair as crossing only if both gaps
+of the run and at its end. A pair counts as crossing only if both gaps
 exceed the noise of a difference between two runs, $2\sqrt{2}$ seed standard
 deviations. The training runs share one data-order seed, so this bound is
 conservative. The cell plots the pair with the largest crossing, or, if none
@@ -918,11 +915,11 @@ all; it does not yet say that small models predict large ones.
 
 The pure-domain matrix shows why mixing is a real choice. At T1 scale each
 proxy is best on its own domain, and the costs off the diagonal are large and
-asymmetric: the web proxy scores 5.2 bits per byte on Python, the code proxy
-2.6 on web text, but the mathematics proxy reaches 2.15 on web text, close to
-the web proxy's 2.05. FineMath is a collection of web pages, written in
-English prose about mathematics, so most of what it teaches carries over to
-web text. The last table makes the earlier warning concrete. Per token, code
+asymmetric. The web proxy scores 5.2 bits per byte on Python and the code
+proxy 2.6 on web text, while the mathematics proxy reaches 2.15 on web text,
+much nearer the web proxy's 2.05. FineMath is a collection of web pages
+written in English prose about mathematics, so much of what it teaches
+carries over to web text. The last table makes the earlier warning concrete. Per token, code
 looks like the easiest domain, 5.1 bits against 8.7 for web text; per byte it
 is the harder one, 2.1 against 1.9, because a token of Python stands for less
 text.
@@ -1041,9 +1038,11 @@ def choose_mixture(f, target, n_grid=5000, seed=0, max_weight=0.9,
 
 How well can any regression do? Each measured loss carries noise of standard
 deviation $\sigma$ from the data order, and the held-out loss we compare a
-prediction with is just as noisy. For a model linear in $p$ parameters
-fitted by least squares to $n$ runs with design matrix $\mathbf{X}$, the
-prediction at a new point $\mathbf{x}$ is
+prediction with is just as noisy. No predictor, however good, can therefore
+reach a root-mean-square error below $\sigma$ against a held-out run. A
+fitted predictor also carries the noise of the runs it was fitted to. Take a
+model linear in $p$ parameters, fitted by least squares to $n$ runs with
+design matrix $\mathbf{X}$. Its prediction at a new point $\mathbf{x}$ is
 $\hat y = \mathbf{x}^\top \hat{\boldsymbol\beta}$ with
 $\hat{\boldsymbol\beta} - \boldsymbol\beta = (\mathbf{X}^\top
 \mathbf{X})^{-1} \mathbf{X}^\top \boldsymbol\epsilon$, and the new
@@ -1062,13 +1061,17 @@ $$
 
 The second identity is the trace of the hat matrix
 $\mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top$, which is $p$.
-Averaged over the design, the root-mean-square error against held-out runs
-cannot fall below $\sigma\sqrt{1 + p/n}$, however good the model class. A
-regression that reaches this *noise floor* has extracted everything the runs
-contain; one that is far above it is wrong about the shape of the function.
-The cell checks :eqref:`eq_lm_mix_floor` by simulation, estimates $\sigma$
-from the two extra seeds of the uniform mixture, fits the three regressions
-on the training runs and judges them only on the held-out ones.
+A correctly specified least-squares model with $p$ parameters therefore
+reaches a root-mean-square error of $\sigma\sqrt{1 + p/n}$ on average over
+the design points. We call this level, with the $p = 3$ of a model linear in
+two free weights and an intercept, the *noise floor*. It is a yardstick, not
+a bound. The bound is $\sigma$, and a correct model with fewer fitted
+parameters comes closer to it; the mixing law has five parameters per domain
+and gradient boosting many more. A regression far above the floor is wrong
+about the shape of the function. The cell checks :eqref:`eq_lm_mix_floor` by
+simulation, estimates $\sigma$ from the two extra seeds of the uniform
+mixture on the training runs' schedule, fits the three regressions on the
+training runs and judges them only on the held-out ones.
 
 Two design facts qualify the comparison. Every training and held-out run uses
 the same data-order seed, so part of the noise is shared and the floor
@@ -1167,9 +1170,11 @@ fig.tight_layout()
 ```
 
 The simulation matches the formula to within a few tenths of a percent. On
-the real runs, at T1 scale, the floor is about 0.02 bits per byte, and its
-interval from three degrees of freedom is wide, 0.01 to 0.06. No regression
-reaches it. Gradient boosting comes closest with a held-out error of about
+the real runs, at T1 scale, the floor is about 0.02 bits per byte. Its
+$\sigma$ rests on only two runs, so it is known only roughly. The printed
+95% interval, 0.01 to 0.06, counts the three domains of those two runs as
+independent measurements, which they are not, and is therefore too narrow.
+No regression reaches the floor. Gradient boosting comes closest with a held-out error of about
 0.03, ridge has about 0.06, and the mixing law about 0.07. The law's error is
 almost all in one domain: on web text it predicts to a few thousandths, on
 code it misses by about 0.12. Code's loss falls steeply as its weight rises
@@ -1186,10 +1191,10 @@ and gradient boosting can match its training points almost exactly.
 :label:`subsec_lm_mix_choose`
 
 With a fitted function in hand, the choice is an optimization. The cell
-minimizes each regression's prediction of the `t_dep` loss, the mixing law's
-also for `t_avg` and without the bound to the training hull, and refits the
-law on 200 bootstrap resamples of the training runs to see how firmly the data
-determine the chosen weights.
+minimizes each regression's prediction of the `t_dep` loss, and the mixing
+law's also for `t_avg` and without the bound to the training hull. It then
+refits the law on 200 bootstrap resamples of the training runs to see how
+firmly the data determine the chosen weights.
 
 ```{.python .input #data-mixtures-choose}
 %%tab pytorch
@@ -1227,13 +1232,13 @@ say(f'{C["select"]} on {B} bootstrap resamples of the training runs: '
 
 The selected mixture at T1 scale is the result of this section that a reader
 would least expect. For a target that puts 70% of its weight on web text, the
-mixing law chooses about a third of each domain, $(0.34, 0.31, 0.35)$. The
-reason is in the matrix above: web loss barely moves with the web weight,
-because mathematics pages teach web prose almost as well as web pages do,
-while the losses on code and mathematics fall steeply with their own weights.
-The optimizer spends tokens where they lower the loss most, and a deployment
-that reads mostly web text does not, at this scale, want mostly web text in
-training. Without the hull bound the law picks the same point, so it is not
+mixing law chooses about a third of each domain, $(0.34, 0.31, 0.35)$. In
+the fitted law the web loss barely moves with the web weight, while the
+losses on code and mathematics fall steeply with their own weights, so the
+optimizer moves tokens from web text to code and mathematics. The choice is
+a statement about these proxies, not advice for a web-heavy deployment, and
+:numref:`subsec_lm_mix_transfer` finds that a larger proxy moves it toward
+web text. Without the hull bound the law picks the same point, so it is not
 pressed against the edge of its data. Ridge, as promised, picks a corner, the
 fixed mixture $(0.1, 0.8, 0.1)$; gradient boosting picks
 $(0.24, 0.55, 0.22)$. For `t_avg` the law shifts weight from web text to
@@ -1253,10 +1258,10 @@ two targets and a hull bound from becoming a menu.
 
 DoReMi (Xie and colleagues, 2023) chooses the weights without a regression,
 and with one difference in what it optimizes. It trains a reference model on
-a default mixture, then trains a proxy whose loss weights $\boldsymbol\alpha$
-over domains are adjusted during training to maximize the proxy's *excess*
-loss over the reference, so that the proxy works hardest on the domains where
-it lags the reference most. This is a minimax game,
+a default mixture. It then trains a proxy whose loss weights
+$\boldsymbol\alpha$ over domains are adjusted during training to maximize the
+proxy's *excess* loss over the reference, so that the proxy works hardest on
+the domains where it lags the reference most. This is a minimax game,
 $\min_\theta \max_{\boldsymbol\alpha \in \Delta} \sum_i \alpha_i
 (\ell_i(\theta) - \ell_{\textrm{ref},i})$, and the step on the weights has a
 closed form. With $g_{t,i}$ the excess loss of domain $i$ at step $t$,
@@ -1321,11 +1326,11 @@ def doremi_weights(ref_model, proxy_model, domain_batches, steps, cfg,
     return np.mean([t['alpha'] for t in trace], 0), trace
 ```
 
-The cell checks the closed-form step against a numerical maximization, runs
-the game on a toy with three quadratic losses whose saddle point is known,
-and builds a batch on which clipping the mean excess loss of a domain would
-give no signal at all while clipping per token does. It then prints the
-weights of the registered run.
+The cell checks the closed-form step against a numerical maximization and
+runs the game on a toy with three quadratic losses whose saddle point is
+known. It builds a batch on which clipping the mean excess loss of a domain
+would give no signal at all while clipping per token does. It then prints
+the weights of the registered run.
 
 ```{.python .input #data-mixtures-doremi}
 %%tab pytorch
@@ -1382,9 +1387,10 @@ code and lowers web text, $(0.17, 0.47, 0.36)$. The trajectory behind that
 average swings: code holds three quarters of the weight a quarter of the way
 in and a quarter of it halfway. With 256 steps the average of so restless a
 sequence is a noisy estimate; the paper's runs are many thousands of steps
-long. Note also what DoReMi does not do. Its objective is the worst excess
-loss over domains, not `t_dep` and not even the average loss, so there is no
-reason to expect its mixture to win on either target.
+long. Note also what DoReMi is built for. Its game, :eqref:`eq_lm_mix_doremi`,
+weighs the domains on which the proxy lags the reference most; it targets
+neither `t_dep` nor the average loss, so there is no reason to expect its
+mixture to win on either target.
 <!-- campaign: lm-mix-runs-t2-v1 -->
 
 ### Four Arms Compared
@@ -1448,9 +1454,9 @@ surprise, since the selected mixture is nearly uniform. DoReMi's arm is
 behind on `t_dep` by about 0.01 to 0.02. The rule calls that real, but with
 little margin, and regenerating the run set moves single runs by up to about
 0.02 bits per byte, so we read it as "worse on `t_dep` by about 0.01, at the
-edge of the noise". The per-domain table explains the sign. DoReMi spent its
-extra code weight well, lowering the code loss by about 0.1 bits per byte,
-and paid with web text, which `t_dep` weighs by 0.7. On the average target the
+edge of the noise". The per-domain table explains the sign. DoReMi's extra
+code weight lowered the code loss by about 0.1 bits per byte and raised the
+web loss by about 0.05, and `t_dep` weighs web text by 0.7. On the average target the
 same arm is better than uniform by about 0.025. One method, two targets, two
 verdicts: a mixture is good only for a stated objective, and DoReMi's
 objective is neither of ours.
@@ -1462,13 +1468,13 @@ objective is neither of ours.
 The staged arm asks a different question: does it matter when in training a
 mixture is read? Under the stable-then-decay schedule of
 :numref:`sec_scheduler` the learning rate stays at its peak for most of
-training and then falls to a small value over the last fifth of the steps,
-and most of the drop in loss happens in that decay. A model fits most closely
-what it reads while its learning rate falls, which suggests saving the best
-data for the end. This is *annealing*, and it is now standard: SmolLM2's last
-stage, the final 10% of its 11 trillion tokens, raises mathematics to 14% and
-code to 24% of the mixture, using FineMath and educational code that were
-held back until then to make them count most. The staged arm is the miniature of this recipe, and the cell
+training and then falls to a small value over the last fifth of the steps.
+A model fits most closely what it reads while its learning rate falls, which
+suggests saving the best data for the end. This is *annealing*, and it is
+now standard. SmolLM2's last stage, the final 10% of its 11 trillion tokens,
+raises mathematics to 14% and code to 24% of the mixture, using FineMath and
+educational code that were held back until then to make them count most. The
+staged arm is the miniature of this recipe, and the cell
 compares its per-domain curves with the uniform arm's, with the stage
 boundary marked.
 
@@ -1506,6 +1512,9 @@ argument to `train_proxy_lm`; what annealing on a different mixture does is
 the subject of an exercise.
 <!-- campaign: lm-mix-runs-t2-v1 -->
 
+### Annealing Gains and Recency
+:label:`subsec_lm_mix_recency`
+
 The harder question is what an annealing gain means. If the decay is run on
 mathematics and question-answer pairs, scores on mathematics and
 question-answering benchmarks rise, and they rise fast. Some of that rise can
@@ -1516,12 +1525,12 @@ the loss on held-out data of the annealed domain that does not resemble any
 benchmark; the other continues training on the general mixture after the
 anneal and asks whether the gain survives. Blakeney and colleagues (2024)
 proposed upsampling domains at the end of training as a cheap way to test
-which data help, and the method is valuable exactly because it is fast; it
-should not be read as a measure of what a model can do after the anneal
-is over. Decontamination, as in :numref:`sec_lm_dedup`, matters doubly here,
+which data help, and the method is valuable because it is fast. It should
+not be read as a measure of what a model can do after the anneal is over.
+Decontamination, as in :numref:`sec_lm_dedup`, matters doubly here,
 since annealing data are often written to look like test items.
 
-### Two Released Mixtures
+### Curricula of Two Released Models
 :label:`subsec_lm_mix_cases`
 
 Olmo 3 documents its data in unusual detail, and it reads best as a case
@@ -1533,21 +1542,21 @@ converted to text, 137 billion of educational code, 34 billion of FineMath,
 5.9 trillion tokens from it. By the two dataset cards' counts, Common Crawl is
 subsampled to a little over half of its pool, while code is read about three
 times, arXiv about two and a half times and FineMath about four and a half
-times: the small, valuable sources are upsampled into the range where
-:eqref:`eq_lm_mix_effective` starts to charge for repetition, and the report
+times. The small, valuable sources are thus upsampled into the range where
+:eqref:`eq_lm_mix_effective` starts to discount repetition, and the report
 states that it avoids repeating any domain more than a few times. The weights
-come from our method at a larger scale: a swarm of proxies of 30 million
-parameters trained for 3 billion tokens each, a hundred tokens per parameter,
-on mixtures drawn from a Dirichlet distribution centred on the natural
-proportions, with five times as many proxies as domains. A separate
+come from our method at a larger scale. A swarm of proxies of 30 million
+parameters, five times as many as there are domains, is trained for 3
+billion tokens each, a hundred tokens per parameter, on mixtures drawn from
+a Dirichlet distribution centred on the natural proportions. A separate
 regression per evaluation task predicts its bits per byte, and the mixture
 minimizes the average prediction under the repetition constraint. After
 pretraining comes a mid-training stage of 100 billion tokens, the Dolmino
-mixture, which combines the highest-quality pretraining data with
-mathematics, code, question answering, instruction following and reasoning
-traces, the annealing of the previous paragraphs at scale; candidate data for
-it are tested by short anneals of 10 billion tokens, half candidate, half
-web. :numref:`sec_lm_continued_pretraining` takes up that stage.
+mixture. It combines the highest-quality pretraining data with mathematics,
+code, question answering, instruction following and reasoning traces, the
+annealing of the previous paragraphs at scale. Candidate data for it are
+tested by short anneals of 10 billion tokens, half candidate, half web.
+:numref:`sec_lm_continued_pretraining` takes up that stage.
 
 SmolLM2 shows the other common pattern, a curriculum of four stages with
 fixed weights inside each. The first 6 trillion tokens are web text and at
@@ -1563,11 +1572,11 @@ between stages from evaluations of the large run itself.
 
 Everything so far was decided by models of 4.6 million parameters. Three
 things limit how far such a decision carries. The first is the number of
-tokens per parameter: the T1 proxies see about 4 tokens per parameter and the
+tokens per parameter. The T1 proxies see about 4 tokens per parameter and the
 T2 proxies about 7, against the roughly 20 of compute-optimal training
-:cite:`hoffmann2022training` and 100 for the Olmo 3 swarm, and an
-under-trained model has learned the easy statistics of every domain and few
-of the hard ones. The second is the model itself: a proxy whose parameters
+:cite:`hoffmann2022training` and 100 for the Olmo 3 swarm. An under-trained
+model has learned the easy statistics of every domain and few of the hard
+ones. The second is the model itself: a proxy whose parameters
 are mostly an embedding table learns which tokens follow which, and a model
 that learns long-range structure may value code and mathematics quite
 differently. The third is the tokenizer: the weights are shares of sequences
@@ -1582,8 +1591,7 @@ The T2 configuration is the next step of that check, packaged in
 `tools/lm_campaigns.yaml`: the same design with 16 Dirichlet training
 mixtures and 8 held-out ones, at 20.3 million parameters and $2^{27}$ tokens
 per run. The launcher runs it on as many GPUs as it is given, checkpoints
-every run, stops itself after a time limit and resumes where it stopped. Once
-its run set is registered, this page reads it in place of the T1 runs.
+every run, stops itself after a time limit and resumes where it stopped.
 
 ```{.python .input #data-mixtures-t2-package}
 %%tab pytorch
@@ -1670,18 +1678,20 @@ say(f'  uniform per domain {wsd2["uniform"].mean(0).round(4).tolist()};'
 The rankings agree only in part. Over the 22 shared mixtures the rank
 correlation of the `t_dep` losses between T1 and the half-length T2 test is
 0.70, and only one of the three best mixtures at T1 scale is among the three
-best in the test. The learning-rate choice moves from $2 \times 10^{-3}$ to $10^{-3}$, as
-expected for a wider model. The mixing law still misses its floor of about 0.02,
-by about 0.07 on code and 0.05 on mathematics. Its choice for `t_dep` moves toward web text,
-$(0.44, 0.27, 0.30)$, a shift of about 0.1 in the web weight, about the width
-of the T1 bootstrap range, and here the regression's arm beats uniform beyond
-the noise, by about 0.01 bits per byte in all three seeds. DoReMi's weights
-move most, to $(0.29, 0.30, 0.41)$, and its arm, like the staged one, is
-within the noise of uniform. So the small proxies located the neighbourhood
-of a good mixture and did not fix the point: a model four times larger
-prefers more web text, and at that size its own choice beats uniform. Whether the trend continues to a model a hundred times larger, the
-size at which mixtures are actually chosen, is a question that only a run at
-that size can answer.
+best in the test. The learning-rate choice moves from $2 \times 10^{-3}$ to
+$10^{-3}$, as expected for a wider model. The mixing law's held-out error is
+still about 0.07 on code and 0.05 on mathematics, against a floor of about
+0.02. Its choice for `t_dep` moves toward web text, to
+$(0.44, 0.27, 0.30)$. That is a shift of about 0.1 in the web weight, about
+the width of the T1 bootstrap range, and here the regression's arm beats
+uniform beyond the noise, by about 0.01 bits per byte in all three seeds.
+DoReMi's weights move most, to $(0.29, 0.30, 0.41)$, and its arm, like the
+staged one, is within the noise of uniform. So the small proxies located the
+neighbourhood of a good mixture and did not fix the point: a model four
+times larger prefers more web text, and at that size its own choice beats
+uniform. Whether the trend continues to a model a hundred times larger, the
+size at which mixtures are actually chosen, only a run at that size can
+answer.
 <!-- campaign: lm-mix-runs-t2-v1 -->
 
 ## Summary
@@ -1690,20 +1700,20 @@ A data mixture is a hyperparameter whose every trial costs a pretraining
 run, so it is chosen with small proxy models: train proxies on random
 mixtures, fit a function from weights to per-domain bits per byte, and
 minimize a target loss fixed in advance. Bits per byte, not bits per token,
-make the domains comparable, and the noise floor $\sigma\sqrt{1 + p/n}$ says
-how well any fitted function can predict a new run. At T1 scale, early
-rankings of mixtures predicted late ones, no regression reached the floor of
-about 0.02 bits per byte, the exponential mixing law failed on code, and its
-choice for a web-heavy target was close to uniform because mathematics pages
-teach web prose almost as well as web pages do; DoReMi's worst-case objective
-moved weight to code and lost slightly on that target. In a model four times
-larger the ranking of mixtures agreed only in part (rank correlation 0.7),
-and the chosen weights moved toward web text and beat uniform, so proxies
-locate a region of good mixtures rather than a point. Temperature sampling
-and annealing change the mixture over sources and over time; the first is
-limited by the value of repeated data, which saturates after a few epochs,
-and the second by the question of whether its gains are capability or
-recency.
+make the domains comparable. No fitted function predicts a new run better
+than that run's noise $\sigma$, and a correct least-squares fit reaches
+$\sigma\sqrt{1 + p/n}$. At T1 scale, early rankings of mixtures predicted
+late ones, and no regression reached the floor of about 0.02 bits per byte;
+the exponential mixing law failed on code. Its choice for a web-heavy target
+was close to uniform, because in the fit the web loss barely moved with the
+web weight. DoReMi's objective moved weight to code and lost slightly on that
+target. In a test of a model four times larger, at half its planned tokens,
+the ranking of mixtures agreed only in part (rank correlation 0.7), and the
+chosen weights moved toward web text and beat uniform. Proxies locate a
+region of good mixtures rather than a point. Temperature sampling changes
+the mixture over sources and is limited by the value of repeated data, which
+saturates after a few epochs. Annealing changes it over time, and its gains
+may be capability or recency.
 <!-- campaign: lm-mix-runs-t2-v1 -->
 
 ## Exercises
@@ -1764,9 +1774,9 @@ recency.
    runs against the code weight. Propose a law that follows the steep drop
    near zero weight, for example
    $c + k (w_{\textrm{code}} + \epsilon)^{-\beta}$ for the code domain with the
-   other domains' weights as a linear correction, fit it on the same training
-   runs, and compare its held-out error per domain with the mixing law's and
-   with the floor. Does its choice for `t_dep` move?
+   other domains' weights as a linear correction, and fit it on the same
+   training runs. Compare its held-out error per domain with the mixing law's
+   and with the floor. Does its choice for `t_dep` move?
    :exlabel:`ex_lm_mix-code-law`
 
 1. [code] **Annealing on mathematics.** Train the staged arm with the decay
@@ -1955,7 +1965,8 @@ Bits per byte of the pure-domain proxies:
 
 ::: {.d2l-note}
 Off-diagonal costs are large and asymmetric. FineMath is English prose about
-mathematics, so it teaches web text almost as well as web text does.
+mathematics: on web text its proxy is much nearer the web proxy than the
+code proxy is.
 :::
 :::
 
@@ -1977,18 +1988,19 @@ model ranks them as a large one does is another question.
 :::
 :::
 
-::: {.slide title="No Regression Can Beat σ√(1 + p/n)"}
+::: {.slide title="A Correct Least-Squares Fit Reaches σ√(1 + p/n)"}
 [The noise floor]{.kicker}
 
-Least squares, $n$ runs, $p$ parameters, noise $\sigma$, noisy held-out run:
+No predictor beats $\sigma$, the noise of the held-out run itself.
+Least squares, $n$ runs, $p$ parameters, correct model:
 
 $$\mathbb{E}\bigl[(\hat y - y)^2\bigr] = \sigma^2 \bigl(1 + \mathbf{x}^\top (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{x}\bigr)$$
 
 Average over the design: $\operatorname{tr}$ of the hat matrix is $p$, so
 $\sigma^2 (1 + p/n)$.
 
-- $\sigma$ from extra seeds of the uniform mixture: floor about 0.02 bits per
-  byte (3 degrees of freedom: 0.01 to 0.06).
+- Floor with $p = 3$: about 0.02 bits per byte; a yardstick, not a bound.
+- $\sigma$ rests on two seeds of the uniform mixture, so it is rough.
 - Simulation: 4.79e-4 against 4.78e-4 predicted.
 :::
 
@@ -2025,8 +2037,8 @@ mixtures:
 200 bootstrap refits: web 0.25 to 0.38, code 0.24 to 0.43.
 
 ::: {.d2l-note}
-Web loss barely moves with web weight; code and math fall with theirs. The
-runs fix a neighbourhood, not a point.
+In the fitted law, web loss barely moves with web weight; code and math fall
+with theirs. The runs fix a neighbourhood, not a point.
 :::
 :::
 
@@ -2073,16 +2085,15 @@ share a sign and the mean exceeds $2\sigma_{\textrm{seed}}$ (about 0.01).
 | staged | about 0 | about 0 | 0.00 |
 
 ::: {.d2l-note}
-DoReMi buys code with web text: worse on the web-heavy target, at the edge
-of the noise; better on the average.
+DoReMi lowers code loss and raises web loss: worse on the web-heavy target,
+at the edge of the noise; better on the average.
 :::
 :::
 
 ::: {.slide title="Annealing Reads the Best Data While the Learning Rate Falls"}
 [Annealing]{.kicker}
 
-- Stable-then-decay: peak rate for 80% of the steps, decay in the last 20%,
-  where most of the loss drop happens.
+- Stable-then-decay: peak rate for 80% of the steps, decay in the last 20%.
 - SmolLM2's last 10% of 11T tokens: 14% math, 24% code, held back until then.
 - Our staged arm decays on the selected mixture, which is nearly uniform:
   no measurable change.
@@ -2148,7 +2159,8 @@ Rank correlation of 22 shared mixtures: 0.70.
   byte.
 - Temperature $\alpha = 0.3$ reads Swahili 143 times, worth 11% of fresh data.
 - Early rankings predict late ones: 0 of 105 pairs cross beyond the noise.
-- Floor about 0.02 bpb; best regression 0.03, mixing law 0.07 (code).
+- Floor of a correct fit about 0.02 bpb; best regression 0.03, mixing law
+  0.07 (code).
 - Web-heavy target selects about one third web; DoReMi moves weight to code.
 - At 4× the size: rank correlation 0.70, the choice moves to web and wins.
 

@@ -43,5 +43,6 @@ campaigns:
     status: run 2026-11-21 on the four RTX 4090s (author ruling 2026-11-20) as a test of the T2 code path; never the T2 result
     config: run_mix_campaign.py's 't2s' (d2l.MIX_CONFIGS['t2'] at half its tokens, 2^26 per run, 2^24 per learning-rate run, on the T2 pools)
     command: python tools/run_mix_campaign.py --config t2s --gpus 0,1,2,3 --out data/lm/rerun/mix-t2s --max-hours 0.25, then the same with --resume --max-hours 3 (tests the time stop and the resume)
+    measured: 49 runs, 2.7 GPU-hours of runs (3.1 GPU-hours of reserved cards), 46 min wall on four RTX 4090s; the time stop left 4 runs at their step-768 checkpoints, and the resume finished them
     outputs:
-      - data/lm/rerun/mix-t2s/lm-mix-runs-t2s-v1.json -> lm-mix-runs-t2s-v1
+      - data/lm/rerun/mix-t2s/lm-mix-runs-t2s-v1.json -> lm-mix-runs-t2s-v1 (registered)

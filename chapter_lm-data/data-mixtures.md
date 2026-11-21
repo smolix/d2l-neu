@@ -71,8 +71,10 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import textwrap
 import time
 import pandas as pd
+import yaml
 from scipy import optimize, spatial, stats
 ```
 
@@ -88,6 +90,13 @@ MIX_DOMAINS = ('web', 'code', 'math')
 MIX_TARGETS = {  # target weights over MIX_DOMAINS, fixed before any run
     't_avg': (1 / 3, 1 / 3, 1 / 3), 't_dep': (0.7, 0.15, 0.15)}
 
+def say(*args, sep=' '):
+    """print, each line wrapped to the page's 100 columns."""
+    print('\n'.join(l if len(l) <= 100 else textwrap.fill(
+        l, 100, subsequent_indent='    ', break_long_words=False,
+        break_on_hyphens=False) for l in sep.join(map(str, args)).split('\n')))
+
+
 DOMAINS = MIX_DOMAINS
 T_AVG, T_DEP = (np.array(MIX_TARGETS[k]) for k in ('t_avg', 't_dep'))
 ARTIFACTS = {'mix-t1': ('lm-mix-runs-t1-v1', 'lm-mix-runs-t1-v1.json')}
@@ -99,9 +108,9 @@ T2 = 'lm-mix-runs-t2-v1' in d2l.DATA_HUB and not RERUN
 RUNS_KEY = 'lm-mix-runs-t2-v1' if T2 else 'lm-mix-runs-t1-v1'
 CONFIG = 't2' if T2 else 't1'
 TAG = f'[at {CONFIG.upper()} scale]'
-print(f'configuration {CONFIG}' + ('' if T2 else ' (the T2 campaign logs are '
-      'not yet committed)'), '| regenerating:', ', '.join(sorted(RERUN))
-      or 'none')
+say(f'configuration {CONFIG}' + ('' if T2 else ' (the T2 campaign logs are '
+    'not yet committed)'), '| regenerating:', ', '.join(sorted(RERUN))
+    or 'none')
 ```
 
 ```{.python .input #data-mixtures-data-hub}
@@ -143,17 +152,22 @@ d2l.DATA_HUB['lm-mix-runs-t1-v1'] = (  # the 41 T1 runs, the selection,
     # DoReMi's weights and the T2 smoke (mix-t1 regeneration, 20.4)
     d2l.LM_DATA_URL + 'lm-mix-runs-t1-v1.json',
     '92abf76a5e9891ba3efe5c5daa5f2a021f05c9e4')
+d2l.DATA_HUB['lm-mix-runs-t2s-v1'] = (  # a small-scale test of the T2 code
+    # path on four RTX 4090s: the T2 design at half its tokens (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-runs-t2s-v1.json',
+    'dac131e52de0e8b0d8ae883f5005eee6c3dcf60d')
 
 # lm-mix-runs-t2-v1 is added after the T2 campaign
 MIX_KEYS = ('lm-mix-web-20m-v1', 'lm-mix-math-20m-v1', 'lm-mix-val-1m-v1',
             'lm-mix-code-meta-v1', 'lm-mix-runs-t1-v1', 'lm-mix-web-150m-v1',
             'lm-mix-math-150m-v1', 'lm-mix-val-2m-v1',
-            'lm-mix-code150-meta-v1', 'lm-mix-runs-t2-v1')
+            'lm-mix-code150-meta-v1', 'lm-mix-runs-t2s-v1',
+            'lm-mix-runs-t2-v1')
 UPSTREAM = ('lm-r2-tokenizer-v1',)
 for name, keys in (('this section', MIX_KEYS), ('upstream', UPSTREAM)):
-    print(f'{name}: registered', ', '.join(
+    say(f'{name}: registered', ', '.join(
         k for k in keys if k in d2l.DATA_HUB) or 'none', '| pending:',
-          ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
+        ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
 ```
 
 ## Domain Weights Are Hyperparameters
@@ -256,8 +270,8 @@ for c in d2l.MIX_CONFIGS.values():  # a pure-domain run reads all its tokens
     assert c['pool_tokens'] >= c['tokens']
 meta = {d: (POOLS[d].meta, VALS[d].meta) for d in POOLS if d in VALS}
 if 'code' not in meta:  # CodeParrot's files are not hosted (their licences)
-    print('code pool not built here: python tools/build_mix_pools.py '
-          f'--config {CONFIG}; its meta comes from {C["code_meta"]}')
+    say('code pool not built here: python tools/build_mix_pools.py '
+        f'--config {CONFIG}; its meta comes from {C["code_meta"]}')
     tar = d2l.download_keyed(C['code_meta'])
     root = pathlib.Path(tar).with_suffix('')
     if not (root / 'meta.json').exists():
@@ -271,7 +285,7 @@ POOL_TABLE = pd.DataFrame([dict(
     bytes_per_token=m['n_bytes_scored'] / m['n_tokens'],
     tokenizer=m['tokenizer_sha256'][:12], here=d in POOLS)
     for d in DOMAINS for split, m in zip(('pool', 'val'), meta[d])])
-print(POOL_TABLE.round(3).to_string(index=False))
+say(POOL_TABLE.round(3).to_string(index=False))
 assert POOL_TABLE.tokenizer.nunique() == 1, 'pools from different tokenizers'
 assert (POOL_TABLE[POOL_TABLE.split == 'pool'].tokens >= C['tokens']).all()
 for d, P in itertools.chain(POOLS.items(), VALS.items()):  # one EOS per doc
@@ -282,8 +296,8 @@ for P, side in ((POOLS['web'], 'side'), (VALS['web'], 'side_val')):
     with gzip.open(docs, 'rt') as f:
         ids = [json.loads(row)['doc_id'] for row in itertools.islice(f, 1000)]
     assert all(d2l.fwedu_bucket(i) in d2l.FWEDU_BUCKETS[side] for i in ids)
-print('bucket rule: the first 1,000 web documents of the pool lie in '
-      'buckets 1-7, those of the validation set (up to 1,000) in bucket 8')
+say('bucket rule: the first 1,000 web documents of the pool lie in '
+    'buckets 1-7, those of the validation set (up to 1,000) in bucket 8')
 ```
 
 ### Temperature Sampling and Repetition
@@ -347,8 +361,8 @@ counts = np.random.default_rng(0).multinomial(D_toy, p)
 se = np.sqrt(D_toy * p * (1 - p)) / n_toy
 assert abs(p.sum() - 1) < 1e-12 and (np.abs(counts / n_toy - e) < 3 * se).all()
 assert e[2] > e[1] > e[0]
-print('D1 (alpha 0.3, sizes 1000/100/10): p =', p.round(4), '| epochs',
-      e.round(1), '| simulated', (counts / n_toy).round(1))
+say('D1 (alpha 0.3, sizes 1000/100/10): p =', p.round(4), '| epochs',
+    e.round(1), '| simulated', (counts / n_toy).round(1))
 FW_ROWS = {  # documents per language (FineWeb-2 configs; English: FineWeb)
     'eng (FineWeb)': 25_886_364_489, 'rus_Cyrl': 699_118_293,
     'cmn_Hani': 636_092_280, 'deu_Latn': 496_029_661,
@@ -364,10 +378,12 @@ for alpha in (1.0, 0.7, 0.3, 0.0):
         rows[lang, f'epochs (alpha {alpha:g})'] = p[lang] * D_DOCS / n
 TEMP = pd.Series(rows).unstack()[[f'{k} (alpha {a:g})' for a in (
     1.0, 0.7, 0.3, 0.0) for k in ('p', 'epochs')]].loc[list(FW_ROWS)]
-print(TEMP.to_string(float_format=lambda v: f'{v:.3g}'))
-print('read more than four times (the repeated-data limit below):',
-      {c.split()[-1][:-1]: list(TEMP.index[TEMP[c] > 4])
-       for c in TEMP.columns if c.startswith('epochs')})
+for k in ('p', 'epochs'):  # sampling probability, then epochs per language
+    say(TEMP[[c for c in TEMP.columns if c.startswith(k + ' ')]].to_string(
+        float_format=lambda v: f'{v:.3g}'))
+say('read more than four times (the repeated-data limit below):',
+    {c.split()[-1][:-1]: list(TEMP.index[TEMP[c] > 4])
+     for c in TEMP.columns if c.startswith('epochs')})
 alphas = np.linspace(0, 1, 21)
 d2l.plot(alphas, [[d2l.temperature_weights(FW_ROWS, a)[lang] for a in alphas]
                   for lang in FW_ROWS], 'alpha', 'sampling probability',
@@ -387,9 +403,9 @@ limit = float(d2l.effective_tokens(U, 1001)) / (U * (1 + 15.4))
 E_10 = optimize.brentq(lambda E: E * U / d2l.effective_tokens(U, E) - 1.1,
                        1.01, 50)
 assert abs(four - 0.932) < 0.005 and abs(limit - 1) < 1e-3
-print(f"D'(4 epochs) / (4U) = {four:.3f}; D'(R = 1000) / (U (1 + R*)) = "
-      f'{limit:.6f}; U E overstates D\' by 10% at E = {E_10:.2f} '
-      f'(R = {E_10 - 1:.2f})')
+say(f"D'(4 epochs) / (4U) = {four:.3f}; D'(R = 1000) / (U (1 + R*)) = "
+    f'{limit:.6f}; U E overstates D\' by 10% at E = {E_10:.2f} '
+    f'(R = {E_10 - 1:.2f})')
 ```
 
 ## Proxy Runs and Regression
@@ -511,18 +527,18 @@ s = d2l._ProxyStream(two, w2, 10**4 * 64, 64, 1, seed=0)  # 10^4 sequences
 web = np.cumsum(s.dom == 0)
 lag = np.abs(web - 0.7 * np.arange(1, len(web) + 1)).max()
 assert lag <= 1 and abs(web[-1] - 7000) <= 3 * math.sqrt(1e4 * 0.7 * 0.3)
-print(f'same (seed, weights, tokens): the same 10 batches and the same loss '
-      f'at step 20 ({runs[0]["log"][19][2]:.6f}); web share after 10^4 '
-      f'sequences {web[-1] / 1e4:.4f}, never more than {lag:.2f} sequences '
-      'from 0.7 n')
+say(f'same (seed, weights, tokens): the same 10 batches and the same loss '
+    f'at step 20 ({runs[0]["log"][19][2]:.6f}); web share after 10^4 '
+    f'sequences {web[-1] / 1e4:.4f}, never more than {lag:.2f} sequences '
+    'from 0.7 n')
 uni = d2l._proxy_model(tiny._replace(dtype='float64')).double()
 nn.init.zeros_(uni.token_emb.weight)  # tied output: every logit is 0
 BYTE_LEN = d2l.token_byte_lengths(d2l.r2_tokenizer())
 r = d2l._proxy_eval(uni, VALS['web'].ids, tiny, BYTE_LEN, 32,
                     torch.device('cpu'))
 assert abs(r['bpb'] / (15 * r['n_tokens'] / r['n_bytes']) - 1) < 1e-9
-print(f'uniform model: {r["bpb"]:.6f} bits per byte = 15 / '
-      f'{r["n_bytes"] / r["n_tokens"]:.4f} bytes per token')
+say(f'uniform model: {r["bpb"]:.6f} bits per byte = 15 / '
+    f'{r["n_bytes"] / r["n_tokens"]:.4f} bytes per token')
 with torch.device('meta'):
     N = {k: d2l.num_params(d2l._proxy_model(c['proxy']))
          for k, c in d2l.MIX_CONFIGS.items()}
@@ -531,11 +547,11 @@ for k, c in d2l.MIX_CONFIGS.items():
     arith = p.vocab_size * p.num_hiddens + 12 * p.num_blks * p.num_hiddens**2
     assert abs(N[k] / arith - 1) < 0.005
     flop = d2l.proxy_flops(p, c['tokens'], N[k])
-    print(f'{k}: {N[k]:,} parameters (arithmetic {arith:,}; embedding '
-          f'{p.vocab_size * p.num_hiddens:,}); {flop:.2g} FLOP per run')
+    say(f'{k}: {N[k]:,} parameters (arithmetic {arith:,}; embedding '
+        f'{p.vocab_size * p.num_hiddens:,}); {flop:.2g} FLOP per run')
 TIER = (f'{CONFIG.upper()}: {N[CONFIG] / 1e6:.1f}M-parameter proxies, '
         f'2^{round(math.log2(C["tokens"]))} tokens per run')
-print('this page reads', TIER)
+say('this page reads', TIER)
 ```
 
 <!-- Prose: the run design. Training mixtures from Dirichlet(1) and
@@ -555,18 +571,18 @@ TRAIN_W = np.vstack([d2l.sample_mixtures(n, DOMAINS, conc,
                      for conc, n in C['train']] + [np.array(C['edges'])])
 HELD_W = d2l.sample_mixtures(C['held'], DOMAINS, 1.0, C['design_seeds'][1],
                              C['max_weight'])
-print(TAG, f'{len(TRAIN_W)} training mixtures (Dirichlet(1), Dirichlet(0.3), '
-      f'{len(C["edges"])} near the corners) and {len(HELD_W)} held-out ones '
-      f'(Dirichlet(1)), weights {DOMAINS}:')
-print(pd.DataFrame(np.vstack([TRAIN_W, HELD_W]), columns=DOMAINS,
-                   index=[f'train {k}' for k in range(len(TRAIN_W))]
-                   + [f'held {k}' for k in range(len(HELD_W))]).round(3).T
-      .to_string())
+say(TAG, f'{len(TRAIN_W)} training mixtures (Dirichlet(1), Dirichlet(0.3), '
+    f'{len(C["edges"])} near the corners) and {len(HELD_W)} held-out ones '
+    f'(Dirichlet(1)), weights {DOMAINS}:')
+say(pd.DataFrame(np.vstack([TRAIN_W, HELD_W]), columns=DOMAINS,
+                 index=[f'train {k}' for k in range(len(TRAIN_W))]
+                 + [f'held {k}' for k in range(len(HELD_W))]).round(3)
+    .to_string())
 SPECS = d2l.mix_run_specs(C)
 for arm, W in (('train', TRAIN_W), ('held', HELD_W)):  # the launcher's design
     assert np.array_equal([s['weights'] for s in SPECS if s['arm'] == arm], W)
 arms = collections.Counter(s['arm'] for s in SPECS)
-print(f'{len(SPECS)} runs: ' + ', '.join(f'{n} {a}' for a, n in arms.items()))
+say(f'{len(SPECS)} runs: ' + ', '.join(f'{n} {a}' for a, n in arms.items()))
 ```
 
 <!-- Prose: one regeneration writes the whole run set: the launcher
@@ -586,7 +602,7 @@ if 'mix-t1' in RERUN:
     t0 = time.time()
     subprocess.run([sys.executable, str(LAUNCHER), '--config', 't1', '--gpus',
                     gpus, '--out', out_dir, '--smoke-t2'], check=True)
-    print(f'mix-t1: {(time.time() - t0) / 60:.1f} min wall clock')
+    say(f'mix-t1: {(time.time() - t0) / 60:.1f} min wall clock')
     d2l.lm_save_rerun(ARTIFACTS['mix-t1'][1], lambda p: shutil.copy(
         os.path.join(out_dir, 'lm-mix-runs-t1-v1.json'), p))
 RUNS_PATH = d2l.lm_artifact(RUNS_KEY, ARTIFACTS['mix-t1'][1]
@@ -612,10 +628,10 @@ for s in C['arm_seeds']:  # the arms trained the selection and DoReMi's weights
     assert REC[f'regsel-s{s}']['weights'] == SEL['weights']
     assert REC[f'staged-s{s}']['stages'] == [[C['stage_frac'], SEL['weights']]]
     assert REC[f'doremi-s{s}']['weights'] == DOREMI_W
-print(TAG, f'{len(REC)} runs from {os.path.basename(RUNS_PATH)}; peak '
-      f'learning rate {RUNS["lr_choice"]["chosen"]:g} (chosen on the uniform '
-      'mixture: ' + ', '.join(f'{lr} -> {v:.4f} bpb' for lr, v in
-                               RUNS['lr_choice']['mean_bpb'].items()) + ')')
+say(TAG, f'{len(REC)} runs from {os.path.basename(RUNS_PATH)}; peak '
+    f'learning rate {RUNS["lr_choice"]["chosen"]:g} (chosen on the uniform '
+    'mixture: ' + ', '.join(f'{lr} -> {v:.4f} bpb' for lr, v in
+                             RUNS['lr_choice']['mean_bpb'].items()) + ')')
 ```
 
 <!-- Prose: the live check retrains the start of the pure-web run on this
@@ -630,12 +646,12 @@ if GPU and not RERUN:  # the regen cell checked the pool against the runs
                               stop_tokens=2**20)
     logged = {s: l for s, _, l, _ in REC['pure-web']['log']}
     diff = max(abs(l - logged[s]) for s, _, l, _ in live['log'] if s % 10 == 0)
-    print(TAG, f'pure-web, steps 10-{live["log"][-1][0]}: largest difference '
-          f'from the registered losses {diff:.4f} nats (bf16; tolerance 0.02)')
+    say(TAG, f'pure-web, steps 10-{live["log"][-1][0]}: largest difference '
+        f'from the registered losses {diff:.4f} nats (bf16; tolerance 0.02)')
     assert diff <= 0.02
 else:
-    print('live check skipped:', 'no GPU' if not GPU else
-          'the regeneration above trained the same run')
+    say('live check skipped:', 'no GPU' if not GPU else
+        'the regeneration above trained the same run')
 ```
 
 <!-- Prose: what the smoke of the T2 configuration measured on the 4090
@@ -649,11 +665,11 @@ SMOKE = RUNS.get('smoke')
 two = lambda v: (v if not isinstance(v, float) else f'{v:.1e}' if 0 < abs(
     v) < 1e-3 else f'{float(f"{v:.2g}"):,g}')  # two significant figures
 if SMOKE is None:
-    print('no smoke record in this run set')
+    say('no smoke record in this run set')
 else:
-    print(f'smoke of the {SMOKE["config"]} configuration on {SMOKE["device"]} '
-          f'({SMOKE["steps"]} steps of {SMOKE["tokens_per_step"]:,} tokens):')
-    print(pd.Series({k: two(SMOKE[k]) for k in (
+    say(f'smoke of the {SMOKE["config"]} configuration on {SMOKE["device"]} '
+        f'({SMOKE["steps"]} steps of {SMOKE["tokens_per_step"]:,} tokens):')
+    say(pd.Series({k: two(SMOKE[k]) for k in (
         'n_params', 'tokens_per_s', 'tokens_per_s_compiled', 'mfu',
         'mfu_compiled', 'compile_seconds', 'peak_mem_gib',
         'resume_bf16_max_diff', 'rerun_bf16_max_diff', 'resume_fp32_max_diff',
@@ -698,12 +714,12 @@ real_cross = [g for g in cross if beyond_noise(g)]
 G = (max(real_cross, key=lambda g: abs(g[1])) if real_cross else
      max(gaps, key=lambda g: abs(g[0])))
 A, B = G[2:]
-print(TAG, f'{len(cross)} of {len(gaps)} pairs of training mixtures cross, '
-      f'{len(real_cross)} with both gaps above 2 sqrt(2) seed SDs (SD '
-      f'{SD[0.25]:.4f} at 25%, {SD[1.0]:.4f} at the end); ' + (
-          'the pair with the largest final gap' if real_cross else
-          'none beyond the noise: the pair with the largest early gap')
-      + f': gap {G[0]:+.4f} at 25%, {G[1]:+.4f} at the end')
+say(TAG, f'{len(cross)} of {len(gaps)} pairs of training mixtures cross, '
+    f'{len(real_cross)} with both gaps above 2 sqrt(2) seed SDs (SD '
+    f'{SD[0.25]:.4f} at 25%, {SD[1.0]:.4f} at the end); ' + (
+        'the pair with the largest final gap' if real_cross else
+        'none beyond the noise: the pair with the largest early gap')
+    + f': gap {G[0]:+.4f} at 25%, {G[1]:+.4f} at the end')
 d2l.plot([[e['tokens'] for e in r['evals']] for r in (A, B)],
          [[t_bpb(e['domains']) for e in r['evals']] for r in (A, B)],
          'tokens', 't_dep bits per byte', legend=[
@@ -712,14 +728,14 @@ d2l.plot([[e['tokens'] for e in r['evals']] for r in (A, B)],
 MATRIX = pd.DataFrame([[REC[f'pure-{a}']['final'][b]['bpb'] for b in DOMAINS]
                        for a in DOMAINS], columns=DOMAINS,
                       index=[f'trained on {a}' for a in DOMAINS])
-print(TAG, 'bits per byte on each validation set (columns) of the '
-      'pure-domain runs (rows):')
-print(MATRIX.round(3).to_string())
-print('each proxy is best on its own domain:', all(
+say(TAG, 'bits per byte on each validation set (columns) of the '
+    'pure-domain runs (rows):')
+say(MATRIX.round(3).to_string())
+say('each proxy is best on its own domain:', all(
     MATRIX.values[i, i] == MATRIX.values[:, i].min() for i in range(3)))
 u = REC['uniform-wsd-s0']['final']
-print(TAG, 'uniform mixture (WSD, seed 0) per domain:')
-print(pd.DataFrame({d: dict(
+say(TAG, 'uniform mixture (WSD, seed 0) per domain:')
+say(pd.DataFrame({d: dict(
     bytes_per_token=u[d]['n_bytes'] / u[d]['n_tokens'],
     bits_per_token=u[d]['nll'] / u[d]['n_tokens'] / math.log(2),
     bits_per_byte=u[d]['bpb']) for d in DOMAINS}).round(3).to_string())
@@ -858,9 +874,9 @@ for _ in range(5000):
 theory = sigma**2 * (1 + np.einsum('ij,jk,ik->i', Xn, np.linalg.inv(X.T @ X),
                                    Xn))
 assert abs((err / 5000).mean() / theory.mean() - 1) < 0.03
-print(f'D4: mean squared error at new mixtures {(err / 5000).mean():.3e}, '
-      f'theory {theory.mean():.3e}; at the design points sigma^2 (1 + p/n) = '
-      f'{sigma**2 * (1 + 3 / 16):.3e}')
+say(f'D4: mean squared error at new mixtures {(err / 5000).mean():.3e}, '
+    f'theory {theory.mean():.3e}; at the design points sigma^2 (1 + p/n) = '
+    f'{sigma**2 * (1 + 3 / 16):.3e}')
 
 final = lambda r: [REC[r]['final'][d]['bpb'] for d in DOMAINS]
 cos = np.array([final(f'uniform-cos-s{s}') for s in C['cos_seeds']])
@@ -885,17 +901,17 @@ noise.update({f'RMSE {k}': np.sqrt(((P - Lh)**2).mean(0))
 noise.update({f'MAE {k}': np.abs(P - Lh).mean(0) for k, P in PRED.items()})
 noise.update({f'Spearman {k}': [stats.spearmanr(P[:, i], Lh[:, i])[0]
                                 for i in range(3)] for k, P in PRED.items()})
-print(TAG, f'{len(train_ids)} training and {len(held_ids)} held-out runs; '
-      f'pooled sigma_cos {SIG_COS:.4f}, sigma_seed {SIG_SEED:.4f} bits per '
-      f'byte (ratio {max(SIG_COS, SIG_SEED) / min(SIG_COS, SIG_SEED):.1f})')
-print(pd.DataFrame(noise, index=DOMAINS).T.round(4).to_string())
+say(TAG, f'{len(train_ids)} training and {len(held_ids)} held-out runs; '
+    f'pooled sigma_cos {SIG_COS:.4f}, sigma_seed {SIG_SEED:.4f} bits per '
+    f'byte (ratio {max(SIG_COS, SIG_SEED) / min(SIG_COS, SIG_SEED):.1f})')
+say(pd.DataFrame(noise, index=DOMAINS).T.round(4).to_string())
 FLOOR_CI = FLOOR * np.sqrt(3 / stats.chi2.ppf([0.975, 0.025], 3))  # 3 df
 rmse = math.sqrt(((PRED[C['select']] - Lh)**2).mean())
-print(f'floor {FLOOR:.4f} (95% interval from 3 degrees of freedom '
-      f'{FLOOR_CI[0]:.4f}-{FLOOR_CI[1]:.4f}); {C["select"]} (the selecting '
-      f'regression), held-out RMSE over all domains {rmse:.4f}:',
-      'reaches only the noise floor' if rmse <= 1.5 * FLOOR else
-      'does not reach the noise floor')
+say(f'floor {FLOOR:.4f} (95% interval from 3 degrees of freedom '
+    f'{FLOOR_CI[0]:.4f}-{FLOOR_CI[1]:.4f}); {C["select"]} (the selecting '
+    f'regression), held-out RMSE over all domains {rmse:.4f}:',
+    'reaches only the noise floor' if rmse <= 1.5 * FLOOR else
+    'does not reach the noise floor')
 
 fig, axes = d2l.plt.subplots(1, 4, figsize=(13, 3.4), gridspec_kw=dict(
     width_ratios=(1, 1, 1, 1.5)))
@@ -914,7 +930,7 @@ ids = train_ids + held_ids + [r['run_id'] for r in RUNS['runs']
 pts = d2l.barycentric(np.array([REC[r]['weights'] for r in ids]))
 dots = ax2.scatter(*pts.T, c=[T_DEP @ final(r) for r in ids], cmap='viridis')
 ax2.plot(*d2l.barycentric(np.array([RUNS['selection']['weights']])).T, '*',
-         color='red', markersize=16, label='selected for t_dep')
+         color='red', markersize=16, label='selected')
 ax2.plot(*d2l.barycentric(np.vstack([np.eye(3), np.eye(3)[:1]])).T, 'k-',
          linewidth=0.8)
 for (x, y), d in zip(d2l.barycentric(np.eye(3)), DOMAINS):
@@ -945,13 +961,13 @@ assert np.allclose(choice[C['select']][0], SEL['weights'], atol=1e-6), (
     'the launcher chose another mixture')
 assert abs(choice[C['select']][1] - SEL['predicted']) < 1e-9
 HULL = spatial.Delaunay(Wt[:, :-1])  # the region the regression has seen
-print(TAG, 'selected mixtures (weights web, code, math) and their predicted '
-      'target-weighted bits per byte (the last one free of the hull bound):')
+say(TAG, 'selected mixtures (weights web, code, math) and their predicted '
+    'target-weighted bits per byte (the last one free of the hull bound):')
 for k, (w, v) in choice.items():
     where = ('inside the training mixtures' if HULL.find_simplex(w[:-1]) >= 0
              else 'extrapolated')
-    print(f'  {k:18s} w = ({", ".join(f"{x:.3f}" for x in w)}), predicted '
-          f'{v:.4f}, {where}')
+    say(f'  {k:18s} w = ({", ".join(f"{x:.3f}" for x in w)}), predicted '
+        f'{v:.4f}, {where}')
 B = 200  # bootstrap refits; the mixing law starts from the full fit
 warm = (dict(init=FITS['mixlaw'].params, starts=1)
         if C['select'] == 'mixlaw' else {})
@@ -962,10 +978,10 @@ for _ in range(B):
                                                  **warm), T_DEP, Wt[k]))
 bw, bv = np.array([w for w, _ in boot]), np.array([v for _, v in boot])
 lo, hi = np.percentile(bv, [2.5, 97.5])
-print(f'{C["select"]} on {B} bootstrap resamples of the training runs: '
-      f'predicted t_dep {np.median(bv):.4f} [{lo:.4f}, {hi:.4f}]; weights '
-      'from ' + ', '.join(f'{d} {a:.2f}-{b:.2f}' for d, a, b in zip(
-          DOMAINS, *np.percentile(bw, [2.5, 97.5], axis=0))))
+say(f'{C["select"]} on {B} bootstrap resamples of the training runs: '
+    f'predicted t_dep {np.median(bv):.4f} [{lo:.4f}, {hi:.4f}]; weights '
+    'from ' + ', '.join(f'{d} {a:.2f}-{b:.2f}' for d, a, b in zip(
+        DOMAINS, *np.percentile(bw, [2.5, 97.5], axis=0))))
 ```
 
 <!-- Prose: DoReMi's one difference: it minimizes the worst-case excess loss
@@ -1040,9 +1056,9 @@ lp = optimize.linprog(np.r_[np.zeros(3), -1], A_ub=np.c_[A_ub, np.ones(
                       bounds=[(0, 1)] * 3 + [(None, None)])
 saddle = np.abs(np.mean(path, 0) - lp.x[:3]).max()
 assert saddle < 0.02
-print(f'D3: closed-form step = numerical maximizer to {gap:.1e}; averaged '
-      f'weights {np.mean(path, 0).round(3)} vs the saddle '
-      f'{lp.x[:3].round(3)} (largest gap {saddle:.3f})')
+say(f'D3: closed-form step = numerical maximizer to {gap:.1e}; averaged '
+    f'weights {np.mean(path, 0).round(3)} vs the saddle '
+    f'{lp.x[:3].round(3)} (largest gap {saddle:.3f})')
 torch.manual_seed(0)
 ref, prox = (d2l._proxy_model(tiny, seed) for seed in (0, 1))
 Xd = torch.randint(0, tiny.vocab_size, (2, tiny.seq_len + 1))
@@ -1053,13 +1069,13 @@ per_domain = max((lp_ - lr_).mean().item(), 0.0)
 _, tr = d2l.doremi_weights(ref, prox, lambda k: {'d': Xd}, 1, tiny)
 assert abs(tr[0]['excess'][0] - per_token) < 1e-6
 assert abs(per_domain - per_token) > 1e-3  # domain-level clipping differs
-print(f'excess loss of a random batch: per token {per_token:.4f}, from the '
-      f'domain mean {per_domain:.4f}; doremi_weights used '
-      f'{tr[0]["excess"][0]:.4f}')
+say(f'excess loss of a random batch: per token {per_token:.4f}, from the '
+    f'domain mean {per_domain:.4f}; doremi_weights used '
+    f'{tr[0]["excess"][0]:.4f}')
 DOREMI_W = np.array(RUNS['doremi']['weights'])
 steps = [0, len(RUNS['doremi']['trace']) // 4, len(RUNS['doremi']['trace'])
          // 2, len(RUNS['doremi']['trace']) - 1]
-print(TAG, 'DoReMi weights (step average):', dict(zip(
+say(TAG, 'DoReMi weights (step average):', dict(zip(
     DOMAINS, DOREMI_W.round(3).tolist())), '| alpha at steps', {
     s + 1: np.round(RUNS['doremi']['trace'][s]['alpha'], 3).tolist()
     for s in steps})
@@ -1086,14 +1102,22 @@ for a in ARMS:
     real = a != 'uniform' and len(set(np.sign(d))) == 1 and abs(
         d.mean()) > 2 * sig_t
     rows.append(dict(arm=a, weights=np.round(w['weights'], 3).tolist(),
-                     stages=[(f, np.round(v, 3).tolist())
-                             for f, v in w['stages'] or []],
                      t_dep_mean=T[a].mean(),
                      diffs=np.round(d, 4).tolist(), real=real))
 ARM_TABLE = pd.DataFrame(rows)
-print(TAG, f'sigma_seed of t_dep bits per byte {sig_t:.4f} (3 uniform '
-      'seeds); differences seed-paired with uniform:')
-print(ARM_TABLE.round(4).to_string(index=False))
+(frac, w_dec), = REC['staged-s0']['stages']
+say(TAG, f'sigma_seed of t_dep bits per byte {sig_t:.4f} (3 uniform '
+    'seeds); differences seed-paired with uniform (staged: the weights '
+    f'below, then {np.round(w_dec, 3).tolist()} from {frac:.0%} of the '
+    'tokens):')
+say(ARM_TABLE.round(4).to_string(index=False))
+ARM_DOMAINS = pd.DataFrame({a: dict(zip(DOMAINS, np.mean([final(
+    f'{"uniform-wsd" if a == "uniform" else a}-s{s}') for s in SEEDS], 0)))
+    for a in ARMS}).T  # DoReMi's objective is no single target
+ARM_DOMAINS['t_dep'] = ARM_DOMAINS[list(DOMAINS)].values @ T_DEP
+ARM_DOMAINS['t_avg'] = ARM_DOMAINS[list(DOMAINS)].values @ T_AVG
+say(TAG, 'mean bits per byte of each arm over its seeds:')
+say(ARM_DOMAINS.round(4).to_string())
 ax = d2l.plot_intervals(
     list(ARMS), {'mean': ([T[a].mean() for a in ARMS],) * 3}, 'arm',
     't_dep bits per byte', reference=T['uniform'].mean(),
@@ -1130,12 +1154,12 @@ for ax, d in zip(axes, DOMAINS):
 fig.tight_layout()
 dec = [k for k, e in enumerate(REC['staged-s0']['evals'])
        if e['step'] > start]  # evaluations inside the decay
-print(TAG, 'change of bits per byte during the decay, staged minus uniform '
-      f'(mean over {len(SEEDS)} seeds; staged weights '
-      f'{np.round(REC["staged-s0"]["stages"][0][1], 3).tolist()}):')
-print({d: round(float((curve('staged', d) - curve('uniform-wsd', d))[dec[-1]]
-                      - (curve('staged', d) - curve('uniform-wsd', d))
-                      [dec[0] - 1]), 4) for d in DOMAINS})
+say(TAG, 'change of bits per byte during the decay, staged minus uniform '
+    f'(mean over {len(SEEDS)} seeds; staged weights '
+    f'{np.round(REC["staged-s0"]["stages"][0][1], 3).tolist()}):')
+say({d: round(float((curve('staged', d) - curve('uniform-wsd', d))[dec[-1]]
+                    - (curve('staged', d) - curve('uniform-wsd', d))
+                    [dec[0] - 1]), 4) for d in DOMAINS})
 ```
 
 ## What Transfers
@@ -1151,17 +1175,83 @@ the label resolves when the prose is written. -->
 ```{.python .input #data-mixtures-t2-package}
 %%tab pytorch
 c2 = d2l.MIX_CONFIGS['t2']
-print('T2 campaign:', f'python tools/run_mix_campaign.py --config t2 '
-      '--gpus 0,1,2,3 --out ../data/lm/rerun/mix-t2 (a faster node)')
-print((ROOT / 'tools' / 'lm_campaigns.yaml').read_text().strip())
+say('T2 campaign:', f'python tools/run_mix_campaign.py --config t2 '
+    '--gpus 0,1,2,3 --out ../data/lm/rerun/mix-t2 (a faster node)')
+CAMPAIGNS = yaml.safe_load((ROOT / 'tools' / 'lm_campaigns.yaml').read_text())
+for e in CAMPAIGNS['campaigns']:  # tools/lm_campaigns.yaml
+    say(f"{e['id']}:")
+    for k in ('status', 'config', 'command', 'runs', 'flop',
+              'predicted_a100_hours', 'memory_gib_per_run', 'measured'):
+        if e.get(k) is not None:
+            say(f'  {k}: {e[k]}')
 n2 = len(d2l.mix_run_specs(c2))
 if SMOKE is not None:
-    print(f'from the smoke on {SMOKE["device"]}: {SMOKE["campaign_flop"]:.2g} '
-          f'FLOP for {n2} runs; A100-hours at the measured MFU '
-          f'{two(SMOKE["predicted_a100_hours"])}, peak memory per run '
-          f'{two(SMOKE["peak_mem_gib"])} GiB')
-print('writes:', ', '.join([c2['runs_key']] + sorted(set(c2['keys'].values()))
-                           + [c2['code_meta']]))
+    say(f'from the smoke on {SMOKE["device"]}: {SMOKE["campaign_flop"]:.2g} '
+        f'FLOP for {n2} runs; A100-hours at the measured MFU '
+        f'{two(SMOKE["predicted_a100_hours"])}, peak memory per run '
+        f'{two(SMOKE["peak_mem_gib"])} GiB')
+say('writes:', ', '.join([c2['runs_key']] + sorted(set(c2['keys'].values()))
+                         + [c2['code_meta']]))
+```
+
+<!-- Prose: a first reading of transfer from a small-scale test of the T2
+code path on the four RTX 4090s (the T2 configuration, proxy and design at
+half its tokens): does the ranking of the mixtures both scales trained
+carry over from 4.6M to 20.3M parameters, and what do the regression and
+the arms say there? Every number from this cell is labelled as that test,
+never as the T2 result. -->
+
+```{.python .input #data-mixtures-t2-test}
+%%tab pytorch
+TEST_KEY = 'lm-mix-runs-t2s-v1'  # four RTX 4090s, 2026-11-21
+TEST_TAG = '[small-scale T2 test, 2^26 tokens per run: not the T2 result]'
+with open(d2l.lm_artifact(TEST_KEY)) as f:
+    TEST = json.load(f)
+TR = {r['run_id']: r for r in TEST['runs']}
+assert TEST['mix_config'] == json.loads(json.dumps(dict(  # t2, half tokens
+    c2, name='t2s', runs_key=TEST_KEY, tokens=2**26, lr_tokens=2**24,
+    pools_of='t2')))
+fin = lambda r: np.array([TR[r]['final'][d]['bpb'] for d in DOMAINS])
+shared = [r for r in REC if r in TR and REC[r]['arm'] in (
+    'pure', 'train', 'held')]  # T1's design draws are a prefix of T2's
+assert all(REC[r]['weights'] == TR[r]['weights'] for r in shared)
+t1_t = np.array([T_DEP @ final(r) for r in shared])
+t2_t = np.array([T_DEP @ fin(r) for r in shared])
+top = lambda v: ', '.join(shared[k] for k in np.argsort(v)[:3])
+say(TEST_TAG, f'{N["t2"] / 1e6:.1f}M-parameter proxies; peak learning '
+    f'rate {TEST["lr_choice"]["chosen"]:g} (T1: '
+    f'{RUNS["lr_choice"]["chosen"]:g})')
+say(f'  t_dep bits per byte of the {len(shared)} mixtures both scales '
+    f'trained: Spearman {stats.spearmanr(t1_t, t2_t)[0]:.2f}')
+say(f'  best three at T1: {top(t1_t)}; in the test: {top(t2_t)}')
+ids = {a: [r['run_id'] for r in TEST['runs'] if r['arm'] == a]
+       for a in ('train', 'held')}
+Wt2, Wh2 = (np.array([TR[r]['weights'] for r in ids[a]])
+            for a in ('train', 'held'))
+Lt2, Lh2 = (np.array([fin(r) for r in ids[a]]) for a in ('train', 'held'))
+f2 = d2l.fit_mixture_regression(Wt2, Lt2, c2['select'])
+cos2 = np.array([fin(f'uniform-cos-s{s}') for s in c2['cos_seeds']])
+floor2 = math.sqrt((cos2.std(0, ddof=1)**2).mean() * (1 + 3 / len(Wt2)))
+rmse2 = np.sqrt(((f2(Wh2) - Lh2)**2).mean(0))
+fmt = lambda w: '(' + ', '.join(f'{x:.3f}' for x in w) + ')'
+say(f'  {c2["select"]} held-out RMSE per domain {rmse2.round(4).tolist()}'
+    f' against a floor of {floor2:.4f}')
+say(f'  selected for t_dep {fmt(TEST["selection"]["weights"])} (T1 '
+    f'{fmt(SEL["weights"])}); DoReMi {fmt(TEST["doremi"]["weights"])} '
+    f'(T1 {fmt(DOREMI_W)})')
+wsd2 = {a: np.array([fin(f'{"uniform-wsd" if a == "uniform" else a}-s{s}')
+                     for s in SEEDS]) for a in ARMS}
+T2T = {a: wsd2[a] @ T_DEP for a in ARMS}
+sig2 = T2T['uniform'].std(ddof=1)
+for a in ARMS[1:]:
+    d = T2T[a] - T2T['uniform']
+    real = len(set(np.sign(d))) == 1 and abs(d.mean()) > 2 * sig2
+    say(f'  {a}: t_dep minus uniform {np.round(d, 4).tolist()} (2 '
+        f'sigma_seed {2 * sig2:.4f}), ' + ('beyond the noise' if real
+                                           else 'within the noise')
+        + f'; mean per domain {wsd2[a].mean(0).round(4).tolist()}')
+say(f'  uniform per domain {wsd2["uniform"].mean(0).round(4).tolist()};'
+    ' cosine schedule ' + str(cos2.mean(0).round(4).tolist()))
 ```
 
 ## Summary

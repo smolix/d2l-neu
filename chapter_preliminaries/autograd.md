@@ -535,6 +535,7 @@ Keep in mind that autograd differentiates the *executed trace* rather than the a
 :label:`subsec_autograd_fwd_rev`
 
 For a mapping $\mathbf{f} : \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mathbf{J}$, the chain rule can be traversed in either direction (:numref:`fig_autograd_fwd_rev`; see :citet:`Wengert.1964,Linnainmaa.1970` and :numref:`sec_mdl-matrix-calculus-autodiff`):
+
 * **Reverse mode (vector--Jacobian product, VJP):** A reverse sweep seeded with $\mathbf{v} \in \mathbb{R}^m$ at the outputs computes $\mathbf{J}^\top \mathbf{v}$, extracting one *row* of $\mathbf{J}$ per sweep ($m$ sweeps for the full Jacobian).
 * **Forward mode (Jacobian--vector product, JVP):** A forward sweep seeded with a tangent $\mathbf{d} \in \mathbb{R}^n$ at the inputs propagates derivatives forward alongside values to compute $\mathbf{J}\mathbf{d}$, extracting one *column* of $\mathbf{J}$ per sweep ($n$ sweeps for the full Jacobian, with constant $2\times$ memory overhead).
 

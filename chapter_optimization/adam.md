@@ -86,6 +86,7 @@ d2l.show_trace_2d(d2l.f_valley, d2l.train_2d(rmsprop_2d, d2l.valley_grad))
 ```
 
 Notice two properties of :eqref:`eq_rmsprop`:
+
 1. **Early step amplification without bias correction:** Because $\mathbf{v}_0 = \mathbf{0}$, the first step has $\mathbf{v}_1 = (1 - \beta_2)\mathbf{g}_1^2$, causing an oversized initial jump of magnitude $\eta/\sqrt{1-\beta_2} \approx 3.16\,\eta$ at $\beta_2 = 0.9$ (and $31.6\,\eta$ at $\beta_2 = 0.999$).
 2. **Normalized step length:** Whenever a coordinate's gradient has roughly steady magnitude, $\sqrt{v_t} \approx |g_t|$ and the update has magnitude $\approx \eta$ regardless of how small $|g_t|$ becomes. Near a minimum, a constant-rate adaptive method therefore oscillates within an $O(\eta)$ neighborhood until $\eta$ is decayed by a schedule (:numref:`sec_scheduler`).
 
@@ -525,6 +526,7 @@ Stabilizing the root-mean-square weight magnitude at $\text{RMS}(\mathbf{x}_\inf
 :label:`subsec_adamw-what-not-to-decay`
 
 In standard Transformer recipes, decoupled weight decay is applied **only to 2D internal projection matrices** ($90\%$ of `TinyLM`), while two parameter groups are explicitly exempted ($\lambda = 0$):
+
 1. **1D biases and LayerNorm/RMSNorm gain and shift vectors:** Normalization scales start near $1$ and directly control feature variance; decaying them toward zero distorts layer activations rather than regulating angular update speed.
 2. **Token and positional embedding tables:** Token embedding rows receive gradients only when their token appears in a minibatch, whereas decoupled decay shrinks every row on every step, collapsing rare token representations and inflating downstream LayerNorm gradients :cite:`OLMo.2025`.
 

@@ -88,6 +88,7 @@ $$
 :eqlabel:`eq_ssm_kernel`
 
 Each channel's impulse response $\mathbf{K} = (K_0, K_1, \ldots)$ is a linear combination of $N$ decaying exponentials. A time-invariant SSM therefore admits three equivalent views (:numref:`fig_ssm_views`):
+
 1. **Continuous-time ODE**, where parameters specify rates and step sizes;
 2. **Discrete recurrence**, used during autoregressive generation in $O(1)$ time and state per token;
 3. **Causal convolution**, evaluated across all $T$ training positions in $O(T \log T)$ work via the Fast Fourier Transform (FFT). S4 :cite:`Gu.Goel.Re.2022` used this convolutional view to solve the 16,384-step Path-X benchmark. Note that the convolutional view requires time-invariant dynamics, whereas the parallel scan of :numref:`sec_linear-recurrence` works even when decays vary per token.
@@ -274,6 +275,7 @@ All three views match to $\sim 10^{-7}$. Notice that for LTI layers, the FFT con
 To test whether initial timescales govern long-range memory, we return to the delayed recall benchmark of :numref:`sec_lstm` at delays of $T = 100$ and $T = 1{,}000$ steps, using identical blank fillers (`blank_fillers=True`) so the task tests pure retention duration rather than content-based filtering (:numref:`sec_mamba`).
 
 We compare four configurations:
+
 1. **Default `minGRU`**, whose gates start near $1/2$;
 2. **Default `S4D`** ($d = 64, N = 16$, $\Delta \in [0.001, 0.1]$, half-lives up to 693 steps);
 3. **`S4D, short timescales`**, initialized with $\Delta \in [0.1, 1.0]$ so no initial half-life exceeds 7 steps;

@@ -103,6 +103,7 @@ $$-\log \prod_{i=1}^n P(y^{(i)} \mid \mathbf{x}^{(i)}) = \sum_{i=1}^n l(\mathbf{
 :eqlabel:`eq_l_cross_entropy`
 
 This objective is the *cross-entropy loss*. Notice how it behaves:
+
 - Because $\hat{y}_y \in (0, 1)$, $l(\mathbf{y}, \hat{\mathbf{y}}) > 0$ always. It approaches $0$ as $\hat{y}_y \to 1$ and diverges to $+\infty$ as $\hat{y}_y \to 0$ (heavily penalizing confident mistakes).
 - On our image with logits $(1.0, 2.2, 0.3)$ and probabilities $(0.21, 0.69, 0.10)$, if the true label is chicken ($y = 2$), the loss is $-\log 0.69 \approx 0.37$ nats; if the image is actually a dog ($y = 3$), the loss jumps sixfold to $-\log 0.10 \approx 2.30$ nats.
 

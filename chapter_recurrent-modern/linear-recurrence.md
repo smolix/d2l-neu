@@ -452,6 +452,7 @@ d2l.plot(lengths, list(times.values()), 'sequence length',
 ```
 
 The empirical scaling curves match :numref:`tab_linear-recurrence-cost`:
+
 - **`GRU`:** slowest at every length, growing more than $15\times$ from $T = 512$ to $16{,}384$ because its $T$ sequential steps cannot be parallelized across time.
 - **`minGRU`:** nearly flat across the entire 32-fold increase in sequence length (growing by under $50\%$ in PyTorch's doubling scan and virtually flat in JAX's work-efficient scan).
 - **`attention`:** nearly flat up to $T \approx 2{,}048$ where $O(Td^2)$ projections and memory traffic dominate, then bending upward toward $2\times$ per doubling once the $O(T^2 d)$ attention term takes over, crossing PyTorch's doubling scan near $T = 4{,}096$ and trailing `minGRU` by $2.5\times$–$5\times$ at $T = 16{,}384$.

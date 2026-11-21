@@ -68,6 +68,7 @@ d2l.show_trace_2d(f_valley, d2l.train_2d(momentum_2d, valley_grad, eta=0.6,
 ```
 
 Two limiting cases explain why momentum simultaneously accelerates the flat coordinate and stabilizes the steep one:
+
 * **Persistent gradients (flat floor):** When successive gradients remain nearly constant ($\mathbf{g}_{t-k} \approx \mathbf{g}$), the velocity builds up to $\mathbf{v}_t \approx (1 + \beta + \beta^2 + \cdots)\mathbf{g} = \frac{1}{1-\beta}\mathbf{g}$, yielding the **effective step size**
   $$\eta_\textrm{eff} = \frac{\eta}{1-\beta}.$$
 * **Alternating gradients (steep walls):** When successive gradients alternate in sign ($\mathbf{g}_{t-k} \approx (-1)^k \mathbf{g}$), the geometric series sums to $1 - \beta + \beta^2 - \cdots = \frac{1}{1+\beta}$, damped to an effective step size of $\frac{\eta}{1+\beta}$.
@@ -160,6 +161,7 @@ d2l.show_trace_2d(f_valley, d2l.train_2d(momentum_2d, valley_grad, eta=0.3,
 ## Momentum on Data
 
 Our analysis predicts two distinct regimes when training on data:
+
 1. **Curvature-limited regime (accurate gradients, large $\kappa$):** Momentum permits a larger effective step $\eta_{\text{eff}}$ and reduces the required iteration count by a large factor.
 2. **Noise-limited regime (small minibatches):** The stationary noise floor is governed by $\eta_{\text{eff}} = \eta/(1-\beta)$, so adding $\beta = 0.9$ shifts the optimal learning rate down by a factor of $1 - \beta = 0.1$ while achieving comparable convergence speed.
 
@@ -249,6 +251,7 @@ for (name, beta), lrs in grids.items():
 ```
 
 Both predictions hold quantitatively:
+
 * On full-batch **softmax regression**, adding momentum $\beta = 0.9$ increases the optimal learning rate from $\eta = 0.125$ to $\eta = 0.4$ ($\eta_{\text{eff}} = 4.0$, a $32\times$ larger effective step), cutting the steps needed to reach loss $0.5$ by more than $6\times$ ($625 \to 100$ steps) and lowering the final loss from $0.472$ to $0.365$.
 * On small-batch **`FashionCNN`** ($b = 32$), the run is noise-limited: the optimal learning rate drops from $\eta \approx 0.1$–$0.2$ at $\beta = 0$ to $\eta \approx 0.02$–$0.04$ at $\beta = 0.9$—a factor of $5$–$10$ that keeps the effective step $\eta_{\text{eff}}$ within one step of the factor-of-two grid of its $\beta = 0$ value—and both configurations reach loss $0.3$ and final losses of $0.26$–$0.30$ within the single-seed variation of :numref:`sec_test_models`.
 

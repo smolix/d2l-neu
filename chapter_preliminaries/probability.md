@@ -208,6 +208,7 @@ To know *how fast* $\hat{p}$ settles—and whether $56/100$ is suspicious—we n
 ### Sample Spaces and Events
 
 The set of all possible outcomes of a random experiment is its *sample space* $\mathcal{S}$ (for one die roll, $\mathcal{S} = \{1, 2, 3, 4, 5, 6\}$). An *event* is any subset $\mathcal{A} \subseteq \mathcal{S}$ (such as "rolling an even number," $\mathcal{A} = \{2, 4, 6\}$, or "at least $5$," $\mathcal{B} = \{5, 6\}$). A *probability* function $P$ assigns a real number to every event $\mathcal{A} \subseteq \mathcal{S}$ subject to Kolmogorov's three axioms :cite:`Kolmogorov.1933`:
+
 * **Nonnegativity:** $P(\mathcal{A}) \geq 0$;
 * **Normalization:** $P(\mathcal{S}) = 1$;
 * **Countable additivity:** for mutually exclusive events $\mathcal{A}_1, \mathcal{A}_2, \ldots$ ($\mathcal{A}_i \cap \mathcal{A}_j = \emptyset$ for $i \neq j$), $P(\bigcup_i \mathcal{A}_i) = \sum_i P(\mathcal{A}_i)$.

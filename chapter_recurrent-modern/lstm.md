@@ -294,6 +294,7 @@ class Recurrent(nn.Module):  #@save
 ```
 
 We compare six recurrent configurations in three pairs:
+
 1. **Plain RNNs:** one with LeCun normal recurrent weights ($\sigma = 1/\sqrt{64} = 1/8$) and a control with uniform weights on $[-1/8, 1/8]$ (variance $1/3$ of LeCun normal, matching PyTorch's default `nn.RNN` scale).
 2. **Default LSTM and GRU:** zero gate biases, so all gates start near $\sigma(0) = 1/2$ (half-life 1 step).
 3. **Keep-gate LSTM and GRU (`init_keep_gate`):** the LSTM forget-gate bias and GRU update-gate bias are initialized to $+5$ ($\sigma(5) = 0.993$, half-life $\approx 100$ steps), and the LSTM input-gate bias is set to $-5$ ($\sigma(-5) = 1 - \sigma(5) = 0.007$). Pairing $b_\textrm{i} = -b_\textrm{f}$ bounds the LSTM cell magnitude by $\sigma(-5)/(1 - \sigma(5)) = 1$ across long filler runs so the output $\tanh$ never saturates, matching the GRU's built-in $1 - \mathbf{z}_t$ coupling (see :citet:`Jozefowicz.Zaremba.Sutskever.2015` and the *chrono initialization* of :citet:`Tallec.Ollivier.2018`).
@@ -494,6 +495,7 @@ for name, cell in cells.items():
 ```
 
 The results confirm our analysis:
+
 - **Default vs. keep-gate LSTM and GRU:** With zero gate biases, both gated networks succeed at $T = 20$ and collapse to chance ($0.12$) at $T \ge 50$. With `init_keep_gate`, both achieve $1.00$ accuracy across every run at every delay up to $T = 200$.
 - **Borderline vs. contracting plain RNN:** Because the LeCun normal RNN starts with spectral radius $\rho \approx 1$, some seeds carry the symbol surprisingly far (even to $T = 100$ or $200$), though unreliably across seeds, whereas the $\rho \approx 0.62$ default-scale RNN fails consistently from $T = 50$ onward. Gates with well-initialized biases turn hit-or-miss spectral retention into dependable, per-unit memory control.
 
@@ -727,6 +729,7 @@ trained = text_table(text_model, arms, data)
 ```
 
 Three findings stand out from the table:
+
 1. **Residual stacking + gating:** Simply placing 4 narrow $\tanh$ RNN layers inside a pre-norm residual + MLP backbone reaches $\sim 1.35$ nats/byte—already matching the 6-block SwiGLU GPT of :numref:`sec_gpt`. Replacing the plain RNN mixer with an LSTM or GRU lowers validation loss by a further $0.05$ nats/byte (to $\sim 1.30$), whereas widening the plain RNN to match the GRU's parameter count (`RNN, d=302`) closes less than a third of that gap ($1.334$).
 2. **Short-context utilization:** Across all models in this 1,000-step, 128-byte regime, loss drops sharply from band `0-15` to `16-63` and changes by less than $0.005$ beyond byte 16. Here the gates earn their lead by managing short-range byte context more effectively rather than by carrying 100-step memories; the attention stack (`1.383`) trails the recurrent mixers already in the first 16 bytes at this small training budget.
 3. **Sequential step latency:** Despite fused cuDNN/XLA loops, the LSTM and GRU take $2\times$–$2.5\times$ longer per training step than the plain RNN because each of the 128 time steps must wait for the previous step's hidden state $\mathbf{h}_{t-1}$. Breaking that sequential dependency is the goal of :numref:`sec_linear-recurrence`.

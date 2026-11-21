@@ -1599,7 +1599,7 @@ $$\mathbf w=\boldsymbol\Phi^+\mathbf y=\sum_{i=1}^{\min(n,p)}\frac{\langle\mathb
 
 Test error $=$ clean part (fit to noise-free labels) $+$ noise part:
 
-$$	extrm{noise part}=\sigma_\xi^2\cdot\frac1n\sum_{i=1}^{n}\frac{\textrm{mean square of test features along }\mathbf v_i}{\textrm{mean square of training features along }\mathbf v_i}$$
+$$\textrm{noise part}=\sigma_\xi^2\cdot\frac1n\sum_{i=1}^{n}\frac{\textrm{mean square of test features along }\mathbf v_i}{\textrm{mean square of training features along }\mathbf v_i}$$
 
 | $p$ | ratio along $\mathbf v_{\min}$ | average ratio | noise part |
 |--:|--:|--:|--:|

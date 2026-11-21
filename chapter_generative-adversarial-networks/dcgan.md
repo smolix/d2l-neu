@@ -2,6 +2,7 @@
 :label:`sec_dcgan`
 
 The multilayer perceptron in :numref:`sec_basic_gan` generated recognizable $28 \times 28$ Fashion-MNIST silhouettes, but its textures were grainy because fully connected layers ignore spatial locality. Generating a $64 \times 64$ RGB image requires producing $12{,}288$ pixel values from a 100-dimensional latent vector. Two questions arise:
+
 1. What convolutional architectures train stably for adversarial image generation?
 2. How can we evaluate and compare image generators quantitatively when no likelihood is available?
 
@@ -46,6 +47,7 @@ import torchvision
 ## The DCGAN Architecture
 
 DCGAN :cite:`Radford.Metz.Chintala.2015` retains the classic non-saturating logistic objective of :numref:`sec_basic_gan` and stabilizes convolutional training through a set of architectural conventions:
+
 - Spatial upsampling in the generator uses *transposed convolutions* (fractional-strided convolutions), while downsampling in the discriminator uses strided convolutions instead of pooling layers.
 - *Batch normalization* is applied after every convolution except the generator output layer and the discriminator input layer.
 - The generator uses ReLU hidden activations and a $\tanh$ output activation (matching pixel values in $[-1, 1]$), whereas the discriminator uses leaky ReLU ($\text{slope} = 0.2$) throughout to prevent zero-gradient dead zones.
@@ -378,6 +380,7 @@ Over the years following DCGAN, large-scale image GANs accumulated numerous arch
 ### Architecture and Fan-In Initialization
 
 We build a minimalist convolutional backbone (:numref:`fig_gan_backbone`) without normalization layers or output $\tanh$:
+
 - The generator concatenates a learned $4 \times 4 \times 128$ constant tensor with a linear projection of $z$ ($4 \times 4 \times 100$)—plus optional extra channels used for class conditioning in :numref:`sec_gan_conditional`—and upsamples four times ($4 \to 8 \to 16 \to 32 \to 64$) via bilinear interpolation followed by a $3 \times 3$ convolution and leaky ReLU ($\text{slope} = 0.2$). Bilinear upsampling followed by a $3 \times 3$ convolution avoids the checkerboard artifacts caused by uneven transposed-convolution overlap :cite:`Odena.Dumoulin.Olah.2016`.
 - The critic mirrors this structure with $3 \times 3$ convolutions, leaky ReLU, and bilinear downsampling down to a $4 \times 4$ feature map $\phi(x)$ followed by a linear head.
 - To preserve activation variance across layers without batch normalization, all weights use He fan-in initialization :cite:`He.Zhang.Ren.ea.2015` scaled for leaky ReLU of slope $0.2$: variance $2 / ((1 + 0.2^2)\,n_{\mathrm{in}})$.
@@ -1026,6 +1029,7 @@ print(f'real pixel values equal to +1: {white:.0%}')
 ```
 
 The table highlights several key lessons:
+
 1. **Real-versus-real baseline floor:** Two disjoint sets of $4{,}059$ real sprites score $\text{FD} \approx 0.2$ (due to finite-sample covariance bias), $\widehat{\mathrm{MMD}}^2 \approx 0.000$, and precision/recall of $0.95$. Evaluating a second draw of latent codes changes FD by $\leq 0.2$.
 2. **Collapse vs. penalized training:** The collapsed unpenalized `NS` arm scores $\text{FD} \approx 64\text{--}72$ with $\text{recall} = 0.00$ and $\text{precision} \leq 0.07$. Adding $R_1 + R_2$ reduces FD by an order of magnitude ($\sim 4\text{--}6$) and raises both precision and recall to $\sim 0.4\text{--}0.5$.
 3. **Feature-space sensitivity (DCGAN vs. penalized backbone):** Even though the penalized backbone produces cleaner visual outlines and white backgrounds at $64 \times 64$, the 2015 DCGAN achieves a lower FD ($\sim 2$) and $\widehat{\mathrm{MMD}}^2$ in our $32 \times 32$ CIFAR-10 classifier features, where $2 \times 2$ downsampling smooths out DCGAN's high-frequency blotches. Feature-space metrics always reflect the invariance and resolution of their underlying feature network.

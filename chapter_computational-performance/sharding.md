@@ -102,6 +102,7 @@ In standard data parallelism, all $k$ GPUs hold identical copies of Adam's
 moment estimates and perform identical optimizer updates. The *ZeRO*
 (*Zero Redundancy Optimizer*) family :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`
 eliminates this redundancy in three cumulative stages (:numref:`tab_mgp-zero`):
+
 * **ZeRO Stage 1** partitions only the optimizer state: each GPU holds Adam's
   two moments for $1/k$ of the parameters ($8 + 8/k$ bytes/parameter). Instead
   of an allreduce ($=\text{reduce-scatter} + \text{all-gather}$,

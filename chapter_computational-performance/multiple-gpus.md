@@ -67,6 +67,7 @@ torch.backends.cudnn.benchmark = True  # Time convolution algorithms per shape
 
 A model and its minibatch can be partitioned across devices in three basic ways
 (:numref:`fig_splitting`):
+
 * **Data parallelism** replicates the model on every device, splits the
   minibatch across devices, and sums gradients once per step. It works for any
   model that fits on a single GPU, though every device still holds all $16N$
@@ -365,6 +366,7 @@ and receive $(k-1)S$ bytes for a gradient of size $S$. *Ring allreduce*
 across all $k$ devices arranged in a logical ring, splitting each device's
 $S$-byte gradient into $k$ chunks of $S/k$ bytes and running two phases of
 $k - 1$ steps each (:numref:`fig_ring_allreduce`):
+
 1. **Reduce-scatter:** In each of $k - 1$ steps, every device sends one chunk
    to its successor and adds the chunk received from its predecessor into its
    local copy. After $k - 1$ steps, each device holds the complete sum for one

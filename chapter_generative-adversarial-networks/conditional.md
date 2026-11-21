@@ -4,6 +4,7 @@
 The generators in :numref:`sec_basic_gan` and :numref:`sec_dcgan` are *unconditional*: they draw random samples from the marginal data distribution $p(x)$ without any way to specify a desired class, text prompt, or input image. Shortly after the original GAN paper, :citet:`Mirza.Osindero.2014` introduced *conditional GANs* (cGANs) by feeding a conditioning variable $c$ to both the generator $G(z, c)$ and the discriminator $D(x, c)$.
 
 In this section, we address three questions:
+
 1. What objective does the conditional formulation optimize, and what does its optimal critic estimate?
 2. How should the conditioning variable $c$ be incorporated into the generator and discriminator architectures?
 3. How do we evaluate a conditional generator separately for condition alignment, sample fidelity, and within-class diversity?
@@ -74,6 +75,7 @@ Conversely, note that each condition $c$ is weighted by its prior frequency $p(c
 ### Three Conditioning Mechanisms
 
 :numref:`fig_gan_conditioning` illustrates the three primary ways to feed a condition $c$ into a generator or discriminator:
+
 1. *Concatenation* :cite:`Mirza.Osindero.2014` embeds $c$ into a vector $e_c$ and concatenates it with the latent vector $z$ (or broadcasts and concatenates it with spatial feature maps).
 2. *Feature modulation* scales and shifts each channel of an intermediate feature map $h$ via learned functions of $c$: $a(c) \odot h + b(c)$. When $h$ is normalized first, this is *conditional batch normalization* :cite:`De-Vries.Strub.Mary.ea.2017,Brock.Donahue.Simonyan.2019` (or AdaIN / FiLM), injecting the condition at every resolution of the generator.
 3. *Projection discriminator head* :cite:`Miyato.Koyama.2018` takes the inner product of a class embedding $e_c$ with the discriminator's pooled feature vector $\phi(x)$ and adds an unconditional score $\psi_0(x)$.
@@ -194,6 +196,7 @@ d2l.show_images(np.asarray(train_X[np.array(first)]) / 2 + 0.5,
 ### Conditional Generator and Projection Critic
 
 We extend `d2l.Generator` and `d2l.Discriminator` (:numref:`sec_dcgan`) at $32 \times 32$ resolution:
+
 - `CondGenerator` passes a 64D unit-variance class embedding broadcast to $4 \times 4 \times 64$ into the generator's `extra` input slot (Exercise :exref:`ex_conditional-modulated-generator` compares this input concatenation with per-block `Modulate` layers).
 - `ProjectionCritic` sums the $4 \times 4$ feature map `self.phi(x)` spatially to obtain $\phi(x)$ and evaluates $e_c^\top \phi(x) + \psi_0(\phi(x))$ (:eqref:`eq_gan_cond_projection`), initializing $e_c = 0$ so the critic starts as an unconditional discriminator.
 
@@ -364,6 +367,7 @@ Each $3 \times 3$ panel reflects the visual characteristics of its requested cla
 ## Evaluating a Conditional Generator
 
 A conditional generator can fail along three distinct axes:
+
 1. *Wrong class* (poor condition alignment),
 2. *Unrealistic images* (poor sample fidelity), or
 3. *Lack of within-class diversity* (mode dropping within each class).

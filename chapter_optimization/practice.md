@@ -4,6 +4,7 @@
 In our small experiments so far, training took a few seconds per run, allowing us to sweep grids of learning rates and repeat runs whenever an update diverged. Production training runs are different: when a single training run takes days or weeks, most settings must be fixed in advance, a single unguarded gradient spike can corrupt hours of progress, and the final checkpoint must not depend on the luck of the last minibatch draw.
 
 Even at extreme scale—such as the $540$-billion-parameter PaLM model trained across $6{,}144$ TPU chips, which experienced roughly $20$ sudden loss spikes despite active gradient clipping :cite:`chowdhery2022palm`—reliable training rests on three operational pillars:
+
 1. **Guards against transient instabilities:** Global-norm **gradient clipping** (:numref:`sec_rnn-scratch`) caps anomalous steps under SGD and protects AdamW's second-moment accumulator $\mathbf{v}_t$ from transient gradient spikes, paired with checkpoint-and-rewind recovery.
 2. **Iterate smoothing:** Maintaining an **exponential moving average (EMA)** of model weights eliminates high-frequency noise-ball fluctuations without requiring a full learning-rate decay to zero.
 3. **Systematic calibration from short proxy runs:** Selecting the batch size from device throughput and $b_{\text{noise}}$ (:numref:`sec_batch_size`), adopting battle-tested optimizer defaults, and calibrating the peak learning rate on a short run ($10\%$ of the horizon) before executing the full warmup-and-decay schedule (:numref:`sec_scheduler`).
@@ -302,6 +303,7 @@ We now synthesize the entire chapter to configure a $3{,}000$-step training run 
 | Loss descends smoothly at constant slope until final step | Under-budgeted cumulative travel $B_T$ | Increase peak $\eta_0$ or total steps $T$ |
 
 Following :numref:`tab_practice_recipes`, we configure our $3.3\text{M}$-parameter `TinyLM` with:
+
 1. **Batch size:** $b = 256$ sequences (where hardware throughput saturates and comparable to the post-warmup gradient-noise scale $b_{\text{noise}} \sim 100\text{--}200$).
 2. **Optimizer & guards:** AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$, decoupled weight decay $\lambda = 0.1$ applied exclusively to 2D hidden matrices (:numref:`subsec_adamw-what-not-to-decay`), global-norm gradient clipping at $\theta = 1.0$, and a short-window weight EMA ($\alpha = 0.995$).
 3. **Peak learning rate calibration:** Three $300$-step ($10\%$-horizon) trial runs across $\eta \in \{10^{-3}, 3 \times 10^{-3}, 10^{-2}\}$ identify $\eta_0 = 3 \times 10^{-3}$ as optimal (with $<5\%$ of steps clipped, confirming that $\theta = 1.0$ acts purely as a guard).

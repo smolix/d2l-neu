@@ -104,6 +104,7 @@ $$
 :eqlabel:`eq_dn-transition`
 
 For a unit key $\mathbf{k}_t$, the symmetric matrix $\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top$ fixes every subspace orthogonal to $\mathbf{k}_t$ (eigenvalue $1$) and scales the direction $\mathbf{k}_t$ by eigenvalue $1 - \beta_t$ (:numref:`fig_dn-geometry`):
+
 - $\beta_t = 0$: identity (no write);
 - $\beta_t \in (0, 1)$: partial contraction along $\mathbf{k}_t$;
 - $\beta_t = 1$: orthogonal projection $\mathbf{I} - \mathbf{k}_t \mathbf{k}_t^\top$, completely erasing the $\mathbf{k}_t$ component before writing $\mathbf{v}_t \mathbf{k}_t^\top$;
@@ -113,6 +114,7 @@ For a unit key $\mathbf{k}_t$, the symmetric matrix $\mathbf{I} - \beta_t \mathb
 :label:`fig_dn-geometry`
 
 Two consequences follow from the eigenvalue $1 - \beta_t\|\mathbf{k}_t\|^2$:
+
 1. **Unit-norm keys prevent instability:** With $\|\mathbf{k}_t\| = 1$ and $\beta_t \in [0, 2]$, all eigenvalues of the transition lie in $[-1, 1]$, so homogeneous memory states never blow up geometrically.
 2. **Negative eigenvalues enable modulo-2 counting (parity):** When $\beta_t \in [0, 1]$, all transition eigenvalues are non-negative, which in finite precision cannot track parity over arbitrary sequence lengths :cite:`Grazzi.Siems.Franke.ea.2025`. Extending $\beta_t$ to $2$ allows reflections (eigenvalue $-1$) that toggle a stored state on each counted token, computing exact parity at any length (Exercise :exref:`ex_dn-parity`).
 
@@ -176,6 +178,7 @@ for i, measure in enumerate(['squared read error', 'recall']):
 ```
 
 The table highlights the trade-off of online projection:
+
 - **Rebinding (`8 orthonormal keys, 4 writes`):** `delta, β = 1` achieves $1.00$ recall ($0.97$ at $\beta = 0.5$), whereas `additive` and unweighted `least squares` average all 4 values bound to each key and score just $0.28$.
 - **Correlated keys (`64 keys, ρ = 0.5`):** Because every key shares a common direction, `additive` piles every value onto that shared component (squared error $8.44$, recall $0.54$), whereas `delta` subtracts the prediction along the shared direction before writing (recall $0.77$ at $\beta = 1$ and $0.89$ at $\beta = 0.5$).
 - **Crowded independent keys (`128 keys`, `256 keys`):** Here `delta, β = 1` has lower squared error than `additive` ($1.06$ vs. $1.99$ at $n = 128$), yet *lower* nearest-neighbor recall ($0.53$ vs. $0.96$). Why? Because shrinking old reads toward $\mathbf{0}$ lowers their squared error toward $\|\mathbf{0} - \mathbf{v}_j\|^2 = 1$ while eroding the signal of early pairs relative to later ones. Using a gentler step $\beta = 0.5$ recovers both lower squared error ($0.67$) and much higher recall ($0.82$), motivating making $\beta_t$ an input-dependent gate so the network can use $\beta_t \approx 1$ to overwrite a rebound key and smaller $\beta_t$ when accumulating facts.
@@ -465,6 +468,7 @@ $$
 :eqlabel:`eq_dn-least-squares`
 
 where $(\mathbf{K}_t^\top \mathbf{K}_t)^{-1}$ is replaced by the pseudoinverse when $t < d_k$. Look at the two factors of :eqref:`eq_dn-least-squares` (:numref:`tab_dn-regression`):
+
 - **Linear attention** keeps only the first factor, the unnormalized cross-moment $\mathbf{V}_t^\top \mathbf{K}_t = \sum_{s \le t} \mathbf{v}_s \mathbf{k}_s^\top$, omitting the Gram inverse $(\mathbf{K}_t^\top \mathbf{K}_t)^{-1}$ that decorrelates overlapping keys.
 - **The delta rule** takes one online stochastic gradient step per token toward :eqref:`eq_dn-least-squares`, while **Gated DeltaNet** adds weight decay ($a_t < 1$) before each step. Replacing the explicit gradient step by the proximal implicit step $\arg\min_{\mathbf{S}} \frac{1}{2}\|\mathbf{S} - \mathbf{S}_{t-1}\|^2 + \frac{\beta_t}{2}\|\mathbf{S}\mathbf{k}_t - \mathbf{v}_t\|^2$ yields the normalized step size $\beta_t / (1 + \beta_t\|\mathbf{k}_t\|^2)$ of Longhorn :cite:`Liu.Wang.Wu.ea.2024` (Exercise :exref:`ex_dn-implicit`), while carrying $(\mathbf{K}_t^\top \mathbf{K}_t + \lambda\mathbf{I})^{-1}$ explicitly yields recursive least squares (Exercise :exref:`ex_dn-rls`).
 - **Softmax attention** performs *nonparametric* Nadaraya–Watson kernel regression (:numref:`sec_attention-pooling`) at query time over all stored pairs, avoiding parametric compression at the cost of an $O(t)$ KV cache.

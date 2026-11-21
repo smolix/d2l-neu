@@ -510,9 +510,17 @@ def translate_directives(text):
 
     # ── Citations (parenthetical) ──
     # :cite:`A.2020,B.2021` → [@A.2020; @B.2021]
+    # A key with a character pandoc does not allow in a bare key (d2l.bib has
+    # He.Zhang.Ren.ea.2016*1) is braced, @{key}; bare, pandoc cut the key at
+    # the "*", cited the wrong entry, and paired the "*" with later emphasis.
+    def cite_key(k):
+        if re.fullmatch(r'\w(?:[\w:.#$%&\-+?<>~/]*\w)?', k):
+            return f'@{k}'
+        return f'@{{{k}}}'
+
     def replace_cite(m):
         keys = [k.strip() for k in m.group(1).split(',')]
-        inner = '; '.join(f'@{k}' for k in keys)
+        inner = '; '.join(cite_key(k) for k in keys)
         return f'[{inner}]'
 
     text = re.sub(r':cite:`([^`]+)`', replace_cite, text)
@@ -522,7 +530,7 @@ def translate_directives(text):
     # Ensure trailing sentence punctuation doesn't attach to the citation key
     def replace_citet(m):
         keys = [k.strip() for k in m.group(1).split(',')]
-        return '; '.join(f'@{k}' for k in keys)
+        return '; '.join(cite_key(k) for k in keys)
 
     text = re.sub(r':citet:`([^`]+)`', replace_citet, text)
 
@@ -531,14 +539,11 @@ def translate_directives(text):
     text = re.sub(r'(@[A-Z][A-Za-z.]+\.\d{4}[a-z]?)\.(\s)', r'\1 .\2', text)
     text = re.sub(r'(@[A-Z][A-Za-z.]+\.\d{4}[a-z]?)\.\n', r'\1 .\n', text)
 
-    # ── Slide/highlight markers ──
-    # [**text**] and (**text**) → text (keep in book, strip wrappers)
-    # [~~text~~] and (~~text~~) → removed (slide-only, hidden from book)
-    # Uses DOTALL since markers can span multiple lines.
-    text = re.sub(r'\[\*\*(.*?)\*\*\]', r'\1', text, flags=re.DOTALL)
-    text = re.sub(r'\(\*\*(.*?)\*\*\)', r'\1', text, flags=re.DOTALL)
-    text = re.sub(r'\[~~.*?~~\]', '', text, flags=re.DOTALL)
-    text = re.sub(r'\(~~.*?~~\)', '', text, flags=re.DOTALL)
+    # The legacy inline slide markers ([**text**], (**text**), [~~text~~],
+    # (~~text~~)) are gone from the corpus (slides live in <!-- slides -->
+    # sections), so they are no longer stripped here. Stripping them ate
+    # ordinary bold text in parentheses: "(**ELBO**)" rendered as "ELBO", and
+    # a lazy match across lines unbalanced the ** of a whole paragraph.
 
     # ── LaTeX math fixes ──
     # _\mathcal{X} → _{\mathcal{X}} (required by unicode-math / XeTeX)

@@ -106,6 +106,7 @@ GPU kernels cached by input shape and dtype.
 Because placeholders carry no numerical values, a tracer cannot evaluate a
 data-dependent Python branch such as `if x.sum() > 0:`. A capture system has
 three possible responses:
+
 1. **Freeze** the branch taken by a concrete example input (as `torch.jit.trace`
    does)—fast, and silently wrong when future inputs should take the other
    branch.
@@ -285,6 +286,7 @@ three quarters as long as the two matrix products; fused, under a tenth.
 ### Fusion Patterns
 
 Compilers routinely fuse two patterns:
+
 * **Elementwise chains** (activations, residual adds, dropout masks, optimizer
   updates), where each thread computes element $i$ of the output in registers.
 * **Row reductions** (softmax, LayerNorm, RMSNorm), where each row fits in
@@ -518,6 +520,7 @@ print(f'training step, reduce-overhead: {1000 * t:.2f} ms/call, '
 Compilation pays off only when a program runs for more than $n^*$ steps and
 spends significant time in bandwidth-bound chains or host-launch overhead.
 Keep three practical caveats in mind:
+
 * **Branches on tensor values:** Logging a scalar loss, testing
   `if loss < 0.1:`, or data-dependent indexing (`x[x > 0]`) forces graph
   breaks or errors. Keep host reads outside compiled functions and express

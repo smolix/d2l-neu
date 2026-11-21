@@ -118,6 +118,7 @@ for name, (_, recalls) in results.items():
 ```
 
 Two properties jump out from the plot and table:
+
 1. **Recall scales with the total state entries $d_k d_v$:** The squared error curves lie directly on $(n - 1)/d_k$. Yet at $n = d_k = d_v = 64$, where the total squared error is $\approx 1$ (as large as the unit signal $\|\mathbf{v}_j\|^2 = 1$), nearest-neighbor recall is still $1.00$ ($96\%$ at $n = 128$). Why? Because the interference vector is spread isotropically across all $d_v$ value dimensions, so its projection onto any single candidate codebook vector has variance $\approx n / (d_k d_v)$. With $d_v = d_k$, doubling $d_k$ quadruples the state entries $d_k d_v$ and quadruples the number of pairs recalled at a fixed accuracy ($96\%$ at $n = 32$ for $d_k = 32$ and at $n = 128$ for $d_k = 64$; $94\%$ at $n = 512$ for $d_k = 128$; Exercise :exref:`ex_ms-value-width` varies $d_k$ and $d_v$ independently).
 2. **Key correlation creates an irreducible error floor:** When keys share a direction with weight $\rho$, pairwise key overlap averages $\approx \rho^2$, yielding expected squared error:
 
@@ -232,6 +233,7 @@ Neither pure form is ideal for GPU training: the token-level recurrence runs $T$
 :label:`fig_ms-semiseparable`
 
 Indexing positions within each chunk from $1$ to $m$, `chunked_linear_attention` proceeds in three batched steps:
+
 1. **Within chunks (diagonal blocks):** Evaluate the dual form :eqref:`eq_ms-semiseparable` inside each length-$m$ chunk in parallel using its $m \times m$ decay mask.
 2. **Across chunks (chunk-boundary states):** Let $\gamma^{(c)} = a_1 \cdots a_m$ be the total decay of chunk $c$. The state at the end of chunk $c$ satisfies the chunk-level linear recurrence
 
@@ -433,6 +435,7 @@ def memory(self, X, Q, K, V, log_a):
 ```
 
 In the forward pass:
+
 1. A width-4 depthwise causal convolution and SiLU mix adjacent tokens into $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ so a value token at position $t$ can bind directly to the key token at position $t - 1$ inside a single layer (:numref:`sec_hybrids` ablates this convolution).
 2. Queries and keys are $\ell_2$-normalized to unit length (matching the setting of :eqref:`eq_ms-capacity-law`).
 3. Each head's readout is RMS-normalized, gated by $\textrm{SiLU}(\mathbf{W}_g \mathbf{x}_t)$, and projected back to width $d$ :cite:`Yang.Wang.Shen.ea.2024`.

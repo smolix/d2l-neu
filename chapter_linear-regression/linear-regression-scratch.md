@@ -416,6 +416,7 @@ chapters never have to rewrite this boilerplate.
 
 
 The four curves tell a classic optimization story:
+
 - **Too small ($\eta = 0.003$):** Each step barely nudges the parameters; after 96 updates the loss is still above $1$, needing ten times as many epochs to reach the floor.
 - **Well tuned ($\eta = 0.03$ and $\eta = 0.3$):** The loss plunges exponentially down to the $5 \times 10^{-5}$ noise floor, with the larger learning rate arriving inside the first 20 steps (and jittering in a slightly wider noise ball once there).
 - **Too large ($\eta = 1.5$):** Each step overshoots the valley and lands higher up on the opposite wall, causing the loss to explode exponentially past $10^7$!

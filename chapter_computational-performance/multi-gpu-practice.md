@@ -82,6 +82,7 @@ import sys
 
 Every modern framework drives $k$ GPUs using one of two *single program,
 multiple data* (SPMD) designs:
+
 1. **Multi-process ($k$ copies + collective library):** A launcher starts $k$
    independent Python processes—one per GPU, each with its own *rank* in
    $\{0, \ldots, k-1\}$ and its own CPU thread—that synchronize gradients
@@ -509,6 +510,7 @@ def step_time(k, b, num_steps=50):
 First we measure $\beta_\textrm{link}$ on a bare 256 MB allreduce through NCCL
 and compare two predictions for the exposed communication time
 $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ under weak scaling:
+
 1. **No overlap:** the entire ring allreduce of $S = 45$ MB is exposed
    ($\frac{2(k-1)}{k} S \beta_\textrm{link}$).
 2. **Full bucket overlap:** only the final bucket/buffer ($last\_bucket$) is

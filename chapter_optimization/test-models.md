@@ -223,6 +223,7 @@ class TinyLM(nnx.Module):  #@save
 ```
 
 For an optimizer, the $470{,}784$ parameters of `TinyLM` divide into three distinct structural groups that later sections treat differently (e.g., for decoupled weight decay in :numref:`sec_adamw` and matrix orthogonalization in :numref:`sec_muon`):
+
 * **Embeddings ($9\%$):** lookup tables (`token_emb`, `pos_emb`) whose rows receive sparse gradients proportional to token frequency.
 * **Weight matrices ($90\%$):** dense 2D projection matrices (`qkv`, `proj`, the two MLP layers per block, and `head`).
 * **1D vectors ($<1\%$):** linear biases and LayerNorm scale/shift vectors.

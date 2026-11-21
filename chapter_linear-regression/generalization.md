@@ -126,6 +126,7 @@ def mse(w, x, y):
 ```
 
 Look at the three fitted curves and their losses:
+
 - **Degree $k = 1$ (underfitting):** A straight line cannot bend to follow $\cos(\frac{3\pi}{2}x)$; both training loss and validation loss are stuck around $0.2$–$0.3$, five times the $0.045$ noise floor.
 - **Degree $k = 3$ (well matched):** A cubic has just enough flexibility to track the cosine wave closely; both training and validation loss land near the $0.045$ noise floor.
 - **Degree $k = 19$ (overfitting):** With $k + 1 = 20$ parameters and $n = 20$ distinct training points, the polynomial has enough degrees of freedom to interpolate every single training point (Exercise :exref:`ex_generalization-exact-polynomial`). Between the data points, however, the curve oscillates wildly, sending the validation loss soaring by orders of magnitude!
@@ -194,6 +195,7 @@ $$\mathbb{E}_{\mathcal{D}, \epsilon}\!\left[\big(\hat{f}_{\mathcal{D}}(x) - y\bi
 :eqlabel:`eq_generalization-bias-variance`
 
 Every model's expected test error is the sum of three nonnegative pieces:
+
 1. **Squared bias $(\bar{f}(x) - f^*(x))^2$:** How far the *average* fitted model (even averaged over infinitely many training datasets) sits from the true function $f^*(x)$. Rigid models (like a straight line $k = 1$ on a cosine wave) have high bias.
 2. **Variance $\mathbb{E}_{\mathcal{D}}[(\hat{f}_{\mathcal{D}}(x) - \bar{f}(x))^2]$:** How sensitively the fitted model fluctuates from one random training sample $\mathcal{D}$ to the next. Overly flexible models ($k = 12$) swing wildly with every new draw of 20 points, suffering huge variance.
 3. **Irreducible noise $\sigma^2$:** The variance of the label $y$ around $f^*(x)$ itself, which no predictor can ever beat.
@@ -234,6 +236,7 @@ complexity, while test error reaches its minimum at an intermediate sweet spot
 
 
 The three panels make :eqref:`eq_generalization-bias-variance` vivid:
+
 - At $k = 1$ (left), all 50 lines cluster tightly together (low variance), but their average $\bar{f}(x)$ completely misses the cosine arch (high bias).
 - At $k = 3$ (middle), the 50 cubics form a narrow ribbon (low variance) whose average $\bar{f}(x)$ lies right on top of $f^*(x)$ (low bias).
 - At $k = 10$ (right), the average $\bar{f}(x)$ tracks $f^*(x)$ well (low bias), but individual fits flare wildly near the edges of $[-1, 1]$ (huge variance).

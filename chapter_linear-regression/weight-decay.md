@@ -270,6 +270,7 @@ regularization and early stopping behave this way, let us look inside the
 weight vector and ask which components the penalty actually removed.
 
 Compare the two runs:
+
 - **Without weight decay ($\lambda = 0$):** Training loss plummets toward zero as the 200 parameters memorize the 20 training points, while validation loss stalls above $0.13$—more than a thousand times the $0.00005$ noise floor!
 - **With weight decay ($\lambda = 3$):** The penalty keeps $\|\mathbf{w}\|_2$ near $0.04$, preventing the weights from wandering into the 180-dimensional unmeasured subspace; training loss stays slightly positive while validation loss drops by an order of magnitude!
 
@@ -307,6 +308,7 @@ $$\frac{s_j}{s_j + \lambda} \in [0, 1).$$
 :label:`fig_ridge_shrinkage`
 
 Here lies the whole secret of ridge regression: **weight decay is not uniform shrinkage—it is variance-adaptive directional filtering!**
+
 - Along **well-determined directions** where the data vary richly ($s_j \gg \lambda$), the slope is tightly pinned down by observations, and the shrinkage factor $s_j / (s_j + \lambda) \approx 1$ leaves the least-squares estimate nearly untouched.
 - Along **poorly determined directions** where the data barely vary ($s_j \ll \lambda$)—such as the difference $x_1 - x_2$ between our two almost-identical thermometers—unregularized least squares divides noise by a tiny $s_j$ and explodes (with coefficient variance $\sigma^2 / (n s_j)$), whereas ridge regression multiplies by $s_j / (s_j + \lambda) \approx s_j / \lambda \ll 1$ and quashes the noisy component!
 - Along **unobserved null-space directions** ($s_j = 0$), ridge regression sets the weight component identically to $0$.

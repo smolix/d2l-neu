@@ -47,6 +47,7 @@ $$
 :eqlabel:`eq_muon-ball`
 
 Different norm geometries yield fundamentally different update directions :cite:`Bernstein.Newhouse.2024` (:numref:`fig_opt_norm_balls` and :numref:`tab_muon_norms`):
+
 1. **Euclidean ball ($\|\mathbf{d}\|_2 \le \eta$):** By Cauchy–Schwarz, the minimizer aligns with the negative gradient, $\mathbf{d}^\star = -\eta\,\mathbf{g}/\|\mathbf{g}\|_2$, decreasing the linearized objective by $\eta\|\mathbf{g}\|_2$ (the direction of SGD).
 2. **Coordinate box ($\|\mathbf{d}\|_\infty = \max_i |d_i| \le \eta$):** Minimizing $\sum_i g_i d_i$ subject to $|d_i| \le \eta$ pushes every coordinate to its boundary, $\mathbf{d}^\star = -\eta\,\operatorname{sign}(\mathbf{g})$, decreasing the linearized objective by the dual $\ell_1$ norm $\eta\|\mathbf{g}\|_1$. This is sign descent, the zero-memory ($\beta_1 = \beta_2 = 0$) limit of Adam (:numref:`sec_adam`).
 

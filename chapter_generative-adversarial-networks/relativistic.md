@@ -4,6 +4,7 @@
 A standard classifier critic scores each sample against a fixed zero threshold ($D(x') > 0$). In many settings, however, pairwise comparisons are more natural than absolute scores—much like Bradley–Terry preference models (:numref:`sec_regularized`), which turn the score difference between two candidates into a win probability. :citet:`Jolicoeur-Martineau.2019` introduced *relativistic* GAN critics that take a real sample $x \sim p$ and a generated sample $x' \sim q$ and predict which one is real from their score difference $D(x) - D(x')$.
 
 Because the R3GAN recipe used from :numref:`sec_gan_convergence` onward relies on this pairwise objective, we analyze three questions here:
+
 1. Does the optimal pairwise ranking critic still recover the log density ratio $\lambda(x) = \log(p(x)/q(x))$?
 2. What divergence does the pairwise objective measure at its optimum, and how does it compare to $\mathrm{JS}(p, q)$?
 3. Under what conditions does pairwise ranking eliminate mode-dropping local minima?
@@ -136,6 +137,7 @@ V_{P,Q}(\mathcal{D}) = \mathbb{E}_{(a_1, a_2) \sim P}\big[\log \sigma(\mathcal{D
 $$
 
 **Lemma (Lifting to Product Space).** *Let $P = p \otimes q$ and $Q = q \otimes p$. Then:*
+
 1. *The log density ratio on the product space separates additively: $\log \frac{dP}{dQ}(a_1, a_2) = \lambda(a_1) - \lambda(a_2)$.*
 2. *Every antisymmetric difference critic $\mathcal{D}(a_1, a_2) = D(a_1) - D(a_2)$ satisfies $V_{P,Q}(\mathcal{D}) = 2\,\Phi(D)$.*
 3. *Restricting $\mathcal{D}$ to difference critics $D(a_1) - D(a_2)$ does not reduce the supremum: $\sup_{\mathcal{D}} V_{P,Q}(\mathcal{D}) = \sup_{D} V_{P,Q}\big(D(a_1) - D(a_2)\big)$.*

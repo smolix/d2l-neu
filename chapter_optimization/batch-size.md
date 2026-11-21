@@ -4,6 +4,7 @@
 In practice, the minibatch size $b$ is often chosen to fill accelerator memory and then left untouched. Yet the moment we scale training across multiple GPUs—or trade wall-clock training time against total compute FLOPs—we face a fundamental question: if we double the minibatch size $b$ (doubling the parallel computation per step), does the run reach our target loss in half as many steps?
 
 In :numref:`sec_sgd`, we saw that a minibatch of $b$ examples reduces the gradient sampling variance to $\operatorname{tr}(\boldsymbol{\Sigma})/b$. This implies two distinct regimes:
+
 1. **Small-batch (noise-dominated) regime:** When sampling noise is larger than the true gradient, doubling $b$ halves the noise variance, allowing a larger learning rate that cuts the required step count $S(b)$ in half while keeping total examples processed $E(b) = b\,S(b)$ constant (*perfect linear scaling*).
 2. **Large-batch (curvature-dominated) regime:** Once $b$ is large enough that the minibatch gradient closely approximates the true full-batch gradient, further increasing $b$ yields diminishing reductions in $S(b)$ while multiplying the data and compute cost $E(b)$ linearly.
 
@@ -213,6 +214,7 @@ where $E_{\min} = b_{\text{noise}} S_{\min}$ is the minimal data budget achieved
 :label:`subsec_batch-size-limits`
 
 When increasing the batch size from $b_0$ to $b$ in the noise-dominated regime ($b_0, b \ll b_{\text{noise}}$), how must the learning rate $\eta$ scale?
+
 * **SGD and Momentum (linear scaling):** From :eqref:`eq_best-step`, when $b \ll b_{\text{noise}}$, $\eta_{\text{opt}}(b) \approx \frac{b}{L b_{\text{noise}}} \propto b$. Equivalently, $k$ steps of size $\eta_0$ on batch size $b_0$ match one step of size $k\eta_0$ on batch size $k b_0$ while preserving the stationary noise floor $\propto \eta / b$ :cite:`Goyal.Dollar.Girshick.ea.2017,Smith.Kindermans.Ying.ea.2018`.
 * **Adam and AdamW (square-root scaling):** In the noise-dominated regime where a coordinate gradient has mean $\bar{g}$ and standard deviation $\sigma / \sqrt{b}$, Adam normalizes the gradient by its RMS scale $\sqrt{\hat{v}_t} \approx \sigma / \sqrt{b}$, yielding single-step drift $-\eta(\sqrt{b}/\sigma)\bar{g}$ and step noise $-\eta z$ ($z \sim \mathcal{N}(0, 1)$). Because the denominator $\sigma/\sqrt{b}$ already supplies a factor of $\sqrt{b/b_0}$, matching the drift and cumulative variance of $k = b/b_0$ small steps in a single large step requires scaling $\eta$ by $\sqrt{b/b_0}$ :cite:`Malladi.Lyu.Panigrahi.ea.2022`:
 

@@ -72,6 +72,7 @@ Note that for any fixed critic $T$, the expectation inside :eqref:`eq_gan_templa
 ### A Two-Outcome Example
 
 Consider a binary outcome space (heads and tails) with data distribution $p = (\tfrac34, \tfrac14)$ and generator distribution $q = (\tfrac14, \tfrac34)$, sampled with equal prior probability $\tfrac12$. Given an outcome, the Bayes posterior probability that it came from $p$ is $\eta = p/(p + q)$, which equals $\tfrac34$ for heads and $\tfrac14$ for tails. A blind prediction ($D = 0$) predicts $\tfrac12$ regardless of the outcome. The reduction in expected loss from observing the outcome depends on the classification loss:
+
 - *Log loss*: the optimal prediction $\eta$ achieves binary entropy $H_b(\tfrac34) = 0.562$ nats versus $\log 2 = 0.693$ nats for a blind guess, saving $0.131\text{ nats} = \mathrm{JS}(p, q)$.
 - *Squared error* on probabilities: predicting $\eta$ achieves expected loss $\tfrac34 \cdot \tfrac14 = \tfrac{3}{16}$ versus $\tfrac14$ for predicting $\tfrac12$, saving $\tfrac{1}{16}$.
 - *Hinge loss* on a score $t$: the optimal scores $t = +1$ (heads) and $t = -1$ (tails) achieve expected loss $2 \cdot \tfrac14 = \tfrac12$ versus $1$ at $t = 0$, saving $\tfrac12 = \mathrm{TV}(p, q) = \tfrac12 \sum |p - q|$.
@@ -378,6 +379,7 @@ $$
 where $\Pi(p, q)$ is the set of joint transport plans with marginals $p$ and $q$. An optimal 1-Lipschitz critic (a *Kantorovich potential*) has unit gradient norm along the optimal transport rays from $q$ to $p$. In 1D, $W_1(p, q) = \int_{-\infty}^\infty |F_p(t) - F_q(t)|\,dt$, so shifting a distribution by $\mu$ gives $W_1(p, q) = |\mu|$ with constant unit slope at any separation.
 
 In higher dimensions, Wasserstein GANs (WGANs) approximate the 1-Lipschitz constraint on a neural network critic $T$ via three main mechanisms:
+
 1. *Weight clipping* :cite:`Arjovsky.Chintala.Bottou.2017` clamps weights to $[-c, c]$, enforcing $\kappa$-Lipschitzness for an architecture-dependent constant $\kappa$ at the cost of restricting capacity.
 2. *Gradient penalty* (WGAN-GP) :cite:`Gulrajani.Ahmed.Arjovsky.ea.2017` adds $\gamma\,\mathbb{E}[(\|\nabla_x T(\tilde x)\| - 1)^2]$ at random interpolants $\tilde x = u x + (1-u)x'$ between real and generated samples.
 3. *Spectral normalization* :cite:`Miyato.Kataoka.Koyama.ea.2018` normalizes each weight matrix by its largest singular value $\sigma_{\max}(W)$, bounding the Lipschitz constant of every linear layer by $1$.
@@ -640,6 +642,7 @@ for name, (critic_loss, gen_loss, kwargs) in arms.items():
 ```
 
 The results clarify how practical neural critics differ from unconstrained theoretical optima:
+
 - **Saturating vs. non-saturating logistic:** As in :numref:`sec_basic_gan`, the saturating generator gradient is tiny ($\sim 0.01$) and $\theta$ barely moves from $6.0$ to $5.76$, whereas the non-saturating generator receives a strong gradient ($\sim 3$) and reaches the target before step 400.
 - **Hinge critic:** Although the theoretical optimal hinge critic $\operatorname{sign} \lambda$ has zero slope inside both clouds, a finite ReLU MLP interpolates smoothly across the gap with slope $1.1\text{--}1.7$, driving the generator to the target by steps $700\text{--}950$.
 - **Two-sided vs. one-sided WGAN-GP:** Both $W_1$ arms pull the generator inward at slope $\approx 1.26$ (minimizing $-ad + 10(a-1)^2$ gives $a = 1 + d/20$) and arrive near step 500. After arrival, however, every two-sided `W1 + GP` run overshoots heavily (`farthest` $> 1$, up to $> 7$), whereas every one-sided run stays within $0.06$ of the origin! Why? Once $\theta$ crosses $0$, the critic must reverse its slope from negative to positive. Because the two-sided penalty $(|T'| - 1)^2$ penalizes a flat critic ($T' = 0$) by $\gamma$, it creates a potential barrier at zero slope that traps the critic on the old slope sign ($1 - d/20$) or causes all ReLU units to die, as confirmed by inspecting the critic slopes and active ReLU counts at step 1,500 below:

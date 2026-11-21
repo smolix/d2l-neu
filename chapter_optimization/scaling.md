@@ -39,6 +39,7 @@ import random
 :label:`subsec_scaling-sweep`
 
 Consider a three-hidden-layer ReLU MLP on Fashion-MNIST whose hidden width $n$ varies across $\{128, 512, 2048, 8192\}$ (from $1.35 \times 10^5$ to $1.41 \times 10^8$ parameters). Note how each weight matrix scales with $n$:
+
 * **Input layer (`fc_in`, $784 \to n$):** fan-in is fixed ($784$), fan-out grows with $n$.
 * **Hidden layers (`fc_h1`, `fc_h2`, $n \to n$):** both fan-in and fan-out grow with $n$.
 * **Output readout (`fc_out`, $n \to 10$):** fan-in grows with $n$, fan-out is fixed ($10$).
@@ -205,6 +206,7 @@ where $\overline{|h|} = \frac{1}{n}\sum_{j=1}^n |h_j| = \Theta(1)$. Because $\De
 ### The $\mu\text{P}$ Scaling Rules
 
 Rather than forcing a single global learning rate across layers with different fan-in scaling, **Maximal Update Parametrization** ($\mu\text{P}$, :citet:`Yang.Hu.2021,Yang.Hu.Babuschkin.ea.2022`) scales each layer relative to a reference **base width** $n_{\text{base}}$ via the **width multiplier** $m = n / n_{\text{base}}$ (:numref:`tab_mup-rules`):
+
 1. **Input weights and 1D biases/norms (fixed fan-in):** Keep initial variance $1/\text{fan-in}$ and learning rate $\eta$ unchanged.
 2. **Hidden matrices (fan-in and fan-out $\propto n$):** Keep initial variance $1/\text{fan-in} = 1/n$ and scale the Adam learning rate as **$\eta / m$**, so that $(\eta / m)\,n\,\overline{|h|} = \eta\,n_{\text{base}}\,\overline{|h|} = \Theta(1)$ at every width.
 3. **Output readout matrix (fan-in $\propto n$, fixed fan-out):** Because both $\Delta\mathbf{W}_{\text{out}}\,\mathbf{h}$ and $\mathbf{W}_{\text{out}}\,\Delta\mathbf{h}$ sum $n$ correlated terms into the output logits, $\mathbf{W}_{\text{out}}$ must have entry magnitude $O(1/n)$ rather than $O(1/\sqrt{n})$. Fixing the unscaled weight initialization variance at $1/n_{\text{base}}$, multiplying the output logits by **$1/m$** in the forward pass, and keeping the Adam learning rate at $\eta$ ensures that both the effective output weights and their updates scale as $O(1/n)$, producing $\Theta(1)$ logit updates at every width.

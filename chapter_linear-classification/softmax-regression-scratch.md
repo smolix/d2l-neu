@@ -572,6 +572,7 @@ class SoftmaxRegression(d2l.Classifier):  #@save
 :label:`subsec_softmax-implementation-revisited`
 
 Why does `SoftmaxRegression.forward` stop at the logits instead of returning probabilities? Recall the twin floating-point hazards of computing $\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o})$ first and $-\log \hat{y}_y$ second in `float32`:
+
 1. **Overflow:** $\exp(o)$ overflows to `inf` for $o > 88.7$. Subtracting $o_{\max} = \max_k o_k$ from every logit fixes overflow because every shifted exponent $o_k - o_{\max}$ is $\leq 0$.
 2. **Underflow:** Even after shifting by $o_{\max}$, any class whose logit sits more than $104$ below $o_{\max}$ (such as class 1 in $\mathbf{o} = (0, -200, 0)$) has $\exp(o_y - o_{\max})$ underflow to exact `0.0` in float32! Taking $\log(0.0)$ then produces `-inf` (or, with our scratch `1e-12` clamp, caps the loss at $27.6$ and **zeroes out the gradient**, leaving the model unable to learn from a confident blunder!).
 

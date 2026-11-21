@@ -4,6 +4,7 @@
 :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` introduced *generative adversarial networks* (GANs) by pairing a generator network with a binary classifier—called the *discriminator* or *critic*—that learns to distinguish real data from generated samples, much like the domain classifier used for covariate-shift correction in :numref:`subsec_covariate-shift-correction`.
 
 Two fundamental questions arise immediately:
+
 1. If a generator fools the discriminator, has it actually learned to match the data distribution $p$?
 2. When the discriminator can easily separate generated samples from real data, does its gradient still guide the generator toward $p$?
 
@@ -180,6 +181,7 @@ $$
 Thus, against an optimal critic, the non-saturating generator descends $2\,D_{\textrm{KL}}(m \,\|\, p)$, the *softened reverse KL divergence* :cite:`Shannon.Poole.Mariooryad.ea.2020`, which shares the unique global minimum $q = p$.
 
 Inspecting $2\,D_{\textrm{KL}}(m \,\|\, p)$ reveals an asymmetry in how errors are penalized:
+
 - Where $q(x) > 0$ but $p(x) = 0$ (spurious samples outside the data support), $m(x) > 0 = p(x)$ and $D_{\textrm{KL}}(m \,\|\, p) = \infty$, heavily penalizing unrealistic samples.
 - Where $p(x) > 0$ but $q(x) = 0$ (dropped modes of the data), $m(x) = p(x)/2$ and the integrand contributes only $p(x) \log \tfrac12$, a small finite penalty.
 
@@ -197,6 +199,7 @@ To test the theoretical predictions quantitatively, we first train a linear gene
 ### Alternating Update Rules
 
 We define `update_D`, `update_G`, and the alternating training loop `train_gan` once and save them to `d2l` for reuse across the chapter.
+
 - `update_D` performs one discriminator step maximizing :eqref:`eq_gan_V` (minimizing binary cross-entropy with label $1$ for real samples and $0$ for detached generated samples). Dividing the summed loss by the batch size estimates $-V(D)$, which equals $2\log 2 \approx 1.386$ when $D = 0$.
 - `update_G` performs one generator step minimizing the non-saturating loss $-\mathbb{E}[\log \sigma(D(G(z)))]$ (binary cross-entropy with target label $1$), which equals $\log 2 \approx 0.693$ when $D = 0$.
 

@@ -284,108 +284,52 @@ Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathb
 ::: {.cover}
 [Dive into Deep Learning · §2.2]{.kicker}
 
-A dataset with a known answer<br>**generator · error threshold**
+Synthetic Regression Data: Ground-Truth Verification<br>
+**known parameters · Gaussian generator · noise floor · statistical estimation error**
 :::
 :::
 
-::: {.slide title="A Poor Fit on Real Data Has Three Suspects"}
-[The problem]{.kicker}
+::: {.slide title="Why Debug Machine Learning Code on Synthetic Data?"}
+[The Debugging Dilemma]{.kicker}
 
-Suppose a model reaches a poor validation loss on real data. Is the model
-wrong, the optimization or its code, or the data?
+When a newly implemented algorithm achieves a disappointing loss on real-world data, three suspects are confounded:
 
-- **Real data:** the true parameters are unknown, and the three
-  explanations are hard to tell apart.
-- **Synthetic data:** we choose $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$,
-  and the noise, so model and data are right by construction; only the
-  optimization or its implementation can fail.
-- A fit of $\hat{\mathbf{w}} = (1.9, -3.1)$ is then $0.3$ off, where the
-  noise allows about $0.001$.
+- **Real-world ambiguity:** Is the model class misspecified for the domain, is the dataset noisy or corrupted, or does the optimizer/code contain a silent bug?
+- **Controlled synthetic ground truth:** By generating labels from $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ with known $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and $\sigma = 0.01$, we guarantee that the linear model and squared loss are statistically optimal by construction.
+- **Quantitative pass/fail oracle:** Any failure to reach the theoretical loss floor $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$ or to recover $(\mathbf{w}^*, b^*)$ within a few standard errors $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$ immediately convicts the training code or hyperparameter choices.
 
 ::: {.d2l-note}
-A fit that misses the known $\mathbf{w}^*$ by more than the noise allows
-points to a bug, or to an optimization that has not converged.
+Always verify a new model or training loop on a synthetic benchmark with known parameters before trusting it on real datasets.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Ground-Truth Data-Generating Process"}
+[Mathematical Specification]{.kicker}
 
-- generate $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$
-  with one function, `synthetic_data`;
-- predict how close a correct fit comes to $\mathbf{w}^*$: within a few
-  standard errors $\sigma/\sqrt{n}$.
+We generate $n = 1{,}000$ training examples and $1{,}000$ validation examples in $d = 2$ dimensions from an isotropic Gaussian design:
 
-**Running example:** $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise
-$\sigma = 0.01$; 1,000 training and 1,000 validation examples.
+$$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}, \qquad X_{ij} \stackrel{\textrm{i.i.d.}}{\sim} \mathcal{N}(0, 1), \quad \epsilon^{(i)} \stackrel{\textrm{i.i.d.}}{\sim} \mathcal{N}(0, \sigma^2)$$
+
+- **True parameters:** Weights $\mathbf{w}^* = (2, -3.4)^\top \in \mathbb{R}^2$ and scalar intercept $b^* = 4.2$.
+- **High signal-to-noise ratio:** The linear signal $\mathbf{x}^\top\mathbf{w}^*$ has variance $\|\mathbf{w}^*\|_2^2 = 2^2 + (-3.4)^2 = 15.56$ (standard deviation $\approx 3.94$), whereas the noise standard deviation $\sigma = 0.01$ is nearly $400\times$ smaller.
+- **Train/validation split:** Drawing $2{,}000$ independent pairs from the exact same distribution provides $1{,}000$ training examples for fitting and $1{,}000$ untouched validation examples for measuring out-of-sample generalization.
 :::
 
-::: {.slide title="Known Parameters Turn Training Into a Test"}
-[Where this fits]{.kicker}
+::: {.slide title="Implementing the Synthetic Generator"}
+[Vectorized Data Generation]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Linear Regression | model, loss, closed form, minibatch SGD |
-| **Synthetic Data** | **data with known $\mathbf{w}^*, b^*$** |
-| Implementation from Scratch | SGD and the training loop by hand |
-| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
-| Concise Implementation | framework layers and losses |
-| Generalization | training vs. test error |
-| Weight Decay | a penalty on large weights |
+The helper `synthetic_data` draws the $(n, d)$ design matrix `X` and the $(n, 1)$ noise column `eps` in two vectorized calls:
+
+@synthetic-regression-data-generating-the-data-1
+
+- **Explicit column shape `(-1, 1)`:** Reshaping `w` to `(d, 1)` ensures `matmul(X, w)` produces an `(n, 1)` column vector matching `eps` of shape `(n, 1)`.
+- **Avoiding the `(n, n)` broadcasting trap:** If `matmul(X, w)` had shape `(n,)` while `eps` had shape `(n, 1)`, adding them would broadcast into an `(n, n)` matrix and exhaust gigabytes of memory!
 :::
 
-::: {.col .narrow}
-- **Uses:** the normal equations, the standard error
-  $\sigma/\sqrt{n}$ of an average.
-- **Skips:** minibatches and the training loop (next deck), the classes
-  (the deck after).
-:::
-:::
-:::
+::: {.slide title="Explicit PRNG Key Splitting in JAX" only="jax"}
+[Stateless Randomness · JAX]{.kicker}
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Generating the data]{.dtitle}
-
-[a known plane · a little noise · one function]{.dsub}
-:::
-:::
-
-::: {.slide title="Labels Lie on a Known Plane, Up to Noise of About 0.01"}
-[Generating the data]{.kicker}
-
-$$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}, \qquad x_j \sim \mathcal{N}(0, 1), \quad \epsilon \sim \mathcal{N}(0, \sigma^2)$$
-
-- $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, $\sigma = 0.01$; $b^*$ is added
-  to every label.
-- Gaussian noise makes the squared loss the maximum-likelihood loss, so a
-  linear model is correctly specified.
-- `synthetic_data` draws 2,000 examples: 1,000 to train on, 1,000 to
-  validate with.
-:::
-
-::: {.slide title="The First Label Is Off the Plane by the Noise Alone"}
-[Generating the data]{.kicker}
-
-@synthetic-regression-data-generating-the-dataset-2
-
-The first example, and its noise $y - (\mathbf{w}^{*\top}\mathbf{x} + b^*)$:
-
-@!synthetic-regression-data-generating-the-dataset-3
-
-::: {.d2l-note}
-The noise is at most a few hundredths, since $\sigma = 0.01$.
-:::
-:::
-
-::: {.slide title="One Key Fixes the Dataset; a New Key Draws a New One" only="jax"}
-[Generating the data · JAX]{.kicker}
-
-JAX has no global random state: every draw takes a key.
+Unlike PyTorch, TensorFlow, and MXNet—which mutate a hidden global random number generator—JAX requires an explicit PRNG `key` for every random draw:
 
 ```{.python #synthetic-regression-data-exercises}
 key1, key2 = jax.random.split(key)
@@ -393,140 +337,126 @@ X = jax.random.normal(key1, (n, w.shape[0]))
 eps = jax.random.normal(key2, (n, 1)) * noise
 ```
 
-- $\mathbf{X}$ and $\boldsymbol{\epsilon}$ come from two different keys.
-- The same key always produces the same dataset; `d2l.get_key()` gives a
-  new key on every call, from a stream seeded anew on every run.
+- **Why split keys:** Passing the *same* `key` to both `X` and `eps` would draw identical underlying normal variates, making the label noise deterministically correlated with the features!
+- **Reproducibility vs. fresh runs:** Calling `jax.random.split(key)` deterministically forks independent subkeys `key1` and `key2`, while `d2l.get_key()` advances a session stream so each benchmark call draws a fresh dataset.
 :::
 
-::: {.slide title="Check: Which Loss Do the True Parameters Reach?"}
-[Check]{.kicker}
+::: {.slide title="Inspecting Generated Tensors and Realized Noise"}
+[Sanity-Checking the Data]{.kicker}
 
-A model that predicts with exactly $\mathbf{w}^* = (2, -3.4)$ and
-$b^* = 4.2$ is scored with the squared loss
-$\tfrac{1}{2}(\hat{y} - y)^2$, averaged over the examples. About which
-value does that average settle?
+We draw $2{,}000$ examples and inspect the first training pair $(\mathbf{x}^{(1)}, y^{(1)})$ alongside its realized noise $\epsilon^{(1)} = y^{(1)} - (\mathbf{w}^{*\top}\mathbf{x}^{(1)} + b^*)$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\hat{y} - y = -\epsilon$, so the average approaches
-$\tfrac{1}{2}\mathbb{E}[\epsilon^2] = \sigma^2/2 = 5 \times 10^{-5}$. The noise is
-unpredictable: no model does better on new examples, and a correct
-training run levels off there.
-:::
-:::
-:::
+@synthetic-regression-data-generating-the-dataset-2
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Recovering the parameters]{.dtitle}
-
-[how close a correct fit can come]{.dsub}
-:::
-:::
-
-::: {.slide title="I. The Estimation Error Is Linear in the Noise"}
-[Recovering the parameters · derivation]{.kicker}
-
-Append a column of ones: $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$,
-$\tilde{\mathbf{w}}^* = (2, -3.4, 4.2)$, and
-$\mathbf{y} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \boldsymbol{\epsilon}$.
-
-Least squares solves
-$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top\mathbf{y}$.
-Substitute $\mathbf{y}$:
-$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*) = \tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$, so
-
-$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}.$$
+@synthetic-regression-data-generating-the-dataset-3
 
 ::: {.d2l-note}
-Without noise, least squares recovers $\tilde{\mathbf{w}}^*$ exactly. The
-noise moves the minimizer of the loss, and we need to know how far.
+Verify the arithmetic directly: $2 x_1^{(1)} - 3.4 x_2^{(1)} + 4.2$ matches the observed label $y^{(1)}$ up to the tiny Gaussian perturbation $\epsilon^{(1)}$ of order $\sigma = 0.01$.
 :::
 :::
 
-::: {.slide title="II. Standard Normal Features Make X̃ᵀX̃ ≈ 1,000 · I"}
-[Recovering the parameters · derivation]{.kicker}
+::: {.slide title="Why 2D Marginal Scatter Plots Look Like Thick Bands"}
+[Geometric Intuition]{.kicker}
 
-Each entry of $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}/n$ averages
-$n = 1{,}000$ products of two columns:
+If $\sigma = 0.01$ is tiny, why does plotting $y$ against a single coordinate $x_2$ show a thick vertical cloud several units wide rather than a razor-thin line?
 
-| entry | product | its mean |
+- **Omitted-variable projection:** In 3D space $(x_1, x_2, y)$, all $1{,}000$ points lie within $\pm 0.03$ of the tilted plane $y = 2x_1 - 3.4x_2 + 4.2$.
+- **Unplotted feature variance:** When we project that plane onto the 2D $(x_2, y)$ margin, each point's unplotted coordinate $2x_1 \sim \mathcal{N}(0, 4)$ acts as an apparent vertical offset with standard deviation $2.0$!
+- **Negative vs. positive marginal slopes:** Plotting $y$ vs. $x_1$ reveals a noisy band of slope $+2$ (with vertical spread $3.4$ from $-3.4x_2$), whereas plotting $y$ vs. $x_2$ reveals a steeper downward band of slope $-3.4$ (with vertical spread $2.0$ from $+2x_1$).
+
+::: {.d2l-note .rule}
+Marginal 2D scatter plots of a multivariate function always fold the variation of the unplotted features into the vertical scatter.
+:::
+:::
+
+::: {.slide title="The Irreducible Loss Floor of the True Parameters"}
+[Theoretical Benchmark]{.kicker}
+
+Before running any optimizer, what empirical loss would an oracle achieve if it plugged the exact ground-truth parameters $(\mathbf{w}^*, b^*)$ into $L(\mathbf{w}, b) = \frac{1}{2n}\sum_{i=1}^n (\hat{y}^{(i)} - y^{(i)})^2$?
+
+$$\mathbb{E}\bigl[L(\mathbf{w}^*, b^*)\bigr] = \frac{1}{2}\,\mathbb{E}\bigl[(\hat{y} - y)^2\bigr] = \frac{1}{2}\,\mathbb{E}\bigl[(-\epsilon)^2\bigr] = \frac{\sigma^2}{2} = \frac{(0.01)^2}{2} = 5 \times 10^{-5}$$
+
+- **Irreducible noise floor:** Because future noise draws $\epsilon \sim \mathcal{N}(0, \sigma^2)$ are independent of $\mathbf{x}$, *no* predictor can achieve an expected validation loss below $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$.
+- **Finite-sample fluctuation:** Over $n' = 1{,}000$ validation examples, the sample average of $\frac{1}{2}\epsilon^2$ fluctuates around $5 \times 10^{-5}$ with standard error $\frac{\sigma^2}{\sqrt{2n'}} \approx 2.2 \times 10^{-6}$ (about $4.5\%$ of the floor).
+:::
+
+::: {.slide title="Recovery I: Estimation Error Is Linear in the Noise"}
+[Statistical Recovery Analysis]{.kicker}
+
+How close to $\tilde{\mathbf{w}}^* = (2, -3.4, 4.2)^\top$ can the exact least-squares fit $\hat{\tilde{\mathbf{w}}}$ on $n = 1{,}000$ noisy training examples possibly come?
+
+$$\mathbf{y} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \boldsymbol{\epsilon}, \qquad \tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}] \in \mathbb{R}^{n \times 3}$$
+
+- **Substitute $\mathbf{y}$ into the normal equations:** Multiplying $\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}}$ by $\tilde{\mathbf{X}}^\top$ and using $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top\mathbf{y} = \tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$ cancels the signal term:
+  $$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = \bigl(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\bigr)^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$$
+- **Exact recovery at zero noise:** The parameter estimation error $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$ is a purely linear function of the noise vector $\boldsymbol{\epsilon}$; when $\sigma = 0$, least squares recovers $\tilde{\mathbf{w}}^*$ to machine precision.
+:::
+
+::: {.slide title="Recovery II: Isotropic Features Make X̃ᵀX̃ ≈ nI"}
+[Law of Large Numbers on the Gram Matrix]{.kicker}
+
+For arbitrary correlated features, inverting $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ couples all coordinates, but for independent standard normal features $x_j \sim \mathcal{N}(0, 1)$, the sample Gram matrix concentrates tightly around the identity:
+
+| Entry of $\frac{1}{n}\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ | Sample Average Over $n = 1{,}000$ Examples | Population Expectation |
 |---|---|---|
-| diagonal | $x_j^2$ or $1 \cdot 1$ | 1 |
-| off the diagonal | $x_j x_k$ or $x_j \cdot 1$ | 0 |
+| **Diagonal ($j = k$)** | $\frac{1}{n}\sum_{i=1}^n (x_j^{(i)})^2$ or $\frac{1}{n}\sum_{i=1}^n 1^2$ | $\mathbb{E}[x_j^2] = 1$ (and $1$ for the bias column) |
+| **Off-diagonal ($j \neq k$)** | $\frac{1}{n}\sum_{i=1}^n x_j^{(i)} x_k^{(i)}$ or $\frac{1}{n}\sum_{i=1}^n x_j^{(i)} \cdot 1$ | $\mathbb{E}[x_j x_k] = 0$ and $\mathbb{E}[x_j] = 0$ |
 
-An average over 1,000 examples lies within a few percent of its mean. So
-
-$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* \approx \frac{1}{n}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\tilde{\mathbf{x}}^{(i)}, \qquad \tilde{\mathbf{x}}^{(i)} = (\mathbf{x}^{(i)}, 1).$$
+$$\frac{1}{n}\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} \approx \mathbf{I}_3 \quad\Longrightarrow\quad \hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* \approx \frac{1}{n}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\tilde{\mathbf{x}}^{(i)}$$
 :::
 
-::: {.slide title="III. Each Coordinate Misses by About σ/√n = 3 × 10⁻⁴"}
-[Recovering the parameters · derivation]{.kicker}
+::: {.slide title="Recovery III: The σ/√n Standard Error Floor"}
+[The Statistical Limit]{.kicker}
 
-Coordinate $j$ of the error averages $n$ independent terms
-$\epsilon^{(i)} \tilde{x}_j^{(i)}$, each with mean 0 and variance
-$\sigma^2 \mathbb{E}[\tilde{x}_j^2] = \sigma^2$. An average of $n$ such terms has standard
-deviation $\sigma/\sqrt{n}$, its **standard error**:
+Each coordinate $j \in \{1, 2, 3\}$ of the estimation error $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$ is the sample mean of $n$ independent zero-mean products $\epsilon^{(i)}\tilde{x}_j^{(i)}$ with variance $\mathbb{E}[(\epsilon^{(i)})^2]\,\mathbb{E}[(\tilde{x}_j^{(i)})^2] = \sigma^2 \cdot 1 = \sigma^2$:
 
 ::: {.d2l-note .rule}
-$$\sigma/\sqrt{n} = 0.01/\sqrt{1000} \approx 3 \times 10^{-4}$$
-for each weight and for the bias.
+$$\operatorname{SE}(\hat{w}_j) = \operatorname{SE}(\hat{b}) \approx \frac{\sigma}{\sqrt{n}} = \frac{0.01}{\sqrt{1000}} \approx 3.16 \times 10^{-4}$$
 :::
 
-Ten times more noise, ten times the error; a hundred times more examples, a tenth of it.
-
-[Assumes: noise independent of the features, $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} \approx n\mathbf{I}$.]{.dgm-cap}
+- **Square-root sample scaling:** Reducing estimation error by $10\times$ requires $100\times$ more training examples ($n = 100{,}000$), whereas reducing label noise $\sigma$ by $10\times$ shrinks estimation error by $10\times$ immediately.
+- **Exact covariance formula:** Conditioned on $\tilde{\mathbf{X}}$, the exact parameter covariance matrix is $\operatorname{Cov}(\hat{\tilde{\mathbf{w}}} \mid \tilde{\mathbf{X}}) = \sigma^2 (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}$; strong feature collinearity inflates $(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}$ and amplifies parameter error.
 :::
 
-::: {.slide title="Least Squares Lands Within a Few 10⁻⁴ of the Truth"}
-[Recovering the parameters]{.kicker}
+::: {.slide title="Verifying the Least-Squares Reference Fit in Code"}
+[Gold-Standard Benchmark]{.kicker}
 
-`lstsq` on the 1,000 training examples, with a column of ones for $b$:
+We solve the normal equations on our $n = 1{,}000$ training examples with `lstsq` and compare the actual parameter errors against $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$:
 
-@!synthetic-regression-data-recovering-the-parameters-2
+@synthetic-regression-data-recovering-the-parameters-1
 
-- Least squares: an error above $10^{-3}$, over three standard errors,
-  would be rare.
-- SGD fluctuates around this estimate by a similar amount, so a converged
-  model lands within about $10^{-3}$.
+@synthetic-regression-data-recovering-the-parameters-2
 
-::: {.d2l-note .rule}
-An error of $0.1$ means a bug, or an optimization that has not converged.
-:::
-:::
-
-::: {.slide title="Check: How Close With Fewer Examples or More Noise?"}
-[Check]{.kicker}
-
-What standard error do the weights have with
-
-1. 100 training examples and $\sigma = 0.01$?
-2. 1,000 training examples and $\sigma = 0.1$?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answers.**
-
-1. $0.01/\sqrt{100} = 10^{-3}$: ten times fewer examples, a
-   $\sqrt{10} \approx 3.2$ times larger error.
-2. $0.1/\sqrt{1000} \approx 3 \times 10^{-3}$: the error scales with
-   $\sigma$.
-:::
+Even an exact solver misses $(2, -3.4, 4.2)$ by a few times $10^{-4}$ because the $1{,}000$ random noise draws happen to correlate slightly with the columns of $\tilde{\mathbf{X}}$. Any converged iterative optimizer in §2.3–§2.4 must land within $\sim 10^{-3}$ (roughly three standard errors) of $(\mathbf{w}^*, b^*)$.
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Loss Floors, Sample Size & Collinearity"}
+[Check Your Understanding]{.kicker}
 
-| step | running example |
-|---|---|
-| generate $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, $\sigma = 0.01$ |
-| standard error $\sigma/\sqrt{n}$ | $0.01/\sqrt{1000} \approx 3 \times 10^{-4}$; least-squares errors of that size |
-| threshold for training | a converged model within about $10^{-3}$ |
-| what passing shows | the code recovers what it should; nothing about data a linear model does not fit |
+Predict the quantitative effect of each modification to our synthetic benchmark:
 
-**Next:** the model, the loss, and minibatch SGD written as plain
-functions, trained on these data, their estimates held to $10^{-3}$.
+1. **Sample size vs. noise:** What is the standard error of $\hat{w}_1$ when (a) $n = 100, \sigma = 0.01$, and (b) $n = 1{,}000, \sigma = 0.1$?
+2. **Misspecified quadratic term:** Suppose the true labels are generated by $y = 2x_1 - 3.4x_2 + 4.2 + 0.5x_1^2 + \epsilon$ with $x_1, x_2 \sim \mathcal{N}(0, 1)$, and we fit the linear model $\hat{y} = w_1 x_1 + w_2 x_2 + b$. Which parameter absorbs the unmodeled $0.5x_1^2$ term as $n \to \infty$?
+3. **Correlated features:** If $x_2 = 0.99 x_1 + \sqrt{1 - 0.99^2}\,z$, why do individual weight errors $|\hat{w}_j - w_j^*|$ blow up by $\sim 7\times$ while predictions $\hat{\mathbf{w}}^\top\mathbf{x}$ on new test points from the same distribution remain accurate?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. (a) $\sigma / \sqrt{n} = 0.01 / \sqrt{100} = 10^{-3}$; (b) $0.1 / \sqrt{1000} \approx 3.16 \times 10^{-3}$.
+2. Because $\mathbb{E}[x_1^2] = 1$ and $\mathbb{E}[x_1 \cdot x_1^2] = \mathbb{E}[x_1^3] = 0$, the quadratic term $0.5x_1^2$ is orthogonal to $x_1$ and $x_2$ but shifts the mean label by $+0.5$, so $\hat{b} \to 4.2 + 0.5 = 4.7$ while $\hat{\mathbf{w}} \to (2, -3.4)^\top$.
+3. When $x_1 \approx x_2$, the difference direction $x_1 - x_2$ has tiny variance ($1 - \rho = 0.01$), inflating $\operatorname{Var}(\hat{w}_1 - \hat{w}_2)$, but new test points from the same distribution also have $x_1 \approx x_2$ and only probe the well-determined sum $\hat{w}_1 + \hat{w}_2$.
+:::
+:::
+
+::: {.slide title="Section 2.2 Summary & Key Takeaways"}
+[Summary]{.kicker}
+
+| Benchmark Quantity | Formula / Definition | Value on Running Example | Diagnostic Role in §2.3–§2.4 |
+|---|---|---|---|
+| **Data Generator** | $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ | $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, $\sigma = 0.01$ | Ground-truth linear testbed ($n = 1{,}000$ train, $1{,}000$ val) |
+| **Irreducible Loss Floor** | $\mathbb{E}[L(\mathbf{w}^*, b^*)] = \frac{1}{2}\sigma^2$ | $5 \times 10^{-5}$ (or $\sigma^2 = 10^{-4}$ without $\frac{1}{2}$) | Target plateau for training and validation loss curves |
+| **Estimation Error** | $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$ | Exact zero when $\sigma = 0$ | Separates statistical noise floor from optimization error |
+| **Parameter Standard Error** | $\operatorname{SE}(\hat{w}_j) \approx \sigma / \sqrt{n}$ | $0.01 / \sqrt{1000} \approx 3.2 \times 10^{-4}$ | Sets $3\text{ SE} \approx 10^{-3}$ pass/fail tolerance for recovered weights |
 :::

@@ -113,64 +113,74 @@ section it goes with. All are freely accessible online except where noted.
 ::: {.cover}
 [Dive into Deep Learning · §6]{.kicker}
 
-Layers that know an image is a grid<br>
-**locality · translation equivariance · convolution · padding · channels · pooling · LeNet**
+Convolutional Neural Networks: Geometry-Aware Vision Layers<br>**locality · translation equivariance · cross-correlation · padding · channels · pooling · LeNet**
 :::
 :::
 
-::: {.slide title="Flattening an Image Throws Away Its Geometry"}
-[The problem]{.kicker}
+::: {.slide title="Flattening Images Destroys Spatial Geometry"}
+[Motivation & Inductive Bias]{.kicker}
 
-- The MLP flattens a 28 × 28 image to 784 numbers; shuffling the pixels
-  the same way in every image would not change how well it learns.
-- An edge or a texture is a pattern among *neighboring* pixels, and it
-  means the same thing wherever it appears.
-- A one-megapixel grayscale image into 1000 hidden units: a billion
-  weights. One small window of shared weights: a few hundred.
+Standard multilayer perceptrons flatten every 2D image grid into an unordered 1D vector, discarding which pixels sit next to one another:
+
+- **Permutation blindness:** Applying one fixed random permutation to all 784 pixels of Fashion-MNIST leaves an MLP's accuracy unchanged ($\approx 87\%$), even though the scrambled images look like pure static to human eyes.
+- **Parameter explosion at scale:** Mapping a 1-megapixel ($1000 \times 1000$) RGB image to a full-resolution 3-channel hidden representation requires $(3 \times 10^6)^2 = 9 \times 10^{12}$ weights (**36 TB** in `float32`; 3.6 TB even for a 1000-pixel grayscale map).
+- **Biological and geometric clue:** Visual features (edges, corners, textures) are formed by *neighboring* pixels and carry the same meaning regardless of where they appear in the frame.
 
 ::: {.d2l-note}
-Build locality and translation equivariance into the layer, and the
-parameter count collapses.
+Building **locality** and **translation equivariance** directly into the linear layer collapses trillions of free weights down to a small shared kernel of a few hundred parameters.
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="Receptive Fields in Biological and Silicon Vision"}
+[From Visual Cortex to ConvNets]{.kicker}
 
-- derive convolution from locality and translation equivariance;
-- compute a cross-correlation by hand, and learn an edge detector from data;
-- predict output sizes and receptive fields under padding, stride, and dilation;
-- count the parameters and multiply-adds of a layer with many channels;
-- say what pooling tolerates and what only global pooling removes;
-- build LeNet, read its learned kernels, and test it against the MLP on
-  ordered and on shuffled pixels.
+Hubel and Wiesel discovered that early visual cortex neurons respond to oriented edges within localized *receptive fields*, inspiring hierarchical filter banks swept across space:
 
-**Running example:** a 28 × 28 Fashion-MNIST image, from one kernel to a
-complete classifier.
+![](../img/field-visual.png){.nostretch width=76% fig-align="center"}
+
+- **Local filter bank (left $\to$ right):** Six oriented edge filters convolved with a natural image produce sparse activation maps that highlight local contours at different orientations and scales.
+- **End-to-end learning:** Rather than hand-crafting filter banks, convolutional neural networks (CNNs) learn the kernel weights across all layers simultaneously via backpropagation.
 :::
 
-::: {.slide title="Map of the Chapter"}
-[Chapter map]{.kicker}
+::: {.slide title="Mathematical and Architectural Roadmap of Chapter 6"}
+[Chapter Architecture]{.kicker}
 
-| section | question | adds |
+Each section introduces one structural mechanism that transforms a dense layer into a complete convolutional classifier:
+
+| Section | Core Mechanism | Mathematical Form / Invariant |
 |---|---|---|
-| From Fully Connected Layers to Convolutions | which layer follows from locality and equivariance? | locality and translation equivariance give convolution |
-| Convolutions for Images | what does the layer compute, and can it learn a kernel? | cross-correlation, learning a kernel, receptive fields |
-| Padding, Stride, and Dilation | how large is the output, and how far does a unit see? | output size and how far each unit sees |
-| Multiple Input and Multiple Output Channels | how do channels combine, and at what cost? | channels, 1 × 1 convolutions, cost |
-| Pooling | how do we summarize a neighborhood? | downsampling, tolerance to small shifts, global pooling |
-| LeNet | what does a whole CNN look like, and what is its prior worth? | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
+| **§6.1 Why Convolutions** | Translation equivariance & locality | $f(T_v \mathbf{X}) = T_v f(\mathbf{X}) \implies [\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ |
+| **§6.2 Conv Layers** | 2D cross-correlation & *im2col* | $[\mathbf{Y}]_{i,j} = \sum_{a,b} [\mathbf{K}]_{a,b}[\mathbf{X}]_{i+a,j+b}$, RF $r = 1 + \sum (k_l - 1)$ |
+| **§6.3 Padding & Stride** | Boundary control, downsampling, dilation | Output size $\lfloor (n + 2p - d(k-1) - 1)/s \rfloor + 1$ |
+| **§6.4 Channels** | Multi-channel tensors & $1 \times 1$ bottlenecks | $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$ params (independent of $H \times W$) |
+| **§6.5 Pooling** | Local shift tolerance & global invariance | Max/mean reduction over $k \times k$ windows (0 params) |
+| **§6.6 LeNet** | Full CNN encoder + dense head | $61{,}706$ params, $416{,}520$ MACs, pixel-shuffle test |
 :::
 
-::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
-[Running examples]{.kicker}
+::: {.slide title="Concrete Benchmarks Across Chapter 6"}
+[Quantitative Anchors]{.kicker}
 
-| section | running example |
+Every section grounds its math and systems trade-offs in exact parameter, FLOP, and shape calculations:
+
+| Section | Concrete Benchmark & Systems Takeaway |
 |---|---|
-| From Fully Connected Layers to Convolutions | an RGB-to-64-channel 3 × 3 layer has 1,792 parameters |
-| Convolutions for Images | a vertical-edge kernel (1, −1) is learned from data in nine steps |
-| Padding, Stride, and Dilation | strides (2, 2, 1) and dilations (1, 2, 4) both see 15 pixels |
-| Multiple Input and Multiple Output Channels | a 3 × 3 layer with 256 channels in and out: 590,080 parameters |
-| Pooling | one response moved through four columns: local pooling merges two positions, a global maximum all four |
-| LeNet | 61,706 parameters, about 88–90% against the MLP's 87%; several points lower on shuffled pixels |
+| **§6.1 Why Convolutions** | A $3 \times 3$ layer mapping RGB ($c_\textrm{i}=3$) to $c_\textrm{o}=64$ channels uses $1{,}792$ parameters at any resolution |
+| **§6.2 Conv Layers** | Gradient descent recovers the vertical edge kernel $[1, -1]$ from input–output pairs in 9 steps |
+| **§6.3 Padding & Stride** | Three $3 \times 3$ layers with strides $(2,2,1)$ or dilations $(1,2,4)$ both achieve a 15-pixel receptive field |
+| **§6.4 Channels** | A $1 \times 1 \to 3 \times 3 \to 1 \times 1$ bottleneck ($256 \to 64 \to 256$) cuts weights $8.5\times$ ($589{,}824 \to 69{,}632$) |
+| **§6.5 Pooling** | $2 \times 2$ stride-2 pooling absorbs 50% of 1-pixel shifts; max-pooling pads borders with $-\infty$ |
+| **§6.6 LeNet** | Convolutions hold 4% of LeNet's weights but do 86% of its MACs; pixel shuffling erases its gain over MLP |
+:::
+
+::: {.slide title="Concept Check & Chapter Study Strategy"}
+[Check & Synthesis]{.kicker}
+
+Before diving into §6.1, test the core scaling intuition separating dense layers from convolutions:
+
+1. **Resolution scaling:** If you double an input image's height and width from $224 \times 224$ to $448 \times 448$, how do the parameter count and the multiply-add (MAC) count of a $3 \times 3$ convolutional layer change?
+2. **Inductive bias test:** Why does a CNN beat an MLP on natural images, yet lose that advantage when all images undergo the same random pixel permutation?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:** (1) The parameter count is **completely unchanged** ($c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$ depends only on kernel and channel dimensions), whereas the MAC count and activation memory **quadruple** ($4\times$ as many output spatial positions). (2) A CNN's shared local kernels assume nearby pixels form meaningful patterns; permuting pixels destroys spatial locality while leaving an MLP's dense weight matrix statistically unchanged.
+:::
 :::

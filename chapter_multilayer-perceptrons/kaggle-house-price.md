@@ -477,379 +477,198 @@ submission.head()
 ::: {.cover}
 [Dive into Deep Learning · §4.7]{.kicker}
 
-Predicting House Prices on Kaggle<br>**tabular data · preprocessing · log RMSE · cross-validated model selection**
+Predicting House Prices on Kaggle: End-to-End Tabular ML<br>**log-RMSE metric · leakage-free preprocessing · shared 5-fold cross-validation · weight-decayed MLP · submission**
 :::
 :::
 
-::: {.slide title="1,460 Houses, 79 Mixed Attributes, Prices from $34,900 to $755,000"}
-[The problem]{.kicker}
+::: {.slide title="From Clean Image Grids to Messy Tabular Data"}
+[The Capstone Challenge]{.kicker}
 
-| | Fashion-MNIST | Ames house prices |
-|---|---|---|
-| examples with labels | 60,000 | 1,460 |
-| inputs | 784 pixels in $[0, 1]$ | 35 numbers, 44 categories |
-| missing values | none | in 19 attributes |
-| label | one of 10 classes | a price, range 22× |
+In this capstone section for Chapters 1–4, we tackle the Kaggle Ames Housing competition (De Cock, 2011)—a realistic tabular dataset where data hygiene and validation protocol matter as much as model architecture:
 
-- A model cannot read the table as it is.
-- With 1,460 houses, a careless error estimate is off by more than the
-  differences between models.
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- turn a table of numbers and categories into features, without leaking
-  validation data into the preprocessing;
-- choose a loss that matches the competition's metric, the RMSE of log
-  prices;
-- estimate the error of a model by 5-fold cross-validation, on folds shared
-  by all models;
-- select the weight decay of an MLP by cross-validation;
-- retrain the selected model and write a submission.
-
-**Running example:** the validation RMSE of log prices; linear regression is
-the baseline every MLP is compared with.
-:::
-
-::: {.slide title="The Chapter Ends with a Real Dataset"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Multilayer Perceptrons | hidden layers, universal approximation, activation functions |
-| Implementation | an MLP trained on Fashion-MNIST |
-| Backpropagation | how the gradients are computed, and at what memory cost |
-| Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
-| Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |
-| Dropout | random masks, slower memorization of noisy labels |
-| **Predicting House Prices on Kaggle** | **the workflow on real data** |
-:::
-
-::: {.col .narrow}
-- **Uses:** squared loss and SGD, standardization, $K$-fold
-  cross-validation, weight decay, He initialization.
-- **Skips:** feature engineering, tree ensembles (an exercise), stacking.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[The Competition]{.dtitle}
-
-[hidden labels, the data, and the score]{.dsub}
-:::
-:::
-
-::: {.slide title="Kaggle Scores Predictions against Hidden Labels"}
-[Competition · Kaggle]{.kicker}
-
-- Training table: 1,460 houses with prices. Test table: 1,459 houses
-  without.
-- Upload one predicted price per test house; Kaggle scores it against
-  prices it keeps hidden and ranks it on a leaderboard.
-- No one can tune a model on the test labels.
+| Dataset Property | Fashion-MNIST (§3.5–§4.6) | Ames House Prices (§4.7) |
+|:--|:--|:--|
+| **Labeled training examples** | $60{,}000$ images | $1{,}460$ houses ($+1{,}459$ unlabeled test houses) |
+| **Raw input attributes** | $784$ uniform `uint8` pixels in $[0, 1]$ | $79$ mixed columns ($35$ numeric, $44$ categorical) |
+| **Feature scales & missingness** | Identical scale; $0$ missing values | Scales span $10^0$ to $10^5$; `NaN` gaps in $19$ columns |
+| **Target & evaluation metric** | $10$ balanced classes; accuracy | Sale price $\$34.9\textrm{k}$–$\$755\textrm{k}$ ($22\times$ range); **log-RMSE** |
 
 ::: {.d2l-note}
-Data: sales in Ames, Iowa, 2006 to 2010, collected by De Cock (2011) as a
-larger replacement for teaching datasets such as Boston Housing.
+With only $1{,}460$ labeled homes and $345$ one-hot expanded features, an unregularized MLP has $\sim 19$ parameters per training house—making leakage-free preprocessing, $K$-fold cross-validation, and weight decay essential.
 :::
 :::
 
-::: {.slide title="Numbers, Categories, and Gaps in One Table"}
-[Competition · the data]{.kicker}
+::: {.slide title="Inspecting the Raw Ames Housing Table"}
+[Raw Data Anatomy]{.kicker}
+
+Loading the CSV tables via `read_house_prices()` reveals $1{,}460 \times 81$ training rows (`Id`, $79$ features, `SalePrice`) and $1{,}459 \times 80$ test rows:
 
 @!kaggle-house-price-data-preprocessing-1
 
-- `MSZoning`, `SaleType`: categories. `LotFrontage`: feet, missing for 259
-  houses.
-- `MSSubClass`: a dwelling-type code stored as a number (20 to 190);
-  we encode it as a category.
-- Most gaps mean "absent": `PoolQC` is missing for the 1,453 houses
-  without a pool.
-- `Id` numbers the rows and is not a feature.
+- **Numeric vs. disguised categorical codes:** `LotFrontage` is a physical length in feet (with $259$ `NaN` rows), whereas `MSSubClass` uses integers ($20, 60, 90, \ldots$) to encode dwelling style (1-story, 2-story, duplex) and must be cast to `str`.
+- **Informative missingness:** In many categorical attributes (such as `PoolQC` or `Alley`), `NaN` is not a recording error—it encodes the physical absence of a pool or alley!
+- **Row identifier trap:** Column `Id` ($1, 2, \ldots, 1460$) carries zero predictive signal and must be dropped before training so the model cannot memorize row indices.
 :::
 
-::: {.slide title="Score Relative Errors: the RMSE of Log Prices"}
-[Competition · the metric]{.kicker}
+::: {.slide title="Why Kaggle Scores Log-RMSE Instead of Dollar RMSE"}
+[The Competition Metric]{.kicker}
 
-$$\textrm{RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^n\left(\log y_i - \log \hat{y}_i\right)^2}$$
+A $\$50{,}000$ prediction error is catastrophic on a $\$60{,}000$ starter home ($83\%$ error) but minor on a $\$650{,}000$ estate ($8\%$ error). Kaggle therefore evaluates **relative** error via the root-mean-squared error of log prices:
 
-- $|\log\hat{y} - \log y| \leq \delta$ means
-  $e^{-\delta} \leq \hat{y}/y \leq e^{\delta}$: within about $\delta$ of the
-  price.
-- RMSE 0.1 ≈ typical error of 10%, for a \$35,000 and a \$750,000 house
-  alike.
+$$\textrm{log-RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^n \bigl(\log y_i - \log \hat{y}_i\bigr)^2}$$
 
-::: {.d2l-note}
-Train on $\log y$ with the squared loss: SGD minimizes the square of the
-score.
-:::
+- **Percentage error interpretation:** Since $\log \hat{y} - \log y = \log(\hat{y}/y) \approx (\hat{y} - y)/y$ for small relative errors $\delta$, a log-RMSE of $0.135$ means predictions typically lie within $e^{\pm 0.135} \approx \pm 14\%$ of the true sale price across all price brackets.
+- **Direct loss alignment:** Training our network to predict $z_i = \log y_i$ under mean squared error $\frac{1}{n}\sum_i (z_i - \hat{z}_i)^2$ optimizes the exact square of the competition metric!
 :::
 
-::: {.slide title="Check: How Much Does One Bad Prediction Cost?"}
-[Check]{.kicker}
+::: {.slide title="Step 1 & 2: Standardization and Mean Imputation"}
+[Leakage-Free Preprocessing]{.kicker}
 
-A house sold for \$200,000 is predicted at \$250,000. What is its squared
-error in log prices? And for a \$100,000 house predicted at \$125,000?
+Raw numerical columns span five orders of magnitude (lot area in $10^4\textrm{ sq ft}$ vs. bedroom count in $[0, 8]$), which would skew both gradient descent step sizes and $\ell_2$ weight decay penalties:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Both are $(\log 1.25)^2 \approx 0.223^2 \approx 0.05$. The
-metric sees only the ratio $\hat{y}/y$, not the dollars.
-:::
-:::
+$$x_{ij} \leftarrow \frac{x_{ij} - \hat{\mu}_j}{\hat{s}_j}, \qquad \hat{\mu}_j, \hat{s}_j \textrm{ computed on the training split ONLY}$$
+
+- **Unit-variance scaling:** Standardizing every numerical feature to zero mean and unit variance puts all weights $w_j$ on an equal footing under $\frac{\lambda}{2}\|\mathbf{W}\|_{\textrm{F}}^2$.
+- **Zero imputation equals mean imputation:** After subtracting $\hat{\mu}_j$ and dividing by $\hat{s}_j$, replacing missing entries (`fillna(0)`) sets every missing numerical measurement to $0$—the exact training-set mean!
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Step 3 & 4: One-Hot Encoding With a Missingness Column"}
+[Leakage-Free Preprocessing]{.kicker}
 
-[Preprocessing]{.dtitle}
+For the $44$ string/categorical attributes (including `MSSubClass`), `pd.get_dummies(df, dummy_na=True)` creates binary indicator columns for every observed category plus an explicit `_nan` column:
 
-[from a table to a matrix, without leakage]{.dsub}
-:::
-:::
+| House Row | Raw `MSZoning` | `MSZoning_RL` | `MSZoning_RM` | `MSZoning_FV` | `MSZoning_RH` | `MSZoning_C (all)` | `MSZoning_nan` |
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| $1$ | `RL` | $1$ | $0$ | $0$ | $0$ | $0$ | $0$ |
+| $2$ | `RM` | $0$ | $1$ | $0$ | $0$ | $0$ | $0$ |
+| $3$ | `NaN` | $0$ | $0$ | $0$ | $0$ | $0$ | $1$ |
 
-::: {.slide title="Standardize Numbers; a Missing Number Becomes the Mean, 0"}
-[Preprocessing · numbers]{.kicker}
-
-$$x \leftarrow \frac{x - \mu}{s}, \qquad \mu, s \textrm{ from the training rows}$$
-
-- Lot areas in the ten thousands, fireplace counts in single digits: one
-  learning rate and one weight decay cannot suit both scales.
-- After standardization, mean imputation fills a gap with 0.
-
-::: {.d2l-note .warn}
-Mean imputation assumes a gap is typical. For "year the garage was built",
-a gap means "no garage".
-:::
+- **Preserving informative `NaN`s:** Giving missing categories their own `_nan` indicator lets the model learn a distinct price offset for homes without a pool (`PoolQC_nan = 1`) or without a garage.
+- **Vocabulary alignment (`reindex`):** Any test-set category never seen in `train` is dropped, and any `train` category absent from `test` is filled with $0$ (`reindex(columns=train_cols, fill_value=0)`).
 :::
 
-::: {.slide title="One-Hot Encode Categories, with a Column for Missing"}
-[Preprocessing · categories]{.kicker}
+::: {.slide title="The Complete Leakage-Free Preprocessing Pipeline"}
+[Preprocessing Code]{.kicker}
 
-`MSZoning` takes 5 values in the training rows:
+All four steps fit exclusively on `train` and transform `*others` (`val` or `test`) identically, expanding $79$ raw attributes into $345$ `float32` features:
 
-| house | `MSZoning` | `_RL` | `_RM` | `_FV` | `_RH` | `_C (all)` | `_nan` |
-|---|---|---:|---:|---:|---:|---:|---:|
-| 1 | RL | 1 | 0 | 0 | 0 | 0 | 0 |
-| 2 | RM | 0 | 1 | 0 | 0 | 0 | 0 |
-
-- A category absent from the training rows gets no column: all its
-  indicators are 0.
-:::
-
-::: {.slide title="Fit Every Statistic on the Training Rows Only"}
-[Preprocessing · leakage]{.kicker}
-
-```{.python #kaggle-house-price-exercises}
-def preprocess(train, *others):
-    frames = [df.drop(columns=['Id', 'SalePrice'], errors='ignore')
-                .astype({'MSSubClass': str})  # A code, not a quantity
-              for df in (train, *others)]
-    numeric = frames[0].select_dtypes(include='number').columns
-    mean, std = frames[0][numeric].mean(), frames[0][numeric].std()
-    for df in frames:
-        df[numeric] = ((df[numeric] - mean) / std).fillna(0)
-    frames = [pd.get_dummies(df, dummy_na=True) for df in frames]
-    return [df.reindex(columns=frames[0].columns, fill_value=0)
-              .to_numpy(dtype=np.float32) for df in frames]
-```
-
-::: {.d2l-note .warn}
-Means, standard deviations, and the set of categories come from `train`;
-statistics that include validation rows make the error estimate optimistic.
-:::
-:::
-
-::: {.slide title="79 Attributes Become 345 Features"}
-[Preprocessing · result]{.kicker}
+@kaggle-house-price-data-preprocessing-2
 
 @!kaggle-house-price-data-preprocessing-3
-
-- Log prices: mean 12.0, standard deviation 0.4. We subtract the mean of
-  the training rows, so that a model starting near 0 is right on average.
-- `KaggleHouse` holds one split: preprocessing and mean log price fitted on
-  its training rows.
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
+::: {.slide title="Target Centering in KaggleHouse"}
+[Target Normalization]{.kicker}
 
-[Model Selection]{.dtitle}
+The log sale prices $\log y_i$ have mean $\approx 12.02$ ($\approx \$166{,}000$) and standard deviation $\approx 0.40$. In `KaggleHouse`, we subtract the training split's mean log price (`self.offset`) from the targets:
 
-[five folds, one baseline, one sweep]{.dsub}
+- **Why center $\log y$?** An initialized network starts with outputs near $0$. If targets sit around $12.02$, the initial squared error is $12^2 = 144$, and early SGD steps waste epochs shifting the output bias before learning feature weights.
+- **Zero-mean targets ($y_i - \bar{y}_{\textrm{train}}$):** A network initialized near $0$ starts with RMSE $\approx 0.40$ from step $0$; at prediction time, we simply add `self.offset` back before exponentiating (`np.exp(pred + data.offset)`).
 :::
-:::
 
-::: {.slide title="Five Folds: Every House Is Validated Once"}
-[Model selection · cross-validation]{.kicker}
+::: {.slide title="Shared 5-Fold Cross-Validation Without Leakage"}
+[Model Selection Protocol]{.kicker}
+
+With only $1{,}460$ labeled houses, a single $20\%$ validation split ($292$ houses) has a sampling standard error of $\sim 0.015$ in log-RMSE—larger than the gap between competing models!
 
 ::: {.cols .vc}
 ::: {.col}
-- One validation set of a fifth: 292 houses, a noisy estimate.
-- 5 folds: train on 4, validate on 1, five times; average.
-- Each round refits the preprocessing on its own training folds.
-- The same folds for every model.
+- **5-fold partition (`k_fold_data`):** Shuffles and splits `raw_train` once into $K = 5$ folds of $292$ houses each.
+- **Fold-local preprocessing:** Each fold instantiates its own `KaggleHouse(train_4_folds, val_1_fold)`, refitting $\hat{\mu}, \hat{s}$, dummy columns, and `offset` on its $1{,}168$ training homes only.
+- **Shared folds for paired comparison:** Evaluating every candidate model on the *exact same 5 folds* cancels fold-sampling noise when taking pairwise differences.
 :::
 
 ::: {.col .fig .big}
-![Each round holds out one fold for validation (orange) and trains on the other four (blue).](../img/mdl-mlp-kfold.svg){width=100%}
+![](../img/mdl-mlp-kfold.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Linear Regression: Validation RMSE About 0.15"}
-[Model selection · baseline]{.kicker}
+::: {.slide title="Benchmarking the Linear Regression Baseline"}
+[Baseline Model]{.kicker}
 
-Minibatches of 64, learning rate 0.02, 100 epochs, the same for every model:
+Before tuning an MLP, we benchmark `d2l.LinearRegression` across our $5$ folds ($100$ epochs, batch size $64$, learning rate $\eta = 0.02$, averaging the final $5$ epochs to smooth single-epoch SGD noise):
 
 @!kaggle-house-price-a-linear-baseline-1
 
-- Training RMSE about 0.11; the best fold 0.11 to 0.13, the worst about 0.2.
-- The five-fold mean moves by about a hundredth between random splits.
-- Each RMSE averages the last five epochs: a single epoch can land far off.
+- **Baseline performance:** Achieves $\sim 0.11$ training log-RMSE and **$\sim 0.15$ validation log-RMSE** ($\sim 15\%$ typical price error), with individual folds ranging from $\sim 0.12$ to $\sim 0.19$ (due to a few outlier mansions in one fold).
 :::
 
-::: {.slide title="An MLP with 64 Units: About 22,000 Parameters for 1,168 Houses"}
-[Model selection · the MLP]{.kicker}
+::: {.slide title="Building HouseMLP: 64 ReLU Units With Weight Decay"}
+[Regularized MLP Architecture]{.kicker}
 
-- One hidden layer of 64 ReLUs, one output; He initialization, zero biases.
-- Squared loss reused from `LinearRegression`.
-- Weight decay `wd` on the weights, not on the biases.
+Next we construct `HouseMLP`: a one-hidden-layer ReLU network ($345 \to 64 \to 1$, $\sim 22{,}200$ parameters, or $19$ parameters per training house) with He initialization and $\ell_2$ weight decay applied strictly to the weight matrices $\mathbf{W}^{(1)}, \mathbf{W}^{(2)}$ (excluding biases):
 
-::: {.d2l-note}
-Nineteen parameters per training house: expect it to fit their noise
-unless something restrains it.
-:::
+@kaggle-house-price-mlp-model
 :::
 
-::: {.slide title="A Moderate Weight Decay Gives the Lowest Validation RMSE"}
-[Model selection · the sweep]{.kicker}
+::: {.slide title="Cross-Validating Weight Decay: The U-Curve in Action"}
+[Hyperparameter Sweep]{.kicker}
 
+Sweeping weight decay `wd` across $\{0.001, 0.003, 0.01, 0.03, 0.1, 0.3\}$ on our $5$ shared folds traces a textbook generalization U-curve:
+
+::: {.cols .vc}
+::: {.col}
+- **Under-regularized (`wd = 0.001`):** Overfits the $1{,}168$ training homes (train RMSE $\sim 0.09$), pushing validation RMSE to $\sim 0.16$—worse than linear regression!
+- **Sweet spot (`wd = 0.03` or `0.1`):** Constrains weight norms so validation RMSE drops to **$\sim 0.135$–$0.140$**, beating the linear baseline.
+- **Over-regularized (`wd = 0.3`):** Shrinks weights too aggressively, underfitting both training and validation splits ($\sim 0.17$).
+:::
+
+::: {.col .fig .big}
 @!kaggle-house-price-mlp-select
-
-::: {.d2l-note}
-Training RMSE rises from a weight decay of 0.03 on; validation RMSE falls,
-then rises.
+:::
 :::
 :::
 
-::: {.slide title="The Sweep Traces the U-Curve of Generalization"}
-[Model selection · reading]{.kicker}
+::: {.slide title="Paired Fold-by-Fold Comparison vs. Linear Baseline"}
+[Statistical Verification]{.kicker}
 
-- **0.001, hardly any decay:** fits training folds better than the linear
-  model (0.09 vs 0.11), validates worse (about 0.16 vs about 0.15): it fits
-  noise.
-- **0.03:** about 0.135, a typical error of about 14% of the price.
-- **0.3:** about 0.17; it fits even the training folds worse than the
-  linear model: it underfits.
-
-::: {.d2l-note}
-On the same folds, the selected MLP is ahead of the linear model by about a
-hundredth on average.
-:::
-:::
-
-::: {.slide title="Fold by Fold, the MLP's Advantage Holds Up, and It Is Small"}
-[Model selection · paired comparison]{.kicker}
-
-The folds are shared, so the two models can be compared on each fold:
-validation RMSE of the best MLP minus that of the linear model.
+Because both models were evaluated on the exact same $5$ folds, we can inspect the paired difference $\textrm{RMSE}_{\textrm{MLP}} - \textrm{RMSE}_{\textrm{linear}}$ on each fold:
 
 @!kaggle-house-price-mlp-paired
 
-- Ahead on most folds, by up to about four hundredths; on the others the
-  two models are within half a hundredth.
-- Shared folds cancel much of the variation between splits: the difference
-  is measured more precisely than either error.
-
-::: {.d2l-note}
-For all its 22,000 parameters, the MLP finds little in this table that a
-weighted sum had missed.
-:::
+- **Variance reduction via pairing:** Even though fold-to-fold validation RMSE varies by $\pm 0.04$ across splits (depending on which fold holds out unusual luxury sales), the paired difference is negative (or tied within $0.005$) on every fold!
+- **Tabular reality check:** While our regularized 64-unit MLP beats linear regression by $\sim 0.01$–$0.015$ log-RMSE, on heterogeneous tabular data gradient-boosted decision trees (XGBoost / LightGBM) remain fierce competitors (Exercise 4.7.3).
 :::
 
-::: {.slide title="Check: Is the Lowest RMSE an Unbiased Estimate of the Score?"}
-[Check]{.kicker}
+::: {.slide title="Retraining on All 1,460 Houses & Writing submission.csv"}
+[Final Submission Pipeline]{.kicker}
 
-We picked the weight decay with the lowest of six cross-validated RMSEs,
-computed on the same folds. Is the selected RMSE an unbiased estimate of the
-score on the test houses?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** No. The minimum of six noisy estimates is biased downward, and
-the selection used the folds that measure the error. With six candidates
-the bias is small; with hundreds it is not.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
-
-[Submission]{.dtitle}
-
-[retrain, predict, upload]{.dsub}
-:::
-:::
-
-::: {.slide title="Retrain on All 1,460 Houses, Then Predict"}
-[Submission · code]{.kicker}
-
-The selected MLP is trained once more, with the same hyperparameters, on all
-houses. The first lines of `submission.csv`:
+Once 5-fold cross-validation selects the best weight decay `best`, we fit a fresh `KaggleHouse(raw_train, raw_test)` preprocessor and retrain `HouseMLP` on **all $1{,}460$ labeled houses** for $100$ epochs:
 
 @!kaggle-house-price-submitting-predictions-on-kaggle
 
-- The test table takes the place of the validation rows, so preprocessing and
-  mean log price are fitted on all 1,460 houses.
-- The model predicts centered log prices: add the mean back, exponentiate.
+- **Un-centering and exponentiating:** Adding `data.offset` back to the predicted centered log prices and applying `np.exp(...)` converts log predictions back into dollars for `submission.csv`.
 :::
 
-::: {.slide title="Upload the File; the Score Should Be Near the Cross-Validated RMSE"}
-[Submission · Kaggle]{.kicker}
+::: {.slide title="Concept Check: Leakage, Log-RMSE, and Selection Bias"}
+[Check]{.kicker}
 
-- Competition page → "Submit Prediction" → upload `submission.csv`.
-- The cross-validated RMSE estimates the score; the retrained model and the
-  selection make it an estimate, not a guarantee.
-- Alternative: average the log-price predictions of the five fold models.
+Test your mastery of end-to-end tabular modeling:
 
-::: {.d2l-note}
-On tables like this, gradient-boosted trees often beat neural networks;
-the pipeline stays the same.
-:::
-:::
+1. **Relative nature of log-RMSE:** Home A sells for $\$100{,}000$ and is predicted at $\$125{,}000$; Home B sells for $\$400{,}000$ and is predicted at $\$500{,}000$. Compare their dollar squared errors and their log-price squared errors.
+2. **Subtle data leakage bug:** Suppose someone runs `preprocess(raw_train)` once on all $1{,}460$ rows *before* splitting into $5$ cross-validation folds. What two statistics leak from the validation fold into training?
+3. **Winner's curse in model selection:** When we pick the lowest validation RMSE among $M$ hyperparameter candidates on our 5 folds, is that winning score an unbiased estimate of test-set RMSE?
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
 
-::: {.cols}
-::: {.col}
-- **Preprocess:** standardize, impute 0, one-hot with a missing column;
-  fit on the training rows only.
-- **Loss:** squared error of centered log prices = square of the
-  competition's RMSE.
-- **Estimate:** 5-fold cross-validation on shared folds.
-:::
-
-::: {.col}
-- **Linear:** validation RMSE about 0.15.
-- **MLP, 64 units:** about 0.16 with weight decay 0.001, about 0.135 with
-  0.03; ahead of the linear model on most folds, by little.
-- **Submit:** retrain the selected model on all houses.
+1. **Equal log error:** Dollar squared errors differ $16\times$ ($\$25\textrm{k}^2$ vs. $\$100\textrm{k}^2$), but both have ratio $\hat{y}/y = 1.25$, giving the exact same log squared error $(\log 1.25)^2 \approx 0.223^2 \approx 0.050$.
+2. **Leaked statistics:** The validation fold's feature means/standard deviations ($\hat{\mu}_j, \hat{s}_j$ used for scaling and mean imputation) and category vocabulary leak into every training fold.
+3. **Downward selection bias:** No—$\mathbb{E}[\min_{m=1\dots M} \hat{R}_m] \le \min_m \mathbb{E}[\hat{R}_m]$. With $M = 6$ candidates on $5$ folds the optimistic bias is tiny, but across hundreds of hyperparameter trials a separate held-out test split is required.
 :::
 :::
 
-**Next:** Computation: modules, parameters, and devices, the software
-structure behind the models so far.
+::: {.slide title="Summary: End-to-End Tabular Pipeline on Kaggle"}
+[Key Takeaways]{.kicker}
+
+| Pipeline Stage | Implementation Choice | Mathematical / Statistical Rationale | Pitfall Prevented |
+|:--|:--|:--|:--|
+| **Metric & Target** | Predict $z_i = \log y_i - \bar{z}_{\textrm{train}}$ under MSE | $\sqrt{\textrm{MSE}(\log y, \log \hat{y})} = \textrm{log-RMSE}$ ($\approx \%$ error) | Dollar MSE over-weights mansions; uncentered $\log y \approx 12$ slows epoch 1 |
+| **Type Hygiene** | Drop `Id`; cast `MSSubClass` to `str` | Row IDs are arbitrary; numeric codes are nominal categories | Prevents memorizing row order or treating duplex code $90 = 4.5 \times 20$ |
+| **Numeric Scaling** | $x_{ij} \leftarrow (x_{ij} - \hat{\mu}_{\textrm{train}}) / \hat{s}_{\textrm{train}}$, then `fillna(0)` | Equalizes feature scales for SGD & $\ell_2$ penalty; $0 =$ train mean | Computing $\hat{\mu}, \hat{s}$ on full table leaks validation/test distribution |
+| **Categoricals** | `get_dummies(dummy_na=True)` + `reindex` | Binary indicator per category + explicit `_nan` column ($345$ cols) | Preserves informative missingness (e.g., `PoolQC = NaN` means no pool) |
+| **Model Selection** | 5-fold CV on shared folds (`k_fold`) | Averages $5$ validation splits ($292$ homes each); paired differences | Single $292$-home split has $\pm 0.015$ noise; unregularized MLP overfits ($0.16$) |
+| **Submission** | Retrain with `wd = best` on all $1{,}460$ homes | $\hat{y} = \exp(\hat{z} + \bar{z}_{\textrm{train}})$ restores dollar scale | Training error of retrained model is not a valid generalization estimate |
 :::
+

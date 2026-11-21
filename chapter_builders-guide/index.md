@@ -86,71 +86,72 @@ section it goes with. All are freely accessible online except where noted.
 ::: {.cover}
 [Dive into Deep Learning · §5]{.kicker}
 
-What happens to a model between its definition and a trained result<br>
-**modules · state · initialization · custom layers · number formats · checkpoints · devices · reproducibility**
+Deep Learning Computation: From Prototype Code to Production Systems<br>**module trees · parameter state · initialization · custom layers · numerics · checkpoints · GPUs · reproducibility**
 :::
 :::
 
-::: {.slide title="An 8-Billion-Parameter Model Has to Fit, Train, Survive, and Be Shared"}
-[The problem]{.kicker}
+::: {.slide title="Scaling From a 4-Array MLP to an 8B Foundation Model"}
+[The Systems Challenge]{.kicker}
 
-- **Fit:** 16 GB of bf16 weights, but about 128 GB of state to train
-  with Adam in fp32.
-- **Train:** a bad initial scale stops a deep network from learning; weights
-  stored in 16 bits lose their small updates without any error.
-- **Survive:** long runs are interrupted; resuming needs the weights, the
-  optimizer state, and the state of the random-number generators.
-- **Share:** a file someone else wrote can run code when it is loaded.
+Moving from a textbook prototype to an 8-billion-parameter language model exposes four engineering bottlenecks that exist around every neural architecture:
 
-::: {.d2l-note}
-None of this is a new model. It is the software around every model, and
-this chapter opens it up.
+- **Memory capacity (`128 GB` floor):** Storing 8B weights takes `16 GB` in `bfloat16`, yet training with Adam in `float32` requires `128 GB` of parameters, gradients, and optimizer moments before computing a single activation.
+- **Numerical stability & precision:** Unscaled residual branches blow up activation variance by $2^{32}$ across 32 blocks, while storing weights directly in 16-bit formats silently rounds away small gradient updates.
+- **Fault tolerance & security:** Multi-GPU pre-training suffers hardware interruptions every few hours; checkpoints must resume bit for bit without executing untrusted `pickle` bytecode on load.
+- **Hardware execution & debugging:** Asynchronous GPU command queues distort naive wall-clock timers, parallel atomic reductions break bitwise determinism, and silent `NaN`s require non-invasive layer hooks.
+:::
+
+::: {.slide title="The Unifying Abstraction: A Model Is a Tree of Modules"}
+[Core Mental Model]{.kicker}
+
+Every deep learning framework represents a network as a recursive **module tree** whose internal nodes are containers or blocks and whose leaves hold persistent tensor **state**:
+
+- **Structured path addressing:** Every parameter and non-trainable buffer is uniquely addressed by its dotted path from the root module (e.g., `1.body.0.weight`), matching Python attribute traversal.
+- **Unified tree traversals:** Optimizer construction, weight initialization, `safetensors` serialization, dtype casting, GPU placement, and diagnostic hooks all execute as recursive walks over registered children.
+- **The silent registration invariant:** Any layer or tensor stored in a plain Python attribute or list outside the module registry still runs during the forward pass, but is silently invisible to optimizers, checkpoints, and device transfers.
+
+::: {.d2l-note .rule}
+**One Data Structure, Eight Operations:** Master how a module registers its children, parameters, and buffers, and every framework subsystem in this chapter follows the exact same traversal pattern.
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="Chapter 5 Roadmap: Architecture, State, and Execution"}
+[Architectural & Systems Roadmap]{.kicker}
 
-- build models from modules and configs, and find any parameter by its name;
-- count a model's parameters and the bytes that training it needs;
-- initialize deep and residual networks so that they train;
-- write a layer or a gradient that the library lacks;
-- train in mixed precision, and explain loss scaling;
-- save a training run and resume it bit for bit, and load pretrained
-  weights safely;
-- place work on devices, time it correctly, and trade compute for memory;
-- make runs repeatable, measure how much they differ, and look inside a
-  running model.
+The eight sections progress from assembling and initializing the module tree to controlling numerical formats, persistent storage, hardware placement, and runtime diagnostics:
 
-**Running example:** will an 8B-parameter model fit, train, and resume?
+| Section | Core Systems Question | Key Mechanism & Mathematical Rule |
+|:---|:---|:---|
+| **§5.1 Modules & Construction** | How are 291 weight arrays organized? | Module trees, `__setattr__` registration, residual blocks $\mathbf{x} + f(\mathbf{x})$, dataclass configs |
+| **§5.2 Parameters & Memory** | What state exists and what does training cost? | Trainable parameters vs. fixed buffers, $16\text{ B/param}$ fp32 Adam floor, weight tying |
+| **§5.3 Initialization** | Why do deep residual networks explode at step 0? | Tree-wide initializers, truncated normals, residual variance $(1+g^2)^N$ and $1/\sqrt{N}$ scaling |
+| **§5.4 Custom Layers** | How do we add new layers or non-differentiable ops? | Stateless layers, `RMSNorm`, fixed-buffer `RandomFeatures`, Straight-Through Estimator |
+| **§5.5 Numerical Formats** | How do we compute in 16 bits without losing updates? | `fp32` vs. `bf16` vs. `fp16` exponent/mantissa split, `fp32` master weights, dynamic loss scaling |
+| **§5.6 Saving & Checkpoints** | How do we share weights safely and resume crashes? | `pickle` RCE hazards vs. zero-copy `safetensors`, 5-part atomic checkpoints, key auditing |
+| **§5.7 GPUs & Memory Budgets** | What fills GPU HBM and how do we time async kernels? | Explicit device transfers, command-queue sync, caching allocator, $O(\sqrt{K})$ activation checkpointing |
+| **§5.8 Reproducibility & Hooks** | When do runs agree and how do we inspect live layers? | PRNG seeds/keys, non-associative GPU atomics, forward/backward hooks and `NaN` traps |
 :::
 
-::: {.slide title="Map of the Chapter"}
-[Chapter map]{.kicker}
+::: {.slide title="Concrete Running Benchmarks Across the Chapter"}
+[Quantitative Anchors]{.kicker}
 
-| section | question | adds |
-|---|---|---|
-| Modules and Model Construction | what is a module, and how is a model assembled? | a model is a tree of modules, built from a config |
-| Parameters, State, and Memory | what state does a model hold, and what does training cost? | parameters, buffers, bytes per parameter |
-| Initialization | how is the state set before training? | library defaults, custom initializers, residual depth |
-| Custom Layers and Functions | what if the library lacks a layer? | new layers, state, and custom gradients |
-| Numerical Formats | which formats can a model compute in? | dtypes, mixed precision, loss scaling |
-| Saving, Loading, and Pretrained Weights | how do we save, resume, and share? | safe files, checkpoints, pretrained weights |
-| GPUs, Devices, and Memory | where does the computation run, and what fills memory? | placement, asynchrony, training memory |
-| Reproducibility and Inspection | when do two runs agree, and how do we look inside? | seeds, determinism, hooks |
+Throughout all eight sections, we pair compact runnable models with exact back-of-the-envelope calculations for an **8-billion-parameter transformer** (32 blocks, hidden width $d = 4096$, vocabulary $|V| = 128{,}256$):
+
+| Systems Dimension | Toy / Notebook Verification | Production 8B-Parameter Scale |
+|:---|:---|:---|
+| **Parameter Inventory (§5.1–5.2)** | 4-block Residual MLP ($784 \to 256 \to 10$): **729,866** params | 32 blocks $\times$ 9 arrays $+$ 3 global arrays $=$ **291 tensors** |
+| **Static Memory Floor (§5.2, §5.5)** | 2-block Residual MLP (18,634 params): **0.28 MiB** in fp32 Adam | `16 GB` bf16 inference; **128 GB** fp32 Adam training state |
+| **Residual Signal Scale (§5.3, §5.8)** | 32 blocks with unscaled $g=1$: activation std balloons by **$2^{16} = 65{,}536\times$** | Output projection gain $g = 1/\sqrt{N}$ caps growth at **$\sqrt{e} \approx 1.65\times$** |
+| **Checkpoint Footprint (§5.6)** | 200-step regressor checkpoint resumes step 201–205 **bit for bit** | Weights (`32 GB`) $+$ Adam $\mathbf{m}, \mathbf{v}$ (`64 GB`) $=$ **96 GB** per checkpoint |
+| **Activation Memory (§5.7)** | 16 blocks ($B=8192, d=1024$): checkpointing cuts **1.1 GiB $\to$ 0.45 GiB** | Segment size $s = \sqrt{K}$ reduces stored activations from $O(K)$ to **$O(\sqrt{K})$** |
 :::
 
-::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
-[Running examples]{.kicker}
+::: {.slide title="How to Navigate This Chapter"}
+[Study & Engineering Guide]{.kicker}
 
-| section | running example |
-|---|---|
-| Modules and Model Construction | the MLP of the last chapter has 4 parameter arrays; an 8B model has 291 |
-| Parameters, State, and Memory | 8B parameters: 32 GB in fp32, about 128 GB to train with Adam |
-| Initialization | 32 residual blocks grow the activations' scale by about $2^{16}$; a scaled last layer in each body keeps it below $\sqrt{e}$ |
-| Custom Layers and Functions | RMSNorm maps (3, 4) and (300, 400) to the same (0.849, 1.131) |
-| Numerical Formats | $300^2$ overflows in fp16 but not in bf16; bf16 weights fall behind, fp32 master weights do not |
-| Saving, Loading, and Pretrained Weights | a 96 GB checkpoint for 32 GB of fp32 weights; a run resumed bit for bit |
-| GPUs, Devices, and Memory | activation checkpointing cuts a step from about 1.1 GiB to 0.4–0.5 GiB for about a quarter more time |
-| Reproducibility and Inspection | five seeds end one to four points apart; activations grow from about 0.7 to 3–4 over eight blocks |
+Each section combines runnable multi-framework code with systems diagnostics that prevent silent training failures:
+
+- **Core path for all readers:** Read **§5.1–§5.3** to master module registration, parameter/buffer accounting, and residual variance scaling, then **§5.5–§5.7** for mixed precision, safe checkpointing, and GPU memory management.
+- **Framework-specific idioms:** Pay close attention to how imperative frameworks (PyTorch, MXNet) differ from traced functional or deferred-build frameworks (JAX/Flax NNX, TensorFlow/Keras) on list containers, lazy shapes, PRNG state, and graph compilation.
+- **Diagnostic habits to adopt immediately:** Count parameter and activation bytes before launching a job, verify initial activation standard deviations with a single forward pass, and audit missing/unexpected keys whenever loading external weights.
 :::

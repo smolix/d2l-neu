@@ -1096,109 +1096,43 @@ roughly two percentage points.
 ::: {.cover}
 [Dive into Deep Learning · §7.2]{.kicker}
 
-Blocks, Bottlenecks, and Branches<br>**VGG blocks · 1×1 convolutions · global average pooling · Inception**
+Blocks, Bottlenecks, and Branches: VGG, NiN, GoogLeNet<br>**repeatable $3\times 3$ blocks · $1\times 1$ channel mixing · global average pooling · multi-branch Inception**
 :::
 :::
 
-::: {.slide title="AlexNet Sets Each Layer by Hand and Keeps 92% of Its Weights in the Head"}
-[The problem]{.kicker}
+::: {.slide title="Two Structural Flaws in AlexNet's Layer-by-Layer Design"}
+[Motivation & Design Bottlenecks]{.kicker}
 
-- Eight layers, each kernel size and width chosen individually: no rule
-  for building a network of twenty layers.
-- The fully connected head holds 43 M of AlexNet's 47 M parameters and
-  does 5% of its arithmetic.
-- The head needs dropout to keep from memorizing the training set.
+Scaling convnets from 8 layers to 20+ layers between 2013 and 2014 required solving two structural bottlenecks in AlexNet:
 
-::: {.d2l-note .warn}
-How should a deeper network be designed, and does it need the head at all?
-:::
+- **Ad-hoc layer lists do not scale:** Choosing kernel sizes ($11\times 11$, $5\times 5$, $3\times 3$), strides, and pooling locations one layer at a time offers no systematic recipe for deeper networks.
+- **The 43M-parameter dense head:** AlexNet places 92% of its parameters in two 4096-unit dense layers that contribute only 5% of its multiply-adds and require heavy dropout to prevent memorization.
+- **Three landmark solutions:** **VGG** introduced repeatable *blocks* of stacked $3\times 3$ convolutions; **NiN** introduced $1\times 1$ channel-mixing convolutions and parameter-free *global average pooling*; **GoogLeNet** combined parallel multi-scale branches with $1\times 1$ *bottlenecks* inside a stem–body–head layout.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Why Stack Narrow 3×3 Convolutions Over Large Kernels?"}
+[VGG: Receptive Field per FLOP]{.kicker}
 
-- build a network from one repeated block and a list of block sizes;
-- compare stacked 3×3 kernels with one large kernel;
-- replace the dense head by 1×1 convolutions and global average pooling;
-- cost an Inception block with and without its 1×1 reductions;
-- compare four networks trained on one schedule, each at its own peak rate.
+If every convolution were followed by stride-2 pooling, a $224\times 224$ image would collapse to $1\times 1$ after $\lfloor\log_2 224\rfloor = 7$ layers ($224$ $\to$ $112$ $\to$ $56$ $\to$ $28$ $\to$ $14$ $\to$ $7$ $\to$ $3$ $\to$ $1$). Going deeper requires stacking stride-1 padded convolutions at each spatial resolution:
 
-**Running example:** the Fashion-MNIST scoreboard. AlexNet: 46.8 M
-parameters, 938 M multiply-adds, ≈ 91%.
+- **Receptive field equivalence:** Two stacked $3\times 3$ layers span a $5\times 5$ window ($1 + 2\cdot(3-1) = 5$); three stacked $3\times 3$ layers span a $7\times 7$ window ($1 + 3\cdot(3-1) = 7$).
+- **Parameter and FLOP savings (at constant width $c$):**
+  $$\text{Two } 3\times 3:\ 2 \cdot 9c^2 = 18c^2 \text{ vs. } 25c^2 \text{ (28\% fewer)} \qquad \text{Three } 3\times 3:\ 3 \cdot 9c^2 = 27c^2 \text{ vs. } 49c^2 \text{ (45\% fewer)}$$
+- **Richer nonlinearity:** Three stacked $3\times 3$ layers insert **three ReLU activations** instead of one, increasing expressive power per weight.
 :::
 
-::: {.slide title="Three Networks of 2013–2014 Organized the Convnet"}
-[Where this fits]{.kicker}
+::: {.slide title="Implementing a Reusable VGG Block" except="tensorflow"}
+[VGG: Modular Block Code]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| AlexNet | learned features, ReLU, dropout, GPUs |
-| **VGG, NiN, GoogLeNet** | **blocks, 1 × 1 convolutions, global pooling** |
-| Normalization Layers | batch, layer, group normalization |
-| ResNet, ResNeXt, DenseNet | residual connections make depth trainable |
-| Efficient Convnets | separable blocks, scaling, re-parameterization |
-| Training Recipes | schedules, augmentation, weight averaging |
-| ConvNeXt | a ResNet modernized one change at a time |
-| Design Spaces (RegNet) | rules from populations of networks |
-:::
-
-::: {.col .narrow}
-- **Uses:** AlexNet and its parameter count; 1×1 convolutions;
-  `Classifier`, `Trainer`.
-- **Skips:** ImageNet training; VGG's staged training and GoogLeNet's
-  auxiliary classifiers.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[VGG]{.dtitle}
-
-[one block, repeated]{.dsub}
-:::
-:::
-
-::: {.slide title="Pooling After Every Convolution Would Stop a 224-Pixel Network at Seven Layers"}
-[VGG]{.kicker}
-
-- Stride-2 pooling halves the side: 224 → 112 → 56 → 28 → 14 → 7 → 3 → 1.
-- At most $\lfloor \log_2 d \rfloor$ such stages for an input of width $d$.
-- To go deeper, place **several stride-1 convolutions at each resolution**,
-  padded to keep the size.
-:::
-
-::: {.slide title="Two 3×3 Convolutions See 5×5 With 18c² Weights Instead of 25c²"}
-[Check]{.kicker}
-
-$c$ input and $c$ output channels, stride 1. Two 3×3 layers see a 5×5
-window with $2 \cdot 9c^2 = 18c^2$ weights; one 5×5 layer needs $25c^2$.
-
-What window do **three** 3×3 layers see, and how many weights do they need
-against one layer of that size?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** 7×7, with $27c^2$ weights against $49c^2$, and three
-nonlinearities instead of one.
-:::
-:::
-:::
-
-::: {.slide title="A VGG Block Is a Few 3×3 Convolutions and One Pooling" except="tensorflow"}
-[VGG]{.kicker}
+A VGG block repeats `num_convs` padded $3\times 3$ convolutions ($p=1$, preserving height and width) followed by $2\times 2$ stride-2 max-pooling that halves spatial dimensions:
 
 @vgg-vgg-blocks
-
-`num_convs` convolutions keep the size; the pooling halves it.
 :::
 
-::: {.slide title="A VGG Block Is a Few 3×3 Convolutions and One Pooling" only="tensorflow"}
-[VGG]{.kicker}
+::: {.slide title="Implementing a Reusable VGG Block" only="tensorflow"}
+[VGG: Modular Block Code]{.kicker}
+
+A VGG block repeats `num_convs` padded $3\times 3$ convolutions (`padding='same'`, preserving height and width) followed by $2\times 2$ stride-2 max-pooling that halves spatial dimensions:
 
 ```{.python #blocks-exercises}
 def vgg_block(num_convs, num_channels):
@@ -1209,214 +1143,231 @@ def vgg_block(num_convs, num_channels):
     blk.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
     return blk
 ```
-
-Excerpt without the `kernel_initializer` argument. `num_convs`
-convolutions keep the size; the pooling halves it.
 :::
 
-::: {.slide title="A VGG Network Is a List of Block Sizes"}
-[VGG]{.kicker}
+::: {.slide title="Network Topology as Data: The VGG Family"}
+[VGG: Parameterized Architecture]{.kicker}
 
-`arch` lists (convolutions, channels) per block. VGG-11:
-`((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))`
+Because every VGG block is defined by a `(num_convs, out_channels)` tuple, an entire architecture family is specified by passing an `arch` list to one class:
 
-| block | convolutions | channels | output |
-|---|--:|--:|---|
-| 1 | 1 | 64 | 64@112×112 |
-| 2 | 1 | 128 | 128@56×56 |
-| 3 | 2 | 256 | 256@28×28 |
-| 4 | 2 | 512 | 512@14×14 |
-| 5 | 2 | 512 | 512@7×7 |
-
-Then AlexNet's head: 4096, 4096, 10. VGG-16 only changes `arch`:
-`((2, 64), (2, 128), (3, 256), (3, 512), (3, 512))`.
+::: {.cols .vc}
+::: {.col}
+- **VGG-11 specification:** `arch = ((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))` (8 convs + 3 dense layers = 11 layers).
+- **Resolution & width invariant:** Five stride-2 pools halve $224$ $\to$ $112$ $\to$ $56$ $\to$ $28$ $\to$ $14$ $\to$ $7$ while channels double $64$ $\to$ $128$ $\to$ $256$ $\to$ $512$, keeping per-layer compute $h w c^2$ roughly constant across stages.
+- **VGG-16 and VGG-19:** Simply change `arch` to `(2, 2, 3, 3, 3)` or `(2, 2, 4, 4, 4)` blocks without altering class code.
 :::
 
-::: {.slide title="VGG-11 Does 8× AlexNet's Convolutional Arithmetic; Its Head Holds 93% of the Weights"}
-[VGG]{.kicker}
-
-| VGG-11, one 224×224 image | parameters | multiply-adds |
-|---|--:|--:|
-| 8 convolutions | 9.2 M | 7.43 G (98%) |
-| head, 25,088 → 4096 → 4096 → 10 | **119.6 M** (93%) | 0.12 G |
-| total | 128.8 M | 7.5 G |
-
-The first dense layer alone: $25{,}088 \cdot 4096 = 103$ M weights.
-:::
-
-::: {.slide title="Check: Where Does a Quarter-Width VGG Keep Its Weights?"}
-[Check]{.kicker}
-
-Channels 16, 32, 64, 128, 128 instead of 64 … 512. The last block emits
-128@7×7. How many weights in the first dense layer (to 4096 units)?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $128 \cdot 7 \cdot 7 \cdot 4096 \approx 25.7$ M. The whole head
-holds 42.5 M of 43.1 M parameters: **99%**. The convolutions shrank to
-0.6 M; the head did not.
+::: {.col .fig}
+![](../img/arch-vgg.svg){.nostretch width=56%}
 :::
 :::
 :::
 
-::: {.slide title="The Quarter-Width VGG Reaches About 93% at Half of AlexNet's Arithmetic"}
-[VGG]{.kicker}
+::: {.slide title="VGG-11 Shapes and the 103M-Parameter Dense Bottleneck"}
+[VGG: Resource Ledger]{.kicker}
 
+Inspecting VGG-11 on a $224\times 224$ input shows that modularizing the convolutional trunk left the classifier head even more bloated than AlexNet's:
+
+::: {.cols}
+::: {.col}
+- **Convolutional trunk:** 8 layers hold $9.2\text{M}$ parameters (7%) and execute $7.43\text{G}$ multiply-adds (98% of compute—$8\times$ AlexNet).
+- **Flattened dense head:** The final $512 \times 7 \times 7$ map flattens to $25{,}088$ features, making the first dense matrix $25{,}088 \times 4096 = 102.8\text{M}$ weights ($119.6\text{M}$ across all three dense layers, or **93% of VGG-11's 128.8M parameters**).
+:::
+
+::: {.col .fig}
+@!vgg-vgg-network-2
+:::
+:::
+:::
+
+::: {.slide title="Training Quarter-Width VGG-11 on Fashion-MNIST"}
+[VGG: Experimental Evidence]{.kicker}
+
+Halving channel widths fourfold to `(16, 32, 64, 128, 128)` cuts compute to $512\text{M}$ multiply-adds (half of AlexNet) and trains cleanly at peak learning rate $\eta_0 = 0.1$:
+
+::: {.cols .vc}
+::: {.col}
+- **Accuracy vs. compute:** Quarter-width VGG reaches **$\approx 93\%$** validation accuracy in 10 epochs—2 points ahead of AlexNet at half the arithmetic (and $\approx 92\%$ at AlexNet's $\eta_0 = 0.03$).
+- **The head problem persists:** Shrinking the trunk cuts convolutional weights to $0.6\text{M}$, yet the dense head ($6272$ $\to$ $4096$ $\to$ $4096$ $\to$ $10$) still holds **$42.5\text{M}$ of the $43.1\text{M}$ parameters (99%)**.
+:::
+
+::: {.col .fig}
 @!vgg-training
-
-- Same procedure as AlexNet: 224×224, 10 epochs of SGD, warmup over the
-  first epoch, cosine decay to 0.
-- Peak 0.1 instead of 0.03: VGG trains reliably there and gains about 1.5
-  points. Networks that diverge or stall at 0.1 in some runs stay at 0.03.
 :::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[NiN]{.dtitle}
-
-[1×1 convolutions and no dense head]{.dsub}
 :::
 :::
 
-::: {.slide title="A 1×1 Convolution Is a Dense Layer Applied at Every Pixel"}
-[NiN]{.kicker}
+::: {.slide title="NiN: Per-Pixel Channel Mixing with 1×1 Convolutions"}
+[Network in Network (NiN)]{.kicker}
+
+A standard convolution applies a single linear filter plus ReLU to each local patch. *Network in Network* (NiN) enriches local representation by placing a miniature per-pixel MLP after every spatial filter:
+
+- **$1\times 1$ convolution as a shared per-pixel linear layer:** A $1\times 1$ convolution mapping $c_{\textrm{i}} \to c_{\textrm{o}}$ applies the exact same dense matrix $\mathbf{W} \in \mathbb{R}^{c_{\textrm{o}} \times c_{\textrm{i}}}$ independently to the channel vector at every spatial coordinate $(x, y)$.
+- **The NiN block:** Stacks one $k\times k$ spatial convolution followed by two $1\times 1$ convolutions (each with ReLU), computing a two-layer nonlinear MLP over every local receptive field:
 
 @nin-nin-blocks
-
-Two 1×1 convolutions after each convolution: a one-hidden-layer MLP
-over the channels at every position, hence *network in network*.
 :::
 
-::: {.slide title="Global Average Pooling Turns Ten Channels Into Ten Scores With No Parameters"}
-[NiN]{.kicker}
+::: {.slide title="Global Average Pooling Eliminates the 43M-Parameter Head"}
+[NiN: Parameter-Free Classification Head]{.kicker}
 
-![VGG's head (left) and NiN's end (right): the last block emits one channel per class, and each channel is averaged over all positions.](../img/arch-nin.svg){width=80%}
+Instead of flattening feature maps into massive dense layers, NiN projects the final block directly to $K$ class channels and averages each channel spatially:
 
-The average does not change when a shift permutes the positions.
+::: {.cols .vc}
+::: {.col}
+- **Zero-parameter spatial aggregation:** The final NiN block emits one $h \times w$ feature map per class ($K=10$), and *global average pooling* computes the mean of each $5\times 5$ map to yield the $10$ class logits:
+  $$z_k = \frac{1}{h w} \sum_{x=1}^h \sum_{y=1}^w X_{k, x, y}$$
+- **Built-in translation invariance:** Averaging over all $(x,y)$ coordinates makes class scores invariant to where an object appears.
+- **14× parameter reduction:** Total parameters drop from AlexNet's $46.8\text{M}$ to **$3.4\text{M}$** ($798\text{M}$ MACs).
 :::
 
-::: {.slide title="NiN Has 3.4 M Parameters, 7% of AlexNet's"}
-[NiN]{.kicker}
-
-- AlexNet's first layers as NiN blocks: 11×11, 5×5, 3×3 with 96, 256,
-  384 channels, each followed by max-pooling.
-- Shapes: 224 → 54 → 26 → 12 → 5, then a last block of 384 channels whose
-  final 1×1 convolution emits **10 channels**, and global average pooling.
-- The last 1×1 convolution has **no ReLU**: it outputs the class scores.
-  A ReLU there can switch a class off for good (logit 0, zero gradient).
-- 3.4 M parameters; 798 M multiply-adds, somewhat fewer than AlexNet's
-  938 M.
+::: {.col .fig}
+![](../img/arch-nin.svg){.nostretch width=82%}
+:::
+:::
 :::
 
-::: {.slide title="NiN Reaches About 89% With 7% of AlexNet's Parameters"}
-[NiN]{.kicker}
+::: {.slide title="Critical Pitfall: Never Put a ReLU on Final Logit Maps"}
+[NiN: Training & Implementation Pitfall]{.kicker}
 
+When `num_classes` is passed to the final `nin_block`, omitting the ReLU after the final $1\times 1$ convolution is essential for trainability:
+
+::: {.cols .vc}
+::: {.col}
+- **The dead-class failure mode:** If a ReLU followed the final $1\times 1$ layer, any class channel whose $5\times 5$ spatial entries all became negative would be clamped to $0$ everywhere, producing logit $z_k = 0$ and gradient $\partial L / \partial W = 0$ identically—permanently killing that class.
+- **Training NiN on Fashion-MNIST:** At peak learning rate $\eta_0 = 0.03$, NiN reaches $\approx 89\%$ validation accuracy (training loss $\approx 0.30$, underfitting slightly in 10 epochs without overfitting).
+:::
+
+::: {.col .fig}
 @!nin-training
-
-Same procedure and peak (0.03) as AlexNet; at 0.1 some runs diverge.
-Training loss ≈ 0.3 against AlexNet's ≈ 0.22: NiN fits more slowly and
-does not overfit.
+:::
+:::
 :::
 
-::: {.slide title="On VGG's Body, a Pooled Head Costs About Two Points"}
-[NiN]{.kicker}
+::: {.slide title="Controlled Ablation: Global Average Pooling on VGG"}
+[Head Ablation: VGG vs. PooledVGG]{.kicker}
+
+Because NiN changes both the trunk and the head, we isolate the head's contribution by replacing *only* `VGG.head` with global average pooling plus a single $128 \to 10$ linear layer (`PooledVGG`):
 
 @nin-training-2
 
 @!nin-training-3
 
-Same body, same training, both at peak 0.03; the head shrinks from
-42.5 M parameters to 1,290. Validation accuracy 89–90% against ≈ 92%
-with the dense head.
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[GoogLeNet]{.dtitle}
-
-[parallel branches and 1×1 bottlenecks]{.dsub}
-:::
-:::
-
-::: {.slide title="The Inception Block Runs Four Kernel Sizes in Parallel"}
-[GoogLeNet]{.kicker}
-
-![The Inception block; input at the bottom.](../img/arch-inception-block.svg){width=70%}
-
-Each branch keeps the size; the outputs are concatenated along channels.
-:::
-
-::: {.slide title="Check: What Does the 1×1 Reduction Save?"}
-[Check]{.kicker}
-
-First Inception block: 192 channels in at 28×28. The 5×5 branch emits 32
-channels. Weights with and without a 16-channel 1×1 reduction?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Direct: $25 \cdot 192 \cdot 32 = 153{,}600$. Reduced:
-$192 \cdot 16 + 25 \cdot 16 \cdot 32 = 15{,}872$, **a tenth**, and the
-multiply-adds fall by the same factor.
+At matched peak learning rate $\eta_0 = 0.03$, swapping the dense head for global average pooling removes **99% of VGG's parameters** ($43.1\text{M} \to 0.6\text{M}$, head shrinks from $42.5\text{M}$ to $1{,}290$ weights) at a cost of $\approx 2$ accuracy points ($92\% \to 89.5\%$) on this narrow 10-epoch trunk.
+:::
+:::
+
+::: {.slide title="GoogLeNet: Multi-Scale Parallel Branches and Bottlenecks"}
+[GoogLeNet & The Inception Block]{.kicker}
+
+Objects in natural images appear at wildly different spatial scales. Rather than committing to a single kernel size per layer, GoogLeNet's *Inception block* runs four parallel branches and concatenates their outputs along the channel axis:
+
+::: {.cols .vc}
+::: {.col}
+- **Four parallel spatial scales:**
+  1. $1\times 1$ conv ($c_1$ ch): pixelwise channel features.
+  2. $1\times 1$ reduction $\to$ $3\times 3$ conv ($c_{2,1} \to c_{2,2}$ ch).
+  3. $1\times 1$ reduction $\to$ $5\times 5$ conv ($c_{3,1} \to c_{3,2}$ ch).
+  4. $3\times 3$ stride-1 max-pool $\to$ $1\times 1$ conv ($c_4$ ch).
+- **1×1 dimensionality-reduction bottlenecks:** Squeeze input channels $c_{\textrm{i}}$ into a narrow intermediate subspace before expensive $3\times 3$ and $5\times 5$ filters.
+:::
+
+::: {.col .fig}
+![](../img/arch-inception-block.svg){.nostretch width=88%}
 :::
 :::
 :::
 
-::: {.slide title="Stem, Body, and Head: Nine Inception Blocks in Three Groups"}
-[GoogLeNet]{.kicker}
+::: {.slide title="Implementing the Four-Branch Inception Block"}
+[GoogLeNet: Block Code]{.kicker}
 
-- **Stem:** 7×7 convolution with stride 2, pooling, 1×1 and 3×3
-  convolutions to 192 channels, pooling.
-- **Body:** Inception blocks in groups of 2, 5, and 2, pooling between
-  groups; channels 192 → 480 → 832 → 1024.
-- **Head:** NiN's global average pooling, then one dense layer.
-- Branch widths: a hand-chosen tuple, stored as data like VGG's `arch`.
+Every branch uses "same" padding ($p=1$ for $3\times 3$, $p=2$ for $5\times 5$, $p=1$ for stride-1 $3\times 3$ max-pooling) so the four output tensors share identical spatial height and width before channel concatenation:
+
+@googlenet-inception-blocks
 :::
 
-::: {.slide title="GoogLeNet Matches AlexNet's 91% With an Eighth of Its Parameters"}
-[GoogLeNet]{.kicker}
+::: {.slide title="Why 1×1 Bottlenecks Cut Spatial Filter Cost Tenfold"}
+[GoogLeNet: Bottleneck Arithmetic]{.kicker}
 
+Consider the $5\times 5$ branch of GoogLeNet's first Inception block, which receives $c_{\textrm{i}} = 192$ channels at $28\times 28$ resolution and emits $c_{\textrm{o}} = 32$ channels:
+
+- **Direct $5\times 5$ convolution ($192 \to 32$):**
+  $$\text{Weights} = 5^2 \cdot 192 \cdot 32 = 153{,}600 \qquad \text{MACs} = 28^2 \cdot 153{,}600 = 120.4\text{M}$$
+- **With a 16-channel $1\times 1$ bottleneck ($192 \xrightarrow{1\times 1} 16 \xrightarrow{5\times 5} 32$):**
+  $$\text{Weights} = \underbrace{192 \cdot 16}_{3{,}072} + \underbrace{5^2 \cdot 16 \cdot 32}_{12{,}800} = 15{,}872 \qquad \text{MACs} = 28^2 \cdot 15{,}872 = 12.4\text{M}$$
+
+::: {.d2l-note .rule}
+Inserting the 16-channel $1\times 1$ bottleneck slashes both parameters and multiply-adds of the $5\times 5$ branch by **$9.7\times$**, making parallel multi-scale processing cheaper than a single unreduced convolution.
+:::
+:::
+
+::: {.slide title="The Stem–Body–Head Macro Blueprint"}
+[GoogLeNet: Macro Architecture]{.kicker}
+
+GoogLeNet established the three-part macro template inherited by ResNet, MobileNet, ConvNeXt, and RegNet:
+
+::: {.cols}
+::: {.col}
+- **Rapidly downsampling stem:** A $7\times 7$ stride-2 conv, stride-2 max-pool, $1\times 1$ conv, $3\times 3$ conv, and second stride-2 max-pool reduce spatial resolution $8\times$ while expanding to 192 channels.
+- **Three-stage Inception body:** Stacks 2, 5, and 2 Inception blocks separated by stride-2 max-pooling ($192$ $\to$ $480$ $\to$ $832$ $\to$ $1024$ channels across 22 total weight layers).
+- **Global average pooling head:** Averages the $1024$ final channels into a 1024-vector feeding one $1024 \to 10$ linear layer.
+:::
+
+::: {.col .fig}
+@!googlenet-googlenet-model-7
+:::
+:::
+:::
+
+::: {.slide title="Training GoogLeNet and Comparing All Five Architectures"}
+[Empirical Comparison]{.kicker}
+
+Trained on $96\times 96$ Fashion-MNIST at $\eta_0 = 0.03$, GoogLeNet matches AlexNet's 91% validation accuracy with $8\times$ fewer parameters ($6.0\text{M}$ vs. $46.8\text{M}$):
+
+::: {.cols .vc}
+::: {.col}
+| Model | Input | Params | MACs | Peak $\eta_0$ | Val Acc |
+|:--|:--|--:|--:|--:|--:|
+| LeNet (30 ep) | $28^2$ | 0.06M | 0.4M | 2.0 | 88–90% |
+| AlexNet | $224^2$ | 46.8M | 938M | 0.03 | 91% |
+| Quarter-VGG | $224^2$ | 43.1M | 512M | 0.1 / 0.03 | 93% / 92% |
+| PooledVGG | $224^2$ | 0.6M | 470M | 0.03 | 89–90% |
+| NiN | $224^2$ | 3.4M | 798M | 0.03 | 89% |
+| GoogLeNet | $96^2$ | 6.0M | 276M | 0.03 | 91% |
+:::
+
+::: {.col .fig}
 @!blocks-stem-body-and-head-3
-
-- Peak 0.03, as AlexNet: at 0.1 an occasional run stays at chance.
-- 276 M multiply-adds at 96×96. At 224×224 it would need about 1.5 G,
-  more than AlexNet: the saving comes from the smaller images.
+:::
+:::
 :::
 
-::: {.slide title="The Dense Head Is Worth About Two Points; VGG Is Most Accurate at Half of AlexNet's Arithmetic"}
-[Scoreboard]{.kicker}
+::: {.slide title="Concept Check: Block Design & Bottleneck Arithmetic"}
+[Concept Check]{.kicker}
 
-| network | input | parameters | multiply-adds | peak | accuracy |
-|---|---|--:|--:|--:|---|
-| LeNet (30 epochs) | 28×28 | 0.06 M | 0.4 M | 2.0 | 88–90% |
-| AlexNet | 224×224 | 46.8 M | 938 M | 0.03 | 91% |
-| VGG, quarter width | 224×224 | 43.1 M | 512 M | 0.1 | 93% |
-| VGG, quarter width | 224×224 | 43.1 M | 512 M | 0.03 | 92% |
-| VGG, pooled head | 224×224 | 0.6 M | 470 M | 0.03 | 89–90% |
-| NiN | 224×224 | 3.4 M | 798 M | 0.03 | 89% |
-| GoogLeNet | 96×96 | 6.0 M | 276 M | 0.03 | 91% |
+Test your understanding of blocks, bottlenecks, and pooling heads:
 
-Validation accuracy after 10 epochs (LeNet: 30); SGD with warmup to the
-peak and cosine decay, He initialization.
+1. **Stacked $3\times 3$ vs. $7\times 7$:** A stage operates at $c = 256$ channels. How many parameters does a stack of three $3\times 3$ convolutions require compared with a single $7\times 7$ convolution (ignoring biases), and what receptive field do both span?
+2. **Inception $3\times 3$ bottleneck:** In GoogLeNet's first Inception block ($c_{\textrm{i}} = 192$), branch 2 reduces $192 \to 96$ with a $1\times 1$ conv before a $3\times 3$ conv emitting $128$ channels. By what factor does the $1\times 1$ reduction shrink the branch's weight count compared with a direct $192 \to 128$ $3\times 3$ conv?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Both span a **$7\times 7$ receptive field**. Three $3\times 3$ layers use $3 \cdot 9 \cdot 256^2 = 1{,}769{,}472$ weights versus $49 \cdot 256^2 = 3{,}211{,}264$ for one $7\times 7$ layer—saving $1.44\text{M}$ weights ($45\%$) while adding two extra ReLU nonlinearities.
+2. Direct $3\times 3$: $9 \cdot 192 \cdot 128 = 221{,}184$ weights. With the $1\times 1$ bottleneck: $192 \cdot 96 + 9 \cdot 96 \cdot 128 = 18{,}432 + 110{,}592 = 129{,}024$ weights (a **$1.71\times$ reduction**).
+:::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Key Takeaways from VGG, NiN, and GoogLeNet"}
+[Summary]{.kicker}
 
-- **VGG:** a network is a list of blocks; stacked 3×3 kernels replace
-  large ones.
-- **NiN:** 1×1 convolutions mix channels; global average pooling
-  replaces a head that held over 90% of the weights.
-- **GoogLeNet:** parallel kernel sizes, 1×1 reductions (the 5×5 branch
-  10× cheaper), stem–body–head.
-- **Fashion-MNIST** (one schedule, each at its highest reliable peak):
-  narrow VGG 93%; GoogLeNet matches AlexNet's 91% with 8× fewer
-  parameters; NiN ends about two points lower with 14× fewer.
-- **Head:** on VGG's body, a pooled head saves 99% of the parameters and
-  loses about two points.
-
-**Next:** normalization layers, which let much deeper networks train.
+| Architecture / Primitive | Structural Mechanism | Problem Solved & Legacy |
+|:--|:--|:--|
+| **VGG Block** | `num_convs` padded $3\times 3$ convs + $2\times 2$ stride-2 max-pool | Replaces ad-hoc layer lists with modular `arch` tuples; $k$ stacked $3\times 3$ convs span $(2k+1)^2$ with fewer weights |
+| **$1\times 1$ Convolution (NiN)** | Per-pixel dense layer $\mathbf{W} \in \mathbb{R}^{c_{\textrm{o}} \times c_{\textrm{i}}}$ shared across $(x, y)$ | Mixes information across channels and adjusts channel dimensionality without spatial footprint |
+| **Global Average Pooling (NiN)** | Averages each feature map over all $h \times w$ spatial positions | Eliminates 40M+ dense classifier heads (cutting 93–99% of weights) and enforces spatial shift invariance |
+| **Inception Block (GoogLeNet)** | Parallel $1\times 1$, $3\times 3$, $5\times 5$, and pool branches with $1\times 1$ bottlenecks | Captures multi-scale features simultaneously while $1\times 1$ projections cut spatial filter cost up to $10\times$ |
+| **Stem–Body–Head Layout** | Downsampling stem $\to$ stage-wise block body $\to$ global pool + linear head | Universal macro blueprint for all modern vision backbones; next (§7.3) we stabilize their scale with normalization |
 :::
+

@@ -1253,313 +1253,259 @@ of nearly every modern architecture, including the Transformers of
 ::: {.cover}
 [Dive into Deep Learning · §7.4]{.kicker}
 
-Residual Networks<br>**the degradation problem · nested function classes · residual blocks · ResNet-18 · ResNeXt and DenseNet**
+Residual Networks: ResNet, ResNeXt, and DenseNet<br>**the degradation paradox · nested function classes · additive shortcuts · ResNet-18 · grouped convs & concatenation**
 :::
 :::
 
-::: {.slide title="A 34-Layer Plain Network Fits ImageNet Worse Than an 18-Layer One"}
-[The problem]{.kicker}
+::: {.slide title="The Degradation Paradox in Deep Plain Networks"}
+[Motivation & Optimization Puzzle]{.kicker}
 
-- Plain networks (convolution, batch norm, ReLU, as in VGG) of growing
-  depth on ImageNet: 34 layers end with **higher training error** than 18.
-- Top-1 validation error: 28.5% for 34 layers, 27.9% for 18.
-- On CIFAR-10: 56 layers train worse than 20.
-- Higher *training* error: not overfitting, but an optimizer that cannot
-  find a good setting.
+Even with batch normalization and ReLU activations stabilizing gradient scales, stacking plain VGG-style layers past ~20 layers triggers a counterintuitive failure mode (He et al., 2016):
 
-::: {.d2l-note .warn}
-The deeper network could copy the shallower one and pass its result
-through unchanged. Why doesn't training find that?
+- **Deeper plain networks fit the training set worse:** On ImageNet, a 34-layer plain convnet ends with higher training error and higher top-1 validation error (28.5% vs. 27.9%) than an 18-layer plain convnet; on CIFAR-10, 56 plain layers train worse than 20.
+- **Not overfitting—an optimization failure:** Because *training* loss degrades, extra capacity is hurting optimization rather than memorizing noise.
+- **The identity paradox:** If the 56-layer network simply copied the 20-layer network and set its remaining 36 layers to the identity map $f(\mathbf{x}) = \mathbf{x}$, its training loss would be *at most* as high. Why does SGD fail to find the identity across plain nonlinear layers?
 :::
 
-Source: He et al. (2016).
-:::
+::: {.slide title="Nested Function Classes Guarantee Monotonic Improvement"}
+[Theoretical Framing]{.kicker}
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- state when a larger model is guaranteed to fit at least as well;
-- build a residual block, with an identity or a 1×1 shortcut;
-- show the degradation of plain networks, and its removal, at 20 and 56
-  layers;
-- assemble ResNet-18 and count its 18 layers and 11.2M parameters;
-- train it on Fashion-MNIST at the larger learning rate that batch
-  normalization allows;
-- compute what grouped convolutions save (ResNeXt) and what
-  concatenation costs (DenseNet).
-
-**Running example:** ResNet-18 on Fashion-MNIST at 96×96 pixels:
-parameters and validation accuracy.
-:::
-
-::: {.slide title="Skip Connections Make Depth Trainable"}
-[Where this fits]{.kicker}
+Consider a sequence of model families $\mathcal{F}_1, \mathcal{F}_2, \ldots, \mathcal{F}_K$ trying to approximate a target mapping $f^*$:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| AlexNet | learned features, ReLU, dropout, GPUs |
-| VGG, NiN, GoogLeNet | blocks, 1 × 1 convolutions, global pooling |
-| Normalization Layers | batch, layer, group normalization |
-| **ResNet, ResNeXt, DenseNet** | **residual connections make depth trainable** |
-| Efficient Convnets | separable blocks, scaling, re-parameterization |
-| Training Recipes | schedules, augmentation, weight averaging |
-| ConvNeXt | a ResNet modernized one change at a time |
-| Design Spaces (RegNet) | rules from populations of networks |
+- **Non-nested classes ($\mathcal{F} \not\subseteq \mathcal{F}'$):** Expanding a layer without preserving existing mappings can shift the whole class away from $f^*$.
+- **Nested classes ($\mathcal{F} \subseteq \mathcal{F}'$):** Guarantees that the best achievable loss never worsens with depth:
+  $$\mathcal{F} \subseteq \mathcal{F}' \implies \min_{f \in \mathcal{F}'} L(f) \le \min_{f \in \mathcal{F}} L(f)$$
+- **The optimization gap:** A plain layer $\textrm{ReLU}(\textrm{BN}(\mathbf{W}\mathbf{x}))$ *can* represent $\mathbf{x}$ on $\mathbf{x} \ge 0$, so plain classes are nested in theory—but the identity sits at an awkward interior weight configuration that SGD fails to reach.
 :::
 
-::: {.col .narrow}
-- **Uses:** VGG's 3×3 blocks, GoogLeNet's stem and head, batch
-  normalization, `Trainer`.
-- **Skips:** ImageNet training; ResNet-50 and deeper (exercises).
+::: {.col .fig}
+![](../img/functionclasses.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
+::: {.slide title="Residual Blocks: Learning Corrections to the Identity"}
+[The Residual Block]{.kicker}
 
-[Function Classes]{.dtitle}
+Instead of forcing a stacked block to parameterize the desired mapping $f(\mathbf{x})$ directly, a residual block learns the *residual* correction $g(\mathbf{x}) = f(\mathbf{x}) - \mathbf{x}$ and adds the input back via a shortcut connection:
 
-[when more capacity cannot hurt]{.dsub}
-:::
-:::
-
-::: {.slide title="Nested Function Classes Guarantee a Best Fit at Least as Good"}
-[Function classes]{.kicker}
-
-![Left: classes not nested. Right: each class contains the previous ones; the star is the target.](../img/functionclasses.svg){width=85%}
-
-If $\mathcal{F} \subseteq \mathcal{F}'$, then
-$\min_{f\in\mathcal{F}'} L \le \min_{f\in\mathcal{F}} L$.
+::: {.cols .vc}
+::: {.col}
+- **Identity sits at the origin ($g(\mathbf{x}) = \mathbf{0}$):**
+  $$f(\mathbf{x}) = \mathbf{x} + g(\mathbf{x})$$
+- **Trivial to drive a block to identity:** Driving the block's transformation to $\mathbf{x}$ requires only pushing the weights (or final BatchNorm scale $\gamma_2, \beta_2$) of the residual branch $g$ toward zero.
+- **Preconditioning around the identity:** Even when $g(\mathbf{x}) \neq \mathbf{0}$, learning small perturbative refinements around $\mathbf{x}$ is much better conditioned than learning a full near-identity coordinate transformation from scratch.
 :::
 
-::: {.slide title="A Deeper Network Contains the Shallower One If the New Layers Can Be the Identity"}
-[Function classes]{.kicker}
-
-- Plain layer $\textrm{ReLU}(\textrm{BN}(\mathbf{W}\mathbf{x} +
-  \mathbf{b}))$: the identity needs particular weights; training does
-  not find them.
-- Residual block $\mathbf{x} + g(\mathbf{x})$: the identity is
-  $g = 0$, the simplest point of the parameter space.
-
-**Make the identity easy to reach, and extra depth no longer degrades
-training.**
+::: {.col .fig}
+![](../img/arch-residual-concept.svg){.nostretch width=82%}
 :::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Residual Blocks]{.dtitle}
-
-[learn a correction to the identity]{.dsub}
 :::
 :::
 
-::: {.slide title="A Residual Block Learns the Correction g(x) = f(x) − x"}
-[Residual blocks]{.kicker}
+::: {.slide title="The Identity Gradient Highway Across Depth"}
+[Backward Jacobian Analysis]{.kicker}
 
-![Regular block (left) learns $f(\mathbf{x})$; residual block (right) learns $g(\mathbf{x})$ and adds $\mathbf{x}$ back.](../img/arch-residual-concept.svg){width=70%}
+Additive shortcuts fundamentally reshape the backward chain rule across stacked blocks $\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + g_{\ell+1}(\mathbf{x}_\ell)$:
 
-Identity mapping $\Leftrightarrow$ $g = 0$: zero the last layer of the
-branch. The block does not start there (its last scale starts at 1); the
-identity is easy to reach, not where training begins.
+- **Single-block Jacobian:** Differentiating $\mathbf{x}_{\ell+1}$ with respect to $\mathbf{x}_\ell$ adds the identity matrix $\mathbf{I}$ directly to the branch Jacobian:
+  $$\frac{\partial \mathbf{x}_{\ell+1}}{\partial \mathbf{x}_\ell} = \mathbf{I} + \frac{\partial g_{\ell+1}(\mathbf{x}_\ell)}{\partial \mathbf{x}_\ell}$$
+- **Unimpeded multi-block gradient path:** Across $L - \ell$ pre-activation blocks, $\mathbf{x}_L = \mathbf{x}_\ell + \sum_{k=\ell+1}^L g_k(\mathbf{x}_{k-1})$, so the loss gradient decomposes into a direct, unattenuated highway plus branch terms:
+  $$\frac{\partial L}{\partial \mathbf{x}_\ell} = \frac{\partial L}{\partial \mathbf{x}_L} \left(\mathbf{I} + \frac{\partial}{\partial \mathbf{x}_\ell} \sum_{k=\ell+1}^L g_k(\mathbf{x}_{k-1})\right)$$
+
+::: {.d2l-note}
+He et al. (2016) verified that batch-normalized plain networks *already* have healthy gradient norms. Residual connections cure degradation not merely by preventing vanishing gradients, but by keeping forward and backward signals coherent with the identity reference frame.
+:::
 :::
 
-::: {.slide title="The Shortcut Adds the Identity to Every Block's Jacobian"}
-[Residual blocks]{.kicker}
+::: {.slide title="Identity vs. 1×1 Projection Shortcuts"}
+[Block Topology]{.kicker}
 
-$$\frac{\partial(\mathbf{x} + g(\mathbf{x}))}{\partial \mathbf{x}} =
-\mathbf{I} + \frac{\partial g}{\partial \mathbf{x}}$$
+ResNet's basic `Residual` block stacks two bias-free $3\times 3$ convolutions with batch normalization, adds the shortcut before the second ReLU, and uses a $1\times 1$ projection whenever dimensions change:
 
-- Residual stack: the gradient reaches every block through a chain of
-  identity terms.
-- Plain stack: the gradient reaches a layer only through all the layers
-  above it.
-- Caveat: ResNet's ReLU after the addition stays on the identity path.
-- Not a story of vanishing gradients: the plain networks of He et al. had
-  gradients of healthy size and degraded all the same.
+::: {.cols .vc}
+::: {.col}
+- **Identity shortcut (left, same shape):** When $c_{\textrm{o}} = c_{\textrm{i}}$ and stride $s = 1$, $\mathbf{x}$ is added directly with **zero extra parameters**.
+- **Projection shortcut (right, downsampling):** When $c_{\textrm{o}} \neq c_{\textrm{i}}$ or stride $s = 2$, a stride-$s$ $1\times 1$ convolution + BatchNorm projects $\mathbf{x}$ to match spatial size and channel width.
+- **Zero-branch condition:** Setting the second BatchNorm's $\gamma_2 = \beta_2 = 0$ zeroes out the residual branch in both training and eval modes, recovering $\textrm{ReLU}(\mathbf{x}) = \mathbf{x}$ for $\mathbf{x} \ge 0$.
 :::
 
-::: {.slide title="Two Variants: Identity Shortcut, or a 1×1 Convolution When the Shape Changes"}
-[Residual blocks]{.kicker}
-
-![Two 3×3 convolutions with batch norm; ReLU after the first and after the addition.](../img/arch-resnet-block.svg){width=90%}
-
-The 1×1 convolution (with batch norm) has the block's stride, so it
-matches channels and resolution. At stride 2 it reads one of every four
-positions; ResNet-D average-pools 2×2 first.
+::: {.col .fig}
+![](../img/arch-resnet-block.svg){.nostretch width=92%}
+:::
+:::
 :::
 
-::: {.slide title="Same Shape In and Out, or Twice the Channels at Half the Resolution"}
-[Residual blocks]{.kicker}
+::: {.slide title="Implementing the Residual Block"}
+[Code Implementation]{.kicker}
+
+Notice that `use_1x1conv or strides != 1` automatically enables the stride-matched $1\times 1$ projection shortcut `conv3` + `bn3`:
+
+@resnet-residual-blocks-1
+:::
+
+::: {.slide title="Verifying Shape Preservation and Stride-2 Downsampling"}
+[Block Shape Checks]{.kicker}
+
+When input and output widths match at stride 1, `Residual(3)` preserves the $(4, 3, 6, 6)$ tensor shape; passing `num_channels=6, use_1x1conv=True, strides=2` doubles channels while halving spatial height and width:
 
 @resnet-residual-blocks-2
 
 @resnet-residual-blocks-3
 :::
 
-::: {.slide title="Check: Is a Residual Block with a Zero Branch the Identity?"}
-[Check]{.kicker}
+::: {.slide title="Controlled Test: 20- vs. 56-Layer Plain and ResNets"}
+[Reproducing Degradation]{.kicker}
 
-Set the weights of `conv2` to zero. The block computes
-$\textrm{ReLU}(\textrm{BN}_2(0) + \mathbf{x})$. Is it the identity?
+To test degradation cleanly on $28\times 28$ Fashion-MNIST, we build `DeepNet` ($6n+2$ layers: a 16-ch $3\times 3$ stem, three stages of $n$ blocks at widths 16, 32, 64, and a pooled linear head) and compare `plain_block` vs. `Residual` at $n=3$ (20 layers) and $n=9$ (56 layers):
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Training mode: $\textrm{BN}_2(0) = \beta_2$, so the block is
-the identity on nonnegative inputs iff $\beta_2 = 0$. Prediction mode:
-$\textrm{BN}_2(0) = \beta_2 - \gamma_2\hat\mu_2/\sqrt{\hat\sigma_2^2 +
-\epsilon}$. $\gamma_2 = \beta_2 = 0$ gives the identity in both modes.
-:::
-:::
+::: {.cols .vc}
+::: {.col}
+- **Plain networks degrade ($56 > 20$ loss):** The 56-layer plain network (red dashed) sits strictly *above* the 20-layer plain network (blue dashed) at every epoch, ending at **$0.25\text{--}0.30$ vs. $0.20$** training loss.
+- **Residual shortcuts reverse the ordering ($56 < 20$ loss):** Adding shortcuts without a single extra trunk parameter drops the 56-layer ResNet (red solid) to **$0.15\text{--}0.17$**, beating both 20-layer models ($\approx 0.19$).
 :::
 
-::: {.slide title="Deeper Plain Networks Train Worse; Deeper Residual Networks Train Better"}
-[Plain against residual]{.kicker}
-
+::: {.col .fig}
 @!resnet-plain-and-residual-networks-compared-4
-
-- The CIFAR design of He et al. at 28×28: a 3×3 stem, three stages of $n$
-  blocks (16, 32, 64 channels), $6n + 2$ layers; 5 epochs, peak rate 0.1.
-- Training loss, plain: ≈ 0.2 at 20 layers, 0.25–0.3 at 56.
-- Training loss, residual: ≈ 0.19 at 20 layers, 0.15–0.17 at 56.
 :::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[ResNet-18]{.dtitle}
-
-[stem, four stages, pooling head]{.dsub}
 :::
 :::
 
-::: {.slide title="ResNet-18: GoogLeNet's Stem and Head Around Four Residual Stages"}
-[ResNet-18]{.kicker}
+::: {.slide title="ResNet-18 Architecture: Stem, Four Stages, Pooled Head"}
+[ResNet-18 Architecture]{.kicker}
 
-![Shapes for a 96×96 Fashion-MNIST image.](../img/arch-resnet18.svg){width=50%}
+At full scale, ResNet wraps four residual stages inside GoogLeNet's stem–body–head template:
+
+::: {.cols .vc}
+::: {.col}
+- **4× downsampling stem (1 weight layer):** A 64-channel $7\times 7$ stride-2 conv ($p=3$) + BatchNorm + ReLU + $3\times 3$ stride-2 max-pool ($p=1$) maps $96\times 96 \to 24\times 24$.
+- **Four residual stages (16 weight layers):** Each stage stacks 2 `Residual` blocks at widths $(64, 128, 256, 512)$. Stage 1 keeps $24\times 24$; stages 2–4 open with a stride-2 projection block ($24$ $\to$ $12$ $\to$ $6$ $\to$ $3$).
+- **Pooled head (1 weight layer):** Global average pooling + $512 \to 10$ linear layer ($1 + 16 + 1 = 18$ layers, **11.18M parameters**).
 :::
 
-::: {.slide title="1 + 4 × 2 × 2 + 1 = 18 Layers and 11.2 Million Parameters"}
-[ResNet-18]{.kicker}
-
-- Stem: one 7×7 convolution, stride 2, then 3×3 max-pooling, stride 2.
-- Four stages × two blocks × two 3×3 convolutions = 16.
-- Head: global average pooling and one fully connected layer.
-- Channels 64, 128, 256, 512; resolution 24, 12, 6, 3 at 96×96 input.
-
-| model | blocks per stage | parameters |
-|---|---|--:|
-| ResNet-18 (Fashion-MNIST) | 2, 2, 2, 2 | 11,175,370 |
-| ResNet-34 | 3, 4, 6, 3 | (exercise) |
+::: {.col .fig}
+![](../img/arch-resnet18.svg){.nostretch width=48%}
+:::
+:::
 :::
 
-::: {.slide title="The Stage Template: Downsample Once, Then Keep the Shape"}
-[ResNet-18]{.kicker}
+::: {.slide title="Stage Construction and Shape Trace in ResNet-18"}
+[Stage Template & Shapes]{.kicker}
 
+In `ResNet.stage`, the first block of stages 2, 3, and 4 (`not first_block`) halves height and width while doubling channels:
+
+::: {.cols}
+::: {.col}
 @resnet-resnet-model-2
 :::
 
-::: {.slide title="Batch Normalization Lets ResNet-18 Train at a Peak Rate of 0.1"}
-[ResNet-18]{.kicker}
-
-- Schedule of AlexNet and VGG: linear warmup over the first epoch, then
-  cosine decay to 0, stepped after every minibatch.
-- Peak 0.1 instead of 0.03.
-- A normalization follows every convolution: scaling up the convolution's
-  weights leaves its normalized output unchanged, and the gradient that
-  reaches those weights shrinks as they grow.
-- Without normalization, NiN diverges at a peak of 0.1 in some runs.
+::: {.col .fig}
+@!resnet-resnet-model-5
+:::
+:::
 :::
 
-::: {.slide title="ResNet-18 Reaches About 93% on Fashion-MNIST in 10 Epochs"}
-[ResNet-18]{.kicker}
+::: {.slide title="Training ResNet-18 on Fashion-MNIST"}
+[Experimental Evidence]{.kicker}
 
+Because batch normalization follows every convolution, ResNet-18 trains reliably at peak learning rate $\eta_0 = 0.1$ over 10 epochs on $96\times 96$ Fashion-MNIST:
+
+::: {.cols .vc}
+::: {.col}
+- **High accuracy at $4\times$ fewer weights than VGG:** Reaches **$\approx 93\%$** validation accuracy with $11.2\text{M}$ parameters ($319\text{M}$ multiply-adds at $96\times 96$), matching quarter-width VGG ($43.1\text{M}$ parameters at $224\times 224$).
+- **Memorization gap without modern regularization:** ResNet-18 drives training loss below $0.01$ while validation loss plateaus near $0.27$—motivating the data augmentation and regularization recipes of §7.6.
+:::
+
+::: {.col .fig}
 @!resnet-training
-
-Peak rate 0.1, minibatch 128, 96×96 pixels. The accuracy of the
-quarter-width VGG at 224×224, with a quarter of its parameters. Training
-loss below 0.01, validation loss ≈ 0.27: 11.2M parameters for 60,000
-images.
-:::
-
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
-
-[ResNeXt and DenseNet]{.dtitle}
-
-[wider at the same cost; concatenate instead of add]{.dsub}
-:::
-:::
-
-::: {.slide title="A Grouped Convolution with g Groups Has 1/g of the Weights and Multiply-Adds"}
-[ResNeXt]{.kicker}
-
-- Dense $k \times k$ convolution: $c_\textrm{i} c_\textrm{o} k^2$ weights.
-- $g$ groups of $c_\textrm{i}/g \to c_\textrm{o}/g$ channels:
-  $c_\textrm{i} c_\textrm{o} k^2 / g$.
-- 3×3, 128 → 128 channels: 147,456 weights dense; **4,608** with 32
-  groups.
-- Measured speedup is smaller than $g$: grouped kernels use the hardware
-  less efficiently.
-:::
-
-::: {.slide title="ResNeXt-50 Matches ResNet-50's Cost and Lowers Its Error from 23.9% to 22.2%"}
-[ResNeXt]{.kicker}
-
-![1×1 to $b$ channels, grouped 3×3, 1×1 back to $c$ channels.](../img/arch-resnext-block.svg){width=34%}
-
-The 1×1 convolutions mix the groups. Source: Xie et al. (2017).
-:::
-
-::: {.slide title="DenseNet Concatenates: Every Layer Sees All Earlier Features"}
-[DenseNet]{.kicker}
-
-![Growth rate 32: 64 → 96 → 128 channels.](../img/arch-densenet-block.svg){width=62%}
-
-Each layer appends its *growth rate* of channels. Between dense blocks a
-transition layer (1×1 convolution, 2×2 average pooling) reduces channels
-and resolution.
-:::
-
-::: {.slide title="Check: How Many Channels Does a Naive Dense Block Keep?"}
-[Check]{.kicker}
-
-Dense block with $c = 64$ input channels, growth rate $r = 32$, $n = 6$
-convolutions. The $i$-th convolution reads a new concatenation of
-$c + (i-1) r$ channels, all kept for the backward pass. Total?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\sum_{i=1}^{6} (64 + 32(i-1)) = 384 + 480 = 864$ channels;
-six residual blocks of width 64 keep $2 \cdot 6 \cdot 64 = 768$, a
-memory-efficient dense block $c + nr = 256$. The dense sum grows
-quadratically: at $n = 24$, 10,368 against 3,072. One reason addition won.
 :::
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="ResNeXt: Wider Bottlenecks via Grouped Convolutions"}
+[ResNeXt & Cardinality]{.kicker}
 
-- **Degradation:** deeper plain networks can train worse, not overfit.
-- **Nesting:** extra layers cannot hurt the best fit if they can be the
-  identity; a residual block makes the identity $g = 0$.
-- **Evidence:** on Fashion-MNIST, a 56-layer plain network ends with a
-  higher training loss than a 20-layer one (0.25–0.3 against 0.2); with
-  shortcuts the order reverses (0.15–0.17 against 0.19).
-- **ResNet-18:** stem, 4 stages × 2 blocks, pooling head; 11.2M
-  parameters; peak rate 0.1, which batch normalization makes safe; about
-  93% on Fashion-MNIST in 10 epochs.
-- **ResNeXt:** grouped 3×3 between 1×1s, $1/g$ of the cost.
-- **DenseNet:** concatenation reuses features, at a quadratic memory
-  cost.
+Doubling channel width quadruples dense convolution cost ($c_{\textrm{i}} c_{\textrm{o}} k^2$). *ResNeXt* (Xie et al., 2017) widens the internal bottleneck at matched cost by partitioning the $3\times 3$ convolution into $g$ independent groups (*cardinality*):
 
-**Next:** making convolutions cheap enough for phones.
+::: {.cols .vc}
+::: {.col}
+- **Grouped $3\times 3$ savings:** Splitting $b$ bottleneck channels into $g$ groups of $b/g$ channels cuts $3\times 3$ weights by a factor of $g$, from $9b^2$ to $9(b/g)^2 \cdot g = 9b^2/g$.
+- **All-to-all $1\times 1$ mixing:** Sandwiches the grouped $3\times 3$ layer between two dense $1\times 1$ convolutions ($c \to b$ and $b \to c$, costing $2cb$ weights) so groups exchange information every block.
+- **Wider at matched cost:** ResNet-50 ($c=256, b=64, g=1$) uses $2(256)(64) + 9(64^2) = 69{,}632$ weights; ResNeXt-50 ($b=128, g=32$) doubles bottleneck width to $128$ using $2(256)(128) + 9(128^2)/32 = 70{,}144$ weights (+0.7%), cutting ImageNet top-1 error from **23.9% to 22.2%**.
 :::
+
+::: {.col .fig}
+![](../img/arch-resnext-block.svg){.nostretch width=48%}
+:::
+:::
+:::
+
+::: {.slide title="Implementing the ResNeXt Block"}
+[ResNeXt Code]{.kicker}
+
+`ResNeXtBlock` generalizes `Residual` and ResNet-50's bottleneck (`groups=1, bot_mul=0.25`) into a single reusable module that powers our AnyNet/RegNet design spaces in §7.8:
+
+@resnet-resnext-1
+:::
+
+::: {.slide title="DenseNet: Concatenation vs. Quadratic Activation Memory"}
+[DenseNet & Skip Topologies]{.kicker}
+
+Instead of summing $\mathbf{x}_k = \mathbf{x}_{k-1} + g_k(\mathbf{x}_{k-1})$, *DenseNet* (Huang et al., 2017) concatenates every layer's output of *growth rate* $r$ channels onto all preceding feature maps:
+
+::: {.cols .vc}
+::: {.col}
+- **Explicit feature reuse:**
+  $$\mathbf{x}_k = [\mathbf{x}_{k-1},\; f_k(\mathbf{x}_{k-1})]$$
+  After $n$ layers on a $c$-channel input, the tensor has $c + n r$ channels, and transition layers ($1\times 1$ conv + $2\times 2$ avg-pool) compress width between dense blocks.
+- **Why additive shortcuts won in practice (Memory Pitfall):** A naive DenseNet allocates a fresh concatenated buffer of width $c + (i-1)r$ at every layer $i=1,\ldots,n$ for backprop, costing $\sum_{i=1}^n (c + (i-1)r) = nc + \frac{n(n-1)}{2}r = \Theta(n^2 r)$ activation memory (e.g., $10{,}368$ channels vs. ResNet's $3{,}072$ at $n=24, c=64, r=32$).
+:::
+
+::: {.col .fig}
+![](../img/arch-densenet-block.svg){.nostretch width=82%}
+:::
+:::
+:::
+
+::: {.slide title="Pre-Activation ResNets and U-Net Skip Connections"}
+[Variants & Extensions]{.kicker}
+
+Two architectural refinements extend how shortcut connections route signals and memory:
+
+- **Pre-activation ResNet (He et al., 2016b):** Moves BatchNorm and ReLU *inside* the residual branch ($\textrm{BN} \to \textrm{ReLU} \to \textrm{Conv}$) and removes the post-addition ReLU, so $\mathbf{x}_L = \mathbf{x}_\ell + \sum_{k=\ell+1}^L g_k(\mathbf{x}_{k-1})$ has an exact, unthresholded identity Jacobian $\mathbf{I}$ across arbitrary depth.
+- **ResNet-D downsampling shortcut (He et al., 2019):** A stride-2 $1\times 1$ shortcut conv samples only $1/4$ of spatial coordinates (top-left of each $2\times 2$ cell); prepending $2\times 2$ stride-2 average pooling before a stride-1 $1\times 1$ conv preserves all pixels at zero parameter cost.
+- **U-Net encoder–decoder concatenation:** In segmentation and diffusion models, concatenating encoder feature maps with decoder maps happens only *once per spatial resolution stage* rather than at every layer, avoiding DenseNet's quadratic memory growth.
+:::
+
+::: {.slide title="Concept Check: Shortcuts, ResNeXt Cost & DenseNet Memory"}
+[Concept Check]{.kicker}
+
+Work out these three design calculations:
+
+1. **Stride-2 shortcut pitfall (ResNet-D):** In a stride-2 `Residual` block on a $24\times 24$ feature map, `conv3` is a $1\times 1$ convolution with stride 2. What fraction of the $24\times 24$ input spatial positions does `conv3` actually read, and how does ResNet-D fix this?
+2. **ResNet-50 vs. ResNeXt-50 block FLOPs:** For $c = 512$, verify that a ResNet-50 bottleneck ($b = 128, g = 1$) and a ResNeXt-50 block ($b = 256, g = 32$) have nearly identical parameter counts.
+3. **DenseNet channel growth:** A dense block receives $c = 64$ channels and runs $n = 4$ layers with growth rate $r = 32$. How many output channels emerge, and how many total input channels are read across all 4 convolutions?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. A stride-2 $1\times 1$ kernel samples only every even row and column—**$1/4$ (25%) of the spatial pixels**, discarding the other $75\%$. ResNet-D prepends a parameter-free $2\times 2$ stride-2 average-pooling layer before a stride-1 $1\times 1$ conv so all pixels contribute.
+2. **ResNet-50:** $2(512)(128) + 9(128^2) = 131{,}072 + 147{,}456 = 278{,}528$ weights. **ResNeXt-50:** $2(512)(256) + 9(256^2)/32 = 262{,}144 + 18{,}432 = 280{,}576$ weights ($<0.8\%$ difference for $2\times$ bottleneck width).
+3. Output width is $64 + 4(32) = 192$ channels. The 4 layers read $64 + 96 + 128 + 160 = 448$ concatenated input channels.
+:::
+:::
+
+::: {.slide title="Summary: Key Takeaways on Residual Networks"}
+[Summary]{.kicker}
+
+| Architecture / Concept | Mathematical / Structural Form | Optimization & Systems Role |
+|:--|:--|:--|
+| **Degradation problem** | 56-layer plain net has higher *training* loss than 20-layer ($0.27 > 0.20$) | Proves plain deep nets fail via optimization ill-conditioning, not overfitting |
+| **Residual block (`Residual`)** | $\mathbf{x}_{\ell+1} = \textrm{ReLU}(\mathbf{x}_\ell + g(\mathbf{x}_\ell))$ (with $1\times 1$ projection if shape changes) | Places identity at $g = 0$ ($\mathcal{F} \subseteq \mathcal{F}'$) and adds $\mathbf{I}$ to every block Jacobian |
+| **ResNet-18** | $7\times 7_{s2}$ + pool stem $\to$ $(2,2,2,2)$ blocks at $(64,128,256,512)$ $\to$ GAP | 11.2M params, 319M MACs ($96^2$); reaches $\approx 93\%$ on Fashion-MNIST at $\eta_0 = 0.1$ |
+| **ResNeXt block** | $1\times 1 (c\to b) \to$ grouped $3\times 3 (g\text{ groups}) \to 1\times 1 (b\to c)$ | Cuts $3\times 3$ cost by $1/g$ ($2cb + 9b^2/g$ weights), doubling width $b$ at matched FLOPs |
+| **DenseNet block** | $\mathbf{x}_k = [\mathbf{x}_{k-1}, f_k(\mathbf{x}_{k-1})]$ with growth rate $r$ | Maximizes feature reuse across layers, but naive activation memory grows as $\Theta(n^2 r)$ |
+:::
+

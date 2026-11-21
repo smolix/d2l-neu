@@ -941,303 +941,303 @@ turn to modeling the token sequences that a tokenizer produces.
 ::: {.cover}
 [Dive into Deep Learning · §8.2]{.kicker}
 
-From Text to Tokens<br>**characters · words · bytes · byte pair encoding · pre-tokenization · special tokens · production tokenizers**
+From Text to Tokens<br>**characters vs. words · UTF-8 bytes · byte pair encoding (BPE) · merge trees · regex pre-tokenization · special tokens · production tokenizers**
 :::
 :::
 
-::: {.slide title="Characters: 173,428 Steps; Words: 4,579 Entries and Still OOV"}
-[The problem]{.kicker}
+::: {.slide title="Why Tokenization Is an Integral Part of the Model"}
+[Motivation & Core Mental Model]{.kicker}
 
-- A network reads integer ids; text arrives as a string.
-- The *tokenizer* cuts the string into units (*tokens*) and maps each to
-  an id.
-- *The Time Machine* as characters: 27 symbols, 173,428 tokens.
-- As words: 4,579 distinct words, 32,775 tokens, and any word unseen in
-  training is *out of vocabulary* (OOV).
+Neural sequence models operate on integer indices $x_t \in \{0, \ldots, |\mathcal{V}| - 1\}$, whereas natural text arrives as a raw string of characters. How we segment text into atomic **tokens** governs three core systems properties:
+
+- **Embedding and output parameter footprint:** Every token in the vocabulary $\mathcal{V}$ claims a row in the input embedding table $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ and a column in the output softmax projection $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$ ($89\%$ of our §8.4 RNN parameters).
+- **Effective context horizon ($T$):** Finer tokens stretch the same passage across more time steps—splitting *The Time Machine* into characters produces $173{,}428$ steps, forcing a single sentence's subject–verb agreement to span dozens of recurrent updates.
+- **Open-vocabulary robustness:** Splitting *The Time Machine* into $32{,}775$ whole words yields $4{,}579$ distinct types, yet still breaks on any unseen word (*out-of-vocabulary*, OOV) at test time.
+
+::: {.d2l-note}
+**The Subword Goal:** We want a tokenizer that lets us choose the exact vocabulary size $|\mathcal{V}|$ while guaranteeing **zero out-of-vocabulary failures** on any string in any language.
+:::
+:::
+
+::: {.slide title="Ingesting and Normalizing The Time Machine"}
+[Corpus Pipeline]{.kicker}
+
+Our running corpus is H. G. Wells' *The Time Machine* (~30,000 words, 179,462 UTF-8 bytes). Classical character/word pipelines normalize text aggressively, whereas our byte-level BPE tokenizer processes `raw_text` losslessly:
+
+@text-sequence-reading-the-dataset-1
+
+@text-sequence-reading-the-dataset-2
 
 ::: {.d2l-note .warn}
-Can we choose the vocabulary size and still never be out of vocabulary?
+**Why Aggressive Normalization Is Brittle:** Stripping non-ASCII characters and folding case (`re.sub('[^A-Za-z]+', ' ', text).lower()`) erases punctuation, numbers, code syntax, and proper-noun distinctions (*"Bill"* vs. *"bill"*).
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Granularity Trade-Off: Characters vs. Words"}
+[Two Ends of the Spectrum]{.kicker}
 
-- count the vocabulary size and sequence length of a tokenization;
-- write any string as UTF-8 bytes;
-- run byte pair encoding (BPE) by hand, and encode new text by its
-  merge ranks;
-- explain pre-tokenization and why special tokens sit outside the BPE
-  range;
-- read a production tokenizer: its rank table, fertility, digits.
-
-**Running example:** *The Time Machine*, BPE with 1,024 tokens, about 2.7
-bytes per token; the rest of the chapter models this token sequence.
-:::
-
-::: {.slide title="Turning Text into the Sequence Every Later Section Models"}
-[Where this fits]{.kicker}
+Character-level and word-level tokenization occupy opposite extremes of the trade-off curve between vocabulary size $|\mathcal{V}|$ and corpus sequence length $T$:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Working with Sequences | autoregression, latent state, rollout error |
-| **From Text to Tokens** | **characters, words, bytes, BPE** |
-| Language Models | $n$-grams, perplexity, bits per byte |
-| Recurrent Neural Networks | a hidden state updated at every step |
-| Implementing RNNs | an RNN language model, scratch and concise |
-| Backpropagation Through Time | gradients through time, truncation |
-| Decoding and Generation | greedy decoding, beam search, sampling |
-:::
-
-::: {.col .narrow}
-- **Uses:** Python strings, `collections.Counter`.
-- **Skips:** other subword schemes (WordPiece, Unigram); text
-  normalization.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Characters, Words, and Bytes]{.dtitle}
-
-[vocabulary size against sequence length]{.dsub}
-:::
-:::
-
-::: {.slide title="Characters: Few Symbols, Long Sequences; Words: Short Sequences, Open Vocabulary"}
-[Two ends of a spectrum]{.kicker}
-
 @!text-sequence-two-ends-of-a-spectrum-1
 
-- Characters: no unknown words, but a subject and its verb lie dozens of
-  steps apart.
-- Words: 5× shorter, but the list grows with the corpus ("traveller",
-  "travellers", "travelled"), and new words are OOV.
+- **Characters ($|\mathcal{V}| = 27$, $T = 173{,}428$):** Tiny output layer and no unknown ASCII letters, but $5.3\times$ longer sequences where individual tokens carry almost no semantic meaning.
+- **Words ($|\mathcal{V}| = 4{,}579$, $T = 32{,}775$):** Compact sequences with semantically rich tokens, but inflections (*"traveller"*, *"travellers"*, *"travelled"*) fragment counts and unseen test words fall out of vocabulary (OOV).
 :::
 
-::: {.slide title="UTF-8 Bytes Are a 256-Symbol Alphabet That Covers Every String"}
-[Text as bytes]{.kicker}
-
-@!text-sequence-text-as-bytes
-
-- Any string in any language is a byte sequence: nothing is OOV.
-- Length: 1 byte per English character, 2–4 for accents, Chinese, emoji.
+::: {.col .fig}
+![](../img/mdl-rnn-granularity-spectrum.svg){.nostretch width=100%}
 :::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Byte Pair Encoding]{.dtitle}
-
-[merge the most frequent pair, repeat]{.dsub}
 :::
 :::
 
-::: {.slide title="BPE Merges the Most Frequent Adjacent Pair, Then Repeats"}
-[The merge rule]{.kicker}
+::: {.slide title="Classical Indexing: Vocab and the <unk> Fallback"}
+[Classical Word & Character Vocabularies]{.kicker}
 
-Toy corpus `hug pug pun bun hugs hug hug pug`, 32 bytes:
+To map discrete strings to integer indices in classical pipelines, `Vocab` sorts unique tokens by descending corpus frequency, reserves index `0` for `<unk>`, and prunes tokens occurring fewer than `min_freq` times:
 
-| step | pair | count | new token | corpus length |
-|:----:|:----:|:-----:|:---------:|:-------------:|
-| 1 | `u`, `g` | 6 | `ug` | 26 |
-| 2 | `h`, `ug` | 4 (tie) | `hug` | 22 |
-| 3 | `hug`, `' '` | 3 (tie) | `'hug '` | 19 |
+@text-sequence-vocabulary-2
 
-Ties go to the pair that occurs first. Each merge gets the next free id
-(256, 257, …): **id order = merge rank**.
+@text-sequence-putting-it-all-together
+
+::: {.d2l-note .warn}
+**The `<unk>` Information Collapse:** Mapping every rare or unseen word to a single `<unk>` ID destroys the word's morphological stem and forces word-level language models to pay an explicit character-spelling penalty during evaluation (§8.3).
+:::
 :::
 
-::: {.slide title="Merges Form a Tree; New Text Replays Them"}
-[The merge rule]{.kicker}
+::: {.slide title="UTF-8 Bytes: A Universal 256-Symbol Base Alphabet"}
+[Text as Bytes]{.kicker}
 
-![](../img/mdl-rnn-merge-tree.svg){width=58%}
+Why not use raw Unicode characters as our base alphabet? Unicode defines ~150,000 characters across scripts and emoji, making a character vocabulary huge. Dropping one level lower to **UTF-8 bytes** gives a universal base alphabet of size $2^8 = 256$:
 
-Unmergeable input falls back to bytes: "bun" stays three tokens.
+@text-sequence-text-as-bytes
+
+- **Zero OOV guarantee:** Every string in any language, mathematical notation, source code, or emoji decomposes losslessly into a sequence of integers in $\{0, \ldots, 255\}$.
+- **Variable byte width:** UTF-8 uses 1 byte for ASCII (`'a'`), 2 bytes for Latin diacritics and Greek (`'é'`), 3 bytes for CJK characters (`'你'`), and 4 bytes for emoji (`'🚀'`), stretching the novella to $179{,}462$ bytes ($5.5$ bytes/word).
 :::
 
-::: {.slide title="Check: Encode “pugs” with the Three Merges"}
-[Check]{.kicker}
+::: {.slide title="Byte Pair Encoding (BPE): Greedy Pair Merging"}
+[The BPE Algorithm]{.kicker}
 
-Merges in rank order: (`u`, `g`) → `ug`; (`h`, `ug`) → `hug`;
-(`hug`, `' '`) → `'hug '`. How many tokens does "pugs" become?
+**Byte Pair Encoding (BPE)** (Sennrich et al., 2016) starts from the 256 single-byte tokens (`0..255`) and grows the vocabulary to size $|\mathcal{V}|$ by iteratively merging the most frequent adjacent token pair into a new token ID (`256, 257, ...`):
 
-::: {.fragment .fade-up}
+| Merge Step | Most Frequent Adjacent Pair | Corpus Count | New Token String | New Token ID (Rank) | Remaining Corpus Length |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **0 (init)** | Raw UTF-8 bytes of `'hug pug pun bun hugs hug hug pug'` | — | `0..255` | `0..255` | $32$ tokens |
+| **1** | `('u', 'g')` inside *hug, pug, hugs* | $6$ | `'ug'` | `256` | $32 - 6 = 26$ tokens |
+| **2** | `('h', 'ug')` inside *hug, hugs* (tie with `('ug', ' ')`) | $4$ | `'hug'` | `257` | $26 - 4 = 22$ tokens |
+| **3** | `('hug', ' ')` after *hug* (tie with `(' ', 'p')`) | $3$ | `'hug '` | `258` | $22 - 3 = 19$ tokens |
+
+::: {.d2l-note .rule}
+**Greedy Compression Invariant:** Replacing a pair of count $c$ everywhere shortens the training corpus by exactly $c$ tokens (or $c - \text{overlaps}$ on runs like `'aaa'`), and each new token ID $256, 257, \ldots$ records its exact **merge rank**.
+:::
+:::
+
+::: {.slide title="Hierarchical Merge Trees and Byte Fallback"}
+[Subword Generalization]{.kicker}
+
+Because later merges combine tokens created by earlier merges (`'h'` + `'ug'` $\to$ `'hug'`), a trained BPE vocabulary defines a collection of binary **merge trees** rooted at the 256 raw bytes:
+
+::: {.cols .vc}
+::: {.col}
+@text-sequence-implementation-2
+
+- **Morphological composition:** On unseen or inflected text, `"hugs"` replays merge 1 (`u`+`g` $\to$ `ug`) and merge 2 (`h`+`ug` $\to$ `hug`), segmenting cleanly into stem + suffix `[b'hug', b's']`.
+- **Graceful byte fallback:** The rare word `"bun"` shares no learned merges, so it remains three individual byte tokens `[b'b', b'u', b'n']` rather than collapsing to `<unk>`.
+:::
+
+::: {.col .fig}
+![](../img/mdl-rnn-merge-tree.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Implementing the Left-to-Right Pair Merge Step"}
+[From-Scratch Implementation]{.kicker}
+
+Both BPE training and encoding rely on a single primitive `_merge(ids, pair, new_id)` that scans an ID list left to right, replacing non-overlapping occurrences of `pair` with `new_id`:
+
+@text-sequence-implementation-3
+
+- **Left-to-right non-overlapping semantics:** Whenever `(ids[i], ids[i + 1]) == pair`, we append `new_id` and advance by `i += 2`; thus on `[a, a, a]`, merging `(a, a)` yields `[aa, a]` rather than overlapping pairs.
+- **State layout in `BPETokenizer`:** `self.vocab` maps each ID `0..vocab_size-1` to its raw `bytes` sequence (`vocab[new_id] = vocab[pair[0]] + vocab[pair[1]]`), while `self.merges` maps `(id_a, id_b) -> new_id`.
+:::
+
+::: {.slide title="Training BPE with Frequency-Weighted Chunks"}
+[From-Scratch Implementation]{.kicker}
+
+To train `vocab_size - 256` merges, we tally unique pre-tokenized chunks once via `collections.Counter` and weight each adjacent pair inside a chunk by that chunk's corpus frequency `w`:
+
+@text-sequence-implementation-4
+
 ::: {.d2l-note}
-**Answer.** Three: `p`, `ug`, `s`. Only the first merge applies; `hug`
-needs an `h`, and there is no space.
+**Why Deduplicate Chunks?** Once regex pre-tokenization splits a corpus into word chunks, a frequent word like `" the"` appears thousands of times; weighting pair counts by chunk frequency `w` processes `" the"` once per iteration instead of thousands of times.
+:::
+:::
+
+::: {.slide title="Encoding New Text Strictly by Merge Rank Order"}
+[Encoding & Decoding Mechanics]{.kicker}
+
+To encode an arbitrary byte chunk, `_encode_chunk` repeatedly merges the adjacent pair with the **lowest merge rank** (smallest `new_id`) until no adjacent pair appears in `self.merges`:
+
+::: {.cols .vc}
+::: {.col}
+@-text-sequence-encoding-and-decoding-1
+:::
+
+::: {.col .fig}
+@!text-sequence-encoding-and-decoding-2
+
+- **The merge table is the tokenizer:** Encoding never consults corpus counts—only merge ranks.
+- **Why rank order is mandatory:** During training, merge $r$ was learned on sequences where all merges $< r$ had *already* been exhausted; applying the lowest-rank pair first faithfully retraces training.
 :::
 :::
 :::
 
-::: {.slide title="Encoding Applies the Lowest-Rank Merge Until None Applies"}
-[Encoding]{.kicker}
+::: {.slide title="What Unconstrained BPE Learns on Wells' Novella"}
+[Empirical Behavior on Prose]{.kicker}
 
-```{.python #text-sequence-exercises}
-ids = list(chunk.encode('utf-8'))
-while len(ids) > 1:
-    pair = min(zip(ids, ids[1:]),
-               key=lambda p: merges.get(p, float('inf')))
-    if pair not in merges:
-        break  # no learned merge applies
-    ids = merge(ids, pair, merges[pair])
-```
-
-- Uses only the merge table. Training applied each merge after all
-  earlier ones, so replaying merges in rank order retraces training.
-- Decoding concatenates each id's bytes. **The merge table is the
-  tokenizer.**
-:::
-
-::: {.slide title="Trained on the Novel, BPE Learns Letter Pairs First and Whole Words Last"}
-[The Time Machine]{.kicker}
+Training a 1,024-token BPE vocabulary ($1024 - 256 = 768$ merges) directly on the raw text of *The Time Machine* reveals a clear progression from frequent bigrams to domain-specific words:
 
 @!text-sequence-training-on-the-time-machine-1
 
-768 merges on the raw text. One token is the two-word composite
-"Time Traveller ".
+- **Earliest merges (`256..263`):** Common English letter pairs and trailing-space endings (`b'e '`, `b'th'`, `b't '`, `b'in'`, `b'd '`, `b'er'`).
+- **Final merges (`1016..1023`):** Multi-character stems and recurring thematic words (`b'imension'`, `b'Time Traveller '`, `b'little '`).
+- **Notice the flaw:** Token `[b'Time Traveller ']` fused two separate words and a trailing space into a single vocabulary entry!
 :::
 
-::: {.slide title="Each Doubling of the Vocabulary Adds About the Same Compression"}
-[Vocabulary size]{.kicker}
+::: {.slide title="Logarithmic Compression Scaling with Vocabulary Size"}
+[Compression vs. Vocabulary Capacity]{.kicker}
 
+Because BPE assigns IDs sequentially in training order, retaining only merges with ID $< |\mathcal{V}|$ from a 4,096-token run gives the exact tokenizer of size $|\mathcal{V}|$:
+
+::: {.cols .vc}
+::: {.col}
+- **Logarithmic gain per doubling:** Plotting UTF-8 bytes per token against $\log |\mathcal{V}|$ from $256 \to 4{,}096$ yields an almost straight line: each doubling of $|\mathcal{V}|$ adds roughly $0.5$ bytes/token.
+- **Diminishing marginal counts:** Merge 256 collapses thousands of occurrences of `b'e '`, whereas merge 4,095 collapses only a handful of occurrences.
+- **In-domain overfitting caveat:** Evaluating on training text flatters large $|\mathcal{V}|$ because 4,096 merges memorize novella-specific phrases.
+:::
+
+::: {.col .fig}
 @!text-sequence-training-on-the-time-machine-2
-
-Keeping the merges with id below $|\mathcal{V}|$ gives the tokenizer of
-that size: one training run sweeps all sizes. Measured on the training
-text, so the upper end overstates what a general vocabulary reaches.
+:::
+:::
 :::
 
-::: {.slide title="Unconstrained Merges Cross Word Boundaries; a Pre-Tokenization Regex Stops Them"}
-[Pre-tokenization]{.kicker}
+::: {.slide title="Why Unconstrained BPE Leaks Across Word Boundaries"}
+[The Pre-Tokenization Motivation]{.kicker}
+
+Without boundary constraints, 108 of the 768 learned merges in our 1,024-token vocabulary straddle an internal space across multiple words:
 
 @!text-sequence-pre-tokenization-telling-bpe-where-words-end-1
 
-"of the " wastes a slot on one phrase. Split text into chunks with a
-regex first; merges never cross a chunk:
+@text-sequence-pre-tokenization-telling-bpe-where-words-end-2
 
+- **Why multi-word tokens hurt generalization:** Slots spent on `'of the '`, `'in the '`, and `'to the '` cannot represent content words, and the word `"of"` is fragmented across dozens of incompatible token IDs depending on what follows it.
+- **GPT-2's 5-branch regex (`GPT2_PATTERN`):** Splits contractions (`'s`, `'ve`, `'ll`), attaches each **leading space** to its following letter run (` ?\p{L}+`) or digit run (` ?\p{N}+`), isolates punctuation (` ?[^\s\p{L}\p{N}]+`), and confines BPE merges strictly *within* each chunk.
+:::
+
+::: {.slide title="Regex Pre-Tokenization Pipeline in Production BPE"}
+[Pre-Tokenized BPE Results]{.kicker}
+
+Passing `pattern=BPETokenizer.GPT2_PATTERN` eliminates every boundary-crossing composite and reallocates those vocabulary slots to complete words with leading spaces:
+
+::: {.cols .vc}
+::: {.col}
 @!text-sequence-pre-tokenization-telling-bpe-where-words-end-3
+
+- **Zero boundary crossers:** `len(crossers)` drops from $108 \to 0$, replaced by clean whole-word tokens like `' Traveller'`, `' Machine'`, and `' dimension'`.
+- **Leading-space convention:** Earliest merges become `b' t'`, `b' a'`, `b'he'`, `b'in'`—attaching the preceding space to the start of a word so decoding never needs heuristic space insertion.
 :::
 
-::: {.slide title="GPT-2's Pattern Keeps Words, Digits, and Punctuation Apart"}
-[Pre-tokenization]{.kicker}
-
-![](../img/mdl-rnn-pretokenization-pipeline.svg){width=86%}
-
-A word keeps its leading space (" the"); digits and punctuation form their
-own chunks.
-:::
-
-::: {.slide title="Check: Split “I've got 1234 cats!” with the GPT-2 Pattern"}
-[Check]{.kicker}
-
-Pattern: contractions; ` ?` + letters; ` ?` + digits; ` ?` + other
-symbols; whitespace. Which chunks does BPE see?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** `I` | `'ve` | `␣got` | `␣1234` | `␣cats` | `!`. GPT-2's
-pattern does not cap the digit run; later tokenizers would split `1234`
-after three digits.
+::: {.col .fig}
+![](../img/mdl-rnn-pretokenization-pipeline.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Special Tokens Sit Above the BPE Range, Out of Reach of Ordinary Text"}
-[Special tokens]{.kicker}
+::: {.slide title="Special Control Tokens and Prompt-Injection Safety"}
+[Infrastructure & Security Invariants]{.kicker}
 
-@!text-sequence-special-tokens
+Training and serving require special control tokens—`<pad>` (batch padding), `<bos>` (beginning of sequence), and `<eos>` (end-of-sequence stopping cue)—that must never collide with ordinary text:
 
-- `<pad>` fills short sequences, `<bos>` and `<eos>` mark start and end.
-- Typed as text, "&lt;bos&gt;" is 5 byte tokens; only
-  `allow_special=True` maps it to its id. Otherwise any document could
-  inject control signals.
-:::
+@text-sequence-special-tokens
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
+::: {.d2l-note .warn}
+**Security Invariant Against Prompt Injection:**
 
-[Tokenizers in the Wild]{.dtitle}
-
-[GPT-2's tokenizer, rebuilt and measured]{.dsub}
+1. **ID isolation:** Special tokens receive IDs *above* the BPE merge table (`1024, 1025, 1026`), so no sequence of byte merges can ever synthesize a special token ID.
+2. **Explicit opt-in (`allow_special`):** By default (`allow_special=False`), `"<bos>"` is tokenized as 5 ordinary characters `[60, 98, 111, 115, 62]`, preventing untrusted user prompts from injecting `<eos>` or system delimiters into the token stream.
 :::
 :::
 
-::: {.slide title="GPT-2 Stores a Rank Table, and Its First Merges Match Ours"}
-[What a production tokenizer stores]{.kicker}
+::: {.slide title="Inside GPT-2's Production Rank Table (tiktoken)"}
+[Production Verification]{.kicker}
+
+Production byte-level BPE tokenizers (GPT-2/3/4, Llama 3) store no neural weights—only a byte-string $\to$ rank dictionary, the pre-tokenization regex, and the special-token map:
 
 @!text-sequence-what-a-production-tokenizer-stores
 
-- Ranks 0–255: the bytes; from 256 on: merges in the order learned. No
-  neural network.
-- First merges " t", " a", "he", "in": the same four as ours, from 40 GB
-  of web text against one novel.
+@!text-sequence-verifying-our-implementation-2
+
+- **Universal English statistics:** GPT-2's first four merges trained on 40 GB of WebText (`b' t'`, `b' a'`, `b'he'`, `b'in'` at ranks `256..259`) are **identical** to the first four merges our tokenizer learned on a single 1895 novella.
+- **Exact parity:** Loading GPT-2's 50,257 ranks into `BPETokenizer.from_tiktoken('gpt2')` matches `tiktoken` token-for-token across prose, decimals, diacritics, currency symbols, and emoji.
 :::
 
-::: {.slide title="Loaded into Our Encoder, GPT-2's Table Reproduces tiktoken Token for Token"}
-[Verifying our implementation]{.kicker}
+::: {.slide title="In-Domain vs. General Production Compression Ratios"}
+[Cross-Tokenizer & Cross-Lingual Fertility]{.kicker}
 
-@!text-sequence-verifying-our-implementation-2
+Comparing our 1,024-token novella tokenizer against OpenAI's 50k `gpt2` and 200k `o200k_base` (GPT-4o) vocabularies highlights domain compression and cross-lingual **fertility** (tokens per word):
 
 @!text-sequence-verifying-our-implementation-3
 
-In domain, 1,024 tokens reach about two thirds of the compression of
-vocabularies 50 and 200 times larger.
-:::
-
-::: {.slide title="Under GPT-2, a Greek Word Takes About Seven Tokens, an English Word About One"}
-[Fertility]{.kicker}
-
 @!text-sequence-fertility-digits-and-glitch-tokens-1
 
-*Fertility* = tokens per word. The multilingual `o200k_base` narrows
-the gap to about two.
+- **Domain adaptation:** Our 1k in-domain BPE reaches $2.73$ bytes/token—nearly $70\%$ of the compression of vocabularies $50\times$ and $200\times$ larger ($3.91$ and $4.35$ bytes/token).
+- **The multilingual fertility tax:** Under English-centric `gpt2`, Greek requires **$7.33$ tokens/word** vs. $1.14$ for English ($6.4\times$ less text fits in a fixed context window and $6.4\times$ higher inference cost); multilingual `o200k_base` cuts Greek fertility to $2.22$.
 :::
 
-::: {.slide title="Digit Chunks Ignore Place Value, and Glitch Tokens Were Never Trained"}
-[Digits and glitch tokens]{.kicker}
+::: {.slide title="Pitfalls: Place-Value Misalignment & Glitch Tokens"}
+[Practical Systems Pitfalls]{.kicker}
 
-@!text-sequence-fertility-digits-and-glitch-tokens-2
+Subword tokenization choices directly explain two famous behavioral quirks of modern large language models:
 
-- "12345678" → 123 | 456 | 78: chunks misaligned with ones, tens,
-  hundreds.
-- " SolidGoldMagikarp" is one token: frequent in the tokenizer's corpus,
-  rare in the model's, so its embedding stayed untrained.
+@text-sequence-fertility-digits-and-glitch-tokens-2
+
+@text-sequence-fertility-digits-and-glitch-tokens-3
+
+- **Arithmetic & left-to-right digit chunking:** `o200k_base` caps digit runs at 3 characters from left to right, splitting `"12345678"` into `['123', '456', '78']`—misaligned with right-to-left positional place values (`12,345,678`), forcing carry operations to shift across inconsistent token boundaries.
+- **Glitch tokens (`' SolidGoldMagikarp'`):** When a string (such as a high-volume Reddit username) is frequent in the *tokenizer's* training scrape but filtered out of the *language model's* pretraining corpus, it claims a single token ID (`42090`) whose embedding row $\mathbf{E}_{42090}$ remains randomly initialized at test time.
 :::
 
-::: {.slide title="Check: How Much Text Fits in 1,024 GPT-2 Tokens?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: BPE Rank Order, Regex & Fertility"}
+[Check Your Understanding]{.kicker}
 
-Fertility under GPT-2: English 1.14 tokens per word, Greek 7.33. About
-how many words of each fit in a context of 1,024 tokens?
+Test your understanding of BPE encoding mechanics and production pre-tokenization:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** About 900 English words ($1024/1.14$) against about 140 Greek
-words ($1024/7.33$): the same window holds about a sixth as much Greek.
+1. **Rank Order vs. Leftmost Pair:** Suppose a BPE tokenizer learned two merges in order: `('b', 'c') -> 256` (rank 256) and then `('a', 'b') -> 257` (rank 257). How does the string `"abc"` segment under (a) the correct lowest-rank rule vs. (b) a naive leftmost-applicable-pair rule? Which matches the end of training?
+2. **GPT-2 Pre-Tokenization Trace:** Into what exact chunks does `BPETokenizer.GPT2_PATTERN` split the sentence `"I've got 1234 cats!"` before BPE merges run?
+3. **Context Window Capacity:** If an LLM has a 1,024-token context window and uses the `gpt2` tokenizer (English fertility $1.14$ tokens/word, Greek fertility $7.33$ tokens/word), roughly how many English words vs. Greek words fit inside one context window?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **(a) Lowest-rank rule:** Merges `('b', 'c')` (rank 256 < 257) first to produce `['a', 'bc']` (`[97, 256]`), matching training (where every `'bc'` was already merged before `('a', 'b')` was ever counted). **(b) Leftmost rule:** Wrongly merges `('a', 'b')` first into `['ab', 'c']`.
+2. **Six chunks:** `['I', "'ve", ' got', ' 1234', ' cats', '!']` (contraction split off, leading space attached to each word and digit run, trailing punctuation isolated).
+3. **~898 English words vs. ~140 Greek words:** $1024 / 1.14 \approx 898$ words in English, compared to $1024 / 7.33 \approx 140$ words in Greek—a $6.4\times$ reduction in effective context length.
 :::
 :::
+
+::: {.slide title="Summary: Tokenization Schemes Compared"}
+[Section Takeaways]{.kicker}
+
+| Tokenization Scheme | Base Alphabet | Vocab Size $|\mathcal{V}|$ (*Time Machine*) | Sequence Length $T$ | Out-of-Vocabulary (OOV) Behavior | Primary Architectural Trade-Off |
+|---|---|---|---|---|---|
+| **Character-Level** | Normalized ASCII / Unicode chars | $27$ (normalized) to $\sim 150\textrm{k}$ (Unicode) | $173{,}428$ | None on ASCII; breaks on unseen Unicode scripts | Tiny softmax layer, but sequences are $5\times$ longer and semantically weak |
+| **Word-Level** | Whitespace-split word types | $4{,}579 + \texttt{<unk>}$ (unbounded with corpus) | $32{,}775$ | Unseen words collapse into `<unk>` | Short sequences, but massive softmax layer and severe OOV/inflection sparsity |
+| **Raw UTF-8 Bytes** | Single bytes `0..255` | $256$ (fixed universal) | $179{,}462$ | **Zero OOV** on any string in any language | Universal coverage, but $5.5\times$ longer sequences ($2\text{--}4\times$ extra for non-ASCII) |
+| **Unconstrained BPE** | UTF-8 bytes + greedy pair merges | Chosen hyperparameter (e.g., $1{,}024$) | $\sim 61{,}000$ | **Zero OOV** (unseen stems fall back to bytes) | Over-merges across spaces (`'of the '`), fragmenting single-word statistics |
+| **Pre-Tokenized BPE (GPT-2 / Llama)** | Regex chunks + byte-level BPE + high-ID specials | $1{,}024 + 3$ (ours) or $50\textrm{k}\text{--}200\textrm{k}$ (prod) | $65{,}741$ ($2.78$ B/tok) | **Zero OOV** + prompt-injection-safe specials | Industry standard balancing sequence compression, softmax cost, and open vocabulary |
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- **Vocabulary vs. length:** characters 27 symbols and 173k tokens;
-  words 4.6k types, 33k tokens, and OOV.
-- **Bytes** make the base alphabet universal (256 symbols).
-- **BPE:** merge the most frequent pair; encode by rank; the merge table
-  is the tokenizer. 1,024 tokens: about 2.7 bytes per token.
-- **Pre-tokenization** keeps merges inside words; **special tokens** sit
-  outside the BPE range.
-- GPT-2's tokenizer is the same construction; we reproduce it exactly.
-
-**Next:** the statistics of these token sequences, and a first language
-model.
-:::

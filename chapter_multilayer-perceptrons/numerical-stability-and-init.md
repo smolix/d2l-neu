@@ -77,6 +77,7 @@ $$\mathbb{E}[g_i^2] = \sum_{j=1}^h \mathbb{E}[w_{ij}^2]\,\mathbb{E}[\phi'(z_j)^2
 :eqlabel:`eq_grad-factor`
 
 Across $t$ layers, the gradient's mean square is multiplied by $\big(h\,\tau^2\,\mathbb{E}[\phi'(z)^2]\big)^t$! For symmetric pre-activations and ReLU, $\phi'(z) \in \{0, 1\}$ is $1$ half the time, so $\mathbb{E}[\phi'(z)^2] = 1/2$ and the per-layer multiplier is $\frac{1}{2}h\tau^2$. At width $h = 256$:
+
 - With $\tau = 0.01$: the multiplier is $256 \times 10^{-4} / 2 = 0.0128$, which after $9$ hops shrinks the gradient mean square by $0.0128^9 \approx 10^{-17}$ (**vanishing gradients**).
 - With $\tau = 1$: the multiplier is $256 \times 1 / 2 = 128$, which after $9$ hops inflates the gradient mean square by $128^9 \approx 10^{19}$ (**exploding gradients**).
 - With sigmoid activations ($\sigma'(z) \leq 1/4$, so $\mathbb{E}[\sigma'(z)^2] \leq 1/16$): even if $h\tau^2 = 1$, every layer shrinks the gradient mean square by at least a factor of $16$ (:cite:`bengio1994learning`).
@@ -215,7 +216,7 @@ This is *He initialization* (or *Kaiming initialization*, :cite:`He.Zhang.Ren.ea
 ### Activations, Gradients, and Training across Depth
 :label:`subsec_variance_propagation`
 
-Let us compare $\mathcal{N}(0, 0.01^2)$, Xavier ($	au^2 = 1/256$), and He ($	au^2 = 2/256$) across a 10-layer ReLU network—first checking the forward activation and backward gradient mean squares at initialization, and then training a 10-hidden-layer `DeepMLP` on Fashion-MNIST for 10 epochs at learning rate $\eta = 0.05$:
+Let us compare $\mathcal{N}(0, 0.01^2)$, Xavier ($\tau^2 = 1/256$), and He ($\tau^2 = 2/256$) across a 10-layer ReLU network—first checking the forward activation and backward gradient mean squares at initialization, and then training a 10-hidden-layer `DeepMLP` on Fashion-MNIST for 10 epochs at learning rate $\eta = 0.05$:
 
 ```{.python .input #numerical-stability-and-init-depth-sweep}
 runs = {'N(0, 0.01²)': moments(*relu, 0.01),
@@ -321,6 +322,7 @@ d2l.plot(list(range(1, 11)), list(losses.values()), 'epoch', 'training loss',
 
 
 Look at how closely the 10-epoch training curves follow our variance analysis:
+
 - Under $\mathcal{N}(0, 0.01^2)$, layer-10 activations ($\sim 10^{-19}$) and layer-1 gradients ($\sim 10^{-17}$) vanish completely, leaving the training loss frozen at $\log 10 \approx 2.30$ and validation accuracy at $10\%$.
 - Under Xavier, losing a factor of $2$ per ReLU layer shrinks signals by $2^{-10} \approx 10^{-3}$, causing a slower first epoch before training recovers to $\sim 85\%$ accuracy.
 - Under He initialization, both activations and gradients stay near order $1$ across all 10 layers and training drops smoothly from the very first epoch.

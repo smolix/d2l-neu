@@ -112,12 +112,14 @@ of the backward pass.](../img/mdl-perf-memory-anatomy.svg)
 :label:`fig_memory_anatomy`
 
 Three rules determine what a Transformer block saves for backpropagation:
+
 1. A linear layer $\mathbf{y} = \mathbf{W}\mathbf{x}$ saves its input
    $\mathbf{x}$ (since $\nabla_{\mathbf{W}} = (\nabla_{\mathbf{y}})\mathbf{x}^\top$).
 2. An elementwise nonlinearity $f$ saves its input or output.
 3. An elementwise product $\mathbf{p} \odot \mathbf{q}$ saves both factors.
 
 Counting per token in units of width $d = 2048$:
+
 * **Attention sublayer:** Pre-attention RMSNorm saves its input ($d$); the QKV
   projection saves the normalized output ($d$); fused causal attention saves
   $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ ($3d$) and its output ($d$, plus only a

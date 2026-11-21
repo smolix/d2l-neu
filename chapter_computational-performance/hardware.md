@@ -174,6 +174,7 @@ I/O.](../img/mdl-perf-shoreline.svg)
 :label:`fig_shoreline`
 
 Architects mitigate the shoreline bottleneck in two ways:
+
 1. **HBM on a silicon interposer:** Stacking DRAM dies vertically next to the
    GPU die replaces a few hundred board traces with thousands of short, dense
    interposer wires (giving a B200 8 TB/s versus ~0.5 TB/s for a CPU socket).
@@ -257,6 +258,7 @@ bytes per value.](../img/mdl-perf-float-formats.svg)
 
 As :numref:`fig_float_formats` illustrates, narrowing the format has two
 roofline effects:
+
 1. **Halving the width halves the bytes moved** (speeding up bandwidth-bound
    kernels up to $2\times$ and halving weight storage), except for tf32, which
    computes on 19-bit mantissas inside the tensor cores but still stores 32-bit

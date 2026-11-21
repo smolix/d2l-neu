@@ -266,6 +266,7 @@ Because `nnx.jit` compiles the entire step, XLA has already fused the elementwis
 ### Host Overhead and Small Kernels
 
 Two remedies target the time spent outside matrix products, and the profile bounds what each can gain:
+
 1. *Reducing host overhead* targets idle gaps where the device waits for the host (:numref:`sec_perf_model`); its speedup is bounded by the idle fraction of the step.
 2. *Kernel fusion* merges chains of bandwidth-bound elementwise kernels so intermediate arrays stay on chip; its speedup is bounded by the non-matmul device time.
 
@@ -434,6 +435,7 @@ Switching to cuDNN fused attention raises throughput by another third while pres
 ### Larger Minibatches
 
 Increasing the minibatch size amortizes fixed per-step costs over more tokens. Because the device is already busy throughout the step, only device work that scales with parameter count rather than token count can be amortized:
+
 - AdamW reads weights, gradients, and two moments, and writes weights and two moments ($28\text{ bytes/param}$ in fp32).
 - Mixed precision casts fp32 master weights to bf16 in the forward pass and bf16 weight gradients back to fp32 in the backward pass ($12\text{ bytes/param}$).
 
@@ -471,6 +473,7 @@ The device is busy for the entire step: matrix products (including fused attenti
 ### Activation Checkpointing
 
 Activation checkpointing (:numref:`subsec_mp-checkpointing`) saves memory by storing only each block's input during the forward pass and recomputing its internal activations during the backward pass. Because batch size 512 uses only a third of GPU memory, checkpointing is unnecessary here and can only slow the step down. We can predict the slowdown in two ways:
+
 1. *By FLOP count*: recomputing the forward pass raises per-token block arithmetic from $6$ to $8\text{ FLOPs/param}$, predicting $6/8 = 0.75$ of the uncheckpointed throughput.
 2. *By timing the forward pass*: below, we time a standalone forward pass $t_{\text{fwd}}$ at batch size 512 and compute $1 / (1 + t_{\text{fwd}} / t_{\text{step}})$.
 
@@ -598,6 +601,7 @@ $$t_{\textrm{step}}(k) \approx t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k),
 for a throughput multiplier of $k\, t_{\textrm{step}}(1) / (t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k))$. Adding a second GPU increases throughput only if $t_{\textrm{allreduce}}(2) < t_{\textrm{step}}(1)$.
 
 For our 19M-parameter GPT, fp32 gradients occupy $S = 76\text{ MB}$, giving $t_{\textrm{allreduce}}(2) \approx S\beta_{\textrm{link}} \approx 31\text{ ms}$ on two GPUs and $t_{\textrm{allreduce}}(4) \approx 1.5\,S\beta_{\textrm{link}} \approx 47\text{ ms}$ on four:
+
 - *Compiled fp32 at batch 64 per GPU* ($t_{\textrm{step}}(1) \approx 22\text{ ms}$): the allreduce takes longer than the step itself! Equation :eqref:`eq_ft-dp` predicts a *slowdown* on 2 GPUs ($\sim 0.85\times$) and only $\sim 1.3\times$ on 4 GPUs.
 - *Compiled bf16 at batch 512 per GPU* ($t_{\textrm{step}}(1) \approx 90\text{--}100\text{ ms}$): the step is much longer than the allreduce, predicting $\sim 1.5\times$ on 2 GPUs and $2.6\text{--}2.7\times$ on 4 GPUs.
 

@@ -282,6 +282,7 @@ performed during the forward pass.
 Always invoke a module as `net(X)` rather than calling `forward` or `call`
 directly: `__call__` executes framework hooks (:numref:`sec_repro`) and, in
 Keras, builds deferred variables on the first call (:numref:`sec_lazy_init`).
+
 ## Module Containers
 :label:`subsec_model-construction-sequential`
 

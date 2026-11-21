@@ -49,6 +49,7 @@ $$\mathbb{E}\big[x_t^2\big] \approx e^{-2\lambda B_t}\, x_0^2 + \frac{\eta_t\, \
 :eqlabel:`eq_scheduler-bias-noise`
 
 Equation :eqref:`eq_scheduler-bias-noise` highlights the two requirements on any finite-horizon schedule over $T$ steps:
+
 1. **Sufficient cumulative budget $B_T$:** The total budget $B_T = \sum_{t=0}^{T-1}\eta_t$ must be large enough that the initial bias $e^{-2\lambda_{\min} B_T} x_0^2$ vanishes along the flattest direction.
 2. **Small terminal learning rate $\eta_T$ with sufficient remaining budget:** The terminal rate $\eta_T$ must decay toward zero slowly enough that noise injected at intermediate steps $s$ is contracted by the remaining budget $R_s = \sum_{u=s}^{T-1}\eta_u \gtrsim 1/\lambda_{\min}$.
 
@@ -100,6 +101,7 @@ The constant rate ($\eta = 0.1$) plateaus at its stationary noise ball ($0.25 + 
 :label:`subsec_scheduler-decay-shapes`
 
 On a fixed step budget $T$, two decay profiles dominate modern deep learning:
+
 * **Cosine decay** :cite:`Loshchilov.Hutter.2016`, which follows a half-cosine wave from peak rate $\eta_0$ at $t = 0$ to terminal rate $\eta_T$ at $t = T$:
   $$
   \eta_t = \eta_T + \frac{\eta_0 - \eta_T}{2}\left(1 + \cos\frac{\pi t}{T}\right).

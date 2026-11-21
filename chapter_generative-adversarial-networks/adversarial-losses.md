@@ -234,6 +234,7 @@ $$
 :eqlabel:`eq_beyond_teacher`
 
 We now equip each student $g(c, z)$ with a 1D Gaussian latent $z \sim \mathcal{N}(0, 1)$ so it has the capacity to cover both bands, and compare three training objectives at teacher noise level $\tau = 2$:
+
 1. *Regression only*: minimizing $\|\hat x - \operatorname{stop\_grad}(\text{teacher}(\hat x + \tau\xi, c, \tau))\|^2$. Because the slope of :eqref:`eq_beyond_teacher` in $\tilde x$ is at most $(\tau^2 + 0.05^2)^{-1} \approx \tfrac14 < 1$ at $\tau = 2$, the fixed-point equation $u = \mathbb{E}_\xi[\tanh((u + \sqrt{\tau^2 + 0.05^2}\,\xi)/(\tau^2 + 0.05^2))]$ for the offset $u = g(c, z) - c$ has the unique contraction fixed point $u = 0$ (the empty corridor!).
 2. *Critic only*: training $g(c, z)$ against a conditional discriminator $D(x, c)$ with `d2l.gan_loss_D` and `d2l.gan_loss_G`.
 3. *Critic + regression*: summing the adversarial loss and the teacher regression loss with equal weight (as in Adversarial Diffusion Distillation, ADD, :citet:`Sauer.Lorenz.Blattmann.ea.2023`).
@@ -374,6 +375,7 @@ for name, (has_critic, lam) in students.items():
 ```
 
 The three-seed results confirm the fixed-point analysis:
+
 - *Regression onto the high-noise teacher* collapses $100\%$ of outputs into the empty corridor ($1.00$ unit from either band), ignoring the latent $z$.
 - *Critic only* and *Critic + regression* both place $98\text{--}99\%$ of outputs directly on the two data bands (mean distance $0.03\text{--}0.04$), splitting probability mass evenly ($\sim 49\% / 49\%$) between the upper and lower bands via the latent $z$. Because the bands have narrow width $\sigma = 0.05$, the optimal critic's restoring slope ($\delta / 0.05^2 = 400\delta$) easily dominates the gentle inward pull of the high-noise teacher.
 

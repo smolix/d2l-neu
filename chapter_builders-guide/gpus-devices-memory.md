@@ -372,6 +372,7 @@ Keep two placement rules in mind: move or initialize the model on its target
 device *before* constructing the optimizer (so optimizer moments are allocated
 on the same device), and allocate any new tensors created inside `forward` on
 `X.device` rather than defaulting to the CPU.
+
 ## Asynchronous Execution
 
 ### The Execution Queue

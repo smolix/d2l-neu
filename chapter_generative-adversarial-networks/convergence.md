@@ -127,6 +127,7 @@ $$
 :eqlabel:`eq_gan_dirac_pen`
 
 For every $\gamma > 0$, both eigenvalues have strictly negative real part ($\operatorname{Re}(\nu_{1,2}) < 0$), so the equilibrium $(0, 0)$ is locally exponentially stable! The characteristic polynomial $\nu^2 + \gamma\nu + \ell'(0)^2 = 0$ is identical to that of a damped harmonic oscillator (:numref:`subsec_mdl-ode-linearization`) with three regimes:
+
 1. *Underdamped* ($\gamma < 2\ell'(0)$): complex-conjugate eigenvalues with real part $-\gamma/2$; trajectories spiral inward (converging under simultaneous Euler steps when $h < \gamma / \ell'(0)^2$, Exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`).
 2. *Critically damped* ($\gamma = 2\ell'(0)$, i.e., $\gamma = 1$ for the logistic loss): repeated real eigenvalue $\nu = -\ell'(0)$, yielding the fastest non-oscillatory decay.
 3. *Overdamped* ($\gamma > 2\ell'(0)$): two negative real eigenvalues, where the slow mode $\nu \approx -\ell'(0)^2/\gamma$ decays more slowly as $\gamma$ increases.
@@ -201,6 +202,7 @@ The phase portraits confirm all four predictions: the continuous flow (`RK4`) or
 :citet:`Mescheder.Geiger.Nowozin.2018` extended this local stability analysis from the two-parameter Dirac-GAN to general neural networks: near an equilibrium where the generator represents the data distribution $p$ and the critic is flat on $\operatorname{supp}(p)$, simultaneous and alternating gradient updates with $R_1$ or $R_2$ (and a strictly concave loss satisfying $\ell'(0) \neq 0, \ell''(0) < 0$) converge exponentially to the equilibrium manifold, provided the critic has sufficient local capacity to detect first-order generator perturbations (:citet:`Huang.Gokaslan.Kuleshov.ea.2024` establish an analogous local theorem for the relativistic pairing objective).
 
 This analysis also explains two practical design choices:
+
 - **Zero-centered ($R_1, R_2$) vs. one-centered (WGAN-GP) penalties:** WGAN-GP penalizes $(\|\nabla_x D\| - 1)^2$, forcing the critic to maintain unit slope even when $q = p$. On the Dirac-GAN with linear payoff $\ell(t) = t$, the one-centered penalty prevents convergence to $\theta = 0$, instead parking the generator at $|\theta| = \gamma$ where the Wasserstein gradient balances the penalty (Exercise :exref:`ex_convergence-one-centered-dynamics`).
 - **Using both $R_1$ and $R_2$ vs. $R_1$ alone:** Near $q = p$, $R_1$ and $R_2$ are equivalent. Far from equilibrium, however, $R_1$ penalizes the critic's slope only at real data points $x \sim p$, leaving its slope at generated points $x' \sim q$ unconstrained (for example, $D_c(x) = -cx^2$ has zero slope at $p = \delta_0$ so $R_1 = 0$, allowing $c \to \infty$ and exploding generator gradients at $x' = 1$; Exercise :exref:`ex_convergence-one-sided-penalty`). Adding $R_2$ bounds the critic's gradient at generated samples as well.
 
@@ -416,6 +418,7 @@ The loss functions are static arguments of the compiled steps, so each pair of l
 :label:`subsec_gan_25_gaussians`
 
 To test how $R_1 + R_2$ and pairwise ranking affect mode coverage in neural networks, we train a 3-layer MLP generator (64D latent, two hidden layers of 256 ReLU units) and a 3-layer leaky-ReLU MLP critic on a $5 \times 5$ grid of 2D Gaussians (spacing $2.0$, standard deviation $\sigma = 0.05$). We evaluate 10,000 generated samples by four metrics:
+
 1. *Covered modes*: number of modes receiving at least $1/5$ of an equal share ($1/25$) of on-mode samples.
 2. *On-mode fraction*: fraction of samples within $3\sigma = 0.15$ of the nearest mode center ($98.9\%$ for the true distribution).
 3. *Mean distance* to the nearest center ($\approx 0.06$ for the true distribution).
@@ -604,6 +607,7 @@ fig.tight_layout()
 ```
 
 The results isolate the roles of the gradient penalties and the pairing loss:
+
 - **Gradient penalties drive mode coverage:** Without penalties ($\gamma = 0$), critic gradients remain steep ($\mathbb{E}_q\|\nabla_x D\|^2 \in [0.7, 17]$) and mode coverage is unreliable (dropping to 12–25 modes depending on the seed). With $R_1 + R_2$ at $\gamma = 1$, critic gradients are damped by three orders of magnitude ($\sim 10^{-3}$) and every run reliably covers 24–25 modes under both `NS` and `pairing`.
 - **Overdamping at large $\gamma$:** Increasing $\gamma$ to $10$ over-flattens the critic ($\sim 10^{-4}$), slowing convergence so that only ~20–25% of samples land within $3\sigma$ of a mode after 10,000 steps.
 

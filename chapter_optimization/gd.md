@@ -48,6 +48,7 @@ Gradient descent with learning rate $\eta > 0$ updates the iterate via $\mathbf{
 $$x_1 \leftarrow (1 - 0.2\eta)\, x_1, \qquad x_2 \leftarrow (1 - 4\eta)\, x_2.$$
 
 Each coordinate places a competing constraint on $\eta$:
+
 * **Stability ceiling (steep direction):** The steep coordinate $x_2$ contracts if and only if $|1 - 4\eta| < 1$, which imposes the hard stability ceiling $\eta < 0.5$.
 * **Convergence pace (flat direction):** For any stable step size $\eta < 0.5$, the flat contraction factor satisfies $1 - 0.2\eta > 0.9$, meaning that each step removes less than $10\%$ of the remaining error along $x_1$.
 
@@ -140,6 +141,7 @@ steps. On our valley ($\kappa = 4 / 0.2 = 20$, $\epsilon = 0.01$), this formula 
 :label:`subsec_opt-intro-saddles`
 
 Unlike a convex quadratic bowl, a neural network loss surface is non-convex and possesses many **critical points** where $\nabla f(\mathbf{x}) = \mathbf{0}$, as well as **plateaus** where $\|\nabla f(\mathbf{x})\|$ is vanishingly small. At any critical point of a twice-differentiable function $f: \mathbb{R}^d \to \mathbb{R}$, the eigenvalues of the Hessian $\mathbf{H} = \nabla^2 f(\mathbf{x})$ classify the local geometry:
+
 * **Local minimum:** all $d$ eigenvalues are strictly positive ($\mathbf{H} \succ \mathbf{0}$).
 * **Local maximum:** all $d$ eigenvalues are strictly negative ($\mathbf{H} \prec \mathbf{0}$).
 * **Saddle point:** $\mathbf{H}$ has both positive and negative eigenvalues, curving upward along some eigenvectors and downward along others, as illustrated by $f(x, y) = x^2 - y^2$ at the origin (:numref:`fig_mdl-opt-saddle`).
@@ -176,6 +178,7 @@ $$f(\mathbf{x} - \eta \nabla f(\mathbf{x})) \leq f(\mathbf{x}) - \eta \Big(1 - \
 Whenever $0 < \eta < 2/L$, every gradient step strictly decreases $f$ at any non-critical point, with the largest guaranteed single-step decrease $\|\nabla f(\mathbf{x})\|^2 / (2L)$ occurring at $\eta = 1/L$.
 
 Now invert this perspective: fix the learning rate $\eta$ on a loss surface with multiple local minima of different curvatures. Near any local minimum $x^\star$ with curvature $\lambda = f''(x^\star) > 0$, a gradient step multiplies a small displacement $x - x^\star$ by $1 - \eta\lambda$. Consequently:
+
 * If $\lambda < 2/\eta$, then $|1 - \eta\lambda| < 1$ and the minimum is **linearly stable** (attracting nearby iterates).
 * If $\lambda > 2/\eta$, then $1 - \eta\lambda < -1$ and the minimum is **unstable** (repelling any iterate that does not land on $x^\star$ exactly).
 
@@ -348,6 +351,7 @@ $$\mathbf{x} \leftarrow \mathbf{x} - \mathbf{H}^{-1} \nabla f(\mathbf{x}).$$
 On any positive-definite quadratic, the second-order expansion is exact and a single Newton step reaches the minimum regardless of the condition number $\kappa$. Near a regular local minimum of a general smooth function, Newton's method achieves *quadratic convergence*, doubling the number of accurate digits on every step (:numref:`sec_mdl-curvature-methods`).
 
 Despite this rapid local convergence, exact Newton steps are impractical for deep neural networks for three reasons:
+
 1. **Computational cost:** Even when using Hessian–vector products (:numref:`subsec_mdl-hvp`) to avoid storing the $d \times d$ Hessian ($10^{18}$ entries for $d = 10^9$), solving $\mathbf{H}\boldsymbol{\epsilon} = -\nabla f(\mathbf{x})$ iteratively requires dozens of backpropagation passes per parameter update.
 2. **Negative curvature:** Because $\mathbf{H}$ acts symmetrically on all critical points, negative eigenvalues invert the step direction and drive iterates uphill toward saddle points or local maxima unless modified by damping or absolute-spectrum projections (:numref:`subsec_mdl-why-not-newton`).
 3. **Sensitivity to minibatch noise:** Inverting noisy curvature estimates near zero amplifies sampling noise catastrophically.

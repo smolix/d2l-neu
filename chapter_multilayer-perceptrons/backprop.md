@@ -59,6 +59,7 @@ from d2l import jax as d2l
 ### A Small Graph
 
 To review reverse-mode differentiation in its barest form, consider the three-scalar expression $e = (a + b)\,c$ at $a = 2, b = 1, c = -3$ (:numref:`fig_mdl-mlp-backprop-small`). The *forward pass* (left to right) computes $u = a + b = 3$ and $e = u\,c = -9$. The *backward pass* (right to left) seeds $\partial e / \partial e = 1$ and applies one local derivative per node:
+
 - At the multiplication node $e = u\,c$: $\partial e / \partial u = c = -3$ and $\partial e / \partial c = u = 3$.
 - At the addition node $u = a + b$: $\partial u / \partial a = \partial u / \partial b = 1$, so $\partial e / \partial a = \partial e / \partial b = -3$.
 
@@ -152,7 +153,7 @@ $$
 
 Notice that the entire first column of $\partial L / \partial \mathbf{W}^{(1)}$ is zero: because $z_1 = -1 < 0$, $\phi'(z_1) = 0$ blocks the upstream gradient $\partial L / \partial h_1 = -4$ from reaching any weight feeding unit 1.
 
-![Forward values (black) and backward gradients (red) for the worked example :eqref:`eq_backprop-example}. Because $z_1 = -1 < 0$, the ReLU gate zeroes out $\partial L / \partial z_1$ and the first column of $\partial L / \partial \mathbf{W}^{(1)}$.](../img/mdl-mlp-backprop-graph.svg)
+![Forward values (black) and backward gradients (red) for the worked example :eqref:`eq_backprop-example`. Because $z_1 = -1 < 0$, the ReLU gate zeroes out $\partial L / \partial z_1$ and the first column of $\partial L / \partial \mathbf{W}^{(1)}$.](../img/mdl-mlp-backprop-graph.svg)
 :label:`fig_mdl-mlp-backprop-graph`
 
 ### Checking the Backward Pass on a Minibatch

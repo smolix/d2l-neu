@@ -485,6 +485,7 @@ bool(jnp.allclose(ours(X), native(X)))
 Whenever a built-in library layer matches your specification, prefer it in
 production for maintenance and fused-kernel speed; write custom layers for
 novel operations or modifications the library lacks.
+
 ## Layers with Fixed State
 
 Some layers depend on arrays that are neither learned by gradient descent nor

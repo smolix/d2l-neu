@@ -96,7 +96,7 @@ Turning the raw DataFrames into float32 feature matrices requires four careful s
 3. **Impute missing numerical values with $0$ (the training mean):** Filling standardized `NaN` entries with `0` replaces missing numerical measurements by their training-set mean (Exercise :exref:`ex_kaggle-house-mean-imputation`).
 4. **One-hot encode categoricals (`pd.get_dummies(..., dummy_na=True)`):** Expands each categorical column into binary indicators (including an explicit indicator for `NaN`) and aligns validation/test columns to the exact training column vocabulary via `reindex(..., fill_value=0)`, yielding $345$ features on the full training table.
 
-Finally, `KaggleHouse(d2l.DataModule)` centers the target $\log(\textrm{SalePrice})$ by subtracting the training split's mean log price `self.offset` ($pprox 12.02$) so the network starts at the right baseline from step 1 (Exercise :exref:`ex_kaggle-house-scaling`):
+Finally, `KaggleHouse(d2l.DataModule)` centers the target $\log(\textrm{SalePrice})$ by subtracting the training split's mean log price `self.offset` ($\approx 12.02$) so the network starts at the right baseline from step 1 (Exercise :exref:`ex_kaggle-house-scaling`):
 
 ```{.python .input #kaggle-house-price-data-preprocessing-2  n=32}
 def preprocess(train, *others):

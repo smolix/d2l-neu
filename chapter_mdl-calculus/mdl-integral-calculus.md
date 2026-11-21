@@ -528,8 +528,7 @@ $$
 
 In words, an integral over $y$ can be rewritten as an integral over $x$
 provided we multiply the integrand by the local stretch factor $du/dx$. Note
-that $u$ does not even need to be monotone
-(exercise :exref:`ex_mdl-integral-calculus-orientation`).
+that $u$ does not even need to be monotone.
 
 A single thin slice makes the stretch factor transparent. Partition $[a,b]$
 into slices of width $\epsilon$. The map $u$ carries the slice at $x$ to a
@@ -689,8 +688,7 @@ ordered endpoints. In one dimension, the order of the limits carries the sign:
 if $u$ is decreasing, the limits in :eqref:`eq_mdl-change_var` run backwards
 while $u'<0$, so the two minus signs cancel and we can equivalently integrate
 over the image interval with $|u'|$. Regions in $\mathbb R^n$ have no natural
-ordering, so only this unsigned form generalizes
-(exercise :exref:`ex_mdl-integral-calculus-orientation`).
+ordering, so only this unsigned form generalizes.
 
 When $f$ is a probability density, :eqref:`eq_mdl-change_var_nd` tells us how
 a density transforms under a smooth invertible map, which is how a normalizing
@@ -841,35 +839,6 @@ and the standard normal normalizing constant $\sqrt{2\pi}$.
 
 ## Exercises
 
-1. [code] **Midpoint versus left rule.** The function `left_sum` evaluates
-   the left-endpoint rule. The midpoint rule instead evaluates $f$ at the
-   center of each slice of width $\epsilon$. On $[a,b]$ with
-   $n=(b-a)/\epsilon$ slices and $x_i=a+i\epsilon$, it returns
-   $\epsilon\sum_{i=1}^n f\bigl(x_{i-1}+\tfrac{\epsilon}{2}\bigr)$.
-    1. The text derives the error of the left rule on $[a,b]$,
-       $\tfrac{\epsilon}{2}\bigl(f(a)-f(b)\bigr)$, from a first-order
-       expansion of $f$ on each slice. The left sum of $x^2$ on
-       $[0,1]$ has error $-\tfrac1{2N}+\tfrac1{6N^2}$; which term does the
-       expansion predict? Use the estimate to predict the errors that the
-       text's cell prints at $\epsilon=10^{-1},\dots,10^{-4}$ for
-       $\int_0^2 \tfrac{x}{1+x^2}\,dx$. Do the sums lie above or below
-       $\tfrac12\log 5$?
-    1. Implement both rules for an integrand $f$ on $[a,b]$. Evaluate
-       $\int_1^2 \tfrac{1}{x}\,dx$ with an antiderivative, and tabulate the
-       error of both rules for $\epsilon\in\{10^{-1},10^{-2},10^{-3}\}$. By
-       what factor does each error shrink when $\epsilon$ shrinks by a factor
-       of ten?
-    1. Expand $f$ to second order about the center of each slice and show
-       that the integral minus the midpoint sum is approximately
-       $\tfrac{\epsilon^2}{24}\bigl(f'(b)-f'(a)\bigr)$. Compare this
-       prediction with your table for $\int_1^2 \tfrac{1}{x}\,dx$. For which
-       integrands does the midpoint rule underestimate the integral?
-
-   *Adapted from MIT 18.01SC,
-   [Unit 3 exercises](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/eaabc6c74a11402341dbc120fffa5ea5_MIT18_01SC_pset3prb.pdf),
-   Problems 3G-1 and 3G-5.*
-   :exlabel:`ex_mdl-integral-calculus-midpoint-rule`
-
 1. **Activations as accumulated areas.** Let $H$ be the unit step, with
    $H(t)=1$ for $t>0$ and $H(t)=0$ for $t\le 0$. Let
    $\phi(t)=e^{-t^2/2}/\sqrt{2\pi}$ be the standard Gaussian density and
@@ -929,25 +898,6 @@ and the standard normal normalizing constant $\sqrt{2\pi}$.
        what fraction of them lies inside the unit ball, and what does that say
        about grids in high dimensions?
    :exlabel:`ex_mdl-integral-calculus-gamma-function`
-
-1. **Orientation in substitution.** The one-dimensional rule
-   :eqref:`eq_mdl-change_var` integrates between oriented limits and
-   carries the factor $\frac{du}{dx}$. The $n$-dimensional rule
-   :eqref:`eq_mdl-change_var_nd` integrates over a set and carries
-   $\bigl|\det \mathbf J_{\boldsymbol{\phi}}\bigr|$.
-    1. Let $u$ be continuously differentiable and strictly monotone on
-       $[a,b]$, either increasing or decreasing. Show that
-
-       $$\int_{u([a,b])} f(y)\,dy=\int_a^b f(u(x))\,|u'(x)|\,dx,$$
-
-       where the left side integrates over the interval $u([a,b])$ from its
-       smaller to its larger endpoint. Check the decreasing case with
-       $u(x)=e^{-x^2}$ and $f=1$ on $[0,1]$.
-    1. Take $u(x)=x^2$ on $[-1,1]$ and $f(y)=y$. Evaluate both sides of
-       :eqref:`eq_mdl-change_var`, and both sides of the absolute-value form
-       of (a). Which of the two forms remains valid for this $u$, which is
-       not injective? Explain the discrepancy in the other form.
-   :exlabel:`ex_mdl-integral-calculus-orientation`
 
 1. **Swapping the order.** Fubini's theorem :eqref:`eq_mdl-fubini`, together
    with zero-extension for regions that are not rectangles, lets us choose

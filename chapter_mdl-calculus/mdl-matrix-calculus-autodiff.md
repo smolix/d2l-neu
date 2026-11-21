@@ -1163,26 +1163,6 @@ solve at the converged solution.
        (a). Which difference between $\varepsilon^2=0$ and $i^2=-1$ causes the
        $O(t^2)$ error of the complex step?
 
-1. [code] **Compressed Jacobians.** A dense $m\times n$ Jacobian costs
-   $\min(m,n)$ passes, and a sparse one can cost fewer. A JVP with the seed
-   $\mathbf e_j+\mathbf e_k$ returns the sum of columns $j$ and $k$ of the
-   Jacobian. If no row has nonzero entries in both columns, each nonzero entry
-   of the sum belongs to exactly one of them.
-    1. Show that one JVP recovers the whole Jacobian of an elementwise map
-       $\boldsymbol\varphi:\mathbb R^n\to\mathbb R^n$. Which seed does it use?
-       How many VJPs does reverse mode need for the same matrix?
-    1. Let $f_i(\mathbf x)=x_{i-1}x_i+\sin(x_{i+1})$ for $i=1,\ldots,n$, where
-       every term with an index outside $1,\ldots,n$ is dropped. Find three
-       seeds from which all nonzero entries of $\mathbf J_{\mathbf f}$ can be
-       read off. Implement $\mathbf f$ for `Dual` inputs with $n=10$, recover
-       $\mathbf J_{\mathbf f}$ from the three JVPs, and compare it with the
-       analytic Jacobian. Can the three JVPs share a single pass, with tangents
-       that are arrays of length three?
-    1. How many seeds does a banded Jacobian need whose nonzero entries satisfy
-       $|i-j|\le b$, and how does this number depend on $n$? A one-dimensional
-       convolution with kernel size $k$, without padding, has nonzero entries
-       at $0\le j-i\le k-1$; how many seeds does it need?
-
 1. [code] **Hyperparameter gradient.** Ridge regression with one penalty
    $\lambda_j>0$ per feature fits
 
@@ -1306,74 +1286,6 @@ solve at the converged solution.
        needs no linear solve and is the Jacobian-free backpropagation of
        :citet:`Fung.Heaton.Li.ea.2022`. Is it still a descent direction
        for $\ell$?
-
-1. [code] **A tensor tape.** Extend `Var` from scalars to NumPy arrays, so
-   that each node holds an array and each backward closure applies a VJP rule.
-    1. State the backward rule of each primitive as a VJP. For
-       $\mathbf Y=\mathbf X\mathbf W$, show $\bar{\mathbf X}=\bar{\mathbf Y}\mathbf W^\top$
-       and $\bar{\mathbf W}=\mathbf X^\top\bar{\mathbf Y}$. For a broadcast sum
-       $\mathbf Y=\mathbf X+\mathbf b$ with a row vector $\mathbf b$, show
-       that the adjoint of $\mathbf b$ sums $\bar{\mathbf Y}$ over the rows.
-       For $s=\sum_{ij}X_{ij}$, show that the adjoint of $\mathbf X$ is
-       $\bar s\,\mathbf 1\mathbf 1^\top$, and for $\mathrm{relu}$ that it is
-       $\bar{\mathbf Y}$ times a mask.
-    1. Implement a class `TVar` with `__matmul__`, `__add__`, `sum`, and
-       `relu`, and reuse `backprop` unchanged. Why does `backprop` not need to
-       know that the values are arrays?
-    1. Build the loss
-       $\tfrac12\sum\bigl(\mathrm{relu}(\mathbf X\mathbf W_1)\mathbf W_2-\mathbf Y\bigr)^2$
-       for random $\mathbf X\in\mathbb R^{32\times8}$,
-       $\mathbf W_1\in\mathbb R^{8\times16}$,
-       $\mathbf W_2\in\mathbb R^{16\times1}$, and $\mathbf Y\in\mathbb R^{32\times1}$
-       (you will need a square or a product node), and check
-       $\nabla_{\mathbf W_1}\ell$ and $\nabla_{\mathbf W_2}\ell$ against your
-       framework's autograd to $10^{-6}$.
-    1. Count the multiplications of the forward product $\mathbf X\mathbf W$
-       and of its two backward products, and conclude that the backward pass
-       of a linear layer costs twice its forward pass.
-
-1. [code] **Mixed mode through a bottleneck.** The text multiplies
-   :eqref:`eq_mdl-jacobian-product` from one end or the other. Splitting it
-   in the middle can beat both. Let $\mathbf h(\mathbf x)=\tanh(\mathbf A\mathbf x)$
-   with $\mathbf A\in\mathbb R^{2\times1000}$, let
-   $\mathbf g(\mathbf z)=\tanh(\mathbf B\mathbf z)$ with
-   $\mathbf B\in\mathbb R^{1000\times2}$, and let
-   $\mathbf f=\mathbf g\circ\mathbf h:\mathbb R^{1000}\to\mathbb R^{1000}$.
-    1. Show that $\operatorname{rank}\mathbf J_{\mathbf f}\le2$.
-    1. Count the passes needed to form the full $1000\times1000$ Jacobian in
-       pure forward mode and in pure reverse mode. In mixed mode, two VJPs
-       through $\mathbf h$ give $\mathbf J_{\mathbf h}$ ($2\times1000$), two
-       JVPs through $\mathbf g$ give $\mathbf J_{\mathbf g}$ ($1000\times2$),
-       and one product forms $\mathbf J_{\mathbf g}\mathbf J_{\mathbf h}$.
-    1. Implement all three with your framework's `jvp` and `vjp` (in MXNet,
-       with VJPs and the analytic diagonal factors of $\tanh$) and compare
-       with its full-Jacobian function. Count multiplications: about
-       $5\times10^6$ for either pure mode (each pass multiplies by $\mathbf A$,
-       by $\mathbf B$, and by the $\tanh'$ factors) against about
-       $2\times10^6$ for mixed mode, and $1000$ runs of the program against four runs of half
-       of it.
-    1. For a longer chain with one layer of width $k$ in the middle, how many
-       half-program passes does mixed mode need? How would you choose where to
-       split the product $\mathbf J_K\cdots\mathbf J_1$ in general?
-
-1. [code] **Forward gradients.** Can forward mode train at all? Let
-   $\ell:\mathbb R^n\to\mathbb R$ and $\mathbf v\sim\mathcal N(\mathbf 0,\mathbf I_n)$.
-   One forward pass seeded with $\mathbf v$ returns
-   $\nabla\ell^\top\mathbf v$; define the estimate
-   $\hat{\mathbf g}=(\nabla\ell^\top\mathbf v)\,\mathbf v$, which
-   :citet:`Baydin.Pearlmutter.Syme.ea.2022` call a forward gradient.
-    1. Show that $\mathbb{E}[\hat{\mathbf g}]=\nabla\ell$.
-    1. Show that $\mathbb{E}\|\hat{\mathbf g}-\nabla\ell\|^2=(n+1)\|\nabla\ell\|^2$.
-       (Hint: $\mathbb{E}[v_iv_jv_k^2]$ is $3$ for $i=j=k$, $1$ for
-       $i=j\neq k$, and $0$ when $i\neq j$.)
-    1. With `Dual`, and the $f$ and `xs0` of the cost cell ($n=200$), average
-       $m$ independent estimates for $m=1,10,10^2,10^3,10^4$ and plot the
-       relative error against $m$ on log--log axes. Show that
-       the slope is $-\tfrac12$ and that about $2\times10^4$ passes reach a
-       relative error of $10\%$.
-    1. Compare that pass count with the $200$ coordinate passes and the one
-       reverse sweep of the text. What does the random seed gain, and what
-       does it cost?
 
 1. [code] **Second derivatives in one forward pass.** Adjoin $\varepsilon$
    with $\varepsilon^3=0$ (but $\varepsilon^2\neq0$), and write

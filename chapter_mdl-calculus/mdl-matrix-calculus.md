@@ -1117,22 +1117,6 @@ nonsymmetric matrix.
        this set?
    :exlabel:`ex_mdl-matrix-calculus-relu-jacobian`
 
-1. [code] **Area under the Jacobian.** The running map
-   $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ carries the circle of radius $r$
-   around $\mathbf x_0=(0.5,0.5)$ to the blue curves
-   of :numref:`fig_mdl-cal-jacobian-ellipse`.
-    1. Show that the ellipse $\mathbf f(\mathbf x_0)+\mathbf J\boldsymbol\delta$,
-       $\|\boldsymbol\delta\|=r$, has semi-axes $r\sigma_1$ and $r\sigma_2$
-       along the left singular vectors of $\mathbf J=\mathbf J_{\mathbf f}(\mathbf x_0)$,
-       and area $\pi r^2|\det\mathbf J|$.
-    1. Compute the area enclosed by the true image of the circle (shoelace
-       formula on 2,000 points) for $r=0.35$ and $r=0.175$, and divide it by
-       $\pi r^2|\det\mathbf J|$. Is the ratio above or below $1$, and how fast
-       does it approach $1$ as $r$ shrinks? Explain both with the average of
-       $|\det\mathbf J_{\mathbf f}|$ over the disk.
-    1. At which points does the running map fail to be locally invertible?
-       Solve $\det\mathbf J_{\mathbf f}(x,y)=0$.
-
 1. [code] **Cheapest chain order.** ● By :eqref:`eq_mdl-jacobian-product`
    the Jacobian of a chain of $K$ maps is $\mathbf J_K\cdots\mathbf J_1$
    with $\mathbf J_k\in\mathbb R^{d_k\times d_{k-1}}$. Multiplying a
@@ -1172,23 +1156,6 @@ nonsymmetric matrix.
        the alternating least-squares step that sets one gradient to zero with
        the other factor fixed, and show that each step is one linear solve.
    :exlabel:`ex_mdl-matrix-calculus-matmul-rules`
-
-1. [code] **Gradient of softmax regression.** Softmax regression of
-   :numref:`sec_softmax_scratch` computes the logits
-   $\mathbf Z=\mathbf X\mathbf W+\mathbf 1\mathbf b^\top$ of a minibatch
-   $\mathbf X\in\mathbb R^{n\times d}$, the row-wise softmax $\mathbf P$, and
-   the loss $\ell=-\frac1n\sum_{ij}Y_{ij}\log P_{ij}$ with one-hot rows
-   $\mathbf Y$.
-    1. Using :eqref:`eq_mdl-softmax-ce-grad` row by row and the matrix-product
-       rule :eqref:`eq_mdl-matmul-vjp`, derive $\bar{\mathbf Z}=(\mathbf P-\mathbf Y)/n$,
-       $\nabla_{\mathbf W}\ell=\mathbf X^\top(\mathbf P-\mathbf Y)/n$ and
-       $\nabla_{\mathbf b}\ell=(\mathbf P-\mathbf Y)^\top\mathbf 1/n$. *Hint:*
-       $\mathbf 1\mathbf b^\top$ is a matrix product too.
-    1. Check all three against your framework's automatic differentiation on
-       a random $6\times4$ matrix $\mathbf X$, a random $4\times3$ matrix
-       $\mathbf W$ and random one-hot rows $\mathbf Y$.
-    1. Count the multiplications of the forward pass and of your gradient
-       formulas, and state the ratio.
 
 1. **Softmax vector–Jacobian product.** A backward pass never forms the
    softmax Jacobian :eqref:`eq_mdl-softmax-jacobian`. It maps the adjoint
@@ -1250,30 +1217,6 @@ nonsymmetric matrix.
     1. How does the norm of the gradient behave as $\mathbf A$ approaches
        a singular matrix? What does this imply for a flow layer whose
        weight matrix is nearly singular?
-
-1. [code] **Gradient through a linear solve.** Let
-   $f(\mathbf A)=\mathbf c^\top\mathbf A^{-1}\mathbf b$ for invertible
-   $\mathbf A\in\mathbb R^{n\times n}$ and fixed vectors $\mathbf b$,
-   $\mathbf c$.
-    1. Differentiate $\mathbf A\mathbf A^{-1}=\mathbf I$ to show
-       $d(\mathbf A^{-1})=-\mathbf A^{-1}\,d\mathbf A\,\mathbf A^{-1}$.
-    1. Show that $\nabla_{\mathbf A}f=-\mathbf v\mathbf u^\top$ with
-       $\mathbf u=\mathbf A^{-1}\mathbf b$ and
-       $\mathbf v=\mathbf A^{-\top}\mathbf c$, so the gradient costs two
-       linear solves and no inverse. When does it reduce to
-       $-\mathbf u\mathbf u^\top$?
-    1. Check (b) for a random $3\times3$ matrix $\mathbf A$ (add $3\mathbf I$
-       to keep it well conditioned) against your framework's gradient of
-       $\mathbf c^\top$ times the solution of $\mathbf A\mathbf z=\mathbf b$,
-       and against the directional derivative
-       $\langle\nabla_{\mathbf A}f,\mathbf E\rangle$ computed by central
-       differences for a random $\mathbf E$.
-    1. For $n=10^4$ and a sparse $\mathbf A$ with $10^5$ nonzeros, compare
-       the cost of (b) with that of forming $\mathbf A^{-1}$.
-
-    *Adapted from Alan Edelman and Steven G. Johnson,
-    [Matrix Calculus for Machine Learning and Beyond, problem set 2](https://ocw.mit.edu/courses/18-s096-matrix-calculus-for-machine-learning-and-beyond-january-iap-2023/mit18_s096iap23_pset2.pdf),
-    MIT 18.S096, IAP 2023, Problem 1.*
 
 1. **Gradient of the spectral norm.** ● Spectral normalization
    :cite:`Miyato.Kataoka.Koyama.ea.2018` divides each weight matrix

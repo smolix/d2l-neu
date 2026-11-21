@@ -690,8 +690,8 @@ survive. These counts come from one sampled run, and on other hardware they
 move by a few. A style that expands its source needs a
 larger budget than one that restates it, and no prompt can change that.
 
-The histograms show what the flags see. Copy rates spread from about 0.2 to
-1. The near-copies above 0.8 include chunks with little to rewrite, such as
+The histograms show what the flags see. Copy rates spread from about 0.2
+to 1. The near-copies above 0.8 include chunks with little to rewrite, such as
 the one-sentence medical disclaimer printed above. Number fidelity is 1 for
 about three in five of the encyclopedia rewrites and for about half of the
 conversations.

@@ -34,6 +34,9 @@ from d2l import jax as d2l
 
 A response $y = (a_1, \ldots, a_T)$ to a prompt $x$ is a trajectory whose actions are tokens (:numref:`tab_rl_sequence_dictionary`). The state before token $t$ is the prefix $s_t = (x, a_1, \ldots, a_{t-1})$, and appending $a_t$ leads to $s_{t+1}$ with probability one, so the response probability is the product of the token probabilities, $\pi_\theta(y \mid x) = \prod_t \pi_\theta(a_t \mid s_t)$, and
 
+$$\nabla_\theta \log \pi_\theta(y \mid x) = \sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(a_t \mid s_t).$$
+:eqlabel:`eq_seq_factorization`
+
 :Autoregressive text generation as a Markov decision process.
 :label:`tab_rl_sequence_dictionary`
 
@@ -47,10 +50,7 @@ A response $y = (a_1, \ldots, a_T)$ to a prompt $x$ is a trajectory whose action
 | next-token distribution | policy $\pi_\theta(a_t \mid s_t)$ |
 | verifier or reward-model score $r(x, y)$ | terminal reward |
 
-$$\nabla_\theta \log \pi_\theta(y \mid x) = \sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(a_t \mid s_t).$$
-:eqlabel:`eq_seq_factorization`
-
-The left side treats the response as one action, the right side as $T$ token actions. With one reward $r(x, y)$ at the end and no discount, every token's reward-to-go is $r(x, y)$, so both views multiply every token's score by the same *response weight* $r(x, y) - b(x)$, for any baseline $b(x)$ of the prompt alone.
+The left side of :eqref:`eq_seq_factorization` treats the response as one action, the right side as $T$ token actions. With one reward $r(x, y)$ at the end and no discount, every token's reward-to-go is $r(x, y)$, so both views multiply every token's score by the same *response weight* $r(x, y) - b(x)$, for any baseline $b(x)$ of the prompt alone.
 
 ### Credit within a Response
 :label:`subsec_rl_sequences_credit`

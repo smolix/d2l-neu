@@ -99,7 +99,7 @@ MacPorts, for example). `make help` lists the targets, and
 Every change to the book travels as a Git commit on a branch of your own
 copy of the repository. If you already use Git daily, skip ahead. First,
 make that copy: click **Fork** on the
-[repository page](https://github.com/smolix/d2l-neu), then
+[repository page](https://github.com/smolix/d2l-neu), then clone your fork and create a branch for your change:
 
 ```bash
 git clone https://github.com/<your-username>/d2l-neu.git

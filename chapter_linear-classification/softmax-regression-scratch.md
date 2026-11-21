@@ -379,7 +379,7 @@ points recorded in `trainer.history['val_loss'][-1]` and
 trainer.evaluate(model, data)
 ```
 
-Our classifier gets roughly 83% of the validation images right—and we
+Our classifier gets roughly 83% of the validation images right—and we can evaluate its performance on the 60,000 training images by passing `train=True`:
 
 ```{.python .input #softmax-regression-scratch-the-training-run-2}
 trainer.evaluate(model, data, train=True)

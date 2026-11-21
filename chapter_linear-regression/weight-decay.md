@@ -6,7 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Weight Decay
 :label:`sec_weight_decay`
 
-In :numref:`sec_generalization_basics`, we controlled model complexity in the bluntest way possible: by changing the discrete number of polynomial features $k + 1$. Yet discrete feature selection quickly hits a wall. In high-dimensional problems with hundreds or thousands of features, there are $2^d$ possible feature subsets, and worse still, we saw that when a polynomial overfits, its weights $w_j$ explode into the hundreds or thousands to cancel almost-collinear features against one another.
+In :numref:`sec_generalization_basics`, we controlled model complexity in the bluntest way possible: by changing the discrete number of polynomial features $k + 1$. Yet discrete feature selection quickly hits a wall. In high-dimensional problems with hundreds or thousands of features, there are $2^d$ possible feature subsets, and worse still, we saw that when a polynomial overfits, its weights $w_j$ explode into the millions and beyond to cancel almost-collinear features against one another.
 
 To see the core pathology in its simplest two-feature form, imagine predicting room temperature from two noisy thermometers placed side by side, $x_1$ and $x_2$, each reading the true temperature plus a tiny independent noise wiggle. Consider two linear models whose weights sum to $2$:
 
@@ -87,7 +87,7 @@ Look at the first term on the right: **before taking the usual data-driven gradi
 
 What if we replaced the squared $\ell_2$ norm $\|\mathbf{w}\|_2^2 = \sum_j w_j^2$ with the $\ell_1$ norm $\|\mathbf{w}\|_1 = \sum_j |w_j|$—a method known in statistics as the *Lasso* :cite:`Tibshirani.1996`? Comparing the geometry of their constraint sets (:numref:`fig_ridge_geometry`) reveals a striking difference. Minimizing the data loss $L(\mathbf{w})$ subject to $\|\mathbf{w}\|_2^2 \leq r^2$ searches inside a smooth round disk (or sphere in $\mathbb{R}^d$), where the elliptical loss contours almost always touch the boundary at a point where *every* coordinate $w_j$ is small but nonzero. Minimizing $L(\mathbf{w})$ subject to $\|\mathbf{w}\|_1 \leq r$, by contrast, searches inside a sharp-cornered diamond (cross-polytope) whose vertices lie directly on the coordinate axes! Elliptical loss contours frequently collide with one of those sharp corners first, setting many coordinates $w_j$ to *exact zero* and performing automatic feature selection (*sparsity*).
 
-![Constraint geometry of $\ell_2$ ridge regression (left) vs. $\ell_1$ Lasso regression (right). Elliptical contours of the data loss $L(\mathbf{w})$ expanding from the unregularized minimum $\hat{\mathbf{w}}$ typically meet the smooth $\ell_2$ circle away from the axes (keeping both weights nonzero), whereas they often hit a sharp corner of the $\ell_1$ diamond right on an axis (setting $w_1 = 0$).](../img/ridge-geometry.svg)
+![Constraint geometry of $\ell_2$ ridge regression (left) vs. $\ell_1$ Lasso regression (right). Elliptical contours of the data loss $L(\mathbf{w})$ expanding from the unregularized minimum $\hat{\mathbf{w}}$ typically meet the smooth $\ell_2$ circle away from the axes (keeping both weights nonzero), whereas they often hit a sharp corner of the $\ell_1$ diamond right on an axis (setting $w_2 = 0$).](../img/mdl-linreg-ridge-geometry.svg)
 :label:`fig_ridge_geometry`
 
 ### A Gaussian Prior on the Weights
@@ -102,11 +102,11 @@ Dividing through by $n / \sigma^2$ recovers our exact weight-decay objective :eq
 
 ## Weight Decay from Scratch
 
-To see weight decay rescue a severely overparameterized model, let us construct a high-dimensional synthetic regression problem where the dimension $d = 200$ dwarfs the training sample size $n_{\textrm{train}} = 20$! Specifically, we draw inputs $\mathbf{x} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_{200})$ and generate labels from
+To see weight decay rescue a model with nearly as many weights as training examples, let us construct a high-dimensional synthetic regression problem where the dimension $d = 200$ comes close to the training sample size $n_{\textrm{train}} = 300$. Specifically, we draw inputs $\mathbf{x} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_{200})$ and generate labels from
 
-$$y = 0.05 + \sum_{j=1}^{200} 0.01\, x_j + \epsilon, \qquad \epsilon \sim \mathcal{N}(0, 0.01^2),$$
+$$y = 0.05 + \sum_{j=1}^{200} 0.1\, x_j + \epsilon, \qquad \epsilon \sim \mathcal{N}(0, 1),$$
 
-with $20$ training examples and $100$ validation examples. Notice that with $d = 200$ features and only $n = 20$ training examples, the training set spans at most a 20-dimensional subspace of $\mathbb{R}^{200}$, leaving a 180-dimensional null space of directions along which the training data provide *zero* information!
+with $300$ training examples (in minibatches of 20) and $1{,}000$ validation examples, using `SyntheticRegressionData` from :numref:`sec_oo-design`. The true weights $\mathbf{w}^* = (0.1, \ldots, 0.1)^\top$ have coordinate scale $\tau = 0.1$, and the noise is substantial: its standard deviation $\sigma = 1$ is comparable to that of the noise-free signal, $\|\mathbf{w}^*\| = \sqrt{2} \approx 1.4$. While 300 examples are technically enough to identify all 200 weights, we will soon see that many linear combinations of them are pinned down only weakly.
 
 ```{.python .input #weight-decay-high-dimensional-linear-regression}
 tau, sigma, n = 0.1, 1.0, 300   # size of the weights, noise, examples
@@ -128,7 +128,7 @@ justify its 200 weights.
 
 ### The Penalized Model
 
-We define `l2_penalty(w)` to return $\frac{1}{2}\|\mathbf{w}\|_2^2$ and subclass `d2l.LinearRegressionScratch` into `WeightDecayScratch`, whose `loss` method adds `self.lambd * l2_penalty(self.w)` to the data loss:
+We define `l2_penalty(w)` to return $\frac{1}{2}\|\mathbf{w}\|_2^2$:
 
 ```{.python .input #weight-decay-defining-ell-2-norm-penalty}
 def l2_penalty(w):
@@ -171,7 +171,7 @@ class WeightDecayScratch(d2l.LinearRegressionScratch):
 
 ### Training with and without the Penalty
 
-Let us write `train_scratch(lambd)` to train `WeightDecayScratch` for 10 epochs at learning rate $\eta = 0.01$ and print both the learned weight norm $\|\mathbf{w}\|_2$ (for comparison, the true weight vector $\mathbf{w}^* = (0.01, \ldots, 0.01)^\top \in \mathbb{R}^{200}$ has $\|\mathbf{w}^*\|_2 = \sqrt{200 \times 0.01^2} \approx 0.14$) and the final training and validation data losses:
+Let us write `train_scratch(lambd, data)` to train `WeightDecayScratch` for 50 epochs at learning rate $\eta = 0.05$ (750 SGD steps) while plotting the training and validation curves, and to return the fitted model, the per-epoch validation losses, and the learned weight norm $\|\mathbf{w}\|_2$ (for comparison, the true weight vector $\mathbf{w}^* = (0.1, \ldots, 0.1)^\top \in \mathbb{R}^{200}$ has $\|\mathbf{w}^*\|_2 = \sqrt{200 \times 0.1^2} \approx 1.4$):
 
 ```{.python .input #weight-decay-defining-the-model-2}
 %%tab pytorch
@@ -228,10 +228,10 @@ The training loss plunges to roughly 0.2–0.3—far below the irreducible
 noise floor of 0.5 achieved by the true parameters—confirming that the model
 is memorizing noise in its 300 training labels. Meanwhile, the validation
 loss hits a minimum of about 0.9 after just two or three epochs and then
-climbs steadily, typically finishing between 1.2 and 1.9 (and only rarely
-lower). After 50 epochs, this 200-weight model performs no better than—and
-sometimes worse than—the trivial constant $b^*$ at 1.5: a textbook display
-of overfitting. Why does validation loss bottom out so early, after only 30
+climbs steadily, typically finishing between 1.1 and 1.9. After 50 epochs,
+this 200-weight model has given back much of its early gain and often does
+no better than—and sometimes worse than—the trivial constant $b^*$ at 1.5:
+a textbook display of overfitting. Why does validation loss bottom out so early, after only 30
 to 45 gradient steps? We will uncover the exact reason once we examine which
 directions in weight space gradient descent learns first.
 
@@ -258,6 +258,11 @@ $\|\mathbf{w}^*\| \approx 1.4$. Even though the regularized weights are
 shrunk below the true length, they generalize dramatically better than the
 unregularized weights.
 
+Compare the two runs:
+
+- **Without weight decay ($\lambda = 0$):** Training loss drops well below the $0.5$ noise floor as the 200 weights memorize noise in the 300 training labels, while validation loss climbs back up from its early minimum of about $0.9$.
+- **With weight decay ($\lambda = \frac{1}{3}$):** The penalty keeps $\|\mathbf{w}\|_2$ near $1.2$, preventing the weights from chasing that noise; training loss stays above $0.5$ while validation loss stays flat near the best value the unpenalized run ever reached.
+
 Let us be honest about what we actually gained here. Compared with the
 unpenalized model trained for all 50 epochs, weight decay slashes the
 validation loss by a quarter to a half. Compared with that same unpenalized
@@ -268,11 +273,6 @@ long we train, whereas the unpenalized run must be halted at a sweet spot
 that the training loss alone gives no hint of. To understand *why* both
 regularization and early stopping behave this way, let us look inside the
 weight vector and ask which components the penalty actually removed.
-
-Compare the two runs:
-
-- **Without weight decay ($\lambda = 0$):** Training loss plummets toward zero as the 200 parameters memorize the 20 training points, while validation loss stalls above $0.13$—more than a thousand times the $0.00005$ noise floor!
-- **With weight decay ($\lambda = 3$):** The penalty keeps $\|\mathbf{w}\|_2$ near $0.04$, preventing the weights from wandering into the 180-dimensional unmeasured subspace; training loss stays slightly positive while validation loss drops by an order of magnitude!
 
 ## Shrinkage Along Eigenvectors
 :label:`subsec_wd-shrinkage`
@@ -295,37 +295,37 @@ $$
 $$
 :eqlabel:`eq_wd-ridge-normal`
 
-Notice the immediate algebraic miracle: even when $\mathbf{X}^\top\mathbf{X}$ is singular (as in our $n = 20, d = 200$ experiment, where $\mathbf{X}^\top\mathbf{X}$ has 180 zero eigenvalues!), adding $n\lambda\mathbf{I}$ for any $\lambda > 0$ shifts every eigenvalue upward by $n\lambda > 0$, making $\mathbf{X}^\top\mathbf{X} + n\lambda\mathbf{I}$ strictly positive definite and invertible!
+Notice the immediate algebraic miracle: even when $\mathbf{X}^\top\mathbf{X}$ is singular (as it is whenever there are fewer examples than features: with $n = 20$ and $d = 200$, $\mathbf{X}^\top\mathbf{X}$ has 180 zero eigenvalues, exercise :exref:`ex_weight-decay-more-weights`), adding $n\lambda\mathbf{I}$ for any $\lambda > 0$ shifts every eigenvalue upward by $n\lambda > 0$, making $\mathbf{X}^\top\mathbf{X} + n\lambda\mathbf{I}$ strictly positive definite and invertible!
 
 ### Shrinkage Factors
 
-To see how :eqref:`eq_wd-ridge-normal` acts along each direction in feature space, let $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$ be the $d \times d$ sample second-moment (covariance) matrix of the features. Since $\mathbf{S}$ is symmetric and positive semidefinite (:numref:`sec_linear-algebra`), it admits an orthonormal eigendecomposition $\mathbf{S} = \sum_{j=1}^d s_j \mathbf{v}_j \mathbf{v}_j^\top$ with eigenvalues $s_1 \geq s_2 \geq \cdots \geq s_d \geq 0$ and orthonormal eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_d$. Here $s_j = \frac{1}{n}\|\mathbf{X}\mathbf{v}_j\|_2^2$ measures the empirical variance (spread) of the training inputs along direction $\mathbf{v}_j$.
+To see how :eqref:`eq_wd-ridge-normal` acts along each direction in feature space, let $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$ be the $d \times d$ sample second-moment (covariance) matrix of the features. Since $\mathbf{S}$ is symmetric and positive semidefinite (:numref:`sec_linear-algebra`), it admits an orthonormal eigendecomposition $\mathbf{S} = \sum_{j=1}^d \mu_j \mathbf{v}_j \mathbf{v}_j^\top$ with eigenvalues $\mu_1 \geq \mu_2 \geq \cdots \geq \mu_d \geq 0$ and orthonormal eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_d$. Here $\mu_j = \frac{1}{n}\|\mathbf{X}\mathbf{v}_j\|_2^2$ measures the empirical variance (spread) of the training inputs along direction $\mathbf{v}_j$.
 
-In this eigenbasis, $\mathbf{S}$ acts on $\mathbf{v}_j$ by multiplying it by $s_j$, while $(\mathbf{S} + \lambda\mathbf{I})^{-1}$ acts on $\mathbf{v}_j$ by dividing by $s_j + \lambda$. Whenever $s_j > 0$, comparing the ridge component $\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda}$ against the unregularized least-squares component $\mathbf{v}_j^\top \hat{\mathbf{w}}_0$ yields
+In this eigenbasis, $\mathbf{S}$ acts on $\mathbf{v}_j$ by multiplying it by $\mu_j$, while $(\mathbf{S} + \lambda\mathbf{I})^{-1}$ acts on $\mathbf{v}_j$ by dividing by $\mu_j + \lambda$. Whenever $\mu_j > 0$, comparing the ridge component $\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda}$ against the unregularized least-squares component $\mathbf{v}_j^\top \hat{\mathbf{w}}_0$ yields
 
 $$
 \begin{aligned}
-\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} &= \frac{s_j}{s_j + \lambda}\, \left(\mathbf{v}_j^\top \hat{\mathbf{w}}_0\right), \\
-\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} &= 0 \quad \textrm{whenever } s_j = 0.
+\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} &= \frac{\mu_j}{\mu_j + \lambda}\, \left(\mathbf{v}_j^\top \hat{\mathbf{w}}_0\right), \\
+\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} &= 0 \quad \textrm{whenever } \mu_j = 0.
 \end{aligned}
 $$
 
 Each eigendirection $\mathbf{v}_j$ is multiplied by its own *shrinkage factor* (:numref:`fig_ridge_shrinkage`):
 
-$$\frac{s_j}{s_j + \lambda} \in [0, 1).$$
+$$\frac{\mu_j}{\mu_j + \lambda} \in [0, 1).$$
 
-![The ridge shrinkage factor $s_j / (s_j + \lambda)$ as a function of the directional feature variance $s_j$ (shown on a log scale in units of $\lambda$). Directions well determined by the data ($s_j \gg \lambda$) are kept nearly untouched ($s_j/(s_j + \lambda) \approx 1$), whereas poorly determined directions ($s_j \ll \lambda$) are strongly shrunk toward zero.](../img/ridge-shrinkage.svg)
+![The ridge shrinkage factor $\mu / (\mu + \lambda)$ along an eigenvector with eigenvalue $\mu$, against the regularization constant $\lambda$ (log scale). A direction well determined by the data is kept nearly untouched while $\lambda \ll \mu$ and is strongly shrunk toward zero once $\lambda \gg \mu$; the factor is $\frac{1}{2}$ at $\lambda = \mu$ (dots). Directions with $\mu = 0$ are set to zero for every $\lambda > 0$ (dashed).](../img/mdl-linreg-ridge-shrinkage.svg)
 :label:`fig_ridge_shrinkage`
 
 Here lies the whole secret of ridge regression: **weight decay is not uniform shrinkage—it is variance-adaptive directional filtering!**
 
-- Along **well-determined directions** where the data vary richly ($s_j \gg \lambda$), the slope is tightly pinned down by observations, and the shrinkage factor $s_j / (s_j + \lambda) \approx 1$ leaves the least-squares estimate nearly untouched.
-- Along **poorly determined directions** where the data barely vary ($s_j \ll \lambda$)—such as the difference $x_1 - x_2$ between our two almost-identical thermometers—unregularized least squares divides noise by a tiny $s_j$ and explodes (with coefficient variance $\sigma^2 / (n s_j)$), whereas ridge regression multiplies by $s_j / (s_j + \lambda) \approx s_j / \lambda \ll 1$ and quashes the noisy component!
-- Along **unobserved null-space directions** ($s_j = 0$), ridge regression sets the weight component identically to $0$.
+- Along **well-determined directions** where the data vary richly ($\mu_j \gg \lambda$), the slope is tightly pinned down by observations, and the shrinkage factor $\mu_j / (\mu_j + \lambda) \approx 1$ leaves the least-squares estimate nearly untouched.
+- Along **poorly determined directions** where the data barely vary ($\mu_j \ll \lambda$)—such as the difference $x_1 - x_2$ between our two almost-identical thermometers—unregularized least squares divides noise by a tiny $\mu_j$ and explodes (with coefficient variance $\sigma^2 / (n \mu_j)$), whereas ridge regression multiplies by $\mu_j / (\mu_j + \lambda) \approx \mu_j / \lambda \ll 1$ and quashes the noisy component!
+- Along **unobserved null-space directions** ($\mu_j = 0$), ridge regression sets the weight component identically to $0$.
 
 ### The Directions Our Data Determine
 
-Let us verify this spectral picture directly on our $n = 20, d = 200$ dataset `data`! First, we compute the eigenvalues $s_1 \geq \cdots \geq s_{200}$ of $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$ along with the minimum-norm unregularized least-squares solution $\hat{\mathbf{w}}_0$ (returned by `lstsq`) and the closed-form ridge solution $\hat{\mathbf{w}}_{\lambda}$ at $\lambda = 3$:
+Let us verify this spectral picture directly on our $d = 200$ dataset `data`! First, we compute the eigenvalues $\mu_j$ of $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$ for the 300 training inputs (uncentered, which scarcely alters the spectrum) along with the shrinkage factors at $\lambda = \frac{1}{3}$. As in :numref:`sec_linear-algebra`, `eigh` returns the eigenvalues in ascending order with the eigenvectors as the columns of its second output. We also count how many eigenvalues fall below $\lambda$—the poorly determined directions where ridge removes more than half of the least-squares coordinate:
 
 ```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
 %%tab pytorch
@@ -380,24 +380,31 @@ dimensions of weight space. Yet the data constrain some directions far more
 tightly than others. The eigenvalues span nearly two orders of magnitude,
 from a few hundredths up to about 3.2, with roughly a quarter of them (50 to
 60 directions) lying below $\lambda = \frac{1}{3}$. The corresponding
-shrinkage factors range from about 0.1 to 0.9, yielding
+shrinkage factors range from about 0.1 to 0.9. Their sum defines the
+*effective number of parameters*
+$\textrm{df}(\lambda) = \sum_j \mu_j/(\mu_j + \lambda)$, and here
 $\textrm{df}(\frac{1}{3}) \approx 127$: out of 200 raw weights, the
 regularized model behaves as though it has roughly 127 effective parameters.
 
 Just how much damage does a tiny eigenvalue inflict on least squares? Along
 eigenvector $\mathbf{v}_j$, label noise injects
-$\frac{1}{n}(\mathbf{X}\mathbf{v}_j)^\top\boldsymbol{\epsilon}$ into $g_j$,
-a random perturbation with standard deviation $\sigma\sqrt{\mu_j/n}$
-(because $\|\mathbf{X}\mathbf{v}_j\|^2 = n\mu_j$). Dividing by $\mu_j$
-shifts the least-squares coordinate $g_j/\mu_j$ by roughly
+$\frac{1}{n}(\mathbf{X}\mathbf{v}_j)^\top\boldsymbol{\epsilon}$ into
+$\frac{1}{n}\mathbf{v}_j^\top\mathbf{X}^\top\mathbf{y}$, a random
+perturbation with standard deviation $\sigma\sqrt{\mu_j/n}$
+(because $\|\mathbf{X}\mathbf{v}_j\|^2 = n\mu_j$). Least squares divides
+by $\mu_j$, which shifts its coordinate $\mathbf{v}_j^\top\hat{\mathbf{w}}_0$ by roughly
 $\sigma/\sqrt{n\mu_j}$: about 0.06 when $\mu_j = 1$, but a whopping 0.3
 when $\mu_j = 0.04$. Since the true coordinates are only around
 $\|\mathbf{w}^*\|/\sqrt{200} = 0.1$ in magnitude, least squares along the
 smallest-eigenvalue directions is swamped by noise. Meanwhile, validation
 inputs are isotropic standard normal, so they weight every direction
 equally: by :eqref:`eq_linreg-scratch-expected-loss`, an error $c_j$ along
-
-Look at the spectrum of $\mathbf{S} = \frac{1}{20}\mathbf{X}^\top\mathbf{X}$: because $n = 20 < 200 = d$, the matrix has rank at most $20$! Exactly 20 eigenvalues $s_1, \ldots, s_{20}$ are positive (ranging from roughly $20$ down to $2$), while the remaining 180 eigenvalues $s_{21}, \ldots, s_{200}$ are zero. Let us decompose the true weight vector $\mathbf{w}^* = (0.01, \ldots, 0.01)^\top$ into its projection $\mathbf{w}^*_{\parallel}$ onto the 20-dimensional data span and its orthogonal component $\mathbf{w}^*_{\perp}$ in the 180-dimensional null space, and compare both $\hat{\mathbf{w}}_0$ and $\hat{\mathbf{w}}_{\lambda}$ against $\mathbf{w}^*_{\parallel}$:
+$\mathbf{v}_j$ inflates the expected validation loss by $c_j^2/2$,
+regardless of $\mu_j$. Let us verify this directly by projecting the
+parameter error $\mathbf{w} - \mathbf{w}^*$ of both trained models onto the
+eigenvectors (`V.T @ (w - w_star)`) and comparing the total squared error
+accumulated in the $k$ poorly determined directions versus the remaining
+ones:
 
 ```{.python .input #weight-decay-the-directions-our-data-determine-1}
 %%tab pytorch
@@ -441,17 +448,17 @@ for name, model in (('lambda = 0', model_0), ('lambda = 1/3', model_lambd)):
 
 The breakdown tells the whole story. Without regularization, roughly one
 quarter of the eigenvectors account for more than half of the total squared
-parameter error—typically between 0.9 and 2.2, versus only about 0.5 across
+parameter error—typically between 0.8 and 2.2, versus only about 0.5 across
 all the remaining directions combined. Turning on weight decay slashes that
 poorly determined error by a factor of two to six while trimming the rest
 modestly, leaving roughly 0.3 to 0.5 in each group. Even along the
 better-determined directions, label noise is nontrivial relative to the
 true coordinates, so shrinking them by 0.5–0.9 still discards more noise
 than signal. As a quick sanity check, half the total squared parameter
-error plus $\sigma^2/2 = 0.5$ closely matches the validation loss we
+error plus $\sigma^2/2 = 0.5$ roughly matches the validation loss we
 observed for both runs. In effect, weight decay performed here—across some
 fifty ill-conditioned directions simultaneously—the exact same surgery it
-performed on the difference direction of our two duplicated features.
+performs on the difference direction $x_1 - x_2$ of our two thermometers.
 
 This spectral lens also solves the mystery we left hanging earlier: why did
 the unpenalized run hit its lowest validation loss after just two or three
@@ -483,6 +490,8 @@ decay factor adds virtually no overhead. Frameworks also support
 per-parameter update rules, allowing us to decay weights while leaving
 biases untouched.
 
+We simply subclass `d2l.LinearRegression` into `WeightDecay` and pass the weight decay hyperparameter `wd` to the framework's SGD optimizer in `configure_optimizers` (excluding the bias parameter from decay so that only the weights $\mathbf{w}$ are penalized, matching :eqref:`eq_wd-objective`).
+
 :begin_tab:`mxnet`
 In Gluon, we pass the weight decay hyperparameter directly as `wd` when
 instantiating `Trainer`. Because Gluon scales each parameter's decay by its
@@ -499,10 +508,19 @@ $\mathcal{N}(0, 0.01^2)$ and the bias to zero by applying `weight_init`
 after the first forward pass materializes the lazy layer's parameters.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Keras optimizers accept a `weight_decay` argument and multiply each
+variable by $1 - \eta \cdot$ `weight_decay` prior to every update. Calling
+`exclude_from_weight_decay` exempts the bias from shrinkage.
+:end_tab:
 
-## Concise Implementation
-
-In practice, every deep learning framework builds weight decay directly into its optimizer (or layer regularizer), so we do not even need to modify the loss function by hand. We simply subclass `d2l.LinearRegression` into `WeightDecay` and pass the weight decay hyperparameter `wd` to the framework's SGD optimizer in `configure_optimizers` (excluding the bias parameter from decay so that only the weights $\mathbf{w}$ are penalized, matching :eqref:`eq_wd-objective`):
+:begin_tab:`jax`
+While `optax.sgd` does not include weight decay directly, Optax composes
+optimizers by chaining gradient transformations. Here `add_decayed_weights`
+adds `wd` times each parameter to its gradient, and `masked` restricts that
+transformation to parameters matching a predicate—namely arrays with more
+than one dimension (the weight matrix, excluding the bias vector).
+:end_tab:
 
 ```{.python .input #weight-decay-concise-implementation-1}
 %%tab mxnet
@@ -611,9 +629,9 @@ print(f'validation loss {trainer.history["val_loss"][-1]:.3f}, '
 ```
 
 The resulting weight norm (around 1.2) reproduces our from-scratch run at
-$\lambda = \frac{1}{3}$, and the validation loss (roughly 1.6–1.9) agrees
-too once we account for the factor of 2 in the framework's mean squared
-error. Note that the plotted training curve now tracks plain mean squared
+$\lambda = \frac{1}{3}$, and the validation loss (about twice the
+from-scratch value) agrees too once we account for the factor of 2 in the
+framework's mean squared error. Note that the plotted training curve now tracks plain mean squared
 error rather than the penalized loss, because the decay lives inside the
 optimizer rather than the loss function.
 
@@ -630,14 +648,11 @@ massive datasets. Even so, applying weight decay uniformly to the weights
 of all layers remains one of the most reliable and widely used heuristics
 in modern deep learning.
 
-
-Both the validation loss curves and the recovered weight norms match our from-scratch implementation.
-
 ## Summary
 
 - **$\ell_2$ penalty and weight decay:** Adding $\frac{\lambda}{2}\|\mathbf{w}\|_2^2$ to the training loss (while leaving the bias $b$ unpenalized) is equivalent in SGD to multiplying $\mathbf{w}$ by $(1 - \eta\lambda)$ before each gradient step, and corresponds to MAP estimation under a zero-mean isotropic Gaussian prior on $\mathbf{w}$.
 - **$\ell_2$ vs. $\ell_1$ geometry:** The smooth spherical level sets of $\|\mathbf{w}\|_2^2$ keep all coordinates small but nonzero, whereas the sharp axis-aligned corners of the $\ell_1$ diamond $\|\mathbf{w}\|_1$ drive many coordinates to exact zero (sparsity).
-- **Spectral shrinkage:** In the eigenbasis of $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$, ridge regression multiplies each component $\mathbf{v}_j^\top\hat{\mathbf{w}}_0$ by $s_j / (s_j + \lambda)$—preserving directions well determined by the data ($s_j \gg \lambda$), strongly damping noisy collinear directions ($s_j \ll \lambda$), and zeroing out unobserved null-space directions ($s_j = 0$).
+- **Spectral shrinkage:** In the eigenbasis of $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$, ridge regression multiplies each component $\mathbf{v}_j^\top\hat{\mathbf{w}}_0$ by $\mu_j / (\mu_j + \lambda)$—preserving directions well determined by the data ($\mu_j \gg \lambda$), strongly damping noisy collinear directions ($\mu_j \ll \lambda$), and zeroing out unobserved null-space directions ($\mu_j = 0$).
 
 ## Exercises
 
@@ -688,7 +703,8 @@ Both the validation loss curves and the recovered weight norms match our from-sc
 1. [code] **Ridge as augmented least squares.** Center the 300 training
    inputs and labels so that the bias drops out, and compute the ridge
    estimator for $\lambda = \frac{1}{3}$ in two ways.
-    1. Solve the linear system :eqref:`eq_wd-ridge-normal` with `ridge`.
+    1. Solve the linear system :eqref:`eq_wd-ridge-normal` directly, for
+       instance with `np.linalg.solve`.
     1. Run ordinary least squares with `lstsq` on $\mathbf{X}$ stacked on
        top of $\sqrt{n\lambda}\,\mathbf{I}$, with the labels $\mathbf{y}$
        followed by $d$ zeros.
@@ -781,7 +797,7 @@ Both the validation loss curves and the recovered weight norms match our from-sc
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §2.6]{.kicker}
+[Dive into Deep Learning · §2.7]{.kicker}
 
 Weight Decay & Spectral Regularization<br>
 **ℓ₂ ridge penalty · multiplicative decay · ℓ₁ lasso sparsity · Gaussian MAP prior · eigenspectrum shrinkage**
@@ -835,7 +851,7 @@ By Lagrangian duality, minimizing $L(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}
 :::
 
 ::: {.col .fig .big}
-![](../img/ridge-geometry.svg){.nostretch width=100%}
+![](../img/mdl-linreg-ridge-geometry.svg){.nostretch width=100%}
 :::
 :::
 :::
@@ -911,7 +927,7 @@ $$\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} = \underbrace{\frac{\mu_j}{\mu_j 
 :::
 
 ::: {.col .fig .big}
-![](../img/ridge-shrinkage.svg){.nostretch width=100%}
+![](../img/mdl-linreg-ridge-shrinkage.svg){.nostretch width=100%}
 :::
 :::
 :::
@@ -987,7 +1003,7 @@ Work out these three quantitative questions on weight decay:
 :::
 :::
 
-::: {.slide title="Section 2.6 Summary & Key Takeaways"}
+::: {.slide title="Section 2.7 Summary & Key Takeaways"}
 [Summary]{.kicker}
 
 | Perspective on Weight Decay | Mathematical Formulation | Key Insight / Mechanism |

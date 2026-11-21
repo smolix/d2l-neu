@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:d6ad045d77d48c1b4352275d61e14967078dc432469c89bef04365f4d1c695a9",
+    "d2l_lib_fingerprint": "sha256:44133b20b7a200bf6a3524567afaf8609eda869fdd4b9822c50b833dc550e421",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,23 +30,36 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (-2.4133, 1.3905)\nlabel: -5.3682, noise: -0.0140\n"
+          "text": "features: (0.2088, 0.6338)\nlabel: 2.4571, noise: -0.0057\n"
+        }
+      ]
+    },
+    "synthetic-regression-data-inspecting-the-data": {
+      "code_fingerprint": "sha256:9282d6b859e9b2a605303cf6b7363e91dc1bf3b0bb5610c6308d1bf3086b2c01",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "synthetic-regression-data/synthetic-regression-data-inspecting-the-data-1.svg",
+          "bytes": 225339,
+          "sha256": "sha256:c1097150a06c22aea2a60bf37702d41e64d962ff443e7d384ca6085e26ea5960"
         }
       ]
     },
     "synthetic-regression-data-recovering-the-parameters-1": {
-      "code_fingerprint": "sha256:0bb8998ae49650c8f6a675066cecd0c5806b1777531b507f7284c2b99d16a4b0",
+      "code_fingerprint": "sha256:389870f835b4ec9382912b629fbbaa5b2d41b0104b78e005994dbb619c1db45d",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-recovering-the-parameters-2": {
-      "code_fingerprint": "sha256:d577fa667b5a27f080c76785294e8948deae12cdb8d344c51dbdd784ca319e23",
+      "code_fingerprint": "sha256:a2b240778e1b39a95b898a0dbef4dc89484afe9b38d79fa5f516e5054d6ea500",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (6.7e-04, 2.1e-04)\nerror in b: 7.6e-06\nstandard error: 3.2e-04\n"
+          "text": "error in w: (-4.7e-04, -5.5e-05)\nerror in b: -6.4e-05\nstandard error: 3.2e-04\n"
         }
       ]
     }

@@ -196,7 +196,7 @@ $$
 
 so token spread decays exponentially as $r^L$ across depth $L$.
 
-Under pre-norm (:eqref:`eq_preln-block`), the residual stream is never divided by a normalization denominator: unrolling $L$ blocks gives a direct sum $\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{2L} \mathbf{U}^{(\ell)}$. Because $2L$ independent sublayer outputs add variance to the stream, the unscaled pre-norm stream variance grows linearly with depth ($\textrm{Var}(\mathbf{X}^{(\ell)}) \approx 1 + 2\ell \sigma^2$). To keep the total variance deposited by all $2L$ sublayers $O(1)$ at any depth $L$, GPT-2 :cite:`Radford.Wu.Child.ea.2019` scales the initialization standard deviation of the two residual output projections in each block (`W_o` and `W_2`) by **$1/\sqrt{2L}$** ($\sigma = 0.02 / \sqrt{2L}$). We compare all four configurations across 32 blocks:
+Under pre-norm (:eqref:`eq_preln-block`), the residual stream is never divided by a normalization denominator: unrolling $L$ blocks gives a direct sum $\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{2L} \mathbf{U}^{(\ell)}$. Because $2L$ independent sublayer outputs add variance to the stream, the unscaled pre-norm stream RMS grows with depth as $\sqrt{1 + 2\ell\sigma^2}$ (to keep the total variance deposited by all $2L$ sublayers $O(1)$ at any depth $L$, GPT-2 :cite:`Radford.Wu.Child.ea.2019` scales the initialization standard deviation of each block's residual output projections `W_o` and `W_2` by $1/\sqrt{2L}$, as we implement in :numref:`sec_gpt` and test in Exercise 4). Meanwhile, in post-norm, BERT :cite:`Devlin.Chang.Lee.ea.2018` slows down the collapse rate :eqref:`eq_collapse-rate` by initializing all linear weights with a smaller standard deviation $\sigma = 0.02$ (so $g^2 = d\sigma^2 \approx 0.10$ at $d = 256$). Let us compare these three configurations (`post-norm`, `pre-norm`, and `post-norm, std 0.02`) across 32 blocks:
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization}
 %%tab pytorch, jax
@@ -226,7 +226,7 @@ d2l.plot(list(range(1, 33)), [s['spread'] for s in stats.values()]
          legend_loc='lower left')
 ```
 
-Under standard post-norm (`post-norm`), token spread collapses to nearly zero by layer 32: all tokens in the sequence have been squeezed into nearly identical vectors. Under pre-norm with $1/\sqrt{2L}$ residual scaling (`pre-norm, 1/sqrt(2L)`), both the stream standard deviation and the token spread remain flat near $1.0$ across all 32 blocks.
+Under standard Xavier post-norm (`post-norm`), token spread collapses to nearly zero ($\sim 10^{-4}$) by layer 32, closely tracking our theoretical curve :eqref:`eq_collapse-rate`: all tokens in the sequence have been squeezed into nearly identical vectors. Shrinking the post-norm initialization (`post-norm, std 0.02`) slows the per-block contraction enough to preserve token spread across 32 blocks, while pre-norm (`pre-norm`) keeps token spread $O(1)$ automatically via its unattenuated identity residual path (with stream RMS growing as $\sqrt{L}$ unless paired with $1/\sqrt{2L}$ output-projection scaling; Exercise 4).
 
 ### Gradients at Initialization
 
@@ -335,7 +335,7 @@ for lam in (1, 4, 16):
           f'QK-norm: logit std {s_n:.2f}, entropy {h_n:.2f}')
 ```
 
-When $Q$ and $K$ are scaled by $5\times$ without QK-Norm, the logit standard deviation jumps to $25$ and softmax entropy collapses toward zero; with `rms_norm` applied to $Q$ and $K$, logit spread and attention entropy remain completely invariant to the weight scale.
+When $Q$ and $K$ are scaled by $\lambda = 4\times$ and $\lambda = 16\times$ without QK-Norm, the logit standard deviation jumps quadratically ($\approx 16$ and $\approx 256$) and softmax entropy collapses toward zero; with `rms_norm` applied to $Q$ and $K$, logit spread and attention entropy remain completely invariant to the weight scale.
 
 ## The Feed-Forward Network: From GELU to SwiGLU
 
@@ -523,7 +523,7 @@ for name, blk in blocks.items():
    1. Unroll :eqref:`eq_preln-block` to express $\mathbf{X}^{(L)}$ explicitly as $\mathbf{X}^{(0)} + \sum_{m=1}^{2L} f_m(\textrm{Norm}(\mathbf{X}^{(m-1)/2}))$.
    2. Apply the chain rule to write $\partial \mathbf{X}^{(L)} / \partial \mathbf{X}^{(0)}$ as a product of $2L$ Jacobians, expand the leading terms, and contrast the resulting identity term $\mathbf{I}$ with the post-norm product where every factor is premultiplied by $J_{\textrm{Norm}}$.
 
-3. **QK-Norm inside `TransformerBlock`.** Write an `attn_factory` that wraps `d2l.MultiHeadAttention` and applies `nn.RMSNorm(d // h)` (or `nnx.RMSNorm`) to queries and keys per head before computing attention scores. Verify on a 16-block stack with projection weights multiplied by $5\times$ that attention entropy remains bounded away from zero.
+3. **QK-Norm inside `TransformerBlock`.** Write an `attn_factory` that wraps `d2l.MultiHeadAttention` and applies `nn.RMSNorm(d // h)` (or `nnx.RMSNorm`) to queries and keys per head before computing attention scores. Verify on a 16-block stack with projection weights multiplied by $4\times$ (or $16\times$) that attention entropy remains bounded away from zero.
 
 4. **Stream variance budget across depth.** In the pre-norm arrangement, every sublayer adds an update to the residual stream. Run `signal_stats(pre_norm=True, std=0.02 / math.sqrt(2 * L), num_blks=L)` for $L \in \{8, 16, 32, 64\}$ and compare against unscaled `std=None`. Verify that the final stream standard deviation at block $L$ grows as $\sqrt{L}$ without scaling but remains near a constant independent of $L$ under the $1/\sqrt{2L}$ rule.
 

@@ -604,7 +604,7 @@ footprint—while total arithmetic stays comparable at 798 million multiply-adds
 per image (versus 938 million for AlexNet), because the added $1 \times 1$
 convolutions shift computation into the convolutional body.
 
-### Training
+### Training NiN
 
 We train NiN with the same optimizer schedule as VGG, using a peak learning
 rate of 0.03 because runs at 0.1 occasionally diverge.

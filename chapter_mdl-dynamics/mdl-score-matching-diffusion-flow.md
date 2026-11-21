@@ -202,8 +202,7 @@ field from growing without bound. The balance sits at the true variance.
 
 Implicit score matching has two limits. The proof needs the boundary term to
 vanish. For data on a bounded interval it does not, and the implicit
-objective then picks the wrong field (Exercise
-:exref:`ex_mdl-score-matching-diffusion-flow-boundary-terms`). The second
+objective then picks the wrong field. The second
 limit is cost. The divergence is the trace of the Jacobian,
 $\nabla \cdot \mathbf{s}_{\boldsymbol{\theta}} = \operatorname{tr}\, (\partial \mathbf{s}_{\boldsymbol{\theta}} / \partial \mathbf{x})$.
 Computing it exactly takes one reverse-mode pass per row of the Jacobian, $d$
@@ -1188,10 +1187,7 @@ forward curve that produced it. DDIM is the deterministic end of the family
 of reverse processes :eqref:`eq_mdl-dyn-reverse-family`, whose members
 reinject a chosen amount of noise and share the single-time marginals of the
 forward process, so one trained network serves them all.
-:numref:`sec_diffusion-samplers` chooses among them. Exercise
-:exref:`ex_mdl-score-matching-diffusion-flow-ddim-heun` sets a second-order
-solver in the same coordinates, at two evaluations per stride, against DDIM
-at equal cost.
+:numref:`sec_diffusion-samplers` chooses among them.
 
 ### DDIM on Fitted Scores
 
@@ -1412,21 +1408,6 @@ follows densities that curve more sharply than any noised density can.
 
 ## Exercises
 
-1. **Boundary terms.** Hyvärinen's identity :eqref:`eq_mdl-hyvarinen` assumes
-   that $p(x)\, s_{\boldsymbol{\theta}}(x)$ vanishes at the ends of the
-   support. Let the data be uniform on $[0, 1]$, so that $\nabla \log p = 0$
-   inside the interval, and fit the linear model $s_{a,b}(x) = a + b x$.
-    1. Minimize the explicit objective :eqref:`eq_mdl-esm-objective` and the
-       implicit objective, the right-hand side of :eqref:`eq_mdl-hyvarinen`,
-       over $(a, b)$. Which density has the score that the implicit objective
-       selects?
-    1. Repeat the one-dimensional integration by parts of the proof on
-       $[0, 1]$, keep the boundary term, and show that it accounts for the
-       difference between the two objectives.
-    1. Pixel intensities are bounded in the same way. Why does denoising score
-       matching at a noise level $\sigma > 0$ not inherit the problem?
-   :exlabel:`ex_mdl-score-matching-diffusion-flow-boundary-terms`
-
 1. [code] **Langevin discretization bias.** For the Gaussian target
    $p = \mathcal{N}(0, v)$, the Langevin sampler of :eqref:`eq_mdl-langevin`
    with step $h$ is the linear recursion
@@ -1527,25 +1508,6 @@ follows densities that curve more sharply than any noised density can.
        and that its value at the optimum, $c\, \sigma_t^2\, R(t)$, stays
        bounded as $t \to 0$.
    :exlabel:`ex_mdl-score-matching-diffusion-flow-weightings`
-
-1. [code] **DDIM against a second-order stride.** ● By the proposition
-   :eqref:`eq_mdl-ddim-euler`, DDIM is Euler's method for
-   $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol{\epsilon}}$ on the grid
-   `strides(K)` of the cell that defines `ddim`.
-    1. Implement Heun's method in the coordinates $(\bar\sigma, \bar x)$ on the
-       same grid: evaluate $\hat\epsilon$ at the start of a stride and at the
-       Euler predictor, and step with their average, two evaluations per
-       stride. Compare its endpoint error against `x_ref` with that of DDIM
-       at equal numbers of evaluations: Heun with $5$, $10$, $20$ strides
-       against DDIM with $10$, $20$, $40$. Which method wins at each budget?
-    1. Verify the point-mass corollary numerically: pass to `ddim` the
-       prediction $(\bar x - x_0)/\bar\sigma$ of data concentrated at a
-       single point $x_0$, written in terms of $x_t$ and $\bar\alpha_t$, and
-       compare the endpoints of $10$ and of 1,000 strides. Which quantity
-       does DDIM hold fixed across a stride, and which quantity does Euler's
-       method for the probability-flow ODE in the original time $t$ hold
-       fixed? Why is the second not exact for a point mass?
-   :exlabel:`ex_mdl-score-matching-diffusion-flow-ddim-heun`
 
 1. [code] **Guidance by noise level.** ● In the cell that defines
    `cfg_sample`, raising $\gamma$ from $1$ to $10$ moves the mean of the

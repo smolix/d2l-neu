@@ -648,11 +648,9 @@ $\mathcal L(\mathbf x)+\tfrac1{2\eta}\|\mathbf x-\mathbf x_k\|^2$ vanishes at
 $\mathbf x_{k+1}$, which for a convex loss makes it the proximal step
 $\mathrm{prox}_{\eta\mathcal L}(\mathbf x_k)$ of
 :numref:`subsec_mdl-proximal-operators`, applied to the loss itself. On our
-quadratic that is one linear system, and Exercise
-:exref:`ex_mdl-numerical-solvers-proximal-step` counts what it costs to
-solve it by gradient steps. On a network it is an optimization problem of
-its own at every step, and for large $\eta$ it is the problem we set out to
-solve.
+quadratic that is one linear system. On a network it is an optimization
+problem of its own at every step, and for large $\eta$ it is the problem we
+set out to solve.
 
 The valley is the stiff system of :numref:`sec_mdl-stiffness-implicit` in a
 milder form, with rates $10$ and $1$ in place of $50$ and $1$, and $\eta$ in
@@ -688,22 +686,6 @@ $\eta<2/\lambda_{\max}(\mathbf H)$ is the edge of Euler's region, and
 ill-conditioning is stiffness.
 
 ## Exercises
-
-1. [code] **Order on a nonlinear field.** The text measured the orders on a
-   linear field, where they follow from the stability function. Here only
-   the Taylor argument explains them (the exercise is adapted from
-   Exercise 2.10 of :citet:`Sarkka.Solin.2019`). Implement Heun's method
-   :eqref:`eq_mdl-ode-heun-update` beside the text's `euler` and `rk4`. Take the damped pendulum
-   $\dot\phi=\omega$, $\dot\omega=-\sin\phi-c\,\omega$ of
-   :numref:`subsec_mdl-ode-linearization` with $c=0.5$ and integrate it from
-   $(\phi,\omega)=(2.5,0)$ to $T=5$ with $n=16,32,\ldots,1024$ steps, using
-   `rk4` with $2^{16}$ steps as the reference. Plot the endpoint errors
-   against $h$ on log--log axes and fit the slopes. Which method reaches an
-   error of $10^{-6}$ with the fewest field evaluations? Then set $c=0$ and
-   integrate to $T=50$ at $h=0.1$, plotting the energy
-   $\tfrac12\omega^2+(1-\cos\phi)$ of each method against time. Which methods
-   drift, and in which direction?
-   :exlabel:`ex_mdl-odes-solvers-nonlinear-order`
 
 1. [code] **Adaptive step size.** ● An embedded pair estimates the local
    error from two methods of different order. The simplest pair uses the
@@ -899,28 +881,6 @@ ill-conditioning is stiffness.
        eigenvalue of the Hessian of an ill-conditioned quadratic sets the
        step limit?
    :exlabel:`ex_mdl-odes-solvers-heavy-ball-ode`
-
-1. [code] **The cost of an implicit step.** ● Backward Euler on the gradient
-   flow is $\mathbf x_{k+1}=\mathbf x_k-\eta\nabla\mathcal L(\mathbf x_{k+1})$
-   (:numref:`sec_mdl-gd-as-solver`).
-    1. Show that $\mathbf x_{k+1}$ is a stationary point of
-       $g(\mathbf x)=\mathcal L(\mathbf x)+\tfrac1{2\eta}\|\mathbf x-\mathbf x_k\|^2$,
-       and that for a convex loss
-       $\mathcal L(\mathbf x_{k+1})\le\mathcal L(\mathbf x_k)-\tfrac1{2\eta}\|\mathbf x_{k+1}-\mathbf x_k\|^2$
-       for every $\eta>0$.
-    1. For a quadratic loss with Hessian $\mathbf H$, find the Hessian of $g$
-       and its condition number as a function of $\eta$. What are its limits
-       as $\eta\to0$ and as $\eta\to\infty$?
-    1. Solve the inner problem approximately by $m$ steps of gradient descent
-       on $g$ with step size $1/(\lambda_{\max}(\mathbf H)+1/\eta)$, started
-       at $\mathbf x_k$. Show that $m=1$ is gradient descent on $\mathcal L$
-       with the learning rate $\eta/(1+\eta\lambda_{\max})$, which stays
-       below $1/\lambda_{\max}$ for every $\eta$.
-    1. On $\mathbf H=\mathrm{diag}(10,1)$ from $(1,1)$, count the gradients
-       this method needs to reach $\|\mathbf x\|<10^{-6}$ for
-       $\eta=0.25, 2.5, 25$ and $m=1, 5, 20$, and compare with gradient
-       descent at $\eta=2/11$. Where did the stiffness go?
-   :exlabel:`ex_mdl-numerical-solvers-proximal-step`
 
 <!-- COORDINATOR: this page needs its own forum topic (tools/create_forum_topics.py); add the [Discussions](...) line here. -->
 

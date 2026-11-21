@@ -1212,12 +1212,11 @@ $\mathcal{N}(0.736,\, 0.930^2)$ from before), and at $320$ steps it has
 $0.735$ and $0.866$. Both fitted slopes are $1.01$: halving the step halves
 the error of the simulated law, which is weak order $1$.
 
-The same computation for geometric Brownian motion also gives weak order $1$
-(Exercise :exref:`ex_mdl-sdes-weak-order-multiplicative`), so multiplicative
-noise costs half an order in the paths and nothing in the law. A scheme that
-looks more accurate can even converge to the wrong equation. Heun's method,
-which averages the noise coefficient over the step, converges to the
-Stratonovich solution instead of the Itô one
+The same computation for geometric Brownian motion also gives weak order $1$,
+so multiplicative noise costs half an order in the paths and nothing in the
+law. A scheme that looks more accurate can even converge to the wrong
+equation. Heun's method, which averages the noise coefficient over the step,
+converges to the Stratonovich solution instead of the Itô one
 (Exercise :exref:`ex_mdl-sdes-ito-versus-stratonovich`).
 
 Simulation produces samples of the forward process, and the kernel gives its
@@ -1248,28 +1247,6 @@ and $\tfrac12$ for multiplicative noise and reproduces laws at order $1$ for
 both.
 
 ## Exercises
-
-1. **Biased random walk.** A walker takes a step of size $\pm c\sqrt{\Delta t}$
-   every $\Delta t$ time units, as in :numref:`sec_mdl-wiener-process`, but
-   its coin is biased: the step is positive with probability
-   $p = \tfrac12\left(1 + b\,\Delta t^{\delta}\right)$ for constants
-   $b, c, \delta > 0$ and $\Delta t$ small enough that $p \le 1$. Let
-   $X^{(\Delta t)}_t$ be the position after $k = t/\Delta t$ steps, starting
-   from $0$.
-    1. Compute $\mathbb{E}\big[X^{(\Delta t)}_t\big]$ and
-       $\textrm{Var}\big(X^{(\Delta t)}_t\big)$. For which exponent
-       $\delta$ does the mean have a finite nonzero limit as
-       $\Delta t \to 0$? What happens to the mean for smaller and for larger
-       $\delta$?
-    1. For that exponent, find the limits of the mean and the variance.
-       Which constant drift and diffusion coefficients give an SDE
-       :eqref:`eq_mdl-sde-general` whose solution from $X_0 = 0$ has the
-       same mean and variance at every $t$?
-    1. Take $c = 1$ and $\Delta t = 10^{-3}$, and choose $b$ so that the
-       drift in (b) equals $1$. Compute $p$. Compare the drift displacement
-       with the standard deviation of the noise displacement, first over one
-       step and then over the interval $[0, 1]$.
-   :exlabel:`ex_mdl-sdes-biased-random-walk`
 
 1. **Infinite total variation.** The total variation of a path $x$ along a
    partition $0 = t_0 < t_1 < \cdots < t_n = t$ is
@@ -1320,35 +1297,6 @@ both.
        what does that say about the limit $n \to \infty$?
    :exlabel:`ex_mdl-sdes-brownian-scaling-exit-times`
 
-1. [code] **Quadratic variation of an Itô process.** Let $X$ solve
-   :eqref:`eq_mdl-sde-general`, and let $[X]_t$ be the limit in probability
-   of $\sum_i (X_{t_{i+1}} - X_{t_i})^2$ over partitions of $[0, t]$ whose
-   mesh tends to zero. The computation of $(dX)^2$ in
-   :numref:`sec_mdl-ito-lemma` suggests
-   $[X]_t = \int_0^t g(X_s, s)^2\, ds$.
-    1. Write $X_t = X_0 + A_t + M_t$ with $A_t = \int_0^t f(X_s, s)\,ds$ and
-       $M_t = \int_0^t g(X_s, s)\,dW_s$, and assume that $f(X_s, s)$ is
-       bounded on $[0, t]$. Show that $\sum_i (\Delta A_i)^2$ and
-       $\sum_i \Delta A_i\, \Delta M_i$ tend to zero along every path, so
-       that $[X]_t = [M]_t$. Exercise
-       :exref:`ex_mdl-sdes-infinite-total-variation`b supplies the first
-       limit; the second needs only the continuity of $M$.
-    1. Reshape the increments `dW_qv` of the quadratic-variation experiment
-       to shape $(1, 2^{18})$ and pass them to `euler_maruyama` to simulate the OU
-       process $dX = -X\,dt + \sqrt{2}\,dW$ from $X_0 = 2$ and the geometric
-       Brownian motion $dX = X\,dt + X\,dW$ from $X_0 = 1.5$ on $[0, 1]$.
-       For each path, print the sum of squared increments on the subsampled
-       grids of that experiment next to $\int_0^1 g(X_s, s)^2\,ds$ evaluated along
-       the same path. For which of the two processes is $[X]_1$ random?
-    1. Let $X_t = \mu t + g W_t$ with constants $\mu$ and $g$ be observed at
-       $n + 1$ equally spaced times on $[0, T]$. Show that
-       $\frac{1}{T}\sum_i (\Delta X_i)^2 \to g^2$ in mean square as
-       $n \to \infty$ for every fixed $T$, whereas the estimator $X_T / T$
-       of $\mu$ has variance $g^2 / T$ for every $n$. What does this
-       imply for estimating the diffusion coefficient and the drift from
-       one finely sampled trajectory?
-   :exlabel:`ex_mdl-sdes-quadratic-variation-ito-process`
-
 1. **Geometric Brownian motion and the $-\nu^2/2$ correction.** Consider
    $dX = \mu X\,dt + \nu X\,dW$ with $X_0 > 0$ and its solution, given
    by :eqref:`eq_mdl-sde-gbm`.
@@ -1395,39 +1343,6 @@ both.
        and step sizes. By what factor does it reduce the
        strong error at $\Delta t = 2^{-8}$?
    :exlabel:`ex_mdl-sdes-milstein-correction`
-
-1. [code] **Weak order under multiplicative noise.** For geometric Brownian
-   motion, the Euler--Maruyama step multiplies $\hat X_n$ by
-   $1 + \mu\,\Delta t + \nu\,\Delta W_n$. Its strong order is
-   $\tfrac12$, as the strong-order experiment measured.
-    1. Derive recursions for the mean and the second moment of the simulated
-       $\hat X_n$, and solve them in closed form.
-    1. As the text does for the OU process, compute the errors of both
-       moments at $T = 1$ against the exact moments of Exercise
-       :exref:`ex_mdl-sdes-geometric-brownian-motion-correction`a, for
-       $\mu = \nu = 1$, $X_0 = 1.5$, and
-       $n \in \{20, 40, 80, 160, 320, 640\}$ steps, and fit the slopes.
-       How do they compare with the strong-order slope of the same scheme?
-   :exlabel:`ex_mdl-sdes-weak-order-multiplicative`
-
-1. [code] **Covariance of the OU process.** Let $X$ be the OU
-   process :eqref:`eq_mdl-sde-ou`.
-    1. For $s \le t$, split the integral in :eqref:`eq_mdl-sde-ou-solution`
-       at time $s$ and show that
-       $\textrm{Cov}(X_s, X_t \mid X_0) = e^{-\theta(t - s)}\textrm{Var}(X_s \mid X_0)$.
-       Write the result in closed form with :eqref:`eq_mdl-sde-ou-kernel`.
-    1. Let $X_0 \sim \mathcal{N}(0, g^2/2\theta)$ be independent of $W$.
-       Show that
-       $\textrm{Cov}(X_s, X_t) = \frac{g^2}{2\theta}\, e^{-\theta |t - s|}$
-       for all $s, t \ge 0$.
-    1. Estimate $\textrm{Cov}(X_1, X_t)$ for $t \in \{1, 1.5, 2, 4\}$ from the
-       clouds `X_ou_snap` that the OU experiment saved, and compare the
-       estimates with the formulas of (a) and (b). Which formula does the
-       cloud follow, and why?
-    1. A sampler stores the state of a stationary OU process every $\Delta$
-       time units. How large must $\Delta$ be for the correlation between
-       consecutive stored states to fall below $0.01$?
-   :exlabel:`ex_mdl-sdes-ou-covariance`
 
 1. **Variance preservation, exactly.** Let $X_t$ follow
    :eqref:`eq_mdl-sde-vp-marginal` with zero-mean data $X_0$.

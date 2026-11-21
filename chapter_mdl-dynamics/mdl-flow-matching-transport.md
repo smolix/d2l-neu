@@ -823,10 +823,8 @@ print(f'floor of the independent pairing, per coordinate: {pairing_floor(moons, 
 ```
 
 The floor is about $1.37$ per coordinate, and the estimate moves in the
-second decimal from one draw to the next (Exercise
-:exref:`ex_mdl-flow-matching-transport-crossing-floor` asks at which times
-it is collected). A perfect network would stop there. Ours has two hidden
-layers and $4{,}000$ steps to get close.
+second decimal from one draw to the next. A perfect network would stop there.
+Ours has two hidden layers and $4{,}000$ steps to get close.
 
 ```{.python .input #mdl-flow-matching-transport-example-two-moons-1}
 #@tab mxnet
@@ -1230,7 +1228,8 @@ costs $\mathbb{E}(m + s\epsilon - \epsilon)^2 = m^2 + (s - 1)^2$. The
 independent pairing costs $\mathbb{E}(\epsilon - x_0)^2 = m^2 + 1 + s^2$. In
 one dimension the sorted pairing is optimal for every convex cost: if two
 pairs cross, swapping their targets does not increase the cost
-(Exercise :exref:`ex_mdl-flow-matching-transport-one-dimensional-ot`). Hence
+(Exercise :exref:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`d of
+:numref:`sec_mdl-test-functions-transport`). Hence
 
 $$
 W_2^2\big(\mathcal{N}(0, 1), \mathcal{N}(m, s^2)\big) = m^2 + (s - 1)^2 .
@@ -1597,31 +1596,6 @@ data.
 
 ## Exercises
 
-1. **Crossing segments and the floor.** The constant $C$ of the CFM theorem
-   is the conditional variance
-   $\mathbb{E} \| Y - \mathbf{u}_t(\mathbf{x}) \|^2$ of the target
-   $Y = \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$.
-    1. Show that $C = 0$ if and only if, for almost every $t$, the
-       conditional velocity is almost surely a function of
-       $(\mathbf{x}_t, t)$. What does this require of the segments of the
-       straight path :eqref:`eq_mdl-rf-path`?
-    1. For the independent pairing of $\mathcal{N}(\mathbf{0}, \mathbf{I})$
-       with the standardized `moons`, compute the conditional variance of
-       $\boldsymbol{\epsilon} - \mathbf{x}_0$ given $\mathbf{x}_t$, summed over
-       coordinates, at $t = 0$ and at $t = 1$. The training cell prints the
-       loss per coordinate; which number should it be compared with?
-    1. The function `pairing_floor` averages the floor over $t$. Change it
-       to report the floor separately for each tenth of $[0, 1]$. At which
-       $t$ is the floor largest, and why does it fall toward both ends?
-       Compare the first and the last tenth with part (b). One end falls
-       short of it. What do the thinness of the crescents and the finite
-       number of training points have to do with that?
-    1. The reflow loss settles at a few thousandths or less. What does this
-       say about crossings among the segments from
-       $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ to $\boldsymbol{\epsilon}$,
-       allowing for the approximation error of the network?
-   :exlabel:`ex_mdl-flow-matching-transport-crossing-floor`
-
 1. **Stochastic interpolants.** ● :citet:`Albergo.Boffi.VandenEijnden.2023`
    write the paths of this section and of the previous one as
    $\mathbf{x}_t = a_t \mathbf{x}_0 + b_t \mathbf{x}_1 + c_t \mathbf{w}$,
@@ -1675,27 +1649,6 @@ data.
        $x_t$ near $0$ is of order $e^{-(1 - t)^2 a^2/2t^2}/t$.
    :exlabel:`ex_mdl-flow-matching-transport-late-decisions`
 
-1. [code] **Optimal transport in one dimension.**
-    1. Prove that in one dimension the sorted pairing minimizes
-       $\mathbb{E}\, c(x_1 - x_0)$ for every convex $c$. Suppose two pairs
-       $(x_0, x_1)$ and $(x_0', x_1')$ cross: $x_0 < x_0'$ but $x_1 > x_1'$.
-       Show that
-       $c(x_1' - x_0) + c(x_1 - x_0') \le c(x_1 - x_0) + c(x_1' - x_0')$.
-       (The two new differences lie between the two old ones and have the
-       same sum.) Conclude :eqref:`eq_mdl-w2-gaussian-1d`.
-    1. Show that the flow map from $t = 1$ to $t = 0$ of a one-dimensional
-       flow with a Lipschitz field is increasing, and hence that a flow
-       carrying $p_1$ to $p_0$, with $p_1$ a density, induces the sorted
-       pairing. Conclude that in one
-       dimension every such flow has an optimal pairing.
-    1. Sorting computes $W_2^2$ on a line even where no formula does.
-       Estimate it between $\mathcal{N}(0, 1)$ and the mixture
-       $\tfrac12 \mathcal{N}(-2, 0.25) + \tfrac12 \mathcal{N}(2, 0.25)$ from
-       $10^5$ sorted samples of each, and compare it with the cost $5.25$ of
-       the independent pairing. Why is it smaller than the $1.81$ of the
-       two points at $\pm 2$?
-   :exlabel:`ex_mdl-flow-matching-transport-one-dimensional-ot`
-
 1. **Kinetic energy of Gaussian paths.**
     1. Show that if $p_t = \mathcal{N}(0, s_t^2)$ in one dimension, the
        velocity $u_t(x) = (\dot{s}_t/s_t)\, x$ satisfies the continuity
@@ -1715,8 +1668,8 @@ data.
 1. [code] **One reflow round on two points.** Take data $\pm a$, noise
    $\mathcal{N}(0, 1)$, the independent pairing, and the marginal flow
    :eqref:`eq_mdl-two-point-velocity` of the two-point example.
-    1. Using part (b) of Exercise
-       :exref:`ex_mdl-flow-matching-transport-one-dimensional-ot`, show that
+    1. Using the order-preservation proposition of
+       :numref:`subsec_mdl-flow-order` and symmetry, show that
        the flow map from $t = 1$ to $t = 0$ is
        $\epsilon \mapsto a \operatorname{sign}(\epsilon)$, so one reflow
        round produces the sorted pairing.

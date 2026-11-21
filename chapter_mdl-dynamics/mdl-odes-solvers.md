@@ -372,8 +372,7 @@ comes from exactly one start. $\blacksquare$
 A field that changes in time loses only the law
 :eqref:`eq_mdl-ode-flow-group`. An hour of wind from noon and an hour from
 midnight are different maps, so the map depends on the starting time as well
-as on the duration (Exercise
-:exref:`ex_mdl-odes-solvers-time-dependent-flow`). We keep the symbol
+as on the duration. We keep the symbol
 $\Phi_t$ for such a field, as the map from the state at time $0$ to the
 state at time $t$.
 
@@ -897,25 +896,6 @@ exists.
        which statement of the corollary on the flow map fails?
    :exlabel:`ex_mdl-odes-solvers-uniqueness-exponent`
 
-1. **Picard iteration on the rotation.** Apply Picard iteration to
-   $\dot{\mathbf x}=\mathbf K\mathbf x$ from $\mathbf x_0=(1,0)$, starting
-   from the constant path $\boldsymbol\varphi_0\equiv\mathbf x_0$.
-    1. Compute $\boldsymbol\varphi_1,\ldots,\boldsymbol\varphi_4$. Which two
-       functions are being built, one Taylor term per iteration?
-    1. Show that
-       $\|\boldsymbol\varphi_k(t)-\boldsymbol\varphi_{k-1}(t)\|=t^k/k!$.
-       The proof in the text promises a factor $\tfrac12$ per iteration, and
-       only on an interval of length $1/(2L)=\tfrac12$. For which $t$ do
-       these iterates converge, and how fast?
-    1. The rotation is not special. For a field that satisfies the hypotheses
-       of the theorem, let $M=\max_{s\le T}\|\mathbf f(\mathbf x_0,s)\|$.
-       Show by induction that
-       $\|\boldsymbol\varphi_{k+1}(t)-\boldsymbol\varphi_k(t)\|\le ML^kt^{k+1}/(k+1)!$
-       on $[0,T]$, and conclude that Picard iteration converges on all of
-       $[0,T]$ without a restart. Which estimate in the proof of the text
-       gave the factorial away?
-   :exlabel:`ex_mdl-odes-solvers-picard-rotation`
-
 1. **Separation of trajectories.** Consider a field of the form
    $\mathbf{f}(\mathbf{x}) = \mathbf W_2 \tanh(\mathbf W_1\mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2$,
    the kind of field that a Neural ODE integrates
@@ -938,25 +918,6 @@ exists.
        distinct points? What do the two bounds imply for the Lipschitz
        constants of $\Phi_T$ and of its inverse?
    :exlabel:`ex_mdl-odes-solvers-trajectory-separation`
-
-1. **A field that changes in time.** Consider $\dot x=-tx$, a decay whose
-   rate grows with time.
-    1. Solve the equation from the state $x$ at time $s$, and write down the
-       map $\Phi_{s\to t}$ that carries the state at time $s$ to the state at
-       time $t$.
-    1. Show that $\Phi_{s\to t}\circ\Phi_{r\to s}=\Phi_{r\to t}$ and that
-       $\Phi_{t\to s}$ inverts $\Phi_{s\to t}$. Then compare
-       $\Phi_{0\to1}$ with $\Phi_{1\to2}$, which both flow for one unit of
-       time. Why can no law $\Phi_{t+s}=\Phi_t\circ\Phi_s$ in the duration
-       alone hold for this field?
-    1. A field that depends on time becomes autonomous when time is made a
-       coordinate of the state: $\mathbf z=(x,t)$ obeys
-       $\dot{\mathbf z}=(f(x,t),\,1)$. Write this field down for
-       $\dot x=-tx$. Is it globally Lipschitz in $\mathbf z$? Is $-tx$
-       globally Lipschitz in $x$ for $t\in[0,T]$? Which route to the
-       bijection asks less of the field, this one or the reversal of time in
-       the proof of the corollary?
-   :exlabel:`ex_mdl-odes-solvers-time-dependent-flow`
 
 1. **A repeated eigenvalue.** The matrix
    $\mathbf A=\left(\begin{smallmatrix}\lambda&1\\0&\lambda\end{smallmatrix}\right)$

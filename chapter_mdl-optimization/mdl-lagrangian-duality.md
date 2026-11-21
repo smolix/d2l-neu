@@ -1308,9 +1308,7 @@ by the lack of convexity, not by a failure of Slater's condition. Returning to
 panel (b) of :numref:`fig_mdl-opt-primal-dual-gap`, the image curve
 $\{(u, -(u + \tfrac12)^2) : u \in [-\tfrac12, \tfrac12]\}$ bends downward, so
 no supporting line below $\mathcal{A}$ can reach $(0, p^\star)$; the highest
-one, of slope $-1$, certifies only $-\tfrac12$. Interestingly, whether a gap
-appears can even depend on how the same feasible set is written as constraints
-(Exercise :exref:`ex_mdl-lagrangian-duality-gap-formulations`).
+one, of slope $-1$, certifies only $-\tfrac12$.
 
 Two open challenges remain. First, for a nonconvex problem, the dual can bound
 the optimum but need not reach it. Second, even when a saddle point exists,
@@ -1446,23 +1444,6 @@ minimizing $-x^2$ on $[0, 1]$ subject to $x \le \tfrac12$.
        $(0.204, 0, 0, 0, 0, 0.273, 0, 0.359)$.)
    :exlabel:`ex_mdl-constrained-optimization-duality-offset-folded-svm-dual`
 
-1. [code] **Duality gaps and formulations.** The gap cell of
-   :numref:`subsec_mdl-explicit-duality-gap` minimizes the Lagrangian over
-   the domain $[0, 1]$ and dualizes only the constraint $x \le \tfrac12$.
-    1. Replace the objective by $f(x) = (x - 1)^2$. Compute $p^\star$, the
-       dual function, $d^\star$, and $\lambda^\star$ by hand, and confirm them
-       with the modified cell. Why is the gap now zero?
-    1. Keep $f(x) = -x^2$, but write the constraint as $x^2 \le \tfrac14$,
-       which defines the same feasible set on $[0, 1]$. Compute the new dual
-       function and $d^\star$ by hand and with the cell.
-    1. Keep $f(x) = -x^2$ and the constraint $x \le \tfrac12$, but treat
-       $0 \le x$ and $x \le 1$ as constraints with their own multipliers and
-       minimize the Lagrangian over all of $\mathbb{R}$. What is $d^\star$
-       now? Rank the dual bounds of the three formulations of the same
-       problem (the one in the text and those of the two previous parts). Is
-       a duality gap a property of the problem or of its formulation?
-   :exlabel:`ex_mdl-lagrangian-duality-gap-formulations`
-
 1. [code] **Gradient descent--ascent.** ● Primal--dual methods and GAN
    training update the minimizing variable by gradient descent and the
    maximizing variable by gradient ascent at the same time.
@@ -1584,55 +1565,6 @@ minimizing $-x^2$ on $[0, 1]$ subject to $x \le \tfrac12$.
        dual values coincide. Which solve is cheaper when $n \ll d$? What does
        replacing $\mathbf{A}\mathbf{A}^\top$ by a kernel matrix give?
    :exlabel:`ex_mdl-lagrangian-duality-ridge-dual`
-
-1. [code] **Dual ascent and the gradient of the dual.** For the clipping
-   problem, $q(\lambda) = \tfrac{25}{2}\tfrac{\lambda}{1 + \lambda} - \tfrac\lambda2$
-   and the Lagrangian's minimizer is $\mathbf{x}(\lambda) = \mathbf{x}_0 / (1 + \lambda)$.
-    1. Show that $q'(\lambda) = g(\mathbf{x}(\lambda))$. Explain why the same
-       holds for any problem whose Lagrangian has a unique minimizer
-       $\mathbf{x}(\boldsymbol{\lambda})$ that depends smoothly on
-       $\boldsymbol{\lambda}$: differentiate
-       $q(\boldsymbol{\lambda}) = \mathcal{L}(\mathbf{x}(\boldsymbol{\lambda}), \boldsymbol{\lambda})$
-       and use stationarity to drop the term through $\mathbf{x}$. The
-       gradient of the dual is the vector of constraint values at the
-       Lagrangian's minimizer.
-    1. Run projected dual ascent,
-       $\lambda \leftarrow \max\bigl(0, \lambda + \eta\, g(\mathbf{x}(\lambda))\bigr)$,
-       from $\lambda = 0$ with $\eta \in \{0.5, 1, 2\}$, and report the
-       iterate after $10$, $50$, and $100$ steps. (For $\eta = 0.5$ you
-       should see about $5.07$, $4.02$, and $4.0001$.) The first step jumps to
-       $12\eta$, far past $\lambda^\star = 4$. Explain this from
-       $q''(\lambda) = -25/(1 + \lambda)^3$, which is $-25$ at $\lambda = 0$
-       and $-0.2$ at $\lambda = 4$. Why does a step size that is safe near
-       $\lambda^\star$ jump so far at the start?
-    1. For $\eta = 0.5$, are the points $\mathbf{x}(\lambda_k)$ feasible? Show
-       that every feasible $\mathbf{x}(\lambda_k)$ gives an upper bound
-       $f(\mathbf{x}(\lambda_k)) \ge p^\star$ while $q(\lambda_k)$ gives a lower
-       bound, and print the certified gap $f(\mathbf{x}(\lambda_k)) - q(\lambda_k)$
-       along the run. Relate dual ascent to the Sinkhorn updates of
-       Exercise :exref:`ex_mdl-lagrangian-duality-entropic-ot`, which maximize
-       the same kind of dual exactly in blocks.
-   :exlabel:`ex_mdl-lagrangian-duality-dual-ascent`
-
-1. **The chapter's quadratic against a half-plane.** Minimize
-   $\tfrac12(x_1^2 + 1000\,x_2^2)$ subject to $x_1 + x_2 \ge 1$.
-    1. Write the constraint as $-x_1 - x_2 \le -1$ and use
-       :eqref:`eq_mdl-opt-dual-conjugate` with the conjugate of
-       $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ from
-       Exercise :exref:`ex_mdl-convexity-conjugate-pairs`b to get
-       $q(\lambda) = \lambda - \tfrac12\lambda^2(1 + \tfrac1{1000})$. Find
-       $\lambda^\star = \tfrac{1000}{1001}$,
-       $p^\star = d^\star = \tfrac{500}{1001} \approx 0.4995$, and
-       $\mathbf{x}^\star = (0.999, 0.000999)$.
-    1. Why does $x_2^\star$ carry almost none of the constraint? By how much,
-       to first order, does the optimum rise if the constraint becomes
-       $x_1 + x_2 \ge 1 + \delta$?
-    1. Replace $1000$ by a curvature ratio $\kappa$ and let $\kappa \to \infty$.
-       What do $\lambda^\star$, $p^\star$, and $\mathbf{x}^\star$ tend to? Fixed-step
-       gradient descent on the unconstrained quadratic slows down by a factor
-       of about $\kappa$ (:numref:`sec_mdl-gradient-based-optimization`).
-       Does the ill-conditioning make this constrained problem hard to solve
-       through its dual?
 
 [Discussions](https://d2l.discourse.group/t/36860)
 

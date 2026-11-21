@@ -1054,8 +1054,7 @@ For a matrix with singular values $\sigma_1\ge\cdots\ge\sigma_d>0$ that
 factor is $\kappa(\mathbf A)=\sigma_1/\sigma_d$, by
 :eqref:`eq_mdl-condition-bound`, and it is about $4\times10^4$ for the two
 lines. The shift $(0,10^{-4})$ realizes $2.8\times10^4$ of it, because it is
-not along the most amplified direction (Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-residual-certificate`).
+not along the most amplified direction.
 
 ### Backward and Forward Error
 
@@ -1069,8 +1068,7 @@ given one by about one rounding of the data. The SVD and the QR decomposition
 are backward stable, and so in practice is the LU decomposition with pivoting
 that `np.linalg.solve` uses. The one-pass variance is not: the variance of
 any data set is nonnegative, so a negative output is the exact variance of no
-data at all (Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-construct-small-dataset-three`).
+data at all.
 
 The definition asks for a minimization over all changes of the data. Luckily,
 for changes of the matrix it has a closed form, computable from the residual.
@@ -1220,8 +1218,7 @@ $12$. The digits were lost when $\mathbf b$ was stored, before any solver
 ran. The rule of
 thumb is pessimistic by about one digit (from about half a digit to about
 one and a half, depending on the row), because the error is not aligned with
-the most amplified direction (Exercise
-:exref:`ex_mdl-numerical-stability-conditioning-residual-certificate`). At
+the most amplified direction. At
 $n=12$, $\kappa u\approx2$ and the bound no longer constrains anything. The
 last decimals vary with the LAPACK build; the trend does not.
 
@@ -1497,21 +1494,6 @@ filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$.
 
     *Part 2 is adapted from Martin Mächler, [Accurately Computing log(1 − exp(−|a|))](https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf), Section 2.*
 
-1. [code] **A negative variance.** The one-pass formula
-   $\frac1N\sum_ix_i^2 - m^2$ of :numref:`subsec_mdl-catastrophic-cancellation`
-   cancels badly when the mean is large compared with the standard
-   deviation.
-    1. Construct three fp64 numbers for which the one-pass formula returns
-       a strictly negative variance. Explain the magnitude of the result
-       from the spacing of fp64 numbers near $x_i^2$.
-    1. Run Welford's recursion :eqref:`eq_mdl-opt-welford` on the same
-       three numbers and compare with the exact variance.
-    1. A backward-stable variance
-       algorithm (:numref:`subsec_mdl-conditioning-revisited`) returns the exact
-       variance of slightly perturbed data. Explain why a single negative
-       output proves that the one-pass formula is not backward stable.
-   :exlabel:`ex_mdl-numerical-stability-conditioning-construct-small-dataset-three`
-
 1. [code] **Normal equations in floating point.** The normal equations
    square the condition number :eqref:`eq_mdl-opt-kappa-squared`.
     1. For $\tau > 0$, the $(m + 1) \times m$ matrix $\mathbf{A}$ of
@@ -1530,26 +1512,6 @@ filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$.
        $k$, together with the two rule-of-thumb lines $16-2k$ and $16-k$.
        At which $k$ does the rule predict that the normal equations keep no
        correct digit, and what do you observe there?
-
-1. **Ridge as a conditioning dial.** Let $\mathbf{A}$ have singular values
-   $\sigma_1 = 1$ and $\sigma_d = 10^{-3}$, and let
-   $\mathbf{w}_0 = \mathbf{A}^+\mathbf{b}$ be the least-squares minimizer.
-    1. For $\lambda \in \{0, 10^{-4}, 10^{-2}\}$, compute
-       $\kappa(\mathbf{A}^\top\mathbf{A} + \lambda\mathbf{I})$ from
-       :eqref:`eq_mdl-opt-ridge-kappa`, the number of correct float64
-       digits that a direct solve of :eqref:`eq_mdl-opt-ridge-solution` can
-       keep, and the number of gradient-descent steps that
-       :eqref:`eq_mdl-opt-gd-iteration-bound` predicts for a relative error
-       of $10^{-6}$.
-    1. Using the filter factors :eqref:`eq_mdl-opt-filter-factors`, choose
-       $\lambda$ so that 90% of the $\mathbf v_d$ component of $\mathbf w_0$
-       survives. What are $\kappa(\mathbf A^\top\mathbf A+\lambda\mathbf I)$
-       and the predicted digits and steps then? Is the trade worth it?
-    1. Show that $\|\mathbf{w}_\lambda\|$ is strictly decreasing in
-       $\lambda$ unless $\mathbf{A}^\top\mathbf{b} = \mathbf{0}$. Conclude
-       that every norm budget $r$ with $0 < r < \|\mathbf{w}_0\|$ in
-       :numref:`subsec_mdl-weight-decay-duality` corresponds to exactly one
-       $\lambda > 0$.
 
 1. [code] **Feature scaling as preconditioning.** Features measured in
    different units give the columns of a design matrix very different
@@ -1659,40 +1621,6 @@ filter factors $\sigma_i^2/(\sigma_i^2+\lambda)$.
    :exlabel:`ex_mdl-numerical-stability-conditioning-summation-error-growth`
 
     *Adapted from Steven G. Johnson, [MIT 18.335 Introduction to Numerical Methods, Problem Set 1](https://ocw.mit.edu/courses/18-335j-introduction-to-numerical-methods-spring-2019/6e6730885b20bd046cbde805d15a4835_MIT18_335JS19_pset1.pdf), Problem 4.*
-
-1. [code] **Residual as a certificate.** ● The two-line system of
-   :numref:`subsec_mdl-two-lines` and the Hilbert systems of the
-   `#numerical-stability-conditioning-hilbert` cell show how much of the
-   condition number a perturbation uses.
-    1. For the system $x_1+x_2=2$, $x_1+1.0001x_2=2.0001$, find the direction
-       of $\Delta\mathbf b$, with $\|\Delta\mathbf b\|=10^{-4}$, that moves
-       $\mathbf x$ the most, and the one that moves it the least. Show that
-       the ratio of the two amplifications is $\kappa(\mathbf A)$, and that
-       the text's shift $(0,10^{-4})$ reaches $2.8\times10^4$ of the
-       possible $4\times10^4$.
-    1. The computed solution $\hat{\mathbf{x}}$ of
-       $\mathbf{H}\mathbf{x} = \mathbf{H}\mathbf{1}$ solves exactly the
-       system whose right-hand side is $\mathbf{H}\mathbf{1}$ perturbed by
-       $\Delta\mathbf{b} = \mathbf{H}(\hat{\mathbf{x}} - \mathbf{1})$, so the
-       right-hand-side bound of the text gives
-       $\|\hat{\mathbf{x}} - \mathbf{1}\|/\|\mathbf{1}\|
-       \le \kappa(\mathbf{H})\,\|\Delta\mathbf{b}\|/\|\mathbf{H}\mathbf{1}\|$.
-       Evaluate $\Delta\mathbf{b}$ in fp64 as `H @ x_hat - b` for each
-       $n$ of the cell, and compare the right-hand side of the bound with
-       the forward error. In which row does the bound appear to fail? Why
-       can a residual computed in working precision do that?
-    1. Every fp64 number is a rational number, so `fractions.Fraction`
-       evaluates $\mathbf{H}(\hat{\mathbf{x}} - \mathbf{1})$ for the stored
-       matrix $\mathbf{H}$ without any rounding. Recompute the bound this
-       way and find, in each row, the ratio of the forward error to the
-       bound.
-    1. Write that ratio as a product of two factors, each at most $1$, one
-       depending only on the right-hand side $\mathbf{H}\mathbf{1}$ and one
-       depending only on the error vector $\hat{\mathbf{x}} - \mathbf{1}$.
-       Evaluate both. What do their values say about the directions of
-       $\mathbf{1}$ and of the error relative to the singular vectors of
-       $\mathbf{H}$?
-   :exlabel:`ex_mdl-numerical-stability-conditioning-residual-certificate`
 
 1. [code] **Mixed-precision iterative refinement.** ●● Mixed-precision
    training does the bulk of its arithmetic in low precision and keeps the

@@ -873,9 +873,7 @@ valley at $0$. The printed products $x_k\sqrt{k}$ settle near $1$, showing that
 $x_k$ decays only like $1/\sqrt{k}$ and still sits at $0.01$ after $10{,}000$
 steps. On a log–log plot, the loss gap $x_k^4$ therefore traces a straight line
 of slope $-2$. Strict convexity rules out multiple minimizers, but it cannot
-guarantee fast convergence; a geometric rate requires $\mu > 0$. Exercise
-:exref:`ex_mdl-convexity-quartic-sublinear` proves this $1/\sqrt{k}$ law for
-the quartic.
+guarantee fast convergence; a geometric rate requires $\mu > 0$.
 
 The next two propositions make this contrast completely general: every smooth
 strongly convex function converges geometrically like $x^2$, whereas without
@@ -1257,7 +1255,7 @@ parameter vector $(w_1, v_1, w_2, v_2) = (1, 1, -1, 1)$ in
 $v_1\,\mathrm{relu}(w_1 x) + v_2\,\mathrm{relu}(w_2 x)$ computes $|x|$, and
 swapping the two units computes $|x|$ identically. Yet averaging the two
 parameter vectors cancels the input weights to zero and collapses the network
-to the zero function (Exercise :exref:`ex_mdl-convexity-permutation-symmetry`).
+to the zero function.
 
 ### The Polyak–Łojasiewicz Condition
 :label:`subsec_mdl-pl-condition`
@@ -1343,8 +1341,7 @@ the gap, quadratic in $x$, by $\tfrac14$.
 PL can also hold on part of the space. For $(ab - 1)^2$ the gradient
 satisfies $\tfrac12\|\nabla f\|^2 = 2(a^2 + b^2) f$, so PL holds with
 constant $2r^2$ on the region $\{a^2 + b^2 \ge r^2\}$ and with no constant
-near the saddle at the origin (Exercise
-:exref:`ex_mdl-convexity-factored-model`). Analyses of wide networks
+near the saddle at the origin. Analyses of wide networks
 establish such local PL inequalities near interpolating solutions
 :cite:`Liu.Zhu.Belkin.2022`, which gives a rate for the training loss and
 says nothing about generalization.
@@ -1550,29 +1547,6 @@ the optimizer's dynamics pick one.
        descent?
    :exlabel:`ex_mdl-convexity-smoothing-maximum`
 
-1. **A factored scalar model.** ● The two-weight model
-   $f(a, b) = (ab - 1)^2$ of :numref:`subsec_mdl-beyond-convexity` is
-   nonconvex, and its minimizers form the hyperbola $ab = 1$.
-    1. Show that the origin is the only stationary point that is not a
-       global minimum. Compute the eigenvalues of $\nabla^2 f(0, 0)$,
-       classify the origin, and locate it in
-       :numref:`fig_mdl-opt-factored-model`, the contour plot of $f$.
-    1. Show that
-       $\tfrac12\|\nabla f(a, b)\|^2 = 2(a^2 + b^2)\, f(a, b)$. On which sets
-       does the PL inequality :eqref:`eq_mdl-opt-pl` hold, and with which
-       constant? Why does no constant $\mu > 0$ work on all of
-       $\mathbb{R}^2$?
-    1. Show that the imbalance $a^2 - b^2$ is constant along the gradient
-       flow $(\dot a, \dot b) = -\nabla f(a, b)$ :cite:`Du.Hu.Lee.2018`, and
-       that a gradient-descent step with step size $\eta$ multiplies it by
-       $1 - 4\eta^2 (ab - 1)^2$.
-    1. Use $a^2 + b^2 \ge |a^2 - b^2|$ and (b) to show that the gradient flow
-       from $(a_0, b_0)$ satisfies
-       $f(a(t), b(t)) \le e^{-4|a_0^2 - b_0^2|\, t}\, f(a_0, b_0)$. What
-       does this bound give for a balanced start $a_0 = b_0$, and why does
-       gradient descent from a small balanced start still converge?
-   :exlabel:`ex_mdl-convexity-factored-model`
-
 1. [code] **Implicit bias and the optimizer.** ● Exercise
    :exref:`ex_mdl-svd-low-rank-ridgeless-gradient-descent` of
    :numref:`sec_mdl-svd-low-rank` shows on paper that gradient descent on
@@ -1658,43 +1632,6 @@ the optimizer's dynamics pick one.
        $k = 10^3$ and $k = 10^6$? What does the comparison imply for stopping
        training as soon as the training error reaches zero?
    :exlabel:`ex_mdl-convexity-max-margin-bias`
-
-1. **Gradient descent on $x^4$.** ● The quartic is strictly but not strongly
-   convex, and the text measured $x_k\sqrt{k} \to 1$ for gradient descent
-   with $\eta = \tfrac18$ from $x_0 = 1$. Here you prove the rate. Let
-   $x_{k+1} = x_k - 4\eta x_k^3$ with $0 < x_0 < 1/(2\sqrt{\eta})$.
-    1. Show that $0 < x_{k+1} < x_k$ for every $k$ and that $x_k \to 0$.
-    1. Show that $1/x_{k+1}^2 = 1/x_k^2 + 8\eta + O(x_k^2)$, and conclude
-       that $x_k\sqrt{k} \to 1/\sqrt{8\eta}$ and
-       $f(x_k) = x_k^4 \sim 1/(64\eta^2 k^2)$. Compare with the measured
-       limit at $\eta = \tfrac18$.
-    1. On $[-1, 1]$, which contains every iterate from $x_0 = 1$, the
-       quartic is $12$-smooth, and the proof of
-       :eqref:`eq_mdl-opt-rate-convex` uses smoothness only between
-       iterates. At $\eta = 1/12$ compare the proposition's bound
-       $12 \cdot x_0^2/(2k) = 6/k$ with the true gap at $k = 100$. Explain
-       why no bound of the form $c\rho^k$ with $\rho < 1$ can hold. (Hint:
-       $\tfrac12 f'(x)^2 = 8x^6$, against $\mu x^4$ in the PL inequality.)
-   :exlabel:`ex_mdl-convexity-quartic-sublinear`
-
-1. [short-code] **Permutation symmetry and nonconvexity.** A network
-   $h(x) = v_1\,\mathrm{relu}(w_1 x) + v_2\,\mathrm{relu}(w_2 x)$ with
-   parameters $(w_1, v_1, w_2, v_2) = (1, 1, -1, 1)$ computes $|x|$.
-    1. Write the parameter vector of the network with the two units
-       swapped, and check that it computes the same function.
-    1. Compute the function computed by the average of the two parameter
-       vectors.
-    1. Draw 1,000 inputs $x \sim \mathcal{N}(0, 1)$ with targets $y = |x|$,
-       and print the mean squared error of the three networks. Explain why
-       the third is close to $\mathbb{E}[x^2] = 1$. Which inequality does
-       the midpoint violate, and what does this say about convexity of the
-       loss in the parameters?
-    1. For a hidden layer of $m$ units with distinct parameters, how many
-       copies of a minimizer does permutation symmetry produce? Show that
-       the average of all copies gives every unit the same parameters, and
-       explain why the convex hull of the copies therefore generally
-       contains non-minimizers.
-   :exlabel:`ex_mdl-convexity-permutation-symmetry`
 
 1. **Convexity of the log-partition function.** This exercise generalizes the
    log-sum-exp proposition to the log-partition functions that

@@ -29,65 +29,71 @@ weight-decay
 ::: {.cover}
 [Dive into Deep Learning · §2]{.kicker}
 
-A complete learning procedure in its simplest form<br>
-**model · loss · minibatch SGD · synthetic data · generalization · weight decay**
+Linear Neural Networks for Regression<br>
+**affine models · squared loss · normal equations · minibatch SGD · generalization · weight decay**
 :::
 :::
 
-::: {.slide title="Every Part of Learning Appears in Linear Regression"}
-[The problem]{.kicker}
+::: {.slide title="Linear Regression Is Deep Learning in Miniature"}
+[The Proving Ground]{.kicker}
 
-- Predict a price from area and age with
-  $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$: a loss measures the misfit,
-  minibatch SGD lowers it.
-- **A wrong program still runs:** one shape bug, a falling loss, and wrong
-  weights.
-- **A perfect fit can mislead:** 20 weights fit 20 noisy points exactly and
-  miss new ones.
+Every essential ingredient of modern neural network training appears in its most transparent, analytically solvable form in linear regression:
+
+- **Parameterized forward pass and loss:** Predict a continuous target via $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$ and score misfit via the squared error $L(\mathbf{w}, b) = \frac{1}{2n}\|\mathbf{X}\mathbf{w} + b - \mathbf{y}\|_2^2$, grounded in Gaussian maximum likelihood.
+- **Exact closed form vs. scalable iteration:** The normal equations $\mathbf{X}^\top\mathbf{X}\mathbf{w}^* = \mathbf{X}^\top\mathbf{y}$ project $\mathbf{y}$ orthogonally in $O(nd^2 + d^3)$ time, whereas minibatch SGD updates parameters in $O(|\mathcal{B}|d)$ per step.
+- **Two recurring failure modes:** A program with a silent shape bug (such as $(32,) - (32, 1)$ broadcasting to $32 \times 32$) still lowers its loss, and a high-degree model that interpolates 20 noisy points fails catastrophically on new data.
 
 ::: {.d2l-note}
-Both failures recur in every later chapter. Linear regression is simple
-enough to analyze them.
+In linear regression we can solve the exact optimum, compute the theoretical noise floor $\frac{1}{2}\sigma^2$, and diagnose both code bugs and statistical overfitting from first principles.
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="From First Principles to a Reusable Training Pipeline"}
+[Architectural Roadmap]{.kicker}
 
-- fit a linear model in closed form and by minibatch SGD;
-- derive a loss from a model of the noise;
-- verify an implementation against known parameters, to within a few
-  standard errors $\sigma/\sqrt{n}$;
-- diagnose underfitting and overfitting, and select a model on validation
-  data;
-- limit a model's flexibility continuously with a penalty of strength
-  $\lambda$ on large weights.
-:::
+We develop linear regression across six stages, moving from mathematical foundations to an object-oriented training harness and statistical regularization:
 
-::: {.slide title="Map of the Chapter"}
-[Chapter map]{.kicker}
-
-| section | question | adds |
+| Section | Core Question | Key Mathematical & Systems Concepts |
 |---|---|---|
-| Linear Regression | how does a linear model predict, and how do we fit it? | model, loss, closed form, minibatch SGD |
-| Synthetic Data | how do we test training when we know the answer? | data with known $\mathbf{w}^*, b^*$ |
-| Implementation from Scratch | what does each part look like when we write it? | SGD and the training loop by hand |
-| Object-Oriented Design | how do we organize model, data, and training once? | `Module`, `DataModule`, `Trainer` |
-| Concise Implementation | which framework parts replace ours? | framework layers and losses |
-| Generalization | when does a good fit predict new data well? | training vs. test error |
-| Weight Decay | how do we limit flexibility continuously? | a penalty on large weights |
+| **§2.1 Linear Regression** | How do we formulate and optimize a linear predictor? | Affine model $\mathbf{X}\mathbf{w} + b$, squared loss, normal equations, minibatch SGD, Gaussian MLE |
+| **§2.2 Synthetic Data** | How do we verify an optimizer when real data lack an answer key? | Ground-truth $\mathbf{w}^*, b^*$, noise floor $\sigma^2/2$, standard error $\sigma/\sqrt{n}$ |
+| **§2.3 From Scratch & Concise** | What happens inside each step of training, and how do frameworks wrap it? | Tensor autograd loop, broadcasting guards, learning-rate stability, `LazyLinear` / `Dense` |
+| **§2.4 Object-Oriented Design** | How do we decouple models, datasets, and training loops once for the book? | `Module`, `DataModule`, `Trainer`, size-weighted `Averager`, `ProgressBoard` |
+| **§2.5 Generalization** | When does a low training loss translate into accurate predictions on new data? | Empirical vs. population risk, bias–variance decomposition, $K$-fold cross-validation |
+| **§2.6 Weight Decay** | How do we control model capacity continuously in high dimensions? | $\ell_2$ ridge penalty vs. $\ell_1$ lasso sparsity, MAP Gaussian prior, spectral shrinkage |
 :::
 
-::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
-[Running examples]{.kicker}
+::: {.slide title="Concrete Running Benchmarks Across the Chapter"}
+[Quantitative Anchors]{.kicker}
 
-| section | running example |
-|---|---|
-| Linear Regression | a 150 m² house, predicted at 480,000 dollars; the three-point line (inputs 0, 1, 2; labels 1, 1, 0) |
-| Synthetic Data | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise $\sigma = 0.01$; 1,000 training, 1,000 validation examples |
-| Implementation from Scratch | minibatches of 32; loss floor $\sigma^2/2 = 5 \times 10^{-5}$ |
-| Object-Oriented Design | the same data and model, trained once more through `Module`, `DataModule`, `Trainer` |
-| Concise Implementation | the same data and model, from framework layers |
-| Generalization | 20 noisy samples of a cubic; polynomials of degree 1 to 19 |
-| Weight Decay | 200 features, 300 noisy examples; two near-duplicate features |
+Every section tests its theory and code against a concrete numerical benchmark where exact error floors and parameter recovery tolerances are known in advance:
+
+| Section | Running Dataset & Ground Truth | Diagnostic Target & Verification Criterion |
+|---|---|---|
+| **§2.1 Theory & Loss** | House pricing ($150\text{ m}^2$, $20\text{ yr} \to \$480\text{k}$); 3-point line $(0,1), (1,1), (2,0)$ | Exact projection $\hat{\mathbf{w}} = (7/6, -1/2)^\top$ with orthogonal residual $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ |
+| **§2.2–§2.4 Synthetic Testbed** | $n = 1{,}000$ train / $1{,}000$ val examples, $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, $\sigma = 0.01$ | Loss drops from $16.6$ to floor $\sigma^2/2 = 5 \times 10^{-5}$; weights recovered within $\sim 3\sigma/\sqrt{n} \approx 10^{-3}$ |
+| **§2.5 Polynomial Fitting** | $n = 20$ noisy samples of cubic $5 + 1.2x - 3.4x^2 + 5.6x^3$ on $[-1, 1]$, $\sigma = 0.1$ | Degree $1$ underfits (high bias); degree $3$ hits $\sigma^2 = 0.01$; degree $19$ interpolates noise (huge variance) |
+| **§2.6 High-Dim Ridge** | $d = 200$ features, $n = 300$ noisy examples, $\mathbf{w}^* = (0.1, \ldots, 0.1)^\top$, $\sigma = 1.0$ | Unregularized SGD overfits (val loss $> 1.2$); prior $\lambda = \sigma^2/(n\tau^2) = 1/3$ shrinks effective $\text{df}$ to $\approx 127$ |
+:::
+
+::: {.slide title="The Complete Supervised Learning Loop"}
+[End-to-End Perspective]{.kicker}
+
+Every model in the rest of this book—from multilayer perceptrons to Transformers—reuses the exact pipeline we construct in Chapter 2:
+
+::: {.cols .vc}
+::: {.col}
+- **Forward & loss (`Module`):** Map minibatch inputs $\mathbf{X} \in \mathbb{R}^{|\mathcal{B}| \times d}$ to predictions $\hat{\mathbf{y}}$ and evaluate the penalized empirical loss $L_{\mathcal{B}}(\mathbf{w}, b) + \frac{\lambda}{2}\|\mathbf{w}\|_2^2$.
+- **Backward & update (`Trainer`):** Differentiate $L_{\mathcal{B}}$ via reverse-mode autograd and step parameters via $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta \nabla L_{\mathcal{B}}$.
+- **Validation & selection (`DataModule`):** Track held-out risk after every epoch to tune hyperparameters $(\eta, |\mathcal{B}|, \lambda)$ without leaking test data.
+:::
+
+::: {.col .fig}
+![](../img/singleneuron.svg){.nostretch width=100%}
+:::
+:::
+
+::: {.d2l-note .rule}
+Viewed as a neural network, linear regression is a single fully connected layer with $d$ inputs and $1$ linear output neuron.
+:::
 :::

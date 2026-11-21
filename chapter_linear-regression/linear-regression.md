@@ -536,23 +536,24 @@ By convention, we count only layers that hold tunable parameters, so linear regr
 ::: {.cover}
 [Dive into Deep Learning · §2.1]{.kicker}
 
-Predicting a number from features<br>
-**the linear model · squared loss · normal equations · minibatch SGD · Gaussian noise**
+Linear Regression: Theory, Geometry & Stochastic Optimization<br>
+**affine model · squared loss · normal equations · orthogonal projection · minibatch SGD · Gaussian MLE**
 :::
 :::
 
-::: {.slide title="Past Sales Should Price a House Nobody Has Sold"}
-[The problem]{.kicker}
+::: {.slide title="Predicting Continuous Quantities From Features"}
+[Motivation & Problem Formulation]{.kicker}
+
+Unlike classification into discrete categories, regression predicts a continuous numerical target from observed covariates:
 
 ::: {.cols .vc}
 ::: {.col}
-- A house: 150 m², built 20 years ago. What is a fair price?
-- Recent sales: area, age, price for each.
-- Bigger houses cost more, not exactly but **on average**.
+- **Concrete task:** Estimate the sale price $y \in \mathbb{R}$ of a house ($150\text{ m}^2$, built $20\text{ years}$ ago) from a training record of $n$ historical sales $\{(\mathbf{x}^{(i)}, y^{(i)})\}_{i=1}^n$.
+- **Features and labels:** Each example $i$ is described by a feature vector $\mathbf{x}^{(i)} = (x_1^{(i)}, \ldots, x_d^{(i)})^\top \in \mathbb{R}^d$ and an observed scalar target $y^{(i)} \in \mathbb{R}$.
+- **Core assumption:** On average, the target varies as an affine combination of the features plus unmodeled measurement noise.
 
 ::: {.d2l-note}
-**Regression:** predict a number from features. Find the line (or plane)
-through the sales, then read off a price for any house.
+Fitting a plane to historical sales yields a closed-form pricing rule that generalizes immediately to any unseen house $\mathbf{x}$.
 :::
 :::
 
@@ -562,84 +563,46 @@ through the sales, then read off a price for any house.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Affine Model: Weights and Bias"}
+[The Model Class]{.kicker}
 
-- write the linear model for one example and for a minibatch;
-- solve the normal equations and read the fit as a projection;
-- write the minibatch SGD update and say what $\eta$ and $|\mathcal{B}|$ do;
-- derive the squared loss from Gaussian noise, and pick a loss for other
-  noise.
-
-**Running examples:** house prices; the three-point line model of
-Calculus (inputs $0, 1, 2$, labels $1, 1, 0$); the weights
-$\mathbf{w} = (2, -3.4)$ and bias $b = 4.2$, the true parameters of the
-synthetic data in the next four decks.
-:::
-
-::: {.slide title="Linear Regression Is the Whole Learning Loop in Miniature"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| **Linear Regression** | **model, loss, closed form, minibatch SGD** |
-| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
-| Implementation from Scratch | SGD and the training loop by hand |
-| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
-| Concise Implementation | framework layers and losses |
-| Generalization | training vs. test error |
-| Weight Decay | a penalty on large weights |
-:::
-
-::: {.col .narrow}
-- **Uses:** matrix–vector products, gradients, gradient descent,
-  expectation.
-- **Skips:** QR and SVD solvers, the pseudoinverse, and convergence
-  proofs, all in the mathematics appendix.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[The model and the loss]{.dtitle}
-
-[a dot product, and a penalty on each miss]{.dsub}
-:::
-:::
-
-::: {.slide title="A Prediction Is a Dot Product Plus a Bias"}
-[The model]{.kicker}
+A linear regression model forms its prediction $\hat{y}$ as a weighted sum of the $d$ input features plus a scalar intercept:
 
 $$\textrm{price} = w_{\textrm{area}} \cdot \textrm{area} + w_{\textrm{age}} \cdot \textrm{age} + b$$
 
-- $w_{\textrm{area}} = 3{,}000$ per m², $w_{\textrm{age}} = -1{,}000$
-  per year, $b = 50{,}000$: the house costs
-  $450{,}000 - 20{,}000 + 50{,}000 = 480{,}000$ dollars.
-- $d$ features: $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$.
-- Minibatch, rows of the design matrix $\mathbf{X}$:
-  $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$, one matrix call.
+- **Marginal slopes ($\mathbf{w} \in \mathbb{R}^d$):** With $w_{\textrm{area}} = 3{,}000\text{ \$/m}^2$ and $w_{\textrm{age}} = -1{,}000\text{ \$/yr}$, each extra square meter adds $\$3{,}000$ while each year of age subtracts $\$1{,}000$.
+- **Intercept / bias ($b \in \mathbb{R}$):** With $b = \$50{,}000$, our $150\text{ m}^2$, $20$-year-old house is priced at $\$450{,}000 - \$20{,}000 + \$50{,}000 = \$480{,}000$.
+- **Single-example inner product:** Collecting weights into $\mathbf{w} = (w_1, \ldots, w_d)^\top \in \mathbb{R}^d$ writes the prediction compactly as $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$.
 
-::: {.d2l-note}
-The **bias** $b$ is the prediction at $\mathbf{x} = \mathbf{0}$. Without
-it, every fit passes through the origin.
+::: {.d2l-note .rule}
+Strictly speaking, $\mathbf{w}^\top \mathbf{x} + b$ is an **affine** function of $\mathbf{x}$. Without the bias $b$, the fitted hyperplane is forced to pass through the origin $\mathbf{x} = \mathbf{0}$, severely restricting the model even when no real house has zero area.
 :::
 :::
 
-::: {.slide title="The Squared Loss Averages the Squared Errors"}
-[The loss]{.kicker}
+::: {.slide title="Vectorizing Across a Dataset With the Design Matrix"}
+[Matrix Formulation]{.kicker}
+
+To evaluate predictions across all $n$ examples simultaneously, we stack the transpose of each feature vector $\mathbf{x}^{(i)} \in \mathbb{R}^d$ as a row of the design matrix $\mathbf{X} \in \mathbb{R}^{n \times d}$:
+
+$$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b, \qquad \mathbf{X} = \begin{bmatrix} (\mathbf{x}^{(1)})^\top \\ \vdots \\ (\mathbf{x}^{(n)})^\top \end{bmatrix} \in \mathbb{R}^{n \times d}$$
+
+- **Shape alignment:** Multiplying $\mathbf{X}$ of shape $(n, d)$ by column vector $\mathbf{w}$ of shape $(d, 1)$ yields $\mathbf{X}\mathbf{w}$ of shape $(n, 1)$, and broadcasting adds the scalar $b$ to all $n$ rows.
+- **Absorbing the bias:** Appending a constant column of ones produces the augmented matrix $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}] \in \mathbb{R}^{n \times (d+1)}$ and parameter vector $\tilde{\mathbf{w}} = (\mathbf{w}^\top, b)^\top \in \mathbb{R}^{d+1}$, reducing the affine map to a pure matrix-vector product $\hat{\mathbf{y}} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}$.
+- **Hardware efficiency:** Expressing all $n$ dot products as a single GEMM call dispatches the entire batch to fused SIMD or GPU tensor cores.
+:::
+
+::: {.slide title="The Squared Error Loss Function"}
+[Measuring Misfit]{.kicker}
+
+We quantify how closely predictions $\hat{y}^{(i)}$ match observed targets $y^{(i)}$ by averaging half the squared vertical residuals across the training set:
 
 ::: {.cols .vc}
 ::: {.col}
-$$L(\mathbf{w}, b) = \frac{1}{2n} \sum_{i=1}^{n} \bigl(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\bigr)^2$$
+$$L(\mathbf{w}, b) = \frac{1}{2n} \sum_{i=1}^{n} \bigl(\hat{y}^{(i)} - y^{(i)}\bigr)^2$$
 
-- Error $r^{(i)} = \hat{y}^{(i)} - y^{(i)}$: the vertical gap.
-- Training: $\hat{\mathbf{w}}, \hat{b} = \operatorname{argmin} L$.
-- Hats mark estimates computed from data.
+- **Residual ($r^{(i)} = \hat{y}^{(i)} - y^{(i)}$):** The signed vertical gap between the predicted point on the line and the observed data point.
+- **Why the factor of $1/2$:** Purely algebraic convenience—it cancels the factor of $2$ that drops down upon differentiation, leaving $\operatorname{argmin}_{\mathbf{w}, b} L(\mathbf{w}, b)$ unchanged.
+- **Why divide by $n$:** Normalizing by sample size keeps the numerical magnitude of the loss and its gradients invariant when dataset size changes.
 :::
 
 ::: {.col .fig}
@@ -648,70 +611,55 @@ $$L(\mathbf{w}, b) = \frac{1}{2n} \sum_{i=1}^{n} \bigl(\mathbf{w}^\top \mathbf{x
 :::
 :::
 
-::: {.slide title="One Bad Label Pulls the Squared-Loss Slope From 2 to 23"}
-[The loss]{.kicker}
+::: {.slide title="Pitfall: Squared Loss Sensitivity to Outliers"}
+[Statistical Failure Mode]{.kicker}
 
-Twenty points on $y = 2x$, one label changed to 10,000. Fit $\hat{y} = wx$
-by squared loss (closed form) and by absolute error (on a grid of slopes):
+Because squared error penalizes residuals quadratically ($r^2$), a single corrupted label exerts a restoring force proportional to its distance from the line:
 
 @linear-regression-loss-function
 
 ::: {.d2l-note .warn}
-Squaring lets one error of nearly 10,000 outweigh nineteen points on the
-line. The absolute error counts it in proportion to its size.
+On 20 points along $y = 2x$, corrupting a single label to $10{,}000$ yanks the least-squares slope from $2.00$ to $23.16$! Under mean absolute error ($\frac{1}{n}\sum_i |\hat{y}^{(i)} - y^{(i)}|$), every point has unit vote $\pm 1$, so the 19 clean points easily outvote the outlier and preserve $w = 2.00$.
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Closed-Form Solution: The Normal Equations"}
+[Analytic Optimization]{.kicker}
 
-[Minimizing the loss]{.dtitle}
+In augmented notation $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}] \in \mathbb{R}^{n \times (d+1)}$, the empirical loss is a convex quadratic bowl $L(\tilde{\mathbf{w}}) = \frac{1}{2n}\|\tilde{\mathbf{X}}\tilde{\mathbf{w}} - \mathbf{y}\|_2^2$:
 
-[exactly, as a projection; or step by step, with minibatches]{.dsub}
+$$\nabla_{\tilde{\mathbf{w}}} L(\tilde{\mathbf{w}}) = \frac{1}{n}\tilde{\mathbf{X}}^\top\bigl(\tilde{\mathbf{X}}\tilde{\mathbf{w}} - \mathbf{y}\bigr) = \mathbf{0} \quad\Longleftrightarrow\quad \tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}\, \hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top \mathbf{y}$$
+
+- **Pythagorean decomposition:** For any candidate $\tilde{\mathbf{w}}$, expanding $\|\mathbf{y} - \tilde{\mathbf{X}}\tilde{\mathbf{w}}\|_2^2$ around a solution $\hat{\tilde{\mathbf{w}}}$ yields $\|\mathbf{y} - \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}}\|_2^2 + \|\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}})\|_2^2$ because the cross term $(\mathbf{y} - \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}})^\top\tilde{\mathbf{X}}$ vanishes identically.
+- **Uniqueness condition:** When the $d + 1$ columns of $\tilde{\mathbf{X}}$ are linearly independent (requiring $n \geq d + 1$), the Gram matrix $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ is strictly positive definite and $\hat{\tilde{\mathbf{w}}} = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\mathbf{y}$ is unique.
+- **Collinearity ($d > n$ or duplicate features):** When $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ is singular, infinitely many weight vectors achieve the exact same minimum loss; `lstsq` returns the minimum-norm solution $\tilde{\mathbf{X}}^\dagger \mathbf{y}$ via QR or SVD.
+:::
+
+::: {.slide title="Worked Example & Numerical Pitfall of Matrix Inversion"}
+[Normal Equations in Code]{.kicker}
+
+Consider fitting a line $w_0 + w_1 x$ to three points $(0, 1), (1, 1), (2, 0)$ with design matrix rows $(1, x^{(i)})$:
+
+$$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}, \quad \tilde{\mathbf{X}}^\top \mathbf{y} = \begin{bmatrix} 2 \\ 1 \end{bmatrix} \quad\Longrightarrow\quad \hat{\tilde{\mathbf{w}}} = \begin{bmatrix} 7/6 \\ -1/2 \end{bmatrix} \approx (1.1667, -0.5000)^\top$$
+
+@linear-regression-the-normal-equations
+
+::: {.d2l-note .warn}
+**Never compute `inv(X.T @ X) @ X.T @ y` explicitly in production:** Forming $\mathbf{X}^\top\mathbf{X}$ squares the condition number $\kappa(\mathbf{X}^\top\mathbf{X}) = \kappa(\mathbf{X})^2$, doubling the loss of floating-point significant digits. Dedicated solvers (`lstsq`) factorize $\mathbf{X}$ directly via Householder QR or SVD in $O(nd^2)$ flops.
 :::
 :::
 
-::: {.slide title="A Zero Gradient Gives the Normal Equations"}
-[Closed form]{.kicker}
+::: {.slide title="Geometric View: Least Squares as Orthogonal Projection"}
+[Why They Are Called the "Normal" Equations]{.kicker}
 
-Fold $b$ into the weights: $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$,
-$\tilde{\mathbf{w}} = (\mathbf{w}, b)$. Set the gradient
-$2\tilde{\mathbf{X}}^\top(\tilde{\mathbf{X}}\tilde{\mathbf{w}} - \mathbf{y})$ to zero:
-
-$$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}\, \hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top \mathbf{y}$$
-
-- Any other point: $\|\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} + \mathbf{v}) - \mathbf{y}\|^2 = \|\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} - \mathbf{y}\|^2 + \|\tilde{\mathbf{X}}\mathbf{v}\|^2$.
-- Independent columns: unique,
-  $\hat{\tilde{\mathbf{w}}} = (\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top \mathbf{y}$.
-- In code, call `lstsq`; never form the inverse.
-:::
-
-::: {.slide title="The Three-Point Line Fits at (7/6, −1/2)"}
-[Closed form]{.kicker}
-
-Inputs $0, 1, 2$ and labels $1, 1, 0$, so the rows of $\tilde{\mathbf{X}}$ are $(1, \textrm{input})$:
-
-$$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}, \quad \tilde{\mathbf{X}}^\top \mathbf{y} = \begin{bmatrix} 2 \\ 1 \end{bmatrix} \quad\Longrightarrow\quad \hat{\tilde{\mathbf{w}}} = (7/6, -1/2)$$
-
-`lstsq` returns $\hat{\tilde{\mathbf{w}}}$; the errors
-$\mathbf{r} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} - \mathbf{y}$ satisfy
-$\tilde{\mathbf{X}}^\top\mathbf{r} = \mathbf{0}$ up to float32 rounding:
-
-@!linear-regression-the-normal-equations
-:::
-
-::: {.slide title="The Fit Is the Projection of y Onto the Column Space"}
-[Closed form · geometry]{.kicker}
+In observation space $\mathbb{R}^n$, varying $\tilde{\mathbf{w}} \in \mathbb{R}^{d+1}$ sweeps out a $(d+1)$-dimensional flat subspace—the column space $\operatorname{col}(\tilde{\mathbf{X}})$:
 
 ::: {.cols .vc}
 ::: {.col}
-- $\tilde{\mathbf{X}}\tilde{\mathbf{w}}$ sweeps all combinations of the columns: the
-  **column space**.
-- Closest point to $\mathbf{y}$: the foot of the **perpendicular**.
-- The errors ${\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y}}$ satisfy
-  ${\tilde{\mathbf{X}}^\top\mathbf{r} = \mathbf{0}}$: perpendicular to every
-  column ("normal").
+- **Closest point in a subspace:** The noisy target vector $\mathbf{y} \in \mathbb{R}^n$ almost never lies inside $\operatorname{col}(\tilde{\mathbf{X}})$. Minimizing $\|\mathbf{y} - \tilde{\mathbf{X}}\tilde{\mathbf{w}}\|_2^2$ finds the point $\hat{\mathbf{y}} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} \in \operatorname{col}(\tilde{\mathbf{X}})$ closest to $\mathbf{y}$ in Euclidean distance.
+- **Orthogonality of the residual:** By Euclidean geometry, the shortest segment from $\mathbf{y}$ to $\operatorname{col}(\tilde{\mathbf{X}})$ is perpendicular (*normal*) to the subspace, meaning the residual $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y}$ satisfies:
+  $$\tilde{\mathbf{X}}^\top \mathbf{r} = \mathbf{0}$$
+- **Zero-sum residuals:** Because the bias column $\mathbf{1}$ lies in $\operatorname{col}(\tilde{\mathbf{X}})$, $\mathbf{1}^\top\mathbf{r} = \sum_{i=1}^n r^{(i)} = 0$ holds for every least-squares fit with an intercept.
 :::
 
 ::: {.col .fig .big}
@@ -720,101 +668,75 @@ $\tilde{\mathbf{X}}^\top\mathbf{r} = \mathbf{0}$ up to float32 rounding:
 :::
 :::
 
-::: {.slide title="Check: Why Do the Errors Sum to Zero?"}
-[Check]{.kicker}
+::: {.slide title="Why Deep Learning Uses Minibatch SGD Instead"}
+[From Closed Form to Iterative Optimization]{.kicker}
 
-The three-point fit leaves errors $\mathbf{r} = (1/6, -1/3, 1/6)$, which
-sum to zero. Is that a coincidence?
+If linear regression has an exact one-line analytic solution, why train models iteratively with stochastic gradients?
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** No. The model has a bias, so $\tilde{\mathbf{X}}$ has a column of
-ones, and the normal equations make the error vector perpendicular to
-it: $\mathbf{1}^\top\mathbf{r} = 0$. Every least-squares fit with a bias
-has errors that sum to zero.
-:::
-:::
-:::
-
-::: {.slide title="Minibatch SGD Steps Along a Cheap, Unbiased Gradient"}
-[Minibatch SGD]{.kicker}
-
-Draw a random minibatch $\mathcal{B}_t$ and step against its average
-gradient:
-
-$$\mathbf{w} \leftarrow \mathbf{w} - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \mathbf{x}^{(i)} \bigl(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\bigr)$$
-
-- Each example pulls $\mathbf{w}$ along its own $\mathbf{x}^{(i)}$, in
-  proportion to its error $r^{(i)}$.
-- Expectation: the full gradient. Variance: $\propto 1/|\mathcal{B}|$.
-- Hyperparameters: $\eta$ and $|\mathcal{B}|$ (often 32 to 256).
-- Scaling the loss by $c$ acts like scaling $\eta$ by $c$: a value of
-  $\eta$ means something only together with its loss.
-:::
-
-::: {.slide title="One Matrix Product Beats a Thousand Small Ones"}
-[Minibatch SGD · vectorization]{.kicker}
-
-Predict 1,000 examples with $\mathbf{w} = (2, -3.4)$, $b = 4.2$, one at a
-time and all at once; `seconds(f)` is the wall time of one call of `f`:
-
-@linear-regression-vectorization-for-speed-3
+1. **Cubic parameter scaling ($O(nd^2 + d^3)$):** Forming $\mathbf{X}^\top\mathbf{X} \in \mathbb{R}^{d \times d}$ takes $O(nd^2)$ flops and factoring it takes $O(d^3)$ flops and $O(d^2)$ memory. For a neural network with $d = 10^8$ parameters, storing a single $d \times d$ matrix would require $40\text{ petabytes}$ of RAM.
+2. **Dataset redundancy ($n \gg |\mathcal{B}|$):** Full-batch gradient descent costs $O(nd)$ per step because it averages over all $n = 10^7$ examples before moving once, even though a random sample of $|\mathcal{B}| = 64$ examples already points in nearly the same descent direction.
+3. **Non-analytic objectives:** Replace the squared loss with cross-entropy or insert a single nonlinear hidden layer, and no closed-form normal equations exist at all.
 
 ::: {.d2l-note}
-Same arithmetic, but the loop incurs the interpreter and launch overhead
-1,000 times. Hence minibatches, and whole-tensor code throughout the book.
+Minibatch SGD decouples the per-step compute cost from dataset size $n$: each update touches only $|\mathcal{B}|$ examples and costs $O(|\mathcal{B}|d)$ time and $O(d)$ parameter memory.
 :::
 :::
 
-::: {.slide title="A Constant Learning Rate Leaves SGD in a Noise Ball"}
-[Minibatch SGD · noise]{.kicker}
+::: {.slide title="Minibatch Stochastic Gradient Descent Mechanics"}
+[The Workhorse Update Rule]{.kicker}
 
-Mean squared distance from $\hat{\mathbf{w}}$ $\propto \eta/|\mathcal{B}|$:
-quarter $\eta$, half the width, four times the steps.
+At step $t$, we sample a random subset $\mathcal{B}_t \subset \{1, \ldots, n\}$ of size $|\mathcal{B}|$ and step opposite the minibatch mean gradient with learning rate $\eta > 0$:
 
-![](../img/mdl-linreg-gd-sgd.svg){.nostretch width=62% fig-align="center"}
+$$\mathbf{w} \leftarrow \mathbf{w} - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \mathbf{x}^{(i)} \bigl(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\bigr), \qquad b \leftarrow b - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \bigl(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\bigr)$$
+
+- **Error-driven correction:** Each example $i \in \mathcal{B}_t$ pulls $\mathbf{w}$ along $-\mathbf{x}^{(i)}$ in direct proportion to its signed prediction residual $r^{(i)} = \hat{y}^{(i)} - y^{(i)}$.
+- **Unbiased gradient estimator:** Under uniform sampling, $\mathbb{E}[\nabla L_{\mathcal{B}_t}(\mathbf{w}, b)] = \nabla L(\mathbf{w}, b)$, while the estimator's standard error decays as $1 / \sqrt{|\mathcal{B}|}$.
+- **Parameters vs. hyperparameters:** The weights $\mathbf{w}$ and bias $b$ are learned during training; the learning rate $\eta$ and batch size $|\mathcal{B}|$ (typically $32$ to $256$) are *hyperparameters* set prior to training and tuned on validation data.
 :::
 
-::: {.slide title="Check: What Does a 4× Larger Minibatch Do to the Noise Ball?"}
-[Check]{.kicker}
+::: {.slide title="Gradient Noise Ball and Learning-Rate Scaling"}
+[Stochastic Dynamics]{.kicker}
 
-Minibatch SGD with learning rate $\eta$ and minibatches of 32 ends in a
-noise ball around $\hat{\mathbf{w}}$. We switch to minibatches of 128.
-
-1. At the same $\eta$, how does the mean squared distance from
-   $\hat{\mathbf{w}}$ change?
-2. Which learning rate gives back the old noise ball?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.** (1) It is $\propto \eta/|\mathcal{B}|$, so it falls 4×: the
-cloud is half as wide. (2) $4\eta$ keeps $\eta/|\mathcal{B}|$ fixed, as
-long as $4\eta$ is still small enough for the steps to stay stable.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Squared loss and Gaussian noise]{.dtitle}
-
-[where the square comes from, and when to drop it]{.dsub}
-:::
-:::
-
-::: {.slide title="Gaussian Noise Scatters Labels Evenly Around the Line"}
-[Gaussian noise]{.kicker}
+Even at the exact empirical minimizer $\hat{\mathbf{w}}$ where the full-batch gradient $\nabla L(\hat{\mathbf{w}}) = \mathbf{0}$, individual noisy examples have nonzero residuals $r^{(i)} \neq 0$:
 
 ::: {.cols .vc}
 ::: {.col}
-$$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon, \qquad \epsilon \sim \mathcal{N}(0, \sigma^2)$$
+- **Full-batch GD (black):** Computes the exact gradient over all $n$ examples per step, marching smoothly across elliptical contours into $\hat{\mathbf{w}}$.
+- **Minibatch SGD (color):** Descends rapidly in $n / |\mathcal{B}|$ cheap steps per epoch, then fluctuates perpetually inside a terminal **noise ball** around $\hat{\mathbf{w}}$:
+  $$\mathbb{E}\bigl[\|\mathbf{w}_t - \hat{\mathbf{w}}\|_2^2\bigr] \propto \frac{\eta\,\sigma^2}{|\mathcal{B}|}$$
+- **Controlling the radius:** Quartering $\eta$ (right panel) or quadrupling $|\mathcal{B}|$ halves the noise ball radius; decaying $\eta_t \to 0$ converges to $\hat{\mathbf{w}}$.
+:::
 
-$$p(y \mid \mathbf{x}) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\Bigl(-\frac{(y - \mathbf{w}^\top \mathbf{x} - b)^2}{2\sigma^2}\Bigr)$$
+::: {.col .fig .big}
+![](../img/mdl-linreg-gd-sgd.svg){.nostretch width=100%}
+:::
+:::
+:::
 
-- Mean on the line, same width $\sigma$ at every $\mathbf{x}$.
-- $5\sigma$ away: density $e^{-12.5} \approx 4 \times 10^{-6}$ of the peak.
+::: {.slide title="Vectorization: Python Loops vs. Matrix Kernels"}
+[Systems Performance]{.kicker}
+
+Never implement minibatch updates by looping over examples $i \in \mathcal{B}_t$ in Python. Vectorizing turns $n$ scalar inner products into one compiled matrix multiplication $\mathbf{X}\mathbf{w} + b$:
+
+@linear-regression-vectorization-for-speed-3
+
+- **Why Python loops crawl:** Computing `X[i:i+1] @ w + b` 1,000 times pays Python interpreter dispatch, type checking, and kernel launch overhead on every single example.
+- **Why `@` flies:** A single `X @ w + b` call pays dispatch overhead once and streams contiguous memory through SIMD vector registers or GPU tensor cores, running hundreds of times faster.
+- **Asynchronous timing pitfall:** GPU frameworks (CUDA, JAX, MXNet) enqueue kernels asynchronously and return to Python immediately; timing benchmarks must synchronize the device (`torch.cuda.synchronize()`, `jax.block_until_ready`) before stopping the clock.
+:::
+
+::: {.slide title="Probabilistic Foundation: The Gaussian Noise Model"}
+[Why Squared Error?]{.kicker}
+
+In 1809, Gauss asked what probability distribution of measurement errors $\epsilon$ makes least squares the most probable parameter estimate:
+
+::: {.cols .vc}
+::: {.col}
+- **Additive Gaussian noise ($y = \mathbf{w}^\top \mathbf{x} + b + \epsilon$ with $\epsilon \sim \mathcal{N}(0, \sigma^2)$):**
+  $$p(y \mid \mathbf{x}; \mathbf{w}, b) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\Bigl(-\frac{(y - \mathbf{w}^\top \mathbf{x} - b)^2}{2\sigma^2}\Bigr)$$
+
+- **Homoscedastic normal scatter:** Every conditional density $p(y \mid \mathbf{x})$ is a Gaussian bell curve centered on the regression line $\mathbf{w}^\top\mathbf{x} + b$ with constant standard deviation $\sigma$.
+- **Light quadratic tails:** Because $(y - \hat{y})^2$ sits inside $\exp(-\cdot / 2\sigma^2)$, a $5\sigma$ residual has density $e^{-12.5} \approx 4 \times 10^{-6}$ of the peak.
 :::
 
 ::: {.col .fig}
@@ -823,74 +745,83 @@ $$p(y \mid \mathbf{x}) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\Bigl(-\frac{(y - \ma
 :::
 :::
 
-::: {.slide title="Maximum Likelihood Under Gaussian Noise Is Least Squares"}
-[Gaussian noise]{.kicker}
+::: {.slide title="Gaussian Maximum Likelihood Yields Least Squares"}
+[Statistical Derivation]{.kicker}
 
-Independent examples: the likelihood is a product; take $-\log$:
+For $n$ independent observations $\{(\mathbf{x}^{(i)}, y^{(i)})\}_{i=1}^n$, the conditional dataset likelihood factors into $\prod_{i=1}^n p(y^{(i)} \mid \mathbf{x}^{(i)}; \mathbf{w}, b)$. Maximizing likelihood is equivalent to minimizing the negative log-likelihood (NLL):
 
-$$-\log p(\mathbf{y} \mid \mathbf{X}) = \frac{n}{2}\log(2\pi\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n \bigl(y^{(i)} - \mathbf{w}^\top \mathbf{x}^{(i)} - b\bigr)^2$$
+$$-\log p(\mathbf{y} \mid \mathbf{X}; \mathbf{w}, b) = \frac{n}{2}\log(2\pi\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n \bigl(y^{(i)} - \mathbf{w}^\top \mathbf{x}^{(i)} - b\bigr)^2$$
 
-- The first term does not depend on $\mathbf{w}, b$.
-- The second is the squared loss, scaled by $1/\sigma^2$.
+- **Invariance to $\sigma^2$:** The first term $\frac{n}{2}\log(2\pi\sigma^2)$ is a constant independent of $(\mathbf{w}, b)$.
+- **Exact equivalence:** The second term is $\frac{n}{\sigma^2} L(\mathbf{w}, b)$—our empirical squared error loss scaled by the positive constant $n / \sigma^2$!
 
 ::: {.d2l-note .rule}
-Choose a noise model, minimize its negative log-likelihood. Gaussian noise
-gives the squared loss.
+**The MLE Loss Recipe:** Minimizing the squared error loss produces the exact maximum-likelihood estimator $(\hat{\mathbf{w}}_{\textrm{MLE}}, \hat{b}_{\textrm{MLE}})$ under additive homoscedastic Gaussian noise, regardless of the noise variance $\sigma^2$.
 :::
 :::
 
-::: {.slide title="Heavy-Tailed Noise Calls for the Absolute Error"}
-[Choosing a loss]{.kicker}
+::: {.slide title="Designing Losses From Alternative Noise Distributions"}
+[Beyond Gaussian Noise]{.kicker}
 
-Gaussian → squared error · Laplace → **absolute error** · Gaussian on
-$\log y$ → squared error on $\log y$ · Poisson with rate $\nu$ → $\nu - y \log \nu$.
-Under heavy Laplace tails a far label is unusual, not impossible, so it does
-not tilt the line.
+Replacing the Gaussian noise density $p(\epsilon) \propto \exp(-l(\epsilon))$ systematically derives robust and domain-specific regression losses via $-\log p(y \mid \mathbf{x})$:
 
-![](../img/mdl-linreg-loss-menu.svg){.nostretch width=64% fig-align="center"}
+::: {.cols .vc}
+::: {.col}
+- **Laplace noise $\to$ $\ell_1$ Absolute Error:** Heavy exponential tails $p(\epsilon) = \frac{1}{2\tau}e^{-|\epsilon|/\tau}$ yield $l(\hat{y}, y) = |\hat{y} - y|$, whose subgradient $\operatorname{sign}(\hat{y} - y) \in \{\pm 1\}$ bounds the pull of any outlier.
+- **Huber loss (smooth + robust):** Splices a quadratic bowl $\frac{1}{2}r^2$ for small residuals ($|r| \leq \delta$) onto linear slopes $\delta(|r| - \delta/2)$ for large residuals ($|r| > \delta$).
+- **Poisson counts ($y \in \{0, 1, \ldots\}$):** Modeling rate $\log \nu(\mathbf{x}) = \mathbf{w}^\top\mathbf{x} + b$ yields convex NLL $l = \nu(\mathbf{x}) - y\log\nu(\mathbf{x})$.
 :::
 
-::: {.slide title="Linear Regression Is a One-Layer Network"}
-[A neural network]{.kicker}
-
-![](../img/singleneuron.svg){.nostretch width=70% fig-align="center"}
-
-- $o_1 = w_1 x_1 + \cdots + w_d x_d + b$: every input feeds the output, a
-  **fully connected** layer.
-- Deep networks stack such layers, with nonlinear functions between them,
-  and train them with the same loss and minibatch SGD.
-:::
-
-::: {.slide title="Check: How Unlikely Is an Error of 10?"}
-[Check]{.kicker}
-
-With unit-scale noise, compare an error of 10 with an error of 1.
-How many times less likely is it under $\mathcal{N}(0, 1)$, and under the
-Laplace density $\tfrac{1}{2}e^{-|\epsilon|}$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Gaussian: $e^{-(100 - 1)/2} = e^{-49.5} \approx 3 \times 10^{-22}$.
-Laplace: $e^{-(10 - 1)} = e^{-9} \approx 1.2 \times 10^{-4}$. The Gaussian
-fit must bend toward such a label; the Laplace fit can ignore it.
+::: {.col .fig .big}
+![](../img/mdl-linreg-loss-menu.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Linear Regression as a Single-Layer Neural Network"}
+[Bridge to Deep Learning]{.kicker}
 
-- **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$; the house costs
-  $480{,}000$ dollars; a minibatch is $\mathbf{X}\mathbf{w} + b$.
-- **Closed form:** $\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top \mathbf{y}$,
-  a projection; the three-point line fits at $(7/6, -1/2)$.
-- **Minibatch SGD:** cheap unbiased steps; constant $\eta$ leaves a noise
-  ball with squared radius $\propto \eta / |\mathcal{B}|$, so $\eta$ is
-  lowered during training; the right $\eta$ depends on how the loss is
-  scaled.
-- **Noise model:** Gaussian → squared loss, sensitive to outliers (slope
-  23 instead of 2); Laplace → absolute error.
+In the language of neural networks, linear regression is a single artificial neuron—a **fully connected (dense) layer** with $d$ inputs and $1$ linear output unit:
 
-**Next:** a synthetic dataset whose true parameters we choose, so that a
-trained model can be checked against a known answer.
+::: {.cols .vc}
+::: {.col}
+- **Input layer ($x_1, \ldots, x_d$):** Holds the $d$ raw feature coordinates (not counted in layer depth because it holds no tunable parameters).
+- **Synaptic weights and output ($o_1$):** Every input node $x_j$ connects to the output node $o_1$ with weight $w_j$, computing $o_1 = \sum_{j=1}^d w_j x_j + b$.
+- **Why stack layers later:** Composing multiple affine layers without nonlinearities collapses into a single affine map; inserting elementwise activations in Chapter 4 unlocks universal approximation.
+:::
+
+::: {.col .fig}
+![](../img/singleneuron.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Orthogonality, Noise Balls & Likelihood"}
+[Check Your Understanding]{.kicker}
+
+Work out these three questions from first principles before revealing the solutions:
+
+1. **Zero-sum residuals:** Why do the residuals $r^{(i)} = \hat{y}^{(i)} - y^{(i)}$ of *every* least-squares fit with a bias $b$ satisfy $\sum_{i=1}^n r^{(i)} = 0$?
+2. **Batch size vs. noise ball:** If you increase the minibatch size from $|\mathcal{B}| = 32$ to $|\mathcal{B}| = 128$ at a fixed learning rate $\eta$, how does the steady-state squared distance $\mathbb{E}[\|\mathbf{w}_t - \hat{\mathbf{w}}\|_2^2]$ change, and what learning rate restores the original noise ball?
+3. **Outlier likelihood ratio:** Under unit-scale noise, how much less likely is a residual of $\epsilon = 10$ than $\epsilon = 1$ under $\mathcal{N}(0, 1)$ versus Laplace $p(\epsilon) = \frac{1}{2}e^{-|\epsilon|}$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. The augmented design matrix $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$ contains the all-ones column $\mathbf{1}$, so the normal equations $\tilde{\mathbf{X}}^\top\mathbf{r} = \mathbf{0}$ enforce $\mathbf{1}^\top\mathbf{r} = \sum_{i=1}^n r^{(i)} = 0$.
+2. Because $\mathbb{E}[\|\mathbf{w}_t - \hat{\mathbf{w}}\|_2^2] \propto \eta / |\mathcal{B}|$, quadrupling $|\mathcal{B}|$ cuts the squared distance by $4\times$ (halving the ball's radius); scaling the learning rate linearly to $4\eta$ restores the original ratio $\eta / |\mathcal{B}|$.
+3. Gaussian ratio: $e^{-(10^2 - 1^2)/2} = e^{-49.5} \approx 3 \times 10^{-22}$ (virtually impossible, forcing the line to tilt). Laplace ratio: $e^{-(10 - 1)} = e^{-9} \approx 1.2 \times 10^{-4}$ (rare but plausible, so the slope ignores the outlier).
+:::
+:::
+
+::: {.slide title="Section 2.1 Summary & Key Takeaways"}
+[Summary]{.kicker}
+
+| Concept | Mathematical Form | Computational Cost / Scaling | Role & Practical Takeaway |
+|---|---|---|---|
+| **Affine Model** | $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b = \tilde{\mathbf{X}}\tilde{\mathbf{w}}$ | $O(nd)$ flops per full dataset pass | Single fully connected layer; bias $b$ frees the hyperplane from the origin |
+| **Squared Error Loss** | $L(\mathbf{w}, b) = \frac{1}{2n}\|\mathbf{X}\mathbf{w} + b - \mathbf{y}\|_2^2$ | $O(n)$ reduction over residuals | Exact MLE under $\mathcal{N}(0, \sigma^2)$ noise; sensitive to heavy-tailed outliers |
+| **Normal Equations** | $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top\mathbf{y}$ | $O(nd^2 + d^3)$ via QR/SVD (`lstsq`) | Orthogonal projection of $\mathbf{y}$ onto $\operatorname{col}(\tilde{\mathbf{X}})$; infeasible for large $d$ |
+| **Minibatch SGD** | $\tilde{\mathbf{w}} \leftarrow \tilde{\mathbf{w}} - \frac{\eta}{|\mathcal{B}|}\tilde{\mathbf{X}}_{\mathcal{B}}^\top(\tilde{\mathbf{X}}_{\mathcal{B}}\tilde{\mathbf{w}} - \mathbf{y}_{\mathcal{B}})$ | $O(|\mathcal{B}|d)$ flops per step, independent of $n$ | Unbiased gradient with variance $\propto 1/|\mathcal{B}|$; settles in noise ball $\propto \eta/|\mathcal{B}|$ |
+| **Robust Alternatives** | $\ell_1$: $\|\hat{\mathbf{y}} - \mathbf{y}\|_1 / n$; Huber $l_\delta$ | $O(|\mathcal{B}|d)$ per subgradient step | Derived from Laplace MLE; bounds each outlier's gradient contribution to $\pm 1$ |
 :::

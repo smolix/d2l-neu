@@ -1061,294 +1061,230 @@ Between 2015 and the early 2020s, convnet training recipes evolved across every 
 ::: {.cover}
 [Dive into Deep Learning · §7.6]{.kicker}
 
-Modern Training Recipes for Convnets<br>**label smoothing · warmup and cosine decay · Mixup · stochastic depth · weight averaging**
+Modern Training Recipes for Convnets<br>**AdamW · cosine warmup · label smoothing · Mixup & CutMix · stochastic depth · EMA weight averaging**
 :::
 :::
 
-::: {.slide title="Retraining an Unchanged ResNet-50 Adds Four Points"}
-[The problem]{.kicker}
+::: {.slide title="Why Reported Architecture Gains Are Often Recipe Gains"}
+[Motivation & Benchmark Confounding]{.kicker}
 
-Same ResNet-50 architecture, different training procedure (Wightman et
-al., 2021), ImageNet top-1:
+Published papers frequently train a new architecture with state-of-the-art optimization and regularization while quoting a baseline trained with a recipe from years earlier:
 
-| recipe | epochs | accuracy |
-|:--|--:|--:|
-| 2015 original | 90 | 76.1% |
-| modern, A3 | 100 | 78.1% |
-| modern, A1 (LAMB, heavy augmentation) | 600 | 80.4% |
-
-::: {.d2l-note .warn}
-A two-point "architecture gain" over a baseline with an older recipe may be
-a recipe gain.
-:::
+- **ResNet-50 Strikes Back (Wightman et al., 2021):** Without altering a single layer of the 2015 ResNet-50 architecture, upgrading its training recipe lifts ImageNet top-1 accuracy by **+4.3 percentage points**:
+  - **2015 Baseline (90 epochs, SGD + step decay, crops/flips):** $76.1\%$
+  - **Modern A3 (100 epochs, LAMB/cosine, Mixup, smoothing):** $78.1\%$
+  - **Modern A1 (600 epochs, strong augmentation + stochastic depth + EMA):** **$80.4\%$**
+- **The scientific rule:** A 1- or 2-point victory over an un-retrained baseline cannot distinguish architectural improvement from training-recipe improvement.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Evolution of Vision Training Recipes (2015 vs. 2022)"}
+[The Modern Recipe Menu]{.kicker}
 
-- compute the label-smoothed loss and its minimizer;
-- write warmup with cosine decay as a function of the step;
-- implement Mixup and stochastic depth in a few lines;
-- choose the decay of a weight average from its horizon $1/(1-\rho)$;
-- read a recipe comparison: what to hold fixed, which loss to compare.
+Between 2015 and 2022, researchers upgraded every stage of the supervised training loop—and the exact same toolkit trains both modern convnets and Vision Transformers:
 
-**Running example:** one ResNet-18 on 10,000 Fashion-MNIST images at
-$96\times 96$, under a 2015 recipe and a compact modern one.
+| Pipeline Ingredient | Classic 2015 Recipe (He et al.) | Modern Early-2020s Recipe | Why the Upgrade Helps |
+|:--|:--|:--|:--|
+| **Optimizer & weight decay** | SGD + momentum ($0.9$), coupled L2 | **AdamW** or LAMB (decoupled decay) | Decouples weight shrinkage from adaptive gradient rescaling |
+| **Learning-rate schedule** | Step decay ($\div 10$ at epochs 30, 60) | **Linear warmup + half-cosine decay** | Stabilizes early steps and removes discrete drop-epoch hyperparameters |
+| **Data augmentation** | Random resized crops + horizontal flips | **RandAugment + Mixup + CutMix** | Enforces smooth linear interpolation between training examples |
+| **Loss & regularization** | One-hot cross-entropy + L2 decay | **Label smoothing + stochastic depth** | Prevents unbounded logit overconfidence and trains subnetwork ensembles |
+| **Duration & checkpoint** | 90 epochs, final iterate $\theta_T$ | **300–600 epochs, shadow EMA $\bar{\theta}_T$** | Stronger regularization requires longer horizons; EMA averages basin noise |
 :::
 
-::: {.slide title="Recipes Are the Sixth Question of the Chapter"}
-[Where this fits]{.kicker}
+::: {.slide title="Decoupled Weight Decay in AdamW vs. Coupled SGD"}
+[Optimizer Mechanics]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| AlexNet | learned features, ReLU, dropout, GPUs |
-| VGG, NiN, GoogLeNet | blocks, 1 × 1 convolutions, global pooling |
-| Normalization Layers | batch, layer, group normalization |
-| ResNet, ResNeXt, DenseNet | residual connections make depth trainable |
-| Efficient Convnets | separable blocks, scaling, re-parameterization |
-| **Training Recipes** | **schedules, augmentation, weight averaging** |
-| ConvNeXt | a ResNet modernized one change at a time |
-| Design Spaces (RegNet) | rules from populations of networks |
+Why did standard Adam underperform SGD with momentum on ImageNet for years until *AdamW* (Loshchilov & Hutter, 2019)?
+
+- **The L2 coupling bug in classic Adam:** Adding $\lambda \boldsymbol{\theta}$ to the gradient $\mathbf{g}_t$ *before* dividing by the adaptive second-moment estimate $\sqrt{\hat{\mathbf{v}}_t}$ shrinks weights with large historical gradients *less* than weights with small gradients.
+- **Decoupled weight decay (AdamW):** Applies the multiplicative decay directly to the parameters outside the adaptive gradient term:
+  $$\boldsymbol{\theta}_{t+1} = (1 - \eta_t \lambda)\,\boldsymbol{\theta}_t - \eta_t \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
+- **Calibrating weight-decay numbers across optimizers:** Always compare the *per-step fractional shrinkage* $\eta_0 \lambda$. At peak learning rate, AdamW ($\eta_0 = 0.002, \lambda = 0.05$) shrinks weights by $\eta_0 \lambda = 10^{-4}$ per step, whereas SGD ($\eta_0 = 0.05, \lambda = 5\times 10^{-4}$) shrinks by $2.5\times 10^{-5}$ before $1/(1-\beta) = 10\times$ momentum amplification.
 :::
 
-::: {.col .narrow}
-- **Uses:** ResNet-18 and its `Residual` block; SGD with momentum; weight
-  decay; dropout.
-- **Skips:** RandAugment, CutMix, LAMB, distillation.
-:::
-:::
-:::
+::: {.slide title="Label Smoothing: Bounding Optimal Logit Margins"}
+[Loss Regularization]{.kicker}
 
-::: {.slide title="Every Row of the 2015 Recipe Was Revisited"}
-[What changed]{.kicker}
+Under standard one-hot cross-entropy ($-\log p_y$), driving the loss toward zero forces the true class logit $z_y \to +\infty$, producing overconfident, poorly calibrated predictions:
 
-| ingredient | 2015 | 2022 |
-|:--|:--|:--|
-| optimizer | SGD + momentum | AdamW / LAMB |
-| schedule | step decay | warmup + cosine |
-| augmentation | crops, flips | RandAugment, Mixup, CutMix |
-| regularization | weight decay | + label smoothing, stochastic depth |
-| duration | 90 epochs | 300–600 epochs |
-| evaluated weights | final | moving average |
-
-::: {.d2l-note}
-Regularization and duration grow together: the 100-epoch recipe uses weaker
-augmentation than the 600-epoch one.
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[The ingredients]{.dtitle}
-
-[each a few lines of code]{.dsub}
-:::
-:::
-
-::: {.slide title="Label Smoothing Makes the Optimal Logits Finite"}
-[The ingredients]{.kicker}
-
-$$l_\epsilon = -(1-\epsilon)\log p_y - \frac{\epsilon}{K}\sum_{k=1}^K \log p_k$$
-
-- Minimizer: $p_y = 1-\epsilon+\epsilon/K$, all others $\epsilon/K$: a
-  finite logit gap.
-- A confident, correct prediction (logits 10, 0, 0) no longer has zero
-  loss:
+- **Softened target distribution:** *Label smoothing* (Szegedy et al., 2016) places probability $1 - \epsilon$ on the true class $y$ and distributes $\epsilon$ uniformly across all $K$ classes ($\epsilon / K$ each):
+  $$l_\epsilon(\mathbf{p}, y) = -(1 - \epsilon)\log p_y - \frac{\epsilon}{K} \sum_{k=1}^K \log p_k$$
+- **Finite optimal logit gap:** Minimized when $p_y^* = 1 - \epsilon + \epsilon/K$ and $p_k^* = \epsilon/K$ ($k \neq y$), which occurs at the exact finite logit margin $z_y^* - z_k^* = \log\bigl(1 + \frac{K(1-\epsilon)}{\epsilon}\bigr)$ (e.g., $\approx 3.33$ for $K=3, \epsilon=0.1$).
+- **Penalizing overconfidence:** On logits $(10, 0, 0)$, $\epsilon=0.1$ raises loss from $0.0001$ to $0.67$, pulling extreme logits back:
 
 @!training-recipes-label-smoothing
 :::
 
-::: {.slide title="Warm Up Linearly, Then Decay along a Half-Cosine"}
-[The ingredients]{.kicker}
+::: {.slide title="Step Decay vs. Cosine Decay with Linear Warmup"}
+[Learning-Rate Schedules]{.kicker}
 
-$$\eta_t = \frac{\eta_0}{2}\Big(1+\cos\frac{\pi(t-t_\textrm{w})}{T-t_\textrm{w}}\Big),\quad t\ge t_\textrm{w};\qquad \eta_t = \eta_0\, t/t_\textrm{w} \textrm{ before.}$$
+Plotting our 30-epoch step schedule against our 45-epoch cosine warmup schedule illustrates why modern recipes abandoned discrete step drops:
 
+::: {.cols .vc}
+::: {.col}
+- **Warmup ($0 \le t < t_{\textrm{w}}$):** Linearly ramps $\eta_t = \eta_0 \cdot (t / t_{\textrm{w}})$, letting BatchNorm running stats and AdamW second moments $\hat{\mathbf{v}}_t$ equilibrate before full steps occur.
+- **Half-cosine decay ($t_{\textrm{w}} \le t \le T$):**
+  $$\eta_t = \frac{\eta_0}{2}\left(1 + \cos\frac{\pi(t - t_{\textrm{w}})}{T - t_{\textrm{w}}}\right)$$
+  Eliminates drop-epoch tuning and anneals smoothly to $0$ at step $T$.
+:::
+
+::: {.col .fig}
 @!training-recipes-cosine-schedules-with-warmup
-
-The rate is updated after each minibatch ($T = 3555$ steps).
-:::
-
-::: {.slide title="Check: Read the Schedule"}
-[Check]{.kicker}
-
-Base rate $\eta_0 = 0.002$, $T = 3555$ steps, warmup $t_\textrm{w} = 237$.
-What is the rate at step 118, at step 1896, and at the last step?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Step 118: in warmup, $0.002\cdot 118/237 \approx 0.001$.
-Step 1896: halfway through the decay ($1896 - 237 = 1659 = 3318/2$),
-cosine 0, so $0.001$. Last step: about 0.
 :::
 :::
 :::
 
-::: {.slide title="Mixup Trains on Convex Combinations of Examples"}
-[The ingredients]{.kicker}
+::: {.slide title="Mixup and CutMix: Blending Examples and Labels"}
+[Data Augmentation]{.kicker}
 
-$\tilde{\mathbf{x}} = \lambda\mathbf{x}_i + (1-\lambda)\mathbf{x}_j$,
-$\tilde{\mathbf{y}} = \lambda\mathbf{y}_i + (1-\lambda)\mathbf{y}_j$,
-$\lambda\sim\mathrm{Beta}(\alpha,\alpha)$; the loss is
-$\lambda\, l(\hat{\mathbf{y}}, y_i) + (1-\lambda)\, l(\hat{\mathbf{y}}, y_j)$:
+Instead of training solely on individual images, *Mixup* (Zhang et al., 2018) trains on random convex combinations of image pairs $(\mathbf{x}_i, \mathbf{y}_i)$ and $(\mathbf{x}_j, \mathbf{y}_j)$ with $\lambda \sim \mathrm{Beta}(\alpha, \alpha)$:
+
+$$\tilde{\mathbf{x}} = \lambda \mathbf{x}_i + (1 - \lambda)\mathbf{x}_j, \qquad \tilde{\mathbf{y}} = \lambda \mathbf{y}_i + (1 - \lambda)\mathbf{y}_j$$
+
+- **Linearity of cross-entropy:** Because cross-entropy is linear in the target vector $\tilde{\mathbf{y}}$, the mixed loss is simply $\lambda\,l(\hat{\mathbf{y}}, y_i) + (1-\lambda)\,l(\hat{\mathbf{y}}, y_j)$.
 
 @training-recipes-mixup-1
 :::
 
-::: {.slide title="With α = 2 the Mixtures Are Visible"}
-[The ingredients]{.kicker}
+::: {.slide title="Visualizing Mixup and Contrasting with CutMix"}
+[Augmentation Geometry]{.kicker}
 
-Top: a minibatch; bottom: mixed with a shuffled copy.
+During training, $\alpha = 0.2$ concentrates $\lambda$ near $0$ and $1$; below we plot $\alpha = 2.0$ ($\lambda \approx 0.5$) so the superposed garment mixtures are clearly visible:
 
+::: {.cols .vc}
+::: {.col}
+- **Linear decision boundaries:** Forces network predictions to transition linearly between classes rather than oscillating sharply outside the training manifold.
+- **CutMix (Yun et al., 2019):** Because global alpha-blending creates ghostly double exposures, CutMix pastes a rectangular patch of area fraction $1 - \lambda$ from $\mathbf{x}_j$ onto $\mathbf{x}_i$ and mixes labels by the exact patch area, preserving local pixel statistics.
+:::
+
+::: {.col .fig}
 @!training-recipes-mixup-2
-
-Training uses $\alpha = 0.2$: most minibatches barely mixed, a few
-strongly. CutMix pastes a rectangle instead and mixes labels by area.
+:::
+:::
 :::
 
-::: {.slide title="Stochastic Depth Drops Whole Residual Branches"}
-[The ingredients]{.kicker}
+::: {.slide title="Stochastic Depth: Dropping Whole Residual Branches"}
+[Structural Regularization]{.kicker}
 
-$$\mathbf{x} + \frac{b}{1-p} f(\mathbf{x}),\qquad b\sim\mathrm{Bernoulli}(1-p)\ \textrm{per example}$$
+Whereas standard dropout zeroes individual scalar activations, *stochastic depth* (Huang et al., 2016) randomly bypasses entire residual branches per training example:
 
-- $\mathbb{E}[b/(1-p)] = 1$: no change needed at evaluation, as with dropout.
-- 1,000 examples through a block with $p = 0.5$ in training mode:
+$$\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + \frac{b}{1 - p}\,f(\mathbf{x}_\ell), \qquad b \sim \mathrm{Bernoulli}(1 - p)$$
 
-@!training-recipes-stochastic-depth
-
-- Typical: $p$ grows linearly from 0 to 0.1–0.5 over the blocks.
+- **Expectation invariance:** Scaling surviving branches by $1/(1-p)$ ensures $\mathbb{E}[b/(1-p)] = 1$, so the full deterministic network ($b \equiv 1$) runs at evaluation time without weight rescaling.
+- **Linear depth schedule:** Drop rate $p_\ell$ ramps linearly from $0$ at block 1 to $p_{\max} \in [0.1, 0.5]$ at the deepest block.
 :::
 
-::: {.slide title="A Weight Average Reaches Back About 1/(1−β) Steps"}
-[The ingredients]{.kicker}
+::: {.slide title="Implementing and Verifying `drop_path`"}
+[Stochastic Depth Code]{.kicker}
 
-$\bar\theta \leftarrow \rho\bar\theta + (1-\rho)\theta$ after every
-step; evaluate with $\bar\theta$. A weight that rises from 0 to 1 over 50
-steps, then fluctuates:
+Sampling one Bernoulli mask per example (`shape = (B, 1, 1, 1)`) and passing 1,000 inputs through `StochasticResidual(p=0.5)` confirms that half of the examples bypass the branch and equal $\textrm{ReLU}(\mathbf{X})$ identically:
 
+@training-recipes-stochastic-depth
+:::
+
+::: {.slide title="Exponential Moving Average (EMA) of Model Weights"}
+[Iterate Averaging]{.kicker}
+
+Near convergence, minibatch noise causes SGD/AdamW iterates $\boldsymbol{\theta}_t$ to bounce around the walls of a flat loss valley. Maintaining a non-trainable shadow copy $\bar{\boldsymbol{\theta}}_t$ averages out this oscillation:
+
+::: {.cols .vc}
+::: {.col}
+- **EMA update after each optimizer step:**
+  $$\bar{\boldsymbol{\theta}}_t \leftarrow \rho\,\bar{\boldsymbol{\theta}}_{t-1} + (1 - \rho)\,\boldsymbol{\theta}_t$$
+- **Effective memory horizon $1/(1-\rho)$:** Iterate $\boldsymbol{\theta}_{t-k}$ carries weight $(1-\rho)\rho^k$.
+- **Pitfall (Horizon vs. Run Length):** At $\rho = 0.99$ (horizon $100$ steps), the shadow trajectory lags $20\%$ below a 50-step ramp even at step 200. Always choose $1/(1-\rho) \ll T$ (e.g., $\rho = 0.9999$ only for $>50{,}000$-step runs).
+:::
+
+::: {.col .fig}
 @!training-recipes-averaging-weights
-
-$\rho = 0.9$ follows about 10 steps late; $\rho = 0.99$ is smoother but
-still a fifth short of 1 after 200 steps.
-:::
-
-::: {.slide title="Check: How Long Is the Horizon?"}
-[Check]{.kicker}
-
-A run has 79 steps per epoch. Roughly how many epochs does a weight
-average with $\rho = 0.999$ reach back? Is that a good choice for a
-45-epoch run?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $1/(1-\rho) = 1000$ steps, about 13 epochs. The average then
-reaches back into a stretch where the rate is still large and the weights
-still improve, so it may lag; whether a shorter horizon does better is worth
-measuring.
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Controlled Experiment: One ResNet-18 Under Two Recipes"}
+[Head-to-Head Comparison]{.kicker}
 
-[Two Recipes on One Network]{.dtitle}
+We train the exact same 11.2M-parameter `ResNet18` on a shared 10,000-image subset of $96\times 96$ Fashion-MNIST (`FashionMNIST10k`, 79 steps/epoch) under `ClassicRecipe` vs. `ModernRecipe`:
 
-[same network, same images, everything else changed]{.dsub}
-:::
-:::
-
-::: {.slide title="One ResNet-18, Two Recipes, the Same 10,000 Images"}
-[Two recipes]{.kicker}
-
-| | recipe A (2015) | compact modern recipe |
+| Setting | `ClassicRecipe` (2015 Baseline) | `ModernRecipe` (Compact 2022) |
 |:--|:--|:--|
-| optimizer | SGD, momentum 0.9, decay $5\cdot 10^{-4}$ | AdamW, decay 0.05 |
-| base rate, schedule | 0.05, 2 epochs warmup, divide by 10 at 60%, 85% | 0.002, 3 epochs warmup, cosine |
-| loss | cross-entropy | smoothed ($\epsilon = 0.1$), Mixup ($\alpha = 0.2$) |
-| epochs | 30 | 45 |
-
-Same He initialization and data for both recipes; each run draws its own
-10,000-image subset. Shrinkage per step at the peak rate: AdamW
-$0.002 \cdot 0.05 = 10^{-4}$; SGD $0.05 \cdot 5 \cdot 10^{-4} = 2.5 \cdot
-10^{-5}$, which momentum multiplies by up to 10.
+| **Optimizer & base LR** | SGD ($\eta_0 = 0.05$, momentum $0.9$, coupled L2 $5\cdot 10^{-4}$) | AdamW ($\eta_0 = 0.002$, decoupled WD $0.05$) |
+| **Schedule & horizon** | 2-ep warmup + $\div 10$ step drops at 60%, 85% (30 epochs) | 3-ep warmup + half-cosine decay (45 epochs) |
+| **Training objective** | Standard 1-hot cross-entropy | Label smoothing ($\epsilon = 0.1$) + Mixup ($\alpha = 0.2$) |
+| **Validation accuracy** | **$89.0\text{--}90.5\%$** | **$90.5\text{--}91.0\%$ (+0.5 to +1.5 pts in every pair)** |
 :::
 
-::: {.slide title="The Compact Modern Recipe Wins Every Run, by 0.5 to 1.5 Points"}
-[Two recipes]{.kicker}
+::: {.slide title="Implementing Classic vs. Modern Training Steps"}
+[Recipe Implementation]{.kicker}
 
-Validation accuracy, repeated runs:
+In code, `ClassicRecipe` and `ModernRecipe` inherit the exact same `ResNet18` backbone and differ only in `configure_optimizers` and `training_step`:
 
-| recipe | validation accuracy |
-|:--|--:|
-| A (2015), 30 epochs | 89–90.5% |
-| compact modern, 45 epochs | 90.5–91% |
-
-Gain within each pair of runs: 0.5–1.5 points, positive in every pair.
-
-::: {.d2l-note}
-Without RandAugment, CutMix, stochastic depth, or weight averaging: this
-measures a subset of the full recipe. Optimizer, loss, schedule, and length
-changed together, so the runs do not say which one gained the point.
-:::
+@training-recipes-one-network-two-recipes-2
 :::
 
-::: {.slide title="Training Losses Cannot Be Compared across Recipes"}
-[Two recipes]{.kicker}
+::: {.slide title="Baseline Trajectory: 30 Epochs of Classic Recipe A"}
+[Classic Recipe Training Curve]{.kicker}
 
-Compact modern recipe: training loss (smoothed, on mixed images) stays
-above the validation loss (plain cross-entropy on validation images).
+Under `ClassicRecipe` (30 epochs, unsmoothed cross-entropy without Mixup), training loss plunges toward zero while validation loss rebounds to $0.4\text{--}0.5$ as logits grow overconfident:
 
+@!training-recipes-one-network-two-recipes-4
+:::
+
+::: {.slide title="Diagnostic Pitfall: Never Compare Raw Training Losses"}
+[Reading Recipe Curves]{.kicker}
+
+Inspecting the training and validation curves of `ModernRecipe` reveals a diagnostic trap that catches many practitioners:
+
+::: {.cols .vc}
+::: {.col}
+- **Why `train_loss > val_loss` under `ModernRecipe`:** `train_loss` is evaluated onMixup-blended images with label-smoothed targets (whose theoretical minimum is bounded well above $0$), whereas `val_loss` is plain cross-entropy on clean unmixed validation images.
+- **Better calibration:** Under `ClassicRecipe`, training loss hits $\approx 0$ while overconfident validation loss rebounds to $0.4\text{--}0.5$; `ModernRecipe` keeps validation loss below $0.4$.
+:::
+
+::: {.col .fig}
 @!training-recipes-one-network-two-recipes-5
-
-- Recipe A: training loss falls to 0, validation loss ends at 0.4–0.5,
-  above its early minimum. The modern recipe ends below 0.4.
-- Hyperparameters do not transfer: AdamW's base rate is 25× smaller than
-  SGD's. Ablations must retune.
-:::
-
-::: {.slide title="A One-Point Gain Needs Matched Recipes"}
-[Published results]{.kicker}
-
-- The recipe moves a fixed ResNet-50 by four ImageNet points: compare
-  architectures only under the same recipe.
-- A new ImageNet test set (ImageNet-V2) costs every model 11–14 points but
-  preserves their ranking: a harder distribution, not overfitting.
-- For backbones within a point on ImageNet, transfer to detection and
-  segmentation separates them better.
-:::
-
-::: {.slide title="Check: Is the New Block Better?"}
-[Check]{.kicker}
-
-A paper reports a new block that beats ResNet-50 by 0.8 points; the
-baseline number comes from the 2015 paper. What do you need before you
-believe it?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The baseline retrained with the new recipe (the recipe alone is
-worth four points), and the run-to-run spread of both numbers: 0.8 points
-may be within it.
 :::
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Reading Leaderboards: Ablations & Distribution Shift"}
+[Benchmark Methodology]{.kicker}
 
-- ResNet-50 unchanged: 76.1% → 80.4% from the recipe alone.
-- Label smoothing: loss 0.67 instead of 0.0001 for a confident, correct
-  prediction.
-- Warmup + cosine per minibatch; Mixup; stochastic depth; weight average
-  with horizon $1/(1-\rho)$.
-- ResNet-18, 10,000 images: the compact modern recipe wins every run, by
-  0.5–1.5 points.
-- Compare architectures under matched recipes, never training losses.
+Three methodological rules govern how we interpret modern vision benchmarks:
 
-Next: ConvNeXt modernizes the architecture under the modern recipe.
+- **One-at-a-time ablations and LR retuning:** Because AdamW's optimal base learning rate ($0.002$) is $25\times$ smaller than momentum SGD's ($0.05$), swapping an optimizer or schedule in an ablation without retuning $\eta_0$ measures miscalibration rather than method quality.
+- **ImageNet-V2 distribution shift (Recht et al., 2019):** Evaluating models on a freshly collected ImageNet test set drops every architecture's top-1 accuracy by $11\text{--}14$ points while preserving model rankings almost linearly—showing that benchmark progress transferred across distribution shift.
+- **Downstream transfer vs. saturated top-1:** Once backbones cluster within $0.5\%$ on ImageNet (where multi-label ambiguity sets an irreducible floor, Beyer et al., 2020), transfer to object detection and segmentation separates representation quality far better.
 :::
+
+::: {.slide title="Concept Check: Smoothed Logits, EMA & Weight Decay"}
+[Concept Check]{.kicker}
+
+Test your grasp of modern recipe mechanics with these three calculations:
+
+1. **Optimal logit gap under label smoothing:** For $K = 10$ classes and $\epsilon = 0.1$, what probability $p_y^*$ does label smoothing assign to the true class, what probability $p_k^*$ to each of the 9 incorrect classes, and what is the optimal logit difference $z_y^* - z_k^* = \log(p_y^* / p_k^*)$?
+2. **EMA horizon vs. epoch count:** In our 45-epoch `FashionMNIST10k` run ($79$ steps/epoch, $T = 3{,}555$ total steps), how many epochs does an EMA with $\rho = 0.999$ average over, and why can that hurt final validation accuracy?
+3. **EMA + BatchNorm pitfall:** When you swap in EMA shadow weights $\bar{\boldsymbol{\theta}}$ at evaluation time, why can BatchNorm's running statistics $(\hat{\mu}, \hat{\sigma}^2)$ be slightly mismatched, and how is this fixed?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $p_y^* = 1 - 0.1 + 0.1/10 = 0.91$, and $p_k^* = 0.1/10 = 0.01$ for each of the 9 other classes. The optimal logit gap is $\log(0.91 / 0.01) = \log(91) \approx \mathbf{4.51}$ (vs. $\infty$ without smoothing).
+2. The effective window is $1/(1 - 0.999) = 1{,}000$ steps $\approx \mathbf{12.7\text{ epochs}}$ (over a third of the entire 45-epoch run), pulling the average back toward undertrained early weights.
+3. BatchNorm's `moving_mean` and `moving_var` were accumulated using the live weights $\boldsymbol{\theta}_t$ with $\rho_{\text{BN}} = 0.9$ (10-step window), not the smoothed weights $\bar{\boldsymbol{\theta}}_t$. Either maintain EMA shadow copies of BN buffers or run one forward pass over training batches with $\bar{\boldsymbol{\theta}}$ frozen to recompute fresh BN stats.
+:::
+:::
+
+::: {.slide title="Summary: Key Takeaways on Modern Training Recipes"}
+[Summary]{.kicker}
+
+| Ingredient | Mathematical Formulation | Practical Role & Tuning Rule |
+|:--|:--|:--|
+| **AdamW** | $\boldsymbol{\theta}_{t+1} = (1 - \eta_t \lambda)\boldsymbol{\theta}_t - \eta_t \hat{\mathbf{m}}_t / (\sqrt{\hat{\mathbf{v}}_t} + \epsilon)$ | Decouples weight shrinkage $\eta_t \lambda$ from adaptive gradient normalization; base LR $\sim 25\times$ smaller than SGD |
+| **Cosine Warmup** | Linear ramp $0 \to \eta_0$ over $t_{\textrm{w}}$, then $\frac{\eta_0}{2}(1 + \cos\frac{\pi(t-t_{\textrm{w}})}{T-t_{\textrm{w}}})$ | Prevents early BN/Adam divergence and eliminates step-drop threshold tuning |
+| **Label Smoothing** | $l_\epsilon = -(1-\epsilon)\log p_y - \frac{\epsilon}{K}\sum_k \log p_k$ | Bounds optimal logit gap to $\log(1 + K(1-\epsilon)/\epsilon)$, improving calibration |
+| **Mixup / CutMix** | $\tilde{\mathbf{x}} = \lambda \mathbf{x}_i + (1-\lambda)\mathbf{x}_j$, $\tilde{\mathbf{y}} = \lambda \mathbf{y}_i + (1-\lambda)\mathbf{y}_j$ | Regularizes inter-class paths; requires longer training horizons (300–600 epochs on ImageNet) |
+| **Stochastic Depth** | $\mathbf{x} + \frac{b}{1-p}f(\mathbf{x})$ with $b \sim \mathrm{Bernoulli}(1-p)$ per example | Drops whole residual branches during training; $p_\ell$ ramps linearly from $0$ to $p_{\max}$ with depth |
+| **Weight EMA** | $\bar{\boldsymbol{\theta}}_t \leftarrow \rho \bar{\boldsymbol{\theta}}_{t-1} + (1-\rho)\boldsymbol{\theta}_t$ | Damps late-training oscillation at zero inference cost; keep horizon $1/(1-\rho) \ll T$ |
+:::
+

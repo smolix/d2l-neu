@@ -33,83 +33,82 @@ kaggle-house-price
 ::: {.cover}
 [Dive into Deep Learning · §4]{.kicker}
 
-From linear models to networks with hidden layers<br>
-**hidden layers · backpropagation · initialization · generalization · dropout · Kaggle**
+Multilayer Perceptrons: Breaking the Linear Barrier<br>
+**hidden layers · backpropagation · variance-preserving initialization · generalization · dropout · Kaggle**
 :::
 :::
 
-::: {.slide title="A Linear Model Cannot Combine Its Inputs"}
-[The problem]{.kicker}
+::: {.slide title="Why Linear Classifiers Hit a Ceiling on Real Tasks"}
+[The Central Problem]{.kicker}
 
-- **XOR of two bits:** no line separates the two classes, so every linear
-  classifier gets at least one of the four points wrong.
-- **Fashion-MNIST:** softmax regression levels off at about 84%; one hidden
-  layer of 256 ReLUs reaches about 87% after 30 epochs.
-- **The price:** 203,530 parameters, 26 times as many, about 3.4 per
-  training image. Such a network could memorize its training set, yet it
-  does not.
+In Chapter 3, softmax regression scored each class by taking a fixed affine weighted sum of the $784$ input pixels, baking in two fundamental flaws:
+
+- **No feature interactions (XOR):** Flipping input bit $x_1$ in exclusive-OR reverses the output depending on $x_2$; no single hyperplane can separate all four corners of $\{0, 1\}^2$.
+- **Context-blind pixel weights:** In Fashion-MNIST, a bright pixel contributes the exact same vote toward a class whether its neighbors form a collar, a sleeve, or a handbag strap, capping linear accuracy at $\sim 84\%$.
+- **The deep-learning solution:** Insert one or more fully connected *hidden layers* $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ that learn nonlinear feature combinations jointly with the output classifier.
 
 ::: {.d2l-note}
-Hidden layers make the model expressive; this chapter shows how to train
-them and why they still generalize.
+Adding a single 256-unit ReLU hidden layer lifts Fashion-MNIST accuracy to $\sim 87\%$ (cutting errors by $\sim 20\%$), while multiplying parameters 26-fold to $203{,}530$.
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="Three Fundamental Challenges of Deep Networks"}
+[What Depth Introduces]{.kicker}
 
-- compute XOR with two hidden units;
-- implement an MLP from scratch and with framework layers;
-- derive backpropagation and check it against automatic differentiation;
-- choose the initial scale (Xavier, He) so that ten layers train;
-- show that capacity cannot explain generalization, and what gradient
-  descent prefers instead;
-- measure what dropout changes when labels are noisy; select a model by
-  cross-validation.
+Moving from a single linear layer to stacked nonlinear layers preserves our cross-entropy loss and minibatch SGD loop, but introduces three new core problems:
 
-**The idea:** a hidden layer computes features, an affine map followed by a
-fixed nonlinearity, and softmax regression classifies them. **Running
-example:** the Fashion-MNIST models on the next slide.
+1. **Efficient gradient computation (§4.3):** Finite differences would require $203{,}530$ forward passes per step; *backpropagation* computes every gradient in one reverse sweep at the cost of caching forward activations in GPU RAM.
+2. **Numerical stability across depth (§4.4):** Across $K$ layers, signals and gradients pass through a product of $K$ weight and slope matrices, vanishing to $0$ or exploding to `NaN` unless initial weight variance matches the fan-in and activation (*Xavier* and *He* initialization).
+3. **Generalization past interpolation (§4.5–§4.6):** With $203{,}530$ parameters for $60{,}000$ images ($3.4$ parameters per image), the MLP can memorize random noise, yet generalizes on real data via the implicit bias of gradient descent, early stopping, and *dropout*.
 :::
 
-::: {.slide title="Running Example: 26 Times the Parameters Add Three Points on Fashion-MNIST"}
-[Running example]{.kicker}
+::: {.slide title="Running Benchmark: Fashion-MNIST Across Chapter 4"}
+[Running Example]{.kicker}
 
-| model | parameters | multiply-adds per image | validation accuracy |
-|---|---:|---:|---:|
-| softmax regression | 7,850 | 7,840 | about 84% (30 epochs) |
-| MLP, 256 hidden units | 203,530 | 203,264 | about 87% (30 epochs) |
-| MLP, 2 × 256 hidden units, dropout | 269,322 | 268,800 | about 87% (20 epochs) |
+Throughout this chapter, we benchmark our models head-to-head on Fashion-MNIST ($d = 784$ pixels, $q = 10$ classes, minibatch size $n = 256$, learning rate $\eta = 0.1$):
 
-- Seconds per epoch on a GPU: about the same for softmax regression and the
-  MLP, since reading the images and the fixed cost of each step dominate.
-- The decks of this chapter measure their models against these rows.
+| Architecture | Parameters | Multiply-Adds / Image | Activation Memory ($n = 256$) | Validation Accuracy |
+|:--|--:|--:|--:|--:|
+| Softmax regression ($784 \to 10$) | $7{,}850$ | $7{,}840$ | $0.8\textrm{ MB}$ | $\sim 84\%$ (30 epochs) |
+| 1-hidden-layer MLP ($784 \to 256 \to 10$) | $203{,}530$ | $203{,}264$ | $1.1\textrm{ MB}$ | $\sim 87\%$ (30 epochs) |
+| 2-hidden-layer Dropout MLP ($784 \to 256 \to 256 \to 10$) | $269{,}322$ | $268{,}800$ | $1.3\textrm{ MB}$ | $\sim 87\%$ (20 epochs) |
+| 10-layer MLP with $\mathcal{N}(0, 0.01^2)$ init | $795{,}658$ | $793{,}088$ | $3.4\textrm{ MB}$ | $10\%$ (frozen at $\log 10$) |
+| 10-layer MLP with He init ($\tau = \sqrt{2/n_{\textrm{in}}}$) | $795{,}658$ | $793{,}088$ | $3.4\textrm{ MB}$ | $\sim 85\%$ (10 epochs) |
+
+::: {.d2l-note}
+On a GPU, the 256-unit MLP trains in nearly the exact same wall-clock time per epoch as softmax regression because data loading and kernel launch overhead dominate dense matrix arithmetic at width $256$.
+:::
 :::
 
-::: {.slide title="Map of the Chapter"}
-[Chapter map]{.kicker}
+::: {.slide title="Architectural & Mathematical Roadmap of Chapter 4"}
+[Chapter Roadmap]{.kicker}
 
-| section | question | adds |
-|---|---|---|
-| Multilayer Perceptrons | which functions can hidden layers represent? | hidden layers, universal approximation, activation functions |
-| Implementation | what does an MLP cost and gain? | an MLP trained on Fashion-MNIST |
-| Backpropagation | how does one backward pass compute every gradient? | how the gradients are computed, and at what memory cost |
-| Numerical Stability and Initialization | why do gradients vanish or explode? | vanishing gradients, Xavier and He initialization |
-| Generalization in Deep Learning | why does a network that can memorize generalize? | memorization, double descent, implicit bias, early stopping |
-| Dropout | what does silencing random units change? | random masks, slower memorization of noisy labels |
-| Predicting House Prices on Kaggle | how do the pieces work on real data? | the workflow on real data |
+Each section solves one concrete link in the chain from representation power to real-world tabular deployment:
+
+| Section | Core Question | Key Mathematical / Systems Takeaway |
+|:--|:--|:--|
+| **§4.1 Multilayer Perceptrons** | What functions can hidden layers represent? | Without nonlinear $\phi$, layers collapse; depth folds space into $2^m$ pieces with $2m$ units. |
+| **§4.2 Implementation** | What do hidden units actually learn on images? | Pre-training sanity checks ($\text{loss} \approx \log 10$, $50\%$ active ReLUs); localized garment-part filters. |
+| **§4.3 Backpropagation** | How does one pass compute $203{,}530$ derivatives? | Three local rules ($\mathbf{X}^\top\mathbf{G}$, $\mathbf{G}\mathbf{W}^\top$, $\odot\,\phi'$) at $\sim 2\times$ forward FLOPs and $O(nKh)$ memory. |
+| **§4.4 Numerical Stability & Init** | Why do 10-layer gradients vanish or explode? | Per-layer variance factor $h\tau^2\mathbb{E}[\phi'(z)^2] = 1$ yields Xavier ($2/(n_{\textrm{in}}+n_{\textrm{out}})$) and He ($2/n_{\textrm{in}}$). |
+| **§4.5 Generalization in Deep Learning** | Why doesn't a memorizing network overfit? | Random-label memorization breaks VC bounds; double descent at $h = n$; minimum-norm implicit bias. |
+| **§4.6 Dropout** | How does random masking curb memorization? | Inverted dropout $h' = \xi h / (1 - p)$ keeps $\mathbb{E}[h'] = h$ at test time and slows noisy-label overfitting. |
+| **§4.7 Kaggle House Prices** | How does the full pipeline run on messy tables? | Leakage-free standardization/imputation, log-RMSE target centering, and shared 5-fold cross-validation. |
 :::
 
-::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
-[Running examples]{.kicker}
+::: {.slide title="Concept Check & Study Guide for Chapter 4"}
+[Check & Synthesis]{.kicker}
 
-| section | running example |
-|---|---|
-| Multilayer Perceptrons | XOR computed by two hidden units; at $z = 4$ the sigmoid's slope is 0.018, the ReLU's 1 |
-| Implementation | 203,530 parameters; about 87% against about 84% for softmax regression |
-| Backpropagation | a minibatch of 256 stores 1.1 MB of activations next to 0.8 MB of weights |
-| Numerical Stability and Initialization | ten layers, weights of standard deviation 0.01: the gradient shrinks by more than $10^8$, and the loss never leaves $\log 10$ |
-| Generalization in Deep Learning | 100% training accuracy on random labels, chance on test images |
-| Dropout | 1,000 images, 40% of the labels redrawn: dropout ends three to five points higher |
-| Predicting House Prices on Kaggle | RMSE of log prices: about 0.15 for a linear model, about 0.135 for an MLP |
+Before diving into §4.1, test your intuition on two foundational questions that connect the sections ahead:
+
+1. **Linear collapse:** If we stack 10 fully connected layers of width $256$ without activation functions ($\phi(z) = z$), does the network have more expressive power than a single $784 \times 10$ linear layer?
+2. **Memory vs. parameters:** When training a deep network on minibatches of size $n = 256$, why can activation memory easily exceed parameter memory even when every hidden layer is narrower than the input?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **No:** $(\mathbf{X}\mathbf{W}^{(1)})\mathbf{W}^{(2)}\cdots\mathbf{W}^{(10)}$ multiplies out to a single matrix $\mathbf{X}\mathbf{W}$ of rank at most $256$ (and at most $10$ at the output). Nonlinear activations are essential to prevent algebraic collapse.
+2. **Batch scaling:** A weight matrix $\mathbf{W}^{(k)} \in \mathbb{R}^{h \times h}$ stores $h^2$ floats independent of batch size, whereas its cached forward activation $\mathbf{H}^{(k)} \in \mathbb{R}^{n \times h}$ stores $nh$ floats per layer, growing linearly with both batch size $n$ and depth $K$.
 :::
+:::
+

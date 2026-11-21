@@ -593,286 +593,239 @@ output-shape formula, :eqref:`eq_conv_output_shape`.
 ::: {.cover}
 [Dive into Deep Learning · §6.3]{.kicker}
 
-Padding, Stride, and Dilation<br>**output shape · border pixels · downsampling · receptive field**
+Padding, Stride, and Dilation<br>**boundary control · spatial downsampling · dilated footprints · receptive-field growth**
 :::
 :::
 
-::: {.slide title="Ten 5×5 Layers Shrink a 240×240 Image to 200×200"}
-[The problem]{.kicker}
+::: {.slide title="Three Geometric Dilemmas of Basic Convolutions"}
+[Motivation & Spatial Trade-Offs]{.kicker}
 
-- Unpadded, a $k\times k$ kernel fits at $n-k+1$ positions per axis:
-  $240 \to 236 \to \cdots \to 200$, 30% of the area lost at the border.
-- The border is underused even before: a $5\times 5$ kernel covers an
-  interior pixel 25 times, a corner pixel once.
-- At $224\times 224$, each $3\times 3$ layer widens the view by 2 pixels:
-  over 100 layers before a unit sees the whole image.
+An unpadded, stride-1 convolution creates three conflicting problems as networks grow deeper:
+
+- **Progressive border erosion:** Because an unpadded $k \times k$ kernel shrinks each axis by $k - 1$ pixels, ten stacked $5 \times 5$ layers shrink a $240 \times 240$ image to $200 \times 200$—discarding **30% of the image area** along the perimeter.
+- **Slow linear receptive-field growth:** At stride 1, each $3 \times 3$ layer widens a unit's receptive field by just 2 pixels ($r = 2L + 1$), requiring over 110 layers before a unit can span a $224 \times 224$ image.
+- **Full-resolution context in dense prediction:** Semantic segmentation requires *both* a wide receptive field and an output at every pixel, without paying the $O(k^2)$ parameter and FLOP cost of huge dense kernels.
 
 ::: {.d2l-note}
-Padding keeps the size, stride reduces it on purpose, and dilation widens
-the view without adding weights.
+Three hyperparameters solve these three problems: **padding ($p$)** preserves borders and spatial dimensions, **stride ($s$)** downsamples feature maps to grow receptive fields geometrically, and **dilation ($d$)** spreads a small kernel across a wide footprint at full resolution.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Why Unpadded Convolutions Under-Sample Border Pixels"}
+[Boundary Pixel Utilization]{.kicker}
 
-- compute the output shape for any padding $p$, stride $s$, and
-  dilation $d$;
-- choose padding that keeps the shape, and say why kernels are odd;
-- predict what zero padding does at the border;
-- compute the receptive field of a stack with strides and dilations;
-- choose among the preserve, halve, and patchify layers.
+Even in a single unpadded $k \times k$ layer, pixels near the edge of the frame participate in far fewer sliding windows than interior pixels:
 
-**Running example:** one $28\times 28$ Fashion-MNIST image and a
-$5\times 5$ kernel: $24\times 24$ unpadded, $28\times 28$ with 2 pixels of
-padding per side, $14\times 14$ with stride 2 added.
+![](../img/conv-reuse.svg){.nostretch width=82% fig-align="center"}
+
+- **Interior vs. corner disparity:** Any interior pixel at distance $\ge k-1$ from the border participates in $k^2$ windows ($25$ windows for a $5 \times 5$ kernel), an edge pixel appears in at most $k$ windows, and a corner pixel appears in **only 1 window**.
+- **Cumulative center bias:** Across stacked layers, unpadded convolutions exponentially down-weight information located near the perimeter of the image.
 :::
 
-::: {.slide title="Padding, Stride, and Dilation Set the Shape and Reach of a Convolution"}
-[Where this fits]{.kicker}
+::: {.slide title="Zero Padding Restores Borders and Output Dimensions"}
+[Symmetric Per-Side Padding]{.kicker}
+
+Surrounding the input with $p_\textrm{h}$ rows of zeros on both top and bottom and $p_\textrm{w}$ columns on both left and right expands the effective input grid to $(n_\textrm{h} + 2p_\textrm{h}) \times (n_\textrm{w} + 2p_\textrm{w})$:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| From Fully Connected Layers to Convolutions | locality and translation equivariance give convolution |
-| Convolutions for Images | cross-correlation, learning a kernel, receptive fields |
-| **Padding, Stride, and Dilation** | **output size and how far each unit sees** |
-| Multiple Input and Multiple Output Channels | channels, 1 × 1 convolutions, cost |
-| Pooling | downsampling, tolerance to small shifts, global pooling |
-| LeNet | a complete CNN on Fashion-MNIST, its learned features, the shuffle test |
+$$\textrm{Output shape} = (n_\textrm{h} + 2p_\textrm{h} - k_\textrm{h} + 1) \times (n_\textrm{w} + 2p_\textrm{w} - k_\textrm{w} + 1)$$
+
+- **Shape-preserving ("same") padding:** Setting $p_\textrm{h} = (k_\textrm{h}-1)/2$ and $p_\textrm{w} = (k_\textrm{w}-1)/2$ cancels the $k - 1$ shrinkage so the output matches $n_\textrm{h} \times n_\textrm{w}$.
+- **Example ($3 \times 3$ input, $p=1$, $2 \times 2$ kernel):** Padding expands $3 \times 3 \to 5 \times 5$, yielding a $4 \times 4$ output instead of $2 \times 2$.
 :::
 
-::: {.col .narrow}
-- **Uses:** cross-correlation, `corr2d`, receptive field.
-- **Skips:** channels (next deck); learned upsampling.
+::: {.col .fig}
+![](../img/conv-pad.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
+::: {.slide title="Why Convolutional Kernels Are Almost Always Odd"}
+[Grid Alignment Under Symmetric Padding]{.kicker}
 
-[Padding]{.dtitle}
+Dividing $k - 1$ evenly between both sides of an axis requires $k - 1$ to be even—and therefore $k$ to be **odd**:
 
-[keeping the shape and the border]{.dsub}
+| Kernel Size $k$ | Shape-Preserving Padding $p = (k-1)/2$ | Center Pixel Alignment |
+|---|---|---|
+| $k = 1$ ($1 \times 1$) | $p = 0$ per side | Output $(i, j)$ aligns exactly with input $(i, j)$ |
+| $k = 3$ ($3 \times 3$) | $p = 1$ per side | Window centered at $(i, j)$ spans $\{i-1, i, i+1\}$ |
+| $k = 5$ ($5 \times 5$) | $p = 2$ per side | Window centered at $(i, j)$ spans $\{i-2, \dots, i+2\}$ |
+| $k = 7$ ($7 \times 7$) | $p = 3$ per side | Window centered at $(i, j)$ spans $\{i-3, \dots, i+3\}$ |
+
+::: {.d2l-note .warn}
+**What goes wrong with even $k$:** For an even kernel (e.g., $k = 2$ or $4$), $k - 1$ is odd, so preserving $n_\textrm{h} \times n_\textrm{w}$ requires **asymmetric padding** (e.g., 1 pixel on the left, 2 on the right) and shifts the output coordinate grid by half a pixel relative to the input.
 :::
 :::
 
-::: {.slide title="Corner Pixels Lie in One Window, Interior Pixels in k²"}
-[Padding]{.kicker}
+::: {.slide title="Verifying Shape-Preserving Padding in Code"}
+[Batch-and-Channel Wrapper Helper]{.kicker}
 
-![Windows that contain each pixel, for $1\times 1$, $2\times 2$, and $3\times 3$ kernels without padding.](../img/conv-reuse.svg){width=85%}
+Built-in 2D convolutional layers expect 4D tensors carrying batch and channel axes. Our helper `comp_conv2d` wraps a 2D matrix $(H, W)$ with singleton batch/channel dimensions and returns the 2D spatial output:
 
-Each layer draws most of its evidence from the center of its input; after a
-few layers the border is gone.
-:::
-
-::: {.slide title="Padding Adds a Border So the Kernel Fits at the Edge"}
-[Padding]{.kicker}
-
-![A $3\times 3$ input padded to $5\times 5$; the $2\times 2$ kernel now gives a $4\times 4$ output.](../img/conv-pad.svg){width=62%}
-
-With $p$ rows or columns of padding on **each side**, an axis of $n$ pixels
-gives $n + 2p - k + 1$ outputs.
-
-Each padding row adds one output row; $p = (k - 1)/2$ keeps the shape.
-:::
-
-::: {.slide title="Odd Kernels Pad Evenly and Keep Each Output Centered"}
-[Padding]{.kicker}
-
-- Shape-preserving padding is $p = (k-1)/2$ on each side: kernels 1, 3, 5,
-  7 pad 0, 1, 2, 3.
-- The output `Y[i, j]` then comes from the window centered on `X[i, j]`.
-- Even $k$ must pad one side more, and the output shifts by half a pixel.
-
-**Running example:** $28\times 28$, $5\times 5$ kernel, $p = 2$:
-$28\times 28$ out, as in LeNet's first layer.
-:::
-
-::: {.slide title="Padding Keeps an 8×8 Input at 8×8"}
-[Padding]{.kicker}
-
-A $3\times 3$ kernel with $p = (3-1)/2 = 1$, which is `padding=1` in code:
+@padding-and-strides-zero-padding-1
 
 @padding-and-strides-padding-1
 :::
 
-::: {.slide title="Zero Padding Makes a Uniform Image Dark at the Border"}
-[Padding]{.kicker}
+::: {.slide title="Boundary Pitfalls: Zero Padding as a Dark Frame"}
+[Implicit Positional Leakage vs. Reflect/Replicate Padding]{.kicker}
 
-A $5\times 5$ image of ones, zero padding 1, a $3\times 3$ kernel of ones:
+Zero padding assumes the world outside the camera frame is pitch black (`0`). Convolving a uniform $5 \times 5$ image of all `1`s (`p = 1`) with a $3 \times 3$ kernel of all `1`s reveals a boundary artifact:
 
 ::: {.cols .vc}
 ::: {.col}
-@!padding-and-strides-padding-values
+@padding-and-strides-padding-values
 :::
 
-::: {.col .narrow}
-- Each output counts the image pixels in its window: 9, 6, or 4.
-- Reflect and replicate padding keep a uniform image uniform.
-:::
-:::
-:::
-
-::: {.slide title="Check: Three Unpadded 5×5 Layers on a 28×28 Image"}
-[Check]{.kicker}
-
-What shape comes out? Which padding keeps $28\times 28$ through all three
-layers?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $28 \to 24 \to 20 \to 16$, so $16\times 16$. Padding $p = 2$
-on each side at every layer keeps $28\times 28$.
+::: {.col}
+- **Border darkening ($9 \to 6 \to 4$):** Interior windows sum 9 ones, edge windows sum 6, and corners sum 4.
+- **Positional leakage:** Deep CNNs learn to exploit this artificial dark border to infer absolute spatial coordinates (Alsallakh et al., 2020).
+- **Generative alternatives:** Image synthesis and super-resolution networks prefer **reflect** or **replicate** padding, which map a constant input to a constant output.
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Strided Convolutions: Downsampling the Grid"}
+[Stepping the Sliding Window by s > 1 Pixels]{.kicker}
 
-[Stride]{.dtitle}
+Instead of evaluating the kernel at every pixel ($s = 1$), a vertical stride $s_\textrm{h}$ and horizontal stride $s_\textrm{w}$ shift the window by $s_\textrm{h}$ rows and $s_\textrm{w}$ columns per step:
 
-[evaluating every s-th window]{.dsub}
-:::
-:::
-
-::: {.slide title="Stride s Evaluates Every s-th Window"}
-[Stride]{.kicker}
-
-![Stride 3 down and 2 across on the padded $3\times 3$ input.](../img/conv-stride.svg){width=55%}
-
-Each output has the color of its window: blue is
-$0{\cdot}0+0{\cdot}1+1{\cdot}2+2{\cdot}3=8$, orange is
-$0{\cdot}0+6{\cdot}1+0{\cdot}2+0{\cdot}3=6$. A third window per row would
-leave the padded input.
+::: {.cols .vc}
+::: {.col}
+- **Example ($s_\textrm{h} = 3$, $s_\textrm{w} = 2$ on padded $3 \times 3$):**
+  - Top-left window (gray): $0\cdot 0 + 0\cdot 1 + 0\cdot 2 + 0\cdot 3 = 0$.
+  - Shift 2 columns right (blue): $0\cdot 0 + 0\cdot 1 + 1\cdot 2 + 2\cdot 3 = 8$.
+  - Shift 3 rows down (orange): $0\cdot 0 + 6\cdot 1 + 0\cdot 2 + 0\cdot 3 = 6$.
+- **Compute savings:** Evaluating every $s$-th row and column cuts output activations and multiply-adds by a factor of $s_\textrm{h} s_\textrm{w}$.
 :::
 
-::: {.slide title="Output Size Is ⌊(n + 2p − k)/s⌋ + 1"}
-[Stride]{.kicker}
-
-$$\Big\lfloor\frac{n+2p-k}{s}\Big\rfloor + 1$$
-
-- Steps the window can take, plus its first position.
-- The figure: $\lfloor 3/3\rfloor+1 = 2$ rows, $\lfloor 3/2\rfloor+1 = 2$
-  columns.
-- With $2p = k - 1$: $\lceil n/s\rceil$, so stride $s$ divides the
-  resolution by $s$.
-- **Running example:** $n=28$, $k=5$, $p=2$, $s=2$ gives
-  $\lfloor 27/2\rfloor+1 = 14$; multiply-adds per channel drop from
-  $28^2\cdot 25 = 19{,}600$ to $14^2\cdot 25 = 4{,}900$.
+::: {.col .fig}
+![](../img/conv-stride.svg){.nostretch width=100%}
+:::
+:::
 :::
 
-::: {.slide title="Stride in Code: 8×8 Becomes 4×4"}
-[Stride]{.kicker}
+::: {.slide title="Deriving the Strided Output-Shape Formula"}
+[Counting Valid Steps Plus the Starting Position]{.kicker}
+
+Along an input axis of length $n$ with padding $p$ on each side, the padded axis has length $n + 2p$. After placing the initial window of width $k$ at index $0$, $n + 2p - k$ pixels remain for steps of size $s$:
+
+$$h_\textrm{o} = \left\lfloor \frac{n_\textrm{h} + 2p_\textrm{h} - k_\textrm{h}}{s_\textrm{h}} \right\rfloor + 1, \qquad w_\textrm{o} = \left\lfloor \frac{n_\textrm{w} + 2p_\textrm{w} - k_\textrm{w}}{s_\textrm{w}} \right\rfloor + 1$$
+
+- **Algebraic equivalent:** Putting $+1$ inside the floor gives $\lfloor (n + 2p - k + s) / s \rfloor$.
+- **Pairing stride $s$ with shape-preserving padding ($2p = k - 1$):**
+  $$h_\textrm{o} = \left\lfloor \frac{n - 1}{s} \right\rfloor + 1 = \left\lceil \frac{n}{s} \right\rceil$$
+- **Concrete Fashion-MNIST check ($n=28, k=5, p=2, s=2$):** Output size is $\lceil 28/2 \rceil = 14 \times 14$, cutting multiply-adds per channel by $4\times$ ($28^2 \cdot 25 = 19{,}600 \to 14^2 \cdot 25 = 4{,}900$).
+:::
+
+::: {.slide title="Strided Downsampling in Code and Design Patterns"}
+[Three Canonical Padding-and-Stride Regimes]{.kicker}
+
+Applying a $3 \times 3$ kernel with $p = 1$ and $s = 2$ halves our $8 \times 8$ input to $4 \times 4$:
 
 @padding-and-strides-stride-1
 
-Height and width may differ in kernel, padding, and stride; the formula
-applies to each axis separately.
+| Architectural Pattern | Kernel $k$ | Padding $p$ | Stride $s$ | Output Size | Primary Role in Vision Architectures |
+|---|---|---|---|---|---|
+| **Preserve ("Same")** | $3$ | $1$ | $1$ | $n \times n$ | Feature extraction at constant spatial resolution |
+| **Halve (Downsample)** | $3$ | $1$ | $2$ | $\lceil n/2 \rceil \times \lceil n/2 \rceil$ | Stage transition: $4\times$ fewer positions, $2\times$ channels |
+| **Patchify (Non-overlapping)** | $k$ | $0$ | $k$ | $\lfloor n/k \rfloor \times \lfloor n/k \rfloor$ | Partition image into $k \times k$ tokens (ViT / ConvNeXt stem) |
 :::
 
-::: {.slide title="Three Settings Cover Most Layers"}
-[Stride]{.kicker}
+::: {.slide title="Geometric Receptive-Field Growth Under Stride"}
+[How Early Strides Multiply All Downstream Kernels]{.kicker}
 
-| | kernel | padding per side | stride | output |
-|---|---|---|---|---|
-| **preserve** | 3 | 1 | 1 | $n \times n$ |
-| **halve** | 3 | 1 | 2 | $\lceil n/2\rceil \times \lceil n/2\rceil$ |
-| **patchify** | $k$ | 0 | $k$ | $\lfloor n/k\rfloor \times \lfloor n/k\rfloor$ |
+After a layer with stride $s_1 = 2$, adjacent units in its output lie $2$ pixels apart in the original image—so a subsequent kernel of width $k_2$ spans $(k_2 - 1) \cdot 2$ original pixels!
 
-- *Preserve* mixes features at full resolution.
-- *Halve* is the standard downsampling layer.
-- *Patchify* tiles the input: $16\times 16$ with stride 16 cuts a
-  $224\times 224$ image into $14\times 14$ patches, as vision transformers
-  do.
+$$r = 1 + \sum_{i=1}^{L} (k_i - 1) \prod_{j=1}^{i-1} s_j$$
+
+- **Cumulative stride multiplier $\prod_{j < i} s_j$:** One unit step at the input of layer $i$ corresponds to $\prod_{j=1}^{i-1} s_j$ pixels in the input image.
+- **Padding invariance of $r$:** Notice that $p_i$ does not appear in $r$; padding shifts *where* windows lie without changing *how many* input pixels feed each unit.
+- **Linear vs. geometric reach (three $3 \times 3$ layers):**
+  - Strides $(1, 1, 1)$: $r = 1 + 2(1) + 2(1) + 2(1) = 7$ pixels.
+  - Strides $(2, 2, 1)$: $r = 1 + 2(1) + 2(2) + 2(4) = 15$ pixels ($> 2\times$ wider reach with the exact same 27 weights!).
 :::
 
-::: {.slide title="Each Stride Multiplies the Reach of All Later Kernels"}
-[Stride]{.kicker}
+::: {.slide title="Dilated Convolutions: Expanding Footprints at Stride 1"}
+[Spacing Kernel Taps Apart by Dilation Rate d]{.kicker}
 
-$$r = 1 + \sum_{i=1}^{L}(k_i - 1)\prod_{j<i} s_j$$
+When a task demands a wide receptive field *without* losing spatial resolution (e.g., per-pixel semantic segmentation), **dilation** inserts spaces of $d - 1$ pixels between adjacent kernel taps:
 
-- $r$: side of the receptive field, the input pixels one top unit can see;
-  layer $i$ has kernel size $k_i$ and stride $s_i$.
-- Three $3\times 3$ layers at stride 1: $r = 1+2+2+2 = 7$.
-- Strides 2, 2, 1: $r = 1+2+4+8 = 15$.
-
-::: {.d2l-note}
-The receptive field grows geometrically for as long as the network keeps
-striding: five halvings multiply a kernel's reach by 32.
-:::
+::: {.cols .vc}
+::: {.col}
+- **Effective kernel size $k'$:** A $k \times k$ kernel with dilation rate $d$ spans:
+  $$k' = k + (k - 1)(d - 1) = d(k - 1) + 1$$
+- **Zero extra parameters or FLOPs:** At $d = 2$, a $3 \times 3$ kernel spans a $5 \times 5$ footprint ($k' = 2(2)+1 = 5$) using only **$9$ weights and $9$ multiply-adds** per pixel instead of $25$.
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Dilation]{.dtitle}
-
-[a wider view with the same weights]{.dsub}
+::: {.col .fig}
+![](../img/arch-conv-dilation.svg){.nostretch width=100%}
+:::
 :::
 :::
 
-::: {.slide title="Dilation Spreads Nine Weights over a 5×5 Window"}
-[Dilation]{.kicker}
+::: {.slide title="Unified Shape Formula: Padding, Stride & Dilation"}
+[Substituting Effective Kernel Size k' = d(k - 1) + 1]{.kicker}
 
-![A $3\times 3$ kernel at dilation 1 and dilation 2.](../img/arch-conv-dilation.svg){width=62%}
+Replacing $k$ with $k' = d(k - 1) + 1$ in the strided output-shape formula yields one master equation governing every convolutional layer along an axis:
 
-Weights $d$ pixels apart: effective size $k' = d(k-1)+1$, still $k^2$
-weights and $k^2$ multiplications per output.
-:::
-
-::: {.slide title="One Formula for Padding, Stride, and Dilation"}
-[Dilation]{.kicker}
-
-$$\Big\lfloor\frac{n + 2p - d(k-1) - 1}{s}\Big\rfloor + 1 \qquad\textrm{per axis}$$
-
-A $3\times 3$ kernel at dilation 2 and a dense $5\times 5$ kernel both
-take $8\times 8$ to $4\times 4$:
+$$n_\textrm{out} = \left\lfloor \frac{n + 2p - d(k - 1) - 1}{s} \right\rfloor + 1$$
 
 @padding-and-strides-dilation
+
+- **Sanity check:** On an $8 \times 8$ unpadded input ($p=0, s=1$), a $3 \times 3$ kernel at dilation $d=2$ has effective size $k' = 5$ and produces the exact same $4 \times 4$ output shape as a dense $5 \times 5$ kernel.
 :::
 
-::: {.slide title="Strides 2, 2, 1 and Dilations 1, 2, 4 See the Same 15 Pixels"}
-[Dilation]{.kicker}
+::: {.slide title="Strided vs. Dilated Towers: Reach vs. Density"}
+[Comparing Strides (2, 2, 1) Against Dilations (1, 2, 4)]{.kicker}
 
-![Three layers with kernel size 3 in one dimension; shaded cells feed the top unit.](../img/conv-rf-towers.svg){width=80%}
+Replacing $k_i - 1$ with $k'_i - 1 = d_i(k_i - 1)$ in our receptive-field formula shows that doubling dilation rates $d_i = 2^{i-1}$ at stride 1 grows the receptive field **exponentially** ($r = 2^{L+1} - 1$ for $3 \times 3$ kernels):
 
-Same connections, but the strided stack keeps every fourth position and the
-dilated stack all of them, as segmentation needs.
+![](../img/conv-rf-towers.svg){.nostretch width=82% fig-align="center"}
+
+- **(a) Strided tower ($s = 2, 2, 1$, $d = 1, 1, 1$):** Reaches $r = 1 + 2 + 4 + 8 = 15$ input pixels, subsampling to every 4th spatial location ($16\times$ cheaper in 2D).
+- **(b) Dilated tower ($s = 1, 1, 1$, $d = 1, 2, 4$):** Reaches the exact same $r = 1 + 2(1) + 2(2) + 2(4) = 15$ input pixels through identical tap wiring, while evaluating **every spatial position** at full resolution.
 :::
 
-::: {.slide title="Check: A 7×7 Stride-2 Layer on a 224×224 Image"}
-[Check]{.kicker}
+::: {.slide title="Systems Pitfall: Dilation Gridding Artifacts"}
+[Why Constant Dilation Schedules Create Blind Lattices]{.kicker}
 
-Kernel 7, padding 3 on each side, stride 2. What is the output size? A
-$3\times 3$ layer at stride 1 follows: how far do its units see?
+If dilation expands the receptive field without adding weights, why not set every layer to a large constant dilation like $d = (4, 4, 4, 4)$?
 
-::: {.fragment .fade-up}
+- **The gridding hazard:** If all layers use $d_i = 4$ (or share a common factor $> 1$), every tap is a multiple of 4 pixels apart. An output unit at $(i, j)$ can *only* depend on input pixels $(i + 4a, j + 4b)$!
+- **Sparse checkerboard sampling:** Even though four $3 \times 3$ layers with $d = (4,4,4,4)$ have a $33 \times 33$ bounding box ($r = 1 + 4 \times 8 = 33$), the output unit actually reads only $9 \times 9 = 81$ pixels ($7.4\%$) inside that $1{,}089$-pixel box—completely blind to thin objects falling between grid lines.
+- **Exponential schedule solution:** Using $d = (1, 2, 4, 8)$ fills every integer offset cleanly ($r = 31$, all $31 \times 31 = 961$ pixels sampled) because each layer's stride/dilation step is bridged by the finer resolution below it.
+:::
+
+::: {.slide title="Concept Check: Shapes and Receptive Fields"}
+[Concept Check]{.kicker}
+
+Test your mastery of the unified shape and receptive-field equations:
+
+1. **Unpadded vs. padded stack:** What output shape comes out when a $28 \times 28$ image passes through three unpadded $5 \times 5$ layers at stride 1? What per-side padding $p$ preserves $28 \times 28$ through all three?
+2. **ResNet-style stem:** A $224 \times 224$ image passes through a $7 \times 7$ conv ($p=3, s=2$) followed by a $3 \times 3$ conv ($p=1, s=2$). What is the output spatial shape after each layer, and what is the receptive field $r$ of a unit after the second layer?
+3. **Dilated shape-preserving padding:** For a $3 \times 3$ kernel with dilation $d = 4$ and stride $s = 1$, what per-side padding $p$ preserves the input height and width?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+(1) Each unpadded $5 \times 5$ layer subtracts $4$ pixels: $28 \to 24 \to 20 \to 16$ ($16 \times 16$). Padding $p = (5-1)/2 = 2$ on each side keeps $28 \times 28$.
+(2) Layer 1 output: $\lfloor(224+6-7)/2\rfloor + 1 = 112 \times 112$. Layer 2 output: $\lfloor(112+2-3)/2\rfloor + 1 = 56 \times 56$. Receptive field after Layer 2: $r = 1 + (7-1)(1) + (3-1)(2) = 1 + 6 + 4 = 11$ pixels.
+(3) The effective kernel size is $k' = 4(3-1)+1 = 9$, so shape-preserving padding requires $p = (k'-1)/2 = 4$ pixels per side.
+:::
+:::
+
+::: {.slide title="Summary & Key Takeaways"}
+[Section Synthesis]{.kicker}
+
+| Hyperparameter | Effect on Output Size $n_\textrm{out}$ | Effect on Receptive Field $r$ | Systems & Architectural Role |
+|---|---|---|---|
+| **Padding ($p$ per side)** | Adds $2p$ to effective input length | None ($r$ is independent of $p$) | Prevents border shrinkage; $p = (k-1)/2$ preserves $H \times W$ at $s=1$ |
+| **Stride ($s$)** | Divides output length by $s$ ($\approx \lceil n/s \rceil$) | Multiplies reach of all subsequent layers by $s$ | Cuts activations & MACs by $s^2$; grows RF geometrically |
+| **Dilation ($d$)** | Expands kernel $k \to k' = d(k-1)+1$ | Adds $d(k-1) \prod_{j<i} s_j$ to $r$ | Exponential RF growth at full resolution ($0$ extra params) |
+| **Master Formula** | $\lfloor (n + 2p - d(k-1) - 1)/s \rfloor + 1$ | $1 + \sum_{i=1}^L d_i(k_i - 1)\prod_{j<i} s_j$ | Governs all 1D, 2D, and 3D convolutional & pooling layers |
+
 ::: {.d2l-note}
-**Answer.** $\lfloor (224-7+6)/2\rfloor+1 = 112$. Receptive field
-$r = 1 + 6 + 2\cdot 2 = 11$ pixels.
+**Next (§6.4):** Extending convolutions from single-channel 2D grids to 3D stacks of input and output channels, accounting for the $c_\textrm{i} c_\textrm{o}$ compute/memory cost, and building $1 \times 1$ bottleneck layers.
 :::
-:::
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- Unpadded: $n \to n-k+1$; a corner pixel lies in 1 window, an interior
-  pixel in $k^2$.
-- Padding $p = (k-1)/2$ per side keeps the shape, for odd $k$; zero padding
-  darkens the border (9, 6, 4).
-- Stride $s$: $\lfloor (n+2p-k)/s\rfloor+1$ outputs; $28 \to 14$ cuts the
-  multiply-adds 4×; the receptive field grows geometrically.
-- Dilation $d$: effective size $d(k-1)+1$; dilations 1, 2, 4 reach 15
-  pixels at full resolution.
-- One formula: $\lfloor (n+2p-d(k-1)-1)/s\rfloor+1$.
-
-Next: several input and output channels.
 :::

@@ -306,24 +306,6 @@ datasheets, named reviewers, and numbers that pass the decode-bound check.
        whose workload uses long contexts?
    :exlabel:`ex_hardware-context-decode`
 
-1. **Power budget.** :numref:`subsec_hardware-buyers-training` notes that
-   NVIDIA specifies 1000 W of system power for a 5090 build, and that the
-   circuit must sustain the load of the whole system, not only of the
-   card. Consider a box with
-   four used RTX 3090 cards at 350 W each on a Threadripper-class platform
-   that draws 350 W, with another 100 W for drives and fans, fed by power
-   supplies that are 90% efficient. The box is plugged into a North
-   American 120 V, 15 A circuit, whose continuous load should stay below
-   80% of its 1,800 W rating.
-    1. Compute the draw at the wall under full load. To which power limit
-       per card must the cards be capped to stay on one such circuit? Does
-       a 230 V, 16 A circuit under the same 80% rule carry the box without
-       a cap?
-    1. Capping the power of a GPU lowers its clock and hence its peak
-       arithmetic rate, while its memory bandwidth changes little. Which
-       workloads of this section lose much throughput under the cap of the
-       first sub-problem, and which lose little?
-
 1. **Mixture-of-experts decode.** A mixture-of-experts (MoE) model stores
    many expert networks but runs only a few of them for each token, so a
    decode step reads only the *active* parameters. Take a 30B-A3B model,
@@ -354,26 +336,6 @@ datasheets, named reviewers, and numbers that pass the decode-bound check.
        between the DGX Spark and Strix Halo say about bandwidth as a
        predictor of decode speed?
    :exlabel:`ex_hardware-moe-decode`
-
-1. **Partial offload.** A model that does not fit into the memory of a
-   discrete card can still run if some of its layers stay in system
-   memory, where the CPU computes them (:numref:`fig_tools_memory_path`).
-   Consider a desktop with a used RTX 3090 (24 GB at 936 GB/s),
-   dual-channel DDR5-5600 system memory (89.6 GB/s), and a PCIe 4.0 ×16
-   link (32 GB/s per direction). A dense 70B model at 4 bits takes about
-   40 GB.
-    1. Keep 22 GB of layers on the GPU and run the other 18 GB on the CPU.
-       Bound the decode rate, and compare it with the bound for the whole
-       model on Strix Halo. Above which fraction of offloaded bytes does
-       the system memory take more than half of the time per token?
-    1. Instead, copy the 18 GB of offloaded weights over PCIe to the GPU
-       for every token. What does this do to the bound?
-    1. Run gpt-oss-120b on the same desktop, with its attention, embedding,
-       and output weights on the GPU and all of its experts in system
-       memory. Use the accounting of problem
-       :exref:`ex_hardware-moe-decode`c to bound the decode rate, and find
-       how much system memory the experts need. Why does this split suit an
-       MoE model better than a dense one?
 
 1. [code] **Break-even with operating costs.** The code that computes the
    break-even divides `purchase` by

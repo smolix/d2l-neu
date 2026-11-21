@@ -252,23 +252,6 @@ prefer safetensors, review remote code, and record its license and parent.
        choosing between A and B?
    :exlabel:`ex_software-ecosystem-rating-gaps`
 
-1. **Error bars for small evaluations.** Two models A and B answer the
-   same 25 items of your task. A answers 19 items correctly and B
-   answers 16. On 5 items A is right and B is wrong, and on 2 items B is
-   right and A is wrong. The analysis follows :citet:`Miller.2024`.
-    1. Compute the standard error of each accuracy and a 95% confidence
-       interval for each.
-    1. Compute the standard error of the difference in accuracy twice:
-       once treating the two accuracies as independent, and once from the
-       per-item differences $d_i \in \{-1, 0, 1\}$ between the scores of A
-       and B. Why is the paired value smaller? Is the observed difference
-       of 12 points resolved?
-    1. Two other models disagree on 20% of the items of a larger
-       evaluation set. How many items are needed for the paired standard
-       error of their difference to fall to 2.5 points, so that a
-       5-point difference lies two standard errors from zero?
-   :exlabel:`ex_software-ecosystem-error-bars`
-
 1. **What a revision pins.** A Hugging Face repository can be addressed
    by the branch `main`, by a tag such as `v1.0`, by a pull-request ref
    such as `refs/pr/3`, or by a 40-character commit hash.
@@ -291,25 +274,6 @@ prefer safetensors, review remote code, and record its license and parent.
        and still change the outputs of the loaded model when every
        repository is pinned to a commit.
 
-1. **Derived artifacts.** A LoRA adapter :cite:`Hu.Shen.Wallis.ea.2021`
-   stores two low-rank matrices $\mathbf{B}$ and $\mathbf{A}$ whose
-   product is added to a frozen weight matrix of the base model,
-   $\mathbf{W}' = \mathbf{W} + \mathbf{B}\mathbf{A}$. An adapter was
-   trained on revision r1 of a base model, and the base repository has
-   since received four commits on `main`: the weights were converted
-   from `pytorch_model.bin` to `model.safetensors` with identical tensors;
-   the chat template in `tokenizer_config.json` was corrected; the
-   weights were replaced by a checkpoint trained for longer; and ten
-   tokens were added to the vocabulary.
-    1. Consider each commit on its own, applied to revision r1. On which
-       of the four resulting revisions does the adapter still reproduce the
-       evaluation it was released with? What must the field `parent` of
-       the adapter's `Artifact` therefore contain?
-    1. A third party publishes a 4-bit conversion of revision r1 and
-       reports that its perplexity on held-out text matches that of the
-       source. Why is this weak evidence that the conversion is numerically
-       faithful? Describe a stronger measurement on the same text.
-
 1. [code] **Code on load.** Python's `pickle` rebuilds an object by
    calling whatever callable the object's `__reduce__` method returns,
    with the arguments it returns.
@@ -329,30 +293,6 @@ prefer safetensors, review remote code, and record its license and parent.
        allowlist? Which risks remain when you load a safetensors model
        from a repository you do not trust?
 
-1. [code] **Selection bias at the top.** ● Leaderboards rank models by
-   their observed scores. Suppose that $K$ models have the same true accuracy
-   $p = 0.7$ on a benchmark of $n = 1000$ items, and that each model
-   answers each item correctly with probability $p$, independently of
-   the other models and items.
-    1. Simulate the observed accuracy of the top-ranked model for
-       $K \in \{1, 10, 100\}$, and compare its mean with $p$. Compare the
-       gap with $\sigma m_K$, where $\sigma = \sqrt{p(1-p)/n}$ and $m_K$ is
-       the expected maximum of $K$ independent standard normal variables
-       (estimate $m_K$ by simulation).
-    1. A provider tests $N$ private variants of equal true strength on the
-       Arena, each on $v$ votes against opponents of the same strength
-       whose scores are known, and publishes only the best one. Each
-       variant's estimated score then has the standard error of
-       exercise :exref:`ex_software-ecosystem-rating-gaps`b.
-       :citet:`Singh.Nan.Wang.ea.2025`
-       identify 27 private variants that one provider tested before a
-       major release. Simulate the expected inflation of the published
-       score for $N \in \{1, 3, 10, 27\}$ and $v = 3000$, and compare it
-       with the gaps between neighboring entries at the top of the
-       current Arena leaderboard.
-    1. The provider measures the published variant again on fresh votes.
-       What happens to the inflation, and why?
-
 1. [extended] **Task-specific model selection.** ● Choose a task you know
    well, such as answering support questions in your field or extracting
    fields from documents you handle.
@@ -361,7 +301,8 @@ prefer safetensors, review remote code, and record its license and parent.
        do the rankings disagree? Explain each disagreement by what the
        disagreeing leaderboards measure.
     1. Build an evaluation set from your task. Choose its size with the
-       analysis of exercise :exref:`ex_software-ecosystem-error-bars` for
+       paired-comparison standard-error analysis of
+       :numref:`subsec_mdl-paired-comparisons` for
        the smallest difference in accuracy that would change your choice.
        Add a random baseline and a simple heuristic baseline, such as the
        most frequent answer or keyword matching.

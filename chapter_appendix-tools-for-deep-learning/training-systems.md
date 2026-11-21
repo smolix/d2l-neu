@@ -348,22 +348,6 @@ checkpoint interval for a given failure rate.
        does the procedure need so that it also survives a power loss?
    :exlabel:`ex_training-systems-resume-parity`
 
-1. **Data-bound scaling.** The CPUs of a node decode and augment 3,000
-   images per second, independent of the number of GPUs, and each GPU
-   trains on 1,200 images per second when its input is ready.
-    1. Predict the throughput and the GPU utilization with 1, 2, 4, and 8
-       GPUs. Beyond which number of GPUs does adding a GPU leave the
-       throughput unchanged?
-    1. Decoding takes 80% of the CPU time per image, and storing decoded
-       images removes it. Compute the storage that the 1,281,167 training
-       images of ImageNet occupy as decoded $256 \times 256$ RGB arrays of
-       8-bit integers, and the read bandwidth that 8 GPUs need at 1,200
-       images per second each. The node reads from network storage at
-       1 GB/s and has 512 GB of host memory. Which resource limits the
-       throughput in the first epoch, and which in later epochs? Which part
-       of the input pipeline must still run in every epoch?
-   :exlabel:`ex_training-systems-data-bound`
-
 1. **Optimizer offload.** ● ZeRO-Offload
    :cite:`Ren.Rajbhandari.Aminabadi.ea.2021` keeps 16-bit parameters on
    the GPU for the forward and backward passes, and keeps FP32 master
@@ -389,39 +373,6 @@ checkpoint interval for a given failure rate.
        does the update then cost no time? What does the delay change about
        the optimization?
    :exlabel:`ex_training-systems-optimizer-offload`
-
-1. **Failures at scale.** ● In a synchronous job, one failed GPU stops all
-   ranks, and the job restarts from its newest checkpoint. Let failures
-   arrive at random with mean time $M$ between them, and let a blocking
-   checkpoint take time $\delta$. The first-order analysis of
-   :citet:`Young.1974`, which problem
-   :exref:`ex_hosted-notebooks-checkpoint-interval`a of
-   :numref:`sec_hosted_notebooks` derives, gives the checkpoint interval and
-   the fraction of time lost to checkpoints and recomputation as
-
-   $$\tau^* = \sqrt{2 \delta M}, \qquad f^* = \sqrt{2 \delta / M}.$$
-
-   :citet:`Grattafiori.Dubey.Jauhri.ea.2024` report 419 unexpected
-   interruptions during a 54-day period of pretraining Llama 3 405B on 16K
-   GPUs.
-    1. Compute $M$ for this job, and $\tau^*$ and $f^*$ for
-       $\delta = 5$ min and for $\delta = 30$ s. Ignoring restart time,
-       which values of $\delta$ are compatible with the effective training
-       time above 90% that the report states?
-    1. Suppose that every GPU fails independently at the same rate. How do
-       $M$, $\tau^*$, and $f^*$ scale with the number of GPUs $N$? Evaluate
-       them for the same hardware at 1,024 GPUs and $\delta = 30$ s.
-    1. Each restart costs a further time $R$ for rescheduling, loading the
-       checkpoint, and warming up. Add this cost to $f^*$. At 16K GPUs with
-       $\delta = 30$ s and $R = 10$ min, which of the two costs is larger?
-    1. A checkpoint of this model holds 14 bytes per parameter: the BF16
-       parameters, FP32 master parameters, and two FP32 moments. Which
-       aggregate write bandwidth over all ranks does $\delta = 30$ s
-       require? Asynchronous checkpointing copies the state to host memory
-       and writes it to storage in the background. Which duration takes the
-       place of $\delta$ in the formulas, and what new constraint on
-       $\tau$ appears?
-   :exlabel:`ex_training-systems-failures-at-scale`
 
 1. **Resumption on fewer workers.** ● A job trains with FSDP on 64 ranks with
    $B_{\textrm{device}} = 4$ sequences and $N_{\textrm{accumulation}} = 4$,

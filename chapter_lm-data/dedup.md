@@ -1,54 +1,43 @@
 # Deduplication and Decontamination
 :label:`sec_lm_dedup`
 
-<!-- Author brief, copied verbatim from the Language Models part plan
-(docs/llm/language_models_part_plan.md, "3.3 Deduplication and Decontamination · T0").
-Blueprint: docs/llm/blueprints/ch03_data.md section 3.3.
-The plan is a specification, not book text; this comment is replaced
-when the section is written.
-
-**Idea:** Near-duplicates are found by hashing, and the hash threshold is a tunable S-curve.
-**Opening:** The same licence text sits in a thousand documents of the 3.2 corpus, and two of them differ only by a date. Comparing every pair is out of reach at a billion documents. The section builds a sketch whose agreement probability is the similarity itself, tunes its threshold on labelled pairs, and closes on the test set: the duplicates that matter most are the benchmark items that leaked into training.
-**Teaches:**
-- Exact hashing of documents and of substrings (a suffix array over a sample, `d2l.suffix_array`, `d2l.repeated_spans`); Jaccard similarity on word 5-gram shingles and why containment matters when a short document sits inside a long one.
-- MinHash signatures with k hash rows (`d2l.minhash_signature`, bit-exact to the A3 specification) and locality-sensitive banding (`d2l.lsh_candidates`): b bands of r rows, candidate pairs from bucket collisions, union-find clusters with a seeded representative; `d2l.near_dedup` as the wrapper 7.3 reuses.
-- Decontamination by 13-gram overlap (`d2l.NgramIndex`) and by embedding similarity; what each detector misses (paraphrase, reformatting, short items); what deduplication does to memorization, in one paragraph.
-- Semantic deduplication with embeddings as a relative with one difference (clusters in embedding space instead of shingle sets).
-**Derivation:** The probability that one MinHash row agrees equals the Jaccard similarity (the minimum over a random permutation of the union falls in the intersection with that probability); with b bands of r rows the candidate probability is 1 - (1 - s^r)^b, an S-curve whose threshold is near (1/b)^(1/r); choosing (b, r) under a signature budget k = b r as a weighted false-positive and false-negative trade (`d2l.best_br`). Smallest numeric case: b = 2, r = 2 gives 1 - (1 - s^2)^2, which at s = 0.5 is 0.4375 and at s = 0.9 is 0.964.
-**Notebook:**
-1. Implement shingling, the signature and banding from scratch; check the signature bit for bit against the committed fixture and the estimator's unbiasedness on 500 fixture pairs against the binomial standard error.
-2. On a committed labelled pair set (6,000 perturbed pairs by substitution, deletion, boilerplate insertion, paragraph shuffle and truncation, plus 6,000 negatives from the same host and at random, regenerated from the rebuilt documents), evaluate the candidate rate per Jaccard bin for a grid of (b, r) at k = 128, with three hash seeds; fit nothing, compare with the curve.
-3. Choose (b, r) on the train half under two false-negative weights and report precision, recall and F1 on the test half with a paired bootstrap clustered by base document; compare with FineWeb's (14, 8) setting and with an oracle library's choice.
-4. Plant 100 items from each of three benchmarks into 900 documents of the 20,000-document slice in verbatim, reformatted and paraphrased form (paraphrases written once by Qwen3.5-4B at authoring); detect with the 13-gram index and with embedding nearest neighbours; report recall by form and the false-positive rate on 1,000 clean documents.
-5. Claim that survives noise: the empirical candidate rate per bin lies within binomial error of the S-curve for every (b, r) (a departure means a flawed hash); all verbatim and reformatted plants are found by the 13-gram index with no false positives, and paraphrased plants are found only by the embedding detector at a stated recall and false-positive rate; the chosen (b, r) is the derived optimum or an adjacent grid point.
-6. Reused pieces: `d2l.Doc`, `d2l.CorpusManifest`, `d2l.docs_hash` (3.1), `lm-c1-docs` and `d2l.embed_docs` (3.2), `d2l.paired_bootstrap` (1.5); new `d2l.shingles`, `d2l.minhash_signature`, `d2l.lsh_candidates`, `d2l.union_find_clusters`, `d2l.near_dedup`, `d2l.jaccard_exact`, `d2l.scurve`, `d2l.best_br`, `d2l.suffix_array`, `d2l.lcp_array`, `d2l.repeated_spans`, `d2l.NgramIndex`, `d2l.make_dup_pairs`.
-**Figures:** `fig_lm_lsh_scurve` (plot: candidate probability against exact Jaccard for several (b, r), theory as lines and the measured bins with binomial intervals, the threshold marked); `fig_lm_minhash` (a document as a shingle set, one permutation, the minimum landing in the intersection or not, the signature and the bands).
-**Restate / forward:** `sec_prob` (a MinHash value is a minimum over a random permutation, and the agreement event is the minimum falling in the intersection). Forward: 8.7 (memorization extraction on a small model).
-**Exercises:** 5 to 7. Load-bearing: derive the expected number of false-positive candidate pairs among N documents under banding when a stated fraction of pairs has Jaccard s (derive); measure F1 against shingle size 3 to 8 on the labelled pairs and explain the shape (measure); check that the signature of a document with fewer than five words is empty and never matches (check); open: deduplicate across two crawl snapshots and compare per-snapshot with global deduplication on retained tokens and on near-duplicate rate.
-**Writer notes:**
-- The MinHash specification is normative and shared with A3: NFC, lowercase, `\w+` tokens, word 5-gram shingles joined by one space, shingle hash from blake2b with an 8-byte digest, prime 2^61 - 1, rows `(a_i x + c_i) mod p` with `a_i, c_i` drawn from `numpy.random.default_rng(seed=0xD2)`, band keys from blake2b over the band's bytes; use Python integers or split 64-bit multiplication, because NumPy `uint64` overflows the modular product; the bit-exact test enforces equality with the Python-integer version.
-- Exports with contracts (`01_interfaces.md`): `d2l.near_dedup(texts, threshold=0.8, ngram=5, num_perm=128, seed=0) -> list[int]` (indices to keep; the representative of a cluster is its lowest index; on 300 documents with planted near-duplicates it returns exactly one index per planted cluster, and `list(range(n))` at threshold 1.0 on distinct texts); `d2l.lsh_candidates(sigs, b, r)` subsamples buckets over `max_bucket` members and reports it (templated pages make giant buckets).
-- Labelled pairs: no natural near-duplicate labels exist in the stream because FineWeb has already deduplicated per dump; the pair set is synthetic by construction (`d2l.make_dup_pairs` from `(a, op, params)`), regenerated from the rebuilt documents so the artifact holds no crawled text; natural pairs in the corpus are inspected, not scored.
-- Plants: GSM8K and MMLU items are MIT, ARC-Challenge items are CC BY-SA 4.0, so the planted file is a separate artifact with its licence stated; the paraphrases are generated once by Qwen3.5-4B (non-thinking) with the prompt and revision stored per row; detection is by n-grams and embeddings, so no model grades its own paraphrases. If the generator revision changes, regenerate and update A3's constants.
-- Runtime at T0: shingling 20,000 documents in pure Python may exceed 10 minutes on 8 cores; vectorize the signature over all shingles of a document at once or use 10,000 documents; MiniLM on CPU over 4,000 documents may need 2,000 and `max_len=128`; a 2 MB sample for the suffix array is fine in NumPy.
-- Pitfalls to state: Python's built-in `hash` is salted per process and breaks the manifest hash; deduplicating after the train-validation split leaks; n-gram decontamination misses paraphrase, translation and changed numbers, and 13-grams miss short items; removing every document that overlaps a benchmark deletes famous quotations (look at the span); per-dump against global deduplication changes the result (the FineWeb comparison).
-- The memorization paragraph follows the blueprint: one paragraph with the "Extracting Training Data" pointer, and the extraction experiment itself is 8.7's.
-- Committed artifacts: `lm-dedup-pairs`, `lm-contam-plant`, `lm-c2-docs` (keep and drop lists with reason codes, no text), `lm-corpus-manifest-v1` (stages `extract, lang_id, nfc, pii, heuristics, edu_score, exact_dedup, minhash_dedup, decontam`), the S-curve data as JSON.
-- Do not re-teach: binomial counting and independence (`sec_prob`), the IoU of boxes (one sentence of contrast with Jaccard on sets).
-**Sources:**
-- Papers: Broder, "On the resemblance and containment of documents" (1997; cited by title: MinHash and the resemblance-containment distinction); [Deduplicating Training Data Makes Language Models Better](https://arxiv.org/abs/2107.06499) (near-duplicate and exact-substring deduplication, effects on memorization and perplexity); [SemDeDup](https://arxiv.org/abs/2303.09540) (semantic deduplication with embeddings); [Extracting Training Data from Large Language Models](https://arxiv.org/abs/2012.07805) (memorization as the reason duplicates matter; the pointer to 8.7); [GSM-Symbolic](https://arxiv.org/abs/2410.05229) (perturbed benchmark items as a contamination control); [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) (the contamination appendix and its 13-gram rule).
-- Code and documentation: [datasketch](https://github.com/ekzhu/datasketch) (the MinHash and LSH oracle and its (b, r) optimizer); [deduplicate-text-datasets](https://github.com/google-research/deduplicate-text-datasets) (the suffix-array deduplicator); [Datatrove](https://github.com/huggingface/datatrove) (the MinHash stages and examples); [dolma](https://github.com/allenai/dolma) (the toolkit behind Dolma's deduplication and decontamination).
-- Courses, tutorials and blogs: [FineWeb blog post](https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1) (the deduplication ablations, per-dump against global); [CS336](https://cs336.stanford.edu/) (the deduplication lecture and assignment A4's MinHash part).
--->
-
-<!-- Placeholder (stage 2, cells step): the cells follow the section
-specification's cell table (S/spec/20.3.md part 3); one-line comments mark
-where prose goes. Rights rule P1: no cell prints text of our own crawl
-extraction (c0, c1, c2); displayed text is FineWeb's (ODC-By) from the audit
-stream and its host pairs, or benchmark items under their licences;
+<!-- Rights rule P1 (for maintainers): no cell prints text of our own crawl
+extraction (c0, c1, c2). Displayed text is FineWeb's (ODC-By) from the audit
+stream and its same-host documents, or benchmark items under their licences;
 everything else about the crawl is counts, hashes and ids. -->
 
-<!-- Prose: the opening (the same licence text in many documents, two pages that differ by a date); comparing every pair does not scale; the section builds a sketch whose agreement probability is the similarity itself, tunes its threshold on labelled pairs and ends with the test set. -->
+The filters of :numref:`sec_lm_quality_filtering` judge one page at a time.
+They can tell a manual from an advertisement for love spells, but they cannot
+notice that they have just kept the same manual for the third time. The web is
+full of such repeats. Mirror sites copy whole pages, blogs republish a post
+with a paragraph added, and shop software prints the same notice about card
+payments under thousands of products. A model trained on a corpus with repeats
+reads those texts again and again, and what a model reads often it learns to
+reproduce word for word. The repeats also use compute that new text would have
+used better.
+
+Exact copies are easy to find: hash every document and look for equal hashes.
+The repeats that matter are rarely exact. The cell below prints two posts from
+one music blog in FineWeb's output, the second of which is the first with one
+paragraph added, and their SHA-256 hashes have nothing in common. To catch
+such a pair we need a measure of similarity, and comparing every pair of
+documents is out of reach: the cell times about eight microseconds per pair,
+which is half an hour for the 20,000 documents of our stream and about $10^5$
+years for a billion.
+
+The way out goes back to Andrei Broder, who in 1997 needed to find
+near-duplicate pages in the index of the AltaVista search engine. Give every
+document a short *signature* such that two signatures agree in any one
+position with probability equal to the similarity of the documents. Cut the
+signatures into pieces and use the pieces as keys of a hash table, and similar
+documents meet in a bucket without being compared with the rest. How the
+pieces are cut sets a threshold, which we can tune on labelled pairs like that
+of any classifier. This section builds the signature, checks it against its
+derivation and tunes it, then adds two methods that see what document
+signatures cannot: long spans shared by otherwise different documents, and
+documents that say the same thing in other words. It closes on the duplicates
+that matter most, test items that leaked into training data, and on the last
+three stages of the manifest that :numref:`sec_lm_crawl` began.
 
 ```{.python .input #dedup-imports}
 %%tab pytorch
@@ -82,7 +71,17 @@ from datasketch import MinHash, MinHashLSH
 from scipy import stats
 ```
 
-<!-- Prose: what the notebook computes (all on the CPU), what it reads from registered files (the labelled pairs, the planted test items and the embeddings, made once on a GPU), and the D2L_RERUN names of the regenerations. -->
+Everything in this notebook runs on the CPU, with four worker processes, in a
+few minutes and about 7 GiB of memory. Two inputs were made once on a GPU and
+are read from registered files: the paraphrased test items, written by
+Qwen3.5-4B, and the embeddings of the test items and of windows of FineWeb
+documents, made by Qwen3-Embedding-0.6B. The labelled pairs, the decisions for
+our crawl, the manifest and the section's numbers are registered as well, so
+that a reader's run can be compared with ours. Setting `D2L_RERUN` to names
+from `ARTIFACTS` regenerates those files under new names. `dedup-plants` and
+`dedup-emb` need a GPU, and `dedup-plants` runs alone, or with `dedup-pairs`,
+because the detectors read the plants before the cell that makes them. The
+last cell compares whatever this run computed with the registered results.
 
 ```{.python .input #dedup-config}
 %%tab pytorch
@@ -131,7 +130,13 @@ say(f'K={K}, TAU={TAU}, seeds {[hex(0xD2 + s) for s in SEEDS]}, '
     f'{", ".join(sorted(RERUN)) or "none"}')
 ```
 
-<!-- Prose: the registry; the pairs file holds ids and edit parameters, no text (the texts are regenerated from FineWeb's stream); the plants file holds benchmark items under their licences (ARC-Challenge is CC BY-SA 4.0); the embeddings are of FineWeb text and benchmark items only. -->
+None of the registered files holds text of our crawl. The labelled pairs are
+stored as document ids and edit parameters, and the cell that reads them
+rebuilds both texts of every pair from FineWeb's stream. The planted test set
+holds benchmark items under their licences, FineWeb ids and character offsets,
+and for every paraphrase the hash of its prompt and the model's revision. The
+embeddings are of FineWeb text and of benchmark items only. The decisions for
+our crawl and the manifest are ids, reason codes, counts and hashes.
 
 <!-- Registered (run step, 2026-11-21): the six keys of the `#@save` block below. The section also reads `lm-data-audit-stream-v1` (with the host_pair rows), `lm-data-emb-qwen3emb-v1`, `lm-c1-docs-v1` and `lm-data-quality-results-v1` (20.2), `lm-c0-docs-v1` and `lm-data-crawl-results-v1` (20.1), and the reference tokenizer `lm-r2-tokenizer-v1` (20.6); GSM8K and ARC-Challenge through chapter 18's keys, MMLU through chapter 18's loader. -->
 
@@ -175,6 +180,13 @@ for name, keys in (('this section', DEDUP_KEYS), ('upstream', UPSTREAM)):
 say('MMLU test:', d2l.EVAL_TASKS['mmlu'].dataset,
     d2l.EVAL_TASKS['mmlu'].revision[:8], '(chapter 18 loader)')
 ```
+
+The opening cell reads the 20,000 documents of the audit stream of
+:numref:`sec_lm_quality_filtering` and 6,000 more, four pages from each of
+1,500 hosts, so that pages of one site can be compared with each other. It
+finds the most similar pair of same-host pages that are not identical, prints
+the lines in which they differ, and then times the exact comparison of all
+pairs among 1,000 documents.
 
 ```{.python .input #dedup-opening}
 %%tab pytorch
@@ -231,10 +243,40 @@ R['opening'] = dict(pair=[a, b], J=J_host[top], n_hosts=len(HOSTS),
 del host_sets, sets
 ```
 
+The two pages are 193 and 268 words long, and the only difference is a
+paragraph that the longer one adds about two EPs on Bandcamp. Their hashes
+differ, so an exact method treats them as two documents. The resemblance $J$
+of :numref:`subsec_lm_dedup_jaccard` puts them at 0.70, below the threshold of
+0.8 that we will use, while the share of the shorter page found in the longer
+one is 1.00. Which of these numbers describes "a duplicate" is the first
+decision of the section. The timing is the second fact. A quadratic method
+that costs half an hour on the 20,000 documents of the stream would take about
+$10^5$ years on $10^9$ documents, and no amount of hardware closes a gap of
+that size. The method has to avoid comparing pairs, not compare them faster.
+
 ## Exact Duplicates
 :label:`subsec_lm_dedup_exact`
 
-<!-- Prose: a document hash of the NFC text finds copies; line and paragraph hashes find shared parts; boilerplate (cookie notices, navigation) is a span problem, not a document problem; C4's rule of keeping one copy of each repeated three-sentence span (cited); pitfall: deduplicate before the train-validation split, never after. -->
+A document hash finds copies. We hash the NFC text of every document with
+SHA-256 and keep the first document of each hash. NFC matters here as it did
+in :numref:`sec_lm_crawl`: the same "é" written as one code point or as two
+gives different bytes, and different bytes give different hashes. A collision
+of two different texts under SHA-256 is not a practical concern, so equal
+hashes mean equal texts.
+
+The same idea applied to lines finds shared parts. Hash every line of at least
+five words and count the documents that contain it. A line that occurs in many
+documents is almost always boilerplate: a cookie notice, a navigation bar, the
+text that blog or shop software prints under every post. Such a line is a span
+problem, not a document problem. The documents that carry it differ, and
+removing them would throw away their content to get rid of one sentence. C4
+handled this at the span level, discarding all but one of every three-sentence
+span that occurred more than once in the corpus :cite:`raffel2020exploring`.
+
+One pitfall belongs here because it is easy to commit and hard to notice.
+Deduplication must come before the split into training and validation data.
+After the split, copies of one page land on both sides, and the validation
+loss partly measures how well the model remembers its training set.
 
 ```{.python .input #dedup-exact}
 %%tab pytorch
@@ -283,15 +325,59 @@ say(ATTRIBUTION)
 R['exact']['common'] = [len(by_para[p]) for p in common]
 ```
 
+FineWeb's output has no exact copies at all: 26,000 documents, 26,000 distinct
+hashes. Yet 1,482 lines occur in more than one of its documents, and 1,742
+documents, about one in fifteen, contain at least one of them. The most
+frequent is a notice about secure card payments in 36 documents, followed by
+the notices that shop software prints under products and WordPress's "Your
+email address will not be published". Our own crawl after the rules, c1, has
+12 exact copies among its 1,032 documents. Nothing has deduplicated it yet,
+while FineWeb removed copies within its dump before we drew the stream.
+
 ## MinHash and Banding
 :label:`subsec_lm_dedup_minhash_banding`
 
-<!-- Prose: one paragraph: comparing every pair is quadratic (the opening's measurement); the rest of this section replaces the comparison by a sketch per document and a lookup. -->
+An exact hash answers one question, equal or not. It cannot be a little bit
+equal: change one character and the two digests share nothing. Near-duplicates
+need a similarity and a way to find similar pairs without the comparison of
+all pairs that the opening cell timed. The three subsections below build this.
+We define similarity as the overlap of two sets of word sequences, show that a
+signature of 128 numbers per document estimates it, and cut the signature into
+bands that act as hash keys, so that similar documents meet in a bucket and
+dissimilar ones almost never do.
 
 ### Similarity as Set Overlap
 :label:`subsec_lm_dedup_jaccard`
 
-<!-- Prose: word 5-gram shingles (FineWeb's choice); resemblance J and containment C (Broder); J misses a truncated copy (J = |A|/|B| when A is inside B) where C does not; one sentence contrasting the IoU of boxes in :numref:`sec_anchor`; Python's built-in hash is salted per process, so a sketch built on it changes between runs. -->
+A document becomes a set by *shingling*: its *shingles* are its runs of $n$
+consecutive words. FineWeb uses $n = 5$
+:cite:`Penedo.Kydlicek.BenAllal.ea.2024`, and so do we. For two documents with
+shingle sets $A$ and $B$, Broder defined two measures of overlap,
+
+$$
+J(A, B) = \frac{|A \cap B|}{|A \cup B|}, \qquad
+C(A, B) = \frac{|A \cap B|}{|A|}.
+$$
+
+The *resemblance* or Jaccard similarity $J$ is symmetric and equals 1 only for
+equal sets. The *containment* $C$ of $A$ in $B$ asks how much of $A$ is found
+in $B$. The two disagree exactly in the case of the opening pair. When $A$
+lies inside $B$, the containment is 1 and the resemblance is $|A|/|B|$, so a
+page cut to half its length is a perfect match by $C$ and a poor one by $J$.
+FineWeb and this section use $J$. A truncated copy therefore counts as a
+duplicate only if most of the page survives, which is a choice and should be
+recognised as one. Readers who met the intersection over union of boxes in
+:numref:`sec_anchor` know $J$ already, with areas of pixels in place of counts
+of shingles.
+
+The code follows a specification that assignment A3 also uses, so that
+signatures can be compared bit for bit. Text is normalized to NFC and
+lowercased, and a word is a match of the regular expression `\w+`. A document
+with fewer than five words has no shingles, and later no signature, so it
+never matches anything. Shingles are hashed with blake2b, never with Python's
+built-in `hash`, which is salted afresh in every process: signatures built on
+it would change from run to run, and so would every manifest hash computed
+from them.
 
 ```{.python .input #dedup-shingle-def}
 %%tab pytorch
@@ -322,6 +408,10 @@ def containment(a, b):
     b = b if isinstance(b, (set, frozenset)) else set(b)
     return len(a & b) / len(a) if a else 0.0
 ```
+
+How similar are web pages to each other? The cell shingles all 26,000
+documents and computes the exact $J$ of 5,000 random pairs and of 5,000 pairs
+of pages from one host.
 
 ```{.python .input #dedup-jaccard-hist}
 %%tab pytorch
@@ -362,12 +452,83 @@ R['jaccard'] = dict(median_shingles=np.median(sizes),
 del SH  # 1.8 GiB: the signatures below replace the sets
 ```
 
+A document has a median of 360 shingles, and all the shingle sets together
+take 1.76 GiB as Python sets; signatures of 128 numbers take 25 MiB, about
+seventy times less. Two random pages share no five-word sequence at all, up to
+the 99th percentile. Pages of one site share more, through their templates,
+and the figure shows their tail on the log scale, but even their 99th
+percentile is 0.32, and no pair in either sample reaches 0.8. This is the
+shape the method has to exploit. Almost every pair is far below the threshold,
+and the work worth saving is the work of looking at those pairs at all.
+
 ### MinHash
 :label:`subsec_lm_dedup_minhash`
 
-<!-- Prose: the derivation eq_lm_dedup_minhash (P[agree] = J: under a random permutation the minimum of the union is equally likely to be any of its elements, and the two minima agree exactly when it lies in the intersection; restating :numref:`sec_prob` in one sentence), with fig_lm_minhash; the estimator's variance J(1 - J)/k as a binomial count (by reference to :numref:`sec_prob`); hash functions (a x + c) mod p in place of permutations; the normative signature specification (NFC, lowercase, \w+ tokens, word 5-grams, blake2b-8, p = 2^61 - 1, a and c from default_rng(0xD2), the split multiplication because NumPy's uint64 product overflows). -->
+Let us start with a thought experiment that is too expensive to run. Put all
+possible shingles in a random order $\pi$, and let $h_\pi(A)$ be the shingle
+of $A$ that comes first in this order, the *minimum* of $A$ under $\pi$. Two
+documents agree in this one value with a probability that we can compute
+exactly.
 
-<!-- Figure: ![…](../img/mdl-lm-data-minhash.svg) :label:`fig_lm_minhash` (generated by tools/gen_mdl_lm_data_figures.py; W4). -->
+**Proposition.** *For a uniformly random order $\pi$ and non-empty sets $A$
+and $B$, $\Pr[h_\pi(A) = h_\pi(B)] = J(A, B)$.*
+
+**Proof.** Let $x^*$ be the element of $A \cup B$ that comes first under
+$\pi$. The order is uniform, so every element of the union is equally likely
+to be $x^*$, and the probability that $x^*$ falls in a subset is the size of
+the subset over the size of the union, as for any uniform choice in
+:numref:`sec_prob`. If $x^*$ lies in $A \cap B$, it is the minimum of both
+sets and the two values agree. If $x^*$ lies in $A$ but not in $B$, it is the
+minimum of $A$, while the minimum of $B$ comes later, so the values differ,
+and the same holds with the roles exchanged. The values therefore agree
+exactly when $x^* \in A \cap B$, which has probability $|A \cap B| / |A \cup
+B|$. $\blacksquare$
+
+One order gives one coin flip with success probability $J$. A *MinHash
+signature* repeats the experiment with $k$ independent orders and stores the
+$k$ minima. The share of positions in which two signatures agree estimates
+$J$, and since the number of agreeing positions is a binomial count of $k$
+trials (:numref:`sec_prob`), the estimate is unbiased with a variance we can
+write down:
+
+$$
+\hat J = \frac{1}{k}\sum_{i=1}^{k}
+\mathbf{1}\bigl[h_{\pi_i}(A) = h_{\pi_i}(B)\bigr],
+\qquad
+\mathbb{E}[\hat J] = J,
+\qquad
+\operatorname{Var}[\hat J] = \frac{J(1 - J)}{k}.
+$$
+:eqlabel:`eq_lm_dedup_minhash`
+
+The remarkable part is what the signature does not depend on. It has $k$
+numbers whether the document has 50 shingles or 50,000, and two signatures
+estimate the similarity without the documents. The estimate is noisy: at $J =
+0.8$ and $k = 128$ the standard deviation is $\sqrt{0.16/128} \approx 0.035$,
+so pairs at 0.75 and at 0.85 are not reliably told apart.
+
+A random order of all possible shingles cannot be stored, so implementations
+use hash functions instead. Each shingle is hashed to a number $x$ below the
+prime $p = 2^{61} - 1$, and position $i$ of the signature is the minimum of
+$(a_i x + c_i) \bmod p$ over the document's shingles. For $a_i \neq 0$ this
+map is a bijection of $\{0, \ldots, p - 1\}$, so it does order the shingles,
+but it is one of about $p^2$ such maps rather than a uniform choice among all
+orders, and the proposition holds only approximately. Whether that matters is
+a question for measurement. The specification, shared with assignment A3,
+fixes every remaining choice:
+
+1. NFC, lower case, `\w+` words, shingles of five words joined by one space;
+2. each shingle hashed by blake2b with an 8-byte digest, read as a
+   little-endian integer and reduced modulo $p$;
+3. $(a_i, c_i)$ for $i = 1, \ldots, 128$ drawn from
+   `numpy.random.default_rng(0xD2)` as integers in $[1, p)$;
+4. the product $a_i x$ computed exactly.
+
+The last point hides a trap. Both factors are below $2^{61}$, so their product
+needs up to 122 bits, and NumPy's `uint64` arithmetic silently discards
+everything above 64. The library splits the multiplication into 32-bit halves.
+
+<!-- Figure pending (write step CODE REQUEST): ![…](../img/mdl-lm-data-minhash.svg) :label:`fig_lm_minhash`, generated by tools/gen_mdl_lm_data_figures.py; the prose does not reference it yet. -->
 
 ```{.python .input #dedup-minhash-def}
 %%tab pytorch
@@ -400,7 +561,14 @@ MINHASH_FIXTURE_SHA256 = (  # of their k = 128, seed 0xD2 signatures' bytes
     'b9b07bf416ce76f2b5cf1ae3d12fc617bdfa5bc7e464230c6bca1ada3bda0195')
 ```
 
-<!-- Prose: the estimator checked on sets of known Jaccard (bias within three standard errors, variance against J(1 - J)/k), against datasketch's MinHash as an oracle, and bit for bit against a Python-integer version of the specification on the fixture that assignment A3 grades with (and the fixture's pinned hash); the 95% half-width at J = 0.8 and k = 128 is 1.96 sqrt(0.8 x 0.2 / 128) = 0.069. -->
+We check the estimator on sets whose similarity we choose: for each $J$ from
+0.1 to 0.9, 200 pairs with unions of 200 random words. If the hash family
+behaves like random orders, the mean of $\hat J$ lies within three standard
+errors of $J$ and the variance across pairs is close to $J(1 - J)/k$. The same
+pairs go through datasketch's `MinHash`, an independent implementation.
+Finally, the signatures of the five fixture strings that A3 grades with are
+compared position by position with a version of the specification in Python
+integers, which never overflow.
 
 ```{.python .input #dedup-minhash-check}
 %%tab pytorch
@@ -457,10 +625,58 @@ R['minhash'] = dict(table=D1.to_dict('list'), fixture=fix.hexdigest(),
                     reference_equal=sum(same))
 ```
 
+In every bin the bias is within two standard errors (the largest $|z|$ is
+1.85), and the variance is between 0.88 and 1.16 times its formula. Datasketch
+behaves the same way. The fixture signatures are equal to the integer
+reference in all five strings, and their hash equals the pinned one, so a
+solution of A3 that follows the specification reproduces ours exactly. For
+sets of this size, then, the $(a x + c) \bmod p$ family is as good as a random
+order, and the 95% half-width at $J = 0.8$ is $1.96 \sqrt{0.8 \cdot 0.2 / 128}
+= 0.069$, as the formula says.
+
 ### Banding and the S-Curve
 :label:`subsec_lm_dedup_lsh`
 
-<!-- Prose: the derivation eq_lm_dedup_scurve (b bands of r rows: a band agrees with probability s^r, no band with (1 - s^r)^b, so P = 1 - (1 - s^r)^b; its steepest point ((r - 1)/(br - 1))^(1/r) is near (1/b)^(1/r)); the smallest case b = r = 2 (0.4375 at s = 0.5, 0.9639 at 0.9); choosing (b, r) under k = br by weighted false-positive and false-negative areas (eq_lm_dedup_br); FineWeb's (14, 8) reproduces the paper's 56, 77, 92 and 98.8%; candidate pairs from bucket collisions; union-find in the next section. -->
+An estimate of $J$ for one pair still leaves us comparing pairs. *Banding*
+turns the signature into a search. Cut the $k = br$ positions of every
+signature into $b$ bands of $r$ positions, and use each band, hashed, as the
+key of a bucket. Two documents become a *candidate pair* if they share a
+bucket in at least one band. For a pair of similarity $s$, one position agrees
+with probability $s$, and the positions come from different hash functions, so
+a whole band agrees with probability $s^r$. All $b$ bands disagree with
+probability $(1 - s^r)^b$, and the pair becomes a candidate with probability
+
+$$
+P(s) = 1 - (1 - s^r)^b.
+$$
+:eqlabel:`eq_lm_dedup_scurve`
+
+For small $s$ the curve is close to $b s^r$, tiny, and for $s$ near 1 it is
+close to 1; in between it rises steeply, which gives it its name, the
+*S-curve*. Its derivative $P'(s) = b r s^{r-1} (1 - s^r)^{b-1}$ is largest
+where $(r - 1)(1 - s^r) = (b - 1) r s^r$, that is at $s^* = ((r - 1)/(br -
+1))^{1/r}$, close to $(1/b)^{1/r}$. More rows per band move the step to the
+right, more bands move it to the left. The smallest case needs four numbers.
+With $b = r = 2$, $P(s) = 1 - (1 - s^2)^2$, which is 0.4375 at $s = 0.5$ and
+0.964 at $s = 0.9$, so a signature of four values already separates these two
+similarities most of the time.
+
+The budget $k$ is fixed by memory and by the cost of hashing, so the design
+question is how to split it. A natural answer compares the S-curve with the
+ideal step at the threshold $\tau$. The area under the curve left of $\tau$
+counts pairs below the threshold that become candidates, the area above the
+curve right of $\tau$ counts duplicates that are missed, and two weights say
+what each error costs:
+
+$$
+E(b, r) = w_{\textrm{fp}} \int_0^{\tau} P(s)\, ds
++ w_{\textrm{fn}} \int_{\tau}^{1} \bigl(1 - P(s)\bigr)\, ds.
+$$
+:eqlabel:`eq_lm_dedup_br`
+
+`best_br` minimizes $E$ over $r$ with $b = \lfloor k/r \rfloor$, as
+datasketch's `MinHashLSH` does internally. The integral weighs every
+similarity in $[0, 1]$ equally, an assumption that will matter.
 
 ```{.python .input #dedup-lsh-def}
 %%tab pytorch
@@ -595,7 +811,32 @@ R['scurve'] = dict(paper=list(ours), best_br=list(BR), brute=list(best),
                    datasketch=list(DS_BR), best_br_w5=list(BR5))
 ```
 
-<!-- Prose: labelled pairs: FineWeb is already deduplicated within its dump, so the stream holds few near-duplicates; the pairs are made by perturbing stream documents (word substitutions and deletions at stated rates, inserted boilerplate, shuffled paragraphs, truncation), plus different pages of one host and random pairs; the file holds ids and parameters, and the texts are regenerated from the stream. -->
+FineWeb's setting, 112 positions as 14 bands of 8 rows, gives candidate
+probabilities of 0.56, 0.77, 0.92 and 0.988 at similarities 0.7, 0.75, 0.8 and
+0.85, the four values its paper reports. Its steepest point is at 0.71,
+because FineWeb aimed at pages about 75% similar. The steepest points agree
+with the formula to four decimals. Under equal weights the best split of 128
+positions for $\tau = 0.8$ is $(9, 13)$, found alike by `best_br`, by a
+brute-force search over all $br \leq 128$ and by datasketch. A pair exactly at
+the threshold becomes a candidate with probability 0.40 there, and the
+steepest point lies at 0.84, so this optimum misses more borderline duplicates
+than it admits borderline non-duplicates. Weighting misses five times as
+heavily moves the choice to $(12, 10)$.
+
+To tune $(b, r)$ on data we need pairs with known similarity. The stream
+cannot provide near-duplicates, because FineWeb deduplicated its dump with
+MinHash before we drew from it, so the pairs are made by editing stream
+documents. From 2,000 documents of at least 50 words, the generator makes
+three copies each, every copy by one random edit: words substituted or deleted
+at a rate between 1% and 30%, a block of 20 to 200 words of boilerplate
+inserted, the paragraphs shuffled, or the text truncated to 30% to 90% of its
+words. Then come 3,000 pairs of different pages from one host, which share
+templates, and 3,000 random pairs. The label is the exact $J \geq 0.8$ of the
+final texts. This makes the task a test of the sketch: estimate a known $J$
+well enough to threshold it. Whether $J \geq 0.8$ is the right definition of a
+duplicate is a separate question, which no labelled pair can settle. The pairs
+are split into training and test halves by the SHA-256 of the base document,
+so that the copies of one document stay together.
 
 ```{.python .input #dedup-pairs-def}
 %%tab pytorch
@@ -707,7 +948,28 @@ R['pairs'] = dict(n=len(PAIRS), by_op=PAIRS.op.value_counts().to_dict(),
                   labels=int(PAIRS.label.sum()))
 ```
 
-<!-- Prose: the measured S-curve: for every (b, r) of the grid, three hash seeds and every 0.05 bin of exact Jaccard, the share of pairs that became candidates against the expected share, the mean of scurve(J_i) over the bin's pairs (not the curve at the bin centre, which in a steep bin is off: at (9, 13) the curve rises from 0.40 to 0.69 across 0.80-0.85), with a Poisson-binomial 95% interval of the count; the claim is the pooled one: across all (setting, bin, seed) cells the share outside is about 5%, below the 0.999 binomial bound (a flawed hash would exceed it); not "95% of bins for every (b, r)" (one setting sits at 0.93), and the interval treats a bin's pairs as independent although the three copies of one base document share shingles. -->
+The rebuilt texts reproduce every stored $J$ exactly. The table shows how
+unevenly the edits move a page across the threshold. Shuffled paragraphs stay
+duplicates most often, because only the shingles that cross a paragraph
+boundary change. Substitutions do surprising damage. Each changed word removes
+up to five shingles, so a substitution rate $q$ leaves a share of about $x =
+(1 - q)^5$ of each document's shingles intact, and then $J = x/(2 - x)$. One
+word in fifty gives $J \approx 0.82$, a duplicate; one word in twenty gives
+$0.63$, not one. Truncation is the case of containment: a copy cut to a share
+$f$ of its words has $J \approx f$, so only copies that keep at least 80% of
+the page are labelled duplicates.
+
+The derivation predicts that a pair of exact similarity $J_i$ becomes a
+candidate with probability $P(J_i)$, and the pairs let us test this. We test
+13 settings, the 12 splits of 128 positions with $r$ from 4 to 16 and
+FineWeb's $(14, 8)$ on the first 112 positions, with three hash seeds each. In
+every bin of $J$ of width 0.05, the number of candidates is a sum of
+independent trials with different probabilities, a *Poisson-binomial* count,
+whose exact distribution gives a 95% interval around the expected count
+$\sum_i P(J_i)$. The curve at the bin's centre would not do: at $(9, 13)$ it
+rises from 0.40 to 0.69 between 0.80 and 0.85. A hash that behaves as derived
+leaves about 5% of the (setting, bin, seed) cells outside their intervals, or
+fewer; a flawed one leaves many more.
 
 ```{.python .input #dedup-scurve-measure}
 %%tab pytorch
@@ -795,7 +1057,26 @@ R['scurve_measure'] = dict(n_cells=n_cells, n_outside=n_out,
                            table=SC.round(6).to_dict('list'))
 ```
 
-<!-- Prose: choosing (b, r) on the training pairs by the weighted error count (false positives plus w_fn times false negatives, averaged over the three seeds) under w_fn = 1 and 5; precision, recall and F1 on the test pairs; FineWeb's (14, 8) on 112 rows and datasketch's choice as further rows; differences between the chosen r and its neighbours, and between the w_fn = 1 choice and the D3 optimum, with a bootstrap over base documents (a document and its copies move together); why the choice is not D3's (9, 13): D3's areas weigh every similarity in [0, 1] equally, while the pair set has many pairs near tau; the expected weighted error under the pairs' own J distribution has its least value exactly at the hashed choices (asserted), so the hashes behave as derived and the objective, not the sketch, moves the optimum; quote the F1 gap to (9, 13) from its interval, never "within the F1 interval". -->
+Of the 780 cells with at least 30 pairs, 19 fall outside their interval, 2.4%,
+against an upper bound of 59 at the 0.999 level. Every setting keeps at least
+93% of its cells inside. In the table for $(9, 13)$ the bin from 0.80 to 0.85
+holds 813 pairs and expects 445 candidates, with an interval from 418 to 473,
+and the three seeds give 431, 438 and 429; below 0.5 no pair becomes a
+candidate at all. The figure shows the same agreement against five theoretical
+curves, among them RefinedWeb's 450 bands of 20 rows
+:cite:`penedo2023refinedweb`, and the bucket pipeline gives exactly the
+per-pair decisions. The intervals treat the pairs of a bin as independent,
+although the three copies of one document share shingles, but the margin to
+the bound is wide. The sketch does what the derivation says.
+
+Now we choose $(b, r)$ like a hyperparameter. On the training pairs we count
+false positives and false negatives of each setting, averaged over the three
+seeds, and take the setting with the fewest errors when a miss weighs
+$w_{\textrm{fn}} = 1$ and when it weighs 5. On the test pairs we report
+precision, recall and F1, and we compare the chosen setting with its
+neighbours on the grid and with the optimum of :eqref:`eq_lm_dedup_br` by a
+bootstrap that resamples base documents, since a document and its copies move
+together.
 
 ```{.python .input #dedup-choose}
 %%tab pytorch
@@ -908,7 +1189,39 @@ ax = d2l.plot_intervals(
 _ = ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))  # beside
 ```
 
-<!-- Prose: the cost of candidates at scale (the expected number among N documents is the number of pairs times the mean of P over their similarities, so the low-similarity bulk matters through P(0.3) and P(0.5)); the slice's observed candidates scaled up, with the caveat that the slice's similarity distribution is not a corpus's; giant buckets of templated pages and max_bucket. -->
+With $w_{\textrm{fn}} = 1$ the training pairs choose $(11, 11)$, and with
+$w_{\textrm{fn}} = 5$ they choose $(14, 9)$: a heavier weight on misses moves
+the choice to fewer rows per band, as the derivation suggests. On the test
+pairs $(11, 11)$ reaches precision 0.86, recall 0.89 and F1 0.87, ahead of the
+equal-weight optimum $(9, 13)$ by $+0.04$ $[+0.03, +0.05]$ in F1. Its lead
+over its neighbours on the grid is small: against $(12, 10)$ the F1 difference
+is not resolved, although the error count it was chosen for is lower by a
+small resolved margin. FineWeb's $(14, 8)$ has recall 0.99 at precision 0.72
+on our labels, since a curve built for 0.75 counts many pairs between 0.7 and
+0.8 as duplicates.
+
+Why do the pairs disagree with :eqref:`eq_lm_dedup_br`? The hashes are not to
+blame; the measurement above showed that. The integral weighs every similarity
+between 0 and 1 equally, and the pairs do not: most negatives sit at $J = 0$,
+where every setting is right, and the copies crowd around the threshold.
+Replace the uniform weight by the pairs' own similarities, so that the
+expected weighted error is $\sum_i [P(J_i)(1 - y_i) + w_{\textrm{fn}}(1 -
+P(J_i))\, y_i]$, and its minimum lies exactly at $(11, 11)$ and at $(14, 9)$,
+the two settings that the hashed decisions chose; the cell asserts it. The
+derivation is right about the curve and wrong about the data. A deployment
+should tune $(b, r)$ on the similarities of the pairs it will actually decide,
+and labelled pairs, even synthetic ones, are the cheapest way to see them.
+
+A threshold that looks right on labelled pairs can still fail at scale. By
+linearity of expectation, the expected number of candidates among $N$
+documents is $\sum_{i < j} P(s_{ij})$, the number of pairs times the mean of
+$P$ over their similarities. Nearly all pairs are dissimilar, so the total is
+decided far below the threshold, by $P(0.3)$ and $P(0.5)$, and every candidate
+from that bulk costs a lookup and a union like a true one. The count can also
+explode through templates. Templated pages share whole bands, so a single
+bucket can collect thousands of documents, and a bucket of $m$ documents
+yields $m(m - 1)/2$ pairs. `lsh_candidates` therefore cuts any bucket above
+`max_bucket` members to a seeded sample and reports every cut.
 
 ```{.python .input #dedup-cost}
 %%tab pytorch
@@ -938,10 +1251,39 @@ for br in (CHOSEN[1], (14, 8), (32, 4)):
                                          cut=len(rep['cut']))
 ```
 
+At $(11, 11)$ a pair of similarity 0.3 becomes a candidate with probability $2
+\times 10^{-5}$, at FineWeb's $(14, 8)$ with about $10^{-3}$, fifty times
+more. For a million documents with 0.1% of their pairs at similarity 0.5, the
+two settings expect about $3 \times 10^6$ and $3 \times 10^7$ candidates. On
+our slice neither setting produces a single candidate, and even the loose
+$(32, 4)$ finds only 104 pairs, about four per thousand documents, with no
+bucket above six members. This is a measurement of an already deduplicated
+corpus, not an estimate for a raw crawl, which is exactly where the giant
+buckets live.
+
 ## From Pairs to a Deduplicated Corpus
 :label:`subsec_lm_dedup_cluster`
 
-<!-- Prose: candidate pairs to clusters by union-find (A~B and B~C put A and C together even when A and C differ); the lowest index represents its cluster (deterministic; FineWeb keeps a random one); per-dump against global deduplication (FineWeb's finding, cited); near_dedup as the wrapper later chapters reuse; say once that the c1 report and the manifest use the setting chosen on train, while near_dedup's default is the D3 optimum (both counts printed). -->
+Candidate pairs are not yet a corpus. Treat them as edges of a graph; the
+*clusters* are its connected components, which `union_find_clusters` computes
+in almost linear time. Clusters are transitive: if A resembles B and B
+resembles C, all three land in one cluster even when A and C are below the
+threshold, as with a chain of revisions of one page. Each cluster keeps one
+document, and which one is a choice. We keep the one with the lowest index, so
+that the result depends neither on the order of the pairs nor on a random
+draw. Keeping the document with the highest quality score or the longest one
+is also reasonable, and whichever rule is used belongs in the manifest. The
+function `near_dedup` wraps shingling, signatures, banding and clusters in one
+call, and :numref:`sec_lm_instruction_data` uses it on instruction data.
+
+Deduplication also needs a scope. FineWeb deduplicates each Common Crawl dump
+on its own :cite:`Penedo.Kydlicek.BenAllal.ea.2024`. Its authors tried
+deduplicating all dumps together and found that it did not improve the models
+trained on the result: in the older dumps, the documents that survived global
+deduplication made worse training data than those it removed. Global
+deduplication sounds stricter and therefore better, and on their evidence it
+is not. Our corpus is one archive range of one dump, so the question returns
+only in the last exercise.
 
 ```{.python .input #dedup-dedup-run}
 %%tab pytorch
@@ -993,10 +1335,44 @@ R['dedup_run'].update(c1_kept=len(c1_keep), c1_kept_d3=len(c1_keep_d3),
                       c1_largest=[multi[c] for c in largest])
 ```
 
+The slice keeps all 26,000 documents, as expected after FineWeb's own
+deduplication with a looser setting. Our crawl is different. At $(11, 11)$,
+the setting chosen on the training pairs and the one the manifest uses, c1
+keeps 1,014 of its 1,032 documents. Its 13 clusters hold 31 documents; the
+largest is four copies of one page on three hosts, and the next ones are
+copies within one site. The default of `near_dedup` is the equal-weight
+optimum $(9, 13)$, because a library cannot know the reader's pairs, and it
+keeps one document more.
+
 ### Substring Duplicates
 :label:`subsec_lm_dedup_substring`
 
-<!-- Prose: what MinHash cannot see: a 60-token licence block shared by thousands of otherwise different documents; Lee et al.'s exact-substring deduplication with a suffix array: sort all suffixes (prefix doubling: rank by the first 2^k tokens, double k), adjacent suffixes share the longest common prefixes (Kasai), and every span of at least 50 tokens that occurs twice is a repeat; the production tool is a Rust pipeline whose memory grows with the corpus; ours is O(n log^2 n) NumPy on a 2 MB sample. -->
+MinHash compares whole documents, and some duplication lives in parts of them.
+A footer of 60 words shared by two otherwise different pages of a few hundred
+words each adds about 56 shared shingles and leaves $J$ near 0.1. No setting
+of $(b, r)$ will flag such pairs, and none should, because the pages are
+different, yet a model reads a footer on thousands of pages thousands of
+times. Lee and colleagues (2022) found in C4, for example, one sentence of 61
+words that occurred more than 60,000 times. Their *exact-substring*
+deduplication finds every span of at least 50 tokens that occurs more than
+once and removes all copies but one.
+
+The tool is a *suffix array*: the starting positions of all suffixes of the
+token sequence, sorted lexicographically. Two occurrences of a span start two
+suffixes that begin with it, so they sort next to each other, and the repeats
+appear as long common prefixes of neighbouring suffixes. The array `lcp`
+stores the length of the prefix that each suffix in sorted order shares with
+the previous one, and every entry of at least 50 marks a span of 50 tokens
+that occurs twice. *Prefix doubling* sorts by the first token, then by the
+first two as a pair of ranks, then by the first four, each round one sort of
+integer pairs, so $\log n$ rounds of $O(n \log n)$ finish the job. Kasai's
+algorithm computes `lcp` in $O(n)$, because the common prefix shrinks by at
+most one from the suffix at $i$ to the one at $i + 1$. The production tool of
+Lee and colleagues is written in Rust and builds the array over the whole
+corpus, with memory that grows with it. Ours runs in NumPy on 2 MiB of the
+slice, tokenized with the reference tokenizer of :numref:`sec_lm_tokenizers`,
+with a unique separator after every document so that no repeat crosses a
+document boundary.
 
 ```{.python .input #dedup-sa-def}
 %%tab pytorch
@@ -1124,10 +1500,31 @@ R['substring'] = dict(docs=len(sample), tokens=len(seq) - len(doc_ids),
                       touched_minhash=int(in_mh[touched].sum()))
 ```
 
+The sample has 627 documents and about 450,000 tokens, and the arrays take a
+second or two. It contains three maximal repeats of at least 50 tokens,
+covering 0.08% of its tokens: a blog's footer inviting readers to newer posts,
+a function signature from a software manual, and the Fourth Amendment to the
+Constitution of the United States. None of the four documents involved is in a
+MinHash cluster. A sample this small cannot contain the 60,000-fold sentences,
+but it shows the kind, and it shows a trap. Exact-substring deduplication
+would delete the amendment from one of the two pages that quote it, whatever
+that page was about. The same trap returns in decontamination.
+
 ### Semantic Duplicates
 :label:`subsec_lm_dedup_semantic`
 
-<!-- Prose: SemDeDup as a relative with one difference: clusters in embedding space instead of shingle sets (k-means, then within a cluster a document goes when an earlier one has cosine above 1 - eps); the registered Qwen3-Embedding vectors of 20.2; what it removes that MinHash missed, and at large eps different pages on one topic; cost O(n^2 / k) per pass. -->
+The third relative works in a different space. *SemDeDup* (Abbas and
+colleagues, 2023) embeds every document, clusters the vectors with k-means,
+and within each cluster removes a document whose cosine similarity to another
+member exceeds $1 - \varepsilon$. The clusters do the job that bands do for
+MinHash: they confine comparisons to documents that are already close, so a
+pass costs $O(n^2/k)$ instead of $O(n^2)$ for $k$ clusters. The one difference
+from MinHash is the similarity. Two texts close in embedding space can share
+few words, and this is the point of the method. We use the Qwen3-Embedding
+vectors that :numref:`sec_lm_quality_filtering` registered for the whole
+stream (:numref:`sec_lm_text_embeddings` describes what such vectors encode),
+the k-means of :numref:`sec_lm_retrieval` with 64 clusters, and remove a
+document when an earlier member of its cluster is closer than the threshold.
 
 ```{.python .input #dedup-semantic}
 %%tab pytorch
@@ -1172,10 +1569,51 @@ R['semantic'] = dict(SEM.round(6).to_dict('list'), n=len(sub),
                      cos_quantiles=q.round(6).tolist())
 ```
 
+The median cosine of a document to its most similar earlier neighbour is 0.46,
+the 99th percentile 0.70 and the largest 0.94. These numbers belong to this
+embedder, and so must $\varepsilon$: a threshold that removes nothing here
+could remove a great deal under a model whose cosines between unrelated texts
+sit at 0.8, and SemDeDup's values do not transfer to ours. At $\varepsilon =
+0.1$ the method removes one document, a genuine near-duplicate that MinHash
+missed: two pages from one template about signing files, at cosine 0.94 and $J
+= 0.17$, whose wording was varied phrase by phrase. From $\varepsilon = 0.15$
+on it removes something else, different pages on one topic: online gambling,
+essay-writing services, plumbers' advice on frozen pipes, surfing in Ericeira,
+all at $J$ near 0. At $\varepsilon = 0.3$ it removes 181 documents, 0.9% of
+the stream. Whether a second article about frozen pipes should go is a
+question about how much of each topic a corpus should hold. D4 (Tirumala and
+colleagues, 2023) builds on SemDeDup to select documents for diversity, and
+:numref:`sec_lm_data_mixtures` takes up the question of proportions with
+training runs.
+
 ## Decontamination
 :label:`subsec_lm_dedup_decontam`
 
-<!-- Prose: decontamination removes training text that overlaps evaluation items; GPT-3's 13-gram rule (confirm the wording in its contamination appendix) as an index of hashed word 13-grams (lowercased, punctuation and spacing dropped); what it misses by construction: paraphrases, translations, changed numbers and items shorter than 13 words; the reformatted form (case, spacing, punctuation, reordered options) is found by construction because the index normalizes exactly these and every plant's question has 13+ words, so its recall of 1 shows the normalization works, not robustness; removing every overlapping document also deletes famous quotations, so look at the span; overlap is evidence of leakage, not of memorization (Carlini et al.: extraction grows with duplication; one paragraph, with the pointer to the memorization experiment only if its label resolves, else the papers); GSM-Symbolic's perturbed items as a contamination control. -->
+The duplicates that matter most are not pages copied from each other but test
+items copied into training data. :numref:`subsec_lm_eval_contamination` looked
+at this from the model's side, comparing accuracy on GSM8K problems with
+accuracy on variants of them. Here we look from the data's side:
+*decontamination* removes training text that overlaps evaluation items before
+any model sees it. The authors of GPT-3 :cite:`brown2020language` looked for
+overlapping sequences of 13 words, ignoring case and punctuation, between
+their training data and their test sets and removed overlapping documents from
+training. A bug in the filter left part of the overlap in place, and their
+paper measured its effect rather than retrain. We build the same test as an
+index: every 13-word sequence of every test item, normalized like the shingles
+and hashed, is stored with the item's id, and a document is looked up by its
+own 13-word sequences.
+
+The index misses some things by construction. A paraphrase shares no long
+sequence with its source, a translation shares none at all, a problem with
+changed numbers breaks every 13-gram that contains a number, and an item
+shorter than 13 words has no 13-gram to find. To measure what it finds we need
+leaks whose location we know, so we plant them. We draw 100 test items from
+each of GSM8K, ARC-Challenge and MMLU and insert each in three forms into 900
+different documents of the stream: *verbatim* (the question, its lettered
+options and an answer line), *reformatted* by rule (lower case, spacing and
+punctuation changed, options in reverse order with new letters), and
+*paraphrased* by a language model. A further 1,000 documents stay untouched as
+controls. The paraphrases themselves are examined after the two detectors.
 
 ```{.python .input #dedup-index-def}
 %%tab pytorch
@@ -1272,7 +1710,51 @@ else:
                          ngram_fp=fp, n_controls=len(ctrl))
 ```
 
-<!-- Prose: a second detector: every document cut into 128-word windows (stride 64), each window's top cosine to any benchmark item under the registered Qwen3-Embedding vectors; the threshold is the 99th percentile of the 1,000 controls of the plants file (a 1% false-positive budget), and the false positives are counted on 1,000 other untouched documents (held out, with a Wilson interval); recall by form, compared with the verbatim form's embedding recall (the ceiling), never with 1; a window holds a plant whole only if the plant has at most 65 words or happens to align, and even then shares it with 60+ host words, so recall is shown by that flag; vectors made once on a GPU, checked live on 8 windows and 8 items on the CPU. -->
+The index holds 633,848 distinct 13-grams of 16,533 test items, and it has
+blind spots before any plant is placed: 102 ARC-Challenge items and 1,589 MMLU
+items are shorter than 13 words even with their answer, and 304 and 4,080 of
+their questions are shorter on their own. No leak of these can be found this
+way. The plants were drawn from items whose question has at least 13 words, so
+that a missed verbatim plant would be a bug.
+
+All 300 verbatim and all 300 reformatted plants are found. The second result
+says less than it seems. The index ignores case, spacing and punctuation, and
+reversing the options keeps each option's words, so the reformatted form is
+found by construction; its recall of 1 shows that the normalization works. The
+paraphrases are a different matter, 0, 2 and 6 of 100. A 13-gram detector
+finds copies and nothing else.
+
+One control is flagged. The page quotes "we hold these truths to be self
+evident that all men are created", and so does MMLU item 3828. A rule that
+removes every overlapping document deletes every page that quotes the
+Declaration of Independence or a famous poem, because benchmarks quote them
+too. Before removing a document, look at the span.
+
+Why do leaked items and duplicates deserve this effort? Language models
+reproduce text they have seen often. Carlini and colleagues
+:cite:`Carlini.Tramer.Wallace.ea.2021` extracted hundreds of verbatim
+sequences from GPT-2's training data, among them names, phone numbers and
+code, and later work by the same group found that the share of training data a
+model reproduces grows with the model's size, with the number of copies of a
+sequence and with the length of the prompt. Lee and colleagues found that
+models trained on their deduplicated corpora emit memorized text about ten
+times less often. Deduplication is a privacy measure as well as a quality
+measure, and :numref:`sec_lm_safety` measures extraction on a model whose
+training data is known. An overlap, however, is evidence of leakage and not of
+memorization: a model can see an item once and not learn it, and what a leak
+did to a score can only be measured on the model, as in
+:numref:`subsec_lm_eval_contamination`.
+
+A paraphrase keeps the meaning of an item, and meaning is what embeddings
+measure. The second detector cuts every document into windows of 128 words
+starting every 64 words, so that a short item is not lost in a long page, and
+scores each window by the cosine of its closest test item; a document's score
+is its best window's. The threshold is the 99th percentile of the 1,000
+controls, a false-positive budget of 1%, and since a threshold fits the
+documents it was set on, the false positives are counted on 1,000 other
+untouched documents. The fair comparison for the paraphrases is the verbatim
+form under the same detector, its ceiling, not a recall of 1. The vectors were
+made once on a GPU; the cell checks 16 of them on the CPU.
 
 ```{.python .input #dedup-decontam-emb}
 %%tab pytorch
@@ -1380,7 +1862,33 @@ if not PLANTS_PENDING:
         fp_ci=[fp_lo, fp_hi], n_windows=len(WIN), size=SIZE, stride=STRIDE)
 ```
 
-<!-- Prose: the planted test set: 100 items from each benchmark (seed 0; questions of at least 13 words), each in three forms: verbatim, reformatted by rule (lower case, spacing, punctuation, the options reversed) and paraphrased once by Qwen3.5-4B (non-thinking, greedy; prompt and revision stored per row), inserted at a sentence start of 900 distinct stream documents; 1,000 stream documents stay untouched as controls; detection is by n-grams and embeddings, so no model grades its own paraphrases; licences: GSM8K and MMLU MIT, ARC-Challenge CC BY-SA 4.0 (the file's card says so). -->
+The held-out controls confirm the budget: 7 of 1,000 are above the threshold.
+The detector finds 0.42 of the paraphrases, about two in five, with an
+interval of $[0.37, 0.48]$, against 0.49 of the verbatim plants and 0.54 of
+the reformatted ones. Paraphrasing costs it little. What limits it is
+dilution, as the split by length shows. About 20 plants per form are too long
+for any window to hold whole, most of them over 100 words; they fill their
+windows, and 95% to 100% of them are found. The other 280 or so have a median
+under 50 words, share their window with about 80 words of the host page, and
+only 38% to 51% are found. Smaller windows would help the short plants and add
+false positives, since every window is another chance to resemble some test
+item by accident. We keep this detector out of the pipeline: at its budget it
+would remove about one innocent document in a hundred to find fewer than half
+of the plants, which makes it a tool for reviewing a corpus rather than for
+filtering one.
+
+The planted set is an artifact of its own. Its 300 items were drawn with a
+fixed seed from items whose question has at least 13 words and whose page form
+has at most 180, and each form was inserted as a line of its own at a sentence
+start of a stream document. Qwen3.5-4B wrote the paraphrases once, with
+thinking off and greedy decoding, and the prompt's hash and the model's
+revision are stored in every row. It takes two prompts. A prompt that mentions
+answer options at all makes this model invent four options for GSM8K problems,
+which have none, so pages with lettered options and pages without get
+different instructions. Detection is by n-grams and embeddings, so no model
+grades its own paraphrases. GSM8K and MMLU are under the MIT licence and
+ARC-Challenge under CC BY-SA 4.0, whose share-alike term is the reason the
+planted items live in a file of their own with its licence stated.
 
 ```{.python .input #dedup-plants}
 %%tab pytorch
@@ -1464,10 +1972,44 @@ for _, r in PL0[PL0.item_id == first].iterrows():
 say('\nItem: ARC-Challenge test, allenai/ai2_arc (CC BY-SA 4.0)')
 ```
 
+The three forms of the ARC item show what the paraphraser does: it keeps the
+question and the answer and changes almost every phrase, so that "a cat has a
+kitten with a broken leg" becomes "a feline offspring is born with a fractured
+limb". The check table, printed and never used to filter, says the same for
+all 300: the median 5-gram $J$ between a paraphrase and its verbatim page is
+between 0.01 and 0.06, and no paraphrase is empty, lost its answer line or
+gained options. Two departures remain. In 26 of the 100 GSM8K paraphrases the
+set of digits changed, mostly because numbers were written as words ("two
+dozen"), which leaves the problem the same and hides it from the 13-gram
+index. One MMLU "paraphrase" repeats its item unchanged. Removing such rows
+after seeing the detectors' results would tune the test to the detectors, so
+they stay.
+
+Planted paraphrases are not a hypothetical worry. Yang and colleagues (2023)
+showed that test items rephrased by a language model pass n-gram
+decontamination and that a 13B model trained on them reaches scores on the
+original benchmarks far above its ability. The perturbed variants of
+GSM-Symbolic :cite:`Mirzadeh.Alizadeh.Shahrokhi.ea.2025`, used in
+:numref:`subsec_lm_eval_contamination`, attack the problem from the other end,
+with problems that a model cannot have seen.
+
 ### The Version-1 Manifest
 :label:`subsec_lm_dedup_manifest`
 
-<!-- Prose: the teaching pipeline's last three stages on c1: exact duplicates by text hash, near-duplicates by MinHash at the chosen (b, r), decontamination by the 13-gram index (a document is charged to the benchmark of its first hit); the result is c2; the manifest lm-corpus-manifest-v1 records all nine stages from the crawl range on, and its hash is identical when the signatures are computed by one worker or four; the funnel of documents and tokens (the reference tokenizer; the lang_id, nfc and pii token counts are of the c0 text, which is the text after pii); the dataset card generated from the manifest; lm-c2-docs-v1 holds keep and drop decisions with reason codes, no text. -->
+The teaching pipeline ends with three stages on c1. `exact_dedup` keeps the
+first document of each hash of the NFC text, in c0 order. `minhash_dedup`
+clusters the rest at $(11, 11)$, the setting chosen on the training pairs, and
+keeps the lowest index of each cluster. `decontam` removes documents with a
+13-gram of any test item and charges each to the benchmark of its first hit.
+The result is c2. The manifest `lm-corpus-manifest-v1` records all nine stages
+from the archive range of :numref:`sec_lm_crawl` on, with parameters, counts
+and hashes, and every step is deterministic: no salted hash, fixed hash seeds,
+lowest index per cluster, documents in their order. The cell builds c2 twice,
+computing the signatures with one process and with four, and compares the
+manifest hashes. Token counts are of the reference tokenizer; for the first
+stages they are of the c0 text, which is the text after personal data was
+removed. `lm-c2-docs-v1` holds, for every c0 document, whether it is kept, the
+stage that dropped it, the reason and the document it copied, without text.
 
 ```{.python .input #dedup-c2}
 %%tab pytorch
@@ -1597,6 +2139,17 @@ R['c2'] = dict(manifest_sha256=MAN.sha256(),
                kept=sum(r['keep'] for r in C2_ROWS))
 ```
 
+The two manifests have the same SHA-256, and so do the registered ones. The
+funnel shows how small deduplication's part is in one archive range: of 1,032
+documents, 12 exact and 6 near-duplicates go, about 0.6% of the tokens, and
+the decontamination stage removes nothing, since our range holds no 13-gram of
+these test sets. It may still hold paraphrases, which the 13-gram index cannot
+see. On a quarter of one archive file a page rarely meets its copy; across a
+whole dump it meets it often, which is why deduplication removes far more at
+the scale of FineWeb. Of 9,731 records, 1,014 documents with 918,627 tokens
+reach the corpus, about one record in ten and a third of the English text that
+extraction produced.
+
 ```{.python .input #dedup-results}
 %%tab pytorch
 def rounded(x):
@@ -1664,10 +2217,500 @@ say(f'memory: shingle sets {MEM["shingle_sets"] / 2**30:.2f} GiB; peak '
     f'{N_WORKERS} workers')
 ```
 
+Deduplication decides that each text is seen once. It does not decide which
+texts deserve to be seen more than once, or how much of a corpus should be
+code, mathematics or prose. Those are questions about proportions, and
+:numref:`sec_lm_data_mixtures` answers them with training runs.
+
 ## Summary
 
-<!-- Prose: Summary (3-6 sentences). -->
+Repeated text wastes compute and raises memorization, repeated test items
+inflate scores, and most repeats on the web are near copies that exact hashes
+miss. MinHash gives every document a signature of $k$ numbers whose positions
+agree with probability equal to the Jaccard similarity of the two shingle
+sets, an unbiased estimate with variance $J(1 - J)/k$, and banding turns
+signatures into hash-table lookups that make a pair a candidate with
+probability $1 - (1 - s^r)^b$. On 12,000 labelled pairs the measured candidate
+rates follow this S-curve for 13 settings and three hash seeds, and the best
+split of 128 positions, $(11, 11)$ with test F1 0.87, differs from the
+uniform-weight optimum only because the pairs' similarities are not uniform.
+Suffix arrays find repeated spans inside different documents, and embeddings
+find rewordings and, at loose thresholds, pages that merely share a topic. A
+13-gram index finds every verbatim and reformatted test item planted in
+FineWeb pages and almost no paraphrase, an embedding detector finds about half
+of the copies and two in five paraphrases, limited by the host text around
+short items, and on our crawl the three stages remove 1.7% of the documents
+and leave a manifest whose hash does not depend on the number of workers.
 
 ## Exercises
 
-<!-- Prose: Exercises (7; spec part 8). -->
+1. **Containment.** A document has 100 five-gram shingles, all of which
+   occur in a document of 1,000 shingles.
+    1. Compute $J$ and the containment of the smaller in the larger. Will
+       MinHash at $\tau = 0.8$ make the pair a candidate?
+    1. Show that the containment can be computed from $J$ and the sizes
+       $|A|$ and $|B|$. Why is an estimate of $C$ from $\hat J$ noisy when
+       $J$ is small, and why would banding not find the pair anyway?
+    1. Should a deduplicator remove the shorter document? Give one case in
+       which it should and one in which it should not.
+   :exlabel:`ex_lm_dedup-containment`
+
+1. [code] **Short documents and salted hashes.**
+    1. Show that `minhash_signature(shingles(t))` is `None` for every text
+       with fewer than five words, and that `lsh_candidates` never pairs such
+       a document. What should a pipeline do with such documents instead?
+    1. Replace blake2b by Python's built-in `hash` in a copy of the
+       signature function and compute the fixture's signatures in two
+       separate processes. Name two places in this section's pipeline where
+       the result would break something.
+   :exlabel:`ex_lm_dedup-short-salted`
+
+1. **Candidates from the bulk.** A corpus of $N$ documents has a share
+   $\phi$ of its pairs at similarity $s$ and the rest at similarity 0.
+    1. For $s < \tau$, derive the expected number of false-positive
+       candidates under $b$ bands of $r$ rows.
+    1. Show that $P(s) \leq b s^r$ by the union bound over bands, and that
+       the bound is tight when $b s^r \ll 1$. Use it to evaluate the expected
+       count for $N = 10^8$, $\phi = 10^{-4}$, $s = 0.3$ and $(b, r) =
+       (14, 8)$.
+    1. Keeping $b$ fixed, by what factor does lowering $r$ by one multiply
+       this count? Why is that factor large exactly where the count matters?
+   :exlabel:`ex_lm_dedup-bulk`
+
+1. **Limits of the S-curve.**
+    1. Write $P(s)$ for $r = 1$ and for $b = 1$, and explain in words what
+       each extreme does.
+    1. Among the splits of 128 positions with $b$ a power of two, which has
+       $(1/b)^{1/r}$ closest to 0.8? Compare its exact steepest point with
+       that of $(9, 13)$ and say which approximation is worse, and why.
+   :exlabel:`ex_lm_dedup-limits`
+
+1. **Shingle size.**
+    1. A copy replaces a share $q$ of the words of a document at random.
+       Derive the approximate $J$ of the pair under $n$-word shingles, and
+       find the largest $q$ at which the pair is still a duplicate at
+       $\tau = 0.8$ for $n = 3$, 5 and 8.
+    1. [code] Before measuring, predict how the test F1 of the best $(b, r)$
+       changes with $n$. Then rebuild the labelled pairs' labels and
+       decisions for $n$ from 3 to 8 and plot F1 against $n$. Is the change
+       a property of the sketch or of the labels?
+   :exlabel:`ex_lm_dedup-shingle-size`
+
+1. [code] **The signature budget.** For $k \in \{64, 128, 256\}$, predict,
+   then measure, the setting chosen on the training pairs, its test F1, and
+   the number of candidate pairs it produces on c1. Report each F1 difference
+   with a bootstrap over base documents. Is doubling $k$ worth its cost in
+   memory and hashing time at $\tau = 0.8$?
+   :exlabel:`ex_lm_dedup-budget`
+
+1. [code] **Changed numbers.** Make a fourth form of the 100 planted GSM8K
+   problems that needs no model: replace every number by a different number
+   of the same magnitude, and keep the wording. Before running, predict the
+   recall of the 13-gram index and of the embedding detector on this form.
+   Measure both with intervals, and explain the 13-gram result from the
+   number of words between the numbers of a typical problem.
+   :exlabel:`ex_lm_dedup-numbers`
+
+1. [extended] **Two snapshots.** Extract documents from the same byte range
+   of the archive files of two Common Crawl dumps a year apart, with the
+   pipeline of :numref:`sec_lm_crawl` and :numref:`sec_lm_quality_filtering`.
+   Deduplicate each dump on its own and both together, and compare the
+   retained tokens, the near-duplicate rate within and across dumps, and the
+   edu scores of the documents that global deduplication removes from the
+   older dump. Does your result agree with FineWeb's argument for per-dump
+   deduplication?
+   :exlabel:`ex_lm_dedup-snapshots`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §20.3]{.kicker}
+
+Deduplication and Decontamination<br>**exact hashes · MinHash · banding and the S-curve · substrings · embeddings · test-set leakage**
+:::
+:::
+
+::: {.slide title="One Blog Post Contains Another, and Their Hashes Share Nothing"}
+[The problem]{.kicker}
+
+Two posts on one music blog in FineWeb's output: the second is the first plus
+one paragraph.
+
+| measure | value |
+|---|---|
+| SHA-256 equal | no |
+| Jaccard of 5-word shingles, $J$ | 0.70 |
+| share of the shorter found in the longer, $C$ | 1.00 |
+
+Exact comparison of all pairs, about 8 µs per pair:
+
+| documents | time |
+|---|---|
+| 20,000 | half an hour |
+| $10^9$ | about $10^5$ years |
+
+::: {.d2l-note .warn}
+The method has to avoid comparing pairs, not compare them faster.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- find exact copies and shared lines with hashes;
+- prove that a MinHash position agrees with probability $J$;
+- derive the banding S-curve and choose $(b, r)$ on labelled pairs;
+- explain what suffix arrays and embeddings catch that MinHash cannot;
+- measure what n-gram and embedding decontamination miss, with planted items.
+
+**Running example:** 26,000 FineWeb documents (the audit stream plus 6,000
+same-host pages) and c1, our 1,032 crawl documents after the rules.
+:::
+
+::: {.slide title="Six Steps From a Crawl Record to a Token on Disk"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| step | section |
+|---|---|
+| get text | Document Extraction from Web Crawls |
+| choose text | Quality Filtering |
+| | **Deduplication and Decontamination** |
+| mix text | Data Mixtures |
+| | Synthetic and Rephrased Data |
+| cut text | Tokenizers at Scale |
+:::
+
+::: {.col .narrow}
+- **Here:** c1 → exact → near → decontam → c2, and the version-1 manifest.
+- **Skips:** how often a text *should* be seen.
+:::
+:::
+:::
+
+::: {.slide title="FineWeb Has No Exact Copies, but One in Fifteen Pages Shares a Line"}
+[Exact duplicates]{.kicker}
+
+| corpus | documents | exact copies | documents with a shared line |
+|---|---|---|---|
+| FineWeb slice | 26,000 | 0 | 1,742 |
+| c1, our crawl | 1,032 | 12 | 73 |
+
+- Most shared: a card-payment notice (36 pages), shop review notices,
+  "Your email address will not be published".
+- Shared lines are a **span** problem: C4 kept one copy of every repeated
+  three-sentence span.
+
+::: {.d2l-note .warn}
+Deduplicate **before** the train/validation split, or validation loss
+measures memory.
+:::
+:::
+
+::: {.slide title="Resemblance and Containment of Shingle Sets"}
+[Similarity as set overlap]{.kicker}
+
+Shingles: runs of 5 words (NFC, lower case, `\w+`).
+
+$$J(A,B) = \frac{|A\cap B|}{|A\cup B|}, \qquad C(A,B) = \frac{|A\cap B|}{|A|}$$
+
+- $A \subseteq B$: $C = 1$, $J = |A|/|B|$; a truncation to $f$ has $J \approx f$.
+- Substitution rate $q$ keeps about $x = (1-q)^5$ of the shingles:
+  $J = x/(2-x)$, so 2% gives 0.82 and 5% gives 0.63.
+- Random pages: $J = 0$ up to the 99th percentile; same host: 0.32.
+
+::: {.d2l-note}
+Hash shingles with blake2b. Python's `hash` is salted per process.
+:::
+:::
+
+::: {.slide title="Check: 100 Shingles Inside a Page of 1,000. A Duplicate?"}
+[Check]{.kicker}
+
+Every shingle of a short page occurs in a long one. $J$? $C$? Does MinHash
+at $\tau = 0.8$ flag the pair?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $J = 100/1{,}000 = 0.1$, $C = 1$. A pair at $J = 0.1$ is almost
+never a candidate. Containment needs its own test; under $J$, a short copy is
+a different document.
+:::
+:::
+:::
+
+::: {.slide title="One Random Order: Agreement Has Probability J"}
+[MinHash]{.kicker}
+
+$h_\pi(A)$: the shingle of $A$ that comes first in a random order $\pi$.
+
+Let $x^*$ be the first element of $A \cup B$, uniform over the union.
+
+- $x^* \in A \cap B$: both minima are $x^*$, they agree.
+- $x^* \in A \setminus B$: $A$'s minimum is $x^*$, $B$'s comes later.
+
+$$\Pr[h_\pi(A) = h_\pi(B)] = \frac{|A\cap B|}{|A \cup B|} = J$$
+
+$k$ orders: $\hat J$ = share of agreeing positions, a binomial count,
+$\operatorname{Var}\hat J = J(1-J)/k$.
+:::
+
+::: {.slide title="128 Numbers per Document, Bit-Exact to a Specification"}
+[The signature]{.kicker}
+
+| step | choice |
+|---|---|
+| shingle hash | blake2b, 8 bytes, little-endian, mod $p = 2^{61}-1$ |
+| position $i$ | $\min_x (a_i x + c_i) \bmod p$ |
+| $(a_i, c_i)$ | `default_rng(0xD2)`, integers in $[1, p)$ |
+| product $a_i x$ | exact: 122 bits; NumPy `uint64` overflows silently |
+
+Checks on 200 pairs per $J$ and on the fixture:
+
+- bias within 2 standard errors in every bin; variance 0.88 to 1.16 × formula;
+- 5 of 5 fixture signatures equal to a Python-integer reference.
+
+95% half-width at $J = 0.8$: $1.96\sqrt{0.16/128} = 0.069$.
+:::
+
+::: {.slide title="Bands Turn the Signature Into Hash-Table Lookups"}
+[Banding]{.kicker}
+
+$k = br$ positions as $b$ bands of $r$; a shared band bucket makes a candidate.
+
+$$P(s) = 1 - (1 - s^r)^b, \qquad s^* = \Bigl(\frac{r-1}{br-1}\Bigr)^{1/r} \approx \Bigl(\frac{1}{b}\Bigr)^{1/r}$$
+
+| $(b, r)$ | $P(0.5)$ | $P(0.8)$ | $P(0.9)$ | steepest |
+|---|---|---|---|---|
+| $(2, 2)$ | 0.44 | | 0.96 | 0.58 |
+| $(14, 8)$, FineWeb | 0.053 | 0.92 | | 0.71 |
+| $(9, 13)$ | | 0.40 | | 0.84 |
+
+FineWeb's paper: 0.56, 0.77, 0.92, 0.988 at 0.7 to 0.85. Reproduced.
+:::
+
+::: {.slide title="Measured Candidate Rates Follow the Curve"}
+[The S-curve, measured]{.kicker}
+
+12,000 labelled pairs: 6,000 edited copies, 6,000 negatives; label $J \geq 0.8$.
+
+13 settings × 3 hash seeds × 0.05-wide bins of $J$; expected count
+$\sum_i P(J_i)$, exact Poisson-binomial 95% interval.
+
+| | value |
+|---|---|
+| cells with $n \geq 30$ | 780 |
+| outside their interval | 19 (2.4%) |
+| bound at the 0.999 level | 59 |
+| $(9,13)$, bin 0.80 to 0.85 | expected 445 [418, 473]; seeds 431, 438, 429 |
+
+::: {.d2l-note}
+A flawed hash would leave many cells outside.
+:::
+:::
+
+::: {.slide title="Choosing (b, r) Like a Hyperparameter"}
+[Tuning]{.kicker}
+
+$$E(b,r) = w_{\textrm{fp}}\!\int_0^\tau\! P\,ds + w_{\textrm{fn}}\!\int_\tau^1\!(1-P)\,ds \;\Rightarrow\; (9, 13) \textrm{ at } k = 128,\ \tau = 0.8$$
+
+| test pairs | precision | recall | F1 |
+|---|---|---|---|
+| $(11, 11)$, chosen on train, $w_{\textrm{fn}} = 1$ | 0.86 | 0.89 | **0.87** |
+| $(9, 13)$, minimum of $E$, datasketch | 0.90 | 0.77 | 0.83 |
+| $(14, 8)$, FineWeb, 112 positions | 0.72 | 0.99 | 0.83 |
+
+$(11, 11) - (9, 13)$: F1 $+0.04$ [+0.03, +0.05]. $w_{\textrm{fn}} = 5$
+chooses $(14, 9)$: fewer rows, as predicted.
+:::
+
+::: {.slide title="Check: Why Do the Pairs Choose (11, 11), Not (9, 13)?"}
+[Check]{.kicker}
+
+The hashes follow the S-curve. So why does the measured optimum differ from
+the minimum of $E$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $E$ weighs every $s \in [0,1]$ equally; the copies crowd near
+$\tau$ and most negatives sit at 0. With the pairs' own $J$ in place of the
+uniform weight, the expected error is least exactly at $(11, 11)$ and, for
+$w_{\textrm{fn}} = 5$, at $(14, 9)$. Right about the curve, wrong about the
+data.
+:::
+:::
+:::
+
+::: {.slide title="The Dissimilar Bulk Decides the Cost"}
+[At scale]{.kicker}
+
+$$\mathbb{E}[\#\textrm{candidates}] = \sum_{i<j} P(s_{ij})$$
+
+| | $(11, 11)$ | $(14, 8)$ |
+|---|---|---|
+| $P(0.3)$ | $2 \times 10^{-5}$ | $9 \times 10^{-4}$ |
+| $P(0.5)$ | 0.005 | 0.053 |
+| $10^6$ documents, 0.1% of pairs at 0.5 | $3 \times 10^6$ | $3 \times 10^7$ |
+
+- Templated pages fill single buckets: $m$ members give $m(m-1)/2$ pairs;
+  `max_bucket` caps and reports them.
+- Our slice, already deduplicated: 0 candidates at both; 104 at $(32, 4)$.
+:::
+
+::: {.slide title="Pairs Become Clusters; Each Cluster Keeps One Page"}
+[From pairs to a corpus]{.kicker}
+
+- Union-find over candidate pairs: A~B and B~C join A and C.
+- Keep the **lowest index**: independent of pair order and of any draw.
+- FineWeb deduplicates each dump on its own: globally deduplicated old
+  dumps trained no better.
+
+| c1 at $(11, 11)$ | |
+|---|---|
+| kept | 1,014 of 1,032 |
+| clusters of two or more | 13 (31 documents) |
+| largest | one page, 4 copies on 3 hosts |
+| `near_dedup` default $(9, 13)$ | 1,015 kept |
+:::
+
+::: {.slide title="Suffix Arrays Find Spans That MinHash Cannot See"}
+[Substring duplicates]{.kicker}
+
+A 60-word footer on thousands of different pages: $J \approx 0.1$, never a
+candidate, read thousands of times.
+
+- Sort all suffixes (prefix doubling, $O(n \log^2 n)$); repeats become long
+  common prefixes of neighbours (Kasai, $O(n)$).
+- Lee et al.: one 61-word sentence over 60,000 times in C4.
+
+2 MiB of FineWeb, about 450,000 tokens: 3 repeats of 50+ tokens.
+
+| repeat | tokens |
+|---|---|
+| a blog's "read more recent posts" footer | 74 |
+| the Fourth Amendment | 66 |
+| a function signature from a manual | 50 |
+
+::: {.d2l-note .warn}
+Keeping one copy of every span also deletes quotations from the pages that
+need them.
+:::
+:::
+
+::: {.slide title="Embeddings Find Rewordings, Then Pages on the Same Topic"}
+[Semantic duplicates]{.kicker}
+
+SemDeDup: k-means (64 clusters), remove a page whose cosine to an earlier
+member exceeds $1 - \varepsilon$. 20,000 stream pages.
+
+| $\varepsilon$ | removed | what goes |
+|---|---|---|
+| 0.05 | 0 | |
+| 0.1 | 1 | a template page, cosine 0.94, $J = 0.17$ |
+| 0.15 to 0.2 | 6 to 27 | gambling, essay mills, frozen pipes ($J \approx 0$) |
+| 0.3 | 181 (0.9%) | FAQs, estate planning |
+
+Cosine to the nearest earlier member: median 0.46, largest 0.94.
+
+::: {.d2l-note}
+$\varepsilon$ belongs to one embedder; at large $\varepsilon$ this is topic
+balancing, a mixture decision.
+:::
+:::
+
+::: {.slide title="A 13-Gram Index Finds Copies and Nothing Else"}
+[Decontamination]{.kicker}
+
+16,533 test items, 633,848 hashed 13-grams. 100 items per benchmark planted
+in three forms into 900 FineWeb pages; 1,000 controls.
+
+| found by 13-grams | GSM8K | ARC | MMLU |
+|---|---|---|---|
+| verbatim | 100 | 100 | 100 |
+| reformatted (case, punctuation, options reversed) | 100 | 100 | 100 |
+| paraphrased by Qwen3.5-4B | 2 | 0 | 6 |
+
+- Reformatted: found **by construction**, since the index ignores exactly
+  these changes.
+- One control flagged: it quotes the Declaration of Independence, as MMLU
+  item 3828 does. Look at the span.
+:::
+
+::: {.slide title="Embeddings Find Paraphrases Nearly as Often as Copies"}
+[A second detector]{.kicker}
+
+128-word windows every 64 words; threshold at the controls' 99th percentile;
+held-out controls above it: 7 of 1,000.
+
+| recall | all plants | long plants (about 20) | short plants (about 280) |
+|---|---|---|---|
+| verbatim | 0.49 | 0.95 | 0.46 |
+| reformatted | 0.54 | 0.95 | 0.51 |
+| paraphrased | **0.42** [0.37, 0.48] | 1.00 | 0.38 |
+
+Short plants have a median under 50 words.
+:::
+
+::: {.slide title="Check: Paraphrase Recall 0.42, Verbatim 0.49. What Limits the Detector?"}
+[Check]{.kicker}
+
+The detector finds long plants almost always and short plants about half the
+time, whatever their form.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Dilution, not paraphrase. A 50-word plant shares its 128-word
+window with about 80 words of the host page, and the window's vector is
+about the host as much as about the item. Smaller windows help and add false
+positives.
+:::
+:::
+:::
+
+::: {.slide title="What Every Detector Here Misses"}
+[Limits]{.kicker}
+
+| leak | 13-gram index | embeddings |
+|---|---|---|
+| paraphrase | misses | about 2 in 5 |
+| numbers written as words ("two dozen") | breaks nearby 13-grams | |
+| item under 13 words (ARC 102, MMLU 1,589) | cannot match | |
+| translation | misses | |
+| famous quotation | false positive | |
+
+- Overlap is evidence of leakage, not of memorization.
+- Memorization grows with model size, copies and prompt length (Carlini et
+  al.); deduplication cuts memorized output about tenfold (Lee et al.).
+:::
+
+::: {.slide title="The Version-1 Manifest: Nine Stages, One Hash"}
+[In the pipeline]{.kicker}
+
+| stage | out | tokens |
+|---|---|---|
+| extract, of 9,731 records | 9,286 | |
+| lang_id, nfc, pii (c0) | 3,288 | 2,850,469 |
+| heuristics, edu_score (c1) | 1,032 | 923,725 |
+| exact_dedup | 1,020 | 920,541 |
+| minhash_dedup at $(11, 11)$ | 1,014 | 918,627 |
+| decontam (c2) | 1,014 | 918,627 |
+
+- Manifest SHA-256 identical with 1 and 4 workers.
+- `lm-c2-docs-v1`: keep, stage, reason and kept copy per c0 id, no text.
+:::
+
+::: {.slide title="Recap"}
+[Recap]{.kicker}
+
+- Exact hashes: no copies in FineWeb's output, 12 in our crawl; shared lines
+  are spans.
+- MinHash: $\Pr[\textrm{agree}] = J$, variance $J(1-J)/k$; bit-exact checks.
+- Banding: $1 - (1-s^r)^b$; measured rates follow it (19 of 780 cells out).
+- Tune $(b, r)$ on the pairs' own similarities: $(11, 11)$, F1 0.87.
+- Suffix arrays: shared spans; embeddings: rewordings, then topics.
+- 13-grams find copies only; embeddings about 2 in 5, limited by dilution.
+
+**Next:** how much of each kind of text a model should see.
+:::

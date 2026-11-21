@@ -81,17 +81,12 @@ from scipy.interpolate import PchipInterpolator
 from torch.utils.checkpoint import checkpoint
 ```
 
-The notebook does most of its work on the CPU in every build: it trains a
-dozen tokenizers, checks the unigram model against brute force, fits the
-vocabulary cost model, and reads and verifies the shards. Two experiments
-need a GPU and were run once. Six small language models compare
-tokenizers, and eight runs of continued training extend the vocabulary of
-a released model. A normal build reads their registered results, checks
-that they were made with this build's tokenizers, text and configuration,
-and repeats part of each: the start of one small-model run and every
-measurement of the extended models before training. Both experiments are
-small, at what this chapter calls T1 scale, and the cell below prints what
-that means.
+Most of this section runs on a CPU. Two experiments need a GPU: six small
+language models that compare tokenizers, and eight runs that extend the
+vocabulary of a released model. A normal build reads their registered
+results, checks that they match this build's tokenizers, text and
+configuration, and repeats part of each. Both are small, at what this
+chapter calls T1 scale, and the cell below prints what that means.
 
 ```{.python .input #tokenizers-config}
 %%tab pytorch
@@ -144,19 +139,15 @@ say(f'GPU={GPU}, SMALL={SMALL}, regenerating:',
     ', '.join(sorted(RERUN)) or 'none')
 ```
 
-The data come from three places. The parallel passages are those of the
-Belebele reading-comprehension benchmark (CC BY-SA 4.0), downloaded from a
-pinned commit of its repository and never re-hosted. The ten-language
-slice is FineWeb-2 text for nine languages and FineWeb-Edu text for English
-:cite:`Penedo.Kydlicek.BenAllal.ea.2024`, both ODC-By: about 4.5 MB of
-training text per language with a tenth of the documents held out, plus
-30,500 Hindi documents for the extension experiment. The reference
-tokenizer and its shards were built once, by `tools/build_r2_shards.py`
-from FineWeb-Edu, and this notebook only reads and checks them.
-
-The two GPU experiments were regenerated together, in one run on one
-RTX 4090, and registered as one file, `lm-data-tok-results-v1`. A later
-regeneration of only one of them reads the other from that file.
+The parallel passages are those of the Belebele reading-comprehension
+benchmark (CC BY-SA 4.0), downloaded from a pinned commit and never
+re-hosted. The ten-language slice is FineWeb-2 text for nine languages and
+FineWeb-Edu text for English :cite:`Penedo.Kydlicek.BenAllal.ea.2024`, both
+ODC-By: about 4.5 MB of training text per language with a tenth held out,
+plus 30,500 Hindi documents for the extension experiment. The reference
+tokenizer and its shards were built once by `tools/build_r2_shards.py`;
+this notebook reads and checks them. The results of both GPU experiments
+sit in one registered file, `lm-data-tok-results-v1`.
 
 ```{.python .input #tokenizers-data-hub}
 %%tab pytorch
@@ -799,10 +790,11 @@ probabilistic lexicon has that a merge table lacks. For *sports* the two
 best paths are `▁s|port|s` and `▁sp|ort|s`, with log-probabilities $-18.5$
 and $-19.3$ nats, so the first is $e^{0.8} \approx 2.2$ times as probable as
 the second. At $\beta = 0.2$ the ratio shrinks to $e^{0.16} \approx 1.17$,
-nearly a coin toss. That is why the sampled segmentations of the sentence
-look so ragged: *three* stays whole in three samples and falls apart in
-the other two, and even *Since* is spelled out once. A model trained
-on such samples has to recognize a word however it is cut.
+nearly a coin toss. That is why the sampled segmentations of the sentence,
+a held-out FineWeb-Edu line (ODC-By), look so ragged: *three* stays whole
+in three samples and falls apart in the other two, and even *Since* is
+spelled out once. A model trained on such samples has to recognize a word
+however it is cut.
 
 Two defaults of SentencePiece change the text a model sees, and neither
 says so. Its default normalization, `nmt_nfkc`, applies Unicode's
@@ -867,9 +859,12 @@ at $\alpha = 1$ in proportion to size, at $\alpha = 0$ uniformly. We train
 three byte-level BPEs of 16,384 pieces on the ten-language slice, with the
 languages weighted at $\alpha = 1$, $0.3$ and $0$ according to FineWeb-2's
 document counts. FineWeb-2 has no English, so English is given German's
-count; this is an assumption, but any count of the same order would do.
-The most heavily weighted language contributes all of its 4.5 MB of
-training text and the others proportionally less.
+count, so that at $\alpha = 1$ it weighs as one large European language
+among others. (:numref:`sec_lm_data_mixtures` uses FineWeb's English count
+instead, about fifty times German's, which at $\alpha = 1$ would hand
+English about nine tenths of the tokenizer's text.) The most heavily
+weighted language contributes all of its 4.5 MB of training text and the
+others proportionally less.
 
 These three tokenizers, and the reference tokenizer later in the section,
 are built with the Hugging Face `tokenizers` library, which assembles a
@@ -985,10 +980,12 @@ classes the vowel signs and the virama of Devanagari as combining marks,
 not letters. The rule therefore cuts हिन्दी (*Hindi*) into ह|िन|्द|ी
 before BPE sees it, and no merge can cross those cuts. The reference
 tokenizer shares this rule, which is harmless for the English model of the
-next chapter and would not be for a Hindi one. The same classification of the
-vowel signs made the English rules of :numref:`sec_lm_quality_filtering`
-remove every Hindi document: a pattern written for letters cuts Devanagari
-words apart.
+next chapter and would not be for a Hindi one. Our implementation of the
+English quality rules in :numref:`sec_lm_quality_filtering` had the same
+flaw: its word pattern, Python's `\w`, also skips the vowel signs, so it
+cut every Hindi word into fragments and removed every Hindi document. A
+word pattern that keeps the marks with their letters, `[\p{L}\p{M}]+`,
+avoids both cuts.
 
 ### Bits per Byte and the Choice of Algorithm
 :label:`subsec_lm_tok_bpb`
@@ -1009,8 +1006,9 @@ $$
 :eqlabel:`eq_lm_tok_bpb`
 
 so a tokenizer with twice the bytes per token is allowed twice the loss
-per token. This is the bits per character of :eqref:`eq_mdl-bpc` with
-bytes in place of characters. Two cautions come with it. Bytes must be
+per token. This is the bits per character of the coding appendix
+(:numref:`subsec_mdl-perplexity`) with bytes in place of characters. Two
+cautions come with it. Bytes must be
 counted on the same normalized text for every tokenizer, because a text
 before and after NFC can differ in length. And bits per byte compares
 models on one language: a byte is a whole English letter but a third of a
@@ -1333,7 +1331,7 @@ order of the languages, finally, says little: Chinese sits near 3 bits
 per byte and Hindi near 1.2 because their scripts spend their bytes
 differently, not because one is harder to model.
 
-## Vocabulary Size
+## Vocabulary Size and Pre-Tokenization
 :label:`subsec_lm_tok_vocab`
 
 Every tokenizer so far had a vocabulary size chosen by habit: 16,384 here,
@@ -1918,20 +1916,16 @@ the shared matrix, is frozen; the control has no new rows, so it waits.
 Then every parameter trains for 100 steps at a low rate of $10^{-5}$. Each
 phase warms up over 10 steps and decays along a cosine, with AdamW.
 
-Why not train everything at once, at a rate usual for fine-tuning? We
-tried, and one phase at $10^{-4}$ made the control, which has nothing new
-to learn, worse at Hindi and at English within ten steps. A released base
-model ends pretraining with its learning rate decayed to nearly zero.
-Raising the rate again disturbs it, and small batches of 8,192 tokens
-make the disturbance worse. A comparison against a control that
-is itself getting worse would flatter the extended arms. The two rates
-were chosen on Hindi documents that are neither in the training pool nor
-in the evaluation set, so no reported number was tuned. The rate
-$3 \times 10^{-3}$ gave the new rows the lowest Hindi loss after the first
-phase in a grid from $3 \times 10^{-4}$ to $3 \times 10^{-2}$; at the top
-of the grid the new rows took over English as well. The body rate
-$10^{-5}$ is the largest at which the control stays within 1% of its start
-on both Hindi and English.
+The low body rate follows from what a released base model is. It ends
+pretraining with its learning rate decayed to nearly zero, and raising the
+rate again, on small batches of 8,192 tokens, can move it away from where
+it ended. A control that got worse in this way would flatter the extended
+arms, so the body rate is the largest at which the control, which has
+nothing new to learn, stays where it started on Hindi and on English. The
+rate of the first phase is the one at which the new rows reached the
+lowest Hindi loss. Both were chosen on Hindi documents that are neither in
+the training pool nor in the evaluation set, so no reported number was
+tuned on them.
 
 All arms read the same documents. An extended arm needs fewer tokens for
 them, so in 150 steps it reads more Hindi text than the control does. The
@@ -2203,7 +2197,7 @@ instance, matches added tokens such as `<think>` inside ordinary text.
 | Tokenizer | byte-level BPE, 32,768 pieces, NFC, single digits, no BOS |
 | Special ids | 0 end of text (the EOS after every document), 1 padding, 2 and 3 chat-turn delimiters, 4-31 reserved |
 | `.bin` | little-endian ids, `uint16` for at most 65,536 ids, else `uint32` |
-| `.idx` | `uint32` offsets, one per document plus the token count |
+| `.idx` | `uint32` offsets, one per document plus the token count; document $i$ is ids `offsets[i]` to `offsets[i+1]`, its closing EOS included |
 | `.meta.parquet` | `doc_id`, `n_tokens`, then `url`, `dump`, `bucket`, `edu_score`, `int_score`, `gpt2_tokens`, `src_file`, `src_row` |
 | `manifest.json` | `d2l-corpus/1`: sources, stages, tokenizer hash, format, splits |
 
@@ -2294,7 +2288,9 @@ until it holds at least `shard_tokens` tokens. It closes a shard only at a
 document boundary, so no document spans two shards. Each shard is three
 files: `.bin` with the raw little-endian ids, as `uint16` when every id
 fits into 16 bits and as `uint32` otherwise; `.idx` with the offset of
-every document; and `.meta.parquet` with one row per document for audits.
+every document, so that the range from one offset to the next is the
+document with its closing EOS; and `.meta.parquet` with one row per
+document for audits.
 A `manifest.json` records the sources, the processing stages, the
 tokenizer's hash and the format. `TokenShards` reads them through memory
 maps. It finds documents by global index and token ranges by global
@@ -2645,7 +2641,8 @@ Of 14,277 validation candidates, 658 repeated a training document's text
 and 164 its URL. After their removal, 211 of the 8,341 validation documents
 (2.5%) still share a span of 50 tokens with the first training shard,
 covering about a third of a percent of all validation tokens. The shared
-spans are boilerplate: a licence notice that appears in four documents,
+spans, printed above as FineWeb-Edu text (ODC-By), are boilerplate: a
+licence notice that appears in four documents,
 the interface text of a presentation website, the reuse notice of an
 article-metrics service. That residue is expected and small. It was
 measured against one training shard of forty, and the whole training set
@@ -2726,26 +2723,23 @@ tokens before reading it at all is a question this part leaves open.
 
 ## Summary
 
-A tokenizer is a compressor fitted to its training text, and it decides
-how many tokens, and so how much compute and context, each language needs:
-on the same passages, English-centred tokenizers need several times
-English's tokens for Hindi and Thai, and lowering the weight of large
-languages in the tokenizer's training text moves pieces to small ones. The
+A tokenizer is a compressor fitted to its training text: English-centred
+tokenizers need several times English's tokens for Hindi and Thai, and
+giving small languages more weight in that text moves pieces to them. The
 unigram model replaces BPE's merge order by piece probabilities that EM
 estimates from forward-backward counts, with pruning; it segments by
 Viterbi and can sample segmentations for subword regularization.
 Tokenizers are compared in bits per byte, never in perplexity, and at T1
-scale the choice between unigram and BPE moved a language's bits per byte
-by a few percent, far less than tokenizers vary between languages in
-tokens. The vocabulary size that minimizes compute per byte is where the
-elasticity of compression equals the vocabulary's share of parameters,
-which favours larger vocabularies for larger models and for multilingual
-text. Pieces can be added to a trained model, and a decomposition
-initialization starts far ahead of random or mean rows, but at T1 scale no
-extended model caught up with the unextended one within 150 steps. The
-reference tokenizer (byte-level BPE, 32,768 pieces, EOS 0, no BOS) is
-reproducible from its recorded inputs, and its shards are verified and
-deduplicated against validation for the next chapter.
+scale unigram against BPE moved a language's bits per byte by a few
+percent, far less than token counts vary between languages. Compute per
+byte is lowest where the elasticity of compression equals the vocabulary's
+share of parameters, which favours larger vocabularies for larger models
+and for multilingual text. Pieces can be added to a trained model, and a
+decomposition initialization starts far ahead of random or mean rows, but
+at T1 scale no extended model reached the unextended one within 150 steps.
+The reference tokenizer (byte-level BPE, 32,768 pieces, EOS 0, no BOS) is
+reproducible from its recorded inputs, and its verified shards are what
+the next chapter trains on.
 
 ## Exercises
 
@@ -2816,6 +2810,18 @@ deduplicated against validation for the next chapter.
    byte for each. Do more pieces always help within this budget? (A GPU
    with about 16 GB, roughly 15 minutes.)
    :exlabel:`ex_lm_tok-npieces`
+
+1. [code] **One phase or two.** Replace the two-phase recipe by a single
+   phase in which every parameter trains for 150 steps at $10^{-4}$, a
+   rate usual for fine-tuning, with the same warmup and cosine decay. Run
+   the control and the decomposition arm and record Hindi and English
+   bits per byte every 10 steps. Before running, predict what happens to
+   the control, which has nothing new to learn. Then compare the gap
+   between the decomposition arm and the control at step 150 under both
+   recipes. Which recipe makes the extension look better, and which
+   comparison would you trust? (A GPU with about 16 GB, roughly 10
+   minutes.)
+   :exlabel:`ex_lm_tok-onephase`
 
 1. **Extension by merges.** The extension of
    :numref:`subsec_lm_tok_extend` appends whole pieces as added tokens,
@@ -2943,7 +2949,7 @@ SentencePiece's default `nmt_nfkc` rewrites text: x² → x2, ﬁ → fi,
 Draw $\mathbf{s}$ with probability $\propto P(\mathbf{s})^{\beta}$:
 $\beta = 0$ uniform, $\beta \to \infty$ Viterbi.
 
-| | segmentation |
+| | segmentation (a FineWeb-Edu line, ODC-By) |
 |---|---|
 | Viterbi | `▁computer ▁scientists ▁have ▁release d ▁over ▁three` |
 | sample | `▁ com p u ter ▁scientists ▁have ▁ r e l e a s ed ▁ over ▁three` |
@@ -2975,7 +2981,7 @@ why samples at 0.2 look so ragged.
 [Language weighting]{.kicker}
 
 Byte-level BPE, 16,384 pieces, languages weighted $\propto n_i^{\alpha}$
-by FineWeb-2 document count $n_i$:
+by FineWeb-2 document count $n_i$ (English: German's count):
 
 | | $\alpha = 1$ | $\alpha = 0.3$ | $\alpha = 0$ |
 |---|---|---|---|
@@ -3131,7 +3137,8 @@ all, lr $10^{-5}$.
 
 ::: {.d2l-note .warn}
 At 1.2M tokens the extension halves Hindi's tokens but is still 0.2 bpb
-behind. One phase at $10^{-4}$ made the control itself worse.
+behind. The body rate is set so that the control, with nothing new to
+learn, stays flat.
 :::
 :::
 
@@ -3142,7 +3149,7 @@ behind. One phase at $10^{-4}$ made the control itself worse.
 |---|---|
 | tokenizer | byte-level BPE, 32,768 pieces, NFC, single digits |
 | special ids | 0 end of text (after every document), 1 pad, 2-3 chat, 4-31 reserved; no BOS |
-| `.bin` / `.idx` | little-endian ids (`uint16` up to 65,536) / `uint32` offsets |
+| `.bin` / `.idx` | little-endian ids (`uint16` up to 65,536) / `uint32` offsets; a document's range includes its EOS |
 | check | retraining on 80,000 documents reproduces the SHA-256 |
 | data | 4.0B FineWeb-Edu tokens in 40 shards; validation $2^{23}$ tokens |
 

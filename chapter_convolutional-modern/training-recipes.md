@@ -252,8 +252,10 @@ mixing coefficient $\lambda \sim \mathrm{Beta}(\alpha, \alpha)$ and pairs
 each example $i$ with a randomly shuffled partner $j$, constructing
 
 $$
-\tilde{\mathbf{x}} = \lambda \mathbf{x}_i + (1-\lambda) \mathbf{x}_j, \qquad
-\tilde{\mathbf{y}} = \lambda \mathbf{y}_i + (1-\lambda) \mathbf{y}_j,
+\begin{aligned}
+\tilde{\mathbf{x}} &= \lambda \mathbf{x}_i + (1-\lambda) \mathbf{x}_j, \\
+\tilde{\mathbf{y}} &= \lambda \mathbf{y}_i + (1-\lambda) \mathbf{y}_j,
+\end{aligned}
 $$
 :eqlabel:`eq_mixup`
 

@@ -552,10 +552,12 @@ spectral norm at most $\varepsilon$. Conveniently, the same set can be
 computed directly from the *resolvent* $(z\mathbf{I}-\mathbf{A})^{-1}$:
 
 $$
+\begin{aligned}
 \Lambda_\varepsilon(\mathbf A)
-=\{z\in\mathbb C:z\text{ is an eigenvalue of }\mathbf A+\mathbf E
-       \text{ for some }\|\mathbf E\|_2\le\varepsilon\}
-=\{z\in\mathbb C:\|(z\mathbf I-\mathbf A)^{-1}\|_2\ge1/\varepsilon\},
+&=\{z\in\mathbb C:z\text{ is an eigenvalue of }\mathbf A+\mathbf E
+       \text{ for some }\|\mathbf E\|_2\le\varepsilon\} \\
+&=\{z\in\mathbb C:\|(z\mathbf I-\mathbf A)^{-1}\|_2\ge1/\varepsilon\},
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-pseudospectrum`
 

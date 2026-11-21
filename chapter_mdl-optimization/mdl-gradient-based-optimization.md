@@ -114,8 +114,10 @@ differentiable at $\mathbf{x}$ with $\nabla f(\mathbf{x}) \neq \mathbf{0}$.*
    the normalized negative gradient:*
 
 $$
-\min_{\|\mathbf{d}\| = 1} \nabla f(\mathbf{x})^\top \mathbf{d} = -\|\nabla f(\mathbf{x})\|,
-\qquad \textrm{attained only at } \mathbf{d} = -\frac{\nabla f(\mathbf{x})}{\|\nabla f(\mathbf{x})\|}.
+\begin{aligned}
+\min_{\|\mathbf{d}\| = 1} \nabla f(\mathbf{x})^\top \mathbf{d} &= -\|\nabla f(\mathbf{x})\|, \\
+\textrm{attained only at }\mathbf{d} &= -\frac{\nabla f(\mathbf{x})}{\|\nabla f(\mathbf{x})\|}.
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-opt-steepest`
 
@@ -245,7 +247,7 @@ Lipschitz condition :eqref:`eq_mdl-opt-smoothness` yields
 
 $$
 \begin{aligned}
-f(\mathbf{y}) - f(\mathbf{x}) - \nabla f(\mathbf{x})^\top (\mathbf{y}-\mathbf{x})
+f(\mathbf{y}) - f(\mathbf{x}) &- \nabla f(\mathbf{x})^\top (\mathbf{y}-\mathbf{x}) \\
 &= \int_0^1 \big(\nabla f(\mathbf{x} + t(\mathbf{y}-\mathbf{x})) - \nabla f(\mathbf{x})\big)^\top (\mathbf{y}-\mathbf{x})\, dt \\
 &\le \int_0^1 L\,t\, \|\mathbf{y}-\mathbf{x}\|^2\, dt = \tfrac{L}{2}\|\mathbf{y}-\mathbf{x}\|^2.
 \end{aligned}
@@ -450,9 +452,11 @@ Shifting the minimizer to the origin and dropping the additive constant leaves
 our model problem:
 
 $$
-f(\mathbf{x}) = \tfrac12\, \mathbf{x}^\top \mathbf{A}\, \mathbf{x},
-\qquad \mathbf{A} \textrm{ symmetric positive definite, with eigenvalues }
+\begin{aligned}
+f(\mathbf{x}) &= \tfrac12\, \mathbf{x}^\top \mathbf{A}\, \mathbf{x}, \\
+&\quad \mathbf{A} \textrm{ symmetric positive definite, with eigenvalues }
 0 < \lambda_{\min} = \lambda_1 \le \cdots \le \lambda_d = \lambda_{\max}.
+\end{aligned}
 $$
 
 Its gradient is $\mathbf{A}\mathbf{x}$ and its Hessian is $\mathbf{A}$, so its

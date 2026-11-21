@@ -274,8 +274,11 @@ $h$, $t\to0$ as $\epsilon\to0$, so $\rho(t)\to0$ as well. Substituting this $t$
 yields
 
 $$
-g(h(x+\epsilon)) - g(h(x)) = \bigl(g'(h(x)) + \rho(t)\bigr)\bigl(\epsilon h'(x) + o(\epsilon)\bigr)
-= \epsilon\, g'(h(x))\, h'(x) + o(\epsilon),
+\begin{aligned}
+g(h(x+\epsilon)) - g(h(x))
+&= \bigl(g'(h(x)) + \rho(t)\bigr)\bigl(\epsilon h'(x) + o(\epsilon)\bigr) \\
+&= \epsilon\, g'(h(x))\, h'(x) + o(\epsilon),
+\end{aligned}
 $$
 
 because every term other than $g'(h(x))\,\epsilon h'(x)$ contains a factor

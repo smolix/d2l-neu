@@ -183,11 +183,13 @@ attention score with $\mathbf{A} = \mathbf{W}_q \mathbf{W}_k^\top /
 \sqrt{d_h}$ expands into four terms:
 
 $$
+\begin{aligned}
 (\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A}\, (\mathbf{x}_j + \mathbf{p}_j)
-= \underbrace{\mathbf{x}_i^\top \mathbf{A}\, \mathbf{x}_j}_{\textrm{content--content}}
-+ \underbrace{\mathbf{x}_i^\top \mathbf{A}\, \mathbf{p}_j}_{\textrm{content--position}}
-+ \underbrace{\mathbf{p}_i^\top \mathbf{A}\, \mathbf{x}_j}_{\textrm{position--content}}
+&= \underbrace{\mathbf{x}_i^\top \mathbf{A}\, \mathbf{x}_j}_{\textrm{content--content}}
++ \underbrace{\mathbf{x}_i^\top \mathbf{A}\, \mathbf{p}_j}_{\textrm{content--position}} \\
+&\quad + \underbrace{\mathbf{p}_i^\top \mathbf{A}\, \mathbf{x}_j}_{\textrm{position--content}}
 + \underbrace{\mathbf{p}_i^\top \mathbf{A}\, \mathbf{p}_j}_{\textrm{position--position}}.
+\end{aligned}
 $$
 :eqlabel:`eq_pos-four-terms`
 
@@ -221,7 +223,10 @@ each query and key into $d_h/2$ pairs and rotates pair $m$ at position $i$ by
 $i\omega_m$ with $\omega_m = 10000^{-2m/d_h}$ (:numref:`fig_rope-rotation`):
 
 $$
-\mathbf{R}_i = \begin{bmatrix} R(i\omega_0) & & \\ & \ddots & \\ & & R(i\omega_{d_h/2-1}) \end{bmatrix}, \qquad R(\alpha) = \begin{bmatrix} \cos\alpha & -\sin\alpha \\ \sin\alpha & \cos\alpha \end{bmatrix}.
+\begin{aligned}
+\mathbf{R}_i &= \begin{bmatrix} R(i\omega_0) & & \\ & \ddots & \\ & & R(i\omega_{d_h/2-1}) \end{bmatrix}, \\
+R(\alpha) &= \begin{bmatrix} \cos\alpha & -\sin\alpha \\ \sin\alpha & \cos\alpha \end{bmatrix}.
+\end{aligned}
 $$
 :eqlabel:`eq_rope-def`
 

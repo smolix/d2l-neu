@@ -488,7 +488,12 @@ A few hundred thousand steps is a great deal of experience for a task this small
 
 A continuous action also allows a second way to differentiate an expected reward. Consider a single state, a Gaussian policy $a \sim \mathcal{N}(\mu, \sigma^2)$, and a known differentiable reward $Q(a)$. The gradient of $\mathbb{E}[Q(a)]$ with respect to $\mu$ has two equivalent forms:
 
-$$\nabla_\mu\, \mathbb{E}\big[ Q(a) \big] = \mathbb{E}\Big[ Q(a)\, \frac{a - \mu}{\sigma^2} \Big] = \mathbb{E}\big[ Q'(\mu + \sigma z) \big], \qquad z \sim \mathcal{N}(0, 1).$$
+$$
+\begin{aligned}
+\nabla_\mu\, \mathbb{E}\big[ Q(a) \big] &= \mathbb{E}\Big[ Q(a)\, \frac{a - \mu}{\sigma^2} \Big] = \mathbb{E}\big[ Q'(\mu + \sigma z) \big], \\
+z &\sim \mathcal{N}(0, 1).
+\end{aligned}
+$$
 :eqlabel:`eq_score_vs_pathwise`
 
 The first equality is the score-function identity used throughout this chapter. The second substitutes $a = \mu + \sigma z$, which moves $\mu$ from the distribution into $Q$, and differentiates through the sample. This is the *pathwise* or reparameterization gradient :cite:`Kingma.Welling.2014`, and :numref:`fig_rl_score_vs_pathwise` shows where each estimator's gradient flows. With a known $Q$ both are unbiased. We compare their noise on $Q(a) = -(a - 1)^2$ at $\mu = 0$ and $\sigma = 0.5$, where the exact gradient is $2$:

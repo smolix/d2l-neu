@@ -47,7 +47,12 @@ This is the *value function* of $\pi$. The start state is arbitrary, so $V^\pi$ 
 
 The question at cell 9 compares commands, while $V^\pi$ averages over them. The *action value* pins the first action and follows the policy afterwards:
 
-$$Q^\pi(s_0, a_0) = r(s_0, a_0) + \mathbb{E}_{a_t \sim \pi(\cdot \mid s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=1}^\infty \gamma^t r(s_t, a_t) \Big].$$
+$$
+\begin{aligned}
+Q^\pi(s_0, a_0) &= r(s_0, a_0) \\
+&\quad + \mathbb{E}_{a_t \sim \pi(\cdot \mid s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=1}^\infty \gamma^t r(s_t, a_t) \Big].
+\end{aligned}
+$$
 
 The sum starts at $t = 1$ because the first reward is fixed by $a_0$: take the given action for one step, then follow the policy forever. Averaging the action value over the policy's own first action gives back the value,
 
@@ -64,12 +69,22 @@ $$V^\pi(s_0) = \mathbb{E}_{a_0 \sim \pi(\cdot \mid s_0)} \Big[ r(s_0, a_0) + \ga
 
 The outer expectation averages over the policy's choice of $a_0$; the inner one averages over the environment's next state $s_1$ given that action. For finite state and action spaces, the expectations are sums:
 
-$$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
+$$
+\begin{aligned}
+V^\pi(s) &= \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s') \Big], \\
+&\quad \textrm{for all } s \in \mathcal{S}.
+\end{aligned}
+$$
 :eqlabel:`eq_dynamic_programming_val`
 
 Conditioning also on the first action gives the corresponding equation for the action value:
 
-$$Q^\pi(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \sum_{a' \in \mathcal{A}} \pi(a' \mid s')\ Q^\pi(s', a');\ \textrm{ for all } s \in \mathcal{S}, a \in \mathcal{A}.$$
+$$
+\begin{aligned}
+Q^\pi(s, a) &= r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \sum_{a' \in \mathcal{A}} \pi(a' \mid s')\ Q^\pi(s', a'), \\
+&\quad \textrm{for all } s \in \mathcal{S}, a \in \mathcal{A}.
+\end{aligned}
+$$
 :eqlabel:`eq_dynamic_programming_q`
 
 These are the *Bellman expectation equations*. For a fixed policy, :eqref:`eq_dynamic_programming_val` is a system of $|\mathcal{S}|$ linear equations in the $|\mathcal{S}|$ unknowns $V^\pi(s)$: the infinite horizon has disappeared into the recursion.
@@ -100,7 +115,12 @@ An *optimal* policy maximizes the value. In principle the best policy could depe
 
 The value of a policy that depends on the history is defined by the same expected return. We write $V^* \equiv V^{\pi^*}$ and $Q^* \equiv Q^{\pi^*}$, and ask which equation $V^*$ satisfies. Two comparisons give the answer. First, the expectation equation of $\pi^*$ says that $V^*(s)$ equals the bracket $r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V^*(s')$ of the action $a = \pi^*(s)$, so $V^*(s)$ cannot exceed the largest bracket. Second, a policy that takes some action $a$ at $s$ once and follows $\pi^*$ afterwards has value equal to the bracket of $a$; by the proposition no policy beats $\pi^*$, so no bracket exceeds $V^*(s)$. Together, the two comparisons say that $V^*(s)$ is the largest bracket:
 
-$$V^*(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^*(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
+$$
+\begin{aligned}
+V^*(s) &= \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^*(s') \Big], \\
+&\quad \textrm{for all } s \in \mathcal{S}.
+\end{aligned}
+$$
 :eqlabel:`eq_bellman_optimality`
 
 This is the *Bellman optimality equation* :cite:`BellmanDPPaper,BellmanDPBook`. In words, the value of a state under optimal play is the value of the best first move followed by optimal play from wherever that move leads. Unlike the expectation form, the equation mentions no policy: it is an equation in the unknown table $V^*$, and it is nonlinear because of the maximum. The first comparison also shows that the action $\pi^*(s)$ attains the maximum. Given $V^*$, an optimal action is therefore found by one look-ahead with the model:
@@ -144,7 +164,12 @@ $$(\mathcal{T}V)(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma \sum_{s' \
 
 The optimality equation says $V^* = \mathcal{T}V^*$: the optimal value function is a *fixed point* of $\mathcal{T}$. The simplest way to look for a fixed point is to apply the map over and over. Start from $V_0 = 0$ and sweep
 
-$$V_{k+1}(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V_k(s') \Big];\ \textrm{for all } s \in \mathcal{S},$$
+$$
+\begin{aligned}
+V_{k+1}(s) &= \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V_k(s') \Big], \\
+&\quad \textrm{for all } s \in \mathcal{S},
+\end{aligned}
+$$
 :eqlabel:`eq_value_iteration`
 
 that is, $V_{k+1} = \mathcal{T}V_k$. This is *value iteration* :cite:`BellmanDPBook`. Each sweep performs one backup per state-action pair and keeps the best one per state. In code the sweep is one line, because `backup` computes all the brackets at once. The function returns every iterate, so that we can watch the values move:
@@ -285,7 +310,12 @@ Value iteration improves the policy implicitly, at every sweep. A second family 
 
 Replace the maximum in the sweep by the policy's own average, that is, apply $\mathcal{T}^\pi$ instead of $\mathcal{T}$:
 
-$$V^\pi_{k+1}(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^\pi_k(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
+$$
+\begin{aligned}
+V^\pi_{k+1}(s) &= \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^\pi_k(s') \Big], \\
+&\quad \textrm{for all } s \in \mathcal{S}.
+\end{aligned}
+$$
 :eqlabel:`eq_policy_eval`
 
 This is *policy evaluation*. It converges to $V^\pi$ from any start because $\mathcal{T}^\pi$ is a $\gamma$-contraction. The code is the value-iteration sweep with the maximum replaced by the average under `pi[s, a]`; we apply it to the uniformly random policy:

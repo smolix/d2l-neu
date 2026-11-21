@@ -579,15 +579,17 @@ posterior expectation as a ratio of two integrals and multiply and divide by
 $q$ inside both:
 
 $$
+\begin{aligned}
 \mathbb{E}_{p(\cdot\mid\mathcal D)}[h(\boldsymbol\theta)]
-=\frac{\int h\,\widetilde p\,d\boldsymbol\theta}{\int\widetilde p\,d\boldsymbol\theta}
+&=\frac{\int h\,\widetilde p\,d\boldsymbol\theta}{\int\widetilde p\,d\boldsymbol\theta}
 =\frac{\int h\,\frac{\widetilde p}{q}\,q\,d\boldsymbol\theta}
-      {\int\frac{\widetilde p}{q}\,q\,d\boldsymbol\theta}
-=\frac{\mathbb{E}_q[w(\boldsymbol\theta)h(\boldsymbol\theta)]}
+      {\int\frac{\widetilde p}{q}\,q\,d\boldsymbol\theta} \\
+&=\frac{\mathbb{E}_q[w(\boldsymbol\theta)h(\boldsymbol\theta)]}
      {\mathbb{E}_q[w(\boldsymbol\theta)]},
 \qquad
 w(\boldsymbol\theta)=\frac{\widetilde p(\boldsymbol\theta)}
                            {q(\boldsymbol\theta)}.
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-bayes-importance`
 
@@ -875,11 +877,13 @@ $\boldsymbol\theta'\ne\boldsymbol\theta$, a move occurs if and only if
 $\boldsymbol\theta'$ is proposed and accepted, so
 
 $$
+\begin{aligned}
 \pi(\boldsymbol\theta)\,T(\boldsymbol\theta'\mid\boldsymbol\theta)
-=\pi(\boldsymbol\theta)\,g(\boldsymbol\theta'\mid\boldsymbol\theta)\,
-\alpha(\boldsymbol\theta,\boldsymbol\theta')
-=\min\big\{\pi(\boldsymbol\theta)\,g(\boldsymbol\theta'\mid\boldsymbol\theta),\;
+&=\pi(\boldsymbol\theta)\,g(\boldsymbol\theta'\mid\boldsymbol\theta)\,
+\alpha(\boldsymbol\theta,\boldsymbol\theta') \\
+&=\min\big\{\pi(\boldsymbol\theta)\,g(\boldsymbol\theta'\mid\boldsymbol\theta),\;
 \pi(\boldsymbol\theta')\,g(\boldsymbol\theta\mid\boldsymbol\theta')\big\},
+\end{aligned}
 $$
 
 which is visibly symmetric in $\boldsymbol\theta$ and $\boldsymbol\theta'$.

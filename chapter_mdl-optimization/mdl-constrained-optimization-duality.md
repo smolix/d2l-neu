@@ -414,11 +414,11 @@ satisfies **Slater's condition** :cite:`Slater.1950` if there exists a point
 $\bar{\mathbf{x}}$ such that
 
 $$
-g_i(\bar{\mathbf{x}}) < 0 \;\textrm{ for every } g_i \textrm{ that is not affine},
-\qquad
-g_i(\bar{\mathbf{x}}) \le 0 \;\textrm{ for every affine } g_i,
-\qquad
-h_j(\bar{\mathbf{x}}) = 0 \;\textrm{ for every } j.
+\begin{aligned}
+g_i(\bar{\mathbf{x}}) &< 0 \quad\textrm{for every } g_i \textrm{ that is not affine}, \\
+g_i(\bar{\mathbf{x}}) &\le 0 \quad\textrm{for every affine } g_i, \\
+h_j(\bar{\mathbf{x}}) &= 0 \quad\textrm{for every } j.
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-opt-slater`
 
@@ -1392,7 +1392,7 @@ lasso with exact zeros that subgradient descent cannot attain.
    :eqref:`eq_mdl-opt-ista` for $F = s + \psi$. With
    $\mathbf{v}_1 = \mathbf{x}_0$ and $t_1 = 1$, it iterates for $k \ge 1$
 
-   $$\mathbf{x}_k = \mathrm{prox}_{\eta \psi}\bigl(\mathbf{v}_k - \eta \nabla s(\mathbf{v}_k)\bigr), \qquad t_{k+1} = \tfrac12\Bigl(1 + \sqrt{1 + 4t_k^2}\Bigr), \qquad \mathbf{v}_{k+1} = \mathbf{x}_k + \frac{t_k - 1}{t_{k+1}}\,(\mathbf{x}_k - \mathbf{x}_{k-1}).$$
+   $$\begin{aligned}\mathbf{x}_k &= \mathrm{prox}_{\eta \psi}\bigl(\mathbf{v}_k - \eta \nabla s(\mathbf{v}_k)\bigr), \\ t_{k+1} &= \tfrac12\Bigl(1 + \sqrt{1 + 4t_k^2}\Bigr), \\ \mathbf{v}_{k+1} &= \mathbf{x}_k + \frac{t_k - 1}{t_{k+1}}\,(\mathbf{x}_k - \mathbf{x}_{k-1}).\end{aligned}$$
 
    With $\eta = 1/L$ its objective gap satisfies
    $F(\mathbf{x}_k) - F^\star \le 2L\|\mathbf{x}_0 - \mathbf{x}^\star\|^2/(k+1)^2$,

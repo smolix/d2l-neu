@@ -68,7 +68,7 @@ If you are running MXNet on an Apple Silicon Mac, synchronize against its dedica
 uv pip sync pylock.cpu-macos.toml
 ```
 
-For MXNet on Linux, `pylock.cpu.toml` uses the Linux `x86-64` wheel distributed with the [smolix/mxnet release](https://github.com/smolix/mxnet/releases/tag/mxnet-2.0.0.zombie.1). Note that MXNet builds are available only for Linux (`x86-64`) and macOS (Apple Silicon); on Windows, please use PyTorch, JAX, or TensorFlow, or run the notebooks in a hosted cloud environment. For PyTorch, JAX, and TensorFlow, `pylock.cpu.toml` automatically selects the appropriate packages for your operating system and architecture.
+For MXNet on Linux, `pylock.cpu.toml` uses the Linux `x86-64` wheel distributed with our [maintained MXNet 2.0 release](https://github.com/smolix/mxnet/releases/tag/mxnet-2.0.0.zombie.1). Note that MXNet builds are available only for Linux (`x86-64`) and macOS (Apple Silicon); on Windows, please use PyTorch, JAX, or TensorFlow, or run the notebooks in a hosted cloud environment. For PyTorch, JAX, and TensorFlow, `pylock.cpu.toml` automatically selects the appropriate packages for your operating system and architecture.
 
 Once the environment is synchronized, launch JupyterLab:
 
@@ -99,7 +99,7 @@ You do not need a separate virtual environment to switch from CPU to GPU: runnin
 * **PyTorch:** CUDA 12.8 wheels.
 * **JAX:** the CUDA 12 pip distribution.
 * **TensorFlow:** the `and-cuda` distribution with its bundled CUDA libraries.
-* **MXNet:** the CUDA 13.3 Blackwell build from `smolix/mxnet`.
+* **MXNet:** the maintained CUDA 13.3 build from `smolix/mxnet`.
 
 Because GPU software stacks depend on your operating system, kernel driver, and GPU architecture, the pinned lock file may occasionally differ from what your specific machine requires. If `pylock.gpu.toml` does not match your hardware or OS, consult the official installation guide for [PyTorch](https://pytorch.org/get-started/locally/), [JAX](https://docs.jax.dev/en/latest/installation.html), or [TensorFlow](https://www.tensorflow.org/install/pip). You can always use the CPU lock file for the early chapters and switch to a hosted notebook (:numref:`sec_hosted_notebooks`) or a cloud GPU instance (:numref:`sec_cloud_instances`) when you reach the more compute-intensive chapters later in the book.
 

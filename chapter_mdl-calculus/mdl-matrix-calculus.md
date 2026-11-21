@@ -579,10 +579,12 @@ so $\nabla_{\mathbf x}\,\mathbf a^\top\mathbf x=\mathbf a$. For a quadratic
 form, the product rule hits both copies of $\mathbf x$:
 
 $$
+\begin{aligned}
 d(\mathbf x^\top\mathbf A\mathbf x)
-=d\mathbf x^\top\mathbf A\mathbf x+\mathbf x^\top\mathbf A\,d\mathbf x
-=\mathbf x^\top\mathbf A^\top d\mathbf x+\mathbf x^\top\mathbf A\,d\mathbf x
-=\bigl\langle(\mathbf A+\mathbf A^\top)\mathbf x,\ d\mathbf x\bigr\rangle.
+&=d\mathbf x^\top\mathbf A\mathbf x+\mathbf x^\top\mathbf A\,d\mathbf x
+=\mathbf x^\top\mathbf A^\top d\mathbf x+\mathbf x^\top\mathbf A\,d\mathbf x \\
+&=\bigl\langle(\mathbf A+\mathbf A^\top)\mathbf x,\ d\mathbf x\bigr\rangle.
+\end{aligned}
 $$
 
 In the second equality we transposed a $1\times1$ matrix:

@@ -220,10 +220,11 @@ score of *noised* data meets both requirements. Perturb each sample with
 Gaussian noise of scale $\sigma$:
 
 $$
-\tilde{\mathbf{x}} = \mathbf{x} + \sigma \boldsymbol{\epsilon}, \qquad
-\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}), \qquad
-\textrm{so}\quad
-p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) = \mathcal{N}(\tilde{\mathbf{x}};\, \mathbf{x},\, \sigma^2 \mathbf{I}).
+\begin{aligned}
+\tilde{\mathbf{x}} &= \mathbf{x} + \sigma \boldsymbol{\epsilon}, \qquad
+\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}), \\
+p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) &= \mathcal{N}(\tilde{\mathbf{x}};\, \mathbf{x},\, \sigma^2 \mathbf{I}).
+\end{aligned}
 $$
 
 The noised marginal
@@ -244,10 +245,12 @@ produced it, and we know it for every pair we generate. **Denoising score
 matching** (DSM) uses it as a regression target:
 
 $$
+\begin{aligned}
 J_{\mathrm{DSM}}(\boldsymbol{\theta})
-= \tfrac12\,\mathbb{E}_{\mathbf{x} \sim p,\ \tilde{\mathbf{x}} \sim p_\sigma(\cdot \mid \mathbf{x})}
-\left[\, \left\| \mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}})
+&= \tfrac12\,\mathbb{E}_{\mathbf{x} \sim p,\ \tilde{\mathbf{x}} \sim p_\sigma(\cdot \mid \mathbf{x})} \\
+&\quad \left[\, \left\| \mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}})
 - \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) \right\|^2 \right].
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-dsm-loss`
 
@@ -307,11 +310,13 @@ the conditional scores*. Writing the posterior $p(\mathbf{x} \mid \tilde{\mathbf
 Bayes' rule and then exchanging gradient and integral,
 
 $$
+\begin{aligned}
 \mathbb{E}\left[ Y \mid \tilde{\mathbf{x}} \right]
-= \int \frac{\nabla_{\tilde{\mathbf{x}}}\, p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})}{p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})}
-\; \frac{p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})\, p(\mathbf{x})}{p_\sigma(\tilde{\mathbf{x}})}\, d\mathbf{x}
-= \frac{\nabla_{\tilde{\mathbf{x}}} \int p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})\, p(\mathbf{x})\, d\mathbf{x}}{p_\sigma(\tilde{\mathbf{x}})}
+&= \int \frac{\nabla_{\tilde{\mathbf{x}}}\, p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})}{p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})}
+\; \frac{p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})\, p(\mathbf{x})}{p_\sigma(\tilde{\mathbf{x}})}\, d\mathbf{x} \\
+&= \frac{\nabla_{\tilde{\mathbf{x}}} \int p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})\, p(\mathbf{x})\, d\mathbf{x}}{p_\sigma(\tilde{\mathbf{x}})}
 = \nabla \log p_\sigma(\tilde{\mathbf{x}}).
+\end{aligned}
 $$
 
 $\blacksquare$
@@ -1288,11 +1293,12 @@ $p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t)$ of noisy inputs and scales it
 by a **guidance scale** $\gamma$:
 
 $$
+\begin{aligned}
 \tilde{\mathbf{s}}(\mathbf{x}, t)
-= \nabla \log p_t(\mathbf{x}) + \gamma\, \nabla \log p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t),
-\qquad
-\tilde{\mathbf{s}} = \nabla \log \tilde p_t,\quad
+&= \nabla \log p_t(\mathbf{x}) + \gamma\, \nabla \log p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t), \\
+\tilde{\mathbf{s}} &= \nabla \log \tilde p_t,\qquad
 \tilde p_t(\mathbf{x}) \propto p_t(\mathbf{x})\, p_{\boldsymbol{\phi}}(y \mid \mathbf{x}, t)^{\gamma}.
+\end{aligned}
 $$
 
 With $\gamma = 1$ this is Bayes' rule. With $\gamma > 1$ the guided field is
@@ -1577,7 +1583,7 @@ follows densities that curve more sharply than any noised density can.
    marginals $p_t$ on $[0, T]$. In reverse time $\bar t = T - t$, the exact
    reversal and the model are
 
-   $$d\mathbf{x} = \left[ -\mathbf{f} + g^2\, \nabla \log p_t \right] d\bar t + g\, d\mathbf{B}_{\bar t}, \qquad d\mathbf{x} = \left[ -\mathbf{f} + g^2\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t) \right] d\bar t + g\, d\mathbf{B}_{\bar t},$$
+   $$\begin{aligned}d\mathbf{x} &= \left[ -\mathbf{f} + g^2\, \nabla \log p_t \right] d\bar t + g\, d\mathbf{B}_{\bar t}, \\ d\mathbf{x} &= \left[ -\mathbf{f} + g^2\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t) \right] d\bar t + g\, d\mathbf{B}_{\bar t},\end{aligned}$$
 
    evaluated at $t = T - \bar t$. The first has marginals $p_t$; the second,
    started from a prior $\pi$ at $\bar t = 0$, has marginals $q_t$. Assume that
@@ -1592,7 +1598,7 @@ follows densities that curve more sharply than any noised density can.
        $\tfrac12 g^2\, \mathbb{E}_{p_t} \| \mathbf{s}_{\boldsymbol{\theta}} - \nabla \log p_t \|^2$,
        integrate over $\bar t$, and obtain
 
-       $$D_{\textrm{KL}}(p_0 \,\|\, q_0) \le D_{\textrm{KL}}(p_T \,\|\, \pi) + \frac12 \int_0^T g(t)^2\, \mathbb{E}_{p_t} \left\| \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \nabla \log p_t(\mathbf{x}) \right\|^2 dt.$$
+       $$\begin{aligned}D_{\textrm{KL}}(p_0 \,\|\, q_0) &\le D_{\textrm{KL}}(p_T \,\|\, \pi) \\ &\quad + \frac12 \int_0^T g(t)^2\, \mathbb{E}_{p_t} \left\| \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \nabla \log p_t(\mathbf{x}) \right\|^2 dt.\end{aligned}$$
 
        Under which condition on $q_t$ is the bound of the derivative tight?
     1. Repeat (a) and (b) for the probability-flow ODE with

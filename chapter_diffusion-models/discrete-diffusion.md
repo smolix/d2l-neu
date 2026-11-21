@@ -81,9 +81,11 @@ The posterior of one step given both of its ends follows from Bayes' rule
 and the Markov property,
 
 $$
+\begin{aligned}
 q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)
-= \frac{q(\mathbf{x}_t \mid \mathbf{x}_{t-1})\, q(\mathbf{x}_{t-1} \mid \mathbf{x}_0)}{q(\mathbf{x}_t \mid \mathbf{x}_0)}
-= \mathrm{Cat}\!\left(\mathbf{x}_{t-1};\ \frac{\mathbf{x}_t \mathbf{Q}_t^\top \odot \mathbf{x}_0 \bar{\mathbf{Q}}_{t-1}}{\mathbf{x}_0 \bar{\mathbf{Q}}_t \mathbf{x}_t^\top}\right),
+&= \frac{q(\mathbf{x}_t \mid \mathbf{x}_{t-1})\, q(\mathbf{x}_{t-1} \mid \mathbf{x}_0)}{q(\mathbf{x}_t \mid \mathbf{x}_0)} \\
+&= \mathrm{Cat}\!\left(\mathbf{x}_{t-1};\ \frac{\mathbf{x}_t \mathbf{Q}_t^\top \odot \mathbf{x}_0 \bar{\mathbf{Q}}_{t-1}}{\mathbf{x}_0 \bar{\mathbf{Q}}_t \mathbf{x}_t^\top}\right),
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-discrete-posterior`
 
@@ -171,10 +173,12 @@ the all-mask sequence. :numref:`sec_diffusion-design-space` bounded the
 negative log-likelihood of such a chain by
 
 $$
+\begin{aligned}
 -\log p_{\boldsymbol{\theta}}(\mathbf{x}_0) \leq L_{\textrm{VLB}}
-= D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0)\, \|\, p(\mathbf{x}_T)\big)
-+ \sum_{t=2}^{T} \mathbb{E}_q\Big[D_{\textrm{KL}}\big(q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)\, \|\, p_{\boldsymbol{\theta}}(\mathbf{x}_{t-1} \mid \mathbf{x}_t)\big)\Big]
-+ \mathbb{E}_q\big[-\log p_{\boldsymbol{\theta}}(\mathbf{x}_0 \mid \mathbf{x}_1)\big].
+&= D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0)\, \|\, p(\mathbf{x}_T)\big) \\
+&\quad + \sum_{t=2}^{T} \mathbb{E}_q\Big[D_{\textrm{KL}}\big(q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0)\, \|\, p_{\boldsymbol{\theta}}(\mathbf{x}_{t-1} \mid \mathbf{x}_t)\big)\Big] \\
+&\quad + \mathbb{E}_q\big[-\log p_{\boldsymbol{\theta}}(\mathbf{x}_0 \mid \mathbf{x}_1)\big].
+\end{aligned}
 $$
 
 This is the negative of the evidence lower bound of
@@ -217,9 +221,10 @@ If $\mathbf{x}_t = \mathbf{x}_0$, then $\mathbf{x}_{t-1} = \mathbf{x}_0$
 with probability one. If $\mathbf{x}_t = [\textrm{M}]$, then*
 
 $$
-q(\mathbf{x}_{t-1} = \mathbf{x}_0 \mid \mathbf{x}_t = [\textrm{M}], \mathbf{x}_0) = \frac{\bar{\alpha}_{t-1} - \bar{\alpha}_t}{1 - \bar{\alpha}_t},
-\qquad
-q(\mathbf{x}_{t-1} = [\textrm{M}] \mid \mathbf{x}_t = [\textrm{M}], \mathbf{x}_0) = \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t},
+\begin{aligned}
+q(\mathbf{x}_{t-1} = \mathbf{x}_0 \mid \mathbf{x}_t = [\textrm{M}], \mathbf{x}_0) &= \frac{\bar{\alpha}_{t-1} - \bar{\alpha}_t}{1 - \bar{\alpha}_t}, \\
+q(\mathbf{x}_{t-1} = [\textrm{M}] \mid \mathbf{x}_t = [\textrm{M}], \mathbf{x}_0) &= \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t},
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-masked-posterior`
 
@@ -263,9 +268,11 @@ $\bar{\alpha}_0 = 1$, $\bar{\alpha}_t < 1$ for $t \geq 1$, and
 $\bar{\alpha}_T = 0$, and the reverse model just described,*
 
 $$
+\begin{aligned}
 L_{\textrm{VLB}}
-= \sum_{t=1}^{T} \frac{\bar{\alpha}_{t-1} - \bar{\alpha}_t}{1 - \bar{\alpha}_t}\;
+&= \sum_{t=1}^{T} \frac{\bar{\alpha}_{t-1} - \bar{\alpha}_t}{1 - \bar{\alpha}_t}\;
 \mathbb{E}_{q(\mathbf{x}_t \mid \mathbf{x}_0)}\Big[ \sum_{i \,:\, \mathbf{x}_t^i = [\textrm{M}]} -\log p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t) \Big].
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-masked-loss`
 
@@ -284,10 +291,12 @@ $w_t\, p_{\boldsymbol{\theta}}(\cdot \mid \mathbf{x}_t)$ on the tokens;
 hence
 
 $$
+\begin{aligned}
 D_{\textrm{KL}}
-= (1 - w_t) \log \frac{1 - w_t}{1 - w_t}
-+ w_t \log \frac{w_t}{w_t\, p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)}
-= -w_t \log p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t).
+&= (1 - w_t) \log \frac{1 - w_t}{1 - w_t}
++ w_t \log \frac{w_t}{w_t\, p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t)} \\
+&= -w_t \log p_{\boldsymbol{\theta}}(\mathbf{x}_0^i \mid \mathbf{x}_t).
+\end{aligned}
 $$
 
 This accounts for $t = 2, \ldots, T$. The reconstruction term is
@@ -552,8 +561,10 @@ probable under its own marginal, and redraws the other from its
 conditional given the kept one. Its output table is
 
 $$
-q(a, b) = p^1(a)\, P\big(p^2(B) \leq p^1(a)\big)\, p(b \mid a)
-+ p^2(b)\, P\big(p^1(A) < p^2(b)\big)\, p(a \mid b),
+\begin{aligned}
+q(a, b) &= p^1(a)\, P\big(p^2(B) \leq p^1(a)\big)\, p(b \mid a) \\
+&\quad + p^2(b)\, P\big(p^1(A) < p^2(b)\big)\, p(a \mid b),
+\end{aligned}
 $$
 
 where the first term keeps the draw $a$ of the first token and the second

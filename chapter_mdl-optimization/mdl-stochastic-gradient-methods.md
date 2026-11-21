@@ -549,13 +549,14 @@ also starts at $\eta_0$; **cosine decay** :cite:`Loshchilov.Hutter.2016`; and
 constant for the first $80\%$ of the budget and then decays linearly to zero:
 
 $$
-\eta_k^{\textrm{cos}} = \tfrac12 \eta_0 \Big(1 + \cos\frac{\pi k}{K}\Big),
-\qquad
-\eta_k^{\textrm{WSD}} =
+\begin{aligned}
+\eta_k^{\textrm{cos}} &= \tfrac12 \eta_0 \Big(1 + \cos\frac{\pi k}{K}\Big), \\
+\eta_k^{\textrm{WSD}} &=
 \begin{cases}
 \eta_0, & k < 0.8K, \\
 \eta_0\, \dfrac{K - k}{0.2K}, & k \ge 0.8K.
 \end{cases}
+\end{aligned}
 $$
 
 Both cosine and WSD start at $\eta_0$ and end at zero, but cosine decays

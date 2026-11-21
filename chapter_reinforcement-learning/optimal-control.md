@@ -53,7 +53,12 @@ $$V_t(\mathbf{x}) = \min_{\mathbf{u} \in \mathbb{R}^m} \Big\{ \mathbf{x}^\top \m
 
 Suppose by backward induction that $V_{t+1}(\mathbf{x}') = {\mathbf{x}'}^\top \mathbf{P}_{t+1} \mathbf{x}'$ for a symmetric positive-semidefinite matrix $\mathbf{P}_{t+1} \succeq \mathbf{0}$. Substituting $\mathbf{x}' = \mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u}$ expands the bracketed action-value function $Q_t(\mathbf{x}, \mathbf{u})$ into a strictly convex quadratic in $\mathbf{u}$:
 
-$$Q_t(\mathbf{x}, \mathbf{u}) = \mathbf{x}^\top(\mathbf{Q} + \mathbf{A}^\top \mathbf{P}_{t+1}\mathbf{A})\mathbf{x} + 2\mathbf{u}^\top \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{A}\mathbf{x} + \mathbf{u}^\top(\mathbf{R} + \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{B})\mathbf{u}.$$
+$$
+\begin{aligned}
+Q_t(\mathbf{x}, \mathbf{u}) &= \mathbf{x}^\top(\mathbf{Q} + \mathbf{A}^\top \mathbf{P}_{t+1}\mathbf{A})\mathbf{x} + 2\mathbf{u}^\top \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{A}\mathbf{x} \\
+&\quad + \mathbf{u}^\top(\mathbf{R} + \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{B})\mathbf{u}.
+\end{aligned}
+$$
 
 Setting the gradient with respect to $\mathbf{u}$ to zero, $\nabla_{\mathbf{u}} Q_t(\mathbf{x}, \mathbf{u}) = 2(\mathbf{R} + \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{B})\mathbf{u} + 2\mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{A}\mathbf{x} = \mathbf{0}$, yields the unique optimal control in closed form:
 
@@ -62,7 +67,12 @@ $$\mathbf{u}_t^* = -\mathbf{K}_t \mathbf{x}_t, \qquad \mathbf{K}_t = (\mathbf{R}
 
 Substituting $\mathbf{u} = -\mathbf{K}_t \mathbf{x}$ back into $Q_t(\mathbf{x}, \mathbf{u})$ confirms that $V_t(\mathbf{x}) = \mathbf{x}^\top \mathbf{P}_t \mathbf{x}$ remains purely quadratic, where $\mathbf{P}_t$ obeys the backward *discrete-time Riccati recursion*:
 
-$$\mathbf{P}_t = \mathbf{Q} + \mathbf{A}^\top \mathbf{P}_{t+1}\mathbf{A} - \mathbf{A}^\top \mathbf{P}_{t+1}\mathbf{B}(\mathbf{R} + \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{B})^{-1}\mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{A}.$$
+$$
+\begin{aligned}
+\mathbf{P}_t &= \mathbf{Q} + \mathbf{A}^\top \mathbf{P}_{t+1}\mathbf{A} \\
+&\quad - \mathbf{A}^\top \mathbf{P}_{t+1}\mathbf{B}(\mathbf{R} + \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{B})^{-1}\mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{A}.
+\end{aligned}
+$$
 :eqlabel:`eq_riccati_recursion`
 
 Three properties of :eqref:`eq_lqr_gain` and :eqref:`eq_riccati_recursion` deserve emphasis:
@@ -128,14 +138,24 @@ Look at the two components of the stationary feedback law $u_t^* = -k_p p_t - k_
 
 Now consider the nonlinear pendulum of :numref:`sec_deeprl`, with state $\mathbf{x}_t = (\vartheta_t, \dot\vartheta_t)^\top$ measured from the upright vertical ($\vartheta = 0$ upright, $\vartheta = \pi$ hanging straight down) and torque $u_t \in [-2, 2]$. Over one simulator step of $\Delta t = 0.05\text{ s}$ with gravity $g = 10$, mass $m = 1$, and rod length $l = 1$, the semi-implicit Euler transition $f(\mathbf{x}_t, u_t)$ is
 
-$$\dot\vartheta_{t+1} = \dot\vartheta_t + \Big(\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t\Big)\Delta t, \qquad \vartheta_{t+1} = \vartheta_t + \dot\vartheta_{t+1}\Delta t,$$
+$$
+\begin{aligned}
+\dot\vartheta_{t+1} &= \dot\vartheta_t + \Big(\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t\Big)\Delta t, \\
+\vartheta_{t+1} &= \vartheta_t + \dot\vartheta_{t+1}\Delta t,
+\end{aligned}
+$$
 :eqlabel:`eq_pendulum_discrete`
 
 and the one-step cost is $c(\mathbf{x}_t, u_t) = \vartheta_t^2 + 0.1\,\dot\vartheta_t^2 + 0.001\,u_t^2$, so $\mathbf{Q} = \textrm{diag}(1.0, 0.1)$ and $\mathbf{R} = [[0.001]]$.
 
 The upright posture $\mathbf{x}^* = (0, 0)^\top$ with zero torque $u^* = 0$ is a fixed point, $f(\mathbf{x}^*, u^*) = \mathbf{x}^*$. Near any reference pair $(\bar{\mathbf{x}}, \bar{u})$, a first-order Taylor expansion approximates the nonlinear transition by a local linear model in the deviations $\delta\mathbf{x}_t = \mathbf{x}_t - \bar{\mathbf{x}}$ and $\delta u_t = u_t - \bar{u}$:
 
-$$f(\mathbf{x}_t, u_t) - f(\bar{\mathbf{x}}, \bar{u}) \approx \mathbf{A}(\bar{\mathbf{x}}, \bar{u})\,\delta\mathbf{x}_t + \mathbf{B}(\bar{\mathbf{x}}, \bar{u})\,\delta u_t, \qquad \mathbf{A} = \frac{\partial f}{\partial \mathbf{x}}(\bar{\mathbf{x}}, \bar{u}), \quad \mathbf{B} = \frac{\partial f}{\partial u}(\bar{\mathbf{x}}, \bar{u}).$$
+$$
+\begin{aligned}
+f(\mathbf{x}_t, u_t) - f(\bar{\mathbf{x}}, \bar{u}) &\approx \mathbf{A}(\bar{\mathbf{x}}, \bar{u})\,\delta\mathbf{x}_t + \mathbf{B}(\bar{\mathbf{x}}, \bar{u})\,\delta u_t, \\
+\mathbf{A} &= \frac{\partial f}{\partial \mathbf{x}}(\bar{\mathbf{x}}, \bar{u}), \qquad \mathbf{B} = \frac{\partial f}{\partial u}(\bar{\mathbf{x}}, \bar{u}).
+\end{aligned}
+$$
 :eqlabel:`eq_local_linearization`
 
 Differentiating :eqref:`eq_pendulum_discrete` with respect to $(\vartheta_t, \dot\vartheta_t)$ and $u_t$ yields $\partial\dot\vartheta_{t+1}/\partial\vartheta_t = \frac{3g}{2l}\cos(\vartheta_t)\Delta t$ and $\partial\dot\vartheta_{t+1}/\partial u_t = \frac{3}{ml^2}\Delta t$:
@@ -205,13 +225,23 @@ To enforce the torque bound $u_t \in [-2, 2]$ smoothly without hard-clipping kin
 
 1. **Backward Riccati pass along $(\bar{\mathbf{x}}_{0:H}, \bar{v}_{0:H-1})$:** At each step $t = H-1, \ldots, 0$, compute the local Jacobians $\mathbf{A}_t = \frac{\partial f}{\partial \mathbf{x}}(\bar{\mathbf{x}}_t, \bar{v}_t)$ and $\mathbf{B}_t = \frac{\partial f}{\partial v}(\bar{\mathbf{x}}_t, \bar{v}_t)$, and form a second-order Taylor approximation of the action-value perturbation $\delta Q_t(\delta\mathbf{x}_t, \delta v_t)$ from the stage cost gradients $(\boldsymbol{\ell}_{\mathbf{x},t}, \ell_{v,t})$, Hessians $(\mathbf{L}_{\mathbf{x}\mathbf{x},t}, \ell_{vv,t})$, and the next step's value gradient $\mathbf{v}_{\mathbf{x},t+1}$ and Hessian $\mathbf{V}_{\mathbf{x}\mathbf{x},t+1}$:
 
-   $$\mathbf{q}_{\mathbf{x},t} = \boldsymbol{\ell}_{\mathbf{x},t} + \mathbf{A}_t^\top \mathbf{v}_{\mathbf{x},t+1}, \qquad q_{v,t} = \ell_{v,t} + \mathbf{B}_t^\top \mathbf{v}_{\mathbf{x},t+1},$$
-   $$\mathbf{Q}_{\mathbf{x}\mathbf{x},t} = \mathbf{L}_{\mathbf{x}\mathbf{x},t} + \mathbf{A}_t^\top \mathbf{V}_{\mathbf{x}\mathbf{x},t+1}\mathbf{A}_t, \quad \mathbf{q}_{v\mathbf{x},t} = \mathbf{B}_t^\top \mathbf{V}_{\mathbf{x}\mathbf{x},t+1}\mathbf{A}_t, \quad q_{vv,t} = \ell_{vv,t} + \mu + \mathbf{B}_t^\top \mathbf{V}_{\mathbf{x}\mathbf{x},t+1}\mathbf{B}_t,$$
+   $$
+   \begin{aligned}
+   \mathbf{q}_{\mathbf{x},t} &= \boldsymbol{\ell}_{\mathbf{x},t} + \mathbf{A}_t^\top \mathbf{v}_{\mathbf{x},t+1}, \qquad q_{v,t} = \ell_{v,t} + \mathbf{B}_t^\top \mathbf{v}_{\mathbf{x},t+1}, \\
+   \mathbf{Q}_{\mathbf{x}\mathbf{x},t} &= \mathbf{L}_{\mathbf{x}\mathbf{x},t} + \mathbf{A}_t^\top \mathbf{V}_{\mathbf{x}\mathbf{x},t+1}\mathbf{A}_t, \qquad \mathbf{q}_{v\mathbf{x},t} = \mathbf{B}_t^\top \mathbf{V}_{\mathbf{x}\mathbf{x},t+1}\mathbf{A}_t, \\
+   q_{vv,t} &= \ell_{vv,t} + \mu + \mathbf{B}_t^\top \mathbf{V}_{\mathbf{x}\mathbf{x},t+1}\mathbf{B}_t,
+   \end{aligned}
+   $$
 
    where $\mu > 0$ is a Levenberg–Marquardt damping term. Minimizing over $\delta v_t$ gives an open-loop feedforward step $k_t = -q_{v,t}/q_{vv,t}$ and a local linear feedback gain $\mathbf{K}_t = -\mathbf{q}_{v\mathbf{x},t}/q_{vv,t}$.
 2. **Forward rollout with backtracking line search:** Because the linear model is only accurate near $(\bar{\mathbf{x}}_t, \bar{v}_t)$, we roll out the *true nonlinear dynamics* with step size $\alpha \in \{1, 1/2, 1/4, \ldots\}$,
 
-   $$v_t^{\textrm{new}} = \bar{v}_t + \alpha\, k_t + \mathbf{K}_t(\mathbf{x}_t^{\textrm{new}} - \bar{\mathbf{x}}_t), \qquad \mathbf{x}_{t+1}^{\textrm{new}} = f(\mathbf{x}_t^{\textrm{new}}, v_t^{\textrm{new}}),$$
+   $$
+   \begin{aligned}
+   v_t^{\textrm{new}} &= \bar{v}_t + \alpha\, k_t + \mathbf{K}_t(\mathbf{x}_t^{\textrm{new}} - \bar{\mathbf{x}}_t), \\
+   \mathbf{x}_{t+1}^{\textrm{new}} &= f(\mathbf{x}_t^{\textrm{new}}, v_t^{\textrm{new}}),
+   \end{aligned}
+   $$
    :eqlabel:`eq_ilqr_forward`
 
    and accept the first $\alpha$ that decreases the true nonlinear trajectory cost.

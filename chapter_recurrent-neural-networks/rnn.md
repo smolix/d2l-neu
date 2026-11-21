@@ -102,7 +102,12 @@ $\mathbf{H}_{t-1} \in \mathbb{R}^{b \times h}$ back into the layer via a
 recurrent weight matrix
 $\mathbf{W}_{\textrm{hh}} \in \mathbb{R}^{h \times h}$:
 
-$$\mathbf{H}_t = \phi(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} + \mathbf{b}_\textrm{h}), \qquad \mathbf{O}_t = \mathbf{H}_t \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}.$$
+$$
+\begin{aligned}
+\mathbf{H}_t &= \phi(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} + \mathbf{b}_\textrm{h}), \\
+\mathbf{O}_t &= \mathbf{H}_t \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}.
+\end{aligned}
+$$
 :eqlabel:`rnn_h_with_state`
 
 Because the same five parameter tensors—$\mathbf{W}_{\textrm{xh}}$,

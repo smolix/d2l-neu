@@ -420,9 +420,11 @@ objective, and its expectation under the true data-generating density
 $p_\star$ is
 
 $$
+\begin{aligned}
 \mathbb{E}_{x\sim p_\star}\big[-\log p(x\mid\boldsymbol{\theta})\big]
-  = h(p_\star) + D_{\textrm{KL}}(p_\star\,\|\,p_{\boldsymbol{\theta}}),
-\qquad h(p_\star) = -\int p_\star(x)\log p_\star(x)\,dx,
+  &= h(p_\star) + D_{\textrm{KL}}(p_\star\,\|\,p_{\boldsymbol{\theta}}), \\
+h(p_\star) &= -\int p_\star(x)\log p_\star(x)\,dx,
+\end{aligned}
 $$
 
 by the same add-and-subtract argument with integrals replacing sums. Because
@@ -520,11 +522,13 @@ expected value is zero. To see why, differentiate the normalization condition
 $\int p(x\mid\boldsymbol{\theta})\,dx = 1$ under the integral sign:
 
 $$
+\begin{aligned}
 \mathbf 0
-  = \nabla_{\boldsymbol{\theta}} \int p(x\mid\boldsymbol{\theta})\,dx
-  = \int \nabla_{\boldsymbol{\theta}}\, p(x\mid\boldsymbol{\theta})\,dx
-  = \int s(x;\boldsymbol{\theta})\, p(x\mid\boldsymbol{\theta})\,dx
+  &= \nabla_{\boldsymbol{\theta}} \int p(x\mid\boldsymbol{\theta})\,dx
+  = \int \nabla_{\boldsymbol{\theta}}\, p(x\mid\boldsymbol{\theta})\,dx \\
+  &= \int s(x;\boldsymbol{\theta})\, p(x\mid\boldsymbol{\theta})\,dx
   = \mathbb{E}_{\boldsymbol{\theta}}\!\big[\,s(x;\boldsymbol{\theta})\,\big],
+\end{aligned}
 $$
 
 where the third equality uses the log-derivative identity
@@ -535,9 +539,11 @@ score has mean zero, its covariance matrix equals its second moment. That
 covariance is the **Fisher information** :cite:`Fisher.1928`,
 
 $$
-I(\boldsymbol{\theta}) = \textrm{Var}_{\boldsymbol{\theta}}\!\big[\,s(x;\boldsymbol{\theta})\,\big]
-  = \mathbb{E}_{\boldsymbol{\theta}}\!\big[\,s(x;\boldsymbol{\theta})\,s(x;\boldsymbol{\theta})^\top\,\big]
-  = -\,\mathbb{E}_{\boldsymbol{\theta}}\!\big[\nabla^2_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})\big].
+\begin{aligned}
+I(\boldsymbol{\theta}) &= \textrm{Var}_{\boldsymbol{\theta}}\!\big[\,s(x;\boldsymbol{\theta})\,\big]
+  = \mathbb{E}_{\boldsymbol{\theta}}\!\big[\,s(x;\boldsymbol{\theta})\,s(x;\boldsymbol{\theta})^\top\,\big] \\
+  &= -\,\mathbb{E}_{\boldsymbol{\theta}}\!\big[\nabla^2_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})\big].
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-fisher`
 
@@ -549,10 +555,12 @@ derivative inside the integral. The product rule splits the derivative into
 two terms,
 
 $$
+\begin{aligned}
 \mathbf 0
-  = \nabla_{\boldsymbol{\theta}} \int s(x;\boldsymbol{\theta})\,p(x\mid\boldsymbol{\theta})\,dx
-  = \int \nabla^2_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})\; p(x\mid\boldsymbol{\theta})\,dx
+  &= \nabla_{\boldsymbol{\theta}} \int s(x;\boldsymbol{\theta})\,p(x\mid\boldsymbol{\theta})\,dx \\
+  &= \int \nabla^2_{\boldsymbol{\theta}} \log p(x\mid\boldsymbol{\theta})\; p(x\mid\boldsymbol{\theta})\,dx
   + \int s(x;\boldsymbol{\theta})\,\big(\nabla_{\boldsymbol{\theta}}\, p(x\mid\boldsymbol{\theta})\big)^\top dx.
+\end{aligned}
 $$
 
 Substituting $\nabla_{\boldsymbol{\theta}}\, p = p\,s$ in the second integral
@@ -1108,11 +1116,13 @@ $\boldsymbol{\theta}$, maximizing the posterior and taking negative logarithms
 gives
 
 $$
+\begin{aligned}
 \hat{\boldsymbol{\theta}}_{\textrm{MAP}}
-  = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}}\, P(X\mid\boldsymbol{\theta})\,p(\boldsymbol{\theta})
-  = \mathop{\mathrm{argmin}}_{\boldsymbol{\theta}}\,
+  &= \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}}\, P(X\mid\boldsymbol{\theta})\,p(\boldsymbol{\theta}) \\
+  &= \mathop{\mathrm{argmin}}_{\boldsymbol{\theta}}\,
     \Big[\underbrace{-\textstyle\sum_i \log p(x_i\mid\boldsymbol{\theta})}_{\textrm{data fit (NLL)}}
        \;\underbrace{-\log p(\boldsymbol{\theta})}_{\textrm{penalty}}\Big].
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-map`
 

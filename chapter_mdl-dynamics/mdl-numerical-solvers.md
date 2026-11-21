@@ -152,9 +152,11 @@ subtract the Taylor identity above from the update
 :eqref:`eq_mdl-ode-euler-update`:
 
 $$
+\begin{aligned}
 \varepsilon_{n+1}
-\le \underbrace{\|\mathbf{x}_n - \mathbf{x}(t_n)\| + h\,\|\mathbf{f}(\mathbf{x}_n, t_n) - \mathbf{f}(\mathbf{x}(t_n), t_n)\|}_{\le\, (1 + hL)\, \varepsilon_n \textrm{ by Lipschitz}}
-\;+\; \underbrace{\|\mathbf{r}_n\|}_{\le\, Mh^2/2} .
+&\le \underbrace{\|\mathbf{x}_n - \mathbf{x}(t_n)\| + h\,\|\mathbf{f}(\mathbf{x}_n, t_n) - \mathbf{f}(\mathbf{x}(t_n), t_n)\|}_{\le\, (1 + hL)\, \varepsilon_n \textrm{ by Lipschitz}} \\
+&\quad + \underbrace{\|\mathbf{r}_n\|}_{\le\, Mh^2/2} .
+\end{aligned}
 $$
 
 Each step multiplies the existing error by at most $1 + hL$ and adds at most
@@ -265,11 +267,11 @@ $z=h\lambda$, one step of each method multiplies $y$ by its **stability
 function** $R(z)$:*
 
 $$
-R_{\textrm{Euler}}(z)=1+z,
-\qquad
-R_{\textrm{mid}}(z)=R_{\textrm{Heun}}(z)=1+z+\frac{z^2}{2},
-\qquad
-R_{\textrm{RK4}}(z)=1+z+\frac{z^2}{2}+\frac{z^3}{6}+\frac{z^4}{24}.
+\begin{aligned}
+R_{\textrm{Euler}}(z) &= 1+z, \qquad
+R_{\textrm{mid}}(z) = R_{\textrm{Heun}}(z) = 1+z+\frac{z^2}{2}, \\
+R_{\textrm{RK4}}(z) &= 1+z+\frac{z^2}{2}+\frac{z^3}{6}+\frac{z^4}{24}.
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-ode-stability-function`
 
@@ -565,10 +567,10 @@ $$
 \begin{aligned}
 \dot{\mathbf{x}} = -\nabla \mathcal L(\mathbf{x})
 \;\;&\xrightarrow{\textrm{linearize}}\;\;
-\dot{\boldsymbol{\delta}} = -\mathbf H\boldsymbol{\delta}
-\;\;\xrightarrow{\textrm{Euler}, \, h = \eta}\;\;
-\boldsymbol{\delta}_{k+1} = (\mathbf I - \eta \mathbf H)\,\boldsymbol{\delta}_k \\
-&\xrightarrow{\textrm{stability}}\;\;
+\dot{\boldsymbol{\delta}} = -\mathbf H\boldsymbol{\delta} \\
+&\xrightarrow{\textrm{Euler}, \, h = \eta}\;\;
+\boldsymbol{\delta}_{k+1} = (\mathbf I - \eta \mathbf H)\,\boldsymbol{\delta}_k
+\;\;\xrightarrow{\textrm{stability}}\;\;
 \eta < \frac{2}{\lambda_{\max}(\mathbf H)} .
 \end{aligned}
 $$

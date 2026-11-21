@@ -170,17 +170,20 @@ class _ShardWriter:
 #@save
 def _fetch_shard_file(shard, ext, path):
     """Download one file of a shard from the manifest's url, checking its
-    sha1 and then its SHA-256 before it is moved into place."""
-    tmp = path + '.part'
+    sha1 and SHA-256 before it is moved into place. The partial file is
+    named per process, so ranks that fetch the same file at once never
+    write into each other's download."""
+    tmp = f'{path}.{os.getpid()}.part'
+    sha1, sha256 = hashlib.sha1(), hashlib.sha256()
     with requests.get(shard['url'][ext], stream=True, timeout=60) as r, \
             open(tmp, 'wb') as f:
         r.raise_for_status()
         for c in r.iter_content(1 << 20):
             f.write(c)
-    with open(tmp, 'rb') as f:
-        sha1 = hashlib.sha1(f.read()).hexdigest()
-    if sha1 != shard['sha1'][ext] or (d2l._sha256_file(tmp)
-                                      != shard['sha256'][ext]):
+            sha1.update(c)
+            sha256.update(c)
+    if (sha1.hexdigest(), sha256.hexdigest()) != (shard['sha1'][ext],
+                                                  shard['sha256'][ext]):
         os.remove(tmp)
         raise ValueError(f'{shard["url"][ext]}: hash differs from the '
                          'manifest')

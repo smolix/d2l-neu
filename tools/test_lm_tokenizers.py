@@ -8,10 +8,12 @@ fixture file (`_r2_from_file`: SHA-256 check, EOS 0, no BOS, pad 1,
 `_lm_boundary_id`, `_lm_encode`, `bits_per_byte` on a tiny random
 `d2l.GPT`); `write_shards`/`TokenShards` round trip (EOS invariants, .idx,
 SHA-256, `locate`/`iter_docs` resume, `locate_token`, `read` across a
-boundary, `max_tokens`, uint32 for large vocabularies, meta columns in
-order, `meta_fn`, a special id inside a document refused, corruption found
+boundary, a pickled reader without its memory maps, `max_tokens`, uint32
+for large vocabularies, meta columns in order, `meta_fn`, a special id inside a document refused, corruption found
 by `verify`); `normalize_url`; the registry guards of `r2_tokenizer` and
-`fwedu_shards`.
+`fwedu_shards`; lazy shard downloads checked by hash (network mocked) and
+the 4B manifest's folder, kept while its sha1 stays and cleared when it
+changes.
 
 Section cells (20.6): the unigram model of D2 against brute force
 (forward-backward expected counts and log P(s) vs enumeration to 1e-9,
@@ -263,6 +265,11 @@ class ShardTest(unittest.TestCase):
         self.assertEqual(ts.read(b - 7, 20).tolist(),
                          flat[b - 7:b + 13].tolist())
         self.assertEqual(int((flat == 0).sum()), ts.n_docs)
+        import pickle
+        blob = pickle.dumps(ts)  # opened memory maps are not copied
+        self.assertLess(len(blob), 100_000)
+        self.assertEqual(pickle.loads(blob).read(b - 7, 20).tolist(),
+                         flat[b - 7:b + 13].tolist())
         self.assertEqual(d2l.TokenShards(self.out, max_tokens=b).n_shards, 1)
         self.assertEqual(d2l.TokenShards(self.out, max_tokens=b + 1)
                          .n_shards, 2)
@@ -727,6 +734,106 @@ class VocabHelpersTest(unittest.TestCase):
             direct.setdefault(tuple(ids[i:i + 10]), set()).add(int(h[i]))
         self.assertTrue(all(len(v) == 1 for v in direct.values()))
         self.assertEqual(len({int(x) for x in h}), len(direct))
+
+
+class FetchTest(unittest.TestCase):
+    """Lazy shard downloads (TokenShards(fetch=True), _fetch_shard_file) and
+    the 4B manifest's folder in fwedu_shards, with the network mocked."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.out = os.path.join(self.tmp.name, 'set')
+        tok = d2l.train_hf_bpe(corpus(200), 400, d2l.R2_SPECIALS)
+        d2l.write_shards([(str(i), t) for i, t in enumerate(corpus(200))],
+                         tok, self.out, 'train', shard_tokens=2000)
+        with open(os.path.join(self.out, 'manifest.json')) as f:
+            man = json.load(f)
+        self.files = {}  # url -> bytes, the mocked server
+        for s in man['splits']['train']['shards']:
+            s['url'], s['sha1'] = {}, {}
+            for ext, e in d2l._SHARD_EXT.items():
+                with open(os.path.join(self.out, s['file'] + e), 'rb') as f:
+                    data = f.read()
+                s['url'][ext] = f'https://example.org/{s["file"]}{e}'
+                s['sha1'][ext] = hashlib.sha1(data).hexdigest()
+                self.files[s['url'][ext]] = data
+        with open(os.path.join(self.out, 'manifest.json'), 'w') as f:
+            json.dump(man, f)
+        self.man = man
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def get(self, url, **kw):
+        from unittest import mock
+        r = mock.MagicMock()
+        r.__enter__.return_value = r
+        r.iter_content = lambda n: [self.files[url][i:i + n] for i in
+                                    range(0, len(self.files[url]), n)]
+        self.calls.append(url)
+        return r
+
+    def test_lazy_fetch(self):
+        from unittest import mock
+        ref = d2l.TokenShards(self.out)
+        want = [ref.doc(i).tolist() for i in range(ref.n_docs)]
+        for name in os.listdir(self.out):
+            if name.startswith('train-00001'):
+                os.remove(os.path.join(self.out, name))
+        self.calls = []
+        with mock.patch.object(d2l.requests, 'get', self.get):
+            with self.assertRaises(FileNotFoundError):
+                d2l.TokenShards(self.out).verify()
+            ts = d2l.TokenShards(self.out, fetch=True)
+            self.assertEqual(ts.doc(0).tolist(), want[0])
+            self.assertEqual(self.calls, [])  # shard 0 is on disk
+            self.assertEqual([ts.doc(i).tolist() for i in range(ts.n_docs)],
+                             want)
+            self.assertTrue(ts.verify())
+        self.assertEqual(sorted(u.rsplit('/', 1)[1] for u in self.calls),
+                         ['train-00001.bin', 'train-00001.idx',
+                          'train-00001.meta.parquet'])
+        self.assertFalse([n for n in os.listdir(self.out)
+                          if n.endswith('.part')])
+
+    def test_bad_download(self):
+        from unittest import mock
+        s = self.man['splits']['train']['shards'][1]
+        path = os.path.join(self.tmp.name, 'x.bin')
+        self.files[s['url']['bin']] = b'not the shard'
+        self.calls = []
+        with mock.patch.object(d2l.requests, 'get', self.get):
+            with self.assertRaisesRegex(ValueError, 'hash differs'):
+                d2l._fetch_shard_file(s, 'bin', path)
+        self.assertEqual(os.listdir(self.tmp.name), ['set'])
+
+    def test_fwedu_4b_folder(self):
+        from unittest import mock
+        cwd = os.getcwd()
+        work = os.path.join(self.tmp.name, 'a', 'b')  # ../data/lm -> a/data
+        os.makedirs(work)
+        src = os.path.join(self.out, 'manifest.json')
+        hub = dict(d2l.DATA_HUB, **{'lm-fwedu-manifest-4b-v1': ('u', 'one')})
+        try:
+            os.chdir(work)
+            with mock.patch.dict(d2l.DATA_HUB, hub, clear=True), \
+                    mock.patch.object(d2l, 'download_keyed',
+                                      lambda key: src):
+                ts = d2l.fwedu_shards('4b', fetch=False)
+                root = ts.root
+                self.assertEqual(ts.n_docs, 200)
+                fetched = os.path.join(root, 'train-00000.bin')
+                with open(fetched, 'wb') as f:
+                    f.write(b'fetched')
+                d2l.fwedu_shards('4b', fetch=False)  # same sha1: kept
+                self.assertTrue(os.path.exists(fetched))
+                d2l.DATA_HUB['lm-fwedu-manifest-4b-v1'] = ('u', 'two')
+                d2l.fwedu_shards('4b', fetch=False)  # new sha1: afresh
+                self.assertFalse(os.path.exists(fetched))
+                with open(os.path.join(root, '.extracted-'
+                                       'lm-fwedu-manifest-4b-v1')) as f:
+                    self.assertEqual(f.read(), 'two')
+        finally:
+            os.chdir(cwd)
 
 
 if __name__ == '__main__':

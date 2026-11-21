@@ -11026,7 +11026,8 @@ class TokenShards:
     verify(), which recomputes every file's SHA-256 and the EOS and offset
     invariants. max_tokens keeps the smallest prefix of shards holding at
     least that many tokens; fetch=True downloads missing files from the
-    manifest's url and checks sha1, then SHA-256.
+    manifest's url and checks sha1 and SHA-256. A pickled copy (a data
+    loader's worker) carries no memory maps; it opens its own.
 
     Defined in :numref:`sec_lm_tokenizers`"""
     def __init__(self, root, split='train', fetch=False, max_tokens=None):
@@ -11039,7 +11040,8 @@ class TokenShards:
             shards = shards[:int(np.searchsorted(total, max_tokens)) + 1]
         self.shards = shards
         fmt = self.manifest['format']
-        self.dtype, self.eos_id = np.dtype(fmt['dtype']), fmt['eos_id']
+        self.dtype = np.dtype(fmt['dtype']).newbyteorder('<')
+        self.eos_id = fmt['eos_id']
         self.vocab_size = (self.manifest.get('tokenizer') or {}).get(
             'vocab_size')
         self._docs = np.cumsum([0] + [s['n_docs'] for s in shards])
@@ -11047,6 +11049,9 @@ class TokenShards:
         self.n_docs, self.n_tokens = int(self._docs[-1]), int(self._toks[-1])
         self.n_shards = len(shards)
         self._mm, self._idx = {}, {}
+
+    def __getstate__(self):  # a worker process reopens the memory maps
+        return dict(self.__dict__, _mm={})
 
     def _path(self, k, ext):
         s = self.shards[k]
@@ -11139,7 +11144,8 @@ def fwedu_shards(which='100m', fetch=True, max_tokens=None):
     """The reference shards of FineWeb-Edu under the reference tokenizer:
     which='val' (2^23 validation tokens), '100m' (train-00000, 10^8 tokens)
     or '4b' (the 40 training shards, downloaded one by one when first read).
-    Each lives in ../data/lm/fwedu-r2-v1/<which>/.
+    Each lives in ../data/lm/fwedu-r2-v1/<which>/, extracted on the first
+    call (make that call once before starting several processes).
 
     Defined in :numref:`sec_lm_tokenizers`"""
     keys = {'val': 'lm-fwedu-val-v1', '100m': 'lm-fwedu-shards-100m-v1',
@@ -11153,13 +11159,17 @@ def fwedu_shards(which='100m', fetch=True, max_tokens=None):
     root = os.path.join('..', 'data', 'lm', 'fwedu-r2-v1', which)
     path, sha1 = d2l.download_keyed(key), d2l.DATA_HUB[key][1]
     stamp = os.path.join(root, '.extracted-' + key)
-    if which == '4b':  # the shards already fetched stay valid
-        os.makedirs(root, exist_ok=True)
-        shutil.copyfile(path, os.path.join(root, 'manifest.json'))
-    elif not (os.path.exists(stamp) and open(stamp).read() == sha1):
-        shutil.rmtree(root, ignore_errors=True)  # extracted afresh when the
+    old = None
+    if os.path.exists(stamp):
+        with open(stamp) as f:
+            old = f.read()
+    if old != sha1:
+        shutil.rmtree(root, ignore_errors=True)  # afresh when the
         os.makedirs(root)                        # registered sha1 changes
-        d2l.extract(path, root)
+        if which == '4b':  # the manifest only; shards come when read
+            shutil.copyfile(path, os.path.join(root, 'manifest.json'))
+        else:
+            d2l.extract(path, root)
         with open(stamp, 'w') as f:
             f.write(sha1)
     return d2l.TokenShards(root, 'val' if which == 'val' else 'train',
@@ -19773,19 +19783,22 @@ class _ShardWriter:
 
 def _fetch_shard_file(shard, ext, path):
     """Download one file of a shard from the manifest's url, checking its
-    sha1 and then its SHA-256 before it is moved into place.
+    sha1 and SHA-256 before it is moved into place. The partial file is
+    named per process, so ranks that fetch the same file at once never
+    write into each other's download.
 
     Defined in :numref:`sec_lm_tokenizers`"""
-    tmp = path + '.part'
+    tmp = f'{path}.{os.getpid()}.part'
+    sha1, sha256 = hashlib.sha1(), hashlib.sha256()
     with requests.get(shard['url'][ext], stream=True, timeout=60) as r, \
             open(tmp, 'wb') as f:
         r.raise_for_status()
         for c in r.iter_content(1 << 20):
             f.write(c)
-    with open(tmp, 'rb') as f:
-        sha1 = hashlib.sha1(f.read()).hexdigest()
-    if sha1 != shard['sha1'][ext] or (d2l._sha256_file(tmp)
-                                      != shard['sha256'][ext]):
+            sha1.update(c)
+            sha256.update(c)
+    if (sha1.hexdigest(), sha256.hexdigest()) != (shard['sha1'][ext],
+                                                  shard['sha256'][ext]):
         os.remove(tmp)
         raise ValueError(f'{shard["url"][ext]}: hash differs from the '
                          'manifest')

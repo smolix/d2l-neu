@@ -82,6 +82,7 @@ import regex
 import sentencepiece as spm
 import tiktoken
 import transformers
+from scipy.interpolate import PchipInterpolator
 from torch.utils.checkpoint import checkpoint
 ```
 
@@ -140,7 +141,11 @@ once by tools/build_r2_shards.py, never by this notebook. -->
 <!-- Pending registration (2026-11-21): lm-data-tok-results-v1 (W12) joins
 this cell as a `#@save` entry once the GPU regeneration (tok-lm, tok-extend)
 is uploaded; until then a normal build stops at the first cell that reads it,
-with a KeyError. The slice and the four reference keys are registered. -->
+with a KeyError. Its first generation makes both parts in one run
+(D2L_RERUN=1, one whole card through the part-runner: tok-extend's peak is
+above the notebook's class); a later single-part regeneration reads the
+other part from the registered file. The slice and the four reference keys
+are registered. -->
 
 ```{.python .input #tokenizers-data-hub}
 %%tab pytorch
@@ -215,9 +220,11 @@ def open_tar(key):
     registered sha1 differs from the one stamped at the last extraction."""
     path = d2l.download_keyed(key)
     root = os.path.join(os.path.dirname(path), 'files')
-    stamp = os.path.join(root, '.sha1')
-    if not (os.path.exists(stamp) and open(stamp).read()
-            == d2l.DATA_HUB[key][1]):
+    stamp, old = os.path.join(root, '.sha1'), None
+    if os.path.exists(stamp):
+        with open(stamp) as f:
+            old = f.read()
+    if old != d2l.DATA_HUB[key][1]:
         shutil.rmtree(root, ignore_errors=True)
         os.makedirs(root)
         d2l.extract(path, root)
@@ -241,6 +248,9 @@ RESULTS = None  # the registered results of both regenerations
 if RES_KEY in d2l.DATA_HUB:
     with open(d2l.lm_artifact(RES_KEY), encoding='utf-8') as f:
         RESULTS = json.load(f)
+assert RESULTS is not None or RERUN in (set(), set(ARTIFACTS)), (
+    'the first generation makes both parts in one run (D2L_RERUN=1); a '
+    'single part reads the other one from the registered results')
 print(pd.DataFrame({
     'train docs': {l: len(TRAIN[l]) for l in LANGS},
     'train MB': {l: sum(len(t.encode()) for t in TRAIN[l]) / 1e6
@@ -799,15 +809,8 @@ alpha = 0), one small LM per tokenizer and seed for one epoch over the same
 text (a byte budget, so token counts differ and are recorded), the 20.4
 recipe and learning rate; every result here is at T1 scale. -->
 
-```{.python .input #tokenizers-small-lms}
+```{.python .input #tokenizers-small-lms-def}
 %%tab pytorch
-LM_TEXT = [t for l in LANGS for t in TRAIN[l]]
-tic = time.time()
-LM_TOKS = {'SP unigram': d2l.sp_train(LM_TEXT, 'unigram', V_SMALL),
-           'SP BPE': d2l.sp_train(LM_TEXT, 'bpe', V_SMALL),
-           'HF BPE': ALPHA_TOK[0.0]}
-print(f'two SentencePiece models trained in {time.time() - tic:.0f} s')
-
 def fingerprint(tok):
     if hasattr(tok, 'id_to_piece'):
         return d2l._sp_fingerprint(tok)
@@ -827,20 +830,6 @@ def as_pool(tok, texts):
     return np.array([i for ids in token_ids(tok, texts)
                      for i in ids + [eos_id(tok)]], dtype=np.uint16)
 
-POOLS = {k: as_pool(t, LM_TEXT) for k, t in LM_TOKS.items()}
-EVAL_IDS = {k: {'heldout': {l: token_ids(t, HELD[l]) for l in LANGS},
-                'belebele': {l: token_ids(t, BELE[l]) for l in LANGS}}
-            for k, t in LM_TOKS.items()}
-N_BYTES = {'heldout': {l: [len(x.encode()) for x in HELD[l]] for l in LANGS},
-           'belebele': {l: [len(x.encode()) for x in BELE[l]]
-                        for l in LANGS}}
-TOK_INFO = {k: dict(fingerprint=fingerprint(t), train_tokens=len(POOLS[k]),
-                    eos=eos_id(t), n_tokens={s: {l: [len(x) for x in v]
-                                                 for l, v in d.items()}
-                                             for s, d in EVAL_IDS[k].items()})
-            for k, t in LM_TOKS.items()}
-TEXT_HASH = d2l.docs_hash([(str(i), t) for i, t in enumerate(LM_TEXT)])
-
 @torch.no_grad()
 def doc_nll(model, docs, eos, cfg, batch=32):
     """Summed NLL (nats) of every document, scored on its own after one
@@ -856,40 +845,88 @@ def doc_nll(model, docs, eos, cfg, batch=32):
             done = end
     windows.sort(key=lambda w: len(w[1]))
     nll, model = np.zeros(len(docs)), model.eval()
+    device = next(model.parameters()).device
     for a in range(0, len(windows), batch):
         ws = windows[a:a + batch]
         T = max(len(x) for _, x, _ in ws)
         X = torch.tensor([x + [0] * (T - len(x)) for _, x, _ in ws],
-                         device=DEVICE)
+                         device=device)
         lp = d2l._per_token_nll(model, X, cfg).double().cpu().numpy()
         for r, (k, x, m) in enumerate(ws):
             nll[k] += lp[r, len(x) - 1 - m:len(x) - 1].sum()
     return nll
 
-def train_small_lm(name, seed, lr, stop_tokens=None):
-    """One small LM on the tokens of LM_TEXT under tokenizer name: one
-    epoch (or stop_tokens); returns train_proxy_lm's record and the model."""
+def lm_config(lr):
+    """The small-LM runs' configuration, as their results file stores it."""
+    return json.loads(json.dumps(dict(
+        proxy=TOK_PROXY._replace(lr=lr)._asdict(), lr_from='lm-mix-runs-t1-v1',
+        seeds=SEEDS, epochs=LM_EPOCHS, log_every=LOG_EVERY,
+        vocab_size=V_SMALL)))
+
+def train_small_lm(pool, seed, lr, stop_tokens=None):
+    """One small LM on a token pool: one epoch (or stop_tokens); returns
+    train_proxy_lm's record, the model and its configuration."""
     cfg = TOK_PROXY._replace(lr=lr)
     per_step = cfg.batch * cfg.seq_len
-    tokens = int(LM_EPOCHS * (len(POOLS[name]) - 1)) // per_step * per_step
+    tokens = int(LM_EPOCHS * (len(pool) - 1)) // per_step * per_step
     with tempfile.TemporaryDirectory() as d:
         ckpt = os.path.join(d, 'last.pt')
         out = d2l.train_proxy_lm(
-            {'slice': POOLS[name]}, {'slice': 1.0}, tokens, cfg, seed=seed,
+            {'slice': pool}, {'slice': 1.0}, tokens, cfg, seed=seed,
             log_every=LOG_EVERY, stop_tokens=stop_tokens, ckpt=ckpt,
             ckpt_every=10**9, device=DEVICE)
         model = d2l._proxy_model(cfg, seed).to(DEVICE)
         model.load_state_dict(torch.load(ckpt, map_location=DEVICE,
                                          weights_only=False)['model'])
     return out, model, cfg
+```
 
+<!-- Prose: the three tokenizers at V = 16,384 on the same 45 MB
+(SentencePiece unigram, SentencePiece BPE, and the byte-level BPE with
+alpha = 0, which was trained on exactly this text above): their token
+counts for the same bytes, and the fingerprints with which a normal build
+checks that its tokenizers are the runs'. -->
+
+```{.python .input #tokenizers-small-lms-data}
+%%tab pytorch
+LM_TEXT = [t for l in LANGS for t in TRAIN[l]]
+tic = time.time()
+LM_TOKS = {'SP unigram': d2l.sp_train(LM_TEXT, 'unigram', V_SMALL),
+           'SP BPE': d2l.sp_train(LM_TEXT, 'bpe', V_SMALL),
+           'HF BPE': ALPHA_TOK[0.0]}
+print(f'two SentencePiece models trained in {time.time() - tic:.0f} s')
+POOLS = {k: as_pool(t, LM_TEXT) for k, t in LM_TOKS.items()}
+EVAL_IDS = {k: {'heldout': {l: token_ids(t, HELD[l]) for l in LANGS},
+                'belebele': {l: token_ids(t, BELE[l]) for l in LANGS}}
+            for k, t in LM_TOKS.items()}
+N_BYTES = {'heldout': {l: [len(x.encode()) for x in HELD[l]] for l in LANGS},
+           'belebele': {l: [len(x.encode()) for x in BELE[l]]
+                        for l in LANGS}}
+TOK_INFO = {k: dict(fingerprint=fingerprint(t), train_tokens=len(POOLS[k]),
+                    eos=eos_id(t), n_tokens={s: {l: [len(x) for x in v]
+                                                 for l, v in d.items()}
+                                             for s, d in EVAL_IDS[k].items()})
+            for k, t in LM_TOKS.items()}
+TEXT_HASH = d2l.docs_hash([(str(i), t) for i, t in enumerate(LM_TEXT)])
+print(f'{sum(len(t.encode()) for t in LM_TEXT) / 1e6:.1f} MB of training '
+      'text:', ', '.join(f'{k} {len(p):,} tokens' for k, p in POOLS.items()))
+```
+
+<!-- Prose: one small LM per tokenizer and seed for one epoch over that
+text (a byte budget, so the runs read different numbers of tokens), the
+20.4 recipe and learning rate; every result here is at T1 scale. A normal
+build reads the registered runs, checks that they used this build's
+tokenizers, text and configuration, and retrains the start of one run. -->
+
+```{.python .input #tokenizers-small-lms}
+%%tab pytorch
 if 'tok-lm' in RERUN:
     with open(d2l.lm_artifact('lm-mix-runs-t1-v1')) as f:
         LR = json.load(f)['lr_choice']['chosen']
     runs = []
     for name in LM_TOKS:
         for seed in SEEDS:
-            out, model, cfg = train_small_lm(name, seed, LR)
+            out, model, cfg = train_small_lm(POOLS[name], seed, LR)
             nll = {s: {l: np.round(doc_nll(model, v, TOK_INFO[name]['eos'],
                                            cfg), 4).tolist()
                        for l, v in d.items()}
@@ -903,29 +940,28 @@ if 'tok-lm' in RERUN:
                   f' s, final loss {out["log"][-1][2]:.3f}', d2l.lm_peak())
             del model
             d2l.lm_free()
-    TOKLM = dict(schema='d2l-tok-lm/1', tier=TIER, text_hash=TEXT_HASH,
-                 config=dict(proxy=TOK_PROXY._replace(lr=LR)._asdict(),
-                             lr_from='lm-mix-runs-t1-v1', seeds=SEEDS,
-                             epochs=LM_EPOCHS,
-                             log_every=LOG_EVERY, vocab_size=V_SMALL),
-                 tokenizers=TOK_INFO, n_bytes=N_BYTES, runs=runs)
-    TOKLM = json.loads(json.dumps(TOKLM))  # as the file will read back
+    TOKLM = json.loads(json.dumps(dict(
+        schema='d2l-tok-lm/1', tier=TIER, text_hash=TEXT_HASH,
+        config=lm_config(LR), tokenizers=TOK_INFO, n_bytes=N_BYTES,
+        runs=runs)))  # as the file will read back
     d2l.lm_save_rerun('tok-lm.json', lambda p: write_json(p, TOKLM))
 elif RESULTS is None:
     raise KeyError(f'{RES_KEY} is not registered: regenerate it with '
-                   'D2L_RERUN=tok-lm,tok-extend, upload and register it')
+                   'D2L_RERUN=1, upload and register it')
 else:
     TOKLM = RESULTS['tok-lm']
-# This build's tokenizers, text and bytes are the ones the runs used
+LR = TOKLM['config']['proxy']['lr']
+# The runs used this build's tokenizers, text, bytes and configuration
+assert TOKLM['config'] == lm_config(LR) and TOKLM['tier'] == TIER
 assert TOKLM['text_hash'] == TEXT_HASH
 assert TOKLM['n_bytes'] == json.loads(json.dumps(N_BYTES))
 for name, info in json.loads(json.dumps(TOK_INFO)).items():
     assert TOKLM['tokenizers'][name] == info, f'{name} differs from its run'
-LR = TOKLM['config']['proxy']['lr']
 print(f'{len(TOKLM["runs"])} runs {TIER}, learning rate {LR:g} (from '
       f'{TOKLM["config"]["lr_from"]})')
 if GPU and 'tok-lm' not in RERUN:  # live check: the start of one run
-    out, model, _ = train_small_lm('HF BPE', 0, LR, stop_tokens=LIVE_TOKENS)
+    out, model, _ = train_small_lm(POOLS['HF BPE'], 0, LR,
+                                   stop_tokens=LIVE_TOKENS)
     reg = {s: l for s, _, l, _ in next(
         r for r in TOKLM['runs'] if r['tokenizer'] == 'HF BPE'
         and r['seed'] == 0)['log']}
@@ -1002,20 +1038,21 @@ for a, b in itertools.combinations(TOKS, 2):
     print(f'macro bits per byte, {a} - {b}: {r.mean:+.4f} '
           f'[{r.ci[0]:+.4f}, {r.ci[1]:+.4f}] over {r.n} passages')
 bpb = TAB.bpb_belebele.unstack(0).loc[list(LANGS)]
+prem = TAB.premium.unstack(0).loc[list(LANGS)]
 rng_ = TAB.seed_range.unstack(0).loc[list(LANGS)]
-tok_spread = bpb.max(axis=1) - bpb.min(axis=1)
-lang_spread = bpb.max() - bpb.min()
 for l in LANGS:  # C4, per language: unigram against BPE at equal V
     d = bpb.loc[l, 'SP unigram'] - bpb.loc[l, 'SP BPE']
     noise = rng_.loc[l, ['SP unigram', 'SP BPE']].max()
     print(f'{l}: unigram - BPE {d:+.3f} bits per byte (seed range '
           f'{noise:.3f}): ' + ('not distinguished' if abs(d) <= noise
                                else 'differs'))
-print(f'tokenizer type moves a language by at most {tok_spread.max():.3f} '
-      f'bits per byte ({tok_spread.idxmax()}); languages differ by '
-      f'{lang_spread.min():.2f}-{lang_spread.max():.2f} under one tokenizer')
+effect = (bpb['SP unigram'] - bpb['SP BPE']).abs() / bpb['SP BPE']
+spread = prem.max() / prem.min()  # per tokenizer, across languages
+print(f'unigram against BPE moves a language by at most {effect.max():.1%} '
+      f'of its bits per byte ({effect.idxmax()}); under one tokenizer the '
+      f'premium spans a factor of {spread.min():.2f}-{spread.max():.2f} '
+      'across languages')
 
-prem = TAB.premium.unstack(0).loc[list(LANGS)]
 d2l.plot([prem[t].to_numpy() for t in TOKS] +
          [prem.loc[l].to_numpy() for l in LANGS],
          [bpb[t].to_numpy() for t in TOKS] +
@@ -1078,13 +1115,19 @@ def bytes_per_token(tok, texts):
 BBAR = pd.DataFrame({k: [bytes_per_token(d2l._bpe_prefix(BIG[k], V),
                                          EVAL[k]) for V in GRID]
                      for k in BIG}, index=GRID)
-EPS = BBAR.apply(lambda c: pd.Series(np.gradient(np.log(c.to_numpy()),
-                                                 np.log(GRID)), GRID))
+# log b-bar as a smooth monotone function of log V: its value and its
+# slope (the elasticity) come from the same curve
+LOG_BBAR = {k: PchipInterpolator(np.log(GRID), np.log(BBAR[k]))
+            for k in BIG}
+bbar = lambda k, V: np.exp(LOG_BBAR[k](np.log(V)))
+elasticity = lambda k, V: LOG_BBAR[k].derivative()(np.log(V))
 d, A = 1024, 12 * 24 * 1024**2   # the reference transformer of D3
 share = lambda V: V * d / (A + V * d)
-cost = lambda V, bbar: 6 * (A + V * d) / bbar  # FLOP per byte
+cost = lambda V, bb: 6 * (A + V * d) / bb  # FLOP per byte
 print(pd.concat([BBAR.round(3).add_prefix('bytes/token, '),
-                 EPS.round(3).add_prefix('elasticity, '),
+                 pd.DataFrame({k: elasticity(k, np.array(GRID, float))
+                               for k in BIG}, index=GRID
+                              ).round(3).add_prefix('elasticity, '),
                  pd.Series({V: share(V) for V in GRID},
                            name='softmax share').round(3)], axis=1))
 
@@ -1096,14 +1139,22 @@ print(f'synthetic b-bar = c V^0.1: grid minimum {v_grid:,.0f}, formula '
       f'{v_star:,.0f}')
 FINE = np.geomspace(GRID[0], GRID[-1], 2_001)
 for k in BIG:  # the measured minimum and the elasticity crossing
-    bb = np.exp(np.interp(np.log(FINE), np.log(GRID), np.log(BBAR[k])))
-    v_min = FINE[np.argmin(cost(FINE, bb))]
-    gap = np.interp(np.log(FINE), np.log(GRID), EPS[k]) - share(FINE)
+    v_min = FINE[np.argmin(cost(FINE, bbar(k, FINE)))]
+    gap = elasticity(k, FINE) - share(FINE)
     cross = FINE[np.argmax(gap < 0)] if (gap < 0).any() else None
     print(f'{k}: cost minimum at V = {v_min:,.0f}; elasticity falls to '
           'the softmax share at ' + (f'V = {cross:,.0f}' if cross else
                                      'no V in the grid'))
+```
 
+<!-- Prose: where released tokenizers sit: each one's bytes per token on
+the same English held-out text, and the share of per-byte compute its
+embedding and softmax take at its own width (parameter counts from the
+pinned configurations; no weights are loaded); the reference tokenizer at
+the width of the next chapter's reference model. -->
+
+```{.python .input #tokenizers-vocab-released}
+%%tab pytorch
 def released_params(model_id):
     """(vocabulary rows, width, parameters) from the pinned configuration,
     on the meta device: no weights are loaded."""
@@ -1143,11 +1194,10 @@ for k in TOKENIZERS:
                  markersize=4)
     axes[0].annotate(k, (rows[k]['V'], rows[k]['bytes_per_token']),
                      xytext=(3, -9), textcoords='offset points', fontsize=7)
-bb = np.exp(np.interp(np.log(FINE), np.log(GRID), np.log(BBAR['English'])))
-d2l.plot(FINE, cost(FINE, bb) / 1e9, 'vocabulary size V',
-         'GFLOP per byte (d = 1024)', xscale='log', axes=axes[1])
-_ = axes[1].plot(FINE[np.argmin(cost(FINE, bb))],
-                 cost(FINE, bb).min() / 1e9, 'ko')
+c = cost(FINE, bbar('English', FINE)) / 1e9
+d2l.plot(FINE, c, 'vocabulary size V', 'GFLOP per byte (d = 1024)',
+         xscale='log', axes=axes[1])
+_ = axes[1].plot(FINE[np.argmin(c)], c.min(), 'ko')
 ```
 
 ### Numbers, Whitespace and Code
@@ -1294,45 +1344,44 @@ print('new pieces:', ' '.join(NEW[:12]), '...', ' '.join(NEW[-6:]))
 
 <!-- Prose: the step-0 diagnostics, before any training: how much
 probability the new rows take from English text (it should be about zero;
-much more means they hijack the softmax), Hindi bits per byte on held-out
+much more means they hijack the softmax) and how much they get on Hindi
+text, where about half of the next tokens are new ones (identical mean rows
+give the new tokens one shared logit, so they can neither win mass nor be
+told apart as inputs), Hindi bits per byte on held-out
 documents and on Belebele's Hindi passages, English bits per byte (the
 English ids are unchanged, so only the softmax normalizer can move it), and
 the decomposition identity: with tied embeddings, a new token's logit is
 the mean of its pieces' logits. -->
 
-```{.python .input #tokenizers-extend-step0}
+```{.python .input #tokenizers-extend-step0-def}
 %%tab pytorch
-BASE, _ = d2l.load_hf(EXT_MODEL, dtype=torch.float32 if SMALL
-                      else torch.bfloat16)
-VAL = d2l.fwedu_shards('val')
-with gzip.open(os.path.join(VAL.root, 'val.jsonl.gz'), 'rt',
-               encoding='utf-8') as f:
-    VAL_TEXT = [json.loads(line) for line in f]
-EN_DOCS = [r['text'] for r in VAL_TEXT[:N_EXT['english']]]
-HI_DOCS, PASSAGES = HI_HELD[:N_EXT['hindi']], BELE['hin_Deva'][
-    :N_EXT['passages']]
-LO = len(QWEN)  # the first new id
-
 @torch.no_grad()
-def new_mass(model, tok):
-    """Mean probability of the new ids over the positions of the English
-    contexts (256 tokens each)."""
+def new_mass(model, tok, texts, lo):
+    """Mean probability of the ids lo and above (the new tokens) over the
+    positions of the first 256 tokens of each text."""
     out = []
-    for ids in d2l._doc_token_ids(tok, EN_DOCS[:N_EXT['contexts']]):
+    for ids in d2l._doc_token_ids(tok, texts):
         x = torch.tensor([ids[:256]], device=model.device)
         p = model(input_ids=x).logits[0].float().softmax(-1)
-        out.append(p[:, LO:].sum(-1).mean().item())
+        out.append(p[:, lo:].sum(-1).mean().item())
     return np.array(out)
 
 def bpb(model, tok, texts):
     return d2l.bits_per_byte(model, tok, texts, ctx_len=N_EXT['ctx_len'])
 
 def step0(model, tok):
+    """The step-0 diagnostics of one model and tokenizer: new-token mass on
+    English and on Hindi contexts, Hindi, Belebele and English bits per
+    byte, Hindi bytes per token, and per-passage Belebele bits per byte."""
     per = np.array([bpb(model, tok, [p]) for p in PASSAGES])
     w = np.array([len(p.encode()) for p in PASSAGES])
-    mass = new_mass(model, tok) if len(tok) > LO else np.zeros(1)
+    k = N_EXT['contexts']
+    en, hi = ((new_mass(model, tok, EN_DOCS[:k], LO),
+               new_mass(model, tok, HI_DOCS[:k], LO)) if len(tok) > LO
+              else (np.zeros(1), np.zeros(1)))
     n = sum(map(len, d2l._doc_token_ids(tok, HI_DOCS)))
-    return dict(new_mass=float(mass.mean()), new_mass_max=float(mass.max()),
+    return dict(new_mass=float(en.mean()), new_mass_max=float(en.max()),
+                hindi_new_mass=float(hi.mean()),
                 hindi_bpb=bpb(model, tok, HI_DOCS),
                 belebele_bpb=float((per * w).sum() / w.sum()),
                 english_bpb=bpb(model, tok, EN_DOCS),
@@ -1358,6 +1407,24 @@ def decomp_check(model, tok, n=64):
         assert ((new - mean).abs() <= tol).all()
         worst = max(worst, (new - mean).abs().max().item())
     return worst
+```
+
+<!-- Prose: the four arms at step 0 (the unextended control and the three
+initializations, seed 0) on the same texts: Hindi held-out documents,
+Belebele's Hindi passages, English validation documents. -->
+
+```{.python .input #tokenizers-extend-step0}
+%%tab pytorch
+BASE, _ = d2l.load_hf(EXT_MODEL, dtype=torch.float32 if SMALL
+                      else torch.bfloat16)
+VAL = d2l.fwedu_shards('val')
+with gzip.open(os.path.join(VAL.root, 'val.jsonl.gz'), 'rt',
+               encoding='utf-8') as f:
+    VAL_TEXT = [json.loads(line) for line in f]
+EN_DOCS = [r['text'] for r in VAL_TEXT[:N_EXT['english']]]
+HI_DOCS, PASSAGES = HI_HELD[:N_EXT['hindi']], BELE['hin_Deva'][
+    :N_EXT['passages']]
+LO = len(QWEN)  # the first new id
 
 tic = time.time()
 STEP0 = {'control': step0(BASE, QWEN)}
@@ -1396,7 +1463,7 @@ checkpointing, and the loss in chunks of 1,024 positions so the
 8,192 x 155,765 logit matrix never exists (D2L_RERUN=tok-extend, about 20
 minutes on one GPU, measured peak printed). -->
 
-```{.python .input #tokenizers-extend-train}
+```{.python .input #tokenizers-extend-train-def}
 %%tab pytorch
 def hindi_docs_for(tok, n_tokens):
     """The first Hindi training documents whose tokens under tok reach
@@ -1468,7 +1535,14 @@ def train_ext(arm, seed, docs):
     del model, opt
     d2l.lm_free()
     return out
+```
 
+<!-- Prose: the eight runs (four arms, two data-order seeds), read from the
+registered results unless regenerated: Hindi bits per byte along training
+and English bits per byte before and after. -->
+
+```{.python .input #tokenizers-extend-train}
+%%tab pytorch
 if 'tok-extend' in RERUN:
     docs = hindi_docs_for(QWEN, EXT_TRAIN['pool_tokens'])
     runs = []
@@ -1487,10 +1561,14 @@ if 'tok-extend' in RERUN:
     d2l.lm_save_rerun('tok-extend.json', lambda p: write_json(p, TOKEXT))
 elif RESULTS is None:
     raise KeyError(f'{RES_KEY} is not registered: regenerate it with '
-                   'D2L_RERUN=tok-lm,tok-extend, upload and register it')
+                   'D2L_RERUN=1, upload and register it')
 else:
     TOKEXT = RESULTS['tok-extend']
 assert TOKEXT['new_pieces'] == NEW, 'the new pieces differ from the runs'
+assert {k: TOKEXT[k] for k in ('tier', 'model', 'revision', 'config')} == (
+    json.loads(json.dumps(dict(tier=TIER, model=EXT_MODEL, config=EXT_TRAIN,
+                               revision=d2l.HF_REVISIONS[EXT_MODEL])))), (
+    'the registered runs used another model or configuration')
 ARMS = ('control', 'random', 'mean', 'decomp')
 steps = [s for s, _ in TOKEXT['runs'][0]['curve']]
 curves = {a: np.array([[v for _, v in r['curve']] for r in TOKEXT['runs']
@@ -1498,9 +1576,9 @@ curves = {a: np.array([[v for _, v in r['curve']] for r in TOKEXT['runs']
 print(f'continued training on Hindi {TIER}')
 print(pd.DataFrame({a: dict(zip(steps, c.mean(0))) for a, c in
                     curves.items()}).round(3).rename_axis('step'))
-print('English bits per byte, step 0 -> 150:', {
-    r['arm'] + f'/{r["seed"]}': '{:.3f} -> {:.3f}'.format(
-        *r['english'].values()) for r in TOKEXT['runs']})
+print(pd.DataFrame([dict(arm=r['arm'], seed=r['seed'], **{
+    f'English bpb, step {s}': v for s, v in r['english'].items()})
+    for r in TOKEXT['runs']]).round(3).to_string(index=False))
 d2l.plot_intervals(steps, {a: (c.mean(0), c.min(0), c.max(0))
                            for a, c in curves.items()}, 'step',
                    'Hindi bits per byte', kind='band',
@@ -1516,7 +1594,9 @@ d2l.plot_intervals(steps, {a: (c.mean(0), c.min(0), c.max(0))
 Transformer replaces fixed tokens by patches whose boundaries a small byte
 model sets where its entropy jumps (cited, not claimed). The toy below uses
 a character trigram model on Hindi text and cuts where the next
-character's entropy rises; it says nothing about BLT's quality. -->
+character's entropy rises, and compares patch and token lengths in UTF-8
+bytes (a byte-level token can be part of a character); it says nothing
+about BLT's quality. -->
 
 ```{.python .input #tokenizers-patches}
 %%tab pytorch
@@ -1530,10 +1610,13 @@ def entropy(ctx):
 para = next(p for t in HI_HELD for p in t.split('\n') if len(p) > 300)
 H = np.array([entropy(para[i - 2:i]) for i in range(2, len(para))])
 cuts = [0] + [i + 2 for i in range(1, len(H)) if H[i] > H[i - 1] + 0.5]
-patches = np.diff(cuts + [len(para)])
-toks = {k: [len(VB[k][i].decode('utf-8', 'ignore')) for i in
+patches = [len(para[a:b].encode()) for a, b in zip(cuts, cuts[1:]
+                                                   + [len(para)])]
+toks = {k: [len(VB[k][i]) for i in
             d2l._doc_token_ids(TOKENIZERS[k], [para])[0]]
         for k in ('Qwen3', 'Qwen3.5', 'reference')}
+print(f'UTF-8 bytes per patch and per token, one Hindi paragraph of '
+      f'{len(para.encode()):,} bytes')
 print(pd.DataFrame({'entropy patches': pd.Series(patches).describe(),
                     **{f'{k} tokens': pd.Series(v).describe()
                        for k, v in toks.items()}}).round(2))
@@ -1709,7 +1792,8 @@ class TokenShards:
     verify(), which recomputes every file's SHA-256 and the EOS and offset
     invariants. max_tokens keeps the smallest prefix of shards holding at
     least that many tokens; fetch=True downloads missing files from the
-    manifest's url and checks sha1, then SHA-256."""
+    manifest's url and checks sha1 and SHA-256. A pickled copy (a data
+    loader's worker) carries no memory maps; it opens its own."""
     def __init__(self, root, split='train', fetch=False, max_tokens=None):
         self.root, self.split, self.fetch = root, split, fetch
         with open(os.path.join(root, 'manifest.json'), encoding='utf-8') as f:
@@ -1720,7 +1804,8 @@ class TokenShards:
             shards = shards[:int(np.searchsorted(total, max_tokens)) + 1]
         self.shards = shards
         fmt = self.manifest['format']
-        self.dtype, self.eos_id = np.dtype(fmt['dtype']), fmt['eos_id']
+        self.dtype = np.dtype(fmt['dtype']).newbyteorder('<')
+        self.eos_id = fmt['eos_id']
         self.vocab_size = (self.manifest.get('tokenizer') or {}).get(
             'vocab_size')
         self._docs = np.cumsum([0] + [s['n_docs'] for s in shards])
@@ -1728,6 +1813,9 @@ class TokenShards:
         self.n_docs, self.n_tokens = int(self._docs[-1]), int(self._toks[-1])
         self.n_shards = len(shards)
         self._mm, self._idx = {}, {}
+
+    def __getstate__(self):  # a worker process reopens the memory maps
+        return dict(self.__dict__, _mm={})
 
     def _path(self, k, ext):
         s = self.shards[k]
@@ -1821,7 +1909,8 @@ def fwedu_shards(which='100m', fetch=True, max_tokens=None):
     """The reference shards of FineWeb-Edu under the reference tokenizer:
     which='val' (2^23 validation tokens), '100m' (train-00000, 10^8 tokens)
     or '4b' (the 40 training shards, downloaded one by one when first read).
-    Each lives in ../data/lm/fwedu-r2-v1/<which>/."""
+    Each lives in ../data/lm/fwedu-r2-v1/<which>/, extracted on the first
+    call (make that call once before starting several processes)."""
     keys = {'val': 'lm-fwedu-val-v1', '100m': 'lm-fwedu-shards-100m-v1',
             '4b': 'lm-fwedu-manifest-4b-v1'}
     if which not in keys:
@@ -1833,13 +1922,17 @@ def fwedu_shards(which='100m', fetch=True, max_tokens=None):
     root = os.path.join('..', 'data', 'lm', 'fwedu-r2-v1', which)
     path, sha1 = d2l.download_keyed(key), d2l.DATA_HUB[key][1]
     stamp = os.path.join(root, '.extracted-' + key)
-    if which == '4b':  # the shards already fetched stay valid
-        os.makedirs(root, exist_ok=True)
-        shutil.copyfile(path, os.path.join(root, 'manifest.json'))
-    elif not (os.path.exists(stamp) and open(stamp).read() == sha1):
-        shutil.rmtree(root, ignore_errors=True)  # extracted afresh when the
+    old = None
+    if os.path.exists(stamp):
+        with open(stamp) as f:
+            old = f.read()
+    if old != sha1:
+        shutil.rmtree(root, ignore_errors=True)  # afresh when the
         os.makedirs(root)                        # registered sha1 changes
-        d2l.extract(path, root)
+        if which == '4b':  # the manifest only; shards come when read
+            shutil.copyfile(path, os.path.join(root, 'manifest.json'))
+        else:
+            d2l.extract(path, root)
         with open(stamp, 'w') as f:
             f.write(sha1)
     return d2l.TokenShards(root, 'val' if which == 'val' else 'train',
@@ -1888,8 +1981,9 @@ with tempfile.TemporaryDirectory() as tmp:
           f'the fixture ends in {tq.doc(tq.n_docs - 1)[-3:].tolist()}')
 for name, ts in (('train', SHARDS), ('val', VAL)):
     i = ts.n_docs - 7
-    k, j, off = ts.locate(i)
-    assert next(ts.iter_docs(start=i))[0] == i and ts.verify()
+    k, j, off = ts.locate(i)  # the resume cursor of document i
+    assert np.array_equal(next(ts.iter_docs(start=i))[1], ts.shard(k)[
+        off:ts.offsets(k)[j + 1]]) and ts.verify()
     print(f'{name}: {ts.n_docs:,} documents, {ts.n_tokens:,} tokens, '
           f'{ts.n_shards} shard(s), {ts.dtype}, EOS {ts.eos_id}, '
           f'vocabulary {ts.vocab_size:,}; verified')
@@ -1929,7 +2023,8 @@ v_off = np.concatenate([[0], np.cumsum([VAL.shard(k).shape[0]
                                         for k in range(VAL.n_shards)])])
 doc_starts = np.concatenate([VAL.offsets(k)[:-1].astype(np.int64)
                              + v_off[k] for k in range(VAL.n_shards)])
-hit_docs = np.unique(np.searchsorted(doc_starts, starts, 'right') - 1)
+hit_doc = np.searchsorted(doc_starts, starts, 'right') - 1
+hit_docs = np.unique(hit_doc)
 cover = np.zeros(len(v_ids) + 1, np.int64)
 np.add.at(cover, starts, 1)
 np.add.at(cover, starts + N, -1)
@@ -1939,14 +2034,17 @@ print(f'{len(starts):,} validation 50-grams also in train-00000 '
       f'({SHARDS.shards[0]["n_docs"]:,} documents), {time.time() - tic:.0f}'
       f' s: {len(hit_docs):,} of {VAL.n_docs:,} validation documents '
       f'({f_docs:.2%}), {covered / VAL.n_tokens:.3%} of their tokens')
-top = collections.Counter()
-for h, d in set(zip(hv[starts].tolist(), (np.searchsorted(
-        doc_starts, starts, 'right') - 1).tolist())):
-    top[h] += 1
+docs_of = collections.defaultdict(set)  # shared span -> its documents
+for h, k in zip(hv[starts].tolist(), hit_doc.tolist()):
+    docs_of[h].add(k)
 first = {h: s for s, h in zip(starts[::-1], hv[starts][::-1].tolist())}
-for h, n in top.most_common(3):
-    s = first[h]
-    print(f'{n} documents: {R2_RAW.decode(v_ids[s:s + N].tolist())!r}'[:160])
+shown = []  # the most shared spans, one per group of documents
+for h in sorted(docs_of, key=lambda h: (-len(docs_of[h]), first[h])):
+    if not any(docs_of[h] & g for g in shown) and len(shown) < 3:
+        shown.append(docs_of[h])
+        s = first[h]
+        print(f'{len(docs_of[h])} documents: '
+              f'{R2_RAW.decode(v_ids[s:s + N].tolist())!r}'[:160])
 if f_docs > 0.05:
     print('more than 5% of validation documents overlap: inspect the spans'
           ' above before reading this as boilerplate')

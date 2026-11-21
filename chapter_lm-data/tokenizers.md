@@ -44,9 +44,14 @@ when the section is written.
 - Courses, tutorials and blogs: [Hugging Face LLM Course, chapter 6](https://huggingface.co/learn/llm-course/en/chapter6/1) (training a tokenizer with the library); [CS336](https://cs336.stanford.edu/) (the tokenization lecture and assignment A1's tokenizer).
 -->
 
-<!-- Placeholder (stage 2, infra step): the cells below are the section's
-shared library, written before the section; the prose around them comes with
-the section. Cell ids follow the section specification. -->
+<!-- Prose: the opening (spec 20.6 part 1): the byte-level BPE of
+sec_text-sequence splits a Hindi passage into several times the tokens of
+its English translation (the table below); one paragraph recaps
+sec_text-sequence (byte-level BPE, pre-tokenization, specials,
+subsec_fertility-digits-glitch) and says what is new here: the unigram
+model, what a tokenizer's training data does to each language, the size of
+the vocabulary, changing a trained model's vocabulary, and the frozen
+reference tokenizer with its shards. -->
 
 ```{.python .input #tokenizers-imports}
 %%tab pytorch
@@ -60,12 +65,629 @@ from d2l import torch as d2l
 
 ```{.python .input #tokenizers-extras}
 %%tab pytorch
+import collections
+import copy
+import gzip
+import hashlib
+import itertools
 import json
 import os
+import shutil
+import tempfile
+import time
+import unicodedata
+import warnings
 import pandas as pd
+import regex
+import sentencepiece as spm
+import tiktoken
+import transformers
+from torch.utils.checkpoint import checkpoint
 ```
 
-<!-- Placeholder (stage 2): the reference tokenizer's pipeline (chapter spec 1.6a): NFC, Qwen3's split pattern with single digits, byte-level BPE, 32 special tokens first. -->
+<!-- Prose: what the notebook computes and where: tokenizer training,
+Viterbi, fertility, the vocabulary cost model and the shards run on the CPU
+in every build; the small-LM comparison and the vocabulary extension are
+T1 results regenerated on one GPU (D2L_RERUN=tok-lm, tok-extend) and read
+from registered files otherwise. -->
+
+```{.python .input #tokenizers-config}
+%%tab pytorch
+LANGS = ('eng_Latn', 'deu_Latn', 'rus_Cyrl', 'arb_Arab', 'hin_Deva',
+         'cmn_Hani', 'jpn_Jpan', 'tha_Thai', 'swh_Latn', 'kor_Hang')
+BELEBELE = {l: 'zho_Hans' if l == 'cmn_Hani' else l for l in LANGS}
+V_SMALL = 16_384            # the small tokenizers' vocabulary
+ALPHAS = (1.0, 0.3, 0.0)     # language weighting of tokenizer text
+TOK_PROXY = d2l.ProxyCfg(num_hiddens=256, num_heads=4, num_blks=4,
+                         seq_len=512, vocab_size=V_SMALL)
+SEEDS, LOG_EVERY, LIVE_TOKENS = (0, 1), 4, 2**19
+LM_EPOCHS = 1.0              # passes of each small LM over its 45 MB
+EXT_MODEL, N_NEW = 'Qwen/Qwen3-0.6B-Base', 4_096
+EXT_TRAIN = dict(lr=1e-4, warmup=10, steps=150, batch=8, micro_batch=4,
+                 seq_len=1024, eval_at=(0, 25, 50, 100, 150), seeds=(0, 1),
+                 loss_chunk=1024, final_lr_frac=0.1, curve_docs=100,
+                 pool_tokens=2**22)
+N_TOK_DOCS, R2_VOCAB = 80_000, 32_768  # the reference tokenizer
+ARTIFACTS = {  # name: (registered key, file a regeneration writes)
+    'tok-lm': ('lm-data-tok-results-v1', 'tok-lm.json'),
+    'tok-extend': ('lm-data-tok-results-v1', 'tok-extend.json')}
+RERUN = d2l.lm_rerun(ARTIFACTS)
+GPU = torch.cuda.is_available()
+assert GPU or not RERUN, 'the regenerations train on a GPU'
+assert GPU or not os.environ.get('CUDA_VISIBLE_DEVICES'), (
+    'a GPU slot without CUDA: the small CPU path must not be captured')
+SMALL = not GPU  # the CPU path: step-0 diagnostics on fewer texts
+DEVICE = d2l.try_gpu()
+N_EXT = (dict(hindi=8, passages=24, english=8, contexts=4, ctx_len=256)
+         if SMALL else dict(hindi=500, passages=488, english=200,
+                            contexts=200, ctx_len=1024))
+RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
+with torch.device('meta'):
+    N_PARAMS = d2l.num_params(d2l._proxy_model(TOK_PROXY))
+TIER = (f'at T1 scale ({N_PARAMS / 1e6:.1f}M-parameter LMs, one epoch over '
+        f'45 MB; {EXT_MODEL.split("/")[1]}, {EXT_TRAIN["steps"]} steps of '
+        f'{EXT_TRAIN["batch"]} x {EXT_TRAIN["seq_len"]:,} tokens)')
+print(f'small-LM comparison and extension {TIER.replace(" scale", "")}')
+print(f'GPU={GPU}, SMALL={SMALL}, regenerating:',
+      ', '.join(sorted(RERUN)) or 'none')
+```
+
+<!-- Prose: the registry: Belebele (CC BY-SA 4.0) is downloaded from its
+pinned commit, never re-hosted; the ten-language slice is FineWeb-2 and
+FineWeb-Edu text (ODC-By); the reference tokenizer and its shards are built
+once by tools/build_r2_shards.py, never by this notebook. -->
+
+<!-- Pending registrations (cells step, 2026-11-16): lm-data-fw2-slice-v1
+(W2), lm-data-tok-results-v1 (W12) and the four reference keys (W5) join
+this cell as `#@save` entries once uploaded; until then a normal build
+stops at the first cell that reads one, with a KeyError. -->
+
+```{.python .input #tokenizers-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['belebele-eng_Latn'] = (  # FLORES passages, CC BY-SA 4.0
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/eng_Latn.jsonl',
+    '39c6796587fef3057a50ff60ecfa3d99c65ada99')
+d2l.DATA_HUB['belebele-deu_Latn'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/deu_Latn.jsonl',
+    '2492011aa4718237cfaf71256150acb453184401')
+d2l.DATA_HUB['belebele-rus_Cyrl'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/rus_Cyrl.jsonl',
+    '9c17bbd2594ec9ea831ad887587a4a401f80c48d')
+d2l.DATA_HUB['belebele-arb_Arab'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/arb_Arab.jsonl',
+    'd409a6fda63a97566583558886f0414c8edd152a')
+d2l.DATA_HUB['belebele-hin_Deva'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/hin_Deva.jsonl',
+    'e7017e822412dd49ef24f24419bc3e2e45175285')
+d2l.DATA_HUB['belebele-zho_Hans'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/zho_Hans.jsonl',
+    'f7da1fed3c0c6d7e43a324bf8739231f2b346b6e')
+d2l.DATA_HUB['belebele-jpn_Jpan'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/jpn_Jpan.jsonl',
+    '2a3755b2eaea864e066f4414c3f64e0a53cca41a')
+d2l.DATA_HUB['belebele-tha_Thai'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/tha_Thai.jsonl',
+    '4aae5d586fe29db59bf12bfcbc9b75e816ca4380')
+d2l.DATA_HUB['belebele-swh_Latn'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/swh_Latn.jsonl',
+    '1c327092d52031a5d7dfffe5b7419e0f2f584bc8')
+d2l.DATA_HUB['belebele-kor_Hang'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/kor_Hang.jsonl',
+    '17fa36b78cef39784d497a7cf40caf678e83c955')
+
+SLICE_KEY, RES_KEY = 'lm-data-fw2-slice-v1', 'lm-data-tok-results-v1'
+R2_KEYS = ('lm-r2-tokenizer-v1', 'lm-fwedu-val-v1',
+           'lm-fwedu-shards-100m-v1', 'lm-fwedu-manifest-4b-v1')
+for name, keys in (('this section', (SLICE_KEY, RES_KEY) + R2_KEYS),
+                   ('upstream', ('lm-mix-runs-t1-v1',))):
+    print(f'{name}: registered', ', '.join(
+        k for k in keys if k in d2l.DATA_HUB) or 'none', '| pending:',
+          ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
+
+def open_tar(key):
+    """The folder of a registered tar, extracted afresh whenever the
+    registered sha1 differs from the one stamped at the last extraction."""
+    path = d2l.download_keyed(key)
+    root = os.path.join(os.path.dirname(path), 'files')
+    stamp = os.path.join(root, '.sha1')
+    if not (os.path.exists(stamp) and open(stamp).read()
+            == d2l.DATA_HUB[key][1]):
+        shutil.rmtree(root, ignore_errors=True)
+        os.makedirs(root)
+        d2l.extract(path, root)
+        with open(stamp, 'w') as f:
+            f.write(d2l.DATA_HUB[key][1])
+    return root
+
+def write_json(path, obj):
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(obj, f, sort_keys=True, ensure_ascii=False)
+
+ROOT = open_tar(SLICE_KEY)
+SLICE = pd.read_parquet(os.path.join(ROOT, 'slice.parquet'))
+HINDI = pd.read_parquet(os.path.join(ROOT, 'hindi.parquet'))
+with open(os.path.join(ROOT, 'meta.json')) as f:
+    SLICE_META = json.load(f)
+TRAIN, HELD = ({l: SLICE[(SLICE.lang == l) & (SLICE.part == p)].text.tolist()
+                for l in LANGS} for p in ('train', 'heldout'))
+assert all(t == unicodedata.normalize('NFC', t) for t in SLICE.text)
+RESULTS = None  # the registered results of both regenerations
+if RES_KEY in d2l.DATA_HUB:
+    with open(d2l.lm_artifact(RES_KEY), encoding='utf-8') as f:
+        RESULTS = json.load(f)
+print(pd.DataFrame({
+    'train docs': {l: len(TRAIN[l]) for l in LANGS},
+    'train MB': {l: sum(len(t.encode()) for t in TRAIN[l]) / 1e6
+                 for l in LANGS},
+    'held-out docs': {l: len(HELD[l]) for l in LANGS}}).round(2))
+print('Hindi extension documents:', HINDI.part.value_counts().to_dict())
+```
+
+<!-- Prose: fertility and premium defined (restating
+subsec_fertility-digits-glitch in one sentence): bytes per token on the
+same passages, and the premium as a language's tokens over English's for
+translations of the same text. -->
+
+```{.python .input #tokenizers-fertility-def}
+%%tab pytorch
+#@save
+def fertility_table(encoders, parallel, ref='eng_Latn'):
+    """Per encoder and language: passages, UTF-8 bytes, tokens, bytes per
+    token, tokens per passage, the share of byte-fallback tokens and the
+    premium, the tokens a language needs over the tokens ref needs for
+    translations of the same passages. encoders maps a name to encode(str)
+    -> ids, or to (encode, fallback_ids); parallel maps a language to its
+    passages, aligned across languages."""
+    rows = []
+    for name, enc in encoders.items():
+        enc, fallback = enc if isinstance(enc, tuple) else (enc, ())
+        fallback = set(fallback)
+        for lang, passages in parallel.items():
+            ids = [enc(p) for p in passages]
+            n = sum(map(len, ids))
+            n_bytes = sum(len(p.encode('utf-8')) for p in passages)
+            rows.append(dict(
+                encoder=name, lang=lang, passages=len(passages),
+                bytes=n_bytes, tokens=n, bytes_per_token=n_bytes / n,
+                tokens_per_passage=n / len(passages),
+                fallback_share=sum(i in fallback for x in ids for i in x)
+                / n))
+    df = pd.DataFrame(rows)
+    ref_tokens = df[df.lang == ref].set_index('encoder').tokens
+    df['premium'] = df.tokens / df.encoder.map(ref_tokens)
+    return df
+```
+
+<!-- Prose: the four released tokenizers (GPT-2 and o200k_base through
+tiktoken, Qwen3 and Qwen3.5 from their pinned tokenizer files) on the 488
+distinct Belebele passages; Belebele's zho_Hans is FineWeb-2's cmn_Hani. -->
+
+```{.python .input #tokenizers-opening}
+%%tab pytorch
+def belebele(lang):
+    """The distinct passages of a Belebele language by link (a passage's
+    link is the same in every language)."""
+    with open(d2l.download_keyed('belebele-' + BELEBELE[lang]),
+              encoding='utf-8') as f:
+        return {r['link']: r['flores_passage'] for r in map(json.loads, f)}
+
+def hf_tokenizer(model_id):
+    return transformers.AutoTokenizer.from_pretrained(
+        model_id, revision=d2l.HF_REVISIONS[model_id])
+
+def encoder(tok):
+    """(encode, fallback ids) of any tokenizer the section uses; special
+    strings in a text stay text."""
+    if hasattr(tok, 'encode_as_ids'):  # SentencePiece
+        return tok.encode, d2l._fallback_ids(tok)
+    return (lambda s: d2l._doc_token_ids(tok, [s])[0],
+            d2l._fallback_ids(tok))
+
+by_link = {lang: belebele(lang) for lang in LANGS}
+LINKS = sorted(by_link['eng_Latn'])
+assert all(sorted(p) == LINKS for p in by_link.values())
+BELE = {lang: [p[k] for k in LINKS] for lang, p in by_link.items()}
+RELEASED = {'GPT-2': tiktoken.get_encoding('gpt2'),
+            'o200k_base': tiktoken.get_encoding('o200k_base'),
+            'Qwen3': hf_tokenizer('Qwen/Qwen3-0.6B-Base'),
+            'Qwen3.5': hf_tokenizer('Qwen/Qwen3.5-0.8B-Base')}
+FERT = d2l.fertility_table({k: encoder(t) for k, t in RELEASED.items()},
+                           BELE)
+print(f'{len(LINKS)} passages per language')
+print(FERT.pivot(index='lang', columns='encoder', values='premium')
+      .loc[list(LANGS)].round(2))
+print(FERT.pivot(index='lang', columns='encoder', values='bytes_per_token')
+      .loc[list(LANGS)].round(2))
+print(FERT.pivot(index='lang', columns='encoder', values='fallback_share')
+      .loc[list(LANGS)].round(3))
+PREM = FERT.set_index(['encoder', 'lang']).premium
+# C1: English-centred tokenizers charge non-Latin scripts several times
+assert min(PREM['GPT-2', l] for l in ('hin_Deva', 'tha_Thai')) > 3
+assert PREM['Qwen3.5', 'hin_Deva'] < PREM['Qwen3', 'hin_Deva']
+print(f"Hindi premium: Qwen3 {PREM['Qwen3', 'hin_Deva']:.1f}, "
+      f"Qwen3.5 {PREM['Qwen3.5', 'hin_Deva']:.1f}")
+```
+
+## The Unigram Model
+:label:`subsec_lm_tok_unigram`
+
+<!-- Prose: piece probabilities p(x), a segmentation's probability as the
+product, the string's probability as the sum over segmentations; the
+lattice (fig_lm_unigram_viterbi: positions as nodes, pieces as edges);
+forward and backward sums; the posterior edge count
+alpha_i p(x) beta_j / P(s) and the EM update (eq_lm_tok_em, derived with a
+Lagrange multiplier); Viterbi as the max-product version; pruning by the
+likelihood a piece's removal costs; sampling with P(s)^alpha for subword
+regularization. -->
+
+![The segmentation lattice of one word: positions are nodes, pieces are
+edges labelled with their log-probabilities, and the Viterbi path is
+highlighted.](../img/mdl-lm-data-unigram-viterbi.svg)
+:label:`fig_lm_unigram_viterbi`
+
+```{.python .input #tokenizers-viterbi-def}
+%%tab pytorch
+#@save
+def _unigram_lattice(s, logp, max_len):
+    """Edges (i, j, piece) of the segmentation lattice of s, by start i:
+    s[i:j] is a piece of logp."""
+    return [(i, j, s[i:j]) for i in range(len(s))
+            for j in range(i + 1, min(len(s), i + max_len) + 1)
+            if s[i:j] in logp]
+
+#@save
+def _unigram_fb(s, logp, max_len):
+    """log P(s), summed over all segmentations of s, and each piece's
+    posterior expected count in s (forward-backward on the lattice)."""
+    n, edges = len(s), _unigram_lattice(s, logp, max_len)
+    fwd, bwd = [-math.inf] * (n + 1), [-math.inf] * (n + 1)
+    fwd[0] = bwd[n] = 0.0
+    for i, j, x in edges:  # by start: fwd[i] is complete when read
+        fwd[j] = d2l._logaddexp(fwd[j], fwd[i] + logp[x])
+    for i, j, x in reversed(edges):  # by start, descending
+        bwd[i] = d2l._logaddexp(bwd[i], logp[x] + bwd[j])
+    counts = collections.Counter()
+    for i, j, x in edges:
+        counts[x] += math.exp(fwd[i] + logp[x] + bwd[j] - fwd[n])
+    return fwd[n], counts
+
+#@save
+def viterbi_segment(text, logp, max_len, *, unk=None):
+    """The most probable segmentation of text into pieces of logp (piece
+    -> log-probability) of at most max_len characters; ties go to fewer
+    pieces. With unk, a character that is no piece is a piece of
+    log-probability unk (SentencePiece's rule for unknown characters)."""
+    n = len(text)
+    best, back = [(-math.inf, 0)] * (n + 1), [0] * (n + 1)
+    best[0] = (0.0, 0)  # (log-probability, minus the number of pieces)
+    for j in range(1, n + 1):
+        for i in range(max(0, j - max_len), j):
+            lp = logp.get(text[i:j], unk if j == i + 1 else None)
+            if lp is not None and best[i][0] > -math.inf:
+                cand = (best[i][0] + lp, best[i][1] - 1)
+                if cand > best[j]:
+                    best[j], back[j] = cand, i
+    if best[n][0] == -math.inf:
+        raise ValueError(f'no segmentation of {text!r}')
+    out, j = [], n
+    while j > 0:
+        out.append(text[back[j]:j])
+        j = back[j]
+    return out[::-1]
+
+#@save
+def _unigram_sample(s, logp, max_len, alpha, rng):
+    """A segmentation of s drawn with probability proportional to
+    P(segmentation)^alpha: forward filtering, then backward sampling."""
+    fwd, into = [-math.inf] * (len(s) + 1), collections.defaultdict(list)
+    fwd[0] = 0.0
+    for i, j, x in _unigram_lattice(s, logp, max_len):
+        fwd[j] = d2l._logaddexp(fwd[j], fwd[i] + alpha * logp[x])
+        into[j].append((i, x))
+    out, j = [], len(s)
+    while j > 0:
+        w = np.array([fwd[i] + alpha * logp[x] for i, x in into[j]])
+        p = np.exp(w - w.max())
+        i, x = into[j][rng.choice(len(w), p=p / p.sum())]
+        out.append(x)
+        j = i
+    return out[::-1]
+
+#@save
+class UnigramTokenizer:
+    """A unigram language model over pieces (Kudo 2018), trained by EM
+    with pruning: seed the vocabulary with every character and the
+    seed_size most frequent substrings (scored by count times length),
+    then alternate em_iters EM steps with keeping prune_frac of the pieces
+    until vocab_size remain. Words are split at whitespace and marked by a
+    leading U+2581, as SentencePiece marks them."""
+    def __init__(self, vocab_size, seed_size=100_000, em_iters=2,
+                 prune_frac=0.8, max_piece_len=12):
+        self.vocab_size, self.seed_size = vocab_size, seed_size
+        self.em_iters, self.prune_frac = em_iters, prune_frac
+        self.max_len, self.pieces, self.history = max_piece_len, {}, []
+
+    @staticmethod
+    def _words(sentences):
+        return collections.Counter('▁' + w for s in sentences
+                                   for w in s.split())
+
+    def _em_step(self, words, logp):
+        """E: expected piece counts under logp; M: probabilities
+        proportional to them. Returns the new log-probabilities and the
+        corpus log-likelihood under the old ones."""
+        counts, loglik = collections.Counter(), 0.0
+        for w, c in words.items():
+            logz, cw = d2l._unigram_fb(w, logp, self.max_len)
+            loglik += c * logz
+            for x, v in cw.items():
+                counts[x] += c * v
+        for x in logp:  # a character stays a piece, however rare
+            if len(x) == 1 and counts[x] <= 0:
+                counts[x] = 1e-6
+        log_total = math.log(sum(counts.values()))
+        return ({x: math.log(counts[x]) - log_total for x in logp
+                 if counts[x] > 0}, loglik)
+
+    def _prune(self, words, logp, keep):
+        """The keep pieces whose removal costs the most likelihood: a
+        piece's loss is its count in the Viterbi segmentations times what
+        its log-probability gains over the best segmentation of its own
+        string without it. Characters are always kept."""
+        freq = collections.Counter()
+        for w, c in words.items():
+            for x in d2l.viterbi_segment(w, logp, self.max_len):
+                freq[x] += c
+        loss, others = {}, dict(logp)
+        for x, lp in logp.items():
+            if len(x) > 1:
+                del others[x]
+                alt = d2l.viterbi_segment(x, others, self.max_len)
+                loss[x] = freq[x] * (lp - sum(others[a] for a in alt))
+                others[x] = lp
+        chars = [x for x in logp if len(x) == 1]
+        ranked = sorted(loss, key=lambda x: (-loss[x], x))
+        kept = set(chars) | set(ranked[:max(keep - len(chars), 0)])
+        return {x: lp for x, lp in logp.items() if x in kept}
+
+    def train(self, sentences):
+        words = self._words(sentences)
+        subs, chars = collections.Counter(), collections.Counter()
+        for w, c in words.items():
+            for i in range(len(w)):
+                chars[w[i]] += c
+                for j in range(i + 2, min(len(w), i + self.max_len) + 1):
+                    subs[w[i:j]] += c
+        seed = sorted(subs, key=lambda x: (-subs[x] * len(x), x))
+        seed = {x: subs[x] * len(x) for x in seed[:self.seed_size]}
+        seed.update(chars)
+        total = sum(seed.values())
+        logp = {x: math.log(v / total) for x, v in seed.items()}
+        while True:
+            for _ in range(self.em_iters):
+                logp, loglik = self._em_step(words, logp)
+                self.history.append((len(logp), loglik))
+            if len(logp) <= self.vocab_size:
+                break
+            logp = self._prune(words, logp, max(
+                self.vocab_size, int(len(logp) * self.prune_frac)))
+        self.pieces = logp
+        return self
+
+    def encode(self, text):
+        return [x for w in text.split() for x in d2l.viterbi_segment(
+            '▁' + w, self.pieces, self.max_len)]
+
+    def encode_sample(self, text, alpha=0.2, seed=0):
+        """A segmentation drawn with probability proportional to
+        P(segmentation)^alpha, word by word (subword regularization)."""
+        rng = np.random.default_rng(seed)
+        return [x for w in text.split() for x in d2l._unigram_sample(
+            '▁' + w, self.pieces, self.max_len, alpha, rng)]
+```
+
+<!-- Prose: the checks of the derivation, each against brute force:
+forward-backward against enumerating every segmentation, Viterbi against
+the enumerated argmax, EM's likelihood against its own previous value,
+sampled segmentations against their posterior probabilities. -->
+
+```{.python .input #tokenizers-em-checks}
+%%tab pytorch
+def segmentations(s, logp, max_len):
+    """Every segmentation of s into pieces of logp (brute force)."""
+    if not s:
+        yield []
+        return
+    for j in range(1, min(max_len, len(s)) + 1):
+        if s[:j] in logp:
+            for rest in segmentations(s[j:], logp, max_len):
+                yield [s[:j]] + rest
+
+def random_pieces(rng, n=12, max_len=4):
+    pieces = set('abc') | {''.join(rng.choice(list('abc'), k)) for k in
+                           rng.integers(2, max_len + 1, n)}
+    w = rng.random(len(pieces))
+    return dict(zip(sorted(pieces), np.log(w / w.sum())))
+
+rng, err, ties = np.random.default_rng(0), 0.0, 0
+for _ in range(200):  # forward-backward and Viterbi against enumeration
+    logp = random_pieces(rng)
+    s = ''.join(rng.choice(list('abc'), rng.integers(1, 13)))
+    segs = list(segmentations(s, logp, 4))
+    lps = np.array([sum(logp[x] for x in g) for g in segs])
+    logz, counts = d2l._unigram_fb(s, logp, 4)
+    brute = collections.Counter()
+    for g, lp in zip(segs, lps):
+        for x in g:
+            brute[x] += math.exp(lp - np.logaddexp.reduce(lps))
+    err = max(err, abs(logz - np.logaddexp.reduce(lps)),
+              *(abs(brute[x] - counts[x]) for x in set(brute) | set(counts)))
+    v = d2l.viterbi_segment(s, logp, 4)
+    top = [len(g) for g, lp in zip(segs, lps) if lp >= lps.max() - 1e-12]
+    ties += len(top) > 1
+    assert ''.join(v) == s and len(v) == min(top)
+    assert sum(logp[x] for x in v) >= lps.max() - 1e-12
+assert err < 1e-9
+print(f'forward-backward vs enumeration: max difference {err:.1e}; '
+      f'Viterbi = argmax on 200 strings ({ties} with tied maxima)')
+
+toy = [''.join(rng.choice(list('abc'), rng.integers(3, 9)))
+       for _ in range(5000)]
+uni = d2l.UnigramTokenizer(vocab_size=0, max_piece_len=3)
+words = collections.Counter(toy)
+logp = random_pieces(np.random.default_rng(1), n=20, max_len=3)
+lls = []
+for _ in range(6):  # EM never lowers the corpus log-likelihood
+    logp, ll = uni._em_step(words, logp)
+    lls.append(ll)
+assert all(b >= a - 1e-9 for a, b in zip(lls, lls[1:]))
+print('EM log-likelihood:', ', '.join(f'{ll:,.1f}' for ll in lls))
+
+s, alpha = 'abcabc', 0.2  # sampled segmentations against posteriors
+logp = random_pieces(np.random.default_rng(2), n=40)
+segs = [tuple(g) for g in segmentations(s, logp, 4)]
+w = alpha * np.array([sum(logp[x] for x in g) for g in segs])
+post = dict(zip(segs, np.exp(w - np.logaddexp.reduce(w))))
+draws, rng = 10_000, np.random.default_rng(0)
+freq = collections.Counter(tuple(d2l._unigram_sample(s, logp, 4, alpha, rng))
+                           for _ in range(draws))
+z = max(abs(freq[g] / draws - p) / math.sqrt(p * (1 - p) / draws)
+        for g, p in post.items())
+assert z < 3
+print(f'{len(segs)} segmentations of {s!r}: sampled frequencies within '
+      f'{z:.1f} standard errors of their posteriors')
+```
+
+<!-- Prose: the from-scratch trainer on 1 MB of English against
+SentencePiece's unigram trainer on the same text; SentencePiece's pieces
+and scores loaded into viterbi_segment reproduce its segmentations; where
+the two vocabularies agree; words with two plausible segmentations; five
+sampled segmentations of one sentence. -->
+
+```{.python .input #tokenizers-unigram-train}
+%%tab pytorch
+def first_bytes(texts, n_bytes):
+    """Documents in order until n_bytes UTF-8 bytes."""
+    out, b = [], 0
+    for t in texts:
+        if b >= n_bytes:
+            break
+        out.append(t)
+        b += len(t.encode('utf-8'))
+    return out
+
+def lines(texts):
+    return [l for t in texts for l in t.split('\n') if l.strip()]
+
+eng_1mb = first_bytes(TRAIN['eng_Latn'], 1_000_000)
+held_lines = lines(HELD['eng_Latn'])[:1000]
+tic = time.time()
+uni = d2l.UnigramTokenizer(4096).train(lines(eng_1mb))
+t_ours = time.time() - tic
+tic = time.time()
+sp_uni = d2l.sp_train(eng_1mb, 'unigram', 4096)
+t_sp = time.time() - tic
+print(f'from scratch: {len(uni.pieces):,} pieces in {t_ours:.0f} s '
+      f'({len(uni.history) // uni.em_iters} rounds); SentencePiece: '
+      f'{t_sp:.1f} s')
+
+def sp_viterbi(sp, text):
+    """SentencePiece's segmentation recomputed by viterbi_segment from its
+    pieces and scores: spaces become U+2581 (with the dummy prefix), a
+    character that is no piece is spelled by its byte pieces."""
+    logp, unk = d2l._sp_pieces_scores(sp)
+    s = '▁' + text.replace(' ', '▁')
+    out = []
+    for x in d2l.viterbi_segment(s, logp, 16, unk=unk):
+        out += ([x] if x in logp else
+                [f'<0x{b:02X}>' for b in x.encode('utf-8')])
+    return out
+
+same = [sp_viterbi(sp_uni, l) == sp_uni.encode(l, out_type=str)
+        for l in held_lines]
+print(f'viterbi_segment reproduces SentencePiece on {sum(same)} of '
+      f'{len(same)} held-out lines')
+for l, ok in list(zip(held_lines, same)):
+    if not ok:  # the first disagreements and their cause
+        a, b = sp_viterbi(sp_uni, l), sp_uni.encode(l, out_type=str)
+        k = next(i for i, (x, y) in enumerate(zip(a, b)) if x != y)
+        print('  ours', a[k:k + 4], '| SentencePiece', b[k:k + 4])
+assert sum(same) >= 0.99 * len(same)  # C2
+
+logp_sp, _ = d2l._sp_pieces_scores(sp_uni)
+shared = set(uni.pieces) & set(logp_sp)
+print(f'vocabulary overlap: {len(shared):,} of {len(uni.pieces):,} pieces '
+      f'({len(shared) / len(uni.pieces):.0%})')
+two = []  # frequent words whose two best segmentations are close
+for w, _ in d2l.UnigramTokenizer._words(held_lines).most_common():
+    if not 7 <= len(w) <= 13:
+        continue
+    segs = sorted(((sum(uni.pieces[x] for x in g), g) for g in
+                   segmentations(w, uni.pieces, 12)), reverse=True)[:2]
+    if len(segs) == 2 and segs[0][0] - segs[1][0] < 1.0:
+        two.append((w, segs))
+    if len(two) == 5:
+        break
+for w, segs in two:
+    print(w, ' | '.join(f'{" ".join(g)} ({lp:.1f})' for lp, g in segs))
+sentence = held_lines[0][:80]
+print('Viterbi:', ' '.join(uni.encode(sentence)))
+for seed in range(5):
+    print(f'sample {seed}:', ' '.join(uni.encode_sample(sentence, 0.2, seed)))
+```
+
+<!-- Prose: SentencePiece's defaults change text before it is segmented
+(nmt_nfkc folds ligatures, superscripts and full-width forms), which is why
+the notebook normalizes to NFC itself and passes identity; with
+character_coverage below 1 the rarest characters fall back to bytes. -->
+
+```{.python .input #tokenizers-sp-pitfalls}
+%%tab pytorch
+probe = ['ﬁnance', 'x² + y²', 'ＡＢＣ１２',
+         'café', 'Ⅳ ①']
+nfkc = spm.SentencePieceNormalizer(rule_name='nmt_nfkc')
+print(pd.DataFrame({'text': probe,
+                    'nmt_nfkc': [nfkc.normalize(s) for s in probe],
+                    'changed': [nfkc.normalize(s) != s for s in probe]}))
+jpn = first_bytes(TRAIN['jpn_Jpan'], 1_000_000)
+rows = {}
+for cov in (0.9995, 1.0):
+    sp = d2l.sp_train(jpn, 'unigram', 4096, character_coverage=cov)
+    fb = d2l._fallback_ids(sp)
+    ids = [i for p in BELE['jpn_Jpan'] for i in sp.encode(p)]
+    chars = {p for p in d2l._sp_pieces_scores(sp)[0] if len(p) == 1}
+    rows[cov] = dict(single_characters=len(chars),
+                     fallback_share=sum(i in fb for i in ids) / len(ids),
+                     tokens=len(ids))
+print(pd.DataFrame(rows).T.round(4).rename_axis('character_coverage'))
+```
+
+## Training Data Decides Who Pays
+:label:`subsec_lm_tok_premium`
+
+<!-- Prose: a tokenizer is a compressor fitted to its training text; three
+byte-level BPEs at V = 16,384 whose text weights the languages by
+temperature_weights (restated from sec_lm_data_mixtures) with alpha 1, 0.3
+and 0 on FineWeb-2's document counts (English is given German's count, an
+assumption the text states); what each alpha does to each language's
+premium on Belebele. -->
+
+<!-- Prose: the reference tokenizer's pipeline in the Hugging Face
+tokenizers library (normalizer, pre-tokenizer, model, decoder; the library's
+pipeline guide): NFC, Qwen3's split rule with single digits, byte-level BPE,
+the special tokens first; train_hf_bpe builds it for any vocabulary size and
+special-token list, and the section uses it at 16,384, 65,536 and 32,768. -->
 
 ```{.python .input #tokenizers-bpe-def}
 %%tab pytorch
@@ -104,7 +726,830 @@ def train_hf_bpe(texts, vocab_size, specials, regex=R2_SPLIT_REGEX,
     return tok
 ```
 
-<!-- Placeholder (stage 2): the frozen reference tokenizer, checked by SHA-256 and wrapped for Transformers; special strings in a document stay text. -->
+```{.python .input #tokenizers-premium}
+%%tab pytorch
+SIZES = {l: SLICE_META['fw2_docs'][l] for l in LANGS if l != 'eng_Latn'}
+SIZES = {'eng_Latn': SIZES['deu_Latn'], **SIZES}  # English: German's count
+SCRIPTS = {'Latin': r'\p{Latin}', 'Cyrillic': r'\p{Cyrillic}',
+           'Arabic': r'\p{Arabic}', 'Devanagari': r'\p{Devanagari}',
+           'Han': r'\p{Han}', 'Kana': r'[\p{Hiragana}\p{Katakana}]',
+           'Thai': r'\p{Thai}', 'Hangul': r'\p{Hangul}'}
+
+def script_counts(tok):
+    """Pieces per script: a piece counts for a script when every letter
+    in it belongs to that script."""
+    out = collections.Counter()
+    for b in d2l._vocab_bytes(tok):
+        try:
+            letters = regex.findall(r'\p{L}', b.decode('utf-8'))
+        except (AttributeError, UnicodeDecodeError):  # special, partial
+            continue
+        for name, rx in SCRIPTS.items():
+            if letters and all(regex.fullmatch(rx, c) for c in letters):
+                out[name] += 1
+    return out
+
+ALPHA_TOK, WEIGHTS, rows = {}, {}, {}
+for a in ALPHAS:
+    w = d2l.temperature_weights(SIZES, a)
+    budget = {l: w[l] / max(w.values()) * sum(len(t.encode())
+                                              for t in TRAIN[l])
+              for l in LANGS}  # the most weighted language uses all of it
+    texts = [t for l in LANGS for t in first_bytes(TRAIN[l], budget[l])]
+    tic = time.time()
+    ALPHA_TOK[a] = d2l.train_hf_bpe(texts, V_SMALL, ['<|endoftext|>'])
+    WEIGHTS[a] = w
+    rows[a] = dict(MB=sum(len(t.encode()) for t in texts) / 1e6,
+                   seconds=time.time() - tic, **script_counts(ALPHA_TOK[a]))
+print(pd.DataFrame(WEIGHTS).loc[list(LANGS)].round(4).rename(
+    columns=lambda a: f'weight, alpha={a}'))
+print(pd.DataFrame(rows).T.round(1).rename_axis('alpha'))
+FERT_A = d2l.fertility_table(
+    {f'alpha={a}': encoder(t) for a, t in ALPHA_TOK.items()}, BELE)
+PREM_A = FERT_A.pivot(index='lang', columns='encoder',
+                      values='premium').loc[list(LANGS)]
+print(PREM_A.round(2))
+for l in ('swh_Latn', 'hin_Deva', 'tha_Thai'):  # C3: the smallest corpora
+    p = [PREM_A.loc[l, f'alpha={a}'] for a in ALPHAS]
+    print(f'{l}: premium ' + ' -> '.join(f'{x:.2f}' for x in p) +
+          (' (falls as alpha falls)' if p[0] > p[1] > p[2] else
+           ' (not monotone in alpha)'))
+```
+
+<!-- Prose: the comparison that is fair across tokenizers is bits per byte
+(eq_lm_tok_bpb: bpb = L / (b-bar ln 2), restating subsec_bits-per-byte and
+eq_mdl-bpc); three tokenizers at V = 16,384 trained on the same 45 MB
+(SentencePiece unigram, SentencePiece BPE, the byte-level BPE with
+alpha = 0), one small LM per tokenizer and seed for one epoch over the same
+text (a byte budget, so token counts differ and are recorded), the 20.4
+recipe and learning rate; every result here is at T1 scale. -->
+
+```{.python .input #tokenizers-small-lms}
+%%tab pytorch
+LM_TEXT = [t for l in LANGS for t in TRAIN[l]]
+tic = time.time()
+LM_TOKS = {'SP unigram': d2l.sp_train(LM_TEXT, 'unigram', V_SMALL),
+           'SP BPE': d2l.sp_train(LM_TEXT, 'bpe', V_SMALL),
+           'HF BPE': ALPHA_TOK[0.0]}
+print(f'two SentencePiece models trained in {time.time() - tic:.0f} s')
+
+def fingerprint(tok):
+    if hasattr(tok, 'id_to_piece'):
+        return d2l._sp_fingerprint(tok)
+    return hashlib.sha256(tok.to_str(pretty=False).encode()).hexdigest()
+
+def token_ids(tok, texts):
+    if hasattr(tok, 'id_to_piece'):
+        return tok.encode(list(texts))
+    return d2l._doc_token_ids(tok, texts)
+
+def eos_id(tok):
+    return (tok.eos_id() if hasattr(tok, 'eos_id')
+            else tok.token_to_id('<|endoftext|>'))
+
+def as_pool(tok, texts):
+    """Every text's ids followed by EOS, in one uint16 array."""
+    return np.array([i for ids in token_ids(tok, texts)
+                     for i in ids + [eos_id(tok)]], dtype=np.uint16)
+
+POOLS = {k: as_pool(t, LM_TEXT) for k, t in LM_TOKS.items()}
+EVAL_IDS = {k: {'heldout': {l: token_ids(t, HELD[l]) for l in LANGS},
+                'belebele': {l: token_ids(t, BELE[l]) for l in LANGS}}
+            for k, t in LM_TOKS.items()}
+N_BYTES = {'heldout': {l: [len(x.encode()) for x in HELD[l]] for l in LANGS},
+           'belebele': {l: [len(x.encode()) for x in BELE[l]]
+                        for l in LANGS}}
+TOK_INFO = {k: dict(fingerprint=fingerprint(t), train_tokens=len(POOLS[k]),
+                    eos=eos_id(t), n_tokens={s: {l: [len(x) for x in v]
+                                                 for l, v in d.items()}
+                                             for s, d in EVAL_IDS[k].items()})
+            for k, t in LM_TOKS.items()}
+TEXT_HASH = d2l.docs_hash([(str(i), t) for i, t in enumerate(LM_TEXT)])
+
+@torch.no_grad()
+def doc_nll(model, docs, eos, cfg, batch=32):
+    """Summed NLL (nats) of every document, scored on its own after one
+    EOS of context, in windows of seq_len tokens that advance by half a
+    window (each token scored once, the later ones with at least half a
+    window of context)."""
+    L, windows = cfg.seq_len, []
+    for k, ids in enumerate(docs):
+        seq, done = [eos] + list(ids), 0  # targets seq[1:done + 1] scored
+        while done < len(seq) - 1:
+            end = min(L if done == 0 else done + L // 2, len(seq) - 1)
+            windows.append((k, seq[max(end - L, 0):end + 1], end - done))
+            done = end
+    windows.sort(key=lambda w: len(w[1]))
+    nll, model = np.zeros(len(docs)), model.eval()
+    for a in range(0, len(windows), batch):
+        ws = windows[a:a + batch]
+        T = max(len(x) for _, x, _ in ws)
+        X = torch.tensor([x + [0] * (T - len(x)) for _, x, _ in ws],
+                         device=DEVICE)
+        lp = d2l._per_token_nll(model, X, cfg).double().cpu().numpy()
+        for r, (k, x, m) in enumerate(ws):
+            nll[k] += lp[r, len(x) - 1 - m:len(x) - 1].sum()
+    return nll
+
+def train_small_lm(name, seed, lr, stop_tokens=None):
+    """One small LM on the tokens of LM_TEXT under tokenizer name: one
+    epoch (or stop_tokens); returns train_proxy_lm's record and the model."""
+    cfg = TOK_PROXY._replace(lr=lr)
+    per_step = cfg.batch * cfg.seq_len
+    tokens = int(LM_EPOCHS * (len(POOLS[name]) - 1)) // per_step * per_step
+    with tempfile.TemporaryDirectory() as d:
+        ckpt = os.path.join(d, 'last.pt')
+        out = d2l.train_proxy_lm(
+            {'slice': POOLS[name]}, {'slice': 1.0}, tokens, cfg, seed=seed,
+            log_every=LOG_EVERY, stop_tokens=stop_tokens, ckpt=ckpt,
+            ckpt_every=10**9, device=DEVICE)
+        model = d2l._proxy_model(cfg, seed).to(DEVICE)
+        model.load_state_dict(torch.load(ckpt, map_location=DEVICE,
+                                         weights_only=False)['model'])
+    return out, model, cfg
+
+if 'tok-lm' in RERUN:
+    with open(d2l.lm_artifact('lm-mix-runs-t1-v1')) as f:
+        LR = json.load(f)['lr_choice']['chosen']
+    runs = []
+    for name in LM_TOKS:
+        for seed in SEEDS:
+            out, model, cfg = train_small_lm(name, seed, LR)
+            nll = {s: {l: np.round(doc_nll(model, v, TOK_INFO[name]['eos'],
+                                           cfg), 4).tolist()
+                       for l, v in d.items()}
+                   for s, d in EVAL_IDS[name].items()}
+            runs.append(dict(
+                tokenizer=name, seed=seed, nll=nll, log=out['log'],
+                **{k: out[k] for k in ('steps', 'n_params', 'throughput',
+                                       'peak_mem', 'seconds')}))
+            print(f'{name}, seed {seed}: {out["steps"]} steps of '
+                  f'{cfg.batch * cfg.seq_len:,} tokens, {out["seconds"]:.0f}'
+                  f' s, final loss {out["log"][-1][2]:.3f}', d2l.lm_peak())
+            del model
+            d2l.lm_free()
+    TOKLM = dict(schema='d2l-tok-lm/1', tier=TIER, text_hash=TEXT_HASH,
+                 config=dict(proxy=TOK_PROXY._replace(lr=LR)._asdict(),
+                             lr_from='lm-mix-runs-t1-v1', seeds=SEEDS,
+                             epochs=LM_EPOCHS,
+                             log_every=LOG_EVERY, vocab_size=V_SMALL),
+                 tokenizers=TOK_INFO, n_bytes=N_BYTES, runs=runs)
+    TOKLM = json.loads(json.dumps(TOKLM))  # as the file will read back
+    d2l.lm_save_rerun('tok-lm.json', lambda p: write_json(p, TOKLM))
+elif RESULTS is None:
+    raise KeyError(f'{RES_KEY} is not registered: regenerate it with '
+                   'D2L_RERUN=tok-lm,tok-extend, upload and register it')
+else:
+    TOKLM = RESULTS['tok-lm']
+# This build's tokenizers, text and bytes are the ones the runs used
+assert TOKLM['text_hash'] == TEXT_HASH
+assert TOKLM['n_bytes'] == json.loads(json.dumps(N_BYTES))
+for name, info in json.loads(json.dumps(TOK_INFO)).items():
+    assert TOKLM['tokenizers'][name] == info, f'{name} differs from its run'
+LR = TOKLM['config']['proxy']['lr']
+print(f'{len(TOKLM["runs"])} runs {TIER}, learning rate {LR:g} (from '
+      f'{TOKLM["config"]["lr_from"]})')
+if GPU and 'tok-lm' not in RERUN:  # live check: the start of one run
+    out, model, _ = train_small_lm('HF BPE', 0, LR, stop_tokens=LIVE_TOKENS)
+    reg = {s: l for s, _, l, _ in next(
+        r for r in TOKLM['runs'] if r['tokenizer'] == 'HF BPE'
+        and r['seed'] == 0)['log']}
+    diff = max(abs(l - reg[s]) for s, _, l, _ in out['log'] if s in reg)
+    print(f'live check, HF BPE seed 0, first {LIVE_TOKENS:,} tokens: '
+          f'largest loss difference {diff:.4f} nats', d2l.lm_peak())
+    assert diff < 0.02
+    del model
+    d2l.lm_free()
+```
+
+<!-- Prose: D1 numerically: three ways to the same bits per byte, and why
+perplexity per token cannot be compared across tokenizers (the pitfall). -->
+
+```{.python .input #tokenizers-bpb-identity}
+%%tab pytorch
+def run_of(name, seed):
+    return next(r for r in TOKLM['runs']
+                if r['tokenizer'] == name and r['seed'] == seed)
+
+LN2, rows = math.log(2), {}
+for name in LM_TOKS:  # 10 held-out documents per language: 100
+    nll = np.concatenate([run_of(name, 0)['nll']['heldout'][l][:10]
+                          for l in LANGS])
+    N = np.concatenate([TOKLM['tokenizers'][name]['n_tokens']['heldout'][l]
+                        [:10] for l in LANGS])
+    B = np.concatenate([TOKLM['n_bytes']['heldout'][l][:10] for l in LANGS])
+    L, bbar = nll.sum() / N.sum(), B.sum() / N.sum()
+    ways = (L / (bbar * LN2), nll.sum() / (B.sum() * LN2),
+            np.sum(B / B.sum() * nll / (B * LN2)))
+    assert max(ways) - min(ways) < 1e-9
+    rows[name] = dict(loss_per_token=L, perplexity=math.exp(L),
+                      bytes_per_token=bbar, bpb=ways[0],
+                      max_difference=max(ways) - min(ways))
+print(f'100 held-out documents, seed 0 {TIER}')
+print(pd.DataFrame(rows).T.round(4))
+```
+
+<!-- Prose: the plot below puts each language at its premium under each
+tokenizer and its bits per byte on the Belebele passages; what C4 says,
+in the words the numbers allow. -->
+
+```{.python .input #tokenizers-bpb-premium}
+%%tab pytorch
+def lang_bpb(name, seed, split, lang):
+    nll = np.sum(run_of(name, seed)['nll'][split][lang])
+    return nll / (np.sum(TOKLM['n_bytes'][split][lang]) * LN2)
+
+TOKS = list(LM_TOKS)
+tab = {}
+for name in TOKS:
+    n = {l: sum(TOKLM['tokenizers'][name]['n_tokens']['belebele'][l])
+         for l in LANGS}
+    for l in LANGS:
+        b = [lang_bpb(name, s, 'belebele', l) for s in SEEDS]
+        h = [lang_bpb(name, s, 'heldout', l) for s in SEEDS]
+        tab[name, l] = dict(premium=n[l] / n['eng_Latn'],
+                            bpb_belebele=np.mean(b), seed_range=np.ptp(b),
+                            bpb_heldout=np.mean(h), heldout_range=np.ptp(h))
+TAB = pd.DataFrame(tab).T.rename_axis(['tokenizer', 'lang'])
+print(f'Belebele and held-out bits per byte {TIER}')
+print(TAB.unstack(0).loc[list(LANGS)].round(3).to_string())
+
+def passage_bpb(name):
+    """Per-passage bits per byte, averaged over languages and seeds."""
+    B = np.array([TOKLM['n_bytes']['belebele'][l] for l in LANGS], float)
+    return np.mean([np.array([run_of(name, s)['nll']['belebele'][l]
+                              for l in LANGS]) / (B * LN2) for s in SEEDS],
+                   axis=(0, 1))
+
+macro = {name: passage_bpb(name) for name in TOKS}
+for a, b in itertools.combinations(TOKS, 2):
+    r = d2l.paired_bootstrap(macro[a], macro[b])
+    print(f'macro bits per byte, {a} - {b}: {r.mean:+.4f} '
+          f'[{r.ci[0]:+.4f}, {r.ci[1]:+.4f}] over {r.n} passages')
+bpb = TAB.bpb_belebele.unstack(0).loc[list(LANGS)]
+rng_ = TAB.seed_range.unstack(0).loc[list(LANGS)]
+tok_spread = bpb.max(axis=1) - bpb.min(axis=1)
+lang_spread = bpb.max() - bpb.min()
+for l in LANGS:  # C4, per language: unigram against BPE at equal V
+    d = bpb.loc[l, 'SP unigram'] - bpb.loc[l, 'SP BPE']
+    noise = rng_.loc[l, ['SP unigram', 'SP BPE']].max()
+    print(f'{l}: unigram - BPE {d:+.3f} bits per byte (seed range '
+          f'{noise:.3f}): ' + ('not distinguished' if abs(d) <= noise
+                               else 'differs'))
+print(f'tokenizer type moves a language by at most {tok_spread.max():.3f} '
+      f'bits per byte ({tok_spread.idxmax()}); languages differ by '
+      f'{lang_spread.min():.2f}-{lang_spread.max():.2f} under one tokenizer')
+
+prem = TAB.premium.unstack(0).loc[list(LANGS)]
+d2l.plot([prem[t].to_numpy() for t in TOKS] +
+         [prem.loc[l].to_numpy() for l in LANGS],
+         [bpb[t].to_numpy() for t in TOKS] +
+         [bpb.loc[l].to_numpy() for l in LANGS],
+         xlabel='premium (tokens relative to English)',
+         ylabel='bits per byte (Belebele)', legend=TOKS,
+         fmts=('o', 's', '^') + ('C7-',) * len(LANGS), figsize=(5, 3.5))
+for l in LANGS:
+    d2l.plt.gca().annotate(l[:3], (prem.loc[l].max(), bpb.loc[l].iloc[-1]),
+                           xytext=(4, 0), textcoords='offset points',
+                           fontsize=8)
+```
+
+## Vocabulary Size
+:label:`subsec_lm_tok_vocab`
+
+<!-- Prose: the per-byte compute model C(V) = 6 (A + V d) / b-bar(V)
+(eq_lm_tok_vstar): five lines from df/dV = 0 to the elasticity of
+compression equal to the softmax share, V* = eps A / (d (1 - eps)) at
+constant eps; the measured b-bar(V) from prefixes of one BPE (the prefix
+property of sec_text-sequence); Tao et al. (Scaling Laws with Vocabulary)
+point the same way, larger models deserve larger vocabularies, and also
+let the vocabulary change the loss, which this model holds fixed; where
+released models sit; the practical rules (multiples of 64 or 128, reserved
+ids, tied embeddings). -->
+
+```{.python .input #tokenizers-vocab}
+%%tab pytorch
+R2 = d2l.r2_tokenizer()
+R2_RAW = d2l.r2_tokenizer(raw=True)
+SHARDS = d2l.fwedu_shards('100m')
+
+def shard_texts(shards, n_bytes, start=0):
+    """Decoded documents of a shard set, in order, until n_bytes bytes."""
+    out, b = [], 0
+    for _, ids in shards.iter_docs(start):
+        if b >= n_bytes:
+            break
+        out.append(R2_RAW.decode(ids[:-1].tolist()))
+        b += len(out[-1].encode())
+    return out
+
+tic = time.time()
+ENG = shard_texts(SHARDS, sum(len(t.encode()) for t in LM_TEXT))
+BIG = {'English': d2l.train_hf_bpe(ENG, 65_536, ['<|endoftext|>']),
+       'ten languages': d2l.train_hf_bpe(LM_TEXT, 65_536,
+                                         ['<|endoftext|>'])}
+print(f'two BPEs of 65,536 pieces, on {len(ENG):,} English documents and '
+      f'on the slice ({sum(len(t.encode()) for t in ENG) / 1e6:.0f} and '
+      f'{sum(len(t.encode()) for t in LM_TEXT) / 1e6:.0f} MB): '
+      f'{time.time() - tic:.0f} s')
+GRID = [2**k for k in range(10, 17)]
+EVAL = {'English': HELD['eng_Latn'],
+        'ten languages': [t for l in LANGS for t in HELD[l]]}
+
+def bytes_per_token(tok, texts):
+    return (sum(len(t.encode()) for t in texts)
+            / sum(len(e.ids) for e in tok.encode_batch(texts)))
+
+BBAR = pd.DataFrame({k: [bytes_per_token(d2l._bpe_prefix(BIG[k], V),
+                                         EVAL[k]) for V in GRID]
+                     for k in BIG}, index=GRID)
+EPS = BBAR.apply(lambda c: pd.Series(np.gradient(np.log(c.to_numpy()),
+                                                 np.log(GRID)), GRID))
+d, A = 1024, 12 * 24 * 1024**2   # the reference transformer of D3
+share = lambda V: V * d / (A + V * d)
+cost = lambda V, bbar: 6 * (A + V * d) / bbar  # FLOP per byte
+print(pd.concat([BBAR.round(3).add_prefix('bytes/token, '),
+                 EPS.round(3).add_prefix('elasticity, '),
+                 pd.Series({V: share(V) for V in GRID},
+                           name='softmax share').round(3)], axis=1))
+
+V = np.geomspace(1_000, 200_000, 20_001)  # D3 check on b-bar = c V^0.1
+v_star = 0.1 * A / (d * 0.9)
+v_grid = V[np.argmin(cost(V, V**0.1))]
+assert abs(v_grid / v_star - 1) < 0.01
+print(f'synthetic b-bar = c V^0.1: grid minimum {v_grid:,.0f}, formula '
+      f'{v_star:,.0f}')
+FINE = np.geomspace(GRID[0], GRID[-1], 2_001)
+for k in BIG:  # the measured minimum and the elasticity crossing
+    bb = np.exp(np.interp(np.log(FINE), np.log(GRID), np.log(BBAR[k])))
+    v_min = FINE[np.argmin(cost(FINE, bb))]
+    gap = np.interp(np.log(FINE), np.log(GRID), EPS[k]) - share(FINE)
+    cross = FINE[np.argmax(gap < 0)] if (gap < 0).any() else None
+    print(f'{k}: cost minimum at V = {v_min:,.0f}; elasticity falls to '
+          'the softmax share at ' + (f'V = {cross:,.0f}' if cross else
+                                     'no V in the grid'))
+
+def released_params(model_id):
+    """(vocabulary rows, width, parameters) from the pinned configuration,
+    on the meta device: no weights are loaded."""
+    cfg = transformers.AutoConfig.from_pretrained(
+        model_id, revision=d2l.HF_REVISIONS[model_id]).get_text_config()
+    with torch.device('meta'), warnings.catch_warnings():
+        warnings.simplefilter('ignore')  # kernels a CPU cannot run
+        m = transformers.AutoModelForCausalLM.from_config(cfg)
+    return cfg.vocab_size, cfg.hidden_size, d2l.num_params(m)
+
+FIT = {'GPT-2': (50_257, 768, 124_439_808),  # OpenAI's released config
+       'Qwen3': released_params('Qwen/Qwen3-0.6B-Base'),
+       'Qwen3.5': released_params('Qwen/Qwen3.5-0.8B-Base'),
+       'reference': (32_768, 768, 138_442_752),  # chap. 21's model
+       'o200k_base': (200_019, None, None)}
+TOKENIZERS = {**RELEASED, 'reference': R2}
+rows = {}
+for k, (Vk, dk, n) in FIT.items():
+    bb = sum(len(t.encode()) for t in HELD['eng_Latn']) / sum(map(
+        len, d2l._doc_token_ids(TOKENIZERS[k], HELD['eng_Latn'])))
+    row = dict(V=Vk, bytes_per_token=bb)
+    if dk:
+        Ak = n - Vk * dk  # tied embeddings: one V x d matrix
+        row.update(d=dk, non_embedding_M=Ak / 1e6,
+                   softmax_share=Vk * dk / (Ak + Vk * dk),
+                   GFLOP_per_kB=6 * (Ak + Vk * dk) / bb * 1e3 / 1e9)
+    rows[k] = row
+print('English held-out text; tied embeddings')
+print(pd.DataFrame(rows).T.round(3))
+
+fig, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.8))
+d2l.plot(GRID, [BBAR[k].to_numpy() for k in BIG], 'vocabulary size V',
+         'bytes per token', legend=list(BIG), xscale='log', axes=axes[0],
+         fmts=('-o', '--s'))
+for k in TOKENIZERS:
+    axes[0].plot(rows[k]['V'], rows[k]['bytes_per_token'], 'k^',
+                 markersize=4)
+    axes[0].annotate(k, (rows[k]['V'], rows[k]['bytes_per_token']),
+                     xytext=(3, -9), textcoords='offset points', fontsize=7)
+bb = np.exp(np.interp(np.log(FINE), np.log(GRID), np.log(BBAR['English'])))
+d2l.plot(FINE, cost(FINE, bb) / 1e9, 'vocabulary size V',
+         'GFLOP per byte (d = 1024)', xscale='log', axes=axes[1])
+_ = axes[1].plot(FINE[np.argmin(cost(FINE, bb))],
+                 cost(FINE, bb).min() / 1e9, 'ko')
+```
+
+### Numbers, Whitespace and Code
+:label:`subsec_lm_tok_digits`
+
+<!-- Prose: three digit rules in released regexes (GPT-2 lets BPE carve
+numbers by frequency, o200k_base caps runs at three digits, Qwen3, Qwen3.5
+and the reference tokenizer split every digit); indentation and newline
+runs on the book's own library code (d2l/torch.py, MIT-0). -->
+
+```{.python .input #tokenizers-digits-code}
+%%tab pytorch
+VB = {k: d2l._vocab_bytes(t) for k, t in TOKENIZERS.items()}
+
+def pieces(k, s):
+    return '|'.join(VB[k][i].decode('utf-8', 'replace')
+                    for i in d2l._doc_token_ids(TOKENIZERS[k], [s])[0])
+
+for s in ('12345678', '3.14159', '1,234,567'):
+    print(f'{s:>10}:', '   '.join(f'{k} {pieces(k, s)}' for k in TOKENIZERS))
+NUMBERS = ('In 2019 the plant produced 1,234,567 tonnes, up 12.5% from '
+           '1,097,393 in 2018; the price rose from $3,456.78 to $3,901.25 '
+           'per unit, and 47 of its 365 days ran at 98.6% capacity.\n'
+           '| year | output | share |\n| 2016 | 864,512 | 31.4% |\n'
+           '| 2017 | 970,031 | 33.9% |\n| 2018 | 1,097,393 | 36.2% |\n')
+with open(d2l.__file__, encoding='utf-8') as f:
+    CODE = ''.join(itertools.islice(f, 2000))
+rows = {}
+for k, tok in TOKENIZERS.items():
+    ids = d2l._doc_token_ids(tok, [NUMBERS])[0]
+    digit_tokens = [i for i in ids if any(48 <= c <= 57 for c in VB[k][i])]
+    code = d2l._doc_token_ids(tok, [CODE])[0]
+    spaces = [len(b) for b in VB[k] if b and b.strip(b' ') == b'']
+    rows[k] = dict(digits_per_token=sum(c.isdigit() for c in NUMBERS)
+                   / len(digit_tokens),
+                   code_tokens_per_line=len(code) / CODE.count('\n'),
+                   code_bytes_per_token=len(CODE.encode()) / len(code),
+                   longest_space_token=max(spaces, default=0))
+print(pd.DataFrame(rows).T.round(2))
+```
+
+## Extending a Trained Vocabulary
+:label:`subsec_lm_tok_extend`
+
+<!-- Prose: Qwen3-0.6B-Base fragments Hindi (its premium in the opening
+table) while Qwen3.5's larger vocabulary and its regex, which keeps
+combining marks with their letters, do not; the motivating contrast. Add
+4,096 Hindi pieces; extend_vocab with three initializations (random from
+the model's initializer, the mean of the old rows with a little noise, the
+mean of the old embeddings of the pieces the old tokenizer splits the new
+token into); 19.1's view of initialization as placement in embedding space
+(one sentence); FOCUS and WECHSEL place new rows by cross-lingual
+similarity and are described, not implemented. -->
+
+
+```{.python .input #tokenizers-extend-def}
+%%tab pytorch
+#@save
+def extend_vocab(model, tokenizer, new_pieces, init='random', seed=0):
+    """Add new_pieces to a Transformers tokenizer (as added tokens, which
+    are matched before the model's own segmentation) and rows for them to
+    the model's input and, if untied, output matrices, initialized by
+    init: 'random' (normal, the config's initializer_range), 'mean' (the
+    mean of the old rows plus noise of 1% of their standard deviation, so
+    that no two rows are equal) or 'decomp' (the mean of the old rows of
+    the pieces the old tokenizer splits the new piece into). Returns
+    (model, tokenizer) with config.vocab_size updated."""
+    if init not in ('random', 'mean', 'decomp'):
+        raise ValueError(f'unknown init {init!r}')
+    pieces, n_old = list(new_pieces), len(tokenizer)
+    parts = tokenizer(pieces, add_special_tokens=False)['input_ids']
+    if tokenizer.add_tokens(pieces) != len(pieces):
+        raise ValueError('a new piece is in the vocabulary already')
+    out = model.get_output_embeddings()
+    tied = out is None or out.weight is model.get_input_embeddings().weight
+    old = [model.get_input_embeddings().weight] + ([] if tied
+                                                   else [out.weight])
+    old = [W.detach()[:n_old].float().cpu() for W in old]
+    model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
+    mats = [model.get_input_embeddings().weight] + (
+        [] if tied else [model.get_output_embeddings().weight])
+    g = torch.Generator().manual_seed(seed)
+    std = model.config.get_text_config().initializer_range
+    k, d = len(pieces), old[0].shape[1]
+    with torch.no_grad():
+        for W, W0 in zip(mats, old):
+            if init == 'random':
+                new = torch.randn(k, d, generator=g) * std
+            elif init == 'mean':
+                new = W0.mean(0) + 0.01 * W0.std() * torch.randn(
+                    k, d, generator=g)
+            else:
+                new = torch.stack([W0[ids].mean(0) for ids in parts])
+            W[n_old:n_old + k] = new.to(W.device, W.dtype)
+    model.config.get_text_config().vocab_size = len(tokenizer)
+    return model, tokenizer
+```
+
+<!-- Prose: the new pieces come from a byte-level BPE of 8,192 pieces on
+the 30,000 Hindi documents, with a split rule that keeps letters and their
+combining marks together and never puts a space in a piece (a piece with an
+ASCII character would change how English is segmented); the first 4,096
+pieces by merge order that hold at least two Devanagari characters and are
+not already in Qwen3's vocabulary. -->
+
+```{.python .input #tokenizers-extend-build}
+%%tab pytorch
+HI_REGEX = r"""[\p{L}\p{M}]+|\p{N}|[^\s\p{L}\p{M}\p{N}]+|\s+"""
+HI_TRAIN = HINDI[HINDI.part == 'ext_train'].text.tolist()
+HI_HELD = HINDI[HINDI.part == 'ext_heldout'].text.tolist()
+tic = time.time()
+hi_bpe = d2l.train_hf_bpe(HI_TRAIN, 8192, ['<|endoftext|>'], regex=HI_REGEX)
+QWEN = RELEASED['Qwen3']
+in_qwen, cand, NEW = QWEN.get_vocab(), 0, []
+for i, b in enumerate(d2l._vocab_bytes(hi_bpe)):  # ids in merge order
+    try:
+        s = b.decode('utf-8')
+    except (AttributeError, UnicodeDecodeError):  # special, partial
+        continue
+    if (len(b) > 1 and not any(c < 128 for c in b)
+            and len(regex.findall(r'\p{Devanagari}', s)) >= 2):
+        cand += 1
+        if hi_bpe.id_to_token(i) not in in_qwen:
+            NEW.append(s)
+print(f'Hindi BPE in {time.time() - tic:.0f} s: {cand:,} Devanagari '
+      f'pieces, {len(NEW):,} new to Qwen3; the first {N_NEW:,} are added')
+assert len(NEW) >= N_NEW
+NEW = NEW[:N_NEW]
+EXT_TOK = copy.deepcopy(QWEN)
+EXT_TOK.add_tokens(NEW)
+ascii_lines = [l for l in lines(HELD['eng_Latn']) if l.isascii()][:1000]
+assert len(ascii_lines) == 1000
+assert (QWEN(ascii_lines, add_special_tokens=False)['input_ids']
+        == EXT_TOK(ascii_lines, add_special_tokens=False)['input_ids'])
+print(f'1,000 ASCII lines: the same ids before and after extension')
+hb = sum(len(t.encode()) for t in HI_HELD)
+for name, tok in (('Qwen3', QWEN), ('Qwen3 + Hindi', EXT_TOK),
+                  ('Qwen3.5', RELEASED['Qwen3.5'])):
+    n = sum(map(len, d2l._doc_token_ids(tok, HI_HELD)))
+    print(f'{name}: {hb / n:.2f} bytes per token on 500 held-out Hindi '
+          'documents')
+print('new pieces:', ' '.join(NEW[:12]), '...', ' '.join(NEW[-6:]))
+```
+
+<!-- Prose: the step-0 diagnostics, before any training: how much
+probability the new rows take from English text (it should be about zero;
+much more means they hijack the softmax), Hindi bits per byte on held-out
+documents and on Belebele's Hindi passages, English bits per byte (the
+English ids are unchanged, so only the softmax normalizer can move it), and
+the decomposition identity: with tied embeddings, a new token's logit is
+the mean of its pieces' logits. -->
+
+```{.python .input #tokenizers-extend-step0}
+%%tab pytorch
+BASE, _ = d2l.load_hf(EXT_MODEL, dtype=torch.float32 if SMALL
+                      else torch.bfloat16)
+VAL = d2l.fwedu_shards('val')
+with gzip.open(os.path.join(VAL.root, 'val.jsonl.gz'), 'rt',
+               encoding='utf-8') as f:
+    VAL_TEXT = [json.loads(line) for line in f]
+EN_DOCS = [r['text'] for r in VAL_TEXT[:N_EXT['english']]]
+HI_DOCS, PASSAGES = HI_HELD[:N_EXT['hindi']], BELE['hin_Deva'][
+    :N_EXT['passages']]
+LO = len(QWEN)  # the first new id
+
+@torch.no_grad()
+def new_mass(model, tok):
+    """Mean probability of the new ids over the positions of the English
+    contexts (256 tokens each)."""
+    out = []
+    for ids in d2l._doc_token_ids(tok, EN_DOCS[:N_EXT['contexts']]):
+        x = torch.tensor([ids[:256]], device=model.device)
+        p = model(input_ids=x).logits[0].float().softmax(-1)
+        out.append(p[:, LO:].sum(-1).mean().item())
+    return np.array(out)
+
+def bpb(model, tok, texts):
+    return d2l.bits_per_byte(model, tok, texts, ctx_len=N_EXT['ctx_len'])
+
+def step0(model, tok):
+    per = np.array([bpb(model, tok, [p]) for p in PASSAGES])
+    w = np.array([len(p.encode()) for p in PASSAGES])
+    mass = new_mass(model, tok) if len(tok) > LO else np.zeros(1)
+    n = sum(map(len, d2l._doc_token_ids(tok, HI_DOCS)))
+    return dict(new_mass=float(mass.mean()), new_mass_max=float(mass.max()),
+                hindi_bpb=bpb(model, tok, HI_DOCS),
+                belebele_bpb=float((per * w).sum() / w.sum()),
+                english_bpb=bpb(model, tok, EN_DOCS),
+                hindi_bytes_per_token=sum(len(t.encode())
+                                          for t in HI_DOCS) / n,
+                per_passage=per.round(5).tolist())
+
+@torch.no_grad()
+def decomp_check(model, tok, n=64):
+    """Largest |logit(new) - mean(logit(its pieces))| over the first n
+    new tokens and the positions of two English contexts, and the
+    rounding bound of the stored rows' dtype."""
+    W = model.get_output_embeddings().weight
+    parts = QWEN(NEW[:n], add_special_tokens=False)['input_ids']
+    worst = 0.0
+    for ids in d2l._doc_token_ids(tok, EN_DOCS[:2]):
+        x = torch.tensor([ids[:128]], device=W.device)
+        h = model.get_decoder()(input_ids=x).last_hidden_state[0].float()
+        new = h @ W[LO:LO + n].float().T
+        mean = torch.stack([(h @ W[p].float().T).mean(1) for p in parts], 1)
+        tol = (1e-5 if W.dtype == torch.float32 else 2**-8) * (
+            h.abs() @ W[LO:LO + n].float().abs().T) + 1e-5
+        assert ((new - mean).abs() <= tol).all()
+        worst = max(worst, (new - mean).abs().max().item())
+    return worst
+
+tic = time.time()
+STEP0 = {'control': step0(BASE, QWEN)}
+for init in ('random', 'mean', 'decomp'):
+    model, tok = d2l.extend_vocab(copy.deepcopy(BASE), copy.deepcopy(QWEN),
+                                  NEW, init=init, seed=0)
+    assert model.config.get_text_config().vocab_size == len(tok) == LO + N_NEW
+    STEP0[init] = step0(model, tok)
+    if init == 'decomp':
+        print(f'decomposition identity: largest logit difference '
+              f'{decomp_check(model, tok):.2e} ({model.dtype})')
+    del model
+    d2l.lm_free()
+print(f'step 0 on {len(HI_DOCS)} Hindi documents, {len(PASSAGES)} Belebele '
+      f'passages, {len(EN_DOCS)} English documents'
+      + (' (the small CPU path)' if SMALL else ''),
+      f'{time.time() - tic:.0f} s', d2l.lm_peak())
+print(pd.DataFrame({k: {c: v for c, v in s.items() if c != 'per_passage'}
+                    for k, s in STEP0.items()}).T.round(4))
+per = {k: np.array(s['per_passage']) for k, s in STEP0.items()}
+for init in ('mean', 'decomp'):  # C5 at step 0, over passages
+    r = d2l.paired_bootstrap(per[init], per['random'])
+    print(f'{init} - random, Belebele Hindi bits per byte: {r.mean:+.3f} '
+          f'[{r.ci[0]:+.3f}, {r.ci[1]:+.3f}];',
+          'lower than random' if r.ci[1] < 0 else 'not lower than random',
+          '| new-token mass', 'below' if STEP0[init]['new_mass']
+          < STEP0['random']['new_mass'] else 'NOT below', "random's")
+```
+
+<!-- Prose: continued training on Hindi (control: the unextended model
+with its own tokenizer; and the three initializations): AdamW at 1e-4
+after 10 warmup steps, cosine, 150 steps of 8 x 1,024 tokens, two
+data-order seeds; every arm reads the same documents, so the extended arms
+see more text per step; bf16 autocast over fp32 weights, gradient
+checkpointing, and the loss in chunks of 1,024 positions so the
+8,192 x 155,765 logit matrix never exists (D2L_RERUN=tok-extend, about 20
+minutes on one GPU, measured peak printed). -->
+
+```{.python .input #tokenizers-extend-train}
+%%tab pytorch
+def hindi_docs_for(tok, n_tokens):
+    """The first Hindi training documents whose tokens under tok reach
+    n_tokens."""
+    k, n = 0, 0
+    for ids in d2l._doc_token_ids(tok, HI_TRAIN[:5000]):
+        k, n = k + 1, n + len(ids) + 1
+        if n >= n_tokens:
+            return HI_TRAIN[:k]
+    raise ValueError('too few Hindi documents for the training pool')
+
+def chunk_ce(h, W, y):
+    """Summed cross-entropy of one chunk of positions; checkpointed, so
+    its logits are recomputed in the backward pass, never stored."""
+    with torch.autocast(h.device.type, dtype=torch.bfloat16,
+                        enabled=h.device.type == 'cuda'):
+        z = h @ W.T
+    return F.cross_entropy(z.float(), y, reduction='sum')
+
+def train_ext(arm, seed, docs):
+    E = EXT_TRAIN
+    model, tok = d2l.load_hf(EXT_MODEL, dtype=torch.float32)
+    if arm != 'control':
+        model, tok = d2l.extend_vocab(model, tok, NEW, init=arm, seed=seed)
+    eos = d2l._lm_boundary_id(tok)
+    pool = np.array([i for ids in d2l._doc_token_ids(tok, docs)
+                     for i in ids + [eos]], dtype=np.uint32)
+    stream = d2l._ProxyStream({'hi': pool}, {'hi': 1.0}, E['steps'] * E[
+        'batch'] * E['seq_len'], E['seq_len'], E['batch'], seed)
+    model.gradient_checkpointing_enable()
+    model.config.use_cache = False
+    opt = torch.optim.AdamW(model.parameters(), lr=E['lr'],
+                            betas=(0.9, 0.95), weight_decay=0.0)
+    sched = d2l.ProxyCfg(1, 1, 1, warmup_frac=E['warmup'] / E['steps'],
+                         final_lr_frac=E['final_lr_frac'])
+    W, curve, losses = model.get_output_embeddings().weight, [], []
+    evaluate = lambda texts: bpb(model.eval(), tok, texts)
+    english = {0: evaluate(EN_DOCS)}
+    curve.append((0, evaluate(HI_HELD[:E['curve_docs']])))
+    tic = time.time()
+    for step in range(E['steps']):
+        model.train()
+        for g in opt.param_groups:
+            g['lr'] = E['lr'] * d2l._lr_at(step, E['steps'], sched)
+        X = torch.from_numpy(stream.batch(step)[0]).to(model.device)
+        total = 0.0
+        for Xm in X.split(E['micro_batch']):
+            with torch.autocast(X.device.type, dtype=torch.bfloat16,
+                                enabled=X.device.type == 'cuda'):
+                H = model.get_decoder()(input_ids=Xm[:, :-1]).last_hidden_state
+            h, y = H.flatten(0, 1), Xm[:, 1:].flatten()
+            loss = sum(checkpoint(
+                chunk_ce, h[i:i + E['loss_chunk']], W,
+                y[i:i + E['loss_chunk']], use_reentrant=False)
+                for i in range(0, len(y), E['loss_chunk'])) / (X.shape[0]
+                                                              * E['seq_len'])
+            loss.backward()
+            total += loss.item()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        losses.append(round(total, 4))
+        if step + 1 in E['eval_at']:
+            curve.append((step + 1, evaluate(HI_HELD[:E['curve_docs']])))
+    english[E['steps']] = evaluate(EN_DOCS)
+    out = dict(arm=arm, seed=seed, curve=curve, english=english,
+               losses=losses, seconds=time.time() - tic,
+               train_tokens=len(pool), peak=d2l.lm_peak())
+    del model, opt
+    d2l.lm_free()
+    return out
+
+if 'tok-extend' in RERUN:
+    docs = hindi_docs_for(QWEN, EXT_TRAIN['pool_tokens'])
+    runs = []
+    for arm in ('control', 'random', 'mean', 'decomp'):
+        for seed in EXT_TRAIN['seeds']:
+            runs.append(train_ext(arm, seed, docs))
+            r = runs[-1]
+            print(f'{arm}, seed {seed}: Hindi bits per byte '
+                  + ' -> '.join(f'{v:.3f}' for _, v in r['curve'])
+                  + f', {r["seconds"]:.0f} s, {r["peak"]}')
+    TOKEXT = dict(schema='d2l-tok-extend/1', tier=TIER, model=EXT_MODEL,
+                  revision=d2l.HF_REVISIONS[EXT_MODEL], config=EXT_TRAIN,
+                  n_eval=N_EXT, new_pieces=NEW, n_docs=len(docs),
+                  step0=STEP0, runs=runs)
+    TOKEXT = json.loads(json.dumps(TOKEXT))
+    d2l.lm_save_rerun('tok-extend.json', lambda p: write_json(p, TOKEXT))
+elif RESULTS is None:
+    raise KeyError(f'{RES_KEY} is not registered: regenerate it with '
+                   'D2L_RERUN=tok-lm,tok-extend, upload and register it')
+else:
+    TOKEXT = RESULTS['tok-extend']
+assert TOKEXT['new_pieces'] == NEW, 'the new pieces differ from the runs'
+ARMS = ('control', 'random', 'mean', 'decomp')
+steps = [s for s, _ in TOKEXT['runs'][0]['curve']]
+curves = {a: np.array([[v for _, v in r['curve']] for r in TOKEXT['runs']
+                       if r['arm'] == a]) for a in ARMS}
+print(f'continued training on Hindi {TIER}')
+print(pd.DataFrame({a: dict(zip(steps, c.mean(0))) for a, c in
+                    curves.items()}).round(3).rename_axis('step'))
+print('English bits per byte, step 0 -> 150:', {
+    r['arm'] + f'/{r["seed"]}': '{:.3f} -> {:.3f}'.format(
+        *r['english'].values()) for r in TOKEXT['runs']})
+d2l.plot_intervals(steps, {a: (c.mean(0), c.min(0), c.max(0))
+                           for a, c in curves.items()}, 'step',
+                   'Hindi bits per byte', kind='band',
+                   marks={'seeds': ('.', {a: (np.tile(steps, len(c)),
+                                              c.ravel())
+                                          for a, c in curves.items()})})
+```
+
+### Byte Patches
+:label:`subsec_lm_tok_patches`
+
+<!-- Prose: a tokenizer is a frozen compression decision; the Byte Latent
+Transformer replaces fixed tokens by patches whose boundaries a small byte
+model sets where its entropy jumps (cited, not claimed). The toy below uses
+a character trigram model on Hindi text and cuts where the next
+character's entropy rises; it says nothing about BLT's quality. -->
+
+```{.python .input #tokenizers-patches}
+%%tab pytorch
+text = ''.join(HI_TRAIN[:2000])
+nxt = collections.defaultdict(collections.Counter)
+for a, b, c in zip(text, text[1:], text[2:]):
+    nxt[a + b][c] += 1
+def entropy(ctx):
+    n = np.array(list(nxt[ctx].values()), float)
+    return float(-(n / n.sum() * np.log2(n / n.sum())).sum()) if len(n) else 8.
+para = next(p for t in HI_HELD for p in t.split('\n') if len(p) > 300)
+H = np.array([entropy(para[i - 2:i]) for i in range(2, len(para))])
+cuts = [0] + [i + 2 for i in range(1, len(H)) if H[i] > H[i - 1] + 0.5]
+patches = np.diff(cuts + [len(para)])
+toks = {k: [len(VB[k][i].decode('utf-8', 'ignore')) for i in
+            d2l._doc_token_ids(TOKENIZERS[k], [para])[0]]
+        for k in ('Qwen3', 'Qwen3.5', 'reference')}
+print(pd.DataFrame({'entropy patches': pd.Series(patches).describe(),
+                    **{f'{k} tokens': pd.Series(v).describe()
+                       for k, v in toks.items()}}).round(2))
+```
+
+## The Reference Tokenizer and Its Shards
+:label:`subsec_lm_tok_reference`
+
+<!-- Prose: the frozen decisions, as a table (tab_lm_tok_shard_format, the
+chapter specification's part 1.6): byte-level BPE, exactly 32,768 pieces,
+NFC, Qwen3's split rule with single digits, ids 0-31 the special tokens
+(<|endoftext|> = 0 is the document end, no BOS), trained on the first
+80,000 documents of the shuffled training stream; special-token strings in
+a document are text, never special ids (a page about <|endoftext|> must
+not end early); the shards. -->
+
+:The reference tokenizer and its shards (normative; the next chapter reads them).
+:label:`tab_lm_tok_shard_format`
+
+| Field | Value |
+|---|---|
+| Tokenizer | byte-level BPE, 32,768 pieces, NFC, single digits, no BOS |
+| Special ids | 0 end of text (the EOS after every document), 1 padding, 2 and 3 chat-turn delimiters, 4-31 reserved |
+| `.bin` | little-endian ids, `uint16` for at most 65,536 ids, else `uint32` |
+| `.idx` | `uint32` offsets, one per document plus the token count |
+| `.meta.parquet` | `doc_id`, `n_tokens`, then `url`, `dump`, `bucket`, `edu_score`, `int_score`, `gpt2_tokens`, `src_file`, `src_row` |
+| `manifest.json` | `d2l-corpus/1`: sources, stages, tokenizer hash, format, splits |
+
+<!-- Prose: r2_tokenizer loads the committed file, checks its SHA-256 and
+wraps it for Transformers with EOS id 0, no BOS, and special strings in
+text kept as text (chapter spec part 1.6a). -->
 
 ```{.python .input #tokenizers-r2-tok-def}
 %%tab pytorch
@@ -125,7 +1570,57 @@ def r2_tokenizer(raw=False):
                              raw=raw, sha256=d2l.R2_TOKENIZER_SHA256)
 ```
 
-<!-- Placeholder (stage 2): shards are flat token files with document offsets and a metadata table, described by a d2l-corpus/1 manifest (chapter spec 1.6b). -->
+<!-- Prose: retraining from the registered documents reproduces the
+committed tokenizer.json byte for byte; the wrapper's contract (what the
+next chapters call); the reference tokenizer's tokens against GPT-2's on
+the same documents (the dataset's own token_count column). -->
+
+```{.python .input #tokenizers-r2-retrain}
+%%tab pytorch
+print(type(R2).__name__, f'| {len(R2):,} ids | eos {R2.eos_token_id} | '
+      f'bos {R2.bos_token_id} | pad {R2.pad_token_id} | SHA-256 '
+      f'{d2l.R2_TOKENIZER_SHA256[:16]}...')
+assert R2.eos_token_id == 0 and R2.bos_token_id is None
+assert d2l._lm_boundary_id(R2) == 0 and len(R2) == R2_VOCAB
+assert R2.encode('a b', add_special_tokens=False) == R2(
+    'a b', add_special_tokens=False)['input_ids'] == R2_RAW.encode('a b').ids
+SPECIAL_TEXT = ('A page about chat templates: <|endoftext|> ends a document, '
+                '<|pad|> pads a batch, <|im_start|> and <|im_end|> wrap a '
+                'turn.')
+ids = R2.encode(SPECIAL_TEXT, add_special_tokens=False)
+assert min(ids) >= 32 and R2.decode(ids) == SPECIAL_TEXT
+print(f'special strings in text: {len(ids)} ordinary tokens, none below 32')
+
+assert SHARDS.n_docs >= N_TOK_DOCS
+tic = time.time()
+DOCS = R2_RAW.decode_batch([SHARDS.doc(i)[:-1].tolist()
+                            for i in range(N_TOK_DOCS)])
+retrained = d2l.train_hf_bpe(DOCS, R2_VOCAB, d2l.R2_SPECIALS)
+sha = hashlib.sha256(retrained.to_str(pretty=False).encode()).hexdigest()
+print(f'retrained on the first {N_TOK_DOCS:,} training documents '
+      f'({sum(map(len, DOCS)) / 1e6:.0f}M characters) in '
+      f'{time.time() - tic:.0f} s: SHA-256 {sha[:16]}...',
+      'equal to the committed file' if sha == d2l.R2_TOKENIZER_SHA256
+      else 'DIFFERENT')
+assert sha == d2l.R2_TOKENIZER_SHA256
+texts = [r['text'] for r in VAL_TEXT[:10_000]]
+assert R2_RAW.decode_batch([e.ids for e in R2_RAW.encode_batch(
+    texts, add_special_tokens=False)]) == texts
+assert [e.ids for e in R2_RAW.encode_batch(DOCS[:10_000])] == [
+    SHARDS.doc(i)[:-1].tolist() for i in range(min(10_000, N_TOK_DOCS))]
+meta = SHARDS.meta(0).iloc[:N_TOK_DOCS]
+ratio = (meta.n_tokens - 1).sum() / meta.gpt2_tokens.sum()
+print(f'round trips: {len(texts):,} validation texts and '
+      f'{min(10_000, N_TOK_DOCS):,} training documents; reference tokens '
+      f'per GPT-2 token: {ratio:.3f}')
+del DOCS, retrained
+```
+
+<!-- Prose: write_shards and TokenShards: each document is its ids and
+one EOS, documents never span shards, a shard closes at the first document
+boundary past shard_tokens; TokenShards finds documents by global index and
+tokens by global position, and verify() recomputes every hash and the EOS
+and offset invariants. -->
 
 ```{.python .input #tokenizers-shards-def}
 %%tab pytorch
@@ -327,3 +1822,178 @@ def fwedu_shards(which='100m', fetch=True, max_tokens=None):
                            fetch=fetch, max_tokens=max_tokens)
 ```
 
+<!-- Prose: write_shards and TokenShards (shown above): each document is
+its ids and one EOS, documents never span shards, a shard closes at the
+first document boundary past shard_tokens; the checks below on a small
+temporary set, the uint32 path the next chapter uses for Qwen3, and the
+registered shards. -->
+
+```{.python .input #tokenizers-shards-demo}
+%%tab pytorch
+docs = [(r['doc_id'], r['text']) for r in VAL_TEXT[:2000]]
+docs.append(('fixture-special-strings', SPECIAL_TEXT))
+with tempfile.TemporaryDirectory() as tmp:
+    entry = d2l.write_shards(docs, R2, tmp, 'val', shard_tokens=500_000)
+    ts = d2l.TokenShards(tmp, 'val')
+    ids = d2l._doc_token_ids(R2, [t for _, t in docs])
+    assert ts.n_docs == len(docs) and ts.n_shards > 1
+    assert all(np.array_equal(ts.doc(i), ids[i] + [0])
+               for i in range(len(docs)))
+    for k, s in enumerate(entry['shards']):
+        x, idx = np.asarray(ts.shard(k)), ts.offsets(k)
+        n = np.diff(idx)
+        assert (x == 0).sum() == (x < 32).sum() == s['n_docs']
+        assert np.array_equal(idx, np.concatenate([[0], np.cumsum(n)]))
+    assert ts.verify()
+    i = ts.n_docs // 2 + 1  # a resume cursor
+    k, j, off = ts.locate(i)
+    first = next(ts.iter_docs(start=i))
+    assert first[0] == i and np.array_equal(
+        first[1], ts.shard(k)[off:ts.offsets(k)[j + 1]])
+    t = entry['shards'][0]['n_tokens'] - 5  # across the first boundary
+    assert np.array_equal(ts.read(t, 10), np.concatenate(
+        [ts.shard(0)[-5:], ts.shard(1)[:5]]))
+    print(f'{ts.n_docs:,} documents, {ts.n_tokens:,} tokens in '
+          f'{ts.n_shards} shards; doc {i} is shard {k}, document {j}, '
+          f'token {off:,}; meta columns: {list(ts.meta(0).columns)}')
+    q = d2l.write_shards(docs[:100] + docs[-1:], QWEN,
+                         os.path.join(tmp, 'qwen'), 'val')
+    tq = d2l.TokenShards(os.path.join(tmp, 'qwen'), 'val')
+    assert tq.dtype == np.uint32 and tq.eos_id == 151643 and tq.verify()
+    print(f'Qwen3: {tq.dtype}, EOS {tq.eos_id}, {tq.n_tokens:,} tokens; '
+          f'the fixture ends in {tq.doc(tq.n_docs - 1)[-3:].tolist()}')
+for name, ts in (('train', SHARDS), ('val', VAL)):
+    i = ts.n_docs - 7
+    k, j, off = ts.locate(i)
+    assert next(ts.iter_docs(start=i))[0] == i and ts.verify()
+    print(f'{name}: {ts.n_docs:,} documents, {ts.n_tokens:,} tokens, '
+          f'{ts.n_shards} shard(s), {ts.dtype}, EOS {ts.eos_id}, '
+          f'vocabulary {ts.vocab_size:,}; verified')
+print(json.dumps(SHARDS.manifest['format']))
+```
+
+<!-- Prose: FineWeb-Edu is deduplicated within each crawl dump, not across
+dumps, so the same page can sit in validation and in training: the
+val_dedup stage dropped validation documents that repeat a training
+document's text or URL; what is left of the overlap, measured with exact
+50-token spans against all of train-00000 (20.3's idea of exact n-gram
+matching on token ids). -->
+
+```{.python .input #tokenizers-leakage}
+%%tab pytorch
+stage = next(s for s in VAL.manifest['stages'] if s['name'] == 'val_dedup')
+print(f"val_dedup: {stage['n_in']:,} validation documents in, "
+      f"{stage['n_out']:,} out; dropped {stage['drops']}")
+N = 50
+tic = time.time()
+v_ids = np.concatenate([np.asarray(VAL.shard(k)) for k in
+                        range(VAL.n_shards)])
+t_ids = np.asarray(SHARDS.shard(0))
+hv, okv = d2l._rolling_ngram_hashes(v_ids, N, eos=0)
+ht, okt = d2l._rolling_ngram_hashes(t_ids, N, eos=0)
+t_pos = np.flatnonzero(okt)
+order = np.argsort(ht[t_pos], kind='stable')
+t_sorted = ht[t_pos][order]
+j = np.minimum(np.searchsorted(t_sorted, hv), len(t_sorted) - 1)
+starts = np.flatnonzero(okv & (t_sorted[j] == hv))
+t_start = t_pos[order[j[starts]]]
+span = np.arange(N)
+same = (v_ids[starts[:, None] + span] == t_ids[t_start[:, None] + span]
+        ).all(1)  # the hash match confirmed on the ids
+starts = starts[same]
+v_off = np.concatenate([[0], np.cumsum([VAL.shard(k).shape[0]
+                                        for k in range(VAL.n_shards)])])
+doc_starts = np.concatenate([VAL.offsets(k)[:-1].astype(np.int64)
+                             + v_off[k] for k in range(VAL.n_shards)])
+hit_docs = np.unique(np.searchsorted(doc_starts, starts, 'right') - 1)
+cover = np.zeros(len(v_ids) + 1, np.int64)
+np.add.at(cover, starts, 1)
+np.add.at(cover, starts + N, -1)
+covered = (np.cumsum(cover)[:-1] > 0).sum()
+f_docs = len(hit_docs) / VAL.n_docs
+print(f'{len(starts):,} validation 50-grams also in train-00000 '
+      f'({SHARDS.shards[0]["n_docs"]:,} documents), {time.time() - tic:.0f}'
+      f' s: {len(hit_docs):,} of {VAL.n_docs:,} validation documents '
+      f'({f_docs:.2%}), {covered / VAL.n_tokens:.3%} of their tokens')
+top = collections.Counter()
+for h, d in set(zip(hv[starts].tolist(), (np.searchsorted(
+        doc_starts, starts, 'right') - 1).tolist())):
+    top[h] += 1
+first = {h: s for s, h in zip(starts[::-1], hv[starts][::-1].tolist())}
+for h, n in top.most_common(3):
+    s = first[h]
+    print(f'{n} documents: {R2_RAW.decode(v_ids[s:s + N].tolist())!r}'[:160])
+if f_docs > 0.05:
+    print('more than 5% of validation documents overlap: inspect the spans'
+          ' above before reading this as boilerplate')
+```
+
+<!-- Prose: the chapter's manifest: what the next chapter reads, with
+its hash, its sources and stages, and the sizes of the four artifacts. -->
+
+```{.python .input #tokenizers-chapter-manifest}
+%%tab pytorch
+M = d2l.CorpusManifest.load(os.path.join(SHARDS.root, 'manifest.json'))
+print(f'{M.name} ({M.SCHEMA}), SHA-256 {M.sha256()[:16]}...')
+print(pd.DataFrame(M.sources).drop(columns=['files'], errors='ignore'))
+print(pd.DataFrame([{k: s.get(k) for k in ('name', 'n_in', 'n_out',
+                                           'tokens_out', 'drops')}
+                    for s in M.stages]).to_string(index=False))
+print('tokenizer:', {k: v for k, v in M.tokenizer.items()
+                     if k != 'specials'})
+sizes = {}
+for key in R2_KEYS:
+    if key not in d2l.DATA_HUB:
+        sizes[key] = dict(MB='pending')
+        continue
+    path = d2l.download_keyed(key)
+    sizes[key] = dict(MB=round(os.path.getsize(path) / 1e6, 1))
+    if key == 'lm-fwedu-manifest-4b-v1':
+        with open(path) as f:
+            split = json.load(f)['splits']['train']
+        sizes[key].update(tokens=split['n_tokens'], shards=len(
+            split['shards']), shard_GB=round(sum(
+                s['bytes']['bin'] for s in split['shards']) / 1e9, 2))
+print(pd.DataFrame(sizes).T)
+```
+
+```{.python .input #tokenizers-results}
+%%tab pytorch
+PARTS = {'tok-lm': TOKLM, 'tok-extend': TOKEXT}
+if RERUN:  # the registered file holds both parts
+    merged = dict(schema='d2l-tok-results/1', **PARTS)
+    d2l.lm_save_rerun(RES_KEY + '.json', lambda p: write_json(p, merged))
+    print(f'regenerated: {", ".join(sorted(RERUN))}' + (
+        '; the other part is the registered one'
+        if len(RERUN) < len(ARTIFACTS) else ''))
+else:
+    reg = RESULTS['tok-extend']['step0']
+    diff = {k: max(abs(STEP0[k][c] - reg[k][c]) for c in
+                   ('hindi_bpb', 'belebele_bpb', 'english_bpb'))
+            for k in STEP0}
+    print('small-LM runs: tokenizers, texts and byte counts equal to the '
+          'registered runs')
+    if SMALL:
+        print('step 0: the small CPU path scores fewer texts than the '
+              'registered results; not compared')
+    else:
+        print('step 0, largest bits-per-byte difference from the registered '
+              'values:', {k: round(v, 4) for k, v in diff.items()})
+        assert max(diff.values()) < 0.01
+```
+
+## Summary
+
+<!-- Prose: 3-6 sentences (W1 rule). -->
+
+## Exercises
+
+<!-- Prose: the seven exercises of spec 20.6 part 8: (1) same bits per
+byte, different perplexities; (2) TokenShards.locate and iter_docs resume,
+id 0 only at document ends; (3) the vocabulary size of D3 for a stated
+parameter budget and elasticity, and its untied variant; (4) EM never
+decreases the corpus log-likelihood; (5) digit chunking under three
+tokenizers and a small arithmetic probe with d2l.score_choices on
+Qwen3-0.6B-Base; (6) 1,024, 4,096 and 8,192 new Hindi tokens with the
+decomposition initialization; (7) editing the merge table instead of
+appending pieces. -->

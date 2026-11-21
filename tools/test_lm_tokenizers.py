@@ -13,6 +13,18 @@ order, `meta_fn`, a special id inside a document refused, corruption found
 by `verify`); `normalize_url`; the registry guards of `r2_tokenizer` and
 `fwedu_shards`.
 
+Section cells (20.6): the unigram model of D2 against brute force
+(forward-backward expected counts and log P(s) vs enumeration to 1e-9,
+Viterbi = argmax with ties to fewer pieces, EM never lowers the corpus
+log-likelihood, sampled segmentations within 3 sigma of their posteriors,
+`UnigramTokenizer` trains to its size); `fertility_table` on a toy encoder
+pair; `extend_vocab` on tiny random tied and untied Llama models (ASCII ids
+unchanged, the decomposition-logit identity to 1e-5, rows of each rule,
+config.vocab_size); `sp_train` (thread-pinned pieces identical across two
+trainings, lossless round trip, `viterbi_segment` on `_sp_pieces_scores`
+reproduces its segmentations); `_bpe_prefix`, `_vocab_bytes`,
+`_fallback_ids`; `_rolling_ngram_hashes` against direct hashing.
+
 Gated on the local Hugging Face cache (no download): `R2_SPLIT_REGEX`
 equals the Split pattern of Qwen3-0.6B's tokenizer.json, and Qwen3's
 tokenizer through `_doc_token_ids`/`write_shards` keeps special strings as
@@ -346,6 +358,255 @@ class Qwen3Test(unittest.TestCase):
                                                      151643))
             self.assertEqual(ts.doc(0).tolist(), ids + [151643])
             self.assertTrue(ts.verify())
+
+
+def segmentations(s, logp, max_len):
+    if not s:
+        yield []
+        return
+    for j in range(1, min(max_len, len(s)) + 1):
+        if s[:j] in logp:
+            for rest in segmentations(s[j:], logp, max_len):
+                yield [s[:j]] + rest
+
+
+def random_pieces(rng, n=12, max_len=4):
+    pieces = set('abc') | {''.join(rng.choice(list('abc'), k)) for k in
+                           rng.integers(2, max_len + 1, n)}
+    w = rng.random(len(pieces))
+    return dict(zip(sorted(pieces), np.log(w / w.sum())))
+
+
+class UnigramTest(unittest.TestCase):
+    def test_forward_backward_and_viterbi(self):
+        rng = np.random.default_rng(0)
+        for _ in range(200):
+            logp = random_pieces(rng)
+            s = ''.join(rng.choice(list('abc'), rng.integers(1, 13)))
+            segs = list(segmentations(s, logp, 4))
+            lps = np.array([sum(logp[x] for x in g) for g in segs])
+            logz, counts = d2l._unigram_fb(s, logp, 4)
+            self.assertAlmostEqual(logz, np.logaddexp.reduce(lps), delta=1e-9)
+            brute = {}
+            for g, lp in zip(segs, lps):
+                for x in g:
+                    brute[x] = brute.get(x, 0) + np.exp(
+                        lp - np.logaddexp.reduce(lps))
+            for x in set(brute) | set(counts):
+                self.assertAlmostEqual(brute.get(x, 0), counts[x], delta=1e-9)
+            v = d2l.viterbi_segment(s, logp, 4)
+            top = [len(g) for g, lp in zip(segs, lps)
+                   if lp >= lps.max() - 1e-12]
+            self.assertEqual(''.join(v), s)
+            self.assertGreaterEqual(sum(logp[x] for x in v), lps.max() - 1e-12)
+            self.assertEqual(len(v), min(top))
+
+    def test_viterbi_unknown(self):
+        logp = {'a': -1.0, 'b': -1.0, 'ab': -1.5}
+        self.assertEqual(d2l.viterbi_segment('abab', logp, 2), ['ab', 'ab'])
+        with self.assertRaises(ValueError):
+            d2l.viterbi_segment('abz', logp, 2)
+        self.assertEqual(d2l.viterbi_segment('abz', logp, 2, unk=-20.0),
+                         ['ab', 'z'])
+
+    def test_em_monotone(self):
+        rng = np.random.default_rng(0)
+        words = {}
+        for _ in range(5000):
+            w = ''.join(rng.choice(list('abc'), rng.integers(3, 9)))
+            words[w] = words.get(w, 0) + 1
+        uni = d2l.UnigramTokenizer(0, max_piece_len=3)
+        logp = random_pieces(np.random.default_rng(1), n=20, max_len=3)
+        lls = []
+        for _ in range(6):
+            logp, ll = uni._em_step(words, logp)
+            lls.append(ll)
+        self.assertTrue(all(b >= a - 1e-9 for a, b in zip(lls, lls[1:])))
+        self.assertAlmostEqual(sum(np.exp(v) for v in logp.values()), 1.0,
+                               delta=1e-9)
+
+    def test_sampling_frequencies(self):
+        s, alpha = 'abcabc', 0.2
+        logp = random_pieces(np.random.default_rng(2), n=40)
+        segs = [tuple(g) for g in segmentations(s, logp, 4)]
+        w = alpha * np.array([sum(logp[x] for x in g) for g in segs])
+        post = dict(zip(segs, np.exp(w - np.logaddexp.reduce(w))))
+        rng, n, freq = np.random.default_rng(0), 10_000, {}
+        for _ in range(n):
+            g = tuple(d2l._unigram_sample(s, logp, 4, alpha, rng))
+            freq[g] = freq.get(g, 0) + 1
+        self.assertLessEqual(set(freq), set(post))
+        for g, p in post.items():
+            self.assertLess(abs(freq.get(g, 0) / n - p),
+                            3 * np.sqrt(p * (1 - p) / n), g)
+
+    def test_train_and_encode(self):
+        text = [' '.join(corpus(200, seed=1))]
+        uni = d2l.UnigramTokenizer(300, seed_size=2000).train(text)
+        self.assertLessEqual(len(uni.pieces), 300)
+        self.assertGreater(len(uni.pieces), 250)
+        sentence = 'the model of data and learning'
+        pieces = uni.encode(sentence)
+        self.assertEqual(''.join(pieces), ''.join(
+            '▁' + w for w in sentence.split()))
+        sample = uni.encode_sample(sentence, alpha=0.2, seed=3)
+        self.assertEqual(''.join(sample), ''.join(pieces))
+
+
+class FertilityTest(unittest.TestCase):
+    def test_toy(self):
+        chars = lambda s: [ord(c) for c in s]
+        pairs = lambda s: [ord(c) for c in s[::2]]
+        par = {'eng_Latn': ['abcd', 'ef'], 'xx': ['abcdefgh', 'ü']}
+        df = d2l.fertility_table({'chars': (chars, {ord('ü')}),
+                                  'pairs': pairs}, par).set_index(
+            ['encoder', 'lang'])
+        self.assertEqual(df.loc[('chars', 'xx'), 'tokens'], 9)
+        self.assertAlmostEqual(df.loc[('chars', 'xx'), 'premium'], 9 / 6)
+        self.assertAlmostEqual(df.loc[('pairs', 'xx'), 'premium'], 5 / 3)
+        self.assertAlmostEqual(df.loc[('chars', 'xx'), 'fallback_share'], 1 / 9)
+        self.assertAlmostEqual(df.loc[('chars', 'xx'), 'bytes_per_token'],
+                               10 / 9)
+        self.assertEqual(df.loc[('pairs', 'eng_Latn'), 'premium'], 1.0)
+
+
+def tiny_lm(tok, tied=True, seed=0):
+    import transformers
+    torch.manual_seed(seed)
+    cfg = transformers.LlamaConfig(
+        vocab_size=len(tok), hidden_size=32, intermediate_size=64,
+        num_hidden_layers=2, num_attention_heads=4, num_key_value_heads=2,
+        max_position_embeddings=128, tie_word_embeddings=tied)
+    return transformers.LlamaForCausalLM(cfg).eval()
+
+
+class ExtendVocabTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import transformers
+        from tokenizers import Tokenizer
+        spec = d2l.train_hf_bpe(corpus(400), 600, ['<|endoftext|>']).to_str()
+        cls.make_tok = staticmethod(
+            lambda: transformers.PreTrainedTokenizerFast(
+                tokenizer_object=Tokenizer.from_str(spec),
+                eos_token='<|endoftext|>'))
+        cls.new = ['नमस्ते', 'दुनिया', 'ßüé']
+
+    def test_decomp_identity_and_ascii(self):
+        tok = self.make_tok()
+        model = tiny_lm(tok)
+        ascii_text = ['the model of data', 'def return x == 42']
+        before = tok(ascii_text, add_special_tokens=False)['input_ids']
+        parts = tok(self.new, add_special_tokens=False)['input_ids']
+        n_old = len(tok)
+        model, tok = d2l.extend_vocab(model, tok, self.new, init='decomp')
+        self.assertEqual(tok(ascii_text, add_special_tokens=False)[
+            'input_ids'], before)
+        self.assertEqual(model.config.vocab_size, n_old + len(self.new))
+        W = model.get_output_embeddings().weight
+        self.assertIs(W, model.get_input_embeddings().weight)
+        x = torch.tensor([before[0]])
+        with torch.no_grad():
+            h = model.model(input_ids=x).last_hidden_state[0]
+            logits = model(input_ids=x).logits[0]
+        for k, ids in enumerate(parts):
+            torch.testing.assert_close(
+                logits[:, n_old + k], (h @ W[ids].T).mean(1), atol=1e-5,
+                rtol=0)
+        self.assertEqual(tok(self.new[0], add_special_tokens=False)[
+            'input_ids'], [n_old])
+
+    def test_rules_and_untied(self):
+        for tied in (True, False):
+            for init in ('random', 'mean'):
+                tok = self.make_tok()
+                model = tiny_lm(tok, tied=tied)
+                n_old = len(tok)
+                old_out = model.get_output_embeddings().weight[:n_old].clone()
+                model, tok = d2l.extend_vocab(model, tok, self.new, init=init,
+                                              seed=1)
+                mats = [model.get_input_embeddings().weight]
+                if not tied:
+                    mats.append(model.get_output_embeddings().weight)
+                    torch.testing.assert_close(
+                        mats[1][:n_old], old_out)
+                for W in mats:
+                    new = W[n_old:].detach()
+                    self.assertEqual(new.shape[0], len(self.new))
+                    self.assertFalse(torch.equal(new[0], new[1]))
+                    if init == 'mean':
+                        torch.testing.assert_close(
+                            new.mean(0), W[:n_old].mean(0), atol=0.01,
+                            rtol=0)
+        with self.assertRaises(ValueError):
+            d2l.extend_vocab(model, tok, ['x'], init='zeros')
+
+
+class SentencePieceTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        try:
+            import sentencepiece  # noqa: F401
+        except ImportError:
+            raise unittest.SkipTest('sentencepiece not installed')
+        cls.docs = corpus(600, seed=2)
+        cls.sp = d2l.sp_train(cls.docs, 'unigram', 500)
+
+    def test_deterministic_and_lossless(self):
+        again = d2l.sp_train(self.docs, 'unigram', 500)
+        self.assertEqual(d2l._sp_fingerprint(again),
+                         d2l._sp_fingerprint(self.sp))
+        for t in self.docs[:50] + ['a  b\tc\nd']:
+            self.assertEqual(self.sp.decode(self.sp.encode(t)), t)
+
+    def test_viterbi_reproduces(self):
+        logp, unk = d2l._sp_pieces_scores(self.sp)
+        for line in corpus(100, seed=3):
+            s = '▁' + line.replace(' ', '▁')
+            ours = []
+            for x in d2l.viterbi_segment(s, logp, 16, unk=unk):
+                ours += ([x] if x in logp else
+                         [f'<0x{b:02X}>' for b in x.encode('utf-8')])
+            self.assertEqual(ours, self.sp.encode(line, out_type=str), line)
+
+
+class VocabHelpersTest(unittest.TestCase):
+    def test_prefix_bytes_fallback(self):
+        docs = [unicodedata.normalize('NFC', d) for d in corpus(400)]
+        tok = d2l.train_hf_bpe(docs, 700, ['<|endoftext|>'])
+        full = d2l._bpe_prefix(tok, 700)
+        self.assertEqual([e.ids for e in full.encode_batch(docs[:50])],
+                         [e.ids for e in tok.encode_batch(docs[:50])])
+        small = d2l._bpe_prefix(tok, 400)
+        self.assertEqual(small.get_vocab_size(), 400)
+        enc = small.encode_batch(docs[:50])
+        self.assertTrue(all(max(e.ids) < 400 for e in enc))
+        self.assertEqual([small.decode(e.ids) for e in enc], docs[:50])
+        self.assertGreater(sum(map(len, enc)),
+                           sum(len(e.ids) for e in tok.encode_batch(docs[:50])))
+        vb = d2l._vocab_bytes(tok)
+        self.assertIsNone(vb[0])  # <|endoftext|>
+        for t, e in zip(docs[:20], tok.encode_batch(docs[:20])):
+            self.assertEqual(b''.join(vb[i] for i in e.ids), t.encode('utf-8'))
+        fb = d2l._fallback_ids(tok)
+        self.assertTrue(fb and all(len(vb[i]) == 1 and vb[i][0] >= 0x80
+                                   for i in fb))
+
+    def test_rolling_hashes(self):
+        rng = np.random.default_rng(0)
+        ids = rng.integers(1, 50, 400)
+        ids[[100, 250]] = 0
+        ids[300:310] = ids[20:30]
+        h, ok = d2l._rolling_ngram_hashes(ids, 10, eos=0)
+        self.assertEqual(len(h), len(ids) - 9)
+        self.assertEqual(h[300], h[20])
+        for i in range(len(h)):
+            self.assertEqual(bool(ok[i]), 0 not in ids[i:i + 10].tolist())
+        direct = {}
+        for i in range(len(h)):
+            direct.setdefault(tuple(ids[i:i + 10]), set()).add(int(h[i]))
+        self.assertTrue(all(len(v) == 1 for v in direct.values()))
+        self.assertEqual(len({int(x) for x in h}), len(direct))
 
 
 if __name__ == '__main__':

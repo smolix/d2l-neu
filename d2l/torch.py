@@ -10514,6 +10514,238 @@ def collapse_sim(n, generations, mode='replace', reps=1000, seed=0, mu=0.0,
                 se_var_mu=np.sqrt(np.maximum(m4 - var**2, 0) / reps),
                 se_sigma2=S.std(1, ddof=1) / math.sqrt(reps))
 
+d2l.DATA_HUB['belebele-eng_Latn'] = (  # FLORES passages, CC BY-SA 4.0
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/eng_Latn.jsonl',
+    '39c6796587fef3057a50ff60ecfa3d99c65ada99')
+d2l.DATA_HUB['belebele-deu_Latn'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/deu_Latn.jsonl',
+    '2492011aa4718237cfaf71256150acb453184401')
+d2l.DATA_HUB['belebele-rus_Cyrl'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/rus_Cyrl.jsonl',
+    '9c17bbd2594ec9ea831ad887587a4a401f80c48d')
+d2l.DATA_HUB['belebele-arb_Arab'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/arb_Arab.jsonl',
+    'd409a6fda63a97566583558886f0414c8edd152a')
+d2l.DATA_HUB['belebele-hin_Deva'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/hin_Deva.jsonl',
+    'e7017e822412dd49ef24f24419bc3e2e45175285')
+d2l.DATA_HUB['belebele-zho_Hans'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/zho_Hans.jsonl',
+    'f7da1fed3c0c6d7e43a324bf8739231f2b346b6e')
+d2l.DATA_HUB['belebele-jpn_Jpan'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/jpn_Jpan.jsonl',
+    '2a3755b2eaea864e066f4414c3f64e0a53cca41a')
+d2l.DATA_HUB['belebele-tha_Thai'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/tha_Thai.jsonl',
+    '4aae5d586fe29db59bf12bfcbc9b75e816ca4380')
+d2l.DATA_HUB['belebele-swh_Latn'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/swh_Latn.jsonl',
+    '1c327092d52031a5d7dfffe5b7419e0f2f584bc8')
+d2l.DATA_HUB['belebele-kor_Hang'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/kor_Hang.jsonl',
+    '17fa36b78cef39784d497a7cf40caf678e83c955')
+
+def fertility_table(encoders, parallel, ref='eng_Latn'):
+    """Per encoder and language: passages, UTF-8 bytes, tokens, bytes per
+    token, tokens per passage, the share of byte-fallback tokens and the
+    premium, the tokens a language needs over the tokens ref needs for
+    translations of the same passages. encoders maps a name to encode(str)
+    -> ids, or to (encode, fallback_ids); parallel maps a language to its
+    passages, aligned across languages.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    rows = []
+    for name, enc in encoders.items():
+        enc, fallback = enc if isinstance(enc, tuple) else (enc, ())
+        fallback = set(fallback)
+        for lang, passages in parallel.items():
+            ids = [enc(p) for p in passages]
+            n = sum(map(len, ids))
+            n_bytes = sum(len(p.encode('utf-8')) for p in passages)
+            rows.append(dict(
+                encoder=name, lang=lang, passages=len(passages),
+                bytes=n_bytes, tokens=n, bytes_per_token=n_bytes / n,
+                tokens_per_passage=n / len(passages),
+                fallback_share=sum(i in fallback for x in ids for i in x)
+                / n))
+    df = pd.DataFrame(rows)
+    ref_tokens = df[df.lang == ref].set_index('encoder').tokens
+    df['premium'] = df.tokens / df.encoder.map(ref_tokens)
+    return df
+
+def _unigram_lattice(s, logp, max_len):
+    """Edges (i, j, piece) of the segmentation lattice of s, by start i:
+    s[i:j] is a piece of logp.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    return [(i, j, s[i:j]) for i in range(len(s))
+            for j in range(i + 1, min(len(s), i + max_len) + 1)
+            if s[i:j] in logp]
+
+def _unigram_fb(s, logp, max_len):
+    """log P(s), summed over all segmentations of s, and each piece's
+    posterior expected count in s (forward-backward on the lattice).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    n, edges = len(s), _unigram_lattice(s, logp, max_len)
+    fwd, bwd = [-math.inf] * (n + 1), [-math.inf] * (n + 1)
+    fwd[0] = bwd[n] = 0.0
+    for i, j, x in edges:  # by start: fwd[i] is complete when read
+        fwd[j] = d2l._logaddexp(fwd[j], fwd[i] + logp[x])
+    for i, j, x in reversed(edges):  # by start, descending
+        bwd[i] = d2l._logaddexp(bwd[i], logp[x] + bwd[j])
+    counts = collections.Counter()
+    for i, j, x in edges:
+        counts[x] += math.exp(fwd[i] + logp[x] + bwd[j] - fwd[n])
+    return fwd[n], counts
+
+def viterbi_segment(text, logp, max_len, *, unk=None):
+    """The most probable segmentation of text into pieces of logp (piece
+    -> log-probability) of at most max_len characters; ties go to fewer
+    pieces. With unk, a character that is no piece is a piece of
+    log-probability unk (SentencePiece's rule for unknown characters).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    n = len(text)
+    best, back = [(-math.inf, 0)] * (n + 1), [0] * (n + 1)
+    best[0] = (0.0, 0)  # (log-probability, minus the number of pieces)
+    for j in range(1, n + 1):
+        for i in range(max(0, j - max_len), j):
+            lp = logp.get(text[i:j], unk if j == i + 1 else None)
+            if lp is not None and best[i][0] > -math.inf:
+                cand = (best[i][0] + lp, best[i][1] - 1)
+                if cand > best[j]:
+                    best[j], back[j] = cand, i
+    if best[n][0] == -math.inf:
+        raise ValueError(f'no segmentation of {text!r}')
+    out, j = [], n
+    while j > 0:
+        out.append(text[back[j]:j])
+        j = back[j]
+    return out[::-1]
+
+def _unigram_sample(s, logp, max_len, alpha, rng):
+    """A segmentation of s drawn with probability proportional to
+    P(segmentation)^alpha: forward filtering, then backward sampling.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    fwd, into = [-math.inf] * (len(s) + 1), collections.defaultdict(list)
+    fwd[0] = 0.0
+    for i, j, x in _unigram_lattice(s, logp, max_len):
+        fwd[j] = d2l._logaddexp(fwd[j], fwd[i] + alpha * logp[x])
+        into[j].append((i, x))
+    out, j = [], len(s)
+    while j > 0:
+        w = np.array([fwd[i] + alpha * logp[x] for i, x in into[j]])
+        p = np.exp(w - w.max())
+        i, x = into[j][rng.choice(len(w), p=p / p.sum())]
+        out.append(x)
+        j = i
+    return out[::-1]
+
+class UnigramTokenizer:
+    """A unigram language model over pieces (Kudo 2018), trained by EM
+    with pruning: seed the vocabulary with every character and the
+    seed_size most frequent substrings (scored by count times length),
+    then alternate em_iters EM steps with keeping prune_frac of the pieces
+    until vocab_size remain. Words are split at whitespace and marked by a
+    leading U+2581, as SentencePiece marks them.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    def __init__(self, vocab_size, seed_size=100_000, em_iters=2,
+                 prune_frac=0.8, max_piece_len=12):
+        self.vocab_size, self.seed_size = vocab_size, seed_size
+        self.em_iters, self.prune_frac = em_iters, prune_frac
+        self.max_len, self.pieces, self.history = max_piece_len, {}, []
+
+    @staticmethod
+    def _words(sentences):
+        return collections.Counter('▁' + w for s in sentences
+                                   for w in s.split())
+
+    def _em_step(self, words, logp):
+        """E: expected piece counts under logp; M: probabilities
+        proportional to them. Returns the new log-probabilities and the
+        corpus log-likelihood under the old ones."""
+        counts, loglik = collections.Counter(), 0.0
+        for w, c in words.items():
+            logz, cw = d2l._unigram_fb(w, logp, self.max_len)
+            loglik += c * logz
+            for x, v in cw.items():
+                counts[x] += c * v
+        for x in logp:  # a character stays a piece, however rare
+            if len(x) == 1 and counts[x] <= 0:
+                counts[x] = 1e-6
+        log_total = math.log(sum(counts.values()))
+        return ({x: math.log(counts[x]) - log_total for x in logp
+                 if counts[x] > 0}, loglik)
+
+    def _prune(self, words, logp, keep):
+        """The keep pieces whose removal costs the most likelihood: a
+        piece's loss is its count in the Viterbi segmentations times what
+        its log-probability gains over the best segmentation of its own
+        string without it. Characters are always kept."""
+        freq = collections.Counter()
+        for w, c in words.items():
+            for x in d2l.viterbi_segment(w, logp, self.max_len):
+                freq[x] += c
+        loss, others = {}, dict(logp)
+        for x, lp in logp.items():
+            if len(x) > 1:
+                del others[x]
+                alt = d2l.viterbi_segment(x, others, self.max_len)
+                loss[x] = freq[x] * (lp - sum(others[a] for a in alt))
+                others[x] = lp
+        chars = [x for x in logp if len(x) == 1]
+        ranked = sorted(loss, key=lambda x: (-loss[x], x))
+        kept = set(chars) | set(ranked[:max(keep - len(chars), 0)])
+        return {x: lp for x, lp in logp.items() if x in kept}
+
+    def train(self, sentences):
+        words = self._words(sentences)
+        subs, chars = collections.Counter(), collections.Counter()
+        for w, c in words.items():
+            for i in range(len(w)):
+                chars[w[i]] += c
+                for j in range(i + 2, min(len(w), i + self.max_len) + 1):
+                    subs[w[i:j]] += c
+        seed = sorted(subs, key=lambda x: (-subs[x] * len(x), x))
+        seed = {x: subs[x] * len(x) for x in seed[:self.seed_size]}
+        seed.update(chars)
+        total = sum(seed.values())
+        logp = {x: math.log(v / total) for x, v in seed.items()}
+        while True:
+            for _ in range(self.em_iters):
+                logp, loglik = self._em_step(words, logp)
+                self.history.append((len(logp), loglik))
+            if len(logp) <= self.vocab_size:
+                break
+            logp = self._prune(words, logp, max(
+                self.vocab_size, int(len(logp) * self.prune_frac)))
+        self.pieces = logp
+        return self
+
+    def encode(self, text):
+        return [x for w in text.split() for x in d2l.viterbi_segment(
+            '▁' + w, self.pieces, self.max_len)]
+
+    def encode_sample(self, text, alpha=0.2, seed=0):
+        """A segmentation drawn with probability proportional to
+        P(segmentation)^alpha, word by word (subword regularization)."""
+        rng = np.random.default_rng(seed)
+        return [x for w in text.split() for x in d2l._unigram_sample(
+            '▁' + w, self.pieces, self.max_len, alpha, rng)]
+
 R2_SPLIT_REGEX = (r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+"""
                   r"""|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)"""
                   r"""|\s+""")
@@ -10547,6 +10779,47 @@ def train_hf_bpe(texts, vocab_size, specials, regex=R2_SPLIT_REGEX,
                          f'{vocab_size}: too little text for this vocabulary')
     tok.encode_special_tokens = True
     return tok
+
+def extend_vocab(model, tokenizer, new_pieces, init='random', seed=0):
+    """Add new_pieces to a Transformers tokenizer (as added tokens, which
+    are matched before the model's own segmentation) and rows for them to
+    the model's input and, if untied, output matrices, initialized by
+    init: 'random' (normal, the config's initializer_range), 'mean' (the
+    mean of the old rows plus noise of 1% of their standard deviation, so
+    that no two rows are equal) or 'decomp' (the mean of the old rows of
+    the pieces the old tokenizer splits the new piece into). Returns
+    (model, tokenizer) with config.vocab_size updated.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if init not in ('random', 'mean', 'decomp'):
+        raise ValueError(f'unknown init {init!r}')
+    pieces, n_old = list(new_pieces), len(tokenizer)
+    parts = tokenizer(pieces, add_special_tokens=False)['input_ids']
+    if tokenizer.add_tokens(pieces) != len(pieces):
+        raise ValueError('a new piece is in the vocabulary already')
+    out = model.get_output_embeddings()
+    tied = out is None or out.weight is model.get_input_embeddings().weight
+    old = [model.get_input_embeddings().weight] + ([] if tied
+                                                   else [out.weight])
+    old = [W.detach()[:n_old].float().cpu() for W in old]
+    model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
+    mats = [model.get_input_embeddings().weight] + (
+        [] if tied else [model.get_output_embeddings().weight])
+    g = torch.Generator().manual_seed(seed)
+    std = model.config.get_text_config().initializer_range
+    k, d = len(pieces), old[0].shape[1]
+    with torch.no_grad():
+        for W, W0 in zip(mats, old):
+            if init == 'random':
+                new = torch.randn(k, d, generator=g) * std
+            elif init == 'mean':
+                new = W0.mean(0) + 0.01 * W0.std() * torch.randn(
+                    k, d, generator=g)
+            else:
+                new = torch.stack([W0[ids].mean(0) for ids in parts])
+            W[n_old:n_old + k] = new.to(W.device, W.dtype)
+    model.config.get_text_config().vocab_size = len(tokenizer)
+    return model, tokenizer
 
 R2_TOKENIZER_SHA256 = None  # SHA-256 of tokenizer.json; set when it is built
 
@@ -18915,7 +19188,8 @@ def _doc_token_ids(tokenizer, texts):
         return tokenizer.encode_ordinary_batch(texts)
     if hasattr(tokenizer, 'all_special_ids'):  # Transformers
         return tokenizer(texts, add_special_tokens=False,
-                         split_special_tokens=True)['input_ids']
+                         split_special_tokens=True,  # no warning about
+                         verbose=False)['input_ids']  # long documents
     old = tokenizer.encode_special_tokens
     tokenizer.encode_special_tokens = True
     try:
@@ -19015,6 +19289,179 @@ def normalize_url(url):
         host = host[4:]
     return urllib.parse.urlunsplit((p.scheme.lower(), host,
                                     p.path.rstrip('/'), p.query, ''))
+
+def _byte_level_decoder():
+    """GPT-2's byte-level alphabet inverted: the printable character that
+    stands for each byte -> the byte (the alphabet of byte-level BPE).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    bs = (list(range(33, 127)) + list(range(161, 173))
+          + list(range(174, 256)))
+    cs, n = bs[:], 0
+    for b in range(256):
+        if b not in bs:
+            bs.append(b)
+            cs.append(256 + n)
+            n += 1
+    return {chr(c): b for b, c in zip(bs, cs)}
+
+def _vocab_bytes(tokenizer):
+    """The UTF-8 bytes behind every token id (None for special and unused
+    ids) of a tiktoken encoding, a Transformers tokenizer, a
+    tokenizers.Tokenizer or a SentencePieceProcessor.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if hasattr(tokenizer, 'decode_single_token_bytes'):  # tiktoken
+        out = [None] * tokenizer.n_vocab
+        special = set(tokenizer.special_tokens_set)
+        for i in range(tokenizer.n_vocab):
+            try:
+                b = tokenizer.decode_single_token_bytes(i)
+            except KeyError:
+                continue
+            if b.decode('utf-8', 'replace') not in special:
+                out[i] = b
+        return out
+    if hasattr(tokenizer, 'id_to_piece'):  # SentencePiece
+        out = []
+        for i in range(tokenizer.get_piece_size()):
+            piece = tokenizer.id_to_piece(i)
+            if tokenizer.is_byte(i):
+                out.append(bytes([int(piece[3:5], 16)]))
+            elif tokenizer.is_control(i) or tokenizer.is_unknown(i):
+                out.append(None)
+            else:
+                out.append(piece.replace('▁', ' ').encode('utf-8'))
+        return out
+    raw = getattr(tokenizer, 'backend_tokenizer', tokenizer)
+    vocab = raw.get_vocab(with_added_tokens=True)
+    special = {t.content for t in raw.get_added_tokens_decoder().values()
+               if t.special}
+    added = {t.content for t in raw.get_added_tokens_decoder().values()}
+    byte_level, dec = 'ByteLevel' in raw.to_str(), _byte_level_decoder()
+    out = [None] * (max(vocab.values()) + 1)
+    for piece, i in vocab.items():
+        if piece in special:
+            continue
+        if byte_level and piece not in added:
+            out[i] = bytes(dec[c] for c in piece)
+        else:
+            out[i] = piece.replace('▁', ' ').encode('utf-8')
+    return out
+
+def _fallback_ids(tokenizer):
+    """Ids that spell a character byte by byte: SentencePiece's byte pieces
+    and, in a byte-level vocabulary, the single bytes that are no
+    character on their own (0x80 and above).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if hasattr(tokenizer, 'is_byte'):
+        return {i for i in range(tokenizer.get_piece_size())
+                if tokenizer.is_byte(i)}
+    return {i for i, b in enumerate(_vocab_bytes(tokenizer))
+            if b is not None and len(b) == 1 and b[0] >= 0x80}
+
+def _bpe_prefix(tok, V):
+    """The byte-level BPE `tok` (a tokenizers.Tokenizer) cut to its first
+    V ids: the vocabulary entries below V and the merges that make them.
+    Encoding with it is encoding with the merges learned first (the prefix
+    property of BPE).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    from tokenizers import Tokenizer
+    spec = json.loads(tok.to_str())
+    vocab = spec['model']['vocab']
+    spec['model']['vocab'] = {p: i for p, i in vocab.items() if i < V}
+    spec['model']['merges'] = [m for m in spec['model']['merges']
+                               if vocab[''.join(m)] < V]
+    spec['added_tokens'] = [t for t in spec['added_tokens'] if t['id'] < V]
+    out = Tokenizer.from_str(json.dumps(spec))
+    out.encode_special_tokens = True
+    return out
+
+def sp_train(texts, model_type, vocab_size, **kw):
+    """A SentencePiece model trained on texts (one input line per line of
+    text) through a temporary file, as a SentencePieceProcessor. Defaults:
+    no normalization (the text is NFC already), whitespace kept as is,
+    byte fallback instead of <unk>, digits split, character_coverage
+    0.9995, 16 threads (the pieces depend on the thread count).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    import io
+    import tempfile
+    import sentencepiece as spm
+    args = dict(model_type=model_type, vocab_size=vocab_size,
+                normalization_rule_name='identity',
+                remove_extra_whitespaces=False, byte_fallback=True,
+                split_digits=True, character_coverage=0.9995,
+                num_threads=16, max_sentence_length=1 << 16,
+                minloglevel=2)
+    args.update(kw)
+    model = io.BytesIO()
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, 'input.txt')
+        with open(path, 'w', encoding='utf-8') as f:
+            for t in texts:
+                f.writelines(line + '\n' for line in t.split('\n')
+                             if line.strip())
+        spm.SentencePieceTrainer.train(input=path, model_writer=model,
+                                       **args)
+    return spm.SentencePieceProcessor(model_proto=model.getvalue())
+
+def _sp_fingerprint(sp):
+    """SHA-256 of a SentencePiece model's pieces and scores in id order
+    (the serialized model also records the training file's path).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    rows = [(sp.id_to_piece(i), round(sp.get_score(i), 6))
+            for i in range(sp.get_piece_size())]
+    return hashlib.sha256(json.dumps(rows, ensure_ascii=False).encode(
+        'utf-8')).hexdigest()
+
+def _sp_pieces_scores(sp):
+    """A unigram SentencePiece model as viterbi_segment's input: the
+    log-probabilities of its ordinary pieces, and the score SentencePiece
+    gives a character that is no piece (the lowest score minus 10).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    logp = {sp.id_to_piece(i): sp.get_score(i)
+            for i in range(sp.get_piece_size())
+            if not (sp.is_byte(i) or sp.is_control(i) or sp.is_unknown(i))}
+    return logp, min(logp.values()) - 10.0
+
+def _logaddexp(a, b):
+    """log(exp(a) + exp(b)) for Python floats, -inf allowed.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if a == -math.inf:
+        return b
+    if b == -math.inf:
+        return a
+    m = max(a, b)
+    return m + math.log1p(math.exp(-math.fabs(a - b)))
+
+def _rolling_ngram_hashes(ids, n, eos=None):
+    """64-bit polynomial hashes of every window of n consecutive token ids
+    (Horner's rule, arithmetic mod 2^64, vectorized over the windows); a
+    window that contains eos gets no hash (its slot is masked). Returns
+    (hashes, valid), both of length len(ids) - n + 1. Equal windows hash
+    equally; a match is confirmed on the ids themselves.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    x = np.asarray(ids).astype(np.uint64) + np.uint64(1)
+    m = len(x) - n + 1
+    if m <= 0:
+        return np.zeros(0, np.uint64), np.zeros(0, bool)
+    h = np.zeros(m, dtype=np.uint64)
+    base = np.uint64(0x9E3779B97F4A7C15)
+    for k in range(n):
+        h *= base
+        h += x[k:k + m]
+    valid = np.ones(m, dtype=bool)
+    if eos is not None:
+        c = np.concatenate([[0], np.cumsum(np.asarray(ids) == eos)])
+        valid = c[n:n + m] == c[:m]
+    return h, valid
 
 
 ones_like = torch.ones_like

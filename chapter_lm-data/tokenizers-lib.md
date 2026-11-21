@@ -16,7 +16,15 @@ uses these symbols at import time). It holds the library code that
   checked download of one shard file (`_SHARD_EXT`, `FWEDU_META_COLUMNS`,
   `_ShardWriter`, `_meta_table`, `_fetch_shard_file`);
 - URL normalization for the validation split's deduplication
-  (`normalize_url`).
+  (`normalize_url`);
+- the bytes behind every token id of the four tokenizer kinds the section
+  compares, its byte-fallback ids, and the prefix of a byte-level BPE
+  (`_byte_level_decoder`, `_vocab_bytes`, `_fallback_ids`, `_bpe_prefix`);
+- SentencePiece training through a temporary file and its pieces as a
+  log-probability table (`sp_train`, `_sp_fingerprint`, `_sp_pieces_scores`);
+- the log-space addition of the unigram lattice (`_logaddexp`);
+- vectorized token n-gram hashes for the train-validation overlap
+  (`_rolling_ngram_hashes`).
 
 Every block is tagged `%%tab pytorch` and imports what it needs beyond the
 library preamble (`tokenizers`, `transformers`, `pyarrow`, `urllib`) inside
@@ -88,7 +96,8 @@ def _doc_token_ids(tokenizer, texts):
         return tokenizer.encode_ordinary_batch(texts)
     if hasattr(tokenizer, 'all_special_ids'):  # Transformers
         return tokenizer(texts, add_special_tokens=False,
-                         split_special_tokens=True)['input_ids']
+                         split_special_tokens=True,  # no warning about
+                         verbose=False)['input_ids']  # long documents
     old = tokenizer.encode_special_tokens
     tokenizer.encode_special_tokens = True
     try:
@@ -192,4 +201,177 @@ def normalize_url(url):
         host = host[4:]
     return urllib.parse.urlunsplit((p.scheme.lower(), host,
                                     p.path.rstrip('/'), p.query, ''))
+```
+
+```{.python .input #tokenizers-lib-vocab}
+%%tab pytorch
+#@save
+def _byte_level_decoder():
+    """GPT-2's byte-level alphabet inverted: the printable character that
+    stands for each byte -> the byte (the alphabet of byte-level BPE)."""
+    bs = (list(range(33, 127)) + list(range(161, 173))
+          + list(range(174, 256)))
+    cs, n = bs[:], 0
+    for b in range(256):
+        if b not in bs:
+            bs.append(b)
+            cs.append(256 + n)
+            n += 1
+    return {chr(c): b for b, c in zip(bs, cs)}
+
+#@save
+def _vocab_bytes(tokenizer):
+    """The UTF-8 bytes behind every token id (None for special and unused
+    ids) of a tiktoken encoding, a Transformers tokenizer, a
+    tokenizers.Tokenizer or a SentencePieceProcessor."""
+    if hasattr(tokenizer, 'decode_single_token_bytes'):  # tiktoken
+        out = [None] * tokenizer.n_vocab
+        special = set(tokenizer.special_tokens_set)
+        for i in range(tokenizer.n_vocab):
+            try:
+                b = tokenizer.decode_single_token_bytes(i)
+            except KeyError:
+                continue
+            if b.decode('utf-8', 'replace') not in special:
+                out[i] = b
+        return out
+    if hasattr(tokenizer, 'id_to_piece'):  # SentencePiece
+        out = []
+        for i in range(tokenizer.get_piece_size()):
+            piece = tokenizer.id_to_piece(i)
+            if tokenizer.is_byte(i):
+                out.append(bytes([int(piece[3:5], 16)]))
+            elif tokenizer.is_control(i) or tokenizer.is_unknown(i):
+                out.append(None)
+            else:
+                out.append(piece.replace('▁', ' ').encode('utf-8'))
+        return out
+    raw = getattr(tokenizer, 'backend_tokenizer', tokenizer)
+    vocab = raw.get_vocab(with_added_tokens=True)
+    special = {t.content for t in raw.get_added_tokens_decoder().values()
+               if t.special}
+    added = {t.content for t in raw.get_added_tokens_decoder().values()}
+    byte_level, dec = 'ByteLevel' in raw.to_str(), _byte_level_decoder()
+    out = [None] * (max(vocab.values()) + 1)
+    for piece, i in vocab.items():
+        if piece in special:
+            continue
+        if byte_level and piece not in added:
+            out[i] = bytes(dec[c] for c in piece)
+        else:
+            out[i] = piece.replace('▁', ' ').encode('utf-8')
+    return out
+
+#@save
+def _fallback_ids(tokenizer):
+    """Ids that spell a character byte by byte: SentencePiece's byte pieces
+    and, in a byte-level vocabulary, the single bytes that are no
+    character on their own (0x80 and above)."""
+    if hasattr(tokenizer, 'is_byte'):
+        return {i for i in range(tokenizer.get_piece_size())
+                if tokenizer.is_byte(i)}
+    return {i for i, b in enumerate(_vocab_bytes(tokenizer))
+            if b is not None and len(b) == 1 and b[0] >= 0x80}
+
+#@save
+def _bpe_prefix(tok, V):
+    """The byte-level BPE `tok` (a tokenizers.Tokenizer) cut to its first
+    V ids: the vocabulary entries below V and the merges that make them.
+    Encoding with it is encoding with the merges learned first (the prefix
+    property of BPE)."""
+    from tokenizers import Tokenizer
+    spec = json.loads(tok.to_str())
+    vocab = spec['model']['vocab']
+    spec['model']['vocab'] = {p: i for p, i in vocab.items() if i < V}
+    spec['model']['merges'] = [m for m in spec['model']['merges']
+                               if vocab[''.join(m)] < V]
+    spec['added_tokens'] = [t for t in spec['added_tokens'] if t['id'] < V]
+    out = Tokenizer.from_str(json.dumps(spec))
+    out.encode_special_tokens = True
+    return out
+```
+
+```{.python .input #tokenizers-lib-sp}
+%%tab pytorch
+#@save
+def sp_train(texts, model_type, vocab_size, **kw):
+    """A SentencePiece model trained on texts (one input line per line of
+    text) through a temporary file, as a SentencePieceProcessor. Defaults:
+    no normalization (the text is NFC already), whitespace kept as is,
+    byte fallback instead of <unk>, digits split, character_coverage
+    0.9995, 16 threads (the pieces depend on the thread count)."""
+    import io
+    import tempfile
+    import sentencepiece as spm
+    args = dict(model_type=model_type, vocab_size=vocab_size,
+                normalization_rule_name='identity',
+                remove_extra_whitespaces=False, byte_fallback=True,
+                split_digits=True, character_coverage=0.9995,
+                num_threads=16, max_sentence_length=1 << 16,
+                minloglevel=2)
+    args.update(kw)
+    model = io.BytesIO()
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, 'input.txt')
+        with open(path, 'w', encoding='utf-8') as f:
+            for t in texts:
+                f.writelines(line + '\n' for line in t.split('\n')
+                             if line.strip())
+        spm.SentencePieceTrainer.train(input=path, model_writer=model,
+                                       **args)
+    return spm.SentencePieceProcessor(model_proto=model.getvalue())
+
+#@save
+def _sp_fingerprint(sp):
+    """SHA-256 of a SentencePiece model's pieces and scores in id order
+    (the serialized model also records the training file's path)."""
+    rows = [(sp.id_to_piece(i), round(sp.get_score(i), 6))
+            for i in range(sp.get_piece_size())]
+    return hashlib.sha256(json.dumps(rows, ensure_ascii=False).encode(
+        'utf-8')).hexdigest()
+
+#@save
+def _sp_pieces_scores(sp):
+    """A unigram SentencePiece model as viterbi_segment's input: the
+    log-probabilities of its ordinary pieces, and the score SentencePiece
+    gives a character that is no piece (the lowest score minus 10)."""
+    logp = {sp.id_to_piece(i): sp.get_score(i)
+            for i in range(sp.get_piece_size())
+            if not (sp.is_byte(i) or sp.is_control(i) or sp.is_unknown(i))}
+    return logp, min(logp.values()) - 10.0
+```
+
+```{.python .input #tokenizers-lib-ngrams}
+%%tab pytorch
+#@save
+def _logaddexp(a, b):
+    """log(exp(a) + exp(b)) for Python floats, -inf allowed."""
+    if a == -math.inf:
+        return b
+    if b == -math.inf:
+        return a
+    m = max(a, b)
+    return m + math.log1p(math.exp(-math.fabs(a - b)))
+
+#@save
+def _rolling_ngram_hashes(ids, n, eos=None):
+    """64-bit polynomial hashes of every window of n consecutive token ids
+    (Horner's rule, arithmetic mod 2^64, vectorized over the windows); a
+    window that contains eos gets no hash (its slot is masked). Returns
+    (hashes, valid), both of length len(ids) - n + 1. Equal windows hash
+    equally; a match is confirmed on the ids themselves."""
+    x = np.asarray(ids).astype(np.uint64) + np.uint64(1)
+    m = len(x) - n + 1
+    if m <= 0:
+        return np.zeros(0, np.uint64), np.zeros(0, bool)
+    h = np.zeros(m, dtype=np.uint64)
+    base = np.uint64(0x9E3779B97F4A7C15)
+    for k in range(n):
+        h *= base
+        h += x[k:k + m]
+    valid = np.ones(m, dtype=bool)
+    if eos is not None:
+        c = np.concatenate([[0], np.cumsum(np.asarray(ids) == eos)])
+        valid = c[n:n + m] == c[:m]
+    return h, valid
 ```

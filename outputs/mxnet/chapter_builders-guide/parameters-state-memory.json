@@ -63,29 +63,8 @@
         }
       ]
     },
-    "parameters-state-memory-parameters-and-buffers-3": {
-      "code_fingerprint": "sha256:2d956613e3a1335f81a736790b6d4b8f2c390335fd0c34ada45f01e37ac18e6f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(dtype('float64'), dtype('float32'))"
-        }
-      ]
-    },
-    "parameters-state-memory-parameters-and-buffers-4": {
-      "code_fingerprint": "sha256:a67a9a6d5b7f0b6bbf3b4459bb3d08d5c85b2259e112b708513a4d79d6aa51dc",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "constant lives on gpu(0)\n"
-        }
-      ]
-    },
     "parameters-state-memory-counting-parameters-counting-bytes-1": {
-      "code_fingerprint": "sha256:7b8d5c3c6e7e275cdce54289c4730545f436842953fcd6b91adafb496976507b",
+      "code_fingerprint": "sha256:44aec7af190522ec85ba3783cb042de52b8dbbfc666a7d53f32cdaeda319a638",
       "kind": "text",
       "outputs": [
         {
@@ -96,7 +75,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-2": {
-      "code_fingerprint": "sha256:1afb653a97f40c3d5ab900a1d07f2a1578ca9838dcdfb6c7580728af83a0c583",
+      "code_fingerprint": "sha256:ed38a3164c3f5f12545d40c1e35037f997bf4da0c76ce76e45cbabba3e66dd42",
       "kind": "text",
       "outputs": [
         {
@@ -106,7 +85,7 @@
       ]
     },
     "parameters-state-memory-counting-without-allocating-1": {
-      "code_fingerprint": "sha256:fdd64bddeca3f9175b8962b1c7ca5b2ee715fe5d5a9e26f5140fc4f1e4200c69",
+      "code_fingerprint": "sha256:9a0c59c5f6eafa02df09195f2371cdbb383b088ac06ea2a479f9040fc7494b77",
       "kind": "text",
       "outputs": [
         {
@@ -117,7 +96,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-1": {
-      "code_fingerprint": "sha256:65025233b3baac22a59a18da483a91beb3eca75b3d39338771392630b37dfda3",
+      "code_fingerprint": "sha256:c5c0ebbb2c2aafff8813f373234512dc0ee3583543cc758375a743df052563f9",
       "kind": "text",
       "outputs": [
         {
@@ -127,7 +106,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-2": {
-      "code_fingerprint": "sha256:0c38d69b32090cb417e1a57e4cdd64e5a8835382b699556375e5fb0675b529c1",
+      "code_fingerprint": "sha256:3302dde06b6bcdd229cdedb7222eaa774e0508c66d525a3a1f2c25ae349a656b",
       "kind": "text",
       "outputs": [
         {
@@ -137,7 +116,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-3": {
-      "code_fingerprint": "sha256:90b468f400930891bbb7c4426f3c895b2a18f44f6c32fbfd10d2e5ba6ddef698",
+      "code_fingerprint": "sha256:f30b3d894f03558ac1f10e310df08fafaa52cf7ec28b16e06defae789a8b972c",
       "kind": "text",
       "outputs": [
         {
@@ -147,7 +126,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-4": {
-      "code_fingerprint": "sha256:cad6e06dba2711bf4ff272c70a4bad5deda7a3af9dc922e15126f670080e878a",
+      "code_fingerprint": "sha256:75e6f9b573e08e3410d965c3cd12574f21e733923da41c9a780dce33a744933d",
       "kind": "text",
       "outputs": [
         {
@@ -157,7 +136,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-1": {
-      "code_fingerprint": "sha256:43d4773e5d0137708a7a5c5b46cd126c7625c022ef427d3443de392d69537371",
+      "code_fingerprint": "sha256:affbc8f4d1958cbc7c2b232e73444f8b130f57054818f307098a2d4e5b9bdb35",
       "kind": "text",
       "outputs": [
         {
@@ -167,7 +146,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-2": {
-      "code_fingerprint": "sha256:6f2ab1683927ccebed78cbc060dc1b5471565420a1886f7cefa17b06a5427073",
+      "code_fingerprint": "sha256:ed13bf5934e3337904a61293a9657480bce56660dbad2f4450224e60e1cbc0be",
       "kind": "text",
       "outputs": [
         {
@@ -177,22 +156,12 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-4": {
-      "code_fingerprint": "sha256:8dd538c98392f125c6db1cb1c7506689a11b831374a9413c83d8ede01cb8f5c7",
+      "code_fingerprint": "sha256:174c422cab0a6f4b857cd894b0a01ff45fab851b441d37228a9cb2b903b381ca",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "False"
-        }
-      ]
-    },
-    "parameters-state-memory-freezing-parameters-5": {
-      "code_fingerprint": "sha256:eed315b762567102915834c3a01c7b79ce3fd3a6e4776866cf9811e9d73bee3c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "0.36856138706207275"
         }
       ]
     }

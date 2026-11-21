@@ -13,41 +13,30 @@
       "kind": "text",
       "outputs": []
     },
-    "init-defaults-and-when-to-override-them": {
-      "code_fingerprint": "sha256:64d8fc5b86327db3a6db9c2b5a83b3c1536e4352f87138f8058e8b523a952590",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "std 0.0444, predicted 0.0442\nmax |w| 0.1005, bias all zero: True\n"
-        }
-      ]
-    },
     "init-applying-initializers-1": {
-      "code_fingerprint": "sha256:85723e65ad2e31fe5d64f351d4c3e2dbf2c3d1f75e7624fdea74939cb67dcf5f",
+      "code_fingerprint": "sha256:d91f6c55a6c64cccdb139ffb39fb2b9ea2b03548807626461e4df10b6b5a3452",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "default: mean square of the output 0.00059\n"
+          "text": "default: mean square of the output 0.00095\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "He:      mean square of the output 0.65\n"
+          "text": "He:      mean square of the output 0.56\n"
         }
       ]
     },
     "init-truncated-normals": {
-      "code_fingerprint": "sha256:31133dd1c86d2f69d28665eb14d46cde0187ffbb6479f20e871342f1d9690d0a",
+      "code_fingerprint": "sha256:ae3b1c15b4ad082ee1ba66e340de42d4b496afb8f93e7c2f779cdf305781faee",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.1003\n"
+          "text": "normal:    std 0.0200, max weight 0.0957\n"
         },
         {
           "type": "stream",
@@ -57,46 +46,46 @@
       ]
     },
     "init-custom-initializers-1": {
-      "code_fingerprint": "sha256:d00b3085a609592d88c2a2da0d9cfa2db404436c49f3e7c0dc906ffad3392cff",
+      "code_fingerprint": "sha256:2749e5c96cff088901ccd13f949d0f6f8d5c530942cb14f5850d7d27f8ba7a53",
       "kind": "text",
       "outputs": []
     },
     "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:013ee2ba96b3599fd9258b7d69d1e4cc14410f4987f4a8583e72062b37a18329",
+      "code_fingerprint": "sha256:095d55703cbbc8b7cd36ea1c6c5a558e8bc2f7403fd56a02aec6b05dbfd0f614",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.65 before, 0.16 after\n"
+          "text": "0.56 before, 0.14 after\n"
         }
       ]
     },
     "init-watching-the-variance-compound-1": {
-      "code_fingerprint": "sha256:3d0dd0e97af544e66955c66883e56a3cf10b3280b9ae821b278f836bad8a580f",
+      "code_fingerprint": "sha256:173a3898ab3a3cc1484973766d94c38dbdd4ce5bbee2ee76fd73098dd86d2bb6",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-2": {
-      "code_fingerprint": "sha256:2b30a3cc80dfa2f6ff6907caa1f4f077902867ed8573f80eda57dccdd1adb512",
+      "code_fingerprint": "sha256:e0c4496348f3e1b96518dd30bf813a8d8e5c37e8cfd8262ae832cf74bc5ee800",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-3": {
-      "code_fingerprint": "sha256:944001198f7d8dc91815f30aec08dc9cdd62e0e1411a0d0c006b9e5ef5a16b0f",
+      "code_fingerprint": "sha256:fff6d468bfd9f02b343226936f303a4f67089cd83d5baa0eb76ead941818efb0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      1.94      1.44         1\n  8      13.6       1.6      1.01\n 32  2.75e+04      1.63         1\n"
+          "text": "  N  unscaled    scaled      zero\n  2      2.06      1.48      1.01\n  8      18.6      1.59     0.997\n 32  3.13e+04      1.73     0.994\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 34877,
-          "sha256": "sha256:7cd5860240dc3e8d43ad5bf2a6403ab55af002bdf73958c4d2cb25967a893add"
+          "bytes": 34952,
+          "sha256": "sha256:a933fe1aeab24d7f4e0ac317232f5ceff38000836fee64424b729c83a96d206e"
         }
       ]
     }

@@ -63,28 +63,8 @@
         }
       ]
     },
-    "parameters-state-memory-parameters-and-buffers-3": {
-      "code_fingerprint": "sha256:4b36bc50c1a45bec205bddfa683660abd1be9041b19836e9c7c08e26a1535fe3",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "['mean', 'std', 'kernel', 'bias']"
-        }
-      ]
-    },
-    "parameters-state-memory-parameters-and-buffers-4": {
-      "code_fingerprint": "sha256:0465c608402793e985cfdfca5c7175c11076e30c5db4df2e648b3b65e90a9303",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "'/job:localhost/replica:0/task:0/device:GPU:0'"
-        }
-      ]
-    },
     "parameters-state-memory-counting-parameters-counting-bytes-1": {
-      "code_fingerprint": "sha256:ae1005b9774059d4a0e645c3b1611864a4aa19f1b6407e012ac5d9d26fb72e36",
+      "code_fingerprint": "sha256:0628c672a3eac34f13b0a864b95666d6723d91077b5917dbd77d529154797ea2",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +75,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-2": {
-      "code_fingerprint": "sha256:f230433a96648f3e2549b4050dc1cd7f502cb71b522bf0b9b3f1bbf85400bfb8",
+      "code_fingerprint": "sha256:2c7ec2d66af7e5eaa89c6c610d7f2b93254f5f23fb7a29410bee9da69f5537bf",
       "kind": "text",
       "outputs": [
         {
@@ -105,7 +85,7 @@
       ]
     },
     "parameters-state-memory-counting-without-allocating-1": {
-      "code_fingerprint": "sha256:b54c8f8ea6948f9a81b43a1f53aa0277aa69e74dc549262248eacc42e1b07d3b",
+      "code_fingerprint": "sha256:2b2e9f17da3bd053716d0489015badb7646bcf4ff9a14ea7e4aa133b3ca01cc8",
       "kind": "text",
       "outputs": [
         {
@@ -116,7 +96,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-1": {
-      "code_fingerprint": "sha256:e978e63ab25be270da6b8b7d514c4a788556e09ea2c2c3c7ad4d02a15bef028a",
+      "code_fingerprint": "sha256:4d0a71d5e25b8fd3d1950b5488311dd745cab09f74b84e8e66881eff783e5086",
       "kind": "text",
       "outputs": [
         {
@@ -126,7 +106,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-2": {
-      "code_fingerprint": "sha256:efc3bbd26adfb336a66f726d9b445628f3a0cb6392419da80af97c2e9242bc1f",
+      "code_fingerprint": "sha256:4da4e175ca6aa0e67a6852b3ed22534fecfaba5c637146b823f6170ea65bbcf5",
       "kind": "text",
       "outputs": [
         {
@@ -136,7 +116,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-4": {
-      "code_fingerprint": "sha256:4efe1eee7d19fb7430a1348be17dcfe2c15f11cc8856cd85f87498496f0f61dc",
+      "code_fingerprint": "sha256:56d748444933e2a02c2430840f154b0c5df1ff92754369160d724cb2a56396e7",
       "kind": "text",
       "outputs": [
         {
@@ -146,7 +126,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-1": {
-      "code_fingerprint": "sha256:bbc4f8fa62db2f20e77c9de438f6d34f4051fb35a77154283c25a69a09a967dd",
+      "code_fingerprint": "sha256:b46e6b7b6a44d2473e34bc90738700f0a1bc92f28ad2018e8d2af14a63de41c0",
       "kind": "text",
       "outputs": [
         {
@@ -156,7 +136,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-2": {
-      "code_fingerprint": "sha256:9bf84ba3267292f8db9f54bb1510edb5d91795eca17246e4d149087977951ed2",
+      "code_fingerprint": "sha256:5651731e30944ae2caeaca4c738cf85144c60cb4891367c9488055095b1c6d3c",
       "kind": "text",
       "outputs": [
         {
@@ -166,22 +146,12 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-4": {
-      "code_fingerprint": "sha256:871fa5422388cf56992df77212df0a654e95b51c7061412336203245348156b1",
+      "code_fingerprint": "sha256:a3f7d7a7a55432f8adfdf0266e5b12b33c17150bcc1e063b1ef1c92cab0b6a96",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "True"
-        }
-      ]
-    },
-    "parameters-state-memory-freezing-parameters-5": {
-      "code_fingerprint": "sha256:c712227404d663e747308412456c226ca4b744de75cc913ff18ebb2bef310c03",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "0.3685559630393982"
         }
       ]
     }

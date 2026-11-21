@@ -340,6 +340,7 @@ W1, W2 = d2l.numpy(model.W1[...]), d2l.numpy(model.W2[...])
 ```
 
 ```{.python .input #mlp-implementation-what-the-hidden-units-compute-2}
+names = data.text_labels(range(10))
 units = np.argsort(np.linalg.norm(W1, axis=0))[::-1][:10]  # Largest weights
 images = W1[:, units].T.reshape(10, 28, 28)
 images /= np.abs(images).max(axis=(1, 2), keepdims=True)  # Own color scale

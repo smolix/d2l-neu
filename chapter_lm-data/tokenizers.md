@@ -1,57 +1,51 @@
 # Tokenizers at Scale
 :label:`sec_lm_tokenizers`
 
-<!-- Author brief, copied verbatim from the Language Models part plan
-(docs/llm/language_models_part_plan.md, "3.6 Tokenizers at Scale · T0").
-Blueprint: docs/llm/blueprints/ch03_data.md section 3.6.
-The plan is a specification, not book text; this comment is replaced
-when the section is written.
+<!-- For maintainers. Plan: docs/llm/language_models_part_plan.md, "3.6
+Tokenizers at Scale"; blueprint docs/llm/blueprints/ch03_data.md, section
+3.6. The reference tokenizer and the shard format (tab_lm_tok_shard_format)
+are one-way doors that the next chapter reads; chapter spec part 1.6 is
+normative. Rights: Belebele (CC BY-SA 4.0) is downloaded from its pinned
+commit and never re-hosted; the slice and the shards are FineWeb-2 and
+FineWeb-Edu text (ODC-By). Every sentence that quotes a small-LM or
+extension result says that it is at T1 scale. Extension recipe: author
+ruling R4 (2026-11-20); open for the author: the body-rate rule (the
+largest rate at which the control stays within 1% of its start) was chosen
+after the probe's grid. fig_lm_unigram_viterbi waits for its generator. -->
 
-**Idea:** Vocabulary size is a compute choice, and the unigram model is the alternative to merges.
-**Opening:** The byte-level BPE of `sec_text-sequence` splits a Hindi sentence into three times the tokens of its English translation, so the same sentence costs three times the compute and fits a third as much into the context. The section builds the alternative to merges, measures what one tokenizer costs each language, chooses a vocabulary size from a cost model, freezes the tokenizer the reference model uses, and closes on the question of extending a vocabulary after training.
-**Teaches:**
-- The unigram model: piece probabilities estimated by expectation-maximization with pruning, Viterbi segmentation (`d2l.viterbi_segment`), subword regularization by sampling segmentations; SentencePiece as the production implementation; the one difference from merges (a probabilistic lexicon instead of a merge order).
-- Vocabulary size against embedding and softmax cost and against sequence length: the elasticity of compression in V and the cost model that picks V for a parameter budget; the vocabulary fit of released models.
-- Fertility and the tokenization premium by language (`d2l.fertility_table`) on parallel passages, and bits per character as the comparison that is fair across tokenizers.
-- Extension of a vocabulary with new pieces and initialization of the new embedding rows (random, mean, decomposition over existing pieces; `d2l.extend_vocab`), with the softmax mass of the new rows at step zero as the check.
-- The reference tokenizer (byte-level BPE, 32,768 pieces, Qwen3-style single-digit pre-tokenization, EOS id 0, no BOS, ids 0 to 31 reserved for specials) and the shard format Chapter 4 reads (`d2l.write_shards`, `d2l.TokenShards`).
-**Derivation:** none.
-**Notebook:**
-1. Train SentencePiece unigram, SentencePiece BPE and byte-level BPE with the reference regex at a fixed vocabulary on a 10-language FineWeb-2 slice (5 MB per language, 90% train); implement Viterbi from scratch and check it against SentencePiece's segmentation on 1,000 sentences.
-2. Compute fertility, bytes per token and the premium relative to English on parallel passages for the three tokenizers and for the GPT-2, o200k and Qwen3 tokenizers; plot bits per character per language.
-3. Train one small `d2l.GPT` per tokenizer on the same 45 MB of text (a byte budget, so token counts differ and are recorded) with two seeds, and evaluate bits per byte per language on the held-out 10% and on the parallel passages.
-4. Extend a small released decoder's vocabulary with Hindi pieces under three initializations and continue training briefly on Hindi; report Hindi bits per byte at step 0 and early steps, English retention, and the new tokens' softmax mass at step 0.
-5. Verify that the freshly trained reference tokenizer reproduces the committed `tokenizer.json` hash; write a 100-million-token FineWeb-Edu shard with `d2l.write_shards` and read it back with `d2l.TokenShards`, checking EOS placement and the resume cursor.
-6. Claim that survives noise: the tokenizer type (unigram against BPE at equal V) matters less for per-language bits per byte than the premium spread across languages does (differences smaller than the larger of the two seed ranges are not interpreted; passages are bootstrapped for the macro-average); informed initializations reach lower Hindi bits per byte at step 0 than random and the arms converge with training (step-0 values are deterministic and bootstrapped over passages).
-7. Reused pieces: `d2l.BPETokenizer` and `GPT2_PATTERN` (`sec_text-sequence`, recapped in one paragraph), `d2l.GPT`, `d2l.train_proxy_lm`, `d2l.ProxyCfg`, `d2l.bpb_from_nll`, `d2l.temperature_weights` (3.4), `d2l.CorpusManifest`, `d2l.docs_hash` (3.1), `d2l.load_hf` (1.1); new `d2l.UnigramTokenizer`, `d2l.viterbi_segment`, `d2l.fertility_table`, `d2l.R2_SPLIT_REGEX`, `d2l.train_hf_bpe`, `d2l.r2_tokenizer`, `d2l.extend_vocab`, `d2l.write_shards`, `d2l.TokenShards`.
-**Figures:** `fig_lm_fertility_by_language` (plot: bits per byte against the tokenization premium per language and tokenizer, with lines joining a language across tokenizers); `fig_lm_unigram_viterbi` (the lattice of segmentations of one word with piece log-probabilities and the best path).
-**Restate / forward:** `subsec_fertility-digits-glitch` (fertility differs by script and digits chunk unevenly under a merge-based tokenizer); `sec_mdl-coding-compression` (bits per character converts a per-token loss into a tokenizer-free quantity, `eq_mdl-bpc`). Forward: 4.1 (the stream that reads these shards).
-**Exercises:** 5 to 7. Load-bearing: derive the vocabulary size that balances embedding and softmax cost against sequence length for a stated parameter budget and compression elasticity (derive); measure digit chunking under the three tokenizers on a numeric passage and the effect on a small arithmetic probe (measure); check that `d2l.TokenShards.locate(i)` returns a cursor from which `iter_docs` resumes at document i, and that id 0 appears only at document ends (check); open: edit the merge table instead of appending pieces so the extended tokenizer stays BPE-consistent, and compare segmentation of mixed Hindi-English text.
-**Writer notes:**
-- The reference tokenizer is a one-way door (blueprint README Decision 1): byte-level BPE with vocabulary exactly 32,768; normalizer NFC; pre-tokenizer `Split(R2_SPLIT_REGEX, 'isolated')` then `ByteLevel(add_prefix_space=False, use_regex=False)` with Qwen3's regex (contractions, letters with an optional leading non-letter, single digits, punctuation runs, newlines, whitespace); specials `<|endoftext|>` = 0 (EOS and document delimiter; no BOS), `<|pad|>` = 1, `<|im_start|>` = 2, `<|im_end|>` = 3, `<|reserved_4|>` to `<|reserved_31|>` = 4 to 31 (so later chat, tool or thinking tokens need no retraining); merges start at id 32 in trainer order (do not assume id minus 32 is a byte value); trained on 200,000 train-bucket documents disjoint from validation; only `<|endoftext|>` occurs in pretraining, so a chapter that starts using a reserved id initializes its row first. Rejected alternative: reuse GPT-2's tokenizer (a 53% larger embedding for a 150M model and worse digit and whitespace handling).
-- The shard format is normative for 4.1's `d2l.PackedStream` and 4.2: `manifest.json` in the `d2l-corpus/1` schema with tokenizer hash and format; `{split}-{k:05d}.bin` raw little-endian ids, `uint16` when every id is at most 65,535 and `uint32` otherwise (Qwen's 151,936 in 4.4 needs `uint32`), recorded in `format.dtype`; EOS appended after every document and nowhere else; documents never span shards; `{split}-{k:05d}.idx` as `uint32` offsets of length documents plus one; `.meta.parquet` for audits; `TokenShards.locate(i)` returns the resume cursor; `verify()` recomputes hashes; `fetch=True` downloads missing shards from the manifest's `DATA_HUB` entries, which pin a commit of a d2l-owned Hugging Face dataset repository (never `main`).
-- Fertility and digit chunking are restated from `subsec_fertility-digits-glitch` and bits per character from `sec_mdl-coding-compression`, not re-measured on the GPT-2 tokenizer; the section's own content is the unigram model, the vocabulary cost model, extension and initialization, and the reference tokenizer and shards; FineWeb-2 is named as the multilingual corpus; the experiment with small LMs is T1 while the rest is T0 (the section's tier stays T0 in the table, with the T1 cells on committed results by default).
-- Data: FineWeb-2 configs for nine languages plus FineWeb-Edu English, 5 MB each (ODC-By); parallel passages from `facebook/belebele` (CC BY-SA 4.0; the language codes differ from FineWeb-2's, for example `zho_Hans` against `cmn_Hani`; passages are translations of the same text, so token counts compare); Hindi documents from FineWeb-2 for the extension and 200 held-out English documents for retention; reference tokenizers GPT-2 and o200k through `tiktoken`, Qwen3-0.6B's `tokenizer.json`, and a small released decoder with a byte-level tokenizer for the extension arm.
-- SentencePiece settings: `byte_fallback=True`, identity normalization after the notebook's own NFC (its default applies NFKC-like rules silently), `split_digits=True`, `character_coverage=0.9995`; the pure-Python `d2l.UnigramTokenizer` is the fallback if wheels fail.
-- Pin the `tokenizers` library to a 0.x release (the blueprint pinned at least 0.21): the documentation of the 1.0 release candidate, read on 6 November 2026, says its bindings load and run a `tokenizer.json` but do not yet expose building a tokenizer from components, editing or training, which `d2l.train_hf_bpe` and the reference-tokenizer cell need.
-- Pitfalls to state: comparing perplexity across tokenizers; counting bytes before normalization for one tokenizer and after for another; training the tokenizer on text the model never sees (glitch tokens); choosing V by habit; the number of new tokens is not the benefit; mean initialization makes every new row identical and can hijack the softmax at step 0 (check the mass); forgetting the output matrix when embeddings are untied and `config.vocab_size`; adding pieces that contain ASCII changes English segmentation; `uint16` with V over 65,536; EOS inside a document.
-- Hosting: the 4-billion-token shard set is about 8 GB; if the bucket cannot host it, ship the manifest and build script and host 1 billion tokens.
-- Committed artifacts: `lm-r2-tokenizer` (`tokenizer.json`, 2 to 3 MB), `lm-fwedu-val` (at least 2^23 tokens plus the NFC text), `lm-fwedu-shards-100m`, `lm-fwedu-manifest-4b` (40 shards of 10^8 tokens with URLs and hashes), the two result tables as JSON.
-- Do not re-teach: the BPE merge rule and pre-tokenization (`sec_text-sequence`), the code-length view of a unigram model beyond one sentence (`sec_mdl-information_theory`), the GPT-2 fertility table.
-**Sources:**
-- Papers: [SentencePiece](https://aclanthology.org/D18-2012/) (the unigram and BPE trainer with byte fallback); [Subword Regularization](https://aclanthology.org/P18-1007/) (the unigram model, Viterbi and sampled segmentations); [Scaling Laws with Vocabulary](https://arxiv.org/abs/2407.13623) (optimal vocabulary size as a function of compute: the cost model); [Language Model Tokenizers Introduce Unfairness Between Languages](https://arxiv.org/abs/2305.15425) (the tokenization premium by language); [Byte Pair Encoding is Suboptimal for Language Model Pretraining](https://arxiv.org/abs/2004.03720) (unigram against BPE in their setting, cited with that limit); [WECHSEL](https://aclanthology.org/2022.naacl-main.293/) (embedding initialization for a new vocabulary by decomposition over the old); [Neural Machine Translation of Rare Words with Subword Units](https://aclanthology.org/P16-1162/) (BPE's origin, one sentence); [Byte Latent Transformer](https://arxiv.org/abs/2412.09871) (the tokenizer-free alternative, one pointer to Chapter 14's Further Reading).
-- Code and documentation: [tokenizers](https://huggingface.co/docs/tokenizers/index) and its [pipeline guide](https://huggingface.co/docs/tokenizers/pipeline) (normalizer, pre-tokenizer, model, decoder: the reference tokenizer is built with these); [tokenization algorithms summary](https://huggingface.co/docs/transformers/tokenizer_summary); [SentencePiece](https://github.com/google/sentencepiece) (the trainer and its normalization defaults); [minbpe](https://github.com/karpathy/minbpe) (the from-scratch BPE oracle); [FineWeb-2 dataset](https://huggingface.co/datasets/HuggingFaceFW/fineweb-2) (the per-language slices).
-- Courses, tutorials and blogs: [Hugging Face LLM Course, chapter 6](https://huggingface.co/learn/llm-course/en/chapter6/1) (training a tokenizer with the library); [CS336](https://cs336.stanford.edu/) (the tokenization lecture and assignment A1's tokenizer).
--->
+Every model in this part reads text through a tokenizer, and so far we have
+taken the tokenizer as given. :numref:`sec_text-sequence` built one, a
+byte-level BPE, and noticed in passing that it treats languages unequally:
+GPT-2's tokenizer spent about seven tokens on a Greek word where an English
+word needed one. That looked like a curiosity of an old tokenizer. It is
+more than that, because a language model counts everything in tokens. A
+language that needs three times the tokens for the same text costs three
+times the compute to train on and to serve, and fits a third as much into
+the context window. Below, the same passages in ten languages go through
+four released tokenizers, and under all but the newest of them the Hindi
+version of a passage needs several times the tokens of the English one.
 
-<!-- Prose: the opening (spec 20.6 part 1): the byte-level BPE of
-sec_text-sequence splits a Hindi passage into several times the tokens of
-its English translation (the table below); one paragraph recaps
-sec_text-sequence (byte-level BPE, pre-tokenization, specials,
-subsec_fertility-digits-glitch) and says what is new here: the unigram
-model, what a tokenizer's training data does to each language, the size of
-the vocabulary, changing a trained model's vocabulary, and the frozen
-reference tokenizer with its shards. -->
+Recall how that tokenizer works. Byte-level BPE starts from the 256 byte
+values, so that any string can be encoded, and repeatedly merges the most
+frequent adjacent pair of symbols into a new symbol until the vocabulary is
+full :cite:`Sennrich.Haddow.Birch.2015,Radford.Wu.Child.ea.2019`. A regular
+expression first cuts the text into words, numbers and punctuation, so that
+no merge crosses those boundaries, and a few special tokens such as
+`<|endoftext|>` are reserved outside the merges.
+:numref:`subsec_fertility-digits-glitch` measured what this does to
+different scripts and to numbers.
+
+This section asks four questions that the builders of a model must answer
+before its first training step. Is merging the only way to build a
+vocabulary? It is not: the unigram model gives every piece a probability
+and segments text by maximizing it. What does the text a tokenizer is
+trained on do to each language? How large should the vocabulary be? The
+answer is a question of compute, with a short derivation. And can a trained
+model's vocabulary be changed afterwards? At the end we freeze the
+tokenizer that the rest of this part uses and write the token files that
+the next chapter trains on. A tokenizer is the one component of a language
+model that cannot be changed cheaply once a model has been trained on it,
+so these choices deserve more thought than they usually get.
 
 ```{.python .input #tokenizers-imports}
 %%tab pytorch
@@ -87,11 +81,17 @@ from scipy.interpolate import PchipInterpolator
 from torch.utils.checkpoint import checkpoint
 ```
 
-<!-- Prose: what the notebook computes and where: tokenizer training,
-Viterbi, fertility, the vocabulary cost model and the shards run on the CPU
-in every build; the small-LM comparison and the vocabulary extension are
-T1 results regenerated on one GPU (D2L_RERUN=tok-lm, tok-extend) and read
-from registered files otherwise. -->
+The notebook does most of its work on the CPU in every build: it trains a
+dozen tokenizers, checks the unigram model against brute force, fits the
+vocabulary cost model, and reads and verifies the shards. Two experiments
+need a GPU and were run once. Six small language models compare
+tokenizers, and eight runs of continued training extend the vocabulary of
+a released model. A normal build reads their registered results, checks
+that they were made with this build's tokenizers, text and configuration,
+and repeats part of each: the start of one small-model run and every
+measurement of the extended models before training. Both experiments are
+small, at what this chapter calls T1 scale, and the cell below prints what
+that means.
 
 ```{.python .input #tokenizers-config}
 %%tab pytorch
@@ -142,16 +142,19 @@ say(f'GPU={GPU}, SMALL={SMALL}, regenerating:',
     ', '.join(sorted(RERUN)) or 'none')
 ```
 
-<!-- Prose: the registry: Belebele (CC BY-SA 4.0) is downloaded from its
-pinned commit, never re-hosted; the ten-language slice is FineWeb-2 and
-FineWeb-Edu text (ODC-By); the reference tokenizer and its shards are built
-once by tools/build_r2_shards.py, never by this notebook. -->
+The data come from three places. The parallel passages are those of the
+Belebele reading-comprehension benchmark (CC BY-SA 4.0), downloaded from a
+pinned commit of its repository and never re-hosted. The ten-language
+slice is FineWeb-2 text for nine languages and FineWeb-Edu text for English
+:cite:`Penedo.Kydlicek.BenAllal.ea.2024`, both ODC-By: about 4.5 MB of
+training text per language with a tenth of the documents held out, plus
+30,500 Hindi documents for the extension experiment. The reference
+tokenizer and its shards were built once, by `tools/build_r2_shards.py`
+from FineWeb-Edu, and this notebook only reads and checks them.
 
-<!-- Prose: the results of the two GPU regenerations (the six small LMs
-and the eight extension runs) are one registered file,
-lm-data-tok-results-v1, made in one run (D2L_RERUN=1, one whole RTX 4090,
-2026-11-21); a later single-part regeneration reads the other part from
-it. -->
+The two GPU experiments were regenerated together, in one run on one
+RTX 4090, and registered as one file, `lm-data-tok-results-v1`. A later
+regeneration of only one of them reads the other from that file.
 
 ```{.python .input #tokenizers-data-hub}
 %%tab pytorch
@@ -268,10 +271,17 @@ print(pd.DataFrame({
 print('Hindi extension documents:', HINDI.part.value_counts().to_dict())
 ```
 
-<!-- Prose: fertility and premium defined (restating
-subsec_fertility-digits-glitch in one sentence): bytes per token on the
-same passages, and the premium as a language's tokens over English's for
-translations of the same text. -->
+:numref:`subsec_fertility-digits-glitch` measured a tokenizer's *fertility*
+as tokens per word. Words are a poor unit across languages: Thai and
+Chinese put no spaces between them, and a German compound is a single
+word. Parallel text lets us do without them. Petrov and colleagues (2023)
+define the *tokenization premium* of a language as the number of tokens
+its version of a set of passages needs, divided by the number the English
+version needs. The passages say the same thing, so a premium of 2 means
+twice the compute and twice the context for the same content.
+`fertility_table` also reports bytes per token and the share of tokens
+that are single bytes of a multi-byte character. Such a token means that
+the tokenizer had no piece for the character at all and spelled it out.
 
 ```{.python .input #tokenizers-fertility-def}
 %%tab pytorch
@@ -303,9 +313,12 @@ def fertility_table(encoders, parallel, ref='eng_Latn'):
     return df
 ```
 
-<!-- Prose: the four released tokenizers (GPT-2 and o200k_base through
-tiktoken, Qwen3 and Qwen3.5 from their pinned tokenizer files) on the 488
-distinct Belebele passages; Belebele's zho_Hans is FineWeb-2's cmn_Hani. -->
+We compare four released tokenizers: GPT-2's (2019) and `o200k_base`
+(OpenAI's tokenizer of 2024), both through `tiktoken`, and those of Qwen3
+and Qwen3.5, the model family this part of the book uses, loaded from
+pinned revisions. The text is Belebele's 488 distinct passages in each of
+the ten languages. (Belebele calls simplified Chinese `zho_Hans`;
+FineWeb-2 calls it `cmn_Hani`.)
 
 ```{.python .input #tokenizers-opening}
 %%tab pytorch
@@ -353,22 +366,102 @@ say(f"Hindi premium: Qwen3 {PREM['Qwen3', 'hin_Deva']:.1f}, "
     f"Qwen3.5 {PREM['Qwen3.5', 'hin_Deva']:.1f}")
 ```
 
+GPT-2's tokenizer needs more than seven times English's tokens for Hindi
+and nine times for Thai, and almost half of its Hindi tokens are lone
+bytes. Qwen3's tokenizer, three times larger, brings Thai down to 2.6 but
+leaves Hindi at 4.5, and a quarter of its Hindi tokens are still pieces of
+a character. Qwen3.5's tokenizer halves the Hindi premium again, to 2.0.
+Notice that Qwen3.5 reads *more* bytes per Hindi token (6.1) than per
+English token (4.8) and still needs twice as many tokens. The reason is
+the encoding: a Devanagari character takes three bytes in UTF-8 and a
+Latin letter one, so the Hindi version of the passages is about 2.6 times
+as long in bytes as the English. Part of every premium belongs to UTF-8,
+and no tokenizer removes it without pieces of many bytes.
+
 ## The Unigram Model
 :label:`subsec_lm_tok_unigram`
 
-<!-- Prose: piece probabilities p(x), a segmentation's probability as the
-product, the string's probability as the sum over segmentations; the
-lattice (fig_lm_unigram_viterbi: positions as nodes, pieces as edges);
-forward and backward sums; the posterior edge count
-alpha_i p(x) beta_j / P(s) and the EM update (eq_lm_tok_em, derived with a
-Lagrange multiplier); Viterbi as the max-product version; pruning by the
-likelihood a piece's removal costs; sampling with P(s)^alpha for subword
-regularization. -->
+BPE builds its vocabulary by a sequence of decisions: merge the most
+frequent pair, then the next most frequent, and so on. Encoding replays
+these decisions in the order they were made, so the segmentation of a word
+is whatever the merge order produces. Nothing ever compares two
+segmentations of the same word and asks which one is better. The *unigram
+model* of Kudo (2018) asks exactly that. It gives each piece $x$ of
+the vocabulary a probability $p(x)$, treats the pieces of a segmentation as
+independent draws, and prefers the most probable segmentation. Training
+chooses the vocabulary and the probabilities to make the corpus likely.
 
-![The segmentation lattice of one word: positions are nodes, pieces are
-edges labelled with their log-probabilities, and the Viterbi path is
-highlighted.](../img/mdl-lm-data-unigram-viterbi.svg)
-:label:`fig_lm_unigram_viterbi`
+Let us make this precise. A segmentation $\mathbf{s} = (x_1, \ldots, x_k)$
+of a word $w$ has probability $P(\mathbf{s}) = \prod_{m=1}^k p(x_m)$, and
+the word has probability $P(w) = \sum_{\mathbf{s}} P(\mathbf{s})$, summed
+over all its segmentations. There can be exponentially many, but they have
+a simple structure. Write the word's characters at positions $0$ to $n$
+and draw an edge from $i$ to $j$ whenever the substring $w_{i:j}$ is a
+piece. This is the word's *lattice*. Every path from $0$ to $n$ is a
+segmentation, and its probability is the product of the edge
+probabilities along it. For the word *sports* (written `▁sports`, with
+SentencePiece's mark of a word start) the lattice of a trained vocabulary
+contains the paths `▁s|port|s` and `▁sp|ort|s`, among others.
+
+Sums over all paths of a lattice are computed by dynamic programming. The
+forward sum $f_j$ collects the probability of every path from $0$ to $j$,
+and the backward sum $g_i$ that of every path from $i$ to $n$:
+
+$$
+f_0 = 1, \quad f_j = \sum_{i < j} f_i\, p(w_{i:j}), \qquad
+g_n = 1, \quad g_i = \sum_{j > i} p(w_{i:j})\, g_j,
+$$
+
+where a term is zero when $w_{i:j}$ is not a piece. Then $P(w) = f_n$, and
+the probability that a segmentation of $w$ uses the edge from $i$ to $j$
+is the share of all paths through it, $f_i\, p(w_{i:j})\, g_j / P(w)$.
+
+Training maximizes the log-likelihood of a corpus in which word $w$ occurs
+$c_w$ times, $\sum_w c_w \log P(w)$. The segmentations are hidden, so we
+use expectation-maximization. The E-step computes the expected number of
+times $N_x$ that piece $x$ is used, summing the edge probabilities over
+every edge labelled $x$ in every word. The M-step chooses new probabilities
+that maximize $\sum_x N_x \log p(x)$ subject to $\sum_x p(x) = 1$. With a
+Lagrange multiplier $\lambda$, setting the derivative of
+$\sum_x N_x \log p(x) - \lambda (\sum_x p(x) - 1)$ to zero gives
+$N_x / p(x) = \lambda$, so the probabilities are the expected counts,
+normalized:
+
+$$
+N_x = \sum_w c_w \sum_{(i, j):\, w_{i:j} = x}
+\frac{f_i\, p(w_{i:j})\, g_j}{P(w)},
+\qquad
+p_{\textrm{new}}(x) = \frac{N_x}{\sum_y N_y}.
+$$
+:eqlabel:`eq_lm_tok_em`
+
+In words, each piece gets the probability of being used, averaged over all
+the ways the corpus could have been cut. Each round of EM never lowers the
+likelihood; the exercises ask you to show it.
+
+Three more operations complete the model. *Viterbi segmentation* replaces
+the sum in the forward recursion by a maximum and remembers which edge won,
+which gives the most probable path in time proportional to the word's
+length times the longest piece; this is `d2l.viterbi_segment`. *Pruning*
+shrinks the vocabulary, which EM alone never does. Training starts from
+every character and the 100,000 most frequent substrings, runs two rounds
+of EM, and then removes the pieces whose removal costs the least
+likelihood: a piece's loss is how often the Viterbi segmentations use it
+times how much less probable its best segmentation without it is. Keeping
+80% per round until the target size is reached, with every single
+character kept so that each word stays segmentable, is the procedure of
+`d2l.UnigramTokenizer`. Finally, because the model is probabilistic, it can
+*sample* segmentations, drawing $\mathbf{s}$ with probability proportional
+to $P(\mathbf{s})^{\beta}$ by running the forward recursion on
+$p(x)^{\beta}$ and then drawing edges backwards from $n$. At $\beta = 0$
+all segmentations are equally likely, and as $\beta \to \infty$ the sample
+becomes the Viterbi path. Kudo trained translation models on a fresh
+sample each time a sentence was read, so that the model sees many
+segmentations of each word and cannot rely on any one of them. He called
+this *subword regularization*. (The code calls $\beta$ `alpha`, Kudo's
+name for it.)
+
+<!-- Figure pending (write step CODE REQUEST): ![The segmentation lattice of one word: positions are nodes, pieces are edges labelled with their log-probabilities, and the Viterbi path is highlighted.](../img/mdl-lm-data-unigram-viterbi.svg) :label:`fig_lm_unigram_viterbi`, generated by tools/gen_mdl_lm_data_figures.py; the prose describes the lattice in words until it exists. -->
 
 ```{.python .input #tokenizers-viterbi-def}
 %%tab pytorch
@@ -531,10 +624,12 @@ class UnigramTokenizer:
             '▁' + w, self.pieces, self.max_len, alpha, rng)]
 ```
 
-<!-- Prose: the checks of the derivation, each against brute force:
-forward-backward against enumerating every segmentation, Viterbi against
-the enumerated argmax, EM's likelihood against its own previous value,
-sampled segmentations against their posterior probabilities. -->
+Every step of this derivation can be checked by brute force on short
+strings over the alphabet $\{a, b, c\}$, where all segmentations can be
+listed. The cell compares the forward sum and the expected counts with
+their values over the enumerated segmentations, Viterbi with the best
+enumerated segmentation, each round of EM with the previous one, and the
+frequencies of sampled segmentations with their probabilities.
 
 ```{.python .input #tokenizers-em-checks}
 %%tab pytorch
@@ -603,11 +698,22 @@ say(f'{len(segs)} segmentations of {s!r}: sampled frequencies within '
     f'{z:.1f} standard errors of their posteriors')
 ```
 
-<!-- Prose: the from-scratch trainer on 1 MB of English against
-SentencePiece's unigram trainer on the same text; SentencePiece's pieces
-and scores loaded into viterbi_segment reproduce its segmentations; where
-the two vocabularies agree; words with two plausible segmentations; five
-sampled segmentations of one sentence. -->
+Forward-backward agrees with enumeration to rounding error, the
+log-likelihood rises at every round of EM, and 10,000 samples of the seven
+segmentations of `abcabc` land within 2.4 standard errors of their
+probabilities. Four of the 200 random strings have two best segmentations
+of equal probability; Viterbi then takes the one with fewer pieces.
+
+Now a real vocabulary. We train `UnigramTokenizer` to 4,096 pieces on
+1 MB of English from the slice, and the unigram trainer of SentencePiece,
+the production implementation (Kudo and Richardson, 2018), on the same
+text. Then we load SentencePiece's pieces and scores into our
+`viterbi_segment` and ask whether it reproduces SentencePiece's
+segmentation of 1,000 held-out lines. SentencePiece marks a word start
+with ▁ (U+2581) attached to the following piece and spells a character
+that has no piece by its UTF-8 bytes (`byte_fallback`); `sp_viterbi`
+imitates both. The cell also lists words whose two best segmentations are
+close and samples five segmentations of one sentence at $\beta = 0.2$.
 
 ```{.python .input #tokenizers-unigram-train}
 %%tab pytorch
@@ -681,10 +787,31 @@ for seed in range(5):
     say(f'sample {seed}:', ' '.join(uni.encode_sample(sentence, 0.2, seed)))
 ```
 
-<!-- Prose: SentencePiece's defaults change text before it is segmented
-(nmt_nfkc folds ligatures, superscripts and full-width forms), which is why
-the notebook normalizes to NFC itself and passes identity; with
-character_coverage below 1 the rarest characters fall back to bytes. -->
+Our pure-Python trainer needs about a minute where SentencePiece's C++
+needs a second or two, but the model is the same: Viterbi on
+SentencePiece's pieces and scores reproduces every one of its 1,000
+segmentations. The two trainers agree on three quarters of their pieces
+(3,067 of 4,096). They seed and prune differently, and the pieces they
+disagree on are rare ones whose fate was close. The word list shows what a
+probabilistic lexicon has that a merge table lacks. For *sports* the two
+best paths are `▁s|port|s` and `▁sp|ort|s`, with log-probabilities $-18.5$
+and $-19.3$ nats, so the first is $e^{0.8} \approx 2.2$ times as probable as
+the second. At $\beta = 0.2$ the ratio shrinks to $e^{0.16} \approx 1.17$,
+nearly a coin toss. That is why the sampled segmentations of the sentence
+look so ragged: *three* stays whole in three samples and falls apart in
+the other two, and even *Since* is spelled out once. A model trained
+on such samples has to recognize a word however it is cut.
+
+Two defaults of SentencePiece change the text a model sees, and neither
+says so. Its default normalization, `nmt_nfkc`, applies Unicode's
+compatibility folding: ligatures become letters, superscripts become
+digits, full-width forms become ASCII. That is convenient for machine
+translation and wrong for a pretraining corpus, in which $x^2$ and x2 are
+different things. The notebook normalizes every text to NFC itself, which
+only composes accents with their letters, and tells SentencePiece to leave
+the text alone. The second default, `character_coverage` of 0.9995, leaves
+out of the vocabulary the rarest characters that together make up 0.05% of
+the training text; byte fallback then spells them in bytes.
 
 ```{.python .input #tokenizers-sp-pitfalls}
 %%tab pytorch
@@ -707,21 +834,50 @@ for cov in (0.9995, 1.0):
 say(pd.DataFrame(rows).T.round(4).rename_axis('character_coverage'))
 ```
 
-## Training Data Decides Who Pays
+Four of the five probe strings change under `nmt_nfkc`; only *café*,
+already composed, survives. On Japanese, full coverage keeps 2,707 single
+characters as pieces and the default 2,523. The default spells more of the
+Belebele text in bytes (1.35% of tokens against 0.96%) and yet needs 0.8%
+fewer tokens in all, because the 184 slots freed from rare characters go
+to longer pieces of common text. That is what coverage below 1 is for, and
+it is a choice to make on purpose.
+
+The unigram model and BPE produce the same kind of object, a list of
+pieces, and both encode a word as a sequence of pieces. They differ in the
+rule that chooses the sequence. BPE replays its merges in the order it
+learned them. The unigram model picks the most probable segmentation and
+can sample others. In the rest of this section the more consequential
+differences are not between these two algorithms but between what any
+tokenizer does to different languages.
+
+## The Tokenization Premium
 :label:`subsec_lm_tok_premium`
 
-<!-- Prose: a tokenizer is a compressor fitted to its training text; three
-byte-level BPEs at V = 16,384 whose text weights the languages by
-temperature_weights (restated from sec_lm_data_mixtures) with alpha 1, 0.3
-and 0 on FineWeb-2's document counts (English is given German's count, an
-assumption the text states); what each alpha does to each language's
-premium on Belebele. -->
+A tokenizer is a compressor fitted to its training text. Frequent strings
+become single pieces, and rare strings are spelled from smaller ones. A
+language that is rare in that text therefore gets few pieces and many
+tokens. Released tokenizers are usually trained on a sample of the model's
+pretraining data, in which English dominates, so the premium of the
+opening is partly a choice of training text. We can test this directly
+with the temperature weighting of :numref:`subsec_lm_mix_temperature`,
+which samples a source with $n_i$ documents in proportion to $n_i^\alpha$:
+at $\alpha = 1$ in proportion to size, at $\alpha = 0$ uniformly. We train
+three byte-level BPEs of 16,384 pieces on the ten-language slice, with the
+languages weighted at $\alpha = 1$, $0.3$ and $0$ according to FineWeb-2's
+document counts. FineWeb-2 has no English, so English is given German's
+count; this is an assumption, but any count of the same order would do.
+The most heavily weighted language contributes all of its 4.5 MB of
+training text and the others proportionally less.
 
-<!-- Prose: the reference tokenizer's pipeline in the Hugging Face
-tokenizers library (normalizer, pre-tokenizer, model, decoder; the library's
-pipeline guide): NFC, Qwen3's split rule with single digits, byte-level BPE,
-the special tokens first; train_hf_bpe builds it for any vocabulary size and
-special-token list, and the section uses it at 16,384, 65,536 and 32,768. -->
+These three tokenizers, and the reference tokenizer later in the section,
+are built with the Hugging Face `tokenizers` library, which assembles a
+tokenizer from four parts: a normalizer (here NFC), a pre-tokenizer (the
+split rule, then a map from bytes to printable symbols), a model (BPE) and
+a decoder that undoes the byte map. The split rule, `R2_SPLIT_REGEX`, is
+Qwen3's. It matches contractions, runs of letters with at most one leading
+non-letter, single digits, runs of punctuation, newlines and whitespace.
+`train_hf_bpe` builds this pipeline for any vocabulary size and list of
+special tokens, which take the first ids.
 
 ```{.python .input #tokenizers-bpe-def}
 %%tab pytorch
@@ -810,13 +966,58 @@ for l in ('swh_Latn', 'hin_Deva', 'tha_Thai'):  # C3: the smallest corpora
          ' (not monotone in alpha)'))
 ```
 
-<!-- Prose: the comparison that is fair across tokenizers is bits per byte
-(eq_lm_tok_bpb: bpb = L / (b-bar ln 2), restating subsec_bits-per-byte and
-eq_mdl-bpc); three tokenizers at V = 16,384 trained on the same 45 MB
-(SentencePiece unigram, SentencePiece BPE, the byte-level BPE with
-alpha = 0), one small LM per tokenizer and seed for one epoch over the same
-text (a byte budget, so token counts differ and are recorded), the 20.4
-recipe and learning rate; every result here is at T1 scale. -->
+Lowering $\alpha$ moves pieces to the small languages. At $\alpha = 1$
+Hindi gets 0.8% of the weight and the tokenizer has 93 pieces in
+Devanagari script; at $\alpha = 0$ Hindi gets a tenth of the text, the
+tokenizer has 574 Devanagari pieces, and Hindi's premium falls from 2.42 to
+1.77. Swahili, the smallest of the ten corpora, falls from 1.88 to 1.04,
+almost English's cost. The pieces come from somewhere. The vocabulary
+has a fixed size, so Russian rises from 1.30 to 1.42 as its Cyrillic
+pieces drop from 2,597 to 1,269, and Chinese from 0.95 to 0.99. Weighting
+divides a fixed vocabulary among languages, and every division favours
+someone.
+
+Even at $\alpha = 0$ Hindi keeps a premium of 1.77, and part of the reason
+lies before BPE. In the split rule, `\p{L}+` matches letters, but Unicode
+classes the vowel signs and the virama of Devanagari as combining marks,
+not letters. The rule therefore cuts हिन्दी (*Hindi*) into ह|िन|्द|ी
+before BPE sees it, and no merge can cross those cuts. The reference
+tokenizer shares this rule, which is harmless for the English model of the
+next chapter and would not be for a Hindi one.
+
+### Bits per Byte and the Choice of Algorithm
+:label:`subsec_lm_tok_bpb`
+
+Fewer tokens answer only half of the question. A tokenizer that packs more
+text into each token makes each prediction harder, and a model could lose
+per token what it saves in tokens. To compare tokenizers, we need a
+measure of how well a model predicts the text that does not depend on how
+the text was cut. Perplexity per token is not such a measure, because
+longer tokens carry more surprise each. :numref:`subsec_lm_bpb` used *bits
+per byte* instead: the total surprisal of a text in bits divided by its
+length in UTF-8 bytes. If $L$ is the mean loss per token in nats and
+$\bar b$ the mean number of bytes per token, then
+
+$$
+\textrm{bpb} = \frac{L}{\bar b \ln 2},
+$$
+:eqlabel:`eq_lm_tok_bpb`
+
+so a tokenizer with twice the bytes per token is allowed twice the loss
+per token. This is the bits per character of :eqref:`eq_mdl-bpc` with
+bytes in place of characters. Two cautions come with it. Bytes must be
+counted on the same normalized text for every tokenizer, because a text
+before and after NFC can differ in length. And bits per byte compares
+models on one language: a byte is a whole English letter but a third of a
+Devanagari character, whose first two bytes are almost always the same.
+
+The experiment holds everything fixed except the tokenizer. Three
+tokenizers of 16,384 pieces are trained on the same 45 MB of ten-language
+text: SentencePiece's unigram model, SentencePiece's BPE, and the
+byte-level BPE trained at $\alpha = 0$ above. One small `d2l.GPT` per
+tokenizer and seed then trains for one epoch over that text and is scored
+per language. The models are small and the text is short, so everything
+here holds at T1 scale and no further.
 
 ```{.python .input #tokenizers-small-lms-def}
 %%tab pytorch
@@ -890,11 +1091,10 @@ def train_small_lm(pool, seed, lr, stop_tokens=None):
     return out, model, cfg
 ```
 
-<!-- Prose: the three tokenizers at V = 16,384 on the same 45 MB
-(SentencePiece unigram, SentencePiece BPE, and the byte-level BPE with
-alpha = 0, which was trained on exactly this text above): their token
-counts for the same bytes, and the fingerprints with which a normal build
-checks that its tokenizers are the runs'. -->
+First the three tokenizers. The cell trains the two SentencePiece models,
+encodes the 45.7 MB of training text and the evaluation texts with all
+three, and records fingerprints of the tokenizers, with which a normal
+build checks that its tokenizers are those the registered runs used.
 
 ```{.python .input #tokenizers-small-lms-data}
 %%tab pytorch
@@ -921,11 +1121,16 @@ say(f'{sum(len(t.encode()) for t in LM_TEXT) / 1e6:.1f} MB of training '
     'text:', ', '.join(f'{k} {len(p):,} tokens' for k, p in POOLS.items()))
 ```
 
-<!-- Prose: one small LM per tokenizer and seed for one epoch over that
-text (a byte budget, so the runs read different numbers of tokens), the
-20.4 recipe and learning rate; every result here is at T1 scale. A normal
-build reads the registered runs, checks that they used this build's
-tokenizers, text and configuration, and retrains the start of one run. -->
+The three tokenizers cut the same bytes into nearly the same number of
+tokens, within about 1% of each other. Each tokenizer gets one small model
+per seed, for two seeds, trained for one epoch over its own tokens of the
+same text, so the six models read the same bytes but not the same number of
+steps (368 to 373 steps of 32,768 tokens). The recipe and the learning
+rate are those of the T1 runs of :numref:`sec_lm_data_mixtures`. Each model
+is scored on the held-out tenth of every language and on the Belebele
+passages. A normal build reads the registered runs, checks that they used
+this build's tokenizers, text and configuration, and retrains the first
+$2^{19}$ tokens of one run to compare its losses with the registered log.
 
 ```{.python .input #tokenizers-small-lms}
 %%tab pytorch
@@ -982,8 +1187,14 @@ if GPU and 'tok-lm' not in RERUN:  # live check: the start of one run
     d2l.lm_free()
 ```
 
-<!-- Prose: D1 numerically: three ways to the same bits per byte, and why
-perplexity per token cannot be compared across tokenizers (the pitfall). -->
+The retrained start of the run matches the registered log well within the
+tolerance of 0.02 nats.
+
+Before comparing languages, a check of the measure itself. On 100
+held-out documents the cell computes bits per byte in three ways: from
+the mean loss per token and the bytes per token, as in
+:eqref:`eq_lm_tok_bpb`; as the summed loss over the summed bytes; and as
+the byte-weighted average of per-document values.
 
 ```{.python .input #tokenizers-bpb-identity}
 %%tab pytorch
@@ -1009,9 +1220,21 @@ say(f'100 held-out documents, seed 0 {TIER}')
 say(pd.DataFrame(rows).T.round(4))
 ```
 
-<!-- Prose: the plot below puts each language at its premium under each
-tokenizer and its bits per byte on the Belebele passages; what C4 says,
-in the words the numbers allow. -->
+The three agree exactly, as they must. The table also shows the pitfall.
+Perplexity puts the three tokenizers at 214, 218 and 243, a spread of
+more than 10%, while bits per byte puts them at 1.94, 1.94 and 1.98, and
+the first two even trade places between the two measures. Per-token
+perplexity compares models that share a tokenizer and nothing else.
+
+Now the languages. The plot places each
+language at its premium under each tokenizer and at the bits per byte of
+the small models on its Belebele passages, with a gray line joining the
+three tokenizers of one language. The tables add the range over the two
+seeds, which is the noise against which differences are read: a
+difference smaller than the larger of two seed ranges is not interpreted.
+The average over languages is compared between tokenizers with the paired
+bootstrap of :numref:`sec_lm_eval_suites`, which resamples the 488
+passages.
 
 ```{.python .input #tokenizers-bpb-premium}
 %%tab pytorch
@@ -1078,18 +1301,105 @@ for l in LANGS:
                            fontsize=8)
 ```
 
+At T1 scale the algorithm matters little. Unigram against BPE at the same
+vocabulary size changes a language's bits per byte by at most 3.6%
+(Thai), and their averages over languages differ by 0.002 bits per byte,
+with an interval that barely excludes zero. Both SentencePiece models are
+better than the byte-level BPE by about 0.02 bits per byte. In the plot
+the lines are short. The premium, by contrast, varies a lot between
+languages under every tokenizer: the most expensive language needs 1.5 to
+1.8 times the tokens of the cheapest. Seven of the ten languages show a
+unigram-BPE difference larger than their seed range, but these
+differences are small, they go both ways, and two seeds cannot rank
+tokenizers language by language. Bostrom and Durrett (2020) found the
+unigram model better than BPE for pretraining BERT-sized models in English
+and Japanese; our small models can neither confirm nor refute that at
+their scale.
+
+One large tokenizer effect stands out: the byte-level BPE gives Hindi a
+premium of 1.77, against 1.32 for SentencePiece's BPE, and also the worst
+Hindi bits per byte of the three (1.30 against 1.21, beyond the seed
+range). This is the split rule again. SentencePiece does not cut inside a
+word of one script, while the byte-level BPE inherits the cuts at every
+vowel sign. So a tokenizer decides how many tokens a language costs far
+more than how well a model predicts it, at least at this scale, and its
+pre-tokenization rule can matter more than its algorithm. The vertical
+order of the languages, finally, says little: Chinese sits near 3 bits
+per byte and Hindi near 1.2 because their scripts spend their bytes
+differently, not because one is harder to model.
+
 ## Vocabulary Size
 :label:`subsec_lm_tok_vocab`
 
-<!-- Prose: the per-byte compute model C(V) = 6 (A + V d) / b-bar(V)
-(eq_lm_tok_vstar): five lines from df/dV = 0 to the elasticity of
-compression equal to the softmax share, V* = eps A / (d (1 - eps)) at
-constant eps; the measured b-bar(V) from prefixes of one BPE (the prefix
-property of sec_text-sequence); Tao et al. (Scaling Laws with Vocabulary)
-point the same way, larger models deserve larger vocabularies, and also
-let the vocabulary change the loss, which this model holds fixed; where
-released models sit; the practical rules (multiples of 64 or 128, reserved
-ids, tied embeddings). -->
+Every tokenizer so far had a vocabulary size chosen by habit: 16,384 here,
+50,257 for GPT-2, 151,669 for Qwen3. Is there a better reason for a
+number? The vocabulary enters a model twice. It sets the size of the
+embedding matrix, $V$ rows of width $d$, which with tied embeddings is
+also the output layer that computes a logit for every piece at every
+position. And through the tokenizer it sets how many tokens a text
+becomes. A larger $V$ makes every token more expensive and the text
+shorter. That trade-off can be written down.
+
+Training a transformer with $N$ parameters costs about $6N$ floating-point
+operations per token, two for each parameter in the forward pass and four
+in the backward pass. Let $A$ be the parameters outside the vocabulary
+matrix. With tied embeddings the vocabulary adds $Vd$ parameters, used
+once per position by the output layer (the input lookup costs nothing).
+A token covers $\bar b(V)$ bytes on average, so the compute per byte of
+text is
+
+$$
+C(V) = \frac{6\,(A + Vd)}{\bar b(V)}.
+$$
+
+To find the best $V$, take logarithms and differentiate with respect to
+$\log V$:
+
+$$
+\frac{d \log C}{d \log V} = \frac{Vd}{A + Vd}
+- \frac{d \log \bar b}{d \log V}.
+$$
+
+The first term is the *softmax share* $s(V)$, the fraction of parameters
+in the vocabulary matrix. The second is the *elasticity of compression*
+$\varepsilon(V)$: by how many percent the bytes per token grow when the
+vocabulary grows by one percent. The derivative is zero where the two are
+equal, and if $\varepsilon$ is roughly constant near that point we can
+solve for $V$:
+
+$$
+\varepsilon(V^*) = s(V^*) = \frac{V^* d}{A + V^* d},
+\qquad
+V^* = \frac{\varepsilon}{1 - \varepsilon} \cdot \frac{A}{d}.
+$$
+:eqlabel:`eq_lm_tok_vstar`
+
+In words, growing the vocabulary is worth it as long as the fraction of
+tokens it saves exceeds the fraction of compute it adds. Since
+compression gains shrink as the vocabulary grows, $\varepsilon$ falls with
+$V$ while $s$ rises, and the crossing is a minimum. For a model with 24
+blocks of width $d = 1{,}024$, so $A = 12 \cdot 24 \cdot 1024^2 \approx
+302$ million, and $\varepsilon = 0.1$, the formula gives $V^* = 32{,}768$.
+Two consequences are visible without numbers: a larger model (larger $A$)
+deserves a larger vocabulary, and so does text that keeps compressing as
+pieces are added (larger $\varepsilon$), such as many languages at once.
+
+Tao and colleagues (2024) reach the same direction with a model that
+also lets the vocabulary change the loss, which ours holds fixed. They
+estimate, for instance, that Llama 2 70B would have been better served by
+at least 216,000 pieces than by its 32,000. Our model is the compute half
+of their argument, and it is enough to see where released vocabularies
+sit.
+
+To measure $\bar b(V)$ we use a property of BPE: merges are learned in
+order, so the first $V$ ids of a trained vocabulary, with the merges that
+made them, are exactly the tokenizer that training would have produced had
+it stopped at $V$. One BPE of 65,536 pieces therefore gives $\bar b$ at
+every smaller size. We train one on English FineWeb-Edu documents and one
+on the ten-language slice, measure bytes per token on held-out text at
+seven sizes, and fit a smooth increasing curve to $\log \bar b$ against
+$\log V$; its slope is the elasticity. A synthetic curve with
+$\bar b = cV^{0.1}$ checks the code against the formula.
 
 ```{.python .input #tokenizers-vocab}
 %%tab pytorch
@@ -1159,11 +1469,23 @@ for k in BIG:  # the measured minimum and the elasticity crossing
                                    'no V in the grid'))
 ```
 
-<!-- Prose: where released tokenizers sit: each one's bytes per token on
-the same English held-out text, and the share of per-byte compute its
-embedding and softmax take at its own width (parameter counts from the
-pinned configurations; no weights are loaded); the reference tokenizer at
-the width of the next chapter's reference model. -->
+For English the elasticity falls from 0.24 at 1,024 pieces to 0.04 at
+65,536, while the softmax share at $d = 1{,}024$ rises from 0.3% to 18%.
+They cross near 27,000 pieces, which is also where the cost curve has its
+minimum (the two numbers agree because both come from one fitted curve).
+Ten-language text keeps compressing for longer, with an elasticity of 0.16
+at 32,768 pieces against English's 0.07, and its optimum moves to about
+51,000 pieces. The synthetic check recovers the formula's 32,768. The
+right panel of the plot shows how flat the minimum is: a vocabulary half
+or twice the optimal size costs only a few percent more compute per byte.
+Any round number near the optimum will do; the cost model does not pin
+the vocabulary down to better than a factor of two.
+
+Where do released tokenizers sit? For each one we measure bytes per token
+on the same English held-out text and compute, from the model's own
+configuration and without loading weights, the share of its parameters in
+the vocabulary matrix. The reference tokenizer is placed at the width of
+the next chapter's reference model, $d = 768$.
 
 ```{.python .input #tokenizers-vocab-released}
 %%tab pytorch
@@ -1212,13 +1534,41 @@ d2l.plot(FINE, c, 'vocabulary size V', 'GFLOP per byte (d = 1024)',
 _ = axes[1].plot(FINE[np.argmin(c)], c.min(), 'ko')
 ```
 
+On English all five tokenizers cover between 4.4 and 4.7 bytes per token,
+although their vocabularies range from 32,768 to 248,320 pieces. Beyond a
+few tens of thousands of pieces, English is compressed nearly as far as it
+goes. The small released models spend a quarter to a third of their
+parameters on the vocabulary matrix (GPT-2 small 31%, Qwen3-0.6B 26%,
+Qwen3.5-0.8B 34%), and the reference model 18%. By the cost model these
+small models have more vocabulary than English needs. Their vocabularies
+were not chosen for them alone, however: one tokenizer serves a whole
+family of model sizes up to hundreds of billions of parameters, and many
+languages, and :eqref:`eq_lm_tok_vstar` says that both push $V$ up. The
+reference tokenizer, measured on the training shard later in this section,
+needs only 1% more tokens than GPT-2's on English prose with a matrix 35%
+smaller.
+
+A few practical rules come from costs the model leaves out. Round $V$ up
+to a multiple of 64 or 128 so that the output layer's matrix multiply fits
+the GPU's tiles; Qwen3's tokenizer has 151,669 ids and its matrix 151,936
+rows. Reserve ids for special tokens that a later stage will need, so that
+adding a chat or tool token does not mean resizing the model. And tie the
+input and output embeddings in small models, which halves the vocabulary's
+parameters.
+
 ### Numbers, Whitespace and Code
 :label:`subsec_lm_tok_digits`
 
-<!-- Prose: three digit rules in released regexes (GPT-2 lets BPE carve
-numbers by frequency, o200k_base caps runs at three digits, Qwen3, Qwen3.5
-and the reference tokenizer split every digit); indentation and newline
-runs on the book's own library code (d2l/torch.py, MIT-0). -->
+Before any merge is learned, the pre-tokenization rule has already decided
+much of how a tokenizer treats numbers and code.
+:numref:`subsec_fertility-digits-glitch` showed GPT-2 cutting 12345678
+wherever BPE had found frequent fragments and `o200k_base` cutting runs of
+digits into groups of at most three. Qwen3, Qwen3.5 and the reference
+tokenizer go further and make every digit its own token. For code, what
+matters is whitespace. An indented line starts with a run of spaces, and a
+tokenizer with no piece for long runs spends a token on every space or two.
+We measure both, on a passage full of numbers and on the first 2,000 lines
+of the book's own library, `d2l/torch.py`.
 
 ```{.python .input #tokenizers-digits-code}
 %%tab pytorch
@@ -1251,19 +1601,48 @@ for k, tok in TOKENIZERS.items():
 say(pd.DataFrame(rows).T.round(2))
 ```
 
+The three rules cut 12345678 in three ways. Single digits are the only rule
+under which every number is cut the same way, digit by digit, so that the
+model sees place value in the same form everywhere. They cost about twice
+as many tokens on the numeric passage as GPT-2's or `o200k_base`'s
+groups. On code, `o200k_base` and the Qwen tokenizers have pieces for
+whitespace runs of up to 128 bytes and need about 11 tokens per line of
+the library. GPT-2's has none and needs 19. The reference tokenizer, whose
+longest whitespace piece is two spaces, needs 17.6, about 65% more than
+Qwen3's. It was trained on educational web prose, where long runs of
+spaces are rare. A model trained on it will read code expensively, and
+only a change of vocabulary can fix that, which is the subject of the next
+part of this section.
+
 ## Extending a Trained Vocabulary
 :label:`subsec_lm_tok_extend`
 
-<!-- Prose: Qwen3-0.6B-Base fragments Hindi (its premium in the opening
-table) while Qwen3.5's larger vocabulary and its regex, which keeps
-combining marks with their letters, do not; the motivating contrast. Add
-4,096 Hindi pieces; extend_vocab with three initializations (random from
-the model's initializer, the mean of the old rows with a little noise, the
-mean of the old embeddings of the pieces the old tokenizer splits the new
-token into); 19.1's view of initialization as placement in embedding space
-(one sentence); FOCUS and WECHSEL place new rows by cross-lingual
-similarity and are described, not implemented. -->
+Suppose a trained model's tokenizer fragments a language you care about.
+Qwen3-0.6B-Base is an example: its tokenizer needs 4.5 times English's
+tokens for Hindi, while that of its successor Qwen3.5 needs 2.0. Part of
+Qwen3.5's improvement is a larger vocabulary, and part is a split rule that
+keeps combining marks with their letters. Training a new model with a
+better tokenizer is out of reach for most of us. Can we add pieces to the
+old one instead?
 
+Adding pieces to a tokenizer is easy. The hard question is what to put in
+their rows of the embedding matrix, which in Qwen3-0.6B are shared between
+input and output. :numref:`sec_lm_word_embeddings` showed that training
+places the row of a token near the rows of tokens used in similar
+contexts. An initialization decides where in that space a new row starts.
+We compare three simple choices. *Random* rows are drawn from the model's
+own initializer. *Mean* rows are the mean of all old rows plus noise of 1%
+of their standard deviation, so that no two rows are equal. The
+*decomposition* uses the old tokenizer: it splits each new piece into old
+pieces, and the new row is the mean of their rows. WECHSEL
+(Minixhofer and colleagues, 2022) and FOCUS (Dobler and de Melo, 2023)
+place a new row more carefully, as a weighted average of the rows of old
+pieces that are similar to it according to auxiliary word embeddings; we
+describe them and do not implement them. `extend_vocab` implements the
+three choices for a Transformers model and tokenizer. It resizes the input
+matrix and, if the embeddings are untied, the output matrix too, and it
+updates `config.vocab_size`. Forgetting either of the last two is a common
+bug that produces no error until the first new id is used.
 
 ```{.python .input #tokenizers-extend-def}
 %%tab pytorch
@@ -1308,12 +1687,16 @@ def extend_vocab(model, tokenizer, new_pieces, init='random', seed=0):
     return model, tokenizer
 ```
 
-<!-- Prose: the new pieces come from a byte-level BPE of 8,192 pieces on
-the 30,000 Hindi documents, with a split rule that keeps letters and their
-combining marks together and never puts a space in a piece (a piece with an
-ASCII character would change how English is segmented); the first 4,096
-pieces by merge order that hold at least two Devanagari characters and are
-not already in Qwen3's vocabulary. -->
+The new pieces come from a byte-level BPE of 8,192 pieces trained on
+30,000 Hindi documents. Its split rule keeps letters and their combining
+marks together and never puts a space inside a piece. This matters for
+English. The new pieces are added as *added tokens*, which the tokenizer
+matches before its own segmentation, so a new piece that contained an
+ASCII character would change how some English text is cut. We keep the
+pieces that hold at least two Devanagari characters and no ASCII byte and
+that are not already in Qwen3's vocabulary, and add the first 4,096 of
+them in merge order. The cell then checks that 1,000 lines of English get
+the same ids as before.
 
 ```{.python .input #tokenizers-extend-build}
 %%tab pytorch
@@ -1354,16 +1737,31 @@ for name, tok in (('Qwen3', QWEN), ('Qwen3 + Hindi', EXT_TOK),
 say('new pieces:', ' '.join(NEW[:12]), '...', ' '.join(NEW[-6:]))
 ```
 
-<!-- Prose: the step-0 diagnostics, before any training: how much
-probability the new rows take from English text (it should be about zero;
-much more means they hijack the softmax) and how much they get on Hindi
-text, where about half of the next tokens are new ones (identical mean rows
-give the new tokens one shared logit, so they can neither win mass nor be
-told apart as inputs), Hindi bits per byte on held-out
-documents and on Belebele's Hindi passages, English bits per byte (the
-English ids are unchanged, so only the softmax normalizer can move it), and
-the decomposition identity: with tied embeddings, a new token's logit is
-the mean of its pieces' logits. -->
+Of the Hindi BPE's 7,154 pieces with at least two Devanagari characters,
+7,153 are new to Qwen3. The first ones are endings and particles such as
+के, है and में; the last ones are whole words such as हिमाचल (Himachal).
+English is cut exactly as before. The extended tokenizer reads 5.28 bytes
+of Hindi per token against 2.79 before, close to Qwen3.5's 6.13, so Hindi
+needs about half the tokens it did. That is the whole benefit the
+tokenizer can deliver, and it is not yet a benefit to the model. Whether
+the model can use the new tokens depends on their rows.
+
+### Initialization at Step Zero
+:label:`subsec_lm_tok_step0`
+
+Before any training, three measurements show what an initialization did.
+The first is the probability the new tokens receive on English text, where
+none of them should appear. If it is large, the new rows have hijacked the
+softmax, and the model has become worse at English before training starts.
+The second is the probability they receive on Hindi text, where about half
+of the next tokens are new ones. The third is bits per byte on held-out
+Hindi documents, on Belebele's Hindi passages and on English documents.
+Bits per byte is the right measure here because the extended and the
+original tokenizers cut Hindi differently. English ids are unchanged, so
+only the softmax's normalizer, which now sums over the new rows as well,
+can move English. The cell also checks an identity of the decomposition.
+With tied embeddings, the output row of a new token is the mean of its
+pieces' rows, so its logit is the mean of their logits.
 
 ```{.python .input #tokenizers-extend-step0-def}
 %%tab pytorch
@@ -1421,9 +1819,10 @@ def decomp_check(model, tok, n=64):
     return worst
 ```
 
-<!-- Prose: the four arms at step 0 (the unextended control and the three
-initializations, seed 0) on the same texts: Hindi held-out documents,
-Belebele's Hindi passages, English validation documents. -->
+The four arms are the unextended model with its own tokenizer, the
+*control*, and the three initializations (seed 0). All four read the same
+500 Hindi documents, 488 Belebele passages and 200 English validation
+documents, in bf16.
 
 ```{.python .input #tokenizers-extend-step0}
 %%tab pytorch
@@ -1466,29 +1865,63 @@ for init in ('mean', 'decomp'):  # C5 at step 0, over passages
         < STEP0['random']['new_mass'] else 'NOT below', "random's")
 ```
 
-<!-- Prose: continued training on Hindi (control: the unextended model
-with its own tokenizer; and the three initializations), 150 steps of
-8 x 1,024 tokens in two phases, the usual vocabulary-extension recipe
-(author ruling R4, 2026-11-20): for 50 steps only the new rows train
-(body and old rows frozen; the control has no new rows, so it waits),
-then every parameter at a low rate; each phase warms up over 10 steps
-and decays by a cosine; AdamW. Why not the spec's single phase at 1e-4:
-re-warming an annealed base model at that rate made the control itself
-worse at Hindi (0.627 -> 0.766 bits per byte after 10 steps, 2026-11-20
-probe), so "the arms converge" would partly have been the control
-degrading. The two rates were settled on Hindi documents outside the
-training pool and outside HI_HELD (2026-11-21 probe), so no reported
-metric was tuned: the new rows' rate 3e-3 had the lowest mean Hindi
-bits per byte of the three initializations after the first phase (grid
-3e-4 to 3e-2; at 3e-2 the new rows hijack English, 8-10 bits per byte);
-the body rate 1e-5 is the largest at which the control ends within 1% of
-its start on both Hindi and English (3e-6 to 1e-4; the mean over the four
-arms alone kept falling up to the spec's 1e-4, where the control lost
-0.04 bits per byte on Hindi and 0.07 on English). Two data-order seeds; every arm reads the same
-documents, so the extended arms see more text per step; bf16 autocast
-over fp32 weights, gradient checkpointing, and the loss in chunks of
-1,024 positions so the 8,192 x 155,765 logit matrix never exists
-(D2L_RERUN=tok-extend, measured time and peak printed). -->
+No initialization disturbs English. English bits per byte is 0.8225 in all
+four arms, and averaged over any English document the new tokens receive
+at most 0.07% of the probability. On Hindi the arms differ sharply. The
+decomposition gives the new tokens 73% of the probability on Hindi text
+and reaches 1.48 bits per byte. Random rows receive 0.2% and reach 2.39.
+Mean rows receive almost nothing and reach 2.89, worse than random by
+0.52 bits per byte on the Belebele passages (a 95% interval over
+passages of 0.52 to 0.53). The control, reading Hindi through Qwen3's
+fragmenting tokenizer, is at 0.62.
+
+Why is the mean worse than random? Every mean row is the same vector up
+to 1% noise, so every new token receives the same logit at every
+position, the average of the old logits. The new tokens can win no
+probability, and as inputs they cannot be told apart. The mean
+initialization is recommended for a different purpose (Hewitt, 2021, and
+the default of Transformers' `resize_token_embeddings`): it keeps new rows
+from hijacking the softmax, and that it does here. It does nothing for the
+new tokens themselves. The decomposition starts better because a new
+token's logit is the mean of its pieces' logits (the identity holds to
+bf16 rounding), which is high exactly where the pieces are likely, that
+is, on Hindi. Still, 1.48 bits per byte is far from the control's 0.62.
+The model has never read the new tokens as inputs, and their rows are only
+a guess.
+
+### Continued Training
+:label:`subsec_lm_tok_ext_train`
+
+Training on Hindi decides whether the new rows can be learned. Each
+extended arm and the control train for 150 steps of 8 sequences of 1,024
+tokens, in two phases, the usual recipe for vocabulary extension. For the
+first 50 steps only the new rows train, at a high learning rate of
+$3 \times 10^{-3}$, while the rest of the model, including the old rows of
+the shared matrix, is frozen; the control has no new rows, so it waits.
+Then every parameter trains for 100 steps at a low rate of $10^{-5}$. Each
+phase warms up over 10 steps and decays along a cosine, with AdamW.
+
+Why not train everything at once, at a rate usual for fine-tuning? We
+tried, and one phase at $10^{-4}$ made the control, which has nothing new
+to learn, worse at Hindi and at English within ten steps. A released base
+model ends pretraining with its learning rate decayed to nearly zero.
+Raising the rate again disturbs it, and small batches of 8,192 tokens
+make the disturbance worse. A comparison against a control that
+is itself getting worse would flatter the extended arms. The two rates
+were chosen on Hindi documents that are neither in the training pool nor
+in the evaluation set, so no reported number was tuned. The rate
+$3 \times 10^{-3}$ gave the new rows the lowest Hindi loss after the first
+phase in a grid from $3 \times 10^{-4}$ to $3 \times 10^{-2}$; at the top
+of the grid the new rows took over English as well. The body rate
+$10^{-5}$ is the largest at which the control stays within 1% of its start
+on both Hindi and English.
+
+All arms read the same documents. An extended arm needs fewer tokens for
+them, so in 150 steps it reads more Hindi text than the control does. The
+weights are in fp32 with bf16 arithmetic. Gradient checkpointing and a
+loss computed in chunks of 1,024 positions keep the
+$8{,}192 \times 155{,}765$ matrix of logits from ever existing at once, and
+a run fits in about 14 GB of one GPU.
 
 ```{.python .input #tokenizers-extend-train-def}
 %%tab pytorch
@@ -1597,9 +2030,11 @@ def train_ext(arm, seed, docs):
     return out
 ```
 
-<!-- Prose: the eight runs (four arms, two data-order seeds), read from the
-registered results unless regenerated: Hindi bits per byte along training
-and English bits per byte before and after. -->
+The eight runs, four arms with two data-order seeds each, are read from
+the registered results unless regenerated. Hindi bits per byte is measured
+along training on 100 held-out documents in fp32, so its values at step 0
+differ slightly from the table above; English is measured on the 200
+English documents before and after training.
 
 ```{.python .input #tokenizers-extend-train}
 %%tab pytorch
@@ -1647,16 +2082,41 @@ d2l.plot_intervals(steps, {a: (c.mean(0), c.min(0), c.max(0))
                                           for a, c in curves.items()})})
 ```
 
+The control stays flat, from 0.627 to 0.626 bits per byte, so the recipe
+does what it was chosen for. The extended arms improve quickly in the
+first phase, and the gaps between initializations shrink from between
+0.5 and 1.4 bits per byte at step 0 to at most 0.2 at step 150. The decomposition
+stays best throughout and ends at 0.85. The mean overtakes random within
+25 steps and ends at 0.92 against 1.03. A plausible reason is that random
+rows are small vectors in a region the model never visited, while the
+mean rows, once training pulls them apart, start among the old ones.
+English barely moves, from 0.822 to at most 0.832.
+
+No extended arm reaches the control, however. After 150 steps, 1.2
+million tokens, the best is still about 0.2 bits per byte above it. At
+this budget the extension halves the number of tokens Hindi needs and
+loses a fifth of a bit per byte in prediction. Published extensions
+continue training on far more text, often billions of tokens, and how
+long the extended model needs to catch up is something 150 steps cannot
+tell. The number of new tokens is not the benefit. The benefit is fewer
+tokens per byte, and it reaches the model only after the model has
+learned to use them.
+
 ### Byte Patches
 :label:`subsec_lm_tok_patches`
 
-<!-- Prose: a tokenizer is a frozen compression decision; the Byte Latent
-Transformer replaces fixed tokens by patches whose boundaries a small byte
-model sets where its entropy jumps (cited, not claimed). The toy below uses
-a character trigram model on Hindi text and cuts where the next
-character's entropy rises, and compares patch and token lengths in UTF-8
-bytes (a byte-level token can be part of a character); it says nothing
-about BLT's quality. -->
+Every tokenizer in this section makes a compression decision once, before
+the model sees any data, and the extension experiment showed how hard that
+decision is to revisit. The Byte Latent Transformer (Pagnoni and
+colleagues, 2024) moves the decision into the model. A small byte-level
+model predicts the next byte, and a new *patch* starts wherever its
+prediction becomes uncertain, so predictable stretches become long
+patches and surprising ones short. The toy below imitates only the
+boundary rule, with a character trigram model trained on Hindi text: a
+patch ends where the entropy of the next character jumps. It compares
+patch lengths with token lengths, both in UTF-8 bytes because a
+byte-level token can be part of a character. It says nothing about how
+well a model would learn from such patches.
 
 ```{.python .input #tokenizers-patches}
 %%tab pytorch
@@ -1682,16 +2142,41 @@ say(pd.DataFrame({'entropy patches': pd.Series(patches).describe(),
                      for k, v in toks.items()}}).round(2))
 ```
 
+On one paragraph of 1,092 bytes, the entropy rule makes 134 patches of
+8.15 bytes on average, against 2.94 bytes for Qwen3's tokens and 2.53 for
+the reference tokenizer's, which was trained on English. That Qwen3.5's
+tokenizer happens to make exactly 134 tokens of the paragraph is a
+coincidence. Even a trigram model with a hand-set threshold produces units
+as long as Qwen3.5's tokens. Whether a
+learned version matches tokenized models at equal compute, as BLT's
+authors report, is a claim we cite here and do not test.
+
 ## The Reference Tokenizer and Its Shards
 :label:`subsec_lm_tok_reference`
 
-<!-- Prose: the frozen decisions, as a table (tab_lm_tok_shard_format, the
-chapter specification's part 1.6): byte-level BPE, exactly 32,768 pieces,
-NFC, Qwen3's split rule with single digits, ids 0-31 the special tokens
-(<|endoftext|> = 0 is the document end, no BOS), trained on the first
-80,000 documents of the shuffled training stream; special-token strings in
-a document are text, never special ids (a page about <|endoftext|> must
-not end early); the shards. -->
+Every model trained in the rest of this part reads text through one
+tokenizer, and the next chapter reads that text from token files written
+once. Changing either later would mean retraining every model built on
+them, so we fix both here, in :numref:`tab_lm_tok_shard_format`, and test
+them. The reference tokenizer is a byte-level BPE, so that any string can
+be encoded without an unknown token. It has 32,768 pieces, a power of two
+in the flat part of the English cost curve. It normalizes to NFC and
+nothing more, uses Qwen3's split rule with single digits, and reserves the
+first 32 ids for special tokens. Only `<|endoftext|>`, id 0, occurs in
+pretraining, at the end of every document. There is no
+beginning-of-sequence token: the end of one document is the context in
+which the next one begins. The tokenizer was trained on the first 80,000
+documents of the shuffled training stream, which shares no document with
+the validation set. The alternative we rejected, GPT-2's tokenizer, would
+have given the reference model an embedding matrix 53% larger, numbers cut
+by frequency and no better handling of whitespace.
+
+One rule is easy to get wrong: special-token strings inside a document are
+text. A web page about tokenizers may contain the characters
+`<|endoftext|>`. If the tokenizer matched them as the special id, the
+document would end in the middle, and the model would learn that the
+string ends documents. Released tokenizers differ here; Qwen3's, for
+instance, matches added tokens such as `<think>` inside ordinary text.
 
 :The reference tokenizer and its shards (normative; the next chapter reads them).
 :label:`tab_lm_tok_shard_format`
@@ -1705,9 +2190,13 @@ not end early); the shards. -->
 | `.meta.parquet` | `doc_id`, `n_tokens`, then `url`, `dump`, `bucket`, `edu_score`, `int_score`, `gpt2_tokens`, `src_file`, `src_row` |
 | `manifest.json` | `d2l-corpus/1`: sources, stages, tokenizer hash, format, splits |
 
-<!-- Prose: r2_tokenizer loads the committed file, checks its SHA-256 and
-wraps it for Transformers with EOS id 0, no BOS, and special strings in
-text kept as text (chapter spec part 1.6a). -->
+`r2_tokenizer` downloads the committed `tokenizer.json`, checks its SHA-256
+against the value recorded in the library, and wraps it for Transformers
+with EOS id 0, padding id 1, no BOS, and special strings in text encoded as
+text. The wrapper is a `PreTrainedTokenizerFast`, which Transformers 5
+reports as `TokenizersBackend`. The hash check guards against a quiet
+failure: a checkpoint paired with a different tokenizer file of the same
+size runs without any error and produces nonsense.
 
 ```{.python .input #tokenizers-r2-tok-def}
 %%tab pytorch
@@ -1729,10 +2218,10 @@ def r2_tokenizer(raw=False):
                              raw=raw, sha256=d2l.R2_TOKENIZER_SHA256)
 ```
 
-<!-- Prose: retraining from the registered documents reproduces the
-committed tokenizer.json byte for byte; the wrapper's contract (what the
-next chapters call); the reference tokenizer's tokens against GPT-2's on
-the same documents (the dataset's own token_count column). -->
+Can the tokenizer be rebuilt from its recorded inputs? The cell checks the
+wrapper's contract, decodes the first 80,000 documents of the training
+shard, trains `train_hf_bpe` on them with the reference special tokens,
+hashes the result, and round-trips text through the tokenizer.
 
 ```{.python .input #tokenizers-r2-retrain}
 %%tab pytorch
@@ -1775,11 +2264,25 @@ say(f'round trips: {len(texts):,} validation texts and '
 del DOCS, retrained
 ```
 
-<!-- Prose: write_shards and TokenShards: each document is its ids and
-one EOS, documents never span shards, a shard closes at the first document
-boundary past shard_tokens; TokenShards finds documents by global index and
-tokens by global position, and verify() recomputes every hash and the EOS
-and offset invariants. -->
+Retraining on 378 million characters reproduces the committed file byte
+for byte, so the tokenizer is a function of recorded data and code rather
+than of one lucky run. The sentence that mentions all four special tokens
+encodes to 46 ordinary tokens, none below id 32, and decodes back
+unchanged. On the training documents the reference tokenizer needs 1.010
+tokens for every token of GPT-2's.
+
+Token files fix how the tokens are stored. `write_shards` turns each
+document into its ids followed by one EOS and appends documents to a shard
+until it holds at least `shard_tokens` tokens. It closes a shard only at a
+document boundary, so no document spans two shards. Each shard is three
+files: `.bin` with the raw little-endian ids, as `uint16` when every id
+fits into 16 bits and as `uint32` otherwise; `.idx` with the offset of
+every document; and `.meta.parquet` with one row per document for audits.
+A `manifest.json` records the sources, the processing stages, the
+tokenizer's hash and the format. `TokenShards` reads them through memory
+maps. It finds documents by global index and token ranges by global
+position, across shard boundaries, and its `verify` recomputes every hash
+and checks that EOS ends every document and occurs nowhere else.
 
 ```{.python .input #tokenizers-shards-def}
 %%tab pytorch
@@ -1999,11 +2502,13 @@ def fwedu_shards(which='100m', fetch=True, max_tokens=None):
                            fetch=fetch, max_tokens=max_tokens)
 ```
 
-<!-- Prose: write_shards and TokenShards (shown above): each document is
-its ids and one EOS, documents never span shards, a shard closes at the
-first document boundary past shard_tokens; the checks below on a small
-temporary set, the uint32 path the next chapter uses for Qwen3, and the
-registered shards. -->
+The checks below write 2,000 validation documents and the special-token
+sentence into a temporary set of small shards, read everything back and
+test the invariants. They write the same documents with Qwen3's
+tokenizer, whose ids need 32 bits, the path the next chapter takes for
+Qwen3, and they verify the registered shards. The resume cursor matters
+for training: `locate(i)` gives the shard and offset of document $i$, and
+iteration started there continues where an interrupted run stopped.
 
 ```{.python .input #tokenizers-shards-demo}
 %%tab pytorch
@@ -2050,12 +2555,21 @@ for name, ts in (('train', SHARDS), ('val', VAL)):
 say(json.dumps(SHARDS.manifest['format']))
 ```
 
-<!-- Prose: FineWeb-Edu is deduplicated within each crawl dump, not across
-dumps, so the same page can sit in validation and in training: the
-val_dedup stage dropped validation documents that repeat a training
-document's text or URL; what is left of the overlap, measured with exact
-50-token spans against all of train-00000 (20.3's idea of exact n-gram
-matching on token ids). -->
+Every invariant holds. The 2,001 documents become 2,029,682 tokens in 5
+shards, and the fixture ends in its text and then EOS 151643 under Qwen3.
+The registered training shard holds 100,000,084 tokens of 95,793
+documents and the validation set 8,390,187 tokens, just over $2^{23}$,
+both as `uint16` and both verified.
+
+One check remains, and it is easy to skip. FineWeb-Edu is deduplicated
+within each crawl dump but not across dumps, so the same page can sit in
+validation under one dump and in training under another, and a validation
+loss would then partly measure memorization. The builder's `val_dedup`
+stage dropped validation documents that repeat a training document's text
+or URL. What is left can be measured with the exact n-gram matching on
+token ids of :numref:`sec_lm_dedup`: hash every window of 50 tokens in
+validation and in the training shard, and confirm each match of hashes on
+the ids themselves.
 
 ```{.python .input #tokenizers-leakage}
 %%tab pytorch
@@ -2110,8 +2624,19 @@ if f_docs > 0.05:
         ' above before reading this as boilerplate')
 ```
 
-<!-- Prose: the chapter's manifest: what the next chapter reads, with
-its hash, its sources and stages, and the sizes of the four artifacts. -->
+Of 14,277 validation candidates, 658 repeated a training document's text
+and 164 its URL. After their removal, 211 of the 8,341 validation documents
+(2.5%) still share a span of 50 tokens with the first training shard,
+covering about a third of a percent of all validation tokens. The shared
+spans are boilerplate: a licence notice that appears in four documents,
+the interface text of a presentation website, the reuse notice of an
+article-metrics service. That residue is expected and small. It was
+measured against one training shard of forty, and the whole training set
+would find more of the same kind.
+
+The chapter's work ends in a manifest. It records what the next chapter
+reads, with its hash, its sources and processing stages, and the sizes of
+the four artifacts.
 
 ```{.python .input #tokenizers-chapter-manifest}
 %%tab pytorch
@@ -2143,6 +2668,13 @@ for key in R2_KEYS:
     say(line)
 ```
 
+The source is FineWeb-Edu's sample of 10 billion tokens at a pinned
+revision: 5.8 million documents, split by bucket into validation and
+training and shuffled. The forty training shards of $10^8$ tokens each
+hold 4.0 billion tokens, 8 GB of ids, downloaded shard by shard when they
+are first read. The last cell compares a normal build with the registered
+results.
+
 ```{.python .input #tokenizers-results}
 %%tab pytorch
 PARTS = {'tok-lm': TOKLM, 'tok-extend': TOKEXT}
@@ -2168,18 +2700,465 @@ else:
         assert max(diff.values()) < 0.01
 ```
 
+These shards are what :numref:`sec_lm_data_path` streams into the
+training of the reference model. The tokenizer they were cut with is now
+frozen, with its strengths on English prose and its costs on Hindi and on
+code, and the extension experiment showed how slowly a trained model
+adapts to a new vocabulary. Whether a model should cut its text into
+tokens before reading it at all is a question this part leaves open.
+
 ## Summary
 
-<!-- Prose: 3-6 sentences (W1 rule). -->
+A tokenizer is a compressor fitted to its training text, and it decides
+how many tokens, and so how much compute and context, each language needs:
+on the same passages, English-centred tokenizers need several times
+English's tokens for Hindi and Thai, and lowering the weight of large
+languages in the tokenizer's training text moves pieces to small ones. The
+unigram model replaces BPE's merge order by piece probabilities that EM
+estimates from forward-backward counts, with pruning; it segments by
+Viterbi and can sample segmentations for subword regularization.
+Tokenizers are compared in bits per byte, never in perplexity, and at T1
+scale the choice between unigram and BPE moved a language's bits per byte
+by a few percent, far less than tokenizers vary between languages in
+tokens. The vocabulary size that minimizes compute per byte is where the
+elasticity of compression equals the vocabulary's share of parameters,
+which favours larger vocabularies for larger models and for multilingual
+text. Pieces can be added to a trained model, and a decomposition
+initialization starts far ahead of random or mean rows, but at T1 scale no
+extended model caught up with the unextended one within 150 steps. The
+reference tokenizer (byte-level BPE, 32,768 pieces, EOS 0, no BOS) is
+reproducible from its recorded inputs, and its shards are verified and
+deduplicated against validation for the next chapter.
 
 ## Exercises
 
-<!-- Prose: the seven exercises of spec 20.6 part 8: (1) same bits per
-byte, different perplexities; (2) TokenShards.locate and iter_docs resume,
-id 0 only at document ends; (3) the vocabulary size of D3 for a stated
-parameter budget and elasticity, and its untied variant; (4) EM never
-decreases the corpus log-likelihood; (5) digit chunking under three
-tokenizers and a small arithmetic probe with d2l.score_choices on
-Qwen3-0.6B-Base; (6) 1,024, 4,096 and 8,192 new Hindi tokens with the
-decomposition initialization; (7) editing the merge table instead of
-appending pieces. -->
+1. **Same bits per byte, different perplexities.** Two models reach the
+   same bits per byte on a text. Model A reports a perplexity of 20 per
+   token and model B one of 40. Using :eqref:`eq_lm_tok_bpb`, which
+   tokenizer covers more bytes per token, and by what factor? Check the
+   relation against the table of the three small models in the
+   subsection :numref:`subsec_lm_tok_bpb`.
+   :exlabel:`ex_lm_tok-bpb`
+
+1. **Resuming from a cursor.** Using `d2l.fwedu_shards('val')`, pick 100
+   random document indices $i$. For each, check that `locate(i)` returns a
+   cursor from which `iter_docs(start=i)` yields document $i$ first, with
+   the same ids as `doc(i)`. Then check, without calling `verify`, that
+   id 0 occurs in the validation shard exactly at the positions
+   `offsets(k)[1:] - 1`. Which property of `write_shards` would each check
+   catch if it broke?
+   :exlabel:`ex_lm_tok-cursor`
+
+1. **The vocabulary of a larger model.** A model has
+   $A = 7 \times 10^9$ non-embedding parameters, width $d = 4{,}096$ and
+   tied embeddings, and its tokenizer's elasticity of compression is about
+   0.08 near the optimum.
+    1. Use :eqref:`eq_lm_tok_vstar` to find $V^*$. How much compute per
+       byte would a vocabulary of 32,000 cost relative to $V^*$, if
+       $\varepsilon$ stays at 0.08 between the two?
+    1. Suppose instead that the cost that matters is memory, the number
+       of parameters, and that the embeddings are untied, so the
+       vocabulary contributes $2Vd$. Redo the derivation. How does $V^*$
+       change?
+   :exlabel:`ex_lm_tok-vstar`
+
+1. **EM never lowers the likelihood.** Show that a round of
+   :eqref:`eq_lm_tok_em` never decreases $\sum_w c_w \log P(w)$. Write
+   $\log P(w)$ as $\log \sum_{\mathbf{s}} q(\mathbf{s}) P(\mathbf{s}) /
+   q(\mathbf{s})$ with $q$ the posterior over segmentations under the old
+   probabilities, apply Jensen's inequality, and show that the M-step
+   maximizes the resulting lower bound, which equals the old
+   log-likelihood at the old probabilities. Where does the argument use
+   the fact that every segmentation is a product of piece probabilities?
+   :exlabel:`ex_lm_tok-em`
+
+1. [code] **The split rule and Hindi.** Change `R2_SPLIT_REGEX` so that a
+   run of letters keeps its combining marks (`[\p{L}\p{M}]+` in place of
+   `\p{L}+`), retrain the byte-level BPE at $\alpha = 0$, and measure the
+   premium of every language on Belebele. How much of the gap between the
+   byte-level BPE's Hindi premium (1.77) and SentencePiece BPE's (1.32)
+   does the split rule explain? Which other languages move, and why?
+   :exlabel:`ex_lm_tok-split`
+
+1. [code] **Digits and arithmetic.** Count how the numbers of a passage of
+   your own are cut by GPT-2's tokenizer, `o200k_base` and the reference
+   tokenizer: how many distinct segmentations do numbers of the same
+   length receive? Then score 200 additions of two three-digit numbers
+   with `d2l.score_choices` on Qwen3-0.6B-Base, choosing between the true
+   sum and three sums that differ from it in one digit, once with the
+   numbers written normally and once with spaces between their digits.
+   Qwen3 cuts digits singly either way: what changes in its input, and
+   does the accuracy change? What would you predict for a model whose
+   tokenizer cuts 12345678 as `123|45|678`?
+   :exlabel:`ex_lm_tok-digits`
+
+1. [code] **How many new pieces?** Repeat the extension with 1,024, 4,096
+   and 8,192 new Hindi pieces, all with the decomposition initialization
+   and the two-phase recipe. Before running, predict the Hindi bytes per
+   token, the Hindi bits per byte after 150 steps and the English bits per
+   byte for each. Do more pieces always help within this budget? (A GPU
+   with about 16 GB, roughly 15 minutes.)
+   :exlabel:`ex_lm_tok-npieces`
+
+1. **Extension by merges.** The extension of
+   :numref:`subsec_lm_tok_extend` appends whole pieces as added tokens,
+   which the tokenizer matches before its own segmentation. Instead, add
+   the Hindi BPE's merges to Qwen3's merge table, so that the extended
+   tokenizer is a BPE in which every new piece is built by merges. What
+   must be true of the new merges' order and of the split rule for this to
+   work? Compare how the two extended tokenizers cut text that mixes Hindi
+   and English, such as a Hindi sentence with an English product name, and
+   say which behaviour you would want.
+   :exlabel:`ex_lm_tok-merges`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §20.6]{.kicker}
+
+Tokenizers at Scale<br>**unigram model · premium · bits per byte · vocabulary size · extension · shards**
+:::
+:::
+
+::: {.slide title="The Same Passage Costs Hindi 7.4× English's Tokens Under GPT-2"}
+[The problem]{.kicker}
+
+Tokens for 488 Belebele passages, relative to English (the *premium*):
+
+| language | GPT-2 | Qwen3 | Qwen3.5 | o200k_base |
+|---|---|---|---|---|
+| German | 2.14 | 1.56 | 1.31 | 1.31 |
+| Hindi | 7.43 | 4.45 | 2.01 | 1.56 |
+| Thai | 9.00 | 2.57 | 1.21 | 1.95 |
+| Chinese | 3.20 | 1.06 | 0.95 | 1.28 |
+
+::: {.d2l-note .warn}
+A premium of 2 means twice the compute and half the context for the same
+content.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- train a unigram tokenizer: forward-backward, EM, pruning, Viterbi;
+- measure the premium and compare tokenizers in bits per byte;
+- derive the vocabulary size that minimizes compute per byte;
+- add pieces to a trained model and check the initialization at step 0;
+- state the reference tokenizer and the shard format.
+
+**Running example:** Belebele (488 parallel passages, 10 languages), a
+FineWeb-2 slice of 4.5 MB per language, Qwen3-0.6B-Base.
+:::
+
+::: {.slide title="Cutting Text Is the Last Step Before Training"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| step | section |
+|---|---|
+| get text | Document Extraction from Web Crawls |
+| choose text | Quality Filtering |
+| | Deduplication and Decontamination |
+| mix text | Data Mixtures |
+| make text | Synthetic and Rephrased Data |
+| cut text | **Tokenizers at Scale** |
+:::
+
+::: {.col .narrow}
+- **Here:** vocabularies, their cost, and the token files of the next
+  chapter.
+- **Skips:** the BPE merge rule (already built), tokenizer-free models.
+:::
+:::
+:::
+
+::: {.slide title="The Unigram Model Scores Segmentations; BPE Replays Merges"}
+[The unigram model]{.kicker}
+
+Pieces $x$ with probabilities $p(x)$; a word $w$ has segmentations
+$\mathbf{s} = (x_1, \ldots, x_k)$:
+
+$$P(\mathbf{s}) = \prod_{m} p(x_m), \qquad P(w) = \sum_{\mathbf{s}} P(\mathbf{s})$$
+
+**Lattice:** positions $0..n$ are nodes, an edge $i \to j$ for every piece
+$w_{i:j}$; a path is a segmentation.
+
+| path for `▁sports` | log-probability |
+|---|---|
+| `▁s` · `port` · `s` | −18.5 |
+| `▁sp` · `ort` · `s` | −19.3 |
+:::
+
+::: {.slide title="Forward-Backward Gives Expected Counts; EM Renormalizes Them"}
+[Training]{.kicker}
+
+$$f_j = \sum_{i<j} f_i\, p(w_{i:j}), \qquad g_i = \sum_{j>i} p(w_{i:j})\, g_j, \qquad P(w) = f_n$$
+
+$$N_x = \sum_w c_w \sum_{w_{i:j} = x} \frac{f_i\, p(w_{i:j})\, g_j}{P(w)}, \qquad p_{\textrm{new}}(x) = \frac{N_x}{\sum_y N_y}$$
+
+- E-step: expected uses of each piece; M-step: Lagrange gives counts / total.
+- Prune: drop pieces whose removal costs the least likelihood, keep 80% per round.
+- Viterbi: replace $\sum$ by $\max$.
+:::
+
+::: {.slide title="Every Step Checks Against Brute Force"}
+[Checks]{.kicker}
+
+| check | result |
+|---|---|
+| forward-backward vs all segmentations (200 strings) | equal to $10^{-14}$ |
+| EM log-likelihood, 6 rounds | rises every round |
+| our Viterbi on SentencePiece's pieces, 1,000 lines | 1,000 identical |
+| our trainer vs SentencePiece, 4,096 pieces | 75% shared |
+
+::: {.d2l-note .warn}
+SentencePiece's default `nmt_nfkc` rewrites text: x² → x2, ﬁ → fi,
+ＡＢＣ → ABC. Normalize to NFC yourself and pass `identity`.
+:::
+:::
+
+::: {.slide title="Sampling Segmentations Makes Words Look Different Each Time"}
+[Subword regularization]{.kicker}
+
+Draw $\mathbf{s}$ with probability $\propto P(\mathbf{s})^{\beta}$:
+$\beta = 0$ uniform, $\beta \to \infty$ Viterbi.
+
+| | segmentation |
+|---|---|
+| Viterbi | `▁computer ▁scientists ▁have ▁release d ▁over ▁three` |
+| sample | `▁ com p u ter ▁scientists ▁have ▁ r e l e a s ed ▁ over ▁three` |
+| sample | `▁computer ▁scientists ▁have ▁release d ▁over ▁t h r e e` |
+
+::: {.d2l-note}
+Train on a fresh sample each time a sentence is read: the model must
+recognize a word however it is cut.
+:::
+:::
+
+::: {.slide title="Check: How Often Does β = 0.2 Prefer ▁s·port·s?"}
+[Check]{.kicker}
+
+`▁s|port|s` has log-probability −18.5, `▁sp|ort|s` −19.3. Viterbi always
+picks the first. At $\beta = 0.2$, how much more often is it sampled than
+the second?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The ratio of probabilities is $e^{0.8} \approx 2.2$; raised to
+$\beta = 0.2$ it is $e^{0.16} \approx 1.17$. Nearly a coin toss, which is
+why samples at 0.2 look so ragged.
+:::
+:::
+:::
+
+::: {.slide title="A Tokenizer's Training Text Decides Each Language's Premium"}
+[Language weighting]{.kicker}
+
+Byte-level BPE, 16,384 pieces, languages weighted $\propto n_i^{\alpha}$
+by FineWeb-2 document count $n_i$:
+
+| | $\alpha = 1$ | $\alpha = 0.3$ | $\alpha = 0$ |
+|---|---|---|---|
+| Devanagari pieces | 93 | 399 | 574 |
+| premium Hindi | 2.42 | 1.91 | 1.77 |
+| premium Swahili | 1.88 | 1.34 | 1.04 |
+| premium Russian | 1.30 | 1.38 | 1.42 |
+
+::: {.d2l-note}
+A fixed vocabulary is divided among languages. The split rule `\p{L}+`
+also cuts हिन्दी into ह·िन·्द·ी before any merge.
+:::
+:::
+
+::: {.slide title="Compare Tokenizers in Bits per Byte, Never in Perplexity"}
+[The fair measure]{.kicker}
+
+$L$: loss per token (nats), $\bar b$: bytes per token.
+$$\textrm{bpb} = \frac{L}{\bar b \ln 2}$$
+
+Small LMs on the same 45 MB, 100 held-out documents:
+
+| tokenizer | perplexity | bytes/token | bpb |
+|---|---|---|---|
+| SP unigram | 214 | 3.99 | 1.94 |
+| SP BPE | 218 | 4.01 | 1.94 |
+| HF byte-level BPE | 243 | 4.00 | 1.98 |
+:::
+
+::: {.slide title="Unigram vs BPE Moves a Language's Bits per Byte by at Most 3.6%"}
+[Results at T1 scale: 7.3M-parameter LMs, one epoch over 45 MB]{.kicker}
+
+| | result |
+|---|---|
+| unigram − BPE, average of 10 languages | +0.002 bpb [0.000, 0.004] |
+| SentencePiece − byte-level BPE | about −0.02 bpb |
+| largest unigram/BPE effect, one language | 3.6% of its bpb (Thai) |
+| premium spread across languages, one tokenizer | 1.5× to 1.8× |
+| Hindi premium, byte-level vs SentencePiece BPE | 1.77 vs 1.32 |
+
+::: {.d2l-note}
+At this scale a tokenizer decides how many tokens a language costs far
+more than how well it is predicted.
+:::
+:::
+
+::: {.slide title="The Best Vocabulary Equates Compression Gain and Softmax Share"}
+[Vocabulary size]{.kicker}
+
+$A$: non-embedding parameters, $d$: width, tied embeddings.
+$$C(V) = \frac{6\,(A + Vd)}{\bar b(V)} \ \text{FLOP per byte}$$
+
+$$\frac{d \log C}{d \log V} = \underbrace{\frac{Vd}{A + Vd}}_{s(V)} - \underbrace{\frac{d \log \bar b}{d \log V}}_{\varepsilon(V)} = 0 \;\Rightarrow\; \boxed{V^* = \frac{\varepsilon}{1-\varepsilon}\cdot\frac{A}{d}}$$
+
+Larger models and multilingual text (larger $\varepsilon$) want larger
+vocabularies.
+:::
+
+::: {.slide title="Measured: English Wants About 27K Pieces, Ten Languages About 51K"}
+[Measured on held-out text]{.kicker}
+
+One BPE of 65,536 pieces cut to its first $V$ ids; $s(V)$ at $d = 1{,}024$,
+$A \approx 302$M.
+
+| $V$ | bytes/token, English | $\varepsilon$, English | $\varepsilon$, 10 languages | $s(V)$ |
+|---|---|---|---|---|
+| 4,096 | 3.30 | 0.19 | 0.22 | 0.014 |
+| 16,384 | 4.09 | 0.11 | 0.18 | 0.053 |
+| 32,768 | 4.36 | 0.07 | 0.16 | 0.100 |
+| 65,536 | 4.53 | 0.04 | 0.14 | 0.182 |
+
+Released small models put 26% to 34% of their parameters in the
+vocabulary matrix; one tokenizer serves a whole model family.
+:::
+
+::: {.slide title="Check: Where Is the Optimum?"}
+[Check]{.kicker}
+
+A 24-block model with $d = 1{,}024$, so $A = 12 \cdot 24 \cdot 1024^2$, and
+a constant elasticity $\varepsilon = 0.1$. What is $V^*$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $A/d = 294{,}912$, and $V^* = \tfrac{0.1}{0.9} \cdot 294{,}912
+= 32{,}768$. The minimum is flat: half or twice that size costs only a
+few percent more.
+:::
+:::
+:::
+
+::: {.slide title="Digit and Whitespace Rules Are Decided Before Any Merge"}
+[Numbers and code]{.kicker}
+
+| tokenizer | `12345678` | digits/token | code tokens/line |
+|---|---|---|---|
+| GPT-2 | 123·45·678 | 2.12 | 19.25 |
+| o200k_base | 123·456·78 | 2.07 | 10.63 |
+| Qwen3 | 1·2·3·4·5·6·7·8 | 1.00 | 10.67 |
+| reference | 1·2·3·4·5·6·7·8 | 1.00 | 17.64 |
+
+::: {.d2l-note}
+The reference tokenizer's longest whitespace piece is two spaces: it reads
+Python 65% more expensively than Qwen3's.
+:::
+:::
+
+::: {.slide title="4,096 Hindi Pieces Halve Qwen3's Hindi Tokens"}
+[Extending a vocabulary]{.kicker}
+
+| tokenizer | Hindi bytes per token |
+|---|---|
+| Qwen3 | 2.79 |
+| Qwen3 + 4,096 Hindi pieces | 5.28 |
+| Qwen3.5 | 6.13 |
+
+New rows of the shared embedding matrix:
+
+- **random:** the model's initializer;
+- **mean:** mean of old rows + 1% noise;
+- **decomp:** mean of the rows of the old pieces it splits into.
+
+No ASCII in new pieces: 1,000 English lines keep their ids.
+:::
+
+::: {.slide title="Decomposition Starts Far Ahead; Mean Rows Start Behind Random"}
+[Step 0, before training]{.kicker}
+
+| arm | new-token mass, Hindi | Hindi bpb | English bpb |
+|---|---|---|---|
+| control (no new pieces) | | 0.62 | 0.8225 |
+| random | 0.2% | 2.39 | 0.8225 |
+| mean | 0.01% | 2.89 | 0.8225 |
+| decomp | 73% | 1.48 | 0.8225 |
+
+::: {.d2l-note}
+Identical mean rows share one logit: no hijacked softmax, but no mass for
+the new tokens either. Decomp's logit is the mean of its pieces' logits.
+:::
+:::
+
+::: {.slide title="After 150 Steps the Arms Converge, but None Reaches the Control"}
+[T1 scale: Qwen3-0.6B-Base, 150 steps × 8 × 1,024 tokens]{.kicker}
+
+Phase 1 (50 steps): new rows only, lr $3\times10^{-3}$. Phase 2 (100 steps):
+all, lr $10^{-5}$.
+
+| Hindi bpb | step 0 | 50 | 150 |
+|---|---|---|---|
+| control | 0.63 | 0.63 | 0.63 |
+| random | 2.38 | 1.25 | 1.03 |
+| mean | 2.88 | 1.03 | 0.92 |
+| decomp | 1.49 | 0.96 | 0.85 |
+
+::: {.d2l-note .warn}
+At 1.2M tokens the extension halves Hindi's tokens but is still 0.2 bpb
+behind. One phase at $10^{-4}$ made the control itself worse.
+:::
+:::
+
+::: {.slide title="The Reference Tokenizer and Its Shards Are Frozen Here"}
+[One-way doors]{.kicker}
+
+| field | value |
+|---|---|
+| tokenizer | byte-level BPE, 32,768 pieces, NFC, single digits |
+| special ids | 0 end of text (after every document), 1 pad, 2-3 chat, 4-31 reserved; no BOS |
+| `.bin` / `.idx` | little-endian ids (`uint16` up to 65,536) / `uint32` offsets |
+| check | retraining on 80,000 documents reproduces the SHA-256 |
+| data | 4.0B FineWeb-Edu tokens in 40 shards; validation $2^{23}$ tokens |
+
+2.5% of validation documents share a 50-token span with a training shard:
+boilerplate.
+:::
+
+::: {.slide title="Check: What If a Web Page Contains the End-of-Text String?"}
+[Check]{.kicker}
+
+A web page about tokenizers contains the end-of-text string,
+&lt;|endoftext|&gt;, as text. What goes wrong if the tokenizer encodes it
+as id 0?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The document ends in the middle, the shard's EOS invariant
+breaks, and the model learns that the string ends documents. The reference
+tokenizer encodes it as ordinary tokens, all with ids ≥ 32.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Recap]{.kicker}
+
+- Premium for Hindi: 7.4 (GPT-2), 4.5 (Qwen3), 2.0 (Qwen3.5).
+- Unigram: EM on forward-backward counts, Viterbi, sampling; 1,000 of 1,000
+  lines match SentencePiece.
+- Weighting $\alpha$: 1 → 0 cuts Hindi's premium 2.42 → 1.77.
+- Bits per byte, not perplexity; unigram vs BPE ≤ 3.6% at T1 scale.
+- $V^*$ where $\varepsilon = s$: about 27K for English, 51K for ten languages.
+- Extension: tokens halved, still 0.2 bpb behind after 150 steps.
+
+**Next:** streaming these shards into pretraining.
+:::

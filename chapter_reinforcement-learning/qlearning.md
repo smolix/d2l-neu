@@ -406,7 +406,7 @@ With little data, about $10{,}000$ steps, the planned greedy policy is the bette
 
 The model has costs of its own. It stores $|\mathcal{S}|^2 |\mathcal{A}|$ counts, here about a thousand numbers and for a large state space far too many, and every new batch of data means solving it again. The planner also trusts the estimate completely: a pair that was never tried looks worthless, and a pair that was tried once and got lucky looks better than it is. :numref:`sec_model_based` fits such a model on Pendulum with regression in place of counts and plans in it.
 
-The agent can now learn optimal action values from samples alone and act on them, or turn the same samples into a model and plan. Both rest on how it collects data, and the rule used here is crude. Forced to act at random one step in twenty, even $\pi^*$ succeeds only about $54\%$ of the time instead of $73\%$, and a greedy table needs a finite set of actions to maximize over. :numref:`sec_exploration` asks whether a different rule can learn as much while losing less; later in the chapter the policy itself becomes the object that is learned.
+The agent can now learn optimal action values from samples alone and act on them, or turn the same samples into a model and plan. Both rest on how it collects data, and the $\epsilon$-greedy rule used here (studied systematically in :numref:`sec_exploration`) is crude. Forced to act at random one step in twenty, even $\pi^*$ succeeds only about $54\%$ of the time instead of $73\%$, and a greedy table needs a finite set of actions to maximize over. :numref:`sec_exploration` asks whether a different rule can learn as much while losing less; later in the chapter the policy itself becomes the object that is learned.
 
 ## Summary
 

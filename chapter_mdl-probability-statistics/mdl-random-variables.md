@@ -744,9 +744,9 @@ every exponential $e^{-\lambda t}$ with $\lambda>0$. Power-law tails, where
 $P(|X|>t)$ decays like $t^{-\alpha}$, are the canonical example: they force
 every moment $\mathbb{E}[|X|^k]$ with $k\ge\alpha$ to be infinite, with the
 Cauchy distribution corresponding to $\alpha=1$. Heavy tails do not
-automatically imply infinite moments, however; the log-normal distribution of
-:numref:`subsec_mdl-change-of-variables` is heavy-tailed yet has all moments
-finite. Heavy tails matter in deep learning because sample averages over them
+automatically imply infinite moments, however; the log-normal distribution (which
+we will derive in :numref:`subsec_mdl-change-of-variables`) is heavy-tailed yet
+has all moments finite. Heavy tails matter in deep learning because sample averages over them
 converge slowly or fail to converge altogether. Minibatch gradient noise, for
 example, has been argued to be heavy-tailed
 :cite:`Simsekli.Sagun.Gurbuzbalaban.2019`, a hypothesis that Exercise
@@ -794,15 +794,20 @@ descends from it.
        the mean of the non-negative variable $X$ of part (a)?
    :exlabel:`ex_mdl-random-variables-power-law-tail`
 
-1. **Rectified Gaussian.** Let $X \sim \mathcal{N}(0, 1)$ have the c.d.f.
-   $\Phi$, and let $Y = \max(0, X)$. This is the output of a ReLU unit
+1. **Rectified Gaussian.** Let $X \sim \mathcal{N}(0, 1)$ have the standard
+   Gaussian density $p_X(x) = \tfrac{1}{\sqrt{2\pi}}e^{-x^2/2}$ and c.d.f.
+   $\Phi(x) = \int_{-\infty}^x p_X(t)\,dt$, and let $Y = \max(0, X)$. This is
+   the output of a ReLU unit
    with a standard normal pre-activation, a common model of a unit at
    initialization.
     1. Express the c.d.f. $F_Y$ through $\Phi$ and sketch it. Where does
        $Y$ have an atom, and what is its mass? Is $Y$ discrete, does it
        have a density, or is it mixed?
-    1. Explain why $Y$ has no density. Which hypothesis of the
-       change-of-variables proposition :eqref:`eq_mdl-cov_density_1d` fails
+    1. Explain why $Y$ has no density. Under the one-dimensional
+       change-of-variables rule $p_Y(y) = p_X(g^{-1}(y))\,|(g^{-1})'(y)|$ (which
+       we will prove in :numref:`subsec_mdl-change-of-variables`,
+       :eqref:`eq_mdl-cov_density_1d`, for a strictly monotone, continuously
+       differentiable transformation $Y = g(X)$), which hypothesis fails
        for the ReLU?
     1. Clipping to $[-c, c]$ for a threshold $c > 0$, as the hard-tanh
        activation does for $c = 1$, gives $C = \min(\max(X, -c), c)$. Write
@@ -812,7 +817,13 @@ descends from it.
        with $\Phi(z) = \tfrac12\bigl(1 + \operatorname{erf}(z/\sqrt{2})\bigr)$.
     1. Show that $\mathbb{E}[Y^2] = \tfrac12$ and
        $\mathbb{E}[Y] = 1/\sqrt{2\pi}$. Hint: write
-       $X^2 = Y^2 + \min(0, X)^2$ and use the symmetry of $X$. The
+       $X^2 = Y^2 + \min(0, X)^2$ and use the symmetry of $X$ (equivalently,
+       this decomposes $\mathbb{E}[Y]$ and $\textrm{Var}(Y)$ by conditioning on
+       the sign of $X$, an instance of the law of total expectation
+       $\mathbb{E}[Y] = \mathbb{E}[\mathbb{E}[Y \mid X]]$ and law of total
+       variance
+       $\textrm{Var}(Y) = \mathbb{E}[\textrm{Var}(Y \mid X)] + \textrm{Var}(\mathbb{E}[Y \mid X])$
+       developed in full in :numref:`sec_mdl-joint-distributions`). The
        He initialization of :numref:`subsec_he_init` multiplies the weight
        variance by $2$; which of these two moments does the factor
        compensate for?

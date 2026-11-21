@@ -305,7 +305,7 @@ The denoiser shrinks the noisy offset from the mean by the factor $v/(v + \sigma
 
 ### A Trained Score
 
-Does a learned score reach this best denoiser? To find out we need a network, and the chapter uses one small MLP for all its two-dimensional experiments. Besides the point it reads sines and cosines of the noise level (from the next section on, of a time $t \in [0, 1]$ along a path from data to noise). Here the level is fixed and these features do nothing. From the next section on, one network serves every level and must tell nearby levels apart, so the frequencies run from 1 to 64 radians per unit of $t$, and the fastest features complete about ten periods on $[0, 1]$. The positional encodings of :numref:`sec_positional-information`, built for positions in the thousands, would be nearly constant or linear on this interval. The few-step generators of :numref:`sec_diffusion-few-step` lower the frequencies again, for a reason given there.
+Does a learned score reach this best denoiser? To find out we need a network, and the chapter uses one small MLP for all its two-dimensional experiments. Besides the point it reads sines and cosines of the noise level (from the next section on, of a time $t \in [0, 1]$ along a path from data to noise). Here the level is fixed and these features do nothing. From the next section on, one network serves every level and must tell nearby levels apart, so the frequencies run from 1 to 64 radians per unit of $t$, and the fastest features complete about ten periods on $[0, 1]$. The positional encodings of :numref:`sec_positional-information`, built for integer token positions in the thousands, would be nearly constant or linear on this $[0, 1]$ interval (in :numref:`sec_diffusion-few-step`, we will see why few-step flow-map generators lower these frequencies again).
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab pytorch
@@ -362,7 +362,7 @@ class TimeMLP(nnx.Module):  #@save
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 
-One training loop serves the whole chapter: Adam on a fresh minibatch with fresh noise at every step. It also keeps a moving average of the weights, which matters from :numref:`sec_diffusion-images` on; its docstring lists the other options.
+One training loop serves the whole chapter: Adam on a fresh minibatch with fresh noise at every step. It also maintains an exponential moving average (EMA) of the weights—which will become important for image generation starting in :numref:`sec_diffusion-images`—and its docstring lists the remaining options.
 
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab pytorch

@@ -7,63 +7,54 @@ plan's Further Reading entry for this chapter is "none", so the chapter has
 no further-reading notebook. Rights: Common Crawl text is never committed or
 hosted, only pins, manifests and hashes. -->
 
-Every model in this book so far has trained on text that somebody else
-prepared. *The Time Machine* arrived as one clean file in
-:numref:`sec_text-sequence`, and the released models of
-:numref:`chap_lm_pretrained` came with their training data already
-collected, filtered and cut into tokens. For anyone who trains a language
-model, preparing that text is a large part of the work. A model starts from
-billions of web pages, and every decision made before its first batch
-changes what it can ever learn: what to extract from a page, what to throw
-away, what to read twice, and how to cut the rest into tokens.
+By now you can download a pretrained model and measure what it does
+(:numref:`chap_lm_pretrained`). The text it learned from was prepared by
+someone else and, for many released models, never published; yet preparing
+it is a large part of the work of training a language model. It starts from
+billions of web pages, and every decision made before the first batch
+changes what the model can ever learn: what to extract from a page, what to
+throw away, what to read twice, and how to cut the rest into tokens.
 
 For a long time such decisions were made by rules of thumb and seldom
-published. The open corpora of the last few years changed that. Their
-builders publish the pipeline together with the experiments behind it,
-small models trained on the output of each candidate filter, so that a
-choice about data is judged by its effect on a model and not by how the data
-look. This chapter builds such a pipeline at a scale that one machine can
-hold. It follows one document from a record of a web crawl to a token in a
-file on disk, and every step writes what it did into a manifest, so that the
-corpus can be rebuilt from hashes, audited, and corrected when a page has to
-be removed.
+published. The open corpora of the last few years publish the pipeline
+together with the experiments behind it, so that others can check a choice
+about data. This chapter builds one that a single machine can hold, from a
+record of a web crawl to a token in a file on disk. It measures what each
+step changes and writes every decision into a manifest, so that the corpus
+can be rebuilt from hashes, audited, and corrected when a page has to be
+removed.
 
 The chapter moves in three steps. The first decides which documents exist:
-an extractor turns pages into text (:numref:`sec_lm_crawl`), filters keep
-what a written definition of quality favours while an audit asks whose pages
-they remove (:numref:`sec_lm_quality_filtering`), and near-copies and leaked
-test items are taken out (:numref:`sec_lm_dedup`). The second decides how
-often a model reads each kind of text, with small proxy models standing in
-for a large one (:numref:`sec_lm_data_mixtures`), and asks whether text
+it extracts text from pages (:numref:`sec_lm_crawl`), filters the text and
+audits whose pages the filters remove (:numref:`sec_lm_quality_filtering`),
+and takes out near-copies and leaked test items (:numref:`sec_lm_dedup`).
+These steps are measured on the documents of a quarter of one Common Crawl
+archive file, each set beside the text that FineWeb, a released corpus, kept
+from the same record. The second step decides how often a model reads each
+kind of text, and there the measure is a model: small proxy runs choose the
+domain weights (:numref:`sec_lm_data_mixtures`) and test whether text
 rewritten by a model can stretch a source that has run short
-(:numref:`sec_lm_synthetic_data`). The third cuts the text into tokens:
-:numref:`sec_lm_tokenizers` asks what one vocabulary costs each language and
-how large it should be, then freezes the tokenizer of the rest of this part
-and writes the token files with which :numref:`chap_lm_pretraining` trains
-the book's reference model.
+(:numref:`sec_lm_synthetic_data`). The third cuts the text into tokens and
+writes the files on which :numref:`chap_lm_pretraining` trains the book's
+reference model (:numref:`sec_lm_tokenizers`). The second and third steps start from
+FineWeb-Edu as released, which holds far more text.
 
-Two lines of data run through the chapter. The first three sections work on
-a quarter of one archive file of Common Crawl, small enough to inspect page
-by page, and set every record beside the text that FineWeb, a released
-corpus, kept from the same file. The last three need far more text than that
-slice holds and start from FineWeb-Edu as released. How the token files are
-streamed into training batches belongs to the next chapter, and the data
-that teach a model to follow instructions and preferences belong to
-:numref:`chap_lm_finetuning` and :numref:`chap_lm_rl`.
+Streaming the token files into training batches belongs to the next chapter,
+and the data that teach a model to follow instructions and preferences
+belong to :numref:`chap_lm_finetuning` and :numref:`chap_lm_rl`. We assume
+you know byte-level BPE (:numref:`sec_text-sequence`), why bits per byte can
+compare models with different tokenizers (:numref:`subsec_lm_bpb`), how a
+paired comparison puts an error bar on a difference
+(:numref:`sec_lm_eval_suites`), and what a text embedding is
+(:numref:`sec_lm_text_embeddings`).
 
-We assume the byte-level tokenizer of :numref:`sec_text-sequence`, bits per
-byte (:numref:`subsec_lm_bpb`), the paired error bars of
-:numref:`sec_lm_eval_suites` and the text embeddings of
-:numref:`sec_lm_text_embeddings`. We ran the notebooks on a machine with
-four GPUs of 24 GB each. The long computations, labelling pages with a model
-of 27 billion parameters, training dozens of small language models
-and rewriting millions of tokens, were done once and their results published
-with the book. Each notebook downloads them, checks that they belong to its
-configuration and repeats a small part as a check; without a GPU it skips
-what needs one and says so. Common Crawl grants no licence for the pages it
-archives, so the book publishes none of their text, only byte ranges and
-hashes, and the notebooks fetch the pages from Common Crawl and rebuild the
-documents themselves. No notebook calls a paid service.
+The long computations, labelling pages with a model of 27 billion parameters
+and training dozens of small language models, ran once on four 24 GB GPUs,
+and their results ship with the book. Each notebook downloads them, checks
+them against its configuration and repeats a small part; without a GPU it
+skips what needs one and says so. Common Crawl grants no licence for the
+pages it archives, so the book publishes only byte ranges and hashes, from
+which the notebooks rebuild the documents. No notebook calls a paid service.
 
 ```toc
 :maxdepth: 2
@@ -138,7 +129,7 @@ A quarter of one Common Crawl archive file, through the first three sections:
 
 ::: {.d2l-note}
 Every row is a decision made before the first batch. A manifest records
-each one, and a model trained on the output judges it.
+each one, and the section that makes it measures what it removes.
 :::
 :::
 
@@ -158,8 +149,9 @@ each one, and a model trained on the output judges it.
 **Running example:** 256 MiB of one Common Crawl file beside FineWeb's text
 for the same records; then FineWeb-Edu as released.
 
-**Idea:** record every decision in a manifest, and judge it by a model
-trained on its output.
+**Idea:** record every decision in a manifest and measure its effect: on
+the documents for extraction, filters and deduplication; on small trained
+models for mixtures and rewritten text.
 :::
 
 ::: {.slide title="Three Steps: Choose Documents, Weigh Them, Cut Them into Tokens"}

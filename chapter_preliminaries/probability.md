@@ -617,90 +617,84 @@ H[D1 & D2].mean()  # Exact value: 0.8307
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §2.6]{.kicker}
+[Dive into Deep Learning · §1.6]{.kicker}
 
-Evidence and error bars for measured numbers<br>
-**sampling · random variables · expectation · the standard error · Bayes' theorem**
+Probability and Statistics: Reasoning Under Uncertainty in Machine Learning<br>**aleatoric vs. epistemic uncertainty · distributions & conditioning · Bayes' theorem · expectation & covariance · $\sigma/\sqrt{n}$ error bars**
 :::
 :::
 
-::: {.slide title="Every Number Computed From Data Fluctuates"}
-[The problem]{.kicker}
+::: {.slide title="Why Probability and Statistics Are the Language of Machine Learning"}
+[Motivation]{.kicker}
 
-- A coin lands heads **56** times in 100 tosses. Is it biased?
-- A classifier labels **230 of 256** images correctly (0.90). The next
-  minibatch gives 0.87. Did anything change?
-- Even a fair coin rarely gives exactly 50 heads.
+Machine learning models act on noisy measurements, ambiguous inputs, and finite datasets—making probability and statistics foundational at every stage of the pipeline:
+
+::: {.cols}
+::: {.col}
+- **Soft predictions & calibrated risk:** Classifiers output probability distributions $P(Y \mid \mathbf{x})$ via softmax rather than brittle hard guesses—critical when predicting heart-attack risk or flagging anomalous sensor readings.
+- **Loss functions as log-likelihoods:** Cross-entropy and squared error arise directly from maximizing the likelihood $P(\mathcal{D} \mid \mathbf{w})$ of observed targets.
+:::
+
+::: {.col}
+- **Stochastic training (Monte Carlo):** Minibatch SGD estimates the full-dataset gradient $\nabla \mathbb{E}[\ell]$ from $B = 256$ random examples per step.
+- **Statistical model evaluation:** Standard errors $\sigma/\sqrt{n}$ distinguish a genuine $+0.5\%$ accuracy breakthrough from finite-test-set sampling noise.
+:::
+:::
 
 ::: {.d2l-note}
-**Probability:** model → data (how likely is 56 for a fair coin?).
-**Statistics:** data → model (what do 56 heads say about the coin?).
+**Forward vs. backward reasoning:** **Probability** reasons *forward* from a known model to the distribution of outcomes ($p = 0.5 \to \textrm{counts}$); **statistics** reasons *backward* from observed data to infer unknown parameters ($\textrm{56/100 heads} \to p$).
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- read marginals off a joint table and test two variables for independence;
-- compute expectations, variances, and the variance of a sum;
-- attach a standard error $\sigma/\sqrt{n}$ to an average, and decide
-  whether 56 heads in 100 tosses is evidence of bias;
-- reverse a conditional with Bayes' theorem: why a positive HIV test
-  means only 13%.
-
-**Running examples:** a coin tossed $n$ times, a classifier's accuracy on
-a minibatch of 256 images, and a two-test HIV diagnosis.
-:::
-
-::: {.slide title="Probability Turns Measurements Into Evidence"}
-[Where this fits]{.kicker}
+::: {.slide title="Two Sources of Uncertainty: Aleatoric vs. Epistemic"}
+[Taxonomy of Uncertainty]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | tool |
-|---|---|
-| Data Manipulation | tensors |
-| Data Preprocessing | pandas |
-| Linear Algebra | matrix products, norms, eigenvalues |
-| Calculus | derivatives, gradients, chain rule |
-| Automatic Differentiation | autograd |
-| **Probability and Statistics** | **standard error, Bayes' theorem** |
-| Documentation | `help`, small tests |
+- **Data (aleatoric) uncertainty — *irreducible*:** Intrinsic randomness or ambiguity in the observation itself.
+  - Even when we know a coin is fair ($p = 0.5$), the next toss is still 50/50.
+  - A blurry $28 \times 28$ Fashion-MNIST image that humans split 60/40 between *pullover* and *coat* stays ambiguous no matter how many training images we collect.
+- **Model (epistemic) uncertainty — *reducible*:** Ignorance about true parameters ($p$ or weights $\mathbf{w}$) due to finite sample size $n$.
+  - Shrinks at rate **$1/\sqrt{n}$** as we collect more data.
 :::
 
-::: {.col .narrow}
-- **Uses:** tensors and random sampling from the earlier decks.
-- **Skips:** densities in depth, named distributions, maximum likelihood,
-  and the proofs, all in the mathematics appendix.
+::: {.col .fig .big}
+@fig:probability-uncertainty
 :::
 :::
 :::
 
-::: {.slide title="Frequencies Fluctuate Around the Probability"}
-[Sampling]{.kicker}
+::: {.slide title="Sampling and Empirical Frequencies"}
+[From Models to Data]{.kicker}
 
-Frequencies of heads and tails in 100 tosses of a fair coin:
+Drawing realizations from a distribution $P$ is called **sampling**. For $n$ independent tosses of a fair coin with $P = (0.5, 0.5)$, the count vector follows a **multinomial distribution**:
+
+::: {.cols .vc}
+::: {.col}
+- Dividing observed counts by $n$ gives the empirical **frequency** $\hat{P}_n = \textrm{counts}/n$, an estimator of the true probability $P = (0.5, 0.5)$.
+- In a single $100$-toss trial, counts routinely deviate from $(50, 50)$ by several heads:
+
+@probability-a-simple-example-tossing-coins-2
+:::
+
+::: {.col}
+- Across five independent $100$-toss experiments, $\hat{p}_n$ fluctuates noticeably around $0.50$ (whereas at $n = 10{,}000$, fluctuations tighten tenfold to $\approx \pm 0.005$):
 
 @probability-a-simple-example-tossing-coins-3
-
-In 10,000 tosses:
-
-@!probability-a-simple-example-tossing-coins-4
-
-- The **probability** $p = 0.5$ belongs to the coin. The **frequency**
-  $\hat{p}$ is an estimate: it changes with every repetition.
+:::
+:::
 :::
 
-::: {.slide title="The Running Frequency Settles Toward 0.5"}
-[Sampling]{.kicker}
+::: {.slide title="The Law of Large Numbers: Convergence of Running Frequencies"}
+[Asymptotic Consistency]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- Heads so far divided by tosses so far, after each toss.
-- **Law of large numbers:** $\hat{p} \to p$ as $n \to \infty$.
+- Tracking the running frequency $\hat{p}_n = \frac{1}{n}\sum_{i=1}^n X_i$ after every toss $n = 1, 2, \ldots, 10{,}000$ via `cumsum` illustrates the **Law of Large Numbers (LLN)**:
+  $$\hat{p}_n = \frac{1}{n}\sum_{i=1}^n X_i \xrightarrow{n \to \infty} p = 0.5$$
+- Early swings at $n < 100$ are wide, but as $n \to 10{,}000$, the empirical curve locks onto $P(\textrm{heads}) = 0.5$.
 
 ::: {.d2l-note}
-It does not say **how fast**. How far from $0.5$ may 100 tosses land?
+**The missing piece:** The LLN guarantees *eventual* convergence as $n \to \infty$, but does not tell us **how fast** estimation error shrinks at finite $n$.
 :::
 :::
 
@@ -710,132 +704,17 @@ It does not say **how fast**. How far from $0.5$ may 100 tosses land?
 :::
 :::
 
-::: {.slide title="Three Axioms Generate Every Rule"}
-[The rules]{.kicker}
+::: {.slide title="How Fast Do Empirical Estimates Converge? The 1/√n Envelope"}
+[Rate of Convergence]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-An **event** is a subset of the sample space $\mathcal{S}$.
-
-- $P(\mathcal{A}) \ge 0$, and $P(\mathcal{S}) = 1$;
-- mutually exclusive events **add**.
-
-Consequences: $P(\mathcal{A}') = 1 - P(\mathcal{A})$ and
-$P(\mathcal{A}\cup\mathcal{B}) = P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
-
-Die, "even or at least 5":
-$$\frac{3}{6} + \frac{2}{6} - \frac{1}{6} = \frac{2}{3}.$$
-:::
-
-::: {.col .fig}
-@fig:probability-venn
-:::
-:::
-:::
-
-::: {.slide title="A Random Variable Maps Outcomes to Values"}
-[The rules]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- Heads in 100 tosses: $2^{100}$ outcomes, only **101** values.
-- **Distribution** $P(X)$: the probability of each value.
-- A height has a **density**: $P(a \le X \le b) = \int_a^b p(x)\,dx$;
-  each exact value has probability zero.
-:::
-::: {.col .fig .big}
-@fig:probability-density
-:::
-:::
-:::
-
-::: {.slide title="A Joint Table Holds Everything About Two Variables"}
-[The rules]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Rain and umbrella on a random day:
-
-| $P(X, Y)$ | umbrella | no umbrella |
-|:--|:--:|:--:|
-| rain | 0.25 | 0.05 |
-| no rain | 0.10 | 0.60 |
-
-- **Marginal:** sum a row or a column.
-  $P(\textrm{rain}) = 0.30$, $P(\textrm{umbrella}) = 0.35$.
-- **Independent** means $P(X, Y) = P(X)\,P(Y)$. Here
-  $0.25 \neq 0.30 \cdot 0.35$: not independent.
-- Two coin tosses are independent; the coin question needs this.
-:::
-
-::: {.col .fig}
-@fig:probability-joint-grid
-:::
-:::
-:::
-
-::: {.slide title="Expectation Is the Probability-Weighted Average"}
-[Expectation and variance]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\mathbb{E}[X] = \sum_x x\,P(X{=}x)$$
-
-- Investment: $0.5 \cdot 0 + 0.4 \cdot 2 + 0.1 \cdot 10 = 1.8$.
-- Indicator of heads: $\mathbb{E}[X] = p$.
-- **Linear**, always: $\mathbb{E}[aX + bY] = a\mathbb{E}[X] + b\mathbb{E}[Y]$, so
-  $\mathbb{E}[\hat{p}] = p$: the frequency is **unbiased**.
-:::
-
-::: {.col .fig}
-@fig:probability-expectation
-:::
-:::
-:::
-
-::: {.slide title="Variance Measures the Spread Around the Mean"}
-[Expectation and variance]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\textrm{Var}(X) = \mathbb{E}\big[(X - \mu)^2\big] = \mathbb{E}[X^2] - \mu^2$$
-
-- Investment: $11.6 - 1.8^2 = 8.36$, so $\sigma \approx 2.9$.
-- Indicator of heads: $p - p^2 = p(1-p)$, at most $\tfrac14$.
-- $\textrm{Var}(aX + b) = a^2\,\textrm{Var}(X)$.
-:::
-
-::: {.col .fig}
-@fig:probability-spread
-:::
-:::
-:::
-
-::: {.slide title="Variances of Independent Variables Add"}
-[Expectation and variance · derivation]{.kicker}
-
-**Step 1.** Expand the square:
-$\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X,Y)$,
-with $\textrm{Cov}(X,Y) = \mathbb{E}[(X-\mu_X)(Y-\mu_Y)]$.
-
-**Step 2.** Independent: $\textrm{Cov}(X,Y) = \mathbb{E}[X-\mu_X]\,\mathbb{E}[Y-\mu_Y] = 0$.
-
-::: {.d2l-note .rule}
-$\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y)$: the sum of $n$
-independent draws has standard deviation $\sqrt{n}\,\sigma$, not $n\sigma$.
-:::
-:::
-
-::: {.slide title="The Standard Error of a Frequency Is 0.5/√n"}
-[Estimation error]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\textrm{Var}(\hat{p}) = \frac{1}{n^2} \cdot n\,p(1-p) = \frac{p(1-p)}{n}$$
-
-- Fair coin: $0.05$ at $n = 100$, $0.005$ at $n = 10{,}000$.
-- 1000 repeats per $n$ land on the line: **slope $-\tfrac12$**.
-- Half the error costs **4×** the data.
+- Simulating $1{,}000$ experiments at each sample size $n \in \{10, 100, 1{,}000, 10{,}000\}$ reveals a straight line of **slope $-1/2$** on a log–log plot:
+  $$\textrm{std}(\hat{p}_n) = \frac{0.5}{\sqrt{n}}$$
+- **The quadratic cost of precision:**
+  - Shrinking error by **$2\times$** requires **$4\times$** more evaluation examples.
+  - Shrinking error by **$10\times$** requires **$100\times$** more examples ($n = 100 \to \pm 5\%$; $n = 10{,}000 \to \pm 0.5\%$).
+- To derive this $1/\sqrt{n}$ law from first principles, we formalize events, random variables, expectation, and variance.
 :::
 
 ::: {.col .fig .big}
@@ -844,84 +723,57 @@ $$\textrm{Var}(\hat{p}) = \frac{1}{n^2} \cdot n\,p(1-p) = \frac{p(1-p)}{n}$$
 :::
 :::
 
-::: {.slide title="56 of 100 Is No Evidence of Bias; 5,600 of 10,000 Is"}
-[Estimation error]{.kicker}
-
-- $56/100$: deviation $0.06 = 1.2$ standard errors.
-- $5600/10000$: deviation $0.06 = 12$ standard errors.
-
-Fraction of 1000 fair-coin experiments at least this far from $n/2$, an
-estimate of the **p-value**:
-
-@!probability-is-the-coin-biased
-
-::: {.d2l-note .rule}
-Chebyshev, any distribution: $P(|X - \mu| \ge k\sigma) \le 1/k^2$.
-Averages do better: within 2 standard errors about 95% of the time.
-Under 2 is unremarkable; 3 or more is hard to blame on chance.
-:::
-:::
-
-::: {.slide title="A Minibatch of 256 Images Measures Accuracy to About ±2 Points"}
-[Estimation error]{.kicker}
-
-Correct label with probability $0.9$, independently per image:
-
-- minibatch of 256: $\sqrt{0.9 \cdot 0.1 / 256} \approx 0.019$;
-- test set of 10,000: $\sqrt{0.9 \cdot 0.1 / 10{,}000} = 0.003$;
-- the difference of two such accuracies: $\sqrt{2} \cdot 0.003 \approx 0.004$,
-  since variances add, so one point is more than two standard errors.
-
-::: {.d2l-note}
-In general: an average of $n$ independent draws has standard error
-$\sigma/\sqrt{n}$.
-:::
-:::
-
-::: {.slide title="More Data Removes Only Epistemic Uncertainty"}
-[Estimation error]{.kicker}
+::: {.slide title="Sample Spaces, Events, and Kolmogorov's Axioms"}
+[Foundations of Probability]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Epistemic:** uncertainty about the model, such as $p$. It shrinks
-  like $1/\sqrt{n}$.
-- **Aleatoric:** randomness of the outcome. Knowing $p = 0.5$ exactly,
-  the next toss is still 50/50; an ambiguous image stays ambiguous.
+- A random experiment has a **sample space** $\mathcal{S}$ of all possible outcomes; an **event** is any subset $\mathcal{A} \subseteq \mathcal{S}$.
+- **Kolmogorov's three axioms** (1933):
+  1. **Nonnegativity:** $P(\mathcal{A}) \ge 0$ for every $\mathcal{A} \subseteq \mathcal{S}$.
+  2. **Normalization:** $P(\mathcal{S}) = 1$ (and $P(\emptyset) = 0$).
+  3. **Additivity:** For mutually exclusive events ($\mathcal{A}_i \cap \mathcal{A}_j = \emptyset$), $P(\bigcup_i \mathcal{A}_i) = \sum_i P(\mathcal{A}_i)$.
+- **Complement ($P(\mathcal{A}^\complement) = 1 - P(\mathcal{A})$) & inclusion–exclusion:**
+  $$P(\mathcal{A} \cup \mathcal{B}) = P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A} \cap \mathcal{B})$$
+:::
+
+::: {.col .fig}
+@fig:probability-venn
+
+*Die roll ($\mathcal{S} = \{1,\ldots,6\}$):* For $\mathcal{A} = \{2, 4, 6\}$ (even) and $\mathcal{B} = \{5, 6\}$ ($\ge 5$), $\mathcal{A} \cap \mathcal{B} = \{6\}$, so $P(\mathcal{A} \cup \mathcal{B}) = \frac{3}{6} + \frac{2}{6} - \frac{1}{6} = \frac{2}{3}$.
+:::
+:::
+:::
+
+::: {.slide title="Discrete vs. Continuous Random Variables"}
+[Random Variables & Distributions]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- A **random variable** $X: \mathcal{S} \to \mathbb{R}$ maps outcomes to numbers (e.g., mapping $2^{100}$ coin sequences to $\{0, \ldots, 100\}$ heads).
+- **Discrete (probability mass function):** Assigns mass $P(X = v) \ge 0$ to individual values with $\sum_v P(X = v) = 1$ (e.g., softmax over classes or vocabulary tokens).
+- **Continuous (probability density function):** Described by a density $p(x) \ge 0$ where probability is **area under the curve**:
+  $$P(a \le X \le b) = \int_a^b p(x)\,dx, \quad \int_{-\infty}^{\infty} p(x)\,dx = 1$$
+  Note: $p(x)$ can exceed $1$, while $P(X = x) = 0$ at any single point!
 :::
 
 ::: {.col .fig .big}
-@fig:probability-uncertainty
+@fig:probability-density
 :::
 :::
 :::
 
-::: {.slide title="Check: How Large a Test Set?"}
-[Check]{.kicker}
-
-A classifier has accuracy about $0.9$. How many test images make the
-standard error of its measured accuracy $0.005$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\sqrt{0.9 \cdot 0.1 / n} = 0.005$ gives
-$n = 0.09 / 0.000025 = 3{,}600$. Halving the error to $0.0025$ takes four
-times as many: 14,400.
-:::
-:::
-:::
-
-::: {.slide title="Conditioning Keeps One Row and Renormalizes It"}
-[Conditional probability]{.kicker}
+::: {.slide title="Joint, Marginal, and Conditional Probability"}
+[Sum Rule & Product Rule]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$$P(Y \mid X{=}x) = \frac{P(X{=}x,\, Y)}{P(X{=}x)}$$
-
-- Rain row $(0.25, 0.05)$ becomes $(0.83, 0.17)$:
-  $P(\textrm{umbrella} \mid \textrm{rain}) = 0.83$ against $0.35$ on an
-  arbitrary day.
-- In the figure, $P(Y{=}y_3 \mid X{=}x_2) = 0.25 / 0.60 \approx 0.42$.
-- Multiplication rule: $P(X, Y) = P(Y \mid X)\,P(X)$.
+- **Joint distribution $P(X = x, Y = y)$:** Probability that $X = x$ and $Y = y$ occur together (a 2D table whose entries sum to $1$).
+- **Sum rule (marginalization):** Sum out nuisance or latent variables along an axis (`sum(axis=1)`):
+  $$P(X = x) = \sum_y P(X = x, Y = y)$$
+- **Conditioning & product (chain) rule:** Restrict to row $X = x$ and renormalize by $P(X = x)$:
+  $$P(Y \mid X) = \frac{P(X, Y)}{P(X)} \iff P(X, Y) = P(Y \mid X)\,P(X)$$
+  Iterating the product rule factorizes autoregressive language models: $P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t})$.
 :::
 
 ::: {.col .fig}
@@ -930,90 +782,15 @@ $$P(Y \mid X{=}x) = \frac{P(X{=}x,\, Y)}{P(X{=}x)}$$
 :::
 :::
 
-::: {.slide title="Bayes' Theorem Reverses the Conditional"}
-[Conditional probability · derivation]{.kicker}
-
-**Step 1.** Write the joint both ways: $P(X, Y) = P(Y \mid X)\,P(X) = P(X \mid Y)\,P(Y)$.
-
-**Step 2.** Divide by $P(Y)$:
-$$P(X \mid Y) = \frac{P(Y \mid X)\,P(X)}{P(Y)}, \qquad P(Y) = \sum_x P(Y \mid X{=}x)\,P(X{=}x).$$
-
-**Step 3.** Hypothesis $H$, observed data $D$:
-
-::: {.d2l-note .rule}
-posterior $\propto$ likelihood $\times$ prior:
-$\;P(H \mid D) \propto P(D \mid H)\,P(H)$.
-:::
-:::
-
-::: {.slide title="Conditioning Can Remove or Create Dependence"}
-[Conditional probability]{.kicker}
-
-**Conditionally independent given $Z$:**
-$P(X, Y \mid Z) = P(X \mid Z)\,P(Y \mid Z)$.
+::: {.slide title="Bayes' Theorem: Reversing Conditioning"}
+[Inverse Probability]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Common cause:** shoe size and reading level are related through age,
-  and unrelated at a fixed age.
-- **Common effect:** broken bones and lung cancer become related among
-  hospital patients (*explaining away*).
-:::
-::: {.col .fig .big}
-@fig:probability-explaining-away
-:::
-:::
-:::
-
-::: {.slide title="Check: Condition on a Column"}
-[Check]{.kicker}
-
-In the joint table, $P(X{=}x_1, Y{=}y_1) = 0.12$ and $P(Y{=}y_1) = 0.32$.
-What is $P(X{=}x_1 \mid Y{=}y_1)$? Are $X$ and $Y$ independent?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $0.12 / 0.32 = 0.375$, while $P(X{=}x_1) = 0.40$. Learning
-$Y = y_1$ changes the distribution of $X$, so $X$ and $Y$ are **not**
-independent.
-:::
-:::
-:::
-
-::: {.slide title="A Test That Never Misses Gives Only 13%"}
-[Bayes in action]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$
-\begin{aligned}
-P(D{=}1 \mid H{=}1) &= 1.00 \\
-P(D{=}1 \mid H{=}0) &= 0.01 \\
-\text{prior } P(H{=}1) &= 0.0015
-\end{aligned}
-$$
-
-$$P(H{=}1 \mid D{=}1) = \frac{0.0015}{0.011485} = 0.13$$
-
-Rare disease: false positives outnumber true ones.
-:::
-
-::: {.col .fig .big}
-@fig:probability-natural-frequencies
-:::
-:::
-:::
-
-::: {.slide title="A Second Positive Test Raises 13% to 83%"}
-[Bayes in action]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Second test: positive with probability $0.98$ if $H{=}1$, $0.03$ if $H{=}0$.
-Given $H$ the tests are independent, so likelihoods multiply:
-$1 \cdot 0.98$ if $H{=}1$, $0.01 \cdot 0.03$ if $H{=}0$.
-
-$$\frac{0.98 \cdot 0.0015}{0.98 \cdot 0.0015 + 0.01 \cdot 0.03 \cdot 0.9985} = 0.83$$
+- Writing the joint distribution in both orders, $P(H, D) = P(D \mid H)P(H) = P(H \mid D)P(D)$, and dividing by $P(D)$ yields **Bayes' theorem**:
+  $$P(H \mid D) = \frac{P(D \mid H)\,P(H)}{P(D)} = \frac{\textrm{likelihood} \times \textrm{prior}}{\textrm{evidence}}$$
+  where $P(D) = \sum_h P(D \mid H = h)\,P(H = h)$ normalizes the posterior across all hypotheses.
+- **Forward model $\to$ inverse inference:** Generative models specify how hidden causes or labels $H$ produce observed features or test results $D$ ($P(D \mid H)$); Bayes' theorem inverts this to infer $P(H \mid D)$.
 :::
 
 ::: {.col .fig}
@@ -1022,48 +799,184 @@ $$\frac{0.98 \cdot 0.0015}{0.98 \cdot 0.0015 + 0.01 \cdot 0.03 \cdot 0.9985} = 0
 :::
 :::
 
-::: {.slide title="Simulating Two Million Patients Confirms 0.83 to About One Point"}
-[Bayes in action]{.kicker}
+::: {.slide title="Dependence, Independence, and 'Explaining Away'"}
+[Graphical Structure & Conditioning]{.kicker}
 
-Draw each patient's status, then both test results:
+::: {.cols .vc}
+::: {.col}
+- **Marginal independence ($X \perp Y$):** $P(X, Y) = P(X)P(Y)$.
+- **Conditional independence ($X \perp Y \mid Z$):** $P(X, Y \mid Z) = P(X \mid Z)P(Y \mid Z)$. Conditioning can *destroy* or *create* dependence:
+  1. **Common cause ($X \leftarrow Z \to Y$):** Dependent marginally, but independent once common cause $Z$ is observed.
+  2. **Markov chain ($X \to Y \to Z$):** Past $X \perp$ future $Z$ given present $Y$.
+  3. **Common effect ($X \to Z \leftarrow Y$, *explaining away*):** Independent causes (Rain $\perp$ Sprinkler) become **negatively dependent** once common effect $Z = 1$ (wet grass) is observed!
+:::
+
+::: {.col .fig}
+@fig:probability-explaining-away
+:::
+:::
+:::
+
+::: {.slide title="Expectation: Center of Mass and Unbiased Estimators"}
+[First Moment]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- The **expectation** (mean $\mu = \mathbb{E}[X]$) is the probability-weighted center of mass:
+  $$\mathbb{E}[X] = \sum_x x\,P(X = x), \qquad \mathbb{E}[f(X)] = \sum_x f(x)\,P(X = x)$$
+- *Examples:* Investment return $0.5(0) + 0.4(2) + 0.1(10) = 1.8$; Bernoulli indicator $X \in \{0, 1\}$ has $\mathbb{E}[X] = p$.
+- **Linearity of expectation (always holds, even if $X, Y$ are dependent!):**
+  $$\mathbb{E}[aX + bY] = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y]$$
+  Thus $\mathbb{E}[\hat{p}_n] = \frac{1}{n}\sum_{i=1}^n \mathbb{E}[X_i] = p$: sample frequencies and minibatch SGD gradients are **unbiased** estimators.
+:::
+
+::: {.col .fig}
+@fig:probability-expectation
+:::
+:::
+:::
+
+::: {.slide title="Variance and Standard Deviation: Measuring Spread"}
+[Second Central Moment]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Variance** measures expected squared deviation around $\mu = \mathbb{E}[X]$; **standard deviation** $\sigma = \sqrt{\mathrm{Var}(X)}$ restores the original units of $X$:
+  $$\mathrm{Var}(X) = \mathbb{E}\!\left[(X - \mu)^2\right] = \mathbb{E}[X^2] - (\mathbb{E}[X])^2$$
+- **Shift invariance & quadratic scaling:** $\mathrm{Var}(aX + b) = a^2\,\mathrm{Var}(X)$.
+- *Investment return:* $\mathbb{E}[X^2] = 0.5(0) + 0.4(4) + 0.1(100) = 11.6$, so $\mathrm{Var}(X) = 11.6 - 1.8^2 = 8.36$ ($\sigma \approx 2.9$).
+- *Bernoulli indicator $X \in \{0, 1\}$:* Since $X^2 = X$, $\mathrm{Var}(X) = p - p^2 = p(1 - p) \le \frac{1}{4}$ (maximized at $p = 0.5$).
+:::
+
+::: {.col .fig}
+@fig:probability-spread
+:::
+:::
+:::
+
+::: {.slide title="Covariance, Correlation, and the Variance of an Average"}
+[Co-Movement & 1/√n Scaling]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Covariance & correlation** ($\rho = \frac{\mathrm{Cov}(X, Y)}{\sigma_X \sigma_Y} \in [-1, 1]$) quantify linear co-movement:
+  $$\mathrm{Cov}(X, Y) = \mathbb{E}\!\left[(X - \mu_X)(Y - \mu_Y)\right]$$
+- **Variance of a sum:** Expanding $\mathbb{E}[(X - \mu_X + Y - \mu_Y)^2]$ gives
+  $$\mathrm{Var}(X + Y) = \mathrm{Var}(X) + \mathrm{Var}(Y) + 2\,\mathrm{Cov}(X, Y)$$
+- **Why averaging divides variance by $n$:** For $n$ independent draws ($\mathrm{Cov} = 0$), variances add ($\mathrm{Var}(\sum_{i=1}^n X_i) = n\sigma^2$), and dividing by $n$ scales variance by $1/n^2$:
+  $$\mathrm{Var}(\bar{X}_n) = \frac{\sigma^2}{n} \implies \mathrm{SE}(\bar{X}_n) = \frac{\sigma}{\sqrt{n}}$$
+:::
+
+::: {.col .fig}
+@fig:probability-covariance
+:::
+:::
+:::
+
+::: {.slide title="Chebyshev's Inequality, the Central Limit Theorem, and Bias Testing"}
+[Statistical Significance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- For a fair coin ($p = 0.5$), $\mathrm{SE}(\hat{p}_n) = \sqrt{p(1-p)/n} = 0.5/\sqrt{n}$. Comparing $\hat{p} = 0.56$ at two sample sizes:
+  - **$56/100$ tosses ($\mathrm{SE} = 0.05$):** Deviation $0.06$ is **$1.2\,\mathrm{SE}$** ($p\text{-value} \approx 0.27$, routine chance fluctuation).
+  - **$5{,}600/10{,}000$ tosses ($\mathrm{SE} = 0.005$):** Deviation $0.06$ is **$12\,\mathrm{SE}$** ($p\text{-value} \approx 0$, decisive evidence of bias).
+- **Chebyshev's inequality (any distribution):** $P(|X - \mu| \ge k\sigma) \le 1/k^2$ (at $k=2$, tail $\le 25\%$).
+- **Central Limit Theorem (Gaussian tails for averages):** $\bar{X}_n$ falls within $\pm 1\sigma / \pm 2\sigma / \pm 3\sigma$ with probability **$68\% / 95\% / 99.7\%$** ($95\%$ CI: $\hat{p} \pm 1.96\,\mathrm{SE}$).
+:::
+
+::: {.col}
+@probability-is-the-coin-biased
+:::
+:::
+:::
+
+::: {.slide title="Evaluating Classifiers: Minibatch Noise vs. Paired Comparisons"}
+[ML Evaluation & Error Bars]{.kicker}
+
+Each test prediction is a Bernoulli trial ($X_i = 1$ if correct, $0$ if wrong) with true accuracy $p$ and standard error $\mathrm{SE}(\hat{p}_n) = \sqrt{p(1-p)/n} \le \frac{1}{2\sqrt{n}}$:
+
+::: {.cols}
+::: {.col}
+**1. Minibatch vs. Test-Set Error Bars ($p = 0.90$)**
+
+- **Minibatch ($n = 256$):** $\mathrm{SE} = \sqrt{0.9 \times 0.1 / 256} \approx \mathbf{1.9\%}$ ($95\%$ CI $\pm 3.7\%$). A dip from $0.90$ to $0.87$ on the next minibatch is pure sampling noise!
+- **Test set ($n = 10{,}000$):** $\mathrm{SE} = \sqrt{0.9 \times 0.1 / 10{,}000} = \mathbf{0.30\%}$ ($95\%$ CI $\pm 0.59\%$).
+:::
+
+::: {.col}
+**2. Paired Comparison on the *Same* Test Set**
+
+- Model A ($90.5\%$) vs. Model B ($90.0\%$) on $n = 10{,}000$ images ($\Delta = +0.5\%$):
+- **Unpaired (independent sets):** $\mathrm{SE}(\hat{p}_A - \hat{p}_B) = \sqrt{0.3^2 + 0.3^2} \approx \mathbf{0.42\%}$ ($\Delta = 1.2\,\mathrm{SE}$, inconclusive).
+- **Paired (same images):** $\mathrm{Var}(X - Y) = \mathrm{Var}(X) + \mathrm{Var}(Y) - 2\mathrm{Cov}(X, Y)$. Since both models agree on $9{,}700$ images ($\mathrm{Cov} > 0$) and disagree on only $300$, $\mathrm{SE}$ drops to $\sqrt{300}/10{,}000 \approx \mathbf{0.17\%}$ ($\Delta \approx \mathbf{2.9\,\mathrm{SE}}$, significant!).
+:::
+:::
+:::
+
+::: {.slide title="Worked Example: Base-Rate Neglect in Medical & Anomaly Screening"}
+[Bayes' Theorem in Practice]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- A diagnostic test $D_1 \in \{0, 1\}$ for HIV status $H \in \{0, 1\}$ has **$100\%$ sensitivity** ($P(D_1{=}1 \mid H{=}1) = 1.00$) and **$99\%$ specificity** ($P(D_1{=}1 \mid H{=}0) = 0.01$), with prevalence $P(H{=}1) = 0.0015$.
+- By the sum rule, $P(D_1{=}1) = 1.00(0.0015) + 0.01(0.9985)$ $= 0.011485$. Bayes' theorem gives:
+  $$P(H{=}1 \mid D_1{=}1) = \frac{0.0015}{0.011485} = \mathbf{0.1306} \;(13.1\%)$$
+- **Why so low?** Out of $10{,}000$ people, all $15$ infected cases test positive, but $1\%$ of $9{,}985$ healthy people creates **$\approx 100$ false alarms** ($15 / 115 \approx 13.1\%$).
+:::
+
+::: {.col .fig}
+@fig:probability-natural-frequencies
+:::
+:::
+:::
+
+::: {.slide title="Sequential Bayesian Updating and Correlated Evidence"}
+[Two-Stage Screening & Monte Carlo]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Follow-up test $D_2$** ($P(D_2{=}1 \mid H{=}1) = 0.98$, false-positive rate $P(D_2{=}1 \mid H{=}0) = 0.03$):
+  Assuming $D_1 \perp D_2 \mid H$, true positives occur at rate $0.98(0.0015) = 0.00147$ and false positives drop to $0.0003(0.9985) \approx 0.00030$:
+  $$P(H{=}1 \mid D_1{=}1, D_2{=}1) = \frac{0.00147}{0.00147 + 0.00030} = \mathbf{0.8307}$$
+- **When conditional independence fails:** If false positives are coupled by shared host biochemistry ($P(D_1{=}1, D_2{=}1 \mid H{=}0) > 0.0003$), the true posterior is lower ($82.2\%$).
+:::
+
+::: {.col}
+Simulating $2{,}000{,}000$ virtual patients in vectorized tensor code ($\approx 3{,}500$ double-positives, $\mathrm{SE} \approx 0.006$):
 
 @probability-worked-example-hiv-testing-1
-
-::: {.d2l-note}
-Only about 3,500 patients test positive twice, so the simulated fraction
-is a frequency with standard error $\sqrt{0.83 \cdot 0.17 / 3500} \approx
-0.006$. A deviation of one point from $0.83$ is what we should expect.
-:::
-:::
-
-::: {.slide title="Check: A Less Rare Disease"}
-[Check]{.kicker}
-
-Same first test, but 1% of the population is infected. What is
-$P(H{=}1 \mid D_1{=}1)$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.**
-$$\frac{1 \cdot 0.01}{1 \cdot 0.01 + 0.01 \cdot 0.99} = \frac{0.01}{0.0199} \approx 0.50.$$
-The prior matters as much as the test: one positive is now a coin flip.
 :::
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Standard Errors & Bayesian Updating"}
+[Check Your Understanding]{.kicker}
 
-- **Rules:** marginalize by summing; independent means the joint is a
-  product.
-- **Summaries:** $\mathbb{E}[X]$ and $\textrm{Var}(X)$; variances of independent
-  variables add.
-- **Standard error** $\sigma/\sqrt{n}$: a frequency of $0.56$ lies $1.2$
-  standard errors from $0.5$ after 100 tosses (no evidence of bias), and
-  $12$ after 10,000.
-- **Conditioning:** keep a row and renormalize. **Bayes:** two positive HIV
-  tests take 0.15% to 13% to 83%.
+Test your intuition on three practical machine learning design problems:
 
-**Next:** looking up what a framework function does, and then the first
-model fitted to data.
+1. **Sizing a test set:** Your classifier has accuracy $p \approx 0.90$. How many test examples $n$ are required to achieve a standard error of $\mathrm{SE}(\hat{p}_n) = 0.005$ ($0.5\%$)? How many for $\mathrm{SE} = 0.0025$?
+2. **Explaining away:** Two independent fair coins $X, Y \in \{0, 1\}$ are tossed, and we observe $Z = \max(X, Y) = 1$ (at least one heads). What is $P(X = 1 \mid Z = 1)$, and how does it change if we then observe $Y = 1$?
+3. **Shifting the prior:** If the first HIV test ($100\%$ sensitivity, $1\%$ FPR) is used in a high-risk clinic where prevalence is $P(H = 1) = 0.01$ ($1\%$) instead of $0.15\%$, what is $P(H = 1 \mid D_1 = 1)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $\sqrt{0.9 \times 0.1 / n} = 0.005 \implies n = 0.09 / 0.000025 = \mathbf{3{,}600}$ images. Halving $\mathrm{SE}$ to $0.0025$ requires $4\times$ more data: **$\mathbf{14{,}400}$** images.
+2. $P(X = 1 \mid Z = 1) = \mathbf{2/3}$ (among $\{(1,0), (0,1), (1,1)\}$). Observing $Y = 1$ *explains away* $Z = 1$, dropping $P(X = 1 \mid Z = 1, Y = 1)$ back to **$\mathbf{1/2}$**!
+3. $P(H = 1 \mid D_1 = 1) = \frac{1.00 \times 0.01}{1.00(0.01) + 0.01(0.99)} = \frac{0.01}{0.0199} \approx \mathbf{50.3\%}$ (true positives and false positives are now $1{:}1$).
+:::
+:::
+
+::: {.slide title="Summary: Probabilistic Tools and Their Deep Learning Roles"}
+[Key Takeaways]{.kicker}
+
+| Concept / Rule | Mathematical Form | Scaling / Behavior | Primary Deep Learning Role |
+| :--- | :--- | :--- | :--- |
+| **Marginalization (Sum Rule)** | $P(X) = \sum_y P(X, Y)$ | Collapses one axis (`sum(axis=...)`) | Averaging over latent variables & ensembles |
+| **Chain Rule (Product Rule)** | $P(X, Y) = P(Y \mid X)\,P(X)$ | Exact factorization of any joint $P(\mathbf{x})$ | Autoregressive LLMs $\prod_t P(x_t \mid x_{<t})$ |
+| **Bayes' Theorem** | $P(H \mid D) = \frac{P(D \mid H)P(H)}{P(D)}$ | Posterior $\propto$ likelihood $\times$ prior | MAP estimation, anomaly & medical screening |
+| **Linearity of Expectation** | $\mathbb{E}[aX + bY] = a\mathbb{E}[X] + b\mathbb{E}[Y]$ | Holds even when $X, Y$ are dependent | Unbiased minibatch SGD gradient estimates |
+| **Standard Error of a Mean** | $\mathrm{SE}(\bar{X}_n) = \sigma / \sqrt{n}$ | $4\times$ data $\to \frac{1}{2}$ error; $100\times$ data $\to \frac{1}{10}$ error | Test-set sizing & paired model comparisons |
+| **Aleatoric vs. Epistemic** | Data noise vs. parameter ignorance | Aleatoric: irreducible; Epistemic: $\propto 1/\sqrt{n}$ | Softmax calibration vs. active data collection |
 :::

@@ -682,355 +682,310 @@ A scalar loss function has $m = 1$ output and $n$ parameters, so its Jacobian is
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §2.5]{.kicker}
+[Dive into Deep Learning · §1.5]{.kicker}
 
-Gradients from a recorded forward pass<br>
-**the backward pass · detaching · control flow · forward and reverse mode**
+Automatic Differentiation: Computational Graphs, Reverse-Mode AD, and Dynamic Programs<br>**forward & reverse mode · computational graphs · VJPs · detaching & memory control · dynamic control flow**
 :::
 :::
 
-::: {.slide title="Hand-Written Backward Passes Do Not Scale to Deep Networks"}
-[The problem]{.kicker}
+::: {.slide title="Three Ways to Differentiate Code: Why Deep Learning Needs Autograd"}
+[Motivation]{.kicker}
 
-Line model: rows $(1, \textrm{input})$ of $\mathbf{X}$, labels $\mathbf{y}$,
-loss $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$.
+Training a modern network requires the gradient $\nabla_{\mathbf{w}} L \in \mathbb{R}^n$ of a scalar loss across $n = 10^8\text{--}10^{11}$ parameters at every optimization step:
 
-- By hand: $\nabla L = \mathbf{X}^\top (2\mathbf{r})$, with errors
-  $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$. At $\mathbf{w} = (1, 0)$:
-  $\nabla L = (2, 4)$.
-- A deep network: one Jacobian per layer to derive, code, and test, again
-  after every change to the model.
-- Finite differences: $10^8$ loss evaluations per step for $10^8$
-  parameters, and 3–4 correct digits in float32.
+| Method | Mechanism | Cost for $n$ Parameters | Accuracy & Failure Mode |
+| :--- | :--- | :--- | :--- |
+| **Symbolic Differentiation** | Algebraic rule rewriting (Mathematica, SymPy) | Exponential **expression swell** | Exact, but requires closed-form algebra (no loops or branches) |
+| **Numerical Finite Differences** | $\frac{\partial L}{\partial w_i} \approx \frac{L(\mathbf{w} + h\mathbf{e}_i) - L(\mathbf{w} - h\mathbf{e}_i)}{2h}$ | **$O(n)$ forward passes** ($10^9$ evals/step!) | **Truncation + roundoff error** ($\approx 3\text{--}4$ digits in `float32`) |
+| **Automatic Differentiation (Autograd)** | Chain rule over primitive ops along the execution trace | **$O(1)$ sweeps** (one backward pass) | **Exact to machine precision**, handles arbitrary Python control flow |
 
 ::: {.d2l-note}
-Autograd records the forward pass and applies the chain rule backward: the
-gradient, exact up to rounding, for a small multiple of the cost of the loss.
+Autograd is neither symbolic algebra nor finite differencing: it applies **exact elementary derivative rules to concrete intermediate tensors** recorded along the program's execution trace.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute a gradient in your framework and check it against one derived by
-  hand;
-- predict what accumulation, detaching, and disabling recording do;
-- differentiate programs with loops and branches, and say what autograd
-  returns where a program jumps;
-- count the passes through the graph that forward and reverse mode need
-  for a Jacobian.
-
-**Running example:** the line model at $\mathbf{w} = (1, 0)$, where
-$\nabla L = (2, 4)$.
-:::
-
-::: {.slide title="Autograd Gets Derivatives Without Algebra"}
-[Where this fits]{.kicker}
+::: {.slide title="Forward-Mode vs. Reverse-Mode AD: The n ≫ m Asymmetry"}
+[Jacobians & Sweeps]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | tool |
-|---|---|
-| Data Manipulation | tensors |
-| Data Preprocessing | pandas |
-| Linear Algebra | matrix products, norms, eigenvalues |
-| Calculus | derivatives, gradients, chain rule |
-| **Automatic Differentiation** | **autograd** |
-| Probability and Statistics | standard error, Bayes' theorem |
-| Documentation | `help`, small tests |
+For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mathbf{J}$ ($J_{ji} = \partial f_j / \partial x_i$):
+
+- **Forward mode (JVP, $\mathbf{d} \mapsto \mathbf{J}\mathbf{d}$):** Seeds input tangent $\dot{\mathbf{x}} = \mathbf{e}_i$ and propagates forward, computing **one column of $\mathbf{J}$** per sweep ($n$ sweeps).
+- **Reverse mode (VJP, $\mathbf{v} \mapsto \mathbf{J}^\top \mathbf{v}$):** Seeds output adjoint $\bar{\mathbf{y}} = \mathbf{e}_j$ and propagates backward, computing **one row of $\mathbf{J}$** per sweep ($m$ sweeps).
+- **Why backprop scales:** A scalar loss has $m = 1 \ll n$, so reverse mode computes all $n$ components of $\nabla_{\mathbf{w}} L$ in **one backward pass**!
 :::
 
-::: {.col .narrow}
-- **Uses:** the chain rule and the line model of the calculus deck.
-- **Skips:** backpropagation through a multilayer network (a later
-  chapter) and the proofs (the mathematics appendix).
+::: {.col .fig}
+@fig:autograd-fwd-vs-rev
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
+::: {.slide title="Defining the Forward Pass: From Mathematical Loss to Code"}
+[Forward Trace]{.kicker}
 
-[Computing gradients]{.dtitle}
-
-[record forward · sweep backward]{.dsub}
-:::
-:::
-
-::: {.slide title="We Write Only the Forward Pass"}
-[Gradients]{.kicker}
-
-Rows of $\mathbf{X}$ are $(1, \textrm{input})$ for the inputs $0, 1, 2$;
-the labels are $\mathbf{y} = (1, 1, 0)$.
-
-@-autograd-a-simple-function-1
-
-No derivative appears anywhere in the code.
+::: {.cols .vc}
+::: {.col}
+- In deep learning frameworks, we write **only the forward pass**; no hand-written derivative formula ever appears in model code.
+- **Running example (§1.4):** Our linear model $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ with design matrix $\mathbf{X} \in \mathbb{R}^{3 \times 2}$ and targets $\mathbf{y} = [1, 1, 0]^\top$, evaluated at $\mathbf{w} = [1, 0]^\top$.
+- Likewise, for a quadratic form $y = 2\mathbf{x}^\top \mathbf{x}$ on $\mathbf{x} = [0, 1, 2, 3]^\top$, each primitive operator (`@`, `-`, `** 2`, `.sum()`) carries its own local backward rule.
 :::
 
-::: {.slide title="Mark w, and the Framework Records Every Operation on It" except="jax"}
-[Gradients]{.kicker}
+::: {.col}
+@autograd-a-simple-function-1
+:::
+:::
+:::
 
-Recording costs memory, so only operations on marked tensors are recorded:
+::: {.slide title="Opting In to Gradient Tracking and Recording the Forward Trace" except="jax"}
+[Graph Construction]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+- Because recording graph nodes and keeping intermediate activations alive consumes VRAM, frameworks only track tensors **explicitly marked for gradients**:
+  - **PyTorch:** `w.requires_grad_(True)` (or `requires_grad=True` at creation) records operations into a dynamic DAG (`grad_fn=<SumBackward0>`).
+  - **TensorFlow:** Wrapping `w = tf.Variable(w)` records operations executed inside a `with tf.GradientTape() as t:` block.
+  - **MXNet:** `w.attach_grad()` allocates `w.grad` and records operations inside `with autograd.record():`.
+:::
+
+::: {.col}
 @autograd-a-simple-function-2
 
 @autograd-a-simple-function-3
 :::
+:::
+:::
 
-::: {.slide title="jax.grad Turns loss Into a Function That Returns (2, 4)" only="jax"}
-[Gradients]{.kicker}
+::: {.slide title="Functional Differentiation with jax.grad: Pure Functions, No Mutable State" only="jax"}
+[Graph Construction]{.kicker}
 
-Nothing is marked, and the call `loss(w)` records nothing. JAX records the
-operations of `loss` only while `jax.grad` runs it:
+::: {.cols .vc}
+::: {.col}
+- Unlike imperative frameworks where tensors carry mutable `.grad` buffers, **JAX is purely functional**: arrays carry no gradient flags or hidden state.
+- Calling `loss(w)` directly executes normal untraced array arithmetic ($L = 1.0$).
+- **`jax.grad(loss)`** is a higher-order function transformation: it traces `loss` during evaluation and returns a pure function computing $\nabla_{\mathbf{w}} L(\mathbf{w}) = [2, 4]^\top$ directly!
+:::
 
+::: {.col}
 @autograd-a-simple-function-3
 
 @autograd-a-simple-function-4
-
-This is $\nabla L = 2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$ at
-$\mathbf{w} = (1, 0)$, without a derivative written by hand.
+:::
+:::
 :::
 
-::: {.slide title="The Backward Pass Applies One Local Rule per Operation"}
-[Gradients]{.kicker}
+::: {.slide title="Inside the Computational Graph: Forward Values and Backward Adjoints"}
+[How Backpropagation Works]{.kicker}
 
 @fig:autograd-comp-graph
 
-Start from $1$ at $L$. The sum copies it, the square multiplies by
-$2\mathbf{r}$, subtracting $\mathbf{y}$ passes it on, and the product with
-$\mathbf{X}$ multiplies by $\mathbf{X}^\top$.
+::: {.cols}
+::: {.col}
+- **Forward pass (blue, left $\to$ right):** Evaluates and caches intermediate activations at $\mathbf{w} = (1, 0)$:
+  - $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} = (1,1,1)$ $\to$ $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y} = (0,0,1)$
+  - $\mathbf{s} = \mathbf{r}^{\odot 2} = (0,0,1)$ $\to$ $L = \sum_i s_i = 1$
 :::
 
-::: {.slide title="One Backward Pass Returns (2, 4), the Gradient Derived by Hand" except="jax"}
-[Gradients]{.kicker}
+::: {.col}
+- **Backward pass (red, right $\to$ left):** Seeds $\bar{L} = 1$ and applies each node's local VJP rule:
+  - $\bar{L}=1$ $\to$ $\bar{\mathbf{s}}=(1,1,1)$ $\to$ $\bar{\mathbf{r}} = 2\mathbf{r} \odot \bar{\mathbf{s}} = (0,0,2)$
+  - $\bar{\hat{\mathbf{y}}} = \bar{\mathbf{r}} = (0,0,2)$ $\to$ $\bar{\mathbf{w}} = \mathbf{X}^\top \bar{\hat{\mathbf{y}}} = (2,4)$
+:::
+:::
+:::
 
+::: {.slide title="Executing the Backward Pass and Verifying Analytical Gradients"}
+[Backward Pass]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Triggering the backward pass (`L.backward()`, `t.gradient(L, w)`, or `jax.grad(loss)(w)`) traverses the graph in reverse topological order and recovers the exact analytical gradient $\nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r}) = [2, 4]^\top$.
+- **Second check on $y = 2\mathbf{x}^\top \mathbf{x}$ at $\mathbf{x} = [0, 1, 2, 3]^\top$:**
+  - **Forward trace:** $\mathbf{u} = \mathbf{x} \odot \mathbf{x} = [0, 1, 4, 9]^\top$ $\to$ $s = \sum_i u_i = 14$ $\to$ $y = 2s = 28$.
+  - **Reverse adjoints:** $\bar{y} = 1$ $\to$ $\bar{s} = 2$ $\to$ $\bar{\mathbf{u}} = [2, 2, 2, 2]^\top$ $\to$ $\bar{\mathbf{x}} = \bar{\mathbf{u}} \odot 2\mathbf{x} = 4\mathbf{x} = [0, 4, 8, 12]^\top$.
+:::
+
+::: {.col}
 @autograd-a-simple-function-4
-
-This is $\nabla L = 2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$ at
-$\mathbf{w} = (1, 0)$, without a derivative written by hand.
+:::
+:::
 :::
 
-::: {.slide title="PyTorch Adds Each New Gradient to w.grad" only="pytorch"}
-[Gradients]{.kicker}
+::: {.slide title="Gradient Accumulation: Why PyTorch Adds into .grad by Default" except="jax"}
+[Stateful Buffers]{.kicker}
 
-A second forward and backward pass at the same $\mathbf{w}$:
+::: {.cols .vc}
+::: {.col}
+- What happens when we run a second backward pass at the same parameter vector $\mathbf{w}$?
+- **PyTorch accumulates (`w.grad += new_grad`):** `w.grad` doubles from `[2., 4.]` to **`[4., 8.]`**. Accumulation is designed for **micro-batch gradient accumulation** (simulating a large batch when GPU memory is limited) and shared weights.
+- **MXNet & TensorFlow:** MXNet overwrites `w.grad` by default (`grad_req='write'`), while TensorFlow's `t.gradient(L, w)` returns a fresh tensor without mutating `w`.
+:::
 
+::: {.col}
 @autograd-a-simple-function-6
 
 ::: {.d2l-note .warn}
-Reset with `w.grad.zero_()` before every backward pass that needs a fresh
-gradient.
+**Classic PyTorch bug:** Forgetting `w.grad.zero_()` (or `optimizer.zero_grad()`) before the next step corrupts every parameter update with stale gradients!
+:::
+:::
 :::
 :::
 
-::: {.slide title="Each Backward Pass Returns a Fresh Gradient" only="mxnet,tensorflow"}
-[Gradients]{.kicker}
+::: {.slide title="Gradient Accumulation vs. Pure Functional Gradients in JAX" only="jax"}
+[Stateless Gradients]{.kicker}
 
-A second forward and backward pass at the same $\mathbf{w}$ gives $(2, 4)$
-again:
-
-@autograd-a-simple-function-6
+::: {.cols .vc}
+::: {.col}
+- **Stateful frameworks (PyTorch):** Store gradients in a mutable `w.grad` attribute and **accumulate** (`w.grad += new_grad`) on each `.backward()` call—so forgetting `w.grad.zero_()` doubles `[2., 4.]` into `[4., 8.]` and silently corrupts training!
+- **Functional purity (JAX):** `jax.grad(loss)(w)` returns a **brand-new array** on every call and stores no state on `w`.
+- To accumulate gradients across micro-batches in JAX, sum the returned gradient arrays explicitly (`g_total = g_1 + g_2`).
 :::
 
-::: {.slide title="For Vector Outputs, the Backward Pass Returns Jᵀv"}
-[Gradients]{.kicker}
+::: {.col}
+@autograd-a-simple-function-4
 
-$m$ outputs $\mathbf{u}$ of $n$ inputs $\mathbf{x}$, with Jacobian
-$J_{ji} = \partial u_j / \partial x_i$. The backward pass starts from
-$\mathbf{v}$ and returns $\mathbf{J}^\top\mathbf{v} =
-\nabla_{\mathbf{x}}(\mathbf{v}^\top\mathbf{u})$; $\mathbf{v} = \mathbf{1}$,
-the vector of all ones, gives the gradient of the sum.
+::: {.d2l-note}
+Because JAX arrays carry no mutable `.grad` buffer, stale-gradient accumulation bugs are impossible by design.
+:::
+:::
+:::
+:::
 
-Per-example squared errors, passing $\mathbf{v} = \mathbf{1}$:
+::: {.slide title="Backward for Non-Scalar Outputs: Vector–Jacobian Products (VJPs)"}
+[Vector Outputs]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+- Differentiating a **vector output** $\mathbf{u}(\mathbf{w}) \in \mathbb{R}^m$ (e.g., per-example losses) never materializes an $n \times n$ Jacobian ($10^{18}$ floats for $n = 10^9$).
+- Instead, `.backward(v)` (or `jax.vjp`) takes an upstream seed $\mathbf{v} \in \mathbb{R}^m$ and computes the **Vector–Jacobian Product**:
+  $$\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{w}}\!\left(\mathbf{v}^\top \mathbf{u}(\mathbf{w})\right)$$
+- Passing $\mathbf{v} = \mathbf{1}$ computes $\nabla_{\mathbf{w}} \sum_i u_i$ (`losses.sum().backward()`).
+:::
+
+::: {.col}
 @autograd-backward-for-non-scalar-variables
 :::
-
-::: {.slide title="Check: The Mean Instead of the Sum"}
-[Check]{.kicker}
-
-The loss becomes the mean of the three squared errors instead of their sum.
-Which local rule of the backward pass changes, and what gradient does it
-return at $\mathbf{w} = (1, 0)$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Only the rule of the last operation: the mean passes $1/3$ to
-each input, where the sum passed $1$. The other rules are unchanged, so
-$\nabla L = (2, 4)/3 = (2/3, 4/3)$.
-:::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
+::: {.slide title="Detaching Subgraphs with detach and stop_gradient"}
+[Graph Surgery]{.kicker}
 
-[Controlling the graph]{.dtitle}
-
-[detached values · unrecorded updates]{.dsub}
+::: {.cols .vc}
+::: {.col}
+- For $u = x^2$ and $z = u \cdot x = x^3$:
+  - **Attached (a):** Gradients flow through both paths $\implies \frac{\partial z}{\partial x} = 2x^2 + x^2 = 3x^2$.
+  - **Detached (b):** `c = u.detach()` (`stop_gradient(u)`) freezes $u$ as constant $x^2 \implies \frac{\partial z}{\partial x}\big|_c = c = x^2$.
+- **ML use cases:** DQN target networks, BYOL/SimSiam teacher branches, and GAN discriminator updates.
 :::
-:::
 
-::: {.slide title="Detaching Keeps the Value and Cuts the Edge"}
-[Controlling the graph]{.kicker}
-
+::: {.col .fig .big}
 @fig:autograd-detach
-
-Why: a target that the model computes must stay fixed while the prediction moves.
+:::
+:::
 :::
 
-::: {.slide title="Detached, ∂z/∂x = x² = (0, 1, 4, 9); Attached, 3x²"}
-[Controlling the graph]{.kicker}
+::: {.slide title="Detaching in Code: Comparing Attached (3x²) vs. Detached (x²) Gradients"}
+[Detaching in Practice]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **With `detach()` / `stop_gradient()` (`z = c * x`):**
+  At $\mathbf{x} = [0, 1, 2, 3]^\top$, $c = \mathbf{x}^2 = [0, 1, 4, 9]^\top$ acts as a constant, yielding $\nabla_{\mathbf{x}} \sum_i z_i = \mathbf{x}^2 = [0, 1, 4, 9]^\top$:
 
 @autograd-detaching-computation-1
-
-Without the detach, both paths carry gradient:
-
-@!autograd-detaching-computation-2
 :::
 
-::: {.slide title="A Gradient Step Runs Unrecorded and Lowers the Loss From 1 to 0.4"}
-[Controlling the graph]{.kicker}
+::: {.col}
+- **Without `detach()` (`z = u * x`):**
+  Both paths from $\mathbf{x}$ to $\mathbf{z}$ carry gradients, yielding the full cubic derivative $\nabla_{\mathbf{x}} \sum_i z_i = 3\mathbf{x}^2 = [0, 3, 12, 27]^\top$:
 
-The update $\mathbf{w} \leftarrow \mathbf{w} - 0.1\, \nabla L(\mathbf{w})$
-is not part of any loss, so it is not recorded:
+@autograd-detaching-computation-2
+:::
+:::
+:::
 
+::: {.slide title="Activation Memory and Disabling Gradient Tracking"}
+[Memory & Inference]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Why reverse-mode AD is memory-hungry:** Backward rules depend on forward intermediates ($\frac{\partial (\mathbf{r}^2)}{\partial \mathbf{r}} = 2\mathbf{r}$ needs $\mathbf{r}$; $\frac{\partial (\mathbf{X}\mathbf{w})}{\partial \mathbf{w}} = \mathbf{X}^\top$ needs $\mathbf{X}$), so autograd **caches every layer's forward activations in VRAM** until backward finishes!
+- **Disable tracking (`torch.no_grad()` / outside tape):**
+  1. **Validation & inference:** Frees activations immediately ($3\text{--}10\times$ less VRAM).
+  2. **Parameter steps ($\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L$):** Keeps updates off the graph.
+:::
+
+::: {.col}
 @autograd-turning-off-gradient-tracking-1
-
-$\mathbf{w} = (0.8, -0.4)$, as computed by hand in the calculus deck.
 :::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Differentiating programs]{.dtitle}
-
-[loops and branches: the graph is what ran]{.dsub}
 :::
 :::
 
-::: {.slide title="A Loop and a Branch That Depend on the Input"}
-[Programs]{.kicker}
+::: {.slide title="Dynamic Control Flow: Differentiating Through Python Loops and Branches"}
+[Differentiable Programs]{.kicker}
 
-`f` doubles its input until the norm reaches 1000, then multiplies by 100
-unless the entries have a positive sum:
-
-@-autograd-gradients-and-python-control-flow-1
+::: {.cols .vc}
+::: {.col}
+- **Define-by-run tracing:** Every forward evaluation records the exact sequence of primitive tensor operations that *actually ran* on that concrete input.
+- Consider `f(a)`:
+  1. Repeatedly doubles `b` inside a data-dependent `while` loop until $\|\mathbf{b}\|_2 \ge 1000$ ($k$ doublings in total).
+  2. Branches on `b.sum() > 0` to return either `b` or `100 * b`.
+- For any scalar input $a \neq 0$, the executed trace is a chain of multiplications $f(a) = m \cdot 2^k \cdot a$ with $m \in \{1, 100\}$.
 :::
 
-::: {.slide title="Each Input Records Its Own Graph, With Its Own Slope"}
-[Programs]{.kicker}
+::: {.col}
+@autograd-gradients-and-python-control-flow-1
+:::
+:::
+:::
 
+::: {.slide title="Each Execution Trace Builds Its Own Graph and Recovers Its Exact Slope"}
+[Trace vs. Function]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Since $f(a) = k \cdot a$ is piecewise linear along each execution path, its derivative equals the exact slope $k = f(a) / a$:
+  - $a = 0.3 > 0$: $12$ doublings (`if` branch) $\implies k = 2^{12} = 4096$.
+  - $a = -0.75 < 0$: $11$ doublings (`else` branch) $\implies k = 100 \cdot 2^{11} = 204{,}800$.
+- **Caveat:** Autograd differentiates the *executed trace*—at jump thresholds where loop iterations change, it returns the slope of the branch that ran.
+:::
+
+::: {.col .fig .big}
 @fig:autograd-dynamic
 
-@!autograd-gradients-and-python-control-flow-2
-
-Where the number of doublings changes, $f$ jumps; autograd still reports
-the slope of the piece that ran.
-:::
-
-::: {.slide title="Check: The Gradient of f at a = 0.1"}
-[Check]{.kicker}
-
-How many times does `f` double $a = 0.1$, which branch runs, and what
-gradient does autograd return?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $0.1 \cdot 2^{13} = 819.2 < 1000$ and
-$0.1 \cdot 2^{14} = 1638.4$: 14 doublings, the first branch, and gradient
-$2^{14} = 16384$.
+@autograd-gradients-and-python-control-flow-2
 :::
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[04]{.dnum}
+::: {.slide title="Concept Check: Activation Memory, Detach, and Accumulation Bugs"}
+[Check Your Understanding]{.kicker}
 
-[Forward and reverse mode]{.dtitle}
+Predict the behavior and gradient outcome in each scenario:
 
-[columns or rows of the Jacobian]{.dsub}
+1. **Missing reset:** In PyTorch, you evaluate 3 micro-batches and call `L.backward()` on each without calling `w.grad.zero_()`. What does `w.grad` hold?
+2. **Detached branches:** Let `u = x * x` and `c = u.detach()` (or `stop_gradient(u)`). What is $\nabla_{\mathbf{x}} \sum_i z_i$ for (a) `z = u * u`, (b) `z = u * c`, and (c) `z = c * c`?
+3. **Forward vs. reverse sweeps:** A physics simulator maps $n = 3$ wing-shape parameters to $m = 10^6$ mesh pressures. Which AD mode computes the full $10^6 \times 3$ Jacobian faster, and in how many sweeps?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **The sum of all 3 micro-batch gradients** ($\sum_{b=1}^3 \nabla_{\mathbf{w}} L_b$). Intentional for micro-batch gradient accumulation; a bug if you already stepped the optimizer after micro-batches 1 and 2!
+2. (a) `z = u * u = x^4` $\implies$ **$4\mathbf{x}^3$**; (b) `z = u * c = c * x^2` $\implies$ **$2c\mathbf{x} = 2\mathbf{x}^3$** (half of $4\mathbf{x}^3$, since one factor is frozen); (c) `z = c * c` has no active path to `x` $\implies$ **$0$** (or no `grad_fn`).
+3. **Forward mode (JVP)** needs only **$n = 3$ sweeps** (one per column), whereas reverse mode needs $m = 10^6$ sweeps (one per row)!
 :::
 :::
 
-::: {.slide title="A Forward Sweep Fills a Column of J, a Reverse Sweep a Row"}
-[Forward and reverse mode]{.kicker}
+::: {.slide title="Summary: Autograd Primitives, Memory Effects, and ML Use Cases"}
+[Key Takeaways]{.kicker}
 
-@fig:autograd-fwd-vs-rev
-
-A sweep is one traversal of the graph, costing a small multiple of one
-evaluation of the function. Forward: $\mathbf{d} \mapsto
-\mathbf{J}\mathbf{d}$. Reverse:
-$\mathbf{v} \mapsto \mathbf{J}^\top\mathbf{v}$.
-:::
-
-::: {.slide title="The Errors' Jacobian Is X: Three Reverse or Two Forward Sweeps"}
-[Forward and reverse mode]{.kicker}
-
-$\mathbf{r}(\mathbf{w}) = \mathbf{X}\mathbf{w} - \mathbf{y}$ has $m = 3$
-outputs and $n = 2$ inputs, and its Jacobian is
-
-$$\mathbf{J} = \mathbf{X} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}.$$
-
-- Reverse sweep from $\mathbf{v} = \mathbf{e}_j$: $\mathbf{J}^\top \mathbf{e}_j$,
-  the gradient of error $j$, is **row** $j$. Three sweeps fill $\mathbf{J}$.
-- Forward sweep along $\mathbf{d} = \mathbf{e}_i$: $\mathbf{J}\mathbf{e}_i$,
-  how all three errors change with $w_i$, is **column** $i$. Two sweeps
-  fill $\mathbf{J}$.
-
-::: {.d2l-note}
-Few inputs, many outputs: forward mode. Many inputs, one output, as for a
-loss: reverse mode.
-:::
-:::
-
-::: {.slide title="One Reverse Sweep Computes the Gradient of 10⁸ Parameters"}
-[Forward and reverse mode]{.kicker}
-
-A loss has $m = 1$ output and, say, $n = 10^8$ parameters. Its Jacobian is
-one row, the transposed gradient.
-
-| method | work for the whole gradient |
-|---|---|
-| reverse mode | 1 sweep |
-| forward mode | $10^8$ sweeps |
-| finite differences | $10^8 + 1$ loss evaluations |
-
-::: {.d2l-note}
-Backpropagation is reverse mode. Its cost in memory: forward values are kept
-until the backward pass has used them.
-:::
-:::
-
-::: {.slide title="Check: Which Mode for 3 Inputs and 10⁶ Outputs?"}
-[Check]{.kicker}
-
-A simulation maps 3 parameters to $10^6$ outputs. How many sweeps does each
-mode need for the full Jacobian?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Forward mode: 3 sweeps, one per column. Reverse mode: $10^6$
-sweeps, one per row. Forward mode wins.
-:::
-:::
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- **Record, then sweep backward:** line model, $\nabla L = (2, 4)$.
-- **Vector outputs:** the backward pass returns $\mathbf{J}^\top\mathbf{v}$.
-- **Detach:** $\partial z/\partial x = x^2$ instead of $3x^2$.
-- **Unrecorded step:** loss $1 \to 0.4$.
-- **Programs:** the graph is what ran; slopes 4096 and 204,800.
-- **Modes:** reverse fills a row per sweep, forward a column; a loss needs
-  one reverse sweep.
-
-**Next:** probability, to tell a pattern in the data from noise.
+| Operation / Concept | PyTorch / MXNet | TensorFlow / JAX | Graph & Memory Behavior | Primary Deep Learning Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Opt-in / Trace** | `requires_grad_(True)` / `attach_grad()` + `record()` | `tf.Variable` + `GradientTape` / `jax.grad(f)` | Caches forward activations in VRAM for backward VJPs | Standard neural network training ($O(1)$ reverse sweep) |
+| **Reverse Sweep (VJP)** | `L.backward()` or `u.backward(v)` | `t.gradient(u, w, v)` / `jax.vjp(f, w)` | Frees activation buffers after computing $\mathbf{J}^\top \mathbf{v}$ | Backpropagation of scalar loss ($m = 1$) or upstream vector $\mathbf{v}$ |
+| **Reset / Accumulate** | `w.grad.zero_()` (PyTorch adds `+=` by default) | Returns fresh tensor/array per call | Clears or reuses `.grad` storage buffer | Micro-batch gradient accumulation vs. fresh optimizer step |
+| **Detach Subgraph** | `u.detach()` | `tf.stop_gradient(u)` / `lax.stop_gradient(u)` | Zero-copy constant view; cuts backward edge | RL target networks, BYOL/SimSiam teacher branch, GAN steps |
+| **Inference / No-Grad** | `with torch.no_grad():` / outside `record()` | Outside `GradientTape` / outside `jax.grad` | Skips graph construction & activation caching ($3\text{--}10\times$ less VRAM) | Validation loops, production inference, parameter updates |
 :::

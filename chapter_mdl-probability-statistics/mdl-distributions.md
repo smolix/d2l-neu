@@ -1314,47 +1314,6 @@ linear regression.
 
 ## Exercises
 
-1. **Error counts on a test set.** A classifier is scored on $n=10{,}000$
-   independent test examples, each of which it gets wrong with the same
-   probability $q$, its true error rate. Its number of errors $X$ then has the
-   distribution $\mathrm{Binomial}(n,q)$.
-    1. Let $q=0.1$. Use the Gaussian approximation of the binomial (the
-       de Moivre--Laplace theorem) to find the interval around $nq$ that
-       contains $X$ with probability about $95\%$. Two classifiers with this
-       error rate are scored on two independent test sets of this size. Find
-       the standard deviation of the difference of their observed accuracies.
-    1. Let $q=5\cdot10^{-4}$. Compute $P(X=0)$ and $P(X\ge10)$ exactly and
-       under the Poisson approximation $\mathrm{Poisson}(nq)$. Show that the
-       logarithm of $P(X=0)$ under the binomial differs from its Poisson
-       value by about $-nq^2/2$.
-    1. The classifier makes no errors on the $n$ test examples. Under the
-       Poisson approximation, find the largest error rate $q$ for which this
-       outcome still has probability at least $0.05$, and express it as a
-       multiple of $1/n$. Use (b) to explain why the Poisson approximation
-       is accurate for every error rate this small.
-   :exlabel:`ex_mdl-distributions-error-counts`
-
-1. **Conditioning on a noisy observation.** The conditional formulas
-   :eqref:`eq_mdl-mvn_conditional` turn a joint Gaussian into a prediction of
-   one block from another.
-    1. Take the bivariate Gaussian with $\boldsymbol\mu=\mathbf 0$ and
-       $\boldsymbol\Sigma=\left(\begin{smallmatrix}1&\rho\\\rho&1\end{smallmatrix}\right)$,
-       where $|\rho|<1$. Identify $\mathbf B$ and the residual $r$, and check
-       $\textrm{Cov}(r,x_2)=0$ directly. Show that
-       $x_1\mid x_2\sim\mathcal N(\rho x_2,1-\rho^2)$. Why does observing $x_2$
-       never increase the uncertainty about $x_1$?
-    1. A signal $s\sim\mathcal N(0,\tau^2)$ is observed with additive noise,
-       $y=s+\epsilon$, where $\epsilon\sim\mathcal N(0,\sigma^2)$ is
-       independent of $s$. Write $(s,y)$ as a linear map of $(s,\epsilon)$ to
-       obtain its joint Gaussian distribution, and compute the conditional
-       distribution of $s$ given $y$. Show that the conditional precision
-       $1/\textrm{Var}(s\mid y)$ is the sum of the prior precision
-       $1/\tau^2$ and the noise precision $1/\sigma^2$. How does
-       $\mathbb{E}[s\mid y]$ behave as $\sigma^2\to0$ and as
-       $\sigma^2\to\infty$? This computation is Gaussian process
-       regression (:numref:`chap_gp`) with a single observation.
-   :exlabel:`ex_mdl-distributions-using-conditional-formula-eqref`
-
 1. **Gamma--Poisson mixture.** Let the Poisson rate itself be random,
    $\lambda\sim\mathrm{Gamma}(\alpha,\beta)$ with the density
    :eqref:`eq_mdl-gamma_pdf`, and let $X\mid\lambda\sim\mathrm{Poisson}(\lambda)$.
@@ -1386,54 +1345,6 @@ linear regression.
        $P(X>s+t\mid X>s)=P(X>t)$ for all integers $s,t\ge0$. Show that $X$ is
        geometric, $P(X>t)=(1-p)^t$ for some $p\in(0,1]$.
    :exlabel:`ex_mdl-distributions-memoryless-converse`
-
-1. [code] **Convergence rate of the CLT.** ●● Let $F_n$ be the c.d.f. of
-   the standardized sum $(S_n-n\mu)/(\sigma\sqrt n)$ of $n$ independent
-   summands with mean $\mu$ and standard deviation $\sigma$. Measure the
-   error of the Gaussian approximation by the Kolmogorov distance
-   $D_n=\sup_x|F_n(x)-\Phi(x)|$, where $\Phi$ and $\phi$ denote the standard
-   Gaussian c.d.f. and density. :numref:`subsec_mdl-gaussian-clt` judges the
-   approximation by eye; this problem measures its rate.
-    1. Compute $D_n$ for $n\in\{1,2,4,\dots,64\}$ and three summand
-       distributions, $U(0,1)$, $\mathrm{Exp}(1)$ and
-       $\mathrm{Bernoulli}(1/2)$. For uniform summands, compute the density of
-       $S_n$ by repeated numerical convolution of the $U(0,1)$ density on a
-       fine grid (`np.convolve`, rescaled by the grid spacing) and integrate it
-       to $F_n$. For exponential summands, $S_n$ is the time of the $n$-th
-       event of a Poisson process with rate $1$, so $P(S_n\le s)=P(N\ge n)$
-       for $N\sim\mathrm{Poisson}(s)$. For the two continuous summands, take
-       the supremum over a fine grid of $x\in[-4,4]$. For Bernoulli summands,
-       use the exact binomial pmf and compare $\Phi$ with $F_n$ on both sides
-       of every jump. Plot $D_n$ against $n$ on log-log axes and fit the
-       slopes.
-    1. For summands that are not confined to a lattice and have skewness
-       $\gamma=\mathbb{E}[(X-\mu)^3]/\sigma^3$, the Edgeworth expansion
-       :cite:`Hall.1992` refines the central limit theorem to
-
-       $$F_n(x)=\Phi(x)-\frac{\gamma}{6\sqrt n}\,(x^2-1)\,\phi(x)+o\bigl(n^{-1/2}\bigr).$$
-
-       Predict the limit of $\sqrt n\,D_n$ for exponential summands and
-       compare it with your measurements. What does the expansion predict for
-       uniform summands, and which rate did you measure for them?
-    1. Bernoulli$(1/2)$ summands also have $\gamma=0$. Explain the slope you
-       measured for them by the size of the largest jump of $F_n$, and predict
-       the limit of $\sqrt n\,D_n$. Then compare $F_n$ at the lattice points
-       $k$ with the continuity-corrected value
-       $\Phi\bigl((k+\tfrac12-n\mu)/(\sigma\sqrt n)\bigr)$. Which rate does the
-       corrected error have?
-    1. The correctness indicators of a classifier with accuracy $0.99$ are
-       $\mathrm{Bernoulli}(0.99)$ variables. Compute their skewness, and
-       assume that the skewness term of (b) also governs the
-       continuity-corrected error. Predict the number of test examples
-       needed before the corrected error falls below $0.01$, and check the
-       prediction by computing the corrected error for
-       $n\in\{10^2,10^3,10^4\}$. Build the pmf of $S_n$ from the number of
-       errors $n-S_n\sim\mathrm{Binomial}(n,0.01)$: the successive-ratio
-       recursion started from $P(S_n=0)=0.01^n$ underflows to zero in
-       floating point once $n$ exceeds about $160$, whereas the recursion for
-       the errors starts from $0.99^n$. What does the result imply for
-       Gaussian error bars on the test accuracy of a highly accurate model?
-   :exlabel:`ex_mdl-distributions-clt-rate`
 
 1. [extended] **Burstiness of word counts.** ●● :citet:`Church.Gale.1995`
    found that word counts in text vary across documents more than a Poisson

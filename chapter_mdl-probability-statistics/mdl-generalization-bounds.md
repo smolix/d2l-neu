@@ -1197,53 +1197,6 @@ the learned solution rather than of the whole function class.
        with the deviation of (a)?
    :exlabel:`ex_mdl-concentration-generalization-leaderboard-attack`
 
-1. **Ranking configurations on a holdout.** ● A validation set has
-   $n=10{,}000$ examples, the loss takes values in $[0,1]$, and
-   $\delta=0.05$.
-    1. From :eqref:`eq_mdl-finite-class`, how many configurations, fixed in
-       advance, can be ranked with a simultaneous guarantee of $\pm2\%$,
-       $\pm2.5\%$ and $\pm3\%$? Why is the count so sensitive to the
-       tolerance?
-    1. Repeat (a) with Chebyshev's inequality (variance at most $\tfrac14$)
-       in place of Hoeffding's, with the same union bound. How many
-       configurations does it allow at $\pm2\%$, and how many at $\pm5\%$?
-    1. *The winner's curse.* Let all $k$ configurations have true error
-       $10\%$, and treat their validation errors as independent. With the
-       Gaussian approximation to each error and the estimate
-       $\mathbb{E}[\max]\approx\sqrt{2\log k}$ for the maximum of $k$
-       independent standard normals, show that the best reported error is
-       about $10\%-0.3\%\cdot\sqrt{2\log k}$, and evaluate it at $k=1{,}000$.
-       Then compute the exact median and the 5th and 95th percentiles of the
-       minimum of $k=1{,}000$ independent $\textrm{Binomial}(10{,}000,0.1)$
-       counts, divided by $n$, from the distribution function of the
-       binomial.
-    1. The reported score of the chosen configuration is biased downward by
-       about one point. Explain in one sentence why scoring it on a fresh
-       test set removes the bias. Does the bias violate a hypothesis of
-       :eqref:`eq_mdl-finite-class`, and does the bound cover it?
-   :exlabel:`ex_mdl-generalization-bounds-ranking-configurations`
-
-1. **Thresholds on the line.** ● Let
-   $\mathcal F=\{x\mapsto\mathbf 1\{x\ge\theta\}:\theta\in\mathbb{R}\}$ act on
-   $n$ distinct real points $x_1<\cdots<x_n$.
-    1. Show that $\mathcal F$ realizes exactly $n+1$ labelings of the points
-       and that its VC dimension (the largest number of points on which it
-       realizes all labelings) is $1$. Show that with both orientations,
-       $\mathbf 1\{x\ge\theta\}$ and $\mathbf 1\{x\le\theta\}$, the count is
-       $2n$ and the VC dimension is $2$.
-    1. Compute $\widehat{\mathfrak R}_S(\mathcal F)$ for the one-sided class
-       exactly for $n=2$ and $n=3$ by enumerating the sign patterns.
-    1. Show that in general
-       $\widehat{\mathfrak R}_S(\mathcal F)=\frac1n\mathbb{E}\bigl[\max(0,\max_kT_k)\bigr]$,
-       where $T_k$ is the sum of the signs at the $k$ largest points, a
-       simple random walk. Argue with the reflection principle, or simulate,
-       that this is about $\sqrt{2/(\pi n)}$ for large $n$, and check the
-       values at $n=100$ and $n=1{,}000$.
-    1. Compare with Massart's lemma applied to the $n+1$ labelings. By what
-       factor is it loose at $n=100$, and which property of the labelings
-       does it ignore?
-   :exlabel:`ex_mdl-generalization-bounds-thresholds-on-the-line`
-
 1. [code] **The square case.** ● Use the sweep of the double-descent
    experiment in :numref:`subsec_mdl-double-descent-example`.
     1. Show from the stored norms that the nesting monotonicity fails below

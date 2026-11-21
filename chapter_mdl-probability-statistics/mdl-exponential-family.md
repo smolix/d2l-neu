@@ -266,8 +266,9 @@ average. Applying that recipe here sets the mean $\theta/2$ equal to
 $\bar x=0.4$, yielding $\theta=0.8$, a value under which the observed draw
 $0.9$ is impossible. Because the uniform likelihood depends on the data through
 their maximum rather than a sum, the machinery of this section does not apply.
-Exercise :exref:`ex_mdl-exponential-family-moment-matching-outside` compares
-how these two estimators behave as the sample size grows.
+Exercise :exref:`ex_mdl-maximum-likelihood-moving-support` in
+:numref:`sec_mdl-maximum_likelihood` compares how these two estimators behave
+as the sample size grows.
 
 Heavy-tailed distributions fall outside the family for a second reason. The
 *Student-$t$* distribution arises by taking a Gaussian whose precision
@@ -701,8 +702,9 @@ Logistic regression hits the exact same wall whenever a hyperplane separates
 the two classes in the training set: the loss keeps decreasing as the weights
 scale up, driving them toward infinity. Adding a prior on the parameters
 (which we introduce at the end of this section) or using weight decay restores
-a finite optimum; Exercise :exref:`ex_mdl-exponential-family-no-maximizer`
-works out the details.
+a finite optimum; Exercise
+:exref:`ex_mdl-maximum-likelihood-small-samples-boundary` in
+:numref:`sec_mdl-maximum_likelihood` works out the details.
 
 When a minimizer does exist, it is unique whenever the negative log-likelihood
 is strictly convex. That holds if $\textrm{Cov}(T)$ is positive definite,
@@ -1403,62 +1405,6 @@ pseudo-counts to the posterior mean and $a-1$ and $b-1$ to the mode.
        $\mathrm{Beta}(1,1)$ on $\theta$. What does the comparison say about
        the phrase "a flat prior"?
    :exlabel:`ex_mdl-distributions-conjugate-recipe`
-
-1. [code] **Moment matching outside the family.** Let $x_1,\dots,x_n$ be
-   independent draws from $U(0,\theta)$.
-    1. Write the likelihood and show that the maximum-likelihood estimate is
-       $\hat\theta_{\mathrm{ML}}=\max_ix_i$. Using the CDF $(t/\theta)^n$ of
-       the maximum, show that
-       $\mathbb{E}[\hat\theta_{\mathrm{ML}}]=n\theta/(n+1)$ and
-       $\textrm{Var}(\hat\theta_{\mathrm{ML}})=n\theta^2/\bigl((n+1)^2(n+2)\bigr)$.
-    1. Show that the moment estimate $\hat\theta_{\mathrm{MM}}=2\bar x$ is
-       unbiased with variance $\theta^2/(3n)$.
-    1. With $\theta=1$, simulate $20{,}000$ data sets for each of
-       $n=10,100,1000$ and report the root-mean-square error of both
-       estimates. Which one falls like $1/n$ and which like $1/\sqrt n$?
-       Which property of the uniform distribution, absent in every
-       exponential family, allows the faster rate?
-    1. Show that $n(\theta-\hat\theta_{\mathrm{ML}})$ converges in
-       distribution to an exponential distribution with mean $\theta$, and
-       check the mean in your simulation at $n=1000$.
-   :exlabel:`ex_mdl-exponential-family-moment-matching-outside`
-
-1. [code] **A likelihood with no maximizer.** This exercise follows the
-   coin with 13 heads in 13 flips.
-    1. Show that the negative log-likelihood in the logit is
-       $13\log(1+e^{-\eta})$, that it decreases for every $\eta$ with
-       infimum $0$, and that it has no minimizer. What is $\bar T$, and why
-       is it not an attainable mean?
-    1. Under the prior $\mathrm{Beta}(2,2)$ the posterior is
-       $\mathrm{Beta}(15,2)$. Compute its mode and its mean, and explain why
-       its one imagined head and one imagined tail in the mode restore a
-       solution strictly inside $(0,1)$.
-    1. Logistic regression on the two examples $(x,y)=(1,1)$ and $(-1,0)$,
-       with $P(y=1\mid x)=\operatorname{sigmoid}(wx)$, has the negative
-       log-likelihood $2\log(1+e^{-w})$, which has no minimizer. Add the
-       penalty $\frac\lambda2w^2$ with $\lambda=0.1$, show that the minimizer
-       solves $2\operatorname{sigmoid}(-w)=\lambda w$, solve this equation by
-       bisection, and report $w^\ast$ and the fitted probability
-       $\operatorname{sigmoid}(w^\ast)$. To which prior on $w$ does the
-       penalty correspond?
-   :exlabel:`ex_mdl-exponential-family-no-maximizer`
-
-1. **Dirichlet smoothing and the next word.** A three-word vocabulary shows
-   the counts $\mathbf c=(3,0,1)$, and the prior is $\mathrm{Dir}(1,1,1)$.
-    1. Write the posterior and its mean, and compare the mean with the
-       maximum-likelihood estimate.
-    1. Show that the probability that the next word is word $k$,
-       $\int p_k\,\mathrm{Dir}(\mathbf p\mid\mathbf a+\mathbf c)\,d\mathbf p$,
-       equals the posterior mean $(a_k+c_k)/\sum_j(a_j+c_j)$. Use
-       $\Gamma(z+1)=z\,\Gamma(z)$ on the normalizer.
-    1. For the prior $\mathrm{Dir}(s,\dots,s)$ on $K$ words, show that the
-       posterior mean tends to the maximum-likelihood estimate as $s\to0$
-       and to the uniform distribution as $s\to\infty$.
-    1. A corpus has $10^6$ words and a vocabulary of $50{,}000$, of which
-       $20{,}000$ never occur. With add-one smoothing ($s=1$), by what
-       factor does the estimate for a word seen $5$ times change, and what
-       total probability do the unseen words receive?
-   :exlabel:`ex_mdl-exponential-family-dirichlet-smoothing`
 
 [Discussions](https://d2l.discourse.group/t/36862)
 

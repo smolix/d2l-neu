@@ -753,8 +753,7 @@ $1$.
 
 Importance sampling cancels the unknown evidence automatically, but it still
 demands a single global proposal $q$ that covers the entire posterior. In high
-dimensions, no simple global distribution can do that (Exercise
-:exref:`ex_mdl-bayesian-computation-higher-dimension`).
+dimensions, no simple global distribution can do that.
 
 ## Markov Chain Monte Carlo
 :label:`sec_mdl-bayes-mcmc`
@@ -1272,12 +1271,10 @@ deviation of the grid mean, while its standard deviations shrink to about half
 the true widths, matching our analytical predictions ($0.54$ and $0.25$) to
 within $2\%$. The optimizer has converged cleanly, so the remaining discrepancy
 comes entirely from the restrictive variational family. Richer families, such as
-full-covariance Gaussians (Exercise
-:exref:`ex_mdl-bayesian-computation-variational-families`), mixtures, or
-normalizing flows, close that gap at higher computational cost. Keep in mind
-that a converged ELBO only confirms that optimization has finished *within the
-chosen family*; by itself, it never certifies that the family actually fits the
-posterior.
+full-covariance Gaussians, mixtures, or normalizing flows, close that gap at
+higher computational cost. Keep in mind that a converged ELBO only confirms that
+optimization has finished *within the chosen family*; by itself, it never
+certifies that the family actually fits the posterior.
 
 ## Comparison of the Methods
 :label:`sec_mdl-bayes-decision-map`
@@ -1329,8 +1326,7 @@ validated against a sampler whenever feasible.
 
 It is worth being candid about scale: none of these four methods scales cleanly
 to the full parameter posterior of a large neural network. Importance weights
-collapse as dimension grows (Exercise
-:exref:`ex_mdl-bayesian-computation-higher-dimension`), random-walk MCMC needs
+collapse as dimension grows, random-walk MCMC needs
 progressively more steps per independent draw, the full Hessian has $d^2$
 entries, and mean-field $q$ understates uncertainty by the correlation factor
 we just derived. Worse still, a neural network's architectural symmetries
@@ -1425,24 +1421,6 @@ unnormalized distributions.
        mean from the grid mean, in units of its own MCSE?
    :exlabel:`ex_mdl-bayesian-computation-proposal-scale`
 
-1. [code] **Monte Carlo standard error.** A stationary AR(1) sequence
-   $x_t=\phi x_{t-1}+\varepsilon_t$ with $|\phi|<1$ has the autocorrelations
-   $\rho_k=\phi^k$ and the autocorrelation time $\kappa=(1+\phi)/(1-\phi)$.
-    1. From the ESS that your run prints for the slope, compute $\kappa$ and
-       the AR(1) coefficient $\phi$ with this autocorrelation time. Compare
-       $\phi$ with the lag-1 autocorrelation $\rho_1$ that the cell prints.
-       Is the chain more or less correlated at long lags than an AR(1)
-       sequence with the same $\rho_1$?
-    1. How many post-warm-up states per chain does the same sampler need to
-       bring the MCSE of the slope's posterior mean down to $0.001$?
-    1. Batch means estimate the MCSE without autocorrelations. Split each
-       chain into batches of $b$ consecutive states, and divide the standard
-       deviation of all batch means by the square root of the number of
-       batches. Compute this estimate for $b\in\{25,100,500\}$ and compare it
-       with the printed MCSE. What goes wrong when $b$ is not much larger
-       than $\kappa$?
-   :exlabel:`ex_mdl-bayesian-computation-mcse`
-
 1. **Laplace and parameterization.** A coin shows 9 heads and 4 tails. Under
    a uniform prior, the posterior of its heads probability $\theta$ is
    $\mathrm{Beta}(10,5)$, with mean $2/3$, standard deviation $0.118$, and
@@ -1533,26 +1511,6 @@ unnormalized distributions.
        sampling from the same prior.
    :exlabel:`ex_mdl-bayesian-computation-weight-ess`
 
-1. [code] **Variational families.** ● The variational cell fits a mean-field
-   Gaussian by stochastic gradient ascent on the ELBO
-   :eqref:`eq_mdl-bayes-vi-elbo`, following the gradients
-   :eqref:`eq_mdl-bayes-vi-gradients` with a decaying step.
-    1. Predict the mean-field standard deviations from the grid standard
-       deviations and correlation, and compare them with the printed values.
-       What would the forward-KL diagonal Gaussian give?
-    1. Rerun the cell three times. Compare the spread of the final iterate
-       `m_vi` across runs with the spread of the averaged iterate `m_avg`.
-       How much of the gap between the mean-field mean and the grid mean is
-       approximation error, and how much is optimization noise?
-    1. Replace the mean-field family by a full-covariance Gaussian
-       $\boldsymbol\theta=\mathbf m+\mathbf L\boldsymbol\epsilon$, where
-       $\mathbf L$ is lower triangular with diagonal entries $e^{\ell_1}$ and
-       $e^{\ell_2}$. Extend :eqref:`eq_mdl-bayes-vi-gradients` to the
-       gradients with respect to $\mathbf m$, $\ell_1$, $\ell_2$, and the
-       off-diagonal entry of $\mathbf L$. Implement them, and compare the
-       fitted standard deviations and correlation with the grid values.
-   :exlabel:`ex_mdl-bayesian-computation-variational-families`
-
 1. [code] **Estimating the evidence.** ● Let $q$ be a normalized proposal,
    let $w=p(\mathcal D,\boldsymbol\theta)/q(\boldsymbol\theta)$, and let
    $\hat Z_N=\frac1N\sum_{s=1}^Nw(\boldsymbol\theta_s)$ for independent draws
@@ -1571,14 +1529,11 @@ unnormalized distributions.
        The Laplace estimate of $p(\mathcal D)$ comes out a few percent low,
        about $0.04$ in $\log p(\mathcal D)$. Which feature of
        the posterior, seen in the grid cell, explains the sign?
-    1. Estimate the ELBO of three Gaussians: the Laplace approximation, the
-       mean-field fit, and the full-covariance fit of Exercise
-       :exref:`ex_mdl-bayesian-computation-variational-families`c. Use $10^5$
-       draws from each and report the MCSE of each estimate. By
+    1. Estimate the ELBO of the Laplace approximation and the mean-field fit
+       using $10^5$ draws from each and report the MCSE of each estimate. By
        :eqref:`eq_mdl-bayes-elbo-gap`, the gap between $\log p(\mathcal D)$
        and the ELBO of $q$ is $D_{\textrm{KL}}(q\|p(\cdot\mid\mathcal D))$.
-       Rank the three Gaussians by this divergence, and explain where the
-       Laplace Gaussian falls in the ranking.
+       Compare the two Gaussians by this divergence.
    :exlabel:`ex_mdl-bayesian-computation-evidence`
 
 1. [code] **A posterior with two modes.** ● Fifty observations are drawn as
@@ -1653,32 +1608,6 @@ unnormalized distributions.
        twice as wide. Also try the defensive mixture of the text, and explain
        why its weights are bounded.
    :exlabel:`ex_mdl-bayesian-computation-posterior-tails`
-
-1. [extended] **Approximations in higher dimension.** ●● Extend the running
-   example to $d$ parameters: an intercept and $d-1$ features with
-   independent standard normal entries, $n=10d$ observations whose labels
-   are drawn from a true parameter with independent
-   $\mathcal N(0,1.5^2/d)$ entries, and the prior
-   $\mathcal N(\mathbf 0,4\mathbf I)$. No grid is available, so a long
-   Metropolis run serves as the reference.
-    1. For $d\in\{2,5,10,20,50\}$, compute the Laplace approximation and the
-       ESS of 5,000 Laplace-proposal draws. Repeat with $n=40d$. Explain how
-       $N_{\mathrm{eff}}/N$ depends on $d$ and on $n/d$.
-    1. Run four Metropolis chains with the proposal $(2.38/\sqrt d)\mathbf L$,
-       where $\mathbf L$ is the Cholesky factor of the Laplace covariance
-       (Exercise :exref:`ex_mdl-bayesian-computation-proposal-scale`b).
-       Measure the acceptance rate and the smallest ESS per log-joint
-       evaluation over the coordinates as functions of $d$. Which power of
-       $d$ describes the efficiency?
-    1. At $d=50$ and $n=500$, give importance sampling and Metropolis the
-       same budget of 20,000 log-joint evaluations, and repeat each run five
-       times. Measure their errors in the posterior mean against the
-       reference, in units of posterior standard deviations, and compare them
-       with the errors that each method's own ESS predicts. Report one row
-       per method with the number of evaluations, the ESS, the predicted
-       error, and the measured error. Which method would you use at this
-       budget?
-   :exlabel:`ex_mdl-bayesian-computation-higher-dimension`
 
 1. [code] **Langevin proposals.** ●● The Metropolis-adjusted Langevin
    algorithm proposes

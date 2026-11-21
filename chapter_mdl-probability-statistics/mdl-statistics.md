@@ -554,8 +554,8 @@ is slow: gaining one extra decimal digit of accuracy requires 100 times as many
 samples. Yet the dimension of $x$ never appears in the exponent, and that
 dimension-independence is the entire reason sampling works in high dimensions.
 The one essential requirement is finite variance; as we saw in
-:numref:`sec_mdl-random_variables`, heavy tails can derail an average (see also
-exercise :exref:`ex_mdl-integral-calculus-heavy-tail-monte-carlo`).
+:numref:`sec_mdl-random_variables`, heavy tails can derail an average (see
+exercise :exref:`ex_mdl-random-variables-heavy-tail-averages`).
 
 Compare this with a deterministic grid. Reaching grid spacing $\epsilon$ in $d$
 dimensions requires $N=\epsilon^{-d}$ evaluation points. The left-endpoint rule
@@ -1374,8 +1374,6 @@ Thus, the bootstrap distribution piles 63% of its probability mass onto a single
 point, even though the true sampling distribution of $\hat\theta$ is continuous.
 Worse still, no resample can ever exceed $\hat\theta$, which is strictly below
 $\theta$, so the percentile interval has zero chance of containing $\theta$.
-Exercise :exref:`ex_mdl-statistics-let-x-1-ldots` checks whether reflecting the
-interval around $\hat\theta$ fixes the problem.
 
 Second, the bootstrap fails when you resample units that are not independent, a
 common trap in modern NLP and vision benchmarks. Consider a
@@ -1456,20 +1454,6 @@ for clustered test sets.
    its distribution.
    :exlabel:`ex_mdl-statistics-shrinking-mean`
 
-1. **Reading a $p$-value.** A $p$-value is computed under $H_0$, so by
-   itself it does not give the probability that $H_0$ is true.
-    1. A two-sided $z$-test of $H_0\!:\mu=0$ on $n=20$ observations reports
-       $p=0.5$. Compute the power of this test at $\alpha=0.05$ against the
-       standardized effect $\delta=0.1$. Why is $p=0.5$ then no evidence that
-       $H_0$ is true?
-    1. In a research program, $90\%$ of the tested ideas have no effect. Each
-       idea is tested once at $\alpha=0.05$, with power $0.8$ against its
-       true effect. What fraction of the significant results are false
-       positives? Recompute the fraction for power $0.2$. This calculation
-       is the core of the argument of :citet:`Ioannidis.2005`. Which of its
-       ingredients does a $p$-value not contain?
-   :exlabel:`ex_mdl-statistics-reading-p-value`
-
 1. [code] **Multiple comparisons.** A hyperparameter sweep compares many
    configurations with one baseline, so it runs many tests at once.
     1. Twenty models, none of them better than the baseline, are each
@@ -1544,55 +1528,6 @@ for clustered test sets.
        it keeps at $\alpha=0.05$. Compare the two intervals, and their
        coverage at $\theta=0.95$ over $100{,}000$ simulated benchmarks.
    :exlabel:`ex_mdl-statistics-delta-boundary`
-
-1. [code] **Bootstrap of the maximum.** Let $x_1,\ldots,x_n$ be i.i.d.
-   $U(0,\theta)$, let $\hat\theta=\max_i x_i$, and let $\hat\theta^*$ be the
-   maximum of a bootstrap resample. The text showed that
-   $P(\hat\theta^*=\hat\theta)\to1-1/e$.
-    1. Show that $n(\theta-\hat\theta)/\theta$ converges in distribution to
-       the exponential distribution with mean 1, whereas
-       $n(\hat\theta-\hat\theta^*)/\hat\theta$, conditionally on the data,
-       has an atom of probability about $0.63$ at $0$. Which part of the
-       true sampling distribution does the bootstrap fail to reproduce?
-    1. The basic bootstrap interval reflects the percentile quantiles
-       $q_{\alpha/2}$ and $q_{1-\alpha/2}$ of the replicates about the
-       estimate, $[2\hat\theta-q_{1-\alpha/2},\,2\hat\theta-q_{\alpha/2}]$.
-       Adapt the text's bootstrap of the median to the maximum, with
-       $n=100$ and $\theta=1$, and
-       estimate the coverage of the basic $95\%$ interval over $1{,}000$
-       data sets with $R=2{,}000$ resamples each.
-    1. For one data set, plot the histogram of $n(\hat\theta-\hat\theta^*)$
-       next to the histogram of $n(\theta-\hat\theta)$ over fresh data sets,
-       and use the two pictures to explain the coverage you measured.
-
-   *Adapted from Larry Wasserman,
-   [All of Statistics](https://link.springer.com/book/10.1007/978-0-387-21736-9),
-   Chapter 8, Exercise 7.*
-   :exlabel:`ex_mdl-statistics-let-x-1-ldots`
-
-1. [code] **Choosing the variance denominator.** ● Let
-   $S=\sum_i(x_i-\bar x)^2$ and consider the estimators $S/c$ of $\sigma^2$.
-   The plug-in variance $s_0^2$ and the unbiased estimator $s^2$ of
-   :eqref:`eq_mdl-unbiased-var` are the cases $c=n$ and $c=n-1$. For
-   Gaussian data, $S/\sigma^2$ has the $\chi^2$ distribution with $n-1$
-   degrees of freedom, so $\textrm{Var}(S)=2(n-1)\sigma^4$.
-    1. Show that for Gaussian data the MSE of $S/c$ is minimized at $c=n+1$.
-       Rank $c=n-1$, $n$ and $n+1$ by their MSE at $n=3$ and $\sigma^2=4$.
-    1. Estimate the three MSEs by simulation, over $100{,}000$ Gaussian
-       data sets with $n=3$ and $\sigma^2=4$, and compare them with your
-       answer to (a).
-    1. For non-Gaussian i.i.d. data with excess kurtosis
-       $\kappa=\mathbb{E}[(x-\mu)^4]/\sigma^4-3$, the variance of $S$ is
-       $$\textrm{Var}(S)=(n-1)^2\sigma^4\left(\frac{\kappa}{n}+\frac{2}{n-1}\right).$$
-       Find the MSE-optimal $c$ as a function of $n$ and $\kappa$. Evaluate
-       it for Laplace data, which have $\kappa=3$, at $n=3$ and $n=10$, and
-       check the case $n=3$ by simulation.
-    1. The optimal shrinkage factor $c^\star$ of the text depends on the
-       unknown $\theta$, whereas for Gaussian data the optimal denominator
-       depends on $n$ alone. Why? What does (c) imply for the use of an
-       MSE-optimal denominator when the distribution of the data is
-       unknown?
-   :exlabel:`ex_mdl-statistics-variance-denominator`
 
 1. [code] **Paired comparisons.** ● Two models evaluated on the same test
    examples or the same seeds share part of their noise, and a paired test
@@ -1671,32 +1606,6 @@ for clustered test sets.
        measurements. At which $d$ do the two methods break even? How reliably
        do $20$ repetitions decide the comparison at that $d$?
    :exlabel:`ex_mdl-integral-calculus-grids-monte-carlo`
-
-1. [code] **Monte Carlo under heavy tails.** ● The Monte Carlo average
-   :eqref:`eq_mdl-monte-carlo` converges by the law of large numbers when
-   the mean is finite, and its $1/\sqrt n$ rate rests on the finite variance
-   in :eqref:`eq_mdl-mc-variance`. Use the Pareto and Cauchy densities of
-   exercise :exref:`ex_mdl-integral-calculus-heavy-tails`, and write
-   $\bar X_n$ for the running mean of the first $n$ samples.
-    1. Show that $X=U^{-1/\alpha}$, with $U$ uniform on $(0,1)$, has the
-       Pareto density with tail index $\alpha$, by computing $P(X>x)$. Find
-       the analogous transformation of $U$ for the Cauchy density.
-    1. For $\alpha=3$ and $\alpha=1.5$, draw $200$ independent sequences of
-       $10^5$ samples each. Plot the median over sequences of
-       $|\bar X_n-\mathbb{E}[X]|$ against $n$ on log-log axes, and fit the
-       slopes. Why is the median a better summary here than the root mean
-       squared error?
-    1. Show that the largest of $n$ Pareto samples exceeds $n^{1/\alpha}$
-       with probability approaching $1-e^{-1}$ as $n\to\infty$. A single
-       sample of that size shifts $\bar X_n$ by about $n^{1/\alpha-1}$. Use
-       this to predict the slope for $1<\alpha<2$. Why does the same
-       argument not set the slope for $\alpha=3$?
-    1. The Pareto density with $\alpha=1$ and the Cauchy density have no
-       finite mean, so the error of (b) is undefined for them. Draw $200$
-       sequences of $10^5$ samples from each, and plot the 25th, 50th and
-       75th percentiles of $\bar X_n$ over sequences against $n$. What does
-       the running mean do in each case?
-   :exlabel:`ex_mdl-integral-calculus-heavy-tail-monte-carlo`
 
 1. [code] **Clustered test sets.** ● Evaluation sets often consist of
    clusters of related items, such as several questions about one passage,

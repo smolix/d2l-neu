@@ -9,9 +9,11 @@ Converts d2l-en markdown files to Quarto .qmd format with:
 - Multi-framework tab display (primary framework executes, others display-only)
 - Code block conversion to Quarto executable cells
 - Prose tab sections (:begin_tab:/:end_tab:) to Quarto panel-tabsets
+- No tabsets on pages of single-framework parts (SINGLE_FRAMEWORK_PARTS)
 """
 
 import re
+import sys
 import argparse
 try:
     from exercise_refs import render as render_exercise_refs
@@ -33,6 +35,42 @@ FRAMEWORK_DISPLAY = {
     'tensorflow': 'TensorFlow',
     'jax': 'JAX',
 }
+
+# Book parts that carry one framework. The HTML book renders the code cells,
+# outputs and tab notes of their pages without the framework tab bar (no
+# panel-tabset), and marks each page with its framework so the Slides and
+# notebook buttons point at it whatever the reader chose on other pages.
+# Keys are chapter-directory prefixes, values the part's framework. Only the
+# HTML path (convert_file) reads this; PDFs, slides and notebooks are one
+# framework each already. See docs/build-system.md §6.11. To switch the
+# Image Models part on, add: 'chapter_image-models': 'pytorch',
+SINGLE_FRAMEWORK_PARTS = {
+    'chapter_lm-': 'pytorch',
+}
+
+# Hidden page marker read by _d2l-tabs.html and _d2l-notebooks.html.
+SINGLE_FRAMEWORK_MARKER = (
+    '```{{=html}}\n'
+    '<div id="d2l-single-framework" data-framework="{fw}" hidden></div>\n'
+    '```')
+
+
+def single_framework(src_path):
+    """The one framework of the part that holds src_path, or None."""
+    chapter = Path(src_path).parent.name
+    for prefix, fw in SINGLE_FRAMEWORK_PARTS.items():
+        if chapter.startswith(prefix):
+            return fw
+    return None
+
+
+_current_src = None  # the file convert_file is converting, for warnings
+
+
+def _warn_dropped(what, fws, solo):
+    print(f'  WARNING: {_current_src or "?"}: {what} for '
+          f'{", ".join(sorted(fws))} not rendered: a single-framework '
+          f'({solo}) page (SINGLE_FRAMEWORK_PARTS)', file=sys.stderr)
 
 # ──────────────────────────────────────────────────────────
 # Block types
@@ -708,8 +746,12 @@ def expand_exercise_tabs(text, primary):
     return '\n'.join(lines[:first] + [''] + out + lines[end:])
 
 
-def convert_prose_tabs(text, primary):
+def convert_prose_tabs(text, primary, solo=None):
     """Convert :begin_tab:/:end_tab: sections to Quarto panel-tabsets.
+
+    On a single-framework page (solo, see SINGLE_FRAMEWORK_PARTS) a group
+    becomes its solo pane's text with no tabset around it; panes for other
+    frameworks are not rendered (a warning names them).
 
     IMPORTANT: Must be called on raw text BEFORE block parsing, because
     tab blocks can span code fences (e.g. installation instructions with
@@ -757,6 +799,15 @@ def convert_prose_tabs(text, primary):
             for fw in fws:
                 if fw not in tab_contents:
                     tab_contents[fw] = content
+
+        if solo:
+            others = set(tab_contents) - {solo}
+            if others:
+                _warn_dropped('tab note', others, solo)
+            if solo in tab_contents:
+                parts.append(f'\n{tab_contents[solo]}\n')
+            last_end = group[-1].end()
+            continue
 
         # Emit panel-tabset with primary framework first
         parts.append('::: {.panel-tabset group="framework"}\n')
@@ -862,8 +913,15 @@ def postprocess_table_captions(text):
 # Output generation
 # ──────────────────────────────────────────────────────────
 
-def emit_qmd(blocks, primary='pytorch'):
-    """Generate .qmd content from processed blocks."""
+def emit_qmd(blocks, primary='pytorch', solo=None):
+    """Generate .qmd content from processed blocks.
+
+    On a single-framework page (solo, see SINGLE_FRAMEWORK_PARTS) a code
+    tabset becomes its solo cell, an ordinary executable `{python}` cell with
+    its `#| label:` and no tabset around it; inject_outputs.py then places
+    the cell's outputs as for an untagged cell. Code for other frameworks is
+    not rendered (a warning names it).
+    """
     parts = []
 
     for block in blocks:
@@ -895,6 +953,17 @@ def emit_qmd(blocks, primary='pytorch'):
                     # Display-only: no label (Quarto would render `#| label:`
                     # as a literal comment in non-executed code blocks).
                     parts.append(f'\n```python\n{code}\n```\n')
+
+        elif isinstance(block, CodeTabSet) and solo:
+            others = set(block.tabs) - {solo}
+            if others:
+                cid = next((i for i in block.ids.values() if i), '')
+                _warn_dropped(f'code cell {cid}'.strip(), others, solo)
+            if solo in block.tabs:
+                code = '\n'.join(block.tabs[solo])
+                cid = block.ids.get(solo)
+                id_prefix = f'#| label: {cid}\n' if cid else ''
+                parts.append(f'\n```{{python}}\n{id_prefix}{code}\n```\n')
 
         elif isinstance(block, CodeTabSet):
             parts.append('\n::: {.panel-tabset group="framework"}\n')
@@ -969,8 +1038,13 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
     # Step 1: Convert prose tabs on raw text BEFORE block parsing. An
     # Exercises list with tabbed problems first becomes one complete list
     # per framework, so the list is not split at each tab group.
+    global _current_src
+    _current_src = src_path
+    solo = single_framework(src_path)
+    if solo:
+        primary = solo
     text = expand_exercise_tabs(text, primary)
-    text = convert_prose_tabs(text, primary)
+    text = convert_prose_tabs(text, primary, solo)
 
     # Step 2: Parse into blocks (code vs markdown)
     blocks = parse_blocks(text)
@@ -983,11 +1057,16 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
     blocks = hide_canonical_preambles(blocks)
 
     # Step 4: Emit .qmd output (directive translation happens per markdown block)
-    output = emit_qmd(blocks, primary)
+    output = emit_qmd(blocks, primary, solo)
 
     # Step 5: Auto-number all display equations that don't have labels
     rel_path = str(src_path).split('/')[-1].replace('.md', '')
     output = number_all_equations(output, rel_path)
+
+    # Step 5b: Mark a single-framework page for the Slides/notebook buttons.
+    if solo:
+        output = (output.rstrip('\n') + '\n\n'
+                  + SINGLE_FRAMEWORK_MARKER.format(fw=solo) + '\n')
 
     # Step 6: Add YAML front matter
     # Frontmatter files: suppress Pandoc auto-numbering.

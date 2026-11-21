@@ -872,6 +872,8 @@ samples, or a score.
 
 <!-- Discussions: forum topic to be created at deploy -->
 
+[Discussions](https://d2l.discourse.group/t/36896)
+
 <!-- slides -->
 
 ::: {.slide}

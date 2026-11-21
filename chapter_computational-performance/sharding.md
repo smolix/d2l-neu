@@ -539,6 +539,8 @@ GPUs to train a 36-block GPT whose 28.6 GiB state fits on neither card alone.
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36886)
+
 <!-- slides -->
 
 ::: {.slide}

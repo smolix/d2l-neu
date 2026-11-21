@@ -1278,6 +1278,8 @@ In summary: for low-resolution images where pixel-space diffusion fits the compu
        every dimension. Compare with the finding of :citet:`Li.He.2026`.
    :exlabel:`ex_latent-large-patches`
 
+[Discussions](https://d2l.discourse.group/t/36892)
+
 <!-- slides -->
 
 ::: {.slide}

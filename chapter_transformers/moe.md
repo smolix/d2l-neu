@@ -565,6 +565,8 @@ Recent frontier MoE families (:numref:`tab_moe-experts`) refine the coarse 8-exp
 6. **Shared experts and fine-grained granularity at fixed budget.** Implement a `SharedMoELayer` that runs 1 always-active shared expert of width $w$ plus Top-$k$ of $E$ routed experts of width $w$, and compare three FFN configurations inside `small_gpt` at matched stored and active expert width ($16 \times 170$ stored, $2 \times 170$ active per block): (a) coarse $E = 8, k = 1, w = 340$, (b) medium $E = 16, k = 2, w = 170$, and (c) fine + shared $E_{\textrm{shared}} = 1, E = 15, k = 1, w = 170$. Compare their validation losses after 800 steps.
 :exlabel:`ex_moe-granularity`
 
+[Discussions](https://d2l.discourse.group/t/36779)
+
 <!-- slides -->
 
 ::: {.slide}

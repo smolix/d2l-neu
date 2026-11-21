@@ -635,6 +635,8 @@ Across $5$ independent random seeds at a well-tuned learning rate, the final $10
 1. [code] **Count-based $n$-gram landmarks.** Compute the empirical byte unigram entropy ($\sim 3.2$ nats) and add-one smoothed bigram ($\sim 2.5$ nats) and trigram cross-entropies from the first $10^7$ training bytes of `WikiText103` evaluated on the validation split, and compare them against the $2{,}000$-step SGD ($2.13$ nats) and AdamW ($1.59$ nats) losses of `TinyLM`.
    :exlabel:`ex_test-models-landmarks`
 
+[Discussions](https://d2l.discourse.group/t/36884)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -521,6 +521,8 @@ for name, blk in blocks.items():
 5. **Rate of token collapse.** :numref:`subsec_signal-propagation` argued that in a post-norm block, only the attention sublayer mixes across tokens, while the FFN acts position-wise. Modify `MiniBlock` so that the attention sublayer is skipped ($\mathbf{H} = \textrm{Norm}(\mathbf{X})$) and only the post-norm FFN runs, and re-run `signal_stats(pre_norm=False)`. Does token spread still collapse to zero across 32 layers, or does it stabilize? Explain how this confirms each factor in :eqref:`eq_collapse-rate`.
 :exlabel:`ex_transformer-block-ffn-width-rounding`
 
+[Discussions](https://d2l.discourse.group/t/36774)
+
 <!-- slides -->
 
 ::: {.slide}

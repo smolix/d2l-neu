@@ -430,6 +430,8 @@ For linear dynamics $\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\math
        and the gradient $\nabla_{\mathbf{u}_t} J = \nabla_{\mathbf{u}} c(\mathbf{x}_t, \mathbf{u}_t) + \mathbf{B}_t^\top \boldsymbol{\lambda}_{t+1}$ :cite:`Pontryagin.Boltyanskii.Gamkrelidze.ea.1962`.
     1. Compare the backward adjoint recursion with the first-order vectors $\mathbf{v}_{\mathbf{x},t}$ and $q_{v,t}$ in the backward pass of `ilqr_swingup` (and with backpropagation through time in :numref:`sec_bptt`). What does iLQR's second-order Hessian recursion $\mathbf{V}_{\mathbf{x}\mathbf{x},t}$ add beyond first-order backpropagation through time?
 
+[Discussions](https://d2l.discourse.group/t/36887)
+
 <!-- slides -->
 
 ::: {.slide}

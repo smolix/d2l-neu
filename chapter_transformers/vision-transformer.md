@@ -507,6 +507,8 @@ On a small 60,000-image dataset without data augmentation or large-scale pretrai
 
 6. **Mean attention distance across depth.** :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` define a head's **mean attention distance** as the attention-weighted average 2D Euclidean pixel distance $\sum_{i,j=1}^{36} \alpha_{ij} \, d_{\textrm{pixel}}(i, j) / 36$ between query patch $i$ and key patch $j$. Compute the mean attention distance for each of the 8 heads in blocks 1 and 2 of our trained `ViT`. Do early-layer heads attend more locally than deeper-layer heads, analogous to the growing receptive field of a CNN?
 
+[Discussions](https://d2l.discourse.group/t/36778)
+
 <!-- slides -->
 
 ::: {.slide}

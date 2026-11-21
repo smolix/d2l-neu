@@ -308,6 +308,8 @@ for name, (N, D) in reported.items():
 
 6. **Activation checkpointing and the $8 N D$ rule.** Full block-level activation checkpointing saves only the input $\mathbf{X}^{(\ell-1)}$ to each block during the forward pass ($2 N D$ FLOPs) and recomputes each block's forward pass once during backpropagation before computing the backward matrix products ($4 N D$ FLOPs). Show that activation checkpointing changes the pretraining compute formula from $C \approx 6 N D$ to $C \approx 8 N D$, and find how replacing $6$ with $8$ in :eqref:`eq_chinchilla_optimum` scales $N^*(C)$ and $D^*(C)$ at fixed FLOP budget $C$.
 
+[Discussions](https://d2l.discourse.group/t/36780)
+
 <!-- slides -->
 
 ::: {.slide}

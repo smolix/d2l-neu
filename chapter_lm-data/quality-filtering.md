@@ -36,8 +36,9 @@ the filter means by quality, and whose pages it removes.
 This section builds both kinds of filter, trains a classifier on labels
 written by Qwen3.8-27B, chooses its threshold, and audits what it removes by
 country, kind of site and language. It ends where the audit points: a filter
-keeps what its annotator likes, and only the training runs of
-:numref:`sec_lm_data_mixtures` can say whether that is what a model needs.
+keeps what its annotator likes, and only training runs, of the kind that
+:numref:`sec_lm_data_mixtures` sets up, can say whether that is what a model
+needs.
 
 ```{.python .input #quality-filtering-imports}
 %%tab pytorch
@@ -1002,9 +1003,11 @@ that Llama-3-70B-Instruct gave it in 2024 under the same prompt. Comparing the
 two is easy and easy to misread. Agreement with one labeller cannot show which
 labels are better: where two labellers disagree, either may be wrong, and a
 third model would only add a third opinion. What decides is the model trained
-on a filter's output, which :numref:`sec_lm_data_mixtures` measures. Here the
-comparison is descriptive. It tells us how the two models use the scale, and
-whether they order documents alike.
+on a filter's output, measured with proxy runs like those of
+:numref:`sec_lm_data_mixtures`, and exercise
+:exref:`ex_lm_quality-two-labellers` sets up that comparison for the two
+labellers. Here the comparison is descriptive. It tells us how the two
+models use the scale, and whether they order documents alike.
 
 ```{.python .input #quality-filtering-agreement}
 %%tab pytorch
@@ -2265,8 +2268,10 @@ Every filter in this section removes documents because they differ from
 something: from English function words, from a reference model's training
 data, from what Llama or Qwen think a schoolteacher would use. What survives
 leans toward the annotator's taste. The audit can show where it leans, but
-not whether a model trained on the result is better or worse for it; that
-takes training runs, which :numref:`sec_lm_data_mixtures` carries out.
+not whether a model trained on the result is better or worse for it. That
+takes training runs with everything but the data held fixed, the method of
+:numref:`sec_lm_data_mixtures`, whose web text is FineWeb-Edu as released,
+filtered by the labels of Llama-3-70B.
 
 ## Summary
 
@@ -2728,7 +2733,7 @@ The classifier follows its rubric; the gap is between two definitions of quality
 | `edu_score` | 1,032 | 1,032 | threshold 1.611, head SHA-256, embedder revision |
 
 - Flags per c0 id: reason codes and score, no text.
-- 20 of the 1,032 score above $t^*$, about 2%.
+- 20 of the 1,032 score at or above $t^*$, about 2%.
 - Score bands can become mixture sources without relabelling.
 :::
 

@@ -875,7 +875,9 @@ def corpus_report(root, meta, rows):
             'n_docs']  # no special id inside a chunk
         table.append(dict(file=name, chunks=P.meta['n_docs'],
                           tokens=P.meta['n_tokens'],
-                          bytes=P.meta['n_bytes_nfc']))
+                          bytes=P.meta['n_bytes_nfc'],
+                          bytes_per_token=round(P.meta['n_bytes_nfc']
+                                                / P.meta['n_tokens'], 2)))
     print(pd.DataFrame(table).to_string(index=False))
     for split in SPLITS:
         src, reph = (meta[f'{NAMES[split, k]}.bin']['n_tokens']
@@ -1215,7 +1217,7 @@ else:
 The judge needs that room. Its median reply is about 2,800 tokens, most of
 them reasoning, so a budget of a thousand reasoning tokens would have
 stopped most of them part way through the argument. Even at 12,000 tokens, 4 of the 60
-replies ended without one. They are left out, and the rate is computed on
+replies ended without a verdict. They are left out, and the rate is computed on
 the other 56.
 
 By the judge, the rewrite adds a claim in 39 of 56 pairs: 70%, with a 95%

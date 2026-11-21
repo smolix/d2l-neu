@@ -134,9 +134,11 @@ def say(*args, sep=' '):
 
 with torch.device('meta'):
     N_PARAMS = d2l.num_params(d2l._proxy_model(TOK_PROXY))
-TIER = (f'at T1 scale ({N_PARAMS / 1e6:.1f}M-parameter LMs, one epoch over '
-        f'45 MB; {EXT_MODEL.split("/")[1]}, {EXT_TRAIN["steps"]} steps of '
-        f'{EXT_TRAIN["batch"]} x {EXT_TRAIN["seq_len"]:,} tokens)')
+TIER_LM = f'{N_PARAMS / 1e6:.1f}M-parameter LMs, one epoch over 45 MB'
+TIER_EXT = (f'{EXT_MODEL.split("/")[1]}, {EXT_TRAIN["steps"]} steps of '
+            f'{EXT_TRAIN["batch"]} x {EXT_TRAIN["seq_len"]:,} tokens')
+TIER = f'at T1 scale ({TIER_LM}; {TIER_EXT})'  # registered with the runs
+TIER_LM, TIER_EXT = (f'at T1 scale ({t})' for t in (TIER_LM, TIER_EXT))
 say(f'small-LM comparison and extension {TIER.replace(" scale", "")}')
 say(f'GPU={GPU}, SMALL={SMALL}, regenerating:',
     ', '.join(sorted(RERUN)) or 'none')
@@ -983,7 +985,10 @@ classes the vowel signs and the virama of Devanagari as combining marks,
 not letters. The rule therefore cuts हिन्दी (*Hindi*) into ह|िन|्द|ी
 before BPE sees it, and no merge can cross those cuts. The reference
 tokenizer shares this rule, which is harmless for the English model of the
-next chapter and would not be for a Hindi one.
+next chapter and would not be for a Hindi one. The same classification of the
+vowel signs made the English rules of :numref:`sec_lm_quality_filtering`
+remove every Hindi document: a pattern written for letters cuts Devanagari
+words apart.
 
 ### Bits per Byte and the Choice of Algorithm
 :label:`subsec_lm_tok_bpb`
@@ -993,9 +998,9 @@ text into each token makes each prediction harder, and a model could lose
 per token what it saves in tokens. To compare tokenizers, we need a
 measure of how well a model predicts the text that does not depend on how
 the text was cut. Perplexity per token is not such a measure, because
-longer tokens carry more surprise each. :numref:`subsec_lm_bpb` used *bits
-per byte* instead: the total surprisal of a text in bits divided by its
-length in UTF-8 bytes. If $L$ is the mean loss per token in nats and
+longer tokens carry more surprise each. :numref:`subsec_lm_bpb` and the
+mixtures of :numref:`sec_lm_data_mixtures` used *bits per byte* instead: the
+total surprisal of a text in bits divided by its length in UTF-8 bytes. If $L$ is the mean loss per token in nats and
 $\bar b$ the mean number of bytes per token, then
 
 $$
@@ -1171,7 +1176,7 @@ assert TOKLM['text_hash'] == TEXT_HASH
 assert TOKLM['n_bytes'] == json.loads(json.dumps(N_BYTES))
 for name, info in json.loads(json.dumps(TOK_INFO)).items():
     assert TOKLM['tokenizers'][name] == info, f'{name} differs from its run'
-say(f'{len(TOKLM["runs"])} runs {TIER}, learning rate {LR:g} (from '
+say(f'{len(TOKLM["runs"])} runs {TIER_LM}, learning rate {LR:g} (from '
     f'{TOKLM["config"]["lr_from"]})')
 if GPU and 'tok-lm' not in RERUN:  # live check: the start of one run
     out, model, _ = train_small_lm(POOLS['HF BPE'], 0, LR,
@@ -1216,7 +1221,7 @@ for name in LM_TOKS:  # 10 held-out documents per language: 100
     rows[name] = dict(loss_per_token=L, perplexity=math.exp(L),
                       bytes_per_token=bbar, bpb=ways[0],
                       max_difference=max(ways) - min(ways))
-say(f'100 held-out documents, seed 0 {TIER}')
+say(f'100 held-out documents, seed 0 {TIER_LM}')
 say(pd.DataFrame(rows).T.round(4))
 ```
 
@@ -1254,7 +1259,7 @@ for name in TOKS:
                             bpb_belebele=np.mean(b), seed_range=np.ptp(b),
                             bpb_heldout=np.mean(h), heldout_range=np.ptp(h))
 TAB = pd.DataFrame(tab).T.rename_axis(['tokenizer', 'lang'])
-say(f'Belebele and held-out bits per byte {TIER}')
+say(f'Belebele and held-out bits per byte {TIER_LM}')
 WIDE = TAB.unstack(0).loc[list(LANGS)].round(3)
 for part in (['premium', 'bpb_belebele', 'seed_range'],
              ['bpb_heldout', 'heldout_range']):
@@ -1523,15 +1528,27 @@ fig, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.8))
 d2l.plot(GRID, [BBAR[k].to_numpy() for k in BIG], 'vocabulary size V',
          'bytes per token', legend=list(BIG), xscale='log', axes=axes[0],
          fmts=('-o', '--s'))
+LABEL_AT = {'reference': ((-5, 5), 'right'), 'GPT-2': ((-5, 6), 'right'),
+            'Qwen3': ((-4, -11), 'right'), 'Qwen3.5': ((0, -11), 'center'),
+            'o200k_base': ((0, 6), 'center')}  # text clear of the curves
 for k in TOKENIZERS:
     axes[0].plot(rows[k]['V'], rows[k]['bytes_per_token'], 'k^',
                  markersize=4)
     axes[0].annotate(k, (rows[k]['V'], rows[k]['bytes_per_token']),
-                     xytext=(3, -9), textcoords='offset points', fontsize=7)
+                     xytext=LABEL_AT[k][0], textcoords='offset points',
+                     ha=LABEL_AT[k][1], fontsize=7)
+axes[0].set_xlim(700, 4e5)  # every released vocabulary on the panel
+axes[0].set_ylim(1.85, 5.0)
+axes[0].legend(list(BIG), loc='lower right')
 c = cost(FINE, bbar('English', FINE)) / 1e9
-d2l.plot(FINE, c, 'vocabulary size V', 'GFLOP per byte (d = 1024)',
-         xscale='log', axes=axes[1])
-_ = axes[1].plot(FINE[np.argmin(c)], c.min(), 'ko')
+d2l.plot(FINE, c, 'vocabulary size V', 'GFLOP per byte', xscale='log',
+         axes=axes[1])
+axes[1].plot(FINE[np.argmin(c)], c.min(), 'ko')
+axes[1].text(0.95, 0.9, '$d = 1{,}024$', transform=axes[1].transAxes,
+             ha='right')
+for ax, n in zip(axes, (3, 2)):
+    ax.set_xticks([1e3, 1e4, 1e5][:n], ['1K', '10K', '100K'][:n])
+fig.tight_layout()
 ```
 
 On English all five tokenizers cover between 4.4 and 4.7 bytes per token,
@@ -2068,7 +2085,7 @@ ARMS = ('control', 'random', 'mean', 'decomp')
 steps = [s for s, _ in TOKEXT['runs'][0]['curve']]
 curves = {a: np.array([[v for _, v in r['curve']] for r in TOKEXT['runs']
                        if r['arm'] == a]) for a in ARMS}
-say(f'continued training on Hindi {TIER}')
+say(f'continued training on Hindi {TIER_EXT}')
 say(pd.DataFrame({a: dict(zip(steps, c.mean(0))) for a, c in
                   curves.items()}).round(3).rename_axis('step'))
 say(pd.DataFrame([dict(arm=r['arm'], seed=r['seed'], **{

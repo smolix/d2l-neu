@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "qa: 60 chunks in 34 s, 16 dropped (out of tokens)\npeak 5.4 GiB (6.7 GiB reserved) | no thinking text in any of the 120 replies (asserted)\nstyle prompt_sha256  kept  out_of_tokens  len_ratio_out  len_ratio  copy_rate  all_numbers  flagged\n wiki  d81cca47fc41    59              0              1      1.014      0.533        0.627    0.492\n   qa  128e10d6b531    34             16             10      1.048      0.472        0.500    0.500\n\nworst number fidelity: S1-00017, wiki, copy 0.29, numbers 0.00, length ratio 1.08\nsource                                         | rewrite\nI tell them, ‘No, we want you stop and think   | McClelland advises parents to instruct\nabout what you’re doing first.’” Another       | children to pause and consider their actions\nsimple activity to help build the              | before proceeding. A specific activity\nconcentration muscle is a dance game in which  | designed to strengthen concentration involves\nchildren are told they have to dance slowly    | a dance game where children are required to\nwhen the music is fast, and dance quickly when | dance slowly when the music is fast and dance\nthe music is slow. “When kids have to control  | quickly when the music is slow. McClelland\ntheir bodies, it’s more challenging for them,” | noted that when children must control their\nMcClelland said. “They actually have to stop   | bodies, the task becomes more challenging\ntheir movements and [...]                      | because they have to stop [...]\n\nhighest copy rate: S1-00213, wiki, copy 0.99, numbers 1.00, length ratio 0.99\nsource                                         | rewrite\nIf you have a medical concern or issue, please | If you have a medical concern or issue, please\nconsult your personal physician immediately.   | consult your personal physician immediately.\n\nlowest copy rate: S1-00510, wiki, copy 0.17, numbers 0.00, length ratio 0.71\nsource                                         | rewrite\nHow and Why You Should be Making Ghee This     | Ghee is the Sanskrit name for clarified\npost may contain Affiliate Links. Thank you    | butter, defined as butter in which all milk\nfor your support! What is this mysterious ghee | solids have been removed through a process of\nor clarified butter? First, Ghee is the        | simmering and straining. This method leaves\nSanskrit name for clarified butter. It is      | behind a pure combination of fats. Benefits of\nsimply butter that has had all of the milk     | Eating Ghee include suitability for\nsolids removed. It is simmered until all that  | individuals with dairy intolerance or allergy,\nremains after straining is a pure combination  | as the removal of milk proteins eliminates\nof fats. Benefits of Eating Ghee 1. Ghee is    | potential allergens. For instance, the\ngreat for those [...]                          | author's niece, who cannot [...]\n\nrandom 1: S1-04864, wiki, copy 0.48, numbers 0.67, length ratio 1.08\nsource                                         | rewrite\nIn a report to the admirals on budget          | In a report to the admirals regarding budget\ndevelopments, Burke provided some of the       | developments, Admiral Burke offered insights\nflavor of inter-service rivalries over nuclear | into inter-service rivalries concerning\nweapons systems. For the Navy, the key items   | nuclear weapons systems. The Navy's key items\nin the proposed add-on to the fiscal year 1959 | in the proposed addition to the fiscal year\nbudget were acceleration of the Polaris        | 1959 budget included the acceleration of the\nprogram and augmentation of anti-submarine     | Polaris program and the augmentation of anti-\nwarfare capabilities. With the Secretary of    | submarine warfare capabilities. In response,\nDefense giving the services an opportunity to  | the Secretary of Defense provided the services\ncomment on each other's [...]                  | with an [...]\n\nrandom 2: S1-05373, wiki, copy 0.39, numbers 1.00, length ratio 1.17\nsource                                         | rewrite\nAlguno can function as either an adjective or  | Alguno functions as either an adjective or a\npronoun. As a pronoun alguno (and alguna)      | pronoun. As a pronoun, alguno means someone or\nmeans someone/somebody/one, and as a pronoun   | somebody, while algunos means some. Examples\nalgunos (and algunas) means some. For example, | of usage include hay alguno aquí, which\nhay alguno aquí means there is someone/one     | indicates that there is someone here, and hay\nhere, and hay algunos aquí means there are     | algunos aquí, which indicates that there are\nsome here. In this sentence, Fue alguno de     | some people here. In the sentence Fue alguno\nustedes, alguno is a pronoun meaning one (of   | de ustedes, the word alguno functions as a\nyou). As an adjective, algún, alguna, algunos, | pronoun referring to one of the listeners. As\nalgunas mean [...]                             | an [...]\nSource text: FineWeb-Edu (HuggingFaceFW/fineweb-edu, sample-10BT, ODC-By 1.0); rewrites by\n    Qwen/Qwen3.5-2B (Apache-2.0)\n"
+          "text": "qa: 60 chunks in 33 s, 16 dropped (out of tokens)\npeak 5.4 GiB (6.7 GiB reserved) | no thinking text in any of the 120 replies (asserted)\nstyle prompt_sha256  kept  out_of_tokens  len_ratio_out  len_ratio  copy_rate  all_numbers  flagged\n wiki  d81cca47fc41    59              0              1      1.014      0.533        0.627    0.492\n   qa  128e10d6b531    34             16             10      1.048      0.472        0.500    0.500\n\nworst number fidelity: S1-00017, wiki, copy 0.29, numbers 0.00, length ratio 1.08\nsource                                         | rewrite\nI tell them, ‘No, we want you stop and think   | McClelland advises parents to instruct\nabout what you’re doing first.’” Another       | children to pause and consider their actions\nsimple activity to help build the              | before proceeding. A specific activity\nconcentration muscle is a dance game in which  | designed to strengthen concentration involves\nchildren are told they have to dance slowly    | a dance game where children are required to\nwhen the music is fast, and dance quickly when | dance slowly when the music is fast and dance\nthe music is slow. “When kids have to control  | quickly when the music is slow. McClelland\ntheir bodies, it’s more challenging for them,” | noted that when children must control their\nMcClelland said. “They actually have to stop   | bodies, the task becomes more challenging\ntheir movements and [...]                      | because they have to stop [...]\n\nhighest copy rate: S1-00213, wiki, copy 0.99, numbers 1.00, length ratio 0.99\nsource                                         | rewrite\nIf you have a medical concern or issue, please | If you have a medical concern or issue, please\nconsult your personal physician immediately.   | consult your personal physician immediately.\n\nlowest copy rate: S1-00510, wiki, copy 0.17, numbers 0.00, length ratio 0.71\nsource                                         | rewrite\nHow and Why You Should be Making Ghee This     | Ghee is the Sanskrit name for clarified\npost may contain Affiliate Links. Thank you    | butter, defined as butter in which all milk\nfor your support! What is this mysterious ghee | solids have been removed through a process of\nor clarified butter? First, Ghee is the        | simmering and straining. This method leaves\nSanskrit name for clarified butter. It is      | behind a pure combination of fats. Benefits of\nsimply butter that has had all of the milk     | Eating Ghee include suitability for\nsolids removed. It is simmered until all that  | individuals with dairy intolerance or allergy,\nremains after straining is a pure combination  | as the removal of milk proteins eliminates\nof fats. Benefits of Eating Ghee 1. Ghee is    | potential allergens. For instance, the\ngreat for those [...]                          | author's niece, who cannot [...]\n\nrandom 1: S1-04864, wiki, copy 0.48, numbers 0.67, length ratio 1.08\nsource                                         | rewrite\nIn a report to the admirals on budget          | In a report to the admirals regarding budget\ndevelopments, Burke provided some of the       | developments, Admiral Burke offered insights\nflavor of inter-service rivalries over nuclear | into inter-service rivalries concerning\nweapons systems. For the Navy, the key items   | nuclear weapons systems. The Navy's key items\nin the proposed add-on to the fiscal year 1959 | in the proposed addition to the fiscal year\nbudget were acceleration of the Polaris        | 1959 budget included the acceleration of the\nprogram and augmentation of anti-submarine     | Polaris program and the augmentation of anti-\nwarfare capabilities. With the Secretary of    | submarine warfare capabilities. In response,\nDefense giving the services an opportunity to  | the Secretary of Defense provided the services\ncomment on each other's [...]                  | with an [...]\n\nrandom 2: S1-05373, wiki, copy 0.39, numbers 1.00, length ratio 1.17\nsource                                         | rewrite\nAlguno can function as either an adjective or  | Alguno functions as either an adjective or a\npronoun. As a pronoun alguno (and alguna)      | pronoun. As a pronoun, alguno means someone or\nmeans someone/somebody/one, and as a pronoun   | somebody, while algunos means some. Examples\nalgunos (and algunas) means some. For example, | of usage include hay alguno aquí, which\nhay alguno aquí means there is someone/one     | indicates that there is someone here, and hay\nhere, and hay algunos aquí means there are     | algunos aquí, which indicates that there are\nsome here. In this sentence, Fue alguno de     | some people here. In the sentence Fue alguno\nustedes, alguno is a pronoun meaning one (of   | de ustedes, the word alguno functions as a\nyou). As an adjective, algún, alguna, algunos, | pronoun referring to one of the listeners. As\nalgunas mean [...]                             | an [...]\nSource text: FineWeb-Edu (HuggingFaceFW/fineweb-edu, sample-10BT, ODC-By 1.0); rewrites by\n    Qwen/Qwen3.5-2B (Apache-2.0)\n"
         },
         {
           "type": "display_data",
@@ -131,13 +131,13 @@
       ]
     },
     "synthetic-data-corpus-checks": {
-      "code_fingerprint": "sha256:df77b624bec34a94bb84e958339ca4a2d5254ef8d3e0114e8f4c282a8aaa4119",
+      "code_fingerprint": "sha256:7cc7039e77239f7eb695a0bc2e122bf7a627dc713c49cb7f42bc034ee7ab6fb1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         file  chunks  tokens   bytes\n train_src_S1    6376 2097182 9479945\ntrain_reph_S1    6165 1921340 9235499\n train_src_S2    6345 2097442 9489100\ntrain_reph_S2    6116 1913970 9219468\n      val_src    1584  524661 2371105\n     val_reph    1528  470466 2277176\nS1: rewrites / sources = 0.916 in tokens\nS2: rewrites / sources = 0.913 in tokens\nval: rewrites / sources = 0.897 in tokens\nkept and dropped of 14,305 chunks (length: out of tokens; len_ratio: outside (0.5, 1.5)):\ndrop   kept  len_ratio  length\nsplit                         \nS1     6165        180      31\nS2     6116        192      37\nval    1528         47       9\nsplit  kept  copy_rate  all_numbers  len_ratio_median  flag_copy  flag_numbers\n   S1  6165      0.607        0.700             1.000      0.246         0.300\n   S2  6116      0.605        0.701             1.000      0.241         0.299\n  val  1528      0.587        0.690             0.998      0.223         0.310\n"
+          "text": "         file  chunks  tokens   bytes  bytes_per_token\n train_src_S1    6376 2097182 9479945             4.52\ntrain_reph_S1    6165 1921340 9235499             4.81\n train_src_S2    6345 2097442 9489100             4.52\ntrain_reph_S2    6116 1913970 9219468             4.82\n      val_src    1584  524661 2371105             4.52\n     val_reph    1528  470466 2277176             4.84\nS1: rewrites / sources = 0.916 in tokens\nS2: rewrites / sources = 0.913 in tokens\nval: rewrites / sources = 0.897 in tokens\nkept and dropped of 14,305 chunks (length: out of tokens; len_ratio: outside (0.5, 1.5)):\ndrop   kept  len_ratio  length\nsplit                         \nS1     6165        180      31\nS2     6116        192      37\nval    1528         47       9\nsplit  kept  copy_rate  all_numbers  len_ratio_median  flag_copy  flag_numbers\n   S1  6165      0.607        0.700             1.000      0.246         0.300\n   S2  6116      0.605        0.701             1.000      0.241         0.299\n  val  1528      0.587        0.690             0.998      0.223         0.310\n"
         },
         {
           "type": "stream",
@@ -152,12 +152,12 @@
       ]
     },
     "synthetic-data-regen-rephrase": {
-      "code_fingerprint": "sha256:63bade407e9143bac13b597f19fa7263cb8607f3c9c251b079a853987053559b",
+      "code_fingerprint": "sha256:d74fc367232c41f71fe1217269c3f67aeb05ec170db68841b4e4120ea27ca944",
       "kind": "text",
       "outputs": []
     },
     "synthetic-data-judge": {
-      "code_fingerprint": "sha256:8751912a6ef43f85d697119800ea92b10442aa77b72694c5c6f554fbda92d3df",
+      "code_fingerprint": "sha256:236c8e37c3603923c4f547c298423427d30d51c79a468fb5c94e17ff7791cc83",
       "kind": "text",
       "outputs": [
         {
@@ -168,7 +168,7 @@
       ]
     },
     "synthetic-data-bounds": {
-      "code_fingerprint": "sha256:5d1c8ea5189907990802dd61d6a4111ffc4b85089a19528c289abd8a1bbca7eb",
+      "code_fingerprint": "sha256:4fc07769039bee64b1ea96bab064a285ddddf39a5dfa63394fc15d476d06f0b9",
       "kind": "text",
       "outputs": [
         {
@@ -179,7 +179,7 @@
       ]
     },
     "synthetic-data-arms-build": {
-      "code_fingerprint": "sha256:e220c25ef0a34caee8cf208981d16272b9f204c140270a00484f37ec41d231f0",
+      "code_fingerprint": "sha256:9ea9ac123c5230367b26322c0d5adac68d5ccbf1a85315d733203011c65c06ad",
       "kind": "text",
       "outputs": [
         {
@@ -190,18 +190,18 @@
       ]
     },
     "synthetic-data-arms-run": {
-      "code_fingerprint": "sha256:ea0c7b8a02f548772cfb987cc6cfe27a6318d5b62c7110c88d141a475ff63d0b",
+      "code_fingerprint": "sha256:7160787f4266f4e068166ffa8096419f564106564d1bb3b755cfa47e230f3ab1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[at T1 scale (8.1M-parameter proxies, 2^24 tokens per run)] arm A, seed 0, steps 4-16: largest\n    difference from the registered losses 0.0003 nats (bf16; tolerance 0.02)\n"
+          "text": "[at T1 scale (8.1M-parameter proxies, 2^24 tokens per run)] arm A, seed 0, steps 4-16: largest\n    difference from the registered losses 0.0001 nats (bf16; tolerance 0.02)\n"
         }
       ]
     },
     "synthetic-data-arms-analysis": {
-      "code_fingerprint": "sha256:1e51ae491c44a83672a0997239c336de7b234da6987a4678ff503d2d291febf1",
+      "code_fingerprint": "sha256:9037a04f6cd43a589a444e03e993e912ba0d126a95f01ea49937d8ff4ba5ac84",
       "kind": "mixed",
       "outputs": [
         {
@@ -214,17 +214,17 @@
           "mime": "image/svg+xml",
           "asset": "synthetic-data/synthetic-data-arms-analysis-1.svg",
           "bytes": 76354,
-          "sha256": "sha256:cfaa2ec9cea3a61dd9007afaa00f7e26f4fb0e4948524fc77407b1294b43c280"
+          "sha256": "sha256:f1d2b2fc7ae52cb2405ad07c5d399ea34d93ddf11037a6350d1a5c44a0832ba8"
         }
       ]
     },
     "synthetic-data-collapse-def": {
-      "code_fingerprint": "sha256:fba7d768a673df3bfffd530f261fb6ecb04435874b2d85d1a34bf3a367520c34",
+      "code_fingerprint": "sha256:f3b06c9ce2c6e26a6bf24c07462d4db262442a3a858761d4d8d216f8a89a3a69",
       "kind": "text",
       "outputs": []
     },
     "synthetic-data-collapse": {
-      "code_fingerprint": "sha256:5e01cd5451b49f09c7900a71e0fb577aee001ad6ddce2637f64bbcf2b0d1b3ea",
+      "code_fingerprint": "sha256:10c89b8e39d4376b7c82f0a0903aa8d8e6d80f2cf98bde69d0a8536e8dba39ac",
       "kind": "mixed",
       "outputs": [
         {
@@ -242,12 +242,12 @@
           "mime": "image/svg+xml",
           "asset": "synthetic-data/synthetic-data-collapse-1.svg",
           "bytes": 63732,
-          "sha256": "sha256:b9b477a2df1bc37623a2743d6d6e3f6007a52f08cbc9cc1b626c2ee67481afeb"
+          "sha256": "sha256:82d16fbc0dcdb8a15b5b9875748df6ad83828049febadb0c9c97b3c6f803c998"
         }
       ]
     },
     "synthetic-data-manifest": {
-      "code_fingerprint": "sha256:ad22e00e5c207cdd8f2bd846f6d2edce42f7f3e54112adb22d4b8907c16df7de",
+      "code_fingerprint": "sha256:d69cf8bfbe2bd82cea96cc44ae90aaeaeb4f50ff496a208ddd575d674d628495",
       "kind": "text",
       "outputs": [
         {

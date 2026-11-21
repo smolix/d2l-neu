@@ -200,9 +200,14 @@ The study comes in two tiers of the same code, fixed in `MIX_CONFIGS` before
 any run. T1 trains proxies of 4.6 million parameters for $2^{24}$ tokens per
 run and fits on one consumer GPU. T2 trains proxies of 20.3 million
 parameters for $2^{27}$ tokens per run, eight times the tokens on a model four
-times larger, and is packaged as a campaign for a larger machine. The page
-reads the largest run set that is registered; the numbers quoted in the text
-are those of T1, and each such sentence says so.
+times larger, and is packaged as a campaign for a larger machine. Two run sets
+are registered. The T1 run set, 41 runs, is what this page reads, and every
+number quoted in the text comes from it; each such sentence says so. A test
+of the T2 design at half its tokens, run on four RTX 4090s, appears only in
+:numref:`subsec_lm_mix_transfer`, as a first look at a larger proxy. The full
+T2 campaign has not been run. Once its run set is registered, the page reads
+it in place of T1.
+<!-- campaign: lm-mix-runs-t2-v1 -->
 
 ```{.python .input #data-mixtures-configs}
 %%tab pytorch
@@ -254,8 +259,11 @@ MIX_CONFIGS = {  # the study's two tiers, fixed before any run
         compile=True, doremi=dict(eta=1.0, smooth=1e-3))}
 ```
 
-The web domain is FineWeb-Edu, the corpus that
-:numref:`sec_lm_quality_filtering` explained how to build. The chapter splits
+The web domain is FineWeb-Edu as released, the corpus whose recipe
+:numref:`sec_lm_quality_filtering` rebuilt. Its filter is the released
+classifier, trained on the labels of Llama-3-70B and cut at a rounded score of
+3, which keeps about twice as much text as the cut on Qwen3.8-27B's stricter
+scale in that section. The chapter splits
 it into 256 buckets by a hash of each document's id, so the bucket of a
 document depends on nothing but its id, and every section that uses the
 corpus agrees on which document lies where.
@@ -1409,13 +1417,14 @@ for a in ARMS:
         d.mean()) > 2 * sig_t
     rows.append(dict(arm=a, weights=np.round(w['weights'], 3).tolist(),
                      t_dep_mean=T[a].mean(),
-                     diffs=np.round(d, 4).tolist(), real=real))
+                     diffs=np.round(d, 4).tolist(), real=real,
+                     margin=abs(d.mean()) / (2 * sig_t)))  # rule needs > 1
 ARM_TABLE = pd.DataFrame(rows)
 (frac, w_dec), = REC['staged-s0']['stages']
 say(TAG, f'sigma_seed of t_dep bits per byte {sig_t:.4f} (3 uniform '
     'seeds); differences seed-paired with uniform (staged: the weights '
     f'below, then {np.round(w_dec, 3).tolist()} from {frac:.0%} of the '
-    'tokens):')
+    'tokens); margin = |mean difference| / (2 sigma_seed):')
 say(ARM_TABLE.round(4).to_string(index=False))
 ARM_DOMAINS = pd.DataFrame({a: dict(zip(DOMAINS, np.mean([final(
     f'{"uniform-wsd" if a == "uniform" else a}-s{s}') for s in SEEDS], 0)))
@@ -2119,8 +2128,8 @@ the large size.
 ::: {.slide title="Four Times Larger: Rank Correlation 0.70, the Choice Moves to Web"}
 [Transfer]{.kicker}
 
-A half-length run of the larger design: 20.3M parameters, $2^{26}$ tokens,
-46 minutes on four RTX 4090s.
+A test at half the T2 tokens: 20.3M parameters, $2^{26}$ tokens, 46 minutes
+on four RTX 4090s. The full T2 campaign ($2^{27}$ tokens) has not been run.
 
 | | 4.6M proxy | 20.3M proxy |
 |---|---|---|

@@ -61,7 +61,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "code pool not built here: python tools/build_mix_pools.py --config t1; its meta comes from\n    lm-mix-code-meta-v1\ndomain split   tokens  documents  bytes_per_token    tokenizer  here\n   web  pool 20000109      18963            4.534 b1b4b45c36aa  True\n   web   val  1001964        961            4.560 b1b4b45c36aa  True\n  code  pool 20001751       4793            2.394 b1b4b45c36aa False\n  code   val  1001697        293            2.417 b1b4b45c36aa False\n  math  pool 20000497      11750            2.968 b1b4b45c36aa  True\n  math   val  1000748        635            3.002 b1b4b45c36aa  True\nbucket rule: the first 1,000 web documents of the pool lie in buckets 1-7, those of the validation\n    set (up to 1,000) in bucket 8\n"
+          "text": "domain split   tokens  documents  bytes_per_token    tokenizer  here\n   web  pool 20000109      18963            4.534 b1b4b45c36aa  True\n   web   val  1001964        961            4.560 b1b4b45c36aa  True\n  code  pool 20001751       4793            2.394 b1b4b45c36aa  True\n  code   val  1001697        293            2.417 b1b4b45c36aa  True\n  math  pool 20000497      11750            2.968 b1b4b45c36aa  True\n  math   val  1000748        635            3.002 b1b4b45c36aa  True\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bucket rule: the first 1,000 web documents of the pool lie in buckets 1-7, those of the validation\n    set (up to 1,000) in bucket 8\n"
         }
       ]
     },
@@ -84,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-temperature-1.svg",
           "bytes": 52783,
-          "sha256": "sha256:77b6d93b2ae64bfb1f5bef080d41b1be159a743b59da7168883ac0e247a54a53"
+          "sha256": "sha256:5ffee50461e715ac15f242f30e99e57b9b9f8f5dc79c9a9771e0c1cd8077e877"
         }
       ]
     },
@@ -178,7 +183,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-opening-plot-1.svg",
           "bytes": 32398,
-          "sha256": "sha256:3123d3b5f9c8e3a688d637c319e297294183cbb8d7b93db9887800d7ab6d0069"
+          "sha256": "sha256:a4778b95f42292ffb5c09fb3ebfca7e207bc12548b8cc6f6303a8036ad6ebfeb"
         }
       ]
     },
@@ -206,7 +211,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-regression-1.svg",
           "bytes": 73361,
-          "sha256": "sha256:0f7cb1713dfdfcfcbeaae737d55c9beb22c704bcf7f052cd1e19b837147995ef"
+          "sha256": "sha256:7c3fc5ffa0ac63b697fe457f19348526797d8b7c7440d415f4d79af189184463"
         }
       ]
     },
@@ -243,25 +248,25 @@
       ]
     },
     "data-mixtures-arms": {
-      "code_fingerprint": "sha256:e2300749a34c4f02354b14813436fc6343f930c6fbf158ce1df30683d83406bb",
+      "code_fingerprint": "sha256:8d2e91e1a6a44e9134f17fc42e8e53d15ced910df008e119fad2ec000ce8b392",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[at T1 scale] sigma_seed of t_dep bits per byte 0.0051 (3 uniform seeds); differences seed-paired\n    with uniform (staged: the weights below, then [0.339, 0.313, 0.348] from 80% of the tokens):\n    arm               weights  t_dep_mean                       diffs  real\nuniform [0.333, 0.333, 0.333]      1.9900             [0.0, 0.0, 0.0] False\n regsel [0.339, 0.313, 0.348]      1.9827 [-0.0061, -0.0054, -0.0105] False\n doremi [0.167, 0.474, 0.359]      2.0052    [0.0142, 0.0088, 0.0224]  True\n staged [0.333, 0.333, 0.333]      1.9890   [0.0003, -0.0025, -0.001] False\n[at T1 scale] mean bits per byte of each arm over its seeds:\n            web    code    math   t_dep   t_avg\nuniform  1.9156  2.1178  2.2095  1.9900  2.0810\nregsel   1.9086  2.1196  2.1916  1.9827  2.0732\ndoremi   1.9629  2.0158  2.1916  2.0052  2.0568\nstaged   1.9140  2.1211  2.2067  1.9890  2.0806\n"
+          "text": "[at T1 scale] sigma_seed of t_dep bits per byte 0.0051 (3 uniform seeds); differences seed-paired\n    with uniform (staged: the weights below, then [0.339, 0.313, 0.348] from 80% of the tokens);\n    margin = |mean difference| / (2 sigma_seed):\n    arm               weights  t_dep_mean                       diffs  real  margin\nuniform [0.333, 0.333, 0.333]      1.9900             [0.0, 0.0, 0.0] False  0.0000\n regsel [0.339, 0.313, 0.348]      1.9827 [-0.0061, -0.0054, -0.0105] False  0.7225\n doremi [0.167, 0.474, 0.359]      2.0052    [0.0142, 0.0088, 0.0224]  True  1.4870\n staged [0.333, 0.333, 0.333]      1.9890   [0.0003, -0.0025, -0.001] False  0.1014\n[at T1 scale] mean bits per byte of each arm over its seeds:\n            web    code    math   t_dep   t_avg\nuniform  1.9156  2.1178  2.2095  1.9900  2.0810\nregsel   1.9086  2.1196  2.1916  1.9827  2.0732\ndoremi   1.9629  2.0158  2.1916  2.0052  2.0568\nstaged   1.9140  2.1211  2.2067  1.9890  2.0806\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-arms-1.svg",
           "bytes": 27931,
-          "sha256": "sha256:7e9ddc0ace64167428c5fdab7cc4221f8d931afb513de32d836b31310119efc5"
+          "sha256": "sha256:f7aca7853824f4e472111746087ff85e9385dbd7ce194e98cb97a7ce4d78a6f8"
         }
       ]
     },
     "data-mixtures-staged": {
-      "code_fingerprint": "sha256:597e6bc25a6d54428692ab605e5518de51af12b7ee480c55a9a8c443c97f4009",
+      "code_fingerprint": "sha256:ef54fa4297c0577c41f0769198b12d8d8f4596706987a5b14b095bb590fd170f",
       "kind": "mixed",
       "outputs": [
         {
@@ -274,12 +279,12 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-staged-1.svg",
           "bytes": 53256,
-          "sha256": "sha256:abf12f703198ccc0ae10c8cacb4a648b8a7d42c2afc474938c42051afbae02fb"
+          "sha256": "sha256:702a1cfaf137a1953ee91bd6492c122f931a9545cb3c695f57514b86763ee785"
         }
       ]
     },
     "data-mixtures-t2-package": {
-      "code_fingerprint": "sha256:d18192a708a9abb61175e1279931e60017fdc82a79b6fe65a73fce971a8d54df",
+      "code_fingerprint": "sha256:e4f6badf0f48c269599e5a891d1ba0b0dd635e4d6f6e7c0d0048676659c292c0",
       "kind": "text",
       "outputs": [
         {
@@ -290,7 +295,7 @@
       ]
     },
     "data-mixtures-t2-test": {
-      "code_fingerprint": "sha256:55468f40b92de50bbd5afc36f4af81fa34beb615fddfb5ae4b1a3c6e4659d0b5",
+      "code_fingerprint": "sha256:900747821f54eb679cbb36186071fdab64f8b50960835d9fd4fa5815282176a1",
       "kind": "text",
       "outputs": [
         {

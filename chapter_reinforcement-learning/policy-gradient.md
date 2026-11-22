@@ -792,7 +792,7 @@ Comparing $10{,}000$ independent $K = 16$ group estimates against the exact 9-te
 - **Why calm ice first:** At the uniform start, slippery ice attenuates each action's directional control by $1/3$, shrinking $\|\nabla_\theta J\|$ three-fold and requiring $9\times$ larger batches for equal signal-to-noise ratio.
 :::
 
-::: {.slide title="Training Trajectories and the Learned Policy Grid"}
+::: {.slide title="Training Trajectories and the Learned Policy Grid" layout="tight"}
 [From Flat Exploration to a Deterministic Shortest Path]{.kicker}
 
 Training 12 seeds of `Policy.tabular(16, 4)` over 256 updates on calm FrozenLake shows the characteristic S-curve of policy gradient learning:
@@ -802,7 +802,7 @@ Training 12 seeds of `Policy.tabular(16, 4)` over 256 updates on calm FrozenLake
 @!policy-gradient-the-reinforce-estimator-2
 :::
 
-::: {.col .fig}
+::: {.col}
 @!policy-gradient-the-reinforce-estimator-3
 :::
 :::

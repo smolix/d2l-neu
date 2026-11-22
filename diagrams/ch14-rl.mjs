@@ -43,7 +43,7 @@ function delayedCredit() {
 
   const by = 212;
   o += arrow(412, by, 118, by, D.orange.base);
-  o += tx(280, 232, 'Bellman backup propagates discounted credit γ^t · r_T backward', { fs: 13, fw: 700, fill: D.orange.dark });
+  o += tx(280, 232, 'Bellman backup propagates discounted credit γᵀ⁻ᵗ · r_T backward', { fs: 13, fw: 700, fill: D.orange.dark });
   return svg(W, H, o);
 }
 
@@ -421,7 +421,7 @@ function linearSolve() {
   o += tx(416, 108, 'V^π = (I − γ P_π)⁻¹ r_π', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
   o += tx(416, 154, 'Cost: O(|S|³) one-shot LU', { fs: 13, fw: 600, fill: C.ink });
   o += tx(416, 178, 'Machine precision in 1 call', { fs: 13, fw: 600, fill: D.green.dark });
-  o += tx(416, 206, '16×16 Lake: V(s₀) = 0.0078', { mono: true, fs: 12, fill: C.muted });
+  o += tx(416, 206, '4×4 Lake: V(s₀) = 0.0078', { mono: true, fs: 12, fill: C.muted });
   return svg(W, H, o);
 }
 
@@ -436,7 +436,7 @@ function maxExpectationOrder() {
   o += box(20, 18, 248, 220, D.red.tint, D.red.base, 9, 2);
   o += tx(144, 42, 'State Value V*(s)', { fs: 15, fw: 700, fill: D.red.dark });
   o += box(34, 66, 220, 48, '#FFFFFF', D.red.base, 6, 1.8);
-  o += tx(144, 90, "max_a E_{s'}[r + γ V*(s')]", { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(144, 90, "max_a E_{s'}[r + γ V*(s')]", { mono: true, fs: 11.3, fw: 700, fill: C.ink });
   o += tx(144, 140, "max_a sits OUTSIDE E_{s'}", { fs: 13.5, fw: 700, fill: D.red.dark });
   o += tx(144, 168, '1 sample reveals only 1 action', { fs: 12.2, fill: C.ink });
   o += tx(144, 192, 'and cannot compare actions', { fs: 12.2, fill: C.ink });
@@ -444,7 +444,7 @@ function maxExpectationOrder() {
 
   o += box(292, 18, 248, 220, C.lgreen, C.green, 9, 2);
   o += tx(416, 42, 'Action Value Q*(s, a)', { fs: 15, fw: 700, fill: D.green.dark });
-  o += box(306, 66, 220, 48, '#FFFFFF', C.green, 6, 1.8);
+  o += box(300, 66, 232, 48, '#FFFFFF', C.green, 6, 1.8);
   o += tx(416, 90, "E_{s'}[r + γ max_{a'} Q*(s',a')]", { mono: true, fs: 11.3, fw: 700, fill: C.ink });
   o += tx(416, 140, "E_{s'} sits OUTSIDE max_{a'}", { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(416, 168, "Environment samples s' ~ P,", { fs: 12.2, fill: C.ink });
@@ -621,7 +621,7 @@ function greedyLottery() {
   o += tx(280, 20, 'Why Pure Greedy (ε = 0) Locks Onto the First Paying Arm', { fs: 15, fw: 700, fill: C.ink });
 
   const stages = [
-    { x: 16,  t: '1. All Estimates 0', s1: 'μ̂₀ = (0, 0, ..., 0)', s2: 'Tie-breaker picks arm 0', s3: '(true mean μ₀ = 0.50)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 16,  t: '1. All Estimates 0', s1: 'μ̂₀ = (0, 0, ..., 0)', s2: 'Random tie-break: arm 0', s3: '(true mean μ₀ = 0.50)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 198, t: '2. First Win (r = 1)', s1: 'μ̂(0) jumps to 1.00', s2: 'Untried arms sit at 0', s3: '1.00 > 0 (greedy max!)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 380, t: '3. Permanent Lock-In', s1: 'Pulls arm 0 forever!', s2: 'Arm 2 (0.90) untried', s3: 'Loses Δ₀ = 0.40 / pull', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
@@ -631,7 +631,7 @@ function greedyLottery() {
     o += tx(st.x + 82, 98, st.s1, { mono: true, fs: 11.8, fw: 700, fill: C.ink });
     o += tx(st.x + 82, 126, st.s2, { fs: 12, fill: C.ink });
     o += tx(st.x + 82, 152, st.s3, { fs: 12, fw: 600, fill: st.dk });
-    if (i < 2) o += arrow(st.x + 166, 115, st.x + 196, 115, C.gray);
+    if (i < 2) o += arrow(st.x + 165, 115, st.x + 181, 115, C.gray);
   });
 
   o += box(16, 202, 528, 38, N.panel, C.gray, 6, 1.5);
@@ -651,17 +651,31 @@ function thompsonBeta() {
   o += tx(280, 182, '0.5', { mono: true, fs: 11.5, fill: C.muted });
   o += tx(512, 182, '1.0', { mono: true, fs: 11.5, fill: C.muted });
 
-  // Curve 1: Untried Beta(1,1) flat line at y=144
-  o += line(48, 144, 512, 144, C.purple, 2.5, true);
-  o += tx(114, 122, 'Untried: Beta(1, 1)', { fs: 12, fw: 700, fill: D.purple.dark });
+  // True Beta densities on a shared scale: x in [0, 1] -> 48..512 px,
+  // density 1 -> 18.7 px (Beta(19, 3) peaks at 6.0, Beta(4, 4) at 2.2).
+  const fact = (n) => (n <= 1 ? 1 : n * fact(n - 1));
+  const pdfPath = (a, b) => {
+    const norm = fact(a + b - 1) / (fact(a - 1) * fact(b - 1));
+    const pts = [];
+    for (let k = 0; k <= 116; k++) {
+      const x = k / 116;
+      const y = norm * x ** (a - 1) * (1 - x) ** (b - 1);
+      pts.push(`${(48 + 464 * x).toFixed(1)} ${(168 - 18.7 * y).toFixed(1)}`);
+    }
+    return 'M ' + pts.join(' L ');
+  };
 
-  // Curve 2: Mediocre arm Beta(4, 4) bell around 0.5 (x=280)
-  o += `<path d="M 164 168 Q 280 68 396 168" fill="none" stroke="${C.amber}" stroke-width="2.5"/>`;
-  o += tx(280, 96, 'Arm 0: Beta(4, 4)', { fs: 12.2, fw: 700, fill: D.orange.dark });
+  // Curve 1: Untried Beta(1,1), flat at density 1
+  o += line(48, 149.3, 512, 149.3, C.purple, 2.5, true);
+  o += tx(114, 132, 'Untried: Beta(1, 1)', { fs: 12, fw: 700, fill: D.purple.dark });
 
-  // Curve 3: Best arm Beta(19, 3) sharp peak near 0.86 (x=446)
-  o += `<path d="M 380 168 Q 446 32 496 168" fill="none" stroke="${C.green}" stroke-width="2.8"/>`;
-  o += tx(440, 56, 'Arm 2: Beta(19, 3)', { fs: 12.2, fw: 700, fill: D.green.dark });
+  // Curve 2: Mediocre arm Beta(4, 4), centred at 0.5
+  o += `<path d="${pdfPath(4, 4)}" fill="none" stroke="${C.amber}" stroke-width="2.5"/>`;
+  o += tx(280, 110, 'Arm 0: Beta(4, 4)', { fs: 12.2, fw: 700, fill: D.orange.dark });
+
+  // Curve 3: Best arm Beta(19, 3), sharp peak at 0.9
+  o += `<path d="${pdfPath(19, 3)}" fill="none" stroke="${C.green}" stroke-width="2.8"/>`;
+  o += tx(368, 64, 'Arm 2: Beta(19, 3)', { fs: 12.2, fw: 700, fill: D.green.dark });
 
   o += box(24, 204, 512, 42, C.lgreen, C.green, 7, 1.8);
   o += tx(280, 225, 'Sample μ̃_a ~ Beta(1 + w_a, 1 + n_a − w_a) per arm → pull argmax_a μ̃_a', { fs: 12.5, fw: 700, fill: D.green.dark });
@@ -720,7 +734,7 @@ function alvinnShift() {
   o += tx(360, 170, 'Unvisited states stay uniform (1/4 random) → crash!', { fs: 12.5, fw: 700, fill: D.red.dark });
 
   o += box(20, 206, 520, 36, C.lamber, C.amber, 6, 1.5);
-  o += tx(280, 224, 'Calm Lake: 81.8% clone wins 66.0% whether trained on 3 or 1,000 expert runs', { fs: 11.8, fw: 700, fill: C.ink });
+  o += tx(280, 224, 'Calm Lake: a clone 81.8% faithful wins 66.0%, from 3 or 1,000 expert runs', { fs: 11.8, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -821,7 +835,7 @@ function gridVsQuadratic() {
   o += box(36, 86, 216, 68, '#FFFFFF', D.red.base, 6, 1.8);
   o += tx(144, 108, 'Table size = 100^d cells', { mono: true, fs: 12.2, fw: 700, fill: D.red.dark });
   o += tx(144, 134, '7-DOF arm (d=14): 10²⁸ cells', { mono: true, fs: 11.5, fill: C.ink });
-  o += tx(144, 182, 'Humanoid (d=36): 10³⁶ cells', { fs: 12.2, fw: 600, fill: C.ink });
+  o += tx(144, 182, 'Humanoid (d=36): 10⁷² cells', { fs: 12.2, fw: 600, fill: C.ink });
   o += tx(144, 208, "Bellman's Curse of Dimensionality", { fs: 12.2, fw: 700, fill: D.red.dark });
 
   o += box(292, 18, 248, 220, C.lgreen, C.green, 9, 2);
@@ -852,11 +866,14 @@ function lqrLoop() {
   o += tx(419, 86, 'Linear Dynamics Plant', { fs: 14, fw: 700, fill: D.blue.dark });
   o += tx(419, 114, 'x_{t+1} = A x_t + B u_t', { mono: true, fs: 13, fw: 700, fill: C.ink });
 
-  o += arrow(419, 144, 419, 184, C.amber);
+  // state feedback: the plant's x_t returns to the controller
+  o += line(419, 144, 419, 166, C.green);
+  o += line(419, 166, 119, 166, C.green);
+  o += arrow(119, 166, 119, 144, C.green);
+  o += tx(269, 155, 'state x_t fed back', { fs: 12, fw: 700, fill: D.green.dark });
   o += box(136, 186, 316, 52, C.lamber, C.amber, 8, 2);
   o += tx(294, 204, 'Quadratic Stage Cost c(x_t, u_t)', { fs: 13.5, fw: 700, fill: D.orange.dark });
   o += tx(294, 224, 'x_tᵀ Q x_t (state) + u_tᵀ R u_t (effort)', { mono: true, fs: 11.5, fw: 600, fill: C.ink });
-  o += arrow(134, 212, 92, 144, C.green);
   return svg(W, H, o);
 }
 
@@ -1151,7 +1168,7 @@ function prefixAdmissibility() {
 function advantageCentering() {
   const W = 560, H = 256;
   let o = '';
-  o += tx(280, 20, 'Why the Baseline Must Depend on State: Advantage A^π(s, a) = Q^π − V^π', { fs: 14.5, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'Why the Baseline Must Depend on State: at π = π*, A*(s, a) = Q* − V*', { fs: 14.5, fw: 700, fill: C.ink });
 
   o += box(20, 44, 248, 194, C.lblue, C.blue, 9, 2);
   o += tx(144, 68, 'Start Cell s = 0 (V* = 0.180)', { fs: 14, fw: 700, fill: D.blue.dark });
@@ -1266,12 +1283,12 @@ function actorCriticMlps() {
 
   o += box(174, 42, 368, 82, D.purple.tint, C.purple, 8, 2);
   o += tx(358, 64, 'Actor Network π_θ (opt_pi: 1 step / batch)', { fs: 13.5, fw: 700, fill: D.purple.dark });
-  o += tx(358, 88, 'Linear(d, 64) → tanh → Linear(64, 64) → tanh → Head', { mono: true, fs: 11, fill: C.ink });
+  o += tx(358, 88, 'dense d→64 → tanh → dense 64→64 → tanh → head', { mono: true, fs: 11, fill: C.ink });
   o += tx(358, 108, 'Outputs discrete logits or Gaussian (μ_θ(s), log σ)', { fs: 11.8, fw: 600, fill: D.purple.dark });
 
   o += box(174, 142, 368, 82, C.lgreen, C.green, 8, 2);
   o += tx(358, 164, 'Critic Baseline V̂_w (opt_v: 40 steps / batch)', { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(358, 188, 'Linear(d, 64) → tanh → Linear(64, 64) → tanh → Scalar', { mono: true, fs: 11, fill: C.ink });
+  o += tx(358, 188, 'dense d→64 → tanh → dense 64→64 → tanh → scalar', { mono: true, fs: 11, fill: C.ink });
   o += tx(358, 208, '40 MSE passes explain ~99% of return variance!', { fs: 11.8, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }

@@ -1004,17 +1004,17 @@ Because $\hat{A}^{\textrm{GAE}}_t = \delta_t + \gamma\lambda\, \hat{A}^{\textrm{
 @!actor-critic-gae-in-one-old-function-2
 :::
 
-::: {.slide title="Sweeping Lambda on Short-Budget CartPole Runs"}
+::: {.slide title="Sweeping Lambda on Short-Budget CartPole Runs" layout="tight"}
 [Empirical Sweep]{.kicker}
 
 ::: {.cols .vc}
-::: {.col}
+::: {.col .narrow}
 - When using GAE, the critic fits the **$\lambda$-return** $G^\lambda_t = \hat{A}^{\textrm{GAE}}_t + \hat{V}(s_t)$, and the actor uses standardized GAE advantages.
 - On a short budget (50 updates of 4 episodes, 5 seeds), heavily bootstrapped estimators ($\lambda = 0$ and $\lambda = 0.5$) stall at median returns of $150$–$250$.
 - Longer-horizon mixtures ($\lambda \in \{0.9, 0.95, 1.0\}$) reach nearly $500$, because downweighting the young critic's bias outweighs the extra reward noise.
 :::
 
-::: {.col .fig}
+::: {.col}
 @!actor-critic-measuring-the-dial-2
 :::
 :::

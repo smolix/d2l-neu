@@ -981,7 +981,7 @@ $$\nabla_\mu\,\mathbb{E}_{a \sim \mathcal{N}(\mu, \sigma^2)}\big[Q(a)\big] = \un
 
 Comparing the computational graphs shows why on-policy REINFORCE uses the score function while off-policy continuous actor-critics (DDPG, TD3, SAC) use pathwise gradients:
 
-![](../img/mdl-rl-score-vs-pathwise.svg){.nostretch width=95%}
+![](../img/mdl-rl-score-vs-pathwise.svg){.nostretch width=76%}
 
 - **Score function (a):** Treats the environment as a non-differentiable black box returning scalar numbers $R$, so it works for discrete actions and unknown dynamics without bias from a critic's slope.
 - **Pathwise gradient (b):** Differentiates $\partial Q_w / \partial a \cdot \partial a / \partial \theta$ through a learned neural critic $Q_w(s, a)$, trading massive variance reduction for sensitivity to errors in $\partial Q_w / \partial a$.
@@ -1002,7 +1002,7 @@ Applying a single plain-SGD step to raise $\hat{V}_w(s_0)$ at one state $s_0 \in
 
 Plotting a 1D slice of the value function before and after a single $+0.50$ update at $x_0$ illustrates why neural RL is both powerful and fragile:
 
-![](../img/mdl-rl-table-vs-network.svg){.nostretch width=95%}
+![](../img/mdl-rl-table-vs-network.svg){.nostretch width=62%}
 
 - **Generalization (the positive bump around $x_0$):** Experience at $x_0$ immediately informs nearby states without visiting them.
 - **Interference and the deadly triad:** Fitting batches of upright CartPole states alters $\hat{V}_w(s)$ at large tilt angles; when combined with bootstrapping and off-policy data (the **deadly triad** of Tsitsiklis & Van Roy, 1997), global parameter coupling can cause value iteration to diverge.

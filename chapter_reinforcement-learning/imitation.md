@@ -701,7 +701,7 @@ A **demonstration** is an expert trajectory $(s_0, a_0^*, s_1, a_1^*, \ldots)$; 
 - **Narrow state-space tube:** On calm ice, every expert episode follows the exact same 6-cell trajectory $[0, 4, 8, 9, 13, 14]$ (*down, down, right, down, right, right*), leaving frozen cells $1, 2, 3, 6, 10$ completely unvisited.
 :::
 
-::: {.slide title="The Differentiable Policy Container"}
+::: {.slide title="The Differentiable Policy Container" only="pytorch"}
 [Softmax Regression Over State-Action Preferences]{.kicker}
 
 `Policy` wraps a neural or tabular score model with an Adam optimizer and computes $\log \pi_\theta(a \mid s)$ via `log_softmax`:
@@ -716,6 +716,27 @@ class Policy(nn.Module):
     def log_prob(self, obs, act):
         return torch.log_softmax(self.policy(obs), dim=-1) \
                     .gather(-1, act[:, None]).squeeze(-1)
+```
+
+- **Tabular specialization (`Policy.tabular`):** Uses a zero-initialized $16 \times 4$ embedding table of preferences $\theta_{s,a}$ so $\pi_\theta(a \mid s) = \exp(\theta_{s,a}) / \sum_{a'} \exp(\theta_{s,a'})$ starts uniformly at $1/4$.
+:::
+
+::: {.slide title="The Differentiable Policy Container" only="jax"}
+[Softmax Regression Over State-Action Preferences]{.kicker}
+
+`Policy` wraps a neural or tabular score model with an Adam optimizer and computes $\log \pi_\theta(a \mid s)$ via `log_softmax`:
+
+```py
+class Policy(nnx.Module):
+    def __init__(self, policy, lr=1e-2):
+        self.policy = policy
+        self.opt_pi = nnx.Optimizer(policy, d2l.shared_adam(lr),
+                                    wrt=nnx.Param)
+
+    def log_prob(self, obs, act, policy=None):
+        policy = self.policy if policy is None else policy
+        logp = jax.nn.log_softmax(policy(obs), axis=-1)
+        return jnp.take_along_axis(logp, act[:, None], axis=-1).squeeze(-1)
 ```
 
 - **Tabular specialization (`Policy.tabular`):** Uses a zero-initialized $16 \times 4$ embedding table of preferences $\theta_{s,a}$ so $\pi_\theta(a \mid s) = \exp(\theta_{s,a}) / \sum_{a'} \exp(\theta_{s,a'})$ starts uniformly at $1/4$.
@@ -836,7 +857,7 @@ Tracing the deployed clone's state visitation probabilities across the 16 cells 
 :::
 
 ::: {.col .fig}
-![](../img/mdl-rl-compounding-error.svg){.nostretch width=100%}
+![](../img/mdl-rl-compounding-error.svg){.nostretch width=80%}
 :::
 :::
 :::

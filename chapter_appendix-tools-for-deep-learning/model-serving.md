@@ -515,7 +515,7 @@ Every generative request executes two physically distinct computational regimes 
 ::: {.cols .vc}
 ::: {.col}
 - **Qwen3-8B ($8.2\text{B}$) GGUF footprints:** `Q4_K_M` ($\sim 4.9\text{ bits/w}$) takes $\sim 5.2\text{ GB}$, `Q5_K_M` takes $\sim 5.8\text{ GB}$, and `Q8_0` takes $\sim 8.7\text{ GB}$.
-- **Capacity + speed + KV cache:** 4-bit weights nearly double batch-1 decode speed over 8-bit, and leave room on a 16 GB card for a 32K BF16 KV cache ($\sim 4.7\text{ GB}$).
+- **Capacity + speed + KV cache:** 4-bit weights nearly double batch-1 decode speed over 8-bit, and leave room on a 16 GB card for a 32K BF16 KV cache ($\sim 4.8\text{ GB}$).
 :::
 
 ::: {.col .fig .big}
@@ -653,7 +653,7 @@ When requests share an identical leading token sequence (system instructions, fe
 - **Prompt design rule:** Never put a per-second timestamp on line 1 of a system prompt—doing so invalidates the hash chain from block 0! Put volatile metadata at the *end* of the prompt.
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 ![](../img/tools-prefix-cache.svg){.nostretch width=100%}
 :::
 :::
@@ -698,13 +698,23 @@ Test your serving systems arithmetic on these three scenarios:
 
 1. In a retrieval-augmented generation (RAG) service, a shared 2,000-token system prompt is followed by 3 retrieved documents out of a 50-document corpus. Request 1 retrieves `[Doc A, Doc B, Doc C]` and Request 2 retrieves `[Doc B, Doc A, Doc C]`. Under block-hashed prefix caching, which KV blocks does Request 2 reuse, and how can you raise cache hits?
 2. On our H100 serving Qwen3-8B ($n = 2{,}048$ average context, $72\text{ GB}$ memory budget), the service enforces a $\text{TPOT} \le 20\text{ ms}$ SLO ($b_{\max,\text{SLO}} = 167$). Under contiguous `max_model_len=32768` allocation ($b_{\max,\text{mem}} = 11$) vs. PagedAttention ($b_{\max,\text{mem}} = 184$), which constraint binds the batch size in each case?
-3. For speculative decoding with draft cost $c = 0.05$, acceptance rate $\alpha = 0.8$, and $\gamma = 4$ draft tokens, what is the expected speedup over standard batch-1 decoding?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. Request 2 reuses **only the 2,000-token system prompt**! Because `Doc B` sits at position 2001 instead of `Doc A`, every block hash from token 2001 onward changes. Ordering retrieved documents in a **canonical ID order** (`[Doc A, Doc B, Doc C]`) allows full prefix reuse whenever subsets share leading documents, trading off relevance-order positional bias.
 2. Under **contiguous reservation**, **memory capacity binds first** ($11 \ll 167$, leaving the GPU starved). Under **PagedAttention**, memory holds $184$ sequences, so the **$20\text{ ms}$ TPOT latency SLO binds first** at $b = 167$.
+:::
+:::
+
+::: {.slide title="Concept Check: KV Cache, Batching, and Prefix Reuse (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. For speculative decoding with draft cost $c = 0.05$, acceptance rate $\alpha = 0.8$, and $\gamma = 4$ draft tokens, what is the expected speedup over standard batch-1 decoding?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. Expected tokens per round $= (1 - 0.8^5) / (1 - 0.8)$ $= 0.67232 / 0.2 = \mathbf{3.362\text{ tokens}}$ in time $1 + 4(0.05) = \mathbf{1.20\text{ target steps}}$, giving a **$\mathbf{2.80\times}$ speedup**.
 :::
 :::

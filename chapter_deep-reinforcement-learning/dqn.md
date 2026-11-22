@@ -830,20 +830,26 @@ $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w
 :::
 :::
 
-::: {.slide title="Experience Replay: Preallocated Ring Buffer"}
+::: {.slide title="Experience Replay: Preallocated Ring Buffer" layout="tight"}
 [Replay Mechanics]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Circular ring buffer ($200{,}000$ slots):** Overwrites oldest transitions at `ptr = (ptr + 1) % cap` and samples uniform minibatches of $128$ uncorrelated 1-step fragments.
 
-@dqn-replay-and-the-off-policy-licence
 :::
 
 ::: {.col .fig}
 @fig:ch15-drl-ring-buffer
 :::
 :::
+:::
+
+::: {.slide title="Experience Replay: Preallocated Ring Buffer (Code)" layout="tight"}
+[Replay Mechanics]{.kicker}
+
+@dqn-replay-and-the-off-policy-licence
+
 :::
 
 ::: {.slide title="Target Network Regression with Clipped Huber Loss"}
@@ -854,7 +860,7 @@ Between target synchronizations ($w^- \leftarrow w$ every $C = 250$ steps), the 
 @dqn-the-target-network-1
 :::
 
-::: {.slide title="The DQN Training Loop on CartPole"}
+::: {.slide title="The DQN Training Loop on CartPole" layout="tight"}
 [Training Loop]{.kicker}
 
 After a $1{,}000$-step warm-up, `train_dqn` acts $\epsilon$-greedily ($\epsilon: 1.0 \to 0.05$ over $10\text{k}$ steps), updates every `train_freq = 2` steps, and syncs $w^- \leftarrow w$ every `sync_every = 250` steps (or every step when `use_target=False`):

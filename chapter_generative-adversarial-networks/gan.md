@@ -1036,7 +1036,7 @@ In practice, the generator takes a gradient step against a fixed critic $D$. Bot
 $$D_{\textrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q) = 2\,D_{\textrm{KL}}(m \,\|\, p)$$
 
 - **Envelope-theorem identity:** Using $-\log\sigma(D) = -D - \log\sigma(-D)$ at $D = \lambda = \log(p/q)$, the non-saturating generator loss descends the **softened reverse KL** $2\,D_{\textrm{KL}}(m \,\|\, p)$.
-- **Asymmetric penalty:** Spurious samples ($q > 0$ where $p = 0$) incur **infinite** cost ($m\log(m/0) = \infty$), whereas dropped data modes ($q = 0$ where $p > 0$) incur only a small finite cost $p\log\frac{1}{2}$.
+- **Asymmetric penalty:** Spurious samples ($q > 0$ where $p = 0$) incur **infinite** cost ($m\log(m/0) = \infty$), whereas dropped data modes ($q = 0$ where $p > 0$) contribute only a finite integrand $\tfrac{p}{2}\log\tfrac{1}{2}$, so dropping one of two modes costs just $\approx 0.26$ nats.
 :::
 
 ::: {.col .fig}
@@ -1062,14 +1062,20 @@ $$D_{\textrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q) = 2\,D_{\textrm{KL}}(m \,\|
 :::
 :::
 
-::: {.slide title="Implementing Alternating Critic and Generator Steps"}
+::: {.slide title="Implementing Alternating Critic and Generator Steps" layout="tight"}
 [Framework Implementation]{.kicker}
 
 `update_D` detaches generated samples so no gradient flows into `net_G`, while `update_G` recomputes critic scores after `net_D`'s half-step and minimizes the non-saturating cross-entropy with target label $1$:
 
 @gan-the-update-rules-1
 
+:::
+
+::: {.slide title="Implementing Alternating Critic and Generator Steps (cont.)" layout="tight"}
+[Framework Implementation]{.kicker}
+
 @gan-the-update-rules-2
+
 :::
 
 ::: {.slide title="The Alternating GAN Training Loop"}

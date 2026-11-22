@@ -969,14 +969,20 @@ $$\mu_a \mid (w_a, n_a) \sim \mathrm{Beta}(1 + w_a,\; 1 + n_a - w_a)$$
 :::
 :::
 
-::: {.slide title="Comparing All Five Bandit Rules on Log-Log Axes"}
+::: {.slide title="Comparing All Five Bandit Rules on Log-Log Axes" layout="tight"}
 [Empirical Regret Curves]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Plotting cumulative regret on logarithmic axes separates linear-regret rules (slope $1$) from logarithmic-regret rules (bending flat):
 
-@!qlearning-optimism-ucb-and-thompson-sampling
-
 - **Three-fold improvement:** UCB ($\kappa = 0.5$) and Thompson sampling finish with median regret $32$–$37$, roughly one-third of fixed $\epsilon = 0.1$ ($100$) and below annealed $\epsilon_t = 20/t$ ($52$).
+:::
+
+::: {.col}
+@!qlearning-optimism-ucb-and-thompson-sampling
+:::
+:::
 :::
 
 ::: {.slide title="Sensitivity to the UCB Exploration Coefficient"}
@@ -1026,18 +1032,18 @@ Initializing all table entries optimistically to $Q_0(s, a) = 1.0$ (an upper bou
 - **Why optimism marches systematically:** One visit to a zero-reward pair updates $Q(s, a)$ toward $\gamma \max_{a'} Q(s', a') = \gamma < 1$, dropping it below every untried pair ($1.0$) so greedy selection systematically sweeps the chain ($8$ episodes at $N = 20$ vs. $46{,}000$ for random).
 :::
 
-::: {.slide title="Count Bonuses and Coverage on FrozenLake"}
+::: {.slide title="Count Bonuses and Coverage on FrozenLake" layout="tight"}
 [From Deterministic Chains to Stochastic Grids]{.kicker}
-
-On stochastic MDPs, a single visit cannot identify $P(\cdot \mid s, a)$, while on small deterministic grids even random tie-breaking covers most pairs:
 
 ::: {.cols .vc}
 ::: {.col}
+On stochastic MDPs, a single visit cannot identify $P(\cdot \mid s, a)$, while on small deterministic grids even random tie-breaking covers most pairs:
+
 - **Count-based UCB bonuses:** Adding $c / \sqrt{n(s, a)}$ to rewards in Bellman backups drives the agent toward under-visited pairs, achieving $\tilde{O}(\sqrt{T})$ regret (Jin et al., 2018).
 - **Calm FrozenLake coverage:** Because the goal is only 6 moves away, greedy tie-breaking tries $91\%$ of live pairs and solves the calm lake in $20/20$ seeds while winning $90\%$ of training episodes.
 :::
 
-::: {.col .fig}
+::: {.col}
 @!exploration-exploration-in-mdps-3
 :::
 :::

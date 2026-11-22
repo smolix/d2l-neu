@@ -1440,22 +1440,28 @@ Setting $\eta = 0$, $\eta = 1$, or using Ho et al.'s ancestral variance defines 
 :::
 :::
 
-::: {.slide title="First-Order Stride Error on the 2D Mixture"}
+::: {.slide title="First-Order Stride Error on the 2D Mixture" layout="tight"}
 [Exact Predictor Across Step Budgets]{.kicker}
-
-Running DDIM ($\eta = 0, 1$) and the ancestral chain with the exact mixture predictor `pred_exact` from $20{,}000$ starts across $N \in \{5, 10, 20, 50, 200, 1000\}$ steps isolates pure discretization error:
 
 ::: {.cols .vc}
 ::: {.col}
+Running DDIM ($\eta = 0, 1$) and the ancestral chain with the exact mixture predictor `pred_exact` from $20{,}000$ starts across $N \in \{5, 10, 20, 50, 200, 1000\}$ steps isolates pure discretization error:
+
 - **$O(1/N)$ first-order convergence:** The mean $L_2$ distance of $\eta = 0$ samples to the 1,000-step trajectory halves each time $N$ doubles ($0.40$ at $5$ steps $\to$ $0.21$ at $10$ $\to$ $0.04$ at $50$).
 - **Systematic mode contraction at coarse steps:** At $N = 10$ steps, deterministic DDIM ($\eta = 0$) contracts within-mode spread to **$0.38$** (vs. $0.48$ for true data) because holding $\hat{\boldsymbol\epsilon}$ constant across a stride over-removes noise.
-- **Why $\eta = 1$ contracts even more ($0.32$):** Replacing correlated kept noise $\hat{\boldsymbol\epsilon}$ with orthogonal fresh noise $\boldsymbol\xi$ eliminates the positive cross-term with $\hat{\mathbf{x}}_0$, whereas the ancestral chain over-inflates spread to **$0.52$**.
 :::
 
 ::: {.col .fig}
 @!samplers-skipping-steps-on-the-running-example
 :::
 :::
+:::
+
+::: {.slide title="First-Order Stride Error on the 2D Mixture (cont.)" layout="tight"}
+[Exact Predictor Across Step Budgets]{.kicker}
+
+- **Why $\eta = 1$ contracts even more ($0.32$):** Replacing correlated kept noise $\hat{\boldsymbol\epsilon}$ with orthogonal fresh noise $\boldsymbol\xi$ eliminates the positive cross-term with $\hat{\mathbf{x}}_0$, whereas the ancestral chain over-inflates spread to **$0.52$**.
+
 :::
 
 ::: {.slide title="Second-Order Integration: Heun's Predictor–Corrector"}
@@ -1596,8 +1602,8 @@ $$\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar\sigma_{t'} - \bar\sigma_t)\
 ::: {.cols .vc}
 ::: {.col}
 - **Local slope mismatch:** Forward Euler ($t \to t'$) evaluates $\hat{\boldsymbol\epsilon}$ at the lower end $t$, whereas reverse Euler ($t' \to t$) evaluates $\hat{\boldsymbol\epsilon}$ at the upper end $t'$.
-- **Discretization error, not field roughness:** As step count increases $10 \to 50 \to 200$, round-trip MSE drops $100\times$ ($0.036 \to 0.003 \to 0.0003$) at the same rate on our U-Net and on the exact 2D oracle.
-- **Code norm contraction (`std` $\approx 0.8 < 1$):** Forward Euler under-amplifies variance on curved paths.
+- **Discretization error, not field roughness:** As step count increases $10 \to 50 \to 200$, round-trip MSE drops more than $100\times$ ($\approx 0.035 \to \approx 0.003 \to 0.0002$) on our U-Net and on the exact 2D oracle alike.
+- **Code norm contraction (`std` $\approx 0.7$–$0.85 < 1$):** Forward Euler under-amplifies variance on curved paths.
 :::
 
 ::: {.col .fig .big}
@@ -1618,13 +1624,13 @@ Why can we not interpolate linearly ($(1 - u)\mathbf{z}_0 + u\mathbf{z}_1$) betw
 @!samplers-the-latent-code-2
 :::
 
-::: {.slide title="Editing by Partial Noising (SDEdit)"}
+::: {.slide title="Editing by Partial Noising (SDEdit)" layout="tight"}
 [Trading Input Fidelity for Sample Realism]{.kicker}
-
-Given a coarse user sketch or blurred composite $\mathbf{y}$ (here the 10 blurred class-mean silhouettes, $\mathrm{FD} \approx 86$), **SDEdit** (Meng et al., 2022) corrupts $\mathbf{y}$ to an intermediate time $t_0 \in (0, 1]$ and integrates backward from $t_0$ to $0$:
 
 ::: {.cols .vc}
 ::: {.col}
+Given a coarse user sketch or blurred composite $\mathbf{y}$ (here the 10 blurred class-mean silhouettes, $\mathrm{FD} \approx 86$), **SDEdit** (Meng et al., 2022) corrupts $\mathbf{y}$ to an intermediate time $t_0 \in (0, 1]$ and integrates backward from $t_0$ to $0$:
+
 $$\mathbf{x}_{t_0} = \alpha_{t_0}\mathbf{y} + \sigma_{t_0}\boldsymbol\epsilon \implies \hat{\mathbf{x}}_0$$
 
 - **Small $t_0 = 0.3$ (high fidelity, poor realism):** Keeps pixel MSE to the input small ($0.025$), but noise is too weak to erase unnatural blur ($\mathrm{FD} \approx 30$).

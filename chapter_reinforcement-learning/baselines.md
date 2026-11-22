@@ -931,7 +931,7 @@ $$\textrm{Var}\big(X - c(Y - \mathbb{E}[Y])\big) = \textrm{Var}(X) - 2c\,\textrm
 
 On the 1-step Gaussian problem $a \sim \mathcal{N}(\mu, 1)$ at $\mu = 0$ with reward $R(a) = 0.4 + 2e^{-(a-2)^2/2}$ ($\mathbb{E}[R] = 0.92$, exact gradient $0.52$), subtracting a constant baseline $b$ shrinks the estimator spread dramatically:
 
-![](../img/mdl-rl-variance-reduction.svg){.nostretch width=95%}
+![](../img/mdl-rl-variance-reduction.svg){.nostretch width=77%}
 
 - **Over $4\times$ variance reduction:** Raw $R(a)\,a$ has standard deviation $1.34$; subtracting the mean reward $b = 0.92$ halves the spread to $0.69$, and the score-weighted optimum $b^* = \mathbb{E}[R(a)a^2]/\mathbb{E}[a^2] = 1.18$ leaves only $23\%$ of the original variance.
 :::

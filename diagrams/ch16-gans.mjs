@@ -180,7 +180,7 @@ export const diagrams = {
     {
       head: 'Generator Gradient Weights',
       eq: 'w_sat = σ(D),  w_ns = σ(−D)',
-      sub: 'w_Rp = E_p[σ(D(x\') − D(x))] = 1/2',
+      sub: 'w_Rp = E_p[σ(D(x\') − D(x))] = 1/2 at q = p',
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     {
@@ -312,9 +312,9 @@ export const diagrams = {
     o += tx(bx + 16, ceilY - 10, 'Ceiling: log 2 ≈ 0.6931 nats (zero slope!)', { mono: true, fs: 12, fw: 700, fill: D.red.dark, anchor: 'start' });
 
     const bars = [
-      { mu: 'μ=1', val: '0.109', h: 20, col: C.lblue, st: C.blue },
-      { mu: 'μ=2', val: '0.338', h: 61, col: C.lblue, st: C.blue },
-      { mu: 'μ=4', val: '0.632', h: 114, col: C.lamber, st: C.amber },
+      { mu: 'μ=1', val: '0.111', h: 20, col: C.lblue, st: C.blue },
+      { mu: 'μ=2', val: '0.337', h: 61, col: C.lblue, st: C.blue },
+      { mu: 'μ=4', val: '0.633', h: 114, col: C.lamber, st: C.amber },
       { mu: 'μ=8', val: '0.693', h: 125, col: D.red.tint, st: D.red.base },
       { mu: 'Disjoint', val: 'log 2', h: 125, col: D.red.tint, st: D.red.base },
     ];
@@ -347,8 +347,8 @@ export const diagrams = {
       sub: 'p(x) > 0  where  q(x) = 0',
       rows: [
         'Mixture m(x) = p(x)/2',
-        'Integrand: p(x) log(1/2)',
-        'Small finite cost (≈ 0.26 nats)',
+        'Integrand: (p/2) log(1/2), finite',
+        'Total 2 KL(m ‖ p) ≈ 0.26 nats',
       ],
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
@@ -883,7 +883,7 @@ export const diagrams = {
     {
       badge: '2. Critical',
       head: 'γ = 2ℓ\'(0)  (γ = 1 for logistic loss)',
-      sub: 'Repeated real roots ν₁ = ν₂ = −1/2; fastest non-oscillatory decay',
+      sub: 'Double root ν = −ℓ\'(0) (−1/2 for logistic); fastest monotone decay',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
     {
@@ -1042,7 +1042,7 @@ export const diagrams = {
     {
       tag: 'Input Image',
       head: '64×64×3 RGB Batch',
-      eq: 'requires_grad_(True)',
+      eq: 'x tracks gradients',
       note1: 'No BatchNorm coupling!',
       note2: 'D(x_i) depends on x_i',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
@@ -1059,11 +1059,11 @@ export const diagrams = {
       tag: 'Pooled Head & R₁/R₂',
       head: '4×4 Features φ(x)',
       eq: '∇_x (∑ D(x_i))',
-      note1: 'create_graph=True',
+      note1: 'Input gradient kept in graph',
       note2: 'Exact per-sample ‖∇D‖²',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
-    { text: 'Omitting BatchNorm ensures ∇_{x_i} ∑_j D(x_j) = ∇_{x_i} D(x_i) in one autograd call' }
+    { text: 'Omitting BatchNorm ensures ∇_{x_i} ∑_j D(x_j) = ∇_{x_i} D(x_i) in one backward pass' }
   ),
 
   'ch16-gan-nonleaking-aug': () => compare2(
@@ -1136,7 +1136,7 @@ export const diagrams = {
     {
       tag: 'Optimal D*(x, c)',
       head: 'Prior p(c) Cancels!',
-      eq: 'log(p(x|c) / q(x|c))',
+      eq: 'log(p(x|c)/q(x|c))',
       note1: 'p(c) in num & denom',
       note2: 'Slice-wise log ratio!',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -1317,12 +1317,12 @@ export const diagrams = {
 
     o += box(276, 38, 266, 86, D.red.tint, D.red.base, 8, 2);
     o += tx(409, 58, 'Conditional Mean μ(c) = c', { fs: 14, fw: 700, fill: D.red.dark });
-    o += tx(409, 80, 'MSE = 1² + 0.05² = 1.0025', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
+    o += tx(409, 80, 'MSE = 1² + 0.05² = 1.0025', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
     o += tx(409, 102, 'Minimum MSE, 20σ from data!', { fs: 12, fw: 600, fill: D.red.dark });
 
     o += box(276, 138, 266, 86, C.lgreen, C.green, 8, 2);
     o += tx(409, 158, 'On-Band Predictor g(c) = c + 1', { fs: 14, fw: 700, fill: D.green.dark });
-    o += tx(409, 180, 'MSE = ½(0²) + ½(2²) = 2.0025', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
+    o += tx(409, 180, 'MSE = ½(0²) + ½(2²) + 0.05² = 2.0025', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
     o += tx(409, 202, '100% on manifold, 2× higher MSE!', { fs: 12, fw: 600, fill: D.green.dark });
 
     o += box(14, 234, 532, 32, D.purple.tint, C.purple, 6, 1.5);
@@ -1416,7 +1416,7 @@ export const diagrams = {
     {
       tag: 'Teacher-Only Loss',
       head: 'Unique Fixed Point',
-      eq: 'u = E[tanh((u+2ξ)/4)]',
+      eq: 'u=E[tanh((u+2ξ)/4)]',
       note1: 'Contraction |f\'(u)| < 1',
       note2: 'Collapses to u* = 0!',
       fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
@@ -1477,7 +1477,7 @@ export const diagrams = {
       sub: 'Forces decoder to commit to crisp high-frequency textures',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
-    'Every latent diffusion model (Stable Diffusion, Flux) uses a PatchGAN-trained decoder'
+    'Latent diffusion autoencoders (e.g., Stable Diffusion\'s) use PatchGAN-trained decoders'
   ),
 
   'ch16-gan-hifigan-phase': () => compare2(

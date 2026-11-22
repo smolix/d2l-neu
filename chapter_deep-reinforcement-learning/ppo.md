@@ -975,7 +975,7 @@ In our CartPole setup (`ActorCritic.mlp(4, 2)` with 64-unit `tanh` layers and Ad
 :::
 :::
 
-::: {.slide title="Multi-Epoch Actor Updates and Live Diagnostics"}
+::: {.slide title="Multi-Epoch Actor Updates and Live Diagnostics" layout="tight"}
 [The Inner Epoch Loop]{.kicker}
 
 Before each of the `num_epochs` passes over the frozen batch `(obs, act, adv, logp_old)`, `ppo_epochs` logs three diagnostic scalars—the **clip fraction**, the **approximate KL** $\frac{1}{N}\sum (\log \pi_{\theta_{\textrm{old}}} - \log \pi_\theta)$, and the **policy entropy**:
@@ -1056,18 +1056,29 @@ Each outer iteration collects 8 episodes, freezes the standardized GAE advantage
 :::
 :::
 
-::: {.slide title="Ratio Collapse and Effective Sample Size"}
+::: {.slide title="Ratio Collapse and Effective Sample Size" layout="tight"}
 [Importance Weight Diagnostics]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - After 20 passes on the same initial batch, clipped ratios stay clustered near $1.0$, whereas unclipped ratios pile up near $0$ and $2 \approx 1/\pi_{\theta_{\textrm{old}}}(a^*)$.
-- **Effective Sample Size ($N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$):** Clipped PPO retains **$N_{\textrm{eff}}/N \approx 98\%$** of the batch at epoch 20, while unclipped saturation halves $N_{\textrm{eff}}/N$ to the harmonic mean of $\pi_{\theta_{\textrm{old}}}(a^* \mid s) \approx 50\%$!
 :::
 
 ::: {.col .fig}
 @!ppo-how-to-know-your-rl-is-broken-3
+:::
+:::
+:::
 
+::: {.slide title="Ratio Collapse and Effective Sample Size (cont.)" layout="tight"}
+[Importance Weight Diagnostics]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Effective Sample Size ($N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$):** Clipped PPO retains **$N_{\textrm{eff}}/N \approx 98\%$** of the batch at epoch 20, while unclipped saturation halves $N_{\textrm{eff}}/N$ to the harmonic mean of $\pi_{\theta_{\textrm{old}}}(a^* \mid s) \approx 50\%$!
+:::
+
+::: {.col .fig}
 @!ppo-how-to-know-your-rl-is-broken-4
 :::
 :::

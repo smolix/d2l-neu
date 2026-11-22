@@ -1234,7 +1234,7 @@ In path coordinates $\mathbf{x} = \alpha\mathbf{x}_0 + \sigma\boldsymbol\epsilon
 @design-space-edm-s-table
 :::
 
-::: {.slide title="Why White Noise Acts as a Spatial Low-Pass Filter"}
+::: {.slide title="Why White Noise Acts as a Spatial Low-Pass Filter" layout="tight"}
 [Fourier Power Spectrum of Natural Images]{.kicker}
 
 Under an orthonormal 2D Fourier transform (`fft2`), isotropic Gaussian noise $\sigma\boldsymbol\epsilon$ has flat expected power $\sigma^2$ across all spatial frequencies $k$, whereas natural and garment images follow a steep power-law decay:
@@ -1248,7 +1248,7 @@ Under an orthonormal 2D Fourier transform (`fft2`), isotropic Gaussian noise $\s
   - At $\sigma = 0.1$, signal dominates across all $14$ frequency rings.
 :::
 
-::: {.col .fig}
+::: {.col}
 @!design-space-noise-levels-are-scales
 :::
 :::

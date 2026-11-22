@@ -1931,7 +1931,7 @@ Every `d2l.Module`, `d2l.DataModule`, and `d2l.Trainer` inherits from `d2l.Hyper
 :::
 :::
 
-::: {.slide title="2D Optimization Trajectories and Image/Heatmap Grids"}
+::: {.slide title="2D Optimization Trajectories and Image/Heatmap Grids" only="pytorch,jax"}
 [Spatial Visualization]{.kicker}
 
 ::: {.cols .vc}
@@ -1946,7 +1946,7 @@ Every `d2l.Module`, `d2l.DataModule`, and `d2l.Trainer` inherits from `d2l.Hyper
 :::
 :::
 
-::: {.slide title="Statistical Uncertainty Plots: plot_intervals"}
+::: {.slide title="Statistical Uncertainty Plots: plot_intervals" only="pytorch"}
 [Confidence Bars & Bands]{.kicker}
 
 ::: {.cols .vc}
@@ -1961,7 +1961,7 @@ Every `d2l.Module`, `d2l.DataModule`, and `d2l.Trainer` inherits from `d2l.Hyper
 :::
 :::
 
-::: {.slide title="RL Visualization and Multi-Seed Aggregation"}
+::: {.slide title="RL Visualization and Multi-Seed Aggregation" only="pytorch,jax"}
 [RL Chapter Utilities]{.kicker}
 
 ::: {.cols .vc}
@@ -1976,7 +1976,7 @@ Every `d2l.Module`, `d2l.DataModule`, and `d2l.Trainer` inherits from `d2l.Hyper
 :::
 :::
 
-::: {.slide title="Avoiding XLA Recompilation Storms in JAX RL"}
+::: {.slide title="Avoiding XLA Recompilation Storms in JAX RL" only="jax"}
 [JAX JIT Engineering]{.kicker}
 
 ::: {.cols .vc}
@@ -1993,12 +1993,12 @@ $$\text{bucket}(n) = 2^{\max(6, \lceil \log_2 n \rceil)}$$
 :::
 :::
 
-::: {.slide title="FeatureCNN: Perceptual Image Scoring on CIFAR-10"}
+::: {.slide title="FeatureCNN: Perceptual Image Scoring on CIFAR-10" only="pytorch,jax"}
 [Generative Model Evaluation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Verified GPU dataset (`load_cifar10_arrays`):** Verifies SHA-1 checksums, scales pixels to $[-1, 1]$, and places CIFAR-10 directly on the GPU (`NCHW` in PyTorch, `NHWC` in JAX).
+- **Verified GPU dataset (`load_cifar10_arrays`):** Verifies SHA-1 checksums, scales pixels to $[-1, 1]$, and places CIFAR-10 directly on the GPU in the framework's native image layout.
 - **128-D perceptual features (`FeatureCNN`):** Resizes inputs to $32 \times 32$ across 3 Conv-BN-ReLU-MaxPool blocks ($[32, 64, 128]$) and trains for 15 epochs with One-Cycle Adam using isolated local PRNG streams.
 :::
 
@@ -2008,7 +2008,7 @@ $$\text{bucket}(n) = 2^{\max(6, \lceil \log_2 n \rceil)}$$
 :::
 :::
 
-::: {.slide title="Custom VJP Embedding Gradients for Small Vocabularies"}
+::: {.slide title="Custom VJP Embedding Gradients for Small Vocabularies" only="jax"}
 [GPU Kernel Contention Fix]{.kicker}
 
 ::: {.cols .vc}
@@ -2040,7 +2040,7 @@ $$\nabla_{\text{table}} \mathcal{L} = \text{einsum}(\texttt{'...v,...d->vd'}, \m
 :::
 :::
 
-::: {.slide title="Concept Check: d2l Utility Internals"}
+::: {.slide title="Concept Check: d2l Utility Internals" only="jax"}
 [Check Your Understanding]{.kicker}
 
 Test your understanding of the systems and numerical tricks inside `d2l`:
@@ -2055,6 +2055,18 @@ Test your understanding of the systems and numerical tricks inside `d2l`:
 1. During interactive notebook runs, `show(final=False)` updates the live SVG figure after every few minibatches. During the automated book build (`D2L_NB_CAPTURE=1`), skipping intermediate redraws avoids running matplotlib hundreds of times per epoch and ensures the saved notebook output stores only **one clean final figure per board**.
 2. **Only 1 shape (`size = 64`)!** Because `_bucket(n) = 1 << max(6, (n - 1).bit_length())` rounds every $n \in [1, 64]$ to $64$, XLA compiles the update step **only once**. The binary `mask` (1 for real rows $0 \dots n-1$, 0 for padded rows $n \dots 63$) ensures the zero-padded dummy rows do not corrupt the batch mean or TD loss!
 3. Materializing a one-hot tensor $\mathbf{O}$ of shape `(B, T, V)` costs $O(BTV)$ memory and $O(BTVd)$ FLOPs: cheap at $V = 256\text{--}1024$ (where atomic contention is worst), but prohibitive at $V = 32{,}000\text{--}128{,}000$ (where token frequencies are also more dispersed across rows).
+:::
+:::
+
+::: {.slide title="Concept Check: d2l Utility Internals" except="jax"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of the systems and numerical tricks inside `d2l`:
+
+In `d2l.ProgressBoard.show()`, why does the method check `os.environ.get('D2L_NB_CAPTURE') == '1'` and skip rendering whenever `final=False`?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:** During interactive notebook runs, `show(final=False)` updates the live SVG figure after every few minibatches. During the automated book build (`D2L_NB_CAPTURE=1`), skipping intermediate redraws avoids running matplotlib hundreds of times per epoch and ensures the saved notebook output stores only **one clean final figure per board**.
 :::
 :::
 

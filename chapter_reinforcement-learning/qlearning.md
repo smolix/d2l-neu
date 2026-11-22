@@ -816,19 +816,19 @@ Comparing seed 0's learned values $\max_a \hat{Q}(s, a)$ and greedy commands aga
 - **Exact tie resolution at cell 6:** Seed 0 commands *right* (`>`) at cell 6 while value iteration picked *left* (`<`); both actions have identical $Q^*(6, \textrm{left}) = Q^*(6, \textrm{right})$ and $1/3$ hole risk.
 :::
 
-::: {.slide title="Step-Size Schedules on Calm vs. Slippery Ice"}
+::: {.slide title="Step-Size Schedules on Calm vs. Slippery Ice" layout="tight"}
 [Finite-Budget Convergence Dynamics]{.kicker}
-
-On deterministic calm ice, targets have zero transition variance so constant $\alpha = 0.9$ solves the lake in $3{,}500$ steps; on slippery ice, tracking $Q(s_0, \textrm{left})$ against $Q^*(s_0, \textrm{left}) = 0.180$ separates three schedules:
 
 ::: {.cols .vc}
 ::: {.col}
+On deterministic calm ice, targets have zero transition variance so constant $\alpha = 0.9$ solves the lake in $3{,}500$ steps; on slippery ice, tracking $Q(s_0, \textrm{left})$ against $Q^*(s_0, \textrm{left}) = 0.180$ separates three schedules:
+
 - **Constant $\alpha = 0.9$:** Never settles, oscillating wildly between $0.05$ and $0.25+$ as individual slips arrive.
 - **Sample mean $1/(1+n)$:** Stays trapped below $0.03$ because early zero targets retain full $1/n$ weight.
 - **Default $1/(1+0.1n)$:** Decays slowly enough to forget early zeros and settles near $0.180$.
 :::
 
-::: {.col .fig}
+::: {.col}
 @!qlearning-reading-the-curve-honestly-4
 :::
 :::

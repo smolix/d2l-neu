@@ -1241,12 +1241,11 @@ A stack of full-resolution $3 \times 3$ convolutions would need $14$ layers just
 :::
 :::
 
-::: {.slide title="Where Parameters Live vs. Where FLOPs Are Spent"}
+::: {.slide title="Where Parameters Live vs. Where FLOPs Are Spent" layout="tight"}
 [Systems Profile of the U-Net]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@image-diffusion-skips-resolutions-and-the-time-embedding-3
 
 - **Low resolution holds the capacity:** The $14 \times 14$ and $7 \times 7$ stages hold **$83\%$ of the $1.20\text{M}$ parameters** ($38\%$ in the $7 \times 7$ bottleneck for just $8\%$ of the compute).
 - **Full resolution dominates the arithmetic:** The $28 \times 28$ blocks hold $17\%$ of the weights but consume **$59\%$ of the $247\text{M}$ MACs** ($16\times$ more compute per weight than $7 \times 7$).
@@ -1258,6 +1257,13 @@ A stack of full-resolution $3 \times 3$ convolutions would need $14$ layers just
 :::
 :::
 
+::: {.slide title="Where Parameters Live vs. Where FLOPs Are Spent (Code)" layout="tight"}
+[Systems Profile of the U-Net]{.kicker}
+
+@image-diffusion-skips-resolutions-and-the-time-embedding-3
+
+:::
+
 ::: {.slide title="Joint Conditioning via Random Label Dropout"}
 [One Network, Two Vector Fields]{.kicker}
 
@@ -1265,7 +1271,7 @@ A stack of full-resolution $3 \times 3$ convolutions would need $14$ layers just
 ::: {.col}
 $$\mathcal{L}(\boldsymbol\theta) = \mathbb{E}_{\mathbf{x}_0, c, t, \boldsymbol\epsilon}\Big[\big\|\mathbf{u}_{\boldsymbol\theta}\big((1-t)\mathbf{x}_0 + t\boldsymbol\epsilon,\; t,\; \tilde{c}\big) - (\boldsymbol\epsilon - \mathbf{x}_0)\big\|^2\Big]$$
 
-- **Null label token ($\varnothing = 10$):** In every minibatch of $128$ images, $10\%$ of class labels are randomly replaced with $\varnothing = 10$ in `nn.Embedding(11, emb_dim)`.
+- **Null label token ($\varnothing = 10$):** In every minibatch of $128$ images, $10\%$ of class labels are randomly replaced with $\varnothing = 10$, row 11 of an $11 \times$ `emb_dim` label-embedding table.
 - **Shared representation:** One U-Net learns both the class-conditional velocity $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$ ($90\%$) and unconditional velocity $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ ($10\%$) with zero parameter overhead.
 :::
 
@@ -1345,12 +1351,11 @@ $$\mathrm{FD}(p, q) = \underbrace{\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2}_{\t
 @image-diffusion-fr-chet-distance-in-learned-features-2
 :::
 
-::: {.slide title="Calibrating FD: The 1/n Finite-Sample Floor"}
+::: {.slide title="Calibrating FD: The 1/n Finite-Sample Floor" layout="tight"}
 [Why Raw FD Numbers Require a Reference Scale]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@image-diffusion-reading-the-number-1
 
 - **Why disjoint real sets score $> 0$:** Sample covariances fluctuate by $O(1/\sqrt{n})$, creating an upward $+O(1/n)$ bias through $(\boldsymbol\Sigma_p^{1/2}\boldsymbol\Sigma_q\boldsymbol\Sigma_p^{1/2})^{1/2}$.
 - **Two iron laws:** (1) Never compare FD across different sample sizes $n$ (real floor drops $5\times$ from $0.87$ at $n = 1{,}000$ to $0.17$ at $n = 5{,}000$); (2) ignore differences smaller than the multi-seed noise floor ($\pm 0.05$ at $n = 5{,}000$).
@@ -1362,6 +1367,13 @@ $$\mathrm{FD}(p, q) = \underbrace{\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2}_{\t
 :::
 :::
 
+::: {.slide title="Calibrating FD: The 1/n Finite-Sample Floor (Code)" layout="tight"}
+[Why Raw FD Numbers Require a Reference Scale]{.kicker}
+
+@image-diffusion-reading-the-number-1
+
+:::
+
 ::: {.slide title="Paired Ablation: EMA Weights vs. 1,000-Step Chain"}
 [Measuring EMA and Step Count on Shared Noise]{.kicker}
 
@@ -1369,8 +1381,8 @@ Using three shared draws of $5{,}000$ initial noise tensors, we compare 50 Euler
 
 @image-diffusion-reading-the-number-3
 
-- **EMA provides a massive $+0.45$ to $+0.55$ FD win:** In every draw, raw final weights score $1.25$–$1.38$ vs. $0.80$–$0.83$ for EMA, while EMA varies by only $\pm 0.02$ across noise seeds.
-- **1,000-step ancestral chain gains $0.13$–$0.19$ FD:** Achieves $\approx 0.65$ FD at **$20\times$ the compute cost** of 50 Euler steps (motivating the fast higher-order solvers of §17.5).
+- **EMA provides a massive $\approx +0.5$ FD win:** In every draw, raw final weights score $\approx 1.3$–$1.5$ vs. $\approx 0.8$ for EMA, while EMA varies by only $\pm 0.02$ across noise seeds.
+- **1,000-step ancestral chain gains $\approx 0.15$ FD:** Achieves $\approx 0.65$ FD at **$20\times$ the compute cost** of 50 Euler steps (motivating the fast higher-order solvers of §17.5).
 :::
 
 ::: {.slide title="Bayes' Rule on Scores and Classifier Guidance"}
@@ -1438,12 +1450,18 @@ Generating $5{,}000$ images from shared initial noise across seven guidance scal
 :::
 :::
 
-::: {.slide title="Visualizing Unconditional (γ = 0) vs. Guided (γ = 4)"}
+::: {.slide title="Visualizing Unconditional (γ = 0) vs. Guided (γ = 4)" layout="tight"}
 [Canonical Prototypes vs. Ambiguous Samples]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Comparing the $40$ samples generated from the exact same initial noise at $\gamma = 0.0$ (top) and $\gamma = 4.0$ (bottom) shows why human users often prefer high $\gamma$ despite worse FD:
+:::
 
+::: {.col .fig}
 @!image-diffusion-classifier-free-guidance-2
+:::
+:::
 :::
 
 ::: {.slide title="Diagnosing the Unconditional (γ = 0) FD Degradation"}

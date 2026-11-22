@@ -1078,13 +1078,13 @@ $$W_1(p, q) = \sup_{\|T\|_{\mathrm{Lip}} \le 1} \Big\{ \mathbb{E}_{x \sim p}\big
 :::
 :::
 
-::: {.slide title="Population Divergence Slope vs. Separation"}
+::: {.slide title="Population Divergence Slope vs. Separation" layout="tight"}
 [Gradients Far from the Data]{.kicker}
-
-Comparing 1D unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ across separation $\mu > 0$ shows how each population divergence responds when distributions separate:
 
 ::: {.cols .vc}
 ::: {.col}
+Comparing 1D unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ across separation $\mu > 0$ shows how each population divergence responds when distributions separate:
+
 - **Wasserstein-1 ($W_1(p, q) = \mu$):** Maintains a constant unit derivative $\frac{d}{d\mu}W_1 = 1$ at every separation $\mu$.
 - **Gaussian-kernel $\mathrm{MMD}^2$ (bandwidth $s = 4$):**
   $$\mathrm{MMD}^2(\mu) = \frac{2s}{\sqrt{s^2 + 2}}\!\left(1 - \exp\!\left(-\frac{\mu^2}{2(s^2 + 2)}\right)\right)$$
@@ -1092,7 +1092,7 @@ Comparing 1D unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N
 - **Jensen–Shannon $\mathrm{JS}(p, q)$:** Its slope drops from $0.20$ at $\mu = 1$ to $0.0013$ at $\mu = 7$ and $1.5 \times 10^{-22}$ at $\mu = 20$.
 :::
 
-::: {.col .fig}
+::: {.col}
 @!objectives-divergence-against-separation
 :::
 :::
@@ -1108,7 +1108,7 @@ Comparing 1D unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N
 - **Right (MMD witness $w(x) = \mathbb{E}_p[k(x, \cdot)] - \mathbb{E}_q[k(x, \cdot)]$):** A smooth difference of kernel bumps whose tail slopes toward $p$ over distances comparable to the bandwidth $s$.
 :::
 
-::: {.slide title="Implementing MMD and WGAN-GP Gradient Penalties"}
+::: {.slide title="Implementing MMD and WGAN-GP Gradient Penalties" layout="tight"}
 [Code Primitives]{.kicker}
 
 `mmd2_median` sets the RBF bandwidth to the median pairwise distance of the pooled minibatch, while `gradient_penalty` evaluates either the two-sided WGAN-GP penalty $(|D'(x)| - 1)^2$ or the one-sided Lipschitz penalty $\max(0, |D'(x)| - 1)^2$ at random interpolants $\tilde{x} = uX + (1 - u)X'$:
@@ -1139,19 +1139,19 @@ Both $W_1$ arms pull the generator to $|\theta| < 0.5$ near step $500$, yet ever
 - **One-sided remedy:** Penalizing $\gamma\max(0, |D'| - 1)^2$ charges nothing when $|D'| \le 1$, allowing the critic slope to pass freely through zero as $q$ reaches $p$.
 :::
 
-::: {.slide title="Comparing Five Objectives on a 2D Gaussian Mixture"}
+::: {.slide title="Comparing Five Objectives on a 2D Gaussian Mixture" layout="tight"}
 [Overlapping Supports Benchmark]{.kicker}
-
-When the initial generator already overlaps the data ($\mathrm{JS}(p, q_0) = 0.529$ nats on our 3-component 2D Gaussian mixture), we compare five objectives over $6{,}000$ alternating steps across three seeds each:
 
 ::: {.cols .vc}
 ::: {.col}
+When the initial generator already overlaps the data ($\mathrm{JS}(p, q_0) = 0.529$ nats on our 3-component 2D Gaussian mixture), we compare five objectives over $6{,}000$ alternating steps across three seeds each:
+
 - **All five non-saturating objectives converge:** Every arm reduces $\mathrm{JS}(p, q_t)$ from $0.529$ nats to a few thousandths of a nat or less.
 - **Direct multi-bandwidth MMD ($s \in \{0.5, 1, 2\}$):** Needs no critic network and achieves the tightest final fit ($0.0001$ nats).
 - **Smooth links vs. hinge step link:** Logistic, least squares, and squared hinge all reach $\le 0.0024$ nats, whereas the discontinuous hinge link ($\operatorname{sign}\lambda$) plateaus slightly higher ($0.003\text{--}0.007$ nats).
 :::
 
-::: {.col .fig}
+::: {.col}
 @!objectives-one-testbed-four-losses-6
 :::
 :::
@@ -1183,6 +1183,13 @@ Test your understanding of adversarial objectives and integral probability metri
 | **Logistic (Non-Sat.)** | $\operatorname{softplus}(-D(x)) + \operatorname{softplus}(D(x'))$ | $\mathrm{JS}(p, q)$ ($G$ descends $2\,D_{\textrm{KL}}(m \,\|\, p)$) | $\lambda(x) = \log \frac{p(x)}{q(x)}$ | Population $\mathrm{JS}$ saturates; neural critic + $w_{\textrm{ns}}$ moves $G$ |
 | **Least Squares (LSGAN)** | $\frac{1}{2}(D(x) - 1)^2 + \frac{1}{2}D(x')^2$ | $\frac{1}{8}\int \frac{(p - q)^2}{p + q}$ ($\frac{1}{4}\chi^2(p \,\|\, m)$) | $\sigma(\lambda(x)) = \frac{p(x)}{p(x) + q(x)}$ | Bounded link $\sigma(\lambda) \in (0, 1)$ flattens far in tails |
 | **Hinge / Squared Hinge** | $\max(0, 1 - D(x)) + \max(0, 1 + D(x'))$ | $\mathrm{TV}(p, q)$ (or $\chi^2(p \,\|\, m)$ for sq. hinge) | $\operatorname{sign}(\lambda(x))$ (or $\tanh \frac{\lambda}{2}$) | Linear slope out to $2/\kappa$ when paired with $\kappa$-Lipschitz critic |
+:::
+
+::: {.slide title="Summary: Adversarial Objectives and Divergences (cont.)"}
+[Key Takeaways]{.kicker}
+
+| Objective Family | Critic Loss / Constraint | Population Discrepancy | Optimal Critic $D^\star$ | Behavior on Separated Supports |
+| :--- | :--- | :--- | :--- | :--- |
 | **$f$-GAN Dual Bound** | $-\mathbb{E}_p[T(x)] + \mathbb{E}_q[f^*(T(x'))]$ | Any $f$-divergence $D_f(p \,\|\, q)$ | $f'(p(x)/q(x))$ | Can target forward KL ($1 + \lambda$), but high estimator variance |
 | **Kernel MMD** | Closed-form U-statistic (no critic net) | $\mathrm{MMD}^2(p, q)$ in RKHS ball | Witness $\mathbb{E}_p[k(x, \cdot)] - \mathbb{E}_q[k(x, \cdot)]$ | $O(n^{-1/2})$ in any dimension; strong slope up to bandwidth $s$ |
 | **Wasserstein-1 ($W_1$)** | $\mathbb{E}_q[T(x')] - \mathbb{E}_p[T(x)]$ + Lipschitz reg. | $W_1(p, q)$ (Earth Mover's distance) | Kantorovich potential ($\|\nabla T^\star\| = 1$) | Unit slope at all distances; two-sided GP overshoots at $q = p$ |

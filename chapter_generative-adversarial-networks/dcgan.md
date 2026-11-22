@@ -1205,13 +1205,19 @@ $$n_{\textrm{out}} = s(n - 1) + k - 2p$$
 ::: {.slide title="The 2015 DCGAN Architecture and Stabilizers"}
 [Architectural Conventions]{.kicker}
 
-![](../img/mdl-gan-dcgan.svg){.nostretch width=100%}
-
 Radford, Metz, and Chintala (2015) stabilized the unpenalized non-saturating logistic loss via five architectural conventions:
 
+::: {.cols .vc}
+::: {.col}
 1. **All-convolutional hierarchy:** Replace all pooling and fully connected layers with transposed convolutions in $G$ ($512 \to 256 \to 128 \to 64 \to 3$) and strided convolutions in $D$.
 2. **Batch normalization:** Normalize activations after every convolution *except* the generator output layer and the discriminator input block.
 3. **Activations, initialization & Adam:** ReLU + output $\tanh$ in $G$; leaky ReLU ($\text{slope} = 0.2$) throughout $D$; weights drawn from $\mathcal{N}(0, 0.02^2)$; Adam with reduced momentum $\beta_1 = 0.5$.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-gan-dcgan.svg){.nostretch width=100%}
+:::
+:::
 :::
 
 ::: {.slide title="Implementing DCGAN Generator and Critic Blocks"}
@@ -1269,22 +1275,27 @@ Training DCGAN for $20$ epochs ($2{,}840$ steps at batch size $256$, $\text{lr} 
 ::: {.slide title="Why Strip BatchNorm? The R3GAN Minimalist Backbone"}
 [From Heuristics to Penalized Objectives]{.kicker}
 
-![](../img/mdl-gan-backbone.svg){.nostretch width=100%}
-
+::: {.cols .vc}
+::: {.col}
 - **Why remove BatchNorm for $R_1 + R_2$?** Batch normalization couples all samples in a minibatch, which invalidates the independent per-sample input gradients $\nabla_{x_i} D(x_i)$ penalized by $R_1$ and $R_2$!
 - **Minimalist normalization-free architecture (inspired by R3GAN, Huang et al., 2024):**
   - **Bilinear resampling + $3 \times 3$ convolutions:** Replaces $4 \times 4$ transposed/strided convolutions to avoid checkerboard artifacts.
   - **No normalization layers & no output $\tanh$:** Both $G$ ($2.8\text{M}$ params, starting from a learned $4 \times 4 \times 128$ constant + projected $z$) and $D$ ($1.6\text{M}$ params) use leaky ReLU ($\text{slope} = 0.2$) with He fan-in initialization $\mathrm{Var}(w) = \frac{2}{(1 + 0.2^2)\,n_{\mathrm{in}}}$.
 :::
 
-::: {.slide title="Implementing the Normalization-Free Generator"}
+::: {.col .fig}
+![](../img/mdl-gan-backbone.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Implementing the Normalization-Free Generator" layout="tight"}
 [Code Architecture]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **4×4 stem + 4 bilinear stages:** Concatenates a learned $4 \times 4 \times 128$ constant tensor with a projected latent vector and upsamples via bilinear resampling + $3 \times 3$ convolutions + leaky ReLU:
 
-@dcgan-a-modern-minimal-backbone-1
 :::
 
 ::: {.col .fig}
@@ -1293,20 +1304,33 @@ Training DCGAN for $20$ epochs ($2{,}840$ steps at batch size $256$, $\text{lr} 
 :::
 :::
 
-::: {.slide title="Implementing the Normalization-Free Critic"}
+::: {.slide title="Implementing the Normalization-Free Generator (Code)" layout="tight"}
+[Code Architecture]{.kicker}
+
+@dcgan-a-modern-minimal-backbone-1
+
+:::
+
+::: {.slide title="Implementing the Normalization-Free Critic" layout="tight"}
 [Code Architecture]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Independent batch rows:** Mirrors $G$ with four stages of $3 \times 3$ convolution, leaky ReLU, and bilinear downsampling down to a $4 \times 4$ feature map $\phi(x)$ without BatchNorm:
 
-@dcgan-a-modern-minimal-backbone-2
 :::
 
 ::: {.col .fig}
 @fig:ch16-gan-normfree-critic
 :::
 :::
+:::
+
+::: {.slide title="Implementing the Normalization-Free Critic (Code)" layout="tight"}
+[Code Architecture]{.kicker}
+
+@-dcgan-a-modern-minimal-backbone-2
+
 :::
 
 ::: {.slide title="A Controlled Three-Arm Objective Ablation"}
@@ -1323,15 +1347,21 @@ We train the normalization-free backbone three times from identical initial weig
 @!dcgan-loss-a-b-on-one-backbone-2
 :::
 
-::: {.slide title="Critic Steepness, Pair Accuracy, and Rank Weights"}
+::: {.slide title="Critic Steepness, Pair Accuracy, and Rank Weights" layout="tight"}
 [Training Dynamics Traces]{.kicker}
 
 Logging $\mathbb{E}_x[\|\nabla_x D(x)\|^2]$, pairwise ranking accuracy $\hat{P}(D(x) > D(x'))$, and the relativistic rank weight $w_{\mathrm{Rp}} = \mathbb{E}[\sigma(D(x') - D(x))]$ every $250$ steps explains why the unpenalized run collapses:
 
-@!dcgan-loss-a-b-on-one-backbone-4
-
+::: {.cols .vc}
+::: {.col}
 - **Critic steepness ($\mathbb{E}_x\|\nabla_x D\|^2$, left):** Without $R_1 + R_2$, critic gradient norm climbs $100\times$ higher ($1\text{--}8$ vs. $\sim 0.01$ for both penalized arms).
 - **Accuracy vs. rank weight (middle & right):** All three critics order $> 90\%$ of pairs correctly, so ranking accuracy alone does not warn of collapse! However, the unpenalized critic drives $w_{\mathrm{Rp}}$ below $0.15$, whereas penalized critics maintain a small logit margin ($w_{\mathrm{Rp}} \in [0.25, 0.40]$, median difference $\approx 0.7$).
+:::
+
+::: {.col}
+@!dcgan-loss-a-b-on-one-backbone-4
+:::
+:::
 :::
 
 ::: {.slide title="Visual Comparison: Penalties Prevent Collapse"}
@@ -1344,45 +1374,43 @@ Evaluating all four EMA generators on the same $64$ latent vectors `z_show`:
 - Without BatchNorm or $R_1 + R_2$, the unpenalized `NS` arm collapses completely to a uniform gray texture, whereas both penalized arms (`NS + R1 + R2` and `RpGAN + R1 + R2`) produce crisp, diverse sprite silhouettes on clean white backgrounds.
 :::
 
-::: {.slide title="Feature-Space Evaluation: FID and KID"}
+::: {.slide title="Feature-Space Evaluation: FID and KID" layout="tight"}
 [Quantitative Quality Metrics]{.kicker}
 
 To compare generators quantitatively, we embed real and generated images through a pretrained feature extractor $\phi(x) \in \mathbb{R}^d$ and compute closed-form distances between the feature distributions:
 
-::: {.cols .vc}
-::: {.col}
 - **Fréchet Inception Distance (FID; Heusel et al., 2017):** Fits Gaussians $\mathcal{N}(\mu_p, \Sigma_p)$ and $\mathcal{N}(\mu_q, \Sigma_q)$ to the real and generated features and computes their squared $W_2$ distance:
   $$\mathrm{FID} = \|\mu_p - \mu_q\|^2 + \operatorname{tr}\!\Big(\Sigma_p + \Sigma_q - 2\big(\Sigma_p^{1/2}\Sigma_q\Sigma_p^{1/2}\big)^{1/2}\Big)$$
   Captures first two moments; exhibits positive $O(1/n)$ finite-sample covariance bias.
 - **Kernel Inception Distance (KID; Bińkowski et al., 2018):** Unbiased $\widehat{\mathrm{MMD}}^2$ with cubic polynomial kernel $k(u, v) = (u^\top v / d + 1)^3$ (compares up to 3rd moments; unbiased at any sample size $n$).
 :::
 
-::: {.col .fig}
+::: {.slide title="Feature-Space Evaluation: FID and KID (Code)" layout="tight"}
+[Quantitative Quality Metrics]{.kicker}
+
 @dcgan-measuring-sample-quality
-:::
-:::
+
 :::
 
-::: {.slide title="Fidelity vs. Coverage: k-NN Precision and Recall"}
+::: {.slide title="Fidelity vs. Coverage: k-NN Precision and Recall" layout="tight"}
 [k-NN Support Estimation]{.kicker}
 
 A single distance like FID or KID conflates **poor sample fidelity** (unrealistic artifacts) with **poor mode coverage** (mode dropping). Kynkäänniemi et al. (2019) separate them using $K$-nearest-neighbor balls ($K = 3$) in feature space:
 
-::: {.cols .vc}
-::: {.col}
 - Around each real feature $\phi(x_i)$, draw the Euclidean ball $B(\phi(x_i), r_i)$ reaching its $K$-th nearest real neighbor; define $B(\phi(x'_j), r'_j)$ analogously among generated features:
   $$\mathrm{precision} = \frac{1}{n_q}\sum_{j=1}^{n_q}\mathbb{1}\!\left[\phi(x'_j) \in \bigcup_i B\big(\phi(x_i), r_i\big)\right]$$
   $$\mathrm{recall} = \frac{1}{n_p}\sum_{i=1}^{n_p}\mathbb{1}\!\left[\phi(x_i) \in \bigcup_j B\big(\phi(x'_j), r'_j\big)\right]$$
 - When a generator collapses to one output, its radii $r'_j \to 0$, driving **$\mathrm{recall} \to 0$**.
 :::
 
-::: {.col .fig}
+::: {.slide title="Fidelity vs. Coverage: k-NN Precision and Recall (Code)" layout="tight"}
+[k-NN Support Estimation]{.kicker}
+
 @dcgan-precision-and-recall
-:::
-:::
+
 :::
 
-::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor"}
+::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor" layout="tight"}
 [Scoring 4,059 Sprites]{.kicker}
 
 Using 128D features from our 3-block CIFAR-10 classifier `FeatureCNN` ($64 \times 64$ sprites average-pooled to $32 \times 32$), we score $n = 4{,}059$ generated samples against the $4{,}059$ held-out sprites across two independent latent draws:
@@ -1434,13 +1462,23 @@ Test your understanding of convolutional GAN architectures and evaluation metric
 
 1. **Resolution scaling of $\gamma$:** Suppose a $64 \times 64$ image $x$ is upsampled to $128 \times 128$ by replicating each pixel into a $2 \times 2$ block ($Ux$), and a $128 \times 128$ critic $D'(Ux) = D(x)$ averages each $2 \times 2$ block back. How does $\|\nabla D'(Ux)\|^2$ compare to $\|\nabla D(x)\|^2$, and how must $\gamma'$ scale with resolution $r$ to keep the penalty invariant?
 2. **Diagnosing failure modes from Precision and Recall:** Generator A achieves $(\text{precision}, \text{recall}) = (0.78, 0.01)$, whereas Generator B achieves $(\text{precision}, \text{recall}) = (0.12, 0.68)$. Which failure mode does each generator exhibit?
-3. **Leaking horizontal flips:** Suppose a fraction $\alpha$ of true sprites face left with no right-facing counterpart, while all other sprites are mirror-symmetric. If only real training images are flipped with probability $\frac{1}{2}$, what fraction of generated samples from an optimal generator will face right?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Because each pixel of $x$ is split across $4$ pixels of $Ux$ with weight $\frac{1}{4}$ each, $\|\nabla D'(Ux)\|^2 = 4 \cdot \frac{1}{16}\|\nabla D(x)\|^2$ $= \mathbf{\frac{1}{4}\|\nabla D(x)\|^2}$. To keep the penalty invariant when resolution doubles, the weight must quadrupled: **$\gamma' = 4\gamma \propto r^2$**.
+1. Because each pixel of $x$ is split across $4$ pixels of $Ux$ with weight $\frac{1}{4}$ each, $\|\nabla D'(Ux)\|^2 = 4 \cdot \frac{1}{16}\|\nabla D(x)\|^2$ $= \mathbf{\frac{1}{4}\|\nabla D(x)\|^2}$. To keep the penalty invariant when resolution doubles, the weight must quadruple: **$\gamma' = 4\gamma \propto r^2$**.
 2. **Generator A** has high precision but near-zero recall: it suffers from **mode collapse** (emitting realistic samples from only one or a few modes). **Generator B** has low precision but high recall: it covers the data support broadly but produces many **low-fidelity / noisy outlier images**.
+:::
+:::
+
+::: {.slide title="Concept Check: Convolutions, Metrics, and Flips (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Leaking horizontal flips:** Suppose a fraction $\alpha$ of true sprites face left with no right-facing counterpart, while all other sprites are mirror-symmetric. If only real training images are flipped with probability $\frac{1}{2}$, what fraction of generated samples from an optimal generator will face right?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. The generator matches the flip-symmetrized distribution $T_{1/2}p$, in which half of the asymmetric left-facing mass $\alpha$ is flipped to face right—so a fraction **$\alpha / 2$** of generated samples will face right.
 :::
 :::

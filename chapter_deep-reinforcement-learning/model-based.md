@@ -777,16 +777,22 @@ At step 100 ($\vartheta = -160.2^\circ$, $\dot\vartheta = 5.69\text{ rad/s}$), t
 :::
 :::
 
-::: {.slide title="Autoregressive Rollouts and Compounding Model Error"}
+::: {.slide title="Autoregressive Rollouts and Compounding Model Error" layout="tight"}
 [The Horizon Bottleneck]{.kicker}
 
 To evaluate a candidate sequence of $n = 25$ torques, the model must roll out **autoregressively** (open-loop), feeding each predicted state $\hat{s}_{t+1}$ back in as the input for step $t+1$:
 
 @model-based-one-step-by-hand-1
 
+:::
+
+::: {.slide title="Autoregressive Rollouts and Compounding Model Error (cont.)" layout="tight"}
+[The Horizon Bottleneck]{.kicker}
+
 @!model-based-compounding-error-2
 
 - **Why Errors Compound:** The model was trained only on true states, never on its own slightly perturbed predictions; a small angle error alters the predicted gravitational torque, which perturbs velocity and snowballs over $k = 10 \to 25$ steps.
+
 :::
 
 ::: {.slide title="Random Shooting: Ranking Candidates in Imagination"}
@@ -889,20 +895,26 @@ Why did seeds 3 and 4 score $\sim -1{,}500$ after the first random episode (200 
 :::
 :::
 
-::: {.slide title="Distilling Search Labels into an Actor Network"}
+::: {.slide title="Distilling Search Labels into an Actor Network" layout="tight"}
 [Policy Distillation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Amortizing search into $\pi_\theta$:** Regress the actor's deterministic mean $c\tanh\mu_\theta(s)$ onto the 500-candidate search actions `improve(model, actor, obs)` via $L_2$ loss (`distill`).
 
-@model-based-distillation-into-the-actor-1
 :::
 
 ::: {.col .fig}
 @fig:ch15-drl-search-distillation
 :::
 :::
+:::
+
+::: {.slide title="Distilling Search Labels into an Actor Network (Code)" layout="tight"}
+[Policy Distillation]{.kicker}
+
+@model-based-distillation-into-the-actor-1
+
 :::
 
 ::: {.slide title="Iterated Search and Distillation (AlphaZero Loop)"}

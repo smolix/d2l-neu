@@ -359,7 +359,7 @@ Ecosystem: Pretrained Models, Datasets, Leaderboards, and Supply-Chain Safety<br
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Discovery & domain selection:** Out of 100,000+ public checkpoints, shortlist candidates and verify whether leaderboard scores hold on your domain data.
+- **1. Discovery & domain selection:** Out of 3M+ public checkpoints, shortlist candidates and verify whether leaderboard scores hold on your domain data.
 - **2. Bitwise identity & reproducibility:** Lock the exact 40-character Git commit SHA of weights, config, and tokenizer so runs stay identical six months later.
 - **3. Security & legal compliance:** Use `safetensors` to prevent pickle RCE exploits and verify the commit's license terms before deployment.
 :::
@@ -499,7 +499,7 @@ A "model" is never just a weight tensor file—reproducing its predictions requi
 :::
 :::
 
-::: {.slide title="Pinning Immutable Revisions and Recording a Manifest"}
+::: {.slide title="Pinning Immutable Revisions and Recording a Manifest" layout="tight"}
 [Dependency Locking]{.kicker}
 
 Hub repositories are Git repositories: the `main` branch, a version tag (`v1.0`), or a pull-request ref (`refs/pr/3`) can all be moved or force-pushed by the repository owner tomorrow!
@@ -518,9 +518,16 @@ Hub repositories are Git repositories: the `main` branch, a version tag (`v1.0`)
 :::
 
 ::: {.col .fig}
-@software-ecosystem-manifest
+@!software-ecosystem-manifest
 :::
 :::
+:::
+
+::: {.slide title="Pinning Immutable Revisions and Recording a Manifest (Code)" layout="tight"}
+[Dependency Locking]{.kicker}
+
+@-software-ecosystem-manifest
+
 :::
 
 ::: {.slide title="Checkpoint Security: Pickle Exploits vs. Safetensors"}

@@ -543,7 +543,7 @@ Training with `kl_group_step` ($K = 32$ samples per prompt, 400 updates) across 
 :::
 :::
 
-::: {.slide title="Group Relative Policy Optimization (GRPO)"}
+::: {.slide title="Group Relative Policy Optimization (GRPO)" layout="tight"}
 [The Complete GRPO Update]{.kicker}
 
 ::: {.cols .vc}
@@ -552,13 +552,19 @@ $$\hat{A}_j = \frac{r_j - \bar{r}}{\sigma_r + 10^{-8}}$$
 
 - **Critic-free group baseline (Shao et al., 2024):** Standardizes rewards across $K$ parallel completions per prompt and optimizes the clipped surrogate minus $\beta k_3$.
 
-@rl-sequences-group-relative-policy-optimization-1
 :::
 
 ::: {.col .fig}
 @fig:ch15-drl-grpo-architecture
 :::
 :::
+:::
+
+::: {.slide title="Group Relative Policy Optimization (GRPO) (Code)" layout="tight"}
+[The Complete GRPO Update]{.kicker}
+
+@rl-sequences-group-relative-policy-optimization-1
+
 :::
 
 ::: {.slide title="Multi-Epoch Group Reuse in GRPO"}
@@ -610,13 +616,23 @@ Test your understanding on three practical LLM post-training scenarios:
 
 1. **Token Advantages on Wrong Prefixes:** In our two-digit `3*4 = 12` task (uniform policy, $V(x) = 0.01, V(x, 1) = 0.1, V(x, 5) = 0$), what are the token advantages $A(s_1, 5)$ and $A(s_2, 2)$ for the wrong reply `52`, versus the response weight $r - V(x)$?
 2. **Softmax Coupling After Clipping:** In GRPO with $\epsilon_{\textrm{clip}} = 0.2$, suppose a correct reply has $\hat{A} = +2.6$ and ratio $\rho = 1.9 > 1.2$, while a wrong reply has $\hat{A} = -0.4$ and $\rho = 0.9 \in [0.8, 1.2]$. Can the next epoch still increase the correct reply's probability?
-3. **Masking External Tool Outputs:** When an agentic LLM emits a query $y^{(1)}$, receives an external Python interpreter output $o \sim P_{\textrm{tool}}(\cdot \mid x, y^{(1)})$, and emits a final answer $y^{(2)}$, why must the tokens of $o$ be masked out of $\sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)$?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. Response weight puts **$-0.01$ on both digits** (unfairly penalizing the `2` in the units place); token advantages give **$A(s_1, 5) = -0.01$** and **$A(s_2, 2) = 0 - 0 = 0.00$** (recognizing that once `5` was chosen, the failure was already sealed!).
 2. **Yes!** Although the correct reply's own clipped term has zero gradient, the unclipped wrong reply pushes its own logit *down*, which increases the correct reply's probability through the shared softmax denominator.
+:::
+:::
+
+::: {.slide title="Concept Check: Token Credit, Clipping, and Tools (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Masking External Tool Outputs:** When an agentic LLM emits a query $y^{(1)}$, receives an external Python interpreter output $o \sim P_{\textrm{tool}}(\cdot \mid x, y^{(1)})$, and emits a final answer $y^{(2)}$, why must the tokens of $o$ be masked out of $\sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. The tool's transition $P_{\textrm{tool}}(o \mid x, y^{(1)})$ does not depend on $\theta$ and cancels in the trajectory ratio; differentiating $\log \pi_\theta(o \mid x, y^{(1)})$ violates $\mathbb{E}[\nabla \log \pi] = 0$ and biases the model to hallucinate tool outputs!
 :::
 :::

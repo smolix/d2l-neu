@@ -196,7 +196,7 @@ export const diagrams = {
   'ch16-gan-bce-game': () => compare2(
     'Two-Player Minimax Value V(D) on Real and Fake Draws',
     {
-      head: 'Discriminator (max_D V)',
+      head: 'Discriminator (max_{D} V)',
       sub: 'Classifies source label y ∈ {1, 0}',
       rows: [
         'Real x ~ p: push D(x) > 0',
@@ -206,7 +206,7 @@ export const diagrams = {
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
     {
-      head: 'Generator (min_G max_D V)',
+      head: 'Generator (min_{G} max_{D} V)',
       sub: 'Moves x\' = G(z) uphill on D',
       rows: [
         'Minimax: E_z[log σ(−D(G(z)))]',
@@ -298,7 +298,7 @@ export const diagrams = {
       note2: 'JS = 0  ⇔  q = p',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
-    { text: 'Minimizing max_D V(D) uniquely matches q = p at value −2 log 2' }
+    { text: 'Minimizing max_{D} V(D) uniquely matches q = p at value −2 log 2' }
   ),
 
   'ch16-gan-js-saturation': () => {
@@ -326,7 +326,7 @@ export const diagrams = {
       o += tx(x + 28, by + bh + 18, b.mu, { mono: true, fs: 12.5, fw: 700, fill: C.ink });
     });
     o += box(14, 230, 532, 38, D.red.tint, D.red.base, 8, 2);
-    o += tx(280, 249, 'When supports separate, I(x; y) = log 2 is constant → ∂_θ JS(p, q_θ) = 0', { fs: 12.5, fw: 700, fill: D.red.dark });
+    o += tx(280, 249, 'When supports separate, I(x; y) = log 2 is constant → ∂_{θ} JS(p, q_θ) = 0', { fs: 12.5, fw: 700, fill: D.red.dark });
     return svg(W, H, o);
   },
 
@@ -459,7 +459,7 @@ export const diagrams = {
     {
       tag: '1. Pointwise Inf',
       head: 'Bayes Risk L(η)',
-      eq: 'inf_t E[loss | η]',
+      eq: 'inf_{t} E[loss | η]',
       note1: 'Inf of affine funcs of η',
       note2: 'Strictly concave on [0,1]',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
@@ -489,7 +489,7 @@ export const diagrams = {
       tag: 'Convex Conjugate',
       head: 'Fenchel Inequality',
       eq: 'f(u) ≥ u·t − f*(t)',
-      note1: 'f*(t) = sup_u {u·t − f(u)}',
+      note1: 'f*(t) = sup_{u} {u·t − f(u)}',
       note2: 'Tight at t* = f\'(u)',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
@@ -532,7 +532,7 @@ export const diagrams = {
       sub: 'Bounds each layer Lipschitz constant ≤ 1 via power iteration',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
-    'W₁(p, q) = sup_{‖T‖_Lip ≤ 1} { E_p[T] − E_q[T] } keeps unit slope at all distances'
+    'W₁(p, q) = sup { E_p[T] − E_q[T] : ‖T‖_{Lip} ≤ 1 } keeps unit slope at all distances'
   ),
 
   'ch16-gan-sample-complexity': () => stack3(
@@ -546,7 +546,7 @@ export const diagrams = {
     {
       badge: 'Empirical W₁',
       head: 'Curse of Dimensionality O(n⁻¹/ᵈˣ) for d_x > 2',
-      sub: 'Halving OT error takes 2^d_x samples; WGAN uses smooth net',
+      sub: 'Halving OT error takes 2ᵈˣ samples; WGAN uses smooth net',
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     {
@@ -614,7 +614,7 @@ export const diagrams = {
   ),
 
   'ch16-gan-drp-entropy': () => stack3(
-    'Calibrated Pairing Divergence d_Rp(p, q) = sup_D Φ(D) + log 2',
+    'Calibrated Pairing Divergence d_Rp(p, q) = sup_{D} Φ(D) + log 2',
     {
       badge: 'Product JS',
       head: 'd_Rp(p, q) = JS(p ⊗ q,  q ⊗ p)',
@@ -662,7 +662,7 @@ export const diagrams = {
   'ch16-gan-rank-weight': () => compare2(
     'Relativistic Rank Weight in Generator Updates',
     {
-      head: 'Saturating Pairing (min_G Φ)',
+      head: 'Saturating Pairing (min_{G} Φ)',
       sub: 'Weight w_Rp(x\') = E_p[σ(D(x\')−D(x))]',
       rows: [
         'Win prob of x\' against real x~p',
@@ -753,7 +753,7 @@ export const diagrams = {
     },
     {
       head: 'Two-Player Minimax Game',
-      sub: 'θ̇ = −∂_θ V(θ,ψ),  ψ̇ = +∂_ψ V(θ,ψ)',
+      sub: 'θ̇ = −∂_{θ} V(θ,ψ),  ψ̇ = +∂_{ψ} V(θ,ψ)',
       rows: [
         'Antisymmetric off-diagonal blocks',
         'Imaginary eigenvalues ν = ±i ω',
@@ -787,7 +787,7 @@ export const diagrams = {
       head: 'Unique Equilibrium',
       eq: 'V = ℓ(0) + ℓ(−ψθ)',
       note1: '(θ*, ψ*) = (0, 0)',
-      note2: 'sup_ψ V = ℓ(0) for θ≠0',
+      note2: 'sup_{ψ} V = ℓ(0) for θ≠0',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
     { text: 'Linear critic D_ψ(x) = ψx has spatial gradient ∇_x D_ψ(x) = ψ everywhere' }
@@ -799,8 +799,8 @@ export const diagrams = {
       head: 'Orthogonal Velocity Field',
       sub: 'u(θ, ψ) = ℓ\'(−ψθ) · (ψ, −θ)',
       rows: [
-        'θ̇ = −∂_θ V = +ψ ℓ\'(−ψθ)',
-        'ψ̇ = +∂_ψ V = −θ ℓ\'(−ψθ)',
+        'θ̇ = −∂_{θ} V = +ψ ℓ\'(−ψθ)',
+        'ψ̇ = +∂_{ψ} V = −θ ℓ\'(−ψθ)',
         'd/dt(θ² + ψ²) = 2θψℓ\' − 2ψθℓ\' = 0',
       ],
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
@@ -822,7 +822,7 @@ export const diagrams = {
     'Discretization Hazards: Simultaneous Euler vs. Alternating Steps',
     {
       head: 'Simultaneous Euler Steps',
-      sub: '(θ, ψ)_{k+1} = (θ, ψ)_k + h u_k',
+      sub: '(θ, ψ)_{k+1} = (θ, ψ)_{k} + h u_k',
       rows: [
         'Since u ⊥ (θ, ψ), by Pythagoras:',
         '‖z_{k+1}‖² = ‖z_k‖² + h²‖u_k‖²',
@@ -1063,7 +1063,7 @@ export const diagrams = {
       note2: 'Exact per-sample ‖∇D‖²',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
-    { text: 'Omitting BatchNorm ensures ∇_{x_i} ∑_j D(x_j) = ∇_{x_i} D(x_i) in one backward pass' }
+    { text: 'Omitting BatchNorm ensures ∇_{x_i} ∑_{j} D(x_j) = ∇_{x_i} D(x_i) in one backward pass' }
   ),
 
   'ch16-gan-nonleaking-aug': () => compare2(
@@ -1092,7 +1092,7 @@ export const diagrams = {
   ),
 
   'ch16-gan-eval-summary': () => stack3(
-    'Complementary Feature-Space Evaluation Metrics (φ(x) ∈ ℝ^d)',
+    'Complementary Feature-Space Evaluation Metrics (φ(x) ∈ ℝ^{d})',
     {
       badge: 'FID (Gaussian W₂²)',
       head: '‖μ_p − μ_q‖² + tr(Σ_p + Σ_q − 2(Σ_p¹/² Σ_q Σ_p¹/²)¹/²)',
@@ -1148,7 +1148,7 @@ export const diagrams = {
     'Expected Slice-Wise JS Divergence vs. Rare-Class Imbalance',
     {
       head: 'Independent Game per Slice c',
-      sub: 'max_D V = E_c[2 JS(p(·|c), q(·|c))] − 2log2',
+      sub: 'max_{D} V = E_c[2 JS(p(·|c), q(·|c))] − 2log2',
       rows: [
         'Min −2 log 2 iff q(·|c) = p(·|c) ∀c',
         'Cyclic shift q(·|c) = p(·|c+1):',
@@ -1379,7 +1379,7 @@ export const diagrams = {
   ),
 
   'ch16-gan-high-noise-blur': () => compare2(
-    'Diffusion Denoiser D*_τ(x_τ) = E[x₀ | x_τ] at Low vs. High Noise',
+    'Diffusion Denoiser D*_{τ}(x_τ) = E[x₀ | x_τ] at Low vs. High Noise',
     {
       head: 'Low Noise (τ ≪ 1)',
       sub: 'Posterior p(x₀ | x_τ) is unimodal',
@@ -1467,7 +1467,7 @@ export const diagrams = {
     },
     {
       badge: '2. Perceptual LPIPS',
-      head: 'Pretrained Feature Matching: ∑_ℓ ‖φ_ℓ(x̂) − φ_ℓ(x)‖₂²',
+      head: 'Pretrained Feature Matching: ∑_{ℓ} ‖φ_ℓ(x̂) − φ_ℓ(x)‖₂²',
       sub: 'Preserves mid-level structure, permits repetitive grid artifacts',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
@@ -1487,7 +1487,7 @@ export const diagrams = {
       sub: 'x_n = sin(ωn + ϑ),  ϑ ~ U[−a, a]',
       rows: [
         'Mel-spectrogram drops phase ϑ',
-        'E_ϑ[sin(ωn + ϑ)] = (sin a / a) sin(ωn)',
+        'E_{ϑ}[sin(ωn + ϑ)] = (sin a / a) sin(ωn)',
         'Full uncertainty a = π ⇒ sin π / π = 0!',
       ],
       fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,

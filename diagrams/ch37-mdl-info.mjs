@@ -336,7 +336,7 @@ function entropyChainRule() {
   ]);
 
   o += card(20, 206, 500, 62, C.lamber, C.amber, [
-    { t: 'Sequence Chain Rule: H(X₁, …, Xₙ) = ∑_{i=1}^n H(Xᵢ | X₁, …, Xᵢ₋₁)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
+    { t: 'Sequence Chain Rule: H(X₁, …, Xₙ) = ∑_{i=1}^{n} H(Xᵢ | X₁, …, Xᵢ₋₁)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
     { t: 'Total: H₂(X, Y) = 1.00 + 0.75 = 1.75 bits = H₂(½, ¼, ⅛, ⅛)', mono: true, fs: 13, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -401,7 +401,7 @@ function properScoringCalibration() {
     { t: 'Heavily punishes confident errors', fs: 12.5, fill: C.ink },
   ]);
 
-  o += titledPanel(280, 14, 240, 188, 'Brier Score: ∑_j (q_j − 1_{j=y})²', D.green, [
+  o += titledPanel(280, 14, 240, 188, 'Brier Score: ∑_{j} (q_j − 1_{j=y})²', D.green, [
     { t: 'E_{y~p}[S_Brier] = (1−‖p‖₂²) + ‖q−p‖₂²', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     { t: 'Excess over truth: ‖q − p‖₂² ≥ 0', mono: true, fs: 12.5, fill: C.ink },
     { t: 'Bounded ≤ 2 even when q_y = 0:', fs: 13, fill: C.ink },
@@ -441,7 +441,7 @@ function timeMachineBpc() {
   });
 
   o += card(16, 224, 508, 48, D.purple.tint, C.purple, [
-    { t: 'Prediction = Compression:  File length ℓ < −∑_{i=1}^n log₂ q(xᵢ | x_{<i}) + 2 bits', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
+    { t: 'Prediction = Compression:  File length ℓ < −∑_{i=1}^{n} log₂ q(xᵢ | x_{<i}) + 2 bits', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
 }
@@ -450,7 +450,7 @@ function kraftDyadicIntervals() {
   const W = 540, H = 282;
   let o = '';
   o += card(20, 12, 500, 42, C.lblue, C.blue, [
-    { t: 'Kraft’s Inequality via Dyadic Intervals: ∑_{i=1}^k 2⁻ℓᵢ ≤ 1', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
+    { t: 'Kraft’s Inequality via Dyadic Intervals: ∑_{i=1}^{k} 2⁻ℓᵢ ≤ 1', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
   ]);
 
   // Unit interval bar [0, 1) split into 1/2, 1/4, 1/8, 1/8
@@ -552,7 +552,7 @@ function arithTwoBitOverhead() {
   const W = 540, H = 280;
   let o = '';
   o += card(20, 12, 500, 44, C.lblue, C.blue, [
-    { t: 'Arithmetic Coding Message Interval [lo, hi) of Width  w = ∏_{i=1}^n q(xᵢ | x_{<i})', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
+    { t: 'Arithmetic Coding Message Interval [lo, hi) of Width  w = ∏_{i=1}^{n} q(xᵢ | x_{<i})', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
   ]);
 
   // Visual interval diagram
@@ -571,7 +571,7 @@ function arithTwoBitOverhead() {
 
   o += card(280, 160, 240, 106, D.purple.tint, C.purple, [
     { t: 'Amortized 2-Bit Overhead', fs: 14, fw: 700, fill: D.purple.dark },
-    { t: 'ℓ < −∑_{i=1}^n log₂ q(xᵢ | x_{<i}) + 2', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: 'ℓ < −∑_{i=1}^{n} log₂ q(xᵢ | x_{<i}) + 2', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
     { t: 'Overhead 2/n → 0 bits/symbol!', fs: 13, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -606,7 +606,7 @@ function mdlTwoPartCode() {
   const W = 540, H = 282;
   let o = '';
   o += card(20, 12, 500, 44, C.lblue, C.blue, [
-    { t: 'Minimum Description Length (MDL):   M̂ = argmin_M [ L(M) + L(D | M) ]', mono: true, fs: 14, fw: 700, fill: D.blue.dark },
+    { t: 'Minimum Description Length (MDL):   M̂ = argmin_{M} [ L(M) + L(D | M) ]', mono: true, fs: 14, fw: 700, fill: D.blue.dark },
   ]);
 
   o += titledPanel(20, 70, 240, 134, 'Model Cost L(M): BIC Rule', D.purple, [
@@ -699,15 +699,15 @@ function disjointPointMasses() {
   o += titledPanel(20, 66, 240, 146, 'f-Divergences (Density Ratio p/q)', D.red, [
     { t: 'D_f(δ₀ ‖ δ_d) = f(0) + f\'(∞)', fs: 12.5, fw: 700, fill: D.red.dark },
     { t: '• KL(P ‖ Q) = ∞  (undefined slope)', fs: 12, fill: C.ink },
-    { t: '• JS(P, Q) = log 2 ≈ 0.693  (∂_d = 0)', fs: 12, fill: C.ink },
-    { t: '• TV(P, Q) = 1.000  (∂_d = 0)', fs: 12, fill: C.ink },
+    { t: '• JS(P, Q) = log 2 ≈ 0.693  (∂_{d} = 0)', fs: 12, fill: C.ink },
+    { t: '• TV(P, Q) = 1.000  (∂_{d} = 0)', fs: 12, fill: C.ink },
   ]);
 
   o += titledPanel(280, 66, 240, 146, 'Geometry-Aware Metrics', D.green, [
     { t: 'Compare locations via test functions:', fs: 12.5, fw: 700, fill: D.green.dark },
     { t: '• RBF MMD² = 2(1 − e^{−d²/2ℓ²})', mono: true, fs: 12, fill: C.ink },
     { t: '  (Nonzero local gradient for d ~ ℓ)', fs: 12, fill: C.muted },
-    { t: '• Wasserstein W₁ = |d|  (∂_d = ±1!)', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: '• Wasserstein W₁ = |d|  (∂_{d} = ±1!)', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
 
   o += card(20, 224, 500, 48, C.lamber, C.amber, [
@@ -885,7 +885,7 @@ function fganVariationalGame() {
   const W = 540, H = 282;
   let o = '';
   o += card(20, 12, 500, 44, D.purple.tint, C.purple, [
-    { t: 'Fenchel–Young Variational Bound:   D_f(P ‖ Q) ≥ sup_T ( E_{x~P}[T(x)] − E_{x~Q}[f*(T(x))] )', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
+    { t: 'Fenchel–Young Variational Bound:   D_f(P ‖ Q) ≥ sup_{T} ( E_{x~P}[T(x)] − E_{x~Q}[f*(T(x))] )', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
   ]);
 
   o += card(20, 70, 152, 126, C.lblue, C.blue, [
@@ -957,7 +957,7 @@ function ipmAuditorClasses() {
   const W = 540, H = 284;
   let o = '';
   o += card(20, 12, 500, 42, D.purple.tint, C.purple, [
-    { t: 'Integral Probability Metric:  IPM_G(P, Q) = sup_{g ∈ G} (E_P[g(x)] − E_Q[g(y)])', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
+    { t: 'Integral Probability Metric:  IPM_{G}(P, Q) = sup_{g ∈ G} (E_P[g(x)] − E_Q[g(y)])', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
   ]);
 
   o += titledPanel(20, 68, 156, 146, '1. Bounded |g| ≤ ½', D.orange, [
@@ -1038,7 +1038,7 @@ function mmdMeanEmbedding() {
   o += card(388, 70, 132, 124, C.lgreen, C.green, [
     { t: 'Cauchy–Schwarz', fs: 13.5, fw: 700, fill: D.green.dark },
     { t: 'w* = (m_P−m_Q)/‖·‖', mono: true, fs: 11.5, fill: C.ink },
-    { t: 'Solves sup_w in', fs: 12.5, fill: C.ink },
+    { t: 'Solves sup_{w} in', fs: 12.5, fill: C.ink },
     { t: 'closed form!', fs: 13, fw: 700, fill: D.green.dark },
   ]);
 
@@ -1107,13 +1107,13 @@ function krDualityBridge() {
   o += card(326, 14, 194, 174, C.lgreen, C.green, [
     { t: 'Dual 1-Lipschitz IPM', fs: 14, fw: 700, fill: D.green.dark },
     { t: 'W₁(P, Q) =', mono: true, fs: 14, fw: 700, fill: C.ink },
-    { t: 'sup_{‖g‖_Lip ≤ 1} (E_P[g] − E_Q[g])', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
+    { t: 'sup_{‖g‖_{Lip} ≤ 1} (E_P[g] − E_Q[g])', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
     { t: '1-Lipschitz WGAN critic', fs: 12.5, fill: C.ink },
     { t: '|g(x) − g(y)| ≤ ‖x − y‖', mono: true, fs: 12, fill: C.muted },
   ]);
 
   o += card(20, 204, 500, 60, C.lamber, C.amber, [
-    { t: 'Exact 1D Collapse:  W₁(P, Q) = ∫_{−∞}^∞ |F_P(t) − F_Q(t)| dt   (Area between CDFs)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
+    { t: 'Exact 1D Collapse:  W₁(P, Q) = ∫_{−∞}^{∞} |F_P(t) − F_Q(t)| dt   (Area between CDFs)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
     { t: 'Attained by monotone quantile coupling (F_P⁻¹(U), F_Q⁻¹(U)) and critic slope g\'(t) = sign(F_Q − F_P)', fs: 12, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -1318,7 +1318,7 @@ function steinIbpIdentity() {
 
   o += card(202, 70, 156, 124, C.lblue, C.blue, [
     { t: 'Integrate by Parts', fs: 13.5, fw: 700, fill: D.blue.dark },
-    { t: '−[g(x)p(x)]_{−∞}^∞', mono: true, fs: 13, fill: C.muted },
+    { t: '−[g(x)p(x)]_{−∞}^{∞}', mono: true, fs: 13, fill: C.muted },
     { t: '+ ∫ g\'(x) p(x) dx', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
     { t: '(Boundary vanishes)', fs: 12, fill: C.ink },
   ]);
@@ -1354,7 +1354,7 @@ function hyvarinenTwoTerms() {
 
   o += titledPanel(280, 70, 240, 136, 'Term 2: tr(∇_x s_Q(x)) < 0', D.green, [
     { t: 'Minimizes Laplacian Δ log q(xᵢ):', fs: 12.5, fw: 700, fill: C.ink },
-    { t: 'tr(∇²_x log q(xᵢ)) ≪ 0', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
+    { t: 'tr(∇²_{x} log q(xᵢ)) ≪ 0', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
     { t: 'Forces log-density to curve downward', fs: 12.5, fill: C.ink },
     { t: '(a sharp peak, not a minimum!)', fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
@@ -1369,7 +1369,7 @@ function ksdSteinKernel() {
   const W = 540, H = 280;
   let o = '';
   o += card(20, 12, 500, 42, C.lblue, C.blue, [
-    { t: 'Kernel Stein Discrepancy (KSD):   KSD(P, Q) = sup_{‖g‖_H ≤ 1} E_{x~P}[ g\'(x) + s_Q(x) g(x) ]', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
+    { t: 'Kernel Stein Discrepancy (KSD):   KSD(P, Q) = sup_{‖g‖_{H} ≤ 1} E_{x~P}[ g\'(x) + s_Q(x) g(x) ]', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
   ]);
 
   o += card(20, 68, 236, 130, D.purple.tint, C.purple, [
@@ -1696,7 +1696,7 @@ function infonceBagProof() {
   o += arrow(270, 84, 270, 104, C.blue);
 
   o += card(20, 108, 500, 68, D.purple.tint, C.purple, [
-    { t: 'Step 2 · Rescaled Softmax γ(x, v) = N e^{T(x,y₁)} / ∑_j e^{T(x,y_j)} Normalizes q(v | x)', fs: 13.5, fw: 700, fill: D.purple.dark },
+    { t: 'Step 2 · Rescaled Softmax γ(x, v) = N e^{T(x,y₁)} / ∑_{j} e^{T(x,y_j)} Normalizes q(v | x)', fs: 13.5, fw: 700, fill: D.purple.dark },
     { t: 'By permutation symmetry of p(v) = ∏ p_Y(y_j):   E_{p(v)}[γ(x, V)] = 1  ⇒  q(v|x) = p(v)γ(x,v)', mono: true, fs: 12, fill: C.ink },
   ]);
   o += arrow(270, 178, 270, 198, C.green);

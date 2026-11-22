@@ -535,7 +535,7 @@ Hub repositories are Git repositories: the `main` branch, a version tag (`v1.0`)
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why legacy `pickle` (`.bin` / `.pt`) is dangerous:** `pickle` is a stack VM whose `__reduce__` opcode invokes arbitrary Python callables on load; even `weights_only=True` suffered allowlist bypasses (**CVE-2025-32434**).
+- **Why legacy `pickle` checkpoints (`.bin` / `.pt`) are dangerous:** `pickle` is a stack VM whose `__reduce__` opcode invokes arbitrary Python callables on load, so loading one (e.g. `torch.load(..., weights_only=False)`) runs arbitrary code; even the `weights_only=True` allowlist was bypassed (**CVE-2025-32434**).
 - **Why `safetensors` is secure by construction:** Stores an 8-byte header size, a pure UTF-8 JSON header (`dtype`, `shape`, `[begin, end)` offsets), and flat tensor bytes—zero executable opcodes and instant zero-copy `mmap`!
 :::
 

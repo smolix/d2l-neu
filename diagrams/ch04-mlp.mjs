@@ -466,7 +466,7 @@ function linearCollapse() {
   o += card(156, 50, 108, 54, 'slate', [{ t: 'H = XW⁽¹⁾', mono: true, fs: 13.5, fw: 700 }, { t: '(n × h)', mono: true, fs: 12.5 }]);
   o += hArrow(268, 306, 77, D.red.base, '× W⁽²⁾');
   o += card(310, 50, 216, 54, 'red', [
-    { t: 'O = X(W⁽¹⁾W⁽²⁾) = XW_eff', mono: true, fs: 13, fw: 700, fill: D.red.dark },
+    { t: 'O = X(W⁽¹⁾W⁽²⁾) = XW_{eff}', mono: true, fs: 13, fw: 700, fill: D.red.dark },
     'Single affine map (rank ≤ min(d,h,q))',
   ]);
 
@@ -832,7 +832,7 @@ function localBiasActRules() {
     'Rule 2: Broadcast Bias Z = A + b',
     { t: 'b : (1 × h) added to all n rows', mono: true, fs: 12.5, fill: C.ink },
     { t: '∂J/∂A = G   (copied unchanged)', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
-    { t: '∂J/∂b = Gᵀ 1_n = G.sum(axis=0)', mono: true, fs: 13, fw: 700, fill: D.orange.dark },
+    { t: '∂J/∂b = Gᵀ 1_{n} = G.sum(axis=0)', mono: true, fs: 13, fw: 700, fill: D.orange.dark },
     'Because b_j branches into all n',
     'examples, backward sums over n',
     '(zero forward cache needed!)',
@@ -857,10 +857,10 @@ function fiveLineSweep() {
   let o = '';
   const steps = [
     { y: 10,  theme: 'red',    step: 'Line 1 (Output Logits)', eq: 'G_O = ∂J/∂O = (1/n)(Ŷ − Y)',                          shape: '(n × q)' },
-    { y: 62,  theme: 'orange', step: 'Line 2 (Layer 2 Params)', eq: '∂J/∂W⁽²⁾ = HᵀG_O + λW⁽²⁾,   ∂J/∂b⁽²⁾ = G_Oᵀ 1_n',    shape: '(h × q), (q,)' },
+    { y: 62,  theme: 'orange', step: 'Line 2 (Layer 2 Params)', eq: '∂J/∂W⁽²⁾ = HᵀG_O + λW⁽²⁾,   ∂J/∂b⁽²⁾ = G_Oᵀ 1_{n}',    shape: '(h × q), (q,)' },
     { y: 114, theme: 'purple', step: 'Line 3 (Hidden Acts)',    eq: '∂J/∂H = G_O (W⁽²⁾)ᵀ   [credit assignment to units]', shape: '(n × h)' },
     { y: 166, theme: 'blue',   step: 'Line 4 (ReLU Gate)',      eq: 'G_Z = ∂J/∂Z = (∂J/∂H) ⊙ φ\'(Z)',                      shape: '(n × h)' },
-    { y: 218, theme: 'green',  step: 'Line 5 (Layer 1 Params)', eq: '∂J/∂W⁽¹⁾ = XᵀG_Z + λW⁽¹⁾,   ∂J/∂b⁽¹⁾ = G_Zᵀ 1_n',    shape: '(d × h), (h,)' },
+    { y: 218, theme: 'green',  step: 'Line 5 (Layer 1 Params)', eq: '∂J/∂W⁽¹⁾ = XᵀG_Z + λW⁽¹⁾,   ∂J/∂b⁽¹⁾ = G_Zᵀ 1_{n}',    shape: '(d × h), (h,)' },
   ];
 
   steps.forEach((s, i) => {
@@ -901,7 +901,7 @@ function kLayerRecurrence() {
 
   o += card(14, 170, 512, 68, 'green', [
     'Read Off Layer-k Parameter Gradients Using Cached Forward H⁽ᵏ⁻¹⁾:',
-    { t: '∂J/∂W⁽ᵏ⁾ = (H⁽ᵏ⁻¹⁾)ᵀ G_Z⁽ᵏ⁾ + λW⁽ᵏ⁾          ∂J/∂b⁽ᵏ⁾ = (G_Z⁽ᵏ⁾)ᵀ 1_n', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
+    { t: '∂J/∂W⁽ᵏ⁾ = (H⁽ᵏ⁻¹⁾)ᵀ G_Z⁽ᵏ⁾ + λW⁽ᵏ⁾          ∂J/∂b⁽ᵏ⁾ = (G_Z⁽ᵏ⁾)ᵀ 1_{n}', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
   return svg(W, H, o);
 }
@@ -1739,7 +1739,7 @@ function targetCentering() {
 
   o += card(278, 12, 248, 124, 'green', [
     'Centered Target (z − offset)',
-    { t: 'offset = mean(log y_train)\n≈ 12.02', mono: true, fs: 12 },
+    { t: 'offset = mean(log y\\_train)\n≈ 12.02', mono: true, fs: 12 },
     { t: 'Step-0 RMSE ≈ std(log y) ≈ 0.40!', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     'Gradients immediately shape',
     'feature weights from epoch 1',
@@ -1747,7 +1747,7 @@ function targetCentering() {
 
   o += card(14, 152, 512, 92, 'blue', [
     'End-to-End Target Centering & Un-Centering Round-Trip in KaggleHouse:',
-    { t: 'Train target:  z_centered = log(SalePrice) − self.offset     (mean = 0.0, std ≈ 0.40)', mono: true, fs: 12, fill: D.blue.dark },
+    { t: 'Train target:  z\\_centered = log(SalePrice) − self.offset     (mean = 0.0, std ≈ 0.40)', mono: true, fs: 12, fill: D.blue.dark },
     { t: 'Submission:    SalePrice_hat = exp( pred_centered + self.offset )   (restores $ scale)', mono: true, fs: 12, fill: D.green.dark },
   ]);
   return svg(W, H, o);

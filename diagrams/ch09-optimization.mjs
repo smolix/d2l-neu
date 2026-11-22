@@ -66,7 +66,7 @@ function twoObstacles() {
   o += circ(417, 128, 5, C.green, D.green.dark, 1.5);
   o += box(302, 184, 230, 66, '#FFFFFF', C.amber, 6, 1.5);
   o += tx(417, 205, 'Stationary Noise Ball at x*', { fs: 12.5, fw: 700, fill: D.orange.dark });
-  o += tx(417, 230, 'E[x_∞²] ≈ η σ² / (2 λ b)', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(417, 230, 'E[x_{∞}²] ≈ η σ² / (2 λ b)', { mono: true, fs: 12, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -349,7 +349,7 @@ function sgdNoiseEquilibrium() {
 
   o += box(16, 190, 528, 66, C.lgreen, C.green, 8, 2);
   o += tx(280, 213, 'Stationary Noise-Ball Balance (E[x_{t+1}²] = E[x_t²]):', { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(280, 238, 'E[x_∞²] = η σ² / [λ(2 − ηλ)]  ≈  η σ² / (2 λ)', { mono: true, fs: 13, fw: 700, fill: C.ink });
+  o += tx(280, 238, 'E[x_{∞}²] = η σ² / [λ(2 − ηλ)]  ≈  η σ² / (2 λ)', { mono: true, fs: 13, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -361,11 +361,11 @@ function sgdThreeLaws() {
     'Denominator (2 − ηλ) → 0 as η → 2/λ; variance blows up at 2/λ',
     'Steep valley wall λ₂ = 4 still caps η < 0.5');
   o += card(16, 102, 528, 78, D.blue.dark, C.lblue,
-    'Law 2: Inverse Curvature Scaling (E[x_∞²] ∝ 1 / λ)',
+    'Law 2: Inverse Curvature Scaling (E[x_{∞}²] ∝ 1 / λ)',
     'Flat λ₁ = 0.2 has var 0.253 vs. steep λ₂ = 4 var 0.016',
     'Noise cloud has 16× higher variance (4× wider std) along flat axis');
   o += card(16, 192, 528, 78, D.green.dark, C.lgreen,
-    'Law 3: Linear η / b Scaling (E[x_∞²] ∝ η / b)',
+    'Law 3: Linear η / b Scaling (E[x_{∞}²] ∝ η / b)',
     'Halving η or doubling batch size b halves stationary variance',
     'Ratio η / b controls the steady-state noise floor');
   return svg(W, H, o);
@@ -416,7 +416,7 @@ function sgdCurvatureCancel() {
   o += box(16, 150, 528, 106, C.lgreen, C.green, 8, 2);
   o += tx(280, 176, 'Curvature λ_k Cancels Out in Every Eigendirection!', { fs: 14.5, fw: 700, fill: D.green.dark });
   o += tx(280, 204, '½ λ_k · [η σ_k² / (2 λ_k b)] = η σ_k² / (4 b)', { mono: true, fs: 13.5, fw: 700, fill: C.ink });
-  o += tx(280, 234, 'Total Excess Loss:  E[f(x_∞)] − f(x*) ≈ η tr(Σ(x*)) / (4 b)', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
+  o += tx(280, 234, 'Total Excess Loss:  E[f(x_{∞})] − f(x*) ≈ η tr(Σ(x*)) / (4 b)', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -865,7 +865,7 @@ function adamRotationalEq() {
   o += card(290, 14, 254, 146, D.green.dark, C.lgreen,
     'With AdamW Decay (t ≳ 2τ)',
     'Equilibrium weight norm:',
-    'RMS(x_∞) ≈ √[η / (2λ)]',
+    'RMS(x_{∞}) ≈ √[η / (2λ)]',
     'Locks angular step √(2ηλ)!');
 
   o += box(16, 176, 528, 80, C.lblue, C.blue, 8, 2);
@@ -903,7 +903,7 @@ function muonSpectralVsFrob() {
   const W = 560, H = 268;
   let o = '';
   o += box(16, 14, 528, 52, D.purple.tint, C.purple, 8, 2);
-  o += tx(280, 40, 'SVD of Matrix Update:  ΔW = U Σ Vᵀ = Σ_{i=1}^r σ_i u_i v_iᵀ', { mono: true, fs: 13, fw: 700, fill: D.purple.dark });
+  o += tx(280, 40, 'SVD of Matrix Update:  ΔW = U Σ Vᵀ = Σ_{i=1}^{r} σ_i u_i v_iᵀ', { mono: true, fs: 13, fw: 700, fill: D.purple.dark });
 
   o += card(16, 82, 254, 170, D.blue.dark, C.lblue,
     'Spectral Norm ‖ΔW‖₂',
@@ -911,7 +911,7 @@ function muonSpectralVsFrob() {
     'Exact max directional stretch',
     'of any unit input vector x');
   o += card(290, 82, 254, 170, D.orange.dark, C.lamber,
-    'Frobenius Norm ‖ΔW‖_F',
+    'Frobenius Norm ‖ΔW‖_{F}',
     '√(σ₁² + σ₂² + ··· + σ_r²)',
     'Sums all r modes in quadrature',
     'Overstates r=128 by √128≈11.3×');
@@ -953,12 +953,12 @@ function muonRank1Collapse() {
   o += tx(280, 37, '2×2 Gradient G = [[3, 1], [1, 1]]  (σ₁ = 3.41, σ₂ = 0.59)', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
 
   o += card(16, 74, 164, 178, D.blue.dark, C.lblue,
-    'Euclidean ‖·‖_F',
-    '−G / ‖G‖_F',
+    'Euclidean ‖·‖_{F}',
+    '−G / ‖G‖_{F}',
     'σ = (0.99, 0.17)',
     'Starves 2nd mode');
   o += card(198, 74, 164, 178, D.red.dark, D.red.tint,
-    'Entry Box ‖·‖_∞',
+    'Entry Box ‖·‖_{∞}',
     '−sign(G) = −11ᵀ',
     'σ = (2.00, 0.00)',
     'RANK-1 COLLAPSE!');
@@ -979,7 +979,7 @@ function muonNsLoop() {
 
   o += card(16, 88, 160, 166, D.blue.dark, C.lblue,
     '1. Normalize',
-    'X₀ = G / ‖G‖_F',
+    'X₀ = G / ‖G‖_{F}',
     'σ_i ∈ [0, 1]',
     'No SVD needed');
   o += arrow(178, 171, 198, 171, C.purple);
@@ -1024,7 +1024,7 @@ function muonQkClip() {
     '1. Weight Decay (λ > 0)',
     'NS₅ sets singular values ~1',
     'Without (1 − ηλ) shrinkage,',
-    '‖W‖_F grows & η/‖W‖_F drops');
+    '‖W‖_{F} grows & η/‖W‖_{F} drops');
   o += card(290, 16, 254, 234, D.purple.dark, D.purple.tint,
     '2. QK-Clip (Kimi K2 1T)',
     'qᵀk = xᵀ W_Qᵀ W_K x is bilinear',
@@ -1087,7 +1087,7 @@ function schedClassicalFamilies() {
     'Stalls at noise ball 0.268');
   o += card(290, 14, 254, 118, D.red.dark, D.red.tint,
     'Exponential (0.4 × 0.98ᵗ)',
-    'B_∞ = 20.0 · η_T = 1.9×10⁻²⁷',
+    'B_{∞} = 20.0 · η_T = 1.9×10⁻²⁷',
     'Tail budget starves early',
     'FREEZES at MSE 0.125!');
   o += card(16, 146, 254, 118, D.orange.dark, C.lamber,
@@ -1107,8 +1107,8 @@ function schedRemainingBudget() {
   const W = 560, H = 274;
   let o = '';
   o += box(16, 14, 528, 60, D.purple.tint, C.purple, 8, 2);
-  o += tx(280, 34, 'Why Exponential Decay Freezes: Noise at Step s Needs Future Budget R_s', { fs: 13.5, fw: 700, fill: D.purple.dark });
-  o += tx(280, 56, 'E[x_T²] ≈ e^{−2λB_T} x₀² + σ² Σ η_s² e^{−2λR_s},  R_s = Σ_{u>s} η_u', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(280, 32, 'Why Exponential Decay Freezes: Noise at Step s Needs Future Budget R_s', { fs: 13.5, fw: 700, fill: D.purple.dark });
+  o += tx(280, 59, 'E[x_T²] ≈ e^{−2λB_T} x₀² + σ² Σ η_s² e^{−2λR_s},  R_s = Σ_{u>s} η_u', { mono: true, fs: 12, fw: 700, fill: C.ink });
 
   o += card(16, 90, 254, 168, D.red.dark, D.red.tint,
     'Geometric Tail Starvation',
@@ -1117,7 +1117,7 @@ function schedRemainingBudget() {
     '2λ R_s < 1 → contraction stops!');
   o += card(290, 90, 254, 168, D.orange.dark, C.lamber,
     'Exact Frozen Noise Floor',
-    'E[x_∞²] ≈ (1 − γ) σ² / (4 λ²)',
+    'E[x_{∞}²] ≈ (1 − γ) σ² / (4 λ²)',
     'At γ = 0.98, λ₁ = 0.2:',
     '0.02 / (4 × 0.04) = 0.125!');
   return svg(W, H, o);
@@ -1361,7 +1361,7 @@ function mupCoherentSum() {
   o += card(290, 14, 254, 148, D.red.dark, D.red.tint,
     'Adam Step 1 (Aligned Signs)',
     'ΔW = −η sign(δ) sign(h)ᵀ',
-    '(ΔW h)_i = −η sign(δ_i) Σ|h_j|',
+    '(ΔW h)_{i} = −η sign(δ_i) Σ|h_j|',
     'Coherent sum blows up → Θ(η n)!');
 
   o += box(16, 178, 528, 78, C.lamber, C.amber, 8, 2);

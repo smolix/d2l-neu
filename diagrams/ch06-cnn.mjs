@@ -329,7 +329,7 @@ function impulseProbing() {
   ]);
   o += card(16, 134, 508, 112, D.purple.tint, C.purple, [
     { t: 'Necessity Proof Summary (Unit Impulse Probing)', fs: 15, fw: 700, fill: D.purple.dark },
-    { t: 'W_{i, j, i+a, j+b} = W_{0, 0, a, b} ≡ K_{a, b}  for all locations (i, j)', mono: true, fs: 13.5, fw: 700, fill: C.ink },
+    { t: 'W_{i,j,i+a,j+b} = W_{0,0,a,b} ≡ K_{a,b}  for all locations (i, j)', mono: true, fs: 13.5, fw: 700, fill: C.ink },
     { t: 'Collapses 10¹² dense weights (4 TB) → 1999² ≈ 4×10⁶ shared offset weights', fs: 13, fw: 600, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
@@ -662,7 +662,7 @@ function im2colGemm() {
   o += grid([[19, 25], [37, 43]], 442, 54, 34, 4, { fs: 13, fill: () => GREEN });
 
   o += card(16, 172, 508, 82, C.lamber, C.amber, [
-    { t: 'Systems Trade-Off:  P ∈ ℝ^{(h_o w_o) × (k_h k_w)}  ×  vec(K) ∈ ℝ^{(k_h k_w) × 1}', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
+    { t: 'Systems Trade-Off:  P ∈ ℝ^{(h_o·w_o)×(k_h·k_w)}  ×  vec(K) ∈ ℝ^{(k_h·k_w)×1}', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
     { t: 'Duplicates interior pixels k_h·k_w times in RAM to run at peak GPU GEMM Tensor Core speed', fs: 12.5, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -886,7 +886,7 @@ function geometricRfStride() {
     { t: 'Geometric growth (>2× wider!)', fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   o += card(16, 166, 508, 78, D.purple.tint, C.purple, [
-    { t: 'Master Receptive-Field Equation:  r = 1 + Σ_{i=1}^L (k_i − 1) Π_{j=1}^{i-1} s_j', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
+    { t: 'Master Receptive-Field Equation:  r = 1 + Σ_{i=1}^{L} (k_i − 1) Π_{j=1}^{i-1} s_j', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
     { t: 'Early stride s_j multiplies the spatial reach of EVERY layer above it (independent of padding p)', fs: 12.5, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);

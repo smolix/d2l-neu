@@ -79,7 +79,7 @@ function triadOverview() {
 
   o += box(130, 118, 300, 52, D.red.tint, D.red.base, 8, 2.2);
   o += tx(280, 136, 'All Three Together → Divergence!', { fs: 13.8, fw: 700, fill: D.red.dark });
-  o += tx(280, 156, "||w||_∞ → ∞ (even on Baird's linear MDP)", { mono: true, fs: 11.2, fw: 700, fill: C.ink });
+  o += tx(280, 156, "||w||_{∞} → ∞ (even on Baird's linear MDP)", { mono: true, fs: 11.2, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -131,7 +131,7 @@ function mcTailVsCritic() {
 function cartpoleTdTrace() {
   const W = 560, H = 260;
   let o = '';
-  o += tx(280, 20, 'Tracing One CartPole Step by Hand (r_t = +1, γ = 0.99, V^∞ = 100)', { fs: 14.8, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'Tracing One CartPole Step by Hand (r_t = +1, γ = 0.99, V^{∞} = 100)', { fs: 14.8, fw: 700, fill: C.ink });
 
   o += box(20, 44, 248, 198, C.lgreen, C.green, 9, 2);
   o += tx(144, 68, 'Calibrated Critic (V̂ = 100)', { fs: 14.5, fw: 700, fill: D.green.dark });
@@ -268,7 +268,7 @@ function gaeTelescoping() {
   o += box(16, 142, 528, 96, C.lgreen, C.green, 8, 2);
   o += tx(280, 164, 'Step 2: Sum Weights (1−λ) ∑_{n>l} λ^{n−1} = λ^l → Single Backward Scan', { fs: 13.2, fw: 700, fill: D.green.dark });
   o += box(44, 178, 472, 42, '#FFFFFF', C.green, 6, 2);
-  o += tx(280, 199, 'Â_t^GAE = ∑_{l=0}^∞ (γλ)^l δ_{t+l} = δ_t + (γλ) Â_{t+1}^GAE', { mono: true, fs: 12.2, fw: 700, fill: D.green.dark });
+  o += tx(280, 199, 'Â_t^GAE = ∑_{l=0}^{∞} (γλ)^l δ_{t+l} = δ_t + (γλ) Â_{t+1}^{GAE}', { mono: true, fs: 12.2, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -305,15 +305,15 @@ function importanceCancellation() {
   o += tx(280, 20, 'Change of Measure: Environment Physics Cancel in Trajectory Ratio', { fs: 14.8, fw: 700, fill: C.ink });
 
   o += box(16, 42, 528, 110, C.lblue, C.blue, 9, 2);
-  o += tx(280, 68, 'Num P(τ; θ): μ₀(s₀) · ∏_t π_θ(a_t | s_t) · ∏_t P(s_{t+1} | s_t, a_t)', { mono: true, fs: 10.8, fw: 700, fill: D.blue.dark });
+  o += tx(280, 68, 'Num P(τ; θ): μ₀(s₀) · ∏_{t} π_θ(a_t | s_t) · ∏_{t} P(s_{t+1} | s_t, a_t)', { mono: true, fs: 10.8, fw: 700, fill: D.blue.dark });
   o += line(40, 92, 520, 92, C.blue, 2);
-  o += tx(280, 118, 'Den P(τ; θ_old): μ₀(s₀) · ∏_t π_old(a_t | s_t) · ∏_t P(s_{t+1} | s_t, a_t)', { mono: true, fs: 10.8, fw: 700, fill: C.muted });
+  o += tx(280, 118, 'Den P(τ; θ_old): μ₀(s₀) · ∏_{t} π_old(a_t | s_t) · ∏_{t} P(s_{t+1} | s_t, a_t)', { mono: true, fs: 10.8, fw: 700, fill: C.muted });
 
   o += arrow(280, 154, 280, 178, C.green);
 
   o += box(16, 182, 528, 56, C.lgreen, C.green, 8, 2);
   o += tx(280, 202, 'Exact Model-Free Likelihood Ratio (μ₀ and unknown P cancel!):', { fs: 13, fw: 700, fill: D.green.dark });
-  o += tx(280, 224, 'P(τ; θ) / P(τ; θ_old) = ∏_t [ π_θ(a_t | s_t) / π_{θ_old}(a_t | s_t) ]', { mono: true, fs: 11.2, fw: 700, fill: C.ink });
+  o += tx(280, 224, 'P(τ; θ) / P(τ; θ_old) = ∏_{t} [ π_θ(a_t | s_t) / π_{θ_old}(a_t | s_t) ]', { mono: true, fs: 11.2, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -352,13 +352,13 @@ function perfDiffLemma() {
   o += box(16, 42, 528, 88, C.lblue, C.blue, 8, 2);
   o += tx(280, 64, 'Exact Return Gap J(θ) − J(θ_old) (Kakade & Langford, 2002):', { fs: 13.5, fw: 700, fill: D.blue.dark });
   o += box(30, 78, 500, 38, '#FFFFFF', C.blue, 6, 1.8);
-  o += tx(280, 97, '(1−γ)⁻¹ ∑_s d_γ^{π_θ}(s) ∑_a π_θ(a|s) A^old(s,a)   [NEW occupancy d^{π_θ}]', { mono: true, fs: 11, fw: 700, fill: C.ink });
+  o += tx(280, 97, '(1−γ)⁻¹ ∑_{s} d_γ^{π_θ}(s) ∑_{a} π_θ(a|s) A^old(s,a)   [NEW occupancy d^{π_θ}]', { mono: true, fs: 11, fw: 700, fill: C.ink });
 
   o += box(16, 144, 528, 96, C.lgreen, C.green, 8, 2);
   o += tx(280, 166, 'Surrogate L̄(θ) Replaces d_γ^{π_θ}(s) with Collected d_γ^{π_{θ_old}}(s):', { fs: 13.2, fw: 700, fill: D.green.dark });
   o += box(30, 180, 500, 36, '#FFFFFF', C.green, 6, 1.8);
-  o += tx(280, 198, '(1−γ)⁻¹ ∑_s d_γ^{π_{θ_old}}(s) ∑_a π_θ(a|s) A^old(s,a)   [OLD occupancy]', { mono: true, fs: 11, fw: 700, fill: D.green.dark });
-  o += tx(280, 228, 'Mismatch |J(θ) − J(θ_old) − L̄(θ)| is bounded by O(max_s D_KL(π_old || π_θ))', { fs: 12, fw: 600, fill: C.ink });
+  o += tx(280, 198, '(1−γ)⁻¹ ∑_{s} d_γ^{π_{θ_old}}(s) ∑_{a} π_θ(a|s) A^old(s,a)   [OLD occupancy]', { mono: true, fs: 11, fw: 700, fill: D.green.dark });
+  o += tx(280, 228, 'Mismatch |J(θ) − J(θ_old) − L̄(θ)| is bounded by O(max_{s} D_KL(π_old || π_θ))', { fs: 12, fw: 600, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -488,7 +488,7 @@ function trustVsAnchor() {
   o += tx(144, 128, 'Effective temp β̃ / k → 0', { mono: true, fs: 11.3, fill: C.ink });
   o += tx(144, 174, 'Bounds each step along the PATH,', { fs: 12.2, fill: C.ink });
   o += tx(144, 198, 'but still converges to greedy', { fs: 12.2, fill: C.ink });
-  o += tx(144, 220, 'argmax_a r̂(a) (reward hacks!)', { fs: 12.2, fw: 700, fill: D.red.dark });
+  o += tx(144, 220, 'argmax_{a} r̂(a) (reward hacks!)', { fs: 12.2, fw: 700, fill: D.red.dark });
 
   o += box(292, 18, 248, 222, C.lgreen, C.green, 9, 2);
   o += tx(416, 42, 'Fixed Reference Penalty (§15.3)', { fs: 14.5, fw: 700, fill: D.green.dark });
@@ -539,9 +539,9 @@ function normMismatch() {
 
   o += box(20, 44, 248, 194, C.lgreen, C.green, 9, 2);
   o += tx(144, 68, 'Exact Bellman Backup T', { fs: 14.5, fw: 700, fill: D.green.dark });
-  o += tx(144, 94, 'Contracts in Supremum Norm ||·||_∞:', { fs: 12.2, fill: C.ink });
+  o += tx(144, 94, 'Contracts in Supremum Norm ||·||_{∞}:', { fs: 12.2, fill: C.ink });
   o += box(34, 110, 220, 44, '#FFFFFF', C.green, 6, 1.8);
-  o += tx(144, 132, "||TQ − TQ'||_∞ ≤ γ ||Q − Q'||_∞", { mono: true, fs: 11.2, fw: 700, fill: D.green.dark });
+  o += tx(144, 132, "||TQ − TQ'||_{∞} ≤ γ ||Q − Q'||_{∞}", { mono: true, fs: 11.2, fw: 700, fill: D.green.dark });
   o += tx(144, 180, 'Bounds WORST-CASE error across', { fs: 12.2, fill: C.ink });
   o += tx(144, 204, 'every state-action pair (s, a)', { fs: 12.2, fw: 700, fill: D.green.dark });
 
@@ -549,10 +549,10 @@ function normMismatch() {
   o += tx(416, 68, 'Neural Regression Π_d', { fs: 14.5, fw: 700, fill: D.red.dark });
   o += tx(416, 94, 'Projects in Visitation L₂(d) Norm:', { fs: 12.2, fill: C.ink });
   o += box(306, 110, 220, 44, '#FFFFFF', D.red.base, 6, 1.8);
-  o += tx(416, 132, 'min_w E_{(s,a)~d}[(Q_w − y)²]', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
-  o += tx(416, 176, 'Π_d T can fail to contract in ||·||_∞:', { fs: 12.2, fill: C.ink });
-  o += tx(416, 198, "||Π_d TQ − Π_d TQ'||_∞", { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
-  o += tx(416, 220, "> γ ||Q − Q'||_∞ is possible!", { fs: 12.2, fw: 700, fill: D.red.dark });
+  o += tx(416, 132, 'min_{w} E_{(s,a)~d}[(Q_w − y)²]', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
+  o += tx(416, 176, 'Π_d T can fail to contract in ||·||_{∞}:', { fs: 12.2, fill: C.ink });
+  o += tx(416, 198, "||Π_d TQ − Π_d TQ'||_{∞}", { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
+  o += tx(416, 220, "> γ ||Q − Q'||_{∞} is possible!", { fs: 12.2, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
 
@@ -641,8 +641,8 @@ function dqnVsSacActor() {
   o += tx(416, 42, 'Continuous Control (SAC)', { fs: 14.5, fw: 700, fill: D.green.dark });
   o += tx(416, 66, 'Actor π_θ(s) + Critic Q_w(s, a)', { mono: true, fs: 12, fill: C.ink });
   o += box(306, 86, 220, 64, '#FFFFFF', C.green, 6, 1.8);
-  o += tx(416, 108, 'Actor samples ã_θ(s, z) and climbs', { fs: 12, fill: C.ink });
-  o += tx(416, 130, 'pathwise ∂Q_w/∂a · ∂ã_θ/∂θ', { mono: true, fs: 11.3, fw: 700, fill: D.green.dark });
+  o += tx(416, 108, 'Actor samples ã_{θ}(s, z) and climbs', { fs: 12, fill: C.ink });
+  o += tx(416, 130, 'pathwise ∂Q_w/∂a · ∂ã_{θ}/∂θ', { mono: true, fs: 11.3, fw: 700, fill: D.green.dark });
   o += tx(416, 178, 'Lower variance than score function', { fs: 12.2, fw: 700, fill: D.green.dark });
   o += tx(416, 202, '300k steps → 3,000 steps!', { fs: 12.8, fw: 700, fill: C.ink });
   return svg(W, H, o);
@@ -862,7 +862,7 @@ function actorSeededSearch() {
 
   o += box(16, 66, 158, 108, D.purple.tint, C.purple, 8, 2);
   o += tx(95, 92, 'Actor Rollout', { fs: 13.8, fw: 700, fill: D.purple.dark });
-  o += tx(95, 118, 'ā_θ = c tanh μ_θ(s)', { mono: true, fs: 11, fw: 700, fill: C.ink });
+  o += tx(95, 118, 'ā_{θ} = c tanh μ_θ(s)', { mono: true, fs: 11, fw: 700, fill: C.ink });
   o += tx(95, 144, '25-step seed plan', { fs: 12, fill: C.muted });
 
   o += arrow(176, 96, 214, 76, C.green);
@@ -880,7 +880,7 @@ function actorSeededSearch() {
   o += arrow(412, 164, 434, 134, C.blue);
 
   o += box(438, 72, 106, 96, C.lamber, C.amber, 8, 2);
-  o += tx(491, 100, 'Winner a*_0', { fs: 13.5, fw: 700, fill: D.orange.dark });
+  o += tx(491, 100, 'Winner a*_{0}', { fs: 13.5, fw: 700, fill: D.orange.dark });
   o += tx(491, 124, 'Ĝ(A*) ≥', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(491, 144, 'Ĝ(A_actor)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
 
@@ -897,8 +897,8 @@ function searchDistillation() {
   const bw = 224, bh = 72;
   const boxes = [
     { x: 24,  y: 44,  t: '1. Refit World Model f̂_φ', s: 'Least squares on buffer D', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 312, y: 44,  t: '2. Actor-Seeded Search', s: 'a*_i = improve(f̂_φ, π_θ, s_i)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 312, y: 158, t: '3. Distill into Actor π_θ', s: 'min_θ ∑ ||ā_θ(s_i) − a*_i||²', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 312, y: 44,  t: '2. Actor-Seeded Search', s: 'a*_{i} = improve(f̂_φ, π_θ, s_i)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 312, y: 158, t: '3. Distill into Actor π_θ', s: 'min_{θ} ∑ ||ā_{θ}(s_i) − a*_{i}||²', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 24,  y: 158, t: '4. Collect New Episode', s: 'Act with improve(f̂_φ, π_θ)', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   boxes.forEach((b) => {
@@ -1069,7 +1069,7 @@ function sftVsRlvr() {
   o += box(16, 16, 528, 104, C.lblue, C.blue, 8, 2);
   o += tx(280, 36, 'Pretraining & SFT (Behavior Cloning): Teacher Target at Every Token', { fs: 13.8, fw: 700, fill: D.blue.dark });
   o += box(34, 52, 492, 38, '#FFFFFF', C.blue, 6, 1.8);
-  o += tx(280, 71, 'x → a*_1 (CE loss) → a*_2 (CE loss) → ··· → a*_T (CE loss)', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(280, 71, 'x → a*_{1} (CE loss) → a*_{2} (CE loss) → ··· → a*_{T} (CE loss)', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(280, 106, 'Imitates static corpus; never practices recovering from its own reasoning errors', { fs: 12, fill: C.ink });
 
   o += box(16, 136, 528, 106, C.lgreen, C.green, 8, 2);

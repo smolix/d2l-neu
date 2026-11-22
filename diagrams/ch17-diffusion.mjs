@@ -468,7 +468,7 @@ export const diagrams = {
     {
       tag: 'Identical Gradients',
       head: '∇_θ C = 0',
-      eq: 'u*_θ(x, t) = u_t(x)',
+      eq: 'u*_{θ}(x, t) = u_t(x)',
       note1: 'Recovers marginal field',
       note2: 'Loss plateaus at floor C',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -617,9 +617,9 @@ export const diagrams = {
     {
       tag: 'Divergence Theorem',
       head: 'Net Inward Flux',
-      eq: '∂_t p_t = −∇·J',
+      eq: '∂_{t} p_t = −∇·J',
       note1: 'Rate of density change',
-      note2: 'Equals −∑ ∂_i(p_t u_{t,i})',
+      note2: 'Equals −∑ ∂_{i}(p_t u_{t,i})',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
     {
@@ -630,7 +630,7 @@ export const diagrams = {
       note2: 'Arrives at x₀ ~ p₀!',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
-    { text: 'Any velocity field u_t satisfying ∂_t p_t = −∇·(p_t u_t) transports p₁ to p₀ exactly' }
+    { text: 'Any velocity field u_t satisfying ∂_{t} p_t = −∇·(p_t u_t) transports p₁ to p₀ exactly' }
   ),
 
   'ch17-diff-continuity-proof': () => pipeline3(
@@ -638,7 +638,7 @@ export const diagrams = {
     {
       tag: 'Step 1 · Single x₀',
       head: 'Conditional Cloud',
-      eq: '∂_t p_c = −∇·J_c',
+      eq: '∂_{t} p_c = −∇·J_c',
       note1: 'J_c = p_t(x|x₀) u_t(x|x₀)',
       note2: 'Exact Gaussian transport',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
@@ -654,8 +654,8 @@ export const diagrams = {
     {
       tag: 'Step 3 · Linearity',
       head: 'Marginal Continuity',
-      eq: '∂_t p_t = −∇·J',
-      note1: '∂_t and ∇· commute with E',
+      eq: '∂_{t} p_t = −∇·J',
+      note1: '∂_{t} and ∇· commute with E',
       note2: 'Proves exact transport!',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
@@ -1047,7 +1047,7 @@ export const diagrams = {
     {
       tag: 'Non-Markov Family',
       head: 'Any Marginal Match',
-      eq: 'q_σ̃(x_s | x_t, x₀)',
+      eq: 'q_{σ̃}(x_s | x_t, x₀)',
       note1: 'Preserves N(α_s x₀, σ_s²I)',
       note2: 'For any σ̃ ∈ [0, σ_s]',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
@@ -1193,7 +1193,7 @@ export const diagrams = {
     {
       badge: '3. w(λ) Integral',
       head: 'Canonical Loss: ½ ∫ w(λ) E‖ε̂_θ(x_λ, λ) − ε‖² dλ',
-      sub: 'Unifies ELBO (w ≡ 1), DDPM, v-prediction (e^−λ/2), flow & EDM',
+      sub: 'Unifies ELBO (w ≡ 1), DDPM, v-prediction (exp(−λ/2)), flow & EDM',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
     'Both the continuous ELBO and ODE flow NLL match our 2D mixture entropy to 0.005 nats'
@@ -1238,7 +1238,7 @@ export const diagrams = {
     },
     {
       badge: 'Denoising L_{k−1}',
-      head: '∑_{k=2}^T E_q[ KL( q(x_{k−1} | x_k, x₀)  ‖  p_θ ) ]',
+      head: '∑_{k=2}^{T} E_q[ KL( q(x_{k−1} | x_k, x₀)  ‖  p_θ ) ]',
       sub: 'Compares each reverse step against Gaussian N(μ̃_k, β̃_k I)',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
@@ -1458,7 +1458,7 @@ export const diagrams = {
     {
       tag: '3. Linear Unpatchify',
       head: 'Zero-Init Projection',
-      eq: 'ℝ^d → p×p×C',
+      eq: 'ℝ^{d} → p×p×C',
       note1: 'Each token → p×p patch',
       note2: 'Starts at exact 0!',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -1472,7 +1472,7 @@ export const diagrams = {
       head: 'Cross-Attention (LDM / SD 1–2)',
       sub: 'Queries Q from image, K & V from text',
       rows: [
-        'softmax(Q Kᵀ / √d) V ∈ ℝ^(m × d)',
+        'softmax(Q Kᵀ / √d) V ∈ ℝ^{m × d}',
         'Text tokens X_text are frozen',
         'Cache K, V once outside 50-step loop!',
       ],
@@ -1525,7 +1525,7 @@ export const diagrams = {
     'Instantaneous Tangent Velocity vs. Integrated Chord Displacement',
     {
       head: 'Velocity Network u_θ(x_t, t)',
-      sub: 'Predicts local tangent dx_t / dt',
+      sub: 'Predicts local tangent dx_{t} / dt',
       rows: [
         'At t = 1: u₁(x₁) = x₁ − E[x₀]',
         '1-step Euler: x₁ − u₁(x₁) = E[x₀]!',
@@ -1610,13 +1610,13 @@ export const diagrams = {
     },
     {
       badge: '2. Lagrangian',
-      head: 'Moving Endpoint s: ∂_s Φ_{t→s}(x_t) = u_s( Φ_{t→s} )',
+      head: 'Moving Endpoint s: ∂_{s} Φ_{t→s}(x_t) = u_s( Φ_{t→s} )',
       sub: 'Evaluates velocity u_s at predicted landing point Φ_{t→s}(x_t)',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
     {
       badge: '3. Eulerian (JVP)',
-      head: 'Moving Start t: ∂_t Φ_{t→s} + (∇_x Φ_{t→s}) u_t(x_t) = 0',
+      head: 'Moving Start t: ∂_{t} Φ_{t→s} + (∇_x Φ_{t→s}) u_t(x_t) = 0',
       sub: 'Evaluates u_t at start x_t via 1 JVP (Consistency & MeanFlow)',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
@@ -1662,7 +1662,7 @@ export const diagrams = {
       tag: '2. Differentiate in t',
       head: 'Product & Chain Rule',
       eq: 'ū + (t−s)dū/dt = u_t',
-      note1: 'dū/dt = ∂_t ū + (∇ū)u_t',
+      note1: 'dū/dt = ∂_{t} ū + (∇ū)u_t',
       note2: '1 forward-mode JVP!',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
@@ -1674,7 +1674,7 @@ export const diagrams = {
       note2: 'Wrap target in sg[·]!',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
-    { text: 'Use slow time frequencies ω ≤ 1 so ∂_t sin(ωt) = ω cos(ωt) avoids JVP noise' }
+    { text: 'Use slow time frequencies ω ≤ 1 so ∂_{t} sin(ωt) = ω cos(ωt) avoids JVP noise' }
   ),
 
   'ch17-diff-unified-fm-loss': () => matrix2x2(
@@ -1740,7 +1740,7 @@ export const diagrams = {
     'Autoregressive Left-to-Right (GPT) vs. Masked Discrete Diffusion',
     {
       head: 'Autoregressive (GPT)',
-      sub: 'Causal chain: ∏_i p(x^i | x^{<i})',
+      sub: 'Causal chain: ∏_{i} p(x^i | x^{<i})',
       rows: [
         'Fixed left-to-right causal order',
         'Reveals 1 token per forward pass',
@@ -1767,7 +1767,7 @@ export const diagrams = {
       tag: '1-Step Transition',
       head: 'Row-Stochastic Q_t',
       eq: 'Cat(x_{t−1} Q_t)',
-      note1: 'One-hot row x ∈ {0,1}^K',
+      note1: 'One-hot row x ∈ {0,1}^{K}',
       note2: '[Q_t]_{ij} = P(i → j)',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
@@ -1782,7 +1782,7 @@ export const diagrams = {
     {
       tag: 'Forward Posterior',
       head: 'Bayes Elementwise ⊙',
-      eq: 'x_tQ_tᵀ ⊙ x₀Q̄_{t−1}',
+      eq: 'x_{t}Q_{t}ᵀ ⊙ x₀Q̄_{t−1}',
       note1: '÷ Z, Z = x₀ Q̄_t x_tᵀ',
       note2: 'Exact categorical dist',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -1826,18 +1826,18 @@ export const diagrams = {
       sub: 'Token survived all t steps unmasked',
       rows: [
         'Absorbing [M] never turns back to word',
-        'Guaranteed 100% clean: x_t^i = x₀^i!',
-        'Reverse copies x_{t−1}^i = x_t^i (KL=0)',
+        'Guaranteed 100% clean: x_t^i = x₀ⁱ!',
+        'Reverse copies x_{t−1}^{i} = x_t^i (KL=0)',
       ],
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
     {
       head: 'Case 2: Masked Token (x_t^i = [M])',
-      sub: 'Only two predecessors: x₀^i or [M]',
+      sub: 'Only two predecessors: x₀ⁱ or [M]',
       rows: [
-        'Unmask to x₀^i with prob w_t',
+        'Unmask to x₀ⁱ with prob w_t',
         'Stay [M] with prob 1 − w_t',
-        'Network predicts p_θ(x₀^i | x_t)!',
+        'Network predicts p_θ(x₀ⁱ | x_t)!',
       ],
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
@@ -1849,7 +1849,7 @@ export const diagrams = {
     {
       tag: '1. Prior & Visible Sites',
       head: 'Vanish Identically!',
-      eq: 'L_T = 0,  KL_vis = 0',
+      eq: 'L_T = 0,  KL_{vis} = 0',
       note1: 'At t=T: all [M] (det.)',
       note2: 'Visible tokens copy',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
@@ -1887,7 +1887,7 @@ export const diagrams = {
     },
     {
       head: 'Time-Agnostic Bayes Denoiser',
-      sub: 'Why optimal p*(x₀^i | x_t) ignores time t',
+      sub: 'Why optimal p*(x₀ⁱ | x_t) ignores time t',
       rows: [
         'Mask coin flips are independent of x₀',
         'x_t already shows which sites are [M]',

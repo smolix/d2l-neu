@@ -860,7 +860,7 @@ function resExplosion() {
 }
 
 const defaultInitDecay = () => fiveRowDiagram([
-  { theme: 'red',    k: 'Uniform ±1/√n_in',   v: 'σ² = 1/(3n_in) → ReLU mult ×1/6 (10 layers → 1.7×10⁻⁸)' },
+  { theme: 'red',    k: 'Uniform ±1/√n_in',   v: 'σ² = 1/(3n_{in}) → ReLU mult ×1/6 (10 layers → 1.7×10⁻⁸)' },
   { theme: 'orange', k: 'LeCun Normal',       v: 'N(0, 1/n_in) → σ² = 1/n_in → ReLU mult ×1/2 (10 layers → 9.8×10⁻⁴)' },
   { theme: 'orange', k: 'Glorot Uniform',     v: 'n_in = n_out → σ² = 1/n_in → ReLU mult ×1/2 (10 layers → 9.8×10⁻⁴)' },
   { theme: 'red',    k: 'Uniform ±0.07',      v: 'σ² ≈ 0.00163 → ReLU mult ×0.21 (10 layers → 1.6×10⁻⁷)' },
@@ -909,7 +909,7 @@ function truncatedNormal() {
     'Unbounded tails (−∞, +∞):',
     'Across 10⁸ foundation-model',
     'weights, ~60 entries exceed ±5σ',
-    { t: '|w|_max ≈ 5.6σ  (extreme spikes!)', mono: true, fs: 12, fw: 700, fill: D.red.dark },
+    { t: 'max |w| ≈ 5.6σ  (extreme spikes!)', mono: true, fs: 12, fw: 700, fill: D.red.dark },
   ], { white: true, rail: true });
 
   o += card(278, 12, 248, 154, 'green', [
@@ -917,7 +917,7 @@ function truncatedNormal() {
     'Rejects & redraws |w| > 2σ:',
     'Strictly bounds every initial weight',
     'inside [−2σ, +2σ] (BERT / ViT):',
-    { t: '|w|_max ≤ 2.0σ  (zero outliers!)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'max |w| ≤ 2.0σ  (zero outliers!)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(14, 180, 512, 66, 'purple', [
@@ -980,7 +980,8 @@ function resVarianceDerivation() {
 
   o += card(14, 156, 512, 92, 'green', [
     'Add Uncorrelated Skip Connection:  x_{k+1} = x_k + f_k(x_k)   (with E[x_kᵀ f_k(x_k)] = 0)',
-    { t: 'm_{k+1} = E[x_k²] + E[f_k(x_k)²] = m_k + g² m_k = (1 + g²) m_k   ⇒   m_N = (1 + g²)^N m_0', mono: true, fs: 13, fw: 700, fill: D.green.dark },
+    { t: 'm_{k+1} = E[x_k²] + E[f_k(x_k)²] = m_k + g² m_k = (1 + g²) m_k', mono: true, fs: 13, fw: 700, fill: D.green.dark },
+    { t: '⇒   m_N = (1 + g²)^N m_0', mono: true, fs: 13, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
   return svg(W, H, o);
 }
@@ -1117,7 +1118,7 @@ function rmsnormFormula() {
   let o = '';
   o += card(14, 10, 512, 48, 'purple', [
     'RMSNorm (Zhang & Sennrich, 2019)',
-    { t: 'RMS(x) = √((1/d) Σ_{i=1}^d x_i² + ε)  ⇒  RMSNorm(x) = (x / RMS(x)) ⊙ g', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
+    { t: 'RMS(x) = √((1/d) Σ_{i=1}^{d} x_i² + ε)  ⇒  RMSNorm(x) = (x / RMS(x)) ⊙ g', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
   ]);
 
   o += card(14, 70, 248, 116, 'blue', [
@@ -1902,7 +1903,7 @@ function logsumexpAndSums() {
     'Hazard A: Log-Sum-Exp Overflow',
     { t: 'x = [12, 11, 10] in fp16 (max 65,504)', mono: true, fs: 11.5 },
     { t: 'Naive: exp(12) ≈ 162,755 → inf!', mono: true, fs: 12, fw: 700, fill: D.red.dark },
-    { t: 'Fix: Shift by m = max_i x_i = 12', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'Fix: Shift by m = max_{i} x_i = 12', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     { t: 'm + log Σ exp(x_i − m)', mono: true, fs: 13, fw: 700, fill: D.green.dark },
     'Exponents are ≤ 0, so exp(x_i−m) ∈ (0,1]',
     'and never overflows in any format!',

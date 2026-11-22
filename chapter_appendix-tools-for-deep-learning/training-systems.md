@@ -656,7 +656,7 @@ Even leaving out the $28\text{ GB}$ master-weight copy ($84\text{ GiB}$ state $+
 ::: {.cols .vc}
 ::: {.col}
 - **Bitwise-complete checkpoint bundle:** Save sharded model weights, Adam moments, **LR scheduler state**, step/token counters, deterministic **data cursor**, and per-rank **PRNG states**.
-- **Crash-safe atomic rename:** Never overwrite `ckpt.pt` in place; write to `ckpt.tmp`, call `f.flush()` + `os.fsync()`, swap via **`os.replace("ckpt.tmp", "ckpt.pt")`**, and `fsync` the directory.
+- **Crash-safe atomic rename:** Never overwrite `ckpt` in place; write to `ckpt.tmp`, call `f.flush()` + `os.fsync()`, swap via **`os.replace("ckpt.tmp", "ckpt")`**, and `fsync` the directory.
 :::
 
 ::: {.col .fig .big}

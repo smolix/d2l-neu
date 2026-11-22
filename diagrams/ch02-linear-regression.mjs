@@ -563,7 +563,7 @@ function broadcastTrap() {
   o += tx(280, 20, 'Silent Shape Bug: Why Loss Can Drop While Weights Fail', { fs: 15, fw: 700, fill: C.ink });
 
   o += box(16, 44, 254, 210, D.red.tint, D.red.base);
-  o += tx(143, 66, 'Bug: y_hat(32,1) − y(32,)', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
+  o += tx(143, 66, 'Bug: y\\_hat(32,1) − y(32,)', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
   o += tx(143, 92, 'Broadcasts to (32, 32) matrix', { fs: 12.5, fw: 700, fill: D.red.dark });
   o += tx(143, 114, 'of all 1,024 pairwise diffs!', { fs: 12.5, fill: C.ink });
   o += box(28, 132, 230, 56, '#FFFFFF', D.red.base, 6, 1.5);
@@ -600,7 +600,7 @@ function defensiveReshape() {
   const cy = 104;
   o += box(16, cy - 38, 140, 76, C.lblue, C.blue);
   o += tx(86, cy - 12, 'linreg(X,w,b)', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
-  o += tx(86, cy + 14, 'y_hat: (32, 1)', { mono: true, fs: 12.5, fill: C.ink });
+  o += tx(86, cy + 14, 'y\\_hat: (32, 1)', { mono: true, fs: 12.5, fill: C.ink });
 
   o += arrow(158, cy, 188, cy, C.blue);
 
@@ -630,7 +630,7 @@ function gradVerify() {
   o += tx(132, 72, 'Analytical Formula', { fs: 14, fw: 700, fill: D.blue.dark });
   o += tx(132, 98, 'r = Xb @ w + b − yb', { mono: true, fs: 12, fill: C.ink });
   o += tx(132, 122, '∇_w L = Xbᵀ r / 32', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
-  o += tx(132, 144, '∂_b L = Σ r / 32', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
+  o += tx(132, 144, '∂_{b} L = Σ r / 32', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
 
   o += box(312, 48, 232, 118, D.purple.tint, C.purple);
   o += tx(428, 72, 'Reverse-Mode Autograd', { fs: 14, fw: 700, fill: D.purple.dark });
@@ -654,12 +654,12 @@ function reshuffleBias() {
 
   o += box(16, 44, 528, 94, C.lgreen, C.green);
   o += tx(32, 66, 'Random Permutation (Unbiased: E[∇L_B] = ∇L)', { fs: 14, fw: 700, fill: D.green.dark, anchor: 'start' });
-  o += tx(32, 92, 'Batch mean label ȳ_B ≈ 4.2 ± 0.7  →  ∂_b L_B ≈ −4.2', { mono: true, fs: 12.5, fw: 600, fill: C.ink, anchor: 'start' });
+  o += tx(32, 92, 'Batch mean label ȳ_B ≈ 4.2 ± 0.7  →  ∂_{b} L_B ≈ −4.2', { mono: true, fs: 12.5, fw: 600, fill: C.ink, anchor: 'start' });
   o += tx(32, 118, 'Every step pushes b steadily upward from 0 toward b* = 4.2', { fs: 12.5, fw: 700, fill: D.green.dark, anchor: 'start' });
 
   o += box(16, 154, 528, 94, D.red.tint, D.red.base);
   o += tx(32, 176, 'Sorted by Label Without Reshuffling (Biased Trajectory!)', { fs: 14, fw: 700, fill: D.red.dark, anchor: 'start' });
-  o += tx(32, 202, 'Batch 1 (32 smallest y): ȳ_B ≈ −4.6  →  ∂_b L_B ≈ +4.6', { mono: true, fs: 12.5, fw: 600, fill: C.ink, anchor: 'start' });
+  o += tx(32, 202, 'Batch 1 (32 smallest y): ȳ_B ≈ −4.6  →  ∂_{b} L_B ≈ +4.6', { mono: true, fs: 12.5, fw: 600, fill: C.ink, anchor: 'start' });
   o += tx(32, 228, 'Steps b downward away from b* = 4.2, cycling wildly every epoch!', { fs: 12.5, fw: 700, fill: D.red.dark, anchor: 'start' });
 
   return svg(W, H, o);
@@ -892,7 +892,7 @@ function scratchModule() {
   return stackCards(560, 284, 'LinearRegressionScratch(d2l.Module) Anatomy', [
     { head: '1. __init__(num_inputs, lr, sigma=0.01)', badge: 'registered params', sub: 'Registers self.w ~ N(0, σ²) of shape (d, 1) and self.b = zeros(1)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
     { head: '2. forward(self, X)', badge: 'matmul(X, w) + b', sub: 'Computes affine prediction ŷ ∈ ℝ^{|B|×1} from registered parameters', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
-    { head: '3. loss(self, y_hat, y)', badge: 'reduce_mean(r²/2)', sub: 'Reshapes y to (-1, 1) and returns scalar half mean squared error', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+    { head: '3. loss(self, y\\_hat, y)', badge: 'reduce_mean(r²/2)', sub: 'Reshapes y to (-1, 1) and returns scalar half mean squared error', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
   ]);
 }
 

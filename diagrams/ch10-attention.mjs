@@ -408,7 +408,7 @@ function scoreJacobianSaturation() {
   let o = '';
   o += card(20, 16, 500, 54, D.purple.tint, C.purple, 'Softmax Jacobian:  J = ∂α / ∂a = diag(α) − α αᵀ', 'Entry (i, j):  ∂αᵢ / ∂aⱼ = αᵢ (δᵢⱼ − αⱼ)', null, D.purple.dark, 14.5, 12.5);
 
-  o += card(20, 90, 236, 156, C.lgreen, C.green, 'Balanced Regime (Scaled)', 'αᵢ ≈ 1/m  ⇒  ‖J‖_F ≈ 0.18', 'Strong cross-key gradient coupling', D.green.dark, 14, 12, { t: 'Peak ‖J‖_F = ½ at k=2 split', mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += card(20, 90, 236, 156, C.lgreen, C.green, 'Balanced Regime (Scaled)', 'αᵢ ≈ 1/m  ⇒  ‖J‖_{F} ≈ 0.18', 'Strong cross-key gradient coupling', D.green.dark, 14, 12, { t: 'Peak ‖J‖_{F} = ½ at k=2 split', mono: true, fs: 12, fw: 700, fill: D.green.dark });
 
   o += card(284, 90, 236, 156, D.red.tint, D.red.base, 'One-Hot Corner (Unscaled)', 'α → e_i*  ⇒  αᵢ(1 − αᵢ) → 0', 'diag(e_i*) − e_i* e_i*ᵀ = 0 matrix!', D.red.dark, 14, 12, { t: '∂L/∂a = J (∂L/∂α) → 0 (frozen!)', mono: true, fs: 12, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
@@ -493,7 +493,7 @@ function mhaCopyBothBound() {
   o += card(284, 42, 236, 116, C.lgreen, C.green, '2 Heads: 2 Mixtures [m₁; m₂]', 'm₁ = α v₁ + (1−α)v₂, m₂ = (1−α)v₁ + α v₂', 'Rank-2 mixing matrix A is invertible!', D.green.dark, 14, 11.5);
 
   o += card(20, 172, 236, 92, '#FFFFFF', D.red.base, 'Rel. Error = 1/2 for EVERY (α₁, α₂)', 'α₂²/(α₁²+α₂²) + α₁²/(α₁²+α₂²) = 1 (of variance 2)', 'RMS relative error = √(1/2) ≈ 0.707', D.red.dark, 13, 11.5);
-  o += card(284, 172, 236, 92, C.lblue, C.blue, 'Error → 0 (10⁻⁷ in fp32)', 'General k-value bound: 1 − rank(A)/k', 'Needs rank(A) = k AND Hd_h ≥ kd_v', D.blue.dark, 13, 11.5);
+  o += card(284, 172, 236, 92, C.lblue, C.blue, 'Error → 0 (10⁻⁷ in fp32)', 'General k-value bound: 1 − rank(A)/k', 'Needs rank(A) = k AND H d_h ≥ k d_v', D.blue.dark, 13, 11.5);
   return svg(W, H, o);
 }
 
@@ -577,7 +577,7 @@ function posEquivariance() {
 function posLearnedTable() {
   const W = 540, H = 266;
   let o = '';
-  o += tx(270, 20, 'Learned Position Embedding Table P ∈ ℝ^(L_max × d) (Trained at L = 128)', { fs: 14.5, fw: 700, fill: C.ink });
+  o += tx(270, 20, 'Learned Position Embedding Table P ∈ ℝ^{L_max×d} (Trained at L = 128)', { fs: 14.5, fw: 700, fill: C.ink });
   o += card(20, 44, 236, 114, C.lgreen, C.green, 'Rows 0 … 127 (In-Range)', 'p_i updated on every batch', 'In-range PPL ≈ 9.6 on WikiText-103', D.green.dark, 14, 12);
   o += card(284, 44, 236, 114, D.red.tint, D.red.base, 'Rows 128 … 511 (Unseen)', '∇_(p_i) L = 0 throughout training!', 'Stuck at random N(0, 0.02²) noise', D.red.dark, 14, 12);
 
@@ -595,7 +595,7 @@ function posPlanarRotation() {
   o += arrow(350, 81, 376, 81, C.green);
   o += card(380, 32, 140, 98, C.lgreen, C.green, 'Code at i + δ', '[sin((i+δ)ω_m)]', '[cos((i+δ)ω_m)]', D.green.dark, 14, 12.5);
 
-  o += card(20, 164, 500, 82, C.lamber, C.amber, 'Offset-Invariant Sinusoidal Inner Product', 'p_iᵀ p_(i+δ) = ∑_m (sin(iω_m)sin((i+δ)ω_m) + cos(iω_m)cos((i+δ)ω_m)) = ∑_m cos(δ ω_m)', 'Depends purely on relative distance δ — before W_q and W_k mix coordinates!', D.orange.dark, 13.5, 12);
+  o += card(20, 164, 500, 82, C.lamber, C.amber, 'Offset-Invariant Sinusoidal Inner Product', 'p_iᵀ p_(i+δ) = ∑_{m} (sin(iω_{m})sin((i+δ)ω_m) + cos(iω_{m})cos((i+δ)ω_m)) = ∑_{m} cos(δ ω_m)', 'Depends purely on relative distance δ — before W_q and W_k mix coordinates!', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -616,7 +616,7 @@ function posFourTerms() {
 function posAlibiSlopes() {
   const W = 540, H = 266;
   let o = '';
-  o += card(20, 14, 500, 70, C.lblue, C.blue, 'ALiBi Score Rule:  score_ij^(h) = qᵢᵀkⱼ / √d_h − m_h · (i − j)', 'Geometric head slopes m_h = 2^(−8h/H) · for H=4:  1/4,  1/16,  1/64,  1/256', null, D.blue.dark, 14, 12.5);
+  o += card(20, 14, 500, 70, C.lblue, C.blue, 'ALiBi Score Rule:  score_{ij}^{(h)} = qᵢᵀkⱼ / √d_h − m_h · (i − j)', 'Geometric head slopes m_h = 2^(−8h/H) · for H=4:  1/4,  1/16,  1/64,  1/256', null, D.blue.dark, 14, 12.5);
 
   o += card(20, 100, 236, 90, C.lamber, C.amber, 'Steep Heads (m₁ = 1/4)', 'At distance 40: penalty −10 (e⁻¹⁰)', 'Strict local recency focus', D.orange.dark, 14, 12);
   o += card(284, 100, 236, 90, C.lgreen, C.green, 'Gentle Heads (m₄ = 1/256)', 'At distance 128: penalty −0.5', 'Broad context window average', D.green.dark, 14, 12);
@@ -786,7 +786,7 @@ function winTwoRoutes() {
   o += card(284, 20, 236, 114, C.lgreen, C.green, 'Route 2: Linear Attention', 'Kernel K(q,k) = φ(q)ᵀ φ(k)', 'O(n d d_h) FLOPs · O(d d_h) state', D.green.dark, 14.5, 12);
 
   o += card(20, 154, 236, 94, '#FFFFFF', C.blue, 'Preserves Softmax Sharpness', 'Exact local retrieval within window w', 'Needs multi-hop or global layers', D.blue.dark, 13.5, 12);
-  o += card(284, 154, 236, 94, '#FFFFFF', C.green, 'Infinite Horizon, Fixed State', 'S_t ∈ ℝ^(d_h × d_v) associative matrix', 'Lacks softmax temperature sharpening', D.green.dark, 13.5, 12);
+  o += card(284, 154, 236, 94, '#FFFFFF', C.green, 'Infinite Horizon, Fixed State', 'S_t ∈ ℝ^{d_h×d_v} associative matrix', 'Lacks softmax temperature sharpening', D.green.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -840,7 +840,7 @@ function winFastWeightRnn() {
   let o = '';
   o += card(20, 24, 152, 98, C.lblue, C.blue, '1. Outer-Product Write', 'S_t = S_(t−1) + φ(k_t)v_tᵀ', 'z_t = z_(t−1) + φ(k_t)', D.blue.dark, 13.5, 11.5);
   o += arrow(176, 73, 194, 73, C.purple);
-  o += card(198, 24, 144, 98, D.purple.tint, C.purple, '2. Fixed State Matrix', 'S_t ∈ ℝ^(d_h × d_v)', '16.25 KiB at d_h=64', D.purple.dark, 13.5, 12);
+  o += card(198, 24, 144, 98, D.purple.tint, C.purple, '2. Fixed State Matrix', 'S_t ∈ ℝ^{d_h×d_v}', '16.25 KiB at d_h=64', D.purple.dark, 13.5, 12);
   o += arrow(346, 73, 364, 73, C.green);
   o += card(368, 24, 152, 98, C.lgreen, C.green, '3. Memory Readout', 'o_tᵀ = φ(q_t)ᵀ S_t /', '(φ(q_t)ᵀ z_t + ε)', D.green.dark, 13.5, 11.5);
 
@@ -899,11 +899,11 @@ function circShortcutIllusion() {
 function circAdditiveHeads() {
   const W = 540, H = 266;
   let o = '';
-  o += card(20, 22, 226, 112, C.lblue, C.blue, 'Concatenate Form', '[u₁; u₂; …; u_H] ∈ ℝ^(H d_h)', 'multiplied by W_o ∈ ℝ^(d × H d_h)', D.blue.dark, 14, 12);
+  o += card(20, 22, 226, 112, C.lblue, C.blue, 'Concatenate Form', '[u₁; u₂; …; u_H] ∈ ℝ^{H·d_h}', 'multiplied by W_o ∈ ℝ^{d×H·d_h}', D.blue.dark, 14, 12);
   o += tx(270, 78, '=', { fs: 26, fw: 700, fill: D.purple.dark });
-  o += card(294, 22, 226, 112, C.lgreen, C.green, 'Independent Sum Form', '∑_(m=1)^H  W_o^m u_m', '= ∑_m ∑_(j≤i) α_ij^m (W_o^m W_v^m) h_j', D.green.dark, 14, 11.5);
+  o += card(294, 22, 226, 112, C.lgreen, C.green, 'Independent Sum Form', '∑_{m=1}^{H}  W_o^m u_m', '= ∑_{m} ∑_{j≤i} α_ij^m (W_o^m W_v^m) h_j', D.green.dark, 14, 11.5);
 
-  o += card(20, 156, 500, 90, D.purple.tint, C.purple, 'Every Head Acts Independently & Additively on the Residual Stream', 'Partitioning W_o = [W_o¹ | … | W_o^H] into H column slices of shape (d × d_h)', 'shows that each head m contributes ∑_(j≤i) α_ij^m W_OV^m h_j directly to the stream!', D.purple.dark, 13.5, 12);
+  o += card(20, 156, 500, 90, D.purple.tint, C.purple, 'Every Head Acts Independently & Additively on the Residual Stream', 'Partitioning W_o = [W_o¹ | … | W_o^H] into H column slices of shape (d × d_h)', 'shows that each head m contributes ∑_{j≤i} α_ij^m W_OV^m h_j directly to the stream!', D.purple.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -911,8 +911,8 @@ function circAdditiveHeads() {
 function circQkovFactorization() {
   const W = 540, H = 270;
   let o = '';
-  o += card(20, 20, 236, 116, C.lblue, C.blue, 'QK Circuit: WHERE to Attend', 'W_QK = W_qᵀ W_k ∈ ℝ^(d × d)', 's_ij = h_iᵀ W_QK h_j / √d_h', D.blue.dark, 14, 12);
-  o += card(284, 20, 236, 116, C.lgreen, C.green, 'OV Circuit: WHAT to Write', 'W_OV = W_o W_v ∈ ℝ^(d × d)', 'writes ∑_j α_ij (W_OV h_j) to stream i', D.green.dark, 14, 12);
+  o += card(20, 20, 236, 116, C.lblue, C.blue, 'QK Circuit: WHERE to Attend', 'W_QK = W_qᵀ W_k ∈ ℝ^{d×d}', 's_ij = h_iᵀ W_QK h_j / √d_h', D.blue.dark, 14, 12);
+  o += card(284, 20, 236, 116, C.lgreen, C.green, 'OV Circuit: WHAT to Write', 'W_OV = W_o W_v ∈ ℝ^{d×d}', 'writes ∑_{j} α_ij (W_OV h_j) to stream i', D.green.dark, 14, 12);
 
   o += card(20, 156, 500, 94, C.lamber, C.amber, 'Rank-d_h Bottleneck & Gauge Invariance', 'Both W_QK and W_OV factor through width d_h = d/H, so rank(W_QK), rank(W_OV) ≤ d_h.', 'Replacing (W_o, W_v) ↦ (W_o G⁻¹, G W_v) leaves W_OV identical for any invertible G!', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
@@ -931,7 +931,7 @@ function circDepthHierarchy() {
   o += arrow(178, y + ch / 2, 189, y + ch / 2, C.gray);
   o += arrow(351, y + ch / 2, 362, y + ch / 2, C.blue);
 
-  o += card(20, 178, 500, 80, D.purple.tint, C.purple, 'Why N = 1 Cannot Perform Content-Based Induction', 'At N = 1, key k_j at [B]’s position depends only on e_[B] and has no record that x_(j−1) = [A]!', null, D.purple.dark, 13.5, 12);
+  o += card(20, 178, 500, 80, D.purple.tint, C.purple, 'Why N = 1 Cannot Perform Content-Based Induction', 'At N = 1, key k_j at [B]’s position depends only on e_{[B]} and has no record that x_(j−1) = [A]!', null, D.purple.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -941,11 +941,11 @@ function circCopyMatrixProbe() {
   let o = '';
   o += card(20, 24, 142, 92, C.lblue, C.blue, 'Mean Stream h̄_a', 'entering Block 2', 'at token a positions', D.blue.dark, 14, 12);
   o += arrow(166, 70, 192, 70, C.purple);
-  o += card(196, 24, 148, 92, D.purple.tint, C.purple, 'Summed OV Map', 'W_OV = ∑_m W_o^m W_v^m', 'transforms h̄_a', D.purple.dark, 13.5, 11.5);
+  o += card(196, 24, 148, 92, D.purple.tint, C.purple, 'Summed OV Map', 'W_OV = ∑_{m} W_o^m W_v^m', 'transforms h̄_a', D.purple.dark, 13.5, 11.5);
   o += arrow(348, 70, 374, 70, C.green);
   o += card(378, 24, 142, 92, C.lgreen, C.green, 'Unembed E', 'C_ab = e_bᵀ W_OV h̄_a', '64 × 64 Copy Matrix', D.green.dark, 14, 11.5);
 
-  o += card(20, 142, 500, 104, C.lamber, C.amber, 'Diagonal Dominance Test:  arg max_b C_ab == a  (98–100% vs. 1.6% chance)', 'When Block 2 attends to token a at position j, its OV circuit boosts logit b = a!', 'Caution: The 1-block model ALSO learns a diagonal C, but lacks the QK circuit to find j.', D.orange.dark, 13.5, 12);
+  o += card(20, 142, 500, 104, C.lamber, C.amber, 'Diagonal Dominance Test:  arg max_{b} C_ab = a  (98–100% vs. 1.6% chance)', 'When Block 2 attends to token a at position j, its OV circuit boosts logit b = a!', 'Caution: The 1-block model ALSO learns a diagonal C, but lacks the QK circuit to find j.', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -966,7 +966,7 @@ function circIclGd() {
 function qkvSummary() {
   const W = 540, H = 272;
   let o = '';
-  o += card(20, 18, 236, 108, C.lblue, C.blue, '1. Soft Convex Pooling', 'Attention(q, D) = ∑ αᵢ vᵢ', 'α ∈ Δ^(m−1): αᵢ ≥ 0, ∑ αᵢ = 1', D.blue.dark, 14, 12);
+  o += card(20, 18, 236, 108, C.lblue, C.blue, '1. Soft Convex Pooling', 'Attention(q, D) = ∑ αᵢ vᵢ', 'α ∈ Δ^{m−1}: αᵢ ≥ 0, ∑ αᵢ = 1', D.blue.dark, 14, 12);
   o += card(284, 18, 236, 108, C.lamber, C.amber, '2. Temperature Bandwidth σ', 'a(q, kᵢ) = −‖q − kᵢ‖² / 2σ²', 'σ → 0: 1-NN · σ → ∞: uniform mean', D.orange.dark, 14, 12);
   o += card(20, 146, 500, 106, C.lgreen, C.green, '3. Matrix Form, Effective Keys n_eff, and Max-Subtract Softmax', 'Batched evaluation: softmax(A) V  (n×m weights times m×d_v values = n×d_v outputs);', 'n_eff = 1 / ∑ αᵢ² ∈ [1, m]; subtract m(q) = maxⱼ a(q, kⱼ) so leading term is exp(0) = 1!', D.green.dark, 13.5, 12);
   return svg(W, H, o);

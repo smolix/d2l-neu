@@ -12,8 +12,55 @@ const line = (x1, y1, x2, y2, color, w = 2, dash = false) =>
 
 const hline = (x1, x2, y) => line(x1, y, x2, y, N.hairline, 1.5, true);
 
-const fitFs = (t, maxFs, availW, factor = 0.64) =>
-  !t ? maxFs : Math.max(8.0, Math.min(maxFs, +(((availW - 24) / (String(t).length * factor))).toFixed(1)));
+// Text fitting. Labels shrink to fit their slot, but never below FS_FLOOR:
+// a label that would need a smaller size wraps onto two lines instead.
+// Character widths are realistic averages in em (Source Sans 3 / JetBrains Mono).
+const FS_FLOOR = 11;
+const charW = (mono, fw) => (mono ? 0.60 : (fw >= 600 ? 0.53 : 0.50));
+
+const fitFs = (t, maxFs, availW, factor = 0.53) =>
+  !t ? maxFs : Math.max(FS_FLOOR, Math.min(maxFs, +(((availW - 16) / (String(t).length * factor))).toFixed(1)));
+
+// Candidate two-line splits, best first: at a lone " · " list separator, then
+// before "→"/"⇒", after ","/";", or before "+"/"=" near the middle, then at the space
+// nearest the middle.
+function splitCandidates(t) {
+  const s = String(t), mid = s.length / 2, out = [];
+  const depth = [];  // bracket depth: never break inside (…) or […]
+  for (let i = 0, d = 0; i < s.length; i++) { if ('([{'.includes(s[i])) d++; if (')]}'.includes(s[i])) d--; depth.push(d); }
+  const dot = s.indexOf(' · ');
+  if (dot > 0 && depth[dot] === 0 && s.indexOf(' · ', dot + 1) < 0) out.push([s.slice(0, dot), s.slice(dot + 3)]);
+  const kinds = [i => s[i + 1] === '→' || s[i + 1] === '⇒', i => s[i - 1] === ',' || s[i - 1] === ';', i => s[i + 1] === '+', i => s[i + 1] === '='];
+  kinds.push(() => true);  // any top-level space near the middle
+  for (const kind of kinds) {
+    let bp = -1;
+    for (let i = 1; i < s.length - 1; i++) {
+      if (s[i] === ' ' && depth[i] === 0 && kind(i) && Math.abs(i - mid) < 0.25 * s.length && (bp < 0 || Math.abs(i - mid) < Math.abs(bp - mid))) bp = i;
+    }
+    if (bp > 0) out.push([s.slice(0, bp), s.slice(bp + 1)]);
+  }
+  let best = -1;
+  for (let i = 0; i < s.length; i++) if (s[i] === ' ' && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
+  if (best > 0) out.push([s.slice(0, best), s.slice(best + 1)]);
+  return out;
+}
+
+// Fit one label into availW: {fs, lines}. One line when it fits at FS_FLOOR or
+// larger, else two lines (wrapped lines are capped at 13 px).
+function fitLines(text, maxFs, availW, mono, fw, nowrap = false) {
+  const factor = charW(mono, fw || 500);
+  const t = String(text ?? '');
+  const fits = u => u.length * factor * FS_FLOOR <= availW - 16;
+  if (!nowrap && t && !fits(t)) {
+    const cands = splitCandidates(t);
+    if (cands.length) {
+      const longest = p => (p[0].length > p[1].length ? p[0] : p[1]);
+      const parts = cands.find(p => fits(longest(p))) || cands[cands.length - 1];
+      return { fs: fitFs(longest(parts), Math.min(maxFs, 13), availW, factor), lines: parts };
+    }
+  }
+  return { fs: fitFs(t, maxFs, availW, factor), lines: [t] };
+}
 
 function tx(x, y, text, opts = {}) {
   const maxFs = opts.fs || 15;
@@ -24,29 +71,37 @@ function tx(x, y, text, opts = {}) {
     else if (anchor === 'start') availW = 540 - x;
     else if (anchor === 'end') availW = x;
   }
-  const factor = opts.mono ? 0.68 : 0.62;
-  const fs = fitFs(text, maxFs, availW, factor);
-  const { availW: _ignore, ...rest } = opts;
-  return rawTx(x, y, text, { ...rest, fs });
+  const { availW: _ignore, nowrap, ...rest } = opts;
+  const { fs, lines } = fitLines(text, maxFs, availW, opts.mono, opts.fw, nowrap);
+  if (lines.length === 1) return rawTx(x, y, text, { ...rest, fs });
+  const dy = +(fs * 0.62).toFixed(1);
+  return rawTx(x, y - dy, lines[0], { ...rest, fs }) + rawTx(x, y + dy, lines[1], { ...rest, fs });
 }
 
-// Helper: titled card with 1, 2, or 3 centered lines of text, auto-fitted to box width w
-function card(x, y, w, h, fill, stroke, title, l1, l2, tColor = C.ink, fsTitle = 14.5, fsSub = 12.5) {
+// Helper: titled card with 1-4 labels (title, mono l1, muted l2, optional
+// extra {t, mono, fs, fw, fill}), each
+// fitted to the box width and wrapped onto two lines when needed; the text
+// block is centred vertically in the box.
+function card(x, y, w, h, fill, stroke, title, l1, l2, tColor = C.ink, fsTitle = 14.5, fsSub = 12.5, extra = null) {
   let o = box(x, y, w, h, fill, stroke, 8, 2);
   const cx = x + w / 2;
-  if (l1 && l2) {
-    const y1 = y + Math.min(20, Math.round(h * 0.25));
-    const y2 = y + Math.min(43, Math.round(h * 0.53));
-    const y3 = y + Math.min(64, Math.round(h * 0.80));
-    o += tx(cx, y1, title, { fs: fsTitle, fw: 700, fill: tColor, availW: w });
-    o += tx(cx, y2, l1, { mono: true, fs: fsSub, fw: 600, fill: C.ink, availW: w });
-    o += tx(cx, y3, l2, { fs: fsSub, fw: 500, fill: C.muted, availW: w });
-  } else if (l1) {
-    o += tx(cx, y + h / 2 - 11, title, { fs: fsTitle, fw: 700, fill: tColor, availW: w });
-    o += tx(cx, y + h / 2 + 11, l1, { mono: true, fs: fsSub, fw: 600, fill: C.ink, availW: w });
-  } else {
-    o += tx(cx, y + h / 2, title, { fs: fsTitle, fw: 700, fill: tColor, availW: w });
-  }
+  const items = [
+    { t: title, mono: false, fw: 700, fill: tColor, fs: fsTitle },
+    { t: l1, mono: true, fw: 600, fill: C.ink, fs: fsSub },
+    { t: l2, mono: false, fw: 500, fill: C.muted, fs: fsSub },
+    extra && { mono: false, fw: 700, fs: fsSub, ...extra },
+  ].filter(it => it && it.t);
+  const GAP = 7;
+  items.forEach(it => { Object.assign(it, fitLines(it.t, it.fs, w, it.mono, it.fw)); it.fs = it.fs; it.lh = it.fs * 1.24; });
+  const total = items.reduce((s, it) => s + it.lines.length * it.lh, 0) + GAP * (items.length - 1);
+  let cy = y + (h - total) / 2;
+  items.forEach(it => {
+    it.lines.forEach(ln => {
+      o += rawTx(cx, +(cy + it.lh / 2).toFixed(1), ln, { mono: it.mono, fs: it.fs, fw: it.fw, fill: it.fill });
+      cy += it.lh;
+    });
+    cy += GAP;
+  });
   return o;
 }
 
@@ -78,7 +133,7 @@ function rnnVsLookup() {
   o += tx(20, 146, '(b) Attention Lookup: O(1) direct retrieval over all m positions', { fs: 15, fw: 700, fill: D.green.dark, anchor: 'start' });
   o += card(24, 166, 152, 62, C.lblue, C.blue, 'Stored Keys & Values', '(k₁,v₁) … (kₘ,vₘ)', null, D.blue.dark, 13.5, 12);
   o += arrow(180, 197, 214, 197, C.blue);
-  o += card(218, 166, 138, 62, C.lamber, C.amber, 'Query Score', 'αᵢ = softmax(q, kᵢ)', null, D.orange.dark, 13.5, 12);
+  o += card(218, 166, 138, 62, C.lamber, C.amber, 'Query Score', 'αᵢ ∝ exp a(q, kᵢ)', null, D.orange.dark, 13.5, 12);
   o += arrow(360, 197, 394, 197, C.green);
   o += card(398, 166, 122, 62, C.lgreen, C.green, 'Convex Sum', '∑ αᵢ vᵢ', null, D.green.dark, 13.5, 13);
   o += tx(270, 252, 'Differentiable soft retrieval with 1-hop gradient path to every token', { fs: 13, fw: 600, fill: D.green.dark });
@@ -252,11 +307,9 @@ function qkvTemperatureDial() {
   let o = '';
   o += card(20, 16, 500, 56, D.purple.tint, C.purple, 'Gaussian Kernel as Softmax Temperature: β = 1 / σ²', 'αᵢ(q) = softmaxᵢ( (1 / σ²) · (−½ ‖q − kᵢ‖²) )', null, D.purple.dark, 14.5, 13);
 
-  o += card(20, 92, 236, 152, C.lamber, C.amber, 'Narrow Bandwidth (σ = 0.1)', 'β = 1/σ² = 100 (400× gap vs σ=2)', 'Low bias · High noise variance', D.orange.dark, 14, 12);
-  o += tx(138, 224, 'n_eff → 1  (1-NN interpolation)', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
+  o += card(20, 92, 236, 152, C.lamber, C.amber, 'Narrow Bandwidth (σ = 0.1)', 'β = 1/σ² = 100 (400× gap vs σ=2)', 'Low bias · High noise variance', D.orange.dark, 14, 12, { t: 'n_eff → 1  (1-NN interpolation)', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
 
-  o += card(284, 92, 236, 152, C.lblue, C.blue, 'Wide Bandwidth (σ = 2.0)', 'β = 1/σ² = 0.25 (compressed gaps)', 'High bias · Low variance (s²/n)', D.blue.dark, 14, 12);
-  o += tx(402, 224, 'n_eff → n  (global mean ȳ)', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
+  o += card(284, 92, 236, 152, C.lblue, C.blue, 'Wide Bandwidth (σ = 2.0)', 'β = 1/σ² = 0.25 (compressed gaps)', 'High bias · Low variance (s²/n)', D.blue.dark, 14, 12, { t: 'n_eff → n  (global mean ȳ)', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
   return svg(W, H, o);
 }
 
@@ -322,11 +375,9 @@ function scoreVarianceScaling() {
   let o = '';
   o += card(20, 16, 500, 56, D.purple.tint, C.purple, 'Why Divide by √d?  (qⱼ, kⱼ ~ N(0, 1) independent)', 'E[qᵀk] = 0,   Var(qᵀk) = ∑ⱼ Var(qⱼ kⱼ) = d   ⇒   Std(qᵀk) = √d', null, D.purple.dark, 14, 12.5);
 
-  o += card(20, 92, 236, 156, D.red.tint, D.red.base, 'Unscaled: qᵀk', 'Std = 8 at d=64; 22.6 at d=512', 'Softmax saturates to one-hot (H → 0)', D.red.dark, 14, 12);
-  o += tx(138, 226, 'Jacobian ∂α/∂a → 0 (vanishing grad)', { fs: 12, fw: 700, fill: D.red.dark });
+  o += card(20, 92, 236, 156, D.red.tint, D.red.base, 'Unscaled: qᵀk', 'Std = 8 at d=64; 22.6 at d=512', 'Softmax saturates to one-hot (H → 0)', D.red.dark, 14, 12, { t: 'Jacobian ∂α/∂a → 0 (vanishing grad)', fs: 12, fw: 700, fill: D.red.dark });
 
-  o += card(284, 92, 236, 156, C.lgreen, C.green, 'Scaled: qᵀk / √d', 'Var(qᵀk / √d) = d / d = 1 always', 'Entropy H ≈ log m − ½ across all d', D.green.dark, 14, 12);
-  o += tx(402, 226, 'Well-conditioned gradients at init', { fs: 12, fw: 700, fill: D.green.dark });
+  o += card(284, 92, 236, 156, C.lgreen, C.green, 'Scaled: qᵀk / √d', 'Var(qᵀk / √d) = d / d = 1 always', 'Entropy H ≈ log m − ½ across all d', D.green.dark, 14, 12, { t: 'Well-conditioned gradients at init', fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -357,11 +408,9 @@ function scoreJacobianSaturation() {
   let o = '';
   o += card(20, 16, 500, 54, D.purple.tint, C.purple, 'Softmax Jacobian:  J = ∂α / ∂a = diag(α) − α αᵀ', 'Entry (i, j):  ∂αᵢ / ∂aⱼ = αᵢ (δᵢⱼ − αⱼ)', null, D.purple.dark, 14.5, 12.5);
 
-  o += card(20, 90, 236, 156, C.lgreen, C.green, 'Balanced Regime (Scaled)', 'αᵢ ≈ 1/m  ⇒  ‖J‖_F ≈ 0.18', 'Strong cross-key gradient coupling', D.green.dark, 14, 12);
-  o += tx(138, 224, 'Peak ‖J‖_F = 1/√2 at k=2 split', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += card(20, 90, 236, 156, C.lgreen, C.green, 'Balanced Regime (Scaled)', 'αᵢ ≈ 1/m  ⇒  ‖J‖_F ≈ 0.18', 'Strong cross-key gradient coupling', D.green.dark, 14, 12, { t: 'Peak ‖J‖_F = ½ at k=2 split', mono: true, fs: 12, fw: 700, fill: D.green.dark });
 
-  o += card(284, 90, 236, 156, D.red.tint, D.red.base, 'One-Hot Corner (Unscaled)', 'α → e_i*  ⇒  αᵢ(1 − αᵢ) → 0', 'diag(e_i*) − e_i* e_i*ᵀ = 0 matrix!', D.red.dark, 14, 12);
-  o += tx(402, 224, '∂L/∂a = J (∂L/∂α) → 0 (frozen!)', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
+  o += card(284, 90, 236, 156, D.red.tint, D.red.base, 'One-Hot Corner (Unscaled)', 'α → e_i*  ⇒  αᵢ(1 − αᵢ) → 0', 'diag(e_i*) − e_i* e_i*ᵀ = 0 matrix!', D.red.dark, 14, 12, { t: '∂L/∂a = J (∂L/∂α) → 0 (frozen!)', mono: true, fs: 12, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
 
@@ -443,8 +492,8 @@ function mhaCopyBothBound() {
   o += card(20, 42, 236, 116, D.red.tint, D.red.base, '1 Head: 1 Mixture m ∈ ℝᵈᵛ', 'm = α₁ v₁ + α₂ v₂', 'Bayes MSE(v₁|m) = α₂²/(α₁²+α₂²)', D.red.dark, 14, 12);
   o += card(284, 42, 236, 116, C.lgreen, C.green, '2 Heads: 2 Mixtures [m₁; m₂]', 'm₁ = α v₁ + (1−α)v₂, m₂ = (1−α)v₁ + α v₂', 'Rank-2 mixing matrix A is invertible!', D.green.dark, 14, 11.5);
 
-  o += card(20, 176, 236, 80, '#FFFFFF', D.red.base, 'Error = 1/2 for EVERY (α₁, α₂)', 'α₂²/(α₁²+α₂²) + α₁²/(α₁²+α₂²) = 1/2', 'RMS relative error = √(1/2) ≈ 0.707', D.red.dark, 13, 11.5);
-  o += card(284, 176, 236, 80, C.lblue, C.blue, 'Error → 0 (10⁻⁷ in fp32)', 'General k-value bound: 1 − rank(A)/k', 'Needs rank(A) = k AND Hd_h ≥ kd_v', D.blue.dark, 13, 11.5);
+  o += card(20, 172, 236, 92, '#FFFFFF', D.red.base, 'Rel. Error = 1/2 for EVERY (α₁, α₂)', 'α₂²/(α₁²+α₂²) + α₁²/(α₁²+α₂²) = 1 (of variance 2)', 'RMS relative error = √(1/2) ≈ 0.707', D.red.dark, 13, 11.5);
+  o += card(284, 172, 236, 92, C.lblue, C.blue, 'Error → 0 (10⁻⁷ in fp32)', 'General k-value bound: 1 − rank(A)/k', 'Needs rank(A) = k AND Hd_h ≥ kd_v', D.blue.dark, 13, 11.5);
   return svg(W, H, o);
 }
 
@@ -455,7 +504,7 @@ function mhaFlopInvariance() {
   o += card(20, 16, 500, 56, D.purple.tint, C.purple, 'Why Splitting d into H Heads of Width d_h = d/H Is Compute-Free', 'H slices of shape (d × d/H) pack into one (d × d) matrix for Q, K, V, O', null, D.purple.dark, 14, 12.5);
 
   o += card(20, 92, 236, 102, C.lblue, C.blue, 'Projections: 8 n d² FLOPs', '4 matrices × 2 n d² FLOPs', '4 d² parameters (2.36M at d=768)', D.blue.dark, 14, 12);
-  o += card(284, 92, 236, 102, C.lamber, C.amber, 'Scores & Mixing: 4 n² d FLOPs', 'H heads × (2 n² d_h + 2 n² d_h)', '= 4 n² (H d_h) = 4 n² d (independent of H!)', D.orange.dark, 14, 11.5);
+  o += card(284, 92, 236, 102, C.lamber, C.amber, 'Scores & Mixing: 4 n² d FLOPs', 'H heads × (2 n² d_h + 2 n² d_h)', '= 4 n² (H d_h) = 4 n² d · independent of H!', D.orange.dark, 14, 11.5);
 
   o += card(20, 210, 500, 44, C.lgreen, C.green, 'Only the O(H n²) softmax overhead depends on H  ·  Standard d_h ∈ {64, 128}', null, null, D.green.dark, 13.5, 12);
   return svg(W, H, o);
@@ -467,7 +516,7 @@ function mhaReshapeBug() {
   let o = '';
   o += tx(270, 20, 'Splitting Projected Tensor X of Shape (B, n, H · d_h) into Heads', { fs: 15, fw: 700, fill: C.ink });
 
-  o += card(20, 42, 236, 124, C.lgreen, C.green, 'Correct: reshape → transpose', 'X.reshape(B, n, H, d_h).transpose(1, 2)', 'Slices each token’s d features into H heads', D.green.dark, 13.5, 11.5);
+  o += card(20, 42, 236, 124, C.lgreen, C.green, 'Correct: reshape → swap axes', 'reshape(B, n, H, d_h) → swap axes 1, 2', 'Slices each token’s d features into H heads', D.green.dark, 13.5, 11.5);
   o += card(284, 42, 236, 124, D.red.tint, D.red.base, 'Silent Bug: direct reshape', 'X.reshape(B, H, n, d_h)', 'Packs first n/H tokens into Head 0!', D.red.dark, 13.5, 11.5);
 
   o += card(20, 184, 500, 70, C.lamber, C.amber, 'Why No Compiler or Shape Assertion Catches the Bug', 'Both expressions return the exact same shape (B, H, n, d_h)!', 'Direct reshape mixes different sequence positions across feature channels.', D.orange.dark, 14, 12);
@@ -478,11 +527,9 @@ function mhaReshapeBug() {
 function mhaSelfVsCross() {
   const W = 540, H = 266;
   let o = '';
-  o += card(20, 20, 236, 144, C.lblue, C.blue, 'Self-Attention', 'attention(X, X, X)', 'Q, K, V all from X ∈ ℝⁿˣᵈ', D.blue.dark, 15, 12.5);
-  o += tx(138, 142, 'n × n score matrix', { mono: true, fs: 13, fw: 700, fill: D.blue.dark });
+  o += card(20, 20, 236, 144, C.lblue, C.blue, 'Self-Attention', 'attention(X, X, X)', 'Q, K, V all from X ∈ ℝⁿˣᵈ', D.blue.dark, 15, 12.5, { t: 'n × n score matrix', mono: true, fs: 13, fw: 700, fill: D.blue.dark });
 
-  o += card(284, 20, 236, 144, C.lamber, C.amber, 'Cross-Attention', 'attention(A, B, B)', 'Q from target A (n) · K,V from B (m)', D.orange.dark, 15, 12.5);
-  o += tx(402, 142, 'n × m score matrix', { mono: true, fs: 13, fw: 700, fill: D.orange.dark });
+  o += card(284, 20, 236, 144, C.lamber, C.amber, 'Cross-Attention', 'attention(A, B, B)', 'Q from target A (n) · K,V from B (m)', D.orange.dark, 15, 12.5, { t: 'n × m score matrix', mono: true, fs: 13, fw: 700, fill: D.orange.dark });
 
   o += card(20, 184, 500, 64, D.purple.tint, C.purple, 'Permutation Property of Unmasked Cross-Attention', 'Permuting source rows B ↦ ΠB leaves every output row of A unchanged!', null, D.purple.dark, 14, 12.5);
   return svg(W, H, o);
@@ -531,10 +578,10 @@ function posLearnedTable() {
   const W = 540, H = 266;
   let o = '';
   o += tx(270, 20, 'Learned Position Embedding Table P ∈ ℝ^(L_max × d) (Trained at L = 128)', { fs: 14.5, fw: 700, fill: C.ink });
-  o += card(20, 44, 236, 114, C.lgreen, C.green, 'Rows 0 … 127 (In-Range)', 'p_i updated on every batch', 'In-range PPL = 9.3 on WikiText-103', D.green.dark, 14, 12);
+  o += card(20, 44, 236, 114, C.lgreen, C.green, 'Rows 0 … 127 (In-Range)', 'p_i updated on every batch', 'In-range PPL ≈ 9.6 on WikiText-103', D.green.dark, 14, 12);
   o += card(284, 44, 236, 114, D.red.tint, D.red.base, 'Rows 128 … 511 (Unseen)', '∇_(p_i) L = 0 throughout training!', 'Stuck at random N(0, 0.02²) noise', D.red.dark, 14, 12);
 
-  o += card(20, 178, 500, 70, C.lamber, C.amber, 'Extrapolation Failure at Context Length n = 512', 'Positions ≥ 128 add untrained random vectors to token embeddings (PPL jumps to 22.9)', null, D.orange.dark, 13.5, 12);
+  o += card(20, 178, 500, 70, C.lamber, C.amber, 'Extrapolation Failure at Context Length n = 512', 'Positions ≥ 128 add untrained random vectors to token embeddings (PPL jumps to 20–25)', null, D.orange.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -569,12 +616,12 @@ function posFourTerms() {
 function posAlibiSlopes() {
   const W = 540, H = 266;
   let o = '';
-  o += card(20, 16, 500, 54, C.lblue, C.blue, 'ALiBi Score Rule:  score_ij^(h) = qᵢᵀkⱼ / √d_h − m_h · (i − j)', 'Geometric head slopes m_h = 2^(−8h/H)  (for H=4:  1/4,  1/16,  1/64,  1/256)', null, D.blue.dark, 14, 12.5);
+  o += card(20, 14, 500, 70, C.lblue, C.blue, 'ALiBi Score Rule:  score_ij^(h) = qᵢᵀkⱼ / √d_h − m_h · (i − j)', 'Geometric head slopes m_h = 2^(−8h/H) · for H=4:  1/4,  1/16,  1/64,  1/256', null, D.blue.dark, 14, 12.5);
 
-  o += card(20, 90, 236, 96, C.lamber, C.amber, 'Steep Heads (m₁ = 1/4)', 'At distance 40: penalty −10 (e⁻¹⁰)', 'Strict local recency focus', D.orange.dark, 14, 12);
-  o += card(284, 90, 236, 96, C.lgreen, C.green, 'Gentle Heads (m₄ = 1/256)', 'At distance 128: penalty −0.5', 'Broad context window average', D.green.dark, 14, 12);
+  o += card(20, 100, 236, 90, C.lamber, C.amber, 'Steep Heads (m₁ = 1/4)', 'At distance 40: penalty −10 (e⁻¹⁰)', 'Strict local recency focus', D.orange.dark, 14, 12);
+  o += card(284, 100, 236, 90, C.lgreen, C.green, 'Gentle Heads (m₄ = 1/256)', 'At distance 128: penalty −0.5', 'Broad context window average', D.green.dark, 14, 12);
 
-  o += card(20, 202, 500, 48, N.panel, C.gray, 'NoPE (No Positional Encoding): relies solely on causal mask prefix length (i + 1)', null, null, C.ink, 13.5, 12);
+  o += card(20, 206, 500, 46, N.panel, C.gray, 'NoPE (No Positional Encoding): relies solely on causal mask prefix length (i + 1)', null, null, C.ink, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -584,10 +631,10 @@ function posFiveSchemes() {
   let o = '';
   o += tx(270, 20, 'Where the Five Positional Schemes Act in TinyCharLM', { fs: 15, fw: 700, fill: C.ink });
 
-  o += card(20, 42, 236, 102, C.lblue, C.blue, 'Input Embedding Layer', 'Learned: H = E(X) + P_learn[0:T]', 'Sinusoidal: H = E(X) + P_sin[0:T]/√d', D.blue.dark, 14, 12);
-  o += card(284, 42, 236, 102, D.purple.tint, C.purple, 'Every Attention Block', 'RoPE: rotate q ↦ Rᵢq,  k ↦ Rⱼk', 'ALiBi: add −m_h(i − j) to scores', D.purple.dark, 14, 12);
+  o += card(20, 42, 236, 92, C.lblue, C.blue, 'Input Embedding Layer', 'Learned: H = E(X) + P_learn[0:T]', 'Sinusoidal: H = E(X) + P_sin[0:T]/√d', D.blue.dark, 14, 12);
+  o += card(284, 42, 236, 92, D.purple.tint, C.purple, 'Every Attention Block', 'RoPE: rotate q ↦ Rᵢq,  k ↦ Rⱼk', 'ALiBi: add −m_h(i − j) to scores', D.purple.dark, 14, 12);
 
-  o += card(20, 164, 500, 92, C.lgreen, C.green, 'WikiText-103 Perplexity Benchmark (Trained at n = 128 → Tested at n = 512)', 'In-Range (128):  RoPE 7.3  <  Learned 9.3  <  Sinusoidal 9.6  <  ALiBi 9.7  <  NoPE 11.6', 'Extrap (512):    Slow-Scaled RoPE 9.0  <  ALiBi 9.7 (windowed!)  <  Sin 15.6  <  RoPE 27.7', D.green.dark, 13.5, 12);
+  o += card(20, 150, 500, 116, C.lgreen, C.green, 'WikiText-103 Perplexity Benchmark (Trained at n = 128 → Tested at n = 512)', 'In-Range (128):  RoPE 7.3  <  Learned 9.6  <  Sinusoidal ≈9.7  <  ALiBi ≈10  <  NoPE ≈11.7', 'Extrap (512):    Slow-Scaled RoPE ≈9  <  ALiBi 9.9 (windowed!)  <  Sin ≈15.5  <  RoPE ≈27', D.green.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -604,7 +651,7 @@ function posFastSlowYarn() {
   o += arrow(402, 154, 402, 178, C.purple);
 
   o += card(20, 182, 236, 72, C.lblue, C.blue, 'Keep Scale = 1.0', 'Preserves local byte resolution', null, D.blue.dark, 13.5, 12);
-  o += card(284, 182, 236, 72, D.purple.tint, C.purple, 'Scale by 128/512 = 0.25', 'Maps angles back to trained arc (PPL 9.0)', null, D.purple.dark, 13.5, 11.5);
+  o += card(284, 182, 236, 72, D.purple.tint, C.purple, 'Scale by 128/512 = 0.25', 'Maps angles back to trained arc (PPL ≈ 9)', null, D.purple.dark, 13.5, 11.5);
   return svg(W, H, o);
 }
 
@@ -617,12 +664,12 @@ function scaleMemoryWall() {
   const W = 540, H = 270;
   let o = '';
   o += tx(270, 20, 'Quadratic Score + Weight Scratch Memory (8n² Bytes/Head in FP32)', { fs: 14.5, fw: 700, fill: C.ink });
-  const cw = 154, y = 42, ch = 112;
+  const cw = 154, y = 42, ch = 98;
   o += card(20, y, cw, ch, C.lgreen, C.green, 'n = 1,024', '1.05M score pairs', '8.0 MiB / head', D.green.dark, 14.5, 12);
   o += card(193, y, cw, ch, C.lamber, C.amber, 'n = 8,192', '67.1M score pairs', '512 MiB / head', D.orange.dark, 14.5, 12);
   o += card(366, y, cw, ch, D.red.tint, D.red.base, 'n = 131,072', '17.2B score pairs', '128 GiB / head!', D.red.dark, 14.5, 12);
 
-  o += card(20, 174, 500, 76, D.purple.tint, C.purple, 'The Breakthrough: Exact Attention Never Needs the n × n Matrix', 'Online Softmax (Milakov & Gimelshein, 2018) + FlashAttention (Dao et al., 2022)', 'Computes exact softmax(QKᵀ/√d_h)V in O(n) memory via on-chip SRAM tiling!', D.purple.dark, 13.5, 12);
+  o += card(20, 156, 500, 100, D.purple.tint, C.purple, 'The Breakthrough: Exact Attention Never Needs the n × n Matrix', 'Online Softmax (Milakov & Gimelshein, 2018) + FlashAttention (Dao et al., 2022)', 'Computes exact softmax(QKᵀ/√d_h)V in O(n) memory via on-chip SRAM tiling!', D.purple.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -632,11 +679,9 @@ function scaleFlopCrossover() {
   let o = '';
   o += card(20, 16, 500, 54, C.lblue, C.blue, 'Self-Attention Layer FLOPs:  8 n d² (projections) + 4 n² d (scores & mixing)', 'Crossover Ratio:  (4 n² d) / (8 n d²) = n / (2d)', null, D.blue.dark, 14, 12.5);
 
-  o += card(20, 90, 236, 154, C.lgreen, C.green, 'Short Context (n < 2d)', 'GPT-2 Small: d=768, n=1,024', 'n / (2d) = 0.67 → Projections dominate', D.green.dark, 14, 12);
-  o += tx(138, 222, '4.8 GFLOPs proj vs 3.2 GFLOPs attn', { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
+  o += card(20, 90, 236, 154, C.lgreen, C.green, 'Short Context (n < 2d)', 'GPT-2 Small: d=768, n=1,024', 'n / (2d) = 0.67 → Projections dominate', D.green.dark, 14, 12, { t: '4.8 GFLOPs proj vs 3.2 GFLOPs attn', mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
 
-  o += card(284, 90, 236, 154, D.red.tint, D.red.base, 'Long Context (n ≫ 2d)', 'Frontier LLM: d=4,096, n=131,072', 'n / (2d) = 16 → Attention is 16× proj!', D.red.dark, 14, 12);
-  o += tx(402, 222, '4× more FLOPs per 2× context length', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
+  o += card(284, 90, 236, 154, D.red.tint, D.red.base, 'Long Context (n ≫ 2d)', 'Frontier LLM: d=4,096, n=131,072', 'n / (2d) = 16 → Attention is 16× proj!', D.red.dark, 14, 12, { t: '4× more FLOPs per 2× context length', mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
 
@@ -647,8 +692,8 @@ function scaleTwoPassVsOnline() {
   o += card(20, 20, 236, 110, D.red.tint, D.red.base, 'Naive Two-Pass Softmax', 'Pass 1: m = maxⱼ aⱼ,  s = ∑ exp(aⱼ−m)', 'Pass 2: o = ∑ (exp(aⱼ−m)/s) vⱼ', D.red.dark, 14, 11.5);
   o += card(284, 20, 236, 110, C.lgreen, C.green, 'One-Pass Online Softmax', 'Streams key blocks of size c', 'Updates (m, s, o) on the fly!', D.green.dark, 14, 12);
 
-  o += card(20, 150, 236, 98, '#FFFFFF', D.red.base, 'Requires All n Scores First', 'Materializes full n × n matrix in HBM', 'O(n²) memory allocation', D.red.dark, 13.5, 12);
-  o += card(284, 150, 236, 98, C.lblue, C.blue, 'Exact Rescaling Repair', 'Multiplies old (s, o) by exp(m − m′)', 'O(nc) stripe memory (linear in n)', D.blue.dark, 13.5, 12);
+  o += card(20, 150, 236, 98, '#FFFFFF', D.red.base, 'Requires All n Scores First', 'Materializes n×n matrix in HBM', 'O(n²) memory allocation', D.red.dark, 13.5, 12);
+  o += card(284, 150, 236, 98, C.lblue, C.blue, 'Exact Rescaling Repair', 'Rescales (s, o) by exp(m − m′)', 'O(nc) stripe memory (linear in n)', D.blue.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -662,7 +707,11 @@ function scaleOnlineRecurrence() {
   o += arrow(360, 70, 386, 70, C.green);
   o += card(390, 24, 130, 92, C.lgreen, C.green, 'Updated State', '(m′,  s′,  o′)', 'exact to m′!', D.green.dark, 14, 12.5);
 
-  o += card(20, 146, 500, 106, C.lamber, C.amber, 'Multiplicative Reference-Shift Identity', 's′ = s · exp(m − m′) + ∑ⱼ exp(aⱼ − m′)   ·   o′ = o · exp(m − m′) + ∑ⱼ exp(aⱼ − m′) vⱼ', 'After final key block:  Output = o / s = softmax(a) V  (exact to machine precision)', D.orange.dark, 13.5, 12);
+  o += box(20, 146, 500, 106, C.lamber, C.amber, 8, 2);
+  o += tx(270, 166, 'Multiplicative Reference-Shift Identity', { fs: 13.5, fw: 700, fill: D.orange.dark });
+  o += tx(270, 189, 's′ = s · exp(m − m′) + ∑ⱼ exp(aⱼ − m′)', { availW: 500, mono: true, fs: 12, fw: 600, fill: C.ink });
+  o += tx(270, 209, 'o′ = o · exp(m − m′) + ∑ⱼ exp(aⱼ − m′) vⱼ', { availW: 500, mono: true, fs: 12, fw: 600, fill: C.ink });
+  o += tx(270, 232, 'After final key block:  Output = o / s = softmax(a) V  (exact to machine precision)', { availW: 500, fs: 12, fw: 500, fill: C.muted });
   return svg(W, H, o);
 }
 
@@ -705,11 +754,11 @@ function scaleHbmPasses() {
     { x: 402, t: 'Pass 4: Read A',  s: 'HBM → A V GEMM (n²)' },
   ];
   passes.forEach((p, i) => {
-    o += card(p.x, 42, 118, 92, D.red.tint, D.red.base, p.t, p.s, null, D.red.dark, 13, 11);
-    if (i < 3) o += arrow(p.x + 120, 88, passes[i + 1].x - 2, 88, D.red.base);
+    o += card(p.x, 42, 118, 84, D.red.tint, D.red.base, p.t, p.s, null, D.red.dark, 13, 11);
+    if (i < 3) o += arrow(p.x + 120, 84, passes[i + 1].x - 2, 84, D.red.base);
   });
 
-  o += card(18, 156, 504, 94, C.lamber, C.amber, 'Low Arithmetic Intensity:  2n²(d_h + d_v) FLOPs / (4n² · bytes) → (d_h + d_v) / 4 (FP16)', 'At d_h = d_v = 64 in FP16:  Intensity = 32 FLOPs/byte  (vs. ~180 FLOPs/byte GPU ridge point)', 'Naive attention is severely memory-bandwidth bound at every sequence length n!', D.orange.dark, 13, 12);
+  o += card(18, 142, 504, 120, C.lamber, C.amber, 'Low Arithmetic Intensity:  2n²(d_h + d_v) FLOPs / (4n² · bytes) → (d_h + d_v) / 4 (FP16)', 'At d_h = d_v = 64 in FP16:  Intensity = 32 FLOPs/byte  (vs. ~180 FLOPs/byte GPU ridge point)', 'Naive attention is severely memory-bandwidth bound at every sequence length n!', D.orange.dark, 13, 12);
   return svg(W, H, o);
 }
 
@@ -745,13 +794,11 @@ function winTwoRoutes() {
 function winReceptiveField() {
   const W = 540, H = 272;
   let o = '';
-  o += card(20, 16, 500, 52, C.lblue, C.blue, 'Multi-Hop Receptive Field Across L Stacked Window Layers:  1 + L(w − 1)', 'Mistral 7B (w = 4,096, L = 32 layers) spans 1 + 32 × 4,095 = 131,041 tokens', null, D.blue.dark, 14, 12.5);
+  o += card(20, 12, 500, 72, C.lblue, C.blue, 'Multi-Hop Receptive Field Across L Stacked Window Layers:  1 + L(w − 1)', 'Mistral 7B (w = 4,096, L = 32 layers) · spans 1 + 32 × 4,095 = 131,041 tokens', null, D.blue.dark, 14, 12.5);
 
-  o += card(20, 88, 236, 160, C.lgreen, C.green, '1 Global Layer (Full Causal)', 'Direct 1-hop score α(q_t, k_s)', 'Uniform weight at Δ=12 is 1/13', D.green.dark, 14, 12);
-  o += tx(138, 226, 'Direct content addressing', { fs: 12.5, fw: 700, fill: D.green.dark });
+  o += card(20, 98, 236, 156, C.lgreen, C.green, '1 Global Layer (Full Causal)', 'Direct 1-hop score α(q_t, k_s)', 'Uniform weight at Δ=12 is 1/13', D.green.dark, 14, 12, { t: 'Direct content addressing', fs: 12.5, fw: 700, fill: D.green.dark });
 
-  o += card(284, 88, 236, 160, C.lamber, C.amber, 'L=4 Window Layers (w = 4)', 'Requires ⌈Δ/(w−1)⌉ = 4 sequential hops', 'Boundary weight at Δ=12 is (1/4)⁴ = 1/256!', D.orange.dark, 14, 11.5);
-  o += tx(402, 226, 'Exponential boundary attenuation', { fs: 12.5, fw: 700, fill: D.orange.dark });
+  o += card(284, 98, 236, 156, C.lamber, C.amber, 'L=4 Window Layers (w = 4)', 'Requires ⌈Δ/(w−1)⌉ = 4 sequential hops', 'Boundary weight at Δ=12 is (1/4)⁴ = 1/256!', D.orange.dark, 14, 11.5, { t: 'Exponential boundary attenuation', fs: 12.5, fw: 700, fill: D.orange.dark });
   return svg(W, H, o);
 }
 
@@ -822,12 +869,12 @@ function winThreeModes() {
   const W = 540, H = 268;
   let o = '';
   o += tx(270, 20, 'Three Mathematically Equivalent Execution Modes of Linear Attention', { fs: 14.5, fw: 700, fill: C.ink });
-  const cw = 154, y = 42, ch = 132;
+  const cw = 154, y = 42, ch = 116;
   o += card(20, y, cw, ch, D.red.tint, D.red.base, '1. Parallel cumsum', 'O(n d_h d_v) memory', '256 MiB/head at 16K', D.red.dark, 13.5, 11.5);
   o += card(193, y, cw, ch, C.lblue, C.blue, '2. Recurrent Loop', 'O(d_h d_v) = 16 KiB', 'n sequential steps', D.blue.dark, 13.5, 11.5);
   o += card(366, y, cw, ch, C.lgreen, C.green, '3. Chunked (c = 64)', 'O((n/c)d_h d_v + nc)', 'Tensor Core GEMMs', D.green.dark, 13.5, 11.5);
 
-  o += card(20, 192, 500, 58, D.purple.tint, C.purple, 'Best Practice: Train & Prefill with Chunked Form · Decode Token-by-Token with Recurrent Form', 'All three match to ~10⁻⁷ in float32!', null, D.purple.dark, 13, 12);
+  o += card(20, 176, 500, 80, D.purple.tint, C.purple, 'Best Practice: Train & Prefill with Chunked Form · Decode Token-by-Token with Recurrent Form', 'All three match to ~10⁻⁷ in float32!', null, D.purple.dark, 13, 12);
   return svg(W, H, o);
 }
 
@@ -841,10 +888,10 @@ function circShortcutIllusion() {
   let o = '';
   o += tx(270, 20, 'Why Behavioral Accuracy & Heatmaps Alone Can Mislead', { fs: 15, fw: 700, fill: C.ink });
 
-  o += card(20, 42, 236, 108, C.lgreen, C.green, 'Trained on Fixed Period L = 32', '1-Block model gets 100% accuracy!', 'Attends sharply to offset j − i = −31', D.green.dark, 14, 12);
-  o += card(284, 42, 236, 108, D.red.tint, D.red.base, 'Probed on Period L = 24', 'Accuracy collapses to 1.6% (1/64)!', 'Still stares blindly at offset −31!', D.red.dark, 14, 12);
+  o += card(20, 42, 236, 96, C.lgreen, C.green, 'Trained on Fixed Period L = 32', '1-Block model gets 100% accuracy!', 'Attends sharply to offset j − i = −31', D.green.dark, 14, 12);
+  o += card(284, 42, 236, 96, D.red.tint, D.red.base, 'Probed on Period L = 24', 'Accuracy collapses to 1.6% (1/64)!', 'Still stares blindly at offset −31!', D.red.dark, 14, 12);
 
-  o += card(20, 170, 500, 80, C.lamber, C.amber, 'Mechanistic Lesson: Position Shortcut ≠ Content-Based Induction', 'A 1-block model with bias queries/keys under RoPE can hard-code a fixed offset −31,', 'but content-based in-context lookup [A][B]…[A] → [B] requires at least 2 layers!', D.orange.dark, 13.5, 12);
+  o += card(20, 154, 500, 104, C.lamber, C.amber, 'Mechanistic Lesson: Position Shortcut ≠ Content-Based Induction', 'A 1-block model with bias queries/keys under RoPE can hard-code a fixed offset −31,', 'but content-based in-context lookup [A][B]…[A] → [B] requires at least 2 layers!', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -876,7 +923,7 @@ function circDepthHierarchy() {
   const W = 540, H = 272;
   let o = '';
   o += tx(270, 20, 'Expressivity Hierarchy of Attention-Only Networks by Depth N', { fs: 15, fw: 700, fill: C.ink });
-  const cw = 154, y = 42, ch = 128;
+  const cw = 154, y = 42, ch = 118;
   o += card(20, y, cw, ch, N.panel, C.gray, 'N = 0 Blocks', 'z_i = E e_(x_i)', 'Symmetric Bigrams', C.ink, 14, 12);
   o += card(193, y, cw, ch, C.lblue, C.blue, 'N = 1 Block', '+ ∑ α_ij E W_OV e_(x_j)', 'Skip-Trigrams & Copy', D.blue.dark, 14, 11.5);
   o += card(366, y, cw, ch, C.lgreen, C.green, 'N = 2 Blocks', 'K-Composition', 'Induction [A][B]…[A]→[B]', D.green.dark, 14, 11.5);
@@ -884,7 +931,7 @@ function circDepthHierarchy() {
   o += arrow(178, y + ch / 2, 189, y + ch / 2, C.gray);
   o += arrow(351, y + ch / 2, 362, y + ch / 2, C.blue);
 
-  o += card(20, 190, 500, 62, D.purple.tint, C.purple, 'Why N = 1 Cannot Perform Content-Based Induction', 'At N = 1, key k_j at [B]’s position depends only on e_[B] and has no record that x_(j−1) = [A]!', null, D.purple.dark, 13.5, 12);
+  o += card(20, 178, 500, 80, D.purple.tint, C.purple, 'Why N = 1 Cannot Perform Content-Based Induction', 'At N = 1, key k_j at [B]’s position depends only on e_[B] and has no record that x_(j−1) = [A]!', null, D.purple.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -931,7 +978,7 @@ function scoreSummary() {
   let o = '';
   o += card(20, 18, 236, 108, C.lblue, C.blue, '1. Scaled Dot-Product', 'a(q, k) = (qᵀ k) / √d', 'Restores Var(a) = 1 across width d', D.blue.dark, 14, 12);
   o += card(284, 18, 236, 108, C.lamber, C.amber, '2. Additive (Bahdanau)', 'a(q, k) = w_vᵀ tanh(W_q q + W_k k)', 'Handles d_q ≠ d_k but O(n m h) memory', D.orange.dark, 14, 12);
-  o += card(20, 146, 500, 106, C.lgreen, C.green, '3. Safe Boolean Masking & Softmax Jacobian Conditioning', 'Fill forbidden positions with −1e9 BEFORE softmax (and guard all-masked rows with any(-1));', '1/√d scaling prevents one-hot saturation where Jacobian J(α) = diag(α) − ααᵀ → 0!', D.green.dark, 13.5, 12);
+  o += card(20, 146, 500, 106, C.lgreen, C.green, '3. Safe Boolean Masking & Softmax Jacobian Conditioning', 'Fill forbidden positions with finfo(dtype).min BEFORE softmax (and guard all-masked rows with any(-1));', '1/√d scaling prevents one-hot saturation where Jacobian J(α) = diag(α) − ααᵀ → 0!', D.green.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -939,7 +986,7 @@ function scoreSummary() {
 function scaleSolvedVsOpen() {
   const W = 540, H = 268;
   let o = '';
-  o += card(20, 20, 236, 114, C.lgreen, C.green, 'What Fused Kernels Solve', 'HBM scratch memory: O(n²) → O(n)', 'HBM traffic: Θ(H n² + nd) → Θ(nd)', D.green.dark, 14, 12);
+  o += card(20, 20, 236, 114, C.lgreen, C.green, 'What Fused Kernels Solve', 'HBM scratch memory: O(n²) → O(n)', 'HBM traffic: Θ(Hn²) → Θ(n²d_h²/M)', D.green.dark, 14, 12);
   o += card(284, 20, 236, 114, D.red.tint, D.red.base, 'What Remains O(n²)', 'Arithmetic FLOPs: still Θ(n² d)', 'Generation KV cache: still O(n d)', D.red.dark, 14, 12);
   o += card(20, 154, 500, 94, C.lblue, C.blue, 'Why §10.6 Introduces Sliding Windows and Linear Attention', 'FlashAttention is an exact IO-aware reorganization of dense softmax attention;', 'breaking the Θ(n² d) arithmetic floor requires changing the attention operator itself!', D.blue.dark, 13.5, 12);
   return svg(W, H, o);
@@ -949,8 +996,8 @@ function scaleSolvedVsOpen() {
 function scaleSummary() {
   const W = 540, H = 272;
   let o = '';
-  o += card(20, 18, 236, 108, D.red.tint, D.red.base, '1. The O(n²) HBM Wall', '8 H n² bytes scratch (64 GiB @ 128K)', 'FLOP crossover at n = 6 d', D.red.dark, 13.5, 12);
-  o += card(284, 18, 236, 108, C.lblue, C.blue, '2. Online Softmax Recurrence', 'Running (m^(r), ℓ^(r), u^(r)) in SRAM', 'Rescales by exp(m^(r−1) − m^(r)) ≤ 1', D.blue.dark, 13.5, 12);
+  o += card(20, 18, 236, 108, D.red.tint, D.red.base, '1. The O(n²) HBM Wall', '8 n² bytes/head scratch (128 GiB @ 128K)', 'Block FLOP crossover (with FFN): n ≈ 6d', D.red.dark, 13.5, 12);
+  o += card(284, 18, 236, 108, C.lblue, C.blue, '2. Online Softmax Recurrence', 'Running (m, s, o) in SRAM', 'Rescales by exp(m − m′) ≤ 1', D.blue.dark, 13.5, 12);
   o += card(20, 146, 500, 106, C.lgreen, C.green, '3. FlashAttention Tiled Fusion & Causal Block Skipping', 'Tiles Q, K, V into on-chip SRAM so S and P never touch HBM (O(nd) memory);', 'Skips strictly upper-triangular causal tiles (j > i) to cut arithmetic FLOPs in half!', D.green.dark, 13.5, 12);
   return svg(W, H, o);
 }

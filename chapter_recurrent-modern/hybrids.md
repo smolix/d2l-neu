@@ -411,7 +411,7 @@ Mean recall across two training runs ($2{,}000$ AdamW updates cycling across pai
 
 ::: {.cols .vc}
 ::: {.col}
-- **4× State Scaling (`GG` vs. `GG, 4x state`):** Quadrupling head entries from $128$ to $512$ floats/layer lifts 64-pair recall from **$0.49$ to $0.95+$** at equal parameter count.
+- **4× State Scaling (`GG` vs. `GG, 4x state`):** Quadrupling head entries from $128$ to $512$ floats/layer lifts 64-pair recall from **$\approx 0.5$ to $0.93$–$0.97$** at equal parameter count.
 - **Why Short Conv Matters:** Adjacent tokens $(k_i, v_i)$ require width-4 causal convolution so step $t$'s outer product $\mathbf{v}_t \mathbf{k}_t^\top$ binds both tokens together.
 :::
 
@@ -445,8 +445,8 @@ Comparing 4-block width-256 `Gated DeltaNet` (`GGGG`), a 3-to-1 `hybrid` (`GGGA`
 
 ::: {.cols .vc}
 ::: {.col}
-- **Short-Window Perplexity (`T = 128`):** `GGGG` ($1.326$ nats/byte) beats pure `AAAA` ($1.383$) because local n-gram induction and decay dominate short windows.
-- **Long-Range Recall (`m = 64` pairs):** `GGGG` ($d_k = 4$) saturates at $49\%$, whereas the 3:1 hybrid `GGGA` achieves **$100\%$ recall** and **$1.335$ nats/byte** at $25\%$ of the KV cache.
+- **Short-Window Perplexity (`T = 128`):** `GGGG` ($1.32$–$1.33$ nats/byte) beats pure `AAAA` ($1.38$) because local n-gram induction and decay dominate short windows.
+- **Long-Range Recall (`m = 64` pairs, 2 blocks):** `GG` ($d_k = 4$) saturates at $\approx 50\%$, whereas the hybrid `GA` achieves **$100\%$ recall**; the 3:1 `GGGA` scores **$1.33$–$1.34$ nats/byte** at $25\%$ of the KV cache.
 :::
 
 ::: {.col .fig .big}
@@ -471,14 +471,20 @@ During autoregressive decoding at scale ($16$-bit `float16` / `bfloat16`), per-s
 ::: {.slide title="KV Cache Savings in Frontier Hybrid Architectures"}
 [32-Layer Memory Scaling]{.kicker}
 
-![](../img/mdl-modernrnn-hybrid-cache.svg){.nostretch width=82%}
-
+::: {.cols .vc}
+::: {.col}
 - **32-layer Transformer at $256\text{K}$ tokens:** $32 \times 1\text{ GB} = \mathbf{32\text{ GB}}$ of KV cache *per sequence*.
 - **1-in-8 Hybrid (Jamba, $4$ attention + $28$ Mamba layers):** $4 \times 1\text{ GB} + 28 \times 2\text{ MB} \approx \mathbf{4.06\text{ GB}}$ (**$8\times$ reduction**).
 - **1-in-4 Hybrid (Qwen3-Next & Kimi Linear, 3:1 Gated DeltaNet + Attention):** Cuts KV cache by **$4\times$** while retaining full in-context retrieval.
 :::
 
-::: {.slide title="Master Comparison of Chapter 12 Sequence Mixers"}
+::: {.col .fig .big}
+![](../img/mdl-modernrnn-hybrid-cache.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Master Comparison of Chapter 12 Sequence Mixers (1/2)"}
 [Architectural Synthesis]{.kicker}
 
 | Sequence Mixer | Generation State / Layer | Parallel Training Method | Key Synthetic Benchmark Result | WikiText-103 ($d=256$) |
@@ -487,6 +493,13 @@ During autoregressive decoding at scale ($16$-bit `float16` / `bfloat16`), per-s
 | **minGRU (§12.3)** | $d$ | Associative scan | $1.00$ at $T=1000$ recall with S4D timescales | $1.34$–$1.35$ ($2.8\text{M}$) |
 | **S4D (§12.4)** | $dN$ | FFT conv or scan | $1.00$ at $T=1000$ fixed delay; $\le 0.20$ selective copy | — |
 | **Mamba (§12.5)** | $HN$ ($H=2d$) | Scan + adjoint scan | **$0.99$–$1.00$** on $1{,}024$-step selective copying | **$1.30$** ($4.0\text{M}$) |
+:::
+
+::: {.slide title="Master Comparison of Chapter 12 Sequence Mixers (2/2)"}
+[Architectural Synthesis]{.kicker}
+
+| Sequence Mixer | Generation State / Layer | Parallel Training Method | Key Synthetic Benchmark Result | WikiText-103 ($d=256$) |
+| :--- | :---: | :--- | :--- | :---: |
 | **Gated Linear Attn (§12.6)** | $d^2 / h$ | Chunked GEMM + scan | Recall scales $\propto d^2/h$; superposes rebound keys | — |
 | **Gated DeltaNet (§12.7)** | $d^2 / h$ | Chunked solve + scan | **$0.96+$** on short-gap rebound keys; saturates at $n \gg d_k$ | $1.32$–$1.33$ ($3.6\text{M}$) |
 | **Causal Attention** | $2dT$ | Flash / fused GEMMs | **$1.00$** at all pair loads; $O(T^2)$ compute & $O(T)$ cache | $1.37$–$1.39$ ($3.3\text{M}$) |

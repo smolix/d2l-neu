@@ -1213,7 +1213,7 @@ Attention Circuits: The Residual Stream, QK/OV Decomposition, and Induction Head
 
 To test whether gradient descent discovers this two-layer induction circuit, we generate synthetic sequences that tile a random pattern of length $L \in [L_{\min}, L_{\max}]$ drawn uniformly from a vocabulary of $64$ tokens:
 
-@what-attention-computes-repetition-as-a-task-1
+@-what-attention-computes-repetition-as-a-task-1
 
 - **Unpredictable First Copy ($t < L$):** Because every pattern is sampled freshly per sequence, no token in the first period can be predicted better than uniform chance (cross-entropy $\log 64 \approx 4.16\text{ nats}$, accuracy $1/64 \approx 1.6\%$).
 - **Deterministic Later Copies ($t \ge L$):** Once the pattern repeats, every token can be predicted with $100\%$ accuracy by looking up the earlier occurrence in context.
@@ -1229,7 +1229,7 @@ What happens if we train a **one-block** model (`num_blks=1, bias=True`) on sequ
 @!what-attention-computes-the-positional-shortcut-2
 
 ::: {.d2l-note .warn}
-**Mechanistic Pitfall:** On $L = 32$, the 1-block model reaches $1.00$ accuracy ($0.00\text{ nats}$) by using constant bias queries and keys under RoPE to attend purely to fixed offset $j - i = -31$! Tested on period $L = 24$ (target at offset $-23$), its heads still place $0.85$–$0.92$ of their mass at offset $-31$ and accuracy collapses to $0.01$.
+**Mechanistic Pitfall:** On $L = 32$, the 1-block model reaches $1.00$ accuracy ($0.07\text{ nats}$) by using constant bias queries and keys under RoPE to attend purely to fixed offset $j - i = -31$! Tested on period $L = 24$ (target at offset $-23$), its heads still place $0.88$–$0.99$ of their mass at offset $-31$ and accuracy collapses to $0.01$.
 :::
 :::
 
@@ -1282,7 +1282,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 
 @!what-attention-computes-the-heads-caught-in-the-act-2
 
-- **Clean Separation of Labor:** In every run, Block 1 has $1$–$2$ previous-token heads (scores $0.35$–$0.93$) and $0.00$ induction score, whereas Block 2 heads concentrate up to $0.58$ of their mass directly on the moving target $i + 1 - L$ (vs. $\approx 0.025$ uniform chance).
+- **Clean Separation of Labor:** In every run, Block 1 has $1$–$2$ previous-token heads (scores $0.38$–$0.99$) and at most $0.02$ induction score, whereas Block 2 heads concentrate up to $\approx 0.6$ of their mass directly on the moving target $i + 1 - L$ (vs. $\approx 0.025$ uniform chance).
 :::
 
 ::: {.slide title="Evidence Level 2: Reading the OV Copy Matrix"}
@@ -1301,16 +1301,16 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 :::
 :::
 
-::: {.slide title="OV Copy Matrix Results and Two Crucial Subtleties"}
+::: {.slide title="OV Copy Matrix Results and Two Crucial Subtleties" layout="tight"}
 [Weight Inspection Results]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Subtlety 1 (Stream vs. Embeddings):** Block 2's OV matrix copies almost perfectly ($0.97$–$1.00$ diagonal share) on the Block-1 stream $\bar{\mathbf{h}}_a$, but much more weakly ($0.39$–$0.75$) on raw embeddings $\mathbf{e}_a$—Block 2 also reads features transformed by Block 1's OV circuits (**V-composition**)!
+- **Subtlety 1 (Stream vs. Embeddings):** Block 2's OV matrix copies almost perfectly ($0.97$–$1.00$ diagonal share) on the Block-1 stream $\bar{\mathbf{h}}_a$, but much more weakly ($0.38$–$0.89$) on raw embeddings $\mathbf{e}_a$—Block 2 also reads features transformed by Block 1's OV circuits (**V-composition**)!
 - **Subtlety 2 (Copying $\neq$ Retrieval):** The 1-block model *also* has a $1.00$ diagonal OV copy matrix, yet gets only $10\%$ accuracy because its QK circuit cannot locate the target!
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!what-attention-computes-the-circuit-is-in-the-weights
 :::
 :::
@@ -1332,9 +1332,9 @@ Correlation in attention maps or weights is not causation. To test which heads a
 
 @!what-attention-computes-head-ablation-2
 
-- **1. Block-1 Previous-Token Heads Are Necessary:** Removing them collapses accuracy from $\sim 0.90$ to $0.05$–$0.09$.
-- **2. Surprise—Block 1's "Inert" Heads Are Also Necessary!** Removing the remaining Block-1 heads drops accuracy to $0.06$–$0.17$ because Block 2's OV copy circuit relies on their stream transformation (and zero-ablation shifts stream norms off-distribution).
-- **3. Block-2 Redundancy:** Removing the single strongest induction head leaves accuracy at $0.40$–$0.77$; all four Block-2 heads share the induction workload and must be removed together to drop to chance.
+- **1. Block-1 Previous-Token Heads Are Necessary:** Removing them collapses accuracy from $\sim 0.90$ to $\approx 0.1$ or below.
+- **2. Surprise—Block 1's "Inert" Heads Are Also Necessary!** Removing the remaining Block-1 heads drops accuracy to $0.08$ or below because Block 2's OV copy circuit relies on their stream transformation (and zero-ablation shifts stream norms off-distribution).
+- **3. Block-2 Redundancy:** Removing the single strongest induction head leaves accuracy at $0.74$–$0.91$; all four Block-2 heads share the induction workload and must be removed together to drop to chance.
 :::
 
 ::: {.slide title="In-Context Learning: Generalizing to Unseen Patterns"}

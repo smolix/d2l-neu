@@ -1269,18 +1269,39 @@ z
     </g>
    </g>
    <g id="text_17">
-    <!-- pre + post -->
-    <g transform="translate(343.234443 20.2) scale(0.13 -0.13)">
-     <use xlink:href="#SourceSans3-Regular-2b"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(55.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-20" transform="translate(89.203125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(138.796875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-872" transform="translate(158.796875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(208.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2b" transform="translate(228.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(284 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(338.203125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2f" transform="translate(378.109375 0)"/>
+    <!-- Peri-LN -->
+    <g transform="translate(350.022881 20.2) scale(0.13 -0.13)">
+     <defs>
+      <path id="SourceSans3-Regular-11" d="M 576 0 
+L 576 4198 
+L 1773 4198 
+Q 2246 4198 2598 4083 
+Q 2950 3968 3148 3696 
+Q 3347 3424 3347 2963 
+Q 3347 2304 2918 1984 
+Q 2490 1664 1798 1664 
+L 1107 1664 
+L 1107 0 
+L 576 0 
+z
+M 1107 2099 
+L 1734 2099 
+Q 2285 2099 2550 2307 
+Q 2816 2515 2816 2963 
+Q 2816 3418 2537 3594 
+Q 2259 3770 1709 3770 
+L 1107 3770 
+L 1107 2099 
+z
+" transform="scale(0.015625)"/>
+     </defs>
+     <use xlink:href="#SourceSans3-Regular-11"/>
+     <use xlink:href="#SourceSans3-Regular-20" transform="translate(54.1875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(103.78125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-24" transform="translate(138.484375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-587" transform="translate(163.078125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-d" transform="translate(194.171875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-f" transform="translate(242.765625 0)"/>
     </g>
     <!-- (Gemma 3) -->
     <g transform="translate(340.250537 37.438) scale(0.13 -0.13)">

@@ -688,8 +688,6 @@ Y = torch.cat([Y, Y.new_zeros(1, d)])[slot]    # Dropped slots read zero row
 weights = P.gather(-1, idx)                    # (n, k) raw probabilities p_e(x)
 out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
 ```
-
-@moe-a-mixture-of-experts-layer-2
 :::
 
 ::: {.slide title="Vectorized Dispatch, Batched SwiGLU, and Gather" only="jax"}
@@ -708,6 +706,10 @@ Y = Y.at[slot].get(mode='fill', fill_value=0)  # Dropped slots read zeros
 weights = jnp.take_along_axis(P, idx, -1)      # (n, k) raw probabilities p_e(x)
 out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
 ```
+:::
+
+::: {.slide title="Plugging MoELayer into a TransformerBlock"}
+[MoELayer Implementation]{.kicker}
 
 @moe-a-mixture-of-experts-layer-2
 :::

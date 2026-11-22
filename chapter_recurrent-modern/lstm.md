@@ -964,12 +964,12 @@ The LSTM (Hochreiter & Schmidhuber, 1997; Gers et al., 2000) maintains an intern
 :::
 :::
 
-::: {.slide title="Fused 4-Gate Matrix Projection and Verification"}
+::: {.slide title="Fused 4-Gate Matrix Projection and Verification" only="pytorch"}
 [LSTM Implementation]{.kicker}
 
 Because $\mathbf{i}_t$, $\mathbf{f}_t$, $\tilde{\mathbf{c}}_t$, and $\mathbf{o}_t$ all read $(\mathbf{x}_t, \mathbf{h}_{t-1})$, stacking their weights into $\mathbf{W}_\textrm{x} \in \mathbb{R}^{d_\textrm{in} \times 4d}$ and $\mathbf{W}_\textrm{h} \in \mathbb{R}^{d \times 4d}$ computes all four pre-activations in one batched matrix product per step:
 
-```python
+```{.python #lstm-exercises-1}
 i, f, c_tilde, o = (x @ self.W_x + h @ self.W_h + self.b).chunk(4, -1)
 c = torch.sigmoid(f) * c + torch.sigmoid(i) * torch.tanh(c_tilde)
 h = torch.sigmoid(o) * torch.tanh(c)
@@ -978,7 +978,26 @@ h = torch.sigmoid(o) * torch.tanh(c)
 @!lstm-implementation-2
 
 ::: {.d2l-note}
-Our from-scratch loop matches fused `nn.LSTM` / `nnx.LSTMCell` to `float32` rounding error ($\sim 10^{-7}$), so we use fused library kernels for training.
+Our from-scratch loop matches fused `nn.LSTM` to `float32` rounding error ($\sim 10^{-7}$), so we use fused library kernels for training.
+:::
+:::
+
+::: {.slide title="Fused 4-Gate Matrix Projection and Verification" only="jax"}
+[LSTM Implementation]{.kicker}
+
+Because $\mathbf{i}_t$, $\mathbf{f}_t$, $\tilde{\mathbf{c}}_t$, and $\mathbf{o}_t$ all read $(\mathbf{x}_t, \mathbf{h}_{t-1})$, stacking their weights into $\mathbf{W}_\textrm{x} \in \mathbb{R}^{d_\textrm{in} \times 4d}$ and $\mathbf{W}_\textrm{h} \in \mathbb{R}^{d \times 4d}$ computes all four pre-activations in one batched matrix product per step:
+
+```{.python #lstm-exercises-2}
+i, f, c_tilde, o = jnp.split(
+    x @ self.W_x[...] + h @ self.W_h[...] + self.b[...], 4, -1)
+c = jax.nn.sigmoid(f) * c + jax.nn.sigmoid(i) * jnp.tanh(c_tilde)
+h = jax.nn.sigmoid(o) * jnp.tanh(c)
+```
+
+@!lstm-implementation-2
+
+::: {.d2l-note}
+Our from-scratch loop matches `nnx.LSTMCell` to `float32` rounding error ($\sim 10^{-7}$), so we use fused library kernels for training.
 :::
 :::
 

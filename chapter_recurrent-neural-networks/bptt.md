@@ -158,11 +158,15 @@ saturate near $\pm 1$, while still permitting explosion if
 $\mathbf{W}_\textrm{hh}$ is large and activations stay near zero.
 
 Let us measure what actually happens inside our trained language model from
-:numref:`sec_rnn-scratch` ($d = 512$, $h = 128$, with dropout).
+:numref:`sec_rnn-scratch`. We first load the `TimeMachine` dataset with
+32-token windows.
 
 ```{.python .input #bptt-vanishing-and-exploding-gradients-1}
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 ```
+
+Next, we instantiate the from-scratch recurrent language model `RNNLMScratch`
+with embedding dimension $d = 512$, hidden size $h = 128$, and dropout.
 
 ```{.python .input #bptt-vanishing-and-exploding-gradients-2}
 %%tab pytorch, mxnet, jax
@@ -179,14 +183,17 @@ with d2l.try_gpu():
                              dropout=0.5, emb_dropout=0.1)
 ```
 
+We train `model` for 10 epochs with learning rate `lr=4` and global gradient
+clipping at `gradient_clip_val=1`.
+
 ```{.python .input #bptt-vanishing-and-exploding-gradients-3}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-We run the trained model forward over 256 validation segments of length
-$L = 64$—twice its training window—recording all hidden states and the
-final-step logits.
+To probe gradient flow over a longer horizon, we sample 256 random validation
+segments `seqs` of length $L = 64$—twice the training window—along with their
+following tokens `targets`.
 
 ```{.python .input #bptt-vanishing-and-exploding-gradients-4}
 L = 64
@@ -195,6 +202,10 @@ starts = np.random.default_rng().choice(len(val) - L, 256, replace=False)
 seqs = np.stack([val[s:s + L] for s in starts])  # (256, L) token ids
 targets = val[starts + L]                        # The token after each stretch
 ```
+
+We now run `model.rnn` forward across `seqs` to collect all 64 per-step hidden
+states in `H`, the final-step `logits`, and the weight matrices `W_hh` and
+`W_hq`.
 
 ```{.python .input #bptt-vanishing-and-exploding-gradients-5}
 %%tab mxnet

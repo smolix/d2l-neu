@@ -107,11 +107,13 @@ x = jnp.arange(3, dtype=jnp.float32)
 x
 ```
 
-Whereas mathematical notation uses 1-based indexing ($x_1, \ldots, x_n$), Python uses 0-based indexing, so $x_3$ is `x[2]`, and the vector's *dimensionality* $n$ is `len(x)` (or the sole entry in `x.shape`):
+Whereas mathematical notation uses 1-based indexing ($x_1, \ldots, x_n$), Python uses 0-based indexing, so the third component $x_3$ is accessed via `x[2]`:
 
 ```{.python .input #linear-algebra-vectors-2}
 x[2]
 ```
+
+A vector's *dimensionality* $n$ (its number of components) is returned by Python's built-in `len(x)` or as the sole entry in its 1-tuple shape `x.shape`:
 
 ```{.python .input #linear-algebra-vectors-4}
 len(x), x.shape
@@ -255,7 +257,7 @@ tf.reduce_sum(A), tf.reduce_sum(A, axis=0), tf.reduce_sum(A, axis=1)
 ### Keeping the Reduced Axis for Broadcasting
 :label:`subsec_lin-alg-non-reduction`
 
-To normalize each row of `A` (shape `(2, 3)`) by its row sum, `A.sum(axis=1)` (shape `(2,)`) cannot broadcast against `(2, 3)` because trailing dimensions $2$ and $3$ clash. Passing `keepdims=True` retains the reduced axis with length $1$ (shape `(2, 1)`), allowing `A / sum_A` to broadcast across columns:
+To normalize each row of `A` (shape `(2, 3)`) by its row sum, `A.sum(axis=1)` (shape `(2,)`) cannot broadcast against `(2, 3)` because trailing dimensions $2$ and $3$ clash. Passing `keepdims=True` retains the reduced axis with length $1$ so `sum_A` has shape `(2, 1)`:
 
 ```{.python .input #linear-algebra-non-reduction-sum-1}
 %%tab mxnet, pytorch, jax
@@ -272,6 +274,8 @@ sum_A, sum_A.shape
 :begin_tab:`pytorch`
 PyTorch accepts both `dim`/`keepdim` and the NumPy aliases `axis`/`keepdims`.
 :end_tab:
+
+Because `sum_A` has shape `(2, 1)`, dividing `A / sum_A` broadcasts each row sum across all three columns so that every row of the resulting $2 \times 3$ matrix sums to $1$:
 
 ```{.python .input #linear-algebra-non-reduction-sum-2}
 A / sum_A
@@ -303,7 +307,7 @@ Given two vectors $\mathbf{x}, \mathbf{y} \in \mathbb{R}^d$, their *dot product*
 
 $$\mathbf{x}^\top \mathbf{y} = \sum_{i=1}^{d} x_i y_i.$$
 
-In code, we compute it via `dot` (or `tf.tensordot(x, y, axes=1)`), or equivalently by summing the elementwise product `x * y`:
+In code, we compute the dot product of two 1D vectors `x` and `y` directly via `dot` (or `tf.tensordot(x, y, axes=1)` in TensorFlow):
 
 ```{.python .input #linear-algebra-dot-products-1}
 %%tab mxnet
@@ -328,6 +332,8 @@ x, y, tf.tensordot(x, y, axes=1)
 y = jnp.ones(3)
 x, y, jnp.dot(x, y)
 ```
+
+Equivalently, we can multiply `x * y` elementwise and sum the resulting products with `sum` (returning $\sum_i x_i = 0 + 1 + 2 = 3$ when $\mathbf{y} = \mathbf{1}$):
 
 ```{.python .input #linear-algebra-dot-products-2}
 %%tab mxnet

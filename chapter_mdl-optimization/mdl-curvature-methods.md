@@ -584,10 +584,11 @@ accepted and the radius doubles. Crucially, the trust-region step moves
 model drops, whereas the unconstrained Newton step $(-0.5, -0.31)$ marched
 straight toward it.
 
-To see where this update rule leads over several iterations, we implement
-`tr_step` via bisection on $\tau$ and run six steps from $(0.5, 0.3)$,
-printing the iterate, objective value, step norm, shift $\tau$, agreement
-ratio $r$, and current radius $\Delta$.
+To see where this subproblem solution leads over several iterations, we first
+implement `tr_step(g, B, Delta)`, which returns the unconstrained Newton step
+when $\mathbf{B} \succ \mathbf{0}$ and $\|\mathbf{B}^{-1}\mathbf{g}\| \le \Delta$,
+and otherwise bisects on $\tau$ until
+$\|(\mathbf{B} + \tau\mathbf{I})^{-1}\mathbf{g}\| = \Delta$:
 
 ```{.python .input #mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-1}
 def tr_step(g, B, Delta):
@@ -603,6 +604,11 @@ def tr_step(g, B, Delta):
         lo, hi = (tau, hi) if np.linalg.norm(p) > Delta else (lo, tau)
     return p, tau
 ```
+
+Starting from $\mathbf{x} = (0.5, 0.3)$ with $\Delta = 0.5$, we now run six
+trust-region iterations on $f_s$, printing the iterate, objective value, step
+norm $\|\mathbf{p}\|$, shift $\tau$, agreement ratio $r$, and radius $\Delta$
+at each step:
 
 ```{.python .input #mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-2}
 x, Delta = np.array([0.5, 0.3]), 0.5

@@ -710,7 +710,9 @@ with d2l.try_gpu():
     trainer.fit(model, data)
 ```
 
-Let us print its parameter count and final validation accuracy.
+Once the 10-epoch training run finishes, we call `d2l.num_params(model)` to
+report `RegNetX32`'s total parameter count alongside its final validation
+accuracy `trainer.history["val_acc"][-1]`.
 
 ```{.python .input #cnn-design-training-2}
 print(f'{d2l.num_params(model):,} parameters, validation accuracy '
@@ -845,6 +847,10 @@ with d2l.try_gpu():
     model = ResNet18(lr=0.1, num_steps=10 * len(data.train_dataloader()))
     trainer.fit(model, data)
 ```
+
+As before, we print `d2l.num_params(model)` and the final validation accuracy
+`trainer.history["val_acc"][-1]` so we can compare `ResNet18` directly against
+`RegNetX32`.
 
 ```{.python .input #cnn-design-regnetx32-on-fashion-mnist-3}
 print(f'{d2l.num_params(model):,} parameters, validation accuracy '

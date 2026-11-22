@@ -56,7 +56,7 @@ import pandas as pd
 
 ## The Dataset and the Log-RMSE Metric
 
-We download and cache the training and test CSV files via `d2l.download`, load them into `pandas` DataFrames (:numref:`sec_pandas`), and inspect the shapes and a slice of the first four rows:
+We download and cache the training and test CSV files via `d2l.download` and load them into `pandas` DataFrames (:numref:`sec_pandas`):
 
 ```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-1  n=30}
 def read_house_prices(root='../data'):
@@ -70,10 +70,14 @@ def read_house_prices(root='../data'):
     return train, test
 ```
 
+Calling `read_house_prices()` loads the two tables into `raw_train` and `raw_test`, whose shapes confirm $1{,}460$ training homes across $81$ columns (including `SalePrice`) and $1{,}459$ test homes across $80$ columns:
+
 ```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-2  n=31}
 raw_train, raw_test = read_house_prices()
 print(raw_train.shape, raw_test.shape)
 ```
+
+Slicing the first four rows across the first four and last three columns of `raw_train` via `iloc` displays a representative mix of integer codes (`Id`, `MSSubClass`), string categories (`MSZoning`, `SaleType`, `SaleCondition`), continuous measurements (`LotFrontage`), and the dollar target `SalePrice`:
 
 ```{.python .input #kaggle-house-price-data-preprocessing-1  n=10}
 print(raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
@@ -94,9 +98,7 @@ Turning the raw DataFrames into float32 feature matrices requires four careful s
 1. **Recast numeric category codes to strings:** `MSSubClass` uses numbers ($20, 60, 90, \ldots$) to name dwelling styles (1-story, 2-story, duplex); converting it to `str` prevents the model from treating code $90$ as a linear multiple of code $20$.
 2. **Standardize numerical features using *training-set* statistics only:** Computing means $\mu$ and standard deviations $s$ exclusively on `train`—and applying $(x - \mu)/s$ to both training and validation/test tables—puts all numerical features on a unit scale for SGD and weight decay while preventing *data leakage* from validation or test rows.
 3. **Impute missing numerical values with $0$ (the training mean):** Filling standardized `NaN` entries with `0` replaces missing numerical measurements by their training-set mean (Exercise :exref:`ex_kaggle-house-mean-imputation`).
-4. **One-hot encode categoricals (`pd.get_dummies(..., dummy_na=True)`):** Expands each categorical column into binary indicators (including an explicit indicator for `NaN`) and aligns validation/test columns to the exact training column vocabulary via `reindex(..., fill_value=0)`, yielding $345$ features on the full training table.
-
-Finally, `KaggleHouse(d2l.DataModule)` centers the target $\log(\textrm{SalePrice})$ by subtracting the training split's mean log price `self.offset` ($\approx 12.02$) so the network starts at the right baseline from step 1 (Exercise :exref:`ex_kaggle-house-scaling`):
+4. **One-hot encode categoricals (`pd.get_dummies(..., dummy_na=True)`):** Expands each categorical column into binary indicators (including an explicit indicator for `NaN`) and aligns validation/test columns to the exact training column vocabulary via `reindex(..., fill_value=0)`:
 
 ```{.python .input #kaggle-house-price-data-preprocessing-2  n=32}
 def preprocess(train, *others):
@@ -113,10 +115,14 @@ def preprocess(train, *others):
               .to_numpy(dtype=np.float32) for df in frames]
 ```
 
+Running `preprocess(raw_train, raw_test)` on the full competition tables expands the $79$ raw attributes into aligned `float32` design matrices `X_train` and `X_test` with $345$ features per house:
+
 ```{.python .input #kaggle-house-price-data-preprocessing-3  n=33}
 X_train, X_test = preprocess(raw_train, raw_test)
 X_train.shape, X_test.shape
 ```
+
+Finally, `KaggleHouse(d2l.DataModule)` pairs `preprocess` with logarithmic target centering, subtracting the training split's mean log price `self.offset` ($\approx 12.02$) from $\log(\textrm{SalePrice})$ so the network starts at the right baseline from step 1 (Exercise :exref:`ex_kaggle-house-scaling`):
 
 ```{.python .input #kaggle-house-price-error-measure  n=60}
 class KaggleHouse(d2l.DataModule):
@@ -145,7 +151,7 @@ class KaggleHouse(d2l.DataModule):
 
 ### Shared 5-Fold Splits and the Linear Baseline
 
-With only $1{,}460$ labeled houses, a single $20\%$ validation split ($292$ houses) has a fold-to-fold standard error of several hundredths in log-RMSE. We instead partition `raw_train` once into $K = 5$ random folds via `k_fold_data`—fitting a fresh `KaggleHouse` preprocessor inside each round so validation folds never leak into feature statistics—and evaluate every candidate model across the *exact same five folds* (averaging the last 5 epochs of loss to damp single-step jitter):
+With only $1{,}460$ labeled houses, a single $20\%$ validation split ($292$ houses) has a fold-to-fold standard error of several hundredths in log-RMSE. Our `k_fold_data(raw, k)` helper partitions `raw` into $K$ random folds and builds a separate `KaggleHouse` data module for each round so validation folds never leak into the training feature statistics:
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-1}
 def k_fold_data(raw, k):
@@ -154,6 +160,8 @@ def k_fold_data(raw, k):
     return [KaggleHouse(raw.drop(index=raw.index[f]), raw.iloc[f])
             for f in folds]
 ```
+
+Given a list of pre-built `folds` and a model factory `make_model`, `k_fold` trains a fresh model on each fold for `max_epochs` epochs, averages the last five epochs of squared loss before taking the square root to damp single-epoch jitter, and prints the mean training and validation log-RMSEs across all folds:
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 def k_fold(folds, make_model, max_epochs=100):
@@ -171,11 +179,13 @@ def k_fold(folds, make_model, max_epochs=100):
     return train, val
 ```
 
+We now generate our shared 5-fold partition `folds` once so every candidate model below is evaluated on the exact same five training and validation splits:
+
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-3}
 folds = k_fold_data(raw_train, 5)
 ```
 
-First, let us benchmark our `d2l.LinearRegression` baseline across the five folds ($100$ epochs, batch size $64$, learning rate $\eta = 0.02$):
+First, let us define `make_linear` for our `d2l.LinearRegression` baseline ($100$ epochs, batch size $64$, learning rate $\eta = 0.02$):
 
 ```{.python .input #kaggle-house-price-model-selection-linear}
 %%tab mxnet, pytorch, tensorflow
@@ -187,6 +197,8 @@ make_linear = lambda num_inputs: d2l.LinearRegression(lr=0.02)
 make_linear = lambda num_inputs: d2l.LinearRegression(num_inputs, lr=0.02)
 ```
 
+Running `k_fold(folds, make_linear)` trains the unregularized linear baseline across all five folds and records its training and validation log-RMSE vectors in `linear`:
+
 ```{.python .input #kaggle-house-price-a-linear-baseline-1}
 linear = k_fold(folds, make_linear)
 ```
@@ -195,7 +207,7 @@ The linear baseline achieves a 5-fold validation log-RMSE of $\sim 0.15$ ($\sim 
 
 ### An MLP with Weight Decay
 
-Now let us build `HouseMLP`: a one-hidden-layer MLP with $64$ ReLU units ($\sim 22{,}000$ parameters, or $\sim 19$ parameters per training house in a fold), He-initialized weights, and $\ell_2$ weight decay applied to weight matrices (`wd`). We sweep `wd` across $\{0.001, 0.003, 0.01, 0.03, 0.1, 0.3\}$ on our shared 5-fold splits:
+Now let us build `HouseMLP`: a one-hidden-layer MLP with $64$ ReLU units ($\sim 22{,}000$ parameters, or $\sim 19$ parameters per training house in a fold), He-initialized weights, and $\ell_2$ weight decay `wd` applied exclusively to the weight matrices (excluding biases):
 
 ```{.python .input #kaggle-house-price-mlp-model}
 %%tab mxnet
@@ -300,6 +312,8 @@ make_mlp = lambda num_inputs, wd: HouseMLP(num_inputs, num_hiddens=64,
                                            wd=wd, lr=0.02)
 ```
 
+We now sweep `wd` across `wds = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3]` on our shared 5-fold splits `folds` and plot the mean training and validation RMSEs against the linear baseline:
+
 ```{.python .input #kaggle-house-price-mlp-select}
 wds = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3]
 mlp = {}
@@ -312,6 +326,8 @@ d2l.plot(wds, [[mlp[wd][0].mean() for wd in wds],
          legend=['MLP, training', 'MLP, validation', 'linear, validation'],
          legend_loc='outside', figsize=(4.5, 3))
 ```
+
+Selecting the weight decay `best` with the lowest 5-fold mean validation RMSE, we can also inspect the paired per-fold difference `mlp[best][1] - linear[1]` where fold-sampling noise cancels out:
 
 ```{.python .input #kaggle-house-price-mlp-paired}
 best = min(wds, key=lambda wd: mlp[wd][1].mean())

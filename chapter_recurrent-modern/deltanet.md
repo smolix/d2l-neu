@@ -122,7 +122,7 @@ Two consequences follow from the eigenvalue $1 - \beta_t\|\mathbf{k}_t\|^2$:
 
 On orthonormal keys, $\beta_t = 1$ erases stale values on rebound keys without touching any other key. What happens when $n > d_k$ or keys are random unit vectors so that distinct keys $\mathbf{k}_i$ and $\mathbf{k}_t$ have non-zero overlap $\mathbf{k}_t^\top \mathbf{k}_i$? Each subsequent delta step along $\mathbf{k}_t$ projects out the $\mathbf{k}_t$-component of $\mathbf{v}_i \mathbf{k}_i^\top$, shrinking key $i$'s stored signal by $1 - (\mathbf{k}_t^\top \mathbf{k}_i)^2 \approx 1 - 1/d_k$ per step—so after $m$ later writes, only $(1 - 1/d_k)^m \approx e^{-m/d_k}$ of an old pair's signal survives.
 
-To see when targeted erasure helps and when it hurts, `correction_cost` compares four memory rules at width $d = 64$: `additive`, `delta, β = 1`, `delta, β = 0.5`, and offline `least squares` (`np.linalg.lstsq`, which minimizes $\sum_{s} \|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2$ over all pairs simultaneously). We test three regimes: (1) 8 orthonormal keys written 4 times each (rebinding), (2) $n \in \{32, 64, 128, 256\}$ independent random unit keys written once, and (3) 64 correlated keys ($\rho = 0.5$) written once.
+To see when targeted erasure helps and when it hurts, `delta_rule(beta)` implements online delta writes and `correction_cost` measures both squared read error and nearest-neighbor recall at width $d = 64$ across multiple write rounds and key correlations:
 
 ```{.python .input #deltanet-what-correction-costs-1}
 %%tab pytorch, jax
@@ -158,6 +158,8 @@ def correction_cost(memories, num_keys, writes=1, orthonormal=False, rho=0,
     return ({name: e / trials for name, e in error.items()},
             {name: r / trials for name, r in recall.items()})
 ```
+
+We compare four memory rules—`additive`, `delta, β = 1`, `delta, β = 0.5`, and offline `least squares` (`np.linalg.lstsq`, which minimizes $\sum_{s} \|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2$ over all pairs simultaneously)—across three regimes: (1) 8 orthonormal keys written 4 times each, (2) $n \in \{32, 64, 128, 256\}$ independent random unit keys written once, and (3) 64 correlated keys ($\rho = 0.5$) written once:
 
 ```{.python .input #deltanet-what-correction-costs-2}
 %%tab pytorch, jax
@@ -306,7 +308,7 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):  #@save
     return Y.reshape(B, T, -1)
 ```
 
-Let us verify `chunked_delta_rule` against sequential step-by-step evaluation (`delta_rule_recurrent`) at chunk sizes $m \in \{16, 64\}$.
+To verify `chunked_delta_rule`, we first implement the sequential token-by-token reference `delta_rule_recurrent`:
 
 ```{.python .input #deltanet-chunked-computation-4}
 %%tab pytorch
@@ -332,6 +334,8 @@ def delta_rule_recurrent(Q, K, V, beta, a):
     S = jnp.zeros((V.shape[-1], K.shape[-1]))
     return jax.lax.scan(step, S, (Q, K, V, beta, a))[1]
 ```
+
+We now compare `chunked_delta_rule` at chunk sizes $m \in \{16, 64\}$ against `delta_rule_recurrent` on a random sequence of length $T = 256$ with unit-normalized keys:
 
 ```{.python .input #deltanet-chunked-computation-3}
 %%tab pytorch
@@ -430,6 +434,8 @@ def rebinding_model(layer, num_hiddens=64, num_heads=4,
         num_hiddens, num_heads, chunk_size=16, timescales=(256, 2048),
         rngs=rngs)], rngs=rngs)
 ```
+
+Using `recall_by_kind` to separate accuracy on rebound keys (`rebound`) from keys written only once (`~rebound`), we train two seeds each of `GatedLinearAttention` and `GatedDeltaNet` on the 16-pair rebinding task:
 
 ```{.python .input #deltanet-rebinding-2}
 %%tab pytorch, jax

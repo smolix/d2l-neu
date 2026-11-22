@@ -502,6 +502,13 @@ def sgd_step(theta, obs, act, w, mask, eta):
 sgd_steps = jax.jit(jax.vmap(sgd_step, in_axes=(0, 0, 0, 0, 0, None)))
 ```
 
+With those helpers in place, `train` runs the plain-SGD REINFORCE loop for
+`num_updates` batches, scaling each per-step weight from
+`weighting(batch, G, V)` by `len(batch) / batch_episodes`, updating the value
+table `V` via :eqref:`eq_value_baseline` (or solving $V^\pi$ exactly when
+`exact` is provided), and recording the mean return, parameter step norm, and
+policy entropy:
+
 ```{.python .input #baselines-five-estimators-3}
 %%tab pytorch
 def train(seed, weighting, eta, env, gamma, num_updates, batch_episodes,

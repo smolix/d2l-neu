@@ -201,6 +201,8 @@ class MoELayer(nnx.Module):
         self.dropped[...] = jnp.zeros(())
 ```
 
+Two small utilities, `moe_layers(model)` and `active_params(model)`, collect all `MoELayer` submodules in a network and tally how many parameters participate in the forward pass of a single token ($k / E$ of the expert bank plus all shared parameters):
+
 ```{.python .input #moe-dispatching-tokens-to-experts-1}
 %%tab pytorch
 def moe_layers(model):
@@ -353,6 +355,8 @@ def train_moe_lm(model, data, optimizer, num_steps, aux_weight=0.0,
                 return [float(l) for l in jax.device_get(losses)]
 ```
 
+To inspect routing balance on the validation set, `evaluate_moe` records the validation cross-entropy, the sorted per-expert token shares, and the fraction of dropped assignments, while `measure` compares the validation loss at the configured capacity factor against an unclipped buffer ($S = n k$, zero drops):
+
 ```{.python .input #moe-three-runs-one-budget-2}
 %%tab pytorch, jax
 def evaluate_moe(model, data):
@@ -383,6 +387,8 @@ def measure(model, data):
         l.capacity_factor = c
     return (val, val_all, peak, dropped), shares
 ```
+
+Next, we load `WikiText103` and define `small_gpt`—a 2-block byte-level `GPT` of width $d = 128$ that uses a dense FFN when `capacity_factor=None` and an 8-expert Top-1 `MoELayer` otherwise—along with `freeze_router` for our frozen-router control arm:
 
 ```{.python .input #moe-balancing-methods-compared-1}
 %%tab pytorch
@@ -422,6 +428,8 @@ def freeze_router(model):
         l.router.kernel = nnx.Variable(l.router.kernel[...])
 ```
 
+The driver `balancing_run` trains a fresh `small_gpt` with capacity factor $\gamma = 1.25$ for `num_steps=800` under a chosen balancing regime and returns the `measure` summary:
+
 ```{.python .input #moe-balancing-methods-compared-2}
 %%tab pytorch, jax
 def balancing_run(data, num_steps=800, frozen=False, aux_weight=0.0,
@@ -439,6 +447,8 @@ def balancing_run(data, num_steps=800, frozen=False, aux_weight=0.0,
     return measure(model, data)
 ```
 
+Running two independent seeds of each of the five balancing arms tabulates their validation losses (with and without buffer drops), peak expert load, and drop rates:
+
 ```{.python .input #moe-three-runs-one-budget-3}
 %%tab pytorch, jax
 arms = {'initialization': dict(num_steps=0), 'no balancing': {},
@@ -455,6 +465,8 @@ for name, kwargs in arms.items():
     print(f'{name:>15}  {a[0]:.2f} {b[0]:.2f}  {a[1]:.2f} {b[1]:.2f}  '
           f'{a[2]:3.1f}x {b[2]:3.1f}x  {a[3]:3.0%} {b[3]:3.0%}')
 ```
+
+Plotting the ranked expert token shares averaged across both MoE layers against the uniform $1/8 = 12.5\%$ reference line visualizes how both balancing mechanisms prevent routing collapse:
 
 ```{.python .input #moe-three-runs-one-budget-4}
 %%tab pytorch, jax
@@ -485,6 +497,8 @@ for name, model in models.items():
     print(f'{name:>5}: {d2l.num_params(model) / 1e6:5.2f}M parameters, '
           f'{active_params(model) / 1e6:.2f}M active per token')
 ```
+
+Training two independent runs of both models for $6{,}000$ steps with the Switch auxiliary loss ($\alpha = 0.01$) and evaluating validation loss every $250$ steps tracks when the sparse model overtakes the dense baseline:
 
 ```{.python .input #moe-a-mixture-of-experts-gpt}
 %%tab pytorch, jax

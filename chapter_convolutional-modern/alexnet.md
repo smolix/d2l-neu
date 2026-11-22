@@ -461,6 +461,9 @@ model = AlexNet(lr=0.03, num_steps=10 * len(data.train_dataloader()))
 K0 = first_kernels(model)
 ```
 
+With the initial $11 \times 11$ kernels recorded in `K0`, we now fit `AlexNet`
+on the resized Fashion-MNIST dataset `data` for 10 epochs.
+
 ```{.python .input #alexnet-training  n=8}
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)

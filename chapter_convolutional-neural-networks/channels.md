@@ -159,6 +159,10 @@ K = d2l.stack((K, K + 1, K + 2), 0)
 K.shape
 ```
 
+Applying `corr2d_multi_in_out` to our two-channel input `X` and the stacked
+$3 \times 2 \times 2 \times 2$ kernel `K` produces a three-channel output
+tensor of shape $(3, 2, 2)$.
+
 ```{.python .input #channels-multiple-output-channels-3}
 corr2d_multi_in_out(X, K)
 ```

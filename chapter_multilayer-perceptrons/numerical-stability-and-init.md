@@ -223,7 +223,7 @@ This is *He initialization* (or *Kaiming initialization*, :cite:`He.Zhang.Ren.ea
 ### Activations, Gradients, and Training across Depth
 :label:`subsec_variance_propagation`
 
-Let us compare $\mathcal{N}(0, 0.01^2)$, Xavier ($\tau^2 = 1/256$), and He ($\tau^2 = 2/256$) across a 10-layer ReLU network—first checking the forward activation and backward gradient mean squares at initialization, and then training a 10-hidden-layer `DeepMLP` on Fashion-MNIST for 10 epochs at learning rate $\eta = 0.05$:
+Let us first compare $\mathcal{N}(0, 0.01^2)$, Xavier ($\tau^2 = 1/256$), and He ($\tau^2 = 2/256$) across our 10-layer synthetic ReLU probe `moments(*relu, ...)`:
 
 ```{.python .input #numerical-stability-and-init-depth-sweep}
 runs = {'N(0, 0.01²)': moments(*relu, 0.01),
@@ -237,6 +237,7 @@ d2l.plot(list(range(1, 11)), [acts for acts, grads in runs.values()],
          yscale='log', figsize=(4.5, 3))
 ```
 
+Notice how $\mathcal{N}(0, 0.01^2)$ crushes layer-10 activations to $\sim 10^{-21}$ and Xavier halves the activation mean square at every ReLU layer ($\sim 2^{-10} \approx 10^{-3}$ by layer 10), whereas He initialization keeps both activations and gradients near $O(1)$. To see how this variance propagation governs real training, we now define a 10-hidden-layer ReLU classifier `DeepMLP` parameterized by a per-layer standard-deviation rule `std(n_in, n_out)`:
 
 ```{.python .input #numerical-stability-and-init-training-a-deep-network-1}
 %%tab mxnet

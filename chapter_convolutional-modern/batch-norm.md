@@ -770,10 +770,16 @@ for model in (CosineLeNet(0.1, num_steps), BNLeNet(0.1, num_steps)):
     curves[type(model).__name__] = trainer.history['val_acc']
 ```
 
+Plotting the epoch-by-epoch validation accuracy trajectories stored in `curves`
+contrasts the convergence speed of `CosineLeNet` and `BNLeNet` directly.
+
 ```{.python .input #batch-norm-lenet-with-batch-normalization-5}
 d2l.plot(list(range(1, 11)), list(curves.values()), 'epoch',
          'validation accuracy', legend=list(curves))
 ```
+
+We also print the final 10-epoch validation accuracy `acc[-1]` from `curves`
+for both models to compare their endpoint performance.
 
 ```{.python .input #batch-norm-lenet-with-batch-normalization-6}
 {name: round(acc[-1], 3) for name, acc in curves.items()}  # After 10 epochs

@@ -110,7 +110,7 @@ On a fixed step budget $T$, two decay profiles dominate modern deep learning:
   When $\eta_T = 0$, cosine decay has cumulative budget $B_T = \frac{1}{2}\eta_0 T$ (half the budget of a constant rate $\eta_0$).
 * **Stable–then–decay (late linear decay)**, which holds the peak rate $\eta_0$ constant until step $t_{\text{decay}}$ (here $0.8\,T = 1{,}600$) and then decays linearly to $0$ over the final $20\%$ of training, preserving $90\%$ of the constant-rate budget ($B_T = 0.9\,\eta_0 T$) while still finishing at $\eta_T = 0$.
 
-We compare constant, cosine, and stable–then–decay schedules ($\eta_0 = 3 \times 10^{-3}, T = 2{,}000$) with AdamW ($\lambda = 0$) on `TinyLM` across two seeds, recording validation loss at step $1{,}500$ and step $2{,}000$:
+To compare constant, cosine, and stable–then–decay schedules ($\eta_0 = 3 \times 10^{-3}, T = 2{,}000$) with AdamW ($\lambda = 0$) on `TinyLM`, we first load `WikiText103` and define the model constructor `tiny_lm(seed)` and scheduled optimizer wrapper `adamw(model, schedule)`:
 
 ```{.python .input #lr-scheduler-language-model-1}
 %%tab pytorch
@@ -155,6 +155,8 @@ def adamw(model, schedule):
                          wrt=nnx.Param)
 ```
 
+Next we define the schedule functions `constant`, `cosine`, and `stable_decay` (which holds $\eta_0$ until `decay_start=1600` before decaying linearly to zero at $T = 2{,}000$), along with the linear ramp wrapper `warmup`:
+
 ```{.python .input #lr-scheduler-language-model-2}
 %%tab pytorch
 def constant(t, eta=3e-3):
@@ -188,6 +190,8 @@ def warmup(schedule, num_steps):
     """schedule, ramped up linearly over its first num_steps steps."""
     return lambda t: jnp.minimum(1, (t + 1) / num_steps) * schedule(t)
 ```
+
+We now train `TinyLM` under each of the three decay profiles across two seeds, recording the cumulative budget $B_T$ and the validation loss at step $1{,}500$ (before late decay starts) and step $2{,}000$:
 
 ```{.python .input #lr-scheduler-decay-on-a-language-model-1}
 %%tab pytorch, jax
@@ -224,7 +228,7 @@ While decay settles the iterate at the end of training, **learning-rate warmup**
 
 Why is warmup needed? First, under Adam (:numref:`sec_adam`), step $1$ moves every coordinate by $\pm\eta_0$ based on a single minibatch before the momentum average $\mathbf{m}_t$ and second-moment average $\mathbf{v}_t$ have accumulated multi-batch statistics. On `TinyLM`, where initial linear weight matrices have $\text{RMS}(\mathbf{W}_0) \approx 0.045$, a cold start at $\eta_0 = 0.03$ alters every weight by $\sim 67\%$ of its initial magnitude on step $1$, corrupting the initialization and causing the run to stall near $2.8$ nats. Second, as shown in :numref:`subsec_gd-edge-of-stability`, gradually raising $\eta_t$ lowers the sharpness ceiling $2/\eta_t$ progressively, guiding the network into a flat region that can tolerate the peak learning rate :cite:`Goyal.Dollar.Girshick.ea.2017,Kalra.Barkeshli.2024`.
 
-Adding a $20$-step linear ramp (`warmup(peak, 20)`, just $1\%$ of the $2{,}000$-step run) caps the initial relative weight change at about $10\%$ and rescues training at $\eta_0 = 0.03$, lowering the final validation loss by about a full nat:
+Adding a $20$-step linear ramp (`warmup(peak, 20)`, just $1\%$ of the $2{,}000$-step run) caps the initial relative weight change at about $10\%$ and rescues training at $\eta_0 = 0.03$, lowering the final validation loss by about a full nat. To measure the step-by-step weight change, `linear_weights` extracts the 2D non-embedding weight matrices of `TinyLM`:
 
 ```{.python .input #lr-scheduler-cold-and-ramped-1}
 %%tab pytorch
@@ -240,6 +244,8 @@ def linear_weights(model):
     return [p[...] for path, p in params
             if p.ndim == 2 and 'emb' not in str(path)]
 ```
+
+Using `relative_change` to compute $\|\Delta\mathbf{W}\|_{\text{RMS}} / \|\mathbf{W}\|_{\text{RMS}}$ at steps $1, 5, 20,$ and $100$, we compare a cold start at $\eta_0 = 0.03$ against a $20$-step linear warmup over $2{,}000$ steps:
 
 ```{.python .input #lr-scheduler-cold-and-ramped-2}
 %%tab pytorch, jax
@@ -279,7 +285,7 @@ Geometrically, :citet:`Wen.Li.Wang.ea.2024` model the WSD trajectory via a **riv
 ### Branching Off the Plateau
 :label:`subsec_scheduler-branching`
 
-Because the plateau phase does not depend on the target horizon $T$, we can maintain a single continuous plateau run and **branch** a short linear cooldown ($250$ steps) from any checkpoint (copying both model weights and AdamW moment buffers $\mathbf{m}_t, \mathbf{v}_t$) to obtain a fully cooled model for that token budget:
+Because the plateau phase does not depend on the target horizon $T$, we can maintain a single continuous plateau run and **branch** a short linear cooldown ($250$ steps) from any checkpoint. First, `branch(model, optimizer, schedule)` clones both the model weights and AdamW's moment buffers $(\mathbf{m}_t, \mathbf{v}_t)$ to continue under a cooldown `schedule`:
 
 ```{.python .input #lr-scheduler-branching-1}
 %%tab pytorch
@@ -298,6 +304,8 @@ def branch(model, optimizer, schedule):
     nnx.update(twin, nnx.clone(nnx.state(optimizer)))  # Moments, step count
     return model, twin
 ```
+
+We now run a $2{,}000$-step constant-rate plateau on `TinyLM`, fork $250$-step linear decay branches at steps $500, 1{,}000,$ and $1{,}500$, and compare the step-$1{,}000 \to 1{,}250$ branch against a dedicated $1{,}250$-step run planned from scratch:
 
 ```{.python .input #lr-scheduler-branching-2}
 %%tab pytorch, jax

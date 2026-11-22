@@ -543,22 +543,6 @@ def diagonal_share(C):
     return float((C.argmax(-1) == rows).float().mean())
 ```
 
-```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
-%%tab pytorch
-x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
-print('rows whose largest entry is the diagonal (chance 1/64)')
-print(f'{"":<32}   run 1   run 2   run 3')
-for name, X in (('2 blocks, block 2, mean stream', x),
-                ('2 blocks, block 2, embeddings', None)):
-    shares = [diagonal_share(copy_matrix(m, 1, X)) for m in models_two]
-    print(f'{name:<32}' + ''.join(f'{v:8.2f}' for v in shares))
-print(f'{"1 block, mean stream":<32}'
-      f'{diagonal_share(copy_matrix(model_one, 0, x)):8.2f}')
-d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None].cpu(),
-                  xlabel='logit boosted', ylabel='token attended to',
-                  figsize=(3.6, 3.6), cmap='Blues')
-```
-
 ```{.python .input #what-attention-computes-copy-matrix-definitions}
 %%tab jax
 def circuits(model, blk):
@@ -588,6 +572,24 @@ def copy_matrix(model, blk, X=None):
 def diagonal_share(C):
     """Fraction of the rows of C whose largest entry is on the diagonal."""
     return float((C.argmax(-1) == jnp.arange(len(C))).mean())
+```
+
+Evaluating `diagonal_share(copy_matrix(...))` across all three two-block training runs (both on the mean block-1 residual stream $\bar{\mathbf{h}}_a$ and on raw token embeddings $\mathbf{e}_a$) as well as on the one-block control model shows that the OV circuit forms a near-diagonal copying matrix:
+
+```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+%%tab pytorch
+x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
+print('rows whose largest entry is the diagonal (chance 1/64)')
+print(f'{"":<32}   run 1   run 2   run 3')
+for name, X in (('2 blocks, block 2, mean stream', x),
+                ('2 blocks, block 2, embeddings', None)):
+    shares = [diagonal_share(copy_matrix(m, 1, X)) for m in models_two]
+    print(f'{name:<32}' + ''.join(f'{v:8.2f}' for v in shares))
+print(f'{"1 block, mean stream":<32}'
+      f'{diagonal_share(copy_matrix(model_one, 0, x)):8.2f}')
+d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None].cpu(),
+                  xlabel='logit boosted', ylabel='token attended to',
+                  figsize=(3.6, 3.6), cmap='Blues')
 ```
 
 ```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
@@ -642,6 +644,8 @@ def ablate(model, blk, heads):
     W_o[...] = W.at[jnp.array(heads, dtype=int)].set(0).reshape(W_o.shape)
     return model
 ```
+
+Applying `ablate` across all three trained two-block models quantifies how much later-copy cross-entropy and copy accuracy degrade when we remove block 1's previous-token heads versus block 2's top induction heads:
 
 ```{.python .input #what-attention-computes-head-ablation-2}
 %%tab pytorch

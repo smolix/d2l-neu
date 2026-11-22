@@ -112,6 +112,8 @@ w.requires_grad_(True)
 w = tf.Variable(w)
 ```
 
+With `w` marked for differentiation, we now evaluate the forward pass `L = loss(w)` (inside `autograd.record()` in MXNet or `tf.GradientTape()` in TensorFlow) so the framework records the sequence of operations connecting `w` to `L`:
+
 ```{.python .input #autograd-a-simple-function-3}
 %%tab mxnet
 with autograd.record():  # record the operations that compute the loss
@@ -344,6 +346,8 @@ def z(x):
 
 jax.grad(lambda x: z(x).sum())(x)
 ```
+
+By contrast, if we compute `z = u * x` directly without detaching `u`, backpropagation flows through both factors of $z = x^3$ and returns $\partial z / \partial x = 3x^2 = (0, 3, 12, 27)$:
 
 ```{.python .input #autograd-detaching-computation-2}
 %%tab mxnet

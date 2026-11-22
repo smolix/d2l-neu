@@ -216,6 +216,9 @@ class Vocab:  #@save
         return self.token_to_idx['<unk>']
 ```
 
+To test `Vocab`, we build a vocabulary over our word `tokens`, map the first
+ten words to integer `indices`, and invert them with `vocab.to_tokens`.
+
 ```{.python .input #text-sequence-vocabulary-2}
 vocab = Vocab(tokens)
 indices = vocab[tokens[:10]]
@@ -436,7 +439,9 @@ def train(self, text):
         seqs = [self._merge(seq, pair, new_id) for seq in seqs]
 ```
 
-Training on our toy corpus reproduces the hand trace exactly:
+Training `BPETokenizer` for three merges (`vocab_size=256 + 3`) on our toy
+corpus and inspecting `toy_tok.merges` reproduces the three merge steps from
+our hand trace above:
 
 ```{.python .input #text-sequence-implementation-2}
 toy_tok = BPETokenizer(vocab_size=256 + 3)

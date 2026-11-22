@@ -245,6 +245,8 @@ class MLP(nnx.Module):
         return self.out(nnx.relu(self.hidden(X)))
 ```
 
+Instantiating `net = MLP()` (calling `net.initialize()` in MXNet or passing an explicit `nnx.Rngs` in JAX) and invoking `net(X)` dispatches to our custom forward method and maps the $2 \times 20$ input batch `X` to an output tensor of shape `(2, 10)`:
+
 ```{.python .input #model-construction-the-module-abstraction-4}
 %%tab mxnet
 net = MLP()
@@ -531,6 +533,8 @@ class PartlyRegisteredMLP(nn.Module):
             X = F.relu(block(X))
         return self.last(X)
 ```
+
+To see which layers actually move during training, we snapshot all four weight matrices of `PartlyRegisteredMLP` in `before`, run a single backward pass on `net(X).sum()` followed by one SGD step, and compare each layer's weights against `before`:
 
 ```{.python .input #model-construction-layers-in-a-plain-list-2}
 %%tab mxnet

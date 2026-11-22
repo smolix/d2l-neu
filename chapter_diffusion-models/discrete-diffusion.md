@@ -821,6 +821,11 @@ def conditionals(model, tau):
     return q[0, 0], q[0, 1], q[1:K + 1, 1], q[K + 1:, 0].T
 ```
 
+Given a function `cond` with the signature of `conditionals`, `sampler_table`
+sums over all jump combinations to form the exact output distribution of the
+$S$-step unmasking sampler, which we compare against the true joint `table` for
+both `pair_model` and `exact` across $S \in \{32, 8, 2, 1\}$:
+
 ```{.python .input #discrete-diffusion-the-quantized-mixture-1}
 %%tab pytorch, jax
 def sampler_table(cond, steps, alpha_bar):

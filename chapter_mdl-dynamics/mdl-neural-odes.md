@@ -279,6 +279,11 @@ solvers = {'Euler': euler_step, 'RK4': rk4_step}
 seed = int(rng.integers(2**31))                # one initialization for both solvers
 ```
 
+With the source circle `X0_ring`, target ellipse `X1_ring`, and shared
+initialization `seed` fixed, `train` fits the two-layer `tanh` vector field
+`net` by backpropagating through 10 steps of `solve(step, net, X, 1.0, 10)` for
+each solver in `solvers`:
+
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab pytorch
 X, Y = torch.tensor(X0_ring).float(), torch.tensor(X1_ring).float()
@@ -1103,6 +1108,12 @@ tr_tanh = np.sum(s * np.einsum('ij,ji->i', W1, W2))  # trace of W2 diag(s) W1
 E = rng.choice([-1.0, 1.0], size=(m, d))         # Rademacher probes, one per row
 E_gauss = rng.standard_normal((m, d))            # Gaussian probes, one per row
 ```
+
+We now evaluate the reverse-mode vector–Jacobian product
+$\boldsymbol\epsilon_k^\top \mathbf{J}$ at `x` for all $m = 1000$ Rademacher
+(`E`) and Gaussian (`E_gauss`) probes and compare the resulting trace estimates
+$\boldsymbol\epsilon_k^\top \mathbf{J}\boldsymbol\epsilon_k$ and their
+single-probe standard deviations against the exact trace `tr_tanh - d`:
 
 ```{.python .input #mdl-neural-odes-the-hutchinson-trace-estimator-2}
 #@tab pytorch

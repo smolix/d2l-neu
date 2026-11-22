@@ -227,6 +227,8 @@ def gpt(*args, **kwargs):  # Fresh random weights for every model
     return d2l.GPT(*args, **kwargs, rngs=nnx.Rngs(d2l.get_key()))
 ```
 
+We now instantiate a 3-block `GPT` under both rotary (`pos='rope'`) and learned absolute (`pos='learned'`) positional embeddings, prefill the first $16$ tokens of a $48$-token sequence in one call, step through the remaining $32$ positions one token at a time, and measure the maximum absolute discrepancy against the full uncached forward pass `model(x)`:
+
 ```{.python .input #kv-cache-same-logits-measured-1}
 %%tab pytorch
 for pos in ('rope', 'learned'):
@@ -286,6 +288,8 @@ model.eval()
 print(f'{d2l.num_params(model) / 1e6:.0f}M parameters')
 ```
 
+Next, we define two timing helpers using `d2l.Benchmark`: `time_forward(model, n)` measures a compiled full-prefix forward pass over $n$ tokens, while `time_decode(model, batch_size, n)` averages the wall-clock latency of $32$ single-token cached decode steps starting at context length $n$:
+
 ```{.python .input #kv-cache-checking-the-cache-3}
 %%tab pytorch
 def time_forward(model, n):
@@ -337,6 +341,8 @@ def time_decode(model, batch_size, n):
     return d2l.Benchmark(run).time / 32
 ```
 
+Sweeping the context length $n$ across powers of two from $256$ to $4{,}032$ tokens contrasts the linear growth of each uncached step against the nearly flat latency of a cached decode step:
+
 ```{.python .input #kv-cache-checking-the-cache-4}
 %%tab pytorch, jax
 lengths, t_naive, t_cached = [256, 512, 1024, 2048, 4032], [], []
@@ -347,12 +353,16 @@ for n in lengths:
           f'cached {1e3 * t_cached[-1]:4.1f} ms per token')
 ```
 
+Plotting both per-token latency curves on log--log axes illustrates the $O(n)$ versus $O(1)$ per-step scaling across the full context window:
+
 ```{.python .input #kv-cache-checking-the-cache-1}
 %%tab pytorch, jax
 d2l.plot(lengths, [[1e3 * t for t in t_naive], [1e3 * t for t in t_cached]],
          'context length', 'ms per token', legend=['naive', 'cached'],
          xscale='log', yscale='log')
 ```
+
+Cumulated over an end-to-end generation of $256$ new tokens after a $3{,}584$-token prompt, replacing `model.generate` with `model.generate_cached` yields more than an order-of-magnitude wall-clock speedup:
 
 ```{.python .input #kv-cache-same-logits-measured-3}
 %%tab pytorch, jax
@@ -384,6 +394,8 @@ def kv_cache_bytes(model, num_tokens, batch_size=1, bytes_per_elem=4):
             * bytes_per_elem)
 ```
 
+Evaluating `kv_cache_bytes` on our 124M-parameter FP32 model at $n = 4{,}096$ tokens confirms that the allocated cache buffers match :eqref:`eq_kv-cache-bytes` ($288\textrm{ MiB}$) and already exceed half the $475\textrm{ MiB}$ footprint of the model weights:
+
 ```{.python .input #kv-cache-the-memory-bill}
 %%tab pytorch, jax
 bytes_per_param = 4  # fp32 weights
@@ -410,6 +422,8 @@ Why did a 2,048-token prefill take nearly the same order of magnitude of time pe
 t_prefill = time_forward(model, 2048)
 t_decode = time_decode(model, 1, 2048)
 ```
+
+Comparing the resulting token throughputs and arithmetic intensities against a $1\textrm{ TB/s}$ HBM bandwidth budget shows why single-stream decode sits near the memory-bandwidth ceiling while a $2{,}048$-token prefill achieves more than $100\times$ higher throughput:
 
 ```{.python .input #kv-cache-prefill-and-decode-1}
 %%tab pytorch, jax
@@ -515,6 +529,8 @@ def pool_heads(target, source, pool):
     return target
 ```
 
+We now train our 6-block byte-level `GPT` on `WikiText103` at $H_{\textrm{kv}} \in \{8, 2\}$ and evaluate `pool_heads` with both `'mean'` and `'first'` head pooling across $0$, $50$, and $100$ uptraining steps:
+
 ```{.python .input #kv-cache-cache-against-quality}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
@@ -572,6 +588,8 @@ tokens = jnp.asarray(enc.encode(open(fname).read()))
 x, calib = tokens[None, :1024], tokens[None, 1024:2048]
 print(f'{len(tokens)} tokens of The Time Machine')
 ```
+
+To intercept and transform the keys and values inside every layer without rewriting `GPT`, we define `forward_blocks(model, X, attn_fn)`—which delegates block $i$'s attention to a callback `attn_fn(q, k, v, i)`—and verify that standard causal attention matches `gpt2(x)` to within $10^{-5}$ while establishing our baseline `tail_loss` on positions $512 \dots 1023$:
 
 ```{.python .input #kv-cache-compressing-the-cache-further-2}
 %%tab pytorch

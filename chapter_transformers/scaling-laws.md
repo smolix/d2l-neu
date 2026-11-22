@@ -57,6 +57,8 @@ def gpt(*args, **kwargs):  # Fresh random weights for every model
     return d2l.GPT(*args, **kwargs, rngs=nnx.Rngs(d2l.get_key()))
 ```
 
+We verify that the non-embedding parameter count equals $12 L d^2$ (to within the negligible $O(Ld)$ normalization gains and biases) on both our 6-block byte-level `GPT` and 12-block GPT-2 Small:
+
 ```{.python .input #scaling-laws-a-parameter-census}
 %%tab pytorch, jax
 def census(model):
@@ -153,6 +155,8 @@ print(f'{len(data.train) / 1e6:.0f}M training bytes, '
       f'vocabulary of {len(data.vocab)}')
 ```
 
+With the corpus loaded, we train all $5 \times 3 = 15$ `(size, budget)` configurations using width-scaled peak learning rates $\eta = 2 \times 10^{-3} \cdot (256 / d)$ and record each model's non-embedding parameter count `Ns` and validation cross-entropy `val`:
+
 ```{.python .input #scaling-laws-five-sizes-one-diet-1}
 %%tab pytorch, jax
 sizes = ((96, 3, 4), (128, 3, 4), (192, 4, 6), (256, 6, 8), (384, 8, 8))
@@ -190,6 +194,8 @@ d2l.plot(Ns, [val[s] for s in budgets], 'non-embedding parameters N',
          xscale='log', yscale='log', fmts=('C0o-', 'C1s-', 'C2^-'),
          legend_loc='outside')
 ```
+
+Re-plotting the same 15 validation losses against total training compute $C = 6 N D$ (and printing three near-IsoFLOP runs around $C \approx 4 \times 10^{13}\textrm{ FLOPs}$) reveals how the compute-optimal model size shifts upward as the FLOP budget grows:
 
 ```{.python .input #scaling-laws-equal-compute}
 %%tab pytorch, jax

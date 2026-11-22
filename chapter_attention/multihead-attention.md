@@ -414,6 +414,8 @@ class MultiHeadAttention(nnx.Module):  #@save
 ![Heads as slices of one projection. The projected queries of $n$ tokens are cut into $H$ column slices of width $d_h = d/H$, which become a separate head axis; each head attends on its own, and the head outputs are placed side by side again before the output projection $\mathbf{W}_o$. Keys and values are split in the same way.](../img/mdl-attention-head-split.svg)
 :label:`fig_head-split`
 
+The two reshape-and-transpose helpers `split_heads` and `merge_heads` (:numref:`fig_head-split`) fold the last dimension $H d_h$ into an explicit head axis `(batch, num_heads, length, width)` before attention and re-concatenate the $H$ head outputs afterward:
+
 ```{.python .input #multihead-attention-implementation-2}
 %%tab pytorch
 @d2l.add_to_class(MultiHeadAttention)  #@save
@@ -515,6 +517,8 @@ def evaluate_copy_both(model, n=10000):
     err = jnp.linalg.norm(Y - target) / jnp.linalg.norm(target)
     return float(err), model.attention_weights[0, :, 0, 0].tolist()
 ```
+
+Training two seeds at each head count $H \in \{1, 2, 4\}$ (all sharing the same total width $d = 16$ and parameter count $1{,}024$) compares their relative reconstruction error and the attention weight $\alpha_1$ that each head places on the first value vector $\mathbf{v}_1$:
 
 ```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-2}
 %%tab pytorch, jax

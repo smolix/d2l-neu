@@ -64,7 +64,7 @@ $$\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}, \quad \mathbf{b}^{(1)} \in \
 ![Architecture of our Fashion-MNIST MLP: a minibatch of $n$ images is flattened to $n \times 784$, mapped through an affine layer and ReLU to an $n \times 256$ hidden representation $\mathbf{H}$, and projected to $n \times 10$ class logits $\mathbf{O}$.](../img/mdl-mlp-arch.svg)
 :label:`fig_mdl-mlp-arch`
 
-To keep our head-to-head comparison with softmax regression controlled, we initialize both weight matrices from $\mathcal{N}(0, 0.01^2)$ and both biases to $0$ (in :numref:`sec_numerical_stability`, we will see why random initialization is mandatory to break symmetry between hidden units, and how He initialization improves upon `std=0.01`). We write `relu(X)` from scratch via boolean masking `X * (X > 0)` and factor the hidden activation into `hidden(X)` so `forward(X)` returns the raw class logits $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$:
+To keep our head-to-head comparison with softmax regression controlled, we initialize both weight matrices from $\mathcal{N}(0, 0.01^2)$ and both biases to $0$ (in :numref:`sec_numerical_stability`, we will see why random initialization is mandatory to break symmetry between hidden units, and how He initialization improves upon `std=0.01`):
 
 ```{.python .input #mlp-implementation-initializing-model-parameters}
 %%tab mxnet
@@ -135,6 +135,7 @@ class MLPScratch(d2l.Classifier):
         self.b2 = nnx.Param(jnp.zeros(num_outputs))
 ```
 
+Next, we implement the elementwise activation `relu(X)` from scratch by multiplying `X` with the Boolean mask `X > 0` (casting the mask to `X.dtype` in TensorFlow) so positive entries pass through unchanged and negative entries become zero:
 
 ```{.python .input #mlp-implementation-model-1}
 %%tab mxnet
@@ -159,6 +160,8 @@ def relu(X):
 def relu(X):
     return X * (X > 0)
 ```
+
+We then factor the hidden layer into `hidden(self, X)`—which flattens each image minibatch to `(-1, self.num_inputs)` and computes $\mathbf{H} = \mathrm{relu}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$—so `forward(self, X)` simply returns the raw class logits $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$ (consumed directly by `Classifier.loss`):
 
 ```{.python .input #mlp-implementation-model-2}
 %%tab mxnet
@@ -290,7 +293,7 @@ class MLP(d2l.Classifier):
 
 ### Accuracy
 
-Let us train both the concise `MLP` and `d2l.SoftmaxRegression` for $30$ epochs under identical settings, timing each epoch and plotting all three validation accuracy curves together:
+Let us train both the concise `MLP` and `d2l.SoftmaxRegression` for $30$ epochs under identical settings, recording each model's average wall-clock time per epoch in `seconds` and its validation accuracy trajectory in `curves`:
 
 ```{.python .input #mlp-implementation-accuracy-1}
 curves, seconds = {'MLP from scratch': trainer.history['val_acc']}, {}
@@ -304,10 +307,14 @@ for name, net in models.items():
     curves[name] = trainer.history['val_acc']
 ```
 
+Plotting all three validation accuracy histories in `curves` across epochs 1 to 30 compares our scratch and concise MLPs directly against the linear softmax baseline:
+
 ```{.python .input #mlp-implementation-accuracy-2}
 d2l.plot(list(range(1, trainer.max_epochs + 1)), list(curves.values()),
          'epoch', 'validation accuracy', legend=list(curves))
 ```
+
+To smooth out single-epoch validation fluctuations, we print each model's mean validation accuracy over the final five epochs (`acc[-5:]`) alongside the training-set accuracy of `MLPScratch`:
 
 ```{.python .input #mlp-implementation-accuracy-3}
 print('validation accuracy averaged over the last 5 epochs')
@@ -324,7 +331,7 @@ Notice two instructive patterns in the learning curves:
 
 ### The Learned Features
 
-In :numref:`sec_softmax_scratch`, the 10 columns of softmax regression's weight matrix $\mathbf{W}$ had to act as whole-garment templates. What did our MLP's 256 hidden units learn? Let us reshape the 10 columns of $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}$ with the largest Euclidean norms into $28 \times 28$ images, titling each hidden unit by the garment class to which $\mathbf{W}^{(2)}$ assigns its largest positive outgoing weight:
+In :numref:`sec_softmax_scratch`, the 10 columns of softmax regression's weight matrix $\mathbf{W}$ had to act as whole-garment templates. To see what our MLP's 256 hidden units learned, we first copy its trained weight matrices $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}$ and $\mathbf{W}^{(2)} \in \mathbb{R}^{256 \times 10}$ into NumPy arrays `W1` and `W2`:
 
 ```{.python .input #mlp-implementation-what-the-hidden-units-compute-1}
 %%tab pytorch, tensorflow
@@ -340,6 +347,8 @@ W1, W2 = d2l.numpy(model.W1.data()), d2l.numpy(model.W2.data())
 %%tab jax
 W1, W2 = d2l.numpy(model.W1[...]), d2l.numpy(model.W2[...])
 ```
+
+We then select the 10 hidden units `units` whose columns in `W1` have the largest Euclidean norms, reshape each 784-vector into a $28 \times 28$ image normalized to $[-1, 1]$, and title each unit by the garment class to which `W2` assigns its largest positive outgoing weight (`W2[units].argmax(1)`):
 
 ```{.python .input #mlp-implementation-what-the-hidden-units-compute-2}
 names = data.text_labels(range(10))

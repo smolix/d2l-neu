@@ -771,6 +771,11 @@ ancestral1000 = lambda pred, x, key: d2l.ancestral_sample(pred, x, vp, 1000,
                                                           key)
 ```
 
+Across three shared initial-noise seeds, we now generate 5,000 images from the
+EMA weights with `euler50`, the raw final weights `net` with `euler50`, and the
+EMA weights with `ancestral1000`, comparing their Fréchet distances against
+`f_test[:5000]`:
+
 ```{.python .input #image-diffusion-reading-the-number-3}
 %%tab pytorch, jax
 for seed in range(3):  # three draws of the initial noise

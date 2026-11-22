@@ -558,6 +558,9 @@ def half_widths(p, n, delta=0.05, z=1.96):
     return hoeffding, plug_in, t, z * np.sqrt(p * (1 - p) / n)
 ```
 
+Evaluating `half_widths(p, 10000)` at both the $8.3\%$ and $2.0\%$ error rates
+compares the resulting 95% confidence half-widths across all four methods:
+
 ```{.python .input #mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables-1}
 for p in (0.083, 0.02):
     hoeffding, plug_in, bernstein, gauss = half_widths(p, 10000)

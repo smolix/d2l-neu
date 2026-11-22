@@ -217,6 +217,8 @@ for name, (pre_norm, std) in arms.items():
         f'{n} {g:.1e}' for n, g in s['proj'].items()))
 ```
 
+Plotting the empirical token spread across blocks $k = 1 \dots 32$ alongside the theoretical post-norm decay curve :eqref:`eq_collapse-rate` confirms how post-norm squeezes token representations together while pre-norm preserves unit spread:
+
 ```{.python .input #transformer-block-signal-propagation-at-initialization-3}
 %%tab pytorch, jax
 d2l.plot(list(range(1, 33)), [s['spread'] for s in stats.values()]

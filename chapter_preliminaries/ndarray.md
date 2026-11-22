@@ -90,7 +90,7 @@ x = jnp.arange(12, dtype=jnp.float32)
 x
 ```
 
-Each value in a tensor is an *element*. We can query the total number of elements---its *size*---and its *shape* tuple (listing the length along each axis):
+Each value in a tensor is an *element*. We can query the total number of elements in `x`---its *size*:
 
 :begin_tab:`pytorch`
 In PyTorch, the total element count is returned by `numel()`.
@@ -110,6 +110,8 @@ x.numel()
 %%tab tensorflow
 tf.size(x)
 ```
+
+Next, we inspect the tensor's *shape* tuple via `x.shape`, which lists its length along each axis (here a 1-tuple `(12,)` for our 12-element vector):
 
 ```{.python .input #ndarray-getting-started-4}
 x.shape
@@ -245,7 +247,7 @@ c = jax.random.normal(key_a, (3,))  # Same key: c repeats a
 a, b, c
 ```
 
-We can also supply exact values directly via nested Python lists:
+When we know the exact entries of a small tensor ahead of time, we can construct it directly from nested Python lists (here creating a $3 \times 4$ matrix where the outer list gives the three rows and each inner list supplies four columns):
 
 ```{.python .input #ndarray-getting-started-9}
 %%tab mxnet
@@ -409,7 +411,7 @@ rows, cols = jnp.arange(3), jnp.array([3, 0, 2])
 X[rows, cols]
 ```
 
-Similarly, an elementwise comparison produces a *Boolean mask* of `True`/`False` values (combinable with `&`, `|`, `~`). Indexing `X[mask]` extracts all `True` entries as a 1D vector, whereas `where(mask, A, B)` chooses from `A` or `B` elementwise while preserving the original shape:
+Similarly, an elementwise comparison produces a *Boolean mask* of `True`/`False` values (combinable with `&`, `|`, `~`). Indexing `X[mask]` extracts all entries where `mask` is `True` into a flattened 1D vector:
 
 :begin_tab:`jax`
 Because the output length of `X[mask]` is data-dependent, Boolean mask indexing works only in eager mode; inside `jax.jit`-compiled functions, use `jnp.where`.
@@ -419,6 +421,8 @@ Because the output length of `X[mask]` is data-dependent, Boolean mask indexing 
 mask = (X > 2) & (X < 8)
 X[mask]
 ```
+
+When we instead want to preserve the $3 \times 4$ shape of `X`, `where(mask, X, 0)` selects from `X` wherever `mask` is `True` and fills all remaining positions with `0`:
 
 ```{.python .input #ndarray-indexing-and-slicing-7}
 %%tab mxnet
@@ -507,7 +511,7 @@ X_new
 
 ### Elementwise Operations
 
-Standard arithmetic operators (`+`, `-`, `*`, `/`, `**`) and unary functions (`exp`) lift scalar operations to act independently on every corresponding element of identically shaped tensors:
+Standard binary arithmetic operators (`+`, `-`, `*`, `/`, `**`) lift scalar arithmetic to act independently on every pair of corresponding elements of two identically shaped tensors `x` and `y`:
 
 ```{.python .input #ndarray-operations-2}
 %%tab mxnet
@@ -537,6 +541,8 @@ y = jnp.array([2.0, 2, 2, 2])
 x + y, x - y, x * y, x / y, x ** y
 ```
 
+Unary mathematical functions such as `exp` likewise apply elementwise, computing $e^{x_i}$ for each entry of `x`:
+
 ```{.python .input #ndarray-operations-1}
 %%tab mxnet
 mnp.exp(x)
@@ -564,15 +570,17 @@ scaled = images / 255
 print(scaled.dtype, images[0, 0, 0, :4], scaled[0, 0, 0, :4], sep='\n')
 ```
 
-Comparisons such as `x == y` return a Boolean tensor elementwise. Summing a tensor via `sum()` collapses its entries to a scalar; on a Boolean mask, `True` counts as $1$ and `False` as $0$, so `(x == y).sum()` counts matching entries:
-
-:begin_tab:`tensorflow`
-In TensorFlow, use `tf.reduce_sum` (casting Booleans via `tf.cast` first).
-:end_tab:
+Relational operators such as `x == y` also act elementwise, returning a Boolean tensor with `True` at positions where `x` and `y` agree (here only index $1$, where both equal `2.0`):
 
 ```{.python .input #ndarray-operations-4}
 x == y
 ```
+
+Summing a tensor via `sum()` collapses all its entries into a single scalar ($1 + 2 + 4 + 8 = 15$ for `x`); because `True` counts as $1$ and `False` as $0$, summing the Boolean mask `(x == y).sum()` counts how many entries match:
+
+:begin_tab:`tensorflow`
+In TensorFlow, use `tf.reduce_sum` (casting Booleans via `tf.cast` first).
+:end_tab:
 
 ```{.python .input #ndarray-operations-5}
 %%tab mxnet, pytorch, jax
@@ -622,7 +630,7 @@ Rather than materializing physical copies, tensor libraries apply a two-step *br
 1. **Align shapes from the right:** Prepend $1$s on the left of the lower-order tensor's shape tuple until both shapes have the same length. Two aligned dimensions are compatible if they are equal or if one of them is $1$.
 2. **Stretch singleton axes:** Virtually replicate any length-$1$ axis to match the other tensor's length $k > 1$ without copying memory, then apply the elementwise operation.
 
-In :numref:`fig_ndarray_broadcasting`, a $3 \times 1$ column `a` and a $1 \times 2$ row `b` both stretch to produce a $3 \times 2$ matrix of pairwise sums:
+To watch both tensors stretch simultaneously (:numref:`fig_ndarray_broadcasting`), let us construct a $3 \times 1$ column vector `a` and a $1 \times 2$ row vector `b`:
 
 ![Broadcasting stretches axes of length 1. The column `a` of shape $(3, 1)$ and the row `b` of shape $(1, 2)$ are both expanded to shape $(3, 2)$ (dashed: virtual copies) before the elementwise addition.](../img/ndarray-broadcasting.svg)
 :label:`fig_ndarray_broadcasting`
@@ -654,6 +662,8 @@ a = jnp.arange(3).reshape(3, 1)
 b = jnp.arange(2).reshape(1, 2)
 a, b
 ```
+
+Adding `a + b` virtually replicates `a` across two columns and `b` across three rows to produce the $3 \times 2$ matrix of all pairwise sums $a_{i0} + b_{0j}$:
 
 ```{.python .input #ndarray-broadcasting-2}
 a + b
@@ -705,7 +715,7 @@ Thus, subtracting a $(28, 28)$ mean image from `images` of shape $(256, 1, 28, 2
 
 ### Concatenation
 
-`concatenate` (or `cat` / `concat`) joins tensors end to end along an *existing* axis (all other axes must match), whereas `stack` joins identically shaped tensors along a *new* axis:
+`concatenate` (or `cat` / `concat`) joins tensors end to end along an *existing* axis (all other axes must have matching lengths): joining two $3 \times 4$ matrices `X` and `Y` along `axis=0` stacks their rows into shape `(6, 4)`, whereas `axis=1` joins their columns into shape `(3, 8)`:
 
 ```{.python .input #ndarray-operations-3}
 %%tab mxnet
@@ -734,6 +744,8 @@ X = jnp.arange(12, dtype=jnp.float32).reshape(3, 4)
 Y = jnp.array([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 jnp.concatenate((X, Y), axis=0), jnp.concatenate((X, Y), axis=1)
 ```
+
+By contrast, `stack` joins identically shaped tensors along a *new* axis, bundling `X` and `Y` into a $3^\textrm{rd}$-order tensor of shape `(2, 3, 4)` by default (`axis=0`) or `(3, 4, 2)` when stacked along `axis=2`:
 
 ```{.python .input #ndarray-concatenation-1}
 %%tab mxnet
@@ -771,15 +783,15 @@ id(Y) == before
 For models with gigabytes of parameters, unnecessary allocations waste memory bandwidth and can leave other references pointing to stale buffers (though inside forward passes, you must not overwrite activations still needed by automatic differentiation; see :numref:`sec_autograd`).
 
 :begin_tab:`mxnet, pytorch`
-In MXNet and PyTorch, slice assignment `Z[:] = X + Y` writes into an existing buffer `Z`, and augmented assignment `X += Y` updates `X` in place without even a temporary buffer:
+In MXNet and PyTorch, slice assignment `Z[:] = X + Y` writes the result into an existing preallocated buffer `Z` so `id(Z)` never changes:
 :end_tab:
 
 :begin_tab:`tensorflow`
-In TensorFlow, `Z.assign(X + Y)` updates a `tf.Variable` in place, whereas `X += Y` on an immutable `Tensor` allocates a new tensor:
+In TensorFlow, `Z.assign(X + Y)` updates a mutable `tf.Variable` buffer `Z` in place so `id(Z)` remains unchanged:
 :end_tab:
 
 :begin_tab:`jax`
-In JAX, arrays are immutable (`X += Y` rebinds `X` to a new array); buffer reuse is handled automatically by the XLA compiler under `@jax.jit`:
+In JAX, arrays are immutable; buffer reuse is handled automatically by the XLA compiler under `@jax.jit`.
 :end_tab:
 
 ```{.python .input #ndarray-saving-memory-2}
@@ -805,6 +817,8 @@ before = id(Z)
 Z.assign(X + Y)
 id(Z) == before
 ```
+
+When the old value of `X` is no longer needed, augmented assignment `X += Y` avoids allocating even a separate destination tensor `Z`:
 
 ```{.python .input #ndarray-saving-memory-3}
 before = id(X)
@@ -867,6 +881,8 @@ A = jax.device_get(X)
 B = jax.device_put(A)
 type(A), type(B)
 ```
+
+We can verify whether `A`, `B`, and `X` share memory by overwriting `A[0, 0] = 100` in the NumPy array and inspecting `X[0, 0]` and `B[0, 0]` (which change to `100.` in PyTorch, remain untouched in MXNet and TensorFlow copies, and raise a read-only `ValueError` in JAX):
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-3}
 %%tab mxnet

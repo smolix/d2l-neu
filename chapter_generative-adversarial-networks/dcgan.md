@@ -191,6 +191,11 @@ def D_block(c_in, c_out, rngs, norm=True):
         lambda x: nnx.leaky_relu(x, 0.2))
 ```
 
+Stacking four `G_block` stages with a final transposed convolution and `tanh`
+forms `net_G`, while four `D_block` stages (omitting batch normalization in the
+first block) and a $4 \times 4$ convolution form `net_D`; a forward pass on two
+100-dimensional latent vectors verifies their output shapes:
+
 ```{.python .input #dcgan-generator-3}
 %%tab pytorch
 torch.manual_seed(0)
@@ -609,10 +614,9 @@ def pair_stats(net_D, real, fake, y=None):
     return float((diff < 0).mean()), float(jax.nn.sigmoid(diff).mean())
 ```
 
-The saved loop `train_r3gan` alternates `d2l.critic_step` and `d2l.generator_step` of :numref:`sec_gan_convergence` on flipped real batches and updates the average after every step. The critic step returns the batch means of $R_1$ and $R_2$, so the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, is logged in every arm, at weight zero in the first. Every 250 steps the loop also applies `pair_stats` to 256 fresh pairs.
-
 :begin_tab:`jax`
-One compiled function, `r3gan_step`, takes both steps, so each training step is a single call.
+In JAX, we first compile `r3gan_step` to combine `d2l.critic_step` and
+`d2l.generator_step` into a single jitted call per training iteration:
 :end_tab:
 
 ```{.python .input #dcgan-three-arms}
@@ -629,6 +633,8 @@ def r3gan_step(net_G, net_D, opt_G, opt_D, loss_D, loss_G, gamma,
     loss_g = d2l.generator_step(net_G, opt_G, loss_G, net_D, X2, z2, y2)
     return loss_d, r1, r2, loss_g
 ```
+
+The saved loop `train_r3gan` alternates `d2l.critic_step` and `d2l.generator_step` of :numref:`sec_gan_convergence` on flipped real batches and updates the EMA generator after every step. The critic step returns the batch means of $R_1$ and $R_2$, so the critic's steepness on real images, $\mathbb{E}_x\|\nabla_x D(x)\|^2$, is logged in every arm (with weight $\gamma = 0$ in the first). Every 250 steps the loop also applies `pair_stats` to 256 fresh pairs:
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-1}
 %%tab pytorch
@@ -784,7 +790,8 @@ fig.tight_layout()
 
 Without $R_1 + R_2$, the critic's squared gradient norm climbs by two orders of magnitude (reaching $1\text{--}8$ vs. $\sim 0.01$ for the penalized critics). While all three critics order $> 90\%$ of pairs correctly, the penalized critics maintain a small score margin ($w_{\mathrm{Rp}} \in [0.25, 0.40]$, corresponding to a median logit difference around $0.7$), whereas the unpenalized critic drives $w_{\mathrm{Rp}}$ below $0.15$.
 
-Next, we display 64 samples from each EMA generator (DCGAN and the three normalization-free arms) evaluated on the same latent vectors `z_show`.
+To compare sample quality visually, we first define a helper `tile_images` that
+arranges a batch of images in $[-1, 1]$ into a single $[0, 1]$ grid:
 
 ```{.python .input #dcgan-samples-of-the-three-arms-1}
 %%tab pytorch
@@ -811,6 +818,10 @@ def tile_images(imgs, num_rows):
     grid = grid.transpose(0, 2, 1, 3, 4)  # (rows, h, cols, w, c)
     return np.asarray(grid.reshape(num_rows * h, -1, c))
 ```
+
+We now evaluate all four EMA generators—DCGAN and the three normalization-free
+arms—on the same 64 latent vectors `z_show` and tile their outputs into
+$8 \times 8$ grids:
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-3}
 %%tab pytorch
@@ -913,6 +924,10 @@ def batched(f, X, batch_size=1000):
     return jnp.concatenate([f(X[i:i + batch_size])
                             for i in range(0, len(X), batch_size)])
 ```
+
+Using `batched` for memory-safe evaluation, we load CIFAR-10, train
+`d2l.FeatureCNN` at $32 \times 32$ resolution with random 4-pixel shifts, and
+verify its test-set classification accuracy:
 
 ```{.python .input #dcgan-a-feature-network-trained-in-the-notebook-2}
 %%tab pytorch

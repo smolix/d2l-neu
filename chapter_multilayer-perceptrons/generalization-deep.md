@@ -164,6 +164,7 @@ class MLP(d2l.Classifier):
             nnx.Linear(num_hiddens, 10, kernel_init=he, rngs=rngs))
 ```
 
+Now we define `corrupt(y, fraction, rng)` to replace each training label with a uniform random class in $\{0, \ldots, 9\}$ with probability `fraction`, train `MLP(num_hiddens=256, lr=0.1)` for $200$ epochs at `fraction = 0` (true labels) and `fraction = 1` (pure random labels), and plot both training and test accuracy trajectories:
 
 ```{.python .input #generalization-deep-fitting-random-labels-5}
 def corrupt(y, fraction, rng):  #@save
@@ -206,7 +207,7 @@ By the *no free lunch theorem* :cite:`Wolpert.1996`, no learner can generalize a
 
 ### The Interpolation Threshold and Conditioning
 
-What happens when we increase model width $h$ right past the sample size $n$? Let us test a tractable *random-features* model :cite:`Rahimi.Recht.2007`: freeze a He-initialized first layer $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 10000}$ on our $n = 1{,}000$ centered training images to form random ReLU features $\mathbf{H} = \mathrm{ReLU}((\mathbf{X} - \bar{\mathbf{x}})\mathbf{W}^{(1)})$, and fit the output weights $\mathbf{W}^{(2)} \in \mathbb{R}^{h \times 10}$ on the first $h$ features by minimum-norm least squares (`np.linalg.lstsq`) across widths $h \in [50, 10{,}000]$:
+What happens when we increase model width $h$ right past the sample size $n$? Let us test a tractable *random-features* model :cite:`Rahimi.Recht.2007`: we freeze a He-initialized first layer $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 10000}$ on our $n = 1{,}000$ centered training images to precompute $10{,}000$ random ReLU features `H` and `H_test`, encode the labels as a one-hot matrix `Y`, and define `error(H, W2, y)`:
 
 ```{.python .input #generalization-deep-beyond-the-interpolation-threshold-1}
 W1 = rng.normal(0, np.sqrt(2 / 784), (784, 10000))  # He-initialized, frozen
@@ -219,6 +220,8 @@ def error(H, W2, y):
     """Fraction of examples whose largest output is not their label."""
     return (np.argmax(H @ W2, axis=1) != y).mean()
 ```
+
+We now sweep the hidden width `h` across 15 values from $50$ to $10{,}000$, fitting the output weights $\mathbf{W}^{(2)} \in \mathbb{R}^{h \times 10}$ on the first `h` feature columns `H[:, :h]` by minimum-norm least squares (`np.linalg.lstsq`) while recording the smallest singular value `s_min[h]` and Frobenius norm `norm[h]`:
 
 ```{.python .input #generalization-deep-beyond-the-interpolation-threshold-2}
 widths = [50, 100, 200, 400, 600, 800, 900, 1000, 1100, 1200, 1500, 2000,

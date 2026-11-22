@@ -351,6 +351,10 @@ estimates = {'mean': data.mean(axis=1),
              'median': np.median(data, axis=1)}
 ```
 
+For each estimator in `estimates`, we now compute its empirical squared bias,
+variance, and total MSE across the 10,000 simulated datasets and compare the
+sum $\textrm{Bias}^2 + \textrm{Var}$ against our analytical predictions:
+
 ```{.python .input #statistics-verify-decomposition}
 predicted = {'mean': sigma**2 / n,            # bias^2 + variance, by formula
              '0.65 * mean': (0.35 * theta)**2 + 0.65**2 * sigma**2 / n,

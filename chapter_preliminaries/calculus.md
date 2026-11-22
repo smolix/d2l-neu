@@ -150,7 +150,7 @@ In matrix--vector form (:numref:`sec_linear-algebra`), writing each example as a
 
 $$\mathbf{X} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}, \quad \mathbf{y} = \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix}, \quad L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2.$$
 
-We can check $(2, 4)$ numerically by perturbing one coordinate at a time by $h = 10^{-6}$ in `float64`:
+We can check these partial derivatives numerically by defining `line_loss(w)` and a finite-difference helper `numerical_gradient(f, w, h=1e-6)` that perturbs one coordinate of `w` at a time by $h = 10^{-6}$ in `float64`:
 
 ```{.python .input #calculus-partial-derivatives-1}
 X = np.array([[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]])  # rows [1, input]
@@ -168,6 +168,8 @@ def numerical_gradient(f, w, h=1e-6):
         grad[i] = (f(w + step) - f(w)) / h
     return grad
 ```
+
+Evaluating `numerical_gradient(line_loss, w)` at $\mathbf{w} = (1, 0)$ reproduces our analytical partial derivatives $(2, 4)$ to within the $O(h) \approx 10^{-6}$ truncation error:
 
 ```{.python .input #calculus-partial-derivatives-2}
 w = np.array([1.0, 0.0])
@@ -188,6 +190,8 @@ def quotient_error(f, x, df, h):
 h = np.logspace(-1, -16, 61)  # 61 values of h, evenly spaced on a log scale
 ```
 
+To compare 64-bit NumPy arithmetic against the 32-bit floating-point format used by default in deep learning, we cast the step grid `h` to a `float32` framework tensor `h32`:
+
 ```{.python .input #calculus-finite-differences-1}
 %%tab mxnet
 h32 = mnp.array(h, dtype='float32')
@@ -207,6 +211,8 @@ h32 = tf.constant(h, dtype=tf.float32)
 %%tab jax
 h32 = jnp.asarray(h, dtype=jnp.float32)
 ```
+
+We now evaluate `quotient_error(loss, 1, 2, ...)` at $w = 1$ (where the exact derivative is $L'(1) = 2$) across all $61$ step sizes in both `float64` (`h`) and `float32` (`h32`), overlaying the truncation error line $3h$ and the `float32` rounding asymptote $\epsilon / h$:
 
 ```{.python .input #calculus-finite-differences-2}
 eps32 = np.finfo(np.float32).eps

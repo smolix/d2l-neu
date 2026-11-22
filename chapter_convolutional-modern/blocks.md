@@ -359,6 +359,10 @@ def configure_optimizers(self):
         t, self.num_steps, self.num_steps // 10))
 ```
 
+With the cosine warmup schedule attached, we train our quarter-width `VGG` on
+$224 \times 224$ Fashion-MNIST for 10 epochs and store its validation trajectory
+in `val_acc['VGG']`.
+
 ```{.python .input #vgg-training  n=8}
 data = d2l.FashionMNIST(batch_size=128, resize=(224, 224))
 model = VGG(arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128)), lr=0.1,
@@ -636,9 +640,7 @@ quarter-width VGG body and override only `VGG.head`. In `PooledVGG`, global
 average pooling summarizes the 128 output channels of the final block, and a
 single linear layer maps those 128 features directly to the ten classes—cutting
 away 42.5 million of the network's 43.1 million parameters (and the same
-number of multiply-adds). Because `PooledVGG`, like NiN, can diverge or
-collapse at 0.1, we train both `VGG` and `PooledVGG` at the matched peak
-learning rate of 0.03 so the comparison isolates the head alone.
+number of multiply-adds).
 
 ```{.python .input #nin-training-2}
 %%tab mxnet
@@ -670,6 +672,10 @@ class PooledVGG(VGG):
         return [global_avg_pool,
                 nnx.Linear(shape[-1], self.num_classes, **init)]
 ```
+
+Because `PooledVGG`, like `NiN`, can diverge or collapse at 0.1, we train both
+`VGG` and `PooledVGG` at the matched peak learning rate `lr=0.03` and store
+their final validation accuracies in `heads`.
 
 ```{.python .input #nin-training-3}
 heads = {}  # Both heads at peak 0.03, the rate the pooled head tolerates

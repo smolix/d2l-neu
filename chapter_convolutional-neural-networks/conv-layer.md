@@ -163,7 +163,9 @@ def corr2d(X, K):  #@save
     return Y
 ```
 
-Let's verify `corr2d` against our hand calculation from :numref:`fig_correlation`:
+To verify `corr2d` against our hand calculation in :numref:`fig_correlation`,
+we construct the $3 \times 3$ input tensor `X` and $2 \times 2$ kernel `K` and
+evaluate `corr2d(X, K)`.
 
 ```{.python .input #conv-layer-the-cross-correlation-operation-2}
 X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
@@ -301,7 +303,9 @@ and spikes wherever intensity jumps.
 K = d2l.tensor([[1.0, -1.0]])
 ```
 
-Cross-correlating `X` with `K` produces the edge map `Y`:
+Cross-correlating the $6 \times 8$ stripe image `X` with the $1 \times 2$
+horizontal-difference kernel `K` via `corr2d(X, K)` produces the $6 \times 7$
+edge map `Y`:
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-3}
 Y = corr2d(X, K)

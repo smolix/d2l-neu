@@ -61,7 +61,7 @@ $$
 \frac{b_{\textrm{l}} N_{b_{\textrm{l}}} - b_{\textrm{s}} N_{b_{\textrm{s}}}}{b_{\textrm{l}} - b_{\textrm{s}}}.
 $$
 
-We save the cross-entropy loss helper `ce_loss`, squared gradient norm `grad_sq_norm`, and two-batch estimator `noise_scale` in `d2l`, and measure $b_{\text{noise}}$ on `TinyLM` at initialization and after $500$ steps of Adam ($\eta = 3 \times 10^{-3}$):
+We first load WikiText-103 and Fashion-MNIST onto the accelerator and define the random minibatch samplers `sample_fashion(b)` and `sample_lm(b)`:
 
 ```{.python .input #batch-size-a-two-batch-estimator-1}
 %%tab pytorch
@@ -97,6 +97,8 @@ def sample_lm(b):  # b windows at random offsets in the training text
     return data.windows(data.train,
                         rng.integers(len(data.train) - data.num_steps, size=b))
 ```
+
+Using these samplers, we save the cross-entropy helper `ce_loss`, the parameter-wide squared gradient norm `grad_sq_norm`, and the two-batch estimator `noise_scale` in `d2l`:
 
 ```{.python .input #batch-size-a-two-batch-estimator-2}
 %%tab pytorch
@@ -149,6 +151,8 @@ def noise_scale(model, sample, b_small=16, b_big=2048, m=400):  #@save
     sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
     return float(tr_sigma / sq_norm)
 ```
+
+We now evaluate `noise_scale` on `TinyLM` ($b_{\text{s}} = 8, b_{\text{l}} = 256$) at initialization and again after $500$ steps of Adam ($\eta = 3 \times 10^{-3}$):
 
 ```{.python .input #batch-size-a-two-batch-estimator-4}
 %%tab pytorch
@@ -232,7 +236,7 @@ Once $b$ exceeds $b_{\text{crit}}$, gradient noise no longer dominates the denom
 ## Empirical Verification: Steps to Target and Scaling Rules
 :label:`subsec_batch-size-steps`
 
-We first measure the steps $S(b)$ required to reach a fixed held-out loss target ($1.9$ nats/byte on `TinyLM` for $b \in \{4, 16, 64, 256\}$ sequences; $0.35$ loss on `FashionCNN` for $b \in \{8, 32, 128, 512, 2048\}$ images) under Adam with square-root learning-rate scaling, fit $S(b) = S_{\min}(1 + b_{\text{crit}}/b)$, and plot the normalized runs against the universal Pareto frontier :eqref:`eq_steps-examples`:
+To measure the steps $S(b)$ required to reach a fixed held-out loss target, we first define `eval_loss` to evaluate `ce_loss` over validation tensors in chunks of $4{,}096$ examples:
 
 ```{.python .input #batch-size-steps-to-a-target}
 %%tab pytorch
@@ -251,6 +255,8 @@ def eval_loss(model, X, Y, chunk=4096):
                             for i in range(0, len(Y), chunk)]).mean())
 ```
 
+The stopping harness `train_to_target` checks `eval_loss` every `eval_every` steps inside `d2l.train_steps` and returns the step count at which `target` is reached (or `inf` if `max_steps` is exhausted):
+
 ```{.python .input #batch-size-steps-to-a-target-1}
 %%tab pytorch, jax
 def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
@@ -263,6 +269,8 @@ def train_to_target(model, data, optimizer, X_eval, Y_eval, target,
                                 stop=reached))
     return steps if reached(steps) else float('inf')
 ```
+
+We first run `train_to_target` on `TinyLM` (target validation loss $1.9$ nats/byte) across $b \in \{4, 16, 64, 256\}$ sequences from a shared initialization, scaling the Adam learning rate as $\eta = 0.003\sqrt{b / 64}$:
 
 ```{.python .input #batch-size-the-language-model}
 %%tab pytorch
@@ -307,6 +315,8 @@ d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
          yscale='log', legend=['measured', 'perfect scaling'])
 ```
 
+We repeat the step-to-target sweep on `FashionCNN` (target loss $0.35$) across $b \in \{8, 32, 128, 512, 2048\}$ images, scaling $\eta = 0.004\sqrt{\min(b, 512)/256}$ up to $b = 512$:
+
 ```{.python .input #batch-size-the-cnn}
 %%tab pytorch
 cnn_bs, cnn_steps = [8, 32, 128, 512, 2048], []
@@ -348,6 +358,8 @@ d2l.plot(cnn_bs, [cnn_steps,
          legend=['measured', 'perfect scaling'])
 ```
 
+Because $S(b) = S_{\min}(1 + b_{\text{crit}}/b)$ is linear in $1/b$, `fit_steps` extracts the asymptotic step floor $S_{\min}$ and empirical critical batch size $b_{\text{crit}}$ for both models via weighted least squares:
+
 ```{.python .input #batch-size-the-critical-batch-size-1}
 %%tab pytorch, jax
 def fit_steps(bs, steps):
@@ -364,6 +376,8 @@ for name, (S_min, b_crit) in fits.items():
     print(f'{name:10s}  S_min = {S_min:4.0f} steps  b_crit = {b_crit:4.0f}')
 ```
 
+Normalizing each run's example count $E(b) = b\,S(b)$ by $E_{\min} = b_{\text{crit}} S_{\min}$ and step count by $S_{\min}$ plots both models against the universal Pareto frontier :eqref:`eq_steps-examples`:
+
 ```{.python .input #batch-size-the-bill-in-examples}
 %%tab pytorch, jax
 x = np.logspace(0.005, 1.3, 100)  # E / E_min along the model curve
@@ -379,7 +393,7 @@ d2l.plot(xs, ys, 'examples / minimum', 'steps / minimum', xscale='log',
 
 Both architectures fall near the universal curve $(E/E_{\min} - 1)(S/S_{\min} - 1) = 1$ (a point close to $E = E_{\min}$ sits on the curve's steep wall, where a small error in the measured step count moves it far up or down) with fitted critical batch sizes $b_{\text{crit}} \sim 100$ sequences for `TinyLM` and $b_{\text{crit}} \sim 200\text{--}400$ images for `FashionCNN`, matching the order of magnitude of the two-batch estimator $b_{\text{noise}}$.
 
-Finally, we directly verify the linear ($\eta \propto b$) versus square-root ($\eta \propto \sqrt{b}$) learning-rate scaling rules :eqref:`eq_lr-rules` on `FashionCNN` at a fixed data budget of $12{,}800$ images ($1/5$ epoch). Increasing $b$ by $8\times$ ($8 \to 64$) under SGD with momentum shifts the optimal learning rate by $4\text{--}8\times$ (at $b = 64$ the final loss is nearly flat between $\eta = 0.05$ and $0.1$), whereas increasing $b$ by $64\times$ ($2 \to 128$) under Adam shifts the optimal learning rate by only $4\text{--}8\times$ ($2$ to $3$ grid steps of $2\times$), near $\sqrt{64} = 8\times$ rather than $64\times$:
+Finally, we directly verify the linear ($\eta \propto b$) versus square-root ($\eta \propto \sqrt{b}$) learning-rate scaling rules :eqref:`eq_lr-rules` on `FashionCNN` at a fixed data budget of $12{,}800$ images ($1/5$ epoch). The helper `final_loss_at` runs `d2l.lr_sweep` for `num_examples // b` steps at batch size `b` and returns the terminal losses averaged over the final quarter of each run:
 
 ```{.python .input #batch-size-learning-rate-rules-1}
 %%tab pytorch
@@ -403,6 +417,8 @@ def final_loss_at(make_tx, lrs, b, seed, num_examples=12800):
                              num_examples // b, verbose=False)
     return [d2l.final_loss(c, k=len(c) // 4) for c in curves.values()]
 ```
+
+Under SGD with momentum ($\beta = 0.9$), increasing the batch size $8\times$ from $b = 8$ to $b = 64$ across `sgd_lrs` shifts the optimal learning rate rightward by $4\text{--}8\times$ (at $b = 64$ the final loss is nearly flat between $\eta = 0.05$ and $0.1$):
 
 ```{.python .input #batch-size-learning-rate-rules-2}
 %%tab pytorch
@@ -430,6 +446,8 @@ for b, loss in ((8, sgd_small), (64, sgd_big)):
 d2l.plot(sgd_lrs, [sgd_small, sgd_big], 'learning rate', 'final loss',
          xscale='log', legend=['b=8', 'b=64'])
 ```
+
+By contrast, increasing the batch size $64\times$ from $b = 2$ to $b = 128$ under Adam across `adam_lrs` shifts the optimal learning rate by only $4\text{--}8\times$ ($2$ to $3$ grid steps of $2\times$), matching $\sqrt{64} = 8\times$ rather than $64\times$:
 
 ```{.python .input #batch-size-learning-rate-rules-3}
 %%tab pytorch

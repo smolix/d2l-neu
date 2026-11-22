@@ -262,6 +262,8 @@ print(f'{len(data.train) / 1e6:.0f}M training bytes, '
       f'vocabulary of {len(data.vocab)}')
 ```
 
+We also define a convenience constructor `gpt(...)` that places a freshly initialized `GPT` on the accelerator (and compiles it in PyTorch while enabling TF32 matrix multiplications):
+
 ```{.python .input #gpt-training-the-model-3}
 %%tab pytorch
 torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
@@ -286,7 +288,7 @@ $$
 $$
 :eqlabel:`eq_gpt-loss`
 
-At initialization, before any learning occurs, the model assigns roughly uniform probability $1/V$ to every byte, so the initial cross-entropy loss is close to $\ln V = \ln 256 \approx 5.55$ nats/byte:
+At initialization, before any learning occurs, the model assigns roughly uniform probability $1/V$ to every byte, so the initial cross-entropy loss is close to $\ln V = \ln 256 \approx 5.55$ nats/byte. First, we inspect one shifted input--target window pair `(X[0], Y[0])` alongside a $5 \times 5$ lower-triangular causal mask:
 
 ```{.python .input #gpt-the-objective}
 %%tab pytorch, jax
@@ -296,6 +298,8 @@ print('X[0]:', repr(data.vocab.decode(X[0, :24].tolist())))
 print('Y[0]:', repr(data.vocab.decode(Y[0, :24].tolist())))
 print(np.asarray(d2l.causal_mask(5)).astype(int))
 ```
+
+Evaluating our freshly initialized 6-block `GPT` ($\approx 4.82\textrm{M}$ parameters) on a validation minibatch confirms that its untrained cross-entropy sits right at $\ln 256 \approx 5.55$ nats/byte:
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-2}
 %%tab pytorch, jax
@@ -387,6 +391,8 @@ print(f'step {num_steps}: train {train_curve[-1]:.2f}, '
       f'{timer.sum():.0f} s of training')
 ```
 
+For reference, we compute the empirical unigram and bigram byte entropies directly from the first $10\textrm{M}$ bytes of the training corpus to verify how far the 6-block Transformer progresses beyond local character statistics:
+
 ```{.python .input #gpt-training-the-model-4}
 %%tab pytorch, jax
 text = data.train[:10**7].astype(np.int64)  # The first 10M training bytes
@@ -477,6 +483,8 @@ def loss_by_position(model, data):
     return (total / count).tolist()
 ```
 
+We now train two `RNNLM` seeds at each candidate peak learning rate $\{10^{-3}, 2\times 10^{-3}, 4\times 10^{-3}\}$ and compare the best recurrent run against `GPT` across window positions $t \in \{0, 1, 4, 16, 64, 127\}$:
+
 ```{.python .input #gpt-against-a-recurrent-network}
 %%tab pytorch, jax
 rnn_runs = []  # (validation loss, model, ms per step) of every run
@@ -549,6 +557,8 @@ def generate(self, prefix, num_tokens, temperature=1.0, top_k=None):
         t = min(t + 1, n)
     return list(prefix) + [int(i) for i in jax.device_get(tokens)]
 ```
+
+Sampling 120-byte continuations of `'The history of the '` under three `(temperature, top_k)` settings shows how lower temperature and top-$k$ filtering trade diversity for local coherence:
 
 ```{.python .input #gpt-sampling-from-the-model-2}
 %%tab pytorch, jax
@@ -695,12 +705,16 @@ loss = optax.softmax_cross_entropy_with_integer_labels(
 print(f'per-token loss {loss:.2f}, perplexity {jnp.exp(loss):.0f}')
 ```
 
+With the pretrained weights verified, we can prompt `gpt2.generate` using greedy decoding (`top_k=1`) for a deterministic continuation:
+
 ```{.python .input #gpt-loading-gpt-2-4}
 %%tab pytorch, jax
 out = gpt2.generate(enc.encode('Alan Turing theorized that computers '
                                'would one day become'), 16, top_k=1)
 d2l.print_wrapped(enc.decode(out))
 ```
+
+Switching to stochastic top-$k$ sampling (`temperature=0.8, top_k=50`) over 40 subword tokens produces a fluent, varied completion:
 
 ```{.python .input #gpt-loading-gpt-2-5}
 %%tab pytorch, jax

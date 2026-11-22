@@ -363,8 +363,8 @@ def __call__(self, inputs, state=None):
     return outputs, state
 ```
 
-We verify the output and final-state shapes on a dummy minibatch using a small
-`check_shape` helper that will be reused in later chapters.
+To verify the recurrent cell's dimensions, we first run `RNNScratch` forward on
+a dummy minibatch `X` of shape `(num_steps, batch_size, num_inputs)`.
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-3}
 batch_size, num_inputs, num_hiddens, num_steps = 2, 16, 32, 100
@@ -372,6 +372,10 @@ rnn = RNNScratch(num_inputs, num_hiddens)
 X = d2l.ones((num_steps, batch_size, num_inputs))
 outputs, state = rnn(X)
 ```
+
+We now define a `check_shape` helper (reused throughout later chapters) to
+confirm that stacking `outputs` produces `(num_steps, batch_size, num_hiddens)`
+and `state` has shape `(batch_size, num_hiddens)`.
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-4}
 def check_shape(a, shape):  #@save
@@ -599,6 +603,10 @@ def forward(self, X, state=None):
     return self.output_layer(self.drop(H))
 ```
 
+Passing a dummy minibatch of token indices of shape `(batch_size, num_steps)`
+through `RNNLMScratch` confirms that the returned logits tensor `outputs` has
+shape `(batch_size, num_steps, vocab_size)`.
+
 ```{.python .input #rnn-implementation-the-output-layer-2}
 %%tab pytorch, mxnet, tensorflow
 model = RNNLMScratch(rnn, vocab_size=1024)
@@ -722,9 +730,8 @@ data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 
 ### A Plain Model and the Role of Clipping
 
-We first train our 222,915-parameter baseline ($d = 64$, $h = 128$, no dropout)
-for ten epochs of SGD at learning rate $\eta = 4$ with clipping at
-$\theta = 1$, saving a copy of the initial embedding table `E_init` first.
+We first instantiate our 222,915-parameter baseline model ($d = 64$, $h = 128$,
+no dropout) with SGD learning rate $\eta = 4$.
 
 ```{.python .input #rnn-implementation-training-2}
 %%tab pytorch, mxnet, jax
@@ -738,6 +745,9 @@ with d2l.try_gpu():
     rnn = RNNScratch(num_inputs=64, num_hiddens=128)
     model = RNNLMScratch(rnn, vocab_size=len(data.vocab), lr=4)
 ```
+
+Before training begins, we snapshot a NumPy copy of the random initial
+embedding matrix `model.E` in `E_init` so we can measure how far SGD moves it.
 
 ```{.python .input #rnn-implementation-a-plain-model-1}
 %%tab mxnet
@@ -754,12 +764,20 @@ E_init = d2l.numpy(model.E).copy()
 E_init = d2l.numpy(model.E[...]).copy()
 ```
 
+We next evaluate the untrained model's initial validation perplexity `ppl_init`
+and then train `model` for 10 epochs with gradient clipping at
+`gradient_clip_val=1`.
+
 ```{.python .input #rnn-implementation-training-3}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 ppl_init = math.exp(trainer.evaluate(model, data)['loss'])
 print(f'initial validation perplexity {ppl_init:.0f}')
 trainer.fit(model, data)
 ```
+
+Exponentiating the final validation cross-entropy loss
+`trainer.history['val_loss'][-1]` gives the trained baseline's validation
+perplexity `ppl_plain`.
 
 ```{.python .input #rnn-implementation-training-4}
 ppl_plain = math.exp(trainer.history['val_loss'][-1])
@@ -771,9 +789,9 @@ ten epochs the clipped model converges smoothly to a validation perplexity
 around 90–100 (while training perplexity drops below half that value as the
 222,915 parameters begin overfitting the 50,000 training tokens).
 
-To see why gradient clipping is essential at $\eta = 4$, we train three fresh
-unclipped instances of the exact same model and plot their validation
-perplexity trajectories on a log scale alongside the clipped baseline.
+To see why gradient clipping is essential at $\eta = 4$, we define a helper
+`unclipped_model()` that constructs a fresh baseline instance with the exact
+same architecture and learning rate.
 
 ```{.python .input #rnn-implementation-a-plain-model-2}
 %%tab pytorch, mxnet, jax
@@ -790,6 +808,10 @@ def unclipped_model():
                             vocab_size=len(data.vocab), lr=4)
 ```
 
+We now train three independent unseeded instances without gradient clipping,
+recording each run's epoch-by-epoch validation perplexities in `ppl_runs` and
+reporting its peak and final values.
+
 ```{.python .input #rnn-implementation-a-plain-model-3}
 ppl_runs = []
 for run in range(3):  # Three unseeded runs, no clipping
@@ -804,6 +826,10 @@ print(f'{sum(f > 2 * ppl_plain for f in finals)} of 3 runs end above twice '
       f'the clipped {ppl_plain:.3g}; finals from {min(finals):.3g} to '
       f'{max(finals):.3g}')
 ```
+
+Plotting the three unclipped trajectories in `ppl_runs` against the clipped
+baseline `ppl_clipped` on a logarithmic axis makes the instability
+unmistakable.
 
 ```{.python .input #rnn-implementation-a-plain-model-4}
 ppl_clipped = [math.exp(loss) for loss in trainer.history['val_loss']]
@@ -829,7 +855,8 @@ print(f'{bytes_per_token:.2f} bytes/token, '
 ### Embeddings under SGD and a Wider Model with Dropout
 
 Inspecting how far each row of $\mathbf{E}$ moved over the ten epochs of SGD
-exposes a second bottleneck:
+exposes a second bottleneck. We first extract the trained embedding table into
+a NumPy array `E_final`.
 
 ```{.python .input #rnn-implementation-embeddings-under-sgd-1}
 %%tab mxnet
@@ -845,6 +872,9 @@ E_final = d2l.numpy(model.E)
 %%tab jax
 E_final = d2l.numpy(model.E[...])
 ```
+
+Computing the relative Euclidean displacement `change` between `E_final` and
+`E_init` across all vocabulary rows reveals how little each token vector moved.
 
 ```{.python .input #rnn-implementation-embeddings-under-sgd-2}
 change = (((E_final - E_init) ** 2).sum(1) / (E_init ** 2).sum(1)) ** 0.5
@@ -877,10 +907,16 @@ with d2l.try_gpu():
                          emb_dropout=0.1)
 ```
 
+We train this wider regularized model for 10 epochs using the same learning
+rate `lr=4` and clipping threshold `gradient_clip_val=1`.
+
 ```{.python .input #rnn-implementation-a-wider-embedding-with-dropout-2}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
+
+From the final validation loss we compute both the validation perplexity
+`ppl_scratch` and the corresponding compression rate in bits per byte.
 
 ```{.python .input #rnn-implementation-a-wider-embedding-with-dropout-3}
 ppl_scratch = math.exp(trainer.history['val_loss'][-1])
@@ -894,10 +930,10 @@ per byte from 2.3–2.4 to roughly 2.1.
 ### Comparison with Kneser–Ney and Effective Context Horizon
 
 How does 2.1 bits per byte compare against interpolated Kneser--Ney smoothing
-(:numref:`subsec_kneser-ney`)? We fit Kneser--Ney $n$-grams ($n = 2, 3, 4$) on
-the exact same 50,000 BPE training tokens and evaluate both Kneser--Ney and our
-trained RNN on `val[32:]`, where each token is scored as the final target of
-its 32-token validation window.
+(:numref:`subsec_kneser-ney`)? We first fit Kneser--Ney $n$-grams
+($n = 2, 3, 4$) on the exact same 50,000 BPE training tokens and evaluate them
+on `val[32:]`, where each token is scored as the final target of its 32-token
+validation window.
 
 ```{.python .input #rnn-implementation-training-6}
 first_tokens = d2l.numpy(data.X[:, 0]).tolist()  # First token of each window
@@ -911,9 +947,17 @@ for n, lp in lp_kns.items():
 lp_kn = lp_kns[3]
 ```
 
+To score our trained RNN on the exact same held-out tokens `val[32:]`, we
+select the slice `[start:stop]` of validation windows whose final target covers
+`val[32:]`.
+
 ```{.python .input #rnn-implementation-comparison-with-kneser-ney-1}
 start, stop = data.num_train, data.num_train + data.num_val - 32  # val[32:]
 ```
+
+Running `model` in evaluation mode over `data.X[start:stop]` in batches of
+1,024 windows collects the matrix `logp` of per-position target
+log-probabilities across all 32 window steps.
 
 ```{.python .input #rnn-implementation-comparison-with-kneser-ney-2}
 %%tab mxnet
@@ -1073,6 +1117,9 @@ def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0):
         outputs.append(int(token))
     return tok.decode(outputs)
 ```
+
+Let us test `model.predict` with greedy decoding (`temperature=0.0`) by
+generating a 50-token continuation from the prompt `'The Time Traveller'`.
 
 ```{.python .input #rnn-implementation-generating-text-2}
 %%tab mxnet, pytorch
@@ -1292,9 +1339,8 @@ class RNNLM(d2l.RNNLMScratch):  #@save
         return d2l.swapaxes(self.linear(hiddens), 0, 1)
 ```
 
-Training `RNNLM` with the same hyperparameters reproduces the validation
-perplexity of our from-scratch implementation at a fraction of the wall-clock
-time.
+To verify our high-level implementation, we instantiate `RNN` and `RNNLM` with
+the same hyperparameters ($d = 512$, $h = 128$, and dropout).
 
 ```{.python .input #rnn-implementation-concise-implementation-3}
 %%tab pytorch, mxnet, jax
@@ -1311,10 +1357,16 @@ with d2l.try_gpu():
                   emb_dropout=0.1)
 ```
 
+We now train `RNNLM` for 10 epochs with `gradient_clip_val=1`, running the
+fused recurrent kernel at a fraction of the from-scratch wall-clock time.
+
 ```{.python .input #rnn-implementation-concise-implementation-5}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
+
+Finally, we report the concise model's validation perplexity `ppl_concise`
+alongside a 30-token greedy continuation from `'The Time Traveller'`.
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab pytorch, mxnet

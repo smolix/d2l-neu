@@ -294,7 +294,10 @@ def pf_nll(eps_fn, path, x, t_min=1e-3, steps=100):
     return (x ** 2).sum(1) / 2 + x.shape[1] / 2 * math.log(2 * math.pi) - div
 ```
 
-We evaluate both fields on the same 4,000 fresh draws.
+We now draw 20,000 test points from `mix` and run `pf_nll` on the first 4,000
+with both the exact noise predictor `eps_exact` and the trained network `ema`,
+comparing their probability-flow negative log-likelihoods against the true
+`-mix.log_prob(test)`:
 
 ```{.python .input #design-space-a-number-for-the-mixture-2}
 %%tab pytorch

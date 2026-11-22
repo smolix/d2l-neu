@@ -158,6 +158,8 @@ d2l.plot(jnp.arange(60), P[:, 6:10].T, xlabel='position',
          figsize=(6, 2.5), legend=[f'column {d}' for d in range(6, 10)])
 ```
 
+Displaying the full $60 \times 32$ encoding matrix `P` as a heatmap shows how rapidly oscillating high-frequency pairs on the left transition to slowly varying low-frequency pairs on the right, much like the binary digits of an integer counter:
+
 ```{.python .input #positional-information-sinusoidal-encodings-3}
 %%tab pytorch, jax
 d2l.show_heatmaps(P[None, None], xlabel='column (encoding dimension)',
@@ -620,6 +622,8 @@ for pos in schemes:  # zip(*...) turns runs x contexts into contexts x runs
           + ''.join(f'{mean_range(col):>18}' for col in zip(*ppls[pos])))
 ```
 
+To anchor these numbers, we compute the exact byte-level bigram perplexity on the same validation windows from Laplace-smoothed empirical transition counts over the training corpus:
+
 ```{.python .input #positional-information-byte-bigram-baseline}
 %%tab pytorch, jax
 V = len(data.vocab)
@@ -685,6 +689,8 @@ for name, weights in [('bias alone', bias_only)] + [
         (f'block {b}', w) for b, w in enumerate(maps, 1)]:
     print(f'{name:>10}: ' + ''.join(f'{w:9.3f}' for w in far_weight(weights)))
 ```
+
+We confirm this directly with `WindowedALiBi`, which copies the trained ALiBi weights and hard-masks all keys at distance $\ge 128$ (`window=train_len`) when evaluating at length $T = 512$:
 
 ```{.python .input #positional-information-alibi-without-far-keys}
 %%tab pytorch

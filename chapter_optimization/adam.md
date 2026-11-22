@@ -190,12 +190,14 @@ def adam(learning_rate):
 ### Gradient Scales and Comparison with SGD on `TinyLM`
 :label:`subsec_adam-where-wins`
 
-Why is per-coordinate scaling so critical for Transformers? On `TinyLM` (:numref:`subsec_tinylm`), we measure the RMS gradient magnitude across $10$ minibatches for each of the $8$ functional parameter groups at initialization and after $500$ steps of Adam ($\eta = 3 \times 10^{-3}$), alongside the normalized step length $\|\Delta \mathbf{x}\|_{\text{RMS}} / \eta$:
+Why is per-coordinate scaling so critical for Transformers? To measure gradient scales across `TinyLM` (:numref:`subsec_tinylm`), we first load the `WikiText103` dataset ($b = 64$, window length $64$):
 
 ```{.python .input #adam-adam-from-scratch-1}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=64)
 ```
+
+Next we define `gradients(model, data)` to compute the root-mean-square (RMS) gradient of each parameter tensor over $10$ minibatches, `snapshot(model)` to clone parameter values, and an initial `TinyLM` instance with Adam ($\eta = 3 \times 10^{-3}$):
 
 ```{.python .input #adam-gradient-scales-in-a-network-1}
 %%tab pytorch
@@ -247,6 +249,8 @@ model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(d2l.get_seed()))
 optimizer = nnx.Optimizer(model, optax.adam(3e-3), wrt=nnx.Param)
 ```
 
+Grouping tensors into the $8$ functional parameter kinds via `rms_by_kind`, we compare their RMS gradient magnitudes at step $0$ and step $500$ alongside the normalized Adam step length $\|\Delta\mathbf{x}\|_{\text{RMS}} / \eta$:
+
 ```{.python .input #adam-gradient-scales-in-a-network-2}
 %%tab pytorch, jax
 KINDS = ['token_emb', 'pos_emb', 'qkv', 'proj', 'mlp', 'head']
@@ -282,7 +286,7 @@ print(f'{"max / min":<11}{ratio(grad_init):>24.0f}{ratio(grad_500):>13.0f}'
 
 Raw gradient magnitudes span a **$40\times$ range** at initialization (from $\sim 2 \times 10^{-4}$ on token embeddings to $\sim 7 \times 10^{-3}$ on biases) and a **$15\times$ range** at step $500$. Under SGD, a single scalar learning rate moves the groups with the largest gradients (biases, LayerNorm, the output head) $15\text{--}40\times$ faster than the embeddings; under Adam, the normalized step size across all eight parameter groups lies within a narrow $2\times$ band ($0.1\eta\text{--}0.3\eta$, close to the pure-noise ratio $\sqrt{(1-\beta_1)/(1+\beta_1)} \approx 0.23$).
 
-Because gradient scales in `TinyLM` lie around $10^{-4}\text{--}10^{-2}$ and Adam's EMA includes $(1-\beta_1) = 0.1$, Adam at $\eta \sim 3 \times 10^{-3}$ produces parameter steps comparable in magnitude to SGD with momentum $0.9$ at $\eta \sim 0.3$. Sweeping both optimizers across log-spaced learning-rate grids over $3$ seeds confirms this scale shift and demonstrates Adam's decisive advantage in usable learning-rate range and stability:
+Because gradient scales in `TinyLM` lie around $10^{-4}\text{--}10^{-2}$ and Adam's EMA includes $(1-\beta_1) = 0.1$, Adam at $\eta \sim 3 \times 10^{-3}$ produces parameter steps comparable in magnitude to SGD with momentum $0.9$ at $\eta \sim 0.3$. To compare both optimizers across $3$ shared seeds, we first set up the model and optimizer closures `make_lm`, `make_sgd`, and `make_adam`:
 
 ```{.python .input #adam-comparison-on-the-language-model-1}
 %%tab pytorch
@@ -301,6 +305,8 @@ make_adam = optax.adam
 seeds = [d2l.get_seed() for _ in range(3)]
 ```
 
+We then sweep SGD with momentum across $\eta \in \{0.1, 0.3, 0.5, 1.0\}$ and Adam across $\eta \in \{3 \times 10^{-4}, 10^{-3}, 3 \times 10^{-3}, 10^{-2}, 3 \times 10^{-2}\}$ from identical initial weights per seed:
+
 ```{.python .input #adam-the-race-on-the-language-model-2}
 %%tab pytorch, jax
 def sweep(make_optimizer, lrs):
@@ -318,6 +324,8 @@ sgd_lm = sweep(make_sgd, [0.1, 0.3, 0.5, 1.0])
 print('Adam')
 adam_lm = sweep(make_adam, [3e-4, 1e-3, 3e-3, 1e-2, 3e-2])
 ```
+
+Summarizing each optimizer at its best learning rate (`best_rate`), we compare the usable learning-rate range (within $0.15$ nats of the optimum), steps to reach $1.8$ nats, maximum single-step loss spikes, and smoothed loss trajectories:
 
 ```{.python .input #adam-the-race-on-the-language-model-3}
 %%tab pytorch, jax
@@ -414,7 +422,7 @@ def adamw(learning_rate, weight_decay):
                        optax.scale(-learning_rate))
 ```
 
-Comparing no decay, coupled `Adam + l2`, and decoupled `AdamW` at $\eta = 3 \times 10^{-3}$ and $\lambda = 0.1$ on `TinyLM` over $1{,}000$ steps shows the dramatic difference between the two formulations:
+To compare no decay, coupled `Adam + l2`, and decoupled `AdamW` on `TinyLM`, we first define `matrix_rms` to measure the entrywise RMS of the 2D non-embedding weight matrices and `train_tracked` to record both the step losses and the matrix RMS every $250$ steps:
 
 ```{.python .input #adamw-coupled-and-decoupled-decay-compared-2}
 %%tab pytorch
@@ -457,6 +465,8 @@ def train_tracked(tx, data, seed, num_steps, every=250):
         rms.append(matrix_rms(model))
     return losses, rms, model
 ```
+
+Running all three configurations for $1{,}000$ steps at $\eta = 3 \times 10^{-3}$ and $\lambda = 0.1$ from a shared seed shows the dramatic difference between coupled $\ell_2$ penalty and decoupled weight decay:
 
 ```{.python .input #adamw-one-number-two-meanings}
 %%tab pytorch

@@ -162,7 +162,7 @@ const softmaxPipe = () => threeStages(560, 262, 'The Softmax Operator: From Real
   { head: '1. Raw Logits o', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['o₁ = 1.0 (cat)', 'o₂ = 2.2 (chicken)', 'o₃ = 0.3 (dog)'] },
   { head: '2. Exponentials eᵒ', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['e¹·⁰ = 2.72', 'e²·² = 9.03', 'e⁰·³ = 1.35 (Σ=13.1)'] },
   { head: '3. Softmax ŷ', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['ŷ₁ = 0.21 (21%)', 'ŷ₂ = 0.69 (69%)', 'ŷ₃ = 0.10 (10%)'] },
-  { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'Strictly Positive (ŷⱼ > 0), Normalized (Σ ŷⱼ = 1), Order-Preserving', t2: 'argmax_j ŷ_j = argmax_j o_j  (inference can skip exp() altogether!)' }
+  { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'Strictly Positive (ŷⱼ > 0), Normalized (Σ ŷⱼ = 1), Order-Preserving', t2: 'argmax_{j} ŷ_j = argmax_{j} o_j  (inference can skip exp() altogether!)' }
 );
 
 const shiftInvariance = () => twoCols(560, 266, 'Shift Invariance & Log-Odds Ratios of the Softmax',
@@ -184,7 +184,7 @@ const shiftInvariance = () => twoCols(560, 266, 'Shift Invariance & Log-Odds Rat
       { t: 'Only pairwise differences matter!' },
     ],
   },
-  { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t: 'Numerical Safeguard: Subtracting c = max_k o_k keeps all exponents ≤ 0' }
+  { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t: 'Numerical Safeguard: Subtracting c = max_{k} o_k keeps all exponents ≤ 0' }
 );
 
 const twoClassSigmoid = () => twoCols(560, 260, 'Two-Class Softmax (q = 2) Reduces to Logistic Regression',
@@ -309,9 +309,9 @@ const templateNudge = () => twoCols(560, 266, 'Parameter Gradients & Global Conv
   {
     head: 'PSD Hessian ⇒ Global Convexity', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     lines: [
-      { t: '∇²_o l = diag(ŷ) − ŷŷᵀ', mono: true, fw: 700, col: D.green.dark },
+      { t: '∇²_{o} l = diag(ŷ) − ŷŷᵀ', mono: true, fw: 700, col: D.green.dark },
       { t: '= Cov(e_Y) for Y ~ Cat(ŷ)', mono: true, fs: 12 },
-      { t: 'vᵀ(∇²_o l)v = Var(v_Y) ≥ 0', mono: true, fs: 12 },
+      { t: 'vᵀ(∇²_{o} l)v = Var(v_Y) ≥ 0', mono: true, fs: 12 },
       { t: 'No spurious local minima!' },
     ],
   },
@@ -424,7 +424,7 @@ const nchwVsNhwc = () => twoCols(560, 260, 'Two Conventions for 4D Minibatch Ima
 const minibatchFlatten = () => threeStages(560, 256, 'From 4D Spatial Image Batch to 2D Design Matrix',
   { head: '4D Image Batch X', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['(64, 1, 28, 28)', 'or (64, 28, 28, 1)', 'float32 (200 KB)'] },
   { head: 'Flatten Spatial Axes', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['reshape(-1, 784)', 'O(1) zero-copy view', '28 × 28 = 784'] },
-  { head: '2D Matrix + 1D y', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['X_flat: (64, 784)', 'y: (64,) int32/64', 'ready for X @ W'] },
+  { head: '2D Matrix + 1D y', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['X\\_flat: (64, 784)', 'y: (64,) int32/64', 'ready for X @ W'] },
   { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'Note: Flattening Discards 2D Spatial Neighborhood Structure', t2: 'Linear models treat pixels as unordered coordinates; CNNs (Ch 6) keep 2D grid' }
 );
 
@@ -483,7 +483,7 @@ const fp32Hazards = () => twoCols(560, 266, 'Twin Float32 Numerical Hazards of N
 );
 
 const rowwiseBroadcast = () => threeStages(560, 258, 'Rowwise Softmax Normalization With keepdims=True',
-  { head: '1. O_exp = exp(O)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['shape: (n, q)', 'e.g. (256, 10)', 'positive entries'] },
+  { head: '1. O\\_exp = exp(O)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['shape: (n, q)', 'e.g. (256, 10)', 'positive entries'] },
   { head: '2. Row Partition Sum', fill: C.lamber, stroke: C.amber, dark: D.orange.dark, mono: true, lines: ['reduce_sum(axis=1,', '  keepdims=True)', 'shape: (n, 1)!'] },
   { head: '3. Broadcast Divide', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['(n, q) / (n, 1)', '→ Ŷ: (n, q)', 'each row sums to 1'] },
   { fill: D.red.tint, stroke: D.red.base, dark: D.red.dark, t1: 'Why keepdims=True Is Mandatory', t2: 'Without keepdims=True, row sums have shape (n,), and (n, q)/(n,) fails or misaligns!' }
@@ -515,7 +515,7 @@ const classifierArch = () => twoCols(560, 260, 'The d2l.Classifier Base Class: D
       { t: 'Logs both val_loss & val_acc!' },
     ],
   },
-  { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t: 'accuracy() compares argmax(Y_hat, axis=1) == Y on raw logits OR probabilities' }
+  { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t: 'accuracy() compares argmax(Y\\_hat, axis=1) == Y on raw logits OR probabilities' }
 );
 
 const scratchParams = () => threeStages(560, 258, 'SoftmaxRegressionScratch: 7,850 Parameters & Initial Loss Check',
@@ -527,16 +527,16 @@ const scratchParams = () => threeStages(560, 258, 'SoftmaxRegressionScratch: 7,8
 
 const gatherVsOnehot = () => twoCols(560, 260, 'Selecting True-Class Probabilities: O(n) Gather vs. O(nq) One-Hot',
   {
-    head: 'Integer Gather: y_hat[range(n), y]', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
+    head: 'Integer Gather: y\\_hat[range(n), y]', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     lines: [
-      { t: 'y_hat = [[0.1, 0.3, 0.6],', mono: true, fs: 11.5 },
+      { t: 'y\\_hat = [[0.1, 0.3, 0.6],', mono: true, fs: 11.5 },
       { t: '         [0.3, 0.2, 0.5]]', mono: true, fs: 11.5 },
       { t: 'y = [0, 2] → picks [0.1, 0.5]', mono: true, fs: 11.5, col: D.green.dark, fw: 700 },
       { t: 'O(n) time & O(n) memory!' },
     ],
   },
   {
-    head: 'Dense One-Hot: −Σ Y_ij log Ŷ_ij', fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
+    head: 'Dense One-Hot: −Σ Y_ij log Ŷ_{ij}', fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     lines: [
       { t: 'Allocates n × q one-hot matrix Y' },
       { t: 'Multiplies (q − 1) zeros per row' },
@@ -577,7 +577,7 @@ const rawLogitsContract = () => twoCols(560, 264, 'Why Concise SoftmaxRegression
 );
 
 const logsumexpFusion = () => threeStages(560, 262, 'The Fused LogSumExp Cross-Entropy Identity',
-  { head: '1. Shift by o_max', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['o_max = max_k o_k', 'd_k = o_k − o_max', 'all d_k ≤ 0'] },
+  { head: '1. Shift by o_max', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['o_max = max_{k} o_k', 'd_k = o_k − o_max', 'all d_k ≤ 0'] },
   { head: '2. Safe LogSumExp', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['S = Σ exp(d_k)', 'o_max + log(S)', 'never overflows!'] },
   { head: '3. Subtract o_y', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['l = LSE(o) − o_y', 'linear −o_y term', 'never underflows!'] },
   { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'On o = (1000, 0, 0): True Class 0 Gives l = 0.0; True Class 1 Gives l = 1000.0', t2: 'Gradient ∇_o l = softmax(o) − y stays finite and nonzero for any logit magnitude' }
@@ -733,15 +733,15 @@ const calibrationMeaning = () => twoCols(560, 264, 'Accuracy and Calibration Are
 );
 
 const eceBins = () => threeStages(560, 258, 'Computing Expected Calibration Error (ECE) Across B = 10 Bins',
-  { head: '1. Per-Example Stats', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['conf p̂ᵢ = max_j ŷᵢⱼ', 'corr cᵢ = (ĉᵢ == yᵢ)', 'i = 1..10,000'] },
+  { head: '1. Per-Example Stats', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['conf p̂ᵢ = max_{j} ŷᵢⱼ', 'corr cᵢ = (ĉᵢ == yᵢ)', 'i = 1..10,000'] },
   { head: '2. Bin Averages', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['10 bins of width 0.1', 'c̄_b = mean(p̂ in I_b)', 'a_b = mean(c in I_b)'] },
   { head: '3. Weighted Gap', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['ECE =', 'Σ (n_b/n)|a_b − c̄_b|', '< 0.03 on Fashion'] },
-  { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'Pigeonhole Lower Bound: max_j ŷ_j ≥ 1/q = 0.10 for q = 10 Classes', t2: 'Bin [0, 0.1) is always empty (n₁ = 0); filter to bins with n_b ≥ 100 when plotting' }
+  { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'Pigeonhole Lower Bound: max_{j} ŷ_j ≥ 1/q = 0.10 for q = 10 Classes', t2: 'Bin [0, 0.1) is always empty (n₁ = 0); filter to bins with n_b ≥ 100 when plotting' }
 );
 
 const tempRecalibration = () => threeStages(560, 260, 'Post-Hoc Temperature Scaling: ŷ(T) = softmax(o / T)',
   { head: '1. Freeze Weights W', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['Collect val logits O', 'Split val in half:', '5k fit / 5k eval'] },
-  { head: '2. 1D Convex Fit T*', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['T* = argmin_T', '  NLL(O_half / T, y)', 'T* ≈ 0.92 on Fashion'] },
+  { head: '2. 1D Convex Fit T*', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['T* = argmin_{T}', '  NLL(O_half / T, y)', 'T* ≈ 0.92 on Fashion'] },
   { head: '3. Recalibrated ŷ(T*)', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['T > 1: softens', 'T < 1: sharpens', 'Accuracy 100% same!'] },
   { fill: D.red.tint, stroke: D.red.base, dark: D.red.dark, t1: 'Never Fit Temperature T on the Training Set!', t2: 'Training margins are optimistically wide; fit T on held-out validation data' }
 );
@@ -1004,7 +1004,7 @@ const essClipping = () => twoCols(560, 262, 'Right-Tail Weight Explosion & Effec
     head: 'Clipped Weights min(βᵢ, c = 5)', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     lines: [
       { t: 'Caps extreme right-tail ratios at 5:' },
-      { t: 'Max weight tilde_β_max = 5.0', mono: true, col: D.green.dark, fw: 700 },
+      { t: 'Max weight β̃_{max} = 5.0', mono: true, col: D.green.dark, fw: 700 },
       { t: 'n_eff jumps to ~200 of 1,000!', mono: true, col: D.green.dark, fw: 700 },
       { t: 'Target accuracy reaches ~93–95%!' },
     ],

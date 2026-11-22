@@ -367,7 +367,7 @@ function singletonAxes() {
   o += tx(185, 94, 'infers 784 = 1·28·28', { fs: 13, fill: C.muted });
 
   o += rect(260, 42, 260, 66, C.lgreen, C.green);
-  o += code(390, 68, 'X_flat: shape (256, 784)', D.green.dark, { fs: 15, fw: 700 });
+  o += code(390, 68, 'X\\_flat: shape (256, 784)', D.green.dark, { fs: 15, fw: 700 });
   o += tx(390, 92, '256 rows × 784 pixels', { fs: 13.5, fill: C.ink });
 
   o += hline(16, 524, 146);
@@ -460,7 +460,7 @@ function broadcastBug() {
   o += grid([[1], [1], [1]], 456, 60, 32, 4, { fs: 13, fill: () => GREEN });
 
   o += tx(270, 206, 'Rule 1 right-aligns (B,) as (1, B), stretching against (B, 1) into B×B!', { fs: 14, fw: 700, fill: D.red.dark });
-  o += tx(270, 232, 'Always assert y_hat.shape == y.shape before computing a loss.', { fs: 14, fw: 600, fill: D.green.dark });
+  o += tx(270, 232, 'Always assert y\\_hat.shape == y.shape before computing a loss.', { fs: 14, fw: 600, fill: D.green.dark });
   return svg(W, H, o);
 }
 

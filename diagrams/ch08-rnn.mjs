@@ -113,7 +113,7 @@ function pipelineSummary() {
   let o = '';
   const stages = [
     { y: 14,  t: '1. Byte-Level BPE (§8.2)', eq: 'UTF-8 bytes → regex chunks → rank-ordered merges (|V| = 1,027)', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 66,  t: '2. Chain-Rule Factorization (§§8.1, 8.3)', eq: 'P(x₁:T) = ∏ P(xₜ | x_<t)   ·   bpb = −(1/B) ∑ log₂ P(xₜ | x_<t)', f: C.lamber, st: C.amber, dk: D.orange.dark },
+    { y: 66,  t: '2. Chain-Rule Factorization (§§8.1, 8.3)', eq: 'P(x_{1:T}) = ∏ P(xₜ | x_{<t})   ·   bpb = −(1/B) ∑ log₂ P(xₜ | x_{<t})', f: C.lamber, st: C.amber, dk: D.orange.dark },
     { y: 118, t: '3. Shared-Weight Recurrent Cell (§8.4)', eq: 'Hₜ = tanh(Xₜ W_xh + Hₜ₋₁ W_hh + b_h)   ·   Oₜ = Hₜ W_hq + b_q', f: C.lgreen, st: C.green, dk: D.green.dark },
     { y: 170, t: '4. Truncated BPTT + Clipping (§8.5)', eq: 'Detach across T₀ = 32 windows   ·   g ← min(1, θ / ||g||) g', f: D.red.tint, st: D.red.base, dk: D.red.dark },
     { y: 222, t: '5. Autoregressive Decoding (§8.6)', eq: 'Beam search (constrained)  or  temperature τ + top-p / min-p', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
@@ -150,7 +150,7 @@ function iidVsTemporal() {
 
   // Bottom: Sequential
   o += box(16, 128, 508, 116, C.lblue, C.blue, 8, 2);
-  o += tx(270, 148, '(b) Sequential Data: Strict Causal Order & Growing Prefix x_<t', { fs: 14, fw: 700, fill: D.blue.dark });
+  o += tx(270, 148, '(b) Sequential Data: Strict Causal Order & Growing Prefix x_{<t}', { fs: 14, fw: 700, fill: D.blue.dark });
   const toks = ['"Thank"', '"you"', '"for"', '"your"', '"help"'];
   toks.forEach((w, i) => {
     const x = 28 + i * 100;
@@ -170,8 +170,8 @@ function taskTaxonomy() {
   const panels = [
     { x: 16,  y: 14,  t: '1. Sequence-to-Label', sub: '(x₁, …, x_T) → class y', ex: 'Sentiment · ECG classification', f: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 276, y: 14,  t: '2. Fixed-to-Sequence', sub: 'image x → (y₁, …, y_T)', ex: 'Image captioning · synthesis', f: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 16,  y: 142, t: '3. Sequence-to-Sequence', sub: '(x₁:T) → (y₁:T\')  (T ≠ T\')', ex: 'Translation · ASR transcription', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 276, y: 142, t: '4. Density Estimation (LM)', sub: 'x₁:T → ∏ P(xₜ | x_<t)', ex: '0 external labels · score & sample', f: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 142, t: '3. Sequence-to-Sequence', sub: '(x_{1:T}) → (y_{1:T\'})  (T ≠ T\')', ex: 'Translation · ASR transcription', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 276, y: 142, t: '4. Density Estimation (LM)', sub: 'x_{1:T} → ∏ P(xₜ | x_{<t})', ex: '0 external labels · score & sample', f: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   panels.forEach((p) => {
     o += box(p.x, p.y, 248, 112, p.f, p.st, 8, 2);
@@ -209,9 +209,9 @@ function growingPrefix() {
   o += arrow(392, 112, 424, 112, C.green);
   o += box(430, 74, 94, 76, C.lgreen, C.green, 8, 2);
   o += tx(477, 100, 'Predictor f', { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(477, 124, 'E[xₜ | x_<t]', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(477, 124, 'E[xₜ | x_{<t}]', { mono: true, fs: 12, fw: 700, fill: C.ink });
 
-  o += tx(270, 236, 'Prefix x_<t grows with t, so every model must compress it to fixed size.', { fs: 13, fw: 600, fill: C.ink });
+  o += tx(270, 236, 'Prefix x_{<t} grows with t, so every model must compress it to fixed size.', { fs: 13, fw: 600, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -234,12 +234,12 @@ function chainRule() {
 
   // Direct product vs Log sum
   o += box(18, 128, 238, 106, D.red.tint, D.red.base, 8, 2);
-  o += tx(137, 150, 'Direct Product ∏ P(xₜ | x_<t)', { fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(137, 150, 'Direct Product ∏ P(xₜ | x_{<t})', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += tx(137, 178, '0.05 × 0.01 × 0.20 = 10⁻⁴', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
   o += tx(137, 206, 'Underflows float32 to 0.0 at T > 100!', { fs: 12, fw: 600, fill: D.red.dark });
 
   o += box(284, 128, 238, 106, C.lgreen, C.green, 8, 2);
-  o += tx(403, 150, 'Log-Domain Sum ∑ log P(xₜ | x_<t)', { fs: 13.5, fw: 700, fill: D.green.dark });
+  o += tx(403, 150, 'Log-Domain Sum ∑ log P(xₜ | x_{<t})', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(403, 178, '−3.00 − 4.61 − 1.61 = −9.21', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
   o += tx(403, 206, 'Numerically stable at any length T', { fs: 12, fw: 600, fill: D.green.dark });
   return svg(W, H, o);
@@ -535,8 +535,8 @@ function lmScoringGeneration() {
   const W = 540, H = 264;
   let o = '';
   o += box(46, 12, 448, 54, D.purple.tint, C.purple, 8, 2);
-  o += tx(270, 31, 'Next-Token Conditional Model P(xₜ | x_<t)', { fs: 14, fw: 700, fill: D.purple.dark });
-  o += tx(270, 51, 'Exact chain rule: log P(x₁:T) = ∑ log P(xₜ | x_<t)', { mono: true, fs: 11.5, fw: 600, fill: C.ink });
+  o += tx(270, 31, 'Next-Token Conditional Model P(xₜ | x_{<t})', { fs: 14, fw: 700, fill: D.purple.dark });
+  o += tx(270, 51, 'Exact chain rule: log P(x_{1:T}) = ∑ log P(xₜ | x_{<t})', { mono: true, fs: 11.5, fw: 600, fill: C.ink });
 
   o += arrow(200, 68, 136, 104, C.blue);
   o += arrow(340, 68, 404, 104, C.green);
@@ -563,7 +563,7 @@ function lmScoringGeneration() {
 function perplexityScale() {
   const W = 540, H = 250;
   let o = '';
-  o += tx(270, 22, 'Perplexity PPL = exp(−(1/T) ∑ log P(xₜ | x_<t)) = Effective Branching Factor', { fs: 13.5, fw: 700, fill: C.ink });
+  o += tx(270, 22, 'Perplexity PPL = exp(−(1/T) ∑ log P(xₜ | x_{<t})) = Effective Branching Factor', { fs: 13.5, fw: 700, fill: C.ink });
 
   const anchors = [
     { x: 16,  ppl: 'PPL = 1',   sub: 'Perfect Oracle', d: 'P(true) = 1.0 always', f: C.lgreen, st: C.green, dk: D.green.dark },
@@ -716,7 +716,7 @@ function windowVsRecurrentParams() {
   o += box(294, 144, 216, 82, '#FFFFFF', C.green, 6, 1.5);
   o += tx(402, 166, '• O(1) params independent of T', { fs: 12, fw: 700, fill: D.green.dark });
   o += tx(402, 188, '• 24,704 cell weights total', { fs: 12, fill: C.ink });
-  o += tx(402, 210, '• Summarizes arbitrary prefix x_<t', { fs: 12, fw: 600, fill: D.green.dark });
+  o += tx(402, 210, '• Summarizes arbitrary prefix x_{<t}', { fs: 12, fw: 600, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -764,11 +764,11 @@ function batchedInputGemm() {
   o += box(16, 14, 508, 102, C.lgreen, C.green, 8, 2);
   o += tx(270, 34, '1. Hoisted Outside Time Loop: 1 Parallel GEMM Across All T Steps', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += box(32, 50, 210, 50, '#FFFFFF', C.green, 6, 1.6);
-  o += tx(137, 68, 'All Window Inputs X₁:T', { fs: 13, fw: 700, fill: C.ink });
+  o += tx(137, 68, 'All Window Inputs X_{1:T}', { fs: 13, fw: 700, fill: C.ink });
   o += tx(137, 88, 'shape: (T·b, d)', { mono: true, fs: 12, fill: C.muted });
   o += arrow(248, 75, 286, 75, C.green);
   o += box(292, 50, 216, 50, '#FFFFFF', C.green, 6, 1.6);
-  o += tx(400, 68, 'U₁:T = X₁:T · W_xh', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
+  o += tx(400, 68, 'U_{1:T} = X_{1:T} · W_xh', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
   o += tx(400, 88, 'saturates GPU Tensor Cores', { fs: 12, fill: C.ink });
 
   // Bottom: Sequential recurrent loop
@@ -979,7 +979,7 @@ function adjointNodeRecursion() {
 function lagMatrixPowers() {
   const W = 540, H = 258;
   let o = '';
-  o += tx(270, 20, 'Unrolling Gₜ = ∑_{j=t}^T (∂L/∂Oⱼ) W_hq^T (W_hh^T)^{j−t} Across Future Steps j', { fs: 13, fw: 700, fill: C.ink });
+  o += tx(270, 20, 'Unrolling Gₜ = ∑_{j=t}^{T} (∂L/∂Oⱼ) W_hq^T (W_hh^T)^{j−t} Across Future Steps j', { fs: 13, fw: 700, fill: C.ink });
 
   const lags = [
     { y: 40,  lag: 'Lag k = 0 (j = t)',   op: '∇Oₜ L · W_hq^T · I', note: 'Direct step-t loss', f: C.lgreen, st: C.green, dk: D.green.dark },
@@ -995,7 +995,7 @@ function lagMatrixPowers() {
     o += box(404, l.y, 120, 38, l.f, l.st, 6, 1.5);
     o += tx(464, l.y + 19, l.note, { fs: 11.5, fw: 700, fill: l.dk });
   });
-  o += tx(270, 244, 'Parameter gradients accumulate outer products: ∂L/∂W_hh = ∑ₜ Hₜ₋₁^T Gₜ', { mono: true, fs: 12, fw: 700, fill: D.purple.dark });
+  o += tx(270, 244, 'Parameter gradients accumulate outer products: ∂L/∂W_hh = ∑ₜ Hₜ₋₁ᵀ Gₜ', { mono: true, fs: 12, fw: 700, fill: D.purple.dark });
   return svg(W, H, o);
 }
 
@@ -1110,7 +1110,7 @@ function fullBpttMemoryWall() {
   o += box(16, 14, 508, 102, D.red.tint, D.red.base, 8, 2);
   o += tx(270, 34, '(a) Full-Corpus BPTT (T = 65,741 Tokens): Prohibitive Memory & Latency', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += box(32, 52, 232, 48, '#FFFFFF', D.red.base, 6, 1.6);
-  o += tx(148, 70, 'Must Retain All 65,741 States H₁:T', { fs: 12.5, fw: 700, fill: D.red.dark });
+  o += tx(148, 70, 'Must Retain All 65,741 States H_{1:T}', { fs: 12.5, fw: 700, fill: D.red.dark });
   o += tx(148, 88, 'O(T·b·h) VRAM for ∂L/∂W_hh', { mono: true, fs: 11.5, fill: C.ink });
   o += box(276, 52, 232, 48, '#FFFFFF', D.red.base, 6, 1.6);
   o += tx(392, 70, 'Only 1 SGD Update per Book!', { fs: 12.5, fw: 700, fill: D.red.dark });
@@ -1138,13 +1138,13 @@ function searchSpaceExplosion() {
   let o = '';
   o += box(16, 12, 508, 52, D.purple.tint, C.purple, 8, 2);
   o += tx(270, 30, 'Exhaustive Search Over T = 50 Tokens: |V|ᵀ = 1,027⁵⁰ > 10¹⁵⁰ Candidates', { fs: 13.5, fw: 700, fill: D.purple.dark });
-  o += tx(270, 50, 'Goal: Convert next-token conditionals P(xₜ | x_<t) into fluent text in O(T) steps', { fs: 12, fw: 600, fill: C.ink });
+  o += tx(270, 50, 'Goal: Convert next-token conditionals P(xₜ | x_{<t}) into fluent text in O(T) steps', { fs: 12, fw: 600, fill: C.ink });
 
   // Left hazard: Pure Maximization
   o += box(16, 80, 244, 164, D.red.tint, D.red.base, 8, 2);
   o += tx(138, 102, 'Hazard 1: Naive Argmax', { fs: 14, fw: 700, fill: D.red.dark });
   o += box(30, 120, 216, 52, '#FFFFFF', D.red.base, 6, 1.5);
-  o += tx(138, 138, 'xₜ = argmax P(x | x_<t)', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(138, 138, 'xₜ = argmax P(x | x_{<t})', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(138, 158, '100% deterministic trajectory', { fs: 11.5, fill: C.muted });
   o += tx(138, 194, '• Myopic local commitment', { fs: 12, fw: 600, fill: D.red.dark });
   o += tx(138, 216, '• Locks into repetition loops!', { fs: 12, fw: 700, fill: D.red.dark });
@@ -1153,7 +1153,7 @@ function searchSpaceExplosion() {
   o += box(280, 80, 244, 164, C.lamber, C.amber, 8, 2);
   o += tx(402, 102, 'Hazard 2: Unpruned Sampling', { fs: 14, fw: 700, fill: D.orange.dark });
   o += box(294, 120, 216, 52, '#FFFFFF', C.amber, 6, 1.5);
-  o += tx(402, 138, 'xₜ ∼ P(x | x_<t) over all |V|', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(402, 138, 'xₜ ∼ P(x | x_{<t}) over all |V|', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(402, 158, '~900 tail tokens hold ~18% mass', { fs: 11.5, fill: C.muted });
   o += tx(402, 194, '• Draws incoherent tail tokens', { fs: 12, fw: 600, fill: D.orange.dark });
   o += tx(402, 216, '• Exposure bias derails rollout!', { fs: 12, fw: 700, fill: D.orange.dark });
@@ -1200,11 +1200,11 @@ function greedyMyopiaTree() {
 function lengthNormCurves() {
   const W = 540, H = 258;
   let o = '';
-  o += tx(270, 20, 'Comparing Variable-Length Hypotheses: Score = (1 / T^β) ∑ log P(xₜ | x_<t)', { fs: 13, fw: 700, fill: C.ink });
+  o += tx(270, 20, 'Comparing Variable-Length Hypotheses: Score = (1 / T^β) ∑ log P(xₜ | x_{<t})', { fs: 13, fw: 700, fill: C.ink });
 
   const cards = [
     { x: 16,  b: 'β = 0 (Unnormalized)', eq: '∑ log P ≤ 0', eff: 'Monotonically decreases with T; unfairly favors premature <eos>!', f: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { x: 194, b: 'β = 0.75 (Standard)',  eq: '(∑ log P) / T^0.75', eff: 'Wu et al. (2016) sweet spot for MT & ASR beam ranking.', f: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 194, b: 'β = 0.75 (Standard)',  eq: '(∑ log P) / T^{0.75}', eff: 'Wu et al. (2016) sweet spot for MT & ASR beam ranking.', f: C.lgreen, st: C.green, dk: D.green.dark },
     { x: 372, b: 'β = 1.0 (Per-Token Avg)', eq: '(1 / T) ∑ log P', eff: 'Removes length penalty completely; can over-favor long outputs.', f: C.lblue, st: C.blue, dk: D.blue.dark },
   ];
   cards.forEach((c) => {
@@ -1255,7 +1255,7 @@ function statelessVsStatefulDecode() {
   // Top: Stateless O(T^2)
   o += box(16, 12, 508, 106, D.red.tint, D.red.base, 8, 2);
   o += tx(270, 32, '(a) Stateless step_fn(ids): Re-Reads Growing Prefix at Every Step → O(T²)', { fs: 13.5, fw: 700, fill: D.red.dark });
-  const stSteps = ['Step 1: read x₁ (1)', 'Step 2: read x₁:₂ (2)', 'Step T: read x₁:T (T)'];
+  const stSteps = ['Step 1: read x₁ (1)', 'Step 2: read x₁:₂ (2)', 'Step T: read x_{1:T} (T)'];
   stSteps.forEach((s, i) => {
     const x = 28 + i * 166;
     o += box(x, 48, 152, 34, '#FFFFFF', D.red.base, 5, 1.5);

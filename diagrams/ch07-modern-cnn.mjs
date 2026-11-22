@@ -132,7 +132,7 @@ function threeUnifyingInvariants() {
   const invs = [
     { x: 16,  t: '1. RF per FLOP & GAP', s1: '2×(3×3) = 18c² vs 25c²', s2: '3×(3×3) = 27c² vs 49c²', s3: 'GAP removes 43M head', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 194, t: '2. Scale & Nesting', s1: 'BN(a wᵀ h) = BN(wᵀ h)', s2: 'f(x) = x + g(x) (g=0 → I)', s3: 'Nested classes F ⊆ F′', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 372, t: '3. Factorization Ratio', s1: 'DWS / Dense = 1/c_o + 1/k²', s2: '≈ 1/9 MACs for 3×3', s3: '9 vs 9c_o MACs/read', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 372, t: '3. Factorization Ratio', s1: 'DWS / Dense = 1/c_o + 1/k²', s2: '≈ 1/9 MACs for 3×3', s3: '9 vs 9c_{o} MACs/read', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   invs.forEach((it) => {
     o += card(it.x, 18, 152, 224, it.fill, it.st, [
@@ -461,7 +461,7 @@ function stemBodyHeadTemplate() {
   let o = '';
   o += card(16, 24, 152, 118, C.lblue, C.blue, [
     { t: '1. Stem', fs: 15, fw: 700, fill: D.blue.dark },
-    { t: '7×7_s2 + MaxPool', mono: true, fs: 12, fw: 700, fill: C.ink },
+    { t: '7×7_{s2} + MaxPool', mono: true, fs: 12, fw: 700, fill: C.ink },
     { t: 'Shrinks H×W 4×–8×', fs: 12, fill: C.ink },
     { t: 'Cuts activation RAM', fs: 11.5, fill: C.muted },
   ]);
@@ -513,8 +513,8 @@ function bnForwardPipeline() {
   let o = '';
   const steps = [
     { x: 16,  t: '1. Minibatch B', s1: '{x₁, …, x_m}', s2: 'Pre-activations', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 146, t: '2. Moments', s1: 'μ̂_B = mean(x)', s2: 'σ̂²_B = var(x)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 276, t: '3. Standardize', s1: 'x̂ = (x − μ̂_B)', s2: '÷ √(σ̂²_B + ε)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 146, t: '2. Moments', s1: 'μ̂_B = mean(x)', s2: 'σ̂_B² = var(x)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 276, t: '3. Standardize', s1: 'x̂ = (x − μ̂_B)', s2: '÷ √(σ̂_B² + ε)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 406, t: '4. Scale & Shift', s1: 'y = γ x̂ + β', s2: 'Learned γ, β', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   steps.forEach((s, i) => {
@@ -604,7 +604,7 @@ function bnTrainVsEvalMode() {
   let o = '';
   o += card(16, 16, 242, 142, C.lblue, C.blue, [
     { t: 'Training Mode (training=True)', fs: 14, fw: 700, fill: D.blue.dark },
-    { t: '1. Normalize by batch (μ̂_B, σ̂²_B)', fs: 12.5, fw: 600, fill: C.ink },
+    { t: '1. Normalize by batch (μ̂_B, σ̂_B²)', fs: 12.5, fw: 600, fill: C.ink },
     { t: '2. Update running EMA buffers:', fs: 12, fill: C.muted },
     { t: 'μ̂ ← ρ μ̂ + (1−ρ) μ̂_B  (ρ = 0.9)', mono: true, fs: 11.5, fw: 700, fill: D.blue.dark },
     { t: 'Effective window: 1/(1−ρ) = 10 steps', fs: 11.5, fill: C.ink },
@@ -683,7 +683,7 @@ function nfnetWeightStd() {
   ]);
   o += card(282, 20, 242, 126, C.lamber, C.amber, [
     { t: '2. Adaptive Gradient Clipping', fs: 13.5, fw: 700, fill: D.orange.dark },
-    { t: 'Clips ‖G_l‖_F / ‖W_l‖_F ≤ λ', mono: true, fs: 12.5, fw: 700, fill: C.ink },
+    { t: 'Clips ‖G_l‖_{F} / ‖W_l‖_{F} ≤ λ', mono: true, fs: 12.5, fw: 700, fill: C.ink },
     { t: 'Replaces BN’s self-stabilizing', fs: 12, fill: C.ink },
     { t: 'large-learning-rate feedback loop', fs: 12, fill: C.muted },
   ]);
@@ -742,7 +742,7 @@ function residualGradientHighway() {
   let o = '';
   // Top forward recursion
   o += box(16, 16, 508, 108, C.lblue, C.blue, 10, 2);
-  o += tx(270, 38, 'Forward Telescoping Sum:  x_L = x_ℓ + Σ_{k=ℓ+1}^L g_k(x_{k-1})', { mono: true, fs: 13.5, fw: 700, fill: D.blue.dark });
+  o += tx(270, 38, 'Forward Telescoping Sum:  x_L = x_ℓ + Σ_{k=ℓ+1}^{L} g_k(x_{k-1})', { mono: true, fs: 13.5, fw: 700, fill: D.blue.dark });
   o += card(32, 54, 128, 54, '#FFFFFF', C.blue, [{ t: 'Early Feature x_ℓ', mono: true, fs: 12.5, fw: 700 }]);
   o += arrow(166, 81, 198, 81, C.blue);
   o += card(204, 54, 146, 54, '#FFFFFF', C.purple, [{ t: '+ Σ Residual Branches', fs: 12.5, fw: 700, fill: D.purple.dark }]);
@@ -772,7 +772,7 @@ function residualShapeTransition() {
     { t: 'Projection: Residual(6, s=2)', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
     { t: 'use_1x1conv=True, strides=2', mono: true, fs: 12, fill: C.muted },
     { t: 'Input:  4 × 3 ch × 6×6', mono: true, fs: 13, fw: 700, fill: C.ink },
-    { t: 'Shortcut: 1×1_s2 + BN', mono: true, fs: 12, fw: 600, fill: D.green.dark },
+    { t: 'Shortcut: 1×1_{s2} + BN', mono: true, fs: 12, fw: 600, fill: D.green.dark },
     { t: 'Output: 4 × 6 ch × 3×3', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
@@ -784,7 +784,7 @@ function postVsPreactivation() {
   const cols = [
     { x: 16,  t: 'Post-Activation (2015)', s1: 'Conv→BN→ReLU (×2)', s2: 'y = ReLU(x + g(x))', s3: 'ReLU sits ON highway', s4: 'Jacobian gated by ReLU′', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 194, t: 'Pre-Activation (2016b)', s1: 'BN→ReLU→Conv (×2)', s2: 'y = x + g(x) (no ReLU)', s3: 'Pure identity highway', s4: 'Exact I in ∂x_L / ∂x_0', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { x: 372, t: 'ResNet-D Shortcut', s1: 'Replaces 1×1_s2 skip', s2: '2×2 AvgPool + 1×1_s1', s3: 'Reads 100% of pixels', s4: '(vs 25% in 1×1_s2!)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 372, t: 'ResNet-D Shortcut', s1: 'Replaces 1×1_{s2} skip', s2: '2×2 AvgPool + 1×1_{s1}', s3: 'Reads 100% of pixels', s4: '(vs 25% in 1×1_{s2}!)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
   ];
   cols.forEach((c) => {
     o += card(c.x, 18, 152, 228, c.fill, c.st, [
@@ -845,7 +845,7 @@ function miniMobilenetPipeline() {
   const W = 540, H = 256;
   let o = '';
   const st = [
-    { x: 16,  t: 'Stem 3×3_s2', s1: '1 → 32 ch', s2: '48 × 48', fill: C.lblue, col: C.blue, dk: D.blue.dark },
+    { x: 16,  t: 'Stem 3×3_{s2}', s1: '1 → 32 ch', s2: '48 × 48', fill: C.lblue, col: C.blue, dk: D.blue.dark },
     { x: 146, t: '7 DWS Blocks', s1: '64 → 128 → 256', s2: '→ 512 @ 6×6', fill: D.purple.tint, col: C.purple, dk: D.purple.dark },
     { x: 276, t: 'Global Avg Pool', s1: '512 × 6 × 6', s2: '→ 512 vector', fill: C.lamber, col: C.amber, dk: D.orange.dark },
     { x: 406, t: 'Linear Head', s1: '512 → 10', s2: '5,130 params', fill: C.lgreen, col: C.green, dk: D.green.dark },
@@ -1165,7 +1165,7 @@ function convnextBlockReorder() {
     { t: 'ConvNeXt Order (DW at Front!)', fs: 13.5, fw: 700, fill: D.green.dark },
     { t: 'DW 7×7 (on c!) → LN → 1×1(4c) → 1×1(c)', mono: true, fs: 11, fw: 700, fill: C.ink },
     { t: '7×7 DW on c costs ONLY 49c MACs!', mono: true, fs: 12, fw: 700, fill: D.green.dark },
-    { t: 'Mirrors ViT: Spatial_c → MLP_{c→4c→c}', mono: true, fs: 11.5, fill: C.ink },
+    { t: 'Mirrors ViT: Spatial_{c} → MLP_{c→4c→c}', mono: true, fs: 11.5, fill: C.ink },
   ]);
   o += card(16, 168, 508, 76, C.lblue, C.blue, [
     { t: 'Per-Pixel Block Compute:  49c (7×7 Depthwise)  +  8c² (Two 1×1 Layers)', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
@@ -1202,8 +1202,8 @@ function convnextAttoPyramid() {
   const W = 540, H = 260;
   let o = '';
   const stages = [
-    { x: 16,  t: 'Stage 1 (d=2)', c: '40 ch @ 16×16', sub: 'After 4×4_s4 stem', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 146, t: 'Stage 2 (d=2)', c: '80 ch @ 8×8', sub: 'After LN+2×2_s2', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 16,  t: 'Stage 1 (d=2)', c: '40 ch @ 16×16', sub: 'After 4×4_{s4} stem', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 146, t: 'Stage 2 (d=2)', c: '80 ch @ 8×8', sub: 'After LN+2×2_{s2}', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 276, t: 'Stage 3 (d=6)', c: '160 ch @ 4×4', sub: 'Deepest stage (3×)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 406, t: 'Stage 4 (d=2)', c: '320 ch @ 2×2', sub: '→ GAP + LN → 10', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
@@ -1229,7 +1229,7 @@ function localAblationSteps() {
     { t: '0. Compact ResNet-18 (base=35, BN)', p: '3.35M', m: '43.2M MACs', a: '≈ 94.0%', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { t: '1. + ConvNeXt Body & Stages (with BN)', p: '3.38M', m: '46.1M MACs', a: '≈ 94.0%', fill: C.lgreen, st: C.green, dk: D.green.dark },
     { t: '2. + Swap BatchNorm → LayerNorm', p: '3.38M', m: '46.1M MACs', a: '≈ 94.0%', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { t: '3. + Swap Stem → 4×4_s4 Patchify', p: '3.38M', m: '44.3M MACs', a: '≈ 91.7% (−2 pts!)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { t: '3. + Swap Stem → 4×4_{s4} Patchify', p: '3.38M', m: '44.3M MACs', a: '≈ 91.7% (−2 pts!)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   rows.forEach((r, i) => {
     const y = 16 + i * 58;
@@ -1251,12 +1251,12 @@ function convnextv2Grn() {
   ]);
   o += card(282, 18, 242, 128, C.lgreen, C.green, [
     { t: '2. Global Response Norm (GRN)', fs: 13.5, fw: 700, fill: D.green.dark },
-    { t: 'g_c = ‖X_c‖₂ ,  g̅ = mean_c(g_c)', mono: true, fs: 12, fw: 700, fill: C.ink },
+    { t: 'g_c = ‖X_c‖₂ ,  g̅ = mean_{c}(g_c)', mono: true, fs: 12, fw: 700, fill: C.ink },
     { t: 'Replaces LayerScale after GELU', fs: 12, fill: C.ink },
     { t: 'Prevents dead/collapsed channels', fs: 11.5, fw: 700, fill: D.green.dark },
   ]);
   o += card(16, 162, 508, 80, D.purple.tint, C.purple, [
-    { t: 'GRN Formula:  GRN(X)_c = γ_c · (g_c / (g̅ + ε)) · X_c + β_c + X_c', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
+    { t: 'GRN Formula:  GRN(X)_{c} = γ_c · (g_c / (g̅ + ε)) · X_c + β_c + X_c', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
     { t: 'Normalizing each channel’s spatial L2 norm against the layer mean enforces inter-channel competition', fs: 12, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -1267,7 +1267,7 @@ function layerscaleVsDroppath() {
   let o = '';
   o += card(16, 18, 242, 134, C.lblue, C.blue, [
     { t: 'Layer Scale γ (init 10⁻⁶)', fs: 14, fw: 700, fill: D.blue.dark },
-    { t: 'Deterministic vector γ ∈ ℝ^c', mono: true, fs: 12, fw: 700, fill: C.ink },
+    { t: 'Deterministic vector γ ∈ ℝ^{c}', mono: true, fs: 12, fw: 700, fill: C.ink },
     { t: 'Starts near identity at step 0', fs: 12, fill: C.ink },
     { t: 'Remains active at eval time', fs: 12, fw: 700, fill: D.blue.dark },
   ]);
@@ -1302,7 +1302,7 @@ function pointSearchVsDesignSpace() {
     { t: '• Sample n=500 models per space', fs: 12.5, fw: 600, fill: C.ink },
     { t: '• Compare empirical error CDFs F̂(e)', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
     { t: '• Progressively constrain 16 knobs:', fs: 12.5, fill: C.ink },
-    { t: '  AnyNetX_A → B → C → D → E → RegNetX', mono: true, fs: 11, fw: 700, fill: D.green.dark },
+    { t: '  AnyNetX_{A} → B → C → D → E → RegNetX', mono: true, fs: 11, fw: 700, fill: D.green.dark },
     { t: '• Generalizes across all FLOP regimes!', fs: 12, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
@@ -1335,7 +1335,7 @@ function anynetStageMacBreakdown() {
   const W = 540, H = 260;
   let o = '';
   const parts = [
-    { x: 16,  t: '1. Stem (3×3_s2)', eq: 'r² · 9 · c_0', sub: 'Halves r → r/2 (c_0=32)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 16,  t: '1. Stem (3×3_{s2})', eq: 'r² · 9 · c_0', sub: 'Halves r → r/2 (c_0=32)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 194, t: '2. 1×1 Convs + Skip', eq: 'r² (2 c_in c + (2d−1)c²)', sub: 'Quadratic in stage width c', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 372, t: '3. Grouped 3×3 (b=1)', eq: 'r² · 9 · g · c · d', sub: 'Linear in c at fixed g!', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];

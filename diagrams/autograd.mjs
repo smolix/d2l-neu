@@ -340,7 +340,7 @@ function functionalTransform() {
   o += mono(282, 94, '         loss)', { fill: PURPLE_DK, fs: 12.5, fw: 700 });
   o += arrow(358, 82, 394, 82, C.green);
   o += box(398, 54, 114, 56, C.lgreen, C.green, false, 6, 2);
-  o += mono(455, 73, 'g = g_fn(w)', { fill: GREEN_DK, fs: 13, fw: 700 });
+  o += mono(455, 73, 'g = g\\_fn(w)', { fill: GREEN_DK, fs: 13, fw: 700 });
   o += mono(455, 94, 'returns (2, 4)', { fill: C.ink, fs: 12.5 });
   return svg(W, H, o);
 }

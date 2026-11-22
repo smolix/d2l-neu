@@ -448,7 +448,7 @@ Stochastic and Minibatch Gradient Descent<br>**sampled gradients · stationary n
 ::: {.cols .vc}
 ::: {.col}
 - **1. Stability ceiling preserved:** $(2 - \eta\lambda) \to 0$ as $\eta \to 2/\lambda$; variance explodes at the deterministic limit ($\eta < 0.5$ on the valley).
-- **2. Inverse curvature scaling ($\propto 1/\lambda$):** Flat directions suffer both slower transient decay ($\eta\lambda$) and wider stationary fluctuations ($20\times$ higher variance along $\lambda_1 = 0.2$ than $\lambda_2 = 4.0$).
+- **2. Inverse curvature scaling ($\propto 1/\lambda$):** Flat directions suffer both slower transient decay ($\eta\lambda$) and wider stationary fluctuations ($16\times$ higher variance along $\lambda_1 = 0.2$ than $\lambda_2 = 4.0$).
 - **3. Linear $\eta/b$ scaling:** For $\eta\lambda \ll 1$, stationary variance scales as $\frac{\eta\sigma^2}{2\lambda b}$; halving $\eta$ or doubling $b$ halves the noise ball.
 :::
 

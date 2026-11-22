@@ -148,7 +148,7 @@ function stressTests() {
     ['3. Selective Copy', 'Copy 4 marked symbols', 'ignore variable noise', 'Tests token Δ_t gate', C.green],
     ['4. Assoc. Recall', 'Store m (k_i, v_i) pairs', 'query k_q at end', 'Tests d_v×d_k matrix', C.amber],
     ['5. Key Rebinding', 'Update existing key k', 'with new value v_new', 'Tests delta erasure', C.coral],
-    ['6. WikiText-103 LM', '4-block SeqLM stack', 'd=128, byte-level', 'Tests nats/byte & tok/s', C.slate],
+    ['6. WikiText-103 LM', '4-block SeqLM stack', 'd=256, byte-level', 'Tests nats/byte & tok/s', C.slate],
   ];
   cards.forEach(([title, l1, l2, tag, col], idx) => {
     const colIdx = idx % 3;
@@ -180,9 +180,9 @@ function grammarDecay() {
 
   const bars = [
     ['Lag k = 1', '0.9¹ = 90.0%', 220, C.green],
-    ['Lag k = 10', '0.9¹⁰ = 34.9%', 110, C.blue],
-    ['Lag k = 30', '0.9³⁰ = 4.2%', 36, C.amber],
-    ['Lag k = 100', '0.9¹⁰⁰ = 0.003%', 8, C.coral],
+    ['Lag k = 10', '0.9¹⁰ = 34.9%', 85, C.blue],
+    ['Lag k = 30', '0.9³⁰ = 4.2%', 10, C.amber],
+    ['Lag k = 100', '0.9¹⁰⁰ = 0.003%', 2, C.coral],
   ];
   bars.forEach(([lbl, val, bw, col], i) => {
     const y = 114 + i * 30;
@@ -286,7 +286,7 @@ function lstmVsGru() {
   body += tx(139, 146, '• c_t = f_t ⊙ c_{t-1} + i_t ⊙ c̃_t', { fs: 10, fill: C.text, mono: true });
   body += tx(139, 168, '• Can saturate f_t ≈ 1 and i_t ≈ 1', { fs: 10, fill: C.muted });
   body += rbox(30, 188, 218, 34, C.slate.bg, C.slate.bd, 5, 1.1);
-  body += tx(139, 206, '4 gates: 4d(p + d) ≈ 8d² params', { fs: 9.5, fw: 700, fill: C.text, mono: true });
+  body += tx(139, 206, '4 weight blocks: 4d(p + d) ≈ 8d²', { fs: 9.5, fw: 700, fill: C.text, mono: true });
 
   body += rbox(278, 38, 246, 198, C.green.bg, C.green.bd);
   body += tx(401, 58, 'GRU Cell (Cho et al.)', { fs: 11, fw: 700, fill: C.green.tx });
@@ -296,7 +296,7 @@ function lstmVsGru() {
   body += tx(401, 146, '• h_t = z_t⊙h_{t-1} + (1−z_t)⊙h̃_t', { fs: 10, fill: C.text, mono: true });
   body += tx(401, 168, '• Convex keep/write: h_t ∈ [-1, 1]^d', { fs: 10, fill: C.muted });
   body += rbox(292, 188, 218, 34, C.slate.bg, C.slate.bd, 5, 1.1);
-  body += tx(401, 206, '3 gates: 3d(p + d) ≈ 6d² params', { fs: 9.5, fw: 700, fill: C.text, mono: true });
+  body += tx(401, 206, '3 weight blocks: 3d(p + d) ≈ 6d²', { fs: 9.5, fw: 700, fill: C.text, mono: true });
   return svg(W, H, body);
 }
 
@@ -312,7 +312,7 @@ function zeroBiasUnderflow() {
   const cards = [
     ['Lag T = 10', '2⁻⁹ = 1.95 × 10⁻³', '0.2% gradient left', C.amber],
     ['Lag T = 20', '2⁻¹⁹ = 1.91 × 10⁻⁶', 'Near noise floor', C.coral],
-    ['Lag T = 50', '2⁻⁴⁹ = 1.78 × 10⁻¹⁵', 'Float32 underflow!', C.coral],
+    ['Lag T = 50', '2⁻⁴⁹ = 1.78 × 10⁻¹⁵', 'Swamped below float32 ε', C.coral],
   ];
   cards.forEach(([title, math, sub, col], i) => {
     const x = 16 + i * 172;
@@ -347,7 +347,7 @@ function keepGateInit() {
   body += tx(401, 152, 'τ_{1/2} ≈ 103 steps without saturation!', { fs: 10, fw: 700, fill: C.green.tx });
 
   body += rbox(16, 198, 508, 40, C.blue.bg, C.blue.bd);
-  body += tx(W / 2, 218, 'Delayed Recall (L = 60): Zero-bias GRU stalls at 25% chance; b_z = +5 reaches 100%', { fs: 10.5, fw: 700, fill: C.blue.tx });
+  body += tx(W / 2, 218, 'Delayed Recall (T = 50–200): zero-bias GRU stalls at chance (0.12); b_z = +5 reaches 100%', { fs: 10.5, fw: 700, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
@@ -357,7 +357,7 @@ function seqlmBackbone() {
   body += tx(W / 2, 18, 'Shared Pre-Norm Residual Language Model Backbone (SeqLM)', { fs: 13.5, fw: 700 });
 
   const stages = [
-    ['Byte Tokens', 'x_{1:T}', 'Embed d=128', C.slate, 14, 82],
+    ['Byte Tokens', 'x_{1:T}', 'Embed d=256', C.slate, 14, 82],
     ['Sub-layer 1', 'H ← H +', 'Mixer(LN(H))', C.blue, 108, 116],
     ['Sub-layer 2', 'H ← H +', 'MLP_4d(LN(H))', C.purple, 236, 118],
     ['Repeat ×4', '4 Residual', 'Blocks', C.green, 366, 76],
@@ -549,13 +549,13 @@ function bitBudgetBars() {
 
   body += rbox(16, 36, 508, 46, C.blue.bg, C.blue.bd);
   body += tx(W / 2, 53, 'Raw Hardware Bit Budget (d = 64 float32):   64 × 32 bits = 2,048 bits', { fs: 11, fw: 700, fill: C.blue.tx, mono: true });
-  body += tx(W / 2, 71, 'Even at 2 effective bits/dim (128 bits), d = 64 can hold T = 32 chars—yet fails at T = 24!', { fs: 10, fill: C.text });
+  body += tx(W / 2, 71, 'At just 1 bit per float (T = 16, 64 bits), d = 64 already loses a quarter of the letters', { fs: 10, fill: C.text });
 
   const rows = [
-    ['T = 8  (32 bits)', 'd=16: 0.72 | d=64: 0.99 chrF', C.green],
-    ['T = 16 (64 bits)', 'd=16: 0.45 | d=64: 0.91 chrF', C.blue],
-    ['T = 24 (96 bits)', 'd=16: 0.30 | d=64: 0.56 chrF', C.amber],
-    ['T = 32 (128 bits)', 'd=16: 0.24 | d=64: 0.38 chrF', C.coral],
+    ['T = 8  (32 bits)', 'd=64: 0.99 | d=256: 1.00 acc', C.green],
+    ['T = 16 (64 bits)', 'd=64: 0.73 | d=256: 0.99 acc', C.blue],
+    ['T = 32 (128 bits)', 'd=64: 0.41 | d=256: 0.80 acc', C.amber],
+    ['T = 64 (256 bits)', 'd=64: 0.26 | d=256: 0.51 acc', C.coral],
   ];
   rows.forEach(([lbl, val, col], i) => {
     const y = 96 + i * 36;
@@ -633,8 +633,8 @@ function scalarEmaImpulse() {
     ['s = t (lag 0)', 'w_0 = 1.00', 92, C.green],
     ['s = t−1 (lag 1)', 'w_1 = 0.85', 78, C.blue],
     ['s = t−2 (lag 2)', 'w_2 = 0.72', 66, C.blue],
-    ['s = t−5 (lag 5)', 'w_5 = 0.44', 44, C.purple],
-    ['s = t−10 (lag 10)', 'w_{10} = 0.20', 24, C.amber],
+    ['s = t−5 (lag 5)', 'w_5 = 0.44', 40, C.purple],
+    ['s = t−10 (lag 10)', 'w_{10} = 0.20', 18, C.amber],
   ];
   lags.forEach(([lbl, val, bh, col], i) => {
     const x = 22 + i * 102;
@@ -770,7 +770,7 @@ function complexityCrossover() {
   const cols = [
     ['Nonlinear GRU', 'Train FLOPs: 12 T d²', 'Seq Depth: O(T)', 'KV/State Mem: O(d)', 'Slowest training (serial)', C.coral],
     ['minGRU (Scan)', 'Train FLOPs: 4 T d²', 'Seq Depth: O(log T)', 'KV/State Mem: O(d)', 'Fast train + O(1) decode!', C.green],
-    ['Causal Attention', 'Train FLOPs: 8Td²+4T²d', 'Seq Depth: O(1)', 'KV Cache: O(T d)', 'Quadratic T² when T > 4d', C.amber],
+    ['Causal Attention', 'Train FLOPs: 8Td²+2T²d', 'Seq Depth: O(1)', 'KV Cache: O(T d)', 'Quadratic T² when T > 4d', C.amber],
   ];
   cols.forEach(([title, l1, l2, l3, tag, col], i) => {
     const x = 16 + i * 172;
@@ -784,7 +784,7 @@ function complexityCrossover() {
   });
 
   body += rbox(16, 196, 508, 42, C.blue.bg, C.blue.bd);
-  body += tx(W / 2, 217, 'Attention vs. minGRU FLOP Crossover: 4 T² d > 12 T d²  ⇔  T > 3d (or T > 4d total mixer FLOPs)', { fs: 10, fw: 700, fill: C.blue.tx });
+  body += tx(W / 2, 217, 'Attention Crossover: causal scores 2 T² d > projections 8 T d²  ⇔  T > 4d', { fs: 10, fw: 700, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
@@ -846,7 +846,7 @@ function continuousSsmBlock() {
 
   body += rbox(16, 152, 508, 80, C.slate.bg, C.slate.bd);
   body += tx(W / 2, 172, 'Why Diagonalize A = diag(λ_1, ..., λ_N) with Re(λ_n) < 0?', { fs: 11.5, fw: 700, fill: C.text });
-  body += tx(W / 2, 194, '• Dense A ∈ C^{N×N} costs O(N²)/token; diagonal A decouples into N independent O(N) scalar ODEs', { fs: 9.5, fill: C.text });
+  body += tx(W / 2, 194, '• Dense A ∈ C^{N×N} costs O(N²)/token; diagonal A decouples into N scalar ODEs, O(N)/token', { fs: 9.5, fill: C.text });
   body += tx(W / 2, 214, '• Re(λ_n) < 0 guarantees bounded energy; Im(λ_n) = ω_n adds oscillatory lag-selective filters', { fs: 9.5, fill: C.blue.tx });
   return svg(W, H, body);
 }
@@ -870,7 +870,7 @@ function diagonalOdeBank() {
     body += rbox(154, y, 224, 50, col.bg, col.bd);
     body += tx(266, y + 18, `${title}:  ${eq}`, { fs: 9.5, fw: 700, fill: col.tx, mono: true });
     body += tx(266, y + 36, tau, { fs: 9.5, fill: C.text });
-    body += arrow(380, y + 25, 422, 123 + (y - 100) / 4);   // spread the fan-in heads
+    body += arrow(380, y + 25, 422, 123 + (y - 100) * 0.37);   // spread the fan-in heads: 100/123/146
   });
 
   body += rbox(424, 78, 100, 90, C.amber.bg, C.amber.bd);
@@ -990,7 +990,7 @@ function realVsComplexBasis() {
 function recall2x2Grid() {
   const W = 540, H = 252;
   let body = '';
-  body += tx(W / 2, 18, '2×2 Ablation on Delayed Recall (Lag L = 60): Timescales vs. Architecture', { fs: 13.5, fw: 700 });
+  body += tx(W / 2, 18, '2×2 Ablation on Delayed Recall (T = 1,000): Timescales vs. Architecture', { fs: 13.5, fw: 700 });
 
   body += tx(206, 42, 'Short Initial Horizon (τ_{1/2} ≤ 7)', { fs: 10.5, fw: 700, fill: C.coral.tx });
   body += tx(420, 42, 'Long Log-Spaced Horizon (τ_{1/2} = 693)', { fs: 10.5, fw: 700, fill: C.green.tx });
@@ -1001,12 +1001,12 @@ function recall2x2Grid() {
 
   body += rbox(106, 54, 200, 78, C.coral.bg, C.coral.bd);
   body += tx(206, 76, 'minGRU (b_z = 0, τ_{1/2} = 1)', { fs: 10, fw: 700, fill: C.coral.tx });
-  body += tx(206, 98, '0.5⁶⁰ ≈ 10⁻¹⁸ underflow', { fs: 9.5, fill: C.text, mono: true });
-  body += tx(206, 118, 'Stalls at 25% random chance', { fs: 9.5, fw: 700, fill: C.coral.tx });
+  body += tx(206, 98, '0.5⁹⁹⁹ ≈ 10⁻³⁰¹ underflow', { fs: 9.5, fill: C.text, mono: true });
+  body += tx(206, 118, 'Stalls at chance (0.12)', { fs: 9.5, fw: 700, fill: C.coral.tx });
 
   body += rbox(316, 54, 208, 78, C.green.bg, C.green.bd);
   body += tx(420, 76, 'minGRU (log-spaced b_z)', { fs: 10, fw: 700, fill: C.green.tx });
-  body += tx(420, 98, 'τ_{1/2} ∈ [0.7, 693] across d dims', { fs: 9.5, fill: C.text, mono: true });
+  body += tx(420, 98, 'τ_{1/2} ∈ [7, 693] across d dims', { fs: 9.5, fill: C.text, mono: true });
   body += tx(420, 118, 'Converges to 100% accuracy!', { fs: 9.5, fw: 700, fill: C.green.tx });
 
   body += rbox(16, 144, 80, 78, C.slate.bg, C.slate.bd);
@@ -1015,13 +1015,13 @@ function recall2x2Grid() {
 
   body += rbox(106, 144, 200, 78, C.coral.bg, C.coral.bd);
   body += tx(206, 166, 'S4D (Δ ≥ 0.1, τ_{1/2} ≤ 7)', { fs: 10, fw: 700, fill: C.coral.tx });
-  body += tx(206, 188, 'Slowest mode: e⁻⁶ ≈ 0.002', { fs: 9.5, fill: C.text, mono: true });
-  body += tx(206, 208, 'Fails to bridge 60-step gap', { fs: 9.5, fw: 700, fill: C.coral.tx });
+  body += tx(206, 188, 'Slowest mode: e⁻¹⁰⁰ ≈ 10⁻⁴⁴', { fs: 9.5, fill: C.text, mono: true });
+  body += tx(206, 208, 'Fails to bridge 1,000-step gap', { fs: 9.5, fw: 700, fill: C.coral.tx });
 
   body += rbox(316, 144, 208, 78, C.blue.bg, C.blue.bd);
   body += tx(420, 166, 'S4D (Δ ∈ [0.001, 0.1])', { fs: 10, fw: 700, fill: C.blue.tx });
   body += tx(420, 188, 'N=16 modes per channel', { fs: 9.5, fill: C.text, mono: true });
-  body += tx(420, 208, 'Fastest convergence to 100%!', { fs: 9.5, fw: 700, fill: C.blue.tx });
+  body += tx(420, 208, 'Converges to 100%!', { fs: 9.5, fw: 700, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
@@ -1128,13 +1128,13 @@ function scan4dMemory() {
   body += rbox(278, 38, 246, 152, C.coral.bg, C.coral.bd);
   body += tx(401, 58, '4D Mamba Naive Scan: (B, T, H, N)', { fs: 11, fw: 700, fill: C.coral.tx });
   body += tx(401, 82, 'H = 2d, N = 16  ⇒  32× larger tensor!', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
-  body += tx(401, 106, '10 rounds × 2 tensors (a, b) = 20 copies', { fs: 10, fill: C.text });
+  body += tx(401, 106, '11 rounds × 2 tensors (a, b) = 22 copies', { fs: 10, fill: C.text });
   body += tx(401, 130, 'B=16, T=2048, H=4096, N=16:', { fs: 9.5, fill: C.muted, mono: true });
   body += rbox(294, 148, 214, 26, '#FFFFFF', C.coral.bd, 4, 1.1);
-  body += tx(401, 161, '8.6 GB/round ⇒ >300 GB for 24 layers!', { fs: 9.5, fw: 700, fill: C.coral.tx });
+  body += tx(401, 161, '8.6 GB/tensor ⇒ ≈190 GB per layer!', { fs: 9.5, fw: 700, fill: C.coral.tx });
 
   body += rbox(16, 202, 508, 38, C.green.bg, C.green.bd);
-  body += tx(W / 2, 221, 'Fix: Custom Adjoint Reverse Scan saves only (a, h) = 2 tensors (10× less HBM!)', { fs: 10.5, fw: 700, fill: C.green.tx });
+  body += tx(W / 2, 221, 'Fix: Custom Adjoint Reverse Scan saves only (a, h) = 2 tensors (≈10× less HBM!)', { fs: 10.5, fw: 700, fill: C.green.tx });
   return svg(W, H, body);
 }
 
@@ -1300,10 +1300,10 @@ function correlatedKeyCone() {
   body += tx(401, 58, 'Correlated Key Cone (ρ > 0)', { fs: 11.5, fw: 700, fill: C.coral.tx });
   body += tx(401, 80, 'k_i = ρ c + √(1 − ρ²) ξ_i  (mean c)', { fs: 9.5, fill: C.text, mono: true });
   body += rbox(294, 96, 214, 52, '#FFFFFF', C.coral.bd, 5, 1.1);
-  body += tx(401, 114, 'MSE = (n−1)ρ⁴ + (n−1)(1−ρ⁴)/d_k', { fs: 9.5, fw: 700, fill: C.coral.tx, mono: true });
+  body += tx(401, 114, 'MSE ≈ (n−1)(ρ⁴ + (1−ρ²)²/d_k)', { fs: 9.5, fw: 700, fill: C.coral.tx, mono: true });
   body += tx(401, 134, 'Floor (n − 1) ρ⁴ NEVER vanishes!', { fs: 9.5, fw: 700, fill: C.coral.tx });
   body += tx(401, 170, '• Unnormalized embeddings cluster on c', { fs: 10, fill: C.text });
-  body += tx(401, 192, '• Must apply LayerNorm/L2-norm + a_t', { fs: 10, fw: 700, fill: C.coral.tx });
+  body += tx(401, 192, '• Center keys before L2-normalizing', { fs: 10, fw: 700, fill: C.coral.tx });
   return svg(W, H, body);
 }
 
@@ -1532,7 +1532,7 @@ function twoBlockEmulation() {
   body += rbox(30, 132, 218, 48, '#FFFFFF', C.amber.bd, 5, 1.1);
   body += tx(139, 150, 'Block 2 writes residual v_t − v̂_t', { fs: 9.5, fw: 700, fill: C.amber.tx, mono: true });
   body += tx(139, 166, 'Spends 2 layers for 1 delta step!', { fs: 9, fill: C.coral.tx });
-  body += tx(139, 206, '1-Block GLA on Rebinding: 59% acc', { fs: 10, fw: 700, fill: C.coral.tx });
+  body += tx(139, 206, '1-Block GLA, rebound keys: ≈88%', { fs: 10, fw: 700, fill: C.coral.tx });
 
   body += rbox(278, 38, 246, 198, C.green.bg, C.green.bd);
   body += tx(401, 58, '1-Block GatedDeltaNet', { fs: 11, fw: 700, fill: C.green.tx });
@@ -1541,7 +1541,7 @@ function twoBlockEmulation() {
   body += tx(401, 120, 'INSIDE every recurrent step t:', { fs: 9.5, fill: C.text });
   body += tx(401, 144, 'S_t = a_t S(I − β_t k kᵀ) + β_t v kᵀ', { fs: 9.5, fw: 700, fill: C.text, mono: true });
   body += tx(401, 166, 'Frees deeper layers for reasoning!', { fs: 9, fill: C.muted });
-  body += tx(401, 206, '1-Block GatedDeltaNet: 100% acc!', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(401, 206, '1-Block GatedDeltaNet: 98–99%', { fs: 10, fw: 700, fill: C.green.tx });
   return svg(W, H, body);
 }
 
@@ -1694,7 +1694,7 @@ function welchDk4VsDk16() {
   body += tx(139, 140, 'Floor is 95.2% of random overlap!', { fs: 10, fw: 700, fill: C.coral.tx });
   body += tx(139, 158, 'Max overlap ≥ √0.2381 = 0.488', { fs: 9.5, fill: C.text, mono: true });
   body += tx(139, 196, '• Backprop has <5% room to reduce MSE', { fs: 9.5, fill: C.text });
-  body += tx(139, 216, '• GG (d_k=4) plateaus at 51% recall', { fs: 10, fw: 700, fill: C.coral.tx });
+  body += tx(139, 216, '• GG (d_k=4) plateaus at ≈50% recall', { fs: 10, fw: 700, fill: C.coral.tx });
 
   body += rbox(278, 38, 246, 198, C.green.bg, C.green.bd);
   body += tx(401, 58, 'Expanded Key Space: d_k = 16, m = 64', { fs: 11, fw: 700, fill: C.green.tx });
@@ -1704,7 +1704,7 @@ function welchDk4VsDk16() {
   body += tx(401, 140, '5.0× lower mean squared overlap!', { fs: 10, fw: 700, fill: C.green.tx });
   body += tx(401, 158, 'Max overlap floor drops to 0.218', { fs: 9.5, fill: C.text, mono: true });
   body += tx(401, 196, '• Same d=32 model width (H=2, d_k=16)', { fs: 9.5, fill: C.text });
-  body += tx(401, 216, '• GG 4x state reaches 100% at m = 64!', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(401, 216, '• GG 4x state reaches ≈95% at m = 64!', { fs: 10, fw: 700, fill: C.green.tx });
   return svg(W, H, body);
 }
 
@@ -1714,9 +1714,9 @@ function fourRecallLayouts() {
   body += tx(W / 2, 18, 'Four 2-Block Architectures on Associative Recall (d = 32)', { fs: 13.5, fw: 700 });
 
   const archs = [
-    ['1. GG (Small)', 'DeltaNet → DeltaNet', 'H=8, d_k=4', '128 floats/layer', 'm=64 acc: 51%', C.coral],
-    ['2. GG (4x State)', 'DeltaNet → DeltaNet', 'H=2, d_k=16', '512 floats/layer', 'm=64 acc: 100%', C.blue],
-    ['3. AA (Full Attn)', 'Attn → Attn (+RoPE)', 'H=4, d_k=8', '2 full KV caches', 'm=64 acc: 100%', C.purple],
+    ['1. GG (Small)', 'DeltaNet → DeltaNet', 'H=8, d_k=4', '128 floats/layer', 'm=64 acc: ≈50%', C.coral],
+    ['2. GG (4x State)', 'DeltaNet → DeltaNet', 'H=2, d_k=16', '512 floats/layer', 'm=64 acc: ≈95%', C.blue],
+    ['3. AA (Full Attn)', 'Attn → Attn (+RoPE)', 'H=2, d_k=16', '2 full KV caches', 'm=64 acc: 100%', C.purple],
     ['4. GA (Hybrid)', 'DeltaNet → Attention', '1 state + 1 KV', '50% KV cache!', 'm=64 acc: 100%', C.green],
   ];
   archs.forEach(([title, l1, l2, l3, res, col], i) => {
@@ -1748,7 +1748,7 @@ function conv4KeyValueBinding() {
   body += tx(139, 158, 'k_t = W_k x_t,   v_t = W_v x_t', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(139, 182, '• k_t depends ONLY on value token v_i!', { fs: 9.5, fill: C.coral.tx });
   body += tx(139, 202, '• Never binds v_i to preceding key k_i', { fs: 9.5, fill: C.text });
-  body += tx(139, 222, '• GG (4x) & GA drop to 25% chance!', { fs: 10, fw: 700, fill: C.coral.tx });
+  body += tx(139, 222, '• GG recall falls to 0.36–0.92', { fs: 10, fw: 700, fill: C.coral.tx });
 
   body += rbox(278, 94, 246, 144, C.green.bg, C.green.bd);
   body += tx(401, 114, 'With Width-4 Causal Conv (Default)', { fs: 11, fw: 700, fill: C.green.tx });
@@ -1756,7 +1756,7 @@ function conv4KeyValueBinding() {
   body += tx(401, 158, 'k_t = f_k(x_{t-1}),  v_t = f_v(x_t)', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(401, 182, '• Step t writes v_i k_iᵀ into S_t!', { fs: 9.5, fill: C.green.tx });
   body += tx(401, 202, '• Acts as an implicit induction head', { fs: 9.5, fill: C.text });
-  body += tx(401, 222, '• GG (4x) & GA jump from 25% → 100%!', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(401, 222, '• GG recall is 0.48–0.99 (+6 to 38 pts)', { fs: 10, fw: 700, fill: C.green.tx });
   return svg(W, H, body);
 }
 
@@ -1766,23 +1766,23 @@ function perplexityVsRetrieval() {
   body += tx(W / 2, 18, 'Pitfall: Short-Window Perplexity Hides Long-Context Retrieval Deficits', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 38, 246, 150, C.blue.bg, C.blue.bd);
-  body += tx(139, 58, 'WikiText-103 (T = 128 Bytes)', { fs: 11, fw: 700, fill: C.blue.tx });
+  body += tx(139, 58, 'WikiText-103 (T = 128), nats/byte', { fs: 11, fw: 700, fill: C.blue.tx });
   body += tx(139, 80, 'Dominated by local n-gram statistics', { fs: 9.5, fill: C.muted });
-  body += tx(139, 106, 'GGGG (4× DeltaNet):  1.326 nats/byte', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
-  body += tx(139, 128, 'GGGA (3:1 Hybrid):   1.335 nats/byte', { fs: 10, fw: 700, fill: C.blue.tx, mono: true });
-  body += tx(139, 150, 'AAAA (4× Attention): 1.383 nats/byte', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
+  body += tx(139, 106, 'GGGG (4× DeltaNet):  1.32–1.33', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
+  body += tx(139, 128, 'GGGA (3:1 Hybrid):   1.33–1.34', { fs: 10, fw: 700, fill: C.blue.tx, mono: true });
+  body += tx(139, 150, 'AAAA (4× Attention): 1.38     ', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
   body += tx(139, 172, 'Conv4 + decay give GGGG strong local bias', { fs: 9, fill: C.muted });
 
   body += rbox(278, 38, 246, 150, C.amber.bg, C.amber.bd);
-  body += tx(401, 58, 'Associative Recall (m = 64 Pairs)', { fs: 11, fw: 700, fill: C.amber.tx });
+  body += tx(401, 58, '2-Block Recall (m = 64 Pairs)', { fs: 11, fw: 700, fill: C.amber.tx });
   body += tx(401, 80, 'Requires exact long-range key lookup', { fs: 9.5, fill: C.muted });
-  body += tx(401, 106, 'GGGG (d_k=4):  49% acc (Welch limit!)', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
-  body += tx(401, 128, 'GGGA (3:1):   100% acc (75% less KV!)', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
-  body += tx(401, 150, 'AAAA (4×):    100% acc (100% KV cost)', { fs: 10, fw: 700, fill: C.blue.tx, mono: true });
+  body += tx(401, 106, 'GG (d_k=4):  ≈50% acc (Welch limit!)', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
+  body += tx(401, 128, 'GA (1:1):    100% acc (50% less KV!)', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
+  body += tx(401, 150, 'AA (2×):     100% acc (100% KV cost)', { fs: 10, fw: 700, fill: C.blue.tx, mono: true });
   body += tx(401, 172, '1 sparse attention layer removes ceiling', { fs: 9, fill: C.muted });
 
   body += rbox(16, 200, 508, 38, C.green.bg, C.green.bd);
-  body += tx(W / 2, 219, 'Pair perplexity with synthetic retrieval probes: GGGA wins on both fluency and recall!', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(W / 2, 219, 'Pair perplexity with synthetic retrieval probes: hybrids keep both fluency and recall!', { fs: 10, fw: 700, fill: C.green.tx });
   return svg(W, H, body);
 }
 

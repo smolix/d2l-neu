@@ -85,7 +85,7 @@ def fig_gpt_stack() -> None:
                                        Span("E", "b")],
                              accent=EMBED, min_w=SPINE_W)
     f.line(SX, ey, SX, p_bot + 30, stroke=STREAM.base, sw=T.SW_HEAVY)
-    f.text(SX + 14, 436, "learned positions are added here",
+    f.text(SX + 14, 436, "GPT-2 instead adds learned positions here",
            size=T.FS_SMALL, color=T.INK, anchor="start")
     f.text(SX, 532, [Span("token ids "), Span("x", "i"), sub("1"),
                      Span(", …, "), Span("x", "i"), sub("T")],

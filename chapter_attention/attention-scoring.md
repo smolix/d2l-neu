@@ -1054,7 +1054,7 @@ Comparing the mean maximum weight $\max_i \alpha_i$ and the mean Frobenius norm 
 @!attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2
 
 ::: {.d2l-note}
-Why does the unscaled Jacobian norm rise from $d = 4$ ($0.292$) to $d = 16$ ($0.338$) before falling? $\|\mathbf{J}\|_F$ is maximized when weight splits evenly between $k = 2$ competing keys ($1/\sqrt{2} \approx 0.707$), which occurs transiently as weights transition from uniform ($m = 64$) toward one-hot ($k = 1$).
+Why does the unscaled Jacobian norm rise from $d = 4$ ($0.292$) to $d = 16$ ($0.338$) before falling? $\|\mathbf{J}\|_F$ is maximized when weight splits evenly between $k = 2$ competing keys ($\|\mathbf{J}\|_F = 1/2$), which occurs transiently as weights transition from uniform ($m = 64$) toward one-hot ($k = 1$).
 :::
 :::
 
@@ -1118,18 +1118,29 @@ Dense GPU matrix multiplication evaluates all $n \times m$ query–key pairs at 
 :::
 :::
 
-::: {.slide title="Visualizing Composite and Packed-Document Masks"}
+::: {.slide title="Visualizing a Composite Padding-and-Causal Mask"}
 [Mask Heatmaps]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Padding `&` Causal (Top):** On uniform zero scores, row $i$ averages over $\min(i+1, \ell_{\textrm{valid}})$ keys, truncating the second sequence at key $3$.
-- **Document Packing (Bottom):** Concatenating short documents `doc = [0,0,0, 1,1, 2]` into one row and computing `(doc[:, None] == doc[None, :]) & causal_mask(6)` forms a block-diagonal causal mask with zero cross-document leakage.
+- **Padding `&` Causal:** On uniform zero scores, row $i$ averages over $\min(i+1, \ell_{\textrm{valid}})$ keys, truncating the second sequence at key $3$.
 :::
 
 ::: {.col .fig}
 @!attention-scoring-composing-masks
+:::
+:::
+:::
 
+::: {.slide title="Visualizing a Packed-Document Mask"}
+[Mask Heatmaps]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Document Packing:** Concatenating short documents `doc = [0,0,0, 1,1, 2]` into one row and computing `(doc[:, None] == doc[None, :]) & causal_mask(6)` forms a block-diagonal causal mask with zero cross-document leakage.
+:::
+
+::: {.col .fig}
 @!attention-scoring-composing-masks-1
 :::
 :::

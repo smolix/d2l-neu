@@ -1240,22 +1240,22 @@ After training $3$ seeds of each scheme for $3{,}000$ AdamW steps at context $n 
 
 Because causal masking ensures positions $0 \ldots 127$ compute identical logits regardless of total window length, every perplexity increase at $n \in \{256, 512\}$ comes from positions $\ge 128$:
 
-- **RoPE Wins In-Range ($7.3$ at $n = 128$) but Degrades at $512$ ($27.7$):** Pure offset rotations give the strongest inductive bias within the trained window, but at offsets $> 127$ low-frequency pairs rotate into angular sectors never seen during training.
-- **Learned ($9.3 \to 22.9$) & Sinusoidal ($9.6 \to 15.6$):** Learned embeddings hit random untrained rows $128 \ldots 511$; sinusoidal slow columns take novel combinations that conflict with content–position cross terms.
+- **RoPE Wins In-Range ($7.3$ at $n = 128$) but Degrades at $512$ ($\approx 27$):** Pure offset rotations give the strongest inductive bias within the trained window, but at offsets $> 127$ low-frequency pairs rotate into angular sectors never seen during training.
+- **Learned ($9.6 \to 20$–$25$) & Sinusoidal ($\approx 9.7 \to \approx 15.5$):** Learned embeddings hit random untrained rows $128 \ldots 511$; sinusoidal slow columns take novel combinations that conflict with content–position cross terms.
 - **NoPE Stalls at the Byte-Bigram Baseline ($11.6$):** Without an explicit position code, a two-block attention-only model predicts almost entirely from the current byte in the residual stream.
 :::
 
 ::: {.slide title="Pitfall: Does Flat Perplexity Mean Long-Range Use?"}
 [Probing ALiBi Beyond the Window]{.kicker}
 
-ALiBi's perplexity stays completely flat at $9.7$ from $n = 128$ to $n = 512$. Does ALiBi actually extract useful information from bytes $\ge 128$ positions back, or does it simply ignore them?
+ALiBi's perplexity stays completely flat at $\approx 9.9$ from $n = 128$ to $n = 512$. Does ALiBi actually extract useful information from bytes $\ge 128$ positions back, or does it simply ignore them?
 
 @!positional-information-alibi-weight-beyond-the-window
 
 @!positional-information-alibi-without-far-keys
 
 ::: {.d2l-note .warn}
-**Diagnostic Lesson:** Hard-masking out all keys at distance $\ge 128$ (`WindowedALiBi`) leaves ALiBi's perplexity at $512$ unchanged ($9.7$)! Steep heads ($1, 2$) assign $0.000$ weight beyond $128$, while gentle heads ($3, 4$) compute a broad recency average. A flat extrapolation curve proves that a scheme *avoids breaking* on distant keys, not that it *retrieves* from them.
+**Diagnostic Lesson:** Hard-masking out all keys at distance $\ge 128$ (`WindowedALiBi`) leaves ALiBi's perplexity at $512$ unchanged ($9.9$)! Steep heads ($1, 2$) assign $0.000$ weight beyond $128$, while gentle heads ($3, 4$) compute a broad recency average. A flat extrapolation curve proves that a scheme *avoids breaking* on distant keys, not that it *retrieves* from them.
 :::
 :::
 
@@ -1278,7 +1278,7 @@ ALiBi's perplexity stays completely flat at $9.7$ from $n = 128$ to $n = 512$. D
 ::: {.slide title="Zero-Shot Context Extension by Scaling Slow Pairs"}
 [Selective Interpolation]{.kicker}
 
-Leaving the $6$ fast pairs untouched (`scale = 1.0`) and multiplying *only* the $10$ slow pairs by $128/512 = 0.25$ repairs length-$512$ perplexity from $27.7$ down to $9.0$ **without updating a single model weight**:
+Leaving the $6$ fast pairs untouched (`scale = 1.0`) and multiplying *only* the $10$ slow pairs by $128/512 = 0.25$ repairs length-$512$ perplexity from $\approx 27$ down to $\approx 9$ **without updating a single model weight**:
 
 @!positional-information-extending-a-trained-model-s-context
 
@@ -1320,10 +1320,10 @@ Test your grasp of positional encodings and context extension:
 [Key Takeaways]{.kicker}
 
 | Scheme | Injection Rule | Relative-Offset Invariant? | In-Range PPL ($128$) | Extrap PPL ($512$) | Primary Strength & Limitation |
-| :--- | :--- | :---: | :---: | :---: | :--- |
-| **NoPE** | Causal mask $j \le i$ only | N/A | $11.6$ | $11.6$ | Zero overhead, but weak position resolution in shallow models |
-| **Learned** | $\mathbf{x}_i + \mathbf{p}_i$ (trainable table) | No | $9.3$ | $22.9$ | Simple, flexible in-range; rows $\ge L_{\textrm{train}}$ receive zero gradient |
-| **Sinusoidal** | $\mathbf{x}_i + \mathbf{p}_i/\sqrt{d}$ (fixed sines) | No (cross terms) | $9.6$ | $15.6$ | Parameter-free counter; additive cross terms break under shifts |
-| **ALiBi** | $s_{ij} - m_h(i - j)$ | Yes | $9.7$ | **$9.7$** | Flat extrapolation via recency bias; attenuates distant keys |
-| **RoPE** | $(\mathbf{R}_i\mathbf{q}_i)^\top(\mathbf{R}_j\mathbf{k}_j) = \mathbf{q}_i^\top\mathbf{R}_{j-i}\mathbf{k}_j$ | **Yes (exact)** | **$7.3$** | $27.7 \to \mathbf{9.0}^*$ | Best in-range quality; $*$slow-pair / YaRN scaling repairs long contexts |
+| :----- | :---------------- | :-------: | :-------: | :--------: | :--------------------- |
+| **NoPE** | Causal mask $j \le i$ only | N/A | $\approx 11.7$ | $\approx 11.8$ | Zero overhead, but weak position resolution in shallow models |
+| **Learned** | $\mathbf{x}_i + \mathbf{p}_i$ (trainable table) | No | $9.6$ | $20$–$25$ | Simple, flexible in-range; rows $\ge L_{\textrm{train}}$ receive zero gradient |
+| **Sinusoidal** | $\mathbf{x}_i + \mathbf{p}_i/\sqrt{d}$ (fixed sines) | No (cross terms) | $\approx 9.7$ | $\approx 15.5$ | Parameter-free counter; additive cross terms break under shifts |
+| **ALiBi** | $s_{ij} - m_h(i - j)$ | Yes | $\approx 10$ | **$9.9$** | Flat extrapolation via recency bias; attenuates distant keys |
+| **RoPE** | $(\mathbf{R}_i\mathbf{q}_i)^\top(\mathbf{R}_j\mathbf{k}_j) = \mathbf{q}_i^\top\mathbf{R}_{j-i}\mathbf{k}_j$ | **Yes (exact)** | **$7.3$** | $\approx 27 \to \mathbf{\approx 9}^*$ | Best in-range quality; $*$slow-pair / YaRN scaling repairs long contexts |
 :::

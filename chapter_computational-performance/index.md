@@ -102,18 +102,34 @@ $$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes
 :::
 :::
 
-::: {.slide title="Five Hardware Constants Characterize Our Benchmark Host"}
+::: {.slide title="Five Hardware Constants Characterize Our Benchmark Host" only="pytorch"}
 [Reference Machine]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Compute & Bandwidth ($P, \beta, I^*$):** Four $24\text{ GiB}$ RTX 4090s deliver $P = 165.2\text{ TFLOP/s}$ (`bf16`) and $\beta = 1.01\text{ TB/s}$ DRAM bandwidth ($I^* \approx 164\text{ FLOP/B}$).
-- **Host Launch ($h$):** Single-op dispatch costs $\sim 13\,\mu\text{s}$ in PyTorch and $50\text{--}100\,\mu\text{s}$ in un-jitted JAX.
+- **Host Launch ($h$):** Single-op dispatch costs $\sim 13\,\mu\text{s}$.
 - **Inter-GPU Link ($\beta_{\textrm{link}}$):** Host-staged PCIe 4.0 allreduces run at $\sim 2.4\text{ GB/s}$ bus bandwidth ($0.42\text{ ns/B}$).
 :::
 
 ::: {.col .fig .big}
-@fig:ch13-perf-host-constants
+@fig:ch13-perf-host-constants@pytorch
+:::
+:::
+:::
+
+::: {.slide title="Five Hardware Constants Characterize Our Benchmark Host" only="jax"}
+[Reference Machine]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Compute & Bandwidth ($P, \beta, I^*$):** Four $24\text{ GiB}$ RTX 4090s deliver $P = 165.2\text{ TFLOP/s}$ (`bf16`) and $\beta = 1.01\text{ TB/s}$ DRAM bandwidth ($I^* \approx 164\text{ FLOP/B}$).
+- **Host Launch ($h$):** Un-jitted single-op dispatch costs $50\text{--}100\,\mu\text{s}$.
+- **Inter-GPU Link ($\beta_{\textrm{link}}$):** Host-staged PCIe 4.0 allreduces run at $\sim 2.4\text{ GB/s}$ bus bandwidth ($0.42\text{ ns/B}$).
+:::
+
+::: {.col .fig .big}
+@fig:ch13-perf-host-constants@jax
 :::
 :::
 :::

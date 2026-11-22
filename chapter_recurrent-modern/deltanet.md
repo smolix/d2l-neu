@@ -749,17 +749,7 @@ $$\mathbf{S}_m = \mathbf{S}_0\,\underbrace{(\gamma_m \mathbf{I} - \mathbf{Z}^\to
 
 Because `GatedLinearAttention` (§12.6) isolated its state recurrence inside `memory(X, Q, K, V, log_a)`, `GatedDeltaNet` adds just one linear projection `W_beta` ($d \to h$) and overrides `memory`:
 
-```python
-class GatedDeltaNet(d2l.GatedLinearAttention):
-    def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
-                 timescales=(4, 256)):
-        super().__init__(num_hiddens, num_heads, chunk_size, conv_width, timescales)
-        self.W_beta = d2l.init_lecun(nn.Linear(num_hiddens, num_heads))
-
-    def memory(self, X, Q, K, V, log_a):
-        beta = d2l.heads_to_batch(torch.sigmoid(self.W_beta(X)), self.num_heads).squeeze(-1)
-        return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
-```
+@-deltanet-the-layer
 
 ::: {.d2l-note}
 Every other component—width-4 causal convolution, $\ell_2$-normalized queries and keys, log-uniform head decay initialization, per-head RMSNorm, and SiLU output gating—is inherited unchanged.
@@ -774,7 +764,7 @@ We compare a 1-block `GatedLinearAttention` model against a 1-block `GatedDeltaN
 @!deltanet-rebinding-2
 
 - **Why `gap=2` isolates the delta rule:** When a key is overwritten just $2$ pairs after it was first bound, both bindings have nearly the same age—so global decay $a_t$ cannot fade the old value without also erasing keys written once prior to that step.
-- **Reliable overwriting:** Adding the $260$-parameter `W_beta` projection lifts rebound-key accuracy to **$0.96$–$0.97$** across runs, outperforming `GatedLinearAttention` ($0.83$–$0.92$) while matching single-write accuracy ($0.97$–$0.98$).
+- **Reliable overwriting:** Adding the $260$-parameter `W_beta` projection lifts rebound-key accuracy to **$0.98$–$0.99$** across runs, outperforming `GatedLinearAttention` ($0.88$–$0.89$) while matching single-write accuracy ($0.99$–$1.00$).
 :::
 
 ::: {.slide title="Why We Tested 1 Block: Depth Approximates a Delta Step"}

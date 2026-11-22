@@ -775,7 +775,7 @@ To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct
 
 ::: {.cols .vc}
 ::: {.col}
-- **Controlled sweep & loop (`lr_sweep`, `train_steps`):** Clones shared seed-0 initial weights across a log-spaced $\eta$ grid and runs $T = 2{,}000$ minibatches in PyTorch or JAX.
+- **Controlled sweep & loop (`lr_sweep`, `train_steps`):** Clones shared seed-0 initial weights across a log-spaced $\eta$ grid and runs $T = 2{,}000$ minibatches.
 - **Smoothed trajectory metrics (`final_loss`, `steps_to_reach`):** Averages the last $k = 100$ step losses and finds the first $25$-step block reaching a target threshold.
 - **Held-out evaluation (`lm_perplexity`, `evaluate_accuracy`):** Scores $1.1\text{M}$ validation bytes or $10{,}000$ test images in eval mode.
 :::
@@ -809,7 +809,7 @@ To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct
 ::: {.cols .vc}
 ::: {.col}
 - Sweeping plain minibatch SGD (no momentum, no weight decay, $2{,}000$ steps) across $\eta \in \{0.1, 0.5, 2.5\}$ from identical initial weights reveals three distinct trajectories:
-  - **$\eta = 0.1$ (blue):** Smooth, monotonic descent that finishes at **$2.47$ nats**—barely reaching the bigram table landmark ($2.5$).
+  - **$\eta = 0.1$ (blue):** Smooth, monotonic descent that finishes at **$2.48$ nats**—barely reaching the bigram table landmark ($2.5$).
   - **$\eta = 0.5$ (orange):** Spikes upward by $>1$ nat in the first $30$ steps, then recovers and reaches **$2.13$ nats**.
   - **$\eta = 2.5$ (green):** Drops on step 1, explodes above $6$ nats on step 2, and diverges to **`inf`** within $10$ steps.
 :::

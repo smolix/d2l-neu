@@ -547,7 +547,7 @@ Hardware Anatomy: CPUs, GPUs, Tensor Cores, and Memory Hierarchy<br>**memory hie
 :::
 
 ::: {.col}
-- **The wire law:** $\textrm{Bandwidth} = (\textrm{number of data wires}) \times (\textrm{bit rate per wire})$.
+- **The wire law:** $\text{BW} = N_{\text{wires}} \times r_{\text{wire}}$ (number of data wires times bit rate per wire).
 - **RTX 4090 GDDR6X vs. PCIe 4.0 $\times 16$:** Memory uses $384\text{ wires} \times 21\text{ Gb/s} \approx 1.0\text{ TB/s}$; PCIe uses $16\text{ lanes} \times 16\text{ Gb/s} = 32\text{ GB/s}$ per direction—similar per-wire speed, but **$24\times$ fewer wires**.
 - **Distance sets wire count:** Every step away from the silicon die (HBM interposer $\to$ PCB traces $\to$ PCIe slot/cables) cuts wire density and bandwidth by roughly $10\times$.
 :::

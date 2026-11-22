@@ -114,7 +114,7 @@ function threeFloors() {
   return svg(W, H, o);
 }
 
-function hostConstants() {
+function hostConstants(fw) {
   const W = 560, H = 284;
   let o = header(W, 'Benchmark Workstation: Five Calibrated Hardware Constants');
   o += card(20, 36, 250, 74, C.lblue, C.blue, 'Peak Compute P (Tensor Cores)', [
@@ -127,7 +127,7 @@ function hostConstants() {
     { t: '164 FLOP/B (bf16) · 82 (tf32)', mono: true, fill: D.green.dark, fw: 700 },
   ], D.green.dark);
   o += card(290, 122, 250, 74, D.red.tint, D.red.base, 'Host Launch Latency h', [
-    { t: '~13 µs (PyTorch) · 50–100 µs (JAX)', mono: true, fill: D.red.dark, fw: 700 },
+    { t: fw === 'jax' ? '50–100 µs per un-jitted op' : '~13 µs per op', mono: true, fill: D.red.dark, fw: 700 },
   ], D.red.dark);
   o += card(20, 208, 520, 64, D.purple.tint, C.purple, 'Inter-GPU Collective Time β_link (4× RTX 4090 via Host PCIe 4.0)', [
     { t: '0.42 ns/byte (≈ 2.4 GB/s allreduce bus BW, no NVLink/P2P)', mono: true, fill: D.purple.dark, fw: 700 },
@@ -254,20 +254,21 @@ function gptIntensityLadder() {
   return svg(W, H, o);
 }
 
-function overheadKnee() {
+function overheadKnee(fw) {
+  const jax = fw === 'jax';
   const W = 560, H = 278;
   let o = header(W, 'The Overhead-to-Compute Crossover Knee n* = (hP / 2)^(1/3)');
   o += card(20, 40, 250, 146, D.red.tint, D.red.base, 'Small Matmuls (n < n*)', [
     { t: '2n³ / P  <  h', mono: true, fs: 14, fw: 700, fill: D.red.dark },
     'Time per call stays flat at ~h',
     'Apparent TFLOP/s scales as n³',
-    'PyTorch knee: n* ≈ 1,000 (h=13µs)',
+    jax ? 'Single-op dispatch: h ≈ 70 µs' : 'Per-op dispatch: h ≈ 13 µs',
   ], D.red.dark);
   o += card(290, 40, 250, 146, C.lgreen, C.green, 'Large Matmuls (n > n*)', [
     { t: '2n³ / P  >  h', mono: true, fs: 14, fw: 700, fill: D.green.dark },
     'Device execution outlasts launch',
     'Time grows as 2n³/P at roof P',
-    'Single-op JAX: n* ≈ 1,800 (h=70µs)',
+    jax ? 'Knee: n* ≈ 1,800' : 'Knee: n* ≈ 1,000',
   ], D.green.dark);
   o += footerBox(20, 200, 520, 66, C.lblue, C.blue, [
     { t: 'Faster GPUs Require Wider Matrices:  n* ∝ P^(1/3)', fill: D.blue.dark, fw: 700 },
@@ -302,32 +303,33 @@ function eagerPenalties() {
   return svg(W, H, o);
 }
 
-function branchStrategies() {
+function branchStrategies(fw) {
+  const jax = fw === 'jax';
   const W = 560, H = 282;
   let o = header(W, 'How Graph Tracers Handle Data-Dependent Branches (if x.sum() > 0)');
   o += card(16, 40, 170, 166, D.red.tint, D.red.base, '1. Freeze Path', [
-    { t: 'torch.jit.trace', mono: true, fill: D.red.dark, fw: 700 },
+    { t: jax ? 'trace one example' : 'torch.jit.trace', mono: true, fill: D.red.dark, fw: 700 },
     'Records only branch',
     'taken by 1st input',
     { t: 'SILENT BUG on', fill: D.red.dark, fw: 700 },
     { t: 'new data!', fill: D.red.dark, fw: 700 },
   ], D.red.dark);
   o += card(195, 40, 170, 166, C.lgreen, C.green, '2. Refuse & Primitives', [
-    { t: 'jax.jit / fullgraph', mono: true, fill: D.green.dark, fw: 700 },
+    { t: jax ? 'jax.jit' : 'fullgraph=True', mono: true, fill: D.green.dark, fw: 700 },
     'Raises trace error;',
     'rewrite with:',
-    { t: 'where / lax.select', mono: true, fill: D.green.dark },
-    { t: 'or cond (1 graph!)', mono: true, fill: D.green.dark },
+    { t: jax ? 'lax.select' : 'torch.where', mono: true, fill: D.green.dark },
+    { t: jax ? 'or lax.cond' : 'or torch.cond', mono: true, fill: D.green.dark },
   ], D.green.dark);
   o += card(374, 40, 170, 166, C.lamber, C.amber, '3. Graph Break', [
-    { t: 'torch.compile default', mono: true, fill: D.orange.dark, fw: 700 },
+    { t: jax ? 'split at the branch' : 'torch.compile default', mono: true, fill: D.orange.dark, fw: 700 },
     'Runs Graph 1 →',
     'Syncs scalar to CPU',
     '→ Python branches',
     '→ Launches Graph 2',
   ], D.orange.dark);
   o += footerBox(16, 220, 528, 48, C.lblue, C.blue, [
-    { t: 'Static metadata branches (if x.shape[0] > 4) unroll at trace time with 0 breaks!', fill: D.blue.dark, fw: 700 },
+    { t: 'Shape branches (x.shape[0] > 4) unroll at trace time: 0 breaks', fill: D.blue.dark, fw: 700 },
   ]);
   return svg(W, H, o);
 }
@@ -337,7 +339,7 @@ function shapeBucketing() {
   let o = header(W, 'Ragged Sequence Lengths: Recompilation Thrashing vs. Bucketing');
   o += card(20, 38, 520, 104, D.red.tint, D.red.base, '(a) Unpadded Ragged Batches: Lengths 100 → 128 → 75', [
     { t: 'Step 1 (L=100): Compile #1 (10s)  ·  Step 2 (L=128): Compile #2 (10s)', mono: true, fill: D.red.dark },
-    { t: 'Step 4 (L=75): Compile #3 (10s)  →  3 multi-second compilation stalls!', mono: true, fill: D.red.dark, fw: 700 },
+    { t: 'Step 3 (L=75): Compile #3 (10s)  →  3 multi-second compilation stalls!', mono: true, fill: D.red.dark, fw: 700 },
   ], D.red.dark);
   o += arrow(280, 144, 280, 162, C.green);
   o += card(20, 164, 520, 104, C.lgreen, C.green, '(b) Padded Shape Buckets (Multiples of 64 → All Padded to L = 128)', [
@@ -403,13 +405,13 @@ function cudaGraphReplay() {
   const W = 560, H = 280;
   let o = header(W, '60-Layer Thin Stack: Per-Kernel Python Launch vs. CUDA Graph Replay');
   o += card(20, 38, 520, 102, D.red.tint, D.red.base, '(a) Default Launch: CPU Dispatches 60 Kernels One by One', [
-    { t: 'CPU: [Launch 1 (13µs)] → [Launch 2 (13µs)] → … → [Launch 60] ≈ 1.9 ms', mono: true, fill: D.red.dark },
+    { t: 'CPU: [Launch 1 (13µs)] → [Launch 2 (13µs)] → … → [Launch 60] ≈ 0.8 ms', mono: true, fill: D.red.dark },
     { t: 'GPU: [2µs] ..idle gap.. [2µs] ..idle gap.. [2µs] (GPU busy only ~15%!)', mono: true, fill: C.ink },
   ], D.red.dark);
   o += arrow(280, 142, 280, 160, C.green);
-  o += card(20, 162, 520, 104, C.lgreen, C.green, '(b) CUDA Graph Replay (reduce-overhead / XLA Command Buffer)', [
+  o += card(20, 162, 520, 104, C.lgreen, C.green, '(b) CUDA Graph Replay: One Host Launch per Call', [
     { t: 'CPU: [1 cudaGraphLaunch Call] (static pointers & shapes baked in)', mono: true, fill: D.green.dark, fw: 700 },
-    { t: 'GPU: [K1][K2][K3]…[K60] back-to-back on device ≈ 0.27 ms (7–30× faster!)', mono: true, fill: D.green.dark, fw: 700 },
+    { t: 'GPU: [K1][K2][K3]…[K60] back-to-back on device ≈ 0.3 ms', mono: true, fill: D.green.dark, fw: 700 },
   ], D.green.dark);
   return svg(W, H, o);
 }
@@ -686,7 +688,7 @@ function activationCheckpointing() {
   o += arrow(280, 140, 280, 158, C.green);
   o += card(20, 160, 520, 108, C.lgreen, C.green, '(b) Checkpointed: Saves Only Block Inputs (L · 4d) + 1 Recomputed Block', [
     { t: '18 × 8 KiB inputs (144 KiB/tok) + 1 live block (160 KiB) → > 3× token capacity!', mono: true, fill: D.green.dark, fw: 700 },
-    'Fits 10,000–15,000 tokens! Cost: 1 extra forward pass (+2N FLOPs/tok ≈ +25% step time)',
+    'Fits 10,000–15,000 tokens! Cost: 1 extra forward pass (+2N FLOPs/tok, ≤ +33% step time)',
   ], D.green.dark);
   return svg(W, H, o);
 }
@@ -723,7 +725,7 @@ function secondGpuTradeoff() {
   ], D.blue.dark);
   o += card(20, 138, 520, 126, C.lamber, C.amber, '2 GPU Step Time (Shard B/2 per GPU + Taxes)', [
     { t: '[ Half-Batch Compute t_dev(B/2) ] + [ Host k·h ] + [ Allreduce α + S·β_link ]', mono: true, fill: D.orange.dark, fw: 700 },
-    'GDDR6X On-Card Memory: 1,000 GB/s  vs.  Host-Staged PCIe 4.0 Link: ≤ 23 GB/s (40× slower!)',
+    'GDDR6X On-Card Memory: 1,000 GB/s  vs.  PCIe 4.0 Link: ≤ 32 GB/s nominal (30× slower!)',
     { t: '2nd GPU wins iff:  t_compute(B) − t_compute(B/2)  >  c·α + S·β_link + Δh', mono: true, fill: D.green.dark, fw: 700 },
   ], D.orange.dark);
   return svg(W, H, o);
@@ -834,25 +836,27 @@ function lenetVsResnet18() {
   return svg(W, H, o);
 }
 
-function spmdModels() {
+function spmdModels(fw) {
   const W = 560, H = 280;
-  let o = header(W, 'Two Production SPMD Architectures for Driving k GPUs');
-  o += card(20, 40, 250, 160, C.lblue, C.blue, '1. Multi-Process SPMD (PyTorch)', [
-    { t: 'torchrun --nproc-per-node=k', mono: true, fill: D.blue.dark, fw: 700 },
-    'Spawns k independent OS processes',
-    '1 Python thread per GPU (rank 0..k−1)',
-    'Arbitrary dynamic Python per rank',
-    'DDP autograd hooks call NCCL',
-  ], D.blue.dark);
-  o += card(290, 40, 250, 160, D.purple.tint, C.purple, '2. Compiler SPMD (JAX / XLA)', [
-    { t: 'nnx.jit + NamedSharding(mesh)', mono: true, fill: D.purple.dark, fw: 700 },
-    '1 Python process writes 1-GPU step',
-    'Annotate P() weights, P("data") batch',
-    'GSPMD/Shardy partitions HLO graph',
-    'Auto-inserts & overlaps NCCL ops',
-  ], D.purple.dark);
+  const jax = fw === 'jax';
+  let o = header(W, jax ? 'Compiler SPMD: One Program Drives k GPUs' : 'Multi-Process SPMD: One Process per GPU');
+  o += jax
+    ? card(20, 40, 520, 160, D.purple.tint, C.purple, 'Compiler-Partitioned SPMD (XLA)', [
+      { t: 'nnx.jit + NamedSharding(mesh)', mono: true, fill: D.purple.dark, fw: 700 },
+      '1 Python process writes the 1-GPU step',
+      'Annotate P() weights, P("data") batch',
+      'GSPMD/Shardy partitions the HLO graph',
+      'Auto-inserts & overlaps NCCL ops',
+    ], D.purple.dark)
+    : card(20, 40, 520, 160, C.lblue, C.blue, 'Multi-Process SPMD (torchrun + DDP)', [
+      { t: 'torchrun --nproc-per-node=k', mono: true, fill: D.blue.dark, fw: 700 },
+      'Spawns k independent OS processes',
+      '1 Python thread per GPU (rank 0..k−1)',
+      'Arbitrary dynamic Python per rank',
+      'DDP autograd hooks call NCCL',
+    ], D.blue.dark);
   o += footerBox(20, 214, 520, 52, C.lgreen, C.green, [
-    { t: 'Both eliminate the §13.5 single-thread k·h_step bottleneck and use NCCL rings/trees!', fill: D.green.dark, fw: 700 },
+    { t: 'Removes the §13.5 single-thread k·h_step bottleneck', fill: D.green.dark, fw: 700 },
   ]);
   return svg(W, H, o);
 }
@@ -928,7 +932,7 @@ function bucketTradeoff() {
     'fragments link BW',
   ], D.red.dark);
   o += card(195, 40, 170, 158, C.lgreen, C.green, '25–30 MiB Buckets', [
-    { t: 'DDP (25M) / XLA (30M)', mono: true, fill: D.green.dark, fw: 700 },
+    { t: '2–3 buckets for 45 MB', mono: true, fill: D.green.dark, fw: 700 },
     'Reverse layer order:',
     'Buckets 1..c−1 hide',
     'behind backward();',
@@ -942,7 +946,7 @@ function bucketTradeoff() {
     { t: 'Full S exposed!', fill: D.orange.dark, fw: 700 },
   ], D.orange.dark);
   o += footerBox(16, 212, 528, 56, C.lblue, C.blue, [
-    { t: 'Ideal Overlap Exposed Time: 2(k−1)/k · S_last · β_link  vs.  No Overlap: 2(k−1)/k · S · β_link', mono: true, fill: D.blue.dark, fw: 700 },
+    { t: 'Exposed, ideal overlap: 2(k−1)/k·S_last·β_link  vs.  none: 2(k−1)/k·S·β_link', mono: true, fill: D.blue.dark, fw: 700 },
     { t: 'Requires: (1) fast links (bucket finishes before next fills) & (2) zero SM contention.', fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -1001,12 +1005,13 @@ function pcieVsNvlinkDdp() {
   return svg(W, H, o);
 }
 
-function ddpSummary() {
+function ddpSummary(fw) {
+  const jax = fw === 'jax';
   const W = 560, H = 280;
   let o = header(W, 'Production Data Parallelism: End-to-End Architecture');
   o += card(20, 38, 250, 106, C.lblue, C.blue, '1. Parallel Dispatch (SPMD)', [
-    'PyTorch: k processes via torchrun',
-    'JAX: 1 jitted program on Auto mesh',
+    jax ? '1 jitted program on Auto mesh' : 'k processes via torchrun',
+    jax ? 'XLA inserts the collectives' : '1 Python process per GPU',
     'No single-thread k·h_step bottleneck',
   ], D.blue.dark);
   o += card(290, 38, 250, 106, C.lgreen, C.green, '2. Reverse-Order Bucketing', [
@@ -1015,8 +1020,8 @@ function ddpSummary() {
     'Hides comm when link outpaces bwd',
   ], D.green.dark);
   o += card(20, 158, 250, 106, C.lamber, C.amber, '3. BatchNorm Semantics Check', [
-    'PyTorch DDP: per-shard stats default',
-    'JAX Auto / SyncBN: global stats',
+    jax ? 'Auto sharding: global batch stats' : 'DDP: per-shard stats by default',
+    jax ? 'Matches 1 GPU on the full batch' : 'SyncBatchNorm: global stats',
     'Verify with 1-step fp32 update check',
   ], D.orange.dark);
   o += card(290, 158, 250, 106, D.purple.tint, C.purple, '4. Link & SM Contention Audit', [
@@ -1329,17 +1334,20 @@ export const diagrams = {
   // index.md
   'ch13-perf-four-bottlenecks':         fourBottlenecks,
   'ch13-perf-three-floors':             threeFloors,
-  'ch13-perf-host-constants':           hostConstants,
+  'ch13-perf-host-constants-pytorch':   () => hostConstants('pytorch'),
+  'ch13-perf-host-constants-jax':       () => hostConstants('jax'),
   'ch13-perf-roadmap':                  roadmap,
   // performance-model.md
   'ch13-perf-matmul-utilization':       matmulUtilization,
   'ch13-perf-arithmetic-intensity':     arithmeticIntensity,
   'ch13-perf-linear-reuse':             linearReuse,
   'ch13-perf-gpt-intensity-ladder':     gptIntensityLadder,
-  'ch13-perf-overhead-knee':            overheadKnee,
+  'ch13-perf-overhead-knee-pytorch':    () => overheadKnee('pytorch'),
+  'ch13-perf-overhead-knee-jax':        () => overheadKnee('jax'),
   // compilation.md
   'ch13-perf-eager-penalties':          eagerPenalties,
-  'ch13-perf-branch-strategies':        branchStrategies,
+  'ch13-perf-branch-strategies-pytorch': () => branchStrategies('pytorch'),
+  'ch13-perf-branch-strategies-jax':    () => branchStrategies('jax'),
   'ch13-perf-shape-bucketing':          shapeBucketing,
   'ch13-perf-ffn-fusion-ratio':         ffnFusionRatio,
   'ch13-perf-fusion-scope':             fusionScope,
@@ -1365,13 +1373,15 @@ export const diagrams = {
   'ch13-perf-strong-vs-weak-scaling':   strongVsWeakScaling,
   // multi-gpu-practice.md
   'ch13-perf-lenet-vs-resnet18':        lenetVsResnet18,
-  'ch13-perf-spmd-models':              spmdModels,
+  'ch13-perf-spmd-models-pytorch':      () => spmdModels('pytorch'),
+  'ch13-perf-spmd-models-jax':          () => spmdModels('jax'),
   'ch13-perf-torchrun-ddp':             torchrunDdp,
   'ch13-perf-jax-mesh-sharding':        jaxMeshSharding,
   'ch13-perf-bucket-tradeoff':          bucketTradeoff,
   'ch13-perf-data-shard-bugs':          dataShardBugs,
   'ch13-perf-pcie-vs-nvlink-ddp':       pcieVsNvlinkDdp,
-  'ch13-perf-ddp-summary':              ddpSummary,
+  'ch13-perf-ddp-summary-pytorch':      () => ddpSummary('pytorch'),
+  'ch13-perf-ddp-summary-jax':          () => ddpSummary('jax'),
   // sharding.md
   'ch13-perf-state-lifetime':           stateLifetime,
   'ch13-perf-zero-stages':              zeroStages,

@@ -699,13 +699,23 @@ Test your grasp of width parameterization on three concrete problems:
 
 1. **Doubling width under SP:** If you double the hidden width $n$ of our MLP at a fixed Adam learning rate $\eta$, by what factor does the first Adam step change the output of (a) the input matrix `fc_in` ($784 \to n$), (b) the hidden matrix `fc_h1` ($n \to n$), and (c) the readout matrix `fc_out` ($n \to 10$)?
 2. **Reading a broken coordinate check:** You implement $\mu\text{P}$ with $m = n/n_{\text{base}} \ge 1$, remembering to set the hidden matrix learning rate to $\eta/m$ but forgetting to divide the output logits by $m$. What will the 4 curves of the 1-step coordinate check look like?
-3. **Scaling down learning rates from $n = 128$ to $n = 2{,}048$ ($m = 16$):** By what factor must the hidden-matrix learning rate be divided when widening $16\times$ under (a) Adam with $\mu\text{P}$, (b) Muon with the $0.2\sqrt{\max(m,n)}$ factor, and (c) Muon with the $\sqrt{d_{\text{out}}/d_{\text{in}}}$ factor?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. Step 1 shifts a layer's output by $\Theta(\eta \cdot \text{fan-in})$: (a) `fc_in` has fixed fan-in $784$ $\to$ **$1\times$ (unchanged)**; (b) `fc_h1` and (c) `fc_out` both have fan-in $n$ $\to$ **$2\times$ larger shift**.
 2. Layers 1, 2, and 3 (`h1`, `h2`, `h3`) will be **completely flat ($\Theta(1)$)**, while the **output logit curve will grow linearly with width as $O(n)$ (slope $+1$)** because $\Delta\mathbf{W}_{\text{out}}\,\mathbf{h}$ sums $n$ aligned terms without the $1/m$ divisor!
+:::
+:::
+
+::: {.slide title="Concept Check: Scaling Hidden Learning Rates with Width"}
+[Check Your Understanding]{.kicker}
+
+3. **Scaling down learning rates from $n = 128$ to $n = 2{,}048$ ($m = 16$):** By what factor must the hidden-matrix learning rate be divided when widening $16\times$ under (a) Adam with $\mu\text{P}$, (b) Muon with the $0.2\sqrt{\max(m,n)}$ factor, and (c) Muon with the $\sqrt{d_{\text{out}}/d_{\text{in}}}$ factor?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. For a $16\times$ widening ($m = 16$): (a) Adam $\mu\text{P}$ divides by **$m = 16\times$**; (b) AdamW-scaled Muon divides by **$\sqrt{m} = 4\times$**; (c) operator-scaled Muon divides by **$1\times$ (no change)**.
 :::
 :::

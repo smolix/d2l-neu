@@ -351,10 +351,14 @@ In an $L$-block dense Transformer of width $d$ with $H_{\text{kv}} = H$ and `Swi
 
 $$N_{\mathrm{blocks}} = 12 L d^2, \qquad N_{\mathrm{total}} = 12 L d^2 + V d + \text{norms/pos}$$
 
-@scaling-laws-a-parameter-census
+- **Small vocabulary ($V = 256$ bytes):** The embedding table is only $1.4\%$ of our $4.79\text{M}$-parameter model ($N_{\text{blocks}} = 12.01\,L d^2$).
+- **Large BPE vocabulary ($V = 50{,}257$ in GPT-2 Small):** The embedding and position tables hold $39.4\text{M}$ ($31.6\%$) of the $124.4\text{M}$ parameters, while the 12 blocks hold $85.0\text{M}$ ($12.02\,L d^2$).
+:::
 
-- **Small vocabulary ($V = 256$ bytes):** The embedding table is only $1.3\%$ of our $4.85\text{M}$-parameter model ($N_{\text{blocks}} = 12.00\,L d^2$).
-- **Large BPE vocabulary ($V = 50{,}257$ in GPT-2 Small):** The embedding and position tables hold $39.4\text{M}$ ($31.7\%$) of the $124.4\text{M}$ parameters, while the 12 blocks hold $85.0\text{M}$ ($12.02\,L d^2$).
+::: {.slide title="Implementing the Parameter Census"}
+[Parameter Accounting]{.kicker}
+
+@scaling-laws-a-parameter-census
 :::
 
 ::: {.slide title="Why Training Costs Six FLOPs per Parameter and Token"}
@@ -380,7 +384,7 @@ $$N_{\mathrm{blocks}} = 12 L d^2, \qquad N_{\mathrm{total}} = 12 L d^2 + V d + \
 ::: {.cols .vc}
 ::: {.col}
 - Inside each block, attention also computes $\mathbf{Q}\mathbf{K}^\top$ and $\mathbf{A}\mathbf{V}$ ($4Td$ forward FLOPs/token vs. $24d^2$ linear projection FLOPs/token), giving a relative correction of $T / (6d)$ (or $T / (12d)$ with causal tile skipping).
-- **Short context ($T \ll 6d$):** Only $+8.2\%$ in our byte-level GPT ($T = 128, d = 256$).
+- **Short context ($T \ll 6d$):** Only $\approx +8\%$ in our byte-level GPT ($T = 128, d = 256$).
 - **Long-context crossover ($T \ge 6d$):** Equals projection FLOPs at $T = 6d = 24{,}576$ tokens in Llama 3 8B ($d = 4{,}096$).
 :::
 
@@ -390,15 +394,27 @@ $$N_{\mathrm{blocks}} = 12 L d^2, \qquad N_{\mathrm{total}} = 12 L d^2 + V d + \
 :::
 :::
 
-::: {.slide title="Verifying C ≈ 6ND Against Exact Hardware Counters"}
+::: {.slide title="Verifying C ≈ 6ND Against Exact Hardware Counters" only="pytorch"}
 [Empirical FLOP Audit]{.kicker}
 
-Measuring a full forward + backward step of `gpt(256, act='gelu')` on batch $(64, 128)$ ($D_{\text{step}} = 8{,}192$ tokens) with PyTorch's `FlopCounterMode` and JAX's HLO `cost_analysis()` confirms the analytical derivation:
+Measuring a full forward + backward step of `gpt(256, act='gelu')` on batch $(64, 128)$ ($D_{\text{step}} = 8{,}192$ tokens) with `FlopCounterMode` confirms the analytical derivation:
 
 @!scaling-laws-checking-the-arithmetic
 
 ::: {.d2l-note .rule}
 The exact matrix-multiply FLOP count lands at **$1.082 \times 6 N D$**—matching $1 + \frac{4 L T d}{2 N} = 1.082$ to three decimal places—and the backward-to-forward ratio is **$\mathbf{2.00}$** ($4 N D$ vs. $2 N D$).
+:::
+:::
+
+::: {.slide title="Verifying C ≈ 6ND Against Exact Hardware Counters" only="jax"}
+[Empirical FLOP Audit]{.kicker}
+
+Measuring a full forward + backward step of `gpt(256, act='gelu')` on batch $(64, 128)$ ($D_{\text{step}} = 8{,}192$ tokens) with the compiled step's HLO `cost_analysis()` confirms the analytical derivation:
+
+@!scaling-laws-checking-the-arithmetic
+
+::: {.d2l-note .rule}
+HLO cost analysis reports **$1.116 \times 6 N D$** and a backward-to-forward ratio of **$2.06$**, a few percent above the matrix-multiply prediction $1 + \frac{4 L T d}{2 N} = 1.082$ and the ratio $2$ ($4 N D$ vs. $2 N D$).
 :::
 :::
 

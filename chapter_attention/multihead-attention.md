@@ -846,15 +846,13 @@ Represent each word of *"Alice gave Bob the book"* by a $9\text{D}$ vector conca
 ::: {.slide title="Visualizing One Head on 'Alice gave Bob the book'"}
 [Geometry & Causal Masking]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-![One head of self-attention scoring "gave" against all five words.](../img/mdl-attention-self-attention.svg){.nostretch width=100%}
+![One head of self-attention scoring "gave" against all five words.](../img/mdl-attention-self-attention.svg){.nostretch width=90%}
 :::
 
-::: {.col .fig}
+::: {.slide title="Computing One Head on 'Alice gave Bob the book'"}
+[Geometry & Causal Masking]{.kicker}
+
 @!multihead-attention-self-attention-1
-:::
-:::
 :::
 
 ::: {.slide title="The Single-Head Bottleneck: The Copy-Both Task"}
@@ -985,7 +983,7 @@ Recovering $k$ independent $d_v$-dimensional values requires two resources simul
 
 ::: {.cols .vc}
 ::: {.col}
-- **Correct (`reshape` then `transpose`):** Slices each token's $d$-dimensional vector into $H$ contiguous blocks of width $d_h$.
+- **Correct (reshape, then swap axes 1 and 2):** Slices each token's $d$-dimensional vector into $H$ contiguous blocks of width $d_h$.
 - **Buggy (`X.reshape(B, H, n, d_h)`):** Because memory is row-major along the sequence axis $n$, reshaping directly packs the first $n/H$ *tokens* into "head 0"!
 - **Insidious Shape Match:** Both return `(B, H, n, d_h)`, so no shape check catches the bug.
 

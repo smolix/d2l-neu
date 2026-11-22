@@ -617,12 +617,7 @@ Can a sum of $N$ monotone real exponentials $K_k = \sum_{n=1}^N c_n \bar{a}_n^k 
 
 `S4D` parameterizes `log_neg_rate` ($\lambda_n = -e^{\theta_n} < 0$) and `log_dt` ($\Delta = e^\phi > 0$), fixes $\mathbf{B} = \mathbf{1}$ (since only $b_n c_n$ enters $K_k$), and supports both FFT training and $O(1)$-state generation:
 
-```python
-a_bar, b_bar = self.discretize()  # exp(dt * rate), expm1(dt * rate) / rate
-powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)  # (d, N, T)
-K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Impulse kernel, (d, T)
-Y = torch.fft.irfft(torch.fft.rfft(X, n=2*T, dim=1) * torch.fft.rfft(K.T, n=2*T, dim=0), n=2*T, dim=1)
-```
+@-ssm-the-s4d-layer-2
 
 - **Memory advantage during LTI training:** The FFT path forms only the $(d, N, T)$ power tensor once per batch rather than materializing the 4D $(B, T, d, N)$ state across sequences.
 :::

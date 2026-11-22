@@ -297,7 +297,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 :::
 :::
 
-::: {.slide title="Ingesting Raw CSV Records into a DataFrame"}
+::: {.slide title="Ingesting Raw CSV Records into a DataFrame" layout="tall-output"}
 [Loading Tabular Data]{.kicker}
 
 ::: {.cols .vc}
@@ -376,7 +376,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 :::
 :::
 
-::: {.slide title="Numerical Imputation and Missingness Indicator Features"}
+::: {.slide title="Numerical Imputation and Missingness Indicator Features" layout="tall-output"}
 [Imputation Strategies]{.kicker}
 
 ::: {.cols .vc}

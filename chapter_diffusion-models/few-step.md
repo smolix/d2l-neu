@@ -1351,7 +1351,7 @@ We evaluate all 18 trained student networks on $20{,}000$ Gaussian starts agains
 @!few-step-on-the-running-example-2[out=2]
 :::
 
-::: {.slide title="Benchmarking Few-Step Students on the 2D Mixture (results)" layout="code"}
+::: {.slide title="Benchmarking Few-Step Students on the 2D Mixture (results)" layout="tall-output"}
 [1, 2, and 4 Evaluations Across Six Training Seeds]{.kicker}
 
 Mode-weight error for each of the six seeds, the fraction of stray samples between modes, and the within-mode spread:

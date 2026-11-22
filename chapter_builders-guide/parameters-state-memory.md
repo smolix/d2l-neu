@@ -1494,7 +1494,7 @@ When fine-tuning a pretrained backbone on a small dataset, we **freeze** the bac
 @parameters-state-memory-freezing-parameters-1
 :::
 
-::: {.slide title="After Freezing, Only the Head Trains"}
+::: {.slide title="After Freezing, Only the Head Trains" layout="tall-output"}
 [Selective Optimization]{.kicker}
 
 ::: {.cols .vc}

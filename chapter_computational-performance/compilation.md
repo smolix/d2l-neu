@@ -738,7 +738,7 @@ Compilers, Operator Fusion, and Graph Capture<br>**graph capture & tracing · va
 :::
 :::
 
-::: {.slide title="Graph Breaks vs. torch.where in torch.compile" only="pytorch" layout="code"}
+::: {.slide title="Graph Breaks vs. torch.where in torch.compile" only="pytorch" layout="tall-output"}
 [Value Branches in PyTorch]{.kicker}
 
 Inspecting a function with a data-dependent `if x.sum() > 0:` via `torch._dynamo.explain` reveals how TorchDynamo splits the program across the branch:

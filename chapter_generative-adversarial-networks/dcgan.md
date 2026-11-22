@@ -1461,7 +1461,7 @@ A single distance like FID or KID conflates **poor sample fidelity** (unrealisti
 
 :::
 
-::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor" layout="code"}
+::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor" layout="tall-output"}
 [Scoring 4,059 Sprites]{.kicker}
 
 Using 128D features from our 3-block CIFAR-10 classifier `FeatureCNN` ($64 \times 64$ sprites average-pooled to $32 \times 32$), we score $n = 4{,}059$ generated samples against the $4{,}059$ held-out sprites across two independent latent draws:

@@ -694,7 +694,7 @@ Five conv layers, three overlapping max-pools, and two dropout-regularized dense
 @alexnet-capacity-control-and-preprocessing-1
 :::
 
-::: {.slide title="Tracing Spatial Shapes Through the Encoder"}
+::: {.slide title="Tracing Spatial Shapes Through the Encoder" layout="tall-output"}
 [Shape Verification]{.kicker}
 
 Passing a dummy $(1, 1, 224, 224)$ tensor through `layer_summary` confirms how spatial dimensions contract while channels expand:

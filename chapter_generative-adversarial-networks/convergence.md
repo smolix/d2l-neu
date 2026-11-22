@@ -856,7 +856,7 @@ $$V_\ell(D) - R_1 - R_2 \approx 2\ell(0) + \ell'(0)\,\langle p - q,\, D\rangle -
   $$c^\star = -\frac{\mu}{1 + 4\gamma}, \qquad V_\gamma(D^\star) - 2\ell(0) \approx \frac{\mu^2}{4 + 16\gamma}$$
 :::
 
-::: {.slide title="Effect of Penalties on the Local Value Function (check)" layout="code"}
+::: {.slide title="Effect of Penalties on the Local Value Function (check)" layout="tall-output"}
 [Quadratic Expansion & Gaussian Shift]{.kicker}
 
 Solving the penalized game exactly on a grid (Newton ascent on $D$) and comparing with the local value $\mu^2/(4 + 16\gamma)$ and the large-$\gamma$ value $\mu^2/(16\gamma)$:
@@ -945,7 +945,7 @@ Evaluating $10{,}000$ samples at step $10{,}000$ isolates the role of each ingre
 - **Overdamping ($\gamma = 10$):** Over-flattening the critic ($\mathbb{E}_q\|\nabla_x D\|^2 \sim 10^{-4}$) slows convergence, leaving only $\sim 20\text{--}25\%$ of samples within $3\sigma$ of a mode after $10{,}000$ steps.
 :::
 
-::: {.slide title="Diagnostic Pitfall: Calm Losses Certify Nothing" layout="code"}
+::: {.slide title="Diagnostic Pitfall: Calm Losses Certify Nothing" layout="tall-output"}
 [Monitoring Hazard]{.kicker}
 
 Comparing the on-mode sample fraction against the critic loss across all $8$ checkpoints (every $1{,}250$ steps) reveals a critical monitoring hazard:

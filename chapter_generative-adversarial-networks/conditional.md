@@ -803,7 +803,7 @@ Generating $9$ random latent draws for each of the $10$ requested CIFAR-10 class
 :::
 :::
 
-::: {.slide title="Measuring Class Alignment with a Referee CNN" layout="code"}
+::: {.slide title="Measuring Class Alignment with a Referee CNN" layout="tall-output"}
 [Axis 1: Condition Alignment]{.kicker}
 
 We train our 3-block CIFAR-10 classifier `FeatureCNN` (with horizontal flips and 4-pixel shifts) for $15$ epochs as an independent referee ($78\%$ test accuracy) and evaluate its accuracy on $500$ generated images per class:

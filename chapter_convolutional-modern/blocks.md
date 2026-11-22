@@ -1180,7 +1180,7 @@ Because every VGG block is defined by a `(num_convs, out_channels)` tuple, an en
 :::
 :::
 
-::: {.slide title="VGG-11 Shapes and the 103M-Parameter Dense Bottleneck"}
+::: {.slide title="VGG-11 Shapes and the 103M-Parameter Dense Bottleneck" layout="tall-output"}
 [VGG: Resource Ledger]{.kicker}
 
 Inspecting VGG-11 on a $224\times 224$ input shows that modularizing the convolutional trunk left the classifier head even more bloated than AlexNet's:

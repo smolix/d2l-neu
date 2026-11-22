@@ -725,7 +725,7 @@ To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct
 - **3. 1D vectors ($3{,}840$ params, $0.8\%$):** Linear biases and LayerNorm scales/shifts.
 :::
 
-::: {.slide title="Parameter Census of TinyLM: Three Structural Groups (cont.)"}
+::: {.slide title="Parameter Census of TinyLM: Three Structural Groups (cont.)" layout="tall-output"}
 [Where the Parameters Live]{.kicker}
 
 The census lists every parameter tensor with its shape and size, then the three group totals:

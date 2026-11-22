@@ -670,12 +670,10 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 :::
 :::
 
-::: {.slide title="At the Edge of Stability: Non-Monotonic Descent"}
+::: {.slide title="At the Edge of Stability: Non-Monotonic Descent" layout="tall-output"}
 [Self-Stabilization at 2/η]{.kicker}
 
-- Across all $10$ random initializations:
-  - Runs at $\eta = 0.4$ arrest at sharpness $\lambda_{\max} \approx 5.0 = 2/0.4$.
-  - Runs at $\eta = 0.25$ climb higher and arrest at $\lambda_{\max} \approx 8.0 = 2/0.25$.
+- **All $10$ random initializations:** runs at $\eta = 0.4$ arrest at sharpness $\lambda_{\max} \approx 5.0 = 2/0.4$; runs at $\eta = 0.25$ climb higher, to $\lambda_{\max} \approx 8.0 = 2/0.25$.
 - **Why doesn't the run diverge?** Once $\lambda_{\max}$ momentarily exceeds $2/\eta$, growing oscillation along the sharpest eigenvector ($1 - \eta\lambda_{\max} \approx -1$, causing loss to rise on $\sim 50\%$ of steps) couples with third derivatives of the loss to push the iterate toward flatter regions (Damian et al., 2023).
 
 @!optimization-intro-the-edge-of-stability-2

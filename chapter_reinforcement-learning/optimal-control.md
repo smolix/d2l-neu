@@ -696,7 +696,7 @@ Applying an external angular-velocity kick $\Delta\dot{\vartheta} \in \{0.0, +0.
 :::
 :::
 
-::: {.slide title="Disturbance Rejection Under an Impulse at t = 45 (cont.)" layout="code"}
+::: {.slide title="Disturbance Rejection Under an Impulse at t = 45 (cont.)" layout="tall-output"}
 [Testing Open-Loop, TV-LQR, and MPC]{.kicker}
 
 Final angle and return of each controller under each kick:

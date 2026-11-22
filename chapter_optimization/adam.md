@@ -767,7 +767,7 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 @!adam-gradient-scales-in-a-network-2
 :::
 
-::: {.slide title="Learning-Rate Sweep: Adam vs. SGD with Momentum"}
+::: {.slide title="Learning-Rate Sweep: Adam vs. SGD with Momentum" layout="tall-output"}
 [3-Seed Grid Comparison]{.kicker}
 
 - We sweep SGD with momentum ($\beta = 0.9$) across $\eta \in \{0.1, 0.3, 0.5, 1.0\}$ and Adam across $\eta \in \{3{\times}10^{-4}, 10^{-3}, 3{\times}10^{-3}, 10^{-2}, 3{\times}10^{-2}\}$ over $3$ seeds ($2{,}000$ steps on `TinyLM`):

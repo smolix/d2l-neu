@@ -1215,7 +1215,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 :::
 :::
 
-::: {.slide title="Quantifying Previous-Token and Induction Head Scores"}
+::: {.slide title="Quantifying Previous-Token and Induction Head Scores" layout="tall-output"}
 [Aggregated Attention Metrics]{.kicker}
 
 `head_scores` averages each head's attention weight on the previous token ($j = i - 1$) and on the variable induction target ($j = i + 1 - L$ for $i \ge L$) over $256$ sequences with $L \in \{16, \ldots, 32\}$:
@@ -1269,13 +1269,13 @@ Correlation in attention maps or weights is not causation. To test which heads a
 - **Experimental Design:** In Block 1, we compare removing the previous-token heads (score $> 0.2$) against removing all *other* Block-1 heads; in Block 2, we remove the top $k \in \{1, 2, 3, 4\}$ induction heads cumulatively.
 :::
 
-::: {.slide title="Ablation Results: Necessity, Redundancy, and Surprises"}
+::: {.slide title="Ablation Results: Necessity, Redundancy, and Surprises" layout="tall-output"}
 [Interpreting Interventions]{.kicker}
 
 @!what-attention-computes-head-ablation-2
 
-- **1. Block-1 Previous-Token Heads Are Necessary:** Removing them collapses accuracy from $\sim 0.90$ to $\approx 0.1$ or below.
-- **2. Surprise—Block 1's "Inert" Heads Are Also Necessary!** Removing the remaining Block-1 heads drops accuracy to $0.08$ or below because Block 2's OV copy circuit relies on their stream transformation (and zero-ablation shifts stream norms off-distribution).
+- **1. Block-1 Previous-Token Heads Are Necessary:** Removing them drops accuracy from $\sim 0.90$ to $\lesssim 0.1$.
+- **2. Surprise—Block 1's "Inert" Heads Are Also Necessary!** Removing them drops accuracy to $\le 0.08$: Block 2's OV copy circuit relies on their stream transformation (zero-ablation also shifts stream norms off-distribution).
 - **3. Block-2 Redundancy:** Removing the single strongest induction head leaves accuracy at $0.74$–$0.91$; all four Block-2 heads share the induction workload and must be removed together to drop to chance.
 :::
 

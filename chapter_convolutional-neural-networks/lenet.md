@@ -696,7 +696,7 @@ Convolutional Neural Networks (LeNet)<br>**convolutional encoder · dense head �
 ::: {.slide title="Pitting a Spatial CNN Against Our Flattened MLP"}
 [Motivation & The Fashion-MNIST Benchmark]{.kicker}
 
-We now assemble every component of Chapter 6—convolutions, padding, multi-channel feature maps, and pooling—into **LeNet** (LeCun et al., 1998) and compare it directly against our Chapter 5 MLP:
+We now assemble every component of Chapter 6—convolutions, padding, multi-channel feature maps, and pooling—into **LeNet** (LeCun et al., 1998) and compare it directly against our Chapter 4 MLP:
 
 - **The MLP baseline ($784 \to 256 \to 10$):** Flattens every $28 \times 28$ image into 784 unordered numbers, using **$203{,}530$ parameters** ($\approx 200{,}704$ in the first layer alone) to reach **$\approx 87\%$** validation accuracy after 30 epochs.
 - **The LeNet hypothesis:** Preserving the 2D grid and sharing $5 \times 5$ local kernels across all spatial positions should generalize better using a fraction of the parameters.
@@ -786,7 +786,7 @@ Training LeNet with the MLP's learning rate ($\eta = 0.1$) stalls near chance ($
 ::: {.slide title="Training LeNet on Fashion-MNIST"}
 [30 Epochs of Minibatch SGD (Batch Size 128, lr = 2.0)]{.kicker}
 
-We train LeNet under the exact same 30-epoch budget and cross-entropy loss as our Chapter 5 MLP:
+We train LeNet under the exact same 30-epoch budget and cross-entropy loss as our Chapter 4 MLP:
 
 @lenet-training
 
@@ -893,7 +893,7 @@ Test your understanding of full-network parameter/FLOP accounting and architectu
 ::: {.slide title="Summary & Key Takeaways: MLP vs. LeNet"}
 [Section & Chapter Synthesis]{.kicker}
 
-| Metric / Component | Chapter 5 MLP ($784 \to 256 \to 10$) | Classical LeNet (1998 Layout) | Modern CNNs (Chapter 7 Preview) |
+| Metric / Component | Chapter 4 MLP ($784 \to 256 \to 10$) | Classical LeNet (1998 Layout) | Modern CNNs (Chapter 7 Preview) |
 |---|---|---|---|
 | **Parameters** | $203{,}530$ ($98.6\%$ in layer 1) | **$61{,}706$** ($4.2\%$ conv, $95.8\%$ dense) | Bottlenecks + Global Avg Pool head |
 | **Multiply-Adds / Image** | $\approx 203{,}000$ | **$416{,}520$** ($85.9\%$ in conv layers) | Dominated by spatial conv layers |

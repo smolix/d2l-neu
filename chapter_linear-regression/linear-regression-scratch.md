@@ -711,4 +711,8 @@ Test your understanding of training loop mechanics on these three scenarios:
 | **2. Backward Pass** | $\nabla_{\mathbf{w}} L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{X}^\top(\hat{\mathbf{y}} - \mathbf{y})$ | Verify `autograd` against hand formula on 1 batch | Max discrepancy $\lesssim 10^{-7}$ (`float32` eps) |
 | **3. SGD Update** | $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta \nabla L_{\mathcal{B}}$ | Run update outside autograd tape (`no_grad`) and clear `.grad` | Stable for $0 < \eta < 2/\mu_{\max}$; $\eta=0.03$ drops loss $7\times$/epoch |
 | **4. Epoch Reshuffle** | Uniform permutation of $\{0, \ldots, n-1\}$ | Re-create generator each epoch so it does not exhaust after epoch 1 | Loss plateaus at $\sigma^2/2 = 5 \times 10^{-5}$; $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_\infty \lesssim 10^{-3}$ |
+
+::: {.d2l-note}
+**Up next (§2.4 Object-Oriented Design & §2.5 Concise Implementation):** We first package this bare loop into reusable `Module`, `DataModule`, and `Trainer` classes (`LinearRegressionScratch`, §2.4), and then swap in high-level framework layers, MSE losses, and optimizers (`LinearRegression`, §2.5).
+:::
 :::

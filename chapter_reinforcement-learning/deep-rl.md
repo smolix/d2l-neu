@@ -813,11 +813,11 @@ Function Approximation in Reinforcement Learning<br>**tables as one-hot linear n
 ::: {.slide title="Why Continuous Control Requires Function Approximation"}
 [Motivation & Mental Model]{.kicker}
 
-In tabular RL (§14.1–§14.8), every state had its own row in a lookup table, which breaks down as soon as observations are continuous vectors $\mathbf{s}_t \in \mathbb{R}^d$:
+In tabular RL (§14.1–§14.8, apart from §14.6 where known differential equations allowed analytical LQR/iLQR planning), every model-free state had its own row in a lookup table, which breaks down when observations are continuous vectors $\mathbf{s}_t \in \mathbb{R}^d$ and dynamics are unknown:
 
 - **Zero state revisits on `CartPole-v1`:** The state $\mathbf{s}_t = (x_t, \dot{x}_t, \vartheta_t, \dot{\vartheta}_t)^\top \in \mathbb{R}^4$ consists of four floating-point numbers; across $1{,}000$ episodes an agent never visits the exact same state vector twice.
 - **No generalization in tables:** A lookup table learns nothing about $(x, \dot{x}, \vartheta + 10^{-4}, \dot{\vartheta})$ from an update at $(x, \dot{x}, \vartheta, \dot{\vartheta})$, whereas a neural network shares weights $\theta$ across the entire state space.
-- **Continuous action spaces (`Pendulum-v1`):** When the action is a continuous torque $u \in [-2, 2]$, a discrete softmax table cannot enumerate the actions.
+- **Model-free continuous control (`Pendulum-v1`, §14.6):** When the action is a continuous torque $u \in [-2, 2]$ and the physics $f(\mathbf{x}, u)$ are unknown, we replace both the discrete softmax table and §14.6's analytical Jacobians with neural networks.
 :::
 
 ::: {.slide title="Tables as One-Hot Linear Nets and the Tangent Kernel"}
@@ -931,7 +931,7 @@ Training `GaussianPolicy(3, 1, zero_mean=True)` on `Pendulum-v1` over 300 update
 ::: {.cols .vc}
 ::: {.col}
 - **Why `zero_mean=True` matters:** Initializing the final mean layer to zero ($\mu_0(s) = 0, \sigma_0 = 1$) prevents early torques from saturating the $[-2, 2]$ clip bounds where reward feedback vanishes.
-- **High on-policy sample cost:** Crossing the $-200$ balancing threshold takes $150$–$300$ updates ($\sim 300{,}000$ steps) because each 1,600-step batch is used once and discarded; off-policy SAC (§15.4) solves Pendulum in $5{,}000$–$11{,}000$ steps.
+- **High on-policy sample cost vs. §14.6 & §15.5:** Unlike §14.6's iLQR planner (which differentiated known physics directly), model-free REINFORCE learns from trig observations $(\cos\vartheta, \sin\vartheta, \dot{\vartheta})$ and scalar rewards alone—taking $150$–$300$ updates ($\sim 300{,}000$ steps) to cross §14.6's $-200$ balancing bar, whereas off-policy SAC (§15.5) will solve it in $5{,}000$–$11{,}000$ steps.
 :::
 
 ::: {.col .fig}

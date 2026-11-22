@@ -588,15 +588,15 @@ $$\mathbf{G}_t = \underbrace{\frac{\partial L}{\partial \mathbf{O}_t}\mathbf{W}_
 :::
 
 ::: {.slide title="Architectural Remedies: Gates and Linear Recurrences"}
-[Preview of Chapter 9 (Modern RNNs & SSMs)]{.kicker}
+[Preview of Chapter 12 (Modern RNNs & SSMs)]{.kicker}
 
 Overcoming vanishing gradients requires redesigning the recurrent state transition $g$ so that the step-to-step Jacobian $\mathbf{J}_t = \partial \mathbf{H}_t / \partial \mathbf{H}_{t-1}$ has eigenvalues near $1$ along memory directions:
 
 | Architectural Family | Core State Transition Mechanism | Why State Jacobians Stay Near Unity ($\mathbf{J}_t \approx \mathbf{I}$) |
 |---|---|---|
 | **Vanilla $\tanh$ RNN (§8.4)** | $\mathbf{H}_t = \tanh(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}})$ | $\mathbf{J}_t = \textrm{diag}(1 - \mathbf{H}_t^2)\mathbf{W}_{\textrm{hh}}^\top$ contracts by $\sim 0.5\times$ per step whenever units saturate |
-| **Gated RNNs (LSTM, GRU — §9.1–§9.2)** | Additive cell state $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$ with learned sigmoid gates $\mathbf{F}_t \in (0, 1)^h$ | When forget gate $\mathbf{F}_t \approx \mathbf{1}$, $\partial \mathbf{C}_t / \partial \mathbf{C}_{t-1} = \textrm{diag}(\mathbf{F}_t) \approx \mathbf{I}$, creating an unattenuated gradient highway |
-| **Structured State Space Models (SSMs / Linear RNNs — §9.4+)** | Linear state recurrence $\mathbf{h}_t = \mathbf{A}\mathbf{h}_{t-1} + \mathbf{B}\mathbf{x}_t$ with nonlinear readout layers | Removes recurrent $\tanh$ saturation altogether and constrains eigenvalues of $\mathbf{A}$ near the unit disk ($|\lambda_i| \le 1$) |
+| **Gated RNNs (LSTM, GRU — §12.1–§12.3)** | Additive cell state $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$ with learned sigmoid gates $\mathbf{F}_t \in (0, 1)^h$ | When forget gate $\mathbf{F}_t \approx \mathbf{1}$, $\partial \mathbf{C}_t / \partial \mathbf{C}_{t-1} = \textrm{diag}(\mathbf{F}_t) \approx \mathbf{I}$, creating an unattenuated gradient highway |
+| **Structured State Space Models (SSMs / Linear RNNs — §12.4+)** | Linear state recurrence $\mathbf{h}_t = \mathbf{A}\mathbf{h}_{t-1} + \mathbf{B}\mathbf{x}_t$ with nonlinear readout layers | Removes recurrent $\tanh$ saturation altogether and constrains eigenvalues of $\mathbf{A}$ near the unit disk ($|\lambda_i| \le 1$) |
 :::
 
 ::: {.slide title="The Memory and Compute Cost of Full-Sequence BPTT"}

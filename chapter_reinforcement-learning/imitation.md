@@ -900,5 +900,9 @@ Test your understanding of distribution shift, compounding error, and DAgger:
 | **DAgger** | Aggregated learner states $s \sim d_t^{\hat{\pi}_k}$ | $\leq u\,\varepsilon\,T = O(u\varepsilon T)$ for recoverable tasks; requires interactive expert on call |
 | **Language Model SFT** | Curated human/teacher prefixes | Suffers exposure bias over long reasoning chains as errors shift context |
 | **On-Policy Distillation** | Student prefixes relabeled by teacher | Implements DAgger for LLMs using teacher logits $\pi^*(\cdot \mid x, y_{<t})$ |
+
+::: {.d2l-note}
+**Up next (§14.6 Optimal Control & §14.7 Policy Gradient):** When no expert is available to imitate, we either differentiate directly through known continuous physics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, \mathbf{u}_t)$ via LQR, iLQR, and MPC (§14.6), or optimize a parameterized policy $\pi_\theta(a \mid s)$ from sampled scalar rewards via the score-function policy gradient (§14.7).
+:::
 :::
 

@@ -1332,6 +1332,7 @@ Fitting `LinearRegressionScratch(2, lr=0.03)` on `SyntheticRegressionData` throu
 @!oo-design-training-linear-regression-again-2
 
 - **Overlapping train and val curves:** With only $3$ parameters and $1{,}000$ examples, memorization is impossible and validation loss tracks training loss down to $\sigma^2/2 = 5 \times 10^{-5}$.
+- **Ready for §2.5 (Concise Implementation):** Because `DataModule` and `Trainer` are completely decoupled from `LinearRegressionScratch`'s internals, §2.5 replaces raw weight tensors, `squared_loss`, and custom `SGD` with built-in framework layers, MSE losses, and optimizers without touching a line of `SyntheticRegressionData` or `Trainer`.
 :::
 
 ::: {.col .fig}

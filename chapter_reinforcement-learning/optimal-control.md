@@ -542,6 +542,18 @@ Sweeping the control penalty $R \in \{0.01, 0.10, 1.00\}$ from initial position 
 :::
 :::
 
+::: {.slide title="The Pendulum-v1 Continuous-Control Benchmark"}
+[Our Running Nonlinear Control Testbed]{.kicker}
+
+To test control methods beyond linear dynamics, we introduce the physical **`Pendulum-v1`** benchmark (revisited by model-free policy gradients in §14.9, off-policy SAC in §15.5, and learned world models in §15.6):
+
+$$\dot{\vartheta}_{t+1} = \textrm{clip}\!\left(\dot{\vartheta}_t + \Big(\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t\Big)\Delta t,\; -8,\; 8\right), \qquad \vartheta_{t+1} = \vartheta_t + \dot{\vartheta}_{t+1}\Delta t$$
+
+- **Physical constants & state:** Uniform rod of mass $m = 1$ and length $l = 1$ in gravity $g = 10$ with step $\Delta t = 0.05\text{ s}$; state $\mathbf{x}_t = (\vartheta_t, \dot{\vartheta}_t)^\top \in \mathbb{R}^2$ measures angle from upright ($\vartheta = 0$ top, $\vartheta = \pi$ hanging bottom).
+- **Severe underactuation:** Motor torque is clipped to $u_t \in [-2, 2]$, whereas peak gravitational torque at horizontal ($\vartheta = \pi/2$) is $\frac{1}{2}mgl = 5 > 2$—the motor *cannot* lift the rod directly against gravity in a single push!
+- **Quadratic stage cost & balancing bar:** Step cost $c(\mathbf{x}_t, u_t) = \vartheta_t^2 + 0.1\,\dot{\vartheta}_t^2 + 0.001\,u_t^2$ (reward $r_t = -c_t$). Over a 200-step ($10\text{ s}$) episode from a random start, random torques score $\approx -1{,}200$, while a policy that swings up and holds upright scores **$\ge -200$** (paying cost only during the initial swing-up).
+:::
+
 ::: {.slide title="Linearizing Nonlinear Physics at an Equilibrium"}
 [First-Order Taylor Approximation]{.kicker}
 
@@ -549,7 +561,7 @@ For a smooth nonlinear system $\mathbf{x}_{t+1} = f(\mathbf{x}_t, u_t)$ near a f
 
 $$\delta\mathbf{x}_{t+1} \approx \mathbf{A}\,\delta\mathbf{x}_t + \mathbf{B}\,\delta u_t, \qquad \mathbf{A} = \frac{\partial f}{\partial \mathbf{x}}(\mathbf{x}^*, u^*), \quad \mathbf{B} = \frac{\partial f}{\partial u}(\mathbf{x}^*, u^*)$$
 
-- **`Pendulum-v1` dynamics:** With angle $\vartheta_t$ from upright ($\vartheta = 0$ top, $\vartheta = \pi$ bottom) and torque $u_t \in [-2, 2]$, $\dot{\vartheta}_{t+1} = \dot{\vartheta}_t + (\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t)\Delta t$ has an unstable fixed point at $(\mathbf{0}, 0)$.
+- **Upright equilibrium of `Pendulum-v1`:** At $(\vartheta^*, \dot{\vartheta}^*) = (0, 0)$ with $u^* = 0$, $\sin\vartheta_t \approx \vartheta_t$ yields an exact local linear model $(\mathbf{A}_p, \mathbf{B}_p)$ around the unstable top saddle point.
 :::
 
 ::: {.slide title="Stabilizing Upright Pendulum via Local LQR"}
@@ -641,7 +653,7 @@ Classical optimal control and reinforcement learning solve the same sequential d
 | **Variables & objective** | State $\mathbf{x}_t \in \mathbb{R}^d$, control $\mathbf{u}_t \in \mathbb{R}^m$; min cost $\sum_t c_t$ | State $s_t \in \mathcal{S}$, action $a_t \in \mathcal{A}$; max return $\mathbb{E}[\sum_t \gamma^t r_t]$ |
 | **Value & backup** | Cost-to-go $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$; Riccati recursion | Value $V^\pi(s)$ or $Q^\pi(s, a)$; Bellman operator $\mathcal{T}$ |
 | **Known nonlinear $f$** | Gradient-based iLQR / DDP + receding-horizon MPC | Tree search or sampling-based MPC (CEM / MPPI) |
-| **Unknown dynamics** | System identification $\hat{f}_\phi$ + certainty-equivalent MPC | Model-based RL (§15.5) or model-free policy gradients (§14.7) |
+| **Unknown dynamics** | System identification $\hat{f}_\phi$ + certainty-equivalent MPC | Model-based RL (§15.6) or model-free policy gradients (§14.7) |
 :::
 
 ::: {.slide title="Concept Check: LQR, iLQR, and MPC"}

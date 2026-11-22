@@ -1031,7 +1031,7 @@ Our model-agnostic `step_fn(ids)` re-fed the entire growing prefix `ids` of leng
 | **Transformer with KV Cache (Chapter 11 preview)** | attends over $t$ cached K/V vectors | $O(T^2)$ attention + $O(T)$ MLP | $O(T)$ KV cache (grows with $T$) |
 
 ::: {.d2l-note}
-**Looking Ahead to Part II (*Advanced*):** Our vanilla RNN generates tokens in $O(1)$ time and $512$ bytes of state, yet uses only $\sim 3$ tokens of history because gradients vanish (§8.5). **Chapter 9** redesigns the recurrence (LSTMs, GRUs, state space models) so gradients survive over long horizons in $O(1)$ state; **Chapter 11** replaces fixed-size state compression with **self-attention**, keeping every past token's representation at $O(T)$ memory cost.
+**Looking Ahead to Part II (*Advanced*):** Our vanilla RNN generates tokens in $O(1)$ time and $512$ bytes of state, yet uses only $\sim 3$ tokens of history because gradients vanish (§8.5). **Chapter 12** redesigns the recurrence (LSTMs, GRUs, state space models) so gradients survive over long horizons in $O(1)$ state; **Chapters 10–11** replace fixed-size state compression with **self-attention**, keeping every past token's representation at $O(T)$ memory cost.
 :::
 :::
 

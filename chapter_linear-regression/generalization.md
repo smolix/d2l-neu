@@ -589,7 +589,7 @@ Across classical parametric model families, increasing capacity shifts error fro
 ::: {.col}
 - **Left of optimum (Underfitting):** Model capacity is too low; high bias keeps both training risk and population risk elevated.
 - **Right of optimum (Overfitting):** Capacity outstrips the information in $n$ examples; training error drops below the noise floor $\sigma^2$ while variance drives test risk up.
-- **Weight norm as continuous capacity:** Even at degree 19, functions with small coefficients $\|\mathbf{w}\|_2$ cannot oscillate wildly—motivating weight decay in §2.6.
+- **Weight norm as continuous capacity:** Even at degree 19, functions with small coefficients $\|\mathbf{w}\|_2$ cannot oscillate wildly—motivating weight decay in §2.7.
 :::
 
 ::: {.col .fig .big}

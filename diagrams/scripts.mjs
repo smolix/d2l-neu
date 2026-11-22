@@ -19,7 +19,8 @@
 //     letter, digit, `_` or `.`) and a script word that does not run on into
 //     another `_`: n_b, w_ij, R_emp, b_noise, x_k. So `batch_size`,
 //     `requires_grad`, `X_train_std` stay as written.
-// A label that should stay literal anyway is written with `\_` / `\^`, which
+// `x^(…)` and `x_(…)` treat the parentheses as grouping and drop them, as
+// TeX braces would. A label that should stay literal anyway is written with `\_` / `\^`, which
 // draws a plain `_` / `^`.
 
 const SCRIPT_SIZE = '70%';
@@ -79,10 +80,11 @@ export function scriptText(s, nested) {
       // bare ^: 2^m, (1+g²)^N, W^T, 2^-1, e^(x)
       if (prev !== undefined && /[A-Za-z0-9)\]²³ᵀ'α-ω]/u.test(prev)) {
         const rest = str(i + 1, chars.length);
-        const m = rest.match(/^[−-]?[A-Za-z0-9α-ω]{1,6}(?![A-Za-z0-9_])/u) || rest.match(/^\([^()]{1,12}\)/);
-        if (m) {
-          out += tsp('super', scriptText(m[0], true), nested);
-          i += Array.from(m[0]).length;
+        const m = rest.match(/^[−-]?[A-Za-z0-9α-ω]{1,6}(?![A-Za-z0-9_])/u);
+        const g = !m && rest.match(/^\(([^()]{1,16})\)/);   // e^(−λ/2): parens only group
+        if (m || g) {
+          out += tsp('super', scriptText(m ? m[0] : g[1], true), nested);
+          i += Array.from(m ? m[0] : g[0]).length;
           continue;
         }
       }
@@ -98,9 +100,10 @@ export function scriptText(s, nested) {
     if (baseOk) {
       const rest = str(i + 1, chars.length);
       const m = rest.match(/^[A-Za-z0-9α-ωℓ∅]{1,12}(?![A-Za-z0-9_])/u);
-      if (m) {
-        out += tsp('sub', m[0], nested);
-        i += Array.from(m[0]).length;
+      const g = !m && rest.match(/^\(([^()]{1,16})\)/);     // S_(t−1): parens only group
+      if (m || g) {
+        out += tsp('sub', m ? m[0] : scriptText(g[1], true), nested);
+        i += Array.from(m ? m[0] : g[0]).length;
         continue;
       }
     }

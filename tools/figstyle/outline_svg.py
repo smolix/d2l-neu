@@ -59,8 +59,10 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import math
 import re
 import sys
+import unicodedata
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
@@ -223,11 +225,63 @@ def _face_chain(cls: str, weight: int, italic: bool, warn) -> list[tuple[str, st
     return chain
 
 
-def _pick_face(ch: str, chain):
-    for face in chain:
-        if ord(ch) in _cmap(face):
+def _pick_face(ch: str, chain, prefer=None):
+    """First face in `chain` (or `prefer`, if given and usable) that draws
+    `ch` properly.  A super- or subscript character whose glyph sits at the
+    wrong height in a face (Inconsolata's U+207F is a full-size "n" on the
+    baseline, its U+207B a minus at full-size math height) counts as absent
+    there, so the next face supplies a real superscript."""
+    for face in ([prefer] if prefer else []) + list(chain):
+        if ord(ch) in _cmap(face) and _script_ok(face, ch):
             return face
     return None
+
+
+_INK: dict = {}
+
+
+def _ink(face, ch: str):
+    """Ink box (xmin, ymin, xmax, ymax) of `ch` in `face`, in em, y-up;
+    None for a blank glyph."""
+    key = (face, ch)
+    if key not in _INK:
+        from fontTools.pens.boundsPen import BoundsPen
+        m = TM._metrics(*face)
+        gname = m["cmap"].get(ord(ch))
+        box = None
+        if gname is not None:
+            gs = _outliner(face)._glyphset
+            pen = BoundsPen(gs)
+            gs[gname].draw(pen)
+            if pen.bounds is not None:
+                box = tuple(v / m["upm"] for v in pen.bounds)
+        _INK[key] = box
+    return _INK[key]
+
+
+def _script_ok(face, ch: str) -> bool:
+    """False when a <super>/<sub> compatibility character's glyph is not
+    raised / lowered: its ink centre must lie above 0.6 cap heights
+    (superscripts) or below 0.35 cap heights (subscripts)."""
+    dec = unicodedata.decomposition(ch)
+    sup, sub = dec.startswith("<super>"), dec.startswith("<sub>")
+    if not (sup or sub):
+        return True
+    box = _ink(face, ch)
+    if box is None:
+        return True
+    cap = TM._metrics(*face)["cap_height"]
+    mid = (box[1] + box[3]) / 2 / cap
+    return mid >= 0.6 if sup else mid <= 0.35
+
+
+def _is_mark(ch: str) -> bool:
+    return unicodedata.category(ch) == "Mn"
+
+
+def _slant(face) -> float:
+    """tan of the face's italic angle (positive = leans right)."""
+    return math.tan(math.radians(-TM._font(*face)["post"].italicAngle))
 
 
 # --------------------------------------------------------------------------- #
@@ -347,6 +401,9 @@ class _Ch:
     gx: float = 0.0       # glyph origin (baseline, before anchoring)
     gy: float = 0.0
     rel: float = 0.0      # vertical offset from the chunk baseline (for aria)
+    mx: float = 0.0       # combining-mark offset from the pen position (px,
+    my: float = 0.0       # y-down), set by _place_marks
+    synth: str = ""       # synthesized path data (U+0305 overline)
 
 
 @dataclass
@@ -458,24 +515,27 @@ def _db_shift(mode: str, face, fs: float) -> float:
 
 def _layout(chars: list[_Ch], root_style: dict, ctx) -> None:
     db_mode = root_style.get("dominant-baseline", "auto")
-    for c in chars:
+    for i, c in enumerate(chars):
         st = c.st
         cls, scale = _font_class(st["font-family"], ctx.warn)
         italic = st.get("font-style", "normal") in ("italic", "oblique")
         chain = _face_chain(cls, st["_fw"], italic, ctx.warn)
         c.size = st["_fs"] * scale
         c.faux_bold = italic and st["_fw"] >= 600 and chain[0][1] == "italic"
-        face = _pick_face(c.ch, chain)
+        prev = chars[i - 1] if i else None
+        mark = _is_mark(c.ch) and prev is not None
+        face = _pick_face(c.ch, chain, prev.face if mark else None)
         if face is None:
             raise ValueError(f"no bundled or fallback font has {c.ch!r} "
                              f"(U+{ord(c.ch):04X})")
-        if face != chain[0] and c.ch != " ":
+        if face != chain[0] and c.ch != " " and not (mark and face == prev.face):
             ctx.warn(f"{c.ch!r} (U+{ord(c.ch):04X}) not in {chain[0]}; "
                      f"drawn from {face}")
         c.face, c.primary = face, chain[0]
         ls = st.get("letter-spacing", "normal")
         spacing = 0.0 if ls == "normal" else _length(ls, st["_fs"])
-        c.adv = TM.measure(c.ch, c.size, *face).width + spacing
+        # a combining mark takes no advance and no letter-spacing
+        c.adv = 0.0 if _is_mark(c.ch) else TM.measure(c.ch, c.size, *face).width + spacing
 
     pen_x = pen_y = 0.0
     chunks: list[int] = []
@@ -511,6 +571,65 @@ def _layout(chars: list[_Ch], root_style: dict, ctx) -> None:
             raise ValueError(f"unsupported text-anchor {anchor!r}")
         for c in chars[s:e]:
             c.gx += shift
+    _place_marks(chars)
+
+
+# Combining marks.  The bundled faces carry no GPOS mark attachment that we
+# apply, and their mark glyphs are drawn for different pen conventions
+# (Inconsolata: zero advance with the ink over the PREVIOUS cell; Source
+# Sans 3: ink centred on the pen), so a mark drawn at the pen lands on the
+# next letter or beside the base.  Instead each mark is centred over its base
+# glyph's ink and lifted clear of the base's top, keeping the face's own gap
+# between an x-height letter and the mark; marks below the baseline are
+# lowered under the base the same way.  U+0305 (combining overline) is drawn
+# as a bar over the base's whole advance, so x̅y̅ joins into one overline.
+def _place_marks(chars: list[_Ch]) -> None:
+    base = None
+    top = bot = 0.0          # current ink top / bottom of the base cluster (px, y-up)
+    for c in chars:
+        if not _is_mark(c.ch):
+            base = c
+            box = _ink(c.face, c.ch) if c.ch != " " else None
+            xh = TM._metrics(*c.face)["x_height"] * c.size
+            top = box[3] * c.size if box else xh
+            bot = box[1] * c.size if box else 0.0
+            continue
+        if base is None:
+            continue
+        bbox = _ink(base.face, base.ch) if base.ch != " " else None
+        if bbox:
+            bx = base.gx + (bbox[0] + bbox[2]) / 2 * base.size
+            by = (bbox[1] + bbox[3]) / 2 * base.size
+        else:
+            bx, by = base.gx + base.adv / 2, 0.0
+        m = TM._metrics(*c.face)
+        xh = m["x_height"] * c.size
+        if c.ch == "\u0305":
+            mac = _ink(c.primary, "\u0304") or _ink(c.face, "\u0304") or (0, 0.6, 0, 0.66)
+            gap = mac[1] * c.size - xh
+            lo = max(mac[1] * c.size, top + gap)
+            hi = lo + (mac[3] - mac[1]) * c.size
+            x0, x1 = base.gx, base.gx + base.adv
+            y0, y1 = base.gy - hi, base.gy - lo
+            c.synth = (f"M{x0:.2f} {y0:.2f}H{x1:.2f}V{y1:.2f}H{x0:.2f}Z")
+            top = hi
+            continue
+        mbox = _ink(c.face, c.ch)
+        if mbox is None:
+            continue
+        lo, hi = mbox[1] * c.size, mbox[3] * c.size
+        if hi > 0.5 * xh:            # mark above the base
+            dy = max(0.0, top - xh)   # keep the gap the face leaves over x-height
+            top = hi + dy
+        else:                        # mark below the baseline
+            dy = min(0.0, bot - 0.03 * c.size - hi)
+            bot = lo + dy
+        mcx = (mbox[0] + mbox[2]) / 2 * c.size
+        mcy = (lo + hi) / 2 + dy
+        # follow the italic slant from the base's centre up to the mark
+        tx_ = bx + _slant(base.face) * (mcy - by)
+        c.mx = tx_ - (c.gx + mcx)
+        c.my = -dy
 
 
 # --------------------------------------------------------------------------- #
@@ -560,7 +679,8 @@ def _outline_text(text_el, parents, ctx) -> str:
     for c in chars:
         if c.ch == " ":
             continue
-        d = _outliner(c.face).path_data(c.ch, c.size, c.gx, c.gy)
+        d = c.synth or _outliner(c.face).path_data(
+            c.ch, c.size, c.gx + c.mx, c.gy + c.my)
         if not d:
             continue
         paint = tuple((k, c.st[k]) for k in _PAINT if k in c.st)

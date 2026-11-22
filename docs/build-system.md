@@ -2198,6 +2198,13 @@ including the ch6/7/8/9 ones (`gen_bg_*`, `gen_arch_*`, `gen_opt_figures`) the o
 `gen_mdl_*_figures.py` glob silently skipped — via a `.figstamps/<name>` per
 generator keyed on the generator script + the shared `gen_mdl_figures.py` style.
 Only a changed generator re-runs; it is never part of `all`/`all-quick`.
+A figure a slide shows through `@fig:<id>` is read from `img/auto/<id>.svg`
+(`tools/gen_slides.py`), the book's from `img/<id>.svg`, and only some
+generators copied their output to both, so 57 slide copies went stale
+(2026-11-22). `make figures` now ends with `tools/sync_auto_figures.py`,
+which copies every regenerated matplotlib `img/<id>.svg` over its
+`img/auto/` twin and then fails (`--check`) if any pair still differs;
+`tools/lint_source.py --corpus` runs the same check.
 
 **Logging.** Every substantive recipe tees to `logs/<target>-<TS>.log` (pipefail
 is global, so the upstream exit status is preserved). Purely informational guards

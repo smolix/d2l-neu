@@ -46,6 +46,8 @@ Cross-corpus checks (with `--corpus`):
   - `:numref:` / `:eqref:` / `:cite:` / `:ref:` point to existing
     labels.
   - `:label:` / `:eqlabel:` IDs are globally unique.
+  - A figure in both img/ and img/auto/ (book copy and the copy `@fig`
+    slides read) is byte-identical (tools/sync_auto_figures.py).
 
 Performance target: <100 ms per file, <5 s for the whole corpus.
 
@@ -780,6 +782,15 @@ def main():
                 error_count += 1
             else:
                 warning_count += 1
+
+    if args.corpus:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from sync_auto_figures import differing_pairs
+        for fid in differing_pairs(str(args.source.resolve())):
+            print(Issue(f'img/auto/{fid}.svg', 1, 1, 'error',
+                        f'differs from img/{fid}.svg; run '
+                        'tools/sync_auto_figures.py').emit())
+            error_count += 1
 
     if error_count or warning_count:
         sev_summary = []

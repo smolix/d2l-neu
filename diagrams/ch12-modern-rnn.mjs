@@ -870,7 +870,7 @@ function diagonalOdeBank() {
     body += rbox(154, y, 224, 50, col.bg, col.bd);
     body += tx(266, y + 18, `${title}:  ${eq}`, { fs: 9.5, fw: 700, fill: col.tx, mono: true });
     body += tx(266, y + 36, tau, { fs: 9.5, fill: C.text });
-    body += arrow(380, y + 25, 422, 123);
+    body += arrow(380, y + 25, 422, 123 + (y - 100) / 4);   // spread the fan-in heads
   });
 
   body += rbox(424, 78, 100, 90, C.amber.bg, C.amber.bd);
@@ -1098,7 +1098,7 @@ function selectiveSsmDataflow() {
     body += rbox(132, y, 200, 46, col.bg, col.bd);
     body += tx(232, y + 17, eq, { fs: 9.5, fw: 700, fill: col.tx, mono: true });
     body += tx(232, y + 34, sub, { fs: 9, fill: C.muted });
-    body += arrow(334, y + 22, 360, 114);
+    body += arrow(334, y + 22, 360, 114 + (y - 96) / 3);   // spread the fan-in heads
   });
 
   body += rbox(362, 52, 164, 124, C.green.bg, C.green.bd);

@@ -3,24 +3,46 @@
 // text-on-text collisions, and viewBox clipping), and outline all diagrams
 // exported by one or more diagram modules (e.g. diagrams/ch02-linear-regression.mjs).
 //
-// Usage:
-//   NODE_PATH=/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
-//   /Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
-//   tools/build_module_diagrams.mjs diagrams/ch02-linear-regression.mjs
+// Usage (from anywhere; the repo root is this script's parent directory,
+// or $D2L_REPO):
+//   node tools/build_module_diagrams.mjs diagrams/ch02-linear-regression.mjs
+//
+// Needs the `playwright` (or `playwright-core`) npm package with a Chromium
+// it has installed.  Without a global one it uses the playwright-core driver
+// that ships inside the Python playwright wheel in .venv-build (or the
+// package directory named by $PLAYWRIGHT_CORE).  Python: $D2L_PYTHON, else
+// .venv-pytorch/bin/python (fontTools + PIL), else python3.
 
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
 
-const REPO = '/Users/smola/Repositories/github/d2l-neu';
+const REPO = process.env.D2L_REPO
+  || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const AUTO_DIR = path.join(REPO, 'img', 'auto');
-const PY311 = '/Users/smola/.local/share/uv/python/cpython-3.11.15-macos-aarch64-none/bin/python3';
-const PYPATH = '/Users/smola/.cache/uv/archive-v0/hzz6KCxlX6Cgwc-TkCWYi:/Users/smola/.cache/uv/archive-v0/0e4XuHEWIYqPIV3UQv7nM';
+const PY = process.env.D2L_PYTHON
+  || [path.join(REPO, '.venv-pytorch', 'bin', 'python')].find((p) => fs.existsSync(p))
+  || 'python3';
+
+function loadChromium() {
+  const tries = ['playwright', 'playwright-core'];
+  if (process.env.PLAYWRIGHT_CORE) tries.unshift(process.env.PLAYWRIGHT_CORE);
+  const lib = path.join(REPO, '.venv-build', 'lib');
+  if (fs.existsSync(lib)) {
+    for (const py of fs.readdirSync(lib).sort()) {
+      tries.push(path.join(lib, py, 'site-packages', 'playwright', 'driver', 'package'));
+    }
+  }
+  for (const t of tries) {
+    try { return require(t).chromium; } catch (e) { /* next */ }
+  }
+  throw new Error(`no playwright found (tried ${tries.join(', ')})`);
+}
+const chromium = loadChromium();
 
 const FONT_IMPORT = "@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&display=swap');";
 
@@ -35,9 +57,18 @@ function standalone(inner) {
     + body + `</svg>\n`;
 }
 
-const modPaths = process.argv.slice(2);
+// Flags: --ids=a,b,c renders (checks, writes) only those ids of the modules;
+// --warn reports visual defects but still writes the files.  The check runs
+// on live text in this host's Chromium with whatever fonts it finds, so its
+// verdict on an untouched diagram can differ between hosts; use --warn to
+// regenerate a module after an outliner-only change.
+const argv = process.argv.slice(2);
+const onlyIds = new Set(argv.filter((a) => a.startsWith('--ids='))
+  .flatMap((a) => a.slice(6).split(',')).filter(Boolean));
+const warnOnly = argv.includes('--warn');
+const modPaths = argv.filter((a) => !a.startsWith('--'));
 if (modPaths.length === 0) {
-  console.error('Usage: node tools/build_module_diagrams.mjs <diagrams/module.mjs> [...]');
+  console.error('Usage: node tools/build_module_diagrams.mjs [--ids=a,b] [--warn] <diagrams/module.mjs> [...]');
   process.exit(2);
 }
 
@@ -49,6 +80,7 @@ for (const mp of modPaths) {
     throw new Error(`${mp} does not export a 'diagrams' object`);
   }
   for (const [id, fn] of Object.entries(mod.diagrams)) {
+    if (onlyIds.size && !onlyIds.has(id)) continue;
     allEntries.push([id, fn]);
   }
 }
@@ -212,30 +244,42 @@ for (const [id, fn] of allEntries) {
 
 await browser.close();
 
-if (totalDefects > 0) {
+if (totalDefects > 0 && warnOnly) {
+  console.error(`\nWARNING: ${totalDefects} visual defect(s) across ${allEntries.length} diagram(s); writing anyway (--warn).`);
+} else if (totalDefects > 0) {
   console.error(`\nFAILED: ${totalDefects} visual defect(s) across ${allEntries.length} diagram(s). Fix coordinates before outlining.`);
   process.exit(1);
 }
 
-// Write to img/auto/<id>.svg and run outline_svg.py on ONLY these files
+// Write to img/auto/<id>.svg and run outline_svg.py on ONLY these files.
+// A file the legacy remake_ch02.py pipeline tight-cropped (its committed
+// viewBox differs from the fresh render's) is cropped again, so a re-run
+// reproduces the committed tree byte for byte; a book copy img/<id>.svg,
+// where one exists, is refreshed from the result.
+const viewBox = (s) => (s.match(/<svg\b[^>]*\sviewBox="([^"]*)"/) || [])[1];
 fs.mkdirSync(AUTO_DIR, { recursive: true });
 const writtenPaths = [];
+const cropPaths = [];
 for (const [id, svgStr] of renderedMap.entries()) {
   const outPath = path.join(AUTO_DIR, `${id}.svg`);
+  if (fs.existsSync(outPath)
+      && viewBox(fs.readFileSync(outPath, 'utf8')) !== viewBox(svgStr)) {
+    cropPaths.push(outPath);
+  }
   fs.writeFileSync(outPath, svgStr);
   writtenPaths.push(outPath);
 }
 
-if (writtenPaths.length > 0) {
-  execFileSync(
-    PY311,
-    [path.join(REPO, 'tools', 'figstyle', 'outline_svg.py'), ...writtenPaths],
-    {
-      cwd: REPO,
-      env: { ...process.env, PYTHONPATH: PYPATH },
-      stdio: 'inherit',
-    }
-  );
+const runPy = (script, files) => execFileSync(
+  PY, [path.join(REPO, 'tools', 'figstyle', script), ...files],
+  { cwd: REPO, stdio: 'inherit' });
+if (writtenPaths.length > 0) runPy('outline_svg.py', writtenPaths);
+if (cropPaths.length > 0) runPy('tightcrop.py', cropPaths);
+let copied = 0;
+for (const p of writtenPaths) {
+  const book = path.join(REPO, 'img', path.basename(p));
+  if (fs.existsSync(book)) { fs.copyFileSync(p, book); copied++; }
 }
 
-console.log(`\nSUCCESS: Rendered, verified (0 visual defects), and outlined ${writtenPaths.length} diagram(s).`);
+console.log(`\nSUCCESS: Rendered, verified (${totalDefects} visual defects), and outlined ${writtenPaths.length} diagram(s)`
+  + ` (${cropPaths.length} re-cropped, ${copied} book copies refreshed).`);

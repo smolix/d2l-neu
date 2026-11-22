@@ -102,6 +102,7 @@ export function grid(data, x0, y0, s, gap, opt) {
 // An arrow from (x1,y1) to (x2,y2). Arrowhead is drawn as a filled path,
 // so no <marker>/<defs> id juggling across multiple inlined SVGs.
 export function arrow(x1, y1, x2, y2, color, dash) {
+  color = color || C.ink;   // a colourless call used to write stroke="undefined"
   // The SHAFT stops at the head's base — drawing it through to the tip
   // makes the head look stubby and the line poke past it (Alex, ch2 review).
   const ang = Math.atan2(y2 - y1, x2 - x1), h = 10.5;

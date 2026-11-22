@@ -58,7 +58,15 @@ import os
 ```
 
 ## Model Implementation
-The implementation computes the linear term and the square-of-sum identity separately. It returns logits; combining the sigmoid and binary cross-entropy in `SigmoidBinaryCrossEntropyLoss` or `BCEWithLogitsLoss` avoids explicitly taking logarithms of probabilities near zero or one.
+The implementation computes the linear term and the square-of-sum identity separately. It returns logits; a loss that combines the sigmoid and binary cross-entropy avoids explicitly taking logarithms of probabilities near zero or one.
+
+:begin_tab:`mxnet`
+In MXNet this loss is `SigmoidBinaryCrossEntropyLoss`.
+:end_tab:
+
+:begin_tab:`pytorch`
+In PyTorch this loss is `BCEWithLogitsLoss`.
+:end_tab:
 
 ```{.python .input #fm-model-implementation  n=2}
 #@tab mxnet
@@ -132,7 +140,7 @@ test_iter = torch.utils.data.DataLoader(
 ```
 
 ## Train the Model
-Afterwards, we train the model. The learning rate is set to 0.02 and the embedding size is set to 20 by default. The `Adam` optimizer and the `SigmoidBinaryCrossEntropyLoss` loss are used for model training.
+Afterwards, we train the model. The learning rate is set to 0.02 and the embedding size is set to 20 by default. The `Adam` optimizer and the loss that combines the sigmoid and binary cross-entropy are used for model training.
 
 ```{.python .input #fm-train-the-model  n=5}
 #@tab mxnet

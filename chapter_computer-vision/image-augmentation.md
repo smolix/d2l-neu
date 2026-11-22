@@ -360,7 +360,23 @@ apply(img, shape_aug)
 
 ### Changing Colors
 
-Another augmentation method is changing colors. We can change four aspects of the image color: brightness, contrast, saturation, and hue. In the example below, we randomly change the brightness of the image to a value between 50% ($1-0.5$) and 150% ($1+0.5$) of the original image.
+Another augmentation method is changing colors. We can change four aspects of the image color: brightness, contrast, saturation, and hue. In the example below, we randomly change the brightness of the image by up to 0.5.
+
+:begin_tab:`mxnet`
+The brightness is scaled to a random value between 50% ($1-0.5$) and 150% ($1+0.5$) of the original image.
+:end_tab:
+
+:begin_tab:`pytorch`
+The brightness is scaled to a random value between 50% ($1-0.5$) and 150% ($1+0.5$) of the original image.
+:end_tab:
+
+:begin_tab:`jax`
+`tf.image.random_brightness` adds a random offset in $[-0.5, 0.5]$ to pixel values in $[0, 1]$, so the change is additive rather than a scaling.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`tf.image.random_brightness` adds a random offset in $[-0.5, 0.5]$ to pixel values in $[0, 1]$, so the change is additive rather than a scaling.
+:end_tab:
 
 ```{.python .input #image-augmentation-changing-colors-1}
 #@tab mxnet
@@ -438,7 +454,7 @@ def RandomHue(max_delta):
 apply(img, RandomHue(0.5))
 ```
 
-We can also create a `RandomColorJitter` instance and set how to randomly change the `brightness`, `contrast`, `saturation`, and `hue` of the image at the same time.
+We can also create a color-jitter transform and set how to randomly change the `brightness`, `contrast`, `saturation`, and `hue` of the image at the same time.
 
 ```{.python .input #image-augmentation-changing-colors-3}
 #@tab mxnet
@@ -583,8 +599,24 @@ d2l.show_images([Image.fromarray(train_images[i]) for i in range(32)],
 ```
 
 In order to obtain definitive results during prediction, we usually only apply image augmentation to training examples, and do not use image augmentation with random operations during prediction. 
-Here we only use the simplest random left-right flipping method. In addition, we use a `ToTensor` instance to convert a minibatch of images into the format required by the deep learning framework, i.e., 
-32-bit floating point numbers between 0 and 1 with the shape of (batch size, number of channels, height, width).
+Here we only use the simplest random left-right flipping method. In addition, we convert a minibatch of images into the format required by the deep learning framework, i.e., 
+32-bit floating point numbers between 0 and 1.
+
+:begin_tab:`mxnet`
+A `ToTensor` instance does this conversion and also gives the shape (batch size, number of channels, height, width).
+:end_tab:
+
+:begin_tab:`pytorch`
+A `ToTensor` instance does this conversion and also gives the shape (batch size, number of channels, height, width).
+:end_tab:
+
+:begin_tab:`jax`
+We cast the images to 32-bit floats and divide by 255; they keep the channels-last shape (batch size, height, width, number of channels).
+:end_tab:
+
+:begin_tab:`tensorflow`
+We cast the images to 32-bit floats and divide by 255; they keep the channels-last shape (batch size, height, width, number of channels).
+:end_tab:
 
 ```{.python .input #image-augmentation-training-with-image-augmentation-2}
 #@tab mxnet
@@ -721,7 +753,7 @@ def load_cifar10(is_train, aug_fn, batch_size):
     return ds
 ```
 
-### Multi-GPU Training
+### Training on the Available Devices
 
 We train the ResNet-18 model from
 :numref:`sec_resnet` on the
@@ -729,7 +761,23 @@ CIFAR-10 dataset.
 Recall the introduction to
 multi-GPU training in :numref:`sec_multi_gpu_concise`.
 In the following,
-we define a function to train and evaluate the model using multiple GPUs.
+we define a function to train and evaluate the model on the available devices.
+
+:begin_tab:`mxnet`
+Each minibatch is split across all available GPUs with `split_batch`.
+:end_tab:
+
+:begin_tab:`pytorch`
+The network is wrapped in `nn.DataParallel`, which splits each minibatch across all available GPUs.
+:end_tab:
+
+:begin_tab:`jax`
+Training runs on a single device.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Training runs on a single device.
+:end_tab:
 
 ```{.python .input #image-augmentation-multi-gpu-training-1}
 #@tab mxnet
@@ -969,10 +1017,17 @@ def train_ch13(net, train_iter, test_iter, loss, optimizer, num_epochs):
 ```
 
 Now we can define the `train_with_data_aug` function to train the model with image augmentation.
-This function gets all available GPUs, 
-uses Adam as the optimization algorithm,
+This function uses Adam as the optimization algorithm,
 applies image augmentation to the training dataset,
 and finally calls the `train_ch13` function just defined to train and evaluate the model.
+
+:begin_tab:`mxnet`
+The cell also collects all available GPUs with `d2l.try_all_gpus()` and passes them to `train_ch13`.
+:end_tab:
+
+:begin_tab:`pytorch`
+The cell also collects all available GPUs with `d2l.try_all_gpus()` and passes them to `train_ch13`.
+:end_tab:
 
 ```{.python .input #image-augmentation-multi-gpu-training-3}
 #@tab mxnet
@@ -1045,7 +1100,7 @@ train_with_data_aug(train_augs, test_augs, net)
 
 ## Exercises
 
-1. Train the model without using image augmentation: `train_with_data_aug(test_augs, test_augs)`. Compare training and testing accuracy when using and not using image augmentation. Can this comparative experiment support the argument that image augmentation can mitigate overfitting? Why?
+1. Train the model without using image augmentation: `train_with_data_aug(test_augs, test_augs, net)`. Compare training and testing accuracy when using and not using image augmentation. Can this comparative experiment support the argument that image augmentation can mitigate overfitting? Why?
 1. Combine multiple different image augmentation methods in model training on the CIFAR-10 dataset. Does it improve test accuracy? 
 1. Refer to the online documentation of the deep learning framework. What other image augmentation methods does it also provide?
 1. Augmentation changes the objective that training minimizes. Consider a linear model $f(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$ trained on augmented inputs.

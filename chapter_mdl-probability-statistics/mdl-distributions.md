@@ -178,7 +178,7 @@ P(X=9) = \frac{715}{8192} \approx 0.087 .
 $$
 
 The probability of seeing 9 heads *or more* is
-$(715+286+78+13+1)/8192=1093/8192\approx0.133$. Whether a tail probability of
+$(715+286+78+13+1)/8192$, which equals $1093/8192\approx0.133$. Whether a tail probability of
 $13.3\%$ is enough reason to doubt the fairness of the coin is a statistical
 question that we set aside for now.
 
@@ -1072,8 +1072,8 @@ $$
 
 **Proof.** By linearity of expectation, the stated mean and covariance hold
 for any distribution with finite second moments:
-$\mathbb{E}[(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)^\top]
-=\mathbf A\,\mathbb{E}[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top]\,\mathbf A^\top
+$\mathbb{E}[(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)(\mathbf A\mathbf x-\mathbf A\boldsymbol\mu)^\top]$
+equals $\mathbf A\,\mathbb{E}[(\mathbf x-\boldsymbol\mu)(\mathbf x-\boldsymbol\mu)^\top]\,\mathbf A^\top
 =\mathbf A\boldsymbol\Sigma\mathbf A^\top$. It remains only to check that the
 transformed density is Gaussian. By the change-of-variables formula of
 :numref:`sec_mdl-joint-distributions`, the density of
@@ -1124,7 +1124,7 @@ Any other square-root factor works equally well, such as the symmetric
 eigen-factor $\mathbf V\operatorname{diag}(\sqrt{\gamma_1},\dots,\sqrt{\gamma_d})$.
 As exercise :exref:`ex_mdl-distributions-two-factors` shows, any two factors of
 the same $\boldsymbol\Sigma$ differ only by an orthogonal matrix. In practice,
-PyTorch's `MultivariateNormal` relies on the Cholesky factor, whereas NumPy's
+library samplers differ: many use the Cholesky factor, whereas NumPy's
 `multivariate_normal` defaults to a factor obtained from the singular value
 decomposition.
 
@@ -1209,8 +1209,8 @@ $\mathbf x_1=\mathbf r+\mathbf B\mathbf x_2$ and $\mathbf r$ is independent of
 $\mathbf x_2$, fixing $\mathbf x_2$ merely shifts the Gaussian variable
 $\mathbf r$ by the known vector $\mathbf B\mathbf x_2$. The residual has mean
 $\boldsymbol\mu_1-\mathbf B\boldsymbol\mu_2$ and covariance
-$\boldsymbol\Sigma_{11}-\mathbf B\boldsymbol\Sigma_{21}-\boldsymbol\Sigma_{12}\mathbf B^\top+\mathbf B\boldsymbol\Sigma_{22}\mathbf B^\top
-=\boldsymbol\Sigma_{11}-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$,
+$\boldsymbol\Sigma_{11}-\mathbf B\boldsymbol\Sigma_{21}-\boldsymbol\Sigma_{12}\mathbf B^\top+\mathbf B\boldsymbol\Sigma_{22}\mathbf B^\top$,
+which equals $\boldsymbol\Sigma_{11}-\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$,
 so $\mathbf x_1\mid\mathbf x_2$ is Gaussian with parameters
 
 $$
@@ -1326,7 +1326,11 @@ linear regression.
     1. Use the law of total expectation
        $\mathbb{E}[X]=\mathbb{E}\bigl[\mathbb{E}[X\mid\lambda]\bigr]$ and the law
        of total variance
-       $\textrm{Var}(X)=\mathbb{E}\bigl[\textrm{Var}(X\mid\lambda)\bigr]+\textrm{Var}\bigl(\mathbb{E}[X\mid\lambda]\bigr)$
+
+       $$
+       \textrm{Var}(X)=\mathbb{E}\bigl[\textrm{Var}(X\mid\lambda)\bigr]+\textrm{Var}\bigl(\mathbb{E}[X\mid\lambda]\bigr)
+       $$
+
        to compute $\mathbb{E}[X]$ and $\textrm{Var}(X)$. Write the variance in
        terms of the mean $m=\alpha/\beta$ and the shape $\alpha$. In which
        limit of $\alpha$ and $\beta$ does the Poisson reappear?
@@ -1403,7 +1407,11 @@ linear regression.
        of :numref:`sec_mdl-random_variables` is the case $\nu=1$?
     1. Show that $\textrm{Var}(X)=\nu/(\nu-2)$ for $\nu>2$ by the law of total
        variance,
-       $\textrm{Var}(X)=\mathbb{E}\bigl[\textrm{Var}(X\mid\tau)\bigr]+\textrm{Var}\bigl(\mathbb{E}[X\mid\tau]\bigr)$.
+
+       $$
+       \textrm{Var}(X)=\mathbb{E}\bigl[\textrm{Var}(X\mid\tau)\bigr]+\textrm{Var}\bigl(\mathbb{E}[X\mid\tau]\bigr).
+       $$
+
     1. [code] Draw $10^5$ samples for $\nu=3$ and $\mu=0$ by the mixture
        recipe (first $\tau$, then $X$), and compare the fraction with
        $|X|>3$ with the Gaussian's $0.0027$. Then draw $10^4$ sample means of

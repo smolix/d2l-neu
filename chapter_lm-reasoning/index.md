@@ -1,7 +1,7 @@
 # Distillation and Reasoning
 :label:`chap_lm_reasoning`
 
-The reader has a 1.7B model that solves the arithmetic family after the reinforcement learning of Chapter 8, and a 0.6B model that does not. This chapter moves the capability into the smaller model, and then shows how to buy accuracy at the moment of answering with tokens instead of parameters.
+The reader has a 1.7B model that solves the arithmetic family after the reinforcement learning of :numref:`chap_lm_rl`, and a 0.6B model that does not. This chapter moves the capability into the smaller model, and then shows how to buy accuracy at the moment of answering with tokens instead of parameters.
 
 <!-- Author brief, copied verbatim from the Language Models part plan
 (docs/llm/language_models_part_plan.md, "Chapter 9 Distillation and Reasoning").

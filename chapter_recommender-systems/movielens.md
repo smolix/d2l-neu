@@ -248,7 +248,15 @@ def load_data_ml100k(data, num_users, num_items, feedback='explicit'):
     return users, items, scores, inter
 ```
 
-Afterwards, we put the above steps together and it will be used in the next section. The results are wrapped with `Dataset` and `DataLoader`. We keep the partial last batch in both frameworks (`last_batch='keep'` for MXNet, `drop_last=False` for PyTorch) so that no training samples are silently dropped from each epoch, and orders are shuffled.
+Afterwards, we put the above steps together and it will be used in the next section. The results are wrapped with `Dataset` and `DataLoader`. We keep the partial last batch so that no training samples are silently dropped from each epoch, and orders are shuffled.
+
+:begin_tab:`mxnet`
+The training `DataLoader` is created with `last_batch='keep'`.
+:end_tab:
+
+:begin_tab:`pytorch`
+The training `DataLoader` is created with `drop_last=False`.
+:end_tab:
 
 ```{.python .input #movielens-loading-the-data-2  n=7}
 #@tab mxnet

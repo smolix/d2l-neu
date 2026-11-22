@@ -1141,13 +1141,13 @@ nonsymmetric matrix.
        order is cheaper.
    :exlabel:`ex_mdl-matrix-calculus-chain-order`
 
-1. [code] **Backward rules of a matrix product.**
+:begin_tab:`mxnet`
+3. [code] **Backward rules of a matrix product.**
     1. For $\mathbf Y=\mathbf X\mathbf W$, derive
        :eqref:`eq_mdl-matmul-vjp` by the differential method, then derive it
        again by indices to confirm the transposes.
-    1. Verify both rules with your framework's vector–Jacobian product
-       (`torch.func.vjp`, `jax.vjp`, `tape.gradient(..., output_gradients=...)`
-       in TensorFlow, `backward(head_grad)` in MXNet) on
+    1. Verify both rules with the vector–Jacobian product
+       `backward(head_grad)` on
        $\mathbf X\in\mathbb R^{3\times4}$, $\mathbf W\in\mathbb R^{4\times2}$
        and a random adjoint $\bar{\mathbf Y}$. Count the multiplications of the
        forward product and of the two backward products.
@@ -1158,8 +1158,66 @@ nonsymmetric matrix.
        the alternating least-squares step that sets one gradient to zero with
        the other factor fixed, and show that each step is one linear solve.
    :exlabel:`ex_mdl-matrix-calculus-matmul-rules`
+:end_tab:
 
-1. **Softmax vector–Jacobian product.** A backward pass never forms the
+:begin_tab:`pytorch`
+3. [code] **Backward rules of a matrix product.**
+    1. For $\mathbf Y=\mathbf X\mathbf W$, derive
+       :eqref:`eq_mdl-matmul-vjp` by the differential method, then derive it
+       again by indices to confirm the transposes.
+    1. Verify both rules with the vector–Jacobian product
+       `torch.func.vjp` on
+       $\mathbf X\in\mathbb R^{3\times4}$, $\mathbf W\in\mathbb R^{4\times2}$
+       and a random adjoint $\bar{\mathbf Y}$. Count the multiplications of the
+       forward product and of the two backward products.
+    1. For the factorization loss $\|\mathbf X-\mathbf U\mathbf V\|_F^2$ with
+       $\mathbf R=\mathbf X-\mathbf U\mathbf V$, check
+       $\nabla_{\mathbf U}=-2\mathbf R\mathbf V^\top$ and
+       $\nabla_{\mathbf V}=-2\mathbf U^\top\mathbf R$ numerically. Then write
+       the alternating least-squares step that sets one gradient to zero with
+       the other factor fixed, and show that each step is one linear solve.
+   :exlabel:`ex_mdl-matrix-calculus-matmul-rules`
+:end_tab:
+
+:begin_tab:`tensorflow`
+3. [code] **Backward rules of a matrix product.**
+    1. For $\mathbf Y=\mathbf X\mathbf W$, derive
+       :eqref:`eq_mdl-matmul-vjp` by the differential method, then derive it
+       again by indices to confirm the transposes.
+    1. Verify both rules with the vector–Jacobian product
+       `tape.gradient(..., output_gradients=...)` on
+       $\mathbf X\in\mathbb R^{3\times4}$, $\mathbf W\in\mathbb R^{4\times2}$
+       and a random adjoint $\bar{\mathbf Y}$. Count the multiplications of the
+       forward product and of the two backward products.
+    1. For the factorization loss $\|\mathbf X-\mathbf U\mathbf V\|_F^2$ with
+       $\mathbf R=\mathbf X-\mathbf U\mathbf V$, check
+       $\nabla_{\mathbf U}=-2\mathbf R\mathbf V^\top$ and
+       $\nabla_{\mathbf V}=-2\mathbf U^\top\mathbf R$ numerically. Then write
+       the alternating least-squares step that sets one gradient to zero with
+       the other factor fixed, and show that each step is one linear solve.
+   :exlabel:`ex_mdl-matrix-calculus-matmul-rules`
+:end_tab:
+
+:begin_tab:`jax`
+3. [code] **Backward rules of a matrix product.**
+    1. For $\mathbf Y=\mathbf X\mathbf W$, derive
+       :eqref:`eq_mdl-matmul-vjp` by the differential method, then derive it
+       again by indices to confirm the transposes.
+    1. Verify both rules with the vector–Jacobian product
+       `jax.vjp` on
+       $\mathbf X\in\mathbb R^{3\times4}$, $\mathbf W\in\mathbb R^{4\times2}$
+       and a random adjoint $\bar{\mathbf Y}$. Count the multiplications of the
+       forward product and of the two backward products.
+    1. For the factorization loss $\|\mathbf X-\mathbf U\mathbf V\|_F^2$ with
+       $\mathbf R=\mathbf X-\mathbf U\mathbf V$, check
+       $\nabla_{\mathbf U}=-2\mathbf R\mathbf V^\top$ and
+       $\nabla_{\mathbf V}=-2\mathbf U^\top\mathbf R$ numerically. Then write
+       the alternating least-squares step that sets one gradient to zero with
+       the other factor fixed, and show that each step is one linear solve.
+   :exlabel:`ex_mdl-matrix-calculus-matmul-rules`
+:end_tab:
+
+4. **Softmax vector–Jacobian product.** A backward pass never forms the
    softmax Jacobian :eqref:`eq_mdl-softmax-jacobian`. It maps the adjoint
    $\mathbf u=\bar{\mathbf p}$ of the probabilities to the adjoint
    $\bar{\mathbf z}=\mathbf J_{\operatorname{softmax}}^\top\mathbf u$ of the
@@ -1193,8 +1251,8 @@ nonsymmetric matrix.
        $\operatorname{span}\{\mathbf 1,\hat{\mathbf x}\}$ and that
        $\operatorname{rank}\mathbf J=n-2$ for $n\ge2$. Which two changes of
        the input can LayerNorm not see, and why?
-    1. Check (a) and the two null vectors against your framework's Jacobian
-       for a random $\mathbf x\in\mathbb R^5$, and print the eigenvalues of
+    1. Check (a) and the two null vectors against the Jacobian computed by
+       automatic differentiation for a random $\mathbf x\in\mathbb R^5$, and print the eigenvalues of
        $\mathbf J$.
 
 1. **Log-determinant gradient.** ● A normalizing flow

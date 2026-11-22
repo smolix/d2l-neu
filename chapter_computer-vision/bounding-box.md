@@ -206,6 +206,10 @@ fig.axes.add_patch(bbox_to_rect(cat_bbox, 'red'));
 [Discussions](https://d2l.discourse.group/t/1527)
 :end_tab:
 
+:begin_tab:`tensorflow`
+[Discussions](https://d2l.discourse.group/t/1527)
+:end_tab:
+
 <!-- slides -->
 
 ::: {.slide title="Bounding Boxes"}

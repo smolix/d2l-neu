@@ -328,6 +328,10 @@ the VGG network uses 5 convolutional blocks.
 In the experiment, we choose the last convolutional layer of the fourth convolutional block as the content layer, and the first convolutional layer of each convolutional block as the style layer.
 The indices of these layers can be obtained by printing the `pretrained_net` instance.
 
+:begin_tab:`jax`
+For the ResNet-50 we instead use the output of the pooled stem and of each of the four residual stages as the style layers (indices 0 to 4), and the output of the third stage as the content layer (index 3).
+:end_tab:
+
 ```{.python .input #neural-style-extracting-features-2}
 style_layers, content_layers = [0, 5, 10, 19, 28], [25]
 ```
@@ -337,6 +341,10 @@ we only need to use all those
 from the input layer to the content layer or style layer that is closest to the output layer.
 Let's construct a new network instance `net`, which only retains all the VGG layers to be
 used for feature extraction.
+
+:begin_tab:`jax`
+For the ResNet-50, `net` is the whole pretrained network; `extract_features` below runs its stem and its four residual stages.
+:end_tab:
 
 ```{.python .input #neural-style-extracting-features-3}
 #@tab mxnet
@@ -444,7 +452,7 @@ def extract_features(X, content_layers, style_layers):
 Two functions are defined below:
 the `get_contents` function extracts content features from the content image,
 and the `get_styles` function extracts style features from the style image.
-Since there is no need to update the model parameters of the pretrained VGG during training,
+Since there is no need to update the model parameters of the pretrained network during training,
 we can extract the content and the style features
 even before the training starts.
 Since the synthesized image
@@ -663,8 +671,23 @@ def compute_loss(X, contents_Y_hat, styles_Y_hat, contents_Y, styles_Y_gram):
 
 In style transfer,
 the synthesized image is the only variable that needs to be updated during training.
-Thus, we can define a simple model, `SynthesizedImage`, and treat the synthesized image as the model parameters.
-In this model, forward propagation just returns the model parameters.
+Thus, we can treat the synthesized image as the model parameters.
+
+:begin_tab:`mxnet`
+We define a simple model, `SynthesizedImage`, whose forward propagation just returns the model parameters.
+:end_tab:
+
+:begin_tab:`pytorch`
+We define a simple model, `SynthesizedImage`, whose forward propagation just returns the model parameters.
+:end_tab:
+
+:begin_tab:`jax`
+No model class is needed: we optimize the synthesized image array directly.
+:end_tab:
+
+:begin_tab:`tensorflow`
+No model class is needed: we optimize the synthesized image as a `tf.Variable` directly.
+:end_tab:
 
 ```{.python .input #neural-style-initializing-the-synthesized-image-1}
 #@tab mxnet
@@ -699,7 +722,7 @@ class SynthesizedImage(nn.Module):
 ```
 
 Next, we define the `get_inits` function.
-This function creates a synthesized image model instance and initializes it to the image `X`.
+This function creates the synthesized image and initializes it to the image `X`.
 Gram matrices for the style image at various style layers, `styles_Y_gram`, are computed prior to training.
 
 ```{.python .input #neural-style-initializing-the-synthesized-image-2}

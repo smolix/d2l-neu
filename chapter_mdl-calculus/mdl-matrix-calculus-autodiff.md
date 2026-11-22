@@ -739,11 +739,16 @@ the cost of $O(T\log T)$ recomputation.
 ## Composing Jacobian Products
 :label:`subsec_mdl-composing-products`
 
-Modern frameworks expose both linear operators our toy engines just built: the
+Automatic differentiation offers both linear operators our toy engines just built: the
 forward-mode JVP $\mathbf J\mathbf v$ and the reverse-mode VJP
 $\mathbf u^\top\mathbf J$. Once both are available as composable primitives, we
 can compute directional curvature, differentiate through numerical solvers, or
 assemble full Jacobians when needed.
+
+:begin_tab:`mxnet`
+MXNet's autograd offers only the reverse-mode VJP, so the MXNet code below
+works around the missing JVP.
+:end_tab:
 
 ### Jacobian--Vector and Vector--Jacobian Products
 :label:`subsec_mdl-jvp-vjp`
@@ -904,7 +909,7 @@ could still pass; for log-sum-exp, $\mathbf H$ varies with $\mathbf x$, and the
 gradient at $\mathbf v$, $\operatorname{softmax}(\mathbf v)=(0.574,0.348,0.078)$,
 is nowhere near $\mathbf H\mathbf v$.
 
-In frameworks that support both modes, forward over reverse takes a single line
+With both modes available, forward over reverse takes a single line
 of code.
 
 ```{.python .input #mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up}
@@ -1200,8 +1205,8 @@ solve at the converged solution.
        `Var(Dual(x_j, v_j))`, and run `backprop`. Show that the value
        parts of the resulting adjoints form $\nabla f$ and that their
        $\varepsilon$-parts form $\mathbf H\mathbf v$, and compare both with
-       (a) and with your framework's forward-over-reverse product applied to
-       the same $f$. Which operations of the backward closures run in dual
+       (a) and with the Hessian--vector product of :numref:`subsec_mdl-hvp`
+       applied to the same $f$. Which operations of the backward closures run in dual
        arithmetic, and why does this make the computation
        forward over reverse in the sense of :eqref:`eq_mdl-hvp`?
     1. Nest the tape in itself instead. Wrap each input as
@@ -1306,22 +1311,6 @@ solve at the converged solution.
        forward-over-reverse pass?
     1. Write $\varepsilon$ as a $3\times3$ matrix with $\varepsilon^3=\mathbf 0$
        and verify the product of (a) by matrix multiplication.
-
-:begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/)
-:end_tab:
-
-:begin_tab:`pytorch`
-[Discussions](https://d2l.discourse.group/)
-:end_tab:
-
-:begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/)
-:end_tab:
-
-:begin_tab:`jax`
-[Discussions](https://d2l.discourse.group/)
-:end_tab:
 
 [Discussions](https://d2l.discourse.group/t/36827)
 

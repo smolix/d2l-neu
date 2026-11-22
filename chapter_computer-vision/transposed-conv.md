@@ -209,6 +209,14 @@ as 1,
 the first and last rows and columns
 will be removed from the transposed convolution output.
 
+:begin_tab:`tensorflow`
+Keras's `Conv2DTranspose` takes no numeric padding, so we remove the first and last rows and columns by slicing its output.
+:end_tab:
+
+:begin_tab:`jax`
+We use `nnx.ConvTranspose` without padding (`padding='VALID'`) and remove the first and last rows and columns by slicing its output.
+:end_tab:
+
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-1}
 #@tab mxnet
 tconv = nn.Conv2DTranspose(1, kernel_size=2, padding=1)
@@ -306,7 +314,23 @@ for the number of output channels
 being the number of channels in $\mathsf{X}$,
 then $g(Y)$ will have the same shape as $\mathsf{X}$.
 This can be illustrated in the following example.
-Note that when the stride is greater than 1, multiple input shapes can map to the same output shape under convolution, so the shape match is not guaranteed in general. In such cases, an additional `output_padding` parameter (available in PyTorch's `ConvTranspose2d`) can be used to resolve the ambiguity.
+Note that when the stride is greater than 1, multiple input shapes can map to the same output shape under convolution, so the shape match is not guaranteed in general. In such cases, an additional output padding can be used to resolve the ambiguity.
+
+:begin_tab:`mxnet`
+`nn.Conv2DTranspose` takes it as the `output_padding` argument.
+:end_tab:
+
+:begin_tab:`pytorch`
+`nn.ConvTranspose2d` takes it as the `output_padding` argument.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`tf.keras.layers.Conv2DTranspose` takes it as the `output_padding` argument.
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.ConvTranspose` has no `output_padding` argument; explicit `(low, high)` padding pairs set the output size instead.
+:end_tab:
 
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-3}
 #@tab mxnet
@@ -490,6 +514,10 @@ $\mathbf{W}^\top$ and $\mathbf{W}$, respectively.
 :end_tab:
 
 :begin_tab:`jax`
+[Discussions](https://d2l.discourse.group/t/1450)
+:end_tab:
+
+:begin_tab:`tensorflow`
 [Discussions](https://d2l.discourse.group/t/1450)
 :end_tab:
 

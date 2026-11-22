@@ -1013,7 +1013,11 @@ what changes when gradients are noisy
        eigenvalue lies in $[-L, L]$. This establishes the converse direction of
        the equivalence stated after :eqref:`eq_mdl-opt-smoothness`.
     1. Consider
-       $f(\mathbf{w}) = \frac1n \sum_{i=1}^n \log\big(1 + \exp(-y_i\, \mathbf{x}_i^\top \mathbf{w})\big) + \frac{\nu}{2}\|\mathbf{w}\|^2$
+
+       $$
+       f(\mathbf{w}) = \frac1n \sum_{i=1}^n \log\big(1 + \exp(-y_i\, \mathbf{x}_i^\top \mathbf{w})\big) + \frac{\nu}{2}\|\mathbf{w}\|^2
+       $$
+
        with labels $y_i = \pm 1$ and $\nu = 0.1$—the `loss` function that we
        will use in the data cell of :numref:`subsec_mdl-why-not-newton`, where
        $\mathbf{x}_i^\top$ is the $i$-th row of
@@ -1087,8 +1091,13 @@ what changes when gradients are noisy
    \nabla f(x) = \begin{cases} 25x, & x < 1, \\ x + 24, & 1 \le x < 2, \\ 25x - 24, & x \ge 2. \end{cases}
    $$
 
-    1. Show that $f$ is $\mu$-strongly convex
-       ($f(y) \ge f(x) + \nabla f(x)(y - x) + \tfrac{\mu}{2}(y - x)^2$) with
+    1. Show that $f$ is $\mu$-strongly convex,
+
+       $$
+       f(y) \ge f(x) + \nabla f(x)(y - x) + \tfrac{\mu}{2}(y - x)^2,
+       $$
+
+       with
        $\mu = 1$ and $L$-smooth ($|\nabla f(y) - \nabla f(x)| \le L|y - x|$)
        with $L = 25$.
     1. Run heavy ball with the tuning :eqref:`eq_mdl-opt-hb-tuning` for $300$
@@ -1161,8 +1170,7 @@ what changes when gradients are noisy
        only if $0 < \eta\lambda < 2 + 2\beta$. Derive the corresponding
        stability interval for Nesterov's update :eqref:`eq_mdl-opt-nesterov`.
     1. Modify the edge-of-stability experiment of
-       :numref:`subsec_gd-edge-of-stability` (cell
-       `#optimization-intro-the-edge-of-stability-1`) to train with heavy ball
+       :numref:`subsec_gd-edge-of-stability` to train with heavy ball
        and with Nesterov's update for $\beta \in \{0.25, 0.5\}$, choosing for
        each run a step size whose predicted threshold lies between $5$ and
        $12$. Track the sharpness against both $2/\eta$ and your threshold from

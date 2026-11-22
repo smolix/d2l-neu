@@ -554,7 +554,23 @@ the remaining anchor boxes $A_1, A_3, A_4, A_6, A_8$ and determine whether to as
 ![Assigning ground-truth bounding boxes to anchor boxes.](../img/anchor-label.svg)
 :label:`fig_anchor_label`
 
-This algorithm is implemented in the following `assign_anchor_to_bbox` function. Note that this routine and the `nms` function below are written as explicit per-box Python loops to mirror the algorithm step by step for teaching; production code should instead use a vectorized/library routine such as `torchvision.ops.batched_nms`, since each in-loop `argmax` forces a device-to-host synchronization on every iteration.
+This algorithm is implemented in the following `assign_anchor_to_bbox` function. Note that this routine and the `nms` function below are written as explicit per-box Python loops to mirror the algorithm step by step for teaching; production code should instead use a vectorized/library routine, since each in-loop `argmax` forces a device-to-host synchronization on every iteration.
+
+:begin_tab:`mxnet`
+MXNet provides such a routine for non-maximum suppression as `npx.box_nms`.
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch provides such a routine for non-maximum suppression as `torchvision.ops.batched_nms`.
+:end_tab:
+
+:begin_tab:`jax`
+JAX has no built-in routine for non-maximum suppression.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow provides such a routine for non-maximum suppression as `tf.image.non_max_suppression`.
+:end_tab:
 
 ```{.python .input #anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes}
 #@tab mxnet

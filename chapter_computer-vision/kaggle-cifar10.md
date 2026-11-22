@@ -130,7 +130,7 @@ After unzipping the downloaded file in `../data`, and unzipping `train.7z` and `
 * `../data/cifar-10/trainLabels.csv`
 * `../data/cifar-10/sampleSubmission.csv`
 
-where the `train` and `test` directories contain the training and testing images, respectively, `trainLabels.csv` provides labels for the training images, and `sample_submission.csv` is a sample submission file.
+where the `train` and `test` directories contain the training and testing images, respectively, `trainLabels.csv` provides labels for the training images, and `sampleSubmission.csv` is a sample submission file.
 
 To make it easier to get started, we provide a small-scale sample of the dataset that
 contains the first 1000 training images and 5 random testing images.

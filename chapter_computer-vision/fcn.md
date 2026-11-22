@@ -274,6 +274,14 @@ and the height and width of the kernel $2s$,
 the transposed convolution will increase
 the height and width of the input by $s$ times.
 
+:begin_tab:`jax`
+`nnx.ConvTranspose` takes `padding='SAME'` here instead of a padding of $16$; it makes the output exactly $32$ times as high and wide as the input.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras's `Conv2DTranspose` takes `padding='same'` here instead of a padding of $16$; it makes the output exactly $32$ times as high and wide as the input.
+:end_tab:
+
 ```{.python .input #fcn-the-model-4}
 #@tab mxnet
 num_classes = 21
@@ -487,7 +495,15 @@ conv_trans = keras.layers.Conv2DTranspose(
 _ = conv_trans(tf.zeros((1, 1, 1, 3)))
 ```
 
-Read the image `X` and assign the upsampling output to `Y`. In order to print the image, we need to adjust the position of the channel dimension.
+Read the image `X` and assign the upsampling output to `Y`.
+
+:begin_tab:`mxnet`
+In order to print the image, we need to adjust the position of the channel dimension.
+:end_tab:
+
+:begin_tab:`pytorch`
+In order to print the image, we need to adjust the position of the channel dimension.
+:end_tab:
 
 ```{.python .input #fcn-initializing-transposed-convolutional-layers-3}
 #@tab mxnet
@@ -915,7 +931,7 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 ## Exercises
 
 1. If we use Xavier initialization for the transposed convolutional layer in the experiment, how does the result change?
-1. The text uses `bilinear_kernel` without deriving it. Work it out for `bilinear_kernel(1, 1, 4)`, the kernel of the layer `conv_trans` with stride 2 and padding 1.
+1. The text uses `bilinear_kernel` without deriving it. Work it out for `bilinear_kernel(1, 1, 4)`, the kernel of the layer `conv_trans` with stride 2 and an output twice the size of its input.
     1. Show that the $4\times 4$ kernel is the outer product of a vector with itself, and give the vector.
     1. In one dimension, compute the six outputs of this transposed convolution for the input $(a, b, c)$. Show that the four interior outputs are the linear interpolations of the input at $1/4$ and $3/4$ of the way between neighboring input pixels, and find the factor by which the first and the last output differ from the neighboring input pixel.
     1. Predict the ratio between the upper-left pixel of the two-dimensional output and the upper-left pixel of the input, and check it for each of the three color channels by applying `conv_trans` to the cat-and-dog image of this section.

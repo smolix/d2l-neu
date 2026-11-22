@@ -6,8 +6,9 @@ outputs. static/d2l-preamble.tex switches to this font for CJK characters
 only. The subset keeps
 
 * the 6,763 hanzi of GB 2312 (simplified Chinese as commonly written),
-* CJK symbols and punctuation (U+3000-U+303F) and fullwidth ASCII forms
-  (U+FF01-U+FF5E),
+* CJK symbols and punctuation (U+3000-U+303F), hiragana and katakana
+  (U+3040-U+30FF; tokenizer outputs print Japanese) and fullwidth ASCII
+  forms (U+FF01-U+FF5E),
 * the space (fontspec reads a font's interword space from it),
 * every other CJK character that occurs in a chapter source or in the
   committed outputs/ store, so a new output that uses a rarer character
@@ -32,8 +33,8 @@ OUT = ROOT / 'static/fonts/NotoSansSC-Regular-subset.otf'
 NOTO_COMMIT = 'f8d157532fbfaeda587e826d4cd5b21a49186f7c'
 # Code-point ranges that static/d2l-preamble.tex sends to this font; keep the
 # two lists in step.
-CJK_RANGES = [(0x3000, 0x303F), (0x3400, 0x4DBF), (0x4E00, 0x9FFF),
-              (0xF900, 0xFAFF), (0xFF00, 0xFFEF)]
+CJK_RANGES = [(0x3000, 0x303F), (0x3040, 0x30FF), (0x3400, 0x4DBF),
+              (0x4E00, 0x9FFF), (0xF900, 0xFAFF), (0xFF00, 0xFFEF)]
 
 
 def is_cjk(cp):
@@ -70,7 +71,7 @@ def main(src):
     font = TTFont(src, recalcTimestamp=False)
     cmap = font.getBestCmap()
     wanted = {ord(c) for c in gb2312_hanzi() | corpus_chars()}
-    wanted |= {cp for lo, hi in [(0x3000, 0x303F), (0xFF01, 0xFF5E)]
+    wanted |= {cp for lo, hi in [(0x3000, 0x30FF), (0xFF01, 0xFF5E)]
                for cp in range(lo, hi + 1)}
     wanted |= {0x20, 0xA0}  # fontspec reads the interword space of a font
     missing = sorted(cp for cp in wanted if cp not in cmap)

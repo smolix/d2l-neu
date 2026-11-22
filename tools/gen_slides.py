@@ -911,8 +911,18 @@ def main():
                 old_hashes = json.loads(hash_store.read_text(encoding='utf-8'))
             except (OSError, ValueError):
                 old_hashes = {}
+            # Each .qmd names the deck theme and overlay by path
+            # (../../../ from <fw>/<chapter>/), so their content is folded
+            # into every deck's hash: a theme or overlay edit re-renders all
+            # decks, which link the theme CSS under a content-hashed name.
+            theme_root = fw_dir.parent.parent
+            theme_bytes = b''.join(
+                (theme_root / f).read_bytes()
+                if (theme_root / f).exists() else b''
+                for f in ('_d2l-slides.scss', '_d2l-slides-overlay.html'))
             cur_hashes = {
-                rel: hashlib.sha256((fw_dir / rel).read_bytes()).hexdigest()
+                rel: hashlib.sha256(
+                    (fw_dir / rel).read_bytes() + theme_bytes).hexdigest()
                 for rel in all_rel}
 
             def _needs_render(rel):

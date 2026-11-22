@@ -100,6 +100,34 @@ h1 code, h2 code, h3 code, h4 code {
   font-size: inherit;
 }
 
+/* Long inline code spans in running text (`chebvander(x, 19)`, long calls)
+   wrap on phones rather than push the page wider than the screen. Bootstrap
+   sets `white-space: pre` on `code`, which forbids any break, so it becomes
+   `pre-wrap` (spaces still kept). Desktop line breaking is unchanged, and
+   code blocks keep their own scrolling (`pre`): only `p` and `li` match. */
+@media (max-width: 600px) {
+  main p code, main li code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ── Wide tables on phones ──────────────────────────────── */
+
+/* A pipe table wider than the column scrolls inside its own box on phones
+   instead of widening the page. `display: block` is what makes overflow-x
+   apply to a table. A captioned table's caption is a <figcaption> outside the
+   <table> (Quarto float), so it stays at full column width and does not
+   scroll; tables inside tabsets and cell outputs scroll the same way. */
+@media (max-width: 600px) {
+  main table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* ── Math equations: responsive scroll & mobile scaling ── */
 
 /* Pandoc wraps display equations in `<span id="eq-...">` + `<span class="math display">`
@@ -130,16 +158,6 @@ mjx-container[jax="CHTML"][display="true"]:not([width="full"]) {
   overflow-x: auto;
   overflow-y: hidden;
   padding: 0.25rem 0;
-}
-
-.math.inline {
-  max-width: 100%;
-}
-.math.inline mjx-container[jax="CHTML"] {
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  vertical-align: middle;
 }
 
 @media (max-width: 600px) {

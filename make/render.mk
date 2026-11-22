@@ -32,8 +32,15 @@ html: _book/index.html
 	} 2>&1 | tee $(LOGDIR)/preprocess-$(TS).log
 	@touch $@
 
+# index.qmd is generated from index.md by the preprocessing above and is
+# gitignored, like chapter_*/*.qmd. A checkout that lacks it (it was tracked
+# until 2026-11-22, so a pull deletes it) while the stamp is current re-runs
+# the preprocessing instead of handing Quarto a missing landing page.
+index.qmd: | .preprocess.stamp
+	@test -f $@ || { rm -f .preprocess.stamp && $(MAKE) --no-print-directory .preprocess.stamp; }
+
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py tools/inject_outputs.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
+_book/index.html: .preprocess.stamp index.qmd _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py tools/inject_outputs.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Verifying committed outputs are fresh ==="
 	@python3 tools/audit_outputs.py --verify-fresh || \
@@ -76,7 +83,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 
-_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py static/d2l-preamble.tex
+_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py static/d2l-preamble.tex $(wildcard static/fonts/*)
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating PDF sources for $* ==="
 	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen-$(TS).log
@@ -163,7 +170,7 @@ pdf-parts: $(PDF_PART_FILES)
 # inject that framework's committed outputs (gen_slides.py), so an output change
 # re-renders its decks and an unchanged store lets the recipe skip entirely — no
 # force-rm needed in rebuild-book-artifacts.
-_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
+_slides/%/.built: $(SRC_MDS) _d2l-slides.scss _d2l-slides-overlay.html tools/gen_slides.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	@# pipefail is global (.SHELLFLAGS) so gen_slides.py's non-zero exit on a

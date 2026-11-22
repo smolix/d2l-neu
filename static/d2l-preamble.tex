@@ -73,44 +73,117 @@
 \usepackage{etoolbox}
 \AtBeginEnvironment{longtable}{\small\setlength{\tabcolsep}{4pt}}
 
-% Chinese characters. The Language Models part prints Chinese in code cells
-% and cell outputs, and the book's fonts (Source Serif 4, Source Sans 3,
-% Inconsolata) have no CJK glyphs, so XeTeX would drop them ("Missing
-% character"). Each run of CJK characters is set in a subset of Noto Sans SC
-% (static/fonts/NotoSansSC-Regular-subset.otf, built by
-% tools/make_cjk_font_subset.py; SIL Open Font License, see
-% NotoSansSC-LICENSE.txt). The switch uses XeTeX's inter-character tokens
-% rather than xeCJK, which TeX Live hosts may not have and which also
-% changes punctuation and spacing elsewhere: the CJK code points get a class
-% of their own, entering that class from any other class opens a group with
-% the CJK font, and leaving it closes the group. A run that starts inside a
-% brace group ends before the group closes (XeTeX inserts the closing tokens
-% before the `}`), so the groups always nest. Text without CJK characters,
-% that is all Latin text, is set exactly as before. Keep the code-point
-% ranges in step with CJK_RANGES of tools/make_cjk_font_subset.py.
+% Characters the book's fonts lack. Source Serif 4, Source Sans 3 and
+% Inconsolata have no CJK or Devanagari glyphs, no mathematical alphanumerics
+% (U+1D400-1D7FF, e.g. a pasted 𝑥 in text) and patchy symbols: Inconsolata
+% has no Greek and no `ﬁ`, the serif and sans no block elements such as `▁`
+% (the SentencePiece word marker) or `●`. XeTeX would drop each one with only
+% a "Missing character" line in the log. The switch uses XeTeX's
+% inter-character tokens rather than xeCJK or ucharclasses, which TeX Live
+% hosts may not have and which also change punctuation and spacing elsewhere.
+% Three classes, with code-point ranges kept in step with the font scripts:
+%
+% * CJK (\bookcjkclass; CJK_RANGES of tools/make_cjk_font_subset.py): each run
+%   of CJK characters, kana included, is set in a subset of Noto Sans SC
+%   (static/fonts/NotoSansSC-Regular-subset.otf; SIL Open Font License, see
+%   NotoSansSC-LICENSE.txt).
+% * Devanagari (\bookdevaclass; DEVA_RANGES of
+%   tools/make_fallback_font_subsets.py): each run is set in a subset of Noto
+%   Sans Devanagari, shaped as Devanagari, so conjuncts and vowel signs form.
+%
+%   For both run classes, entering the class from any other class opens a
+%   group with the font, and leaving it closes the group. A run that starts
+%   inside a brace group ends before the group closes (XeTeX inserts the
+%   closing tokens before the `}`), so the groups always nest.
+% * Fallback (\bookfbclass; FALLBACK_RANGES of the same script): Greek,
+%   Cyrillic, symbols, Latin ligatures, mathematical alphanumerics. Each such
+%   character passes through \book@fb, which keeps the current font when it
+%   has the glyph (Greek stays in Source Serif, `▁` in Inconsolata) and
+%   otherwise uses the first fallback font that has it: DejaVu Sans Mono
+%   inside code (scaled to Inconsolata's advance width, so columns line up),
+%   then DejaVu Sans, then Noto Sans Math (subsets in static/fonts/; DejaVu
+%   licence and OFL, see DejaVu-LICENSE.txt and Noto-OFL-LICENSE.txt).
+%
+% Text without such characters, that is all Latin text, is set exactly as
+% before. A character outside these ranges that no font has (emoji) is still
+% dropped with a "Missing character" line.
 \usepackage{fontspec}
 \newfontfamily\bookcjkfont{NotoSansSC-Regular-subset.otf}[Path=static/fonts/]
+\newfontfamily\bookdevafont{NotoSansDevanagari-Regular-subset.ttf}[%
+  Path=static/fonts/, Script=Devanagari, Scale=MatchLowercase]
+\newfontfamily\bookfbmono{DejaVuSansMono-subset.ttf}[%
+  Path=static/fonts/, Scale=0.747]% 0.9 x 0.5em (Inconsolata) / 0.602em
+\newfontfamily\bookfbsans{DejaVuSans-subset.ttf}[%
+  Path=static/fonts/, Scale=MatchLowercase]
+\newfontfamily\bookfbmath{NotoSansMath-Regular-subset.ttf}[%
+  Path=static/fonts/, Scale=MatchLowercase]
 \newXeTeXintercharclass\bookcjkclass
+\newXeTeXintercharclass\bookdevaclass
+\newXeTeXintercharclass\bookfbclass
 \makeatletter
-\def\book@cjkrange#1#2{%
-  \count@=#1\relax
+\def\book@range#1#2#3{% class, first and last code point
+  \count@=#2\relax
   \loop
-    \XeTeXcharclass\count@=\bookcjkclass
-  \ifnum\count@<#2\relax\advance\count@\@ne\repeat}
-\book@cjkrange{"3000}{"303F}% CJK symbols and punctuation
-\book@cjkrange{"3400}{"4DBF}% CJK unified ideographs extension A
-\book@cjkrange{"4E00}{"9FFF}% CJK unified ideographs
-\book@cjkrange{"F900}{"FAFF}% CJK compatibility ideographs
-\book@cjkrange{"FF00}{"FFEF}% halfwidth and fullwidth forms
-% Every other class: 0 (ordinary, all characters by default), 4095 (boundary:
-% glue, kerns, `{`, `}`, the start and end of a paragraph) and any class a
-% package allocates.
+    \XeTeXcharclass\count@=#1\relax
+  \ifnum\count@<#3\relax\advance\count@\@ne\repeat}
+\book@range\bookcjkclass{"3000}{"303F}% CJK symbols and punctuation
+\book@range\bookcjkclass{"3040}{"30FF}% hiragana and katakana
+\book@range\bookcjkclass{"3400}{"4DBF}% CJK unified ideographs extension A
+\book@range\bookcjkclass{"4E00}{"9FFF}% CJK unified ideographs
+\book@range\bookcjkclass{"F900}{"FAFF}% CJK compatibility ideographs
+\book@range\bookcjkclass{"FF00}{"FFEF}% halfwidth and fullwidth forms
+\book@range\bookdevaclass{"0900}{"097F}% Devanagari
+\book@range\bookdevaclass{"A8E0}{"A8FF}% Devanagari extended
+\book@range\bookdevaclass{"200C}{"200D}% ZWNJ, ZWJ (inside conjuncts)
+\book@range\bookfbclass{"0370}{"03FF}% Greek and Coptic
+\book@range\bookfbclass{"0400}{"052F}% Cyrillic
+\book@range\bookfbclass{"1D00}{"1DBF}% phonetic extensions (ᵀ)
+\book@range\bookfbclass{"2016}{"2016}% double vertical line
+\book@range\bookfbclass{"202F}{"202F}% narrow no-break space
+\book@range\bookfbclass{"2070}{"209F}% superscripts and subscripts
+\book@range\bookfbclass{"2100}{"218F}% letterlike symbols, number forms
+\book@range\bookfbclass{"2190}{"23FF}% arrows, math operators, technical
+\book@range\bookfbclass{"2400}{"24FF}% control pictures, enclosed alnum
+\book@range\bookfbclass{"2500}{"27BF}% box drawing, blocks, shapes, symbols
+\book@range\bookfbclass{"27C0}{"2BFF}% supplemental arrows and operators
+\book@range\bookfbclass{"FB00}{"FB06}% Latin ligatures
+\book@range\bookfbclass{"FEFF}{"FEFF}% zero-width no-break space
+\book@range\bookfbclass{"FFF9}{"FFFD}% specials, replacement character
+\book@range\bookfbclass{"1D400}{"1D7FF}% mathematical alphanumerics
+% \book@fb takes the character itself as its argument (XeTeX inserts the
+% tokens right before it) and typesets it in a group with the inter-character
+% tokens off, so the character is not seen, and the tokens not inserted,
+% twice.
+\def\book@fbtry#1#2{\iffontchar\font`#2\relax\else#1\fi}
+\def\book@fb#1{%
+  \begingroup
+  \XeTeXinterchartokenstate=0\relax
+  \iffontchar\font`#1\relax\else
+    \edef\book@fam{\f@family}\edef\book@tt{\ttdefault}%
+    \ifx\book@fam\book@tt\book@fbtry\bookfbmono{#1}\fi
+    \book@fbtry\bookfbsans{#1}%
+    \book@fbtry\bookfbmath{#1}%
+  \fi
+  #1\endgroup}
+% Every pair of classes: 0 (ordinary, all characters by default), 4095
+% (boundary: glue, kerns, `{`, `}`, the start and end of a paragraph), any
+% class a package allocates, and the three above. First the transitions
+% between an ordinary class and the three; then the pairs among the three.
 \count@=\z@
 \loop
-  \ifnum\count@=\bookcjkclass\else
-    \XeTeXinterchartoks\count@\bookcjkclass={\begingroup\bookcjkfont}%
-    \XeTeXinterchartoks\bookcjkclass\count@={\endgroup}%
-  \fi
+  \XeTeXinterchartoks\count@\bookcjkclass={\begingroup\bookcjkfont}%
+  \XeTeXinterchartoks\bookcjkclass\count@={\endgroup}%
+  \XeTeXinterchartoks\count@\bookdevaclass={\begingroup\bookdevafont}%
+  \XeTeXinterchartoks\bookdevaclass\count@={\endgroup}%
+  \XeTeXinterchartoks\count@\bookfbclass={\book@fb}%
 \ifnum\count@<4095 \advance\count@\@ne\repeat
+\XeTeXinterchartoks\bookcjkclass\bookcjkclass={}%
+\XeTeXinterchartoks\bookdevaclass\bookdevaclass={}%
+\XeTeXinterchartoks\bookcjkclass\bookdevaclass={\endgroup\begingroup\bookdevafont}%
+\XeTeXinterchartoks\bookdevaclass\bookcjkclass={\endgroup\begingroup\bookcjkfont}%
+\XeTeXinterchartoks\bookcjkclass\bookfbclass={\endgroup\book@fb}%
+\XeTeXinterchartoks\bookdevaclass\bookfbclass={\endgroup\book@fb}%
+\XeTeXinterchartoks\bookfbclass\bookcjkclass={\begingroup\bookcjkfont}%
+\XeTeXinterchartoks\bookfbclass\bookdevaclass={\begingroup\bookdevafont}%
 \makeatother
 \XeTeXinterchartokenstate=1

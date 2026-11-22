@@ -6,7 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Linear Regression Implementation from Scratch
 :label:`sec_linear_scratch`
 
-Now that we have the theory of linear regression (:numref:`sec_linear_regression`) and a synthetic dataset with known ground-truth parameters (:numref:`sec_synthetic-regression-data`), we are ready to put both into code. In this section, we build every component of the training pipeline from scratch—parameter initialization, the linear forward pass, the squared loss, automatic differentiation, the minibatch iterator, and the SGD update loop—relying only on basic tensor arithmetic and `autograd`. Writing each step by hand strips away all magic so you can see exactly how gradients flow and how hyperparameters like the learning rate shape convergence. Once every moving part is transparent, :numref:`sec_oo-design` will organize these components into reusable object-oriented classes (`Module`, `DataModule`, and `Trainer`), and :numref:`sec_linear_concise` will re-express the exact same model in a handful of lines using high-level framework layers, built-in loss functions, and optimizers.
+Now that we have the theory of linear regression (:numref:`sec_linear_regression`) and a synthetic dataset with known ground-truth parameters (:numref:`sec_synthetic-regression-data`), we are ready to put both into code. In this section, we build every component of the training pipeline from scratch—parameter initialization, the linear forward pass, the squared loss, automatic differentiation, the minibatch iterator, and the SGD update loop—relying only on basic tensor arithmetic and the framework's automatic differentiation. Writing each step by hand strips away all magic so you can see exactly how gradients flow and how hyperparameters like the learning rate shape convergence. Once every moving part is transparent, :numref:`sec_oo-design` will organize these components into reusable object-oriented classes (`Module`, `DataModule`, and `Trainer`), and :numref:`sec_linear_concise` will re-express the exact same model in a handful of lines using high-level framework layers, built-in loss functions, and optimizers.
 
 ```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=2}
 %%tab mxnet
@@ -138,12 +138,12 @@ def squared_loss(y_hat, y):
 
 ### The Gradient
 
-Before letting automatic differentiation take over, let us check on a single minibatch of 32 examples that `autograd` produces the exact same gradients as our hand-derived formulas from :eqref:`eq_linreg_batch_update`:
+Before letting automatic differentiation take over, let us check on a single minibatch of 32 examples that automatic differentiation produces the exact same gradients as our hand-derived formulas from :eqref:`eq_linreg_batch_update`:
 
 $$\frac{\partial L}{\partial \mathbf{w}} = \frac{1}{|\mathcal{B}|} \mathbf{X}^\top (\hat{\mathbf{y}} - \mathbf{y}), \qquad \frac{\partial L}{\partial b} = \frac{1}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} (\hat{y}^{(i)} - y^{(i)}).$$
 :eqlabel:`eq_linreg_grad_by_hand`
 
-Let us slice out the first 32 training examples `(Xb, yb)` and compare the analytical gradients with `autograd`:
+Let us slice out the first 32 training examples `(Xb, yb)` and compare the analytical gradients with automatic differentiation:
 
 ```{.python .input #linear-regression-scratch-the-gradient-1}
 Xb, yb = X_train[:32], y_train[:32]
@@ -200,7 +200,7 @@ print(f'largest difference: {float(abs(by_hand - by_autograd).max()):.1g}')
 
 The largest entrywise discrepancy is zero (or at most $\sim 10^{-6}$, `float32`
 rounding precision), confirming that autograd computes the exact minibatch
-gradient we expect. From here on, we let `autograd` differentiate our forward pass and loss automatically.
+gradient we expect. From here on, we let the framework differentiate our forward pass and loss automatically.
 
 ## Training from Scratch
 
@@ -426,10 +426,7 @@ curvature along that weight by $s^2$ and shrinks the maximum stable learning rat
 to roughly $2 / s^2$—a major practical reason why we standardize input features
 before training (:numref:`sec_pandas`).
 
-Everything we checked in this section leaned on knowing the ground-truth
-parameters, a luxury we never have on real datasets; in
-:numref:`sec_generalization_basics`, we tackle how to judge models strictly from
-held-out data. First, however, :numref:`sec_oo-design` packages the training
+Next, :numref:`sec_oo-design` packages the training
 machinery we just built into reusable object-oriented classes (`Module`,
 `DataModule`, and `Trainer`), and :numref:`sec_linear_concise` shows how to swap
 our hand-written tensors, loss, and updater for ready-made framework components.

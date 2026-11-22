@@ -275,7 +275,11 @@ def forward(self, X):
 
 ### The Cross-Entropy Loss
 
-Recall from :eqref:`eq_l_cross_entropy` that $l(\mathbf{y}, \hat{\mathbf{y}}) = -\log \hat{y}_y$. Instead of materializing one-hot matrices and taking inner products, we pluck out the true-class probability $\hat{y}^{(i)}_{y^{(i)}}$ for every row $i$ in one vectorized indexing step (`y_hat[range(len(y_hat)), y]`, or `tf.gather(y_hat, y, batch_dims=1)` in TensorFlow). In our scratch `cross_entropy`, we clamp probabilities below at $10^{-12}$ as a temporary guard against $\log 0$:
+Recall from :eqref:`eq_l_cross_entropy` that $l(\mathbf{y}, \hat{\mathbf{y}}) = -\log \hat{y}_y$. Instead of materializing one-hot matrices and taking inner products, we pluck out the true-class probability $\hat{y}^{(i)}_{y^{(i)}}$ for every row $i$ in one vectorized indexing step. In our scratch `cross_entropy`, we clamp probabilities below at $10^{-12}$ as a temporary guard against $\log 0$:
+
+:begin_tab:`tensorflow`
+TensorFlow gathers them with `tf.gather(y_hat, y, batch_dims=1)`.
+:end_tab:
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-1}
 %%tab mxnet, pytorch, jax
@@ -295,9 +299,9 @@ That extracts 0.1 for the first example and 0.5 for the second. Wrapping
 this in `cross_entropy`, we average the negative logarithms across the
 minibatch. Notice the one defensive clamp to $10^{-12}$ before taking the
 logarithm: it stops an underflowed zero probability from turning into
-$-\infty$, capping the per-example loss at $27.6$, though—as the comment
-notes—clamping also zeroes out the gradient whenever it triggers. In the
-next section, we replace this stopgap with a fused loss computed directly
+$-\infty$, capping the per-example loss at $27.6$, though clamping also
+zeroes out the gradient whenever it triggers. Later in this section
+(:numref:`sec_softmax_concise`), we replace this stopgap with a fused loss computed directly
 from logits.
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
@@ -503,7 +507,7 @@ Now let us see how deep learning frameworks simplify softmax regression while pe
 
 ### Defining the Model
 
-In `SoftmaxRegression(d2l.Classifier)`, a flattening step and a single built-in fully connected layer (`LazyLinear` / `Dense` / `nnx.Linear`) with $10$ outputs compute the logits $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ (initialized with $\mathcal{N}(0, 0.01^2)$ weights and zero biases to match our scratch baseline). Crucially, **`forward` returns the raw logits $\mathbf{O}$ directly, without applying softmax**:
+In `SoftmaxRegression(d2l.Classifier)`, a flattening step and a single built-in fully connected layer with $10$ outputs compute the logits $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ (initialized with $\mathcal{N}(0, 0.01^2)$ weights and zero biases to match our scratch baseline). Crucially, **`forward` returns the raw logits $\mathbf{O}$ directly, without applying softmax**:
 
 ```{.python .input #softmax-regression-concise-defining-the-model}
 %%tab pytorch
@@ -589,7 +593,23 @@ $$l(y, \mathbf{o}) = \log \sum_{k=1}^q \exp(o_k) - o_y = o_{\max} + \log \sum_{k
 
 Because every shifted exponent $o_k - o_{\max}$ is $\leq 0$ and at least one equals $0$, the sum inside the logarithm is trapped strictly inside $[1, q]$, and its logarithm lies strictly inside $[0, \log q]$! Neither overflow nor $\log 0$ can ever occur, and automatic differentiation yields the exact finite gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$.
 
-Every framework provides this fused log-sum-exp cross-entropy (`F.cross_entropy` in PyTorch, `SoftmaxCrossEntropyLoss` in MXNet, `SparseCategoricalCrossentropy(from_logits=True)` in Keras, and `optax.softmax_cross_entropy_with_integer_labels` in JAX). We install it once on `d2l.Classifier.loss` so every classifier in the rest of the book inherits it, and verify on our extreme logits $(1000, 0, 0)$ with true labels $0$ and $1$ that it returns the exact finite losses $0$ and $1000$:
+Every framework provides this fused log-sum-exp cross-entropy. We install it once on `d2l.Classifier.loss` so every classifier in the rest of the book inherits it, and verify on our extreme logits $(1000, 0, 0)$ with true labels $0$ and $1$ that it returns the exact finite losses $0$ and $1000$:
+
+:begin_tab:`mxnet`
+MXNet provides it as `gluon.loss.SoftmaxCrossEntropyLoss`.
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch provides it as `F.cross_entropy`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras provides it as `SparseCategoricalCrossentropy(from_logits=True)`.
+:end_tab:
+
+:begin_tab:`jax`
+Optax provides it as `optax.softmax_cross_entropy_with_integer_labels`.
+:end_tab:
 
 ```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab pytorch
@@ -644,7 +664,7 @@ SoftmaxRegression(num_outputs=3, lr=0.1).loss(O, y, averaged=False)
 ```
 
 
-(Watch out for one classic pitfall: because `Classifier.loss` expects raw logits and applies log-softmax internally, accidentally placing a softmax at the end of `forward` applies softmax *twice*, trapping the training loss above a positive floor; see Exercise 4 below.)
+(Watch out for one classic pitfall: because `Classifier.loss` expects raw logits and applies log-softmax internally, accidentally placing a softmax at the end of `forward` applies softmax *twice*, trapping the training loss above a positive floor; see Exercise :exref:`ex_softmax-double-softmax` below.)
 
 ### Training
 
@@ -721,6 +741,7 @@ trainer.fit(model, data)
        and `d2l.Trainer(max_epochs=10)`. Compare its training loss and
        validation accuracy with those of `SoftmaxRegression`, and relate
        the final training loss to the value from the previous step.
+   :exlabel:`ex_softmax-double-softmax`
 
 
 1. [code] **Stable softplus.** For two classes with logits $(x, 0)$, the

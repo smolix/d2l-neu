@@ -10,25 +10,25 @@ To get anything done in machine learning, we need a way to store and manipulate 
 
 To see why specialized array containers are indispensable, consider a single *minibatch* of $256$ grayscale photographs of resolution $28 \times 28$ pixels, containing $256 \times 28 \times 28 = 200{,}704$ numbers. Image files store each pixel as an integer in $\{0, \ldots, 255\}$, which we rescale to $[0, 1]$ by dividing by $255$. In plain Python, three nested loops would execute $200{,}704$ separate scalar divisions in the interpreter. In a tensor library, the single expression `images / 255` dispatches to compiled C++ or CUDA kernels that divide all $200{,}704$ numbers in parallel on a CPU or GPU. Throughout deep learning, we operate on whole tensors at once rather than iterating over individual scalar elements in Python loops.
 
-Across all modern deep learning frameworks, the tensor class (`ndarray` in MXNet, `Tensor` in PyTorch and TensorFlow, and `jax.Array` in JAX) closely mirrors NumPy's `ndarray` :cite:`Harris.Millman.Walt.ea.2020`, with two crucial additions:
+Across all modern deep learning frameworks, the tensor class closely mirrors NumPy's `ndarray` :cite:`Harris.Millman.Walt.ea.2020`, with two crucial additions:
 
 1. **Hardware acceleration:** framework tensors execute across GPUs and specialized AI accelerators, whereas NumPy runs on CPUs.
 2. **Automatic differentiation:** frameworks track computations on tensors and compute gradients automatically via backpropagation (:numref:`sec_autograd`).
 
 :begin_tab:`mxnet`
-We import MXNet's NumPy-compatible array module as `mnp` (keeping `np` for standard NumPy) along with `npx` (`numpy_extension`), and call `npx.set_np()` to activate NumPy-compatible tensor semantics.
+In MXNet the tensor class is `ndarray`. We import MXNet's NumPy-compatible array module as `mnp` (keeping `np` for standard NumPy) along with `npx` (`numpy_extension`), and call `npx.set_np()` to activate NumPy-compatible tensor semantics.
 :end_tab:
 
 :begin_tab:`pytorch`
-We import PyTorch (`torch`).
+In PyTorch the tensor class is `torch.Tensor`. We import PyTorch (`torch`).
 :end_tab:
 
 :begin_tab:`tensorflow`
-We import TensorFlow under its customary alias `tf`.
+In TensorFlow the tensor class is `tf.Tensor`. We import TensorFlow under its customary alias `tf`.
 :end_tab:
 
 :begin_tab:`jax`
-We import `jax` and its NumPy-compatible array interface `jax.numpy` as `jnp`.
+In JAX the tensor class is `jax.Array`. We import `jax` and its NumPy-compatible array interface `jax.numpy` as `jnp`.
 :end_tab:
 
 ```{.python .input #ndarray-getting-started-1}
@@ -190,7 +190,7 @@ key = jax.random.key(random.getrandbits(32))  # A new seed on each run
 jax.random.normal(key, (3, 4))
 ```
 
-Computer-generated random numbers are *pseudorandom*: a deterministic algorithm computes them from an integer *seed*, so resetting the seed reproduces the exact same sequence (`a` and `c` below match, whereas `b` is drawn after the generator has advanced):
+Computer-generated random numbers are *pseudorandom*: a deterministic algorithm computes them from an integer *seed*, so starting again from the same seed reproduces the exact same sequence (`a` and `c` below match, whereas `b` does not):
 
 :begin_tab:`mxnet`
 MXNet resets its global generator via `mnp.random.seed`.
@@ -205,7 +205,7 @@ TensorFlow resets its global generator via `tf.random.set_seed`.
 :end_tab:
 
 :begin_tab:`jax`
-JAX is purely functional and has no global random state: every random function takes an explicit PRNG *key*, and `jax.random.split` derives new independent subkeys deterministically.
+JAX is purely functional and has no global random state: every random function takes an explicit PRNG *key*, and `jax.random.split` derives new independent subkeys deterministically. Below, `c` reuses `key_a`, so it repeats `a`.
 :end_tab:
 
 ```{.python .input #ndarray-initial-values-1}
@@ -446,18 +446,22 @@ jnp.where(mask, X, 0)
 
 ### Writing Elements
 
-MXNet and PyTorch tensors are *mutable* (`X[i, j] = val` overwrites memory in place), whereas TensorFlow and JAX tensors are *immutable*. Moreover, when `reshape` returns a zero-copy *view* sharing the original buffer (as in PyTorch), mutating `X` also mutates `x`:
+Whether a tensor can be overwritten in place depends on the framework; the tab note shows how yours updates an entry:
 
-:begin_tab:`mxnet, pytorch`
-We assign `17` to `X[1, 2]` (flat index $6$) and inspect both `X` and `x`:
+:begin_tab:`mxnet`
+MXNet tensors are *mutable*: `X[i, j] = val` overwrites memory in place. We assign `17` to `X[1, 2]` (flat index $6$) and inspect both `X` and `x`:
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch tensors are *mutable*: `X[i, j] = val` overwrites memory in place. Moreover, `reshape` returned a zero-copy *view* sharing the original buffer, so mutating `X` also mutates `x`. We assign `17` to `X[1, 2]` (flat index $6$) and inspect both `X` and `x`:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Learnable parameters live in mutable `tf.Variable` containers updated via `.assign()`:
+TensorFlow tensors are *immutable*. Learnable parameters live in mutable `tf.Variable` containers updated via `.assign()`:
 :end_tab:
 
 :begin_tab:`jax`
-JAX provides functional updates `X.at[1, 2].set(17)`, returning a new array while leaving `X` unchanged:
+JAX arrays are *immutable*. JAX provides functional updates `X.at[1, 2].set(17)`, returning a new array while leaving `X` unchanged:
 :end_tab:
 
 ```{.python .input #ndarray-indexing-and-slicing-2}
@@ -818,7 +822,7 @@ Z.assign(X + Y)
 id(Z) == before
 ```
 
-When the old value of `X` is no longer needed, augmented assignment `X += Y` avoids allocating even a separate destination tensor `Z`:
+When the old value of `X` is no longer needed, augmented assignment `X += Y` asks for the sum to be written into `X` itself; `id(X)` shows whether the framework could do so:
 
 ```{.python .input #ndarray-saving-memory-3}
 before = id(X)
@@ -839,19 +843,19 @@ Because `X` is an immutable tensor, `id(X) == before` is `False`.
 Converting between framework tensors and NumPy arrays is routine at the boundary with plotting or data libraries, but frameworks differ in whether conversion shares memory or copies:
 
 :begin_tab:`mxnet`
-`X.asnumpy()` and `mnp.array(A)` each allocate an independent copy.
+`X.asnumpy()` and `mnp.array(A)` each allocate an independent copy, so after the write below both `X[0, 0]` and `B[0, 0]` stay unchanged.
 :end_tab:
 
 :begin_tab:`pytorch`
-On the CPU, `X.numpy()` and `torch.from_numpy(A)` **share the exact same underlying memory buffer**, so mutating one in place immediately modifies the other!
+On the CPU, `X.numpy()` and `torch.from_numpy(A)` **share the exact same underlying memory buffer**, so mutating one in place immediately modifies the other! After the write below, both `X[0, 0]` and `B[0, 0]` change to `100.`
 :end_tab:
 
 :begin_tab:`tensorflow`
-`X.numpy()` and `tf.constant(A)` each allocate an independent copy.
+`X.numpy()` and `tf.constant(A)` each allocate an independent copy, so after the write below both `X[0, 0]` and `B[0, 0]` stay unchanged.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.device_get(X)` returns a read-only NumPy array (potentially zero-copy on CPU), and `jax.device_put(A)` transfers it back.
+`jax.device_get(X)` returns a read-only NumPy array (potentially zero-copy on CPU), and `jax.device_put(A)` transfers it back. Because the NumPy view is read-only, the write below raises a `ValueError`.
 :end_tab:
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-1}
@@ -882,7 +886,7 @@ B = jax.device_put(A)
 type(A), type(B)
 ```
 
-We can verify whether `A`, `B`, and `X` share memory by overwriting `A[0, 0] = 100` in the NumPy array and inspecting `X[0, 0]` and `B[0, 0]` (which change to `100.` in PyTorch, remain untouched in MXNet and TensorFlow copies, and raise a read-only `ValueError` in JAX):
+We can verify whether `A`, `B`, and `X` share memory by overwriting `A[0, 0] = 100` in the NumPy array and inspecting `X[0, 0]` and `B[0, 0]`:
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-3}
 %%tab mxnet
@@ -944,7 +948,7 @@ a, a.item(), float(a), int(a)
 
 ## Summary
 
-Tensors store inputs, parameters, activations, and gradients as $n$-dimensional arrays characterized by a `shape` and a `dtype`. Deep learning code expresses computations over whole tensors at once—rescaling all $200{,}704$ pixels of a minibatch in a single compiled operation (`images / 255`). We reconfigure axes with `reshape`, extract or modify subsets with integer indices, slices, and Boolean masks (`where`), join tensors with `concatenate` and `stack`, and combine differently shaped tensors via *broadcasting* (aligning shapes from the right and stretching singleton axes). Finally, mutable frameworks (PyTorch and MXNet) support in-place updates (`Z[:] = ...`, `X += Y`), while immutable frameworks (TensorFlow and JAX) manage memory reuse through `Variable` containers or compiler optimizations.
+Tensors store inputs, parameters, activations, and gradients as $n$-dimensional arrays characterized by a `shape` and a `dtype`. Deep learning code expresses computations over whole tensors at once—rescaling all $200{,}704$ pixels of a minibatch in a single compiled operation (`images / 255`). We reconfigure axes with `reshape`, extract or modify subsets with integer indices, slices, and Boolean masks (`where`), join tensors with `concatenate` and `stack`, and combine differently shaped tensors via *broadcasting* (aligning shapes from the right and stretching singleton axes). Finally, where tensors are mutable, in-place updates (`Z[:] = ...`, `X += Y`) reuse memory; otherwise mutable containers or the compiler take over that role.
 
 ## Exercises
 

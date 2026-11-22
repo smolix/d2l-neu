@@ -241,8 +241,16 @@ torch.save(Tripwire(), 'tripwire.pt')
 _ = torch.load('tripwire.pt', weights_only=False)  # the payload runs here
 ```
 
-By default, `np.load` (`allow_pickle=False`) and modern `torch.load`
-(`weights_only=True`) reject arbitrary Python objects:
+By default, the loaders reject arbitrary Python objects:
+
+:begin_tab:`mxnet, tensorflow, jax`
+`np.load` refuses pickles unless `allow_pickle=True`.
+:end_tab:
+
+:begin_tab:`pytorch`
+`torch.load` defaults to `weights_only=True` since PyTorch 2.6.
+:end_tab:
+
 ```{.python .input #saving-loading-safetensors-the-interchange-format-2}
 %%tab mxnet, tensorflow, jax
 try:
@@ -260,9 +268,13 @@ except Exception as e:
 ```
 
 Restricted unpicklers only protect you insofar as their allowlists have no
-bugs—and historical vulnerabilities have bypassed even hardened loaders such as
-PyTorch's `weights_only` mode. A file format that simply *cannot* encode
+bugs—and historical vulnerabilities have bypassed even hardened restricted loaders.
+A file format that simply *cannot* encode
 executable instructions eliminates the entire attack surface by design.
+
+:begin_tab:`pytorch`
+PyTorch's `weights_only` mode is such a restricted loader.
+:end_tab:
 
 :begin_tab:`tensorflow`
 TensorFlow's own checkpoint and Keras `.weights.h5` files contain no pickle.
@@ -860,7 +872,11 @@ absent from the file, left randomly initialized) and *unexpected* keys (file
 entries unused by the model).
 
 :begin_tab:`pytorch`
-`load_state_dict(..., strict=False)` loads matching keys and returns `(missing_keys, unexpected_keys)` directly; in MXNet, TensorFlow, and JAX, we compute the set differences between the model's parameter paths and the checkpoint's keys:
+`load_state_dict(..., strict=False)` loads matching keys and returns `(missing_keys, unexpected_keys)` directly:
+:end_tab:
+
+:begin_tab:`mxnet, tensorflow, jax`
+We compute the missing and unexpected keys as set differences between the model's parameter paths and the checkpoint's keys:
 :end_tab:
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-2}
 %%tab mxnet

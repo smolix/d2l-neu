@@ -143,10 +143,26 @@ print(f'mean {float(Y.mean()):.3f}, '
 
 ### Defining and Training the Model from Scratch
 
-We apply dropout to the outputs of each hidden layer right after its ReLU activation (:numref:`fig_dropout2`)—active *only* during training (`autograd.is_training()` in MXNet, `self.training` in PyTorch/TensorFlow, and `not self.deterministic` in Flax/JAX). Below we define our He-initialized two-hidden-layer classifier `DropoutMLPScratch` ($784 \to 256 \to 256 \to 10$) with separate dropout probabilities `dropout_1` and `dropout_2`:
+We apply dropout to the outputs of each hidden layer right after its ReLU activation (:numref:`fig_dropout2`)—active *only* during training. Below we define our He-initialized two-hidden-layer classifier `DropoutMLPScratch` ($784 \to 256 \to 256 \to 10$) with separate dropout probabilities `dropout_1` and `dropout_2`:
 
 ![Dropout silences a random subset of hidden units ($h_2$ and $h_5$ shown) and their incident connections on each training step.](../img/dropout2.svg)
 :label:`fig_dropout2`
+
+:begin_tab:`mxnet`
+The layers test `autograd.is_training()`, which is true only inside `autograd.record()`.
+:end_tab:
+
+:begin_tab:`pytorch`
+The layers test `self.training`, which the trainer's `model.eval()` sets to `False`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The layers test `self.training`, which our `Module.call` sets from the `training` argument Keras passes.
+:end_tab:
+
+:begin_tab:`jax`
+The layers test `self.deterministic`, which the trainer's evaluation view sets to `True`.
+:end_tab:
 
 ```{.python .input #dropout-defining-the-model}
 %%tab mxnet

@@ -154,7 +154,11 @@ A = jnp.arange(6, dtype=jnp.float32).reshape(2, 3)
 A
 ```
 
-Exchanging a matrix's rows and columns yields its *transpose* $\mathbf{A}^\top \in \mathbb{R}^{n \times m}$, with $[\mathbf{A}^\top]_{ij} = a_{ji}$, accessed in code via `.T` (or `tf.transpose`):
+Exchanging a matrix's rows and columns yields its *transpose* $\mathbf{A}^\top \in \mathbb{R}^{n \times m}$, with $[\mathbf{A}^\top]_{ij} = a_{ji}$, accessed in code via `.T`:
+
+:begin_tab:`tensorflow`
+In TensorFlow, use `tf.transpose(A)`.
+:end_tab:
 
 ```{.python .input #linear-algebra-matrices-2}
 %%tab mxnet, pytorch, jax
@@ -275,6 +279,10 @@ sum_A, sum_A.shape
 PyTorch accepts both `dim`/`keepdim` and the NumPy aliases `axis`/`keepdims`.
 :end_tab:
 
+:begin_tab:`tensorflow`
+TensorFlow tensors have no `.sum` or `.mean` method: write `A.sum(axis=1)` as `tf.reduce_sum(A, axis=1)` and `X.mean(axis=1)` as `tf.reduce_mean(X, axis=1)`, here and in the exercises.
+:end_tab:
+
 Because `sum_A` has shape `(2, 1)`, dividing `A / sum_A` broadcasts each row sum across all three columns so that every row of the resulting $2 \times 3$ matrix sums to $1$:
 
 ```{.python .input #linear-algebra-non-reduction-sum-2}
@@ -307,7 +315,11 @@ Given two vectors $\mathbf{x}, \mathbf{y} \in \mathbb{R}^d$, their *dot product*
 
 $$\mathbf{x}^\top \mathbf{y} = \sum_{i=1}^{d} x_i y_i.$$
 
-In code, we compute the dot product of two 1D vectors `x` and `y` directly via `dot` (or `tf.tensordot(x, y, axes=1)` in TensorFlow):
+In code, we compute the dot product of two 1D vectors `x` and `y` directly with the framework's `dot` function:
+
+:begin_tab:`tensorflow`
+TensorFlow computes it with `tf.tensordot(x, y, axes=1)`.
+:end_tab:
 
 ```{.python .input #linear-algebra-dot-products-1}
 %%tab mxnet
@@ -594,6 +606,10 @@ tf.norm(tf.ones((4, 9)))
 jnp.linalg.norm(jnp.ones((4, 9)))
 ```
 
+:begin_tab:`pytorch`
+PyTorch separates `torch.linalg.vector_norm` from `torch.linalg.matrix_norm`; the latter treats a 3D tensor as a batch of 2D matrices.
+:end_tab:
+
 ## Eigenvectors and Eigenvalues
 :label:`subsec_lin-alg-eigenvalues`
 
@@ -746,7 +762,7 @@ Linear algebra expresses whole-minibatch models compactly: stacking $256$ flatte
 
     *Adapted from MIT 18.06, [Problem Set 1](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/22297c2a6dcf06d82e93ee4af115e91a_MIT18_06S10_pset1_s10_soln.pdf), Section 1.2, Problem 28.*
 
-1. [code] **Norms across multiple parameter tensors.** The vector-norm routines introduced in this section can also be applied to higher-order tensors (in PyTorch, use `torch.linalg.vector_norm`; note that `torch.linalg.matrix_norm` treats a 3D tensor as a batch of 2D matrices).
+1. [code] **Norms across multiple parameter tensors.** The vector-norm routines introduced in this section can also be applied to higher-order tensors.
     1. Evaluate the vector norm with default arguments on a 3D tensor of shape $(2, 3, 4)$, state in words what mathematical formula it computes, and confirm your answer by squaring, summing, and taking the square root of the entries manually.
     1. A deep neural network stores its learnable parameters across a list of weight and bias tensors of varying orders and shapes. When monitoring training or clipping gradients (:numref:`sec_rnn-scratch`), we often need the single global $\ell_2$ norm of all parameters concatenated into one giant vector. Express this global $\ell_2$ norm in terms of the individual tensor norms without flattening or concatenating the tensors, and verify your formula in code on three tensors of shapes $(3, 4)$, $(4,)$, and $(2, 3, 5)$.
 

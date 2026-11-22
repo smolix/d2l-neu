@@ -134,12 +134,20 @@ channels grows as spatial resolution shrinks via strides or pooling, trading
 fine-grained spatial layout for richer, jointly learned feature descriptions
 at each location.
 
-:begin_tab:`mxnet, pytorch`
-Gluon and PyTorch store kernels channels-first as $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$.
+:begin_tab:`mxnet`
+Gluon stores kernels channels-first as $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$.
 :end_tab:
 
-:begin_tab:`tensorflow, jax`
-Keras and Flax store kernels channels-last as $(k_\textrm{h}, k_\textrm{w}, c_\textrm{i}, c_\textrm{o})$.
+:begin_tab:`pytorch`
+PyTorch stores kernels channels-first as $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras stores kernels channels-last as $(k_\textrm{h}, k_\textrm{w}, c_\textrm{i}, c_\textrm{o})$.
+:end_tab:
+
+:begin_tab:`jax`
+Flax stores kernels channels-last as $(k_\textrm{h}, k_\textrm{w}, c_\textrm{i}, c_\textrm{o})$.
 :end_tab:
 To implement multi-channel output cross-correlation, we iterate over the
 output kernels, apply `corr2d_multi_in` to each, and stack the resulting

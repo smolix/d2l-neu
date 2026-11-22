@@ -228,11 +228,25 @@ all of them. Throughout this book we focus on CPUs and CUDA GPUs.
 ### Arrays on Devices
 
 Every tensor exposes its location via its `device` attribute, while the default
-creation device varies by framework.
+creation device varies by framework; the tab note says where yours creates
+tensors by default.
 
-In MXNet and PyTorch, tensors default to the CPU unless `device=` is passed;
-in TensorFlow and JAX, tensors default to the first GPU when one is available
-(or can be placed explicitly via `with tf.device(...):` or `jax.device_put`).
+:begin_tab:`mxnet`
+MXNet tensors default to the CPU unless `device=` is passed.
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch tensors default to the CPU unless `device=` is passed.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow tensors default to the first GPU when one is available (or can be placed explicitly via `with tf.device(...):`).
+:end_tab:
+
+:begin_tab:`jax`
+JAX arrays default to the first GPU when one is available (or can be placed explicitly via `jax.device_put`).
+:end_tab:
+
 Allocating directly on the target device avoids an extra CPU-to-GPU copy.
 Let's place `X` on the first GPU and `Y` on the second GPU (falling back to CPU
 when fewer than two GPUs are present) and try adding them:
@@ -446,25 +460,33 @@ B.block_until_ready()  # The device runs the products in order
 print(f'time until they all finished:     {time.perf_counter() - t:.4f} sec')
 ```
 
-:begin_tab:`mxnet, jax`
-Both MXNet and JAX dispatch asynchronously on CPU and GPU alike; `npx.waitall()` or `B.block_until_ready()` blocks until computation completes.
+:begin_tab:`mxnet`
+MXNet dispatches asynchronously on CPU and GPU alike; `npx.waitall()` blocks until computation completes.
 :end_tab:
 
-:begin_tab:`pytorch, tensorflow`
-GPU kernels run asynchronously while CPU operations run synchronously; `torch.cuda.synchronize()` or `tf.test.experimental.sync_devices()` waits for all queued GPU work to finish.
+:begin_tab:`jax`
+JAX dispatches asynchronously on CPU and GPU alike; `B.block_until_ready()` blocks until computation completes.
+:end_tab:
+
+:begin_tab:`pytorch`
+GPU kernels run asynchronously while CPU operations run synchronously; `torch.cuda.synchronize()` waits for all queued GPU work to finish.
+:end_tab:
+
+:begin_tab:`tensorflow`
+GPU kernels run asynchronously while CPU operations run synchronously; `tf.test.experimental.sync_devices()` waits for all queued GPU work to finish.
 :end_tab:
 Python finishes enqueuing all 32 matrix multiplications in a tiny fraction of
 the actual compute time. When does the CPU actually block and wait? Only when
-Python needs a concrete value back on the host—printing a tensor, calling
-`.item()`, converting to NumPy, or branching on a tensor in an `if` statement.
+Python needs a concrete value back on the host—printing a tensor, converting
+a scalar to a Python float, converting to NumPy, or branching on a tensor in an `if` statement.
 Every such *synchronization point* stalls Python until the GPU drains its queue
 up to that value, leaving the GPU idle while Python catches up
-(:numref:`fig_bg_async_queue`). Logging `loss.item()` after every minibatch
+(:numref:`fig_bg_async_queue`). Logging the loss as a Python number after every minibatch
 inserts a synchronization bubble on every step—which is why our `Trainer` keeps
 losses on-device inside a `d2l.Averager` and converts them to Python floats only
 once per epoch (:numref:`sec_oo-design`).
 
-![Python queues operations op1 through op4 and continues while the GPU runs them in order. loss.item() is a synchronization point: the CPU blocks until the GPU has drained its queue; Python then resumes, and the GPU idles until it receives more work.](../img/bg-async-queue.svg)
+![Python queues operations op1 through op4 and continues while the GPU runs them in order. Reading the loss as a Python number is a synchronization point: the CPU blocks until the GPU has drained its queue; Python then resumes, and the GPU idles until it receives more work.](../img/bg-async-queue.svg)
 :label:`fig_bg_async_queue`
 
 Asynchronous dispatch also dictates four rules for trustworthy GPU benchmarks:
@@ -654,7 +676,7 @@ JAX's default matrix-product precision chooses tf32 on this GPU.
 :end_tab:
 
 On a modern GPU, the $4096 \times 4096$ product finishes in under 2 ms, whereas
-the CPU requires 200 ms to 2 s—a $100\times$ to $1000\times$ speedup depending
+the CPU requires about 100 ms to 2 s—roughly a $100\times$ to $1000\times$ speedup depending
 on CPU core count. Dropping to 16-bit precision cuts GPU time roughly in half
 again, delivering the tensor-core speedup promised in :numref:`sec_numerics`.
 
@@ -768,11 +790,14 @@ else:
     print('No GPU: memory_stats() returns None on the CPU backend.')
 ```
 
-Deleting `big` drops the live-tensor byte counter by 1 GiB (in PyTorch,
-TensorFlow, and JAX), yet the framework's caching allocator retains the freed
-1 GiB slab in its reserved pool so `nvidia-smi` does not budge. (Never call
-`empty_cache()` inside a training loop, as forcing slabs back to the CUDA
-driver adds slow driver allocations on every step.)
+:begin_tab:`mxnet`
+MXNet reports only driver-level usage, which drops once `empty_cache()` returns the slab.
+:end_tab:
+
+Deleting `big` frees 1 GiB of live tensors, yet the framework's caching
+allocator retains the freed 1 GiB slab in its reserved pool so `nvidia-smi`
+does not budge. (Never force slabs back to the CUDA driver inside a training
+loop, as this adds slow driver allocations on every step.)
 The outermost driver view sets the hard out-of-memory ceiling, since the driver
 cannot hand out more RAM than the card physically holds. To diagnose *where*
 memory goes inside our code, we inspect live-byte counters—especially the *peak*
@@ -827,7 +852,7 @@ each $4096 \times 4096$ fp32 tensors of 64 MiB—192 MiB in total, already a thi
 larger than the weights themselves!
 
 :begin_tab:`mxnet`
-Because MXNet does not expose a per-step live-byte allocator counter in Python, the four-stage training memory trace is executed in the PyTorch, TensorFlow, and JAX tabs, while the analytical $16N$ plus activations budget below applies identically to MXNet.
+Because MXNet does not expose a per-step live-byte allocator counter in Python, this subsection has no MXNet code; the analytical $16N$ plus activations budget below applies unchanged.
 :end_tab:
 
 ```{.python .input #gpus-devices-memory-what-fills-memory-during-training}
@@ -959,8 +984,8 @@ mix.
 
 Activation checkpointing shines on deep stacks of identical blocks, such as our
 residual MLP (:numref:`sec_model_construction`) and modern transformers. Below
-we define `ResidualBlock` with $\mathcal{N}(0, 0.01^2)$ weights and zero biases
-across all frameworks, along with a `run_stack` helper that groups blocks into
+we define `ResidualBlock` with $\mathcal{N}(0, 0.01^2)$ weights and zero biases,
+along with a `run_stack` helper that groups blocks into
 segments with optional checkpointing.
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
@@ -1046,7 +1071,7 @@ def run_stack(graphdef, states, X, use_checkpoint=False, segment_size=4):
 ```
 
 :begin_tab:`mxnet`
-MXNet offers no per-segment checkpointing API in Python (only a process-wide `MXNET_BACKWARD_DO_MIRROR=1` flag for hybridized graphs), so this subsection runs in PyTorch, TensorFlow, and JAX.
+MXNet offers no per-segment checkpointing API in Python (only a process-wide `MXNET_BACKWARD_DO_MIRROR=1` flag for hybridized graphs), so this subsection has no MXNet code.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1469,7 +1494,8 @@ operation requires its operands on the same device. Because host–device
 transfers are far slower than GPU compute, place models once upfront, transfer
 batches at step boundaries, and keep inner loops on-device. GPUs execute
 asynchronously from a command queue, meaning Python stalls only at
-synchronization points (such as `.item()` or NumPy conversions) and reliable
+synchronization points (such as converting a scalar to a Python float, or NumPy
+conversions) and reliable
 benchmarks require warm-up, explicit synchronization, and repeated trials.
 Training memory consists of static model/optimizer state plus batch-dependent
 activations; activation checkpointing cuts activation memory from $O(K)$ to

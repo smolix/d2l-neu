@@ -6,7 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Backpropagation
 :label:`sec_backprop`
 
-In :numref:`sec_mlp-implementation`, we trained all $203{,}530$ parameters of our Fashion-MNIST MLP without writing a single derivative by hand: calling `backward()` computed every gradient automatically. In :numref:`sec_autograd`, we saw the general principle—reverse-mode automatic differentiation records the forward pass as a computational graph and walks the chain rule backward from the scalar loss.
+In :numref:`sec_mlp-implementation`, we trained all $203{,}530$ parameters of our Fashion-MNIST MLP without writing a single derivative by hand: automatic differentiation computed every gradient for us. In :numref:`sec_autograd`, we saw the general principle—reverse-mode automatic differentiation records the forward pass as a computational graph and walks the chain rule backward from the scalar loss.
 
 In this section, we open that black box for multilayer perceptrons. An entire MLP requires just **three local matrix-calculus rules**: matrix multiplication, broadcasted bias addition, and elementwise activation. Walking through them answers three essential engineering questions:
 
@@ -160,7 +160,7 @@ Notice that the entire first column of $\partial L / \partial \mathbf{W}^{(1)}$ 
 
 ### Checking the Backward Pass on a Minibatch
 
-Let us implement :eqref:`eq_backprop-mlp` in `mlp_backward` and verify it in 64-bit floating point against each framework's `autograd` on a random $256 \times 784$ minibatch ($h = 256, q = 10, \lambda = 10^{-3}$):
+Let us implement :eqref:`eq_backprop-mlp` in `mlp_backward` and verify it in 64-bit floating point against each framework's automatic differentiation on a random $256 \times 784$ minibatch ($h = 256, q = 10, \lambda = 10^{-3}$):
 
 ```{.python .input #backprop-checking-the-backward-pass-on-a-minibatch-1}
 %%tab mxnet
@@ -221,7 +221,7 @@ def mlp_backward(X, Y, W1, b1, W2, b2, lambd):
 Let us generate a random 256-example minibatch with the exact dimensions
 and initialization of :numref:`sec_mlp-implementation` plus
 $\lambda = 10^{-3}$, and compare `mlp_backward` against each framework's
-built-in autograd. Following best practice for gradient checks, we run in
+built-in automatic differentiation. Following best practice for gradient checks, we run in
 64-bit floating point (whose ~$10^{-16}$ rounding floor catches even tiny
 algebraic bugs cleanly) and report the maximum relative discrepancy per
 parameter tensor.
@@ -315,7 +315,7 @@ for name, a, g in zip(['W1', 'b1', 'W2', 'b2'], auto, grads):
 ```
 
 
-Every parameter gradient matches `autograd` to within $10^{-14}$ relative error (double-precision machine epsilon).
+Every parameter gradient matches automatic differentiation to within $10^{-14}$ relative error (double-precision machine epsilon).
 
 ## Memory and Computation
 

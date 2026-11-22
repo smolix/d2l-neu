@@ -178,10 +178,22 @@ def text_labels(self, indices):
 
 ## Reading Minibatches
 
-In deep learning frameworks, each image in a minibatch of size $n$ with $c$ channels ($c = 1$ for grayscale, $c = 3$ for RGB color), height $h$, and width $w$ is stored either in *channel-first* layout $(n, c, h, w)$ (PyTorch and MXNet) or *channel-last* layout $(n, h, w, c)$ (TensorFlow and JAX).
+In deep learning frameworks, each image in a minibatch of size $n$ with $c$ channels ($c = 1$ for grayscale, $c = 3$ for RGB color), height $h$, and width $w$ is stored either in *channel-first* layout $(n, c, h, w)$ or *channel-last* layout $(n, h, w, c)$, depending on the framework.
+
+:begin_tab:`mxnet`
+MXNet stores images channel-first.
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch stores images channel-first.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow stores images channel-last.
+:end_tab:
 
 :begin_tab:`jax`
-In JAX, we wrap `tf.data.Dataset` in a lightweight `TensorFlowDataLoader` helper that exposes `.as_numpy_iterator()` and `__len__` so each epoch yields NumPy minibatches directly:
+JAX stores images channel-last. We wrap `tf.data.Dataset` in a lightweight `TensorFlowDataLoader` helper that exposes `.as_numpy_iterator()` and `__len__` so each epoch yields NumPy minibatches directly:
 :end_tab:
 
 ```{.python .input #image-classification-dataset-reading-minibatches-1}
@@ -198,7 +210,11 @@ class TensorFlowDataLoader:  #@save
         return len(self.dataset)
 ```
 
-Now we attach `get_dataloader(self, train)` to `FashionMNIST` (along with a `batchify` helper in MXNet), wrapping each framework's native data loader so it reshuffles the training split on every epoch and retains the final partial minibatch ($60{,}000 = 937 \times 64 + 32$) so every image is visited once per epoch:
+Now we attach `get_dataloader(self, train)` to `FashionMNIST`, wrapping the framework's native data loader so it reshuffles the training split on every epoch and retains the final partial minibatch ($60{,}000 = 937 \times 64 + 32$) so every image is visited once per epoch:
+
+:begin_tab:`mxnet`
+A `batchify` helper resizes each minibatch as the loader reads it.
+:end_tab:
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-1}
 %%tab mxnet
@@ -319,7 +335,7 @@ Even a quick visual scan previews what our linear classifier is up against: trou
 ## Summary
 
 - **Fashion-MNIST benchmark:** $60{,}000$ training and $10{,}000$ test grayscale $28 \times 28$ images across $10$ balanced apparel classes, challenging enough to separate linear models ($\sim 83\%$) from convolutional networks ($>90\%$) while running in seconds.
-- **`FashionMNIST` data module:** Delivers float32 image minibatches in $[0, 1]$ of shape $(n, 1, h, w)$ (channel-first) or $(n, h, w, 1)$ (channel-last) alongside integer class labels, with built-in resizing, worker parallelism, and grayscale visualization.
+- **`FashionMNIST` data module:** Delivers float32 image minibatches in $[0, 1]$ of shape $(n, 1, h, w)$ (channel-first) or $(n, h, w, 1)$ (channel-last) alongside integer class labels, with built-in resizing and grayscale visualization.
 
 ## Exercises
 

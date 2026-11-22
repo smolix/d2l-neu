@@ -114,9 +114,11 @@ $32\times32$ inputs, whereas MNIST and Fashion-MNIST images are $28\times28$
 pixels of padding to our first convolutional layer restores the same
 $28\times28$ output dimensions after the first $5\times5$ convolution.
 
+:begin_tab:`pytorch`
 Before defining the network, we write `init_cnn` to initialize all
 convolutional and linear weights with Xavier uniform initialization
 (:numref:`subsec_xavier`).
+:end_tab:
 
 ```{.python .input #lenet-1}
 %%tab pytorch

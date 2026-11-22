@@ -123,12 +123,28 @@ Every class we build in the remainder of this section inherits from
 ## Models
 :label:`subsec_oo-design-models`
 
-The `Module` class is the base class of every model we implement. It inherits from each framework's native neural network container (`nn.Module` in PyTorch, `nn.Block` in MXNet, `tf.keras.Model` in TensorFlow, or `nnx.Module` in Flax/JAX) as well as `d2l.HyperParameters`. By default:
+The `Module` class is the base class of every model we implement. It inherits from the framework's native neural network container as well as `d2l.HyperParameters`. By default:
 
 - Calling `model(X)` invokes `model.forward(X)`.
 - `training_step(batch)` passes the features `batch[:-1]` through the model and returns a dictionary `{'loss': l}` comparing the predictions against the labels `batch[-1]`.
 - `validation_step(batch)` computes the same validation loss dictionary (and in :numref:`sec_softmax_scratch`, `Classifier` will override `validation_step` to report both `'loss'` and `'acc'`).
 - The helper `as_metrics` normalizes any single scalar or dictionary return value into a metric dictionary so `Trainer` can log arbitrary named quantities uniformly.
+
+:begin_tab:`mxnet`
+In MXNet the container is `nn.Block`.
+:end_tab:
+
+:begin_tab:`pytorch`
+In PyTorch the container is `nn.Module`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In TensorFlow the container is `tf.keras.Model`.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX the container is Flax's `nnx.Module`.
+:end_tab:
 
 ```{.python .input #oo-design-models}
 %%tab pytorch
@@ -489,7 +505,11 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
 ### A Loader for Every Epoch
 
 
-Inside `get_dataloader`, we want an object that can be iterated over once per epoch—reshuffling the training split at the start of every epoch while reading the validation split in deterministic order. We provide both a from-scratch `ArrayLoader` class (wrapping our slice-by-slice index permutation logic from :numref:`sec_linear_scratch`) and a concise `get_tensorloader` method that delegates to each framework's native `DataLoader` / `tf.data.Dataset`:
+Inside `get_dataloader`, we want an object that can be iterated over once per epoch—reshuffling the training split at the start of every epoch while reading the validation split in deterministic order. A `get_tensorloader` method builds it from the split's tensors.
+
+:begin_tab:`jax, mxnet`
+We write this object from scratch as an `ArrayLoader` class, wrapping our slice-by-slice index permutation logic from :numref:`sec_linear_scratch`:
+:end_tab:
 
 ```{.python .input #synthetic-regression-data-reusable-data-loaders-1}
 %%tab jax

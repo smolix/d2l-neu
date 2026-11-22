@@ -450,8 +450,8 @@ print(net16(X).dtype, param_bytes(net16))
 print(net16(X.astype(jnp.bfloat16)).dtype)
 ```
 
-Across all four frameworks, casting halves parameter memory, though each
-framework handles an fp32 input differently.
+Casting halves parameter memory; the tab note and output above show what
+happens to an fp32 input.
 
 For *inference*, casting a trained model to 16 bits immediately halves its
 weight footprint (subject to verifying that task accuracy holds up). For
@@ -890,7 +890,7 @@ enabled.
 
 Multiplying the gradients by $2^{16}$ eliminates every subnormal entry while
 staying comfortably below fp16's overflow ceiling of 65504. That is the essence
-of *loss scaling*: before calling `backward()`, multiply the scalar loss by a
+of *loss scaling*: before the backward pass, multiply the scalar loss by a
 large constant $S$. By linearity of differentiation, every intermediate gradient
 shifts up by $S$ during backpropagation. Before stepping the optimizer, divide
 the gradients back down by $S$ in fp32, where tiny values are represented
@@ -903,8 +903,12 @@ start with a large $S$, inspect the gradients on every step, and whenever an
 `inf` or NaN appears, skip the optimizer update and halve $S$; after a streak of
 clean steps, double $S$ to stay close to the top of fp16's range.
 
-:begin_tab:`mxnet, jax`
-Gluon's `Trainer` and Optax provide no automatic loss scaler (JAX primarily targets TPUs and modern GPUs with native bf16); if training in fp16, multiply the loss by $S$ before backward and divide gradients by $S$ before the optimizer update.
+:begin_tab:`mxnet`
+Gluon's `Trainer` provides no automatic loss scaler; if training in fp16, multiply the loss by $S$ before backward and divide gradients by $S$ before the optimizer update.
+:end_tab:
+
+:begin_tab:`jax`
+Optax provides no automatic loss scaler (JAX primarily targets TPUs and modern GPUs with native bf16); if training in fp16, multiply the loss by $S$ before backward and divide gradients by $S$ before the optimizer update.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -959,8 +963,16 @@ fp16's 10-bit mantissa while keeping fp32's 8-bit exponent, and inner products
 accumulate in full fp32—delivering substantial speedups while matching strict
 fp32 to three or four significant digits.
 
-:begin_tab:`mxnet, tensorflow, jax`
-MXNet, TensorFlow, and JAX enable tf32 on supported GPUs by default (controlled via `NVIDIA_TF32_OVERRIDE=0`, `tf.config.experimental.enable_tensor_float_32_execution(False)`, or `jax.default_matmul_precision('float32')`).
+:begin_tab:`mxnet`
+MXNet enables tf32 on supported GPUs by default (controlled via `NVIDIA_TF32_OVERRIDE=0`).
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow enables tf32 on supported GPUs by default (controlled via `tf.config.experimental.enable_tensor_float_32_execution(False)`).
+:end_tab:
+
+:begin_tab:`jax`
+JAX enables tf32 on supported GPUs by default (controlled via `jax.default_matmul_precision('float32')`).
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1010,8 +1022,12 @@ poisoned. Whenever a loss turns NaN, check value ranges first—is any operation
 running in fp16 near its 65504 ceiling?—before blaming the learning rate or
 architecture.
 
-:begin_tab:`tensorflow, jax`
-To halt immediately at the first op producing `inf` or NaN during debugging, enable `tf.debugging.enable_check_numerics()` or `jax.config.update('jax_debug_nans', True)`.
+:begin_tab:`tensorflow`
+To halt immediately at the first op producing `inf` or NaN during debugging, enable `tf.debugging.enable_check_numerics()`.
+:end_tab:
+
+:begin_tab:`jax`
+To halt immediately at the first op producing `inf` or NaN during debugging, enable `jax.config.update('jax_debug_nans', True)`.
 :end_tab:
 ### Log-Sum-Exp
 

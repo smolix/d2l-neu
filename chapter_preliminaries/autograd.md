@@ -112,7 +112,19 @@ w.requires_grad_(True)
 w = tf.Variable(w)
 ```
 
-With `w` marked for differentiation, we now evaluate the forward pass `L = loss(w)` (inside `autograd.record()` in MXNet or `tf.GradientTape()` in TensorFlow) so the framework records the sequence of operations connecting `w` to `L`:
+We now evaluate the forward pass `L = loss(w)`, letting the framework record the sequence of operations connecting `w` to `L`:
+
+:begin_tab:`mxnet`
+MXNet records the operations inside `with autograd.record():`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow records the operations inside `with tf.GradientTape() as t:`.
+:end_tab:
+
+:begin_tab:`jax`
+JAX records nothing yet: `jax.grad` traces `loss` when it is called below.
+:end_tab:
 
 ```{.python .input #autograd-a-simple-function-3}
 %%tab mxnet
@@ -150,7 +162,11 @@ The recorded trace forms the *computational graph* shown in :numref:`fig_autogra
 
 ### The Backward Pass
 
-Triggering the backward pass propagates sensitivities from $\partial L/\partial L = 1$ at the output back to $\mathbf{w}$ through each node's local derivative rule ($\nabla_{\mathbf{s}} L = \mathbf{1} \to \nabla_{\mathbf{r}} L = 2\mathbf{r} \to \nabla_{\hat{\mathbf{y}}} L = 2\mathbf{r} \to \nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r})$), reproducing $(2, 4)$:
+Triggering the backward pass propagates sensitivities from $\partial L/\partial L = 1$ at the output back to $\mathbf{w}$ through each node's local derivative rule,
+
+$$\nabla_{\mathbf{s}} L = \mathbf{1} \to \nabla_{\mathbf{r}} L = 2\mathbf{r} \to \nabla_{\hat{\mathbf{y}}} L = 2\mathbf{r} \to \nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r}),$$
+
+reproducing $(2, 4)$:
 
 :begin_tab:`mxnet, pytorch`
 `L.backward()` runs the backward pass and stores the gradient in `w.grad`.

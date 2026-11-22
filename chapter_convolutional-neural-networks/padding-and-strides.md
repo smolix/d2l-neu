@@ -352,7 +352,7 @@ simply write $p$ and $s$. Unless specified otherwise, a convolutional layer
 defaults to stride 1 and zero padding ($p=0$).
 
 :begin_tab:`jax`
-`nnx.Conv` is the exception: its default is `padding='SAME'`.
+In `nnx.Conv`, however, the default is `padding='SAME'`.
 :end_tab:
 
 ### Stride and the Receptive Field

@@ -70,7 +70,16 @@ export function baselineY(y, fs, mono, base) {
 export function tx(x, y, t, o) {
   o = o || {};
   const fs = o.fs || 15;
-  return `<text x="${x}" y="${baselineY(y, fs, o.mono, o.base)}" font-family="${o.mono ? FM : FS}" font-size="${fs}" font-weight="${o.fw || 500}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || 'middle'}">${esc(t)}</text>`;
+  return `<text x="${x}" y="${baselineY(y, fs, o.mono, o.base)}" font-family="${o.mono ? FM : FS}" font-size="${fs}" font-weight="${o.fw || 500}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || 'middle'}">${supRuns(esc(t))}</text>`;
+}
+
+// Unicode has no superscript ℓ or α, so '2⁻ℓᵢ' / 'k⁻α' would draw a raised
+// minus followed by a full-size letter ("2−ℓ" reads as subtraction). A
+// superscript minus followed by a letter (plus any subscript digits/letters)
+// becomes one raised, smaller run: 2<sup>−ℓᵢ</sup>.
+function supRuns(s) {
+  return s.replace(/⁻([A-Za-zα-ωℓ][₀-₉ᵢⱼₖₘₙₜ]*)/g,
+    '<tspan baseline-shift="super" font-size="70%">−$1</tspan>');
 }
 
 // A grid of cells. `data` is a 2D array of values (use '' / null for blank).

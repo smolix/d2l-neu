@@ -333,7 +333,9 @@ before promoting. With multiple workers, fast configs
 finish first and idle waiting for stragglers.
 
 ![Synchronous SH: workers idle while waiting for slow trials at the rung boundary.](../img/sync_sh.svg){width=72%}
+:::
 
+::: {.slide title="ASHA: Promote Without Waiting"}
 **ASHA** (Asynchronous Successive Halving) fixes this:
 promote configs to the next rung the moment they qualify,
 without waiting for the rest of the cohort. Workers
@@ -355,12 +357,11 @@ family as the random-search deck. The only new idea is that
 :::
 
 ::: {.slide title="Objective with Epochs as Budget"}
-The objective reports the validation loss and error after every
-epoch, so the scheduler can decide whether to stop, continue, or
-promote a trial without waiting for full training. ASHA ranks by the
-loss: a LeNet that has not started to learn predicts one class and has
-error exactly 0.9, and when most trials tie there, the median cutoff
-stops none of them.
+The objective reports validation loss and error after every epoch,
+so the scheduler can stop, continue, or promote a trial without
+waiting for full training. ASHA ranks by the loss: an untrained
+LeNet predicts one class (error exactly 0.9), and when most trials
+tie there, the median cutoff stops none of them.
 
 @sh-async-objective-function-1
 :::
@@ -388,8 +389,11 @@ rung $i$, promote a config only if it is in the best
 $\lfloor n_i/\eta \rfloor$ scores at that rung.
 
 @sh-async-asynchronous-scheduler-1
+:::
 
-. . .
+::: {.slide title="Configuring the ASHA scheduler"}
+Syne Tune's `ASHA` ranks trials by validation loss, starts every
+trial at `grace_period` epochs and promotes the top $1/\eta$:
 
 @sh-async-asynchronous-scheduler-2
 :::
@@ -403,7 +407,11 @@ loaded from the completed experiment.
 @sh-async-asynchronous-scheduler-4
 :::
 
-::: {.slide title="Running ASHA"}
+::: {.slide title="Running ASHA" only="pytorch"}
+@sh-async-visualize-the-optimization-process[out=2]
+:::
+
+::: {.slide title="Running ASHA" except="pytorch"}
 @sh-async-visualize-the-optimization-process
 :::
 

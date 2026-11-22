@@ -414,21 +414,23 @@ $$\text{RMSE} = \sqrt{\frac{1}{|\mathcal{T}|} \sum_{(u,i) \in \mathcal{T}} (r_{u
 :::
 
 ::: {.slide title="Only observed ratings enter the objective"}
-Adam on MSE loss with $\ell_2$ weight decay (regularizes the
-embedding magnitudes — important for unobserved (u, i)
-pairs):
+Adam on MSE loss with $\ell_2$ weight decay (regularizes embedding magnitudes, key for unobserved pairs):
 
 @mf-training-and-evaluating-the-model-1
 :::
 
 ::: {.slide title="A fitted subspace need not have named coordinates"}
-Initialize the embedding tables, run rating prediction training,
-then interpret the final RMSE as average prediction error on the
-1-5 rating scale:
+Initialize the embedding tables and run rating prediction training:
 
-@mf-training-and-evaluating-the-model-2
+@-mf-training-and-evaluating-the-model-2
+:::
+
+::: {.slide title="A fitted subspace need not have named coordinates (cont.)"}
+@!mf-training-and-evaluating-the-model-2
 
 . . .
+
+The final RMSE is the average prediction error on the 1-5 rating scale. The trained model scores any user--item pair:
 
 @mf-training-and-evaluating-the-model-3
 :::

@@ -410,12 +410,10 @@ SyneTune, Vizier, Ray Tune).
 @hyperopt-api-hyperparameter-optimization-api
 :::
 
-::: {.slide title="Searcher base class"}
+::: {.slide title="Searcher base class and a concrete RandomSearcher"}
 @hyperopt-api-searcher-1
 
 . . .
-
-A concrete `RandomSearcher`:
 
 @hyperopt-api-searcher-2
 :::
@@ -455,15 +453,34 @@ Fashion-MNIST. Search over learning rate and batch size:
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-2
 :::
 
-::: {.slide title="Run + results"}
+::: {.slide title="Run: five random-search trials"}
+Plug the random searcher into the basic scheduler and let the tuner
+run five trials of the LeNet objective:
+
+@-hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3
+
+The next slide shows what the run prints: each trial's sampled
+configuration, its validation error and its runtime.
+:::
+
+::: {.slide title="Run (cont.): the trial log"}
+::: {.cols .vc}
+::: {.col}
+@!hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3
+:::
+
+::: {.col .narrow}
+- The plot shows the training curves of the **last** trial.
+- The log lists each trial's sampled configuration, its validation error and its runtime.
+:::
+:::
+:::
+
+::: {.slide title="Results: the incumbent curve"}
 The incumbent curve reports the best validation error found so far
 as the tuner spends more wall-clock time. Downward steps mean a new
 configuration beat the previous best; flat regions mean the search
 is still evaluating but has not improved the incumbent.
-
-@hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-3
-
-. . .
 
 @hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4
 :::

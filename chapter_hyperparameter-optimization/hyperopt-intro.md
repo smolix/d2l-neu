@@ -390,11 +390,26 @@ counts, categorical for activations:
 Iterate: draw random config, evaluate, log. Keep the best
 seen so far. Brutally simple, surprisingly effective:
 
-@hyperopt-intro-random-search-1
+@-hyperopt-intro-random-search-1
 
 . . .
 
+After the loop, the incumbent is the trial with the lowest validation error:
+
 @hyperopt-intro-random-search-2
+:::
+
+::: {.slide title="Random search (cont.): the trial log"}
+::: {.cols .vc}
+::: {.col}
+@!hyperopt-intro-random-search-1
+:::
+
+::: {.col .narrow}
+- The plot shows the training curves of the **last** trial.
+- The log lists each trial's learning rate and validation error.
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}

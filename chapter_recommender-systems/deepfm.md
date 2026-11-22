@@ -256,7 +256,13 @@ $$\hat y = \sigma(\hat y^{(FM)} + \hat y^{(DNN)})$$
 Same CTR pipeline as the FM deck — only the model
 changes:
 
-@deepfm-training-and-evaluating-the-model
+@-deepfm-training-and-evaluating-the-model
+:::
+
+::: {.slide title="A controlled comparison (cont.)"}
+Loss and accuracy over the training epochs:
+
+@!deepfm-training-and-evaluating-the-model
 :::
 
 ::: {.slide title="Explicit pair terms and an MLP encode different biases"}

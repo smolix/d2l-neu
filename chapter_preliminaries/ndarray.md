@@ -1305,7 +1305,7 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 :::
 :::
 
-::: {.slide title="Vectorized Elementwise Operations and Type Promotion"}
+::: {.slide title="Vectorized Elementwise Operations and Type Promotion" except="tensorflow"}
 [Elementwise Compute]{.kicker}
 
 ::: {.cols}
@@ -1321,6 +1321,22 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 @ndarray-elementwise-operations-1
 :::
 :::
+:::
+
+::: {.slide title="Vectorized Elementwise Operations and Type Promotion" only="tensorflow"}
+[Elementwise Compute]{.kicker}
+
+- Scalar operators (`+`, `-`, `*`, `/`, `**`, `exp`) apply element-by-element: $c_i = f(x_i, y_i)$. Note that `x * y` is the **Hadamard product** $\mathbf{x} \odot \mathbf{y}$, not a matrix product.
+
+@ndarray-operations-2
+:::
+
+::: {.slide title="Vectorized Elementwise Operations and Type Promotion (cont.)" only="tensorflow"}
+[Elementwise Compute]{.kicker}
+
+- **Type promotion:** Dividing `uint8` pixels `images` by `255` promotes the output to `float32` in $[0, 1]$ ($0.8\text{ MB}$), ready for gradient computation.
+
+@ndarray-elementwise-operations-1
 :::
 
 ::: {.slide title="Boolean Comparisons and Axis Reductions"}

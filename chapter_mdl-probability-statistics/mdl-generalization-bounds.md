@@ -920,7 +920,7 @@ interpolation up to floating-point precision. Simultaneously, the smallest
 singular value drops to around $0.01$–$0.04$, several times smaller than at
 $p=38$ or $p=42$. Because :eqref:`eq_mdl-svd-interpolant` divides by
 $\sigma_{\min}$, the solution explodes: $\|\mathbf w\|$ jumps to between
-$6$ and $20$, and test MSE spikes to between $5$ and $50$, one to two
+$10$ and $30$, and test MSE spikes to between $10$ and $70$, one to two
 orders of magnitude above the U-curve minimum. Those ranges are wide because
 the peak is heavy-tailed, just as for a square Gaussian matrix where
 $\mathbb{E}[1/\sigma_{\min}^2]=\infty$; even a median over 20 trials
@@ -946,7 +946,7 @@ loses to ordinary least squares on the raw inputs by another factor of ten.
 Whether an interpolating model can outperform a well-specified small model
 is a separate question, and here the answer is no.
 
-The capacity product peaks near 8 to 25 at $p=40$ and drops back to roughly
+The capacity product peaks near 10 to 35 at $p=40$ and drops back to roughly
 $1.2$–$1.3$ at $p=400$. It mirrors the shape of the test curve, but we
 should not mistake it for a generalization certificate: no theorem in this
 section covers unbounded squared loss, the product is not invariant to
@@ -995,7 +995,7 @@ $p=40$, the noise part is roughly $1$ to $4$ (a hundred times or more the
 label-noise variance of $0.01$), and the clean part is larger still. By
 $p=42$ the noise part drops to a few tenths, at $p=80$ to about $0.02$, and
 at $p=400$ to just under $0.01$. Over the same stretch, the clean part
-falls from roughly 4–20 at the peak to about $0.05$ at $p=400$, so most of
+falls from roughly 8–60 at the peak to about $0.05$ at $p=400$, so most of
 the improvement past the threshold comes from approximating the target
 better.
 

@@ -800,7 +800,7 @@ print('fresh optimizer:', [round(l, 4) for l in fresh])
 
 With the saved optimizer state, training picks up smoothly with losses hovering
 near 0.01 or below. With a fresh Adam optimizer, a *single* step blows the loss
-up by several hundredfold, and even four steps later it remains over a hundred
+up roughly a thousandfold, and even four steps later it remains over a hundred
 times higher than before!
 
 Why does one step of a fresh Adam wreck a nearly converged model? Equation

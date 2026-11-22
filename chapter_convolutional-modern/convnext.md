@@ -933,9 +933,9 @@ for name, (params, accuracy) in results.items():
 | Compact ResNet-18 | (ResNet-50 with the modern recipe) | | 3.35M | ≈ 94% |
 | ConvNeXt blocks and stages, BN | stage ratio to fewer normalizations, separate downsampling | +3.0 | 3.38M | ≈ 94% |
 | BN $\to$ LN | BN $\to$ LN | +0.1 | 3.38M | ≈ 94% |
-| Patchify stem (our ConvNeXt) | patchify stem | +0.1 | 3.38M | ≈ 91.5% |
+| Patchify stem (our ConvNeXt) | patchify stem | +0.1 | 3.38M | ≈ 92% |
 
-The results in :numref:`tab_convnext_local` pinpoint what transfers to $64 \times 64$ Fashion-MNIST and what does not. Keeping ResNet's overlapping stem, ConvNeXt's modernized blocks, stage ratio, and layer normalization tie with our parameter-matched `CompactResNet18` (~94%, within ~43--46M multiply-adds per image). The entire ~2.5-point drop to ~91.5% comes from the single step that was neutral on $224 \times 224$ ImageNet: the non-overlapping $4 \times 4$ stride-4 patchify stem, which jumps straight to a coarse $16 \times 16$ grid in one linear projection. Architectural choices tuned at ImageNet resolution do not transfer blindly to low-resolution domains, and a cumulative ablation immediately identifies which component to adapt.
+The results in :numref:`tab_convnext_local` pinpoint what transfers to $64 \times 64$ Fashion-MNIST and what does not. Keeping ResNet's overlapping stem, ConvNeXt's modernized blocks, stage ratio, and layer normalization tie with our parameter-matched `CompactResNet18` (~94%, within ~43--46M multiply-adds per image). The entire ~2-point drop to ~92% comes from the single step that was neutral on $224 \times 224$ ImageNet: the non-overlapping $4 \times 4$ stride-4 patchify stem, which jumps straight to a coarse $16 \times 16$ grid in one linear projection. Architectural choices tuned at ImageNet resolution do not transfer blindly to low-resolution domains, and a cumulative ablation immediately identifies which component to adapt.
 
 ## Limits and Open Problems
 

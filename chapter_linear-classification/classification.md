@@ -165,7 +165,7 @@ d2l.plot([mean_conf[used], [0, 1]], [acc[used], [0, 1]], 'mean confidence',
          fmts=('o-', 'k:'), figsize=(3.5, 3.5))
 ```
 
-Across all well-populated bins ($n_b \geq 100$), empirical accuracy tracks mean confidence within two or three percentage points (sitting slightly *above* the diagonal: average confidence $\sim 81\%$ vs. accuracy $\sim 83\%$, for an ECE below $0.03$). Unlike deep overparameterized networks—which frequently become severely overconfident—shallow softmax regression on Fashion-MNIST is already well calibrated (slightly underconfident).
+Across all well-populated bins ($n_b \geq 100$), empirical accuracy tracks mean confidence within at most eight percentage points (sitting slightly *above* the diagonal: average confidence $\sim 81\%$ vs. accuracy $\sim 83\%$, for an ECE below $0.03$). Unlike deep overparameterized networks—which frequently become severely overconfident—shallow softmax regression on Fashion-MNIST is already well calibrated (slightly underconfident).
 
 ### Temperature Scaling
 

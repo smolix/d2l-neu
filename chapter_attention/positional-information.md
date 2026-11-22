@@ -637,7 +637,7 @@ print(f'byte bigram: perplexity {np.exp(-np.log(bigram[x, y]).mean()):.1f}')
 ```
 
 At the training length ($n = 128$), RoPE achieves the lowest perplexity
-($7.3$), ahead of learned ($9.3$), sinusoidal ($9.6$), and ALiBi ($9.7$), all
+($7.3$), ahead of learned ($9.6$), sinusoidal ($9.7$--$9.8$), and ALiBi ($9.9$--$10.0$), all
 of which improve on the byte-bigram baseline ($11.6$); NoPE remains at the
 bigram level in this small two-block model.
 
@@ -645,7 +645,7 @@ At $n = 512$, the three schemes whose representations encounter out-of-range
 values degrade sharply: learned embeddings hit untrained rows ($128$--$511$),
 sinusoidal slow columns take unseen values, and RoPE's low-frequency pairs
 rotate to angles never seen during training. ALiBi's perplexity remains flat
-at $9.7$. To see why, we measure the fraction of attention weight that ALiBi's
+at $9.9$. To see why, we measure the fraction of attention weight that ALiBi's
 four heads place on keys at distance $\ge 128$, and compare against
 masking out all keys at distance $\ge 128$:
 
@@ -813,8 +813,8 @@ for name, factor in factors.items():  # Each of the three trained RoPE runs
                                     for col in zip(*ppl)))
 ```
 
-Rescaling only the slow pairs cuts length-512 perplexity from $27.7$ down to
-$9.0$ without updating a single weight, and a brief fine-tune at the target
+Rescaling only the slow pairs cuts length-512 perplexity from about $27$ down to
+about $9$ without updating a single weight, and a brief fine-tune at the target
 length eliminates the remaining gap (Exercise
 :exref:`ex_positional-information-position-interpolation`).
 

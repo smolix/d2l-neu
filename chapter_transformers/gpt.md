@@ -30,7 +30,7 @@ from d2l import jax as d2l
 ## From Blocks to a Language Model
 :label:`subsec_gpt-blocks-to-lm`
 
-![A GPT from bottom to top. A table $\mathbf{E}$ embeds the token ids into the residual stream; $L$ causal `TransformerBlock` layers read from and write to the stream; a final normalization and the transposed table $\mathbf{E}^\top$ turn each position's vector into logits over the vocabulary. Left, GPT-2 adds learned position vectors once at the bottom; right, the modern configuration leaves the stream alone at the bottom and rotates queries and keys inside each attention layer via RoPE.](../img/mdl-transformers-gpt-stack.svg)
+![A GPT from bottom to top. A table $\mathbf{E}$ embeds the token ids into the residual stream; $L$ causal `TransformerBlock` layers read from and write to the stream; a final normalization and the transposed table $\mathbf{E}^\top$ turn each position's vector into logits over the vocabulary. The modern configuration shown here rotates queries and keys inside each attention layer via RoPE; GPT-2 instead adds learned position vectors once at the bottom.](../img/mdl-transformers-gpt-stack.svg)
 :label:`fig_gpt-stack`
 
 Inside each block, `CausalAttention` fuses the query, key, and value projections, supports **grouped-query attention** (`num_kv_heads` $\le$ `num_heads`, :numref:`sec_multihead-attention`), optionally rotates queries and keys via **RoPE** (`rope=True`, :numref:`sec_positional-information`), and applies the causal mask so position $t$ attends only to positions $s \le t$:
@@ -307,7 +307,7 @@ print('Y[0]:', repr(data.vocab.decode(Y[0, :24].tolist())))
 print(np.asarray(d2l.causal_mask(5)).astype(int))
 ```
 
-Evaluating our freshly initialized 6-block `GPT` ($\approx 4.82\textrm{M}$ parameters) on a validation minibatch confirms that its untrained cross-entropy sits right at $\ln 256 \approx 5.55$ nats/byte:
+Evaluating our freshly initialized 6-block `GPT` ($\approx 4.79\textrm{M}$ parameters) on a validation minibatch confirms that its untrained cross-entropy sits close to $\ln 256 \approx 5.55$ nats/byte:
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-2}
 %%tab pytorch, jax

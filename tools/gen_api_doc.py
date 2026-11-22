@@ -85,12 +85,22 @@ def _get_bases(node):
     return bases
 
 
+def _escape_markup(text):
+    """Escape < and > outside `code` spans, so a docstring that names a tag
+    (``<body>``, ``<EMAIL>``) prints it instead of pandoc reading raw HTML,
+    which drops the tag and can unbalance the page's tabset divs."""
+    parts = re.split(r'(`[^`]*`)', text)
+    return ''.join(part if part.startswith('`') else
+                   part.replace('<', r'\<').replace('>', r'\>')
+                   for part in parts)
+
+
 def _format_docstring(docstring):
     """Extract the first line and Defined-in reference from a docstring."""
     if not docstring:
         return '', ''
     lines = docstring.strip().split('\n')
-    first_line = lines[0].strip()
+    first_line = _escape_markup(lines[0].strip())
 
     defined_in = ''
     for line in lines:

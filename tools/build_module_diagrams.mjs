@@ -110,6 +110,22 @@ for (const [id, fn] of allEntries) {
 
     const texts = Array.from(svg.querySelectorAll('text')).map((el) => {
       const r = el.getBoundingClientRect();
+      // A raised/lowered script run (<tspan baseline-shift>, written by
+      // diagrams/scripts.mjs) stretches the text's box by ~0.3 em above or
+      // below, so two tightly stacked lines with scripts "overlap" although
+      // no glyphs touch. Take the vertical extent from the base-line runs
+      // only (text nodes outside script tspans); keep the full horizontal one.
+      let vTop = r.top, vBottom = r.bottom;
+      if (el.querySelector('tspan[baseline-shift]')) {
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let tb = Infinity, bb = -Infinity, n;
+        while ((n = walker.nextNode())) {
+          if (!n.textContent.trim() || n.parentElement.closest('tspan[baseline-shift]')) continue;
+          const rg = document.createRange(); rg.selectNodeContents(n);
+          for (const q of rg.getClientRects()) { tb = Math.min(tb, q.top); bb = Math.max(bb, q.bottom); }
+        }
+        if (tb < bb) { vTop = tb; vBottom = bb; }
+      }
       const bbox = el.getBBox();
       const ctm = el.getScreenCTM();
       const invCtm = ctm ? ctm.inverse() : null;
@@ -119,8 +135,8 @@ for (const [id, fn] of allEntries) {
         text: (el.textContent || '').trim(),
         left: r.left + 1.0,
         right: r.right - 1.0,
-        top: r.top + 2.0,
-        bottom: r.bottom - 2.0,
+        top: vTop + 2.0,
+        bottom: vBottom - 2.0,
         raw: r,
         bbox,
         invCtm,

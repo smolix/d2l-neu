@@ -72,6 +72,7 @@ Write labels the way you type math: `n_b`, `R_emp[f]`, `x_{k+1}`,
 - A bare `_` needs a one-letter base and a script word that does not run on
   into another `_`: `n_b`, `w_ij`, `b_noise` convert; `batch_size`,
   `requires_grad`, `X_train_std` do not.
+- Tests: `node tools/test_diagram_scripts.mjs`.
 - To keep a `_` or `^` literal in a label that would otherwise convert, write
   `\_` or `\^` (in a JS string: `'c\\_attn'`).
 - A braced script must open and close inside one label: a formula split

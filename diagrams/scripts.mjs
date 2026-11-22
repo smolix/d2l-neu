@@ -19,8 +19,10 @@
 //     letter, digit, `_` or `.`) and a script word that does not run on into
 //     another `_`: n_b, w_ij, R_emp, b_noise, x_k. So `batch_size`,
 //     `requires_grad`, `X_train_std` stay as written.
-// `x^(…)` and `x_(…)` treat the parentheses as grouping and drop them, as
-// TeX braces would. A label that should stay literal anyway is written with `\_` / `\^`, which
+// `x_(…)` treats the parentheses as grouping and drops them (S_(t−1)), as TeX
+// braces would; `x^(…)` keeps them around a single token (layer index X^(L))
+// and drops them around an expression (P^(1/3), e^(−λ/2)). A label that should
+// stay literal anyway is written with `\_` / `\^`, which
 // draws a plain `_` / `^`.
 
 const SCRIPT_SIZE = '70%';
@@ -28,7 +30,16 @@ const NESTED_SIZE = '85%';  // a script inside a script (n_in inside ^{...})
 
 // Letters that may carry a bare subscript: Latin, Greek, ℓ, ∇, precomposed
 // accented Latin (ŷ ȳ ŵ x̄ come precomposed or as base + combining mark).
-const BASE = /[A-Za-zα-ωΑ-Ωϵϑϕℓŷȳŵĉĥĝŝẑḡ∇]/u;
+const BASE = /[A-Za-zα-ωΑ-Ωϵϑϕℓ∇À-ɏḀ-ỿ]/u;
+// Symbols that take a bare subscript whatever precedes them: big operators,
+// norms and closing delimiters (∑_k, ∫_a, ‖x‖_F, (ΔW h)_i, [uv]_a).
+const SUB_SYM = /[∑∏∫∮⋂⋃∂‖|)\]}]/u;
+// Operator words that take a bare subscript: max_k, argmin_θ, sup_f, proj_w.
+const OP_WORD = /(?:^|[^A-Za-z0-9_.])(?:max|min|argmax|argmin|sup|inf|lim|mean|proj|prox|softmax)$/;
+// A bare-script word: letters, digits, Greek, ℓ ∅ ∞ ϵ ⊥, optionally after <, ≤ (x_<t);
+// it must not run on into an identifier character or a combining accent
+// (σ_tσ̇_t takes only the t).
+const SCRIPT_WORD = /^(?:&lt;|≤)?[A-Za-z0-9α-ωϵℓ∅∞⊥]{1,12}(?![A-Za-z0-9_\u0300-\u036f])/u;
 const IDENT = /[A-Za-z0-9_.]/;
 // Code syntax in a mono label: attribute access (y.reshape, self.loss),
 // keywords, quotes, ==, slices, comments, a call of a snake_case name
@@ -78,12 +89,20 @@ export function scriptText(s, nested) {
     }
     if (kind === 'super') {
       // bare ^: 2^m, (1+g²)^N, W^T, 2^-1, e^(x)
-      if (prev !== undefined && /[A-Za-z0-9)\]²³ᵀ'α-ω]/u.test(prev)) {
+      // bases: letters, digits, Greek (either case), ℝ ℕ ℤ ℚ ℂ, closing
+      // delimiters and } (Σ_{i=1}^n), |, ‖, Unicode super/subscripts, a prime
+      if (prev !== undefined && /[A-Za-z0-9)\]}|‖²³ᵀ'α-ωΑ-Ωℓℝℕℤℚℂ₀-₉ₐ-ₜ\u0300-\u036f]/u.test(prev)) {
         const rest = str(i + 1, chars.length);
-        const m = rest.match(/^[−-]?[A-Za-z0-9α-ω]{1,6}(?![A-Za-z0-9_])/u);
-        const g = !m && rest.match(/^\(([^()]{1,16})\)/);   // e^(−λ/2): parens only group
+        // a number (T^0.75, 10^-5), or a short word (2^m, W^T, x^∞, L^CLIP)
+        const m = rest.match(/^[−-]?[0-9]+(?:\.[0-9]+)?(?![A-Za-z0-9_.])/u)
+          || rest.match(/^[−-]?[A-Za-z0-9α-ωϵ∞⊥π±]{1,6}(?![A-Za-z0-9_])/u);
+        // x^(…): parens around one token stay (a layer or sample index X^(L),
+        // h^(1), Â^(2) is not a power); around an expression they only group
+        // and are dropped (P^(1/3), α^(γ+1), ℝ^(m×n), e^(−λ/2))
+        const g = !m && rest.match(/^\(([^()]{1,16})\)/);
+        const dropParens = g && !/^(?:[A-Za-zα-ωℓ]+|[0-9]+)$/u.test(g[1]);
         if (m || g) {
-          out += tsp('super', scriptText(m ? m[0] : g[1], true), nested);
+          out += tsp('super', scriptText(m ? m[0] : (dropParens ? g[1] : g[0]), true), nested);
           i += Array.from(m ? m[0] : g[0]).length;
           continue;
         }
@@ -94,13 +113,19 @@ export function scriptText(s, nested) {
     let baseOk = false;
     if (prev !== undefined && BASE.test(prev) && (prev2 === undefined || !IDENT.test(prev2))) baseOk = true;
     if (prev === "'" && prev2 !== undefined && BASE.test(prev2)) baseOk = true;
+    if (prev !== undefined && SUB_SYM.test(prev)) baseOk = true;
+    if (prev === '*' && prev2 !== undefined && BASE.test(prev2)) baseOk = true;   // a*_t
+    // operator words take a one-character script only (max_a, argmin_θ),
+    // so code names such as max_len, min_freq, max_norm stay literal
+    const opBase = OP_WORD.test(str(Math.max(0, i - 9), i));
     // a combining accent on the base (x̄_k): look one further back
     if (prev !== undefined && /[̀-ͯ]/.test(prev) && prev2 !== undefined && BASE.test(prev2)
         && (chars[i - 3] === undefined || !IDENT.test(chars[i - 3]))) baseOk = true;
-    if (baseOk) {
+    if (baseOk || opBase) {
       const rest = str(i + 1, chars.length);
-      const m = rest.match(/^[A-Za-z0-9α-ωℓ∅]{1,12}(?![A-Za-z0-9_])/u);
-      const g = !m && rest.match(/^\(([^()]{1,16})\)/);     // S_(t−1): parens only group
+      const m = baseOk ? rest.match(SCRIPT_WORD)
+        : rest.match(/^[A-Za-zα-ωϵ](?![A-Za-z0-9_\u0300-\u036f])/u);
+      const g = !m && baseOk && rest.match(/^\(([^()]{1,16})\)/);     // S_(t−1): parens only group
       if (m || g) {
         out += tsp('sub', m ? m[0] : scriptText(g[1], true), nested);
         i += Array.from(m ? m[0] : g[0]).length;

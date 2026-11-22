@@ -144,7 +144,7 @@ function roadmapTwoStage() {
 function threeTheorems() {
   let o = card(20, 14, 500, 72, C.lblue, C.blue, '1. Orthogonal Projection (P = QQᵀ)', 'y − Py ⊥ S   ⇒   ∥y − Py∥ ≤ ∥y − s∥ for all s ∈ S', 'Closest point & right-triangle least squares', D.blue.dark);
   o += card(20, 98, 500, 72, C.lamber, C.amber, '2. Spectral Theorem (A = Aᵀ ⇒ A = VΛVᵀ)', 'xᵀAx = ∑ λᵢ (vᵢᵀx)²   with real λᵢ and orthonormal V', 'Positive definiteness, Rayleigh bounds & curvature bowls', D.orange.dark);
-  o += card(20, 182, 500, 72, C.lgreen, C.green, '3. Eckart–Young–Mirsky (Aₖ = ∑ᵢ≤ₖ σᵢuᵢvᵢᵀ)', 'min_{rank(B)≤k} ∥A − B∥₂ = σₖ₊₁   and   ∥A − Aₖ∥_F² = ∑ᵢ>ₖ σᵢ²', 'Optimal low-rank compression, PCA & LoRA adapters', D.green.dark);
+  o += card(20, 182, 500, 72, C.lgreen, C.green, '3. Eckart–Young–Mirsky (Aₖ = ∑_{i≤k} σᵢuᵢvᵢᵀ)', 'min_{rank(B)≤k} ∥A − B∥₂ = σₖ₊₁   and   ∥A − Aₖ∥_{F}² = ∑_{i>k} σᵢ²', 'Optimal low-rank compression, PCA & LoRA adapters', D.green.dark);
   return svg(540, 268, o);
 }
 
@@ -165,7 +165,7 @@ function runningBenchmarks() {
 
 // ── §33.1 mdl-geometry-linear-algebraic-ops.md (10 diagrams) ──
 function pythagorasSplit() {
-  let o = card(20, 16, 500, 68, C.lblue, C.blue, 'Orthogonal Decomposition: v = proj_w(v) + r', 'proj_w(v) = ((v·w)/(w·w)) w = (2, 1)     r = v − proj_w(v) = (−1, 2)', 'Orthogonality check: r · w = (−1)(2) + (2)(1) = 0', D.blue.dark);
+  let o = card(20, 16, 500, 68, C.lblue, C.blue, 'Orthogonal Decomposition: v = proj_{w}(v) + r', 'proj_{w}(v) = ((v·w)/(w·w)) w = (2, 1);   r = v − proj_{w}(v) = (−1, 2)', 'Orthogonality check: r · w = (−1)(2) + (2)(1) = 0', D.blue.dark);
   o += card(20, 102, 146, 86, D.purple.tint, C.purple, 'Hypotenuse ∥v∥²', 'v = (1, 3)', '1² + 3² = 10', D.purple.dark);
   o += tx(184, 145, '=', { fs: 24, fw: 700, fill: C.ink });
   o += card(202, 102, 146, 86, C.lgreen, C.green, 'Shadow ∥proj∥²', 'proj = (2, 1)', '2² + 1² = 5', D.green.dark);
@@ -177,7 +177,7 @@ function pythagorasSplit() {
 }
 
 function cauchySchwarz() {
-  let o = card(20, 16, 500, 74, C.lblue, C.blue, 'Right-Triangle Proof of Cauchy–Schwarz in ℝᵈ', '∥v∥² = ∥proj_w(v)∥² + ∥r∥²  ≥  ∥proj_w(v)∥² = (v · w)² / ∥w∥²', 'Dropping ∥r∥² ≥ 0 and taking square roots gives |v · w| ≤ ∥v∥ ∥w∥', D.blue.dark);
+  let o = card(20, 16, 500, 74, C.lblue, C.blue, 'Right-Triangle Proof of Cauchy–Schwarz in ℝᵈ', '∥v∥² = ∥proj_{w}(v)∥² + ∥r∥²  ≥  ∥proj_{w}(v)∥² = (v · w)² / ∥w∥²', 'Dropping ∥r∥² ≥ 0 and taking square roots gives |v · w| ≤ ∥v∥ ∥w∥', D.blue.dark);
   o += card(20, 106, 240, 134, C.lgreen, C.green, 'Strict Inequality (r ≠ 0)', '|v · w| < ∥v∥ ∥w∥', 'cos θ = (v·w)/(∥v∥∥w∥) ∈ (−1, 1)', D.green.dark);
   o += tx(140, 214, 'θ ∈ (0, π) non-collinear', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += card(280, 106, 240, 134, C.lamber, C.amber, 'Equality Case (r = 0)', '|v · w| = ∥v∥ ∥w∥', 'v = t* w  (collinear vectors)', D.orange.dark);
@@ -205,7 +205,7 @@ function projectorQQT() {
 }
 
 function normalVsQr() {
-  let o = card(20, 14, 500, 52, D.purple.tint, C.purple, 'Least Squares: min_x ∥Ax − y∥²  (A = [1, t], y = (6, 0, 0))', 'Both routes: x̂ = (5, −3), Py = (5, 2, −1), r = (1, −2, 1)', '', D.purple.dark);
+  let o = card(20, 14, 500, 52, D.purple.tint, C.purple, 'Least Squares: min_{x} ∥Ax − y∥²  (A = [1, t], y = (6, 0, 0))', 'Both routes: x̂ = (5, −3), Py = (5, 2, −1), r = (1, −2, 1)', '', D.purple.dark);
   o += card(20, 82, 238, 160, D.red.tint, D.red.base, 'Route 1: Normal Equations', 'AᵀA x̂ = Aᵀy', '[3, 3; 3, 5] x̂ = [6; 0]', D.red.dark);
   o += tx(139, 190, 'Condition number SQUARES:', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += tx(139, 216, 'κ(AᵀA) = κ(A)²  (roundoff loss)', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
@@ -641,7 +641,7 @@ function svdExistenceProof() {
 }
 
 function svdVsEigen() {
-  let o = card(20, 14, 500, 68, C.lblue, C.blue, 'Variational Norms & Gram Decompositions', '∥A∥₂ = max_{∥x∥=1} ∥Ax∥ = σ₁     ∥A∥_F² = tr(AᵀA) = ∑ᵢ σᵢ²', 'AᵀA = V(ΣᵀΣ)Vᵀ   and   AAᵀ = U(ΣΣᵀ)Uᵀ   share nonzero eigenvalues σᵢ²', D.blue.dark);
+  let o = card(20, 14, 500, 68, C.lblue, C.blue, 'Variational Norms & Gram Decompositions', '∥A∥₂ = max_{∥x∥=1} ∥Ax∥ = σ₁,   ∥A∥_{F}² = tr(AᵀA) = ∑ᵢ σᵢ²', 'AᵀA = V(ΣᵀΣ)Vᵀ   and   AAᵀ = U(ΣΣᵀ)Uᵀ   share nonzero eigenvalues σᵢ²', D.blue.dark);
   o += card(20, 98, 238, 144, C.lamber, C.amber, 'Running Matrix A = [1,2;−1,3]', 'Eigenvalues: λ = 2 ± i', '|λ₁| = |λ₂| = √5 ≈ 2.236', D.orange.dark);
   o += tx(139, 212, 'Governs asymptotic Aᵏ rate', { fs: 13, fw: 700, fill: D.orange.dark });
   o += card(282, 98, 238, 144, C.lgreen, C.green, 'Singular Values of Same A', 'AᵀA = [2, −1; −1, 13]', 'σ₁ ≈ 3.618,  σ₂ ≈ 1.382 ≠ √5!', D.green.dark);
@@ -668,7 +668,7 @@ function eckartYoungBounds() {
   o += tx(148, 36, 'Kept in Aₖ (rank k)', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(392, 36, 'Tail A − Aₖ (error)', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += card(20, 174, 238, 70, C.lblue, C.blue, 'Spectral Norm Error', 'min_{rank(B)≤k} ∥A − B∥₂ = σₖ₊₁', '', D.blue.dark);
-  o += card(282, 174, 238, 70, C.lamber, C.amber, 'Frobenius Norm Error', 'min_{rank(B)≤k}  ∥A − B∥_F² = ∑_{i>k} σᵢ²', '', D.orange.dark);
+  o += card(282, 174, 238, 70, C.lamber, C.amber, 'Frobenius Norm Error', 'min_{rank(B)≤k}  ∥A − B∥_{F}² = ∑_{i>k} σᵢ²', '', D.orange.dark);
   return svg(540, 258, o);
 }
 
@@ -677,7 +677,7 @@ function weylFrobenius() {
   o += card(20, 102, 238, 142, C.lblue, C.blue, '1. Perturbation Bound (j = 1)', '|σᵢ(A + E) − σᵢ(A)| ≤ σ₁(E) = ∥E∥₂', 'Singular values are 1-Lipschitz!', D.blue.dark);
   o += tx(139, 214, 'Roundoff shifts σᵢ by ≤ ∥E∥₂', { fs: 13, fw: 700, fill: D.blue.dark });
   o += card(282, 102, 238, 142, C.lgreen, C.green, '2. Frobenius Eckart–Young', 'X = A−B, Y = B, j = k+1  (σ_{k+1}(B)=0)', '⇒  σᵢ(A − B) ≥ σ_{k+i}(A)  ∀i ≥ 1', D.green.dark);
-  o += tx(401, 214, 'Sum squares: ∥A−B∥_F² ≥ ∑_{i>k} σᵢ²', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(401, 214, 'Sum squares: ∥A−B∥_{F}² ≥ ∑_{i>k} σᵢ²', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(540, 258, o);
 }
 
@@ -692,7 +692,7 @@ function condErrorBound() {
 
 function muonNewtonSchulz() {
   let o = card(20, 14, 500, 72, C.lblue, C.blue, 'Polar Decomposition: A = UΣVᵀ = (UVᵀ)(VΣVᵀ) = Q P', 'Q = UVᵀ sets every σᵢ → 1: the closest orthogonal matrix', 'Muon optimizer orthogonalizes momentum M so all active directions update at unit scale', D.blue.dark);
-  o += card(20, 102, 240, 142, D.purple.tint, C.purple, 'Newton–Schulz Iteration', 'X_{t+1} = ½ (3Xₜ − Xₜ Xₜᵀ Xₜ)', 'Start: X₀ = M / ∥M∥_F  (σᵢ ∈ (0, 1])', D.purple.dark);
+  o += card(20, 102, 240, 142, D.purple.tint, C.purple, 'Newton–Schulz Iteration', 'X_{t+1} = ½ (3Xₜ − Xₜ Xₜᵀ Xₜ)', 'Start: X₀ = M / ∥M∥_{F}  (σᵢ ∈ (0, 1])', D.purple.dark);
   o += tx(140, 214, 'Pure GPU matmuls — no SVD call!', { fs: 13, fw: 700, fill: D.purple.dark });
   o += arrow(264, 173, 282, 173, C.green);
   o += card(286, 102, 234, 142, C.lgreen, C.green, 'Cubic Singular Map p(σ)', 'Xₜ = U p(Σ) Vᵀ', 'p(σ) = ½(3σ − σ³) → 1', D.green.dark);

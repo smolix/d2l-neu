@@ -9,6 +9,7 @@
 // (or a future book-figure pass) references files as img/auto/<id>.svg.
 
 import { diagrams } from './registry.mjs';
+import { scriptSvg } from './scripts.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -44,7 +45,7 @@ function standalone(inner) {
     // the file is unparseable as a standalone SVG (e.g. an <img> book
     // figure, or rsvg-convert). Inlined-into-slides decks strip <style>.
     + `<style><![CDATA[${FONT_IMPORT}]]></style>`
-    + body + `</svg>\n`;
+    + scriptSvg(body) + `</svg>\n`;
 }
 
 mkdirSync(out, { recursive: true });

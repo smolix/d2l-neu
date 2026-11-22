@@ -54,6 +54,29 @@ builds its own `<text>` (tspans for italics, sub/superscripts) passes its
 `y` through `baselineY(y, fs, mono)` instead of setting a baseline
 attribute.
 
+## Sub- and superscripts
+
+Write labels the way you type math: `n_b`, `R_emp[f]`, `x_{k+1}`,
+`Σ_{i=1}^{n}`, `2^m`, `ℝ^{|B|×1}`, `W_hh^T`. The standalone step (both
+`render.mjs` and `tools/build_module_diagrams.mjs`) runs `scriptSvg` from
+`scripts.mjs` over every `<text>`, which turns these into lowered/raised
+70 % runs (`<tspan baseline-shift="sub|super">`). The rules:
+
+- **Sans labels** are prose and formulas, so they are always converted.
+- **Mono labels** are converted only when they read as a formula: a braced
+  script, a bare `^`, a math-only symbol (Σ ∂ ∇ ∈ ℝ ≤ ⇒, Greek, Unicode
+  super/subscripts), or no code syntax at all (`s_t`, `w_h = 1.1`). A mono
+  label with code syntax (`y.reshape`, `self`, `return`, a `'string'`, `==`,
+  a slice, `#`, a call of a snake_case or long lowercase name such as
+  `squared_loss(` or `linreg(`) stays literal, so Python reads as Python.
+- A bare `_` needs a one-letter base and a script word that does not run on
+  into another `_`: `n_b`, `w_ij`, `b_noise` convert; `batch_size`,
+  `requires_grad`, `X_train_std` do not.
+- To keep a `_` or `^` literal in a label that would otherwise convert, write
+  `\_` or `\^` (in a JS string: `'c\\_attn'`).
+- A braced script must open and close inside one label: a formula split
+  across two `tx()` calls (`ℝ^{(h w) ×` / `…}`) draws its braces literally.
+
 ## Pipeline: render → outline → crop → copy
 
 `render.mjs` writes live `<text>` in 'Source Sans 3' / 'JetBrains Mono'.

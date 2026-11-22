@@ -17,6 +17,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { scriptSvg } from '../diagrams/scripts.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
@@ -54,7 +55,7 @@ function standalone(inner) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n`
     + `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`
     + `<style><![CDATA[${FONT_IMPORT}]]></style>`
-    + body + `</svg>\n`;
+    + scriptSvg(body) + `</svg>\n`;
 }
 
 // Flags: --ids=a,b,c renders (checks, writes) only those ids of the modules;

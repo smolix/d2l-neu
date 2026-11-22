@@ -83,7 +83,7 @@ _book/index.html: .preprocess.stamp index.qmd _quarto.yml _d2l-theme.scss _d2l-s
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 
-_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py static/d2l-preamble.tex $(wildcard static/fonts/*)
+_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py static/d2l-preamble.tex d2l.bib $(wildcard static/fonts/*)
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating PDF sources for $* ==="
 	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen-$(TS).log

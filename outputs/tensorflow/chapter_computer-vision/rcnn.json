@@ -29,12 +29,12 @@
       "outputs": []
     },
     "rcnn-fast-r-cnn-3": {
-      "code_fingerprint": "sha256:e25b1415e0e068bd64b275c15001dbf19f5abc7b619f413b6741ee3f0c741e1c",
+      "code_fingerprint": "sha256:013c48727fe17f3b813ef6bf0f054a4761f00026efaf180a7caf6ed5dcb06588",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 2, 2, 1), dtype=float32, numpy=\narray([[[[ 0.],\n         [ 1.]],\n\n        [[ 4.],\n         [ 5.]]],\n\n\n       [[[ 4.],\n         [ 6.]],\n\n        [[ 8.],\n         [10.]]]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 2, 2, 1), dtype=float32, numpy=\narray([[[[ 5.],\n         [ 6.]],\n\n        [[ 9.],\n         [10.]]],\n\n\n       [[[ 9.],\n         [11.]],\n\n        [[13.],\n         [15.]]]], dtype=float32)>"
         }
       ]
     }

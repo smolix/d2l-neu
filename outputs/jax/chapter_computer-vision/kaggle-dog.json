@@ -80,43 +80,43 @@
       "outputs": []
     },
     "kaggle-dog-defining-the-training-function": {
-      "code_fingerprint": "sha256:7fbb67d2d334753719cf0972789cfd14fee011ce0614c83042beebb8b3878b01",
+      "code_fingerprint": "sha256:bcd06698e6509bac345cb627c46af4d58cd07f11d5fde32e7f890da23db41982",
       "kind": "text",
       "outputs": []
     },
     "kaggle-dog-training-and-validating-the-model": {
-      "code_fingerprint": "sha256:60ae9213d5e3bd9b6e7ce8c5ff74ebc70580b9d7227d92962f538c7883f20d64",
+      "code_fingerprint": "sha256:1308f9459a8380d21d506e4d9a2df150dcf91fe7898c79ee66a5bd068372abde",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.352, valid loss 0.485\n3018.0 examples/sec\n"
+          "text": "train loss 0.348, valid loss 0.503\n3711.3 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 23139,
-          "sha256": "sha256:a8ff5b5819b0ac4c6ba18cd6079f49764597f370a5569f74a09ff09d79ff17d9"
+          "bytes": 23130,
+          "sha256": "sha256:3d2b44da7d4f937a720525f67ac26c20829855b9e56a7a406743b39cb41a84c4"
         }
       ]
     },
     "kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle": {
-      "code_fingerprint": "sha256:9b0b1964c6b9221df35ebe32c873d83b0f38d7a2e35f69f90ea2ea01e8197b4d",
+      "code_fingerprint": "sha256:303d89b9691f2a900f5259dc500638acc4fc5186bf1d77ef431d386ee99647c9",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.329\n5012.5 examples/sec\n"
+          "text": "train loss 0.303\n5582.0 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 20934,
-          "sha256": "sha256:e58c062457ddc90bb41a7b6e810736c653ae711587559be4669cc4614f15c83f"
+          "bytes": 20970,
+          "sha256": "sha256:a53dbbcbfcea4c75ea0c782b36f68567137cb8dc450fabd025b4d190ec9b7bcd"
         }
       ]
     }

@@ -299,7 +299,7 @@ test_augs = torchvision.transforms.Compose([
 # Image preprocessing. We use `tf.image` ops so the pipeline can run
 # inside `tf.data.Dataset.map`. The ImageNet RGB mean/std normalization
 # matches the preprocessing expected by the pretrained ImageNet ResNet
-# weights (and the PyTorch/MXNet tabs).
+# weights.
 IMG_SIZE = 224
 _IMAGENET_MEAN = tf.constant([0.485, 0.456, 0.406], dtype=tf.float32)
 _IMAGENET_STD  = tf.constant([0.229, 0.224, 0.225], dtype=tf.float32)
@@ -321,8 +321,8 @@ def test_preprocess(x):
 ```{.python .input #fine-tuning-reading-the-dataset-4}
 #@tab tensorflow
 # Plain tf.image / tf.data preprocessing for Keras ResNet50 (NHWC). Keras
-# ResNet50 expects its own `preprocess_input` convention, not PyTorch-style
-# RGB mean/std normalization.
+# ResNet50 expects its own `preprocess_input` convention, not an RGB
+# mean/std normalization.
 IMG_SIZE = 224
 
 def _normalize(x):

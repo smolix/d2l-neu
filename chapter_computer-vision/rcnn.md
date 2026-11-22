@@ -218,6 +218,10 @@ each region of interest is divided
 into a grid of sub-windows to
 further extract features of the same shape $2\times 2$.
 
+:begin_tab:`tensorflow`
+TensorFlow stores `X` in NHWC layout, so these regions are `X[:, 0:3, 0:3, :]` and `X[:, 1:4, 0:4, :]`.
+:end_tab:
+
 ```{.python .input #rcnn-fast-r-cnn-3}
 #@tab mxnet
 npx.roi_pooling(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
@@ -232,30 +236,29 @@ torchvision.ops.roi_pool(X, rois, output_size=(2, 2), spatial_scale=0.1)
 #@tab jax
 # JAX does not have a built-in ROI pooling operator, so we implement it
 def roi_pool(X, rois, pooled_size, spatial_scale):
-    num_rois = rois.shape[0]
-    c = X.shape[1]
+    c, height, width = X.shape[1:]
     ph, pw = pooled_size
     outputs = []
-    for i in range(num_rois):
-        roi = rois[i]
+    for roi in np.asarray(rois):
         batch_idx = int(roi[0])
-        x1 = int(np.round(float(roi[1]) * spatial_scale))
-        y1 = int(np.round(float(roi[2]) * spatial_scale))
-        x2 = int(np.round(float(roi[3]) * spatial_scale))
-        y2 = int(np.round(float(roi[4]) * spatial_scale))
-        x2, y2 = max(x2, x1 + 1), max(y2, y1 + 1)
-        roi_feat = X[batch_idx, :, y1:y2, x1:x2]
-        # Divide into ph x pw bins and take the max of each
-        h, w = roi_feat.shape[1], roi_feat.shape[2]
-        bin_h = np.linspace(0, h, ph + 1).astype(int)
-        bin_w = np.linspace(0, w, pw + 1).astype(int)
+        # Round the scaled corners; both corners belong to the region
+        x1, y1, x2, y2 = [int(math.floor(v * spatial_scale + 0.5))
+                          for v in roi[1:]]
+        bin_h = max(y2 - y1 + 1, 1) / ph
+        bin_w = max(x2 - x1 + 1, 1) / pw
         pooled = jnp.zeros((c, ph, pw))
         for pi in range(ph):
+            # A subwindow starts at the floor and ends at the ceiling
+            hs = min(max(y1 + math.floor(pi * bin_h), 0), height)
+            he = min(max(y1 + math.ceil((pi + 1) * bin_h), 0), height)
             for pj in range(pw):
-                sub = roi_feat[:, bin_h[pi]:bin_h[pi+1], bin_w[pj]:bin_w[pj+1]]
-                pooled = pooled.at[:, pi, pj].set(sub.max(axis=(1, 2)))
+                ws = min(max(x1 + math.floor(pj * bin_w), 0), width)
+                we = min(max(x1 + math.ceil((pj + 1) * bin_w), 0), width)
+                if hs < he and ws < we:  # empty subwindows output 0
+                    sub = X[batch_idx, :, hs:he, ws:we]
+                    pooled = pooled.at[:, pi, pj].set(sub.max(axis=(1, 2)))
         outputs.append(pooled)
-    return jnp.stack(outputs, axis=0).reshape(num_rois, c, ph, pw)
+    return jnp.stack(outputs, axis=0)
 
 roi_pool(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
 ```
@@ -266,33 +269,32 @@ roi_pool(X, rois, pooled_size=(2, 2), spatial_scale=0.1)
 # so we implement max-RoI pooling manually.  X is NHWC here.
 def roi_pool(X, rois, pooled_size, spatial_scale):
     """RoI max-pooling for NHWC tensors."""
-    num_rois = rois.shape[0]
+    height, width, c = X.shape[1:]
     ph, pw = pooled_size
     outputs = []
-    for i in range(num_rois):
-        roi = rois[i]
+    for roi in np.asarray(rois):
         batch_idx = int(roi[0])
-        x1 = int(np.round(float(roi[1]) * spatial_scale))
-        y1 = int(np.round(float(roi[2]) * spatial_scale))
-        x2 = int(np.round(float(roi[3]) * spatial_scale))
-        y2 = int(np.round(float(roi[4]) * spatial_scale))
-        x2, y2 = max(x2, x1 + 1), max(y2, y1 + 1)
-        # roi_feat shape: (h_roi, w_roi, C)
-        roi_feat = X[batch_idx, y1:y2, x1:x2, :]
-        h = roi_feat.shape[0]
-        w = roi_feat.shape[1]
-        bin_h = np.linspace(0, h, ph + 1).astype(int)
-        bin_w = np.linspace(0, w, pw + 1).astype(int)
-        pooled_bins = []
+        # Round the scaled corners; both corners belong to the region
+        x1, y1, x2, y2 = [int(math.floor(v * spatial_scale + 0.5))
+                          for v in roi[1:]]
+        bin_h = max(y2 - y1 + 1, 1) / ph
+        bin_w = max(x2 - x1 + 1, 1) / pw
+        rows = []
         for pi in range(ph):
-            row_bins = []
+            # A subwindow starts at the floor and ends at the ceiling
+            hs = min(max(y1 + math.floor(pi * bin_h), 0), height)
+            he = min(max(y1 + math.ceil((pi + 1) * bin_h), 0), height)
+            row = []
             for pj in range(pw):
-                sub = roi_feat[bin_h[pi]:bin_h[pi+1],
-                               bin_w[pj]:bin_w[pj+1], :]
-                row_bins.append(tf.reduce_max(sub, axis=[0, 1]))
-            pooled_bins.append(tf.stack(row_bins, axis=0))  # (pw, C)
-        # stack rows -> (ph, pw, C)
-        outputs.append(tf.stack(pooled_bins, axis=0))
+                ws = min(max(x1 + math.floor(pj * bin_w), 0), width)
+                we = min(max(x1 + math.ceil((pj + 1) * bin_w), 0), width)
+                if hs < he and ws < we:
+                    sub = X[batch_idx, hs:he, ws:we, :]
+                    row.append(tf.reduce_max(sub, axis=[0, 1]))
+                else:  # empty subwindows output 0
+                    row.append(tf.zeros((c,), X.dtype))
+            rows.append(tf.stack(row, axis=0))  # (pw, C)
+        outputs.append(tf.stack(rows, axis=0))  # (ph, pw, C)
     # (num_rois, ph, pw, C)
     return tf.stack(outputs, axis=0)
 
@@ -402,8 +404,8 @@ in subsequent sections of this chapter.
 ## Exercises
 
 1. Work through region of interest pooling by hand for the two regions `X[:, :, 0:3, 0:3]` and `X[:, :, 1:4, 0:4]` named in the text.
-    1. Using the rule that subwindow heights and widths are rounded up, list the elements of the four subwindows of each region and write down the two $2\times 2$ outputs. Compare them with the output of the section's code. If they differ, find the lines of the code that place the region boundaries or the subwindow boundaries differently from the text.
-    1. Let $L$ be the sum of the eight pooled values. List the entries of `X` whose partial derivative $\partial L/\partial x_{ij}$ is nonzero, together with the values of these derivatives. Explain why one entry receives a derivative of 2, and check your answer with automatic differentiation applied to the regions that the code actually pools.
+    1. Using the rule that subwindow heights and widths are rounded up, list the elements of the four subwindows of each region and write down the two $2\times 2$ outputs. Compare them with the output of the section's code.
+    1. Let $L$ be the sum of the eight pooled values. List the entries of `X` whose partial derivative $\partial L/\partial x_{ij}$ is nonzero, together with the values of these derivatives. Explain why one entry receives a derivative of 2, and check your answer with automatic differentiation.
 1. Estimate the cost of the R-CNN family on one $600\times 1000$ image with 2000 region proposals. Assume that the backbone CNN costs about 300 multiply-adds per input pixel, regardless of the image size (roughly the cost of VGG-16), that the R-CNN resizes every proposal to $224\times 224$ before running the backbone on it, and that the fast R-CNN pools each region to a $512\times 7\times 7$ feature and then applies two fully connected layers with 4096 outputs each, as in the VGG networks of :numref:`sec_vgg`.
     1. Compute the ratio of the backbone cost of the R-CNN to that of the fast R-CNN.
     1. Count the multiply-adds of the two fully connected layers for one region and for all 2000 regions, and compare the total with the backbone cost of the fast R-CNN.
@@ -413,6 +415,10 @@ in subsequent sections of this chapter.
 1. The region of interest alignment layer of the mask R-CNN does not round coordinates. Implement a function `roi_align(X, rois, pooled_size, spatial_scale)` that scales each region to real-valued coordinates on the feature map, divides it into a grid of equal subwindows, and outputs the bilinear interpolation of `X` at the center of each subwindow, treating `X[0, 0, i, j]` as the value at the point $(x, y) = (j, i)$.
     1. Apply it to `X` and `rois` of this section and report the two $2\times 2$ outputs. The entries of `X` satisfy $x_{ij} = 4i + j$; check that each output equals $4y + x$ at the center $(x, y)$ of its subwindow, and explain why bilinear interpolation gives this value exactly.
     1. Shift the first region proposal to the right by 2, 4, 6, and 8 pixels in the input image, that is, by 0.2 to 0.8 cells of `X`. Tabulate the outputs of region of interest pooling and of your `roi_align` for each shift. State which of the two changes continuously with the shift, and explain why this matters for predicting pixel-level masks.
+
+:begin_tab:`tensorflow`
+In TensorFlow, `X` is NHWC: read the regions `X[:, :, 0:3, 0:3]` and `X[:, :, 1:4, 0:4]` as `X[:, 0:3, 0:3, :]` and `X[:, 1:4, 0:4, :]`, and `X[0, 0, i, j]` as `X[0, i, j, 0]`.
+:end_tab:
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/374)

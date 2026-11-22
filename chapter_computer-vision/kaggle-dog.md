@@ -439,6 +439,14 @@ not retrain the pretrained model used for feature
 extraction. This reduces training time and
 memory for storing gradients.
 
+:begin_tab:`jax`
+The JAX code uses a pretrained ResNet-50, whose pooled features have 2048 dimensions.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The TensorFlow code uses a pretrained ResNet-50, whose pooled features have 2048 dimensions.
+:end_tab:
+
 Recall that we
 standardized images using
 the means and standard deviations of the three RGB channels for the full ImageNet dataset.
@@ -468,8 +476,10 @@ def get_net(devices):
     finetune_net = nn.Sequential()
     finetune_net.features = torchvision.models.resnet34(
         weights=torchvision.models.ResNet34_Weights.DEFAULT)
+    # Remove the ImageNet output layer to expose the 512 pooled features
+    finetune_net.features.fc = nn.Identity()
     # Define a new output network (there are 120 output categories)
-    finetune_net.output_new = nn.Sequential(nn.Linear(1000, 256),
+    finetune_net.output_new = nn.Sequential(nn.Linear(512, 256),
                                             nn.ReLU(),
                                             nn.Linear(256, 120))
     # Move the model to devices
@@ -477,6 +487,8 @@ def get_net(devices):
     # Freeze parameters of feature layers
     for param in finetune_net.features.parameters():
         param.requires_grad = False
+    # Keep the pretrained batch normalization statistics frozen as well
+    finetune_net.features.eval()
     return finetune_net
 ```
 
@@ -506,16 +518,17 @@ def get_net():
 # head. We keep them as SEPARATE models (not one Keras `Model`) so the frozen
 # backbone can run OUTSIDE the GradientTape and in micro-batches: a batch-32
 # ResNet-50 forward at 224x224 otherwise reserves ~8.6 GiB (its activations are
-# held for the head's backprop), whereas the JAX/PyTorch tabs never retain the
-# backbone activations. Micro-batching caps the peak activation working set.
+# held for the head's backprop). Micro-batching caps the peak activation
+# working set.
 BACKBONE_MICROBATCH = 16
 
 def get_net():
+    # Remove the ImageNet output layer and keep the 2048 pooled features
     backbone = keras.applications.ResNet50(
-        weights='imagenet', include_top=True, classifier_activation=None,
+        weights='imagenet', include_top=False, pooling='avg',
         input_shape=(224, 224, 3))
     backbone.trainable = False
-    head = keras.Sequential([keras.layers.Input(shape=(1000,)),
+    head = keras.Sequential([keras.layers.Input(shape=(2048,)),
                              keras.layers.Dense(256, activation='relu'),
                              keras.layers.Dense(120)])
     return backbone, head
@@ -718,7 +731,7 @@ def train(backbone, output_net, train_iter, valid_iter,
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
                             legend=legend)
 
-    # Run the frozen TF backbone over the training set once to determine
+    # Run the frozen backbone over the training set once to determine
     # n_train and num_batches, which are needed to configure the LR schedule
     # before the epoch loop starts.
     print('Pre-extracting train features...')
@@ -732,9 +745,8 @@ def train(backbone, output_net, train_iter, valid_iter,
     num_batches = (n_train + bs - 1) // bs
 
     # `optax.exponential_decay.transition_steps` counts *gradient-update
-    # steps*, not epochs — unlike PyTorch's `StepLR(step_size=lr_period)`,
-    # which the PT tab steps once per epoch. Scale by `num_batches` so the
-    # LR decays every `lr_period` *epochs*, matching PT/MX.
+    # steps*, not epochs. Scale by `num_batches` so the LR decays every
+    # `lr_period` *epochs*.
     schedule = optax.exponential_decay(
         init_value=lr, transition_steps=lr_period * num_batches,
         decay_rate=lr_decay, staircase=True)
@@ -747,8 +759,7 @@ def train(backbone, output_net, train_iter, valid_iter,
         def compute_loss(output_net):
             logits = output_net(feats)
             l = loss_fn(logits, y)
-            # Backprop on the per-batch *sum* (not mean) to match the PT/TF
-            # tabs, which use reduction='none' + .sum(). Otherwise the
+            # Backprop on the per-batch *sum* (not mean). Otherwise the
             # effective learning rate here is 1/batch_size smaller and the
             # head barely moves.
             s = l.sum()
@@ -762,8 +773,6 @@ def train(backbone, output_net, train_iter, valid_iter,
         metric = d2l.Accumulator(2)
         # Re-extract train features each epoch so each epoch sees freshly
         # augmented images (random crop/flip/jitter from the tf.data pipeline).
-        # This matches PyTorch, which runs augmentation + backbone forward on
-        # every batch in every epoch rather than caching a single augmented pass.
         train_feats, train_labels = precompute_features(backbone, train_iter)
         # Shuffle indices each epoch
         perm = rng.permutation(n_train)
@@ -797,9 +806,8 @@ def train(backbone, head, train_iter, valid_iter, num_epochs, lr, wd,
     # Only train the custom head; the backbone is frozen (see get_net()) and is
     # run outside the tape.
     # Keras's `ExponentialDecay.decay_steps` counts *gradient-update
-    # steps*, not epochs — unlike PyTorch's `StepLR(step_size=lr_period)`,
-    # which the PT tab steps once per epoch. Scale by `num_batches` so the
-    # LR decays every `lr_period` *epochs*, matching PT/MX.
+    # steps*, not epochs. Scale by `num_batches` so the LR decays every
+    # `lr_period` *epochs*.
     num_batches = sum(1 for _ in train_iter)
     lr_schedule = keras.optimizers.schedules.ExponentialDecay(
         initial_learning_rate=lr,
@@ -859,7 +867,7 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 
 ```{.python .input #kaggle-dog-training-and-validating-the-model}
 #@tab pytorch
-devices, num_epochs, lr, wd = d2l.try_all_gpus(), 10, 1e-4, 1e-4
+devices, num_epochs, lr, wd = d2l.try_all_gpus(), 10, 1e-3, 1e-4
 lr_period, lr_decay, net = 2, 0.9, get_net(devices)
 train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
       lr_decay)
@@ -878,7 +886,7 @@ output_net = train(backbone, output_net, train_iter, valid_iter, num_epochs,
 
 ```{.python .input #kaggle-dog-training-and-validating-the-model}
 #@tab tensorflow
-num_epochs, lr, wd = 10, 1e-4, 1e-4
+num_epochs, lr, wd = 10, 3e-4, 1e-4
 lr_period, lr_decay = 2, 0.9
 backbone, head = get_net()
 head = train(backbone, head, train_iter, valid_iter, num_epochs, lr, wd,
@@ -1000,7 +1008,7 @@ to Kaggle in the same way described in :numref:`sec_kaggle_house`.
     1. Divide the logits of the trained output network by a temperature $T > 0$, and choose $T$ by minimizing the validation loss over a grid of values. Report the best $T$ and the validation loss before and after the change, and explain why the validation accuracy does not change.
 1. When using the full Kaggle competition dataset, what results can you achieve when you increase `batch_size` (batch size) and `num_epochs` (number of epochs) while setting some other hyperparameters as `lr = 0.01`, `lr_period = 10`, and `lr_decay = 0.1`?
 1. Do you get better results if you use a deeper pretrained model? How do you tune hyperparameters? Can you further improve the results?
-1. The text says that the output network takes the input of the pretrained model's output layer. Check which features the code of your framework passes to the output network: the pooled features that enter the pretrained output layer, or the 1000 ImageNet class scores that this layer produces. Implement the other choice and compare the validation loss after the same 10 epochs on the full dataset. Explain the result using the fact that the 1000 ImageNet classes include more than a hundred dog breeds.
+1. The output network takes the pooled features that enter the pretrained model's output layer. Feed it instead the 1000 ImageNet class scores that this layer produces, and compare the validation loss after the same 10 epochs on the full dataset. Explain the result using the fact that the 1000 ImageNet classes include more than a hundred dog breeds.
 1. The pretrained network is frozen, so the features of the training images could be computed once and cached, which rules out random augmentation. Count the forward passes through the pretrained network over 10 epochs of the section's training, with and without a cache. Implement training on cached features of the training images under the test transform (resize and center crop), and compare the time per epoch and the validation loss on the full dataset with those of the section's training. State whether augmentation still lowers the validation loss when only the output network is trained.
 
 :begin_tab:`mxnet`

@@ -622,13 +622,23 @@ Test your understanding of relativistic pairwise objectives:
 
 1. **Behavior of the divergence ratio $d_{\mathrm{Rp}}(p, q) / \mathrm{JS}(p, q)$:** On our two-state example, $d_{\mathrm{Rp}}(p, q) / \mathrm{JS}(p, q) = 0.319 / 0.193 \approx 1.66$. What value does this ratio approach as $q \to p$, and what value does it approach when $p$ and $q$ have disjoint supports?
 2. **Escape path under fixed pairing:** For $n = 2$ with fixed pairing $x_1 \leftrightarrow x'_1$ and $x_2 \leftrightarrow x'_2$, suppose both generated points collide on $x_1$ ($x'_1 = x'_2 = x_1$). What is the best-response paired loss $\mathcal{E}_{\mathrm{diag}}$, and how does it behave as $x'_2$ moves continuously from $x_1$ to $x_2$?
-3. **Interpreting individual critic scores:** After training an RpGAN critic, you evaluate $D(x') = +3.5$ on a generated image. Does $D(x') > 0$ mean the critic classifies $x'$ as more likely real than generated?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. By $d_{\mathrm{Rp}}(p, q) = 2\,\mathrm{JS}(p, q) - I(a_1; a_2)$: as $q \to p$, $I(a_1; a_2) = \Theta(\|p - q\|^4)$ $\ll$ $\mathrm{JS}(p, q) = \Theta(\|p - q\|^2)$, so the ratio approaches **$2$**. On disjoint supports, both $d_{\mathrm{Rp}}$ and $\mathrm{JS}$ saturate at $\log 2$, so the ratio approaches **$1$**.
 2. At $x'_1 = x'_2 = x_1$, edge $1 \to 1$ forms a 1-cycle (contributing $-\frac{1}{2}\log 2$) while edge $2 \to 1$ is acyclic (contributing $0$), giving $\mathcal{E}_{\mathrm{diag}} = -\frac{1}{2}\log 2 \approx -0.347$. As $x'_2$ moves across empty space toward $x_2$, $\mathcal{E}_{\mathrm{diag}}$ stays **completely flat** at $-\frac{1}{2}\log 2$ and then drops to $-\log 2$ once $x'_2$ lands on $x_2$ (closing the second 1-cycle $2 \to 2$).
+:::
+:::
+
+::: {.slide title="Concept Check: Relativistic Critics and Pairings (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Interpreting individual critic scores:** After training an RpGAN critic, you evaluate $D(x') = +3.5$ on a generated image. Does $D(x') > 0$ mean the critic classifies $x'$ as more likely real than generated?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. **No.** Because $\Phi(D + b) = \Phi(D)$ is shift-invariant, the zero level of $D$ is arbitrary. Only pairwise differences $D(x) - D(x')$ (or the ranking accuracy $P(D(x) > D(x'))$) are meaningful.
 :::
 :::

@@ -1351,7 +1351,7 @@ $$\mathcal{L}_{\textrm{AE}}(\mathbf{x}) = \frac{1}{784}\|\mathbf{x} - \mathcal{D
 :::
 :::
 
-::: {.slide title="Implementing the KL-Regularized Autoencoder"}
+::: {.slide title="Implementing the KL-Regularized Autoencoder" only="pytorch"}
 [Residual Convolutional Encoder and Decoder]{.kicker}
 
 Our `Autoencoder` downsamples $28 \times 28 \times 1 \to 14 \times 14 \to 7 \times 7 \times 8$ (splitting into $4$ mean and $4$ clamped log-variance channels) and mirrors the hierarchy in the decoder:
@@ -1359,18 +1359,33 @@ Our `Autoencoder` downsamples $28 \times 28 \times 1 \to 14 \times 14 \to 7 \tim
 ```python
 class Autoencoder(nn.Module):
     def encode(self, x):
-        mu, log_var = self.encoder(x).chunk(2, dim=1)
-        return mu, (0.5 * log_var.clamp(-20, 10)).exp()  # mean and std s
+        mean, log_var = self.encoder(x).chunk(2, dim=1)
+        return mean, log_var.clamp(-30, 20)
 
-    def sample(self, x):
-        mu, std = self.encode(x)
-        return mu + std * torch.randn_like(std)          # reparameterization
+    def forward(self, x):
+        mean, log_var = self.encode(x)
+        z = mean + (0.5 * log_var).exp() * torch.randn_like(mean)
+        kl = 0.5 * (mean ** 2 + log_var.exp() - 1 - log_var).mean()
+        return self.decoder(z), kl
+```
+:::
 
-    def loss(self, x, kl_weight=1e-4):
-        mu, std = self.encode(x)
-        recon = ((x - self.decode(mu + std * torch.randn_like(std))) ** 2).mean()
-        kl = 0.5 * (mu ** 2 + std ** 2 - 1 - 2 * std.log()).mean()
-        return recon + kl_weight * kl
+::: {.slide title="Implementing the KL-Regularized Autoencoder" only="jax"}
+[Residual Convolutional Encoder and Decoder]{.kicker}
+
+Our `Autoencoder` downsamples $28 \times 28 \times 1 \to 14 \times 14 \to 7 \times 7 \times 8$ (splitting into $4$ mean and $4$ clamped log-variance channels) and mirrors the hierarchy in the decoder:
+
+```py
+class Autoencoder(nnx.Module):
+    def encode(self, x):
+        mean, log_var = jnp.split(self.encoder(x), 2, axis=-1)
+        return mean, jnp.clip(log_var, -30, 20)
+
+    def __call__(self, x, key):
+        mean, log_var = self.encode(x)
+        z = mean + jnp.exp(0.5 * log_var) * jax.random.normal(key, mean.shape)
+        kl = 0.5 * (mean ** 2 + jnp.exp(log_var) - 1 - log_var).mean()
+        return self.decoder(z), kl
 ```
 :::
 
@@ -1549,12 +1564,11 @@ Generating eight samples from the exact same initial noise tensor across all fou
 - **Why human eyes need FD:** While 8 thumbnails look visually comparable between row 1 (`DiT-S`, $\mathrm{FD} \approx 4.7$) and row 4 (`U-Net 64`, $\mathrm{FD} \approx 1.5$), FD over $5{,}000$ samples detects subtle edge distortion and covariance drift.
 :::
 
-::: {.slide title="Combining Latents and Transformers: When Each Wins"}
+::: {.slide title="Combining Latents and Transformers: When Each Wins" layout="tight"}
 [Architectural Decision Matrix]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@latent-diffusion-scaling-with-compute-4
 
 - **Low resolution ($\le 64^2$):** Use **Pixel U-Net**; pixel FLOPs are cheap and avoid the autoencoder modelability gap ($\mathrm{FD} \approx 1.5$ vs. $2.0$).
 - **High resolution ($512^2+$) at scale:** Use **Latent DiT ($p=2$)**; cuts spatial positions $64\times$ while Transformer tokens scale cleanly with GFLOPs.
@@ -1567,6 +1581,13 @@ Generating eight samples from the exact same initial noise tensor across all fou
 :::
 :::
 
+::: {.slide title="Combining Latents and Transformers: When Each Wins (Code)" layout="tight"}
+[Architectural Decision Matrix]{.kicker}
+
+@latent-diffusion-scaling-with-compute-4
+
+:::
+
 ::: {.slide title="Concept Check: Latent Scaling, adaLN-Zero & Tokens"}
 [Check Your Understanding]{.kicker}
 
@@ -1574,13 +1595,23 @@ Test your understanding of latent diffusion autoencoders and Diffusion Transform
 
 1. **Stable Diffusion's $0.18215$ scale factor:** Stable Diffusion multiplies its autoencoder latents by $c = 0.18215$ before adding unit-variance Gaussian noise. What was the raw latent standard deviation $\varsigma$, and by how many nats would skipping $c$ shift the log-SNR $\lambda_t$?
 2. **Partial zero initialization in DiT:** Suppose every `DiTBlock`'s `ada` gate starts at zero, and the final norm modulation starts at zero, *except* the final linear output layer `self.out` uses standard random initialization. What does the untrained DiT output at time $t$?
-3. **Token count and attention scaling at $1024 \times 1024$:** Using an $8\times$ downsampling autoencoder and $2 \times 2$ latent patches ($p = 2$), how many tokens $L$ does a DiT process on a $1024 \times 1024$ image compared to $512 \times 512$, and by what factor does self-attention cost increase?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. Raw latent std was $\varsigma = 1 / 0.18215 \approx \mathbf{5.49}$ (variance $\varsigma^2 \approx 30.1$). Skipping $c$ inflates signal variance $30\times$ at every $t$, shifting $\lambda_t$ upward by $+\log(30.1) \approx \mathbf{+3.4\text{ nats}}$.
 2. Every `DiTBlock` computes the exact identity ($\mathbf{g}_1 = \mathbf{g}_2 = \mathbf{0}$), so the network outputs `self.out(self.ln(patch(x) + pos))`—a **nonzero** linear projection of the normalized input patches that is completely **independent of time $t$**!
+:::
+:::
+
+::: {.slide title="Concept Check: Latent Scaling, adaLN-Zero & Tokens (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Token count and attention scaling at $1024 \times 1024$:** Using an $8\times$ downsampling autoencoder and $2 \times 2$ latent patches ($p = 2$), how many tokens $L$ does a DiT process on a $1024 \times 1024$ image compared to $512 \times 512$, and by what factor does self-attention cost increase?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. The latent grid is $128 \times 128 \times 4$, so $p = 2$ yields $L = 64^2 = \mathbf{4{,}096\text{ tokens}}$ ($4\times$ the $1{,}024$ tokens at $512^2$), increasing quadratic self-attention cost $O(L^2)$ by **$16\times$**.
 :::
 :::

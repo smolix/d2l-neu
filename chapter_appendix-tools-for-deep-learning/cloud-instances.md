@@ -410,10 +410,10 @@ GPU rental providers differ less in the silicon itself than in the surrounding m
 
 ::: {.cols .vc}
 ::: {.col}
-$$b_{\text{balance}} = \frac{F \cdot \beta_{\text{link}}}{3} \quad (N\text{ cancels!})$$
+$$b_{\text{balance}} = \frac{2(W-1)}{W} \cdot \frac{F \cdot \beta_{\text{link}}}{3} \quad (N\text{ cancels!})$$
 
-- **NVLink ($450\text{ GB/s}$) vs. PCIe 5.0 ($64\text{ GB/s}$) on $8\times\text{H100}$:** At $395.6\text{ TFLOP/s}$ sustained, communication equals compute at $b_{\text{balance}} \approx 293$ tok/GPU on NVLink vs. $2{,}060$ tok/GPU on PCIe.
-- **Impact at $b = 4{,}096$ tok/GPU:** NVLink adds only $\sim 7\%$ overhead, whereas PCIe adds **$50\%$ overhead** unless amortized by gradient accumulation.
+- **NVLink ($450\text{ GB/s}$) vs. PCIe 5.0 ($64\text{ GB/s}$) on $8\times\text{H100}$:** At $395.6\text{ TFLOP/s}$ sustained, communication equals compute at $b_{\text{balance}} \approx 513$ tok/GPU on NVLink vs. $3{,}606$ tok/GPU on PCIe ($W = 8$).
+- **Impact at $b = 4{,}096$ tok/GPU:** NVLink adds only $\sim 13\%$ overhead, whereas PCIe adds **$88\%$ overhead** unless amortized by gradient accumulation.
 :::
 
 ::: {.col .fig}
@@ -439,7 +439,7 @@ $$\text{Cost} = (T_{\text{wall}} + T_{\text{setup}})p_{\text{gpu}} + C_{\text{st
 :::
 :::
 
-::: {.slide title="Modeling Experiment Cost Across GPU Tiers"}
+::: {.slide title="Modeling Experiment Cost Across GPU Tiers" layout="tight"}
 [Executable Cost Model]{.kicker}
 
 Compare a marketplace RTX 4090 ($\$0.40/\text{hr}$), A100 80 GB ($\$1.20/\text{hr}$), and H100 ($\$2.50/\text{hr}$) on a job that takes 8 hours on the 4090:
@@ -451,9 +451,16 @@ Compare a marketplace RTX 4090 ($\$0.40/\text{hr}$), A100 80 GB ($\$1.20/\text{h
 :::
 
 ::: {.col .fig}
-@cloud-instances-cost-model
+@!cloud-instances-cost-model
 :::
 :::
+:::
+
+::: {.slide title="Modeling Experiment Cost Across GPU Tiers (Code)" layout="tight"}
+[Executable Cost Model]{.kicker}
+
+@-cloud-instances-cost-model
+
 :::
 
 ::: {.slide title="When a Pricier GPU Is Cheaper Overall"}
@@ -478,7 +485,7 @@ Compare a marketplace RTX 4090 ($\$0.40/\text{hr}$), A100 80 GB ($\$1.20/\text{h
 ::: {.col}
 $$\mathbb{E}[T_{\text{wall}}] = \left(e^{T/M} - 1\right)(M + R)$$
 
-- **Exponential blowup without checkpoints:** If an $8\text{ h}$ run restarts from scratch after Poisson interruptions ($M = 4\text{ h}$, $R = 0.25\text{ h}$), expected wall time reaches $27.2\text{ h}$—costing **$1.69\times$ more** than on-demand even at a $50\%$ spot discount!
+- **Exponential blowup without checkpoints:** If an $8\text{ h}$ run restarts from scratch after Poisson interruptions ($M = 4\text{ h}$, $R = 0.25\text{ h}$), expected wall time reaches $27.2\text{ h}$—costing **$1.70\times$ more** than on-demand even at a $50\%$ spot discount!
 - **Never run uncheckpointed jobs or live interactive sessions on spot VMs.**
 :::
 
@@ -502,7 +509,7 @@ When a training script saves a durable checkpoint of duration $\delta$ every $\t
 
 ::: {.col}
 - **Concrete impact ($T = 8\text{ h}$, $\delta = 2\text{ min}$, $R = 15\text{ min}$):**
-  - Even when interruptions strike every $M = 4\text{ hours}$ on average, checkpointing every $\tau^* \approx 33\text{ minutes}$ keeps total overhead small enough that spot instances remain cheaper than on-demand for any price ratio $q \lesssim 0.80$.
+  - Even when interruptions strike every $M = 4\text{ hours}$ on average, checkpointing every $\tau^* \approx 31\text{ minutes}$ keeps total overhead small enough that spot instances remain cheaper than on-demand for any price ratio $q \lesssim 0.80$.
 :::
 :::
 :::

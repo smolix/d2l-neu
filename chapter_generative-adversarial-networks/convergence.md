@@ -751,7 +751,7 @@ $$V(\theta, \psi) = \ell\big(D_\psi(0)\big) + \ell\big(-D_\psi(\theta)\big) = \e
 $$\dot{\theta} = -\partial_\theta V = \psi\,\ell'(-\psi\theta), \qquad \dot{\psi} = +\partial_\psi V = -\theta\,\ell'(-\psi\theta)$$
 
 - **Exact conservation of radius:** Because velocity $\mathbf{u}(\theta, \psi) = \ell'(-\psi\theta)(\psi, -\theta)$ is orthogonal to $(\theta, \psi)$, $\frac{d}{dt}(\theta^2 + \psi^2) = 0$.
-- **Imaginary Jacobian eigenvalues:** Linearizing at $(0, 0)$ gives $J = \begin{psmallmatrix} 0 & \ell'(0) \\ -\ell'(0) & 0 \end{psmallmatrix}$ with eigenvalues $\nu_{1,2} = \pm i\,\ell'(0)$—a linear **center** whose trajectories orbit on circles forever.
+- **Imaginary Jacobian eigenvalues:** Linearizing at $(0, 0)$ gives $J = \left(\begin{smallmatrix} 0 & \ell'(0) \\ -\ell'(0) & 0 \end{smallmatrix}\right)$ with eigenvalues $\nu_{1,2} = \pm i\,\ell'(0)$—a linear **center** whose trajectories orbit on circles forever.
 :::
 
 ::: {.col .fig}
@@ -883,11 +883,11 @@ Because each sample's critic score $D(x_i)$ depends only on row $x_i$ (provided 
 @convergence-the-loss-in-code-2
 
 ::: {.d2l-note}
-**Computational cost:** Keeping the input gradient in the autodiff graph (`create_graph=True` in PyTorch; nested `jax.grad` in JAX) so the optimizer can differentiate $\|\nabla_x D(x)\|^2$ with respect to the critic's parameters makes each penalized critic update cost roughly **two backward passes**.
+**Computational cost:** Keeping the input gradient in the autodiff graph so the optimizer can differentiate $\|\nabla_x D(x)\|^2$ with respect to the critic's parameters makes each penalized critic update cost roughly **two backward passes**.
 :::
 :::
 
-::: {.slide title="The R3GAN Critic and Generator Step Functions"}
+::: {.slide title="The R3GAN Critic and Generator Step Functions" layout="tight"}
 [Training Recipe in Code]{.kicker}
 
 R3GAN (Huang et al., 2024) pairs the relativistic pairing loss (`rpgan_loss_D`, `rpgan_loss_G`) with $R_1 + R_2$. `critic_step` updates `net_D` on `loss_D + gamma / 2 * (r1 + r2).mean()` and returns the unscaled batch means of $R_1$ and $R_2$ for logging:

@@ -6,35 +6,93 @@ const D = TOKENS.accents;
 const box = (x, y, w, h, fill, stroke, rx = 8, sw = 2, dash = false) =>
   `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 
-// Fit font-size so text width never exceeds maxW (with safety margin for bold/mono/caps)
+// Font sizing. Width estimates use measured mean advance widths (Source
+// Sans 3 Regular 0.45 em, Bold, used from weight 600, 0.48 em; JetBrains
+// Mono 0.60 em). Text shrinks to fit
+// its box but never below MIN_FS, so labels stay legible when projected;
+// card lines that still do not fit wrap onto two lines instead.
+const MIN_FS = 11;
+const emW = (mono, fw) => (mono ? 0.60 : (fw >= 600 ? 0.48 : 0.45));
+function fitFs(text, maxW, baseFs, mono, fw) {
+  const est = text.length * emW(mono, fw);
+  return est * baseFs > maxW ? Math.max(MIN_FS, Math.floor((10 * maxW) / est) / 10) : baseFs;
+}
+
 function fitText(x, y, text, maxW, o = {}) {
-  const baseFs = o.fs || 13;
   const fw = o.fw || 600;
-  const mono = !!o.mono;
-  const factor = mono ? 0.68 : (fw >= 700 ? 0.62 : 0.58);
-  const est = text.length * factor;
-  const fs = est * baseFs > maxW ? Math.max(7.5, +((maxW / est)).toFixed(1)) : baseFs;
+  const fs = fitFs(text, maxW, o.fs || 13, !!o.mono, fw);
   return tx(x, y, text, { ...o, fs, fw });
 }
 
-// Reusable card helper: guarantees text stays strictly inside box borders
+// Split a line at the space nearest its middle, preferring spaces outside
+// brackets so '(1, L)' or '[1 + x]' stay whole (leading indentation dropped).
+function wrap2(text) {
+  const t = text.trim(), mid = t.length / 2;
+  let best = -1, bestOut = -1, depth = 0;
+  const nearer = (k, cur) => cur < 0 || Math.abs(k - mid) < Math.abs(cur - mid);
+  for (let k = 0; k < t.length; k++) {
+    if ('([{'.includes(t[k])) depth++;
+    else if (')]}'.includes(t[k])) depth = Math.max(0, depth - 1);
+    else if (t[k] === ' ') {
+      if (nearer(k, best)) best = k;
+      if (depth === 0 && nearer(k, bestOut)) bestOut = k;
+    }
+  }
+  const at = bestOut >= 0 && Math.abs(bestOut - mid) < t.length / 3 ? bestOut : best;
+  return at < 0 ? [t] : [t.slice(0, at), t.slice(at + 1)];
+}
+
+// Reusable card helper: one font size for all body lines of a card (the
+// smallest any line needs, floored at MIN_FS); a line too long even at
+// MIN_FS wraps onto two lines; the lines spread over the card's height.
 function card(x, y, w, h, fill, stroke, title, lines, titleFill = C.ink, monoLines = false) {
   let o = box(x, y, w, h, fill, stroke, 8, 2);
   const padW = w - 20;
-  const n = lines.length;
-  const topPad = n <= 1 ? 22 : (n === 2 ? 20 : 18);
-  const step = n <= 1 ? 24 : (n === 2 ? 22 : 19);
-  o += fitText(x + w / 2, y + topPad, title, padW, { fs: 14, fw: 700, fill: titleFill });
-  lines.forEach((ln, i) => {
+  const items = lines.map((ln) => {
     const isObj = typeof ln === 'object';
-    const text = isObj ? ln.t : ln;
-    const mono = isObj ? ln.mono : monoLines;
-    const col = isObj && ln.fill ? ln.fill : C.ink;
-    const fs = isObj && ln.fs ? ln.fs : 12.2;
-    const fw = isObj && ln.fw ? ln.fw : 600;
-    o += fitText(x + w / 2, y + topPad + 21 + i * step, text, padW, { mono, fs, fw, fill: col });
+    return {
+      text: isObj ? ln.t : ln,
+      mono: isObj ? !!ln.mono : monoLines,
+      fill: isObj && ln.fill ? ln.fill : C.ink,
+      fw: isObj && ln.fw ? ln.fw : 600,
+      base: Math.max(MIN_FS, isObj && ln.fs ? ln.fs : 12.2),
+    };
+  });
+  const fs = Math.min(...items.map((it) => fitFs(it.text, padW, it.base, it.mono, it.fw)));
+  const rows = [];
+  items.forEach((it) => {
+    const fits = it.text.length * emW(it.mono, it.fw) * fs <= padW;
+    (fits ? [it.text] : wrap2(it.text)).forEach((t) => rows.push({ ...it, text: t }));
+  });
+  const small = h < 80;                       // the one-row cards of threeRows
+  const titleY = small ? 17 : 22;
+  o += fitText(x + w / 2, y + titleY, title, padW, { fs: 14, fw: 700, fill: titleFill });
+  const top = y + titleY + (small ? 19 : 21), bottom = y + h - 10, n = rows.length;
+  const step = n > 1 ? Math.max(fs * 1.15, Math.min(24, (bottom - top) / (n - 1))) : 0;
+  rows.forEach((r, i) => {
+    o += tx(x + w / 2, top + i * step, r.text, { mono: r.mono, fs, fw: r.fw, fill: r.fill });
   });
   return o;
+}
+
+// Footer banner text: two specs (bold accent line, plain line). A line too
+// long at MIN_FS wraps, giving three rows, spread evenly over the banner.
+function footerText(cx, y, h, maxW, footer) {
+  const specs = [
+    { t: footer.line1, mono: !!footer.mono1, fs: 13, fw: 700, fill: footer.dk },
+    { t: footer.line2, mono: !!footer.mono2, fs: 12.2, fw: 600, fill: C.ink },
+  ];
+  const rows = [];
+  specs.forEach((sp) => {
+    const fs = fitFs(sp.t, maxW, sp.fs, sp.mono, sp.fw);
+    const fits = sp.t.length * emW(sp.mono, sp.fw) * fs <= maxW;
+    (fits ? [sp.t] : wrap2(sp.t)).forEach((t) => rows.push({ ...sp, t, fs: fits ? fs : MIN_FS }));
+  });
+  if (rows.length === 2) {
+    return rows.map((r, i) => tx(cx, y + (i ? 42 : 20), r.t, r)).join('');
+  }
+  const step = (h - 22) / (rows.length - 1);
+  return rows.map((r, i) => tx(cx, y + 11 + i * step, r.t, { ...r, fs: MIN_FS })).join('');
 }
 
 // Reusable 2x2 grid diagram builder
@@ -60,8 +118,7 @@ function twoCols(mainTitle, left, right, footer) {
   o += card(20,  38, 250, 156, left.fill, left.st, left.title, left.lines, left.dk);
   o += card(290, 38, 250, 156, right.fill, right.st, right.title, right.lines, right.dk);
   o += box(20, 208, 520, 58, footer.fill, footer.st, 8, 1.8);
-  o += fitText(280, 228, footer.line1, 496, { mono: !!footer.mono1, fs: 13, fw: 700, fill: footer.dk });
-  o += fitText(280, 250, footer.line2, 496, { mono: !!footer.mono2, fs: 12.2, fw: 600, fill: C.ink });
+  o += footerText(280, 208, 58, 496, footer);
   return svg(W, H, o);
 }
 
@@ -69,16 +126,17 @@ function twoCols(mainTitle, left, right, footer) {
 function threeCols(mainTitle, c1, c2, c3, footer, arrows = false) {
   const W = 560, H = 282;
   let o = fitText(280, 18, mainTitle, W - 32, { fs: 14.8, fw: 700, fill: C.ink });
-  o += card(16,  38, 168, 158, c1.fill, c1.st, c1.title, c1.lines, c1.dk);
-  o += card(196, 38, 168, 158, c2.fill, c2.st, c2.title, c2.lines, c2.dk);
-  o += card(376, 38, 168, 158, c3.fill, c3.st, c3.title, c3.lines, c3.dk);
+  // With arrows the cards narrow so each 24 px gap holds a visible shaft.
+  const cw = arrows ? 160 : 168, xs = arrows ? [16, 200, 384] : [16, 196, 376];
+  [c1, c2, c3].forEach((c, i) => {
+    o += card(xs[i], 38, cw, 158, c.fill, c.st, c.title, c.lines, c.dk);
+  });
   if (arrows) {
-    o += arrow(186, 117, 194, 117, c1.st);
-    o += arrow(366, 117, 374, 117, c2.st);
+    o += arrow(xs[0] + cw + 2, 117, xs[1] - 2, 117, c1.st);
+    o += arrow(xs[1] + cw + 2, 117, xs[2] - 2, 117, c2.st);
   }
   o += box(16, 210, 528, 58, footer.fill, footer.st, 8, 1.8);
-  o += fitText(280, 230, footer.line1, 504, { mono: !!footer.mono1, fs: 13, fw: 700, fill: footer.dk });
-  o += fitText(280, 252, footer.line2, 504, { mono: !!footer.mono2, fs: 12.2, fw: 600, fill: C.ink });
+  o += footerText(280, 210, 58, 504, footer);
   return svg(W, H, o);
 }
 
@@ -119,19 +177,19 @@ export const diagrams = {
 
   'ch39-tools-sizing-equations': () => grid2x2(
     'Four First-Principles Equations for Back-of-the-Envelope Sizing',
-    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Peak Training Memory (§§39.4, 39.6)', lines: [
+    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Peak Training Memory (§39.4, §39.6)', lines: [
       { t: 'M_train ≈ 16N + M_act + M_ws', mono: true, fill: D.blue.dark, fw: 700 },
       '2B w + 2B g + 4B master + 8B Adam',
     ]},
-    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: 'Decode Bandwidth Ceiling (§§39.4, 39.7)', lines: [
+    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: 'Decode Bandwidth Ceiling (§39.4, §39.7)', lines: [
       { t: 'tok/s ≲ β / (B_w + b·n·B_kv)', mono: true, fill: D.orange.dark, fw: 700 },
       'Active weight bytes + batched KV cache',
     ]},
-    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Training FLOP Budget (§§39.2, 39.6)', lines: [
+    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Training FLOP Budget (§39.2, §39.6)', lines: [
       { t: 'C ≈ 6 · N · D  FLOPs', mono: true, fill: D.green.dark, fw: 700 },
       '2ND forward + 4ND backward pass',
     ]},
-    { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: "Young's Checkpoint Law (§§39.2, 39.3)", lines: [
+    { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: "Young's Checkpoint Law (§39.2, §39.3)", lines: [
       { t: 'τ* = √(2 · δ · M)', mono: true, fill: D.purple.dark, fw: 700 },
       'Write cost δ vs. mean failure interval M',
     ]},
@@ -389,7 +447,7 @@ export const diagrams = {
       'Pin uv lock file / framework versions',
       'Log GPU model, dtype & shapes for timings',
     ]},
-    { fill: C.lgreen, st: C.green, dk: D.green.dark, text: 'A public notebook is an executable publication: its saved outputs are part of what you publish.' }
+    { fill: C.lgreen, st: C.green, dk: D.green.dark, text: 'A public notebook is an executable publication: its saved outputs are published too.' }
   ),
 
   // ── §39.2 hosted-notebooks.md (9 diagrams) ──────────────────────────────
@@ -431,7 +489,7 @@ export const diagrams = {
       { t: 'Fix: Inline & inspect', fill: D.green.dark, fw: 700 },
     ]},
     { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: '3. Drive / Local Mount', lines: [
-      { t: 'drive.mount("/content..")', mono: true, fs: 11.2, fill: D.purple.dark, fw: 700 },
+      { t: 'drive.mount(path)', mono: true, fs: 11.2, fill: D.purple.dark, fw: 700 },
       'Grants notebook full',
       'read/write access to all',
       'personal Drive files (or',
@@ -572,7 +630,7 @@ export const diagrams = {
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark,
       line1: 'Why τ* Is Robust: Total overhead curve E[T]/τ is flat near the minimum τ*,',
-      line2: 'so checkpointing every 10–15 minutes wastes < 4% of wall time while bounding lost work!' }
+      line2: 'so checkpointing every 10–15 minutes wastes < 8% of wall time while bounding lost work!' }
   ),
 
   'ch39-tools-portable-summary': () => grid2x2(
@@ -678,21 +736,21 @@ export const diagrams = {
     '8× H100 Node at Equal $/hr: NVLink (450 GB/s) vs. PCIe 5.0 (64 GB/s)',
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '8× H100 SXM with NVLink (450 GB/s)', lines: [
       { t: 'Sustained F ≈ 395.6 TFLOP/s (40%)', mono: true, fill: C.ink },
-      { t: 'b_balance = F·β_link / 3 ≈ 293 tok/GPU', mono: true, fill: D.green.dark, fw: 700 },
+      { t: 'b_balance = 7F·β_link / 12 ≈ 513 tok/GPU', mono: true, fill: D.green.dark, fw: 700 },
       'At b = 4,096 tokens/GPU (N = 1.3B):',
-      'Compute = 78.9 ms, Comm = 5.8 ms',
-      { t: 'Comm overhead is only 7.3%!', fill: D.green.dark, fw: 700 },
+      'Compute = 80.8 ms, Comm = 10.1 ms',
+      { t: 'Comm overhead is only 12.5%!', fill: D.green.dark, fw: 700 },
     ]},
     { fill: D.red.tint, st: D.red.base, dk: D.red.dark, title: '8× H100 PCIe 5.0 (64 GB/s)', lines: [
       { t: 'Same GPU compute F ≈ 395.6 TFLOP/s', mono: true, fill: C.ink },
-      { t: 'b_balance = F·β_link / 3 ≈ 2,060 tok/GPU', mono: true, fill: D.red.dark, fw: 700 },
+      { t: 'b_balance = 7F·β_link / 12 ≈ 3,606 tok/GPU', mono: true, fill: D.red.dark, fw: 700 },
       'At b = 4,096 tokens/GPU (N = 1.3B):',
-      'Compute = 78.9 ms, Comm = 40.6 ms',
-      { t: 'Comm overhead is 51.5% (30% slower)!', fill: D.red.dark, fw: 700 },
+      'Compute = 80.8 ms, Comm = 71.1 ms',
+      { t: 'Comm overhead is 88% (step 67% longer)!', fill: D.red.dark, fw: 700 },
     ]},
     { fill: C.lblue, st: C.blue, dk: D.blue.dark,
-      line1: 'Notice that parameter count N cancels out of t_comm / t_compute = (2N·β_link) / (6Nb / F)!',
-      line2: 'A PCIe node must be ≥ 30% cheaper per hour (or accumulate N_acc microbatches) to match NVLink.' }
+      line1: 'N cancels: t_comm / t_compute = (2(W−1)/W · 2N·β_link) / (6Nb / F), β_link = 1/bandwidth',
+      line2: 'A PCIe node must be ≥ 40% cheaper per hour (or accumulate N_acc microbatches) to match NVLink.' }
   ),
 
   'ch39-tools-completed-result-cost': () => twoCols(
@@ -743,11 +801,11 @@ export const diagrams = {
       { t: 'E[T_wall] = (e^(T/M) − 1)·(M + R)', mono: true, fill: D.red.dark, fw: 700 },
       '8h job, mean interruption M = 4h,',
       'restart R = 0.25h, half price q = 0.5:',
-      { t: 'E[T_wall] = (e² − 1)·4.25 = 27.1 hours!', mono: true, fill: D.red.dark, fw: 700 },
-      'Expected cost is 1.69× On-Demand!',
+      { t: 'E[T_wall] = (e² − 1)·4.25 = 27.2 hours!', mono: true, fill: D.red.dark, fw: 700 },
+      'Expected cost is 1.70× On-Demand!',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Checkpointed Spot Run (τ* = √(2δM))', lines: [
-      { t: 'Loses at most τ* ≈ 33 min per eviction', mono: true, fill: D.green.dark, fw: 700 },
+      { t: 'Loses at most τ* + δ ≈ 33 min per eviction', mono: true, fill: D.green.dark, fw: 700 },
       'Each segment (τ*+δ)/M ≪ 1 stays linear!',
       'At δ = 2 min, R = 15 min, M = 4h:',
       { t: 'Spot is cheaper for any q < 0.80!', mono: true, fill: D.green.dark, fw: 700 },
@@ -850,7 +908,7 @@ export const diagrams = {
       { t: 'FLOPs = 2 × 8B = 16 GFLOPs / token', mono: true, fill: D.blue.dark, fw: 700 },
       'Arithmetic Intensity:',
       { t: 'I = 16 GFLOPs / 4.5 GB ≈ 3.5 FLOP/B', mono: true, fill: D.red.dark, fw: 700 },
-      '50–80× below GPU ridge point (150–295)!',
+      '≈40–85× below GPU ridge point (150–295)!',
       'Tensor Cores sit > 95% idle waiting on RAM',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark,
@@ -925,7 +983,7 @@ export const diagrams = {
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Mac Studio M5 Max/Ultra', lines: [
       { t: '128–512 GB · 614–1200 GB/s', mono: true, fs: 11.2, fill: D.green.dark, fw: 700 },
-      'From $2,500 / $5,500',
+      'Base: $2,500 / $5,500',
       'Apple MLX & llama.cpp',
       { t: '115–120 tok/s (Ultra)', fill: D.green.dark, fw: 700 },
       'Highest local RAM & BW',
@@ -974,7 +1032,7 @@ export const diagrams = {
     ]},
     { fill: D.purple.tint, st: C.purple, dk: D.purple.dark,
       line1: 'Why MoE Prefill Needs Large Chunks (≥ 512–2,048 tokens):',
-      line2: 'A 512-token chunk touches ~126 of 128 experts/layer, amortizing the full 59 GiB weight read across tokens.' }
+      line2: 'A 512-token chunk touches nearly all 128 experts/layer, amortizing the full 59 GiB weight read across tokens.' }
   ),
 
   'ch39-tools-calibrated-decode-fit': () => twoCols(
@@ -1292,7 +1350,7 @@ export const diagrams = {
       'All-gathers layer weights just-in-time (fwd+bwd)',
       'Reduce-scatters gradients & frees non-owned',
       { t: 'Comm volume: 3(W−1)/W · S ≈ 3S (1.5×)', mono: true, fill: C.ink },
-      '8× H100 shrinks 7B state: 84 → 10.5 GiB!',
+      '8× H100 shrinks 7B state: 112 → 14 GB!',
     ]},
     { fill: D.purple.tint, st: C.purple, dk: D.purple.dark,
       line1: 'PyTorch FSDP2 represents sharded parameters as DTensor via fully_shard(module);',
@@ -1346,8 +1404,8 @@ export const diagrams = {
     { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Fixed Global Batch (Exact Equivalence)', lines: [
       { t: 'B_global = B_device · N_ranks · N_acc', mono: true, fill: D.blue.dark, fw: 700 },
       'Target: 1,024 seqs (4.2M tok), B_device = 4:',
-      '• 32 GPUs → N_acc = 8   (2 step time)',
-      '• 64 GPUs → N_acc = 4   (1 step time)',
+      '• 32 GPUs → N_acc = 8   (2× time/step)',
+      '• 64 GPUs → N_acc = 4   (1× time/step)',
       '• 256 GPUs → N_acc = 1  (Max DP world!)',
     ]},
     { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: 'What Breaks If You Forget to Adjust N_acc', lines: [
@@ -1463,8 +1521,8 @@ export const diagrams = {
       { t: '4. os.fsync(dir_fd)  (power-loss safe!)', mono: true, fs: 11.8, fill: D.green.dark, fw: 700 },
     ]},
     { fill: C.lamber, st: C.amber, dk: D.orange.dark,
-      line1: 'Drill Recovery Before Day 1: Kill at step 40, restore on fresh workers, and verify bitwise parity at step 64!',
-      line2: 'Omitted scheduler or data cursor state never raises an error—it silently ruins the loss curve.' }
+      line1: 'Drill Recovery Early: Kill at step 40, restore on fresh workers, check bitwise parity at step 64!',
+      line2: 'Omitted scheduler or data cursor state raises no error—it silently ruins the loss curve.' }
   ),
 
   // ── §39.7 model-serving.md (9 diagrams) ─────────────────────────────────
@@ -1486,7 +1544,7 @@ export const diagrams = {
     ]},
     { fill: C.lblue, st: C.blue, dk: D.blue.dark,
       line1: 'Step Time for b Sequences of Context n:   t(b) = (B_w + b · n · B_kv) / β',
-      line2: 'Aslong as b·n·B_kv ≲ B_w, adding concurrent users is nearly free in step time!' }
+      line2: 'As long as b·n·B_kv ≲ B_w, adding concurrent users is nearly free in step time!' }
   ),
 
   'ch39-tools-throughput-vs-goodput': () => twoCols(
@@ -1527,22 +1585,22 @@ export const diagrams = {
     'Local GGUF Quantization Budget on Qwen3-8B (8.2B Params + 32K KV)',
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Q4_K_M (~4.9 bits/w)', lines: [
       { t: 'Weights ≈ 5.0–5.2 GB', mono: true, fill: D.green.dark, fw: 700 },
-      '+ 32K BF16 KV (4.7 GB)',
-      '= 9.9 GB total footprint',
+      '+ 32K BF16 KV (4.8 GB)',
+      '= 10.0 GB total footprint',
       'Fastest decode speed;',
       'fits 16 GB cards easily',
     ]},
     { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Q5_K_M (~5.7 bits/w)', lines: [
       { t: 'Weights ≈ 5.8 GB', mono: true, fill: D.blue.dark, fw: 700 },
-      '+ 32K BF16 KV (4.7 GB)',
-      '= 10.5 GB total footprint',
+      '+ 32K BF16 KV (4.8 GB)',
+      '= 10.6 GB total footprint',
       'Near-lossless perplexity',
       'at ~15% lower tok/s',
     ]},
     { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: 'Q8_0 (~8.5 bits/w)', lines: [
       { t: 'Weights ≈ 8.7 GB', mono: true, fill: D.orange.dark, fw: 700 },
-      '+ 32K BF16 KV (4.7 GB)',
-      '= 13.4 GB total footprint',
+      '+ 32K BF16 KV (4.8 GB)',
+      '= 13.5 GB total footprint',
       '42% slower decode than',
       'Q4_K_M; tight on 16 GB',
     ]},
@@ -1601,7 +1659,7 @@ export const diagrams = {
   ),
 
   'ch39-tools-paged-attention-blocks': () => twoCols(
-    'KV Cache Allocation on 72 GB H100 (55.6 GB Cache Budget, Avg n = 2048)',
+    'KV Cache Allocation on 80 GB H100 (55.6 GB Cache Budget, Avg n = 2048)',
     { fill: D.red.tint, st: D.red.base, dk: D.red.dark, title: 'Contiguous Reservation (max_len=32,768)', lines: [
       'Reserves 32,768 × 147.5 KB = 4.83 GB / seq',
       { t: 'Max Batch b = ⌊55.6 / 4.83⌋ = 11 seqs!', mono: true, fill: D.red.dark, fw: 700 },
@@ -1611,7 +1669,7 @@ export const diagrams = {
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'PagedAttention (16-Token Virtual Blocks)', lines: [
       'Allocates 2.36 MB blocks on demand via table',
-      'Internal waste ≤ 15 tokens/seq (< 0.7% waste!)',
+      'Internal waste ≤ 15 tokens/seq (≤ 0.75% waste!)',
       { t: 'Max Batch b = ⌊55.6 / 0.302⌋ = 184 seqs!', mono: true, fill: D.green.dark, fw: 700 },
       '16.7× higher concurrency on the same GPU!',
       'Now the 20 ms TPOT SLO (b = 167) binds first',
@@ -1897,7 +1955,7 @@ export const diagrams = {
       { t: 'gmake audit-outputs && gmake html', mono: true, fs: 11.5, fill: D.purple.dark, fw: 700 },
       'Confirms 0 stale cells and clean Quarto build',
     ]},
-    { fill: C.lgreen, st: C.green, dk: D.green.dark, text: 'The VS Code extension (.vscode-extension/) runs execution, capture, and source sync in one click.' }
+    { fill: C.lgreen, st: C.green, dk: D.green.dark, text: 'The VS Code extension (.vscode-extension/) runs execution, capture, and source sync.' }
   ),
 
   'ch39-tools-noisy-bisection': () => twoCols(
@@ -1917,8 +1975,8 @@ export const diagrams = {
       'Approaches Shannon channel capacity limit C!',
     ]},
     { fill: C.lblue, st: C.blue, dk: D.blue.dark,
-      line1: 'Each stochastic training run is a noisy binary channel with capacity C ≈ 0.32 bits/run (at p=0.9, q=0.3).',
-      line2: 'Extracting log₂(64) = 6 bits of fault location at 95% confidence requires at least ~17–22 runs by physics!' }
+      line1: 'Each noisy training run is a binary channel with capacity C ≈ 0.30 bits/run (p=0.9, q=0.3).',
+      line2: 'Extracting log₂(64) = 6 bits of fault location at 95% confidence requires at least ~18 runs (Fano)!' }
   ),
 
   // ── §39.9 utils.md (10 diagrams) ────────────────────────────────────────
@@ -2003,7 +2061,7 @@ export const diagrams = {
       'orthogonality to contours!',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'show_images(imgs, r, c)', lines: [
-      'Converts PyTorch/JAX/TF',
+      'Converts framework',
       'tensors via d2l.numpy()',
       'Arranges r × c gallery',
       'with hidden axis spines',

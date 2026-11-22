@@ -1181,8 +1181,8 @@ Running Euler's method on the exact mixture velocity `mix.velocity` from $20{,}0
 ::: {.cols .vc}
 ::: {.col}
 - **1 Euler step:** Collapses $100\%$ of starts onto $(-0.5, -0.7)$ in the empty valley between modes (`weights` $[1, 0, 0]$, $100\%$ strays).
-- **2 Euler steps:** Separates into three clusters, but leaves **$25.6\%$ strays** and severely distorts mode weights to **$[0.64, 0.22, 0.14]$** (vs. $[0.50, 0.30, 0.20]$) because the first half-step pulls all points toward $(-0.5, -0.7)$, closest to mode 1!
-- **4 vs. 10 Euler steps:** Strays remain at $6.5\%$ at $4$ steps before dropping to $2.0\%$ at $10$ steps ($1.1\%$ in true data).
+- **2 Euler steps:** Separates into three clusters, but leaves **$\approx 25\%$ strays** and severely distorts mode weights to **$[0.64, 0.22, 0.14]$** (vs. $[0.50, 0.30, 0.20]$) because the first half-step pulls all points toward $(-0.5, -0.7)$, closest to mode 1!
+- **4 vs. 10 Euler steps:** Strays remain at $\approx 6.5\%$ at $4$ steps before dropping to $\approx 2\%$ at $10$ steps ($\approx 1\%$ in true data).
 :::
 
 ::: {.col .fig}
@@ -1314,12 +1314,17 @@ $$\mathcal{L}_{\textrm{FM}}(\boldsymbol\theta) = \mathbb{E}\!\left[\Big\|\bar{\m
 :::
 :::
 
-::: {.slide title="Implementing Flow-Map Error & Slow Time Embeddings"}
+::: {.slide title="Implementing Flow-Map Error & Slow Time Embeddings" layout="tight"}
 [Avoiding JVP Instability in Time Features]{.kicker}
 
 In code, `flow_map_error` evaluates $\bar{\mathbf{u}}_{\boldsymbol\theta}$ and its directional derivative $d\bar{\mathbf{u}}_{\boldsymbol\theta}/dt$ simultaneously in a single `jvp` call:
 
 @few-step-average-velocity-and-the-meanflow-identity
+
+:::
+
+::: {.slide title="Implementing Flow-Map Error & Slow Time Embeddings (cont.)" layout="tight"}
+[Avoiding JVP Instability in Time Features]{.kicker}
 
 - **Why flow maps use slow sinusoidal time frequencies (`slow = (1e-4, 1.0)`):**
   - Differentiating $\sin(\omega t)$ with respect to $t$ multiplies the feature by its angular frequency: $\frac{d}{dt}\sin(\omega t) = \omega\cos(\omega t)$.
@@ -1364,18 +1369,25 @@ Comparing the six independent seeds of two-time `distillation` against teacher-f
 :::
 :::
 
-::: {.slide title="Distilling a Few-Step U-Net Student on Fashion-MNIST"}
+::: {.slide title="Distilling a Few-Step U-Net Student on Fashion-MNIST" layout="tight"}
 [Zero-Initialized Gap Conditioning]{.kicker}
 
 To distill our $1.2\text{M}$-parameter Fashion-MNIST velocity U-Net into a two-time flow map `UNetFlowMap`, we initialize the student as an exact copy of the teacher and inject the step gap $t - s$ through a **zero-initialized linear layer**:
 
 @few-step-average-velocity-and-the-meanflow-identity-2
 
-- **Warm-starting at the teacher's velocity:** Because `self.gap` is initialized to zero, $\bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) = \hat{\mathbf{u}}_{\textrm{teacher}}(\mathbf{x}_t, t)$ at step $0$.
-- **50% diagonal anchor ($s = t$):** Half of each minibatch sets $s = t$ (where the target is simply the teacher's instantaneous velocity $\hat{\mathbf{u}}_{\textrm{teacher}}$) so the student never forgets the tangent field while learning long jumps $s < t$ over $5{,}000$ updates.
 :::
 
-::: {.slide title="Teacher Euler vs. Student Jumps on Fashion-MNIST"}
+::: {.slide title="Distilling a Few-Step U-Net Student on Fashion-MNIST (cont.)" layout="tight"}
+[Zero-Initialized Gap Conditioning]{.kicker}
+
+- **Warm-starting at the teacher's velocity:** Because `self.gap` is initialized to zero, $\bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) = \hat{\mathbf{u}}_{\textrm{teacher}}(\mathbf{x}_t, t)$ at step $0$.
+
+- **50% diagonal anchor ($s = t$):** Half of each minibatch sets $s = t$ (where the target is simply the teacher's instantaneous velocity $\hat{\mathbf{u}}_{\textrm{teacher}}$) so the student never forgets the tangent field while learning long jumps $s < t$ over $5{,}000$ updates.
+
+:::
+
+::: {.slide title="Teacher Euler vs. Student Jumps on Fashion-MNIST" layout="tight"}
 [FD Scaling from 1 to 50 Evaluations]{.kicker}
 
 Evaluating the teacher ($1$ to $50$ Euler steps) and two distilled students (`seed 2, 3` at $1, 2, 4$ jumps) on $1{,}000$ shared noise images shows a massive few-step gain:
@@ -1387,7 +1399,7 @@ Evaluating the teacher ($1$ to $50$ Euler steps) and two distilled students (`se
 - **4 evaluations:** Student reaches **$\mathrm{FD} \approx 3.7$**, approaching 20 teacher Euler steps ($3.1$) and within $1.4\times$ of the 50-step teacher ($2.6$).
 :::
 
-::: {.col .fig}
+::: {.col}
 @!few-step-on-images-3
 :::
 :::

@@ -107,61 +107,7 @@ function matrix2x2(title, tl, tr, bl, br, footer) {
 }
 
 export const diagrams = {
-  // ── index.md (3 diagrams) ───────────────────────────────────────────
-  'ch17-diff-single-regression': () => compare2(
-    'Adversarial Minimax Game (§16) vs. Denoising Regression (§17)',
-    {
-      head: 'GAN Two-Player Minimax (§16)',
-      sub: 'No direct supervision target z → x\'',
-      rows: [
-        'Requires competing critic network D',
-        'Rotational minimax gradient dynamics',
-        'Mode dropping costs only ~0.26 nats',
-      ],
-      fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
-    },
-    {
-      head: 'Diffusion & Flow Matching (§17)',
-      sub: 'Explicit pairing x_t = α_t x₀ + σ_t ε',
-      rows: [
-        'Single network trained by L₂ regression',
-        'Exact ODE log-likelihoods & ELBO',
-        'Forward KL(p ‖ p_θ) forbids mode drops',
-      ].map((s, i) => i === 2 ? 'KL(p ‖ p_θ) forbids mode drops' : s),
-      fill: C.lgreen, stroke: C.green, dark: D.green.dark,
-    },
-    { text: 'Progressive corruption turns generation into supervised regression across t ∈ [0, 1]' }
-  ),
-
-  'ch17-diff-four-targets': () => matrix2x2(
-    'One Posterior Mean Unifies Four Regression Targets',
-    {
-      head: '1. Clean Prediction x̂₀(x_t)',
-      eq: 'x̂₀ = E[x₀ | x_t]',
-      sub: 'Bayes-optimal MSE denoiser',
-      fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
-    },
-    {
-      head: '2. Noise Prediction ε̂(x_t)',
-      eq: 'ε̂ = (x_t − α_t x̂₀) / σ_t',
-      sub: 'DDPM simple loss target',
-      fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
-    },
-    {
-      head: '3. Marginal Score ∇log p_t',
-      eq: 's_t(x_t) = −ε̂(x_t) / σ_t',
-      sub: 'Tweedie: α_t x̂₀ = x_t + σ_t² s_t',
-      fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
-    },
-    {
-      head: '4. Marginal Velocity u_t(x_t)',
-      eq: 'u_t = α̇_t x̂₀ + σ̇_t ε̂',
-      sub: 'Drives probability-flow ODE t: 1 → 0',
-      fill: C.lgreen, stroke: C.green, dark: D.green.dark,
-    },
-    'All four targets are exact affine reparameterizations of E[x₀ | x_t]'
-  ),
-
+  // ── index.md (1 diagram) ────────────────────────────────────────────
   'ch17-diff-roadmap': () => stack3(
     'Chapter 17 Roadmap: Score Matching → Fast Solvers → Tokens',
     {
@@ -220,8 +166,8 @@ export const diagrams = {
     {
       tag: 'Conditional Kernel',
       head: 'Known Noise Score',
-      eq: '∇log p_σ(x̃|x₀) = −ε/σ',
-      note1: 'Points back to x₀',
+      eq: '∇log p_σ(x̃|x₀)',
+      note1: '= −ε/σ, points back to x₀',
       note2: 'Equals (x₀ − x̃) / σ²',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
@@ -307,8 +253,8 @@ export const diagrams = {
       sub: 'Blurred score ∇log p_σ ≠ ∇log p',
       rows: [
         'Bias = d σ⁴ / [2s²(s² + σ²)²]',
-        'σ=0.05: 0.0004  →  σ=1.0: 2.60',
-        'Fast mixing, but 5× over-wide samples',
+        'σ=0.05: 0.0004  →  σ=1.0: 2.56',
+        'Fast mixing, but 5× the data variance',
       ],
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
@@ -380,7 +326,7 @@ export const diagrams = {
     {
       badge: 'Wide Blur ∇log p₁.₀',
       head: 'Weights [0.49, 0.31, 0.20]  ·  Strays 41%  ·  Spread 1.01',
-      sub: 'Mixes mode weights accurately, but samples are 5× too wide!',
+      sub: 'Mixes mode weights accurately, but with 5× the variance!',
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     {
@@ -791,7 +737,7 @@ export const diagrams = {
     {
       tag: 'Euler Step in (x̄, σ̄)',
       head: 'Multiply by α_s',
-      eq: 'x_s = α_s x̂₀ + σ_s ε̂',
+      eq: 'x_s=α_s x̂₀+σ_s ε̂',
       note1: 'Equals DDIM at η = 0!',
       note2: 'Exact on 1-point data',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -945,7 +891,7 @@ export const diagrams = {
       tag: '11-Row Embedding',
       head: 'Null Token ∅ = 10',
       eq: '90% c  /  10% ∅',
-      note1: 'nn.Embedding(11, d)',
+      note1: '11 × d embedding table',
       note2: 'Added to time embed t',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
@@ -998,7 +944,7 @@ export const diagrams = {
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     {
-      head: 'Two Iron Laws of FD Evaluation',
+      head: 'Three Iron Laws of FD Evaluation',
       sub: 'n = 5,000 real floor drops 5× to 0.17 ± 0.05',
       rows: [
         '1. Never compare FD across different n!',
@@ -1212,13 +1158,13 @@ export const diagrams = {
       rows: [
         'Forward t→t\': uses slope ε̂ at lower t',
         'Reverse t\'→t: uses slope ε̂ at upper t\'',
-        'MSE drops 100× from 10 to 200 steps',
+        'MSE drops >100× from 10 to 200 steps',
       ],
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
     {
       head: 'Code Norm Contraction',
-      sub: 'Inverted code std ≈ 0.80 < 1.00',
+      sub: 'Inverted code std ≈ 0.7–0.85 < 1',
       rows: [
         'Forward Euler under-amplifies variance',
         'Same rate on U-Net & exact 2D oracle',
@@ -1226,7 +1172,7 @@ export const diagrams = {
       ],
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
-    { text: 'Round-trip error is O(1/N) solver discretization, not neural vector-field roughness' }
+    { text: 'Round-trip error is solver discretization error, not neural vector-field roughness' }
   ),
 
   // ── design-space.md (7 diagrams) ────────────────────────────────────
@@ -1403,7 +1349,7 @@ export const diagrams = {
     {
       tag: 'Output Scale c_out',
       head: 'Adaptive Target',
-      eq: 'σ̄ σ_d / √(σ̄² + σ_d²)',
+      eq: 'σ̄σ_d / √(σ̄²+σ_d²)',
       note1: 'σ̄ → 0: F_θ predicts −ε',
       note2: 'σ̄ → ∞: F_θ predicts x₀',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -1591,8 +1537,8 @@ export const diagrams = {
       head: 'Two Routes to 1–4 Step Generation',
       sub: 'Replace local tangent with global jump',
       rows: [
-        '1. Straighten paths (Reflow) or learn',
-        '   integrated flow map Φ_{t→s}(x_t)',
+        '1a. Straighten paths (Reflow)',
+        '1b. Learn flow map Φ_{t→s}(x_t)',
         '2. Match output density (DMD / ADD)',
       ],
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -1773,7 +1719,7 @@ export const diagrams = {
     {
       tag: 'Score Difference',
       head: 'Fake vs. Real Score',
-      eq: 's_fake(x_t) − s_real',
+      eq: 's_fake − s_real',
       note1: 'Online fake score net',
       note2: '− Frozen teacher score',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
@@ -1781,7 +1727,7 @@ export const diagrams = {
     {
       tag: 'KL Gradient Step',
       head: 'Matches Marginals',
-      eq: '∇_θ KL(q_{θ,t} ‖ p_t)',
+      eq: '∇_θ KL(q_{θ,t}‖p_t)',
       note1: 'DMD2 adds GAN critic',
       note2: 'Loses ODE bijection',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -1836,8 +1782,8 @@ export const diagrams = {
     {
       tag: 'Forward Posterior',
       head: 'Bayes Elementwise ⊙',
-      eq: '(x_t Q_tᵀ ⊙ x₀Q̄) / Z',
-      note1: 'Z = x₀ Q̄_t x_tᵀ',
+      eq: 'x_tQ_tᵀ ⊙ x₀Q̄_{t−1}',
+      note1: '÷ Z, Z = x₀ Q̄_t x_tᵀ',
       note2: 'Exact categorical dist',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },

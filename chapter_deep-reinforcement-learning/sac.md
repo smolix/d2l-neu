@@ -1231,7 +1231,7 @@ $$J(\beta) = -\log \beta\, \mathbb{E}_{s \sim \mathcal{D},\, a \sim \pi_\theta}\
 @sac-the-update-step-and-the-loop-2
 :::
 
-::: {.slide title="Executing One Complete SAC Update Step"}
+::: {.slide title="Executing One Complete SAC Update Step" layout="tight"}
 [The Update Step]{.kicker}
 
 Each call to `sac_step` regresses both critics onto the shared twin-minimum soft target $y$, updates the actor via the pathwise gradient of $\beta \log \pi_\theta - \min_j Q_{w_j}$, updates $\log \beta$ toward $\bar{H} = -1$, and blends the target networks by $\nu = 0.005$:
@@ -1289,18 +1289,29 @@ Why do returns drop from the random policy's $-1{,}200$ down to $-1{,}700$ aroun
 :::
 :::
 
-::: {.slide title="Dual Temperature Trajectory and Sampling Cost"}
+::: {.slide title="Dual Temperature Trajectory and Sampling Cost" layout="tight"}
 [Temperature & Evaluation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Log-Linear Decay:** While $\hat{H} > -1$, Adam steps $\log \beta$ downward by its learning rate $\approx 3 \times 10^{-4}$ per update, matching the predicted $e^{-1.8} \approx 0.17$ at $6{,}000$ updates ($7\text{k}$ env steps) before settling near $0.03$.
+:::
+
+::: {.col}
+@!sac-entropy-and-temperature-2
+:::
+:::
+:::
+
+::: {.slide title="Dual Temperature Trajectory and Sampling Cost (cont.)" layout="tight"}
+[Temperature & Evaluation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
 - **Zero-Cost Exploration at Convergence:** Evaluating the deterministic mean action $c\tanh\mu_\theta(s)$ vs. stochastic sampling shows that state-dependent spread costs at most $\sim 10$ return points!
 :::
 
-::: {.col .fig}
-@!sac-entropy-and-temperature-2
-
+::: {.col}
 @!sac-the-entropy-the-policy-keeps-2
 :::
 :::

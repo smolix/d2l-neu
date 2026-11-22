@@ -580,7 +580,7 @@ Peak per-GPU memory is the sum of model state, saved activations, temporary comm
 :::
 :::
 
-::: {.slide title="Modeling Per-Device Memory: DDP vs. FSDP"}
+::: {.slide title="Modeling Per-Device Memory: DDP vs. FSDP" layout="tight"}
 [Executable Memory Model]{.kicker}
 
 Even leaving out the $28\text{ GB}$ master-weight copy ($84\text{ GiB}$ state $+ 18\text{ GiB}$ activations $+ 5\text{ GiB}$ temporary buffers), our sizing script shows why DDP cannot fit a 7B full fine-tune on 80 GB GPUs:
@@ -593,9 +593,16 @@ Even leaving out the $28\text{ GB}$ master-weight copy ($84\text{ GiB}$ state $+
 :::
 
 ::: {.col .fig}
-@training-systems-memory-model
+@!training-systems-memory-model
 :::
 :::
+:::
+
+::: {.slide title="Modeling Per-Device Memory: DDP vs. FSDP (Code)" layout="tight"}
+[Executable Memory Model]{.kicker}
+
+@-training-systems-memory-model
+
 :::
 
 ::: {.slide title="Five Orthogonal Memory-Reduction Techniques"}

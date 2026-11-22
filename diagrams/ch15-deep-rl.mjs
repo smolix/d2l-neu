@@ -96,11 +96,11 @@ function benchmarkGains() {
   o += box(34, 102, 180, 26, C.lamber, C.amber, 4, 1.8);
   o += tx(124, 115, '§15.5 SAC: 2.4k–11k', { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
   o += box(228, 102, 298, 26, C.lgreen, C.green, 4, 1.8);
-  o += tx(377, 115, '§15.6 World-Model MPC: 200–600 steps!', { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
+  o += tx(377, 115, '§15.6 World-Model MPC: 200–800 steps!', { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
 
   o += box(18, 154, 524, 92, C.lgreen, C.green, 8, 2);
   o += tx(34, 176, 'CartPole-v1 (Return 500) & Discrete Exact Benchmarks:', { fs: 13.5, fw: 700, fill: D.green.dark, anchor: 'start' });
-  o += tx(280, 202, 'CartPole: 1-Step A2C ~60k  →  DQN ~40k  →  4-Epoch Clipped PPO ~25k', { mono: true, fs: 11.8, fw: 700, fill: C.ink });
+  o += tx(280, 202, 'CartPole: 1-Step A2C ≥50k  →  DQN ~40k  →  4-Epoch Clipped PPO ~25k', { mono: true, fs: 11.8, fw: 700, fill: C.ink });
   o += tx(280, 226, 'Hazard Grid & Offline Lake: KL leash (β) & LCB (−κ/√n) stop reward hacking', { fs: 12, fw: 600, fill: D.green.dark });
   return svg(W, H, o);
 }
@@ -240,13 +240,13 @@ function gaeMixture() {
   const rows = [
     { y: 44,  w: '(1 − λ)',     f: 'Â_t^(1) = r_t + γ V̂(s_{t+1}) − V̂(s_t) = δ_t', col: C.blue, dk: D.blue.dark },
     { y: 96,  w: '(1 − λ) λ',   f: 'Â_t^(2) = r_t + γ r_{t+1} + γ² V̂(s_{t+2}) − V̂(s_t)', col: C.purple, dk: D.purple.dark },
-    { y: 148, w: '(1 − λ) λ²',  f: 'Â_t^(3) = r_t + γ r_{t+1} + γ² r_{t+2} + γ³ V̂(s_{t+3}) − V̂', col: C.amber, dk: D.orange.dark },
+    { y: 148, w: '(1 − λ) λ²',  f: 'Â_t^(3) = r_t + γr_{t+1} + γ²r_{t+2} + γ³V̂(s_{t+3}) − V̂(s_t)', col: C.amber, dk: D.orange.dark },
   ];
   rows.forEach((r) => {
-    o += box(16, r.y, 114, 42, N.panel, r.col, 6, 1.8);
-    o += tx(73, r.y + 21, r.w, { mono: true, fs: 12, fw: 700, fill: r.dk });
-    o += box(142, r.y, 402, 42, '#FFFFFF', r.col, 6, 1.8);
-    o += tx(343, r.y + 21, r.f, { mono: true, fs: 11.2, fw: 600, fill: C.ink });
+    o += box(16, r.y, 100, 42, N.panel, r.col, 6, 1.8);
+    o += tx(66, r.y + 21, r.w, { mono: true, fs: 12, fw: 700, fill: r.dk });
+    o += box(124, r.y, 420, 42, '#FFFFFF', r.col, 6, 1.8);
+    o += tx(334, r.y + 21, r.f, { mono: true, fs: 11.2, fw: 600, fill: C.ink });
   });
 
   o += box(16, 202, 528, 44, C.lgreen, C.green, 7, 2);
@@ -471,7 +471,7 @@ function exponentialTiltFlow() {
   o += tx(462, y + 12, 'π_ref(a) e^{r/β} / Z', { mono: true, fs: 11.8, fw: 700, fill: C.ink });
 
   o += box(20, 166, 520, 70, D.purple.tint, C.purple, 8, 1.8);
-  o += tx(280, 190, "Partition Z = ∑ π_ref(a') e^{r(a')/β}   ·   Optimal Objective Value = β log Z", { mono: true, fs: 11.8, fw: 700, fill: D.purple.dark });
+  o += tx(280, 190, "Partition Z = ∑ π_ref(a') e^{r(a')/β}  ·  Optimal value = β log Z", { mono: true, fs: 11.5, fw: 700, fill: D.purple.dark });
   o += tx(280, 216, 'Support invariant: π_ref(a) = 0 ⟹ π*(a) = 0   ·   Gibbs: obj(π) = β log Z − β D_KL(π || π*)', { fs: 11.8, fw: 600, fill: C.ink });
   return svg(W, H, o);
 }
@@ -483,8 +483,8 @@ function trustVsAnchor() {
   o += box(20, 18, 248, 222, C.lamber, C.amber, 9, 2);
   o += tx(144, 42, 'Moving Trust Region (§15.2)', { fs: 14.5, fw: 700, fill: D.orange.dark });
   o += tx(144, 66, 'Penalty to PREVIOUS iterate π_k', { fs: 12.2, fill: C.ink });
-  o += box(34, 84, 220, 62, '#FFFFFF', C.amber, 6, 1.8);
-  o += tx(144, 104, 'π_k(a) ∝ π_ref(a) e^{k · r(a)/β̃}', { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
+  o += box(28, 84, 232, 62, '#FFFFFF', C.amber, 6, 1.8);
+  o += tx(144, 104, 'π_k(a) ∝ π_ref(a) e^{k·r(a)/β̃}', { mono: true, fs: 11.3, fw: 700, fill: D.orange.dark });
   o += tx(144, 128, 'Effective temp β̃ / k → 0', { mono: true, fs: 11.3, fill: C.ink });
   o += tx(144, 174, 'Bounds each step along the PATH,', { fs: 12.2, fill: C.ink });
   o += tx(144, 198, 'but still converges to greedy', { fs: 12.2, fill: C.ink });
@@ -493,7 +493,7 @@ function trustVsAnchor() {
   o += box(292, 18, 248, 222, C.lgreen, C.green, 9, 2);
   o += tx(416, 42, 'Fixed Reference Penalty (§15.3)', { fs: 14.5, fw: 700, fill: D.green.dark });
   o += tx(416, 66, 'Penalty to FROZEN reference π_ref', { fs: 12.2, fill: C.ink });
-  o += box(306, 84, 220, 62, '#FFFFFF', C.green, 6, 1.8);
+  o += box(300, 84, 232, 62, '#FFFFFF', C.green, 6, 1.8);
   o += tx(416, 104, 'π*(a) ∝ π_ref(a) e^{r(a)/β}', { mono: true, fs: 11.8, fw: 700, fill: D.green.dark });
   o += tx(416, 128, 'Fixed temperature β > 0 forever', { mono: true, fs: 11.3, fill: C.ink });
   o += tx(416, 174, 'Changes the DESTINATION itself:', { fs: 12.2, fill: C.ink });
@@ -512,21 +512,21 @@ function naiveQExplosion() {
   let o = '';
   o += tx(280, 20, 'Why Naive Neural Q-Learning Explodes Past 10⁸ on CartPole', { fs: 15, fw: 700, fill: C.ink });
 
-  const bw = 224, bh = 72;
+  const bw = 240, bh = 72;
   const boxes = [
-    { x: 24,  y: 44,  t: '1. Push Q_w(s_t, a_t) Up', s: 'y_t = 1 + 0.99 max Q_w(s_{t+1})', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 312, y: 44,  t: '2. Shared Weights Coupled', s: "k(s', s) > 0 lifts Q_w(s') too!", fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 312, y: 158, t: '3. Next Target Jumps Higher', s: 'y_{t+1} = 1 + 0.99 max Q_w climbs', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { x: 24,  y: 158, t: '4. Runaway Feedback Loop', s: 'Q_w(s₀) > 10⁸, policy return ≈ 9!', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: 16,  y: 44,  t: '1. Push Q_w(s_t, a_t) Up', s: 'y_t = 1 + 0.99 max Q_w(s_{t+1})', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 304, y: 44,  t: '2. Shared Weights Coupled', s: "k(s', s) > 0 lifts Q_w(s') too!", fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 304, y: 158, t: '3. Next Target Jumps Higher', s: 'y_{t+1} = 1 + 0.99 max Q_w climbs', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: 16,  y: 158, t: '4. Runaway Feedback Loop', s: 'Q_w(s₀) > 10⁸, policy return ≈ 9!', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   boxes.forEach((b) => {
     o += box(b.x, b.y, bw, bh, b.fill, b.st, 8, 2);
     o += tx(b.x + bw / 2, b.y + 24, b.t, { fs: 13.5, fw: 700, fill: b.dk });
     o += tx(b.x + bw / 2, b.y + 48, b.s, { mono: true, fs: 11.2, fw: 600, fill: C.ink });
   });
-  o += arrow(250, 80, 308, 80, C.blue);
+  o += arrow(258, 80, 300, 80, C.blue);
   o += arrow(424, 118, 424, 154, C.amber);
-  o += arrow(308, 194, 250, 194, D.red.base);
+  o += arrow(300, 194, 258, 194, D.red.base);
   o += arrow(136, 154, 136, 118, D.red.base);
   return svg(W, H, o);
 }
@@ -550,8 +550,9 @@ function normMismatch() {
   o += tx(416, 94, 'Projects in Visitation L₂(d) Norm:', { fs: 12.2, fill: C.ink });
   o += box(306, 110, 220, 44, '#FFFFFF', D.red.base, 6, 1.8);
   o += tx(416, 132, 'min_w E_{(s,a)~d}[(Q_w − y)²]', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
-  o += tx(416, 180, 'Shrinking error on visited states', { fs: 12.2, fill: C.ink });
-  o += tx(416, 204, 'can EXPAND ||Π_d TQ||_∞ > ||Q||_∞!', { fs: 12.2, fw: 700, fill: D.red.dark });
+  o += tx(416, 176, 'Π_d T can fail to contract in ||·||_∞:', { fs: 12.2, fill: C.ink });
+  o += tx(416, 198, "||Π_d TQ − Π_d TQ'||_∞", { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
+  o += tx(416, 220, "> γ ||Q − Q'||_∞ is possible!", { fs: 12.2, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
 
@@ -584,7 +585,7 @@ function ringBuffer() {
   o += box(24, 160, 512, 80, C.lgreen, C.green, 8, 2);
   o += tx(280, 182, 'Uniform Minibatch Gather (batch_size = 128, 1-step fragments)', { fs: 13.8, fw: 700, fill: D.green.dark });
   o += tx(280, 206, 'Breaks temporal trajectory correlation  ·  Reuses each transition ~64×', { fs: 12.2, fw: 600, fill: C.ink });
-  o += tx(280, 226, "Stores float(terminated) so 500-step truncations still bootstrap Q_{w⁻}(s')", { mono: true, fs: 11.2, fw: 700, fill: D.green.dark });
+  o += tx(280, 226, "Stores float(terminated): 500-step truncations still bootstrap Q_{w⁻}(s')", { mono: true, fs: 10.8, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -642,7 +643,7 @@ function dqnVsSacActor() {
   o += box(306, 86, 220, 64, '#FFFFFF', C.green, 6, 1.8);
   o += tx(416, 108, 'Actor samples ã_θ(s, z) and climbs', { fs: 12, fill: C.ink });
   o += tx(416, 130, 'pathwise ∂Q_w/∂a · ∂ã_θ/∂θ', { mono: true, fs: 11.3, fw: 700, fill: D.green.dark });
-  o += tx(416, 178, '20× lower variance than score fn', { fs: 12.2, fw: 700, fill: D.green.dark });
+  o += tx(416, 178, 'Lower variance than score function', { fs: 12.2, fw: 700, fill: D.green.dark });
   o += tx(416, 202, '300k steps → 3,000 steps!', { fs: 12.8, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
@@ -782,7 +783,7 @@ function scalarVsPhysics() {
   o += box(34, 90, 220, 52, '#FFFFFF', C.amber, 6, 1.8);
   o += tx(144, 116, '1 Scalar Target: y_t ∈ R¹', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += tx(144, 168, 'Discards where s_{t+1} moved!', { fs: 12.2, fill: C.ink });
-  o += tx(144, 192, 'Needs 2,400–7,500 steps', { fs: 12.2, fw: 700, fill: D.orange.dark });
+  o += tx(144, 192, 'Needs 1,600–7,500 steps', { fs: 12.2, fw: 700, fill: D.orange.dark });
   o += tx(144, 216, 'to propagate swing-up value', { fs: 12.2, fill: C.ink });
 
   o += box(292, 44, 248, 194, C.lgreen, C.green, 9, 2);
@@ -790,7 +791,7 @@ function scalarVsPhysics() {
   o += box(306, 90, 220, 52, '#FFFFFF', C.green, 6, 1.8);
   o += tx(416, 116, '4D Target: (Δs_t, r_t) ∈ R⁴', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   o += tx(416, 168, 'Learns global gravity & inertia', { fs: 12.2, fill: C.ink });
-  o += tx(416, 192, 'Swings up in 200–600 steps', { fs: 12.2, fw: 700, fill: D.green.dark });
+  o += tx(416, 192, 'Swings up in 200–800 steps', { fs: 12.2, fw: 700, fill: D.green.dark });
   o += tx(416, 216, '(just 1 to 3 episodes!)', { fs: 12.2, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
@@ -824,7 +825,7 @@ function deltaResidualNet() {
   o += tx(270, 36, "Identity skip connection s (since Δt = 0.05 s ⟹ s' ≈ s)", { fs: 12, fw: 700, fill: D.green.dark });
 
   o += box(20, 164, 520, 72, N.panel, C.gray, 8, 1.6);
-  o += tx(280, 186, 'Why standardize targets (Δs, r)? Reward r ∈ [−16.2, 0] has ~2000× larger variance', { fs: 12.2, fw: 600, fill: C.ink });
+  o += tx(280, 186, 'Why standardize targets (Δs, r)? Reward r ∈ [−16.2, 0] has far larger variance', { fs: 12.2, fw: 600, fill: C.ink });
   o += tx(280, 210, 'than Δcos θ (~0.01); z-scoring ensures equal L₂ weight across all 4 dimensions!', { fs: 12.2, fw: 700, fill: D.blue.dark });
   return svg(W, H, o);
 }
@@ -838,7 +839,7 @@ function experienceVsCompute() {
   o += box(20, 44, 248, 194, C.lblue, C.blue, 9, 2);
   o += tx(144, 68, 'World-Model MPC (§15.6)', { fs: 14.5, fw: 700, fill: D.blue.dark });
   o += box(34, 88, 220, 44, '#FFFFFF', C.green, 6, 1.8);
-  o += tx(144, 110, 'Data: 200–600 real steps!', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(144, 110, 'Data: 200–800 real steps!', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   o += box(34, 142, 220, 44, '#FFFFFF', D.red.base, 6, 1.8);
   o += tx(144, 164, 'Test: 12,500 model calls', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
   o += tx(144, 212, '500 cands × 25 steps per command', { fs: 12, fw: 600, fill: C.ink });
@@ -846,7 +847,7 @@ function experienceVsCompute() {
   o += box(292, 44, 248, 194, C.lgreen, C.green, 9, 2);
   o += tx(416, 68, 'Soft Actor–Critic (§15.5)', { fs: 14.5, fw: 700, fill: D.green.dark });
   o += box(306, 88, 220, 44, '#FFFFFF', C.amber, 6, 1.8);
-  o += tx(416, 110, 'Data: 2,400–7,500 real steps', { mono: true, fs: 12, fw: 700, fill: D.orange.dark });
+  o += tx(416, 110, 'Data: 1,600–7,500 real steps', { mono: true, fs: 12, fw: 700, fill: D.orange.dark });
   o += box(306, 142, 220, 44, '#FFFFFF', C.green, 6, 1.8);
   o += tx(416, 164, 'Test: 1 actor pass (~μs)!', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   o += tx(416, 212, 'Amortizes planning into weights θ', { fs: 12, fw: 600, fill: C.ink });
@@ -883,7 +884,7 @@ function actorSeededSearch() {
   o += tx(491, 124, 'Ĝ(A*) ≥', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(491, 144, 'Ĝ(A_actor)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
 
-  o += tx(280, 226, 'Because Candidate 0 is unperturbed, search strictly improves on the actor inside f̂_φ!', { fs: 12.2, fw: 700, fill: C.ink });
+  o += tx(280, 226, 'Because Candidate 0 is unperturbed, search scores at least as high as the actor inside f̂_φ!', { fs: 12.2, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -1032,16 +1033,24 @@ function cqlPushPull() {
   o += tx(280, 20, 'Conservative Q-Learning (CQL): Push Down All Actions, Pull Up Log Data', { fs: 14.2, fw: 700, fill: C.ink });
 
   o += box(20, 42, 520, 152, '#FFFFFF', C.gray, 8, 1.8);
-  o += `<path d="M 56 146 Q 130 48 200 132 T 350 120 T 480 54" fill="none" stroke="${D.red.base}" stroke-width="2.5" stroke-dasharray="5 4"/>`;
-  o += `<path d="M 56 166 Q 130 138 200 136 Q 280 92 350 132 Q 410 148 480 144" fill="none" stroke="${C.green}" stroke-width="3"/>`;
+  // Smooth curves from Gaussian bumps: naive Q (dashed) peaks on the two
+  // out-of-distribution actions; the CQL estimate (solid) peaks on the data.
+  const bump = (x, c, w) => Math.exp(-(((x - c) / w) ** 2));
+  const curve = (f) => {
+    const pts = [];
+    for (let x = 56; x <= 504; x += 4) pts.push(`${x} ${f(x).toFixed(1)}`);
+    return 'M ' + pts.join(' L ');
+  };
+  o += `<path d="${curve((x) => 150 - 58 * bump(x, 130, 48) - 58 * bump(x, 465, 42))}" fill="none" stroke="${D.red.base}" stroke-width="2.5" stroke-dasharray="5 4"/>`;
+  o += `<path d="${curve((x) => 160 - 42 * bump(x, 280, 60))}" fill="none" stroke="${C.green}" stroke-width="3"/>`;
 
-  o += arrow(130, 66, 130, 116, D.red.base);
+  o += arrow(130, 52, 130, 86, D.red.base);
   o += tx(130, 178, 'OOD Peak: Push ↓', { fs: 12, fw: 700, fill: D.red.dark });
 
-  o += arrow(465, 66, 465, 116, D.red.base);
+  o += arrow(465, 52, 465, 86, D.red.base);
   o += tx(465, 178, 'OOD Peak: Push ↓', { fs: 12, fw: 700, fill: D.red.dark });
 
-  o += arrow(280, 154, 280, 114, C.green);
+  o += arrow(280, 162, 280, 126, C.green);
   o += tx(280, 72, 'In-Support a_log ~ D: Pull ↑', { fs: 12.5, fw: 700, fill: D.green.dark });
 
   o += box(20, 204, 520, 40, D.purple.tint, C.purple, 7, 1.8);
@@ -1153,8 +1162,8 @@ function gspoDapoClip() {
   o += box(34, 86, 220, 66, '#FFFFFF', C.blue, 6, 1.8);
   o += tx(144, 106, 'Product W = ∏ ρ_t explodes', { fs: 12, fill: D.red.dark });
   o += tx(144, 132, 'ρ̄ = W^{1/T} = exp((1/T)∑log ρ_t)', { mono: true, fs: 10.6, fw: 700, fill: D.blue.dark });
-  o += tx(144, 180, 'Keeps sequence ratio variance', { fs: 12.2, fill: C.ink });
-  o += tx(144, 204, 'O(1/T) instead of O(T)!', { fs: 12.5, fw: 700, fill: D.blue.dark });
+  o += tx(144, 180, 'Keeps log-ratio variance at', { fs: 12.2, fill: C.ink });
+  o += tx(144, 204, 'v/T, not vT as for log W!', { fs: 12.5, fw: 700, fill: D.blue.dark });
 
   o += box(292, 18, 248, 220, C.lgreen, C.green, 9, 2);
   o += tx(416, 42, 'DAPO: Asymmetric Clip-Higher', { fs: 14.2, fw: 700, fill: D.green.dark });
@@ -1236,7 +1245,7 @@ function dpoInversion() {
   const steps = [
     { y: 42,  t: '1. Solve tilted optimum π*(y|x) = π_ref(y|x) e^{r/β} / Z(x) for r(x, y):', f: 'r(x, y) = β log [ π*(y | x) / π_ref(y | x) ] + β log Z(x)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { y: 112, t: '2. Substitute into Bradley–Terry r(x, y_w) − r(x, y_l) (Z(x) cancels!):', f: 'Δr = β log(π_θ(y_w|x)/π_ref(y_w|x)) − β log(π_θ(y_l|x)/π_ref(y_l|x))', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { y: 182, t: '3. Optimize policy π_θ directly by binary cross-entropy on (y_w ≻ y_l):', f: 'L_DPO(θ) = −E_D[ log σ( β log(π_θ(y_w)/π_ref(y_w)) − β log(π_θ(y_l)/π_ref(y_l)) ) ]', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { y: 182, t: '3. Optimize policy π_θ directly by binary cross-entropy on (y_w ≻ y_l):', f: 'L_DPO(θ) = −E_D[ log σ(Δr) ]  with Δr from step 2', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   steps.forEach((s, i) => {
     o += box(16, s.y, 528, 54, s.fill, s.st, 8, 2);

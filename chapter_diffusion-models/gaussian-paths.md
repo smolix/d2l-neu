@@ -888,7 +888,7 @@ On our three-mode mixture, both the single-point conditional path $p_t(\mathbf{x
 :::
 
 ::: {.col .fig}
-![](../img/mdl-diffusion-blueprint.svg){.nostretch width=100%}
+![](../img/mdl-diffusion-blueprint.svg){.nostretch width=70%}
 :::
 :::
 :::

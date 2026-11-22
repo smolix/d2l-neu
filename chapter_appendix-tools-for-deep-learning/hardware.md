@@ -499,7 +499,7 @@ Our sizing function sums parameter state ($12\text{ B/param}$ without master wei
 $$\text{decode tokens/s} \lesssim \frac{\beta}{B_w + B_{\text{kv}}(n)}$$
 
 - **Worked example (8B dense model at 4 bits):** Streams $B_w = 4.0\text{ GB}$ of weights plus $B_{\text{kv}} \approx 0.5\text{ GB}$ of 4K BF16 KV cache ($4.5\text{ GB/token}$ total).
-- **Why compute is idle:** Executing $16\text{ GFLOPs}$ across $4.5\text{ GB}$ yields $I \approx 3.5\text{ FLOP/B}$—$50\times\text{--}100\times$ below the GPU ridge point!
+- **Why compute is idle:** Executing $16\text{ GFLOPs}$ across $4.5\text{ GB}$ yields $I \approx 3.5\text{ FLOP/B}$—$40\times\text{--}85\times$ below the GPU ridge point!
 :::
 
 ::: {.col .fig}
@@ -508,7 +508,7 @@ $$\text{decode tokens/s} \lesssim \frac{\beta}{B_w + B_{\text{kv}}(n)}$$
 :::
 :::
 
-::: {.slide title="Ranking Hardware by the Decode Bandwidth Bound"}
+::: {.slide title="Ranking Hardware by the Decode Bandwidth Bound" layout="tight"}
 [Bandwidth Ordering]{.kicker}
 
 Applying $\beta / (4.5\text{ GB})$ across consumer discrete cards, unified-memory boxes, and a datacenter H100 predicts generation speed to within a factor of two:

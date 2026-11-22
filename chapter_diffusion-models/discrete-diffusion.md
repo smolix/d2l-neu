@@ -1719,13 +1719,23 @@ Test your mastery of discrete and masked diffusion mechanics:
 
 1. **Absorbing vs. uniform kernel visibility:** Under a uniform corruption kernel $\mathbf{Q}_t = (1 - \beta_t)\mathbf{I} + (\beta_t/K)\mathbf{1}\mathbf{1}^\top$, every token value has positive posterior probability even at unmasked positions. What question must a network answer at every visible token under the uniform kernel that it never has to answer under the absorbing kernel?
 2. **Linear-schedule ELBO weights:** For a pair of tokens ($L = 2$) under a linear schedule $\bar\alpha_t = 1 - t/T$ with $T = 32$ steps, what are the step weights $w_1$ and $w_{32}$, and what is the expected weighted count of masked tokens at any step $t$?
-3. **Splitting parallel error from network error:** On our quantized mixture pair, an exact oracle sampler has total variation error $0.314 / S$, while our trained `pair_model` has $\mathrm{TV} = 0.020$ at $S = 32$ steps. Will increasing the sampler budget to $S = 1{,}024$ steps push the trained network's TV error below $0.005$?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. Under the uniform kernel, the network must infer **whether each visible token is genuine clean data or was randomly resampled by noise**; under the absorbing kernel, any visible token ($\neq [\textrm{M}]$) is guaranteed to be $100\%$ clean!
 2. Since $w_t = 1/t$, we have **$w_1 = 1$** and **$w_{32} = 1/32$**. At step $t$, the expected number of masked tokens is $L(t/T) = 2t/32$, so the expected weighted count is $(2t/32) \cdot (1/t) = \mathbf{1/16 = L/T}$ at every step $t$.
+:::
+:::
+
+::: {.slide title="Concept Check: Absorbing Posteriors & Parallel Error (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Splitting parallel error from network error:** On our quantized mixture pair, an exact oracle sampler has total variation error $0.314 / S$, while our trained `pair_model` has $\mathrm{TV} = 0.020$ at $S = 32$ steps. Will increasing the sampler budget to $S = 1{,}024$ steps push the trained network's TV error below $0.005$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. **No:** At $S = 32$, the parallel independence error is $0.314/32 \approx 0.010$ and the trained network's own conditional approximation error is $\approx 0.010$. Taking $S = 1{,}024$ eliminates the $0.314/S$ term, but the $\approx 0.010$ network error remains fixed regardless of step count.
 :::
 :::

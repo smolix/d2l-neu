@@ -702,13 +702,23 @@ Test your understanding of conditional-mean blurring and adversarial losses in m
 
 1. **PSNR cost of exact sampling:** Using Blau and Michaeli's identity $\mathbb{E}[\|x - \hat{x}\|^2] = 2\,\mathbb{E}[\|x - \mu(c)\|^2]$ for an ideal sampler $\hat{x} \sim p(x \mid c)$, how many decibels of Peak Signal-to-Noise Ratio ($\mathrm{PSNR} = 10\log_{10}(x_{\max}^2 / \mathrm{MSE})$) does a perfectly realistic generator lose relative to the blurry conditional mean $\mu(c)$?
 2. **Partial phase uncertainty in vocoders:** In the sinusoidal audio frame model $x_n = \sin(\omega n + \vartheta)$ with phase $\vartheta \sim \textrm{Uniform}[-\pi/2, \pi/2]$, to what fraction of the true amplitude does $L_2$ waveform regression shrink the signal? What artifact occurs if a vocoder minimizes only frame-level DFT magnitude error without a time-domain waveform critic?
-3. **Selecting the right training paradigm:** Among (a) pretraining a general text-to-image foundation model from scratch, (b) distilling a 50-step diffusion model into a 1-step generator, and (c) training a latent diffusion image tokenizer decoder, which tasks use an adversarial critic today?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. Doubling the MSE reduces $\mathrm{PSNR} = 10\log_{10}(x_{\max}^2 / \mathrm{MSE})$ by $10\log_{10}(2) \approx \mathbf{3.01\text{ dB}}$.
 2. At $a = \pi / 2$, the amplitude shrinks by $\frac{\sin(\pi/2)}{\pi/2} = \mathbf{\frac{2}{\pi} \approx 0.637}$. Minimizing only frame-level DFT magnitude error leaves each frame's phase $\vartheta_k$ independent, creating **phase-discontinuity clicks** at every frame boundary that a time-domain waveform discriminator immediately penalizes.
+:::
+:::
+
+::: {.slide title="Concept Check: Blurring, Distillation, and Phase (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Selecting the right training paradigm:** Among (a) pretraining a general text-to-image foundation model from scratch, (b) distilling a 50-step diffusion model into a 1-step generator, and (c) training a latent diffusion image tokenizer decoder, which tasks use an adversarial critic today?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. **(a)** uses multi-step diffusion/flow regression (for broad coverage and stable scaling), whereas **(b)** one-step diffusion distillation (ADD/DMD2) and **(c)** latent autoencoder decoders (VQGAN/SD-VAE) both pair regression/perceptual anchors with an **adversarial critic** to prevent conditional-mean blurring.
 :::
 :::

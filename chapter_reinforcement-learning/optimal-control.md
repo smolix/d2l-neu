@@ -540,14 +540,22 @@ $$\mathbf{P}_t = \mathbf{Q} + \mathbf{A}^\top\mathbf{P}_{t+1}(\mathbf{A} - \math
 :::
 :::
 
-::: {.slide title="The Double Integrator: LQR Derives a PD Controller"}
+::: {.slide title="The Double Integrator: LQR Derives a PD Controller" layout="tight"}
+[Infinite-Horizon Stationary Feedback]{.kicker}
+
+@-optimal-control-riccati-lqr
+
+:::
+
+::: {.slide title="The Double Integrator: LQR Derives a PD Controller (cont.)" layout="tight"}
 [Infinite-Horizon Stationary Feedback]{.kicker}
 
 Applying `riccati_lqr` to a 1D vehicle $\mathbf{x}_t = (p_t, v_t)^\top$ driven by acceleration $u_t$ automatically derives a proportional-derivative (PD) controller $u_t^* = -k_p p_t - k_v v_t$:
 
-@optimal-control-riccati-lqr
+@!optimal-control-riccati-lqr
 
 - **Asymptotic stability:** As $H \to \infty$, $\mathbf{P}_t \to \mathbf{P}_\infty$ (the Discrete Algebraic Riccati Equation), placing all eigenvalues of $\mathbf{A} - \mathbf{B}\mathbf{K}_\infty$ strictly inside the unit circle ($\rho < 1$).
+
 :::
 
 ::: {.slide title="Control Effort Penalty vs. Damping Speed"}
@@ -632,19 +640,19 @@ $$v_t^{\textrm{new}} = \bar{v}_t + \alpha\,k_t + \mathbf{K}_t(\mathbf{x}_t^{\tex
 :::
 :::
 
-::: {.slide title="iLQR Discovers Multi-Phase Energy Pumping"}
+::: {.slide title="iLQR Discovers Multi-Phase Energy Pumping" layout="tight"}
 [Nonlinear Swing-Up from the Bottom]{.kicker}
-
-In 35 iterations from the hanging equilibrium $(\pi, 0)$, iLQR discovers a three-phase swing-up and catch trajectory over $H = 80$ steps ($4.0\text{ s}$):
 
 ::: {.cols .vc}
 ::: {.col}
+In 35 iterations from the hanging equilibrium $(\pi, 0)$, iLQR discovers a three-phase swing-up and catch trajectory over $H = 80$ steps ($4.0\text{ s}$):
+
 - **Steps 0–10 (back-swing):** Pushes left ($u_0 = -1.78$) to $\vartheta_{10} = 2.65\text{ rad}$.
 - **Steps 10–30 (energy pump):** Reverses torque ($u_{20} = +1.68$) to swing through the bottom to $\vartheta_{30} = 4.04\text{ rad}$.
 - **Steps 30–80 (whip & catch):** Reverses again ($u_{40} = -1.83$), hitting peak speed $\dot{\vartheta}_{40} = -4.44\text{ rad/s}$ and braking to rest at $\vartheta_{80} = 0.0001\text{ rad}$.
 :::
 
-::: {.col .fig}
+::: {.col}
 @!optimal-control-ilqr-swingup
 :::
 :::
@@ -666,12 +674,18 @@ In 35 iterations from the hanging equilibrium $(\pi, 0)$, iLQR discovers a three
 :::
 :::
 
-::: {.slide title="Disturbance Rejection Under an Impulse at t = 45"}
+::: {.slide title="Disturbance Rejection Under an Impulse at t = 45" layout="tight"}
 [Testing Open-Loop, TV-LQR, and MPC]{.kicker}
 
+::: {.cols .vc}
+::: {.col .narrow}
 Applying an external angular-velocity kick $\Delta\dot{\vartheta} \in \{0.0, +0.5, +2.2\}\text{ rad/s}$ at step $t = 45$ (just as the pendulum climbs toward the catch basin) separates the three controllers:
+:::
 
+::: {.col}
 @!optimal-control-mpc-comparison
+:::
+:::
 :::
 
 ::: {.slide title="Phase Portraits and Recovery from Strong Knocks"}
@@ -679,7 +693,7 @@ Applying an external angular-velocity kick $\Delta\dot{\vartheta} \in \{0.0, +0.
 
 Comparing the three panels below shows how local LQR, trajectory optimization, and receding-horizon re-planning fit together:
 
-![](../img/mdl-rl-optimal-control.svg){.nostretch width=95%}
+![](../img/mdl-rl-optimal-control.svg){.nostretch width=58%}
 
 - **Moderate knock ($\Delta\dot{\vartheta} = +0.5$):** Open-loop falls ($\vartheta_{120} = -2.94$), while both TV-LQR and MPC absorb the perturbation inside the linear tube ($\vartheta_{120} = 0.000$).
 - **Strong knock ($\Delta\dot{\vartheta} = +2.2$):** Arrests the upward climb; TV-LQR saturates its linear feedback around the old plan and fails ($\vartheta_{120} = +1.96$), whereas **MPC detects the miss, plans a fresh swing-up pump, and restores $\vartheta_{120} = 0.000$**.

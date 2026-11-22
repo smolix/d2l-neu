@@ -843,7 +843,7 @@ To prove that high classifier alignment and high precision can mask a collapse i
 @!conditional-a-prototype-baseline
 
 ::: {.d2l-note .warn}
-**The prototype paradox:** Selecting only the $100$ most canonical real images per class boosts **class alignment** to $0.90$ (beating random real images at $0.78$!) and **precision** to $0.98$, while collapsing **recall** from $0.83 \to 0.40$ and worsening **FD** sevenfold ($0.43 \to 3.03$). BigGAN's *truncation trick* deliberately exploits this trade-off by truncating $z \in [-\tau, \tau]$.
+**The prototype paradox:** Selecting only the $100$ most canonical real images per class boosts **class alignment** to $\approx 0.9$ (beating random real images at $\approx 0.8$!) and **precision** to $\approx 0.97$, while collapsing **recall** from $\approx 0.85 \to \approx 0.37$ and worsening **FD** sevenfold ($0.43 \to \approx 3$). BigGAN's *truncation trick* deliberately exploits this trade-off by truncating $z \in [-\tau, \tau]$.
 :::
 :::
 
@@ -854,13 +854,23 @@ Test your understanding of conditional GAN architectures and evaluation:
 
 1. **Comparing critic scores across classes:** After same-class RpGAN training on CIFAR-10, your projection critic has mean score $+4.2$ on real cats and $-1.5$ on real trucks. Does this mean the critic finds cats more realistic than trucks?
 2. **Effect of latent truncation ($\tau \downarrow$):** BigGAN's truncation trick samples each latent coordinate from a standard normal truncated to $[-\tau, \tau]$. As $\tau$ decreases from $\infty$ toward $0.5$, in which direction will class alignment, per-class precision, per-class recall, and FD move?
-3. **Using the critic as a post-hoc classifier:** Why must a shift-corrected optimal conditional critic $D^\star(x, c) = \log(p(x \mid c)/q(x \mid c))$ drop to random-guessing classification accuracy ($1/10$) as the generator converges ($q(\cdot \mid c) \to p(\cdot \mid c)$)?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. **No.** Because same-class pairing only ever evaluates differences $D(x, c) - D(x', c)$ within the same class $c$, adding an arbitrary per-class offset $\zeta_c$ leaves the objective unchanged. Scores across different classes are not on a shared scale.
 2. Truncating $z$ pulls generated samples toward the high-density centroid of each class, mimicking the **nearest-centroid prototype baseline**: **class alignment and precision increase**, while **per-class recall drops** and **FD worsens (increases)**.
+:::
+:::
+
+::: {.slide title="Concept Check: Conditional Critics and Metrics (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Using the critic as a post-hoc classifier:** Why must a shift-corrected optimal conditional critic $D^\star(x, c) = \log(p(x \mid c)/q(x \mid c))$ drop to random-guessing classification accuracy ($1/10$) as the generator converges ($q(\cdot \mid c) \to p(\cdot \mid c)$)?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. By Bayes' rule, $D^\star(x, c) - D^\star(x, c')$ $= \log \frac{p(c \mid x)}{p(c' \mid x)} - \log \frac{q(c \mid x)}{q(c' \mid x)}$. As $q(\cdot \mid c) \to p(\cdot \mid c)$, the generated posterior matches the true posterior and $D^\star(x, c) \to 0$ for every class $c$!
 :::
 :::

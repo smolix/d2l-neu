@@ -1053,10 +1053,8 @@ To test learned denoisers and samplers against exact ground truth, we use a thre
 :::
 :::
 
-::: {.slide title="Quantitative Yardsticks on the Three-Mode Mixture"}
+::: {.slide title="Quantitative Yardsticks on the Three-Mode Mixture" layout="tight"}
 [Evaluating 2D Samplers]{.kicker}
-
-Every 2D experiment in this chapter evaluates generated point sets against four ground-truth benchmarks on $2{,}000$ draws:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1066,7 +1064,9 @@ Every 2D experiment in this chapter evaluates generated point sets against four 
 - **Negative log-likelihood (`NLL`):** True mixture entropy is $\approx 2.47$ nats/point (a target to match, since collapsing onto mode centers artificially lowers NLL).
 :::
 
-::: {.col .fig}
+::: {.col}
+Every 2D experiment in this chapter evaluates generated point sets against four ground-truth benchmarks on $2{,}000$ draws:
+
 @!denoising-the-running-example-4
 :::
 :::
@@ -1224,7 +1224,7 @@ $$\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}}) = \begin{bmatrix
 :::
 :::
 
-::: {.slide title="The U-Curve of Score Estimation Error Across σ"}
+::: {.slide title="The U-Curve of Score Estimation Error Across σ" layout="tight"}
 [Empirical Bias–Variance Sweep]{.kicker}
 
 Training `TimeMLP` models across seven noise levels $\sigma \in [0.05, 1.0]$ and evaluating their Fisher divergence against the clean score $\nabla \log p$ reveals a classic U-curve:
@@ -1236,7 +1236,7 @@ Training `TimeMLP` models across seven noise levels $\sigma \in [0.05, 1.0]$ and
 - **Single-level sweet spot:** Error is minimized near $\sigma \approx s/3 \in [0.1, 0.2]$ (around $0.15$–$0.25$).
 :::
 
-::: {.col .fig}
+::: {.col}
 @!denoising-the-loss-floor-and-the-noise-level
 :::
 :::

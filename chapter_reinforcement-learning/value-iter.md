@@ -903,29 +903,41 @@ $$\|V_k - V^*\|_\infty \leq \frac{\gamma}{1 - \gamma}\,\|V_k - V_{k-1}\|_\infty$
 :::
 :::
 
-::: {.slide title="Calm vs. Slippery Optimal Values and Policies"}
+::: {.slide title="Calm vs. Slippery Optimal Values and Policies" layout="tight"}
 [Solving FrozenLake Exactly]{.kicker}
 
 Running value iteration on slippery FrozenLake answers the cell 9 question and reveals how drastically stochastic slips reshape optimal behavior:
 
-@!value-iter-value-iteration-2
-
+::: {.cols .vc}
+::: {.col}
 - **Safety wins at cell 9:** $Q^*(9, \textrm{down}) = 0.375$ beats $Q^*(9, \textrm{right}) = 0.289$; avoiding hole 5 is worth sliding sideways two times in three.
 - **Lower values everywhere:** Slips cut the start-state value $V^*(s_0)$ from $0.774$ to $0.180$, and even cell 14 adjacent to the goal drops from $1.000$ to $0.724$.
 :::
 
-::: {.slide title="Empirical Convergence vs. Stopping Rules"}
+::: {.col .fig}
+@!value-iter-value-iteration-2
+:::
+:::
+:::
+
+::: {.slide title="Empirical Convergence vs. Stopping Rules" layout="tight"}
 [Certifying Accuracy]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Comparing true distance $\|V_k - V^*\|_\infty$ against the a priori bound $\gamma^k e_0$ and the observable certificate highlights a common stopping pitfall:
-
-@!value-iter-value-iteration-3
 
 - **Stopping on raw change is premature:** Stopping when $\|V_k - V_{k-1}\|_\infty \leq 10^{-6}$ halts at sweep 128, where true error is still $1.1 \times 10^{-5}$ ($11\times$ above tolerance).
 - **Certificate reliability:** Waiting for $\frac{\gamma}{1-\gamma}\|V_k - V_{k-1}\|_\infty \leq 10^{-6}$ halts at sweep 164, just 6 sweeps after the true error crosses $10^{-6}$ at sweep 158.
 :::
 
-::: {.slide title="Policy Evaluation: Sweeps vs. Direct Linear Solve"}
+::: {.col}
+@!value-iter-value-iteration-3
+:::
+:::
+:::
+
+::: {.slide title="Policy Evaluation: Sweeps vs. Direct Linear Solve" layout="tight"}
 [Scoring a Fixed Policy]{.kicker}
 
 ::: {.cols .vc}
@@ -933,13 +945,19 @@ Comparing true distance $\|V_k - V^*\|_\infty$ against the a priori bound $\gamm
 - **Linear Bellman system:** Under a fixed policy $\pi$, $V^\pi = r_\pi + \gamma P_\pi V^\pi$ with $P_\pi(s' \mid s) = \sum_a \pi(a \mid s)P(s' \mid s, a)$.
 - **Exact matrix solve:** For $\gamma < 1$, $V^\pi = (I - \gamma P_\pi)^{-1}r_\pi$ yields the uniform policy's start value $V(s_0) = 0.0078$ in one $O(|\mathcal{S}|^3)$ solve.
 
-@value-iter-policy-evaluation-1
 :::
 
 ::: {.col .fig}
 @fig:ch14-rl-linear-solve
 :::
 :::
+:::
+
+::: {.slide title="Policy Evaluation: Sweeps vs. Direct Linear Solve (Code)" layout="tight"}
+[Scoring a Fixed Policy]{.kicker}
+
+@value-iter-policy-evaluation-1
+
 :::
 
 ::: {.slide title="Policy Improvement and Policy Iteration"}

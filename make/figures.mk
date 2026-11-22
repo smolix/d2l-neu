@@ -10,7 +10,9 @@
 # a generator's figures regenerate only when its own script — or the shared house
 # style it imports — changed. Generators are byte-idempotent (svg.hashsalt +
 # Date:None), so re-running a changed generator yields a clean `git diff img/`
-# unless the picture actually changed.
+# unless the picture actually changed. Afterwards tools/sync_auto_figures.py
+# copies each regenerated img/<id>.svg over its img/auto/<id>.svg (the copy
+# @fig slides read) and fails if any pair still differs.
 #
 # Coverage: every standalone chapter generator, INCLUDING the ch6/7/8/9 ones
 # (gen_bg_*, gen_arch_*, gen_opt_figures) that the old gen_mdl_*_figures.py glob
@@ -66,4 +68,6 @@ $(patsubst tools/%.py,.figstamps/%,$(wildcard tools/figstyle/remake_ch*.py)): \
 
 .PHONY: figures
 figures: $(FIGURE_STAMPS)
+	@python3 tools/sync_auto_figures.py
+	@python3 tools/sync_auto_figures.py --check
 	@echo "Figures up to date (only changed generators ran). Verify: git diff --stat img/"

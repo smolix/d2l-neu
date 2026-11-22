@@ -434,8 +434,11 @@ rules in CLAUDE.md ("Content authoring"):
 $EDITOR tools/gen_mdl_<chapter>_figures.py
 make figures                                   # re-runs changed generators only
 /opt/local/bin/rsvg-convert -z 2 img/mdl-<prefix>-<id>.svg -o /tmp/f.png   # look at it
-git add tools/gen_mdl_<chapter>_figures.py img/mdl-<prefix>-<id>.svg
+git add tools/gen_mdl_<chapter>_figures.py img/mdl-<prefix>-<id>.svg   # + img/auto/ twin if synced
 ```
+
+`make figures` also syncs `img/auto/<id>.svg` (the copy `@fig` slides read)
+from `img/<id>.svg` and fails if the two differ (`tools/sync_auto_figures.py`).
 
 Include it as `![caption](../img/<id>.svg)` plus `:label:`fig_...``.
 `make figures` uses `.venv-pytorch` and is never part of `all` or

@@ -647,9 +647,11 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 :::
 
 ::: {.col .fig}
-@!gd-local-minima
+@!gd-local-minima[out=2]
 :::
 :::
+
+@!gd-local-minima[out=1]
 :::
 
 ::: {.slide title="Progressive Sharpening and the Edge of Stability"}
@@ -671,18 +673,12 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 ::: {.slide title="At the Edge of Stability: Non-Monotonic Descent"}
 [Self-Stabilization at 2/η]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 - Across all $10$ random initializations:
   - Runs at $\eta = 0.4$ arrest at sharpness $\lambda_{\max} \approx 5.0 = 2/0.4$.
   - Runs at $\eta = 0.25$ climb higher and arrest at $\lambda_{\max} \approx 8.0 = 2/0.25$.
 - **Why doesn't the run diverge?** Once $\lambda_{\max}$ momentarily exceeds $2/\eta$, growing oscillation along the sharpest eigenvector ($1 - \eta\lambda_{\max} \approx -1$, causing loss to rise on $\sim 50\%$ of steps) couples with third derivatives of the loss to push the iterate toward flatter regions (Damian et al., 2023).
-:::
 
-::: {.col .fig}
 @!optimization-intro-the-edge-of-stability-2
-:::
-:::
 :::
 
 ::: {.slide title="Newton's Method and Why Exact Hessian Inversion Fails"}
@@ -712,10 +708,12 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 - **Diagonal preconditioning ($\mathbf{P} = \operatorname{diag}(\mathbf{H})$):**
   $$x_i \leftarrow x_i - \eta\,\frac{\partial_i f(\mathbf{x})}{H_{ii}}$$
 - On our axis-aligned valley ($\operatorname{diag}(\mathbf{H}) = (0.2, 4)$), both coordinates contract by $1 - \eta$, collapsing $\kappa = 20 \to 1$ and reaching $1\%$ error in **$7$ steps** at $\eta = 0.5$ ($0.5^7 \approx 0.0078$) instead of $47$!
+
+@!gd-preconditioning[out=1]
 :::
 
 ::: {.col .fig .narrow}
-@!gd-preconditioning
+@!gd-preconditioning[out=2]
 :::
 :::
 :::

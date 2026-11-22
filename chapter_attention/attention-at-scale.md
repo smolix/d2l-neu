@@ -664,9 +664,17 @@ Measuring peak scratch memory (`d2l.peak_memory`) and wall-clock execution time 
 ::: {.slide title="Implementing Chunked Causal Attention"}
 [Code Implementation]{.kicker}
 
-`chunked_attention` steps through key–value blocks of width `chunk_size=512`, initializing `m` and masking future keys with `finfo(dtype).min` so fully masked future blocks never trigger $-\infty - (-\infty) = \mathrm{NaN}$:
+The reference `causal_attention` materializes the full $n \times n$ score matrix; it is the baseline every faster kernel must match:
 
-@attention-at-scale-a-chunked-implementation-1
+@-attention-at-scale-a-chunked-implementation-1[1-6]
+:::
+
+::: {.slide title="Implementing Chunked Causal Attention (cont.)"}
+[Code Implementation]{.kicker}
+
+Masking with `finfo(dtype).min`, not $-\infty$, keeps fully masked blocks free of $-\infty - (-\infty) = \mathrm{NaN}$:
+
+@-attention-at-scale-a-chunked-implementation-1[8-]
 :::
 
 ::: {.slide title="Verifying Exactness and Linear Memory Growth"}
@@ -736,12 +744,28 @@ Measuring peak scratch memory (`d2l.peak_memory`) and wall-clock execution time 
 :::
 :::
 
-::: {.slide title="Benchmarking Fused FlashAttention vs. Naive Attention"}
+::: {.slide title="Benchmarking Fused FlashAttention vs. Naive Attention" except="jax"}
 [Code & Wall-Clock Speedup]{.kicker}
 
 We benchmark `causal_attention` against the framework's fused FlashAttention kernel on $B = 2$ sequences, $H = 8$ heads, $d_h = 64$, and $n = 8{,}192$ in `float16`:
 
 @attention-at-scale-the-bottleneck-is-memory-traffic
+:::
+
+::: {.slide title="Benchmarking Fused FlashAttention vs. Naive Attention" only="jax"}
+[Code & Wall-Clock Speedup]{.kicker}
+
+We benchmark `causal_attention` against the framework's fused FlashAttention kernel. The fused cuDNN kernel expects (batch, length, heads, width), so the wrapper swaps axes on the way in and out:
+
+@-attention-at-scale-the-bottleneck-is-memory-traffic[1-7]
+:::
+
+::: {.slide title="Benchmarking Fused FlashAttention vs. Naive Attention (cont.)" only="jax"}
+[Code & Wall-Clock Speedup]{.kicker}
+
+Timing all three on $B = 2$ sequences, $H = 8$ heads, $d_h = 64$, and $n = 8{,}192$ in `float16`:
+
+@attention-at-scale-the-bottleneck-is-memory-traffic[9-]
 :::
 
 ::: {.slide title="Analyzing the Fused Kernel Speedup and Causal Skipping"}
@@ -777,8 +801,12 @@ Work through these three systems and algorithmic questions:
 1. **Log-Sum-Exp Backward Reconstruction:** After the final block of online softmax produces $(m, s, \mathbf{o})$, how can the backward pass recover the exact softmax weight $\alpha_j$ of key $j$ from its score $a_j$ and the single stored scalar $\ell = m + \log s$?
 2. **Float16 Overflow Without Running Max:** In `float16` (max finite value $65{,}504 \approx e^{11.09}$), what happens if you accumulate raw $\sum_j e^{a_j}$ without subtracting the running maximum $m$ when a scaled score reaches $a_j = 12$?
 3. **Tile Size vs. Head Width:** Using FlashAttention's HBM traffic bound $\Theta(n^2 d_h^2 / M)$ for on-chip SRAM size $M$, how does doubling the head width from $d_h = 64$ to $d_h = 128$ (at fixed total width $d$) affect the maximum tile size $b$ and HBM traffic?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Online Softmax and Memory Traffic (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **$\alpha_j = \exp(a_j - \ell)$**, because $\exp(a_j - m - \log s) = \exp(a_j - m) / s = \alpha_j$, requiring only $1$ float per query instead of $(m, s)$ or all $n$ weights!

@@ -631,7 +631,7 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 ::: {.slide title="Implementing Muon from Scratch"}
 [Code Implementation]{.kicker}
 
-Notice that `Muon` requires only **one momentum buffer (`buf`) per parameter**—half the optimizer state memory of AdamW:
+`Muon` keeps **one momentum buffer (`buf`) per parameter**, half of AdamW's optimizer state:
 
 @-muon-the-update
 :::
@@ -664,9 +664,11 @@ Notice that `Muon` requires only **one momentum buffer (`buf`) per parameter**�
 :::
 
 ::: {.col .fig}
-@!muon-the-race-on-the-language-model-3
+@!muon-the-race-on-the-language-model-3[out=2]
 :::
 :::
+
+@!muon-the-race-on-the-language-model-3[out=1]
 :::
 
 ::: {.slide title="High-Rate Stability: Muon+AdamW Trains at 3× Higher LR"}
@@ -713,8 +715,12 @@ Work out the exact numerical answer for each Muon design question:
 1. **Entrywise RMS matching:** For `TinyLM`'s first MLP matrix $\mathbf{W} \in \mathbb{R}^{512 \times 128}$, what is the Frobenius norm and entrywise RMS of an exact orthogonal matrix $\mathbf{U}\mathbf{V}^\top \in \mathbb{R}^{512 \times 128}$, and what does the multiplier $0.2\sqrt{\max(512, 128)}$ turn that entrywise RMS into?
 2. **Why embeddings stay with AdamW:** Suppose a minibatch contains token $A$ $500$ times and token $B$ once, so the embedding gradient matrix $\mathbf{G}$ has two nonzero rows $\mathbf{g}_A \perp \mathbf{g}_B$ with $\|\mathbf{g}_A\|_2 = 500\,\|\mathbf{g}_B\|_2$. What does exact orthogonalization $\mathbf{U}\mathbf{V}^\top$ do to those two rows, and what does AdamW do instead?
 3. **3-step vs. 5-step Newton–Schulz reach:** Given initial quintic slope $p'(0) = 3.4445$, how large must a normalized singular value $\sigma / \|\mathbf{G}\|_F$ be to reach $0.68$ in $3$ iterations versus $5$ iterations?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Spectral Norm, Quintic, and RMS Scale (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. $\mathbf{U}\mathbf{V}^\top$ has $\min(512, 128) = 128$ unit singular values, so $\|\mathbf{U}\mathbf{V}^\top\|_F = \sqrt{128}$ across $512 \times 128 = 65{,}536$ entries, giving entry RMS $\sqrt{\frac{128}{512 \times 128}} = \frac{1}{\sqrt{512}} \approx 0.0442$. Multiplying by $0.2\sqrt{512} \approx 4.525$ yields an exact entrywise RMS of **$0.2$**.

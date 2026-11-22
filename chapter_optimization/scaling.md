@@ -628,18 +628,12 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 ::: {.slide title="Quantifying the Transfer Penalty: SP vs. μP"}
 [Cost of Proxy-to-Target Transfer]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 - How much loss do we pay at width $8{,}192$ when we use the learning rate tuned on the $1{,}000\times$ smaller width-$128$ proxy instead of retuning at width $8{,}192$?
   - **Under SP:** Loses **$0.09\text{--}0.15$ nats** ($0.343$ vs. $0.228$), worse than the narrow width-$128$ proxy itself!
   - **Under $\mu\text{P}$:** Loses **$\le 0.003$ nats** ($0.228\text{--}0.231$), completely indistinguishable from seed noise!
 - Notice also that under $\mu\text{P}$, narrower proxy networks rise sooner on the right of $\eta^\star$ (where step size $\eta/m$ reaches initial weight size $1/\sqrt{n}$ at $\eta = \sqrt{n}/n_{\text{base}}$), so a rate stable on the narrow proxy is guaranteed to be stable on the wide target!
-:::
 
-::: {.col .fig}
 @!scaling-learning-rate-transfer-1
-:::
-:::
 :::
 
 ::: {.slide title="Extending μP to Transformers: The 1/d_k Attention Rule"}

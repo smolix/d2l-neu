@@ -841,14 +841,20 @@ Evaluating our trained 4-block byte-level `MaskedLM` across window positions $t 
 ::: {.col}
 - Masking individual bytes in `'Homarus gammarus , known as the European lobster'` shows how bidirectional attention fuses left and right spelling constraints:
 - At position 28 (`known as _he European`), the encoder assigns $96\text{--}97\%$ probability to `'t'`; at position 22 (`kno_n as`), it assigns $47\text{--}66\%$ to `'w'`.
-
-@encoders-decoders-what-the-second-side-is-worth-2
 :::
 
 ::: {.col .fig}
 @fig:ch11-tf-enc-bathtub-curve
 :::
 :::
+:::
+
+::: {.slide title="How Right-Hand Context Resolves Ambiguous Gaps (cont.)"}
+[Qualitative Probing]{.kicker}
+
+The probe masks one byte at a time and prints the encoder's top three guesses for it:
+
+@encoders-decoders-what-the-second-side-is-worth-2
 :::
 
 ::: {.slide title="Sequence-to-Sequence Alignment: String Reversal"}
@@ -858,14 +864,20 @@ Evaluating our trained 4-block byte-level `MaskedLM` across window positions $t 
 ::: {.col}
 - **Teacher-forced decoder input (`dec_in`):** Prepends `<bos>` (`id = 16`) and shifts the reversed target right by one slot: `dec_in` $= (\texttt{<bos>}, x_T, \dots, x_2)$ predicts `tgt` $= (x_T, \dots, x_1)$.
 - **Exact ground-truth alignment:** To emit target position $t$, the decoder must retrieve source token $x_{T - 1 - t}$ along the **anti-diagonal** $(t, T - 1 - t)$.
-
-@encoders-decoders-a-task-whose-alignment-we-know
 :::
 
 ::: {.col .fig}
 @fig:ch11-tf-enc-string-reversal
 :::
 :::
+:::
+
+::: {.slide title="Sequence-to-Sequence Alignment: String Reversal (cont.)"}
+[Encoder–Decoder Benchmark]{.kicker}
+
+Sampling a batch builds the source, its reversal as target, and the shifted decoder input:
+
+@encoders-decoders-a-task-whose-alignment-we-know
 :::
 
 ::: {.slide title="The Decoder Block: Adding a Cross-Attention Sublayer"}

@@ -1147,7 +1147,7 @@ Dense GPU matrix multiplication evaluates all $n \times m$ query–key pairs at 
 ::: {.slide title="The DotProductAttention Module"}
 [Module Implementation]{.kicker}
 
-Operating over the last two axes allows `DotProductAttention` to carry arbitrary leading batch and head dimensions automatically:
+Working on the last two axes, `DotProductAttention` carries any leading batch and head axes along:
 
 @attention-scoring-the-dotproductattention-class-1
 :::
@@ -1186,17 +1186,17 @@ Always verify custom attention and masking modules on small inputs with known cl
 
 Can gradient descent discover a word reordering from output supervision alone? In `ToyAligner`, output position $j$ must copy source token $\pi(j)$ where $\pi = (0, 1, 2, 4, 3, 5, 6, 7)$ swaps positions $3$ and $4$:
 
-::: {.cols .vc}
-::: {.col}
 - **Model Architecture:** Each output position $j$ holds a trainable query $\mathbf{q}_j \in \mathbb{R}^{16}$.
 - **Position-Aware Keys:** Source position $i$ concatenates its one-hot token ($16\text{D}$) and one-hot position ($8\text{D}$) before multiplying by $\mathbf{W}_k \in \mathbb{R}^{24 \times 16}$.
 - **Values:** One-hot source tokens, so the attention output directly gives the predicted token distribution.
 :::
 
-::: {.col .fig}
+::: {.slide title="Learning Sequence Alignments End to End (cont.)"}
+[Learned Alignment]{.kicker}
+
+`ToyAligner` builds the position-aware keys and lets `DotProductAttention` read out the one-hot values:
+
 @attention-scoring-attention-as-learned-alignment-1
-:::
-:::
 :::
 
 ::: {.slide title="Emergence of the Permutation Matrix in ToyAligner"}

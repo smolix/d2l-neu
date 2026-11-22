@@ -1151,11 +1151,11 @@ Attention Circuits: The Residual Stream, QK/OV Decomposition, and Induction Head
 ::: {.slide title="Synthetic Benchmark: Repeated Random Token Patterns"}
 [Isolating In-Context Retrieval]{.kicker}
 
-To test whether gradient descent discovers this two-layer induction circuit, we generate synthetic sequences that tile a random pattern of length $L \in [L_{\min}, L_{\max}]$ drawn uniformly from a vocabulary of $64$ tokens:
+Does gradient descent find this circuit? Each sequence tiles a random pattern of length $L \in [L_{\min}, L_{\max}]$ over $64$ tokens:
 
 @-what-attention-computes-repetition-as-a-task-1
 
-- **Unpredictable First Copy ($t < L$):** Because every pattern is sampled freshly per sequence, no token in the first period can be predicted better than uniform chance (cross-entropy $\log 64 \approx 4.16\text{ nats}$, accuracy $1/64 \approx 1.6\%$).
+- **Unpredictable First Copy ($t < L$):** Each pattern is fresh, so the first period stays at chance (cross-entropy $\log 64 \approx 4.16\text{ nats}$, accuracy $1/64 \approx 1.6\%$).
 - **Deterministic Later Copies ($t \ge L$):** Once the pattern repeats, every token can be predicted with $100\%$ accuracy by looking up the earlier occurrence in context.
 :::
 
@@ -1248,10 +1248,12 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 ::: {.col}
 - **Subtlety 1 (Stream vs. Embeddings):** Block 2's OV matrix copies almost perfectly ($0.97$–$1.00$ diagonal share) on the Block-1 stream $\bar{\mathbf{h}}_a$, but much more weakly ($0.38$–$0.89$) on raw embeddings $\mathbf{e}_a$—Block 2 also reads features transformed by Block 1's OV circuits (**V-composition**)!
 - **Subtlety 2 (Copying $\neq$ Retrieval):** The 1-block model *also* has a $1.00$ diagonal OV copy matrix, yet gets only $10\%$ accuracy because its QK circuit cannot locate the target!
+
+@!what-attention-computes-the-circuit-is-in-the-weights[out=1]
 :::
 
 ::: {.col .fig .narrow}
-@!what-attention-computes-the-circuit-is-in-the-weights
+@!what-attention-computes-the-circuit-is-in-the-weights[out=2]
 :::
 :::
 :::

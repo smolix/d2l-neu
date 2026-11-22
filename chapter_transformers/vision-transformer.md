@@ -597,7 +597,7 @@ Transformers for Vision (ViT)<br>**patches as tokens · strided conv stem · `<c
 ::: {.slide title="Implementing and Verifying PatchEmbedding"}
 [Stem Implementation]{.kicker}
 
-`PatchEmbedding` verifies that `patch_size` tiles `img_size` evenly (`96 % 16 == 0`) so partial border pixels are never silently dropped, turning a batch of four $96 \times 96$ images into shape `(4, 36, 512)`:
+`PatchEmbedding` checks `96 % 16 == 0` and maps four $96 \times 96$ images to `(4, 36, 512)`:
 
 @vision-transformer-patches-as-tokens-1
 :::
@@ -786,8 +786,12 @@ Work through these three quantitative questions:
 1. **Halving the patch size:** In our $96 \times 96$ `ViT` ($d = 512, L = 2$), suppose we halve the patch size from $p = 16$ to $p = 8$. What happens to (a) the number of patch tokens $m$, (b) the parameter count of the $L$ `ViTBlock` layers, and (c) the forward FLOPs per image?
 2. **ImageNet token count:** How many patch tokens $m$ and per-head attention scores $m^2$ does a $224 \times 224$ ImageNet image produce at $p = 16$ versus $p = 8$?
 3. **Zeroed positional embeddings:** If you set `model.pos_embedding.zero_()` at test time and evaluate `shuffled_accuracy(model, data, perm)` across 5 different random permutations `perm`, how much will the 5 accuracies differ from each other?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Patch Sizing, FLOPs, and Invariance (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. (a) Patch tokens quadruple: **$m = 36 \to 144$** ($12 \times 12$ grid). (b) `ViTBlock` parameter count ($12 L d^2$) is **completely unchanged** (and total parameters drop by $<1\%$ as the $16 \times 16$ conv stem shrinks to $8 \times 8$). (c) Forward FLOPs **quadruple** ($0.48 \to 1.92\text{ GFLOPs}$)!

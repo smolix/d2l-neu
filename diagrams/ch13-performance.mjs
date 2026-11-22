@@ -442,16 +442,16 @@ function decodeBottleneck() {
 
 function hockneyTransfer() {
   const W = 560, H = 276;
-  let o = header(W, 'Hockney Block-Transfer Law & Half-Bandwidth Size n_1/2 = α·β');
-  o += card(20, 40, 250, 144, D.red.tint, D.red.base, 'Random Transfers (n ≪ n_1/2)', [
+  let o = header(W, 'Hockney Block-Transfer Law & Half-Bandwidth Size n_{1/2} = α·β');
+  o += card(20, 40, 250, 144, D.red.tint, D.red.base, 'Random Transfers (n ≪ n_{1/2})', [
     { t: 't(n) = α + n/β ≈ α', mono: true, fill: D.red.dark, fw: 700 },
     'Dominated by start-up latency α',
     '4 KB NVMe read (α=70µs):',
     { t: 'β_eff ≈ 0.06 GB/s (< 0.5% peak)', mono: true, fill: D.red.dark },
   ], D.red.dark);
-  o += card(290, 40, 250, 144, C.lgreen, C.green, 'Contiguous Shards (n ≥ n_1/2)', [
-    { t: 'n_1/2 = α · β  (reaches ½ β)', mono: true, fill: D.green.dark, fw: 700 },
-    'NVMe (70µs × 14 GB/s): n_1/2 ≈ 1 MB',
+  o += card(290, 40, 250, 144, C.lgreen, C.green, 'Contiguous Shards (n ≥ n_{1/2})', [
+    { t: 'n_{1/2} = α · β  (reaches ½ β)', mono: true, fill: D.green.dark, fw: 700 },
+    'NVMe (70µs × 14 GB/s): n_{1/2} ≈ 1 MB',
     'Multi-MB contiguous shards:',
     { t: 'Streams near full 14 GB/s!', mono: true, fill: D.green.dark },
   ], D.green.dark);
@@ -672,7 +672,7 @@ function mixedPrecisionFlow() {
     'Prevents underflow',
   ], D.orange.dark);
   o += footerBox(20, 204, 520, 62, D.purple.tint, C.purple, [
-    { t: 'Why bf16 Needs No Loss Scaling: Same 8-Bit Exponent Range as fp32 (~10^±38)', fill: D.purple.dark, fw: 700 },
+    { t: 'Why bf16 Needs No Loss Scaling: Same 8-Bit Exponent Range as fp32 (~10^{±38})', fill: D.purple.dark, fw: 700 },
     { t: 'Net effect: 1.5–1.75× faster step; capacity grows ~15–25% (+2N weights offset act savings).', fill: C.ink },
   ]);
   return svg(W, H, o);

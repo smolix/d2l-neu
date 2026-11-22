@@ -185,7 +185,7 @@ function blkPostVsPreEq() {
   o += card(284, 20, 236, 116, C.lgreen, C.green, 'Pre-Norm (Modern LLMs)', 'H = X + Attn(Norm₁(X))', 'Y = H + FFN(Norm₂(H))', D.green.dark, 14.5, 12.5);
 
   o += card(20, 156, 236, 92, '#FFFFFF', D.red.base, 'Norm Sits on Main Stream', 'Divides residual sum at every step', 'Attenuates early gradients by r^(2L)', D.red.dark, 13.5, 11.5);
-  o += card(284, 156, 236, 92, C.lblue, C.blue, 'Uninterrupted Identity Highway', 'Norm sits only on branch inputs', '∂X^(L)/∂X^(ℓ) = I + … (flat grads!)', D.blue.dark, 13.5, 11.5);
+  o += card(284, 156, 236, 92, C.lblue, C.blue, 'Uninterrupted Identity Highway', 'Norm sits only on branch inputs', '∂X^{(L)}/∂X^{(ℓ)} = I + … (flat grads!)', D.blue.dark, 13.5, 11.5);
   return svg(W, H, o);
 }
 
@@ -221,12 +221,12 @@ function blkWidthPitfall() {
 function blkUnrolledHighway() {
   const W = 540, H = 270;
   let o = '';
-  o += card(20, 20, 500, 62, C.lblue, C.blue, 'Unrolled Pre-Norm Residual Stream Across L Blocks (2L Sublayers)', 'X^(L) = X^(0) + ∑_(ℓ=1)^L [ Attn_ℓ(Norm(X^(ℓ−1))) + FFN_ℓ(Norm(H^(ℓ))) ]', null, D.blue.dark, 14, 12.5);
+  o += card(20, 20, 500, 62, C.lblue, C.blue, 'Unrolled Pre-Norm Residual Stream Across L Blocks (2L Sublayers)', 'X^{(L)} = X^{(0)} + ∑_{ℓ=1}^{L} [ Attn_{ℓ}(Norm(X^{(ℓ−1)})) + FFN_{ℓ}(Norm(H^{(ℓ)})) ]', null, D.blue.dark, 14, 12.5);
 
   o += card(20, 102, 236, 146, D.red.tint, D.red.base, 'Without Depth Scaling', '2L branches each add variance σ²', 'Stream RMS grows as √(1 + 2L σ²)', D.red.dark, 14, 12,
     [{ t: 'At L = 32: stream RMS ≈ 5.0', mono: true, fw: 700, fill: D.red.dark }]);
 
-  o += card(284, 102, 236, 146, C.lgreen, C.green, 'With 1/√(2L) Scaling (GPT-2)', 'Scale W_o and W_2 init std by 1/√(2L)', 'Total added var: ∑_(m=1)^(2L) σ²/(2L) = σ²', D.green.dark, 14, 12,
+  o += card(284, 102, 236, 146, C.lgreen, C.green, 'With 1/√(2L) Scaling (GPT-2)', 'Scale W_o and W_2 init std by 1/√(2L)', 'Total added var: ∑_{m=1}^{2L} σ²/(2L) = σ²', D.green.dark, 14, 12,
     [{ t: 'Stream RMS stays O(1) at any L!', mono: true, fw: 700, fill: D.green.dark }]);
   return svg(W, H, o);
 }
@@ -265,7 +265,7 @@ function blkGeluVsSwiglu() {
   o += card(20, 20, 236, 120, C.lblue, C.blue, '2-Matrix GELU MLP', 'GELU(x W₁) W₂', 'Width d_ff = 4d  →  2 · d · 4d = 8d²', D.blue.dark, 14.5, 12);
   o += card(284, 20, 236, 120, C.lgreen, C.green, '3-Matrix Gated SwiGLU', '(SiLU(x W_g) ⊙ (x W₁)) W₂', 'Width d_ff = (8/3)d  →  3 · d · (8/3)d = 8d²', D.green.dark, 14.5, 11.5);
 
-  o += card(20, 160, 500, 88, C.lamber, C.amber, 'Matched Parameter & FLOP Budget, Richer Bilinear Channel Interactions', 'At d = 256: GELU uses 2 × 256 × 1024 = 524,288 params; SwiGLU uses 3 × 256 × 683 = 524,544.', 'Multiplicative gating (SiLU(xW_g) ⊙ xW₁) beats GELU by ~0.06 nats/byte at identical cost!', D.orange.dark, 13.5, 12);
+  o += card(20, 160, 500, 88, C.lamber, C.amber, 'Matched Parameter & FLOP Budget, Richer Bilinear Channel Interactions', 'At d = 256: GELU uses 2 × 256 × 1024 = 524,288 params; SwiGLU uses 3 × 256 × 683 = 524,544.', 'Multiplicative gating (SiLU(x W_g) ⊙ x W₁) beats GELU by ~0.06 nats/byte at identical cost!', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -283,7 +283,7 @@ function gptParallelPrefixes() {
   o += arrow(260, 90, 280, 90, C.green);
   o += card(284, 42, 236, 96, C.lgreen, C.green, 'Shifted Targets Y = X[:, 1:T+1]', 'x₂,  x₃,  x₄,  …,  x_(T+1)', '100% of tokens supervised!', D.green.dark, 14, 12.5);
 
-  o += card(20, 154, 500, 98, D.purple.tint, C.purple, 'Chain-Rule Factorization:  log P(x_(1:T+1)) = ∑_(t=1)^T log P(x_(t+1) | x_(1:t))', 'Row t of logits Z_t depends ONLY on prefix x_(1:t) because upper-triangular scores are −∞.', 'At step 0 (random weights), uniform p ≈ 1/V gives initial loss ln(256) ≈ 5.55 nats/byte.', D.purple.dark, 13.5, 12);
+  o += card(20, 154, 500, 98, D.purple.tint, C.purple, 'Chain-Rule Factorization:  log P(x_(1:T+1)) = ∑_{t=1}^{T} log P(x_(t+1) | x_(1:t))', 'Row t of logits Z_t depends ONLY on prefix x_(1:t) because upper-triangular scores are −∞.', 'At step 0 (random weights), uniform p ≈ 1/V gives initial loss ln(256) ≈ 5.55 nats/byte.', D.purple.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -291,13 +291,13 @@ function gptParallelPrefixes() {
 function gptFusedQkvGqa() {
   const W = 540, H = 268;
   let o = '';
-  o += card(20, 24, 140, 96, N.panel, C.gray, 'Normed Stream', 'X ∈ ℝ^(B × T × d)', 'single GEMM W_qkv', C.ink, 14, 12);
+  o += card(20, 24, 140, 96, N.panel, C.gray, 'Normed Stream', 'X ∈ ℝ^{B×T×d}', 'single GEMM W\\_qkv', C.ink, 14, 12);
   o += arrow(164, 72, 188, 72, C.blue);
   o += card(192, 18, 164, 108, C.lblue, C.blue, 'Split & RoPE Rotate', 'Q: H heads (d)', 'K, V: H_kv heads (2 H_kv d_h)', D.blue.dark, 13.5, 11.5);
   o += arrow(360, 72, 384, 72, C.green);
   o += card(388, 24, 132, 96, C.lgreen, C.green, 'Causal SDPA', 'is_causal = True', 'grouped KV heads', D.green.dark, 13.5, 12);
 
-  o += card(20, 148, 500, 100, C.lamber, C.amber, 'Fused Projection Size:  d × (d + 2 H_kv d_h)', 'When H_kv = H (standard MHA): W_qkv has shape (d, 3d) → 3d² parameters.', 'When H_kv = H / G (GQA): each KV head is shared across G query heads, shrinking KV cache by G×!', D.orange.dark, 13.5, 12);
+  o += card(20, 148, 500, 100, C.lamber, C.amber, 'Fused Projection Size:  d × (d + 2 H_kv d_h)', 'When H_kv = H (standard MHA): W\\_qkv has shape (d, 3d) → 3d² parameters.', 'When H_kv = H / G (GQA): each KV head is shared across G query heads, shrinking KV cache by G×!', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -335,7 +335,7 @@ function gptSamplingPipeline() {
   const W = 540, H = 268;
   let o = '';
   const stages = [
-    { x: 18,  w: 114, fill: C.lblue, st: C.blue, dk: D.blue.dark, t: '1. Last Logits', l1: 'z_t = model(X)', l2: 'row −1 ∈ ℝ^V' },
+    { x: 18,  w: 114, fill: C.lblue, st: C.blue, dk: D.blue.dark, t: '1. Last Logits', l1: 'z_t = model(X)', l2: 'row −1 ∈ ℝ^{V}' },
     { x: 148, w: 114, fill: C.lamber, st: C.amber, dk: D.orange.dark, t: '2. Temperature', l1: 'z_t ← z_t / τ', l2: 'τ<1 sharpens' },
     { x: 278, w: 114, fill: D.purple.tint, st: C.purple, dk: D.purple.dark, t: '3. Top-k Mask', l1: 'keep top k logits', l2: 'rest ← −∞' },
     { x: 408, w: 114, fill: C.lgreen, st: C.green, dk: D.green.dark, t: '4. Sample', l1: 'p = softmax(z_t)', l2: 'sample v ~ p' },
@@ -356,7 +356,7 @@ function gptCheckpointMap() {
   o += tx(270, 20, 'Mapping OpenAI GPT-2 Small (124.4M) safetensors to d2l.GPT', { fs: 14.5, fw: 700, fill: C.ink });
 
   o += card(20, 42, 236, 98, C.lblue, C.blue, 'Embeddings & Final Norm', 'wte (50257×768) → token_emb', 'wpe (1024×768) → pos_emb · ln_f → norm', D.blue.dark, 13.5, 11.5);
-  o += card(284, 42, 236, 98, C.lgreen, C.green, '12 × TransformerBlock (h.0…11)', 'ln_1, ln_2 → norm1, norm2', 'c_attn, c_proj → W_qkv, W_o · mlp → W_1, W_2', D.green.dark, 13.5, 11.5);
+  o += card(284, 42, 236, 98, C.lgreen, C.green, '12 × TransformerBlock (h.0…11)', 'ln_1, ln_2 → norm1, norm2', 'c\\_attn, c\\_proj → W\\_qkv, W\\_o · mlp → W\\_1, W\\_2', D.green.dark, 13.5, 11.5);
 
   o += card(20, 160, 500, 94, D.red.tint, D.red.base, 'Layout Check: GPT-2 Stores Its Conv1D Weights as (in, out)', 'A dense layer that stores (out, in) must transpose every 2D Conv1D weight (W.T);', 'one that stores (in, out) copies the Conv1D weights directly, without a transpose.', D.red.dark, 13, 12);
   return svg(W, H, o);
@@ -434,7 +434,7 @@ function kvThreeAxes() {
   o += card(20, y, cw, ch, C.lblue, C.blue, 'Axis 1: Heads H_kv', 'GQA & MQA', 'H_kv = H / G (4–8×)', D.blue.dark, 14, 12,
     [{ t: 'Uptrain in 5–10% steps', fill: D.blue.dark }]);
 
-  o += card(193, y, cw, ch, C.lgreen, C.green, 'Axis 2: Width 2H_kv d_h', 'Low-Rank SVD / MLA', '2d → r (6–16× smaller)', D.green.dark, 14, 12,
+  o += card(193, y, cw, ch, C.lgreen, C.green, 'Axis 2: Width 2H_{kv} d_h', 'Low-Rank SVD / MLA', '2d → r (6–16× smaller)', D.green.dark, 14, 12,
     [{ t: 'Absorb B_k, B_v in W_q, W_o', fill: D.green.dark }]);
 
   o += card(366, y, cw, ch, C.lamber, C.amber, 'Axis 3: Length n', 'Window w + s Sinks', 'n → w + s (constant!)', D.orange.dark, 14, 12,
@@ -448,7 +448,7 @@ function kvMlaAbsorption() {
   let o = '';
   o += tx(270, 20, 'Low-Rank KV Compression & Multi-Head Latent Attention (MLA)', { fs: 14.5, fw: 700, fill: C.ink });
 
-  o += card(20, 42, 236, 100, C.lblue, C.blue, '1. Compress Token to Latent c_t', 'c_t = x_t W_DKV ∈ ℝ^r  (r ≪ 2d)', 'Cache stores ONLY c_t (16× smaller!)', D.blue.dark, 13.5, 12);
+  o += card(20, 42, 236, 100, C.lblue, C.blue, '1. Compress Token to Latent c_t', 'c_t = x_t W_DKV ∈ ℝʳ (r ≪ 2d)', 'Cache stores ONLY c_t (16× smaller!)', D.blue.dark, 13.5, 12);
   o += arrow(260, 92, 280, 92, C.green);
   o += card(284, 42, 236, 100, C.lgreen, C.green, '2. Matrix Absorption at Decode', 'q_t k_jᵀ = (x_t W_q B_kᵀ) c_jᵀ', 'Absorb B_kᵀ into W_q & B_v into W_o!', D.green.dark, 13.5, 12);
 
@@ -492,7 +492,7 @@ function encMultihopLeakage() {
   let o = '';
   o += tx(270, 20, 'Why an Unmasked Multi-Layer Encoder Cannot Train on Next-Token Loss', { fs: 14, fw: 700, fill: D.red.dark });
 
-  o += card(20, 44, 236, 104, D.red.tint, D.red.base, 'Layer 1 Direct Leakage', 'Position t attends to key t + 1', 'Copies target x_(t+1) directly into h_t^(1)!', D.red.dark, 13.5, 12);
+  o += card(20, 44, 236, 104, D.red.tint, D.red.base, 'Layer 1 Direct Leakage', 'Position t attends to key t + 1', 'Copies target x_(t+1) directly into h_t^{(1)}!', D.red.dark, 13.5, 12);
   o += card(284, 44, 236, 104, C.lamber, C.amber, 'Layer 2 Multi-Hop Leakage', 'Position t attends to key t + 2 (or t − 1)', 'which already read x_(t+1) in Layer 1!', D.orange.dark, 13.5, 12);
 
   o += card(20, 168, 500, 82, C.lgreen, C.green, 'The MLM Rule (BERT): Remove Target Tokens from the Input Before Layer 1', 'Replace 15% of positions i ∈ M with <mask> (ID 256) and set unmasked labels to −100', 'so the network must reconstruct xᵢ purely from surrounding context!', D.green.dark, 13.5, 12);
@@ -603,7 +603,7 @@ function vitStridedConvStem() {
   o += arrow(352, 79, 378, 79, C.green);
   o += card(382, 30, 138, 98, C.lgreen, C.green, 'Flatten the Grid', '6 × 6 → 36 tokens', 'shape (B, 36, 512)', D.green.dark, 13.5, 12);
 
-  o += card(20, 158, 500, 88, C.lamber, C.amber, 'Why Strided Convolution Equals Patch Slicing + Linear Projection W_E ∈ ℝ^(Cp² × d)', 'Each of the d = 512 conv filters has weights of shape (C, 16, 16) = 256C parameters,', 'computing the exact inner product of each 16 × 16 patch with one column of W_E in 1 fused kernel!', D.orange.dark, 13, 12);
+  o += card(20, 158, 500, 88, C.lamber, C.amber, 'Why Strided Convolution Equals Patch Slicing + Linear Projection W_E ∈ ℝ^{Cp²×d}', 'Each of the d = 512 conv filters has weights of shape (C, 16, 16) = 256C parameters,', 'computing the exact inner product of each 16 × 16 patch with one column of W_E in 1 fused kernel!', D.orange.dark, 13, 12);
   return svg(W, H, o);
 }
 
@@ -613,7 +613,7 @@ function vit2dPosSchemes() {
   let o = '';
   o += tx(270, 20, 'Three Ways to Inject 2D Grid Coordinates (r, c) into Patch Tokens', { fs: 14.5, fw: 700, fill: C.ink });
   const cw = 154, y = 42, ch = 132;
-  o += card(20, y, cw, ch, C.lblue, C.blue, '1. Learned 1D Table', 'p_k ∈ ℝ^d (k = 0…m)', 'Discovers 2D from data', D.blue.dark, 13.5, 11.5);
+  o += card(20, y, cw, ch, C.lblue, C.blue, '1. Learned 1D Table', 'p_k ∈ ℝ^{d} (k = 0…m)', 'Discovers 2D from data', D.blue.dark, 13.5, 11.5);
   o += card(193, y, cw, ch, C.lamber, C.amber, '2. 2D Sinusoidal', '[sin/cos(r); sin/cos(c)]', 'Hard-codes grid at t=0', D.orange.dark, 13.5, 11.5);
   o += card(366, y, cw, ch, C.lgreen, C.green, '3. 2D Axial RoPE', 'Rotate ½ by r, ½ by c', 'Relative 2D shift inv.', D.green.dark, 13.5, 11.5);
 
@@ -663,7 +663,7 @@ function scaleBudgetTradeoff() {
   o += card(20, 104, 204, 68, D.red.tint, D.red.base, 'Too Large N, Small D', 'Under-trained (data-starved)', null, D.red.dark, 13.5, 11.5);
   o += card(316, 104, 204, 68, D.red.tint, D.red.base, 'Too Small N, Huge D', 'Capacity-bottlenecked', null, D.red.dark, 13.5, 11.5);
 
-  o += card(70, 184, 400, 70, C.lgreen, C.green, 'Chinchilla Pretraining Optimum:  N* ∝ C^0.5,  D* ∝ C^0.5', 'Scale parameters N and tokens D equally (~20 tokens per parameter)', null, D.green.dark, 14, 12.5);
+  o += card(70, 184, 400, 70, C.lgreen, C.green, 'Chinchilla Pretraining Optimum:  N* ∝ C^{0.5},  D* ∝ C^{0.5}', 'Scale parameters N and tokens D equally (~20 tokens per parameter)', null, D.green.dark, 14, 12.5);
   return svg(W, H, o);
 }
 
@@ -709,10 +709,10 @@ function scaleCosineHorizon() {
 function scaleChinchillaSurface() {
   const W = 540, H = 270;
   let o = '';
-  o += card(20, 16, 500, 50, D.purple.tint, C.purple, 'Chinchilla Additive Loss Decomposition:  L(N, D) = L_∞ + A / N^α + B / D^β', null, null, D.purple.dark, 14.5, 12);
+  o += card(20, 16, 500, 50, D.purple.tint, C.purple, 'Chinchilla Additive Loss Decomposition:  L(N, D) = L_{∞} + A / N^α + B / D^β', null, null, D.purple.dark, 14.5, 12);
 
   const cw = 154, y = 84, ch = 164;
-  o += card(20, y, cw, ch, N.panel, C.gray, '1. Entropy Floor L_∞', '≈ 1.69–1.82 nats/tok', 'Irreducible Shannon noise of natural language', C.ink, 13.5, 11.5);
+  o += card(20, y, cw, ch, N.panel, C.gray, '1. Entropy Floor L_{∞}', '≈ 1.69–1.82 nats/tok', 'Irreducible Shannon noise of natural language', C.ink, 13.5, 11.5);
 
   o += card(193, y, cw, ch, C.lblue, C.blue, '2. Capacity Error', 'A / N^α  (α ≈ 0.35)', 'Finite-width/depth approximation gap', D.blue.dark, 13.5, 11.5);
 
@@ -724,8 +724,8 @@ function scaleChinchillaSurface() {
 function scaleKaplanVsChinchilla() {
   const W = 540, H = 268;
   let o = '';
-  o += card(20, 20, 236, 120, C.lamber, C.amber, 'Kaplan et al. (2020)', 'N* ∝ C^0.73,   D* ∝ C^0.27', '100× compute → 29× larger N, 3.5× D', D.orange.dark, 14.5, 12);
-  o += card(284, 20, 236, 120, C.lgreen, C.green, 'Chinchilla (2022) & Refits', 'N* ∝ C^0.50,   D* ∝ C^0.50', '100× compute → 10× larger N, 10× D', D.green.dark, 14.5, 12);
+  o += card(20, 20, 236, 120, C.lamber, C.amber, 'Kaplan et al. (2020)', 'N* ∝ C^{0.73},   D* ∝ C^{0.27}', '100× compute → 29× larger N, 3.5× D', D.orange.dark, 14.5, 12);
+  o += card(284, 20, 236, 120, C.lgreen, C.green, 'Chinchilla (2022) & Refits', 'N* ∝ C^{0.50},   D* ∝ C^{0.50}', '100× compute → 10× larger N, 10× D', D.green.dark, 14.5, 12);
 
   o += card(20, 158, 500, 92, C.lblue, C.blue, 'Three Methodological Reasons the Exponent Moved from 0.73 to 0.50', '1. Decaying cosine LR to minimum at the end of every budget D  ·  2. Accounting for embedding FLOPs', '3. Tuning warmup & width-scaled peak learning rate (η ∝ 1/d) on small models.', D.blue.dark, 13.5, 12);
   return svg(W, H, o);
@@ -766,8 +766,8 @@ function moeRouterGradient() {
   let o = '';
   o += tx(270, 20, 'How Router Weights W_r Learn Through Discrete Top-k Selection', { fs: 14.5, fw: 700, fill: C.ink });
 
-  o += card(20, 42, 236, 104, C.lgreen, C.green, 'Unnormalized Gate: g_e = p_e(x)', 'MoE(x) = ∑_(e ∈ T_k) p_e(x) FFN_e(x)', '∂L/∂p_e = (∇_MoE L)ᵀ FFN_e(x) ≠ 0!', D.green.dark, 13.5, 11.5);
-  o += card(284, 42, 236, 104, D.red.tint, D.red.base, 'k = 1 Renormalization Trap!', 'If g_e = p_e / ∑_(j ∈ T₁) p_j = p_e / p_e ≡ 1', 'Gate is constant 1 ⇒ ∂MoE/∂W_r = 0!', D.red.dark, 13.5, 11.5);
+  o += card(20, 42, 236, 104, C.lgreen, C.green, 'Unnormalized Gate: g_e = p_e(x)', 'MoE(x) = ∑_{e∈T_k} p_e(x) FFN_{e}(x)', '∂L/∂p_e = (∇_MoE L)ᵀ FFN_{e}(x) ≠ 0!', D.green.dark, 13.5, 11.5);
+  o += card(284, 42, 236, 104, D.red.tint, D.red.base, 'k = 1 Renormalization Trap!', 'If g_e = p_e / ∑_{j∈T₁} p_j = p_e / p_e ≡ 1', 'Gate is constant 1 ⇒ ∂MoE/∂W_r = 0!', D.red.dark, 13.5, 11.5);
 
   o += card(20, 162, 500, 88, C.lamber, C.amber, 'Rule: Never Renormalize Top-1 Router Probabilities', 'In Top-1 routing (Switch Transformer), multiplying by the raw softmax probability p_(e*)(x)', 'is the ONLY path for task-loss gradients to update the router matrix W_r!', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
@@ -811,7 +811,7 @@ function moeCollapseLoop() {
 function moeAuxVsBias() {
   const W = 540, H = 272;
   let o = '';
-  o += card(20, 20, 236, 118, C.lamber, C.amber, 'Switch Auxiliary Loss', 'L_aux = E ∑_e f_e p̄_e  (min = 1)', 'Adds α ∇L_aux to router gradients', D.orange.dark, 14, 12);
+  o += card(20, 20, 236, 118, C.lamber, C.amber, 'Switch Auxiliary Loss', 'L_aux = E ∑_{e} f_e p̄_e  (min = 1)', 'Adds α ∇L_aux to router gradients', D.orange.dark, 14, 12);
   o += card(284, 20, 236, 118, C.lgreen, C.green, 'Loss-Free Bias Control (DeepSeek)', 'Select top_k(p(x) + b), gate by p(x)', 'b_e ← b_e + η_b sign(1/E − f_e)', D.green.dark, 14, 11.5);
 
   o += card(20, 158, 236, 94, '#FFFFFF', C.amber, 'Gradient Interference', '∇L_aux pushes p(x) toward uniform', 'competing with task gradient ∇L_LM', D.orange.dark, 13.5, 11.5);
@@ -860,8 +860,8 @@ function blkSummary() {
 function gptDepthInit() {
   const W = 540, H = 268;
   let o = '';
-  o += card(20, 20, 236, 112, C.lblue, C.blue, 'Standard Projections', 'token_emb, W_qkv, W_g, W_1', 'Initialized from N(0, 0.02²)', D.blue.dark, 14, 12);
-  o += card(284, 20, 236, 112, C.lgreen, C.green, 'Residual Write Matrices', 'W_o (attention) & W_2 (FFN)', 'Scaled by 1/√(2L): σ = 0.02 / √(2L)', D.green.dark, 14, 12);
+  o += card(20, 20, 236, 112, C.lblue, C.blue, 'Standard Projections', 'token_emb, W\\_qkv, W\\_g, W\\_1', 'Initialized from N(0, 0.02²)', D.blue.dark, 14, 12);
+  o += card(284, 20, 236, 112, C.lgreen, C.green, 'Residual Write Matrices', 'W\\_o (attention) & W\\_2 (FFN)', 'Scaled by 1/√(2L): σ = 0.02 / √(2L)', D.green.dark, 14, 12);
   o += card(20, 152, 500, 96, D.purple.tint, C.purple, 'Why 2L Appears in the Denominator', 'Each of the L blocks adds TWO residual branches (1 Attention + 1 FFN = 2L writes);', 'scaling each write by 1/√(2L) keeps total added variance ∑ (σ² / 2L) = σ² = O(1)!', D.purple.dark, 13.5, 12);
   return svg(W, H, o);
 }
@@ -870,7 +870,7 @@ function gptDepthInit() {
 function gptSummary() {
   const W = 540, H = 272;
   let o = '';
-  o += card(20, 18, 236, 108, C.lblue, C.blue, '1. Architecture & Tied Head', 'Shared E ∈ ℝ^(V×d), RoPE, Causal Mask', 'Saves Vd params (38.6M in GPT-2)', D.blue.dark, 13.5, 12);
+  o += card(20, 18, 236, 108, C.lblue, C.blue, '1. Architecture & Tied Head', 'Shared E ∈ ℝ^{V×d}, RoPE, Causal Mask', 'Saves Vd params (38.6M in GPT-2)', D.blue.dark, 13.5, 12);
   o += card(284, 18, 236, 108, C.lgreen, C.green, '2. LMOptimizer & SwiGLU', 'AdamW (2D decay) + warmup/cosine', '1.34 nats/byte (beats GELU & RNNLM)', D.green.dark, 13.5, 12);
   o += card(20, 146, 500, 106, C.lamber, C.amber, '3. Controlled Baselines & Pretrained GPT-2 Compatibility', 'SwiGLU beats GELU by 0.06 nats (5× seed spread); GPT beats RNNLM for context t ≥ 16;', 'Loads official 124.4M OpenAI GPT-2 checkpoint directly (perplexity ≈ 49 on Time Machine).', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
@@ -914,7 +914,7 @@ function encPerceiverFlow() {
   let o = '';
   o += card(20, 22, 146, 102, C.lblue, C.blue, 'Long Input X', 'Shape (B, N, d)', 'e.g. N = 8,192 tokens', D.blue.dark, 14, 12);
   o += arrow(170, 73, 192, 73, C.amber);
-  o += card(196, 22, 148, 102, C.lamber, C.amber, 'Cross-Attn Read', 'M Latents Z₀ ∈ ℝ^(M×d)', 'O(M N d) cost (M = 64)', D.orange.dark, 13.5, 11.5);
+  o += card(196, 22, 148, 102, C.lamber, C.amber, 'Cross-Attn Read', 'M Latents Z₀ ∈ ℝ^{M×d}', 'O(M N d) cost (M = 64)', D.orange.dark, 13.5, 11.5);
   o += arrow(348, 73, 370, 73, C.green);
   o += card(374, 22, 146, 102, C.lgreen, C.green, 'L Latent Blocks', 'Self-Attn on (B, M, d)', 'O(L M² d) cost!', D.green.dark, 14, 12);
   o += card(20, 146, 500, 102, D.purple.tint, C.purple, '734× Fewer Attention Score Pairs at N = 8,192, M = 64, L = 6', 'Full 6-layer encoder: 6 × 8192² = 402.7M pairs/head  vs.  Perceiver: 64×8192 + 6×64² = 0.55M pairs!', 'Used by Flamingo & BLIP-2 Q-Former to compress visual tokens into 32–64 LLM prefix tokens.', D.purple.dark, 13.5, 12);
@@ -956,7 +956,7 @@ function vitSummary() {
 function moeSwitchAux() {
   const W = 540, H = 268;
   let o = '';
-  o += card(20, 12, 500, 72, C.lamber, C.amber, 'Switch Auxiliary Load-Balancing Loss:  L_aux = E ∑_(e=1)^E f_e · p̄_e', 'f_e = actual token fraction routed to expert e (stop-grad) · p̄_e = mean router probability', null, D.orange.dark, 13.5, 12);
+  o += card(20, 12, 500, 72, C.lamber, C.amber, 'Switch Auxiliary Load-Balancing Loss:  L_aux = E ∑_{e=1}^{E} f_e · p̄_e', 'f_e = actual token fraction routed to expert e (stop-grad) · p̄_e = mean router probability', null, D.orange.dark, 13.5, 12);
   o += card(20, 102, 236, 146, C.lblue, C.blue, 'Gradient: ∂L_aux / ∂p̄_e = E f_e', 'Overloaded experts (f_e > 1/E)', 'receive steeper downward push!', D.blue.dark, 13.5, 12);
   o += card(284, 102, 236, 146, C.lgreen, C.green, 'Uniform Minimum: L_aux = 1', 'When f_e = 1/E for all E experts:', 'E ∑ (1/E) p̄_e = ∑ p̄_e = 1  (vs. E collapsed)', D.green.dark, 13.5, 12);
   return svg(W, H, o);
@@ -966,7 +966,7 @@ function moeSwitchAux() {
 function moeSummary() {
   const W = 540, H = 272;
   let o = '';
-  o += card(20, 18, 236, 108, C.lblue, C.blue, '1. Top-k Conditional Compute', 'MoE(x) = ∑_(e ∈ T_k) p_e(x) FFN_e(x)', 'Decouples N_total (VRAM) from N_active', D.blue.dark, 13.5, 12);
+  o += card(20, 18, 236, 108, C.lblue, C.blue, '1. Top-k Conditional Compute', 'MoE(x) = ∑_{e∈T_k} p_e(x) FFN_{e}(x)', 'Decouples N_total (VRAM) from N_active', D.blue.dark, 13.5, 12);
   o += card(284, 18, 236, 108, C.lgreen, C.green, '2. Static Buffers & Balancing', 'S = ⌈γ n k / E⌉ slots per expert', 'Aux loss (α=0.01) or loss-free bias b_e', D.green.dark, 13.5, 12);
   o += card(20, 146, 500, 106, D.purple.tint, C.purple, '3. IsoFLOP Victory & Fine-Grained + Shared Expert Scaling', '8-expert Top-1 MoE beats dense GPT by 0.05 nats/byte at identical active FLOPs;', 'Splitting experts (E → mE, k → mk) + shared experts powers DeepSeek-V3 (671B / 37B active).', D.purple.dark, 13.5, 12);
   return svg(W, H, o);

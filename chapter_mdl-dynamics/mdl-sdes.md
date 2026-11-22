@@ -119,7 +119,11 @@ can be: point masses at $x_0 = 2$ and at $x_0 = -2$.
   limiting law.
 - **Both together**, $dX = -X\,dt + \sqrt{2}\, dW$. From either start the law
   at $t = 3$ is $\mathcal{N}(\pm 0.0996,\, 0.9975)$, as
-  :numref:`sec_mdl-ornstein-uhlenbeck` proves. The two laws are nearly
+  :numref:`sec_mdl-ornstein-uhlenbeck` will prove below (and as its density
+  evolution $\partial_t p_t = -\nabla \cdot (\mathbf{f} p_t) + \tfrac{1}{2}g^2 \Delta p_t$
+   attains at stationarity $\partial_t p_t = 0$, previewing the Fokker--Planck
+  partial differential equation that :numref:`sec_mdl-fokker-planck-probability-flow`
+  develops next). The two laws are nearly
   indistinguishable from each other and from $\mathcal{N}(0, 1)$.
 
 ![One failure, one usable process and the one we use, from the two starts $x_0=\pm2$. Drift alone sends every start to the point $0$. Noise alone keeps each start as the center of a cloud whose two-standard-deviation envelope $x_0\pm2\sqrt{2t}$ (dashed) grows without bound. Both together carry every start into the same limiting law $\mathcal N(0,1)$, drawn sideways at the right. Green lines are the means.](../img/mdl-dyn-sde-paths.svg)
@@ -1419,9 +1423,13 @@ both.
        marginal, which is a nonlinear function of $x$ for non-Gaussian data.
        Why can its steps not be made exact? Exponential integrators for
        diffusion samplers :cite:`Zhang.Chen.2023` apply the idea of (c) to
-       the deterministic counterpart of this sampler, an ODE whose drift has
-       the same two parts with half the score term
-       (:numref:`sec_mdl-fokker-planck-probability-flow`). Which part of
+       the deterministic counterpart of this sampler, an ODE whose drift
+       $f(x, t) - \tfrac12 g(t)^2 \partial_x \log p_t(x)$ has the same two
+       parts with half the score term (derived in
+       :numref:`sec_mdl-fokker-planck-probability-flow` by rewriting the 1D
+       Fokker--Planck PDE
+       $\partial_t p_t(x) = -\partial_x\bigl(f(x,t)p_t(x)\bigr) + \tfrac{1}{2}g(t)^2 \partial_x^2 p_t(x)$
+       as a continuity equation). Which part of
        such a drift does the step treat exactly, and which part does it
        approximate?
    :exlabel:`ex_mdl-sdes-exact-vp-discretization`

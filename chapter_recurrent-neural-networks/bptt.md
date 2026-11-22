@@ -85,9 +85,10 @@ restore $\tanh$ immediately afterward). For a minibatch of $b$ sequences with
 step inputs $\mathbf{X}_t \in \mathbb{R}^{b\times d}$, the linear RNN computes
 
 $$
-\mathbf{H}_t = \mathbf{X}_t \mathbf{W}_\textrm{xh} +
-\mathbf{H}_{t-1}\mathbf{W}_\textrm{hh}, \qquad
-\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_\textrm{hq},
+\begin{aligned}
+\mathbf{H}_t &= \mathbf{X}_t \mathbf{W}_\textrm{xh} + \mathbf{H}_{t-1}\mathbf{W}_\textrm{hh}, \\
+\mathbf{O}_t &= \mathbf{H}_t \mathbf{W}_\textrm{hq},
+\end{aligned}
 $$
 :eqlabel:`eq_bptt_linear_rnn`
 
@@ -108,8 +109,10 @@ multiplies by the transposed weight matrix (:numref:`sec_backprop`),
 $\mathbf{G}_t$ obeys the backward recursion
 
 $$
-\mathbf{G}_t = \frac{\partial L}{\partial \mathbf{O}_t}\mathbf{W}_\textrm{hq}^\top +
-\mathbf{G}_{t+1}\mathbf{W}_\textrm{hh}^\top, \qquad \mathbf{G}_{T+1} = \mathbf{0},
+\begin{aligned}
+\mathbf{G}_t &= \frac{\partial L}{\partial \mathbf{O}_t}\mathbf{W}_\textrm{hq}^\top + \mathbf{G}_{t+1}\mathbf{W}_\textrm{hh}^\top, \\
+\mathbf{G}_{T+1} &= \mathbf{0},
+\end{aligned}
 $$
 :eqlabel:`eq_bptt_partial_L_ht_recur`
 
@@ -133,10 +136,10 @@ Once $\mathbf{G}_1, \ldots, \mathbf{G}_T$ are computed in a single backward
 sweep, the parameter gradients simply sum one outer product per step:
 
 $$
-\frac{\partial L}{\partial \mathbf{W}_\textrm{hh}} = \sum_{t=1}^{T}
-\mathbf{H}_{t-1}^\top \mathbf{G}_t, \qquad
-\frac{\partial L}{\partial \mathbf{W}_\textrm{xh}} = \sum_{t=1}^{T}
-\mathbf{X}_t^\top \mathbf{G}_t.
+\begin{aligned}
+\frac{\partial L}{\partial \mathbf{W}_\textrm{hh}} &= \sum_{t=1}^{T} \mathbf{H}_{t-1}^\top \mathbf{G}_t, \\
+\frac{\partial L}{\partial \mathbf{W}_\textrm{xh}} &= \sum_{t=1}^{T} \mathbf{X}_t^\top \mathbf{G}_t.
+\end{aligned}
 $$
 :eqlabel:`eq_bptt_param_grads`
 

@@ -62,7 +62,12 @@ $$\pi_\theta(a) = \begin{cases} \sigma(\theta) & a = 1 \\ 1 - \sigma(\theta) & a
 
 Take two parameter updates of the same size, $\Delta\theta = 2$, from two different starting points:
 
-$$\pi_{\theta=0}(a{=}1) = \sigma(0) = 0.50 \ \xrightarrow{\ \Delta\theta = 2\ }\ \sigma(2) = 0.88, \qquad \pi_{\theta=6}(a{=}1) = \sigma(6) = 0.9975 \ \xrightarrow{\ \Delta\theta = 2\ }\ \sigma(8) = 0.9997.$$
+$$
+\begin{aligned}
+\pi_{\theta=0}(a{=}1) &= \sigma(0) = 0.50 \ \xrightarrow{\ \Delta\theta = 2\ }\ \sigma(2) = 0.88, \\
+\pi_{\theta=6}(a{=}1) &= \sigma(6) = 0.9975 \ \xrightarrow{\ \Delta\theta = 2\ }\ \sigma(8) = 0.9997.
+\end{aligned}
+$$
 
 The first update takes the agent from indifference between the two actions to a strong preference for one of them. The second changes nothing that an observer of the agent could detect. The slope of the map from parameter to policy says why: $\sigma'(\theta)=\sigma(\theta)(1-\sigma(\theta))$ is $0.25$ at $\theta=0$ and about $0.0025$ at $\theta=6$. :numref:`fig_rl-policy-vs-parameter` draws both updates.
 
@@ -81,7 +86,12 @@ Every estimator since :numref:`sec_policygradient` has used trajectories sampled
 
 Importance sampling gives an exact answer. For any function $f$ of trajectories,
 
-$$\mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \big[ f(\tau) \big] = \sum_\tau P(\tau; \theta)\, f(\tau) = \sum_\tau P(\tau; \theta_{\textrm{old}})\ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, f(\tau) = \mathbb{E}_{\tau \sim P(\cdot;\, \theta_{\textrm{old}})} \Big[ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, f(\tau) \Big],$$
+$$
+\begin{aligned}
+\mathbb{E}_{\tau \sim P(\cdot;\, \theta)} \big[ f(\tau) \big] &= \sum_\tau P(\tau; \theta)\, f(\tau) = \sum_\tau P(\tau; \theta_{\textrm{old}})\ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, f(\tau) \\
+&= \mathbb{E}_{\tau \sim P(\cdot;\, \theta_{\textrm{old}})} \Big[ \frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})}\, f(\tau) \Big],
+\end{aligned}
+$$
 :eqlabel:`eq_change_of_measure`
 
 valid whenever every trajectory the new policy can produce has positive probability under the old one. Softmax policies satisfy this condition, because they never assign zero probability to an action. Applied with $f = R$, the return, the identity rewrites the objective as an expectation under the *old* policy:
@@ -148,7 +158,10 @@ of which $\hat{L}$ is the sampled estimate, without the factor $\gamma^t$. Since
 **Proposition** (:citet:`Kakade.Langford.2002,Schulman.Levine.Abbeel.ea.2015`). *For $\gamma < 1$ and $A_{\max} = \max_{s, a} \lvert A^{\textrm{old}}(s, a) \rvert$,*
 
 $$
-J(\theta)\ \geq\ J(\theta_{\textrm{old}}) + \bar{L}(\theta)\ -\ \frac{4 \gamma A_{\max}}{(1-\gamma)^2}\ \max_s\, D_{\textrm{KL}}\big( \pi_{\theta_{\textrm{old}}}(\cdot \mid s)\ \Vert\ \pi_\theta(\cdot \mid s) \big).
+\begin{aligned}
+J(\theta)\ &\geq\ J(\theta_{\textrm{old}}) + \bar{L}(\theta) \\
+&\quad -\ \frac{4 \gamma A_{\max}}{(1-\gamma)^2}\ \max_s\, D_{\textrm{KL}}\big( \pi_{\theta_{\textrm{old}}}(\cdot \mid s)\ \Vert\ \pi_\theta(\cdot \mid s) \big).
+\end{aligned}
 $$
 :eqlabel:`eq_trpo_bound`
 
@@ -156,7 +169,12 @@ The surrogate is right up to a penalty proportional to the largest Kullback--Lei
 
 TRPO keeps the shape of the bound and replaces its pieces by quantities a batch can estimate. It maximizes the sampled surrogate subject to a budget $\Delta_{\textrm{KL}}$ on the mean divergence over the batch's states,
 
-$$\max_\theta\ \hat{L}(\theta) \quad \textrm{subject to} \quad \frac{1}{N}\sum_{i,t} D_{\textrm{KL}}\big( \pi_{\theta_{\textrm{old}}}(\cdot \mid s_t^i)\ \Vert\ \pi_\theta(\cdot \mid s_t^i) \big) \leq \Delta_{\textrm{KL}},$$
+$$
+\begin{aligned}
+\max_\theta\ &\hat{L}(\theta) \\
+\textrm{subject to}\ &\frac{1}{N}\sum_{i,t} D_{\textrm{KL}}\big( \pi_{\theta_{\textrm{old}}}(\cdot \mid s_t^i)\ \Vert\ \pi_\theta(\cdot \mid s_t^i) \big) \leq \Delta_{\textrm{KL}},
+\end{aligned}
+$$
 :eqlabel:`eq_trpo_constraint`
 
 with a mean in place of the maximum over all states and a chosen budget, typically $\Delta_{\textrm{KL}} = 0.01$, in place of the conservative coefficient. It solves this problem with a second-order method, which exercise :exref:`ex_ppo-trpo` builds from the pieces of this section. :numref:`fig_rl_trust_region` shows why the constraint lives in policy space.
@@ -168,7 +186,12 @@ with a mean in place of the maximum over all states and a chosen budget, typical
 
 PPO replaces the constrained second-order problem by a first-order objective with a built-in limit. It does not clip the ratios themselves; it stops rewarding a sample once its ratio has moved beyond a band of half-width $\epsilon_{\textrm{clip}}$ around one:
 
-$$L^{\textrm{CLIP}}(\theta) = \frac{1}{N} \sum_{i,t} \min\Big( \rho_t^i(\theta)\, \hat{A}_t^i,\ \ \textrm{clip}\big(\rho_t^i(\theta),\ 1-\epsilon_{\textrm{clip}},\ 1+\epsilon_{\textrm{clip}}\big)\, \hat{A}_t^i \Big).$$
+$$
+\begin{aligned}
+L^{\textrm{CLIP}}(\theta) &= \frac{1}{N} \sum_{i,t} \min\Big( \rho_t^i(\theta)\, \hat{A}_t^i, \\
+&\qquad\qquad \textrm{clip}\big(\rho_t^i(\theta),\ 1-\epsilon_{\textrm{clip}},\ 1+\epsilon_{\textrm{clip}}\big)\, \hat{A}_t^i \Big).
+\end{aligned}
+$$
 :eqlabel:`eq_ppo_clip`
 
 Consider one sample. If $\hat{A}_t > 0$, its contribution grows with $\rho_t$ only until $\rho_t = 1+\epsilon_{\textrm{clip}}$; beyond that the clipped term is the smaller one and its gradient is zero. If $\hat{A}_t < 0$, the threshold is $1-\epsilon_{\textrm{clip}}$. With the usual $\epsilon_{\textrm{clip}} = 0.2$ and an action the old policy chose with probability $0.5$, a sample with positive advantage stops rewarding the update once the new policy gives that action probability $0.6$; with negative advantage, once the probability falls to $0.4$. The minimum makes the limit one-sided: a change that lowers the objective is always counted, while further movement in the favorable direction adds nothing. :numref:`fig_rl_ppo_clip` plots one sample's contribution for both signs of the advantage.
@@ -186,7 +209,7 @@ Implementations often add a small *entropy bonus*, a weight `entropy_coef` times
 
 ### The Advantage Estimate
 
-Any advantage estimate can fill the place of $\hat{A}$ in :eqref:`eq_ppo_clip`. We use generalized advantage estimation (GAE) from :numref:`sec_actorcritic`: `Batch.gae` sums the TD errors $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ of the critic backward through each episode with weights $(\gamma\lambda)^k$, and $\lambda$ sets how far ahead each advantage looks. That section found the error of this estimate smallest near $\lambda = 0.9$ to $0.95$; $0.95$ is also the setting of the PPO paper. The advantages are computed with the critic as it stands before it is fit to the batch, the order of the GAE paper :cite:`Schulman.Moritz.Levine.ea.2016`. `train_ac` of :numref:`sec_actorcritic` used the opposite order, because its actor's weight was the one-step TD error, which rests entirely on the critic. At $\lambda = 0.95$ the advantage is mostly the batch's own sampled rewards and leans little on the critic, so the order changes no result of this section, and we follow the paper.
+Any advantage estimate can fill the place of $\hat{A}$ in :eqref:`eq_ppo_clip`. We use generalized advantage estimation (GAE) from :numref:`sec_actorcritic`: `Batch.gae` sums the TD errors $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ of the critic backward through each episode with weights $(\gamma\lambda)^k$, and $\lambda$ sets how far ahead each advantage looks. That section found the error of this estimate smallest near $\lambda = 0.9$ to $0.95$; $0.95$ is also the setting of the PPO paper. The advantages are computed with the critic as it stands before it is fit to the batch, the order of the GAE paper :cite:`Schulman.Moritz.Levine.ea.2016`. `td_weight` of :numref:`sec_actorcritic` used the opposite order, because its actor's weight was the one-step TD error, which rests entirely on the critic. At $\lambda = 0.95$ the advantage is mostly the batch's own sampled rewards and leans little on the critic, so the order changes no result of this section, and we follow the paper.
 
 ### The Implementation
 

@@ -1113,9 +1113,10 @@ with kernel $\mathbf{W}$ and bias $b_o$ (indexed by output channel $o$) gives
 an equivalent fused kernel and bias:
 
 $$
-\hat{\mathbf{W}}_o = \frac{\gamma_o}{\sqrt{\sigma_o^2 + \epsilon}}\, \mathbf{W}_o,
-\qquad
-\hat{b}_o = \beta_o + \frac{\gamma_o(b_o-\mu_o)}{\sqrt{\sigma_o^2 + \epsilon}}.
+\begin{aligned}
+\hat{\mathbf{W}}_o &= \frac{\gamma_o}{\sqrt{\sigma_o^2 + \epsilon}}\, \mathbf{W}_o, \\
+\hat{b}_o &= \beta_o + \frac{\gamma_o(b_o-\mu_o)}{\sqrt{\sigma_o^2 + \epsilon}}.
+\end{aligned}
 $$
 :eqlabel:`eq_bn_fold`
 

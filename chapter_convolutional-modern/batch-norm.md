@@ -90,10 +90,12 @@ across a minibatch $\mathcal{B}$ of $m$ examples, producing scalar values
 $x_1, \ldots, x_m$. Batch normalization computes their sample mean and sample
 variance across the minibatch,
 
-$$\hat{\mu}_\mathcal{B} = \frac{1}{m} \sum_{i=1}^m x_i
-\quad \textrm{and} \quad
-\hat{\sigma}^2_\mathcal{B} = \frac{1}{m} \sum_{i=1}^m
-(x_i - \hat{\mu}_\mathcal{B})^2,$$
+$$
+\begin{aligned}
+\hat{\mu}_\mathcal{B} &= \frac{1}{m} \sum_{i=1}^m x_i, \\
+\hat{\sigma}^2_\mathcal{B} &= \frac{1}{m} \sum_{i=1}^m (x_i - \hat{\mu}_\mathcal{B})^2,
+\end{aligned}
+$$
 
 and transforms each value via
 
@@ -205,10 +207,10 @@ updating exponential moving averages $\hat{\mu}$ and $\hat{\sigma}^2$
 (initialized to 0 and 1) after every step:
 
 $$
-\hat{\mu} \leftarrow \rho \, \hat{\mu} + (1 - \rho) \,
-\hat{\mu}_\mathcal{B} \quad \textrm{and} \quad
-\hat{\sigma}^2 \leftarrow \rho \, \hat{\sigma}^2 + (1 - \rho) \,
-\hat{\sigma}^2_\mathcal{B}.
+\begin{aligned}
+\hat{\mu} &\leftarrow \rho \, \hat{\mu} + (1 - \rho) \, \hat{\mu}_\mathcal{B}, \\
+\hat{\sigma}^2 &\leftarrow \rho \, \hat{\sigma}^2 + (1 - \rho) \, \hat{\sigma}^2_\mathcal{B}.
+\end{aligned}
 $$
 :eqlabel:`eq_bn_running`
 
@@ -857,12 +859,12 @@ grouped together to share a mean and variance.
 *Layer normalization* :cite:`Ba.Kiros.Hinton.2016` standardizes all $n$
 features $\mathbf{x} = (x_1, \ldots, x_n)$ of a single example independently:
 
-$$\textrm{LN}(\mathbf{x})_j = \gamma_j \, \frac{x_j - \hat{\mu}}
-{\sqrt{\hat{\sigma}^2 + \epsilon}} + \beta_j
-\quad \textrm{with} \quad
-\hat{\mu} = \frac{1}{n} \sum_{j=1}^n x_j
-\quad \textrm{and} \quad
-\hat{\sigma}^2 = \frac{1}{n} \sum_{j=1}^n (x_j - \hat{\mu})^2.$$
+$$
+\begin{aligned}
+\textrm{LN}(\mathbf{x})_j &= \gamma_j \, \frac{x_j - \hat{\mu}}{\sqrt{\hat{\sigma}^2 + \epsilon}} + \beta_j, \\
+\textrm{with} \quad \hat{\mu} &= \frac{1}{n} \sum_{j=1}^n x_j \quad \textrm{and} \quad \hat{\sigma}^2 = \frac{1}{n} \sum_{j=1}^n (x_j - \hat{\mu})^2.
+\end{aligned}
+$$
 
 This is :eqref:`eq_batchnorm` transposed: instead of averaging one feature
 across examples, we average one example across its features while keeping the

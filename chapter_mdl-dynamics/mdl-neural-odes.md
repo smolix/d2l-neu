@@ -611,12 +611,14 @@ Define $\mathbf{a}(t)$ by the backward ODE :eqref:`eq_mdl-ode-adjoint` and
 differentiate the pairing $\mathbf{a}^\top\delta\mathbf{x}$:
 
 $$
+\begin{aligned}
 \frac{d}{dt}\left(\mathbf{a}^\top \delta\mathbf{x}\right)
-= \dot{\mathbf{a}}^\top \delta\mathbf{x} + \mathbf{a}^\top \delta\dot{\mathbf{x}}
-= -\mathbf{a}^\top \frac{\partial \mathbf{f}}{\partial \mathbf{x}}\,\delta\mathbf{x}
+&= \dot{\mathbf{a}}^\top \delta\mathbf{x} + \mathbf{a}^\top \delta\dot{\mathbf{x}} \\
+&= -\mathbf{a}^\top \frac{\partial \mathbf{f}}{\partial \mathbf{x}}\,\delta\mathbf{x}
 + \mathbf{a}^\top \frac{\partial \mathbf{f}}{\partial \mathbf{x}}\,\delta\mathbf{x}
 + \mathbf{a}^\top \frac{\partial \mathbf{f}}{\partial \boldsymbol\theta}\,\delta\boldsymbol\theta
 = \mathbf{a}^\top \frac{\partial \mathbf{f}}{\partial \boldsymbol\theta}\,\delta\boldsymbol\theta .
+\end{aligned}
 $$
 
 The state-coupling terms cancel, and the adjoint ODE was defined so that
@@ -662,12 +664,13 @@ by the chain rule, with $\mathbf{a}_n=\partial\mathcal{L}/\partial\mathbf{x}_n$.
 The Jacobian of one step is $\mathbf{I}+h\mathbf J(\mathbf{x}_n)$, so
 
 $$
-\mathbf{a}_n=\big(\mathbf{I}+h\mathbf J(\mathbf{x}_n)\big)^{\!\top}\mathbf{a}_{n+1},
+\begin{aligned}
+\mathbf{a}_n &= \big(\mathbf{I}+h\mathbf J(\mathbf{x}_n)\big)^{\!\top}\mathbf{a}_{n+1},
 \qquad
-\mathbf{a}_N=\nabla\ell(\mathbf{x}_N),
-\qquad
+\mathbf{a}_N = \nabla\ell(\mathbf{x}_N), \\
 \frac{\partial\mathcal{L}}{\partial\boldsymbol\theta}
-=\sum_{n=0}^{N-1}h\left(\frac{\partial\mathbf{f}}{\partial\boldsymbol\theta}(\mathbf{x}_n)\right)^{\!\top}\mathbf{a}_{n+1}.
+&= \sum_{n=0}^{N-1}h\left(\frac{\partial\mathbf{f}}{\partial\boldsymbol\theta}(\mathbf{x}_n)\right)^{\!\top}\mathbf{a}_{n+1}.
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-ode-discrete-adjoint`
 
@@ -908,9 +911,11 @@ determinant is close to $1$, hence positive, so the absolute value can be
 dropped:
 
 $$
+\begin{aligned}
 \log p_{t+h}(\mathbf{x}(t+h))
-= \log p_t(\mathbf{x}(t)) - \log\det\!\big(\mathbf{I} + h\mathbf J + o(h)\big)
-= \log p_t(\mathbf{x}(t)) - h \operatorname{tr} \mathbf J + o(h),
+&= \log p_t(\mathbf{x}(t)) - \log\det\!\big(\mathbf{I} + h\mathbf J + o(h)\big) \\
+&= \log p_t(\mathbf{x}(t)) - h \operatorname{tr} \mathbf J + o(h),
+\end{aligned}
 $$
 
 using $\log(1+u)=u+O(u^2)$. Subtract $\log p_t(\mathbf{x}(t))$, divide by

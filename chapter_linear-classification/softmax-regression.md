@@ -99,7 +99,12 @@ $$P(y \mid \mathbf{x}) = \hat{y}_y = \prod_{j=1}^q \hat{y}_j^{y_j}.$$
 
 Across $n$ independent training examples, the negative log-likelihood is the sum of per-example losses:
 
-$$-\log \prod_{i=1}^n P(y^{(i)} \mid \mathbf{x}^{(i)}) = \sum_{i=1}^n l(\mathbf{y}^{(i)}, \hat{\mathbf{y}}^{(i)}), \qquad \textrm{where} \qquad l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y.$$
+$$
+\begin{aligned}
+-\log \prod_{i=1}^n P(y^{(i)} \mid \mathbf{x}^{(i)}) &= \sum_{i=1}^n l(\mathbf{y}^{(i)}, \hat{\mathbf{y}}^{(i)}), \\
+\textrm{where} \quad l(\mathbf{y}, \hat{\mathbf{y}}) &= -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y.
+\end{aligned}
+$$
 :eqlabel:`eq_l_cross_entropy`
 
 This objective is the *cross-entropy loss*. Notice how it behaves:
@@ -122,7 +127,12 @@ $$
 
 The first term, $\log \sum_{k=1}^q \exp(o_k)$, is the *log-sum-exp* function—a smooth convex upper bound on $\max_k o_k$ that exceeds $\max_k o_k$ by at most $\log q$ (Exercise :exref:`ex_softmax-regression-realsoftmax`). Differentiating with respect to $o_j$ gives
 
-$$\frac{\partial l}{\partial o_j} = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} - y_j = \mathrm{softmax}(\mathbf{o})_j - y_j, \qquad \textrm{or} \qquad \nabla_{\mathbf{o}}\, l = \hat{\mathbf{y}} - \mathbf{y}.$$
+$$
+\begin{aligned}
+\frac{\partial l}{\partial o_j} &= \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} - y_j = \mathrm{softmax}(\mathbf{o})_j - y_j, \\
+\textrm{or} \quad \nabla_{\mathbf{o}}\, l &= \hat{\mathbf{y}} - \mathbf{y}.
+\end{aligned}
+$$
 
 Just as in linear regression under squared loss, **the gradient with respect to the natural parameters $\mathbf{o}$ is simply prediction minus observation, $\hat{\mathbf{y}} - \mathbf{y}$** (a universal property of exponential-family generalized linear models; see :numref:`subsec_mdl-glm`). On our chicken image ($\mathbf{y} = (0, 1, 0)$), $\nabla_{\mathbf{o}}\, l = (0.21, -0.31, 0.10)$: one gradient descent step boosts the chicken's logit while pushing down the cat and dog logits in exact proportion to the probability mass each rival wrongly claimed. By the chain rule through $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$, the minibatch gradient with respect to $\mathbf{W}$ is $\frac{1}{n}\mathbf{X}^\top(\hat{\mathbf{Y}} - \mathbf{Y})$, and the loss is globally *convex* in $(\mathbf{W}, \mathbf{b})$ (its Hessian with respect to $\mathbf{o}$ is the covariance matrix of a categorical draw from $\hat{\mathbf{y}}$; see Exercise :exref:`ex_softmax-regression-hessian`).
 

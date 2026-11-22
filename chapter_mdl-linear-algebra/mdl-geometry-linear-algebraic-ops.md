@@ -596,7 +596,8 @@ confirming $\mathbf{P}^2 = \mathbf{P}$ and $\mathbf{Q}^\top\mathbf{r} = \mathbf{
 On a tiny, well-behaved problem like this, the two methods agree completely.
 When the columns of $\mathbf{A}$ are nearly dependent, however, forming
 $\mathbf{A}^\top\mathbf{A}$ squares the problem's condition number, its
-sensitivity to rounding errors (:numref:`subsec_mdl-condition-number`). For
+sensitivity to rounding errors (as we will show in
+:numref:`subsec_mdl-condition-number`). For
 that reason, production least-squares solvers avoid the normal equations and
 work with an orthonormal basis of the column space instead.
 
@@ -1224,10 +1225,19 @@ similar pairs where class spread along the boundary normal matters.
 
    the squared separation between the projected class means divided by the
    within-class variance of the projections. When $\mathbf{C}$ is positive
-   definite, the maximizer is $\mathbf{w} \propto \mathbf{C}^{-1}\boldsymbol{\Delta}$.
-   (This problem uses the matrix inverse from :numref:`subsec_mdl-inverses`,
-   positive definiteness from :numref:`subsec_mdl-psd`, and the condition
-   number from :numref:`subsec_mdl-condition-number`.)
+   definite ($\mathbf{v}^\top\mathbf{C}\mathbf{v} > 0$ for all
+   $\mathbf{v} \neq \mathbf{0}$, so its matrix inverse $\mathbf{C}^{-1}$
+   satisfying $\mathbf{C}\mathbf{C}^{-1} = \mathbf{I}$ exists), the maximizer is
+   $\mathbf{w} \propto \mathbf{C}^{-1}\boldsymbol{\Delta}$. (As we will prove
+   in upcoming sections, matrix inverses are developed in
+   :numref:`subsec_mdl-inverses`, positive definiteness and eigenvalues
+   $\lambda_1 \ge \cdots \ge \lambda_d > 0$ in
+   :numref:`sec_mdl-eigendecompositions` (:numref:`subsec_mdl-psd`),
+   power-iteration convergence at ratio $|\lambda_2/\lambda_1|$ in
+   :numref:`subsec_mdl-power-iteration` (:eqref:`eq_mdl-power-iter`), and the
+   condition number
+   $\kappa(\mathbf{C}) = \lambda_{\max}(\mathbf{C})/\lambda_{\min}(\mathbf{C})$
+   in :numref:`subsec_mdl-condition-number`.)
     1. Show that $J(c\mathbf{w}) = J(\mathbf{w})$ for every $c \neq 0$. When
        $\mathbf{C} = s^2\mathbf{I}$, apply Cauchy–Schwarz to show that
        $\boldsymbol{\Delta}$ maximizes $J$.

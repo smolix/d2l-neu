@@ -40,9 +40,10 @@ Let us first write the chain of :numref:`sec_diffusion-gaussian-paths` as a gene
 Step $k$ of the forward chain shrinks the current point and adds noise, $\mathbf{x}_k = \sqrt{1 - \beta_k}\, \mathbf{x}_{k-1} + \sqrt{\beta_k}\, \boldsymbol\epsilon_k$, and the steps compose into one Gaussian draw, $\mathbf{x}_k = \alpha_k \mathbf{x}_0 + \sigma_k \boldsymbol\epsilon$ with $\alpha_k^2 = \prod_{j \le k}(1 - \beta_j)$ and $\sigma_k^2 = 1 - \alpha_k^2$: the VP path at the times $t_k = k/T$. We write $q$ for the distributions of this forward chain. The generative model runs it backward through learned Gaussian steps,
 
 $$
-p_{\boldsymbol\theta}(\mathbf{x}_{0:T}) = p(\mathbf{x}_T) \prod_{k=1}^{T} p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k),
-\qquad
-p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k) = \mathcal{N}\big(\boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k),\, \nu_k \mathbf{I}\big),
+\begin{aligned}
+p_{\boldsymbol\theta}(\mathbf{x}_{0:T}) &= p(\mathbf{x}_T) \prod_{k=1}^{T} p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k), \\
+p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k) &= \mathcal{N}\big(\boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k),\, \nu_k \mathbf{I}\big),
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-reverse-chain`
 
@@ -51,9 +52,11 @@ with $p(\mathbf{x}_T) = \mathcal{N}(\mathbf{0}, \mathbf{I})$, a mean $\boldsymbo
 The density of $\mathbf{x}_0$ is this joint integrated over the latents $\mathbf{x}_{1:T}$, an integral over $T$ copies of the data space that we cannot compute. Any distribution $q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)$ over the latents turns it into an expectation, $p_{\boldsymbol\theta}(\mathbf{x}_0) = \mathbb{E}_{q}\big[p_{\boldsymbol\theta}(\mathbf{x}_{0:T}) / q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big]$, and since the logarithm is concave, the logarithm of an average is at least the average of the logarithms (Jensen's inequality). For the negative log-likelihood this gives an upper bound,
 
 $$
+\begin{aligned}
 -\log p_{\boldsymbol\theta}(\mathbf{x}_0)
-= -\log \mathbb{E}_{q}\!\left[\frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right]
-\le \mathbb{E}_{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\!\left[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] =: L(\mathbf{x}_0).
+&= -\log \mathbb{E}_{q}\!\left[\frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] \\
+&\le \mathbb{E}_{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\!\left[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] =: L(\mathbf{x}_0).
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-elbo`
 
@@ -69,26 +72,32 @@ $$
 The $k$-th term cannot yet be read as a divergence, since the learned step goes from $\mathbf{x}_k$ to $\mathbf{x}_{k-1}$ and the forward step the other way. Bayes' rule turns the forward step around. By the Markov property it does not change when we also condition on $\mathbf{x}_0$, and then
 
 $$
-q(\mathbf{x}_k \mid \mathbf{x}_{k-1}) = q(\mathbf{x}_k \mid \mathbf{x}_{k-1}, \mathbf{x}_0) = \frac{q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)\, q(\mathbf{x}_k \mid \mathbf{x}_0)}{q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)}.
+\begin{aligned}
+q(\mathbf{x}_k \mid \mathbf{x}_{k-1}) &= q(\mathbf{x}_k \mid \mathbf{x}_{k-1}, \mathbf{x}_0) \\
+&= \frac{q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)\, q(\mathbf{x}_k \mid \mathbf{x}_0)}{q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)}.
+\end{aligned}
 $$
 
 Substituted for $k \ge 2$, the ratios of marginals telescope, $\prod_{k=2}^{T} q(\mathbf{x}_{k-1} \mid \mathbf{x}_0) / q(\mathbf{x}_k \mid \mathbf{x}_0) = q(\mathbf{x}_1 \mid \mathbf{x}_0) / q(\mathbf{x}_T \mid \mathbf{x}_0)$, and the numerator cancels the forward step left over at $k = 1$. Each remaining logarithm is, in expectation, a divergence:
 
 $$
-L(\mathbf{x}_0) = \underbrace{D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T}
-+ \sum_{k=2}^{T} \underbrace{\mathbb{E}_q\, D_{\textrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big)}_{L_{k-1}}
-+ \underbrace{\mathbb{E}_q\big[-\log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)\big]}_{L_0}.
+\begin{aligned}
+L(\mathbf{x}_0)
+&= \underbrace{D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T} \\
+&\quad + \sum_{k=2}^{T} \underbrace{\mathbb{E}_q\, D_{\textrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big)}_{L_{k-1}} \\
+&\quad + \underbrace{\mathbb{E}_q\big[-\log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)\big]}_{L_0}.
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-elbo-terms`
 
 The *prior term* $L_T$ checks that the chain ends at the Gaussian the sampler starts from, the *denoising terms* $L_{k-1}$ compare each learned step with the *forward posterior*, the reversal of step $k$ for a known clean point, and the *reconstruction term* $L_0$ scores the last step. Conditioning on $\mathbf{x}_0$ makes the forward posterior computable: as a product of two Gaussians in $\mathbf{x}_{k-1}$, the forward step and $q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$, it is Gaussian (Exercise :exref:`ex_design-space-forward-posterior` completes the square),
 
 $$
-q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) = \mathcal{N}\big(\tilde{\boldsymbol\mu}_k, \tilde\beta_k \mathbf{I}\big),
-\qquad
-\tilde{\boldsymbol\mu}_k = \frac{\alpha_{k-1}\beta_k}{\sigma_k^2}\, \mathbf{x}_0 + \frac{\sqrt{1 - \beta_k}\, \sigma_{k-1}^2}{\sigma_k^2}\, \mathbf{x}_k,
-\qquad
-\tilde\beta_k = \frac{\beta_k\, \sigma_{k-1}^2}{\sigma_k^2}.
+\begin{aligned}
+q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) &= \mathcal{N}\big(\tilde{\boldsymbol\mu}_k, \tilde\beta_k \mathbf{I}\big), \qquad
+\tilde\beta_k = \frac{\beta_k\, \sigma_{k-1}^2}{\sigma_k^2}, \\
+\tilde{\boldsymbol\mu}_k &= \frac{\alpha_{k-1}\beta_k}{\sigma_k^2}\, \mathbf{x}_0 + \frac{\sqrt{1 - \beta_k}\, \sigma_{k-1}^2}{\sigma_k^2}\, \mathbf{x}_k.
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-posterior`
 
@@ -97,7 +106,10 @@ The mean is a weighted average of where the clean point and the noisy point put 
 The prior and denoising terms compare Gaussians, so one formula evaluates them. For isotropic Gaussians in $d$ dimensions,
 
 $$
-D_{\textrm{KL}}\big(\mathcal{N}(\mathbf{m}_1, v_1 \mathbf{I}) \,\|\, \mathcal{N}(\mathbf{m}_2, v_2 \mathbf{I})\big) = \frac{d}{2}\Big(\frac{v_1}{v_2} - 1 - \log\frac{v_1}{v_2}\Big) + \frac{\|\mathbf{m}_1 - \mathbf{m}_2\|^2}{2 v_2},
+\begin{aligned}
+&D_{\textrm{KL}}\big(\mathcal{N}(\mathbf{m}_1, v_1 \mathbf{I}) \,\|\, \mathcal{N}(\mathbf{m}_2, v_2 \mathbf{I})\big) \\
+&\qquad = \frac{d}{2}\Big(\frac{v_1}{v_2} - 1 - \log\frac{v_1}{v_2}\Big) + \frac{\|\mathbf{m}_1 - \mathbf{m}_2\|^2}{2 v_2},
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-gauss-kl`
 
@@ -139,7 +151,10 @@ $$
 and the difference of the two means is a multiple of the noise error:
 
 $$
-L_{k-1} = \mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\Big[\frac{\beta_k^2}{2\nu_k (1 - \beta_k)\sigma_k^2}\, \big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\alpha_k \mathbf{x}_0 + \sigma_k \boldsymbol\epsilon, k)\big\|^2\Big] + \textrm{const}.
+\begin{aligned}
+L_{k-1} &= \mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\Big[\frac{\beta_k^2}{2\nu_k (1 - \beta_k)\sigma_k^2}\, \big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\alpha_k \mathbf{x}_0 + \sigma_k \boldsymbol\epsilon, k)\big\|^2\Big] \\
+&\quad + \textrm{const}.
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-lt-eps`
 
@@ -509,9 +524,10 @@ The bound weights each unit of log-SNR equally, the simple loss each step of the
 Each of our losses draws a time $t$, forms $\mathbf{x}_t$, and takes the squared error of a target. At fixed $\mathbf{x}_t$ every target is affine in the noise prediction, with a scalar slope that depends only on $t$, so each squared error is $c(t)\, \|\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon\|^2$ for a factor $c(t)$ set by the target and the path. Changing the variable from $t$ to $\lambda$ gives the form of :citet:`Kingma.Gao.2023`,
 
 $$
-\mathcal{L}_w = \frac12 \int_{\lambda_{\min}}^{\lambda_{\max}} w(\lambda)\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\, d\lambda,
-\qquad
-w(\lambda) = 2\, c(t)\, p(t) \left|\frac{dt}{d\lambda}\right|,
+\begin{aligned}
+\mathcal{L}_w &= \frac12 \int_{\lambda_{\min}}^{\lambda_{\max}} w(\lambda)\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\, d\lambda, \\
+w(\lambda) &= 2\, c(t)\, p(t) \left|\frac{dt}{d\lambda}\right|,
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-weighted-loss`
 
@@ -632,11 +648,12 @@ NCSN :cite:`song2019generative` (:numref:`sec_mdl-score-based-generative-modelin
 EDM's new column is this parameterization: what the network outputs, and how its input and output are scaled. Two considerations decide it. The first is scale. The network $F$ shares its weights across noise levels, so it should see inputs and produce outputs of unit variance at every level. For data of zero mean and standard deviation $\sigma_{\mathrm{data}}$, the denoiser is
 
 $$
-D(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\mathrm{out}}\, F(c_{\mathrm{in}}\, \bar{\mathbf{x}};\, \bar\sigma),
-\qquad
-c_{\mathrm{in}} = \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}},\quad
-c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2},\quad
-c_{\mathrm{out}} = \frac{\bar\sigma\, \sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}},
+\begin{aligned}
+D(\bar{\mathbf{x}}; \bar\sigma) &= c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\mathrm{out}}\, F(c_{\mathrm{in}}\, \bar{\mathbf{x}};\, \bar\sigma), \\
+c_{\mathrm{in}} &= \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}, \quad
+c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}, \\
+c_{\mathrm{out}} &= \frac{\bar\sigma\, \sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}},
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-edm-precond`
 
@@ -903,7 +920,7 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
     print(f'{name:27} {edm:28} {lin}')
 ```
 
-At 5,000 updates (one-quarter the budget of :numref:`sec_diffusion-latent`), this table measures sample quality early in training across multiple seeds on two sampling grids:
+At 5,000 updates (one-quarter the 20,000-step budget we will use for latent diffusion in :numref:`sec_diffusion-latent`), this table measures sample quality early in training across multiple seeds on two sampling grids:
 
 1. **Sampling grid sensitivity:** Every velocity model trained on the linear path (including the control trained at EDM's noise levels) scores $0.35$–$1.3$ FD lower on the linear grid than on the EDM grid, whereas the preconditioned EDM model is insensitive to the grid choice.
 2. **Training noise-level distribution:** Centering logit-normal training times at $m = 0$ ($t = 0.5$) degrades FD by $1.1$–$1.3$ on the EDM grid ($0.5$–$0.75$ on the linear grid) relative to uniform $t$. Shifting the logit-normal center toward the data ($m = -0.5$, $t \approx 0.38$) or using EDM's levels ($m = -1.2$, $t \approx 0.23$) eliminates this deficit.

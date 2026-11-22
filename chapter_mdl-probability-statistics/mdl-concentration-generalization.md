@@ -393,10 +393,12 @@ any $\lambda>0$, the Chernoff method :eqref:`eq_mdl-chernoff` and the product
 rule give
 
 $$
+\begin{aligned}
 P(\bar X - \mathbb{E}[\bar X] \geq t)
- = P\Bigl(\sum_i Z_i \geq nt\Bigr)
- \leq e^{-\lambda n t} \prod_{i=1}^n \mathbb{E}\bigl[e^{\lambda Z_i}\bigr]
- \leq \exp\!\left(-\lambda n t + \frac{n\lambda^2 (b-a)^2}{8}\right).
+ &= P\Bigl(\sum_i Z_i \geq nt\Bigr)
+ \leq e^{-\lambda n t} \prod_{i=1}^n \mathbb{E}\bigl[e^{\lambda Z_i}\bigr] \\
+ &\leq \exp\!\left(-\lambda n t + \frac{n\lambda^2 (b-a)^2}{8}\right).
+\end{aligned}
 $$
 
 This is the same parabola we minimized for the coin, with $(b-a)^2$ in place of

@@ -1022,8 +1022,8 @@ where the **Kronecker product** $\mathbf{B} \otimes \mathbf{D}$ is the block
 matrix whose $(i, j)$ block is $b_{ij}\mathbf{D}$.
 
 The outer-product curvature of this layer—the block of the Fisher
-information matrix $\mathbb{E}[\nabla\log p\,\nabla\log p^\top]$ from
-:numref:`sec_mdl-maximum_likelihood` corresponding to $\mathbf{W}$—is
+information matrix $\mathbb{E}[\nabla\log p\,\nabla\log p^\top]$ (which we will
+study in :numref:`sec_mdl-maximum_likelihood`) corresponding to $\mathbf{W}$—is
 therefore
 $\mathbb{E}\bigl[(\mathbf{a}\mathbf{a}^\top) \otimes (\boldsymbol{\delta}\boldsymbol{\delta}^\top)\bigr]$.
 **K-FAC** :cite:`Martens.Grosse.2015` approximates this expectation by the
@@ -1249,7 +1249,10 @@ equalizing the singular directions of a layer's update.
    :exlabel:`ex_mdl-adaptive-stochastic-methods-regret-ogd`
 
 1. [code] **Rotation sensitivity.** ● Use `rotated`, `run` and the update
-   factories of the `#adaptive-stochastic-methods-adam-vs-gd` cell.
+   factories of the `#adaptive-stochastic-methods-adam-vs-gd` cell, where the
+   Hessian $\mathbf{A}_\theta$ has eigenvalues $\lambda_{\min} = 1$ and
+   $\lambda_{\max} = 1000$ and condition number
+   $\kappa = \lambda_{\max}/\lambda_{\min} = 1000$.
     1. Show that the iterates of gradient descent and of heavy ball on
        $\mathbf{A}_\theta$ from $\mathbf{R}_\theta(1, 1)^\top$ are
        $\mathbf{R}_\theta$ times their iterates on the aligned valley, so

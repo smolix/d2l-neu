@@ -1108,8 +1108,9 @@ def number_all_equations(text, file_slug):
         stripped = line.strip()
         no_auto = skip[i]
 
-        # Single-line display equation: $$...$$ (opens and closes on one line)
-        if stripped.startswith('$$') and stripped.endswith('$$') and len(stripped) > 4:
+        # Single-line display equation: $$...$$ (opens and closes on one line,
+        # optionally followed by {#eq-*} or trailing text on the same line)
+        if stripped.startswith('$$') and stripped.count('$$') >= 2 and len(stripped) > 4:
             if '{#eq-' in line or no_auto:
                 result.append(line)
             else:
@@ -1273,8 +1274,9 @@ CHAPTER_NUMBERING = {
     'chapter_linear-regression/synthetic-regression-data.md': [2, 2],
     'chapter_linear-regression/linear-regression-scratch.md': [2, 3],
     'chapter_linear-regression/oo-design.md': [2, 4],
-    'chapter_linear-regression/generalization.md': [2, 5],
-    'chapter_linear-regression/weight-decay.md': [2, 6],
+    'chapter_linear-regression/linear-regression-concise.md': [2, 5],
+    'chapter_linear-regression/generalization.md': [2, 6],
+    'chapter_linear-regression/weight-decay.md': [2, 7],
     'chapter_linear-classification/index.md': [3],
     'chapter_linear-classification/softmax-regression.md': [3, 1],
     'chapter_linear-classification/image-classification-dataset.md': [3, 2],

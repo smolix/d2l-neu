@@ -854,10 +854,12 @@ Visual inspection easily spots catastrophic collapse, but comparing two working 
 1. **Fréchet Inception Distance (FID)** :cite:`Heusel.Ramsauer.Unterthiner.ea.2017` fits multivariate Gaussians $\mathcal{N}(\mu_p, \Sigma_p)$ and $\mathcal{N}(\mu_q, \Sigma_q)$ to the real and generated feature clouds and computes the squared Wasserstein-2 distance between them :cite:`Dowson.Landau.1982,Givens.Shortt.1984`:
 
    $$
+   \begin{aligned}
    \mathrm{FID}
-   = \big\| \mu_p - \mu_q \big\|^2
-   + \operatorname{tr}\!\Big( \Sigma_p + \Sigma_q
+   &= \big\| \mu_p - \mu_q \big\|^2 \\
+   &\quad + \operatorname{tr}\!\Big( \Sigma_p + \Sigma_q
    - 2 \big( \Sigma_p^{1/2}\, \Sigma_q\, \Sigma_p^{1/2} \big)^{1/2} \Big).
+   \end{aligned}
    $$
    :eqlabel:`eq_gan_fid`
 
@@ -866,10 +868,12 @@ Visual inspection easily spots catastrophic collapse, but comparing two working 
 2. **Kernel Inception Distance (KID)** :cite:`Binkowski.Sutherland.Arbel.ea.2018` computes the unbiased squared Maximum Mean Discrepancy (`d2l.mmd2_unbiased`, :numref:`sec_gan_objectives`) using the cubic polynomial kernel $k(u, v) = (u^\top v / d + 1)^3$, which compares feature moments up to order three (Exercise :exref:`ex_dcgan-moments-fid-kid`):
 
    $$
+   \begin{aligned}
    \widehat{\mathrm{MMD}}^2
-   = \frac{1}{n_p(n_p-1)} \sum_{i \neq i'} k\big(\phi(x_i), \phi(x_{i'})\big)
-   + \frac{1}{n_q(n_q-1)} \sum_{j \neq j'} k\big(\phi(x'_j), \phi(x'_{j'})\big)
-   - \frac{2}{n_p n_q} \sum_{i,j} k\big(\phi(x_i), \phi(x'_j)\big).
+   &= \frac{1}{n_p(n_p-1)} \sum_{i \neq i'} k\big(\phi(x_i), \phi(x_{i'})\big) \\
+   &\quad + \frac{1}{n_q(n_q-1)} \sum_{j \neq j'} k\big(\phi(x'_j), \phi(x'_{j'})\big) \\
+   &\quad - \frac{2}{n_p n_q} \sum_{i,j} k\big(\phi(x_i), \phi(x'_j)\big).
+   \end{aligned}
    $$
    :eqlabel:`eq_gan_kid`
 
@@ -950,9 +954,10 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).mean()):.3f}')
 A single distance like FID or KID conflates two distinct failure modes: *poor fidelity* (generating unrealistic images outside the support of $p$) and *poor coverage* (mode dropping, failing to cover parts of $p$). :citet:`Kynkaanniemi.Karras.Laine.ea.2019` separate them using $K$-nearest-neighbor balls in feature space. Around each real feature $\phi(x_i)$, let $B(\phi(x_i), r_i)$ be the Euclidean ball reaching its $K$-th nearest real neighbor; define $B(\phi(x'_j), r'_j)$ analogously among the generated features (we use $K = 3$). Then:
 
 $$
-\mathrm{precision} = \frac{1}{n_q} \sum_{j=1}^{n_q} \mathbb{1}\Big[\phi(x'_j) \in \textstyle\bigcup_i B\big(\phi(x_i), r_i\big)\Big],
-\qquad
-\mathrm{recall} = \frac{1}{n_p} \sum_{i=1}^{n_p} \mathbb{1}\Big[\phi(x_i) \in \textstyle\bigcup_j B\big(\phi(x'_j), r'_j\big)\Big].
+\begin{aligned}
+\mathrm{precision} &= \frac{1}{n_q} \sum_{j=1}^{n_q} \mathbb{1}\Big[\phi(x'_j) \in \textstyle\bigcup_i B\big(\phi(x_i), r_i\big)\Big], \\
+\mathrm{recall} &= \frac{1}{n_p} \sum_{i=1}^{n_p} \mathbb{1}\Big[\phi(x_i) \in \textstyle\bigcup_j B\big(\phi(x'_j), r'_j\big)\Big].
+\end{aligned}
 $$
 
 *Precision* is the fraction of generated samples that fall within the estimated real feature support, while *recall* is the fraction of real samples covered by the estimated generated feature support. When a generator collapses to a single output, its $K$-NN radii $r'_j$ shrink to zero, driving recall to $0$.
@@ -1113,7 +1118,12 @@ With $1.6\text{M}$ parameters and $36{,}538$ training sprites, the critic sees e
 
 1. [code] **Scale-free critic overfitting statistics.** To compare critic memorization across objectives with different score scales, :citet:`Karras.Aittala.Hellsten.ea.2020` define
 
-   $$r_v = \frac{\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{holdout}}]}{\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{generated}}]}, \qquad r_t = \mathbb{E}\big[\operatorname{sign}(D_{\textrm{train}})\big].$$
+   $$
+   \begin{aligned}
+   r_v &= \frac{\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{holdout}}]}{\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{generated}}]}, \\
+   r_t &= \mathbb{E}\big[\operatorname{sign}(D_{\textrm{train}})\big].
+   \end{aligned}
+   $$
 
     1. Show that $r_v$ is invariant to positive affine transformations $D \mapsto aD + c$ ($a > 0$), whereas the raw gap $\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{holdout}}]$ scales with $a$ and $r_t$ depends on the shift $c$.
     1. For a shift-invariant pairing critic, under what transformations of $D$ is $\mathbb{E}[\operatorname{sign}(D_{\textrm{train}} - D_{\textrm{holdout}})]$ invariant, and what value does it take when training and held-out scores have identical distributions?

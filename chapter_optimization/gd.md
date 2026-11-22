@@ -45,7 +45,12 @@ whose unique minimum lies at the origin. The second derivative (curvature) is $\
 
 Gradient descent with learning rate $\eta > 0$ updates the iterate via $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$. Because $\nabla f(\mathbf{x}) = (0.2 x_1, 4 x_2)$, the two coordinates decouple and evolve multiplicatively on each step:
 
-$$x_1 \leftarrow (1 - 0.2\eta)\, x_1, \qquad x_2 \leftarrow (1 - 4\eta)\, x_2.$$
+$$
+\begin{aligned}
+x_1 &\leftarrow (1 - 0.2\eta)\, x_1, \\
+x_2 &\leftarrow (1 - 4\eta)\, x_2.
+\end{aligned}
+$$
 
 Each coordinate places a competing constraint on $\eta$:
 
@@ -168,7 +173,12 @@ On a non-quadratic objective, curvature varies from point to point. Why does the
 
 By a first-order Taylor expansion $f(\mathbf{x} + \boldsymbol{\epsilon}) \approx f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x})$ and the Cauchy–Schwarz inequality, the negative gradient $-\nabla f(\mathbf{x})$ is the direction of steepest local descent. To guarantee that a finite step $\mathbf{x} - \eta \nabla f(\mathbf{x})$ actually decreases $f$, suppose $f$ is **$L$-smooth**, meaning its gradient is $L$-Lipschitz continuous (in one variable, $|f'(y) - f'(x)| \le L|y - x|$, or $|f''(x)| \le L$). Integrating the slope difference along a step $\epsilon$ bounds $f$ above by a touching parabola of curvature $L$:
 
-$$f(x + \epsilon) - f(x) - \epsilon f'(x) = \int_0^\epsilon \big(f'(x + s) - f'(x)\big)\, ds \leq \int_0^\epsilon L s \, ds = \frac{L}{2} \epsilon^2.$$
+$$
+\begin{aligned}
+f(x + \epsilon) - f(x) - \epsilon f'(x) &= \int_0^\epsilon \big(f'(x + s) - f'(x)\big)\, ds \\
+&\leq \int_0^\epsilon L s \, ds = \frac{L}{2} \epsilon^2.
+\end{aligned}
+$$
 
 Substituting the gradient step $\epsilon = -\eta f'(x)$ (or $\boldsymbol{\epsilon} = -\eta \nabla f(\mathbf{x})$ in $d$ dimensions, where $\|\nabla^2 f(\mathbf{x})\|_2 \le L$; :numref:`subsec_mdl-gd-smoothness`) yields the **descent lemma**:
 

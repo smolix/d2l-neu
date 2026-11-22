@@ -27,6 +27,11 @@ CPU_ONLY_NOTEBOOKS = {
     "chapter_mdl-information-theory/mdl-test-functions-transport.ipynb",
     "chapter_mdl-information-theory/mdl-mutual-information.ipynb",
     "chapter_mdl-optimization/mdl-numerical-stability-conditioning.ipynb",
+    # 20.3: a normal build reads its GPU-made files (paraphrases, vectors)
+    # and computes everything else on the CPU (its live embedding check
+    # passes device='cpu'); "cuda" and "GPU" appear only in its regeneration
+    # path, which runs through the part-runner, not the scheduler.
+    "chapter_lm-data/dedup.ipynb",
 }
 
 # (framework, notebook) pairs listed in CPU_ONLY_NOTEBOOKS that nevertheless
@@ -63,6 +68,15 @@ NOTEBOOK_TIMEOUTS = {
     # card is shared.
     "chapter_generative-adversarial-networks/dcgan.ipynb": 7200,
     "chapter_generative-adversarial-networks/conditional.ipynb": 7200,
+    # 20.2's regeneration labels 22,000 documents on four vLLM servers (one
+    # request at a time each, for reproducible bits), embeds 42,000 and
+    # judges 200 removals in one run (about 100 min on four RTX 4090s,
+    # 2026-11-21); a normal build reads the results in minutes.
+    "chapter_lm-data/quality-filtering.ipynb": 10800,
+    # 20.5's corpus regeneration rewrites 4.7M tokens with Qwen3.5-2B on one
+    # GPU (three parts, about 50 min at batch 96, 2026-11-16 pilot); its judge
+    # and proxy runs follow in a second run; a normal build takes minutes.
+    "chapter_lm-data/synthetic-data.ipynb": 7200,
 }
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
@@ -423,6 +437,15 @@ HEAVY_GPU_NOTEBOOKS = {
     # 19.3 fine-tunes the encoder into an embedder (about 5-7 GiB) next to
     # the released embedder and reranker.
     ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): 2,
+    # 20.5 generates with Qwen3.5-2B in bf16 at batch 32 (about 8 GiB) and
+    # trains an 8.1M-parameter proxy (6.8 GiB peak, 2026-11-16 pilot).
+    ("pytorch", "chapter_lm-data/synthetic-data.ipynb"): 2,
+    # 20.6's step-0 diagnostics score Qwen3-0.6B-Base in bf16 with 155,765-id
+    # logits over 1,024-token contexts: 4.0 GiB allocated, 11.2 GiB reserved
+    # (2026-11-21 regeneration). Its D2L_RERUN regeneration (12-13 GiB peak
+    # in the extension runs) takes a whole card: run it on a card masked for
+    # it alone.
+    ("pytorch", "chapter_lm-data/tokenizers.ipynb"): 2,
 }
 
 
@@ -514,6 +537,10 @@ NOTEBOOK_ENV = {
         "HF_HUB_VERBOSITY": "error",
     },
     ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    # 20.2: the same X-HF-Warning (the sentence-transformers check).
+    ("pytorch", "chapter_lm-data/quality-filtering.ipynb"): {
         "HF_HUB_VERBOSITY": "error",
     },
     # 19.5: Qwen3.5-9B generates with prompts of changing length within 1-2

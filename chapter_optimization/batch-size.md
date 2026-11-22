@@ -194,10 +194,11 @@ $$
 Minimizing the right-hand side over $\eta$ yields the optimal step size $\eta_{\text{opt}}(b)$ and single-step guaranteed decrease:
 
 $$
-\eta_{\textrm{opt}}(b) = \frac{1}{L} \cdot \frac{1}{1 + b_{\textrm{noise}} / b},
-\qquad
+\begin{aligned}
+\eta_{\textrm{opt}}(b) &= \frac{1}{L} \cdot \frac{1}{1 + b_{\textrm{noise}} / b}, \\
 f(\mathbf{x}) - \mathbb{E}\big[f(\mathbf{x} - \eta_{\textrm{opt}}\, \hat{\mathbf{g}}_b)\big]
-\geq \frac{\|\nabla f\|^2}{2L} \cdot \frac{1}{1 + b_{\textrm{noise}} / b}.
+&\geq \frac{\|\nabla f\|^2}{2L} \cdot \frac{1}{1 + b_{\textrm{noise}} / b}.
+\end{aligned}
 $$
 :eqlabel:`eq_best-step`
 
@@ -223,9 +224,10 @@ When increasing the batch size from $b_0$ to $b$ in the noise-dominated regime (
 * **Adam and AdamW (square-root scaling):** In the noise-dominated regime where a coordinate gradient has mean $\bar{g}$ and standard deviation $\sigma / \sqrt{b}$, Adam normalizes the gradient by its RMS scale $\sqrt{\hat{v}_t} \approx \sigma / \sqrt{b}$, yielding single-step drift $-\eta(\sqrt{b}/\sigma)\bar{g}$ and step noise $-\eta z$ ($z \sim \mathcal{N}(0, 1)$). Because the denominator $\sigma/\sqrt{b}$ already supplies a factor of $\sqrt{b/b_0}$, matching the drift and cumulative variance of $k = b/b_0$ small steps in a single large step requires scaling $\eta$ by $\sqrt{b/b_0}$ :cite:`Malladi.Lyu.Panigrahi.ea.2022`:
 
 $$
-\eta(b) = \frac{b}{b_0}\, \eta_0 \;\; \textrm{(SGD)},
-\qquad
-\eta(b) = \sqrt{\frac{b}{b_0}}\, \eta_0 \;\; \textrm{(Adam / AdamW)}.
+\begin{aligned}
+\eta(b) &= \frac{b}{b_0}\, \eta_0 \;\; \textrm{(SGD)}, \\
+\eta(b) &= \sqrt{\frac{b}{b_0}}\, \eta_0 \;\; \textrm{(Adam / AdamW)}.
+\end{aligned}
 $$
 :eqlabel:`eq_lr-rules`
 

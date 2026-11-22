@@ -68,6 +68,12 @@ LIB_ONLY_FILES = [
     # The CUDA-graph replay behind the 25-Gaussians training step of the GAN
     # convergence section, explained there in one sentence.
     'chapter_generative-adversarial-networks/convergence-lib.md',
+    # Chapter 20: 20.1's WARC reader and block-checked fetch internals, the
+    # crawl pin and registered domains; 20.4's token pools and byte lengths;
+    # 20.6's shard writer, special-string-safe encoding and URL rule.
+    'chapter_lm-data/crawl-lib.md',
+    'chapter_lm-data/mixtures-lib.md',
+    'chapter_lm-data/tokenizers-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a
@@ -1007,14 +1013,6 @@ def main():
     late = [f for f in LIB_ONLY_FILES
             if f not in LIB_ONLY_EARLY_FILES and (args.source / f).exists()]
     files = early + list(CHAPTER_NUMBERING.keys()) + late
-    # oo-design.md defines base classes (Module, DataModule, Trainer) used by
-    # LinearRegression in linear-regression-scratch.md (#sec_linear_concise).
-    if ('chapter_linear-regression/linear-regression-scratch.md' in files
-            and 'chapter_linear-regression/oo-design.md' in files):
-        i_s = files.index('chapter_linear-regression/linear-regression-scratch.md')
-        i_o = files.index('chapter_linear-regression/oo-design.md')
-        if i_s < i_o:
-            files[i_s], files[i_o] = files[i_o], files[i_s]
 
     # Copy __init__.py
     init_src = args.source / 'd2l' / '__init__.py'

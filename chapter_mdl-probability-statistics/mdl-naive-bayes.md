@@ -222,11 +222,13 @@ feature multiplies the prior odds by its likelihood ratio—the probability of
 what we saw under spam divided by its probability under ordinary email:
 
 $$
+\begin{aligned}
 \frac{p(\text{spam}\mid\mathbf x)}{p(\text{ordinary}\mid\mathbf x)}
-=\underbrace{\frac{0.4}{0.6}}_{\text{prior}}\cdot
+&=\underbrace{\frac{0.4}{0.6}}_{\text{prior}}\cdot
 \underbrace{\frac{3/4}{1/6}}_{\text{"free"}}\cdot
-\underbrace{\frac{1}{2/6}}_{\text{no "meeting"}}
-=\frac23\cdot4.5\cdot3=9.
+\underbrace{\frac{1}{2/6}}_{\text{no "meeting"}} \\
+&=\frac23\cdot4.5\cdot3=9.
+\end{aligned}
 $$
 
 Odds of $9$ to $1$ correspond to a probability of $9/10$. The 784-pixel

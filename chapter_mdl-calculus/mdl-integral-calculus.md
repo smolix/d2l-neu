@@ -390,9 +390,11 @@ deciding whether a tail decays fast enough to enclose finite area. Applying the
 evaluation rule on $[1,b]$ and taking $b\to\infty$ gives
 
 $$
-\int_1^b x^{-s}\,dx = \frac{b^{1-s}-1}{1-s}
-\ \xrightarrow{\ b\to\infty\ }\
+\begin{aligned}
+\int_1^b x^{-s}\,dx &= \frac{b^{1-s}-1}{1-s} \\
+&\xrightarrow{\ b\to\infty\ }
 \begin{cases} \dfrac{1}{s-1}, & s>1\ \text{(converges)},\\[1ex] \infty, & s\le 1\ \text{(diverges)}.\end{cases}
+\end{aligned}
 $$
 
 (At $s=1$ the expression reads $0/0$; the definite integral is $\log b$, which

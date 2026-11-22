@@ -1435,7 +1435,14 @@ Models part: notebooks whose source lies under `chapter_lm-*` execute in
 linux-x86_64 `flash-linear-attention==0.6.0`/`fla-core==0.6.0`, the fused
 Gated DeltaNet kernels section 18.1 measures; for chapter 19 `faiss-cpu`,
 and `bm25s`, `pytrec-eval-terrier`, `seqeval` and `sentence-transformers` as
-the oracles its library is tested against), so the rest of the book never
+the oracles its library is tested against; for chapter 20 `warcio` (the
+oracle of `iter_warc`), `trafilatura==2.1.0` and `resiliparse` (HTML
+extraction; trafilatura 2.2.0 and 2.3.1 would raise `charset-normalizer` and
+`urllib3` in the jax/build/run extras, which share that resolution fork),
+`fasttext-numpy2-wheel` (linux only; language ID), `datasketch` (MinHash
+oracle), `sentencepiece`, `tldextract` (registered domains from its bundled
+suffix list, no network) and explicit pins of `tokenizers==0.23.3` and
+`tiktoken==0.13.0`, the reference tokenizer's toolchain), so the rest of the book never
 installs those packages. `make venv-lm` builds it with the d2l package
 installed editable from the checkout it runs in. `causal-conv1d` is left out:
 it has no torch 2.11 wheel (it would compile), and its PyTorch fallback holds

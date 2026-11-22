@@ -168,17 +168,21 @@ Setting $z_t = \sigma(-s_t)$ turns the ZOH update into $h_t = z_t h_{t-1} + (1 -
 Now give each of the layer's $H$ channels ($H = 2d$ in Mamba) an $N$-dimensional state vector $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ with rates $\boldsymbol{\lambda} = (\lambda_1, \ldots, \lambda_N)^\top$ initialized to $(-1, \ldots, -N)^\top$. From the current $H$-dimensional input $\mathbf{x}_t$, the layer computes per-channel step sizes $\boldsymbol{\Delta}_t \in \mathbb{R}_+^H$ together with a shared write direction $\mathbf{B}_t \in \mathbb{R}^N$ and read direction $\mathbf{C}_t \in \mathbb{R}^N$:
 
 $$
-\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t +
-\mathbf{b}_\Delta), \qquad \mathbf{B}_t = \mathbf{W}_B \mathbf{x}_t, \qquad
+\begin{aligned}
+\boldsymbol{\Delta}_t &= \textrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t + \mathbf{b}_\Delta), \\
+\mathbf{B}_t &= \mathbf{W}_B \mathbf{x}_t, \qquad
 \mathbf{C}_t = \mathbf{W}_C \mathbf{x}_t.
+\end{aligned}
 $$
 
 Each channel $c \in \{1, \ldots, H\}$ then updates its $N$ states and reads out its output via:
 
 $$
-\mathbf{h}_t^{(c)} = e^{\Delta_{t,c} \boldsymbol{\lambda}} \odot
-\mathbf{h}_{t-1}^{(c)} + \Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t, \qquad
-y_{t,c} = \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}.
+\begin{aligned}
+\mathbf{h}_t^{(c)} &= e^{\Delta_{t,c} \boldsymbol{\lambda}} \odot
+\mathbf{h}_{t-1}^{(c)} + \Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t, \\
+y_{t,c} &= \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}.
+\end{aligned}
 $$
 :eqlabel:`eq_selective_ssm`
 

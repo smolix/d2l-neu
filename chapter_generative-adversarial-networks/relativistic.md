@@ -3,7 +3,7 @@
 
 A standard classifier critic scores each sample against a fixed zero threshold ($D(x') > 0$). In many settings, however, pairwise comparisons are more natural than absolute scores—much like Bradley–Terry preference models (:numref:`sec_regularized`), which turn the score difference between two candidates into a win probability. :citet:`Jolicoeur-Martineau.2019` introduced *relativistic* GAN critics that take a real sample $x \sim p$ and a generated sample $x' \sim q$ and predict which one is real from their score difference $D(x) - D(x')$.
 
-Because the R3GAN recipe used from :numref:`sec_gan_convergence` onward relies on this pairwise objective, we analyze three questions here:
+Because the modern R3GAN recipe we will build in :numref:`sec_gan_convergence` and use throughout the rest of the chapter relies on this pairwise objective, we analyze three questions here:
 
 1. Does the optimal pairwise ranking critic still recover the log density ratio $\lambda(x) = \log(p(x)/q(x))$?
 2. What divergence does the pairwise objective measure at its optimum, and how does it compare to $\mathrm{JS}(p, q)$?
@@ -89,9 +89,11 @@ In the single-sample log-loss objective, maximizing $V(D)$ decoupled pointwise a
 **Proof.** Because $D \mapsto D(x) - D(x')$ is linear and $\log \sigma$ is strictly concave, $\Phi(D)$ is concave in $D$ and strictly concave in the score differences. Taking the functional derivative of $\Phi(D)$ with respect to $D(t)$ (where $t$ appears both as the real sample $x$ and as the generated sample $x'$) and using $\tfrac{d}{du} \log \sigma(u) = \sigma(-u)$ gives:
 
 $$
+\begin{aligned}
 \frac{\delta \Phi}{\delta D(t)}
-\;=\; p(t)\, \mathbb{E}_{x' \sim q}\big[\sigma(D(x') - D(t))\big]
-\;-\; q(t)\, \mathbb{E}_{x \sim p}\big[\sigma(D(t) - D(x))\big].
+&= p(t)\, \mathbb{E}_{x' \sim q}\big[\sigma(D(x') - D(t))\big] \\
+&\quad - q(t)\, \mathbb{E}_{x \sim p}\big[\sigma(D(t) - D(x))\big].
+\end{aligned}
 $$
 :eqlabel:`eq_gan_rp_stationarity`
 
@@ -133,7 +135,11 @@ print(f'JS(p, q) = {js(p, q):.3f}   JS(P, Q) = {js(P.ravel(), Q.ravel()):.3f}   
 We can prove this equivalence in general by viewing the ordered pair $(a_1, a_2) \in \mathcal{X} \times \mathcal{X}$ as a single observation drawn either from $P = p \otimes q$ (real first) or from $Q = q \otimes p$ (real second), and considering the standard log-loss objective :eqref:`eq_gan_V` on $\mathcal{X} \times \mathcal{X}$ with a pair critic $\mathcal{D}(a_1, a_2)$:
 
 $$
-V_{P,Q}(\mathcal{D}) = \mathbb{E}_{(a_1, a_2) \sim P}\big[\log \sigma(\mathcal{D}(a_1, a_2))\big] + \mathbb{E}_{(a_1, a_2) \sim Q}\big[\log \sigma(-\mathcal{D}(a_1, a_2))\big].
+\begin{aligned}
+V_{P,Q}(\mathcal{D})
+&= \mathbb{E}_{(a_1, a_2) \sim P}\big[\log \sigma(\mathcal{D}(a_1, a_2))\big] \\
+&\quad + \mathbb{E}_{(a_1, a_2) \sim Q}\big[\log \sigma(-\mathcal{D}(a_1, a_2))\big].
+\end{aligned}
 $$
 
 **Lemma (Lifting to Product Space).** *Let $P = p \otimes q$ and $Q = q \otimes p$. Then:*
@@ -149,9 +155,11 @@ $$
 **Theorem.** *The calibrated pairing divergence $d_{\mathrm{Rp}}(p, q) := \sup_D \Phi(D) + \log 2$ satisfies*
 
 $$
+\begin{aligned}
 d_{\mathrm{Rp}}(p, q)
-\;=\; \mathrm{JS}\big(p \otimes q,\; q \otimes p\big)
-\;=\; H\Big(\tfrac{1}{2}\big(p \otimes q + q \otimes p\big)\Big) - H(p) - H(q).
+&= \mathrm{JS}\big(p \otimes q,\; q \otimes p\big) \\
+&= H\Big(\tfrac{1}{2}\big(p \otimes q + q \otimes p\big)\Big) - H(p) - H(q).
+\end{aligned}
 $$
 :eqlabel:`eq_gan_rp_value`
 
@@ -160,15 +168,19 @@ $$
 Substituting $D^\star = \lambda$ directly into :eqref:`eq_gan_rp` also yields the explicit expectation form:
 
 $$
+\begin{aligned}
 d_{\mathrm{Rp}}(p, q)
-\;=\; \log 2 \;-\; \mathbb{E}_{x \sim p,\; x' \sim q}\Big[\log\Big(1 + \frac{q(x)\, p(x')}{p(x)\, q(x')}\Big)\Big],
+&= \log 2 - \mathbb{E}_{x \sim p,\; x' \sim q}\Big[\log\Big(1 + \frac{q(x)\, p(x')}{p(x)\, q(x')}\Big)\Big],
+\end{aligned}
 $$
 :eqlabel:`eq_gan_rp_explicit`
 
 and the mutual-information identity :eqref:`eq_gan_entropy_gap` on the pair space shows that for a randomly ordered pair $(a_1, a_2)$ with ordering label $y \in \{0, 1\}$,
 
 $$
-d_{\mathrm{Rp}}(p, q) \;=\; I\big((a_1, a_2);\, y\big) \;=\; \log 2 - H\big(y \mid a_1, a_2\big).
+\begin{aligned}
+d_{\mathrm{Rp}}(p, q) &= I\big((a_1, a_2);\, y\big) = \log 2 - H\big(y \mid a_1, a_2\big).
+\end{aligned}
 $$
 :eqlabel:`eq_gan_rp_mi`
 
@@ -178,15 +190,19 @@ $$
 Using :eqref:`eq_gan_rp_mi`, we can relate $d_{\mathrm{Rp}}(p, q)$ directly to $\mathrm{JS}(p, q)$. Each marginal element $a_k$ of the randomly ordered pair has distribution $m = (p+q)/2$ and carries $I(a_k; y) = \mathrm{JS}(p, q)$ nats about the ordering label $y$, while $a_1$ and $a_2$ are conditionally independent given $y$ ($H(a_2 \mid a_1, y) = H(a_2 \mid y)$). By the chain rule of mutual information:
 
 $$
-d_{\mathrm{Rp}}(p, q) = I(a_1; y) + I(a_2; y \mid a_1)
-= I(a_1; y) + I(a_2; y) - I(a_1; a_2)
-= 2\, \mathrm{JS}(p, q) - I(a_1; a_2).
+\begin{aligned}
+d_{\mathrm{Rp}}(p, q) &= I(a_1; y) + I(a_2; y \mid a_1) \\
+&= I(a_1; y) + I(a_2; y) - I(a_1; a_2) \\
+&= 2\, \mathrm{JS}(p, q) - I(a_1; a_2).
+\end{aligned}
 $$
 
 Because $I(a_2; y \mid a_1) \geq 0$, $I(a_1; a_2) \geq 0$, and $d_{\mathrm{Rp}}(p, q) \leq \log 2$, we obtain the tight sandwich bounds:
 
 $$
-\mathrm{JS}(p, q) \;\leq\; d_{\mathrm{Rp}}(p, q) \;\leq\; \min\big(2\,\mathrm{JS}(p, q),\, \log 2\big).
+\begin{aligned}
+\mathrm{JS}(p, q) &\leq d_{\mathrm{Rp}}(p, q) \leq \min\big(2\,\mathrm{JS}(p, q),\, \log 2\big).
+\end{aligned}
 $$
 
 Near equilibrium ($q \to p$), $I(a_1; a_2)$ is fourth-order in $p - q$ while $\mathrm{JS}(p, q)$ is second-order, so $d_{\mathrm{Rp}}(p, q) \approx 2\,\mathrm{JS}(p, q)$ (Exercise :exref:`ex_relativistic-gap-twice-js`). When $p$ and $q$ have disjoint supports, both $\mathrm{JS}(p, q)$ and $d_{\mathrm{Rp}}(p, q)$ saturate at $\log 2$.
@@ -198,9 +214,10 @@ Near equilibrium ($q \to p$), $I(a_1; a_2)$ is fourth-order in $p - q$ while $\m
 Differentiating $\Phi(D)$ with respect to the generator parameters $\theta$ through $x' = G(z)$ yields:
 
 $$
-\nabla_\theta \Phi = -\,\mathbb{E}_{z}\big[w_{\textrm{Rp}}(G(z))\, \nabla_\theta D(G(z))\big],
-\qquad
-w_{\textrm{Rp}}(x') = \mathbb{E}_{x \sim p}\big[\sigma\big(D(x') - D(x)\big)\big].
+\begin{aligned}
+\nabla_\theta \Phi &= -\,\mathbb{E}_{z}\big[w_{\textrm{Rp}}(G(z))\, \nabla_\theta D(G(z))\big], \\
+w_{\textrm{Rp}}(x') &= \mathbb{E}_{x \sim p}\big[\sigma\big(D(x') - D(x)\big)\big].
+\end{aligned}
 $$
 :eqlabel:`eq_gan_rp_weights`
 

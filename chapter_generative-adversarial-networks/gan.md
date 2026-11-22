@@ -73,9 +73,10 @@ The discriminator maximizes $V(D)$, while the generator affects only the second 
 For a fixed generator distribution $q$, maximizing :eqref:`eq_gan_V` decouples pointwise across $x$. At each point $x$, the integrand is $p(x) \log \sigma(D(x)) + q(x) \log \sigma(-D(x))$. Writing $u = \sigma(D(x)) \in (0, 1)$, maximizing the strictly concave function $p \log u + q \log(1-u)$ via the first-order condition $p/u = q/(1-u)$ gives the unique optimum:
 
 $$
-\sigma(D^\star(x)) = \frac{p(x)}{p(x) + q(x)} = P(y = 1 \mid x),
-\qquad
-D^\star(x) = \log \frac{p(x)}{q(x)} = \lambda(x).
+\begin{aligned}
+\sigma(D^\star(x)) &= \frac{p(x)}{p(x) + q(x)} = P(y = 1 \mid x), \\
+D^\star(x) &= \log \frac{p(x)}{q(x)} = \lambda(x).
+\end{aligned}
 $$
 :eqlabel:`eq_gan_dstar`
 
@@ -94,8 +95,10 @@ which changes sign at the midpoint $\mu/2$. When $p$ and $q$ have different cova
 Substituting the optimal discriminator $\sigma(D^\star) = p/(2m)$ and $\sigma(-D^\star) = q/(2m)$ back into :eqref:`eq_gan_V` reveals what the generator minimizes against an optimal discriminator:
 
 $$
-V(D^\star) = \int p \log \frac{p}{2m} + \int q \log \frac{q}{2m}
-= D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m) - 2 \log 2 .
+\begin{aligned}
+V(D^\star) &= \int p \log \frac{p}{2m} + \int q \log \frac{q}{2m} \\
+&= D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m) - 2 \log 2 .
+\end{aligned}
 $$
 
 Using the definition of the Jensen–Shannon divergence, $\mathrm{JS}(p, q) = \tfrac12 D_{\textrm{KL}}(p \,\|\, m) + \tfrac12 D_{\textrm{KL}}(q \,\|\, m)$, we obtain:
@@ -131,8 +134,10 @@ In practice, the generator takes gradient steps against a fixed discriminator $D
 In the literal minimax formulation, the generator minimizes $\mathbb{E}_z[\log \sigma(-D(G(z)))]$ with respect to its parameters $\theta$. Using $\tfrac{d}{du} \log \sigma(-u) = -\sigma(u)$ and $x' = G(z)$, the gradient is:
 
 $$
-\nabla_\theta \, \mathbb{E}_z\big[\log \sigma(-D(G(z)))\big]
-= -\,\mathbb{E}_z\big[\sigma(D(x'))\, \nabla_\theta D(G(z))\big].
+\begin{aligned}
+&\nabla_\theta \, \mathbb{E}_z\big[\log \sigma(-D(G(z)))\big] \\
+&\qquad = -\,\mathbb{E}_z\big[\sigma(D(x'))\, \nabla_\theta D(G(z))\big].
+\end{aligned}
 $$
 
 Each generated sample $x'$ is pushed uphill along $\nabla_\theta D(G(z))$, weighted by $\sigma(D(x'))$—the discriminator's estimated probability that $x'$ is real. When the discriminator confidently rejects a sample ($D(x') \ll 0$), this weight $\sigma(D(x')) \approx e^{D(x')}$ becomes exponentially small, causing the generator gradient to *saturate* precisely when the generator most needs to improve.
@@ -140,16 +145,19 @@ Each generated sample $x'$ is pushed uphill along $\nabla_\theta D(G(z))$, weigh
 To avoid this saturation, :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` trained the generator to maximize the log-probability of its samples being classified as real, minimizing $-\mathbb{E}_z[\log \sigma(D(G(z)))]$. Since $\tfrac{d}{du} \log \sigma(u) = \sigma(-u)$, its gradient is:
 
 $$
-\nabla_\theta \Big({-\mathbb{E}_z\big[\log \sigma(D(G(z)))\big]}\Big)
-= -\,\mathbb{E}_z\big[\sigma(-D(x'))\, \nabla_\theta D(G(z))\big].
+\begin{aligned}
+&\nabla_\theta \Big({-\mathbb{E}_z\big[\log \sigma(D(G(z)))\big]}\Big) \\
+&\qquad = -\,\mathbb{E}_z\big[\sigma(-D(x'))\, \nabla_\theta D(G(z))\big].
+\end{aligned}
 $$
 
 Both objectives push each sample in the same direction $\nabla_\theta D(G(z))$, differing only in the per-sample scalar weight:
 
 $$
-w_{\textrm{sat}}(x') = \sigma(D(x')),
-\qquad
-w_{\textrm{ns}}(x') = \sigma(-D(x')) = 1 - \sigma(D(x')).
+\begin{aligned}
+w_{\textrm{sat}}(x') &= \sigma(D(x')), \\
+w_{\textrm{ns}}(x') &= \sigma(-D(x')) = 1 - \sigma(D(x')).
+\end{aligned}
 $$
 :eqlabel:`eq_gan_weights`
 
@@ -163,17 +171,19 @@ As shown in :numref:`fig_gan_weights`, the *non-saturating* weight $w_{\textrm{n
 What divergence does the non-saturating generator loss descend when the discriminator is held at its optimal response $D = \lambda = \log(p/q)$? Using $\log \sigma(-D) - \log \sigma(D) = -D$, we can decompose the non-saturating objective as:
 
 $$
--\mathbb{E}_{x'}\big[\log \sigma(D(x'))\big]
-= \mathbb{E}_{x'}\big[-D(x')\big] - \mathbb{E}_{x'}\big[\log \sigma(-D(x'))\big].
+\begin{aligned}
+&-\mathbb{E}_{x'}\big[\log \sigma(D(x'))\big] \\
+&\qquad = \mathbb{E}_{x'}\big[-D(x')\big] - \mathbb{E}_{x'}\big[\log \sigma(-D(x'))\big].
+\end{aligned}
 $$
 
 With $D$ fixed at $\lambda$, the first term on the right has the same gradient with respect to $q$ as the reverse KL divergence $D_{\textrm{KL}}(q \,\|\, p) = \mathbb{E}_q[\log(q/p)]$, while by the envelope theorem the second term (the minimax loss) has the gradient of $2\,\mathrm{JS}(p, q) = D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m)$ :cite:`Arjovsky.Bottou.2017` (Exercise :exref:`ex_gan-generator-weight-divergences`). Combining the integrals using $\log(q/p) - \log(q/m) = \log(m/p)$ and $p + q = 2m$ yields:
 
 $$
 \begin{aligned}
-D_{\textrm{KL}}(q \,\|\, p) - D_{\textrm{KL}}(p \,\|\, m) - D_{\textrm{KL}}(q \,\|\, m)
-&= \int q \log \frac{m}{p} + \int p \log \frac{m}{p} \\
-&= \int (p + q) \log \frac{m}{p} \;=\; 2\, D_{\textrm{KL}}(m \,\|\, p).
+&D_{\textrm{KL}}(q \,\|\, p) - D_{\textrm{KL}}(p \,\|\, m) - D_{\textrm{KL}}(q \,\|\, m) \\
+&\qquad = \int q \log \frac{m}{p} + \int p \log \frac{m}{p} \\
+&\qquad = \int (p + q) \log \frac{m}{p} \;=\; 2\, D_{\textrm{KL}}(m \,\|\, p).
 \end{aligned}
 $$
 :eqlabel:`eq_gan_ns_divergence`
@@ -446,10 +456,12 @@ Within 10 epochs, the discriminator loss rises to the equilibrium value $2\log 2
 Because $G(z) = z A_q + \mu_q$ defines a Gaussian $q = \mathcal{N}(\mu_q, \Sigma_q)$ with $\Sigma_q = A_q^\top A_q$, we can evaluate the exact KL divergence $D_{\textrm{KL}}(q \,\|\, p)$ in $d_x$ dimensions :cite:`Kullback.1959`:
 
 $$
-D_{\textrm{KL}}\big(\mathcal{N}(\mu_0, \Sigma_0) \,\|\, \mathcal{N}(\mu_1, \Sigma_1)\big)
-= \tfrac12 \Big[ \operatorname{tr}(\Sigma_1^{-1} \Sigma_0)
-+ (\mu_1 - \mu_0)^\top \Sigma_1^{-1} (\mu_1 - \mu_0)
-- d_x + \log \tfrac{\det \Sigma_1}{\det \Sigma_0} \Big].
+\begin{aligned}
+&D_{\textrm{KL}}\big(\mathcal{N}(\mu_0, \Sigma_0) \,\|\, \mathcal{N}(\mu_1, \Sigma_1)\big) \\
+&\qquad = \tfrac12 \Big[ \operatorname{tr}(\Sigma_1^{-1} \Sigma_0)
++ (\mu_1 - \mu_0)^\top \Sigma_1^{-1} (\mu_1 - \mu_0) \\
+&\qquad\qquad - d_x + \log \tfrac{\det \Sigma_1}{\det \Sigma_0} \Big].
+\end{aligned}
 $$
 :eqlabel:`eq_gan_mvn_kl`
 

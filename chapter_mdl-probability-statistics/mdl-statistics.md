@@ -231,9 +231,11 @@ write $x_i-\bar x=(x_i-\mu)-(\bar x-\mu)$ and expand the square. Using
 $\sum_i(x_i-\mu)=n(\bar x-\mu)$ to simplify the cross term gives
 
 $$
+\begin{aligned}
 \sum_{i=1}^n (x_i-\bar x)^2
- = \sum_{i=1}^n (x_i-\mu)^2 - 2(\bar x-\mu)\cdot n(\bar x-\mu) + n(\bar x-\mu)^2
- = \sum_{i=1}^n (x_i-\mu)^2 - n(\bar x-\mu)^2 .
+ &= \sum_{i=1}^n (x_i-\mu)^2 - 2(\bar x-\mu)\cdot n(\bar x-\mu) + n(\bar x-\mu)^2 \\
+ &= \sum_{i=1}^n (x_i-\mu)^2 - n(\bar x-\mu)^2 .
+\end{aligned}
 $$
 
 The cross term is twice the final term with the opposite sign, so centering at

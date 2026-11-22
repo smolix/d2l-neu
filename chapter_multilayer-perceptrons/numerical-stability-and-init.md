@@ -64,16 +64,23 @@ $$
 Unrolling :eqref:`eq_grad-step` from the top hidden layer $K - 1$ down to layer $k$ expresses the gradient at layer $k$ as a product of $K - 1 - k$ matrix--slope factors:
 
 $$
-\frac{\partial L}{\partial \mathbf{H}^{(k)}} = \frac{\partial L}{\partial \mathbf{H}^{(K-1)}}\;
-\underbrace{\odot\, \phi'\bigl(\mathbf{Z}^{(K-1)}\bigr)\, \mathbf{W}^{(K-1)\top}}_{\textrm{layer } K-1}
-\;\cdots\;
+\begin{aligned}
+\frac{\partial L}{\partial \mathbf{H}^{(k)}} &= \frac{\partial L}{\partial \mathbf{H}^{(K-1)}}\;
+\underbrace{\odot\, \phi'\bigl(\mathbf{Z}^{(K-1)}\bigr)\, \mathbf{W}^{(K-1)\top}}_{\textrm{layer } K-1} \\
+&\quad \cdots\;
 \underbrace{\odot\, \phi'\bigl(\mathbf{Z}^{(k+1)}\bigr)\, \mathbf{W}^{(k+1)\top}}_{\textrm{layer } k+1}.
+\end{aligned}
 $$
 :eqlabel:`eq_grad-product`
 
 For a single example with upstream gradient row $\mathbf{g}'$ and downstream gradient row $\mathbf{g}$ across a layer of width $h$ whose weights $w_{ij}$ are drawn i.i.d. with mean $0$ and variance $\tau^2$, each coordinate $g_i = \sum_{j=1}^h w_{ij}\,\phi'(z_j)\,g'_j$ has expected square (treating weights, slopes, and upstream gradients as approximately independent at initialization)
 
-$$\mathbb{E}[g_i^2] = \sum_{j=1}^h \mathbb{E}[w_{ij}^2]\,\mathbb{E}[\phi'(z_j)^2]\,\mathbb{E}[(g'_j)^2] = \underbrace{h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr]}_{\textrm{per-layer factor}}\, \mathbb{E}[(g'_j)^2].$$
+$$
+\begin{aligned}
+\mathbb{E}[g_i^2] &= \sum_{j=1}^h \mathbb{E}[w_{ij}^2]\,\mathbb{E}[\phi'(z_j)^2]\,\mathbb{E}[(g'_j)^2] \\
+&= \underbrace{h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr]}_{\textrm{per-layer factor}}\, \mathbb{E}[(g'_j)^2].
+\end{aligned}
+$$
 :eqlabel:`eq_grad-factor`
 
 Across $t$ layers, the gradient's mean square is multiplied by $\big(h\,\tau^2\,\mathbb{E}[\phi'(z)^2]\big)^t$! For symmetric pre-activations and ReLU, $\phi'(z) \in \{0, 1\}$ is $1$ half the time, so $\mathbb{E}[\phi'(z)^2] = 1/2$ and the per-layer multiplier is $\frac{1}{2}h\tau^2$. At width $h = 256$:

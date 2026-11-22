@@ -97,7 +97,12 @@ A freshly initialized critic predicts values near $0$ everywhere. Then every ste
 
 With a perfect critic, the TD error estimates the same quantity as the Monte Carlo weight. Suppose for a moment that $\hat{V} = V^\pi$. The action value satisfies $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^\pi(s')$, the Bellman equation of :numref:`sec_valueiter` written with $V^\pi$. Averaging :eqref:`eq_td_error_v` over the next state therefore gives
 
-$$\mathbb{E}\big[ \delta_t \mid s_t, a_t \big] = r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^{\pi}(s') - V^{\pi}(s_t) = Q^{\pi}(s_t, a_t) - V^{\pi}(s_t).$$
+$$
+\begin{aligned}
+\mathbb{E}\big[ \delta_t \mid s_t, a_t \big] &= r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^{\pi}(s') - V^{\pi}(s_t) \\
+&= Q^{\pi}(s_t, a_t) - V^{\pi}(s_t).
+\end{aligned}
+$$
 
 The right-hand side is the advantage $A^\pi(s_t, a_t)$, how much better the action taken is than the policy's average at that state. The learned baseline of :numref:`sec_baselines` estimated it with $\hat{G}_t - \hat{V}(s_t)$. One transition, with one reward and two critic evaluations, gives an unbiased sample of the advantage, where the Monte Carlo weight needed the entire rest of the episode.
 
@@ -138,7 +143,7 @@ The critic's target moves with both networks. An actor step changes the values t
 
 ### The Batched Loop
 
-The code does not apply :eqref:`eq_actor_critic` after every transition. It keeps the eight-episode batches of :numref:`sec_deeprl` and changes what happens to each batch. The critic first takes `critic_steps` regression passes toward the batch's one-step targets, recomputing the targets from the current critic before every pass. Regression toward targets that contain the regressor's own predictions is called *fitted TD*, and recomputing the targets makes them a moving target. The actor then takes one step weighted by the TD errors of the refitted critic. We call this loop a batched one-step actor-critic. Its best-known relative, A2C :cite:`Mnih.Badia.Mirza.ea.2016`, weights the same score by $n$-step advantages, adds an entropy bonus, and takes one joint gradient step per rollout collected from many environments in parallel.
+The code does not apply :eqref:`eq_actor_critic` after every transition. It keeps the eight-episode batches of :numref:`sec_deeprl` and changes what happens to each batch. The critic first takes `critic_steps` regression passes toward the batch's one-step targets, recomputing the targets from the current critic before every pass. Regression toward targets that contain the regressor's own predictions is called *fitted TD*, and recomputing the targets makes them a moving target. The actor then takes one step weighted by the TD errors of the refitted critic. We call this loop a batched one-step actor-critic. Its best-known relative, *Advantage Actor-Critic (A2C)* :cite:`Mnih.Badia.Mirza.ea.2016`, weights the same score by $n$-step advantages, adds an entropy bonus, and takes one joint gradient step per rollout collected from many environments in parallel.
 
 The actor's weight is the raw TD error, not normalized within the batch as the Monte Carlo weight of :numref:`sec_deeprl` was, because of the way Adam scales its steps. Adam divides each gradient coordinate by the square root of a running average of its past squares, an average that with the default decay remembers about a thousand steps, longer than our 150 updates. Its first steps therefore have about the same size whatever the scale of the weights, and later steps shrink only when the gradients shrink below their early size. As the critic improves, the TD errors fall from a standard deviation of about $3$ early in training to $0.1$ or less near the ceiling, by then mostly the critic's own noise, and Adam's steps fall with them, about eightfold over a run. Normalized TD errors would keep the gradient near its early size, and Adam would keep taking large steps in directions set by that noise (exercise :exref:`ex_actor-critic-gradient-norms`).
 

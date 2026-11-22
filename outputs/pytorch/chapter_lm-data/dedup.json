@@ -1,0 +1,381 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-data/dedup.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:2fa2657a6eadf8232fbfdc5389e1f9597d4967dfd9bc4dbb3f4daaf13fa29f34",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dedup-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "dedup-extras": {
+      "code_fingerprint": "sha256:b0bbd6208c1e2e1628cef096ee87f5437cd2fcef6aced60ce92874056db51872",
+      "kind": "text",
+      "outputs": []
+    },
+    "dedup-config": {
+      "code_fingerprint": "sha256:af98bd28c7b32bc2b63505237ef79166775721b3adca1d68d774470dc261069a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K=128, TAU=0.8, seeds ['0xd2', '0xd3', '0xd4'], workers 4, GPU=False, regenerating: none\n"
+        }
+      ]
+    },
+    "dedup-data-hub": {
+      "code_fingerprint": "sha256:6901ef19eadd5001a6c58e63e4b7706effdabb98755b908c3cabca1478c043f0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "this section: registered lm-contam-plant-v1, lm-dedup-pairs-v1, lm-data-dedup-emb-v1,\n    lm-data-dedup-results-v1, lm-c2-docs-v1, lm-corpus-manifest-v1 | pending: none\nupstream: registered lm-data-audit-stream-v1, lm-data-emb-qwen3emb-v1, lm-c1-docs-v1,\n    lm-data-quality-results-v1, lm-c0-docs-v1, lm-data-crawl-results-v1, lm-r2-tokenizer-v1,\n    gsm8k-test, arc-challenge-test | pending: none\nMMLU test: cais/mmlu c30699e8 (chapter 18 loader)\n"
+        }
+      ]
+    },
+    "dedup-opening": {
+      "code_fingerprint": "sha256:cc1044fda0b845f7cb584cbb0cfb2c1ad158d907f801d9244cb6371fc17331a1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "slice: 20,000 stream documents and 6,000 same-host documents (1,500 hosts, 9,000 same-host pairs)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nmost similar same-host pair below J = 1: nialler9.com, J = 0.701, containment of the smaller 1.000,\n    193 and 268 words, SHA-256 equal: False\n  +After last week’s new ‘Whitney’ track, both FAWS EPs are now available from Bandcamp for free.…\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nexact Jaccard of all pairs of 1,000 documents: measured 4.1 s (8.3 µs per pair); extrapolated\n    (quadratic):\n         20,000 documents: 1.66e+03 s = 0.461 hours = 5.26e-05 years\n  1,000,000,000 documents: 4.15e+12 s = 1.15e+09 hours = 1.31e+05 years\n"
+        }
+      ]
+    },
+    "dedup-exact": {
+      "code_fingerprint": "sha256:3b7ad9ea6ed884e90f99c24c56d164f81e30507cf610b0e4b810a22f286dc716",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "slice: 26,000 documents, 26,000 distinct NFC hashes (0 exact copies); 1,482 of 389,001 distinct\n    paragraphs occur in more than one document, and 1,742 documents contain one\nc1: 1,032 documents, 1,020 distinct NFC hashes (12 exact copies); 174 of 18,118 distinct paragraphs\n    occur in more than one document, and 73 documents contain one\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n  36 documents, e.g. 1b16df4f… and 226a5e06…: 'Your payment information is processed securely. We do\n    not store credit card details nor have access '\n  19 documents, e.g. 0e1d0d5e… and 102703e9…: 'Choosing a selection results in a full page refresh.'\n  17 documents, e.g. 176d3347… and 3c1cc4d8…: 'Your email address will not be published'\n  17 documents, e.g. 0fe8960c… and 160bb894…: 'Only logged in customers who have purchased this\n    product may leave a review.'\n  15 documents, e.g. 145a4817… and 1b708247…: 'Getting your Trinity Audio player ready...'\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\n"
+        }
+      ]
+    },
+    "dedup-shingle-def": {
+      "code_fingerprint": "sha256:c6efee7a86c8d0734f0d24805457a269ad82b6eb3aaeab5498017eeccb8acf73",
+      "kind": "text",
+      "outputs": []
+    },
+    "dedup-jaccard-hist": {
+      "code_fingerprint": "sha256:b571f082a94a6c34786167dfd1f3dc17d282126569dc5645df55da45fc7a32a7",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "26,000 documents: shingles per document median 360, 90th percentile 1,186; all shingle sets take\n    1.76 GiB as Python sets, signatures of 128 rows 25 MiB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   random pairs: median J 0.000, 99th percentile 0.000, J >= 0.8: 0\nsame-host pairs: median J 0.000, 99th percentile 0.317, J >= 0.8: 0\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dedup/dedup-jaccard-hist-1.svg",
+          "bytes": 37264,
+          "sha256": "sha256:42e915d093f7fcbdcf368882a3a4ce7e31389e76b6217f5bedfe2d9e849787d9"
+        }
+      ]
+    },
+    "dedup-minhash-def": {
+      "code_fingerprint": "sha256:dc570a8286fd33565c4220180a87167add3e78d253f49609e5e9d83c96654dc3",
+      "kind": "text",
+      "outputs": []
+    },
+    "dedup-minhash-check": {
+      "code_fingerprint": "sha256:96bc15ca968b15318378ff920324ba120bec33a2b34a7461929bff3f5bcfe252",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  J    bias       z  var_ratio  z_datasketch\n0.1 -0.0009 -0.4792     1.0779        0.7708\n0.2 -0.0016 -0.6406     1.0658       -0.5625\n0.3  0.0005  0.1909     1.0693        0.9411\n0.4 -0.0035 -1.1354     1.0935        1.9392\n0.5 -0.0014 -0.4500     1.0989        0.0000\n0.6 -0.0057 -1.8499     0.8833       -1.1227\n0.7 -0.0002 -0.0818     0.8818       -1.8139\n0.8  0.0002  0.0938     1.1554        0.5937\n0.9 -0.0006 -0.3125     0.9622        0.6458\n95% half-width at J = 0.8, k = 128: 0.0693\nfixture: signatures equal to the Python-integer specification: 5 of 5\nfixture signatures: SHA-256 b9b07bf416ce76f2…, pinned b9b07bf416ce76f2…\n"
+        }
+      ]
+    },
+    "dedup-lsh-def": {
+      "code_fingerprint": "sha256:70ce8b91f37b18857edede1441006f75222cd535613b814565a300e5b834034d",
+      "kind": "text",
+      "outputs": []
+    },
+    "dedup-scurve-check": {
+      "code_fingerprint": "sha256:9f2d81bec00fda16722b6faf975db8a909c69aac5a0850a0f9c87a65f91ac4b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(14, 8) at s = 0.7, 0.75, 0.8, 0.85: [0.56, 0.77, 0.92, 0.988] | paper: (0.56, 0.77, 0.92, 0.988)\nb = r = 2: P(0.5) = 0.4375, P(0.9) = 0.9639\n(14, 8): steepest at 0.7079; ((r - 1)/(br - 1))^(1/r) = 0.7079; (1/b)^(1/r) = 0.7190\n(9, 13): steepest at 0.8399; ((r - 1)/(br - 1))^(1/r) = 0.8399; (1/b)^(1/r) = 0.8445\n(20, 5): steepest at 0.5264; ((r - 1)/(br - 1))^(1/r) = 0.5264; (1/b)^(1/r) = 0.5493\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "best_br(128, 0.8) = (9, 13), error 0.0586; brute force over b r <= 128: (9, 13), error 0.0586\n  (10, 12): error 0.0600, P(0.8) = 0.509\n  (9, 13): error 0.0586, P(0.8) = 0.399\n  (9, 14): error 0.0588, P(0.8) = 0.333\ndatasketch MinHashLSH(threshold=0.8, num_perm=128): (b, r) = (9, 13); best_br with w_fn = 5: (12,\n    10)\n"
+        }
+      ]
+    },
+    "dedup-pairs-def": {
+      "code_fingerprint": "sha256:768591a2b59906865c7b0e320f2c082c8125fc92eee0e750f166894805cb8a0e",
+      "kind": "text",
+      "outputs": []
+    },
+    "dedup-pairs": {
+      "code_fingerprint": "sha256:55163fb24902614537c1cd462b6c8cfb3dae5fd06d16c81fd294758474ee62c6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "12,000 pairs regenerated from the stream in 11 s; largest |J - stored J| 0.0e+00\nsplit       test  train  label rate  median J\nop                                           \nboiler       592    592       0.427     0.765\ndel          557    627       0.349     0.629\nneg_host    1504   1496       0.000     0.000\nneg_random  1565   1435       0.000     0.000\nshuffle      593    629       0.649     0.839\nsub          579    639       0.323     0.604\ntrunc        556    636       0.167     0.608\n"
+        }
+      ]
+    },
+    "dedup-scurve-measure": {
+      "code_fingerprint": "sha256:2546786a21081f41034fa5b9e741bf108e2fcb5bb4b5a9645294b5bee1e6e60d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "16,934 distinct pair documents, 3 seeds, 13 settings: 32 s; bucket pipeline at (9, 13) = per-pair\n    band test on all 12,000 pairs\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "780 (setting, bin, seed) cells with n >= 30: 19 outside their 95% interval (a correct hash: about 5%\n    or fewer, at most 59 at the 0.999 level); share inside per (b, r): 8x16 1.00, 9x13 0.98, 9x14\n    1.00, 10x12 0.97, 11x11 0.95, 12x10 0.98, 14x8 0.93, 14x9 0.98, 16x8 0.95, 18x7 0.98, 21x6 1.00,\n    25x5 0.98, 32x4 0.97\n\n(9, 13): observed candidates per seed against the expected count and its interval\n bin    n  J_mean  expected  lo  hi     0     1     2\n0.00 5820   0.001     0.000   0   0   0.0   0.0   0.0\n0.05  264   0.082     0.000   0   0   0.0   0.0   0.0\n0.10  182   0.117     0.000   0   0   0.0   0.0   0.0\n0.15  175   0.183     0.000   0   0   0.0   0.0   0.0\n0.20  236   0.220     0.000   0   0   0.0   0.0   0.0\n0.25   86   0.273     0.000   0   0   0.0   0.0   0.0\n0.30  142   0.328     0.001   0   0   0.0   0.0   0.0\n0.35  203   0.375     0.006   0   0   0.0   0.0   0.0\n0.40  378   0.425     0.055   0   1   0.0   0.0   0.0\n0.45  248   0.472     0.139   0   1   0.0   0.0   0.0\n0.50  187   0.524     0.398   0   2   2.0   0.0   0.0\n0.55  210   0.576     1.517   0   4   1.0   0.0   1.0\n0.60  472   0.628    10.288   5  17   4.0  10.0  11.0\n0.65  422   0.672    21.969  14  31  25.0  25.0  24.0\n0.70  299   0.725    39.741  29  52  39.0  33.0  41.0\n0.75  372   0.776   108.893  92 126 110.0 102.0 114.0\n0.80  813   0.826   445.087 418 473 431.0 438.0 429.0\n0.85  662   0.874   539.373 520 558 537.0 546.0 534.0\n0.90  664   0.919   642.670 633 651 640.0 651.0 647.0\n0.95  165   0.978   164.962 164 165 165.0 165.0 165.0\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dedup/dedup-scurve-measure-1.svg",
+          "bytes": 195903,
+          "sha256": "sha256:7aa7a8db1b3285d78bf01a13fef029dde27690146388a0b98a174fabe5c467b7"
+        }
+      ]
+    },
+    "dedup-choose": {
+      "code_fingerprint": "sha256:9cd1cedd3ba51f18f78d2baf6bd0f6598d66c16a0a58b84b40a2cdcea3055a24",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the grid, means over three seeds (FP, FN: counts on the split):\n b  r split     P     R    F1       FP      FN  F1_min  F1_max\n32  4 train 0.463 1.000 0.633 1351.667   0.000   0.632   0.634\n32  4  test 0.481 1.000 0.650 1225.333   0.000   0.648   0.651\n25  5 train 0.519 1.000 0.684 1080.667   0.000   0.682   0.686\n25  5  test 0.534 1.000 0.697  990.667   0.000   0.694   0.699\n21  6 train 0.576 1.000 0.731  859.000   0.000   0.729   0.733\n21  6  test 0.587 1.000 0.740  798.667   0.000   0.739   0.743\n18  7 train 0.639 0.999 0.780  657.333   1.667   0.778   0.782\n18  7  test 0.643 0.998 0.782  629.667   2.667   0.778   0.784\n16  8 train 0.702 0.993 0.823  491.333   7.667   0.821   0.827\n16  8  test 0.701 0.991 0.821  481.667   9.667   0.814   0.825\n14  9 train 0.764 0.978 0.858  352.333  26.000   0.849   0.862\n14  9  test 0.754 0.973 0.849  361.667  31.000   0.846   0.852\n12 10 train 0.812 0.936 0.870  252.333  75.000   0.864   0.873\n12 10  test 0.815 0.933 0.870  240.333  75.667   0.870   0.872\n11 11 train 0.854 0.899 0.876  179.667 117.333   0.868   0.882\n11 11  test 0.858 0.889 0.873  167.000 126.667   0.866   0.881\n10 12 train 0.885 0.835 0.859  126.667 192.667   0.849   0.869\n10 12  test 0.891 0.833 0.861  116.000 189.667   0.856   0.864\n 9 13 train 0.913 0.779 0.840   87.000 258.333   0.829   0.862\n 9 13  test 0.903 0.769 0.831   93.667 263.000   0.822   0.836\n 9 14 train 0.929 0.737 0.822   65.333 307.000   0.808   0.835\n 9 14  test 0.921 0.732 0.816   71.333 304.333   0.813   0.823\n 8 16 train 0.957 0.627 0.758   33.000 435.000   0.742   0.781\n 8 16  test 0.953 0.625 0.755   35.333 426.333   0.751   0.759\n14  8 train 0.718 0.990 0.832  453.667  11.667   0.829   0.838\n14  8  test 0.715 0.987 0.829  447.333  14.333   0.821   0.835\n\nchosen on train: w_fn = 1 -> (11, 11), w_fn = 5 -> (14, 9); the D3 optimum (9, 13) is 2 grid step(s)\n    from the w_fn = 1 choice; FineWeb (14, 8) on 112 rows and datasketch (9, 13) are rows of the\n    table\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test, w_fn = 1: F1 of 11 x 11 minus 12 x 10: +0.0027 [-0.0045, +0.0103]; weighted errors per pair\n    saved: +0.0038 [+0.0008, +0.0069]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test, w_fn = 1: F1 of 11 x 11 minus 10 x 12: +0.0120 [+0.0037, +0.0206]; weighted errors per pair\n    saved: +0.0020 [-0.0012, +0.0053]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test, w_fn = 5: F1 of 14 x 9 minus 16 x 8: +0.0282 [+0.0222, +0.0343]; weighted errors per pair\n    saved: +0.0022 [-0.0033, +0.0081]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test, w_fn = 5: F1 of 14 x 9 minus 12 x 10: -0.0212 [-0.0290, -0.0138]; weighted errors per pair\n    saved: +0.0172 [+0.0090, +0.0257]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test, w_fn = 1: F1 of 11 x 11 minus 9 x 13: +0.0426 [+0.0325, +0.0530]; weighted errors per pair\n    saved: +0.0106 [+0.0068, +0.0145]\nw_fn = 1: expected weighted error on train under the pairs' J: least at (11, 11) (307.8); at the D3\n    optimum (9, 13): 352.0; measured choice (11, 11)\nw_fn = 5: expected weighted error on train under the pairs' J: least at (14, 9) (516.8); at the D3\n    optimum (9, 13): 1389.8; measured choice (14, 9)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dedup/dedup-choose-1.svg",
+          "bytes": 47934,
+          "sha256": "sha256:acf07b1544afa7c57b78cac0b5701b1f770c18cd73b9537bf77a4e55a68ef16b"
+        }
+      ]
+    },
+    "dedup-cost": {
+      "code_fingerprint": "sha256:cd369c672f314d65aa8341d097bcde0ab21825d124de1796de68179b1bc1b719",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "(11, 11): P(0.3) = 1.95e-05, P(0.5) = 0.0054; N = 10^6 with 0.1% of pairs at s = 0.5: 2.68e+06\n    expected candidate pairs\n(14, 8): P(0.3) = 9.18e-04, P(0.5) = 0.0533; N = 10^6 with 0.1% of pairs at s = 0.5: 2.67e+07\n    expected candidate pairs\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "slice: 26,000 signatures in 22 s (4 workers); candidate pairs, per 1,000 documents, and scaled by\n    (N/n)^2 to N = 10^6 (a measured count, not a corpus estimate: FineWeb is already deduplicated\n    within its dump):\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  (11, 11): 0 pairs, 0.00 per 1,000, 0.00e+00 scaled; largest bucket 0 members, 0 cut to max_bucket\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  (14, 8): 0 pairs, 0.00 per 1,000, 0.00e+00 scaled; largest bucket 0 members, 0 cut to max_bucket\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  (32, 4): 104 pairs, 4.00 per 1,000, 1.54e+05 scaled; largest bucket 6 members, 0 cut to max_bucket\n"
+        }
+      ]
+    },
+    "dedup-dedup-run": {
+      "code_fingerprint": "sha256:b34653d0f11559980c5be60ab2a9a18793271589934339115cb5b0cc6ca1d2e0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "slice, near_dedup(threshold=0.8) at (9, 13): 26,000 of 26,000 kept; by role: stream 0.00% in\n    clusters, host_pair 0.00% in clusters\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "c1 at (11, 11) (chosen on train; the manifest below): 1,014 of 1,032 kept; 13 clusters of two or\n    more (31 documents); largest bucket 4, cut buckets: none\nc1 by near_dedup(threshold=0.8) at its default (9, 13): 1,015 kept\n    4 documents on 3 host(s), J to the representative 1.00-1.00\n    3 documents on 1 host(s), J to the representative 0.94-0.94\n    3 documents on 1 host(s), J to the representative 1.00-1.00\n    3 documents on 1 host(s), J to the representative 1.00-1.00\n    2 documents on 1 host(s), J to the representative 1.00-1.00\n"
+        }
+      ]
+    },
+    "dedup-sa-def": {
+      "code_fingerprint": "sha256:f3e831b91abe74f14d684d17e3fd94ed4442cbc6dc5aafb50f28d5df3f6bcb5f",
+      "kind": "text",
+      "outputs": []
+    },
+    "dedup-substring": {
+      "code_fingerprint": "sha256:97083ffe34ee00bf68fe27b8d8070e060ee5ae2d08749e10281cdb3b1545b0e0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "627 documents, 2.00 MiB, 451,757 tokens: suffix array and LCP in 1.4 s; 3 maximal repeats of 50+\n    tokens covering 0.08% of the tokens\n  74 tokens x 2 (from 0167e8cf…): 'Ready for More? Read more recent posts from Tony’s Blog. Want to\n    be the first to know when we add ne'\n  66 tokens x 2 (from 03adef16…): 'The right of the people to be secure in their persons, houses,\n    papers, and effects, against unreason'\n  50 tokens x 2 (from 03ed49fe…): '>[, <relation> or <axis>][, <orderBy>][, <blanks>][,\n    <partitionBy>][, <matchBy>][, <reset>] )'\ndocuments with 50+ repeated tokens: 4; of these in a MinHash cluster: 0; MinHash-clustered documents\n    in the sample: 0\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\n"
+        }
+      ]
+    },
+    "dedup-semantic": {
+      "code_fingerprint": "sha256:213db85e3e198a934e5424987ebe4ab6824449f8f940120b649ed00d8e5f7a72",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "20,000 stream documents in 64 clusters; cosine to the most similar earlier member: median 0.461,\n    99th percentile 0.696, largest 0.942\neps 0.1: cosine 0.942, J 0.17\n    'You require to import a file from the file creation area to be able to sign it. FAQ : How '\n    'You require to import a file from the document development area to be able to sign it. FAQ'\neps 0.15: cosine 0.854, J 0.01\n    'Are you all set for a thrilling journey in the globe of on-line gambling? The allure of th'\n    'In latest several years, the planet of gambling has gone through a considerable digital tr'\neps 0.15: cosine 0.858, J 0.00\n    'Buying Research Papers Online\\n- Numerous grateful customers\\n- Unrivalled writing experienc'\n    'Table of Contents\\n- Get Our Expert Research Paper Help/Custom Term Paper Writing Help\\n- Pr'\neps 0.2: cosine 0.804, J 0.00\n    'Steps to Protect Your Plumbing Pipes from Freezing\\nWe’ve all heard the saying: “An ounce o'\n    'Of course, we’re talking about frozen pipes. Every year we get many, many calls from homeo'\neps 0.2: cosine 0.804, J 0.00\n    'Surf Camp Ericeira - Surf holidays in Portugal - starting at 330 €\\nSurf Camp Ericeira\\nSurf'\n    'Ericeira is a picturesque coastal town of Portugal known for its stunning beaches, world-c'\neps 0.3: cosine 0.701, J 0.00\n    'Frequently asked questions\\nOrder and delivery\\nQuestion: When can I expect my order?\\nAnswer'\n    'Frequently Asked Questions\\nWhat is your processing time?\\nCurrently our processing time is '\neps 0.3: cosine 0.701, J 0.00\n    'Let’s face it, nobody wants to think about what will happen to their family once they pass'\n    \"Organizing Your Estate\\nPlanning an estate isn't something exclusive to eccentric billionai\"\n eps  removed  fraction  also_minhash\n0.05        0   0.00000             0\n0.10        1   0.00005             0\n0.15        6   0.00030             0\n0.20       27   0.00135             0\n0.30      181   0.00905             0\ndocuments in MinHash clusters among them: 0\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\n"
+        }
+      ]
+    },
+    "dedup-index-def": {
+      "code_fingerprint": "sha256:b6c768c72de95091b55ead2fb43930f6cc76ac3945216f7e7b3ec9c06305c159",
+      "kind": "text",
+      "outputs": []
+    },
+    "dedup-decontam-ngram": {
+      "code_fingerprint": "sha256:a2c09967f5c4fb60a987e1dbd7d322fdeed6e2e1468b4b4fb9f01e478677eef9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "16,533 test items ({'gsm8k': 1319, 'arc': 1172, 'mmlu': 14042}), 633,848 distinct 13-grams, built in\n    3 s\n  gsm8k: 0 items with fewer than 13 words (question and answer), 0 with a shorter question\n  arc: 102 items with fewer than 13 words (question and answer), 304 with a shorter question\n  mmlu: 1589 items with fewer than 13 words (question and answer), 4080 with a shorter question\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n13-gram index: planted items found, by benchmark and form\nbenchmark       form   n  found  recall    lo    hi\n      arc paraphrase 100      0    0.00 0.000 0.037\n      arc   reformat 100    100    1.00 0.963 1.000\n      arc   verbatim 100    100    1.00 0.963 1.000\n    gsm8k paraphrase 100      2    0.02 0.006 0.070\n    gsm8k   reformat 100    100    1.00 0.963 1.000\n    gsm8k   verbatim 100    100    1.00 0.963 1.000\n     mmlu paraphrase 100      6    0.06 0.028 0.125\n     mmlu   reformat 100    100    1.00 0.963 1.000\n     mmlu   verbatim 100    100    1.00 0.963 1.000\ncontrols flagged: 1 of 1000 (Wilson 95% interval 0.0002-0.0056)\n  control cfc0c217… shares 2 13-gram(s) with mmlu-3828, e.g. 'we hold these truths to be self\n    evident that all men are created'\n"
+        }
+      ]
+    },
+    "dedup-decontam-emb": {
+      "code_fingerprint": "sha256:9641cc367912090a53e79e3229407a5193ad43e24c45ad9d839b4710adefb0fe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "embedding detector: 24,062 windows of 128 words every 64; threshold 0.6577 (99th percentile of the\n    1,000 controls of the plants file); held-out controls above it: 7 of 1,000 (Wilson 95% interval\n    0.0034-0.0144)\nrecall by form; fits: some window holds the whole plant\n      form  fits   n  found  recall    lo    hi  median_words  ngram\nparaphrase False  19     19   1.000 0.832 1.000         120.0  0.000\nparaphrase  True 281    107   0.381 0.326 0.439          49.0  0.028\n  reformat False  21     20   0.952 0.773 0.992         114.0  1.000\n  reformat  True 279    142   0.509 0.451 0.567          47.0  1.000\n  verbatim False  19     18   0.947 0.754 0.991         136.0  1.000\n  verbatim  True 281    129   0.459 0.402 0.518          47.0  1.000\nparaphrase   all 300    126   0.420 0.366 0.477          50.0  0.027\n  reformat   all 300    162   0.540 0.483 0.596          49.0  1.000\n  verbatim   all 300    147   0.490 0.434 0.546          48.0  1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.float32, cpu, attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check, 8 items and 8 windows on the CPU: cosine to the registered vectors min 0.9998\n"
+        }
+      ]
+    },
+    "dedup-plants": {
+      "code_fingerprint": "sha256:42d2acbe6661291e61c8491ae4af37683d1c8fc5ea8b9a124a08d4843618a8c5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "benchmark   arc  gsm8k  mmlu   NaN\nform                              \ncontrol       0      0     0  1000\nparaphrase  100    100   100     0\nreformat    100    100   100     0\nverbatim    100    100   100     0\nparaphrases written with these prompts and Qwen/Qwen3.5-4B@851bf6e8: 300 of 300\n\nparaphrases against their verbatim pages (5-gram Jaccard):\nbenchmark   n  J_median  J_max  blank  no_answer_line  numbers_changed  options_added\n      arc 100     0.031  0.600      0               0                2              0\n    gsm8k 100     0.014  0.178      0               0               26              0\n     mmlu 100     0.059  1.000      0               0                3              0\n\nverbatim:\n  Which statement is an example of an inherited trait in a living thing? (A) A child learns to\n  ride a bicycle. (B) A cat has a kitten with a broken leg. (C) A white dog has a puppy with\n  white fur. (D) A person has a scar from a burn. Answer: C\n\nreformat:\n  which statement is an example of an inherited trait in a living thing ? (a) a person has a\n  scar from a burn. (b) a white dog has a puppy with white fur. (c) a cat has a kitten with a\n  broken leg. (d) a child learns to ride a bicycle. answer: b\n\nparaphrase:\n  Which of the following describes a characteristic passed down genetically? (A) A young person\n  acquires the skill of cycling. (B) A feline offspring is born with a fractured limb. (C) A\n  puppy born to a white canine possesses white fur. (D) An individual develops a burn mark on\n  their skin. Answer: C\n\nItem: ARC-Challenge test, allenai/ai2_arc (CC BY-SA 4.0)\n"
+        }
+      ]
+    },
+    "dedup-c2": {
+      "code_fingerprint": "sha256:3366b7e262118d4f57980de0357b9616058fd8c19fe1b395a9c5888fcd0eb505",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "manifest SHA-256 with 1 worker 3de9eb949cce2841… (4 s), with 4 workers 3de9eb949cce2841… (8 s)\n        stage  n_in  n_out  tokens_out tokens_of                                            drops\n      extract  9731   9286        <NA>         —                empty 305, not_html 140 (+1 more)\n      lang_id  9286   3288     2850469   c0 text                       not_en 5448, low_score 550\n          nfc  3288   3288     2850469   c0 text                                                —\n          pii  3288   3288     2850469   c0 text                                                —\n   heuristics  3288   1032      923725    output gopher_dup_text 571, gopher_alpha 403 (+12 more)\n    edu_score  1032   1032      923725    output                                                —\n  exact_dedup  1032   1020      920541    output                                         exact 12\nminhash_dedup  1020   1014      918627    output                                       near_dup 6\n     decontam  1014   1014      918627    output                                                —\n\n# Dataset card: lm-corpus-v1\n\nSchema `d2l-corpus/1`, manifest SHA-256 `3de9eb949cce2841…`.\n\n## Sources\n\n| id | uri | revision | license | documents | bytes |\n|---|---|---|---|---|---|\n| cc-main-2025-05-00000 | https://data.commoncrawl.org/crawl-data/CC-MAIN-2025-05/segments/1736703361941.29/warc/CC-MAIN-20250126135402-20250126165402-00000.warc.gz | ece35baafe3dc587bcf1875916028dce71b496cf4383895f8f8e2c6210467070 | none granted (Common Crawl terms of use); text not redistributed | 9731 | 268435456 |\n\n## Processing stages\n\n| stage | implementation | in | out | dropped (reason: count) |\n|---|---|---|---|---|\n| extract | trafilatura 2.1.0 | 9731 | 9286 | empty: 305, not_200: 0, not_html: 140 |\n| lang_id | fasttext 0.9.2 | 9286 | 3288 | low_score: 550, not_en: 5448 |\n| nfc | unicodedata 15.0.0 | 3288 | 3288 | — |\n| pii | d2l.scrub_pii | 3288 | 3288 | — |\n| heuristics | d2l.heuristic_filters | 3288 | 1032 | c4_quality: 123, fw_dup_chars: 89, fw_line_punct: 195, fw_short_lines: 33, gopher_alpha: 403, gopher_bullets: 15, gopher_dup_ngram: 176, gopher_dup_text: 571, gopher_ellipsis: 52, gopher_stop_words: 21, gopher_symbols: 2, gopher_top_ngram: 247, gopher_word_len: 7, gopher_words: 322 |\n| edu_score | d2l.embed_docs + linear head | 1032 | 1032 | — |\n| exact_dedup | hashlib.sha256 | 1032 | 1020 | exact: 12 |\n| minhash_dedup | d2l.minhash_signature, lsh_candidates, union_find_clusters | 1020 | 1014 | near_dup: 6 |\n| decontam | d2l.NgramIndex | 1014 | 1014 | — |\n\nagainst lm-c2-docs-v1: identical\nagainst lm-corpus-manifest-v1: SHA-256 identical\n"
+        }
+      ]
+    },
+    "dedup-results": {
+      "code_fingerprint": "sha256:c5a2d58ed22cc35a1c8f0c189c9edf9d1936828b4c15c87e5a396779decd0aa9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "against lm-data-dedup-results-v1: 9185/9185 values equal, largest numeric difference 0; semantic,\n    decontam_emb within tolerance: True\nwall clock (s): all_pairs_1000 4, shingle_slice 13, pairs_regen 11, scurve_measure 32,\n    slice_signatures 22, near_dedup 23, suffix_array 1, index 3, c2_1 4, c2_4 8\nmemory: shingle sets 1.76 GiB; peak RSS of this process 7.0 GiB, plus up to 4 workers\n"
+        }
+      ]
+    }
+  }
+}

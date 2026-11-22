@@ -311,7 +311,7 @@ print(f'{d2l.num_params(model) / 1e6:.2f}M parameters; loss before '
 
 ### The Training Recipe (`LMOptimizer`)
 
-Modern LLM pretraining pairs **AdamW** ($\beta_1 = 0.9, \beta_2 = 0.95$, :numref:`sec_adam`) with **selective weight decay** (applying weight decay $\lambda = 0.1$ only to 2D linear projection matrices while exempting embeddings, biases, and 1D normalization scales), **linear warmup followed by cosine learning-rate decay** (:numref:`sec_scheduler`), and **global gradient-norm clipping** ($\|\nabla \mathcal{L}\|_2 \le 1.0$):
+Modern LLM pretraining pairs **AdamW** (:numref:`sec_adam`, using standard momentum parameters $\beta_1 = 0.9, \beta_2 = 0.999$ by default, or $\beta_2 = 0.95$ in large-batch runs) with **selective weight decay** (applying weight decay $\lambda = 0.1$ only to 2D linear projection matrices while exempting embeddings, biases, and 1D normalization scales), **linear warmup followed by cosine learning-rate decay** (:numref:`sec_scheduler`), and **global gradient-norm clipping** ($\|\nabla \mathcal{L}\|_2 \le 1.0$):
 
 ```{.python .input #gpt-training-the-model-2}
 %%tab pytorch

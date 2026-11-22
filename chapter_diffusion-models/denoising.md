@@ -38,9 +38,10 @@ We want one distribution on which every quantity of the chapter is exact at ever
 The *score* of a density $p$ is the gradient of its logarithm, $\nabla \log p(\mathbf{x})$, a vector field that points in the direction in which the density grows fastest. For the mixture $p(\mathbf{x}) = \sum_k \pi_k\, \mathcal{N}(\mathbf{x}; \boldsymbol\mu_k, s^2\mathbf{I})$ it reads
 
 $$
-\nabla \log p(\mathbf{x}) = \sum_k r_k(\mathbf{x})\, \frac{\boldsymbol\mu_k - \mathbf{x}}{s^2},
-\qquad
-r_k(\mathbf{x}) = \frac{\pi_k\, \mathcal{N}(\mathbf{x}; \boldsymbol\mu_k, s^2\mathbf{I})}{p(\mathbf{x})}.
+\begin{aligned}
+\nabla \log p(\mathbf{x}) &= \sum_k r_k(\mathbf{x})\, \frac{\boldsymbol\mu_k - \mathbf{x}}{s^2}, \\
+r_k(\mathbf{x}) &= \frac{\pi_k\, \mathcal{N}(\mathbf{x}; \boldsymbol\mu_k, s^2\mathbf{I})}{p(\mathbf{x})}.
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-mixture-score`
 
@@ -249,9 +250,11 @@ $$
 a vector pointing from the noisy point back to the clean one. *Denoising score matching* regresses a vector field $\mathbf{s}_{\boldsymbol\theta}$ onto it :cite:`Vincent.2011`:
 
 $$
+\begin{aligned}
 J_{\mathrm{DSM}}(\boldsymbol\theta)
-= \tfrac12\, \mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}
+&= \tfrac12\, \mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}
 \Big\| \mathbf{s}_{\boldsymbol\theta}(\mathbf{x}_0 + \sigma \boldsymbol\epsilon) + \frac{\boldsymbol\epsilon}{\sigma} \Big\|^2.
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-dsm`
 
@@ -265,8 +268,10 @@ $$
 The proof is two lines of Bayes' rule. The noisy density is the clean one blurred by the noise, $p_\sigma(\tilde{\mathbf{x}}) = \int p(\mathbf{x}_0)\, p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\, d\mathbf{x}_0$. Differentiate under the integral, write the gradient of the kernel as the kernel times the gradient of its logarithm, and divide by $p_\sigma(\tilde{\mathbf{x}})$:
 
 $$
+\begin{aligned}
 \nabla \log p_\sigma(\tilde{\mathbf{x}})
-= \int \frac{p(\mathbf{x}_0)\, p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)}{p_\sigma(\tilde{\mathbf{x}})}\, \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\, d\mathbf{x}_0.
+&= \int \frac{p(\mathbf{x}_0)\, p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)}{p_\sigma(\tilde{\mathbf{x}})}\, \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\, d\mathbf{x}_0.
+\end{aligned}
 $$
 
 The fraction is Bayes' rule for the posterior $p(\mathbf{x}_0 \mid \tilde{\mathbf{x}})$, so the right-hand side is the posterior mean of the conditional score, which is :eqref:`eq_diffusion-posterior-mean-score`. Nothing in the two lines used that the noise is Gaussian; the conditions under which the gradient may move inside the integral are in :numref:`sec_mdl-denoising-score-matching`.
@@ -285,9 +290,10 @@ $$
 The best denoiser takes one step of size $\sigma^2$ up the score of the noisy density (:numref:`fig_mdl-dyn-tweedie`). A denoiser, a score and a noise predictor are therefore three ways of writing one posterior mean:
 
 $$
-\hat{\mathbf{x}}_0(\tilde{\mathbf{x}}) = \tilde{\mathbf{x}} + \sigma^2\, \hat{\mathbf{s}}(\tilde{\mathbf{x}}),
-\qquad
-\hat{\boldsymbol\epsilon}(\tilde{\mathbf{x}}) = \frac{\tilde{\mathbf{x}} - \hat{\mathbf{x}}_0(\tilde{\mathbf{x}})}{\sigma} = -\sigma\, \hat{\mathbf{s}}(\tilde{\mathbf{x}}).
+\begin{aligned}
+\hat{\mathbf{x}}_0(\tilde{\mathbf{x}}) &= \tilde{\mathbf{x}} + \sigma^2\, \hat{\mathbf{s}}(\tilde{\mathbf{x}}), \\
+\hat{\boldsymbol\epsilon}(\tilde{\mathbf{x}}) &= \frac{\tilde{\mathbf{x}} - \hat{\mathbf{x}}_0(\tilde{\mathbf{x}})}{\sigma} = -\sigma\, \hat{\mathbf{s}}(\tilde{\mathbf{x}}).
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-three-predictions`
 
@@ -303,7 +309,7 @@ The denoiser shrinks the noisy offset from the mean by the factor $v/(v + \sigma
 
 ### A Trained Score
 
-Does a learned score reach this best denoiser? To find out we need a network, and the chapter uses one small MLP for all its two-dimensional experiments. Besides the point it reads sines and cosines of the noise level (from the next section on, of a time $t \in [0, 1]$ along a path from data to noise). Here the level is fixed and these features do nothing. From the next section on, one network serves every level and must tell nearby levels apart, so the frequencies run from 1 to 64 radians per unit of $t$, and the fastest features complete about ten periods on $[0, 1]$. The positional encodings of :numref:`sec_positional-information`, built for positions in the thousands, would be nearly constant or linear on this interval. The few-step generators of :numref:`sec_diffusion-few-step` lower the frequencies again, for a reason given there.
+Does a learned score reach this best denoiser? To find out we need a network, and the chapter uses one small MLP for all its two-dimensional experiments. Besides the point it reads sines and cosines of the noise level (from the next section on, of a time $t \in [0, 1]$ along a path from data to noise). Here the level is fixed and these features do nothing. From the next section on, one network serves every level and must tell nearby levels apart, so the frequencies run from 1 to 64 radians per unit of $t$, and the fastest features complete about ten periods on $[0, 1]$. The positional encodings of :numref:`sec_positional-information`, built for integer token positions in the thousands, would be nearly constant or linear on this $[0, 1]$ interval (in :numref:`sec_diffusion-few-step`, we will see why few-step flow-map generators lower these frequencies again).
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab pytorch
@@ -360,7 +366,7 @@ class TimeMLP(nnx.Module):  #@save
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 
-One training loop serves the whole chapter: Adam on a fresh minibatch with fresh noise at every step. It also keeps a moving average of the weights, which matters from :numref:`sec_diffusion-images` on; its docstring lists the other options.
+One training loop serves the whole chapter: Adam on a fresh minibatch with fresh noise at every step. It also maintains an exponential moving average (EMA) of the weights—which will become important for image generation starting in :numref:`sec_diffusion-images`—and its docstring lists the remaining options.
 
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab pytorch
@@ -538,7 +544,10 @@ The second problem matters most for images, which are believed to lie near a low
 A large noise level has the opposite problem. The regression is well conditioned, but its answer is the score of $p_\sigma$, not of $p$. For one Gaussian component $\mathcal{N}(\boldsymbol\mu, s^2\mathbf{I})$ in $d$ dimensions the two scores are $-(\mathbf{x} - \boldsymbol\mu)/(s^2 + \sigma^2)$ and $-(\mathbf{x} - \boldsymbol\mu)/s^2$, and averaging the squared norm of their difference over $p$ gives the bias
 
 $$
-\tfrac12\, \mathbb{E}_p \big\| \nabla \log p_\sigma - \nabla \log p \big\|^2 = \frac{d\, \sigma^4}{2 s^2 (s^2 + \sigma^2)^2}.
+\begin{aligned}
+\tfrac12\, \mathbb{E}_p \big\| \nabla \log p_\sigma - \nabla \log p \big\|^2
+&= \frac{d\, \sigma^4}{2 s^2 (s^2 + \sigma^2)^2}.
+\end{aligned}
 $$
 
 The bias grows like $\sigma^4$ at first. For $s = 0.5$ and $d = 2$ it is $0.0004$ at $\sigma = 0.05$, $0.28$ at $\sigma = 0.3$ and $2.6$ at $\sigma = 1$, and the well-separated mixture has nearly the same values. Divided by the size of the clean score, $\tfrac12 \mathbb{E}_p\|\nabla \log p\|^2 = d/(2s^2)$, it becomes $(\sigma^2/(s^2 + \sigma^2))^2$, which depends only on $\sigma/s$. The smoothed score stays within $10\%$ of the clean one, in root-mean-square terms, while $\sigma < s/3 \approx 0.17$, so we should expect the bias to start to matter near there.

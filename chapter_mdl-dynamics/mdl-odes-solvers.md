@@ -388,10 +388,11 @@ generative flow needs, and the fields of many neural networks qualify. A
 field built from linear maps and Lipschitz activations, such as
 $\mathbf f(\mathbf x)=\mathbf W_2\tanh(\mathbf W_1\mathbf x+\mathbf b_1)+\mathbf b_2$,
 is globally Lipschitz, with $L$ at most the product of the weight norms and
-the activations' constants ($\|\mathbf W_2\|\,\|\mathbf W_1\|$ here). The
+the activations' constants ($\|\mathbf W_2\|\,\|\mathbf W_1\|$ here). The continuous-time
 model of :numref:`sec_mdl-neural-odes-cnf`, whose field may also depend on
-time, is therefore well-posed, and by the corollary its map from input to
-output is a bijection.
+time (and whose trajectories we will approximate with numerical solvers such as
+forward Euler and RK4 in :numref:`sec_mdl-euler-runge-kutta`), is therefore
+well-posed, and by the corollary its map from input to output is a bijection.
 
 ## Linear ODEs and Stability
 :label:`sec_mdl-linear-odes-stability`
@@ -692,9 +693,11 @@ whenever the equation is. Compare the factor $1+h\lambda$ of one compounding
 period, which follows the field for a time $h$ without looking again. On
 $\dot x=-50x$ with $h=0.05$ the exact factor is $e^{-2.5}=0.08$, while
 $1+h\lambda=-1.5$ flips the sign of the state and enlarges it. Stepping along
-the field in this way is Euler's method, and
-:numref:`sec_mdl-euler-runge-kutta` shows what the factor $-1.5$ does to a
-training run.
+the field in this way is forward Euler's method
+($\mathbf x_{k+1} = \mathbf x_k + h\mathbf f(\mathbf x_k)$), and as we will see
+in the next section (:numref:`sec_mdl-euler-runge-kutta`, alongside higher-order
+Runge--Kutta solvers such as RK4), the factor $-1.5$ explains why an oversized
+step blows up a training run.
 
 The recurrence is exact only while the input is constant over each step, and
 a sequence model reads samples of a signal that moves between them. What
@@ -976,9 +979,12 @@ exists.
        and compare it with the peak of the trajectory from $(0,1)$. Why can
        the first never be smaller than the second?
     1. Heavy-ball momentum on $\mathcal L(x)=\tfrac\lambda2x^2$ is the
-       recurrence $x_{k+1}=(1+\beta-\eta\lambda)x_k-\beta x_{k-1}$, which
-       Exercise :exref:`ex_mdl-odes-solvers-heavy-ball-ode` of
-       :numref:`sec_mdl-euler-runge-kutta` derives from a damped oscillator.
+       recurrence $x_{k+1}=(1+\beta-\eta\lambda)x_k-\beta x_{k-1}$ (which we
+       will also connect to a damped oscillator in the next section,
+       :numref:`sec_mdl-euler-runge-kutta`, Exercise
+       :exref:`ex_mdl-odes-solvers-heavy-ball-ode`, where forward Euler steps via
+       $\mathbf x_{k+1} = \mathbf x_k + h\mathbf f(\mathbf x_k)$ and backward
+       Euler via $\mathbf x_{k+1} = \mathbf x_k + h\mathbf f(\mathbf x_{k+1})$).
        It is the linear map $(x_{k+1},x_k)=\mathbf M(x_k,x_{k-1})$ with
        $\mathbf M=\left(\begin{smallmatrix}1+\beta-\eta\lambda&-\beta\\1&0\end{smallmatrix}\right)$.
        Show that $\mathbf M$ is not normal, that is,

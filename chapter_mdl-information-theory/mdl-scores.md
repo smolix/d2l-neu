@@ -491,17 +491,21 @@ $k(x, x') = \langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x') \rangle$
 and its partial derivatives:
 
 $$
-\langle \boldsymbol{\varphi}'(x), \boldsymbol{\varphi}(x') \rangle = \partial_x k, \qquad
-\langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}'(x') \rangle = \partial_{x'} k, \qquad
-\langle \boldsymbol{\varphi}'(x), \boldsymbol{\varphi}'(x') \rangle = \partial_x \partial_{x'} k.
+\begin{aligned}
+\langle \boldsymbol{\varphi}'(x), \boldsymbol{\varphi}(x') \rangle &= \partial_x k, \qquad
+\langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}'(x') \rangle = \partial_{x'} k, \\
+\langle \boldsymbol{\varphi}'(x), \boldsymbol{\varphi}'(x') \rangle &= \partial_x \partial_{x'} k.
+\end{aligned}
 $$
 
 Collecting these four terms with the score weights defines the **Stein kernel**
 of $Q$:
 
 $$
-k_Q(x, x') = s_Q(x)\, s_Q(x')\, k(x, x') + s_Q(x)\, \partial_{x'} k(x, x')
-+ \partial_x k(x, x')\, s_Q(x') + \partial_x \partial_{x'} k(x, x').
+\begin{aligned}
+k_Q(x, x') &= s_Q(x)\, s_Q(x')\, k(x, x') + s_Q(x)\, \partial_{x'} k(x, x') \\
+&\quad + \partial_x k(x, x')\, s_Q(x') + \partial_x \partial_{x'} k(x, x').
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-stein-kernel`
 

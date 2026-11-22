@@ -414,14 +414,6 @@ We write `.params` (model), `.states` (Trainer pickle—load only from trusted d
 :begin_tab:`pytorch`
 We pack model state, optimizer state, step, `asdict(cfg)`, and CPU/CUDA/`torch.Generator` RNG states into a pure-tensor/primitive dict compatible with `weights_only=True`, saving via a `.tmp` file and `os.replace`:
 :end_tab:
-
-:begin_tab:`tensorflow`
-`tf.train.Checkpoint` bundles the model, optimizer, step variable, and `tf.random.Generator` into numbered checkpoint files (`run-tf-1`, ...), paired with a `.cfg.json` config file:
-:end_tab:
-
-:begin_tab:`jax`
-We pack the model state tree, optimizer state tree, PRNG key array, step, and config dict into one dictionary and save it atomically via Orbax (`ocp.StandardCheckpointer`):
-:end_tab:
 ```{.python .input #saving-loading-checkpointing-a-training-run-1}
 %%tab mxnet
 def save_checkpoint(prefix, model, trainer, step, cfg=None, rng=None):  #@save
@@ -505,9 +497,13 @@ run for 5 more steps to create our uninterrupted 205-step ground truth. Each
 call to `train` records the minibatch loss before each update step.
 
 :begin_tab:`tensorflow`
-TensorFlow runs these operations on a GPU when one is visible, and on a GPU
-it does not add up the terms of the gradient of a bias in a fixed order.
-Two runs can then differ in the last bits, so `train` runs on the CPU.
+`tf.train.Checkpoint` bundles the model, optimizer, step variable, and `tf.random.Generator` into numbered checkpoint files (`run-tf-1`, ...), paired with a `.cfg.json` config file. TensorFlow runs these operations on a GPU when one is visible, and on a GPU
+it does not add up the terms of the gradient of a bias in a fixed order;
+two runs can then differ in the last bits, so `train` runs on the CPU:
+:end_tab:
+
+:begin_tab:`jax`
+We pack the model state tree, optimizer state tree, PRNG key array, step, and config dict into one dictionary and save it atomically via Orbax (`ocp.StandardCheckpointer`):
 :end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-2}

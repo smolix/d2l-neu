@@ -145,7 +145,7 @@ The measured backward pass is $2.00\times$ the forward pass, and $6 N D$ (with t
 ### Five Model Sizes Across Three Data Budgets
 :label:`subsec_scaling-laws-five-sizes`
 
-To observe scaling behavior firsthand, we train a grid of **15 models** on WikiText-103: five architectures spanning $N \in [0.3\textrm{M}, 14\textrm{M}]$ non-embedding parameters (`(d, L, H)` from `(96, 3, 4)` up to `(384, 8, 8)`) crossed with three step budgets $s \in \{250, 500, 1000\}$ steps (corresponding to $D \in \{2.05\textrm{M}, 4.10\textrm{M}, 8.19\textrm{M}\}$ training bytes):
+To observe scaling behavior firsthand, we train a grid of **15 models** on WikiText-103: five architectures spanning $N \in [0.3\textrm{M}, 14\textrm{M}]$ non-embedding parameters (`(d, L, H)` from `(96, 3, 4)` up to `(384, 8, 8)`) crossed with three step budgets $s \in \{500, 1000, 2000\}$ steps (corresponding to $D \in \{4.10\textrm{M}, 8.19\textrm{M}, 16.38\textrm{M}\}$ training bytes):
 
 ```{.python .input #scaling-laws-a-corpus-bigger-than-a-novella}
 %%tab pytorch, jax
@@ -212,7 +212,7 @@ for i, s in ((2, 2000), (3, 1000), (4, 500)):  # Larger N, fewer tokens
 
 Two patterns stand out:
 
-1. At the largest token budget ($1{,}000$ steps), validation loss decreases almost linearly with $\log N$ across the small and medium models before bending flat at the largest model ($N = 14.2\textrm{M}$), where $1{,}000$ steps is too few updates for $14\textrm{M}$ parameters.
+1. At the largest token budget ($2{,}000$ steps, $D = 16.4\textrm{M}$ bytes), validation loss decreases almost linearly with $\log N$ across the small and medium models before bending flat at the largest model ($N = 14.16\textrm{M}$), where $2{,}000$ steps ($D/N \approx 1.2$ bytes per parameter) is still starved of data relative to $14\textrm{M}$ parameters.
 2. When all 15 runs are plotted against total training FLOPs $C = 6 N D$, their lower envelope traces the **Pareto-optimal compute frontier**: at low compute, small models win; at higher compute, larger models overtake them once given enough steps.
 
 ## Compute-Optimal Allocation (Chinchilla Scaling)
@@ -238,7 +238,10 @@ $$
 where
 
 $$
-a \;=\; \frac{\beta}{\alpha + \beta}, \qquad b \;=\; \frac{\alpha}{\alpha + \beta}, \qquad G \;=\; \left(\frac{\alpha A}{\beta B}\right)^{\frac{1}{\alpha + \beta}}.
+\begin{aligned}
+a &\;=\; \frac{\beta}{\alpha + \beta}, \qquad b \;=\; \frac{\alpha}{\alpha + \beta}, \\
+G &\;=\; \left(\frac{\alpha A}{\beta B}\right)^{\frac{1}{\alpha + \beta}}.
+\end{aligned}
 $$
 :eqlabel:`eq_chinchilla_allocation`
 
@@ -298,7 +301,7 @@ for name, (N, D) in reported.items():
 2. **Total vs. non-embedding parameters in the scaling grid.** Each model in our 5-size WikiText-103 sweep used a byte vocabulary ($V = 256$), where $V d$ is less than $3\%$ of $12 L d^2$. Repeat `census` for the same five `(d, L, H)` backbones if they instead used a BPE vocabulary of $V = 128{,}256$ tokens (Llama 3). What fraction of total parameters would the embedding table represent in the smallest (`d=96, L=3`) versus largest (`d=384, L=8`) model, and why do :citet:`kaplan2020scaling` fit power laws against $N_{\textrm{non-emb}} = 12 L d^2$ rather than $N_{\textrm{total}}$?
 :exlabel:`ex_scaling-laws-embedding-count`
 
-3. **Cosine decay horizon vs. fixed step horizon.** In our 15-run scaling study, each budget $s \in \{250, 500, 1000\}$ annealed its cosine schedule to $0.1 \times \textrm{lr}$ at step $s$ (:citet:`hoffmann2022training`'s crucial correction to :citet:`kaplan2020scaling`). Re-run the three budgets for the medium model `(192, 4, 6)` using a single fixed cosine horizon `num_steps=1000` inside `LMOptimizer` and merely reading off the validation loss at steps 250, 500, and 1000. By how much does failing to decay the learning rate at $s = 250$ and $s = 500$ overestimate the loss of short runs?
+3. **Cosine decay horizon vs. fixed step horizon.** In our 15-run scaling study, each budget $s \in \{500, 1000, 2000\}$ annealed its cosine schedule to $0.1 \times \textrm{lr}$ at step $s$ (:citet:`hoffmann2022training`'s crucial correction to :citet:`kaplan2020scaling`). Re-run the three budgets for the medium model `(192, 4, 6)` using a single fixed cosine horizon `num_steps=2000` inside `LMOptimizer` and merely reading off the validation loss at steps 500, 1000, and 2000. By how much does failing to decay the learning rate at $s = 500$ and $s = 1000$ overestimate the loss of short runs?
 :exlabel:`ex_scaling-laws-frozen-learning-rate`
 
 4. **Fitting the Chinchilla law to our 15-point grid.** Using `scipy.optimize.minimize` (or grid search + nonlinear least squares), fit the parameters $(L_\infty, A, B, \alpha, \beta)$ of :eqref:`eq_chinchilla_law` to the 15 `(N, D, val_loss)` points measured in our WikiText-103 sweep. What scaling exponents $a = \beta/(\alpha+\beta)$ and $b = \alpha/(\alpha+\beta)$ does the byte-level 15-point grid produce?

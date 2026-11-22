@@ -1758,21 +1758,45 @@ all four PDFs (~46–51 MB each) with no manual steps:
   bottom margin. The preamble sets `\raggedbottom` (inside the same
   `\AtBeginDocument`), so pages end short instead. Facing pages may end at
   slightly different heights — the accepted trade.
-- **Chinese characters need the CJK fallback font (2026-11-12).** Source Serif 4,
-  Source Sans 3 and Inconsolata have no CJK glyphs, and XeTeX drops a missing
-  glyph with only a `Missing character` line in the log. The Language Models
-  part prints Chinese in code cells and outputs, so `static/d2l-preamble.tex`
-  gives the CJK code points (U+3000–303F, 3400–4DBF, 4E00–9FFF, F900–FAFF,
-  FF00–FFEF) an inter-character class of their own and switches each run of
-  them to `static/fonts/NotoSansSC-Regular-subset.otf` (no xeCJK, which some
-  TeX Live hosts lack and which changes Latin spacing; Latin output is
-  pixel-identical with and without the block). The font is a subset (GB 2312
-  hanzi, CJK punctuation, fullwidth forms, plus every CJK character found in
-  the chapter sources and `outputs/`), built by
-  `tools/make_cjk_font_subset.py` from Noto Sans SC (OFL,
-  `static/fonts/NotoSansSC-LICENSE.txt`). A captured output with a rarer
-  character still shows as `Missing character: … NotoSansSC` in the PDF log:
-  re-run the script (it rescans `outputs/`) and commit the new font.
+- **Characters the book fonts lack go to fallback fonts (CJK 2026-11-12;
+  Devanagari and symbols 2026-11-22).** Source Serif 4, Source Sans 3 and
+  Inconsolata have no CJK or Devanagari glyphs, no mathematical alphanumerics
+  (U+1D400–1D7FF) and patchy symbols (Inconsolata: no Greek, no `ﬁ`; serif and
+  sans: no `▁`, `●`, box drawing), and XeTeX drops a missing glyph with only a
+  `Missing character` line in the log. `static/d2l-preamble.tex` uses XeTeX
+  inter-character classes (no xeCJK or ucharclasses, which some TeX Live hosts
+  lack and which change Latin spacing; Latin output is unchanged):
+  - **CJK** (U+3000–30FF incl. kana, 3400–4DBF, 4E00–9FFF, F900–FAFF,
+    FF00–FFEF): each run is set in `static/fonts/NotoSansSC-Regular-subset.otf`
+    (GB 2312 hanzi, CJK punctuation, kana, fullwidth forms, plus every CJK
+    character in the chapter sources and `outputs/`), built by
+    `tools/make_cjk_font_subset.py` from Noto Sans SC (OFL,
+    `static/fonts/NotoSansSC-LICENSE.txt`).
+  - **Devanagari** (U+0900–097F, A8E0–A8FF, ZWNJ/ZWJ): each run is set in
+    `NotoSansDevanagari-Regular-subset.ttf` with `Script=Devanagari`, so
+    conjuncts (`क्‍ष`) shape.
+  - **Fallback** (Greek, Cyrillic, super/subscripts, letterlike, arrows,
+    operators, box drawing, blocks, shapes, Latin ligatures, specials,
+    mathematical alphanumerics): each character goes through `\book@fb`, which
+    keeps the current font when it has the glyph and otherwise tries
+    `DejaVuSansMono-subset.ttf` (inside code only; scaled to Inconsolata's
+    advance width so columns line up), `DejaVuSans-subset.ttf`, then
+    `NotoSansMath-Regular-subset.ttf`.
+
+  The last three subsets and the Devanagari one are built by
+  `tools/make_fallback_font_subsets.py` from the Noto 2.001 and DejaVu 2.37
+  fonts (Ubuntu's `fonts-noto-core`, `fonts-dejavu-core`; licences
+  `static/fonts/Noto-OFL-LICENSE.txt`, `DejaVu-LICENSE.txt`). Each script's
+  range list must match the preamble's `\book@range` lines. A captured output
+  with a rarer CJK character still shows as `Missing character: … NotoSansSC`
+  in the PDF log: re-run `make_cjk_font_subset.py` (it rescans `outputs/`) and
+  commit the new font. A character outside every class (emoji such as 🚀)
+  is still dropped; no fallback font covers it. To check a preamble or font
+  change without a book build, render a one-page `.qmd` with the `latex`
+  format block of `tools/gen_pdf.py` (same fonts, `include-in-header`) to
+  `.tex`, run `xelatex` on it and grep its log for `Missing character`.
+  `static/fonts/*` is a prerequisite of `_pdf/%/.generated`, so a new font
+  re-generates the PDF trees.
 - **Stale PDFs in `img/outputs/` abort the parallel render.** Quarto's
   `convert_svg` (built-in `main.lua`) has a "skip conversion if the `.pdf`
   already exists" optimization, then `assert(read(pdf) ~= nil)`. A leftover

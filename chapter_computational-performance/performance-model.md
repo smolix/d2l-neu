@@ -60,8 +60,12 @@ import time
 
 :begin_tab:`pytorch`
 In PyTorch, we also set the float32 matrix-multiplication precision to `'high'`
-so that fp32 matrix products use the tf32 tensor cores (matching JAX's default
-on NVIDIA GPUs):
+so that fp32 matrix products use the tf32 tensor cores:
+:end_tab:
+
+:begin_tab:`jax`
+JAX already runs fp32 matrix products on the tf32 tensor cores by default on
+NVIDIA GPUs.
 :end_tab:
 
 ```{.python .input #performance-model-the-performance-model-2}
@@ -493,9 +497,17 @@ of Python that asks for it. When calls are queued back-to-back, host and
 device overlap and each call takes $\max(h, 2n^3/P)$. For small $n$, the
 device finishes before the host issues the next call, placing the program in
 the *overhead-bound* regime. The knee where compute overtakes dispatch lies
-at $n \approx (hP/2)^{1/3}$: near $n = 1{,}000$ in PyTorch ($h \approx 13$ µs)
-and near $n = 1{,}600\text{--}2{,}000$ for single-op JAX dispatch
-($h \approx 50\text{--}100$ µs, paid once for an entire jitted training step).
+at $n \approx (hP/2)^{1/3}$.
+
+:begin_tab:`pytorch`
+With $h \approx 13$ µs, the knee lies near $n = 1{,}000$.
+:end_tab:
+
+:begin_tab:`jax`
+Single-op dispatch takes $h \approx 50\text{--}100$ µs (paid once for an
+entire jitted training step), so the knee lies near
+$n = 1{,}600\text{--}2{,}000$.
+:end_tab:
 
 Combining all three floors gives our fundamental time bound for a single
 dispatched operation:
@@ -635,9 +647,16 @@ def kernel_times(f, steps=10):  #@save
     return kernels
 ```
 
-Both profilers can also export timeline traces (`prof.export_chrome_trace` in
-PyTorch; `jax.profiler.trace` directories in JAX) viewable at
+The framework profiler can also export a timeline trace, viewable at
 <https://ui.perfetto.dev>.
+
+:begin_tab:`pytorch`
+`prof.export_chrome_trace` writes the trace of the profile in `kernel_times`.
+:end_tab:
+
+:begin_tab:`jax`
+`jax.profiler.trace` writes the trace into its trace directory.
+:end_tab:
 
 ### Reading the Profile
 
@@ -685,6 +704,10 @@ three quarters of the device time.
 :begin_tab:`pytorch`
 The three `gemm` lines aggregate the five large matrix products, and
 `multi_tensor_apply_kernel` is the batched SGD update at the predicted 0.4 ms.
+
+Notice that an unfused optimizer update takes a fixed time independent of
+batch size: at batch size 128, the five products shrink eightfold to ~0.07 ms
+each, leaving the 0.4 ms update larger than all five products combined.
 :end_tab:
 
 :begin_tab:`jax`
@@ -692,10 +715,6 @@ XLA fuses the SGD update directly into the weight-gradient products
 (`gemm_fusion_dot`), subtracting the scaled gradient before writing the
 updated weight so the gradient never makes a separate round trip to memory.
 :end_tab:
-
-Notice that an unfused optimizer update takes a fixed time independent of
-batch size: at batch size 128, the five products shrink eightfold to ~0.07 ms
-each, leaving the 0.4 ms update larger than all five products combined.
 
 ## Summary
 

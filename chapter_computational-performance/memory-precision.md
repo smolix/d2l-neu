@@ -264,9 +264,17 @@ $$
 :eqlabel:`eq_mp-budget`
 
 For our 18-block GPT on a 24 GiB card ($16N = 15.1$ GiB, leaving 8.9 GiB for
-activations), the raw count predicts $La + a_\textrm{out} \approx 2.8$
-MiB/token (~3,200 tokens, or 3 sequences of 1,024) in PyTorch and 4.3
-MiB/token (~2,100 tokens, or 2 sequences) in JAX.
+activations), the raw count predicts:
+
+:begin_tab:`pytorch`
+$La + a_\textrm{out} \approx 2.8$ MiB/token (~3,200 tokens, or 3 sequences of
+1,024).
+:end_tab:
+
+:begin_tab:`jax`
+$La + a_\textrm{out} \approx 4.3$ MiB/token (~2,100 tokens, or 2 sequences of
+1,024).
+:end_tab:
 
 ### Measured Peak Memory
 :label:`subsec_mp-measuring`
@@ -463,7 +471,7 @@ args = mlp_params, X_mlp, y_mlp
 ```
 
 Next, we count the exact multiply-accumulate operations (`macs`) and total
-`flops` for the forward and backward matrix products of `mlp` and define
+`flops` for the forward and backward matrix products of the MLP and define
 `report` to benchmark each precision format in milliseconds and TFLOP/s:
 
 ```{.python .input #memory-precision-mixed-precision-3}
@@ -544,8 +552,7 @@ for name, (fixed, per_token) in budgets.items():  # M(n) <= M_gpu
 
 With per-block checkpointing, the 18 blocks together store only
 $18 \times 8 = 144$ KiB/token—less than the output layer and loss alone—raising
-the token budget more than threefold (~10,000 tokens in PyTorch, ~15,000 in
-JAX). Notice that under checkpointing, bf16 actually fits slightly *fewer*
+the token budget more than threefold (to 10,000–15,000 tokens). Notice that under checkpointing, bf16 actually fits slightly *fewer*
 tokens than fp32 because the extra $2N$ bytes of bf16 weight copies outweigh
 the activation savings on the single recomputed block. At that point, the
 output logits and cross-entropy loss dominate per-token memory; computing the

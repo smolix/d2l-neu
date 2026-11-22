@@ -95,7 +95,15 @@ $$
 ### Checking the Arithmetic Against Hardware Counters
 :label:`subsec_scaling-laws-checking`
 
-We can verify :eqref:`eq_six_nd` directly against exact hardware FLOP counters (`FlopCounterMode` in PyTorch and HLO cost analysis in JAX) on a single training step of `gpt(256, act='gelu')`:
+We can verify :eqref:`eq_six_nd` directly against exact FLOP counts of the framework on a single training step of `gpt(256, act='gelu')`:
+
+:begin_tab:`pytorch`
+PyTorch's `FlopCounterMode` counts the FLOPs of every operator.
+:end_tab:
+
+:begin_tab:`jax`
+XLA's cost analysis counts the FLOPs of the compiled program on the CPU.
+:end_tab:
 
 ```{.python .input #scaling-laws-checking-the-arithmetic}
 %%tab pytorch
@@ -138,7 +146,7 @@ print(f'step    {s:.3e} FLOPs, {s / (6 * N * X.size):.3f} x 6ND')
 print(f'backward / forward = {(s - f) / f:.2f}')
 ```
 
-The measured backward pass is $2.00\times$ the forward pass, and $6 N D$ (with the tied output head and attention score term $6 L T d D$ accounted for) matches the exact operator count to within $0.1\%$.
+The measured backward pass is about twice the forward pass ($2.0\text{--}2.1\times$), and $6 N D$ (with the tied output head and attention score term $6 L T d D$ accounted for) matches the exact operator count to within a few percent.
 
 ## A Miniature Scaling Study on WikiText-103
 
@@ -299,13 +307,13 @@ for name, (N, D) in reported.items():
    2. Take the ratio of $6 L T d$ to $6 N = 72 L d^2$ to show that causal attention adds a relative FLOP fraction of $T / (12 d)$ (or $T / (6 d)$ without causal tile skipping). At what context length $T^*$ does attention match the linear-projection FLOPs of Llama 3 8B ($d = 4096$)?
 
 2. **Total vs. non-embedding parameters in the scaling grid.** Each model in our 5-size WikiText-103 sweep used a byte vocabulary ($V = 256$), where $V d$ is less than $3\%$ of $12 L d^2$. Repeat `census` for the same five `(d, L, H)` backbones if they instead used a BPE vocabulary of $V = 128{,}256$ tokens (Llama 3). What fraction of total parameters would the embedding table represent in the smallest (`d=96, L=3`) versus largest (`d=384, L=8`) model, and why do :citet:`kaplan2020scaling` fit power laws against $N_{\textrm{non-emb}} = 12 L d^2$ rather than $N_{\textrm{total}}$?
-:exlabel:`ex_scaling-laws-embedding-count`
+   :exlabel:`ex_scaling-laws-embedding-count`
 
 3. **Cosine decay horizon vs. fixed step horizon.** In our 15-run scaling study, each budget $s \in \{500, 1000, 2000\}$ annealed its cosine schedule to $0.1 \times \textrm{lr}$ at step $s$ (:citet:`hoffmann2022training`'s crucial correction to :citet:`kaplan2020scaling`). Re-run the three budgets for the medium model `(192, 4, 6)` using a single fixed cosine horizon `num_steps=2000` inside `LMOptimizer` and merely reading off the validation loss at steps 500, 1000, and 2000. By how much does failing to decay the learning rate at $s = 500$ and $s = 1000$ overestimate the loss of short runs?
-:exlabel:`ex_scaling-laws-frozen-learning-rate`
+   :exlabel:`ex_scaling-laws-frozen-learning-rate`
 
 4. **Fitting the Chinchilla law to our 15-point grid.** Using `scipy.optimize.minimize` (or grid search + nonlinear least squares), fit the parameters $(L_\infty, A, B, \alpha, \beta)$ of :eqref:`eq_chinchilla_law` to the 15 `(N, D, val_loss)` points measured in our WikiText-103 sweep. What scaling exponents $a = \beta/(\alpha+\beta)$ and $b = \alpha/(\alpha+\beta)$ does the byte-level 15-point grid produce?
-:exlabel:`ex_scaling-laws-fit-grid`
+   :exlabel:`ex_scaling-laws-fit-grid`
 
 5. **Lifetime compute optimization with inference demand $D_{\textrm{inf}}$.** A model of size $N$ trained on $D$ tokens and deployed to serve $D_{\textrm{inf}}$ inference tokens consumes total lifetime FLOPs $C_{\textrm{tot}}(N, D) = 6 N D + 2 N D_{\textrm{inf}}$.
    1. Using Lagrange multipliers on $\mathcal{L}(N, D) = L_\infty + A N^{-\alpha} + B D^{-\beta} = \mathcal{L}_{\textrm{target}}$, show that at the lifetime-compute minimum $(N^*, D^*)$, the marginal ratio satisfies
@@ -313,7 +321,7 @@ for name, (N, D) in reported.items():
       $$\frac{\beta B (D^*)^{-\beta}}{\alpha A (N^*)^{-\alpha}} \;=\; \frac{6 N^* D^*}{6 N^* D^* + 2 N^* D_{\textrm{inf}}} \;=\; \frac{1}{1 + \frac{D_{\textrm{inf}}}{3 D^*}}.$$
 
    2. Verify that when $D_{\textrm{inf}} = 0$ this recovers the Chinchilla balance $\alpha A (N^*)^{-\alpha} = \beta B (D^*)^{-\beta}$, and solve numerically for $(N^*, D^*)$ at $\mathcal{L}_{\textrm{target}} = \mathcal{L}(70\textrm{B}, 1.4\textrm{T})$ when $D_{\textrm{inf}} \in \{10\textrm{T}, 100\textrm{T}, 500\textrm{T}\}$ tokens.
-:exlabel:`ex_scaling-laws-training-for-inference`
+   :exlabel:`ex_scaling-laws-training-for-inference`
 
 6. **Activation checkpointing and the $8 N D$ rule.** Full block-level activation checkpointing saves only the input $\mathbf{X}^{(\ell-1)}$ to each block during the forward pass ($2 N D$ FLOPs) and recomputes each block's forward pass once during backpropagation before computing the backward matrix products ($4 N D$ FLOPs). Show that activation checkpointing changes the pretraining compute formula from $C \approx 6 N D$ to $C \approx 8 N D$, and find how replacing $6$ with $8$ in :eqref:`eq_chinchilla_optimum` scales $N^*(C)$ and $D^*(C)$ at fixed FLOP budget $C$.
 

@@ -60,7 +60,11 @@ Q_t(\mathbf{x}, \mathbf{u}) &= \mathbf{x}^\top(\mathbf{Q} + \mathbf{A}^\top \mat
 \end{aligned}
 $$
 
-Setting the gradient with respect to $\mathbf{u}$ to zero, $\nabla_{\mathbf{u}} Q_t(\mathbf{x}, \mathbf{u}) = 2(\mathbf{R} + \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{B})\mathbf{u} + 2\mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{A}\mathbf{x} = \mathbf{0}$, yields the unique optimal control in closed form:
+Setting the gradient with respect to $\mathbf{u}$ to zero,
+
+$$\nabla_{\mathbf{u}} Q_t(\mathbf{x}, \mathbf{u}) = 2(\mathbf{R} + \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{B})\mathbf{u} + 2\mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{A}\mathbf{x} = \mathbf{0},$$
+
+yields the unique optimal control in closed form:
 
 $$\mathbf{u}_t^* = -\mathbf{K}_t \mathbf{x}_t, \qquad \mathbf{K}_t = (\mathbf{R} + \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{B})^{-1} \mathbf{B}^\top \mathbf{P}_{t+1}\mathbf{A}.$$
 :eqlabel:`eq_lqr_gain`
@@ -421,7 +425,7 @@ When the dynamics $f$ are unknown and must be acted on without fitting a transit
 
 ## Summary
 
-For linear dynamics $\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t$ and quadratic costs $\mathbf{x}^\top\mathbf{Q}\mathbf{x} + \mathbf{u}^\top\mathbf{R}\mathbf{u}$, Bellman's backward dynamic programming has an exact closed-form solution in continuous space: the cost-to-go is quadratic, $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$, where $\mathbf{P}_t$ obeys the backward Riccati recursion, and the optimal policy is the linear feedback controller $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$ (LQR). Linearizing a nonlinear system around an unstable fixed point via its analytical Jacobians (verified against automatic differentiation in Exercise 2) stabilizes states inside the actuator-limited catch basin, but fails outside it when underactuated swing-up pumping is needed. Iterative LQR (iLQR) repeatedly linearizes the dynamics and quadratizes the cost around a nominal trajectory, discovering multi-phase energy-pumping trajectories via backward Riccati passes and forward nonlinear rollouts. Executing an open-loop plan fails under disturbances, and time-varying LQR feedback around a fixed trajectory handles only small perturbations; receding-horizon Model Predictive Control (MPC) re-solves the finite-horizon problem from the current state at each step and recovers even when large disturbances force a completely new trajectory.
+For linear dynamics $\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t$ and quadratic costs $\mathbf{x}^\top\mathbf{Q}\mathbf{x} + \mathbf{u}^\top\mathbf{R}\mathbf{u}$, Bellman's backward dynamic programming has an exact closed-form solution in continuous space: the cost-to-go is quadratic, $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$, where $\mathbf{P}_t$ obeys the backward Riccati recursion, and the optimal policy is the linear feedback controller $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$ (LQR). Linearizing a nonlinear system around an unstable fixed point via its analytical Jacobians stabilizes states inside the actuator-limited catch basin, but fails outside it when underactuated swing-up pumping is needed. Iterative LQR (iLQR) repeatedly linearizes the dynamics and quadratizes the cost around a nominal trajectory, discovering multi-phase energy-pumping trajectories via backward Riccati passes and forward nonlinear rollouts. Executing an open-loop plan fails under disturbances, and time-varying LQR feedback around a fixed trajectory handles only small perturbations; receding-horizon Model Predictive Control (MPC) re-solves the finite-horizon problem from the current state at each step and recovers even when large disturbances force a completely new trajectory.
 
 ## Exercises
 
@@ -432,7 +436,11 @@ For linear dynamics $\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\math
 
        where $\mathbf{P}_t$ is given by :eqref:`eq_riccati_recursion`.
     1. Use $\mathbf{R} \succ \mathbf{0}$ and $\mathbf{P}_{t+1} \succeq \mathbf{0}$ to conclude that $\mathbf{S}_{t+1} \succ \mathbf{0}$, that $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}$ is the unique global minimizer of $Q_t(\mathbf{x}, \mathbf{u})$, and that $\mathbf{P}_t \succeq \mathbf{0}$.
-    1. Verify the Joseph stabilized form $\mathbf{P}_t = \mathbf{Q} + \mathbf{K}_t^\top\mathbf{R}\mathbf{K}_t + (\mathbf{A} - \mathbf{B}\mathbf{K}_t)^\top\mathbf{P}_{t+1}(\mathbf{A} - \mathbf{B}\mathbf{K}_t)$, and explain why every term on the right-hand side is manifestly positive semidefinite even when $\mathbf{K}_t$ is replaced by an arbitrary feedback matrix $\mathbf{K}$.
+    1. Verify the Joseph stabilized form
+
+       $$\mathbf{P}_t = \mathbf{Q} + \mathbf{K}_t^\top\mathbf{R}\mathbf{K}_t + (\mathbf{A} - \mathbf{B}\mathbf{K}_t)^\top\mathbf{P}_{t+1}(\mathbf{A} - \mathbf{B}\mathbf{K}_t),$$
+
+       and explain why every term on the right-hand side is manifestly positive semidefinite even when $\mathbf{K}_t$ is replaced by an arbitrary feedback matrix $\mathbf{K}$.
 
 1. **Certainty equivalence under additive Gaussian noise.** Suppose the linear dynamics :eqref:`eq_lqr_dynamics` are perturbed by independent zero-mean noise vectors $\mathbf{w}_0, \ldots, \mathbf{w}_{H-1}$ with covariance $\mathbb{E}[\mathbf{w}_t\mathbf{w}_t^\top] = \boldsymbol{\Sigma}$, so that $\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t + \mathbf{w}_t$.
     1. Prove by backward induction that the optimal cost-to-go is $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x} + c_t$, where $\mathbf{P}_t$ obeys the exact same deterministic Riccati recursion :eqref:`eq_riccati_recursion` and $c_t = \sum_{k=t+1}^{H} \textrm{tr}(\mathbf{P}_k \boldsymbol{\Sigma})$.

@@ -107,13 +107,11 @@ Because placeholders carry no numerical values, a tracer cannot evaluate a
 data-dependent Python branch such as `if x.sum() > 0:`. A capture system has
 three possible responses:
 
-1. **Freeze** the branch taken by a concrete example input (as `torch.jit.trace`
-   does)—fast, and silently wrong when future inputs should take the other
+1. **Freeze** the branch taken by a concrete example input—fast, and silently wrong when future inputs should take the other
    branch.
 2. **Refuse** with an error, requiring the programmer to express the branch as
-   a graph primitive: either a *select* (`torch.where` / `jax.lax.select`,
-   which evaluates both branches and picks one) or a *conditional op*
-   (`torch.cond` / `jax.lax.cond`).
+   a graph primitive: either a *select* (which evaluates both branches and
+   picks one) or a *conditional op*.
 3. **Fall back** to Python by inserting a *graph break*: end the first graph
    at the condition, let Python evaluate the branch on the materialized value,
    and resume in a second compiled graph.
@@ -163,6 +161,7 @@ and `x.sum() > 0`, returns control to Python to evaluate the `if`, and
 dispatches Graph 2 for the chosen branch. Passing `fullgraph=True` (or using
 `torch.export`) refuses graph breaks instead, while rewriting the branch with
 `torch.where(x.sum() > 0, x + 1, x - 1)` captures a single graph.
+The older `torch.jit.trace` freezes the branch of its example input.
 :end_tab:
 
 :begin_tab:`jax`

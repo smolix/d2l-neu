@@ -838,31 +838,31 @@ print(f'full attention:            loss {full:.2f}, '
 1. **Cache memory and batch limits of a 70B model.** Llama 3.1 70B has $L = 80$ layers, hidden size $d = 8192$, $H = 64$ query heads ($d_h = 128$), and $H_{\textrm{kv}} = 8$ key--value heads, stored in BF16 ($b = 2$ bytes).
    1. Use :eqref:`eq_kv-cache-bytes` to compute the KV cache size $M_{\textrm{KV}}(n, 1)$ of a single sequence at full context length $n = 131{,}072$ ($128\textrm{K}$), and compare it with what the cache would cost under standard MHA ($H_{\textrm{kv}} = 64$).
    2. On an 8-GPU node with $8 \times 80 = 640\textrm{ GB}$ of total HBM (of which $140\textrm{ GB}$ holds the BF16 model weights), what is the maximum batch size $B$ of $128\textrm{K}$-token sequences that can fit in the remaining $500\textrm{ GB}$ under GQA ($H_{\textrm{kv}} = 8$) versus MHA ($H_{\textrm{kv}} = 64$)?
-:exlabel:`ex_kv-cache-70b`
+   :exlabel:`ex_kv-cache-70b`
 
 2. **Batched decode throughput and the KV-bandwidth ceiling.** Serve the 70B model of :exref:`ex_kv-cache-70b` at context length $n = 32{,}768$ on a system with aggregate HBM bandwidth $\mathcal{B}_{\textrm{HBM}} = 24\textrm{ TB/s}$ and $M_{\textrm{weights}} = 140\textrm{ GB}$.
    1. Evaluate the bandwidth upper bound :eqref:`eq_kv-cache-batch-throughput` at batch sizes $B \in \{1, 8, 32, 128, 512\}$ for both GQA ($H_{\textrm{kv}} = 8$) and MHA ($H_{\textrm{kv}} = 64$).
    2. At what batch size $B_{1/2}$ does each configuration reach half of its asymptotic ceiling $\lim_{B \to \infty} \textrm{Throughput}(B, n) = \mathcal{B}_{\textrm{HBM}} / M_{\textrm{KV}}(n, 1)$?
-:exlabel:`ex_kv-cache-70b-batch`
+   :exlabel:`ex_kv-cache-70b-batch`
 
 3. **Prefix sharing across $K$ completions.** Suppose $K = 16$ sequences in a batch share a common system prompt of $n_{\textrm{shared}} = 4096$ tokens and each has generated $n_{\textrm{unique}} = 256$ unique tokens. Modify the denominator of :eqref:`eq_kv-cache-batch-throughput` when the shared prefix KV cache is stored and read **once** per step for all $K$ sequences, and compute the resulting throughput speedup at $K = 16$ for the 70B GQA model.
-:exlabel:`ex_kv-cache-shared-reads`
+   :exlabel:`ex_kv-cache-shared-reads`
 
 4. **INT8 / FP8 KV cache quantization.** Store the cached keys and values of GPT-2 in `forward_blocks` using symmetric per-token 8-bit integer quantization: for each token vector $\mathbf{u} \in \mathbb{R}^d$, compute scale $s = \max_j |u_j| / 127$, quantize $\tilde{\mathbf{u}} = s \cdot \textrm{round}(\mathbf{u} / s)$, and use $\tilde{\mathbf{u}}$ in attention. Measure the change in `tail_loss` on `x` when quantizing keys and values to 8 bits ($2\times$ cache byte reduction) versus 4 bits (`max / 7`, $4\times$ reduction).
-:exlabel:`ex_kv-cache-quantization`
+   :exlabel:`ex_kv-cache-quantization`
 
 5. **Attention sinks and a virtual sink logit ($\textrm{softmax}_1$).** :citet:`Xiao.Tian.Chen.ea.2024` and gpt-oss (:numref:`tab_modern-recipe`) note that a head needs an attention sink because standard softmax forces attention weights to sum to $1$.
    1. Replace the softmax in `forward_blocks` with $\textrm{softmax}_1(\mathbf{s})_j = \frac{e^{s_j}}{e^{b} + \sum_{m} e^{s_m}}$ (adding a non-token sink logit $b = 5.0$ to the denominator without adding any value vector).
    2. Evaluate the pure sliding window ($w = 256, s = 0$ kept sink tokens) on GPT-2 with $b = 5.0$. How much of the $s = 0$ loss spike does the virtual denominator logit eliminate?
-:exlabel:`ex_kv-cache-sink-logit`
+   :exlabel:`ex_kv-cache-sink-logit`
 
 6. **Absorbing low-rank key--value reconstructions into $\mathbf{W}_q$ and $\mathbf{W}_o$.** Suppose layer $\ell$ compresses each token $j$ into a single latent vector $\mathbf{c}_j \in \mathbb{R}^r$ ($r \ll d_h H$), from which head $m$'s key and value are reconstructed via $\mathbf{k}_{j,m} = \mathbf{c}_j \mathbf{B}_{k,m}$ and $\mathbf{v}_{j,m} = \mathbf{c}_j \mathbf{B}_{v,m}$ ($\mathbf{B}_{k,m}, \mathbf{B}_{v,m} \in \mathbb{R}^{r \times d_h}$).
    1. Show that $\mathbf{q}_{t,m}\mathbf{k}_{j,m}^\top = (\mathbf{x}_t \mathbf{W}_{q,m} \mathbf{B}_{k,m}^\top)\mathbf{c}_j^\top$ and $\bigl(\sum_j \alpha_{t,j}^{(m)} \mathbf{v}_{j,m}\bigr)\mathbf{W}_{o,m} = \bigl(\sum_j \alpha_{t,j}^{(m)} \mathbf{c}_j\bigr)(\mathbf{B}_{v,m}\mathbf{W}_{o,m})$.
    2. Explain why absorbing $\mathbf{B}_{k,m}^\top$ into $\mathbf{W}_{q,m}$ and $\mathbf{B}_{v,m}$ into $\mathbf{W}_{o,m}$ during decoding avoids ever materializing the full keys $\mathbf{k}_{j,m}$ or values $\mathbf{v}_{j,m}$ in HBM, and explain why DeepSeek-V2/V3 applies RoPE to a separate narrow decoupled key $\mathbf{k}_j^{\textrm{RoPE}}$ rather than rotating $\mathbf{c}_j \mathbf{B}_{k,m}$.
-:exlabel:`ex_kv-cache-absorbed`
+   :exlabel:`ex_kv-cache-absorbed`
 
 7. **Implementing a fixed-size streaming ring-buffer cache.** Write a `StreamingCache` variant of `init_cache` and `forward_cached` that pre-allocates only $s + w$ token slots per layer (retaining the first $s = 4$ sink positions in slots $0 \dots s-1$ and overwriting slots $s + ((t - s) \bmod w)$ in a circular buffer for $t \ge s$), and verify that it generates 2,048 tokens from `gpt2` using constant $O(s + w)$ cache memory.
-:exlabel:`ex_kv-cache-streaming`
+   :exlabel:`ex_kv-cache-streaming`
 
 [Discussions](https://d2l.discourse.group/t/36776)
 

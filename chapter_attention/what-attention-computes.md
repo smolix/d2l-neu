@@ -120,7 +120,7 @@ attention layers can express:
 
 * **Zero blocks ($N = 0$):** $\mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i}$,
   modeling only constrained token-bigram logits via the symmetric, positive
-  semidefinite Gram matrix $\mathbf{E}\mathbf{E}^\top$ (Exercise 1).
+  semidefinite Gram matrix $\mathbf{E}\mathbf{E}^\top$ (Exercise :exref:`ex_what-attention-computes-tied-bigrams`).
 * **One block ($N = 1$):**
 
   $$
@@ -869,6 +869,7 @@ validate the induction circuit.
        \mathbf{e}_{x_0}$ for a matrix $\mathbf{M}$ built from the OV
        circuits, and explain why neither constraint of the previous parts
        applies to $\mathbf{E}\mathbf{M}\mathbf{E}^\top$.
+   :exlabel:`ex_what-attention-computes-tied-bigrams`
 
 1. **Paths through two blocks.** Fix the attention patterns of a model with
    $N$ blocks of $H$ heads on a sequence of $T$ tokens, and write

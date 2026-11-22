@@ -196,7 +196,7 @@ arms = {'Gated DeltaNet': ('GGGG', 256), 'hybrid': ('GGGA', 256),
 trained = d2l.text_table(text_model, arms, data)
 ```
 
-On short 128-byte windows, `Gated DeltaNet` (`1.326`) and the `GGGA` hybrid (`1.335`) both outperform pure `attention` (`1.383`) by $0.05$–$0.06$ nats/byte: average next-byte loss on short contexts is dominated by local syntax, while the hybrid's single attention layer stands ready for exact long-range lookup when repeated spans occur (see Exercise 5).
+On short 128-byte windows, `Gated DeltaNet` and the `GGGA` hybrid (both about $1.33$) outperform pure `attention` (about $1.38$) by $0.05$–$0.06$ nats/byte: average next-byte loss on short contexts is dominated by local syntax, while the hybrid's single attention layer stands ready for exact long-range lookup when repeated spans occur (see Exercise :exref:`ex_hybrids-recall-in-text`).
 
 ## Inference Memory
 
@@ -295,6 +295,7 @@ A fixed-size state of $M$ numbers at $b$ bits each can distinguish at most $2^{M
 1. [code] **Recall in text.** In the validation windows of byte-level
    WikiText-103, mark the positions whose byte completes a string of at
    least eight bytes that already occurred earlier in the same window.
+   :exlabel:`ex_hybrids-recall-in-text`
     1. Compare the loss of the trained Gated DeltaNet, hybrid, and
        attention models (`trained`) at the marked positions and at all
        other positions. Does attention's advantage on recall show up where

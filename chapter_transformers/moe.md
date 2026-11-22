@@ -561,23 +561,23 @@ Recent frontier MoE families (:numref:`tab_moe-experts`) refine the coarse 8-exp
 1. **Router gradient under $k = 1$ vs. $k > 1$ renormalization.** Many MoE layers renormalize the selected probabilities by their sum: $g_e(\mathbf{x}) = p_e(\mathbf{x}) / \sum_{j \in T(\mathbf{x})} p_j(\mathbf{x})$.
    1. Show that if you apply this same renormalization when $k = 1$, then $g_{e^*}(\mathbf{x}) = p_{e^*}(\mathbf{x}) / p_{e^*}(\mathbf{x}) \equiv 1$ is constant, so $\partial \textrm{MoE}(\mathbf{x}) / \partial \mathbf{W}_r = \mathbf{0}$ and the router never receives a task-loss gradient!
    2. Verify in code that our `MoELayer` avoids this by weighting each selected expert by its raw probability (so $g_{e^*}(\mathbf{x}) = p_{e^*}(\mathbf{x})$ as in Switch Transformer :cite:`fedus2022switch`).
-:exlabel:`ex_moe-router-gradient`
+   :exlabel:`ex_moe-router-gradient`
 
 2. **Minimum and gradient of the Switch auxiliary loss.** Consider $\mathcal{L}_{\textrm{aux}} = E \sum_{e=1}^E f_e \bar{p}_e$ (:eqref:`eq_moe-aux`), where $f_e$ is treated as a stop-gradient constant and $\sum_e \bar{p}_e = 1$.
    1. Compute $\partial \mathcal{L}_{\textrm{aux}} / \partial s_{t,e}$ with respect to token $t$'s router logit $s_{t,e} = (\mathbf{x}_t \mathbf{W}_r)_e$, and show that it vanishes if and only if all empirical loads are equal ($f_1 = \dots = f_E = 1/E$).
    2. Prove via Cauchy--Schwarz that when $\bar{p}_e = f_e$, $\mathcal{L}_{\textrm{aux}} \ge 1$ with equality if and only if $f_e = 1/E$, and find its maximum value $E$ under complete single-expert collapse ($f_1 = \bar{p}_1 = 1$).
 
 3. **Disentangling positive feedback from input distribution skew.** In `balancing_run`, compare the `frozen router` arm against `no balancing` at steps $100, 200, 400, 800$. Starting from the fresh model's top-expert share (already about a third in our byte-level model), does the trainable router's top-expert share move further from it than the frozen router's, over enough seeds to tell, and what happens if you initialize all expert output projections `W_2` to zero so all experts produce identical outputs on early steps?
-:exlabel:`ex_moe-feedback`
+   :exlabel:`ex_moe-feedback`
 
 4. **Step-size dynamics of the loss-free bias controller.** Run `balancing_run` with `bias_rate` $\eta_b \in \{10^{-4}, 10^{-3}, 10^{-2}, 10^{-1}\}$ and plot the top-expert share and validation loss across training steps. Why does an overly large controller step size ($\eta_b = 10^{-1}$) cause expert loads to oscillate from step to step?
-:exlabel:`ex_moe-bias-controller`
+   :exlabel:`ex_moe-bias-controller`
 
 5. **Overfitting of MoE in the tiny-data regime.** Repeat the 6,000-step `dense` vs. `MoE` comparison (:numref:`subsec_moe-gpt`), but restrict `data.train` to only its first $65{,}536$ bytes ($64\textrm{ KB}$) so the models pass over the same text hundreds of times. Plot both training loss and validation loss for `dense` and `MoE`: why does the $2.26\textrm{M}$-parameter MoE memorize the small corpus much faster and start overfitting earlier than the $0.43\textrm{M}$-parameter dense model even though both use the exact same FLOPs per token?
-:exlabel:`ex_moe-data-regime`
+   :exlabel:`ex_moe-data-regime`
 
 6. **Shared experts and fine-grained granularity at fixed budget.** Implement a `SharedMoELayer` that runs 1 always-active shared expert of width $w$ plus Top-$k$ of $E$ routed experts of width $w$, and compare three FFN configurations inside `small_gpt` at matched stored and active expert width ($16 \times 170$ stored, $2 \times 170$ active per block): (a) coarse $E = 8, k = 1, w = 340$, (b) medium $E = 16, k = 2, w = 170$, and (c) fine + shared $E_{\textrm{shared}} = 1, E = 15, k = 1, w = 170$. Compare their validation losses after 800 steps.
-:exlabel:`ex_moe-granularity`
+   :exlabel:`ex_moe-granularity`
 
 [Discussions](https://d2l.discourse.group/t/36779)
 

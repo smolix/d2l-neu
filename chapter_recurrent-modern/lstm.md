@@ -165,7 +165,15 @@ class LSTMScratch(nnx.Module):
         return jnp.swapaxes(outputs, 0, 1)  # (batch_size, num_steps, ...)
 ```
 
-To verify that `LSTMScratch` computes the exact same recurrence as the fused framework LSTM (`nn.LSTM` / `nnx.LSTMCell`), we copy the library weights into our class and compare outputs on a random batch.
+To verify that `LSTMScratch` computes the exact same recurrence as the framework's LSTM layer, we copy the library weights into our class and compare outputs on a random batch.
+
+:begin_tab:`pytorch`
+The library layer is the fused `nn.LSTM`.
+:end_tab:
+
+:begin_tab:`jax`
+The library layer is `nnx.LSTMCell`.
+:end_tab:
 
 ```{.python .input #lstm-implementation-2}
 %%tab pytorch
@@ -295,9 +303,13 @@ class Recurrent(nn.Module):  #@save
 
 We compare six recurrent configurations in three pairs:
 
-1. **Plain RNNs:** one with LeCun normal recurrent weights ($\sigma = 1/\sqrt{64} = 1/8$) and a control with uniform weights on $[-1/8, 1/8]$ (variance $1/3$ of LeCun normal, matching PyTorch's default `nn.RNN` scale).
+1. **Plain RNNs:** one with LeCun normal recurrent weights ($\sigma = 1/\sqrt{64} = 1/8$) and a control with uniform weights on $[-1/8, 1/8]$ (variance $1/3$ of LeCun normal).
 2. **Default LSTM and GRU:** zero gate biases, so all gates start near $\sigma(0) = 1/2$ (half-life 1 step).
 3. **Keep-gate LSTM and GRU (`init_keep_gate`):** the LSTM forget-gate bias and GRU update-gate bias are initialized to $+5$ ($\sigma(5) = 0.993$, half-life $\approx 100$ steps), and the LSTM input-gate bias is set to $-5$ ($\sigma(-5) = 1 - \sigma(5) = 0.007$). Pairing $b_\textrm{i} = -b_\textrm{f}$ bounds the LSTM cell magnitude by $\sigma(-5)/(1 - \sigma(5)) = 1$ across long filler runs so the output $\tanh$ never saturates, matching the GRU's built-in $1 - \mathbf{z}_t$ coupling (see :citet:`Jozefowicz.Zaremba.Sutskever.2015` and the *chrono initialization* of :citet:`Tallec.Ollivier.2018`).
+
+:begin_tab:`pytorch`
+The uniform control matches PyTorch's default `nn.RNN` initialization.
+:end_tab:
 
 ```{.python .input #lstm-delayed-recall-2}
 %%tab pytorch
@@ -496,8 +508,8 @@ for name, cell in cells.items():
 
 The results confirm our analysis:
 
-- **Default vs. keep-gate LSTM and GRU:** With zero gate biases, both gated networks succeed at $T = 20$ and collapse to chance ($0.12$) at $T \ge 50$. With `init_keep_gate`, both achieve $1.00$ accuracy across every run at every delay up to $T = 200$.
-- **Borderline vs. contracting plain RNN:** Because the LeCun normal RNN starts with spectral radius $\rho \approx 1$, some seeds carry the symbol surprisingly far (even to $T = 100$ or $200$), though unreliably across seeds, whereas the $\rho \approx 0.62$ default-scale RNN fails consistently from $T = 50$ onward. Gates with well-initialized biases turn hit-or-miss spectral retention into dependable, per-unit memory control.
+- **Default vs. keep-gate LSTM and GRU:** With zero gate biases, the GRU succeeds at $T = 20$, the LSTM is already unreliable there, and both collapse to chance ($0.12$) at $T \ge 50$. With `init_keep_gate`, both achieve $1.00$ accuracy across every run at every delay up to $T = 200$.
+- **Borderline vs. contracting plain RNN:** Because the LeCun normal RNN starts with spectral radius $\rho \approx 1$, some seeds carry the symbol surprisingly far (even to $T = 100$ or $200$), though unreliably across seeds, whereas the $\rho \approx 0.62$ default-scale RNN fails on nearly every seed from $T = 50$ onward. Gates with well-initialized biases turn hit-or-miss spectral retention into dependable, per-unit memory control.
 
 ### Gated Networks on Text
 :label:`subsec_deep-rnn`
@@ -737,8 +749,8 @@ trained = text_table(text_model, arms, data)
 Three findings stand out from the table:
 
 1. **Residual stacking + gating:** Simply placing 4 narrow $\tanh$ RNN layers inside a pre-norm residual + MLP backbone reaches $\sim 1.35$ nats/byte—already matching the 6-block SwiGLU GPT of :numref:`sec_gpt`. Replacing the plain RNN mixer with an LSTM or GRU lowers validation loss by a further $0.05$ nats/byte (to $\sim 1.30$), whereas widening the plain RNN to match the GRU's parameter count (`RNN, d=302`) closes less than a third of that gap ($1.334$).
-2. **Short-context utilization:** Across all models in this 1,000-step, 128-byte regime, loss drops sharply from band `0-15` to `16-63` and changes by less than $0.005$ beyond byte 16. Here the gates earn their lead by managing short-range byte context more effectively rather than by carrying 100-step memories; the attention stack (`1.383`) trails the recurrent mixers already in the first 16 bytes at this small training budget.
-3. **Sequential step latency:** Despite fused cuDNN/XLA loops, the LSTM and GRU take $2\times$–$2.5\times$ longer per training step than the plain RNN because each of the 128 time steps must wait for the previous step's hidden state $\mathbf{h}_{t-1}$. Breaking that sequential dependency is the goal of :numref:`sec_linear-recurrence`.
+2. **Short-context utilization:** Across all models in this 1,000-step, 128-byte regime, loss drops sharply from band `0-15` to `16-63` and changes by less than $0.005$ beyond byte 16. Here the gates earn their lead by managing short-range byte context more effectively rather than by carrying 100-step memories; the attention stack (about $1.38$) trails the recurrent mixers already in the first 16 bytes at this small training budget.
+3. **Sequential step latency:** Despite fused library loops, the LSTM and GRU take $1.4\times$–$3\times$ longer per training step than the plain RNN because each of the 128 time steps must wait for the previous step's hidden state $\mathbf{h}_{t-1}$. Breaking that sequential dependency is the goal of :numref:`sec_linear-recurrence`.
 
 ## Summary
 
@@ -797,14 +809,15 @@ In a plain recurrent network, signals and gradients pass through a product of st
        involving the previous state must each step perform one after the
        other? Why do fused GRU kernels use the form above?
 
-1. [code] **GRU from scratch.** Write a class `GRUScratch` by editing
+:begin_tab:`pytorch`
+4. [code] **GRU from scratch.** Write a class `GRUScratch` by editing
    `LSTMScratch`: three heads following :eqref:`gru_gates` and
    :eqref:`gru_tilde_H`, the update :eqref:`gru_H`, and a state that
    consists of $\mathbf{h}_t$ alone.
     1. Copy the weights of the library GRU layer into your layer, as we did
        for the LSTM, and compare the outputs. They will not agree. Use the
        previous exercise to change one line of your layer so that they do.
-       (In PyTorch, also keep the last third of `bias_hh_l0`, the recurrent
+       (Also keep the last third of `bias_hh_l0`, the recurrent
        bias of the candidate, as a separate vector inside the reset gate,
        or zero it before copying.)
     1. Remove the reset gate by fixing $\mathbf{r}_t = \mathbf{1}$, and in
@@ -812,8 +825,24 @@ In a plain recurrent network, signals and gradients pass through a product of st
        \mathbf{0}$. Before training, predict from :eqref:`gru_H` which
        removal hurts delayed recall more. Then run the experiment of
        :numref:`subsec_delayed-recall` and check your prediction.
+:end_tab:
 
-1. [code] **The cell's other paths.** ● Consider an LSTM with one input and
+:begin_tab:`jax`
+4. [code] **GRU from scratch.** Write a class `GRUScratch` by editing
+   `LSTMScratch`: three heads following :eqref:`gru_gates` and
+   :eqref:`gru_tilde_H`, the update :eqref:`gru_H`, and a state that
+   consists of $\mathbf{h}_t$ alone.
+    1. Copy the weights of the library GRU layer into your layer, as we did
+       for the LSTM, and compare the outputs. They will not agree. Use the
+       previous exercise to change one line of your layer so that they do.
+    1. Remove the reset gate by fixing $\mathbf{r}_t = \mathbf{1}$, and in
+       a second layer remove the update gate by fixing $\mathbf{z}_t =
+       \mathbf{0}$. Before training, predict from :eqref:`gru_H` which
+       removal hurts delayed recall more. Then run the experiment of
+       :numref:`subsec_delayed-recall` and check your prediction.
+:end_tab:
+
+5. [code] **The cell's other paths.** ● Consider an LSTM with one input and
    one hidden unit, so that every quantity in :eqref:`lstm_gates` and
    :eqref:`lstm_update` is a scalar, and write $w_\textrm{hf}$,
    $w_\textrm{hi}$, and $w_\textrm{hc}$ for the recurrent weights of the

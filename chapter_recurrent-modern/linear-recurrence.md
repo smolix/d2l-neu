@@ -118,7 +118,15 @@ boxes hold complete prefixes. After $\log_2 8 = 3$ rounds every position
 does.](../img/mdl-modernrnn-scan-tree.svg)
 :label:`fig_scan_tree`
 
-The Hillis–Steele doubling schedule performs $O(T \log_2 T)$ combines across $\lceil \log_2 T \rceil$ parallel rounds, whereas the *work-efficient* up-sweep/down-sweep tree schedule of :citet:`Blelloch.1990` performs $\sim 2T$ combines across $2\lceil \log_2 T \rceil$ shrinking rounds. We write the concise doubling schedule in PyTorch (`associative_scan`) and call XLA's built-in work-efficient `jax.lax.associative_scan` in JAX.
+The Hillis–Steele doubling schedule performs $O(T \log_2 T)$ combines across $\lceil \log_2 T \rceil$ parallel rounds, whereas the *work-efficient* up-sweep/down-sweep tree schedule of :citet:`Blelloch.1990` performs $\sim 2T$ combines across $2\lceil \log_2 T \rceil$ shrinking rounds.
+
+:begin_tab:`pytorch`
+We write the concise doubling schedule as `associative_scan`.
+:end_tab:
+
+:begin_tab:`jax`
+We call XLA's built-in work-efficient `jax.lax.associative_scan`.
+:end_tab:
 
 ### Implementation
 
@@ -462,8 +470,16 @@ d2l.plot(lengths, list(times.values()), 'sequence length',
 The empirical scaling curves match :numref:`tab_linear-recurrence-cost`:
 
 - **`GRU`:** slowest at every length, growing more than $15\times$ from $T = 512$ to $16{,}384$ because its $T$ sequential steps cannot be parallelized across time.
-- **`minGRU`:** nearly flat across the entire 32-fold increase in sequence length (growing by under $50\%$ in PyTorch's doubling scan and virtually flat in JAX's work-efficient scan).
-- **`attention`:** nearly flat up to $T \approx 2{,}048$ where $O(Td^2)$ projections and memory traffic dominate, then bending upward toward $2\times$ per doubling once the $O(T^2 d)$ attention term takes over, crossing PyTorch's doubling scan near $T = 4{,}096$ and trailing `minGRU` by $2.5\times$–$5\times$ at $T = 16{,}384$.
+- **`minGRU`:** nearly flat across the entire 32-fold increase in sequence length.
+- **`attention`:** nearly flat up to $T \approx 2{,}048$ where $O(Td^2)$ projections and memory traffic dominate, then bending upward toward $2\times$ per doubling once the $O(T^2 d)$ attention term takes over.
+
+:begin_tab:`pytorch`
+The doubling scan of `minGRU` grows by under $50\%$; `attention`, faster at short lengths, crosses it near $T = 4{,}096$ and trails it by about $2.5\times$ at $T = 16{,}384$.
+:end_tab:
+
+:begin_tab:`jax`
+The work-efficient scan of `minGRU` stays flat and is faster than `attention` at every length, about $14\times$ at $T = 16{,}384$.
+:end_tab:
 
 What `minGRU` still lacks is a structured way to initialize and control multi-timescale memories—the question :numref:`sec_ssm` addresses via continuous-time state space models.
 

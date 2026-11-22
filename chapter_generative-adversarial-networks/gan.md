@@ -834,7 +834,11 @@ The generated images capture recognizable garment silhouettes (shirts, trousers,
 1. **Excess loss and the additive constant.** Let $\eta = p / (p + q)$ and let $D_{\textrm{b}}(a \,\|\, u)$ be the KL divergence between Bernoulli distributions with parameters $a$ and $u$.
     1. Show that every critic satisfies $V(D^\star) - V(D) = 2\, \mathbb{E}_{m}\big[D_{\textrm{b}}(\eta \,\|\, \sigma(D))\big]$, so that $D^\star$ is the unique maximizer of :eqref:`eq_gan_V` up to $m$-null sets.
     1. Conclude that $V(D^\star + b) < V(D^\star)$ for every constant $b \neq 0$.
-    1. Expand to second order in $b$ to show $V(D^\star + b) - V(D^\star) = -\frac{b^2}{2} \int \frac{p q}{p + q}\, dx + O(b^3)$, with coefficient in $[0, \tfrac12]$. When $p$ and $q$ are nearly disjoint, how tightly do finite samples pin down the additive constant of $D$?
+    1. Expand to second order in $b$ to show
+
+       $$V(D^\star + b) - V(D^\star) = -\frac{b^2}{2} \int \frac{p q}{p + q}\, dx + O(b^3),$$
+
+       with coefficient in $[0, \tfrac12]$. When $p$ and $q$ are nearly disjoint, how tightly do finite samples pin down the additive constant of $D$?
    :exlabel:`ex_gan-log-loss-game-identifies`
 
 1. **Supports of measure zero.**

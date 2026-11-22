@@ -338,11 +338,18 @@ query ($O(n)$ memory) and recomputes the score tiles on chip during
 backpropagation.
 
 We benchmark the framework-provided fused FlashAttention kernel
-(`F.scaled_dot_product_attention` in PyTorch; `jax.nn.dot_product_attention`
-with `implementation='cudnn'` in JAX) against `causal_attention` on $B = 2$
+against `causal_attention` on $B = 2$
 sequences, $H = 8$ heads, $d_h = 64$, and $n = 8{,}192$ in float16. Including
 an unmasked fused run separates the $O(n^2)$ HBM-traffic speedup from the
 $\sim 1.5\times$ speedup of skipping upper-triangular causal tiles:
+
+:begin_tab:`pytorch`
+The fused kernel is `F.scaled_dot_product_attention`.
+:end_tab:
+
+:begin_tab:`jax`
+The fused kernel is `jax.nn.dot_product_attention` with `implementation='cudnn'`.
+:end_tab:
 
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab pytorch

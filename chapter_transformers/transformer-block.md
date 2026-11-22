@@ -196,7 +196,7 @@ $$
 
 so token spread decays exponentially as $r^L$ across depth $L$.
 
-Under pre-norm (:eqref:`eq_preln-block`), the residual stream is never divided by a normalization denominator: unrolling $L$ blocks gives a direct sum $\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{2L} \mathbf{U}^{(\ell)}$. Because $2L$ independent sublayer outputs add variance to the stream, the unscaled pre-norm stream RMS grows with depth as $\sqrt{1 + 2\ell\sigma^2}$ (to keep the total variance deposited by all $2L$ sublayers $O(1)$ at any depth $L$, GPT-2 :cite:`Radford.Wu.Child.ea.2019` scales the initialization standard deviation of each block's residual output projections `W_o` and `W_2` by $1/\sqrt{2L}$, as we implement in :numref:`sec_gpt` and test in Exercise 4). Meanwhile, in post-norm, BERT :cite:`Devlin.Chang.Lee.ea.2018` slows down the collapse rate :eqref:`eq_collapse-rate` by initializing all linear weights with a smaller standard deviation $\sigma = 0.02$ (so $g^2 = d\sigma^2 \approx 0.10$ at $d = 256$). Let us compare these three configurations (`post-norm`, `pre-norm`, and `post-norm, std 0.02`) across 32 blocks:
+Under pre-norm (:eqref:`eq_preln-block`), the residual stream is never divided by a normalization denominator: unrolling $L$ blocks gives a direct sum $\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{2L} \mathbf{U}^{(\ell)}$. Because $2L$ independent sublayer outputs add variance to the stream, the unscaled pre-norm stream RMS grows with depth as $\sqrt{1 + 2\ell\sigma^2}$ (to keep the total variance deposited by all $2L$ sublayers $O(1)$ at any depth $L$, GPT-2 :cite:`Radford.Wu.Child.ea.2019` scales the initialization standard deviation of each block's residual output projections `W_o` and `W_2` by $1/\sqrt{2L}$, as we implement in :numref:`sec_gpt` and test in Exercise :exref:`ex_transformer-block-stream-variance`). Meanwhile, in post-norm, BERT :cite:`Devlin.Chang.Lee.ea.2018` slows down the collapse rate :eqref:`eq_collapse-rate` by initializing all linear weights with a smaller standard deviation $\sigma = 0.02$ (so $g^2 = d\sigma^2 \approx 0.10$ at $d = 256$). Let us compare these three configurations (`post-norm`, `pre-norm`, and `post-norm, std 0.02`) across 32 blocks:
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization}
 %%tab pytorch, jax
@@ -228,7 +228,7 @@ d2l.plot(list(range(1, 33)), [s['spread'] for s in stats.values()]
          legend_loc='lower left')
 ```
 
-Under standard Xavier post-norm (`post-norm`), token spread collapses to nearly zero ($\sim 10^{-4}$) by layer 32, closely tracking our theoretical curve :eqref:`eq_collapse-rate`: all tokens in the sequence have been squeezed into nearly identical vectors. Shrinking the post-norm initialization (`post-norm, std 0.02`) slows the per-block contraction enough to preserve token spread across 32 blocks, while pre-norm (`pre-norm`) keeps token spread $O(1)$ automatically via its unattenuated identity residual path (with stream RMS growing as $\sqrt{L}$ unless paired with $1/\sqrt{2L}$ output-projection scaling; Exercise 4).
+Under standard Xavier post-norm (`post-norm`), token spread collapses to nearly zero ($\sim 10^{-4}$) by layer 32, closely tracking our theoretical curve :eqref:`eq_collapse-rate`: all tokens in the sequence have been squeezed into nearly identical vectors. Shrinking the post-norm initialization (`post-norm, std 0.02`) slows the per-block contraction enough to preserve token spread across 32 blocks, while pre-norm (`pre-norm`) keeps token spread $O(1)$ automatically via its unattenuated identity residual path (with stream RMS growing as $\sqrt{L}$ unless paired with $1/\sqrt{2L}$ output-projection scaling; Exercise :exref:`ex_transformer-block-stream-variance`).
 
 ### Gradients at Initialization
 
@@ -525,12 +525,13 @@ for name, blk in blocks.items():
    1. Unroll :eqref:`eq_preln-block` to express $\mathbf{X}^{(L)}$ explicitly as $\mathbf{X}^{(0)} + \sum_{m=1}^{2L} f_m(\textrm{Norm}(\mathbf{X}^{(m-1)/2}))$.
    2. Apply the chain rule to write $\partial \mathbf{X}^{(L)} / \partial \mathbf{X}^{(0)}$ as a product of $2L$ Jacobians, expand the leading terms, and contrast the resulting identity term $\mathbf{I}$ with the post-norm product where every factor is premultiplied by $J_{\textrm{Norm}}$.
 
-3. **QK-Norm inside `TransformerBlock`.** Write an `attn_factory` that wraps `d2l.MultiHeadAttention` and applies `nn.RMSNorm(d // h)` (or `nnx.RMSNorm`) to queries and keys per head before computing attention scores. Verify on a 16-block stack with projection weights multiplied by $4\times$ (or $16\times$) that attention entropy remains bounded away from zero.
+3. **QK-Norm inside `TransformerBlock`.** Write an `attn_factory` that wraps `d2l.MultiHeadAttention` and applies an RMSNorm of width `d // h` to queries and keys per head before computing attention scores. Verify on a 16-block stack with projection weights multiplied by $4\times$ (or $16\times$) that attention entropy remains bounded away from zero.
 
 4. **Stream variance budget across depth.** In the pre-norm arrangement, every sublayer adds an update to the residual stream. Run `signal_stats(pre_norm=True, std=0.02 / math.sqrt(2 * L), num_blks=L)` for $L \in \{8, 16, 32, 64\}$ and compare against unscaled `std=None`. Verify that the final stream standard deviation at block $L$ grows as $\sqrt{L}$ without scaling but remains near a constant independent of $L$ under the $1/\sqrt{2L}$ rule.
+   :exlabel:`ex_transformer-block-stream-variance`
 
 5. **Rate of token collapse.** :numref:`subsec_signal-propagation` argued that in a post-norm block, only the attention sublayer mixes across tokens, while the FFN acts position-wise. Modify `MiniBlock` so that the attention sublayer is skipped ($\mathbf{H} = \textrm{Norm}(\mathbf{X})$) and only the post-norm FFN runs, and re-run `signal_stats(pre_norm=False)`. Does token spread still collapse to zero across 32 layers, or does it stabilize? Explain how this confirms each factor in :eqref:`eq_collapse-rate`.
-:exlabel:`ex_transformer-block-ffn-width-rounding`
+   :exlabel:`ex_transformer-block-ffn-width-rounding`
 
 [Discussions](https://d2l.discourse.group/t/36774)
 

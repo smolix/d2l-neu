@@ -234,11 +234,13 @@ def _plot(self, ax):
     ax.grid()
 ```
 
+:begin_tab:`pytorch, jax`
 `show_trace_2d` draws the iterates of a two-dimensional update rule, as
 `d2l.train_2d` of :numref:`sec_gd` returns them, over the contour lines of
 the objective `f`. The window covers the start $(-5, -2)$ and the minimum
 at the origin, and widens to fit the trace. Both axes share one scale
 unless the trace has diverged along one of them.
+:end_tab:
 
 ```{.python .input #utils-progress-and-plotting-1}
 %%tab pytorch, jax
@@ -261,6 +263,7 @@ def show_trace_2d(f, results):  #@save
         d2l.plt.gca().set_aspect('equal')
 ```
 
+:begin_tab:`pytorch`
 `plot_intervals` draws estimates with their intervals, such as accuracies
 with bootstrap bars. `series` maps a label to three sequences as long as `x`:
 the estimates and the lower and upper ends of their intervals; a `nan` leaves
@@ -274,6 +277,7 @@ axes, so that a caller can add matching lines. `marks` adds more points to
 the series, such as a second estimator: it maps a name to a matplotlib
 format (`'--'`, `'D'`) and, per series label, the points `(xs, ys)`, drawn
 in the series' color and listed once in the legend, in black.
+:end_tab:
 
 ```{.python .input #utils-plot-intervals}
 %%tab pytorch
@@ -465,9 +469,13 @@ def on_grid(runs, grid, col, smooth=1):  #@save
     return np.stack(out)
 ```
 
+:begin_tab:`pytorch, jax`
 `run_seeds` runs a training generator once per seed and stacks the curves it yields into one array of shape (seed, step, ...), the input `plot_curves` expects. Off-policy agents report once per episode, and seeds finish different numbers of episodes; `on_grid` puts such per-episode records on a common grid of environment steps, so that they too can be stacked and plotted.
+:end_tab:
 
+:begin_tab:`jax`
 The JAX implementations of the reinforcement-learning agents act one state at a time and update on batches whose length changes from one batch to the next. Compiled code is keyed on the structure of the network, the shapes of its inputs and the optimizer, so three helpers keep the number of compilations small. `forward_np` compiles one forward pass per network structure and reads the network's current parameters at each call, so optimizer steps need no recompilation. `_pad` and `_bucket` pad a batch to the next power of two (at least 64 rows), so a compiled update is reused across batches of different lengths; `padded` pads several arrays of one batch together and adds a mask that marks the real rows, so that an update can leave the padding out of its means. `shared_adam` keeps one `optax.adam` per learning rate, so agents created with the same learning rate share their compiled updates, and `plain_sgd` does the same for plain SGD, which some experiments use in place of Adam.
+:end_tab:
 
 ```{.python .input #utils-reinforcement-learning-utilities-1}
 %%tab pytorch
@@ -542,7 +550,9 @@ def plain_sgd(net, lr):  #@save
 ## Feature Networks for Image Scores
 :label:`subsec_utils_feature_cnn`
 
+:begin_tab:`pytorch, jax`
 The generative chapters score images in the features of a small CIFAR-10 classifier (:numref:`sec_dcgan`). `load_cifar10_arrays` returns the CIFAR-10 training and test images, scaled to $[-1, 1]$, with their labels. `FeatureCNN` is a classifier of three convolution blocks, each with batch normalization, ReLU and $2 \times 2$ max pooling, followed by global average pooling and a linear head; its `features` method returns the pooled features, and its `resolution` argument sets the size to which it first resizes its inputs, low-pass filtering them when it shrinks them. `train_feature_cnn` trains it with Adam under a one-cycle learning-rate schedule on random horizontal flips and, optionally, random shifts.
+:end_tab:
 
 ```{.python .input #utils-feature-networks-for-image-scores}
 %%tab pytorch
@@ -1788,6 +1798,7 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
 ### Embedding Gradients for Small Vocabularies
 :label:`subsec_utils_embed`
 
+:begin_tab:`jax`
 The gradient of an embedding lookup adds the gradient at each position to
 the row of that position's token, and XLA performs these additions with
 atomic operations. In a minibatch of text, thousands of positions hold the
@@ -1797,6 +1808,7 @@ take tens of times as long as for random tokens. For vocabularies of up to
 1,024 tokens, `Embed` computes the same sum as one matrix product of the
 one-hot rows of the tokens with the gradients. It is otherwise an
 `nnx.Embed`, and the JAX models of the book use it for their token tables.
+:end_tab:
 
 ```{.python .input #utils-embedding-gradients-for-small-vocabularies}
 %%tab jax
@@ -1829,19 +1841,18 @@ class Embed(nnx.Embed):  #@save
 
 ## A Note on Framework Coverage
 
-The legacy helpers in this section (`evaluate_accuracy`, `train_ch6`,
+The legacy helpers in this section (`train_ch6`,
 `train_seq2seq`, `predict_seq2seq`, `MaskedSoftmaxCELoss`) are kept for
 parity with the original D2L implementation, which predates the unified
 `d2l.Trainer` class introduced in this edition. They are not provided for
-JAX, and the PyTorch module includes only the subset used outside the
-`Trainer` workflow. If you are reading the JAX tab,
+JAX. If you are reading the JAX tab,
 the corresponding chapters use `d2l.Trainer.fit(model, data)` end-to-end;
 the corresponding per-batch logic is implemented in
 `Trainer.fit_epoch` and the `@d2l.add_to_class` extensions defined
-alongside it. The MXNet and TensorFlow tabs additionally retain
-`evaluate_accuracy` because some of their earlier-chapter snippets call
-it directly; for PyTorch and JAX,
-use `Trainer.validation_step` (or its return value) instead.
+alongside it. `evaluate_accuracy` exists in all four frameworks: PyTorch
+and JAX define `evaluate_accuracy(model, batches)` in
+:numref:`sec_test_models`, and the MXNet and TensorFlow tabs retain the
+legacy `evaluate_accuracy(net, data_iter)` above.
 
 [Discussions](https://d2l.discourse.group/t/36849)
 

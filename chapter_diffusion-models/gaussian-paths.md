@@ -723,11 +723,22 @@ Both trained networks reach their theoretical floors: the mean squared error aga
     1. :citet:`Song.Ermon.2020` choose $q$ so that this mass is about one half. Solve for $q$ at $d = 3072$, the dimension of CIFAR-10 images, and count the levels from $\tilde\sigma = 50$ down to $0.01$. Compare with the $232$ levels of their CIFAR-10 model.
     1. The top level must also be coarse enough to merge the modes. Two equal Gaussian components at $\pm\mu$ with variance $v$ have a single mode exactly when $\mu^2 \le v$ (Exercise :exref:`ex_mdl-fokker-planck-probability-flow-mode-merging` of :numref:`sec_mdl-fokker-planck-probability-flow`). Use this criterion on the two lower modes of the mixture to estimate the noise level at which they merge, and compare it with the ladder's top level of $3$.
    :exlabel:`ex_gaussian-paths-ladder-spacing`
-1. [code] **The exact optimum memorizes.** A finite training set is itself a distribution, a mixture of point masses, and its exact velocity field is known. :citet:`Bertrand.Gagneux.Massias.ea.2025` take as their starting point that following this field from noise reproduces the training points, and ask why trained networks generalize instead.
+
+:begin_tab:`pytorch`
+5. [code] **The exact optimum memorizes.** A finite training set is itself a distribution, a mixture of point masses, and its exact velocity field is known. :citet:`Bertrand.Gagneux.Massias.ea.2025` take as their starting point that following this field from noise reproduces the training points, and ask why trained networks generalize instead.
     1. Draw $64$ points from the mixture and train `TimeMLP(256, 3)` with `regression_loss(linear, 'velocity')` on batches drawn from these points only.
-    1. `d2l.GaussianMixture(points.tolist(), [1/64] * 64, 0.0)` is the empirical distribution (in PyTorch, also pass the `device`), and its `velocity` method is the exact field for $t > 0$. Follow it and the trained network from the same $2{,}000$ standard Gaussian starts, with $100$ straight steps $\mathbf{x} \leftarrow \mathbf{x} - \mathbf{u}_t(\mathbf{x})/100$ at $t = 1, 0.99, \ldots, 0.01$. For both sets of samples, plot the histogram of the distance to the nearest training point.
+    1. `d2l.GaussianMixture(points.tolist(), [1/64] * 64, 0.0)` is the empirical distribution (also pass the `device`), and its `velocity` method is the exact field for $t > 0$. Follow it and the trained network from the same $2{,}000$ standard Gaussian starts, with $100$ straight steps $\mathbf{x} \leftarrow \mathbf{x} - \mathbf{u}_t(\mathbf{x})/100$ at $t = 1, 0.99, \ldots, 0.01$. For both sets of samples, plot the histogram of the distance to the nearest training point.
     1. Which field reproduces the training set, and which produces new points? Bertrand et al. argue that the noise in the regression targets is not what makes the network generalize. Repeat the first two parts with $1{,}024$ training points, and describe how the two histograms change.
    :exlabel:`ex_gaussian-paths-memorization`
+:end_tab:
+
+:begin_tab:`jax`
+5. [code] **The exact optimum memorizes.** A finite training set is itself a distribution, a mixture of point masses, and its exact velocity field is known. :citet:`Bertrand.Gagneux.Massias.ea.2025` take as their starting point that following this field from noise reproduces the training points, and ask why trained networks generalize instead.
+    1. Draw $64$ points from the mixture and train `TimeMLP(256, 3)` with `regression_loss(linear, 'velocity')` on batches drawn from these points only.
+    1. `d2l.GaussianMixture(points.tolist(), [1/64] * 64, 0.0)` is the empirical distribution, and its `velocity` method is the exact field for $t > 0$. Follow it and the trained network from the same $2{,}000$ standard Gaussian starts, with $100$ straight steps $\mathbf{x} \leftarrow \mathbf{x} - \mathbf{u}_t(\mathbf{x})/100$ at $t = 1, 0.99, \ldots, 0.01$. For both sets of samples, plot the histogram of the distance to the nearest training point.
+    1. Which field reproduces the training set, and which produces new points? Bertrand et al. argue that the noise in the regression targets is not what makes the network generalize. Repeat the first two parts with $1{,}024$ training points, and describe how the two histograms change.
+   :exlabel:`ex_gaussian-paths-memorization`
+:end_tab:
 
 [Discussions](https://d2l.discourse.group/t/36888)
 

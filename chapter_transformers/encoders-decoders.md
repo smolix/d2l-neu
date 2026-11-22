@@ -698,21 +698,21 @@ class PerceiverEncoder(nnx.Module):
 ## Exercises
 
 1. **BERT's 80 / 10 / 10 masking recipe.** `mask_tokens` replaces every selected position ($15\%$ of bytes) with `<mask>`. Because `<mask>` never appears at fine-tuning or inference time, :citet:`Devlin.Chang.Lee.ea.2018` replace selected tokens with `<mask>` $80\%$ of the time, with a uniformly random vocabulary token $10\%$ of the time, and leave the original token unchanged $10\%$ of the time. Implement this 80 / 10 / 10 rule in `mask_tokens` and explain why keeping $10\%$ unmasked and $10\%$ random forces the encoder to maintain accurate representations at *unmasked* tokens as well as `<mask>` tokens.
-:exlabel:`ex_encdec-masking-recipe`
+   :exlabel:`ex_encdec-masking-recipe`
 
 2. **Padding masks on ragged sequence-to-sequence batches.** When a batch contains variable-length source strings of lengths $(s_1, \dots, s_B) \le S$ and target strings of lengths $(t_1, \dots, t_B) \le T_{\textrm{dec}}$, three boolean masks are needed: (a) a $(B, 1, S, S)$ encoder padding mask, (b) a $(B, 1, T_{\textrm{dec}}, T_{\textrm{dec}})$ decoder causal + padding mask, and (c) a $(B, 1, T_{\textrm{dec}}, S)$ rectangular cross-attention source-padding mask. Write a helper `make_seq2seq_masks(src_len, tgt_len, S, T_dec)` that constructs all three masks and verify that appending padded tokens to `src` in `EncoderDecoder` does not alter the non-padded decoder logits.
-:exlabel:`ex_encdec-padding`
+   :exlabel:`ex_encdec-padding`
 
 3. **Varying the MLM masking fraction $p$.** Train `MaskedLM` for 2,000 steps at masking fractions $p \in \{0.05, 0.15, 0.30, 0.50\}$ and evaluate all four models on the same $p = 0.15$ validation set `masked.val_dataloader()`. How does $p$ trade off the number of supervised gradient signals per batch against the amount of uncorrupted context available around each mask?
 
 4. **Forward vs. backward direction of time in causal and bidirectional models.** A causal language model processes text left-to-right ($x_1 \to x_n$). Reverse every byte window in `WikiText103` so a causal model predicts right-to-left ($x_n \to x_1$), train for 1,000 steps, and compare its average per-byte validation loss and its `loss_by_position` curve against the left-to-right causal model and the bidirectional `MaskedLM`. Why is the total joint log-likelihood $\sum_{t=1}^n \log P(x_t \mid \textrm{past})$ theoretically invariant to time reversal, and where does the bidirectional model gain its advantage over both one-sided directions?
-:exlabel:`ex_encdec-times-arrow`
+   :exlabel:`ex_encdec-times-arrow`
 
-5. **Content-addressed vs. position-addressed cross-attention alignment.** In our string reversal experiment, every letter in a random string can repeat, so position is required to distinguish duplicate letters. Modify `sample_batch` so each length-12 string is a random permutation of 12 *distinct* letters, and train `EncoderDecoder` without positional embeddings in the encoder (`pos_emb.weight.zero_()`). Why does a 1-layer encoder without position embeddings fail on string reversal even when all 12 letters are distinct, whereas a sorting task (outputting the input letters in alphabetical order `a..p`) succeeds without any encoder positional embeddings?
-:exlabel:`ex_encdec-depth-heads`
+5. **Content-addressed vs. position-addressed cross-attention alignment.** In our string reversal experiment, every letter in a random string can repeat, so position is required to distinguish duplicate letters. Modify `sample_batch` so each length-12 string is a random permutation of 12 *distinct* letters, and train `EncoderDecoder` with the position term removed from the encoder's forward pass. Why does a 1-layer encoder without position embeddings fail on string reversal even when all 12 letters are distinct, whereas a sorting task (outputting the input letters in alphabetical order `a..p`) succeeds without any encoder positional embeddings?
+   :exlabel:`ex_encdec-depth-heads`
 
 6. **Perceiver IO for sequence-to-sequence reversal.** Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2022` pairs a `PerceiverEncoder` ($M$ learned latent queries attending to the $N$-token input) with a cross-attention **decoder** in which $N_{\textrm{out}}$ target position embeddings $\mathbf{Q}_{\textrm{out}} \in \mathbb{R}^{N_{\textrm{out}} \times d}$ cross-attend to the $M$ latent vectors $\mathbf{Z}^{(L)} \in \mathbb{R}^{B \times M \times d}$. Build a `PerceiverAutoencoder` that encodes a 12-letter string into $M \in \{2, 4, 8, 12\}$ latents ($d = 128$) and decodes the reversed string in one parallel cross-attention readout pass. How does reversal accuracy vary with the bottleneck size $M$?
-:exlabel:`ex_encdec-perceiver-reversal`
+   :exlabel:`ex_encdec-perceiver-reversal`
 
 [Discussions](https://d2l.discourse.group/t/36777)
 

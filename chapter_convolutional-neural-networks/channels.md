@@ -578,7 +578,7 @@ In addition to $1 \times 1$ bottlenecks, Chapter 7 introduces two structural fac
 | **Standard Conv ($c_\textrm{i} \to c_\textrm{o}$)** | $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$ | $1\times$ (all-to-all baseline) | LeNet, AlexNet, VGG, ResNet |
 | **Grouped Conv ($g$ groups)** | $\frac{1}{g} c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$ | $g\times$ fewer weights & MACs | ResNeXt ($g = 32$), RegNet |
 | **Depthwise Conv ($g = c_\textrm{i} = c_\textrm{o}$)** | $c_\textrm{i} k_\textrm{h} k_\textrm{w}$ | $c_\textrm{o}\times$ fewer spatial weights (1 filter/channel) | MobileNet, EfficientNet, ConvNeXt |
-| **Depthwise-Separable ($k \times k$ + $1 \times 1$)** | $c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o} c_\textrm{i}$ | $\approx \frac{1}{c_\textrm{o}} + \frac{1}{k_\textrm{h} k_\textrm{w}}$ ($\approx 8\text{--}9\times$ for $3 \times 3$) | Xception, MobileNets (§7.4) |
+| **Depthwise-Separable ($k \times k$ + $1 \times 1$)** | $c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o} c_\textrm{i}$ | $\approx \frac{1}{c_\textrm{o}} + \frac{1}{k_\textrm{h} k_\textrm{w}}$ ($\approx 8\text{--}9\times$ for $3 \times 3$) | Xception, MobileNets (§7.5) |
 
 ::: {.d2l-note}
 **Separation of concerns:** Depthwise-separable convolutions completely decouple **spatial filtering** (one $k \times k$ depthwise filter per channel) from **cross-channel mixing** (a $1 \times 1$ pointwise projection across channels).

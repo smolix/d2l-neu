@@ -1029,7 +1029,7 @@ Consider fitting the unnormalized quartic density $\tilde{q}_\theta(x) = e^{-\th
 - **Step 2 (Form the empirical score-matching objective):** Writing $\overline{f(x)} = \frac{1}{N}\sum_{i=1}^N f(x_i)$:
   $$\hat{J}(\theta) = \overline{\frac{1}{2}s_Q(x)^2 + s_Q'(x)} = \frac{1}{2}\theta^2\,\overline{x^6} - 3\theta\,\overline{x^2}$$
 - **Step 3 (Solve the quadratic in $\theta$):** Setting $\hat{J}'(\theta) = \theta\,\overline{x^6} - 3\overline{x^2} = 0$ yields the closed-form estimator $\hat{\theta}_{\textrm{SM}} = \frac{3\overline{x^2}}{\overline{x^6}}$ from two empirical moments!
-  *(Note: In $\mathbb{R}^n$, computing $\textrm{tr}(\nabla_{\mathbf{x}} s_Q(\mathbf{x})) = \sum_{i=1}^n \partial_{x_i} s_{Q,i}(\mathbf{x})$ requires $n$ backward passes, motivating sliced and denoising score matching in Chapter 21.)*
+  *(Note: In $\mathbb{R}^n$, computing $\textrm{tr}(\nabla_{\mathbf{x}} s_Q(\mathbf{x})) = \sum_{i=1}^n \partial_{x_i} s_{Q,i}(\mathbf{x})$ requires $n$ backward passes, motivating sliced and denoising score matching in Chapter 17 and §38.6.)*
 :::
 
 ::: {.slide title="Stein's Operator as a Goodness-of-Fit Diagnostic"}

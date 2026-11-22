@@ -440,7 +440,7 @@ Two lightweight annotations connect code cells in a chapter to the rest of the b
 ::: {.col}
 - **2. The `#@save` Library Extractor (`make lib`):**
   - Any function, class, or `@d2l.add_to_class` block marked with `#@save` is extracted into `d2l/torch.py`, `d2l/jax.py`, `d2l/tensorflow.py`, and `d2l/mxnet.py`.
-  - **Last-definition-wins rule:** `make lib` scans sections in book order; when a later chapter (e.g., GPU training in §6.7) redefines `Trainer.prepare_batch` with device support, the library keeps the **last** definition while the earlier teaching chapter temporarily binds its simpler pedagogical version during its own run.
+  - **Last-definition-wins rule:** `make lib` scans sections in book order; when a later chapter (e.g., GPU training in §5.7) redefines `Trainer.prepare_batch` with device support, the library keeps the **last** definition while the earlier teaching chapter (§2.4) temporarily binds its simpler pedagogical version during its own run.
 :::
 :::
 :::
@@ -656,14 +656,14 @@ Test your grasp of the D2L build system on these three questions:
 
 1. A source `.md` file has 5 cells: (1) `%%tab pytorch` defining `x`, (2) `%%tab jax` defining `x`, (3) an untagged cell `y = x * 2`, (4) `%%tab pytorch` modifying `x`, and (5) an untagged `print(y.sum())`. If you edit cell (3), which notebooks change and must be re-executed?
 2. You upgrade your local PyTorch environment from `torch==2.11.0+cu124` on Linux to `torch==2.11.0` CPU on macOS. Does `tools/audit_outputs.py` mark the committed PyTorch outputs stale? What if you upgrade to `torch==2.12.0`?
-3. `Trainer.prepare_batch` is defined with `#@save` in §3.2 (CPU-only) and redefined with `#@save` in §6.7 (moving batches to GPU). Which version is in `d2l/torch.py`, and which version runs at the end of the §3.2 notebook?
+3. `Trainer.prepare_batch` is defined with `#@save` in §2.4 (CPU-only) and redefined with `#@save` in §5.7 (moving batches to GPU). Which version is in `d2l/torch.py`, and which version runs at the end of the §2.4 notebook?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. **Both the PyTorch and JAX notebooks!** Because cell (3) is untagged, it belongs to every framework generated from the file (`pytorch` and `jax`), and editing it invalidates the prefix fingerprint of cells (3), (4), and (5) in both frameworks.
 2. Switching `2.11.0+cu124` $\to$ `2.11.0` CPU **does not mark outputs stale** because the fingerprint strips local build tags (`+cu124`) so CPU laptops can build the site without false alarms. Upgrading to **`2.12.0` marks all PyTorch outputs stale**.
-3. `d2l/torch.py` contains the **§6.7 GPU-aware definition** (last definition in book order wins). When §3.2 starts, `d2l.Trainer.prepare_batch` holds the §6.7 version until §3.2's own `@d2l.add_to_class` cell executes and overwrites it in memory with the CPU version for the remainder of §3.2.
+3. `d2l/torch.py` contains the **§5.7 GPU-aware definition** (last definition in book order wins). When §2.4 starts, `d2l.Trainer.prepare_batch` holds the §5.7 version until §2.4's own `@d2l.add_to_class` cell executes and overwrites it in memory with the CPU version for the remainder of §2.4.
 :::
 :::
 

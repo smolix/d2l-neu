@@ -712,7 +712,7 @@ Variance-preserving initialization (Xavier and He) guarantees healthy signal and
 
 - **Weights become correlated with activations after step 1:** The derivation $\mathrm{Var}[o_j] = n_{\textrm{in}}\tau^2\gamma^2$ relies on independent weights and inputs. Once SGD updates $\mathbf{W}^{(k)}$, layer gains can drift away from $1$—which is why our 10-layer plain MLP needed $\eta = 0.05$ rather than $\eta = 0.1$.
 - **Rescaling symmetries in ReLU networks:** Because $\mathrm{ReLU}(\alpha z) = \alpha\,\mathrm{ReLU}(z)$ for $\alpha > 0$, multiplying incoming weights by $\alpha$ and dividing outgoing weights by $\alpha$ leaves the network function identical while distorting layerwise gradient norms.
-- **Architectural stabilizes for $K \ge 50$ layers:** Training dozens or hundreds of layers reliably combines He/Xavier initialization with **normalization layers** (BatchNorm / LayerNorm, §8.5) and **residual skip connections** (ResNets, §8.6).
+- **Architectural stabilizers for $K \ge 50$ layers:** Training dozens or hundreds of layers reliably combines He/Xavier initialization with **normalization layers** (BatchNorm / LayerNorm, §7.3 & §11.1) and **residual skip connections** (ResNets, §7.4).
 :::
 
 ::: {.slide title="Concept Check: Initialization Scales & Symmetry"}

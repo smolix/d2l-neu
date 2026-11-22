@@ -352,11 +352,18 @@ Verify the arithmetic directly: $2 x_1^{(1)} - 3.4 x_2^{(1)} + 4.2$ matches the 
 ::: {.slide title="Why 2D Marginal Scatter Plots Look Like Thick Bands"}
 [Geometric Intuition]{.kicker}
 
-If $\sigma = 0.01$ is tiny, why does plotting $y$ against a single coordinate $x_2$ show a thick vertical cloud several units wide rather than a razor-thin line?
+::: {.cols .vc}
+::: {.col}
+If $\sigma = 0.01$ is tiny, why does plotting $y$ against $x_1$ and $x_2$ show thick vertical clouds several units wide rather than razor-thin lines?
 
 - **Omitted-variable projection:** In 3D space $(x_1, x_2, y)$, all $1{,}000$ points lie within $\pm 0.03$ of the tilted plane $y = 2x_1 - 3.4x_2 + 4.2$.
-- **Unplotted feature variance:** When we project that plane onto the 2D $(x_2, y)$ margin, each point's unplotted coordinate $2x_1 \sim \mathcal{N}(0, 4)$ acts as an apparent vertical offset with standard deviation $2.0$!
-- **Negative vs. positive marginal slopes:** Plotting $y$ vs. $x_1$ reveals a noisy band of slope $+2$ (with vertical spread $3.4$ from $-3.4x_2$), whereas plotting $y$ vs. $x_2$ reveals a steeper downward band of slope $-3.4$ (with vertical spread $2.0$ from $+2x_1$).
+- **Unplotted feature variance:** Projecting onto $(x_2, y)$ folds each point's unplotted coordinate $2x_1 \sim \mathcal{N}(0, 4)$ into the vertical spread ($\textrm{std} = 2.0$), while projecting onto $(x_1, y)$ folds in $-3.4x_2$ ($\textrm{std} = 3.4$).
+:::
+
+::: {.col .fig}
+@!synthetic-regression-data-inspecting-the-data
+:::
+:::
 
 ::: {.d2l-note .rule}
 Marginal 2D scatter plots of a multivariate function always fold the variation of the unplotted features into the vertical scatter.
@@ -422,7 +429,7 @@ We solve the normal equations on our $n = 1{,}000$ training examples with `lstsq
 @synthetic-regression-data-recovering-the-parameters-2
 
 ::: {.d2l-note}
-Even an exact solver misses $(2, -3.4, 4.2)$ by a few times $10^{-4}$ because the $1{,}000$ random noise draws happen to correlate slightly with the columns of $\tilde{\mathbf{X}}$. Any converged iterative optimizer in §2.3–§2.4 must land within $\sim 10^{-3}$ (roughly three standard errors) of $(\mathbf{w}^*, b^*)$.
+Even an exact solver misses $(2, -3.4, 4.2)$ by a few times $10^{-4}$ because the $1{,}000$ random noise draws happen to correlate slightly with the columns of $\tilde{\mathbf{X}}$. Any converged iterative optimizer in §2.3–§2.5 must land within $\sim 10^{-3}$ (roughly three standard errors) of $(\mathbf{w}^*, b^*)$.
 :::
 :::
 
@@ -447,7 +454,7 @@ Predict the quantitative effect of each modification to our synthetic benchmark:
 ::: {.slide title="Section 2.2 Summary & Key Takeaways"}
 [Summary]{.kicker}
 
-| Benchmark Quantity | Formula / Definition | Value on Running Example | Diagnostic Role in §2.3–§2.4 |
+| Benchmark Quantity | Formula / Definition | Value on Running Example | Diagnostic Role in §2.3–§2.5 |
 |---|---|---|---|
 | **Data Generator** | $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ | $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, $\sigma = 0.01$ | Ground-truth linear testbed ($n = 1{,}000$ train, $1{,}000$ val) |
 | **Irreducible Loss Floor** | $\mathbb{E}[L(\mathbf{w}^*, b^*)] = \frac{1}{2}\sigma^2$ | $5 \times 10^{-5}$ (or $\sigma^2 = 10^{-4}$ without $\frac{1}{2}$) | Target plateau for training and validation loss curves |

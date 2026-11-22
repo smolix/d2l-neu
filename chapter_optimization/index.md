@@ -120,7 +120,7 @@ We develop every optimizer by first deriving exact predictions on tractable anal
 ::: {.col}
 - **Connection to subsequent chapters & proofs:**
   - `TinyLM`, its WikiText-103 byte loader, and its AdamW/schedule harness return in the chapters on Attention, Transformers, State Space Models, and Performance.
-  - Concise derivations that directly guide hyperparameter choices appear inline; full convergence proofs and convex analysis live in **Chapter 36 (*Mathematics for Deep Learning: Optimization*)**.
+  - Concise derivations that directly guide hyperparameter choices appear inline; full convergence proofs and convex analysis live in **Chapter 35 (*Mathematics for Deep Learning: Optimization*)**.
 :::
 :::
 

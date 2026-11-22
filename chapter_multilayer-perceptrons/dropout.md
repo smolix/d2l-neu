@@ -505,7 +505,7 @@ Dropout: Regularization via Multiplicative Hidden Noise<br>**co-adaptation · in
 
 In §4.5 we saw that overparameterized MLPs trained for many epochs on noisy data eventually memorize wrong labels and degrade on unseen images. How can we disrupt memorization *during* each forward pass?
 
-- **Three complementary regularizers:** Weight decay (§3.7) penalizes large weight norms $\|\mathbf{W}\|_{\textrm{F}}^2$; early stopping (§4.5) halts training before late-stage noise memorization; **dropout** (Hinton et al., 2012; Srivastava et al., 2014) randomly zeroes out each hidden unit with probability $p$ on every training step.
+- **Three complementary regularizers:** Weight decay (§2.7) penalizes large weight norms $\|\mathbf{W}\|_{\textrm{F}}^2$; early stopping (§4.5) halts training before late-stage noise memorization; **dropout** (Hinton et al., 2012; Srivastava et al., 2014) randomly zeroes out each hidden unit with probability $p$ on every training step.
 - **Preventing hidden-unit co-adaptation:** When units are always present together, groups of neurons can conspire to fix isolated training errors (*co-adaptation*). Random masking forces every unit to extract features that remain useful alongside random subsets of partners.
 :::
 
@@ -676,7 +676,7 @@ Comparing our two experiments with modern deep-learning architectures clarifies 
 | **Large dense layers on small/noisy data** (e.g., AlexNet classifier head, tabular MLPs) | $p \in [0.2, 0.5]$ | Parameters dwarf sample count over many epochs; strong co-adaptation risk |
 | **Multi-epoch Transformers / Vision backbones** | $p \approx 0.1$ | Light regularization on residual/attention outputs across multi-epoch runs |
 | **Single-epoch LLM pretraining** (trillions of tokens, $1$ pass per document) | $p = 0.0$ | Every gradient step sees fresh data; memorization cannot build across epochs |
-| **Directly before Batch Normalization (§8.5)** | **Avoid ($p = 0.0$)** | Dropout inflates training second moment by $\frac{1}{1-p}$, causing a train/test variance shift in BatchNorm's running statistics (Li et al., 2019) |
+| **Directly before Batch Normalization (§7.3)** | **Avoid ($p = 0.0$)** | Dropout inflates training second moment by $\frac{1}{1-p}$, causing a train/test variance shift in BatchNorm's running statistics (Li et al., 2019) |
 :::
 
 ::: {.slide title="Concept Check: Inverted Dropout, Partners & Variance"}

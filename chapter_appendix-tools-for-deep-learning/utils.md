@@ -1940,7 +1940,7 @@ Three specialized visualizers render optimization paths, image minibatches, and 
 
 ::: {.cols}
 ::: {.col}
-- **`show_trace_2d(f, results)` (Chapter 12 Optimization):**
+- **`show_trace_2d(f, results)` (Chapter 9 Optimization):**
   - Evaluates objective `f(x1, x2)` on an automatically widened $100 \times 100$ meshgrid covering $(-5.5, 1.0) \times (-3.0, 3.0)$ and all visited iterates.
   - Enforces equal aspect ratio (`set_aspect('equal')`) so gradient directions look orthogonal to contours, disabling equal aspect only if an unstable trace diverges $> 4\times$ along one axis.
 :::

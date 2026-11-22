@@ -133,7 +133,7 @@ Every neural network in this book is trained by iterating a gradient step, yet e
 :::
 
 ::: {.d2l-note}
-This chapter supplies the complete proofs, geometric intuition, and numerical counterexamples behind the practical optimizers of Chapter 11.
+This chapter supplies the complete proofs, geometric intuition, and numerical counterexamples behind the practical optimizers of Chapter 9.
 :::
 :::
 

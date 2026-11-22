@@ -969,7 +969,7 @@ Because $o_j = \mathbf{w}_j^\top\mathbf{x} + b_j$ is an inner product between im
 :::
 
 ::: {.slide title="Concise Model: Returning Raw Logits"}
-[Framework Implementation (§3.3.4)]{.kicker}
+[Concise Framework Implementation]{.kicker}
 
 In `SoftmaxRegression(d2l.Classifier)`, a flattening layer and a single built-in linear layer (`LazyLinear` / `Dense` / `nnx.Linear`) replace manual parameter management:
 

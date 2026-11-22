@@ -502,7 +502,7 @@ Predicting House Prices on Kaggle: End-to-End Tabular ML<br>**log-RMSE metric ·
 
 In this capstone section for Chapters 1–4, we tackle the Kaggle Ames Housing competition (De Cock, 2011)—a realistic tabular dataset where data hygiene and validation protocol matter as much as model architecture:
 
-| Dataset Property | Fashion-MNIST (§3.5–§4.6) | Ames House Prices (§4.7) |
+| Dataset Property | Fashion-MNIST (§3.2–§4.6) | Ames House Prices (§4.7) |
 |:--|:--|:--|
 | **Labeled training examples** | $60{,}000$ images | $1{,}460$ houses ($+1{,}459$ unlabeled test houses) |
 | **Raw input attributes** | $784$ uniform `uint8` pixels in $[0, 1]$ | $79$ mixed columns ($35$ numeric, $44$ categorical) |

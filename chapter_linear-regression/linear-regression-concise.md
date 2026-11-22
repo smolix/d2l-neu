@@ -405,6 +405,23 @@ In `LinearRegression(d2l.Module)`, a single built-in dense layer allocates weigh
 - **Eager shape specification (JAX / Flax NNX):** `nnx.Linear(num_inputs, 1, ...)` allocates parameter arrays immediately upon construction using explicit PRNG `rngs`.
 :::
 
+::: {.slide title="Parameter Initialization: Lazy vs. Eager Across Frameworks"}
+[Weight & Bias Initialization]{.kicker}
+
+Even with high-level layers, we still initialize weights from $\mathcal{N}(0, 0.01^2)$ and bias to $0$ so our concise run starts from the exact same distribution as §§2.3–2.4:
+
+| Framework | Layer Declaration | How $\mathcal{N}(0, 0.01^2)$ Weight & Zero Bias Are Initialized |
+|---|---|---|
+| **PyTorch** | `nn.LazyLinear(1)` | Direct tensor fill `self.net.weight.data.normal_(0, 0.01)` and `bias.data.fill_(0)` |
+| **MXNet** | `nn.Dense(1)` | Deferred initializer `self.net.initialize(init.Normal(0.01))` (materialized on batch 1) |
+| **TensorFlow / Keras** | `keras.layers.Dense(1, ...)` | Pass `kernel_initializer=RandomNormal(0.01)` directly to `Dense` constructor |
+| **JAX / Flax NNX** | `nnx.Linear(num_inputs, 1, ...)` | Pass `kernel_init=nnx.initializers.normal(0.01)` and `rngs` to `nnx.Linear` |
+
+::: {.d2l-note}
+In Chapter 4 (§4.4), we will see how framework default initializers (Xavier/Glorot and He/Kaiming) automatically scale the initial standard deviation as $O(1/\sqrt{d_{\textrm{in}}})$ to prevent activations from exploding or vanishing across deep layer stacks.
+:::
+:::
+
 ::: {.slide title="Framework MSE Loss and Halving the Learning Rate"}
 [Loss Scaling & Hyperparameter Coupling]{.kicker}
 
@@ -464,6 +481,24 @@ To inspect the learned weights and bias inside `self.net`, we attach a `get_w_b`
 
 ::: {.d2l-note}
 Both weights and bias match $(\mathbf{w}^*, b^*)$ to within a few times $10^{-4}$ ($\approx \sigma / \sqrt{n}$), confirming that the high-level framework abstractions execute the exact same optimization trajectory as our hand-written loop.
+:::
+:::
+
+::: {.slide title="Three Levels of Abstraction: §§2.3 -> 2.4 -> 2.5"}
+[The Chapter 2 Pedagogical Progression]{.kicker}
+
+Tracing the same linear regression benchmark across §§2.3–2.5 shows how the `d2l` harness bridges transparent tensor math and production framework APIs:
+
+| Pipeline Stage | §2.3 From Scratch (Bare Functions) | §2.4 OO Design (`LinearRegressionScratch`) | §2.5 Concise (`LinearRegression`) |
+|---|---|---|---|
+| **Parameters** | Raw tensors `w, b` with `requires_grad` | `nn.Parameter` / `nnx.Param` attributes on `Module` | Managed automatically inside `self.net` layer |
+| **Forward Pass** | `linreg(X, w, b) = X @ w + b` | `self.forward(X)` calls `d2l.matmul(X, self.w) + self.b` | Inherited `Module.forward(X) -> self.net(X)` |
+| **Objective** | `squared_loss(y_hat, y)` ($\frac{1}{2|\mathcal{B}|}\|\mathbf{r}\|_2^2$) | `self.loss` method calling `squared_loss` | Framework `MSELoss` / `l2_loss` ($\frac{1}{|\mathcal{B}|}\|\mathbf{r}\|_2^2$) |
+| **Optimizer** | Manual `param -= lr * param.grad` loop | Custom `d2l.SGD(params, lr=0.03)` class | Framework `SGD` (`lr=0.015`, automatic param discovery) |
+| **Data & Loop** | One-pass `minibatches` + nested `for` loops | `SyntheticRegressionData` + `d2l.Trainer` | **Identical** `SyntheticRegressionData` + `d2l.Trainer` |
+
+::: {.d2l-note .rule}
+From Chapter 3 onward, switching from linear regression to softmax classification, MLPs, CNNs, or Transformers requires overriding only `self.net`, `self.loss`, and `configure_optimizers` on `d2l.Module`!
 :::
 :::
 

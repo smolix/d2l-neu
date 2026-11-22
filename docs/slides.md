@@ -365,7 +365,18 @@ shows its first 6 and last 6 lines around a `...` line
 override. An output that fits the cap can still exceed the output box
 (`.cell-output` has `max-height: 44vh` and scrolls), which hides lines
 without overflowing the slide; `tools/check_slide_overflow.py` reports such
-clipped boxes and wrapped code lines along with slide overflow.
+clipped boxes and wrapped code lines along with slide overflow. It runs each
+deck in a child process under a watchdog (`--timeout`, default 120 s per deck;
+`--slide-timeout`, default 30 s per slide) and exits 2 with `HANG at leaf
+slide N` when Chromium stops responding, so one bad deck cannot stall a loop.
+
+Paragraphs and list items use `text-wrap: wrap`, not `pretty`: Chromium's
+pretty-wrap pass never finished on items that mix text with KaTeX math (inline
+or display), and the deck hung at load or on that slide (training-recipes on
+2026-11-22; generalization, weight-decay and optimal-control before #275).
+Headings keep `balance`. The deck hash in `_slides/<fw>/.deckhashes.json` covers
+`_d2l-slides.scss` and `_d2l-slides-overlay.html`, so an edit to either
+re-renders every deck on the next `make slides`.
 
 ---
 

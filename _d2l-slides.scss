@@ -94,10 +94,15 @@ $code-block-padding:     0.45em 0.7em;
 .reveal h3 { font-size: $h3-size; color: $ink-2; }
 .reveal h4 { font-size: $h4-size; color: $ink-2; }
 
+// `text-wrap: wrap`, not `pretty`: Chromium's pretty-wrap pass hangs the page
+// (Reveal never becomes ready) on paragraphs and list items that mix text with
+// KaTeX math, inline or display (training-recipes; earlier generalization,
+// weight-decay, optimal-control).
+// Headings keep `balance` above.
 .reveal p, .reveal li {
   color: $ink-2;
   line-height: 1.32;
-  text-wrap: pretty;
+  text-wrap: wrap;
 }
 
 .reveal p {
@@ -501,6 +506,9 @@ body.d2l-deck-fullscreen .reveal .slides section:has(> .divider) { padding-top: 
   height: 100dvh;
 }
 @media (pointer: coarse) {
+  // The navbar copy shrinks to a ~32x10 px target on phones; the 42 px
+  // bottom-left button below covers touch screens on its own.
+  .d2l-nav-fullscreen-btn { display: none; }
   .d2l-presenter-btn,
   .d2l-fullscreen-btn {
     width: 42px;

@@ -840,7 +840,7 @@ $$\mathrm{softmax}(\mathbf{O})_{ij} = \frac{\exp(O_{ij})}{\sum_{k=1}^q \exp(O_{i
 ::: {.slide title="Verifying Rowwise Softmax on Test Logits"}
 [Sanity Check]{.kicker}
 
-Testing `softmax` on our cat/chicken/dog logits $(1.0, 2.2, 0.3)$ from §3.1 alongside a row of three identical zeros confirms row normalization:
+Testing `softmax` on our cat/chicken/dog logits $(1.0, 2.2, 0.3)$ from §{sec_softmax} alongside a row of three identical zeros confirms row normalization:
 
 @softmax-regression-scratch-the-softmax-3
 
@@ -1106,7 +1106,7 @@ Training `SoftmaxRegression` with `d2l.Trainer` takes four lines of code and rep
 ::: {.cols .vc}
 ::: {.col}
 - **Identical mathematical trajectory:** Because weights start from $\mathcal{N}(0, 0.01^2)$ and biases at $0$, the concise model follows the exact same optimization dynamics as `SoftmaxRegressionScratch`.
-- **Foundation for Chapters 4–8:** Replacing the single linear layer inside `self.net` with multilayer perceptrons or convolutional networks requires zero changes to `Classifier`, `loss`, or `Trainer`.
+- **Foundation for Chapters §{num:chap_perceptrons}–§{num:chap_rnn}:** Replacing the single linear layer inside `self.net` with multilayer perceptrons or convolutional networks requires zero changes to `Classifier`, `loss`, or `Trainer`.
 :::
 
 ::: {.col .fig}

@@ -636,6 +636,6 @@ Calculate the outcome in each minibatch SGD scenario:
 | **Stationary Noise Ball** | $\mathbb{E}[x_\infty^2] = \frac{\eta\sigma^2}{b\lambda(2 - \eta\lambda)} \approx \frac{\eta\sigma^2}{2\lambda b}$ | Scales with ratio $\eta/b$ and inversely with curvature $\lambda$ | Flat directions fluctuate over the widest parameter radius |
 | **Stationary Excess Loss** | $\mathbb{E}[f(\mathbf{x}_\infty)] - f(\mathbf{x}^\star) \approx \frac{\eta\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star)}{4b}$ | Curvature $\lambda_k$ cancels; proportional to $\eta/b$ and $\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star)$ | Vanishes in interpolating models ($\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star)=0$); requires LR decay otherwise |
 | **Robbins–Monro Conditions** | $\sum_t \eta_t = \infty,\; \sum_t \eta_t^2 < \infty$ | $\eta_t = c/(t+t_0)$ gives $\mathbb{E}\|\mathbf{x}_t - \mathbf{x}^\star\|^2 = O(1/t)$ | Infinite travel budget + finite cumulative noise variance |
-| **Linear Scaling Regime** | $\eta(b) \propto b$ for $\eta L \ll 2$ | Same progress per example and same noise floor at fixed $\eta/b$ | Amortizes per-step overhead across parallel hardware up to $b_{\text{crit}}$ (§9.8) |
+| **Linear Scaling Regime** | $\eta(b) \propto b$ for $\eta L \ll 2$ | Same progress per example and same noise floor at fixed $\eta/b$ | Amortizes per-step overhead across parallel hardware up to $b_{\text{crit}}$ (§{sec_batch_size}) |
 :::
 

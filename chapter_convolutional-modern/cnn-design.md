@@ -943,7 +943,7 @@ The *AnyNet* template fixes the stem–body–head macro layout while leaving fo
 ::: {.cols .vc}
 ::: {.col}
 - **Fixed stem & head:** A stride-2 $3\times 3$ stem ($c_0 = 32$ ch, BN, ReLU) and a global-average-pooling + linear head.
-- **Four free numbers per stage ($d_i, c_i, b_i, g_i$):** Stage $i$ stacks $d_i$ ResNeXt blocks (§7.4) with output channels $c_i$, bottleneck compression ratio $b_i \in \{1, 2, 4\}$ (so bottleneck width is $c_i / b_i$), and *group width* $g_i \in \{1, 2, \ldots, 32\}$ (so group count is $(c_i / b_i)/g_i$).
+- **Four free numbers per stage ($d_i, c_i, b_i, g_i$):** Stage $i$ stacks $d_i$ ResNeXt blocks (§{sec_resnet}) with output channels $c_i$, bottleneck compression ratio $b_i \in \{1, 2, 4\}$ (so bottleneck width is $c_i / b_i$), and *group width* $g_i \in \{1, 2, \ldots, 32\}$ (so group count is $(c_i / b_i)/g_i$).
 - **$1.8 \times 10^{18}$ candidate models:** Sampling $d_i \le 16$ and $c_i \le 1024$ (multiples of 8) yields $(16 \cdot 128 \cdot 3 \cdot 6)^4 \approx 1.8 \times 10^{18}$ distinct architectures.
 :::
 

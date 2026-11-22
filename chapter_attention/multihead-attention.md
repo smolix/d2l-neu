@@ -1064,7 +1064,7 @@ Test your understanding of multi-head scaling and capacity bounds:
 
 1. **$n = 2d = 8{,}192$ tokens** ($4n^2d = 8nd^2 \iff n = 2d$). Changing $H$ to $64$ leaves both leading FLOP counts and the crossover unchanged.
 2. **$1 - \operatorname{rank}(\mathbf{A}) / k$** (provided the output has room $H d_h \ge k d_v$); for $H = 1$ and $k = 2$, $\operatorname{rank}(\mathbf{A}) = 1$ gives $1 - 1/2 = 1/2$.
-3. **No!** Swapping two tokens permutes their keys and values together across every head, so the weighted sum at *gave* is identical—motivating positional encodings (§10.4).
+3. **No!** Swapping two tokens permutes their keys and values together across every head, so the weighted sum at *gave* is identical—motivating positional encodings (§{sec_positional-information}).
 :::
 :::
 

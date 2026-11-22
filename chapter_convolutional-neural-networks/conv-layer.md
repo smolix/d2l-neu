@@ -810,7 +810,7 @@ Cross-correlating `X` with the $1 \times 2$ kernel $\mathbf{K} = \begin{bmatrix}
 @conv-layer-object-edge-detection-in-images-4
 
 - **Blind to horizontal edges:** Transposing `X` (`X.T`) makes horizontal neighbors identical, so $[1, -1]$ outputs all zeros.
-- **Filter banks (§6.4):** Vision layers learn parallel channels for horizontal, vertical, and diagonal orientations.
+- **Filter banks (§{sec_channels}):** Vision layers learn parallel channels for horizontal, vertical, and diagonal orientations.
 :::
 
 ::: {.col .fig}
@@ -879,7 +879,7 @@ Instead of unfolding the input image into duplicated patches, we can unroll the 
 ![](../img/why-conv-weight-sharing.svg){.nostretch width=46% fig-align="center"}
 
 - **Matrix–vector form:** $\textrm{vec}(\mathbf{Y}) = \mathbf{W}\,\textrm{vec}(\mathbf{X})$, where $\mathbf{W}$ has $(n_\textrm{h}-k_\textrm{h}+1)(n_\textrm{w}-k_\textrm{w}+1)$ rows and $n_\textrm{h} n_\textrm{w}$ columns.
-- **Connection to §6.1 and backprop:** Every row of $\mathbf{W}$ holds the same $k_\textrm{h} k_\textrm{w}$ kernel entries shifted across columns (panel c), making the backward pass with respect to $\mathbf{X}$ simply multiplication by $\mathbf{W}^\top$ (a transposed convolution).
+- **Connection to §{sec_why-conv} and backprop:** Every row of $\mathbf{W}$ holds the same $k_\textrm{h} k_\textrm{w}$ kernel entries shifted across columns (panel c), making the backward pass with respect to $\mathbf{X}$ simply multiplication by $\mathbf{W}^\top$ (a transposed convolution).
 :::
 
 ::: {.slide title="Feature Maps and Receptive Fields Across Depth"}
@@ -908,7 +908,7 @@ A unit's **receptive field** is the region of the original input image whose pix
 ::: {.col}
 - **Matched $7 \times 7$ receptive field:** Three stacked $3 \times 3$ layers ($r = 1 + 2 + 2 + 2 = 7$) see the exact same $7 \times 7$ patch as one $7 \times 7$ layer.
 - **45% fewer parameters:** $3 \times 9 c^2 = 27 c^2$ weights instead of $49 c^2$ across $c$ channels.
-- **Richer expressivity:** Compounds **3 nonlinear activations** instead of 1 (the core VGG design rule in §7.2).
+- **Richer expressivity:** Compounds **3 nonlinear activations** instead of 1 (the core VGG design rule in §{sec_blocks}).
 :::
 
 ::: {.col .fig .big}

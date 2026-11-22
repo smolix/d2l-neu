@@ -111,14 +111,14 @@ Goodfellow et al. (2014) turned two-sample binary classification into a generati
 :::
 :::
 
-::: {.slide title="Chapter 16 Roadmap: Theory, Dynamics, and Systems"}
+::: {.slide title="Chapter §{num:chap_gans} Roadmap: Theory, Dynamics, and Systems"}
 [Architectural & Mathematical Roadmap]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Part I — Objectives & Divergences (§§16.1–16.3):** From log-loss density-ratio estimation ($D^\star = \log(p/q)$) and non-saturating weights ($2\,D_{\textrm{KL}}(m \,\|\, p)$) to $f$-divergences, IPMs ($W_1$, MMD), and relativistic pairing ($d_{\mathrm{Rp}}$).
-- **Part II — Dynamics & Convergence (§16.4):** Why unpenalized minimax steps orbit or spiral outward on the Dirac-GAN, and how zero-centered penalties $R_1 + R_2$ shift Jacobian eigenvalues into the open left half-plane.
-- **Part III — Images, Conditioning & Applications (§§16.5–16.7):** DCGAN vs. normalization-free backbones, FID/KID and $K$-NN precision/recall, projection critics, and diffusion distillation (ADD/DMD2).
+- **Part I — Objectives & Divergences (§§{sec_basic_gan}–§{num:sec_gan_relativistic}):** From log-loss density-ratio estimation ($D^\star = \log(p/q)$) and non-saturating weights ($2\,D_{\textrm{KL}}(m \,\|\, p)$) to $f$-divergences, IPMs ($W_1$, MMD), and relativistic pairing ($d_{\mathrm{Rp}}$).
+- **Part II — Dynamics & Convergence (§{sec_gan_convergence}):** Why unpenalized minimax steps orbit or spiral outward on the Dirac-GAN, and how zero-centered penalties $R_1 + R_2$ shift Jacobian eigenvalues into the open left half-plane.
+- **Part III — Images, Conditioning & Applications (§§{sec_dcgan}–§{num:sec_gan_beyond}):** DCGAN vs. normalization-free backbones, FID/KID and $K$-NN precision/recall, projection critics, and diffusion distillation (ADD/DMD2).
 :::
 
 ::: {.col .fig .big}
@@ -134,10 +134,10 @@ Each section tests its theoretical predictions on concrete analytical distributi
 
 ::: {.cols .vc}
 ::: {.col}
-- **Exact-density 2D Gaussians & mixtures (§16.1–16.3):** Check learned critic logits directly against analytical $\lambda(x) = \log(p(x)/q(x))$ and measure generator fit in exact nats of $D_{\textrm{KL}}(q \,\|\, p)$ and $\mathrm{JS}(p, q)$.
-- **25-Gaussian $5 \times 5$ grid (§16.4):** Isolate whether pairwise ranking or $R_1 + R_2$ gradient penalties eliminate mode dropping.
-- **Image & conditional synthesis (§16.1, §16.5–16.6):** $60{,}000$ Fashion-MNIST garments ($28 \times 28$), $40{,}597$ Pokémon sprites ($64 \times 64$), and 10-class CIFAR-10 ($32 \times 32$).
-- **Bimodal regression & distillation (§16.7):** Two-band benchmark $x = c \pm 1 + 0.05\,\xi$ with an exact closed-form denoising teacher.
+- **Exact-density 2D Gaussians & mixtures (§{sec_basic_gan}–§{num:sec_gan_relativistic}):** Check learned critic logits directly against analytical $\lambda(x) = \log(p(x)/q(x))$ and measure generator fit in exact nats of $D_{\textrm{KL}}(q \,\|\, p)$ and $\mathrm{JS}(p, q)$.
+- **25-Gaussian $5 \times 5$ grid (§{sec_gan_convergence}):** Isolate whether pairwise ranking or $R_1 + R_2$ gradient penalties eliminate mode dropping.
+- **Image & conditional synthesis (§{sec_basic_gan}, §{sec_dcgan}–§{num:sec_gan_conditional}):** $60{,}000$ Fashion-MNIST garments ($28 \times 28$), $40{,}597$ Pokémon sprites ($64 \times 64$), and 10-class CIFAR-10 ($32 \times 32$).
+- **Bimodal regression & distillation (§{sec_gan_beyond}):** Two-band benchmark $x = c \pm 1 + 0.05\,\xi$ with an exact closed-form denoising teacher.
 :::
 
 ::: {.col .fig}
@@ -158,7 +158,7 @@ Test your intuition on three foundational scenarios from the chapter overview:
 **Answers:**
 
 1. Since $D^\star(x) = \log(p(x)/q(x))$, we have $p(x_1)/q(x_1) = e^{1.2} \approx \mathbf{3.32}$ (real data is $3.3\times$ denser) and $p(x_2)/q(x_2) = e^{-2.0} \approx \mathbf{0.135}$ (the generator is $\approx 7.4\times$ too dense). The generator must move probability mass away from **$x_2$** toward **$x_1$**.
-2. **(a)** Use a **non-saturating generator loss** (§16.1) or smooth/penalized critic (§16.2) so rejected samples ($D(x') \ll 0$) retain unit gradient weight. **(b)** Add **zero-centered gradient penalties $R_1 + R_2$** (§16.4) and exponential moving average (**EMA**, §16.5) to damp rotational minimax dynamics. **(c)** Measure **per-class $K$-NN recall** (§16.6) to catch intra-class mode collapse hidden by high classifier alignment.
+2. **(a)** Use a **non-saturating generator loss** (§{sec_basic_gan}) or smooth/penalized critic (§{sec_gan_objectives}) so rejected samples ($D(x') \ll 0$) retain unit gradient weight. **(b)** Add **zero-centered gradient penalties $R_1 + R_2$** (§{sec_gan_convergence}) and exponential moving average (**EMA**, §{sec_dcgan}) to damp rotational minimax dynamics. **(c)** Measure **per-class $K$-NN recall** (§{sec_gan_conditional}) to catch intra-class mode collapse hidden by high classifier alignment.
 :::
 :::
 

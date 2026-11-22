@@ -87,7 +87,7 @@ Information Theory and Divergences<br>**entropy · cross-entropy · source codin
 :::
 
 ::: {.slide title="Why Do We Train Models with Cross-Entropy?"}
-[Central Questions of Chapter 37]{.kicker}
+[Central Questions of Chapter §{num:chap_mdl-information-theory}]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -107,9 +107,9 @@ Information Theory and Divergences<br>**entropy · cross-entropy · source codin
 
 ::: {.cols .vc}
 ::: {.col}
-- **Gibbs' inequality (§37.1):** $D_{\textrm{KL}}(P \| Q) \ge 0$ ($= 0 \iff P = Q$), so no classifier can beat the conditional label entropy $H(Y \mid X)$.
-- **Source coding (§37.2):** Kraft's inequality ($\sum_i 2^{-\ell_i} \le 1$) and arithmetic coding turn any causal LLM into a lossless compressor.
-- **Variational critics (§§37.3–37.7):** $f$-GAN and InfoNCE lower-bound divergences and MI from samples, capped at $\log N$ nats for batch size $N$.
+- **Gibbs' inequality (§{sec_mdl-information_theory}):** $D_{\textrm{KL}}(P \| Q) \ge 0$ ($= 0 \iff P = Q$), so no classifier can beat the conditional label entropy $H(Y \mid X)$.
+- **Source coding (§{sec_mdl-coding-compression}):** Kraft's inequality ($\sum_i 2^{-\ell_i} \le 1$) and arithmetic coding turn any causal LLM into a lossless compressor.
+- **Variational critics (§§{sec_mdl-divergences-distances}–§{num:sec_mdl-mi-estimation}):** $f$-GAN and InfoNCE lower-bound divergences and MI from samples, capped at $\log N$ nats for batch size $N$.
 :::
 
 ::: {.col .fig .big}
@@ -118,14 +118,14 @@ Information Theory and Divergences<br>**entropy · cross-entropy · source codin
 :::
 :::
 
-::: {.slide title="Chapter 37 Roadmap: Seven Connected Sections"}
+::: {.slide title="Chapter §{num:chap_mdl-information-theory} Roadmap: Seven Connected Sections"}
 [Chapter Architecture]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Track 1 — Log-Loss, Coding & Perplexity (§§37.1–37.2):** Surprisal, Shannon entropy, Gibbs' floor, label smoothing, distillation, Kraft's inequality, arithmetic coding, MDL, AEP, and perplexity.
-- **Track 2 — Divergences, Transport & Scores (§§37.3–37.5):** $f$-divergences, Pinsker's inequality, $f$-GAN, IPMs, kernel MMD, Wasserstein $W_1$, Sinkhorn OT, Stein's identity, score matching, and KSD.
-- **Track 3 — Dependence & Contrastive Bounds (§§37.6–37.7):** Mutual information, DPI, Fano's inequality, Information Bottleneck, KSG neighbors, McAllester–Stratos ceiling, and InfoNCE.
+- **Track 1 — Log-Loss, Coding & Perplexity (§§{sec_mdl-information_theory}–§{num:sec_mdl-coding-compression}):** Surprisal, Shannon entropy, Gibbs' floor, label smoothing, distillation, Kraft's inequality, arithmetic coding, MDL, AEP, and perplexity.
+- **Track 2 — Divergences, Transport & Scores (§§{sec_mdl-divergences-distances}–§{num:sec_mdl-scores}):** $f$-divergences, Pinsker's inequality, $f$-GAN, IPMs, kernel MMD, Wasserstein $W_1$, Sinkhorn OT, Stein's identity, score matching, and KSD.
+- **Track 3 — Dependence & Contrastive Bounds (§§{sec_mdl-mutual-information}–§{num:sec_mdl-mi-estimation}):** Mutual information, DPI, Fano's inequality, Information Bottleneck, KSG neighbors, McAllester–Stratos ceiling, and InfoNCE.
 :::
 
 ::: {.col .fig .big}
@@ -158,8 +158,8 @@ Every theoretical bound in this chapter is tested on concrete, reproducible benc
 - **Discrete benchmarks:** The dyadic source $(\tfrac12, \tfrac14, \tfrac18, \tfrac18)$, the asymmetric pair $P = (0.6, 0.3, 0.1)$ vs. $Q = (0.2, 0.5, 0.3)$, the flipped bit ($\delta = 0.1$), and character-level compression of *The Time Machine*.
 - **Continuous benchmarks:** Shifted and variance-scaled Gaussians $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(d, \sigma^2)$, bimodal Gaussian mixtures ($70/30$ split), and the correlated bivariate Gaussian pair at $\rho = 0.9$ and $\rho = 0.99$.
 - **Three modular tracks:**
-  1. **Log-loss & language models (§§37.1–37.2):** Read straight through for supervised learning and perplexity.
-  2. **Generative modeling comparisons (§§37.3–37.5):** Essential background for GANs, flow matching, and diffusion models.
-  3. **Dependence & contrastive learning (§§37.6–37.7):** Self-contained after §37.1; read directly for VAEs,SimCLR, and CLIP.
+  1. **Log-loss & language models (§§{sec_mdl-information_theory}–§{num:sec_mdl-coding-compression}):** Read straight through for supervised learning and perplexity.
+  2. **Generative modeling comparisons (§§{sec_mdl-divergences-distances}–§{num:sec_mdl-scores}):** Essential background for GANs, flow matching, and diffusion models.
+  3. **Dependence & contrastive learning (§§{sec_mdl-mutual-information}–§{num:sec_mdl-mi-estimation}):** Self-contained after §{sec_mdl-information_theory}; read directly for VAEs,SimCLR, and CLIP.
 :::
 

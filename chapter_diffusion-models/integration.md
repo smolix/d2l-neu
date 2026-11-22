@@ -787,22 +787,22 @@ With $N = 20{,}000$ samples, the binomial standard error on a mode weight is $\s
 
 - **Sub-1% mode disagreement with the exact oracle:** For $99.5\%$ to $99.8\%$ of the $20{,}000$ starting points, the trained neural network and the exact analytical posterior mean send the trajectory to the **exact same mode**.
 - **Mode weights within sampling noise:** Both the 200-step ancestral chain and the 100-step Euler ODE match the oracle's mode weights within $\le 0.004$ ($\approx 1\,\mathrm{SE}$), within-mode spread within $0.01$, and stray fraction ($\approx 1.1\%$).
-- **Deterministic map vs. stochastic correction:** The ODE maps each initial $\mathbf{x}_1$ deterministically to a unique $\mathbf{x}_0$ (enabling inversion and latent interpolation in §17.5), while the ancestral chain injects Langevin noise at every step.
+- **Deterministic map vs. stochastic correction:** The ODE maps each initial $\mathbf{x}_1$ deterministically to a unique $\mathbf{x}_0$ (enabling inversion and latent interpolation in §{sec_diffusion-samplers}), while the ancestral chain injects Langevin noise at every step.
 :::
 
-::: {.slide title="Synthesis: The Generative Models of Chapter 17"}
+::: {.slide title="Synthesis: The Generative Models of Chapter §{num:chap_diffusion}"}
 [Unifying Path, Target, and Sampler]{.kicker}
 
 Every diffusion and flow-matching model in the literature is specified by three modular choices—a forward path, a regression target, and a reverse integrator:
 
 | Model Family | Forward Path | Training Target | Reverse Sampler | Chapter Section |
 | :--- | :--- | :--- | :--- | :--- |
-| **Single-Level DSM** | Fixed blur $\mathbf{x}_0 + \sigma\boldsymbol\epsilon$ | Score $-\boldsymbol\epsilon/\sigma$ | Fixed-$\sigma$ Langevin MCMC | §17.1 |
-| **NCSN** (Song & Ermon, 2019) | Geometric VE ladder $\tilde\sigma_i$ | Score $-\boldsymbol\epsilon/\tilde\sigma_i$ (weight $\tilde\sigma_i^2$) | Annealed Langevin ladder | §17.2 |
-| **DDPM** (Ho et al., 2020) | Linear-$\beta$ VP ($\alpha_t^2 + \sigma_t^2 = 1$) | Noise $\boldsymbol\epsilon$ | Ancestral chain (reverse SDE) | §17.2–17.3 |
-| **Flow Matching / Rectified Flow** | Linear $(1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$ | Velocity $\boldsymbol\epsilon - \mathbf{x}_0$ | Euler / Heun on flow ODE | §17.2–17.5 |
-| **$\mathbf{v}$-Prediction** (Salimans & Ho) | Cosine VP ($\cos\frac{\pi t}{2}, \sin\frac{\pi t}{2}$) | Angular velocity $\mathbf{v} = \alpha_t\boldsymbol\epsilon - \sigma_t\mathbf{x}_0$ | ODE or ancestral sampler | §17.2, §17.6 |
-| **EDM** (Karras et al., 2022) | VE coordinates $\bar{\mathbf{x}} = \mathbf{x}_0 + \bar\sigma\boldsymbol\epsilon$ | Preconditioned clean point $\hat{\mathbf{x}}_0$ | 2nd-order Heun on $\bar\sigma^{1/\rho}$ grid | §17.5–17.6 |
+| **Single-Level DSM** | Fixed blur $\mathbf{x}_0 + \sigma\boldsymbol\epsilon$ | Score $-\boldsymbol\epsilon/\sigma$ | Fixed-$\sigma$ Langevin MCMC | §{sec_diffusion-denoising} |
+| **NCSN** (Song & Ermon, 2019) | Geometric VE ladder $\tilde\sigma_i$ | Score $-\boldsymbol\epsilon/\tilde\sigma_i$ (weight $\tilde\sigma_i^2$) | Annealed Langevin ladder | §{sec_diffusion-gaussian-paths} |
+| **DDPM** (Ho et al., 2020) | Linear-$\beta$ VP ($\alpha_t^2 + \sigma_t^2 = 1$) | Noise $\boldsymbol\epsilon$ | Ancestral chain (reverse SDE) | §{sec_diffusion-gaussian-paths}–§{num:sec_diffusion-integration} |
+| **Flow Matching / Rectified Flow** | Linear $(1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$ | Velocity $\boldsymbol\epsilon - \mathbf{x}_0$ | Euler / Heun on flow ODE | §{sec_diffusion-gaussian-paths}–§{num:sec_diffusion-samplers} |
+| **$\mathbf{v}$-Prediction** (Salimans & Ho) | Cosine VP ($\cos\frac{\pi t}{2}, \sin\frac{\pi t}{2}$) | Angular velocity $\mathbf{v} = \alpha_t\boldsymbol\epsilon - \sigma_t\mathbf{x}_0$ | ODE or ancestral sampler | §{sec_diffusion-gaussian-paths}, §{sec_diffusion-design-space} |
+| **EDM** (Karras et al., 2022) | VE coordinates $\bar{\mathbf{x}} = \mathbf{x}_0 + \bar\sigma\boldsymbol\epsilon$ | Preconditioned clean point $\hat{\mathbf{x}}_0$ | 2nd-order Heun on $\bar\sigma^{1/\rho}$ grid | §{sec_diffusion-samplers}–§{num:sec_diffusion-design-space} |
 :::
 
 ::: {.slide title="Concept Check: Transport, Euler Steps & SDE Split"}

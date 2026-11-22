@@ -1170,7 +1170,7 @@ Deep Convolutional GANs and Architectural Stabilization<br>**transposed convolut
 ::: {.slide title="Scaling from Flat Vectors to 64×64 RGB Images"}
 [Motivation]{.kicker}
 
-In §16.1, a fully connected MLP generator produced grainy $28 \times 28$ Fashion-MNIST silhouettes because dense layers ignore 2D spatial locality. Scaling to $64 \times 64$ RGB images raises two fundamental challenges:
+In §{sec_basic_gan}, a fully connected MLP generator produced grainy $28 \times 28$ Fashion-MNIST silhouettes because dense layers ignore 2D spatial locality. Scaling to $64 \times 64$ RGB images raises two fundamental challenges:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1237,7 +1237,7 @@ Radford, Metz, and Chintala (2015) stabilized the unpenalized non-saturating log
 ::: {.slide title="EMA Weight Averaging and BatchNorm Recalibration"}
 [Damping Rotational Orbits]{.kicker}
 
-Because minimax gradient iterates orbit around equilibrium (§16.4), their center of mass sits closer to the solution than the last iterate. We therefore sample from an **exponential moving average (EMA)** of the generator parameters:
+Because minimax gradient iterates orbit around equilibrium (§{sec_gan_convergence}), their center of mass sits closer to the solution than the last iterate. We therefore sample from an **exponential moving average (EMA)** of the generator parameters:
 
 ::: {.cols .vc}
 ::: {.col}

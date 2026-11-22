@@ -1713,7 +1713,7 @@ In Donsker–Varadhan, the outer logarithm in $-\log \mathbb{E}_Q[e^T]$ makes mi
 
 $$I(X; Y) \ge \mathbb{E}_{P_{X,Y}}\big[T(x, y)\big] - e^{-1}\mathbb{E}_{P_X \otimes P_Y}\big[e^{T(x, y)}\big]$$
 
-- **Connection to §37.3 $f$-GAN duality:** Writing $e^{-1}\mathbb{E}_Q[e^T] = \mathbb{E}_Q[e^{T-1}]$ shows that NWJ is identically the Fenchel–Young critic bound $\mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]$ for $f(u) = u\log u$ ($f^*(t) = e^{t-1}$).
+- **Connection to §{sec_mdl-divergences-distances} $f$-GAN duality:** Writing $e^{-1}\mathbb{E}_Q[e^T] = \mathbb{E}_Q[e^{T-1}]$ shows that NWJ is identically the Fenchel–Young critic bound $\mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]$ for $f(u) = u\log u$ ($f^*(t) = e^{t-1}$).
 - **Pinned additive constant:** Unlike DV, shifting $T$ changes $\log Z - Z/e$; NWJ attains equality $I(X; Y)$ uniquely at $T^*(x, y) = 1 + \textrm{pmi}(x, y)$ (where $Z = \mathbb{E}_Q[e^{1+\textrm{pmi}}] = e$).
 - **Unbiased but heavy-tailed:** Because no $\log$ wraps the expectation, minibatch averages of NWJ are strictly unbiased, yet suffer from the explosive variance $\textrm{Var}_Q(e^{\textrm{pmi}}) = e^{2I} - 1$.
 :::

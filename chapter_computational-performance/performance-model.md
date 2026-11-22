@@ -1021,7 +1021,7 @@ In eager execution, each operation in the 8-op GELU approximation `gelu_ish` lau
 @!performance-model-three-regimes-2
 
 ::: {.d2l-note}
-Six unary ops move $6 \times 2 = 12$ tensors and two binary ops move $2 \times 3 = 6$ tensors ($18$ array transfers vs. $2$ for `x + 1`), making the eager chain **$8\text{--}9\times$ slower** until a compiler fuses it into one kernel (§13.3).
+Six unary ops move $6 \times 2 = 12$ tensors and two binary ops move $2 \times 3 = 6$ tensors ($18$ array transfers vs. $2$ for `x + 1`), making the eager chain **$8\text{--}9\times$ slower** until a compiler fuses it into one kernel (§{sec_compilation}).
 :::
 :::
 

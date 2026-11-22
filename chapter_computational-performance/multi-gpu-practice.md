@@ -865,7 +865,7 @@ Distributed Data Parallel (DDP) in Practice: Bucketing and Overlap<br>**multi-pr
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why LeNet stalled in §13.5:** One Python thread dispatched sequentially to both GPUs ($k \cdot h_{\textrm{step}}$), and the allreduce waited until `backward()` finished.
+- **Why LeNet stalled in §{sec_multi_gpu}:** One Python thread dispatched sequentially to both GPUs ($k \cdot h_{\textrm{step}}$), and the allreduce waited until `backward()` finished.
 - **Production DDP remedies:** Spawns **1 process per GPU** (`torchrun`), launching bucketed allreduces *during* `backward()`.
 - **ResNet-18 benchmark ($64 \times 64$, $b=256$):** Keeps each RTX 4090 busy for $\sim 100\text{ ms/step}$ across $11.2\text{M}$ params ($S = 45\text{ MB}$), exposing true communication overlap.
 :::
@@ -881,7 +881,7 @@ Distributed Data Parallel (DDP) in Practice: Bucketing and Overlap<br>**multi-pr
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why LeNet stalled in §13.5:** One Python thread dispatched sequentially to both GPUs ($k \cdot h_{\textrm{step}}$), and the allreduce waited until `backward()` finished.
+- **Why LeNet stalled in §{sec_multi_gpu}:** One Python thread dispatched sequentially to both GPUs ($k \cdot h_{\textrm{step}}$), and the allreduce waited until `backward()` finished.
 - **Compiled data-parallel remedy:** Compiles **1 multi-GPU program** (`jax.jit`) whose XLA-inserted allreduces run *during* the backward pass.
 - **ResNet-18 benchmark ($64 \times 64$, $b=256$):** Keeps each RTX 4090 busy for $\sim 100\text{ ms/step}$ across $11.2\text{M}$ params ($S = 45\text{ MB}$), exposing true communication overlap.
 :::
@@ -1175,7 +1175,7 @@ Offloading host-staged copies to DMA copy engines (`NCCL_SHM_USE_CUDA_MEMCPY=1`)
 ::: {.col}
 - **Consumer PCIe 4.0 via Host DRAM ($\sim 2.4\text{ GB/s}$ bus):** A $45\text{ MB}$ allreduce at $k=4$ takes $\sim 28\text{ ms}$ and competes for SMs, yielding $77\text{--}83\%$ weak-scaling efficiency ($3.1\text{--}3.3\times$).
 - **Data-Center NVLink 4/5 ($450\text{--}900\text{ GB/s}$):** The same $45\text{ MB}$ allreduce finishes in $< 0.2\text{ ms}$ via dedicated fabric engines, achieving $>99\%$ scaling efficiency ($\approx 4.0\times$).
-- **Next wall:** Even on NVLink, DDP replicates all $16N$ bytes of state on every GPU (§13.7).
+- **Next wall:** Even on NVLink, DDP replicates all $16N$ bytes of state on every GPU (§{sec_sharding}).
 :::
 
 ::: {.col .fig .big}

@@ -767,7 +767,7 @@ The decomposition $\log \text{Evidence} = \mathrm{ELBO}(q) + D_{\mathrm{KL}}(q \
 | :--- | :--- | :--- | :--- | :--- |
 | **EM Algorithm** | Per-example discrete cluster $z_i \in \{1,\dots,K\}$ | Exact tabular distribution $q_i(z_i)$ per point | Coordinate ascent (closed-form E & M steps) | **Yes** ($q_i = p(z_i \mid x_i, \boldsymbol{\theta}^{(t)})$ after every E-step) |
 | **Variational Autoencoder** | Per-example continuous code $\mathbf{z}_i \in \mathbb{R}^d$ | Amortized encoder network $q_{\boldsymbol{\phi}}(\mathbf{z}_i \mid \mathbf{x}_i)$ | Joint SGD over $(\boldsymbol{\theta}, \boldsymbol{\phi})$ via reparameterization | **No** (bounded by encoder family capacity) |
-| **Bayesian VI (§36.8)** | Global model parameters $\boldsymbol{\theta} \in \mathbb{R}^p$ | Parametric family $q_{\boldsymbol{\psi}}(\boldsymbol{\theta})$ (e.g., Gaussian) | Gradient ascent on $\mathcal{L}(\boldsymbol{\psi})$ over variational $\boldsymbol{\psi}$ | **No** (minimizes reverse KL $D_{\mathrm{KL}}(q_{\boldsymbol{\psi}} \,\|\, p(\boldsymbol{\theta}\mid\mathcal{D}))$) |
+| **Bayesian VI (§{sec_mdl-bayesian-computation})** | Global model parameters $\boldsymbol{\theta} \in \mathbb{R}^p$ | Parametric family $q_{\boldsymbol{\psi}}(\boldsymbol{\theta})$ (e.g., Gaussian) | Gradient ascent on $\mathcal{L}(\boldsymbol{\psi})$ over variational $\boldsymbol{\psi}$ | **No** (minimizes reverse KL $D_{\mathrm{KL}}(q_{\boldsymbol{\psi}} \,\|\, p(\boldsymbol{\theta}\mid\mathcal{D}))$) |
 :::
 
 ::: {.slide title="Concept Check: Latent Variables, EM, and the ELBO"}

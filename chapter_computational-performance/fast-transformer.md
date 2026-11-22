@@ -1115,7 +1115,7 @@ Wrapping all 6 Transformer blocks in `Checkpointed` cuts activation memory by tw
 - **Why recomputation costs less than a standalone forward pass:** While the block matrix products must be re-executed in full ($+14\text{ ms}$), the compiler fuses the recomputed elementwise kernels (SwiGLU, RoPE, norms) directly into the backward kernels that consume them, saving most of their $13\text{ ms}$ of standalone DRAM traffic!
 :::
 
-::: {.slide title="Cumulative Single-GPU Waterfall: ~2× Speedup, 50% MFU"}
+::: {.slide title="Cumulative Single-GPU Waterfall: ~2× Speedup, 45–50% MFU"}
 [Single-GPU Results]{.kicker}
 
 Summarizing all single-GPU rungs side by side converts token throughput into achieved `TFLOP/s` ($6N\text{ FLOPs/token}$) and **Model FLOPs Utilization** ($\textrm{MFU} = \textrm{achieved FLOP/s} / 165.2\text{ TFLOP/s}$):

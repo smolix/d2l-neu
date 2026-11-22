@@ -2143,7 +2143,7 @@ Test your understanding on three practical statistical design problems:
 ::: {.slide title="Summary: Statistical Estimation and Testing"}
 [Key Takeaways]{.kicker}
 
-| Statistical Tool | Mathematical Formula / Rule | Benchmark Value in §36.5 | Deep Learning Engineering Role |
+| Statistical Tool | Mathematical Formula / Rule | Benchmark Value in §{sec_mdl-statistics} | Deep Learning Engineering Role |
 | :--- | :--- | :--- | :--- |
 | **Sample Proportion $\hat{\theta}_n$** | $\mathbb{E}[\hat{\theta}_n] = \theta$, $\mathrm{se}(\hat{\theta}_n) = \sqrt{\theta(1-\theta)/n}$ | $912/1000 \implies 91.2\% \pm 0.90\%$ ($\mathrm{se}$) | Error bars on classification test accuracy |
 | **Unbiased Variance $s^2$** | $s^2 = \frac{1}{n-1}\sum_{i=1}^n (x_i - \bar{x})^2$ (`ddof=1`) | Dividing by $n$ has bias $-\sigma^2/n$ | Estimating seed-to-seed variance at small $k$ |

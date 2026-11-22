@@ -955,7 +955,7 @@ Training `GaussianPolicy(3, 1, zero_mean=True)` on `Pendulum-v1` over 300 update
 ::: {.cols .vc}
 ::: {.col}
 - **Why `zero_mean=True` matters:** Initializing the final mean layer to zero ($\mu_0(s) = 0, \sigma_0 = 1$) prevents early torques from saturating the $[-2, 2]$ clip bounds where reward feedback vanishes.
-- **High on-policy sample cost vs. §14.6 & §15.5:** Unlike §14.6's iLQR planner (which differentiated known physics directly), model-free REINFORCE learns from trig observations $(\cos\vartheta, \sin\vartheta, \dot{\vartheta})$ and scalar rewards alone—taking $150$–$300$ updates ($\sim 300{,}000$ steps) to cross §14.6's $-200$ balancing bar, whereas off-policy SAC (§15.5) will solve it in $5{,}000$–$11{,}000$ steps.
+- **High on-policy sample cost vs. §{sec_optimal_control} & §{sec_sac}:** Unlike §{sec_optimal_control}'s iLQR planner (which differentiated known physics directly), model-free REINFORCE learns from trig observations $(\cos\vartheta, \sin\vartheta, \dot{\vartheta})$ and scalar rewards alone—taking $150$–$300$ updates ($\sim 300{,}000$ steps) to cross §{sec_optimal_control}'s $-200$ balancing bar, whereas off-policy SAC (§{sec_sac}) will solve it in $5{,}000$–$11{,}000$ steps.
 :::
 
 ::: {.col .fig}
@@ -1008,15 +1008,15 @@ Plotting a 1D slice of the value function before and after a single $+0.50$ upda
 - **Interference and the deadly triad:** Fitting batches of upright CartPole states alters $\hat{V}_w(s)$ at large tilt angles; when combined with bootstrapping and off-policy data (the **deadly triad** of Tsitsiklis & Van Roy, 1997), global parameter coupling can cause value iteration to diverge.
 :::
 
-::: {.slide title="Synthesis: Roadmap of Chapter 14 and Chapter 15"}
+::: {.slide title="Synthesis: Roadmap of Chapter §{num:chap_reinforcement_learning} and Chapter §{num:chap_deep_rl}"}
 [What Each Method Learns and Which Data It Consumes]{.kicker}
 
-Every algorithm across Chapters 14 and 15 is positioned by two axes: **what object it parameterizes** (values, policy, or dynamics model) and **which data distribution drives its update**:
+Every algorithm across Chapters §{num:chap_reinforcement_learning} and §{num:chap_deep_rl} is positioned by two axes: **what object it parameterizes** (values, policy, or dynamics model) and **which data distribution drives its update**:
 
 ::: {.cols .vc}
 ::: {.col}
-- **Solid boxes (Chapter 14):** Exact DP on $P$, tabular TD (Q-learning/SARSA), bandits (UCB/Thompson), imitation (BC/DAgger), optimal control (LQR/iLQR/MPC), and on-policy Monte Carlo policy gradients (REINFORCE/RLOO/GRPO).
-- **Dashed boxes (Chapter 15):** Bootstrapped actor-critics (A2C), clipped batch reuse (PPO), replay-buffer value nets (DQN, SAC), learned dynamics models, and pessimistic offline RL.
+- **Solid boxes (Chapter §{num:chap_reinforcement_learning}):** Exact DP on $P$, tabular TD (Q-learning/SARSA), bandits (UCB/Thompson), imitation (BC/DAgger), optimal control (LQR/iLQR/MPC), and on-policy Monte Carlo policy gradients (REINFORCE/RLOO/GRPO).
+- **Dashed boxes (Chapter §{num:chap_deep_rl}):** Bootstrapped actor-critics (A2C), clipped batch reuse (PPO), replay-buffer value nets (DQN, SAC), learned dynamics models, and pessimistic offline RL.
 :::
 
 ::: {.col .fig}

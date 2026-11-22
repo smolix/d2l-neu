@@ -1108,7 +1108,7 @@ Even though $\mathbf{M} = \left(\begin{smallmatrix}0.9&4\\0&0.8\end{smallmatrix}
 ::: {.cols .vc}
 ::: {.col}
 - **Four Gaps Eigenvalues Cannot Fill:** Rectangular layers ($m \neq n$), defective shears, non-normal transient growth, and the $2\times$ stretch gap in random Gaussian weights.
-- **The SVD Remedy (§33.5):** Separate orthonormal input ($\mathbf{V}$) and output ($\mathbf{U}$) bases decompose *every* matrix into non-negative stretches $\sigma_1 \ge \sigma_2 \ge \cdots \ge 0$.
+- **The SVD Remedy (§{sec_mdl-svd-low-rank}):** Separate orthonormal input ($\mathbf{V}$) and output ($\mathbf{U}$) bases decompose *every* matrix into non-negative stretches $\sigma_1 \ge \sigma_2 \ge \cdots \ge 0$.
 :::
 
 ::: {.col .fig .big}

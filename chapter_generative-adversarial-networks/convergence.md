@@ -715,7 +715,7 @@ Minimax Game Dynamics and Gradient Penalties<br>**the Dirac-GAN · rotational ve
 
 ::: {.cols .vc}
 ::: {.col}
-- **Static optimum vs. coupled dynamics:** Sections 16.1–16.3 assumed $D$ sits at $D^\star$, but in practice both players take incremental gradient steps that shift each other's objective.
+- **Static optimum vs. coupled dynamics:** Sections §{num:sec_basic_gan}–§{num:sec_gan_relativistic} assumed $D$ sits at $D^\star$, but in practice both players take incremental gradient steps that shift each other's objective.
 - **Minimal counterexample (Mescheder et al., 2018):** Even on a two-parameter minimax game with a unique equilibrium at $(0, 0)$, taking $300$ simultaneous gradient steps ($h = 0.2$) from $(1, 1)$ **doubles** the distance to $(0, 0)$ from $1.41$ to $2.87$!
 - **Key question:** How do zero-centered penalties ($R_1, R_2$) make the equilibrium locally exponentially stable?
 :::

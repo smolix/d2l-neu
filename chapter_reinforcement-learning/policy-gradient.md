@@ -768,7 +768,7 @@ On `VerifierTask` (4 prompts, 9 responses), a trajectory is a single response $y
 
 @policy-gradient-the-reinforce-estimator-4
 
-- **Flexible weighting hook:** Passing `weighting = lambda r: r` executes vanilla REINFORCE; in §14.8, passing group-standardized rewards turns this exact same function into GRPO.
+- **Flexible weighting hook:** Passing `weighting = lambda r: r` executes vanilla REINFORCE; in §{sec_baselines}, passing group-standardized rewards turns this exact same function into GRPO.
 :::
 
 ::: {.slide title="Verifying Unbiasedness on the Verifier Task"}
@@ -881,7 +881,7 @@ Verify your mastery of the score function, log-derivative cancellation, and vari
 
 1. Only the single successful episode contributes: at each of its 6 visited states, $\hat{u}_s = \frac{\gamma^5}{16}(\mathbf{e}_{a_t} - \frac{1}{4}\mathbf{1})$, which is $+0.0363$ on the taken action and $-0.0121$ on the other three actions.
 2. $P(s_{t+1} \mid s_t, a_t)$ determines the sampling distribution $P(\tau; \theta)$ over which the expectation $\mathbb{E}_{\tau \sim P(\cdot; \theta)}[\cdots]$ is taken, which the environment simulator executes for us.
-3. Because RMS error scales as $1/\sqrt{n}$, we need $n \approx 4 \times (3.38 / 0.50)^2 \approx 4 \times 45.7 \approx 183$ episodes per batch—motivating variance reduction via baselines in §14.8!
+3. Because RMS error scales as $1/\sqrt{n}$, we need $n \approx 4 \times (3.38 / 0.50)^2 \approx 4 \times 45.7 \approx 183$ episodes per batch—motivating variance reduction via baselines in §{sec_baselines}!
 :::
 :::
 

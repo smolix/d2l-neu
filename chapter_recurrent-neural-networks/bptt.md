@@ -585,7 +585,7 @@ $$\mathbf{G}_{t-1} = \frac{\partial L}{\partial \mathbf{O}_{t-1}}\mathbf{W}_{\te
 ::: {.slide title="Setting Up the Gradient Horizon Experiment (L = 64)"}
 [Empirical Probe on Our Trained RNN]{.kicker}
 
-To measure how far gradients actually travel inside our trained language model from §8.4 ($d = 512, h = 128$, dropout $0.5$, clipped at $\theta = 1$), we run the trained network forward over 256 validation segments of length $L = 64$ tokens:
+To measure how far gradients actually travel inside our trained language model from §{sec_rnn} ($d = 512, h = 128$, dropout $0.5$, clipped at $\theta = 1$), we run the trained network forward over 256 validation segments of length $L = 64$ tokens:
 
 @-bptt-vanishing-and-exploding-gradients-4
 
@@ -599,7 +599,7 @@ To measure how far gradients actually travel inside our trained language model f
 
 ::: {.cols .vc}
 ::: {.col}
-Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ on a logarithmic axis against lag $k \in \{0, \ldots, 63\}$ resolves the puzzle from §8.4:
+Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ on a logarithmic axis against lag $k \in \{0, \ldots, 63\}$ resolves the puzzle from §{sec_rnn}:
 
 - **Large weights, yet fast vanishing:** The trained recurrent matrix has spectral radius $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$ (which would explode as $1.80^k$ in a linear RNN!), yet the mean $\tanh$ derivative is $\overline{1 - H^2} \approx 0.27$.
 - **Halving every step ($1.80 \times 0.27 \approx 0.49$):** The gradient norm drops by roughly half at every step back in time—falling **below $1\%$ within $k = 8$ steps** and shrinking to $\sim 10^{-9}$ across 32 tokens.
@@ -636,7 +636,7 @@ Overcoming vanishing gradients requires redesigning the recurrent state transiti
 
 | Architectural Family | Core State Transition Mechanism | Why State Jacobians Stay Near Unity ($\mathbf{J}_t \approx \mathbf{I}$) |
 |---|---|---|
-| **Vanilla $\tanh$ RNN (§8.4)** | $\mathbf{H}_t = \tanh(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}})$ | $\mathbf{J}_t = \textrm{diag}(1 - \mathbf{H}_t^2)\mathbf{W}_{\textrm{hh}}^\top$ contracts by $\sim 0.5\times$ per step whenever units saturate |
+| **Vanilla $\tanh$ RNN (§{sec_rnn})** | $\mathbf{H}_t = \tanh(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}})$ | $\mathbf{J}_t = \textrm{diag}(1 - \mathbf{H}_t^2)\mathbf{W}_{\textrm{hh}}^\top$ contracts by $\sim 0.5\times$ per step whenever units saturate |
 | **Gated RNNs (LSTM, GRU — Gated Recurrent Networks section)** | Additive cell state $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$ with learned sigmoid gates $\mathbf{F}_t \in (0, 1)^h$ | When forget gate $\mathbf{F}_t \approx \mathbf{1}$, $\partial \mathbf{C}_t / \partial \mathbf{C}_{t-1} = \textrm{diag}(\mathbf{F}_t) \approx \mathbf{I}$, creating an unattenuated gradient highway |
 | **Structured State Space Models (SSMs / Linear RNNs — Linear Recurrences and State Space Models sections)** | Linear state recurrence $\mathbf{h}_t = \mathbf{A}\mathbf{h}_{t-1} + \mathbf{B}\mathbf{x}_t$ with nonlinear readout layers | Removes recurrent $\tanh$ saturation altogether and constrains eigenvalues of $\mathbf{A}$ near the unit disk ($|\lambda_i| \le 1$) |
 :::
@@ -679,7 +679,7 @@ Overcoming vanishing gradients requires redesigning the recurrent state transiti
 Truncating backpropagation to windows of length $T_0$ trades long-range gradient credit assignment for bounded memory and parallel minibatch shuffling:
 
 - **Hard credit-assignment horizon of $T_0$ steps:** Within a segment of length $T_0 = 32$, the loss at position $j \in \{1, \ldots, 32\}$ backpropagates through $j - 1$ steps within that segment (at most $31$ steps, $15.5$ steps on average) and **never sends gradient across the detached boundary** into the preceding segment.
-- **Zero-state windows vs. detached streaming:** In §8.4, `d2l.TimeMachine` sampled shuffled 32-token windows starting from $\mathbf{H}_0 = \mathbf{0}$ so minibatches are i.i.d. for SGD; stateful streaming carries $\mathbf{H}_{T_0}$ across segments for inference context but still blocks gradients at $T_0$.
+- **Zero-state windows vs. detached streaming:** In §{sec_rnn}, `d2l.TimeMachine` sampled shuffled 32-token windows starting from $\mathbf{H}_0 = \mathbf{0}$ so minibatches are i.i.d. for SGD; stateful streaming carries $\mathbf{H}_{T_0}$ across segments for inference context but still blocks gradients at $T_0$.
 - **Which horizon binds first?** In our vanilla $\tanh$ RNN, gradients already vanish below $1\%$ by lag $k = 8 \ll T_0 = 32$—so the cell's Jacobian decay, not the 32-token window, is the active bottleneck!
 :::
 
@@ -690,7 +690,7 @@ Test your understanding of matrix powers, graph detachment, and gradient horizon
 
 1. **Sensitivity Across a 32-Token Window:** In a linear RNN over a window of $T_0 = 32$ tokens, how many step Jacobians separate the final loss at $t = 32$ from the initial state $\mathbf{H}_1$, and by what factor does that sensitivity scale if $\rho(\mathbf{W}_{\textrm{hh}}) = 0.9$ versus $\rho(\mathbf{W}_{\textrm{hh}}) = 1.1$?
 2. **The Missing Detach Bug:** Suppose you train an RNN over 1,000 consecutive 32-token segments on a GPU, carrying `state` from segment $s$ into segment $s+1$, but you forget to detach `state` (stop its gradient) at the end of each segment. What happens to GPU memory and backward runtime on segment $s = 1, 2, 3, \ldots$?
-3. **Widening the Window on a Vanilla RNN:** If you retrain our vanilla $\tanh$ RNN from §8.4 with `num_steps = 128` instead of `num_steps = 32`, will its validation loss-by-position curve keep improving beyond token 3? Why or why not?
+3. **Widening the Window on a Vanilla RNN:** If you retrain our vanilla $\tanh$ RNN from §{sec_rnn} with `num_steps = 128` instead of `num_steps = 32`, will its validation loss-by-position curve keep improving beyond token 3? Why or why not?
 
 :::
 

@@ -1390,7 +1390,7 @@ Shrinking the step $\boldsymbol{\delta}$ tenfold at a time confirms that the rel
 @!matrix-calculus-autodiff-jacobian-finite-diff
 
 ::: {.d2l-note .rule}
-**Sufficient condition for a Jacobian:** Just as in §34.2, existence of partial derivatives alone is not enough ($2xy/(x^2+y^2)$ at $\mathbf{0}$ has none); if all partials $\partial f_i / \partial x_j$ are **continuous** near $\mathbf{x}$, $\mathbf{f}$ is differentiable at $\mathbf{x}$ and smooth ($C^2$) maps have $O(\|\boldsymbol{\delta}\|^2)$ error.
+**Sufficient condition for a Jacobian:** Just as in §{sec_mdl-multivariable_calculus}, existence of partial derivatives alone is not enough ($2xy/(x^2+y^2)$ at $\mathbf{0}$ has none); if all partials $\partial f_i / \partial x_j$ are **continuous** near $\mathbf{x}$, $\mathbf{f}$ is differentiable at $\mathbf{x}$ and smooth ($C^2$) maps have $O(\|\boldsymbol{\delta}\|^2)$ error.
 :::
 :::
 

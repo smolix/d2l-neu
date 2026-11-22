@@ -682,17 +682,17 @@ $$\mathbb{E}_\vartheta\big[\sin(\omega n + \vartheta)\big] = \frac{\sin a}{a}\,\
 :::
 :::
 
-::: {.slide title="Synthesis: Every Adversarial Game of Chapter 16"}
+::: {.slide title="Synthesis: Every Adversarial Game of Chapter §{num:chap_gans}"}
 [Comparing the Six Formulations]{.kicker}
 
 | Adversarial Formulation | Optimal Critic Estimate | Scoring Mechanism | Critic Constraint / Penalty | Disjoint-Support Gradient (at $D^\star$) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Logistic / $f$-GAN (§16.1–16.2)** | $\log(p/q)$ or $f'(p/q)$ | Single-sample classification | Unconstrained | Saturates ($\mathrm{JS} = \log 2$) |
-| **Hinge (§16.2)** | $\operatorname{sign}(\log(p/q))$ | Margin classification | Unconstrained or spectral norm | Saturates (linear to $2/\kappa$ with $\kappa$-Lip) |
-| **MMD (§16.2)** | Kernel-smoothed $p - q$ | Difference of means | RKHS unit ball (no critic net) | Nonzero within kernel bandwidth $s$ |
-| **Wasserstein-1 (§16.2)** | Kantorovich potential | Difference of means | 1-Lipschitz ball (WGAN-GP) | Constant unit slope at all distances |
-| **RpGAN (§16.3)** | $\log(p/q) + c$ | Pairwise Bradley–Terry ranking | Unconstrained | Saturates ($d_{\mathrm{Rp}} = \log 2$) |
-| **R3GAN (§16.4–16.6)** | $\log(p/q)$ filtered above $2\sqrt{\gamma}$ | Pairwise Bradley–Terry ranking | Zero-centered $R_1 + R_2$ on $p, q$ | Smooth interpolation via damped critic |
+| **Logistic / $f$-GAN (§{sec_basic_gan}–§{num:sec_gan_objectives})** | $\log(p/q)$ or $f'(p/q)$ | Single-sample classification | Unconstrained | Saturates ($\mathrm{JS} = \log 2$) |
+| **Hinge (§{sec_gan_objectives})** | $\operatorname{sign}(\log(p/q))$ | Margin classification | Unconstrained or spectral norm | Saturates (linear to $2/\kappa$ with $\kappa$-Lip) |
+| **MMD (§{sec_gan_objectives})** | Kernel-smoothed $p - q$ | Difference of means | RKHS unit ball (no critic net) | Nonzero within kernel bandwidth $s$ |
+| **Wasserstein-1 (§{sec_gan_objectives})** | Kantorovich potential | Difference of means | 1-Lipschitz ball (WGAN-GP) | Constant unit slope at all distances |
+| **RpGAN (§{sec_gan_relativistic})** | $\log(p/q) + c$ | Pairwise Bradley–Terry ranking | Unconstrained | Saturates ($d_{\mathrm{Rp}} = \log 2$) |
+| **R3GAN (§{sec_gan_convergence}–§{num:sec_gan_conditional})** | $\log(p/q)$ filtered above $2\sqrt{\gamma}$ | Pairwise Bradley–Terry ranking | Zero-centered $R_1 + R_2$ on $p, q$ | Smooth interpolation via damped critic |
 :::
 
 ::: {.slide title="Concept Check: Blurring, Distillation, and Phase"}

@@ -1017,7 +1017,7 @@ $$M(n) \;\approx\; 16N \;+\; n\,(L a + a_{\textrm{out}}) \;\le\; M_{\textrm{GPU}
 
 - **Fixed parameter floor ($N = 1.01 \times 10^9$):** $16N = 15.1\text{ GiB}$, leaving only $M_{\textrm{GPU}} - 16N = \mathbf{8.9\text{ GiB}}$ for activations and backward temporaries on a $24\text{ GiB}$ RTX 4090.
 - **Maximum micro-batch token count ($L = 18$ blocks):** At $La + a_{\textrm{out}} \approx 2.8\text{--}4.3\text{ MiB/token}$, at most **$2{,}000\text{--}3{,}200$ tokens** (2 or 3 sequences of length $1{,}024$) can fit in a single micro-batch.
-- **Doubling depth to 36 blocks ($N = 1.92\text{B}$):** Fixes $16N = 28.6\text{ GiB} > 24\text{ GiB}$—not even a single token fits without sharding the $16N$ state across multiple GPUs (§13.7)!
+- **Doubling depth to 36 blocks ($N = 1.92\text{B}$):** Fixes $16N = 28.6\text{ GiB} > 24\text{ GiB}$—not even a single token fits without sharding the $16N$ state across multiple GPUs (§{sec_sharding})!
 :::
 
 ::: {.slide title="Measured Peak Memory: The 8V Cross-Entropy Excess" only="pytorch"}

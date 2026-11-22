@@ -759,7 +759,7 @@ Inspecting the update gates $\mathbf{z}_t \in (0, 1)^d$ of the first `minGRU` bl
 @!ssm-a-linear-recurrent-language-model-6
 
 - **Emergence of word-scale memories:** At initialization ($\mathbf{b}_\textrm{z} = \mathbf{0}$), only $1.2\%$ of gates exceed $0.9$ (half-life $\ge 7$ bytes); training expands this share more than tenfold to $\sim 16\%$.
-- **Why almost no gates exceed $0.99$ (half-life $69$ bytes):** Over 128-byte windows, local word and phrase context dominates the loss, and zero-bias initialization starts far from the $0.99$–$0.999$ regime—a limitation §12.4 addresses directly.
+- **Why almost no gates exceed $0.99$ (half-life $69$ bytes):** Over 128-byte windows, local word and phrase context dominates the loss, and zero-bias initialization starts far from the $0.99$–$0.999$ regime—a limitation §{sec_ssm} addresses directly.
 :::
 
 ::: {.slide title="Asymptotic Complexity: GRU vs. Scan vs. Attention"}

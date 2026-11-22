@@ -58,9 +58,9 @@ Modern Convolutional Neural Networks<br>**AlexNet · blocks · normalization · 
 
 ::: {.cols .vc}
 ::: {.col}
-- **§§7.1–7.2 (AlexNet, VGG, NiN, GoogLeNet):** ReLU, dropout, $3 \times 3$ blocks, $1 \times 1$ bottlenecks, and global average pooling inside a stem–body–head template.
-- **§§7.3–7.4 (Norms & Residuals):** BatchNorm, LayerNorm, GroupNorm, additive shortcuts $\mathbf{x} + g(\mathbf{x})$, grouped ResNeXt blocks, and DenseNet concatenation.
-- **§§7.5–7.8 (Efficiency, Recipes, ConvNeXt, RegNet):** Depthwise factorization, RepVGG fusion, AdamW/Mixup/EMA, $7 \times 7$ ConvNeXt blocks, and population error CDFs.
+- **§§{sec_alexnet}–§{num:sec_blocks} (AlexNet, VGG, NiN, GoogLeNet):** ReLU, dropout, $3 \times 3$ blocks, $1 \times 1$ bottlenecks, and global average pooling inside a stem–body–head template.
+- **§§{sec_batch_norm}–§{num:sec_resnet} (Norms & Residuals):** BatchNorm, LayerNorm, GroupNorm, additive shortcuts $\mathbf{x} + g(\mathbf{x})$, grouped ResNeXt blocks, and DenseNet concatenation.
+- **§§{sec_efficient_cnns}–§{num:sec_cnn-design} (Efficiency, Recipes, ConvNeXt, RegNet):** Depthwise factorization, RepVGG fusion, AdamW/Mixup/EMA, $7 \times 7$ ConvNeXt blocks, and population error CDFs.
 :::
 
 ::: {.col .fig .big}

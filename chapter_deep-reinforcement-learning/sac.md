@@ -1101,7 +1101,7 @@ $$J(\pi) = \mathbb{E}_{\pi}\Big[\sum_{t \ge 0} \gamma^t \big(r_t + \beta\, H(\pi
 ::: {.slide title="Two Actions by Hand: Exact Single-Sample Soft Values"}
 [Concrete Intuition]{.kicker}
 
-Consider a single state with two actions of value $Q = (1, 0)$ at temperature $\beta = 0.5$. By §15.3, the tilted optimum is $\pi^\star \propto e^{Q/\beta} = (e^2, 1)/(e^2 + 1) = (0.88, 0.12)$ with soft value $\beta \log(e^2 + 1) = 1.063$:
+Consider a single state with two actions of value $Q = (1, 0)$ at temperature $\beta = 0.5$. By §{sec_regularized}, the tilted optimum is $\pi^\star \propto e^{Q/\beta} = (e^2, 1)/(e^2 + 1) = (0.88, 0.12)$ with soft value $\beta \log(e^2 + 1) = 1.063$:
 
 @!sac-soft-evaluation-one-new-term-in-the-target
 

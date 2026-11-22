@@ -526,7 +526,7 @@ Instantiating `FashionMNIST()` loads the official $60{,}000$-image training spli
 @image-classification-dataset-loading-the-dataset-2
 
 - **Compact memory footprint:** At $784$ pixels/image, $60{,}000$ training images take $\approx 47\text{ MB}$ in `uint8` or $\approx 188\text{ MB}$ in `float32`.
-- **Test-set reuse caveat:** Because Fashion-MNIST ships with only two splits, `data.val` uses the $10\text{k}$ test split (§3.5 quantifies reuse inflation).
+- **Test-set reuse caveat:** Because Fashion-MNIST ships with only two splits, `data.val` uses the $10\text{k}$ test split (§{chap_classification_generalization} quantifies reuse inflation).
 :::
 
 ::: {.col .fig}
@@ -696,7 +696,7 @@ Displaying the first three validation images of each category (one column per cl
 
 Test your understanding of the `FashionMNIST` pipeline on three practical questions:
 
-1. **Minibatch counts:** When we switch to `batch_size=256` in §3.3, how many minibatches does one training epoch ($60{,}000$ images) produce, and how many images are in the final minibatch?
+1. **Minibatch counts:** When we switch to `batch_size=256` in §{sec_softmax_scratch}, how many minibatches does one training epoch ($60{,}000$ images) produce, and how many images are in the final minibatch?
 2. **Visual vs. numerical bugs:** Which of these four bugs will a `data.visualize` gallery expose immediately by eye, and which will it miss: *(a)* labels shifted by $+1$, *(b)* images transposed $(h \leftrightarrow w)$, *(c)* pixels left unnormalized in $[0, 255.0]$, *(d)* every image duplicated twice per epoch?
 3. **Upsampling invariance:** If we set `resize=(32, 32)` ($1{,}024$ pixels via bilinear interpolation $\mathbf{x}' = \mathbf{A}\mathbf{x}$), does a linear softmax classifier gain any new expressive power?
 

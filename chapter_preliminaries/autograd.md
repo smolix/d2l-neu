@@ -748,7 +748,7 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 ::: {.cols .vc}
 ::: {.col}
 - In deep learning frameworks, we write **only the forward pass**; no hand-written derivative formula ever appears in model code.
-- **Running example (§1.4):** Our linear model $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ with design matrix $\mathbf{X} \in \mathbb{R}^{3 \times 2}$ and targets $\mathbf{y} = [1, 1, 0]^\top$, evaluated at $\mathbf{w} = [1, 0]^\top$.
+- **Running example (§{sec_calculus}):** Our linear model $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ with design matrix $\mathbf{X} \in \mathbb{R}^{3 \times 2}$ and targets $\mathbf{y} = [1, 1, 0]^\top$, evaluated at $\mathbf{w} = [1, 0]^\top$.
 - Likewise, for a quadratic form $y = 2\mathbf{x}^\top \mathbf{x}$ on $\mathbf{x} = [0, 1, 2, 3]^\top$, each primitive operator (`@`, `-`, `** 2`, `.sum()`) carries its own local backward rule.
 :::
 

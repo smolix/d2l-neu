@@ -1698,7 +1698,7 @@ What happens when we unmask $L = 784$ binary pixels in just $S = 4$ jumps ($\app
 :::
 :::
 
-::: {.slide title="Chapter 17 in Retrospect: Strengths and Open Frontiers"}
+::: {.slide title="Chapter §{num:chap_diffusion} in Retrospect: Strengths and Open Frontiers"}
 [Comparing Diffusion & Flow Models Across the Design Space]{.kicker}
 
 Across all nine sections, one principle drove every continuous and discrete generator—**regress onto the clean point across all corruption levels, then integrate backward from pure noise/mask**:

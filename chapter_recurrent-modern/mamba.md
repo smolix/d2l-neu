@@ -793,7 +793,7 @@ Selective State Space Models (Mamba)<br>**selective copying · input-dependent s
 
 ::: {.cols .vc}
 ::: {.col}
-- **The flaw of fixed lag kernels:** In §12.4, `S4D` weights any token $k$ steps back by the fixed convolution coefficient $K_k$, whether that token was a key entity or an uninformative filler.
+- **The flaw of fixed lag kernels:** In §{sec_ssm}, `S4D` weights any token $k$ steps back by the fixed convolution coefficient $K_k$, whether that token was a key entity or an uninformative filler.
 - **Natural language is content-selective:** A reader must write salient nouns strongly into memory and hold them across variable-length clauses while ignoring filler tokens in between.
 - **Why no LTI convolution can solve selective copying:** When target symbols appear at random positions that change from sequence to sequence, no fixed lag weight $K_k$ can align with the targets.
 :::
@@ -809,9 +809,9 @@ Selective State Space Models (Mamba)<br>**selective copying · input-dependent s
 
 ::: {.cols .vc}
 ::: {.col}
-- **What `MinGRU` (§12.3) Has:** Input-dependent gate $\mathbf{z}_t(\mathbf{x}_t)$, but only $N = 1$ scalar per channel starting at $\tau_{1/2} = 1$.
-- **What `S4D` (§12.4) Has:** $N = 16$ log-spaced decay modes per channel ($\tau_{1/2} \in [0.4, 693]$), but fixed LTI step size $\Delta_c$.
-- **What `Mamba` (§12.5) Unifies:** Token-dependent $(\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t)$ over an $H \times N$ multi-timescale state trained via parallel + adjoint scans.
+- **What `MinGRU` (§{sec_linear-recurrence}) Has:** Input-dependent gate $\mathbf{z}_t(\mathbf{x}_t)$, but only $N = 1$ scalar per channel starting at $\tau_{1/2} = 1$.
+- **What `S4D` (§{sec_ssm}) Has:** $N = 16$ log-spaced decay modes per channel ($\tau_{1/2} \in [0.4, 693]$), but fixed LTI step size $\Delta_c$.
+- **What `Mamba` (§{sec_mamba}) Unifies:** Token-dependent $(\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t)$ over an $H \times N$ multi-timescale state trained via parallel + adjoint scans.
 :::
 
 ::: {.col .fig .big}
@@ -839,7 +839,7 @@ Training a 2-block `SeqLM` ($d = 48$) for $1{,}500$ Adam steps ($\text{lr} = 3 \
 @!mamba-selective-copying-3
 
 - **`S4D` stays near chance ($\le 0.20$):** Fixed lag weights cannot track symbols whose positions shift randomly between sequences.
-- **Why `minGRU` succeeds ($0.75$–$0.97$) despite 1-step initial gates:** Unlike fixed $1{,}000$-step delayed recall (§12.4), random placement occasionally puts marked symbols just a few steps before the queries—providing short-range gradients that progressively teach the gates to stay closed on filler tokens `0`.
+- **Why `minGRU` succeeds ($0.75$–$0.97$) despite 1-step initial gates:** Unlike fixed $1{,}000$-step delayed recall (§{sec_ssm}), random placement occasionally puts marked symbols just a few steps before the queries—providing short-range gradients that progressively teach the gates to stay closed on filler tokens `0`.
 :::
 
 ::: {.slide title="Exact Duality: Softplus Step Sizes Are Sigmoid Gates"}
@@ -1007,7 +1007,7 @@ Comparing 4-block `Mamba`, `minGRU`, causal `attention` ($d = 256$), and a param
 @!mamba-language-modeling-2
 
 ::: {.d2l-note}
-`Mamba` reaches **$1.30$ nats/byte**—matching the full sequential LSTM and GRU of §12.1 while training via a parallel scan, and beating parameter-matched `minGRU, d=309` by **$0.03$ nats/byte**.
+`Mamba` reaches **$1.30$ nats/byte**—matching the full sequential LSTM and GRU of §{sec_lstm} while training via a parallel scan, and beating parameter-matched `minGRU, d=309` by **$0.03$ nats/byte**.
 :::
 :::
 

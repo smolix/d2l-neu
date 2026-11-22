@@ -86,7 +86,7 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 ::: {.col}
 - **Hands-on systems focus:** Every concept pairs directly with executable framework code for shapes, dtypes, memory aliasing, and gradients.
 - **Must-read sections:** Even if you know NumPy and calculus, study **the autograd section** for DAG semantics (`detach`, in-place hazards) and **the probability section** for finite-sample standard errors.
-- **Deep theoretical proofs:** Jump to **Chapters 33–36 (Math Appendix)** for SVD, matrix calculus identities, and MLE asymptotics.
+- **Deep theoretical proofs:** Jump to **Chapters §{num:chap_mdl-linear-algebra}–§{num:chap_mdl-probability-statistics} (Math Appendix)** for SVD, matrix calculus identities, and MLE asymptotics.
 :::
 
 ::: {.col .fig .big}

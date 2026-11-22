@@ -1141,7 +1141,7 @@ Evaluating trigram models across character, BPE-1024, and word tokenizations on 
 ::: {.slide title="Sliding Input–Target Windows for Neural Training"}
 [Sequence Data Partitioning]{.kicker}
 
-To train the neural language models of §8.4–§8.6 with minibatch SGD, we slice the BPE-encoded corpus $x_1, x_2, \ldots$ into overlapping windows of length $T = \texttt{num\_steps}$:
+To train the neural language models of §{sec_rnn}–§{sec_decoding} with minibatch SGD, we slice the BPE-encoded corpus $x_1, x_2, \ldots$ into overlapping windows of length $T = \texttt{num\_steps}$:
 
 ::: {.cols .vc}
 ::: {.col}

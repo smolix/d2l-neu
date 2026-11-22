@@ -109,16 +109,16 @@ Diffusion papers place clean data at $t = 0$, whereas many flow-matching papers 
 :::
 :::
 
-::: {.slide title="Concrete Running Benchmarks Across Chapter 17"}
+::: {.slide title="Concrete Running Benchmarks Across Chapter §{num:chap_diffusion}"}
 [Empirical Grounding]{.kicker}
 
 Every theoretical claim and architectural choice is tested on controlled benchmarks where exact references or calibrated feature metrics exist:
 
 ::: {.cols .vc}
 ::: {.col}
-- **2D Three-Mode Gaussian Mixture (§17.1–17.3, §17.6, §17.8):** Weights $(0.5, 0.3, 0.2)$ and width $s = 0.5$ where exact density, score, posterior mean, velocity, and entropy ($\approx 2.5$ nats) are available in closed form.
-- **Fashion-MNIST Pixels & Latents (§17.4–17.8):** $28 \times 28$ images in $[-1, 1]$ and $7 \times 7 \times 4$ VAE latents, evaluated by Fréchet distance (FD) against the finite-sample real-vs.-real reference floor.
-- **Discrete Token Sequences (§17.9):** Quantized $32 \times 32$ grid pairs and 784-token binary garments corrupted by token masking $[\textrm{M}]$.
+- **2D Three-Mode Gaussian Mixture (§{sec_diffusion-denoising}–§{num:sec_diffusion-integration}, §{sec_diffusion-design-space}, §{sec_diffusion-few-step}):** Weights $(0.5, 0.3, 0.2)$ and width $s = 0.5$ where exact density, score, posterior mean, velocity, and entropy ($\approx 2.5$ nats) are available in closed form.
+- **Fashion-MNIST Pixels & Latents (§{sec_diffusion-images}–§{num:sec_diffusion-few-step}):** $28 \times 28$ images in $[-1, 1]$ and $7 \times 7 \times 4$ VAE latents, evaluated by Fréchet distance (FD) against the finite-sample real-vs.-real reference floor.
+- **Discrete Token Sequences (§{sec_diffusion-discrete}):** Quantized $32 \times 32$ grid pairs and 784-token binary garments corrupted by token masking $[\textrm{M}]$.
 :::
 
 ::: {.col .fig}
@@ -127,14 +127,14 @@ Every theoretical claim and architectural choice is tested on controlled benchma
 :::
 :::
 
-::: {.slide title="Chapter 17 Roadmap: From Score Matching to Tokens"}
+::: {.slide title="Chapter §{num:chap_diffusion} Roadmap: From Score Matching to Tokens"}
 [Study Guide]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **§§17.1–17.3 Core Theory:** Denoising score matching, Tweedie's formula, Gaussian paths ($\lambda_t$), and reverse ODE/SDE transport (trained MLP matches exact 2D oracle weights within $0.004$).
-- **§§17.4–17.6 Images, Fast Solvers & Design Space:** U-Net + CFG ($\approx 90\%$ class agreement), 20-NFE Heun and multistep solvers, continuous ELBO ($w(\lambda) \equiv 1$), and EDM preconditioning.
-- **§§17.7–17.9 Latents, Few-Step & Discrete Tokens:** KL-autoencoders + `adaLN-Zero` DiT ($>10\times$ fewer FLOPs), two-time flow-map distillation ($2$ jumps match $15$ Euler steps), and absorbing masked diffusion ($0.17$ bpp).
+- **§§{sec_diffusion-denoising}–§{num:sec_diffusion-integration} Core Theory:** Denoising score matching, Tweedie's formula, Gaussian paths ($\lambda_t$), and reverse ODE/SDE transport (trained MLP matches exact 2D oracle weights within $0.004$).
+- **§§{sec_diffusion-images}–§{num:sec_diffusion-design-space} Images, Fast Solvers & Design Space:** U-Net + CFG ($\approx 90\%$ class agreement), 20-NFE Heun and multistep solvers, continuous ELBO ($w(\lambda) \equiv 1$), and EDM preconditioning.
+- **§§{sec_diffusion-latent}–§{num:sec_diffusion-discrete} Latents, Few-Step & Discrete Tokens:** KL-autoencoders + `adaLN-Zero` DiT ($>10\times$ fewer FLOPs), two-time flow-map distillation ($2$ jumps match $15$ Euler steps), and absorbing masked diffusion ($0.17$ bpp).
 :::
 
 ::: {.col .fig .big}

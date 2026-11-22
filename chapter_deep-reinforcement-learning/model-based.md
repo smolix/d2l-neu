@@ -812,7 +812,7 @@ At state $s$, **random shooting** draws $J$ candidate action sequences $A^{(j)} 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Receding-Horizon Execution (MPC, §14.6):** Just as in §14.6's analytical MPC, execute *only the first torque* $a_0^\star$ of the winning 25-step plan, observe the real next state $s_{t+1}$, and re-plan from scratch—preventing open-loop model errors from accumulating along the real trajectory.
+- **Receding-Horizon Execution (MPC, §{sec_optimal_control}):** Just as in §{sec_optimal_control}'s analytical MPC, execute *only the first torque* $a_0^\star$ of the winning 25-step plan, observe the real next state $s_{t+1}$, and re-plan from scratch—preventing open-loop model errors from accumulating along the real trajectory.
 - **Warm-Started Search:** Instead of drawing 500 fresh random sequences at step $t+1$, shift step $t$'s winning plan forward by 1 step, append $0$, and perturb it with Gaussian noise ($\sigma = c = 2$, keeping the unperturbed shifted plan as candidate $0$).
 :::
 

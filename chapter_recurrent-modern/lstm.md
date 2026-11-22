@@ -1151,7 +1151,7 @@ Gates replace fragile whole-matrix eigenvalue tuning with **per-unit learned dec
 $$\mathbf{H} \leftarrow \mathbf{H} + \textrm{mixer}(\textrm{LN}(\mathbf{H})), \quad \mathbf{H} \leftarrow \mathbf{H} + \textrm{MLP}(\textrm{LN}(\mathbf{H}))$$
 
 - **Controlled Architecture:** Byte embedding $\to$ $4$ pre-norm residual blocks ($d = 256$, $4d$ GELU MLP) $\to$ LayerNorm + output head on 128-byte WikiText-103 windows.
-- **Isolating the Mixer:** Only `mixer(·)` changes across §§12.1–12.8.
+- **Isolating the Mixer:** Only `mixer(·)` changes across §§{sec_lstm}–§{num:sec_hybrids}.
 :::
 
 ::: {.col .fig}
@@ -1173,9 +1173,9 @@ Two runs per configuration reporting parameters, overall validation loss (nats/b
 
 Three systems and modeling lessons emerge from the WikiText-103 benchmark:
 
-1. **The residual stack closes the plain-RNN gap:** Simply placing $4$ narrow $\tanh$ RNN layers inside `SeqLM` reaches $\sim 1.35$ nats/byte—matching Chapter 11's 6-block SwiGLU GPT and outperforming the 4-block GELU `attention` stack ($1.38$) at this $1{,}000$-step budget.
+1. **The residual stack closes the plain-RNN gap:** Simply placing $4$ narrow $\tanh$ RNN layers inside `SeqLM` reaches $\sim 1.35$ nats/byte—matching Chapter §{num:chap_transformers}'s 6-block SwiGLU GPT and outperforming the 4-block GELU `attention` stack ($1.38$) at this $1{,}000$-step budget.
 2. **Gating beats raw parameter scaling:** Replacing the plain RNN with an `LSTM` or `GRU` lowers loss by $0.05$ nats/byte to $\sim 1.30$, whereas widening the plain RNN to match the GRU's $3.81\text{M}$ parameters (`RNN, d=302`) closes less than a third of that gap ($1.334$).
-3. **Sequential training latency:** Because every gate and candidate step waits for $\mathbf{h}_{t-1}$, `LSTM` and `GRU` take **$2\times$–$2.5\times$ longer per step** than the plain RNN—motivating the parallel linear recurrences of §12.3.
+3. **Sequential training latency:** Because every gate and candidate step waits for $\mathbf{h}_{t-1}$, `LSTM` and `GRU` take **$2\times$–$2.5\times$ longer per step** than the plain RNN—motivating the parallel linear recurrences of §{sec_linear-recurrence}.
 :::
 
 ::: {.slide title="Concept Check: Gate Half-Lives and Saturation Bounds"}

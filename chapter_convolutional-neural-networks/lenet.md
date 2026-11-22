@@ -700,7 +700,7 @@ Convolutional Neural Networks (LeNet)<br>**convolutional encoder · dense head �
 
 ::: {.cols .vc}
 ::: {.col}
-- **Chapter 4 MLP ($784 \to 256 \to 10$):** Flattens $28 \times 28$ images, using **$203{,}530$ parameters** to reach $\approx 87\%$ validation accuracy.
+- **Chapter §{num:chap_perceptrons} MLP ($784 \to 256 \to 10$):** Flattens $28 \times 28$ images, using **$203{,}530$ parameters** to reach $\approx 87\%$ validation accuracy.
 - **LeNet-5 spatial CNN:** Preserves 2D locality and shares $5 \times 5$ kernels across space, reaching **$\approx 88\text{--}90\%$** with **$3.3\times$ fewer parameters** ($61{,}706$).
 - **Controlled test:** We will also permute all 784 pixels to isolate spatial inductive bias.
 :::
@@ -931,7 +931,7 @@ Every permuted image still contains the exact same 784 pixel intensities in a co
 ::: {.slide title="Summary & Key Takeaways: MLP vs. LeNet"}
 [Section & Chapter Synthesis]{.kicker}
 
-| Metric / Component | Chapter 4 MLP ($784 \to 256 \to 10$) | Classical LeNet (1998 Layout) | Modern CNNs (Chapter 7 Preview) |
+| Metric / Component | Chapter §{num:chap_perceptrons} MLP ($784 \to 256 \to 10$) | Classical LeNet (1998 Layout) | Modern CNNs (Chapter §{num:chap_modern_cnn} Preview) |
 |---|---|---|---|
 | **Parameters** | $203{,}530$ ($98.6\%$ in layer 1) | **$61{,}706$** ($4.2\%$ conv, $95.8\%$ dense) | Bottlenecks + Global Avg Pool head |
 | **Multiply-Adds / Image** | $\approx 203{,}000$ | **$416{,}520$** ($85.9\%$ in conv layers) | Dominated by spatial conv layers |

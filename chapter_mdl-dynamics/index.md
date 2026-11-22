@@ -143,14 +143,14 @@ Dynamics: Differential Equations, Stochastic Flows, and Transport<br>**ODEs & so
 :::
 :::
 
-::: {.slide title="The Three-Stage Mathematical Roadmap of Chapter 38"}
+::: {.slide title="The Three-Stage Mathematical Roadmap of Chapter §{num:chap_mdl-dynamics}"}
 [Architecture of the Chapter]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Stage 1 — Deterministic ODEs & Flows (§§38.1–38.3):** Picard–Lindelöf uniqueness, matrix exponential $e^{\mathbf{A}t}$, Runge–Kutta stability $R(h\lambda)$, continuous adjoint ODE, and Liouville's trace rule $\frac{d}{dt}\log p_t = -\operatorname{tr}\mathbf{J}$.
-- **Stage 2 — Stochastic Calculus & Density Flow (§§38.4–38.5):** Quadratic variation $(dW)^2 = dt$, Itô's lemma, OU Gaussian kernels, Fokker–Planck PDE, Anderson's reverse SDE, and the probability-flow ODE.
-- **Stage 3 — Learning Generative Fields (§§38.6–38.7):** Vincent's denoising score matching, Tweedie's formula, DDPM/DDIM, Conditional Flow Matching, and Reflow.
+- **Stage 1 — Deterministic ODEs & Flows (§§{sec_mdl-odes-solvers}–§{num:sec_mdl-neural-odes-cnf}):** Picard–Lindelöf uniqueness, matrix exponential $e^{\mathbf{A}t}$, Runge–Kutta stability $R(h\lambda)$, continuous adjoint ODE, and Liouville's trace rule $\frac{d}{dt}\log p_t = -\operatorname{tr}\mathbf{J}$.
+- **Stage 2 — Stochastic Calculus & Density Flow (§§{sec_mdl-sdes}–§{num:sec_mdl-fokker-planck-probability-flow}):** Quadratic variation $(dW)^2 = dt$, Itô's lemma, OU Gaussian kernels, Fokker–Planck PDE, Anderson's reverse SDE, and the probability-flow ODE.
+- **Stage 3 — Learning Generative Fields (§§{sec_mdl-score-matching-diffusion-flow}–§{num:sec_mdl-flow-matching-transport}):** Vincent's denoising score matching, Tweedie's formula, DDPM/DDIM, Conditional Flow Matching, and Reflow.
 :::
 
 ::: {.col .fig .big}
@@ -191,18 +191,18 @@ Dynamics: Differential Equations, Stochastic Flows, and Transport<br>**ODEs & so
 :::
 :::
 
-::: {.slide title="Prerequisites and Reading Paths Through Chapter 38"}
+::: {.slide title="Prerequisites and Reading Paths Through Chapter §{num:chap_mdl-dynamics}"}
 [Study Guide]{.kicker}
 
 ::: {.cols}
 ::: {.col}
-- **Mathematical Prerequisites:** Eigendecompositions and spectral norms (§33), multivariable Jacobians, divergence, and integration by parts (§34), and Gaussian conditional expectations (§36). No measure theory is required.
-- **Optimization & SSM Path (§38.1–38.2):** Covers exact zero-order hold discretizations for State Space Models (Mamba/S4), non-normal transient growth in momentum, and numerical stiffness in gradient descent.
+- **Mathematical Prerequisites:** Eigendecompositions and spectral norms (§{chap_mdl-linear-algebra}), multivariable Jacobians, divergence, and integration by parts (§{chap_mdl-calculus}), and Gaussian conditional expectations (§{chap_mdl-probability-statistics}). No measure theory is required.
+- **Optimization & SSM Path (§{sec_mdl-odes-solvers}–§{num:sec_mdl-euler-runge-kutta}):** Covers exact zero-order hold discretizations for State Space Models (Mamba/S4), non-normal transient growth in momentum, and numerical stiffness in gradient descent.
 :::
 
 ::: {.col}
-- **Fast-Track to Diffusion & Flow Models:** Read **§38.1–38.2** for flows and Runge–Kutta solvers, **§38.4** for Itô's lemma and the Ornstein–Uhlenbeck kernel, **§38.5** for reverse-time SDEs and the probability-flow ODE, and **§38.6–38.7** for score and flow matching.
-- **Optional Deep Dives:** You can skip the continuous adjoint method (**§38.3**) and Wasserstein optimal transport theory (**§38.7**) on a first pass toward image generation.
+- **Fast-Track to Diffusion & Flow Models:** Read **§{sec_mdl-odes-solvers}–§{num:sec_mdl-euler-runge-kutta}** for flows and Runge–Kutta solvers, **§{sec_mdl-sdes}** for Itô's lemma and the Ornstein–Uhlenbeck kernel, **§{sec_mdl-fokker-planck-probability-flow}** for reverse-time SDEs and the probability-flow ODE, and **§{sec_mdl-score-matching-diffusion-flow}–§{num:sec_mdl-flow-matching-transport}** for score and flow matching.
+- **Optional Deep Dives:** You can skip the continuous adjoint method (**§{sec_mdl-neural-odes-cnf}**) and Wasserstein optimal transport theory (**§{sec_mdl-flow-matching-transport}**) on a first pass toward image generation.
 :::
 :::
 :::

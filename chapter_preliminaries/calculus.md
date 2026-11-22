@@ -548,7 +548,7 @@ Approximating $f'(x) \approx \frac{f(x+h) - f(x)}{h}$ has **two fatal flaws** in
 1. **The Numerical V-Curve:**
    - **Too large $h$:** Taylor truncation error grows as $O(h)$ (or $O(h^2)$ for central differences).
    - **Too small $h$:** Subtracting nearly equal floats $f(x+h) - f(x)$ erases mantissa bits (**catastrophic cancellation**, error $\sim \epsilon / h$, capping `float32` at $\sim 4$ valid digits!).
-2. **Computational $O(d)$ Blowup:** Perturbing $d = 10^9$ weights requires **$10^9 + 1$ forward passes** per step, whereas reverse-mode AD (§1.5) takes **one backward pass**.
+2. **Computational $O(d)$ Blowup:** Perturbing $d = 10^9$ weights requires **$10^9 + 1$ forward passes** per step, whereas reverse-mode AD (§{sec_autograd}) takes **one backward pass**.
 :::
 
 ::: {.col .fig .big}
@@ -582,7 +582,7 @@ Approximating $f'(x) \approx \frac{f(x+h) - f(x)}{h}$ has **two fatal flaws** in
 | **Partial** $\frac{\partial f}{\partial x_i}$ | Derivative with $x_{j \neq i}$ fixed | `()` | Axis-$i$ slice slope | Sensitivity of loss to single weight $w_i$ |
 | **Gradient** $\nabla_{\mathbf{x}} f(\mathbf{x})$ | $[\partial f/\partial x_1, \ldots, \partial f/\partial x_n]^\top$ | **`(n,)`** | Points uphill $\perp$ contours | Descent step $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla_{\mathbf{w}}\mathcal{L}$ |
 | **Jacobian** $\mathbf{J}_{\mathbf{f}}(\mathbf{x})$ | $(\mathbf{J}_{\mathbf{f}})_{ij} = \partial f_i / \partial x_j$ | **`(m, n)`** | Local linear map $\mathbf{J}\mathbf{h}$ | Layer-to-layer sensitivity matrix |
-| **Chain rule (VJP)** | $\nabla_{\mathbf{x}} y = \mathbf{J}_{\mathbf{u}}(\mathbf{x})^\top \nabla_{\mathbf{u}} y$ | `(n,)` | Sum over all DAG paths | Reverse-mode backpropagation (§1.5) |
+| **Chain rule (VJP)** | $\nabla_{\mathbf{x}} y = \mathbf{J}_{\mathbf{u}}(\mathbf{x})^\top \nabla_{\mathbf{u}} y$ | `(n,)` | Sum over all DAG paths | Reverse-mode backpropagation (§{sec_autograd}) |
 | **Finite difference** | $\frac{f(x+h)-f(x-h)}{2h}$ | $2d$ evals | Secant slope on $[x-h, x+h]$ | Unit-test gradient checks in `float64` |
 :::
 

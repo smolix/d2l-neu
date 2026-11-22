@@ -563,7 +563,7 @@ Because local and server engines implement the OpenAI Chat Completions schema, c
 
 ::: {.cols}
 ::: {.col}
-```python
+```{.python #model-serving-exercises}
 from openai import OpenAI
 
 client = OpenAI(

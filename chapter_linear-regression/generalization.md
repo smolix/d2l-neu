@@ -712,7 +712,7 @@ Apply the principles of generalization and model selection to these three proble
 |---|---|---|---|
 | **Empirical vs. True Risk** | $R_{\textrm{emp}}[f] = \frac{1}{n}\sum_i l_i$ vs. $R[f] = \mathbb{E}[l]$ | $\mathbb{E}[R_{\textrm{emp}}] = \sigma^2(1 - p/n) < \mathbb{E}[R]$ | Never evaluate or select models on training error |
 | **Underfitting (High Bias)** | $\textrm{bias}^2(x) = (\bar{f}(x) - f^*(x))^2 \gg \sigma^2$ | Both train and val errors high ($d=1$) | Increase model capacity / add features (more data won't help) |
-| **Overfitting (High Variance)** | $\operatorname{Var}(\hat{f}_{\mathcal{D}}(x)) \approx \sigma^2 p / n \gg \sigma^2$ | Train error $\to 0$, val error explodes ($d=19$) | Add training data ($n \uparrow$), reduce $p$, or apply weight decay (§2.7) |
+| **Overfitting (High Variance)** | $\operatorname{Var}(\hat{f}_{\mathcal{D}}(x)) \approx \sigma^2 p / n \gg \sigma^2$ | Train error $\to 0$, val error explodes ($d=19$) | Add training data ($n \uparrow$), reduce $p$, or apply weight decay (§{sec_weight_decay}) |
 | **Bias–Variance Identity** | $\mathbb{E}[(y - \hat{f}(x))^2] = \textrm{bias}^2 + \operatorname{Var} + \sigma^2$ | U-shaped test risk minimized at intermediate $d^*$ | Balance approximation capacity against sample size $n$ |
 | **Validation & $K$-Fold CV** | Average loss across $K$ held-out folds $\mathcal{D}_k$ | Trains on $\frac{K-1}{K}n$ points per fold ($K=5$ or $10$) | Tune all hyperparameters on val/CV; touch test set only once |
 :::

@@ -672,7 +672,7 @@ In an MDP, **Pessimistic Value Iteration** (Jin, Yang, & Wang, 2021) subtracts a
 
 $$Q(s, a) \leftarrow \max\Big(\hat{r}(s, a) + \gamma \sum_{s'} \hat{P}(s' \mid s, a) \max_{a'} Q(s', a') - \frac{\kappa}{\sqrt{n(s, a)}},\ 0\Big)$$
 
-- **Mirror Image of UCB Exploration (§14.4):** Online UCB *adds* $+\kappa \sqrt{\log t / n(s, a)}$ to entice the agent to visit uncertain pairs and gather corrective data; offline LCB *subtracts* $-\kappa / \sqrt{n(s, a)}$ to repel the policy from unsupported pairs where no new data will ever arrive.
+- **Mirror Image of UCB Exploration (§{sec_exploration}):** Online UCB *adds* $+\kappa \sqrt{\log t / n(s, a)}$ to entice the agent to visit uncertain pairs and gather corrective data; offline LCB *subtracts* $-\kappa / \sqrt{n(s, a)}$ to repel the policy from unsupported pairs where no new data will ever arrive.
 :::
 
 ::: {.slide title="When Pessimism Helps—and When It Hurts"}

@@ -1913,7 +1913,7 @@ Why does the acceptance rate alone never certify convergence? Rerunning our $4$ 
 ::: {.slide title="Variational Inference: Integration via Optimization"}
 [Method 4: Parametric ELBO Maximization]{.kicker}
 
-Instead of drawing correlated samples, **variational inference (VI)** posits a tractable family of densities $q_{\boldsymbol{\psi}}(\boldsymbol{\theta})$ and optimizes $\boldsymbol{\psi}$ to minimize KL divergence to the posterior. Treating $\boldsymbol{\theta}$ as the latent variable in our §36.7 ELBO identity yields:
+Instead of drawing correlated samples, **variational inference (VI)** posits a tractable family of densities $q_{\boldsymbol{\psi}}(\boldsymbol{\theta})$ and optimizes $\boldsymbol{\psi}$ to minimize KL divergence to the posterior. Treating $\boldsymbol{\theta}$ as the latent variable in our §{sec_mdl-latent-em-elbo} ELBO identity yields:
 
 $$\log p(\mathcal{D}) = \underbrace{\mathbb{E}_{q_{\boldsymbol{\psi}}}\bigl[\log \widetilde{p}(\boldsymbol{\theta}) - \log q_{\boldsymbol{\psi}}(\boldsymbol{\theta})\bigr]}_{\mathcal{L}(\boldsymbol{\psi})\ (\mathrm{ELBO})} + D_{\mathrm{KL}}\bigl(q_{\boldsymbol{\psi}}(\boldsymbol{\theta}) \,\|\, p(\boldsymbol{\theta} \mid \mathcal{D})\bigr)$$
 

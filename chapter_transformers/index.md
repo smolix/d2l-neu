@@ -52,14 +52,14 @@ Transformers: From One Block to Frontier Architectures<br>**residual stream · p
 :::
 :::
 
-::: {.slide title="The Four Architectural Pillars of Chapter 11"}
+::: {.slide title="The Four Architectural Pillars of Chapter §{num:chap_transformers}"}
 [Architectural Roadmap]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Build & Train (§§11.1–11.2):** Pre-norm, `RMSNorm`, `QK-Norm`, $1/\sqrt{2L}$ scaling, `SwiGLU`, and decoder-only GPT pretraining.
-- **2. Serve & Compress (§11.3):** KV caching, roofline analysis, GQA, low-rank MLA, and attention sinks.
-- **3. Rewire & Scale (§§11.4–11.7):** Encoders, cross-attention, ViT patches, Chinchilla scaling laws, and sparse Mixture of Experts (MoE).
+- **1. Build & Train (§§{sec_transformer-block}–§{num:sec_gpt}):** Pre-norm, `RMSNorm`, `QK-Norm`, $1/\sqrt{2L}$ scaling, `SwiGLU`, and decoder-only GPT pretraining.
+- **2. Serve & Compress (§{sec_kv-cache}):** KV caching, roofline analysis, GQA, low-rank MLA, and attention sinks.
+- **3. Rewire & Scale (§§{sec_transformer}–§{num:sec_moe}):** Encoders, cross-attention, ViT patches, Chinchilla scaling laws, and sparse Mixture of Experts (MoE).
 :::
 
 ::: {.col .fig .big}
@@ -68,7 +68,7 @@ Transformers: From One Block to Frontier Architectures<br>**residual stream · p
 :::
 :::
 
-::: {.slide title="Concrete Single-GPU Benchmarks Across Chapter 11"}
+::: {.slide title="Concrete Single-GPU Benchmarks Across Chapter §{num:chap_transformers}"}
 [Running Examples]{.kicker}
 
 ::: {.cols .vc}
@@ -89,7 +89,7 @@ Transformers: From One Block to Frontier Architectures<br>**residual stream · p
 ::: {.cols .vc}
 ::: {.col}
 - Every model in this chapter is an instance of one parameterized constructor whose defaults match frontier open-weights LLMs (`RMSNorm`, `RoPE`, `SwiGLU`, GQA/MLA, MoE).
-- **Up next (§11.1 The Transformer Block):** How pre-norm placement, `RMSNorm`, `QK-Norm`, and `SwiGLU` prevent token collapse and keep gradients well-behaved across depth.
+- **Up next (§{sec_transformer-block} The Transformer Block):** How pre-norm placement, `RMSNorm`, `QK-Norm`, and `SwiGLU` prevent token collapse and keep gradients well-behaved across depth.
 :::
 
 ::: {.col .fig .big}

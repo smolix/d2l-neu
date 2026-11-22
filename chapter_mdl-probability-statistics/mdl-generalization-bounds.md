@@ -1474,7 +1474,7 @@ Averaging the exact supremum $\frac{B}{n}\bigl\|\sum_{i=1}^n \varepsilon_i \math
 
 @!mdl-concentration-generalization-coin-flips-in-code
 
-- **Why the bound becomes sharper in high dimensions:** The only inequality in our proof was Jensen's $\mathbb{E}\|\mathbf{s}\|_2 \le \sqrt{\mathbb{E}\|\mathbf{s}\|_2^2}$. In $d = 2$, a 2D Gaussian's mean length is $\frac{\sqrt{\pi}}{2} \approx 0.89$ of its RMS length ($0.125$ vs $0.141$); in $d \ge 20$, thin-shell norm concentration (§36.9) makes $\|\mathbf{s}\|_2$ nearly constant across sign patterns, reducing the slack to $< 1\%$.
+- **Why the bound becomes sharper in high dimensions:** The only inequality in our proof was Jensen's $\mathbb{E}\|\mathbf{s}\|_2 \le \sqrt{\mathbb{E}\|\mathbf{s}\|_2^2}$. In $d = 2$, a 2D Gaussian's mean length is $\frac{\sqrt{\pi}}{2} \approx 0.89$ of its RMS length ($0.125$ vs $0.141$); in $d \ge 20$, thin-shell norm concentration (§{sec_mdl-concentration-generalization}) makes $\|\mathbf{s}\|_2$ nearly constant across sign patterns, reducing the slack to $< 1\%$.
 :::
 
 ::: {.slide title="Where Uniform Convergence Stops: Fitting Random Labels"}

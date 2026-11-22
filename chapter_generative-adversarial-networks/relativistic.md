@@ -584,7 +584,7 @@ We can test every discrete assignment in $\{0, \ldots, n-1\}^n$ for $n = 2$ and 
 ::: {.col}
 - **What Sun et al. (2020) proved:** The fixed one-to-one coupling objective $\mathcal{E}_{\mathrm{diag}}$ has **$0$** suboptimal collision local minima ($0$ vs. $n^n - n!$), because any colliding point $x'_i$ not on a directed cycle can move toward $x_i$ along a flat plateau.
 - **What happens under minibatch re-pairing:** Drawing fresh independent minibatches from $p$ and $q$ at every step averages over random pairings, evaluating the **all-pairs expectation** $\mathcal{E}_{\mathrm{all}} = d_{\mathrm{Rp}}(\hat{p}, \hat{q}) - \log 2$ (which retains all $n^n - n!$ collision minima!).
-- **Takeaway:** In §16.4, our $2 \times 2$ experiment on 25 Gaussians confirms that $R_1 + R_2$ gradient penalties—not pairing alone—drive mode coverage.
+- **Takeaway:** In §{sec_gan_convergence}, our $2 \times 2$ experiment on 25 Gaussians confirms that $R_1 + R_2$ gradient penalties—not pairing alone—drive mode coverage.
 :::
 
 ::: {.col .fig .big}

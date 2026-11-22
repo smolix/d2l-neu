@@ -1051,7 +1051,7 @@ A common pitfall in language modeling is attempting to use perplexity (or model 
 ::: {.col}
 - **Stateless prefix re-evaluation (`step_fn(ids)`):** Re-running the network over $x_{1:t}$ at step $t$ performs $\sum_{t=1}^T t = O(T^2)$ cell updates.
 - **Stateful recurrent carry (`predict`):** Passing $\mathbf{H}_{t-1} \in \mathbb{R}^h$ forward costs **1 cell update per token** ($O(T)$ total) and a fixed $512$-byte state at any sequence length.
-- **Next horizon (Chapters 10–12):** Upgrade $\mathbf{H}_t$ with gates/SSMs so gradients survive in $O(1)$ space (Ch 12), or retain all past token K/V vectors via self-attention at $O(T)$ memory cost (Ch 10–11).
+- **Next horizon (Chapters §{num:chap_attention}–§{num:chap_modern_rnn}):** Upgrade $\mathbf{H}_t$ with gates/SSMs so gradients survive in $O(1)$ space (Ch 12), or retain all past token K/V vectors via self-attention at $O(T)$ memory cost (Ch 10–11).
 :::
 
 ::: {.col .fig .big}

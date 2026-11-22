@@ -1447,7 +1447,7 @@ Every concentration inequality in this section—Hoeffding, Bernstein, and sub-e
 :::
 
 - **What happens during training and model selection?** A learning algorithm inspects the dataset $S$, evaluates thousands or infinitely many candidate functions $f \in \mathcal{F}$, and selects the empirical winner $\hat{f} = \operatorname{argmin}_{f \in \mathcal{F}} \hat{R}_S(f)$.
-- **Selection bias of the minimum:** Even if every candidate has true risk $R(f) = 0.5$, the best of $1{,}000$ empirical averages on $n = 100$ examples systematically lands near $0.34$. Certifying a data-dependent choice $\hat{f}$ requires **uniform convergence** over the entire class $\mathcal{F}$ (§36.10).
+- **Selection bias of the minimum:** Even if every candidate has true risk $R(f) = 0.5$, the best of $1{,}000$ empirical averages on $n = 100$ examples systematically lands near $0.34$. Certifying a data-dependent choice $\hat{f}$ requires **uniform convergence** over the entire class $\mathcal{F}$ (§{sec_mdl-generalization-bounds}).
 :::
 
 ::: {.slide title="Comparing Concentration Tail Bounds"}

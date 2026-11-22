@@ -150,14 +150,14 @@ Hubel and Wiesel discovered that early visual cortex neurons respond to oriented
 :::
 :::
 
-::: {.slide title="Mathematical and Architectural Roadmap of Chapter 6"}
+::: {.slide title="Mathematical and Architectural Roadmap of Chapter §{num:chap_cnn}"}
 [Chapter Architecture]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **§§6.1–6.2 (Symmetry & Conv Layer):** Translation equivariance and locality yield 2D cross-correlation $\mathbf{Y} = \mathbf{X} \star \mathbf{K}$, executed via `im2col` GEMM.
-- **§§6.3–6.4 (Geometry & Channels):** Padding $p$, stride $s$, dilation $d$, 4D filter banks $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$, and $1 \times 1$ bottlenecks.
-- **§§6.5–6.6 (Pooling & LeNet):** Parameter-free pooling and end-to-end LeNet verification against our MLP.
+- **§§{sec_why-conv}–§{num:sec_conv_layer} (Symmetry & Conv Layer):** Translation equivariance and locality yield 2D cross-correlation $\mathbf{Y} = \mathbf{X} \star \mathbf{K}$, executed via `im2col` GEMM.
+- **§§{sec_padding}–§{num:sec_channels} (Geometry & Channels):** Padding $p$, stride $s$, dilation $d$, 4D filter banks $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$, and $1 \times 1$ bottlenecks.
+- **§§{sec_pooling}–§{num:sec_lenet} (Pooling & LeNet):** Parameter-free pooling and end-to-end LeNet verification against our MLP.
 :::
 
 ::: {.col .fig .big}
@@ -166,7 +166,7 @@ Hubel and Wiesel discovered that early visual cortex neurons respond to oriented
 :::
 :::
 
-::: {.slide title="Concrete Benchmarks Across Chapter 6"}
+::: {.slide title="Concrete Benchmarks Across Chapter §{num:chap_cnn}"}
 [Quantitative Anchors]{.kicker}
 
 ::: {.cols .vc}

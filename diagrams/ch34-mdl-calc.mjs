@@ -189,7 +189,7 @@ function elementaryRules() {
   o += card(278, 14, 246, 70, C.lblue, C.blue, '2. Power Rule (All Real n)', 'd/dx (xⁿ) = n xⁿ⁻¹', 'Holds on x > 0 via xⁿ = e^{n log x}', D.blue.dark);
   o += card(16, 96, 246, 70, C.lgreen, C.green, '3. Exponential & Base e', '(eˣ)′ = eˣ,  (aˣ)′ = (log a) aˣ', 'Unique base e where slope at 0 is 1', D.green.dark);
   o += card(278, 96, 246, 70, C.lamber, C.amber, '4. Natural Logarithm', 'd/dx (log x) = 1 / x  (x > 0)', 'Inverse of eˣ: 1 / e^{log x} = 1/x', D.orange.dark);
-  o += card(16, 178, 508, 68, D.purple.tint, C.purple, '5. Trigonometric Cycle: d/dx (sin x) = cos x,   d/dx (cos x) = −sin x', 'Why aˣ has slope proportional to height: (a^{x+ϵ} − aˣ)/ϵ = aˣ · ((a^ϵ − 1)/ϵ) → (log a) aˣ', '', D.purple.dark);
+  o += card(16, 178, 508, 68, D.purple.tint, C.purple, '5. Trigonometric Cycle: d/dx (sin x) = cos x,   d/dx (cos x) = −sin x', 'Why aˣ has slope proportional to height:   (a^{x+ϵ} − aˣ)/ϵ = aˣ · ((a^{ϵ} − 1)/ϵ) → (log a) aˣ', '', D.purple.dark);
   return svg(540, 260, o);
 }
 
@@ -253,7 +253,7 @@ function lsePartials() {
 function multivarGradient() {
   let o = card(20, 14, 500, 74, C.lblue, C.blue, 'Multivariable Differentiability: Genuine Linear Map Λ(ϵ)', 'ℓ(w + ϵ) = ℓ(w) + Λ(ϵ) + o(∥ϵ∥),  o(∥ϵ∥)/∥ϵ∥ → 0', 'Probing along axis eᵢ (ϵ = h eᵢ) forces Λ(eᵢ) = ∂ℓ/∂wᵢ', D.blue.dark);
   o += card(20, 104, 500, 138, C.lgreen, C.green, 'Uniqueness of the Gradient Dot Product', 'Λ(∑ᵢ ϵᵢ eᵢ) = ∑ᵢ ϵᵢ (∂ℓ/∂wᵢ) = ϵ · ∇_w ℓ(w)', 'Coordinate changes add up cleanly ONLY when ℓ is differentiable at w!', D.green.dark);
-  o += tx(270, 216, 'Column gradient ∇_w ℓ ∈ ℝ^N matches the exact shape of parameter vector w ∈ ℝ^N', { fs: 13.5, fw: 700, fill: D.green.dark });
+  o += tx(270, 216, 'Column gradient ∇_w ℓ ∈ ℝ^{N} matches the exact shape of parameter vector w ∈ ℝ^{N}', { fs: 13.5, fw: 700, fill: D.green.dark });
   return svg(540, 256, o);
 }
 
@@ -301,7 +301,7 @@ function criticalDiscBound() {
 }
 
 function hessianLse() {
-  let o = card(20, 14, 500, 74, C.lblue, C.blue, 'The Hessian Matrix H_f(x) = ∇²f(x): [H_f]_{ij} = ∂²f / (∂xᵢ ∂xⱼ)', 'LSE f(x) = log ∑_k e^{x_k} has gradient p = softmax(x):', '∂pᵢ/∂xⱼ = pᵢ δ_{ij} − pᵢ pⱼ   ⇒   H_f(x) = diag(p) − p pᵀ', D.blue.dark);
+  let o = card(20, 14, 500, 74, C.lblue, C.blue, 'The Hessian Matrix H_f(x) = ∇²f(x): [H_f]_{ij} = ∂²f / (∂xᵢ ∂xⱼ)', 'LSE f(x) = log ∑_{k} e^{x_k} has gradient p = softmax(x):', '∂pᵢ/∂xⱼ = pᵢ δ_{ij} − pᵢ pⱼ   ⇒   H_f(x) = diag(p) − p pᵀ', D.blue.dark);
   o += card(20, 104, 238, 140, C.lamber, C.amber, 'At (0, log 2): p = (⅓, ⅔)ᵀ', 'H_f = (2/9) [1, −1; −1, 1]', 'tr(H_f) = 4/9,   det(H_f) = 0', D.orange.dark);
   o += tx(139, 214, 'Positive semidefinite (H_f ⪰ 0)', { fs: 13.5, fw: 700, fill: D.orange.dark });
   o += card(282, 104, 238, 140, C.lgreen, C.green, 'Eigendirections of H_f', 'λ₁ = 0 along q₁ = (1, 1)ᵀ (flat shift)', 'λ₂ = 4/9 along q₂ = (1, −1)ᵀ (curved)', D.green.dark);
@@ -388,7 +388,7 @@ function pathSumRule() {
 }
 
 function resnetPaths() {
-  let o = card(20, 14, 500, 74, C.lblue, C.blue, 'Residual Stack: x_{l+1} = x_l + g_l(x_l)  Across l = 0, …, m − 1', 'dx_m/dx₀ = ∏_l (1 + g_l′(x_l)) = ∑_{S ⊆ {0..m−1}} ∏_{l∈S} g_l′(x_l)', 'Each block branches into an identity skip highway (slope 1) + residual branch g_l′', D.blue.dark);
+  let o = card(20, 14, 500, 74, C.lblue, C.blue, 'Residual Stack: x_{l+1} = x_l + g_l(x_l)  Across l = 0, …, m − 1', 'dx_{m}/dx₀ = ∏_{l} (1 + g_l′(x_l)) = ∑_{S ⊆ {0..m−1}} ∏_{l∈S} g_l′(x_l)', 'Each block branches into an identity skip highway (slope 1) + residual branch g_l′', D.blue.dark);
   o += card(20, 104, 238, 140, C.lgreen, C.green, '2ᵐ Total Paths Ensemble', 'C(m, k) paths visit k blocks', 'and skip m − k blocks with slope 1', D.green.dark);
   o += tx(139, 214, 'Unbroken gradient highway to x₀!', { fs: 13, fw: 700, fill: D.green.dark });
   o += card(282, 104, 238, 140, C.lamber, C.amber, 'Veit et al. (m = 54 ResNet)', '2⁵⁴ ≈ 1.8 × 10¹⁶ paths total', 'Most gradient flows via k ∈ [5, 17]', D.orange.dark);
@@ -492,12 +492,12 @@ function jacobianChainProof() {
   o += card(194, 16, 152, 106, C.lamber, C.amber, '2. Intermediate Shift', 'y = f(x) ↦ y + η', 'η = Aδ + o(∥δ∥) ∈ ℝᵖ', D.orange.dark);
   o += arrow(350, 69, 368, 69, C.green);
   o += card(372, 16, 152, 106, C.lgreen, C.green, '3. Outer Expansion', 'g(y+η) = g(y)+Bη+o(∥η∥)', '= g(y) + BAδ + o(∥δ∥)', D.green.dark);
-  o += card(16, 140, 508, 104, D.purple.tint, C.purple, 'Matrix Chain Rule: J_{g ∘ f}(x) = J_g(f(x)) · J_f(x) = B A ∈ ℝᵐˣⁿ', 'Entry (i, k): [BA]_{ik} = ∑_{j=1}^p (∂gᵢ / ∂yⱼ)(∂fⱼ / ∂xₖ)  (sums over all p intermediate coordinates yⱼ)', 'Unifies multivariable path sums (§34.3) with matrix multiplication (§33.2)!', D.purple.dark);
+  o += card(16, 140, 508, 104, D.purple.tint, C.purple, 'Matrix Chain Rule: J_{g ∘ f}(x) = J_g(f(x)) · J_f(x) = B A ∈ ℝᵐˣⁿ', 'Entry (i, k): [BA]_{ik} = ∑_{j=1}^{p} (∂gᵢ / ∂yⱼ)(∂fⱼ / ∂xₖ)  (sums over all p intermediate coordinates yⱼ)', 'Unifies multivariable path sums (§34.3) with matrix multiplication (§33.2)!', D.purple.dark);
   return svg(540, 258, o);
 }
 
 function deepJacobianNorms() {
-  let o = card(20, 14, 500, 68, C.lblue, C.blue, 'Deep Network Input–Output Jacobian: J = J_K J_{K−1} ⋯ J₁', 'For repeated weight matrix W = VΛV⁻¹ across K = 50 steps: W^K = V Λ^K V⁻¹ ~ |λ_max|^K', '', D.blue.dark);
+  let o = card(20, 14, 500, 68, C.lblue, C.blue, 'Deep Network Input–Output Jacobian: J = J_K J_{K−1} ⋯ J₁', 'For repeated weight matrix W = VΛV⁻¹ across K = 50 steps:   W^{K} = V Λ^{K} V⁻¹ ~ |λ_max|^{K}', '', D.blue.dark);
   o += card(20, 98, 238, 146, C.lamber, C.amber, 'Vanishing Gradients (|λ| < 1)', 'At |λ_max| = 0.9, depth K = 50:', '0.9⁵⁰ ≈ 0.005  (200× shrinkage)', D.orange.dark);
   o += tx(139, 214, 'At 0.5⁵⁰ ≈ 8.9 × 10⁻¹⁶ (stalls!)', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += card(282, 98, 238, 146, D.red.tint, D.red.base, 'Exploding Gradients (|λ| > 1)', 'At |λ_max| = 1.1, depth K = 50:', '1.1⁵⁰ ≈ 117.4  (exponential blowup)', D.red.dark);
@@ -586,12 +586,12 @@ function softmaxJacobianVar() {
 }
 
 function softmaxCeCancel() {
-  let o = card(16, 16, 152, 108, C.lblue, C.blue, '1. Logits z ∈ ℝ^C', 'p = softmax(z)', 'J_p = diag(p) − ppᵀ', D.blue.dark);
+  let o = card(16, 16, 152, 108, C.lblue, C.blue, '1. Logits z ∈ ℝ^{C}', 'p = softmax(z)', 'J_p = diag(p) − ppᵀ', D.blue.dark);
   o += arrow(172, 70, 190, 70, C.blue);
   o += card(194, 16, 152, 108, C.lamber, C.amber, '2. Cross-Entropy ℓ', 'ℓ(p) = −∑ᵢ yᵢ log pᵢ', '∂ℓ/∂pᵢ = −yᵢ / pᵢ', D.orange.dark);
   o += arrow(350, 70, 368, 70, C.green);
   o += card(372, 16, 152, 108, C.lgreen, C.green, '3. 1/pᵢ Cancels!', '−∑ᵢ (yᵢ/pᵢ) pᵢ(δᵢⱼ−pⱼ)', '= (∑ᵢ yᵢ) pⱼ − yⱼ', D.green.dark);
-  o += card(16, 140, 508, 104, D.purple.tint, C.purple, 'Clean Logit Gradient: ∇_z ℓ = p − y   (Whenever ∑_{i=1}^C yᵢ = 1)', 'Avoids dividing by tiny pᵢ ≈ 0 (numerical stability!) and gives prediction − target directly', 'Caution: if target y is unnormalized (e.g. two-hot ∑ yᵢ = 2), gradient is (∑ yᵢ)p − y = 2p − y!', D.purple.dark);
+  o += card(16, 140, 508, 104, D.purple.tint, C.purple, 'Clean Logit Gradient: ∇_z ℓ = p − y   (Whenever ∑_{i=1}^{C} yᵢ = 1)', 'Avoids dividing by tiny pᵢ ≈ 0 (numerical stability!) and gives prediction − target directly', 'Caution: if target y is unnormalized (e.g. two-hot ∑ yᵢ = 2), gradient is (∑ yᵢ)p − y = 2p − y!', D.purple.dark);
   return svg(540, 258, o);
 }
 
@@ -732,19 +732,19 @@ function densityAreaParadox() {
   let o = card(20, 14, 500, 70, C.lblue, C.blue, 'Standard Normal Density p(z) = (1/√(2π)) e^{−z²/2}: Height vs. Area', 'p(0) ≈ 0.3989 is the peak height, yet P(Z = 0) = ∫₀⁰ p(z) dz = 0!', 'Probability is area under p(z): P(−1 ≤ Z ≤ 1) = ∫_{−1}¹ p(z) dz ≈ 0.6827', D.blue.dark);
   o += card(20, 100, 238, 144, C.lamber, C.amber, 'Question 1: Definite Integrals', 'How to sum continuous height f(x)', 'across [a, b] without infinite sums?', D.orange.dark);
   o += tx(139, 214, 'Answer: FTC Antiderivatives G(b)−G(a)', { fs: 12.5, fw: 700, fill: D.orange.dark });
-  o += card(282, 100, 238, 144, C.lgreen, C.green, 'Question 2: Normalizer √(2π)', 'e^{−z²/2} has NO elementary G(z)!', 'Why is ∫_{−∞}^∞ e^{−z²/2} dz = √(2π)?', D.green.dark);
+  o += card(282, 100, 238, 144, C.lgreen, C.green, 'Question 2: Normalizer √(2π)', 'e^{−z²/2} has NO elementary G(z)!', 'Why is ∫_{−∞}^{∞} e^{−z²/2} dz = √(2π)?', D.green.dark);
   o += tx(401, 214, 'Answer: 2D Fubini + Polar Jacobian r', { fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(540, 258, o);
 }
 
 function ftcEvalPitfall() {
-  let o = card(20, 14, 500, 88, C.lgreen, C.green, 'Fundamental Theorem Evaluation Rule (FTC Part 2)', 'If f is continuous on [a, b] and G′(x) = f(x) for ALL x ∈ [a, b], then ∫_a^b f(x) dx = G(b) − G(a)', 'Running example: ∫₀² x/(1+x²) dx = [½ log(1+x²)]₀² = ½ log 5 ≈ 0.804719', D.green.dark);
+  let o = card(20, 14, 500, 88, C.lgreen, C.green, 'Fundamental Theorem Evaluation Rule (FTC Part 2)', 'If f is continuous on [a, b] and G′(x) = f(x) for ALL x ∈ [a, b], then ∫_{a}^{b} f(x) dx = G(b) − G(a)', 'Running example: ∫₀² x/(1+x²) dx = [½ log(1+x²)]₀² = ½ log 5 ≈ 0.804719', D.green.dark);
   o += card(20, 118, 500, 126, D.red.tint, D.red.base, 'Singular Antiderivative Trap: Why G′(x) = f(x) Must Hold at EVERY Point of [a, b]', 'False: ∫_{−1}¹ x⁻² dx = [−1/x]_{−1}¹ = (−1) − (+1) = −2 < 0,  though x⁻² > 0!', 'Why it fails: G(x) = −1/x blows up at x = 0 ∈ [−1, 1]; both ∫_{−1}⁰ x⁻² dx and ∫₀¹ x⁻² dx diverge to +∞!', D.red.dark);
   return svg(540, 258, o);
 }
 
 function improperPowerLaws() {
-  let o = card(20, 14, 238, 118, C.lblue, C.blue, 'Unbounded Tail: ∫₁^∞ x⁻ˢ dx', 'lim_{b→∞} (b^{1−s} − 1)/(1 − s)', 'Converges to 1/(s−1) iff s > 1!', D.blue.dark);
+  let o = card(20, 14, 238, 118, C.lblue, C.blue, 'Unbounded Tail: ∫₁^{∞} x⁻ˢ dx', 'lim_{b→∞} (b^{1−s} − 1)/(1 − s)', 'Converges to 1/(s−1) iff s > 1!', D.blue.dark);
   o += tx(139, 108, 'Diverges for s ≤ 1 (harmonic 1/x)', { fs: 12.5, fw: 700, fill: D.red.dark });
   o += card(282, 14, 238, 118, C.lamber, C.amber, 'Origin Blow-Up: ∫₀¹ x⁻ˢ dx', 'lim_{a→0⁺} (1 − a^{1−s})/(1 − s)', 'Converges to 1/(1−s) iff s < 1!', D.orange.dark);
   o += tx(401, 108, 'Diverges for s ≥ 1', { fs: 12.5, fw: 700, fill: D.red.dark });
@@ -753,8 +753,8 @@ function improperPowerLaws() {
 }
 
 function ibpStein() {
-  let o = card(20, 14, 500, 70, C.lblue, C.blue, 'Integration by Parts (Reversing the Product Rule (uv)′ = u′v + uv′)', '∫_a^b u(x) v′(x) dx  =  [u(x) v(x)]_a^b  −  ∫_a^b u′(x) v(x) dx', 'Shifts a derivative off v′ onto u′ at the cost of a boundary term [uv]_a^b', D.blue.dark);
-  o += card(20, 100, 500, 144, C.lgreen, C.green, "Stein's Identity for the Gaussian Bell w(z) = e^{−z²/2}  (where w′(z) = −z w(z))", '∫_{−∞}^∞ g′(z) w(z) dz = [g(z)w(z)]_{−∞}^∞ − ∫_{−∞}^∞ g(z)(−z w(z)) dz = ∫_{−∞}^∞ z g(z) w(z) dz', 'For Z ~ N(0, 1): E[Z g(Z)] = E[g′(Z)]   ⇒   g(z)=z gives E[Z²]=1;  g(z)=z³ gives E[Z⁴]=3E[Z²]=3!', D.green.dark);
+  let o = card(20, 14, 500, 70, C.lblue, C.blue, 'Integration by Parts (Reversing the Product Rule (uv)′ = u′v + uv′)', '∫_{a}^{b} u(x) v′(x) dx  =  [u(x) v(x)]_{a}^{b}  −  ∫_{a}^{b} u′(x) v(x) dx', 'Shifts a derivative off v′ onto u′ at the cost of a boundary term [uv]_{a}^{b}', D.blue.dark);
+  o += card(20, 100, 500, 144, C.lgreen, C.green, "Stein's Identity for the Gaussian Bell w(z) = e^{−z²/2}  (where w′(z) = −z w(z))", '∫_{−∞}^{∞} g′(z) w(z) dz = [g(z)w(z)]_{−∞}^{∞} − ∫_{−∞}^{∞} g(z)(−z w(z)) dz = ∫_{−∞}^{∞} z g(z) w(z) dz', 'For Z ~ N(0, 1): E[Z g(Z)] = E[g′(Z)]   ⇒   g(z)=z gives E[Z²]=1;  g(z)=z³ gives E[Z⁴]=3E[Z²]=3!', D.green.dark);
   return svg(540, 258, o);
 }
 
@@ -763,7 +763,7 @@ function flowDensityTransform() {
   o += arrow(172, 70, 190, 70, C.blue);
   o += card(194, 16, 152, 108, C.lamber, C.amber, 'Invertible Map φ', 'Y = φ(X)  (diffeo)', 'Vol scales by |det J_φ|', D.orange.dark);
   o += arrow(350, 70, 368, 70, C.green);
-  o += card(372, 16, 152, 108, C.lgreen, C.green, 'Target Y ~ p_Y', 'p_Y(φ(x)) |det J_φ| = p_X(x)', 'Mass conserved!', D.green.dark);
+  o += card(372, 16, 152, 108, C.lgreen, C.green, 'Target Y ~ p_Y', 'p_Y(φ(x)) |det J_φ|   = p_X(x)', 'Mass conserved!', D.green.dark);
   o += card(16, 140, 508, 104, D.purple.tint, C.purple, 'Exact Normalizing Flow Log-Likelihood Formula', 'log p_Y(φ(x)) = log p_X(x) − log |det J_φ(x)|', 'Expanding volume (|det J_φ| > 1) dilutes density; triangular coupling layers compute log |det J_φ| in O(n)!', D.purple.dark);
   return svg(540, 258, o);
 }
@@ -785,10 +785,10 @@ function mcRmseScaling() {
 }
 
 function integralSwap() {
-  let o = card(20, 14, 500, 72, D.purple.tint, C.purple, 'Differentiating Under the Integral Sign ("The Swap" on Fixed Support X)', 'd/dθ ∫_X f(x, θ) dx  =  ∫_X (∂f / ∂θ)(x, θ) dx', 'Exchanges limit of difference quotients (ϵ → 0) with limit of Riemann sums', D.purple.dark);
-  o += card(20, 102, 238, 142, C.lblue, C.blue, '1. Bounded Closed Interval [a, b]', 'Support endpoints a, b fixed (no θ)', 'Joint continuity of ∂_θ f(x, θ)', D.blue.dark);
+  let o = card(20, 14, 500, 72, D.purple.tint, C.purple, 'Differentiating Under the Integral Sign ("The Swap" on Fixed Support X)', 'd/dθ ∫_{X} f(x, θ) dx  =  ∫_{X} (∂f / ∂θ)(x, θ) dx', 'Exchanges limit of difference quotients (ϵ → 0) with limit of Riemann sums', D.purple.dark);
+  o += card(20, 102, 238, 142, C.lblue, C.blue, '1. Bounded Closed Interval [a, b]', 'Support endpoints a, b fixed (no θ)', 'Joint continuity of ∂_{θ} f(x, θ)', D.blue.dark);
   o += tx(139, 214, 'Sufficient for exact swap!', { fs: 13.5, fw: 700, fill: D.blue.dark });
-  o += card(282, 102, 238, 142, C.lgreen, C.green, '2. Unbounded Domain (e.g. ℝ)', 'Dominated Convergence bound:', '|∂_θ f(x, θ′)| ≤ M(x) with ∫ M dx < ∞', D.green.dark);
+  o += card(282, 102, 238, 142, C.lgreen, C.green, '2. Unbounded Domain (e.g. ℝ)', 'Dominated Convergence bound:', '|∂_{θ} f(x, θ′)| ≤ M(x) with ∫ M dx < ∞', D.green.dark);
   o += tx(401, 214, 'Gaussian tails e^{−x²/2} always qualify!', { fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(540, 258, o);
 }
@@ -803,8 +803,8 @@ function exponentialTilting() {
 }
 
 function movingSupportSign() {
-  let o = card(20, 14, 500, 68, C.lblue, C.blue, 'Moving-Support Pitfall: X ~ Uniform(0, θ) with Density p_θ(x) = 1/θ on [0, θ]', 'True mean: E[X] = ∫₀^θ (x/θ) dx = θ/2     ⇒     True derivative: d/dθ E[X] = +1/2', '', D.blue.dark);
-  o += card(20, 98, 238, 146, D.red.tint, D.red.base, 'Naive Interior Swap Alone', '∫₀^θ ∂_θ(x/θ) dx = ∫₀^θ (−x/θ²) dx', '= −1/2   (WRONG SIGN!)', D.red.dark);
+  let o = card(20, 14, 500, 68, C.lblue, C.blue, 'Moving-Support Pitfall: X ~ Uniform(0, θ) with Density p_θ(x) = 1/θ on [0, θ]', 'True mean: E[X] = ∫₀^{θ} (x/θ) dx = θ/2     ⇒     True derivative: d/dθ E[X] = +1/2', '', D.blue.dark);
+  o += card(20, 98, 238, 146, D.red.tint, D.red.base, 'Naive Interior Swap Alone', '∫₀^{θ} ∂_{θ}(x/θ) dx = ∫₀^{θ} (−x/θ²) dx', '= −1/2   (WRONG SIGN!)', D.red.dark);
   o += tx(139, 214, 'Misses moving upper wall b(θ) = θ', { fs: 13, fw: 700, fill: D.red.dark });
   o += arrow(262, 171, 278, 171, C.green);
   o += card(282, 98, 238, 146, C.lgreen, C.green, 'Full Leibniz Rule', 'Interior (−½) + Boundary f(θ,θ) b′(θ)', '= −1/2 + (θ/θ)(1) = −1/2 + 1 = +1/2!', D.green.dark);
@@ -855,8 +855,8 @@ function stepLossFailure() {
   let o = card(20, 14, 500, 70, C.lblue, C.blue, 'Step-Function Benchmark: g(x) = 1(x > 0) with X = θ + Z (Z ~ N(0, 1)) at θ = 1.5', 'True expectation: E[1(θ + Z > 0)] = P(Z > −θ) = Φ(θ)   ⇒   True slope: φ(1.5) ≈ 0.1295', '', D.blue.dark);
   o += card(20, 100, 238, 144, D.red.tint, D.red.base, 'Pathwise Fails (Biased = 0!)', 'd/dθ 1(θ + z > 0) = 0 for all z ≠ −θ', 'Jump occurs at single point z = −θ', D.red.dark);
   o += tx(139, 214, 'Returns 0 with probability 1 ≠ 0.1295!', { fs: 12.5, fw: 700, fill: D.red.dark });
-  o += card(282, 100, 238, 144, C.lgreen, C.green, 'Score Function Succeeds!', '1(θ + Z > 0) · Z  never diffs g(x)', 'E[1(Z > −θ) Z] = ∫_{−θ}^∞ z φ(z) dz', D.green.dark);
-  o += tx(401, 214, '= [−φ(z)]_{−θ}^∞ = φ(θ) ≈ 0.1295!', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
+  o += card(282, 100, 238, 144, C.lgreen, C.green, 'Score Function Succeeds!', '1(θ + Z > 0) · Z  never diffs g(x)', 'E[1(Z > −θ) Z] = ∫_{−θ}^{∞} z φ(z) dz', D.green.dark);
+  o += tx(401, 214, '= [−φ(z)]_{−θ}^{∞} = φ(θ) ≈ 0.1295!', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(540, 258, o);
 }
 

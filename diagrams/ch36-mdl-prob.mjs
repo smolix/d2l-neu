@@ -835,7 +835,7 @@ function uniformCenter() {
 
   o += box(284, 16, 236, 112, D.purple.tint, C.purple, 8, 2);
   o += tx(402, 38, "Centered on [−c, c], c=(b−a)/2", { fs: 13.5, fw: 700, fill: D.purple.dark });
-  o += tx(402, 68, "Var(X) = ∫₋c^c y²/(2c) dy = c²/3", { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(402, 68, "Var(X) = ∫_{−c}^{c} y²/(2c) dy = c²/3", { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(402, 98, "Var(X) = (b − a)² / 12", { mono: true, fs: 13.5, fw: 700, fill: D.purple.dark });
 
   // Bottom: Canonical benchmarks
@@ -1062,7 +1062,7 @@ function boundaryMinimal() {
   o += tx(401, 148, "∇²A(z)·1 = 0 (flat along 1)", { mono: true, fs: 11, fw: 600, fill: C.ink });
   o += tx(401, 184, "softmax(z + c·1) = softmax(z)", { mono: true, fs: 11.5, fw: 700, fill: D.blue.dark });
   o += tx(401, 208, "Exploited by log-sum-exp:", { fs: 11.5, fw: 600, fill: C.ink });
-  o += tx(401, 228, "subtract c = max_k z_k for stability!", { fs: 11.5, fw: 700, fill: D.green.dark });
+  o += tx(401, 228, "subtract c = max_{k} z_k for stability!", { fs: 11.5, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -1278,7 +1278,7 @@ function likVsProb() {
   o += tx(138, 126, "Hold parameter θ FIXED", { mono: true, fs: 12.5, fw: 700, fill: C.ink });
   o += tx(138, 150, "Vary dataset outcomes X", { fs: 12.5, fw: 600, fill: D.blue.dark });
   o += box(38, 170, 200, 38, "#FFFFFF", C.blue, 6, 1.5);
-  o += tx(138, 189, "∑_X P(X | θ) = 1", { mono: true, fs: 13.5, fw: 700, fill: D.blue.dark });
+  o += tx(138, 189, "∑_{X} P(X | θ) = 1", { mono: true, fs: 13.5, fw: 700, fill: D.blue.dark });
   o += tx(138, 228, "Forward data generation", { fs: 12, fill: C.muted });
 
   // Right: Likelihood
@@ -1287,7 +1287,7 @@ function likVsProb() {
   o += tx(402, 126, "Hold observed data X FIXED", { mono: true, fs: 12.5, fw: 700, fill: C.ink });
   o += tx(402, 150, "Vary candidate parameters θ", { fs: 12.5, fw: 600, fill: D.orange.dark });
   o += box(302, 170, 200, 38, "#FFFFFF", C.amber, 6, 1.5);
-  o += tx(402, 189, "θ̂_MLE = argmax_θ P(X | θ)", { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
+  o += tx(402, 189, "θ̂_MLE = argmax_{θ} P(X | θ)", { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += tx(402, 228, "Does NOT integrate to 1 over θ!", { fs: 12, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
@@ -1317,7 +1317,7 @@ function ceKlSplit() {
   let o = "";
   o += box(18, 14, 504, 50, C.lblue, C.blue, 8, 2);
   o += tx(270, 32, "Average NLL Equals Cross-Entropy From Empirical Data to Model", { fs: 14, fw: 700, fill: D.blue.dark });
-  o += tx(270, 52, "(1/n) ℓ(θ) = −∑_x p̂_data(x) log p_θ(x) = CE(p̂_data, p_θ)", { mono: true, fs: 12.5, fw: 700, fill: C.ink });
+  o += tx(270, 52, "(1/n) ℓ(θ) = −∑_{x} p̂_data(x) log p_θ(x) = CE(p̂_data, p_θ)", { mono: true, fs: 12.5, fw: 700, fill: C.ink });
 
   // Stacked horizontal bar showing CE = H + KL
   // Columns: the stacked bar (CE = H + KL) and the cards below share edges.
@@ -1338,7 +1338,7 @@ function ceKlSplit() {
 
   o += box(rx, 160, rw, 88, "#FFFFFF", C.amber, 8, 1.8);
   o += tx(rx + rw / 2, 182, "MLE = Forward KL Projection", { fs: 13.5, fw: 700, fill: D.orange.dark });
-  o += tx(rx + rw / 2, 206, "θ̂ = argmin_θ D_KL(p̂||p_θ)", { mono: true, fs: 11.5, fw: 700, fill: C.ink });
+  o += tx(rx + rw / 2, 206, "θ̂ = argmin_{θ} D_KL(p̂||p_θ)", { mono: true, fs: 11.5, fw: 700, fill: C.ink });
   o += tx(rx + rw / 2, 228, "Matches empirical data frequencies", { fs: 12, fill: C.muted });
   return svg(W, H, o);
 }
@@ -1378,7 +1378,7 @@ function fisherDuality() {
   // Left: First-order score variance
   o += box(18, 80, 214, 118, C.lblue, C.blue, 8, 2);
   o += tx(125, 104, "1st-Order View: Score Spread", { fs: 13, fw: 700, fill: D.blue.dark });
-  o += tx(125, 134, "Var_θ[ s(x; θ) ]", { mono: true, fs: 13.5, fw: 700, fill: C.ink });
+  o += tx(125, 134, "Var_{θ}[ s(x; θ) ]", { mono: true, fs: 13.5, fw: 700, fill: C.ink });
   o += tx(125, 158, "= E_θ[ s(x;θ) s(x;θ)ᵀ ]", { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
   o += tx(125, 182, "How wildly gradients fluctuate", { fs: 11.5, fill: C.muted });
 
@@ -1389,7 +1389,7 @@ function fisherDuality() {
   // Right: Second-order NLL curvature
   o += box(308, 80, 214, 118, C.lgreen, C.green, 8, 2);
   o += tx(415, 104, "2nd-Order View: NLL Bowl", { fs: 13, fw: 700, fill: D.green.dark });
-  o += tx(415, 134, "E_θ[ −∇²_θ log p(x|θ) ]", { mono: true, fs: 13, fw: 700, fill: C.ink });
+  o += tx(415, 134, "E_θ[ −∇²_{θ} log p(x|θ) ]", { mono: true, fs: 13, fw: 700, fill: C.ink });
   o += tx(415, 158, "= Expected Hessian of NLL", { fs: 12, fw: 700, fill: D.green.dark });
   o += tx(415, 182, "How sharply loss pins down θ", { fs: 11.5, fill: C.muted });
 
@@ -1539,7 +1539,7 @@ function latentDag() {
 
   o += box(rx, 138, 262, 104, C.lamber, C.amber, 8, 2);
   o += tx(rx + 131, 160, "2. Marginal Likelihood (Evidence)", { fs: 14, fw: 700, fill: D.orange.dark });
-  o += tx(rx + 131, 188, "p(x|θ) = ∑_z p(z|θ) p(x|z,θ)", { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
+  o += tx(rx + 131, 188, "p(x|θ) = ∑_{z} p(z|θ) p(x|z,θ)", { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += tx(rx + 131, 216, "Sums over all hidden paths to x", { fs: 12, fill: C.ink });
   return svg(W, H, o);
 }
@@ -1556,13 +1556,13 @@ function oracleVsMixture() {
   o += tx(138, 156, "Decouples into K quadratics:", { fs: 11.5, fill: C.muted });
   o += tx(138, 184, "π̂_k = n_k / n", { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   o += tx(138, 208, "μ̂_k = (1/n_k) ∑_{zᵢ=k} xᵢ", { mono: true, fs: 12, fw: 700, fill: D.green.dark });
-  o += tx(138, 232, "σ̂²_k = (1/n_k) ∑_{zᵢ=k}(xᵢ−μ̂_k)²", { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
+  o += tx(138, 232, "σ̂_{k}² = (1/n_k) ∑_{zᵢ=k}(xᵢ−μ̂_k)²", { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
 
   // Right: Observed mixture log of sum
   o += box(282, 16, 240, 234, D.red.tint, D.red.base, 8, 2);
   o += tx(402, 40, "Observed Mixture (zᵢ Hidden)", { fs: 13, fw: 700, fill: D.red.dark });
   o += box(292, 60, 220, 46, "#FFFFFF", D.red.base, 6, 1.8);
-  o += tx(402, 83, "log [ ∑_k π_k N(xᵢ; μ_k, σ²_k) ]", { mono: true, fs: 10.5, fw: 700, fill: D.red.dark });
+  o += tx(402, 83, "log [ ∑_{k} π_k N(xᵢ; μ_k, σ_{k}²) ]", { mono: true, fs: 10.5, fw: 700, fill: D.red.dark });
   o += tx(402, 128, "Sum trapped INSIDE logarithm!", { fs: 12, fw: 700, fill: D.red.dark });
   o += tx(402, 156, "Logarithm cannot reach exp(·)", { fs: 11.5, fill: C.ink });
   o += tx(402, 184, "∇ℓ = 0 couples all 3K params", { fs: 12, fw: 700, fill: C.ink });
@@ -1647,12 +1647,12 @@ function jensenElbo() {
   const rx = 282;
   o += box(rx, 26, 240, 104, C.lblue, C.blue, 8, 2);
   o += tx(rx + 120, 48, "1. Multiply & Divide by q(z)", { fs: 13.5, fw: 700, fill: D.blue.dark });
-  o += tx(rx + 120, 74, "log p(x|θ) = log ∑_z q(z)[p/q]", { mono: true, fs: 11.5, fw: 700, fill: C.ink });
+  o += tx(rx + 120, 74, "log p(x|θ) = log ∑_{z} q(z)[p/q]", { mono: true, fs: 11.5, fw: 700, fill: C.ink });
   o += tx(rx + 120, 100, "= log E_q[ p(x,z|θ) / q(z) ]", { mono: true, fs: 11.5, fw: 700, fill: D.blue.dark });
 
   o += box(rx, 144, 240, 104, C.lgreen, C.green, 8, 2);
   o += tx(rx + 120, 166, "2. Push log Inside via Jensen", { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(rx + 120, 192, "≥ ∑_z q(z) log[ p(x,z|θ) / q(z) ]", { mono: true, fs: 11, fw: 700, fill: C.ink });
+  o += tx(rx + 120, 192, "≥ ∑_{z} q(z) log[ p(x,z|θ) / q(z) ]", { mono: true, fs: 11, fw: 700, fill: C.ink });
   o += tx(rx + 120, 218, "=: L(q, θ)  (ELBO Lower Bound)", { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
@@ -1666,7 +1666,7 @@ function elboAnatomy() {
   // Left: Expected complete-data log-likelihood
   o += box(18, 82, 240, 168, C.lblue, C.blue, 8, 2);
   o += tx(138, 106, "1. Expected Complete Log-Lik", { fs: 13.5, fw: 700, fill: D.blue.dark });
-  o += tx(138, 134, "∑_z q(z) log p(x, z | θ)", { mono: true, fs: 13, fw: 700, fill: C.ink });
+  o += tx(138, 134, "∑_{z} q(z) log p(x, z | θ)", { mono: true, fs: 13, fw: 700, fill: C.ink });
   o += tx(138, 164, "• Tractable oracle objective!", { fs: 12.5, fw: 600, fill: D.blue.dark });
   o += tx(138, 190, "• Soft weights q(z) stand in", { fs: 12, fill: C.ink });
   o += tx(138, 210, "  for missing oracle labels", { fs: 12, fill: C.ink });
@@ -1675,7 +1675,7 @@ function elboAnatomy() {
   // Right: Entropy bonus H(q)
   o += box(282, 82, 240, 168, C.lamber, C.amber, 8, 2);
   o += tx(402, 106, "2. Shannon Entropy Bonus H(q)", { fs: 13.5, fw: 700, fill: D.orange.dark });
-  o += tx(402, 134, "−∑_z q(z) log q(z) ≥ 0", { mono: true, fs: 13, fw: 700, fill: C.ink });
+  o += tx(402, 134, "−∑_{z} q(z) log q(z) ≥ 0", { mono: true, fs: 13, fw: 700, fill: C.ink });
   o += tx(402, 164, "• Penalizes overconfident hard", { fs: 12.5, fw: 600, fill: D.orange.dark });
   o += tx(402, 186, "  0/1 guesses (where H(q) = 0)", { fs: 12, fill: C.ink });
   o += tx(402, 210, "• Independent of parameters θ", { fs: 12, fill: C.ink });
@@ -1732,7 +1732,7 @@ function emLoop() {
   o += tx(409, 104, "M-Step: Optimize θ", { fs: 14.5, fw: 700, fill: D.green.dark });
   o += tx(409, 128, "Hold qᵢ⁽ᵗ⁾ fixed (H(qᵢ) drops)", { fs: 12, fw: 600, fill: C.muted });
   o += box(312, 144, 194, 42, "#FFFFFF", C.green, 6, 1.8);
-  o += tx(409, 165, "max_θ ∑ᵢ E_{qᵢ}[log p(xᵢ,z|θ)]", { fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(409, 165, "max_{θ} ∑ᵢ E_{qᵢ}[log p(xᵢ,z|θ)]", { fs: 12.5, fw: 700, fill: D.green.dark });
   o += tx(409, 206, "Climbs lower bound:", { fs: 12, fw: 700, fill: C.ink });
   o += tx(409, 226, "log P(X|θ⁽ᵗ⁺¹⁾) ≥ log P(X|θ⁽ᵗ⁾)", { fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
@@ -1770,8 +1770,8 @@ function gmmSpikes() {
 
   o += box(rx, 144, 240, 104, C.lgreen, C.green, 8, 2);
   o += tx(rx + 120, 166, "Practical Remedies", { fs: 14, fw: 700, fill: D.green.dark });
-  o += tx(rx + 120, 192, "• Variance floor σ²_k ≥ σ²_min > 0", { fs: 12.5, fw: 600, fill: C.ink });
-  o += tx(rx + 120, 218, "• Inverse-Gamma prior on σ²_k", { fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(rx + 120, 192, "• Variance floor σ_{k}² ≥ σ_{min}² > 0", { fs: 12.5, fw: 600, fill: C.ink });
+  o += tx(rx + 120, 218, "• Inverse-Gamma prior on σ_{k}²", { fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -2068,7 +2068,7 @@ function depthNormDrift() {
   // Layer chain h0 -> h1 -> ... -> hK
   const lx = [24, 152, 280, 408];
   const labs = ["h₀", "h₁ = ReLU(W₁h₀)", "h₂ = ReLU(W₂h₁)", "h_K (depth K)"];
-  const subs = ["‖h₀‖²", "ρ₁ = ‖h₁‖²/‖h₀‖²", "ρ₂ = ‖h₂‖²/‖h₁‖²", "∏_{k=1}^K ρ_k"];
+  const subs = ["‖h₀‖²", "ρ₁ = ‖h₁‖²/‖h₀‖²", "ρ₂ = ‖h₂‖²/‖h₁‖²", "∏_{k=1}^{K} ρ_k"];
   lx.forEach((x, i) => {
     o += box(x, 78, 108, 62, i === 3 ? C.lamber : "#FFFFFF", i === 3 ? C.amber : C.blue, 7, 2);
     o += tx(x + 54, 98, labs[i], { mono: true, fs: 11.5, fw: 700, fill: i === 3 ? D.orange.dark : D.blue.dark });
@@ -2179,7 +2179,7 @@ function uniformSup() {
   o += path(dLo, C.green, "none", 1.5, true);
   o += path(dTrue, C.blue, "none", 2.8);
   o += path(dEmp, D.orange.base, "none", 2.5);
-  o += tx(x0 + gw / 2, 20, "Uniform Tube: sup_f |R̂_S(f)−R(f)| ≤ t", { fs: 12.5, fw: 700, fill: D.blue.dark });
+  o += tx(x0 + gw / 2, 20, "Uniform Tube: sup_{f} |R̂_S(f)−R(f)| ≤ t", { fs: 12.5, fw: 700, fill: D.blue.dark });
   o += tx(x0 + 68, 44, "True R(f) ± t band", { fs: 11.5, fw: 700, fill: D.green.dark });
   o += tx(x0 + 150, 188, "Empirical R̂_S(f)", { fs: 11.5, fw: 700, fill: D.orange.dark });
   o += tx(x0 + gw / 2, y0 + 22, "Function class F (includes winner f̂)", { fs: 11.5, fw: 600, fill: C.ink });
@@ -2187,12 +2187,12 @@ function uniformSup() {
   const rx = 284;
   o += box(rx, 24, 238, 104, D.red.tint, D.red.base, 8, 2);
   o += tx(rx + 119, 46, "Why Pointwise Fails on f̂(S)", { fs: 13.5, fw: 700, fill: D.red.dark });
-  o += tx(rx + 119, 72, "f̂ = argmin_f R̂_S(f) depends on S", { mono: true, fs: 11, fw: 700, fill: C.ink });
+  o += tx(rx + 119, 72, "f̂ = argmin_{f} R̂_S(f) depends on S", { mono: true, fs: 11, fw: 700, fill: C.ink });
   o += tx(rx + 119, 98, "Picks the largest downward dip!", { fs: 12, fw: 700, fill: D.red.dark });
 
   o += box(rx, 144, 238, 104, C.lgreen, C.green, 8, 2);
   o += tx(rx + 119, 166, "Uniform Convergence Remedy", { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(rx + 119, 192, "|R̂_S(f̂)−R(f̂)| ≤ sup_f |R̂_S(f)−R(f)|", { mono: true, fs: 10.5, fw: 700, fill: C.ink });
+  o += tx(rx + 119, 192, "|R̂_S(f̂)−R(f̂)| ≤ sup_{f} |R̂_S(f)−R(f)|", { mono: true, fs: 10.5, fw: 700, fill: C.ink });
   o += tx(rx + 119, 218, "Covers EVERY f ∈ F simultaneously!", { fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
@@ -2272,8 +2272,8 @@ function symmetrizationGhost() {
   let o = "";
   const steps = [
     { y: 14, t: "Step 1 (Ghost Sample S'): Replace Population Risk R(g) = E_{S'}[R̂_{S'}(g)]", f: "E_S[sup_{g∈G}(R(g)−R̂_S(g))] ≤ E_{S,S'}[sup_{g∈G} (1/n) ∑ᵢ (g(z'ᵢ) − g(zᵢ))]", fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 98, t: "Step 2 (Exchangeable Swap zᵢ ↔ z'ᵢ): Multiply Differences by εᵢ ∈ {±1}", f: "Since zᵢ, z'ᵢ are i.i.d.: = E_{S,S',ε}[sup_g (1/n) ∑ᵢ εᵢ(g(z'ᵢ) − g(zᵢ))]", fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { y: 182, t: "Step 3 (Split the Supremum of a Sum): Factor of 2 Emerges", f: "≤ E_{S',ε}[sup_g (1/n)∑ εᵢg(z'ᵢ)] + E_{S,ε}[sup_g (1/n)∑ (−εᵢ)g(zᵢ)] = 2 R_n(G)", fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { y: 98, t: "Step 2 (Exchangeable Swap zᵢ ↔ z'ᵢ): Multiply Differences by εᵢ ∈ {±1}", f: "Since zᵢ, z'ᵢ are i.i.d.: = E_{S,S',ε}[sup_{g} (1/n) ∑ᵢ εᵢ(g(z'ᵢ) − g(zᵢ))]", fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { y: 182, t: "Step 3 (Split the Supremum of a Sum): Factor of 2 Emerges", f: "≤ E_{S',ε}[sup_{g} (1/n)∑ εᵢg(z'ᵢ)] + E_{S,ε}[sup_{g} (1/n)∑ (−εᵢ)g(zᵢ)] = 2 R_n(G)", fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   steps.forEach((s, i) => {
     o += box(18, s.y, 504, 68, s.fill, s.st, 8, 2);
@@ -2343,8 +2343,8 @@ function cleanVsNoise() {
   const W = 540, H = 264;
   let o = "";
   o += box(18, 14, 504, 50, C.lblue, C.blue, 8, 2);
-  o += tx(270, 32, "Linearity of Pseudoinverse on Noisy Targets y = y₀ + ξ (Cov(ξ) = σ²_ξ Iₙ)", { fs: 13, fw: 700, fill: D.blue.dark });
-  o += tx(270, 52, "w = Φ⁺ y₀ + Φ⁺ ξ   ⇒   E_ξ[MSE_test] = Clean Error + Noise Error", { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(270, 32, "Linearity of Pseudoinverse on Noisy Targets y = y₀ + ξ (Cov(ξ) = σ_{ξ}² Iₙ)", { fs: 13, fw: 700, fill: D.blue.dark });
+  o += tx(270, 52, "w = Φ⁺ y₀ + Φ⁺ ξ   ⇒   E_ξ[MSE_{test}] = Clean Error + Noise Error", { mono: true, fs: 12, fw: 700, fill: C.ink });
 
   // Left: Clean target approximation error
   o += box(18, 82, 240, 168, C.lamber, C.amber, 8, 2);
@@ -2359,7 +2359,7 @@ function cleanVsNoise() {
   o += box(282, 82, 240, 168, C.lgreen, C.green, 8, 2);
   o += tx(402, 106, "2. Noise Amplification Error", { fs: 13.5, fw: 700, fill: D.green.dark });
   o += box(290, 120, 224, 48, "#FFFFFF", C.green, 6, 1.5);
-  o += tx(402, 135, "σ²_ξ · (1/n) ∑ᵢ rᵢ", { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(402, 135, "σ_{ξ}² · (1/n) ∑ᵢ rᵢ", { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   o += tx(402, 155, "rᵢ = (‖Φ_te vᵢ‖²/n_te) / (σ²ᵢ/n)", { fs: 12, fw: 600, fill: D.green.dark });
   o += tx(402, 188, "• Average test-to-train feature", { fs: 11.5, fw: 600, fill: C.ink });
   o += tx(402, 210, "  energy ratio across n directions", { fs: 11.5, fill: C.ink });
@@ -2376,7 +2376,7 @@ function benignDirections() {
   // Left: Threshold p = n = 40 accidental pinch
   o += box(18, 76, 240, 174, D.red.tint, D.red.base, 8, 2);
   o += tx(138, 100, "Threshold p = n = 40 (Catastrophic)", { fs: 12.5, fw: 700, fill: D.red.dark });
-  o += tx(138, 126, "Train denominator σ²_min/n ≈ 10⁻⁵", { mono: true, fs: 11, fw: 700, fill: D.red.dark });
+  o += tx(138, 126, "Train denominator σ_{min}²/n ≈ 10⁻⁵", { mono: true, fs: 11, fw: 700, fill: D.red.dark });
   o += tx(138, 150, "Test numerator stays O(1) normal!", { fs: 11.5, fw: 700, fill: C.ink });
   o += box(36, 168, 204, 40, "#FFFFFF", D.red.base, 6, 1.8);
   o += tx(138, 188, "Energy Ratio ≈ 10⁴×!", { mono: true, fs: 13, fw: 700, fill: D.red.dark });
@@ -2413,7 +2413,7 @@ function genVsDiscRoute() {
   o += arrow(362, 80, 388, 80, C.purple);
   o += box(392, 54, 116, 52, "#FFFFFF", C.green, 6, 1.8);
   o += tx(450, 72, "Invert to Label", { fs: 12, fw: 700, fill: D.green.dark });
-  o += tx(450, 92, "argmax_y s_y(x)", { mono: true, fs: 11, fw: 700, fill: D.green.dark });
+  o += tx(450, 92, "argmax_{y} s_y(x)", { mono: true, fs: 11, fw: 700, fill: D.green.dark });
 
   // Bottom: Discriminative route
   o += box(18, 140, 504, 108, C.lamber, C.amber, 8, 2);
@@ -2504,7 +2504,7 @@ function missingPixels() {
   // Right: Pitfall of setting x_j = 0 in W^T x + b
   o += box(280, 78, 242, 172, D.red.tint, D.red.base, 8, 2);
   o += tx(401, 100, "2. Pitfall: Setting xⱼ = 0 in Wᵀx+b", { fs: 13, fw: 700, fill: D.red.dark });
-  o += tx(401, 126, "b_y = log p(y) + ∑_j log(1−θ_{jy})", { fs: 12, fw: 700, fill: C.ink });
+  o += tx(401, 126, "b_y = log p(y) + ∑_{j} log(1−θ_{jy})", { fs: 12, fw: 700, fill: C.ink });
   o += tx(401, 150, "already includes log(1 − θ_{jy})!", { fs: 12, fw: 700, fill: D.red.dark });
   o += box(296, 162, 210, 52, "#FFFFFF", D.red.base, 6, 1.8);
   o += tx(401, 188, "Treats occluded pixel as BLANK", { fs: 11.5, fw: 700, fill: D.red.dark });

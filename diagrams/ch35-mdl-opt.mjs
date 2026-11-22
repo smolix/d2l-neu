@@ -574,7 +574,7 @@ function mahalanobisSteepest() {
     { t: 'd = −∇f(x)  (zig-zags)', mono: true, fs: 13.5, fw: 700, fill: D.red.dark },
   ]);
 
-  o += titledPanel(280, 14, 240, 188, 'Hessian Norm ‖d‖_P = 1', D.green, [
+  o += titledPanel(280, 14, 240, 188, 'Hessian Norm ‖d‖_{P} = 1', D.green, [
     { t: 'min ∇f(x)ᵀd  s.t. dᵀPd = 1', mono: true, fs: 12.5, fill: C.ink },
     { t: 'Ellipsoid aligns with', fs: 13, fill: C.ink },
     { t: 'level sets of quadratic bowl', fs: 13, fill: C.ink },
@@ -817,7 +817,7 @@ function intersectionHull() {
     { t: 'C = ⋂ᵢ Cᵢ  is always convex', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
     { t: 'Top-Down Construction:', fs: 13, fw: 700, fill: C.ink },
     { t: '• Simplex Δ: 1 plane ∩ d half-spaces', fs: 12.5, fill: C.ink },
-    { t: '• PSD Cone S₊ᵈ: ⋂_z {zᵀAz ≥ 0}', fs: 12.5, fill: C.ink },
+    { t: '• PSD Cone S₊ᵈ: ⋂_{z} {zᵀAz ≥ 0}', fs: 12.5, fill: C.ink },
   ]);
 
   o += titledPanel(280, 14, 240, 188, '2. Convex Hull conv(S)', D.green, [
@@ -1034,7 +1034,7 @@ function secondMomentBalance() {
   ]);
 
   o += card(20, 206, 500, 56, C.lamber, C.amber, [
-    { t: 'Linear Batch-Size Scaling Rule:  E[f(x_∞)] ≈ η tr(Σ) / (4b)', mono: true, fs: 14, fw: 700, fill: D.orange.dark },
+    { t: 'Linear Batch-Size Scaling Rule:  E[f(x_{∞})] ≈ η tr(Σ) / (4b)', mono: true, fs: 14, fw: 700, fill: D.orange.dark },
     { t: 'Halving learning rate η and doubling batch size b cut the loss floor by the same factor', fs: 13, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -1386,7 +1386,7 @@ function adamScaleInvariance() {
 
   o += card(20, 224, 500, 70, C.lamber, C.amber, [
     { t: 'Consequence: On ½(x₁² + 1000 x₂²) from (1, 1), Adam follows x_{t,1} = x_{t,2}', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
-    { t: 'Identical trajectory to the isotropic bowl ½(x₁² + x₂²): iteration count scales with ‖x₀‖_∞ / η', fs: 12.5, fill: C.ink },
+    { t: 'Identical trajectory to the isotropic bowl ½(x₁² + x₂²): iteration count scales with ‖x₀‖_{∞} / η', fs: 12.5, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -1470,7 +1470,7 @@ function adamwLinfBox() {
     { t: 'Uniform shrinkage across all', fs: 13, fill: C.ink },
     { t: 'gradient noise scales!', fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Exact-gradient fixed point (ε→0):', fs: 12.5, fill: C.ink },
-    { t: 'ℓ_∞ Box: ‖w*‖_∞ ≤ 1 / λ', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
+    { t: 'ℓ_{∞} Box: ‖w*‖_{∞} ≤ 1 / λ', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
   ]);
 
   o += card(20, 218, 500, 50, D.purple.tint, C.purple, [
@@ -1729,7 +1729,7 @@ function softThresholdingProx() {
 
   o += card(280, 16, 240, 76, C.lblue, C.blue, [
     { t: 'Proximal Operator Definition', fs: 14, fw: 700, fill: D.blue.dark },
-    { t: 'prox_ψ(z) = argmin_x (ψ(x) + ½‖x−z‖²)', mono: true, fs: 11.5, fill: C.ink },
+    { t: 'prox_{ψ}(z) = argmin_{x} (ψ(x) + ½‖x−z‖²)', mono: true, fs: 11.5, fill: C.ink },
     { t: 'Balances kinked ψ against tether', fs: 12.5, fill: C.muted },
   ]);
 
@@ -1741,7 +1741,7 @@ function softThresholdingProx() {
 
   o += card(280, 190, 240, 76, D.purple.tint, C.purple, [
     { t: 'Unifies Projection & Lasso', fs: 14, fw: 700, fill: D.purple.dark },
-    { t: '• ψ = I_C  ⇒  prox_ψ = Π_C', mono: true, fs: 12.5, fill: C.ink },
+    { t: '• ψ = I_C  ⇒  prox_{ψ} = Π_C', mono: true, fs: 12.5, fill: C.ink },
     { t: '• ψ = λ‖w‖₁ ⇒  ISTA exact zeros', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
@@ -1761,7 +1761,7 @@ function dualLowerBoundCert() {
   o += card(20, 68, 152, 130, C.lgreen, C.green, [
     { t: 'Dual Lower Bound', fs: 14, fw: 700, fill: D.green.dark },
     { t: 'Any λ ≥ 0 gives', fs: 13, fill: C.ink },
-    { t: 'q(λ) = inf_x L(x,λ)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'q(λ) = inf_{x} L(x,λ)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     { t: 'q(3) = 7.875 ≤ p*', mono: true, fs: 13, fw: 700, fill: C.ink },
   ]);
 
@@ -1803,12 +1803,12 @@ function concaveInfimumEnvelope() {
   o += path('M 36 202 Q 142 72 248 216', C.green, 'none', 3.5, false);
   o += circle(136.6, 140.3, 5.5, D.orange.base, '#FFFFFF', 1.5);
   o += fitTx(142, 38, 'Affine family λ ↦ f(x) + λg(x)', 228, { fs: 12.5, fw: 600, fill: C.muted });
-  o += fitTx(142, 246, 'Lower envelope q(λ) = inf_x L(x, λ)', 228, { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
+  o += fitTx(142, 246, 'Lower envelope q(λ) = inf_{x} L(x, λ)', 228, { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
 
   o += card(280, 16, 240, 76, C.lgreen, C.green, [
     { t: 'Universal Concavity of q', fs: 14, fw: 700, fill: D.green.dark },
     { t: 'For fixed x: (λ,ν) ↦ L(x,λ,ν)', mono: true, fs: 12, fill: C.ink },
-    { t: 'is affine ⇒ inf_x is ALWAYS concave', fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'is affine ⇒ inf_{x} is ALWAYS concave', fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
 
   o += card(280, 103, 240, 76, C.lblue, C.blue, [
@@ -1856,7 +1856,7 @@ function saddleMinmaxGame() {
   const W = 540, H = 320;
   let o = '';
   o += card(20, 12, 500, 44, D.purple.tint, C.purple, [
-    { t: 'Min–Max Swapability:  d* = sup_{λ⪰0} inf_x L(x,λ)  ≤  inf_x sup_{λ⪰0} L(x,λ) = p*', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
+    { t: 'Min–Max Swapability:  d* = sup_{λ⪰0} inf_{x} L(x,λ)  ≤  inf_{x} sup_{λ⪰0} L(x,λ) = p*', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
   ]);
 
   o += card(20, 70, 152, 130, C.lgreen, C.green, [
@@ -1895,7 +1895,7 @@ function saddleMinmaxGame() {
 function bilinearGdaSpiral() {
   const W = 540, H = 280;
   let o = '';
-  o += titledPanel(20, 14, 240, 188, 'Simultaneous GDA on min_x max_y xy', D.red, [
+  o += titledPanel(20, 14, 240, 188, 'Simultaneous GDA on min_{x} max_{y} xy', D.red, [
     { t: 'xₖ₊₁ = xₖ − η yₖ', mono: true, fs: 13.5, fw: 700, fill: C.ink },
     { t: 'yₖ₊₁ = yₖ + η xₖ', mono: true, fs: 13.5, fw: 700, fill: C.ink },
     { t: 'rₖ₊₁² = (1 + η²) rₖ²', mono: true, fs: 14, fw: 700, fill: D.red.dark },
@@ -1920,7 +1920,7 @@ function weightDecayNormBall() {
   let o = '';
   o += card(20, 14, 186, 174, C.lblue, C.blue, [
     { t: 'Penalized Ridge Form', fs: 14.5, fw: 700, fill: D.blue.dark },
-    { t: 'min_w  ℓ(w) + (λ/2)‖w‖₂²', mono: true, fs: 13, fw: 700, fill: C.ink },
+    { t: 'min_{w}  ℓ(w) + (λ/2)‖w‖₂²', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'Fix weight decay λ > 0', fs: 13, fill: C.ink },
     { t: 'Minimizer w_λ defines radius', fs: 12.5, fill: C.muted },
     { t: 'r = ‖w_λ‖₂', mono: true, fs: 14, fw: 700, fill: D.blue.dark },
@@ -1933,7 +1933,7 @@ function weightDecayNormBall() {
 
   o += card(334, 14, 186, 174, C.lgreen, C.green, [
     { t: 'Constrained Norm Ball', fs: 14.5, fw: 700, fill: D.green.dark },
-    { t: 'min_w ℓ(w)  s.t. ½‖w‖₂² ≤ ½r²', mono: true, fs: 12, fw: 700, fill: C.ink },
+    { t: 'min_{w} ℓ(w)  s.t. ½‖w‖₂² ≤ ½r²', mono: true, fs: 12, fw: 700, fill: C.ink },
     { t: 'Fix norm budget r > 0', fs: 13, fill: C.ink },
     { t: 'Slater holds at w̄ = 0;', fs: 12.5, fill: C.muted },
     { t: 'recovery λ* = λ', mono: true, fs: 14, fw: 700, fill: D.green.dark },
@@ -1964,9 +1964,9 @@ function fenchelConjugatePairs() {
     { t: 'Domain y > 0; maximizer x* = log y', fs: 12.5, fill: C.ink },
   ]);
 
-  o += titledPanel(280, 148, 240, 124, '4. ℓ₁ Penalty & ℓ_∞ Box', D.purple, [
-    { t: 'λ‖x‖₁  ↔  I_{‖y‖_∞ ≤ λ}(y)', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
-    { t: '0 inside box ‖y‖_∞ ≤ λ, +∞ outside', fs: 12.5, fill: C.ink },
+  o += titledPanel(280, 148, 240, 124, '4. ℓ₁ Penalty & ℓ_{∞} Box', D.purple, [
+    { t: 'λ‖x‖₁  ↔  I_{‖y‖_{∞} ≤ λ}(y)', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
+    { t: '0 inside box ‖y‖_{∞} ≤ λ, +∞ outside', fs: 12.5, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -2125,7 +2125,7 @@ function welfordVsNaive() {
   ]);
 
   o += card(20, 218, 500, 50, C.lblue, C.blue, [
-    { t: 'Exact Algebraic Identity:  ∑_{i=1}^k (xᵢ − mₖ)²  =  Mₖ₋₁ + (xₖ − mₖ₋₁)(xₖ − mₖ)', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
+    { t: 'Exact Algebraic Identity:  ∑_{i=1}^{k} (xᵢ − mₖ)²  =  Mₖ₋₁ + (xₖ − mₖ₋₁)(xₖ − mₖ)', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
   ]);
   return svg(W, H, o);
 }

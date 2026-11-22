@@ -9,11 +9,40 @@ const W = {" ":[0.2,0.2,0.64],"!":[0.289,0.34,0.64],"\"":[0.426,0.537,0.64],"#":
 
 // Width in px of one text run at font size fs (mono, bold as in engine.tx).
 // Sans runs get 2% slack: weight 500 sets slightly wider than Regular.
-export function textWidth(s, fs, mono = false, bold = false) {
+// TeX-style scripts (x_{k+1}, e^{−z²/2}) are measured as drawn: scriptSvg
+// (scripts.mjs) decides what converts, braces and markers take no width, and
+// a script run counts at its reduced size.
+import { scriptSvg } from './scripts.mjs';
+
+function runEm(s, mono, bold) {
   let u = 0;
-  for (const ch of String(s ?? '')) {
+  for (const ch of s) {
     const e = W[ch];
     u += e ? e[mono ? 2 : bold ? 1 : 0] : 0.6;
+  }
+  return u;
+}
+
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+export function textWidth(s, fs, mono = false, bold = false) {
+  const str = String(s ?? '');
+  let u = 0;
+  if (/[_^]/.test(str)) {
+    const out = scriptSvg(`<text font-family="${mono ? 'Mono' : 'Sans'}">${esc(str)}</text>`);
+    const inner = out.replace(/^<text[^>]*>/, '').replace(/<\/text>$/, '');
+    const scale = [1];
+    for (const tok of inner.split(/(<[^>]+>)/)) {
+      if (!tok) continue;
+      if (tok.startsWith('<tspan')) {
+        const m = tok.match(/font-size="([\d.]+)%"/);
+        scale.push(scale[scale.length - 1] * (m ? +m[1] / 100 : 1));
+      } else if (tok === '</tspan>') scale.pop();
+      else if (!tok.startsWith('<')) u += scale[scale.length - 1] * runEm(unesc(tok), mono, bold);
+    }
+  } else {
+    u = runEm(str, mono, bold);
   }
   return u * fs * (mono ? 1 : 1.02);
 }

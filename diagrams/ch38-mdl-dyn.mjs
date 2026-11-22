@@ -236,7 +236,7 @@ function fourEquationsBridge() {
   ]);
 
   o += titledPanel(20, 148, 240, 124, '3. Fokker–Planck Density PDE', D.orange, [
-    { t: '∂_t p_t = −∇·(f p_t) + ½ g(t)² Δp_t', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark },
+    { t: '∂_{t} p_t = −∇·(f p_t) + ½ g(t)² Δp_t', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark },
     { t: '= −∇ · (p_t u_t)   (Continuity Eq.)', mono: true, fs: 12.5, fw: 700, fill: C.ink },
   ]);
 
@@ -320,7 +320,7 @@ function picardFixedPoint() {
     { k: 'φ₀(t)', val: '1', sub: 'Initial guess', fill: N.panel, st: C.gray, dk: C.ink },
     { k: 'φ₁(t)', val: '1 + t', sub: '1st integral', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { k: 'φ₂(t)', val: '1 + t + t²/2', sub: '2nd integral', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { k: 'φ_∞(t)', val: '∑ tᵏ/k! = eᵗ', sub: 'Unique limit', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { k: 'φ_{∞}(t)', val: '∑ tᵏ/k! = eᵗ', sub: 'Unique limit', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   stages.forEach((s, i) => {
@@ -365,7 +365,7 @@ function finiteTimeBlowup() {
 
   o += card(276, 103, 244, 76, C.lamber, C.amber, [
     { t: 'Shrinking Picard Steps', fs: 14, fw: 700, fill: D.orange.dark },
-    { t: 'Safe step δ_ρ = 1/(2L_ρ) = 1/(4ρ)', mono: true, fs: 12, fill: C.ink },
+    { t: 'Safe step δ_ρ = 1/(2L_{ρ}) = 1/(4ρ)', mono: true, fs: 12, fill: C.ink },
     { t: 'As x(t) ↑, steps shrink to 0', fs: 12.5, fill: C.muted },
   ]);
 
@@ -412,7 +412,7 @@ function spectralDecoupling() {
   const W = 540, H = 280;
   let o = '';
   o += card(20, 12, 500, 42, C.lblue, C.blue, [
-    { t: 'Matrix Exponential Diagonalization:   A = V Λ V⁻¹   ⇒   e^{At} = V diag(e^{λ₁t}, …, e^{λ_dt}) V⁻¹', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
+    { t: 'Matrix Exponential Diagonalization:   A = V Λ V⁻¹   ⇒   e^{At} = V diag(e^{λ₁t}, …, e^{λ_{d}t}) V⁻¹', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
   ]);
 
   o += card(20, 70, 148, 122, D.red.tint, D.red.base, [
@@ -767,7 +767,7 @@ function backwardEulerImplicit() {
   ]);
 
   o += card(20, 216, 500, 52, C.lblue, C.blue, [
-    { t: 'Optimization Equivalence: Backward Euler on −∇L(x) is the Proximal Point Step argmin_x L(x) + (1/2η)‖x−xₖ‖²', fs: 12, fw: 700, fill: D.blue.dark },
+    { t: 'Optimization Equivalence: Backward Euler on −∇L(x) is the Proximal Point Step argmin_{x} L(x) + (1/2η)‖x−xₖ‖²', fs: 12, fw: 700, fill: D.blue.dark },
   ]);
   return svg(W, H, o);
 }
@@ -960,7 +960,7 @@ function liouvilleNearIdentity() {
 
   o += card(20, 108, 500, 68, D.purple.tint, C.purple, [
     { t: 'Step 2 · Near-Identity Determinant Expansion (Off-Diagonals Are O(h²))', fs: 14.5, fw: 700, fill: D.purple.dark },
-    { t: 'det(I + hJ) = ∏_{i=1}^d (1 + h J_{ii}) + O(h²) = 1 + h tr(J) + O(h²)', mono: true, fs: 13, fill: C.ink },
+    { t: 'det(I + hJ) = ∏_{i=1}^{d} (1 + h J_{ii}) + O(h²) = 1 + h tr(J) + O(h²)', mono: true, fs: 13, fill: C.ink },
   ]);
   o += arrow(270, 178, 270, 198, C.green);
 
@@ -979,7 +979,7 @@ function hutchinsonRademacher() {
   ]);
 
   o += titledPanel(20, 68, 156, 146, '1. Exact Diagonal', D.red, [
-    { t: '∑_{i=1}^d eᵢᵀ J eᵢ', mono: true, fs: 13.5, fw: 700, fill: C.ink },
+    { t: '∑_{i=1}^{d} eᵢᵀ J eᵢ', mono: true, fs: 13.5, fw: 700, fill: C.ink },
     { t: 'Cost: d VJPs / step!', fs: 12.5, fw: 700, fill: D.red.dark },
     { t: 'Variance: 0', mono: true, fs: 13, fill: D.green.dark },
     { t: 'Prohibitive for', fs: 12, fill: C.muted },
@@ -998,7 +998,7 @@ function hutchinsonRademacher() {
     { t: 'ε ~ N(0, I)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
     { t: 'Cost: 1 VJP / step', fs: 12.5, fill: C.ink },
     { t: 'Since Var(εᵢ²) = 2:', fs: 12, fill: C.ink },
-    { t: 'Var = 2 ‖S‖_F²', mono: true, fs: 13, fw: 700, fill: D.red.dark },
+    { t: 'Var = 2 ‖S‖_{F}²', mono: true, fs: 13, fw: 700, fill: D.red.dark },
     { t: 'Includes 2 ∑ J_{ii}²!', mono: true, fs: 12, fill: D.red.dark },
   ]);
 
@@ -1050,25 +1050,25 @@ function itoIsometryMartingale() {
   const W = 540, H = 280;
   let o = '';
   o += card(20, 12, 500, 42, D.purple.tint, C.purple, [
-    { t: 'Itô Stochastic Integral (Left-Endpoint Predictable):   ∫₀ᵗ H_s dW_s = lim ∑ H_{tᵢ} (W_{t_{i+1}} − W_{tᵢ})', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: 'Itô Stochastic Integral (Left-Endpoint Predictable):   ∫₀ᵗ H_s dW_{s} = lim ∑ H_{tᵢ} (W_{t_{i+1}} − W_{tᵢ})', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
   ]);
 
   o += titledPanel(20, 68, 240, 138, '1. Zero-Mean Martingale Property', D.blue, [
     { t: 'H_{tᵢ} decided BEFORE ΔWᵢ is drawn:', fs: 12.5, fill: C.ink },
     { t: 'E[H_{tᵢ} ΔWᵢ] = E[H_{tᵢ}] E[ΔWᵢ] = 0', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
-    { t: '⇒  E[ ∫₀ᵗ H_s dW_s ] = 0', mono: true, fs: 14, fw: 700, fill: D.blue.dark },
+    { t: '⇒  E[ ∫₀ᵗ H_s dW_{s} ] = 0', mono: true, fs: 14, fw: 700, fill: D.blue.dark },
     { t: '(Right-endpoint sum adds +t bias!)', fs: 12, fill: D.red.dark },
   ]);
 
   o += titledPanel(280, 68, 240, 138, '2. The Itô Isometry (Variance)', D.green, [
     { t: 'Cross terms i < j vanish: E[⋯ΔWⱼ] = 0', fs: 12.5, fill: C.ink },
     { t: 'Diagonal terms: E[Hᵢ²] E[(ΔWᵢ)²] = E[Hᵢ²]Δtᵢ', mono: true, fs: 11.5, fill: C.ink },
-    { t: 'E[(∫₀ᵗ H_s dW_s)²] = ∫₀ᵗ E[H_s²] ds', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'E[(∫₀ᵗ H_s dW_{s})²] = ∫₀ᵗ E[H_s²] ds', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     { t: 'Converts stochastic L² to time integral', fs: 12, fill: D.green.dark },
   ]);
 
   o += card(20, 220, 500, 48, C.lamber, C.amber, [
-    { t: 'Canonical Example:   ∫₀ᵗ W_s dW_s = ½ (W_t² − t)   (Mean = 0,  Variance = ∫₀ᵗ s ds = ½ t²)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
+    { t: 'Canonical Example:   ∫₀ᵗ W_s dW_{s} = ½ (W_t² − t)   (Mean = 0,  Variance = ∫₀ᵗ s ds = ½ t²)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1105,7 +1105,7 @@ function itoLemmaExpansion() {
 
   o += card(20, 208, 500, 58, D.purple.tint, C.purple, [
     { t: 'Multivariate Isotropic Form in ℝᵈ (dWᵢ dWⱼ = δ_{ij} dt):', fs: 13.5, fw: 700, fill: D.purple.dark },
-    { t: 'dφ(X_t, t) = ( ∂_t φ + ∇φ · f + ½ g(t)² Δφ ) dt  +  g(t) ∇φ · dW_t', mono: true, fs: 13.5, fw: 700, fill: C.ink },
+    { t: 'dφ(X_t, t) = ( ∂_{t} φ + ∇φ · f + ½ g(t)² Δφ ) dt  +  g(t) ∇φ · dW_{t}', mono: true, fs: 13.5, fw: 700, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -1118,7 +1118,7 @@ function ouEmVsExact() {
     { t: 'a = e^{−θΔt} = 0.99005', mono: true, fs: 13, fill: D.green.dark },
     { t: 'b = 1 − e^{−2θΔt} = 0.01980', mono: true, fs: 13, fill: D.green.dark },
     { t: 'Stationary variance b / (1 − a²):', fs: 12.5, fill: C.ink },
-    { t: 'v_∞ = 1.0000  (Exact for ANY Δt!)', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'v_{∞} = 1.0000  (Exact for ANY Δt!)', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
 
   o += titledPanel(280, 14, 240, 188, 'Euler–Maruyama Step (Δt = 0.01)', D.orange, [
@@ -1126,7 +1126,7 @@ function ouEmVsExact() {
     { t: 'a_EM = 1 − Δt = 0.99000', mono: true, fs: 13, fill: D.orange.dark },
     { t: 'b_EM = 2Δt = 0.02000', mono: true, fs: 13, fill: D.orange.dark },
     { t: 'Stationary variance 2Δt / (2Δt − Δt²):', fs: 12, fill: C.ink },
-    { t: 'v_∞ = 1 / (1 − Δt/2) = 1.0050 (+0.5%)', mono: true, fs: 12, fw: 700, fill: D.red.dark },
+    { t: 'v_{∞} = 1 / (1 − Δt/2) = 1.0050 (+0.5%)', mono: true, fs: 12, fw: 700, fill: D.red.dark },
   ]);
 
   o += card(20, 216, 500, 52, C.lblue, C.blue, [
@@ -1144,7 +1144,7 @@ function fpWeakDerivation() {
   let o = '';
   o += card(20, 14, 500, 68, C.lblue, C.blue, [
     { t: 'Step 1 · Apply Multivariate Itô’s Lemma to Smooth Test Bump φ(X_t) & Take E[·]', fs: 13.5, fw: 700, fill: D.blue.dark },
-    { t: 'd/dt E[φ(X_t)] = ∫ φ(x) ∂_t p_t(x) dx = ∫ [ ∇φ · f + ½ g(t)² Δφ ] p_t(x) dx', mono: true, fs: 12.5, fill: C.ink },
+    { t: 'd/dt E[φ(X_t)] = ∫ φ(x) ∂_{t} p_t(x) dx = ∫ [ ∇φ · f + ½ g(t)² Δφ ] p_t(x) dx', mono: true, fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 84, 270, 104, C.blue);
 
@@ -1156,7 +1156,7 @@ function fpWeakDerivation() {
 
   o += card(20, 202, 500, 68, C.lgreen, C.green, [
     { t: 'Step 3 · Holds for Every Bump φ ⇒ Pointwise Fokker–Planck Equation', fs: 14, fw: 700, fill: D.green.dark },
-    { t: '∂_t p_t(x)  =  −∇ · (f(x, t) p_t(x))  +  ½ g(t)² Δp_t(x)', mono: true, fs: 14, fw: 700, fill: D.green.dark },
+    { t: '∂_{t} p_t(x)  =  −∇ · (f(x, t) p_t(x))  +  ½ g(t)² Δp_t(x)', mono: true, fs: 14, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1165,7 +1165,7 @@ function ouMomentOdes() {
   const W = 540, H = 280;
   let o = '';
   o += card(20, 12, 500, 42, C.lblue, C.blue, [
-    { t: 'Gaussian Ansatz p(x, t) = N(x; m(t), v(t)) in OU Fokker–Planck ∂_t p = θ ∂_x(xp) + ½g² ∂_{xx}p', fs: 13, fw: 700, fill: D.blue.dark },
+    { t: 'Gaussian Ansatz p(x, t) = N(x; m(t), v(t)) in OU Fokker–Planck ∂_{t} p = θ ∂_{x}(xp) + ½g² ∂_{xx}p', fs: 13, fw: 700, fill: D.blue.dark },
   ]);
 
   o += titledPanel(20, 68, 240, 138, '1. Mean ODE (Match (x − m)¹)', D.blue, [
@@ -1178,7 +1178,7 @@ function ouMomentOdes() {
   o += titledPanel(280, 68, 240, 138, '2. Variance ODE (Match (x − m)²)', D.green, [
     { t: 'v̇(t) = g² − 2θ v(t)', mono: true, fs: 14.5, fw: 700, fill: D.green.dark },
     { t: 'v(t) = v₀e^{−2θt} + (g²/2θ)(1−e^{−2θt})', mono: true, fs: 12, fw: 700, fill: C.ink },
-    { t: 'Equilibrates at v_∞ = g² / (2θ)', mono: true, fs: 13, fw: 700, fill: D.green.dark },
+    { t: 'Equilibrates at v_{∞} = g² / (2θ)', mono: true, fs: 13, fw: 700, fill: D.green.dark },
     { t: '(Drift compression = diffusion spread)', fs: 12, fill: C.muted },
   ]);
 
@@ -1197,7 +1197,7 @@ function laplacianToScoreFlow() {
 
   o += card(20, 70, 206, 126, C.lamber, C.amber, [
     { t: 'Fokker–Planck PDE', fs: 14, fw: 700, fill: D.orange.dark },
-    { t: '∂_t p_t = −∇·(f p_t)', mono: true, fs: 13, fw: 700, fill: C.ink },
+    { t: '∂_{t} p_t = −∇·(f p_t)', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: '+ ½ g(t)² Δp_t', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
     { t: '(Advection + Diffusion)', fs: 12, fill: C.muted },
   ]);
@@ -1208,7 +1208,7 @@ function laplacianToScoreFlow() {
 
   o += card(314, 70, 206, 126, C.lgreen, C.green, [
     { t: 'Continuity Equation', fs: 14, fw: 700, fill: D.green.dark },
-    { t: '∂_t p_t = −∇·(p_t u_t)', mono: true, fs: 13, fw: 700, fill: C.ink },
+    { t: '∂_{t} p_t = −∇·(p_t u_t)', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'u_t = f − ½g² ∇log p_t', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     { t: '(Probability-Flow ODE!)', fs: 12, fill: D.green.dark },
   ]);
@@ -1316,7 +1316,7 @@ function dsmWeightSchedules() {
   o += titledPanel(364, 64, 156, 152, '3. Likelihood w = g(t)²', D.blue, [
     { t: 'w(t) = β(t)', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
     { t: 'w(t) R(t) ~ d / t', mono: true, fs: 12.5, fill: C.ink },
-    { t: '∫_ε^T (d/t)dt = d log(T/ε)', mono: true, fs: 11, fill: C.ink },
+    { t: '∫_{ε}^{T} (d/t)dt = d log(T/ε)', mono: true, fs: 11, fill: C.ink },
     { t: 'Upper-bounds KL', fs: 12.5, fill: D.blue.dark },
     { t: 'D_KL(p₀ ‖ p_{θ,0})!', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
   ]);
@@ -1339,8 +1339,8 @@ function ddpmToDdimEuler() {
   ]);
 
   o += arrow(220, 84, 320, 84, C.purple);
-  o += fitTx(270, 62, 'x̄_t = x_t / √ᾱ_t', 96, { mono: true, fs: 12.5, fw: 700, fill: D.purple.dark });
-  o += fitTx(270, 114, 'σ̄_t = √((1−ᾱ_t)/ᾱ_t)', 96, { mono: true, fs: 11.5, fw: 700, fill: D.purple.dark });
+  o += fitTx(270, 62, 'x̄_t = x_t / √ᾱ_{t}', 96, { mono: true, fs: 12.5, fw: 700, fill: D.purple.dark });
+  o += fitTx(270, 114, 'σ̄_t = √((1−ᾱ_{t})/ᾱ_{t})', 96, { mono: true, fs: 11.5, fw: 700, fill: D.purple.dark });
 
   o += card(326, 14, 194, 174, C.lgreen, C.green, [
     { t: 'Forward Euler on PF-ODE', fs: 13.5, fw: 700, fill: D.green.dark },
@@ -1408,7 +1408,7 @@ function curvedDiffusionVsStraight() {
   let o = '';
   o += titledPanel(20, 14, 240, 188, 'Diffusion Probability-Flow ODE', D.orange, [
     { t: 'Path inherited from OU / VP-SDE:', fs: 12.5, fw: 700, fill: C.ink },
-    { t: 'x_t = √ᾱ_t x₀ + √(1 − ᾱ_t) ε', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark },
+    { t: 'x_t = √ᾱ_{t} x₀ + √(1 − ᾱ_{t}) ε', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark },
     { t: 'Trajectories curve across time;', fs: 12.5, fill: C.ink },
     { t: '91% of motion happens below t = 0.5', fs: 12.5, fill: D.red.dark },
     { t: 'Requires 20–50 ODE solver steps', fs: 13, fw: 700, fill: D.orange.dark },
@@ -1417,7 +1417,7 @@ function curvedDiffusionVsStraight() {
   o += titledPanel(280, 14, 240, 188, 'Straight Constant-Speed Flow Ideal', D.green, [
     { t: 'Prescribe straight-line interpolant:', fs: 12.5, fw: 700, fill: C.ink },
     { t: 'x_t = (1 − t) x₀ + t x₁', mono: true, fs: 13, fw: 700, fill: D.green.dark },
-    { t: 'Constant velocity: ẋ_t = x₁ − x₀', mono: true, fs: 12.5, fw: 700, fill: C.ink },
+    { t: 'Constant velocity: ẋ_{t} = x₁ − x₀', mono: true, fs: 12.5, fw: 700, fill: C.ink },
     { t: 'When paired without crossings (C = 0):', fs: 12, fill: C.ink },
     { t: '1 Euler step (h = 1) is 100% exact!', fs: 13, fw: 700, fill: D.green.dark },
   ]);
@@ -1432,7 +1432,7 @@ function cfmMarginalPosterior() {
   const W = 540, H = 280;
   let o = '';
   o += card(20, 12, 500, 42, C.lblue, C.blue, [
-    { t: 'Conditional Flow Matching (CFM):   u_t(x) = E[ u_t(x | z) | x_t = x ]   Solves ∂_t p_t + ∇·(p_t u_t) = 0', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: 'Conditional Flow Matching (CFM):   u_t(x) = E[ u_t(x | z) | x_t = x ]   Solves ∂_{t} p_t + ∇·(p_t u_t) = 0', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
   ]);
 
   o += card(20, 68, 152, 126, C.lblue, C.blue, [
@@ -1493,7 +1493,7 @@ function scoreVelocityDictionary() {
   o += card(20, 174, 240, 102, D.purple.tint, C.purple, [
     { t: '4. Flow Velocity u_t(x)', fs: 14, fw: 700, fill: D.purple.dark },
     { t: 'E[α̇_t x₀ + σ̇_t ε | x_t = x]', mono: true, fs: 12.5, fill: C.ink },
-    { t: '= (α̇_t/α_t)x − (σ_tσ̇_t − σ_t²α̇_t/α_t)s', mono: true, fs: 12, fw: 700, fill: D.purple.dark },
+    { t: '= (α̇_t/α_t)x − (σ_{t}σ̇_{t} − σ_t²α̇_t/α_t)s', mono: true, fs: 12, fw: 700, fill: D.purple.dark },
   ]);
 
   o += card(280, 174, 240, 102, D.teal.tint, D.teal.base, [

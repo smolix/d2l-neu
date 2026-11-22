@@ -977,7 +977,7 @@ $$\Delta_\ell(p, q) = D_f(p \,\|\, q), \qquad f(u) = L(\tfrac{1}{2}) - \frac{u +
 ::: {.slide title="Standard Classification Losses and Critic Links"}
 [Taxonomy of Margin Losses]{.kicker}
 
-Each margin loss $-\ell(t)$ defines a specific $f$-divergence gap $\Delta_\ell(p, q)$ and an optimal critic $D^\star(x)$ that is a monotone **link function** of $\lambda(x) = \log(p(x)/q(x))$:
+Each margin loss gives a divergence gap $\Delta_\ell$ and an optimal critic $D^\star$, a monotone **link** of $\lambda = \log(p/q)$:
 
 | Objective | Margin Loss $-\ell(t)$ | Bayes Risk $L(\eta)$ | Gap $\Delta_\ell(p, q)$ | Optimal Link $D^\star(\lambda)$ | Practical $G$ Loss |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -1101,7 +1101,7 @@ Comparing 1D unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N
 ::: {.slide title="Geometry of Optimal Critics on Disjoint Supports"}
 [Why Smooth Critics Provide Gradients]{.kicker}
 
-![](../img/mdl-gan-critics-separated.svg){.nostretch width=100%}
+![](../img/mdl-gan-critics-separated.svg){.nostretch width=82%}
 
 - **Left (Unconstrained JS critic $\log(p/q)$):** Evaluates to $+\infty$ on $\operatorname{supp}(p)$ and $-\infty$ on $\operatorname{supp}(q)$, with zero spatial slope on both clouds.
 - **Middle ($W_1$ Kantorovich potential):** A linear ramp of unit slope connecting $q$ to $p$, providing a constant restoring gradient across the gap.
@@ -1111,12 +1111,20 @@ Comparing 1D unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N
 ::: {.slide title="Implementing MMD and WGAN-GP Gradient Penalties" layout="tight"}
 [Code Primitives]{.kicker}
 
-`mmd2_median` sets the RBF bandwidth to the median pairwise distance of the pooled minibatch, while `gradient_penalty` evaluates either the two-sided WGAN-GP penalty $(|D'(x)| - 1)^2$ or the one-sided Lipschitz penalty $\max(0, |D'(x)| - 1)^2$ at random interpolants $\tilde{x} = uX + (1 - u)X'$:
+`mmd2_loss` sums RBF kernels over several bandwidths; `mmd2_median` sets one bandwidth to the median pairwise distance of the pooled minibatch:
 
-@objectives-separated-start-losses
+@-objectives-separated-start-losses[1-14]
 :::
 
-::: {.slide title="Trained Neural Critics from a Separated Start"}
+::: {.slide title="Implementing MMD and WGAN-GP Gradient Penalties (cont.)" layout="tight"}
+[Code Primitives]{.kicker}
+
+`gradient_penalty` evaluates either the two-sided WGAN-GP penalty $(|D'(x)| - 1)^2$ or the one-sided Lipschitz penalty $\max(0, |D'(x)| - 1)^2$ at random interpolants $\tilde{x} = uX + (1 - u)X'$:
+
+@objectives-separated-start-losses[15-]
+:::
+
+::: {.slide title="Trained Neural Critics from a Separated Start" layout="code"}
 [Theory vs. Neural Practice]{.kicker}
 
 We fit a 1D location generator $q_\theta = \mathcal{N}(\theta, 1)$ ($x' = \theta + z$) starting at $\theta_0 = 6.0$ to $p = \mathcal{N}(0, 1)$ using vanilla SGD on $\theta$ (so step sizes directly reflect gradient magnitudes) against a 2-layer ReLU MLP critic updated $5$ times per generator step:
@@ -1152,9 +1160,17 @@ When the initial generator already overlaps the data ($\mathrm{JS}(p, q_0) = 0.5
 :::
 
 ::: {.col}
-@!objectives-one-testbed-four-losses-6
+@!objectives-one-testbed-four-losses-6[out=2]
 :::
 :::
+:::
+
+::: {.slide title="Comparing Five Objectives on a 2D Gaussian Mixture (cont.)"}
+[Overlapping Supports Benchmark]{.kicker}
+
+For each objective and seed, the median JS over the last 2,000 steps and the first steps at which JS drops below $0.1$ and $0.01$:
+
+@!objectives-one-testbed-four-losses-6[out=1]
 :::
 
 ::: {.slide title="Concept Check: Divergences, Links, and Critics"}
@@ -1164,13 +1180,23 @@ Test your understanding of adversarial objectives and integral probability metri
 
 1. **Zero–one loss vs. forward KL:** The $0\text{--}1$ classification loss has conditional Bayes risk $L(\eta) = \min(\eta, 1 - \eta)$. What is its Bayes-risk gap $\Delta_\ell(p, q)$, and why can no symmetric nonnegative classification loss evaluate the forward KL divergence $D_{\textrm{KL}}(p \,\|\, q)$?
 2. **Peak MMD gradient distance:** For 1D unit Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ under a Gaussian RBF kernel of bandwidth $s = 4$, at what separation $\mu$ is the gradient $\frac{d}{d\mu}\mathrm{MMD}^2(p, q)$ largest?
-3. **Why hinge critics still move a separated generator:** At the theoretical optimum $D^\star(x) = \operatorname{sign}(\lambda(x))$, the hinge critic has derivative $0$ everywhere except on the decision boundary. Why did our trained hinge critic still drive $\theta_0 = 6 \to 0$?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. $L(\frac{1}{2}) - \mathbb{E}_m[\min(\eta, 1 - \eta)]$ $= \frac{1}{2}\int |p - q|\,\frac{dx}{2}$ $= \mathbf{\frac{1}{2}\mathrm{TV}(p, q)}$ (half the hinge gap). Any nonnegative loss has $L(\eta) \ge 0$, so its gap is bounded above by $\Delta_\ell(p, q) \le L(\frac{1}{2}) < \infty$, whereas $D_{\textrm{KL}}(p \,\|\, q)$ is unbounded and asymmetric.
 2. Differentiating $1 - \exp(-\mu^2 / (2(s^2 + 2)))$ with respect to $\mu$ yields $\propto \mu\exp(-\mu^2 / (2(s^2 + 2)))$, which peaks at $\mu = \sqrt{s^2 + 2} = \sqrt{18} \approx \mathbf{4.24}$.
+:::
+:::
+
+::: {.slide title="Concept Check: Divergences, Links, and Critics (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Why hinge critics still move a separated generator:** At the theoretical optimum $D^\star(x) = \operatorname{sign}(\lambda(x))$, the hinge critic has derivative $0$ everywhere except on the decision boundary. Why did our trained hinge critic still drive $\theta_0 = 6 \to 0$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. A finite piecewise-linear ReLU network trained with finite steps does not jump discontinuously from $+1$ to $-1$; it interpolates linearly across the gap between the two clouds with slope $\approx 1.1\text{--}1.7$, and the linear generator loss $-D(x')$ passes that slope directly to $\theta$.
 :::
 :::

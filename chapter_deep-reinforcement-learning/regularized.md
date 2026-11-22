@@ -738,7 +738,7 @@ In a sequential MDP where $-\beta D_{\textrm{KL}}(\pi(\cdot \mid s_t) \Vert \pi_
 ::: {.slide title="Soft Value Iteration in Markov Decision Processes"}
 [The Soft Bellman Backup]{.kicker}
 
-Applying the single-decision closed form at every state replaces the hard $\max_a$ of classical value iteration with a reference-weighted **log-sum-exp (soft maximum)**:
+The closed form at every state replaces value iteration's hard $\max_a$ with a reference-weighted **log-sum-exp**:
 
 $$V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}, \qquad Q_\beta(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V_\beta(s')$$
 

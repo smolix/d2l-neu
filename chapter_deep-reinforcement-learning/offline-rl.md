@@ -588,8 +588,14 @@ We can run standard tabular Q-learning (`offline_q_sweeps`) over a fixed log $\m
 Because every sweep revisits the exact same logged transitions, incremental Q-learning converges to the optimal value table of the log's **empirical MDP** ($\hat{P}(s' \mid s, a) = n(s, a, s')/n(s, a)$, $\hat{r}(s, a) = \sum r / n(s, a)$):
 
 @offline-rl-distribution-shift-against-the-exact-optimum-1
+:::
 
-@!offline-rl-distribution-shift-against-the-exact-optimum-2
+::: {.slide title="Certainty Equivalence: Solving the Empirical MDP (check)"}
+[The Empirical Fixed Point]{.kicker}
+
+On a 500-transition log from the uniform policy, the incremental sweeps and the direct solve agree:
+
+@offline-rl-distribution-shift-against-the-exact-optimum-2
 :::
 
 ::: {.slide title="Behavior Cloning and Trajectory Stitching"}

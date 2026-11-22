@@ -1078,12 +1078,36 @@ $$D_{\textrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q) = 2\,D_{\textrm{KL}}(m \,\|
 
 :::
 
-::: {.slide title="The Alternating GAN Training Loop"}
+::: {.slide title="The Alternating GAN Training Loop" only="pytorch"}
 [Training Infrastructure]{.kicker}
 
 `train_gan` alternates `update_D` and `step_G` across minibatches using Adam with reduced momentum $\beta_1 = 0.5$ (Radford et al., 2015) so first-moment estimates adapt quickly to the changing opponent:
 
-@gan-training-1
+@-gan-training-1[1-15]
+:::
+
+::: {.slide title="The Alternating GAN Training Loop (cont.)" only="pytorch"}
+[Training Infrastructure]{.kicker}
+
+Each minibatch draws fresh latents, takes one critic step and one generator step, and sums the losses on the device:
+
+@gan-training-1[16-]
+:::
+
+::: {.slide title="The Alternating GAN Training Loop" only="jax"}
+[Training Infrastructure]{.kicker}
+
+`train_gan` alternates `update_D` and `step_G` across minibatches using Adam with reduced momentum $\beta_1 = 0.5$ (Radford et al., 2015) so first-moment estimates adapt quickly to the changing opponent:
+
+@-gan-training-1[1-14]
+:::
+
+::: {.slide title="The Alternating GAN Training Loop (cont.)" only="jax"}
+[Training Infrastructure]{.kicker}
+
+Each minibatch draws fresh latents, takes one critic step and one generator step, and sums the losses on the device:
+
+@gan-training-1[15-]
 :::
 
 ::: {.slide title="Testbed 1: Linear Generator on a 2D Tilted Gaussian"}

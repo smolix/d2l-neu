@@ -854,6 +854,12 @@ $$V_\ell(D) - R_1 - R_2 \approx 2\ell(0) + \ell'(0)\,\langle p - q,\, D\rangle -
 
 - **1D Gaussian shift ($p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\mu, 1)$, linear critic $D(x) = cx$):** For small $\mu$, maximizing $-\ell'(0)\mu c - (|\ell''(0)| + \gamma)c^2$ under the logistic loss ($\ell'(0) = \frac{1}{2}, |\ell''(0)| = \frac{1}{4}$) shrinks both the optimal slope and local value by $1 + 4\gamma$:
   $$c^\star = -\frac{\mu}{1 + 4\gamma}, \qquad V_\gamma(D^\star) - 2\ell(0) \approx \frac{\mu^2}{4 + 16\gamma}$$
+:::
+
+::: {.slide title="Effect of Penalties on the Local Value Function (check)" layout="code"}
+[Quadratic Expansion & Gaussian Shift]{.kicker}
+
+Solving the penalized game exactly on a grid (Newton ascent on $D$) and comparing with the local value $\mu^2/(4 + 16\gamma)$ and the large-$\gamma$ value $\mu^2/(16\gamma)$:
 
 @!convergence-a-gaussian-shift
 :::
@@ -892,7 +898,15 @@ Because each sample's critic score $D(x_i)$ depends only on row $x_i$ (provided 
 
 R3GAN (Huang et al., 2024) pairs the relativistic pairing loss (`rpgan_loss_D`, `rpgan_loss_G`) with $R_1 + R_2$. `critic_step` updates `net_D` on `loss_D + gamma / 2 * (r1 + r2).mean()` and returns the unscaled batch means of $R_1$ and $R_2$ for logging:
 
-@convergence-the-loss-in-code-1
+@-convergence-the-loss-in-code-1[1-14]
+:::
+
+::: {.slide title="The R3GAN Critic and Generator Step Functions (cont.)" layout="tight"}
+[Training Recipe in Code]{.kicker}
+
+`generator_step` takes one step on the generator's loss against the current critic:
+
+@convergence-the-loss-in-code-1[15-]
 :::
 
 ::: {.slide title="Mode-Coverage Testbed: 25 Gaussians on a 5×5 Grid"}
@@ -911,7 +925,7 @@ R3GAN (Huang et al., 2024) pairs the relativistic pairing loss (`rpgan_loss_D`, 
 :::
 :::
 
-::: {.slide title="25-Gaussian Results: Penalties Drive Coverage"}
+::: {.slide title="25-Gaussian Results: Penalties Drive Coverage" layout="code"}
 [Quantitative Comparison]{.kicker}
 
 Evaluating $10{,}000$ samples at step $10{,}000$ isolates the role of each ingredient:
@@ -931,7 +945,7 @@ Evaluating $10{,}000$ samples at step $10{,}000$ isolates the role of each ingre
 - **Overdamping ($\gamma = 10$):** Over-flattening the critic ($\mathbb{E}_q\|\nabla_x D\|^2 \sim 10^{-4}$) slows convergence, leaving only $\sim 20\text{--}25\%$ of samples within $3\sigma$ of a mode after $10{,}000$ steps.
 :::
 
-::: {.slide title="Diagnostic Pitfall: Calm Losses Certify Nothing"}
+::: {.slide title="Diagnostic Pitfall: Calm Losses Certify Nothing" layout="code"}
 [Monitoring Hazard]{.kicker}
 
 Comparing the on-mode sample fraction against the critic loss across all $8$ checkpoints (every $1{,}250$ steps) reveals a critical monitoring hazard:
@@ -950,13 +964,23 @@ Test your understanding of minimax rotational dynamics and zero-centered gradien
 
 1. **Discrete Euler stability threshold:** On the penalized Dirac-GAN with logistic loss ($\ell'(0) = \frac{1}{2}$), the continuous Jacobian eigenvalues are $\nu_{1,2} = -\frac{\gamma}{2} \pm i\sqrt{\ell'(0)^2 - \gamma^2/4}$ in the underdamped regime $\gamma < 1$. What is the maximum step size $h$ for which simultaneous discrete Euler steps converge ($|1 + h\nu_{1,2}| < 1$), and what is its numerical value at $\gamma = 0.3$?
 2. **Penalized Gaussian shift:** For $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ with small shift $\mu = 0.2$ under the logistic loss, by what factor does $\gamma = 1$ shrink the optimal linear critic slope $c^\star$ compared to $\gamma = 0$?
-3. **Pairing on the Dirac-GAN:** Does replacing the single-sample logistic loss with the relativistic pairing loss $\ell(D_\psi(0) - D_\psi(\theta))$ change the unpenalized Dirac-GAN vector field?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. Since $\nu_1 \nu_2 = |\nu|^2 = \ell'(0)^2$ and $2\operatorname{Re}(\nu) = -\gamma$, we have $|1 + h\nu|^2 = 1 - h\gamma + h^2\ell'(0)^2 < 1$ $\iff$ $h < \frac{\gamma}{\ell'(0)^2} = \mathbf{4\gamma}$. At $\gamma = 0.3$, simultaneous Euler steps converge for **$h < 1.2$**.
 2. Since $c^\star = -\frac{\mu}{1 + 4\gamma}$, setting $\gamma = 1$ shrinks both the critic slope and the local quadratic value $\frac{\mu^2}{4 + 16\gamma}$ by a factor of $1 + 4(1) = \mathbf{5\times}$.
+:::
+:::
+
+::: {.slide title="Concept Check: Minimax Dynamics and Penalties (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Pairing on the Dirac-GAN:** Does replacing the single-sample logistic loss with the relativistic pairing loss $\ell(D_\psi(0) - D_\psi(\theta))$ change the unpenalized Dirac-GAN vector field?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. **No.** Because $D_\psi(0) = 0$, the pairing objective $\ell(D_\psi(0) - D_\psi(\theta)) = \ell(-\psi\theta)$ differs from the single-sample objective $\ell(0) + \ell(-\psi\theta)$ only by the constant $\ell(0)$, producing the exact same rotational vector field.
 :::
 :::

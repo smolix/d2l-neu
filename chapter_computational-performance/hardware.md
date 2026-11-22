@@ -539,7 +539,7 @@ Hardware Anatomy: CPUs, GPUs, Tensor Cores, and Memory Hierarchy<br>**memory hie
 ::: {.slide title="The Memory Hierarchy: Trading Capacity for Bandwidth"}
 [Memory Hierarchy]{.kicker}
 
-![](../img/mdl-perf-memory-hierarchy.svg){height=420px}
+![](../img/mdl-perf-memory-hierarchy.svg){height=400px}
 
 - **On-die registers & SRAM ($L_1$/shared, $L_2$):** Hold $\sim 0.1\text{ GB}$ millimeters from the ALUs and deliver tens of $\text{TB/s}$.
 - **Off-die GPU DRAM (GDDR6X / HBM3e) & beyond:** Capacity grows by orders of magnitude ($24\text{--}180\text{ GB}$ DRAM $\to$ hundreds of $\text{GB}$ host RAM $\to$ $\text{TB}$ NVMe), while bandwidth drops by orders of magnitude at every boundary.

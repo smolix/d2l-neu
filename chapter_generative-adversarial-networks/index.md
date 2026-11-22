@@ -89,7 +89,7 @@ Goodfellow et al. (2014) turned two-sample binary classification into a generati
 - **Gradients without densities:** Backpropagating through $D$ pushes generated samples $x' = G(z)$ uphill along $\nabla_x D(x')$, moving probability mass from over-represented regions ($q > p \implies D^\star < 0$) toward under-represented regions ($p > q \implies D^\star > 0$).
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 ![](../img/mdl-gan-architecture.svg){.nostretch width=100%}
 :::
 :::

@@ -829,9 +829,11 @@ On deterministic calm ice, targets have zero transition variance so constant $\a
 :::
 
 ::: {.col}
-@!qlearning-reading-the-curve-honestly-4
+@!qlearning-reading-the-curve-honestly-4[out=2]
 :::
 :::
+
+@!qlearning-reading-the-curve-honestly-4[out=1]
 :::
 
 ::: {.slide title="Off-Policy Q-Learning vs. On-Policy SARSA"}

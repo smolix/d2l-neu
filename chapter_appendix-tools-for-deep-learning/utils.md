@@ -2048,8 +2048,12 @@ Test your understanding of the systems and numerical tricks inside `d2l`:
 1. In `d2l.ProgressBoard.show()`, why does the method check `os.environ.get('D2L_NB_CAPTURE') == '1'` and skip rendering whenever `final=False`?
 2. In JAX reinforcement learning, an agent calls `d2l.padded(states, actions, rewards)` on three consecutive episode batches of lengths $n = 19$, $n = 47$, and $n = 58$. How many distinct padded array shapes are produced, and why must the returned `mask` be passed into the loss function?
 3. Why does `d2l.Embed` switch from the one-hot matrix product back to standard scatter-add `nnx.Embed` when the vocabulary size exceeds $1{,}024$?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: d2l Utility Internals (cont.)" only="jax"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. During interactive notebook runs, `show(final=False)` updates the live SVG figure after every few minibatches. During the automated book build (`D2L_NB_CAPTURE=1`), skipping intermediate redraws avoids running matplotlib hundreds of times per epoch and ensures the saved notebook output stores only **one clean final figure per board**.

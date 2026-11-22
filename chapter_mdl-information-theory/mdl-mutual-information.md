@@ -1555,13 +1555,15 @@ How does mutual information connect to individual, joint, and conditional entrop
 
 Evaluating both the KL divergence formula and the conditional entropy reduction $H(Y) - H(Y \mid X)$ on the $2 \times 2$ flipped-bit table confirms $I(X; Y) = 0.3681\text{ nats}$ ($0.531\text{ bits}$):
 
-@-mutual-information-joint-conditional
+@-mutual-information-joint-conditional[1-14]
 :::
 
 ::: {.slide title="Verifying Discrete Mutual Information in Code (cont.)"}
 [KL Form vs. Entropy Reduction]{.kicker}
 
-@!mutual-information-joint-conditional
+With the joint table and both helpers in place, the marginals give $H(Y \mid X)$, and the two routes to $I(X; Y)$ agree:
+
+@mutual-information-joint-conditional[16-]
 :::
 
 ::: {.slide title="Mutual Information of a Bivariate Gaussian Pair"}
@@ -1804,8 +1806,12 @@ Work through these three problems:
 1. **Two noisy lines in series:** A fair bit $X$ passes through a flip channel with $\delta_1 = 0.1$ to produce $Y$, and $Y$ passes through an independent flip channel with $\delta_2 = 0.2$ to produce $Z$. What are $I(X; Y)$, $I(X; Z)$, $I(X; Z \mid Y)$, and $I(X; Y \mid Z)$?
 2. **Binary symmetric channel capacity:** Why does a BSC with flip probability $\delta = 1.0$ have the same capacity ($\ln 2\text{ nats}$) as a noiseless channel ($\delta = 0$), whereas $\delta = 0.5$ has capacity $0$?
 3. **Gaussian bottleneck operating point:** For the Gaussian pair at $\rho = 0.9$ ($\rho^2 = 0.81$), compute the optimal rate $u^* = I(X; Z)^*$ and preserved label information $I(Y; Z)^*$ at trade-off multiplier $\beta = 2$.
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Cascaded Channels, Capacity, IB (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **Cascaded flips:** $I(X; Y) = \ln 2 - H_b(0.1) = 0.368\text{ nats}$. The composite flip probability is $0.1(0.8) + 0.9(0.2) = 0.26$, so $I(X; Z) = \ln 2 - H_b(0.26) = 0.120\text{ nats}$. By the Markov chain $X \to Y \to Z$, $I(X; Z \mid Y) = 0$, and the chain rule gives $I(X; Y \mid Z) = 0.368 - 0.120 = 0.248\text{ nats}$.

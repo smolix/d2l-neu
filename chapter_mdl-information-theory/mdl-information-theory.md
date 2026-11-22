@@ -1550,7 +1550,7 @@ $$D_{\textrm{KL}}(P \| Q) = \mathbb{E}_{x \sim P}\!\left[\log \frac{p(x)}{q(x)}\
 ::: {.slide title="KL Asymmetry and the Zero-Probability Penalty"}
 [KL Divergence in Code]{.kicker}
 
-If a model $Q'$ assigns $q'(x) = 0$ to any event that can actually occur ($p(x) > 0$), its surprisal $-\log q'(x)$ is infinite and $D_{\textrm{KL}}(P \| Q') = +\infty$:
+If $q'(x) = 0$ where $p(x) > 0$, the surprisal $-\log q'(x)$ is infinite and $D_{\textrm{KL}}(P \| Q') = +\infty$:
 
 @information-theory-definition-2
 

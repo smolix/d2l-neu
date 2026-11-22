@@ -2065,20 +2065,34 @@ and is achieved by moving each pair $(\mathbf{x}_0, \mathbf{x}_1)$ of the optima
 
 When sampling from a curved probability-flow ODE on a tight budget of $10$ to $80$ function evaluations (NFE), does 2nd-order **Heun** ($2$ NFE/step) always beat 1st-order **Euler** ($1$ NFE/step)?
 
-@!score-matching-diffusion-flow-euler-vs-heun
+::: {.cols .vc}
+::: {.col}
+@!score-matching-diffusion-flow-euler-vs-heun[out=1]
 
 - **Grid Sensitivity:** On a **uniform grid**, Euler beats Heun at 10 and 20 NFE! On a **squared grid** $t_k = (1 - k/K)^2$ crowded near the data end $t = 0$, Heun wins at every budget and cuts the 10-NFE error to $0.030$.
 :::
 
-::: {.slide title="Why Euler Leads on Uniform Grids: Error Cancellation"}
+::: {.col .fig}
+@!score-matching-diffusion-flow-euler-vs-heun[out=2]
+:::
+:::
+:::
+
+::: {.slide title="Why Euler Leads on Uniform Grids: Error Cancellation" layout="tall-output"}
 [Diagnosing Step Errors]{.kicker}
 
 Decomposing the terminal error into individual signed step contributions $c_k$ carried to $t = 0$ reveals why grid placement interacts strongly with solver order:
 
+::: {.cols .vc}
+::: {.col}
 @!mdl-flow-matching-transport-solver-order-at-equal-cost-1
+:::
 
+::: {.col}
 - **91% of Motion Happens Below $t = 0.5$:** Because the noised law near $t = 1$ is almost $\mathcal{N}(0, 1)$ where the score cancels the drift, uniform steps waste half the NFE budget above $t = 0.5$ where trajectories move only $9\%$ of their length.
 - **Accidental Sign Cancellation:** Before summation, Euler's absolute step errors $\sum_k |c_k|$ are more than $2\times$ larger than Heun's on both grids—but on the uniform grid, opposite signs cancel $88\%$ of Euler's errors (surviving share $0.12$). Crowding the grid near $t = 0$ removes this cancellation and lets Heun's true $O(h^2)$ local accuracy dominate.
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Flow Matching, Reflow, and Transport"}
@@ -2089,8 +2103,12 @@ Test your understanding of Conditional Flow Matching, Reflow, and Optimal Transp
 1. **One Euler Step Under Independent Pairing:** For a dataset in $\mathbb{R}^d$ with mean $\boldsymbol{\mu} = (3, -1)$ paired independently with $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ along $\mathbf{x}_t = (1-t)\mathbf{x}_0 + t\boldsymbol{\epsilon}$, where does a single Euler step from $t = 1$ to $t = 0$ with the exact marginal velocity $\mathbf{u}_1(\mathbf{x})$ send every noise point?
 2. **1D Reflow Optimality:** On 1D data $p_0$ and Gaussian noise $p_1$, why does **one** round of exact Reflow always reach the exact $W_2$-optimal transport coupling with loss floor $C = 0$?
 3. **2D Fixed Points of Reflow:** Give an example of a 2D coupling between $p_0 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ and $p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ whose straight segments never cross ($C = 0$, so Reflow does not change it) even though its transport cost is strictly greater than $W_2^2(p_0, p_1) = 0$.
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Flow Matching, Reflow, and Transport (cont.)"}
+[Concept Check]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. At $t = 1$, $\mathbf{u}_1(\mathbf{x}) = \mathbb{E}[\boldsymbol{\epsilon} - \mathbf{x}_0 \mid \boldsymbol{\epsilon} = \mathbf{x}] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0] = \mathbf{x} - \boldsymbol{\mu}$. One Euler step $\mathbf{x} - 1 \cdot \mathbf{u}_1(\mathbf{x}) = \boldsymbol{\mu} = (3, -1)$ collapses every point onto the data mean.

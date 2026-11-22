@@ -1331,7 +1331,15 @@ Eigendecompositions<br>**eigenvectors · diagonalization & matrix powers · defe
 - **Worked $2 \times 2$ Surfer Matrix:** $\det(\mathbf{P} - \lambda\mathbf{I}) = (\tfrac{1}{2}-\lambda)(\tfrac{3}{4}-\lambda) - \tfrac{1}{8} = \lambda^2 - \tfrac{5}{4}\lambda + \tfrac{1}{4} = (\lambda - 1)(\lambda - \tfrac{1}{4})$, giving roots $\lambda_1 = 1$ and $\lambda_2 = 1/4$.
 - **Solving for Eigenspaces:** Plugging $\lambda_1 = 1$ into $(\mathbf{P} - \mathbf{I})\mathbf{v} = \mathbf{0}$ gives $-\tfrac{1}{2}v_1 + \tfrac{1}{4}v_2 = 0 \implies \mathbf{v}_1 = (1, 2)$; plugging $\lambda_2 = 1/4$ gives $\tfrac{1}{4}v_1 + \tfrac{1}{4}v_2 = 0 \implies \mathbf{v}_2 = (1, -1)$.
 
-@eigendecomposition-an-example
+::: {.cols .vc}
+::: {.col}
+@-eigendecomposition-an-example
+:::
+
+::: {.col}
+@!eigendecomposition-an-example
+:::
+:::
 :::
 
 ::: {.slide title="How Libraries Compute Eigenvalues in Practice"}

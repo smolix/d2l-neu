@@ -649,12 +649,12 @@ When a notebook that worked last week suddenly fails on a hosted runtime, a logg
 ::: {.col}
 - **Path adapter & secrets:** Route outputs to `/kaggle/working`, `/content/drive`, or `Path.cwd()` automatically, and keep API tokens in the provider secret store.
 - **Young's checkpoint law ($\tau^* = \sqrt{2\delta M}$):** If saving takes $\delta = 30\text{ s}$ and disconnects arrive every $M = 3\text{ h}$, checkpoint every $\tau^* \approx 13.4\text{ min}$.
-
-@hosted-notebooks-work-directory
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 @fig:ch39-tools-young-checkpoint
+
+@hosted-notebooks-work-directory
 :::
 :::
 :::

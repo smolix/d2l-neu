@@ -1883,16 +1883,22 @@ Subtracting two nearly equal `fp32` numbers $a = 1.0002344$ and $b = 1.0002341$ 
 - **Why the result is still off by $20\%$:** The subtraction operation itself committed zero error; it merely cancelled the shared leading bits and exposed the prior rounding errors committed when $a$ and $b$ were first stored on the $2^{-23} \approx 1.19 \times 10^{-7}$ grid.
 :::
 
-::: {.slide title="Truncation vs. Cancellation in Finite Differences"}
+::: {.slide title="Truncation vs. Cancellation in Finite Differences" layout="tall-output"}
 [Catastrophic Cancellation]{.kicker}
 
 In one place—numerical gradient checks via the forward difference $\frac{f(x + h) - f(x)}{h}$—we cannot algebraically eliminate the subtraction of nearly equal numbers:
 
 $$\text{Total Error}(h) \;\approx\; \underbrace{\frac{h}{2}\,|f''(x)|}_{\text{Taylor truncation error}} \;+\; \underbrace{\frac{2u\,|f(x)|}{h}}_{\text{cancellation of rounding noise}}$$
 
+::: {.cols .vc}
+::: {.col}
 @!mdl-numerical-stability-conditioning-subtraction-of-nearly-equal-numbers-1
+:::
 
+::: {.col}
 - **Optimal step $h^\star = 2\sqrt{\frac{u|f(x)|}{|f''(x)|}}$:** Minimizing the sum yields minimum error $\approx 2\sqrt{u|f(x)f''(x)|} \propto \sqrt{u}$, retaining only **half the digits** of the format ($\sim 8$ digits at $h^\star \approx 10^{-8}$ in `fp64`, vs. $\sim 3.5$ digits at $h^\star \approx 5 \times 10^{-4}$ in `fp32`).
+:::
+:::
 :::
 
 ::: {.slide title="Why Naive One-Pass Variance Squares Conditioning"}

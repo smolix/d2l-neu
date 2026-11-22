@@ -1683,10 +1683,18 @@ $$d\phi(X_t, t) = \left(\phi_t + f\,\phi_x + \frac{1}{2}g^2\,\phi_{xx}\right)dt 
 
 On $X_t = W_t$ ($f = 0, g = 1$) with $\phi(x) = x^2$, Itô's lemma gives $d(W_t^2) = 2W_t\,dW_t + dt$, so $W_t^2 - \int_0^t 2W_s\,dW_s = t$ deterministically along every individual path:
 
-@!sdes-ito-correction
+::: {.cols .vc}
+::: {.col}
+@!sdes-ito-correction[out=1]
 
 ::: {.d2l-note}
 The naive chain-rule curve $\int_0^t 2W_s\,dW_s$ sags below $W_t^2$ by the running quadratic variation $\sum (\Delta W_i)^2 \approx t$; adding $+t$ restores exact pathwise agreement.
+:::
+:::
+
+::: {.col .fig}
+@!sdes-ito-correction[out=2]
+:::
 :::
 :::
 

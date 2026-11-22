@@ -1764,7 +1764,7 @@ $$\mathbf{s}_t(\mathbf{x}) = \nabla_{\mathbf{x}}\log p_t(\mathbf{x}) = \frac{\na
 - **Critical Points and Tails:** $\mathbf{s}_t(\mathbf{x}) = \mathbf{0}$ at modes, local minima, and saddle points of $p_t$, while $\|\mathbf{s}_t(\mathbf{x})\|$ is largest in low-density valleys and far tails where $\log p_t$ changes steeply.
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 ![](../img/mdl-dyn-score-field.svg)
 :::
 :::

@@ -84,7 +84,7 @@ Attributes:
 | `title="…"`            | Optional. Renders as a `## Title` slide heading.       |
 | `only="fw[,fw]"`       | Render this slide **only** for the listed framework decks. For sections whose *framing* (not just code) differs per framework. |
 | `except="fw[,fw]"`     | Render for all decks **except** the listed frameworks. |
-| `layout="…"`           | Legacy section class (`2col`/`figure`/`code` → `.slide-<L>`). Prefer body-level `::: {.cols}` (see *Two-column layout* below). |
+| `layout="…"`           | Legacy section class (`2col`/`figure`/`code` → `.slide-<L>`). Prefer body-level `::: {.cols}` (see *Two-column layout* below). `tight` and `tall-output` adjust output boxes (see *Output injection*). |
 | `transition="…"`       | Reveal.js transition. `fade`, `slide`, `convex`, `concave`, `zoom`, `none`. |
 | `data-background-color="#…"`   | Slide background color.                        |
 | `data-background-image="…"`    | Slide background image.                        |
@@ -422,8 +422,9 @@ Text output is capped at 12 lines per cell (40 in HTML): a longer output
 shows its first 6 and last 6 lines around a `...` line
 (`MAX_TEXT_LINES_BY_MODE` in `tools/inject_outputs.py`). There is no per-slide
 override. An output that fits the cap can still exceed the output box
-(`.cell-output` has `max-height: 44vh` and scrolls), which hides lines
-without overflowing the slide; `tools/check_slide_overflow.py` reports such
+(`.cell-output` has `max-height: 36vh`, 30vh inside `.cols`, and scrolls),
+which hides lines; a slide whose 11–12 line table just misses the box can set
+`layout="tall-output"` (44vh) if the slide still fits 720 px. `tools/check_slide_overflow.py` reports such
 clipped boxes and wrapped code lines along with slide overflow. It runs each
 deck in a child process under a watchdog (`--timeout`, default 120 s per deck;
 `--slide-timeout`, default 30 s per slide) and exits 2 with `HANG at leaf

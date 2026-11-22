@@ -1044,7 +1044,7 @@ On the planar spiral $\mathbf{A} = -\frac{1}{2}\mathbf{I} + \mathbf{K}$ ($\lambd
 - **Euler Cost to Match RK4:** Achieving $1.3 \times 10^{-9}$ with Euler requires $n \approx 1.4 \times 10^9$ evaluations.
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!odes-solvers-euler-rk4-order
 :::
 :::
@@ -1126,7 +1126,7 @@ A solver's **stability region** $\{z \in \mathbb{C} : |R(z)| < 1\}$ shows which 
 - **No Explicit RK Method Is A-Stable:** Every $s$-stage explicit Runge–Kutta method has a polynomial $R(z)$ of degree $\le s$, which must diverge as $|z| \to \infty$. Only implicit solvers like backward Euler cover the entire left half-plane $\operatorname{Re}z < 0$ (**A-stability**).
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 ![](../img/mdl-dyn-stability-regions.svg)
 :::
 :::

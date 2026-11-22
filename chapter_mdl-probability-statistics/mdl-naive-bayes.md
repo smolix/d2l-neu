@@ -1509,8 +1509,12 @@ $$p(\mathbf{x}_{\mathcal{V}} \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \m
 1. **Can Bernoulli Naive Bayes learn XOR?** Suppose $y = x_1 \oplus x_2$ on the four binary points $(0,0), (0,1), (1,0), (1,1)$. Why can no choice of Bernoulli naive Bayes parameters $\theta_{iy} \in (0, 1)$ classify all four points correctly?
 2. **Duplicated clue against a strong prior:** Two classes have prior odds $\frac{\pi_1}{\pi_0} = \frac{1}{5}$. A binary feature $x=1$ has likelihood ratio $r = \frac{p(x=1\mid y=1)}{p(x=1\mid y=0)} = 4$, and the pipeline duplicates $x$ three times ($k = 3$). What class does the true posterior predict, and what class does naive Bayes predict?
 3. **Why zero-filling is not marginalization:** In the affine score $s_y(\mathbf{x}) = \mathbf{w}_y^\top \mathbf{x} + b_y$, why does setting an occluded pixel $x_i = 0$ fail to marginalize $x_i$ out of $p(\mathbf{x} \mid y)$?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Naive Bayes and Calibration (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. Bernoulli naive Bayes produces an affine log-odds score $(\mathbf{w}_1 - \mathbf{w}_0)^\top \mathbf{x} + (b_1 - b_0)$, whose decision boundary is a single straight hyperplane, whereas XOR is not linearly separable (and in fact each marginal frequency $\hat{\theta}_{iy} = 1/2$, making every weight $w_{iy} = \log 1 = 0$).

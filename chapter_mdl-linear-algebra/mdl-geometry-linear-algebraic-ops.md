@@ -1463,7 +1463,7 @@ Vectors, Angles, and Projections<br>**dot products · orthogonal shadows · Cauc
 @geometry-linear-algebraic-ops-dot-products-and-angles
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 @fig:ch33-la-angle-clip
 :::
 :::

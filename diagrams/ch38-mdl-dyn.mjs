@@ -2,6 +2,7 @@
 // Rendered and audited by tools/build_module_diagrams.mjs with 0 visual defects.
 
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { textWidth } from './mdl-textwidth.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -18,33 +19,99 @@ const circle = (cx, cy, r, fill, stroke, sw = 2, dash = false) =>
 const path = (d, stroke, fill = 'none', sw = 2.5, dash = false) =>
   `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 
-function fitTx(x, y, t, maxW, o = {}) {
-  const str = String(t);
-  const charW = o.mono ? 0.68 : 0.60;
-  const len = Math.max(1, str.length);
-  const capFs = Math.floor(((maxW - 22) / (len * charW)) * 10) / 10;
-  const fs = Math.max(7.0, Math.min(o.fs || 14.5, capFs));
-  return tx(x, y, str, { ...o, fs });
+// Text that does not fit is shrunk, but never below MIN_FS. A mono string
+// still too wide at MIN_FS is set in the (narrower) sans face instead; a
+// string still too wide after that is wrapped onto two lines at the space
+// nearest its middle. Widths come from the real font metrics
+// (mdl-textwidth.mjs).
+const MIN_FS = 11;
+export const _fitLog = [];
+function split2(s) {
+  const mid = s.length / 2;
+  let best = -1;
+  for (let i = 1; i < s.length - 1; i++) {
+    if (s[i] === ' ' && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
+  }
+  return best < 0 ? null : [s.slice(0, best).trimEnd(), s.slice(best + 1).trimStart()];
 }
 
-function card(x, y, w, h, fill, stroke, lines, opts = {}) {
-  let o = rect(x, y, w, h, fill, stroke, opts.rx || 8, opts.sw || 2, opts.dash || false);
-  const cx = x + w / 2;
-  const n = lines.length;
-  const spacing = opts.spacing || (n <= 1 ? 0 : Math.min(22, (h - 24) / (n - 1)));
-  const startY = y + h / 2 - ((n - 1) * spacing) / 2;
-  lines.forEach((ln, i) => {
-    const item = typeof ln === 'string' ? { t: ln } : ln;
-    o += fitTx(cx, startY + i * spacing, item.t, w, {
-      fs: item.fs || (i === 0 ? 15 : 13.5),
-      fw: item.fw || (i === 0 ? 700 : 500),
-      mono: item.mono || false,
-      fill: item.fill || (i === 0 ? C.ink : C.muted),
+// { lines: [one or two strings], fs, mono } for text t in a box of width maxW.
+function fitLines(t, maxW, o = {}) {
+  const str = String(t);
+  const avail = maxW - 22;
+  const base = o.fs || 14.5;
+  const bold = (o.fw || 500) >= 600;
+  const fit1 = (mono) => {
+    const w = textWidth(str, base, mono, bold);
+    return w <= avail ? base : Math.floor((base * avail / w) * 10) / 10;
+  };
+  let mono = !!o.mono;
+  let fs = fit1(mono);
+  if (fs < MIN_FS && mono) { mono = false; fs = fit1(false); }
+  if (fs >= MIN_FS) return { lines: [str], fs, mono };
+  const parts = split2(str);
+  if (!parts) {
+    _fitLog.push(['over', str, MIN_FS]);
+    return { lines: [str], fs: MIN_FS, mono };
+  }
+  const w2 = Math.max(...parts.map(p => textWidth(p, base, mono, bold)));
+  fs = Math.max(MIN_FS, Math.min(base, Math.floor((base * avail / w2) * 10) / 10));
+  _fitLog.push(['wrap', str, fs, w2 * fs / base > avail]);
+  return { lines: parts, fs, mono };
+}
+
+// Centred text fitted to width maxW (one line, or two around y).
+function fitTx(x, y, t, maxW, o = {}) {
+  const { lines, fs, mono } = fitLines(t, maxW, o);
+  if (lines.length === 1) return tx(x, y, lines[0], { ...o, fs, mono });
+  const dy = 0.6 * fs;
+  return tx(x, y - dy, lines[0], { ...o, fs, mono }) + tx(x, y + dy, lines[1], { ...o, fs, mono });
+}
+
+// Stack fitted items: a wrapped item adds 1.2 fs of height between its two
+// lines; sp separates items. Returns the markup.
+function stackLines(cx, cy, items, maxW, sp) {
+  const fitted = items.map(it => ({ it, ...fitLines(it.t, maxW, it) }));
+  const extra = fitted.map(f => (f.lines.length > 1 ? 1.2 * f.fs : 0));
+  const total = (fitted.length - 1) * sp + extra.reduce((a, b) => a + b, 0);
+  let y = cy - total / 2;
+  let o = '';
+  fitted.forEach((f, i) => {
+    f.lines.forEach((ln, j) => {
+      o += tx(cx, y + j * 1.2 * f.fs, ln, { ...f.it, fs: f.fs, mono: f.mono });
     });
+    y += extra[i] + sp;
   });
   return o;
 }
 
+function wrapExtra(items, maxW) {
+  return items.reduce((a, it) => {
+    const f = fitLines(it.t, maxW, it);
+    return a + (f.lines.length > 1 ? 1.2 * f.fs : 0);
+  }, 0);
+}
+
+// High-level clean card with lines of text guaranteed inside borders
+function card(x, y, w, h, fill, stroke, lines, opts = {}) {
+  let o = rect(x, y, w, h, fill, stroke, opts.rx || 8, opts.sw || 2, opts.dash || false);
+  const n = lines.length;
+  const items = lines.map((ln, i) => {
+    const item = typeof ln === 'string' ? { t: ln } : ln;
+    return {
+      t: item.t,
+      fs: item.fs || (i === 0 ? 15 : 13.5),
+      fw: item.fw || (i === 0 ? 700 : 500),
+      mono: item.mono || false,
+      fill: item.fill || (i === 0 ? C.ink : C.muted),
+    };
+  });
+  const ex = wrapExtra(items, w);
+  const spacing = opts.spacing || (n <= 1 ? 0 : Math.min(22, (h - 24 - ex) / (n - 1)));
+  return o + stackLines(x + w / 2, y + h / 2, items, w, spacing);
+}
+
+// Header bar + body card
 function titledPanel(x, y, w, h, title, accent, bodyLines, opts = {}) {
   let o = rect(x, y, w, h, opts.fill || '#FFFFFF', accent.base, 10, 2);
   o += rect(x + 6, y + 6, w - 12, 30, accent.tint, 'none', 6, 0);
@@ -52,18 +119,19 @@ function titledPanel(x, y, w, h, title, accent, bodyLines, opts = {}) {
   const bodyTop = y + 40;
   const bodyH = h - 44;
   const n = bodyLines.length;
-  const sp = opts.spacing || (n <= 1 ? 0 : Math.min(22, (bodyH - 20) / (n - 1)));
-  const sy = bodyTop + bodyH / 2 - ((n - 1) * sp) / 2;
-  bodyLines.forEach((ln, i) => {
+  const items = bodyLines.map(ln => {
     const item = typeof ln === 'string' ? { t: ln } : ln;
-    o += fitTx(x + w / 2, sy + i * sp, item.t, w, {
+    return {
+      t: item.t,
       fs: item.fs || 13.5,
       fw: item.fw || 600,
       mono: item.mono || false,
       fill: item.fill || C.ink,
-    });
+    };
   });
-  return o;
+  const ex = wrapExtra(items, w);
+  const sp = opts.spacing || (n <= 1 ? 0 : Math.min(22, (bodyH - 20 - ex) / (n - 1)));
+  return o + stackLines(x + w / 2, bodyTop + bodyH / 2, items, w, sp);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -78,7 +146,7 @@ function unifiedPrimitives() {
   ]);
 
   o += titledPanel(20, 66, 156, 146, '1. ResNet Block', D.blue, [
-    { t: 'x_{l+1} = x_l + f(x_l)', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
+    { t: 'x_{ℓ+1} = x_ℓ + f(x_ℓ)', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
     { t: 'Forward Euler step', fs: 12.5, fill: C.ink },
     { t: 'with h = 1 on ODE', fs: 12.5, fill: C.ink },
     { t: 'ẋ(t) = f(x(t), t)', mono: true, fs: 12.5, fw: 700, fill: C.ink },
@@ -220,11 +288,11 @@ function wellPosedTriad() {
 function decayPlusRotation() {
   const W = 540, H = 282;
   let o = '';
-  o += titledPanel(20, 14, 240, 188, '1. Radial Decay: ẋ = −½ x', D.blue, [
+  o += titledPanel(20, 14, 240, 188, '1. Radial Decay: ẋ = −x', D.blue, [
     { t: 'Velocity points straight inward', fs: 12.5, fill: C.ink },
-    { t: 'd/dt ‖x‖² = 2 xᵀ(−½ x) = −‖x‖²', mono: true, fs: 12, fw: 700, fill: D.blue.dark },
-    { t: '‖x(t)‖ = e^{−t/2} ‖x₀‖', mono: true, fs: 14, fw: 700, fill: C.ink },
-    { t: 'Pure real eigenvalue λ = −1/2', fs: 12.5, fill: C.muted },
+    { t: 'd/dt ‖x‖² = 2 xᵀ(−x) = −2‖x‖²', mono: true, fs: 12, fw: 700, fill: D.blue.dark },
+    { t: '‖x(t)‖ = e^{−t} ‖x₀‖', mono: true, fs: 14, fw: 700, fill: C.ink },
+    { t: 'Pure real eigenvalue λ = −1', fs: 12.5, fill: C.muted },
   ]);
 
   o += titledPanel(280, 14, 240, 188, '2. Orthogonal Turn: ẋ = K x', D.green, [
@@ -235,8 +303,9 @@ function decayPlusRotation() {
   ]);
 
   o += card(20, 216, 500, 52, D.purple.tint, C.purple, [
-    { t: 'Combined Planar Spiral:   A = −½ I + K   ⇒   λ = −0.5 ± i   (decays as e^{−t/2} while rotating at 1 rad/s)', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
-  ]);
+    { t: 'Combined Planar Spiral:  A = −½ I + K  ⇒  λ = −0.5 ± i', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: 'decays as e^{−t/2} while rotating at 1 rad/s', fs: 12.5, fill: C.ink },
+  ], { spacing: 18 });
   return svg(W, H, o);
 }
 
@@ -370,7 +439,7 @@ function spectralDecoupling() {
   ]);
 
   o += card(20, 208, 500, 58, D.purple.tint, C.purple, [
-    { t: 'Eigenvalue Decomposition λⱼ = aⱼ + i bⱼ:   |e^{λⱼt}| = e^{aⱼt}   (Decay / Growth)   ·   arg = bⱼt   (Rotation)', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: 'Eigenvalues λⱼ = aⱼ + i bⱼ:  |e^{λⱼt}| = e^{aⱼt} (Decay / Growth)  ·  arg = bⱼt (Rotation)', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
     { t: 'Asymptotically stable (x(t) → 0 for all x₀) if and only if maxⱼ Re(λⱼ) < 0', fs: 13, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -396,7 +465,7 @@ function spiralMatrixExp() {
   ]);
 
   o += card(20, 216, 500, 52, C.lblue, C.blue, [
-    { t: 'Compound-Interest Limit (Lie–Trotter):  (I + At/n)ⁿ → e^{At}  always holds, with O(1/n) gap', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
+    { t: 'Compound-Interest Limit:  (I + At/n)ⁿ → e^{At}  always holds, with O(1/n) gap', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
   ]);
   return svg(W, H, o);
 }
@@ -435,16 +504,19 @@ function nonnormalTransient() {
     { t: 'Non-Normal Transient Growth:  A = [−1, 10; 0, −2]  (AAᵀ ≠ AᵀA,  Eigenvalues λ₁ = −1, λ₂ = −2 < 0)', mono: true, fs: 13, fw: 700, fill: D.orange.dark },
   ]);
 
-  // Left plot showing norm rising to 2.51 at t = ln 2 before decaying
+  // Left plot: the norm rises from 1 to 2.51 at t = ln 2, then decays
   o += rect(20, 66, 236, 200, '#FFFFFF', C.gray, 8, 1.5);
   o += line(38, 236, 238, 236, C.gray, 1.5, false);
   o += line(38, 82, 38, 236, C.gray, 1.5, false);
-  // Monotone decay e^{-t} (dashed blue) vs non-normal hump 10(e^{-t}-e^{-2t}) (red)
-  o += path('M 38 186 Q 110 222 232 233', C.blue, 'none', 2, true);
-  o += path('M 38 186 Q 94 74 232 228', D.red.base, 'none', 3.5, false);
-  o += circle(94, 114, 5, D.red.base, '#FFFFFF', 1.5);
-  o += fitTx(138, 92, 'Peak ‖x(ln 2)‖ ≈ 2.51×!', 210, { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
-  o += fitTx(138, 252, 'x₁(t) = 10(e⁻ᵗ − e⁻²ᵗ)', 210, { mono: true, fs: 12.5, fw: 700, fill: C.ink });
+  // ‖x(t)‖ for x₀ = (0, 1) (red) vs. the monotone decay e^{-t} of a normal
+  // matrix (dashed blue); t ∈ [0, 4] at 50 px per unit, 52 px per unit of norm.
+  o += `<polyline points="38.0,184.0 40.5,186.5 43.0,188.9 45.5,191.2 48.0,193.4 50.5,195.5 53.0,197.5 55.5,199.4 58.0,201.1 60.5,202.8 63.0,204.5 65.5,206.0 68.0,207.5 70.5,208.9 73.0,210.2 75.5,211.4 78.0,212.6 80.5,213.8 83.0,214.9 85.5,215.9 88.0,216.9 90.5,217.8 93.0,218.7 95.5,219.5 98.0,220.3 100.5,221.1 103.0,221.8 105.5,222.5 108.0,223.2 110.5,223.8 113.0,224.4 115.5,225.0 118.0,225.5 120.5,226.0 123.0,226.5 125.5,227.0 128.0,227.4 130.5,227.8 133.0,228.2 135.5,228.6 138.0,229.0 140.5,229.3 143.0,229.6 145.5,229.9 148.0,230.2 150.5,230.5 153.0,230.8 155.5,231.0 158.0,231.3 160.5,231.5 163.0,231.7 165.5,231.9 168.0,232.1 170.5,232.3 173.0,232.5 175.5,232.7 178.0,232.8 180.5,233.0 183.0,233.1 185.5,233.3 188.0,233.4 190.5,233.5 193.0,233.7 195.5,233.8 198.0,233.9 200.5,234.0 203.0,234.1 205.5,234.2 208.0,234.3 210.5,234.3 213.0,234.4 215.5,234.5 218.0,234.6 220.5,234.6 223.0,234.7 225.5,234.8 228.0,234.8 230.5,234.9 233.0,234.9 235.5,235.0 238.0,235.0" fill="none" stroke="${C.blue}" stroke-width="2" stroke-dasharray="5 4"/>`;
+  o += `<polyline points="38.0,184.0 40.5,183.1 43.0,174.2 45.5,162.7 48.0,151.3 50.5,141.0 53.0,132.2 55.5,124.7 58.0,118.7 60.5,114.0 63.0,110.4 65.5,107.9 68.0,106.3 70.5,105.5 73.0,105.4 75.5,105.9 78.0,106.9 80.5,108.4 83.0,110.2 85.5,112.4 88.0,114.9 90.5,117.5 93.0,120.4 95.5,123.4 98.0,126.5 100.5,129.6 103.0,132.8 105.5,136.1 108.0,139.3 110.5,142.6 113.0,145.8 115.5,149.0 118.0,152.2 120.5,155.3 123.0,158.3 125.5,161.3 128.0,164.2 130.5,167.1 133.0,169.8 135.5,172.5 138.0,175.1 140.5,177.7 143.0,180.1 145.5,182.5 148.0,184.8 150.5,187.0 153.0,189.1 155.5,191.1 158.0,193.1 160.5,195.0 163.0,196.8 165.5,198.6 168.0,200.2 170.5,201.9 173.0,203.4 175.5,204.9 178.0,206.3 180.5,207.7 183.0,209.0 185.5,210.2 188.0,211.4 190.5,212.5 193.0,213.6 195.5,214.7 198.0,215.7 200.5,216.6 203.0,217.5 205.5,218.4 208.0,219.2 210.5,220.0 213.0,220.8 215.5,221.5 218.0,222.2 220.5,222.8 223.0,223.5 225.5,224.1 228.0,224.6 230.5,225.2 233.0,225.7 235.5,226.2 238.0,226.7" fill="none" stroke="${D.red.base}" stroke-width="3.5"/>`;
+  o += circle(72.7, 105.4, 5, D.red.base, '#FFFFFF', 1.5);
+  o += fitTx(138, 86, 'Peak ‖x(ln 2)‖ ≈ 2.51×!', 210, { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
+  o += tx(136, 124, '‖x(t)‖, x₀ = (0, 1)', { fs: 12.5, fw: 700, fill: D.red.dark, anchor: 'start' });
+  o += tx(136, 144, 'e⁻ᵗ (normal decay)', { fs: 12.5, fw: 700, fill: D.blue.dark, anchor: 'start' });
+  o += fitTx(138, 252, 'x₁ = 10(e⁻ᵗ − e⁻²ᵗ), x₂ = e⁻²ᵗ', 210, { mono: true, fs: 12.5, fw: 700, fill: C.ink });
 
   o += card(272, 66, 248, 94, D.red.tint, D.red.base, [
     { t: 'Nearly Parallel Eigenvectors (5.7°)', fs: 13.5, fw: 700, fill: D.red.dark },
@@ -570,9 +642,9 @@ function rk4FourStageProbes() {
 
   const probes = [
     { k: 'k₁ (Start tₙ)', eq: 'f(xₙ, tₙ)', wt: 'Weight 1/6', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { k: 'k₂ (Midpoint 1)', eq: 'f(xₙ + ½hk₁)', wt: 'Weight 2/6', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { k: 'k₃ (Midpoint 2)', eq: 'f(xₙ + ½hk₂)', wt: 'Weight 2/6', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { k: 'k₄ (End tₙ+h)', eq: 'f(xₙ + hk₃)', wt: 'Weight 1/6', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { k: 'k₂ (Midpoint 1)', eq: 'f(xₙ + ½hk₁, tₙ + ½h)', wt: 'Weight 2/6', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { k: 'k₃ (Midpoint 2)', eq: 'f(xₙ + ½hk₂, tₙ + ½h)', wt: 'Weight 2/6', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { k: 'k₄ (End tₙ+h)', eq: 'f(xₙ + hk₃, tₙ + h)', wt: 'Weight 1/6', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   probes.forEach((p, i) => {
@@ -614,13 +686,13 @@ function stabilityPolynomials() {
   ]);
 
   o += titledPanel(20, 174, 240, 102, '3. Classical RK4 (Order p = 4)', D.purple, [
-    { t: 'R(z) = 1 + z + ½z² + z³/6 + z⁴/24', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
-    { t: 'Gap = z⁵/120 · Real: −2.79 < hλ < 0', mono: true, fs: 11.5, fill: C.ink },
+    { t: 'R(z) = 1 + z + ½z² + z³/6 + z⁴/24', fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: 'Gap = z⁵/120 · Real: −2.79 < hλ < 0', fs: 11.5, fill: C.ink },
   ]);
 
   o += titledPanel(280, 174, 240, 102, '4. Backward Euler (Implicit p = 1)', D.green, [
-    { t: 'R(z) = 1 / (1 − z) = 1 + z + z² + ⋯', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: 'A-Stable: |R(z)| < 1 ∀ Re(z) < 0!', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'R(z) = 1 / (1 − z) = 1 + z + z² + ⋯', fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'A-Stable: |R(z)| < 1 ∀ Re(z) < 0!', fs: 12, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }
@@ -638,7 +710,7 @@ function adaptiveAndSymplectic() {
 
   o += titledPanel(280, 14, 240, 190, 'Symplectic Euler & Leapfrog', D.green, [
     { t: 'Hamiltonian oscillator q̇ = p, ṗ = −q:', fs: 12.5, fw: 700, fill: C.ink },
-    { t: '1. q_{n+1} = q_n + h p_n', mono: true, fs: 13, fw: 700, fill: C.ink },
+    { t: '1. q_{n+1} = q_n + h p_n', fs: 12.5, fw: 700, fill: C.ink },
     { t: '2. p_{n+1} = p_n − h q_{n+1} (new q!)', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     { t: 'Jacobian det S_h = 1 (Area-preserving!)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     { t: '(Forward Euler has det = 1 + h² > 1)', fs: 12, fill: D.red.dark },
@@ -660,19 +732,19 @@ function stiffTwoModeTrap() {
   o += titledPanel(20, 68, 240, 138, 'Slow Mode x₂(t) = e^{−t} (λ₂ = −1)', D.blue, [
     { t: 'Carries 99.9% of signal for t ≥ 0.1', fs: 12.5, fill: C.ink },
     { t: 'Coarse step h = 0.10 gives:', fs: 12.5, fill: C.ink },
-    { t: 'R(−0.1) = 1 − 0.1 = 0.90 ≈ e^{−0.1}', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: 'R(−0.1) = 1 − 0.1 = 0.90 ≈ e^{−0.1}', fs: 12.5, fw: 700, fill: D.blue.dark },
     { t: 'Tracks e⁻¹ = 0.368 within 5%!', fs: 13, fw: 700, fill: D.green.dark },
   ]);
 
   o += titledPanel(280, 68, 240, 138, 'Fast Mode x₁(t) = e^{−50t} (λ₁ = −50)', D.red, [
-    { t: 'Exact x₁(1) = e^{−50} ≈ 2 × 10⁻²² ≈ 0', mono: true, fs: 12.5, fill: C.ink },
+    { t: 'Exact x₁(1) = e^{−50} ≈ 2 × 10⁻²² ≈ 0', fs: 12.5, fill: C.ink },
     { t: 'At h = 0.10, Euler multiplier is:', fs: 12.5, fill: C.ink },
-    { t: 'R(−50 · 0.1) = 1 − 5 = −4  (|R| > 1!)', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
-    { t: 'Explodes to (−4)¹⁰ = +1.05 × 10⁶!', mono: true, fs: 13, fw: 700, fill: D.red.dark },
+    { t: 'R(−50 · 0.1) = 1 − 5 = −4  (|R| > 1!)', fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: 'Explodes to (−4)¹⁰ = +1.05 × 10⁶!', fs: 13, fw: 700, fill: D.red.dark },
   ]);
 
   o += card(20, 220, 500, 48, C.lamber, C.amber, [
-    { t: 'Explicit Step Ceiling: Fast mode forces h < 2 / |λ_max| = 2 / 50 = 0.04 long after e^{−50t} has vanished!', fs: 12.5, fw: 700, fill: D.orange.dark },
+    { t: 'Explicit Step Ceiling: h < 2/|λ_max| = 2/50 = 0.04 long after e^{−50t} has vanished!', fs: 12.5, fw: 700, fill: D.orange.dark },
   ]);
   return svg(W, H, o);
 }
@@ -684,7 +756,7 @@ function backwardEulerImplicit() {
     { t: 'x_{n+1} = x_n + h f(x_n, t_n)', mono: true, fs: 13.5, fw: 700, fill: C.ink },
     { t: 'R_fwd(z) = 1 + z', mono: true, fs: 14, fw: 700, fill: D.red.dark },
     { t: 'Extrapolates initial steep slope;', fs: 12.5, fill: C.ink },
-    { t: 'overshoots 0 when h|λ| > 2', fs: 12.5, fill: D.red.dark },
+    { t: 'diverges when h|λ| > 2', fs: 12.5, fill: D.red.dark },
   ]);
 
   o += titledPanel(280, 14, 240, 188, 'Backward Euler (Implicit End Slope)', D.green, [
@@ -724,7 +796,7 @@ function whyGdUsesEuler() {
   o += titledPanel(364, 64, 156, 152, 'Heavy-Ball Momentum', D.blue, [
     { t: 'Changes the ODE!', fs: 13.5, fw: 700, fill: D.blue.dark },
     { t: 'm ẍ + c ẋ = −∇L(x)', mono: true, fs: 12, fw: 700, fill: C.ink },
-    { t: '2nd-order damped wave', fs: 12, fill: C.ink },
+    { t: '2nd-order damped oscillator', fs: 12, fill: C.ink },
     { t: 'O(√κ) vs O(κ) steps', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
   ]);
 
@@ -742,7 +814,7 @@ function cubicDetVsTrace() {
   const W = 540, H = 282;
   let o = '';
   o += titledPanel(20, 14, 240, 188, 'Discrete Normalizing Flow', D.red, [
-    { t: 'x_{l+1} = g_l(x_l)   (d = 3,072)', mono: true, fs: 13, fw: 700, fill: C.ink },
+    { t: 'x_{ℓ+1} = g_ℓ(x_ℓ)   (d = 3,072)', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'log p_out = log p_in − ∑ log|det J_g|', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
     { t: 'Full Jacobian det costs O(d³):', fs: 12.5, fill: C.ink },
     { t: '~2 × 10¹⁰ FLOPs / layer (3,000× slower!)', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
@@ -847,7 +919,7 @@ function pontryaginAdjointVjp() {
   ]);
 
   o += card(20, 220, 500, 48, D.purple.tint, C.purple, [
-    { t: 'Automatic Differentiation Efficiency: Both J_xᵀ a and J_θᵀ a are computed in 1 reverse-mode VJP!', fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: 'AD Efficiency: both J_xᵀa and J_θᵀa come from 1 reverse-mode VJP!', fs: 12.5, fw: 700, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
 }
@@ -915,10 +987,10 @@ function hutchinsonRademacher() {
   ]);
 
   o += titledPanel(192, 68, 156, 146, '2. Rademacher ±1', D.green, [
-    { t: 'εᵢ ∈ {−1, +1} i.i.d.', mono: true, fs: 13, fw: 700, fill: D.green.dark },
+    { t: 'εᵢ ∈ {−1, +1} i.i.d.', fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Cost: 1 VJP / step!', fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Since εᵢ² ≡ 1 always:', fs: 12, fill: C.ink },
-    { t: 'Var = 2 ∑_{i≠j} S_{ij}²', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'Var = 2 ∑_{i≠j} S_{ij}²', fs: 12, fw: 700, fill: D.green.dark },
     { t: 'Zero diagonal noise!', fs: 12, fw: 700, fill: D.green.dark },
   ]);
 
@@ -1058,7 +1130,7 @@ function ouEmVsExact() {
   ]);
 
   o += card(20, 216, 500, 52, C.lblue, C.blue, [
-    { t: 'Convergence Orders of Euler–Maruyama: Weak Order = 1 (O(Δt)); Strong Order = 1 (additive) or 1/2 (mult.)', fs: 12, fw: 700, fill: D.blue.dark },
+    { t: 'Euler–Maruyama Orders: Weak = 1 (O(Δt)); Strong = 1 (additive) or 1/2 (mult.)', fs: 12, fw: 700, fill: D.blue.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1111,7 +1183,7 @@ function ouMomentOdes() {
   ]);
 
   o += card(20, 220, 500, 48, D.purple.tint, C.purple, [
-    { t: 'Linearity Superposition: Any mixture ∑ wₖ N(μₖ, v₀) evolves each Gaussian component independently!', fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: 'Superposition: any mixture ∑ wₖ N(μₖ, v₀) evolves each component independently!', fs: 12.5, fw: 700, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1213,7 +1285,7 @@ function regressionLemmaFloor() {
   ]);
 
   o += card(20, 218, 500, 50, C.lgreen, C.green, [
-    { t: 'Engine of DSM & CFM: Regressing onto per-sample Y = −ε/σ (or ε−x₀) fits E[Y|X] = ∇log p_σ (or u_t)!', fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'Engine of DSM & CFM: regressing onto Y = −ε/σ (or ε−x₀) fits E[Y|X] = ∇log p_σ (or u_t)!', fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1387,7 +1459,7 @@ function cfmMarginalPosterior() {
   ]);
 
   o += card(20, 208, 500, 58, C.lamber, C.amber, [
-    { t: 'Why Independent Pairing Bends: At t = 1, u₁(x) = x − E[x₀], so 1 Euler step collapses all points to E[x₀]!', fs: 12.5, fw: 700, fill: D.orange.dark },
+    { t: 'Why Independent Pairing Bends: u₁(x) = x − E[x₀], so 1 Euler step collapses all points to E[x₀]!', fs: 12.5, fw: 700, fill: D.orange.dark },
     { t: 'When straight chords cross at (x, t), averaging their velocities creates a curved non-crossing ODE flow', fs: 12, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -1448,8 +1520,8 @@ function reflowJensenStraightening() {
 
   o += titledPanel(280, 68, 240, 138, 'Round 2: Reflowed Pairs (Z₀, Z₁)', D.green, [
     { t: 'Deterministic ODE endpoints never cross:', fs: 12, fill: C.ink },
-    { t: 'Crossing floor C drops 1.37 → 0.002!', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: 'Trajectories become 25× straighter;', fs: 12.5, fill: C.ink },
+    { t: 'Crossing floor C drops 1.37 → ≈0.001–0.003', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'Trajectories become 20–35× straighter;', fs: 12.5, fill: C.ink },
     { t: '1 Euler step matches 32 steps!', fs: 13, fw: 700, fill: D.green.dark },
   ]);
 

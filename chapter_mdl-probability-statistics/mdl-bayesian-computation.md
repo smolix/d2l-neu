@@ -1675,7 +1675,7 @@ $$p(y_\star \mid \mathbf{x}_\star, \mathcal{D}) = \int p(y_\star \mid \mathbf{x}
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-predictive-integral
+@fig:ch36-prob-predictive-integral
 :::
 :::
 :::
@@ -1751,7 +1751,7 @@ Comparing the MAP plug-in $\operatorname{sigmoid}(\mathbf{z}_\star^\top \boldsym
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-predictive-shift
+@fig:ch36-prob-predictive-shift
 :::
 :::
 :::
@@ -1853,7 +1853,7 @@ $$\pi(\boldsymbol{\theta})\,T(\boldsymbol{\theta}' \mid \boldsymbol{\theta}) = \
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-detailed-balance
+@fig:ch36-prob-detailed-balance
 :::
 :::
 :::

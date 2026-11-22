@@ -781,7 +781,7 @@ On $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ from $(1, 1)$, modeling curva
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-curvature-vs-first-order
+@fig:ch35-opt-curvature-vs-first-order
 :::
 :::
 :::
@@ -800,7 +800,7 @@ $$m_k(\mathbf{p}) = f(\mathbf{x}_k) + \mathbf{g}_k^\top \mathbf{p} + \tfrac12\,\
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-newton-quadratic-model
+@fig:ch35-opt-newton-quadratic-model
 :::
 :::
 :::
@@ -818,7 +818,7 @@ $$\nabla f(\mathbf{x})^\top \mathbf{d} = -\nabla f(\mathbf{x})^\top \mathbf{P}^{
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-mahalanobis-steepest
+@fig:ch35-opt-mahalanobis-steepest
 :::
 :::
 :::
@@ -836,7 +836,7 @@ $$\mathbf{T}\mathbf{y}_{k+1} = \mathbf{x}_k - \big(\nabla^2 f(\mathbf{x}_k)\big)
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-affine-invariance
+@fig:ch35-opt-affine-invariance
 :::
 :::
 :::
@@ -867,7 +867,7 @@ $$\|\mathbf{e}_{k+1}\| \le \frac{L_2}{2\mu}\,\|\mathbf{e}_k\|^2$$
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-quadratic-doubling-digits
+@fig:ch35-opt-quadratic-doubling-digits
 :::
 :::
 :::
@@ -894,7 +894,7 @@ We test Newton's method on the $\kappa = 1000$ quadratic $\mathrm{diag}(1, 1000)
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-hessian-scale-wall
+@fig:ch35-opt-hessian-scale-wall
 :::
 :::
 :::
@@ -912,7 +912,7 @@ $$y_{k+1} = y_k - \frac{-\sin y_k}{-\cos y_k} = y_k - \tan y_k \approx -\frac{y_
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-saddle-wrong-way
+@fig:ch35-opt-saddle-wrong-way
 :::
 :::
 :::
@@ -942,7 +942,7 @@ $$h_k = \frac{f'(x_k) - f'(x_{k-1})}{x_k - x_{k-1}}, \qquad x_{k+1} = x_k - \fra
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-secant-chord-slope
+@fig:ch35-opt-secant-chord-slope
 :::
 :::
 :::
@@ -974,7 +974,7 @@ $$\mathbf{z}^\top \mathbf{M}_{k+1}\mathbf{z} = \mathbf{w}^\top \mathbf{M}_k\math
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-bfgs-erase-write
+@fig:ch35-opt-bfgs-erase-write
 :::
 :::
 :::
@@ -1014,7 +1014,7 @@ $$(\mathbf{B} + \tau\mathbf{I})\,\mathbf{p} = -\mathbf{g}, \quad \mathbf{B} + \t
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-trust-region-damping
+@fig:ch35-opt-trust-region-damping
 :::
 :::
 :::

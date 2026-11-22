@@ -1567,6 +1567,10 @@ The original GAN objective of Goodfellow et al. (2014) is a special case of the 
 Training a $\chi^2$ critic by gradient ascent on $P = (0.6, 0.3, 0.1)$ vs. $Q = (0.2, 0.5, 0.3)$ ($\chi^2 = 1.0133$) exposes two structural limits of the variational bound:
 
 @!divergences-distances-f-gan-bound
+:::
+
+::: {.slide title="Practical Pitfalls of Adversarial Critic Bounds (cont.)"}
+[Underestimation & Vanishing Gradients]{.kicker}
 
 - **Downward bias & disjoint-support saturation:** Any suboptimal critic ($T \neq T^\star$, including $2T^\star$) underestimates $D_f$ by $\tfrac14\mathbb{E}_Q[(T - T^\star)^2]$; on disjoint supports, $T^\star$ is constant ($f'(\infty)$ on data, $f'(0)$ on model samples), giving the generator zero gradient!
 :::

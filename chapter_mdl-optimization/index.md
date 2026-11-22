@@ -126,7 +126,7 @@ Mathematics for Deep Learning: Optimization<br>**smoothness · condition number 
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-three-questions
+@fig:ch35-opt-three-questions
 :::
 :::
 :::
@@ -144,7 +144,7 @@ We test every theorem against $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ ($
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-benchmark-valley
+@fig:ch35-opt-benchmark-valley
 :::
 :::
 :::
@@ -160,7 +160,7 @@ We test every theorem against $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ ($
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-chapter-architecture
+@fig:ch35-opt-chapter-architecture
 :::
 :::
 :::
@@ -201,7 +201,7 @@ We test every theorem against $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ ($
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-study-roadmap
+@fig:ch35-opt-study-roadmap
 :::
 :::
 :::

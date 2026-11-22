@@ -1555,7 +1555,13 @@ How does mutual information connect to individual, joint, and conditional entrop
 
 Evaluating both the KL divergence formula and the conditional entropy reduction $H(Y) - H(Y \mid X)$ on the $2 \times 2$ flipped-bit table confirms $I(X; Y) = 0.3681\text{ nats}$ ($0.531\text{ bits}$):
 
-@mutual-information-joint-conditional
+@-mutual-information-joint-conditional
+:::
+
+::: {.slide title="Verifying Discrete Mutual Information in Code (cont.)"}
+[KL Form vs. Entropy Reduction]{.kicker}
+
+@!mutual-information-joint-conditional
 :::
 
 ::: {.slide title="Mutual Information of a Bivariate Gaussian Pair"}
@@ -1640,7 +1646,7 @@ with equality if and only if $I(X; Y \mid Z) = 0$ (meaning $X \to Z \to Y$ is al
 :::
 
 - **Two-line proof from the chain rule:** Expand $I(X; Y, Z)$ in both orders:
-  $$I(X; Z) + I(X; Y \mid Z) = I(X; Y, Z) = I(X; Y) + \underbrace{I(X; Z \mid Y)}_{= 0 \text{ (Markov)}} \implies I(X; Z) = I(X; Y) - \underbrace{I(X; Y \mid Z)}_{\ge 0} \le I(X; Y) \quad \blacksquare$$
+  $$\begin{aligned} I(X; Z) + I(X; Y \mid Z) &= I(X; Y, Z) = I(X; Y) + \underbrace{I(X; Z \mid Y)}_{= 0 \text{ (Markov)}} \\ \implies I(X; Z) &= I(X; Y) - \underbrace{I(X; Y \mid Z)}_{\ge 0} \le I(X; Y) \quad \blacksquare \end{aligned}$$
 - **Sufficient statistics:** Equality $I(X; T(Y)) = I(X; Y)$ holds if and only if $T(Y)$ retains everything $Y$ reveals about $X$ ($p(x \mid y) = p(x \mid T(y))$, e.g., the total head count for a coin's bias).
 :::
 
@@ -1735,7 +1741,8 @@ For a Gaussian source $X \sim \mathcal{N}(0, \sigma_X^2)$ under squared-error di
 
 $$R(D) = \frac{1}{2}\log\frac{\sigma_X^2}{D} \iff D(R) = \sigma_X^2 e^{-2R} \quad \text{(each extra bit } \ln 2\text{ nats cuts MSE by } 4\times\text{)}$$
 
-- **Lower bound proof:** $I(X; \hat{X}) = h(X) - h(X - \hat{X} \mid \hat{X}) \ge h(X) - h(X - \hat{X}) \ge \tfrac12\log(2\pi e\sigma_X^2) - \tfrac12\log(2\pi e D) = \tfrac12\log(\sigma_X^2/D)$.
+- **Lower bound proof:**
+  $$\begin{aligned} I(X; \hat{X}) &= h(X) - h(X - \hat{X} \mid \hat{X}) \ge h(X) - h(X - \hat{X}) \\ &\ge \tfrac12\log(2\pi e\sigma_X^2) - \tfrac12\log(2\pi e D) = \tfrac12\log(\sigma_X^2/D). \end{aligned}$$
 - **Attaining the bound via the additive Gaussian channel:** Encode $Z = X + \sigma\epsilon$ and reconstruct the posterior mean $\hat{X} = \mathbb{E}[X \mid Z] = \frac{\sigma_X^2}{\sigma_X^2 + \sigma^2}Z$:
 
 @!mdl-mutual-information-rate-distortion

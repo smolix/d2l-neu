@@ -1753,6 +1753,10 @@ No peak of a $\sigma$-blurred density can ever curve more sharply than the Gauss
 On $4{,}096$ draws from $p = \frac{1}{2}\mathcal{N}(-2, 0.5^2) + \frac{1}{2}\mathcal{N}(2, 0.5^2)$ noised four times each at $\sigma = 0.5$ ($16{,}384$ pairs), fitting 17 fixed basis functions by `np.linalg.lstsq` against $y = -\epsilon/\sigma$ recovers the exact score $4\tanh(4\tilde{x}) - 2\tilde{x}$:
 
 @!score-matching-diffusion-flow-dsm-train
+:::
+
+::: {.slide title="Fitting a Curved Bimodal Score by Least Squares (cont.)"}
+[1D Mixture Experiment]{.kicker}
 
 ::: {.d2l-note}
 Although the cloud of targets $-\epsilon/\sigma$ scatters vertically with variance $\approx 2.11$ (the population floor), its conditional mean is the exact score curve, and the least-squares fit achieves an excess risk of only $0.01$.

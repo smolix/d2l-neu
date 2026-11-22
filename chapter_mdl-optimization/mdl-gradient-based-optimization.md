@@ -1205,7 +1205,7 @@ On $f(x, y) = \tfrac12(x^2 + 10y^2)$ from $\mathbf{x}_0 = (2, 1)$ ($f = 7, \nabl
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-three-step-regimes
+@fig:ch35-opt-three-step-regimes
 :::
 :::
 :::
@@ -1224,7 +1224,7 @@ $$f(\mathbf{x} + \eta\,\mathbf{d}) = f(\mathbf{x}) + \eta\,\nabla f(\mathbf{x})^
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-steepest-descent-cone
+@fig:ch35-opt-steepest-descent-cone
 :::
 :::
 :::
@@ -1255,7 +1255,7 @@ $$f(\mathbf{y}) \le f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \math
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-lipschitz-quadratic-ceiling
+@fig:ch35-opt-lipschitz-quadratic-ceiling
 :::
 :::
 :::
@@ -1319,7 +1319,7 @@ Without convexity, $\nabla f(\mathbf{x}) = \mathbf{0}$ cannot distinguish a mini
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-saddle-halt
+@fig:ch35-opt-saddle-halt
 :::
 :::
 :::
@@ -1338,7 +1338,7 @@ $$f\big(\mathbf{x}_k - \eta\,\nabla f(\mathbf{x}_k)\big) \le f(\mathbf{x}_k) - c
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-armijo-backtracking
+@fig:ch35-opt-armijo-backtracking
 :::
 :::
 :::
@@ -1427,7 +1427,7 @@ $$1 - \eta^\star\lambda_{\min} = \eta^\star\lambda_{\max} - 1 \implies \eta^\sta
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-edge-of-stability
+@fig:ch35-opt-edge-of-stability
 :::
 :::
 :::
@@ -1511,7 +1511,7 @@ $$\mathbf{v}_{k+1} = \beta\,\mathbf{v}_k - \eta\,\nabla f(\mathbf{x}_k + \beta\,
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-nesterov-lookahead
+@fig:ch35-opt-nesterov-lookahead
 :::
 :::
 :::

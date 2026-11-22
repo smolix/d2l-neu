@@ -1146,8 +1146,12 @@ Test your understanding of score-based comparisons:
 1. **Coordinate rescaling ($D_{\textrm{F}}$ vs. $D_{\textrm{KL}}$):** Compute $D_{\textrm{F}}(P \| Q) = \frac{\Delta^2}{2\sigma^4}$ and $D_{\textrm{KL}}(P \| Q) = \frac{\Delta^2}{2\sigma^2}$ for $P = \mathcal{N}(0, 1)$ vs. $Q = \mathcal{N}(1, 1)$, and then for the doubled-coordinate pair $P = \mathcal{N}(0, 4)$ vs. $Q = \mathcal{N}(2, 4)$. Why does one change and not the other?
 2. **Closed-form KSD prediction:** Using $\mathrm{KSD}^2(P, Q) = \mathbb{E}_{x, x' \sim P}[(s_Q - s_P)(x)k(x, x')(s_Q - s_P)(x')]$, compute the exact population $\mathrm{KSD}^2$ between data $P = \mathcal{N}(0, 1)$ and shifted model $Q = \mathcal{N}(1, 1)$ under the RBF kernel $k(x, x') = e^{-(x-x')^2/2}$ ($\ell = 1$).
 3. **Energy-based model audit:** Given an EBM $\tilde{q}(\mathbf{x}) = e^{-E(\mathbf{x})}$ with intractable $Z$ and no MCMC sampler, plus a dataset $\{\mathbf{x}_i\}_{i=1}^N \sim P$, which of $D_{\textrm{KL}}(P \| Q)$, $\textrm{JS}$, $\textrm{MMD}$, $W_1$, $D_{\textrm{F}}$, and $\mathrm{KSD}$ can you compute or optimize?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Fisher Scaling, KSD, Normalizers (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **Rescaling:** On $\mathcal{N}(0,1)\|\mathcal{N}(1,1)$ ($\Delta=1, \sigma^2=1$), both equal $1/2$. On $\mathcal{N}(0,4)\|\mathcal{N}(2,4)$ ($\Delta=2, \sigma^2=4$), $D_{\textrm{KL}} = \frac{4}{2(4)} = 1/2$ is invariant, whereas $D_{\textrm{F}} = \frac{4}{2(16)} = 1/8$ drops $4\times$ because scores carry units of $1/x$.

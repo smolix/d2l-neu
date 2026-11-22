@@ -1442,7 +1442,7 @@ $$\nabla f(\mathbf{x}^\star) + 4\,\nabla g(\mathbf{x}^\star) = (-2.4, -3.2) + 4(
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-boundary-force-balance
+@fig:ch35-opt-boundary-force-balance
 :::
 :::
 :::
@@ -1493,7 +1493,7 @@ $$\nu^\star = -\frac{b}{\|\mathbf{a}\|^2}, \qquad \mathbf{x}^\star = \frac{b}{\|
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-hyperplane-shadow-price
+@fig:ch35-opt-hyperplane-shadow-price
 :::
 :::
 :::
@@ -1512,7 +1512,7 @@ $$\mathbf{x}^\star = \frac{\mathbf{y}}{\max\big(1,\, \|\mathbf{y}\|/r\big)}, \qq
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-active-vs-inactive-ball
+@fig:ch35-opt-active-vs-inactive-ball
 :::
 :::
 :::
@@ -1543,7 +1543,7 @@ $$\nabla f(\mathbf{x}^\star) + \sum_{i=1}^m \lambda_i^\star\nabla g_i(\mathbf{x}
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-kkt-four-conditions
+@fig:ch35-opt-kkt-four-conditions
 :::
 :::
 :::
@@ -1641,7 +1641,7 @@ $$\|\Pi_C(\mathbf{x}) - \Pi_C(\mathbf{y})\|_2 \le \|\mathbf{x} - \mathbf{y}\|_2$
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-projection-nonexpansive
+@fig:ch35-opt-projection-nonexpansive
 :::
 :::
 :::
@@ -1659,7 +1659,7 @@ $$\mathbf{x}_{k+1} = \Pi_C\big(\mathbf{x}_k - \eta\,\nabla f(\mathbf{x}_k)\big)$
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-pgd-step-cycle
+@fig:ch35-opt-pgd-step-cycle
 :::
 :::
 :::
@@ -1739,7 +1739,7 @@ $$\mathrm{prox}_\psi(\mathbf{z}) = \mathop{\mathrm{argmin}}_{\mathbf{x} \in \mat
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-soft-thresholding-prox
+@fig:ch35-opt-soft-thresholding-prox
 :::
 :::
 :::
@@ -1795,7 +1795,7 @@ Work out these three calculations using the KKT and proximal rules:
 | :--- | :--- | :--- | :--- |
 | **Equality Lagrange** | $\nabla f(\mathbf{x}^\star) + \sum_j \nu_j^\star \nabla h_j(\mathbf{x}^\star) = \mathbf{0}$, $h_j = 0$ | Necessary under LICQ; $\nu_j^\star = -\partial p^\star/\partial b_j$ | Hyperplane projections, normalization constraints |
 | **Inequality KKT** | Stationarity, primal/dual feas. ($\lambda_i^\star \ge 0$), $\lambda_i^\star g_i(\mathbf{x}^\star) = 0$ | Sufficient for convex problems; necessary under Slater | Gradient clipping, SVMs, norm-budget regularization |
-| **Euclidean Projection $\Pi_C$** | $(\mathbf{y} - \Pi_C(\mathbf{y}))^\top(\mathbf{x} - \Pi_C(\mathbf{y})) \le 0\;\forall\mathbf{x}\in C$ | Unique and nonexpansive ($\|\Pi_C(\mathbf{x}) - \Pi_C(\mathbf{y})\| \le \|\mathbf{x}-\mathbf{y}\|$) | PGD $\mathbf{x}_{k+1} = \Pi_C(\mathbf{x}_k - \eta\nabla f(\mathbf{x}_k))$ keeps GD's exact rate |
+| **Euclidean Projection $\Pi_C$** | $(\mathbf{y} - \Pi_C(\mathbf{y}))^\top(\mathbf{x} - \Pi_C(\mathbf{y})) \le 0\;\forall\mathbf{x}\in C$ | Unique and nonexpansive ($\|\Pi_C(\mathbf{x}) - \Pi_C(\mathbf{y})\| \le \|\mathbf{x}-\mathbf{y}\|$) | PGD $\mathbf{x}_{k+1} = \Pi_C(\mathbf{x}_k - \eta\nabla f(\mathbf{x}_k))$ contracts at least as fast as GD (same $\rho$) |
 | **Simplex Projection** | $x_i^\star = \max(y_i - \tau, 0)$ with $\sum_i x_i^\star = 1$ | Exact $O(n\log n)$ sort-and-threshold | `sparsemax` attention weights with exact zero entries |
 | **Proximal Gradient (ISTA)** | $\mathbf{w}_{k+1} = \mathrm{prox}_{\eta\psi}(\mathbf{w}_k - \eta\nabla s(\mathbf{w}_k))$ | $O(1/k)$ convex, linear $(1-\mu/L)^k$ strongly convex | Soft-thresholding $\mathrm{prox}_{\lambda\|\cdot\|_1}$ creates exact weight sparsity |
 :::

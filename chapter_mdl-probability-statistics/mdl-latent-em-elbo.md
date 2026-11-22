@@ -520,7 +520,7 @@ Latent Variable Models, EM, and the ELBO<br>**mixture models · marginal log-lik
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-lost-labels
+@fig:ch36-prob-lost-labels
 :::
 :::
 :::
@@ -537,7 +537,7 @@ $$p(x, z \mid \boldsymbol{\theta}) = p(z \mid \boldsymbol{\theta})\,p(x \mid z, 
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-latent-dag
+@fig:ch36-prob-latent-dag
 :::
 :::
 :::
@@ -554,7 +554,7 @@ $$\ell(\boldsymbol{\theta}) = -\sum_{i=1}^n \log \Biggl(\sum_{k=1}^K \pi_k\,\mat
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-oracle-vs-mixture
+@fig:ch36-prob-oracle-vs-mixture
 :::
 :::
 :::
@@ -571,7 +571,7 @@ $$P(z = 1 \mid x = 0.5) = \frac{0.5\,e^{-(0.5 + 1)^2 / 2}}{0.5\,e^{-(0.5 + 1)^2 
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-soft-resp
+@fig:ch36-prob-soft-resp
 :::
 :::
 :::
@@ -588,7 +588,7 @@ $$\log p(x \mid \boldsymbol{\theta}) = \log \sum_{z} q(z)\,\frac{p(x, z \mid \bo
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-jensen-elbo
+@fig:ch36-prob-jensen-elbo
 :::
 :::
 :::
@@ -605,7 +605,7 @@ $$\mathcal{L}(q, \boldsymbol{\theta}) = \mathbb{E}_{q(z)}\bigl[\log p(x, z \mid 
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-elbo-anatomy
+@fig:ch36-prob-elbo-anatomy
 :::
 :::
 :::
@@ -638,7 +638,7 @@ $$\mathcal{L}(q, \boldsymbol{\theta}) = \mathbb{E}_{q(z)}\bigl[\log p(x, z \mid 
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-elbo-gap-bars
+@fig:ch36-prob-elbo-gap-bars
 :::
 :::
 :::
@@ -654,7 +654,7 @@ $$\mathcal{L}(q, \boldsymbol{\theta}) = \mathbb{E}_{q(z)}\bigl[\log p(x, z \mid 
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-em-loop
+@fig:ch36-prob-em-loop
 :::
 :::
 :::
@@ -693,6 +693,10 @@ Applying the E-step and M-step to a $K$-component Gaussian mixture model yields 
 In vectorized NumPy, the entire EM loop for $n = 500$ observations from $0.6\,\mathcal{N}(-2.0, 0.8^2) + 0.4\,\mathcal{N}(1.5, 0.6^2)$ takes a dozen lines:
 
 @maximum-likelihood-em-gmm
+:::
+
+::: {.slide title="Implementing 1D Gaussian Mixture EM in NumPy (cont.)"}
+[Code Implementation]{.kicker}
 
 ::: {.d2l-note}
 Broadcasting `x[:, None]` of shape `(n, 1)` against parameter arrays of shape `(K,)` evaluates the `(n, K)` joint density matrix `joint` in one step; normalizing across rows gives `r` (E-step), and summing down columns gives `n_k` (M-step).
@@ -733,7 +737,7 @@ $$\ell(\boldsymbol{\theta}) \le \log\bigl(n\sqrt{2\pi}\bigr) + \log\epsilon + \m
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-gmm-spikes
+@fig:ch36-prob-gmm-spikes
 :::
 :::
 :::
@@ -749,7 +753,7 @@ $$\ell(\boldsymbol{\theta}) \le \log\bigl(n\sqrt{2\pi}\bigr) + \log\epsilon + \m
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-vae-amortized
+@fig:ch36-prob-vae-amortized
 :::
 :::
 :::

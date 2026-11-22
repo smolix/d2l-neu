@@ -1742,7 +1742,7 @@ Point Estimation, Hypothesis Testing, Confidence Intervals, and the Bootstrap<br
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-paired-vs-unpaired
+@fig:ch36-prob-paired-vs-unpaired
 :::
 :::
 :::
@@ -1795,7 +1795,7 @@ $$\mathbb{E}\!\left[\sum_{i=1}^n (x_i - \bar{x})^2\right] = n\sigma^2 - n\,\math
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-bessel-dof
+@fig:ch36-prob-bessel-dof
 :::
 :::
 :::
@@ -1874,7 +1874,7 @@ $$\hat{I}_N = \frac{1}{N}\sum_{i=1}^N g(\mathbf{x}_i), \qquad \mathrm{RMSE}(\hat
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-mc-vs-grid
+@fig:ch36-prob-mc-vs-grid
 :::
 :::
 :::
@@ -2018,7 +2018,7 @@ Evaluating Classifier A ($912/1000$) and Classifier B ($921/1000$) on the *same*
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-bonferroni-fdr
+@fig:ch36-prob-bonferroni-fdr
 :::
 :::
 :::

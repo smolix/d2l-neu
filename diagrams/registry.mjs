@@ -25,8 +25,8 @@ import { diagrams as ch16Gans } from './ch16-gans.mjs';
 import { diagrams as ch17Diffusion } from './ch17-diffusion.mjs';
 import { diagrams as ch33MdlLa } from './ch33-mdl-la.mjs';
 import { diagrams as ch34MdlCalc } from './ch34-mdl-calc.mjs';
-import { diagrams as ch35MdlProb } from './ch35-mdl-prob.mjs';
-import { diagrams as ch36MdlOpt } from './ch36-mdl-opt.mjs';
+import { diagrams as ch35MdlOpt } from './ch35-mdl-opt.mjs';
+import { diagrams as ch36MdlProb } from './ch36-mdl-prob.mjs';
 import { diagrams as ch37MdlInfo } from './ch37-mdl-info.mjs';
 import { diagrams as ch38MdlDyn } from './ch38-mdl-dyn.mjs';
 import { diagrams as ch39Tools } from './ch39-tools.mjs';
@@ -58,8 +58,8 @@ export const diagrams = {
   ...ch17Diffusion,
   ...ch33MdlLa,
   ...ch34MdlCalc,
-  ...ch35MdlProb,
-  ...ch36MdlOpt,
+  ...ch35MdlOpt,
+  ...ch36MdlProb,
   ...ch37MdlInfo,
   ...ch38MdlDyn,
   ...ch39Tools,

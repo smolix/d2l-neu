@@ -1874,9 +1874,13 @@ $$\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}) = \mathbf{f}(\mathbf{x}, t) 
 Evolving $20{,}000$ particles from our bimodal mixture $p_0 = \frac{1}{2}\mathcal{N}(-2, 0.25) + \frac{1}{2}\mathcal{N}(2, 0.25)$ via Euler–Maruyama on the OU SDE vs. Heun's method on the probability-flow ODE:
 
 @!fokker-planck-pf-ode-overlay
+:::
+
+::: {.slide title="Comparing SDE and PF-ODE Marginals on the Mixture (cont.)"}
+[Bimodal Evolution]{.kicker}
 
 ::: {.d2l-note}
-Why is `KS(ODE)` identical ($0.0044$) at $t = 0.25, 1.00, 3.00$? In 1D, the ODE flow map $\Phi_t$ is strictly increasing and maps the true CDF $F_0$ to $F_t$, so it transports the initial sample's empirical quantiles without adding any stochastic resampling noise!
+Why is `KS(ODE)` the same at every $t$? In 1D, the ODE flow map $\Phi_t$ is strictly increasing and maps the true CDF $F_0$ to $F_t$, so it transports the initial sample's empirical quantiles without adding any stochastic resampling noise!
 :::
 :::
 
@@ -1944,6 +1948,10 @@ Why does the reverse SDE carry **twice** the score correction ($g^2\nabla\log p_
 Starting $20{,}000$ particles from symmetric prior noise $\mathcal{N}(0, 1)$ at $T = 3$ and integrating Anderson's reverse SDE down to $t = 0$ on the **lopsided** mixture $p_0 = 0.8\,\mathcal{N}(-2, 0.25) + 0.2\,\mathcal{N}(2, 0.25)$:
 
 @!fokker-planck-reverse-sde
+:::
+
+::: {.slide title="Generating Asymmetric Modes From Symmetric Noise (cont.)"}
+[Reverse-Time Sampling]{.kicker}
 
 - **When Does the Score Allocate the 80% / 20% Mode Weights?**
   - **Not at $t = 0$:** In each mode, $r_k(x) \in \{0, 1\}$, so $s_0(x) \approx -(x \pm 2)/0.25$ is blind to the mixture weights $(0.8, 0.2)$.

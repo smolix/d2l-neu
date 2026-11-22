@@ -661,7 +661,13 @@ The Chain Rule on Computational Graphs<br>**dependency DAGs · edge vs. total de
 
 Running the forward pass and pushing the sensitivity to $w$ forward in Python confirms $\mathrm{d}f/\mathrm{d}w = 73472$ at a cost of $6$ multiplications for that single input:
 
-@multivariable-calculus-the-backpropagation-algorithm-1
+@-multivariable-calculus-the-backpropagation-algorithm-1
+:::
+
+::: {.slide title="Executing Forward Mode in Plain Python (cont.)"}
+[Code Verification]{.kicker}
+
+@!multivariable-calculus-the-backpropagation-algorithm-1
 
 ::: {.d2l-note .warn}
 Computing the full gradient over all $4$ inputs by forward mode requires $4 \times 6 = 24$ multiplications ($N$ separate forward sweeps for $N$ inputs).

@@ -1580,10 +1580,10 @@ To infer function behavior across an entire interval $[a, b]$ from pointwise der
 ::: {.slide title="Five Step-Size Regimes on a Quadratic Bowl"}
 [Stability Threshold]{.kicker}
 
-On $f(x) = x^2$, where $f'(x) = 2x$ and curvature is $f''(x) \equiv 2$, gradient descent obeys the exact recurrence $x_{t+1} = (1 - 2\eta)x_t = (1 - 2\eta)^{t+1}x_0$, converging if and only if $|1 - 2\eta| < 1$ ($0 < \eta < 1 = 2/f''$):
-
 ::: {.cols .vc}
 ::: {.col}
+On $f(x) = x^2$, where $f'(x) = 2x$ and curvature is $f''(x) \equiv 2$, gradient descent obeys the exact recurrence $x_{t+1} = (1 - 2\eta)x_t = (1 - 2\eta)^{t+1}x_0$, converging if and only if $|1 - 2\eta| < 1$ ($0 < \eta < 1 = 2/f''$):
+
 - **$0 < \eta < \tfrac{1}{2}$ (Cautious monotone):** At $\eta = 0.05$, iterates creep down one side of the bowl ($x_{10} = 0.349$).
 - **$\eta = \tfrac{1}{2} = 1/f''$ (Exact one-step):** Lands at $x_1 = 0$ immediately.
 - **$\tfrac{1}{2} < \eta < 1$ (Damped oscillation):** At $\eta = 0.9$, iterates jump across the valley and decay ($x_{10} = 0.107$).
@@ -1649,10 +1649,10 @@ On $f(x) = x^2$, where $f'(x) = 2x$ and curvature is $f''(x) \equiv 2$, gradient
 ::: {.slide title="Verifying Taylor Remainder Scaling on Log-Log Axes"}
 [Order of Accuracy]{.kicker}
 
-When $|f^{(n+1)}|$ is bounded near $x_0$, the worst-case error of $P_n$ on $|x - x_0| \le h$ scales as $O(h^{n+1})$, so halving the window $h$ divides the error by $2^{n+1}$ ($4$ for $P_1$, $8$ for $P_2$, and $16$ for $P_3$):
-
 ::: {.cols .vc}
 ::: {.col}
+When $|f^{(n+1)}|$ is bounded near $x_0$, the worst-case error of $P_n$ on $|x - x_0| \le h$ scales as $O(h^{n+1})$, so halving the window $h$ divides the error by $2^{n+1}$ ($4$ for $P_1$, $8$ for $P_2$, and $16$ for $P_3$):
+
 - **Testing $e^x$ around $x_0 = 0$:** Here $P_n(x) = \sum_{k=0}^n x^k/k!$ and $|e^x - P_n(x)| = \frac{e^\xi |x|^{n+1}}{(n+1)!}$.
 - **Successive halving ratios:** Across windows $h \in \{0.4, 0.2, 0.1, 0.05\}$, consecutive error ratios approach $2^{n+1} = 4, 8, 16$.
 - **Log-log slopes:** On log-log axes, $\log(\text{error}) \approx (n+1)\log h + c$ plots as straight lines of slopes $2$, $3$, and $4$.

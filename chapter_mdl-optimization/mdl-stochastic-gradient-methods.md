@@ -1356,7 +1356,7 @@ $$\mathbb{E}\big[\|\hat{\mathbf{g}}_b(\mathbf{x}) - \nabla f(\mathbf{x})\|^2\big
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-minibatch-variance-law
+@fig:ch35-opt-minibatch-variance-law
 :::
 :::
 :::
@@ -1387,7 +1387,7 @@ $$e_{k+1} = \rho^2\,e_k + \eta^2\sigma^2$$
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-second-moment-balance
+@fig:ch35-opt-second-moment-balance
 :::
 :::
 :::
@@ -1437,7 +1437,7 @@ On $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ with $\eta = 1/L = 10^{-3}$ a
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-valley-noise-penalty
+@fig:ch35-opt-valley-noise-penalty
 :::
 :::
 :::
@@ -1456,7 +1456,7 @@ $$\sum_{k=1}^\infty \eta_k = \infty, \qquad \sum_{k=1}^\infty \eta_k^2 < \infty$
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-robbins-monro-balance
+@fig:ch35-opt-robbins-monro-balance
 :::
 :::
 :::
@@ -1485,7 +1485,7 @@ $$e_{k+1} = \left(1 - \frac{c\mu}{t}\right)^{\!2} e_k + \frac{c^2\sigma^2}{t^2}$
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-one-over-k-threshold
+@fig:ch35-opt-one-over-k-threshold
 :::
 :::
 :::
@@ -1559,7 +1559,7 @@ $$\mathbb{E}\big[f(\bar{\mathbf{x}}_K)\big] - f^\star \le \frac{D^2}{2\eta K} + 
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-convex-sgd-telescoping
+@fig:ch35-opt-convex-sgd-telescoping
 :::
 :::
 :::
@@ -1589,7 +1589,7 @@ $$\mathbb{E}\big[\|\nabla f(\mathbf{x}_R)\|^2\big] \le \frac{2L\Delta}{K} + 2\si
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-ghadimi-lan-random-stop
+@fig:ch35-opt-ghadimi-lan-random-stop
 :::
 :::
 :::
@@ -1627,7 +1627,7 @@ $$\tilde{\mathbf{g}}_i(\mathbf{x}) = \nabla f_i(\mathbf{x}) - \nabla f_i(\tilde{
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-svrg-control-variate
+@fig:ch35-opt-svrg-control-variate
 :::
 :::
 :::

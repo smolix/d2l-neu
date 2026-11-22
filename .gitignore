@@ -8,6 +8,7 @@ _freeze/
 
 # Generated .qmd files (produced by d2l_preprocess.py from d2l-en sources)
 chapter_*/*.qmd
+/index.qmd
 
 # Make stamp files
 .preprocess.stamp

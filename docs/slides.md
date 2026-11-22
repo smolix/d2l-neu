@@ -101,6 +101,29 @@ no heading — useful for continuation slides under the same section.
 The first slide in a file inherits the file's H1 as the deck title;
 no `title=` needed.
 
+### Section numbers: `§{label}` tokens
+
+Never type another section's or chapter's number into slide text; chapter
+renumbering is routine and hardcoded numbers rot. Name the target by the
+`:label:` under its H1 and let `gen_slides.py` write the current number:
+
+| Token | Renders as | Use |
+|---|---|---|
+| `§{sec_sgd}` | `§9.3` | a section, with the sign |
+| `§{chap_optimization}` | `§9` | a chapter, with the sign |
+| `§{num:sec_sgd}` | `9.3` | the bare number: `Chapter §{num:chap_optimization}`, `Section §{num:sec_sgd}`, the far end of `§{sec_sgd}–§{num:sec_momentum}` |
+
+Tokens work anywhere in a slide section, slide titles included. Only the H1
+labels of pages that `CHAPTER_NUMBERING` numbers resolve (a chapter `index.md`
+or a section page); subsection (`##`) labels and unnumbered pages do not. An
+unknown label, or a token above `<!-- slides -->` (book prose uses
+`:numref:`), is an error: `tools/lint_source.py` reports it on save and
+`gen_slides.py` prints `file:line: error: …` and exits non-zero before it
+writes any deck. The cover kicker (`[Dive into Deep Learning · §N.M]{.kicker}`)
+needs no token; `gen_slides.py` rewrites it from the file's own number.
+Implementation: `tools/section_refs.py`; the one-shot
+`tools/oneshot/slide_section_tokens.py` converts hardcoded numbers.
+
 ### Sub-slides (vertical)
 
 ```markdown

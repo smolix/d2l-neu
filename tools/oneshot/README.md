@@ -8,6 +8,7 @@ as-is. Nothing in the live build imports or shells out to them.
 | Script | What it did (once) |
 |---|---|
 | `migrate_slide_markers.py` | Converted inline `[**…**]` slide markers → `::: {.slide}` divs (slides refactor). |
+| `slide_section_tokens.py` | Rewrites hardcoded `§N.M` / `Chapter N` strings in slide sections as `§{label}` tokens (tools/section_refs.py) under the current numbering. Written 2026-11-22; dry run by default, `--apply` to write. Run once after the parallel slide passes land. |
 | `strip_tab_all.py` | Removed `#@tab all` / `%%tab all` from the corpus (untagged = all frameworks). |
 | `split_tab_selected.py` | Split `tab.selected()` cells during the same tab-marker cleanup. |
 | `patch_slides_navlink_r2.sh` | One-time remediation of a stale nav href on ~520 already-live R2 slide decks. |

@@ -64,6 +64,55 @@ def single_framework(src_path):
     return None
 
 
+_TAB_DIRECTIVE_RE = re.compile(r'^(?:#@tab|%%tab)\s+(.+)$', re.MULTILINE)
+
+
+def tab_frameworks(text):
+    """Frameworks named by the `#@tab` / `%%tab` lines of a source text.
+
+    `all` is not a framework; a text with no tags (or only `all`) gives the
+    empty set.
+    """
+    fws = set()
+    for m in _TAB_DIRECTIVE_RE.finditer(text):
+        fws |= {t.strip() for t in m.group(1).split(',')}
+    return fws & set(FRAMEWORKS)
+
+
+def _file_tab_frameworks(path):
+    try:
+        return tab_frameworks(Path(path).read_text(encoding='utf-8'))
+    except OSError:
+        return set()
+
+
+def page_frameworks(src_path, text=None):
+    """The frameworks a page carries, in FRAMEWORKS order.
+
+    A page whose code cells are tagged carries the frameworks its tags name
+    (the frameworks its code tabsets show). An untagged page (a chapter
+    index, a prose-only section, or one whose cells are all untagged) takes
+    the union over the tagged pages of its chapter directory, its siblings in
+    CHAPTER_NUMBERING; with no tagged sibling it carries all four. So the
+    index of a PyTorch+JAX Advanced chapter is PyTorch+JAX, while a Basics,
+    math or Tools index stays four-framework. LIB_ONLY files (absent from
+    CHAPTER_NUMBERING) are not siblings. Used for slide decks
+    (gen_slides.has_framework_code) and exercise panes (expand_exercise_tabs).
+    """
+    src_path = Path(src_path)
+    own = (tab_frameworks(text) if text is not None
+           else _file_tab_frameworks(src_path))
+    if not own:
+        chapter = src_path.parent.name
+        for rel in CHAPTER_NUMBERING:
+            rp = Path(rel)
+            if rp.parent.name == chapter and rp.name != src_path.name:
+                own |= _file_tab_frameworks(src_path.parent / rp.name)
+    if not own:
+        own = set(FRAMEWORKS)
+    return [fw for fw in FRAMEWORKS if fw in own]
+
+
 _current_src = None  # the file convert_file is converting, for warnings
 
 
@@ -635,7 +684,7 @@ def _drop_labels(seg):
     return out
 
 
-def expand_exercise_tabs(text, primary):
+def expand_exercise_tabs(text, primary, frameworks=None):
     """Rewrite an Exercises list with :begin_tab: problems as one list per framework.
 
     convert_prose_tabs turns every :begin_tab: group into a column-0
@@ -647,9 +696,12 @@ def expand_exercise_tabs(text, primary):
     tabbed problem (or without the problem if the framework has none), so
     convert_prose_tabs emits a single tabset whose panes each hold one list.
 
-    Every framework that has any content gets a pane, not only those named in
-    the section's tab blocks: _d2l-tabs.html hides a tabset that lacks the
+    Every framework of the page (`frameworks`, from page_frameworks; default
+    all four) that has any content gets a pane, not only those named in the
+    section's tab blocks: _d2l-tabs.html hides a tabset that lacks the
     reader's framework, so a missing pane would hide the untabbed problems too.
+    A framework the page does not carry gets no pane, as its code gets no tab:
+    a PyTorch+JAX page shows no TensorFlow or MXNet exercise list.
 
     Numbering: each item keeps the number tools/exercise_refs.py gives it, so
     :exref: references match. Pandoc numbers a list from its first marker; where
@@ -713,8 +765,13 @@ def expand_exercise_tabs(text, primary):
             b -= 1
         return seg[a:b]
 
+    fws = [f for f in FRAMEWORKS if frameworks is None or f in frameworks]
+    if not fws:
+        return text
+    if primary not in fws:
+        primary = fws[0]
     out = []
-    for fw in [primary] + [f for f in FRAMEWORKS if f != primary]:
+    for fw in [primary] + [f for f in fws if f != primary]:
         pieces = []
         for kind, val in segs:
             seg = val if kind == 'shared' else val.get(fw)
@@ -1048,7 +1105,7 @@ def convert_file(src_path, primary='pytorch', chapter_number=None,
     solo = single_framework(src_path)
     if solo:
         primary = solo
-    text = expand_exercise_tabs(text, primary)
+    text = expand_exercise_tabs(text, primary, page_frameworks(src_path))
     text = convert_prose_tabs(text, primary, solo)
 
     # Step 2: Parse into blocks (code vs markdown)

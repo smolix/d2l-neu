@@ -1029,7 +1029,7 @@ $96 \times 96$; validation accuracy, range over repeated runs).
 
 In every paired run on the same 10,000-image subset, `ModernRecipe` beats `ClassicRecipe` by 0.5--1.5 percentage points (even while omitting RandAugment, CutMix, stochastic depth, and EMA). Three practical lessons accompany this comparison:
 
-1. **Bundled comparisons vs. ablations:** Because optimizer, schedule, loss, augmentation, and epoch budget changed together, only a one-at-a-time ablation (Exercise 4) can isolate which ingredient contributed most—and because optimal learning rates differ $25\times$ between AdamW ($0.002$) and SGD ($0.05$), any optimizer swap must retune the learning rate.
+1. **Bundled comparisons vs. ablations:** Because optimizer, schedule, loss, augmentation, and epoch budget changed together, only a one-at-a-time ablation (Exercise :exref:`ex_training-recipes-ablation`) can isolate which ingredient contributed most—and because optimal learning rates differ $25\times$ between AdamW ($0.002$) and SGD ($0.05$), any optimizer swap must retune the learning rate.
 2. **Never compare raw training losses across recipes:** Under `ClassicRecipe`, training loss plunges toward zero while validation loss rebounds to 0.4--0.5 as logits grow overconfident; under `ModernRecipe`, validation loss drops below 0.4 while training loss stays *higher* than validation loss because Mixup and label smoothing evaluate a soft, blended training objective.
 3. **Reading published leaderboards:** Because training recipes alone move a fixed ResNet-50 by $>4$ ImageNet points :cite:`wightman2021resnet`, a 1-point claim over a baseline copied from an older paper confounds recipe with architecture. Even under matched recipes, test-set noise and multi-object ambiguity on ImageNet :cite:`Recht.Roelofs.Schmidt.ea.2019,beyer2020imagenetreal` mean that transfer to detection or segmentation is often a sharper test of backbone quality than sub-point ImageNet top-1 deltas.
 
@@ -1049,6 +1049,7 @@ Between 2015 and the early 2020s, convnet training recipes evolved across every 
     1. Run both `ClassicRecipe` and `ModernRecipe` five times on `FashionMNIST10k` to estimate the run-to-run standard deviation of validation accuracy.
     1. Starting from `ModernRecipe`, revert one ingredient at a time to its `ClassicRecipe` counterpart: (i) remove Mixup, (ii) remove label smoothing, (iii) replace cosine warmup with `step_decay`, (iv) replace AdamW with momentum SGD (retuning the peak learning rate to $0.05$), and (v) shorten training from 45 to 30 epochs. Which individual changes exceed the run-to-run noise floor?
     1. Complete the $2 \times 2$ table of optimizer (SGD vs. AdamW) $\times$ schedule (`step_decay` vs. `cosine_warmup`) with Mixup and label smoothing enabled. Do the optimizer and schedule interact?
+   :exlabel:`ex_training-recipes-ablation`
 
 1. [code] **Stochastic depth in the recipe.** ● Our compact modern recipe omitted stochastic depth. Add it back to `ResNet18`:
     1. Extend `StochasticResidual` to support stride-2 downsampling blocks with $1 \times 1$ shortcuts, and build `ResNet18` with drop probabilities growing linearly from $0$ in block 1 to $p_{\max}$ in block 8. What is the expected number of active residual branches per forward pass as a function of $p_{\max}$?

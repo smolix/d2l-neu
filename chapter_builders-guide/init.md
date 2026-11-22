@@ -80,29 +80,27 @@ from d2l import jax as d2l
 ## Applying Initializers
 
 As we saw in :numref:`sec_numerical_stability`, no framework defaults to He
-initialization (:numref:`subsec_he_init`) for linear layers: Gluon draws from
-$U(-0.07, 0.07)$, PyTorch from $U(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$
-(one-sixth of He's variance), Keras from Glorot uniform, and NNX from LeCun
-normal (half of He's variance). To apply He initialization—or the
+initialization (:numref:`subsec_he_init`) for linear layers; the tab note gives
+yours. To apply He initialization—or the
 depth-dependent residual scaling we derive shortly—across an entire model, we
 walk the module tree (:numref:`sec_model_construction`). Let's compare default
 versus He initialization on a 10-layer ReLU stack of width 256 (without biases)
 fed 1,024 standard-normal inputs.
 
 :begin_tab:`mxnet`
-`net.initialize(init.MSRAPrelu(factor_type='in', slope=0), force_reinit=True)` applies He initialization ($g = \sqrt{2}$) across the block tree, overwriting existing weights:
+Gluon's default draws from $U(-0.07, 0.07)$. `net.initialize(init.MSRAPrelu(factor_type='in', slope=0), force_reinit=True)` applies He initialization ($g = \sqrt{2}$) across the block tree, overwriting existing weights:
 :end_tab:
 
 :begin_tab:`pytorch`
-`net.apply(init_he)` invokes `init_he` on every submodule, using the in-place `nn.init.kaiming_normal_` (trailing underscore) so existing `nn.Parameter` references remain intact:
+PyTorch's default draws from $U(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$ (one-sixth of He's variance). `net.apply(init_he)` invokes `init_he` on every submodule, using the in-place `nn.init.kaiming_normal_` (trailing underscore) so existing `nn.Parameter` references remain intact:
 :end_tab:
 
 :begin_tab:`tensorflow`
-To reinitialize an existing Keras model, we loop over `model.layers` and `assign` a fresh draw in place—instantiating a new `initializer_class()` per layer because an unseeded Keras initializer instance replays the same numbers if reused:
+Keras defaults to Glorot uniform. To reinitialize an existing Keras model, we loop over `model.layers` and `assign` a fresh draw in place—instantiating a new `initializer_class()` per layer because an unseeded Keras initializer instance replays the same numbers if reused:
 :end_tab:
 
 :begin_tab:`jax`
-We walk `nnx.iter_modules(model)`, split a fresh random key per `nnx.Linear` layer, and update `layer.kernel[...]` in place with `nnx.initializers.he_normal()`:
+NNX defaults to LeCun normal (half of He's variance). We walk `nnx.iter_modules(model)`, split a fresh random key per `nnx.Linear` layer, and update `layer.kernel[...]` in place with `nnx.initializers.he_normal()`:
 :end_tab:
 ```{.python .input #init-applying-initializers-1}
 %%tab mxnet
@@ -481,7 +479,7 @@ into the first layer as well.
 :label:`subsec_variance_across_depth`
 
 Let's test all three predictions empirically. `WideResidualBlock` implements our
-$d \to 4d \to d$ residual block using our custom `ScaledNormal` initializer—gain
+$d \to 4d \to d$ residual block using our custom gain-scaled normal initializer—gain
 $\sqrt{2}$ on the expansion layer and a configurable `out_gain` on the output
 projection:
 

@@ -99,8 +99,12 @@ generator or require passing generator state explicitly as an argument. Let's
 demonstrate seeding on a small five-step training loop where weights and
 synthetic inputs all come from one seeded source.
 
-:begin_tab:`mxnet, pytorch`
-`mnp.random.seed(k)` and `torch.manual_seed(k)` seed the framework's global CPU and GPU generators (note that Python's `random` and NumPy's `np.random` must be seeded separately if used).
+:begin_tab:`mxnet`
+`mnp.random.seed(k)` seeds the framework's global CPU and GPU generators (note that Python's `random` and NumPy's `np.random` must be seeded separately if used).
+:end_tab:
+
+:begin_tab:`pytorch`
+`torch.manual_seed(k)` seeds the framework's global CPU and GPU generators (note that Python's `random` and NumPy's `np.random` must be seeded separately if used).
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -233,8 +237,12 @@ perturb it.
 Because MXNet has no private generator objects, we re-seed right before draws that must stay fixed:
 :end_tab:
 
-:begin_tab:`pytorch, tensorflow`
-`torch.Generator().manual_seed(42)` and `tf.random.Generator.from_seed(42)` create isolated PRNG streams unaffected by global draws:
+:begin_tab:`pytorch`
+`torch.Generator().manual_seed(42)` creates an isolated PRNG stream unaffected by global draws:
+:end_tab:
+
+:begin_tab:`tensorflow`
+`tf.random.Generator.from_seed(42)` creates an isolated PRNG stream unaffected by global draws:
 :end_tab:
 
 :begin_tab:`jax`
@@ -365,14 +373,18 @@ Without per-worker or per-example re-seeding, both workers output identical "ran
 ### Randomness as a Value
 
 Every worker bug above stems from hidden mutable generator state being copied or
-shared implicitly behind the scenes. JAX eliminates hidden state by treating
-randomness as an explicit value: every random call takes a key, calling it twice
+shared implicitly behind the scenes. Functional random APIs eliminate hidden
+state by treating randomness as an explicit value: every random call takes a key, calling it twice
 with the same key returns identical numbers, and independent streams come from
 explicitly splitting keys. While you can still reuse a key accidentally, the
 reuse is right there in the code. The price is plumbing keys through every
 stochastic function. A global seed is simply the implicit shorthand for that
 same contract, and private generator objects recover explicit isolation wherever
 needed.
+
+:begin_tab:`jax`
+JAX's `jax.random` works this way.
+:end_tab:
 
 ### The Spread across Seeds
 :label:`subsec_seed_spread`
@@ -650,8 +662,8 @@ else:
 ```
 
 Without determinism enabled, two consecutive scatter-adds on the exact same GPU
-data differ by a few thousandths on sums of a few hundred; with determinism
-enabled, both calls match bit for bit.
+data differ by a few thousandths on sums of a few hundred; with a deterministic
+kernel, both calls match bit for bit.
 
 :begin_tab:`tensorflow`
 With the switch on, random operations must have a seed, since an operation
@@ -888,12 +900,20 @@ is the exact variance-growth analysis of :numref:`sec_init_param` (with factor
 $1.5$ here instead of $2$ under He initialization), underscoring why deep
 residual branches benefit from scaled-down output projections.
 
-:begin_tab:`mxnet, pytorch`
-Two rules keep hooks leak-free: always `.detach()` any tensor stored inside a hook (otherwise the entire autograd graph stays alive in memory across steps), and always remove the hook handle (`h.detach()` in Gluon, `h.remove()` in PyTorch) once inspection is done.
+:begin_tab:`mxnet`
+Two rules keep hooks leak-free: always `.detach()` any tensor stored inside a hook (otherwise the entire autograd graph stays alive in memory across steps), and always remove the hook handle (`h.detach()`) once inspection is done.
 :end_tab:
 
-:begin_tab:`tensorflow, jax`
-Neither `probe(X)` nor `nnx.capture` attaches persistent state to the model, so nothing needs to be detached or removed afterwards.
+:begin_tab:`pytorch`
+Two rules keep hooks leak-free: always `.detach()` any tensor stored inside a hook (otherwise the entire autograd graph stays alive in memory across steps), and always remove the hook handle (`h.remove()`) once inspection is done.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`probe(X)` attaches no persistent state to the model, so nothing needs to be detached or removed afterwards.
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.capture` attaches no persistent state to the model, so nothing needs to be detached or removed afterwards.
 :end_tab:
 ### A NaN Finder
 :label:`subsec_nan_finder`
@@ -1000,9 +1020,7 @@ net.layers[3].body.layers[0].kernel[0, 0] = saved  # restore the weight
 ```
 
 The hook immediately identifies the corrupted layer in block 3 without adding a
-single print statement inside the layer classes (for whole-graph NaN traps
-during debugging, TensorFlow and JAX also offer `tf.debugging.enable_check_numerics()`
-and `jax.config.update('jax_debug_nans', True)`).
+single print statement inside the layer classes.
 Of course, catching a planted NaN is the clean demo case; in a real training
 crash, the finder points you to the first *symptom*, while the underlying cause
 (such as runaway activation growth culminating in overflow) may begin several

@@ -135,7 +135,11 @@ class MLPScratch(d2l.Classifier):
         self.b2 = nnx.Param(jnp.zeros(num_outputs))
 ```
 
-Next, we implement the elementwise activation `relu(X)` from scratch by multiplying `X` with the Boolean mask `X > 0` (casting the mask to `X.dtype` in TensorFlow) so positive entries pass through unchanged and negative entries become zero:
+Next, we implement the elementwise activation `relu(X)` from scratch by multiplying `X` with the Boolean mask `X > 0` so positive entries pass through unchanged and negative entries become zero:
+
+:begin_tab:`tensorflow`
+TensorFlow does not multiply a float tensor by a Boolean one, so we cast the mask to `X.dtype` first.
+:end_tab:
 
 ```{.python .input #mlp-implementation-model-1}
 %%tab mxnet

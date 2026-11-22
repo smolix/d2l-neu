@@ -335,7 +335,7 @@ print(f'weight decay {best}: MLP minus linear, per fold',
       np.round(mlp[best][1] - linear[1], 3))
 ```
 
-The cross-validation curve traces a textbook U-shape: weak weight decay (`wd = 0.001`) overfits the training folds (training RMSE $\sim 0.09$, validation RMSE $\sim 0.16$, worse than linear regression!), intermediate weight decay (`wd = 0.03` or `0.1`) hits the sweet spot at validation RMSE $\sim 0.135$–$0.14$ (beating the linear baseline on nearly every fold), and excessive decay (`wd = 0.3`) underfits.
+The cross-validation curve traces a textbook U-shape: weak weight decay (`wd = 0.001`) overfits the training folds (training RMSE $\sim 0.09$, validation RMSE $\sim 0.15$–$0.18$, worse than linear regression!), intermediate weight decay (`wd = 0.03` or `0.1`) hits the sweet spot at validation RMSE $\sim 0.135$–$0.14$ (beating the linear baseline on most folds), and excessive decay (`wd = 0.3`) underfits.
 
 ## Submitting Predictions
 :label:`subsec_kaggle_submission`
@@ -358,7 +358,7 @@ submission.head()
 ## Summary
 
 - **Leakage-free tabular preprocessing:** Recast numeric category codes to strings, standardize numerical features using training-split means and standard deviations only, impute missing standardized values with $0$, one-hot encode categoricals with `dummy_na=True`, and center log targets by the training mean.
-- **Cross-validated model selection:** Reusing identical $K = 5$ folds across models cancels fold-sampling noise in paired comparisons; tuning weight decay takes a 22,000-parameter MLP from overfitting ($\sim 0.16$ log-RMSE) past the linear baseline ($\sim 0.15$) down to $\sim 0.135$ log-RMSE (while gradient-boosted trees remain a strong tabular competitor; see Exercise :exref:`ex_kaggle-house-trees`).
+- **Cross-validated model selection:** Reusing identical $K = 5$ folds across models cancels fold-sampling noise in paired comparisons; tuning weight decay takes a 22,000-parameter MLP from overfitting ($\sim 0.15$–$0.18$ log-RMSE) past the linear baseline ($\sim 0.15$) down to $\sim 0.135$ log-RMSE (while gradient-boosted trees remain a strong tabular competitor; see Exercise :exref:`ex_kaggle-house-trees`).
 
 ## Exercises
 

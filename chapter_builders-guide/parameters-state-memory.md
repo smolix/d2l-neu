@@ -1004,8 +1004,8 @@ The second pitfall is even easier to overlook: freezing blocks gradients, yet
 some layer state mutates *without* gradients. In particular, batch normalization
 (:numref:`sec_batch_norm`) updates its running mean and variance during the
 *forward pass* whenever the layer runs in training mode, completely bypassing
-the optimizer. Simply freezing a BatchNorm layer's trainable weights therefore
-does not automatically lock its running statistics. Let's pass a shifted batch
+the optimizer. Whether freezing a BatchNorm layer's trainable weights also locks its running
+statistics therefore depends on the framework. Let's pass a shifted batch
 through a frozen BatchNorm layer in training mode—with no optimizer step at
 all—and check whether its running mean drifts.
 
@@ -1053,8 +1053,16 @@ bn(jax.random.normal(rngs(), (8, 4)) + 3)   # training mode
 bool(jnp.allclose(bn.mean, before))
 ```
 
-:begin_tab:`mxnet, pytorch, jax`
-The running mean moved! Freezing parameter gradients (`grad_req='null'`, `requires_grad=False`, or an `nnx.Param` filter) is separate from switching the layer to evaluation mode (`use_global_stats=True`, `bn.eval()`, or `use_running_average=True`). Locking a BatchNorm layer during fine-tuning requires setting both.
+:begin_tab:`mxnet`
+The running mean moved! Freezing parameter gradients (`grad_req='null'`) is separate from switching the layer to evaluation mode (`use_global_stats=True`). Locking a BatchNorm layer during fine-tuning requires setting both.
+:end_tab:
+
+:begin_tab:`pytorch`
+The running mean moved! Freezing parameter gradients (`requires_grad=False`) is separate from switching the layer to evaluation mode (`bn.eval()`). Locking a BatchNorm layer during fine-tuning requires setting both.
+:end_tab:
+
+:begin_tab:`jax`
+The running mean moved! Freezing parameter gradients (an `nnx.Param` filter) is separate from switching the layer to evaluation mode (`use_running_average=True`). Locking a BatchNorm layer during fine-tuning requires setting both.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1077,7 +1085,7 @@ requires a baseline of 16 bytes per parameter before accounting for activations
 shape inspection lets us compute such budgets without allocating memory. Weight
 tying aliases one tensor across multiple roles so it is counted once and
 receives the sum of gradients from all call sites; freezing halts gradient
-updates but neither releases existing optimizer state nor automatically stops
+updates but does not release existing optimizer state, and need not stop
 forward-pass updates to BatchNorm running statistics.
 
 ## Exercises

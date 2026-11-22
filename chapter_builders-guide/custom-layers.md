@@ -11,8 +11,8 @@ needed yesterday: linear projections, activation functions, dropout. Research
 moves faster than release cycles, however, and a newly proposed layer can take
 years to appear in official libraries. *RMSNorm*—a normalization layer that
 rescales each activation vector to unit root-mean-square magnitude—is a case in
-point: published in 2019 :cite:`Zhang.Sennrich.2019`, it did not land in
-PyTorch's standard library until 2024. Until then, every codebase that wanted
+point: published in 2019 :cite:`Zhang.Sennrich.2019`, it took years to reach
+the standard layer libraries. Until then, every codebase that wanted
 RMSNorm either implemented it by hand or imported a third-party version. To
 behave like a first-class built-in layer, any custom layer we write must plug
 seamlessly into the framework: its parameters must reach the optimizer, its
@@ -447,8 +447,16 @@ weights provides an immediate numerical sanity check.
 Gluon provides `nn.LayerNorm` but no built-in RMSNorm, so our custom `RMSNorm` is the implementation to use.
 :end_tab:
 
-:begin_tab:`pytorch, tensorflow, jax`
-We set a non-trivial gain (`linspace(0.5, 1.5, 8)`) on both our custom `RMSNorm` and the native layer (`nn.RMSNorm`, `tf.keras.layers.RMSNormalization`, `nnx.RMSNorm`) and verify that their outputs match:
+:begin_tab:`pytorch`
+We set a non-trivial gain (`linspace(0.5, 1.5, 8)`) on both our custom `RMSNorm` and the native `nn.RMSNorm` and verify that their outputs match:
+:end_tab:
+
+:begin_tab:`tensorflow`
+We set a non-trivial gain (`linspace(0.5, 1.5, 8)`) on both our custom `RMSNorm` and the native `tf.keras.layers.RMSNormalization` and verify that their outputs match:
+:end_tab:
+
+:begin_tab:`jax`
+We set a non-trivial gain (`linspace(0.5, 1.5, 8)`) on both our custom `RMSNorm` and the native `nnx.RMSNorm` and verify that their outputs match:
 :end_tab:
 ```{.python .input #custom-layers-checking-against-the-built-in}
 %%tab pytorch
@@ -506,8 +514,7 @@ layer placed on top can approximate rich nonlinear functions.
 Just like the running statistics in `Standardizer` (:numref:`subsec_params_buffers`),
 $\mathbf{W}$ and $\mathbf{b}$ must stay fixed during optimization yet travel
 with the model in checkpoints and across devices. We therefore register them as
-buffers (`gluon.Constant`, `register_buffer`, `add_weight(..., trainable=False)`,
-or our `Buffer(nnx.Variable)` subclass):
+buffers:
 ```{.python .input #custom-layers-precomputed-state-buffers-1}
 %%tab mxnet
 class RandomFeatures(nn.Block):

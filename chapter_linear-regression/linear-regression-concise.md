@@ -51,7 +51,7 @@ from d2l import jax as d2l
 
 ## The Fully Connected Layer
 
-In our concise implementation, a subclass `LinearRegression(d2l.Module)` wraps a single built-in fully connected layer (`Dense` or `Linear` / `LazyLinear`) with one output unit, initializing its weights from $\mathcal{N}(0, 0.01^2)$ and its bias to zero.
+In our concise implementation, a subclass `LinearRegression(d2l.Module)` wraps a single built-in fully connected layer with one output unit, initializing its weights from $\mathcal{N}(0, 0.01^2)$ and its bias to zero.
 
 :begin_tab:`pytorch`
 PyTorch's `nn.LazyLinear(1)` requires only the output dimension at construction time and infers the number of input features $d$ automatically on the very first forward pass!
@@ -125,7 +125,23 @@ to `self.net(X)`.
 
 ## The Loss Function
 
-Instead of writing $(\hat{y} - y)^2 / 2$ by hand, we delegate `loss` to each framework's built-in mean squared error primitive (`nn.MSELoss` in PyTorch, `gluon.loss.L2Loss` in MXNet, `MeanSquaredError` in Keras, or `optax.squared_error` in JAX). Note that PyTorch, TensorFlow, and Optax omit the cosmetic $\frac{1}{2}$ factor in their squared error definitions (and we multiply Gluon's `L2Loss`, which includes it, by $2$), so these losses are twice our scratch values and level off at $\sigma^2 = 10^{-4}$ rather than $\sigma^2 / 2$:
+Instead of writing $(\hat{y} - y)^2 / 2$ by hand, we delegate `loss` to the framework's built-in mean squared error primitive. The resulting loss omits the cosmetic $\frac{1}{2}$ factor of our scratch loss, so it is twice our scratch value and levels off at $\sigma^2 = 10^{-4}$ rather than $\sigma^2 / 2$:
+
+:begin_tab:`mxnet`
+MXNet's primitive is `gluon.loss.L2Loss`, which includes the $\frac{1}{2}$ factor, so we multiply it by $2$.
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch's primitive is `nn.MSELoss`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow's primitive is `tf.keras.losses.MeanSquaredError`.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX, Optax provides `optax.squared_error`.
+:end_tab:
 
 ```{.python .input #linear-regression-concise-defining-the-loss-function}
 %%tab pytorch
@@ -160,7 +176,23 @@ def loss(self, y_hat, y):
 
 ## The Optimizer
 
-Similarly, `configure_optimizers` returns each framework's built-in minibatch SGD instance (`torch.optim.SGD`, `gluon.Trainer`, `tf.keras.optimizers.SGD`, or `optax.sgd`), automatically wired to the module's registered parameters and learning rate `self.lr`:
+Similarly, `configure_optimizers` returns the framework's built-in minibatch SGD optimizer, automatically wired to the module's registered parameters and learning rate `self.lr`:
+
+:begin_tab:`mxnet`
+In MXNet, this is a `gluon.Trainer` with the `'sgd'` optimizer.
+:end_tab:
+
+:begin_tab:`pytorch`
+In PyTorch, this is `torch.optim.SGD`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In TensorFlow, this is `tf.keras.optimizers.SGD`.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX, this is `optax.sgd`.
+:end_tab:
 
 ```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
 %%tab pytorch
@@ -228,10 +260,8 @@ trainer.fit(model, data)
 print(f"validation loss: {trainer.history['val_loss'][-1]:.2e}")
 ```
 
-The final validation loss lands within roughly $15\%$ of the theoretical noise
-floor $\sigma^2 = 10^{-4}$.
-
-The validation and training loss curves drop right down to the $10^{-4}$ noise floor, mirroring our from-scratch implementation. Let us add a small helper method `get_w_b` to extract the learned weight tensor and bias from the framework layer and compare them against $(\mathbf{w}^*, b^*)$:
+The final validation loss lands within roughly $3\%$ of the theoretical noise
+floor $\sigma^2 = 10^{-4}$, mirroring our from-scratch implementation. Let us add a small helper method `get_w_b` to extract the learned weight tensor and bias from the framework layer and compare them against $(\mathbf{w}^*, b^*)$:
 
 ```{.python .input #linear-regression-concise-training-2}
 %%tab pytorch
@@ -281,7 +311,7 @@ held-out data.
 
 ## Summary
 
-- **High-level framework layers:** A single built-in dense layer (`nn.LazyLinear(1)`, `nn.Dense(1)`, `layers.Dense(1)`, or `nnx.Linear(num_inputs, 1)`) allocates parameters, registers them with the module, and implements the affine forward pass $\mathbf{X}\mathbf{w} + b$.
+- **High-level framework layers:** A single built-in dense layer allocates parameters, registers them with the module, and implements the affine forward pass $\mathbf{X}\mathbf{w} + b$.
 - **Loss scaling and learning-rate coupling:** Built-in mean squared error primitives omit the $\frac{1}{2}$ factor used in our scratch loss, doubling both the loss value (noise floor $\sigma^2 = 10^{-4}$) and its gradient; halving the learning rate ($\eta = 0.015$) reproduces the exact same parameter updates.
 - **Drop-in compatibility with `Trainer`:** Because `LinearRegression` implements the `d2l.Module` interface (`loss` and `configure_optimizers`, while inheriting `forward`), `d2l.Trainer` fits it without a single line of change to the training loop.
 

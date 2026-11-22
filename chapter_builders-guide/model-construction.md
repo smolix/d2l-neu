@@ -193,8 +193,23 @@ A sequential container handles linear chains neatly, but many architectures
 branch, merge, or reuse components. For anything beyond a straight chain, we
 subclass the framework's base module and implement two methods: a constructor
 that creates child modules and a forward method that specifies how data flows
-through them (`forward` in PyTorch and Gluon, `call` in Keras, and `__call__` in
-NNX).
+through them.
+
+:begin_tab:`mxnet`
+In Gluon the forward method is `forward`.
+:end_tab:
+
+:begin_tab:`pytorch`
+In PyTorch the forward method is `forward`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In Keras the forward method is `call`.
+:end_tab:
+
+:begin_tab:`jax`
+In Flax NNX the forward method is `__call__`.
+:end_tab:
 
 Here is the same MLP once more:
 
@@ -245,7 +260,15 @@ class MLP(nnx.Module):
         return self.out(nnx.relu(self.hidden(X)))
 ```
 
-Instantiating `net = MLP()` (calling `net.initialize()` in MXNet or passing an explicit `nnx.Rngs` in JAX) and invoking `net(X)` dispatches to our custom forward method and maps the $2 \times 20$ input batch `X` to an output tensor of shape `(2, 10)`:
+Instantiating `MLP` and invoking `net(X)` dispatches to our custom forward method and maps the $2 \times 20$ input batch `X` to an output tensor of shape `(2, 10)`:
+
+:begin_tab:`mxnet`
+In MXNet, `net.initialize()` creates the parameters first.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX, the constructor takes an explicit `nnx.Rngs`.
+:end_tab:
 
 ```{.python .input #model-construction-the-module-abstraction-4}
 %%tab mxnet
@@ -281,9 +304,15 @@ Second, we never have to write a backward method: automatic differentiation
 (:numref:`sec_autograd`) derives the gradients directly from the operations
 performed during the forward pass.
 
-Always invoke a module as `net(X)` rather than calling `forward` or `call`
-directly: `__call__` executes framework hooks (:numref:`sec_repro`) and, in
-Keras, builds deferred variables on the first call (:numref:`sec_lazy_init`).
+Always invoke a module as `net(X)`.
+
+:begin_tab:`mxnet, pytorch`
+Calling `forward` directly skips the hooks that `__call__` runs (:numref:`sec_repro`).
+:end_tab:
+
+:begin_tab:`tensorflow`
+Calling `call` directly skips `__call__`, which builds deferred variables on the first call (:numref:`sec_lazy_init`).
+:end_tab:
 
 ## Module Containers
 :label:`subsec_model-construction-sequential`
@@ -485,7 +514,7 @@ except ValueError as e:
 ```
 
 :begin_tab:`mxnet`
-The forward pass succeeds, yet `collect_params()` is empty! While an completely empty parameter dict makes `Trainer` fail immediately, a *partly* registered model—where outer layers are attributes and inner layers sit in a plain list—fails silently during training. Let's take one SGD step on such a model and check which weights move:
+The forward pass succeeds, yet `collect_params()` is empty! While a completely empty parameter dict makes `Trainer` fail immediately, a *partly* registered model—where outer layers are attributes and inner layers sit in a plain list—fails silently during training. Let's take one SGD step on such a model and check which weights move:
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -534,7 +563,9 @@ class PartlyRegisteredMLP(nn.Module):
         return self.last(X)
 ```
 
+:begin_tab:`mxnet, pytorch`
 To see which layers actually move during training, we snapshot all four weight matrices of `PartlyRegisteredMLP` in `before`, run a single backward pass on `net(X).sum()` followed by one SGD step, and compare each layer's weights against `before`:
+:end_tab:
 
 ```{.python .input #model-construction-layers-in-a-plain-list-2}
 %%tab mxnet
@@ -815,9 +846,8 @@ Eager execution runs the data-dependent loop, whereas tracing rejects converting
 
 ### Shapes from Data
 
-Since :numref:`sec_linear_concise`, many of our layers have specified only
-their output dimension, deferring input-shape inference until the first
-minibatch arrives.
+Some layer libraries let a layer specify only its output dimension and infer
+its input width from the first minibatch; the tab note says whether yours does.
 
 :begin_tab:`mxnet`
 Before the first forward pass, `nn.Dense(256)` creates parameter placeholders with unknown input dimension `-1`:
@@ -832,7 +862,7 @@ Before the first call, `Dense(256)` has not allocated any variables at all:
 :end_tab:
 
 :begin_tab:`jax`
-Unlike the other three frameworks, NNX layers require explicit input and output widths and allocate their parameters immediately in `__init__`.
+NNX layers require explicit input and output widths and allocate their parameters immediately in `__init__`.
 :end_tab:
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-1}
 %%tab mxnet
@@ -892,9 +922,10 @@ Lazy layers free us from manually propagating input dimensions from layer to
 layer, which quickly becomes error-prone in deep models. The trade-off is that
 parameters do not exist until data flows through the network: before that first
 pass, we cannot inspect parameter counts or run shape-dependent initializers
-such as Xavier initialization (:numref:`subsec_xavier`). To initialize a lazy
-model cleanly before training, we first perform a *dry run*—a single forward
-pass on a dummy minibatch whose output is discarded—to materialize every shape.
+such as Xavier initialization (:numref:`subsec_xavier`). A lazy model therefore needs its initializer either recorded up front or
+applied after a *dry run*—a single forward pass on a dummy minibatch whose
+output is discarded—that materializes every shape; the tab note shows which
+your framework uses.
 
 :begin_tab:`mxnet`
 `net.initialize(init.Xavier())` records the initializer upfront and applies it automatically on the first forward pass.

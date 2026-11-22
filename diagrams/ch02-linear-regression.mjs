@@ -85,15 +85,15 @@ function lrMiniature() {
 function lrRoadmap() {
   const W = 560, H = 296;
   let o = '';
-  o += tx(280, 20, 'Chapter 2 Progression: Theory → Systems → Generalization', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'Chapter Progression: Theory → Systems → Generalization', { fs: 15, fw: 700, fill: C.ink });
 
   const stages = [
-    { x: 16,  y: 44,  w: 162, h: 68, sec: '§2.1 Theory', sub: 'Xw+b, lstsq, SGD', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 199, y: 44,  w: 162, h: 68, sec: '§2.2 Synthetic', sub: 'w*=(2,-3.4), σ=0.01', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 382, y: 44,  w: 162, h: 68, sec: '§2.3 Scratch', sub: 'Autograd & loop', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 382, y: 136, w: 162, h: 68, sec: '§2.4 OO Design', sub: 'Module · Trainer', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 199, y: 136, w: 162, h: 68, sec: '§2.5 Concise', sub: 'LazyLinear & MSE', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 16,  y: 136, w: 162, h: 68, sec: '§2.6 Generalize', sub: 'Bias² + Var + CV', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 44,  w: 162, h: 68, sec: 'Theory', sub: 'Xw+b, lstsq, SGD', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 199, y: 44,  w: 162, h: 68, sec: 'Synthetic Data', sub: 'w*=(2,-3.4), σ=0.01', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 382, y: 44,  w: 162, h: 68, sec: 'Scratch', sub: 'Autograd & loop', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 382, y: 136, w: 162, h: 68, sec: 'OO Design', sub: 'Module · Trainer', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 199, y: 136, w: 162, h: 68, sec: 'Concise', sub: 'Dense layer & MSE', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 16,  y: 136, w: 162, h: 68, sec: 'Generalization', sub: 'Bias² + Var + CV', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   o += arrow(180, 78, 197, 78, C.blue);
@@ -110,18 +110,18 @@ function lrRoadmap() {
   });
 
   o += box(16, 226, 528, 54, D.red.tint, D.red.base, 8, 2);
-  o += tx(280, 244, '§2.7 Weight Decay (Ridge Regularization): L(w,b) + (λ/2)‖w‖₂²', { fs: 14, fw: 700, fill: D.red.dark });
+  o += tx(280, 244, 'Weight Decay (Ridge Regularization): L(w,b) + (λ/2)‖w‖₂²', { fs: 14, fw: 700, fill: D.red.dark });
   o += tx(280, 266, 'Step (1−ηλ)w  ·  MAP prior λ = σ²/(nτ²)  ·  Spectral filter μ/(μ+λ)', { fs: 12, fw: 600, fill: C.ink });
 
   return svg(W, H, o);
 }
 
 function lrBenchmarks() {
-  return stackCards(560, 312, 'Quantitative Running Benchmarks Across Chapter 2', [
-    { head: '§2.1 3-Point Projection', badge: 'ŵ = (7/6, -1/2)', sub: 'Points (0,1),(1,1),(2,0) → orthogonal residual Xᵀr = 0', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
-    { head: '§§2.2–2.5 Synthetic 2D Testbed', badge: 'floor 5e-5', sub: 'n = 1,000, w* = (2, −3.4), b* = 4.2, σ = 0.01 → SE ≈ 3.2e-4', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
-    { head: '§2.6 Polynomial Curve Fitting', badge: 'deg 1 vs 3 vs 19', sub: 'n = 20 on cubic f*(x), σ = 0.1 → deg 3 hits floor σ² = 0.01', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
-    { head: '§2.7 High-Dimensional Ridge', badge: 'λ = 1/3, df ≈ 127', sub: 'd = 200, n = 300, w* = 0.1·1, σ = 1.0 → quashes noisy directions', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+  return stackCards(560, 312, 'Quantitative Running Benchmarks Across the Chapter', [
+    { head: '3-Point Projection', badge: 'ŵ = (7/6, -1/2)', sub: 'Points (0,1),(1,1),(2,0) → orthogonal residual Xᵀr = 0', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
+    { head: 'Synthetic 2D Testbed', badge: 'floor 5e-5', sub: 'n = 1,000, w* = (2, −3.4), b* = 4.2, σ = 0.01 → SE ≈ 3.2e-4', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
+    { head: 'Polynomial Curve Fitting', badge: 'deg 1 vs 3 vs 19', sub: 'n = 20 on cubic f*(x), σ = 0.1 → deg 3 hits floor σ² = 0.01', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+    { head: 'High-Dimensional Ridge', badge: 'λ = 1/3, df ≈ 127', sub: 'd = 200, n = 300, w* = 0.1·1, σ = 1.0 → quashes noisy directions', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
   ]);
 }
 
@@ -215,7 +215,7 @@ function outlierPull() {
   o += box(28, 110, 230, 56, '#FFFFFF', D.red.base, 6, 1.5);
   o += tx(143, 128, '19 clean pts: r ≈ 0', { mono: true, fs: 12, fill: C.muted });
   o += tx(143, 150, '1 outlier (10,000): r ≈ 10⁴', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
-  o += tx(143, 190, 'Fitted slope w_sq = 23.16', { mono: true, fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(143, 190, 'Fitted slope w_sq = 22.88', { mono: true, fs: 13.5, fw: 700, fill: D.red.dark });
   o += tx(143, 216, '(pulled 11× off true w = 2.00!)', { fs: 12.5, fw: 600, fill: D.red.dark });
 
   o += box(290, 42, 254, 204, C.lgreen, C.green);
@@ -313,7 +313,7 @@ function loopVsGemm() {
   o += tx(170, 211, 'All 1,000 rows in SIMD / Tensor Cores', { fs: 12.5, fw: 700, fill: D.green.dark });
   o += arrow(312, 211, 348, 211, C.green);
   o += box(352, 192, 174, 38, '#FFFFFF', C.green, 6, 1.8);
-  o += tx(439, 211, '100×–500× speedup', { fs: 13, fw: 700, fill: D.green.dark });
+  o += tx(439, 211, '100×–1,000× speedup', { fs: 13, fw: 700, fill: D.green.dark });
 
   return svg(W, H, o);
 }
@@ -442,7 +442,7 @@ function jaxKeySplit() {
   o += tx(461, 160, 'key2 → eps', { mono: true, fs: 13.5, fw: 700, fill: D.orange.dark });
   o += tx(461, 182, 'normal(key2,(n,1))', { mono: true, fs: 11.5, fill: C.ink });
 
-  o += tx(280, 228, 'Reusing the same key for X and eps would make noise identical to feature 1!', { fs: 12.5, fw: 700, fill: D.red.dark });
+  o += tx(280, 228, 'Reusing one key would make eps repeat the first n draws of X (row-major)!', { fs: 12.5, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
 
@@ -534,12 +534,13 @@ function seScaling() {
   o += tx(280, 20, 'The σ / √n Parameter Recovery Law (SE ≈ 3.16 × 10⁻⁴)', { fs: 15, fw: 700, fill: C.ink });
 
   const bars = [
-    { label: 'n = 10',     se: '3.2 × 10⁻³', w: 256, col: D.red.base, tint: D.red.tint, dk: D.red.dark },
-    { label: 'n = 100',    se: '1.0 × 10⁻³', w: 144, col: C.amber,    tint: C.lamber,   dk: D.orange.dark },
-    { label: 'n = 1,000',  se: '3.2 × 10⁻⁴', w: 76,  col: C.blue,     tint: C.lblue,    dk: D.blue.dark },
-    { label: 'n = 10,000', se: '1.0 × 10⁻⁴', w: 40,  col: C.green,    tint: C.lgreen,   dk: D.green.dark },
+    { label: 'n = 10',     se: '3.2 × 10⁻³', w: 252, col: D.red.base, tint: D.red.tint, dk: D.red.dark },
+    { label: 'n = 100',    se: '1.0 × 10⁻³', w: 192, col: C.amber,    tint: C.lamber,   dk: D.orange.dark },
+    { label: 'n = 1,000',  se: '3.2 × 10⁻⁴', w: 132, col: C.blue,     tint: C.lblue,    dk: D.blue.dark },
+    { label: 'n = 10,000', se: '1.0 × 10⁻⁴', w: 72,  col: C.green,    tint: C.lgreen,   dk: D.green.dark },
   ];
 
+  o += tx(544, 38, 'bar length: log scale', { fs: 11.5, fill: C.muted, anchor: 'end' });
   bars.forEach((b, i) => {
     const y = 46 + i * 42;
     o += tx(110, y + 15, b.label, { mono: true, fs: 13.5, fw: 700, fill: C.ink, anchor: 'end' });
@@ -585,10 +586,9 @@ function broadcastTrap() {
 }
 
 function paramInit() {
-  return stackCards(560, 284, 'Allocating Trainable Parameters With Autograd Hooks', [
-    { head: 'Weights w ~ N(0, 0.01²) · shape (2, 1)', badge: 'b = zeros(1)', sub: 'Small random Gaussian weights + zero bias (breaks symmetry in Ch 4)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
-    { head: 'PyTorch / MXNet / TensorFlow', badge: 'requires_grad=True', sub: 'Attaches .grad buffer or watches tf.Variable on GradientTape', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
-    { head: 'JAX Pure Functional Differentiation', badge: 'jax.grad(loss_fn)', sub: 'Arrays are immutable; jax.grad differentiates pure functions directly', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+  return stackCards(560, 284, 'Allocating Trainable Parameters for Autograd', [
+    { head: 'Weights w ~ N(0, 0.01²) · shape (2, 1)', badge: 'b = zeros(1)', sub: 'Small random Gaussian weights + zero bias (breaks symmetry in deeper nets)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
+    { head: 'Differentiable Parameters', badge: '∂L/∂w, ∂L/∂b', sub: 'Created so that the backward pass can return the gradient of the loss for both', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
   ]);
 }
 
@@ -629,20 +629,19 @@ function gradVerify() {
   o += box(16, 48, 232, 118, C.lblue, C.blue);
   o += tx(132, 72, 'Analytical Formula', { fs: 14, fw: 700, fill: D.blue.dark });
   o += tx(132, 98, 'r = Xb @ w + b − yb', { mono: true, fs: 12, fill: C.ink });
-  o += tx(132, 122, '∇_w L = Xb.T @ r / 32', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
-  o += tx(132, 144, '∂_b L = r.sum() / 32', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
+  o += tx(132, 122, '∇_w L = Xbᵀ r / 32', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
+  o += tx(132, 144, '∂_b L = Σ r / 32', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
 
   o += box(312, 48, 232, 118, D.purple.tint, C.purple);
   o += tx(428, 72, 'Reverse-Mode Autograd', { fs: 14, fw: 700, fill: D.purple.dark });
-  o += tx(428, 98, 'loss.backward()', { mono: true, fs: 12.5, fw: 700, fill: D.purple.dark });
-  o += tx(428, 122, 'reads w.grad, b.grad', { mono: true, fs: 12, fill: C.ink });
-  o += tx(428, 144, 'or jax.grad(loss_wb)', { mono: true, fs: 12, fill: C.ink });
+  o += tx(428, 98, 'backward sweep', { mono: true, fs: 12.5, fw: 700, fill: D.purple.dark });
+  o += tx(428, 122, 'returns ∂L/∂w, ∂L/∂b', { mono: true, fs: 12, fill: C.ink });
 
   o += arrow(250, 107, 310, 107, C.green);
   o += arrow(310, 107, 250, 107, C.green);
 
   o += box(16, 186, 528, 54, C.lgreen, C.green);
-  o += tx(280, 206, 'Max Entrywise Discrepancy: |by_hand − by_autograd| ≤ 10⁻⁷', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
+  o += tx(280, 206, 'Max Entrywise Discrepancy: |by_hand − by_autograd| ~ 10⁻⁷', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
   o += tx(280, 226, 'Exact match up to float32 machine epsilon on a 32-example minibatch', { fs: 12.5, fill: C.ink });
 
   return svg(W, H, o);
@@ -676,7 +675,7 @@ function genExhaustion() {
   const bx0 = 32, by = 80;
   for (let i = 0; i < 4; i++) {
     o += box(bx0 + i * 96, by, 84, 36, '#FFFFFF', C.blue, 6, 1.5);
-    o += tx(bx0 + i * 96 + 42, by + 18, `B_${i + 1} (32)`, { mono: true, fs: 12, fw: 700, fill: C.ink });
+    o += tx(bx0 + i * 96 + 42, by + 18, `B${'₁₂₃₄'[i]} (32)`, { mono: true, fs: 12, fw: 700, fill: C.ink });
   }
   o += tx(430, by + 18, '···', { fs: 18, fw: 700, fill: C.ink });
   o += box(452, by, 76, 36, C.lamber, C.amber, 6, 1.8);
@@ -690,7 +689,7 @@ function genExhaustion() {
   o += box(290, 146, 254, 96, C.lgreen, C.green);
   o += tx(417, 170, 'Call minibatches() Per Epoch', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   o += tx(417, 196, 'Fresh generator & shuffle', { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(417, 220, 'Or use DataLoader (§2.4)', { fs: 12, fill: C.ink });
+  o += tx(417, 220, 'Or a reusable data loader', { fs: 12, fill: C.ink });
 
   return svg(W, H, o);
 }
@@ -698,34 +697,34 @@ function genExhaustion() {
 function fourStepLoop() {
   const W = 560, H = 266;
   let o = '';
-  o += tx(280, 20, 'The Four-Step Minibatch Update Cycle & Autograd Guards', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'The Four-Step Minibatch Update Cycle', { fs: 15, fw: 700, fill: C.ink });
 
   const bw = 248, bh = 86;
   o += box(16, 42, bw, bh, C.lblue, C.blue);
-  o += tx(16 + bw / 2, 64, '1. Forward & Loss', { fs: 14, fw: 700, fill: D.blue.dark });
-  o += tx(16 + bw / 2, 88, 'loss = squared_loss(', { mono: true, fs: 12, fill: C.ink });
-  o += tx(16 + bw / 2, 108, '  linreg(Xb, w, b), yb)', { mono: true, fs: 12, fill: C.ink });
+  o += tx(16 + bw / 2, 64, '1. Forward Pass', { fs: 14, fw: 700, fill: D.blue.dark });
+  o += tx(16 + bw / 2, 88, 'y_hat = linreg(Xb, w, b)', { mono: true, fs: 12, fill: C.ink });
+  o += tx(16 + bw / 2, 108, 'recorded for differentiation', { fs: 12, fill: C.ink });
 
   o += arrow(266, 85, 294, 85, C.blue);
 
-  o += box(296, 42, bw, bh, D.purple.tint, C.purple);
-  o += tx(296 + bw / 2, 64, '2. Backward Pass', { fs: 14, fw: 700, fill: D.purple.dark });
-  o += tx(296 + bw / 2, 88, 'loss.backward()', { mono: true, fs: 12.5, fw: 700, fill: D.purple.dark });
-  o += tx(296 + bw / 2, 108, 'populates w.grad, b.grad', { fs: 12, fill: C.ink });
+  o += box(296, 42, bw, bh, C.lamber, C.amber);
+  o += tx(296 + bw / 2, 64, '2. Loss', { fs: 14, fw: 700, fill: D.orange.dark });
+  o += tx(296 + bw / 2, 88, 'loss = squared_loss(y_hat, yb)', { mono: true, fs: 12, fill: C.ink });
+  o += tx(296 + bw / 2, 108, 'one scalar per minibatch', { fs: 12, fill: C.ink });
 
   o += arrow(420, 130, 420, 154, D.red.base);
 
-  o += box(296, 158, bw, bh, C.lgreen, C.green);
-  o += tx(296 + bw / 2, 180, '3. Unrecorded Step', { fs: 14, fw: 700, fill: D.green.dark });
-  o += tx(296 + bw / 2, 204, 'with torch.no_grad():', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
-  o += tx(296 + bw / 2, 224, '  param -= lr * param.grad', { mono: true, fs: 12, fill: C.ink });
+  o += box(296, 158, bw, bh, D.purple.tint, C.purple);
+  o += tx(296 + bw / 2, 180, '3. Backward Pass', { fs: 14, fw: 700, fill: D.purple.dark });
+  o += tx(296 + bw / 2, 204, 'gradients of loss', { mono: true, fs: 12, fw: 700, fill: D.purple.dark });
+  o += tx(296 + bw / 2, 224, 'with respect to w and b', { fs: 12, fill: C.ink });
 
   o += arrow(294, 201, 266, 201, D.orange.base);
 
-  o += box(16, 158, bw, bh, C.lamber, C.amber);
-  o += tx(16 + bw / 2, 180, '4. Zero Gradients', { fs: 14, fw: 700, fill: D.orange.dark });
-  o += tx(16 + bw / 2, 204, 'param.grad.zero_()', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
-  o += tx(16 + bw / 2, 224, 'prevents sum across steps!', { fs: 12, fill: C.ink });
+  o += box(16, 158, bw, bh, C.lgreen, C.green);
+  o += tx(16 + bw / 2, 180, '4. Update', { fs: 14, fw: 700, fill: D.green.dark });
+  o += tx(16 + bw / 2, 204, 'param -= lr * grad', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(16 + bw / 2, 224, 'not recorded; next minibatch', { fs: 12, fill: C.ink });
 
   o += arrow(140, 156, 140, 130, C.blue);
 
@@ -792,7 +791,7 @@ function paramRecovery() {
 
 function lrRegimes() {
   return stackCards(560, 286, 'Three Learning-Rate Regimes on a Quadratic Bowl (μ_max ≈ 1)', [
-    { head: 'Too Small: η = 0.003 (Crawling)', badge: 'val loss ≈ 2.4', sub: 'Contracts by 0.997/step → after 640 steps, 16.6 × 0.997⁶⁴⁰ ≈ 2.4', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+    { head: 'Too Small: η = 0.003 (Crawling)', badge: 'val loss ≈ 2–3', sub: 'Loss contracts by 0.997²/step → after 320 steps, 16.6 × 0.997⁶⁴⁰ ≈ 2.4', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
     { head: 'Well Tuned: η = 0.03 to 0.3', badge: 'val loss ≈ 5e-5', sub: 'Reaches the irreducible noise floor σ²/2 = 5 × 10⁻⁵ in 1–7 epochs', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
     { head: 'Unstable: η = 3 > 2 / μ_max', badge: 'val loss → NaN', sub: 'Multiplies error by (1 − ημ) ≈ −2 per step → oscillates & diverges!', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark },
   ]);
@@ -808,7 +807,7 @@ function ooDecouple() {
   o += tx(280, 20, 'Why Factor Training Into Three Orthogonal Abstractions?', { fs: 15, fw: 700, fill: C.ink });
 
   o += box(16, 46, 246, 198, D.red.tint, D.red.base);
-  o += tx(139, 70, 'Monolithic Loop (§2.3)', { fs: 14, fw: 700, fill: D.red.dark });
+  o += tx(139, 70, 'Monolithic Loop', { fs: 14, fw: 700, fill: D.red.dark });
   o += tx(139, 98, 'Model + Data + Loop coupled', { fs: 12.5, fill: C.ink });
   o += box(30, 116, 218, 62, '#FFFFFF', D.red.base, 6, 1.5);
   o += tx(139, 138, '30 Models × 10 Datasets', { fs: 12.5, fw: 700, fill: D.red.dark });
@@ -819,7 +818,7 @@ function ooDecouple() {
   o += arrow(264, 145, 294, 145, C.green);
 
   o += box(298, 46, 246, 198, C.lgreen, C.green);
-  o += tx(421, 70, 'd2l OO Harness (§2.4)', { fs: 14, fw: 700, fill: D.green.dark });
+  o += tx(421, 70, 'd2l OO Harness', { fs: 14, fw: 700, fill: D.green.dark });
   o += tx(421, 98, 'trainer.fit(model, data)', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   o += box(312, 116, 218, 62, '#FFFFFF', C.green, 6, 1.5);
   o += tx(421, 138, '30 Modules + 10 DataModules', { fs: 12, fw: 700, fill: D.green.dark });
@@ -849,7 +848,7 @@ function ooUtilities() {
   o += tx(417, 98, 'Inspects __init__ stack frame', { fs: 12, fill: C.ink });
   o += box(304, 116, 226, 60, '#FFFFFF', C.purple, 6, 1.5);
   o += tx(417, 138, 'Binds args → self.lr, self.w', { mono: true, fs: 11.5, fw: 700, fill: D.purple.dark });
-  o += tx(417, 158, 'Supports ignore=[\'rngs\']', { mono: true, fs: 11.5, fill: C.ink });
+  o += tx(417, 158, 'Supports ignore=[...]', { mono: true, fs: 11.5, fill: C.ink });
   o += tx(417, 206, 'Eliminates repetitive', { fs: 12, fill: C.muted });
   o += tx(417, 224, 'self.x = x boilerplate', { mono: true, fs: 12, fill: C.muted });
 
@@ -879,7 +878,7 @@ function moduleContract() {
   o += box(404, 50, 140, 82, C.lgreen, C.green);
   o += tx(474, 74, 'as_metrics(out)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   o += tx(474, 98, '{\'loss\': l}', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
-  o += tx(474, 118, '(+ \'acc\' in Ch 3)', { fs: 11.5, fill: C.muted });
+  o += tx(474, 118, '(+ \'acc\' for classifiers)', { fs: 11.5, fill: C.muted });
 
   o += box(16, 158, 528, 106, C.lamber, C.amber);
   o += tx(280, 182, 'configure_optimizers() → Returns Optimizer (+ Scheduler)', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
@@ -891,7 +890,7 @@ function moduleContract() {
 
 function scratchModule() {
   return stackCards(560, 284, 'LinearRegressionScratch(d2l.Module) Anatomy', [
-    { head: '1. __init__(num_inputs, lr, sigma=0.01)', badge: 'nn.Parameter', sub: 'Registers self.w ~ N(0, σ²) of shape (d, 1) and self.b = zeros(1)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
+    { head: '1. __init__(num_inputs, lr, sigma=0.01)', badge: 'registered params', sub: 'Registers self.w ~ N(0, σ²) of shape (d, 1) and self.b = zeros(1)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
     { head: '2. forward(self, X)', badge: 'matmul(X, w) + b', sub: 'Computes affine prediction ŷ ∈ ℝ^{|B|×1} from registered parameters', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
     { head: '3. loss(self, y_hat, y)', badge: 'reduce_mean(r²/2)', sub: 'Reshapes y to (-1, 1) and returns scalar half mean squared error', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
   ]);
@@ -900,23 +899,23 @@ function scratchModule() {
 function sgdClass() {
   const W = 560, H = 256;
   let o = '';
-  o += tx(280, 20, 'Wrapping From-Scratch SGD Across Imperative & Functional Frameworks', { fs: 14.5, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'Wrapping From-Scratch SGD in the Optimizer Interface', { fs: 14.5, fw: 700, fill: C.ink });
 
   o += box(16, 46, 254, 192, C.lblue, C.blue);
-  o += tx(143, 70, 'Imperative (PyTorch / MXNet / TF)', { fs: 13, fw: 700, fill: D.blue.dark });
-  o += tx(143, 98, 'Mutates parameter buffers in place:', { fs: 12, fill: C.ink });
+  o += tx(143, 70, 'The Update Rule', { fs: 13.5, fw: 700, fill: D.blue.dark });
+  o += tx(143, 98, 'For every registered parameter:', { fs: 12, fill: C.ink });
   o += box(30, 114, 226, 64, '#FFFFFF', C.blue, 6, 1.5);
-  o += tx(143, 136, 'step(): param -= lr * grad', { mono: true, fs: 11.5, fw: 700, fill: D.blue.dark });
-  o += tx(143, 158, 'zero_grad(): grad.zero_()', { mono: true, fs: 11.5, fill: C.ink });
-  o += tx(143, 206, 'TF: param.assign_sub(lr * grad)', { mono: true, fs: 11.5, fill: C.muted });
+  o += tx(143, 136, 'param ← param − lr · grad', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
+  o += tx(143, 158, 'lr saved as a hyperparameter', { fs: 12, fill: C.ink });
+  o += tx(143, 206, 'No state beyond lr', { fs: 12, fill: C.muted });
 
   o += box(290, 46, 254, 192, C.lgreen, C.green);
-  o += tx(417, 70, 'Functional (JAX / Optax Pair)', { fs: 13, fw: 700, fill: D.green.dark });
-  o += tx(417, 98, 'Pure gradient transformation:', { fs: 12, fill: C.ink });
+  o += tx(417, 70, 'The Optimizer Interface', { fs: 13.5, fw: 700, fill: D.green.dark });
+  o += tx(417, 98, 'Same calls as built-in optimizers:', { fs: 12, fill: C.ink });
   o += box(304, 114, 226, 64, '#FFFFFF', C.green, 6, 1.5);
-  o += tx(417, 136, 'init(params) → EmptyState()', { mono: true, fs: 11.5, fill: C.ink });
-  o += tx(417, 158, 'update(g) → tree_map(-lr*g)', { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
-  o += tx(417, 206, 'Wrapped by nnx.Optimizer', { mono: true, fs: 11.5, fill: C.muted });
+  o += tx(417, 136, 'Trainer applies one update', { fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(417, 158, 'per minibatch', { fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(417, 206, 'Swap in a built-in SGD later', { fs: 12, fill: C.muted });
 
   return svg(W, H, o);
 }
@@ -924,7 +923,7 @@ function sgdClass() {
 function reusableLoader() {
   const W = 560, H = 262;
   let o = '';
-  o += tx(280, 20, 'Single-Use Generator vs. Reusable Multi-Epoch DataLoader', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'Single-Use Generator vs. Reusable Multi-Epoch Loader', { fs: 15, fw: 700, fill: C.ink });
 
   o += box(16, 46, 254, 196, D.red.tint, D.red.base);
   o += tx(143, 70, 'Python Generator (yield)', { fs: 14, fw: 700, fill: D.red.dark });
@@ -934,11 +933,11 @@ function reusableLoader() {
   o += tx(143, 180, '• Single-threaded in-RAM only', { fs: 12.5, fill: C.muted });
 
   o += box(290, 46, 254, 196, C.lgreen, C.green);
-  o += tx(417, 70, 'DataLoader / ArrayLoader', { fs: 14, fw: 700, fill: D.green.dark });
+  o += tx(417, 70, 'Reusable Data Loader', { fs: 14, fw: 700, fill: D.green.dark });
   o += tx(417, 100, '• __iter__() reshuffles each pass', { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
   o += tx(417, 126, '• Epoch 1, 2, ...: all 32 batches', { fs: 12.5, fill: C.ink });
   o += tx(417, 152, '• len(loader) == 32 in O(1)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
-  o += tx(417, 180, '• Parallel worker prefetching', { fs: 12.5, fill: C.ink });
+  o += tx(417, 180, '• One loader serves every epoch', { fs: 12.5, fill: C.ink });
 
   return svg(W, H, o);
 }
@@ -1001,7 +1000,7 @@ function trainerTimeline() {
 function detachGraph() {
   const W = 560, H = 260;
   let o = '';
-  o += tx(280, 20, 'Why Trainer Detaches Metrics & Compiles Step Graphs', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'Why Trainer Detaches Logged Metrics', { fs: 15, fw: 700, fill: C.ink });
 
   o += box(16, 46, 254, 194, D.red.tint, D.red.base);
   o += tx(143, 70, 'Without .detach() in Averager', { fs: 13.5, fw: 700, fill: D.red.dark });
@@ -1013,11 +1012,11 @@ function detachGraph() {
   o += tx(143, 224, 'compute graph immediately', { fs: 12, fw: 700, fill: D.green.dark });
 
   o += box(290, 46, 254, 194, C.lblue, C.blue);
-  o += tx(417, 70, 'JIT Compilation (TF & JAX)', { fs: 13.5, fw: 700, fill: D.blue.dark });
-  o += tx(417, 98, '@tf.function  /  @nnx.jit', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
+  o += tx(417, 70, 'Sums Stay on the Device', { fs: 13.5, fw: 700, fill: D.blue.dark });
+  o += tx(417, 98, 'sums[name] += v.detach() * n', { mono: true, fs: 11.5, fw: 700, fill: D.blue.dark });
   o += box(304, 116, 226, 60, '#FFFFFF', C.blue, 6, 1.5);
-  o += tx(417, 138, 'Fuses forward + backward +', { fs: 12, fill: C.ink });
-  o += tx(417, 158, 'optimizer step into 1 XLA kernel', { fs: 12, fw: 700, fill: D.blue.dark });
+  o += tx(417, 138, 'No host synchronization', { fs: 12, fill: C.ink });
+  o += tx(417, 158, 'inside the minibatch loop', { fs: 12, fw: 700, fill: D.blue.dark });
   o += tx(417, 206, '1 host sync per epoch via', { fs: 12, fill: C.ink });
   o += tx(417, 224, 'float(self.sums[name]) / self.n', { mono: true, fs: 11, fill: D.blue.dark });
 
@@ -1034,9 +1033,9 @@ function scratchToConcise() {
   o += tx(280, 20, 'Swapping Hand-Written Primitives for Framework Components', { fs: 15, fw: 700, fill: C.ink });
 
   const rows = [
-    ['1. Model Layer', 'w, b + matmul(X, w) + b', 'LazyLinear(1) / Dense(1)'],
-    ['2. Loss Function', 'reduce_mean((ŷ − y)² / 2)', 'nn.MSELoss / squared_error'],
-    ['3. Optimizer', 'for p in params: p -= lr*g', 'torch.optim.SGD / optax.sgd'],
+    ['1. Model Layer', 'w, b + matmul(X, w) + b', 'built-in dense layer'],
+    ['2. Loss Function', 'reduce_mean((ŷ − y)² / 2)', 'built-in MSE loss'],
+    ['3. Optimizer', 'for p in params: p -= lr*g', 'built-in SGD'],
   ];
 
   rows.forEach(([title, sc, co], i) => {
@@ -1049,7 +1048,7 @@ function scratchToConcise() {
 
     o += box(296, y, 248, 58, C.lgreen, C.green);
     o += tx(420, y + 20, `${title} (Concise)`, { fs: 13, fw: 700, fill: D.green.dark });
-    o += tx(420, y + 42, co, { mono: true, fs: 11.5, fw: 700, fill: C.ink });
+    o += tx(420, y + 42, co, { fs: 13, fw: 700, fill: C.ink });
   });
 
   return svg(W, H, o);
@@ -1058,11 +1057,11 @@ function scratchToConcise() {
 function lazyLinear() {
   const W = 560, H = 254;
   let o = '';
-  o += tx(280, 20, 'How LazyLinear(1) / Dense(1) Infers Input Dimension d', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'How the Dense Layer Infers Input Dimension d', { fs: 15, fw: 700, fill: C.ink });
 
   o += box(16, 48, 160, 92, C.lamber, C.amber);
   o += tx(96, 72, '1. Construction', { fs: 13.5, fw: 700, fill: D.orange.dark });
-  o += tx(96, 96, 'nn.LazyLinear(1)', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(96, 96, 'dense, 1 output', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(96, 118, 'd unknown (uninit)', { fs: 12, fill: C.muted });
 
   o += arrow(178, 94, 206, 94, C.blue);
@@ -1076,8 +1075,8 @@ function lazyLinear() {
 
   o += box(396, 48, 148, 92, C.lgreen, C.green);
   o += tx(470, 72, '3. Materialized', { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(470, 96, 'weight: (1, 2)', { mono: true, fs: 12, fw: 700, fill: C.ink });
-  o += tx(470, 118, 'bias:   (1,)', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(470, 96, 'weights: 2', { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(470, 118, 'bias:    1', { mono: true, fs: 12, fw: 700, fill: C.ink });
 
   o += box(16, 162, 528, 72, D.purple.tint, C.purple);
   o += tx(280, 186, 'Inherited forward: d2l.Module.forward(X) → self.net(X)', { mono: true, fs: 13, fw: 700, fill: D.purple.dark });
@@ -1086,12 +1085,27 @@ function lazyLinear() {
   return svg(W, H, o);
 }
 
-function lazyVsEager() {
-  return stackCards(560, 286, 'Initializing N(0, 0.01²) Weights Across Lazy & Eager Layers', [
-    { head: 'PyTorch: LazyLinear(1) + Dummy Call', badge: 'net.apply(init)', sub: 'Run model(data.X[:1]) to materialize shapes, then apply normal_(0, 0.01)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
-    { head: 'MXNet & Keras: Deferred Initializer Object', badge: 'Normal(0.01)', sub: 'Attach initializer at construction; framework runs it on batch 1', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
-    { head: 'JAX / Flax NNX: Eager Construction With RNG', badge: 'nnx.Linear(2,1)', sub: 'Passes num_inputs=2, kernel_init=normal(0.01), and rngs immediately', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
-  ]);
+function lazyVsEager(fw = 'pytorch') {
+  const title = 'Initializing N(0, 0.01²) Weights and a Zero Bias';
+  const cards = {
+    pytorch: [
+      { head: '1. Construction: nn.LazyLinear(1)', badge: 'shapes unknown', sub: 'A dummy call model(data.X[:1]) creates the parameters', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+      { head: '2. Initialization: net.apply(init)', badge: 'normal_, zeros_', sub: 'weight (1, 2) drawn from N(0, 0.01²); bias set to 0', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+    ],
+    tensorflow: [
+      { head: '1. Construction: Dense(1, kernel_initializer=…)', badge: 'RandomNormal', sub: 'The initializer is attached; shapes are still unknown', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+      { head: '2. First Minibatch', badge: 'deferred', sub: 'kernel (2, 1) drawn from N(0, 0.01²); bias set to 0', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+    ],
+    mxnet: [
+      { head: '1. Construction: initialize(init.Normal(0.01))', badge: 'deferred', sub: 'The initializer is attached; shapes are still unknown', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+      { head: '2. First Minibatch', badge: 'shapes inferred', sub: 'weight (1, 2) drawn from N(0, 0.01²); bias set to 0', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+    ],
+    jax: [
+      { head: '1. Construction: nnx.Linear(2, 1, …)', badge: 'eager', sub: 'num_inputs = 2, kernel_init = normal(0.01), rngs', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+      { head: '2. Parameters Exist Immediately', badge: 'no dummy call', sub: 'kernel (2, 1) drawn from N(0, 0.01²); bias set to 0', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+    ],
+  };
+  return stackCards(560, 200, title, cards[fw]);
 }
 
 function mseHalving() {
@@ -1131,18 +1145,18 @@ function paramDiscovery() {
   o += arrow(340, 94, 426, 126, C.blue);
 
   o += box(34, 130, 200, 52, C.lblue, C.blue);
-  o += tx(134, 150, 'self.net.weight / kernel', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
+  o += tx(134, 150, 'dense-layer weight', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
   o += tx(134, 168, '2 weights', { fs: 11.5, fill: C.muted });
 
   o += box(326, 130, 200, 52, C.lblue, C.blue);
-  o += tx(426, 150, 'self.net.bias', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
+  o += tx(426, 150, 'dense-layer bias', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
   o += tx(426, 168, '1 intercept', { fs: 11.5, fill: C.muted });
 
   o += arrow(134, 184, 210, 204, C.green);
   o += arrow(426, 184, 350, 204, C.green);
 
   o += box(34, 204, 492, 40, C.lgreen, C.green);
-  o += tx(280, 224, 'self.parameters() → SGD(lr=0.015) (scales to 1,000 layers!)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(280, 224, 'all registered parameters → SGD(lr=0.015) (scales to 1,000 layers!)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
 
   return svg(W, H, o);
 }
@@ -1152,29 +1166,35 @@ function getWb() {
   let o = '';
   o += tx(280, 20, 'Extracting Learned Weights and Bias via model.get_w_b()', { fs: 15, fw: 700, fill: C.ink });
 
-  const items = [
-    { fw: 'PyTorch', code: 'self.net.weight.detach(), self.net.bias.detach()', col: C.blue, tint: C.lblue, dk: D.blue.dark },
-    { fw: 'TensorFlow', code: 'self.net.kernel, self.net.bias', col: C.amber, tint: C.lamber, dk: D.orange.dark },
-    { fw: 'JAX / NNX', code: 'self.net.kernel[...], self.net.bias[...]', col: C.green, tint: C.lgreen, dk: D.green.dark },
-    { fw: 'MXNet', code: 'self.net.weight.data(), self.net.bias.data()', col: C.purple, tint: D.purple.tint, dk: D.purple.dark },
-  ];
+  o += box(16, 52, 150, 92, C.lblue, C.blue);
+  o += tx(91, 80, 'Trained Layer', { fs: 13.5, fw: 700, fill: D.blue.dark });
+  o += tx(91, 106, 'LinearRegression', { mono: true, fs: 12, fill: C.ink });
+  o += tx(91, 126, '.net', { mono: true, fs: 12, fill: C.ink });
+  o += arrow(168, 98, 200, 98, C.blue);
 
-  items.forEach((it, i) => {
-    const y = 44 + i * 48;
-    o += box(16, y, 128, 38, it.tint, it.col);
-    o += tx(80, y + 19, it.fw, { fs: 13, fw: 700, fill: it.dk });
-    o += box(154, y, 390, 38, '#FFFFFF', it.col);
-    o += tx(349, y + 19, it.code, { mono: true, fs: 12, fw: 600, fill: C.ink });
-  });
+  o += box(204, 52, 150, 92, D.purple.tint, C.purple);
+  o += tx(279, 80, 'get_w_b()', { mono: true, fs: 13.5, fw: 700, fill: D.purple.dark });
+  o += tx(279, 106, 'returns weight', { fs: 12, fill: C.ink });
+  o += tx(279, 126, 'and bias values', { fs: 12, fill: C.ink });
+  o += arrow(356, 98, 388, 98, C.green);
+
+  o += box(392, 52, 152, 92, C.lgreen, C.green);
+  o += tx(468, 80, 'Compare to Truth', { fs: 13.5, fw: 700, fill: D.green.dark });
+  o += tx(468, 106, 'w* = (2, −3.4)', { mono: true, fs: 12, fill: C.ink });
+  o += tx(468, 126, 'b* = 4.2', { mono: true, fs: 12, fill: C.ink });
+
+  o += box(16, 166, 528, 66, C.lamber, C.amber);
+  o += tx(280, 190, 'Errors of order 10⁻⁴ to 10⁻³: a few σ / √n ≈ 3 × 10⁻⁴', { fs: 13.5, fw: 700, fill: D.orange.dark });
+  o += tx(280, 214, 'Framework layers recover the same parameters as the scratch model', { fs: 12.5, fill: C.ink });
 
   return svg(W, H, o);
 }
 
 function threeTiers() {
-  return stackCards(560, 286, 'Pedagogical Progression Across §§2.3 → 2.4 → 2.5', [
-    { head: 'Tier 1 (§2.3): Bare Tensor Functions', badge: 'linreg + train()', sub: 'Raw tensors w, b, manual backward(), manual loop & generator', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
-    { head: 'Tier 2 (§2.4): OO Scratch Module', badge: 'LinearRegressionScratch', sub: 'Packages raw w, b & custom SGD into reusable d2l.Module + Trainer', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
-    { head: 'Tier 3 (§2.5): Concise Framework API', badge: 'LinearRegression', sub: 'Plugs LazyLinear/Dense, MSELoss, and optim.SGD into the same Trainer!', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+  return stackCards(560, 286, 'Pedagogical Progression: Three Implementation Tiers', [
+    { head: 'Tier 1: Bare Tensor Functions', badge: 'linreg + train()', sub: 'Raw tensors w, b, manual backward pass, manual loop & generator', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+    { head: 'Tier 2: OO Scratch Module', badge: 'LinearRegressionScratch', sub: 'Packages raw w, b & custom SGD into reusable d2l.Module + Trainer', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
+    { head: 'Tier 3: Concise Framework API', badge: 'LinearRegression', sub: 'Plugs a built-in dense layer, MSE loss, and SGD into the same Trainer!', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
   ]);
 }
 
@@ -1313,16 +1333,16 @@ function sampleScale() {
 
   o += box(16, 46, 254, 196, C.lamber, C.amber);
   o += tx(143, 70, 'Degree 1 (High Bias)', { fs: 14.5, fw: 700, fill: D.orange.dark });
-  o += tx(143, 102, 'n = 20:    Test MSE ≈ 1.8', { mono: true, fs: 12.5, fill: C.ink });
-  o += tx(143, 128, 'n = 100:   Test MSE ≈ 1.6', { mono: true, fs: 12.5, fill: C.ink });
-  o += tx(143, 154, 'n = 1,000: Test MSE ≈ 1.6', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
+  o += tx(143, 102, 'n = 20:    Test MSE ≈ 1.8–2.1', { mono: true, fs: 12.5, fill: C.ink });
+  o += tx(143, 128, 'n = 100:   Test MSE ≈ 1.7–2.0', { mono: true, fs: 12.5, fill: C.ink });
+  o += tx(143, 154, 'n = 1,000: Test MSE ≈ 1.7–1.9', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += box(30, 176, 226, 48, '#FFFFFF', C.amber, 6, 1.5);
   o += tx(143, 200, 'More data NEVER cures bias!', { fs: 12.5, fw: 700, fill: D.orange.dark });
 
   o += box(290, 46, 254, 196, C.lgreen, C.green);
   o += tx(417, 70, 'Degree 19 (High Variance)', { fs: 14.5, fw: 700, fill: D.green.dark });
-  o += tx(417, 102, 'n = 20:    Test MSE > 10⁴', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
-  o += tx(417, 128, 'n = 100:   Test MSE ≈ 0.015', { mono: true, fs: 12.5, fill: C.ink });
+  o += tx(417, 102, 'n = 20:    Test MSE > 10⁸', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
+  o += tx(417, 128, 'n = 100:   Test MSE ≈ 0.01–0.2', { mono: true, fs: 12.5, fill: C.ink });
   o += tx(417, 154, 'n = 1,000: Test MSE ≈ 0.010', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   o += box(304, 176, 226, 48, '#FFFFFF', C.green, 6, 1.5);
   o += tx(417, 200, 'Variance ∝ p/n → matches cubic!', { fs: 12, fw: 700, fill: D.green.dark });
@@ -1499,15 +1519,15 @@ function highdimTestbed() {
 
   o += box(xs[1], y, bw, bh, C.lblue, C.blue);
   o += tx(xs[1] + bw / 2, y + 24, 'Ridge (λ = 1/3)', { fs: 14, fw: 700, fill: D.blue.dark });
-  o += tx(xs[1] + bw / 2, y + 52, 'Val Loss ≈ 0.88', { mono: true, fs: 13.5, fw: 700, fill: D.blue.dark });
+  o += tx(xs[1] + bw / 2, y + 52, 'Val ≈ 0.75–1.05', { mono: true, fs: 13.5, fw: 700, fill: D.blue.dark });
   o += tx(xs[1] + bw / 2, y + 78, '‖ŵ‖₂ ≈ 1.2', { mono: true, fs: 12, fill: C.ink });
   o += tx(xs[1] + bw / 2, y + 98, 'Stable for 50+ epochs', { fs: 11.5, fill: D.blue.dark });
 
   o += box(xs[2], y, bw, bh, D.red.tint, D.red.base);
   o += tx(xs[2] + bw / 2, y + 24, 'Unpenalized (λ = 0)', { fs: 14, fw: 700, fill: D.red.dark });
-  o += tx(xs[2] + bw / 2, y + 52, 'Val Loss ≈ 1.4–1.8', { mono: true, fs: 13, fw: 700, fill: D.red.dark });
+  o += tx(xs[2] + bw / 2, y + 52, 'Val Loss ≈ 1.1–1.9', { mono: true, fs: 13, fw: 700, fill: D.red.dark });
   o += tx(xs[2] + bw / 2, y + 78, 'Train loss ≈ 0.25!', { mono: true, fs: 12, fill: D.red.dark });
-  o += tx(xs[2] + bw / 2, y + 98, 'Worse than w=0 (1.50)!', { fs: 11.5, fw: 700, fill: D.red.dark });
+  o += tx(xs[2] + bw / 2, y + 98, 'No better than w=0 (1.50)', { fs: 11.5, fw: 700, fill: D.red.dark });
 
   o += box(16, 176, 528, 66, D.purple.tint, C.purple);
   o += tx(280, 198, 'Why validation_step Never Includes the Penalty Term (λ/2)‖w‖₂²', { fs: 13.5, fw: 700, fill: D.purple.dark });
@@ -1530,21 +1550,21 @@ function errorSpectrum() {
   o += tx(280, 20, 'Squared Parameter Error ‖ŵ − w*‖₂² Split Across 200 Eigenvectors', { fs: 14.5, fw: 700, fill: C.ink });
 
   o += box(16, 46, 254, 146, D.red.tint, D.red.base);
-  o += tx(143, 70, 'k ≈ 55 Ill-Conditioned Dirs', { fs: 14, fw: 700, fill: D.red.dark });
+  o += tx(143, 70, 'k ≈ 54–55 Ill-Conditioned Dirs', { fs: 14, fw: 700, fill: D.red.dark });
   o += tx(143, 92, '(eigenvalues μⱼ < λ = 1/3)', { mono: true, fs: 12, fill: C.muted });
-  o += tx(143, 122, 'λ = 0:    error ≈ 1.40', { mono: true, fs: 13.5, fw: 700, fill: D.red.dark });
-  o += tx(143, 148, 'λ = 1/3:  error ≈ 0.35', { mono: true, fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(143, 174, '4× surgical error reduction!', { fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(143, 122, 'λ = 0:    error ≈ 0.8–2.2', { mono: true, fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(143, 148, 'λ = 1/3:  error ≈ 0.3–0.4', { mono: true, fs: 13.5, fw: 700, fill: D.green.dark });
+  o += tx(143, 174, '2–6× surgical error reduction!', { fs: 12.5, fw: 700, fill: D.green.dark });
 
   o += box(290, 46, 254, 146, C.lblue, C.blue);
-  o += tx(417, 70, '145 Well-Determined Dirs', { fs: 14, fw: 700, fill: D.blue.dark });
+  o += tx(417, 70, '~145 Well-Determined Dirs', { fs: 14, fw: 700, fill: D.blue.dark });
   o += tx(417, 92, '(eigenvalues μⱼ ≥ 1/3 up to 3.2)', { mono: true, fs: 12, fill: C.muted });
-  o += tx(417, 122, 'λ = 0:    error ≈ 0.50', { mono: true, fs: 13.5, fw: 700, fill: C.ink });
-  o += tx(417, 148, 'λ = 1/3:  error ≈ 0.38', { mono: true, fs: 13.5, fw: 700, fill: D.blue.dark });
+  o += tx(417, 122, 'λ = 0:    error ≈ 0.5–0.6', { mono: true, fs: 13.5, fw: 700, fill: C.ink });
+  o += tx(417, 148, 'λ = 1/3:  error ≈ 0.3–0.45', { mono: true, fs: 13.5, fw: 700, fill: D.blue.dark });
   o += tx(417, 174, 'Signal preserved (df ≈ 127)', { fs: 12.5, fw: 700, fill: D.blue.dark });
 
   o += box(16, 206, 528, 44, C.lgreen, C.green);
-  o += tx(280, 228, 'Expected Val Loss = ½‖ŵ − w*‖₂² + 0.50: drops from ~1.45 (λ=0) to ~0.86 (λ=1/3)!', { fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(280, 228, 'Expected Val Loss = ½‖ŵ − w*‖₂² + 0.50: drops from ~1.1–1.8 (λ=0) to ~0.75–1.05 (λ=1/3)!', { fs: 12.5, fw: 700, fill: D.green.dark });
 
   return svg(W, H, o);
 }
@@ -1574,9 +1594,8 @@ function earlyStoppingFilter() {
 
 function paramGroupsWd() {
   return stackCards(560, 286, 'Exempting Bias b From Optimizer-Level Weight Decay', [
-    { head: 'PyTorch: Parameter Groups in optim.SGD', badge: 'weight_decay=wd', sub: '[{\'params\': net.weight, \'weight_decay\': wd}, {\'params\': net.bias}]', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
-    { head: 'TensorFlow / MXNet: Name Exclusion or wd_mult', badge: 'wd_mult = 0', sub: 'Keras: exclude_from_weight_decay([\'bias\'])  ·  MXNet: p.wd_mult = 0', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
-    { head: 'JAX / Optax: Dimension Mask (p.ndim > 1)', badge: 'optax.masked', sub: 'chain(masked(add_decayed_weights(wd), is_matrix), sgd(lr))', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+    { head: 'Weights w: Decayed Every Step', badge: 'weight decay = wd', sub: 'w ← w − η(∇L + wd · w): the optimizer adds wd · w to the gradient', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true },
+    { head: 'Bias b: Exempt From Decay', badge: 'decay = 0', sub: 'b ← b − η ∂L/∂b: the intercept is left unpenalized', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true },
   ]);
 }
 
@@ -1587,14 +1606,14 @@ function lstsqReference() {
 
   o += box(16, 46, 256, 134, C.lblue, C.blue);
   o += tx(144, 70, 'Exact QR Solve: lstsq(X̃, y)', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
-  o += tx(144, 98, 'ŵ ≈ (2.0001, −3.4002)', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
-  o += tx(144, 124, 'b̂ ≈ 4.1998', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
-  o += tx(144, 152, 'Error ~ 2 × 10⁻⁴ ≈ σ / √n', { mono: true, fs: 12, fill: D.blue.dark });
+  o += tx(144, 98, 'ŵ ≈ (2, −3.4)', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
+  o += tx(144, 124, 'b̂ ≈ 4.2', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
+  o += tx(144, 152, 'Errors ~10⁻⁴ ≈ σ / √n', { mono: true, fs: 12, fill: D.blue.dark });
 
   o += box(288, 46, 256, 134, C.lgreen, C.green);
   o += tx(416, 70, '3-SE Tolerance Band', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(416, 98, '3 × (σ / √n) ≈ 10⁻³', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
-  o += tx(416, 124, 'Any converged SGD (§2.3–§2.5)', { fs: 12, fill: C.ink });
+  o += tx(416, 124, 'Any converged SGD in this chapter', { fs: 12, fill: C.ink });
   o += tx(416, 152, 'must land within ±10⁻³ of w*, b*', { fs: 12, fw: 700, fill: D.green.dark });
 
   o += box(16, 196, 528, 48, D.purple.tint, C.purple);
@@ -1651,6 +1670,9 @@ export const diagrams = {
   'ch02-lr-scratch-to-concise':    scratchToConcise,
   'ch02-lr-lazy-linear':           lazyLinear,
   'ch02-lr-lazy-vs-eager':         lazyVsEager,
+  'ch02-lr-lazy-vs-eager-tensorflow': () => lazyVsEager('tensorflow'),
+  'ch02-lr-lazy-vs-eager-mxnet':   () => lazyVsEager('mxnet'),
+  'ch02-lr-lazy-vs-eager-jax':     () => lazyVsEager('jax'),
   'ch02-lr-mse-halving':           mseHalving,
   'ch02-lr-param-discovery':       paramDiscovery,
   'ch02-lr-get-wb':                getWb,

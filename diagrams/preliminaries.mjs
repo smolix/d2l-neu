@@ -26,13 +26,13 @@ function pillars() {
   let o = '';
   // Top roof bar: Deep Learning Training & Evaluation
   o += box(24, 14, 512, 46, D.purple.tint, C.purple, 8, 2);
-  o += tx(280, 37, 'End-to-End Deep Learning (§1 Preliminaries)', { fs: 17, fw: 700, fill: D.purple.dark });
+  o += tx(280, 37, 'End-to-End Deep Learning (Preliminaries)', { fs: 17, fw: 700, fill: D.purple.dark });
 
   // Left Pillar: Contiguous Tensor Kernels (§§1.1-1.3)
   const lx = 24, rx = 292, py = 74, pw = 244, ph = 166;
   o += box(lx, py, pw, ph, C.lblue, C.blue, 10, 2);
   o += tx(lx + pw / 2, py + 24, 'Pillar 1: Tensor Kernels', { fs: 16, fw: 700, fill: D.blue.dark });
-  o += tx(lx + pw / 2, py + 44, '§§1.1–1.3 · Contiguous GPU Memory', { fs: 13.5, fw: 600, fill: C.muted });
+  o += tx(lx + pw / 2, py + 44, 'Contiguous GPU Memory', { fs: 13.5, fw: 600, fill: C.muted });
   // Mini contiguous buffer + SIMD lanes inside left pillar
   const s = 30, g = 4, gx = lx + 28, gy = py + 62;
   o += grid([['x₀', 'x₁', 'x₂', 'x₃', 'x₄']], gx, gy, s, g, {
@@ -49,7 +49,7 @@ function pillars() {
   // Right Pillar: Reverse-Mode Autograd (§§1.4-1.5)
   o += box(rx, py, pw, ph, D.red.tint, D.red.base, 10, 2);
   o += tx(rx + pw / 2, py + 24, 'Pillar 2: Reverse Autograd', { fs: 16, fw: 700, fill: D.red.dark });
-  o += tx(rx + pw / 2, py + 44, '§§1.4–1.5 · Dynamic Compute DAG', { fs: 13.5, fw: 600, fill: C.muted });
+  o += tx(rx + pw / 2, py + 44, 'Dynamic Compute DAG', { fs: 13.5, fw: 600, fill: C.muted });
   // Mini forward/backward DAG inside right pillar
   const ny = py + 104, nxs = [rx + 44, rx + 122, rx + 200], nlabs = ['w', 'O', 'L'];
   o += arrow(nxs[0] + 22, ny - 8, nxs[1] - 22, ny - 8, C.blue);
@@ -66,7 +66,7 @@ function pillars() {
   // Foundation Bar: Statistical Uncertainty (§1.6)
   const fy = 254;
   o += box(24, fy, 512, 72, C.lgreen, C.green, 10, 2);
-  o += tx(280, fy + 24, 'Foundation: Probability & Statistical Inference (§1.6)', { fs: 16, fw: 700, fill: D.green.dark });
+  o += tx(280, fy + 24, 'Foundation: Probability & Statistical Inference', { fs: 16, fw: 700, fill: D.green.dark });
   o += tx(280, fy + 50, 'Unbiased minibatch E[g] = ∇L  ·  Standard error σ / √n  ·  Bayes P(H | D)', { fs: 13, fw: 600, fill: C.ink });
 
   return svg(W, H, o);
@@ -84,12 +84,12 @@ function mlLoop() {
   const ty = 28, by = 198;
 
   const stages = [
-    { x: xs[0], y: ty, sec: '§1.2 Pandas', title: '1. Clean & Encode', sub: 'CSV → float32 X, y', fill: C.lgray, st: C.gray, dk: C.ink },
-    { x: xs[1], y: ty, sec: '§1.1 Tensors', title: '2. Store & Batch', sub: 'X: (256, 784) GPU', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: xs[2], y: ty, sec: '§1.3 LinAlg', title: '3. Forward Pass', sub: 'O = XW + b', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: xs[2], y: by, sec: '§1.4 Calculus', title: '4. Loss & Slopes', sub: 'L(O, y) & ∂L/∂O', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: xs[1], y: by, sec: '§1.5 Autograd', title: '5. Reverse VJP', sub: 'backward() → ∇W', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { x: xs[0], y: by, sec: '§1.6 Prob & Stats', title: '6. Update & Eval', sub: 'W ← W − η∇W', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: xs[0], y: ty, sec: 'Pandas', title: '1. Clean & Encode', sub: 'CSV → float32 X, y', fill: C.lgray, st: C.gray, dk: C.ink },
+    { x: xs[1], y: ty, sec: 'Tensors', title: '2. Store & Batch', sub: 'X: (256, 784) GPU', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: xs[2], y: ty, sec: 'LinAlg', title: '3. Forward Pass', sub: 'O = XW + b', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: xs[2], y: by, sec: 'Calculus', title: '4. Loss & Slopes', sub: 'L(O, y) & ∂L/∂O', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: xs[1], y: by, sec: 'Autograd', title: '5. Reverse VJP', sub: 'reverse sweep → ∇W', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: xs[0], y: by, sec: 'Prob & Stats', title: '6. Update & Eval', sub: 'W ← W − η∇W', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   // Top arrows (1 -> 2 -> 3)
@@ -174,12 +174,12 @@ function runningExample() {
 function studyRoadmap() {
   const W = 560, H = 310;
   let o = '';
-  o += tx(280, 22, 'Chapter 1 Crash Course → MDL Appendix Deep Dives', { fs: 16, fw: 700, fill: C.ink });
+  o += tx(280, 22, 'Preliminaries Crash Course → Math Appendix Deep Dives', { fs: 16, fw: 700, fill: C.ink });
 
   const rows = [
-    { ch1: '§§1.1–1.3 · Tensors & LinAlg', sub1: 'Shapes, strides, GEMM & norms', mdl: 'Ch 33 · MDL Linear Algebra', sub2: 'SVD, spectra, conditioning', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { ch1: '§§1.4–1.5 · Calculus & Autograd', sub1: 'Gradients, chain rule & DAGs', mdl: 'Ch 34 · MDL Calculus', sub2: 'Jacobians, VJPs, dual numbers', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { ch1: '§1.6 · Probability & Statistics', sub1: 'Bayes rule, expectations & 1/√n', mdl: 'Ch 35 · MDL Prob & Stats', sub2: 'MLE, ELBO, concentration', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { ch1: 'Tensors & LinAlg', sub1: 'Shapes, strides, GEMM & norms', mdl: 'Appendix · Linear Algebra', sub2: 'SVD, spectra, conditioning', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { ch1: 'Calculus & Autograd', sub1: 'Gradients, chain rule & DAGs', mdl: 'Appendix · Calculus', sub2: 'Jacobians, VJPs, dual numbers', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { ch1: 'Probability & Statistics', sub1: 'Bayes rule, expectations & 1/√n', mdl: 'Appendix · Probability & Stats', sub2: 'MLE, ELBO, concentration', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   rows.forEach((r, i) => {

@@ -747,7 +747,7 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 
 ::: {.cols .vc}
 ::: {.col}
-- **Explicit opt-in saves VRAM:** Frameworks only record DAG nodes for parameters marked via `w.requires_grad_(True)`, `tf.Variable` + `GradientTape`, or `w.attach_grad()`.
+- **Explicit opt-in saves VRAM:** Frameworks only record DAG nodes for parameters explicitly marked for gradient tracking.
 
 @autograd-a-simple-function-2
 
@@ -773,7 +773,7 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 :::
 
 ::: {.col .fig}
-@fig:autograd-imperative-vs-functional
+@fig:autograd-imperative-vs-functional@jax
 :::
 :::
 :::
@@ -803,7 +803,7 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 
 ::: {.cols .vc}
 ::: {.col}
-- Triggering the backward pass (`L.backward()`, `t.gradient(L, w)`, or `jax.grad(loss)(w)`) traverses the graph in reverse topological order and recovers the exact analytical gradient $\nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r}) = [2, 4]^\top$.
+- Triggering the backward pass traverses the graph in reverse topological order and recovers the exact analytical gradient $\nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r}) = [2, 4]^\top$.
 - **Second check on $y = 2\mathbf{x}^\top \mathbf{x}$ at $\mathbf{x} = [0, 1, 2, 3]^\top$:**
   - **Forward trace:** $\mathbf{u} = \mathbf{x} \odot \mathbf{x} = [0, 1, 4, 9]^\top$ $\to$ $s = \sum_i u_i = 14$ $\to$ $y = 2s = 28$.
   - **Reverse adjoints:** $\bar{y} = 1$ $\to$ $\bar{s} = 2$ $\to$ $\bar{\mathbf{u}} = [2, 2, 2, 2]^\top$ $\to$ $\bar{\mathbf{x}} = \bar{\mathbf{u}} \odot 2\mathbf{x} = 4\mathbf{x} = [0, 4, 8, 12]^\top$.
@@ -815,13 +815,13 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 :::
 :::
 
-::: {.slide title="Gradient Accumulation: Why PyTorch Adds into .grad by Default" except="jax"}
+::: {.slide title="Gradient Accumulation: Why PyTorch Adds into .grad by Default" only="pytorch"}
 [Stateful Buffers]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Accumulation by default (`w.grad += g`):** Enables summing gradients across micro-batches when a full batch exceeds GPU memory.
-- **Classic bug:** Forgetting `w.grad.zero_()` before the next step adds onto stale gradients (`(2, 4) + (4, 0) = (6, 4)`).
+- **Classic bug:** Forgetting `w.grad.zero_()` before the next step adds onto stale gradients (`(2, 4) + (2, 4) = (4, 8)`).
 
 @autograd-a-simple-function-6
 :::
@@ -832,18 +832,23 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 :::
 :::
 
+::: {.slide title="A Second Backward Pass Returns a Fresh Gradient" only="tensorflow,mxnet"}
+[Stateless Gradients]{.kicker}
+
+- **No accumulation by default:** Each backward pass yields the gradient of the current loss alone, so a second pass gives $(2, 4)$ again rather than $(4, 8)$.
+- **Accumulating over micro-batches** therefore means summing the returned gradients yourself.
+
+@autograd-a-simple-function-6
+:::
+
 ::: {.slide title="Gradient Accumulation vs. Pure Functional Gradients in JAX" only="jax"}
 [Stateless Gradients]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Stateful `.grad` vs. pure `jax.grad`:** PyTorch accumulates into `w.grad` (risking stale-gradient corruption if `zero_()` is omitted), whereas `jax.grad(loss)(w)` returns a fresh array every call.
+- **No stored gradient state:** `jax.grad(loss)(w)` returns a fresh array every call, so there is no buffer to reset and no stale gradient to corrupt the next step.
 
 @autograd-a-simple-function-4
-:::
-
-::: {.col .fig}
-@fig:autograd-grad-accumulation
 :::
 :::
 :::
@@ -853,7 +858,7 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 
 ::: {.cols .vc}
 ::: {.col}
-- Differentiating $\mathbf{u}(\mathbf{w}) \in \mathbb{R}^m$ never forms an $m \times n$ Jacobian; `.backward(v)` contracts upstream seed $\mathbf{v} \in \mathbb{R}^m$ via $\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{w}}(\mathbf{v}^\top \mathbf{u})$ ($\mathbf{v} = \mathbf{1}$ sums per-example gradients).
+- Differentiating $\mathbf{u}(\mathbf{w}) \in \mathbb{R}^m$ never forms an $m \times n$ Jacobian; a backward pass seeded with $\mathbf{v} \in \mathbb{R}^m$ computes $\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{w}}(\mathbf{v}^\top \mathbf{u})$ ($\mathbf{v} = \mathbf{1}$ sums per-example gradients).
 
 @autograd-backward-for-non-scalar-variables
 :::
@@ -906,8 +911,8 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 
 ::: {.cols .vc}
 ::: {.col}
-- **Training caches $O(L)$ activations:** Backward VJPs need forward intermediates ($\mathbf{r}$ for $2\mathbf{r}$, $\mathbf{X}$ for $\mathbf{X}^\top$), pinning every layer's activations in HBM until `backward()`.
-- **`torch.no_grad()` inference:** Frees each layer buffer immediately ($O(1)$ depth memory) and keeps SGD steps off the tape.
+- **Training caches $O(L)$ activations:** Backward VJPs need forward intermediates ($\mathbf{r}$ for $2\mathbf{r}$, $\mathbf{X}$ for $\mathbf{X}^\top$), pinning every layer's activations in HBM until the backward pass.
+- **Inference with tracking off:** Frees each layer buffer immediately ($O(1)$ depth memory) and keeps SGD steps off the tape.
 
 @autograd-turning-off-gradient-tracking-1
 :::
@@ -955,12 +960,12 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 :::
 :::
 
-::: {.slide title="Concept Check: Activation Memory, Detach, and Accumulation Bugs"}
+::: {.slide title="Concept Check: Activation Memory, Detach, and Accumulation Bugs" only="pytorch"}
 [Check Your Understanding]{.kicker}
 
 Predict the behavior and gradient outcome in each scenario:
 
-1. **Missing reset:** In PyTorch, you evaluate 3 micro-batches and call `L.backward()` on each without calling `w.grad.zero_()`. What does `w.grad` hold?
+1. **Missing reset:** You evaluate 3 micro-batches and call `L.backward()` on each without calling `w.grad.zero_()`. What does `w.grad` hold?
 2. **Detached branches:** Let `u = x * x` and `c = u.detach()` (or `stop_gradient(u)`). What is $\nabla_{\mathbf{x}} \sum_i z_i$ for (a) `z = u * u`, (b) `z = u * c`, and (c) `z = c * c`?
 3. **Forward vs. reverse sweeps:** A physics simulator maps $n = 3$ wing-shape parameters to $m = 10^6$ mesh pressures. Which AD mode computes the full $10^6 \times 3$ Jacobian faster, and in how many sweeps?
 
@@ -973,14 +978,68 @@ Predict the behavior and gradient outcome in each scenario:
 :::
 :::
 
-::: {.slide title="Summary: Autograd Primitives, Memory Effects, and ML Use Cases"}
+::: {.slide title="Concept Check: Activation Memory, Detach, and Accumulation Bugs" except="pytorch"}
+[Check Your Understanding]{.kicker}
+
+Predict the behavior and gradient outcome in each scenario:
+
+1. **Micro-batches:** You run the backward pass on 3 micro-batches in a row. What does the last gradient hold, and how do you accumulate all three?
+2. **Detached branches:** Let `u = x * x` and `c = u.detach()` (or `stop_gradient(u)`). What is $\nabla_{\mathbf{x}} \sum_i z_i$ for (a) `z = u * u`, (b) `z = u * c`, and (c) `z = c * c`?
+3. **Forward vs. reverse sweeps:** A physics simulator maps $n = 3$ wing-shape parameters to $m = 10^6$ mesh pressures. Which AD mode computes the full $10^6 \times 3$ Jacobian faster, and in how many sweeps?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Only the third micro-batch's gradient** $\nabla_{\mathbf{w}} L_3$: nothing is added to earlier results, so you sum the three returned gradients yourself.
+2. (a) `z = u * u = x^4` $\implies$ **$4\mathbf{x}^3$**; (b) `z = u * c = c * x^2` $\implies$ **$2c\mathbf{x} = 2\mathbf{x}^3$** (half of $4\mathbf{x}^3$, since one factor is frozen); (c) `z = c * c` has no active path to `x` $\implies$ **$0$** (or no `grad_fn`).
+3. **Forward mode (JVP)** needs only **$n = 3$ sweeps** (one per column), whereas reverse mode needs $m = 10^6$ sweeps (one per row)!
+:::
+:::
+
+::: {.slide title="Summary: Autograd Primitives, Memory Effects, and ML Use Cases" only="pytorch"}
 [Key Takeaways]{.kicker}
 
-| Operation / Concept | PyTorch / MXNet | TensorFlow / JAX | Graph & Memory Behavior | Primary Deep Learning Role |
-| :--- | :--- | :--- | :--- | :--- |
-| **Opt-in / Trace** | `requires_grad_(True)` / `attach_grad()` + `record()` | `tf.Variable` + `GradientTape` / `jax.grad(f)` | Caches forward activations in VRAM for backward VJPs | Standard neural network training ($O(1)$ reverse sweep) |
-| **Reverse Sweep (VJP)** | `L.backward()` or `u.backward(v)` | `t.gradient(u, w, v)` / `jax.vjp(f, w)` | Frees activation buffers after computing $\mathbf{J}^\top \mathbf{v}$ | Backpropagation of scalar loss ($m = 1$) or upstream vector $\mathbf{v}$ |
-| **Reset / Accumulate** | `w.grad.zero_()` (PyTorch adds `+=` by default) | Returns fresh tensor/array per call | Clears or reuses `.grad` storage buffer | Micro-batch gradient accumulation vs. fresh optimizer step |
-| **Detach Subgraph** | `u.detach()` | `tf.stop_gradient(u)` / `lax.stop_gradient(u)` | Zero-copy constant view; cuts backward edge | RL target networks, BYOL/SimSiam teacher branch, GAN steps |
-| **Inference / No-Grad** | `with torch.no_grad():` / outside `record()` | Outside `GradientTape` / outside `jax.grad` | Skips graph construction & activation caching ($3\text{--}10\times$ less VRAM) | Validation loops, production inference, parameter updates |
+| Operation / Concept | API | Graph & Memory Behavior | Primary Deep Learning Role |
+| :--- | :--- | :--- | :--- |
+| **Opt-in / Trace** | `w.requires_grad_(True)` | Caches forward activations in VRAM for backward VJPs | Standard neural network training ($O(1)$ reverse sweep) |
+| **Reverse Sweep (VJP)** | `L.backward()` or `u.backward(v)` | Frees activation buffers after computing $\mathbf{J}^\top \mathbf{v}$ | Backpropagation of scalar loss ($m = 1$) or upstream vector $\mathbf{v}$ |
+| **Reset / Accumulate** | `w.grad.zero_()` (adds `+=` by default) | Decides whether a new gradient adds to or replaces the last one | Micro-batch gradient accumulation vs. fresh optimizer step |
+| **Detach Subgraph** | `u.detach()` | Zero-copy constant view; cuts backward edge | RL target networks, BYOL/SimSiam teacher branch, GAN steps |
+| **Inference / No-Grad** | `with torch.no_grad():` | Skips graph construction & activation caching ($3\text{--}10\times$ less VRAM) | Validation loops, production inference, parameter updates |
+:::
+
+::: {.slide title="Summary: Autograd Primitives, Memory Effects, and ML Use Cases" only="tensorflow"}
+[Key Takeaways]{.kicker}
+
+| Operation / Concept | API | Graph & Memory Behavior | Primary Deep Learning Role |
+| :--- | :--- | :--- | :--- |
+| **Opt-in / Trace** | `tf.Variable` + `tf.GradientTape()` | Caches forward activations in VRAM for backward VJPs | Standard neural network training ($O(1)$ reverse sweep) |
+| **Reverse Sweep (VJP)** | `t.gradient(L, w)` or `t.gradient(u, w, output_gradients=v)` | Frees activation buffers after computing $\mathbf{J}^\top \mathbf{v}$ | Backpropagation of scalar loss ($m = 1$) or upstream vector $\mathbf{v}$ |
+| **Reset / Accumulate** | None: returns a fresh tensor per call | Decides whether a new gradient adds to or replaces the last one | Micro-batch gradient accumulation vs. fresh optimizer step |
+| **Detach Subgraph** | `tf.stop_gradient(u)` | Zero-copy constant view; cuts backward edge | RL target networks, BYOL/SimSiam teacher branch, GAN steps |
+| **Inference / No-Grad** | Outside `GradientTape` | Skips graph construction & activation caching ($3\text{--}10\times$ less VRAM) | Validation loops, production inference, parameter updates |
+:::
+
+::: {.slide title="Summary: Autograd Primitives, Memory Effects, and ML Use Cases" only="jax"}
+[Key Takeaways]{.kicker}
+
+| Operation / Concept | API | Graph & Memory Behavior | Primary Deep Learning Role |
+| :--- | :--- | :--- | :--- |
+| **Opt-in / Trace** | `jax.grad(f)` | Caches forward activations in VRAM for backward VJPs | Standard neural network training ($O(1)$ reverse sweep) |
+| **Reverse Sweep (VJP)** | `jax.grad(loss)(w)` or `jax.vjp(f, w)` | Frees activation buffers after computing $\mathbf{J}^\top \mathbf{v}$ | Backpropagation of scalar loss ($m = 1$) or upstream vector $\mathbf{v}$ |
+| **Reset / Accumulate** | None: returns a fresh array per call | Decides whether a new gradient adds to or replaces the last one | Micro-batch gradient accumulation vs. fresh optimizer step |
+| **Detach Subgraph** | `jax.lax.stop_gradient(u)` | Zero-copy constant view; cuts backward edge | RL target networks, BYOL/SimSiam teacher branch, GAN steps |
+| **Inference / No-Grad** | Outside `jax.grad` | Skips graph construction & activation caching ($3\text{--}10\times$ less VRAM) | Validation loops, production inference, parameter updates |
+:::
+
+::: {.slide title="Summary: Autograd Primitives, Memory Effects, and ML Use Cases" only="mxnet"}
+[Key Takeaways]{.kicker}
+
+| Operation / Concept | API | Graph & Memory Behavior | Primary Deep Learning Role |
+| :--- | :--- | :--- | :--- |
+| **Opt-in / Trace** | `w.attach_grad()` + `autograd.record()` | Caches forward activations in VRAM for backward VJPs | Standard neural network training ($O(1)$ reverse sweep) |
+| **Reverse Sweep (VJP)** | `L.backward()` or `u.backward(v)` | Frees activation buffers after computing $\mathbf{J}^\top \mathbf{v}$ | Backpropagation of scalar loss ($m = 1$) or upstream vector $\mathbf{v}$ |
+| **Reset / Accumulate** | None: overwrites `w.grad` by default | Decides whether a new gradient adds to or replaces the last one | Micro-batch gradient accumulation vs. fresh optimizer step |
+| **Detach Subgraph** | `u.detach()` | Zero-copy constant view; cuts backward edge | RL target networks, BYOL/SimSiam teacher branch, GAN steps |
+| **Inference / No-Grad** | Outside `autograd.record()` | Skips graph construction & activation caching ($3\text{--}10\times$ less VRAM) | Validation loops, production inference, parameter updates |
 :::

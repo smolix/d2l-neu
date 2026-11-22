@@ -543,7 +543,7 @@ Linear Regression: Theory, Geometry & Stochastic Optimization<br>
 ::: {.slide title="Predicting Continuous Quantities From Features"}
 [Motivation & Problem Formulation]{.kicker}
 
-Unlike classification into discrete categories, regression predicts a continuous numerical target from observed covariates:
+Regression predicts a continuous numerical target from observed covariates:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -623,7 +623,7 @@ $$L(\mathbf{w}, b) = \frac{1}{2n} \sum_{i=1}^{n} \bigl(\hat{y}^{(i)} - y^{(i)}\b
 ::: {.col}
 @linear-regression-loss-function
 
-- **Quadratic pull vs. unit vote:** Corrupting a single label to $10{,}000$ yanks the least-squares slope from $2.00$ to $23.16$, whereas mean absolute error ($\frac{1}{n}\sum_i |\hat{y}^{(i)} - y^{(i)}|$) bounds each outlier's subgradient to $\pm 1$ and preserves $w = 2.00$.
+- **Quadratic pull vs. unit vote:** Corrupting a single label to $10{,}000$ yanks the least-squares slope from $2.00$ to $22.88$, whereas mean absolute error ($\frac{1}{n}\sum_i |\hat{y}^{(i)} - y^{(i)}|$) bounds each outlier's subgradient to $\pm 1$ and preserves $w = 2.00$.
 :::
 
 ::: {.col .fig}
@@ -667,8 +667,8 @@ In observation space $\mathbb{R}^n$, varying $\tilde{\mathbf{w}} \in \mathbb{R}^
 
 ::: {.cols .vc}
 ::: {.col}
-- **Closest point in a subspace:** The noisy target vector $\mathbf{y} \in \mathbb{R}^n$ almost never lies inside $\operatorname{col}(\tilde{\mathbf{X}})$. Minimizing $\|\mathbf{y} - \tilde{\mathbf{X}}\tilde{\mathbf{w}}\|_2^2$ finds the point $\hat{\mathbf{y}} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} \in \operatorname{col}(\tilde{\mathbf{X}})$ closest to $\mathbf{y}$ in Euclidean distance.
-- **Orthogonality of the residual:** By Euclidean geometry, the shortest segment from $\mathbf{y}$ to $\operatorname{col}(\tilde{\mathbf{X}})$ is perpendicular (*normal*) to the subspace, meaning the residual $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y}$ satisfies:
+- **Closest point in a subspace:** The noisy $\mathbf{y} \in \mathbb{R}^n$ almost never lies in $\operatorname{col}(\tilde{\mathbf{X}})$; minimizing $\|\mathbf{y} - \tilde{\mathbf{X}}\tilde{\mathbf{w}}\|_2^2$ finds the closest point $\hat{\mathbf{y}} = \tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}}$.
+- **Orthogonality of the residual:** The shortest segment from $\mathbf{y}$ to the subspace is perpendicular (*normal*) to it, so $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y}$ satisfies:
   $$\tilde{\mathbf{X}}^\top \mathbf{r} = \mathbf{0}$$
 - **Zero-sum residuals:** Because the bias column $\mathbf{1}$ lies in $\operatorname{col}(\tilde{\mathbf{X}})$, $\mathbf{1}^\top\mathbf{r} = \sum_{i=1}^n r^{(i)} = 0$ holds for every least-squares fit with an intercept.
 :::
@@ -809,7 +809,7 @@ In the language of neural networks, linear regression is a single artificial neu
 ::: {.col}
 - **Input layer ($x_1, \ldots, x_d$):** Holds the $d$ raw feature coordinates (not counted in layer depth because it holds no tunable parameters).
 - **Synaptic weights and output ($o_1$):** Every input node $x_j$ connects to the output node $o_1$ with weight $w_j$, computing $o_1 = \sum_{j=1}^d w_j x_j + b$.
-- **Why stack layers later:** Composing multiple affine layers without nonlinearities collapses into a single affine map; inserting elementwise activations in Chapter 4 unlocks universal approximation.
+- **Why stack layers later:** Composing multiple affine layers without nonlinearities collapses into a single affine map; inserting elementwise activations in the MLP chapter unlocks universal approximation.
 :::
 
 ::: {.col .fig}
@@ -836,7 +836,7 @@ Work out these three questions from first principles before revealing the soluti
 :::
 :::
 
-::: {.slide title="Section 2.1 Summary & Key Takeaways"}
+::: {.slide title="Summary & Key Takeaways"}
 [Summary]{.kicker}
 
 | Concept | Mathematical Form | Computational Cost / Scaling | Role & Practical Takeaway |

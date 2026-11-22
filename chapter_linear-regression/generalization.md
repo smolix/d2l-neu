@@ -475,9 +475,9 @@ Fitting 20 polynomial weights to 20 noisy points from a cubic curve drives the t
 
 @!generalization-polynomial-curve-fitting-6
 
-- **Degree 1 (left — underfitting):** A straight line is too rigid to bend with the cubic; it misses both the training points and the true curve.
-- **Degree 3 (middle — balanced):** Matches the true cubic family and tracks the dashed ground-truth curve closely across $[-1, 1]$.
-- **Degree 19 (right — overfitting):** Has $20$ parameters for $20$ points, threading every noisy sample exactly while oscillating wildly between them.
+- **Degree 1 (left — underfitting):** Too rigid to bend; misses both the points and the true curve.
+- **Degree 3 (middle — balanced):** Matches the cubic family and tracks the dashed true curve.
+- **Degree 19 (right — overfitting):** $20$ parameters thread all $20$ noisy points, oscillating wildly between them.
 :::
 
 ::: {.slide title="Empirical Risk (Training Error) vs. Population Risk"}
@@ -609,7 +609,7 @@ Across classical parametric model families, increasing capacity shifts error fro
 ::: {.col}
 - **Left of optimum (Underfitting):** Model capacity is too low; high bias keeps both training risk and population risk elevated.
 - **Right of optimum (Overfitting):** Capacity outstrips the information in $n$ examples; training error drops below the noise floor $\sigma^2$ while variance drives test risk up.
-- **Weight norm as continuous capacity:** Even at degree 19, functions with small coefficients $\|\mathbf{w}\|_2$ cannot oscillate wildly—motivating weight decay in §2.7.
+- **Weight norm as continuous capacity:** Even at degree 19, functions with small coefficients $\|\mathbf{w}\|_2$ cannot oscillate wildly—motivating weight decay in the next section.
 :::
 
 ::: {.col .fig .big}
@@ -625,7 +625,7 @@ Across classical parametric model families, increasing capacity shifts error fro
 ::: {.col}
 @!generalization-dataset-size
 
-- **Variance decays as $O(p / n)$:** Growing $n$ from $20$ to $1{,}000$ brings degree-19 test MSE right down to the $\sigma^2 = 0.01$ floor, whereas the underfitted degree-1 line stays stuck near $1.6$.
+- **Variance decays as $O(p / n)$:** Growing $n$ from $20$ to $1{,}000$ brings degree-19 test MSE right down to the $\sigma^2 = 0.01$ floor, whereas the underfitted degree-1 line stays stuck near $2$.
 :::
 
 ::: {.col .fig}
@@ -694,18 +694,18 @@ Apply the principles of generalization and model selection to these three proble
 
 1. **Statistical significance of a gap:** A model achieves training loss $0.020$ and validation loss $0.030$ on $n' = 400$ held-out examples, where per-example loss has standard deviation $\sigma_l = 0.04$. Could this $0.010$ gap be a random fluctuation of the validation set?
 2. **When to collect more data:** Model A has training error $1.9$ and validation error $2.0$. Model B has training error $10^{-14}$ and validation error $10^4$. For which model will collecting $10\times$ more training examples improve validation performance?
-3. **Leave-one-out shortcut:** Comparing $19$ polynomial degrees on $n = 20$ points via naive leave-one-out ($K = 20$) cross-validation requires $19 \times 20 = 380$ fits (plus $1$ refit). Using the Sherman–Morrison formula $y^{(i)} - \hat{y}^{(-i)} = (y^{(i)} - \hat{y}^{(i)}) / (1 - H_{ii})$ where $\mathbf{H} = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$, how many least-squares fits are needed?
+3. **Leave-one-out shortcut:** Naive leave-one-out CV over $19$ polynomial degrees on $n = 20$ points needs $19 \times 20 = 380$ fits. With the identity $y^{(i)} - \hat{y}^{(-i)} = (y^{(i)} - \hat{y}^{(i)}) / (1 - H_{ii})$, $\mathbf{H} = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$, how many fits are needed?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. The validation standard error is $\sigma_l / \sqrt{n'} = 0.04 / \sqrt{400} = 0.002$. The observed gap of $0.010$ is $5$ standard errors wide—confirming a genuine generalization gap.
-2. **Model B** (which is overfitting due to high variance; $10\times$ more data crushes variance). Model A is underfitting (high bias); collecting more data leaves its error stuck near $2.0$, so it needs a richer model class instead.
-3. Only **$19$ fits** (one full $n$-point fit per degree)! From a single fit's residuals $y^{(i)} - \hat{y}^{(i)}$ and hat-matrix diagonal $H_{ii}$, the exact leave-one-out residuals are obtained in $O(n)$ arithmetic without refitting $n$ times.
+1. The standard error is $\sigma_l / \sqrt{n'} = 0.04 / 20 = 0.002$, so the $0.010$ gap is $5$ standard errors: a genuine gap.
+2. **Model B** (overfitting, high variance; more data crushes variance). Model A underfits (high bias): more data leaves it near $2.0$, so it needs a richer model class.
+3. Only **$19$ fits** (one per degree): one fit's residuals and the diagonal $H_{ii}$ give the exact leave-one-out residuals in $O(n)$ arithmetic.
 :::
 :::
 
-::: {.slide title="Section 2.6 Summary & Key Takeaways"}
+::: {.slide title="Summary & Key Takeaways"}
 [Summary]{.kicker}
 
 | Concept / Phenomenon | Mathematical Expression | Scaling / Behavior | Practical Action / Remedy |

@@ -102,7 +102,7 @@ const regVsCls = () => twoCols(560, 270, 'From Linear Regression (§2) to Softma
   {
     head: 'Softmax Regression (§3)', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     lines: [
-      { t: 'Target: one-hot y ∈ {0,1}⁹', mono: true },
+      { t: 'Target: one-hot y, q entries', mono: true },
       { t: 'Model: ŷ = softmax(Wᵀx + b)', mono: true },
       { t: 'Likelihood: Categorical(ŷ)' },
       { t: 'Loss: −log ŷ_y  (Cross-Entropy)', mono: true },
@@ -155,7 +155,7 @@ const onehotSimplex = () => threeStages(560, 262, 'One-Hot Encoding: Symmetric V
   { head: 'Cat (y = 1)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['y = (1, 0, 0)', '100% on class 1', '‖e₁ − e₂‖₂ = √2'] },
   { head: 'Chicken (y = 2)', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['y = (0, 1, 0)', '100% on class 2', '‖e₂ − e₃‖₂ = √2'] },
   { head: 'Dog (y = 3)', fill: C.lamber, stroke: C.amber, dark: D.orange.dark, mono: true, lines: ['y = (0, 0, 1)', '100% on class 3', '‖e₃ − e₁‖₂ = √2'] },
-  { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t1: 'Every Pair of Distinct Classes Sits at Identical Distance √2', t2: 'Math uses one-hot y ∈ {0,1}⁹; code stores 0-based integer index y ∈ {0..q−1}' }
+  { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t1: 'Every Pair of Distinct Classes Sits at Identical Distance √2', t2: 'Math uses a one-hot y of length q; code stores 0-based integer index y ∈ {0..q−1}' }
 );
 
 const softmaxPipe = () => threeStages(560, 262, 'The Softmax Operator: From Real Logits to Probabilities',
@@ -336,9 +336,9 @@ const benchmarkSweetspot = () => stackCards(560, 286, 'Why Fashion-MNIST Is the 
 ]);
 
 const garmentTaxonomy = () => stackCards(560, 286, '10 Balanced Fashion-MNIST Classes Grouped by Silhouette', [
-  { head: 'Distinct Silhouettes (Linear Recall ≥ 92%)', badge: '1:trouser 8:bag', sub: 'Unmistakable two-leg trouser gap and rectangular bag handles', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+  { head: 'Distinct Silhouettes', badge: '1, 3, 8', sub: 'Trouser (1), dress (3), bag (8): leg gap, long single body, handles', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
   { head: 'Footwear Cluster (Linear Recall ~88%–95%)', badge: '5, 7, 9: shoes', sub: 'Sandal (5), sneaker (7), ankle boot (9): distinct side-profile shoes', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
-  { head: 'Boxy Upper-Body Tops + Dress (Bottleneck)', badge: '0, 2, 3, 4, 6', sub: 'T-shirt, pullover, dress, coat, shirt overlap; shirt recall is ~55%!', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark },
+  { head: 'Boxy Upper-Body Tops (Bottleneck)', badge: '0, 2, 4, 6', sub: 'T-shirt, pullover, coat, shirt overlap; shirt recall is ~55%!', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark },
 ]);
 
 const pixelRescale = () => threeStages(560, 256, 'FashionMNIST DataModule Preprocessing Pipeline',
@@ -389,7 +389,7 @@ const idxHeader = () => twoCols(560, 256, 'Parsing Official IDX Binary Files in 
       { t: 'astype(int32) ∈ {0..9}', mono: true, col: D.purple.dark },
     ],
   },
-  { fill: C.lgreen, stroke: C.green, dark: D.green.dark, t: 'Guarantees identical 60,000 / 10,000 split across all four frameworks' }
+  { fill: C.lgreen, stroke: C.green, dark: D.green.dark, t: 'Yields the standard 60,000 / 10,000 train / validation split' }
 );
 
 const epochBatches = () => threeStages(560, 258, 'One Training Epoch at batch_size = 64 (60,000 Images)',
@@ -399,11 +399,11 @@ const epochBatches = () => threeStages(560, 258, 'One Training Epoch at batch_si
   { fill: C.lgreen, stroke: C.green, dark: D.green.dark, t1: 'At batch_size = 256 (§3.3): 60,000 = 234 × 256 + 96 → 235 Batches/Epoch', t2: 'd2l.Averager weights the final partial batch by its exact size (32 or 96)' }
 );
 
-const nchwVsNhwc = () => twoCols(560, 260, '4D Minibatch Image Tensor Layouts Across Frameworks',
+const nchwVsNhwc = () => twoCols(560, 260, 'Two Conventions for 4D Minibatch Image Tensors',
   {
     head: 'Channel-First: NCHW', fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     lines: [
-      { t: 'PyTorch & MXNet', fw: 700 },
+      { t: 'Channel axis before rows, cols', fw: 700 },
       { t: 'Single image: (1, 28, 28)', mono: true },
       { t: 'Minibatch X:  (64, 1, 28, 28)', mono: true, col: D.blue.dark, fw: 700 },
       { t: 'Each channel plane contiguous' },
@@ -412,7 +412,7 @@ const nchwVsNhwc = () => twoCols(560, 260, '4D Minibatch Image Tensor Layouts Ac
   {
     head: 'Channel-Last: NHWC', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     lines: [
-      { t: 'TensorFlow & JAX', fw: 700 },
+      { t: 'Channel axis after rows, cols', fw: 700 },
       { t: 'Single image: (28, 28, 1)', mono: true },
       { t: 'Minibatch X:  (64, 28, 28, 1)', mono: true, col: D.green.dark, fw: 700 },
       { t: 'Channels at pixel (r,c) contiguous' },
@@ -434,7 +434,7 @@ const producerConsumer = () => twoCols(560, 264, 'Producer–Consumer Pipeline: 
     lines: [
       { t: '• Small batch_size (1 or 16):', fw: 700 },
       { t: '  per-batch dispatch dominates' },
-      { t: '• num_workers = 0:', mono: true },
+      { t: '• A single loading process:' },
       { t: '  GPU sits idle waiting for CPU!' },
     ],
   },
@@ -442,7 +442,7 @@ const producerConsumer = () => twoCols(560, 264, 'Producer–Consumer Pipeline: 
     head: 'Compute-Bound (T_load ≤ T_comp)', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     lines: [
       { t: '• Batch size 64–256 amortizes IPC', fw: 700 },
-      { t: '• Parallel workers / AUTOTUNE' },
+      { t: '• Parallel loading workers' },
       { t: '  prefetch batch b+1 while GPU' },
       { t: '  trains on batch b (full overlap!)' },
     ],
@@ -486,7 +486,7 @@ const rowwiseBroadcast = () => threeStages(560, 258, 'Rowwise Softmax Normalizat
   { head: '1. O_exp = exp(O)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['shape: (n, q)', 'e.g. (256, 10)', 'positive entries'] },
   { head: '2. Row Partition Sum', fill: C.lamber, stroke: C.amber, dark: D.orange.dark, mono: true, lines: ['reduce_sum(axis=1,', '  keepdims=True)', 'shape: (n, 1)!'] },
   { head: '3. Broadcast Divide', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['(n, q) / (n, 1)', '→ Ŷ: (n, q)', 'each row sums to 1'] },
-  { fill: D.red.tint, stroke: D.red.base, dark: D.red.dark, t1: 'Why keepdims=True Is Mandatory', t2: 'Without keepdims=True, row sums have shape (n,), and (n, q)/(n,) raises ValueError!' }
+  { fill: D.red.tint, stroke: D.red.base, dark: D.red.dark, t1: 'Why keepdims=True Is Mandatory', t2: 'Without keepdims=True, row sums have shape (n,), and (n, q)/(n,) fails or misaligns!' }
 );
 
 const maxShiftRange = () => threeStages(560, 256, 'Max-Shift Invariance Traps Exponentials Inside (0, 1]',
@@ -544,7 +544,7 @@ const gatherVsOnehot = () => twoCols(560, 260, 'Selecting True-Class Probabiliti
       { t: 'wastes 100 MB per minibatch!', col: D.red.dark, fw: 700 },
     ],
   },
-  { fill: C.lblue, stroke: C.blue, dark: D.blue.dark, t: 'TF equivalent: tf.gather(y_hat, y, batch_dims=1) plucks 1 prob per row' }
+  { fill: C.lblue, stroke: C.blue, dark: D.blue.dark, t: 'One gather call plucks 1 prob per row; no n × q matrix is built' }
 );
 
 const confusionAccum = () => threeStages(560, 258, 'Vectorized 10 × 10 Confusion Matrix Accumulation: N += PᵀY',
@@ -558,17 +558,17 @@ const rawLogitsContract = () => twoCols(560, 264, 'Why Concise SoftmaxRegression
   {
     head: 'Correct: forward(X) → Logits O', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     lines: [
-      { t: 'self.net = Sequential(Flatten,', mono: true, fs: 11 },
-      { t: '             LazyLinear(10))', mono: true, fs: 11 },
+      { t: 'net = Flatten → linear(q = 10)', mono: true, fs: 11 },
+      { t: '(no softmax layer at the end)', fs: 11 },
       { t: '• accuracy() uses argmax(O, 1)' },
-      { t: '• F.cross_entropy fuses log_softmax', col: D.green.dark, fw: 700 },
+      { t: '• Built-in CE fuses log_softmax', col: D.green.dark, fw: 700 },
     ],
   },
   {
     head: 'Bug: Putting softmax in forward', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
     lines: [
       { t: 'Passes probabilities p ∈ [0, 1]' },
-      { t: 'into F.cross_entropy(p, y):', mono: true, fs: 11.5 },
+      { t: 'into the built-in cross-entropy:' },
       { t: 'Applies softmax TWICE!', col: D.red.dark, fw: 700 },
       { t: 'Loss trapped ≥ log(e+9)−1 ≈ 1.46!', mono: true, fs: 11, col: D.red.dark, fw: 700 },
     ],
@@ -682,8 +682,8 @@ const asymmetricCost = () => twoCols(560, 260, 'Expected Cost Per Person Under �
 );
 
 const costThreshold = () => threeStages(560, 260, 'Deriving the Bayes-Optimal Decision Threshold τ*',
-  { head: 'Predict Healthy', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark, mono: true, lines: ['Misses if sick (p)', 'Expected cost:', 'C_0 = p · κ_FN'] },
-  { head: 'Predict Sick', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['False alarm (1−p)', 'Expected cost:', 'C_1 = (1 − p) · κ_FP'] },
+  { head: 'Predict Healthy', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark, mono: true, lines: ['Misses if sick (p)', 'Expected cost:', 'C₀ = p · κ_FN'] },
+  { head: 'Predict Sick', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['False alarm (1−p)', 'Expected cost:', 'C₁ = (1 − p) · κ_FP'] },
   { head: 'Optimal Rule C₁ < C₀', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['p > τ* =', 'κ_FP / (κ_FP + κ_FN)', '= 1 / 101 ≈ 0.01'] },
   { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t1: 'Equal Costs (κ_FN = κ_FP) Give τ* = 0.50; 100:1 Cost Drops τ* to 1%!', t2: 'Requires calibrated probabilities p = P(sick | x) so numerical thresholds are valid' }
 );
@@ -826,7 +826,7 @@ const hoeffdingVsClt = () => twoCols(560, 266, 'Asymptotic Normal Interval vs. F
 const unionBound = () => threeStages(560, 260, 'Evaluating k Fixed Classifiers on One Test Set: The Union Bound',
   { head: '1 Model (k = 1)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['P(bad₁) ≤ δ', 'r = √(log(40)/2n)', '±1.36% at n=10k'] },
   { head: 'Union Over k Models', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['P(∪ bad) ≤ Σ P(bad)', '≤ 2k exp(−2nt²)', 'set RHS = δ = 0.05'] },
-  { head: 'Grows as √log k', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['r = √(log(2k/δ)/2n)', 'k = 10³ → ±2.30%', 'k = 10⁶ → ±2.99%'] },
+  { head: 'Grows as √log k', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['r = √(log(2k/δ)/2n)', 'k = 10³ → ±2.30%', 'k = 10⁶ → ±2.96%'] },
   { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'Non-Adaptive Comparisons Pay Only a Logarithmic Penalty √(log k)', t2: 'Requires all k candidate models to be fixed BEFORE observing any test-set score!' }
 );
 
@@ -837,7 +837,7 @@ const adaptiveOverfit = () => twoCols(560, 266, 'Non-Adaptive Selection vs. Adap
       { t: '1,000 independent fair-coin guessers' },
       { t: '(true population accuracy = 50.0%)' },
       { t: 'Best single guesser on test set:' },
-      { t: 'acc ≈ 54.8%  (0.5 + √(log k/2n))', mono: true, fs: 11, col: D.blue.dark, fw: 700 },
+      { t: 'acc ≈ 55–56%  (0.5 + √(log k/2n))', mono: true, fs: 11, col: D.blue.dark, fw: 700 },
     ],
   },
   {
@@ -845,7 +845,7 @@ const adaptiveOverfit = () => twoCols(560, 266, 'Non-Adaptive Selection vs. Adap
     lines: [
       { t: 'Keep guessers with test acc > 50%' },
       { t: 'and take their majority vote:' },
-      { t: 'Test accuracy jumps to ~70.0%!', mono: true, col: D.red.dark, fw: 700 },
+      { t: 'Test accuracy jumps to ~70–72%!', mono: true, col: D.red.dark, fw: 700 },
       { t: 'Population accuracy is STILL 50.0%!', col: D.red.dark, fw: 700 },
     ],
   },
@@ -917,7 +917,7 @@ const sauerGrowth = () => twoCols(560, 264, 'Sauer\'s Lemma: Polynomial O(nᵛ) 
     lines: [
       { t: 'Sauer: Σ_{i≤v} C(n,i) ≤ (en/v)ᵛ', mono: true, fs: 11.5, fw: 700 },
       { t: 'At n = 100 points in ℝ²:' },
-      { t: 'At most 9,902 labelings (O(n³))', mono: true, fs: 11.5, col: D.green.dark, fw: 700 },
+      { t: 'At most 9,902 labelings (O(n²))', mono: true, fs: 11.5, col: D.green.dark, fw: 700 },
       { t: 'VC gap: O(√(v / n)) → 0 as n → ∞!' },
     ],
   },
@@ -995,9 +995,9 @@ const essClipping = () => twoCols(560, 262, 'Right-Tail Weight Explosion & Effec
     head: 'Unclipped βᵢ = exp(2x₁ − 2)', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
     lines: [
       { t: 'Source N(0,1) → Target N(2,1):' },
-      { t: 'Max weight β_max ≈ 50–150!', mono: true, col: D.red.dark, fw: 700 },
-      { t: 'n_eff = (Σ βᵢ)² / Σ βᵢ² ≈ 30–70', mono: true, fs: 11.5, col: D.red.dark, fw: 700 },
-      { t: '93% of sample variance wasted!' },
+      { t: 'Max weight β_max ≈ 30–160!', mono: true, col: D.red.dark, fw: 700 },
+      { t: 'n_eff = (Σ βᵢ)² / Σ βᵢ² ≈ 30–120', mono: true, fs: 11.5, col: D.red.dark, fw: 700 },
+      { t: '88–97% of the sample wasted!' },
     ],
   },
   {
@@ -1006,7 +1006,7 @@ const essClipping = () => twoCols(560, 262, 'Right-Tail Weight Explosion & Effec
       { t: 'Caps extreme right-tail ratios at 5:' },
       { t: 'Max weight tilde_β_max = 5.0', mono: true, col: D.green.dark, fw: 700 },
       { t: 'n_eff jumps to ~200 of 1,000!', mono: true, col: D.green.dark, fw: 700 },
-      { t: 'Target accuracy reaches ~95%!' },
+      { t: 'Target accuracy reaches ~93–95%!' },
     ],
   },
   { fill: C.lblue, stroke: C.blue, dark: D.blue.dark, t: 'Theoretical large-n ESS for shift distance s is n·exp(−s²) (1000·e⁻⁴ ≈ 18)' }
@@ -1036,7 +1036,7 @@ const clinicalBbse = () => threeStages(560, 258, 'Worked Clinical Label-Shift In
 const logitPriorShift = () => threeStages(560, 260, 'Instant Zero-Retraining Bayes Logit Adaptation Under Label Shift',
   { head: 'Source Logits o(x)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['Trained on balanced', 'p_S(y) = 0.10', 'ŷ_S = softmax(o)'] },
   { head: 'Add Log-Prior Ratio', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['o\'_j = o_j +', '  log(p̂_T(j)/p_S(j))', 'shirt: +log(0.5/0.1)'] },
-  { head: 'Adapted Target Pred', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['ŷ_T = softmax(o\')', '+5–7% target acc', 'in 0 grad steps!'] },
+  { head: 'Adapted Target Pred', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['ŷ_T = softmax(o\')', '+6–13 pts target acc', 'in 0 grad steps!'] },
   { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'Follows From Bayes\' Theorem: p_T(y|x) ∝ p_S(y|x) · [p_T(y) / p_S(y)]', t2: 'Taking logs turns the multiplicative prior ratio into an additive logit offset!' }
 );
 

@@ -916,7 +916,7 @@ For $\sigma = 1.0, n = 300, \tau = 0.1$, the Gaussian prior formula prescribes $
 
 @!weight-decay-training-with-and-without-the-penalty-2
 
-- **Without penalty ($\lambda = 0$):** Training loss drops to $\sim 0.25$ (far below the $0.50$ noise floor!), while validation loss climbs to $1.2$–$1.9$—no better than the trivial constant predictor at $1.50$!
+- **Without penalty ($\lambda = 0$):** Training loss drops to $\sim 0.25$ (far below the $0.50$ noise floor!), while validation loss climbs to $1.1$–$1.9$—no better than the trivial constant predictor at $1.50$!
 - **With penalty ($\lambda = 1/3$):** Validation loss stabilizes at $0.8$–$1.0$ and $\|\hat{\mathbf{w}}\|_2 \approx 1.2$ stays compact.
 :::
 
@@ -967,7 +967,7 @@ $$\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} = \frac{\mu_j}{\mu_j + \lambda}\b
 
 @!weight-decay-the-directions-our-data-determine-1
 
-- **Surgical noise removal:** Roughly $k \approx 55$ eigenvalues fall below $\lambda = 1/3$ ($\operatorname{df} \approx 127$); turning on $\lambda = 1/3$ slashes squared error in those noisy directions by $3\times$–$6\times$.
+- **Surgical noise removal:** Roughly $k \approx 55$ eigenvalues fall below $\lambda = 1/3$ ($\operatorname{df} \approx 127$); turning on $\lambda = 1/3$ slashes squared error in those noisy directions by $2\times$–$6\times$.
 :::
 
 ::: {.col .fig}
@@ -998,7 +998,7 @@ $$\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} = \frac{\mu_j}{\mu_j + \lambda}\b
 ::: {.col}
 @weight-decay-concise-implementation-1
 
-- **Exempting the bias:** Parameter groups (PyTorch), `wd_mult = 0` (MXNet), `exclude_from_weight_decay` (Keras), and `optax.masked(..., is_matrix)` (JAX) decay weights while leaving biases unpenalized.
+- **Exempting the bias:** The optimizer decays the weights while leaving the bias unpenalized.
 :::
 
 ::: {.col .fig}
@@ -1029,10 +1029,10 @@ Because framework MSE omits the $\frac{1}{2}$ factor on the data loss, its data 
 ::: {.slide title="Concept Check: Priors, Shrinkage & Adaptive Decay"}
 [Check Your Understanding]{.kicker}
 
-Work out these three quantitative questions on weight decay:
+Work out these three questions:
 
-1. **Cost of shrinking the truth:** In our 200-feature benchmark ($\|\mathbf{w}^*\|_2^2 = 2.0$, $\sigma^2 = 1.0$, expected validation loss $\frac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|_2^2 + 0.5$), what validation loss would an isotropic shrinkage $\mathbf{w} = 0.8\,\mathbf{w}^*$ incur?
-2. **Effective parameters at $\lambda = \mu_j$:** Suppose a $10$-feature design matrix has $5$ eigenvalues equal to $\mu = 2.0$, $3$ eigenvalues equal to $\mu = 0.5$, and $2$ eigenvalues equal to $\mu = 0$. What is the effective number of parameters $\operatorname{df}(\lambda)$ at $\lambda = 0.5$?
+1. **Cost of shrinking the truth:** In our 200-feature benchmark ($\|\mathbf{w}^*\|_2^2 = 2.0$, expected validation loss $\frac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|_2^2 + 0.5$), what validation loss does $\mathbf{w} = 0.8\,\mathbf{w}^*$ incur?
+2. **Effective parameters at $\lambda = \mu_j$:** A $10$-feature design matrix has eigenvalues $\mu = 2.0$ ($5\times$), $0.5$ ($3\times$), and $0$ ($2\times$). What is $\operatorname{df}(\lambda)$ at $\lambda = 0.5$?
 3. **Decoupled weight decay (AdamW vs. $\ell_2$ penalty):** If an adaptive optimizer preconditions each coordinate's gradient by $a_j > 0$, compare the decoupled update $w_j \leftarrow (1 - \eta\lambda)w_j - \eta a_j \partial_{w_j} L$ against the coupled update $w_j \leftarrow w_j - \eta a_j (\partial_{w_j} L + \lambda w_j)$. Which one decays all weights at the same rate regardless of $a_j$?
 
 ::: {.d2l-note .fragment .fade-up}
@@ -1044,7 +1044,7 @@ Work out these three quantitative questions on weight decay:
 :::
 :::
 
-::: {.slide title="Section 2.7 Summary & Key Takeaways"}
+::: {.slide title="Summary & Key Takeaways"}
 [Summary]{.kicker}
 
 | Perspective on Weight Decay | Mathematical Formulation | Key Insight / Mechanism |

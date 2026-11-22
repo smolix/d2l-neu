@@ -1237,7 +1237,7 @@ for epoch in range(num_epochs):
 
 @linear-regression-scratch-defining-the-model-2
 
-- **Parameter registration:** Wrapping raw tensors in `nn.Parameter` / `nnx.Param` registers them for automatic discovery and device transfer.
+- **Parameter registration:** Registering the raw tensors as module parameters makes them discoverable for gradients and device transfer.
 :::
 
 ::: {.col .fig}
@@ -1269,7 +1269,7 @@ for epoch in range(num_epochs):
 ::: {.col}
 @synthetic-regression-data-concise-implementation-of-the-data-loader-2
 
-- **Why `DataLoader` beats a bare generator:** A Python `yield` generator exhausts after epoch 1, whereas `DataLoader` / `ArrayLoader` creates a fresh reshuffled iterator on every epoch and supports `len(loader)` in $O(1)$ time.
+- **Why a reusable loader beats a bare generator:** A Python `yield` generator exhausts after epoch 1, whereas the framework's data loader creates a fresh reshuffled iterator on every epoch and supports `len(loader)` in $O(1)$ time.
 :::
 
 ::: {.col .fig}
@@ -1279,7 +1279,7 @@ for epoch in range(num_epochs):
 :::
 
 ::: {.slide title="Verifying Multi-Epoch Reshuffling on Synthetic Data"}
-[DataLoader Behavior]{.kicker}
+[Loader Behavior]{.kicker}
 
 Calling `data.train_dataloader()` returns a reusable loader that yields $32$ minibatches (ending with the $8$-example remainder) on every pass, starting in a fresh random permutation each epoch:
 
@@ -1295,7 +1295,7 @@ Calling `data.train_dataloader()` returns a reusable loader that yields $32$ min
 ::: {.col}
 @linear-regression-scratch-training-5
 
-- **Exact example weighting:** Because $1{,}000 = 31 \times 32 + 8$, an unweighted mean of 32 batch losses overweights the last 8 examples by $4\times$; `Averager` weights each batch by $n_b = \text{len}(\text{batch}[-1])$.
+- **Exact example weighting:** As $1{,}000 = 31 \times 32 + 8$, an unweighted mean overweights the last 8 examples by $4\times$; `Averager` weights each batch by its size $n_b$.
 :::
 
 ::: {.col .fig}
@@ -1307,10 +1307,14 @@ Calling `data.train_dataloader()` returns a reusable loader that yields $32$ min
 ::: {.slide title="The Trainer Outer Loop and Per-Epoch History"}
 [Driving the Training Cycle]{.kicker}
 
+@oo-design-training-1
+:::
+
+::: {.slide title="Where Train and Validation Points Land"}
+[Driving the Training Cycle]{.kicker}
+
 ::: {.cols .vc}
 ::: {.col}
-@oo-design-training-1
-
 - **Mid-epoch vs. end-of-epoch coordinates:** `fit_epoch()` averages training loss across updates and plots at $x = \text{epoch} + 0.5$, whereas `validate()` evaluates end-of-epoch weights at $x = \text{epoch} + 1.0$.
 :::
 
@@ -1320,12 +1324,12 @@ Calling `data.train_dataloader()` returns a reusable loader that yields $32$ min
 :::
 :::
 
-::: {.slide title="Inside fit_epoch and validate: The Four-Step Core"}
+::: {.slide title="Inside fit_epoch and validate: The Four-Step Core" only="pytorch"}
 [Per-Minibatch Execution]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-```python
+```{.python #oo-design-exercises-1}
 for batch in map(self.prepare_batch, self.train_dataloader):
     out = d2l.as_metrics(self.model.training_step(batch))
     self.optim.zero_grad()
@@ -1336,7 +1340,7 @@ for batch in map(self.prepare_batch, self.train_dataloader):
 return metrics.mean()
 ```
 
-- **Graph detachment & JIT:** Calling `.detach()` frees each batch's autograd graph immediately, while `@tf.function` / `@nnx.jit` fuse the step into one compiled XLA kernel.
+- **Graph detachment:** Calling `.detach()` on the logged metrics frees each batch's autograd graph immediately.
 :::
 
 ::: {.col .fig}
@@ -1345,21 +1349,46 @@ return metrics.mean()
 :::
 :::
 
+::: {.slide title="Inside fit_epoch and validate: The Four-Step Core" only="tensorflow"}
+[Per-Minibatch Execution]{.kicker}
+
+- **Compiled step:** `train_step` records the forward pass under `tf.GradientTape`, computes the gradients, and applies them; `prepare_model` wraps it in `tf.function`, so the whole step runs as one compiled graph.
+- **Thin outer loop:** `fit_epoch` only feeds minibatches to the compiled step and adds each returned metric to the size-weighted `Averager`.
+:::
+
+::: {.slide title="Inside fit_epoch and validate: The Four-Step Core" only="jax"}
+[Per-Minibatch Execution]{.kicker}
+
+- **Compiled step:** `_trainer_train_step` computes the loss and gradients with `nnx.grad(..., has_aux=True)` and updates the optimizer, all inside one `@nnx.jit`-compiled XLA computation.
+- **Thin outer loop:** `fit_epoch` only feeds minibatches to the compiled step and adds each returned metric to the size-weighted `Averager`.
+:::
+
+::: {.slide title="Inside fit_epoch and validate: The Four-Step Core" only="mxnet"}
+[Per-Minibatch Execution]{.kicker}
+
+- **Four steps per minibatch:** `fit_epoch` records the forward pass and loss under `autograd.record()`, calls `backward()`, and applies `self.optim.step(1)` (our loss is already a minibatch mean).
+- **Bounded asynchrony:** Waiting on the previous batch's loss (`wait_to_read()`) keeps Python at most one minibatch ahead of MXNet's asynchronous backend.
+:::
+
 ::: {.slide title="The ProgressBoard Live Plotting Interface"}
 [Visualizing Training Progress]{.kicker}
 
-As `Trainer.fit` records metrics after each epoch, `ProgressBoard` redraws live training and validation curves in place:
+`ProgressBoard` redraws live training and validation curves in place:
 
 @oo-design-utilities-6
+:::
+
+::: {.slide title="ProgressBoard: Plot Coordinates and Headless Mode"}
+[Visualizing Training Progress]{.kicker}
 
 - **Mid-epoch training vs. end-of-epoch validation:** Drawing `'train_loss'` at $x = \text{epoch} + 0.5$ and `'val_loss'` at $x = \text{epoch} + 1.0$ aligns each curve with the average point in time at which its parameters were evaluated.
 - **Headless / sweep mode:** Setting `trainer.board.display = False` disables figure rendering while still populating `trainer.history` for hyperparameter sweeps.
 :::
 
 ::: {.slide title="End-to-End Check: Training LinearRegressionScratch"}
-[Reproducing the §2.3 Benchmark]{.kicker}
+[Reproducing the Scratch Benchmark]{.kicker}
 
-Fitting `LinearRegressionScratch(2, lr=0.03)` on `SyntheticRegressionData` through `Trainer(max_epochs=10)` reproduces our exact $7\times$-per-epoch convergence and $10^{-4}$ parameter recovery:
+`Trainer(max_epochs=10)` on `LinearRegressionScratch(2, lr=0.03)` reproduces the $7\times$-per-epoch convergence and $10^{-4}$ parameter recovery:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1368,7 +1397,7 @@ Fitting `LinearRegressionScratch(2, lr=0.03)` on `SyntheticRegressionData` throu
 @!oo-design-training-linear-regression-again-2
 
 - **Overlapping train and val curves:** With only $3$ parameters and $1{,}000$ examples, memorization is impossible and validation loss tracks training loss down to $\sigma^2/2 = 5 \times 10^{-5}$.
-- **Ready for §2.5 (Concise Implementation):** Because `DataModule` and `Trainer` are completely decoupled from `LinearRegressionScratch`'s internals, §2.5 replaces raw weight tensors, `squared_loss`, and custom `SGD` with built-in framework layers, MSE losses, and optimizers without touching a line of `SyntheticRegressionData` or `Trainer`.
+- **Ready for the concise implementation:** The next section swaps in built-in layers, losses, and optimizers without touching `SyntheticRegressionData` or `Trainer`.
 :::
 
 ::: {.col .fig}
@@ -1395,14 +1424,14 @@ Test your grasp of the object-oriented training harness on these three questions
 :::
 :::
 
-::: {.slide title="Section 2.4 Summary & Key Takeaways"}
+::: {.slide title="Summary & Key Takeaways"}
 [Summary]{.kicker}
 
 | Class / Utility | Core Responsibility | Key Pitfall Prevented | Contract with the Rest of the Book |
 |---|---|---|---|
 | **`@add_to_class` & `HyperParameters`** | Incremental method binding; automatic `self.<arg>` assignment | Eliminates 60-line monolithic cells and constructor boilerplate | Inherited by every `Module`, `DataModule`, and `Trainer` |
-| **`d2l.Module`** | Holds parameters, `forward`, `loss`, `training_step`, optimizer | Pure return contract (`as_metrics`) keeps models decoupled from logging | Base class for all neural networks (Chapters 2–17) |
+| **`d2l.Module`** | Holds parameters, `forward`, `loss`, `training_step`, optimizer | Pure return contract (`as_metrics`) keeps models decoupled from logging | Base class for all neural networks in the book |
 | **`d2l.DataModule`** | Encapsulates splits and returns reusable multi-epoch loaders | Prevents silent single-pass generator exhaustion after epoch 1 | Base class for synthetic, tabular, vision, and sequence datasets |
 | **`d2l.Averager`** | Accumulates $\sum_b n_b \bar{L}_b / \sum_b n_b$ on device | Prevents partial final minibatches ($n_B < |\mathcal{B}|$) from skewing epoch means | Used inside `fit_epoch` and `validate` across all tasks |
-| **`d2l.Trainer`** | Runs epoch loops, detaches graphs, logs `history` and `ProgressBoard` | Detaches per-batch tensors (`.detach()`) and JIT-compiles steps (TF/JAX) | Fits any `Module` to any `DataModule` via `trainer.fit(model, data)` |
+| **`d2l.Trainer`** | Runs epoch loops, logs `history` and `ProgressBoard` | Keeps logged metrics from holding each batch's gradient graph | Fits any `Module` to any `DataModule` via `trainer.fit(model, data)` |
 :::

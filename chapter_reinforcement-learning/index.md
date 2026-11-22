@@ -91,16 +91,18 @@ In supervised learning the dataset sits still, whereas a sequential agent's deci
 ::: {.slide title="Delayed Credit Assignment and Trial-and-Error Search"}
 [Two Core Challenges]{.kicker}
 
-Unlike token-level classification, reinforcement learning provides no per-step ground-truth label and evaluates behavior only through cumulative discounted return:
-
+::: {.cols .vc}
+::: {.col}
 $$R(\tau) = \sum_{t=0}^{\infty} \gamma^t r_t, \qquad \gamma \in [0, 1)$$
 
-- **Temporal credit assignment:** When a math verifier scores a 1,000-token proof only at the end, or a pole falls 50 steps after a bad push, which earlier decisions deserve credit or blame?
-- **Bellman's principle (1957):** Score every state by its *value*—the expected discounted future return—turning a long-horizon problem into a chain of local one-step lookaheads.
-- **Exploration without a teacher:** Because the agent observes rewards only for actions it actually tries, it must balance exploiting high-value actions against exploring uncertain ones.
+- **Temporal credit assignment:** Which earlier decisions deserve credit or blame when reward arrives only at the end of a long rollout?
+- **Bellman's principle (1957):** Score every state by its expected discounted future return, turning a horizon-$1/(1-\gamma)$ problem into one-step lookaheads.
+- **Exploration without a teacher:** Balance exploiting high-value actions against exploring uncertain ones.
+:::
 
-::: {.d2l-note}
-At our chapter default $\gamma = 0.95$, the effective horizon is $1/(1-\gamma) = 20$ steps, and a goal reached in 6 moves is weighted by $\gamma^5 \approx 0.774$.
+::: {.col .fig}
+@fig:ch14-rl-delayed-credit
+:::
 :::
 :::
 
@@ -125,32 +127,33 @@ Our first running benchmark is $4 \times 4$ `FrozenLake-v1`, small enough to sol
 ::: {.slide title="Benchmark 2: Language Generation as a Verifier MDP"}
 [Language Model Post-Training Benchmark]{.kicker}
 
-Autoregressive text generation is a deterministic-transition MDP where the state is the prompt plus tokens generated so far and the action is the next token:
+::: {.cols .vc}
+::: {.col}
+- **Collapsed one-step view:** With deterministic token appending and terminal reward $r(x, y) \in \{0, 1\}$, an entire response $y$ acts as one action at prompt $x$.
+- **Reference vs. ceiling:** The uniform softmax reference policy passes $6.2\%$ of the time ($\approx 1/8$ on `2+2` and `3*4`, $0$ on unsolvable `8*8` and `9*9`), against a $50\%$ ceiling.
+- **Reward hacking hazard:** A ninth candidate hedges (*"4, 12, 64 or 81"*); an exact checker scores it $0$, whereas a lenient substring checker pays $1.0$ on every prompt.
+:::
 
-| Prompt $x$ | `2+2` | `3*4` | `8*8` | `9*9` |
-|:--|--:|--:|--:|--:|
-| Verifier exact answer | `4` | `12` | `64` | `81` |
-| Solvable from 9 shared candidates? | Yes (`4`) | Yes (`12`) | No | No |
-
-- **Collapsed one-step view:** With deterministic token appending and a single terminal reward $r(x, y) \in \{0, 1\}$, an entire response $y$ acts as one action at prompt $x$.
-- **Reference vs. ceiling:** The uniform softmax reference policy passes $6.2\%$ of the time ($\approx 1/8$ on two solvable prompts, $0$ on two unsolvable prompts), against a $50\%$ ceiling.
-- **Reward hacking hazard:** A ninth candidate hedges (*"one of 4, 12, 64 or 81"*); an exact-match verifier scores it $0$, whereas a lenient substring checker pays $1.0$ on every prompt.
+::: {.col .fig .big}
+@fig:ch14-rl-verifier-benchmark
+:::
+:::
 :::
 
 ::: {.slide title="Chapter 14 Roadmap: From Exact Tables to Neural Critics"}
 [Architectural & Algorithmic Progression]{.kicker}
 
-Every section relaxes one assumption—moving from known discrete tables to unknown dynamics, continuous spaces, and neural function approximation:
+::: {.cols .vc}
+::: {.col}
+- **Known to unknown physics (§§14.1–14.4):** Formulate MDPs, solve Bellman contraction sweeps, learn $Q^*$ from single samples, and bound exploration regret via UCB and Thompson sampling.
+- **Demonstrations & continuous physics (§§14.5–14.6):** Diagnose $O(\varepsilon T^2)$ cloning shift (DAgger), and solve continuous linear/nonlinear control via Riccati LQR, iLQR, and receding-horizon MPC.
+- **Policy gradients & neural critics (§§14.7–14.9):** Differentiate stochastic policies via REINFORCE, baselines, RLOO, GRPO, and `tanh` MLP critics.
+:::
 
-| Section | Core Problem & Algorithmic Mechanism | Primary Benchmark |
-|:--|:--|:--|
-| **§14.1–§14.2 MDPs & DP** | Formalize $(\mathcal{S}, \mathcal{A}, P, r, \gamma)$; solve Bellman equations via contraction sweeps | Slippery FrozenLake |
-| **§14.3 Tabular TD Control** | Learn $Q^*$ from single sampled transitions via Q-learning and SARSA | Slippery FrozenLake |
-| **§14.4 Exploration** | Bound cumulative regret via UCB, Thompson sampling, and count bonuses | 10-Armed Bandit & Chain |
-| **§14.5 Imitation Learning** | Fit expert demonstrations; diagnose $O(\varepsilon T^2)$ compounding error & DAgger | Calm FrozenLake |
-| **§14.6 Optimal Control** | Solve continuous linear/nonlinear physics via Riccati LQR, iLQR, and MPC | Double Integrator & Pendulum |
-| **§14.7–§14.8 Policy Gradients** | Differentiate stochastic policies via REINFORCE, baselines, RLOO, and GRPO | Verifier Task & Calm Lake |
-| **§14.9 Function Approximation** | Replace tables with MLPs, Gaussian heads, tangent kernels, and truncation bootstraps | CartPole & Pendulum |
+::: {.col .fig .big}
+@fig:ch14-rl-chapter-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Framing Sequential Decision Problems"}

@@ -500,17 +500,16 @@ Predicting House Prices on Kaggle: End-to-End Tabular ML<br>**log-RMSE metric ·
 ::: {.slide title="From Clean Image Grids to Messy Tabular Data"}
 [The Capstone Challenge]{.kicker}
 
-In this capstone section for Chapters 1–4, we tackle the Kaggle Ames Housing competition (De Cock, 2011)—a realistic tabular dataset where data hygiene and validation protocol matter as much as model architecture:
+::: {.cols .vc}
+::: {.col}
+- **Scarce, heterogeneous data:** Only $1{,}460$ labeled Ames homes ($+1{,}459$ test homes) across $79$ mixed columns ($35$ numeric spanning $10^0$–$10^5$, $44$ categorical, `NaN`s in $19$ columns).
+- **Relative evaluation metric:** Sale prices span $\$34.9\textrm{k}$–$\$755\textrm{k}$ ($22\times$ range) and are scored by **log-RMSE**.
+- **Overfitting risk ($\sim 19$ params/house):** With $345$ one-hot expanded features, leakage-free preprocessing, 5-fold cross-validation, and $\ell_2$ weight decay are essential.
+:::
 
-| Dataset Property | Fashion-MNIST (§3.2–§4.6) | Ames House Prices (§4.7) |
-|:--|:--|:--|
-| **Labeled training examples** | $60{,}000$ images | $1{,}460$ houses ($+1{,}459$ unlabeled test houses) |
-| **Raw input attributes** | $784$ uniform `uint8` pixels in $[0, 1]$ | $79$ mixed columns ($35$ numeric, $44$ categorical) |
-| **Feature scales & missingness** | Identical scale; $0$ missing values | Scales span $10^0$ to $10^5$; `NaN` gaps in $19$ columns |
-| **Target & evaluation metric** | $10$ balanced classes; accuracy | Sale price $\$34.9\textrm{k}$–$\$755\textrm{k}$ ($22\times$ range); **log-RMSE** |
-
-::: {.d2l-note}
-With only $1{,}460$ labeled homes and $345$ one-hot expanded features, an unregularized MLP has $\sim 19$ parameters per training house—making leakage-free preprocessing, $K$-fold cross-validation, and weight decay essential.
+::: {.col .fig .big}
+@fig:ch04-mlp-images-vs-tabular
+:::
 :::
 :::
 
@@ -529,38 +528,50 @@ Loading the CSV tables via `read_house_prices()` reveals $1{,}460 \times 81$ tra
 ::: {.slide title="Why Kaggle Scores Log-RMSE Instead of Dollar RMSE"}
 [The Competition Metric]{.kicker}
 
-A $\$50{,}000$ prediction error is catastrophic on a $\$60{,}000$ starter home ($83\%$ error) but minor on a $\$650{,}000$ estate ($8\%$ error). Kaggle therefore evaluates **relative** error via the root-mean-squared error of log prices:
-
+::: {.cols .vc}
+::: {.col}
 $$\textrm{log-RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^n \bigl(\log y_i - \log \hat{y}_i\bigr)^2}$$
 
-- **Percentage error interpretation:** Since $\log \hat{y} - \log y = \log(\hat{y}/y) \approx (\hat{y} - y)/y$ for small relative errors $\delta$, a log-RMSE of $0.135$ means predictions typically lie within $e^{\pm 0.135} \approx \pm 14\%$ of the true sale price across all price brackets.
-- **Direct loss alignment:** Training our network to predict $z_i = \log y_i$ under mean squared error $\frac{1}{n}\sum_i (z_i - \hat{z}_i)^2$ optimizes the exact square of the competition metric!
+- **Percentage error interpretation:** Since $\log(\hat{y}/y) \approx (\hat{y} - y)/y$, a log-RMSE of $0.135$ means predictions typically lie within $e^{\pm 0.135} \approx \pm 14\%$ of the true price across all brackets.
+- **Direct loss alignment:** Predicting $z_i = \log y_i$ under mean squared error optimizes the exact square of the competition metric.
+:::
+
+::: {.col .fig}
+@fig:ch04-mlp-log-rmse-metric
+:::
+:::
 :::
 
 ::: {.slide title="Step 1 & 2: Standardization and Mean Imputation"}
 [Leakage-Free Preprocessing]{.kicker}
 
-Raw numerical columns span five orders of magnitude (lot area in $10^4\textrm{ sq ft}$ vs. bedroom count in $[0, 8]$), which would skew both gradient descent step sizes and $\ell_2$ weight decay penalties:
-
-$$x_{ij} \leftarrow \frac{x_{ij} - \hat{\mu}_j}{\hat{s}_j}, \qquad \hat{\mu}_j, \hat{s}_j \textrm{ computed on the training split ONLY}$$
+::: {.cols .vc}
+::: {.col}
+$$x_{ij} \leftarrow \frac{x_{ij} - \hat{\mu}_j}{\hat{s}_j}, \qquad \hat{\mu}_j, \hat{s}_j \textrm{ from train ONLY}$$
 
 - **Unit-variance scaling:** Standardizing every numerical feature to zero mean and unit variance puts all weights $w_j$ on an equal footing under $\frac{\lambda}{2}\|\mathbf{W}\|_{\textrm{F}}^2$.
-- **Zero imputation equals mean imputation:** After subtracting $\hat{\mu}_j$ and dividing by $\hat{s}_j$, replacing missing entries (`fillna(0)`) sets every missing numerical measurement to $0$—the exact training-set mean!
+- **Zero imputation equals mean imputation:** After standardizing by $\hat{\mu}_j, \hat{s}_j$, replacing missing entries (`fillna(0)`) imputes the exact training-set mean without leakage.
+:::
+
+::: {.col .fig}
+@fig:ch04-mlp-leakage-free-std
+:::
+:::
 :::
 
 ::: {.slide title="Step 3 & 4: One-Hot Encoding With a Missingness Column"}
 [Leakage-Free Preprocessing]{.kicker}
 
-For the $44$ string/categorical attributes (including `MSSubClass`), `pd.get_dummies(df, dummy_na=True)` creates binary indicator columns for every observed category plus an explicit `_nan` column:
-
-| House Row | Raw `MSZoning` | `MSZoning_RL` | `MSZoning_RM` | `MSZoning_FV` | `MSZoning_RH` | `MSZoning_C (all)` | `MSZoning_nan` |
-|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| $1$ | `RL` | $1$ | $0$ | $0$ | $0$ | $0$ | $0$ |
-| $2$ | `RM` | $0$ | $1$ | $0$ | $0$ | $0$ | $0$ |
-| $3$ | `NaN` | $0$ | $0$ | $0$ | $0$ | $0$ | $1$ |
-
-- **Preserving informative `NaN`s:** Giving missing categories their own `_nan` indicator lets the model learn a distinct price offset for homes without a pool (`PoolQC_nan = 1`) or without a garage.
+::: {.cols .vc}
+::: {.col}
+- **Preserving informative `NaN`s:** `pd.get_dummies(df, dummy_na=True)` creates binary indicator columns for every observed category plus an explicit `_nan` column (e.g., `PoolQC_nan = 1` for homes without a pool).
 - **Vocabulary alignment (`reindex`):** Any test-set category never seen in `train` is dropped, and any `train` category absent from `test` is filled with $0$ (`reindex(columns=train_cols, fill_value=0)`).
+:::
+
+::: {.col .fig .big}
+@fig:ch04-mlp-onehot-nan
+:::
+:::
 :::
 
 ::: {.slide title="The Complete Leakage-Free Preprocessing Pipeline"}
@@ -576,10 +587,16 @@ All four steps fit exclusively on `train` and transform `*others` (`val` or `tes
 ::: {.slide title="Target Centering in KaggleHouse"}
 [Target Normalization]{.kicker}
 
-The log sale prices $\log y_i$ have mean $\approx 12.02$ ($\approx \$166{,}000$) and standard deviation $\approx 0.40$. In `KaggleHouse`, we subtract the training split's mean log price (`self.offset`) from the targets:
+::: {.cols .vc}
+::: {.col}
+- **Why center $\log y \approx 12.02$?** An initialized network starts with outputs near $0$. If targets sit around $12.02$, the initial MSE is $12^2 = 144$, wasting early epochs shifting the output bias.
+- **Zero-mean targets ($y_i - \bar{y}_{\textrm{train}}$):** Subtracting `self.offset` starts step-0 RMSE at $\approx 0.40$; at prediction time we add `self.offset` back before `np.exp(pred + data.offset)`.
+:::
 
-- **Why center $\log y$?** An initialized network starts with outputs near $0$. If targets sit around $12.02$, the initial squared error is $12^2 = 144$, and early SGD steps waste epochs shifting the output bias before learning feature weights.
-- **Zero-mean targets ($y_i - \bar{y}_{\textrm{train}}$):** A network initialized near $0$ starts with RMSE $\approx 0.40$ from step $0$; at prediction time, we simply add `self.offset` back before exponentiating (`np.exp(pred + data.offset)`).
+::: {.col .fig .big}
+@fig:ch04-mlp-target-centering
+:::
+:::
 :::
 
 ::: {.slide title="Shared 5-Fold Cross-Validation Without Leakage"}

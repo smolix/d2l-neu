@@ -606,60 +606,63 @@ Doubling our 1B-parameter GPT from $18$ to $36$ blocks (width $d = 2048$) produc
 ::: {.slide title="Why Replicating State Across k GPUs Is Redundant"}
 [Core Insight]{.kicker}
 
-Look at *when* a GPU actually touches each of the four `float32` arrays that make up the $16N$ bytes of Adam training state:
+::: {.cols .vc}
+::: {.col}
+- **Weights ($\mathbf{W}_\ell$, $4\text{ B/param}$):** Needed only while block $\ell$ executes its forward or backward pass.
+- **Gradients ($\nabla\mathbf{W}_\ell$, $4\text{ B/param}$):** Needed only from block $\ell$'s backward pass until the optimizer step.
+- **Adam Moments ($\mathbf{m}, \mathbf{v}$, $8\text{ B/param}$):** Touched **only inside the elementwise Adam update** at the end of the step—each of the $k$ GPUs needs to own and update only $1/k$ of the parameters!
+:::
 
-| State Component | Bytes / Param | Total ($1.92\text{B}$ GPT) | When a GPU Actually Needs It During a Step |
-| :--- | :---: | :---: | :--- |
-| **Weights ($\mathbf{W}_\ell$)** | $4\text{ B}$ | $7.15\text{ GiB}$ | Only while block $\ell$ is executing its forward or backward pass |
-| **Gradients ($\nabla \mathbf{W}_\ell$)** | $4\text{ B}$ | $7.15\text{ GiB}$ | Only from the moment block $\ell$'s backward finishes until the optimizer update |
-| **Adam 1st & 2nd Moments ($\mathbf{m}, \mathbf{v}$)** | $8\text{ B}$ | $14.3\text{ GiB}$ | **Only inside the elementwise optimizer update** at the very end of the step |
-
-::: {.d2l-note .rule}
-**The ZeRO / FSDP Principle:** Partition weights, gradients, and optimizer moments so each of the $k$ GPUs permanently stores only **$1/k$ of each**, materializing a single block's full weights on the fly via collectives only while that block computes.
+::: {.col .fig .big}
+@fig:ch13-perf-state-lifetime
+:::
 :::
 :::
 
 ::: {.slide title="The Three ZeRO Stages: Memory per GPU vs. Stage"}
 [ZeRO Taxonomy]{.kicker}
 
-The *Zero Redundancy Optimizer* (ZeRO; Rajbhandari et al., 2020) partitions the three components of the $16N$ `float32` Adam state across $k$ GPUs in three cumulative stages:
+::: {.cols .vc}
+::: {.col}
+- **ZeRO-1 ($8 + 8/k\text{ B/param}$):** Shards Adam moments $\mathbf{m}, \mathbf{v}$ across $k$ GPUs ($21.4\text{ GiB}$ at $k=2$ for our $1.92\text{B}$ GPT).
+- **ZeRO-2 ($4 + 12/k\text{ B/param}$):** Shards moments + gradients ($17.9\text{ GiB}$ at $k=2$) at the same $2\,\frac{k-1}{k}S$ comm volume as DDP.
+- **ZeRO-3 / FSDP ($16/k\text{ B/param}$):** Shards weights, gradients, and moments ($14.3\text{ GiB}$ at $k=2$, leaving $\sim 10\text{ GiB}$ for activations).
+:::
 
-| Parallelism Strategy | Weights | Gradients | Adam Moments | Bytes / Param per GPU | 36-Block GPT ($k = 2$) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Data Parallelism (DDP)** | All ($4$) | All ($4$) | All ($8$) | $16\text{ B}$ | $28.6\text{ GiB}$ (OOM!) |
-| **ZeRO Stage 1 ($P_{\textrm{os}}$)** | All ($4$) | All ($4$) | $1/k$ ($8/k$) | $8 + \frac{8}{k}\text{ B}$ | $21.4\text{ GiB}$ |
-| **ZeRO Stage 2 ($P_{\textrm{os+g}}$)** | All ($4$) | $1/k$ ($4/k$) | $1/k$ ($8/k$) | $4 + \frac{12}{k}\text{ B}$ | $17.9\text{ GiB}$ |
-| **ZeRO Stage 3 / FSDP ($P_{\textrm{os+g+p}}$)** | $1/k$ ($4/k$) | $1/k$ ($4/k$) | $1/k$ ($8/k$) | **$\frac{16}{k}\text{ B}$** | **$14.3\text{ GiB}$** |
-
-::: {.d2l-note}
-On two $24\text{ GiB}$ GPUs ($k = 2$), ZeRO-1 leaves $< 3\text{ GiB}$ for activations, whereas ZeRO-3 (**Fully Sharded Data Parallelism**, FSDP) cuts steady-state memory in half to $14.3\text{ GiB}$, leaving nearly $10\text{ GiB}$ for activations and temporary buffers.
+::: {.col .fig .big}
+@fig:ch13-perf-zero-stages
+:::
 :::
 :::
 
 ::: {.slide title="Collective Primitives Behind Sharded Training"}
 [Collective Operations]{.kicker}
 
-Recall from §13.5 that a ring **allreduce** of an $S$-byte buffer decomposes into two half-collectives that each transmit $\frac{k-1}{k}S$ bytes per GPU:
+::: {.cols .vc}
+::: {.col}
+- **Ring Allreduce = Reduce-Scatter + All-Gather:** Decomposes a $\frac{2(k-1)}{k}S$ sum into two half-collectives of $\frac{k-1}{k}S$ bytes each.
+- **Reduce-Scatter ($\text{Full } S \to \text{Summed } S/k$):** Sums gradients across GPUs and delivers shard $j$ to owner GPU $j$.
+- **All-Gather ($\text{Shard } S/k \to \text{Full } S$):** Reconstructs full weights across GPUs just in time for a layer or after a sharded optimizer update.
+:::
 
-| Collective Primitive | Per-GPU Input $\to$ Output | Bytes Sent / GPU | Role in Data-Parallel & Sharded Training |
-| :--- | :--- | :---: | :--- |
-| **Allreduce** | Full vector $S \to$ Full sum $S$ | $\frac{2(k-1)}{k}S$ | Sums replicated gradients in standard DDP |
-| **Reduce-Scatter** | Full vector $S \to$ Summed $1/k$ shard ($S/k$) | $\frac{k-1}{k}S$ | Sums & partitions gradients to their owner GPU in ZeRO 1–3 |
-| **All-Gather** | Owned $1/k$ shard ($S/k$) $\to$ Full vector $S$ | $\frac{k-1}{k}S$ | Reconstructs full weights across GPUs in ZeRO 1–3 |
-| **All-to-All** | $k$ slices $\to$ Transposed slices across GPUs | $\frac{k-1}{k}S$ | Routes tokens to expert GPUs in Mixture-of-Experts (MoE) |
+::: {.col .fig .big}
+@fig:ch13-perf-four-collectives
+:::
+:::
 :::
 
 ::: {.slide title="ZeRO Stage 1: Sharding Optimizer Moments at Free Comm"}
 [ZeRO Stage 1]{.kicker}
 
-In DDP, every GPU receives the full summed gradient via an allreduce ($\text{reduce-scatter} + \text{all-gather}$) and performs the exact same Adam update on all $N$ parameters. **ZeRO Stage 1** simply inserts the Adam update *between* the two halves of the allreduce:
+::: {.cols .vc}
+::: {.col}
+- **Insert Adam between the two halves of allreduce:** (1) Reduce-scatter gradients ($\frac{k-1}{k}S$), (2) update owned $1/k$ weights with owned $1/k$ Adam moments, (3) all-gather updated weights ($\frac{k-1}{k}S$).
+- **Zero extra communication bytes:** Total traffic per GPU is $\frac{2(k-1)}{k}S$—identical to standard DDP while cutting Adam state memory by $k\times$!
+:::
 
-1. **Reduce-scatter gradients ($\frac{k-1}{k}S$ bytes):** Sum the gradients across GPUs and deliver only shard $j$ ($N/k$ parameters) to GPU $j$.
-2. **Sharded Adam step ($O(N/k)$ memory & compute):** GPU $j$ updates its owned $1/k$ slice of master weights using its owned $1/k$ slice of Adam moments ($\mathbf{m}_j, \mathbf{v}_j$).
-3. **All-gather updated weights ($\frac{k-1}{k}S$ bytes):** Broadcast each GPU's newly updated $1/k$ weight shard so every GPU holds the full updated weights for the next step.
-
-::: {.d2l-note .rule}
-**Zero extra communication bytes:** ZeRO Stage 1 sends $\frac{k-1}{k}S + \frac{k-1}{k}S = \frac{2(k-1)}{k}S$ bytes per GPU—the **exact same communication volume as a standard DDP allreduce**, while cutting Adam moment memory by $k\times$!
+::: {.col .fig .big}
+@fig:ch13-perf-zero1-pipeline
+:::
 :::
 :::
 
@@ -685,12 +688,18 @@ Why hold all $4N$ bytes of gradients until the end of the backward pass if each 
 ::: {.slide title="FSDP Communication Cost: 1.5× Data-Parallel Volume"}
 [Communication Model]{.kicker}
 
-Counting the collective phases across one full FSDP step ($S = 4N$ bytes of `float32` weights/gradients) yields the FSDP communication time bound:
+::: {.cols .vc}
+::: {.col}
+$$t_{\textrm{comm (FSDP)}} \;=\; \frac{3(k-1)}{k}\,S\,\beta_{\textrm{link}}$$
 
-$$t_{\textrm{comm (FSDP)}} \;=\; \underbrace{\frac{k-1}{k}S\beta_{\textrm{link}}}_{\textrm{forward all-gather}} \;+\; \underbrace{\frac{k-1}{k}S\beta_{\textrm{link}}}_{\textrm{backward all-gather}} \;+\; \underbrace{\frac{k-1}{k}S\beta_{\textrm{link}}}_{\textrm{backward reduce-scatter}} \;=\; \frac{3(k-1)}{k}\,S\,\beta_{\textrm{link}}$$
+- **$1.5\times$ DDP traffic:** Because FSDP frees gathered weights after the forward pass, it pays one extra all-gather in the backward pass ($3$ collective phases vs. $2$).
+- **Scaling law as $k$ grows:** Adding GPUs divides steady-state memory ($16N/k \downarrow$), while per-GPU communication rises from $1.5\,S$ ($k=2$) toward $3S$ ($k \to \infty$).
+:::
 
-- **$1.5\times$ the traffic of DDP / ZeRO-1 / ZeRO-2:** Because FSDP frees gathered weights after the forward pass to save memory, it must pay one extra all-gather during the backward pass ($3$ collective phases instead of $2$).
-- **Crucial scaling law:** Adding more GPUs ($k \uparrow$) divides the steady-state memory per GPU ($16N/k \downarrow$), **but the bytes each GPU transmits per step grow from $1.5\,S$ (at $k = 2$) toward $3S$ (as $k \to \infty$)**!
+::: {.col .fig}
+@fig:ch13-perf-fsdp-comm-scaling
+:::
+:::
 :::
 
 ::: {.slide title="Measuring All-Gather Bandwidth on Two RTX 4090s"}
@@ -794,26 +803,33 @@ Running our 36-block, $1.92\text{B}$-parameter GPT step on two $24\text{ GiB}$ R
 ::: {.slide title="FSDP Over Host-Staged PCIe vs. NVLink 5 Fabrics"}
 [Interconnect Sensitivity]{.kicker}
 
-Comparing our host-staged PCIe workstation against an NVLink 5 node ($900\text{ GB/s}$ per direction) for the exact same $11.5\text{ GB}$ FSDP traffic per step explains why large-model sharding was designed for high-bandwidth fabrics:
+::: {.cols .vc}
+::: {.col}
+- **Host-staged PCIe 4.0 ($\sim 2.2\text{ GB/s}$):** Moving $1.5\,S = 11.5\text{ GB}$ takes $\sim 5.0\text{ s}$ vs. $0.40\text{ s}$ compute, leaving the step deeply link-bound ($\sim 7\%$ compute share).
+- **NVLink 4/5 ($450\text{--}900\text{ GB/s}$):** The same $11.5\text{ GB}$ finishes in $13\text{--}26\text{ ms}$, matching or beating block compute time ($14\text{--}32\text{ ms}$).
+- **Block prefetching:** Overlapping block $\ell+1$'s all-gather with block $\ell$'s compute hides communication completely when $g \le c$.
+:::
 
-| Interconnect Fabric | Bus Bandwidth | FSDP Comm Time ($1.5\,S = 11.5\text{ GB}$) | Compute Time ($8N b T / P$) | Step Regime & Utilization |
-| :--- | :---: | :---: | :---: | :--- |
-| **PCIe 4.0 via Host DRAM (Ours)** | $\sim 2.2\text{ GB/s}$ | **$\approx 5.0\text{ s}$** | $0.40\text{ s}$ (`tf32`) | **Link-bound** ($\sim 7\%$ compute share) |
-| **NVLink 4 (H100, $450\text{ GB/s}$)** | $450\text{ GB/s}$ | **$\approx 26\text{ ms}$** | $\sim 32\text{ ms}$ (`bf16`) | Balanced (hidden via block prefetching) |
-| **NVLink 5 (B200, $900\text{ GB/s}$)** | $900\text{ GB/s}$ | **$\approx 13\text{ ms}$** | $\sim 14\text{ ms}$ (`bf16`) | **Compute-bound** (hidden via prefetching) |
-
-- **Block prefetching:** Issuing the all-gather for block $\ell + 1$ on a communication stream while block $\ell$ computes reduces forward time from $L(g + c)$ to $g + (L-1)\max(g, c) + c$, completely hiding communication whenever $g \le c$!
+::: {.col .fig .big}
+@fig:ch13-perf-fsdp-prefetch
+:::
+:::
 :::
 
 ::: {.slide title="When to Shard vs. Replicate with Gradient Accumulation"}
 [Decision Guide]{.kicker}
 
-Should we also use FSDP on our 18-block, 1B-parameter GPT ($16N = 15.1\text{ GiB}$) across two RTX 4090s so each GPU holds $7.5\text{ GiB}$ of state and fits larger micro-batches?
+::: {.cols .vc}
+::: {.col}
+- **When $16N$ fits (e.g., 1B GPT on $24\text{ GiB}$):** Use **DDP + gradient accumulation**—GPUs communicate only **once per global step** after all $m$ micro-batches finish.
+- **Why FSDP loses over PCIe on accumulated steps:** FSDP frees weights after every block, forcing it to re-gather all weights **twice on every single micro-batch** ($2m\times$ extra PCIe traffic).
+- **Escalation ladder:** DDP $\to$ ZeRO-1/2 $\to$ ZeRO-3 (FSDP) only as memory demands require.
+:::
 
-- **Why gradient accumulation + DDP wins over PCIe when the state fits:**
-  - Under **DDP with gradient accumulation** over $m$ micro-batches, the GPUs communicate **only once per global step** (after all $m$ micro-batches complete).
-  - Under **FSDP (ZeRO-3)**, because non-owned weight shards are freed after every block, the GPUs must **re-gather all weights twice on every single micro-batch** ($2\text{ s}$ of PCIe traffic per micro-batch vs. saving $0.01\text{ s}$ of accumulator memory traffic!).
-- **Practical rule:** On slow interconnects, use **DDP + gradient accumulation** whenever $16N$ fits alongside a reasonable micro-batch; escalate to **ZeRO-1 / ZeRO-2** (which keep full weights and communicate only once per global step), and use **ZeRO-3 / FSDP** only when $4N + \textrm{activations}$ exceeds single-GPU memory.
+::: {.col .fig .big}
+@fig:ch13-perf-ddp-vs-fsdp-decision
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: ZeRO Memory, FSDP Traffic, and Links"}

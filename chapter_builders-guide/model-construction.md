@@ -1341,14 +1341,16 @@ Modules and Model Construction<br>**module trees · child registration · contai
 ::: {.slide title="Why Models Need a Recursive Bookkeeping Abstraction"}
 [Motivation & Scale]{.kicker}
 
-A single-hidden-layer MLP has just 4 parameter arrays (`W1`, `b1`, `W2`, `b2`), small enough to pass to an optimizer by hand. Production architectures make manual tracking impossible:
+::: {.cols .vc}
+::: {.col}
+- **Hundreds of distributed weight tensors:** Llama 3 8B stacks 32 transformer blocks of 9 parameter arrays each plus 3 outer arrays, totaling $32 \times 9 + 3 = 291$ distinct tensors.
+- **All-or-nothing lifecycle:** Every tensor must be discovered by the optimizer, serialized into checkpoints, initialized, and transferred to GPU memory.
+- **Silent failure hazard:** Omitting a weight array from the module registry raises no error during a CPU forward pass—those weights simply stay frozen at initialization.
+:::
 
-- **Hundreds of distributed weight tensors:** Llama 3 8B stacks 32 identical transformer blocks of 9 parameter arrays each plus 3 outer arrays, totaling $32 \times 9 + 3 = 291$ distinct tensors.
-- **All-or-nothing lifecycle:** Every single tensor must be discovered by the optimizer, serialized into checkpoints, initialized properly, and transferred to GPU memory.
-- **Silent failure hazard:** Omitting a weight array from the optimizer or checkpoint raises no syntax or runtime error during a CPU forward pass—those weights simply remain frozen at their random initial values.
-
-::: {.d2l-note .warn}
-**The Unregistered Layer Bug:** Deep learning frameworks solve parameter discovery by organizing models into a **tree of modules**, but only children registered into that tree are visible to whole-model operations.
+::: {.col .fig .big}
+@fig:ch05-bg-scale-bookkeeping
+:::
 :::
 :::
 
@@ -1375,68 +1377,102 @@ When layers form a straight pipeline, a sequential container registers each chil
 ::: {.slide title="Custom Module Subclasses Register Attributes"}
 [Subclassing the Base Module]{.kicker}
 
-For architectures that branch, merge, or reuse components, we subclass the base module class (`nn.Module`, `nn.Block`, `tf.keras.Model`, or `nnx.Module`):
-
+::: {.cols .vc}
+::: {.col}
 @-model-construction-the-module-abstraction-3
 
 @model-construction-the-module-abstraction-4
 
-- **Automatic registration via `__setattr__`:** Assigning `self.hidden = ...` intercepts the module instance and adds it to the parent's internal child registry under the key `'hidden'`.
-- **Always invoke `net(X)`:** Calling the module instance runs framework hooks and deferred shape builders before invoking `forward` or `call`.
+- **Automatic registration via `__setattr__`:** Assigning `self.hidden = ...` inserts the child into `_modules['hidden']`; always call `net(X)` to run hooks and builders.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-setattr-registry
+:::
+:::
 :::
 
 ::: {.slide title="Every Whole-Model Operation Walks the Module Registry"}
 [Why Registration Matters]{.kicker}
 
-Once children and parameters are registered in the module tree, five core framework subsystems operate as recursive tree traversals:
+::: {.cols .vc}
+::: {.col}
+- **Five recursive tree walks:** Optimizer setup (`parameters()`), checkpointing (`state_dict()`), device transfer (`.to(gpu)`), initialization (`.apply(fn)`), and mode/hook toggling (`train()`/`eval()`) all walk registered children.
+- **Consequence of an unregistered layer:** Its weights never update, are omitted from checkpoints, stay on CPU when `.to(gpu)` runs, and keep training-mode Dropout/BatchNorm during evaluation.
+:::
 
-| Framework Operation | What the Recursive Tree Walk Performs | Consequence if a Child Layer Is Unregistered |
-|:---|:---|:---|
-| **Optimizer setup** | Collects all trainable leaf parameters (`net.parameters()`) | Layer weights never receive gradient updates |
-| **Checkpointing** | Saves/loads every parameter & buffer by path (`state_dict()`) | Layer weights are omitted from disk and stay random on load |
-| **Device placement** | Moves all parameters and buffers to GPU HBM (`net.to(gpu)`) | Layer stays on CPU; forward pass crashes on device mismatch |
-| **Initialization** | Applies an initializer callback across submodules (`net.apply`) | Layer keeps default random values instead of target scale |
-| **Mode & hooks** | Toggles `train()`/`eval()` and attaches diagnostic hooks | Dropout/BatchNorm stay in training mode during evaluation |
+::: {.col .fig .big}
+@fig:ch05-bg-tree-walk-ops
+:::
+:::
 :::
 
 ::: {.slide title="Inside a Sequential Container: Registration + Loop" except="mxnet"}
 [Building a Container]{.kicker}
 
-Implementing `MySequential` from scratch reveals that a container has only two duties—registering children in `__init__` and looping over them in the forward pass:
+::: {.cols .vc}
+::: {.col}
+- A sequential container has only two duties—registering children in `__init__` and looping over them in `forward`:
 
 @-model-construction-sequential-and-friends-containers-1
 
 @model-construction-sequential-and-friends-containers-2
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-sequential-loop
+:::
+:::
 :::
 
 ::: {.slide title="Inside a Sequential Container: Registration + Loop" only="mxnet"}
 [Building a Container]{.kicker}
 
-Implementing `MySequential` from scratch reveals that a container has only two duties—registering children in `add` and looping over them in `forward`:
+::: {.cols .vc}
+::: {.col}
+- A sequential container has only two duties—registering children in `add` and looping over them in `forward`:
 
 @-model-construction-sequential-and-friends-containers-1
 
 @model-construction-sequential-and-friends-containers-2
 :::
 
+::: {.col .fig}
+@fig:ch05-bg-sequential-loop
+:::
+:::
+:::
+
 ::: {.slide title="Pitfall: Plain Python Lists Hide Layers from PyTorch" only="pytorch"}
 [The Plain-List Trap]{.kicker}
 
-Storing layers inside an ordinary Python `list` (`self.layers = [...]`) allows `forward` to run, but `__setattr__` sees a plain list rather than an `nn.Module`:
+::: {.cols .vc}
+::: {.col}
+- Storing layers inside an ordinary Python `list` (`self.layers = [...]`) allows `forward` to run, but `net.parameters()` is empty (`0` parameters instead of `7,946`):
 
 @model-construction-sequential-and-friends-containers-3
+:::
 
-- **Zero registered parameters:** `net.parameters()` is completely empty (`0` parameters instead of `7,946`) because PyTorch does not scan inside plain Python lists or dicts.
+::: {.col .fig}
+@fig:ch05-bg-plain-list-trap
+:::
+:::
 :::
 
 ::: {.slide title="Pitfall: Plain Python Lists Hide Layers from Gluon" only="mxnet"}
 [The Plain-List Trap]{.kicker}
 
-Storing layers inside an ordinary Python `list` (`self.layers = [...]`) hides them from `net.initialize()` and `net.collect_params()`:
+::: {.cols .vc}
+::: {.col}
+- Storing layers inside an ordinary Python `list` (`self.layers = [...]`) hides them from `net.initialize()` and `net.collect_params()` (`0` parameters instead of `7,946`):
 
 @model-construction-sequential-and-friends-containers-3
+:::
 
-- **Zero registered parameters:** Even after manually initializing each layer so the forward pass can run, `net.collect_params()` returns `0` parameters (and emits a warning naming `PlainListMLP.layers`).
+::: {.col .fig}
+@fig:ch05-bg-plain-list-trap
+:::
+:::
 :::
 
 ::: {.slide title="A Partly Registered Model Silently Freezes Inner Layers" only="pytorch,mxnet"}
@@ -1454,61 +1490,97 @@ If outer layers are assigned to attributes (`self.first`, `self.last`) while mid
 ::: {.slide title="Keras Scans Python Lists Assigned to Attributes" only="tensorflow"}
 [Container Registration in Keras]{.kicker}
 
-Unlike PyTorch and Gluon, Keras's `__setattr__` automatically inspects Python lists, tuples, and dicts assigned to model attributes:
+::: {.cols .vc}
+::: {.col}
+- Keras's `__setattr__` automatically inspects Python lists, tuples, and dicts assigned to model attributes, tracking all $7{,}946$ parameters:
 
 @model-construction-sequential-and-friends-containers-3
+:::
 
-- **All 7,946 parameters tracked:** Both layers ($20 \times 256 + 256 + 256 \times 10 + 10 = 7{,}946$) appear automatically in `net.trainable_variables`.
+::: {.col .fig}
+@fig:ch05-bg-plain-list-trap
+:::
+:::
 :::
 
 ::: {.slide title="Flax NNX Rejects Plain Lists of Modules at Construction" only="jax"}
 [Container Registration in NNX]{.kicker}
 
-Flax NNX prevents the silent plain-list bug by scanning attributes during `__init__` and raising an immediate `ValueError` if a plain Python list contains an `nnx.Module`:
+::: {.cols .vc}
+::: {.col}
+- Flax NNX scans attributes during `__init__` and raises an immediate `ValueError` if a plain Python list contains an `nnx.Module`:
 
 @model-construction-sequential-and-friends-containers-3
+:::
 
-- **Fail-fast design:** Rather than silently dropping parameters from `nnx.state`, NNX aborts construction and directs you to wrap module collections in `nnx.List` or `nnx.Dict`.
+::: {.col .fig}
+@fig:ch05-bg-plain-list-trap
+:::
+:::
 :::
 
 ::: {.slide title="Fixing List Registration with Module Containers" only="pytorch"}
 [Registered Collection Containers]{.kicker}
 
-Whenever your `forward` method loops or indexes over a dynamic collection of layers, wrap the collection in `nn.ModuleList` (or `nn.ModuleDict` for key-value mappings):
+::: {.cols .vc}
+::: {.col}
+- Wrap dynamic collections of layers in `nn.ModuleList` (or `nn.ModuleDict`) so all $7{,}946$ parameters register in the module tree:
 
 @model-construction-sequential-and-friends-containers-4
+:::
 
-- **Full parameter discovery:** All $20 \times 256 + 256 + 256 \times 10 + 10 = 7{,}946$ parameters are now registered in the module tree.
+::: {.col .fig}
+@fig:ch05-bg-plain-list-trap
+:::
+:::
 :::
 
 ::: {.slide title="Fixing List Registration with register_child" only="mxnet"}
 [Registered Collection Containers]{.kicker}
 
-When storing blocks in a Python list for custom iteration in Gluon, register each element explicitly via `self.register_child(layer)`:
+::: {.cols .vc}
+::: {.col}
+- Register each block in a Python list via `self.register_child(layer)` so all $7{,}946$ parameters appear in `net.collect_params()`:
 
 @model-construction-sequential-and-friends-containers-4
+:::
 
-- **Full parameter discovery:** All $20 \times 256 + 256 + 256 \times 10 + 10 = 7{,}946$ parameters now appear in `net.collect_params()`.
+::: {.col .fig}
+@fig:ch05-bg-plain-list-trap
+:::
+:::
 :::
 
 ::: {.slide title="Keras Forbids Attaching Layers After Build" only="tensorflow"}
 [Structural Integrity in Keras]{.kicker}
 
-While Keras allows plain lists in `__init__`, it locks the module tree once variables are built—attaching a new layer later raises an immediate `ValueError`:
+::: {.cols .vc}
+::: {.col}
+- Keras locks the module tree once variables are built—attaching a new layer later raises an immediate `ValueError`:
 
 @model-construction-sequential-and-friends-containers-4
+:::
 
-- **Declare all layers upfront:** Every child layer must be assigned in `__init__` or `build` so the state tree is complete before training begins.
+::: {.col .fig}
+@fig:ch05-bg-plain-list-trap
+:::
+:::
 :::
 
 ::: {.slide title="Fixing List Registration with nnx.List" only="jax"}
 [Registered Collection Containers]{.kicker}
 
-Wrapping the sequence of layers in `nnx.List` (or `nnx.Dict` for mappings) registers every child module into the NNX graph state:
+::: {.cols .vc}
+::: {.col}
+- Wrapping the sequence of layers in `nnx.List` (or `nnx.Dict`) registers every child module into `nnx.state(net, nnx.Param)`:
 
 @model-construction-sequential-and-friends-containers-4
+:::
 
-- **Full parameter discovery:** `nnx.state(net, nnx.Param)` now locates all $7{,}946$ parameters under their indexed paths.
+::: {.col .fig}
+@fig:ch05-bg-plain-list-trap
+:::
+:::
 :::
 
 ::: {.slide title="Custom Forward Passes: The Residual Connection"}
@@ -1543,63 +1615,100 @@ No special framework primitive is needed for a skip connection—the forward met
 ::: {.slide title="Eager vs. Compiled Execution: Tracing Constraints" only="tensorflow,jax"}
 [Graph Compilation Limits]{.kicker}
 
-Direct calls execute eagerly, but `d2l.Trainer` compiles training steps (`tf.function` or `nnx.jit`) by tracing the forward method once on symbolic tensors without concrete numerical values:
+::: {.cols .vc}
+::: {.col}
+- `d2l.Trainer` compiles training steps (`tf.function` or `nnx.jit`) by tracing `forward` once on symbolic tensors:
 
 @model-construction-forward-is-just-python-4
+:::
 
-- **Static vs. data-dependent loops:** Python loops over static model structure (e.g., `for m in self.modules`) unroll cleanly at trace time, whereas branching on tensor values (`while abs(X).sum() > 1`) requires `tf.while_loop` or `jax.lax.while_loop`.
+::: {.col .fig}
+@fig:ch05-bg-eager-vs-trace
+:::
+:::
 :::
 
 ::: {.slide title="Eager Execution vs. Graph Tracing" only="pytorch,mxnet"}
 [Forward Execution Modes]{.kicker}
 
-By default, PyTorch and Gluon execute `forward` **eagerly**—running one Python statement at a time on concrete tensor values:
+::: {.cols .vc}
+::: {.col}
+- **Eager execution (default):** Runs line-by-line on concrete values so data-dependent `if`/`while` loops and `print` debugging work directly.
+- **Compiled graph tracing (`torch.compile` / `hybridize()`):** Static loops over registered modules (`for block in self.blocks:`) unroll cleanly, whereas data-dependent branches require symbolic control flow.
+:::
 
-- **Arbitrary Python control flow:** Data-dependent `if` statements, `while` loops conditioned on tensor norms, and `print` debugging work just like standard NumPy code.
-- **Compilation trade-off:** When tracing a module into a static computation graph (`torch.compile` or `hybridize()`), data-dependent Python branches cannot be evaluated at trace time and require symbolic control-flow primitives.
-- **Structural loops always compile:** Iterating over registered child modules (`for block in self.blocks:`) depends only on static tree topology and unrolls cleanly in both eager and compiled modes.
+::: {.col .fig .big}
+@fig:ch05-bg-eager-vs-trace
+:::
+:::
 :::
 
 ::: {.slide title="Lazy Layers Infer Input Shapes on the First Batch" except="jax"}
 [Deferred Shape Inference]{.kicker}
 
-Lazy layers (`nn.LazyLinear`, `nn.Dense` without `in_units`, or Keras `Dense`) specify only their output width at construction, waiting for the first forward pass to materialize weight matrices:
+::: {.cols .vc}
+::: {.col}
+- Lazy layers specify only their output width at construction and materialize weight matrices on the first forward pass:
 
 @model-construction-lazy-initialization-shapes-from-data-1
 
 @model-construction-lazy-initialization-shapes-from-data-2
 :::
 
+::: {.col .fig}
+@fig:ch05-bg-lazy-dry-run
+:::
+:::
+:::
+
 ::: {.slide title="Flax NNX Allocates Explicit Shapes at Construction" only="jax"}
 [Eager Parameter Allocation]{.kicker}
 
-Unlike lazy layers in other frameworks, Flax NNX layers require both input and output widths (`nnx.Linear(20, 256, rngs=rngs)`) and allocate parameter arrays immediately in `__init__`:
+::: {.cols .vc}
+::: {.col}
+- Flax NNX layers require both input and output widths (`nnx.Linear(20, 256, rngs=rngs)`) and allocate weights immediately in `__init__`:
 
 @model-construction-lazy-initialization-shapes-from-data-2
+:::
 
-- **Immediate inspectability:** Because weights exist as soon as `__init__` returns, optimizers, parameter counters, and custom initializers can inspect `nnx.state(net, nnx.Param)` before any data batch is loaded.
+::: {.col .fig}
+@fig:ch05-bg-lazy-dry-run
+:::
+:::
 :::
 
 ::: {.slide title="Initializing Lazy Models After a Dry Run"}
 [Materializing Shapes Before Training]{.kicker}
 
-Because variance-scaling initializers (such as Xavier or He) depend on $n_{\text{in}}$ and $n_{\text{out}}$, lazy layers must run a dummy forward pass (**dry run**) to fix parameter shapes before custom initialization:
+::: {.cols .vc}
+::: {.col}
+- Because variance-scaling initializers depend on $n_{\text{in}}$ and $n_{\text{out}}$, lazy layers must run a dummy forward pass (**dry run**) before custom initialization:
 
 @model-construction-lazy-initialization-shapes-from-data-4
+:::
 
-::: {.d2l-note}
-**Prototyping vs. Production:** Lazy layers save manual dimension arithmetic during quick experiments, whereas production models declare explicit widths in a configuration object so parameters exist immediately without dummy data.
+::: {.col .fig}
+@fig:ch05-bg-lazy-dry-run
+:::
 :::
 :::
 
 ::: {.slide title="Separating Architecture Configs from Builder Code"}
 [Dataclass Configurations]{.kicker}
 
-Saved weight tensors record array shapes, but not architectural choices without parameters (such as activation functions or block wiring). Production code factors hyperparameters into a serializable `dataclass` paired with a `build` function:
+::: {.cols .vc}
+::: {.col}
+- Production code factors hyperparameters into a serializable `@dataclass` paired with a `build` function:
 
 @-model-construction-building-from-a-config-1
 
 @model-construction-building-from-a-config-2
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-config-builder
+:::
+:::
 :::
 
 ::: {.slide title="Exact Parameter Accounting From the Config"}

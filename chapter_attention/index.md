@@ -78,22 +78,16 @@ Attention Mechanisms: Differentiable Content-Based Retrieval<br>**queries, keys 
 ::: {.slide title="From Fixed-Size State Bottlenecks to Direct Lookup"}
 [Motivation]{.kicker}
 
-Recurrent networks compress an entire sequence into a single fixed-width hidden vector before knowing which early details a future prediction will require:
-
 ::: {.cols .vc}
 ::: {.col}
-- **The Recurrent Bottleneck:** A model of width $d = 768$ (GPT-2 small) reading $n = 1{,}024$ tokens must squeeze $1{,}024 \times 768 \approx 786{,}000$ numbers of history into $768$ floats.
-- **Premature Compression:** Details from paragraph one must be written into $\mathbf{h}_t$ long before the final query arrives, across an $O(n)$-step gradient chain.
-:::
-
-::: {.col}
-- **Content-Based Retrieval:** Instead of summarizing history into one vector, keep one representation at every position and retrieve relevant context on demand.
+- **The Recurrent Bottleneck:** A model of width $d = 768$ (GPT-2 small) reading $n = 1{,}024$ tokens squeezes $1{,}024 \times 768 \approx 786{,}000$ numbers of history into $768$ floats across an $O(n)$-step gradient chain.
+- **Content-Based Retrieval:** Keep one representation at every position and retrieve relevant context on demand.
 - **Differentiable Soft Lookup:** Replace discontinuous database matching with a softmax-weighted average of stored values, trainable end to end by backpropagation.
 :::
-:::
 
-::: {.d2l-note}
-Introduced for neural machine translation (Bahdanau et al., 2014), attention became the sole token-mixing operator in the Transformer (Vaswani et al., 2017).
+::: {.col .fig .big}
+@fig:ch10-attn-rnn-vs-lookup
+:::
 :::
 :::
 
@@ -117,33 +111,33 @@ Introduced for neural machine translation (Bahdanau et al., 2014), attention bec
 ::: {.slide title="Three Challenges Created by All-Pairs Lookup"}
 [Architectural Trade-Offs]{.kicker}
 
-Replacing sequential recurrence with all-pairs content lookup eliminates the $O(n)$ path length but creates three new engineering and theoretical challenges:
+::: {.cols .vc}
+::: {.col}
+- **1. Order Blindness:** A weighted sum $\sum_i \alpha_i \mathbf{v}_i$ is permutation equivariant and ignores word order, requiring absolute tables, **RoPE**, or **ALiBi** (**§10.4**).
+- **2. Quadratic Cost:** Scoring all pairs of $n$ tokens costs $\Theta(n^2 d)$ FLOPs and $O(n^2)$ naive memory ($64\text{ GiB}$ at $n=128\text{K}$), motivating **FlashAttention** (**§10.5**), windows, and **linear attention** (**§10.6**).
+- **3. Mechanistic Opacity:** Attention weights show *where* a head looks, not *what* function it computes across the residual stream via **QK/OV circuits** (**§10.7**).
+:::
 
-| Challenge | Why It Happens in Attention | Solutions Developed in Chapter 10 |
-| :--- | :--- | :--- |
-| **1. Order Blindness** | A weighted sum $\sum_i \alpha_i \mathbf{v}_i$ is permutation equivariant and ignores word order | Absolute tables, rotary embeddings (**RoPE**), and distance penalties (**ALiBi**) in **§10.4** |
-| **2. Quadratic Cost** | Scoring all pairs of $n$ tokens costs $\Theta(n^2 d)$ FLOPs and $O(n^2)$ naive memory | Tiled **online softmax** (**FlashAttention**, **§10.5**), sliding windows, and **linear attention** (**§10.6**) |
-| **3. Mechanistic Opacity** | Attention weights show *where* a head looks, not *what* function it computes | Residual stream, **QK/OV circuit** decomposition, and two-layer **induction heads** (**§10.7**) |
-
-::: {.d2l-note}
-At $n = 1{,}024$, a single head evaluates $1{,}024^2 \approx 1.05 \times 10^6$ pairs; at $n = 131{,}072$, a naive `float32` score matrix for one head requires $64\text{ GiB}$.
+::: {.col .fig .big}
+@fig:ch10-attn-three-challenges
+:::
 :::
 :::
 
 ::: {.slide title="Architecture and Roadmap of Chapter 10"}
 [Chapter Roadmap]{.kicker}
 
-We first construct the multi-head self-attention layer (§10.1–10.3), then restore sequence order (§10.4), scale to long contexts (§10.5–10.6), and analyze trained circuits (§10.7):
+::: {.cols .vc}
+::: {.col}
+- **Part 1 — Build the Layer (§§10.1–10.3):** Soft key–value lookup, Nadaraya–Watson kernel pooling, $1/\sqrt{d}$ scaled dot-product scoring, boolean mask algebra, and multi-head & grouped-query attention.
+- **Part 2 — Sequence Order (§10.4):** Permutation equivariance, sinusoidal rotations, **RoPE**, **ALiBi**, and zero-shot context extension.
+- **Part 3 & Part 4 — Scale & Circuits (§§10.5–10.7):** Blockwise online softmax (**FlashAttention**), sliding windows, linear attention recurrences, and two-layer **induction heads**.
+:::
 
-| Part | Section | Central Mathematical & Systems Question |
-| :--- | :--- | :--- |
-| **1. Build the Layer** | **§10.1 Queries, Keys, and Values** | How does soft key–value lookup unify database retrieval and kernel regression? |
-| **1. Build the Layer** | **§10.2 Attention Scoring & Masking** | Why scale dot products by $1/\sqrt{d}$, and how do boolean masks compose? |
-| **1. Build the Layer** | **§10.3 Self-Attention & Multi-Head** | Why does a single head lose half of two values, and how does GQA shrink caches? |
-| **2. Sequence Order** | **§10.4 Positional Information** | How does RoPE enforce relative-offset scores and extrapolate beyond training length? |
-| **3. Scale & Speed** | **§10.5 The Cost of Attention** | How does blockwise online softmax compute exact attention in $O(n)$ memory? |
-| **3. Scale & Speed** | **§10.6 Windowed & Linear Attention** | What do sliding windows and factorized kernel recurrences trade for $O(n)$ time? |
-| **4. Interpretation** | **§10.7 Attention Circuits** | How do QK and OV circuits compose across two layers to form an induction head? |
+::: {.col .fig .big}
+@fig:ch10-attn-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Running Benchmarks and Study Guide"}

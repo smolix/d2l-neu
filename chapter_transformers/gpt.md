@@ -792,16 +792,16 @@ Decoder-Only Language Models (GPT)<br>**causal stack & tied embeddings · byte-l
 ::: {.slide title="One Window of Length T Trains T Prediction Problems"}
 [Motivation]{.kicker}
 
-An autoregressive language model factors the joint probability of a sequence $(x_1, \dots, x_{T+1})$ via the chain rule $P(x_{1:T+1}) = \prod_{t=1}^T P(x_{t+1} \mid x_{1:t})$:
+::: {.cols .vc}
+::: {.col}
+- An autoregressive language model factors sequence probability via the chain rule $P(x_{1:T+1}) = \prod_{t=1}^T P(x_{t+1} \mid x_{1:t})$.
+- **Parallel teacher forcing:** Rather than running $T$ separate forward passes for prefixes of length $1, \dots, T$, a **decoder-only GPT** scores all $T$ prefix predictions in **one parallel forward pass** under a causal mask.
+:::
 
-| Input Prefix seen at Position $t$ | Next-Token Target $y_t = x_{t+1}$ | Prefix Context Length |
-| :--- | :--- | :---: |
-| `the European lobste` | `r` | $19$ bytes |
-| `the European lobster` | `␣` (space) | $20$ bytes |
-| `the European lobster␣` | `(` | $21$ bytes |
-
-- **Parallel teacher forcing:** Rather than running $T$ separate forward passes for prefixes of length $1, 2, \dots, T$, a **decoder-only GPT** processes all $T$ tokens in **one parallel forward pass**.
-- **Two structural requirements:** Position $t$ must never leak information from future tokens $s > t$ (enforced by a lower-triangular causal mask), and the same block parameters must generalize across all positions $t \in \{1, \dots, T\}$.
+::: {.col .fig}
+@fig:ch11-tf-gpt-parallel-prefixes
+:::
+:::
 :::
 
 ::: {.slide title="GPT Architecture: Embeddings, Causal Stack, Tied Head"}
@@ -823,25 +823,30 @@ An autoregressive language model factors the joint probability of a sequence $(x
 ::: {.slide title="Fused Causal Self-Attention with RoPE and GQA"}
 [Causal Attention]{.kicker}
 
-Inside each block, `CausalAttention` fuses query, key, and value projections into one matrix $\mathbf{W}_{qkv} \in \mathbb{R}^{d \times (d + 2 H_{\text{kv}} d_h)}$:
+::: {.cols .vc}
+::: {.col}
+- **Fused QKV projection:** Multiplies $\mathbf{X}$ by one matrix $\mathbf{W}_{qkv} \in \mathbb{R}^{d \times (d + 2 H_{\text{kv}} d_h)}$ and splits into $H$ query heads and $H_{\text{kv}} \le H$ key–value heads.
+- **RoPE + Causal mask (`is_causal=True`):** Rotates queries and keys by position angles and masks $s > t$ to $-\infty$ so $\partial \mathbf{z}_t / \partial \mathbf{x}_s = \mathbf{0}$.
+:::
 
-- **Grouped-query support ($H_{\text{kv}} \le H$):** Splits $\mathbf{X}\mathbf{W}_{qkv}$ into $H$ query heads of width $d_h = d/H$ and $H_{\text{kv}}$ key–value heads, sharing each KV head across $H / H_{\text{kv}}$ query heads.
-- **Rotary Position Embeddings (`rope=True`):** Rotates queries $\mathbf{q}_t$ and keys $\mathbf{k}_s$ in 2D frequency planes by angles proportional to $t$ and $s$, so inner products $\mathbf{q}_t^\top \mathbf{k}_s$ depend only on relative distance $t - s$.
-- **Lower-triangular causal mask (`is_causal=True`):** Masks upper-triangular attention scores ($s > t$) to $-\infty$ before softmax, guaranteeing $\partial \mathbf{z}_t / \partial \mathbf{x}_s = \mathbf{0}$ for all $s > t$.
+::: {.col .fig}
+@fig:ch11-tf-gpt-fused-qkv-gqa
+:::
+:::
 :::
 
 ::: {.slide title="Positional Information: Learned Tables vs. RoPE"}
 [Positional Encodings]{.kicker}
 
-Without positional information, self-attention is permutation-equivariant. Our `GPT` constructor supports both historical and modern schemes:
+::: {.cols .vc}
+::: {.col}
+- **`pos='learned'` (GPT-2, 2019):** Adds a lookup row $\mathbf{p}_t \in \mathbb{R}^d$ from `pos_emb` ($T_{\max} \times d$) once at the bottom of the stack; hard ceiling at $T_{\max} = 1{,}024$.
+- **`pos='rope'` (Default / Llama / Qwen):** Rotates $(\mathbf{q}_t, \mathbf{k}_s)$ inside *every* attention layer using precomputed `d2l.rope_tables(T, head_width)`, giving relative scores that scale to $32\text{K}$–$1\text{M}$ tokens.
+:::
 
-| Scheme | How Position Enters the Network | Context Length & Generalization |
-| :--- | :--- | :--- |
-| **`pos='learned'`** (GPT-2, 2019) | Adds a lookup row $\mathbf{p}_t \in \mathbb{R}^d$ from `pos_emb` ($T_{\max} \times d$) to $\mathbf{e}_{x_t}$ once at the bottom of the stack | Hard ceiling at $T_{\max} = 1{,}024$ tokens; positions $t \ge T_{\max}$ have no trained vector |
-| **`pos='rope'`** (Default / Llama / Qwen) | Leaves the bottom residual stream untouched and rotates $(\mathbf{q}_t, \mathbf{k}_s)$ inside *every* attention layer | Translation-invariant relative scores; supports context extension (YaRN) to $32\text{K}$–$1\text{M}$ tokens |
-
-::: {.d2l-note}
-In our `GPT.forward` pass, `d2l.rope_tables(T, head_width)` precomputes the cosine and sine tables once per forward pass and passes them to all $L$ blocks.
+::: {.col .fig .big}
+@fig:ch11-tf-gpt-learned-vs-rope
+:::
 :::
 :::
 
@@ -892,12 +897,17 @@ Tying the output projection via `self.token_emb.attend` means rare tokens receiv
 ::: {.slide title="Depth-Scaled Weight Initialization (1/√(2L))"}
 [Initialization]{.kicker}
 
-Following GPT-2 and §11.1, `init_weights` initializes embeddings and linear projections from $\mathcal{N}(0, 0.02^2)$, while scaling the two residual write matrices (`W_o` and `W_2`) by $1/\sqrt{2L}$:
+::: {.cols .vc}
+::: {.col}
+- `init_weights` initializes embeddings and linear projections from $\mathcal{N}(0, 0.02^2)$, while scaling the two residual write matrices (`W_o` and `W_2`) by $1/\sqrt{2L}$:
+- With $2L$ sublayers adding updates to the pre-norm stream, scaling `W_o` and `W_2` by $1/\sqrt{2L}$ keeps initial stream variance near the embedding variance right from block 1.
 
 @gpt-from-blocks-to-a-language-model-5
+:::
 
-::: {.d2l-note .rule}
-With $2L$ sublayers adding updates to the pre-norm stream, scaling `W_o` and `W_2` by $1/\sqrt{2L}$ ($\sigma = 0.0058$ at $L = 6$; $\sigma = 0.0041$ at $L = 12$) keeps initial stream variance near the embedding variance right from block 1.
+::: {.col .fig}
+@fig:ch11-tf-gpt-depth-init
+:::
 :::
 :::
 
@@ -928,14 +938,17 @@ We train a 6-block byte-level `GPT` ($V = 256, d = 256, H = 8, L = 6, T = 128$, 
 ::: {.slide title="The Modern Pretraining Optimizer (LMOptimizer)"}
 [Optimization Recipe]{.kicker}
 
-`LMOptimizer` combines four essential ingredients used across frontier LLM pretraining runs:
+::: {.cols .vc}
+::: {.col}
+- `LMOptimizer` combines AdamW ($\eta_{\max} = 2 \times 10^{-3}$), linear warmup + cosine decay, and global gradient clipping ($\le 1.0$):
+  $$\eta_t = \eta_{\max} \cdot \frac{1}{2}\Bigl(1 + \cos\bigl(\pi \tfrac{t - t_w}{S - t_w}\bigr)\Bigr)$$
+- **Selective weight decay ($\lambda = 0.1$ on 2D matrices only):** Exempts embeddings (`*emb*`), 1D `RMSNorm` gains, and biases.
+:::
 
-$$\eta_t = \eta_{\max} \cdot \begin{cases} t / t_w, & t < t_w \\ \frac{1}{2}\bigl(1 + \cos(\pi \frac{t - t_w}{S - t_w})\bigr), & t \ge t_w \end{cases}$$
-
-- **AdamW ($\eta_{\max} = 2 \times 10^{-3}$):** Decouples weight decay from adaptive gradient moments.
-- **Selective weight decay ($\lambda = 0.1$ on 2D matrices only):** Exempts token/position embeddings (`*emb*`), 1D `RMSNorm` gains, and biases so inactive vocabulary rows and scale factors are not decayed toward zero.
-- **Linear warmup ($t_w = 100$) + cosine decay ($S = 1{,}000$):** Prevents early Adam variance-estimate spikes from destabilizing attention logits.
-- **Global gradient-norm clipping ($\|\nabla \mathcal{L}\|_2 \le 1.0$):** Guards against rare high-loss minibatch spikes.
+::: {.col .fig}
+@fig:ch11-tf-gpt-lm-optimizer
+:::
+:::
 :::
 
 ::: {.slide title="Training Curve and Empirical Entropy Yardsticks"}
@@ -985,34 +998,39 @@ We train a matched `d2l.RNNLM` ($d_{\text{rnn}} = 1{,}920$, $4.74\text{M}$ param
 ::: {.slide title="Autoregressive Decoding: Temperature and Top-k"}
 [Sampling Mechanics]{.kicker}
 
-At each generation step, `GPT.generate` takes the last position's logit vector $\mathbf{z}_t \in \mathbb{R}^V$, scales by **temperature $\tau > 0$**, and optionally truncates to the **top-$k$** candidates before sampling:
-
-$$p_v = \frac{\exp(z_{t,v} / \tau)}{\sum_{u \in \mathcal{V}_k} \exp(z_{t,u} / \tau)}$$
+::: {.cols .vc}
+::: {.col}
+- At each decode step, `GPT.generate` scales logits $\mathbf{z}_t \in \mathbb{R}^V$ by **temperature $\tau > 0$** and truncates to the **top-$k$** (or nucleus **top-$p$**) candidates:
+  $$p_v = \frac{\exp(z_{t,v} / \tau)}{\sum_{u \in \mathcal{V}_k} \exp(z_{t,u} / \tau)}$$
+- $\tau = 0.7, k = 8$ concentrates probability mass on clean English words, whereas $\tau = 2.0$ flattens toward gibberish.
 
 @!gpt-sampling-from-the-model-2
+:::
 
-- **$\tau = 1.0$, unfiltered:** Samples from the raw model distribution, occasionally picking low-probability tail bytes that create non-words.
-- **$\tau = 0.7, k = 8$:** Concentrates probability mass on the 8 most likely next bytes, producing clean English words and phrases.
-- **$\tau = 2.0$:** Flattens the distribution toward uniform, degenerating into gibberish.
+::: {.col .fig}
+@fig:ch11-tf-gpt-sampling-pipeline
+:::
+:::
 :::
 
 ::: {.slide title="Loading Pretrained OpenAI GPT-2 Small (124M)"}
 [Checkpoint Loading]{.kicker}
 
-Passing GPT-2's 2019 hyperparameters (`norm='layer'`, `act='gelu'`, `pos='learned'`, `bias=True`) into our `GPT` constructor instantiates the exact **GPT-2 Small** architecture:
-
+::: {.cols .vc}
+::: {.col}
+- Passing GPT-2's 2019 settings (`norm='layer'`, `act='gelu'`, `pos='learned'`, `bias=True`) into `d2l.GPT` instantiates the exact **GPT-2 Small** architecture:
 ```{.python #gpt-exercises-3}
-gpt2 = GPT(vocab_size=50257, num_hiddens=768, num_heads=12, num_blks=12,
-           max_len=1024, pos='learned', norm='layer', act='gelu',
+gpt2 = GPT(vocab_size=50257, num_hiddens=768,
+           num_heads=12, num_blks=12, max_len=1024,
+           pos='learned', norm='layer', act='gelu',
            pre_norm=True, bias=True)
 ```
+:::
 
-| Hugging Face `safetensors` Key | Our `GPT` Module Attribute | Shape & Role |
-| :--- | :--- | :--- |
-| `wte.weight` / `wpe.weight` | `token_emb.weight` / `pos_emb.weight` | $(50257, 768)$ tied tokens; $(1024, 768)$ positions |
-| `h.i.ln_1` / `h.i.ln_2` / `ln_f` | `blks[i].norm1` / `blks[i].norm2` / `norm` | Pre-attention, pre-FFN, and final `LayerNorm`s |
-| `h.i.attn.c_attn` / `c_proj` | `blks[i].attention.W_qkv` / `W_o` | Fused QKV $(768, 2304)$ and output $(768, 768)$ |
-| `h.i.mlp.c_fc` / `c_proj` | `blks[i].ffn.W_1` / `W_2` | Up-projection $(768, 3072)$ and down $(3072, 768)$ |
+::: {.col .fig}
+@fig:ch11-tf-gpt-checkpoint-map
+:::
+:::
 :::
 
 ::: {.slide title="Pitfall: Transposing Conv1D Weights in PyTorch" only="pytorch"}
@@ -1072,16 +1090,18 @@ Evaluating the loaded `124.4M`-parameter `gpt2` model on *The Time Machine* yiel
 ::: {.slide title="The Architectural Recipe of Modern Open-Weights LLMs"}
 [Frontier Comparison]{.kicker}
 
-Every major open-weights decoder-only family (2023–2025) shares our default `GPT` backbone (`RMSNorm`, `RoPE`, `SwiGLU`), varying mainly in KV-cache compression (§11.3) and sparse MoE FFNs (§11.7):
+::: {.cols .vc}
+::: {.col}
+- Every major open-weights decoder-only family (2023–2025) shares our default `GPT` backbone (`RMSNorm`, `RoPE`, `SwiGLU`).
+- **Two frontier axes of differentiation:**
+  1. **KV-cache compression (§11.3):** GQA ($32{:}8$ or $64{:}8$), $5{:}1$ local/global windows (Gemma 3), or low-rank MLA (DeepSeek-V3).
+  2. **FFN sparsity (§11.7):** Dense `SwiGLU` vs. fine-grained MoE ($128$–$256$ experts).
+:::
 
-| Model Family | Attention & KV Cache | Normalization | Positions | FFN & Sparsity |
-| :--- | :--- | :--- | :--- | :--- |
-| **Mistral 7B** (2023) | GQA $32{:}8$; window $4096$ | Pre-norm `RMSNorm` | RoPE ($10^4$) | `SwiGLU`, Dense |
-| **Llama 3** 8B–405B (2024) | GQA ($8$ KV heads across scales) | Pre-norm `RMSNorm` | RoPE ($5 \times 10^5$) | `SwiGLU`, Dense |
-| **Qwen3** (2025) | GQA $64{:}8$ (32B), $64{:}4$ (MoE) | Pre-`RMSNorm` + `QK-Norm` | RoPE ($10^6$), YaRN | `SwiGLU`, Dense & MoE ($128$E, top-$8$) |
-| **DeepSeek-V3** (2024) | **MLA** ($512$-dim latent KV) | Pre-norm `RMSNorm` | Decoupled RoPE | `SwiGLU`, MoE ($256{+}1$E, top-$8$) |
-| **Gemma 3** (2025) | GQA; $5{:}1$ local/global window | Pre+post `RMSNorm`, `QK-Norm` | RoPE ($10^6$ / $10^4$) | `GeGLU`, Dense |
-| **gpt-oss** (2025) | GQA $64{:}8$; window $128$ + sinks | Pre-norm `RMSNorm` | RoPE, YaRN | Clamped `SwiGLU`, MoE ($128$E, top-$4$) |
+::: {.col .fig .big}
+@fig:ch11-tf-gpt-frontier-evolution
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Parameters, Perplexity, and Symmetry"}
@@ -1105,12 +1125,15 @@ Test your understanding with three concrete calculations:
 ::: {.slide title="Summary: Building and Training a Decoder-Only GPT"}
 [Key Takeaways]{.kicker}
 
-| Component | Design Choice in `d2l.GPT` | Quantitative Impact / Purpose |
-| :--- | :--- | :--- |
-| **Input & Tied Head** | Shared $\mathbf{E} \in \mathbb{R}^{V \times d}$, final `Norm` + $\mathbf{E}^\top$ | Saves $V d$ parameters ($38.6\text{M}$ in GPT-2); aligns input/output spaces |
-| **Causal Attention** | Fused $\mathbf{W}_{qkv}$, RoPE, lower-triangular mask | Trains all $T$ prefix predictions in one pass without future leakage |
-| **`1/√(2L)` Init** | $\sigma = 0.02 / \sqrt{2L}$ on `W_o` and `W_2` | Keeps initial pre-norm stream variance bounded at any depth $L$ |
-| **`LMOptimizer`** | AdamW, 2D-only weight decay, warmup + cosine, clip | Reaches $1.34\text{ nats/byte}$ in $1{,}000$ steps ($1.1\text{ nats}$ below bigram entropy) |
-| **Controlled Baselines** | `SwiGLU` vs. `GELU`; `GPT` vs. matched `RNNLM` | `SwiGLU` wins by $0.06\text{ nats}$ (vs. $0.01$ seed spread); `GPT` pulls ahead for $t \ge 16$ |
-| **Pretrained Compatibility** | `load_gpt2()` + `tiktoken` BPE | Loads official `124M` checkpoint directly; validates at perplexity $\approx 49$ |
+::: {.cols .vc}
+::: {.col}
+- **Causal Stack & Tied Head:** Fused $\mathbf{W}_{qkv}$, RoPE, lower-triangular mask, and shared $\mathbf{E} \in \mathbb{R}^{V \times d}$ train all $T$ prefix predictions in one pass.
+- **`1/√(2L)` Init & `LMOptimizer`:** AdamW with 2D-only weight decay and warmup + cosine decay reaches $1.34\text{ nats/byte}$ in $1{,}000$ steps.
+- **Controlled Baselines & GPT-2 Loading:** `SwiGLU` beats `GELU` by $0.06\text{ nats}$; loads official `124M` GPT-2 directly.
+:::
+
+::: {.col .fig .big}
+@fig:ch11-tf-gpt-summary
+:::
+:::
 :::

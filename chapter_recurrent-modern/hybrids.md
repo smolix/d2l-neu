@@ -318,74 +318,83 @@ Hybrid Architectures: Combining Recurrence with Global Attention<br>**informatio
 ::: {.slide title="Why Every Fixed-Size State Hits an In-Context Ceiling"}
 [Motivation]{.kicker}
 
-Suppose a user pastes a table of $64$ product codes and prices into a prompt and asks for $20$ of them at the end:
+::: {.cols .vc}
+::: {.col}
+- **Pre-Query Compression Limit:** A fixed recurrent state $\mathbf{S}_t$ must compress all $64$ prompt pairs *before* knowing which $20$ keys will be queried.
+- **Post-Query Attention Lookup:** Full attention retains the raw KV table for exact random access at $O(T)$ memory cost.
+- **The Hybrid Principle:** Interleave 1 sparse attention layer per 3–7 recurrent layers.
+:::
 
-- **The structural limit of fixed-size states:** A recurrent layer must compress all $64$ pairs into its fixed state *as it reads the table*, before knowing which items will be queried. Once the number of pairs exceeds the state's capacity, early or overlapping entries are lost.
-- **How full attention escapes the limit:** A Transformer keeps every token's key and value in its KV cache and looks back directly at query time—at the cost of memory and compute that grow linearly with context length $T$.
-
-::: {.d2l-note .rule}
-**The hybrid principle:** Interleave a small fraction of full attention layers ($1$ in $4$ to $1$ in $8$) among fast recurrent matrix-state layers to gain exact content-addressable lookup at a fraction of the KV-cache cost.
+::: {.col .fig .big}
+@fig:ch12-mrnn-table-lookup-ceiling
+:::
 :::
 :::
 
 ::: {.slide title="Limit 1: The Information-Theoretic Bit-Counting Bound"}
 [Pigeonhole Capacity Limit]{.kicker}
 
-By the pigeonhole principle, a recurrent state of $M$ floating-point numbers stored at $b$ bits each has at most $2^{Mb}$ distinct states. To distinguish and reproduce all $V^k$ possible sequences of $k$ tokens from a vocabulary of size $V$, the state must satisfy (Jelassi et al., 2024):
+::: {.cols .vc}
+::: {.col}
+$$M b \ge k \log_2 V \implies k_{\max} \le \frac{M b}{\log_2 V}$$
 
-$$M b \ge k \log_2 V \quad\Longrightarrow\quad k_{\max} \le \frac{M b}{\log_2 V}$$
+- **Abundant Raw Bits:** Our 2-layer `GG` model ($8$ heads of $4 \times 4$) holds **$8{,}192$ `float32` bits**, whereas $64$ four-valued answers carry just **$128$ bits** ($>30\times$ smaller).
+- **Linear-Algebraic Bottleneck:** Matrix memories saturate rank $d_k$ long before exhausting raw float bits.
+:::
 
-| Quantity in Our 2-Layer Recall Model | Calculation | Total Bits |
-| :--- | :--- | :---: |
-| **Raw `float32` state bits (`GG`, $8$ heads of $4 \times 4$)** | $2\text{ layers} \times 8\text{ heads} \times 16\text{ floats} \times 32\text{ bits}$ | **$8{,}192\text{ bits}$** |
-| **Lookup table for all $128$ possible keys ($4$ values)** | $128\text{ keys} \times \log_2 4\text{ bits/value}$ | **$256\text{ bits}$** |
-| **Values of the $64$ presented pairs alone** | $64\text{ pairs} \times \log_2 4\text{ bits/value}$ | **$128\text{ bits}$** |
-
-::: {.d2l-note .warn}
-Our small model has **$>30\times$ the raw bits** required to store $64$ pairs, yet still loses half of them! Matrix memories hit a *linear-algebraic* limit long before saturating their raw bit count.
+::: {.col .fig}
+@fig:ch12-mrnn-pigeonhole-vs-algebra
+:::
 :::
 :::
 
 ::: {.slide title="Limit 2: Linear Independence and Welch's Overlap Bound"}
 [Geometric Capacity Limit]{.kicker}
 
-Whether a head matrix $\mathbf{S} \in \mathbb{R}^{d_v \times d_k}$ is written additively (§12.6) or via the delta rule toward least squares (§12.7), exact linear readout $\mathbf{S}\mathbf{k}_j = \mathbf{v}_j$ for arbitrary values requires the keys $\mathbf{k}_1, \ldots, \mathbf{k}_m \in \mathbb{R}^{d_k}$ to be linearly independent—which is impossible once $m > d_k$!
+::: {.cols .vc}
+::: {.col}
+$$\operatorname{mean}_{i \neq j}\,(\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge \frac{m - d_k}{d_k\,(m - 1)} \quad (m > d_k)$$
 
-**Proposition (Welch's Bound, Welch, 1974).** For any $m > d_k$ unit vectors $\mathbf{k}_1, \ldots, \mathbf{k}_m \in \mathbb{R}^{d_k}$, the mean squared pairwise overlap over all $m(m-1)$ distinct pairs $i \neq j$ satisfies:
+- **Rank-$d_k$ Gram Deficit:** $\mathbf{G} = \sum_{i=1}^m \mathbf{k}_i \mathbf{k}_i^\top \in \mathbb{R}^{d_k \times d_k}$ has trace $m$ and rank $\le d_k$, so Cauchy–Schwarz forces $\|\mathbf{G}\|_F^2 \ge m^2 / d_k$.
+- **Universal Linear Floor:** Applies to *every* linear matrix readout $\mathbf{y} = \mathbf{S}\mathbf{q}$ (`GLA`, `DeltaNet`, `Longhorn`).
+:::
 
-$$\operatorname{mean}_{i \neq j}\,(\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge \frac{m - d_k}{d_k\,(m - 1)}$$
-
-- **Proof in two lines:** The Gram matrix $\mathbf{G} = \sum_{i=1}^m \mathbf{k}_i \mathbf{k}_i^\top \in \mathbb{R}^{d_k \times d_k}$ has trace $m$ and at most $d_k$ nonzero eigenvalues, so by Cauchy–Schwarz $\|\mathbf{G}\|_F^2 = \sum_{i,j} (\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge m^2 / d_k$. Subtracting the $m$ unit diagonal entries $(\mathbf{k}_i^\top \mathbf{k}_i)^2 = 1$ yields $\sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge m(m - d_k)/d_k$. $\blacksquare$
+::: {.col .fig}
+@fig:ch12-mrnn-welch-bound-geometry
+:::
+:::
 :::
 
 ::: {.slide title="What Welch's Bound Predicts for Trained Key Embeddings"}
 [Theory to Experiment]{.kicker}
 
-How much better than random unit vectors ($\mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)^2] = 1/d_k$) can gradient descent possibly pack $m = 64$ keys into a head of dimension $d_k$?
+::: {.cols .vc}
+::: {.col}
+- **At $d_k = 4, m = 64$:** Welch's lower bound ($0.2381$) is **$95.2\%$** of random overlap ($1/4 = 0.2500$), leaving gradient descent almost zero room to reduce cross-talk.
+- **At $d_k = 16, m = 64$:** Welch's bound drops $5\times$ to **$0.0476$**, predicting a $4\times$ capacity jump when head width quadruples at fixed model width $d = 32$.
+:::
 
-| Head Key Dimension $d_k$ (for $m = 64$ keys) | Welch Minimum Overlap $\frac{m - d_k}{d_k(m - 1)}$ | Random Unit-Key Overlap $\frac{1}{d_k}$ | Ratio (Welch / Random) |
-| :---: | :---: | :---: | :---: |
-| **$d_k = 4$** ($8$ heads at width $32$) | **$0.2381$** | $0.2500$ | **$95.2\%$** (almost no room to improve!) |
-| **$d_k = 16$** ($2$ heads at width $32$) | **$0.0476$** | $0.0625$ | **$76.2\%$** ($5\times$ lower overlap floor) |
-
-- **Prediction 1:** Widening heads from $d_k = 4$ ($128$ state entries/layer) to $d_k = 16$ ($512$ state entries/layer) at fixed model width $d = 32$ will shift the recall degradation curve to roughly $4\times$ higher pair loads.
-- **Prediction 2:** Replacing just one recurrent block with full causal attention (`GA`) will achieve $100\%$ recall across all pair loads.
+::: {.col .fig .big}
+@fig:ch12-mrnn-welch-dk4-vs-dk16
+:::
+:::
 :::
 
 ::: {.slide title="Four 2-Block Architectures on Associative Recall"}
 [Controlled Experimental Design]{.kicker}
 
-We test four 2-block `SeqLM` architectures at width $d = 32$ ($35\text{K}$–$38\text{K}$ parameters) on multi-query associative recall (`num_keys=128`, `num_values=4`, pair loads $n \in \{4, 8, 16, 32, 64\}$):
+::: {.cols .vc}
+::: {.col}
+- **Four Matched 2-Block Stacks ($d = 32$):**
+  1. `GG` ($8$ heads of $4 \times 4 = 128$ floats/layer).
+  2. `GG, 4x state` ($2$ heads of $16 \times 16 = 512$ floats/layer, same params).
+  3. `AA` ($2$ full causal attention layers).
+  4. `GA` hybrid (`GatedDeltaNet` $\to$ `Attention`, $50\%$ KV cache).
+:::
 
-| Configuration Name | Block 1 & Block 2 Mixers | Head Count & Size | State per Layer at Generation |
-| :--- | :---: | :---: | :--- |
-| **`Gated DeltaNet`** | `G G` | $8$ heads of $4 \times 4$ | $128$ floats |
-| **`Gated DeltaNet, 4x state`** | `G G` | $2$ heads of $16 \times 16$ | $512$ floats ($4\times$ state, same params) |
-| **`attention`** | `A A` | $2$ heads of $16$ (`rope=False`) | $2dT$ KV cache (all tokens) |
-| **`hybrid`** | `G A` | Block 1: `G` ($8 \times 4^2$), Block 2: `A` | $128$ floats in Block 1 + KV cache in Block 2 |
-
-::: {.d2l-note}
-All four models include the same width-$4$ depthwise causal convolution on $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ so local token preprocessing is held constant.
+::: {.col .fig .big}
+@fig:ch12-mrnn-four-recall-layouts
+:::
 :::
 :::
 
@@ -400,10 +409,16 @@ Mean recall across two training runs ($2{,}000$ AdamW updates cycling across pai
 ::: {.slide title="1 Attention Layer Lifts the Ceiling; 4x State Shifts It"}
 [Interpreting the Recall Sweep]{.kicker}
 
-Both theoretical predictions are borne out quantitatively:
+::: {.cols .vc}
+::: {.col}
+- **4× State Scaling (`GG` vs. `GG, 4x state`):** Quadrupling head entries from $128$ to $512$ floats/layer lifts 64-pair recall from **$0.49$ to $0.95+$** at equal parameter count.
+- **Why Short Conv Matters:** Adjacent tokens $(k_i, v_i)$ require width-4 causal convolution so step $t$'s outer product $\mathbf{v}_t \mathbf{k}_t^\top$ binds both tokens together.
+:::
 
-- **Fixed-state capacity scaling (`GG` vs. `GG, 4x state`):** With $128$ state entries/layer, `Gated DeltaNet` drops from $1.00$ at $4$ pairs to $\sim 0.65$ at $32$ pairs and $\sim 0.48$ at $64$ pairs. Quadrupling state entries to $512$/layer (`num_heads=2`) sustains **$0.93$–$0.97$ recall at $64$ pairs**—matching the $128$-entry model's accuracy at $8$ pairs (at least a $4\times$ capacity gain at equal parameter count!).
-- **Single attention layer (`GA` hybrid):** Replacing only the second mixer with causal attention eliminates the capacity drop completely, achieving **$1.00$ recall at every load from $4$ to $64$ pairs on every run**.
+::: {.col .fig .big}
+@fig:ch12-mrnn-conv4-key-value-binding
+:::
+:::
 :::
 
 ::: {.slide title="Why the Width-4 Causal Convolution Is Essential"}
@@ -428,16 +443,15 @@ Comparing 4-block width-256 `Gated DeltaNet` (`GGGG`), a 3-to-1 `hybrid` (`GGGA`
 ::: {.slide title="Pitfall: Short-Window Loss Masks Retrieval Deficits"}
 [Benchmarking Insight]{.kicker}
 
-Compare the associative recall and 128-byte WikiText-103 benchmarks side by side:
+::: {.cols .vc}
+::: {.col}
+- **Short-Window Perplexity (`T = 128`):** `GGGG` ($1.326$ nats/byte) beats pure `AAAA` ($1.383$) because local n-gram induction and decay dominate short windows.
+- **Long-Range Recall (`m = 64` pairs):** `GGGG` ($d_k = 4$) saturates at $49\%$, whereas the 3:1 hybrid `GGGA` achieves **$100\%$ recall** and **$1.335$ nats/byte** at $25\%$ of the KV cache.
+:::
 
-| 4-Block / 2-Block Architecture | 64-Pair Associative Recall | WikiText-103 Validation Loss (nats/byte) | Loss Drop from Bytes `16-63` to `64-127` |
-| :--- | :---: | :---: | :---: |
-| **Pure `Gated DeltaNet` (`GG` / `GGGG`)** | $0.48$–$0.50$ (saturates) | **$1.326$–$1.327$** (lowest!) | $0.004$ |
-| **Hybrid (`GA` / `GGGA`)** | **$1.00$** (exact recall) | **$1.335$** (within $0.009$) | $0.004$ |
-| **Pure `attention` (`AA` / `AAAA`)** | **$1.00$** (exact recall) | $1.375$–$1.385$ (trails by $0.05$) | $0.003$ |
-
-::: {.d2l-note .warn}
-**Evaluation lesson:** Average perplexity on short 128-byte windows is dominated by local subword syntax (where recurrent inductive bias excels) and barely tests long-range retrieval. Always pair average validation loss with targeted retrieval stress tests!
+::: {.col .fig .big}
+@fig:ch12-mrnn-perplexity-vs-retrieval
+:::
 :::
 :::
 
@@ -482,17 +496,14 @@ During autoregressive decoding at scale ($16$-bit `float16` / `bfloat16`), per-s
 ::: {.slide title="When to Choose Which Sequence Architecture"}
 [Design Guidelines]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Continuous streaming & edge inference (audio, robotics, sensor streams):**
-  - Sequence length $T$ is unbounded and exact verbatim lookup of arbitrary tokens thousands of steps back is unnecessary.
-  - **Choice:** Selective SSM (`Mamba`) or gated RNN (`GRU`/`LSTM`) for strictly constant $O(1)$ memory and latency per step.
+- **Unbounded Streaming & Edge (`Mamba` / `S4D` / `GRU`):** Best for audio, robotics, and sensor streams requiring strictly constant $O(1)$ memory and latency per step.
+- **Long-Context Foundation Models (3:1 or 7:1 Hybrid):** Interleaving chunked `GatedDeltaNet` / `Mamba-2` with sparse GQA layers delivers fast prefill, $4\times$–$8\times$ smaller KV caches, and $100\%$ exact retrieval.
 :::
 
-::: {.col}
-- **Long-context foundation models (RAG, few-shot prompting, code editing):**
-  - Must combine fast local/syntactic processing over $128\text{K}$–$1\text{M}$ tokens with exact needle-in-a-haystack key–value retrieval.
-  - **Choice:** **3:1 or 7:1 Hybrid** interleaving chunked delta-rule matrix layers (`GatedDeltaNet` / `Mamba-2`) with sparse full attention layers, preceded by width-4 causal convolutions.
+::: {.col .fig .big}
+@fig:ch12-mrnn-architecture-decision-tree
 :::
 :::
 :::

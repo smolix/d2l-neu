@@ -641,19 +641,14 @@ Adaptive Learning-Rate Methods: AdaGrad, RMSProp, Adam, and AdamW<br>**per-coord
 ::: {.slide title="Why Transformers Need Per-Coordinate Learning Rates"}
 [Motivation]{.kicker}
 
-On `TinyLM`, plain SGD required $\eta = 0.5$ to reach $2.13$ nats/byte, whereas AdamW at $\eta = 3 \times 10^{-3}$—a nominal learning rate **$160\times$ smaller**—reached **$1.59$ nats/byte** in the same $2{,}000$ steps:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Why scalar step sizes fail on Transformers:**
-  - Momentum averages gradients over time, but still multiplies every parameter in the network by a single scalar $\eta$.
-  - In a Transformer, raw gradient magnitudes differ by **$15\text{--}40\times$** across token embeddings, attention projections, MLP layers, and LayerNorm parameters.
+- **40× cross-layer gradient disparity:** In a Transformer, raw gradient magnitudes differ by $15\text{--}40\times$ across token embeddings, attention projections, MLP layers, and LayerNorm parameters—starving embeddings under any scalar SGD step size.
+- **Adaptive RMS preconditioning:** Dividing each coordinate's update by its historical RMS gradient scale turns $\eta$ into a **direct coordinate step length in parameter space** ($\eta^\star \approx 3 \times 10^{-3}$ vs. $0.5$ for SGD) and requires **decoupling weight decay** (AdamW).
 :::
 
-::: {.col}
-- **The adaptive preconditioning idea:**
-  - Estimate each coordinate's historical root-mean-square (RMS) gradient scale online and divide its update by that scale.
-  - This turns $\eta$ from a multiplier on raw gradients into a **direct coordinate step length in parameter space**—and requires **decoupling weight decay** (AdamW) from the preconditioner!
+::: {.col .fig .big}
+@fig:ch09-opt-adam-layer-scales
 :::
 :::
 :::
@@ -697,27 +692,34 @@ $$\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} 
 ::: {.slide title="Two Consequences of Uncorrected RMS Normalization"}
 [Early Jumps & Late Oscillation]{.kicker}
 
-Examining the RMSProp update $\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{v}_t + \epsilon}} \odot \mathbf{g}_t$ reveals two structural behaviors:
+::: {.cols .vc}
+::: {.col}
+- **1. Cold-start step amplification:** From $\mathbf{v}_0 = \mathbf{0}$, step 1 evaluates $\mathbf{v}_1 = (1-\beta_2)\mathbf{g}_1^2$, producing an oversized jump $|\Delta x_{1,i}| = \frac{\eta}{\sqrt{1-\beta_2}}$ ($3.16\,\eta$ at $\beta_2=0.9$; **$31.6\,\eta$** at $\beta_2=0.999$).
+- **2. Non-vanishing late-stage steps:** Near a minimum where $|g_t|$ is locally steady, $\sqrt{v_t} \approx |g_t|$ and the update becomes $-\eta\,\operatorname{sign}(g_t)$ of fixed length $\eta$, hopping within $\pm\eta/2$ until $\eta_t \to 0$ (§9.7).
+:::
 
-1. **Cold-start step amplification (lack of bias correction):**
-   - Because $\mathbf{v}_0 = \mathbf{0}$, the first step evaluates $\mathbf{v}_1 = (1 - \beta_2)\mathbf{g}_1^2$, producing an oversized initial jump:
-     $$|\Delta x_{1,i}| = \frac{\eta\,|g_{1,i}|}{\sqrt{(1 - \beta_2)\,g_{1,i}^2}} = \frac{\eta}{\sqrt{1 - \beta_2}}$$
-   - At $\beta_2 = 0.9$, step 1 is **$3.16\,\eta$**; at Adam's default $\beta_2 = 0.999$, an uncorrected step 1 would be **$31.6\,\eta$**!
-2. **Non-vanishing steady-state steps near a minimum:**
-   - Whenever $|g_t|$ has locally steady magnitude, $\sqrt{v_t} \approx |g_t|$ and the update becomes $-\eta\,\operatorname{sign}(g_t)$ of fixed length $\eta$—hopping within an $O(\eta)$ band ($\pm\eta/2$) regardless of curvature until $\eta$ is decayed (§9.7).
+::: {.col .fig .big}
+@fig:ch09-opt-adam-cold-start-jump
+:::
+:::
 :::
 
 ::: {.slide title="Adam: First and Second Moments with Bias Correction"}
 [Adaptive Moment Estimation]{.kicker}
 
-**Adam** (Kingma & Ba, 2014) combines an EMA of the gradient ($\mathbf{m}_t$, momentum window $\frac{1}{1-\beta_1}$) with an EMA of the squared gradient ($\mathbf{v}_t$, scale window $\frac{1}{1-\beta_2}$), initialized at $\mathbf{m}_0 = \mathbf{v}_0 = \mathbf{0}$:
+::: {.cols .vc}
+::: {.col}
+- **Dual moving averages ($\mathbf{m}_0 = \mathbf{v}_0 = \mathbf{0}$):**
+  $$\mathbf{m}_t = \beta_1\mathbf{m}_{t-1} + (1-\beta_1)\mathbf{g}_t, \quad \mathbf{v}_t = \beta_2\mathbf{v}_{t-1} + (1-\beta_2)\mathbf{g}_t^2$$
+- **Bias-corrected update:**
+  $$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1-\beta_1^t}, \quad \hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1-\beta_2^t}, \quad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t}+\epsilon}$$
+- Dividing by $1 - \beta^t$ normalizes the geometric weights at every step $t \ge 1$ (defaults: $\beta_1 = 0.9, \beta_2 \in \{0.95, 0.999\}, \epsilon = 10^{-8}$).
+:::
 
-$$\mathbf{m}_t = \beta_1\,\mathbf{m}_{t-1} + (1 - \beta_1)\,\mathbf{g}_t, \qquad \mathbf{v}_t = \beta_2\,\mathbf{v}_{t-1} + (1 - \beta_2)\,\mathbf{g}_t^2$$
-
-$$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1 - \beta_1^t}, \qquad \hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1 - \beta_2^t}, \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
-
-- **Why divide by $1 - \beta^t$?** Unrolling $\mathbf{v}_t = (1-\beta_2)\sum_{s=1}^t \beta_2^{t-s}\mathbf{g}_s^2$ shows that the geometric weights sum to $(1-\beta_2)\frac{1-\beta_2^t}{1-\beta_2} = 1 - \beta_2^t$ ($0.001$ at $t=1$ for $\beta_2 = 0.999$). Dividing by $1 - \beta^t$ makes $\hat{\mathbf{m}}_t$ and $\hat{\mathbf{v}}_t$ exact normalized weighted averages at every step $t \ge 1$.
-- **Standard defaults:** $\beta_1 = 0.9$ ($10$-step momentum), $\beta_2 = 0.999$ ($1{,}000$-step scale, or $0.95$ in LLMs), $\epsilon = 10^{-8}$.
+::: {.col .fig}
+@fig:ch09-opt-adam-dual-moments
+:::
+:::
 :::
 
 ::: {.slide title="Scale Invariance: η Is a Direct Coordinate Step Length"}
@@ -803,23 +805,33 @@ Notice that `(1 - beta1)` and `(1 - beta2)` are already included inside the movi
 ::: {.slide title="Sign Descent, Role of ε, and Small-β₂ Pathologies"}
 [Mechanics & Edge Cases]{.kicker}
 
-- **Adam as smoothed sign descent:** Setting $\beta_1 = \beta_2 = 0, \epsilon = 0$ reduces Adam to **sign descent** $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\operatorname{sign}(\mathbf{g}_t)$. Recent studies (Kunstner et al., 2023; Zhang et al., 2024) show that sign descent with momentum matches Adam's lead over SGD on Transformers by equalizing updates across heterogeneous blocks and rare tokens.
-- **Role of $\epsilon$ as a maximum-LR cap:** Because $\frac{\eta}{\sqrt{\hat{v}_{t,i}} + \epsilon} \le \frac{\eta}{\epsilon}$, $\epsilon$ caps the effective coordinate learning rate; for $\epsilon \gg \sqrt{\hat{v}_{t,i}}$, Adam reduces to SGD with momentum at step size $(1-\beta_1)\frac{\eta}{\epsilon}$.
-- **Why $\beta_2$ must not be too small (Reddi et al., 2019):** On a periodic gradient sequence $+4, -1, -1$ (mean $+2/3 > 0$), a short-memory $\beta_2 = 1/17$ shrinks $\sqrt{v_t}$ during the $-1$ steps and inflates it on the $+4$ step, turning a weighted vote into a head count that steps in the wrong direction ($+0.69\eta$/period). Keeping **$\beta_2 \in [0.95, 0.999]$** prevents this without needing running maxima (`AMSGrad`).
+::: {.cols .vc}
+::: {.col}
+- **Adam as smoothed sign descent:** Setting $\beta_1 = \beta_2 = 0, \epsilon = 0$ gives $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\operatorname{sign}(\mathbf{g}_t)$; adding momentum matches Adam's lead over SGD on Transformers (Kunstner et al., 2023).
+- **$\epsilon$ as a maximum-LR cap:** $\frac{\eta}{\sqrt{\hat{v}_{t,i}} + \epsilon} \le \frac{\eta}{\epsilon}$; for $\epsilon \gg \sqrt{\hat{v}_{t,i}}$, Adam reduces to SGD with momentum at rate $(1-\beta_1)\eta/\epsilon$.
+- **Why $\beta_2$ must not be too small (Reddi et al., 2019):** A short-memory $\beta_2$ lets rare large gradients inflate $\sqrt{v_t}$ while small opposite gradients step further; keeping $\beta_2 \in [0.95, 0.999]$ prevents this.
+:::
+
+::: {.col .fig .big}
+@fig:ch09-opt-adam-sign-and-eps
+:::
+:::
 :::
 
 ::: {.slide title="Why Standard ℓ₂ Regularization Breaks Under Adam"}
 [Coupled vs. Decoupled Decay]{.kicker}
 
-Under plain SGD, adding an $\ell_2$ penalty $\frac{\lambda}{2}\|\mathbf{x}\|^2$ to the loss adds $\lambda\mathbf{x}_t$ to the gradient, which is mathematically identical to uniform multiplicative weight decay:
+::: {.cols .vc}
+::: {.col}
+- **Coupled $\ell_2$ penalty inside Adam ($\mathbf{g}_t \leftarrow \mathbf{g}_t + \lambda\mathbf{x}_t$):** Divides the decay penalty by each coordinate's preconditioner:
+  $$\Delta x_{t,i}^{\text{decay}} = -\frac{\eta\,\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\; x_{t,i}$$
+- **Pathology:** Weights with small loss gradients are decayed up to $10^3\times$ more harshly than active weights—or normalize the penalty by itself to collapse $x_{t,i} \to 0$ at speed $\eta$/step!
+:::
 
-$$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta(\mathbf{g}_t + \lambda\mathbf{x}_t) = (1 - \eta\lambda)\,\mathbf{x}_t - \eta\,\mathbf{g}_t$$
-
-When $\mathbf{g}_t + \lambda\mathbf{x}_t$ is fed into Adam, however, the penalty is divided by each coordinate's gradient preconditioner $\sqrt{\hat{v}_{t,i}} + \epsilon$:
-
-$$\underbrace{\frac{\eta\,\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\; x_{t,i}}_{\text{Coupled } \ell_2 \text{ penalty inside Adam}} \qquad \text{versus} \qquad \underbrace{\eta\,\lambda\; x_{t,i}\vphantom{\frac{\eta}{\sqrt{\hat{v}_{t,i}}}}}_{\text{Decoupled weight decay (AdamW)}}$$
-
-- **Pathology of coupled $\ell_2$ in Adam:** Weights with small loss gradients are decayed up to $10^3\times$ more harshly than weights with large gradients—or, when $\lambda|x_{t,i}| > |g_{t,i}|$, Adam normalizes the penalty by itself and drives $x_{t,i} \to 0$ at speed $\eta$ per step until $\lambda|x| \sim |g_{\text{loss}}|$!
+::: {.col .fig}
+@fig:ch09-opt-adam-coupled-vs-decoupled
+:::
+:::
 :::
 
 ::: {.slide title="AdamW: Decoupling Weight Decay from the Preconditioner"}
@@ -852,26 +864,35 @@ $$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t - \eta\,\frac{\hat{\mathbf{
 ::: {.slide title="Unrolling AdamW: The Decay Timescale τ = 1/(ηλ)"}
 [Weights as an EMA of Updates]{.kicker}
 
-Let $\mathbf{u}_t = \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$ denote Adam's normalized update direction. Unrolling the AdamW update $\mathbf{x}_{t+1} = (1 - \eta\lambda)\mathbf{x}_t - \eta\mathbf{u}_t$ over $t$ steps yields (Wang & Aitchison, 2025):
+::: {.cols .vc}
+::: {.col}
+- **Unrolled EMA of normalized updates $\mathbf{u}_s = \frac{\hat{\mathbf{m}}_s}{\sqrt{\hat{\mathbf{v}}_s}+\epsilon}$ (Wang & Aitchison, 2025):**
+  $$\mathbf{x}_t = (1 - \eta\lambda)^t\,\mathbf{x}_0 - \eta\sum_{s=0}^{t-1} (1 - \eta\lambda)^{t-1-s}\,\mathbf{u}_s$$
+- **Weight-decay timescale:** $\tau = \frac{1}{\eta\lambda}$ steps ($3{,}333$ steps at $\eta = 3 \times 10^{-3}, \lambda = 0.1$).
+- **Hyperparameter decoupling:** When sweeping $\eta$, hold per-step shrinkage $s = \eta\lambda = 1/\tau$ fixed ($\lambda = s/\eta$).
+:::
 
-$$\mathbf{x}_t = (1 - \eta\lambda)^t\,\mathbf{x}_0 - \eta\sum_{s=0}^{t-1} (1 - \eta\lambda)^{t-1-s}\,\mathbf{u}_s$$
-
-- **The weight-decay timescale $\tau$:** Because $(1 - \eta\lambda)^k \approx e^{-\eta\lambda k}$, the parameters $\mathbf{x}_t$ are an exponentially weighted moving average of past normalized updates over a memory window of:
-  $$\tau = \frac{1}{\eta\lambda} \text{ steps}$$
-- **Counting timescales $T/\tau = T\eta\lambda$:** At $\eta = 3 \times 10^{-3}, \lambda = 0.1$, the timescale is $\tau = 3{,}333$ steps (so a $1{,}000$-step run spans $0.3\,\tau$, whereas a $300{,}000$-step run at $\eta = 3 \times 10^{-4}, \lambda = 0.1$ spans $9\,\tau$).
-- **Hyperparameter decoupling:** When sweeping $\eta$, hold the per-step shrinkage $s = \eta\lambda = 1/\tau$ fixed ($\lambda = s/\eta$) so the decay horizon does not shift with $\eta$!
+::: {.col .fig}
+@fig:ch09-opt-adam-decay-timescale
+:::
+:::
 :::
 
 ::: {.slide title="Equilibrium Weight Norm and Rotational Equilibrium"}
 [Steady-State Weight Dynamics]{.kicker}
 
-Over runs longer than $2\tau = \frac{2}{\eta\lambda}$, initial weights $\mathbf{x}_0$ decay away and each weight coordinate reaches a stochastic equilibrium between decay $(1-\eta\lambda)x_t$ and unit-RMS normalized updates $-\eta n_t$ ($\mathbb{E}[n_t^2] = \sigma^2 \approx 1$):
+::: {.cols .vc}
+::: {.col}
+- **Stochastic norm equilibrium ($t \gtrsim 2\tau$):** Balancing decay $(1-\eta\lambda)x_t$ against unit-RMS steps $-\eta n_t$ gives:
+  $$\text{RMS}(\mathbf{x}_\infty) \approx \sqrt{\frac{\eta}{2\lambda}}$$
+- **Why $\lambda = 0$ slows angular learning:** Without decay, $\text{RMS}(\mathbf{x}_t) \propto \eta\sqrt{t}$ grows via random walk, shrinking the relative angular step across scale-invariant LayerNorm sublayers as $1/\sqrt{t}$.
+- **Rotational equilibrium (Kosson et al., 2024):** Under AdamW, $\frac{\eta}{\text{RMS}(\mathbf{x}_\infty)} \approx \sqrt{2\eta\lambda}$ stays constant across layers.
+:::
 
-$$\mathbb{E}\big[x_{t+1}^2\big] = (1 - \eta\lambda)^2\,\mathbb{E}\big[x_t^2\big] + \eta^2 \sigma^2 \quad \Longrightarrow \quad \text{RMS}(\mathbf{x}_\infty) \approx \sqrt{\frac{\eta\,\sigma^2}{2\lambda}} \approx \sqrt{\frac{\eta}{2\lambda}}$$
-
-- **What happens without weight decay ($\lambda = 0$)?** Perpendicular updates accumulate like a random walk, $\text{RMS}(\mathbf{x}_t) \approx \sqrt{\text{RMS}(\mathbf{x}_0)^2 + \eta^2 t}$ ($0.045 \to 0.14$ in $2{,}000$ steps on `TinyLM`). Because normalized layers ($\text{LayerNorm}(\mathbf{W}\mathbf{h})$) are scale-invariant, growing $\|\mathbf{W}\|$ silently shrinks the **relative angular step** $\frac{\eta}{\text{RMS}(\mathbf{x}_t)} \propto \frac{1}{\sqrt{t}}$!
-- **Rotational equilibrium (Kosson et al., 2024):** Under AdamW, $\text{RMS}(\mathbf{x}_\infty) \propto \sqrt{\eta/(2\lambda)}$ locks the relative angular step size of every decayed matrix at a constant value independent of initialization and gradient scale:
-  $$\frac{\eta}{\text{RMS}(\mathbf{x}_\infty)} \approx \sqrt{2\eta\lambda}$$
+::: {.col .fig}
+@fig:ch09-opt-adam-rotational-eq
+:::
+:::
 :::
 
 ::: {.slide title="Parameters Exempt from Weight Decay and State Memory"}

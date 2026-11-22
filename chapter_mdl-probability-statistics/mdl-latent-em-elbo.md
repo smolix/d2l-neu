@@ -512,71 +512,102 @@ Latent Variable Models, EM, and the ELBO<br>**mixture models · marginal log-lik
 ::: {.slide title="500 Points from Two Populations, Labels Lost"}
 [Motivation & Core Problem]{.kicker}
 
-Suppose we collect $n = 500$ measurements—$300$ drawn from $\mathcal{N}(-2.0, 0.8^2)$ and $200$ from $\mathcal{N}(1.5, 0.6^2)$—but no one recorded which population generated which observation:
+::: {.cols .vc}
+::: {.col}
+- **With observed labels (complete data):** Fitting $K$ Gaussian populations takes closed-form per-cluster sample fractions, means, and variances.
+- **Without labels (latent variables):** Each observation's probability sums over hidden populations, trapping a sum inside the logarithm of the likelihood.
+- **Unifying strategy:** Replace missing labels with soft posterior probabilities $q(z)$ and maximize the **Evidence Lower Bound (ELBO)**.
+:::
 
-- **With observed labels (complete data):** Fitting the model takes three closed-form sample statistics per population: the empirical fraction, sample mean, and sample variance.
-- **Without labels (latent variables):** Each measurement's probability is a sum over the hidden populations it could have come from, trapping a sum inside the logarithm of the likelihood.
-- **The unifying strategy:** Guess the missing labels using soft probabilities $q(z)$ rather than hard assignments, and optimize a tractable lower bound (**ELBO**) on the true log-likelihood.
-
-::: {.d2l-note}
-Unobserved quantities that explain hidden structure—cluster assignments, document topics, or generative latent codes—are called **latent variables**.
+::: {.col .fig .big}
+@fig:ch35-prob-lost-labels
+:::
 :::
 :::
 
 ::: {.slide title="Joint and Marginal Likelihoods with Latent Variables"}
 [Generative Structure]{.kicker}
 
-A latent variable model specifies a joint distribution over the observed variable $x$ and a hidden variable $z$ in terms of prior probabilities and class-conditional likelihoods:
+::: {.cols .vc}
+::: {.col}
+$$p(x, z \mid \boldsymbol{\theta}) = p(z \mid \boldsymbol{\theta})\,p(x \mid z, \boldsymbol{\theta}), \qquad p(x \mid \boldsymbol{\theta}) = \sum_{z} p(x, z \mid \boldsymbol{\theta})$$
 
-$$p(x, z \mid \boldsymbol{\theta}) = p(z \mid \boldsymbol{\theta})\,p(x \mid z, \boldsymbol{\theta})$$
+- **Generative story ($z \to x$):** First sample the hidden cause $z \sim p(z \mid \boldsymbol{\theta})$, then generate the observation $x \sim p(x \mid z, \boldsymbol{\theta})$.
+- **Marginal likelihood (evidence):** Because only $x$ is observed, $p(x \mid \boldsymbol{\theta})$ sums or integrates over every possible latent state $z$.
+:::
 
-- **Marginalizing out the unobserved cause:** Because we observe only $x$, the probability of $x$ sums (or integrates) over every possible value of the latent variable $z$:
-  $$p(x \mid \boldsymbol{\theta}) = \sum_{z} p(x, z \mid \boldsymbol{\theta}) = \sum_{z} p(z \mid \boldsymbol{\theta})\,p(x \mid z, \boldsymbol{\theta})$$
-- **The marginal likelihood (evidence):** Just as the Bayesian evidence $P(X)$ integrates out unobserved parameters, $p(x \mid \boldsymbol{\theta})$ sums out unobserved latent variables $z$ for each data point.
+::: {.col .fig}
+@fig:ch35-prob-latent-dag
+:::
+:::
 :::
 
 ::: {.slide title="Complete-Data Oracle vs. Observed-Data Mixture NLL"}
 [Gaussian Mixture Models]{.kicker}
 
-In a $K$-component **Gaussian mixture model (GMM)**, $z_i \in \{1, \dots, K\}$ selects component $k$ with mixing weight $\pi_k$, and $x_i \mid z_i{=}k \sim \mathcal{N}(\mu_k, \sigma_k^2)$. Contrasting the oracle problem against our observed problem shows why optimization is hard:
-
+::: {.cols .vc}
+::: {.col}
 $$\ell(\boldsymbol{\theta}) = -\sum_{i=1}^n \log \Biggl(\sum_{k=1}^K \pi_k\,\mathcal{N}(x_i;\, \mu_k, \sigma_k^2)\Biggr)$$
 
-- **If an oracle revealed $z_i$:** The sum inside the logarithm disappears, and the log-likelihood decouples by component into $\hat{\pi}_k = n_k / n$, $\hat{\mu}_k = \frac{1}{n_k}\sum_{z_i=k} x_i$, and $\hat{\sigma}_k^2 = \frac{1}{n_k}\sum_{z_i=k} (x_i - \hat{\mu}_k)^2$.
-- **Why the log of a sum is hard:** In $\ell(\boldsymbol{\theta})$, the logarithm stops at the outer sum and never reaches $\exp\bigl(-(x_i-\mu_k)^2/(2\sigma_k^2)\bigr)$, coupling all $3K$ parameters across every observation.
+- **Complete-data oracle ($z_i$ known):** The logarithm hits $\mathcal{N}(x_i; \mu_{z_i}, \sigma_{z_i}^2)$ directly, decoupling into $K$ closed-form quadratics.
+- **Observed mixture ($z_i$ hidden):** The sum $\sum_{k=1}^K$ sits *inside* $\log(\cdot)$, coupling all $3K$ parameters across every data point.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-oracle-vs-mixture
+:::
+:::
 :::
 
 ::: {.slide title="Soft Probabilistic Guesses via Bayes' Rule"}
 [Posterior Responsibilities]{.kicker}
 
-Suppose we hold the component parameters fixed at two equal-weight Gaussians $\mathcal{N}(-1, 1)$ and $\mathcal{N}(1, 1)$ and observe a single point at $x = 0.5$. Bayes' rule computes the posterior probability over which component generated $x$:
+::: {.cols .vc}
+::: {.col}
+$$P(z = 1 \mid x = 0.5) = \frac{0.5\,e^{-(0.5 + 1)^2 / 2}}{0.5\,e^{-(0.5 + 1)^2 / 2} + 0.5\,e^{-(0.5 - 1)^2 / 2}} = \frac{1}{1 + e} \approx 0.27$$
 
-$$P(z = 1 \mid x = 0.5) = \frac{0.5\,e^{-(0.5 - (-1))^2 / 2}}{0.5\,e^{-(0.5 - (-1))^2 / 2} + 0.5\,e^{-(0.5 - 1)^2 / 2}} = \frac{e^{-1.125}}{e^{-1.125} + e^{-0.125}} = \frac{1}{1 + e} \approx 0.27$$
+- **Fractional responsibility:** Under $0.5\,\mathcal{N}(-1, 1) + 0.5\,\mathcal{N}(1, 1)$, Bayes' rule assigns $x = 0.5$ softly ($27\%$ to component $1$, $73\%$ to component $2$).
+- **Smooth uncertainty:** Responsibilities split $50/50$ at $x = 0$ and sharpen to $0.2\% / 99.8\%$ out at $x = 3$.
+:::
 
-- **Soft fractional assignment:** Rather than forcing a brittle $0/1$ decision, Bayes' rule splits the observation $27\%$ to the left component and $73\%$ to the right component.
-- **Smooth adaptation to uncertainty:** At the midpoint $x = 0$, the posterior splits evenly ($50\% / 50\%$); far to the right at $x = 3$, it becomes $99.8\%$ certain ($0.2\% / 99.8\%$).
+::: {.col .fig}
+@fig:ch35-prob-soft-resp
+:::
+:::
 :::
 
 ::: {.slide title="Deriving the Evidence Lower Bound (ELBO)"}
 [Jensen's Inequality]{.kicker}
 
-To push the logarithm back inside the sum over $z$, we introduce *any* auxiliary probability distribution $q(z)$ over the latent variable ($q(z) \ge 0, \sum_z q(z) = 1$) and apply Jensen's inequality ($\log \mathbb{E}_q[\cdot] \ge \mathbb{E}_q[\log(\cdot)]$):
-
+::: {.cols .vc}
+::: {.col}
 $$\log p(x \mid \boldsymbol{\theta}) = \log \sum_{z} q(z)\,\frac{p(x, z \mid \boldsymbol{\theta})}{q(z)} \ge \sum_{z} q(z) \log \frac{p(x, z \mid \boldsymbol{\theta})}{q(z)} =: \mathcal{L}(q, \boldsymbol{\theta})$$
 
-- **Valid for every distribution $q$:** The inequality holds globally for every choice of $q(z)$ and every parameter vector $\boldsymbol{\theta}$.
-- **Decoupling the joint density:** Inside $\mathcal{L}(q, \boldsymbol{\theta})$, the logarithm acts directly on the complete-data joint density $p(x, z \mid \boldsymbol{\theta})$, canceling exponential factors just as in the oracle problem.
+- **Pushing $\log$ inside the sum:** For *any* distribution $q(z)$ over latent states, concavity of $\log$ ($\log \mathbb{E}_q[Y] \ge \mathbb{E}_q[\log Y]$) yields a global lower bound.
+- **Tractable joint log-density:** Inside $\mathcal{L}(q, \boldsymbol{\theta})$, the logarithm acts directly on the complete-data product $p(x, z \mid \boldsymbol{\theta})$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-jensen-elbo
+:::
+:::
 :::
 
 ::: {.slide title="Anatomy of the ELBO: Energy Plus Entropy"}
 [Decomposing the Lower Bound]{.kicker}
 
-Expanding the logarithm of the ratio $\log\frac{p(x, z \mid \boldsymbol{\theta})}{q(z)} = \log p(x, z \mid \boldsymbol{\theta}) - \log q(z)$ splits the **Evidence Lower Bound (ELBO)** into two interpretable terms:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathcal{L}(q, \boldsymbol{\theta}) = \mathbb{E}_{q(z)}\bigl[\log p(x, z \mid \boldsymbol{\theta})\bigr] + H(q)$$
 
-- **Expected complete-data log-likelihood ($\mathbb{E}_q[\log p(x, z \mid \boldsymbol{\theta})]$):** The tractable oracle objective, weighted by our soft probabilistic guess $q(z)$ in place of hard oracle labels.
-- **Shannon entropy of the guess ($H(q) = -\sum_z q(z)\log q(z)$):** Measures how spread out the distribution $q$ is and depends *only* on $q$, dropping out completely when we optimize over $\boldsymbol{\theta}$.
+- **Expected complete-data log-likelihood ($\mathbb{E}_q[\log p(x, z \mid \boldsymbol{\theta})]$):** The tractable oracle objective weighted by soft probabilities $q(z)$.
+- **Shannon entropy bonus ($H(q) = -\sum_z q(z)\log q(z)$):** Rewards spread-out guesses $q(z)$ and drops out when optimizing over $\boldsymbol{\theta}$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-elbo-anatomy
+:::
+:::
 :::
 
 ::: {.slide title="The Fundamental ELBO–KL Decomposition"}
@@ -599,28 +630,33 @@ $$\mathcal{L}(q, \boldsymbol{\theta}) = \mathbb{E}_{q(z)}\bigl[\log p(x, z \mid 
 ::: {.slide title="Worked Example: Measuring the ELBO Gap by Hand"}
 [Numerical Verification at x = 0.5]{.kicker}
 
-For our single observation $x = 0.5$ under $0.5\,\mathcal{N}(-1, 1) + 0.5\,\mathcal{N}(1, 1)$, the true log-evidence is $\log p(x) = -1.42$ nats and the posterior is $p(z \mid x) = (0.27, 0.73)$. Comparing three guesses $q(z)$ verifies the identity $\log p(x) = \mathcal{L}(q) + D_{\mathrm{KL}}(q \,\|\, p)$:
+::: {.cols .vc}
+::: {.col}
+- **Exact identity at $x = 0.5$ ($\log p(x) = -1.42$):** For every guess $q(z)$, $\mathcal{L}(q) + D_{\mathrm{KL}}(q \,\|\, p(z \mid x)) = -1.42$ nats.
+- **Exact posterior $q = (0.27, 0.73)$:** Achieves $\mathcal{L} = -1.42$ with zero KL gap.
+- **Why hard assignment $(0, 1)$ loses twice as much as uniform $(0.5, 0.5)$:** Setting $q = (0, 1)$ forfeits the entropy bonus ($H(q) = 0$), incurring a $0.31$-nat KL gap vs. $0.12$ nats for $(0.5, 0.5)$.
+:::
 
-| Latent Guess $q(z)$ | Expected Joint $\mathbb{E}_q[\log p(x,z)]$ | Entropy $H(q)$ | $\mathrm{ELBO}\ \mathcal{L}(q)$ | Gap $D_{\mathrm{KL}}(q \,\|\, p)$ |
-| :--- | :---: | :---: | :---: | :---: |
-| **Exact posterior** $(0.27, 0.73)$ | $-2.00$ | $+0.58$ | **$-1.42$** | **$0.00$ nats** |
-| **Undecided uniform** $(0.50, 0.50)$ | $-2.23$ | $+0.69$ | **$-1.54$** | **$0.12$ nats** |
-| **Hard assignment** $(0.00, 1.00)$ | $-1.73$ | $+0.00$ | **$-1.73$** | **$0.31$ nats** |
-
-::: {.d2l-note}
-Notice that a hard assignment to the more likely cluster ($q = (0, 1)$) loses **$0.31$ nats** ($\log\frac{1}{0.73}$) because its entropy $H(q) = 0$ forfeits the uncertainty bonus, losing more than twice as much as the $50/50$ guess!
+::: {.col .fig .big}
+@fig:ch35-prob-elbo-gap-bars
+:::
 :::
 :::
 
 ::: {.slide title="Expectation–Maximization as Coordinate Ascent"}
 [The EM Algorithm]{.kicker}
 
-For an independent dataset $X = \{x_1, \dots, x_n\}$, we introduce one distribution $q_i(z)$ per data point and perform **coordinate ascent** on the total ELBO $\sum_{i=1}^n \mathcal{L}(q_i, \boldsymbol{\theta})$:
-
-- **E-step (Expectation):** Hold $\boldsymbol{\theta}^{(t)}$ fixed and maximize over each $q_i$ by setting $q_i^{(t)}(z) = p(z \mid x_i, \boldsymbol{\theta}^{(t)})$. This drives every KL gap to zero so the bound touches the log-likelihood:
-  $$\sum_{i=1}^n \mathcal{L}\bigl(q_i^{(t)}, \boldsymbol{\theta}^{(t)}\bigr) = \log P(X \mid \boldsymbol{\theta}^{(t)})$$
-- **M-step (Maximization):** Hold the posterior responsibilities $q_i^{(t)}$ fixed and maximize the expected complete-data log-likelihood over $\boldsymbol{\theta}$ (since $H(q_i^{(t)})$ does not depend on $\boldsymbol{\theta}$):
+::: {.cols .vc}
+::: {.col}
+- **E-step (Expectation):** Fix $\boldsymbol{\theta}^{(t)}$ and set each $q_i^{(t)}(z) = p(z \mid x_i, \boldsymbol{\theta}^{(t)})$, closing the KL gap to zero so the ELBO touches $\log P(X \mid \boldsymbol{\theta}^{(t)})$.
+- **M-step (Maximization):** Fix the responsibilities $q_i^{(t)}$ and maximize the expected complete-data log-likelihood over $\boldsymbol{\theta}$:
   $$\boldsymbol{\theta}^{(t+1)} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \sum_{i=1}^n \mathbb{E}_{q_i^{(t)}(z)}\bigl[\log p(x_i, z \mid \boldsymbol{\theta})\bigr]$$
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-em-loop
+:::
+:::
 :::
 
 ::: {.slide title="Theorem: EM Monotonically Improves Likelihood"}
@@ -688,23 +724,34 @@ Permuting the $K$ component indices produces $K!$ identical global maxima (*labe
 ::: {.slide title="Pitfall 2: Unbounded Likelihood and Variance Spikes"}
 [Degenerate Global Maxima]{.kicker}
 
-In a continuous Gaussian mixture with learned variances, the observed-data log-likelihood is **unbounded above** ($\ell(\boldsymbol{\theta})$ has no global minimum):
-
+::: {.cols .vc}
+::: {.col}
 $$\ell(\boldsymbol{\theta}) \le \log\bigl(n\sqrt{2\pi}\bigr) + \log\epsilon + \mathrm{const} \xrightarrow{\epsilon \to 0} -\infty$$
 
-- **Mechanism of a variance spike:** Center component $2$ directly on a single training point ($\mu_2 = x_1, \pi_2 = 1/n$) and shrink its scale $\sigma_2 = \epsilon \to 0$. Its density at $x_1$ explodes as $\frac{1}{n\sqrt{2\pi}\epsilon} \to \infty$ while component $1$ covers the remaining $n-1$ observations.
-- **Same pathology in heteroscedastic regression:** A neural network predicting both mean $\hat{y}(\mathbf{x}_i)$ and variance $\hat{\sigma}^2(\mathbf{x}_i)$ suffers the exact same $-\infty$ NLL spike whenever it interpolates one training point ($\hat{y}(\mathbf{x}_i) = y_i$) and drives $\hat{\sigma}^2(\mathbf{x}_i) \to 0$.
-- **Practical fix:** Impose a variance floor $\sigma_k^2 \ge \sigma_{\min}^2 > 0$ or place an inverse-gamma prior on the variances to eliminate degenerate spikes.
+- **Mechanism of a variance spike:** Centering component $2$ on a single point ($\mu_2 = x_1$) and shrinking $\sigma_2 = \epsilon \to 0$ drives its density $\frac{1}{\sqrt{2\pi}\epsilon} \to \infty$ (just like heteroscedastic regression NLL when $\hat{y}_i = y_i$ and $\hat{\sigma}_i \to 0$).
+- **Practical fix:** Enforce a variance floor $\sigma_k^2 \ge \sigma_{\min}^2 > 0$ or place an inverse-gamma prior on $\sigma_k^2$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-gmm-spikes
+:::
+:::
 :::
 
 ::: {.slide title="From Exact EM to Variational Autoencoders (VAEs)"}
 [Amortized Variational Inference]{.kicker}
 
-What happens when the latent variable $z \in \mathbb{R}^d$ is a continuous code passed through a deep nonlinear generator $p_{\boldsymbol{\theta}}(x \mid z)$?
+::: {.cols .vc}
+::: {.col}
+- **Intractable deep posterior:** When continuous latent codes $z \in \mathbb{R}^d$ pass through a deep nonlinear decoder $p_{\boldsymbol{\theta}}(x \mid z)$, the exact posterior $p(z \mid x, \boldsymbol{\theta})$ has no closed form.
+- **Amortized encoder $q_{\boldsymbol{\phi}}(z \mid x)$:** A neural network predicts $(\boldsymbol{\mu}_{\boldsymbol{\phi}}(x), \log\boldsymbol{\sigma}_{\boldsymbol{\phi}}(x))$ directly from $x$.
+- **Joint SGD on the ELBO:** Reparameterizing $z = \boldsymbol{\mu} + \boldsymbol{\sigma} \odot \boldsymbol{\epsilon}$ trains $(\boldsymbol{\theta}, \boldsymbol{\phi})$ jointly by backpropagating through $\sum_i \mathcal{L}(q_{\boldsymbol{\phi}}(\cdot \mid x_i), \boldsymbol{\theta})$.
+:::
 
-- **Intractable exact posterior:** The marginal integral $p(x \mid \boldsymbol{\theta}) = \int p(z)\,p_{\boldsymbol{\theta}}(x \mid z)\,dz$ has no closed form, so Bayes' rule cannot evaluate the exact E-step posterior $p(z \mid x, \boldsymbol{\theta})$.
-- **Amortized variational approximation:** A **variational autoencoder (VAE)** replaces the per-example distribution $q_i(z)$ with an encoder neural network $q_{\boldsymbol{\phi}}(z \mid x)$ that predicts variational parameters (e.g., mean and diagonal log-variance) directly from $x$.
-- **Joint stochastic gradient ascent on the ELBO:** Instead of alternating exact E-steps and M-steps, a VAE maximizes $\sum_{i=1}^n \mathcal{L}\bigl(q_{\boldsymbol{\phi}}(\cdot \mid x_i),\, \boldsymbol{\theta}\bigr)$ jointly over decoder weights $\boldsymbol{\theta}$ and encoder weights $\boldsymbol{\phi}$ via the reparameterization trick.
+::: {.col .fig .big}
+@fig:ch35-prob-vae-amortized
+:::
+:::
 :::
 
 ::: {.slide title="Unifying EM, VAEs, and Bayesian Variational Inference"}

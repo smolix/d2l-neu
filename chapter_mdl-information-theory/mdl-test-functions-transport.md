@@ -1038,17 +1038,17 @@ Test Functions and Optimal Transport<br>**integral probability metrics · kernel
 ::: {.slide title="Does Tail Overlap Rescue Density-Ratio Losses?"}
 [Motivation: The Shifted-Gaussian Diagnostic]{.kicker}
 
-In §37.3 we saw that every $f$-divergence freezes at a constant on disjoint point masses $\delta_0$ and $\delta_d$. What if the two distributions have smooth tails that overlap everywhere, such as $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(d, 1)$ shifted by $d$ standard deviations?
+::: {.cols .vc}
+::: {.col}
+Compare overlapping shifted Gaussians $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(d, 1)$ separated by $d = 8$ standard deviations:
 
-| Separation $d$ | KL Slope $\frac{\partial \textrm{KL}}{\partial d}$ | JS Slope $\frac{\partial \textrm{JS}}{\partial d}$ | TV Slope $\frac{\partial \textrm{TV}}{\partial d}$ | RBF $\textrm{MMD}^2$ Slope ($\ell = 1$) | Wasserstein $W_1$ Slope $\frac{\partial W_1}{\partial d}$ |
-|:--|---:|---:|---:|---:|---:|
-| **$d = 0.5$** | $0.50$ | $0.12$ | $0.39$ | $0.18$ | **$1.00$** |
-| **$d = 2.0$** | $2.00$ | $0.22$ | $0.24$ | $0.40$ | **$1.00$** |
-| **$d = 4.0$** | $4.00$ | $0.07$ | $0.05$ | $0.11$ | **$1.00$** |
-| **$d = 8.0$** | $8.00$ | $2 \times 10^{-4}$ | $1 \times 10^{-4}$ | $7 \times 10^{-5}$ | **$1.00$** |
+- **Smooth tails do not rescue JS, TV, or local MMD:** By $d = 8$, $\textrm{JS} \approx \log 2$ and $\textrm{TV} \approx 1$ have saturated, collapsing $\partial\textrm{JS}/\partial d$, $\partial\textrm{TV}/\partial d$, and $\partial\textrm{MMD}^2/\partial d$ ($\ell = 1$) to $\sim 10^{-4}$!
+- **Wasserstein-1 ($W_1$) stays steady:** Maintains unit slope $\partial W_1/\partial d = 1.00$ at every distance $d$ without needing an explicit model density $q(x)$.
+:::
 
-::: {.d2l-note .warn}
-**Overlapping Tails Do Not Rescue JS or TV:** By $d = 8$, $\textrm{JS} \approx 0.693 = \log 2$ and $\textrm{TV} \approx 1.000$ have saturated, collapsing their gradients to $\sim 10^{-4}$. Meanwhile, KL requires an explicit model density $q(x)$, which implicit sample generators lack!
+::: {.col .fig .big}
+@fig:ch37-info-shifted-gaussian-slopes
+:::
 :::
 :::
 
@@ -1063,52 +1063,71 @@ Evaluating all five comparisons and their central-difference derivatives in $d$ 
 ::: {.slide title="Integral Probability Metrics: A Panel of Auditors"}
 [Unifying Test-Function Comparisons]{.kicker}
 
-Total variation $\textrm{TV}(P, Q) = \sup_A |P(A) - Q(A)|$ compares the expectations of indicator functions $\mathbf{1}_A(x)$. Replacing indicators with a general symmetric class $\mathcal{G}$ of **test functions** $g$ defines an **Integral Probability Metric (IPM)**:
+::: {.cols .vc}
+::: {.col}
+An **Integral Probability Metric (IPM)** compares $P$ and $Q$ across a symmetric class $\mathcal{G}$ of test functions ("auditors") $g$:
 
 $$\textrm{IPM}_{\mathcal{G}}(P, Q) = \sup_{g \in \mathcal{G}}\Big(\mathbb{E}_{x \sim P}[g(x)] - \mathbb{E}_{y \sim Q}[g(y)]\Big)$$
 
-| Test Function Class $\mathcal{G}$ | Resulting Integral Probability Metric | Requires Auxiliary Training? |
-|:--|:---|:---|
-| Bounded functions $\{g : |g(x)| \le \tfrac12\}$ | **Total Variation** $\textrm{TV}(P, Q)$ | Yes (or exact density sign $\tfrac12\textrm{sign}(p - q)$) |
-| Linear in features $\{g(x) = \mathbf{w}^\top \boldsymbol{\varphi}(x) : \|\mathbf{w}\|_2 \le 1\}$ | **Maximum Mean Discrepancy** $\textrm{MMD}(P, Q)$ | **No** (closed-form pairwise kernel averages) |
-| 1-Lipschitz functions $\{g : |g(x) - g(y)| \le \|x - y\|\}$ | **Wasserstein-1 Distance** $W_1(P, Q)$ | Yes (1-Lipschitz WGAN critic or LP / CDF) |
+- **Three choices of $\mathcal{G}$:** Bounded $|g| \le \tfrac12$ gives **TV**; RKHS unit ball $\|\mathbf{w}\|_2 \le 1$ gives **MMD** (closed-form); 1-Lipschitz $\textrm{Lip}_1$ gives **Wasserstein $W_1$** (WGAN).
+:::
 
-- Unlike the $f$-GAN bound $\mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]$ where $f^*$ penalizes large $T$, an IPM averages $g$ linearly under both $P$ and $Q$, so **membership in $\mathcal{G}$ is the sole constraint keeping the gap finite**.
+::: {.col .fig}
+@fig:ch37-info-ipm-auditor-classes
+:::
+:::
 :::
 
 ::: {.slide title="Two Competing Requirements on Test Class G"}
 [Sample Efficiency vs. Far-Sighted Gradients]{.kicker}
 
-Why not make the auditor panel $\mathcal{G}$ as large as possible? A useful test class must balance two opposing demands:
+::: {.cols .vc}
+::: {.col}
+- **Failure 1 ($\mathcal{G}$ too rich / spiky):** For $|g(x)| \le \tfrac12$, two independent $N$-samples from $\mathcal{N}(0, 1)$ share no points almost surely, so $g(x) = \mathbf{1}_{x \in \{X_i\}} - \tfrac12$ gives empirical $\textrm{TV}(\hat{P}_N, \hat{Q}_N) = 1.00$ even when $P = Q$!
+- **Failure 2 ($\mathcal{G}$ bounded in height):** Any class with $|g(x)| \le M$ caps the gap at $2M$, saturating with zero gradient on distant modes.
+- **1-Lipschitz resolution:** Bounded slope $|\nabla g| \le 1$ prevents sample memorization *and* grows linearly with distance $d$.
+:::
 
-- **1. Estimable from finite samples ($\mathcal{G}$ cannot be too rich or spiky):**
-  Draw two independent samples $X_1, \ldots, X_N$ and $Y_1, \ldots, Y_N$ from the *same* continuous distribution $\mathcal{N}(0, 1)$. With probability $1$, the two samples share no points, so the indicator function $g(x) = \mathbf{1}\{x \in \{X_i\}\} - \tfrac12$ averages to $+\tfrac12$ on the first sample and $-\tfrac12$ on the second, yielding **empirical $\textrm{TV} = 1.0$ even when $P = Q$**!
-- **2. Far-sighted gradients ($\mathcal{G}$ must contain functions that grow with distance):**
-  If every $g \in \mathcal{G}$ is bounded ($|g| \le 1/2$), the gap can never exceed $1$. On $P = \mathcal{N}(0, 1)$ vs. $Q = \mathcal{N}(d, 1)$, the optimal separating event is $\{x < d/2\}$, giving $\textrm{TV} = 2\Phi(d/2) - 1$, which reaches $0.99994$ at $d = 8$ and provides zero gradient for distant samples.
+::: {.col .fig .big}
+@fig:ch37-info-test-class-goldilocks
+:::
+:::
 :::
 
 ::: {.slide title="From Linear and Quadratic Features to Mean Maps"}
 [Building Maximum Mean Discrepancy]{.kicker}
 
-Let us build a smooth test class step by step, testing each choice on $P = \mathcal{N}(0, 1)$ versus $Q = \mathcal{N}(0, 4)$ (same mean $0$, variances $1$ and $4$):
+::: {.cols .vc}
+::: {.col}
+With feature map $\boldsymbol{\varphi}(x)$ and mean embedding $\mathbf{m}_P = \mathbb{E}_{x \sim P}[\boldsymbol{\varphi}(x)]$, Cauchy–Schwarz solves the supremum over $\|\mathbf{w}\|_2 \le 1$ analytically:
 
-- **Step 1 (Linear functions $g(x) = wx$ with $|w| \le 1$):**
-  $\sup_{|w| \le 1} w(\mathbb{E}_P[X] - \mathbb{E}_Q[X]) = |\mathbb{E}_P[X] - \mathbb{E}_Q[X]| = 0$. Linear auditors are completely blind to variance!
-- **Step 2 (Feature map $\boldsymbol{\varphi}(x) = (x, x^2)$ with $g(x) = \mathbf{w}^\top \boldsymbol{\varphi}(x)$, $\|\mathbf{w}\|_2 \le 1$):**
-  Define the **mean feature vector** (or *mean embedding*) $\mathbf{m}_P = \mathbb{E}_{x \sim P}[\boldsymbol{\varphi}(x)]$. By the Cauchy–Schwarz inequality, maximizing a linear inner product over the unit ball yields the Euclidean norm in feature space:
-  $$\textrm{MMD}(P, Q) = \sup_{\|\mathbf{w}\|_2 \le 1} \mathbf{w}^\top(\mathbf{m}_P - \mathbf{m}_Q) = \|\mathbf{m}_P - \mathbf{m}_Q\|_2$$
-- **Result on $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(0, 4)$:** Here $\mathbf{m}_P = (0, 1)$ and $\mathbf{m}_Q = (0, 4)$, so $\textrm{MMD}^2(P, Q) = (0 - 0)^2 + (1 - 4)^2 = 9$.
+$$\textrm{MMD}(P, Q) = \sup_{\|\mathbf{w}\|_2 \le 1} \mathbf{w}^\top(\mathbf{m}_P - \mathbf{m}_Q) = \|\mathbf{m}_P - \mathbf{m}_Q\|_2$$
+
+- **Feature richness:** Linear $\varphi(x) = x$ is blind to variance on $\mathcal{N}(0,1)$ vs. $\mathcal{N}(0,4)$, whereas $\boldsymbol{\varphi}(x) = (x, x^2)$ separates them ($\|\mathbf{m}_P - \mathbf{m}_Q\|_2 = 3$), and the characteristic RBF kernel embeds all moments $j = 0, \ldots, \infty$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-mmd-mean-embedding
+:::
+:::
 :::
 
 ::: {.slide title="The Kernel Trick Eliminates the Supremum"}
 [Closed-Form Pairwise Expectations]{.kicker}
 
-Expanding the squared Euclidean distance $\|\mathbf{m}_P - \mathbf{m}_Q\|_2^2$ using independent draws $x, x' \sim P$ and $y, y' \sim Q$ replaces explicit feature vectors $\boldsymbol{\varphi}(x)$ with inner products $k(x, x') = \langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x') \rangle$:
+::: {.cols .vc}
+::: {.col}
+Expanding $\|\mathbf{m}_P - \mathbf{m}_Q\|_2^2$ via $k(x, x') = \langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x') \rangle$ yields three pairwise kernel expectations:
 
-$$\textrm{MMD}^2(P, Q) = \underbrace{\mathbb{E}_{x, x' \sim P}\big[k(x, x')\big]}_{\text{similarity within } P} + \underbrace{\mathbb{E}_{y, y' \sim Q}\big[k(y, y')\big]}_{\text{similarity within } Q} - 2\underbrace{\mathbb{E}_{x \sim P, y \sim Q}\big[k(x, y)\big]}_{\text{similarity across } P \text{ and } Q}$$
+$$\textrm{MMD}^2(P, Q) = \mathbb{E}_{P}[k(x, x')] + \mathbb{E}_{Q}[k(y, y')] - 2\mathbb{E}_{P, Q}[k(x, y)]$$
 
-- **Geometric interpretation:** When $P = Q$, within-group similarity equals cross-group similarity and the three terms cancel to $0$; when $P$ and $Q$ separate into distinct clusters, within-group similarities exceed the cross term.
-- **No critic network to train:** The supremum over $\mathcal{G}$ has been solved analytically by Cauchy–Schwarz—evaluating $\textrm{MMD}^2$ requires only three expectations of the kernel $k$.
+- **No critic to train:** Within-group similarities minus twice cross-group similarity cancel to $0$ iff $P = Q$ (for characteristic kernels).
+:::
+
+::: {.col .fig}
+@fig:ch37-info-mmd-kernel-expansion
+:::
+:::
 :::
 
 ::: {.slide title="Characteristic Kernels and Closed-Form RBF MMD"}
@@ -1174,15 +1193,19 @@ On the real line, reshaping a left-heavy distribution $P$ into a right-heavy dis
 ::: {.slide title="Kantorovich–Rubinstein Duality: 1-Lipschitz Critics"}
 [Primal Linear Program to Dual IPM]{.kicker}
 
-Minimizing over high-dimensional joint distributions $\gamma \in \Pi(P, Q)$ is intractable from samples, but linear programming duality converts the infimum over couplings into a supremum over a single **1-Lipschitz test function**:
+::: {.cols .vc}
+::: {.col}
+LP strong duality converts the primal optimal-transport infimum over couplings $\gamma \in \Pi(P, Q)$ into a dual IPM supremum over **1-Lipschitz critics**:
 
-::: {.d2l-note .rule}
-**Theorem (Kantorovich–Rubinstein Duality):** For any distributions $P, Q$ on $\mathbb{R}^n$ with finite first moments,
-$$W_1(P, Q) = \sup_{\|g\|_{\textrm{Lip}} \le 1}\Big(\mathbb{E}_{x \sim P}[g(x)] - \mathbb{E}_{y \sim Q}[g(y)]\Big), \qquad \|g\|_{\textrm{Lip}} = \sup_{x \neq y}\frac{|g(x) - g(y)|}{\|x - y\|}$$
+$$W_1(P, Q) = \inf_{\gamma \in \Pi(P,Q)}\mathbb{E}_\gamma[\|x - y\|] = \sup_{\|g\|_{\textrm{Lip}} \le 1}\big(\mathbb{E}_P[g(x)] - \mathbb{E}_Q[g(y)]\big)$$
+
+- **Weak duality in one line:** Since $g(x) - g(y) \le \|x - y\|$ pointwise for $\|g\|_{\textrm{Lip}} \le 1$, taking $\mathbb{E}_\gamma$ gives $\mathbb{E}_P[g] - \mathbb{E}_Q[g] \le \mathbb{E}_\gamma[\|x - y\|]$.
 :::
 
-- **One-line proof of weak duality ($\textrm{IPM}_{\textrm{Lip}_1} \le W_1$):** For any 1-Lipschitz $g$ and any coupling $\gamma \in \Pi(P, Q)$, $g(x) - g(y) \le \|x - y\|$ holds pointwise; taking $\mathbb{E}_{(x,y) \sim \gamma}$ gives $\mathbb{E}_P[g] - \mathbb{E}_Q[g] \le \mathbb{E}_\gamma[\|x - y\|]$.
-- **Why 1-Lipschitz auditors solve both IPM requirements:** Bounded slope $|g(x) - g(y)| \le \|x - y\|$ prevents spiky memorization of finite samples, while unbounded linear growth (e.g., $g(x) = -x$ on $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(d, 1)$) provides unit gradient everywhere (**Wasserstein GAN**, Arjovsky et al., 2017).
+::: {.col .fig}
+@fig:ch37-info-kr-duality-bridge
+:::
+:::
 :::
 
 ::: {.slide title="Exact 1D Optimal Transport: Area Between CDFs"}
@@ -1208,14 +1231,20 @@ On the 6-point benchmark, summing the five CDF gaps ($0.25 + 0.35 + 0.50 + 0.35 
 ::: {.slide title="Squared Cost W₂ and Fréchet Inception Distance"}
 [Strict Convexity & Gaussian Closed Form]{.kicker}
 
-In the 6-point $W_1$ experiment, the LP found a non-monotone plan with the exact same cost $1.7$ because $F_P \ge F_Q$ everywhere (any plan moving mass strictly rightward has cost $\mathbb{E}[Y - X] = 3.35 - 1.65 = 1.7$). Replacing $|x - y|$ with squared distance $\|x - y\|^2$ defines the **Wasserstein-2 distance**:
+::: {.cols .vc}
+::: {.col}
+Replacing $|x - y|$ with squared distance $\|x - y\|^2$ defines **Wasserstein-2 ($W_2$)**:
 
-$$W_2(P, Q) = \left(\inf_{\gamma \in \Pi(P, Q)} \mathbb{E}_{(x, y) \sim \gamma}\big[\|x - y\|^2\big]\right)^{1/2}$$
+$$W_2^2\big(\mathcal{N}(\mu_1, \sigma_1^2), \mathcal{N}(\mu_2, \sigma_2^2)\big) = (\mu_1 - \mu_2)^2 + (\sigma_1 - \sigma_2)^2$$
 
-- **Strict uniqueness of the 1D monotone plan:** If two ribbons cross ($x < x'$ and $y < y'$), uncrossing them from $(x \to y', x' \to y)$ to $(x \to y, x' \to y')$ saves $2(x' - x)(y' - y) > 0$ per unit mass, making the quantile coupling $Y = F_Q^{-1}(F_P(X))$ the *unique* optimal plan.
-- **Exact closed form between Gaussians (and FID):** For $P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$, the monotone map $Y = \mu_2 + \frac{\sigma_2}{\sigma_1}(X - \mu_1)$ gives:
-  $$W_2^2\big(\mathcal{N}(\mu_1, \sigma_1^2), \mathcal{N}(\mu_2, \sigma_2^2)\big) = (\mu_1 - \mu_2)^2 + (\sigma_1 - \sigma_2)^2$$
-  In $\mathbb{R}^n$, this generalizes to $\|\boldsymbol{\mu}_1 - \boldsymbol{\mu}_2\|_2^2 + \textrm{tr}\big(\boldsymbol{\Sigma}_1 + \boldsymbol{\Sigma}_2 - 2(\boldsymbol{\Sigma}_1^{1/2}\boldsymbol{\Sigma}_2\boldsymbol{\Sigma}_1^{1/2})^{1/2}\big)$, the **Fréchet Inception Distance (FID)** used to evaluate image generators.
+- **Strict 1D uncrossing:** For $x < x'$ and $y < y'$, uncrossing saves $2(x' - x)(y' - y) > 0$, making the monotone quantile coupling strictly unique.
+- **Fréchet Inception Distance (FID):** Multivariate Gaussian $W_2^2$ evaluates image generators in feature space.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-w2-uncrossing-fid
+:::
+:::
 :::
 
 ::: {.slide title="Entropic Regularization and the Gibbs Kernel"}
@@ -1233,14 +1262,20 @@ $$\min_{\boldsymbol{\gamma} \in \Pi(\mathbf{p}, \mathbf{q})} \sum_{i,j=1}^N \gam
 ::: {.slide title="Sinkhorn Matrix Scaling and the ε Trade-Off"}
 [Alternating Marginal Projections]{.kicker}
 
-How do we find the scaling vectors $\mathbf{a}$ and $\mathbf{b}$ in $\boldsymbol{\gamma}_\varepsilon = \textrm{diag}(\mathbf{a})\,\mathbf{K}\,\textrm{diag}(\mathbf{b})$?
+::: {.cols .vc}
+::: {.col}
+To enforce $\boldsymbol{\gamma}_\varepsilon^\top\mathbf{1} = \mathbf{q}$ and $\boldsymbol{\gamma}_\varepsilon\mathbf{1} = \mathbf{p}$ on $\boldsymbol{\gamma}_\varepsilon = \textrm{diag}(\mathbf{a})\mathbf{K}\textrm{diag}(\mathbf{b})$, **Sinkhorn–Knopp** alternates two $\mathcal{O}(N^2)$ matrix-vector divisions:
 
-- **Sinkhorn–Knopp alternating updates:** Enforcing column sums $\boldsymbol{\gamma}_\varepsilon^\top \mathbf{1} = \mathbf{q}$ and row sums $\boldsymbol{\gamma}_\varepsilon \mathbf{1} = \mathbf{p}$ alternates two elementwise divisions:
-  $$\mathbf{b} \leftarrow \frac{\mathbf{q}}{\mathbf{K}^\top \mathbf{a}}, \qquad \mathbf{a} \leftarrow \frac{\mathbf{p}}{\mathbf{K}\mathbf{b}}$$
-- **GPU-friendly and end-to-end differentiable:** Each iteration costs just two matrix-vector products ($\mathcal{O}(N^2)$), allowing gradients to backpropagate directly through the unrolled Sinkhorn steps.
-- **The $\varepsilon$ sharpness vs. speed trade-off:**
-  - **Large $\varepsilon$:** Fast convergence in tens of iterations, but blurs the transport plan toward the outer product $\mathbf{p}\mathbf{q}^\top$.
-  - **Small $\varepsilon \to 0$:** Recovers the exact sparse LP plan, but iteration counts grow like $\mathcal{O}(1/\varepsilon)$ and $e^{-C_{ij}/\varepsilon}$ underflows in standard floating point (requiring log-domain `logsumexp` updates).
+$$\mathbf{b} \leftarrow \frac{\mathbf{q}}{\mathbf{K}^\top \mathbf{a}}, \qquad \mathbf{a} \leftarrow \frac{\mathbf{p}}{\mathbf{K}\mathbf{b}}$$
+
+- **Differentiable on GPUs:** Gradients backpropagate directly through unrolled Sinkhorn steps.
+- **The $\varepsilon$ trade-off:** Large $\varepsilon$ converges fast but blurs $\boldsymbol{\gamma}_\varepsilon$; small $\varepsilon \to 0$ recovers the exact LP at $\mathcal{O}(1/\varepsilon)$ steps.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-sinkhorn-gibbs-scaling
+:::
+:::
 :::
 
 ::: {.slide title="Sinkhorn Convergence Across ε on the 6-Point Grid"}
@@ -1254,17 +1289,15 @@ With squared cost $C_{ij} = (x_i - x_j)^2$ ($W_2^2 = 3.50000$ across $10$ monoto
 ::: {.slide title="Fixed Kernels vs. Critics: Curse of Dimension"}
 [Statistical & Computational Trade-Offs]{.kicker}
 
-When comparing high-dimensional distributions from $N$ samples in $\mathbb{R}^n$, MMD and $W_1$ split our requirements down the middle:
+::: {.cols .vc}
+::: {.col}
+- **Fixed-Kernel MMD:** Closed-form $\mathcal{O}(N^2)$ U-statistic with **dimension-free sample error $\mathcal{O}(N^{-1/2})$** in any dimension $n$, but tail gradients vanish for $d \gg \ell$.
+- **Wasserstein-1 ($W_1$):** Unit gradient at all distances $d$, but empirical sample-to-sample $W_1$ suffers the **curse of dimensionality $\mathcal{O}(N^{-1/n})$** for $n > 2$ (requiring neural critic restriction in WGAN).
+:::
 
-| Criterion | Fixed-Kernel MMD ($\textrm{MMD}^2$) | Wasserstein-1 Distance ($W_1$) |
-|:--|:---|:---|
-| **Computational cost** | Closed-form U-statistic: $3$ pairwise kernel averages ($\mathcal{O}(N^2)$, no auxiliary training) | Requires solving an OT linear program / Sinkhorn or training a 1-Lipschitz WGAN critic |
-| **Sample estimation error** | **$\mathcal{O}(N^{-1/2})$ in every dimension $n$** (dimension-free parametric rate; Gretton et al., 2012) | **$\mathcal{O}(N^{-1/n})$ for $n > 2$** (severe curse of dimensionality; Weed & Bach, 2019) |
-| **Gradient at large distance $d$** | Vanishes exponentially ($\sim d\,e^{-d^2/(2\ell^2)}$) beyond a few length scales $\ell$ | Constant unit slope ($\|\nabla W_1\| = 1$) at every separation $d$ |
-| **Best practical use case** | Nonparametric two-sample hypothesis testing, KID evaluation, multi-scale kernel losses | WGAN adversarial training (where a neural critic restricts $\mathcal{G}$), low-D or minibatch OT |
-
-::: {.d2l-note .warn}
-**The High-Dimensional Empirical $W_1$ Trap:** In $n = 100$ dimensions, halving the empirical sample-to-sample $W_1$ estimation error requires $2^{100} \approx 10^{30}$ times more samples! WGAN avoids this only by restricting $\mathcal{G}$ to a parametric neural network class.
+::: {.col .fig .big}
+@fig:ch37-info-mmd-vs-w1-dimension
+:::
 :::
 :::
 

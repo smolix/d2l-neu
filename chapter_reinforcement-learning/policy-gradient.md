@@ -672,11 +672,16 @@ Policy Gradient and REINFORCE<br>**softmax preferences & score function · log-d
 ::: {.slide title="Learning a Policy Directly from Episode Returns"}
 [Motivation & Mental Model]{.kicker}
 
-When we have neither an expert to imitate (§14.5) nor differentiable physics $f(\mathbf{x}, \mathbf{u})$ to linearize (§14.6), the agent must improve its parameterized policy $\pi_\theta(a \mid s)$ directly from sampled returns:
+::: {.cols .vc}
+::: {.col}
+- **From cloning weights to return weights:** Behavior cloning ascended $\frac{1}{N}\sum_t w_t \log \pi_\theta(a_t \mid s_t)$ with $w_t = 1$ on expert data; REINFORCE rolls out $\pi_\theta$ itself and sets $w_t = R(\tau)$.
+- **Williams' insight (1992):** Weighting each sampled action's score $\nabla_\theta \log \pi_\theta(a_t \mid s_t)$ by $R(\tau)$ gives an unbiased stochastic gradient of $J(\theta) = \mathbb{E}[R(\tau)]$.
+:::
 
-- **From cloning weights to return weights:** Behavior cloning maximized $\frac{1}{N}\sum_t w_t \log \pi_\theta(a_t \mid s_t)$ with $w_t = 1$ on expert actions; what if we roll out $\pi_\theta$ itself and set $w_t = R(\tau)$, the total return of the episode?
-- **Williams' REINFORCE insight (1992):** Weighting each sampled action's score $\nabla_\theta \log \pi_\theta(a_t \mid s_t)$ by the episode return $R(\tau)$ yields an *unbiased stochastic gradient* of the expected return $J(\theta) = \mathbb{E}_{\tau \sim P(\cdot; \theta)}[R(\tau)]$.
-- **Beyond finite action tables:** Unlike Q-learning (which requires $\max_a Q(s, a)$ over a discrete list), $\pi_\theta(a \mid s)$ can parameterize continuous torques or distributions over 100,000-token vocabularies.
+::: {.col .fig .big}
+@fig:ch14-rl-cloning-to-reinforce
+:::
+:::
 :::
 
 ::: {.slide title="Softmax Preferences and the Score Function"}
@@ -695,23 +700,34 @@ $$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a''} e^{\theta_{s,a''}}},
 ::: {.slide title="The Smallest Case: Rare Rewards Mean High Variance"}
 [Bias and Variance of a Single-State Estimator]{.kicker}
 
-Consider one state with two actions where $r(1) = 1, r(2) = 0$, and $p = \pi_\theta(1)$, so $J(\theta) = p$ and $\partial J / \partial \theta_1 = p(1 - p)$:
+::: {.cols .vc}
+::: {.col}
+$$\frac{\partial J}{\partial \theta_1} = \mathbb{E}_{a \sim \pi_\theta}\Big[r(a)\,\frac{\partial \log \pi_\theta(a)}{\partial \theta_1}\Big] = p(1 - p)$$
 
-$$\frac{\partial J}{\partial \theta_1} = \sum_a \pi_\theta(a)\,r(a)\,\frac{\partial \log \pi_\theta(a)}{\partial \theta_1} = \mathbb{E}_{a \sim \pi_\theta}\Big[r(a)\,\frac{\partial \log \pi_\theta(a)}{\partial \theta_1}\Big]$$
+- **Unbiased but spiky:** With probability $p$, action $1$ returns estimator $1 - p$; with probability $1 - p$, action $2$ returns $0$.
+- **Relative std $\sqrt{(1 - p)/p}$:** At $p \approx 0.014$ on FrozenLake, single-episode noise is $8.4\times$ the true gradient.
+:::
 
-- **Unbiased but spiky:** With probability $p$, we sample action $1$ and observe estimator $1(1 - p)$; with probability $1 - p$, we sample action $2$ and observe $0$, averaging to the exact gradient $p(1 - p)$.
-- **Relative standard deviation $\sqrt{(1 - p)/p}$:** On FrozenLake, the initial uniform policy reaches the goal with $p \approx 0.014$, giving a relative standard deviation of $\sqrt{0.986/0.014} \approx 8.4\times$ the true gradient (and $0.986^{16} \approx 80\%$ of 16-episode batches return an all-zero gradient).
+::: {.col .fig}
+@fig:ch14-rl-rare-reward-variance
+:::
+:::
 :::
 
 ::: {.slide title="Trajectory Probabilities and the Log-Derivative Trick"}
 [Differentiating Through an Expectation]{.kicker}
 
-A trajectory $\tau = (s_0, a_0, r_0, \ldots, s_T)$ has probability $P(\tau; \theta)$ determined by the start distribution $\mu_0$, the policy $\pi_\theta$, and the environment transition kernel $P$:
+::: {.cols .vc}
+::: {.col}
+$$P(\tau; \theta) = \mu_0(s_0) \prod_{t=0}^{T-1} \pi_\theta(a_t \mid s_t)\,P(s_{t+1} \mid s_t, a_t)$$
 
-$$P(\tau; \theta) = \mu_0(s_0) \prod_{t=0}^{T-1} \pi_\theta(a_t \mid s_t)\,P(s_{t+1} \mid s_t, a_t), \qquad J(\theta) = \sum_\tau P(\tau; \theta)\,R(\tau)$$
+- **The log-derivative trick ($\nabla_\theta P = P\,\nabla_\theta \log P$):** Multiplying and dividing by $P(\tau; \theta)$ turns $\nabla_\theta \sum_\tau P(\tau; \theta)R(\tau)$ back into a sampleable expectation $\mathbb{E}_{\tau \sim P}[R(\tau)\,\nabla_\theta \log P(\tau; \theta)]$.
+:::
 
-- **The log-derivative trick ($\nabla_\theta P = P\,\nabla_\theta \log P$):** Because $R(\tau)$ does not depend on $\theta$, differentiating $J(\theta)$ and multiplying/dividing by $P(\tau; \theta)$ turns the gradient back into an expectation over $\tau \sim P(\cdot; \theta)$:
-  $$\nabla_\theta J(\theta) = \sum_\tau P(\tau; \theta)\,R(\tau)\,\nabla_\theta \log P(\tau; \theta) = \mathbb{E}_{\tau \sim P(\cdot; \theta)}\Big[R(\tau)\,\nabla_\theta \log P(\tau; \theta)\Big]$$
+::: {.col .fig}
+@fig:ch14-rl-log-derivative
+:::
+:::
 :::
 
 ::: {.slide title="Why the Unknown Transition Kernel Drops Out"}
@@ -797,12 +813,18 @@ Training 12 seeds of `Policy.tabular(16, 4)` over 256 updates on calm FrozenLake
 ::: {.slide title="The Policy Gradient Theorem"}
 [Causality and Discounted State Occupancy]{.kicker}
 
-Sutton et al. (2000) proved that rewards collected *before* step $t$ contribute zero in expectation, allowing us to replace the full trajectory return $R(\tau)$ with the action value $Q^{\pi_\theta}(s_t, a_t)$:
+::: {.cols .vc}
+::: {.col}
+$$\nabla_\theta J(\theta) = \mathbb{E}_\tau\Big[\sum_{t \geq 0} \gamma^t\,\nabla_\theta \log \pi_\theta(a_t \mid s_t)\,Q^{\pi_\theta}(s_t, a_t)\Big]$$
 
-$$\nabla_\theta J(\theta) = \mathbb{E}_\tau\Big[\sum_{t \geq 0} \gamma^t\,\nabla_\theta \log \pi_\theta(a_t \mid s_t)\,Q^{\pi_\theta}(s_t, a_t)\Big] = \frac{1}{1 - \gamma}\,\mathbb{E}_{s \sim d_\gamma^{\pi_\theta},\; a \sim \pi_\theta}\Big[\nabla_\theta \log \pi_\theta(a \mid s)\,Q^{\pi_\theta}(s, a)\Big]$$
+- **Causality cancellation:** Past rewards $r_{<t}$ are fixed at $s_t$ while $\mathbb{E}_{a_t}[\nabla_\theta \log \pi_\theta(a_t \mid s_t)] = \mathbf{0}$.
+- **State-occupancy weighting:** Scales updates at $s$ by $d_\gamma^{\pi_\theta}(s) = (1-\gamma)\sum_{t \geq 0} \gamma^t \Pr(s_t = s)$.
+:::
 
-- **Proof in two steps:** (1) Given $s_t$, past rewards $r_0, \ldots, r_{t-1}$ are fixed while $\mathbb{E}_{a_t \sim \pi_\theta}[\nabla_\theta \log \pi_\theta(a_t \mid s_t)] = \nabla_\theta \sum_a \pi_\theta(a \mid s_t) = \nabla_\theta 1 = \mathbf{0}$; (2) by the Markov property, future rewards from $(s_t, a_t)$ average to $\gamma^t Q^{\pi_\theta}(s_t, a_t)$.
-- **State-occupancy weighting:** The gradient at state $s$ is scaled by $d_\gamma^{\pi_\theta}(s) = (1-\gamma)\sum_{t \geq 0} \gamma^t \Pr(s_t = s)$, explaining why cells off the learned path barely update.
+::: {.col .fig}
+@fig:ch14-rl-causality-credit
+:::
+:::
 :::
 
 ::: {.slide title="Sample Cost of On-Policy Data Collection"}

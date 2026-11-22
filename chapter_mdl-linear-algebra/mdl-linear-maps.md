@@ -1446,12 +1446,16 @@ Matrices as Linear Maps<br>**column geometry · composition & einsum · rank–n
 ::: {.slide title="When Does a Linear Layer Destroy Information?"}
 [Motivation]{.kicker}
 
-- **Beyond the Row-by-Row View:** Reading $\mathbf{A}\mathbf{x}$ one row at a time shows $m$ separate hyperplane tests, but hides what the matrix does to the entire input space $\mathbb{R}^n$ at once.
-- **Dimension Bottlenecks in Neural Networks:** A fully connected layer mapping $784$ Fashion-MNIST pixels to $256$ features is a $256 \times 784$ matrix; because it outputs fewer numbers than it takes in, it must collapse at least $784 - 256 = 528$ independent directions to zero.
-- **Invertible vs. Singular Square Maps:** Our running matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$ sends $(2, -1) \mapsto (0, -5)$ and can be completely undone, whereas $\mathbf{B} = \left(\begin{smallmatrix}2&1\\4&2\end{smallmatrix}\right)$ sends both $(1, 1)$ and $(0, 3)$ to $(3, 6)$, destroying the ability to recover the input.
+::: {.cols .vc}
+::: {.col}
+- **From Rows to Columns:** Reading $\mathbf{A}\mathbf{x}$ by rows shows $m$ hyperplane tests, while reading by columns shows where the input coordinate axes land.
+- **Dimension Bottlenecks:** A $256 \times 784$ Fashion-MNIST layer outputs fewer numbers than it takes in, collapsing at least $784 - 256 = 528$ directions to zero.
+- **Invertible vs. Singular:** Running matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$ is reversible, whereas $\mathbf{B} = \left(\begin{smallmatrix}2&1\\4&2\end{smallmatrix}\right)$ merges $(1, 1)$ and $(0, 3)$ onto $(3, 6)$.
+:::
 
-::: {.d2l-note}
-**The Column Shift:** Switching from rows to columns reveals where the coordinate axes land, how many dimensions survive (rank), and how volumes rescale (determinant).
+::: {.col .fig .big}
+@fig:ch33-la-row-vs-col-view
+:::
 :::
 :::
 
@@ -1501,35 +1505,50 @@ Matrices as Linear Maps<br>**column geometry · composition & einsum · rank–n
 ::: {.slide title="Orthogonal Matrices Preserve Lengths and Angles"}
 [Rigid Motions]{.kicker}
 
-- **Orthonormal Columns ($\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$):** A square matrix $\mathbf{Q}$ is *orthogonal* when its columns are mutually perpendicular unit vectors, which guarantees that every dot product is preserved:
-  $$(\mathbf{Q}\mathbf{x})\cdot(\mathbf{Q}\mathbf{y}) = \mathbf{x}^\top\mathbf{Q}^\top\mathbf{Q}\mathbf{y} = \mathbf{x}^\top\mathbf{y} = \mathbf{x}\cdot\mathbf{y}$$
-- **Isometry & Cosine Invariance:** Setting $\mathbf{y} = \mathbf{x}$ shows $\|\mathbf{Q}\mathbf{x}\| = \|\mathbf{x}\|$, and rotating an entire embedding space by $\mathbf{Q}$ leaves every pairwise cosine similarity untouched.
-- **Two-Sided Inverse ($\mathbf{Q}^{-1} = \mathbf{Q}^\top$):** For square $\mathbf{Q}$, $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ implies $\mathbf{Q}\mathbf{Q}^\top = \mathbf{I}$; in $\mathbb{R}^2$, the only orthogonal matrices are rotations $\mathbf{R}_\phi = \left(\begin{smallmatrix}\cos\phi & -\sin\phi \\ \sin\phi & \cos\phi\end{smallmatrix}\right)$ and reflections.
+::: {.cols .vc}
+::: {.col}
+- **Orthonormal Columns ($\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$):** Square $\mathbf{Q}$ preserves dot products $(\mathbf{Q}\mathbf{x})\cdot(\mathbf{Q}\mathbf{y}) = \mathbf{x}^\top\mathbf{Q}^\top\mathbf{Q}\mathbf{y} = \mathbf{x}\cdot\mathbf{y}$, lengths, and angles.
+- **Two-Sided Inverse ($\mathbf{Q}^{-1} = \mathbf{Q}^\top$):** In $\mathbb{R}^2$, only rotations $\mathbf{R}_\phi$ and reflections are orthogonal.
+- **Equal Lengths Are Essential:** $\operatorname{diag}(1, 10)$ has perpendicular columns but bends $90^\circ$ into $169^\circ$.
+:::
 
-::: {.d2l-note .warn}
-**Perpendicular Columns Alone Are Not Enough:** The diagonal matrix $\operatorname{diag}(1, 10)$ has perpendicular columns, but because their lengths differ, it distorts the $90^\circ$ angle between $(1, 1)$ and $(1, -1)$ into $169^\circ$.
+::: {.col .fig .big}
+@fig:ch33-la-orthogonal-isometry
+:::
 :::
 :::
 
 ::: {.slide title="Einstein Summation Unifies Tensor Contractions"}
 [Index Notation]{.kicker}
 
-- **One Rule for Every Product:** Dot products ($v_i w_i$), matrix–vector products ($a_{ij}v_j$), matrix products ($a_{ij}b_{jk}$), and the trace ($\operatorname{tr}\mathbf{A} = \sum_i a_{ii}$) all multiply entries and sum over repeated indices:
+::: {.cols .vc}
+::: {.col}
+- **One Rule for Every Product:** Multiply entries and sum over indices omitted after `->`.
+- **Cyclic Trace Invariance:** $\operatorname{tr}(\mathbf{A}\mathbf{B}) = \sum_{i,j} a_{ij}b_{ji} = \operatorname{tr}(\mathbf{B}\mathbf{A})$, so $\operatorname{tr}(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) = \operatorname{tr}(\mathbf{A})$.
 
 @geometry-linear-algebraic-ops-expressing-in-code-2
+:::
 
-- **Cyclic Invariance of the Trace:** Swapping scalar factors inside the double sum proves $\operatorname{tr}(\mathbf{A}\mathbf{B}) = \sum_{i,j} a_{ij}b_{ji} = \sum_{j,i} b_{ji}a_{ij} = \operatorname{tr}(\mathbf{B}\mathbf{A})$, so $\operatorname{tr}(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) = \operatorname{tr}(\mathbf{A})$ is independent of basis.
+::: {.col .fig}
+@fig:ch33-la-einsum-unification
+:::
+:::
 :::
 
 ::: {.slide title="Multi-Head Attention Contractions With einsum"}
 [Index Notation in Practice]{.kicker}
 
-- **Named Kept vs. Summed Axes:** In `np.einsum('bhij,bhtj->bhit', queries, keys)`, batch $b$ and head $h$ appear on both sides of `->` (kept), while feature index $j$ is omitted from the output (summed out):
+::: {.cols .vc}
+::: {.col}
+- **Named Kept vs. Summed Axes:** `'bhij,bhtj->bhit'` keeps batch $b$, head $h$, query $i$, key $t$, and sums feature width $j$.
+- **Contraction Order Pitfall:** Evaluating $\mathbf{A}(\mathbf{B}\mathbf{v})$ takes $2n^2$ ops vs. $n^3$ for $(\mathbf{A}\mathbf{B})\mathbf{v}$.
 
 @mdl-linear-maps-tensors-and-einstein-summation-1
+:::
 
-::: {.d2l-note .warn}
-**Contraction Order Pitfall:** Associativity guarantees $(\mathbf{A}\mathbf{B})\mathbf{v} = \mathbf{A}(\mathbf{B}\mathbf{v})$, but multiplying two $n \times n$ matrices first costs $O(n^3)$ operations whereas two matrix–vector products $\mathbf{A}(\mathbf{B}\mathbf{v})$ cost only $2n^2$.
+::: {.col .fig}
+@fig:ch33-la-einsum-attention
+:::
 :::
 :::
 
@@ -1552,33 +1571,50 @@ Matrices as Linear Maps<br>**column geometry · composition & einsum · rank–n
 ::: {.slide title="The Rank–Nullity Theorem: Dimension Conservation"}
 [Rank and Dimension]{.kicker}
 
-The *rank* of a matrix is the dimension of its column space ($\operatorname{rank}\mathbf{A} = \dim\operatorname{col}\mathbf{A}$), counting how many independent input dimensions survive the map:
-
-::: {.d2l-note .rule}
-**Proposition (Rank–Nullity Theorem).** For every $m \times n$ matrix $\mathbf{A}$, the number of surviving dimensions plus the number of collapsed dimensions equals the input dimension:
-$$\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$$
+::: {.cols .vc}
+::: {.col}
+- **Dimension Conservation:** For every $\mathbf{A} \in \mathbb{R}^{m \times n}$, $\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$.
+- **Proof by Basis Extension:** Extending a basis $\mathbf{w}_1, \ldots, \mathbf{w}_k$ of $\ker\mathbf{A}$ with $\mathbf{u}_1, \ldots, \mathbf{u}_{n-k}$ yields independent images $\mathbf{A}\mathbf{u}_i$ spanning $\operatorname{col}\mathbf{A}$.
+- **Bottleneck Layers:** A $256 \times 784$ layer has $\operatorname{rank}\mathbf{A} \le 256$, forcing $\dim\ker\mathbf{A} \ge 528$.
 :::
 
-- **Proof Intuition:** Extend a basis $\mathbf{w}_1, \ldots, \mathbf{w}_k$ of $\ker\mathbf{A}$ to a full basis of $\mathbb{R}^n$ with $\mathbf{u}_1, \ldots, \mathbf{u}_{n-k}$; the $\mathbf{w}_j$ vanish under $\mathbf{A}$, while the images $\mathbf{A}\mathbf{u}_1, \ldots, \mathbf{A}\mathbf{u}_{n-k}$ are linearly independent and span $\operatorname{col}\mathbf{A}$.
-- **Bottleneck Layers:** A $256 \times 784$ linear layer has $\operatorname{rank}\mathbf{A} \le 256$, so rank–nullity guarantees $\dim\ker\mathbf{A} \ge 784 - 256 = 528$ directions sent to zero.
+::: {.col .fig .big}
+@fig:ch33-la-rank-nullity-split
+:::
+:::
 :::
 
 ::: {.slide title="Row Rank Equals Column Rank & Bottleneck Factors"}
 [Rank and Bottlenecks]{.kicker}
 
-- **Why Row Rank Equals Column Rank:** If $r = \operatorname{rank}\mathbf{A}$, placing a basis of $\operatorname{col}\mathbf{A}$ into $\mathbf{G} \in \mathbb{R}^{m \times r}$ and column coefficients into $\mathbf{H} \in \mathbb{R}^{r \times n}$ factors $\mathbf{A} = \mathbf{G}\mathbf{H}$; reading by rows shows every row of $\mathbf{A}$ lies in the span of the $r$ rows of $\mathbf{H}$.
-- **Parameter-Efficient Bottlenecks:** Storing a rank-$r$ matrix as $\mathbf{G}\mathbf{H}$ requires $r(m + n)$ parameters instead of $mn$, the structural foundation of low-rank adapters (LoRA).
+::: {.cols .vc}
+::: {.col}
+- **Rank-$r$ Factorization ($\mathbf{A} = \mathbf{G}\mathbf{H}$):** $\mathbf{G} \in \mathbb{R}^{m \times r}$ holds a column-space basis and $\mathbf{H} \in \mathbb{R}^{r \times n}$ holds row-space basis coefficients, proving row rank equals column rank.
+- **Low-Rank Storage:** $\mathbf{G}\mathbf{H}$ stores $r(m+n)$ numbers instead of $mn$.
 
 @mdl-linear-maps-rank
+:::
+
+::: {.col .fig}
+@fig:ch33-la-bottleneck-gh
+:::
+:::
 :::
 
 ::: {.slide title="Matrix Inverses and the 2×2 Explicit Formula"}
 [Invertibility]{.kicker}
 
-- **Two-Sided Inverse ($\mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$):** An inverse recovers every input uniquely via $\mathbf{x} = \mathbf{A}^{-1}(\mathbf{A}\mathbf{x})$. Whenever a left inverse $\mathbf{L}$ and right inverse $\mathbf{X}$ exist, associativity forces $\mathbf{L} = \mathbf{L}(\mathbf{A}\mathbf{X}) = (\mathbf{L}\mathbf{A})\mathbf{X} = \mathbf{X}$.
-- **Explicit $2 \times 2$ Formula:** When $ps - qr \neq 0$, swapping the diagonal entries, negating the off-diagonal entries, and dividing by $ps - qr$ inverts the matrix:
-  $$\begin{bmatrix}p & q \\ r & s\end{bmatrix}^{-1} = \frac{1}{ps - qr}\begin{bmatrix}s & -q \\ -r & p\end{bmatrix}$$
-- **Running Matrix Check:** For $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$, $ps - qr = 3 - (-2) = 5$, giving $\mathbf{A}^{-1} = \frac{1}{5}\left(\begin{smallmatrix}3&-2\\1&1\end{smallmatrix}\right)$, which maps $(0, -5)$ right back to $(2, -1)$.
+::: {.cols .vc}
+::: {.col}
+- **Two-Sided Inverse ($\mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$):** Uniquely recovers inputs via $\mathbf{x} = \mathbf{A}^{-1}(\mathbf{A}\mathbf{x})$.
+- **Explicit $2 \times 2$ Rule:** When $ps - qr \neq 0$, $\mathbf{A}^{-1} = \frac{1}{ps - qr}\left(\begin{smallmatrix}s & -q \\ -r & p\end{smallmatrix}\right)$.
+- **Running Matrix $\mathbf{A}$:** $ps - qr = 5$ gives $\mathbf{A}^{-1} = \frac{1}{5}\left(\begin{smallmatrix}3&-2\\1&1\end{smallmatrix}\right)$, mapping $(0, -5) \mapsto (2, -1)$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-inverse-2x2-wheel
+:::
+:::
 :::
 
 ::: {.slide title="The Invertible Matrix Theorem for Square Maps"}
@@ -1635,42 +1671,48 @@ For an $n \times n$ square matrix $\mathbf{A}$, being one-to-one and being onto 
 ::: {.slide title="Three Axioms Define the n-Dimensional Determinant"}
 [General Determinant]{.kicker}
 
-Rather than slicing $n$-dimensional polytopes, three geometric axioms for signed volume uniquely determine the determinant as a function of the columns $\mathbf{a}_1, \ldots, \mathbf{a}_n$:
+::: {.cols .vc}
+::: {.col}
+- **1. Multilinear in Each Column:** Scaling or adding in column $j$ scales or adds signed volume.
+- **2. Alternating ($\det = 0$ on Equal Columns):** Coinciding columns flatten the box; swapping any two columns flips the sign.
+- **3. Normalized ($\det\mathbf{I} = 1$):** Uniquely forces the $n!$ permutation sum $\det\mathbf{A} = \sum_\sigma \operatorname{sgn}(\sigma)\prod_j a_{\sigma(j)j}$.
+:::
 
-- **1. Multilinear in Each Column:** Scaling one column scales volume by the same factor, and adding two vectors in column $j$ adds the two signed volumes while holding all other columns fixed.
-- **2. Alternating ($\det = 0$ on Equal Columns):** Whenever two columns coincide, the $n$-dimensional box flattens into a lower-dimensional slab of zero volume.
-- **3. Normalized on the Unit Cube ($\det\mathbf{I} = 1$):** Expanding $\det(\ldots, \mathbf{u}+\mathbf{w}, \ldots, \mathbf{u}+\mathbf{w}, \ldots) = 0$ proves that **swapping any two columns flips the sign**, which forces the $n!$ permutation formula:
-  $$\det\mathbf{A} = \sum_{\sigma} \operatorname{sgn}(\sigma)\, a_{\sigma(1)1}\, a_{\sigma(2)2} \cdots a_{\sigma(n)n}$$
+::: {.col .fig .big}
+@fig:ch33-la-det-axioms
+:::
+:::
 :::
 
 ::: {.slide title="Triangular Matrices, Block Rules, and Cofactors"}
 [Computing Determinants]{.kicker}
 
-- **Triangular & Block-Triangular Shortcut:** In an upper- or lower-triangular matrix $\mathbf{U}$, only the diagonal permutation $\sigma(j) = j$ avoids zeros, so the determinant is simply the product of the diagonal entries:
-  $$\det\mathbf{U} = u_{11}u_{22}\cdots u_{nn}, \qquad \det\begin{bmatrix}\mathbf{D}_1 & * \\ \mathbf{0} & \mathbf{D}_2\end{bmatrix} = \det\mathbf{D}_1\,\det\mathbf{D}_2$$
-- **Transpose Symmetry ($\det\mathbf{A}^\top = \det\mathbf{A}$):** Inverting permutations preserves parity ($\operatorname{sgn}(\sigma^{-1}) = \operatorname{sgn}(\sigma)$), so every column property of determinants holds identically for rows.
-- **Cofactor Expansion ($3 \times 3$ Example):** Expanding $\mathbf{M} = \left(\begin{smallmatrix}2&1&0\\1&3&1\\0&1&2\end{smallmatrix}\right)$ along column 1 gives $2\det\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right) - 1\det\left(\begin{smallmatrix}1&0\\1&2\end{smallmatrix}\right) + 0 = 2(5) - 2 = 8$.
+::: {.cols .vc}
+::: {.col}
+- **Triangular Shortcut:** Only $\sigma(j) = j$ avoids zeros, so $\det\mathbf{U} = \prod_i u_{ii}$ and $\det\left(\begin{smallmatrix}\mathbf{D}_1 & * \\ \mathbf{0} & \mathbf{D}_2\end{smallmatrix}\right) = \det\mathbf{D}_1\det\mathbf{D}_2$.
+- **Transpose Symmetry:** $\det\mathbf{A}^\top = \det\mathbf{A}$.
+- **Normalizing Flows:** Triangular Jacobians turn $\log|\det\mathbf{J}| = \sum_i \log|J_{ii}|$ into an $O(d)$ sum instead of $O(d^3)$.
+:::
 
-::: {.d2l-note}
-**Why Normalizing Flows Use Triangular Jacobians:** Evaluating $\log|\det\mathbf{J}|$ for a general $d \times d$ layer costs $O(d^3)$ via LU factorization, whereas a triangular Jacobian reduces $\log|\det\mathbf{J}| = \sum_i \log|J_{ii}|$ to $O(d)$ work.
+::: {.col .fig .big}
+@fig:ch33-la-triangular-flow-det
+:::
 :::
 :::
 
 ::: {.slide title="Multiplicativity: Volume Scaling Under Composition"}
 [Multiplicativity]{.kicker}
 
-If $\mathbf{B}$ scales volume by $\det\mathbf{B}$ and $\mathbf{A}$ scales volume by $\det\mathbf{A}$, their composite $\mathbf{A}\mathbf{B}$ scales volume by the product:
-
-::: {.d2l-note .rule}
-**Proposition (Multiplicativity of the Determinant).** For all $n \times n$ matrices $\mathbf{A}$ and $\mathbf{B}$, $\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{A})\,\det(\mathbf{B})$.
+::: {.cols .vc}
+::: {.col}
+- **Multiplicativity ($\det(\mathbf{A}\mathbf{B}) = \det\mathbf{A}\det\mathbf{B}$):** $D(\mathbf{B}) = \det(\mathbf{A}\mathbf{B})$ is multilinear and alternating in columns of $\mathbf{B}$, so $D(\mathbf{B}) = D(\mathbf{I})\det\mathbf{B}$.
+- **Key Corollaries:** Scalar commutativity $\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{B}\mathbf{A})$, similarity invariance $\det(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) = \det\mathbf{A}$, $\det(\mathbf{A}^{-1}) = 1/\det\mathbf{A}$, and $\det\mathbf{Q} = \pm 1$.
 :::
 
-- **Three-Line Axiomatic Proof:** Fix $\mathbf{A}$; the map $D(\mathbf{B}) = \det(\mathbf{A}\mathbf{B})$ is multilinear and alternating in the columns $\mathbf{b}_j$ of $\mathbf{B}$ (since column $j$ of $\mathbf{A}\mathbf{B}$ is $\mathbf{A}\mathbf{b}_j$), so $D(\mathbf{B}) = D(\mathbf{I})\det\mathbf{B} = \det(\mathbf{A})\det(\mathbf{B})$.
-- **Four Immediate Consequences:**
-  1. *Commutativity of scalars:* $\det(\mathbf{A}\mathbf{B}) = \det(\mathbf{B}\mathbf{A})$ even when $\mathbf{A}\mathbf{B} \neq \mathbf{B}\mathbf{A}$.
-  2. *Similarity invariance:* $\det(\mathbf{V}\mathbf{A}\mathbf{V}^{-1}) = \det\mathbf{A}$, so volume scaling is independent of coordinate basis.
-  3. *Inverses:* $\det(\mathbf{A}^{-1}) = 1/\det\mathbf{A}$ (e.g., $\det\mathbf{A}^{-1} = 1/5$ for our running matrix).
-  4. *Orthogonal matrices:* $\det(\mathbf{Q}^\top\mathbf{Q}) = (\det\mathbf{Q})^2 = 1 \implies \det\mathbf{Q} = \pm 1$ ($+1$ rotation, $-1$ reflection).
+::: {.col .fig .big}
+@fig:ch33-la-det-multiplicativity
+:::
+:::
 :::
 
 ::: {.slide title="Invertibility Criterion: det A ≠ 0"}

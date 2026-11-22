@@ -667,13 +667,16 @@ Compilers, Operator Fusion, and Graph Capture (`torch.compile`, `jax.jit`)<br>**
 ::: {.slide title="Why an Eight-Op Activation Moves 9× the Needed Bytes"}
 [Motivation]{.kicker}
 
-In §13.1, evaluating the 8-operation GELU approximation `gelu_ish(x)` ($0.5\,x\,(1 + \tanh(0.8\,(x + 0.04\,x^3)))$) on a $4000 \times 4000$ `float32` tensor ($61\text{ MiB}$) exposed two penalties of **eager execution**:
+::: {.cols .vc}
+::: {.col}
+- **Redundant DRAM round trips:** In eager mode, the 8-op `gelu_ish(x)` launches 8 separate kernels that read 10 arrays and write 8 arrays ($18 \times 61\text{ MiB} = 1.07\text{ GiB}$ vs. $122\text{ MiB}$ minimum).
+- **Per-kernel host dispatch:** On small tensors, Python pays launch latency $h$ ($10\text{--}100\,\mu\text{s}$) for each of the 8 kernels.
+- **Compiler cure:** Operator fusion keeps intermediates in registers ($9\times$ less DRAM traffic) and CUDA graph replay collapses host dispatch to 1 call.
+:::
 
-- **Redundant DRAM round trips (bandwidth-bound):** Launching 8 separate kernels reads 10 arrays and writes 8 arrays ($18 \times 61\text{ MiB} = 1.07\text{ GiB}$, taking $\ge 1.1\text{ ms}$ at $1\text{ TB/s}$), whereas the mathematical function needs only $1$ read and $1$ write ($122\text{ MiB}$, or $0.13\text{ ms}$).
-- **Per-kernel host dispatch (overhead-bound):** On a small tensor, Python pays host launch time $h$ ($10\text{--}100\,\mu\text{s}$) for each of the 8 kernels, taking far longer to enqueue the work than the GPU takes to run it.
-
-::: {.d2l-note}
-Handing the whole computation graph to a compiler before execution cures both: **operator fusion** keeps intermediate values in on-chip registers, and **kernel replay** replaces hundreds of Python launches with one.
+::: {.col .fig .big}
+@fig:ch13-perf-eager-penalties
+:::
 :::
 :::
 
@@ -698,16 +701,16 @@ Handing the whole computation graph to a compiler before execution cures both: *
 ::: {.slide title="Three Ways a Tracer Handles Data-Dependent Branches"}
 [Control Flow]{.kicker}
 
-Because symbolic placeholders carry no runtime numerical values, a tracer cannot evaluate a Python conditional such as `if x.sum() > 0:`:
+::: {.cols .vc}
+::: {.col}
+- **1. Freeze (`torch.jit.trace`):** Records only the branch taken by one example input—fast, but **silently wrong** when new inputs take the other branch.
+- **2. Refuse (`jax.jit`, `fullgraph=True`):** Raises a trace-time error and requires graph primitives (`where`/`select` or `cond`) inside a single fused program.
+- **3. Fall back (`torch.compile` default):** Inserts a **graph break**, synchronizing the GPU with Python to evaluate `if` before launching Graph 2.
+:::
 
-| Capture Strategy | Mechanism at Trace / Run Time | Correctness & Performance Trade-Off |
-| :--- | :--- | :--- |
-| **1. Freeze** (`torch.jit.trace`) | Record only the branch taken by one concrete example input | Fast at run time, but **silently wrong** when new data takes the other branch |
-| **2. Refuse** (`jax.jit`, `fullgraph=True`) | Raise a trace-time error; require graph primitives (`where`/`select` or `cond`) | Single fused program; `where`/`select` evaluates both branches and picks one |
-| **3. Fall back** (`torch.compile` default) | Insert a **graph break**: run Graph 1, synchronize with Python to branch, launch Graph 2 | Preserves arbitrary Python semantics at the cost of a host–device sync barrier |
-
-::: {.d2l-note}
-Branches on **static metadata** (`if x.shape[0] > 4:` or `if training:`) are known at trace time and unroll cleanly into the captured graph without any break.
+::: {.col .fig .big}
+@fig:ch13-perf-branch-strategies
+:::
 :::
 :::
 
@@ -756,11 +759,17 @@ Because compiled kernels specialize tile sizes and loop bounds to tensor shapes,
 ::: {.slide title="Handling Ragged Sequences Without Recompilation"}
 [Bucketing & Padding]{.kicker}
 
-Suppose a compiled training step receives variable-length minibatches of sequence lengths $100, 128, 100, 75, 128, 100$ (or a smaller final minibatch at the end of an epoch):
+::: {.cols .vc}
+::: {.col}
+- **Unpadded ragged lengths ($100, 128, 75$):** Every new sequence length triggers a multi-second compilation pause, thrashing the training loop.
+- **Power-of-two / multiple-of-64 bucketing:** Padding lengths $100$ and $75$ with masked tokens to bucket $128$ compiles and caches **only 1 kernel**.
+- **Epoch tail batches:** Always pass `drop_last=True` (or pad the final batch) when using `jax.jit` or static-shape `torch.compile` / CUDA graphs.
+:::
 
-- **Unpadded static compilation:** Every distinct sequence length triggers a multi-second compilation pause ($3$ compilations for lengths $100, 128, 75$), stall-thrashing the training loop.
-- **Shape bucketing (padding to multiples of $64$):** Lengths $100$ and $75$ are padded with masked tokens to length $128$, so the compiler traces and caches **only $1$ kernel** (trading $\sim 70\%$ extra padded compute on the length-$75$ batch to avoid recompilation).
-- **Epoch tail batches:** Always set `drop_last=True` (or pad the final batch) when using `jax.jit` or static-shape `torch.compile(..., dynamic=False)` / CUDA graphs.
+::: {.col .fig .big}
+@fig:ch13-perf-shape-bucketing
+:::
+:::
 :::
 
 ::: {.slide title="Operator Fusion Eliminates Off-Chip DRAM Round Trips"}
@@ -787,26 +796,34 @@ Always verify `allclose` first because compiler fusion can reorder floating-poin
 ::: {.slide title="Impact of Activation Fusion Inside a 1B GPT Block"}
 [Transformer FFN Fusion]{.kicker}
 
-How much time does an unfused 8-op activation waste inside a Transformer FFN of width $d = 2048$ and hidden width $4d = 8192$ in `bfloat16` ($b = 2$, ridge $I^* = P/\beta \approx 164\text{ FLOP/byte}$) across $M$ tokens?
+::: {.cols .vc}
+::: {.col}
+$$\frac{t_{\textrm{act (eager)}}}{t_{\textrm{FFN matmuls}}} \;=\; \frac{9 I^*}{d} \;\approx\; 0.72$$
 
-$$\frac{t_{\textrm{activation (eager)}}}{t_{\textrm{FFN matmuls}}} \;=\; \frac{18 \cdot (4dM \cdot 2) / \beta}{2 \cdot (2 \cdot M \cdot d \cdot 4d) / P} \;=\; \frac{144\, dM / \beta}{16\, d^2 M / P} \;=\; \frac{9 I^*}{d} \;\approx\; 0.72$$
+- **Independent of token count $M$:** On $M = 8{,}192$ tokens ($d = 2048$, hidden $4d = 8192$), the two `bf16` FFN GEMMs take $\sim 3.3\text{ ms}$ at $165\text{ TFLOP/s}$.
+- **Eager vs. fused activation:** Unfused 8-op `gelu_ish` moves $2.25\text{ GiB}$ ($\sim 2.4\text{ ms}$, or **$72\%$ of GEMM time**); fusion cuts traffic $9\times$ to $256\text{ MiB}$ ($\sim 0.27\text{ ms}$, $< 8\%$ of GEMM time).
+:::
 
-- **Independent of token count $M$:** On $M = 8{,}192$ tokens, the two surrounding FFN matrix products perform $5.5 \times 10^{11}\text{ FLOPs}$ ($\sim 3.3\text{ ms}$ at $165\text{ TFLOP/s}$).
-- **Unfused vs. fused:** Eager `gelu_ish` moves $18 \times 128\text{ MiB} = 2.25\text{ GiB}$ ($\sim 2.4\text{ ms}$, or **$72\%$ of the matrix-product time**!); fusion cuts activation traffic to $256\text{ MiB}$ ($\sim 0.27\text{ ms}$, under $8\%$ of matmul time).
+::: {.col .fig}
+@fig:ch13-perf-ffn-fusion-ratio
+:::
+:::
 :::
 
 ::: {.slide title="What Compilers Fuse vs. Hand-Tiled Kernel Algorithms"}
 [Scope of Fusion]{.kicker}
 
-Graph compilers automatically fuse two local patterns but do not invent new tiled algorithms:
+::: {.cols .vc}
+::: {.col}
+- **Automatically fused:** Elementwise chains (activations, residual adds, AdamW) and SRAM-resident row reductions (RMSNorm, row softmax) collapse into 1 read + 1 write.
+- **Delegated to library GEMMs:** Dense matrix products ($\mathbf{X}\mathbf{W}$) already run near $P$ via cuBLAS/CUTLASS tiles, optionally fusing bias/activation epilogues.
+- **Requires custom tiled algorithms:** Avoiding the $T \times T$ attention matrix in DRAM requires FlashAttention's online softmax rescaling across K/V tiles.
+:::
 
-| Pattern / Operation | Compiler Capability | Why / Systems Mechanism |
-| :--- | :--- | :--- |
-| **Elementwise chains** | **Automatically fused** | Thread $i$ keeps scalar intermediates in registers (activations, residual adds, AdamW) |
-| **Row reductions** | **Automatically fused** | When a row of length $d$ fits in on-chip SRAM, softmax / RMSNorm reads & writes once |
-| **GEMM epilogues** | **Partially fused** | Bias + activation can fuse into a matmul epilogue if the compiler owns the GEMM kernel |
-| **Dense Matmul ($\mathbf{X}\mathbf{W}$)** | **Unchanged** | Already compute-bound near $P$; delegates to heavily tuned cuBLAS / CUTLASS tiles |
-| **FlashAttention ($T \times T$)** | **Requires hand-written kernel** | Avoiding the $T \times T$ DRAM matrix requires online softmax rescaling across K/V tiles |
+::: {.col .fig .big}
+@fig:ch13-perf-fusion-scope
+:::
+:::
 :::
 
 ::: {.slide title="Accounting for a Complete 4-Layer MLP Training Step"}
@@ -862,11 +879,17 @@ Operator fusion cannot merge consecutive matrix multiplications. Consider a 60-l
 ::: {.slide title="CUDA Graphs: Record Once, Replay in One Host Launch"}
 [Kernel Replay]{.kicker}
 
-To eliminate per-kernel host dispatch overhead across a sequence of short kernels, NVIDIA GPUs provide **CUDA Graphs** (used by `torch.compile(..., mode='reduce-overhead')` and XLA command buffers):
+::: {.cols .vc}
+::: {.col}
+- **Capture phase:** A warm-up run on a dedicated stream records every kernel descriptor, grid shape, and exact GPU memory pointer into a static graph.
+- **Replay phase (`cudaGraphLaunch`):** One CPU call hands the entire 60+ kernel graph to the GPU hardware scheduler, eliminating per-kernel Python/driver overhead $h$.
+- **Static contract:** Shapes and buffer addresses are baked in—no dynamic shapes or host sync barriers (`item()`, `print`) are allowed inside the graph.
+:::
 
-- **Capture phase:** During a warm-up run on a dedicated stream, the driver records every kernel launch descriptor, grid dimension, and exact GPU memory pointer into a static execution graph.
-- **Replay phase:** A single host API call (`cudaGraphLaunch`) hands the entire graph to the GPU hardware scheduler, which launches all 60+ kernels back-to-back on the device without CPU intervention.
-- **Static address & shape contract:** Because raw memory pointers are baked into the recording, input shapes cannot change, inputs are copied into fixed staging buffers, and no CPU synchronization (`item()`, `print`) is permitted inside the graph.
+::: {.col .fig .big}
+@fig:ch13-perf-cuda-graph-replay
+:::
+:::
 :::
 
 ::: {.slide title="CUDA Graph Replay Speeds Up the 60-Layer Stack 7×" only="pytorch"}

@@ -826,53 +826,66 @@ The Roofline Model: Compute, Bandwidth, and Overhead Regimes<br>**arithmetic int
 ::: {.slide title="Why Do Matrix Products Run at 2% or 100% of Peak?"}
 [Motivation]{.kicker}
 
-On an RTX 4090 (`bfloat16` Tensor Core peak $P = 165.2\text{ TFLOP/s}$), two calls to the exact same matrix-multiplication primitive behave completely differently:
+::: {.cols .vc}
+::: {.col}
+- **Large square product ($8192 \times 8192$):** Sustains nearly $100\%$ of the RTX 4090's $165.2\text{ TFLOP/s}$ `bfloat16` peak.
+- **Small square product ($256 \times 256$):** Achieves **less than $2\%$ of peak**—over $50\times$ lower utilization on the exact same primitive.
+- **Why it matters:** A faster GPU or second card helps only if we know whether **compute ($P$)**, **memory bandwidth ($\beta$)**, or **host dispatch ($h$)** binds the step.
+:::
 
-- **Large square product ($8192 \times 8192$):** Sustains nearly $100\%$ of the $165.2\text{ TFLOP/s}$ hardware peak.
-- **Small square product ($256 \times 256$):** Achieves **less than $2\%$ of peak**—over $50\times$ lower hardware utilization on the same chip.
-- **Implication for training:** Because a training step executes hundreds of operations of varying sizes, buying a faster GPU or adding a second card helps only if we know whether **arithmetic**, **memory bandwidth**, or **host dispatch overhead** limits the step.
-
-::: {.d2l-note}
-Two paper counts—**FLOPs performed** and **bytes moved**—plus one measured constant, the **host launch time $h$**, determine which regime governs any operation.
+::: {.col .fig .big}
+@fig:ch13-perf-matmul-utilization
+:::
 :::
 :::
 
 ::: {.slide title="Counting FLOPs, Bytes, and Arithmetic Intensity"}
 [Arithmetic Intensity]{.kicker}
 
-Every tensor operation draws from two hardware budgets: peak arithmetic throughput $P$ ($\text{FLOP/s}$) and main-memory bandwidth $\beta$ ($\text{bytes/s}$; $\beta = 1.008\text{ TB/s}$ on the RTX 4090).
+::: {.cols .vc}
+::: {.col}
+$$I \;=\; \frac{\textrm{FLOPs performed}}{\textrm{bytes moved (DRAM $\leftrightarrow$ on-chip)}}$$
 
-$$I \;=\; \frac{\textrm{FLOPs performed}}{\textrm{bytes moved between off-chip DRAM and on-chip processors}}$$
+- **The hardware gap:** While moving $1\text{ B}$ from DRAM takes $1/\beta \approx 1\text{ ps}$, Tensor Cores can execute $P/\beta \approx 164\text{ FLOPs}$ in that picosecond.
+- **Elementwise benchmark ($y_i = x_i + 1$):** Performs $1\text{ FLOP}$ per element while reading $2\text{ B}$ and writing $2\text{ B}$ in `bf16`, yielding $I = 0.25\text{ FLOP/B}$ at any size.
+:::
 
-- **Why the ratio matters:** While moving $1\text{ byte}$ from DRAM takes $1/\beta \approx 1\text{ ps}$, the Tensor Cores can execute $P/\beta \approx 164\text{ FLOPs}$ in that same picosecond.
-- **Elementwise benchmark ($y_i = x_i + 1$):** Performs $1\text{ FLOP}$ per element while reading $b$ bytes and writing $b$ bytes ($2b$ bytes total), yielding $I = \frac{1}{2b} = 0.25\text{ FLOP/byte}$ in `bfloat16` ($b = 2$) regardless of tensor size.
+::: {.col .fig}
+@fig:ch13-perf-arithmetic-intensity
+:::
+:::
 :::
 
 ::: {.slide title="Arithmetic Intensity of a Linear Layer Matmul"}
 [Matrix Multiplication]{.kicker}
 
-Multiplying an activation batch $\mathbf{X} \in \mathbb{R}^{B \times D}$ by a weight matrix $\mathbf{W} \in \mathbb{R}^{D \times F}$ performs $2BDF$ FLOPs (one multiply and one add per inner-product term) and transfers at least $b(BD + DF + BF)$ bytes:
+::: {.cols .vc}
+::: {.col}
+$$I \;=\; \frac{2}{b}\left(\frac{1}{F} + \frac{1}{B} + \frac{1}{D}\right)^{-1} \;\approx\; \frac{2B}{b}$$
 
-$$I \;=\; \frac{2BDF}{b\,(BD + DF + BF)} \;=\; \frac{2}{b}\left(\frac{1}{F} + \frac{1}{B} + \frac{1}{D}\right)^{-1} \;\approx\; \frac{2B}{b} \quad (\textrm{for } B \ll D, F)$$
+- **The smallest dimension binds:** Whichever of batch tokens $B$, input width $D$, or output width $F$ is smallest bottlenecks data reuse.
+- **Batch reuse of weights:** When $B \ll D, F$, fetching $\mathbf{W}$ ($bDF$ bytes) dominates DRAM traffic, and each weight is reused across all $B$ batch rows.
+:::
 
-- **The smallest dimension governs intensity:** The harmonic-sum form shows that whichever of $(B, D, F)$ is smallest bottlenecks data reuse.
-- **Batch reuse of weights:** When $B \ll D, F$, fetching the weight matrix ($bDF$ bytes) dominates memory traffic, and every weight fetched from DRAM is reused across all $B$ rows of the batch.
+::: {.col .fig}
+@fig:ch13-perf-linear-reuse
+:::
+:::
 :::
 
 ::: {.slide title="One GPT Layer Spans a Factor of 1,000 in Intensity"}
 [Training vs. Decoding]{.kicker}
 
-Consider a linear projection of width $D = F = 2048$ inside a 1B-parameter GPT in `bfloat16` ($b = 2\text{ B}$):
+::: {.cols .vc}
+::: {.col}
+- **Single-token decode ($B = 1$):** Streams $8.4\text{ MB}$ of weights for a single use ($I \approx 1.0\text{ FLOP/B}$, deeply bandwidth-bound).
+- **Batched decode ($B = 64$):** Reuses weights across $64$ streams ($I \approx 60\text{ FLOP/B}$), raising throughput $\sim 60\times$ at the same step time.
+- **Training ($B = 8{,}192$):** Layer width $D = 2048$ becomes the smallest dimension ($I \approx 910 \gg I^* = 164$), saturating Tensor Cores.
+:::
 
-| Workload Regime | Token Rows $B$ | FLOPs ($2BD^2$) | Minimum DRAM Traffic | Arithmetic Intensity $I$ |
-| :--- | :---: | :---: | :---: | :---: |
-| **Elementwise ($x + 1$)** | Any $n$ | $n$ | $4n\text{ B}$ | **$0.25\text{ FLOP/byte}$** |
-| **Single-token decode** | $B = 1$ | $8.4 \times 10^6$ | $8.4\text{ MB}$ (weights) | **$\approx 1.0\text{ FLOP/byte}$** |
-| **Batched decoding** | $B = 64$ | $5.4 \times 10^8$ | $8.9\text{ MB}$ | **$\approx 60\text{ FLOP/byte}$** |
-| **Training step ($8 \times 1024$)** | $B = 8192$ | $6.9 \times 10^{10}$ | $75.5\text{ MB}$ | **$\approx 910\text{ FLOP/byte}$** |
-
-::: {.d2l-note}
-During autoregressive decoding ($B = 1$), the GPU streams $8.4\text{ MB}$ of weights just to use each weight once ($I \approx 1$); during training ($B = 8192$), the layer width $D = 2048$ becomes the smallest dimension ($I \approx 910$).
+::: {.col .fig .big}
+@fig:ch13-perf-gpt-intensity-ladder
+:::
 :::
 :::
 
@@ -1024,13 +1037,19 @@ The GPU finishes either operation in $\sim 2\,\mu\text{s}$; the remaining $10\te
 ::: {.slide title="The Three-Floor Time Bound and Crossover Knee"}
 [Unified Time Model]{.kicker}
 
-Combining host dispatch latency $h$, arithmetic throughput $P$, and memory bandwidth $\beta$ yields the fundamental lower bound for a single dispatched operation:
-
+::: {.cols .vc}
+::: {.col}
 $$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes}}{\beta}\right)$$
 
-- **The dominant floor names the regime:** **Overhead-bound** ($h$), **compute-bound** ($\textrm{FLOPs}/P$), or **bandwidth-bound** ($\textrm{bytes}/\beta$).
-- **Overhead crossover knee for square matmuls:** Compute time $2n^3/P$ overtakes host dispatch $h$ at $n^* \approx (hP/2)^{1/3}$ ($n^* \approx 1{,}000$ for PyTorch at $h \approx 13\,\mu\text{s}$; $n^* \approx 1{,}800$ for single-op JAX dispatch at $h \approx 70\,\mu\text{s}$).
-- **Why faster GPUs are harder to keep fed:** Because $n^* \propto P^{1/3}$, increasing $P$ by $14\times$ (from an RTX 4090 to a B200) requires matrix dimensions $14^{1/3} \approx 2.4\times$ wider to avoid becoming overhead-bound at the same host latency $h$.
+- **The dominant floor names the regime:** Overhead-bound ($h$), compute-bound ($\textrm{FLOPs}/P$), or bandwidth-bound ($\textrm{bytes}/\beta$).
+- **Overhead knee ($n^* \approx (hP/2)^{1/3}$):** Square matmul compute overtakes host launch at $n^* \approx 1{,}000$ in PyTorch ($h \approx 13\,\mu\text{s}$) and $n^* \approx 1{,}800$ in single-op JAX ($h \approx 70\,\mu\text{s}$).
+- **Faster GPUs need wider matrices:** A $14\times$ faster GPU raises $n^*$ by $14^{1/3} \approx 2.4\times$.
+:::
+
+::: {.col .fig}
+@fig:ch13-perf-overhead-knee
+:::
+:::
 :::
 
 ::: {.slide title="Diagnosing and Fixing the Three Performance Regimes"}

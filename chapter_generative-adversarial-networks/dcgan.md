@@ -1188,15 +1188,17 @@ In §16.1, a fully connected MLP generator produced grainy $28 \times 28$ Fashio
 ::: {.slide title="Spatial Upsampling via Transposed Convolutions"}
 [Resolution Doubling]{.kicker}
 
-To expand a $1 \times 1 \times 100$ latent tensor into a $64 \times 64 \times 3$ image, DCGAN chains **transposed convolutions** (fractional-strided convolutions):
+::: {.cols .vc}
+::: {.col}
+$$n_{\textrm{out}} = s(n - 1) + k - 2p$$
 
-- **Stamping mechanism:** Each input pixel stamps a weighted $k \times k$ kernel onto the output grid at stride $s$, summing overlapping stamps. An $n \times n$ input with kernel $k$, stride $s$, and padding $p$ produces output spatial width:
-  $$n_{\textrm{out}} = s(n - 1) + k - 2p$$
-- **Stage 1 ($1 \times 1 \to 4 \times 4$):** $k = 4, s = 1, p = 0$ maps $n = 1 \to 1(0) + 4 - 0 = 4$.
-- **Stages 2–5 ($n \to 2n$):** $k = 4, s = 2, p = 1$ doubles the spatial side ($2(n - 1) + 4 - 2 = 2n$) across $4 \to 8 \to 16 \to 32 \to 64$, while strided convolutions ($k = 4, s = 2, p = 1$) in the critic halve resolution from $64 \to 1$.
+- **Resolution doubling hierarchy:** Stage 1 ($k = 4, s = 1, p = 0$) projects $1 \times 1 \to 4 \times 4$; Stages 2–5 ($k = 4, s = 2, p = 1$) double spatial width across $4 \to 8 \to 16 \to 32 \to 64$.
+- **Checkerboard overlap pitfall (Odena et al., 2016):** When kernel size $k$ is not divisible by stride $s$ (e.g., $k = 3, s = 2$), adjacent output pixels receive alternating overlap counts ($2, 1, 2, 1$), imprinting checkerboard artifacts.
+:::
 
-::: {.d2l-note .warn}
-**Checkerboard overlap pitfall (Odena et al., 2016):** When kernel size $k$ is not divisible by stride $s$ (e.g., $k = 3, s = 2$), adjacent output positions receive an alternating number of overlapping stamps ($2, 1, 2, 1, \ldots$), imprinting a high-frequency checkerboard pattern.
+::: {.col .fig}
+@fig:ch16-gan-transposed-conv
+:::
 :::
 :::
 
@@ -1278,17 +1280,33 @@ Training DCGAN for $20$ epochs ($2{,}840$ steps at batch size $256$, $\text{lr} 
 ::: {.slide title="Implementing the Normalization-Free Generator"}
 [Code Architecture]{.kicker}
 
-`Generator` concatenates a learned $4 \times 4 \times 128$ constant tensor with a projected latent vector (plus optional conditioning channels for §16.6) and applies four stages of bilinear upsampling + $3 \times 3$ convolution + leaky ReLU:
+::: {.cols .vc}
+::: {.col}
+- **4×4 stem + 4 bilinear stages:** Concatenates a learned $4 \times 4 \times 128$ constant tensor with a projected latent vector and upsamples via bilinear resampling + $3 \times 3$ convolutions + leaky ReLU:
 
 @dcgan-a-modern-minimal-backbone-1
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-normfree-gen
+:::
+:::
 :::
 
 ::: {.slide title="Implementing the Normalization-Free Critic"}
 [Code Architecture]{.kicker}
 
-`Discriminator` mirrors the generator with four stages of $3 \times 3$ convolution, leaky ReLU, and antialiased bilinear downsampling down to a $4 \times 4$ feature map $\phi(x)$ followed by a linear head:
+::: {.cols .vc}
+::: {.col}
+- **Independent batch rows:** Mirrors $G$ with four stages of $3 \times 3$ convolution, leaky ReLU, and bilinear downsampling down to a $4 \times 4$ feature map $\phi(x)$ without BatchNorm:
 
 @dcgan-a-modern-minimal-backbone-2
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-normfree-critic
+:::
+:::
 :::
 
 ::: {.slide title="A Controlled Three-Arm Objective Ablation"}
@@ -1396,11 +1414,17 @@ To check that `RpGAN + R1 + R2` learns a smooth image manifold rather than memor
 ::: {.slide title="Critic Overfitting and Non-Leaking Augmentation"}
 [Small-Data Generalization Pitfall]{.kicker}
 
-With $1.6\text{M}$ parameters and $36{,}538$ training sprites, our critic sees each sprite $\sim 20$ times over $12{,}000$ steps. Under $R_1 + R_2$, the train–holdout score gap $\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{holdout}}]$ stays tiny ($+0.02$ to $+0.05$ vs. a real–fake margin of $\sim 0.7$):
+::: {.cols .vc}
+::: {.col}
+- **Small-dataset overfitting hazard:** Under $R_1 + R_2$, the train–holdout critic gap stays tiny ($+0.02\text{--}0.05$) on $36{,}538$ sprites, but smaller datasets require data augmentation to prevent critic memorization.
+- **Why augmenting only real images leaks:** Applying a random flip $T_\rho$ only to real images trains $G$ to match $T_\rho p$ (generating right-facing copies of strictly left-facing sprites).
+- **Non-leaking augmentation (ADA / DiffAugment):** Apply invertible $T_\rho$ ($\rho \neq \frac{1}{2}$) to **both** real and generated images inside $D$ so $T_\rho q = T_\rho p \implies q = p$.
+:::
 
-- **Small-dataset overfitting hazard:** On smaller datasets or longer runs, critic memorization widens the train–holdout gap and degrades FID.
-- **Why augmenting only real images leaks:** Applying a random transformation $T_\rho$ (such as flipping with probability $\rho$) *only* to real images trains $G$ to match the transformed distribution $T_\rho p$ (e.g., generating right-facing copies of strictly left-facing sprites).
-- **Non-leaking augmentation (ADA / DiffAugment; Karras et al., 2020; Zhao et al., 2020):** Apply invertible $T_\rho$ ($\rho \neq \frac{1}{2}$ for flips) to **both** real and generated images inside the differentiable critic path so that $T_\rho q = T_\rho p \implies q = p$.
+::: {.col .fig .big}
+@fig:ch16-gan-nonleaking-aug
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Convolutions, Metrics, and Flips"}
@@ -1424,12 +1448,15 @@ Test your understanding of convolutional GAN architectures and evaluation metric
 ::: {.slide title="Summary: Convolutional GANs and Image Evaluation"}
 [Key Takeaways]{.kicker}
 
-| Component / Metric | Mathematical or Architectural Form | Key Property / Bias | Practical Role in Image Synthesis |
-| :--- | :--- | :--- | :--- |
-| **Transposed Conv.** | $n_{\textrm{out}} = s(n - 1) + k - 2p$ ($k=4, s=2, p=1 \implies 2n$) | Uneven $k/s$ causes checkerboard artifacts | Spatial upsampling in 2015 DCGAN generator |
-| **EMA + BN Recalibration** | $\bar{\theta} \leftarrow \beta\bar{\theta} + (1-\beta)\theta$, $\;\beta = 2^{-1/n_{1/2}}$ | Averages out rotational minimax orbits | Requires $100$ fresh `train()` passes if BatchNorm is used |
-| **Normalization-Free Backbone** | Bilinear resampling + $3 \times 3$ conv + He fan-in init | Omits BatchNorm so rows $D(x_i)$ are independent | Enables exact per-sample $R_1 + R_2$ gradient penalties |
-| **Fréchet Distance (FID)** | $\|\mu_p - \mu_q\|^2 + \operatorname{tr}(\Sigma_p + \Sigma_q - 2(\Sigma_p^{1/2}\Sigma_q\Sigma_p^{1/2})^{1/2})$ | Gaussian $W_2^2$ (first 2 moments); $+O(1/n)$ bias | Standard overall feature-distribution distance |
-| **Kernel Distance (KID)** | Unbiased $\widehat{\mathrm{MMD}}^2$ with $k(u, v) = (u^\top v/d + 1)^3$ | Compares up to 3rd moments; zero finite-$n$ bias | Reliable comparison at small evaluation sample sizes |
-| **$K$-NN Precision & Recall** | Fraction of $q$ in $p$-balls vs. fraction of $p$ in $q$-balls | Separates fidelity (precision) from coverage (recall) | Detects mode collapse ($\mathrm{recall} \to 0$) vs. blur/noise |
+::: {.cols .vc}
+::: {.col}
+- **From DCGAN heuristics to R3GAN:** Bilinear resampling + $3 \times 3$ convolutions eliminate transposed-conv checkerboards, while removing BatchNorm keeps batch rows independent for exact per-sample $R_1 + R_2$ gradient penalties.
+- **EMA weight averaging:** Smooths out rotational minimax orbits ($\bar{\theta} \leftarrow \beta\bar{\theta} + (1-\beta)\theta$); requires $100$ fresh `train()` passes to recalibrate BatchNorm buffers when BatchNorm is present.
+- **Complementary feature metrics:** Calibrate **FID** against the $+O(1/n)$ real-vs.-real floor, use **KID** for unbiased finite-$n$ comparisons, and report **$K$-NN precision and recall** to separate fidelity from mode coverage.
+:::
+
+::: {.col .fig .big}
+@fig:ch16-gan-eval-summary
+:::
+:::
 :::

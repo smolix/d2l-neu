@@ -561,18 +561,15 @@ Expectations and Their Gradients<br>**differentiation under the integral sign ·
 ::: {.slide title="When Parameters Govern the Sampling Distribution"}
 [Motivation]{.kicker}
 
-When randomness does not depend on the model parameters (as in minibatch selection or fixed dropout), the derivative of an average is simply the average of the derivatives. What happens when the parameters $\boldsymbol{\theta}$ control the probability distribution $p_{\boldsymbol{\theta}}(x)$ itself?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Where parameter-dependent sampling arises:**
-  - **Variational Autoencoders (VAEs):** The encoder outputs $(\boldsymbol{\mu}_{\boldsymbol{\theta}}, \boldsymbol{\sigma}_{\boldsymbol{\theta}})$ and samples latent codes $\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}_{\boldsymbol{\theta}}, \operatorname{diag}(\boldsymbol{\sigma}_{\boldsymbol{\theta}}^2))$.
-  - **Policy Gradients (Reinforcement Learning):** An agent samples actions $a \sim \pi_{\boldsymbol{\theta}}(a \mid s)$ to maximize expected reward $\mathbb{E}_{a \sim \pi_{\boldsymbol{\theta}}}[R(a)]$.
+- **Where Parameterized Sampling Arises:** VAEs sample latent codes $\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}_{\boldsymbol{\theta}}, \operatorname{diag}(\boldsymbol{\sigma}_{\boldsymbol{\theta}}^2))$ and RL policies sample actions $a \sim \pi_{\boldsymbol{\theta}}(a \mid s)$.
+- **The Graph-Severing Obstacle:** A raw sample $x_i \sim p_{\boldsymbol{\theta}}$ is just a number with no computation graph linking it to $\boldsymbol{\theta}$.
+- **Running Benchmark:** For $X \sim \mathcal{N}(\theta, 1)$ and $\ell(\theta) = \mathbb{E}[X^2] = \theta^2 + 1$, true slope at $\theta = 1.5$ is $\ell'(1.5) = 2\theta = 3$.
 :::
 
-::: {.col}
-- **The core obstacle:** Once a sample $x_i \sim p_{\boldsymbol{\theta}}$ is drawn, it is just a raw number carrying no computational graph linking it back to $\boldsymbol{\theta}$.
-- **Concrete running benchmark:** Let $X \sim \mathcal{N}(\theta, 1)$ ($X = \theta + Z$ with $Z \sim \mathcal{N}(0, 1)$) and $\ell(\theta) = \mathbb{E}[X^2] = \theta^2 + 1$. At $\theta = 1.5$, $\ell'(1.5) = 2\theta = 3$. How can we estimate $\ell'(\theta)$ from samples alone?
+::: {.col .fig .big}
+@fig:ch34-calc-param-dependent-sampling
 :::
 :::
 :::
@@ -580,39 +577,47 @@ When randomness does not depend on the model parameters (as in minibatch selecti
 ::: {.slide title="Expectations as Integrals and Monte Carlo Error"}
 [Foundations]{.kicker}
 
-Expressing an expectation over a continuous density $p(x) \ge 0$ ($\int_{\mathcal{X}} p(x)\,dx = 1$) as a definite integral connects stochastic optimization directly to calculus:
+::: {.cols .vc}
+::: {.col}
+- **Expectation as Integral:** $\mathbb{E}_{X \sim p}[g(X)] = \int_{\mathcal{X}} g(x)p(x)\,dx$, approximated by $\hat{\mu}_n = \frac{1}{n}\sum_{i=1}^n g(x_i)$.
+- **Dimension-Free RMSE ($\sigma/\sqrt{n}$):** Root-mean-square error scales as $\sigma/\sqrt{n}$ regardless of dimension $d$.
+- **The Yardstick:** Sample efficiency of any unbiased gradient estimator is governed by its single-sample standard deviation $\sigma$.
+:::
 
-$$\mathbb{E}_{X \sim p}[g(X)] = \int_{\mathcal{X}} g(x)\,p(x)\,dx \qquad \left(\text{well-defined whenever } \int_{\mathcal{X}} |g(x)|\,p(x)\,dx < \infty\right)$$
-
-- **Monte Carlo estimation in high dimensions:** When $\mathcal{X} = \mathbb{R}^d$ with $d \gg 1$, grid quadrature is intractable. Drawing $n$ independent samples $x_1, \ldots, x_n \sim p$ gives the unbiased sample average $\hat{\mu}_n = \frac{1}{n}\sum_{i=1}^n g(x_i)$.
-- **Dimension-free RMSE scaling:** If a single sample $g(X)$ has standard deviation $\sigma = \sqrt{\operatorname{Var}(g(X))}$, the Monte Carlo average has root-mean-square error:
-  $$\operatorname{RMSE}(\hat{\mu}_n) = \frac{\sigma}{\sqrt{n}}$$
-- **The yardstick for gradient estimators:** Because our gradient estimators will both be unbiased Monte Carlo averages of the same true derivative $\nabla_{\boldsymbol{\theta}}\mathbb{E}[g(X)]$, their sample efficiency is governed entirely by their **single-sample standard deviation $\sigma$**.
+::: {.col .fig .big}
+@fig:ch34-calc-mc-rmse-scaling
+:::
+:::
 :::
 
 ::: {.slide title="Differentiating Under the Integral Sign: The Swap"}
 [Exchanging Limits]{.kicker}
 
-When the domain of integration is fixed and only the integrand $f(x, \theta)$ depends on $\theta$, we differentiate by passing $\frac{d}{d\theta}$ inside the integral—an operation we call **the swap**:
+::: {.cols .vc}
+::: {.col}
+- **The Interior Swap:** On fixed support $\mathcal{X}$, $\frac{d}{d\theta}\int_{\mathcal{X}} f(x, \theta)\,dx = \int_{\mathcal{X}} \frac{\partial f}{\partial\theta}(x, \theta)\,dx$.
+- **Regularity Conditions:** Joint continuity of $\partial_\theta f$ on bounded $[a, b]$, plus an integrable dominating bound $|\partial_\theta f(x, \theta')| \le M(x)$ on unbounded $\mathbb{R}$ (satisfied by Gaussian tails).
+:::
 
-$$\frac{d}{d\theta}\int_{\mathcal{X}} f(x, \theta)\,dx = \int_{\mathcal{X}} \frac{\partial f}{\partial \theta}(x, \theta)\,dx$$
-
-- **Why exchanging two limits requires a condition:** A derivative is a limit of difference quotients ($\epsilon \to 0$) and an integral is a limit of Riemann sums ($\|P\| \to 0$, $b \to \infty$); infinite limits do not commute automatically.
-- **Regularity conditions (Dominated Convergence Theorem):**
-  1. On a **bounded closed interval** $[a, b]$, continuity of $\frac{\partial f}{\partial \theta}(x, \theta)$ jointly in $(x, \theta)$ is sufficient.
-  2. On an **unbounded domain** like $\mathbb{R}$, we also need an integrable dominating function $M(x)$ ($\int |M(x)|\,dx < \infty$) such that $\bigl|\frac{\partial f}{\partial \theta}(x, \theta')\bigr| \le M(x)$ for all $\theta'$ near $\theta$.
-- **Gaussian tails always qualify:** For $f(x, \theta) = g(x)p_\theta(x)$ with normal $p_\theta$, $e^{-(x-\theta)^2/2}$ decays faster than any polynomial $|g(x)|$ grows.
+::: {.col .fig .big}
+@fig:ch34-calc-integral-swap
+:::
+:::
 :::
 
 ::: {.slide title="Log-Integral-Exp and Exponential Family Tilting"}
 [Continuous Softmax]{.kicker}
 
-Applying the chain rule and the swap to the continuous counterpart of log-sum-exp—the **log-partition function** $\log \int e^{\theta x}p(x)\,dx$—yields an expectation under an exponentially tilted density:
+::: {.cols .vc}
+::: {.col}
+- **Log-Partition Derivative:** Differentiating $\log\int e^{\theta x}p(x)\,dx$ via the swap yields the tilted expectation $\mathbb{E}_{X \sim \tilde{p}_\theta}[X]$ under $\tilde{p}_\theta(x) \propto e^{\theta x}p(x)$.
+- **Standard Normal Check:** For $Z \sim \mathcal{N}(0, 1)$, $\log\mathbb{E}[e^{\theta Z}] = \tfrac{1}{2}\theta^2$ has derivative $\theta$, matching the mean of $\tilde{p}_\theta = \mathcal{N}(\theta, 1)$.
+:::
 
-$$\frac{d}{d\theta}\log\int_{-\infty}^\infty e^{\theta x}p(x)\,dx = \frac{\int_{-\infty}^\infty x\,e^{\theta x}p(x)\,dx}{\int_{-\infty}^\infty e^{\theta x}p(x)\,dx} = \mathbb{E}_{X \sim \tilde{p}_\theta}[X], \qquad \tilde{p}_\theta(x) \propto e^{\theta x}p(x)$$
-
-- **Discrete vs. continuous duality:** Just as $\nabla_{\mathbf{z}}\log\sum_i e^{z_i} = \operatorname{softmax}(\mathbf{z})$ produces a probability vector, differentiating $\log\int e^{\theta x}p(x)\,dx$ produces the mean under the tilted density $\tilde{p}_\theta$.
-- **Exact check on standard normal $Z \sim \mathcal{N}(0, 1)$:** Completing the square via $\theta z - \tfrac{1}{2}z^2 = \tfrac{1}{2}\theta^2 - \tfrac{1}{2}(z - \theta)^2$ shows that the tilted density is $\tilde{p}_\theta = \mathcal{N}(\theta, 1)$ and $\log\mathbb{E}[e^{\theta Z}] = \tfrac{1}{2}\theta^2$, whose derivative is indeed the tilted mean $\theta$.
+::: {.col .fig .big}
+@fig:ch34-calc-exponential-tilting
+:::
+:::
 :::
 
 ::: {.slide title="The Leibniz Rule: Moving Integration Boundaries"}
@@ -635,94 +640,112 @@ $$\frac{d}{d\theta}\int_{a(\theta)}^{b(\theta)} f(x, \theta)\,dx = \int_{a(\thet
 ::: {.slide title="Why Ignoring Boundary Terms Flips the Sign"}
 [Moving-Support Pitfall]{.kicker}
 
-Whenever a distribution's support depends on $\theta$, applying the interior swap alone misses the boundary terms and produces a biased—or even opposite-signed—derivative:
+::: {.cols .vc}
+::: {.col}
+- **Uniform$(0, \theta)$ Mean:** $\mathbb{E}[X] = \int_0^\theta \frac{x}{\theta}\,dx = \frac{\theta}{2}$ has true derivative $+\frac{1}{2}$.
+- **Naive Swap Gives Wrong Sign:** Differentiating only inside gives $\int_0^\theta -\frac{x}{\theta^2}\,dx = -\frac{1}{2}$.
+- **Leibniz Boundary Term:** Adding the upper wall sweep $f(\theta, \theta)b'(\theta) = 1 \cdot 1 = +1$ restores $-\frac{1}{2} + 1 = +\frac{1}{2}$.
+:::
 
-- **Uniform distribution on $[0, \theta]$:** Let $X \sim \mathrm{Uniform}(0, \theta)$, with density $p_\theta(x) = 1/\theta$ on $[0, \theta]$ and $0$ outside.
-- **True derivative of the mean:** $\mathbb{E}[X] = \int_0^\theta \frac{x}{\theta}\,dx = \frac{\theta}{2}$, so the exact derivative is $\frac{d}{d\theta}\mathbb{E}[X] = +\frac{1}{2}$.
-- **What the naive interior swap produces:** Differentiating only $f(x, \theta) = x/\theta$ inside the integral gives:
-  $$\int_0^\theta \frac{\partial}{\partial \theta}\left(\frac{x}{\theta}\right)dx = \int_0^\theta -\frac{x}{\theta^2}\,dx = -\frac{1}{2} \quad \text{(wrong sign!)}$$
-- **Restoring the upper boundary term:** As the right wall $b(\theta) = \theta$ moves outward at rate $b'(\theta) = 1$, it sweeps in height $f(\theta, \theta) = \frac{\theta}{\theta} = 1$, giving $-\frac{1}{2} + 1 \cdot 1 = +\frac{1}{2}$.
+::: {.col .fig .big}
+@fig:ch34-calc-moving-support-sign
+:::
+:::
 :::
 
 ::: {.slide title="Why Raw Density Derivatives Cannot Be Sampled"}
 [The Monte Carlo Obstacle]{.kicker}
 
-Suppose $p_{\boldsymbol{\theta}}(x)$ has fixed support and we apply the swap to $\nabla_{\boldsymbol{\theta}}\mathbb{E}_{X \sim p_{\boldsymbol{\theta}}}[g(X)]$:
+::: {.cols .vc}
+::: {.col}
+- **$\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}(x)$ Is Not a Density:** In $\int g(x)\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}(x)\,dx$, $\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}$ takes negative values and integrates to $\mathbf{0}$.
+- **Two Escape Routes Back to an Expectation:**
+  1. *Score function:* Multiply and divide by $p_{\boldsymbol{\theta}}(x)$ ($\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}$).
+  2. *Pathwise:* Change variables to $X = T_{\boldsymbol{\theta}}(\mathbf{z})$ with $\mathbf{z} \sim q(\mathbf{z})$.
+:::
 
-$$\nabla_{\boldsymbol{\theta}}\mathbb{E}_{X \sim p_{\boldsymbol{\theta}}}[g(X)] = \nabla_{\boldsymbol{\theta}}\int_{\mathcal{X}} g(x)\,p_{\boldsymbol{\theta}}(x)\,dx = \int_{\mathcal{X}} g(x)\,\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}(x)\,dx$$
-
-- **Why we cannot estimate $\int g(x)\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}(x)\,dx$ directly by sampling:** The derivative $\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}(x)$ is **not a probability density**—it takes both positive and negative values and integrates to $\nabla_{\boldsymbol{\theta}}\int p_{\boldsymbol{\theta}}(x)\,dx = \nabla_{\boldsymbol{\theta}}1 = \mathbf{0}$.
-- **Two algebraic escape routes:** To turn this integral back into an expectation $\mathbb{E}[\,\cdot\,]$ that Monte Carlo samples can estimate, we must either:
-  1. **Score-function route:** Multiply and divide by $p_{\boldsymbol{\theta}}(x)$ inside the integral (**differentiate the log-density**).
-  2. **Pathwise route:** Change variables to a parameter-free base noise $\mathbf{z} \sim q(\mathbf{z})$ before swapping (**differentiate the sample path**).
+::: {.col .fig .big}
+@fig:ch34-calc-two-escape-routes
+:::
+:::
 :::
 
 ::: {.slide title="The Log-Derivative Trick and the Score Function"}
 [Score-Function Identity]{.kicker}
 
-By the chain rule, $\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(x) = \frac{\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}(x)}{p_{\boldsymbol{\theta}}(x)}$, which rearranges into the **log-derivative identity** $\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}(x) = p_{\boldsymbol{\theta}}(x)\,\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(x)$:
-
-::: {.d2l-note .rule}
-**Score-Function (REINFORCE) Gradient Identity (Williams, 1992):**
-$$\nabla_{\boldsymbol{\theta}}\mathbb{E}_{X \sim p_{\boldsymbol{\theta}}}[g(X)] = \int_{\mathcal{X}} g(x)\,p_{\boldsymbol{\theta}}(x)\,\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(x)\,dx = \mathbb{E}_{X \sim p_{\boldsymbol{\theta}}}\bigl[g(X)\,\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(X)\bigr]$$
+::: {.cols .vc}
+::: {.col}
+- **REINFORCE Identity:** Using $\nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}} = p_{\boldsymbol{\theta}}\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}$ gives $\nabla_{\boldsymbol{\theta}}\mathbb{E}_{p_{\boldsymbol{\theta}}}[g(X)] = \mathbb{E}_{p_{\boldsymbol{\theta}}}[g(X)\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(X)]$.
+- **Zero-Mean Score:** On fixed support, $\mathbb{E}[\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(X)] = \mathbf{0}$ (for $\mathcal{N}(\theta, 1)$, $s_\theta(X) = X - \theta = Z$).
+- **Generality:** Never differentiates $g(x)$, so it works for discrete actions and black-box rewards.
 :::
 
-- **The score vector $\mathbf{s}_{\boldsymbol{\theta}}(x) = \nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(x)$:** Measures how strongly nudging $\boldsymbol{\theta}$ increases the log-probability of outcome $x$. For $X \sim \mathcal{N}(\theta, 1)$, $\log p_\theta(x) = -\tfrac{1}{2}(x-\theta)^2 - \tfrac{1}{2}\log(2\pi)$, so the score is $s_\theta(X) = X - \theta = Z$.
-- **Why the score has mean zero (on fixed support):** Setting $g(x) \equiv 1$ gives $\mathbb{E}[\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(X)] = \int \nabla_{\boldsymbol{\theta}}p_{\boldsymbol{\theta}}(x)\,dx = \nabla_{\boldsymbol{\theta}}1 = \mathbf{0}$.
-- **Generality:** Notice that $\nabla_{\boldsymbol{\theta}}$ never touches $g(x)$! The score-function estimator works even when $g$ is discontinuous or a black-box environment reward, and when $X$ is discrete.
+::: {.col .fig .big}
+@fig:ch34-calc-score-log-deriv
+:::
+:::
 :::
 
 ::: {.slide title="Variance Reduction via Control-Variate Baselines"}
 [Baseline Subtraction]{.kicker}
 
-Because the score $\mathbf{s}_{\boldsymbol{\theta}}(X) = \nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(X)$ has expectation zero ($\mathbb{E}[\mathbf{s}_{\boldsymbol{\theta}}(X)] = \mathbf{0}$), we can subtract any constant **baseline** $b$ (independent of $X$) from $g(X)$ without changing the mean:
+::: {.cols .vc}
+::: {.col}
+- **Unbiased Baseline Subtraction:** Since $\mathbb{E}[s_\theta(X)] = 0$, replacing $g(X)$ by $g(X) - b$ leaves the mean unchanged for any constant $b$.
+- **Optimal Constant Baseline:** $b^\star = \frac{\mathbb{E}[g(X)s_\theta(X)^2]}{\mathbb{E}[s_\theta(X)^2]}$ ($= \theta^2 + 3$ for $g(X) = X^2$), cutting variance from $O(\theta^4)$ to $8\theta^2 + 6 = O(\theta^2)$.
+:::
 
-$$\mathbb{E}\bigl[(g(X) - b)\,\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(X)\bigr] = \mathbb{E}\bigl[g(X)\,\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(X)\bigr] - b\,\underbrace{\mathbb{E}\bigl[\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}(X)\bigr]}_{\mathbf{0}}$$
-
-- **Intuition:** Centering $g(X)$ around $b \approx \mathbb{E}[g(X)]$ prevents large raw loss offsets from multiplying the random zero-mean fluctuations of the score.
-- **Optimal constant baseline $b^\star$:** Minimizing $\operatorname{Var}\bigl((g(X) - b)s_\theta(X)\bigr) = \mathbb{E}\bigl[(g(X)-b)^2 s_\theta(X)^2\bigr] - (\ell'(\theta))^2$ with respect to $b$ yields:
-  $$b^\star = \frac{\mathbb{E}\bigl[g(X)\,s_\theta(X)^2\bigr]}{\mathbb{E}\bigl[s_\theta(X)^2\bigr]}$$
-- **For $g(X) = X^2$ on $\mathcal{N}(\theta, 1)$ ($s_\theta(X) = Z, \mathbb{E}[Z^2]=1, \mathbb{E}[Z^4]=3$):** $b^\star = \mathbb{E}[(\theta+Z)^2 Z^2] = \theta^2\mathbb{E}[Z^2] + \mathbb{E}[Z^4] = \theta^2 + 3$.
+::: {.col .fig .big}
+@fig:ch34-calc-baseline-variance
+:::
+:::
 :::
 
 ::: {.slide title="The Pathwise (Reparameterization) Estimator"}
 [Differentiating Through Samples]{.kicker}
 
-Whenever a sample $X \sim p_{\boldsymbol{\theta}}$ can be written as a differentiable deterministic transformation $X = T_{\boldsymbol{\theta}}(\mathbf{z})$ of a parameter-free noise variable $\mathbf{z} \sim q(\mathbf{z})$, changing variables to $\mathbf{z}$ removes $\boldsymbol{\theta}$ from the density entirely:
-
-::: {.d2l-note .rule}
-**Pathwise (Reparameterization) Gradient Identity (Kingma & Welling, 2014):**
-$$\nabla_{\boldsymbol{\theta}}\mathbb{E}_{X \sim p_{\boldsymbol{\theta}}}[g(X)] = \nabla_{\boldsymbol{\theta}}\int g\bigl(T_{\boldsymbol{\theta}}(\mathbf{z})\bigr)\,q(\mathbf{z})\,d\mathbf{z} = \mathbb{E}_{\mathbf{z} \sim q}\Bigl[\nabla_{\boldsymbol{\theta}}g\bigl(T_{\boldsymbol{\theta}}(\mathbf{z})\bigr)\Bigr]$$
+::: {.cols .vc}
+::: {.col}
+- **Reparameterization ($X = T_{\boldsymbol{\theta}}(\mathbf{z})$, $\mathbf{z} \sim q$):** Changing variables to parameter-free noise $\mathbf{z}$ gives $\nabla_{\boldsymbol{\theta}}\mathbb{E}_{p_{\boldsymbol{\theta}}}[g(X)] = \mathbb{E}_{\mathbf{z} \sim q}[\nabla_{\boldsymbol{\theta}}g(T_{\boldsymbol{\theta}}(\mathbf{z}))]$.
+- **Direct Chain Rule Through $g$:** For $\mathbf{x} = \boldsymbol{\mu} + \boldsymbol{\sigma}\odot\mathbf{z}$, backprop differentiates $g(\boldsymbol{\mu} + \boldsymbol{\sigma}\odot\mathbf{z})$ directly with low variance.
 :::
 
-- **How it restores the sample's memory of $\boldsymbol{\theta}$:** For a Gaussian latent layer $\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}, \operatorname{diag}(\boldsymbol{\sigma}^2))$, we draw $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ and set $\mathbf{x} = T_{\boldsymbol{\mu},\boldsymbol{\sigma}}(\mathbf{z}) = \boldsymbol{\mu} + \boldsymbol{\sigma} \odot \mathbf{z}$. Backpropagation then applies the chain rule directly through $g(\boldsymbol{\mu} + \boldsymbol{\sigma} \odot \mathbf{z})$!
-- **No moving-boundary terms:** Even if the support of $X = T_{\boldsymbol{\theta}}(\mathbf{z})$ moves with $\boldsymbol{\theta}$ (e.g., $X = \theta U$ with $U \sim \mathrm{Uniform}(0, 1)$), the integral over $\mathbf{z}$ has fixed limits, so no Leibniz boundary term ever arises.
+::: {.col .fig .big}
+@fig:ch34-calc-pathwise-reparam
+:::
+:::
 :::
 
 ::: {.slide title="When Pathwise Fails: Step Losses & Discrete Choices"}
 [Differentiability Boundary]{.kicker}
 
-The pathwise estimator requires $g(T_{\boldsymbol{\theta}}(\mathbf{z}))$ to be differentiable along the path. When $g$ is a step function, differentiating inside the expectation fails completely:
+::: {.cols .vc}
+::: {.col}
+- **Step Loss $g(x) = \mathbf{1}(x > 0)$ at $\theta = 1.5$:** True derivative of $\Phi(\theta)$ is $\varphi(1.5) \approx 0.1295$.
+- **Pathwise Returns $0$ Almost Surely:** The step $\theta \mapsto \mathbf{1}(\theta + z > 0)$ is flat everywhere except the zero-probability jump $z = -\theta$.
+- **Score Function Succeeds:** $\mathbb{E}[\mathbf{1}(\theta + Z > 0)Z] = \varphi(\theta) \approx 0.1295$.
+:::
 
-- **Step-function benchmark:** Let $g(x) = \mathbf{1}(x > 0)$ with $X = \theta + Z$ ($Z \sim \mathcal{N}(0, 1)$) at $\theta = 1.5$.
-- **Exact derivative:** Since $\mathbb{E}[\mathbf{1}(\theta + Z > 0)] = P(Z > -\theta) = \Phi(\theta)$, the true derivative is the standard normal density $\varphi(\theta) = \frac{1}{\sqrt{2\pi}}e^{-\theta^2/2} \approx 0.1295$ at $\theta = 1.5$.
-- **Pathwise failure (returns $0$ with probability $1$):** For every sample $z \ne -\theta$, the flat step $\theta \mapsto \mathbf{1}(\theta + z > 0)$ has derivative $0$, so the pathwise estimator has expectation $0 \ne 0.1295$ (all the change occurs at the jump $z = -\theta$, which a single sample hits with probability zero).
-- **Score-function success:** Because REINFORCE never differentiates $g$, its single-sample estimate $\mathbf{1}(\theta + Z > 0)\,Z$ has exact mean $\int_{-\theta}^\infty z\varphi(z)\,dz = [-\varphi(z)]_{-\theta}^\infty = \varphi(\theta) \approx 0.1295$!
+::: {.col .fig .big}
+@fig:ch34-calc-step-loss-failure
+:::
+:::
 :::
 
 ::: {.slide title="Analytical Variance Comparison on E[X²]"}
 [Exact Moment Calculation]{.kicker}
 
-On our smooth quadratic benchmark $\ell(\theta) = \mathbb{E}[X^2] = \theta^2 + 1$ ($X = \theta + Z$, $\ell'(\theta) = 2\theta$), we can compute the exact single-sample variance of all three unbiased estimators using $\mathbb{E}[Z^2] = 1$, $\mathbb{E}[Z^4] = 3$, and $\mathbb{E}[Z^6] = 15$:
+::: {.cols .vc}
+::: {.col}
+- **Exact Variances on $\ell(\theta) = \mathbb{E}[X^2]$ at $\theta = 1.5$:**
+  - *Pathwise ($2X$):* $\operatorname{Var} = 4 \implies \sigma = 2.000$.
+  - *Score + Baseline ($b^\star = \theta^2+3$):* $\operatorname{Var} = 8\theta^2+6 \implies \sigma = 4.899$.
+  - *Plain REINFORCE ($X^2 Z$):* $\operatorname{Var} = \theta^4+14\theta^2+15 \implies \sigma = 7.181$ ($12.9\times$ higher variance!).
+:::
 
-| Unbiased Estimator of $\ell'(\theta) = 2\theta$ | Single-Sample Formula $\hat{g}$ | Exact Single-Sample Variance $\operatorname{Var}(\hat{g})$ | SD $\sigma$ at $\theta = 1.5$ |
-| :--- | :--- | :--- | :--- |
-| **1. Pathwise (Reparameterized)** | $\frac{d}{d\theta}(\theta + Z)^2 = 2(\theta + Z) = 2X$ | $\operatorname{Var}(2Z) = 4$ (constant in $\theta$!) | **$\sigma = 2.000$** |
-| **2. Plain Score Function (REINFORCE)** | $X^2 \cdot \partial_\theta\log p_\theta(X) = (\theta + Z)^2 Z$ | $\theta^4 + 14\theta^2 + 15$ (grows as $O(\theta^4)$!) | **$\sigma = 7.181$** |
-| **3. Score + Optimal Baseline ($b^\star = \theta^2 + 3$)** | $\bigl(X^2 - (\theta^2 + 3)\bigr)Z = (2\theta Z + Z^2 - 3)Z$ | $8\theta^2 + 6$ (grows as $O(\theta^2)$) | **$\sigma = 4.899$** |
-
-::: {.d2l-note}
-At $\theta = 1.5$, the plain score-function estimator has $(7.181 / 2.000)^2 \approx 12.9\times$ higher variance than the pathwise estimator—requiring **$13\times$ as many samples** to achieve the same Monte Carlo accuracy!
+::: {.col .fig .big}
+@fig:ch34-calc-estimator-variance-bars
+:::
 :::
 :::
 

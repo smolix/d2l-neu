@@ -1735,12 +1735,16 @@ Singular Value Decomposition and Low-Rank Approximation<br>**two orthonormal bas
 ::: {.slide title="Why One Basis Is Not Enough for Deep Learning"}
 [Motivation]{.kicker}
 
-- **Rectangular Matrices Everywhere:** Neural weight layers $\mathbf{W} \in \mathbb{R}^{m \times n}$ map inputs of one width to outputs of another, and data tables $\mathbf{X} \in \mathbb{R}^{n \times d}$ stack examples against features—neither is square, so eigenvalues do not exist.
-- **Even Square Matrices Can Fail:** The defective shear $\mathbf{T} = \left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ lacks an eigenbasis, and non-normal matrices can stretch vectors far more than their eigenvalues suggest.
-- **Low-Rank Compression Benchmark:** A $400 \times 500$ grayscale cat photograph holds $200{,}000$ pixels, yet keeping just $k = 20$ rank-one pieces stores $20(400 + 500 + 1) = 18{,}020$ numbers ($9\%$) and reconstructs the image within $8\%$ relative error.
+::: {.cols .vc}
+::: {.col}
+- **Rectangular Layers & Data Tables:** Weight matrices $\mathbf{W} \in \mathbb{R}^{m \times n}$ and data tables $\mathbf{X} \in \mathbb{R}^{n \times d}$ are not square, so eigenvalues do not exist.
+- **Two Orthonormal Bases ($\mathbf{V}$ and $\mathbf{U}$):** Pairing an input basis $\mathbf{V}$ with an output basis $\mathbf{U}$ turns *every* matrix into non-negative stretches $\mathbf{A}\mathbf{v}_i = \sigma_i\mathbf{u}_i$.
+- **Low-Rank Compression:** Keeping $k = 20$ rank-1 pieces of a $400 \times 500$ cat photo uses $9\%$ storage at $8\%$ relative error.
+:::
 
-::: {.d2l-note}
-**The Unifying Idea:** Stop asking a single basis to serve for both inputs and outputs. Using one orthonormal basis $\mathbf{V}$ for the input space and a separate orthonormal basis $\mathbf{U}$ for the output space turns *every* matrix into a diagonal list of non-negative stretches $\sigma_1 \ge \sigma_2 \ge \cdots \ge 0$.
+::: {.col .fig .big}
+@fig:ch33-la-svd-two-bases
+:::
 :::
 :::
 
@@ -1756,24 +1760,33 @@ Singular Value Decomposition and Low-Rank Approximation<br>**two orthonormal bas
 ::: {.slide title="Full, Thin, Compact, and Dyadic Forms of the SVD"}
 [SVD Representations]{.kicker}
 
-If $r = \#\{i : \sigma_i > 0\}$ is the number of positive singular values, dropping zero rows and columns of $\boldsymbol{\Sigma}$ yields four equivalent ways to write $\mathbf{A} \in \mathbb{R}^{m \times n}$:
+::: {.cols .vc}
+::: {.col}
+- **Full vs. Thin SVD:** Full SVD keeps square orthogonal $\mathbf{U}_{m\times m}, \mathbf{V}_{n\times n}$; thin SVD keeps $p = \min(m, n)$ columns (`full_matrices=False`).
+- **Compact SVD ($r = \operatorname{rank}\mathbf{A}$):** Keeps only positive stretches $\sigma_1 \ge \cdots \ge \sigma_r > 0$.
+- **Dyadic Sum:** $\mathbf{A} = \sum_{i=1}^r \sigma_i\mathbf{u}_i\mathbf{v}_i^\top$ sorts rank-1 outer products from heaviest to lightest.
+:::
 
-| SVD Form | Factor Shapes | Expression & Storage Role |
-| :--- | :--- | :--- |
-| **Full SVD** | $\mathbf{U} \in \mathbb{R}^{m \times m}$, $\boldsymbol{\Sigma} \in \mathbb{R}^{m \times n}$, $\mathbf{V}^\top \in \mathbb{R}^{n \times n}$ | $\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$; includes orthonormal bases for both null spaces |
-| **Thin SVD** | $\mathbf{U} \in \mathbb{R}^{m \times p}$, $\boldsymbol{\Sigma} \in \mathbb{R}^{p \times p}$, $\mathbf{V}^\top \in \mathbb{R}^{p \times n}$ | Keeps $p = \min(m, n)$ columns; default reduced form in `svd(..., full_matrices=False)` |
-| **Compact SVD** | $\mathbf{U}_r \in \mathbb{R}^{m \times r}$, $\boldsymbol{\Sigma}_r \in \mathbb{R}^{r \times r}$, $\mathbf{V}_r^\top \in \mathbb{R}^{r \times n}$ | $\mathbf{A} = \mathbf{U}_r\boldsymbol{\Sigma}_r\mathbf{V}_r^\top$; keeps only the $r = \operatorname{rank}\mathbf{A}$ positive singular triples |
-| **Dyadic Sum** | Sum of $r$ rank-1 outer products | $\mathbf{A} = \sum_{i=1}^r \sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top$; orders rank-1 building blocks from heaviest to lightest |
+::: {.col .fig .big}
+@fig:ch33-la-svd-four-forms
+:::
+:::
 :::
 
 ::: {.slide title="Existence Proof: Spectral Theorem on AᵀA"}
 [Why the SVD Always Exists]{.kicker}
 
-- **Step 1 — Diagonalize the Gram Matrix:** For any $\mathbf{A} \in \mathbb{R}^{m \times n}$, $\mathbf{A}^\top\mathbf{A} \in \mathbb{R}^{n \times n}$ is symmetric and positive semidefinite ($\mathbf{x}^\top\mathbf{A}^\top\mathbf{A}\mathbf{x} = \|\mathbf{A}\mathbf{x}\|^2 \ge 0$). By the spectral theorem, it has an orthonormal eigenbasis $\mathbf{v}_1, \ldots, \mathbf{v}_n$ with real eigenvalues $\lambda_1 \ge \cdots \ge \lambda_n \ge 0$.
-- **Step 2 — Define Singular Values & Push Forward:** Set $\sigma_i = \sqrt{\lambda_i}$ and $r = \#\{i : \sigma_i > 0\}$. For each $i \le r$, define $\mathbf{u}_i = \mathbf{A}\mathbf{v}_i / \sigma_i$; for $i > r$, $\|\mathbf{A}\mathbf{v}_i\|^2 = \lambda_i = 0$ forces $\mathbf{A}\mathbf{v}_i = \mathbf{0}$.
-- **Step 3 — Output Orthonormality Is Automatic:** The vectors $\mathbf{u}_1, \ldots, \mathbf{u}_r$ inherit orthonormality directly from $\mathbf{A}^\top\mathbf{A}\mathbf{v}_j = \sigma_j^2\mathbf{v}_j$:
-  $$\mathbf{u}_i^\top\mathbf{u}_j = \frac{\mathbf{v}_i^\top\mathbf{A}^\top\mathbf{A}\mathbf{v}_j}{\sigma_i\sigma_j} = \frac{\sigma_j^2\,\mathbf{v}_i^\top\mathbf{v}_j}{\sigma_i\sigma_j} = \delta_{ij}$$
-- **Step 4 — Complete the Basis:** Extending $\mathbf{u}_1, \ldots, \mathbf{u}_r$ via Gram–Schmidt to an orthonormal basis of $\mathbb{R}^m$ gives $\mathbf{A}\mathbf{V} = \mathbf{U}\boldsymbol{\Sigma} \implies \mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$.
+::: {.cols .vc}
+::: {.col}
+- **1. Diagonalize PSD Gram Matrix $\mathbf{A}^\top\mathbf{A}$:** Orthonormal eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_n$ have eigenvalues $\lambda_1 \ge \cdots \ge \lambda_n \ge 0$.
+- **2. Push Forward ($\sigma_i = \sqrt{\lambda_i}$):** For $i \le r$, set $\mathbf{u}_i = \mathbf{A}\mathbf{v}_i/\sigma_i$; for $i > r$, $\|\mathbf{A}\mathbf{v}_i\|^2 = 0 \implies \mathbf{A}\mathbf{v}_i = \mathbf{0}$.
+- **3. Automatic Orthonormality:** $\mathbf{u}_i^\top\mathbf{u}_j = \frac{\mathbf{v}_i^\top\mathbf{A}^\top\mathbf{A}\mathbf{v}_j}{\sigma_i\sigma_j} = \delta_{ij}$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-svd-existence-proof
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: SVD of the Defective Shear T"}
@@ -1800,11 +1813,17 @@ Carrying out the proof recipe on a $3 \times 2$ matrix ($\mathbf{A}^\top\mathbf{
 ::: {.slide title="Maximum Stretch, Norms, and Eigenvalue Links"}
 [Singular Values vs. Eigenvalues]{.kicker}
 
-- **Variational Characterization of $\sigma_1$:** Applying the Rayleigh quotient theorem to $\mathbf{A}^\top\mathbf{A}$ proves that the top singular value is the exact spectral norm (maximum 1-step stretch), attained at $\mathbf{x} = \mathbf{v}_1$:
-  $$\sigma_1 = \max_{\|\mathbf{x}\|=1} \|\mathbf{A}\mathbf{x}\| = \|\mathbf{A}\|_2, \qquad \|\mathbf{A}\|_F^2 = \operatorname{tr}(\mathbf{A}^\top\mathbf{A}) = \sum_{i=1}^r \sigma_i^2$$
-- **Gram Matrix Eigendecompositions:** $\mathbf{A}^\top\mathbf{A} = \mathbf{V}\boldsymbol{\Sigma}^\top\boldsymbol{\Sigma}\mathbf{V}^\top$ and $\mathbf{A}\mathbf{A}^\top = \mathbf{U}\boldsymbol{\Sigma}\boldsymbol{\Sigma}^\top\mathbf{U}^\top$ share nonzero eigenvalues $\sigma_i^2$.
-- **Singular Values $\neq$ Eigenvalue Magnitudes:** For our running matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$, the eigenvalues are $2 \pm i$ with modulus $|\lambda_1| = |\lambda_2| = \sqrt{5} \approx 2.236$, whereas $\mathbf{A}^\top\mathbf{A} = \left(\begin{smallmatrix}2&-1\\-1&13\end{smallmatrix}\right)$ gives $\sigma_1 \approx 3.618$ and $\sigma_2 \approx 1.382$. Only their product matches volume scaling:
-  $$|\det\mathbf{A}| = \prod_{i=1}^n \sigma_i = \prod_{i=1}^n |\lambda_i| = 5$$
+::: {.cols .vc}
+::: {.col}
+- **Norms From Singular Values:** $\|\mathbf{A}\|_2 = \max_{\|\mathbf{x}\|=1}\|\mathbf{A}\mathbf{x}\| = \sigma_1$ (attained at $\mathbf{v}_1$) and $\|\mathbf{A}\|_F^2 = \sum_{i=1}^r \sigma_i^2$.
+- **Singular Values $\neq$ Eigenvalue Moduli:** Running matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$ has $|\lambda_{1,2}| = \sqrt{5} \approx 2.236$, whereas $\sigma_1 \approx 3.618, \sigma_2 \approx 1.382$.
+- **Volume Identity:** $|\det\mathbf{A}| = \prod_i \sigma_i = \prod_i |\lambda_i| = 5$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-svd-vs-eigen
+:::
+:::
 :::
 
 ::: {.slide title="The Four Fundamental Subspaces From the SVD"}
@@ -1839,15 +1858,17 @@ Carrying out the proof recipe on a $3 \times 2$ matrix ($\mathbf{A}^\top\mathbf{
 ::: {.slide title="Truncated SVD and the Eckart–Young Theorem"}
 [Best Low-Rank Approximation]{.kicker}
 
-Keeping only the $k$ heaviest dyads of $\mathbf{A}$ defines the rank-$k$ *truncated SVD* $\mathbf{A}_k = \sum_{i=1}^k \sigma_i\mathbf{u}_i\mathbf{v}_i^\top$, storing $k(m + n + 1)$ numbers instead of $mn$:
-
-::: {.d2l-note .rule}
-**Theorem (Eckart–Young–Mirsky).** For any $0 \le k \le r$, the truncated SVD $\mathbf{A}_k$ achieves the minimum approximation error over all matrices $\mathbf{B}$ of rank at most $k$ simultaneously in the spectral and Frobenius norms:
-$$\min_{\operatorname{rank}\mathbf{B} \le k} \|\mathbf{A} - \mathbf{B}\|_2 = \|\mathbf{A} - \mathbf{A}_k\|_2 = \sigma_{k+1}, \qquad \min_{\operatorname{rank}\mathbf{B} \le k} \|\mathbf{A} - \mathbf{B}\|_F^2 = \|\mathbf{A} - \mathbf{A}_k\|_F^2 = \sum_{i > k} \sigma_i^2$$
+::: {.cols .vc}
+::: {.col}
+- **Rank-$k$ Truncated SVD:** $\mathbf{A}_k = \sum_{i=1}^k \sigma_i\mathbf{u}_i\mathbf{v}_i^\top$ stores $k(m + n + 1)$ numbers instead of $mn$.
+- **Eckart–Young–Mirsky Theorem:** $\mathbf{A}_k$ minimizes $\|\mathbf{A} - \mathbf{B}\|$ over all $\operatorname{rank}\mathbf{B} \le k$ in both spectral ($\sigma_{k+1}$) and Frobenius ($\sqrt{\sum_{i>k}\sigma_i^2}$) norms.
+- **Uniqueness:** Unique in Frobenius norm whenever $\sigma_k > \sigma_{k+1}$.
 :::
 
-- **Achievability Is Immediate:** The residual $\mathbf{A} - \mathbf{A}_k = \sum_{i > k} \sigma_i\mathbf{u}_i\mathbf{v}_i^\top$ is already in compact SVD form with top singular value $\sigma_{k+1}$ and squared Frobenius norm $\sum_{i > k} \sigma_i^2$.
-- **Uniqueness:** In the Frobenius norm, $\mathbf{A}_k$ is the *unique* best rank-$k$ approximation whenever $\sigma_k > \sigma_{k+1}$.
+::: {.col .fig .big}
+@fig:ch33-la-eckart-young-bounds
+:::
+:::
 :::
 
 ::: {.slide title="Proving Eckart–Young by Subspace Intersection"}
@@ -1870,11 +1891,17 @@ $$\min_{\operatorname{rank}\mathbf{B} \le k} \|\mathbf{A} - \mathbf{B}\|_2 = \|\
 ::: {.slide title="Weyl's Inequality and the Frobenius Norm Proof"}
 [Perturbation & Frobenius Bound]{.kicker}
 
-- **Weyl's Inequality for Singular Values:** Applying the spectral-norm Eckart–Young bound to $\mathbf{X} + \mathbf{Y}$ against the rank-$(i+j-2)$ sum $\mathbf{X}_{i-1} + \mathbf{Y}_{j-1}$ proves that for all $i, j \ge 1$:
-  $$\sigma_{i+j-1}(\mathbf{X} + \mathbf{Y}) \le \|(\mathbf{X} - \mathbf{X}_{i-1}) + (\mathbf{Y} - \mathbf{Y}_{j-1})\|_2 \le \sigma_i(\mathbf{X}) + \sigma_j(\mathbf{Y})$$
-- **Two Key Consequences of Weyl's Lemma:**
-  1. *Perturbation Stability ($j = 1$):* Adding a perturbation $\mathbf{E}$ shifts no singular value by more than $\|\mathbf{E}\|_2$: $|\sigma_i(\mathbf{A} + \mathbf{E}) - \sigma_i(\mathbf{A})| \le \sigma_1(\mathbf{E}) = \|\mathbf{E}\|_2$.
-  2. *Frobenius Eckart–Young Proof:* Setting $\mathbf{X} = \mathbf{A} - \mathbf{B}$, $\mathbf{Y} = \mathbf{B}$, and $j = k + 1$ (where $\sigma_{k+1}(\mathbf{B}) = 0$ since $\operatorname{rank}\mathbf{B} \le k$) yields $\sigma_i(\mathbf{A} - \mathbf{B}) \ge \sigma_{k+i}(\mathbf{A})$ for every $i \ge 1$; squaring and summing over $i$ proves $\|\mathbf{A} - \mathbf{B}\|_F^2 \ge \sum_{i > k} \sigma_i(\mathbf{A})^2$.
+::: {.cols .vc}
+::: {.col}
+- **Weyl's Lemma:** $\sigma_{i+j-1}(\mathbf{X} + \mathbf{Y}) \le \sigma_i(\mathbf{X}) + \sigma_j(\mathbf{Y})$ by comparing $\mathbf{X} + \mathbf{Y}$ against rank-$(i+j-2)$ truncation $\mathbf{X}_{i-1} + \mathbf{Y}_{j-1}$.
+- **1-Lipschitz Stability ($j = 1$):** $|\sigma_i(\mathbf{A} + \mathbf{E}) - \sigma_i(\mathbf{A})| \le \|\mathbf{E}\|_2$.
+- **Frobenius Proof ($j = k + 1$):** $\sigma_i(\mathbf{A} - \mathbf{B}) \ge \sigma_{k+i}(\mathbf{A}) \implies \|\mathbf{A} - \mathbf{B}\|_F^2 \ge \sum_{i>k}\sigma_i^2$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-weyl-frobenius
+:::
+:::
 :::
 
 ::: {.slide title="Eckart–Young on a 400×500 Photograph"}
@@ -1955,10 +1982,17 @@ On a 300-point cloud rotated by $36^\circ$ with population standard deviations $
 ::: {.slide title="The Condition Number κ(A) = σ₁ / σᵣ"}
 [Sensitivity & Conditioning]{.kicker}
 
-- **Ratio of Extreme Stretches:** The condition number $\kappa(\mathbf{A}) = \sigma_1/\sigma_r \ge 1$ measures how unevenly $\mathbf{A}$ stretches space ($\kappa = 1$ for orthogonal matrices; $\kappa = \infty$ for singular ones).
-- **Exact Relative Error Amplification Bound:** For an invertible system $\mathbf{A}\mathbf{x} = \mathbf{b}$ perturbed to $\mathbf{A}(\mathbf{x} + \delta\mathbf{x}) = \mathbf{b} + \delta\mathbf{b}$, $\|\delta\mathbf{x}\| \le \sigma_n^{-1}\|\delta\mathbf{b}\|$ and $\|\mathbf{b}\| \le \sigma_1\|\mathbf{x}\|$ combine to give:
-  $$\frac{\|\delta\mathbf{x}\|}{\|\mathbf{x}\|} \le \frac{\sigma_1}{\sigma_n}\,\frac{\|\delta\mathbf{b}\|}{\|\mathbf{b}\|} = \kappa(\mathbf{A})\,\frac{\|\delta\mathbf{b}\|}{\|\mathbf{b}\|}$$
-- **Worst-Case Alignment & Squaring in $\mathbf{A}^\top\mathbf{A}$:** Equality holds when $\mathbf{b} \propto \mathbf{u}_1$ and $\delta\mathbf{b} \propto \mathbf{u}_n$. Forming the Gram matrix squares singular values ($\sigma_i^2$), so $\kappa(\mathbf{A}^\top\mathbf{A}) = \kappa(\mathbf{A})^2$.
+::: {.cols .vc}
+::: {.col}
+- **Ratio of Extreme Stretches:** $\kappa(\mathbf{A}) = \sigma_1/\sigma_r \ge 1$ ($\kappa = 1$ for orthogonal $\mathbf{Q}$; $\kappa = \infty$ for singular matrices).
+- **Relative Error Amplification:** Perturbing $\mathbf{A}\mathbf{x} = \mathbf{b}$ by $\delta\mathbf{b}$ amplifies relative solution error by at most $\kappa(\mathbf{A})$: $\frac{\|\delta\mathbf{x}\|}{\|\mathbf{x}\|} \le \kappa(\mathbf{A})\frac{\|\delta\mathbf{b}\|}{\|\mathbf{b}\|}$.
+- **Gram Squaring:** $\kappa(\mathbf{A}^\top\mathbf{A}) = (\sigma_1/\sigma_r)^2 = \kappa(\mathbf{A})^2$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-cond-error-bound
+:::
+:::
 :::
 
 ::: {.slide title="Condition Number Amplification & Narrow Valleys"}
@@ -1997,10 +2031,18 @@ On a 300-point cloud rotated by $36^\circ$ with population standard deviations $
 ::: {.slide title="Polar Decomposition and Muon's Newton–Schulz Loop"}
 [Orthogonalized Matrix Updates]{.kicker}
 
-- **Polar Factor ($\mathbf{Q} = \mathbf{U}\mathbf{V}^\top$):** Inserting $\mathbf{V}^\top\mathbf{V} = \mathbf{I}$ splits $\mathbf{A} = (\mathbf{U}\mathbf{V}^\top)(\mathbf{V}\boldsymbol{\Sigma}\mathbf{V}^\top) = \mathbf{Q}\mathbf{P}$ into the closest orthogonal matrix $\mathbf{Q} = \mathbf{U}\mathbf{V}^\top$ (setting all $\sigma_i \to 1$) times a symmetric PSD stretch $\mathbf{P}$. The Muon optimizer updates weights along the polar factor of momentum so all active directions move at unit scale.
-- **Odd Polynomials Act Purely on Singular Values:** Because $\mathbf{X}(\mathbf{X}^\top\mathbf{X})^j = \mathbf{U}\boldsymbol{\Sigma}^{2j+1}\mathbf{V}^\top$, iterating the cubic Newton–Schulz map $\mathbf{X}_{t+1} = \tfrac{1}{2}(3\mathbf{X}_t - \mathbf{X}_t\mathbf{X}_t^\top\mathbf{X}_t)$ from $\mathbf{X}_0 = \mathbf{M}/\|\mathbf{M}\|_F$ applies $p(\sigma) = \tfrac{1}{2}(3\sigma - \sigma^3)$ to drive every $\sigma_i \in (0, 1]$ quadratically to $1$ using only matrix multiplications:
+::: {.cols .vc}
+::: {.col}
+- **Polar Factor ($\mathbf{Q} = \mathbf{U}\mathbf{V}^\top$):** Closest orthogonal matrix ($\sigma_i \to 1$), used by Muon to update all active directions at unit scale.
+- **Matrix-Multiply Newton–Schulz Loop:** Iterating $\mathbf{X}_{t+1} = \tfrac{1}{2}(3\mathbf{X}_t - \mathbf{X}_t\mathbf{X}_t^\top\mathbf{X}_t)$ from $\mathbf{M}/\|\mathbf{M}\|_F$ applies $p(\sigma) = \tfrac{1}{2}(3\sigma - \sigma^3) \to 1$.
 
 @mdl-svd-low-rank-the-svd-in-modern-deep-learning-1
+:::
+
+::: {.col .fig}
+@fig:ch33-la-muon-newton-schulz
+:::
+:::
 :::
 
 ::: {.slide title="Spectral Normalization & Measuring Decay"}

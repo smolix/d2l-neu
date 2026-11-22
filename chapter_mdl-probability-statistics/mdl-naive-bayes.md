@@ -1226,13 +1226,18 @@ In earlier chapters, we trained softmax regression on Fashion-MNIST by running g
 ::: {.slide title="Bayes' Rule: Generative vs. Discriminative Routes"}
 [Two Families of Classifiers]{.kicker}
 
-To minimize expected $0\text{--}1$ classification error, the Bayes-optimal decision rule picks the class with the largest posterior probability $p(y \mid \mathbf{x})$. Applying Bayes' rule rewrites this posterior in terms of the class-conditional likelihood and prior:
+::: {.cols .vc}
+::: {.col}
+$$\hat{y} = \mathop{\mathrm{argmax}}_{y \in \{1,\dots,K\}} p(y \mid \mathbf{x}) = \mathop{\mathrm{argmax}}_{y} p(\mathbf{x} \mid y)\,p(y)$$
 
-$$\hat{y} = \mathop{\mathrm{argmax}}_{y \in \{1,\dots,K\}} p(y \mid \mathbf{x}) = \mathop{\mathrm{argmax}}_{y} \frac{p(\mathbf{x} \mid y)\,p(y)}{p(\mathbf{x})} = \mathop{\mathrm{argmax}}_{y} \underbrace{p(\mathbf{x} \mid y)\,p(y)}_{\text{Bayes numerator}}$$
+- **Generative route (Naive Bayes):** Fit $p(\mathbf{x} \mid y)$ and $p(y)$ separately for each class, then invert via the Bayes numerator $p(y)\prod_i p(x_i \mid y)$.
+- **Discriminative route (Softmax regression):** Skip modeling $p(\mathbf{x} \mid y)$ and optimize the decision boundary $p(y \mid \mathbf{x})$ directly by conditional NLL.
+:::
 
-- **Discriminative classifiers (e.g., logistic/softmax regression):** Model the decision boundary $p(y \mid \mathbf{x})$ directly without ever modeling how the input features $\mathbf{x}$ are distributed.
-- **Generative classifiers (e.g., naive Bayes, GMMs):** Model how each class produces its inputs via $p(\mathbf{x} \mid y)$ alongside the class prior $p(y)$, then normalize the $K$ Bayes numerators to recover $p(y \mid \mathbf{x})$.
-- **Where the explosion lives:** By the exact chain rule, $p(\mathbf{x} \mid y) = \prod_{i=1}^d p(x_i \mid x_1, \dots, x_{i-1}, y)$, where factor $i$ still requires conditioning on $2^{i-1}$ feature histories.
+::: {.col .fig}
+@fig:ch35-prob-gen-vs-disc-route
+:::
+:::
 :::
 
 ::: {.slide title="The Naive Conditional Independence Assumption"}
@@ -1255,15 +1260,18 @@ $$\hat{y} = \mathop{\mathrm{argmax}}_{y \in \{1,\dots,K\}} p(y \mid \mathbf{x}) 
 ::: {.slide title="Worked Example: A Two-Word Spam Filter by Hand"}
 [Multiplicative Likelihood Ratios]{.kicker}
 
-Consider a training corpus of $10$ emails—$4$ spam ($\hat{p}(\text{spam}) = 0.4$) and $6$ ordinary ($\hat{p}(\text{ordinary}) = 0.6$)—tracking two binary word indicators, `"free"` and `"meeting"`:
+::: {.cols .vc}
+::: {.col}
+$$\frac{p(\text{spam} \mid \mathbf{x})}{p(\text{ordinary} \mid \mathbf{x})} = \frac{0.4}{0.6} \times \frac{3/4}{1/6} \times \frac{1}{2/6} = \frac{2}{3} \times 4.5 \times 3 = 9$$
 
-| Feature $x_i \in \{0, 1\}$ | Spam Emails ($n_1 = 4$) | Ordinary Emails ($n_0 = 6$) | Likelihood Ratio $\frac{p(x_i \mid \text{spam})}{p(x_i \mid \text{ord})}$ |
-| :--- | :---: | :---: | :---: |
-| **Contains `"free"`** ($x_1 = 1$) | $3 / 4 = 0.75$ | $1 / 6 \approx 0.167$ | $\frac{3/4}{1/6} = 4.5$ (when present) |
-| **Contains `"meeting"`** ($x_2 = 1$) | $0 / 4 = 0.00$ | $4 / 6 \approx 0.667$ | $\frac{1 - 0}{1 - 4/6} = 3.0$ (when absent) |
+- **Multiplying evidence:** Prior odds ($2/3$), presence of `"free"` ($\times 4.5$), and absence of `"meeting"` ($\times 3.0$) multiply to posterior odds $9:1$ ($P = 0.90$).
+- **Additive log-odds:** In log space, multiplying likelihood ratios becomes adding log-odds ($-0.41 + 1.50 + 1.10 = +2.20$ nats).
+:::
 
-- **Classifying a new email with `"free"` and no `"meeting"` ($\mathbf{x} = (1, 0)$):**
-  $$\frac{p(\text{spam} \mid \mathbf{x})}{p(\text{ordinary} \mid \mathbf{x})} = \underbrace{\frac{0.4}{0.6}}_{\text{prior odds}} \times \underbrace{\frac{3/4}{1/6}}_{\text{has ``free''}} \times \underbrace{\frac{1}{2/6}}_{\text{no ``meeting''}} = \frac{2}{3} \times 4.5 \times 3 = 9 \implies p(\text{spam} \mid \mathbf{x}) = \frac{9}{9+1} = 0.90$$
+::: {.col .fig}
+@fig:ch35-prob-spam-odds
+:::
+:::
 :::
 
 ::: {.slide title="Maximum Likelihood Counting and Zero-Count Vetoes"}
@@ -1424,13 +1432,18 @@ Exponentiating and normalizing the class scores recovers the model's posterior p
 ::: {.slide title="Why Correlated Features Cause Extreme Overconfidence"}
 [The Duplicated-Evidence Theorem]{.kicker}
 
-Why does naive Bayes rank classes reasonably well ($71\%$ accuracy) while reporting completely untrustworthy probabilities ($99.2\%$ confidence)? Consider a binary feature $x$ with likelihood ratio $r(x) = \frac{p(x \mid y=1)}{p(x \mid y=0)}$ that is stored **$k$ times** in the feature vector:
+::: {.cols .vc}
+::: {.col}
+$$\log\frac{p_{\mathrm{NB}}(y=1 \mid \mathbf{x})}{p_{\mathrm{NB}}(y=0 \mid \mathbf{x})} = \log\frac{\pi_1}{\pi_0} + k\log r(x)$$
 
-$$\log\frac{p_{\mathrm{true}}(y=1 \mid \mathbf{x})}{p_{\mathrm{true}}(y=0 \mid \mathbf{x})} = \log\frac{\pi_1}{\pi_0} + \log r(x) \qquad \text{vs.} \qquad \log\frac{p_{\mathrm{NB}}(y=1 \mid \mathbf{x})}{p_{\mathrm{NB}}(y=0 \mid \mathbf{x})} = \log\frac{\pi_1}{\pi_0} + k\log r(x)$$
+- **Duplication multiplies log-odds by $k$:** When a clue with likelihood ratio $r = 4$ ($80\%$ true accuracy) is copied $k = 5$ times, naive Bayes reports odds $4^5 = 1024$ ($99.9\%$ confidence!).
+- **Repair:** Temperature scaling $s_y(\mathbf{x})/T$ with $T = k$ restores calibrated log-odds without altering class rankings under equal priors.
+:::
 
-- **Duplication multiplies log-odds by $k$:** Because the $k$ identical copies always agree, they carry no new information beyond copy $1$, yet naive Bayes multiplies $p(x \mid y)^k$.
-- **Under equal priors ($\pi_1 = \pi_0$), rankings survive while confidence explodes:** Multiplying $\log r(x)$ by $k > 0$ never changes its sign (so $\hat{y}$ is unchanged), but an $80\%$ clue ($r = 4$) copied $k = 5$ times reports posterior probability $\frac{4^5}{1 + 4^5} = \frac{1024}{1025} = 99.9\%$ while still being right only $80\%$ of the time!
-- **Under unequal priors, even the ranking can flip:** If $\pi_1/\pi_0 = 1/5$ and $r = 4$, one copy gives odds $4/5 < 1$ (class $0$, correct), whereas $k = 2$ copies give odds $16/5 > 1$ (flipping the prediction to class $1$).
+::: {.col .fig}
+@fig:ch35-prob-dup-evidence
+:::
+:::
 :::
 
 ::: {.slide title="Post-Hoc Repair: Temperature Scaling and Label Shift"}
@@ -1447,23 +1460,33 @@ Two operational adjustments repair naive Bayes probabilities at test time withou
 ::: {.slide title="Where Generative Classifiers Win: Missing Features"}
 [Exact Analytical Marginalization]{.kicker}
 
-Suppose half of the pixels in a test image are occluded behind an obstacle, partitioning the $d$ features into visible pixels $\mathcal{V}$ and unobserved pixels $\mathcal{U}$.
+::: {.cols .vc}
+::: {.col}
+$$p(\mathbf{x}_{\mathcal{V}} \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \mid y)\Biggr] \prod_{j \in \mathcal{U}} \underbrace{\sum_{x_j \in \{0,1\}} p(x_j \mid y)}_{=\,1} = \prod_{i \in \mathcal{V}} p(x_i \mid y)$$
 
-- **Exact marginalization in naive Bayes:** Because the joint class-conditional distribution factorizes across features, summing out every unobserved pixel $x_j$ ($j \in \mathcal{U}$) removes its factor cleanly:
-  $$p(\mathbf{x}_{\mathcal{V}} \mid y) = \sum_{\mathbf{x}_{\mathcal{U}}} \prod_{i=1}^d p(x_i \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \mid y)\Biggr] \prod_{j \in \mathcal{U}} \underbrace{\sum_{x_j \in \{0,1\}} p(x_j \mid y)}_{=\,1} = \prod_{i \in \mathcal{V}} p(x_i \mid y)$$
-- **Log-space score on visible features:** We simply sum $\log p(x_i \mid y)$ over $i \in \mathcal{V}$ (`(X_test * M) @ np.log(P_xy).T + ((1 - X_test) * M) @ np.log1p(-P_xy).T + np.log(P_y)`).
-- **Pitfall of zero-imputation:** Setting missing pixels to $x_j = 0$ in the affine formula $\mathbf{w}_y^\top \mathbf{x} + b_y$ is *not* marginalization—it treats every occluded pixel as actively observed blank background, adding $\log(1 - \theta_{jy})$ via $b_y$. Discriminative classifiers lack $p(\mathbf{x})$ altogether and cannot marginalize missing features analytically.
+- **Exact marginalization:** Summing out occluded pixels $j \in \mathcal{U}$ simply drops their factors from the score $s_y(\mathbf{x}_{\mathcal{V}}) = \log p(y) + \sum_{i \in \mathcal{V}} \log p(x_i \mid y)$.
+- **Zero-imputation pitfall:** Setting $x_j = 0$ in $\mathbf{w}_y^\top\mathbf{x} + b_y$ treats occluded pixels as observed blank background via $b_y = \log p(y) + \sum_j \log(1-\theta_{jy})$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-missing-pixels
+:::
+:::
 :::
 
 ::: {.slide title="The Ng & Jordan (2002) Sample-Complexity Crossover"}
 [O(log d) vs. O(d) Learning Curves]{.kicker}
 
-With $n = 60{,}000$ images, discriminative softmax regression beat generative naive Bayes by $12.5$ points ($83.1\%$ vs $70.6\%$). Why does naive Bayes often win in the small-data regime ($n \ll d$)?
+::: {.cols .vc}
+::: {.col}
+- **Small $n \ll d$ (Naive Bayes wins):** Because $1\text{D}$ pixel frequencies are decoupled, a union bound over $2d$ parameters needs only $m = O(\log d)$ samples to reach its asymptotic floor (low variance, higher bias).
+- **Large $n \gg d$ (Discriminative wins):** Logistic/softmax regression fits $d$ coupled weights in $n = O(d)$ samples, reaching a much lower asymptotic error ($16.9\%$ vs. $29.4\%$).
+:::
 
-- **Logarithmic sample complexity of Naive Bayes ($m = O(\log d)$):** Because each parameter $\hat{\theta}_{iy}$ is estimated independently from $m$ class-$y$ examples, Hoeffding's inequality and a union bound over all $2d$ parameters of a two-class model guarantee $\max_{i,y} \lvert\hat{\theta}_{iy} - \theta_{iy}\rvert \le \varepsilon$ with probability $\ge 1 - \delta$ once:
-  $$m \ge \frac{\log(4d/\delta)}{2\varepsilon^2} \qquad (\approx 2{,}230 \text{ examples at } d = 784,\, \varepsilon = 0.05,\, \delta = 0.05)$$
-- **Linear sample complexity of Logistic Regression ($n = O(d)$):** Fitting $d$ coupled weights jointly by conditional MLE requires $n = \Omega(d)$ examples to prevent overfitting (and on small $n < d$, the data are linearly separable so unregularized logistic NLL has no finite minimizer).
-- **The bias–variance crossover:** Naive Bayes has **lower variance** (reaching its higher asymptotic error floor in $O(\log d)$ examples), whereas logistic regression has **lower asymptotic bias** (reaching a lower error floor once $n \gg d$).
+::: {.col .fig .big}
+@fig:ch35-prob-ng-jordan-crossover
+:::
+:::
 :::
 
 ::: {.slide title="Generative vs. Discriminative Classifiers Compared"}

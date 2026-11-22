@@ -547,21 +547,15 @@ The Transformer Block: Pre-Norm, SwiGLU, and Signal Propagation<br>**residual st
 ::: {.slide title="Why Stacking Attention Alone Fails at Depth"}
 [Motivation]{.kicker}
 
-Self-attention mixes tokens by taking weighted averages of value vectors, but surrounds that weighted sum with purely linear projections ($\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v, \mathbf{W}_o$).
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **No per-token feature synthesis:** Without a position-wise nonlinearity between attention layers, a composition of linear projections collapses to a single low-rank linear map on each token's channels.
-- **Catastrophic token collapse at initialization:** If we stack $L = 32$ post-norm Transformer blocks with standard Xavier initialization, all 64 token vectors collapse onto a single shared point (relative spread $\sim 10^{-4}$) before a single gradient step occurs.
+- **No per-token nonlinearity:** Without a position-wise FFN between attention layers, linear projections collapse to a single low-rank map on each token's channels.
+- **Token collapse & starved gradients:** Stacking $L = 32$ post-norm blocks with Xavier initialization collapses token spread to $\sim 10^{-4}$ and drops layer-1 query gradients $\|\partial \mathcal{L} / \partial \mathbf{W}_q^{(1)}\|_F$ to $\sim 10^{-9}$!
 :::
 
-::: {.col}
-- **Starved early-layer gradients:** In that same 32-layer post-norm stack, the query projection gradient norm $\|\partial \mathcal{L} / \partial \mathbf{W}_q^{(1)}\|_F$ drops to $\sim 10^{-9}$, freezing lower blocks while upper blocks receive large updates.
+::: {.col .fig .big}
+@fig:ch11-tf-blk-failure-modes
 :::
-:::
-
-::: {.d2l-note .warn}
-**Core design question:** How must we wire residual connections, normalization, weight initialization, and feed-forward layers so a stack of $L$ blocks propagates both forward token diversity and backward gradients cleanly?
 :::
 :::
 
@@ -584,21 +578,16 @@ Self-attention mixes tokens by taking weighted averages of value vectors, but su
 ::: {.slide title="Normalization Placement: Post-Norm vs. Pre-Norm"}
 [Normalization Placement]{.kicker}
 
-The original 2017 Transformer and BERT placed normalization *on the residual stream itself* (**post-norm**), whereas modern architectures move normalization *onto each sublayer's input branch* (**pre-norm**):
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Post-norm (2017 / BERT):**
-  $$\mathbf{H} = \mathrm{Norm}_1\bigl(\mathbf{X} + \mathrm{Attn}(\mathbf{X})\bigr)$$
-  $$\mathbf{Y} = \mathrm{Norm}_2\bigl(\mathbf{H} + \mathrm{FFN}(\mathbf{H})\bigr)$$
-  Every residual addition is immediately divided by a normalization denominator on the main stream.
+- **Post-norm (2017 / BERT):** Places normalization on the main residual stream itself:
+  $$\mathbf{H} = \mathrm{Norm}_1(\mathbf{X} + \mathrm{Attn}(\mathbf{X})), \quad \mathbf{Y} = \mathrm{Norm}_2(\mathbf{H} + \mathrm{FFN}(\mathbf{H}))$$
+- **Pre-norm (GPT-2 / Llama / Qwen):** Moves normalization onto each sublayer's input branch so the main stream runs uninterrupted:
+  $$\mathbf{H} = \mathbf{X} + \mathrm{Attn}(\mathrm{Norm}_1(\mathbf{X})), \quad \mathbf{Y} = \mathbf{H} + \mathrm{FFN}(\mathrm{Norm}_2(\mathbf{H}))$$
 :::
 
-::: {.col}
-- **Pre-norm (GPT-2 / Llama / Qwen):**
-  $$\mathbf{H} = \mathbf{X} + \mathrm{Attn}\bigl(\mathrm{Norm}_1(\mathbf{X})\bigr)$$
-  $$\mathbf{Y} = \mathbf{H} + \mathrm{FFN}\bigl(\mathrm{Norm}_2(\mathbf{H})\bigr)$$
-  The main residual stream runs uninterrupted from input embeddings all the way to the final output head.
+::: {.col .fig}
+@fig:ch11-tf-blk-post-vs-pre-eq
 :::
 :::
 :::
@@ -626,30 +615,33 @@ Because an untrained $L$-block stack is a deterministic random function, we can 
 ::: {.slide title="Why Post-Norm Squeezes Tokens Together Across Depth"}
 [Mechanism of Token Collapse]{.kicker}
 
-Decompose each token vector $\mathbf{x}_i \in \mathbb{R}^d$ into the sequence mean $\boldsymbol{\mu} = \frac{1}{n}\sum_{j=1}^n \mathbf{x}_j$ plus a token-specific deviation $\boldsymbol{\delta}_i = \mathbf{x}_i - \boldsymbol{\mu}$:
+::: {.cols .vc}
+::: {.col}
+- Decompose each token vector $\mathbf{x}_i = \boldsymbol{\mu} + \boldsymbol{\delta}_i$ into the sequence mean $\boldsymbol{\mu} = \frac{1}{n}\sum_j \mathbf{x}_j$ and token-specific deviation $\boldsymbol{\delta}_i$.
+- **Random attention reinforces $\boldsymbol{\mu}$:** Uniform initial weights add $\mathbf{W}_o\mathbf{W}_v\boldsymbol{\mu}$ to every token while deviations $\boldsymbol{\delta}_i$ cancel.
+- **Post-norm rescales downward:** Dividing by $\sqrt{1 + \sigma_{\text{attn}}^2}$ shrinks $\boldsymbol{\delta}_i$ at every layer (`LayerNorm` centers *channels*, not tokens!).
+:::
 
-- **Random attention averages across tokens:** At initialization, random query–key scores produce nearly uniform attention weights over the $n$ positions, so every token receives approximately the same context vector $\mathbf{W}_o \mathbf{W}_v \boldsymbol{\mu}$ while zero-mean deviations $\boldsymbol{\delta}_i$ cancel out.
-- **Shared energy grows while differences stagnate:** Adding the attention update reinforces the shared component $\boldsymbol{\mu}$ across all tokens without amplifying the token-specific differences $\boldsymbol{\delta}_i$.
-- **Post-norm rescales every token Downward:** When `LayerNorm` divides the sum $\mathbf{x}_i + \mathbf{u}_i$ by $\sqrt{1 + \sigma_{\text{attn}}^2}$ (and again after the FFN by $\sqrt{1 + \sigma_{\text{ffn}}^2}$), it shrinks the distinct deviations $\boldsymbol{\delta}_i$ at every block!
-
-::: {.d2l-note .rule}
-`LayerNorm` subtracts the mean *across the $d$ channels of a single token*, not the mean $\boldsymbol{\mu}$ *across the $n$ tokens*—so normalization never removes the growing shared vector $\boldsymbol{\mu}$.
+::: {.col .fig .big}
+@fig:ch11-tf-blk-token-collapse
+:::
 :::
 :::
 
 ::: {.slide title="Predicting the Exponential Rate of Token Collapse"}
 [Mathematical Derivation]{.kicker}
 
-Let $\rho = n\|\boldsymbol{\mu}\|^2 / \sum_{i=1}^n \|\boldsymbol{\delta}_i\|^2$ be the ratio of common-to-distinct token energy, so relative token spread is $s = (1 + \rho)^{-1/2}$:
-
-- If $\mathbf{W}_v, \mathbf{W}_o \in \mathbb{R}^{d \times d}$ have entries of variance $g^2 / d$, each projection multiplies squared norms by $g^2$, amplifying the shared energy ratio by $\rho \mapsto (1 + g^4)\rho$ per block.
-- Starting from $n = 64$ independent random tokens ($\rho_0 = \frac{1}{n-1} = \frac{1}{63}$), the predicted token spread after $k$ post-norm blocks is:
+::: {.cols .vc}
+::: {.col}
+- Let $\rho = n\|\boldsymbol{\mu}\|^2 / \sum_{i=1}^n \|\boldsymbol{\delta}_i\|^2$ be the ratio of common-to-distinct token energy, so relative token spread is $s = (1 + \rho)^{-1/2}$.
+- With per-projection variance gain $g^2 = d\sigma^2$, each post-norm block amplifies $\rho \mapsto (1 + g^4)\rho$:
   $$s_k \approx \left(1 + \frac{(1 + g^4)^k}{63}\right)^{-1/2}$$
+:::
 
-| Initialization Scheme ($d = 256, n = 64$) | Gain $g^2 = d\sigma^2$ | Block $k = 8$ | Block $k = 16$ | Block $k = 32$ |
-| :--- | :---: | :---: | :---: | :---: |
-| **Xavier uniform ($g = 1$)** | $1.00$ ($\rho$ doubles/block) | $0.44$ | $0.031$ | $1.2 \times 10^{-4}$ |
-| **Small Gaussian $\mathcal{N}(0, 0.02^2)$** | $0.10$ ($1 + g^4 \approx 1.01$) | $0.99$ | $0.99$ | $0.99$ |
+::: {.col .fig}
+@fig:ch11-tf-blk-collapse-law
+:::
+:::
 :::
 
 ::: {.slide title="Measured Token Spread Matches the Analytical Law"}
@@ -671,15 +663,16 @@ Let $\rho = n\|\boldsymbol{\mu}\|^2 / \sum_{i=1}^n \|\boldsymbol{\delta}_i\|^2$ 
 ::: {.slide title="Pitfall: Fixed Weight Scale 0.02 Grows With Model Width"}
 [Width Scaling Pitfall]{.kicker}
 
-Why not simply keep post-norm and initialize all weights with $\mathcal{N}(0, 0.02^2)$ as in BERT and GPT-1?
+::: {.cols .vc}
+::: {.col}
+- For $\mathbf{W} \in \mathbb{R}^{d \times d}$ with fixed entry variance $\sigma^2 = 0.02^2$, the per-projection variance gain grows linearly with width $d$:
+  $$g^2 = d \sigma^2 = 0.0004\,d$$
+- A fixed $\sigma = 0.02$ is only small for $d \ll 2{,}500$; at frontier widths ($d = 4{,}096$), $g^2 = 1.64 > 1$ collapses post-norm stacks even faster than Xavier!
+:::
 
-- **Effective gain depends on width $d$:** For a weight matrix $\mathbf{W} \in \mathbb{R}^{d \times d}$ with entry variance $\sigma^2 = 0.02^2$, the per-projection variance gain is $g^2 = d \sigma^2$:
-  - At $d = 256$: $g^2 = 256 \times 0.0004 \approx 0.10$ $\to$ $1 + g^4 \approx 1.01$ (minimal collapse over 32 layers).
-  - At $d = 1024$: $g^2 = 1024 \times 0.0004 \approx 0.41$ $\to$ $1 + g^4 \approx 1.17$ (a 24-block stack already drops to $s_{24} \approx 0.78$).
-  - At $d = 4096$ (Llama 3 8B): $g^2 = 4096 \times 0.0004 \approx 1.64 > 1$ $\to$ $1 + g^4 \approx 3.68$, collapsing even faster than Xavier!
-
-::: {.d2l-note .warn}
-A fixed numeric standard deviation ($\sigma = 0.02$) is only "small" at narrow widths $d \ll 1 / \sigma^2 = 2{,}500$. At frontier widths ($d \ge 4096$), post-norm requires explicit depth-dependent residual scaling (e.g., DeepNet) to avoid collapse.
+::: {.col .fig}
+@fig:ch11-tf-blk-width-pitfall
+:::
 :::
 :::
 
@@ -701,13 +694,17 @@ A fixed numeric standard deviation ($\sigma = 0.02$) is only "small" at narrow w
 ::: {.slide title="Pre-Norm Unrolled Stream and 1/√(2L) Residual Scaling"}
 [Pre-Norm Variance Control]{.kicker}
 
-Unrolling $L$ pre-norm blocks reveals an uninterrupted identity highway from input $\mathbf{X}^{(0)}$ to output $\mathbf{X}^{(L)}$:
+::: {.cols .vc}
+::: {.col}
+- Unrolling $L$ pre-norm blocks reveals an uninterrupted identity highway:
+  $$\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{L} \bigl(\mathrm{Attn}_\ell(\mathrm{Norm}(\mathbf{X}^{(\ell-1)})) + \mathrm{FFN}_\ell(\mathrm{Norm}(\mathbf{H}^{(\ell)}))\bigr)$$
+- **GPT-2's $1/\sqrt{2L}$ scaling rule:** Scaling the initial std of the two residual write matrices per block (`W_o` and `W_2`) by $1/\sqrt{2L}$ keeps cumulative stream variance $\sum_{m=1}^{2L} \frac{\sigma^2}{2L} = \sigma^2 = O(1)$ at any depth $L$.
+:::
 
-$$\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{L} \Bigl(\mathrm{Attn}_\ell\bigl(\mathrm{Norm}(\mathbf{X}^{(\ell-1)})\bigr) + \mathrm{FFN}_\ell\bigl(\mathrm{Norm}(\mathbf{H}^{(\ell)})\bigr)\Bigr)$$
-
-- **Direct gradient highway:** Differentiating gives $\frac{\partial \mathbf{X}^{(L)}}{\partial \mathbf{X}^{(\ell)}} = \mathbf{I} + \cdots$, guaranteeing that loss gradients reach layer 1 without multiplicative decay.
-- **Linear variance growth without scaling:** Because each of the $2L$ normalized branches deposits variance $\sigma_{\text{branch}}^2$ into the stream, unscaled stream RMS grows with depth as $\sqrt{1 + 2L\sigma_{\text{branch}}^2}$ ($\approx 5.0$ at $L = 32$).
-- **GPT-2's $1/\sqrt{2L}$ scaling rule:** Scaling the initialization standard deviation of the two residual write matrices per block (`W_o` and `W_2`) by $1/\sqrt{2L}$ makes total deposited variance $\sum_{m=1}^{2L} \frac{\sigma^2}{2L} = \sigma^2 = O(1)$ at any depth $L$.
+::: {.col .fig}
+@fig:ch11-tf-blk-unrolled-highway
+:::
+:::
 :::
 
 ::: {.slide title="RMSNorm: Dropping Mean-Centering for Speed"}
@@ -727,13 +724,17 @@ $$\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\mathrm{RMS}(\mathbf{x})} \od
 ::: {.slide title="Query–Key Normalization (QK-Norm) Bounds Logits"}
 [Attention Stability]{.kicker}
 
-Pre-norm normalizes the block input $\mathbf{X}$, but inside attention the queries $\mathbf{Q} = \mathrm{Norm}(\mathbf{X})\mathbf{W}_q$ and keys $\mathbf{K} = \mathrm{Norm}(\mathbf{X})\mathbf{W}_k$ are multiplied by learned matrices:
+::: {.cols .vc}
+::: {.col}
+- **Quadratic logit blow-up:** If the spectral norms of $\mathbf{W}_q$ and $\mathbf{W}_k$ grow by $\lambda$ during training, attention logits $\mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}$ grow as **$\lambda^2$**, saturating softmax.
+- **Per-head `QK-Norm`:** Applying width-$d_h$ `RMSNorm` to queries and keys enforces $\|\hat{\mathbf{q}}_i\|_2 = \|\hat{\mathbf{k}}_j\|_2 = \sqrt{d_h}$, imposing a hard Cauchy–Schwarz bound:
+  $$\frac{|\hat{\mathbf{q}}_i^\top \hat{\mathbf{k}}_j|}{\sqrt{d_h}} \le \sqrt{d_h}$$
+:::
 
-- **Quadratic logit blow-up:** If the spectral norms of $\mathbf{W}_q$ and $\mathbf{W}_k$ grow by a factor $\lambda$ during training (common in large ViTs and high-learning-rate LLMs), attention logits $\mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}$ grow as **$\lambda^2$**, driving softmax into one-hot saturation where gradients vanish.
-- **Per-head `QK-Norm`:** Applying `RMSNorm` of width $d_h$ to each head's queries and keys immediately before the dot product enforces $\|\hat{\mathbf{q}}_i\|_2 = \|\hat{\mathbf{k}}_j\|_2 = \sqrt{d_h}$ (at unit gain $\boldsymbol{\gamma} = \mathbf{1}$).
-- **Hard Cauchy–Schwarz ceiling:**
-  $$\frac{|\hat{\mathbf{q}}_i^\top \hat{\mathbf{k}}_j|}{\sqrt{d_h}} \le \frac{\|\hat{\mathbf{q}}_i\|_2 \, \|\hat{\mathbf{k}}_j\|_2}{\sqrt{d_h}} = \sqrt{d_h}$$
-  Attention logits stay bounded and have unit variance for random directions regardless of weight scale $\lambda$.
+::: {.col .fig}
+@fig:ch11-tf-blk-qknorm-bound
+:::
+:::
 :::
 
 ::: {.slide title="Empirical Logit and Entropy Invariance Under QK-Norm"}
@@ -751,24 +752,33 @@ Without `QK-Norm`, a $16\times$ weight growth inflates logit standard deviation 
 ::: {.slide title="The Feed-Forward Network as a Key–Value Memory"}
 [Channel Mixing]{.kicker}
 
-Writing the two-layer position-wise FFN in terms of the rows $\mathbf{w}_{1,j} \in \mathbb{R}^d$ of $\mathbf{W}_1$ and columns $\mathbf{w}_{2,j} \in \mathbb{R}^d$ of $\mathbf{W}_2$ reveals a content-addressed memory bank (Geva et al., 2021):
+::: {.cols .vc}
+::: {.col}
+- Writing the two-layer FFN in terms of rows $\mathbf{w}_{1,j} \in \mathbb{R}^d$ of $\mathbf{W}_1$ and columns $\mathbf{w}_{2,j} \in \mathbb{R}^d$ of $\mathbf{W}_2$ reveals a content-addressed memory bank (Geva et al., 2021):
+  $$\mathrm{FFN}_{\mathrm{GELU}}(\mathbf{x}) = \sum_{j=1}^{4d} \mathrm{GELU}(\mathbf{x}^\top \mathbf{w}_{1,j})\, \mathbf{w}_{2,j}$$
+- **Dominant parameter share:** Two $d \times 4d$ matrices hold $8d^2$ parameters ($3{,}072$ detector slots per block in GPT-2 Small).
+:::
 
-$$\mathrm{FFN}_{\mathrm{GELU}}(\mathbf{x}) = \mathrm{GELU}(\mathbf{x}\mathbf{W}_1)\mathbf{W}_2 = \sum_{j=1}^{4d} \mathrm{GELU}(\mathbf{x}^\top \mathbf{w}_{1,j})\, \mathbf{w}_{2,j}$$
-
-- **Detector keys ($\mathbf{w}_{1,j}$):** Each of the $d_{\text{ff}} = 4d$ hidden units acts as a learned pattern detector that fires when the token representation $\mathbf{x}$ aligns with $\mathbf{w}_{1,j}$.
-- **Feature values ($\mathbf{w}_{2,j}$):** When detector $j$ activates, it adds $\mathrm{GELU}(\mathbf{x}^\top \mathbf{w}_{1,j})\,\mathbf{w}_{2,j}$ back onto the token's residual stream.
-- **Dominant parameter share:** Two $d \times 4d$ matrices hold $2 \times 4d^2 = 8d^2$ parameters—$3{,}072$ memory slots ($4.72\text{M}$ weights) per block in GPT-2 Small.
+::: {.col .fig}
+@fig:ch11-tf-blk-ffn-kv-memory
+:::
+:::
 :::
 
 ::: {.slide title="From GELU MLPs to Gated SwiGLU Networks"}
 [Gated Feed-Forward Networks]{.kicker}
 
-Modern Transformers (PaLM, Llama 3, Qwen3, DeepSeek-V3) replace the two-matrix `GELU` MLP with a bias-free gated **`SwiGLU`** network (Shazeer, 2020):
+::: {.cols .vc}
+::: {.col}
+- Modern Transformers replace the two-matrix `GELU` MLP with a bias-free gated **`SwiGLU`** network (Shazeer, 2020):
+  $$\mathrm{FFN}_{\mathrm{SwiGLU}}(\mathbf{x}) = \bigl(\mathrm{SiLU}(\mathbf{x}\mathbf{W}_g) \odot (\mathbf{x}\mathbf{W}_1)\bigr)\mathbf{W}_2$$
+- **Matching the $8d^2$ budget:** Shrinking hidden width from $4d$ to $d_{\text{ff}} = \operatorname{round}(\frac{8}{3}d)$ keeps the 3-matrix parameter count at $3 \times d \times \frac{8}{3}d = 8d^2$.
+:::
 
-$$\mathrm{FFN}_{\mathrm{SwiGLU}}(\mathbf{x}) = \bigl(\mathrm{SiLU}(\mathbf{x}\mathbf{W}_g) \odot (\mathbf{x}\mathbf{W}_1)\bigr)\mathbf{W}_2, \qquad \mathrm{SiLU}(z) = z\,\sigma(z)$$
-
-- **Multiplicative feature gating:** Taking the elementwise product of the $\mathrm{SiLU}$-activated gate $\mathbf{x}\mathbf{W}_g$ and linear up-projection $\mathbf{x}\mathbf{W}_1$ produces rich second-order interactions across a token's channels.
-- **Matching the $8d^2$ budget with three matrices:** Because `SwiGLU` uses *three* matrices ($\mathbf{W}_g, \mathbf{W}_1 \in \mathbb{R}^{d \times d_{\text{ff}}}$ and $\mathbf{W}_2 \in \mathbb{R}^{d_{\text{ff}} \times d}$), shrinking hidden width from $4d$ to $d_{\text{ff}} = \operatorname{round}(\frac{8}{3}d)$ keeps the total parameter count at $3 \times d \times \frac{8}{3}d = 8d^2$.
+::: {.col .fig}
+@fig:ch11-tf-blk-gelu-vs-swiglu
+:::
+:::
 :::
 
 ::: {.slide title="Both FFN Variants in One Parameter-Matched Class"}
@@ -823,11 +833,15 @@ Work out the following three design questions:
 ::: {.slide title="Summary: Anatomy and Stability of the Transformer Block"}
 [Key Takeaways]{.kicker}
 
-| Component / Upgrade | Mathematical Form | Parameter / Compute Cost | Role in Deep Transformers |
-| :--- | :--- | :--- | :--- |
-| **Multi-Head Attention** | $\mathrm{Attn}(\mathbf{X}) = \mathrm{Concat}(\text{heads})\mathbf{W}_o$ | $4d^2$ params ($1/3$ of block) | Mixes information across sequence positions $1 \dots n$ |
-| **Pre-Norm Residual** | $\mathbf{X} \leftarrow \mathbf{X} + f(\mathrm{Norm}(\mathbf{X}))$ | $2d$ norm gains | Preserves identity path for token spread & backward gradients |
-| **$1/\sqrt{2L}$ Output Init** | $\sigma_{\mathbf{W}_o, \mathbf{W}_2} = 0.02 / \sqrt{2L}$ | $0$ extra params | Keeps cumulative residual stream variance $O(1)$ across depth $L$ |
-| **`RMSNorm` & `QK-Norm`** | $\frac{\mathbf{x}}{\sqrt{\frac{1}{d}\sum x_j^2 + \epsilon}} \odot \boldsymbol{\gamma}$ | $d$ (or $d_h$) gains | Fast scale normalization; bounds attention logits by $\sqrt{d_h}$ |
-| **`SwiGLU` FFN** | $(\mathrm{SiLU}(\mathbf{x}\mathbf{W}_g) \odot \mathbf{x}\mathbf{W}_1)\mathbf{W}_2$ | $8d^2$ params ($d_{\text{ff}} = \frac{8}{3}d$) | Nonlinear per-token channel mixing ($2/3$ of block parameters) |
+::: {.cols .vc}
+::: {.col}
+- **Token Mixing ($4d^2$) + Channel Mixing ($8d^2$):** Multi-head attention and `SwiGLU` FFN ($d_{\text{ff}} = \frac{8}{3}d$) total $12d^2$ parameters per block.
+- **Pre-Norm + $1/\sqrt{2L}$ Output Scaling:** Preserves the identity gradient highway while keeping cumulative stream variance $O(1)$ across depth $L$.
+- **`RMSNorm` & `QK-Norm`:** Fast scale normalization and Cauchy–Schwarz logit bound ($\le \sqrt{d_h}$).
+:::
+
+::: {.col .fig .big}
+@fig:ch11-tf-blk-summary
+:::
+:::
 :::

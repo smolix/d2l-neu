@@ -836,15 +836,15 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 
 ::: {.cols .vc}
 ::: {.col}
-- **Matrices ($\mathbf{A} \in \mathbb{R}^{m \times n}$):** $2^\textrm{nd}$-order tensors indexing row $i$ and column $j$ as $a_{ij}$. Design matrices $\mathbf{X} \in \mathbb{R}^{n \times d}$ store one example per row and one feature per column.
-- **Transpose ($\mathbf{A}^\top \in \mathbb{R}^{n \times m}$):** Swaps row and column axes so $[\mathbf{A}^\top]_{ij} = a_{ji}$.
-- **Symmetric matrices ($\mathbf{S} = \mathbf{S}^\top$):** Square matrices with $s_{ij} = s_{ji}$, such as covariance $\frac{1}{n}\mathbf{X}^\top\mathbf{X}$ and loss Hessians $\nabla^2 \mathcal{L}$.
-:::
-
-::: {.col}
-@linear-algebra-matrices-1
+- **Design matrices ($\mathbf{X} \in \mathbb{R}^{n \times d}$):** Store one example per row $i$ and one feature per column $j$.
+- **Transpose ($[\mathbf{A}^\top]_{ij} = a_{ji}$):** Reflects entries across the main diagonal, turning $(m, n) \to (n, m)$.
+- **Symmetric ($\mathbf{S} = \mathbf{S}^\top$):** Covariances $\frac{1}{n}\mathbf{X}^\top\mathbf{X}$ and Hessians $\nabla^2 \mathcal{L}$.
 
 @linear-algebra-matrices-2
+:::
+
+::: {.col .fig}
+@fig:linear-algebra-transpose
 :::
 :::
 :::
@@ -854,16 +854,14 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 
 ::: {.cols .vc}
 ::: {.col}
-- **Higher-order tensors ($\mathsf{X}, \mathsf{Y}$):** 3D token sequences `(batch, seq, d_model)` and 4D image batches `(256, 1, 28, 28)`. Flattening via `reshape(256, -1)` bridges spatial grids to a 2D matrix $\mathbf{X} \in \mathbb{R}^{256 \times 784}$.
-
-@linear-algebra-tensors
-:::
-
-::: {.col}
-- **Linearity and the Hadamard product ($\mathbf{A} \odot \mathbf{B}$):** Addition $\mathbf{A} + \mathbf{B}$ and scalar multiplication $a\mathbf{X}$ act entry-by-entry and preserve shape.
-- In code, `A * B` computes the elementwise **Hadamard product** $[\mathbf{A} \odot \mathbf{B}]_{ij} = a_{ij} b_{ij}$—used for multiplicative gating in LSTMs, GRUs, and SwiGLU layers—*not* matrix multiplication.
+- **Higher-order tensors:** 3D token sequences `(B, T, d)` and 4D images `(256, 1, 28, 28)` unroll to 2D matrices via `reshape(256, -1)`.
+- **Hadamard product ($\mathbf{A} \odot \mathbf{B}$, `A * B`):** Multiplies matching entries $[\mathbf{A} \odot \mathbf{B}]_{ij} = a_{ij} b_{ij}$ for gating (LSTMs, SwiGLU), distinct from matrix product `A @ B`.
 
 @linear-algebra-basic-properties-of-tensor-arithmetic-1
+:::
+
+::: {.col .fig}
+@fig:linear-algebra-hadamard
 :::
 :::
 :::
@@ -995,17 +993,16 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 ::: {.slide title="Computational Complexity and Arithmetic Intensity of Matmul"}
 [Systems & FLOPs]{.kicker}
 
-Multiplying $(m, k) \times (k, n)$ computes $mn$ dot products of length $k$ ($k$ multiplies and $k - 1$ adds each), costing **$\approx 2mkn\text{ FLOPs}$**:
+::: {.cols .vc}
+::: {.col}
+- **FLOP count:** Multiplying $(m, k) \times (k, n)$ computes $mn$ dot products of length $k$, costing **$\approx 2mkn\text{ FLOPs}$**.
+- **$O(n^2)$ bytes vs. $O(n^3)$ FLOPs:** Elementwise ops ($0.33\text{ FLOP/el}$) and single-vector matvecs ($2\text{ FLOP/el}$) starve on HBM bandwidth.
+- **Why we batch:** Grouping vectors into a matrix $\mathbf{X}\mathbf{W}$ raises arithmetic intensity to $O(n)$ ($2{,}730\text{ FLOP/el}$ at $n=4096$), saturating GPU Tensor Cores.
+:::
 
-| Operation | Tensor Shapes | Memory Elements | Arithmetic Work (FLOPs) | FLOPs per Element |
-| :--- | :--- | :--- | :--- | :--- |
-| **Hadamard Product (`A * B`)** | `(n, n) * (n, n)` | $3n^2$ | $n^2$ | $0.33$ (memory-bound) |
-| **Matrix–Vector (`W @ x`)** | `(n, n) @ (n,)` | $n^2 + 2n$ | $2n^2$ | $\approx 2$ (memory-bound) |
-| **Fashion-MNIST Batch (`X @ W`)** | `(256, 784) @ (784, 10)` | $2.11 \times 10^5$ | $2 \cdot 256 \cdot 784 \cdot 10 \approx 4.01 \times 10^6$ | $\approx 19\text{ FLOPs / elem}$ |
-| **LLM Hidden Layer (`X @ W`)** | `(4096, 4096) @ (4096, 4096)` | $5.03 \times 10^7$ | $2 \cdot 4096^3 \approx 1.37 \times 10^{11}$ | $\approx 2{,}730\text{ FLOPs / elem}$ |
-
-::: {.d2l-note}
-For $n \times n$ matrices, data transfer grows as $O(n^2)$ while compute grows as $O(n^3)$. This $O(n)$ **arithmetic intensity** is why batching vectors into matrices unlocks GPU Tensor Core throughput!
+::: {.col .fig .big}
+@fig:linear-algebra-arithmetic-intensity
+:::
 :::
 :::
 
@@ -1051,15 +1048,17 @@ Given flattened minibatch `X` of shape `(256, 784)` and weight matrix `W_T` stor
 ::: {.slide title="Why Choice of Norm Matters: Outliers, Weight Decay, and Sparsity"}
 [Norms in Machine Learning]{.kicker}
 
-On residual error vector $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y} = (1, -1, 1, -1, 10)$, the single outlier $10$ accounts for $100 / 104 \approx \mathbf{96\%}$ of squared $\ell_2$ error $\|\mathbf{r}\|_2^2$, versus $10 / 14 \approx \mathbf{71\%}$ of $\ell_1$ error $\|\mathbf{r}\|_1$:
+::: {.cols .vc}
+::: {.col}
+- **Outliers ($\ell_2^2$ vs. $\ell_1$ loss):** On $\mathbf{r} = (1, -1, 1, -1, 10)$, the single outlier $10$ dominates **$96\%$** of $\|\mathbf{r}\|_2^2$ (slope $2r$), versus **$71\%$** of $\|\mathbf{r}\|_1$ (bounded slope $\pm 1$).
+- **Weight decay ($\frac{\lambda}{2}\|\mathbf{W}\|_\textrm{F}^2$):** Round $\ell_2$ ball shrinks weights smoothly toward zero.
+- **Sparsity ($\lambda\|\mathbf{w}\|_1$):** Sharp axis corners of the $\ell_1$ diamond drive irrelevant weights to **exact zero**.
+:::
 
-| Norm Quantity | Deep Learning Objective | Geometric & Optimization Behavior |
-| :--- | :--- | :--- |
-| $\frac{1}{n}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ | **Mean Squared Error (MSE) loss** | Smooth gradient proportional to residual; heavily penalizes outliers |
-| $\frac{1}{n}\|\hat{\mathbf{y}} - \mathbf{y}\|_1$ | **Mean Absolute Error (L1) loss** | Constant-magnitude gradient ($\pm 1$); robust to corrupted outlier targets |
-| $\frac{\lambda}{2}\|\mathbf{W}\|_\textrm{F}^2$ | **$\ell_2$ Regularization (Weight Decay)** | Isotropic round $\ell_2$ ball shrinks large weights smoothly toward zero |
-| $\lambda\|\mathbf{w}\|_1$ | **$\ell_1$ Regularization (Lasso / Sparsity)** | Sharp axis corners of the $\ell_1$ diamond drive small weights to *exact zero* |
-| $\|\mathbf{g}\|_2 \leq \tau$ | **Global Gradient Clipping** | Rescales $\mathbf{g} \leftarrow \frac{\tau}{\|\mathbf{g}\|_2}\mathbf{g}$ when $\|\mathbf{g}\|_2 > \tau$ to prevent unstable steps |
+::: {.col .fig .big}
+@fig:linear-algebra-norm-outliers-sparsity
+:::
+:::
 :::
 
 ::: {.slide title="Eigendecomposition: Invariant Directions and the Spectral Theorem"}
@@ -1101,19 +1100,14 @@ On residual error vector $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y} = (1, -1, 1
 
 ::: {.cols .vc}
 ::: {.col}
-- Passing activations or backpropagating gradients through $L = 50$ layers multiplies by $50$ weight matrices. Even a $10\%$ deviation from unit eigenvalues ($\lambda_1 = 1.1$, $\lambda_2 = 0.9$) causes exponential blow-up or decay:
+- Across $L = 50$ layers, even a $10\%$ eigenvalue deviation ($\lambda_1 = 1.1$, $\lambda_2 = 0.9$) explodes as $1.1^{50} \approx \mathbf{117.4\times}$ or vanishes as $0.9^{50} \approx \mathbf{0.0052\times}$.
+- Keeping singular values near $1$ motivates **Xavier/He initialization**, **residual connections**, and **LayerNorm**.
 
-| Depth $k$ | $\lambda_1^k = 1.1^k$ (Exploding) | $\lambda_2^k = 0.9^k$ (Vanishing) |
-| :---: | :---: | :---: |
-| $10$ | $2.59$ | $0.349$ |
-| $20$ | $6.73$ | $0.122$ |
-| $50$ | **$117.4$** | **$0.0052$** |
-
-- Keeping layer singular values near $1$ motivates **Xavier/He initialization**, **residual connections**, and **LayerNorm / BatchNorm**.
+@linear-algebra-powers-of-a-matrix-1
 :::
 
-::: {.col}
-@linear-algebra-powers-of-a-matrix-1
+::: {.col .fig}
+@fig:linear-algebra-spectral-depth
 :::
 :::
 :::

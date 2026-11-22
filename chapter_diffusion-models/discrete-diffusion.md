@@ -1448,38 +1448,51 @@ Discrete and Masked Diffusion Models<br>**transition matrices Q_t · absorbing (
 ::: {.slide title="Why Discrete Tokens Need a Non-Gaussian Corruption"}
 [Motivation]{.kicker}
 
-Every generative model in §17.1–17.8 perturbed continuous vectors in $\mathbb{R}^d$ with additive Gaussian noise. Discrete sequences—text tokens, source code, or quantized image codes—require a fundamentally different corruption process:
+::: {.cols .vc}
+::: {.col}
+- **No continuous vector addition:** Adding $0.3\,\boldsymbol\epsilon$ to token index `412` (*"cat"*) is meaningless—categorical IDs have no Euclidean metric structure.
+- **Sequential bottleneck of GPT:** Autoregressive decoding of $L = 1{,}024$ tokens requires $1{,}024$ sequential forward passes.
+- **Discrete diffusion (Austin et al., 2021; Sahoo et al., 2024):** Corrupt tokens into masks $[\textrm{M}]$ via a Markov chain and train a bidirectional denoiser to unmask tokens in parallel!
+:::
 
-- **No continuous vector addition:** Adding $0.3\,\boldsymbol\epsilon$ to token index `412` (*"cat"*) does not produce a "slightly noisy cat"—categorical token IDs have no Euclidean metric structure.
-- **Sequential bottleneck of autoregressive models (GPT):** Generating $L = 1{,}024$ tokens from left to right requires $L = 1{,}024$ sequential Transformer forward passes with causal masking.
-- **The promise of discrete diffusion (Austin et al., 2021; Sahoo et al., 2024):** Corrupt tokens through a discrete-state Markov chain until the sequence is completely erased into masks $[\textrm{M}]$, and train a bidirectional denoiser to unmask multiple tokens in parallel!
+::: {.col .fig .big}
+@fig:ch17-diff-discrete-motivation
+:::
+:::
 :::
 
 ::: {.slide title="Discrete Forward Chains via Transition Matrices"}
 [Markov Chains on a Finite Vocabulary]{.kicker}
 
-Represent a token taking one of $K$ vocabulary values as a one-hot row vector $\mathbf{x} \in \{0, 1\}^K$. At step $t \in \{1, \ldots, T\}$, a row-stochastic **transition matrix** $\mathbf{Q}_t \in [0, 1]^{K \times K}$ ($[\mathbf{Q}_t]_{ij} = P(\text{value } i \to \text{value } j)$) corrupts each sequence position independently:
+::: {.cols .vc}
+::: {.col}
+$$q(\mathbf{x}_t \mid \mathbf{x}_0) = \mathrm{Cat}\big(\mathbf{x}_t;\; \mathbf{x}_0\bar{\mathbf{Q}}_t\big), \qquad \bar{\mathbf{Q}}_t = \mathbf{Q}_1\mathbf{Q}_2\cdots\mathbf{Q}_t$$
 
-$$q(\mathbf{x}_t \mid \mathbf{x}_{t-1}) = \mathrm{Cat}\big(\mathbf{x}_t;\; \mathbf{x}_{t-1}\mathbf{Q}_t\big)$$
+- **Row-stochastic transitions:** For one-hot row vector $\mathbf{x} \in \{0, 1\}^K$, $[\mathbf{Q}_t]_{ij} = P(i \to j)$ corrupts each position independently.
+- **Exact Bayes posterior:** Given $(\mathbf{x}_0, \mathbf{x}_t)$, the predecessor distribution is an elementwise product ($\odot$) of backward and forward probabilities:
+  $$q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0) = \mathrm{Cat}\!\left(\frac{\mathbf{x}_t\mathbf{Q}_t^\top \odot \mathbf{x}_0\bar{\mathbf{Q}}_{t-1}}{\mathbf{x}_0\bar{\mathbf{Q}}_t\mathbf{x}_t^\top}\right)$$
+:::
 
-- **Closed-form $t$-step marginal:** Composing $t$ steps multiplies their transition matrices into $\bar{\mathbf{Q}}_t = \mathbf{Q}_1\mathbf{Q}_2\cdots\mathbf{Q}_t$:
-  $$q(\mathbf{x}_t \mid \mathbf{x}_0) = \mathrm{Cat}\big(\mathbf{x}_t;\; \mathbf{x}_0\bar{\mathbf{Q}}_t\big)$$
-- **Exact forward posterior via Bayes' rule:** Given both endpoints $(\mathbf{x}_0, \mathbf{x}_t)$, the conditional distribution over the predecessor $\mathbf{x}_{t-1}$ is an elementwise product ($\odot$) of backward and forward probabilities:
-  $$q(\mathbf{x}_{t-1} \mid \mathbf{x}_t, \mathbf{x}_0) = \mathrm{Cat}\!\left(\mathbf{x}_{t-1};\; \frac{\mathbf{x}_t\mathbf{Q}_t^\top \odot \mathbf{x}_0\bar{\mathbf{Q}}_{t-1}}{\mathbf{x}_0\bar{\mathbf{Q}}_t\mathbf{x}_t^\top}\right)$$
+::: {.col .fig}
+@fig:ch17-diff-transition-matrix
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Two-Step Binary Flip Posterior"}
 [Evaluating the Discrete Forward Posterior by Hand]{.kicker}
 
-Consider a binary token ($K = 2$) that flips with probability $0.1$ at every step, so $\mathbf{Q}_1 = \mathbf{Q}_2 = \begin{pmatrix} 0.9 & 0.1 \\ 0.1 & 0.9 \end{pmatrix}$. Suppose the clean token starts at $\mathbf{x}_0 = (1, 0)$ and is observed at step $t = 2$ as $\mathbf{x}_2 = (0, 1)$:
+::: {.cols .vc}
+::: {.col}
+- **Symmetric $10\%$ binary flip ($\mathbf{Q}_1 = \mathbf{Q}_2$):** Starting at $\mathbf{x}_0 = (1, 0)$ and observing $\mathbf{x}_2 = (0, 1)$ after two steps means exactly one flip occurred.
+- **Forward prior $\odot$ backward likelihood:** $\mathbf{x}_0\bar{\mathbf{Q}}_1 = (0.9, 0.1)$ and $\mathbf{x}_2\mathbf{Q}_2^\top = (0.1, 0.9)$ multiply elementwise to $(0.09, 0.09)$ with marginal evidence $0.18$.
+- **Normalized posterior $(0.50, 0.50)$:** The single flip is equally likely to have occurred at step 1 ($\mathbf{x}_1 = 1$) or step 2 ($\mathbf{x}_1 = 0$)!
+:::
 
-| Posterior Quantity | Formula | Vector / Scalar Value | Probabilistic Meaning |
-| :--- | :--- | :--- | :--- |
-| **1-step forward marginal** | $\mathbf{x}_0\bar{\mathbf{Q}}_1$ | $(0.9,\; 0.1)$ | Prior over $\mathbf{x}_1$ given $\mathbf{x}_0 = (1, 0)$ |
-| **1-step backward likelihood** | $\mathbf{x}_2\mathbf{Q}_2^\top$ | $(0.1,\; 0.9)$ | Likelihood of reaching $\mathbf{x}_2 = (0, 1)$ from $\mathbf{x}_1$ |
-| **Unnormalized numerator** | $\mathbf{x}_2\mathbf{Q}_2^\top \odot \mathbf{x}_0\bar{\mathbf{Q}}_1$ | $(0.09,\; 0.09)$ | Joint probability of path through state $0$ vs. $1$ |
-| **2-step marginal evidence** | $\mathbf{x}_0\bar{\mathbf{Q}}_2\mathbf{x}_2^\top$ | $0.09 + 0.09 = 0.18$ | Total probability of net flip in $2$ steps |
-| **Normalized posterior** $q(\mathbf{x}_1 \mid \mathbf{x}_2, \mathbf{x}_0)$ | Numerator $/ 0.18$ | **$(0.50,\; 0.50)$** | The single flip is equally likely at step 1 or step 2! |
+::: {.col .fig .big}
+@fig:ch17-diff-binary-flip-bayes
+:::
+:::
 :::
 
 ::: {.slide title="The Absorbing (Masking) Kernel"}
@@ -1505,38 +1518,52 @@ $$\mathbf{Q}_t = (1 - \beta_t)\,\mathbf{I} + \beta_t\,\mathbf{1}\mathbf{e}_{\tex
 ::: {.slide title="Two-Point Posterior of the Absorbing Chain"}
 [Why Visible Tokens Never Change in Reverse]{.kicker}
 
-Under the absorbing kernel, an unmasked token $\mathbf{x}_t \neq [\textrm{M}]$ was never corrupted, so its predecessor is deterministically $\mathbf{x}_{t-1} = \mathbf{x}_t = \mathbf{x}_0$. If $\mathbf{x}_t = [\textrm{M}]$ is masked, only two predecessors have nonzero probability in $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t = [\textrm{M}], \mathbf{x}_0)$:
+::: {.cols .vc}
+::: {.col}
+$$q\big(\mathbf{x}_{t-1} = \mathbf{x}_0 \,\big|\, [\textrm{M}], \mathbf{x}_0\big) = \frac{\bar\alpha_{t-1} - \bar\alpha_t}{1 - \bar\alpha_t} =: w_t, \quad q\big(\mathbf{x}_{t-1} = [\textrm{M}] \,\big|\, [\textrm{M}], \mathbf{x}_0\big) = 1 - w_t$$
 
-$$q\big(\mathbf{x}_{t-1} = \mathbf{x}_0 \,\big|\, \mathbf{x}_t = [\textrm{M}], \mathbf{x}_0\big) = \frac{\bar\alpha_{t-1} - \bar\alpha_t}{1 - \bar\alpha_t} =: w_t, \qquad q\big(\mathbf{x}_{t-1} = [\textrm{M}] \,\big|\, \mathbf{x}_t = [\textrm{M}], \mathbf{x}_0\big) = \frac{1 - \bar\alpha_{t-1}}{1 - \bar\alpha_t} = 1 - w_t$$
+- **If $\mathbf{x}_t^i \neq [\textrm{M}]$ (visible):** Never corrupted, so $\mathbf{x}_{t-1}^i = \mathbf{x}_t^i$ with probability $1$ (revealed tokens are never revised).
+- **If $\mathbf{x}_t^i = [\textrm{M}]$ (masked):** Only two predecessors exist—stay $[\textrm{M}]$ with probability $1 - w_t$, or unmask $\mathbf{x}_{t-1}^i \sim p_{\boldsymbol\theta}(\cdot \mid \mathbf{x}_t)$ with probability $w_t$.
+:::
 
-- **Factorized $\mathbf{x}_0$-parameterized reverse step:** A neural network predicts clean token probabilities $p_{\boldsymbol\theta}(\mathbf{x}_0^i \mid \mathbf{x}_t)$ at every masked position $i$, and substitutes $p_{\boldsymbol\theta}$ for the unknown $\mathbf{x}_0^i$:
-  - **If $\mathbf{x}_t^i \neq [\textrm{M}]$:** Copy $\mathbf{x}_{t-1}^i = \mathbf{x}_t^i$ with probability $1$ (revealed tokens are never revised).
-  - **If $\mathbf{x}_t^i = [\textrm{M}]$:** Keep $\mathbf{x}_{t-1}^i = [\textrm{M}]$ with probability $1 - w_t$, or unmask $\mathbf{x}_{t-1}^i \sim p_{\boldsymbol\theta}(\cdot \mid \mathbf{x}_t)$ with probability $w_t$.
+::: {.col .fig}
+@fig:ch17-diff-absorbing-posterior
+:::
+:::
 :::
 
 ::: {.slide title="The Masked Diffusion ELBO Is Weighted Cross-Entropy"}
 [Simplifying the Variational Bound (Sahoo et al., 2024; Shi et al., 2024)]{.kicker}
 
-Substituting the absorbing posterior into the discrete variational bound $L_{\textrm{VLB}}$ causes the prior term $L_T$ and all unmasked position divergences to vanish identically, while the mask-stay probability $1 - w_t$ cancels inside $D_{\textrm{KL}}$:
+::: {.cols .vc}
+::: {.col}
+$$L_{\textrm{VLB}}(\mathbf{x}_0) = \sum_{t=1}^T w_t\;\mathbb{E}_{q(\mathbf{x}_t \mid \mathbf{x}_0)}\!\left[\sum_{i \,:\, \mathbf{x}_t^i = [\textrm{M}]} -\log p_{\boldsymbol\theta}\big(\mathbf{x}_0^i \mid \mathbf{x}_t\big)\right]$$
 
-$$D_{\textrm{KL}}\big(q(\mathbf{x}_{t-1}^i \mid [\textrm{M}], \mathbf{x}_0^i) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{t-1}^i \mid \mathbf{x}_t)\big) = (1 - w_t)\log\frac{1 - w_t}{1 - w_t} + w_t\log\frac{w_t}{w_t\,p_{\boldsymbol\theta}(\mathbf{x}_0^i \mid \mathbf{x}_t)} = -w_t\log p_{\boldsymbol\theta}(\mathbf{x}_0^i \mid \mathbf{x}_t)$$
+- **Exact cancellation inside $D_{\textrm{KL}}$:** Unmasked divergences vanish ($0$), while $(1-w_t)\log\frac{1-w_t}{1-w_t} = 0$ leaves $-w_t\log p_{\boldsymbol\theta}(\mathbf{x}_0^i \mid \mathbf{x}_t)$ on masked sites.
+- **Linear schedule ($\bar\alpha_t = 1 - t/T$):** A fraction $t/T$ of tokens are masked with weight $w_t = 1/t$, giving constant expected weighted mask count $L/T$ at every step!
+:::
 
-- **Exact discrete ELBO ($L_{\textrm{VLB}} \ge -\log p_{\boldsymbol\theta}(\mathbf{x}_0)$):** Sums the masked-token cross-entropy across steps $t = 1, \ldots, T$:
-  $$L_{\textrm{VLB}}(\mathbf{x}_0) = \sum_{t=1}^T \frac{\bar\alpha_{t-1} - \bar\alpha_t}{1 - \bar\alpha_t}\;\mathbb{E}_{q(\mathbf{x}_t \mid \mathbf{x}_0)}\!\left[\sum_{i \,:\, \mathbf{x}_t^i = [\textrm{M}]} -\log p_{\boldsymbol\theta}\big(\mathbf{x}_0^i \mid \mathbf{x}_t\big)\right]$$
-- **Under the linear schedule ($\bar\alpha_t = 1 - t/T$):** A fraction $t/T$ of tokens are masked at step $t$ with weight $w_t = \frac{1/T}{t/T} = \mathbf{1/t}$, so every step carries the exact same expected weighted mask count $(L \cdot \frac{t}{T}) \cdot \frac{1}{t} = \mathbf{L/T}$!
+::: {.col .fig}
+@fig:ch17-diff-masked-elbo-ce
+:::
+:::
 :::
 
 ::: {.slide title="Schedule Invariance and Time-Agnostic Optimality"}
 [Continuous-Time CTMC Limit (T → ∞)]{.kicker}
 
-Letting $T \to \infty$ with masking probability $u(\tau) = 1 - \bar\alpha(\tau) \in [0, 1]$ ($\tau = t/T$) turns the Riemann sum $L_{\textrm{VLB}}$ into a **schedule-invariant integral** over the masking rate $u$:
-
+::: {.cols .vc}
+::: {.col}
 $$L_{\textrm{VLB}}(\mathbf{x}_0) \xrightarrow{T \to \infty} \int_0^1 \frac{-\bar\alpha'(\tau)}{1 - \bar\alpha(\tau)}\,\mathbb{E}\big[\ell(\mathbf{x}_0, \mathbf{x}_\tau)\big]\,d\tau = \int_0^1 \frac{1}{u}\,\mathbb{E}_u\big[\ell(\mathbf{x}_0, \mathbf{x})\big]\,du$$
 
-- **Why the Bayes-optimal denoiser ignores time $t$ (Ou et al., 2025):**
-  - Under independent absorbing corruption, which positions are masked is determined by coin flips that are conditionally independent of the token values $\mathbf{x}_0$.
-  - Once the input sequence $\mathbf{x}_t$ reveals which positions are masked and which tokens are visible, the step index $t$ carries **zero additional information** about the hidden tokens!
-  - Thus the optimal prediction $p^\star(\mathbf{x}_0^i \mid \mathbf{x}_t) = p(\mathbf{x}_0^i \mid \mathbf{x}_t^{\text{visible}})$ is completely **time-agnostic**.
+- **Schedule invariance:** Changing variables to the masking rate $u(\tau) = 1 - \bar\alpha(\tau) \in [0, 1]$ eliminates the schedule $\bar\alpha(\tau)$ completely.
+- **Time-agnostic optimality (Ou et al., 2025):** Once $\mathbf{x}_t$ reveals which positions are masked, the step index $t$ carries zero extra information about $\mathbf{x}_0$, so $p^\star(\mathbf{x}_0^i \mid \mathbf{x}_t)$ does not need $t$!
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-time-agnostic
+:::
+:::
 :::
 
 ::: {.slide title="Implementing the Masked Diffusion Loss and Sampler"}
@@ -1552,13 +1579,18 @@ Because composing absorbing kernels yields another absorbing kernel, `unmask` ca
 ::: {.slide title="The Parallel Independence Error on Two Tokens"}
 [Analytical Derivation on the Quantized 32×32 Mixture]{.kicker}
 
-What do we lose by unmasking multiple tokens in the same step? Quantizing our 2D three-mode mixture onto a $32 \times 32$ grid represents each point as a **pair of tokens** $(X^1, X^2) \sim p$ ($K = 32$, joint entropy $H(p) = 4.840$ nats, mutual information $I(X^1; X^2) = 0.479$ nats):
+::: {.cols .vc}
+::: {.col}
+$$q_S = \left(1 - \frac{1}{S}\right)p + \frac{1}{S}\,p^1 \otimes p^2 \quad \Longrightarrow \quad \mathrm{TV}(q_S, p) = \frac{\mathrm{TV}(p^1 \otimes p^2, p)}{S} = \frac{0.314}{S}$$
 
-- **What happens in $S$ equal linear jumps ($\Delta_k = 1/S$) with an *exact* conditional oracle?**
-  - With probability $1 - 1/S$, $X^1$ and $X^2$ are revealed in **different** jumps (one from its marginal, the second from its exact conditional given the first), drawing an exact sample from $p$.
-  - With probability $S \cdot (1/S)^2 = \mathbf{1/S}$, both tokens are revealed in the **same** jump from the all-mask state $([\textrm{M}], [\textrm{M}])$—forcing them to be drawn independently from the product of marginals $p^1 \otimes p^2$!
-- **Exact output distribution of an $S$-step oracle sampler:**
-  $$q_S = \left(1 - \frac{1}{S}\right)p + \frac{1}{S}\,p^1 \otimes p^2 \quad \Longrightarrow \quad \mathrm{TV}(q_S, p) = \frac{\mathrm{TV}(p^1 \otimes p^2, p)}{S} = \frac{0.314}{S}$$
+- **Sequential reveal (prob $1 - 1/S$):** $X^1$ and $X^2$ unmask in different jumps (marginal then conditional), drawing an exact sample from $p$.
+- **Simultaneous collision (prob $S \cdot (1/S)^2 = 1/S$):** Both unmask in the same jump from $([\textrm{M}], [\textrm{M}])$, drawing independently from $p^1 \otimes p^2$ and creating phantom modes!
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-parallel-indep-error
+:::
+:::
 :::
 
 ::: {.slide title="Phantom Modes in the Product of Marginals"}
@@ -1653,14 +1685,17 @@ What happens when we unmask $L = 784$ binary pixels in just $S = 4$ jumps ($\app
 ::: {.slide title="Unifying GPT, Order-Agnostic AR, and BERT"}
 [Sequence Models as Special Cases of Masked Diffusion]{.kicker}
 
-Sorting masked diffusion models by their training mask distribution and the number of tokens revealed per sampling step connects three major sequence modeling paradigms:
+::: {.cols .vc}
+::: {.col}
+- **Autoregressive (GPT) & Order-Agnostic AR:** Unmask $1$ token/call ($L$ calls total, $\mathrm{TV} = 0$) along either a causal left-to-right prefix or a random permutation $\sigma$ trained across $u \sim U(0, 1)$ with weight $1/u$.
+- **Masked Diffusion LM (MDLM / LLaDA):** Trained across $u \sim U(0, 1)$ with weight $1/u$, but reveals $\approx L/S$ tokens/call in parallel—trading $\propto 1/S$ independence error for $L/S\times$ speedup.
+- **Masked LM (BERT):** Single fixed masking slice $u = 0.15$; cannot generate from the $u = 1.0$ all-mask start.
+:::
 
-| Sequence Paradigm | Training Mask Pattern | Sampling Order & Tokens / Call | Continuous-Time / Exact-Oracle Property |
-| :--- | :--- | :--- | :--- |
-| **Autoregressive (GPT)** | Causal prefix unmasked, suffix masked | Fixed left-to-right, **$1$ token/call** ($L$ calls) | Exact joint factorization ($\mathrm{TV} = 0$, $L_{\textrm{NLL}} = H(p)$) |
-| **Order-Agnostic AR** (Uria et al., 2014) | All masking rates $u \sim U(0, 1)$ (weight $1/u$) | Random permutation $\sigma$, **$1$ token/call** ($L$ calls) | Time-agnostic continuous ELBO equals $\mathbb{E}_\sigma[\text{AR NLL}]$ ($\mathrm{TV} = 0$) |
-| **Masked Diffusion LM** (MDLM / LLaDA) | All masking rates $u \sim U(0, 1)$ (weight $1/u$) | Parallel jumps, **$\approx L/S$ tokens/call** ($S \ll L$ calls) | Trades $\propto 1/S$ independence error for **$L/S\times$ parallel speedup** |
-| **Masked LM (BERT)** (Devlin et al., 2018) | Single fixed masking rate **$u = 0.15$** | Bidirectional representation / 1-step infill | 1-step diffusion slice; cannot sample from $u = 1.0$ all-mask start |
+::: {.col .fig .big}
+@fig:ch17-diff-sequence-unification
+:::
+:::
 :::
 
 ::: {.slide title="Chapter 17 in Retrospect: Strengths and Open Frontiers"}

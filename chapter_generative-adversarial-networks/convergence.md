@@ -709,52 +709,68 @@ Minimax Game Dynamics and Gradient Penalties<br>**the Dirac-GAN · rotational ve
 ::: {.slide title="Equilibrium Existence vs. Gradient Convergence"}
 [Motivation]{.kicker}
 
-Sections 16.1–16.3 analyzed population divergences assuming the critic sits at its exact optimum $D^\star$. In actual training, both players take incremental gradient steps, and each player's update shifts the other player's objective:
+::: {.cols .vc}
+::: {.col}
+- **Static optimum vs. coupled dynamics:** Sections 16.1–16.3 assumed $D$ sits at $D^\star$, but in practice both players take incremental gradient steps that shift each other's objective.
+- **Minimal counterexample (Mescheder et al., 2018):** Even on a two-parameter minimax game with a unique equilibrium at $(0, 0)$, taking $300$ simultaneous gradient steps ($h = 0.2$) from $(1, 1)$ **doubles** the distance to $(0, 0)$ from $1.41$ to $2.87$!
+- **Key question:** How do zero-centered penalties ($R_1, R_2$) make the equilibrium locally exponentially stable?
+:::
 
-- **Empirical warning from §16.1:** On Fashion-MNIST, neither the critic loss nor the generator loss settled to its theoretical equilibrium value after $20$ epochs.
-- **Minimal counterexample (Mescheder et al., 2018):** Even on a two-parameter minimax game with a unique equilibrium at $(0, 0)$, taking $300$ simultaneous gradient steps of size $h = 0.2$ from $(1, 1)$ **doubles** the distance to the equilibrium from $1.41$ to $2.87$!
-
-::: {.d2l-note .warn}
-**The dynamical question:** Why do minimax gradient updates orbit or spiral away from equilibrium, and how do zero-centered input-gradient penalties ($R_1, R_2$) make the equilibrium locally exponentially stable?
+::: {.col .fig .big}
+@fig:ch16-gan-equilibrium-spiral
+:::
 :::
 :::
 
 ::: {.slide title="The Dirac-GAN: A Two-Parameter Minimax System"}
 [Minimal Analytical Model]{.kicker}
 
-To analyze gradient dynamics in closed form, Mescheder, Geiger, and Nowozin (2018) introduced the **Dirac-GAN**:
+::: {.cols .vc}
+::: {.col}
+$$V(\theta, \psi) = \ell\big(D_\psi(0)\big) + \ell\big(-D_\psi(\theta)\big) = \ell(0) + \ell(-\psi\theta)$$
 
-- **True data distribution:** A unit point mass at the origin, $p = \delta_0$.
-- **Generator distribution:** A unit point mass at $\theta \in \mathbb{R}$, $q_\theta = \delta_\theta$ (so $q_\theta = p \iff \theta = 0$).
-- **Linear critic without bias:** $D_\psi(x) = \psi x$ parameterized by slope $\psi \in \mathbb{R}$.
-- **Minimax value function:** Under any symmetric margin payoff $\ell(t)$ (e.g., logistic $\ell(t) = \log\sigma(t)$ with $\ell'(0) = \frac{1}{2}$ and $\ell''(0) = -\frac{1}{4}$), both expectations collapse to point evaluations:
-  $$V(\theta, \psi) = \ell\big(D_\psi(0)\big) + \ell\big(-D_\psi(\theta)\big) = \ell(0) + \ell(-\psi\theta)$$
-  Note that for any $\theta \neq 0$, maximizing over $\psi$ sends $\psi\theta \to -\infty$, yielding a constant best-response value $\sup_\psi V(\theta, \psi) = \ell(0)$ with zero gradient.
+- **Two scalar parameters (Mescheder et al., 2018):** True data $p = \delta_0$, generator $q_\theta = \delta_\theta$ ($q_\theta = p \iff \theta = 0$), and linear critic $D_\psi(x) = \psi x$.
+- **Discontinuous best response:** For any $\theta \neq 0$, maximizing over $\psi$ sends $\psi\theta \to -\infty$, yielding a flat value $\sup_\psi V(\theta, \psi) = \ell(0)$ with zero slope.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-dirac-setup
+:::
+:::
 :::
 
 ::: {.slide title="Continuous-Time Gradient Flow Orbits on Circles"}
 [Rotational Vector Field]{.kicker}
 
-Instead of solving for $\sup_\psi V(\theta, \psi)$, simultaneous gradient flow updates $\theta$ and $\psi$ continuously along $\dot{\theta} = -\partial_\theta V$ and $\dot{\psi} = +\partial_\psi V$:
-
+::: {.cols .vc}
+::: {.col}
 $$\dot{\theta} = -\partial_\theta V = \psi\,\ell'(-\psi\theta), \qquad \dot{\psi} = +\partial_\psi V = -\theta\,\ell'(-\psi\theta)$$
 
-- **Exact conservation of radius:** Because the velocity vector $\mathbf{u}(\theta, \psi) = \ell'(-\psi\theta)\,(\psi, -\theta)$ is everywhere orthogonal to the state vector $(\theta, \psi)$, the squared distance to $(0, 0)$ is conserved:
-  $$\frac{d}{dt}\big(\theta^2 + \psi^2\big) = 2\theta\psi\,\ell'(-\psi\theta) - 2\psi\theta\,\ell'(-\psi\theta) = 0$$
-- **Purely imaginary Jacobian eigenvalues:** Linearizing around $(0, 0)$ yields $J = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & 0 \end{pmatrix}$ with eigenvalues $\nu_{1,2} = \pm i\,\ell'(0)$—a linear **center** whose trajectories orbit on closed circles of constant radius for *every* strictly increasing payoff $\ell$.
+- **Exact conservation of radius:** Because velocity $\mathbf{u}(\theta, \psi) = \ell'(-\psi\theta)(\psi, -\theta)$ is orthogonal to $(\theta, \psi)$, $\frac{d}{dt}(\theta^2 + \psi^2) = 0$.
+- **Imaginary Jacobian eigenvalues:** Linearizing at $(0, 0)$ gives $J = \begin{psmallmatrix} 0 & \ell'(0) \\ -\ell'(0) & 0 \end{psmallmatrix}$ with eigenvalues $\nu_{1,2} = \pm i\,\ell'(0)$—a linear **center** whose trajectories orbit on circles forever.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-circular-flow
+:::
+:::
 :::
 
 ::: {.slide title="Discrete Time: Outward Spirals vs. Limit Bands"}
 [Discretization Hazards]{.kicker}
 
-When we discretize the rotational vector field $\mathbf{u}(\theta, \psi)$ with step size $h > 0$, neither simultaneous nor alternating updates converge:
+::: {.cols .vc}
+::: {.col}
+$$\|(\theta, \psi) + h\,\mathbf{u}\|^2 = \|(\theta, \psi)\|^2 + h^2\|\mathbf{u}\|^2 > \|(\theta, \psi)\|^2$$
 
-- **1. Simultaneous Euler steps spiral outward for every $h > 0$:** Since $\mathbf{u} \perp (\theta, \psi)$, the Pythagorean theorem shows that every step strictly increases the distance to $(0, 0)$:
-  $$\big\|(\theta, \psi) + h\,\mathbf{u}\big\|^2 = \big\|(\theta, \psi)\big\|^2 + h^2\big\|\mathbf{u}\big\|^2 > \big\|(\theta, \psi)\big\|^2$$
-  The discrete Jacobian has eigenvalues $1 \pm i\,h\,\ell'(0)$ with modulus $\sqrt{1 + h^2\ell'(0)^2} > 1$.
-- **2. Alternating steps preserve area (bounded orbits, no convergence):** Updating $\psi$ first and then $\theta$ against the updated $\psi$ composes two area-preserving linear shears ($a = h\,\ell'(0)$):
-  $$\begin{pmatrix} \theta_{k+1} \\ \psi_{k+1} \end{pmatrix} = \begin{pmatrix} 1 - a^2 & a \\ -a & 1 \end{pmatrix} \begin{pmatrix} \theta_k \\ \psi_k \end{pmatrix}, \qquad \det = 1$$
-  For $a \le 2$, both eigenvalues lie on the unit circle, trapping iterates inside a bounded annulus around $(0, 0)$.
+- **Simultaneous Euler steps spiral outward for all $h > 0$:** Since $\mathbf{u} \perp (\theta, \psi)$, every step increases the radius (eigenvalues $1 \pm i\,h\,\ell'(0)$ have modulus $> 1$).
+- **Alternating steps preserve area:** Composing the $\psi$ and $\theta$ half-steps yields a $2 \times 2$ matrix with $\det = 1$, trapping iterates in a bounded annulus without converging.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-euler-vs-alt
+:::
+:::
 :::
 
 ::: {.slide title="Phase Portraits of Unpenalized and Penalized Flow"}
@@ -778,39 +794,51 @@ Integrating the Dirac-GAN from $(\theta_0, \psi_0) = (1, 1)$ (initial radius $\s
 ::: {.slide title="Zero-Centered Gradient Penalties (R₁ and R₂)"}
 [Damping the Critic]{.kicker}
 
-To shift the Jacobian eigenvalues into the open left half-plane ($\operatorname{Re}(\nu) < 0$) without displacing the equilibrium $q = p$, we penalize a critic property that vanishes at $q = p$:
-
+::: {.cols .vc}
+::: {.col}
 $$R_1 = \frac{\gamma}{2}\,\mathbb{E}_{x \sim p}\Big[\big\|\nabla_x D(x)\big\|^2\Big], \qquad R_2 = \frac{\gamma}{2}\,\mathbb{E}_{x' \sim q}\Big[\big\|\nabla_{x'} D(x')\big\|^2\Big]$$
 
-- **Why penalize the critic's input gradient?** At $q = p$, the optimal log-ratio critic $D^\star(x) = \log(p(x)/q(x)) = 0$ is **completely flat** ($\nabla_x D^\star(x) = \mathbf{0}$), whereas we do not know in advance which parameter vector $\theta^\star$ makes the generator match $p$.
-- **Penalized critic objective:** The critic maximizes $V_\ell(D) - R_1 - R_2$, where the combined penalty is the expected squared gradient norm under the balanced mixture $m = \frac{1}{2}(p + q)$:
-  $$R_1 + R_2 = \gamma\,\mathbb{E}_{x \sim m}\Big[\big\|\nabla_x D(x)\big\|^2\Big]$$
+- **Why penalize input gradients?** At $q = p$, the optimal log-ratio critic $D^\star(x) = \log(p/q) = 0$ is **completely flat** ($\nabla_x D^\star = \mathbf{0}$), so penalizing $\|\nabla_x D\|^2$ does not shift the equilibrium $q = p$.
+- **Combined mixture penalty:** Maximizing $V_\ell(D) - R_1 - R_2$ subtracts $R_1 + R_2 = \gamma\,\mathbb{E}_{x \sim m}[\|\nabla_x D(x)\|^2]$.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-r1-r2-flat
+:::
+:::
 :::
 
 ::: {.slide title="Eigenvalues and Three Oscillator Damping Regimes"}
 [Damped Harmonic Oscillator]{.kicker}
 
-On the Dirac-GAN ($D_\psi(x) = \psi x$), $\nabla_x D_\psi(x) = \psi$, so subtracting $\frac{\gamma}{2}\psi^2$ adds linear damping $-\gamma\psi$ to $\dot{\psi}$:
-
+::: {.cols .vc}
+::: {.col}
 $$J_\gamma = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & -\gamma \end{pmatrix}, \qquad \nu_{1,2} = -\frac{\gamma}{2} \pm \sqrt{\frac{\gamma^2}{4} - \ell'(0)^2}$$
 
-For **every** $\gamma > 0$, $\operatorname{Re}(\nu_{1,2}) < 0$, making $(0, 0)$ locally exponentially stable with characteristic polynomial $\nu^2 + \gamma\nu + \ell'(0)^2 = 0$:
+- **Exponential local stability for all $\gamma > 0$:** $\operatorname{Re}(\nu_{1,2}) < 0$ across all three oscillator regimes (underdamped $0 < \gamma < 2\ell'(0)$, critically damped $\gamma = 2\ell'(0)$, and overdamped $\gamma > 2\ell'(0)$).
+- **Overdamping pitfall ($\gamma \gg 1$):** The slow eigenvalue $\nu_{\textrm{slow}} \approx -\ell'(0)^2/\gamma \to 0$ slows generator convergence when $\gamma$ is excessively large.
+:::
 
-| Oscillator Regime | Penalty Range (Logistic $\ell'(0) = \tfrac{1}{2}$) | Eigenvalue Structure | Trajectory Behavior |
-| :--- | :--- | :--- | :--- |
-| **1. Underdamped** | $0 < \gamma < 2\ell'(0)$ ($0 < \gamma < 1$) | Complex conjugate, $\operatorname{Re}(\nu) = -\gamma/2$ | Spirals inward (Euler converges if $h < \gamma/\ell'(0)^2$) |
-| **2. Critically damped** | $\gamma = 2\ell'(0)$ ($\gamma = 1$) | Repeated real $\nu_1 = \nu_2 = -\ell'(0) = -\tfrac{1}{2}$ | Fastest non-oscillatory decay to $(0, 0)$ |
-| **3. Overdamped** | $\gamma > 2\ell'(0)$ ($\gamma > 1$) | Two negative real; slow mode $\nu \approx -\ell'(0)^2/\gamma$ | Non-oscillatory, but converges *more slowly* as $\gamma$ grows |
+::: {.col .fig}
+@fig:ch16-gan-damping-regimes
+:::
+:::
 :::
 
 ::: {.slide title="Local Network Convergence and Penalty Design"}
 [Generalization & Design Rules]{.kicker}
 
-Mescheder et al. (2018) and Huang et al. (2024) extended this stability analysis from the two-parameter Dirac-GAN to general neural networks:
+::: {.cols .vc}
+::: {.col}
+- **Local exponential convergence (Mescheder et al., 2018):** Near $q_{\theta^\star} = p$ where $D_{\psi^\star}$ is flat on $\operatorname{supp}(p)$, simultaneous and alternating updates with $R_1$/$R_2$ converge exponentially.
+- **Zero-centered ($R_1, R_2$) vs. one-centered (WGAN-GP):** WGAN-GP forces unit slope $\|\nabla_x D\| = 1$ even at $q = p$, parking the Dirac-GAN away from the origin at $|\theta| = \gamma$.
+- **Why $R_1 + R_2$ beats $R_1$ alone:** Far from equilibrium ($p = \delta_0, q = \delta_1$), a quadratic critic $D_c(x) = -cx^2$ has $R_1 = 0$ at $x = 0$ and lets $c \to \infty$; adding $R_2$ caps $c^\star < 1/(8\gamma)$.
+:::
 
-- **Local exponential convergence theorem:** Near an equilibrium manifold where $q_{\theta^\star} = p$ and $D_{\psi^\star}$ is flat on $\operatorname{supp}(p)$, simultaneous and alternating gradient updates with $R_1$/$R_2$ and a strictly concave loss ($\ell'(0) \neq 0, \ell''(0) < 0$) converge exponentially—provided $D$ has sufficient local capacity to detect first-order generator perturbations.
-- **Why zero-centered ($R_1, R_2$) beats one-centered (WGAN-GP):** WGAN-GP penalizes $(\|\nabla_x D\| - 1)^2$, forcing unit slope even when $q = p$. On the Dirac-GAN with linear payoff $\ell(t) = t$, WGAN-GP parks the generator away from the data at $|\theta| = \gamma$ where the Wasserstein pull balances the penalty!
-- **Why $R_1 + R_2$ beats $R_1$ alone:** Far from equilibrium, $R_1$ constrains $\nabla_x D$ only on $\operatorname{supp}(p)$. For $p = \delta_0, q = \delta_1$, the quadratic critic $D_c(x) = -cx^2$ has $R_1 = 0$ (flat at $0$) and lets $c \to \infty$, exploding generator gradients at $x' = 1$; adding $R_2 = 2\gamma c^2$ caps $c^\star < 1/(8\gamma)$.
+::: {.col .fig .big}
+@fig:ch16-gan-zero-vs-one-gp
+:::
+:::
 :::
 
 ::: {.slide title="Effect of Penalties on the Local Value Function"}
@@ -829,13 +857,18 @@ $$V_\ell(D) - R_1 - R_2 \approx 2\ell(0) + \ell'(0)\,\langle p - q,\, D\rangle -
 ::: {.slide title="Dual Sobolev Norm and Spatial Low-Pass Filtering"}
 [Multiscale Interpretation]{.kicker}
 
-Integrating by parts writes $\int m\,\|\nabla_x D\|^2 = \langle D, \mathcal{L}_m D\rangle$, where $\mathcal{L}_m D = -\nabla \cdot (m\nabla D)$ is the $m$-weighted Laplacian. Maximizing the local quadratic approximation over all functions $D$ yields:
+::: {.cols .vc}
+::: {.col}
+$$\sup_D V_\gamma(D) - 2\ell(0) \approx \frac{\ell'(0)^2}{4}\Big\langle p - q,\; \big(|\ell''(0)|\,m + \gamma\mathcal{L}_m\big)^{-1}(p - q)\Big\rangle$$
 
-$$\sup_D \Big\{ \ell'(0)\,\langle p - q, D\rangle - |\ell''(0)|\int m\,D^2 - \gamma\int m\,\|\nabla_x D\|^2 \Big\} = \frac{\ell'(0)^2}{4}\Big\langle p - q,\; \big(|\ell''(0)|\,m + \gamma\mathcal{L}_m\big)^{-1}(p - q)\Big\rangle$$
+- **Interpolating JS and dual Sobolev norm:** With $\mathcal{L}_m D = -\nabla \cdot (m\nabla D)$, the local value transitions from $2\,\mathrm{JS}(p, q)$ as $\gamma \to 0$ to $\frac{\ell'(0)^2}{4\gamma}\|p - q\|_{\dot{H}^{-1}(m)}^2$ as $\gamma \to \infty$.
+- **Spatial low-pass filter:** Attenuates Fourier wavenumber $\omega$ by $(|\ell''(0)| + \gamma\omega^2)^{-1}$ below cutoff length scale $2\sqrt{\gamma}$ ($\gamma$ has units of **squared length**).
+:::
 
-- **Small-penalty limit ($\gamma \to 0$):** Recovers $\frac{\ell'(0)^2}{4|\ell''(0)|}\int \frac{(p - q)^2}{m} \approx 2\,\mathrm{JS}(p, q)$.
-- **Large-penalty limit ($\gamma \to \infty$):** Approaches $\frac{\ell'(0)^2}{4\gamma}\|p - q\|_{\dot{H}^{-1}(m)}^2$, the squared **dual Sobolev norm**.
-- **Spatial low-pass filter:** On a Fourier mode of wavenumber $\omega$, $\mathcal{L}_m$ multiplies by $m\omega^2$, weighting the mode by $(|\ell''(0)| + \gamma\omega^2)^{-1}$ instead of $|\ell''(0)|^{-1}$. Thus $R_1 + R_2$ filters out differences below the cutoff length scale $\sqrt{\gamma / |\ell''(0)|} = 2\sqrt{\gamma}$, meaning $\gamma$ has units of **squared length**.
+::: {.col .fig}
+@fig:ch16-gan-sobolev-filter
+:::
+:::
 :::
 
 ::: {.slide title="Implementing Differentiable R₁ + R₂ Penalties"}
@@ -861,11 +894,17 @@ R3GAN (Huang et al., 2024) pairs the relativistic pairing loss (`rpgan_loss_D`, 
 ::: {.slide title="Mode-Coverage Testbed: 25 Gaussians on a 5×5 Grid"}
 [Experimental Setup]{.kicker}
 
-To test whether pairwise ranking or zero-centered gradient penalties drive mode coverage in neural networks, we train a 3-layer ReLU MLP generator ($64 \to 256 \to 256 \to 2$) and leaky-ReLU MLP critic ($2 \to 256 \to 256 \to 1$) on a $5 \times 5$ grid of isotropic 2D Gaussians (spacing $2.0$, width $\sigma = 0.05$):
+::: {.cols .vc}
+::: {.col}
+- **$5 \times 5$ Gaussian grid (spacing $2.0, \sigma = 0.05$):** 3-layer ReLU MLP generator ($64 \to 256 \to 256 \to 2$) and leaky-ReLU critic trained for $10{,}000$ steps with Adam **$\beta_1 = 0, \beta_2 = 0.99$**.
+- **$2 \times 2$ factorial design (3 seeds per arm):** Crosses objective (`NS` vs. `pairing`) with penalty ($\gamma = 0$ vs. $\gamma = 1$), plus an overdamped $\gamma = 10$ control.
+- **Four quantitative metrics:** Covered modes (out of $25$), on-mode fraction (within $3\sigma = 0.15$), mean distance to nearest center, and critic steepness $\mathbb{E}_q[\|\nabla_x D(x')\|^2]$.
+:::
 
-- **Optimizer settings ($10{,}000$ steps, batch size $1{,}024$):** Adam with **$\beta_1 = 0, \beta_2 = 0.99$** (since positive first-moment momentum averages past orthogonal directions in a rotating vector field) and cosine LR decay from $2 \times 10^{-3}$ to $2 \times 10^{-4}$.
-- **$2 \times 2$ factorial design (3 seeds per arm):** Crosses objective (`NS` vs. `pairing`) with penalty ($\gamma = 0$ vs. $\gamma = 1$), plus an overdamped run at $\gamma = 10$.
-- **Four metrics on $10{,}000$ generated samples:** (1) covered modes ($\ge \frac{1}{5}$ of an equal share $\frac{1}{25}$ of on-mode samples), (2) on-mode fraction (within $3\sigma = 0.15$ of a center; $98.9\%$ for true $p$), (3) mean distance to nearest center ($\approx 0.06$ for true $p$), and (4) critic steepness $\mathbb{E}_q[\|\nabla_x D(x')\|^2]$.
+::: {.col .fig .big}
+@fig:ch16-gan-25g-factorial
+:::
+:::
 :::
 
 ::: {.slide title="25-Gaussian Results: Penalties Drive Coverage"}

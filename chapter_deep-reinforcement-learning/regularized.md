@@ -555,17 +555,14 @@ KL-Regularized Policy Optimization and Reward Hacking<br>**Bradley–Terry prefe
 ::: {.slide title="When the Reward Must Be Learned from Comparisons"}
 [Motivation]{.kicker}
 
-In tasks like helpful dialogue, safe driving, or mathematical exposition, no hand-written formula scores quality—yet humans can reliably compare two candidate trajectories $\tau$ and $\tau'$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The RLHF Pipeline (Christiano et al., 2017; Ouyang et al., 2022):** Collect trajectories from a reference policy $\pi_{\textrm{ref}}$, fit a reward model $\hat{r}$ to pairwise human preferences, and optimize a policy against $\hat{r}$.
-- **Out-of-Support Extrapolation:** The fitted reward $\hat{r}$ is accurate only where $\pi_{\textrm{ref}}$ generated comparison data; elsewhere it guesses.
+- **The RLHF Pipeline:** Roll out a reference policy $\pi_{\textrm{ref}}$, fit a reward model $\hat{r}$ to pairwise human comparisons $\tau \succ \tau'$, and optimize a policy against $\hat{r}$.
+- **Reward Hacking (Goodhart's Law):** Because $\hat{r}$ is accurate only on $\pi_{\textrm{ref}}$'s support, an unregularized policy exploits out-of-support blind spots unless anchored by $-\beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$.
 :::
 
-::: {.col}
-- **Reward Hacking (Goodhart's Law):** An unconstrained optimizer searches the entire state-action space, inevitably finding unvisited regions where $\hat{r}$ happens to be erroneously high.
-- **The KL Leash:** Adding a penalty $-\beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ directly to the objective anchors the optimal policy near the reference distribution's support.
+::: {.col .fig .big}
+@fig:ch15-drl-rlhf-pipeline
 :::
 :::
 :::
@@ -589,12 +586,18 @@ In tasks like helpful dialogue, safe driving, or mathematical exposition, no han
 ::: {.slide title="Fitting a Reward Model via Bradley–Terry Regression"}
 [Preference Learning]{.kicker}
 
-The **Bradley–Terry model** (1952) treats a pairwise preference $\tau \succ \tau'$ as a logistic observation of the difference in trajectory returns $r(\tau) - r(\tau')$:
+::: {.cols .vc}
+::: {.col}
+$$P(\tau \succ \tau') = \sigma\big(r(\tau) - r(\tau')\big) = \frac{1}{1 + e^{-(r(\tau) - r(\tau'))}}$$
 
-$$P(\tau \succ \tau') = \sigma\big(r(\tau) - r(\tau')\big) = \frac{1}{1 + \exp\big(-(r(\tau) - r(\tau'))\big)}$$
+- **Linearity in discounted counts:** With $c_{s,a}(\tau) = \sum_{t:(s_t,a_t)=(s,a)} \gamma^t$, trajectory return is $r(\tau) = \mathbf{c}(\tau)^\top \mathbf{r}$.
+- **Logistic regression:** Fitting $\hat{\mathbf{r}}$ on $6{,}000$ comparisons is $L_2$-regularized logistic regression ($\lambda_{\textrm{wd}} = 0.02$) on count differences $\mathbf{c}(\tau) - \mathbf{c}(\tau')$.
+:::
 
-- **Linearity in Discounted Counts:** Defining the discounted state-action visit vector $\mathbf{c}(\tau) \in \mathbb{R}^{64}$ with entries $c_{s,a}(\tau) = \sum_{t: (s_t, a_t)=(s,a)} \gamma^t$, the return is $r(\tau) = \mathbf{c}(\tau)^\top \mathbf{r}$.
-- **Logistic Regression:** Fitting $\hat{\mathbf{r}}$ on $6{,}000$ binary comparisons between $1{,}000$ reference trajectories is standard $L_2$-regularized logistic regression ($\lambda_{\textrm{wd}} = 0.02$) on feature differences $\mathbf{c}(\tau) - \mathbf{c}(\tau')$.
+::: {.col .fig}
+@fig:ch15-drl-bradley-terry
+:::
+:::
 :::
 
 ::: {.slide title="Where the Fitted Reward Is Accurate—and Where It Fails"}
@@ -636,13 +639,18 @@ When we run exact value iteration (`plan`) on the fitted reward $\hat{r}$ and ev
 ::: {.slide title="The Single-Decision KL-Regularized Objective"}
 [KL Regularization]{.kicker}
 
-To prevent the optimizer from leaving the reference policy's support, we subtract $\beta$ units of reward for every nat of reverse KL divergence from $\pi_{\textrm{ref}}$:
+::: {.cols .vc}
+::: {.col}
+$$\max_{\pi}\ \mathbb{E}_{a \sim \pi}\big[r(a)\big] - \beta\, D_{\textrm{KL}}\big(\pi \Vert \pi_{\textrm{ref}}\big)$$
 
-$$\max_{\pi}\ \mathbb{E}_{a \sim \pi}\big[r(a)\big] - \beta\, D_{\textrm{KL}}\big(\pi \Vert \pi_{\textrm{ref}}\big) = \sum_{a} \pi(a)\, r(a) - \beta \sum_{a} \pi(a) \log \frac{\pi(a)}{\pi_{\textrm{ref}}(a)}$$
+- **Exponentially tilted optimum:** For any $\beta > 0$, $\pi^\star(a) = \frac{1}{Z}\,\pi_{\textrm{ref}}(a)\,e^{r(a)/\beta}$ with partition function $Z = \sum_{a'} \pi_{\textrm{ref}}(a')\,e^{r(a')/\beta}$.
+- **Exact optimal value:** By Gibbs' inequality, any policy $\pi$ achieves objective value $\beta \log Z - \beta D_{\textrm{KL}}(\pi \Vert \pi^\star) \le \beta \log Z$.
+:::
 
-- **Proposition (Closed-Form Optimum):** For any $\beta > 0$, the unique global maximizer is the **exponentially tilted reference policy**:
-  $$\pi^\star(a) = \frac{1}{Z}\, \pi_{\textrm{ref}}(a)\, e^{r(a)/\beta}, \qquad Z = \sum_{a'} \pi_{\textrm{ref}}(a')\, e^{r(a')/\beta}$$
-- **Exact Optimal Value (Gibbs' Inequality):** Substituting $r(a) = \beta \log(\pi^\star(a) Z / \pi_{\textrm{ref}}(a))$ rewrites the objective for any $\pi$ as $\beta \log Z - \beta D_{\textrm{KL}}(\pi \Vert \pi^\star) \le \beta \log Z$.
+::: {.col .fig}
+@fig:ch15-drl-exponential-tilt-flow
+:::
+:::
 :::
 
 ::: {.slide title="Visualizing the Exponential Tilt Across Temperatures"}
@@ -702,19 +710,14 @@ Running iterative exponentiated gradient ascent $\pi \leftarrow \pi \odot \exp\b
 ::: {.slide title="Trust Region vs. Fixed-Reference Penalty & KL Direction"}
 [Critical Distinctions]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Moving Trust Region (§15.2) vs. Fixed Penalty (§15.3):**
-  - If each step $k$ solves $\pi_{k+1} = \operatorname{argmax}_\pi \mathbb{E}_\pi[r] - \tilde{\beta} D_{\textrm{KL}}(\pi \Vert \pi_k)$ relative to the *previous iterate*, then:
-    $$\pi_k(a) \propto \pi_{\textrm{ref}}(a)\, e^{k\, r(a)/\tilde{\beta}}$$
-  - As $k \to \infty$, the effective temperature $\tilde{\beta}/k \to 0$ and $\pi_k$ still converges to the greedy argmax! A trust region bounds the *path*; only a **frozen** $\pi_{\textrm{ref}}$ changes the *destination*.
+- **Moving Trust Region (§15.2) vs. Fixed Penalty (§15.3):** Penalizing divergence to the *previous iterate* $\pi_k$ accumulates tilts $\pi_k(a) \propto \pi_{\textrm{ref}}(a) e^{k\,r(a)/\tilde{\beta}}$ and still converges to the greedy argmax; only a **frozen** $\pi_{\textrm{ref}}$ changes the destination.
+- **Reverse vs. Forward KL:** Reverse KL $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ suppresses poor actions exponentially ($\propto e^{-\Delta(a)/\beta}$), whereas forward KL keeps a linear floor ($\approx \beta / \Delta(a)$).
 :::
 
-::: {.col}
-- **Reverse KL vs. Forward KL Penalty:**
-  - For an action falling short of the best by $\Delta(a) > 0$ as $\beta \to 0$:
-  - **Reverse KL $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$:** suppresses poor actions **exponentially**, $\pi^\star(a)/\pi_{\textrm{ref}}(a) \propto e^{-\Delta(a)/\beta}$.
-  - **Forward KL $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$:** mode-covering; keeps a heavy **linear floor** $\pi^\star(a)/\pi_{\textrm{ref}}(a) \approx \beta / \Delta(a)$.
+::: {.col .fig .big}
+@fig:ch15-drl-trust-vs-anchor
 :::
 :::
 :::

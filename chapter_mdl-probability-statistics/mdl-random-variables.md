@@ -944,30 +944,35 @@ Random Variables: Densities, Cumulative Distributions, Moments, and Tail Bounds<
 ::: {.slide title="A Dart Lands at Distance 0.5: What Was the Probability?"}
 [The Continuous Paradox]{.kicker}
 
-Continuous quantities in deep learning—pixel intensities, initialized weights, or diffusion noise—can take any real value in an interval. Consider a dart landing uniformly on a unit disk of radius $1$ at radial distance $R \in [0, 1]$:
+::: {.cols .vc}
+::: {.col}
+- **Continuous outcomes:** A dart landing uniformly on a unit disk has radial distance $R \in [0, 1]$ with disk area share $P(R \le r) = r^2$.
+- **Shrinking bins around $r = 0.5$:** As bin width $\epsilon$ shrinks from $0.1 \to 0.01 \to 0.001$, the probability $P(R \in \text{bin})$ shrinks identically while the ratio $P/\epsilon = 1$ stays constant.
+- **Zero probability $\ne$ impossibility:** Every single point has $P(R = r) = 0$ because a point has zero width, yet probability accumulates at a finite local rate.
+:::
 
-| Distance Interval Around $r = 0.5$ | Bin Width $\epsilon$ | Exact Disk Area Share $P(R \in \text{bin})$ | Ratio: $\text{Probability} / \epsilon$ |
-| :--- | ---: | ---: | ---: |
-| $[0.45, 0.55]$ | $0.1$ | $0.55^2 - 0.45^2 = 0.1$ | $1$ |
-| $[0.495, 0.505]$ | $0.01$ | $0.505^2 - 0.495^2 = 0.01$ | $1$ |
-| $[0.4995, 0.5005]$ | $0.001$ | $0.5005^2 - 0.4995^2 = 0.001$ | $1$ |
-| Exact point $R = 0.5$ | $0$ | $0$ | — |
-
-::: {.d2l-note .warn}
-**Zero probability is not impossibility:** Every individual real number has probability $P(R = r) = 0$ because a point has zero width, yet the ratio of probability to bin width converges to a finite rate.
+::: {.col .fig .big}
+@fig:ch35-prob-dart-bins
+:::
 :::
 :::
 
 ::: {.slide title="Probability Density Is Probability per Unit Length"}
 [Local Rate of Accumulation]{.kicker}
 
-Because a disk of radius $r$ has area $\pi r^2$ inside a board of area $\pi$, the dart falls within distance $r$ with probability $P(R \le r) = r^2$. Over a short interval $[x, x + \epsilon)$, the **probability density** $p(x)$ is the limiting probability per unit length:
+::: {.cols .vc}
+::: {.col}
+$$p(x) = \lim_{\epsilon \downarrow 0} \frac{P(x \le X < x + \epsilon)}{\epsilon}$$
 
-$$p(x) = \lim_{\epsilon \downarrow 0} \frac{P(x \le X < x + \epsilon)}{\epsilon} \iff P(x \le X < x + \epsilon) \approx \epsilon\,p(x)$$
+- **Deriving the dart's density:** Dividing $P(r \le R < r+\epsilon) = (r+\epsilon)^2 - r^2 = 2r\epsilon + \epsilon^2$ by $\epsilon$ yields $p(r) = 2r$ on $[0, 1]$.
+- **Geometric meaning:** Density grows linearly with $r$ because ring circumference $2\pi r$ is larger near the outer rim.
+- **Rate, not probability:** A density can exceed $1$ (e.g., $p(0.9) = 1.8$, or $p(x) = 10$ on $[0, 0.1]$).
+:::
 
-- **Deriving the dart's density:** On $[r, r + \epsilon)$, the probability is $(r + \epsilon)^2 - r^2 = 2r\epsilon + \epsilon^2$. Dividing by $\epsilon$ and sending $\epsilon \downarrow 0$ yields $p(r) = 2r$ for $0 \le r \le 1$.
-- **Why $p(r) = 2r$ grows linearly:** More of the board's area sits near the outer rim, proportional to the circle's circumference $2\pi r$.
-- **A density is a rate, not a probability:** At $r = 0.9$, $p(0.9) = 1.8 > 1$; a variable uniform on $[0, 0.1]$ has density $p(x) = 10$ across that interval of length $0.1$.
+::: {.col .fig}
+@fig:ch35-prob-dart-density
+:::
+:::
 :::
 
 ::: {.slide title="Probability as Area Under the Density Curve"}
@@ -1004,39 +1009,32 @@ To throw darts uniformly on the unit disk without formulas, we sample uniformly 
 ::: {.slide title="Atoms, Densities, and Mixed Variables in Deep Learning"}
 [Discrete vs. Continuous vs. Mixed]{.kicker}
 
-Not every random variable in a neural network is purely discrete or purely continuous. A single point $x$ carrying strictly positive probability $P(X = x) > 0$ is called an **atom**:
+::: {.cols .vc}
+::: {.col}
+- **Atoms vs. densities:** A point $x$ with $P(X = x) > 0$ is an **atom** (discrete class labels $Y \in \{1,\dots,K\}$), whereas purely continuous weights $W_{ij} \sim \mathcal{N}(0, \sigma^2)$ have zero atoms.
+- **Mixed distributions (Rectified Gaussian / ReLU):** Passing $X \sim \mathcal{N}(0, 1)$ through $Y = \max(0, X)$ collapses all negative inputs onto an **atom $P(Y = 0) = 1/2$**.
+- **Positive half-line:** The remaining $50\%$ of the probability spreads continuously over $(0, \infty)$ with Gaussian density $\frac{1}{\sqrt{2\pi}}e^{-y^2/2}$.
+:::
 
-| Variable Type | Atomic vs. Continuous Mass | Canonical Deep Learning Example |
-| :--- | :--- | :--- |
-| **Purely discrete** | $100\%$ of mass sits on countable atoms $\{x_i\}$ | Class label $Y \in \{1, \dots, K\}$ or vocabulary token ID |
-| **Purely continuous** | Zero atoms ($P(X=x)=0\ \forall x$); all mass in density $p(x)$ | Gaussian weight initialization $W_{ij} \sim \mathcal{N}(0, \sigma^2)$ |
-| **Mixed distribution** | Positive mass on atoms *plus* a continuous density elsewhere | ReLU output $Y = \max(0, X)$ fed $X \sim \mathcal{N}(0, 1)$ |
-
-::: {.d2l-note .rule}
-**The Rectified Gaussian (ReLU activation):** When $X \sim \mathcal{N}(0, 1)$, all negative inputs collapse onto $Y = 0$, creating an **atom of probability $P(Y = 0) = 1/2$**, while the remaining half spreads over $(0, \infty)$ with density $\frac{1}{\sqrt{2\pi}}e^{-y^2/2}$.
+::: {.col .fig .big}
+@fig:ch35-prob-mixed-relu
+:::
 :::
 :::
 
 ::: {.slide title="The Cumulative Distribution Function (CDF)"}
 [Unifying Discrete, Continuous, and Mixed Variables]{.kicker}
 
-The **cumulative distribution function** $F(x) = P(X \le x)$ sweeps from left to right across the real line, recording the total probability accumulated up to $x$:
-
-$$F(x) = P(X \le x) = \int_{-\infty}^x p(t)\,dt \quad \text{(when } X \text{ has density } p\text{)}$$
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Universal properties of every CDF:**
-  - Monotone non-decreasing: $a < b \implies F(a) \le F(b)$.
-  - Boundary limits: $\lim_{x \to -\infty} F(x) = 0$ and $\lim_{x \to \infty} F(x) = 1$.
-  - **Right-continuous:** $\lim_{y \downarrow x} F(y) = F(x)$, taking the upper value at any jump.
+$$F(x) = P(X \le x) = \int_{-\infty}^x p(t)\,dt$$
+
+- **Universal rules:** Every CDF is monotone non-decreasing, right-continuous ($\lim_{y \downarrow x} F(y) = F(x)$), and runs from $F(-\infty) = 0$ to $F(+\infty) = 1$.
+- **Visual signature:** Smooth curves for continuous densities ($F(r) = r^2$), staircases for discrete atoms, and jumps plus smooth climbs for mixed ReLU outputs.
 :::
 
-::: {.col}
-- **How $F(x)$ encodes distribution type:**
-  - **Continuous (Dart):** Smooth climb $F(r) = r^2$ on $[0, 1]$ with no jumps.
-  - **Discrete (Fair coin):** Staircase jumping by $1/2$ at $x = 0$ and $x = 1$.
-  - **Mixed (ReLU):** Flat $0$ on $(-\infty, 0)$, jump of $1/2$ at $x = 0$, then smooth Gaussian climb $\Phi(x)$ on $(0, \infty)$.
+::: {.col .fig}
+@fig:ch35-prob-cdf-types
 :::
 :::
 :::
@@ -1092,14 +1090,18 @@ Comparing $10^6$ inverse-transform draws $R = \sqrt{U}$ against 2D rejection-sam
 ::: {.slide title="Expectation: The Center of Mass of a Distribution"}
 [First Moment & Law of the Unconscious Statistician]{.kicker}
 
-Slicing a continuous variable into narrow bins of width $\epsilon$ weights each position $\epsilon i$ by probability $\approx \epsilon\,p(\epsilon i)$, turning the discrete average into an integral:
+::: {.cols .vc}
+::: {.col}
+$$\mu_X = \mathbb{E}[X] = \int_{-\infty}^{\infty} x\,p(x)\,dx, \qquad \mathbb{E}[g(X)] = \int_{-\infty}^{\infty} g(x)\,p(x)\,dx$$
 
-$$\mu_X = \mathbb{E}[X] = \sum_i x_i p_i \quad \text{(discrete)}, \qquad \mu_X = \mathbb{E}[X] = \int_{-\infty}^{\infty} x\,p(x)\,dx \quad \text{(density)}$$
+- **Dart mean vs. median:** $\mathbb{E}[R] = \int_0^1 r(2r)\,dr = \frac{2}{3} \approx 0.667$, sitting slightly below the median $\sqrt{0.5} \approx 0.707$ because the long left tail pulls the center of mass inward.
+- **LOTUS & existence:** Any function $g(X)$ averages directly against $p(x)$ without deriving $p_{g(X)}$, provided $\int |g(x)|\,p(x)\,dx < \infty$.
+:::
 
-- **Existence condition:** Requires absolute convergence $\int_{-\infty}^\infty |x|\,p(x)\,dx < \infty$ (so the balance point does not depend on how limits at $\pm\infty$ are taken).
-- **Dart mean vs. median:** $\mathbb{E}[R] = \int_0^1 r(2r)\,dr = \frac{2}{3} \approx 0.667$, sitting slightly below the median $0.707$ because the long left tail toward $r = 0$ pulls the center of mass inward.
-- **Law of the Unconscious Statistician (LOTUS):** We can average any function $g(X)$ directly against $p(x)$ without first deriving the density of the transformed variable $Y = g(X)$:
-  $$\mathbb{E}[g(X)] = \int_{-\infty}^{\infty} g(x)\,p(x)\,dx \quad \text{whenever } \int |g(x)|\,p(x)\,dx < \infty$$
+::: {.col .fig}
+@fig:ch35-prob-mean-lotus
+:::
+:::
 :::
 
 ::: {.slide title="Linearity of Expectation Needs No Independence"}
@@ -1126,30 +1128,35 @@ $$\mathbb{E}[cX + d] = c\,\mathbb{E}[X] + d, \qquad \mathbb{E}[X + Y] = \mathbb{
 ::: {.slide title="Variance and Standard Deviation"}
 [Second Central Moment]{.kicker}
 
-The **variance** measures the expected squared deviation from the mean, and the **standard deviation** $\sigma_X = \sqrt{\mathrm{Var}(X)}$ restores the original physical units of $X$:
-
+::: {.cols .vc}
+::: {.col}
 $$\sigma_X^2 = \mathrm{Var}(X) = \mathbb{E}\bigl[(X - \mu_X)^2\bigr] = \mathbb{E}[X^2] - \mu_X^2$$
 
-- **Proof of the shortcut formula:** Expand $(X - \mu_X)^2 = X^2 - 2\mu_X X + \mu_X^2$ and apply linearity: $\mathbb{E}[X^2] - 2\mu_X\mathbb{E}[X] + \mu_X^2 = \mathbb{E}[X^2] - \mu_X^2$.
-- **Affine transformation rule:** Shifting by $d$ leaves spread unchanged, while scaling by $c$ squares the variance:
-  $$\mathrm{Var}(cX + d) = c^2\,\mathrm{Var}(X), \qquad \sigma_{cX + d} = |c|\,\sigma_X$$
-- **Worked benchmarks:**
-  - **Dart radius $R$:** $\mathbb{E}[R^2] = \int_0^1 r^2(2r)\,dr = \frac{1}{2}$ $\to$ $\mathrm{Var}(R) = \frac{1}{2} - \left(\frac{2}{3}\right)^2 = \frac{1}{18} \approx 0.056$ ($\sigma_R \approx 0.236$).
-  - **Uniform $U \sim \mathrm{Unif}(0, 1)$:** $\mu_U = \frac{1}{2}$ and $\mathbb{E}[U^2] = \frac{1}{3}$ $\to$ $\mathrm{Var}(U) = \frac{1}{3} - \frac{1}{4} = \frac{1}{12}$.
+- **Affine transformation rule:** Shifting by $d$ leaves spread unchanged, while scaling by $c$ squares the variance ($\mathrm{Var}(cX + d) = c^2\,\mathrm{Var}(X)$ and $\sigma_{cX + d} = |c|\,\sigma_X$).
+- **Worked benchmarks:** Dart radius $R$ has $\mathbb{E}[R^2] = 1/2 \implies \mathrm{Var}(R) = 1/2 - 4/9 = 1/18$ ($\sigma_R \approx 0.236$); uniform $U(0, 1)$ has $\mathrm{Var}(U) = 1/3 - 1/4 = 1/12$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-var-affine
+:::
+:::
 :::
 
 ::: {.slide title="Markov's Inequality: Tail Bounds from the Mean Alone"}
 [The Ancestor of All Concentration Bounds]{.kicker}
 
-How much probability can sit far out in the tail when we know only the mean of a non-negative variable?
+::: {.cols .vc}
+::: {.col}
+$$P(X \ge t) \le \frac{\mathbb{E}[X]}{t} \quad \text{for } X \ge 0,\ t > 0$$
 
-**Proposition (Markov's Inequality):** If $X \ge 0$ has finite mean $\mathbb{E}[X]$ and $t > 0$, then
+- **One-line proof:** Since $X \ge t\,\mathbf{1}_{X \ge t}$ holds pointwise for every outcome $X \ge 0$, taking expectations gives $\mathbb{E}[X] \ge t\,P(X \ge t)$.
+- **Rule of thumb & lineage:** At most $10\%$ of any non-negative population can exceed $10\times$ its average; applying Markov to $(X-\mu)^2$ gives Chebyshev, and to $e^{\lambda X}$ gives Chernoff/Hoeffding.
+:::
 
-$$P(X \ge t) \le \frac{\mathbb{E}[X]}{t}$$
-
-- **One-line proof:** For every outcome, $X \ge t\,\mathbf{1}_{X \ge t}$ (since when $X \ge t$ the indicator is $1$ and $X \ge t$, while when $X < t$ the right side is $0 \le X$). Taking expectations gives $\mathbb{E}[X] \ge t\,\mathbb{E}[\mathbf{1}_{X \ge t}] = t\,P(X \ge t)$. $\blacksquare$
-- **Immediate rule of thumb ($t = 10\,\mathbb{E}[X]$):** At most $10\%$ of any non-negative population—whether gradient norms, training losses, or server latencies—can exceed $10$ times its average.
-- **Unifying role in Chapter 36:** Applying Markov's inequality to $(X - \mu)^2$ yields Chebyshev's inequality; applying it to $\exp(\lambda X)$ yields the exponential Chernoff and Hoeffding bounds of §36.9.
+::: {.col .fig}
+@fig:ch35-prob-markov-step
+:::
+:::
 :::
 
 ::: {.slide title="Chebyshev's Inequality and Its Three-Atom Sharpness"}
@@ -1189,14 +1196,18 @@ Chebyshev's inequality must cover the worst-case distribution that piles all of 
 ::: {.slide title="Heavy Tails and the Cauchy Distribution"}
 [When Moments Fail to Exist]{.kicker}
 
-A smooth, symmetric bell curve can fail to have either a variance or a mean if its tails decay only algebraically. The **standard Cauchy distribution** has density:
+::: {.cols .vc}
+::: {.col}
+$$p(x) = \frac{1}{\pi(1 + x^2)}, \qquad x \in \mathbb{R}$$
 
-$$p(x) = \frac{1}{\pi(1 + x^2)}, \qquad x \in \mathbb{R} \quad \left(\int_{-\infty}^{\infty} \frac{dx}{1 + x^2} = \bigl[\arctan x\bigr]_{-\infty}^{\infty} = \pi\right)$$
+- **Infinite second moment ($\mathbb{E}[X^2] = \infty$):** Because the tail decays algebraically like $1/(\pi x^2)$, $\int_{-L}^L x^2 p(x)\,dx = \frac{2}{\pi}(L - \arctan L) \to \infty$.
+- **Undefined mean ($\mathbb{E}[|X|] = \infty$):** Since $\int_{-L}^L |x|\,p(x)\,dx = \frac{1}{\pi}\log(1+L^2) \to \infty$, asymmetric limits $[-L, 2L]$ shift $\int x\,p(x)\,dx \to \frac{\log 2}{\pi} \approx 0.221$.
+:::
 
-- **Infinite second moment ($\mathbb{E}[X^2] = \infty$):** Since $x^2 / (1 + x^2) \to 1$, the truncated integral diverges linearly:
-  $$\int_{-L}^{L} x^2 p(x)\,dx = \frac{2}{\pi}(L - \arctan L) \xrightarrow{L \to \infty} \infty \quad (5.43 \text{ at } L=10;\ 636 \text{ at } L=1000)$$
-- **Why the mean does not exist ($\mathbb{E}[|X|] = \infty$):** Expectation requires $\int |x|\,p(x)\,dx < \infty$, but $\int_{-L}^L |x|\,p(x)\,dx = \frac{1}{\pi}\log(1 + L^2) \to \infty$. Without absolute convergence, asymmetric limits shift the integral arbitrarily:
-  $$\int_{-L}^{L} x\,p(x)\,dx = 0, \qquad \text{yet} \qquad \int_{-L}^{2L} x\,p(x)\,dx = \frac{1}{2\pi}\log\frac{1 + 4L^2}{1 + L^2} \xrightarrow{L \to \infty} \frac{\log 2}{\pi} \approx 0.221$$
+::: {.col .fig}
+@fig:ch35-prob-cauchy-tail
+:::
+:::
 :::
 
 ::: {.slide title="When Averaging Fails: Gaussian vs. Cauchy Draws"}

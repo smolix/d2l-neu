@@ -1017,37 +1017,35 @@ Tensors as Contiguous Memory, Geometric Views, and Parallel Compute<br>**storage
 ::: {.slide title="Why Tensors? From Python Pointers to Parallel Kernels"}
 [Motivation]{.kicker}
 
-A single Fashion-MNIST minibatch of 256 grayscale images ($28 \times 28$ pixels) holds $256 \times 1 \times 28 \times 28 = 200{,}704$ numbers; a modern network updates billions of parameters per step.
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Python lists (`PyObject*` arrays):** Every float is a heap-allocated 28-byte object reached via an 8-byte pointer. Python loops chase scattered pointers and pay interpreter dispatch on every scalar operation.
+- **Batch scale:** One 256-image Fashion-MNIST batch ($28 \times 28$) holds $200{,}704$ pixels; modern networks update billions of parameters per step.
+- **Python lists (`PyObject*`):** Chasing 8-byte pointers to scattered 28-byte heap boxes causes cache misses and interpreter loop overhead.
+- **Contiguous tensor buffers:** Unboxed values (`uint8`, `float32`, `bfloat16`) sit back-to-back in RAM/HBM, feeding one vectorized CPU/GPU kernel + autograd.
 :::
 
-::: {.col}
-- **Tensors (contiguous buffers):** Values sit back-to-back in one unboxed memory block (`uint8`, `float32`, `bfloat16`). Writing `images / 255` launches **one vectorized CPU/GPU kernel** across all $200{,}704$ pixels.
+::: {.col .fig .big}
+@fig:ndarray-pointers-vs-contiguous
 :::
-:::
-
-::: {.d2l-note}
-Beyond NumPy's contiguous arrays, deep learning tensor libraries add **GPU/TPU execution**, **automatic differentiation**, and **low-precision accelerator types** (`bfloat16`, `float16`).
 :::
 :::
 
 ::: {.slide title="The Unifying Mental Model: Storage Buffer + Metadata Header"}
 [Systems View]{.kicker}
 
-Every tensor pairs a **1D contiguous storage buffer** in RAM/VRAM with a small **metadata header** (`dtype`, `shape`, `offset`, `strides`, `device`):
+::: {.cols .vc}
+::: {.col}
+Every tensor pairs a **1D contiguous storage buffer** with a small **metadata header** (`shape`, `strides`, `offset`, `dtype`):
 
-$$\textrm{memory\_index}(i_0, i_1, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r \, s_r$$
+$$\textrm{index}(i_0, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r s_r$$
 
-| Category | Representative Operations | Cost & Memory Behavior |
-| :--- | :--- | :--- |
-| **Metadata-only views** | `reshape`, slices `X[1:3]`, `None` / `squeeze`, **broadcasting** ($s_r = 0$) | **$O(1)$ zero-copy:** new header pointing to the *same* storage buffer |
-| **Buffer allocations** | Elementwise math `X + Y`, gather `X[rows, cols]`, mask `X[mask]`, `cat` | **$O(N)$ copy:** allocates and writes a brand-new storage buffer |
+- **$O(1)$ zero-copy views** (`reshape`, slices `X[1:3]`, `X.T`, broadcasting $s_r = 0$) create a new header pointing to the *same* buffer.
+- **$O(N)$ allocations** (`X + Y`, gather, mask, `cat`) write a brand-new buffer.
+:::
 
-::: {.d2l-note}
-Asking *"Does this operation only rewrite the metadata header, or does it allocate a new storage buffer?"* explains both tensor performance and aliasing bugs.
+::: {.col .fig}
+@fig:ndarray-header-buffer
+:::
 :::
 :::
 
@@ -1083,14 +1081,19 @@ Asking *"Does this operation only rewrite the metadata header, or does it alloca
 ::: {.slide title="Data Types Control Precision, Range, and Memory Footprint"}
 [Data Types]{.kicker}
 
-| Data type | Bytes | Precision / Range | Role in Deep Learning | Batch / $10^9$ params |
-| :--- | :---: | :--- | :--- | :--- |
-| `uint8` | 1 B | $0 \ldots 255$ | Raw image pixels on disk & data loaders | $0.20\text{ MB}$ / — |
-| `float32` | 4 B | $\approx 7$ digits | Master weights, gradients, losses | $0.80\text{ MB}$ / $4.0\text{ GB}$ |
-| `bfloat16` / `float16` | 2 B | $\approx 3$–$4$ digits | Tensor Core mixed-precision matmuls | $0.40\text{ MB}$ / $2.0\text{ GB}$ |
-| `int64` / `int32` | 8 / 4 B | Exact ints | Class labels, token IDs, gather indices | — |
+::: {.cols .vc}
+::: {.col}
+- **`float32` (4 B):** Default for master weights, gradients, and loss reductions ($4\text{ GB} / 10^9$ params).
+- **`bfloat16` (2 B):** Keeps `float32`'s 8-bit exponent (**same dynamic range**, no overflow!) while halving HBM traffic for Tensor Core matmuls.
+- **`uint8` (1 B) & `int64` (8 B):** Compact raw image pixels ($0\ldots 255$) and exact class/token indices.
 
 @ndarray-initial-values-2
+:::
+
+::: {.col .fig}
+@fig:ndarray-dtypes
+:::
+:::
 :::
 
 ::: {.slide title="Deterministic Construction vs. Random Weight Initialization"}
@@ -1146,19 +1149,16 @@ Asking *"Does this operation only rewrite the metadata header, or does it alloca
 ::: {.slide title="Automatic Dimension Inference (-1) and Singleton Axes"}
 [Reshaping in Pipelines]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Flattening with `-1`:** A linear layer expects a 2D matrix `(batch, features)` rather than 4D images `(256, 1, 28, 28)`.
-- Passing `-1` infers $\textrm{size} / 784 = 256$. Using `reshape(-1, 784)` survives smaller final minibatches at the end of an epoch!
+- **Flattening with `-1`:** `images.reshape(-1, 784)` infers batch size $\textrm{size}/784 = 256$ and survives smaller final epoch batches.
+- **Singleton axes (`None` / `squeeze`):** `None` inserts a length-1 axis for batching or broadcasting; `squeeze` drops length-1 axes.
 
 @ndarray-reshaping-1
 :::
 
-::: {.col}
-- **Singleton axes (`None` / `squeeze`):** Indexing with `None` inserts a length-1 axis (wrapping one `(1, 28, 28)` image into a size-1 batch `(1, 1, 28, 28)`).
-- `squeeze` drops length-1 axes (giving a 2D `(28, 28)` grid for plotting).
-
-@ndarray-reshaping-2
+::: {.col .fig}
+@fig:ndarray-singleton-axes
 :::
 :::
 :::
@@ -1201,17 +1201,16 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 ::: {.slide title="Integer Gather and Boolean Masking in Machine Learning"}
 [Selective Indexing]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Integer gather (`X[rows, cols]`):** Pairs row and column indices. In **cross-entropy loss**, `log_probs[arange(B), labels]` pulls the true class log-probability for every example in the batch.
+- **Integer gather (`X[rows, cols]`):** Pairs row and column indices—used in cross-entropy (`log_probs[arange(B), labels]`) to pluck the true-class score per example.
+- **Mask (`X[mask]`) vs. `where`:** `X[mask]` collapses matches to a **1D vector**, whereas `where(mask, X, 0)` preserves the 2D shape for ReLU and attention masks.
 
 @ndarray-indexing-and-slicing-5
 :::
 
-::: {.col}
-- **Mask selection (`X[mask]`) vs. `where`:** `X[mask]` extracts `True` entries into a **1D vector**, whereas `where(mask, X, 0)` preserves the $(3, 4)$ shape (essential for ReLU, attention masks, and JIT).
-
-@ndarray-indexing-and-slicing-7
+::: {.col .fig}
+@fig:ndarray-gather-mask
 :::
 :::
 :::
@@ -1348,27 +1347,17 @@ When two shapes differ, **broadcasting** aligns and virtually expands length-1 a
 ::: {.slide title="When Broadcasting Fails—and When It Silently Bugs!"}
 [Broadcasting Pitfalls]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-**1. Loud Error (Incompatible Axes)**
-
-Aligning `(3, 2)` and `(2, 3)` compares $2$ vs. $3$ on axis 1 and $3$ vs. $2$ on axis 0. Neither matches and neither is `1`:
+- **Loud error (`(3, 2)` + `(2, 3)`):** Trailing axes $2 \neq 3$ neither match nor equal `1`.
+- **Silent bug (`(B, 1)` − `(B,)` $\to$ `(B, B)`):** Right-alignment treats `y: (B,)` as `(1, B)`, turning `y_hat - y` into all $B^2$ pairwise differences!
 
 @ndarray-broadcasting-3
 :::
 
-::: {.col}
-**2. Silent Bug: The `(N, 1)` vs. `(N,)` Trap**
-
-If predictions `y_hat` have shape **`(256, 1)`** while targets `y` have shape **`(256,)`**:
-
-- Right-alignment turns `y` into **`(1, 256)`**.
-- `y_hat - y` silently broadcasts into a **`(256, 256)` matrix** of all $65{,}536$ pairwise differences $\hat{y}_i - y_j$ instead of $256$ residuals!
+::: {.col .fig}
+@fig:ndarray-broadcast-bug
 :::
-:::
-
-::: {.d2l-note}
-**Defensive habit:** Always align target and prediction shapes explicitly (e.g., `y_hat.squeeze(-1) - y` or `y.reshape(y_hat.shape)`) inside loss functions.
 :::
 :::
 

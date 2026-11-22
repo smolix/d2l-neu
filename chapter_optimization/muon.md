@@ -447,13 +447,16 @@ Matrix Preconditioning and Muon<br>**steepest descent under norm balls · spectr
 ::: {.slide title="Weight Matrices Are Linear Operators, Not Flat Vectors"}
 [Motivation]{.kicker}
 
-Every optimizer studied so far—SGD, Momentum, and AdamW—treats a network's parameters as an unstructured flat vector in $\mathbb{R}^d$:
+::: {.cols .vc}
+::: {.col}
+- **Permutation blindness of entrywise methods:** SGD, Momentum, and AdamW treat $\mathbf{W} \in \mathbb{R}^{m \times n}$ as $mn$ independent coordinates—shuffling entries of $\mathbf{W}$ leaves AdamW's steps unchanged!
+- **Operator geometry ($83.5\%$ of `TinyLM`):** Internal 2D weight matrices map layer activations $\mathbf{x} \in \mathbb{R}^n \mapsto \mathbf{y} = \mathbf{W}\mathbf{x} \in \mathbb{R}^m$.
+- **Central question:** What is the steepest descent direction when we bound the activation shift $\Delta\mathbf{y} = \Delta\mathbf{W}\,\mathbf{x}$?
+:::
 
-- **Permutation blindness of entrywise methods:** Even AdamW maintains two scalar moments $(m_{t,ij}, v_{t,ij})$ independently for each entry $W_{ij}$ of a weight matrix $\mathbf{W}$. If you arbitrarily shuffled the entries of $\mathbf{W}$, AdamW would take the exact same steps!
-- **Operator structure in Transformers:** Yet $84\%$ of `TinyLM`'s parameters ($393{,}216$ of $470{,}784$) sit in $8$ hidden 2D projection matrices $\mathbf{W} \in \mathbb{R}^{m \times n}$ that act as linear operators mapping layer activations $\mathbf{x} \in \mathbb{R}^n \mapsto \mathbf{y} = \mathbf{W}\mathbf{x} \in \mathbb{R}^m$.
-
-::: {.d2l-note}
-**The central question of §9.6:** What is the direction of steepest descent for a weight matrix $\mathbf{W}$ when we bound the change $\Delta\mathbf{y} = \Delta\mathbf{W}\,\mathbf{x}$ it induces in the layer's output activations?
+::: {.col .fig .big}
+@fig:ch09-opt-muon-operator-view
+:::
 :::
 :::
 
@@ -479,39 +482,50 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 ::: {.slide title="Measuring Matrix Steps by the Spectral Operator Norm"}
 [Matrix Operator Geometry]{.kicker}
 
-For a hidden weight matrix $\mathbf{W} \in \mathbb{R}^{m \times n}$ mapping $\mathbf{x} \mapsto \mathbf{W}\mathbf{x}$, an update $\Delta\mathbf{W}$ shifts the output activation vector by $\Delta\mathbf{W}\,\mathbf{x}$, whose Euclidean norm is bounded by the **spectral norm** $\|\Delta\mathbf{W}\|_2$:
+::: {.cols .vc}
+::: {.col}
+- **Spectral norm bounds activation shift:**
+  $$\|\Delta\mathbf{W}\,\mathbf{x}\|_2 \le \|\Delta\mathbf{W}\|_2\,\|\mathbf{x}\|_2, \quad \|\Delta\mathbf{W}\|_2 = \sigma_1(\Delta\mathbf{W})$$
+- **SVD vs. Frobenius norm:** For $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top = \sum_{i=1}^r \sigma_i\mathbf{u}_i\mathbf{v}_i^\top$, $\|\mathbf{G}\|_2 = \sigma_1$ measures the max directional stretch, whereas $\|\mathbf{G}\|_F = \sqrt{\sum_i \sigma_i^2}$ overstates an orthogonal $r=128$ update by $\sqrt{128} \approx 11.3\times$!
+:::
 
-$$\|\Delta\mathbf{W}\,\mathbf{x}\|_2 \le \|\Delta\mathbf{W}\|_2\,\|\mathbf{x}\|_2, \qquad \|\Delta\mathbf{W}\|_2 = \max_{\|\mathbf{x}\|_2 = 1} \|\Delta\mathbf{W}\,\mathbf{x}\|_2 = \sigma_1(\Delta\mathbf{W})$$
-
-- **SVD of the gradient matrix $\mathbf{G} \in \mathbb{R}^{m \times n}$:** Let $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top = \sum_{i=1}^r \sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top$ with orthonormal columns $\mathbf{u}_i, \mathbf{v}_i$ and singular values $\sigma_1 \ge \cdots \ge \sigma_r > 0$.
-- **Spectral norm vs. Frobenius (Euclidean) norm:** The spectral norm is $\sigma_1$, whereas the Frobenius norm is $\|\mathbf{G}\|_F = \sqrt{\sum_{i=1}^r \sigma_i^2}$. For an orthogonal update with $128$ unit singular values, no input vector is stretched by more than $1$, yet the Frobenius norm overstates its size by $\sqrt{128} \approx 11.3\times$!
+::: {.col .fig}
+@fig:ch09-opt-muon-spectral-vs-frob
+:::
+:::
 :::
 
 ::: {.slide title="Under the Spectral Norm, Steepest Descent Is UVᵀ"}
 [The Orthogonalized Gradient]{.kicker}
 
-Solving the steepest-descent problem under the spectral norm constraint $\|\Delta\mathbf{W}\|_2 \le \eta$ replaces every nonzero singular value of $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ with $1$:
+::: {.cols .vc}
+::: {.col}
+- **Spectral steepest descent replaces every active singular value with $1$:**
+  $$\Delta\mathbf{W}^\star = \operatorname*{argmin}_{\|\Delta\mathbf{W}\|_2 \le \eta}\; \langle\mathbf{G}, \Delta\mathbf{W}\rangle = -\eta\,\mathbf{U}\mathbf{V}^\top$$
+- **Proof via trace duality:** For $\|\mathbf{A}\|_2 \le 1$, $\langle\mathbf{G}, \mathbf{A}\rangle = \sum_{i=1}^r \sigma_i (\mathbf{U}^\top\mathbf{A}\mathbf{V})_{ii} \ge -\sum_{i=1}^r \sigma_i = -\|\mathbf{G}\|_*$, achieved at $\mathbf{A} = -\mathbf{U}\mathbf{V}^\top$.
+:::
 
-$$\Delta\mathbf{W}^\star = \operatorname*{argmin}_{\|\Delta\mathbf{W}\|_2 \le \eta}\; \langle\mathbf{G}, \Delta\mathbf{W}\rangle = -\eta\,\mathbf{U}\mathbf{V}^\top$$
-
-- **Three-line proof:** For any matrix $\mathbf{A}$ with $\|\mathbf{A}\|_2 \le 1$, cyclic trace invariance gives:
-  1. $\langle\mathbf{G}, \mathbf{A}\rangle = \operatorname{tr}(\mathbf{G}^\top\mathbf{A}) = \operatorname{tr}(\boldsymbol{\Sigma}\,\mathbf{U}^\top\mathbf{A}\mathbf{V}) = \sum_{i=1}^r \sigma_i\,(\mathbf{U}^\top\mathbf{A}\mathbf{V})_{ii}$.
-  2. Since $\mathbf{u}_i, \mathbf{v}_i$ are unit vectors, $|(\mathbf{U}^\top\mathbf{A}\mathbf{V})_{ii}| = |\mathbf{u}_i^\top\mathbf{A}\mathbf{v}_i| \le \|\mathbf{A}\|_2 \le 1$, so $|\langle\mathbf{G}, \mathbf{A}\rangle| \le \sum_{i=1}^r \sigma_i = \|\mathbf{G}\|_*$.
-  3. Setting $\mathbf{A} = -\mathbf{U}\mathbf{V}^\top$ makes $\mathbf{U}^\top\mathbf{A}\mathbf{V} = -\mathbf{I}_r$, achieving the minimum $-\eta\|\mathbf{G}\|_*$ (dual **nuclear norm**).
+::: {.col .fig}
+@fig:ch09-opt-muon-svd-equalize
+:::
+:::
 :::
 
 ::: {.slide title="Why Entrywise Sign Descent Can Collapse to Rank 1"}
 [Entrywise vs. Spectral Equalization]{.kicker}
 
-Equalizing update magnitudes across *individual entries* ($\ell_\infty$ box) is fundamentally different from equalizing update magnitudes across *singular directions* (spectral ball):
+::: {.cols .vc}
+::: {.col}
+- Consider $\mathbf{G} = \begin{bmatrix}3 & 1\\ 1 & 1\end{bmatrix}$ ($\sigma_1 \approx 3.41, \sigma_2 \approx 0.59$):
+  - **Euclidean ($-\mathbf{G}/\|\mathbf{G}\|_F$):** Singular values $(0.99, 0.17)$ starve the second direction.
+  - **Coordinate box ($-\operatorname{sign}(\mathbf{G}) = -\mathbf{1}\mathbf{1}^\top$):** Singular values $(2.00, 0.00)$ **collapse to rank 1**!
+  - **Spectral ($-\mathbf{U}\mathbf{V}^\top = -\mathbf{I}_2$):** Singular values **$(1.00, 1.00)$** take a full step along every orthogonal feature mode.
+:::
 
-- Consider the $2 \times 2$ gradient matrix $\mathbf{G} = \begin{bmatrix}3 & 1\\ 1 & 1\end{bmatrix}$, which has singular values $\sigma_1 \approx 3.41$ and $\sigma_2 \approx 0.59$:
-
-| Norm Ball on $\Delta\mathbf{W}$ | Unscaled Steepest Direction | Resulting $2 \times 2$ Matrix | Singular Values $(\sigma_1, \sigma_2)$ of Update |
-| :--- | :---: | :---: | :---: |
-| **Euclidean ($\|\Delta\mathbf{W}\|_F \le \eta$)** | $-\mathbf{G} / \|\mathbf{G}\|_F$ | $-\frac{1}{\sqrt{12}}\begin{bmatrix}3 & 1\\ 1 & 1\end{bmatrix}$ | $(0.99,\; 0.17)$ — **starves 2nd direction** |
-| **Coordinate Box ($\|\Delta\mathbf{W}\|_\infty \le \eta$)** | $-\operatorname{sign}(\mathbf{G})$ | $-\begin{bmatrix}1 & 1\\ 1 & 1\end{bmatrix}$ | $(2.00,\; 0.00)$ — **collapses to rank 1!** |
-| **Spectral ($\|\Delta\mathbf{W}\|_2 \le \eta$)** | $-\mathbf{U}\mathbf{V}^\top$ | $-\begin{bmatrix}1 & 0\\ 0 & 1\end{bmatrix}$ | **$(1.00,\; 1.00)$ — full step along both modes!** |
+::: {.col .fig}
+@fig:ch09-opt-muon-rank1-collapse
+:::
+:::
 :::
 
 ::: {.slide title="Three Norm Geometries and Connection to Shampoo"}
@@ -530,14 +544,19 @@ Equalizing update magnitudes across *individual entries* ($\ell_\infty$ box) is 
 ::: {.slide title="Orthogonalization Without SVD: Odd Matrix Polynomials"}
 [Newton–Schulz Iteration]{.kicker}
 
-Computing an exact SVD $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ at every training step is far too slow on GPUs. Instead, observe how an **odd matrix polynomial** acts on $\mathbf{X} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$:
+::: {.cols .vc}
+::: {.col}
+- **Odd matrix polynomials preserve singular vectors:** For $\mathbf{X} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ and $\mathbf{A} = \mathbf{X}\mathbf{X}^\top = \mathbf{U}\boldsymbol{\Sigma}^2\mathbf{U}^\top$:
+  $$p(\mathbf{X}) = (a\mathbf{I} + b\mathbf{A} + c\mathbf{A}^2)\mathbf{X} = \mathbf{U}\,p(\boldsymbol{\Sigma})\,\mathbf{V}^\top$$
+- **Two-step GPU recipe:**
+  1. Normalize $\mathbf{X}_0 = \mathbf{G} / (\|\mathbf{G}\|_F + \epsilon)$ so $\sigma_i \in [0, 1]$.
+  2. Apply $\mathbf{X}_{k+1} = p(\mathbf{X}_k)$ for $5$ fast matmul steps so $p^{(5)}(\sigma_i) \approx 1$.
+:::
 
-$$p(\mathbf{X}) = a\mathbf{X} + b\,(\mathbf{X}\mathbf{X}^\top)\mathbf{X} + c\,(\mathbf{X}\mathbf{X}^\top)^2\mathbf{X} = \mathbf{U}\,p(\boldsymbol{\Sigma})\,\mathbf{V}^\top$$
-
-- **Why singular vectors are preserved:** Because $\mathbf{X}\mathbf{X}^\top = \mathbf{U}\boldsymbol{\Sigma}^2\mathbf{U}^\top$, every odd power $(\mathbf{X}\mathbf{X}^\top)^k\mathbf{X} = \mathbf{U}\boldsymbol{\Sigma}^{2k+1}\mathbf{V}^\top$ applies the scalar polynomial $p(\sigma_i) = a\sigma_i + b\sigma_i^3 + c\sigma_i^5$ independently to each singular value $\sigma_i$!
-- **Two-step Newton–Schulz recipe:**
-  1. Normalize $\mathbf{X}_0 = \mathbf{G} / (\|\mathbf{G}\|_F + \epsilon)$ so all singular values lie in $[0, 1]$.
-  2. Iterate $\mathbf{X}_{k+1} = p(\mathbf{X}_k)$ for $5$ steps using fast GPU matrix multiplications (`A = X @ X.T`) so that $p^{(5)}(\sigma_i) \approx 1$ for all active singular values.
+::: {.col .fig}
+@fig:ch09-opt-muon-ns-loop
+:::
+:::
 :::
 
 ::: {.slide title="Jordan et al.'s Tuned Quintic Newton–Schulz Polynomial"}
@@ -595,14 +614,18 @@ $$p(\mathbf{X}) = a\mathbf{X} + b\,(\mathbf{X}\mathbf{X}^\top)\mathbf{X} + c\,(\
 ::: {.slide title="The Complete Muon Update and Entrywise RMS Alignment"}
 [Matching AdamW's Learning Rate]{.kicker}
 
-For an $m \times n$ hidden weight matrix $\mathbf{W}$ with gradient $\mathbf{G}_t$, **Muon** updates a momentum buffer $\mathbf{M}_t$ ($\beta = 0.95$, window $20$ steps), orthogonalizes the Nesterov look-ahead $\mathbf{G}_t + \beta\mathbf{M}_t$, and applies decoupled weight decay (Liu et al., 2025):
+::: {.cols .vc}
+::: {.col}
+- **Muon update ($\beta = 0.95$, Liu et al., 2025):**
+  $$\mathbf{W}_{t+1} = (1-\eta\lambda)\mathbf{W}_t - 0.2\eta\sqrt{\max(m,n)}\;\mathrm{NS}_5(\mathbf{G}_t + \beta\mathbf{M}_t)$$
+- **Why average before $\mathrm{NS}_5$?** Extracts persistent singular directions over $20$ steps before applying nonlinear orthogonalization.
+- **Why $0.2\sqrt{\max(m, n)}$?** Since $\text{RMS}(\mathbf{U}\mathbf{V}^\top) = 1/\sqrt{\max(m,n)}$, this multiplier sets the entrywise step RMS to **$0.2\,\eta$**, matching AdamW so both share a single $\eta$ and $\lambda$!
+:::
 
-$$\mathbf{M}_t = \beta\,\mathbf{M}_{t-1} + \mathbf{G}_t, \qquad \mathbf{W}_{t+1} = (1 - \eta\lambda)\,\mathbf{W}_t - \eta \cdot 0.2\sqrt{\max(m, n)}\;\mathrm{NS}_5(\mathbf{G}_t + \beta\,\mathbf{M}_t)$$
-
-- **Why average before orthogonalizing?** Because $\mathrm{NS}_5$ is nonlinear, orthogonalizing the $20$-step Nesterov momentum average $\mathbf{G}_t + \beta\mathbf{M}_t$ extracts persistent singular directions rather than single-batch noise.
-- **Why multiply by $0.2\sqrt{\max(m, n)}$?** An exact orthogonal matrix $\mathbf{U}\mathbf{V}^\top \in \mathbb{R}^{m \times n}$ has $\min(m, n)$ unit singular values, so $\|\mathbf{U}\mathbf{V}^\top\|_F^2 = \min(m, n)$ across $mn$ entries, giving entrywise RMS:
-  $$\text{RMS}(\mathbf{U}\mathbf{V}^\top) = \sqrt{\frac{\min(m, n)}{m\,n}} = \frac{1}{\sqrt{\max(m, n)}}$$
-  Multiplying by $0.2\sqrt{\max(m, n)}$ sets the entrywise update RMS to **$0.2\,\eta$**—matching AdamW's empirical step size (§9.5) so both optimizers share a single $\eta$ and $\lambda$!
+::: {.col .fig}
+@fig:ch09-opt-muon-rms-alignment
+:::
+:::
 :::
 
 ::: {.slide title="Implementing Muon from Scratch"}
@@ -669,10 +692,17 @@ Notice that `Muon` requires only **one momentum buffer (`buf`) per parameter**�
 ::: {.slide title="Scaling Muon to Long Pretraining Runs and QK-Clip"}
 [Long-Horizon Pretraining Caveats]{.kicker}
 
-In large-scale pretraining benchmarks with full learning-rate decay ($0.1\text{B}\text{--}1.2\text{B}$ parameters in Wen et al., 2025; $1\text{T}$ parameters in Kimi K2, 2025), Muon achieves **$1.1\times\text{--}1.4\times$ step reductions** over heavily tuned AdamW when paired with two long-run safeguards:
+::: {.cols .vc}
+::: {.col}
+- **1.1–1.4× step reductions at scale (Wen et al., 2025; Kimi K2 1T, 2025)** require two long-run safeguards:
+- **1. Decoupled weight decay ($\lambda > 0$) is mandatory:** Because $\mathrm{NS}_5$ normalizes singular values to $\sim 1$ at every step, weight norms $\|\mathbf{W}\|_F$ grow unboundedly without $(1-\eta\lambda)$ shrinkage.
+- **2. Bilinear QK-Clip:** Attention logits $\mathbf{q}^\top\mathbf{k} = \mathbf{x}^\top\mathbf{W}_Q^\top\mathbf{W}_K\mathbf{x}$ are a product of two matrices; rescaling $\mathbf{W}_Q, \mathbf{W}_K$ when max logits exceed $100$ prevents softmax saturation.
+:::
 
-- **1. Decoupled weight decay ($\lambda > 0$) is mandatory:** Because $\mathrm{NS}_5(\cdot)$ normalizes singular values to $\sim 1$ at every step regardless of gradient magnitude, hidden weight norms grow unboundedly over long runs without $(1 - \eta\lambda)$ shrinkage, causing the early lead over AdamW to fade once $\eta / \|\mathbf{W}\|_F$ decays.
-- **2. Bilinear attention-logit clipping (QK-Clip):** The spectral ball bounds one matrix step $\|\Delta\mathbf{W}\mathbf{x}\|_2$, but attention scores $\mathbf{q}^\top\mathbf{k} = \mathbf{x}^\top\mathbf{W}_Q^\top\mathbf{W}_K\mathbf{x}$ are a *product of two learned matrices*. In trillion-parameter runs, $\mathbf{q}^\top\mathbf{k}$ drifted past $1{,}000$; rescaling $\mathbf{W}_Q, \mathbf{W}_K$ whenever the max attention logit exceeds $100$ prevents softmax saturation.
+::: {.col .fig .big}
+@fig:ch09-opt-muon-qk-clip
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Spectral Norm, Quintic, and RMS Scale"}

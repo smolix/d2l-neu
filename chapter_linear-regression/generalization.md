@@ -483,53 +483,68 @@ Fitting 20 polynomial weights to 20 noisy points from a cubic curve drives the t
 ::: {.slide title="Empirical Risk (Training Error) vs. Population Risk"}
 [Statistical Foundations]{.kicker}
 
-Under the **i.i.d. assumption**, both our finite training dataset $\mathcal{D} = \{(\mathbf{x}^{(i)}, y^{(i)})\}_{i=1}^n$ and future deployment examples are drawn independently from the same joint distribution $P(\mathbf{x}, y)$:
+::: {.cols .vc}
+::: {.col}
+$$R_{\textrm{emp}}[f] = \frac{1}{n} \sum_{i=1}^n l\bigl(f(\mathbf{x}^{(i)}), y^{(i)}\bigr), \quad R[f] = \mathbb{E}_{(\mathbf{x}, y) \sim P}\Bigl[l\bigl(f(\mathbf{x}), y\bigr)\Bigr]$$
 
-$$R_{\textrm{emp}}[f] = \frac{1}{n} \sum_{i=1}^n l\bigl(f(\mathbf{x}^{(i)}), y^{(i)}\bigr), \qquad R[f] = \mathbb{E}_{(\mathbf{x}, y) \sim P}\Bigl[l\bigl(f(\mathbf{x}), y\bigr)\Bigr]$$
+- **Empirical risk ($R_{\textrm{emp}}[f]$):** Average loss on the $n$ training examples $\mathcal{D}$; minimized during training.
+- **Population risk ($R[f]$):** Expected loss on unseen examples drawn from $P(\mathbf{x}, y)$; governs deployment accuracy.
+- **Generalization gap ($R[\hat{f}] - R_{\textrm{emp}}[\hat{f}]$):** Measures how much worse $\hat{f}$ performs on new data than on $\mathcal{D}$.
+:::
 
-- **Empirical risk ($R_{\textrm{emp}}[f]$):** The average loss on the $n$ observed training examples; this is the quantity our training algorithm minimizes.
-- **True / population risk ($R[f]$):** The expected loss on a fresh unseen example drawn from $P$; this is the quantity that governs deployment accuracy.
-- **Generalization gap ($R[\hat{f}] - R_{\textrm{emp}}[\hat{f}]$):** Measures how much worse the learned predictor $\hat{f}$ performs on unseen population data than on the sample that selected it.
+::: {.col .fig}
+@fig:ch02-lr-emp-vs-pop-risk
+:::
+:::
 :::
 
 ::: {.slide title="Why Training Error Is Optimistically Biased Downward"}
 [The Optimism of Empirical Risk Minimization]{.kicker}
 
-Why can we never trust $R_{\textrm{emp}}[\hat{f}]$ as an estimate of $R[\hat{f}]$?
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}\bigl[R_{\textrm{emp}}\bigr] = \sigma^2\Bigl(1 - \frac{p}{n}\Bigr), \qquad \mathbb{E}\bigl[R_{\textrm{in-sample}}\bigr] = \sigma^2\Bigl(1 + \frac{p}{n}\Bigr)$$
 
-- **Fixed function vs. data-selected function:** For a predictor $f$ fixed *before* observing $\mathcal{D}$, $R_{\textrm{emp}}[f]$ is an unbiased estimator of $R[f]$ with standard error $\sigma_l / \sqrt{n}$.
-- **Selection bias of optimization:** Our trained model $\hat{f} = \operatorname{argmin}_{f \in \mathcal{F}} R_{\textrm{emp}}[f]$ was explicitly chosen to minimize error *on $\mathcal{D}$*, latching onto accidental correlations between features and label noise $\boldsymbol{\epsilon}$.
-- **Exact optimism in linear least squares:** For a full-rank $n \times p$ design matrix $\mathbf{X}$ under homoscedastic noise $\sigma^2$, the projection matrix $\mathbf{H} = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ has trace $p$, yielding:
-  $$\mathbb{E}\bigl[R_{\textrm{emp}}\bigr] = \sigma^2\Bigl(1 - \frac{p}{n}\Bigr), \qquad \mathbb{E}\bigl[R_{\textrm{in-sample}}\bigr] = \sigma^2\Bigl(1 + \frac{p}{n}\Bigr)$$
+- **Selection bias of optimization:** Because $\hat{f}$ is chosen to minimize loss *on $\mathcal{D}$*, each fitted parameter absorbs $\sigma^2/n$ of training noise.
+- **Exact interpolation at $p = n = 20$:** Expected training MSE vanishes ($\sigma^2(1 - 20/20) = 0$) even when fitting pure noise!
+:::
 
-::: {.d2l-note .warn}
-Each fitted parameter absorbs $\sigma^2 / n$ of training noise: when $p = n = 20$, expected training MSE vanishes ($\sigma^2(1 - 20/20) = 0$) even on pure noise!
+::: {.col .fig}
+@fig:ch02-lr-erm-optimism
+:::
 :::
 :::
 
 ::: {.slide title="Polynomial Regression: Linear Fitting on Monomials"}
 [Controlled Capacity Benchmark]{.kicker}
 
-We can vary model capacity continuously without leaving linear least squares by mapping a scalar input $x \in [-1, 1]$ to the degree-$d$ Vandermonde feature vector $(1, x, x^2, \ldots, x^d)^\top \in \mathbb{R}^{d+1}$:
-
-$$\hat{y} = \sum_{j=0}^{d} w_j x^j, \qquad y = f^*(x) + \epsilon, \quad f^*(x) = 5 + 1.2x - 3.4x^2 + 5.6x^3$$
-
+::: {.cols .vc}
+::: {.col}
 @generalization-polynomial-curve-fitting-3
 
-- **Linear in the parameters $\mathbf{w}$:** Although $x^j$ is nonlinear in $x$, the prediction $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w}$ is linear in $\mathbf{w} \in \mathbb{R}^{d+1}$, so `np.linalg.lstsq` finds the exact global minimizer for every degree $d \in \{1, \ldots, 19\}$.
-- **Benchmark setup:** We draw $n = 20$ training points and $n' = 1{,}000$ test points on $[-1, 1]$ with Gaussian noise $\sigma = 0.1$ (irreducible MSE floor $\sigma^2 = 0.01$).
+- **Linear in the weights $\mathbf{w}$:** Mapping $x \in [-1, 1]$ to $[1, x, x^2, \ldots, x^d]$ turns degree-$d$ polynomial fitting into linear least squares $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w}$ on $n = 20$ points from $f^*(x) = 5 + 1.2x - 3.4x^2 + 5.6x^3$ ($\sigma = 0.1$).
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-vandermonde
+:::
+:::
 :::
 
 ::: {.slide title="Degrees 1, 3, and 19: Errors and Weight Explosion"}
 [Quantitative Diagnosis]{.kicker}
 
-Evaluating training MSE, held-out test MSE, and the largest coefficient magnitude $\|\hat{\mathbf{w}}\|_\infty$ across degrees $1$, $3$, and $19$ exposes the mechanism of overfitting:
-
+::: {.cols .vc}
+::: {.col}
 @!generalization-polynomial-curve-fitting-4
 
-- **Degree 1 (underfitting):** Both training and test MSE exceed $1.0$ (over $100\times$ the $\sigma^2 = 0.01$ noise floor) because a line cannot represent $x^2$ or $x^3$.
-- **Degree 3 (well-specified):** Both training and test MSE land near the irreducible floor $\sigma^2 = 0.01$, and the largest coefficient stays near the true cubic coefficient $5.6$.
-- **Degree 19 (overfitting & weight explosion):** Training MSE plunges near $0$, test MSE explodes by orders of magnitude, and coefficients blow up to $10^4$–$10^6$ with alternating signs to cancel nearly collinear monomials ($x^{17} \approx x^{19}$) at the 20 training points!
+- **Why weights explode at degree 19:** High powers $x^{17}$ and $x^{19}$ are nearly collinear on $[-1, 1]$, so least squares cancels huge alternating coefficients ($|\hat{w}_j| > 10^6$) to thread the 20 points.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-weight-explosion
+:::
+:::
 :::
 
 ::: {.slide title="The U-Shaped Test Error Curve Across Degrees 1 to 19"}
@@ -553,13 +568,18 @@ Sweeping polynomial degree $d$ from $1$ to $19$ contrasts the monotonic decline 
 ::: {.slide title="The Bias–Variance Decomposition of Expected Test Error"}
 [Theoretical Decomposition]{.kicker}
 
-Let $\hat{f}_{\mathcal{D}}(x)$ be the predictor trained on a random dataset $\mathcal{D}$, and let $\bar{f}(x) = \mathbb{E}_{\mathcal{D}}[\hat{f}_{\mathcal{D}}(x)]$ be the average predictor across independent draws of $\mathcal{D}$. For a test point $y = f^*(x) + \epsilon$ ($\mathbb{E}[\epsilon] = 0, \operatorname{Var}(\epsilon) = \sigma^2$):
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}_{\mathcal{D}, \epsilon}\Bigl[\bigl(y - \hat{f}_{\mathcal{D}}(x)\bigr)^2\Bigr] = \bigl(f^*(x) - \bar{f}(x)\bigr)^2 + \operatorname{Var}_{\mathcal{D}}\bigl(\hat{f}_{\mathcal{D}}(x)\bigr) + \sigma^2$$
 
-$$\mathbb{E}_{\mathcal{D}, \epsilon}\Bigl[\bigl(y - \hat{f}_{\mathcal{D}}(x)\bigr)^2\Bigr] = \underbrace{\bigl(f^*(x) - \bar{f}(x)\bigr)^2}_{\textrm{bias}^2(x)} + \underbrace{\mathbb{E}_{\mathcal{D}}\Bigl[\bigl(\hat{f}_{\mathcal{D}}(x) - \bar{f}(x)\bigr)^2\Bigr]}_{\textrm{variance}(x)} + \underbrace{\sigma^2}_{\textrm{irreducible noise}}$$
+- **Squared bias:** Systematic approximation error of the model family even with infinite data (dominates in rigid models $d = 1, 2$).
+- **Variance & noise $\sigma^2$:** Sensitivity of $\hat{f}_{\mathcal{D}}$ to random training sample noise (dominates in flexible models $d \gg 3$), above the irreducible floor $\sigma^2$.
+:::
 
-- **Squared bias $\bigl(f^*(x) - \bar{f}(x)\bigr)^2$:** Systematic approximation error of the model family even with infinite training ensembles (dominates in rigid, underfitted models).
-- **Variance $\operatorname{Var}_{\mathcal{D}}(\hat{f}_{\mathcal{D}}(x))$:** Sensitivity of the learned curve to random fluctuations in the finite training sample $\mathcal{D}$ (dominates in overparameterized, overfitted models).
-- **Irreducible noise $\sigma^2$:** Variance of the label $y$ itself around $f^*(x)$, setting the absolute floor on expected MSE.
+::: {.col .fig}
+@fig:ch02-lr-bias-var-bullseye
+:::
+:::
 :::
 
 ::: {.slide title="Empirical Bias² and Variance Across Polynomial Degrees"}
@@ -601,25 +621,33 @@ Across classical parametric model families, increasing capacity shifts error fro
 ::: {.slide title="Dataset Scale: More Data Cures Variance, Never Bias"}
 [Sample Complexity]{.kicker}
 
-What happens to our underfitted line ($d = 1$), well-specified cubic ($d = 3$), and overfitted degree-19 polynomial ($d = 19$) as we increase training sample size $n$ from $20$ to $1{,}000$?
-
+::: {.cols .vc}
+::: {.col}
 @!generalization-dataset-size
 
-- **Variance decays as $O(p / n)$:** Increasing $n$ from $20$ to $100$ slashes degree-19 test MSE by many orders of magnitude, and by $n = 1{,}000$ degree $19$ matches the cubic right at the $\sigma^2 = 0.01$ floor!
-- **Bias is invariant to $n$:** Even at $n = 1{,}000$, the degree-1 line remains stuck at MSE $\approx 1.5$–$2.0$; collecting more data never helps a model class that cannot represent the truth.
+- **Variance decays as $O(p / n)$:** Growing $n$ from $20$ to $1{,}000$ brings degree-19 test MSE right down to the $\sigma^2 = 0.01$ floor, whereas the underfitted degree-1 line stays stuck near $1.6$.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-sample-scale
+:::
+:::
 :::
 
 ::: {.slide title="Principled Model Selection: The Three-Way Data Split"}
 [Preventing Test-Set Leakage]{.kicker}
 
-How do we select hyperparameters—such as polynomial degree $d$, learning rate $\eta$, or regularization strength $\lambda$—without cheating?
+::: {.cols .vc}
+::: {.col}
+- **Never select on training error:** Training error always favors the most complex, memorization-prone model ($d = 19$).
+- **Never tune on the test set:** Repeatedly querying the test set fits hyperparameters to test-set noise.
+- **Three-way partition:** Fit $(\mathbf{w}, b)$ on the **training split**, select hyperparameters $(d, \eta, \lambda)$ on the **validation split**, and evaluate the winner **once** on the **test split**.
+:::
 
-- **Why never select on training error:** Training error decreases monotonically with nesting complexity and will always pick the most overfitted model ($d = 19$).
-- **Why never tune on the test set:** Choosing the best of $M$ models on the test set fits a single discrete hyperparameter to test-set noise, making the reported minimum test error optimistically biased.
-- **The three-way partition discipline:**
-  1. **Training split:** Fits model parameters $(\mathbf{w}, b)$ for each candidate hyperparameter.
-  2. **Validation split:** Evaluates candidate models and selects the winning hyperparameter.
-  3. **Test split:** Kept locked in a vault and evaluated **once** to report final generalization risk.
+::: {.col .fig .big}
+@fig:ch02-lr-three-way-split
+:::
+:::
 :::
 
 ::: {.slide title="K-Fold Cross-Validation When Data Are Scarce"}

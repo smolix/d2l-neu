@@ -1316,44 +1316,67 @@ Repeating the $1{,}000$-coin experiment $2{,}000$ times shows that the single-co
 ::: {.slide title="From Pointwise Concentration to Uniform Convergence"}
 [The Supremum Over a Function Class]{.kicker}
 
-For a loss $\ell(f(\mathbf{x}), y) \in [0, 1]$, let $\hat{R}_S(f) = \frac{1}{n}\sum_{i=1}^n \ell(f(\mathbf{x}_i), y_i)$ denote the **empirical risk** on an i.i.d. sample $S$ and $R(f) = \mathbb{E}[\ell(f(\mathbf{x}), y)]$ denote the true **population risk**:
-
+::: {.cols .vc}
+::: {.col}
 $$\bigl\lvert\hat{R}_S(\hat{f}) - R(\hat{f})\bigr\rvert \le \sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert$$
 
-- **Why pointwise bounds fail:** Hoeffding's inequality bounds $\lvert\hat{R}_S(f) - R(f)\rvert$ for one fixed $f$ chosen independent of $S$, not for the data-dependent winner $\hat{f}(S)$.
-- **The uniform convergence principle (Vapnik & Chervonenkis, 1971):** If the worst-case deviation across the *entire* candidate class $\mathcal{F}$ is at most $t$ with probability $\ge 1 - \delta$, then every function in $\mathcal{F}$—including whichever predictor $\hat{f}$ the learner selects—is simultaneously guaranteed to satisfy $\lvert\hat{R}_S(\hat{f}) - R(\hat{f})\rvert \le t$.
+- **Why pointwise bounds fail:** Because $\hat{f} = \operatorname{argmin}_{f \in \mathcal{F}} \hat{R}_S(f)$ depends on $S$, it systematically picks the largest downward dip in empirical risk.
+- **Uniform convergence remedy:** Bounding the supremum over all $f \in \mathcal{F}$ simultaneously certifies every candidate, including $\hat{f}(S)$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-uniform-sup
+:::
+:::
 :::
 
 ::: {.slide title="Finite Function Classes and the Union Bound"}
 [Logarithmic Cost of Search]{.kicker}
 
-When $\mathcal{F}$ is a finite pool of $\lvert\mathcal{F}\rvert$ candidate models fixed before drawing $S$, combining Hoeffding's bound $P(\lvert\hat{R}_S(f) - R(f)\rvert \ge t) \le 2e^{-2nt^2}$ with the union bound over all $f \in \mathcal{F}$ gives $P\bigl(\sup_{f \in \mathcal{F}} \lvert\hat{R}_S(f) - R(f)\rvert \ge t\bigr) \le 2\lvert\mathcal{F}\rvert e^{-2nt^2}$. Setting this total failure probability to $\delta$ proves that with probability $\ge 1 - \delta$:
+::: {.cols .vc}
+::: {.col}
+$$\sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert \le \sqrt{\frac{\log(2\lvert\mathcal{F}\rvert/\delta)}{2n}}$$
 
-$$\sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert \le \sqrt{\frac{\log(2\lvert\mathcal{F}\rvert/\delta)}{2n}}, \qquad n = \frac{\log(2/\delta) + \log\lvert\mathcal{F}\rvert}{2t^2}$$
+- **Logarithmic penalty for search:** Under Hoeffding's exponential tail, searching $\lvert\mathcal{F}\rvert$ fixed models on $n = 10{,}000$ examples widens the $95\%$ band gently from $\pm 1.36\%$ ($1$ model) to $\pm 2.38\%$ ($2{,}000$ models) and $\pm 2.96\%$ ($10^6$ models).
+- **Polynomial tails collapse:** Under Chebyshev's $1/n$ tail, a union bound over $2{,}000$ models gives a vacuous $\pm 100\%$ bound!
+:::
 
-- **Logarithmic penalty for model selection:** Searching among $\lvert\mathcal{F}\rvert$ candidates adds only $\log\lvert\mathcal{F}\rvert$ inside the square root. On $n = 10{,}000$ validation examples at $\delta = 0.05$, the half-width grows gently from $\pm 1.36\%$ ($1$ model) to $\pm 2.38\%$ ($2{,}000$ models) and $\pm 2.96\%$ ($10^6$ models).
-- **Why exponential tails are essential:** Applying the union bound to Chebyshev's polynomial tail $1/(4nt^2)$ yields $t = \sqrt{\lvert\mathcal{F}\rvert/(4n\delta)}$, which evaluates to a vacuous $t = 1.0$ ($100\%$) for $\lvert\mathcal{F}\rvert = 2{,}000$ on $n = 10{,}000$ examples!
+::: {.col .fig}
+@fig:ch35-prob-union-log-cost
+:::
+:::
 :::
 
 ::: {.slide title="Pitfall: Adaptive Leaderboards Break the Union Bound"}
 [Non-Adaptive vs. Adaptive Queries]{.kicker}
 
-The finite-class union bound rests on a hypothesis that public benchmark leaderboards routinely violate: **the candidate set $\mathcal{F}$ must be fixed before any holdout scores are observed**.
+::: {.cols .vc}
+::: {.col}
+- **Non-adaptive pool ($\sqrt{\log k / n}$):** Fixing all $k$ candidates *before* seeing holdout scores preserves the logarithmic union bound even for $k = 10^6$.
+- **Adaptive Blum–Hardt attack ($\sqrt{k / n}$):** Inspecting the leaderboard after each query lets an attacker submit $k$ random coin-flip vectors, keep those with error $\le 1/2$, and take their majority vote—driving holdout error to $\frac{1}{2} - \Omega(\sqrt{k/n})$ while true error stays $50\%$!
+:::
 
-- **Adaptive overfitting via sequential feedback:** When a practitioner inspects the test score of submission $k-1$ before designing submission $k$, the candidates depend on the holdout sample $S$ and the union bound no longer applies.
-- **The Blum–Hardt boosting attack (2015):** Without knowing anything about the task, submit $k$ uniformly random label vectors $\mathbf{y}^{(j)} \in \{0, 1\}^n$ to a leaderboard of size $n$, keep the roughly $k/2$ vectors whose reported error is $\le 1/2$, and submit their coordinate-wise majority vote.
-- **Square-root degradation ($\sqrt{k/n}$ vs. $\sqrt{\log k / n}$):** Even though the majority vote has true population error $50\%$ on fresh data, its holdout error drops to $\frac{1}{2} - \Omega\bigl(\sqrt{k/n}\bigr)$—growing linearly with $k$ inside the square root rather than as $\log k$.
+::: {.col .fig .big}
+@fig:ch35-prob-leaderboard-attack
+:::
+:::
 :::
 
 ::: {.slide title="Rademacher Complexity: Correlation with Coin-Flip Noise"}
 [Measuring Infinite Function Classes]{.kicker}
 
-For continuous parameter spaces (such as all linear classifiers in $\mathbb{R}^d$), $\lvert\mathcal{F}\rvert = \infty$ and the union bound is vacuous. **Rademacher complexity** measures the richness of an arbitrary class $\mathcal{F}$ operationally by asking how well $\mathcal{F}$ can correlate with pure coin-flip labels $\varepsilon_1, \dots, \varepsilon_n \stackrel{\mathrm{i.i.d.}}{\sim} \mathrm{Uniform}\{-1, +1\}$:
+::: {.cols .vc}
+::: {.col}
+$$\widehat{\mathfrak{R}}_S(\mathcal{F}) = \mathbb{E}_{\boldsymbol{\varepsilon}}\Biggl[\sup_{f \in \mathcal{F}} \frac{1}{n}\sum_{i=1}^n \varepsilon_i\,f(\mathbf{x}_i)\Biggr]$$
 
-$$\widehat{\mathfrak{R}}_S(\mathcal{F}) = \mathbb{E}_{\boldsymbol{\varepsilon}}\Biggl[\sup_{f \in \mathcal{F}} \frac{1}{n}\sum_{i=1}^n \varepsilon_i\,f(\mathbf{x}_i)\Biggr], \qquad \mathfrak{R}_n(\mathcal{F}) = \mathbb{E}_S\bigl[\widehat{\mathfrak{R}}_S(\mathcal{F})\bigr]$$
+- **Operational richness measure:** Measures how well $\mathcal{F}$ can align with random coin-flip signs $\varepsilon_i \in \{\pm 1\}$ on the observed inputs $S$.
+- **Three capacity tiers:** Singleton $\{f\}$ has $\widehat{\mathfrak{R}}_S = 0$; two constants $\{\pm 1\}$ have $\mathbb{E}|\bar{\varepsilon}| \approx \sqrt{2/(\pi n)}$; a shattering class in $[-1, 1]$ has $\widehat{\mathfrak{R}}_S = 1.0$.
+:::
 
-- **Intuition:** If $\mathcal{F}$ can align closely with random signs $\boldsymbol{\varepsilon}$ that carry zero true signal, it can memorize random label noise in real datasets just as easily.
-- **Worked example ($\mathcal{F} = \{+1, -1\}$):** With two constant functions, $\sup_{f \in \{\pm 1\}} \frac{1}{n}\sum_i \varepsilon_i f(\mathbf{x}_i) = \max(\bar{\varepsilon}, -\bar{\varepsilon}) = \lvert\bar{\varepsilon}\rvert$, giving $\widehat{\mathfrak{R}}_S = \frac{1}{2}$ at $n = 2$, $\frac{3}{8}$ at $n = 4$, and $\approx \sqrt{\frac{2}{\pi n}}$ for large $n$ ($0.0796$ at $n = 100$).
+::: {.col .fig}
+@fig:ch35-prob-rademacher-noise
+:::
+:::
 :::
 
 ::: {.slide title="The Rademacher Complexity Spectrum Across Classes"}
@@ -1385,14 +1408,18 @@ $$R(g) \le \hat{R}_S(g) + 2\,\mathfrak{R}_n(\mathcal{G}) + \sqrt{\frac{\log(1/\d
 ::: {.slide title="Proof by Symmetrization: Ghost Sample and Sign Swaps"}
 [The Three-Step Symmetrization Argument]{.kicker}
 
-How does correlation with coin flips bound $\Phi(S) = \sup_{g \in \mathcal{G}}\bigl(R(g) - \hat{R}_S(g)\bigr)$? We bound $\mathbb{E}_S[\Phi(S)] \le 2\,\mathfrak{R}_n(\mathcal{G})$ in three steps and concentrate $\Phi(S)$ around $\mathbb{E}_S[\Phi(S)]$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}_S\Bigl[\sup_{g \in \mathcal{G}}\bigl(R(g) - \hat{R}_S(g)\bigr)\Bigr] \le 2\,\mathfrak{R}_n(\mathcal{G})$$
 
-1. **Introduce an independent ghost sample $S' = (z'_1, \dots, z'_n)$:** Since $R(g) = \mathbb{E}_{S'}[\hat{R}_{S'}(g)]$ and $\sup_g \mathbb{E}_{S'}[\cdot] \le \mathbb{E}_{S'}[\sup_g \cdot]$, we replace the population risk with the empirical risk on $S'$:
-   $$\mathbb{E}_S\bigl[\Phi(S)\bigr] \le \mathbb{E}_{S, S'}\Biggl[\sup_{g \in \mathcal{G}} \frac{1}{n}\sum_{i=1}^n \bigl(g(z'_i) - g(z_i)\bigr)\Biggr]$$
-2. **Randomize exchangeable pair swaps ($z_i \leftrightarrow z'_i$):** Because $z_i$ and $z'_i$ are i.i.d., swapping them leaves the joint law of $(S, S')$ invariant while multiplying $g(z'_i) - g(z_i)$ by $-1$. Averaging over independent Rademacher signs $\varepsilon_i \in \{\pm 1\}$ therefore preserves the expectation:
-   $$= \mathbb{E}_{S, S', \boldsymbol{\varepsilon}}\Biggl[\sup_{g \in \mathcal{G}} \frac{1}{n}\sum_{i=1}^n \varepsilon_i\bigl(g(z'_i) - g(z_i)\bigr)\Biggr] \le 2\,\mathfrak{R}_n(\mathcal{G})$$
-   where the last step splits $\sup(A + B) \le \sup A + \sup B$ and uses $-\boldsymbol{\varepsilon} \stackrel{d}{=} \boldsymbol{\varepsilon}$.
-3. **McDiarmid concentration:** Changing one point $z_i \in S$ alters $\Phi(S)$ by at most $\frac{1}{n}$, so $P\bigl(\Phi(S) - \mathbb{E}[\Phi(S)] \ge t\bigr) \le e^{-2nt^2}$.
+- **1. Ghost sample $S'$:** Pull the expectation $R(g) = \mathbb{E}_{S'}[\hat{R}_{S'}(g)]$ outside the supremum by Jensen's inequality.
+- **2. Exchangeable sign swaps ($z_i \leftrightarrow z'_i$):** Multiply each difference $g(z'_i) - g(z_i)$ by an independent Rademacher sign $\varepsilon_i \in \{\pm 1\}$ and split the supremum into $2\,\mathfrak{R}_n(\mathcal{G})$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-symmetrization-ghost
+:::
+:::
 :::
 
 ::: {.slide title="Geometry of Rademacher Complexity for Linear Models"}
@@ -1426,13 +1453,18 @@ $$\mathbb{E}_{\boldsymbol{\varepsilon}}\Biggl[\Biggl\|\sum_{i=1}^n \varepsilon_i
 ::: {.slide title="Talagrand's Contraction Lemma and Margin Bounds"}
 [From Real-Valued Scores to Classification Risk]{.kicker}
 
-How do we pass from the complexity of real-valued linear scores $\langle\mathbf{w}, \mathbf{x}\rangle$ to the $0\text{--}1$ classification error $P(y\langle\mathbf{w}, \mathbf{x}\rangle \le 0)$?
+::: {.cols .vc}
+::: {.col}
+$$P\bigl(y\langle\mathbf{w}, \mathbf{x}\rangle \le 0\bigr) \le \hat{R}_\gamma(\mathbf{w}) + \frac{2Br}{\gamma\sqrt{n}} + \sqrt{\frac{\log(1/\delta)}{2n}}$$
 
-- **Talagrand's Contraction Lemma:** If $\phi_1, \dots, \phi_n : \mathbb{R} \to \mathbb{R}$ are each $L$-Lipschitz, then composing $\mathcal{F}$ with $\phi_i$ stretches its Rademacher complexity by at most $L$: $\widehat{\mathfrak{R}}_S(\phi \circ \mathcal{F}) \le L\,\widehat{\mathfrak{R}}_S(\mathcal{F})$.
-- **The $(1/\gamma)$-Lipschitz ramp loss:** The ramp loss $\phi_\gamma(u) = \min\bigl\{1, \max\{0, 1 - u/\gamma\}\bigr\}$ on the margin $u = y\langle\mathbf{w}, \mathbf{x}\rangle$ takes values in $[0, 1]$, upper-bounds the $0\text{--}1$ error $\mathbf{1}\{u \le 0\}$ everywhere, and has slope $1/\gamma$ on $[0, \gamma]$.
-- **Dimension-free margin bound:** Combining contraction ($L = 1/\gamma$) with $\widehat{\mathfrak{R}}_S(\mathcal{F}) \le Br/\sqrt{n}$ guarantees that with probability $\ge 1 - \delta$, for all $\|\mathbf{w}\|_2 \le B$:
-  $$P\bigl(y\langle\mathbf{w}, \mathbf{x}\rangle \le 0\bigr) \le \hat{R}_\gamma(\mathbf{w}) + \frac{2Br}{\gamma\sqrt{n}} + \sqrt{\frac{\log(1/\delta)}{2n}}$$
-  At $Br/\gamma = 10, n = 50{,}000, \delta = 0.05$, any zero-ramp-loss separator is certified to have true test error $\le 0.089 + 0.005 = 9.5\%$.
+- **Ramp loss $\phi_\gamma(u)$:** Upper-bounds the $0\text{--}1$ step loss everywhere and is $(1/\gamma)$-Lipschitz on $[0, \gamma]$.
+- **Talagrand contraction:** Multiplies linear Rademacher complexity $Br/\sqrt{n}$ by $1/\gamma$, proving that large margin $\gamma / B$ certifies low test error in any dimension $d$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-ramp-margin
+:::
+:::
 :::
 
 ::: {.slide title="Monte Carlo Verification of Dimension-Free Complexity"}
@@ -1459,12 +1491,18 @@ What happens when a model family is overparameterized ($p = 2n = 100$ standard G
 ::: {.slide title="Minimum-Norm Interpolation and the SVD Spectrum"}
 [Analytical Mechanism of Double Descent]{.kicker}
 
-To understand how an interpolating model generalizes, we analyze the minimum-norm linear interpolant $\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y}$ on an $n \times p$ random ReLU feature matrix $\boldsymbol{\Phi} = \mathrm{ReLU}(\mathbf{X}\mathbf{V}^\top)$ with singular value decomposition $\boldsymbol{\Phi} = \sum_{i=1}^{q} \sigma_i \mathbf{u}_i \mathbf{v}_i^\top$ ($q = \min(n, p)$):
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y} = \sum_{i=1}^{\min(n,p)} \frac{\langle\mathbf{u}_i, \mathbf{y}\rangle}{\sigma_i}\,\mathbf{v}_i$$
 
-- **Why the threshold $p = n$ explodes:** At $p = n$, the $n$ singular directions span all of $\mathbb{R}^n$ (zero training residual), but a square $n \times n$ random matrix has a tiny smallest singular value $\sigma_{\min} = \sigma_n \ll 1$. Dividing $\langle\mathbf{u}_n, \mathbf{y}\rangle$ by $\sigma_{\min}$ blows up both $\|\mathbf{w}\|_2$ and test predictions.
-- **Why $\|\mathbf{w}\|_2$ shrinks monotonically for $p > n$:** Padding a $p$-feature interpolant $\mathbf{w}_p$ with a $0$ on feature $p+1$ produces a valid $(p+1)$-feature interpolant of identical norm, so the minimum-norm solution satisfies $\|\mathbf{w}_{p+1}\|_2 \le \|\mathbf{w}_p\|_2$ on every trial.
+- **Why $p = n$ explodes:** At the interpolation threshold $p = n$, the residual vanishes and a square random matrix has a tiny singular value $\sigma_n \ll 1$, blowing up $1/\sigma_n$ and $\|\mathbf{w}\|_2$.
+- **Why $p \gg n$ recovers:** Adding features lifts $\sigma_n$ and monotonically shrinks the minimum-norm interpolant ($\|\mathbf{w}_{p+1}\|_2 \le \|\mathbf{w}_p\|_2$).
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-svd-interpolant
+:::
+:::
 :::
 
 ::: {.slide title="Simulating Double Descent on Random ReLU Features"}
@@ -1498,28 +1536,33 @@ Inspecting all nine diagnostics across $p \in \{15, 38, 40, 42, 50, 80, 400\}$ r
 ::: {.slide title="Bias–Variance Decomposition of Interpolating Fits"}
 [Clean Error vs. Noise Error]{.kicker}
 
-Why does memorizing noisy labels ($\mathbf{y} = \mathbf{y}_0 + \boldsymbol{\xi}$ with $\mathbb{E}[\boldsymbol{\xi}] = \mathbf{0}, \operatorname{Cov}(\boldsymbol{\xi}) = \sigma_\xi^2 \mathbf{I}_n$) cause catastrophic overfitting at $p = 40$ but almost no harm at $p = 400$? By linearity of $\boldsymbol{\Phi}^+$, $\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y}_0 + \boldsymbol{\Phi}^+\boldsymbol{\xi}$, splitting expected test MSE into two orthogonal terms:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}_{\boldsymbol{\xi}}\bigl[\mathrm{MSE}_{\mathrm{test}}\bigr] = \frac{1}{n_{\mathrm{te}}}\bigl\|\boldsymbol{\Phi}_{\mathrm{te}}\boldsymbol{\Phi}^+\mathbf{y}_0 - \mathbf{y}_{\mathrm{te}}\bigr\|_2^2 + \frac{\sigma_\xi^2}{n}\sum_{i=1}^n \frac{\|\boldsymbol{\Phi}_{\mathrm{te}}\mathbf{v}_i\|_2^2 / n_{\mathrm{te}}}{\|\boldsymbol{\Phi}\mathbf{v}_i\|_2^2 / n}$$
 
-$$\mathbb{E}_{\boldsymbol{\xi}}\bigl[\mathrm{MSE}_{\mathrm{test}}\bigr] = \underbrace{\frac{1}{n_{\mathrm{te}}}\bigl\|\boldsymbol{\Phi}_{\mathrm{te}}\boldsymbol{\Phi}^+\mathbf{y}_0 - \mathbf{y}_{\mathrm{te}}\bigr\|_2^2}_{\text{clean target approximation error}} + \underbrace{\frac{\sigma_\xi^2}{n_{\mathrm{te}}}\bigl\|\boldsymbol{\Phi}_{\mathrm{te}}\boldsymbol{\Phi}^+\bigr\|_F^2}_{\text{noise amplification error}}$$
+- **Linearity of $\boldsymbol{\Phi}^+$:** Writing $\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y}_0 + \boldsymbol{\Phi}^+\boldsymbol{\xi}$ separates noise-free target approximation error from label-noise amplification.
+- **Average energy ratio:** For $p \ge n$, the noise error equals $\sigma_\xi^2$ times the average test-to-train feature energy ratio across the $n$ singular directions.
+:::
 
-Expanding the Frobenius norm via the SVD $\boldsymbol{\Phi}^+ = \sum_{i=1}^n \sigma_i^{-1}\mathbf{v}_i \mathbf{u}_i^\top$ with $\sigma_i^2 = \|\boldsymbol{\Phi}\mathbf{v}_i\|_2^2$ rewrites the noise term for $p \ge n$ as an average energy ratio across the $n$ singular directions:
-
-$$\text{noise part} = \sigma_\xi^2 \cdot \frac{1}{n}\sum_{i=1}^n \frac{\|\boldsymbol{\Phi}_{\mathrm{te}}\mathbf{v}_i\|_2^2 / n_{\mathrm{te}}}{\|\boldsymbol{\Phi}\mathbf{v}_i\|_2^2 / n}$$
+::: {.col .fig}
+@fig:ch35-prob-clean-vs-noise
+:::
+:::
 :::
 
 ::: {.slide title="Why Overfitting Becomes Benign at Large Width (p >> n)"}
 [Test-to-Train Feature Energy Ratios]{.kicker}
 
-The energy-ratio formula explains when dividing by a small singular value $\sigma_i$ hurts test performance and when it cancels out:
+::: {.cols .vc}
+::: {.col}
+- **Threshold $p = n = 40$ (catastrophic):** $\mathbf{v}_n$ is an accidental pinch on the $40$ training points ($\sigma_{\min}^2/n \approx 10^{-5}$) while test inputs carry $O(1)$ energy, giving a $\sim 1{,}000\times$ energy ratio!
+- **Wide limit $p = 400$ (benign overfitting):** Label noise is absorbed into genuinely low-variance directions where test inputs *also* have small projections, keeping the mean energy ratio $\approx 0.9\times$.
+:::
 
-| Regime | Smallest Singular Value $\sigma_{\min}$ | Test/Train Ratio Along $\mathbf{v}_{\min}$ (`ratio_q`) | Mean Ratio Across All $i$ (`ratio`) | Resulting Noise Error |
-| :--- | :---: | :---: | :---: | :---: |
-| **Threshold ($p = n = 40$)** | $\approx 0.02$ (accidental pinch) | **$\sim 1{,}000\times$** | **$\sim 100\times$** | **$1.0\text{--}4.0$** ($>100\sigma_\xi^2$) |
-| **Near threshold ($p = 42$)** | $\approx 0.08$ | $\sim 40\times$ | $\sim 15\times$ | $\approx 0.15$ ($15\sigma_\xi^2$) |
-| **Overparameterized ($p = 80$)** | $\approx 0.70$ | $\sim 4\times$ | $\approx 2.0\times$ | $\approx 0.02$ ($2\sigma_\xi^2$) |
-| **Wide limit ($p = 400$)** | $\approx 2.80$ | **$\approx 2.0\times$** | **$\approx 0.9\times$** | **$\approx 0.009$** ($\le \sigma_\xi^2$) |
-
-- **Accidental vs. genuine low-energy directions:** At $p = n$, $\mathbf{v}_n$ is a direction where the $40$ training vectors happen to align poorly by chance while test inputs still carry normal energy ($\text{numerator} \gg \text{denominator}$). At $p = 400$, plenty of low-variance feature directions exist to absorb label noise where *test inputs also have tiny projections*, canceling the small denominator (**benign overfitting**; Bartlett et al., 2020).
+::: {.col .fig .big}
+@fig:ch35-prob-benign-directions
+:::
+:::
 :::
 
 ::: {.slide title="Diagnostic vs. Certificate: Limits of Uniform Bounds"}

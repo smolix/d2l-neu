@@ -1337,19 +1337,33 @@ Eigendecompositions<br>**eigenvectors · diagonalization & matrix powers · defe
 ::: {.slide title="How Libraries Compute Eigenvalues in Practice"}
 [Numerical Eigensolvers]{.kicker}
 
-- **Why Libraries Never Form $p(\lambda)$:** For $n \ge 5$, Abel's theorem rules out a general radical formula for polynomial roots, and even for moderate $n$, polynomial roots are catastrophically sensitive to floating-point rounding in the coefficients (Wilkinson's polynomial).
-- **Iterative Orthogonal Similarity (QR / Schur Algorithm):** Production solvers (`np.linalg.eig`, `eigh`) apply a sequence of orthogonal transformations $\mathbf{A}_{k+1} = \mathbf{Q}_k^\top\mathbf{A}_k\mathbf{Q}_k$ that preserve eigenvalues while driving $\mathbf{A}_k$ to upper-triangular (Schur) form:
-  $$\det(\mathbf{U} - \lambda\mathbf{I}) = \prod_{i=1}^n (u_{ii} - \lambda) = 0$$
-- **Reading Eigenvalues Off the Diagonal:** Because a triangular matrix displays its eigenvalues directly on its diagonal, driving off-diagonal entries to zero reveals the entire spectrum cleanly.
+::: {.cols .vc}
+::: {.col}
+- **Never Solve $p(\lambda) = 0$ Directly:** For $n \ge 5$, no closed-form radical formula exists, and polynomial roots are catastrophically sensitive to coefficient roundoff.
+- **Iterative Orthogonal Similarity (QR / Schur):** Solvers apply $\mathbf{A}_{k+1} = \mathbf{Q}_k^\top\mathbf{A}_k\mathbf{Q}_k$ to drive off-diagonal entries to zero while preserving eigenvalues.
+- **Triangular Readout:** Once upper-triangular, $\det(\mathbf{U} - \lambda\mathbf{I}) = \prod_i (u_{ii} - \lambda)$ displays all eigenvalues on the diagonal.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-schur-qr-loop
+:::
+:::
 :::
 
 ::: {.slide title="Diagonalization Turns Matrix Powers Into Scalars"}
 [Diagonalization]{.kicker}
 
-- **Three-Step Coordinate Change ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$):** When $\mathbf{A}$ has $n$ linearly independent eigenvectors forming the columns of an invertible matrix $\mathbf{V}$, stacking $\mathbf{A}\mathbf{v}_i = \lambda_i\mathbf{v}_i$ gives $\mathbf{A}\mathbf{V} = \mathbf{V}\boldsymbol{\Lambda} \implies \mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$.
-- **Telescoping Powers:** In $\mathbf{A}^k = (\mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1})\cdots(\mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1})$, interior $\mathbf{V}^{-1}\mathbf{V} = \mathbf{I}$ factors cancel, decoupling any vector $\mathbf{x} = \sum_i c_i\mathbf{v}_i$ ($\mathbf{c} = \mathbf{V}^{-1}\mathbf{x}$) into independent scalar powers:
-  $$\mathbf{A}^k\mathbf{x} = \mathbf{V}\boldsymbol{\Lambda}^k\mathbf{V}^{-1}\mathbf{x} = \sum_{i=1}^n c_i\,\lambda_i^k\,\mathbf{v}_i$$
-- **Closed-Form Surfer Trajectory:** With $\mathbf{c} = \mathbf{V}^{-1}(1, 0) = (\tfrac{1}{3}, \tfrac{2}{3})$, the distribution after $k$ clicks is $\mathbf{p}_k = \tfrac{1}{3}(1, 2) + \tfrac{2}{3}(\tfrac{1}{4})^k(1, -1)$, converging to $\boldsymbol{\pi} = (1/3, 2/3)$ as the error shrinks $4\times$ per click.
+::: {.cols .vc}
+::: {.col}
+- **Eigenbasis Factorization ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$):** Stacking $n$ independent eigenvectors into $\mathbf{V}$ gives $\mathbf{A}\mathbf{V} = \mathbf{V}\boldsymbol{\Lambda}$.
+- **Telescoping Powers:** Interior $\mathbf{V}^{-1}\mathbf{V} = \mathbf{I}$ cancel in $\mathbf{A}^k = \mathbf{V}\boldsymbol{\Lambda}^k\mathbf{V}^{-1}$, so $\mathbf{A}^k\mathbf{x} = \sum_{i=1}^n c_i\lambda_i^k\mathbf{v}_i$ ($\mathbf{c} = \mathbf{V}^{-1}\mathbf{x}$).
+- **Surfer Closed Form:** $\mathbf{p}_k = \tfrac{1}{3}(1, 2) + \tfrac{2}{3}(\tfrac{1}{4})^k(1, -1) \to (1/3, 2/3)$ as error divides by $4$ each click.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-diag-powers
+:::
+:::
 :::
 
 ::: {.slide title="Verifying the Closed-Form Eigen-Expansion"}
@@ -1367,23 +1381,33 @@ Fifty matrix multiplications $\mathbf{P}^{50}\mathbf{p}_0$ and the scalar power 
 ::: {.slide title="Similarity Invariants: Trace and Determinant"}
 [Similarity & Invariants]{.kicker}
 
-- **Basis Independence of the Spectrum:** Similar matrices $\mathbf{A}' = \mathbf{B}\mathbf{A}\mathbf{B}^{-1}$ represent the same linear map in different coordinates and share the exact same characteristic polynomial:
-  $$\det(\mathbf{B}\mathbf{A}\mathbf{B}^{-1} - \lambda\mathbf{I}) = \det\mathbf{B}\,\det(\mathbf{A} - \lambda\mathbf{I})\,\det\mathbf{B}^{-1} = \det(\mathbf{A} - \lambda\mathbf{I})$$
-- **Determinant Is the Product of Eigenvalues:** Factoring $\det(\mathbf{A} - \lambda\mathbf{I}) = \prod_{i=1}^n (\lambda_i - \lambda)$ over $\mathbb{C}$ and setting $\lambda = 0$ proves $\det\mathbf{A} = \lambda_1\lambda_2\cdots\lambda_n$ (for $\mathbf{P}$: $\det\mathbf{P} = \tfrac{1}{4} = 1 \cdot \tfrac{1}{4}$).
-- **Trace Is the Sum of Eigenvalues:** Using $\operatorname{tr}(\mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}) = \operatorname{tr}(\boldsymbol{\Lambda}\mathbf{V}^{-1}\mathbf{V}) = \operatorname{tr}(\boldsymbol{\Lambda})$ (or matching the $\lambda^{n-1}$ polynomial coefficient) proves $\operatorname{tr}\mathbf{A} = \lambda_1 + \cdots + \lambda_n$ (for $\mathbf{P}$: $\operatorname{tr}\mathbf{P} = \tfrac{1}{2} + \tfrac{3}{4} = \tfrac{5}{4} = 1 + \tfrac{1}{4}$).
-- **Quick $2 \times 2$ Shortcut:** Every $2 \times 2$ characteristic polynomial is simply $\lambda^2 - (\operatorname{tr}\mathbf{A})\lambda + \det\mathbf{A} = 0$.
+::: {.cols .vc}
+::: {.col}
+- **Basis Independence:** Similar matrices $\mathbf{A}' = \mathbf{B}\mathbf{A}\mathbf{B}^{-1}$ share the exact same characteristic polynomial $\det(\mathbf{A} - \lambda\mathbf{I}) = \prod_{i=1}^n (\lambda_i - \lambda)$.
+- **Trace & Determinant Identities:** $\operatorname{tr}\mathbf{A} = \sum_{i=1}^n \lambda_i$ and $\det\mathbf{A} = \prod_{i=1}^n \lambda_i$ hold for every square matrix.
+- **$2 \times 2$ Shortcut:** $p(\lambda) = \lambda^2 - (\operatorname{tr}\mathbf{A})\lambda + \det\mathbf{A} = 0$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-similarity-invariants
+:::
+:::
 :::
 
 ::: {.slide title="Distinct Eigenvalues Guarantee Independence"}
 [Multiplicity & Diagonalizability]{.kicker}
 
-::: {.d2l-note .rule}
-**Proposition (Independence Across Distinct Eigenvalues).** Eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_m$ corresponding to distinct eigenvalues $\lambda_1, \ldots, \lambda_m$ are linearly independent. Consequently, any $n \times n$ matrix with $n$ distinct eigenvalues is diagonalizable.
+::: {.cols .vc}
+::: {.col}
+- **Distinct Eigenvalues $\implies$ Independent Eigenvectors:** Minimal-dependence proof by applying $\mathbf{A} - \lambda_m\mathbf{I}$ shows $n$ distinct eigenvalues always diagonalize $\mathbf{A}$.
+- **Multiplicity Bound ($1 \le g(\lambda) \le a(\lambda)$):** Geometric multiplicity $g(\lambda) = \dim\ker(\mathbf{A} - \lambda\mathbf{I})$ never exceeds root multiplicity $a(\lambda)$.
+- **Diagonalizability Criterion:** $\mathbf{A}$ is diagonalizable over $\mathbb{C}$ iff $g(\lambda) = a(\lambda)$ for every eigenvalue $\lambda$.
 :::
 
-- **Proof by Minimal Dependence:** If a nontrivial relation $\sum_{i=1}^m c_i\mathbf{v}_i = \mathbf{0}$ existed with the fewest nonzero terms ($c_m \neq 0$), applying $\mathbf{A} - \lambda_m\mathbf{I}$ would annihilate $\mathbf{v}_m$ and leave $\sum_{i=1}^{m-1} c_i(\lambda_i - \lambda_m)\mathbf{v}_i = \mathbf{0}$ with nonzero coefficients $c_i(\lambda_i - \lambda_m) \neq 0$, a contradiction.
-- **Algebraic vs. Geometric Multiplicity:** For repeated eigenvalues, the root multiplicity $a(\lambda)$ in $p(\lambda)$ and the eigenspace dimension $g(\lambda) = \dim\ker(\mathbf{A} - \lambda\mathbf{I})$ always obey $1 \le g(\lambda) \le a(\lambda)$.
-- **Exact Diagonalizability Criterion:** An $n \times n$ matrix is diagonalizable over $\mathbb{C}$ if and only if $g(\lambda) = a(\lambda)$ for every eigenvalue $\lambda$.
+::: {.col .fig .big}
+@fig:ch33-la-multiplicity-gap
+:::
+:::
 :::
 
 ::: {.slide title="Defective Matrices: The Shear Lacks an Eigenbasis"}
@@ -1405,23 +1429,34 @@ Fifty matrix multiplications $\mathbf{P}^{50}\mathbf{p}_0$ and the scalar power 
 ::: {.slide title="Jordan Blocks Multiply λᵏ by a Polynomial in k"}
 [Jordan Normal Form]{.kicker}
 
-- **Replacing Missing Eigenvectors:** Over $\mathbb{C}$, every square matrix is similar to a block-diagonal matrix of *Jordan blocks* $\mathbf{J}_m(\lambda) = \lambda\mathbf{I} + \mathbf{N}$, where the superdiagonal shift $\mathbf{N}$ is nilpotent ($\mathbf{N}^m = \mathbf{0}$).
-- **Binomial Power Expansion ($m = 2$):** Since $\mathbf{I}$ and $\mathbf{N}$ commute and $\mathbf{N}^2 = \mathbf{0}$, $(\lambda\mathbf{I} + \mathbf{N})^k = \lambda^k\mathbf{I} + k\lambda^{k-1}\mathbf{N}$, introducing the polynomial factor $k\lambda^{k-1}$:
+::: {.cols .vc}
+::: {.col}
+- **Jordan Block ($\mathbf{J}_m(\lambda) = \lambda\mathbf{I} + \mathbf{N}$):** Nilpotent shift $\mathbf{N}^m = \mathbf{0}$ gives $\mathbf{J}_2(\lambda)^k = \lambda^k\mathbf{I} + k\lambda^{k-1}\mathbf{N}$.
+- **Transient Amplification:** At $\lambda = 0.99$, $k(0.99)^{k-1}$ climbs to $37.0$ at $k = 100$ before decaying.
 
 @mdl-eigendecomposition-jordan-power
+:::
 
-::: {.d2l-note .warn}
-**Transient Amplification at $\lambda = 0.99$:** Even though every eigenvalue of $\mathbf{J}_2(0.99)$ lies strictly inside the unit circle, the off-diagonal entry $k(0.99)^{k-1}$ climbs to $37.0$ at $k = 100$ before exponential decay takes over.
+::: {.col .fig}
+@fig:ch33-la-jordan-transient
+:::
 :::
 :::
 
 ::: {.slide title="Complex Eigenvalues Encode Rotation Plus Scaling"}
 [Complex Spectra in Real Matrices]{.kicker}
 
-- **Where Is the Rotation Hiding?** A planar rotation $\mathbf{R}_\theta$ has eigenvalues $e^{\pm i\theta} = \cos\theta \pm i\sin\theta$. More generally, if a real matrix $\mathbf{A}$ has a complex eigenpair $\mathbf{A}(\mathbf{u} + i\mathbf{v}) = (a + ib)(\mathbf{u} + i\mathbf{v})$ with $b \neq 0$, equating real and imaginary parts gives $\mathbf{A}\mathbf{u} = a\mathbf{u} - b\mathbf{v}$ and $\mathbf{A}\mathbf{v} = b\mathbf{u} + a\mathbf{v}$.
-- **Invariant 2D Plane:** In the real basis $\mathbf{B} = [\mathbf{v}\;\;\mathbf{u}]$, $\mathbf{A}$ acts as a rotation–scaling block of modulus $r = \sqrt{a^2 + b^2}$ and angle $\theta = \arg(a + ib)$:
-  $$\mathbf{B}^{-1}\mathbf{A}\mathbf{B} = \begin{bmatrix}a & -b \\ b & a\end{bmatrix} = r\begin{bmatrix}\cos\theta & -\sin\theta \\ \sin\theta & \cos\theta\end{bmatrix}$$
-- **Running Matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$:** With $\operatorname{tr}\mathbf{A} = 4$ and $\det\mathbf{A} = 5$, the eigenvalues are $2 \pm i = \sqrt{5}\,e^{\pm i\,26.6^\circ}$.
+::: {.cols .vc}
+::: {.col}
+- **Real Invariant Plane:** Splitting $\mathbf{A}(\mathbf{u} + i\mathbf{v}) = (a + ib)(\mathbf{u} + i\mathbf{v})$ into real and imaginary parts gives $\mathbf{B}^{-1}\mathbf{A}\mathbf{B} = r\mathbf{R}_\theta$ in basis $\mathbf{B} = [\mathbf{v}\;\;\mathbf{u}]$.
+- **Modulus & Angle:** Scales by $r = \sqrt{a^2 + b^2}$ and rotates by $\theta = \arg(a + ib)$.
+- **Running Matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$:** $\lambda = 2 \pm i = \sqrt{5}\,e^{\pm i\,26.6^\circ}$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-complex-rotation-block
+:::
+:::
 :::
 
 ::: {.slide title="Elliptical Spirals of the Running Matrix A"}
@@ -1439,26 +1474,33 @@ Extracting the real and imaginary parts of the complex eigenvector transforms $\
 ::: {.slide title="Three Elementary Behaviors of Real Square Matrices"}
 [Real Jordan Form Synthesis]{.kicker}
 
-Up to a real change of basis, every real square matrix is built from three elementary geometric actions, alone or in block combination:
+::: {.cols .vc}
+::: {.col}
+- **1. Distinct Real Eigenvalues:** Pure exponential scaling $\lambda_i^k$ along real axes (surfer $\mathbf{P}$, symmetric $\mathbf{S}$).
+- **2. Defective Jordan Block:** Polynomial-times-exponential $k\lambda^{k-1}$ drift or transient growth (shear $\mathbf{T}$, $\mathbf{J}_2(0.99)$).
+- **3. Complex Conjugate Pair:** Rotation–scaling $r^k\mathbf{R}_{k\theta}$ in an invariant 2D plane (running matrix $\mathbf{A}$).
+:::
 
-| Spectral Case | Canonical $2 \times 2$ Block | Behavior Under Repeated Powers $\mathbf{A}^k$ | Chapter 33 Example |
-| :--- | :--- | :--- | :--- |
-| **1. Distinct Real Eigenvalues** | $\begin{bmatrix}\lambda_1 & 0 \\ 0 & \lambda_2\end{bmatrix}$ | Pure exponential scaling $\lambda_i^k$ along independent real axes | Surfer $\mathbf{P}$ ($\lambda = 1, \tfrac{1}{4}$); Symmetric $\mathbf{S}$ ($\lambda = 3, 1$) |
-| **2. Defective Jordan Block** | $\begin{bmatrix}\lambda & 1 \\ 0 & \lambda\end{bmatrix}$ | Polynomial-times-exponential $\binom{k}{j}\lambda^{k-j}$; transient growth before decay | Shear $\mathbf{T} = \mathbf{J}_2(1)$ (linear drift); $\mathbf{J}_2(0.99)$ (peaks at $37$) |
-| **3. Complex Conjugate Pair** | $\begin{bmatrix}a & -b \\ b & a\end{bmatrix} = r\mathbf{R}_\theta$ | Spirals in an invariant 2D plane, scaling by $r^k$ and rotating by $k\theta$ | Running matrix $\mathbf{A}$ ($\lambda = 2 \pm i$, $r = \sqrt{5}$, $\theta = 26.6^\circ$) |
+::: {.col .fig .big}
+@fig:ch33-la-real-jordan-cases
+:::
+:::
 :::
 
 ::: {.slide title="The Spectral Theorem for Real Symmetric Matrices"}
 [Symmetric Matrices]{.kicker}
 
-Symmetry ($\mathbf{A} = \mathbf{A}^\top$) eliminates both complex eigenvalues and defective Jordan blocks, guaranteeing an *orthonormal* basis of real eigenvectors:
-
-::: {.d2l-note .rule}
-**Theorem (Spectral Theorem).** Every real symmetric matrix $\mathbf{A} = \mathbf{A}^\top$ has real eigenvalues and an orthonormal basis of real eigenvectors. Equivalently, $\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^\top$ with orthogonal $\mathbf{V}$ ($\mathbf{V}^\top\mathbf{V} = \mathbf{I}$) and real diagonal $\boldsymbol{\Lambda}$.
+::: {.cols .vc}
+::: {.col}
+- **Spectral Theorem ($\mathbf{A} = \mathbf{A}^\top \implies \mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^\top$):** Real eigenvalues $\boldsymbol{\Lambda}$ and orthonormal eigenvectors $\mathbf{V}^\top\mathbf{V} = \mathbf{I}$.
+- **Part (i) Real $\lambda$:** $\lambda\|\mathbf{v}\|^2 = \mathbf{v}^*\mathbf{A}\mathbf{v} = \bar{\lambda}\|\mathbf{v}\|^2 \implies \lambda \in \mathbb{R}$.
+- **Part (ii) Orthogonal $\mathbf{v}_i$:** $(\lambda - \mu)\mathbf{u}^\top\mathbf{v} = 0 \implies \mathbf{u} \perp \mathbf{v}$ for $\lambda \neq \mu$.
 :::
 
-- **Proof Part (i) — All Eigenvalues Are Real:** For any possibly complex eigenpair $\mathbf{A}\mathbf{v} = \lambda\mathbf{v}$ ($\mathbf{v} \neq \mathbf{0}$), real symmetry $\mathbf{A}^* = \mathbf{A}$ gives $\lambda\|\mathbf{v}\|^2 = \mathbf{v}^*\mathbf{A}\mathbf{v} = (\mathbf{A}\mathbf{v})^*\mathbf{v} = \bar{\lambda}\|\mathbf{v}\|^2 \implies \lambda = \bar{\lambda} \in \mathbb{R}$.
-- **Proof Part (ii) — Eigenvectors of Distinct Eigenvalues Are Orthogonal:** If $\mathbf{A}\mathbf{u} = \lambda\mathbf{u}$ and $\mathbf{A}\mathbf{v} = \mu\mathbf{v}$ with $\lambda \neq \mu$, then $\lambda(\mathbf{u}^\top\mathbf{v}) = (\mathbf{A}\mathbf{u})^\top\mathbf{v} = \mathbf{u}^\top(\mathbf{A}\mathbf{v}) = \mu(\mathbf{u}^\top\mathbf{v}) \implies (\lambda - \mu)\mathbf{u}^\top\mathbf{v} = 0 \implies \mathbf{u} \perp \mathbf{v}$.
+::: {.col .fig .big}
+@fig:ch33-la-spectral-theorem-proof
+:::
+:::
 :::
 
 ::: {.slide title="Inductive Proof & Geometry of the Spectral Theorem"}
@@ -1503,22 +1545,33 @@ Symmetry ($\mathbf{A} = \mathbf{A}^\top$) eliminates both complex eigenvalues an
 ::: {.slide title="The Rayleigh Quotient Bounds Quadratic Stretch"}
 [Variational Characterization]{.kicker}
 
-- **Quadratic Form per Unit Length:** For symmetric $\mathbf{A}$ with ordered eigenvalues $\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_n$, the *Rayleigh quotient* $R(\mathbf{x}) = (\mathbf{x}^\top\mathbf{A}\mathbf{x})/(\mathbf{x}^\top\mathbf{x})$ for unit $\mathbf{x}$ ($\|\mathbf{y}\| = \|\mathbf{V}^\top\mathbf{x}\| = 1$) is a convex weighted average of the eigenvalues:
-  $$R(\mathbf{x}) = \sum_{i=1}^n \lambda_i y_i^2 \in [\lambda_n, \lambda_1], \qquad \max_{\mathbf{x} \neq \mathbf{0}} R(\mathbf{x}) = \lambda_1, \quad \min_{\mathbf{x} \neq \mathbf{0}} R(\mathbf{x}) = \lambda_n$$
-- **Maximum Layer Stretch:** Applying Rayleigh to $\mathbf{A}^\top\mathbf{A}$ shows that $\max_{\mathbf{x} \neq \mathbf{0}} \|\mathbf{A}\mathbf{x}\|^2 / \|\mathbf{x}\|^2 = \lambda_{\max}(\mathbf{A}^\top\mathbf{A})$, the square of the spectral norm $\|\mathbf{A}\|_2$.
-- **Gradient Descent Step-Size Limit:** On $f(\mathbf{x}) = \tfrac{1}{2}\mathbf{x}^\top\mathbf{A}\mathbf{x}$ ($\mathbf{A} \succ 0$), gradient descent updates $\mathbf{x}_{k+1} = (\mathbf{I} - \eta\mathbf{A})\mathbf{x}_k$, scaling each eigen-coordinate by $1 - \eta\lambda_i$; convergence requires $|1 - \eta\lambda_i| < 1$ for all $i$, capping the learning rate at $\eta < 2/\lambda_{\max}$ with slowest contraction governed by $\lambda_{\max}/\lambda_{\min}$.
+::: {.cols .vc}
+::: {.col}
+- **Convex Average of Eigenvalues:** For unit $\mathbf{x}$ ($\mathbf{y} = \mathbf{V}^\top\mathbf{x}$), $R(\mathbf{x}) = \frac{\mathbf{x}^\top\mathbf{A}\mathbf{x}}{\mathbf{x}^\top\mathbf{x}} = \sum_{i=1}^n \lambda_i y_i^2 \in [\lambda_{\min}, \lambda_{\max}]$.
+- **Maximum Stretch:** On $\mathbf{A}^\top\mathbf{A}$, $\max_{\|\mathbf{x}\|=1}\|\mathbf{A}\mathbf{x}\|^2 = \lambda_{\max}(\mathbf{A}^\top\mathbf{A}) = \|\mathbf{A}\|_2^2$.
+- **Gradient Descent Limit:** On $\tfrac{1}{2}\mathbf{x}^\top\mathbf{A}\mathbf{x}$, $|1 - \eta\lambda_i| < 1$ requires $0 < \eta < 2/\lambda_{\max}$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-rayleigh-quotient
+:::
+:::
 :::
 
 ::: {.slide title="Sample Covariance Noise: Marchenko–Pastur Law"}
 [High-Dimensional Statistics]{.kicker}
 
-- **Do Pure-Noise Eigenvalues Cluster Near $1$?** Draw $n$ samples in $d$ dimensions with independent $\mathcal{N}(0, 1)$ coordinates (true covariance $\mathbf{I}_d$) and form $\mathbf{C} = \tfrac{1}{n}\mathbf{X}^\top\mathbf{X}$ at aspect ratio $c = d/n \le 1$.
-- **Marchenko–Pastur Bulk Interval:** As $n, d \to \infty$ with $c = d/n$ fixed, the eigenvalues of $\mathbf{C}$ spread across $[(1 - \sqrt{c})^2,\, (1 + \sqrt{c})^2]$:
+::: {.cols .vc}
+::: {.col}
+- **Marchenko–Pastur Bulk:** For $n$ pure-noise samples in $\mathbb{R}^d$ ($c = d/n$), eigenvalues of $\mathbf{C} = \tfrac{1}{n}\mathbf{X}^\top\mathbf{X}$ spread across $[(1 - \sqrt{c})^2, (1 + \sqrt{c})^2]$ ($[0.25, 2.25]$ at $c = 1/4$).
+- **Signal Detection:** Only eigenvalues escaping above $(1 + \sqrt{c})^2$ reflect genuine data structure.
 
 @mdl-eigendecomposition-sample-covariance-and-the-marchenko-pastur-law
+:::
 
-::: {.d2l-note}
-**Signal vs. Noise Bulk:** Even with $4\times$ more samples than features ($c = 1/4$), random sampling inflates the top sample variance to $2.25$ and shrinks the bottom to $0.25$. Only eigenvalues escaping above $(1 + \sqrt{c})^2$ reflect genuine data structure.
+::: {.col .fig}
+@fig:ch33-la-marchenko-pastur
+:::
 :::
 :::
 

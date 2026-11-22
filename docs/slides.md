@@ -318,7 +318,10 @@ the PDF; each label keeps its string as an `aria-label`.
   two directions / steps directly on the graph.
 - **Subscripts:** the unicode subscript `j` (ⱼ) is missing in many fonts
   and renders full-size — use SVG `<tspan baseline-shift="sub">` instead.
-- **Colors:** use the `C` tokens only; keep them in sync with the scss.
+- **Colors:** use the `C` and `TOKENS` tokens only; keep them in sync with the scss.
+- **Zero visual defects (`tools/build_module_diagrams.mjs`):** Before outlining `<text>` to paths, run `tools/build_module_diagrams.mjs diagrams/<module>.mjs`. It loads every diagram in headless Chromium and verifies **0 curve/line/arrow/circle/ellipse intersections with text** (`*-intersects-text`), **0 box borders cutting through text** (`rect-*-edge-cuts-text`), **0 text-on-text overlaps** (`text-overlap`), and **0 labels extending outside the `viewBox`** (`text-outside-viewbox`), then automatically runs `tools/figstyle/outline_svg.py` on the verified `img/auto/<id>.svg` files.
+- **Visual density & de-densification target ($\ge 65\%$ visual slides):** At least $65\text{--}75\%$ of slides in every section deck (and at least 3 slides in every chapter opener `index.md`) should include a visual diagram (`@fig:<id>`), chapter SVG figure, or output plot (`@!<cell-id>`). When adding a diagram to a slide, always trim redundant prose, tables, or multi-line equation blocks down to 2–3 concise bullets in the left column.
+- **Fullscreen view for mobile, iPad, and projectors:** `_d2l-slides-overlay.html` injects a Fullscreen toggle button into both the top navbar (`#d2l-nav-fullscreen`) and the bottom-left control cluster (`#d2l-deck-fullscreen`). Clicking either button triggers the native Fullscreen API (when supported) AND toggles `body.d2l-deck-fullscreen` (which hides `.d2l-deck-nav`, expands `.reveal-viewport` to `100dvh` for iOS Safari / mobile browsers, and calls `Reveal.layout()`).
 - **Standalone SVGs must be valid XML.** `render.mjs` wraps the font-import
   `<style>` in `<![CDATA[…]]>` so the committed SVG parses as an `<img>`
   (book figures) and via rsvg→PDF. The *slide* path inlines the SVG and

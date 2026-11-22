@@ -118,50 +118,51 @@ Mathematics for Deep Learning: Optimization<br>**smoothness · condition number 
 ::: {.slide title="Three Questions Every Training Loop Leaves Open"}
 [Motivation]{.kicker}
 
-Every neural network in this book is trained by iterating a gradient step, yet empirical tuning alone leaves the core mathematical questions unanswered:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Why is there a hard ceiling on the learning rate?** Even when the negative gradient points strictly downhill, a step exceeding $2/L$ overshoots the valley wall and increases the loss.
-- **Why do safe steps still make painfully slow progress?** When curvatures differ across directions by a factor of $\kappa = L/\mu$, the steepest direction caps the step size while the flattest direction crawls.
+- **Why is there a hard step-size ceiling?** Stepping past $2/L$ along the steepest direction overshoots the valley wall and increases the loss.
+- **Why do safe steps crawl?** When curvatures differ by $\kappa = L/\mu$, the steepest wall caps $\eta$ while the flattest direction stalls.
+- **Why does minibatch noise stop above $f^\star$?** Constant-step SGD settles into a stationary noise ball of loss $\propto \eta\sigma^2/b$.
 :::
 
-::: {.col}
-- **Why does minibatch noise stop training above the minimum?** Constant-step stochastic gradient descent settles into a stationary noise ball whose loss floor scales proportionally to $\eta \sigma^2 / b$.
-- **When is a stationary point actually optimal?** Convexity, KKT multipliers, and Lagrangian duality determine when local stationarity certifies a global minimum.
+::: {.col .fig .big}
+@fig:ch36-opt-three-questions
 :::
-:::
-
-::: {.d2l-note}
-This chapter supplies the complete proofs, geometric intuition, and numerical counterexamples behind the practical optimizers of Chapter 9.
 :::
 :::
 
 ::: {.slide title="The Running Benchmark: An Ill-Conditioned Valley"}
 [Unifying Thread]{.kicker}
 
-Throughout all eight sections, we test every theorem against the canonical ill-conditioned quadratic bowl $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ with eigenvalues $\mu = 1$, $L = 1000$, and condition number $\kappa = 1000$:
+::: {.cols .vc}
+::: {.col}
+We test every theorem against $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ ($\mu = 1, L = 1000, \kappa = 1000$):
 
-| Optimizer / Regime | Mathematical Mechanism | Steps to $10^{-6}$ Accuracy | Primary Bottleneck or Trade-Off |
-| :--- | :--- | :--- | :--- |
-| **Gradient Descent (§35.1)** | Fixed scalar step $\eta^\star = 2/(\mu + L)$ | $6{,}908$ steps | Linear scaling $O(\kappa \log(1/\epsilon))$ |
-| **Heavy-Ball Momentum (§35.1)** | Velocity memory equalizing mode moduli to $\sqrt{\beta^\star}$ | $315$ steps | Square-root scaling $O(\sqrt{\kappa}\log(1/\epsilon))$ |
-| **Nesterov Look-Ahead (§35.1)** | Gradient evaluated at look-ahead $\mathbf{x}_k + \beta \mathbf{v}_k$ | $508$ steps | Global $O(\sqrt{\kappa})$ guarantee beyond quadratics |
-| **Newton's Method (§35.2)** | Inverse-Hessian step $-(\nabla^2 f)^{-1}\nabla f$ | $1$ step | $O(d^2)$ memory, $O(d^3)$ solve, attracted to saddles |
-| **Constant-Step SGD (§35.4)** | Noisy gradient with $\eta = 10^{-3}$, $\sigma^2 = 1$ | Stalls at loss $7.5 \times 10^{-4}$ | Stationary noise floor $\propto \eta \operatorname{tr}\boldsymbol{\Sigma}/b$ |
-| **Diagonal Adam (§35.5)** | Per-coordinate RMS normalization $\hat{\mathbf{m}}_t / \sqrt{\hat{\mathbf{v}}_t}$ | $22$–$48$ steps (aligned) | Coordinate scale-invariant, but fails under $45^\circ$ rotation |
+- **First-order scaling:** Fixed-step GD takes $6{,}908$ steps ($O(\kappa)$), while Heavy-Ball and Nesterov momentum take $315$–$508$ steps ($O(\sqrt{\kappa})$).
+- **Preconditioning vs. rotation:** Exact Newton finishes in $1$ step and aligned Adam in $22$–$48$ steps, but $45^\circ$ rotation breaks diagonal scaling.
+- **Stochastic noise floor:** Constant-step SGD ($\eta = 10^{-3}, \sigma^2 = 1$) stalls at loss $7.5 \times 10^{-4}$.
+:::
+
+::: {.col .fig .big}
+@fig:ch36-opt-benchmark-valley
+:::
+:::
 :::
 
 ::: {.slide title="Architecture of Chapter 35: Three Core Parts"}
 [Chapter Roadmap]{.kicker}
 
-The chapter progresses from exact deterministic geometry to stochastic noise, constraints, and finite-precision arithmetic:
+::: {.cols .vc}
+::: {.col}
+- **Part I — Exact Gradients & Geometry (§§35.1–35.3):** $L$-smoothness descent lemma, $\kappa$ vs. $\sqrt{\kappa}$ momentum law, Newton/BFGS/trust regions, and convexity guarantees.
+- **Part II — Stochastic & Adaptive Methods (§§35.4–35.5):** The $1/b$ variance law, stationary noise floors, Robbins–Monro schedules, AdamW, and matrix preconditioning (K-FAC, Muon).
+- **Part III — Constraints, Duality & Numerics (§§35.6–35.8):** KKT conditions, projections, proximal ISTA, Fenchel duality, and floating-point conditioning.
+:::
 
-| Part & Sections | Core Mathematical Questions | Key Theorems & Deep Learning Connections |
-| :--- | :--- | :--- |
-| **I. Exact Gradients & Geometry** (§35.1–§35.3) | How fast can gradient and curvature methods converge, and when is a local minimum global? | $L$-smoothness descent lemma, $\kappa$ vs. $\sqrt{\kappa}$ momentum law, Newton/BFGS/trust regions, Jensen's inequality, PL condition |
-| **II. Stochastic & Adaptive Methods** (§35.4–§35.5) | How does minibatch noise interact with step schedules and per-coordinate preconditioners? | $1/b$ variance law, exact SGD noise floor, Robbins–Monro $1/k$ threshold, $O(1/\sqrt{K})$ budget rates, Adam scale invariance, AdamW, K-FAC & Muon |
-| **III. Constraints, Duality & Numerics** (§35.6–§35.8) | How do we optimize over feasible sets, certify lower bounds, and survive low-precision rounding? | Lagrange & KKT conditions, simplex projection (`sparsemax`), proximal ISTA, strong duality, Fenchel conjugates, Welford variance & matrix conditioning |
+::: {.col .fig .big}
+@fig:ch36-opt-chapter-architecture
+:::
+:::
 :::
 
 ::: {.slide title="Core Mathematical Quantities and Notation"}
@@ -192,22 +193,16 @@ The chapter progresses from exact deterministic geometry to stochastic noise, co
 ::: {.slide title="How to Navigate This Chapter"}
 [Study Guide]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The Two Essential Pillars (§35.1 & §35.3):** If you read only two sections, start with **§35.1 (Gradient Descent & Curvature)** for the $2/L$ stability ceiling and $\sqrt{\kappa}$ momentum speedup, and **§35.3 (Convexity)** for the tangent lower bound, Jensen's inequality, and global convergence rates.
-- **Modern Deep Learning Optimizers (§35.4 & §35.5):** Read these to understand why constant-step SGD stalls at a noise floor, how cosine and warmup–stable–decay schedules behave, why AdamW decouples weight decay into an $\ell_\infty$ box, and how Muon orthogonalizes layer updates.
+- **Essential Core (§35.1 & §35.3):** Start here for the $2/L$ step ceiling, $\sqrt{\kappa}$ momentum speedup, tangent lower bounds, Jensen's inequality, and global convergence rates.
+- **Deep Learning Workhorses (§35.4 & §35.5):** Read next for SGD noise floors, cosine/WSD schedules, Adam scale invariance, decoupled AdamW, and Muon.
+- **On-Demand Deep Dives (§35.2, §§35.6–35.8):** Consult for L-BFGS/trust regions, KKT/projections/ISTA, Fenchel duality, and `bf16` numerical stability.
 :::
 
-::: {.col}
-- **On-Demand Deep Dives (§35.2, §35.6–§35.8):**
-  - **§35.2 (Curvature Methods):** Consult when studying second-order preconditioning, L-BFGS, or saddle-point escape via trust regions.
-  - **§35.6–§35.7 (Constraints & Duality):** Consult for norm budgets, projections onto the simplex, soft-thresholding, SVMs, and water-filling.
-  - **§35.8 (Numerical Stability):** Consult whenever `bf16`/`fp16` training encounters `NaN`s, vanished updates, or ill-conditioned linear solves.
+::: {.col .fig .big}
+@fig:ch36-opt-study-roadmap
 :::
-:::
-
-::: {.d2l-note}
-**Up next (§35.1 Gradient Descent and Curvature):** Why the steepest descent direction needs a smoothness bound to guarantee finite-step progress.
 :::
 :::
 

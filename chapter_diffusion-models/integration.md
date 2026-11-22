@@ -575,11 +575,17 @@ Reverse-Time Integration: ODEs and Ancestral Chains<br>**continuity equation · 
 ::: {.slide title="Why Following a Velocity Field Recovers Mode Weights"}
 [Motivation]{.kicker}
 
-Section 17.2 trained networks whose outputs determine the marginal velocity $\mathbf{u}_t(\mathbf{x})$ and score $\nabla \log p_t(\mathbf{x})$ at every $t \in [0, 1]$. Why does integrating $\mathbf{u}_t$ backward from $\mathbf{x}_1 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ recover the exact mode weights $(0.5, 0.3, 0.2)$ that fixed-level Langevin chains missed?
+::: {.cols .vc}
+::: {.col}
+- **Fixed-level Langevin failure:** Local scores $\nabla\log p(\mathbf{x})$ keep $p$ stationary once reached, but offer zero global flux across the $10\text{--}12$ nat valleys separating modes.
+- **Continuous transport from a known prior:** Reverse-time integration transports a known prior $p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ continuously along $p_t$ down to $p_0$.
+- **Conservation of probability mass:** Because no trajectories are created or destroyed, the fraction of Gaussian starts landing in mode $k$ equals $\pi_k$.
+:::
 
-- **Fixed-level Langevin failure:** Local scores $\nabla \log p(\mathbf{x})$ keep $p$ stationary once reached, but offer no global flux across the $10$–$12$ nat valleys separating modes.
-- **Continuous transport from a known prior:** Instead of waiting for random thermal kicks to cross high barriers, reverse-time integration transports a known prior $p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ continuously along $p_t$ down to $p_0$.
-- **Conservation of probability mass:** Because no trajectories are created or destroyed, the fraction of Gaussian initial conditions landing in mode $k$ equals $\pi_k$ by mass conservation.
+::: {.col .fig .big}
+@fig:ch17-diff-transport-weights
+:::
+:::
 :::
 
 ::: {.slide title="Our Two Trained Predictors and the Exact Oracle"}
@@ -597,51 +603,69 @@ To separate discretization error from neural network approximation error, we ben
 ::: {.slide title="Conservation of Mass and the Continuity Equation"}
 [Probability Transport]{.kicker}
 
-When a cloud of particles with density $p_t(\mathbf{x})$ moves under a velocity field $\mathbf{u}_t(\mathbf{x})$, the rate of change of density inside any small volume equals the net inward mass flux $-\nabla \cdot (p_t \mathbf{u}_t)$:
+::: {.cols .vc}
+::: {.col}
+$$\frac{\partial p_t(\mathbf{x})}{\partial t} = -\nabla \cdot \big(p_t(\mathbf{x})\,\mathbf{u}_t(\mathbf{x})\big)$$
 
-$$\frac{\partial p_t(\mathbf{x})}{\partial t} = -\nabla \cdot \big(p_t(\mathbf{x})\,\mathbf{u}_t(\mathbf{x})\big) = -\sum_{i=1}^d \frac{\partial}{\partial x_i}\big(p_t(\mathbf{x})\,u_{t,i}(\mathbf{x})\big)$$
+- **Mass flux vector $\mathbf{J}_t = p_t(\mathbf{x})\mathbf{u}_t(\mathbf{x})$:** Measures probability mass crossing a unit surface per unit time; its negative divergence is the rate of density increase.
+- **Exact marginal transport theorem:** If $(p_t, \mathbf{u}_t)$ satisfy the continuity equation, particles starting from $\mathbf{x}_1 \sim p_1$ and evolving via $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ have exact marginal density $\mathbf{x}_t \sim p_t$ for all $t \in [0, 1]$.
+:::
 
-- **Mass flux vector $p_t(\mathbf{x})\mathbf{u}_t(\mathbf{x})$:** Measures probability mass crossing a unit surface per unit time.
-- **Exact marginal transport theorem:** If $(p_t, \mathbf{u}_t)$ satisfy the continuity equation for $t \in [0, 1]$, then particles initialized as $\mathbf{x}_1 \sim p_1$ and evolving via $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ backward from $t = 1$ to $t = 0$ have exact marginal density $\mathbf{x}_t \sim p_t$ at every instant $t$.
+::: {.col .fig}
+@fig:ch17-diff-continuity-flux
+:::
+:::
 :::
 
 ::: {.slide title="Proof: The Marginal Velocity Satisfies Continuity"}
 [From Conditional Clouds to Marginal Density]{.kicker}
 
-Why does the conditional expectation $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon \mid \mathbf{x}_t = \mathbf{x}]$ satisfy the continuity equation for the marginal density $p_t(\mathbf{x}) = \int p(\mathbf{x}_0)p_t(\mathbf{x} \mid \mathbf{x}_0)\,d\mathbf{x}_0$?
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}_{\mathbf{x}_0}\big[p_t(\mathbf{x} \mid \mathbf{x}_0)\,\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big] = p_t(\mathbf{x})\,\mathbf{u}_t(\mathbf{x})$$
 
-- **Step 1 — Conditional conservation:** Fix one clean point $\mathbf{x}_0$. Its Gaussian cloud $p_t(\mathbf{x} \mid \mathbf{x}_0) = \mathcal{N}(\alpha_t\mathbf{x}_0, \sigma_t^2\mathbf{I})$ is transported exactly by its conditional velocity $\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0) = \dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon$:
-  $$\partial_t p_t(\mathbf{x} \mid \mathbf{x}_0) = -\nabla \cdot \big(p_t(\mathbf{x} \mid \mathbf{x}_0)\,\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big)$$
-- **Step 2 — Averaging over $\mathbf{x}_0 \sim p$ with Bayes' rule:** Taking expectations over $\mathbf{x}_0$ and applying $p(\mathbf{x}_0)p_t(\mathbf{x} \mid \mathbf{x}_0) = p_t(\mathbf{x})p(\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x})$ factors $p_t(\mathbf{x})$ out of the flux:
-  $$\mathbb{E}_{\mathbf{x}_0}\big[p_t(\mathbf{x} \mid \mathbf{x}_0)\,\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big] = p_t(\mathbf{x})\,\underbrace{\mathbb{E}\big[\dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon \,\big|\, \mathbf{x}_t = \mathbf{x}\big]}_{\mathbf{u}_t(\mathbf{x})}$$
+- **Step 1 — Conditional conservation:** For each fixed $\mathbf{x}_0$, the Gaussian cloud $p_t(\mathbf{x} \mid \mathbf{x}_0)$ satisfies $\partial_t p_t(\mathbf{x} \mid \mathbf{x}_0) = -\nabla \cdot \big(p_t(\mathbf{x} \mid \mathbf{x}_0)\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big)$.
+- **Step 2 — Bayes' rule averaging:** Using $p(\mathbf{x}_0)p_t(\mathbf{x} \mid \mathbf{x}_0) = p_t(\mathbf{x})p(\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x})$ factors $p_t(\mathbf{x})$ out of the expectation, yielding $\partial_t p_t = -\nabla \cdot (p_t\mathbf{u}_t)$ by linearity!
+:::
 
-::: {.d2l-note}
-Because differentiation is linear, averaging the conditional fluxes yields $\partial_t p_t = -\nabla \cdot (p_t \mathbf{u}_t)$ directly!
+::: {.col .fig}
+@fig:ch17-diff-continuity-proof
+:::
 :::
 :::
 
 ::: {.slide title="Why ODE Trajectories Never Cross Conditional Lines"}
 [Geometry of the Probability-Flow ODE]{.kicker}
 
-A common misconception is that because conditional paths $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$ are straight lines, the trajectories of the marginal ODE $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ are also straight:
+::: {.cols .vc}
+::: {.col}
+$$\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}), \qquad t: 1 \to 0$$
 
-- **Conditional lines cross everywhere:** Every pair $(\mathbf{x}_0, \boldsymbol\epsilon)$ defines a straight chord, and chords from different modes intersect throughout $\mathbb{R}^d \times (0, 1)$.
-- **Marginal ODE trajectories never intersect:** Because $\mathbf{u}_t(\mathbf{x})$ assigns a single unique velocity vector to each spacetime point $(\mathbf{x}, t)$, Picard–Lindelöf uniqueness forbids two ODE trajectories from ever crossing.
-- **Curved deterministic bijection:** The **probability-flow ODE** (Song et al., 2021) bends trajectories around each other to define a smooth, invertible deterministic map between $\mathcal{N}(\mathbf{0}, \mathbf{I})$ and $p_0$:
-  $$\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}), \qquad \text{integrated from } t = 1 \text{ down to } t = 0$$
+- **Conditional lines cross everywhere:** Straight chords $\mathbf{x}_t = (1-t)\mathbf{x}_0 + t\boldsymbol\epsilon$ from different modes intersect throughout $\mathbb{R}^d \times (0, 1)$.
+- **Marginal ODE trajectories never intersect:** Because $\mathbf{u}_t(\mathbf{x})$ assigns a single velocity vector to each $(\mathbf{x}, t)$, Picard–Lindelöf uniqueness bends trajectories around intersections into a smooth bijection $\mathcal{N}(\mathbf{0}, \mathbf{I}) \leftrightarrow p_0$.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-noncrossing-ode
+:::
+:::
 :::
 
 ::: {.slide title="Euler's Method and the Single-Step Mean Collapse"}
 [Discretizing the Probability-Flow ODE]{.kicker}
 
-**Euler's method** divides $[0, 1]$ into $K$ equal steps of size $\Delta t = 1/K$ and steps backward against the velocity at $t_k = k/K$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{u}_1(\mathbf{x}_1) = \mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0] \quad \Longrightarrow \quad \mathbf{x}_1 - \mathbf{u}_1(\mathbf{x}_1) = \mathbb{E}[\mathbf{x}_0]$$
 
-$$\mathbf{x}_{t_{k-1}} = \mathbf{x}_{t_k} - \frac{1}{K}\,\mathbf{u}_{t_k}(\mathbf{x}_{t_k})$$
+- **Euler discretization:** $\mathbf{x}_{t_{k-1}} = \mathbf{x}_{t_k} - \frac{1}{K}\mathbf{u}_{t_k}(\mathbf{x}_{t_k})$ across $K$ steps.
+- **Why $K = 1$ collapses on general data:** At $t = 1$, $\mathbf{x}_1 = \boldsymbol\epsilon$ is independent of $\mathbf{x}_0$, so the posterior mean is the global data mean $\mathbb{E}[\mathbf{x}_0]$ and a single Euler jump sends **every starting point** to $\mathbb{E}[\mathbf{x}_0] = (-0.50, -0.70)$!
+:::
 
-- **When is $K = 1$ step exact?** Only when the dataset consists of a single point $\mathbf{x}_0$, where $\mathbf{u}_t(\mathbf{x}) = (\mathbf{x} - \mathbf{x}_0)/t$ has straight trajectories into $\mathbf{x}_0$.
-- **Why $K = 1$ collapses on general data:** At pure noise ($t = 1$), $\mathbf{x}_1 = \boldsymbol\epsilon$ is independent of $\mathbf{x}_0$, so the posterior $p(\mathbf{x}_0 \mid \mathbf{x}_1)$ equals the prior $p(\mathbf{x}_0)$ and the initial velocity is:
-  $$\mathbf{u}_1(\mathbf{x}) = \mathbb{E}\big[\boldsymbol\epsilon - \mathbf{x}_0 \,\big|\, \mathbf{x}_1 = \mathbf{x}\big] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$$
-- Taking one full Euler step of length $1$ yields $\mathbf{x}_0 = \mathbf{x}_1 - (\mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0]) = \mathbb{E}[\mathbf{x}_0]$, mapping **every starting point** to the global data mean $(-0.50, -0.70)$!
+::: {.col .fig}
+@fig:ch17-diff-euler-mean-collapse
+:::
+:::
 :::
 
 ::: {.slide title="Tracing Five Starts Under 1, 10, and 100 Euler Steps"}
@@ -659,14 +683,18 @@ Integrating the exact mixture field `mix.velocity` from five fixed initial point
 ::: {.slide title="Path-Agnostic Coordinates: Rescaling by α_t"}
 [Unifying ODE Integration Across Schedules]{.kicker}
 
-Taking uniform Euler steps in time $t$ performs poorly on schedules like VP where noise changes unevenly ($\sigma_{0.5} = 0.96 \to \sigma_{0.1} = 0.32$). Dividing by $\alpha_t$ puts every Gaussian path into canonical **variance-exploding coordinates** (Karras et al., 2022):
+::: {.cols .vc}
+::: {.col}
+$$\bar{\mathbf{x}}_t = \frac{\mathbf{x}_t}{\alpha_t} = \mathbf{x}_0 + \bar\sigma_t\,\boldsymbol\epsilon, \qquad \frac{d\bar{\mathbf{x}}}{d\bar\sigma} = \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$$
 
-$$\bar{\mathbf{x}}_t = \frac{\mathbf{x}_t}{\alpha_t} = \mathbf{x}_0 + \bar\sigma_t\,\boldsymbol\epsilon, \qquad \bar\sigma_t = \frac{\sigma_t}{\alpha_t} = e^{-\lambda_t / 2}$$
+- **Universal VE coordinates (Karras et al., 2022):** Dividing $\mathbf{x}_t$ by $\alpha_t$ with noise ratio $\bar\sigma_t = \sigma_t/\alpha_t = e^{-\lambda_t/2}$ absorbs the linear drift so every path obeys $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$.
+- **Path-agnostic Euler update (= DDIM at $\eta = 0$):** Stepping from $\bar\sigma_t$ to $\bar\sigma_s$ and multiplying by $\alpha_s$ gives $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$.
+:::
 
-- **Universal ODE in noise level $\bar\sigma$:** Along any conditional path, $\bar{\mathbf{x}}_t$ moves linearly in $\bar\sigma_t$ with slope $\boldsymbol\epsilon$. Averaging over the posterior gives the path-agnostic ODE:
-  $$\frac{d\bar{\mathbf{x}}}{d\bar\sigma} = \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$$
-- **One Euler step in $(\bar{\mathbf{x}}, \bar\sigma)$ (= DDIM update):** Using $\bar{\mathbf{x}}_t = \hat{\mathbf{x}}_0 + \bar\sigma_t\hat{\boldsymbol\epsilon}$, an Euler step from $\bar\sigma_t$ to $\bar\sigma_s$ is $\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\hat{\boldsymbol\epsilon} = \hat{\mathbf{x}}_0 + \bar\sigma_s\hat{\boldsymbol\epsilon}$. Multiplying by $\alpha_s$ restores the original coordinates:
-  $$\mathbf{x}_s = \alpha_s\,\hat{\mathbf{x}}_0 + \sigma_s\,\hat{\boldsymbol\epsilon}$$
+::: {.col .fig}
+@fig:ch17-diff-ve-coordinates
+:::
+:::
 :::
 
 ::: {.slide title="Implementing Path-Agnostic ODE Sampling"}
@@ -698,50 +726,48 @@ Running `ode_sample` on our trained linear-velocity network `ema_v` from $2{,}00
 ::: {.slide title="Disentangling Discretization Error from Network Error"}
 [Analyzing the 10-Step vs. 100-Step Runs]{.kicker}
 
-Comparing the trained velocity network against the exact `oracle` on the same $2{,}000$ initial noise points separates solver step error from model error:
+::: {.cols .vc}
+::: {.col}
+- **10 Euler steps (trained MLP vs. exact oracle):** Both contract within-mode spread identically ($0.45\text{--}0.46$ vs. $0.48$ true) and double strays ($2.6\text{--}3.0\%$)—proving the 10-step error is solver discretization, not network error!
+- **100 Euler steps:** Matches ground-truth mode weights ($[0.504, 0.302, 0.194]$), spread ($0.48$), and strays ($1.3\%$).
+:::
 
-| Run Configuration | Mode Weights | Stray Fraction ($>3s$) | Within-Mode Spread | Diagnosis |
-| :--- | :--- | :--- | :--- | :--- |
-| **Ground-truth data** ($2{,}000$ draws) | $[0.506, 0.300, 0.194]$ | $1.1\%$–$1.5\%$ | $0.48$–$0.49$ | *(Target reference)* |
-| **1 Euler step, network** | Mean $(-0.5, -0.7)$ | $100\%$ | — | Collapses to global data mean $\mathbb{E}[\mathbf{x}_0]$ |
-| **10 Euler steps, network** | $[0.504, 0.303, 0.193]$ | $\approx 3.0\%$ | **$0.45$** | Correct mode weights, but $2\times$ strays & **contracted spread** |
-| **10 Euler steps, exact oracle** | $[0.505, 0.303, 0.192]$ | $\approx 2.6\%$ | **$0.46$** | **Identical contraction:** 10-step error is solver discretization! |
-| **100 Euler steps, network** | $[0.504, 0.302, 0.194]$ | **$1.3\%$** | **$0.48$** | Matches ground-truth strays, spread, and weights |
+::: {.col .fig .big}
+@fig:ch17-diff-disentangle-error
+:::
+:::
 :::
 
 ::: {.slide title="DDPM Ancestral Sampling: First-Order Decomposition"}
 [Stochastic Reverse Markov Chain]{.kicker}
 
-Instead of solving a deterministic ODE, DDPM (Ho et al., 2020) steps backward from $t$ to $s < t$ on the VP path by sampling from the forward posterior $q(\mathbf{x}_s \mid \mathbf{x}_t, \hat{\mathbf{x}}_0)$ with step variance $\beta = 1 - \alpha_t^2/\alpha_s^2$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{x}_s \approx \underbrace{\Big[\mathbf{x}_t + \frac{\beta}{2}\nabla \log p_t + \sqrt{\beta}\,\mathbf{z}\Big]}_{\text{Langevin step } (h = \beta)} + \underbrace{\frac{\beta}{2}\big(\mathbf{x}_t + \nabla \log p_t\big)}_{\text{Flow ODE Euler step}}$$
 
-$$\mathbf{x}_s = \frac{\mathbf{x}_t + \beta\,\nabla \log p_t(\mathbf{x}_t)}{\sqrt{1 - \beta}} + \sqrt{\beta}\,\mathbf{z}, \qquad \mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+- **First-order expansion ($1/\sqrt{1-\beta} \approx 1 + \beta/2$):** Splitting the drift of DDPM's reverse step reveals two simultaneous updates.
+- **Structural insight:** Every ancestral step is **1 Euler step of the probability-flow ODE** (transporting $p_t \to p_s$) plus **1 Langevin MCMC step** (damping stray drift errors).
+:::
 
-- **First-order Taylor expansion ($1/\sqrt{1 - \beta} \approx 1 + \beta/2$):** Splitting the drift in half reveals two familiar updates operating simultaneously:
-  $$\mathbf{x}_s \approx \underbrace{\Big[\mathbf{x}_t + \frac{\beta}{2}\nabla \log p_t(\mathbf{x}_t) + \sqrt{\beta}\,\mathbf{z}\Big]}_{\text{Langevin MCMC step of size } h = \beta \text{ on } p_t} + \underbrace{\frac{\beta}{2}\big(\mathbf{x}_t + \nabla \log p_t(\mathbf{x}_t)\big)}_{\text{Euler step } -(t - s)\mathbf{u}_t \text{ of the VP flow ODE}}$$
-
-::: {.d2l-note}
-**Structural insight:** Every DDPM ancestral step is **one Euler step of the probability-flow ODE** (which transports $p_t \to p_s$) plus **one Langevin MCMC step** (which leaves $p_t$ invariant and pulls stray trajectories back toward high density)!
+::: {.col .fig}
+@fig:ch17-diff-ancestral-split
+:::
 :::
 :::
 
 ::: {.slide title="Continuous Time: Reverse SDE vs. Probability-Flow ODE"}
 [Anderson's Time-Reversal Theorem (1982)]{.kicker}
 
-As step size $\Delta t \to 0$, a forward diffusion SDE $d\mathbf{x} = \mathbf{f}(\mathbf{x}, t)\,dt + g(t)\,d\mathbf{W}$ (for VP: $\mathbf{f} = -\frac{1}{2}\beta(t)\mathbf{x}, g(t) = \sqrt{\beta(t)}$) admits two exact reverse-time processes from $t = 1$ to $t = 0$ that share identical marginal densities $p_t(\mathbf{x})$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. Reverse-Time SDE (Stochastic):**
-  $$d\mathbf{x} = \big[\mathbf{f}(\mathbf{x}, t) - g(t)^2\nabla_{\mathbf{x}} \log p_t(\mathbf{x})\big]\,dt + g(t)\,d\bar{\mathbf{W}}$$
-- Discretizing via Euler–Maruyama with $\beta = \beta(t)\Delta t$ yields DDPM's ancestral chain to first order.
-- Fresh Brownian noise $d\bar{\mathbf{W}}$ continuously mixes trajectories and damps accumulated score errors.
+$$d\mathbf{x} = \big[\mathbf{f}(\mathbf{x}, t) - g(t)^2\nabla_{\mathbf{x}} \log p_t(\mathbf{x})\big]\,dt + g(t)\,d\bar{\mathbf{W}}$$
+
+- **Reverse-Time SDE (stochastic):** Discretized by DDPM's ancestral chain; fresh Brownian noise $g(t)\,d\bar{\mathbf{W}}$ continuously mixes trajectories and damps score errors.
+- **Probability-Flow ODE (deterministic):** Drops $g\,d\bar{\mathbf{W}}$ and halves the score term ($g^2 \to \frac{1}{2}g^2$) to define an invertible bijection $\mathbf{x}_1 \leftrightarrow \mathbf{x}_0$ sharing the exact same marginals $p_t(\mathbf{x})$.
 :::
 
-::: {.col}
-- **2. Probability-Flow ODE (Deterministic):**
-  $$\frac{d\mathbf{x}}{dt} = \mathbf{f}(\mathbf{x}, t) - \frac{1}{2}g(t)^2\nabla_{\mathbf{x}} \log p_t(\mathbf{x}) = \mathbf{u}_t(\mathbf{x})$$
-- Drops the stochastic differential $g\,d\bar{\mathbf{W}}$ and halves the score coefficient $g^2 \to \frac{1}{2}g^2$.
-- Defines a reproducible, invertible bijection $\mathbf{x}_1 \leftrightarrow \mathbf{x}_0$ suitable for higher-order ODE solvers and exact likelihoods.
+::: {.col .fig}
+@fig:ch17-diff-sde-vs-ode
 :::
 :::
 :::

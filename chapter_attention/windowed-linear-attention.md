@@ -701,31 +701,29 @@ Windowed, Sparse, and Linear Attention<br>**sliding-window masks · multi-hop re
 ::: {.slide title="Why Fused Exact Attention Still Costs O(n²) Time"}
 [Motivation]{.kicker}
 
-FlashAttention eliminates the $O(n^2)$ score matrix in HBM, yet still evaluates every causal query–key tile and retains every past key and value in the generation cache:
+::: {.cols .vc}
+::: {.col}
+- FlashAttention eliminates the $O(n^2)$ score matrix in HBM, yet at $n = 32{,}768$ ($T = 256$ tile rows of $b = 128$) it still visits $T(T+1)/2 = \mathbf{32{,}896}$ tiles and caches all $32{,}768$ KV tokens!
+- To cut arithmetic below $\Theta(n^2 d)$ and bound generation memory, we must either **score fewer pairs** (windows: $511$ tiles) or **factorize the similarity kernel** (linear attention: $d_h \times d_v$ state).
+:::
 
-| Mechanism at $n = 32{,}768$ Tokens ($b = 128$ Tile Size, $T = 256$ Tile Rows) | $128 \times 128$ Tiles Visited | Asymptotic Work | KV Cache Tokens per Layer |
-| :--- | ---: | :---: | :---: |
-| **Dense Causal Attention** ($j \le i$) | $T(T+1)/2 = \mathbf{32{,}896}$ | $\Theta(n^2 d)$ | $n = 32{,}768$ |
-| **Sliding-Window Attention** ($w = 128$) | $2T - 1 = \mathbf{511}$ ($64\times$ fewer) | $\Theta(nw d)$ | $w = 128$ |
-| **Linear Attention** ($\phi(\mathbf{q})^\top \phi(\mathbf{k})$) | No pairwise tiles ($d_h \times d_v$ state) | $\Theta(n d d_h)$ | Fixed $d_h \times d_v$ matrix |
-
-::: {.d2l-note}
-To reduce arithmetic below $\Theta(n^2 d)$ and bound generation memory, we must modify the attention function itself—either by **scoring fewer pairs** (windows) or by **factorizing the similarity kernel** (linear attention).
+::: {.col .fig .big}
+@fig:ch10-attn-win-tile-wall
+:::
 :::
 :::
 
 ::: {.slide title="Two Architectural Routes to O(n) Attention"}
 [Design Trade-Offs]{.kicker}
 
-Both sub-quadratic strategies achieve linear $O(n)$ scaling in sequence length $n$, but they trade away different capabilities of dense softmax attention:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Route 1 — Sliding-Window Attention:** Restricts each query $i$ to its $w$ most recent keys ($i - w < j \le i$), keeping exact softmax sharpness within the local band at $O(nw)$ cost while relying on stacked layers or periodic global layers for long-range routing.
+- **Route 1 — Sliding-Window Attention:** Restricts each query $i$ to its $w$ most recent keys ($i - w < j \le i$), preserving exact softmax sharpness locally at $O(nw)$ cost.
+- **Route 2 — Linear Attention:** Replaces $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h})$ with a nonnegative feature map product $\phi(\mathbf{q})^\top\phi(\mathbf{k})$, collapsing all past keys/values into a fixed $d_h \times d_v$ state matrix.
 :::
 
-::: {.col}
-- **Route 2 — Linear Attention:** Replaces $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h})$ with an inner product of nonnegative feature maps $\phi(\mathbf{q})^\top\phi(\mathbf{k})$, collapsing all past keys and values into a fixed-size $d_h \times d_v$ recurrent state matrix at the expense of temperature sharpening.
+::: {.col .fig .big}
+@fig:ch10-attn-win-two-routes
 :::
 :::
 :::
@@ -744,29 +742,33 @@ A causal sliding window of width $w$ permits query $i$ to attend to key $j$ if a
 ::: {.slide title="Receptive Field Growth Across Stacked Window Layers"}
 [Multi-Hop Propagation]{.kicker}
 
-Just like stacked 1D convolutions, stacking $L$ sliding-window layers of width $w$ allows information to step up to $w - 1$ positions backward per layer, giving a theoretical receptive field of:
+::: {.cols .vc}
+::: {.col}
+- Stacking $L$ sliding-window layers of width $w$ steps up to $w - 1$ positions back per layer:
+  $$\textrm{Receptive Field}(L, w) = 1 + L(w - 1)$$
+- **Theoretical Reach vs. Effective Attenuation:** Reaching distance $\Delta$ requires $\lceil \Delta / (w - 1) \rceil$ hops across layers; under uniform window weights ($w = 4, L = 4$), a boundary token at $\Delta = 12$ arrives with weight $(1/4)^4 = 1/256$.
+:::
 
-$$\textrm{Receptive Field}(L, w) = 1 + L(w - 1)$$
-
-| Window Configuration | $L = 1$ Layer | $L = 2$ Layers | $L = 4$ Layers | $L = 32$ Layers |
-| :--- | ---: | ---: | ---: | ---: |
-| **Small Window ($w = 4$)** | $4$ tokens | $7$ tokens | $13$ tokens | $97$ tokens |
-| **Mistral 7B ($w = 4{,}096$, Jiang et al., 2023)** | $4{,}096$ tokens | $8{,}191$ tokens | $16{,}381$ tokens | **$131{,}041$ tokens** |
-
-- **Theoretical Reach vs. Effective Retrieval:** Reaching distance $\Delta$ requires $\lceil \Delta / (w - 1) \rceil$ sequential hops across layers. Under uniform window weights ($w = 4, L = 4$), a boundary token at $\Delta = 12$ arrives along a single 4-hop path with weight $(1/4)^4 = 1/256$ (vs. $1/13$ in one global layer)!
+::: {.col .fig}
+@fig:ch10-attn-win-receptive-field
+:::
+:::
 :::
 
 ::: {.slide title="Interleaving Windowed and Global Attention Layers"}
 [Hybrid Long-Context Architectures]{.kicker}
 
-To retain direct 1-hop global retrieval while capturing most of the compute and KV-cache savings of local windows, modern long-context transformers interleave $r$ windowed layers with $1$ full global layer:
+::: {.cols .vc}
+::: {.col}
+- Modern long-context transformers interleave $r$ windowed layers with $1$ full global layer:
+  $$\frac{\textrm{Hybrid Cache}}{\textrm{All-Global Cache}} = \frac{r \min(n, w) + n}{(r + 1)\,n} \;\xrightarrow{\;n \gg w\;}\; \frac{1}{r + 1}$$
+- **Gemma 3 ($r = 5, w = 1{,}024$):** Shrinks the KV cache to **$17.3\%$** at $n = 128\text{K}$ while guaranteeing a 1-hop global attention path every 6th layer!
+:::
 
-$$\frac{\textrm{Hybrid KV Cache}}{\textrm{All-Global KV Cache}} = \frac{r \min(n, w) + n}{(r + 1)\,n} \;\xrightarrow{\;n \gg w\;}\; \frac{1}{r + 1}$$
-
-| Gemma 3 Schedule ($r = 5$ windowed layers of $w = 1{,}024$ per $1$ global layer) | $n = 8{,}192$ | $n = 32{,}768$ | $n = 131{,}072$ | Asymptotic Limit ($n \to \infty$) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Relative KV-Cache Footprint** | **$27.1\%$** | **$19.3\%$** | **$17.3\%$** | **$1/6 \approx 16.7\%$** |
-| **Maximum Hops to Any Distant Token** | $1$ (every 6th layer) | $1$ | $1$ | $1$ |
+::: {.col .fig}
+@fig:ch10-attn-win-hybrid-schedule
+:::
+:::
 :::
 
 ::: {.slide title="Realizing O(nw) Cost via Blocked Band Evaluation"}
@@ -815,25 +817,33 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 ::: {.slide title="Linear Attention: Factorizing the Similarity Kernel"}
 [Factorized Kernels]{.kicker}
 
-Instead of restricting which pairs interact, **linear attention** (Katharopoulos et al., 2020) replaces $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h})$ with a factorized similarity kernel $K(\mathbf{q}, \mathbf{k}) = \phi(\mathbf{q})^\top \phi(\mathbf{k})$ using a nonnegative elementwise feature map $\phi: \mathbb{R}^{d_h} \to \mathbb{R}_+^{d_h}$:
+::: {.cols .vc}
+::: {.col}
+- **Linear attention** (Katharopoulos et al., 2020) replaces $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h})$ with $K(\mathbf{q}, \mathbf{k}) = \phi(\mathbf{q})^\top \phi(\mathbf{k})$ where $\phi(x) = \mathrm{elu}(x) + 1 > 0$:
+  $$\bigl(\phi(\mathbf{Q})\,\phi(\mathbf{K})^\top\bigr)\,\mathbf{V} \;=\; \phi(\mathbf{Q})\,\bigl(\phi(\mathbf{K})^\top \mathbf{V}\bigr)$$
+- **The Associativity Trick:** Computing $\phi(\mathbf{K})^\top \mathbf{V} \in \mathbb{R}^{d_h \times d_v}$ first reduces cost from $\Theta(n^2 d_h)$ to **$\Theta(n d_h d_v)$** without ever forming an $n \times n$ matrix!
+:::
 
-$$\bigl(\underbrace{\phi(\mathbf{Q})\,\phi(\mathbf{K})^\top}_{n \times n \;\textrm{matrix}}\bigr)\,\mathbf{V} \;=\; \phi(\mathbf{Q})\,\bigl(\underbrace{\phi(\mathbf{K})^\top \mathbf{V}}_{d_h \times d_v \;\textrm{matrix}}\bigr)$$
-
-- **The Associativity Trick:** Re-bracketing the product computes $\phi(\mathbf{K})^\top \mathbf{V} \in \mathbb{R}^{d_h \times d_v}$ first in $2n d_h d_v$ FLOPs, then multiplies by $\phi(\mathbf{Q})$ in another $2n d_h d_v$ FLOPs—reducing complexity from $\Theta(n^2 d_h)$ to **$\Theta(n d_h d_v)$** without ever forming an $n \times n$ matrix!
-- **Nonnegative Feature Map:** Setting $\phi(x) = \mathrm{elu}(x) + 1 > 0$ elementwise guarantees $\phi(\mathbf{q})^\top \phi(\mathbf{k}) > 0$ so attention weights remain nonnegative.
+::: {.col .fig}
+@fig:ch10-attn-win-associativity
+:::
+:::
 :::
 
 ::: {.slide title="Causal Linear Attention as a Fast-Weight RNN"}
 [Recurrent Matrix State]{.kicker}
 
-Under a causal mask ($s \le t$), factoring $\phi(\mathbf{q}_t)^\top$ out of the numerator and denominator sums turns causal linear attention into an exact recurrence:
+::: {.cols .vc}
+::: {.col}
+- Under a causal mask ($s \le t$), factoring $\phi(\mathbf{q}_t)^\top$ out of the sums turns causal linear attention into an exact recurrence:
+  $$\mathbf{o}_t^\top = \frac{\phi(\mathbf{q}_t)^\top \mathbf{S}_t}{\phi(\mathbf{q}_t)^\top \mathbf{z}_t + \epsilon}, \qquad \mathbf{S}_t = \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top$$
+- **Constant Generation State:** $(\mathbf{S}_t, \mathbf{z}_t)$ has fixed size $d_h d_v + d_h$ ($16.25\text{ KiB}$ in `float32` at $d_h = d_v = 64$) for any sequence length $n$!
+:::
 
-$$\mathbf{o}_t^\top = \frac{\sum_{s \le t} \phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_s)\,\mathbf{v}_s^\top}{\sum_{s \le t} \phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_s)} = \frac{\phi(\mathbf{q}_t)^\top \mathbf{S}_t}{\phi(\mathbf{q}_t)^\top \mathbf{z}_t + \epsilon}$$
-
-$$\mathbf{S}_t = \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top \in \mathbb{R}^{d_h \times d_v}, \qquad \mathbf{z}_t = \mathbf{z}_{t-1} + \phi(\mathbf{k}_t) \in \mathbb{R}^{d_h}$$
-
-- **Outer-Product Associative Memory:** At step $t$, the layer writes key–value pair $(\mathbf{k}_t, \mathbf{v}_t)$ into the state matrix $\mathbf{S}_t$ by adding the rank-1 outer product $\phi(\mathbf{k}_t)\mathbf{v}_t^\top$, and queries the memory via matrix–vector multiplication $\phi(\mathbf{q}_t)^\top \mathbf{S}_t$.
-- **Constant Generation Cache:** Unlike a softmax KV cache that grows as $O(n d_h)$, $(\mathbf{S}_t, \mathbf{z}_t)$ has fixed size $d_h d_v + d_h$ ($16.25\text{ KiB}$ in `float32` at $d_h = d_v = 64$) for any sequence length $n$!
+::: {.col .fig}
+@fig:ch10-attn-win-fast-weight-rnn
+:::
+:::
 :::
 
 ::: {.slide title="Parallel and Recurrent Linear Attention in Code"}
@@ -847,13 +857,17 @@ Because the state recurrence $\mathbf{S}_t = \sum_{s \le t} \phi(\mathbf{k}_s)\m
 ::: {.slide title="Chunked Linear Attention: Hardware-Friendly Training"}
 [Chunkwise Parallel Form]{.kicker}
 
-Why do production linear-attention kernels train in chunks of length $c$ (e.g., $c = 64$) rather than using `cumsum` or a token-by-token loop?
-
-- **Parallel `cumsum` Memory Trap:** Materializing $\mathbf{S}_t \in \mathbb{R}^{d_h \times d_v}$ at every step $t = 1, \ldots, n$ allocates $n d_h d_v$ floats ($256\text{ MiB}$ per head at $n = 16{,}384, d_h = d_v = 64$) and runs bandwidth-bound elementwise scans.
-- **Sequential Loop Underutilization:** Updating $\mathbf{S}_t$ one token at a time executes $n$ sequential rank-1 outer products without using GPU Tensor Cores.
-- **The Chunked Decomposition (Yang et al., 2024):** Split the sequence into $n/c$ chunks of length $c$; for a chunk starting at $t_0$ with pre-chunk state $(\mathbf{S}, \mathbf{z})$:
+::: {.cols .vc}
+::: {.col}
+- **Chunked Decomposition (Yang et al., 2024):** Split the sequence into $n/c$ chunks of length $c$ ($c = 64$); for a chunk starting at $t_0$ with pre-chunk state $(\mathbf{S}, \mathbf{z})$:
   $$\mathbf{o}_t^\top = \frac{\phi(\mathbf{q}_t)^\top \mathbf{S} + \sum_{t_0 \le s \le t} \big(\phi(\mathbf{q}_t)^\top\phi(\mathbf{k}_s)\big)\,\mathbf{v}_s^\top}{\phi(\mathbf{q}_t)^\top \mathbf{z} + \sum_{t_0 \le s \le t} \phi(\mathbf{q}_t)^\top\phi(\mathbf{k}_s) + \epsilon}$$
-  Both the inter-chunk contribution ($\mathbf{Q}_p \mathbf{S}$) and the intra-chunk contribution ($\mathrm{tril}(\mathbf{Q}_p \mathbf{K}_p^\top)\mathbf{V}_c$) run as dense Tensor Core GEMMs while storing only $n/c$ chunk states!
+- Runs both inter-chunk ($\mathbf{Q}_p \mathbf{S}$) and intra-chunk ($\mathrm{tril}(\mathbf{Q}_p \mathbf{K}_p^\top)\mathbf{V}_c$) terms as dense Tensor Core GEMMs while storing only $n/c$ chunk states!
+:::
+
+::: {.col .fig}
+@fig:ch10-attn-win-chunked-gemm
+:::
+:::
 :::
 
 ::: {.slide title="Implementing and Verifying Chunked Linear Attention"}
@@ -869,14 +883,16 @@ Why do production linear-attention kernels train in chunks of length $c$ (e.g., 
 ::: {.slide title="Three Execution Modes of Linear Attention Compared"}
 [Systems Comparison]{.kicker}
 
-| Execution Mode | Working State Memory | Dominant GPU Primitive | Sequential Steps | Optimal Workload |
-| :--- | :--- | :--- | :---: | :--- |
-| **Parallel (`cumsum`)** | $\Theta(n d_h d_v)$ ($256\text{ MiB}$ at $n=16\text{K}$) | Elementwise outer product + prefix scan | $O(\log n)$ | Very short sequences or debugging |
-| **Recurrent (token loop)** | **$\Theta(d_h d_v)$ ($16\text{ KiB}$ constant)** | Vector–matrix product $\phi(\mathbf{q}_t)^\top \mathbf{S}_t$ | $n$ | **Autoregressive token-by-token generation** |
-| **Chunked (chunk size $c$)** | **$\Theta(\frac{n}{c} d_h d_v + nc)$** | **Dense Tensor Core GEMMs** | $n/c$ | **High-throughput parallel training & prefill** |
+::: {.cols .vc}
+::: {.col}
+- **Parallel (`cumsum`):** Materializes all $n$ state matrices ($256\text{ MiB}$ at $n = 16\text{K}$); useful only for short debug sequences.
+- **Recurrent Loop:** Constant $16\text{ KiB}$ state ($O(1)$ per step); ideal for token-by-token generation.
+- **Chunked ($c = 64$):** Combines Tensor Core GEMMs with $64\times$ smaller state memory for fast parallel training and prefill.
+:::
 
-::: {.d2l-note}
-A standard `float32` softmax head ($d_h = d_v = 64$) caches $2 \times 64 \times 4 = 512\text{ B/token}$, exceeding the entire $16\text{ KiB}$ linear-attention state after just $33$ tokens!
+::: {.col .fig .big}
+@fig:ch10-attn-win-three-modes
+:::
 :::
 :::
 
@@ -900,14 +916,17 @@ Compressing an unbounded history of key–value pairs into a fixed $d_h \times d
 ::: {.slide title="Engineering Guide: Choosing an Attention Mechanism"}
 [Architectural Decision Guide]{.kicker}
 
-How do modern foundation models combine these mechanisms in practice?
+::: {.cols .vc}
+::: {.col}
+- **Short/medium contexts ($n \le 32\text{K}$):** Exact fused FlashAttention ($\Theta(n^2 d)$ time, full 1-hop recall).
+- **Long contexts ($n = 128\text{K}\text{--}1\text{M}$):** Interleaved sliding window + periodic global layers (e.g., Gemma 3 $5{:}1$ schedule cuts KV cache to $17\%$).
+- **Constant-state streaming:** Gated linear attention / modern RNNs with input-dependent decay gates $\gamma_t$ + hybrid softmax layers.
+:::
 
-| Architecture / Regime | Time & Cache Cost | 1-Hop Exact Recall? | Production Deployment Pattern |
-| :--- | :--- | :---: | :--- |
-| **Exact Fused Attention (FlashAttention)** | $\Theta(n^2 d)$ time, $O(nd)$ cache | **Yes (full context)** | Default for short-to-medium contexts ($n \le 8\text{K}$–$32\text{K}$) |
-| **Interleaved Sliding Window + Global** | $\Theta(nwd)$ local + $\frac{1}{r+1}\Theta(n^2 d)$ global | **Yes (via global layers)** | Standard for long-context LLMs (e.g., Gemma 3: $5$ local : $1$ global) |
-| **Plain Linear Attention ($\mathrm{elu}+1$)** | $\Theta(n d d_h)$ time, $O(d d_h)$ state | No (diffuse weights) | Not competitive alone on associative recall benchmarks |
-| **Gated Linear / Modern RNN + Hybrid Softmax** | $\Theta(n d d_h)$ time, $O(d d_h)$ state | **Yes (via hybrid layers)** | Adds input-dependent decay gates $\gamma_t$ + periodic softmax layers (e.g., MiniMax-01, Mamba-2/DeltaNet hybrids) |
+::: {.col .fig .big}
+@fig:ch10-attn-win-decision-guide
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Tiles, Caches, and Linear Kernels"}

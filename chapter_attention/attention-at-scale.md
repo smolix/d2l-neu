@@ -531,29 +531,34 @@ Attention at Scale: Memory Bandwidth, Online Softmax, and FlashAttention<br>**qu
 ::: {.slide title="Why Long-Context Attention Hits a Memory Wall"}
 [Motivation]{.kicker}
 
-Long-context language models process $32\text{K}$ to $128\text{K}+$ tokens in a single pass, where materializing an $n \times n$ score matrix per head exhausts GPU memory long before compute saturates:
+::: {.cols .vc}
+::: {.col}
+- **Quadratic Scratch Footprint ($8n^2$ Bytes/Head in FP32):** Materializing the $n \times n$ score and softmax weight matrices consumes $8\text{ MiB}$ at $n = 1{,}024$, $512\text{ MiB}$ at $n = 8{,}192$, and **$128\text{ GiB}$ per head** at $n = 131{,}072$!
+- **Training Multiplier:** Saving weights across all $144$ heads of GPT-2 small at $n = 8{,}192$ requires $36\text{ GiB}$ per sequence.
+- **The Breakthrough:** Online softmax (Milakov & Gimelshein, 2018; Rabe & Staats, 2021) and **FlashAttention** (Dao et al., 2022) compute *exact* attention in **$O(n)$ memory**.
+:::
 
-| Context Length $n$ | Score Pairs $n^2$ per Head | One `float32` Score Matrix ($4n^2$ B) | Score + Weight Buffers ($8n^2$ B) | All 144 Heads of GPT-2 Small (Training) |
-| ---: | ---: | ---: | ---: | ---: |
-| **$1{,}024$ (GPT-2)** | $1.05 \times 10^6$ | $4.0\text{ MiB}$ | $8.0\text{ MiB}$ | $0.56\text{ GiB}$ |
-| **$8{,}192$** | $6.71 \times 10^7$ | $256.0\text{ MiB}$ | $512.0\text{ MiB}$ | $36.0\text{ GiB}$ |
-| **$131{,}072$ ($128\text{K}$)** | $1.72 \times 10^{10}$ | **$64.0\text{ GiB}$** | **$128.0\text{ GiB}$** | **$9.0\text{ TiB}$** |
-
-::: {.d2l-note}
-For years, $O(n^2)$ memory was thought unavoidable for exact attention. Online softmax (Milakov & Gimelshein, 2018; Rabe & Staats, 2021) and **FlashAttention** (Dao et al., 2022) compute *exact* attention in **$O(n)$ memory**.
+::: {.col .fig .big}
+@fig:ch10-attn-scale-memory-wall
+:::
 :::
 :::
 
 ::: {.slide title="Counting FLOPs: When Scores Overtake Projections"}
 [Arithmetic Scaling]{.kicker}
 
-A multi-head self-attention layer of width $d$ with $H$ heads of width $d_h = d/H$ over $n$ tokens executes:
+::: {.cols .vc}
+::: {.col}
+- **Per-Layer FLOP Decomposition:**
+  $$\textrm{FLOPs} = 8 n d^2 + 4 n^2 d + O(H n^2)$$
+- **The Crossover Ratio:** Dividing quadratic score-and-mix work ($4n^2d$) by linear projection work ($8nd^2$) gives $n / (2d)$.
+- **Short vs. Long Contexts:** At $d = 768, n = 1{,}024$, projections dominate ($n/2d = 0.67$); at $d = 4{,}096, n = 131{,}072$, attention scoring and mixing cost **$16\times$** more FLOPs than all projections combined!
+:::
 
-$$\textrm{FLOPs} = \underbrace{8 n d^2}_{\textrm{Q, K, V, O projections}} \;+\; \underbrace{4 n^2 d}_{\textrm{scores } \mathbf{Q}\mathbf{K}^\top \textrm{ and mixing } \mathbf{A}\mathbf{V}} \;+\; O(H n^2)$$
-
-- **The Crossover Ratio:** Dividing the quadratic score-and-mix work by the linear projection work gives:
-  $$\frac{4 n^2 d}{8 n d^2} = \frac{n}{2d}$$
-- **Short vs. Long Context Regimes:** In GPT-2 small ($d = 768, n = 1{,}024$), $n / (2d) = 0.67$, so linear projections still dominate; at $d = 4{,}096$ and $n = 131{,}072$, $n / (2d) = 16$, so attention scoring and value mixing cost **$16\times$** more FLOPs than all four projections combined!
+::: {.col .fig}
+@fig:ch10-attn-scale-flop-crossover
+:::
+:::
 :::
 
 ::: {.slide title="Counting Memory: The 8n²-Byte Scratch Footprint"}
@@ -586,44 +591,50 @@ Measuring peak scratch memory (`d2l.peak_memory`) and wall-clock execution time 
 ::: {.slide title="Why Naive Softmax Seems to Require Two Passes"}
 [The Two-Pass Bottleneck]{.kicker}
 
-To compute row-wise softmax weights $\alpha_j = e^{a_j - m} / \sum_{j'=1}^n e^{a_{j'} - m}$ without floating-point overflow, standard softmax needs two global statistics over the entire row of $n$ keys:
-
-$$m = \max_{1 \le j \le n} a_j, \qquad s = \sum_{j=1}^n \exp(a_j - m), \qquad \mathbf{o} = \frac{1}{s}\sum_{j=1}^n \exp(a_j - m)\,\mathbf{v}_j$$
-
-- **Pass 1 (Row Maximum & Normalizer):** Scan all $n$ scores to find $m$ and accumulate the denominator $s$.
-- **Pass 2 (Value Accumulation):** Divide each $\exp(a_j - m)$ by $s$ and accumulate $\sum_j \alpha_j \mathbf{v}_j$.
+::: {.cols .vc}
+::: {.col}
+- **Two Global Statistics Needed:** Standard stable softmax requires the global row maximum $m = \max_j a_j$ and denominator $s = \sum_j \exp(a_j - m)$ before weighting any value $\mathbf{v}_j$.
 - **Why Must We Keep $m$?** Without subtracting $m$, $\exp(a_j)$ overflows `float16` above $a_j \approx 11.09$ and `float32` above $a_j \approx 88.7$.
-- **The Online Insight:** We can process keys in blocks and *rescale* running sums whenever a new block contains a larger maximum $m' > m$!
+- **The Online Insight:** Process keys in blocks and *rescale* running sums whenever a new block contains a larger maximum $m' > m$!
+:::
+
+::: {.col .fig .big}
+@fig:ch10-attn-scale-two-pass-vs-online
+:::
+:::
 :::
 
 ::: {.slide title="Deriving Blockwise Online Softmax"}
 [Online Softmax Recurrence]{.kicker}
 
-Maintain three running statistics per query across key blocks: the running maximum $m$, the unnormalized denominator sum $s = \sum_j e^{a_j - m}$, and the unnormalized output vector $\mathbf{o} = \sum_j e^{a_j - m}\mathbf{v}_j$. When a new block of keys $\{a_j, \mathbf{v}_j\}$ arrives:
+::: {.cols .vc}
+::: {.col}
+- **Three Running Statistics per Query:** Running maximum $m$, unnormalized sum $s = \sum_j e^{a_j - m}$, and unnormalized output $\mathbf{o} = \sum_j e^{a_j - m}\mathbf{v}_j$.
+- **Block Update Rule:**
+  $$m' = \max\!\big(m, \max_j a_j\big), \quad s' = s\,e^{m - m'} + \sum_j e^{a_j - m'}$$
+  $$\mathbf{o}' = \mathbf{o}\,e^{m - m'} + \sum_j e^{a_j - m'}\mathbf{v}_j$$
+- **Exact Output:** After all blocks, $\mathbf{o} / s = \mathrm{softmax}(\mathbf{a})\mathbf{V}$.
+:::
 
-$$m' = \max\!\big(m,\, \max_j a_j\big), \qquad s' = s\,\exp(m - m') + \sum_j \exp(a_j - m')$$
-
-$$\mathbf{o}' = \mathbf{o}\,\exp(m - m') + \sum_j \exp(a_j - m')\,\mathbf{v}_j$$
-
-- **Exact Multiplicative Repair:** Because $e^{a_{\textrm{old}} - m} \cdot e^{m - m'} = e^{a_{\textrm{old}} - m'}$, multiplying the old accumulators $s$ and $\mathbf{o}$ by $\exp(m - m') \le 1$ updates every earlier term to the new reference maximum $m'$ in $O(1)$ operations!
-- **Final Output:** After visiting all key blocks, dividing $\mathbf{o} / s$ yields the **exact** attention output $\mathrm{softmax}(\mathbf{a})\mathbf{V}$.
+::: {.col .fig}
+@fig:ch10-attn-scale-online-recurrence
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Online Softmax Across Two Blocks"}
 [Step-by-Step Numerical Trace]{.kicker}
 
-Trace one query against four keys arriving in two blocks of $c = 2$: Block 1 has scores $(1, 3)$ and Block 2 has scores $(5, 2)$:
+::: {.cols .vc}
+::: {.col}
+- **Block 1 (scores $1, 3$):** Sets $m_1 = 3$ and $s_1 = e^{-2} + e^0 \approx 1.1353$.
+- **Block 2 (scores $5, 2$):** Updates maximum to $m_2 = \max(3, 5) = 5$, rescales $s_1$ by $e^{3-5} = e^{-2}$, and adds $e^0 + e^{-3}$ to reach $s_2 \approx 1.2034$.
+- **Associative & Commutative:** Processing Block 2 before Block 1 keeps $m = 5$ ($e^{m-m'} = 1$) and yields the exact same sum $1.2034$.
+:::
 
-| Statistic / Operation | After Block 1: scores $(1, 3)$ | Block 2 Arrives: scores $(5, 2)$ | Final Exact Verification |
-| :--- | :--- | :--- | :--- |
-| **Running maximum $m$** | $m_1 = \max(1, 3) = \mathbf{3}$ | $m_2 = \max(3, 5, 2) = \mathbf{5}$ | Global max $\max(1,3,5,2) = 5$ |
-| **Rescale factor $e^{m - m'}$** | — | $e^{3 - 5} = e^{-2} \approx \mathbf{0.1353}$ | Shifts reference from $3 \to 5$ |
-| **Rescaled old sum $s \cdot e^{m-m'}$** | $0$ | $(e^{-2} + e^0) \cdot e^{-2} = e^{-4} + e^{-2} \approx 0.1537$ | Exact Block-1 terms relative to $5$ |
-| **New block contribution** | $e^{1-3} + e^{3-3} = e^{-2} + 1 \approx 1.1353$ | $e^{5-5} + e^{2-5} = 1 + e^{-3} \approx 1.0498$ | Exact Block-2 terms relative to $5$ |
-| **Updated running sum $s$** | $s_1 \approx \mathbf{1.1353}$ | $s_2 = 0.1537 + 1.0498 \approx \mathbf{1.2034}$ | $e^{-4} + e^{-2} + 1 + e^{-3} \approx \mathbf{1.2034}$ |
-
-::: {.d2l-note .rule}
-Online softmax is an **associative, commutative reduction**: processing Block 2 before Block 1 keeps $m = 5$ ($e^{m-m'} = 1$) and yields the exact same sum $1.2034$.
+::: {.col .fig .big}
+@fig:ch10-attn-scale-online-trace
+:::
 :::
 :::
 
@@ -672,38 +683,50 @@ Online softmax is an **associative, commutative reduction**: processing Block 2 
 ::: {.slide title="The Hardware Bottleneck: GPU HBM vs. On-Chip SRAM"}
 [GPU Memory Hierarchy]{.kicker}
 
-Why is a Python loop like `chunked_attention` still slow even though it uses linear memory? Because modern GPUs are **memory-bandwidth bound** on elementwise and softmax operations:
+::: {.cols .vc}
+::: {.col}
+- **Tensor Cores vs. HBM:** A GPU executes $\sim 165$–$1{,}000\text{ TFLOP/s}$ in 16-bit matrix arithmetic, while off-chip HBM transfers only $\sim 0.9$–$3.3\text{ TB/s}$ ($\sim 180$ FLOPs per byte transferred!).
+- **On-Chip SRAM ($\sim 19\text{ TB/s}$):** Registers and L1/shared memory are $10$–$20\times$ faster than HBM but hold only $\sim 128$–$256\text{ KiB}$ per SM.
+- **Why Python Chunking Is Still Slow:** Launching separate kernels reads and writes every $n \times c$ stripe to slow HBM.
+:::
 
-| Memory Tier / Compute Unit | Capacity (Typical GPU) | Bandwidth / Throughput | Role in Naive vs. Fused Attention |
-| :--- | :--- | :--- | :--- |
-| **Tensor Cores (FP16/BF16)** | — | $\sim 165$–$1{,}000\text{ TFLOP/s}$ | Executes $\mathbf{Q}\mathbf{K}^\top$ and $\mathbf{P}\mathbf{V}$ matrix multiplies |
-| **On-Chip SRAM (Registers/L1)** | $\sim 128$–$256\text{ KiB}$ per SM ($\sim 20$–$50\text{ MiB}$ total) | **$\sim 19\text{ TB/s}$** ($10$–$20\times$ HBM) | Holds active tiles $(m, s, \mathbf{o}, \mathbf{Q}_i, \mathbf{K}_j, \mathbf{V}_j)$ in **FlashAttention** |
-| **Off-Chip HBM (Main VRAM)** | $24$–$80\text{ GiB}$ | **$\sim 0.9$–$3.3\text{ TB/s}$** | Naive & Python-chunked attention read/write every score here! |
-
-::: {.d2l-note}
-At $165\text{ TFLOP/s}$ and $0.9\text{ TB/s}$ HBM bandwidth, the GPU can perform $\sim 180$ floating-point operations in the time it takes to transfer a single byte from HBM!
+::: {.col .fig .big}
+@fig:ch10-attn-scale-sram-hierarchy
+:::
 :::
 :::
 
 ::: {.slide title="Arithmetic Intensity of Naive Attention"}
 [Roofline Analysis]{.kicker}
 
-Naive attention launches separate kernels that move $n \times n$ matrices back and forth across slow HBM:
+::: {.cols .vc}
+::: {.col}
+- **Four HBM Passes Over $n^2$ Floats:** Naive attention writes $\mathbf{S}$ to HBM, reads $\mathbf{S}$ for softmax, writes $\mathbf{A}$ to HBM, and reads $\mathbf{A}$ to multiply by $\mathbf{V}$.
+- **Low Arithmetic Intensity:**
+  $$\textrm{Intensity} \;\xrightarrow{n \to \infty}\; \frac{d_h + d_v}{4}\;\textrm{FLOPs/byte (fp16)}$$
+- **Memory-Bound Regime:** For $d_h = d_v = 64$ in FP16, intensity is only $32\text{ FLOPs/byte}$—far below the $\sim 180\text{ FLOPs/byte}$ Tensor Core ridge point.
+:::
 
-- **Four HBM Passes Over $n^2$ Floats:** (1) Write score matrix $\mathbf{S} = \mathbf{Q}\mathbf{K}^\top/\sqrt{d_h}$ to HBM; (2) read $\mathbf{S}$ from HBM for softmax; (3) write weight matrix $\mathbf{A}$ to HBM; (4) read $\mathbf{A}$ from HBM to multiply by $\mathbf{V}$—moving $4n^2$ floats ($8n^2$ bytes in 16-bit, $16n^2$ bytes in 32-bit).
-- **Low Arithmetic Intensity:** Dividing total FLOPs $2n^2(d_h + d_v)$ by HBM bytes moved $4n^2 \cdot \text{bytes\_per\_float}$ gives:
-  $$\textrm{Arithmetic Intensity} \;\xrightarrow{\;n \to \infty\;}\; \frac{d_h + d_v}{8}\;\textrm{FLOPs/byte (fp32)} \quad\textrm{or}\quad \frac{d_h + d_v}{4}\;\textrm{FLOPs/byte (fp16)}$$
-- **Memory-Bound Regime:** For $d_h = d_v = 64$ in 16-bit, intensity is only $32\text{ FLOPs/byte}$—well below the $\sim 180$–$300\text{ FLOPs/byte}$ ridge point of modern Tensor Core GPUs.
+::: {.col .fig}
+@fig:ch10-attn-scale-hbm-passes
+:::
+:::
 :::
 
 ::: {.slide title="FlashAttention: Tiling Queries and Keys in SRAM"}
 [IO-Aware Kernel Fusion]{.kicker}
 
-**FlashAttention** (Dao et al., 2022) fuses $\mathbf{Q}\mathbf{K}^\top$, masking, online softmax, and $\mathbf{P}\mathbf{V}$ into a *single* GPU kernel that tiles both queries and keys of block size $b$:
+::: {.cols .vc}
+::: {.col}
+- **Zero HBM Score Traffic:** FlashAttention loads a query tile $\mathbf{Q}_i$ and $(m_i, s_i, \mathbf{O}_i)$ into on-chip SRAM, streams $(\mathbf{K}_j, \mathbf{V}_j)$ tiles from HBM, and writes $\mathbf{O}_i / s_i$ to HBM only once.
+- **HBM Traffic Bound:** Choosing max tile size $b \propto M / d_h$ cuts quadratic HBM traffic from $4n^2$ to $\Theta(n^2 d_h^2 / M)$ floats.
+- **$O(n)$ Backward Recomputation:** Saves only $\ell_i = m_i + \log s_i$ ($1$ float/query) and recomputes $\alpha_{ij} = \exp(a_{ij} - \ell_i)$ on chip during backprop!
+:::
 
-- **Zero HBM Score Traffic:** An outer loop loads a query tile $\mathbf{Q}_i \in \mathbb{R}^{b \times d_h}$ into fast on-chip SRAM along with $(m_i, s_i, \mathbf{O}_i)$; an inner loop streams key–value tiles $(\mathbf{K}_j, \mathbf{V}_j)$ from HBM, updates $(m_i, s_i, \mathbf{O}_i)$ entirely in SRAM, and writes $\mathbf{O}_i / s_i$ to HBM only once at the end.
-- **HBM Traffic Bound:** Choosing the largest tile $b \propto M / d_h$ that fits in SRAM of size $M$ cuts quadratic HBM traffic from $4n^2$ floats down to $\Theta(n^2 d_h^2 / M)$ floats (a $4\times$ to $16\times$ traffic reduction).
-- **$O(n)$ Backward Pass via Log-Normalizer Recomputation:** Instead of saving the $n \times n$ attention matrix for backpropagation, the forward pass saves only the single scalar $\ell_i = m_i + \log s_i$ per query ($O(n)$ memory) and reconstructs weights $\alpha_{ij} = \exp(a_{ij} - \ell_i)$ on chip during the backward pass!
+::: {.col .fig .big}
+@fig:ch10-attn-scale-flash-tiling
+:::
+:::
 :::
 
 ::: {.slide title="Benchmarking Fused FlashAttention vs. Naive Attention"}
@@ -727,17 +750,15 @@ Comparing `naive`, `fused` (causal), and `fused, no mask` separates two distinct
 ::: {.slide title="What Fused Kernels Solve—and What Remains O(n²)"}
 [Architectural Perspective]{.kicker}
 
-FlashAttention is now the default implementation of exact attention in every modern LLM training and inference stack, but it is crucial to distinguish what it changes from what it leaves intact:
+::: {.cols .vc}
+::: {.col}
+- **What FlashAttention solves:** Eliminates the $\Theta(n^2)$ HBM score and weight matrices, reducing peak scratch memory to $\Theta(n d_h)$ and HBM traffic to $\Theta(n^2 d_h^2 / M)$.
+- **What remains $\Theta(n^2)$:** Total arithmetic FLOPs still scale as $\Theta(n^2 d)$, and the autoregressive KV cache still grows as $O(n d)$—motivating **sliding windows** and **linear attention** (§10.6).
+:::
 
-| Resource / Property | Naive Materialized Attention | Python `chunked_attention` | Fused **FlashAttention** |
-| :--- | :--- | :--- | :--- |
-| **Mathematical Function** | Exact $\mathrm{softmax}(\mathbf{Q}\mathbf{K}^\top/\sqrt{d_h})\mathbf{V}$ | Exact (up to fp round-off) | Exact (up to fp round-off) |
-| **Peak Working Memory** | $\Theta(n^2)$ ($8n^2$ B in fp32) | $\Theta(nc)$ (linear in $n$) | **$\Theta(n d_h)$ (linear in $n$)** |
-| **Quadratic HBM Traffic** | $4n^2$ floats moved | $2n^2 + O(n^2 d_h / c)$ floats | **$\Theta(n^2 d_h^2 / M)$ floats** (in SRAM) |
-| **Total Arithmetic FLOPs** | $\Theta(n^2 d_h)$ | $\Theta(n^2 d_h)$ | **$\Theta(n^2 d_h)$ ($4\times$ per $2\times$ length)** |
-
-::: {.d2l-note}
-Removing the $\Theta(n^2 d)$ arithmetic itself requires changing the attention function—via **sliding windows** or **linear attention** (§10.6).
+::: {.col .fig .big}
+@fig:ch10-attn-scale-solved-vs-open
+:::
 :::
 :::
 
@@ -762,12 +783,15 @@ Work through these three systems and algorithmic questions:
 ::: {.slide title="Summary: The Computational Cost of Attention"}
 [Key Takeaways]{.kicker}
 
-| Concept / Algorithm | Mathematical Formula / Bound | Scaling with Length $n$ | Systems Impact |
-| :--- | :--- | :--- | :--- |
-| **Layer FLOP Count** | $8nd^2 + 4n^2d$ | Crossover at $n = 2d$ ($\approx 6d$ with FFN) | Projections dominate short contexts; scores dominate long contexts |
-| **Naive Scratch Memory** | $2 \times n^2 \times \text{sizeof(float)}$ per head | $\Theta(n^2)$ ($64\text{ GiB}$ at $n=128\text{K}$, fp32) | Exhausts GPU VRAM at long contexts before compute saturates |
-| **Arithmetic Intensity** | $\to \dfrac{d_h + d_v}{4}$ FLOPs/byte (fp16) | $O(1)$ independent of $n$ | Naive attention is severely HBM-bandwidth bound |
-| **Online Softmax Update** | $s' = s e^{m-m'} + \sum_j e^{a_j-m'}$ | Processes $n \times c$ stripes in $O(nc)$ memory | Exact one-pass softmax via $e^{m-m'}$ rescaling |
-| **Parallel State Merge** | Associative & commutative on $(m_B, s_B, \mathbf{o}_B)$ | $O(\log(n/c))$ parallel tree depth | Enables FlashDecoding across long KV caches during generation |
-| **FlashAttention** | Tiled SRAM loop + save $\ell = m + \log s$ | **$\Theta(n)$ memory**, $\Theta(n^2 d_h^2/M)$ HBM IO | Default exact attention kernel; $3$–$10\times$ faster, zero $n \times n$ storage |
+::: {.cols .vc}
+::: {.col}
+- **The $O(n^2)$ HBM Wall:** Naive attention allocates $8 H n^2$ bytes ($64\text{ GiB}$ at $n = 128\text{K}$) and is severely HBM-bandwidth bound.
+- **Online Softmax Recurrence:** Updates running $(m, s, \mathbf{o})$ in one streaming pass via $e^{m - m'}$ rescaling.
+- **FlashAttention Tiling:** Fuses $\mathbf{Q}\mathbf{K}^\top$, softmax, and $\mathbf{P}\mathbf{V}$ inside on-chip SRAM in $\Theta(n)$ HBM memory while skipping empty upper-triangular causal tiles.
+:::
+
+::: {.col .fig .big}
+@fig:ch10-attn-scale-summary
+:::
+:::
 :::

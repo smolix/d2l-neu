@@ -531,30 +531,35 @@ Batch Size, Gradient Noise Scale, and Critical Batch Size<br>**signal vs. noise 
 ::: {.slide title="When Does Doubling the Batch Size Halve the Step Count?"}
 [Motivation]{.kicker}
 
-When scaling training across multiple GPUs, we trade parallel work per step (minibatch size $b$) against sequential steps $S(b)$ and total data processed $E(b) = b\,S(b)$:
+::: {.cols .vc}
+::: {.col}
+- **Small batch ($b: 4 \to 16$, $4\times$):** Noise-dominated; averaging cuts sampling variance $\operatorname{tr}(\boldsymbol{\Sigma})/b$, delivering **$>3.3\times$ fewer steps** at nearly constant data cost ($\approx 1.2\times E(4)$).
+- **Large batch ($b: 64 \to 256$, $4\times$):** Curvature-dominated; minibatch gradients already match $\nabla f$, yielding only **$\approx 1.8\times$ fewer steps** while doubling data & FLOP cost.
+- **The knee ($b_{\text{crit}} \approx b_{\text{noise}}$):** Governed by the gradient-noise scale $b_{\text{noise}} = \operatorname{tr}(\boldsymbol{\Sigma}) / \|\nabla f\|^2$ (McCandlish et al., 2018).
+:::
 
-| Scaling Regime on `TinyLM` (Target Held-Out Loss $1.9$ Nats) | Step Reduction Factor | Total Examples Processed $E(b) = b\,S(b)$ | Dominant Bottleneck |
-| :--- | :---: | :---: | :--- |
-| **Small batch ($b: 4 \to 16$ sequences, $4\times$)** | **$>3.3\times$ fewer steps** | $\approx 1.2\times E(4)$ (nearly constant data cost) | **Noise-dominated:** Averaging cuts sampling variance $\operatorname{tr}(\boldsymbol{\Sigma})/b$ |
-| **Large batch ($b: 64 \to 256$ sequences, $4\times$)** | **$\approx 1.8\times$ fewer steps** | $\approx 2.2\times E(64)$ (data & FLOP cost doubles!) | **Curvature-dominated:** Minibatch gradient already matches $\nabla f$ |
-
-::: {.d2l-note}
-McCandlish et al. (2018) showed that the knee between these two regimes—the **critical batch size $b_{\text{crit}}$**—is governed by a single measurable ratio: the **gradient-noise scale $b_{\text{noise}} = \operatorname{tr}(\boldsymbol{\Sigma}) / \|\nabla f\|^2$**.
+::: {.col .fig .big}
+@fig:ch09-opt-bs-two-regimes
+:::
 :::
 :::
 
 ::: {.slide title="Signal Power, Noise Power, and Gradient-Noise Scale"}
 [The Signal-to-Noise Ratio of a Minibatch]{.kicker}
 
-Let $\nabla f(\mathbf{x})$ be the exact full-dataset gradient and $\hat{\mathbf{g}}_b$ be a minibatch gradient averaged over $b$ independent examples with per-example covariance $\boldsymbol{\Sigma}$:
-
-$$\mathbb{E}\big[\|\hat{\mathbf{g}}_b\|^2\big] = \|\nabla f\|^2 + \mathbb{E}\big[\|\hat{\mathbf{g}}_b - \nabla f\|^2\big] = \underbrace{\|\nabla f\|^2}_{\text{Signal power}} + \underbrace{\frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}}_{\text{Noise power}}$$
-
-- **Simple gradient-noise scale $b_{\text{noise}}$ (McCandlish et al., 2018):** The minibatch size at which expected noise power equals true gradient signal power:
+::: {.cols .vc}
+::: {.col}
+- **Expected squared norm decomposition:**
+  $$\mathbb{E}\big[\|\hat{\mathbf{g}}_b\|^2\big] = \underbrace{\|\nabla f\|^2}_{\text{Signal power}} + \underbrace{\frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}}_{\text{Noise power}}$$
+- **Simple gradient-noise scale:** The batch size where noise power equals signal power:
   $$b_{\text{noise}} = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{\|\nabla f\|^2}$$
-- **Regime interpretation:**
-  - For $b \ll b_{\text{noise}}$, a minibatch gradient is mostly random sampling noise ($\mathbb{E}\|\hat{\mathbf{g}}_b\|^2 \approx \operatorname{tr}\boldsymbol{\Sigma}/b$).
-  - For $b \gg b_{\text{noise}}$, a minibatch gradient closely tracks the deterministic gradient ($\mathbb{E}\|\hat{\mathbf{g}}_b\|^2 \approx \|\nabla f\|^2$).
+- For $b \ll b_{\text{noise}}$, $\hat{\mathbf{g}}_b$ is mostly sampling noise; for $b \gg b_{\text{noise}}$, $\hat{\mathbf{g}}_b \approx \nabla f$.
+:::
+
+::: {.col .fig}
+@fig:ch09-opt-bs-snr-crossover
+:::
+:::
 :::
 
 ::: {.slide title="A Two-Batch Estimator for b_noise Without Full Passes"}
@@ -593,42 +598,54 @@ $$\mathbb{E}\big[\|\hat{\mathbf{g}}_b\|^2\big] = \|\nabla f\|^2 + \mathbb{E}\big
 ::: {.slide title="Optimal Step Size and Single-Step Progress Under Noise"}
 [The Noisy Descent Bound]{.kicker}
 
-Taking expectations of the $L$-smooth descent lemma $f(\mathbf{x} - \eta\hat{\mathbf{g}}_b) - f(\mathbf{x}) \le -\eta\nabla f^\top \hat{\mathbf{g}}_b + \frac{L}{2}\eta^2\|\hat{\mathbf{g}}_b\|^2$ and substituting $\mathbb{E}[\|\hat{\mathbf{g}}_b\|^2] = \|\nabla f\|^2(1 + b_{\text{noise}}/b)$ gives:
+::: {.cols .vc}
+::: {.col}
+- **Noisy $L$-smooth descent bound:**
+  $$\mathbb{E}[f(\mathbf{x} - \eta\hat{\mathbf{g}}_b)] - f(\mathbf{x}) \le -\eta\|\nabla f\|^2 + \frac{L}{2}\eta^2\|\nabla f\|^2\Big(1 + \frac{b_{\text{noise}}}{b}\Big)$$
+- **Optimal step size & single-step drop:**
+  $$\eta_{\text{opt}}(b) = \frac{1}{L\,(1 + b_{\text{noise}}/b)}, \quad \Delta f_{\text{opt}}(b) = \frac{\|\nabla f\|^2}{2L\,(1 + b_{\text{noise}}/b)}$$
+- At $b = b_{\text{noise}}$, both $\eta_{\text{opt}}$ and $\Delta f_{\text{opt}}$ equal **exactly half** of their full-batch ($b \to \infty$) values.
+:::
 
-$$\mathbb{E}\big[f(\mathbf{x} - \eta\hat{\mathbf{g}}_b)\big] - f(\mathbf{x}) \le -\eta\,\|\nabla f\|^2 + \frac{L}{2}\,\eta^2\,\|\nabla f\|^2\Big(1 + \frac{b_{\text{noise}}}{b}\Big)$$
-
-Minimizing this quadratic over $\eta$ yields the optimal step size $\eta_{\text{opt}}(b)$ and guaranteed single-step loss decrease:
-
-$$\eta_{\text{opt}}(b) = \frac{1}{L}\cdot\frac{1}{1 + b_{\text{noise}} / b}, \qquad \Delta f_{\text{opt}}(b) = \frac{\|\nabla f\|^2}{2L}\cdot\frac{1}{1 + b_{\text{noise}} / b}$$
-
-- **At $b = b_{\text{noise}}$:** Both the optimal learning rate and the single-step progress equal **exactly half** of their full-batch ($b \to \infty$) values!
+::: {.col .fig}
+@fig:ch09-opt-bs-noisy-descent
+:::
+:::
 :::
 
 ::: {.slide title="The Step–Data Pareto Frontier and Critical Batch Size"}
 [Universal Trade-Off Law]{.kicker}
 
-Because each step at batch size $b$ makes a fraction $(1 + b_{\text{noise}}/b)^{-1}$ of full-batch progress, reaching a target loss that requires $S_{\min}$ full-batch steps takes $S(b)$ updates and $E(b) = b\,S(b)$ total examples:
+::: {.cols .vc}
+::: {.col}
+- **Steps $S(b)$ vs. examples $E(b) = b\,S(b)$ ($E_{\min} = b_{\text{crit}}S_{\min}$):**
+  $$\frac{S(b)}{S_{\min}} = 1 + \frac{b_{\text{crit}}}{b}, \qquad \frac{E(b)}{E_{\min}} = 1 + \frac{b}{b_{\text{crit}}}$$
+- **Small batch ($b = 0.1\,b_{\text{crit}}$):** $11\,S_{\min}$ steps, only $1.10\,E_{\min}$ data.
+- **Critical knee ($b = b_{\text{crit}}$):** Balanced **$2\,S_{\min}$ steps and $2\,E_{\min}$ data**.
+- **Oversized ($b = 10\,b_{\text{crit}}$):** Saves $<50\%$ steps vs. $b_{\text{crit}}$ at $5.5\times$ the data bill ($11\,E_{\min}$)!
+:::
 
-$$\frac{S(b)}{S_{\min}} = 1 + \frac{b_{\text{noise}}}{b}, \qquad \frac{E(b)}{E_{\min}} = 1 + \frac{b}{b_{\text{noise}}}, \qquad \text{where } E_{\min} = b_{\text{noise}}\,S_{\min}$$
-
-| Batch Size Regime ($b_{\text{crit}} = b_{\text{noise}} = 100$) | Required Steps $S(b) / S_{\min}$ | Required Examples $E(b) / E_{\min}$ | Efficiency Trade-Off |
-| :--- | :---: | :---: | :--- |
-| **Small batch ($b = 10 = 0.1\,b_{\text{crit}}$)** | $11.0\,S_{\min}$ | **$1.10\,E_{\min}$** ($+10\%$ data) | Compute/data optimal, many sequential steps |
-| **Critical batch size ($b = 100 = b_{\text{crit}}$)** | **$2.0\,S_{\min}$** | **$2.00\,E_{\min}$** ($2\times$ data, $2\times$ steps) | **Balanced knee of the Pareto frontier** |
-| **Oversized batch ($b = 1{,}000 = 10\,b_{\text{crit}}$)** | $1.1\,S_{\min}$ | **$11.0\,E_{\min}$** ($11\times$ data waste!) | Saves only $45\%$ steps vs. $b_{\text{crit}}$ at $5.5\times$ compute |
+::: {.col .fig}
+@fig:ch09-opt-bs-pareto-regimes
+:::
+:::
 :::
 
 ::: {.slide title="Why SGD Uses Linear LR Scaling (η ∝ b) Below b_crit"}
 [Linear Scaling Rule for Unnormalized Optimizers]{.kicker}
 
-When increasing the batch size from $b_0$ to $b$ in the noise-dominated regime ($b_0, b \ll b_{\text{noise}}$), how must the learning rate of **SGD or Momentum** scale?
+::: {.cols .vc}
+::: {.col}
+- **Small-batch limit ($b \ll b_{\text{noise}}$):**
+  $$\eta_{\text{opt}}(b) = \frac{1}{L\,(1 + b_{\text{noise}}/b)} \approx \frac{b}{L\,b_{\text{noise}}} \implies \eta(b) = \frac{b}{b_0}\eta_0$$
+- **Trajectory & noise-floor equivalence (Goyal et al., 2017):** $k = b/b_0$ small steps at $(\eta_0, b_0)$ equal one step at $(k\eta_0, kb_0)$ while holding $\eta/b$ (and excess loss $\frac{\eta\operatorname{tr}\boldsymbol{\Sigma}}{4b}$) constant.
+- **Saturation past $b_{\text{crit}}$:** For $b \gg b_{\text{crit}}$, $\eta_{\text{opt}} \to 1/L$; linear scaling past $b_{\text{crit}}$ violates $\eta < 2/L$.
+:::
 
-$$b \ll b_{\text{noise}}: \quad \eta_{\text{opt}}(b) = \frac{1}{L\,(1 + b_{\text{noise}}/b)} \approx \frac{b}{L\,b_{\text{noise}}} \quad \Longrightarrow \quad \eta(b) = \frac{b}{b_0}\,\eta_0$$
-
-- **Trajectory & noise-ball equivalence (Goyal et al., 2017; Smith et al., 2018):**
-  - Taking $k = b/b_0$ sequential steps of size $\eta_0$ on minibatches of size $b_0$ moves parameters by $-\eta_0 \sum_{j=1}^k \hat{\mathbf{g}}_{b_0}^{(j)} = -(k\eta_0)\,\hat{\mathbf{g}}_{k b_0}$, which is a single step of size $k\eta_0$ on batch size $k b_0$.
-  - Linear scaling keeps the ratio $\eta(b)/b = \eta_0/b_0$ constant, preserving the exact stationary noise floor $\mathbb{E}[f(\mathbf{x}_\infty)] - f(\mathbf{x}^\star) \approx \frac{\eta\operatorname{tr}\boldsymbol{\Sigma}}{4b}$ (§9.2).
-- **Saturation past $b_{\text{noise}}$:** For $b \gg b_{\text{noise}}$, $\eta_{\text{opt}}(b) \to 1/L$; continuing to scale $\eta \propto b$ past $b_{\text{crit}}$ violates $\eta < 2/L$ and diverges!
+::: {.col .fig}
+@fig:ch09-opt-bs-linear-vs-sqrt
+:::
+:::
 :::
 
 ::: {.slide title="Why Adam Uses Square-Root Scaling (η ∝ √b) Below b_crit"}
@@ -747,14 +764,20 @@ Why does **Adam / AdamW** require **square-root scaling** $\eta(b) = \sqrt{b/b_0
 ::: {.slide title="Dynamic Batch Size Ramps and Practical Selection Recipe"}
 [Engineering Playbook]{.kicker}
 
-Because $b_{\text{noise}}$ grows by $1\text{--}2$ orders of magnitude from step 0 to mid-training, a fixed batch size $b$ is always a compromise (motivating **batch-size warmup ramps** such as GPT-3's $32\text{K} \to 3.2\text{M}$ tokens or Llama 3's $4\text{M} \to 16\text{M}$ tokens):
+::: {.cols .vc}
+::: {.col}
+- **Why ramp $b$ over training?** Because $b_{\text{noise}}$ grows $10\text{--}100\times$ from step 0 to mid-training, frontier runs ramp $b$ up dynamically (e.g., Llama 3: $4\text{M} \to 16\text{M}$ tokens).
+- **Four-step selection protocol:**
+  1. Set $b \ge b_{\text{sat}}$ so GPU tensor cores saturate.
+  2. Measure post-warmup $b_{\text{noise}}$ at step $300\text{--}500$.
+  3. Choose $b \lesssim 0.3\,b_{\text{crit}}$ (compute-bound) or $b \approx b_{\text{crit}}$ (wall-clock bound).
+  4. Scale $\eta \propto b$ (SGD) or $\eta \propto \sqrt{b}$ (AdamW) with linear warmup.
+:::
 
-| Engineering Step | Concrete Rule | Quantitative Target |
-| :--- | :--- | :--- |
-| **1. Hardware saturation floor** | Increase $b$ until per-step time scales linearly with $b$ | $b \ge b_{\text{sat}}$ (no idle GPU tensor cores) |
-| **2. Post-warmup $b_{\text{noise}}$ check** | Estimate $b_{\text{noise}}$ via `noise_scale` after initial loss drop ($300\text{--}500$ steps) | Use post-transient $b_{\text{noise}}$ as $b_{\text{crit}}$ |
-| **3. Position $b$ vs. $b_{\text{crit}}$** | **Compute/data-bound:** $b \lesssim 0.3\,b_{\text{crit}}$ ($\le 1.33\,E_{\min}$)<br>**Wall-clock time-bound:** $b \approx b_{\text{crit}}$ ($2\,S_{\min}, 2\,E_{\min}$) | Never set $b \gg b_{\text{crit}}$ ($b = 4\,b_{\text{crit}}$ costs $5\,E_{\min}$ for $1.25\,S_{\min}$) |
-| **4. Scale $\eta$ & add warmup** | Scale $\eta \propto b$ (SGD) or $\eta \propto \sqrt{b}$ (AdamW) up to $b_{\text{crit}}$ | Pair with linear warmup (§9.7) when $b > b_{\text{noise}}(0)$ |
+::: {.col .fig .big}
+@fig:ch09-opt-bs-ramp-playbook
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Two-Batch Estimator and Scaling Rules"}

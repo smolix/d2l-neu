@@ -1042,33 +1042,51 @@ Likelihood, Weighting, and the Diffusion Design Space<br>**variational bound (EL
 ::: {.slide title="How Does Noise Regression Relate to Maximum Likelihood?"}
 [Motivation]{.kicker}
 
-Unlike GANs, diffusion models assign explicit probability densities to data points in two distinct ways—and unify all standard training losses under one log-SNR integral:
+::: {.cols .vc}
+::: {.col}
+- **1. Variational bound (ELBO):** Sohl-Dickstein et al. (2015) and Ho et al. (2020) showed the reverse chain is a latent-variable model whose NLL is bounded by weighted noise-prediction errors.
+- **2. Probability-flow ODE likelihood:** Song et al. (2021) integrated $-\nabla \cdot \mathbf{u}_t(\mathbf{x}_t)$ along the deterministic ODE trajectory for exact log-density $\log p_{\boldsymbol\theta}(\mathbf{x}_0)$.
+- **3. Log-SNR weighting $w(\lambda)$:** Kingma & Gao (2023) proved every diffusion and flow objective reduces to $\frac{1}{2}\int w(\lambda)\,\mathbb{E}\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \boldsymbol\epsilon\|^2\,d\lambda$.
+:::
 
-- **1. Variational bound (ELBO) of the reverse Markov chain:** Sohl-Dickstein et al. (2015) and Ho et al. (2020) showed that the reverse chain is a latent-variable model whose negative log-likelihood is bounded by a weighted sum of noise-prediction errors across noise levels.
-- **2. Exact log-likelihood via the probability-flow ODE:** Song et al. (2021) showed that integrating the divergence $-\nabla \cdot \mathbf{u}_t(\mathbf{x}_t)$ along the deterministic ODE trajectory gives the exact log-density $\log p_{\boldsymbol\theta}(\mathbf{x}_0)$ by instantaneous change of variables.
-- **3. Unification via log-SNR weighting $w(\lambda)$:** Kingma & Gao (2023) proved that every diffusion and flow-matching objective reduces to $\frac{1}{2}\int w(\lambda)\,\mathbb{E}\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \boldsymbol\epsilon\|^2\,d\lambda$.
+::: {.col .fig .big}
+@fig:ch17-diff-three-likelihood-views
+:::
+:::
 :::
 
 ::: {.slide title="The Reverse Chain as a Latent-Variable Model (ELBO)"}
 [Variational Upper Bound on Negative Log-Likelihood]{.kicker}
 
-The forward chain $q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) = \prod_{k=1}^T q(\mathbf{x}_k \mid \mathbf{x}_{k-1})$ has no learnable parameters, while the reverse chain $p_{\boldsymbol\theta}(\mathbf{x}_{0:T}) = p(\mathbf{x}_T)\prod_{k=1}^T \mathcal{N}(\mathbf{x}_{k-1}; \boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k), \nu_k\mathbf{I})$ starts from $p(\mathbf{x}_T) = \mathcal{N}(\mathbf{0}, \mathbf{I})$:
+::: {.cols .vc}
+::: {.col}
+$$-\log p_{\boldsymbol\theta}(\mathbf{x}_0) \le \mathbb{E}_{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\!\left[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] =: L(\mathbf{x}_0)$$
 
-$$-\log p_{\boldsymbol\theta}(\mathbf{x}_0) = -\log \mathbb{E}_{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\!\left[\frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] \le \mathbb{E}_{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\!\left[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] =: L(\mathbf{x}_0)$$
+- **Exact Jensen gap:** The bound gap is $D_{\textrm{KL}}\big(q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big)$, vanishing when the reverse chain matches the true time-reversed posterior.
+- **Mode-dropping penalty:** Averaged over $p(\mathbf{x}_0)$, $\mathbb{E}_p[L(\mathbf{x}_0)] \ge H(p) + D_{\textrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$, charging a heavy penalty for any dropped mode.
+:::
 
-- **Exact gap via Jensen's inequality:** The bound gap is $D_{\textrm{KL}}\big(q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big)$, which vanishes when the reverse chain matches the true time-reversed posterior.
-- **Mode-dropping penalty:** Averaged over the true data distribution $p(\mathbf{x}_0)$, $\mathbb{E}_p[L(\mathbf{x}_0)] \ge H(p) + D_{\textrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$, charging an infinite or large penalty for any mode assigned negligible mass.
+::: {.col .fig}
+@fig:ch17-diff-elbo-jensen
+:::
+:::
 :::
 
 ::: {.slide title="Telescoping the ELBO into Per-Step KL Divergences"}
 [Prior, Denoising, and Reconstruction Terms]{.kicker}
 
-Using Bayes' rule on the Markov forward step, $q(\mathbf{x}_k \mid \mathbf{x}_{k-1}, \mathbf{x}_0) = q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)\,q(\mathbf{x}_k \mid \mathbf{x}_0) / q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$, telescopes the marginal ratios across $k = 2, \ldots, T$:
+::: {.cols .vc}
+::: {.col}
+$$L(\mathbf{x}_0) = \underbrace{D_{\textrm{KL}}(q_T \| p_T)}_{L_T \text{ (prior)}} + \sum_{k=2}^T \underbrace{\mathbb{E}_q\big[D_{\textrm{KL}}(q_{k-1|k,0} \| p_{\boldsymbol\theta})\big]}_{L_{k-1} \text{ (denoising)}} + \underbrace{\mathbb{E}_q[-\log p_{\boldsymbol\theta}(\mathbf{x}_0|\mathbf{x}_1)]}_{L_0 \text{ (recon)}}$$
 
-$$L(\mathbf{x}_0) = \underbrace{D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T \text{ (prior matching)}} + \sum_{k=2}^T \underbrace{\mathbb{E}_q\big[D_{\textrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big)\big]}_{L_{k-1} \text{ (denoising steps)}} + \underbrace{\mathbb{E}_q\big[-\log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)\big]}_{L_0 \text{ (reconstruction)}}$$
+- **Bayes telescoping:** Rewriting $q(\mathbf{x}_k \mid \mathbf{x}_{k-1}, \mathbf{x}_0)$ via Bayes' rule cancels intermediate marginals across $k = 2, \ldots, T$.
+- **Tractable Gaussian posterior:** Conditioning on both endpoints $(\mathbf{x}_0, \mathbf{x}_k)$ makes $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) = \mathcal{N}(\tilde{\boldsymbol\mu}_k, \tilde\beta_k\mathbf{I})$ an exact Gaussian with $\tilde\beta_k = \beta_k\sigma_{k-1}^2/\sigma_k^2 < \beta_k$.
+:::
 
-- **Tractable Gaussian forward posterior:** Conditioning on both endpoints $(\mathbf{x}_0, \mathbf{x}_k)$ makes $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) = \mathcal{N}(\tilde{\boldsymbol\mu}_k, \tilde\beta_k\mathbf{I})$ an exact Gaussian with precision-weighted mean and variance:
-  $$\tilde{\boldsymbol\mu}_k = \frac{\alpha_{k-1}\beta_k}{\sigma_k^2}\,\mathbf{x}_0 + \frac{\sqrt{1 - \beta_k}\,\sigma_{k-1}^2}{\sigma_k^2}\,\mathbf{x}_k, \qquad \tilde\beta_k = \frac{\beta_k\,\sigma_{k-1}^2}{\sigma_k^2} < \beta_k$$
+::: {.col .fig}
+@fig:ch17-diff-elbo-telescoping
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Exact Two-Step ELBO on N(0, 1) Data"}
@@ -1085,13 +1103,18 @@ $$\mathbb{E}_{x_0}[L(x_0)] = \underbrace{0.144}_{L_2 \text{ (prior)}} + \underbr
 ::: {.slide title="From Gaussian KL to Log-SNR Weighted Regression"}
 [Deriving the Continuous-Time ELBO Integral]{.kicker}
 
-Substituting $\mathbf{x}_0 = (\mathbf{x}_k - \sigma_k\boldsymbol\epsilon)/\alpha_k$ into $\tilde{\boldsymbol\mu}_k$ writes the posterior mean in terms of the noise $\boldsymbol\epsilon$, turning each Gaussian KL term $L_{k-1}$ into a weighted noise-prediction error:
+::: {.cols .vc}
+::: {.col}
+$$L(\mathbf{x}_0) \xrightarrow{T \to \infty} \frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{\max}} \mathbb{E}_{\boldsymbol\epsilon}\big[\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda)\|^2\big]\,d\lambda + L_T + L_0$$
 
-$$L_{k-1} = \mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\!\left[\frac{\beta_k^2}{2\nu_k(1 - \beta_k)\sigma_k^2}\,\big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_k, k)\big\|^2\right] + \text{const}$$
+- **The ELBO weight is half the log-SNR drop:** For $\nu_k = \tilde\beta_k$, each step's Gaussian KL weight simplifies to $\frac{1}{2}(e^{\lambda_{k-1} - \lambda_k} - 1) \approx \frac{1}{2}(\lambda_{k-1} - \lambda_k)$.
+- **Continuous-time limit ($T \to \infty$, Kingma et al., 2021):** The Riemann sum over $\Delta\lambda_k$ converges to a schedule-invariant integral with flat weighting $w(\lambda) \equiv 1$.
+:::
 
-- **The ELBO weight is half the log-SNR drop:** For $\nu_k = \tilde\beta_k$, the weight simplifies to $\frac{\beta_k}{2(1-\beta_k)\sigma_{k-1}^2} = \frac{1}{2}\big(e^{\lambda_{k-1} - \lambda_k} - 1\big) \approx \frac{1}{2}(\lambda_{k-1} - \lambda_k)$.
-- **Continuous-time limit ($T \to \infty$, Kingma et al., 2021):** The Riemann sum over log-SNR increments $\Delta\lambda_k = \lambda_{k-1} - \lambda_k$ converges to a schedule-invariant integral over $\lambda \in [\lambda_{\min}, \lambda_{\max}]$:
-  $$L(\mathbf{x}_0) \xrightarrow{T \to \infty} \frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{\max}} \mathbb{E}_{\boldsymbol\epsilon}\big[\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda)\|^2\big]\,d\lambda + L_T + L_0$$
+::: {.col .fig}
+@fig:ch17-diff-elbo-logsnr-integral
+:::
+:::
 :::
 
 ::: {.slide title="Inspecting the Discrete ELBO Weights Along the VP Chain"}
@@ -1135,18 +1158,19 @@ With abundant capacity (`width = 256`), any positive weighting reaches the exact
 ::: {.slide title="Unifying All Objectives via Log-SNR Weighting w(λ)"}
 [The Canonical Integral Form (Kingma & Gao, 2023)]{.kicker}
 
-At fixed $\mathbf{x}_t$, every target in our dictionary is an affine function of $\hat{\boldsymbol\epsilon}$ with scalar slope $\sqrt{c(t)}$, so $\|\text{net} - \text{target}\|^2 = c(t)\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \boldsymbol\epsilon\|^2$. Changing variables from $t \sim p(t)$ to $\lambda_t = \log(\alpha_t^2/\sigma_t^2)$ unifies all losses:
+::: {.cols .vc}
+::: {.col}
+$$\mathcal{L}_w(\boldsymbol\theta) = \frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{\max}} w(\lambda)\,\mathbb{E}\big[\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\|^2\big]\,d\lambda, \quad w(\lambda) = 2\,c(t)\,p(t)\,\left|\frac{dt}{d\lambda}\right|$$
 
-$$\mathcal{L}_w(\boldsymbol\theta) = \frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{\max}} w(\lambda)\,\mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\big[\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\|^2\big]\,d\lambda, \qquad w(\lambda) = 2\,c(t)\,p(t)\,\left|\frac{dt}{d\lambda}\right|$$
+- **Continuous ELBO ($w(\lambda) = 1$):** Flat across all scales; optimizes exact log-likelihood on clean data.
+- **Flow matching & cosine $\mathbf{v}$-prediction ($w(\lambda) = e^{-\lambda/2}$):** Monotonically decreasing; equals an ELBO on noise-augmented data.
+- **DDPM simple, linear noise & EDM:** Bell-shaped bumps focused on perceptual mid-SNR structure (not likelihood bounds).
+:::
 
-| Published Objective | Forward Path & Time Sampling | Implied Log-SNR Weighting $w(\lambda)$ | Likelihood Bound Status |
-| :--- | :--- | :--- | :--- |
-| **Continuous ELBO** (VDM) | Any path, $\lambda \sim U(\lambda_{\min}, \lambda_{\max})$ | $w(\lambda) = \mathbf{1}$ (flat across all scales) | Exact ELBO on clean data |
-| **DDPM Simple Loss** | VP (linear $\beta$), $t \sim U(0, 1)$ | $|dt/d\lambda|$ (peaks near $\lambda \approx -0.9$) | Non-monotone (not a bound) |
-| **Linear-Path Noise** | Linear $(1-t, t)$, $t \sim U(0, 1)$ | $\operatorname{sech}^2(\lambda/4)$ (bell bump at $\lambda = 0$) | Non-monotone (not a bound) |
-| **Cosine-Path $\mathbf{v}$-Prediction** | Cosine VP, $t \sim U(0, 1)$ | **$e^{-\lambda / 2}$** ($c(t) = 1/\alpha_t^2 = 1 + e^{-\lambda}$) | **Monotone:** ELBO on noised data |
-| **Flow Matching Velocity** | Linear $(1-t, t)$, $t \sim U(0, 1)$ | **$e^{-\lambda / 2}$** ($c(t) = 1/(1-t)^2$) | **Monotone:** ELBO on noised data |
-| **EDM Preconditioned Loss** | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$ | $\mathcal{N}(\lambda; 2.4, 2.4^2)\big(e^{-\lambda} + \sigma_{\mathrm{data}}^2\big)$ | Peaked bump (not a bound) |
+::: {.col .fig}
+@fig:ch17-diff-canonical-w-lambda
+:::
+:::
 :::
 
 ::: {.slide title="Verifying the Flow-Matching and v-Prediction Identity"}
@@ -1168,25 +1192,34 @@ Computing $w(\lambda) = 2\,c(t)\,|dt/d\lambda|$ numerically via forward-mode AD 
 ::: {.slide title="Why Monotone Weightings Are Likelihood Bounds"}
 [Noise-Augmented Data Interpretation & Time Sampling]{.kicker}
 
-Which weightings $w(\lambda)$ correspond to valid variational bounds?
+::: {.cols .vc}
+::: {.col}
+- **Step-function basis:** A step weighting $w_\mu(\lambda) = \mathbf{1}\{\lambda \le \mu\}$ is the exact continuous ELBO for data pre-corrupted to log-SNR level $\mu$.
+- **Monotone decreasing $w(\lambda)$ = mixture of bounds (Kingma & Gao, 2023):** Any $w'(\lambda) \le 0$ decomposes as $\int w_\mu(\lambda)\,(-w'(\mu))\,d\mu$—an average of ELBOs over noise-augmented data!
+- **Time sampling $p(t)$ as a multiplier:** Drawing $\operatorname{logit}(t) \sim \mathcal{N}(m, s^2)$ multiplies $w(\lambda)$ by a bell curve centered at $m$.
+:::
 
-- **Step-function basis:** A step weighting $w_\mu(\lambda) = \mathbf{1}\{\lambda \le \mu\}$ is the exact continuous ELBO for data pre-corrupted to log-SNR level $\mu$ (since its reverse path stops at $\mu$).
-- **Monotone decreasing $w(\lambda)$ = mixture of bounds (Kingma & Gao, 2023):** Any monotonically decreasing weighting ($w'(\lambda) \le 0$) decomposes as $\int w_\mu(\lambda)\,(-w'(\mu))\,d\mu$—an average of ELBOs over data augmented with random Gaussian noise!
-  - Flow matching and $\mathbf{v}$-prediction ($w(\lambda) = e^{-\lambda/2}$) weight coarse structure heavily and fine detail lightly.
-- **Time distribution $p(t)$ as an implicit multiplier:** When training draws $t \sim p(t)$ (e.g., Esser et al.'s **logit-normal** $\operatorname{logit}(t) \sim \mathcal{N}(m, s^2)$) without dividing the loss by $p(t)$, $p(t)$ directly multiplies $w(\lambda)$ by a bell curve centered at $m$.
+::: {.col .fig .big}
+@fig:ch17-diff-monotone-bounds
+:::
+:::
 :::
 
 ::: {.slide title="The EDM Design Space and Network Preconditioning"}
 [Unit-Variance Inputs, Skip Connections, and Targets]{.kicker}
 
-Karras et al. (2022) observed that training a raw neural network $F_{\boldsymbol\theta}$ directly across $\bar\sigma \in [0.002, 80]$ forces it to handle inputs and targets whose variances change by four orders of magnitude. **EDM preconditioning** wraps $F_{\boldsymbol\theta}$ in analytic scaling coefficients for data of RMS scale $\sigma_{\mathrm{data}}$:
-
+::: {.cols .vc}
+::: {.col}
 $$D_{\boldsymbol\theta}(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}(\bar\sigma)\,\bar{\mathbf{x}} + c_{\mathrm{out}}(\bar\sigma)\,F_{\boldsymbol\theta}\big(c_{\mathrm{in}}(\bar\sigma)\,\bar{\mathbf{x}};\; \bar\sigma\big)$$
 
-$$c_{\mathrm{in}} = \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}, \qquad c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}, \qquad c_{\mathrm{out}} = \frac{\bar\sigma\,\sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}$$
+- **Exact unit-variance normalization (Karras et al., 2022):** With $n = \sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}$, setting $c_{\mathrm{in}} = 1/n$, $c_{\mathrm{skip}} = \sigma_{\mathrm{data}}^2/n^2$, and $c_{\mathrm{out}} = \bar\sigma\sigma_{\mathrm{data}}/n$ normalizes both network inputs and training targets to unit variance across $\bar\sigma \in [0.002, 80]$.
+- **Adaptive target interpolation:** Smoothly shifts $F_{\boldsymbol\theta}$ from predicting clean data $\mathbf{x}_0/\sigma_{\mathrm{data}}$ at high noise to $-\boldsymbol\epsilon$ at low noise.
+:::
 
-- **Exact unit-variance normalization:** $c_{\mathrm{in}}$ scales the noisy input $\bar{\mathbf{x}} = \mathbf{x}_0 + \bar\sigma\boldsymbol\epsilon$ to unit variance; $c_{\mathrm{skip}}$ minimizes target variance; and $c_{\mathrm{out}}$ (paired with loss weight $1/c_{\mathrm{out}}^2$) gives $F_{\boldsymbol\theta}$ a unit-variance training target at every $\bar\sigma$.
-- **Adaptive target interpolation:** As $\bar\sigma \to \infty$ ($c_{\mathrm{skip}} \to 0$), $F_{\boldsymbol\theta}$ predicts the clean image $\mathbf{x}_0/\sigma_{\mathrm{data}}$ without dividing by $\alpha_t \to 0$; as $\bar\sigma \to 0$ ($c_{\mathrm{skip}} \to 1$), $F_{\boldsymbol\theta}$ predicts the added noise $-\boldsymbol\epsilon$.
+::: {.col .fig}
+@fig:ch17-diff-edm-precond
+:::
+:::
 :::
 
 ::: {.slide title="Implementing EDM Preconditioning and Log-Normal Loss"}

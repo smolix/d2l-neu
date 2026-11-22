@@ -1075,29 +1075,34 @@ Every 2D experiment in this chapter evaluates generated point sets against four 
 ::: {.slide title="Least-Squares Denoising Learns the Posterior Mean"}
 [Optimal Denoising]{.kicker}
 
-Corrupt a clean sample $\mathbf{x}_0 \sim p$ with Gaussian noise $\boldsymbol\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ at noise level $\sigma > 0$ to form $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\epsilon \sim p_\sigma$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}\big[\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2 \,\big|\, \tilde{\mathbf{x}}\big] = \big\|D(\tilde{\mathbf{x}}) - \mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]\big\|^2 + \operatorname{tr}\mathrm{Cov}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$$
 
-- **Minimum MSE objective:** A denoiser $D(\tilde{\mathbf{x}})$ minimizes the expected squared reconstruction error over joint draws $(\mathbf{x}_0, \tilde{\mathbf{x}})$:
-  $$D^\star = \arg\min_D \mathbb{E}_{\mathbf{x}_0, \tilde{\mathbf{x}}}\big[\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2\big]$$
-- **Orthogonal decomposition:** Conditioning on the observation $\tilde{\mathbf{x}}$, for any predictor $D(\tilde{\mathbf{x}})$ the cross term vanishes because $\mathbb{E}[\mathbf{x}_0 - \mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] \mid \tilde{\mathbf{x}}] = \mathbf{0}$:
-  $$\mathbb{E}\big[\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2 \,\big|\, \tilde{\mathbf{x}}\big] = \big\|D(\tilde{\mathbf{x}}) - \mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]\big\|^2 + \operatorname{tr}\mathrm{Cov}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$$
-- **The Bayes-optimal denoiser:** Pointwise in $\tilde{\mathbf{x}}$, squared error is uniquely minimized by the **posterior mean** $D^\star(\tilde{\mathbf{x}}) = \mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$—the posterior-weighted average of all clean points that could have generated $\tilde{\mathbf{x}}$.
+- **Orthogonal decomposition:** Conditioning on $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\epsilon$, the cross term vanishes by iterated expectation.
+- **Bayes-optimal denoiser:** Pointwise in $\tilde{\mathbf{x}}$, squared error is uniquely minimized by the **posterior mean** $D^\star(\tilde{\mathbf{x}}) = \mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-mse-posterior
+:::
+:::
 :::
 
 ::: {.slide title="Denoising Score Matching: Vincent's Identity"}
 [From Conditional to Marginal Scores]{.kicker}
 
-Given $\mathbf{x}_0$, the perturbation kernel $p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0) = \mathcal{N}(\tilde{\mathbf{x}}; \mathbf{x}_0, \sigma^2\mathbf{I})$ has a known conditional score pointing back to $\mathbf{x}_0$:
+::: {.cols .vc}
+::: {.col}
+$$J_{\mathrm{DSM}}(\boldsymbol\theta) = \frac{1}{2}\mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\!\left[\Big\|\mathbf{s}_{\boldsymbol\theta}(\mathbf{x}_0 + \sigma\boldsymbol\epsilon) + \frac{\boldsymbol\epsilon}{\sigma}\Big\|^2\right]$$
 
-$$\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0) = \frac{\mathbf{x}_0 - \tilde{\mathbf{x}}}{\sigma^2} = -\frac{\boldsymbol\epsilon}{\sigma}$$
+- **Known conditional score:** For $p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0) = \mathcal{N}(\mathbf{x}_0, \sigma^2\mathbf{I})$, the conditional score is $\nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0) = (\mathbf{x}_0 - \tilde{\mathbf{x}})/\sigma^2 = -\boldsymbol\epsilon/\sigma$.
+- **Vincent's theorem (2011):** Differentiating $p_\sigma(\tilde{\mathbf{x}}) = \int p(\mathbf{x}_0)p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\,d\mathbf{x}_0$ shows $\nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}}) = \mathbb{E}[-\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}}]$, so regressing onto $-\boldsymbol\epsilon/\sigma$ fits $\nabla\log p_\sigma$ exactly!
+:::
 
-- **Denoising Score Matching (DSM) loss (Vincent, 2011):** Regress a score network $\mathbf{s}_{\boldsymbol\theta}(\tilde{\mathbf{x}})$ onto the known conditional score $-\boldsymbol\epsilon/\sigma$:
-  $$J_{\mathrm{DSM}}(\boldsymbol\theta) = \frac{1}{2}\mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\!\left[\Big\|\mathbf{s}_{\boldsymbol\theta}(\mathbf{x}_0 + \sigma\boldsymbol\epsilon) + \frac{\boldsymbol\epsilon}{\sigma}\Big\|^2\right]$$
-- **Two-line proof of Vincent's theorem:** Differentiating $p_\sigma(\tilde{\mathbf{x}}) = \int p(\mathbf{x}_0)p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\,d\mathbf{x}_0$ under the integral and dividing by $p_\sigma(\tilde{\mathbf{x}})$ yields Bayes' rule for $p(\mathbf{x}_0 \mid \tilde{\mathbf{x}})$:
-  $$\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}}) = \int p(\mathbf{x}_0 \mid \tilde{\mathbf{x}})\,\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\,d\mathbf{x}_0 = \mathbb{E}\!\left[-\frac{\boldsymbol\epsilon}{\sigma} \,\Big|\, \tilde{\mathbf{x}}\right]$$
-
-::: {.d2l-note}
-**Core insight:** We cannot evaluate the unknown data score $\nabla \log p(\mathbf{x}_0)$, but regressing onto the score of the noise we added fits $\nabla \log p_\sigma(\tilde{\mathbf{x}})$ exactly!
+::: {.col .fig}
+@fig:ch17-diff-vincents-dsm
+:::
 :::
 :::
 
@@ -1124,16 +1129,18 @@ $$\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma
 ::: {.slide title="Worked Example: Analytical Shrinkage on Gaussians"}
 [Tweedie's Formula in Closed Form]{.kicker}
 
-For a single isotropic Gaussian component $\mathbf{x}_0 \sim \mathcal{N}(\boldsymbol\mu, v\mathbf{I})$, the noised marginal is $p_\sigma = \mathcal{N}(\boldsymbol\mu, (v + \sigma^2)\mathbf{I})$ with exact score $\nabla \log p_\sigma(\tilde{\mathbf{x}}) = -(\tilde{\mathbf{x}} - \boldsymbol\mu)/(v + \sigma^2)$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} - \frac{\sigma^2}{v + \sigma^2}(\tilde{\mathbf{x}} - \boldsymbol\mu) = \boldsymbol\mu + \frac{v}{v + \sigma^2}(\tilde{\mathbf{x}} - \boldsymbol\mu)$$
 
-- **James–Stein / Wiener shrinkage:** Substituting the score into Tweedie's formula shrinks the noisy offset toward the mode mean $\boldsymbol\mu$ by the signal-to-total-variance ratio:
-  $$\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} - \frac{\sigma^2}{v + \sigma^2}(\tilde{\mathbf{x}} - \boldsymbol\mu) = \boldsymbol\mu + \frac{v}{v + \sigma^2}(\tilde{\mathbf{x}} - \boldsymbol\mu)$$
+- **James–Stein / Wiener shrinkage:** For $\mathbf{x}_0 \sim \mathcal{N}(\boldsymbol\mu, v\mathbf{I})$, Tweedie's step shrinks noisy offsets toward the mode center $\boldsymbol\mu$ by the signal-to-total-variance ratio $v/(v + \sigma^2)$.
+- **Quantitative test ($v = s^2 = 0.25, \sigma = 0.3$):** Shrinkage factor is $0.25/0.34 = \mathbf{0.735}$, reducing 2D point MSE by $27\%$ from $2\sigma^2 = 0.180$ to $0.132$.
+:::
 
-| Quantity ($v = s^2 = 0.25, \sigma = 0.3$) | Formula | Value on 2D Mixture |
-| :--- | :--- | :--- |
-| **Shrinkage factor** | $v / (v + \sigma^2)$ | $0.25 / (0.25 + 0.09) = \mathbf{0.735}$ |
-| **Per-coordinate MSE** | $\sigma^2 \to v\sigma^2 / (v + \sigma^2)$ | $0.090 \to \mathbf{0.066}$ |
-| **2D point MSE ($d = 2$)** | $2\sigma^2 \to 2v\sigma^2 / (v + \sigma^2)$ | $0.180 \to \mathbf{0.132}$ |
+::: {.col .fig}
+@fig:ch17-diff-gaussian-shrinkage
+:::
+:::
 :::
 
 ::: {.slide title="Verifying Tweedie's Step with a Trained Score MLP"}
@@ -1170,34 +1177,32 @@ An energy-based model (EBM) defines a density $p_{\boldsymbol\theta}(\mathbf{x})
 ::: {.slide title="Three Score-Matching Objectives Compared"}
 [From Fisher Divergence to Denoising]{.kicker}
 
-How can we fit $\mathbf{s}_{\boldsymbol\theta}(\mathbf{x}) \approx \nabla \log p(\mathbf{x})$ when we only have samples $\mathbf{x}_0 \sim p$ and no formula for $\nabla \log p$?
+::: {.cols .vc}
+::: {.col}
+- **Exact Fisher divergence $D_{\mathrm{F}}(p, \mathbf{s}_{\boldsymbol\theta}) = \frac{1}{2}\mathbb{E}_p[\|\mathbf{s}_{\boldsymbol\theta} - \nabla\log p\|^2]$:** Ideal objective, but intractable because the ground-truth data score $\nabla\log p(\mathbf{x})$ is unknown.
+- **Explicit Score Matching (Hyvärinen, 2005):** Eliminates $\nabla\log p$ via integration by parts, but the Jacobian divergence $\nabla \cdot \mathbf{s}_{\boldsymbol\theta}$ requires $O(d)$ backward passes.
+- **Denoising Score Matching (Vincent, 2011):** Fast $O(1)$ noise regression pass in any dimension $d$, trading the Jacobian trace for a controllable smoothing bias at scale $\sigma$.
+:::
 
-| Objective | Mathematical Formulation | Computational & Statistical Bottleneck |
-| :--- | :--- | :--- |
-| **Exact Fisher Divergence** $D_{\mathrm{F}}(p, \mathbf{s}_{\boldsymbol\theta})$ | $\frac{1}{2}\mathbb{E}_{\mathbf{x} \sim p}\big[\|\mathbf{s}_{\boldsymbol\theta}(\mathbf{x}) - \nabla \log p(\mathbf{x})\|^2\big]$ | Requires knowing the ground-truth data score $\nabla \log p(\mathbf{x})$ |
-| **Explicit Score Matching** (Hyvärinen, 2005) | $\mathbb{E}_{\mathbf{x} \sim p}\big[\frac{1}{2}\|\mathbf{s}_{\boldsymbol\theta}(\mathbf{x})\|^2 + \nabla \cdot \mathbf{s}_{\boldsymbol\theta}(\mathbf{x})\big] + C$ | Exact via integration by parts, but Jacobian trace $\nabla \cdot \mathbf{s}_{\boldsymbol\theta}$ costs $O(d)$ backward passes |
-| **Denoising Score Matching** (Vincent, 2011) | $\frac{1}{2}\mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\big[\|\mathbf{s}_{\boldsymbol\theta}(\mathbf{x}_0 + \sigma\boldsymbol\epsilon) + \boldsymbol\epsilon/\sigma\|^2\big]$ | $O(1)$ regression pass, but fits the **blurred** score $\nabla \log p_\sigma$ instead of $\nabla \log p$ |
-
-::: {.d2l-note}
-Denoising score matching trades the $O(d)$ Jacobian trace of explicit score matching for a smoothing bias controlled by the noise level $\sigma$.
+::: {.col .fig .big}
+@fig:ch17-diff-three-sm-losses
+:::
 :::
 :::
 
 ::: {.slide title="The Single-Noise-Level Dilemma: Variance vs. Bias"}
 [Statistical Trade-Off in σ]{.kicker}
 
-Training a score network at a single fixed noise scale $\sigma$ forces an irreconcilable trade-off between target variance at small $\sigma$ and smoothing bias at large $\sigma$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Small $\sigma$ (exploding target variance):** The conditional target $-\boldsymbol\epsilon/\sigma$ has variance $d/\sigma^2$ while the true score $\nabla \log p$ remains bounded.
-- As $\sigma \to 0$, the regression target becomes pure zero-mean noise of diverging amplitude, causing high estimator variance and a large loss floor $\propto d/\sigma^2$.
+$$\text{Bias}(\sigma) = \frac{1}{2}\mathbb{E}_p\big[\|\nabla \log p_\sigma - \nabla \log p\|^2\big] = \frac{d\,\sigma^4}{2s^2(s^2 + \sigma^2)^2}$$
+
+- **Small $\sigma$ (exploding target variance):** The conditional target $-\boldsymbol\epsilon/\sigma$ has variance $d/\sigma^2 \to \infty$ as $\sigma \to 0$, inflating estimator variance and trapping chains in local modes.
+- **Large $\sigma$ (smoothing bias):** Regression is well conditioned, but $\nabla\log p_\sigma$ underestimates the sharp clean score $\nabla\log p$ (bias climbs from $0.0004$ at $\sigma = 0.05$ to $2.6$ at $\sigma = 1.0$).
 :::
 
-::: {.col}
-- **Large $\sigma$ (smoothing bias):** The regression is well conditioned, but its optimum $\nabla \log p_\sigma$ systematically underestimates the clean score $\nabla \log p$:
-  $$\frac{1}{2}\mathbb{E}_p\big[\|\nabla \log p_\sigma - \nabla \log p\|^2\big] = \frac{d\,\sigma^4}{2s^2(s^2 + \sigma^2)^2}$$
-- For $s = 0.5, d = 2$, bias grows from $0.0004$ ($\sigma = 0.05$) to $0.28$ ($\sigma = 0.3$) and $2.6$ ($\sigma = 1.0$).
+::: {.col .fig}
+@fig:ch17-diff-sigma-dilemma
 :::
 :::
 :::
@@ -1205,14 +1210,17 @@ Training a score network at a single fixed noise scale $\sigma$ forces an irreco
 ::: {.slide title="Pathological Gradients Near Low-Dimensional Manifolds"}
 [Geometric Breakdown at Small σ]{.kicker}
 
-Natural images concentrate near a low-dimensional manifold inside $\mathbb{R}^d$. Consider clean data supported on the 1D line $x_2 = 0$ inside $\mathbb{R}^2$:
+::: {.cols .vc}
+::: {.col}
+$$\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}}) = \begin{bmatrix} \partial_{\tilde{x}_1} \log q_\sigma(\tilde{x}_1) \\ -\tilde{x}_2 / \sigma^2 \end{bmatrix}$$
 
-- **Anisotropic Gaussian thickening:** Convolving the line density $q(x_1)\,\delta(x_2)$ with $\mathcal{N}(\mathbf{0}, \sigma^2\mathbf{I})$ yields $p_\sigma(\tilde{\mathbf{x}}) = q_\sigma(\tilde{x}_1)\,\mathcal{N}(\tilde{x}_2; 0, \sigma^2)$, whose score decomposes into tangential and normal components:
-  $$\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}}) = \begin{bmatrix} \partial_{\tilde{x}_1} \log q_\sigma(\tilde{x}_1) \\ -\tilde{x}_2 / \sigma^2 \end{bmatrix}$$
-- **Exploding normal curvature:** Orthogonal to the manifold, the score has slope $-1/\sigma^2$ and expected squared norm $\mathbb{E}[\|\partial_{\tilde{x}_2} \log p_\sigma\|^2] = 1/\sigma^2 \to \infty$ as $\sigma \to 0$.
+- **Anisotropic Gaussian thickening:** For data supported on the 1D line $x_2 = 0$ inside $\mathbb{R}^2$, the tangential score $\partial_{\tilde{x}_1}\log q_\sigma$ is $O(1)$ while the normal score is $-\tilde{x}_2/\sigma^2$.
+- **Manifold cliff hazard:** As $\sigma \to 0$, a network must fit an infinitely steep normal cliff (slope $-1/\sigma^2$) while averaging out $O(1/\sigma)$ noise tangential to the manifold.
+:::
 
-::: {.d2l-note .warn}
-**Manifold cliff hazard:** At tiny $\sigma$, a neural network must simultaneously fit an infinitely steep restoring cliff normal to the manifold while averaging out $O(1/\sigma)$ noise tangential to the manifold.
+::: {.col .fig}
+@fig:ch17-diff-manifold-cliff
+:::
 :::
 :::
 
@@ -1256,13 +1264,18 @@ Compare our true mixture $\pi = (0.5, 0.3, 0.2)$ against an equal-weight mixture
 ::: {.slide title="Langevin Dynamics: Sampling with Only a Score Field"}
 [Score-Based MCMC]{.kicker}
 
-Given a score vector field $\mathbf{s}(\mathbf{x}) \approx \nabla \log p(\mathbf{x})$, **overdamped Langevin dynamics** (1908) generates samples by combining gradient ascent on $\log p$ with Brownian thermal noise:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{x}_{k+1} = \mathbf{x}_k + \frac{h}{2}\,\mathbf{s}(\mathbf{x}_k) + \sqrt{h}\,\boldsymbol\xi_k, \qquad \boldsymbol\xi_k \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
 
-- **Stationary distribution guarantee:** As step size $h \to 0$ with exact score $\mathbf{s} = \nabla \log p$, the deterministic drift uphill balances the diffusive spread $\sqrt{h}\,\boldsymbol\xi_k$, leaving $p(\mathbf{x})$ invariant.
-- **Finite-step discretization inflation:** For a Gaussian component of variance $v$, discrete steps of size $h$ inflate the stationary variance to $v / (1 - h/(4v))$ (a $+5\%$ width increase at $v = 0.25, h = 0.05$).
-- **Kramers' barrier escape bottleneck:** Crossing a potential barrier $\Delta U = -\Delta \log p \approx 10$–$12$ nats between modes requires expected time $\tau \propto e^{\Delta U} \approx 10^6$ steps!
+- **Stationary guarantee vs. step inflation:** As $h \to 0$ with $\mathbf{s} = \nabla\log p$, uphill drift balances Brownian noise to keep $p(\mathbf{x})$ invariant (while finite $h$ inflates variance to $v/(1 - h/4v)$).
+- **Kramers' barrier bottleneck:** Crossing a $\Delta U \approx 10\text{--}12$ nat valley between modes requires expected time $\tau \propto e^{\Delta U} \approx 10^6$ steps!
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-langevin-step
+:::
+:::
 :::
 
 ::: {.slide title="Langevin Chains on Exact vs. Learned Score Fields"}
@@ -1276,31 +1289,34 @@ Starting $2{,}000$ chains from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$ ($\approx 
 ::: {.slide title="Diagnosing the Single-Level Sampling Breakdown"}
 [Mixing vs. Sharpness]{.kicker}
 
-Comparing the summary statistics across the five Langevin runs exposes why no single noise level $\sigma$ suffices for generative sampling:
+::: {.cols .vc}
+::: {.col}
+- **Exact clean score ($\nabla\log p$):** Produces sharp modes ($\text{spread} = 0.50, \text{strays} = 1.3\%$), but $10\text{--}12$ nat valleys trap chains in their initial $[0.34, 0.33, 0.33]$ proportions.
+- **Wide blurred score ($\nabla\log p_{1.0}$):** Fills valleys to recover the true $[0.49, 0.31, 0.20]$ weights, but inflates within-mode variance $5\times$ ($\text{strays} = 41\%$).
+- **Trained MLP scores ($\sigma = 0.3$):** Still blocked by $7\text{--}9$ nat barriers; inter-mode drift is driven by uncontrolled approximation errors in empty valleys.
+:::
 
-| Driving Vector Field | Final Mode Weights | Stray Fraction | Within-Mode Spread | Failure Mechanism |
-| :--- | :--- | :--- | :--- | :--- |
-| **Ground-truth data** $p$ | $[0.50, 0.30, 0.20]$ | $\approx 1.1\%$ | $\approx 0.48$ | *(Target reference)* |
-| **Exact clean score** $\nabla \log p$ | $[0.34, 0.33, 0.33]$ | $\approx 1.3\%$ | $\approx 0.50$ | **Trapped in initial modes** ($10$–$12$ nat barriers) |
-| **Exact blurred score** $\nabla \log p_{1.0}$ | $[0.49, 0.31, 0.20]$ | **$\approx 41\%$** | $\approx 1.01$ | Mixes weights accurately, but **variance is $5\times$ too wide** |
-| **Exact blurred score** $\nabla \log p_{0.3}$ | $[0.36, 0.32, 0.32]$ | $\approx 4.2\%$ | $\approx 0.62$ | $7$–$9$ nat barriers still block mixing in $2{,}000$ steps |
-| **Trained MLP scores** ($\sigma = 0.3$) | $[0.39\text{--}0.46, \dots]$ | $\approx 5\text{--}6.5\%$ | $\approx 0.60$ | Drift across valleys is driven by **uncontrolled valley errors** |
-
-::: {.d2l-note .warn}
-**The core contradiction:** Small $\sigma$ gives sharp modes but traps chains in their initialization; large $\sigma$ mixes rapidly across modes but samples a heavily blurred distribution.
+::: {.col .fig .big}
+@fig:ch17-diff-single-level-table
+:::
 :::
 :::
 
 ::: {.slide title="High-Dimensional Denoising: Convnets vs. Wiener"}
 [Scaling to 784-D Garment Images]{.kicker}
 
-On $28 \times 28$ Fashion-MNIST images ($d = 784$) corrupted at $\sigma = 0.5$, we compare our 4-layer convnet against the closed-form optimal linear denoiser (**Wiener filter**) fitted to the empirical covariance $\boldsymbol\Sigma \in \mathbb{R}^{784 \times 784}$:
-
+::: {.cols .vc}
+::: {.col}
 $$D_{\mathrm{lin}}(\tilde{\mathbf{x}}) = \boldsymbol\mu + \boldsymbol\Sigma(\boldsymbol\Sigma + \sigma^2\mathbf{I})^{-1}(\tilde{\mathbf{x}} - \boldsymbol\mu)$$
 
-- **Eigenvalue shrinkage vs. nonlinear projection:** The Wiener filter shrinks each principal component $i$ by $\lambda_i / (\lambda_i + \sigma^2)$ onto a flat global subspace ($\textrm{MSE} = 0.045 \pm 0.0005$), leaving background grain and blurred edges.
-- **Curved manifold recovery:** The 4-layer convnet ($\textrm{MSE} = 0.030 \pm 0.0004$ across both seeds) projects noisy inputs onto the curved nonlinear set of garments ($30\,\mathrm{SE}$ improvement).
-- **Why one-step denoising is not generation:** Because $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$ averages over all clean garments compatible with $\tilde{\mathbf{x}}$, fine textures destroyed by large noise are replaced by a blurry conditional mean.
+- **Linear subspace vs. curved manifold ($\sigma = 0.5$ on Fashion-MNIST):** The optimal $784 \times 784$ Wiener filter shrinks each PCA component by $\lambda_i/(\lambda_i + \sigma^2)$ ($\textrm{MSE} = 0.045$), whereas our 4-layer convnet projects onto the nonlinear garment manifold ($\textrm{MSE} = 0.030$, a $30\,\mathrm{SE}$ improvement).
+- **Why one-step denoising is not generation:** At high noise, $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$ averages across compatible garments into a blur.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-wiener-vs-cnn
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Tweedie's Formula & Noise Scales"}

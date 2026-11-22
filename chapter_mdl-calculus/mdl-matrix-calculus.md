@@ -1279,28 +1279,33 @@ Matrix Calculus<br>**the Jacobian · chain rule & multiplication order · differ
 ::: {.slide title="From Scalar Nodes to Vector and Matrix Layers"}
 [Motivation]{.kicker}
 
-A neural network is not written in scalar variables: each layer maps a vector to a vector, and its parameters live in weight matrices. Consider our running 2-2-1 $\mathrm{ReLU}$ network at input $\mathbf{x} = (1, 1)^\top$:
+::: {.cols .vc}
+::: {.col}
+- **2-2-1 ReLU Network at $\mathbf{x} = (1, 1)^\top$:** $g(\mathbf{x}) = \mathbf{w}_2^\top\boldsymbol{\varphi}(\mathbf{W}_1\mathbf{x} + \mathbf{b})$ gives $\mathbf{a} = (3, -2)^\top$, $\mathbf{h} = (3, 0)^\top$, and $g = 6$.
+- **Three Distinct Derivative Shapes:** Input Jacobian $\partial g/\partial\mathbf{x} \in \mathbb{R}^{1 \times 2}$, weight gradient $\nabla_{\mathbf{W}_1}g \in \mathbb{R}^{2 \times 2}$, and hidden-layer Jacobian $\partial\mathbf{h}/\partial\mathbf{x} \in \mathbb{R}^{2 \times 2}$.
+- **Transpose Bug Hazard:** A missing transpose on a square weight matrix raises no shape error; the differential method prevents it.
+:::
 
-$$g(\mathbf{x}) = \mathbf{w}_2^\top \boldsymbol{\varphi}(\mathbf{W}_1\mathbf{x} + \mathbf{b}), \qquad \mathbf{W}_1 = \begin{pmatrix} 1 & 2 \\ 3 & -1 \end{pmatrix}, \quad \mathbf{b} = \begin{pmatrix} 0 \\ -4 \end{pmatrix}, \quad \mathbf{w}_2 = \begin{pmatrix} 2 \\ -1 \end{pmatrix}$$
-
-- **Forward values at $\mathbf{x} = (1, 1)^\top$:** Pre-activations are $\mathbf{a} = \mathbf{W}_1\mathbf{x} + \mathbf{b} = (3, -2)^\top$, so hidden unit 2 is inactive, hidden activations are $\mathbf{h} = (3, 0)^\top$, and the scalar output is $g = 6$.
-- **Three distinct derivative shapes:** Perturbing $\mathbf{x}$ by $\boldsymbol{\delta}$ changes $g$ by $2\delta_1 + 4\delta_2$ (a $1 \times 2$ row); perturbing $\mathbf{W}_1$ by $\Delta\mathbf{W}_1$ changes $g$ by $2\Delta W_{11} + 2\Delta W_{12}$ (a $2 \times 2$ matrix); and the hidden layer itself maps $\mathbb{R}^2 \to \mathbb{R}^2$.
-
-::: {.d2l-note .warn}
-In hand derivations, a missing transpose on a square weight matrix raises no shape error—the code runs silently and training fails. One definition and one differential rule prevent such bugs.
+::: {.col .fig .big}
+@fig:ch34-calc-three-deriv-shapes
+:::
 :::
 :::
 
 ::: {.slide title="The Jacobian: Best Linear Map for Vector Functions"}
 [Definition & Entries]{.kicker}
 
-A map $\mathbf{f} : \mathbb{R}^n \to \mathbb{R}^m$ is **differentiable** at $\mathbf{x}$ if there exists an $m \times n$ matrix $\mathbf{J}$—the **Jacobian** $\mathbf{J}_{\mathbf{f}}(\mathbf{x})$—that approximates $\mathbf{f}$ to first order:
+::: {.cols .vc}
+::: {.col}
+- **First-Order Vector Linearization:** $\mathbf{f}(\mathbf{x} + \boldsymbol{\delta}) = \mathbf{f}(\mathbf{x}) + \mathbf{J}_{\mathbf{f}}(\mathbf{x})\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|)$, where $[\mathbf{J}_{\mathbf{f}}(\mathbf{x})]_{ij} = \frac{\partial f_i}{\partial x_j}(\mathbf{x}) \in \mathbb{R}^{m \times n}$.
+- **Row & Column Views:** Row $i$ is $\nabla f_i(\mathbf{x})^\top$; column $j$ is $\partial\mathbf{f}/\partial x_j$.
+- **Curved Map $(x+\sin y, y+x^2/2)^\top$ at $(0.5, 0.5)^\top$:** $\mathbf{J}_{\mathbf{f}} = \left(\begin{smallmatrix}1 & \cos 0.5 \\ 0.5 & 1\end{smallmatrix}\right)$.
+:::
 
-$$\mathbf{f}(\mathbf{x} + \boldsymbol{\delta}) = \mathbf{f}(\mathbf{x}) + \mathbf{J}_{\mathbf{f}}(\mathbf{x})\,\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|), \qquad [\mathbf{J}_{\mathbf{f}}(\mathbf{x})]_{ij} = \frac{\partial f_i}{\partial x_j}(\mathbf{x})$$
-
-- **Structure of $\mathbf{J}_{\mathbf{f}} \in \mathbb{R}^{m \times n}$:** Row $i$ is the transpose of the gradient $\nabla f_i(\mathbf{x})^\top$ of output $i$; column $j$ is the partial derivative vector $\partial \mathbf{f}/\partial x_j$ showing how all $m$ outputs respond when input $j$ moves.
-- **Running curved map $\mathbf{f}(x, y) = (x + \sin y,\ y + x^2/2)^\top$ at $\mathbf{x}_0 = (0.5, 0.5)^\top$:**
-  $$\mathbf{J}_{\mathbf{f}}(\mathbf{x}_0) = \begin{pmatrix} 1 & \cos y \\ x & 1 \end{pmatrix}_{(0.5, 0.5)} = \begin{pmatrix} 1 & \cos 0.5 \\ 0.5 & 1 \end{pmatrix} \approx \begin{pmatrix} 1 & 0.8776 \\ 0.5 & 1 \end{pmatrix}$$
+::: {.col .fig .big}
+@fig:ch34-calc-jacobian-grid
+:::
+:::
 :::
 
 ::: {.slide title="Geometry of the Jacobian: Circles Map to Ellipses"}
@@ -1334,35 +1339,33 @@ Shrinking the step $\boldsymbol{\delta}$ tenfold at a time confirms that the rel
 ::: {.slide title="Numerator vs. Denominator Layout and Shape Rules"}
 [Shape Conventions]{.kicker}
 
-Keeping two complementary shape conventions distinct eliminates confusion between row vectors, column vectors, and matrix gradients:
+::: {.cols .vc}
+::: {.col}
+- **Jacobian $\mathbf{J}_{\mathbf{f}} \in \mathbb{R}^{m \times n}$ (Numerator Layout):** Composes directly via $\mathbf{J}_{\mathbf{g}}\mathbf{J}_{\mathbf{f}}$ without transposes.
+- **Gradient $\nabla_{\mathbf{X}} f$ (Golden Shape Invariant):** Always matches the exact shape of $\mathbf{X}$ (column $\mathbb{R}^{n \times 1}$ or matrix $\mathbb{R}^{p \times q}$) via $df = \langle \nabla_{\mathbf{X}} f, d\mathbf{X}\rangle$.
+- **Hessian $\mathbf{H}_f = \mathbf{J}_{\nabla f} \in \mathbb{R}^{n \times n}$:** Jacobian of the gradient map.
+:::
 
-| Object | Notation & Shape | First-Order Expansion & Purpose |
-| :--- | :--- | :--- |
-| **Vector-Map Jacobian** | $\mathbf{J}_{\mathbf{f}}(\mathbf{x}) = \dfrac{\partial \mathbf{f}}{\partial \mathbf{x}} \in \mathbb{R}^{m \times n}$ | $\mathbf{f}(\mathbf{x}+\boldsymbol{\delta}) \approx \mathbf{f}(\mathbf{x}) + \mathbf{J}_{\mathbf{f}}\boldsymbol{\delta}$; composes directly via matrix multiplication $\mathbf{J}_{\mathbf{g}}\mathbf{J}_{\mathbf{f}}$ without transposes. |
-| **Vector Gradient** | $\nabla_{\mathbf{x}} f = \left(\dfrac{\partial f}{\partial \mathbf{x}}\right)^\top \in \mathbb{R}^{n \times 1}$ | $f(\mathbf{x}+\boldsymbol{\delta}) \approx f(\mathbf{x}) + \langle \nabla_{\mathbf{x}} f, \boldsymbol{\delta}\rangle$; column vector matching the shape of $\mathbf{x}$ for $\mathbf{x} \leftarrow \mathbf{x} - \eta\nabla_{\mathbf{x}}f$. |
-| **Matrix Gradient** | $\nabla_{\mathbf{W}} f \in \mathbb{R}^{p \times q}$, $[\nabla_{\mathbf{W}} f]_{ij} = \dfrac{\partial f}{\partial W_{ij}}$ | $f(\mathbf{W}+\mathbf{E}) \approx f(\mathbf{W}) + \langle \nabla_{\mathbf{W}} f, \mathbf{E}\rangle$ under Frobenius inner product $\langle \mathbf{A}, \mathbf{B}\rangle = \operatorname{tr}(\mathbf{A}^\top\mathbf{B}) = \sum_{ij} A_{ij}B_{ij}$. |
-| **Hessian Matrix** | $\mathbf{H}_f(\mathbf{x}) = \mathbf{J}_{\nabla f}(\mathbf{x}) \in \mathbb{R}^{n \times n}$ | Jacobian of the gradient map $\nabla f : \mathbb{R}^n \to \mathbb{R}^n$; symmetric ($\mathbf{H}_f = \mathbf{H}_f^\top$) when $f \in C^2$. |
-
-::: {.d2l-note .rule}
-**The Golden Shape Invariant:** The gradient $\nabla_{\mathbf{X}} f$ of a scalar function $f$ always has the **exact same dimensions** as its variable $\mathbf{X}$.
+::: {.col .fig .big}
+@fig:ch34-calc-shape-conventions
+:::
 :::
 :::
 
 ::: {.slide title="The Chain Rule for Jacobians: Matrix Multiplication"}
 [Composition of Maps]{.kicker}
 
-Composing differentiable vector-valued maps multiplies their Jacobians:
-
-::: {.d2l-note .rule}
-**Proposition (Matrix Chain Rule):** If $\mathbf{f} : \mathbb{R}^n \to \mathbb{R}^p$ is differentiable at $\mathbf{x}$ and $\mathbf{g} : \mathbb{R}^p \to \mathbb{R}^m$ is differentiable at $\mathbf{y} = \mathbf{f}(\mathbf{x})$, then $\mathbf{g} \circ \mathbf{f} : \mathbb{R}^n \to \mathbb{R}^m$ is differentiable at $\mathbf{x}$ and
-$$\mathbf{J}_{\mathbf{g} \circ \mathbf{f}}(\mathbf{x}) = \mathbf{J}_{\mathbf{g}}\bigl(\mathbf{f}(\mathbf{x})\bigr)\,\mathbf{J}_{\mathbf{f}}(\mathbf{x})$$
+::: {.cols .vc}
+::: {.col}
+- **Matrix Chain Rule:** If $\mathbf{f} : \mathbb{R}^n \to \mathbb{R}^p$ and $\mathbf{g} : \mathbb{R}^p \to \mathbb{R}^m$ are differentiable, then $\mathbf{J}_{\mathbf{g} \circ \mathbf{f}}(\mathbf{x}) = \mathbf{J}_{\mathbf{g}}(\mathbf{f}(\mathbf{x}))\,\mathbf{J}_{\mathbf{f}}(\mathbf{x})$.
+- **Three-Line Proof:** $\boldsymbol{\eta} = \mathbf{A}\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|) \implies \mathbf{g}(\mathbf{y}+\boldsymbol{\eta}) = \mathbf{g}(\mathbf{y}) + \mathbf{B}\mathbf{A}\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|)$.
+- **Path-Sum Link:** $[\mathbf{B}\mathbf{A}]_{ik} = \sum_{j=1}^p \frac{\partial g_i}{\partial y_j}\frac{\partial f_j}{\partial x_k}$.
 :::
 
-- **Three-line proof from linear approximations:** Let $\mathbf{A} = \mathbf{J}_{\mathbf{f}}(\mathbf{x})$ and $\mathbf{B} = \mathbf{J}_{\mathbf{g}}(\mathbf{y})$.
-  1. Perturbing $\mathbf{x}$ gives $\mathbf{f}(\mathbf{x}+\boldsymbol{\delta}) = \mathbf{y} + \boldsymbol{\eta}$ with intermediate shift $\boldsymbol{\eta} = \mathbf{A}\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|)$.
-  2. Feeding $\boldsymbol{\eta}$ into $\mathbf{g}$ gives $\mathbf{g}(\mathbf{y}+\boldsymbol{\eta}) = \mathbf{g}(\mathbf{y}) + \mathbf{B}\boldsymbol{\eta} + o(\|\boldsymbol{\eta}\|) = \mathbf{g}(\mathbf{y}) + \mathbf{B}\mathbf{A}\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|)$ since $\|\boldsymbol{\eta}\| \le \|\mathbf{A}\|\,\|\boldsymbol{\delta}\| + o(\|\boldsymbol{\delta}\|) = O(\|\boldsymbol{\delta}\|)$.
-  3. By uniqueness of the linear approximation, $\mathbf{J}_{\mathbf{g}\circ\mathbf{f}}(\mathbf{x}) = \mathbf{B}\mathbf{A}$.
-- **Connection to §34.3 sum over paths:** Entry $(i, k)$ of $\mathbf{B}\mathbf{A}$ is $\sum_{j=1}^p \frac{\partial g_i}{\partial y_j}\frac{\partial f_j}{\partial x_k}$, summing path products across all $p$ intermediate coordinates $y_j$.
+::: {.col .fig .big}
+@fig:ch34-calc-jacobian-chain-proof
+:::
+:::
 :::
 
 ::: {.slide title="Jacobian of a Multilayer Perceptron"}
@@ -1395,17 +1398,15 @@ For a $K$-layer network $\mathbf{f} = \mathbf{f}_K \circ \cdots \circ \mathbf{f}
 ::: {.slide title="Deep Jacobian Products: Vanishing & Exploding Norms"}
 [Spectral Scaling]{.kicker}
 
-Writing a deep or recurrent network's input-output sensitivity as the matrix product $\mathbf{J} = \mathbf{J}_K \mathbf{J}_{K-1} \cdots \mathbf{J}_1$ immediately explains gradient instability across depth $K$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Exponential scaling with depth:** When a recurrent network applies the same weight matrix $\mathbf{W}$ across $K$ steps (ignoring nonlinearities), $\mathbf{J} = \mathbf{W}^K$. If $\mathbf{W} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$ is diagonalizable, then $\mathbf{W}^K = \mathbf{V}\boldsymbol{\Lambda}^K\mathbf{V}^{-1}$ scales asymptotically as $|\lambda_{\max}|^K$.
-- **Concrete numbers at $K = 50$:** If $|\lambda_{\max}| = 0.9$, gradients shrink by $0.9^{50} \approx 0.005$ (**vanishing**); if $|\lambda_{\max}| = 1.1$, they grow by $1.1^{50} \approx 117$ (**exploding**).
+- **Exponential Depth Scaling ($\mathbf{J} = \mathbf{J}_K \cdots \mathbf{J}_1$):** For repeated $\mathbf{W} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$, $\mathbf{W}^K = \mathbf{V}\boldsymbol{\Lambda}^K\mathbf{V}^{-1}$ scales as $|\lambda_{\max}|^K$.
+- **At Depth $K = 50$:** $|\lambda_{\max}| = 0.9 \implies 0.9^{50} \approx 0.005$ (vanishing); $|\lambda_{\max}| = 1.1 \implies 1.1^{50} \approx 117$ (exploding).
+- **Input vs. Weight Gradients:** $\mathbf{J}_K \cdots \mathbf{J}_1$ gives $\partial g/\partial\mathbf{x}$; training needs $\nabla_{\mathbf{W}_k}\ell$.
 :::
 
-::: {.col}
-- **Non-normal transient growth & distinct factors:** When eigenvectors in $\mathbf{V}$ are far from orthogonal, $\|\mathbf{W}^K\|$ can spike transiently before decaying; for distinct layer matrices $\mathbf{J}_K \cdots \mathbf{J}_1$, singular values govern step-by-step norm growth.
-- **What $\mathbf{J}_K \cdots \mathbf{J}_1$ leaves out:** This product gives $\partial g / \partial \mathbf{x}$ with respect to the **input**, treating $\mathbf{W}_k$ as fixed constants. Training requires gradients with respect to the **weight matrices** $\mathbf{W}_k$ themselves.
+::: {.col .fig .big}
+@fig:ch34-calc-deep-jacobian-norms
 :::
 :::
 :::
@@ -1429,90 +1430,96 @@ Writing a deep or recurrent network's input-output sensitivity as the matrix pro
 ::: {.slide title="The Differential Method: One Rule Replaces Tables"}
 [First-Order Differentials]{.kicker}
 
-Instead of memorizing tables of matrix derivatives, we derive every vector and matrix gradient from a single identity: the first-order differential $df$ (the linear part of $f(\mathbf{X} + d\mathbf{X}) - f(\mathbf{X})$) is the Frobenius inner product with the gradient:
+::: {.cols .vc}
+::: {.col}
+- **Step 1 — Expand $df$:** Apply linearity, matrix product rule $d(\mathbf{A}\mathbf{B}) = (d\mathbf{A})\mathbf{B} + \mathbf{A}(d\mathbf{B})$, transpose $d(\mathbf{A}^\top) = (d\mathbf{A})^\top$, and elementwise $d\varphi(\mathbf{X}) = \varphi'(\mathbf{X})\odot d\mathbf{X}$.
+- **Step 2 — Match Canonical Inner Product:** Rearrange into $df = \langle \mathbf{M}, d\mathbf{X}\rangle = \operatorname{tr}(\mathbf{M}^\top d\mathbf{X})$ and read off $\nabla_{\mathbf{X}} f = \mathbf{M}$.
+:::
 
-::: {.d2l-note .rule}
-**The Differential Recipe:** To find $\nabla_{\mathbf{X}} f$ for any vector or matrix variable $\mathbf{X}$:
-
-1. Compute the differential $df$ using four elementary rules:
-   - **Linearity:** $d(a\mathbf{U} + b\mathbf{V}) = a\,d\mathbf{U} + b\,d\mathbf{V}$
-   - **Matrix product rule:** $d(\mathbf{A}\mathbf{B}) = (d\mathbf{A})\mathbf{B} + \mathbf{A}(d\mathbf{B})$
-   - **Transpose rule:** $d(\mathbf{A}^\top) = (d\mathbf{A})^\top$
-   - **Elementwise chain rule:** $d\varphi(\mathbf{X}) = \varphi'(\mathbf{X}) \odot d\mathbf{X}$
-2. Rearrange $df$ into the canonical inner-product form $df = \langle \mathbf{M}, d\mathbf{X}\rangle = \operatorname{tr}(\mathbf{M}^\top d\mathbf{X})$ and read off $\nabla_{\mathbf{X}} f = \mathbf{M}$.
+::: {.col .fig .big}
+@fig:ch34-calc-differential-recipe
+:::
 :::
 :::
 
 ::: {.slide title="The Trace Move Rule for Isolating dX"}
 [Adjoint Algebra]{.kicker}
 
-To isolate $d\mathbf{X}$ on the right side of the inner product $\langle \mathbf{A}, \cdot \rangle$, we use one algebraic identity derived from the cyclic property of the trace, $\operatorname{tr}(\mathbf{U}\mathbf{V}) = \operatorname{tr}(\mathbf{V}\mathbf{U})$:
-
-::: {.d2l-note .rule}
-**The Trace Move Rule:** For any conformable matrices $\mathbf{A}, \mathbf{B}, \mathbf{C}$,
-$$\langle \mathbf{A},\ \mathbf{B}\mathbf{C}\rangle = \langle \mathbf{B}^\top\mathbf{A},\ \mathbf{C}\rangle = \langle \mathbf{A}\mathbf{C}^\top,\ \mathbf{B}\rangle, \qquad \langle \mathbf{A},\ \mathbf{B} \odot \mathbf{C}\rangle = \langle \mathbf{A} \odot \mathbf{B},\ \mathbf{C}\rangle$$
+::: {.cols .vc}
+::: {.col}
+- **Cyclic Trace Identity ($\operatorname{tr}(\mathbf{U}\mathbf{V}) = \operatorname{tr}(\mathbf{V}\mathbf{U})$):**
+  - Left multiplier: $\langle \mathbf{A}, \mathbf{B}\mathbf{C}\rangle = \langle \mathbf{B}^\top\mathbf{A}, \mathbf{C}\rangle$.
+  - Right multiplier: $\langle \mathbf{A}, \mathbf{B}\mathbf{C}\rangle = \langle \mathbf{A}\mathbf{C}^\top, \mathbf{B}\rangle$.
+  - Hadamard mask: $\langle \mathbf{A}, \mathbf{B} \odot \mathbf{C}\rangle = \langle \mathbf{A} \odot \mathbf{B}, \mathbf{C}\rangle$.
 :::
 
-- **Proof in one line:**
-  $$\langle \mathbf{A}, \mathbf{B}\mathbf{C}\rangle = \operatorname{tr}(\mathbf{A}^\top \mathbf{B}\mathbf{C}) = \operatorname{tr}\bigl((\mathbf{B}^\top\mathbf{A})^\top \mathbf{C}\bigr) = \operatorname{tr}(\mathbf{C}\mathbf{A}^\top\mathbf{B}) = \operatorname{tr}\bigl((\mathbf{A}\mathbf{C}^\top)^\top \mathbf{B}\bigr)$$
-- **Mnemonic for moving factors across $\langle \cdot, \cdot \rangle$:** A matrix multiplying $d\mathbf{X}$ on the **left** ($\mathbf{B}\,d\mathbf{X}$) moves to the other side as $\mathbf{B}^\top$ on the **left**; a matrix multiplying $d\mathbf{X}$ on the **right** ($d\mathbf{X}\,\mathbf{C}$) moves across as $\mathbf{C}^\top$ on the **right**; an elementwise factor $\mathbf{B} \odot d\mathbf{X}$ moves across unchanged.
+::: {.col .fig .big}
+@fig:ch34-calc-trace-move-rule
+:::
+:::
 :::
 
 ::: {.slide title="Deriving Linear, Quadratic, and Least-Squares Gradients"}
 [Worked Derivations]{.kicker}
 
-Applying the differential recipe and move rule derives the core identities of linear algebra in two lines each:
+::: {.cols .vc}
+::: {.col}
+- **1. Linear Form $\mathbf{a}^\top\mathbf{x}$:** $df = \langle \mathbf{a}, d\mathbf{x}\rangle \implies \nabla_{\mathbf{x}}(\mathbf{a}^\top\mathbf{x}) = \mathbf{a}$.
+- **2. Quadratic Form $\mathbf{x}^\top\mathbf{A}\mathbf{x}$:** $df = \langle (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}, d\mathbf{x}\rangle \implies \nabla_{\mathbf{x}}(\mathbf{x}^\top\mathbf{A}\mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ ($= 2\mathbf{A}\mathbf{x}$ only if $\mathbf{A} = \mathbf{A}^\top$).
+- **3. Least Squares $\|\mathbf{W}\mathbf{x} - \mathbf{y}\|_2^2$:** $d\ell = \langle 2\mathbf{r}\mathbf{x}^\top, d\mathbf{W}\rangle \implies \nabla_{\mathbf{W}}\ell = 2(\mathbf{W}\mathbf{x} - \mathbf{y})\mathbf{x}^\top$.
+:::
 
-- **1. Linear form $f(\mathbf{x}) = \mathbf{a}^\top\mathbf{x}$:** $df = \mathbf{a}^\top d\mathbf{x} = \langle \mathbf{a}, d\mathbf{x}\rangle$ $\implies$ $\nabla_{\mathbf{x}}(\mathbf{a}^\top\mathbf{x}) = \mathbf{a}$.
-- **2. Quadratic form $f(\mathbf{x}) = \mathbf{x}^\top\mathbf{A}\mathbf{x}$ (for general square $\mathbf{A} \in \mathbb{R}^{n \times n}$):**
-  $$df = (d\mathbf{x})^\top\mathbf{A}\mathbf{x} + \mathbf{x}^\top\mathbf{A}\,d\mathbf{x} = \langle \mathbf{A}\mathbf{x}, d\mathbf{x}\rangle + \langle \mathbf{A}^\top\mathbf{x}, d\mathbf{x}\rangle = \bigl\langle (\mathbf{A} + \mathbf{A}^\top)\mathbf{x},\ d\mathbf{x}\bigr\rangle$$
-  Therefore $\nabla_{\mathbf{x}}(\mathbf{x}^\top\mathbf{A}\mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$, which reduces to $2\mathbf{A}\mathbf{x}$ **only when $\mathbf{A} = \mathbf{A}^\top$**.
-- **3. Least-squares loss $\ell(\mathbf{W}) = \|\mathbf{W}\mathbf{x} - \mathbf{y}\|_2^2 = \langle \mathbf{r}, \mathbf{r}\rangle$ with residual $\mathbf{r} = \mathbf{W}\mathbf{x} - \mathbf{y}$:**
-  $$d\ell = 2\langle \mathbf{r}, d\mathbf{r}\rangle = \langle 2\mathbf{r},\ (d\mathbf{W})\mathbf{x}\rangle = \langle 2\mathbf{r}\mathbf{x}^\top,\ d\mathbf{W}\rangle \implies \nabla_{\mathbf{W}}\|\mathbf{W}\mathbf{x} - \mathbf{y}\|_2^2 = 2(\mathbf{W}\mathbf{x} - \mathbf{y})\mathbf{x}^\top$$
+::: {.col .fig .big}
+@fig:ch34-calc-worked-matrix-grads
+:::
+:::
 :::
 
 ::: {.slide title="Sanity Checks: Shape, 1×1 Scalar, and Nonsymmetric Test"}
 [Debugging Matrix Gradients]{.kicker}
 
-How can you verify a hand-derived matrix gradient before trusting it in a training loop? Use three complementary checks:
+::: {.cols .vc}
+::: {.col}
+- **1. Shape Check:** Catches missing transposes on rectangular matrices ($p \neq q$), but misses square matrices ($p = q$).
+- **2. $1 \times 1$ Scalar Check:** Catches missing factors of $2$ and signs, but misses all transposes.
+- **3. Nonsymmetric Numerical Test:** Comparing against autograd on a random nonsymmetric square matrix catches *every* bug.
+:::
 
-| Sanity Check | How It Works | What It Catches | What It Misses |
-| :--- | :--- | :--- | :--- |
-| **1. Shape Check** | Verify $\nabla_{\mathbf{X}} f$ has the exact dimensions of $\mathbf{X}$ ($p \times q$) | Missing transposes on **rectangular** factors ($p \ne q$) | Missing transposes on **square** factors ($p = q$) |
-| **2. $1 \times 1$ Scalar Check** | Replace every matrix/vector with a $1 \times 1$ scalar | Missing factors of $2$, wrong signs, dropped product-rule terms | All transposes and factor orderings ($1 \times 1$ matrices commute!) |
-| **3. Nonsymmetric Numerical Test** | Compare against autograd or finite differences on a random **nonsymmetric square** matrix | **Everything**, including square transpose bugs | Nothing |
-
-::: {.d2l-note .warn}
-**Concrete trap:** For $\mathbf{A} = \begin{pmatrix} 0 & 1 \\ 0 & 0 \end{pmatrix}$ and $\mathbf{x} = (1, 2)^\top$, $\mathbf{x}^\top\mathbf{A}\mathbf{x} = x_1 x_2$ has true gradient $(x_2, x_1)^\top = (2, 1)^\top = (\mathbf{A}+\mathbf{A}^\top)\mathbf{x}$. The naive guess $2\mathbf{A}\mathbf{x} = (4, 0)^\top$ passes both the shape check and the $1 \times 1$ scalar check ($2ax$), yet is completely wrong!
+::: {.col .fig .big}
+@fig:ch34-calc-three-sanity-checks
+:::
 :::
 :::
 
 ::: {.slide title="The General Backward Rule (VJP) of a Layer"}
 [Layer Adjoints]{.kicker}
 
-For a matrix layer $\mathbf{Y} = \mathbf{F}(\mathbf{X})$ mapping $1000 \times 1000$ weights to $1000 \times 1000$ batched outputs, the full Jacobian has $10^{12}$ entries. Backpropagation never forms that Jacobian—it only maps the upstream adjoint $\bar{\mathbf{Y}} = \nabla_{\mathbf{Y}}\ell$ to the downstream adjoint $\bar{\mathbf{X}} = \nabla_{\mathbf{X}}\ell$:
-
-::: {.d2l-note .rule}
-**Proposition (Backward Rule of a Layer):** Let $\mathbf{Y} = \mathbf{F}(\mathbf{X})$ be differentiable at $\mathbf{X}$ with first-order differential $d\mathbf{Y}$, and let $\ell$ be a differentiable scalar loss with upstream adjoint $\bar{\mathbf{Y}} = \nabla_{\mathbf{Y}}\ell$. Then the downstream adjoint $\bar{\mathbf{X}} = \nabla_{\mathbf{X}}\ell$ is the unique matrix satisfying
-$$\langle \bar{\mathbf{X}},\ d\mathbf{X}\rangle = \langle \bar{\mathbf{Y}},\ d\mathbf{Y}\rangle \quad \text{for every } d\mathbf{X}$$
+::: {.cols .vc}
+::: {.col}
+- **No $10^{12}$-Entry Tensor Jacobians:** A layer $\mathbf{Y} = \mathbf{F}(\mathbf{X})$ maps the upstream adjoint $\bar{\mathbf{Y}} = \nabla_{\mathbf{Y}}\ell$ directly to $\bar{\mathbf{X}} = \nabla_{\mathbf{X}}\ell$.
+- **Adjoint Duality Identity:** $\bar{\mathbf{X}}$ is the unique matrix satisfying $\langle \bar{\mathbf{X}}, d\mathbf{X}\rangle = \langle \bar{\mathbf{Y}}, d\mathbf{Y}\rangle$ for all $d\mathbf{X}$.
+- **Vector VJP:** When $d\mathbf{y} = \mathbf{J}\,d\mathbf{x}$, $\bar{\mathbf{x}} = \mathbf{J}^\top\bar{\mathbf{y}}$.
 :::
 
-- **Connection to transposed Jacobians:** When $\mathbf{y} = \mathbf{f}(\mathbf{x})$ is a vector layer with $d\mathbf{y} = \mathbf{J}\,d\mathbf{x}$, the move rule gives $\langle \bar{\mathbf{y}}, \mathbf{J}\,d\mathbf{x}\rangle = \langle \mathbf{J}^\top\bar{\mathbf{y}}, d\mathbf{x}\rangle$, so $\bar{\mathbf{x}} = \mathbf{J}^\top\bar{\mathbf{y}}$ (or $\bar{\mathbf{x}}^\top = \bar{\mathbf{y}}^\top\mathbf{J}$, a **vector–Jacobian product**).
+::: {.col .fig .big}
+@fig:ch34-calc-layer-vjp-duality
+:::
+:::
 :::
 
 ::: {.slide title="Backward Rules for Batched Matrix Multiplication"}
 [Core MLP Primitives]{.kicker}
 
-Consider a minibatch linear layer $\mathbf{Y} = \mathbf{X}\mathbf{W}$ where $\mathbf{X} \in \mathbb{R}^{n \times d}$ ($n$ examples of dimension $d$) and $\mathbf{W} \in \mathbb{R}^{d \times q}$. Substituting $d\mathbf{Y} = (d\mathbf{X})\mathbf{W} + \mathbf{X}(d\mathbf{W})$ into $\langle \bar{\mathbf{Y}}, d\mathbf{Y}\rangle$ and applying the move rule yields both backward rules at once:
+::: {.cols .vc}
+::: {.col}
+- **Batched Matmul ($\mathbf{Y} = \mathbf{X}\mathbf{W}$):** $\langle \bar{\mathbf{Y}}, (d\mathbf{X})\mathbf{W} + \mathbf{X}(d\mathbf{W})\rangle$ immediately gives $\bar{\mathbf{X}} = \bar{\mathbf{Y}}\mathbf{W}^\top$ and $\bar{\mathbf{W}} = \mathbf{X}^\top\bar{\mathbf{Y}}$.
+- **Elementwise & Bias Rules:** $\mathbf{Y} = \boldsymbol{\varphi}(\mathbf{X}) \implies \bar{\mathbf{X}} = \varphi'(\mathbf{X}) \odot \bar{\mathbf{Y}}$; $\mathbf{Z} = \mathbf{Y} + \mathbf{1}\mathbf{b}^\top \implies \bar{\mathbf{b}} = \bar{\mathbf{Z}}^\top\mathbf{1}$.
+:::
 
-$$\langle \bar{\mathbf{Y}},\ (d\mathbf{X})\mathbf{W} + \mathbf{X}(d\mathbf{W})\rangle = \langle \bar{\mathbf{Y}}\mathbf{W}^\top,\ d\mathbf{X}\rangle + \langle \mathbf{X}^\top\bar{\mathbf{Y}},\ d\mathbf{W}\rangle$$
-
-| Layer Operation | Forward Pass (& FLOPs) | Backward Adjoint Rule(s) (& FLOPs) | Forward Values Saved on Tape |
-| :--- | :--- | :--- | :--- |
-| **Batched Matmul** | $\mathbf{Y} = \mathbf{X}\mathbf{W}$ ($ndq$ mults) | $\bar{\mathbf{X}} = \bar{\mathbf{Y}}\mathbf{W}^\top$, $\bar{\mathbf{W}} = \mathbf{X}^\top\bar{\mathbf{Y}}$ ($2ndq$ mults) | Activations $\mathbf{X}$ & weights $\mathbf{W}$ |
-| **Single-Vector Matvec** | $\mathbf{y} = \mathbf{W}\mathbf{x}$ ($dq$ mults) | $\bar{\mathbf{x}} = \mathbf{W}^\top\bar{\mathbf{y}}$, $\bar{\mathbf{W}} = \bar{\mathbf{y}}\mathbf{x}^\top$ ($2dq$ mults) | Input vector $\mathbf{x}$ & weights $\mathbf{W}$ |
-| **Elementwise Activation** | $\mathbf{Y} = \boldsymbol{\varphi}(\mathbf{X})$ ($nq$ ops) | $\bar{\mathbf{X}} = \varphi'(\mathbf{X}) \odot \bar{\mathbf{Y}}$ ($nq$ mults) | Pre-activations $\mathbf{X}$ (or mask $\varphi'$) |
-| **Batched Bias Add** | $\mathbf{Z} = \mathbf{Y} + \mathbf{1}\mathbf{b}^\top$ ($nq$ adds) | $\bar{\mathbf{Y}} = \bar{\mathbf{Z}}$, $\bar{\mathbf{b}} = \bar{\mathbf{Z}}^\top\mathbf{1} = \sum_{i=1}^n \bar{\mathbf{z}}_i$ ($nq$ adds) | None! |
+::: {.col .fig .big}
+@fig:ch34-calc-batched-matmul-vjp
+:::
+:::
 :::
 
 ::: {.slide title="Catching Square-Matrix Transpose Bugs in Code"}
@@ -1542,27 +1549,30 @@ Applying our three local VJP rules backward from $\bar{g} = 1$ at $\mathbf{x} = 
 ::: {.slide title="The Softmax Jacobian and Log-Sum-Exp Convexity"}
 [Classifier Derivatives]{.kicker}
 
-For the softmax map $p_i(\mathbf{z}) = e^{z_i} / S$ with $S = \sum_k e^{z_k}$, differentiating by the quotient rule gives:
+::: {.cols .vc}
+::: {.col}
+- **Softmax Jacobian:** Differentiating $p_i = e^{z_i}/\sum_k e^{z_k}$ gives $\mathbf{J}_{\operatorname{softmax}}(\mathbf{z}) = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$, with null vector $\mathbf{1}$ from shift invariance.
+- **Statistical Proof of LSE Convexity:** Since $\mathbf{p} = \nabla\operatorname{LSE}(\mathbf{z})$, $\mathbf{v}^\top\mathbf{H}_{\operatorname{LSE}}\mathbf{v} = \operatorname{Var}_{I \sim \mathbf{p}}(v_I) \ge 0$ everywhere.
+:::
 
-$$\frac{\partial p_i}{\partial z_j} = \frac{\delta_{ij}e^{z_i}S - e^{z_i}e^{z_j}}{S^2} = p_i(\delta_{ij} - p_j), \qquad \mathbf{J}_{\operatorname{softmax}}(\mathbf{z}) = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$$
-
-- **Shift invariance $\implies$ null vector $\mathbf{1}$:** $\mathbf{J}_{\operatorname{softmax}}\mathbf{1} = \mathbf{p} - \mathbf{p}(\mathbf{p}^\top\mathbf{1}) = \mathbf{0}$ because adding $c\mathbf{1}$ to the logits $\mathbf{z}$ leaves all probabilities $\mathbf{p}$ unchanged.
-- **Why $\mathbf{J}_{\operatorname{softmax}}$ is symmetric:** Since $\mathbf{p} = \nabla_{\mathbf{z}}\log\sum_k e^{z_k}$, $\mathbf{J}_{\operatorname{softmax}}$ is the **Hessian of log-sum-exp**.
-- **Statistical proof of convexity:** For any vector $\mathbf{v} \in \mathbb{R}^C$, the quadratic form is a variance:
-  $$\mathbf{v}^\top \mathbf{J}_{\operatorname{softmax}}\mathbf{v} = \sum_{i=1}^C p_i v_i^2 - \left(\sum_{i=1}^C p_i v_i\right)^2 = \operatorname{Var}_{I \sim \mathbf{p}}(v_I) \ge 0$$
-  Because variance is always nonnegative, $\mathbf{H}_{\operatorname{LSE}} \succeq 0$ everywhere and log-sum-exp is globally convex!
+::: {.col .fig .big}
+@fig:ch34-calc-softmax-jacobian-var
+:::
+:::
 :::
 
 ::: {.slide title="Softmax + Cross-Entropy Collapses to p − y"}
 [Logit Gradient]{.kicker}
 
-Composing $\mathbf{p} = \operatorname{softmax}(\mathbf{z})$ with cross-entropy loss $\ell(\mathbf{p}) = -\sum_{i=1}^C y_i \log p_i$ multiplies $\frac{\partial \ell}{\partial p_i} = -\frac{y_i}{p_i}$ into $\mathbf{J}_{\operatorname{softmax}}$, causing the $1/p_i$ factors to cancel cleanly:
+::: {.cols .vc}
+::: {.col}
+- **Clean Cancellation of $1/p_i$:** Multiplying $\frac{\partial\ell}{\partial p_i} = -\frac{y_i}{p_i}$ into $\mathbf{J}_{\operatorname{softmax}} = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$ cancels $p_i$ in the denominator.
+- **Logit Gradient Formula:** $\nabla_{\mathbf{z}}\ell = \bigl(\sum_{i=1}^C y_i\bigr)\mathbf{p} - \mathbf{y}$, which collapses to $\mathbf{p} - \mathbf{y}$ whenever $\sum_{i=1}^C y_i = 1$.
+:::
 
-$$\frac{\partial \ell}{\partial z_j} = \sum_{i=1}^C \frac{\partial \ell}{\partial p_i}\frac{\partial p_i}{\partial z_j} = -\sum_{i=1}^C \frac{y_i}{p_i}\,p_i(\delta_{ij} - p_j) = -y_j + p_j \sum_{i=1}^C y_i$$
-
-::: {.d2l-note .rule}
-**Classifier Logit Gradient:** For any target vector $\mathbf{y}$, $\nabla_{\mathbf{z}}\ell = \bigl(\sum_{i=1}^C y_i\bigr)\mathbf{p} - \mathbf{y}$. Whenever $\mathbf{y}$ is a valid probability distribution ($\sum_{i=1}^C y_i = 1$, including one-hot labels, label smoothing, and knowledge distillation targets), this collapses to
-$$\nabla_{\mathbf{z}}\ell = \mathbf{p} - \mathbf{y}$$
+::: {.col .fig .big}
+@fig:ch34-calc-softmax-ce-cancel
+:::
 :::
 :::
 

@@ -440,38 +440,53 @@ Backpropagation Through Time<br>**unrolled computational graphs · Jacobian prod
 ::: {.slide title="Two Empirical Mysteries with One Mathematical Root"}
 [Motivation & Scalar Intuition]{.kicker}
 
-Our experiments in §8.4 uncovered two seemingly opposite behaviors in the exact same RNN language model: without gradient clipping, optimization exploded; with clipping, training converged smoothly, yet the model ignored every token more than $\sim 3$ steps back in its 32-token window:
+::: {.cols .vc}
+::: {.col}
+$$\frac{\partial h_t}{\partial h_{t-k}} = w_{\textrm{h}}^k$$
 
-- **Compound multiplication through time:** Even in a 1D linear recurrence $h_t = w_{\textrm{h}} h_{t-1} + x_t$, unrolling gives $h_t = \sum_{s \le t} w_{\textrm{h}}^{t-s} x_s$, so the sensitivity of state $h_t$ to an earlier state $h_{t-k}$ scales geometrically with lag $k$:
-  $$\frac{\partial h_t}{\partial h_{t-k}} = w_{\textrm{h}}^k$$
+- **Compound multiplication through time:** In a 1D linear recurrence $h_t = w_{\textrm{h}} h_{t-1} + x_t$, sensitivity across lag $k$ scales geometrically as $w_{\textrm{h}}^k$.
 - **The 40-step razor's edge:** At $w_{\textrm{h}} = 0.9$, a gradient traveling back 40 steps shrinks to $0.9^{40} \approx 0.015$ (**vanishing**); at $w_{\textrm{h}} = 1.1$, it inflates to $1.1^{40} \approx 45.3$ (**exploding**).
-- **Backpropagation Through Time (BPTT):** Unrolling the recurrence across $T$ steps and applying standard reverse-mode automatic differentiation (Werbos, 1990) explains both phenomena in full matrix form.
+- **Backpropagation Through Time (BPTT):** Unrolling the recurrence across $T$ steps and applying reverse-mode autodiff explains both phenomena in matrix form.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-scalar-bptt-powers
+:::
+:::
 :::
 
 ::: {.slide title="Unrolling a Recurrence into a Shared-Weight Graph"}
 [Computational Graph Structure]{.kicker}
 
-Consider a general recurrent network with state transition $h_t = g(h_{t-1}, x_t, w_{\textrm{h}})$, readout $o_t = f(h_t, w_{\textrm{o}})$, and average sequence loss $L = \frac{1}{T}\sum_{t=1}^T l(y_t, o_t)$:
+::: {.cols .vc}
+::: {.col}
+$$\frac{\partial L}{\partial w_{\textrm{h}}} = \frac{1}{T}\sum_{t=1}^T \frac{\partial l(y_t, o_t)}{\partial o_t}\,\frac{\partial o_t}{\partial h_t}\,\frac{\partial h_t}{\partial w_{\textrm{h}}}$$
 
-- **Weight tying across depth:** Unrolling across $T$ steps produces a deep network of depth $T$ where the recurrent parameter $w_{\textrm{h}}$ is shared across every single layer $t \in \{1, \ldots, T\}$.
-- **Total derivative under weight sharing:** By the multivariable chain rule, a parameter used at multiple nodes accumulates the **sum** of its local gradient paths across all time steps:
-  $$\frac{\partial L}{\partial w_{\textrm{h}}} = \frac{1}{T}\sum_{t=1}^T \frac{\partial l(y_t, o_t)}{\partial o_t}\,\frac{\partial o_t}{\partial h_t}\,\frac{\partial h_t}{\partial w_{\textrm{h}}}$$
-- **Why $\partial h_t / \partial w_{\textrm{h}}$ is recursive:** Changing $w_{\textrm{h}}$ alters $h_t = g(h_{t-1}, x_t, w_{\textrm{h}})$ both **directly** at step $t$ and **indirectly** because $h_{t-1}$ itself was computed using $w_{\textrm{h}}$ at steps $1, \ldots, t-1$.
+- **Weight tying across depth:** Unrolling across $T$ steps yields a depth-$T$ network where $w_{\textrm{h}}$ is shared at every step $t \in \{1, \ldots, T\}$.
+- **Total derivative under weight sharing:** By the multivariable chain rule, $w_{\textrm{h}}$ accumulates the **sum** of its local gradient paths across all $T$ steps.
+- **Recursive sensitivity:** Changing $w_{\textrm{h}}$ alters $h_t = g(h_{t-1}, x_t, w_{\textrm{h}})$ both directly at step $t$ and indirectly through $h_{t-1}$.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-shared-weight-accumulation
+:::
+:::
 :::
 
 ::: {.slide title="Chain Rule Over Time: Forward Sensitivity Recursion"}
 [Jacobian Product Expansion]{.kicker}
 
-Applying the total derivative to $h_t = g(h_{t-1}, x_t, w_{\textrm{h}})$ yields a linear first-order recursion of the form $a_t = u_t + c_t a_{t-1}$ (with $a_0 = 0$):
+::: {.cols .vc}
+::: {.col}
+$$\frac{\partial h_t}{\partial w_{\textrm{h}}} = \frac{\partial g_t}{\partial w_{\textrm{h}}} + \sum_{i=1}^{t-1}\left(\prod_{j=i+1}^t \frac{\partial g_j}{\partial h_{j-1}}\right)\frac{\partial g_i}{\partial w_{\textrm{h}}}$$
 
-$$\frac{\partial h_t}{\partial w_{\textrm{h}}} = \underbrace{\frac{\partial g(h_{t-1}, x_t, w_{\textrm{h}})}{\partial w_{\textrm{h}}}}_{\text{immediate effect } u_t} + \underbrace{\frac{\partial g(h_{t-1}, x_t, w_{\textrm{h}})}{\partial h_{t-1}}}_{\text{step Jacobian } c_t}\frac{\partial h_{t-1}}{\partial w_{\textrm{h}}}$$
+- **First-order sensitivity recursion:** Applying the chain rule gives $\frac{\partial h_t}{\partial w_{\textrm{h}}} = u_t + c_t \frac{\partial h_{t-1}}{\partial w_{\textrm{h}}}$ with immediate effect $u_t = \partial g_t / \partial w_{\textrm{h}}$ and step Jacobian $c_t = \partial g_t / \partial h_{t-1}$.
+- **Why reverse-mode BPTT wins:** Evaluating $\prod_{j=i+1}^t c_j$ separately for every pair $(i, t)$ would cost $O(T^2)$ Jacobian products; reverse-mode autodiff factors the sum backward in a single $O(T)$ sweep.
+:::
 
-Unrolling this recursion from step $1$ up to step $t$ expresses $\partial h_t / \partial w_{\textrm{h}}$ as a sum over all historical steps $i \le t$, weighted by the product of $t - i$ intermediate state-to-state Jacobians:
-
-$$\frac{\partial h_t}{\partial w_{\textrm{h}}} = \frac{\partial g_t}{\partial w_{\textrm{h}}} + \sum_{i=1}^{t-1}\left(\prod_{j=i+1}^t \frac{\partial g(h_{j-1}, x_j, w_{\textrm{h}})}{\partial h_{j-1}}\right)\frac{\partial g(h_{i-1}, x_i, w_{\textrm{h}})}{\partial w_{\textrm{h}}}$$
-
-::: {.d2l-note .rule}
-**Why We Do Not Evaluate This Forward Sum Directly:** Computing $\prod_{j=i+1}^t (\partial g_j / \partial h_{j-1})$ separately for every pair $(i, t)$ would cost $O(T^2)$ Jacobian multiplications. Reverse-mode autodiff (BPTT) factors the sum backward in a single $O(T)$ sweep.
+::: {.col .fig}
+@fig:ch08-rnn-forward-vs-reverse-bptt
+:::
 :::
 :::
 
@@ -498,52 +513,73 @@ To see the exact matrix structure of the backward sweep, consider a minibatch li
 ::: {.slide title="The Backward Recursion for Hidden-State Gradients"}
 [Reverse-Mode Dynamic Program]{.kicker}
 
-Let $\mathbf{G}_t = \partial L / \partial \mathbf{H}_t \in \mathbb{R}^{b \times h}$ denote the total gradient of the sequence loss $L$ with respect to $\mathbf{H}_t$. Because differentiating a right-multiplication $\mathbf{Y} = \mathbf{A}\mathbf{B}$ with respect to $\mathbf{A}$ right-multiplies by $\mathbf{B}^\top$, $\mathbf{G}_t$ obeys the backward recursion from $t = T$ down to $t = 1$ (with boundary condition $\mathbf{G}_{T+1} = \mathbf{0}$):
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{G}_t = \frac{\partial L}{\partial \mathbf{O}_t}\mathbf{W}_{\textrm{hq}}^\top + \mathbf{G}_{t+1}\mathbf{W}_{\textrm{hh}}^\top$$
 
-$$\mathbf{G}_t = \underbrace{\frac{\partial L}{\partial \mathbf{O}_t}\mathbf{W}_{\textrm{hq}}^\top}_{\text{from step-}t\text{ loss } l_t} + \underbrace{\mathbf{G}_{t+1}\mathbf{W}_{\textrm{hh}}^\top}_{\text{from future steps } > t}$$
+- **Two incoming paths at $\mathbf{H}_t$:** Because $\mathbf{H}_t$ feeds both $\mathbf{O}_t$ and $\mathbf{H}_{t+1}$, its adjoint $\mathbf{G}_t = \partial L / \partial \mathbf{H}_t \in \mathbb{R}^{b \times h}$ sums the local output sensitivity and the backpropagated future adjoint (with $\mathbf{G}_{T+1} = \mathbf{0}$).
+- **Single $O(T)$ backward sweep:** Each step from $t = T$ down to $1$ requires just one $(b \times h) \times (h \times h)$ GEMM by $\mathbf{W}_{\textrm{hh}}^\top$.
+:::
 
-- **Single $O(T)$ backward sweep:** Starting at $\mathbf{G}_T = (\partial L / \partial \mathbf{O}_T)\mathbf{W}_{\textrm{hq}}^\top$, each backward step performs one matrix multiplication by $\mathbf{W}_{\textrm{hh}}^\top$ and adds the local output gradient from step $t$.
-- **Cost parity with the forward pass:** One backward step through the linear cell requires the exact same $(b \times h) \times (h \times h)$ GEMM footprint as one forward recurrent step.
+::: {.col .fig}
+@fig:ch08-rnn-adjoint-node-recursion
+:::
+:::
 :::
 
 ::: {.slide title="Unrolling G_t: Matrix Powers Across Time Lags"}
 [Explicit Matrix Power Expansion]{.kicker}
 
-Unrolling the backward recursion $\mathbf{G}_t = (\partial L / \partial \mathbf{O}_t)\mathbf{W}_{\textrm{hq}}^\top + \mathbf{G}_{t+1}\mathbf{W}_{\textrm{hh}}^\top$ from step $T$ down to step $t$ reveals how future loss signals at step $j \ge t$ propagate back across lag $k = j - t$:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{G}_t = \sum_{j=t}^T \frac{\partial L}{\partial \mathbf{O}_j}\,\mathbf{W}_{\textrm{hq}}^\top \big(\mathbf{W}_{\textrm{hh}}^\top\big)^{j-t}$$
 
-Once the sequence of state adjoints $\mathbf{G}_1, \ldots, \mathbf{G}_T$ has been computed, the shared weight gradients accumulate one outer product per time step:
+$$\frac{\partial L}{\partial \mathbf{W}_{\textrm{hh}}} = \sum_{t=1}^T \mathbf{H}_{t-1}^\top \mathbf{G}_t, \quad \frac{\partial L}{\partial \mathbf{W}_{\textrm{xh}}} = \sum_{t=1}^T \mathbf{X}_t^\top \mathbf{G}_t$$
 
-$$\frac{\partial L}{\partial \mathbf{W}_{\textrm{hh}}} = \sum_{t=1}^T \mathbf{H}_{t-1}^\top \mathbf{G}_t, \qquad \frac{\partial L}{\partial \mathbf{W}_{\textrm{xh}}} = \sum_{t=1}^T \mathbf{X}_t^\top \mathbf{G}_t$$
+- **The lag-$k$ operator:** A loss signal at step $j$ traverses the $k^\textrm{th}$ matrix power $(\mathbf{W}_{\textrm{hh}}^\top)^k$ ($k = j - t$) to reach $\mathbf{H}_t$.
+- **Outer-product accumulation:** Once $\mathbf{G}_{1:T}$ are computed, weight gradients sum one outer product per step.
+:::
 
-::: {.d2l-note .rule}
-**The Lag-$k$ Operator:** A loss signal originating at future step $j$ must pass through the **$k^\textrm{th}$ matrix power** $(\mathbf{W}_{\textrm{hh}}^\top)^k$ ($k = j - t$) to influence hidden state $\mathbf{H}_t$ and the parameter contribution $\mathbf{H}_{t-1}^\top \mathbf{G}_t$.
+::: {.col .fig}
+@fig:ch08-rnn-lag-matrix-powers
+:::
 :::
 :::
 
 ::: {.slide title="Spectral Radius Governs Matrix Power Growth"}
 [Eigenvalue & Singular-Value Analysis]{.kicker}
 
-Let $\lambda_1, \ldots, \lambda_h$ be the eigenvalues of $\mathbf{W}_{\textrm{hh}}$ (identical to those of $\mathbf{W}_{\textrm{hh}}^\top$), and let $\rho(\mathbf{W}_{\textrm{hh}}) = \max_i |\lambda_i|$ denote its **spectral radius**:
+::: {.cols .vc}
+::: {.col}
+- **Asymptotic exponential scaling ($\|(\mathbf{W}_{\textrm{hh}}^\top)^k\| \sim \rho^k$):** Letting $\rho = \max_i |\lambda_i(\mathbf{W}_{\textrm{hh}})|$ denote the **spectral radius**, raising $\mathbf{W}_{\textrm{hh}}^\top$ to the $k^\textrm{th}$ power scales each eigenvector by $\lambda_i^k$:
+  - **Vanishing ($\rho < 1$):** $\|(\mathbf{W}_{\textrm{hh}}^\top)^k\| \to 0$ exponentially.
+  - **Exploding ($\rho > 1$):** Leading eigenspace grows as $\rho^k \to \infty$.
+  - **Critical boundary ($\rho = 1$):** Only $|\lambda_i| = 1$ preserves norm over long horizons.
+- **Transient non-normal growth:** If $\mathbf{W}_{\textrm{hh}}$ is asymmetric with $\sigma_{\max}(\mathbf{W}_{\textrm{hh}}) > 1 > \rho$, norms can hump at small lags before $\rho^k$ decays.
+:::
 
-- **Asymptotic exponential scaling ($\|(\mathbf{W}_{\textrm{hh}}^\top)^k\| \sim \rho^k$):** Raising a diagonalizable matrix to the $k^\textrm{th}$ power scales each eigenvector $\mathbf{v}_i$ by $\lambda_i^k$, so for large lag $k$ the dominant eigenspace scales as $\rho^k$:
-  - **Vanishing regime ($\rho < 1$):** $\|(\mathbf{W}_{\textrm{hh}}^\top)^k\| \to 0$ exponentially; distant tokens cannot send gradient signals back to early steps.
-  - **Exploding regime ($\rho > 1$):** Components along the top eigenvector grow as $\rho^k \to \infty$, causing exponential gradient overflow.
-  - **Critical boundary ($\rho = 1$):** Only eigenvalues on the complex unit circle $|\lambda_i| = 1$ preserve gradient magnitude over arbitrarily long horizons.
-- **Transient non-normal growth:** When $\mathbf{W}_{\textrm{hh}}$ is asymmetric (non-normal), its largest singular value $\sigma_{\max}(\mathbf{W}_{\textrm{hh}})$ can exceed $1$ even when $\rho < 1$, allowing $\|(\mathbf{W}_{\textrm{hh}}^\top)^k\|$ to grow transiently at small lags before $\rho^k$ eventually decays.
+::: {.col .fig .big}
+@fig:ch08-rnn-spectral-radius-regimes
+:::
+:::
 :::
 
 ::: {.slide title="How the tanh Nonlinearity Contrasts with Linear BPTT"}
 [Nonlinear State Jacobians]{.kicker}
 
-Restoring the elementwise $\tanh$ activation in $\mathbf{H}_t = \tanh(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}})$ inserts an entrywise multiplication ($\odot$) by the local activation derivative $\tanh'(z) = 1 - \mathbf{H}_t^2$ at every step of the backward recursion:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{G}_{t-1} = \frac{\partial L}{\partial \mathbf{O}_{t-1}}\mathbf{W}_{\textrm{hq}}^\top + \Big(\mathbf{G}_t \odot \big(1 - \mathbf{H}_t^2\big)\Big)\mathbf{W}_{\textrm{hh}}^\top$$
 
-- **The $\tanh$ derivative is a strict contraction:** Because $H_{t,i} \in (-1, 1)$, every entry of $1 - \mathbf{H}_t^2$ lies in $(0, 1]$ and never amplifies a gradient.
-- **Saturation accelerates vanishing:** Whenever a hidden unit saturates near $\pm 1$, its local derivative $1 - H_{t,i}^2 \approx 0$ chokes off backward gradient flow through that coordinate.
-- **Effective step multiplier:** Even if $\rho(\mathbf{W}_{\textrm{hh}}) > 1$, the effective Jacobian norm per step scales roughly as $\overline{(1 - H^2)} \cdot \rho(\mathbf{W}_{\textrm{hh}})$, which can still fall well below $1$!
+- **Strict local contraction:** Because $H_{t,i} \in (-1, 1)$, every entry of $\tanh'(z) = 1 - \mathbf{H}_t^2$ lies in $(0, 1]$ and never amplifies a gradient.
+- **Saturation accelerates vanishing:** Whenever a hidden unit saturates near $\pm 1$, $1 - H_{t,i}^2 \approx 0$ chokes off backward gradient flow.
+- **Effective step multiplier:** Even when $\rho(\mathbf{W}_{\textrm{hh}}) > 1$, the net per-step factor $\overline{(1 - H^2)} \cdot \rho(\mathbf{W}_{\textrm{hh}})$ can fall well below $1$.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-tanh-contraction
+:::
+:::
 :::
 
 ::: {.slide title="Setting Up the Gradient Horizon Experiment (L = 64)"}
@@ -579,12 +615,18 @@ Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\ma
 ::: {.slide title="Why Gradient Clipping Fixes Explosion, Not Vanishing"}
 [Asymmetry of the Two Gradient Pathologies]{.kicker}
 
-Why did global gradient clipping $\mathbf{g} \leftarrow \min(1, \theta / \|\mathbf{g}\|)\mathbf{g}$ stabilize training so effectively in §8.4 yet fail to extend the model's 3-token memory horizon?
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{G}_t = \sum_{j=t}^T \frac{\partial L}{\partial \mathbf{O}_j}\mathbf{W}_{\textrm{hq}}^\top \prod_{i=t+1}^j \mathbf{J}_i$$
 
-$$\mathbf{G}_t = \underbrace{\frac{\partial L}{\partial \mathbf{O}_t}\mathbf{W}_{\textrm{hq}}^\top}_{\text{lag } 0\text{ (dominant)}} + \underbrace{\frac{\partial L}{\partial \mathbf{O}_{t+1}}\mathbf{W}_{\textrm{hq}}^\top \mathbf{J}_{t+1}}_{\text{lag } 1} + \cdots + \underbrace{\frac{\partial L}{\partial \mathbf{O}_T}\mathbf{W}_{\textrm{hq}}^\top \prod_{i=t+1}^T \mathbf{J}_i}_{\text{lag } T-t\text{ (}\sim 10^{-9}\text{)}}$$
+- **What clipping fixes (Exploding spikes):** When an unsaturated trajectory causes $\|\mathbf{g}\| \gg \theta$, rescaling by $\theta/\|\mathbf{g}\|$ caps the step size at $\eta\theta$ so parameters cannot diverge.
+- **What clipping cannot fix (Vanishing ratios):** Multiplying the entire gradient sum $\mathbf{g}$ by a single scalar rescales lag-$0$ and lag-$20$ terms equally—leaving the $1 : 10^{-6}$ ratio between short-range and long-range signals unchanged!
+:::
 
-- **What clipping fixes (Exploding spikes):** When an occasional trajectory keeps activations unsaturated ($1 - H^2 \approx 1$), the product of $\rho \approx 1.8$ Jacobians spikes; rescaling $\mathbf{g}$ by $\theta / \|\mathbf{g}\|$ caps the step size at $\eta\theta$ so the parameters cannot diverge.
-- **What clipping cannot fix (Vanishing ratios):** Multiplying the entire gradient sum $\mathbf{g}$ by a single scalar factor rescales lag-$0$ and lag-$20$ terms equally—leaving the **relative ratio** ($1 : 10^{-6}$) between short-range and long-range credit assignment completely unchanged!
+::: {.col .fig}
+@fig:ch08-rnn-clipping-lag-ratios
+:::
+:::
 :::
 
 ::: {.slide title="Architectural Remedies: Gates and Linear Recurrences"}
@@ -602,10 +644,16 @@ Overcoming vanishing gradients requires redesigning the recurrent state transiti
 ::: {.slide title="The Memory and Compute Cost of Full-Sequence BPTT"}
 [Systems Bottleneck on Long Streams]{.kicker}
 
-Even if vanishing gradients were solved, running full BPTT across an entire book of $T = 65{,}741$ BPE tokens is computationally prohibitive for two systems reasons:
+::: {.cols .vc}
+::: {.col}
+- **Activation memory grows linearly with $T$ ($O(Tbh)$):** Evaluating the backward pass at step $t$ requires both $\mathbf{H}_t$ (for $1 - \mathbf{H}_t^2$) and $\mathbf{H}_{t-1}$ (for $\mathbf{H}_{t-1}^\top \mathbf{G}_t$). Reverse-mode autodiff must retain all $T$ states in VRAM until the backward sweep finishes.
+- **Update latency scales as $O(T)$:** Full BPTT across *The Time Machine* ($T = 65{,}741$ tokens) would run $65{,}741$ forward and $65{,}741$ backward steps for **a single weight update**!
+:::
 
-- **Activation memory grows linearly with $T$ ($O(Tbh)$):** Evaluating the backward pass at step $t$ requires both $\mathbf{H}_t$ (to compute $1 - \mathbf{H}_t^2$) and $\mathbf{H}_{t-1}$ (to compute the outer product $\mathbf{H}_{t-1}^\top \mathbf{G}_t$). Reverse-mode autodiff must retain all $T$ forward hidden states in GPU memory until the backward sweep finishes.
-- **Update latency scales as $O(T)$:** A single SGD parameter update would require $65{,}741$ sequential forward matrix multiplications followed by $65{,}741$ sequential backward matrix multiplications—yielding only **one weight update per pass through the entire book**!
+::: {.col .fig .big}
+@fig:ch08-rnn-full-bptt-memory-wall
+:::
+:::
 :::
 
 ::: {.slide title="Truncated BPTT: Detaching State Across Segments"}

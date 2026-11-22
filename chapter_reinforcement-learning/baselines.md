@@ -871,26 +871,34 @@ Baselines and Variance Reduction<br>**zero-mean score identity · reward-to-go �
 ::: {.slide title="Why Raw Return Weighting Is Too Noisy"}
 [Motivation & Mental Model]{.kicker}
 
-In §14.7, a 4-episode REINFORCE gradient estimate on calm FrozenLake missed the true gradient by more than **$3.3\times$ its length**, and failed episodes contributed zero update:
-
+::: {.cols .vc}
+::: {.col}
 $$\hat{u} = \frac{1}{n}\sum_{i=1}^n R(\tau_i) \sum_{t=0}^{T_i-1} \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i)$$
 
-- **All-or-nothing weights:** Because FrozenLake returns are either $0$ (hole) or $\gamma^{T-1} > 0$ (goal), a wasteful loop inside a winning episode gets pushed *up*, while a fatal step into a hole gets weight $0$ and is never pushed *down*.
-- **Control-variate solution (Williams, 1992):** Subtracting a baseline $b(s_t)$ from each step's future return pushes above-average actions up and below-average actions down without altering the expected gradient.
+- **All-or-nothing weights:** Nonnegative returns $R(\tau) \in \{0, \gamma^{T-1}\}$ push wasteful loops inside winning episodes *up*, while fatal steps into holes get weight $0$ and are never pushed *down*.
+- **Control-variate solution:** Subtracting $b(s_t)$ pushes above-average actions up and below-average actions down without altering $\mathbb{E}[\hat{u}]$.
+:::
+
+::: {.col .fig}
+@fig:ch14-rl-all-or-nothing
+:::
+:::
 :::
 
 ::: {.slide title="The Zero-Mean Score Lemma and Prefix Identity"}
 [Why Subtracting a Baseline Is Unbiased]{.kicker}
 
-Every variance-reduction technique in policy gradients rests on a single identity: at any state $s$, the score of an action sampled from $\pi_\theta(\cdot \mid s)$ averages to zero:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}_{a \sim \pi_\theta(\cdot \mid s)}\big[\nabla_\theta \log \pi_\theta(a \mid s)\big] = \nabla_\theta \sum_{a \in \mathcal{A}} \pi_\theta(a \mid s) = \mathbf{0}$$
 
-$$\mathbb{E}_{a \sim \pi_\theta(\cdot \mid s)}\big[\nabla_\theta \log \pi_\theta(a \mid s)\big] = \sum_{a \in \mathcal{A}} \pi_\theta(a \mid s)\,\frac{\nabla_\theta \pi_\theta(a \mid s)}{\pi_\theta(a \mid s)} = \nabla_\theta \sum_{a \in \mathcal{A}} \pi_\theta(a \mid s) = \nabla_\theta 1 = \mathbf{0}$$
+- **Conditional prefix identity:** For any quantity $c(s_{0:t}, a_{0:t-1})$ determined before $a_t$ is sampled, $\mathbb{E}[c\,\nabla_\theta \log \pi_\theta(a_t \mid s_t)] = \mathbf{0}$.
+- **Admissibility rule:** Any prefix quantity may be subtracted without bias; anything depending on $a_t$ or $s_{t+1}$ biases the expectation.
+:::
 
-- **Conditional prefix identity:** Let $c(s_0, a_0, \ldots, s_t)$ be *any* quantity determined before $a_t$ is sampled (such as past rewards $r_{<t}$, a constant $b$, or a state function $b(s_t)$):
-  $$\mathbb{E}\big[c\,\nabla_\theta \log \pi_\theta(a_t \mid s_t)\big] = \mathbb{E}\Big[c\,\underbrace{\mathbb{E}\big[\nabla_\theta \log \pi_\theta(a_t \mid s_t) \;\big|\; s_{0:t}, a_{0:t-1}\big]}_{=\;\mathbf{0}}\Big] = \mathbf{0}$$
-
-::: {.d2l-note .rule}
-Any quantity fixed by the trajectory prefix up to $s_t$ may be dropped from or subtracted from the step-$t$ weight; anything depending on $a_t$ or $s_{t+1}$ introduces bias.
+::: {.col .fig}
+@fig:ch14-rl-prefix-admissibility
+:::
 :::
 :::
 
@@ -931,12 +939,18 @@ On the 1-step Gaussian problem $a \sim \mathcal{N}(\mu, 1)$ at $\mu = 0$ with re
 ::: {.slide title="State Values and the Advantage Function"}
 [Learning a State-Dependent Baseline]{.kicker}
 
-Because a cell adjacent to the goal expects far higher return than the start cell, a single constant $b$ cannot center every state; the natural baseline at state $s_t$ is its value $V^\pi(s_t)$:
+::: {.cols .vc}
+::: {.col}
+$$A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad \mathbb{E}_{a \sim \pi}\big[A^\pi(s, a)\big] = 0$$
 
-$$A^\pi(s, a) = Q^\pi(s, a) - V^\pi(s), \qquad \mathbb{E}_{a \sim \pi(\cdot \mid s)}\big[A^\pi(s, a)\big] = 0$$
+- **Sampled advantage $\hat{G}_t - V^{\pi_\theta}(s_t)$:** Subtracting $V^{\pi_\theta}(s_t)$ centers every state around zero—pushing actions with $Q^\pi(s_t, a_t) > V^\pi(s_t)$ up and worse actions down.
+- **Online value-table baseline:** Maintain $\hat{V}(s)$ updated after each batch via $\hat{V}(s_t) \leftarrow \hat{V}(s_t) + \eta_V(\hat{G}_t - \hat{V}(s_t))$.
+:::
 
-- **Sampled advantage $\hat{G}_t - V^{\pi_\theta}(s_t)$:** Because $\mathbb{E}[\hat{G}_t \mid s_t, a_t] = Q^{\pi_\theta}(s_t, a_t)$, subtracting $V^{\pi_\theta}(s_t)$ centers the weight around zero at every state—pushing actions with $Q^{\pi_\theta}(s_t, a_t) > V^{\pi_\theta}(s_t)$ up and worse actions down.
-- **Online value-table baseline:** When $V^{\pi_\theta}$ is unknown, we maintain a table $\hat{V}(s)$ updated after each batch via $\hat{V}(s_t) \leftarrow \hat{V}(s_t) + \eta_V(\hat{G}_t - \hat{V}(s_t))$ using earlier batches only.
+::: {.col .fig}
+@fig:ch14-rl-advantage-centering
+:::
+:::
 :::
 
 ::: {.slide title="Batch Centering vs. Standard-Deviation Scaling"}
@@ -995,11 +1009,17 @@ Evaluating $2{,}000$ 4-episode batches at our frozen probe ($J = 0.313$, where e
 ::: {.slide title="Interpreting the Frozen-Policy Variance Table"}
 [What Drops Noise and When Causality Helps]{.kicker}
 
-The $2{,}000$-batch measurement separates three distinct variance-reduction mechanisms:
+::: {.cols .vc}
+::: {.col}
+- **State value baseline is quietest:** Subtracting $V^{\pi_\theta}(s_t)$ halves relative noise ($18.1 \to 9.1$) while preserving mean scale ($1.40$) and direction (`cos = 0.991`).
+- **Centering vs. normalization:** Batch centering cuts noise by $\approx 40\%$ with $(n-1)/n$ shrink; dividing by $\sigma$ leaves relative noise unchanged ($10.8$) while tripling step length ($3.21$).
+- **Dropping past rewards:** With a $-0.1$ per-step charge, causality cuts noise nearly **$3\times$** ($101.6 \to 34.1$).
+:::
 
-- **State value baseline is quietest:** Subtracting $V^{\pi_\theta}(s_t)$ cuts relative noise in half ($18.1 \to 9.1$ on the lake; $34.1 \to 12.1$ with step cost) while keeping the exact same mean scale ($1.40$) and direction (`cos = 0.991`) as reward-to-go.
-- **Centering vs. normalization:** Batch centering cuts noise by $\approx 40\%$ ($18.1 \to 10.6$) while shrinking the mean to $1.10 / 1.40 \approx 0.79 \approx (n-1)/n$; dividing by $\sigma$ leaves relative noise identical ($10.8$) but triples the vector length ($1.10 \to 3.21$).
-- **When dropping past rewards helps:** On the sparse lake ($r_t = 0$ before the goal), `return` and `causal` ($\gamma^t\hat{G}_t$) are identical ($15.8$); with a $-0.1$ per-step move charge, dropping past rewards cuts noise Nearly **$3\times$** ($101.6 \to 34.1$).
+::: {.col .fig .big}
+@fig:ch14-rl-variance-mechanisms
+:::
+:::
 :::
 
 ::: {.slide title="Disentangling Step Size from Variance in Training"}

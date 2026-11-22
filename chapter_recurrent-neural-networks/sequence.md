@@ -677,44 +677,51 @@ Working with Sequences<br>**autoregression · fixed windows vs. latent state · 
 ::: {.slide title="Why Sequence Data Breaks the i.i.d. Assumption"}
 [Motivation & Core Mental Model]{.kicker}
 
-Every model in Chapters 3–7 mapped a fixed-shape tensor $\mathbf{x} \in \mathbb{R}^d$ to a label under the assumption that examples are independent and identically distributed (i.i.d.):
+::: {.cols .vc}
+::: {.col}
+- **Variable length and strict temporal ordering:** A document, speech waveform, or vital-sign stream has length $T$ that varies across examples, and permuting the order (*"Thank you for your"* $\to$ *"your thank for you"*) destroys its meaning.
+- **Internal statistical dependence:** While separate trajectories may be drawn independently, consecutive entries $x_t$ *within* a sequence depend strongly on their prefix $x_{<t} = (x_1, \ldots, x_{t-1})$.
+- **The multistep forecasting gap:** On $x_t = \sin(0.01t) + \epsilon_t$, a linear model on 4 past values achieves near-optimal 1-step MSE ($\approx 0.05$) yet fails when rolled out 64 steps ahead (MSE $\approx 0.25$).
+:::
 
-- **Variable length and strict temporal ordering:** A document, speech waveform, or clinical vital-sign stream has length $T$ that varies across examples, and permuting the order (*"Thank you for your"* $\to$ *"your thank for you"*) destroys its predictive meaning.
-- **Internal statistical dependence:** While *entire* trajectories (e.g., separate patient hospital stays) may be drawn independently, consecutive entries $x_t$ *within* a sequence depend strongly on their history $x_{<t} = (x_1, \ldots, x_{t-1})$.
-- **The multistep forecasting gap:** On a simple noisy sine wave $x_t = \sin(0.01t) + \epsilon_t$, a linear model conditioned on 4 past values achieves near-optimal 1-step MSE ($\approx 0.05$), yet fails completely when rolled out 64 steps ahead (MSE $\approx 0.25$).
-
-::: {.d2l-note .warn}
-**Central Questions of §8.1:** How do we feed a growing history $x_{<t}$ of length $t - 1$ into a fixed-size predictor, and why does minimizing 1-step prediction error fail to guarantee stable multistep rollouts?
+::: {.col .fig .big}
+@fig:ch08-rnn-iid-vs-temporal
+:::
 :::
 :::
 
 ::: {.slide title="Taxonomy of Sequence Learning Problems"}
 [Problem Formulation]{.kicker}
 
-Depending on whether the input, the output, or both are sequential, supervised and unsupervised sequence tasks fall into four canonical regimes:
+::: {.cols .vc}
+::: {.col}
+- **Supervised sequence mappings:** Tasks may map a variable-length sequence to a single category (**Sequence-to-Label**), expand a fixed input into a sequence (**Fixed-to-Sequence**), or transduce an input sequence $\mathbf{x}_{1:T}$ into an unaligned target sequence $\mathbf{y}_{1:T'}$ (**Sequence-to-Sequence**).
+- **Unsupervised density estimation:** Modeling the joint probability $P(x_1, \ldots, x_T)$ requires **zero external labels** because every entry $x_t$ serves as the supervised target for its own prefix $x_{<t}$.
+- **Dual utility:** A joint sequence distribution supports both candidate likelihood ranking (e.g., ASR rescoring) and ancestral generation.
+:::
 
-| Task Regime | Input $\to$ Output Structure | Concrete Applications |
-|---|---|---|
-| **Sequence-to-Label** | Variable-length sequence $(\mathbf{x}_1, \ldots, \mathbf{x}_T) \to$ fixed class $y$ | Sentiment classification of a movie review, arrhythmia detection from an ECG |
-| **Fixed-to-Sequence** | Fixed vector/image $\mathbf{x} \to$ sequence $(y_1, \ldots, y_T)$ | Image captioning, molecule generation from target property descriptors |
-| **Sequence-to-Sequence** | Input sequence $\mathbf{x}_{1:T} \to$ output sequence $\mathbf{y}_{1:T'}$ | Machine translation ($T \neq T'$), speech transcription, frame-level video tagging |
-| **Density Estimation** | Unlabeled sequence $(x_1, \ldots, x_T) \to$ joint probability $P(x_{1:T})$ | Language modeling, time-series forecasting, candidate re-ranking in ASR |
-
-::: {.d2l-note}
-**Why Start with Unsupervised Sequence Modeling?** Estimating $P(x_1, \ldots, x_T)$ requires **zero external labels** because every entry $x_t$ serves as the supervised target for its own prefix $x_{<t}$, enabling both likelihood scoring and new sequence generation.
+::: {.col .fig .big}
+@fig:ch08-rnn-task-taxonomy
+:::
 :::
 :::
 
 ::: {.slide title="Autoregressive Forecasting and Growing Prefixes"}
 [Autoregressive Models]{.kicker}
 
-To forecast the next entry $x_t$ of a series from its observed history $x_{<t} = (x_1, \ldots, x_{t-1})$, we model the conditional distribution or its conditional expectation:
-
+::: {.cols .vc}
+::: {.col}
 $$P(x_t \mid x_1, \ldots, x_{t-1}) = P(x_t \mid x_{<t}), \qquad \hat{x}_t = \mathbb{E}[x_t \mid x_{<t}]$$
 
-- **Why "autoregressive":** Both the conditioning features $x_{<t}$ and the regression target $x_t$ are drawn from the *exact same* underlying series (regressing the signal on itself).
-- **The variable-dimension obstacle:** At time step $t = 2$, the prefix $x_{<2} = (x_1)$ contains 1 feature; at step $t = 500$, the prefix $x_{<500}$ contains 499 features. Standard regression and neural layers require a fixed input dimension.
-- **Two compression strategies:** To reduce $x_{<t}$ to a fixed-size representation at every step $t$, we must either **truncate the history** to a fixed window of $m$ recent steps or **maintain a recursive latent state** $\mathbf{h}_t$.
+- **Why "autoregressive":** Both the conditioning features $x_{<t}$ and the regression target $x_t$ come from the *exact same* underlying series.
+- **The variable-dimension obstacle:** At $t = 2$, $x_{<2}$ has 1 feature; at $t = 500$, $x_{<500}$ has 499 features. Fixed-input predictors require a constant feature dimension.
+- **Two compression strategies:** Either **truncate** $x_{<t}$ to a fixed window of $m$ recent steps or update a **recursive latent state** $\mathbf{h}_{t-1}$.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-growing-prefix
+:::
+:::
 :::
 
 ::: {.slide title="Fixed Windows vs. Latent Autoregressive State"}
@@ -741,36 +748,53 @@ Both strategies cast sequence forecasting as fixed-input prediction, differing i
 ::: {.slide title="The Chain Rule Factors Joint Sequence Probabilities"}
 [Probabilistic Foundation]{.kicker}
 
-By the **chain rule of probability**, *any* joint distribution over a sequence of length $T$ factors exactly into a product of left-to-right one-step conditionals:
+::: {.cols .vc}
+::: {.col}
+$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t})$$
 
-$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}) = P(x_1)\,P(x_2 \mid x_1)\,P(x_3 \mid x_1, x_2)\cdots P(x_T \mid x_1, \ldots, x_{T-1})$$
+- **Exact equivalence:** Modeling one-step conditionals $P(x_t \mid x_{<t})$ completely specifies the joint probability over the entire sequence.
+- **Log-domain scoring:** Multiplying hundreds of probabilities in $(0, 1)$ underflows `float32` to $0.0$; we instead sum log-probabilities $\sum_{t=1}^T \log P(x_t \mid x_{<t})$.
+- **Causal left-to-right ordering:** Factoring forward in time aligns with physical causality and enables step-by-step ancestral sampling.
+:::
 
-- **Concrete trace:** For $P(\textrm{the}, \textrm{cat}, \textrm{sat}) = P(\textrm{the})\,P(\textrm{cat} \mid \textrm{the})\,P(\textrm{sat} \mid \textrm{the}, \textrm{cat})$, conditionals $0.05$, $0.01$, and $0.20$ multiply to joint probability $10^{-4}$.
-- **Log-domain scoring (avoiding underflow):** Multiplying hundreds of probabilities in $(0, 1)$ underflows IEEE 754 `float32` to $0.0$; in practice we sum log-probabilities $\log P(x_{1:T}) = \sum_{t=1}^T \log P(x_t \mid x_{<t})$.
-- **Causal ordering vs. arbitrary permutations:** While the chain rule holds for any index permutation, factoring left-to-right aligns with physical causality (predicting effects from past causes) and allows ancestral generation by sampling $x_1 \sim P(x_1)$, then $x_2 \sim P(x_2 \mid x_1)$, and so on.
+::: {.col .fig}
+@fig:ch08-rnn-chain-rule
+:::
+:::
 :::
 
 ::: {.slide title="The Markov Condition: Bounded Memory Horizons"}
 [Statistical Assumptions]{.kicker}
 
-Using a fixed window of length $m$ is mathematically exact if and only if the sequence obeys an **$m^\textrm{th}$-order Markov condition**—conditional independence of the future from the distant past given the last $m$ steps:
-
+::: {.cols .vc}
+::: {.col}
 $$P(x_t \mid x_1, \ldots, x_{t-1}) = P(x_t \mid x_{t-m}, \ldots, x_{t-1})$$
 
-- **First-order Markov factorization ($m = 1$):** Each observation depends solely on its immediate predecessor, reducing the joint law to adjacent transitions:
-  $$P(x_1, \ldots, x_T) = P(x_1)\prod_{t=2}^T P(x_t \mid x_{t-1})$$
-- **Approximation vs. tractability:** Natural language is never truly Markov (a pronoun at token 500 may refer to a protagonist introduced at token 5), yet truncating context to a bounded window $m$ is a practical necessity for count-based $n$-grams and finite-window neural models alike.
+- **$m^\textrm{th}$-order Markov condition:** The future $x_t$ is conditionally independent of the distant past $x_{\le t-m-1}$ given the $m$ most recent observations.
+- **First-order case ($m = 1$):** Each entry depends solely on its immediate predecessor, $P(x_{1:T}) = P(x_1)\prod_{t=2}^T P(x_t \mid x_{t-1})$.
+- **Approximation vs. tractability:** Natural language is never truly Markov, yet bounded windows make count tables and finite-context models tractable.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-markov-horizon
+:::
+:::
 :::
 
 ::: {.slide title="Stationarity: Time-Homogeneous Transition Dynamics"}
 [Statistical Assumptions]{.kicker}
 
-Fitting a *single* shared predictor $f$ across all time steps $t \in \{m+1, \ldots, T\}$ relies on a second foundational assumption—**stationarity** (strictly, **time-homogeneity**) of the transition rule:
+::: {.cols .vc}
+::: {.col}
+- **Time-invariant conditional law:** Fitting a *single* shared predictor $f$ across all steps $t \in \{m+1, \ldots, T\}$ assumes the transition distribution $P(x_t \mid x_{t-m:t-1})$ does not drift with $t$.
+- **Stationary dynamics vs. evolving values:** A fixed transition rule does *not* force the marginal $P(x_t)$ to stay constant—a novel's closing paragraph differs from its opening line because the same rule evaluates on a different context.
+- **Pooling sliding windows:** Stationarity justifies extracting $T - m$ training pairs from a single length-$T$ trajectory.
+:::
 
-$$P(x_t \mid x_{t-m}, \ldots, x_{t-1}) \quad \text{is invariant with respect to time index } t$$
-
-- **Stationary dynamics vs. evolving values:** Time-invariant transition dynamics do *not* force the marginal distribution $P(x_t)$ to stay constant—a patient's vital signs trend toward recovery and a novel's closing paragraph looks very different from its opening line because the *same* transition law is evaluated on a different recent context.
-- **Why stationarity matters for learning:** Because the conditional law does not drift with $t$, we can slide an $m$-step window across a single sequence of length $T$ to extract $T - m$ training pairs sharing the exact same ground-truth regression function.
+::: {.col .fig .big}
+@fig:ch08-rnn-stationarity-pooling
+:::
+:::
 :::
 
 ::: {.slide title="Synthetic Benchmark: A Noisy Sine Wave"}
@@ -795,15 +819,18 @@ To test fixed-window autoregression where the true dynamics are known analytical
 ::: {.slide title="Turning a Time Series into Sliding Lag Windows"}
 [Supervised Feature Construction]{.kicker}
 
-With window length $m = 4$, `lag_features` slices four shifted views of `self.x` and stacks them column-wise into a $(T - m) \times m = 996 \times 4$ feature matrix paired with target column $\mathbf{y} \in \mathbb{R}^{996 \times 1}$:
-
+::: {.cols .vc}
+::: {.col}
 @-sequence-training-3
 
-| Example Index $j$ | Lag Feature Row $(x_{t-4}, x_{t-3}, x_{t-2}, x_{t-1})$ | Target $y = x_t$ | Split Assignment |
-|---|---|---|---|
-| $j = 1$ ($t = 5$) | $(x_1, x_2, x_3, x_4)$ | $x_5$ | Training ($j = 1, \ldots, 600$) |
-| $j = 600$ ($t = 604$) | $(x_{600}, x_{601}, x_{602}, x_{603})$ | $x_{604}$ | Last training window |
-| $j = 601$ ($t = 605$) | $(x_{601}, x_{602}, x_{603}, x_{604})$ | $x_{605}$ | First validation window ($j = 601, \ldots, 996$) |
+- **Vectorized lag stacking:** Slicing four shifted views of `self.x` builds the $(T - m) \times m = 996 \times 4$ feature matrix paired with target column $\mathbf{y} \in \mathbb{R}^{996 \times 1}$.
+- **Chronological split:** Rows $1\text{--}600$ ($t = 5\text{--}604$) train the model; rows $601\text{--}996$ ($t = 605\text{--}1000$) evaluate out-of-sample forecasting.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-lag-matrix
+:::
+:::
 :::
 
 ::: {.slide title="Training a Linear Autoregressor on Four Lags"}
@@ -881,13 +908,19 @@ Despite its low 1-step validation error, rolling the exact same linear model for
 ::: {.slide title="Why One-Step MSE Learns a Moving Average"}
 [Statistical Diagnosis of the Failure]{.kicker}
 
-Inspecting the four learned weights explains immediately why 1-step training produced a non-oscillating rollout:
-
+::: {.cols .vc}
+::: {.col}
 @sequence-multistep-rollout-1
 
-- **Why 1-step MSE prefers averaging:** Every weight sits near $w_i \approx 1/4 = 0.25$. Averaging four i.i.d. noise terms cuts the noise variance fourfold ($\sigma^2 / 4 = 0.04 / 4 = 0.01$), whereas the sine wave moves by at most $0.01$ per step (squared lag bias $\sim 10^{-4}$).
-- **Why linearity is *not* the bottleneck:** A noiseless sine wave satisfies the exact 2-lag linear recurrence $x_t = 2\cos(0.01)\,x_{t-1} - x_{t-2} \approx 1.9999\,x_{t-1} - x_{t-2}$. However, weights $(2, -1)$ amplify noise variance by $2^2 + (-1)^2 = 5\times$ ($5 \times 0.04 = 0.20$), so 1-step MSE rejects the true oscillator in favor of a moving average!
-- **Fixed-point attraction during rollout:** Fed its own outputs, a moving average merely repeats its current level, decaying slowly toward the fixed point $x^* = b / (1 - \sum_{i=1}^4 w_i)$ because $\sum_i w_i$ sits slightly below $1$.
+- **1-step MSE rewards noise averaging:** Weights $w_i \approx 0.25$ cut white-noise variance fourfold ($\sigma^2/4 = 0.01$) with negligible 1-step phase bias ($\sim 10^{-4}$).
+- **Why 1-step MSE rejects the true oscillator:** The exact noiseless recurrence $x_t = 2\cos(0.01)x_{t-1} - x_{t-2}$ amplifies noise variance $5\times$ ($5\sigma^2 = 0.20$).
+- **Fixed-point rollout collapse:** Fed its own outputs, a moving average cannot oscillate and decays toward $x^* = b / (1 - \sum w_i)$.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-averaging-vs-oscillator
+:::
+:::
 :::
 
 ::: {.slide title="Vectorized k-Step-Ahead Rollout Across All Starts"}

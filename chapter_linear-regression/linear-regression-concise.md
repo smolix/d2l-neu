@@ -383,71 +383,81 @@ Concise Implementation of Linear Regression<br>
 ::: {.slide title="Why Move From Scratch Code to Concise Framework APIs?"}
 [Scaling Up to Deep Networks]{.kicker}
 
-Our from-scratch loop allocated and updated $3$ scalar parameters (`w` and `b`). Modern architectures like ResNet-50 or Llama manage millions to billions of parameters across hundreds of layers:
+::: {.cols .vc}
+::: {.col}
+- **Hardware-tuned layers:** Replace manual `w, b` allocation and `matmul(X, w) + b` with a single dense layer (`LazyLinear(1)`, `Dense(1)`, or `nnx.Linear(2, 1)`).
+- **Tested losses & optimizers:** Replace manual `squared_loss` and parameter loops with built-in MSE (`nn.MSELoss`, `L2Loss`, `MeanSquaredError`, `optax.squared_error`) and `SGD`.
+- **Zero Trainer changes:** Reuses the exact same `SyntheticRegressionData` and `d2l.Trainer` from §2.4.
+:::
 
-| Component | From-Scratch Implementation (§2.3–§2.4) | Concise Framework Abstraction (§2.5) |
-|---|---|---|
-| **Parameters & Forward Pass** | `init_params()` + `d2l.matmul(X, w) + b` | Single fully connected layer (`LazyLinear(1)` / `Dense(1)` / `nnx.Linear(2, 1)`) |
-| **Loss Function** | `squared_loss`: $\frac{1}{2|\mathcal{B}|}\sum_i (\hat{y}^{(i)} - y^{(i)})^2$ | Built-in MSE (`nn.MSELoss` / `L2Loss` / `MeanSquaredError` / `optax.squared_error`) |
-| **Parameter Updater** | Manual loop `param -= lr * param.grad` | Built-in optimizer (`torch.optim.SGD` / `gluon.Trainer` / `keras.optimizers.SGD` / `optax.sgd`) |
-| **Data & Epoch Loop** | `d2l.SyntheticRegressionData` + `d2l.Trainer` | Reuses the exact same `d2l.SyntheticRegressionData` and `d2l.Trainer` |
+::: {.col .fig .big}
+@fig:ch02-lr-scratch-to-concise
+:::
+:::
 :::
 
 ::: {.slide title="Concise Model: A Single Fully Connected Layer"}
 [Framework Layer API]{.kicker}
 
-In `LinearRegression(d2l.Module)`, a single built-in dense layer allocates weights and bias and implements the affine forward pass `self.net(X)`:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-concise-defining-the-model-1
 
-- **Inherited `forward`:** Because `d2l.Module.forward(X)` delegates to `self.net(X)` by default (§2.4), `LinearRegression` needs no custom `forward` method.
-- **Lazy input dimension inference (PyTorch / MXNet / Keras):** `nn.LazyLinear(1)` and `Dense(1)` require only the output width `1` at construction time, inferring input width $d = 2$ automatically when the first minibatch passes through!
-- **Eager shape specification (JAX / Flax NNX):** `nnx.Linear(num_inputs, 1, ...)` allocates parameter arrays immediately upon construction using explicit PRNG `rngs`.
+- **Inherited `forward` & lazy shape inference:** `d2l.Module.forward(X)` delegates directly to `self.net(X)`; `LazyLinear(1)` and `Dense(1)` infer input dimension $d = 2$ automatically on the first minibatch.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-lazy-linear
+:::
+:::
 :::
 
 ::: {.slide title="Parameter Initialization: Lazy vs. Eager Across Frameworks"}
 [Weight & Bias Initialization]{.kicker}
 
-Even with high-level layers, we still initialize weights from $\mathcal{N}(0, 0.01^2)$ and bias to $0$ so our concise run starts from the exact same distribution as §§2.3–2.4:
+::: {.cols .vc}
+::: {.col}
+- **PyTorch (`LazyLinear`):** Materialize shapes with a dummy call `model(data.X[:1])`, then apply `normal_(0, 0.01)` and `zeros_`.
+- **MXNet & TensorFlow/Keras (`Dense`):** Attach deferred `init.Normal(0.01)` or `RandomNormal(stddev=0.01)` at construction; weights materialize on batch 1.
+- **JAX / Flax NNX (`nnx.Linear`):** Eagerly allocates arrays at construction using `num_inputs=2`, `kernel_init=normal(0.01)`, and `rngs`.
+:::
 
-| Framework | Layer Declaration | How $\mathcal{N}(0, 0.01^2)$ Weight & Zero Bias Are Initialized |
-|---|---|---|
-| **PyTorch** | `nn.LazyLinear(1)` | Direct tensor fill `self.net.weight.data.normal_(0, 0.01)` and `bias.data.fill_(0)` |
-| **MXNet** | `nn.Dense(1)` | Deferred initializer `self.net.initialize(init.Normal(0.01))` (materialized on batch 1) |
-| **TensorFlow / Keras** | `keras.layers.Dense(1, ...)` | Pass `kernel_initializer=RandomNormal(0.01)` directly to `Dense` constructor |
-| **JAX / Flax NNX** | `nnx.Linear(num_inputs, 1, ...)` | Pass `kernel_init=nnx.initializers.normal(0.01)` and `rngs` to `nnx.Linear` |
-
-::: {.d2l-note}
-In Chapter 4 (§4.4), we will see how framework default initializers (Xavier/Glorot and He/Kaiming) automatically scale the initial standard deviation as $O(1/\sqrt{d_{\textrm{in}}})$ to prevent activations from exploding or vanishing across deep layer stacks.
+::: {.col .fig .big}
+@fig:ch02-lr-lazy-vs-eager
+:::
 :::
 :::
 
 ::: {.slide title="Framework MSE Loss and Halving the Learning Rate"}
 [Loss Scaling & Hyperparameter Coupling]{.kicker}
 
-Standard framework MSE primitives (`nn.MSELoss`, Keras `MeanSquaredError`, `optax.squared_error`, and $2 \times$ Gluon `L2Loss`) compute the plain mean squared error *without* our factor of $\frac{1}{2}$:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-concise-defining-the-loss-function
 
-| Objective Convention | Formula | Minibatch Gradient | Noise Floor ($\sigma = 0.01$) | Equivalent Learning Rate |
-|---|---|---|---|---|
-| **Scratch loss (with $1/2$)** | $\frac{1}{2|\mathcal{B}|}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ | $\mathbf{g}$ | $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$ | $\eta = 0.03$ |
-| **Framework MSE (no $1/2$)** | $\frac{1}{|\mathcal{B}|}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ | $2\mathbf{g}$ | $\sigma^2 = 10^{-4}$ | $\eta = 0.03 / 2 = 0.015$ |
+- **Why halve $\eta$ from $0.03$ to $0.015$:** Standard framework MSE omits our $\frac{1}{2}$ factor, doubling both the loss value (floor $\sigma^2 = 10^{-4}$) and its gradient ($2\mathbf{g}$); halving $\eta = 0.015$ makes $-\eta(2\mathbf{g}) = -0.03\mathbf{g}$ identical to our scratch step.
+:::
 
-::: {.d2l-note .rule}
-Multiplying a loss function by any constant $c > 0$ multiplies all its gradients by $c$. Halving the learning rate to $\eta = 0.015$ makes every framework SGD step identical to our scratch step at $\eta = 0.03$.
+::: {.col .fig}
+@fig:ch02-lr-mse-halving
+:::
 :::
 :::
 
 ::: {.slide title="Configuring the Built-In Framework Optimizer"}
 [Optimizer Abstraction]{.kicker}
 
-In `configure_optimizers`, we return the framework's built-in SGD optimizer wired to the module's registered parameters and learning rate `self.lr`:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-concise-defining-the-optimization-algorithm
 
-- **Automatic parameter discovery:** `self.parameters()` (PyTorch), `self.collect_params()` (MXNet), `model.trainable_variables` (Keras), and `nnx.Param` (Flax NNX) traverse the module tree automatically—scaling effortlessly from 1 layer to 1,000 layers.
-- **One-line optimizer swap:** Switching from minibatch SGD to Adam or AdamW in later chapters requires changing only this single return statement.
+- **Automatic parameter discovery:** `self.parameters()` (PyTorch), `collect_params()` (MXNet), `trainable_variables` (Keras), and `nnx.Param` (Flax NNX) traverse the module tree automatically.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-param-discovery
+:::
+:::
 :::
 
 ::: {.slide title="Training and Parameter Recovery With Framework Parts"}
@@ -473,32 +483,34 @@ Fitting `LinearRegression(lr=0.015)` with `d2l.Trainer(max_epochs=10)` reproduce
 ::: {.slide title="Extracting and Verifying the Learned Layer Parameters"}
 [Inspecting Framework Layer Weights]{.kicker}
 
-To inspect the learned weights and bias inside `self.net`, we attach a `get_w_b` helper and compare $(\hat{\mathbf{w}}, \hat{b})$ against $\mathbf{w}^* = (2, -3.4)^\top$ and $b^* = 4.2$:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-concise-training-2
 
 @!linear-regression-concise-training-3
 
-::: {.d2l-note}
-Both weights and bias match $(\mathbf{w}^*, b^*)$ to within a few times $10^{-4}$ ($\approx \sigma / \sqrt{n}$), confirming that the high-level framework abstractions execute the exact same optimization trajectory as our hand-written loop.
+- **Matching ground truth:** Both weights and bias match $(\mathbf{w}^*, b^*)$ within $\sim \sigma / \sqrt{n} \approx 3 \times 10^{-4}$.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-get-wb
+:::
 :::
 :::
 
 ::: {.slide title="Three Levels of Abstraction: §§2.3 -> 2.4 -> 2.5"}
 [The Chapter 2 Pedagogical Progression]{.kicker}
 
-Tracing the same linear regression benchmark across §§2.3–2.5 shows how the `d2l` harness bridges transparent tensor math and production framework APIs:
+::: {.cols .vc}
+::: {.col}
+- **§2.3 Bare Functions:** Raw tensors `w, b`, manual `linreg` & `squared_loss`, manual `backward()`, and a one-pass `minibatches` generator.
+- **§2.4 OO Scratch (`LinearRegressionScratch`):** Wraps raw tensors and custom `SGD(lr=0.03)` inside `d2l.Module`, trained via `SyntheticRegressionData` and `d2l.Trainer`.
+- **§2.5 Concise (`LinearRegression`):** Swaps in framework dense layers, `MSELoss`, and built-in `SGD(lr=0.015)` while reusing `DataModule` and `Trainer` unchanged.
+:::
 
-| Pipeline Stage | §2.3 From Scratch (Bare Functions) | §2.4 OO Design (`LinearRegressionScratch`) | §2.5 Concise (`LinearRegression`) |
-|---|---|---|---|
-| **Parameters** | Raw tensors `w, b` with `requires_grad` | `nn.Parameter` / `nnx.Param` attributes on `Module` | Managed automatically inside `self.net` layer |
-| **Forward Pass** | `linreg(X, w, b) = X @ w + b` | `self.forward(X)` calls `d2l.matmul(X, self.w) + self.b` | Inherited `Module.forward(X) -> self.net(X)` |
-| **Objective** | `squared_loss(y_hat, y)` ($\frac{1}{2|\mathcal{B}|}\|\mathbf{r}\|_2^2$) | `self.loss` method calling `squared_loss` | Framework `MSELoss` / `l2_loss` ($\frac{1}{|\mathcal{B}|}\|\mathbf{r}\|_2^2$) |
-| **Optimizer** | Manual `param -= lr * param.grad` loop | Custom `d2l.SGD(params, lr=0.03)` class | Framework `SGD` (`lr=0.015`, automatic param discovery) |
-| **Data & Loop** | One-pass `minibatches` + nested `for` loops | `SyntheticRegressionData` + `d2l.Trainer` | **Identical** `SyntheticRegressionData` + `d2l.Trainer` |
-
-::: {.d2l-note .rule}
-From Chapter 3 onward, switching from linear regression to softmax classification, MLPs, CNNs, or Transformers requires overriding only `self.net`, `self.loss`, and `configure_optimizers` on `d2l.Module`!
+::: {.col .fig .big}
+@fig:ch02-lr-three-tiers
+:::
 :::
 :::
 

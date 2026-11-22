@@ -1692,15 +1692,18 @@ A jagged SDE path $\mathbf{X}_t$ has no time derivative, but the expectation $\m
 ::: {.slide title="Deriving Fokker–Planck, II: Integration by Parts"}
 [The Density PDE]{.kicker}
 
-Writing both expectations as integrals against the marginal density $p_t(\mathbf{x})$ and moving derivatives off the test function $\phi$ onto $p_t$ via integration by parts:
+::: {.cols .vc}
+::: {.col}
+Moving derivatives off the test bump $\phi(\mathbf{x})$ onto $p_t(\mathbf{x})$ via integration by parts yields the **Fokker–Planck PDE**:
 
-$$\int \phi(\mathbf{x})\,\partial_t p_t(\mathbf{x})\,d\mathbf{x} = \underbrace{\int (\nabla\phi \cdot \mathbf{f})\,p_t\,d\mathbf{x}}_{-\int \phi\,\nabla\cdot(\mathbf{f}p_t)\,d\mathbf{x}} + \frac{1}{2}g(t)^2 \underbrace{\int (\Delta\phi)\,p_t\,d\mathbf{x}}_{+\int \phi\,\Delta p_t\,d\mathbf{x}}$$
+$$\partial_t p_t(\mathbf{x}) = -\nabla \cdot \big(\mathbf{f}(\mathbf{x}, t)\,p_t(\mathbf{x})\big) + \frac{1}{2}g(t)^2\,\Delta p_t(\mathbf{x})$$
 
-Because this equality holds for every smooth bump $\phi$, the integrand multiplying $\phi$ must vanish pointwise:
+- **Two competing operators:** First-order **advection** $-\nabla\cdot(\mathbf{f}p_t)$ transports mass along the drift $\mathbf{f}$, while second-order **diffusion** $\tfrac12 g^2\Delta p_t$ smooths peaks into valleys.
+:::
 
-::: {.d2l-note .rule}
-**The Fokker–Planck Equation (Kolmogorov Forward Equation):**
-$$\partial_t p_t(\mathbf{x}) = \underbrace{-\nabla \cdot \big(\mathbf{f}(\mathbf{x}, t)\,p_t(\mathbf{x})\big)}_{\text{advection (drift transport)}} + \underbrace{\frac{1}{2}g(t)^2\,\Delta p_t(\mathbf{x})}_{\text{diffusion (Laplacian smoothing)}}$$
+::: {.col .fig}
+@fig:ch38-dyn-fp-weak-derivation
+:::
 :::
 :::
 
@@ -1717,13 +1720,19 @@ Each operator on the right-hand side of $\partial_t p_t = -\nabla\cdot(\mathbf{f
 ::: {.slide title="Gaussian Moment ODEs for Ornstein–Uhlenbeck"}
 [Exact Moment Closure]{.kicker}
 
-For the 1D Ornstein–Uhlenbeck drift $f(x) = -\theta x$, the Fokker–Planck PDE reads $\partial_t p = \theta\,\partial_x(xp) + \frac{1}{2}g^2\,\partial_{xx}p$. Substituting a Gaussian ansatz $p(x, t) = \mathcal{N}(x; m(t), v(t))$ turns both sides into $p(x, t)$ times a quadratic polynomial in $(x - m)$:
+::: {.cols .vc}
+::: {.col}
+Substituting a Gaussian ansatz $p(x, t) = \mathcal{N}(x; m(t), v(t))$ into the 1D OU Fokker–Planck PDE $\partial_t p = \theta\partial_x(xp) + \tfrac12 g^2\partial_{xx}p$ reduces the PDE to two scalar ODEs:
 
-$$\partial_t p = p\left[\frac{\dot{m}}{v}(x - m) + \frac{\dot{v}}{2v^2}\big((x - m)^2 - v\big)\right] = p\left[-\frac{\theta m}{v}(x - m) + \left(\frac{g^2}{2v^2} - \frac{\theta}{v}\right)\big((x - m)^2 - v\big)\right]$$
+$$\dot{m} = -\theta m, \qquad \dot{v} = g^2 - 2\theta v$$
 
-- **Proposition (OU Moment ODEs):** Matching coefficients of $(x - m)$ and $(x - m)^2$ reduces the infinite-dimensional PDE to two scalar ODEs:
-  $$\dot{m} = -\theta m, \qquad \dot{v} = g^2 - 2\theta v \quad \Longrightarrow \quad m(t) = m_0 e^{-\theta t}, \quad v(t) = v_0 e^{-2\theta t} + \frac{g^2}{2\theta}\left(1 - e^{-2\theta t}\right)$$
-- **Stationary Equilibrium ($\dot{m} = \dot{v} = 0$):** At $m_\infty = 0$ and $v_\infty = \frac{g^2}{2\theta}$, inward drift compression $\theta\partial_x(xp)$ cancels outward Laplacian smoothing $\frac{1}{2}g^2\partial_{xx}p$ everywhere.
+- **Stationary equilibrium ($\dot{m} = \dot{v} = 0$):** At $m_\infty = 0$ and $v_\infty = \frac{g^2}{2\theta}$, inward drift compression cancels outward Laplacian diffusion everywhere.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-ou-moment-odes
+:::
+:::
 :::
 
 ::: {.slide title="Linearity of Fokker–Planck and Mixture Marginals"}
@@ -1804,18 +1813,19 @@ When particles move deterministically along an ODE velocity field $\dot{\mathbf{
 ::: {.slide title="The Key Identity: Rewriting Diffusion as Transport"}
 [Bridging SDEs and ODEs]{.kicker}
 
-At first glance, the Fokker–Planck equation $\partial_t p_t = -\nabla\cdot(\mathbf{f}p_t) + \frac{1}{2}g^2\Delta p_t$ has a second-order Laplacian term that a deterministic continuity equation lacks. One line of the chain rule converts the Laplacian into a divergence:
+::: {.cols .vc}
+::: {.col}
+Using $\nabla p_t = p_t\nabla\log p_t$ converts the second-order Laplacian $\tfrac12 g^2\Delta p_t$ into a first-order transport divergence:
 
-$$\nabla p_t = p_t\,\nabla\log p_t \quad \Longrightarrow \quad \frac{1}{2}g(t)^2\,\Delta p_t = \nabla \cdot \left(\frac{1}{2}g(t)^2\,\nabla p_t\right) = \nabla \cdot \left(p_t \cdot \frac{1}{2}g(t)^2\,\nabla\log p_t\right)$$
+$$\partial_t p_t + \nabla \cdot \big(p_t\,\mathbf{u}_t\big) = 0, \qquad \mathbf{u}_t(\mathbf{x}) = \mathbf{f}(\mathbf{x}, t) - \frac{1}{2}g(t)^2\,\nabla\log p_t(\mathbf{x})$$
 
-Merging the advection and diffusion divergences turns the Fokker–Planck PDE into a **continuity equation**:
-
-::: {.d2l-note .rule}
-**Proposition (Fokker–Planck as Deterministic Transport):** Wherever $p_t(\mathbf{x}) > 0$,
-$$\partial_t p_t + \nabla \cdot \big(p_t\,\mathbf{u}_t\big) = 0, \qquad \text{with velocity } \mathbf{u}_t(\mathbf{x}) = \mathbf{f}(\mathbf{x}, t) - \frac{1}{2}g(t)^2\,\nabla\log p_t(\mathbf{x})$$
+- **Probability-flow velocity $\mathbf{u}_t$:** At the marginal density level, random Brownian kicks act identically to a deterministic velocity $-\tfrac12 g^2\nabla\log p_t$ pushing probability downhill.
 :::
 
-- **Physical Interpretation:** At the level of marginal densities, random Brownian kicks act identically to a deterministic velocity $-\frac{1}{2}g^2\nabla\log p_t$ pushing probability **downhill** from high density to low density.
+::: {.col .fig}
+@fig:ch38-dyn-laplacian-to-score-flow
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Solving the Heat Equation as a Flow"}
@@ -1883,12 +1893,17 @@ The forward SDE smooths data $p_0$ into noise $p_T \approx \mathcal{N}(\mathbf{0
 ::: {.slide title="Infinitesimal Bayes' Rule on a Single Backward Step"}
 [Deriving the Reverse Drift]{.kicker}
 
-Given a particle at $\mathbf{x}_{t+\tau} = \mathbf{y}$, where did it come from at time $t$? By Bayes' rule, the backward transition density reweights the forward Gaussian step $\mathcal{N}(\mathbf{y}; \mathbf{x} + \mathbf{f}\tau, g^2\tau\mathbf{I})$ by the prior marginal $p_t(\mathbf{x})$:
+::: {.cols .vc}
+::: {.col}
+By Bayes' rule, $p(\mathbf{x}_t = \mathbf{x} \mid \mathbf{x}_{t+\tau} = \mathbf{y}) \propto p(\mathbf{y} \mid \mathbf{x})\,p_t(\mathbf{x})$. Expanding $\log p_t(\mathbf{x}) \approx \log p_t(\mathbf{y}) + (\mathbf{x} - \mathbf{y})\cdot\nabla\log p_t(\mathbf{y})$ and completing the square in the Gaussian exponent shifts the backward mean by $+g^2\tau\nabla\log p_t(\mathbf{y})$, yielding **Anderson's reverse-time SDE** ($t : T \to 0$):
 
-$$\log p(\mathbf{x}_t = \mathbf{x} \mid \mathbf{x}_{t+\tau} = \mathbf{y}) = -\frac{\|\mathbf{x} - (\mathbf{y} - \mathbf{f}(\mathbf{y}, t)\tau)\|^2}{2g^2\tau} + \underbrace{\log p_t(\mathbf{y}) + (\mathbf{x} - \mathbf{y}) \cdot \nabla\log p_t(\mathbf{y})}_{\text{first-order Taylor expansion of } \log p_t(\mathbf{x})} + \text{const}$$
+$$d\mathbf{X} = \Big[\mathbf{f}(\mathbf{X}, t) - g(t)^2\,\nabla_{\mathbf{x}}\log p_t(\mathbf{X})\Big]\,dt + g(t)\,d\bar{\mathbf{W}}$$
+:::
 
-- **Completing the Square in the Gaussian Exponent:** Adding a linear tilt $(\mathbf{x} - \mathbf{y}) \cdot \mathbf{s}$ to a Gaussian of variance $\sigma^2 = g^2\tau$ shifts its mean by $\sigma^2\mathbf{s} = +g^2\tau\nabla\log p_t(\mathbf{y})$:
-  $$p(\mathbf{x}_t = \mathbf{x} \mid \mathbf{x}_{t+\tau} = \mathbf{y}) \approx \mathcal{N}\!\Big(\mathbf{x};\; \mathbf{y} - \big[\mathbf{f}(\mathbf{y}, t) - g(t)^2\nabla\log p_t(\mathbf{y})\big]\tau,\; g(t)^2\tau\,\mathbf{I}\Big)$$
+::: {.col .fig}
+@fig:ch38-dyn-anderson-bayes-tilt
+:::
+:::
 :::
 
 ::: {.slide title="Anderson's Reverse-Time SDE and the Factor of Two"}

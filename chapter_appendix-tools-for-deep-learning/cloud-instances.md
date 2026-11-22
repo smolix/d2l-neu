@@ -345,19 +345,14 @@ Cloud Computing: GPU Rental Tiers, Cost per Completed Result, and Spot Resilienc
 ::: {.slide title="When a Project Outgrows Local and Hosted Runtimes"}
 [Motivation]{.kicker}
 
-Most single-GPU notebooks in this book use under $8\text{ GB}$ of VRAM and run easily on a $24\text{ GB}$ card or free hosted tier, but real workloads eventually hit three walls:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. Duration wall:** Data preprocessing or multi-epoch training exceeds the 12-hour wall-clock limit and weekly quotas of Colab or Kaggle.
-- **2. Memory capacity wall:** Full fine-tuning or long-context evaluation requires $80\text{--}96\text{ GB}$ of HBM on an A100, H100, or RTX PRO 6000.
-- **3. Multi-GPU scaling wall:** Training requires 4–8 tightly coupled accelerators communicating over high-speed NVLink.
+- **Three walls that force cloud rental:** (1) Training exceeds 12-hour hosted sessions/quotas; (2) full fine-tunes or long contexts need $80\text{--}96\text{ GB}$ HBM; (3) multi-GPU scaling needs $450\text{--}900\text{ GB/s}$ NVLink.
+- **Two durable cloud rules:** Select instances by **total cost per completed result** (never hourly sticker price alone), and treat every rented VM as **disposable**.
 :::
 
-::: {.col}
-- **Two rules that outlast monthly price sheets:**
-  1. Choose an instance by its **total cost per completed result**, never by its hourly sticker price alone.
-  2. Treat every rented VM as **disposable**: automate setup, stream checkpoints to durable storage, and tear down every billable resource immediately.
+::: {.col .fig .big}
+@fig:ch39-tools-three-cloud-walls
 :::
 :::
 :::
@@ -383,19 +378,14 @@ GPU rental providers differ less in the silicon itself than in the surrounding m
 ::: {.slide title="Trust Boundaries, Compliance, and Host Isolation"}
 [Security Architecture]{.kicker}
 
-Choosing a provider tier is first a question about who is allowed to touch your code, credentials, and training data:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Community marketplace hosts:** Your container runs on a machine physically operated by a third party.
-  - Even if the dataset is public, the host operator has root access to hypervisor RAM and can read **cloud storage access keys**, proprietary model weights, or private code while the job runs.
-  - **Why disk encryption does not stop a malicious host:** Decryption keys and cleartext tensors must reside in system RAM and GPU memory during execution.
+- **Community marketplace hosts:** Third-party operators have physical and hypervisor root access; disk encryption cannot hide keys or weights that must sit in cleartext RAM/VRAM during execution.
+- **Vetted datacenters & hyperscalers:** Use vetted tiers and short-lived scoped tokens for proprietary weights, and require a signed legal **BAA** (plus VPC/KMS controls) before uploading regulated data (HIPAA).
 :::
 
-::: {.col}
-- **Vetted datacenter tiers & hyperscalers:**
-  - For proprietary weights or internal company data, use vetted tiers (e.g., RunPod Secure Cloud, GPU specialists, or hyperscalers) and scoped, short-lived credentials.
-  - For regulated data (e.g., hospital medical records under HIPAA), technical controls (VPC isolation, KMS encryption, audit logs) must be paired with a signed legal **Business Associate Agreement (BAA)** before uploading a single byte.
+::: {.col .fig .big}
+@fig:ch39-tools-trust-boundaries
 :::
 :::
 :::
@@ -403,35 +393,31 @@ Choosing a provider tier is first a question about who is allowed to touch your 
 ::: {.slide title="Dated On-Demand GPU Price Snapshot (Nov 2026)"}
 [Market Spread]{.kicker}
 
-On-demand hourly prices for identical silicon span a $3\times\text{--}5\times$ range across tiers (always verify current quotes before launching):
+::: {.cols .vc}
+::: {.col}
+- **$3\times\text{--}5\times$ price dispersion for identical silicon:** An 80 GB H100 rents for $\$1.80\text{--}3.99/\text{hr}$ on marketplaces, $\$1.99\text{--}4.50/\text{hr}$ on GPU specialists, and $\$6.88\text{--}11.00/\text{hr}$ on hyperscalers.
+- **Entry 24 GB tier:** Marketplace RTX 4090s ($\$0.30\text{--}0.89/\text{hr}$) and hyperscaler L4s ($\$0.71\text{--}0.80/\text{hr}$) cover single-GPU fine-tuning and evaluation at minimal invoice cost.
+:::
 
-| Provider (Tier) | Entry / 24 GB+ GPU Option | $\approx\text{ \$/hr}$ | $1\times\text{H100 80 GB}$ $\approx\text{ \$/hr}$ |
-| :--- | :--- | :--- | :--- |
-| **Vast.ai** (marketplace) | RTX 4090 24 GB | $0.30\text{--}0.50$ | $1.80\text{--}2.40$ |
-| **RunPod** (marketplace) | RTX 4090 24 GB | $0.34\text{--}0.89$ | $1.99\text{--}3.99$ |
-| **Lambda / Nebius** (specialist) | A100 40 GB / PRO 6000 96 GB | $1.80\text{--}1.99$ | $3.29\text{--}4.50$ |
-| **Voltage Park** (specialist) | H100 80 GB | $1.99$ | $1.99$ |
-| **AWS** (hyperscaler) | L4 24 GB (`g6.xlarge`) | $0.80$ | $6.88$ (`p5`) |
-| **Azure** (hyperscaler) | T4 16 GB (`NC4as T4 v3`) | $0.53$ | $6.98$ (H100 NVL 94 GB) |
-| **Google Cloud** (hyperscaler) | L4 24 GB (`g2-standard-4`) | $0.71$ | $\approx 11.00$ (per GPU in 8-GPU `A3`) |
+::: {.col .fig .big}
+@fig:ch39-tools-price-spread
+:::
+:::
 :::
 
 ::: {.slide title="Why Multi-GPU Interconnects Are Not Priced Linearly"}
 [Interconnect Arithmetic]{.kicker}
 
-Two providers may rent $8\times\text{H100}$ nodes at the same price per GPU-hour while delivering vastly different training throughput if one uses **NVLink** ($450\text{ GB/s}$) and the other uses **PCIe 5.0** ($64\text{ GB/s}$):
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Compute vs. gradient communication per step:** For a transformer with $N$ parameters in BF16 ($2N$ gradient bytes) processing $b$ tokens per GPU at sustained throughput $F$, compute takes $t_{\text{compute}} \approx 6Nb / F$ and communication takes $t_{\text{comm}} \approx 2N \beta_{\text{link}}$.
-- **Notice that $N$ cancels out of the ratio!** Communication equals compute time when:
-  $$b_{\text{balance}} = \frac{F \cdot \beta_{\text{link}}}{3}$$
+$$b_{\text{balance}} = \frac{F \cdot \beta_{\text{link}}}{3} \quad (N\text{ cancels!})$$
+
+- **NVLink ($450\text{ GB/s}$) vs. PCIe 5.0 ($64\text{ GB/s}$) on $8\times\text{H100}$:** At $395.6\text{ TFLOP/s}$ sustained, communication equals compute at $b_{\text{balance}} \approx 293$ tok/GPU on NVLink vs. $2{,}060$ tok/GPU on PCIe.
+- **Impact at $b = 4{,}096$ tok/GPU:** NVLink adds only $\sim 7\%$ overhead, whereas PCIe adds **$50\%$ overhead** unless amortized by gradient accumulation.
 :::
 
-::: {.col}
-- **Concrete H100 comparison ($F = 0.4 \times 989 \approx 395.6\text{ TFLOP/s}$):**
-  - On **NVLink** ($450\text{ GB/s}$): $b_{\text{balance}} \approx 293$ tokens/GPU—at $b = 4{,}096$ tokens, communication is only $\sim 7\%$ of compute!
-  - On **PCIe 5.0** ($64\text{ GB/s}$): $b_{\text{balance}} \approx 2{,}060$ tokens/GPU—at $b = 4{,}096$, PCIe gradient transfer adds **50% overhead** unless hidden by $N_{\text{accumulation}}$ gradient accumulation steps.
+::: {.col .fig}
+@fig:ch39-tools-nvlink-vs-pcie-cloud
 :::
 :::
 :::
@@ -439,21 +425,16 @@ Two providers may rent $8\times\text{H100}$ nodes at the same price per GPU-hour
 ::: {.slide title="Total Cost per Completed Result vs. Hourly Price"}
 [Experiment Economics]{.kicker}
 
-The hourly GPU rate is only one term in the true cost of producing a verified scientific or engineering result:
-
-$$\text{Total Cost} = (T_{\text{wall}} + T_{\text{setup}}) \cdot p_{\text{gpu}} + C_{\text{storage}} + C_{\text{egress}} + (T_{\text{setup}} + f \cdot T_{\text{wall}}) \cdot p_{\text{eng}}$$
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Direct cloud invoice terms:**
-  - Execution wall time $T_{\text{wall}} = W / \text{speed}$ plus environment setup/debugging hours $T_{\text{setup}}$.
-  - Persistent volume storage $C_{\text{storage}}$ (which bills even while the VM is stopped!) and data egress $C_{\text{egress}}$.
+$$\text{Cost} = (T_{\text{wall}} + T_{\text{setup}})p_{\text{gpu}} + C_{\text{store}} + C_{\text{egress}} + (T_{\text{setup}} + f T_{\text{wall}})p_{\text{eng}}$$
+
+- **Direct cloud invoice:** Includes execution wall time $T_{\text{wall}}$, setup hours $T_{\text{setup}}$, persistent storage $C_{\text{store}}$ (billed even while stopped!), and outbound egress $C_{\text{egress}}$.
+- **Engineer time ($p_{\text{eng}}$):** Setup/debugging rounds plus fractional waiting attention $f \cdot T_{\text{wall}}$ often outweigh the raw GPU invoice.
 :::
 
-::: {.col}
-- **Human engineering time ($p_{\text{eng}}$):**
-  - Hands-on setup and debugging rounds ($T_{\text{setup}}$).
-  - Fractional attention $f \cdot T_{\text{wall}}$ spent waiting on or monitoring a running job—where a $3\times$ faster GPU shrinks turnaround from a full workday to 2.7 hours.
+::: {.col .fig}
+@fig:ch39-tools-completed-result-cost
 :::
 :::
 :::
@@ -478,19 +459,14 @@ Compare a marketplace RTX 4090 ($\$0.40/\text{hr}$), A100 80 GB ($\$1.20/\text{h
 ::: {.slide title="When a Pricier GPU Is Cheaper Overall"}
 [Break-Even Analysis]{.kicker}
 
-Why do production teams routinely rent H100s instead of cheaper cards when the raw invoice is higher?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. Extra debugging iterations:** If an 8-hour card requires just **one extra 30-minute debugging round** ($\$30$ of engineer time + compute), its total jumps above $\$65$—making the H100 significantly cheaper.
-- **2. Monitoring & waiting attention ($f \cdot T_{\text{wall}} \cdot p_{\text{eng}}$):**
-  - Between the 4090 ($T_{\text{wall}} = 8.0\text{ h}$, invoice $\$5.40$) and H100 ($T_{\text{wall}} = 2.67\text{ h}$, invoice $\$9.92$), the $\$4.52$ invoice gap breaks even at $f \approx 1.4\%$:
-    $$f \cdot (8.0 - 2.67) \times 60 = 4.52$$
+- **1. One extra 30-min debug round ($\$30+$):** Pushes an 8-hour RTX 4090 run from $\$35.40$ above $\$65$, making the 2.67-hour H100 ($\$39.92$) far cheaper.
+- **2. The 7-minute attention threshold ($f \approx 1.4\%$):** Because the H100 saves $5.33\text{ hours}$ of wall time for only $\$4.52$ more on the invoice, if waiting on the 8-hour run consumes even **$6.8\text{ minutes}$** of engineer attention at $\$60/\text{hr}$, the H100 wins!
 :::
 
-::: {.col}
-- **The 7-minute threshold:** If waiting for or checking on the 8-hour run consumes even **$1.4\%$ of the wall time ($\sim 6.8\text{ minutes}$ of engineer attention)**, the H100 is cheaper in total cost per completed result!
-- **Scale still dominates:** For a 2-hour LoRA run, any 24 GB card works; for a 2,000 GPU-hour pretrain, hardware utilization and spot pricing dominate.
+::: {.col .fig .big}
+@fig:ch39-tools-breakeven-attention
 :::
 :::
 :::
@@ -498,25 +474,17 @@ Why do production teams routinely rent H100s instead of cheaper cards when the r
 ::: {.slide title="Spot and Interruptible Capacity Economics"}
 [Preemptible Compute]{.kicker}
 
-Cloud providers sell spare capacity as **spot** or **interruptible** instances at $50\%\text{--}70\%$ discounts, with one catch—the machine can be reclaimed at any moment:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Shutdown warning windows vary wildly:**
-  - **AWS Spot:** 2-minute warning before termination.
-  - **Google Cloud Spot:** Up to 30 seconds by default.
-  - **Vast.ai Interruptible:** Zero warning—processes are killed immediately as soon as your bid is outbid.
+$$\mathbb{E}[T_{\text{wall}}] = \left(e^{T/M} - 1\right)(M + R)$$
+
+- **Exponential blowup without checkpoints:** If an $8\text{ h}$ run restarts from scratch after Poisson interruptions ($M = 4\text{ h}$, $R = 0.25\text{ h}$), expected wall time reaches $27.2\text{ h}$—costing **$1.69\times$ more** than on-demand even at a $50\%$ spot discount!
+- **Never run uncheckpointed jobs or live interactive sessions on spot VMs.**
 :::
 
-::: {.col}
-- **Uncheckpointed spot runs are a trap:** If a job requiring $T$ hours of compute restarts from scratch after Poisson interruptions (mean interval $M$, restart delay $R$), expected wall time explodes exponentially:
-  $$\mathbb{E}[T_{\text{wall}}] = \left(e^{T/M} - 1\right)(M + R)$$
-  For $T = 8\text{ h}$, $M = 4\text{ h}$, $R = 0.25\text{ h}$ at half price ($q = 0.5$), expected spot cost is **$1.69\times$ higher** than on-demand!
+::: {.col .fig}
+@fig:ch39-tools-spot-blowup
 :::
-:::
-
-::: {.d2l-note .warn}
-**Never run uncheckpointed jobs or live interactive notebooks on spot capacity.** Spot discounts only pay off when automatic checkpoint-and-resume bounds lost work per preemption to $\tau \ll M$.
 :::
 :::
 
@@ -542,20 +510,14 @@ When a training script saves a durable checkpoint of duration $\delta$ every $\t
 ::: {.slide title="The Hidden Bill: Data Egress and Idle Storage"}
 [Storage & Network Costs]{.kicker}
 
-Compute billing stops when you terminate an instance, but storage volumes and outbound network transfers can silently dwarf your GPU bill:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The egress fee shock:**
-  - Hyperscalers (AWS, Azure) charge $\sim\$0.09/\text{GB}$ for data transferred out to the public internet beyond $100\text{ GB/month}$.
-  - Downloading a $140\text{ GB}$ checkpoint to your local workstation once a day for 30 days moves $4.2\text{ TB}$—costing **$\approx \$370$ in egress fees**, more than running a marketplace RTX 4090 24/7 for the entire month ($\approx \$320$)!
+- **The egress fee shock ($\sim\$0.09/\text{GB}$):** Downloading a $140\text{ GB}$ checkpoint once a day for 30 days ($4.2\text{ TB}$) costs **$\approx\$370$ in egress fees**—more than renting a marketplace RTX 4090 24/7 for the entire month!
+- **Three defensive rules:** Co-locate compute and object storage in the same cloud region, use zero-egress storage (e.g., R2 / RunPod) for cross-cloud workflows, and delete unattached NVMe volumes immediately.
 :::
 
-::: {.col}
-- **Three rules to avoid storage/egress traps:**
-  1. **Co-locate compute and object storage** in the exact same cloud provider and region (intra-region transfers are normally free).
-  2. **Evaluate zero-egress providers** (such as RunPod or Cloudflare R2) when workflows frequently move large checkpoints across clouds.
-  3. **Audit persistent volumes:** An unattached $2\text{ TB}$ NVMe block volume keeps billing every hour even when no GPU is running.
+::: {.col .fig .big}
+@fig:ch39-tools-egress-shock
 :::
 :::
 :::
@@ -563,32 +525,14 @@ Compute billing stops when you terminate an instance, but storage volumes and ou
 ::: {.slide title="First-Minute Verification and Smoke Testing"}
 [Instance Onboarding]{.kicker}
 
-A newly booted cloud VM is an untrusted environment; verify hardware, disk, and I/O in the first two minutes before launching an 8-hour run:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-```bash
-# 1. Start from a prebuilt DL image & use tmux
-tmux new -s train
-
-# 2. Verify driver, GPU model, and free VRAM
-nvidia-smi
-
-# 3. Verify scratch disk capacity & permissions
-df -h
-
-# 4. Verify framework sees the CUDA device
-python -c "import torch; print(torch.cuda.get_device_name(0))"
-```
+- **Boot & shell check:** Start inside `tmux new -s train`, run `nvidia-smi` and `df -h`, and verify framework CUDA visibility before starting long jobs.
+- **60-second automated smoke test:** Verify (1) free GPU VRAM, (2) writable checkpoint mount (catches read-only disks before hour 1!), (3) 1 forward/backward step + bitwise checkpoint round-trip, and (4) data loader batch/s $>$ GPU step/s.
 :::
 
-::: {.col}
-- **Run a 60-second automated smoke test before every long job:**
-  1. Target accelerator is visible and free.
-  2. Checkpoint directory is writable with sufficient free bytes (catches read-only mounts and full disks *before* hour 1!).
-  3. One forward/backward step succeeds at target batch size (catches OOM and broken cuDNN).
-  4. `save_checkpoint` $\to$ `load_checkpoint` round-trip reproduces tensors bitwise.
-  5. Data loader batch/s exceeds GPU step/s (catches slow network storage mounts).
+::: {.col .fig .big}
+@fig:ch39-tools-smoke-test-gates
 :::
 :::
 :::

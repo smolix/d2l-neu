@@ -444,97 +444,148 @@ The Image Classification Dataset: Fashion-MNIST & Data Pipelines<br>**Fashion-MN
 ::: {.slide title="Why Fashion-MNIST Is Our Running Vision Benchmark"}
 [Benchmark Selection]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 An effective development benchmark must separate weak models from strong architectures while fitting in memory and training in seconds:
 
-| Dataset | Images & Resolution | Classes | Practical Trade-off |
-|:--|:--|--:|:--|
-| **MNIST** (1998) | $70{,}000$ grayscale digits ($28 \times 28$) | $10$ | Linear models $\approx 92\%$, trivial nets $>99\%$: almost no headroom to test new ideas |
-| **ImageNet** (2009) | $1.2\text{M}$ color photos ($\sim 224 \times 224$) | $1{,}000$ | Gold-standard scale, but requires hours of multi-GPU compute per experiment |
-| **Fashion-MNIST** (2017) | **$70{,}000$ grayscale garments ($28 \times 28$)** | **$10$** | **Drop-in MNIST footprint; linear softmax reaches $\sim 83\%$ while CNNs exceed $90\%$** |
+- **MNIST (1998) is too easy:** Linear models reach $\approx 92\%$ and trivial nets exceed $99\%$, leaving almost no headroom to test new ideas.
+- **ImageNet (2009) is too heavy:** $1.2\text{M}$ color photos across $1{,}000$ classes require hours of multi-GPU compute per experiment.
+- **Fashion-MNIST (2017) hits the sweet spot:** Drop-in $70{,}000$-image ($28\times 28$) footprint where linear softmax reaches $\sim 83\%$ and CNNs exceed $90\%$.
+:::
 
-::: {.d2l-note}
-Fashion-MNIST preserves MNIST's exact byte size ($60{,}000$ training + $10{,}000$ test images) while exposing realistic visual ambiguities among upper-body garments.
+::: {.col .fig .big}
+@fig:ch03-cls-benchmark-sweetspot
+:::
 :::
 :::
 
 ::: {.slide title="Ten Balanced Apparel Categories"}
 [Class Taxonomy]{.kicker}
 
-Fashion-MNIST contains exactly $6{,}000$ training images and $1{,}000$ test images for each of $q = 10$ clothing categories ($0$-based integer indices $0, \ldots, 9$):
-
-| `0` | `1` | `2` | `3` | `4` | `5` | `6` | `7` | `8` | `9` |
-|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| T-shirt | trouser | pullover | dress | coat | sandal | shirt | sneaker | bag | ankle boot |
-
-We attach `text_labels` to translate integer indices into human-readable category names:
+::: {.cols .vc}
+::: {.col}
+Fashion-MNIST contains $6{,}000$ training and $1{,}000$ test images for each of $q = 10$ clothing categories ($0$-based indices $0, \ldots, 9$):
 
 @image-classification-dataset-loading-the-dataset-4
+
+- **Silhouette clusters:** $4$ boxy upper-body tops (`0, 2, 4, 6`), $3$ footwear items (`5, 7, 9`), and $3$ distinct shapes (`1` trouser, `3` dress, `8` bag).
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-garment-taxonomy
+:::
+:::
 :::
 
 ::: {.slide title="Encapsulating Fashion-MNIST in a DataModule"}
 [Object-Oriented Data Pipeline]{.kicker}
 
-Following §2.4, `FashionMNIST` subclasses `d2l.DataModule` so every classifier in later chapters can swap datasets or resolutions via `resize=(h, w)` without changing training code:
+::: {.cols .vc}
+::: {.col}
+`FashionMNIST` subclasses `d2l.DataModule` so every classifier in later chapters can swap datasets or resolutions via `resize=(h, w)` without changing training code:
 
 @-image-classification-dataset-loading-the-dataset-1
 
-- **Normalization at load/transform time:** Raw 8-bit unsigned integers (`uint8` in $[0, 255]$, where $0$ is the dark background) are rescaled to 32-bit floats (`float32` in $[0, 1]$).
+- **Normalization at transform time:** Raw 8-bit pixels (`uint8` in $[0, 255]$, dark background $= 0$) rescale to `float32` in $[0, 1]$.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-pixel-rescale
+:::
+:::
 :::
 
 ::: {.slide title="Verifying the Official Train and Validation Splits"}
 [Dataset Splits & Pitfalls]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Instantiating `FashionMNIST()` loads the official $60{,}000$-image training split and $10{,}000$-image evaluation split into memory:
 
 @image-classification-dataset-loading-the-dataset-2
 
-- **Compact memory footprint:** At $28 \times 28 = 784$ pixels per image, all $60{,}000$ training images occupy $60{,}000 \times 784 \times 1\text{ B} \approx 47\text{ MB}$ as raw `uint8` bytes, or $\approx 188\text{ MB}$ as `float32` tensors.
+- **Compact memory footprint:** At $784$ pixels/image, $60{,}000$ training images take $\approx 47\text{ MB}$ in `uint8` or $\approx 188\text{ MB}$ in `float32`.
+- **Test-set reuse caveat:** Because Fashion-MNIST ships with only two splits, `data.val` uses the $10\text{k}$ test split (§3.5 quantifies reuse inflation).
+:::
 
-::: {.d2l-note .warn}
-**Test-set reuse caveat:** Because Fashion-MNIST ships with only two splits, we use the $10{,}000$ test images as our validation split (`data.val`). In §3.5 we quantify how repeated validation queries erode test-set confidence intervals.
+::: {.col .fig}
+@fig:ch03-cls-dataset-splits
+:::
 :::
 :::
 
 ::: {.slide title="Why MXNet Reads the Raw IDX Byte Files Directly" only="mxnet"}
 [Reproducibility Across Frameworks]{.kicker}
 
-Why does the MXNet implementation parse the official `*-ubyte.gz` files directly instead of calling `gluon.data.vision.FashionMNIST`?
+::: {.cols .vc}
+::: {.col}
+Why does MXNet parse the official `*-ubyte.gz` files directly instead of calling `gluon.data.vision.FashionMNIST`?
 
-- **Nonstandard split in Gluon's helper:** Gluon's built-in helper partitions Fashion-MNIST differently from the official release—roughly $80\%$ of its $10{,}000$ "test" images are actually drawn from the published **training** split!
-- **Cross-framework comparability:** Reading the official IDX binary files directly (skipping the $16$-byte image header and $8$-byte label header) guarantees that PyTorch, JAX, TensorFlow, and MXNet train and evaluate on the exact same $60{,}000 + 10{,}000$ images.
+- **Nonstandard split in Gluon's helper:** Gluon's built-in helper draws roughly $80\%$ of its $10{,}000$ "test" images from the published **training** split!
+- **Cross-framework comparability:** Parsing the official IDX binary files directly (skipping the $16$-byte image header and $8$-byte label header) guarantees identical $60\text{k} + 10\text{k}$ splits across all frameworks.
+:::
+
+::: {.col .fig .big}
+@fig:ch03-cls-idx-header
+:::
+:::
 :::
 
 ::: {.slide title="Building the Minibatch DataLoader"}
 [Shuffling & Batching]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 The `get_dataloader(train)` method wraps the dataset in an iterable minibatch loader:
 
 @image-classification-dataset-reading-a-minibatch-1
 
-- **Epoch reshuffling (`shuffle=train`):** Training reshuffles all $60{,}000$ indices on every epoch so minibatches vary across passes, whereas validation iterates in deterministic order.
-- **Retaining the short final minibatch:** At `batch_size=64`, $60{,}000 = 937 \times 64 + 32$, so each training epoch yields $938$ minibatches (the last holding $32$ images) and visits every example once.
+- **Epoch reshuffling (`shuffle=train`):** Training reshuffles all $60{,}000$ indices every epoch; validation iterates in deterministic order.
+- **Retaining the short final minibatch:** At `batch_size=64`, $60{,}000 = 937 \times 64 + 32$ yields $938$ batches per epoch with zero dropped examples.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-epoch-batches
+:::
+:::
 :::
 
 ::: {.slide title="Single-Image Layouts: Channel-First vs. Channel-Last"}
 [Framework Tensor Conventions]{.kicker}
 
-A single grayscale image ($c = 1$ channel, height $h = 28$, width $w = 28$) is stored as a 3D tensor whose channel-axis position depends on the framework:
+::: {.cols .vc}
+::: {.col}
+A single grayscale image ($c = 1$, $h = 28$, $w = 28$) is stored as a 3D tensor whose channel-axis position depends on the framework:
 
 @image-classification-dataset-loading-the-dataset-3
 
-- **Channel-first $(c, h, w) = (1, 28, 28)$:** Used by PyTorch and MXNet (`NCHW` convention, matching cuDNN's classic layout).
-- **Channel-last $(h, w, c) = (28, 28, 1)$:** Used by TensorFlow and JAX (`NHWC` convention, keeping all channels of a spatial pixel contiguous in memory).
+- **Channel-first $(c, h, w) = (1, 28, 28)$:** Used by PyTorch and MXNet (`NCHW`).
+- **Channel-last $(h, w, c) = (28, 28, 1)$:** Used by TensorFlow and JAX (`NHWC`).
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-nchw-vs-nhwc
+:::
+:::
 :::
 
 ::: {.slide title="Inspecting a Full Minibatch of Images and Labels"}
 [4D Image Tensors & 1D Label Vectors]{.kicker}
 
-Stacking $n = 64$ images into a minibatch prepends a leading batch axis to `X` while pairing it with a 1D integer vector `y` of class indices:
+::: {.cols .vc}
+::: {.col}
+Stacking $n = 64$ images prepends a leading batch axis to `X` and pairs it with a 1D integer vector `y`:
 
 @image-classification-dataset-reading-a-minibatch-2
 
-- **Minibatch memory footprint:** One minibatch of $64$ float32 images occupies $64 \times 1 \times 28 \times 28 \times 4\text{ B} = 200{,}704\text{ B} \approx 200\text{ KB}$ (or $\approx 803\text{ KB}$ at $n = 256$).
-- **Flattening for linear models:** In §3.3, reshaping `X` to `(-1, 784)` collapses the spatial and channel axes into a 2D design matrix $\mathbf{X} \in \mathbb{R}^{n \times 784}$ regardless of whether the layout is channel-first or channel-last.
+- **Minibatch footprint:** $64 \times 1 \times 28 \times 28 \times 4\text{ B} \approx 200\text{ KB}$ ($\approx 803\text{ KB}$ at $n = 256$).
+- **Flattening for linear models:** Reshaping `X` to `(-1, 784)` produces $\mathbf{X} \in \mathbb{R}^{n \times 784}$ in both `NCHW` and `NHWC`.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-minibatch-flatten
+:::
+:::
 :::
 
 ::: {.slide title="Benchmarking DataLoader Throughput in Isolation"}
@@ -550,23 +601,38 @@ Before attaching any neural network, always time one complete pass over `train_d
 ::: {.slide title="Diagnosing Data Pipeline Bottlenecks"}
 [Producer–Consumer Overlap]{.kicker}
 
-When background worker processes (`num_workers`) or asynchronous prefetch queues prepare batch $b + 1$ on the CPU while the accelerator computes on batch $b$, epoch wall-clock time obeys:
+::: {.cols .vc}
+::: {.col}
+When background CPU workers prefetch batch $b + 1$ while the GPU computes on batch $b$, epoch wall-clock time obeys:
 
 $$T_{\text{epoch}} \;\ge\; \max\!\big(T_{\text{load}},\; T_{\text{compute}}\big)$$
 
-- **Small batch sizes ($n = 1$ or $16$):** Per-batch Python dispatch and IPC overhead dominate per-image work, starving the GPU (`T_load >> T_compute`). Increasing `batch_size` amortizes dispatch overhead.
-- **Too few workers (`num_workers=0`):** The main thread blocks on CPU image decoding/resizing between every gradient step.
-- **Too many workers:** Once $T_{\text{load}} < T_{\text{compute}}$ (or CPU cores / shared-memory bandwidth saturate), adding more workers yields zero speedup and wastes RAM.
+- **Small batch sizes ($n = 1$ or $16$):** Per-batch Python dispatch and IPC overhead dominate (`T_load >> T_compute`), starving the GPU.
+- **Worker scaling:** `num_workers=0` blocks serially between steps; once $T_{\text{load}} < T_{\text{compute}}$, extra workers add zero speedup.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-producer-consumer
+:::
+:::
 :::
 
 ::: {.slide title="Visualizing Labeled Minibatches Before Training"}
 [Defensive Data Inspection]{.kicker}
 
-Silent data bugs—off-by-one label mappings, transposed spatial axes, or scrambled channels—never raise syntax errors. Always plot a grid of labeled tensors first:
+::: {.cols .vc}
+::: {.col}
+Silent data bugs—shifted label mappings, transposed spatial axes, or scrambled channels—never raise syntax errors. Always plot a labeled gallery first:
 
 @-image-classification-dataset-visualization-2
 
-- **Dropping the singleton channel:** Reshaping `X` to `(-1, *self.resize)` strips the length-$1$ channel axis from either `(n, 1, h, w)` or `(n, h, w, 1)` before calling `d2l.show_images`.
+- **Dropping the singleton channel:** Reshaping `X` to `(-1, *self.resize)` strips the length-$1$ channel axis from either `(n, 1, h, w)` or `(n, h, w, 1)`.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-visual-debug
+:::
+:::
 :::
 
 ::: {.slide title="What the Garment Silhouettes Predict About Model Errors"}

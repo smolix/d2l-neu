@@ -633,22 +633,16 @@ Probability and Statistics: Reasoning Under Uncertainty in Machine Learning<br>*
 ::: {.slide title="Why Probability and Statistics Are the Language of Machine Learning"}
 [Motivation]{.kicker}
 
-Machine learning models act on noisy measurements, ambiguous inputs, and finite datasets—making probability and statistics foundational at every stage of the pipeline:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Soft predictions & calibrated risk:** Classifiers output probability distributions $P(Y \mid \mathbf{x})$ via softmax rather than brittle hard guesses—critical when predicting heart-attack risk or flagging anomalous sensor readings.
-- **Loss functions as log-likelihoods:** Cross-entropy and squared error arise directly from maximizing the likelihood $P(\mathcal{D} \mid \mathbf{w})$ of observed targets.
+- **Calibrated predictions & losses:** Softmax outputs $P(Y \mid \mathbf{x})$ quantify predictive risk; cross-entropy and MSE arise directly from maximum likelihood $P(\mathcal{D} \mid \mathbf{w})$.
+- **Monte Carlo training & evaluation:** Minibatch SGD estimates $\nabla \mathbb{E}[\ell]$ from $B = 256$ examples, while standard errors $\sigma/\sqrt{n}$ separate true gains from test-set noise.
+- **Forward vs. inverse duality:** Probability predicts data from known $\boldsymbol{\theta}$; statistics infers $\hat{\boldsymbol{\theta}}$ and error bars from data $\mathcal{D}$.
 :::
 
-::: {.col}
-- **Stochastic training (Monte Carlo):** Minibatch SGD estimates the full-dataset gradient $\nabla \mathbb{E}[\ell]$ from $B = 256$ random examples per step.
-- **Statistical model evaluation:** Standard errors $\sigma/\sqrt{n}$ distinguish a genuine $+0.5\%$ accuracy breakthrough from finite-test-set sampling noise.
+::: {.col .fig .big}
+@fig:probability-forward-inverse
 :::
-:::
-
-::: {.d2l-note}
-**Forward vs. backward reasoning:** **Probability** reasons *forward* from a known model to the distribution of outcomes ($p = 0.5 \to \textrm{counts}$); **statistics** reasons *backward* from observed data to infer unknown parameters ($\textrm{56/100 heads} \to p$).
 :::
 :::
 
@@ -901,22 +895,16 @@ Drawing realizations from a distribution $P$ is called **sampling**. For $n$ ind
 ::: {.slide title="Evaluating Classifiers: Minibatch Noise vs. Paired Comparisons"}
 [ML Evaluation & Error Bars]{.kicker}
 
-Each test prediction is a Bernoulli trial ($X_i = 1$ if correct, $0$ if wrong) with true accuracy $p$ and standard error $\mathrm{SE}(\hat{p}_n) = \sqrt{p(1-p)/n} \le \frac{1}{2\sqrt{n}}$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-**1. Minibatch vs. Test-Set Error Bars ($p = 0.90$)**
+Each test prediction is Bernoulli with $\mathrm{SE}(\hat{p}_n) = \sqrt{p(1-p)/n}$:
 
-- **Minibatch ($n = 256$):** $\mathrm{SE} = \sqrt{0.9 \times 0.1 / 256} \approx \mathbf{1.9\%}$ ($95\%$ CI $\pm 3.7\%$). A dip from $0.90$ to $0.87$ on the next minibatch is pure sampling noise!
-- **Test set ($n = 10{,}000$):** $\mathrm{SE} = \sqrt{0.9 \times 0.1 / 10{,}000} = \mathbf{0.30\%}$ ($95\%$ CI $\pm 0.59\%$).
+- **Minibatch ($n = 256$) vs. test set ($n = 10{,}000$) at $p = 0.90$:** Minibatch $\mathrm{SE} \approx \mathbf{1.9\%}$ (a $3\%$ dip is normal noise!), whereas test-set $\mathrm{SE} = \mathbf{0.30\%}$.
+- **Why paired evaluation on the *same* test set wins:** On $10{,}000$ shared images, $9{,}700$ agreements cancel ($\mathrm{Cov} > 0$), cutting $\mathrm{SE}(\hat{p}_A - \hat{p}_B)$ from $0.42\%$ to **$\mathbf{0.17\%}$** ($+0.5\%$ gain $= 2.9\,\mathrm{SE}$!).
 :::
 
-::: {.col}
-**2. Paired Comparison on the *Same* Test Set**
-
-- Model A ($90.5\%$) vs. Model B ($90.0\%$) on $n = 10{,}000$ images ($\Delta = +0.5\%$):
-- **Unpaired (independent sets):** $\mathrm{SE}(\hat{p}_A - \hat{p}_B) = \sqrt{0.3^2 + 0.3^2} \approx \mathbf{0.42\%}$ ($\Delta = 1.2\,\mathrm{SE}$, inconclusive).
-- **Paired (same images):** $\mathrm{Var}(X - Y) = \mathrm{Var}(X) + \mathrm{Var}(Y) - 2\mathrm{Cov}(X, Y)$. Since both models agree on $9{,}700$ images ($\mathrm{Cov} > 0$) and disagree on only $300$, $\mathrm{SE}$ drops to $\sqrt{300}/10{,}000 \approx \mathbf{0.17\%}$ ($\Delta \approx \mathbf{2.9\,\mathrm{SE}}$, significant!).
+::: {.col .fig}
+@fig:probability-paired-comparison
 :::
 :::
 :::
@@ -943,14 +931,13 @@ Each test prediction is a Bernoulli trial ($X_i = 1$ if correct, $0$ if wrong) w
 
 ::: {.cols .vc}
 ::: {.col}
-- **Follow-up test $D_2$** ($P(D_2{=}1 \mid H{=}1) = 0.98$, false-positive rate $P(D_2{=}1 \mid H{=}0) = 0.03$):
-  Assuming $D_1 \perp D_2 \mid H$, true positives occur at rate $0.98(0.0015) = 0.00147$ and false positives drop to $0.0003(0.9985) \approx 0.00030$:
+- **Follow-up test $D_2$** (sensitivity $0.98$, FPR $0.03$): Under conditional independence $D_1 \perp D_2 \mid H$, joint false positives drop to $0.01 \times 0.03 = 0.0003$:
   $$P(H{=}1 \mid D_1{=}1, D_2{=}1) = \frac{0.00147}{0.00147 + 0.00030} = \mathbf{0.8307}$$
-- **When conditional independence fails:** If false positives are coupled by shared host biochemistry ($P(D_1{=}1, D_2{=}1 \mid H{=}0) > 0.0003$), the true posterior is lower ($82.2\%$).
+- **Correlated errors:** If shared biochemistry couples false positives ($P(D_1{=}1, D_2{=}1 \mid H{=}0) > 0.0003$), the posterior drops ($82.2\%$).
 :::
 
-::: {.col}
-Simulating $2{,}000{,}000$ virtual patients in vectorized tensor code ($\approx 3{,}500$ double-positives, $\mathrm{SE} \approx 0.006$):
+::: {.col .fig}
+@fig:probability-bayes-update
 
 @probability-worked-example-hiv-testing-1
 :::

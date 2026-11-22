@@ -278,9 +278,180 @@ function dynamic() {
   return svg(W, H, o);
 }
 
+// ── Three ways to differentiate code: Symbolic vs Numeric vs Autograd ─
+function threeMethods() {
+  const W = 540, H = 290; let o = '';
+  const AMBER_DK = TOKENS.accents.orange.dark;
+  const GREEN_DK = TOKENS.accents.green.dark;
+  // 1. Symbolic Differentiation
+  o += box(14, 14, 512, 76, RED.tint, RED.base, false, 8, 2);
+  o += tx(28, 36, '1. Symbolic Algebra (Mathematica / SymPy)', { fs: 15.5, fw: 700, fill: RED.dark, anchor: 'start' });
+  o += mono(28, 60, '(f·g)′ = f′g + fg′ → exponential expression swell (2ᴸ terms)', { fill: RED.dark, anchor: 'start', fs: 13 });
+  o += tx(28, 78, '✗ Requires closed-form expression; cannot differentiate Python loops/branches', { fs: 13, fill: C.ink, anchor: 'start' });
+
+  // 2. Numerical Finite Differences
+  o += box(14, 104, 512, 76, C.lamber, C.amber, false, 8, 2);
+  o += tx(28, 126, '2. Numerical Finite Differences:  (L(w + h eᵢ) − L(w − h eᵢ)) / 2h', { fs: 15.5, fw: 700, fill: AMBER_DK, anchor: 'start' });
+  o += mono(28, 150, 'Cost: O(n) forward passes (10⁹ evals/step at n = 10⁹!)', { fill: AMBER_DK, anchor: 'start', fs: 13 });
+  o += tx(28, 168, '✗ Truncation + float32 cancellation leaves only ~3–4 accurate digits', { fs: 13, fill: C.ink, anchor: 'start' });
+
+  // 3. Reverse-Mode Autograd
+  o += box(14, 194, 512, 82, C.lgreen, C.green, false, 8, 2);
+  o += tx(28, 216, '3. Reverse-Mode Autograd (PyTorch / JAX / TF / MXNet)', { fs: 15.5, fw: 700, fill: GREEN_DK, anchor: 'start' });
+  o += mono(28, 240, 'Cost: 1 forward trace + 1 backward VJP sweep = O(1) sweeps!', { fill: GREEN_DK, anchor: 'start', fs: 13, fw: 700 });
+  o += tx(28, 260, '✓ Exact to machine precision; differentiates arbitrary dynamic Python code', { fs: 13.5, fw: 600, fill: C.ink, anchor: 'start' });
+  return svg(W, H, o);
+}
+
+// ── Imperative stateful tape (.grad) vs Functional transform (jax.grad) ─
+function imperativeVsFunctional() {
+  const W = 540, H = 276; let o = '';
+  const PURPLE_DK = TOKENS.accents.purple.dark;
+  const GREEN_DK = TOKENS.accents.green.dark;
+  // Top: Imperative tape (PyTorch / TF / MXNet)
+  o += box(14, 14, 512, 114, C.lblue, C.blue, false, 9, 2);
+  o += tx(26, 36, '(a) Imperative Stateful Tape (PyTorch / TensorFlow / MXNet)', { fs: 15.5, fw: 700, fill: BLUE_DARK, anchor: 'start' });
+  o += box(26, 54, 136, 56, '#fff', C.blue, false, 6, 2);
+  o += mono(94, 73, 'w.requires_grad_', { fill: C.ink, fs: 12.5, fw: 700 });
+  o += mono(94, 94, 'w.grad = None', { fill: C.muted, fs: 12.5 });
+  o += arrow(166, 82, 206, 82, C.blue);
+  o += box(210, 54, 134, 56, '#fff', C.blue, false, 6, 2);
+  o += mono(277, 73, 'L = loss(w)', { fill: BLUE_DARK, fs: 13, fw: 700 });
+  o += mono(277, 94, 'L.backward()', { fill: RED.dark, fs: 13, fw: 700 });
+  o += arrow(348, 82, 388, 82, RED.base);
+  o += box(392, 54, 120, 56, RED.tint, RED.base, false, 6, 2);
+  o += mono(452, 73, 'mutates w.grad', { fill: RED.dark, fs: 12.5, fw: 700 });
+  o += mono(452, 94, 'in place: (2, 4)', { fill: C.ink, fs: 12.5 });
+
+  // Bottom: Functional transform (JAX)
+  o += box(14, 146, 512, 114, TOKENS.accents.purple.tint, C.purple, false, 9, 2);
+  o += tx(26, 168, '(b) Pure Functional Transformation (JAX: jax.grad)', { fs: 15, fw: 700, fill: PURPLE_DK, anchor: 'start' });
+  o += box(26, 186, 136, 56, '#fff', C.purple, false, 6, 2);
+  o += mono(94, 205, 'def loss(w):', { fill: C.ink, fs: 13, fw: 700 });
+  o += mono(94, 226, '  return L', { fill: C.muted, fs: 12.5 });
+  o += arrow(166, 214, 206, 214, C.purple);
+  o += box(210, 186, 144, 56, '#fff', C.purple, false, 6, 2);
+  o += mono(282, 205, 'g_fn = jax.grad(', { fill: PURPLE_DK, fs: 12.5, fw: 700 });
+  o += mono(282, 226, '         loss)', { fill: PURPLE_DK, fs: 12.5, fw: 700 });
+  o += arrow(358, 214, 394, 214, C.green);
+  o += box(398, 186, 114, 56, C.lgreen, C.green, false, 6, 2);
+  o += mono(455, 205, 'g = g_fn(w)', { fill: GREEN_DK, fs: 13, fw: 700 });
+  o += mono(455, 226, 'returns (2, 4)', { fill: C.ink, fs: 12.5 });
+  return svg(W, H, o);
+}
+
+// ── Gradient accumulation: micro-batching vs missing zero_grad() bug ──
+function gradAccumulation() {
+  const W = 540, H = 276; let o = '';
+  const GREEN_DK = TOKENS.accents.green.dark;
+  // Top: Intended micro-batch accumulation
+  o += box(14, 14, 512, 112, C.lgreen, C.green, false, 9, 2);
+  o += tx(26, 36, '✓ Intended Use: Micro-Batch Gradient Accumulation', { fs: 14.5, fw: 700, fill: GREEN_DK, anchor: 'start' });
+  o += box(26, 54, 108, 54, '#fff', C.gray, false, 6, 2);
+  o += mono(80, 73, 'zero_grad()', { fill: C.ink, fs: 12.5, fw: 700 });
+  o += mono(80, 93, 'w.grad = 0', { fill: C.muted, fs: 12.5 });
+  o += arrow(138, 81, 168, 81, C.green);
+  o += box(172, 54, 152, 54, '#fff', C.green, false, 6, 2);
+  o += mono(248, 73, 'micro-batch 1', { fill: GREEN_DK, fs: 12.5, fw: 700 });
+  o += mono(248, 93, 'w.grad += g₁', { fill: C.ink, fs: 12.5 });
+  o += arrow(328, 81, 358, 81, C.green);
+  o += box(362, 54, 152, 54, '#fff', C.green, false, 6, 2);
+  o += mono(438, 73, 'micro-batch 2', { fill: GREEN_DK, fs: 12.5, fw: 700 });
+  o += mono(438, 93, 'w.grad = g₁ + g₂', { fill: C.ink, fs: 12.5, fw: 700 });
+
+  // Bottom: Stale gradient bug when zero_grad() is forgotten
+  o += box(14, 144, 512, 116, RED.tint, RED.base, false, 9, 2);
+  o += tx(26, 166, '✗ Pitfall: Missing zero_grad() Corrupts Step t + 1 with Stale Step t', { fs: 14.5, fw: 700, fill: RED.dark, anchor: 'start' });
+  o += box(26, 184, 134, 58, '#fff', RED.base, false, 6, 2);
+  o += mono(93, 204, 'Step 1 backward', { fill: C.ink, fs: 12.5, fw: 700 });
+  o += mono(93, 226, 'w.grad = (2, 4)', { fill: BLUE_DARK, fs: 12.5, fw: 700 });
+  o += arrow(164, 213, 222, 213, RED.base);
+  o += mono(193, 194, 'no clear', { fill: RED.dark, fs: 11.5, fw: 700 });
+  o += box(226, 184, 136, 58, '#fff', RED.base, false, 6, 2);
+  o += mono(294, 204, 'Step 2 backward', { fill: C.ink, fs: 12.5, fw: 700 });
+  o += mono(294, 226, 'adds +(4, 0)', { fill: RED.dark, fs: 12.5, fw: 700 });
+  o += arrow(366, 213, 396, 213, RED.base);
+  o += box(400, 184, 114, 58, '#fff', RED.base, false, 6, 2);
+  o += mono(457, 204, 'corrupted!', { fill: RED.dark, fs: 13, fw: 700 });
+  o += mono(457, 226, '(6, 4) ≠ (4, 0)', { fill: RED.dark, fs: 12.5, fw: 700 });
+  return svg(W, H, o);
+}
+
+// ── Vector-Jacobian Product seed contraction v^T J ────────────────────
+function vjpSeed() {
+  const W = 540, H = 250; let o = '';
+  const GREEN_DK = TOKENS.accents.green.dark;
+  o += tx(16, 22, 'Why y.backward(v) Needs a Seed Vector v ∈ Rᵐ for Non-Scalar y:', { fs: 15, fw: 700, fill: C.ink, anchor: 'start' });
+
+  // v^T (1 x m)
+  o += box(24, 96, 84, 32, C.lamber, C.amber, false, 5, 2);
+  o += mono(66, 112, 'vᵀ (1×m)', { fill: TOKENS.accents.orange.dark, fs: 13.5, fw: 700 });
+  o += tx(66, 148, 'seed [1, …, 1]', { mono: true, fs: 12.5, fill: C.muted });
+
+  o += tx(124, 112, '·', { fs: 28, fw: 700, fill: C.ink });
+
+  // Jacobian J_y(x) (m x n) -- dashed because never materialized!
+  o += box(142, 54, 148, 116, '#fff', C.gray, true, 6, 2);
+  o += tx(216, 94, 'Jacobian J_y(x)', { fs: 15, fw: 700, fill: C.ink });
+  o += mono(216, 118, 'shape (m × n)', { fill: C.muted, fs: 13.5 });
+  o += tx(216, 142, 'never materialized!', { fs: 13, fw: 700, fill: RED.dark });
+
+  o += tx(308, 112, '=', { fs: 24, fw: 700, fill: C.ink });
+
+  // Result v^T J (1 x n)
+  o += box(328, 96, 188, 32, C.lgreen, C.green, false, 5, 2);
+  o += mono(422, 112, 'vᵀ J = ∇_x (vᵀ y)  (1×n)', { fill: GREEN_DK, fs: 13, fw: 700 });
+  o += tx(422, 148, '1 backward sweep, O(n) memory', { fs: 13.5, fw: 600, fill: GREEN_DK });
+
+  o += box(24, 190, 492, 44, C.lblue, C.blue, false, 7, 1.5);
+  o += tx(270, 212, 'Elementwise yᵢ = f(xᵢ) with v = 1 gives (∂y₁/∂x₁, …, ∂yₙ/∂xₙ)', { fs: 13.5, fw: 600, fill: BLUE_DARK });
+  return svg(W, H, o);
+}
+
+// ── Activation memory in training vs torch.no_grad() inference ────────
+function activationMemory() {
+  const W = 540, H = 276; let o = '';
+  const GREEN_DK = TOKENS.accents.green.dark;
+  // Top: Training caches all L intermediate activations in VRAM
+  o += tx(16, 22, '(a) Training (grad enabled): caches L layer activations until backward()', { fs: 14.5, fw: 700, fill: RED.dark, anchor: 'start' });
+  const layers = ['h₁ (cached)', 'h₂ (cached)', 'h₃ (cached)', 'h₄ (cached)'];
+  layers.forEach((lab, i) => {
+    const x = 20 + i * 128;
+    o += box(x, 42, 108, 46, RED.tint, RED.base, false, 6, 2);
+    o += mono(x + 54, 65, lab, { fill: RED.dark, fs: 13, fw: 700 });
+    if (i < 3) o += arrow(x + 110, 56, x + 126, 56, C.blue);
+    if (i < 3) o += arrow(x + 126, 76, x + 110, 76, RED.base);
+  });
+  o += tx(270, 110, 'VRAM grows as O(L × batch_size × hidden_dim) — dominates training memory!', { fs: 13.5, fw: 700, fill: RED.dark });
+
+  o += line(16, 134, 524, 134, HAIR, 1.5);
+
+  // Bottom: Inference with no_grad() frees each buffer immediately
+  o += tx(16, 158, '(b) Inference (torch.no_grad / stop_gradient): O(1) buffer reuse', { fs: 14.5, fw: 700, fill: GREEN_DK, anchor: 'start' });
+  const inf = [
+    ['h₁ (freed)', '#fff', C.gray, true, C.muted],
+    ['h₂ (freed)', '#fff', C.gray, true, C.muted],
+    ['h₃ (freed)', '#fff', C.gray, true, C.muted],
+    ['h₄ (active)', C.lgreen, C.green, false, GREEN_DK],
+  ];
+  inf.forEach(([lab, fill, st, dash, tc], i) => {
+    const x = 20 + i * 128;
+    o += box(x, 178, 108, 46, fill, st, dash, 6, 2);
+    o += mono(x + 54, 201, lab, { fill: tc, fs: 13, fw: 700 });
+    if (i < 3) o += arrow(x + 110, 201, x + 126, 201, C.green);
+  });
+  o += tx(270, 248, 'No computation graph recorded → 2–4× larger batch sizes fit in GPU HBM', { fs: 13.5, fw: 700, fill: GREEN_DK });
+  return svg(W, H, o);
+}
+
 export const diagrams = {
   'autograd-comp-graph': computeGraph,
   'autograd-detach':     detachGraph,
   'autograd-fwd-vs-rev': fwdVsRev,
   'autograd-dynamic':    dynamic,
+  'autograd-three-methods':            threeMethods,
+  'autograd-imperative-vs-functional': imperativeVsFunctional,
+  'autograd-grad-accumulation':        gradAccumulation,
+  'autograd-vjp-seed':                 vjpSeed,
+  'autograd-activation-memory':        activationMemory,
 };

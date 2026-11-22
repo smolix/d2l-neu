@@ -1518,13 +1518,19 @@ A generative diffusion model needs a forward process that maps **every** data di
 ::: {.slide title="From Random Walks to the √Δt Scaling Law"}
 [Constructing Brownian Motion]{.kicker}
 
-Divide $[0, t]$ into $k = t / \Delta t$ steps of duration $\Delta t$, and let a walker take independent coin-flip steps of size $\pm \sqrt{\Delta t}$ (mean $0$, variance $\Delta t$ per step):
+::: {.cols .vc}
+::: {.col}
+Over $k = t/\Delta t$ independent steps of size $\pm c(\Delta t)^a$, the total variance at time $t$ scales as:
 
-$$\mathbb{E}\!\left[W_t^{(\Delta t)}\right] = 0, \qquad \operatorname{Var}\!\left(W_t^{(\Delta t)}\right) = k \cdot \Delta t = \frac{t}{\Delta t} \cdot \Delta t = t$$
+$$\operatorname{Var}\!\left(W_t^{(\Delta t)}\right) = \frac{t}{\Delta t} \cdot c^2 (\Delta t)^{2a} = c^2 t\,(\Delta t)^{2a - 1}$$
 
-- **Why Only the Square Root Survives:** If steps instead scaled as $\pm c\,(\Delta t)^a$, the variance at time $t$ would be:
-  $$\operatorname{Var}\!\left(W_t^{(\Delta t)}\right) = \frac{t}{\Delta t} \cdot c^2 (\Delta t)^{2a} = c^2 t\,(\Delta t)^{2a - 1} \;\xrightarrow{\Delta t \to 0}\; \begin{cases} 0, & a > 1/2 \text{ (noise vanishes)} \\ \infty, & a < 1/2 \text{ (noise explodes)} \end{cases}$$
-- **Central Limit Theorem:** As $\Delta t \to 0$, the sum of $t/\Delta t \to \infty$ independent steps of variance $\Delta t$ converges in distribution to a Gaussian $\mathcal{N}(0, t)$.
+- **Unique critical exponent ($a = 1/2$):** If $a > 1/2$, the variance vanishes as $\Delta t \to 0$; if $a < 1/2$, it explodes to $\infty$. Only $\pm\sqrt{\Delta t}$ steps survive in the limit $W_t \sim \mathcal{N}(0, t)$.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-sqrt-dt-scaling-window
+:::
+:::
 :::
 
 ::: {.slide title="The Wiener Process: Axioms, Covariance, and Roughness"}
@@ -1606,14 +1612,19 @@ $$\sum_{i=0}^{n-1} W_{t_{i+1}}\,\Delta W_i - \sum_{i=0}^{n-1} W_{t_i}\,\Delta W_
 ::: {.slide title="The Itô Integral and the Itô Isometry"}
 [Stochastic Integration]{.kicker}
 
-**Itô's convention** evaluates the integrand at the **left endpoint** $t_i$, so that $H_i$ is *predictable* (decided before the future noise increment $\Delta W_i = W_{t_{i+1}} - W_{t_i}$ is drawn):
+::: {.cols .vc}
+::: {.col}
+**Itô's integral** evaluates $H_s$ at the **left endpoint** $t_i$, so $H_i$ is independent of the future kick $\Delta W_i = W_{t_{i+1}} - W_{t_i}$:
 
-$$\int_0^t H_s\,dW_s = \lim_{h_{\max} \to 0} \sum_{i=0}^{n-1} H_i\left(W_{t_{i+1}} - W_{t_i}\right)$$
+$$\mathbb{E}\!\left[\int_0^t H_s\,dW_s\right] = 0, \qquad \mathbb{E}\!\left[\left(\int_0^t H_s\,dW_s\right)^{\!2}\right] = \int_0^t \mathbb{E}\!\left[H_s^2\right]ds$$
 
-- **Zero-Mean Fair Game (Martingale Property):** Because $H_i$ and $\Delta W_i$ are independent and $\mathbb{E}[\Delta W_i] = 0$, every term has expected value $\mathbb{E}[H_i\,\Delta W_i] = \mathbb{E}[H_i]\mathbb{E}[\Delta W_i] = 0$, so $\mathbb{E}\!\left[\int_0^t H_s\,dW_s\right] = 0$.
-- **Proposition (Itô Isometry):** When squaring $\sum_i H_i\Delta W_i$, every cross term $i < j$ has $\mathbb{E}[H_i\Delta W_i H_j\Delta W_j] = \mathbb{E}[H_i\Delta W_i H_j]\mathbb{E}[\Delta W_j] = 0$, leaving only the diagonal terms $\mathbb{E}[H_i^2]\mathbb{E}[(\Delta W_i)^2] = \mathbb{E}[H_i^2]\Delta t_i$:
-  $$\mathbb{E}\!\left[\left(\int_0^t H_s\,dW_s\right)^{\!2}\right] = \int_0^t \mathbb{E}\!\left[H_s^2\right]ds$$
-- **Fundamental Example:** $\int_0^t W_s\,dW_s = \frac{1}{2}(W_t^2 - t)$, which has mean $0$ and variance $\int_0^t \mathbb{E}[W_s^2]\,ds = \frac{1}{2}t^2$.
+- **Martingale & Itô isometry:** Left-endpoint evaluation guarantees zero mean and eliminates all cross terms $i < j$ when squaring the sum.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-ito-isometry-martingale
+:::
+:::
 :::
 
 ::: {.slide title="Itô Stochastic Differential Equations: Drift & Noise"}
@@ -1652,16 +1663,19 @@ The ordinary chain rule predicts $d(W_t^2) = 2W_t\,dW_t$, which integrates to $\
 ::: {.slide title="Theorem: Itô's Lemma (The Stochastic Chain Rule)"}
 [Core Theorem]{.kicker}
 
-To differentiate a smooth transformation $Y_t = \phi(X_t, t)$ of an SDE $dX = f\,dt + g\,dW$, we expand $\phi$ to **second order** in $dX$ and apply the Itô multiplication table $(dX)^2 = f^2(dt)^2 + 2fg\,dt\,dW + g^2(dW)^2 = g^2\,dt$:
+::: {.cols .vc}
+::: {.col}
+Expanding $\phi(X_t, t)$ to second order in $dX = f\,dt + g\,dW$ and applying $(dX)^2 = g^2(dW)^2 = g^2\,dt$ yields **Itô's lemma**:
 
-::: {.d2l-note .rule}
-**Theorem (Itô's Lemma in 1D):** For any $\phi(x, t) \in C^{1,2}$,
 $$d\phi(X_t, t) = \left(\phi_t + f\,\phi_x + \frac{1}{2}g^2\,\phi_{xx}\right)dt + g\,\phi_x\,dW_t$$
-**Multivariate Isotropic Form ($d\mathbf{X} = \mathbf{f}\,dt + g(t)\,d\mathbf{W}$ in $\mathbb{R}^d$, where $dW_i\,dW_j = \delta_{ij}\,dt$):**
-$$d\phi(\mathbf{X}_t, t) = \left(\partial_t\phi + \nabla\phi \cdot \mathbf{f} + \frac{1}{2}g(t)^2\,\Delta\phi\right)dt + g(t)\,\nabla\phi \cdot d\mathbf{W}_t$$
+
+- **Multivariate isotropic form ($\mathbb{R}^d$):** $d\phi = (\partial_t\phi + \nabla\phi\cdot\mathbf{f} + \tfrac12 g(t)^2\Delta\phi)\,dt + g(t)\nabla\phi\cdot d\mathbf{W}_t$, where $\tfrac12 g^2\Delta\phi$ is the Itô curvature correction.
 :::
 
-- **The Itô Correction ($\frac{1}{2}g^2\phi_{xx}\,dt$):** Half the variance rate $g^2$ times the second derivative (or Laplacian $\Delta\phi = \sum_i \partial^2\phi/\partial x_i^2$). It vanishes if and only if $\phi$ is affine in $x$ ($\phi_{xx} = 0$).
+::: {.col .fig}
+@fig:ch38-dyn-ito-lemma-expansion
+:::
+:::
 :::
 
 ::: {.slide title="Watching the Itô Correction Accumulate Along One Path"}
@@ -1740,14 +1754,19 @@ $$X_t = \sqrt{\bar{\alpha}_t}\,X_0 + \sqrt{1 - \bar{\alpha}_t}\,\epsilon, \qquad
 ::: {.slide title="Simulating SDEs: Euler–Maruyama vs. Exact Transitions"}
 [Numerical SDE Schemes]{.kicker}
 
-When an SDE has no closed-form transition kernel, the **Euler–Maruyama scheme** freezes $f$ and $g$ at the start of each step $\Delta t$ and injects a $\sqrt{\Delta t}$ Gaussian kick:
+::: {.cols .vc}
+::: {.col}
+**Euler–Maruyama** freezes $f$ and $g$ at the start of each step $\Delta t$ and injects a $\sqrt{\Delta t}$ Gaussian kick:
 
-$$\hat{X}_{n+1} = \hat{X}_n + f(\hat{X}_n, t_n)\,\Delta t + g(\hat{X}_n, t_n)\sqrt{\Delta t}\,\xi_n, \qquad \xi_n \sim \mathcal{N}(0, 1) \text{ i.i.d.}$$
+$$\hat{X}_{n+1} = \hat{X}_n + f(\hat{X}_n, t_n)\,\Delta t + g(\hat{X}_n, t_n)\sqrt{\Delta t}\,\xi_n$$
 
-| Discretization of OU ($dX = -\theta X\,dt + \sqrt{2\theta}\,dW$, $\theta=1, \Delta t=0.01$) | Signal Multiplier $a$ | Noise Variance $b$ | Stationary Variance $v_\infty$ |
-| :--- | :--- | :--- | :--- |
-| **Exact Transition (DDPM Forward Step)** | $e^{-\theta\Delta t} = 0.99005$ | $1 - e^{-2\theta\Delta t} = 0.01980$ | $1.0000$ (exact for all $\Delta t$) |
-| **Euler–Maruyama ($O(\Delta t)$ Approximation)** | $1 - \theta\Delta t = 0.99000$ | $2\theta\Delta t = 0.02000$ | $\frac{2\theta\Delta t}{1 - (1-\theta\Delta t)^2} = 1.0050$ ($+0.5\%$ bias) |
+- **Exact OU vs. Euler–Maruyama ($\theta = 1, g = \sqrt{2}, \Delta t = 0.01$):** Exact DDPM steps use $a = e^{-\theta\Delta t}$ and $b = 1 - e^{-2\theta\Delta t}$ ($v_\infty = 1.000$), whereas Euler–Maruyama's $1 - \theta\Delta t$ inflates $v_\infty = 1.005$ ($+0.5\%$ bias).
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-ou-em-vs-exact
+:::
+:::
 :::
 
 ::: {.slide title="Implementing Batched Euler–Maruyama With Shared Noise"}

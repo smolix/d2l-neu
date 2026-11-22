@@ -1053,17 +1053,14 @@ Continuous Control: DDPG, TD3, and Soft Actor–Critic<br>**maximum-entropy RL �
 ::: {.slide title="Why Continuous Control Needs Replay and Pathwise Slopes"}
 [Motivation]{.kicker}
 
-In Chapter 14, swinging up Pendulum-v1 ($s = (\cos\vartheta, \sin\vartheta, \dot\vartheta)$, torque $u \in [-2, 2]$, step cost $\vartheta^2 + 0.1\dot\vartheta^2 + 0.001u^2$, 200-step episodes) with REINFORCE took $\sim 300{,}000$ environment steps:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Why DQN Cannot Apply Directly:** When actions are continuous torques $u \in [-2, 2]$, evaluating $\max_{u'} Q_w(s', u')$ inside every Bellman target requires solving an inner continuous optimization problem at every transition.
-- **Replacing the Max with an Actor:** We keep DQN's **replay buffer** and **target networks**, but train an actor network $\pi_\theta(s)$ to propose high-value continuous actions.
+- **Why DQN Cannot Apply Directly:** With continuous torques $u \in [-2, 2]$, evaluating $\max_{u'} Q_w(s', u')$ inside every Bellman target requires an inner optimization problem at every step.
+- **Pathwise Actor + Replay:** We keep DQN's replay buffer and target networks, and train an actor $\tilde{a}_\theta(s, z)$ to climb $\partial Q_w(s, a)/\partial a$ directly—cutting Pendulum's sample cost from $\sim 300{,}000$ to $\sim 3{,}000$ steps.
 :::
 
-::: {.col}
-- **Pathwise Policy Gradient:** Instead of weighting log-probabilities by scalar returns, the actor differentiates the critic $Q_w(s, a)$ directly with respect to the sampled action $a = \tilde{a}_\theta(s, z)$ ($\sim 20\times$ lower variance).
-- **From $300{,}000$ to $3{,}000$ Steps:** Combining off-policy replay, pathwise critic gradients, twin critics, and entropy regularization cuts Pendulum's sample cost by two orders of magnitude.
+::: {.col .fig .big}
+@fig:ch15-drl-dqn-vs-sac-actor
 :::
 :::
 :::
@@ -1071,29 +1068,34 @@ In Chapter 14, swinging up Pendulum-v1 ($s = (\cos\vartheta, \sin\vartheta, \dot
 ::: {.slide title="From DDPG and TD3 to Soft Actor–Critic (SAC)"}
 [Algorithmic Evolution]{.kicker}
 
-Continuous off-policy actor-critic evolved through three milestones to overcome critic exploitation and premature collapse:
+::: {.cols .vc}
+::: {.col}
+- **DDPG (2016):** Deterministic actor $\mu_\theta(s)$ + single critic $Q_{w^-}$; brittle because the actor exploits narrow peaks of critic error.
+- **TD3 (2018):** Adds **twin critics** $\min_{j=1,2} Q_{w_j^-}(s', \tilde{a}')$ to eliminate upward maximization bias, but still relies on ad-hoc exploration noise.
+- **SAC (2018):** Pairs twin critics with a **stochastic squashed Gaussian actor** and maximum-entropy reward $-\beta \log \pi_\theta$.
+:::
 
-| Algorithm | Actor Policy & Exploration | Critic Target & Overestimation Guard | Primary Failure Mode or Strength |
-| :--- | :--- | :--- | :--- |
-| **DDPG (2016)** | Deterministic $\mu_\theta(s)$ + external noise | Single critic $Q_{w^-}(s', \mu_{\theta^-}(s'))$ | **Brittle:** deterministic actor climbs narrow peaks of critic error |
-| **TD3 (2018)** | Deterministic $\mu_\theta(s)$ + target smoothing | **Twin critics** $\min_{j=1,2} Q_{w_j^-}(s', \tilde{a}')$ | Eliminates upward maximization bias; still relies on ad-hoc exploration noise |
-| **SAC (2018)** | **Stochastic** squashed Gaussian $\pi_\theta(\cdot \mid s)$ | Twin critics + **entropy reward** $-\beta \log \pi_\theta$ | Principled maximum-entropy exploration and state-dependent action spread |
-
-::: {.d2l-note}
-In one sentence: **Soft Actor–Critic** adds the policy's entropy to the reward, evaluates that augmented objective off-policy from replay, and improves the actor via pathwise gradients through twin critics.
+::: {.col .fig .big}
+@fig:ch15-drl-ddpg-td3-sac
+:::
 :::
 :::
 
 ::: {.slide title="The Maximum-Entropy Reinforcement Learning Objective"}
 [Maximum-Entropy RL]{.kicker}
 
-In §15.3, we penalized divergence from a reference policy by $-\beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$. When $\pi_{\textrm{ref}}$ is uniform on $[-c, c]$ (density $1/(2c)$, entropy $\log(2c) = \log 4 \approx 1.39\text{ nats}$), $-D_{\textrm{KL}}(\pi \Vert \textrm{unif}) = H(\pi) - \log(2c)$, turning the KL penalty into an **entropy bonus** at every step:
+::: {.cols .vc}
+::: {.col}
+$$J(\pi) = \mathbb{E}_{\pi}\Big[\sum_{t \ge 0} \gamma^t \big(r_t + \beta\, H(\pi(\cdot \mid s_t))\big)\Big]$$
 
-$$J(\pi) = \mathbb{E}_{\pi}\Big[\sum_{t \ge 0} \gamma^t \big(r_t + \beta\, H(\pi(\cdot \mid s_t))\big)\Big], \qquad H(\pi(\cdot \mid s)) = -\mathbb{E}_{a \sim \pi(\cdot \mid s)}\big[\log \pi(a \mid s)\big]$$
+- **Temperature $\beta > 0$:** Sets the exchange rate in units of reward per nat of differential entropy $H(\pi) = -\mathbb{E}[\log \pi(a \mid s)]$.
+- **Future entropy credit:** Paying $\beta H(\pi(\cdot \mid s'))$ inside the critic target rewards actions that lead to high-entropy, multi-option future states.
+:::
 
-- **Temperature $\beta > 0$ (written $\alpha$ in the SAC papers):** Sets the exchange rate in units of **reward per nat of entropy**.
-- **Differential Entropy Nuance:** Unlike discrete Shannon entropy ($H \ge 0$), continuous differential entropy $\int -\pi(a)\log\pi(a)\,da$ becomes **negative** whenever the density concentrates on an interval shorter than $1$.
-- **Why Put Entropy in the Objective?** Unlike PPO's small auxiliary bonus, SAC pays $\beta H(\pi(\cdot \mid s'))$ at *future* states inside the critic's target, encouraging actions that lead to high-entropy, multi-option states.
+::: {.col .fig}
+@fig:ch15-drl-maxent-objective
+:::
+:::
 :::
 
 ::: {.slide title="Two Actions by Hand: Exact Single-Sample Soft Values"}
@@ -1111,12 +1113,18 @@ Consider a single state with two actions of value $Q = (1, 0)$ at temperature $\
 ::: {.slide title="Soft Policy Evaluation: One Fresh Action in the Target"}
 [Soft Policy Evaluation]{.kicker}
 
-Because the soft state value is $V^\pi(s) = \mathbb{E}_{a \sim \pi}[Q^\pi(s, a) - \beta \log \pi(a \mid s)]$, SAC's critic approximates $V^\pi(s')$ in its Bellman target using a **single fresh action** $\tilde{a}' \sim \pi_\theta(\cdot \mid s')$:
+::: {.cols .vc}
+::: {.col}
+$$y = r + \gamma\,(1 - \textrm{term})\Big(Q_{w^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s')\Big)$$
 
-$$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\Big(Q_{w^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s')\Big), \qquad \tilde{a}' \sim \pi_\theta(\cdot \mid s')$$
+- **Zero importance ratios needed:** Transition $(s, a, r, s')$ is drawn from replay, while continuation $\tilde{a}' \sim \pi_\theta(\cdot \mid s')$ is sampled *freshly* from the live policy.
+- **Contraction guarantee:** Exact soft policy evaluation is a $\gamma$-contraction for bounded rewards and entropies.
+:::
 
-- **Why No Importance Ratios Are Needed:** The transition $(s, a, r, s')$ is drawn from the replay buffer (collected by older policies), but the continuation action $\tilde{a}'$ is sampled *freshly* from the live policy $\pi_\theta$.
-- **Contraction Guarantee:** Soft policy evaluation is standard Bellman expectation evaluation for the entropy-augmented reward $r(s, a) + \gamma \beta H(\pi(\cdot \mid s'))$, so the exact operator is a $\gamma$-contraction for bounded rewards and entropies.
+::: {.col .fig}
+@fig:ch15-drl-soft-target-sampling
+:::
+:::
 :::
 
 ::: {.slide title="Soft Policy Improvement via Reverse-KL Projection"}
@@ -1134,18 +1142,14 @@ $$L_\pi(\theta) = \mathbb{E}_{s \sim \mathcal{D},\, z \sim \mathcal{N}(0, I)}\Bi
 ::: {.slide title="Why Hard Clipping Breaks the Pathwise Gradient"}
 [Bounded Continuous Actions]{.kicker}
 
-In Chapter 14, our score-function Gaussian policy sampled unbounded $u \sim \mathcal{N}(\mu, \sigma^2)$ and let the environment clip torques to $[-2, 2]$. Under SAC's pathwise gradient, hard clipping fails in two ways:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. Zero Pathwise Derivative Outside $[-c, c]$:** For any sample $|u| > c$, $\frac{d}{du}\textrm{clip}(u, -c, c) = 0$. The actor receives **zero gradient** from out-of-bounds samples, even when full torque $\pm c$ is optimal!
-- **2. Undefined Boundary Density:** Hard clipping piles all tail probability $\Pr(u \ge c)$ into a discrete point mass at $a = +c$, so $\log \pi(a \mid s)$ in the soft target and actor loss is undefined.
+- **Why hard clipping fails:** For $|u| > c$, $\frac{d}{du}\textrm{clip}(u, -c, c) = 0$ kills the pathwise actor gradient, and piling tail mass at $\pm c$ makes the continuous density $\log \pi(a \mid s)$ undefined.
+- **Smooth squashed Gaussian:** Sampling $u \sim \mathcal{N}(\mu_\theta(s), \sigma_\theta(s)^2)$ and setting $a = c\tanh(u) \in (-c, c)$ keeps $da/du = c(1 - \tanh^2 u) > 0$ everywhere.
 :::
 
-::: {.col}
-- **The Smooth Squashed Gaussian Solution:** Sample an unconstrained Gaussian $u \sim \mathcal{N}(\mu_\theta(s), \sigma_\theta(s)^2)$ and apply a smooth, strictly increasing bijection:
-  $$a = c \tanh(u) \in (-c, c)$$
-- Because $da/du = c(1 - \tanh^2 u) > 0$ everywhere, gradients flow smoothly and the density $\pi(a \mid s)$ is well-defined via change of variables.
+::: {.col .fig .big}
+@fig:ch15-drl-clip-vs-tanh
 :::
 :::
 :::
@@ -1205,13 +1209,18 @@ $$\log\big(1 - \tanh^2 u\big) = \log \frac{4 e^{-2u}}{(1 + e^{-2u})^2} = 2\big(\
 ::: {.slide title="Automatic Temperature Tuning via Dual Gradient Descent"}
 [Entropy Constraint]{.kicker}
 
-A fixed temperature $\beta$ depends on the arbitrary units of the reward (multiplying rewards by $10$ acts like dividing $\beta$ by $10$). Haarnoja et al. (2018b) instead enforce a target expected entropy $\bar{H} = -\dim(\mathcal{A})$ ($-1.0\text{ nat}$ on Pendulum):
+::: {.cols .vc}
+::: {.col}
+$$J(\beta) = -\log \beta\, \mathbb{E}_{s \sim \mathcal{D},\, a \sim \pi_\theta}\big[\log \pi_\theta(a \mid s) + \bar{H}\big]$$
 
-$$\max_{\pi}\ \mathbb{E}_\pi\Big[\sum_{t \ge 0} \gamma^t r_t\Big] \quad \textrm{subject to} \quad \mathbb{E}_{s \sim \mathcal{D}}\big[H(\pi(\cdot \mid s))\big] \ge \bar{H}$$
+- **Target entropy $\bar{H} = -\dim(\mathcal{A})$:** Enforces $-1.0\text{ nat}$ on Pendulum independently of reward scaling.
+- **Automatic feedback loop:** With $\partial J / \partial \log\beta = \hat{H}_{\textrm{batch}} - \bar{H}$, excess randomness ($\hat{H} > \bar{H}$) lowers $\log\beta$, while narrow entropy ($\hat{H} < \bar{H}$) raises $\log\beta$.
+:::
 
-- **Dual Objective for $\log \beta$:** Treating $\beta = \exp(\log \beta) > 0$ as a Lagrange multiplier gives the temperature loss:
-  $$J(\beta) = -\log \beta\, \mathbb{E}_{s \sim \mathcal{D},\, a \sim \pi_\theta}\big[\log \pi_\theta(a \mid s) + \bar{H}\big], \qquad \frac{\partial J}{\partial \log \beta} = \hat{H}_{\textrm{batch}} - \bar{H}$$
-- **Automatic Feedback Loop:** While the policy is more random than $\bar{H}$ ($\hat{H}_{\textrm{batch}} > \bar{H}$), $\log \beta$ decreases (making entropy cheaper to give up); if the policy collapses below $\bar{H}$, $\log \beta$ rises to restore exploration.
+::: {.col .fig}
+@fig:ch15-drl-dual-temperature
+:::
+:::
 :::
 
 ::: {.slide title="The SoftActorCritic Container and Loss Functions"}

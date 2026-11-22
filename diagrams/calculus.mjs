@@ -74,8 +74,8 @@ function secantTangent() {
   o += dot(Px, Py, 4.5, C.ink); o += dot(Qx, Qy, 4.5, C.ink);
   o += mtx(Px, Py + 20, 'P', { fs: 17 });
   o += mtx(Qx - 10, Qy - 14, 'Q', { fs: 17, anchor: 'end' });
-  o += rotated(241, 205, -35.9, 'secant', C.blue);
-  o += rotated(384, 151, -25.8, 'tangent', TOKENS.accents.purple.dark);
+  o += rotated(228, 190, -35.9, 'secant', C.blue);
+  o += rotated(396, 184, -25.8, 'tangent', TOKENS.accents.purple.dark);
   return svg(W, H, o);
 }
 
@@ -130,8 +130,149 @@ function productRule() {
   return svg(W, H, o);
 }
 
+// ── Worked example: summing parallel paths on a diamond DAG ───────────
+// u = x1 * x2, v = x2^2, z = u^2 + v at (x1, x2) = (1, 2)
+function parallelDag() {
+  const W = 560, H = 290; let o = '';
+  const RED = TOKENS.accents.red;
+  const BLUE_DK = TOKENS.accents.blue.dark;
+  const box = (cx, cy, w, h, fill, st, title, val, grad) =>
+    `<rect x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}" rx="8" fill="${fill}" stroke="${st}" stroke-width="2"/>`
+    + tx(cx, cy - 17, title, { mono: true, fs: 13.5, fw: 700, fill: C.ink })
+    + tx(cx, cy + 2, val, { mono: true, fs: 13, fw: 600, fill: BLUE_DK })
+    + tx(cx, cy + 20, grad, { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
+
+  // Node coordinates with wider horizontal separation
+  const X1 = [68, 72], X2 = [68, 212];
+  const U = [276, 72], V = [276, 212];
+  const Z = [488, 142];
+
+  // Forward blue arrows + backward red arrows
+  // x1 -> u
+  o += arrow(X1[0] + 56, X1[1] - 6, U[0] - 62, U[1] - 6, C.blue);
+  o += arrow(U[0] - 62, U[1] + 10, X1[0] + 56, X1[1] + 10, RED.base);
+  o += tx(170, 48, '∂u/∂x₁ = 2', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
+
+  // x2 -> u (diagonal)
+  o += arrow(X2[0] + 54, X2[1] - 24, U[0] - 60, U[1] + 24, C.blue);
+  o += arrow(U[0] - 52, U[1] + 34, X2[0] + 62, X2[1] - 14, RED.base);
+  o += tx(198, 156, '∂u/∂x₂ = 1', { mono: true, fs: 12.5, fw: 700, fill: RED.dark, anchor: 'start' });
+
+  // x2 -> v
+  o += arrow(X2[0] + 56, X2[1] - 6, V[0] - 62, V[1] - 6, C.blue);
+  o += arrow(V[0] - 62, V[1] + 10, X2[0] + 56, X2[1] + 10, RED.base);
+  o += tx(170, 238, '∂v/∂x₂ = 4', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
+
+  // u -> z
+  o += arrow(U[0] + 62, U[1] + 10, Z[0] - 56, Z[1] - 18, C.blue);
+  o += arrow(Z[0] - 60, Z[1] - 6, U[0] + 58, U[1] + 22, RED.base);
+  o += tx(388, 66, '∂z/∂u = 4', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
+
+  // v -> z
+  o += arrow(V[0] + 62, V[1] - 10, Z[0] - 56, Z[1] + 18, C.blue);
+  o += arrow(Z[0] - 60, Z[1] + 6, V[0] + 58, V[1] - 22, RED.base);
+  o += tx(388, 218, '∂z/∂v = 1', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
+
+  // Nodes
+  o += box(X1[0], X1[1], 108, 64, TOKENS.accents.slate.tint, C.gray, 'x₁', 'val = 1', '∂z/∂x₁ = 8');
+  o += box(X2[0], X2[1], 108, 64, C.lamber, C.amber, 'x₂ (2 paths)', 'val = 2', '4·1 + 1·4 = 8');
+  o += box(U[0], U[1], 120, 64, C.lblue, C.blue, 'u = x₁ x₂', 'val = 2', '∂z/∂u = 4');
+  o += box(V[0], V[1], 120, 64, C.lblue, C.blue, 'v = x₂²', 'val = 4', '∂z/∂v = 1');
+  o += box(Z[0], Z[1], 108, 64, C.lgreen, C.green, 'z = u² + v', 'val = 8', '∂z/∂z = 1');
+
+  o += tx(280, 272, 'Sum over all paths from x₂ to z:  ∂z/∂x₂ = (4 × 1) + (1 × 4) = 8', { mono: true, fs: 14, fw: 700, fill: RED.dark });
+  return svg(W, H, o);
+}
+
+// ── Two-stage VJP pipeline for L(w) = ||Xw - y||^2 ────────────────────
+function vjpPipeline() {
+  const W = 540, H = 250; let o = '';
+  const RED = TOKENS.accents.red;
+  const BLUE_DK = TOKENS.accents.blue.dark;
+  const card = (x, y, w, h, fill, st, t1, t2, t3) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${fill}" stroke="${st}" stroke-width="2"/>`
+    + tx(x + w / 2, y + 22, t1, { mono: true, fs: 15, fw: 700, fill: C.ink })
+    + tx(x + w / 2, y + 46, t2, { mono: true, fs: 13, fw: 600, fill: BLUE_DK })
+    + tx(x + w / 2, y + 70, t3, { mono: true, fs: 13, fw: 700, fill: RED.dark });
+
+  const y = 78, bh = 90;
+  o += tx(16, 26, '▸ Forward Pass (left → right): evaluate predictions & scalar loss', { fs: 14.5, fw: 700, fill: BLUE_DK, anchor: 'start' });
+
+  // Arrows between w -> r -> L
+  o += arrow(150, y + 28, 204, y + 28, C.blue);
+  o += tx(177, y + 10, 'Xw − y', { mono: true, fs: 13, fw: 700, fill: BLUE_DK });
+  o += arrow(204, y + 64, 150, y + 64, RED.base);
+  o += tx(177, y + 84, 'Xᵀ g_r', { mono: true, fs: 13, fw: 700, fill: RED.dark });
+
+  o += arrow(346, y + 28, 400, y + 28, C.blue);
+  o += tx(373, y + 10, '‖r‖₂²', { mono: true, fs: 13, fw: 700, fill: BLUE_DK });
+  o += arrow(400, y + 64, 346, y + 64, RED.base);
+  o += tx(373, y + 84, '2 r · 1', { mono: true, fs: 13, fw: 700, fill: RED.dark });
+
+  // 3 Nodes
+  o += card(14,  y, 132, bh, TOKENS.accents.slate.tint, C.gray, 'w ∈ R²', 'w = (1, 0)', '∇_w L = (2, 4)');
+  o += card(208, y, 134, bh, C.lblue, C.blue, 'r ∈ R³', 'r = (0, 0, 1)', 'g_r = (0, 0, 2)');
+  o += card(404, y, 122, bh, C.lgreen, C.green, 'L ∈ R', 'L = 1', '∂L/∂L = 1');
+
+  o += tx(16, 212, '◂ Backward Pass (right → left): each stage applies its VJP', { fs: 14, fw: 700, fill: RED.dark, anchor: 'start' });
+  o += tx(16, 236, 'Never forms giant m×n Jacobians — passes only vectors of shape Rᵐ and Rⁿ!', { fs: 13, fw: 600, fill: C.ink, anchor: 'start' });
+  return svg(W, H, o);
+}
+
+// ── Smooth surrogate loss vs 0-1 step error & 1 gradient vs d+1 probes ─
+function surrogateVsStep() {
+  const W = 540, H = 264; let o = '';
+  const RED = TOKENS.accents.red;
+  const BLUE_DK = TOKENS.accents.blue.dark;
+  // Panel (a): 0-1 step error vs smooth surrogate log(1 + exp(-z))
+  o += tx(135, 20, '(a) Surrogate Loss vs. 0–1 Error', { fs: 15, fw: 700, fill: C.ink });
+  const ox = 135, oy = 216, sx = 36, sy = 44;
+  o += line(26, oy, 246, oy, C.ink, 1.6);
+  o += line(ox, oy + 8, ox, 40, C.ink, 1.6);
+  o += tx(244, oy + 16, 'margin z', { fs: 13, fw: 600, fill: C.ink, anchor: 'end' });
+  // 0-1 step function (red: flat slope = 0!)
+  o += line(32, oy - sy, ox, oy - sy, RED.base, 2.8);
+  o += line(ox, oy - sy, ox, oy, RED.base, 1.6, true);
+  o += line(ox, oy, 240, oy, RED.base, 2.8);
+  o += tx(ox + 12, oy - sy - 10, '0–1 step: slope = 0', { fs: 12.5, fw: 700, fill: RED.dark, anchor: 'start' });
+  // Smooth logistic surrogate log2(1 + exp(-z)) clamped to z >= -2.1 so top stays clear of title
+  const pts = [];
+  for (let i = -21; i <= 28; i++) {
+    const z = i / 10;
+    const val = Math.log(1 + Math.exp(-z)) / Math.LN2;
+    pts.push([ox + z * sx, oy - val * sy]);
+  }
+  o += plines(pts, C.blue, 2.8);
+  o += tx(ox + 10, 68, 'surrogate L(z):', { fs: 13, fw: 700, fill: BLUE_DK, anchor: 'start' });
+  o += tx(ox + 10, 86, 'slope ≠ 0 everywhere', { fs: 12.5, fw: 600, fill: BLUE_DK, anchor: 'start' });
+
+  // Panel (b): d+1 random perturbation probes vs 1 gradient vector -∇L
+  o += tx(405, 20, '(b) 1 Gradient vs. d+1 Probes', { fs: 15, fw: 700, fill: C.ink });
+  const cx = 434, cy = 104;
+  o += `<ellipse cx="${cx}" cy="${cy}" rx="86" ry="56" fill="none" stroke="${C.gray}" stroke-width="1.4"/>`;
+  o += `<ellipse cx="${cx}" cy="${cy}" rx="54" ry="35" fill="none" stroke="${C.gray}" stroke-width="1.4"/>`;
+  o += `<ellipse cx="${cx}" cy="${cy}" rx="24" ry="15" fill="none" stroke="${C.gray}" stroke-width="1.4"/>`;
+  o += dot(cx, cy, 5.5, C.green);
+  const wx = 336, wy = 162;
+  // Blind probe rays
+  for (const ang of [20, 80, 140, 200, 260, 320]) {
+    const rad = (ang * Math.PI) / 180;
+    const px = wx + 32 * Math.cos(rad), py = wy + 32 * Math.sin(rad);
+    o += line(wx, wy, px, py, C.muted, 1.4, true);
+    o += dot(px, py, 3, C.muted);
+  }
+  o += arrow(wx, wy, cx - 14, cy + 10, C.green);
+  o += dot(wx, wy, 5, C.ink);
+  o += tx(442, 184, '−∇_w L (1 sweep)', { fs: 13, fw: 700, fill: GREEN_DARK });
+  o += tx(405, 224, 'finite differences need O(d) passes', { fs: 13, fill: C.muted });
+  return svg(W, H, o);
+}
+
 export const diagrams = {
-  'calculus-secant-tangent':  secantTangent,
-  'calculus-chain-graph':     chainGraph,
-  'calculus-product-rule':    productRule,
+  'calculus-secant-tangent':    secantTangent,
+  'calculus-chain-graph':       chainGraph,
+  'calculus-product-rule':      productRule,
+  'calculus-parallel-dag':      parallelDag,
+  'calculus-vjp-pipeline':      vjpPipeline,
+  'calculus-surrogate-vs-step': surrogateVsStep,
 };

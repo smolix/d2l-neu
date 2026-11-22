@@ -923,11 +923,16 @@ Convolutional Network Design Spaces (RegNet)<br>**the AnyNet template · populat
 ::: {.slide title="From Hand-Crafted Models to Population Design Spaces"}
 [Motivation & Limits of Single-Model Search]{.kicker}
 
-Throughout §§7.1–7.7, stage depths and widths were chosen either by manual trial-and-error or by single-model Neural Architecture Search (NAS):
+::: {.cols .vc}
+::: {.col}
+- **Limits of point search:** Manual tuning and NAS search a $1.8 \times 10^{18}$ haystack for a single model at one budget, yielding opaque stage depths like $(3,4,6,3)$ or $(3,3,9,3)$.
+- **Design-space distillation (RegNet, Radosavovic et al., 2020):** Sample $n=500$ models per parameterized space and compare empirical error CDFs $\hat{F}(e)$ to discover simple structural rules that generalize across all FLOP regimes.
+:::
 
-- **No visible stage-depth rule across landmark models:** While channel widths double cleanly across stages—$(64, 128, 256, 512)$ in ResNet-18, $(256, 512, 1024, 2048)$ in ResNet-50/ResNeXt-50, $(96, 192, 384, 768)$ in ConvNeXt-T—stage depths jump from $(2, 2, 2, 2)$ to $(3, 4, 6, 3)$ to $(3, 3, 9, 3)$ without a general principle.
-- **Combinatorial explosion:** With 4 structural numbers per stage across 4 stages, even 2 choices per knob yield $2^{16} = 65{,}536$ networks; full grids span $>10^{18}$ architectures.
-- **The RegNet shift (Radosavovic et al., 2020):** Instead of searching for a single winning network at one compute budget, compare *populations of networks* sampled from parameterized **design spaces** to discover simple structural rules that generalize across budgets.
+::: {.col .fig .big}
+@fig:ch07-mcnn-point-search-vs-design-space
+:::
+:::
 :::
 
 ::: {.slide title="The AnyNet Design Space: 16 Degrees of Freedom"}
@@ -959,12 +964,18 @@ In `AnyNet`, each stage is specified by a 4-tuple `(depth, num_channels, groups,
 ::: {.slide title="Comparing Design Spaces via Empirical Error CDFs"}
 [Statistical Methodology]{.kicker}
 
-To compare two massive design spaces without exhaustive enumeration, we sample $n$ networks at a fixed FLOP budget, train each briefly under an identical optimizer schedule, and plot their validation errors $e_1, \ldots, e_n$:
+::: {.cols .vc}
+::: {.col}
+$$\hat{F}(e) = \frac{1}{n} \sum_{j=1}^n \mathbf{1}(e_j \le e)$$
 
-- **Empirical Cumulative Distribution Function (EDF / CDF):** Gives the fraction of sampled models achieving validation error at most $e$:
-  $$\hat{F}(e) = \frac{1}{n} \sum_{j=1}^n \mathbf{1}(e_j \le e)$$
-- **Stochastic dominance:** If space $\mathcal{S}_1$'s CDF curve lies uniformly above and to the left of $\mathcal{S}_2$'s curve, a random draw from $\mathcal{S}_1$ beats any error threshold $e$ with higher probability—even if the single best point model in both spaces coincides.
-- **Four working assumptions (Radosavovic et al., 2019):** (1) Good networks are abundant under sound rules; (2) short-run rankings (e.g., 10 ImageNet epochs) correlate with full-training rankings; (3) low-FLOP rules extrapolate to high-FLOP models; and (4) design constraints roughly decouple.
+- **Stochastic dominance:** If $\hat{F}_1(e)$ lies above and to the left of $\hat{F}_2(e)$, a random network from space 1 beats any error threshold $e$ with higher probability.
+- **Population view:** Evaluates the entire distribution of valid architectures rather than noisy single-point optima.
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-empirical-cdf-dominance
+:::
+:::
 :::
 
 ::: {.slide title="Design-Space Refinement: AnyNetXA to AnyNetXE"}
@@ -989,12 +1000,16 @@ Sampling $n = 500$ models per space at $\approx 400\text{M}$ multiply-adds and t
 ::: {.slide title="Tallying Multiply-Adds Across an AnyNet Instance"}
 [FLOP Budget Accounting]{.kicker}
 
-To compare sampled networks fairly at a fixed compute budget ($112\text{M} \pm 20\%$ multiply-adds on $96\times 96$ Fashion-MNIST), `mult_adds` tallies the stem, $1\times 1$ projections, and grouped $3\times 3$ filters across stages:
-
+::: {.cols .vc}
+::: {.col}
 @cnn-design-comparing-design-spaces-1
 
-::: {.d2l-note}
-In a ResNeXt block with $b = 1$ and group width $g$, the number of groups is $c / g$, so each grouped $3\times 3$ layer at spatial resolution $r \times r$ performs $r^2 \cdot 9 \cdot c^2 / (c / g) = 9 r^2 g c$ multiply-adds—scaling *linearly* with width $c$ at fixed group width $g$.
+- **Linear grouped $3 \times 3$ cost:** With $b=1$ and group width $g$, groups $= c/g$, so grouped $3 \times 3$ MACs $= 9 r^2 g c$ per block.
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-anynet-stage-mac-breakdown
+:::
 :::
 :::
 
@@ -1026,12 +1041,18 @@ We sample $n = 12$ two-stage networks with growing widths ($c_1 < c_2$) and $12$
 ::: {.slide title="The RegNetX Family: Quantized Linear Width Staircases"}
 [From AnyNetXE to RegNetX]{.kicker}
 
-Inspecting the top-performing networks inside $\text{AnyNetX}_E$ reveals that block widths across depth $j = 0, 1, \ldots, d-1$ follow a simple linear ramp quantized onto a geometric stage grid:
+::: {.cols .vc}
+::: {.col}
+$$u_j = u_0 + a \cdot j \implies \tilde{u}_j = u_0\,m^{s_j}$$
 
-- **1. Linear block-width parameterization:**
-  $$u_j = u_0 + a \cdot j \qquad (u_0 = \text{initial width},\; a > 0 = \text{slope})$$
-- **2. Geometric stage quantization (ratio $m > 1$):** Each block $j$ snaps to stage index $s_j = \operatorname{round}\bigl(\log(u_j / u_0) / \log m\bigr)$ with quantized width $\tilde{u}_j = u_0\,m^{s_j}$ (rounded to a multiple of $8$ divisible by $g$), grouping blocks with equal $s_j$ into stage $i$.
-- **3. No internal bottleneck compression ($b = 1$):** Surprisingly, $b = 1$ (`bot_mul = 1`) consistently outperforms the $b = 4$ compression of ResNet-50/ResNeXt-50. Together, $(d, u_0, a, m, g)$ with $b = 1$ define the **RegNetX** family (and adding SE gates yields **RegNetY**).
+- **Quantized linear staircase:** Block widths follow a linear ramp $(u_0, a)$ snapped to geometric stages $s_j = \operatorname{round}(\log(u_j/u_0)/\log m)$.
+- **No bottleneck ($b = 1$):** Collapses 16 stage hyperparameters into $(d, u_0, a, m, g)$.
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-regnet-linear-staircase
+:::
+:::
 :::
 
 ::: {.slide title="Constructing RegNetX32 for Fashion-MNIST"}
@@ -1085,11 +1106,17 @@ Because ResNet-18 shares the stem–body–head template, we subclass `AnyNet` a
 ::: {.slide title="Three Nuances: Optimizer Coupling, Ceiling & Latency"}
 [Systems & Experimental Pitfalls]{.kicker}
 
-Interpreting the `RegNetX32` vs. `ResNet-18` tie requires three methodological cautions:
+::: {.cols .vc}
+::: {.col}
+- **1. Architecture–optimizer coupling:** Without momentum + weight decay, `RegNetX32` drops to $\approx 91\%$ vs. ResNet-18's $\approx 93\%$.
+- **2. Dataset ceiling:** Larger 4-stage RegNets plateau at the same $\approx 94\%$ Fashion-MNIST ceiling.
+- **3. GPU latency:** Grouped 32-layer `RegNetX32` takes $1.5\times$ longer per epoch than 18-layer dense ResNet-18, but runs **$5\times$ faster** than depthwise EfficientNets at equal FLOPs.
+:::
 
-1. **Architecture–optimizer coupling:** Under plain SGD *without* momentum or weight decay (§7.4), `RegNetX32` drops to $\approx 91\%$ while `ResNet18` hits $\approx 93\%$. `RegNetX32` pulls even only under the momentum + weight-decay protocol on which the RegNet space was calibrated.
-2. **Dataset accuracy ceiling:** Scaling up to 4-stage ImageNet models (`RegNetX-400MF` to `1.6GF`) stays at $93\text{--}94\%$ because Fashion-MNIST saturates near $94\%$ (and deep 4-stage models require initializing each block's final BatchNorm scale $\gamma_3 = 0$ to avoid early instability).
-3. **FLOPs vs. GPU epoch time:** Despite executing $3\times$ fewer multiply-adds ($112\text{M}$ vs. $319\text{M}$), an epoch of 32-layer grouped `RegNetX32` takes **$\approx 1.5\times$ longer on a GPU** than 18-layer dense `ResNet-18` due to lower arithmetic intensity and more kernel launches—though against depthwise *EfficientNets*, RegNetX runs up to **$5\times$ faster** at equal FLOPs.
+::: {.col .fig .big}
+@fig:ch07-mcnn-regnet-vs-resnet-tradeoffs
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Quantized Staircases, Group Counts & EDFs"}

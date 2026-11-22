@@ -1814,11 +1814,17 @@ Flow Matching, Rectified Flows, and Optimal Transport<br>**probability paths · 
 ::: {.slide title="Why Do Diffusion Samplers Need So Many Steps?"}
 [Motivation]{.kicker}
 
-Score-based diffusion samplers evaluate a neural network 1,000 times for ancestral reverse-SDE chains and 20–50 times for deterministic ODE solvers. Why can't they generate an image in **one** Euler step?
+::: {.cols .vc}
+::: {.col}
+- **Curved diffusion paths:** Probability-flow ODE trajectories inherited from OU / VP-SDE noising curve across time and concentrate $91\%$ of motion below $t = 0.5$, requiring 20–50 solver steps.
+- **Straight constant-speed ideal:** If particles travel along $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\mathbf{x}_1$ without crossings ($\dot{\mathbf{x}}_t = \mathbf{x}_1 - \mathbf{x}_0$), a **single** Euler step ($h = 1$) is $100\%$ exact!
+- **Flow Matching paradigm:** Prescribe $p_t$ directly and regress $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ onto per-sample velocities by least squares.
+:::
 
-- **Curved Forward Trajectories:** Diffusion models inherit their probability path $(p_t)_{t \in [0, 1]}$ from an Ornstein–Uhlenbeck noising process whose probability-flow trajectories curve across time and noise scales.
-- **The Straight-Line Ideal:** If every particle traveled from its noise point $\mathbf{x}_1 = \boldsymbol{\epsilon}$ to its data point $\mathbf{x}_0$ along a **straight line at constant speed**, $\dot{\mathbf{x}} = \mathbf{x}_1 - \mathbf{x}_0$, then a **single** Euler step of size $h = 1$ would integrate the trajectory with zero truncation error!
-- **The Flow Matching Paradigm:** Instead of deriving the path from an SDE, **prescribe** a probability path $p_t$ from simple per-sample interpolants and train a neural velocity field $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ directly by least squares.
+::: {.col .fig .big}
+@fig:ch38-dyn-curved-diffusion-vs-straight
+:::
+:::
 :::
 
 ::: {.slide title="Time Convention: Data at t = 0 and Noise at t = 1"}
@@ -1846,31 +1852,37 @@ A velocity field $\mathbf{u}_t: \mathbb{R}^d \to \mathbb{R}^d$ **realizes** a pr
 ::: {.slide title="The Conditional Flow Matching (CFM) Theorem"}
 [Simulation-Free Training]{.kicker}
 
-The marginal Flow Matching objective $\mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) = \mathbb{E}_{t, \mathbf{x}\sim p_t}\|\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x})\|^2$ is intractable because $\mathbf{u}_t(\mathbf{x})$ integrates over all conditional blobs. Because $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \mid \mathbf{x}_t = \mathbf{x}]$, the Regression Lemma (§38.6) replaces $\mathbf{u}_t(\mathbf{x})$ with the closed-form per-sample target $\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$:
+::: {.cols .vc}
+::: {.col}
+Because the marginal velocity is the posterior mean $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \mid \mathbf{x}_t = \mathbf{x}]$, the Regression Lemma equates the marginal and conditional objectives up to a constant floor $C$:
 
-::: {.d2l-note .rule}
-**Theorem (Conditional Flow Matching — Lipman et al., 2022; Tong et al., 2023):**
-$$\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathbb{E}_{t \sim \mathcal{U}[0,1],\, \mathbf{z} \sim q,\, \mathbf{x} \sim p_t(\cdot \mid \mathbf{z})}\!\left[\left\|\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})\right\|^2\right] = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$$
-where $C = \mathbb{E}\big[\|\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) - \mathbf{u}_t(\mathbf{x})\|^2\big]$ is independent of $\boldsymbol{\theta}$. Both objectives have the **exact same gradients and minimizers**.
+$$\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathbb{E}_{t, \mathbf{z}, \mathbf{x}}\!\left[\left\|\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})\right\|^2\right] = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$$
+
+- **Crossing variance floor $C$:** $C = \mathbb{E}[\operatorname{Var}(\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \mid \mathbf{x}_t)]$ vanishes ($C = 0$) if and only if distinct sample paths never cross!
 :::
 
-- **What the Floor $C$ Measures:** $C$ is the average conditional variance of per-sample velocities passing through the same space-time point $(\mathbf{x}, t)$. It equals zero if and only if distinct sample paths never cross!
+::: {.col .fig}
+@fig:ch38-dyn-cfm-marginal-posterior
+:::
+:::
 :::
 
 ::: {.slide title="The Score–Velocity Dictionary on Gaussian Paths"}
 [Unifying Diffusion and Flow Matching]{.kicker}
 
-On any Gaussian path $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol{\epsilon}$ ($\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$), both the marginal score $\nabla\log p_t(\mathbf{x})$ and the marginal velocity $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\dot{\alpha}_t\mathbf{x}_0 + \dot{\sigma}_t\boldsymbol{\epsilon} \mid \mathbf{x}_t = \mathbf{x}]$ are affine functions of the single posterior mean $\hat{\mathbf{x}}_0(\mathbf{x}) = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$:
+::: {.cols .vc}
+::: {.col}
+On any Gaussian path $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol{\epsilon}$, score $\mathbf{s}$, noise $\hat{\boldsymbol{\epsilon}}$, clean point $\hat{\mathbf{x}}_0$, and velocity $\mathbf{u}_t$ are affine conversions of one another:
 
 $$\mathbf{u}_t(\mathbf{x}) = \frac{\dot{\alpha}_t}{\alpha_t}\,\mathbf{x} - \left(\sigma_t\dot{\sigma}_t - \sigma_t^2\,\frac{\dot{\alpha}_t}{\alpha_t}\right)\nabla\log p_t(\mathbf{x})$$
 
-| Network Target Parameterization | Posterior Mean Learned by Least Squares | Exact Conversion From Score $\mathbf{s} = \nabla\log p_t(\mathbf{x})$ |
-| :--- | :--- | :--- |
-| **Score ($\mathbf{s}_{\boldsymbol{\theta}}$)** | $\nabla\log p_t(\mathbf{x})$ | $\mathbf{s}$ |
-| **Noise ($\hat{\boldsymbol{\epsilon}}$)** | $\mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t = \mathbf{x}]$ | $-\sigma_t\,\mathbf{s}$ |
-| **Clean Data ($\hat{\mathbf{x}}_0$)** | $\mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$ | $(\mathbf{x} + \sigma_t^2\,\mathbf{s}) / \alpha_t$ |
-| **Flow Velocity ($\mathbf{u}_{\boldsymbol{\theta}}$)** | $\mathbb{E}[\dot{\alpha}_t\mathbf{x}_0 + \dot{\sigma}_t\boldsymbol{\epsilon} \mid \mathbf{x}_t = \mathbf{x}]$ | $\frac{\dot{\alpha}_t}{\alpha_t}\mathbf{x} - (\sigma_t\dot{\sigma}_t - \sigma_t^2\frac{\dot{\alpha}_t}{\alpha_t})\mathbf{s}$ ($= -\frac{\mathbf{x} + t\mathbf{s}}{1-t}$ for $\alpha_t=1-t, \sigma_t=t$) |
-| **$\mathbf{v}$-Prediction ($\hat{\mathbf{v}}$)** | $\mathbb{E}[\alpha_t\boldsymbol{\epsilon} - \sigma_t\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$ | $-\frac{\sigma_t}{\alpha_t}\mathbf{x} - \sigma_t\frac{\alpha_t^2 + \sigma_t^2}{\alpha_t}\mathbf{s}$ |
+- **One posterior mean:** Learning $\mathbf{s}_{\boldsymbol{\theta}}$, $\hat{\boldsymbol{\epsilon}} = -\sigma_t\mathbf{s}$, $\hat{\mathbf{x}}_0 = (\mathbf{x} + \sigma_t^2\mathbf{s})/\alpha_t$, or $\mathbf{u}_{\boldsymbol{\theta}}$ trains the exact same underlying conditional expectation.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-score-velocity-dictionary
+:::
+:::
 :::
 
 ::: {.slide title="Worked Closed Form: Two Data Points at ±2"}
@@ -1976,17 +1988,19 @@ Increasing the step count from $K = 1$ to $K = 8$ unfolds the mean blob into two
 ::: {.slide title="Reflow: Straightening Flows by Model Re-Pairing"}
 [Rectified Flow Re-Pairing]{.kicker}
 
-How can we eliminate segment crossings so that $1$ Euler step suffices? **Reflow** integrates the trained ODE from noise draws $\mathbf{Z}_1 = \mathbf{X}_1 \sim p_1$ down to $t = 0$ to obtain model endpoints $\mathbf{Z}_0 = \hat{\mathbf{x}}_0(\mathbf{X}_1)$, and retrains on the deterministic pairs $(\mathbf{Z}_0, \mathbf{Z}_1)$:
+::: {.cols .vc}
+::: {.col}
+**Reflow** integrates the trained ODE from noise $\mathbf{Z}_1 = \mathbf{X}_1 \sim p_1$ to $t = 0$ to obtain deterministic pairs $(\mathbf{Z}_0, \mathbf{Z}_1)$ and retrains on their straight chords:
 
-::: {.d2l-note .rule}
-**Proposition (Reflow Preserves Marginals and Lowers Convex Transport Cost):**
+$$\mathbb{E}\!\left[\|\mathbf{Z}_1 - \mathbf{Z}_0\|^2\right] \le \mathbb{E}\!\left[\|\mathbf{X}_1 - \mathbf{X}_0\|^2\right] - C$$
 
-1. **Marginal Preservation:** $\mathbf{Z}_t \sim \mathbf{X}_t$ for all $t \in [0, 1]$, so the new endpoints still follow $\mathbf{Z}_0 \sim p_0$.
-2. **Monotonic Cost Reduction:** For any convex cost $c: \mathbb{R}^d \to \mathbb{R}$, applying Jensen's inequality twice (first over the time integral $\mathbf{Z}_1 - \mathbf{Z}_0 = \int_0^1 \mathbf{u}_t(\mathbf{Z}_t)\,dt$, then over the conditional expectation $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\mathbf{X}_1 - \mathbf{X}_0 \mid \mathbf{X}_t = \mathbf{x}]$) yields:
-   $$\mathbb{E}\!\left[c(\mathbf{Z}_1 - \mathbf{Z}_0)\right] \le \int_0^1 \mathbb{E}\!\left[c\big(\mathbf{u}_t(\mathbf{Z}_t)\big)\right]dt = \int_0^1 \mathbb{E}\!\left[c\big(\mathbb{E}[\mathbf{X}_1 - \mathbf{X}_0 \mid \mathbf{X}_t]\big)\right]dt \le \mathbb{E}\!\left[c(\mathbf{X}_1 - \mathbf{X}_0)\right]$$
+- **Marginal preservation & cost drop:** Applying Jensen's inequality over time and over the posterior $\mathbb{E}[\mathbf{X}_1 - \mathbf{X}_0 \mid \mathbf{X}_t]$ guarantees lower convex transport cost and eliminates segment crossings ($C \to 0$).
 :::
 
-- **Quadratic Cost Drops by at Least $C$:** For $c(\mathbf{v}) = \|\mathbf{v}\|^2$, conditional Jensen loses exactly the conditional variance floor $C$, so $\mathbb{E}\|\mathbf{Z}_1 - \mathbf{Z}_0\|^2 \le \mathbb{E}\|\mathbf{X}_1 - \mathbf{X}_0\|^2 - C$.
+::: {.col .fig}
+@fig:ch38-dyn-reflow-jensen-straightening
+:::
+:::
 :::
 
 ::: {.slide title="One Reflow Round Drops the Loss From 1.40 to 0.002"}

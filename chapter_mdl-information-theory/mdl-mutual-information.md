@@ -1503,14 +1503,19 @@ Linear correlation $\rho(X, Y) = \frac{\textrm{Cov}(X, Y)}{\sigma_X \sigma_Y}$ d
 ::: {.slide title="Joint and Conditional Entropy on the Flipped Bit"}
 [Running Benchmark: Binary Symmetric Channel]{.kicker}
 
-Let $X \in \{0, 1\}$ be a fair bit ($p_X = (\tfrac12, \tfrac12)$) and let $Y$ be a copy of $X$ flipped with probability $\delta = 0.1$:
+::: {.cols .vc}
+::: {.col}
+Let $X \in \{0, 1\}$ be a fair bit ($H(X) = \ln 2 \approx 0.693\text{ nats}$) flipped with probability $\delta = 0.1$ to produce $Y$:
 
-$$p_{X,Y} = \begin{pmatrix} 0.45 & 0.05 \\ 0.05 & 0.45 \end{pmatrix}, \qquad p_X = p_Y = \left(\frac{1}{2}, \frac{1}{2}\right)$$
+$$p_{X,Y} = \begin{pmatrix} 0.45 & 0.05 \\ 0.05 & 0.45 \end{pmatrix}, \qquad H(X, Y) = H(X) + H(Y \mid X)$$
 
-- **Marginal entropies:** Each variable alone is a fair coin: $H(X) = H(Y) = \ln 2 \approx 0.693\text{ nats}$.
-- **Joint entropy of the pair:** Viewing $(X, Y)$ as a 4-outcome variable:
-  $$H(X, Y) = -2(0.45\ln 0.45) - 2(0.05\ln 0.05) = 1.018\text{ nats}$$
-- **Conditional entropy remaining in $Y$ given $X$:** Each conditional row $p(y \mid x)$ is $(0.9, 0.1)$ or $(0.1, 0.9)$ with binary entropy $H_b(0.1) = 0.325\text{ nats}$, verifying the chain rule $H(X, Y) = H(X) + H(Y \mid X) = 0.693 + 0.325 = 1.018\text{ nats}$.
+- **Conditional & joint entropy:** Each row has $H(Y \mid X = x) = H_b(0.1) = 0.325\text{ nats}$, so $H(X, Y) = 0.693 + 0.325 = 1.018\text{ nats}$ and $I(X; Y) = 0.693 - 0.325 = 0.368\text{ nats}$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-bsc-flipped-bit
+:::
+:::
 :::
 
 ::: {.slide title="Mutual Information: KL Divergence from Independence"}
@@ -1556,18 +1561,19 @@ Evaluating both the KL divergence formula and the conditional entropy reduction 
 ::: {.slide title="Mutual Information of a Bivariate Gaussian Pair"}
 [Exact Closed Form in Continuous Space]{.kicker}
 
-For continuous variables with differential entropies $h$, the KL definition of $I(X; Y)$ remains non-negative and unit-free:
+::: {.cols .vc}
+::: {.col}
+For a bivariate Gaussian pair $(X, Y)$ with correlation $\rho \in (-1, 1)$, conditioning on $X$ cuts the variance of $Y$ from $\sigma_Y^2$ to $\sigma_Y^2(1 - \rho^2)$:
 
-::: {.d2l-note .rule}
-**Proposition (Gaussian Mutual Information):** If $(X, Y)$ is bivariate Gaussian with variances $\sigma_X^2, \sigma_Y^2 > 0$ and correlation $\rho \in (-1, 1)$, then $I(X; Y) = -\tfrac12\log(1 - \rho^2)$.
+$$I(X; Y) = h(Y) - h(Y \mid X) = -\frac{1}{2}\log(1 - \rho^2)$$
+
+- **Unexplained variance law:** Depends solely on $1 - \rho^2$ ($0$ nats at $\rho = 0$, $0.830$ nats at $\rho = 0.9$, $1.959$ nats at $\rho = 0.99$, and $\infty$ as $\rho \to \pm 1$).
 :::
 
-- **Two-line proof:** Marginally, $Y \sim \mathcal{N}(\mu_Y, \sigma_Y^2)$ has $h(Y) = \tfrac12\log(2\pi e\sigma_Y^2)$. Conditioned on $X = x$, the linear regression residual has constant variance $\textrm{Var}(Y \mid X = x) = \sigma_Y^2(1 - \rho^2)$ for every $x$, so $h(Y \mid X) = \tfrac12\log\big(2\pi e\sigma_Y^2(1 - \rho^2)\big)$, and $h(Y) - h(Y \mid X) = -\tfrac12\log(1 - \rho^2)$. $\blacksquare$
-
-| Linear Correlation $\rho$ | $\rho = 0$ | $\rho = 0.5$ | $\rho = 0.9$ (Running Benchmark) | $\rho = 0.99$ | $\rho \to \pm 1$ ($Y = X$) |
-|:--|---:|---:|---:|---:|---:|
-| **Unexplained Variance** $1 - \rho^2$ | $1.00$ | $0.75$ | $0.19$ | $0.0199$ | $0$ |
-| **Mutual Information** $I(X; Y)$ (nats) | $0.000$ | $0.144$ | **$0.830$** | $1.959$ | $\infty$ |
+::: {.col .fig}
+@fig:ch37-info-bivariate-gaussian-mi
+:::
+:::
 :::
 
 ::: {.slide title="Pointwise Mutual Information and Collocations"}
@@ -1649,14 +1655,19 @@ The inequality $I(X; Y \mid Z) \le I(X; Y)$ holds inside a Markov chain $X \to Y
 ::: {.slide title="What Deep Network Layers Do: Usable Information"}
 [Interpreting DPI in Deep Learning]{.kicker}
 
-In a feed-forward network with label $Y$, input $X$, and hidden layers $Z_1, Z_2, \ldots$, the variables form a Markov chain $Y \to X \to Z_1 \to Z_2 \to \cdots$, so the data-processing inequality guarantees:
+::: {.cols .vc}
+::: {.col}
+Along a feed-forward network $Y \to X \to Z_1 \to Z_2 \to \cdots$, the Data-Processing Inequality guarantees:
 
 $$I(Y; Z_\ell) \le \cdots \le I(Y; Z_1) \le I(Y; X)$$
 
-- **If depth cannot add label information, why do deep layers help?** Because downstream classifiers (such as a final linear layer) belong to a *restricted function family* $\mathcal{V}$ and cannot extract arbitrarily tangled information!
-- **Concentric circles example:** Let $Y \in \{0, 1\}$ be a fair bit, and let $X \in \mathbb{R}^2$ lie uniformly on the circle of radius $1$ when $Y = 0$ and radius $2$ when $Y = 1$.
-  - $X$ determines $Y$ exactly ($I(Y; X) = \ln 2$), yet any linear half-plane classifier on $X$ gets at most $2/3$ accuracy (zero **usable information** $I_{\mathcal{V}}(X \to Y) = 0$ for logistic regression).
-  - A single quadratic feature $Z_1 = \|X\|_2^2 \in \{1, 4\}$ satisfies $I(Y; Z_1) = \ln 2 = I(Y; X)$ (no new Shannon information created), yet makes all $\ln 2\text{ nats}$ linearly separable with $100\%$ accuracy!
+- **Why depth helps:** Hidden layers cannot create new Shannon information, but they untangle concentric manifolds (e.g., $Z_1 = \|X\|_2^2 \in \{1, 4\}$) so a restricted linear readout $\mathcal{V}$ can extract all $\ln 2$ nats (**usable information**).
+:::
+
+::: {.col .fig}
+@fig:ch37-info-dpi-usable-info
+:::
+:::
 :::
 
 ::: {.slide title="Fano's Inequality: Prediction Requires Information"}
@@ -1733,13 +1744,19 @@ $$R(D) = \frac{1}{2}\log\frac{\sigma_X^2}{D} \iff D(R) = \sigma_X^2 e^{-2R} \qua
 ::: {.slide title="The Information Bottleneck as Rate–Distortion"}
 [Task-Relevant Representation Learning]{.kicker}
 
-How should a stochastic encoder $p(z \mid x)$ compress an input $X$ into a representation $Z$ that discards nuisance background details while preserving everything needed to predict a target label $Y$? Along the Markov chain $Y \to X \to Z$, the **Information Bottleneck** (Tishby et al., 1999) minimizes:
+::: {.cols .vc}
+::: {.col}
+Along $Y \to X \to Z$, the **Information Bottleneck** (Tishby et al., 1999) trades compression rate against preserved label information:
 
-$$\min_{p(z \mid x)}\; \underbrace{I(X; Z)}_{\text{compression rate}} - \beta \underbrace{I(Y; Z)}_{\text{preserved label info}} \qquad (\beta > 0)$$
+$$\min_{p(z \mid x)}\; I(X; Z) - \beta\,I(Y; Z) \qquad (\beta > 0)$$
 
-- **Always collapses for $\beta \le 1$:** By data processing, $I(Y; Z) \le \min\{I(X; Y), I(X; Z)\}$, so for $\beta \le 1$, $I(X; Z) - \beta I(Y; Z) \ge (1 - \beta)I(X; Z) \ge 0$, minimized by a constant encoder $I(X; Z) = 0$.
-- **Exact rate–distortion equivalence:** Expanding $I(Y; X, Z)$ by the chain rule in both orders along $Y \to X \to Z$ ($I(Y; Z \mid X) = 0$) proves:
-  $$I(Y; Z) = I(X; Y) - \mathbb{E}_{(x, z) \sim P_{X,Z}}\Big[\underbrace{D_{\textrm{KL}}\big(p(y \mid x) \,\|\, p(y \mid z)\big)}_{\text{KL prediction distortion } d_{\textrm{IB}}(x, z)}\Big]$$
+- **Rate–distortion identity:** $I(Y; Z) = I(X; Y) - \mathbb{E}[D_{\textrm{KL}}(p(y \mid x) \| p(y \mid z))]$, and the encoder always collapses ($I(X; Z) = 0$) whenever $\beta \le 1$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-ib-rate-distortion
+:::
+:::
 :::
 
 ::: {.slide title="Closed-Form Solution of the Gaussian Bottleneck"}

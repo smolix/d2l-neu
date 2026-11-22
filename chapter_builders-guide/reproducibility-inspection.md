@@ -1356,24 +1356,31 @@ Reproducibility, Debugging, and Model Inspection<br>**PRNG seeds & keys · data-
 ::: {.slide title="Why Reproducibility and Model Inspection Belong Together"}
 [Scientific Validity vs. Bug Hunting]{.kicker}
 
-Two everyday engineering questions depend on controlling randomness and observing internal layer state:
+::: {.cols .vc}
+::: {.col}
+- **Is a 0.3-point accuracy gain real or random noise?** Five runs of the *exact same* Fashion-MNIST training script differing only in their random seed span $1\text{--}4$ percentage points.
+- **Why did the loss turn `NaN` at step 40,000?** Debugging late-stage crashes requires reproducing the exact trajectory and inspecting layer activations/gradients via non-invasive hooks.
+:::
 
-- **Is a 0.3-point accuracy gain real or random noise?** Five runs of the *exact same* Fashion-MNIST training script differing only in their random seed span $1\text{--}4$ percentage points due to random weight initialization and minibatch shuffling.
-- **Why did the loss turn `NaN` at step 40,000?** Debugging a late-stage crash requires reproducing the exact trajectory up to the failure and inspecting every layer's activations and gradients without forking third-party model code.
+::: {.col .fig .big}
+@fig:ch05-bg-repro-vs-debug
+:::
+:::
 :::
 
 ::: {.slide title="Where Randomness Enters a Deep Learning Pipeline"}
 [Five Stochastic Entry Points]{.kicker}
 
-Every stochastic choice in training comes from a deterministic **pseudorandom number generator (PRNG)** whose sequence is fixed by its starting **seed**:
+::: {.cols .vc}
+::: {.col}
+- **Model & layer randomness:** Weight initialization ($\mathbf{W}_0$) and stochastic forward masks (Dropout $\boldsymbol{\xi}_j$).
+- **Data & worker randomness:** Epoch minibatch shuffling, random data augmentations, and forked multi-process `DataLoader` workers (which clone identical NumPy RNG state unless re-seeded per worker!).
+:::
 
-| Pipeline Stage | What Random Numbers Control | Consequence if Left Unseeded or Shared |
-|:---|:---|:---|
-| **1. Weight initialization** | Starting values of every layer ($\mathbf{W}_0$) | Different initial basin and loss trajectory |
-| **2. Stochastic layers** | Dropout binary masks, stochastic depth | Forward pass differs on identical inputs |
-| **3. DataLoader shuffling** | Minibatch permutation at each epoch | Gradient updates arrive in a different order |
-| **4. Data augmentation** | Random crops, horizontal flips, color jitter | Different training views generated per step |
-| **5. Multi-process workers** | Forked OS processes running `__getitem__` | Cloned workers emit *identical* "random" noise! |
+::: {.col .fig .big}
+@fig:ch05-bg-five-rng-sources
+:::
+:::
 :::
 
 ::: {.slide title="Seeding Repeats a Training Trajectory Bit for Bit"}
@@ -1389,9 +1396,17 @@ When we seed every PRNG the loop touches (`torch.manual_seed`, `mnp.random.seed`
 ::: {.slide title="Private Generator Objects Prevent Stream Coupling"}
 [Isolating Stochastic Streams]{.kicker}
 
-Relying on a single global PRNG couples every piece of code: adding one extra random call during debugging shifts the entire downstream sequence. A private **generator object** (`torch.Generator`, `tf.random.Generator`, or split JAX keys) isolates a stream behind its own state:
+::: {.cols .vc}
+::: {.col}
+- A private **generator object** (`torch.Generator`, `tf.random.Generator`, or split JAX keys) isolates a random stream so adding a debug call never shifts downstream weights or batches:
 
 @reproducibility-inspection-generator-objects
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-private-generators
+:::
+:::
 :::
 
 ::: {.slide title="The Multi-Worker DataLoader Fork Bug" only="pytorch,mxnet"}
@@ -1408,20 +1423,32 @@ When a `DataLoader` spawns `num_workers=2` processes via OS `fork`, each worker 
 ::: {.slide title="Deterministic Shuffling in Multi-Threaded Data Pipelines" only="tensorflow"}
 [Seeding tf.data Pipelines]{.kicker}
 
-In TensorFlow, `tf.data` runs parallel worker threads inside a single process and takes an explicit `seed=` on `.shuffle(buffer_size, seed=0)`:
+::: {.cols .vc}
+::: {.col}
+- In TensorFlow, `tf.data` runs parallel worker threads inside a single process and takes an explicit `seed=` on `.shuffle(buffer_size, seed=0)`:
 
 @reproducibility-inspection-dataloader-workers-3
+:::
 
-- **Epoch-by-epoch determinism:** Rebuilding the seeded pipeline replays the exact epoch-1 and epoch-2 shuffle orders without forked-process state duplication.
+::: {.col .fig}
+@fig:ch05-bg-private-generators
+:::
+:::
 :::
 
 ::: {.slide title="Explicit PRNG Keys Eliminate Hidden Worker State" only="jax"}
 [Randomness as a Pure Value]{.kicker}
 
-Every worker bug in imperative frameworks comes from hidden mutable PRNG state being shared or cloned implicitly across processes:
+::: {.cols .vc}
+::: {.col}
+- **Stateless functional keys:** In JAX, `jax.random.normal(key, shape)` is a pure deterministic function of `key`.
+- **Independent worker streams:** Splitting a base key via `jax.random.split(base_key, num_workers)` or `jax.random.fold_in(base_key, idx)` makes accidental stream duplication impossible.
+:::
 
-- **Stateless functional keys:** In JAX, `jax.random.normal(key, shape)` is a pure deterministic function of `key`; calling it twice with the same key returns the exact same array.
-- **Deriving independent worker streams:** Splitting a base key across workers via `jax.random.split(base_key, num_workers)` or folding in the epoch and example index via `jax.random.fold_in(base_key, idx)` makes accidental stream duplication impossible.
+::: {.col .fig .big}
+@fig:ch05-bg-private-generators
+:::
+:::
 :::
 
 ::: {.slide title="Measuring Seed-to-Seed Variance Across Five Runs"}
@@ -1439,11 +1466,19 @@ Training softmax regression on Fashion-MNIST for 3 epochs across five seeds (`0.
 ::: {.slide title="Why Floating-Point Addition Is Not Associative"}
 [The Arithmetic Wrinkle]{.kicker}
 
-Fixing random seeds guarantees that two runs draw the same numbers, not that the hardware adds them in the same order. Because every float addition rounds to the nearest representable value, $(a + b) + c \neq a + (b + c)$:
+::: {.cols .vc}
+::: {.col}
+- Because every float addition rounds to the nearest representable value, $(a + b) + c \neq a + (b + c)$:
 
 @reproducibility-inspection-determinism-and-its-price-1
 
-- **Swamping at $10^8$:** Near $10^8$, adjacent `float32` numbers sit $8.0$ apart, so $(-10^8 + 1.0)$ rounds to $-10^8$, turning $10^8 + (-10^8 + 1.0)$ into $0.0$ while $(10^8 - 10^8) + 1.0 = 1.0$.
+- **Swamping at $10^8$:** Near $10^8$, adjacent `float32` numbers sit $8.0$ apart, so $10^8 + (-10^8 + 1.0) = 0.0$ while $(10^8 - 10^8) + 1.0 = 1.0$.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-float-nonassociative
+:::
+:::
 :::
 
 ::: {.slide title="GPU Atomic Reductions and Deterministic Kernel Switches"}
@@ -1459,11 +1494,16 @@ On a GPU, thousands of threads accumulate partial sums into shared bins (in `sca
 ::: {.slide title="Bitwise Determinism vs. Scientific Reproducibility"}
 [Scope of Bitwise Repeatability]{.kicker}
 
-Understanding what deterministic switches do—and do not—guarantee prevents wasted engineering effort:
+::: {.cols .vc}
+::: {.col}
+- **Bitwise determinism is a local debugging tool:** Guarantees identical bits on **one machine, one GPU architecture, and one library version** to bisect the exact step where a bug or `NaN` appears.
+- **Scientific reproducibility is statistical:** Real modeling improvements must hold across multiple random seeds ($N \ge 5$) and survive minor floating-point reassociation across hardware.
+:::
 
-- **Bitwise determinism is a local debugging tool:** It guarantees identical bits on **one machine, one GPU architecture, and one library version** so you can bisect the exact step where a bug or `NaN` appears.
-- **What never matches bitwise:** Different GPU architectures, CPU vs. GPU execution, different tensor-parallel world sizes, or library version upgrades alter kernel reduction trees and last-bit rounding.
-- **Scientific reproducibility is statistical:** Any real modeling improvement must hold across multiple random seeds ($N \ge 5$) and survive minor floating-point reassociation.
+::: {.col .fig .big}
+@fig:ch05-bg-determinism-tiers
+:::
+:::
 :::
 
 ::: {.slide title="Non-Invasive Model Inspection with Execution Hooks"}
@@ -1479,9 +1519,17 @@ When debugging a deep network or a locked third-party library model, editing eve
 ::: {.slide title="Building an 8-Block Residual Testbed for Inspection"}
 [Unscaled Xavier Residual Stack]{.kicker}
 
-To test our inspection tools, we construct an 8-block residual MLP ($20 \to 64 \to 8\text{ blocks of width } 64 \to 10$) initialized with Xavier uniform weights and zero biases:
+::: {.cols .vc}
+::: {.col}
+- We construct an 8-block residual MLP ($20 \to 64 \to 8\text{ blocks of width } 64 \to 10$) initialized with Xavier uniform weights and zero biases:
 
 @-reproducibility-inspection-hooks-looking-inside
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-xavier-res-15x
+:::
+:::
 :::
 
 ::: {.slide title="Profiling Activation Standard Deviations Across Depth"}
@@ -1504,21 +1552,33 @@ Attaching a forward hook to every top-level module captures the activation growt
 ::: {.slide title="Why Xavier Residual Blocks Grow by √1.5 ≈ 1.22 per Block"}
 [Analytical Verification of Hook Measurements]{.kicker}
 
-We can verify the hook profile directly from the variance rules of §5.3. Each residual block computes $\mathbf{h}_k = \mathbf{x}_k + \text{body}(\mathbf{x}_k)$ with Xavier-initialized linear layers ($\text{Var}(W_{ij}) = \frac{2}{d + d} = \frac{1}{d}$):
+::: {.cols .vc}
+::: {.col}
+$$\text{Var}[\mathbf{h}_k] \approx \text{Var}[\mathbf{x}_k] + \frac{1}{2}\text{Var}[\mathbf{x}_k] = 1.5\,\text{Var}[\mathbf{x}_k]$$
 
-$$\text{Var}[\mathbf{h}_k] \approx \text{Var}[\mathbf{x}_k] + \text{Var}[\text{body}(\mathbf{x}_k)] = \text{Var}[\mathbf{x}_k] + \frac{1}{2}\text{Var}[\mathbf{x}_k] = 1.5\,\text{Var}[\mathbf{x}_k]$$
+- **Why the body contributes $\frac{1}{2}\text{Var}[\mathbf{x}_k]$:** The first $64 \to 64$ Xavier layer preserves variance ($1\times$), ReLU halves the mean square ($\frac{1}{2}\times$), and the second Xavier layer preserves that half ($\frac{1}{2}\times$).
+- **Exact match with hooks:** Starting from $\approx 0.69$, multiplying by $\sqrt{1.5} \approx 1.225$ across 8 blocks predicts $0.69 \times 1.5^4 \approx 3.5$!
+:::
 
-- **Why the body contributes $\frac{1}{2}\text{Var}[\mathbf{x}_k]$:** The first $64 \to 64$ Xavier linear layer preserves variance ($1\times$), the ReLU halves the mean square ($\frac{1}{2}\times$), and the second $64 \to 64$ Xavier layer preserves that half ($\frac{1}{2}\times$).
-- **Exact match with hooks:** Starting from input-layer std $\sqrt{20 \times \frac{2}{20+64}} \approx 0.69$, multiplying by $\sqrt{1.5} \approx 1.225$ across 8 blocks predicts $0.69 \times 1.5^4 \approx 3.5$!
+::: {.col .fig}
+@fig:ch05-bg-xavier-res-15x
+:::
+:::
 :::
 
 ::: {.slide title="Two Golden Rules for Leak-Free Hooks" only="pytorch,mxnet"}
 [Preventing Autograd Memory Leaks]{.kicker}
 
-Whenever you attach forward or backward hooks to a live model during training, follow two mandatory cleanup habits:
+::: {.cols .vc}
+::: {.col}
+1. **Always `.detach()` stored tensors (or extract scalars via `.item()`):** Appending a live activation tensor `output` directly to a Python list retains the entire backward computation graph in GPU memory across steps.
+2. **Always remove hook handles when finished (`h.remove()` / `h.detach()`):** Unregister callbacks inside a `finally` block so they do not persist across future forward passes.
+:::
 
-1. **Always `.detach()` stored tensors (or extract Python scalars via `.item()`):** Appending a live activation tensor `output` directly to a Python list retains a reference to the entire backward computation graph, leaking gigabytes of GPU memory across steps.
-2. **Always remove hook handles when finished (`h.remove()` in PyTorch, `h.detach()` in Gluon):** Hooks persist on the module object across future forward passes until explicitly unregistered.
+::: {.col .fig .big}
+@fig:ch05-bg-hook-memory-leak
+:::
+:::
 :::
 
 ::: {.slide title="Pinpointing the First NaN Layer in One Forward Pass"}
@@ -1560,11 +1620,15 @@ Test your diagnostic skills on these three questions:
 ::: {.slide title="Summary: Reproducibility, Debugging, and Inspection"}
 [Key Takeaways]{.kicker}
 
-| Diagnostic Pillar | Mechanism / Tool | Practical Engineering Rule |
-|:---|:---|:---|
-| **PRNG seeding** | Global seeds + private `Generator` / split JAX keys | Seed framework, NumPy, Python `random`, and each DataLoader worker (`worker_init_fn`) |
-| **Statistical validity** | Run $N \ge 5$ seeds; report mean $\pm$ std | A single-run gain smaller than seed-to-seed spread ($1\text{--}4\%$ on Fashion-MNIST) is noise |
-| **Bitwise determinism** | `use_deterministic_algorithms(True)` / `enable_op_determinism` | Replaces non-associative parallel GPU atomic adds with fixed-order reductions for debugging |
-| **Forward hooks** | `register_forward_hook` / `nnx.capture` / functional probes | Profile layer activation scales and trap the first `NaN` without editing model code |
-| **Backward inspection** | `register_full_backward_hook` / intermediate tape grads | Track gradient norms across depth to diagnose vanishing or exploding backward signals |
+::: {.cols .vc}
+::: {.col}
+- **PRNG seeding & statistics:** Seed framework, NumPy, Python `random`, and `worker_init_fn`; report mean $\pm$ std across $N \ge 5$ seeds.
+- **Bitwise determinism:** Enable `use_deterministic_algorithms(True)` to replace non-associative parallel GPU atomic adds with fixed-order reductions during bug bisection.
+- **Execution hooks:** Attach forward and backward hooks (always `.detach()`ing tensors and removing handles) to profile scales and trap the first `NaN` layer.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-repro-summary
+:::
+:::
 :::

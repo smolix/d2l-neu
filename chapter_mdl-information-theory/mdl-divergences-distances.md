@@ -1281,18 +1281,17 @@ f-Divergences and Variational Duals<br>**density ratios · forward vs. reverse K
 ::: {.slide title="Why Disjoint Supports Break Density-Ratio Losses"}
 [Motivation: The Point-Mass Diagnostic]{.kicker}
 
-A generative network mapping low-dimensional noise into image space places its samples on a thin manifold that initially fails to overlap real data. Compare two point masses $P = \delta_0$ and $Q = \delta_d$ separated by distance $d$:
+::: {.cols .vc}
+::: {.col}
+Compare two point masses $P = \delta_0$ and $Q = \delta_d$ separated by distance $d > 0$:
 
-| Distribution Comparison | Near Miss ($d = 0.01$) | Moderate ($d = 1$) | Far Off ($d = 100$) | Gradient w.r.t. $d$ |
-|:--|---:|---:|---:|:---|
-| **KL divergence** $D_{\textrm{KL}}(P \| Q)$ | $\infty$ | $\infty$ | $\infty$ | Undefined ($\infty$) |
-| **Jensen–Shannon divergence** $\textrm{JS}(P, Q)$ | $\log 2 \approx 0.693$ | $\log 2 \approx 0.693$ | $\log 2 \approx 0.693$ | $0$ (completely flat) |
-| **Total variation distance** $\textrm{TV}(P, Q)$ | $1.000$ | $1.000$ | $1.000$ | $0$ (completely flat) |
-| **RBF Kernel MMD** $\textrm{MMD}^2(P, Q)$ ($\ell = 1$) | $0.0001$ | $0.787$ | $2.000$ | Nonzero locally |
-| **Wasserstein-1 distance** $W_1(P, Q)$ | $0.01$ | $1.00$ | $100.00$ | $\pm 1$ everywhere |
+- **Frozen $f$-divergences ($u = p/q$):** For every $d > 0$, $D_{\textrm{KL}} = \infty$, $\textrm{JS} = \log 2 \approx 0.693$, and $\textrm{TV} = 1.000$—providing **zero gradient** to pull $Q$ toward $P$!
+- **Geometry-aware metrics:** RBF $\textrm{MMD}^2 = 2(1 - e^{-d^2/(2\ell^2)})$ supplies local gradients, and Wasserstein $W_1(\delta_0, \delta_d) = |d|$ supplies unit gradient $\pm 1$ at all distances.
+:::
 
-::: {.d2l-note .warn}
-**The Frozen-Row Problem:** The first three rows belong to one family—the **$f$-divergences**—built from the density ratio $u(x) = p(x)/q(x)$. When supports do not overlap, all of them freeze at a constant independent of $d$!
+::: {.col .fig .big}
+@fig:ch37-info-disjoint-point-masses
+:::
 :::
 :::
 
@@ -1309,14 +1308,17 @@ Representing $\delta_0$ and $\delta_d$ as probability vectors $(1, 0)$ and $(0, 
 ::: {.slide title="Divergences Versus True Probability Metrics"}
 [Mathematical Foundations]{.kicker}
 
-What mathematical axioms distinguish a general divergence from a true distance metric?
+::: {.cols .vc}
+::: {.col}
+- **Divergence axioms:** $D(P, Q) \ge 0$ and $D(P, Q) = 0 \iff P = Q$.
+- **True metric axioms:** Also requires symmetry $D(P, Q) = D(Q, P)$ and the triangle inequality $D(P, R) \le D(P, Q) + D(Q, R)$ (satisfied by TV, $d_{\mathrm{H}}$, $\sqrt{\textrm{JS}}$, MMD, $W_1, W_2$).
+- **Why KL is not a metric:** Asymmetric ($0.318 \neq 0.807$ on $\mathcal{N}(0,1)$ vs. $\mathcal{N}(0,4)$) and behaves like a *squared* distance $\tfrac12(\mu_1 - \mu_2)^2$, violating the triangle inequality ($2 > \tfrac12 + \tfrac12$).
+:::
 
-- **Divergence axioms:** A function $D(P, Q)$ is a *divergence* if it satisfies non-negativity and identity of indiscernibles:
-  $$D(P, Q) \ge 0, \qquad D(P, Q) = 0 \iff P = Q$$
-- **Metric axioms:** A *metric* must additionally be symmetric ($D(P, Q) = D(Q, P)$) and satisfy the triangle inequality ($D(P, R) \le D(P, Q) + D(Q, R)$).
-- **Why KL divergence fails both metric axioms:**
-  - **Asymmetry:** For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(0, 4)$, $D_{\textrm{KL}}(P \| Q) = 0.318\text{ nats} \neq D_{\textrm{KL}}(Q \| P) = 0.807\text{ nats}$.
-  - **Triangle violation:** For unit-variance Gaussians centered at $0, 1, 2$, $D_{\textrm{KL}}(\mathcal{N}(\mu_1, 1) \| \mathcal{N}(\mu_2, 1)) = \tfrac12(\mu_1 - \mu_2)^2$, so $D_{\textrm{KL}}(0 \| 2) = 2 > \tfrac12 + \tfrac12$ (KL behaves like a *squared* Euclidean distance).
+::: {.col .fig .big}
+@fig:ch37-info-divergence-vs-metric
+:::
+:::
 :::
 
 ::: {.slide title="The f-Divergence Template and Non-Negativity"}
@@ -1334,17 +1336,16 @@ $$D_f(P \| Q) = \mathbb{E}_{x \sim Q}\!\left[f\!\left(\frac{p(x)}{q(x)}\right)\r
 ::: {.slide title="Common Divergence Functions and Their Properties"}
 [The f-Divergence Catalog]{.kicker}
 
-Every major density-ratio comparison in statistics and machine learning corresponds to one convex generator $f(u)$:
+::: {.cols .vc}
+::: {.col}
+- **Asymmetric generators:** Forward KL ($u\log u$, $f''(1)=1$), Reverse KL ($-\log u$, $f''(1)=1$), and Pearson $\chi^2$ ($(u-1)^2$, $f''(1)=2$).
+- **Symmetric & metric generators:** Squared Hellinger ($(\sqrt{u}-1)^2$, $f''(1)=1/2$), Jensen–Shannon ($f''(1)=1/4$, $\sqrt{\textrm{JS}} \le \sqrt{\log 2}$), and Total Variation ($\tfrac12|u-1|$, V-corner at $u=1$).
+:::
 
-| Divergence Name | Generator $f(u)$ (with $f(1) = 0$) | Explicit Sum / Integral Formula | Curvature $f''(1)$ | Symmetric / Metric? |
-|:--|:---|:---|---:|:---|
-| **Forward KL** $D_{\textrm{KL}}(P \| Q)$ | $u \log u$ | $\sum_x p(x) \log(p(x)/q(x))$ | $1$ | No / No |
-| **Reverse KL** $D_{\textrm{KL}}(Q \| P)$ | $-\log u$ | $\sum_x q(x) \log(q(x)/p(x))$ | $1$ | No / No |
-| **Pearson $\chi^2$** $\chi^2(P \| Q)$ | $(u - 1)^2$ | $\sum_x (p(x) - q(x))^2 / q(x)$ | $2$ | No / No |
-| **Squared Hellinger** $d_{\mathrm{H}}^2(P, Q)$ | $(\sqrt{u} - 1)^2$ | $\sum_x (\sqrt{p(x)} - \sqrt{q(x)})^2$ | $1/2$ | Yes / $d_{\mathrm{H}}$ is a metric |
-| **Total Variation** $\textrm{TV}(P, Q)$ | $\tfrac12 |u - 1|$ | $\tfrac12 \sum_x |p(x) - q(x)|$ | Corner | Yes / True metric |
-| **Jensen–Shannon** $\textrm{JS}(P, Q)$ | $\tfrac{u}{2}\log u - \tfrac{u+1}{2}\log\tfrac{u+1}{2}$ | $\tfrac12 D_{\textrm{KL}}(P \| M) + \tfrac12 D_{\textrm{KL}}(Q \| M)$ | $1/4$ | Yes / $\sqrt{\textrm{JS}}$ is a metric |
-| **$\alpha$-Divergence** ($\alpha \neq 0, 1$) | $\frac{u^\alpha - \alpha u + \alpha - 1}{\alpha(\alpha - 1)}$ | Interpolates rev-KL ($\alpha\to 0$) to KL ($\alpha\to 1$) | $1$ | At $\alpha = 1/2$ |
+::: {.col .fig .big}
+@fig:ch37-info-f-divergence-catalog
+:::
+:::
 :::
 
 ::: {.slide title="Geometry of Divergence Generators Near u = 1"}
@@ -1391,13 +1392,20 @@ On $P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$, the six divergences span an 
 ::: {.slide title="Local Quadratic Theorem: All Smooth D_f Agree"}
 [Second-Order Taylor Expansion]{.kicker}
 
-Why do all smooth $f$-divergences become scalar multiples of Pearson's $\chi^2(P \| Q) = \mathbb{E}_Q[(u - 1)^2]$ when $P$ is close to $Q$?
+::: {.cols .vc}
+::: {.col}
+Expanding $f(u)$ around $u = 1$ and taking $\mathbb{E}_Q$ annihilates the first-order term $f'(1)\mathbb{E}_Q[u - 1] = 0$:
 
-- **Taylor expansion around $u = 1$:** For three-times differentiable $f$ with $|f'''| \le B$ on $[1-r, 1+r]$ where $r = \max_x |u(x) - 1| < 1$:
-  $$f(u) = \underbrace{f(1)}_{=0} + f'(1)(u - 1) + \frac{f''(1)}{2}(u - 1)^2 + R(u), \qquad |R(u)| \le \frac{B}{6}|u - 1|^3$$
-- **Expectation under $Q$ kills the first-order term:** Because $\mathbb{E}_Q[u - 1] = 0$, the slope $f'(1)$ drops out completely:
-  $$\left|D_f(P \| Q) - \frac{f''(1)}{2}\chi^2(P \| Q)\right| \le \frac{Br}{6}\chi^2(P \| Q)$$
-- **Connection to Fisher information and natural gradients:** For a small parameter step $q_{\boldsymbol{\theta}+\mathbf{h}}$ vs. $q_{\boldsymbol{\theta}}$, $u - 1 \approx \mathbf{h}^\top \nabla_{\boldsymbol{\theta}} \log q_{\boldsymbol{\theta}}$, so $\chi^2(q_{\boldsymbol{\theta}+\mathbf{h}} \| q_{\boldsymbol{\theta}}) \approx \mathbf{h}^\top \mathbf{I}(\boldsymbol{\theta})\mathbf{h}$ and *every* smooth $D_f$ has Hessian $f''(1)\mathbf{I}(\boldsymbol{\theta})$.
+$$D_f(P \| Q) \approx \frac{f''(1)}{2}\,\chi^2(P \| Q)$$
+
+- **Universal local geometry:** Near $P = Q$, $2\,\textrm{KL} \approx 4\,d_{\mathrm{H}}^2 \approx 8\,\textrm{JS} \approx \chi^2$.
+- **Fisher information metric:** For $q_{\boldsymbol{\theta}+\mathbf{h}}$ vs. $q_{\boldsymbol{\theta}}$, $D_f(q_{\boldsymbol{\theta}+\mathbf{h}} \| q_{\boldsymbol{\theta}}) \approx \tfrac12 f''(1)\mathbf{h}^\top\mathbf{I}(\boldsymbol{\theta})\mathbf{h}$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-local-chi2-collapse
+:::
+:::
 :::
 
 ::: {.slide title="Verifying Local Quadratic Convergence in Code"}
@@ -1411,15 +1419,16 @@ Sliding $P_t = Q + t(P - Q)$ toward $Q$ scales $r = 2t$; as $t$ drops tenfold fr
 ::: {.slide title="Forward vs. Reverse KL: Mode-Covering vs. Seeking"}
 [Asymmetry as a Modeling Choice]{.kicker}
 
-When fitting a parametric model $Q_{\boldsymbol{\theta}}$ to a target $P$ outside the model family, argument order reverses the geometry of the fit:
+::: {.cols .vc}
+::: {.col}
+- **Forward KL $D_{\textrm{KL}}(P \| Q_{\boldsymbol{\theta}})$ (Zero-Avoiding / Mode-Covering):** Blows up when $q_{\boldsymbol{\theta}}(x) \to 0$ on data ($f'(\infty) = \infty$), stretching across all modes of $P$ (maximum likelihood).
+- **Reverse KL $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \| P)$ (Zero-Forcing / Mode-Seeking):** Blows up when $p(x) \to 0$ on model samples ($f(0) = \infty$), locking onto a single mode of $P$ at cost $-\log w_k$ (variational inference, RLHF).
+:::
 
-| Property | Forward KL: $D_{\textrm{KL}}(P \| Q_{\boldsymbol{\theta}}) = \mathbb{E}_P[\log(p/q_{\boldsymbol{\theta}})]$ | Reverse KL: $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \| P) = \mathbb{E}_{Q_{\boldsymbol{\theta}}}[\log(q_{\boldsymbol{\theta}}/p)]$ |
-|:--|:---|:---|
-| **Expectation taken over** | True data distribution $P$ | Model distribution $Q_{\boldsymbol{\theta}}$ |
-| **Blows up to $+\infty$ when** | $q_{\boldsymbol{\theta}}(x) \to 0$ where $p(x) > 0$ ($f'(\infty) = \infty$) | $p(x) \to 0$ where $q_{\boldsymbol{\theta}}(x) > 0$ ($f(0) = \infty$) |
-| **Geometric behavior** | **Zero-avoiding / mode-covering:** stretches over all data modes, spilling mass into valleys | **Zero-forcing / mode-seeking:** locks onto a single mode and ignores distant modes |
-| **What it requires** | Data samples $x \sim P$ and tractable density $q_{\boldsymbol{\theta}}(x)$ | Model samples $x \sim Q_{\boldsymbol{\theta}}$ and target $\tilde{p}(x)$ up to $Z$ |
-| **Primary ML applications** | Maximum likelihood (classifiers, autoregressive LLMs) | Variational inference (ELBO), RLHF policy KL penalty |
+::: {.col .fig .big}
+@fig:ch37-info-forward-vs-reverse-kl
+:::
+:::
 :::
 
 ::: {.slide title="Fitting a Single Gaussian to a Bimodal Mixture"}
@@ -1464,15 +1473,20 @@ What does a Total Variation distance of $\textrm{TV}(P, Q) = 0.4$ physically gua
 ::: {.slide title="Pinsker's Inequality: Bounding TV via KL"}
 [Two-Step Proof via Log-Sum]{.kicker}
 
-Because neural losses control log-probabilities ($D_{\textrm{KL}}$) while safety and trust-region guarantees require bounded event shifts ($\textrm{TV}$), **Pinsker's inequality** bridges the two:
+::: {.cols .vc}
+::: {.col}
+**Pinsker's inequality** bounds worst-case event shift via log-probability divergence:
 
-::: {.d2l-note .rule}
-**Proposition (Pinsker's Inequality):** For any two distributions $P$ and $Q$, $\textrm{TV}(P, Q) \le \sqrt{\tfrac12 D_{\textrm{KL}}(P \| Q)}$.
+$$\textrm{TV}(P, Q) \le \sqrt{\tfrac12 D_{\textrm{KL}}(P \| Q)}$$
+
+- **Step 1 (Coarsen to $A^\star = \{p > q\}$):** With $a = P(A^\star), b = Q(A^\star)$ ($a - b = \textrm{TV}$), data processing gives $D_{\textrm{KL}}(P \| Q) \ge D_{\textrm{KL}}(\textrm{Ber}(a) \| \textrm{Ber}(b))$.
+- **Step 2 (Bernoulli curvature $\ge 4$):** $\frac{d^2}{da^2}D_{\textrm{KL}}(\textrm{Ber}(a)\|\textrm{Ber}(b)) = \frac{1}{a(1-a)} \ge 4 \implies D_{\textrm{KL}} \ge 2(a - b)^2$.
 :::
 
-- **Step 1 (Two-outcome Bernoulli case):** For coins $\textrm{Ber}(a)$ and $\textrm{Ber}(b)$, define $\rho(a) = D_{\textrm{KL}}(\textrm{Ber}(a) \| \textrm{Ber}(b)) - 2(a - b)^2$. Fixing $b$, we have $\rho(b) = \rho'(b) = 0$ and $\rho''(a) = \frac{1}{a(1-a)} - 4 \ge 0$ (since $a(1-a) \le 1/4$), so $\rho(a) \ge 0$ for all $a \in [0, 1]$.
-- **Step 2 (Coarsening to $A^\star = \{p > q\}$ via log-sum inequality):** Merge all outcomes into the two buckets $A^\star$ (probabilities $a = P(A^\star), b = Q(A^\star)$ with $a - b = \textrm{TV}(P, Q)$) and $(A^\star)^c$. By the log-sum inequality ($\sum_i v_i \log\frac{v_i}{w_i} \ge (\sum_i v_i)\log\frac{\sum_i v_i}{\sum_i w_i}$):
-  $$D_{\textrm{KL}}(P \| Q) \ge D_{\textrm{KL}}(\textrm{Ber}(a) \| \textrm{Ber}(b)) \ge 2(a - b)^2 = 2\,\textrm{TV}(P, Q)^2 \quad \blacksquare$$
+::: {.col .fig}
+@fig:ch37-info-pinsker-coarsening-proof
+:::
+:::
 :::
 
 ::: {.slide title="Sharpness and Limits of Pinsker's Inequality"}
@@ -1520,15 +1534,20 @@ How can we estimate $D_f(P \| Q)$ when we have only samples from $P$ and $Q$ and
 ::: {.slide title="The Variational Critic Bound and f-GAN Training"}
 [Estimating Divergences from Samples]{.kicker}
 
-Applying the Fenchel–Young inequality $f(u) \ge ut - f^*(t)$ pointwise at $u = p(x)/q(x)$ with a learned **critic** $t = T(x)$ and multiplying by $q(x)$ eliminates the unknown density ratio:
+::: {.cols .vc}
+::: {.col}
+Applying $f(p/q) \ge (p/q)T(x) - f^*(T(x))$ and averaging under $Q$ eliminates the unknown density ratio:
 
-$$q(x)\,f\!\left(\frac{p(x)}{q(x)}\right) \ge p(x)T(x) - q(x)f^*(T(x)) \implies D_f(P \| Q) \ge \mathbb{E}_{x \sim P}[T(x)] - \mathbb{E}_{x \sim Q}\big[f^*(T(x))\big]$$
+$$D_f(P \| Q) \ge \mathbb{E}_{x \sim P}[T(x)] - \mathbb{E}_{x \sim Q}\big[f^*(T(x))\big]$$
 
-- **Sample-only expectations:** Both terms on the right are simple averages over real data $x \sim P$ and generated samples $x \sim Q$.
-- **Optimal critic $T^\star(x)$:** Equality holds pointwise when the critic matches the slope of $f$ at the true density ratio:
-  $$T^\star(x) = f'\!\left(\frac{p(x)}{q(x)}\right)$$
-  (e.g., $T^\star = 1 + \log(p/q)$ for forward KL; $T^\star = 2(p/q - 1)$ for Pearson $\chi^2$).
-- **The $f$-GAN minimax game (Nowozin et al., 2016):** The critic $T$ maximizes the lower bound to track $D_f(P \| Q)$, while the generator producing $Q$ minimizes it.
+- **Optimal critic:** Attains equality at $T^\star(x) = f'(p(x)/q(x))$ ($1 + \log(p/q)$ for KL; $2(p/q - 1)$ for $\chi^2$).
+- **Original GAN:** $T(x) = \log D(x)$ and $-f^*(T) = \log(1 - D(x))$ recovers $2\,\textrm{JS}(P, Q) - \log 4$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-fgan-variational-game
+:::
+:::
 :::
 
 ::: {.slide title="Recovering the Original GAN as a JS Dual"}

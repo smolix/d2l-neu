@@ -740,53 +740,68 @@ Matrix-State Recurrences and Gated Linear Attention<br>**outer-product key–val
 ::: {.slide title="From Vector States to Associative Key–Value Matrices"}
 [Motivation]{.kicker}
 
-Much of language and code understanding is **associative recall**—binding a key to a value (`rate = 0.05`, or *"Mira is the ship's engineer"*) and retrieving the value when the key reappears hundreds of tokens later:
-
-- **How Transformers solve it:** Keep every past $(\mathbf{k}_s, \mathbf{v}_s)$ pair in an $O(T)$ KV cache and compare $\mathbf{q}_t$ against all of them.
-- **How a fixed-size state solves it:** Promote the state from a vector to a **matrix** $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$ updated by summing rank-$1$ outer products and queried by matrix-vector multiplication:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top, \qquad \mathbf{y}_t = \mathbf{S}_t \mathbf{q}_t$$
+
+- **Associative Recall:** Language and code continually bind a key to a value (`rate = 0.05`) and retrieve it hundreds of tokens later.
+- **Outer-Product Matrix State:** Upgrading $\mathbf{h}_t \in \mathbb{R}^d$ to $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$ writes key-addressed rank-1 outer products and queries via $\mathbf{S}_t \mathbf{q}_t$.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-vector-vs-matrix-state
+:::
+:::
 :::
 
 ::: {.slide title="Outer-Product Writes and Cross-Talk in Toy Dimension 2"}
 [Geometric Intuition]{.kicker}
 
-Bind orthogonal unit keys $\mathbf{k}_1 = (1, 0)^\top$ and $\mathbf{k}_2 = (0, 1)^\top$ in $\mathbb{R}^2$ to scalar values $v_1 = 3$ and $v_2 = 5$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{S} = 3\,\mathbf{k}_1^\top + 5\,\mathbf{k}_2^\top \implies \mathbf{S}\mathbf{k}_1 = 3, \quad \mathbf{S}\mathbf{k}_2 = 5$$
 
-$$\mathbf{S} = 3\,\mathbf{k}_1^\top + 5\,\mathbf{k}_2^\top = (3, 5) \quad\Longrightarrow\quad \mathbf{S}\mathbf{k}_1 = 3, \quad \mathbf{S}\mathbf{k}_2 = 5$$
+- **Exact up to $d_k$ Orthogonal Keys:** In $\mathbb{R}^2$, orthogonal $\mathbf{k}_1 = (1, 0)^\top, \mathbf{k}_2 = (0, 1)^\top$ experience zero interference ($\mathbf{k}_1^\top \mathbf{k}_2 = 0$).
+- **Cross-Talk Once $n > d_k$:** Adding a 3rd key $\mathbf{k}_3 = (1, 1)^\top / \sqrt{2}$ with $v_3 = 7$ leaks $7/\sqrt{2}$ into $\mathbf{S}\mathbf{k}_1 \approx 7.95$.
+:::
 
-- **Exact readout up to $d_k$ orthogonal keys:** Because $\mathbf{k}_1^\top \mathbf{k}_2 = 0$, querying $\mathbf{k}_1$ sees zero contribution from $v_2$.
-- **Cross-talk once $n > d_k$:** Now add a third pair $\mathbf{k}_3 = (1, 1)^\top / \sqrt{2}$ with value $v_3 = 7$. The state becomes $\mathbf{S} = (3 + 7/\sqrt{2},\; 5 + 7/\sqrt{2}) \approx (7.95, 9.95)$, so querying $\mathbf{k}_1$ returns **$7.95$ instead of $3$**!
-
-::: {.d2l-note .warn}
-A key dimension of $d_k$ holds at most $d_k$ mutually orthogonal keys without cross-talk; beyond $d_k$ pairs, every non-orthogonal key leaks into the readout.
+::: {.col .fig}
+@fig:ch12-mrnn-orthogonal-vs-crosstalk
+:::
 :::
 :::
 
 ::: {.slide title="Matrix Recurrence Is Unnormalized Linear Attention"}
 [Left vs. Right Associativity]{.kicker}
 
-Unrolling $\mathbf{S}_t = \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ from $\mathbf{S}_0 = \mathbf{0}$ reveals that an additive matrix memory computes causal linear attention (Katharopoulos et al., 2020):
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{y}_t = \Big(\sum_{s=1}^{t} \mathbf{v}_s \mathbf{k}_s^\top\Big)\mathbf{q}_t = \sum_{s=1}^{t} (\mathbf{k}_s^\top \mathbf{q}_t)\,\mathbf{v}_s$$
 
-$$\mathbf{y}_t = \underbrace{\Big(\sum_{s=1}^{t} \mathbf{v}_s \mathbf{k}_s^\top\Big)}_{\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}} \mathbf{q}_t = \sum_{s=1}^{t} (\mathbf{k}_s^\top \mathbf{q}_t)\, \mathbf{v}_s$$
+- **Left Association (Recurrent):** Accumulates $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$ in $O(d_v d_k)$ state and $O(d_v d_k)$ work per decoded token.
+- **Right Association (Attention):** Computes dot products $\mathbf{k}_s^\top \mathbf{q}_t$ across chunks via parallel Tensor Core GEMMs.
+:::
 
-- **Right association (Attention view):** Compute scalar dot-product scores $\mathbf{k}_s^\top \mathbf{q}_t$ first and weight past values—costing $O(t)$ work per query ($O(T^2)$ overall).
-- **Left association (Recurrent view):** Accumulate the outer products into $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$—costing $O(d_v d_k)$ state and $O(d_v d_k)$ work per token regardless of context length $t$!
+::: {.col .fig}
+@fig:ch12-mrnn-left-vs-right-assoc
+:::
+:::
 :::
 
 ::: {.slide title="Exact Retrieval-Error Law for Random Unit Keys"}
 [Signal vs. Interference]{.kicker}
 
-When $n$ pairs with unit keys ($\|\mathbf{k}_i\| = 1$) and unit values ($\|\mathbf{v}_i\| = 1$) are stored in $\mathbf{S} = \sum_{i=1}^n \mathbf{v}_i \mathbf{k}_i^\top$, querying with key $\mathbf{k}_j$ separates the target signal from $n - 1$ interference terms:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)\,\mathbf{v}_i, \qquad \mathbb{E}\,\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\|^2 = \frac{n - 1}{d_k}$$
 
-$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)\, \mathbf{v}_i$$
+- **Crowding, Not Aging:** For random unit keys on the sphere in $\mathbb{R}^{d_k}$, every stored pair experiences expected squared error $(n - 1)/d_k$.
+- **1D Codebook Projection:** Along any wrong codebook vector $\mathbf{c} \in \mathbb{R}^{d_v}$, variance drops to $(n - 1)/(d_k d_v)$.
+:::
 
-**Proposition (Expected Squared Read Error).** If $\mathbf{k}_1, \ldots, \mathbf{k}_n$ are drawn independently and uniformly on the unit sphere in $\mathbb{R}^{d_k}$ independently of unit values $\mathbf{v}_1, \ldots, \mathbf{v}_n \in \mathbb{R}^{d_v}$, then:
-
-$$\mathbb{E}\,\big\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\big\|^2 = \sum_{i \neq j} \mathbb{E}\big[(\mathbf{k}_i^\top \mathbf{k}_j)^2\big]\,\|\mathbf{v}_i\|^2 = \frac{n - 1}{d_k}$$
-
-::: {.d2l-note .rule}
-**Crowding, not aging:** Every stored pair suffers the exact same expected error $(n-1)/d_k$ regardless of *when* it was written.
+::: {.col .fig}
+@fig:ch12-mrnn-retrieval-error-law
+:::
 :::
 :::
 
@@ -812,23 +827,35 @@ Look at the $d_k = d_v = 64$ row of the table: at $n = 64$ pairs, the squared er
 ::: {.slide title="Pitfall: Key Correlation Creates an Irreducible Floor"}
 [Anisotropic Interference]{.kicker}
 
-What happens if keys are not isotropic, but share a common unit direction with weight $\rho$ ($\mathbf{k}_i \propto \sqrt{1 - \rho^2}\,\mathbf{g}_i + \rho\,\mathbf{c}$)?
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbb{E}\,\big\|\mathbf{S}\mathbf{k}_j - \mathbf{v}_j\big\|^2 \approx (n - 1)\Big(\rho^4 + \frac{(1 - \rho^2)^2}{d_k}\Big)$$
 
-- **Non-zero mean overlap ($\mathbf{k}_i^\top \mathbf{k}_j \approx \rho^2$):** The term $(n - 1)\rho^4$ **does not decrease as key width $d_k$ grows**!
-- **Severe recall loss:** In our experiment at $d_k = 64$ with $\rho = 0.5$, squared error jumps $4.6\times$ above random keys and 64-pair recall drops from **$1.00$ to $0.49$**—showing why learned projections must center and spread keys across the sphere.
+- **Non-Vanishing Overlap Floor:** When keys share a common direction $\mathbf{c}$ with weight $\rho > 0$, the floor $(n - 1)\rho^4$ never shrinks as $d_k \to \infty$.
+- **Empirical Collapse:** At $d_k = 64, \rho = 0.5$, 64-pair recall drops from $1.00$ to $0.49$.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-correlated-key-cone
+:::
+:::
 :::
 
 ::: {.slide title="Bounded-Interference Memory via Input-Dependent Decay"}
 [Forgetting Stale Pairs]{.kicker}
 
-Without decay, interference $(n - 1)/d_k$ grows without bound as sequence length $T \to \infty$. Multiplying the state matrix by a scalar decay $a_t \in (0, 1)$ before each write fades old pairs:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{S}_t = a_t\, \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top, \qquad a_t \in (0, 1)$$
 
-- **Effective sliding window:** At a constant decay $a$, a pair written $\ell$ steps ago carries weight $a^\ell$. The weights sum to $\sum_{\ell \ge 0} a^\ell = \frac{1}{1 - a}$ ($10$ pairs at $a = 0.9$; $100$ pairs at $a = 0.99$).
-- **Bounded steady-state interference:** Squared weights sum to $\sum_{\ell \ge 0} a^{2\ell} = \frac{1}{1 - a^2}$, bounding expected squared interference at any length $T$ by $\frac{1}{(1 - a^2)d_k}$.
+- **Effective Sliding Window:** At constant decay $a$, a pair written $\ell$ steps ago carries weight $a^\ell$, summing to $\frac{1}{1 - a}$ ($10$ pairs at $a = 0.9$; $100$ pairs at $a = 0.99$).
+- **Bounded Steady-State Interference:** Squared weights sum to $\frac{1}{1 - a^2}$, bounding expected squared interference at any length $T$ by $\frac{1}{(1 - a^2)d_k}$.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-sliding-window-decay
+:::
+:::
 :::
 
 ::: {.slide title="Mamba and Mamba-2 as Decayed Matrix-State Recurrences"}
@@ -850,11 +877,17 @@ $$\mathbf{S}_t = \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t \o
 ::: {.slide title="State Space Duality (SSD): Recurrence vs. Masked Dual"}
 [Primal and Dual Forms]{.kicker}
 
-Unrolling $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ with scalar per-head decay $a_t$ attenuates pair $s$ at query $t \ge s$ by $L_{ts} = a_{s+1} a_{s+2} \cdots a_t = \exp(\sum_{r=s+1}^t \log a_r)$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{y}_t = \sum_{s=1}^{t} L_{ts}\,(\mathbf{k}_s^\top \mathbf{q}_t)\,\mathbf{v}_s \iff \mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\,\mathbf{V}$$
 
-$$\mathbf{y}_t = \sum_{s=1}^{t} L_{ts}\,(\mathbf{k}_s^\top \mathbf{q}_t)\,\mathbf{v}_s \quad\Longleftrightarrow\quad \mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\,\mathbf{V}$$
+- **State Space Duality (Dao & Gu, 2024):** The $O(T d_v d_k)$ primal recurrence $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ and the $O(T^2 d)$ causally masked linear attention dual compute the exact same output $\mathbf{Y}$ with $L_{ts} = \prod_{r=s+1}^t a_r$.
+:::
 
-- **State Space Duality (Dao & Gu, 2024):** The recurrent state-space form (`linear_attention_recurrent`, $O(T d_k d_v)$ work, $O(d_k d_v)$ memory) and the causally masked linear attention form (`linear_attention_dual`, $O(T^2(d_k + d_v))$ work, $O(T^2)$ memory) compute the exact same tensor $\mathbf{Y}$.
+::: {.col .fig}
+@fig:ch12-mrnn-ssd-duality
+:::
+:::
 :::
 
 ::: {.slide title="Block-Semiseparable Structure and Chunked Training"}
@@ -890,12 +923,17 @@ All three algorithms match to $\sim 10^{-6}$ relative error while chunking reduc
 ::: {.slide title="The Gated Linear Attention (GLA) Sequence Mixer"}
 [Layer Architecture]{.kicker}
 
-`GatedLinearAttention` wraps multi-head chunked matrix memory into a drop-in mixer for `SeqLM`:
+::: {.cols .vc}
+::: {.col}
+- **Width-4 Causal Conv + SiLU:** Binds adjacent key and value tokens $(t-1, t)$ before outer-product writing.
+- **$\ell_2$-Normalized $\mathbf{Q}, \mathbf{K}$ & Log-Uniform Decays:** Enforces unit-norm keys and spans initial head horizons $\tau_h \in [4, 256]$.
+- **Per-Head RMSNorm & SiLU Gate:** Stabilizes readout scale before output projection $\mathbf{W}_o$.
+:::
 
-- **Width-4 depthwise causal convolution + SiLU on $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$:** Crucial when a key and its value arrive on adjacent tokens $(t-1, t)$ so a single write $\mathbf{v}_t \mathbf{k}_t^\top$ can bind both tokens together.
-- **$\ell_2$-normalized queries and keys:** Enforces $\|\mathbf{q}_{t,h}\|_2 = \|\mathbf{k}_{t,h}\|_2 = 1$ per head, matching the unit-sphere capacity law and preventing inner-product blow-up.
-- **Log-uniform head timescales (`init_decays`):** Initializes head decay biases $b_h = -\log(e^{1/\tau_h} - 1)$ so initial memory windows $\tau_h$ span $[4, 256]$ steps across heads.
-- **Per-head RMSNorm and SiLU output gate:** Normalizes each head's readout before multiplying by $\textrm{SiLU}(\mathbf{W}_g \mathbf{x}_t)$ and projecting via $\mathbf{W}_o$.
+::: {.col .fig .big}
+@fig:ch12-mrnn-gla-block
+:::
+:::
 :::
 
 ::: {.slide title="Multi-Query Associative Recall Benchmark Setup"}

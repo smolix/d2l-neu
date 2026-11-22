@@ -1345,13 +1345,20 @@ Gradient noise shifts the central question from *how many steps* an optimizer ne
 ::: {.slide title="Minibatch Gradients and the 1/b Variance Law"}
 [Minibatch Statistics]{.kicker}
 
-Let $\boldsymbol{\Sigma} = \frac{1}{n}\sum_{i=1}^n \big(\nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})\big)\big(\nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})\big)^\top$ be the covariance matrix of a single uniformly drawn example gradient. For a minibatch $\mathcal{B}$ of $b$ independent uniform indices:
+::: {.cols .vc}
+::: {.col}
+For $b$ independent example gradients with per-example covariance $\boldsymbol{\Sigma}$, the minibatch average $\hat{\mathbf{g}}_b(\mathbf{x}) = \frac{1}{b}\sum_{i \in \mathcal{B}}\nabla f_i(\mathbf{x})$ is unbiased with variance:
 
-$$\hat{\mathbf{g}}_b(\mathbf{x}) = \frac{1}{b}\sum_{i \in \mathcal{B}} \nabla f_i(\mathbf{x}) \implies \mathbb{E}\big[\hat{\mathbf{g}}_b(\mathbf{x})\big] = \nabla f(\mathbf{x}), \qquad \mathbb{E}\big[\|\hat{\mathbf{g}}_b(\mathbf{x}) - \nabla f(\mathbf{x})\|^2\big] = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}$$
+$$\mathbb{E}\big[\|\hat{\mathbf{g}}_b(\mathbf{x}) - \nabla f(\mathbf{x})\|^2\big] = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}$$
 
-- **Derivation:** By linearity of expectation, $\mathbb{E}[\hat{\mathbf{g}}_b] = \nabla f(\mathbf{x})$. Because the $b$ indices are independent, the covariance of their sum is $b\boldsymbol{\Sigma}$, so the covariance of their average is $\boldsymbol{\Sigma}/b$, whose expected squared norm is $\operatorname{tr}(\boldsymbol{\Sigma}/b)$.
-- **Square-root amplitude law:** Noise *power* falls as $1/b$, so root-mean-square noise *amplitude* falls only as $1/\sqrt{b}$: cutting gradient noise by $10\times$ requires $100\times$ larger minibatches.
-- **Gradient-noise scale:** Signal and noise have equal power at batch size $b_{\mathrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma} / \|\nabla f(\mathbf{x})\|^2$.
+- **Square-root amplitude law:** RMS noise amplitude falls as $1/\sqrt{b}$, so cutting noise $10\times$ requires $100\times$ larger batches.
+- **Gradient-noise scale:** Signal and noise have equal power at $b_{\mathrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma}/\|\nabla f(\mathbf{x})\|^2$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-minibatch-variance-law
+:::
+:::
 :::
 
 ::: {.slide title="Empirical Verification of the 1/b Noise Law"}
@@ -1369,14 +1376,20 @@ Sampling without replacement (standard epoch shuffling) multiplies this variance
 ::: {.slide title="Exact Second-Moment Recursion Under Gradient Noise"}
 [The Noise Floor]{.kicker}
 
-To see how gradient noise accumulates across iterations, consider a single quadratic mode $f(x) = \tfrac12\lambda x^2$ ($\lambda > 0$) with stochastic gradient $g_k = \lambda x_k + \xi_k$, where $\mathbb{E}[\xi_k \mid x_k] = 0$ and $\mathbb{E}[\xi_k^2 \mid x_k] = \sigma^2$:
+::: {.cols .vc}
+::: {.col}
+On a scalar mode $f(x) = \tfrac12\lambda x^2$ with noisy gradient $g_k = \lambda x_k + \xi_k$ ($\mathbb{E}[\xi_k \mid x_k] = 0, \mathbb{E}[\xi_k^2 \mid x_k] = \sigma^2$), the second moment $e_k = \mathbb{E}[x_k^2]$ obeys ($\rho = 1 - \eta\lambda$):
 
-$$x_{k+1} = x_k - \eta(\lambda x_k + \xi_k) = \rho\,x_k - \eta\,\xi_k, \qquad \rho = 1 - \eta\lambda$$
+$$e_{k+1} = \rho^2\,e_k + \eta^2\sigma^2$$
 
-- **Tracking the second moment $e_k = \mathbb{E}[x_k^2]$:** Square both sides and take expectations:
-  $$e_{k+1} = \rho^2\,\mathbb{E}[x_k^2] - 2\rho\eta\,\mathbb{E}[x_k\xi_k] + \eta^2\,\mathbb{E}[\xi_k^2] = \rho^2\,e_k + \eta^2\sigma^2$$
-- **Why the cross term vanishes:** By iterated expectations, $\mathbb{E}[x_k\xi_k] = \mathbb{E}\big[x_k\,\mathbb{E}[\xi_k \mid x_k]\big] = 0$.
-- **Physical balance:** Every step contracts the existing variance by $\rho^2 = (1 - \eta\lambda)^2$ while injecting fresh noise power $\eta^2\sigma^2$.
+- **Orthogonal noise injection:** The cross term $\mathbb{E}[x_k\xi_k] = 0$ vanishes by iterated expectations.
+- **Physical balance:** Every step contracts existing variance by $\rho^2$ while injecting fresh noise power $\eta^2\sigma^2$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-second-moment-balance
+:::
+:::
 :::
 
 ::: {.slide title="Closed-Form Trajectory and the Stationary Noise Ball"}
@@ -1415,29 +1428,37 @@ In deep learning we care about the expected suboptimality gap $\mathbb{E}[f(\mat
 ::: {.slide title="Speed vs. Accuracy on the κ = 1000 Valley"}
 [Running Benchmark]{.kicker}
 
-Apply constant-step SGD with $\eta = 1/L = 10^{-3}$ and unit noise per coordinate ($\sigma_1^2 = \sigma_2^2 = 1$) to our chapter benchmark $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$:
+::: {.cols .vc}
+::: {.col}
+On $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ with $\eta = 1/L = 10^{-3}$ and unit noise ($\sigma_1^2 = \sigma_2^2 = 1$):
 
-| Eigenmode | Contraction $\rho_i = 1 - \eta\lambda_i$ | Steps to Shrink Transient $10^3\times$ | Coordinate Variance Floor $V_i$ | Expected Loss Floor $\tfrac12\lambda_i V_i$ |
-| :--- | :--- | :--- | :--- | :--- |
-| **Flat ($x_1$, $\lambda_1 = 1$)** | $0.999$ | $\approx 3{,}450$ steps | $5.0 \times 10^{-4}$ | $2.5 \times 10^{-4}$ ($33\%$) |
-| **Steep ($x_2$, $\lambda_2 = 1000$)** | $0.000$ | $1$ step | $1.0 \times 10^{-6}$ | $5.0 \times 10^{-4}$ ($67\%$) |
-| **Total Objective** | Governed by $\rho_1 = 0.999$ | $\approx 3{,}450$ steps | $5.01 \times 10^{-4}$ | **$7.5 \times 10^{-4}$** ($100\%$) |
+- **Flat mode ($\lambda_1 = 1$):** Contracts at $\rho_1 = 0.999$, taking $\approx 3{,}450$ steps to decay its transient to the floor $\tfrac12\lambda_1 V_1 = 2.5 \times 10^{-4}$ ($33\%$).
+- **Steep mode ($\lambda_2 = 1000$):** Contracts in $1$ step ($\rho_2 = 0$), but because $2 - \eta\lambda_2 = 1$, it contributes $\tfrac12\lambda_2 V_2 = 5.0 \times 10^{-4}$ ($67\%$ of the total $7.5 \times 10^{-4}$ loss floor!).
+:::
 
-::: {.d2l-note .warn}
-**The double penalty of ill-conditioning under noise:** The flat direction dictates the slow $3{,}450$-step transient, while the stiff direction—where $\eta\lambda_2 = 1$ makes $2 - \eta\lambda_2 = 1$ instead of $2$—contributes *two-thirds* of the stationary loss floor!
+::: {.col .fig .big}
+@fig:ch36-opt-valley-noise-penalty
+:::
 :::
 :::
 
 ::: {.slide title="Breaking the Floor: The Robbins–Monro Conditions"}
 [Step-Size Decay]{.kicker}
 
-Because any constant step size $\eta$ parks the iterate on a floor proportional to $\eta$, converging to the exact minimizer requires decaying $\eta_k \to 0$ at a carefully balanced rate:
+::: {.cols .vc}
+::: {.col}
+To break the constant-step noise floor, a decaying schedule $\eta_k \to 0$ must balance two series:
 
-$$\sum_{k=1}^\infty \eta_k = \infty \quad \text{(infinite travel reach)}, \qquad \sum_{k=1}^\infty \eta_k^2 < \infty \quad \text{(finite cumulative noise variance)}$$
+$$\sum_{k=1}^\infty \eta_k = \infty, \qquad \sum_{k=1}^\infty \eta_k^2 < \infty$$
 
-- **Why $\sum \eta_k = \infty$ is necessary:** If $\sum_{k=1}^\infty \eta_k < \infty$ and gradients are bounded, the total distance traveled from $\mathbf{x}_0$ is bounded, so the iterate can stall permanently before reaching $\mathbf{x}^\star$.
-- **Why $\sum \eta_k^2 < \infty$ is necessary:** The total noise variance injected across the entire trajectory scales as $\sigma^2 \sum_{k=1}^\infty \eta_k^2$; keeping it finite ensures almost-sure convergence on strongly convex objectives.
-- **Canonical schedule:** $\eta_k = \frac{c}{k + k_0}$ satisfies both conditions ($\sum \frac{1}{k} = \infty$, $\sum \frac{1}{k^2} = \frac{\pi^2}{6} < \infty$).
+- **Infinite reach ($\sum \eta_k = \infty$):** Ensures the iterate can travel arbitrarily far from $\mathbf{x}_0$ to reach $\mathbf{x}^\star$.
+- **Finite cumulative noise ($\sum \eta_k^2 < \infty$):** Ensures total injected variance $\sigma^2\sum \eta_k^2$ remains finite (satisfied by $\eta_k = c/(k + k_0)$).
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-robbins-monro-balance
+:::
+:::
 :::
 
 ::: {.slide title="Fixed Steps vs. 1/k Decay on Logistic Regression"}
@@ -1453,14 +1474,20 @@ On our $\ell_2$-regularized logistic regression benchmark ($n = 200, d = 5, b = 
 ::: {.slide title="Why the Constant c in a c/k Schedule Is Critical"}
 [Step-Size Decay]{.kicker}
 
-Does every schedule $\eta_k = c/(k + k_0)$ achieve an $O(1/k)$ convergence rate on a $\mu$-strongly convex quadratic? Write $t = k + k_0$ in the exact second-moment recursion:
+::: {.cols .vc}
+::: {.col}
+Substituting $\eta_k = c/t$ ($t = k + k_0$) into the second-moment recursion gives:
 
 $$e_{k+1} = \left(1 - \frac{c\mu}{t}\right)^{\!2} e_k + \frac{c^2\sigma^2}{t^2}$$
 
-- **Asymptotic matching ($e_k \approx A/t$):** Expand the left side as $\frac{A}{t+1} \approx \frac{A}{t} - \frac{A}{t^2}$ and the right side as $\big(1 - \frac{2c\mu}{t}\big)\frac{A}{t} + \frac{c^2\sigma^2}{t^2} = \frac{A}{t} - \frac{2c\mu A - c^2\sigma^2}{t^2}$.
-- **Equating $1/t^2$ coefficients:**
-  $$-A = -2c\mu A + c^2\sigma^2 \implies A = \frac{c^2\sigma^2}{2c\mu - 1} \qquad \text{(valid only when } 2c\mu > 1\text{)}$$
-- **Catastrophic slowdown below $c = 1/(2\mu)$:** If $2c\mu < 1$, the step size shrinks faster than the iterate contracts, and the rate degrades to $e_k = \Theta(k^{-2c\mu})$ (e.g., $k^{-0.2}$ at $c\mu = 0.1$).
+- **Critical threshold ($2c\mu > 1$):** Matching $e_k \approx A/t$ yields $A = \frac{c^2\sigma^2}{2c\mu - 1}$, minimized at $c^\star = 1/\mu$ ($e_k \approx \frac{\sigma^2}{\mu^2 k}$).
+- **Catastrophic slowdown ($2c\mu < 1$):** Steps shrink faster than the iterate contracts, degrading the rate to $\Theta(k^{-2c\mu})$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-one-over-k-threshold
+:::
+:::
 :::
 
 ::: {.slide title="Sensitivity of 1/k Schedules and Condition Number"}
@@ -1522,13 +1549,19 @@ When the compute budget $K$ is fixed in advance and $\mu = 0$ (no strong convexi
 ::: {.slide title="Proving the O(1/√K) Rate for Convex SGD"}
 [Convex Budget Proof]{.kicker}
 
-Let $f$ be convex (not necessarily smooth!) with $\|\mathbf{x}_0 - \mathbf{x}^\star\| \le D$, unbiased subgradients $\mathbf{s}_k = \mathbb{E}[\mathbf{g}_k \mid \mathbf{x}_k] \in \partial f(\mathbf{x}_k)$, and $\mathbb{E}[\|\mathbf{g}_k\|^2 \mid \mathbf{x}_k] \le G^2$:
+::: {.cols .vc}
+::: {.col}
+For convex $f$ with $\|\mathbf{x}_0 - \mathbf{x}^\star\| \le D$ and $\mathbb{E}[\|\mathbf{g}_k\|^2 \mid \mathbf{x}_k] \le G^2$, telescoping the distance expansion and applying Jensen to $\bar{\mathbf{x}}_K = \frac{1}{K}\sum_{k=0}^{K-1}\mathbf{x}_k$ gives:
 
-- **Step 1 — Expand squared distance to $\mathbf{x}^\star$:** Taking conditional expectations and applying $\mathbf{s}_k^\top(\mathbf{x}_k - \mathbf{x}^\star) \ge f(\mathbf{x}_k) - f^\star$ gives:
-  $$\mathbb{E}\big[\|\mathbf{x}_{k+1} - \mathbf{x}^\star\|^2 \mid \mathbf{x}_k\big] \le \|\mathbf{x}_k - \mathbf{x}^\star\|^2 - 2\eta\big(f(\mathbf{x}_k) - f^\star\big) + \eta^2 G^2$$
-- **Step 2 — Telescope over $k = 0, \ldots, K-1$ and apply Jensen's inequality to $\bar{\mathbf{x}}_K = \frac{1}{K}\sum_{k=0}^{K-1}\mathbf{x}_k$:**
-  $$\mathbb{E}\big[f(\bar{\mathbf{x}}_K)\big] - f^\star \le \frac{1}{K}\sum_{k=0}^{K-1}\mathbb{E}\big[f(\mathbf{x}_k) - f^\star\big] \le \frac{D^2}{2\eta K} + \frac{\eta G^2}{2}$$
-- **Step 3 — Tune $\eta$ to the budget $K$:** Choosing $\eta^\star = \frac{D}{G\sqrt{K}}$ achieves the minimax optimal rate $\mathbb{E}[f(\bar{\mathbf{x}}_K)] - f^\star \le \frac{DG}{\sqrt{K}}$.
+$$\mathbb{E}\big[f(\bar{\mathbf{x}}_K)\big] - f^\star \le \frac{D^2}{2\eta K} + \frac{\eta G^2}{2}$$
+
+- **Minimax budget step:** Setting $\eta^\star = \frac{D}{G\sqrt{K}}$ equalizes the two terms and achieves $\mathbb{E}[f(\bar{\mathbf{x}}_K)] - f^\star \le \frac{DG}{\sqrt{K}}$ without requiring smoothness.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-convex-sgd-telescoping
+:::
+:::
 :::
 
 ::: {.slide title="Nonconvex SGD: The Ghadimi–Lan Stationarity Bound"}
@@ -1545,12 +1578,20 @@ For nonconvex neural networks, assume $f$ is $L$-smooth with $\Delta = f(\mathbf
 ::: {.slide title="Optimal Nonconvex Step and Sample Complexity"}
 [Nonconvex Budget Proof]{.kicker}
 
-Because a stochastic algorithm cannot observe the exact gradient norm $\|\nabla f(\mathbf{x}_k)\|$ to pick the best iterate, Ghadimi and Lan return a uniformly drawn random iterate $\mathbf{x}_R$ ($R \sim \mathrm{Uniform}\{0, \ldots, K-1\}$):
+::: {.cols .vc}
+::: {.col}
+Returning a uniformly drawn iterate $\mathbf{x}_R$ ($R \sim \mathrm{Uniform}\{0, \ldots, K-1\}$) with $\eta^\star = \min\!\big(\frac{1}{L}, \sqrt{\frac{2\Delta}{L\sigma^2 K}}\big)$ certifies:
 
-$$\mathbb{E}\big[\|\nabla f(\mathbf{x}_R)\|^2\big] = \frac{1}{K}\sum_{k=0}^{K-1}\mathbb{E}\big[\|\nabla f(\mathbf{x}_k)\|^2\big] \le \frac{2L\Delta}{K} + 2\sigma\sqrt{\frac{2L\Delta}{K}}$$
+$$\mathbb{E}\big[\|\nabla f(\mathbf{x}_R)\|^2\big] \le \frac{2L\Delta}{K} + 2\sigma\sqrt{\frac{2L\Delta}{K}}$$
 
-- **Optimal step choice:** $\eta^\star = \min\Big(\frac{1}{L},\; \sqrt{\frac{2\Delta}{L\sigma^2 K}}\Big)$ seamlessly interpolates between the noiseless $\frac{1}{L}$ step ($\sigma \to 0$) and the noise-limited $O(1/\sqrt{K})$ step.
-- **Fourth-power sample complexity:** Because $\mathbb{E}[\|\nabla f(\mathbf{x}_R)\|^2] = O(K^{-1/2})$, reducing the root-mean-square gradient norm $\sqrt{\mathbb{E}\|\nabla f\|^2}$ by $10\times$ requires $100\times$ lower squared norm, which demands **$10^4\times$ more iterations**!
+- **Why random stopping?** SGD cannot observe exact $\|\nabla f(\mathbf{x}_k)\|$ to pick the best iterate, so sampling $R$ turns the average into an expectation.
+- **$O(1/\epsilon^4)$ sample complexity:** Halving $\mathbb{E}\|\nabla f\|^2$ by $100\times$ (so RMS gradient drops $10\times$) requires $10^4\times$ more steps.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-ghadimi-lan-random-stop
+:::
+:::
 :::
 
 ::: {.slide title="Measuring the Nonconvex Rate on a tanh Neuron"}
@@ -1575,14 +1616,20 @@ Why does constant-step SGD stall on a noise floor? At the global minimizer $\mat
 ::: {.slide title="SVRG: Snapshot Control Variates Shrink Variance"}
 [Variance Reduction]{.kicker}
 
-**Stochastic Variance-Reduced Gradient (SVRG)** periodically saves a snapshot iterate $\tilde{\mathbf{x}}$, computes its exact full gradient $\nabla f(\tilde{\mathbf{x}})$ once per epoch, and forms the single-example estimator:
+::: {.cols .vc}
+::: {.col}
+**SVRG** periodically saves a snapshot $\tilde{\mathbf{x}}$ with exact full gradient $\nabla f(\tilde{\mathbf{x}})$ and forms the unbiased control-variate estimator:
 
 $$\tilde{\mathbf{g}}_i(\mathbf{x}) = \nabla f_i(\mathbf{x}) - \nabla f_i(\tilde{\mathbf{x}}) + \nabla f(\tilde{\mathbf{x}})$$
 
-- **Unbiasedness:** For uniform $i \in \{1, \ldots, n\}$, $\mathbb{E}_i[\tilde{\mathbf{g}}_i(\mathbf{x})] = \nabla f(\mathbf{x}) - \nabla f(\tilde{\mathbf{x}}) + \nabla f(\tilde{\mathbf{x}}) = \nabla f(\mathbf{x})$.
-- **Vanishing variance bound:** Because $\mathrm{Var}(\mathbf{Z}) \le \mathbb{E}\|\mathbf{Z}\|^2$ and each $\nabla f_i$ is $L_{\max}$-Lipschitz,
-  $$\mathbb{E}_i\big[\|\tilde{\mathbf{g}}_i(\mathbf{x}) - \nabla f(\mathbf{x})\|^2\big] \le \mathbb{E}_i\big[\|\nabla f_i(\mathbf{x}) - \nabla f_i(\tilde{\mathbf{x}})\|^2\big] \le L_{\max}^2\,\|\mathbf{x} - \tilde{\mathbf{x}}\|^2$$
-- **Geometric convergence at fixed $\eta$:** As both $\mathbf{x}$ and $\tilde{\mathbf{x}}$ approach $\mathbf{x}^\star$, the gradient noise vanishes to zero, restoring linear convergence on strongly convex finite sums without decaying $\eta$.
+- **Vanishing variance:** By $L_{\max}$-smoothness of each $f_i$, $\mathbb{E}_i\|\tilde{\mathbf{g}}_i(\mathbf{x}) - \nabla f(\mathbf{x})\|^2 \le L_{\max}^2\|\mathbf{x} - \tilde{\mathbf{x}}\|^2$.
+- **Linear convergence at fixed $\eta$:** As $\mathbf{x}, \tilde{\mathbf{x}} \to \mathbf{x}^\star$, the gradient noise vanishes without decaying $\eta$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-svrg-control-variate
+:::
+:::
 :::
 
 ::: {.slide title="SVRG vs. SGD on Ridge Regression"}

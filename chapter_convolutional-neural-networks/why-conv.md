@@ -379,14 +379,16 @@ From Fully Connected Layers to Convolutions<br>**translation equivariance · loc
 ::: {.slide title="Why Dense Layers Fail on High-Resolution Images"}
 [The Scaling Bottleneck]{.kicker}
 
-Flattening a 2D image into an unstructured 1D vector forces a fully connected layer to learn separate weights for every input–output pixel pair:
+::: {.cols .vc}
+::: {.col}
+- **All-to-all quadratic explosion:** Mapping a $1000 \times 1000$ image to an equal-sized hidden grid needs $10^{12}$ weights (**4 TB** grayscale, **36 TB** RGB).
+- **Even narrow projections fail:** Projecting a 1MP RGB frame to just 300 hidden units demands $9 \times 10^8$ weights (**3.6 GB**).
+- **Root cause:** Dense layers assign separate weights to every input–output coordinate pair and ignore 2D spatial proximity.
+:::
 
-- **1-megapixel grayscale to 1,000 hidden units:** $10^6 \times 10^3 = 10^9$ weights (**4 GB** in `float32`) for a single narrow hidden layer.
-- **Full-resolution 1-megapixel grayscale grid:** Mapping $1000 \times 1000 \to 1000 \times 1000$ requires $10^6 \times 10^6 = 10^{12}$ weights (**4 TB** in `float32`; or $9 \times 10^8$ weights = **3.6 GB** for a $1000 \times 1000$ RGB image into just 300 hidden units, and **36 TB** for a full-resolution 3-channel map).
-- **Even on $28 \times 28$ Fashion-MNIST:** Mapping a $28 \times 28$ grid to an equal-sized $28 \times 28$ grid needs $784^2 = 614{,}656$ weights per channel.
-
-::: {.d2l-note .warn}
-No labeled dataset could ever fit trillions of parameters without catastrophic overfitting—and worse, a dense layer discards which pixels are spatial neighbors.
+::: {.col .fig .big}
+@fig:ch06-cnn-dense-param-explosion
+:::
 :::
 :::
 
@@ -411,15 +413,17 @@ Finding a target pattern in a cluttered visual scene illustrates the two geometr
 ::: {.slide title="Translation Equivariance vs. Translation Invariance"}
 [Formalizing Spatial Symmetries]{.kicker}
 
-Let the shift operator $T_v$ translate a 2D image by offset $v = (v_1, v_2)$, so that $[T_v \mathbf{X}]_{i,j} = [\mathbf{X}]_{i-v_1, j-v_2}$:
+::: {.cols .vc}
+::: {.col}
+- **Shift operator $T_v$:** Translates an image by $v = (v_1, v_2)$ so $[T_v \mathbf{X}]_{i,j} = [\mathbf{X}]_{i-v_1, j-v_2}$.
+- **Equivariance ($f(T_v \mathbf{X}) = T_v f(\mathbf{X})$):** Feature maps shift with the input, preserving *where* patterns occur for localization.
+- **Invariance ($f(T_v \mathbf{X}) = f(\mathbf{X})$):** Whole-image classifiers pool equivariant maps across space so the final label is shift-independent.
+:::
 
-$$\begin{aligned}
-f(T_v \mathbf{X}) &= T_v f(\mathbf{X}) && \textrm{(translation equivariance)}, \\
-f(T_v \mathbf{X}) &= f(\mathbf{X}) && \textrm{(translation invariance)}.
-\end{aligned}$$
-
-- **Equivariant feature maps ($f(T_v \mathbf{X}) = T_v f(\mathbf{X})$):** Preserve *where* a pattern occurs so object detectors and segmentation networks can localize targets.
-- **Invariant classification heads ($f(T_v \mathbf{X}) = f(\mathbf{X})$):** Discard location to answer whole-image questions (*"Is Waldo in the picture?"*), achieved by aggregating an equivariant map across space (e.g., via global max or average pooling).
+::: {.col .fig .big}
+@fig:ch06-cnn-equivariance-vs-invariance
+:::
+:::
 :::
 
 ::: {.slide title="Equivariance as a Commuting Diagram"}
@@ -449,86 +453,100 @@ On an 8-sample 1D signal mapped to 8 hidden units ($h_i = u_i + \sum_k W_{i,k} x
 ::: {.slide title="Re-Indexing a 2D Dense Layer by Relative Offsets"}
 [From 4D Weight Tensors to Spatial Offsets]{.kicker}
 
-Connecting every pixel $[\mathbf{X}]_{k,l}$ of a 2D image to every unit $[\mathbf{H}]_{i,j}$ of a 2D hidden map requires a 4th-order weight tensor $\mathsf{W}$ and a 2D bias matrix $\mathbf{U}$:
-
-$$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_k \sum_l [\mathsf{W}]_{i, j, k, l} [\mathbf{X}]_{k, l}$$
-
-- **Re-index by relative offset $(a, b) = (k - i, l - j)$:** Define $[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$ so the sum ranges over where the input pixel sits *relative* to output unit $(i, j)$:
-
+::: {.cols .vc}
+::: {.col}
 $$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b} [\mathbf{X}]_{i+a, j+b}$$
 
-- **No reduction yet:** This change of variables merely reads $\mathsf{W}$ along its spatial diagonals; a $1000 \times 1000 \to 1000 \times 1000$ layer still has $10^{12}$ free weights.
+- **Change of variables:** Substitute relative offset $(a, b) = (k - i, l - j)$ and define $[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$.
+- **No reduction yet:** Re-indexing merely reads $\mathsf{W}$ along spatial diagonals ($10^{12}$ free weights until $(i,j)$-dependence is dropped).
+:::
+
+::: {.col .fig}
+@fig:ch06-cnn-offset-reindexing
+:::
+:::
 :::
 
 ::: {.slide title="Proposition: Shared Weights Yield Equivariance"}
 [Sufficiency Proof on the Infinite Grid]{.kicker}
 
-Embed the finite image on an infinite 2D grid padded with zeros outside its support so shifts never clip the signal at a boundary.
+::: {.cols .vc}
+::: {.col}
+$$[f(T_v \mathbf{X})]_{i,j} = u + \sum_{a,b} [\mathbf{K}]_{a,b} [\mathbf{X}]_{i - v_1 + a, j - v_2 + b} = [T_v f(\mathbf{X})]_{i,j}$$
 
-- **Claim (Sufficiency):** If the bias $[\mathbf{U}]_{i,j} = u$ and offset weights $[\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ do not depend on location $(i, j)$, the layer is translation equivariant for every shift $v = (v_1, v_2)$.
-- **One-line proof:** Evaluate the layer on the shifted input $[T_v \mathbf{X}]_{i+a, j+b} = [\mathbf{X}]_{i - v_1 + a, j - v_2 + b}$:
+- **Infinite zero-padded grid:** Ensures shifts never clip nonzero pixels at a finite boundary.
+- **Sufficiency:** Tying $[\mathbf{U}]_{i,j} = u$ and $[\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ makes $f$ commute with every shift $T_v$.
+:::
 
-$$[f(T_v \mathbf{X})]_{i,j} = u + \sum_a \sum_b [\mathbf{K}]_{a,b} [\mathbf{X}]_{i - v_1 + a, j - v_2 + b} = [f(\mathbf{X})]_{i - v_1, j - v_2} = [T_v f(\mathbf{X})]_{i,j}$$
-
-::: {.d2l-note}
-Why doesn't the converse fail? Could a clever location-dependent tensor $\mathsf{V}$ also commute with shifts? The next slide proves the answer is **no**.
+::: {.col .fig}
+@fig:ch06-cnn-infinite-grid-shift
+:::
 :::
 :::
 
 ::: {.slide title="Converse Proof: Equivariance Forces Weight Sharing"}
 [Necessity Proof via Unit Impulse Probing]{.kicker}
 
-Assume $f(T_v \mathbf{X}) = T_v f(\mathbf{X})$ holds for every input $\mathbf{X}$ and shift $v$ on the infinite grid:
+::: {.cols .vc}
+::: {.col}
+- **1. Constant bias:** $T_v \mathbf{0} = \mathbf{0} \implies \mathbf{U} = T_v \mathbf{U}$, so $[\mathbf{U}]_{i,j} = u$.
+- **2. Impulse probing:** Feeding a single $1$ at $(k,l)$ and shifting by $v = (i,j)$ forces $[\mathsf{V}]_{i,j,a,b} = [\mathsf{W}]_{0,0,a,b} \equiv [\mathbf{K}]_{a,b}$.
+- **Equivariance theorem:** Linear layer commutes with shifts $\iff$ it shares one kernel $\mathbf{K}$ and scalar bias $u$ ($10^{12} \to 4 \times 10^6$ weights).
+:::
 
-1. **Constant bias ($[\mathbf{U}]_{i,j} = u$):** The all-zero image $\mathbf{0}$ satisfies $T_v \mathbf{0} = \mathbf{0}$ and maps to $f(\mathbf{0}) = \mathbf{U}$, forcing $\mathbf{U} = T_v \mathbf{U}$ for all shifts $v$. Thus every entry of $\mathbf{U}$ equals a single scalar $u$.
-2. **Impulse probing:** Feed an image with a single $1$ at pixel $(k, l)$ and $0$ elsewhere. Its linear response at $(i, j)$ is $[\mathsf{W}]_{i,j,k,l}$. Shifting the impulse by $v$ moves it to $(k+v_1, l+v_2)$, so equivariance requires:
-   $$[\mathsf{W}]_{i, j, k+v_1, l+v_2} = [\mathsf{W}]_{i-v_1, j-v_2, k, l}$$
-3. **Collapse to a single kernel $\mathbf{K}$:** Substitute $(k, l) = (a, b)$ and $v = (i, j)$:
-   $$[\mathsf{V}]_{i,j,a,b} = [\mathsf{W}]_{i, j, i+a, j+b} = [\mathsf{W}]_{0, 0, a, b} \equiv [\mathbf{K}]_{a,b}$$
-
-::: {.d2l-note .rule}
-**Equivariance theorem:** A linear layer on the grid is translation equivariant $\iff$ it shares one kernel $\mathbf{K}$ and one scalar bias $u$ across all spatial positions ($10^{12}$ weights $\to$ $1999^2 \approx 4 \times 10^6$).
+::: {.col .fig .big}
+@fig:ch06-cnn-impulse-probing
+:::
 :::
 :::
 
 ::: {.slide title="Enforcing Locality Yields the Convolutional Layer"}
 [Pruning Distant Offsets to a $(2\Delta+1) \times (2\Delta+1)$ Window]{.kicker}
 
-Even with weight sharing, a $1999 \times 1999$ kernel connects every unit to pixels clear across a megapixel image. Enforcing **locality** sets $[\mathbf{K}]_{a,b} = 0$ whenever $|a| > \Delta$ or $|b| > \Delta$:
-
+::: {.cols .vc}
+::: {.col}
 $$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathbf{K}]_{a, b} [\mathbf{X}]_{i+a, j+b}$$
 
-| Layer Type ($1000 \times 1000 \to 1000 \times 1000$) | Free Weights | `float32` Memory |
-|---|--:|--:|
-| Fully connected ($\mathsf{V}_{i,j,a,b}$) | $10^{12}$ | $4\textrm{ TB}$ |
-| Translation equivariant ($\mathbf{K}_{a,b}$, full support) | $1999^2 \approx 4 \times 10^6$ | $16\textrm{ MB}$ |
-| Equivariant + Local ($\Delta = 1$, $3 \times 3$ kernel) | $(2\Delta+1)^2 = 9$ | $36\textrm{ B}$ |
-| Equivariant + Local ($\Delta = 5$, $11 \times 11$ kernel) | $(2\Delta+1)^2 = 121$ | $484\textrm{ B}$ |
+- **Local window $|a|, |b| \le \Delta$:** Zeroes out distant offsets so each unit inspects only a $(2\Delta+1) \times (2\Delta+1)$ neighborhood.
+- **11-order-of-magnitude collapse:** For $\Delta = 1$ ($3 \times 3$ kernel), $10^{12}$ weights (**4 TB**) shrink to just **9 shared weights** (**36 B**)!
+:::
+
+::: {.col .fig}
+@fig:ch06-cnn-locality-window
+:::
+:::
 :::
 
 ::: {.slide title="Inductive Bias: Sample Efficiency vs. Expressivity"}
 [What We Gained and What We Traded Away]{.kicker}
 
-Slashing $10^{12}$ parameters down to $(2\Delta+1)^2$ is not a free lunch—it restricts the hypothesis class to local, translation-equivariant functions:
+::: {.cols .vc}
+::: {.col}
+- **Sample efficiency:** Pooling evidence across all $H \times W$ positions prevents overfitting on local, shift-equivariant visual structures.
+- **Single-layer blind spot:** Tied weights cannot tell identical local patches apart by absolute position (e.g., an eye vs. a nostril).
+- **Deep recovery:** Stacking layers with nonlinearities expands the receptive field to capture whole-object layout.
+:::
 
-- **Why it helps on natural images:** Edges, corners, and textures obey locality and shift equivariance, so weight sharing pools statistical evidence across all $H \times W$ spatial locations and prevents overfitting on small datasets.
-- **What a single layer cannot do:** Because weights are tied across space, a single convolutional layer cannot distinguish identical local patches by absolute coordinates (e.g., a dark oval near the top of a passport photo is an eye, whereas an identical dark oval lower down is a nostril).
-- **How deep CNNs recover global context:** Stacking multiple convolutional layers with nonlinearities and downsampling widens the effective receptive field so deeper units integrate relative positions across the whole object.
+::: {.col .fig .big}
+@fig:ch06-cnn-inductive-bias
+:::
+:::
 :::
 
 ::: {.slide title="Mathematical Convolution vs. Cross-Correlation"}
 [Why Deep Learning Libraries Omit the Kernel Flip]{.kicker}
 
-In signal processing and mathematics, discrete 2D **convolution** flips the kernel along both axes before sliding it across the input:
+::: {.cols .vc}
+::: {.col}
+$$\sum_{a,b} [\mathbf{K}]_{a, b} [\mathbf{X}]_{i+a, j+b} = (\mathbf{K}' * \mathbf{X})(i, j)$$
 
-$$(f * g)(i, j) = \sum_a \sum_b f(a, b)\, g(i - a, j - b) \qquad \textrm{(mathematical convolution)}$$
+- **Sign convention:** Mathematical convolution uses $(i-a, j-b)$; cross-correlation uses $(i+a, j+b)$.
+- **Identical hypothesis class:** Because $[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$ is a 180° flip of learned weights, frameworks implement cross-correlation and call it `Conv2d`.
+:::
 
-- **Cross-correlation uses $(i+a, j+b)$:** Defining the flipped kernel $[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$ connects our derived layer directly to mathematical convolution:
-
-$$\sum_a \sum_b [\mathbf{K}]_{a, b} [\mathbf{X}]_{i+a, j+b} = \sum_a \sum_b [\mathbf{K}']_{a, b} [\mathbf{X}]_{i-a, j-b} = (\mathbf{K}' * \mathbf{X})(i, j)$$
-
-::: {.d2l-note}
-**Practical equivalence:** Because $\mathbf{K}$ is learned from data, learning $\mathbf{K}$ under cross-correlation parameterizes the exact same set of functions as learning $\mathbf{K}'$ under convolution. All major frameworks implement **cross-correlation** and call it `Conv2d`.
+::: {.col .fig}
+@fig:ch06-cnn-conv-vs-xcorr
+:::
 :::
 :::
 
@@ -553,29 +571,32 @@ Real images carry multiple values per pixel (e.g., Red, Green, Blue), and hidden
 ::: {.slide title="The 4D Convolutional Kernel and Parameter Count"}
 [All-to-All Channel Wiring with Spatial Weight Sharing]{.kicker}
 
-To map $c_\textrm{i}$ input channels to $c_\textrm{o}$ output channels, each output channel $o$ has its own bias $u_o$ and its own $c_\textrm{i} \times (2\Delta+1) \times (2\Delta+1)$ bank of spatial filters:
-
+::: {.cols .vc}
+::: {.col}
 $$[\mathsf{H}]_{o, i, j} = u_o + \sum_{c=1}^{c_\textrm{i}} \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathsf{K}]_{o, c, a, b} [\mathsf{X}]_{c, i+a, j+b}$$
 
-- **4th-order kernel tensor $\mathsf{K}$:** Shape $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$ where $k_\textrm{h} = k_\textrm{w} = 2\Delta + 1$.
-- **Exact parameter count:**
-  $$\textrm{Parameters} = c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$$
-- **Resolution independence:** A $3 \times 3$ layer mapping RGB ($c_\textrm{i}=3$) to $c_\textrm{o}=64$ channels uses $64 \times 3 \times 9 + 64 = 1{,}792$ parameters—whether the input is $28 \times 28$ or $4000 \times 4000$!
+- **4D kernel $\mathsf{K} \in \mathbb{R}^{c_\textrm{o} \times c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}}$:** Total parameters $= c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$.
+- **Resolution independence:** A $3 \times 3$ RGB-to-64 layer uses $1{,}792$ parameters on both $28 \times 28$ and $4000 \times 4000$ images.
+:::
+
+::: {.col .fig}
+@fig:ch06-cnn-4d-kernel-tensor
+:::
+:::
 :::
 
 ::: {.slide title="Convolutions Beyond 2D Images: 1D, 2D, and 3D"}
 [The Same Symmetry Principle Across Modalities]{.kicker}
 
-Nothing in our equivariance-plus-locality derivation is restricted to two spatial dimensions:
+::: {.cols .vc}
+::: {.col}
+- **1D, 2D, and 3D grids:** Equivariance + locality yields 1D convolutions over time $(c_\textrm{i}, T)$, 2D over images $(c_\textrm{i}, H, W)$, and 3D over video/volumes $(c_\textrm{i}, D, H, W)$.
+- **When equivariance breaks:** In a linear-Hz spectrogram, shifting frequency alters harmonic ratios—requiring a log-frequency (mel) axis before applying 2D convolutions.
+:::
 
-| Modality | Equivariant Axes | Input Tensor Shape | Kernel Tensor Shape | Typical Example |
-|---|---|---|---|---|
-| **1D Convolution** | Time or sequence index ($t$) | $(c_\textrm{i}, T)$ | $(c_\textrm{o}, c_\textrm{i}, k_t)$ | Audio waveforms, physiological signals |
-| **2D Convolution** | Height and width ($i, j$) | $(c_\textrm{i}, H, W)$ | $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$ | Photographs, medical X-rays |
-| **3D Convolution** | Depth/time, height, width ($d, i, j$) | $(c_\textrm{i}, D, H, W)$ | $(c_\textrm{o}, c_\textrm{i}, k_d, k_\textrm{h}, k_\textrm{w})$ | Video clips, volumetric CT/MRI scans |
-
-::: {.d2l-note .warn}
-**When equivariance breaks:** In a linear-frequency audio spectrogram, shifting along the time axis preserves the sound (time-equivariant), whereas shifting along linear frequency alters harmonic ratios—requiring log-frequency (mel) scales before applying 2D convolutions.
+::: {.col .fig .big}
+@fig:ch06-cnn-1d-2d-3d-modalities
+:::
 :::
 :::
 

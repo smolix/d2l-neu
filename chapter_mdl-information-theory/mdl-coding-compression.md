@@ -1278,16 +1278,15 @@ Codes, Compression, and Perplexity<br>**prefix codes · Kraft's inequality · ar
 ::: {.slide title="Why Does Better Prediction Yield a Shorter File?"}
 [Motivation & Core Question]{.kicker}
 
-In §37.1 we interpreted cross-entropy in bits as an expected codeword length, but only for a dyadic source whose probabilities were exact powers of $\tfrac12$. Can we build a code whose file size matches *any* model's log-loss?
+::: {.cols .vc}
+::: {.col}
+- **Compressing *The Time Machine* ($173{,}428$ chars, $27$ symbols):** Raw ASCII takes $8.00\text{ bpc}$, fixed 27-symbol code takes $4.75\text{ bpc}$, `zlib -9` takes $2.84\text{ bpc}$, and a tiny adaptive order-3 character model reaches **$2.55\text{ bpc}$**.
+- **Prediction = Compression:** Any causal model $q(x_i \mid x_{<i})$ paired with an arithmetic coder stores $n$ symbols in $-\sum_{i=1}^n \log_2 q(x_i \mid x_{<i}) + 2$ bits.
+:::
 
-- **Empirical benchmark (*The Time Machine*, $173{,}428$ chars over $27$ symbols):**
-  - Raw 8-bit ASCII byte stream: $8.00\text{ bits/char}$ (uncompressed).
-  - Fixed-length 27-symbol code: $\log_2 27 \approx 4.75\text{ bits/char}$.
-  - General-purpose Lempel–Ziv + Huffman (`zlib -9`): $2.84\text{ bits/char}$.
-  - Tiny adaptive order-$3$ character counting predictor: **$2.55\text{ bits/char}$**.
-
-::: {.d2l-note .rule}
-**The Equivalence of Prediction and Compression:** Any probability model $q(x_i \mid x_{<i})$ paired with an arithmetic coder compresses a document of $n$ symbols into its total log-loss $-\sum_{i=1}^n \log_2 q(x_i \mid x_{<i})$ plus at most $2$ bits.
+::: {.col .fig .big}
+@fig:ch37-info-time-machine-bpc
+:::
 :::
 :::
 
@@ -1312,15 +1311,20 @@ How can a receiver parse a concatenated bitstream without delimiter characters b
 ::: {.slide title="Kraft's Inequality: The Dyadic Interval Proof"}
 [Existence of Prefix Codes]{.kicker}
 
-Which integer length profiles $(\ell_1, \ldots, \ell_k)$ can form a valid prefix-free binary code?
+::: {.cols .vc}
+::: {.col}
+A prefix-free binary code with integer lengths $\ell_1, \ldots, \ell_k$ exists if and only if:
 
-::: {.d2l-note .rule}
-**Proposition (Kraft's Inequality):** A prefix-free binary code with codeword lengths $\ell_1, \ldots, \ell_k$ exists if and only if $\sum_{i=1}^k 2^{-\ell_i} \le 1$.
+$$\sum_{i=1}^k 2^{-\ell_i} \le 1$$
+
+- **Necessity ($\Rightarrow$):** Codeword $c$ of length $\ell$ maps to the dyadic interval $[0.c, 0.c + 2^{-\ell}) \subset [0, 1)$. Prefix-free $\iff$ disjoint intervals $\implies$ total width $\le 1$.
+- **Sufficiency ($\Leftarrow$):** Sort $\ell_1 \le \cdots \le \ell_k$ and pack widths $2^{-\ell_i}$ left-to-right; each start $s_i$ is an integer multiple of $2^{-\ell_i}$.
 :::
 
-- **Necessity ($\implies$):** Map each binary codeword $c$ of length $\ell$ to the half-open **dyadic interval** $[0.c, 0.c + 2^{-\ell}) \subset [0, 1)$ of all real numbers whose binary expansion starts with $c$. Two dyadic intervals are nested if and only if one codeword is a prefix of the other; hence a prefix-free code maps to disjoint intervals inside $[0, 1)$ of total width $\sum_{i=1}^k 2^{-\ell_i} \le 1$.
-- **Sufficiency ($\Longleftarrow$):** Sort $\ell_1 \le \cdots \le \ell_k$ and pack intervals of width $2^{-\ell_i}$ left-to-right starting at $s_i = \sum_{m < i} 2^{-\ell_m}$. Because $\ell_m \le \ell_i$, every $s_i$ is an integer multiple of $2^{-\ell_i}$, so its first $\ell_i$ binary digits define a disjoint dyadic interval and thus a valid prefix-free codeword. $\blacksquare$
-- **McMillan's theorem:** Every *uniquely decodable* code (even if not prefix-free) must also obey $\sum_i 2^{-\ell_i} \le 1$, so restricting to prefix codes loses no coding efficiency.
+::: {.col .fig}
+@fig:ch37-info-kraft-dyadic-intervals
+:::
+:::
 :::
 
 ::: {.slide title="Optimal Codeword Lengths Match Surprisal"}
@@ -1336,23 +1340,34 @@ Given symbol probabilities $P = (p_1, \ldots, p_k)$, which codeword lengths mini
 ::: {.slide title="The Fundamental Entropy Sandwich for Prefix Codes"}
 [Shannon's Source Coding Bounds]{.kicker}
 
-Every prefix-free code satisfies $\mathbb{E}[\ell] \ge H_2(P)$, and the Shannon code achieves $\mathbb{E}[\ell] < H_2(P) + 1$:
+::: {.cols .vc}
+::: {.col}
+With spent Kraft budget $Z = \sum_i 2^{-\ell_i} \le 1$ and implied distribution $q_i = 2^{-\ell_i}/Z$, expected length splits into three terms:
 
-- **Exact waste decomposition:** Define the spent Kraft budget $Z = \sum_{i=1}^k 2^{-\ell_i} \le 1$ and the code's implied distribution $q_i = 2^{-\ell_i}/Z$ (so $\ell_i = -\log_2 q_i - \log_2 Z$). Taking expectations under $P$ yields:
-  $$\mathbb{E}_P[\ell] = H_2(P) + \underbrace{D_{\textrm{KL}}^{(2)}(P \| Q)}_{\text{distribution mismatch } \ge 0} + \underbrace{(-\log_2 Z)}_{\text{unspent Kraft budget } \ge 0} \ge H_2(P)$$
-- **Upper bound for Shannon lengths:** Since $\ell_i = \lceil \log_2(1/p_i) \rceil < \log_2(1/p_i) + 1$ for every symbol $i$, averaging under $P$ guarantees $\mathbb{E}_P[\ell] < H_2(P) + 1$.
-- **Where waste comes from on $P = (0.6, 0.3, 0.1)$:** Surprisals $(0.74, 1.74, 3.32)$ round up to Shannon lengths $(1, 2, 4)$ with $\mathbb{E}[\ell] = 1.60\text{ bits}$ vs. $H_2(P) = 1.295\text{ bits}$; of the $0.305$-bit waste, $0.005$ bits come from mismatch $D_{\textrm{KL}}^{(2)}(P \| Q)$ and $0.300$ bits from unspent budget ($Z = 0.8125$).
+$$\mathbb{E}_P[\ell] = H_2(P) + D_{\textrm{KL}}^{(2)}(P \| Q) + (-\log_2 Z) \ge H_2(P)$$
+
+- **Shannon sandwich:** Choosing $\ell_i = \lceil \log_2(1/p_i) \rceil < \log_2(1/p_i) + 1$ guarantees $H_2(P) \le \mathbb{E}_P[\ell] < H_2(P) + 1$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-entropy-waste-split
+:::
+:::
 :::
 
 ::: {.slide title="Shannon vs. Huffman Codes and the 1-Bit Floor"}
 [Optimal Symbol Codes]{.kicker}
 
-Can we eliminate the unspent Kraft budget of Shannon's ceiling rule?
+::: {.cols .vc}
+::: {.col}
+- **Huffman greedy merging:** Repeatedly merges the two rarest symbols so $Z = 1$, cutting expected length on $P = (0.6, 0.3, 0.1)$ from Shannon's $1.60$ bits to $1.40$ bits ($H_2 = 1.295$).
+- **The 1-bit symbol wall:** Because every symbol codeword has $\ell_i \ge 1$, *no symbol code* can beat $1.00$ bit/symbol—even when $P(\texttt{a}) = 0.9$ has $H_2(P) = 0.469$ bits!
+:::
 
-- **Huffman's greedy bottom-up merging:** Repeatedly merge the two least probable symbols into a parent node until one root remains. On $P = (0.6, 0.3, 0.1)$, Huffman assigns lengths $(1, 2, 2)$ with $Z = 1$, cutting the expected length from $1.60$ to $1.40$ bits (just $0.105$ bits above $H_2(P) = 1.295$).
-- **The 1-bit per-symbol wall on skewed sources:** Because every codeword requires at least $\ell_i \ge 1$ bit, *no symbol code* can compress below $1$ bit per symbol:
-  - On a binary source with $P(\texttt{a}) = 0.9$, an $\texttt{a}$ carries only $\log_2(1/0.9) = 0.152$ bits of surprisal and $H_2(P) = 0.469$ bits, yet any symbol code spends $1.00$ bit/symbol ($>2\times$ entropy).
-  - Coding **blocks** of $n$ symbols amortizes the rounding penalty to $< 1/n$ bits/symbol (e.g., Huffman on pairs of symbols drops the rate to $0.645$ bits/symbol), but requires an exponential codebook of $k^n$ entries.
+::: {.col .fig .big}
+@fig:ch37-info-shannon-vs-huffman
+:::
+:::
 :::
 
 ::: {.slide title="Mismatched Codes: Cross-Entropy Is File Length"}
@@ -1378,12 +1393,19 @@ $$\textrm{CE}_2(P, Q) \le \mathbb{E}_P[\ell] < \textrm{CE}_2(P, Q) + 1$$
 ::: {.slide title="The Two-Bit Overhead Bound of Arithmetic Coding"}
 [Dyadic Interval Selection]{.kicker}
 
-How many bits does it take to specify a dyadic interval lying completely inside the final message interval $[lo, hi)$ of width $w = \prod_{i=1}^n q(x_i \mid x_{<i})$?
+::: {.cols .vc}
+::: {.col}
+To specify a dyadic interval $[m 2^{-\ell}, (m+1)2^{-\ell})$ wholly inside $[lo, hi)$ of width $w = \prod_{i=1}^n q(x_i \mid x_{<i})$, set $\ell = \lceil\log_2(1/w)\rceil + 1$ ($2^{-\ell} \le w/2$):
 
-- **Choosing the codeword length:** Set $\ell = \lceil \log_2(1/w) \rceil + 1$, which guarantees $2^{-\ell} \le w/2$.
-- **Why a dyadic interval always fits inside:** The first integer multiple $m 2^{-\ell} \ge lo$ falls within $[lo, lo + w/2]$, so $[m 2^{-\ell}, (m+1)2^{-\ell})$ lies wholly inside $[lo, hi)$. Since $\ell < \log_2(1/w) + 2$:
-  $$\ell < \sum_{i=1}^n \log_2 \frac{1}{q(x_i \mid x_{<i})} + 2\text{ bits}$$
-- **Amortized rounding:** Rounding happens *once for the entire message* rather than once per symbol, so the per-symbol overhead $2/n \to 0$ as message length $n$ grows.
+$$\ell < \sum_{i=1}^n \log_2 \frac{1}{q(x_i \mid x_{<i})} + 2\text{ bits}$$
+
+- **Amortized rounding:** Rounding happens *once* for the entire message, so per-symbol overhead $2/n \to 0$ as $n \to \infty$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-arith-two-bit-overhead
+:::
+:::
 :::
 
 ::: {.slide title="Arithmetic Coding in Code: 6 Bits vs. 13 Bits"}
@@ -1423,26 +1445,35 @@ Evaluating adaptive context lengths $m \in \{0, 1, 2, 3, 4\}$ on *The Time Machi
 ::: {.slide title="Pretrained LLMs as Universal Compressors"}
 [Parametric vs. Adaptive Trade-Off]{.kicker}
 
-What if we drive an arithmetic coder with a frozen 70-billion-parameter language model (Delétang et al., 2023)?
+::: {.cols .vc}
+::: {.col}
+- **Frozen 70B LLM + arithmetic coder (Delétang et al., 2023):** Compresses raw ImageNet patches to **$43.4\%$** (beating PNG's $58.5\%$) and LibriSpeech audio to **$16.4\%$** (beating FLAC's $30.3\%$).
+- **Two-part MDL catch:** If the receiver does not already hold the $140\text{ GB}$ weights ($2$ bytes/param), transmitting the model inflates a $1\text{ GB}$ dataset to $>14{,}000\%$!
+:::
 
-| Dataset (1 GB Raw Size Each) | 70B LLM + Arithmetic Coder | Standard Domain Codec | LLM + 140 GB Weights Included |
-|:--|---:|---:|---:|
-| **ImageNet image patches** | **$43.4\%$** of raw size | PNG: $58.5\%$ | $>14{,}000\%$ (weights dominate) |
-| **LibriSpeech audio waveforms** | **$16.4\%$** of raw size | FLAC: $30.3\%$ | $>14{,}000\%$ (weights dominate) |
-
-- **Pretrained vs. adaptive:** A pretrained LLM predicts accurately from the very first byte across modalities, but if the receiver does not already possess the $140\text{ GB}$ weights ($2$ bytes/param), transmitting the model dwarfs a $1\text{ GB}$ dataset.
+::: {.col .fig .big}
+@fig:ch37-info-llm-universal-compressor
+:::
+:::
 :::
 
 ::: {.slide title="Minimum Description Length (MDL) and BIC"}
 [Occam's Razor in Bits]{.kicker}
 
-In hindsight on training data, a larger model always achieves lower log-loss by memorizing. **Minimum Description Length (MDL)** selects the model $\mathcal{M}$ that minimizes total two-part file size—model description plus compressed data:
+::: {.cols .vc}
+::: {.col}
+**Minimum Description Length (MDL)** selects the model $\mathcal{M}$ minimizing total two-part file size:
 
 $$\hat{\mathcal{M}} = \operatorname{argmin}_{\mathcal{M}}\big[L(\mathcal{M}) + L(\mathcal{D} \mid \mathcal{M})\big]$$
 
-- **Precision of a continuous parameter ($1/\sqrt{n}$):** In $n = 1{,}000$ coin flips, empirical bias fluctuates by $\mathcal{O}(1/\sqrt{n})$, so quantizing $\theta \in (0, 1)$ onto a grid of $\sqrt{n}$ points costs $L(\mathcal{M}_1) = \tfrac12 \log_2 n \approx 5\text{ bits}$ per parameter (the **Bayesian Information Criterion**, BIC).
-- **Worked coin decision:** A fair coin ($\mathcal{M}_0$) costs $0 + 1{,}000 = 1{,}000\text{ bits}$. With $600$ heads, sending $\hat{\theta} = 0.6$ costs $5 + 1000\,H_2(0.6) = 976 < 1000\text{ bits}$ ($\mathcal{M}_1$ wins by $24$ bits); with $520$ heads, data savings are only $1.2 < 5\text{ bits}$ ($\mathcal{M}_0$ wins).
-- **Why prequential/adaptive coding beats naive parameter counting:** Naive BIC charges $1.2 \times 10^8$ bits for all $27^4 \times 26$ order-4 parameters, whereas the adaptive code pays *only* for contexts that actually appear in the text!
+- **BIC rule ($\tfrac12\log_2 n$ bits/param):** Empirical parameter uncertainty scales as $1/\sqrt{n}$, so a $\sqrt{n}$-grid costs $\approx 5$ bits at $n = 1{,}000$.
+- **Adaptive prequential advantage:** Pays only for contexts that actually appear in the text stream.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-mdl-two-part-code
+:::
+:::
 :::
 
 ::: {.slide title="Entropy Rate of Stationary Sources with Memory"}
@@ -1459,16 +1490,16 @@ $$H_{\textrm{rate}} = \lim_{n \to \infty} \frac{1}{n} H(X_1, \ldots, X_n) = \lim
 ::: {.slide title="Achieving and Bounding the Entropy Rate"}
 [English Compression Ladder]{.kicker}
 
-No uniquely decodable block code can average fewer than $H_{\textrm{rate}}$ bits/symbol, while arithmetic coding under the true conditional distribution achieves $\frac{1}{n}H(X_{1:n}) + \frac{2}{n} \to H_{\textrm{rate}}$:
+::: {.cols .vc}
+::: {.col}
+- **Fundamental floor:** No uniquely decodable block code can average fewer than $H_{\textrm{rate}}$ bits/symbol, while arithmetic coding under the true conditional model achieves $\frac{1}{n}H(X_{1:n}) + \frac{2}{n} \to H_{\textrm{rate}}$.
+- **English progression ($\textrm{PPL} = 2^{\textrm{bpc}}$):** Drops from uniform $4.75\text{ bpc}$ ($\textrm{PPL} = 27$) to unigram $4.08\text{ bpc}$, `zlib` $2.84\text{ bpc}$, order-3 $2.55\text{ bpc}$ ($\textrm{PPL} = 5.84$), neural LM $1.73\text{ bpc}$, and Shannon's human estimate $\approx 1.00\text{ bpc}$ ($\textrm{PPL} \approx 2$).
+:::
 
-| Predictor / Compressor on 27-Symbol English Text | Code Rate (Bits / Char) | Equivalent Nats / Char | Per-Character Perplexity ($2^{\text{bpc}}$) |
-|:--|---:|---:|---:|
-| Uniform guessing over 27 symbols ($\log_2 27$) | $4.75$ | $3.30$ | $27.00$ |
-| Empirical unigram letter frequencies (order 0) | $4.08$ | $2.83$ | $16.91$ |
-| General-purpose dictionary + Huffman (`zlib -9`) | $2.84$ | $1.97$ | $7.16$ |
-| Adaptive order-$3$ character counting model | $2.55$ | $1.77$ | $5.84$ |
-| Neural language model from chapter intro ($1.2$ nats) | $1.73$ | $1.20$ | $3.32$ |
-| Shannon's human prediction estimate for English (1951) | $\approx 1.00$ | $\approx 0.69$ | $\approx 2.00$ |
+::: {.col .fig .big}
+@fig:ch37-info-english-compression-ladder
+:::
+:::
 :::
 
 ::: {.slide title="The Asymptotic Equipartition Property (AEP)"}
@@ -1539,14 +1570,19 @@ How low can expected perplexity go on sequences drawn from a stationary source w
 ::: {.slide title="Comparing Perplexity Across Different Tokenizers"}
 [Systems Pitfall: Token Granularity]{.kicker}
 
-Because perplexity is defined *per token*, two models with different tokenizers cannot be compared by raw $\textrm{PPL}$—finer tokenizers have smaller vocabularies and artificially lower per-token perplexity!
+::: {.cols .vc}
+::: {.col}
+Because perplexity is defined *per token*, models with different vocabularies must be compared via **bits per character (bpc)** or **bits per byte (bpb)**:
 
-- **Invariant file-size conversion:** Convert total token surprisal $n_{\textrm{tok}} \log_2 \textrm{PPL}$ back into **bits per character (bpc)** or **bits per byte (bpb)**:
-  $$\textrm{bpc} = \frac{n_{\textrm{tok}}}{n_{\textrm{char}}}\log_2 \textrm{PPL}$$
-- **Concrete comparison on a $10^6$-character corpus:**
-  - **Model A (coarse subword tokenizer):** $n_{\textrm{tok}} = 2 \times 10^5$ tokens, $\textrm{PPL} = 32$ $\implies$ $\textrm{bpc} = 0.2 \times \log_2 32 = 0.2 \times 5 = \mathbf{1.00\text{ bpc}}$.
-  - **Model B (fine character-like tokenizer):** $n_{\textrm{tok}} = 5 \times 10^5$ tokens, $\textrm{PPL} = 8$ $\implies$ $\textrm{bpc} = 0.5 \times \log_2 8 = 0.5 \times 3 = \mathbf{1.50\text{ bpc}}$.
-  - Model A compresses the corpus into $33\%$ fewer bits despite reporting a $4\times$ higher per-token perplexity!
+$$\textrm{bpc} = \frac{n_{\textrm{tok}}}{n_{\textrm{char}}}\log_2 \textrm{PPL}$$
+
+- **Coarse subwords vs. fine chars ($10^6$ chars):** Model A ($2 \times 10^5$ tokens, $\textrm{PPL} = 32$) achieves **$1.00\text{ bpc}$**, beating Model B ($5 \times 10^5$ tokens, $\textrm{PPL} = 8$, **$1.50\text{ bpc}$**) by $33\%$ despite $4\times$ higher token PPL!
+:::
+
+::: {.col .fig}
+@fig:ch37-info-tokenizer-bpc-normalization
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Prefix Codes, AEP, and Perplexity"}

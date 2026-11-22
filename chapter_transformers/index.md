@@ -40,67 +40,60 @@ Transformers: From One Block to Frontier Architectures<br>**residual stream · p
 ::: {.slide title="Why Attention Alone Is Not Enough"}
 [Motivation]{.kicker}
 
-Multi-head attention mixes information across sequence positions, but on its own it applies only linear projections around a weighted sum of values.
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Missing per-token nonlinearity:** Without a position-wise feed-forward network (FFN), stacked attention layers cannot compute hierarchical nonlinear features within each token vector.
-- **Depth instability at initialization:** Stacking 32 post-norm blocks with standard Xavier weights collapses all token representations onto a single vector (token spread $\sim 10^{-4}$) before training even begins.
+- **Missing per-token nonlinearity:** Without a position-wise FFN, stacked attention layers cannot synthesize hierarchical nonlinear features within each token vector.
+- **Depth instability & bandwidth walls:** Deep stacks require pre-norm residual streams, and generation streams all $12 L d^2$ block weights and the KV cache from HBM.
 :::
 
-::: {.col}
-- **The memory-bandwidth wall of generation:** Autoregressive decoding streams all model weights and a growing key–value (KV) cache from GPU HBM for every single generated token.
-- **Unifying architectural insight:** Nearly every modern foundation model across text, code, speech, and vision is built by repeating and rewiring **one configurable Transformer block**.
+::: {.col .fig .big}
+@fig:ch11-tf-why-block
 :::
-:::
-
-::: {.d2l-note}
-In GPT-2 Small ($124\text{M}$ parameters, $L = 12, d = 768$), the 12 blocks hold $12 \times 12 d^2 \approx 85\text{M}$ parameters ($4d^2$ in attention, $8d^2$ in the FFN), while the weight-tied token embedding table ($50{,}257 \times 768 \approx 38.6\text{M}$) and $1{,}024$ learned positions ($0.8\text{M}$) hold the remaining $39\text{M}$.
 :::
 :::
 
 ::: {.slide title="The Four Architectural Pillars of Chapter 11"}
 [Architectural Roadmap]{.kicker}
 
-We progress from a single residual block to frontier training, serving, and scaling in seven connected sections:
+::: {.cols .vc}
+::: {.col}
+- **1. Build & Train (§§11.1–11.2):** Pre-norm, `RMSNorm`, `QK-Norm`, $1/\sqrt{2L}$ scaling, `SwiGLU`, and decoder-only GPT pretraining.
+- **2. Serve & Compress (§11.3):** KV caching, roofline analysis, GQA, low-rank MLA, and attention sinks.
+- **3. Rewire & Scale (§§11.4–11.7):** Encoders, cross-attention, ViT patches, Chinchilla scaling laws, and sparse Mixture of Experts (MoE).
+:::
 
-| Pillar | Chapter 11 Sections | Core Engineering & Mathematical Question |
-| :--- | :--- | :--- |
-| **1. Build & Train** | **§11.1** Transformer Block · **§11.2** GPT | Why do pre-norm, `RMSNorm`, `QK-Norm`, $1/\sqrt{2L}$ scaling, and `SwiGLU` stabilize deep language models? |
-| **2. Serve & Compress** | **§11.3** The KV Cache & Cache Reduction | How does KV caching turn $O(T^2)$ decoding into $O(T)$, and how do GQA, MLA, and sinks beat the bandwidth roofline? |
-| **3. Rewire Modalities** | **§11.4** Encoders–Decoders · **§11.5** ViT | When should we use bidirectional MLM, cross-attention, latent bottlenecks, or image patch tokens? |
-| **4. Scale Capacity** | **§11.6** Scaling Laws · **§11.7** MoE | How do we allocate a $C \approx 6ND$ FLOP budget (Chinchilla) or decouple stored capacity from active FLOPs? |
+::: {.col .fig .big}
+@fig:ch11-tf-four-pillars
+:::
+:::
 :::
 
 ::: {.slide title="Concrete Single-GPU Benchmarks Across Chapter 11"}
 [Running Examples]{.kicker}
 
-Every architectural mechanism in this chapter is tested on reproducible models that train or run on a single GPU in minutes:
+::: {.cols .vc}
+::: {.col}
+- Every architectural mechanism in this chapter is verified on reproducible models that train or profile on a single GPU in minutes:
+- **End-to-end validation:** From 32-layer initialization audits and byte-level WikiText-103 pretraining to RTX 4090 roofline profiling, 15-model IsoFLOP fits, and 8-expert MoE routing.
+:::
 
-| Section | Concrete Benchmark & Empirical Verification |
-| :--- | :--- |
-| **§11.1 Transformer Block** | 32-layer signal propagation & gradient audit comparing post-norm vs. pre-norm with $1/\sqrt{2L}$ scaling |
-| **§11.2 Decoder-Only (GPT)** | 4.8M-parameter byte-level GPT on WikiText-103 vs. matched 4.7M RNN; loading OpenAI's 124M GPT-2 Small |
-| **§11.3 KV Cache & Reduction** | RTX 4090 roofline profiling of prefill vs. batched decode; GQA uptraining, SVD low-rank KV, and attention sinks |
-| **§11.4 Encoders & Cross-Attn** | Masked byte modeling on WikiText-103; exact sequence reversal alignment; Perceiver $O(MN)$ latent bottleneck |
-| **§11.5 Vision Transformer** | 6.5M-parameter ViT ($6 \times 6$ grid of $16 \times 16$ patches) vs. parameter-matched ResNet on $96 \times 96$ Fashion-MNIST |
-| **§11.6–11.7 Scaling & MoE** | 15-model IsoFLOP scaling grid ($N \in [0.3\text{M}, 14\text{M}]$); 8-expert Top-1 MoE GPT vs. dense GPT with loss-free bias control |
+::: {.col .fig .big}
+@fig:ch11-tf-benchmarks
+:::
+:::
 :::
 
 ::: {.slide title="From the 2017 Transformer to the Modern Recipe"}
 [The Modern Recipe]{.kicker}
 
-Every model in this chapter is an instance of one parameterized constructor whose defaults match frontier open-weights LLMs:
+::: {.cols .vc}
+::: {.col}
+- Every model in this chapter is an instance of one parameterized constructor whose defaults match frontier open-weights LLMs (`RMSNorm`, `RoPE`, `SwiGLU`, GQA/MLA, MoE).
+- **Up next (§11.1 The Transformer Block):** How pre-norm placement, `RMSNorm`, `QK-Norm`, and `SwiGLU` prevent token collapse and keep gradients well-behaved across depth.
+:::
 
-| Component | 2017 Transformer / GPT-2 Baseline | Modern Frontier Recipe (Llama 3, Qwen3, DeepSeek-V3) |
-| :--- | :--- | :--- |
-| **Normalization** | Mean-centered `LayerNorm` with bias | Pre-norm **`RMSNorm`** (no bias) + optional per-head **`QK-Norm`** |
-| **Positional Encoding** | Sinusoidal or learned absolute table $\mathbf{P}$ | **Rotary Position Embeddings (RoPE)** inside every attention layer |
-| **Feed-Forward Network** | Two-matrix ReLU/GELU MLP ($d_{\text{ff}} = 4d$) | Three-matrix gated **`SwiGLU`** ($d_{\text{ff}} \approx \frac{8}{3}d$, matched $8d^2$ budget) |
-| **KV Cache Footprint** | Multi-head attention ($H_{\text{kv}} = H$) | **Grouped-Query Attention (GQA)**, low-rank **MLA**, or sliding windows + sinks |
-| **Capacity vs. FLOPs** | Dense FFN ($N_{\text{active}} = N_{\text{total}}$) | **Sparse Mixture of Experts (MoE)** with fine-grained + shared experts |
-
-::: {.d2l-note}
-**Up next (§11.1 The Transformer Block):** How pre-norm placement, `RMSNorm`, `QK-Norm`, and `SwiGLU` prevent token collapse and keep gradients well-behaved across depth.
+::: {.col .fig .big}
+@fig:ch11-tf-modern-recipe
+:::
 :::
 :::

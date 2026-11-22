@@ -953,14 +953,16 @@ From Text to Tokens<br>**characters vs. words · UTF-8 bytes · byte pair encodi
 ::: {.slide title="Why Tokenization Is an Integral Part of the Model"}
 [Motivation & Core Mental Model]{.kicker}
 
-Neural sequence models operate on integer indices $x_t \in \{0, \ldots, |\mathcal{V}| - 1\}$, whereas natural text arrives as a raw string of characters. How we segment text into atomic **tokens** governs three core systems properties:
+::: {.cols .vc}
+::: {.col}
+- **Embedding & output parameter footprint:** Every token in $\mathcal{V}$ claims a row in $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ and a column in $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$ ($89\%$ of our §8.4 RNN parameters).
+- **Effective context horizon ($T$):** Splitting *The Time Machine* into characters produces $173{,}428$ time steps, forcing subject–verb agreement to span dozens of recurrent updates.
+- **Open-vocabulary robustness:** Splitting into $32{,}775$ whole words ($4{,}579$ types) breaks on any unseen word (*out-of-vocabulary*, OOV) at test time; subword BPE interpolates with zero OOVs.
+:::
 
-- **Embedding and output parameter footprint:** Every token in the vocabulary $\mathcal{V}$ claims a row in the input embedding table $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ and a column in the output softmax projection $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$ ($89\%$ of our §8.4 RNN parameters).
-- **Effective context horizon ($T$):** Finer tokens stretch the same passage across more time steps—splitting *The Time Machine* into characters produces $173{,}428$ steps, forcing a single sentence's subject–verb agreement to span dozens of recurrent updates.
-- **Open-vocabulary robustness:** Splitting *The Time Machine* into $32{,}775$ whole words yields $4{,}579$ distinct types, yet still breaks on any unseen word (*out-of-vocabulary*, OOV) at test time.
-
-::: {.d2l-note}
-**The Subword Goal:** We want a tokenizer that lets us choose the exact vocabulary size $|\mathcal{V}|$ while guaranteeing **zero out-of-vocabulary failures** on any string in any language.
+::: {.col .fig .big}
+@fig:ch08-rnn-tokenizer-impact
+:::
 :::
 :::
 
@@ -1000,42 +1002,51 @@ Character-level and word-level tokenization occupy opposite extremes of the trad
 ::: {.slide title="Classical Indexing: Vocab and the <unk> Fallback"}
 [Classical Word & Character Vocabularies]{.kicker}
 
-To map discrete strings to integer indices in classical pipelines, `Vocab` sorts unique tokens by descending corpus frequency, reserves index `0` for `<unk>`, and prunes tokens occurring fewer than `min_freq` times:
-
+::: {.cols .vc}
+::: {.col}
 @text-sequence-vocabulary-2
 
 @text-sequence-putting-it-all-together
 
-::: {.d2l-note .warn}
-**The `<unk>` Information Collapse:** Mapping every rare or unseen word to a single `<unk>` ID destroys the word's morphological stem and forces word-level language models to pay an explicit character-spelling penalty during evaluation (§8.3).
+- **The `<unk>` collapse:** Mapping every rare (`< min_freq`) or unseen word to index `0 (<unk>)` erases morphological stems and incurs an explicit character-spelling penalty during evaluation (§8.3).
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-vocab-unk
+:::
 :::
 :::
 
 ::: {.slide title="UTF-8 Bytes: A Universal 256-Symbol Base Alphabet"}
 [Text as Bytes]{.kicker}
 
-Why not use raw Unicode characters as our base alphabet? Unicode defines ~150,000 characters across scripts and emoji, making a character vocabulary huge. Dropping one level lower to **UTF-8 bytes** gives a universal base alphabet of size $2^8 = 256$:
-
+::: {.cols .vc}
+::: {.col}
 @text-sequence-text-as-bytes
 
-- **Zero OOV guarantee:** Every string in any language, mathematical notation, source code, or emoji decomposes losslessly into a sequence of integers in $\{0, \ldots, 255\}$.
-- **Variable byte width:** UTF-8 uses 1 byte for ASCII (`'a'`), 2 bytes for Latin diacritics and Greek (`'é'`), 3 bytes for CJK characters (`'你'`), and 4 bytes for emoji (`'🚀'`), stretching the novella to $179{,}462$ bytes ($5.5$ bytes/word).
+- **Zero OOV guarantee:** Because a byte takes $2^8 = 256$ values, any string in any script, code, or emoji decomposes losslessly into IDs `0..255`.
+- **Variable byte width:** UTF-8 spends 1 byte on ASCII, 2 on Latin diacritics/Greek, 3 on CJK, and 4 on emoji ($179{,}462$ bytes across the novella).
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-utf8-bytes
+:::
+:::
 :::
 
 ::: {.slide title="Byte Pair Encoding (BPE): Greedy Pair Merging"}
 [The BPE Algorithm]{.kicker}
 
-**Byte Pair Encoding (BPE)** (Sennrich et al., 2016) starts from the 256 single-byte tokens (`0..255`) and grows the vocabulary to size $|\mathcal{V}|$ by iteratively merging the most frequent adjacent token pair into a new token ID (`256, 257, ...`):
+::: {.cols .vc}
+::: {.col}
+- **Iterative greedy compression (Sennrich et al., 2016):** Start from the 256 single-byte tokens (`0..255`). At each step, tally all adjacent token pairs, merge the most frequent pair into a new token ID (`256, 257, ...`), and repeat until reaching $|\mathcal{V}|$.
+- **Corpus length reduction:** Replacing a pair of count $c$ everywhere shortens the training sequence by $c$ tokens (minus self-overlaps on runs like `'aaa'`).
+- **Token IDs as merge ranks:** Because IDs are assigned sequentially (`256, 257, ...`), a token's integer ID records the exact rank order in which its merge was learned.
+:::
 
-| Merge Step | Most Frequent Adjacent Pair | Corpus Count | New Token String | New Token ID (Rank) | Remaining Corpus Length |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| **0 (init)** | Raw UTF-8 bytes of `'hug pug pun bun hugs hug hug pug'` | — | `0..255` | `0..255` | $32$ tokens |
-| **1** | `('u', 'g')` inside *hug, pug, hugs* | $6$ | `'ug'` | `256` | $32 - 6 = 26$ tokens |
-| **2** | `('h', 'ug')` inside *hug, hugs* (tie with `('ug', ' ')`) | $4$ | `'hug'` | `257` | $26 - 4 = 22$ tokens |
-| **3** | `('hug', ' ')` after *hug* (tie with `(' ', 'p')`) | $3$ | `'hug '` | `258` | $22 - 3 = 19$ tokens |
-
-::: {.d2l-note .rule}
-**Greedy Compression Invariant:** Replacing a pair of count $c$ everywhere shortens the training corpus by exactly $c$ tokens (or $c - \text{overlaps}$ on runs like `'aaa'`), and each new token ID $256, 257, \ldots$ records its exact **merge rank**.
+::: {.col .fig .big}
+@fig:ch08-rnn-bpe-greedy-loop
+:::
 :::
 :::
 
@@ -1165,15 +1176,17 @@ Passing `pattern=BPETokenizer.GPT2_PATTERN` eliminates every boundary-crossing c
 ::: {.slide title="Special Control Tokens and Prompt-Injection Safety"}
 [Infrastructure & Security Invariants]{.kicker}
 
-Training and serving require special control tokens—`<pad>` (batch padding), `<bos>` (beginning of sequence), and `<eos>` (end-of-sequence stopping cue)—that must never collide with ordinary text:
-
+::: {.cols .vc}
+::: {.col}
 @text-sequence-special-tokens
 
-::: {.d2l-note .warn}
-**Security Invariant Against Prompt Injection:**
+- **ID isolation above BPE merges:** Special tokens (`<pad>`, `<bos>`, `<eos>`) sit at IDs `1024..1026`, so ordinary byte merges can never synthesize a control ID.
+- **Explicit `allow_special` guard:** By default (`allow_special=False`), `"<bos>"` encodes as 5 literal ASCII bytes `[60, 98, 111, 115, 62]`, blocking prompt injection of control tokens.
+:::
 
-1. **ID isolation:** Special tokens receive IDs *above* the BPE merge table (`1024, 1025, 1026`), so no sequence of byte merges can ever synthesize a special token ID.
-2. **Explicit opt-in (`allow_special`):** By default (`allow_special=False`), `"<bos>"` is tokenized as 5 ordinary characters `[60, 98, 111, 115, 62]`, preventing untrusted user prompts from injecting `<eos>` or system delimiters into the token stream.
+::: {.col .fig}
+@fig:ch08-rnn-special-token-safety
+:::
 :::
 :::
 

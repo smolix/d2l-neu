@@ -679,13 +679,15 @@ Learning from Demonstrations<br>**behavior cloning · covariate & distribution s
 ::: {.slide title="Why an 82%-Accurate Clone Succeeds Only 66% of Runs"}
 [Motivation & Mental Model]{.kicker}
 
-In supervised classification, test inputs are drawn from the same distribution as training inputs; in sequential control, the policy's own actions choose which states it sees next:
+::: {.cols .vc}
+::: {.col}
+- **Pomerleau's ALVINN (1989):** Because the human driver stayed centered, road-camera demonstrations contained no examples of recovering from the roadside.
+- **Calm FrozenLake benchmark:** A clone matching $\pi^*$ with probability $0.818$ on demonstrated states succeeds in only **$66.0\%$** of episodes—whether trained on $3$ expert episodes or $1{,}000$.
+:::
 
-- **Pomerleau's ALVINN (1989):** A neural network trained on human road-camera images and steering angles learned to follow lanes, but because the human driver stayed centered, the dataset contained no examples of recovering from the roadside.
-- **Calm FrozenLake benchmark:** An expert $\pi^*$ walks the 6-move shortest path and succeeds $100\%$ of the time; a clone that matches $\pi^*$ with probability $0.818$ at every demonstrated state succeeds in only **$66.0\%$** of episodes—whether trained on $3$ expert episodes or $100$.
-
-::: {.d2l-note .warn}
-More expert demonstrations cannot teach a clone how to recover from states that the expert never visits.
+::: {.col .fig .big}
+@fig:ch14-rl-alvinn-shift
+:::
 :::
 :::
 
@@ -742,11 +744,17 @@ To model imperfect real-world classifiers (limited capacity, feature aliasing, o
 ::: {.slide title="Exact State-Visitation Propagation"}
 [Evaluating Policies Without Sampling Noise]{.kicker}
 
-Given any policy table $\pi(a \mid s)$ and transition kernel $P(s' \mid s, a)$, the state distribution $d_t^\pi(s) = \Pr(s_t = s)$ evolves via one matrix multiplication per step:
+::: {.cols .vc}
+::: {.col}
+$$d_{t+1}^\pi(s') = \sum_{s \in \mathcal{S}} d_t^\pi(s)\,P_\pi(s' \mid s) = \big(d_t^\pi P_\pi\big)(s')$$
 
-$$d_{t+1}^\pi(s') = \sum_{s \in \mathcal{S}} d_t^\pi(s) \sum_{a \in \mathcal{A}} \pi(a \mid s)\,P(s' \mid s, a) = \big(d_t^\pi P_\pi\big)(s')$$
+- **Exact 100-step success probability:** Making terminal holes and the goal absorbing in $P_\pi$ ensures that $d_{100}^\pi(\textrm{goal})$ equals the exact 100-step success rate.
+:::
 
-- **Exact 100-step success probability:** Making terminal holes and the goal absorbing in $P_\pi$ ensures that the probability mass at the goal after $T = 100$ steps, $d_{100}^\pi(\textrm{goal})$, equals the exact 100-step success rate.
+::: {.col .fig}
+@fig:ch14-rl-visitation-markov
+:::
+:::
 :::
 
 ::: {.slide title="Greedy vs. Sampling Deployment of the Clone"}
@@ -785,12 +793,18 @@ On *slippery* ice, the expert itself slips into different cells across episodes,
 ::: {.slide title="The Compounding Error Theorem"}
 [Quadratic vs. Linear Horizon Scaling]{.kicker}
 
-Ross and Bagnell (2010) proved that a per-step classification error $\varepsilon$ scales quadratically with horizon $T$ when measured on the expert's states $d_t^{\pi^*}$, but linearly on the learner's states $d_t^{\hat{\pi}}$:
+::: {.cols .vc}
+::: {.col}
+$$J(\pi^*) - J(\hat{\pi}) \leq \begin{cases} \varepsilon\,T(T + 1)/2 & \text{error } \varepsilon \text{ on } d_t^{\pi^*} \\ u\,\varepsilon\,T & \text{error } \varepsilon \text{ on } d_t^{\hat{\pi}} \end{cases}$$
 
-$$J(\pi^*) - J(\hat{\pi}) \leq \begin{cases} \dfrac{\varepsilon\,T(T + 1)}{2} \leq \varepsilon\,T^2 & \text{if } \mathbb{E}_{s \sim d_t^{\pi^*}}\big[\hat{\pi}(s) \neq \pi^*(s)\big] \leq \varepsilon \\[8pt] u\,\varepsilon\,T & \text{if } \mathbb{E}_{s \sim d_t^{\hat{\pi}}}\big[\hat{\pi}(s) \neq \pi^*(s)\big] \leq \varepsilon \end{cases}$$
+- **$O(\varepsilon T^2)$ under behavior cloning:** The first mistake at step $t$ forfeits up to all $T - t + 1$ remaining steps.
+- **$O(u\varepsilon T)$ via hybrid telescoping:** Consecutive hybrids $\pi_{k-1}, \pi_k$ differ only at step $k$ on $d_k^{\hat{\pi}}$, losing at most $u\varepsilon$ per step.
+:::
 
-- **Proof of $O(\varepsilon T^2)$ under behavior cloning:** Couple $\hat{\pi}$ and $\pi^*$ on the same random seed; the first disagreement occurs at step $t$ (on $d_t^{\pi^*}$) with probability $\leq \varepsilon$ and forfeits up to all $T - t + 1$ remaining rewards, summing to $\sum_{t=1}^T \varepsilon(T - t + 1) = \varepsilon T(T+1)/2$.
-- **Proof of $O(u\varepsilon T)$ via hybrid telescoping:** Define hybrid $\pi_k$ following $\hat{\pi}$ for $k$ steps then $\pi^*$; consecutive hybrids $\pi_{k-1}, \pi_k$ differ only at step $k$ on $d_k^{\hat{\pi}}$, losing at most $u\varepsilon$ per step when a single mistake followed by $\pi^*$ costs $u$.
+::: {.col .fig}
+@fig:ch14-rl-hybrid-telescoping
+:::
+:::
 :::
 
 ::: {.slide title="Quadratic vs. Linear Error Growth on a 64-Step Chain"}
@@ -841,11 +855,18 @@ Making the off-path cells absorbing partitions the clone's $34.0$-point loss ($1
 ::: {.slide title="DAgger: Dataset Aggregation"}
 [Collecting States from the Learner, Labels from the Expert]{.kicker}
 
-**DAgger** (Ross, Gordon, and Bagnell, 2011) eliminates distribution shift by rolling out the current learner $\hat{\pi}_k$ and querying the expert $\pi^*$ on the states the learner actually visits:
+::: {.cols .vc}
+::: {.col}
+- **Interactive relabeling (Ross et al., 2011):** Roll out the current learner $\hat{\pi}_k$ and query the expert $\pi^*$ on the states the learner actually visits.
+- **Aggregating all rounds:** Append relabeled pairs to $\mathcal{D}_k = \mathcal{D}_{k-1} \cup \mathcal{D}_{\textrm{new}}$ and refit $\hat{\pi}_{k+1}$ so earlier states are never forgotten.
 
 @imitation-dagger-collect-from-the-learner-relabel-with-the-expert
+:::
 
-- **Aggregating all rounds:** At round $k$, DAgger appends the newly relabeled pairs $(s_t, \pi^*(s_t))$ to the cumulative dataset $\mathcal{D}_{k} = \mathcal{D}_{k-1} \cup \mathcal{D}_{\textrm{new}}$ and refits $\hat{\pi}_{k+1}$ on $\mathcal{D}_k$ so the policy never forgets earlier states.
+::: {.col .fig}
+@fig:ch14-rl-dagger-loop
+:::
+:::
 :::
 
 ::: {.slide title="Four DAgger Rounds Recover the Off-Path Loss"}

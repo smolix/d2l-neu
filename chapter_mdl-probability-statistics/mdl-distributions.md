@@ -1505,17 +1505,16 @@ Common Probability Distributions: From a Single Coin Flip to the Multivariate Ga
 ::: {.slide title="Every Training Loss Is a Probability Distribution"}
 [Motivation]{.kicker}
 
-Every predictive model in deep learning implicitly chooses a probability distribution for its target labels, and taking the negative log-probability $-\log p(y \mid \hat{y})$ fixes the training loss:
+::: {.cols .vc}
+::: {.col}
+- **Loss = Negative Log-Likelihood:** Every predictive network implicitly chooses a distribution $p(y \mid \hat{y})$ for its targets and minimizes $-\log p(y \mid \hat{y})$.
+- **Four canonical pairings:** Bernoulli $\to$ binary cross-entropy; Categorical $\to$ multi-class cross-entropy; Gaussian $\to$ squared error ($L_2$); Laplace $\to$ absolute error ($L_1$).
+- **Beyond point predictions:** Misspecifying variance (e.g., Poisson on bursty counts) makes confidence intervals dangerously overconfident.
+:::
 
-| Model Output | Assumed Target Distribution | Negative Log-Likelihood Loss $-\log p(y)$ |
-| :--- | :--- | :--- |
-| Scalar probability $\hat{p} = P(Y = 1 \mid \mathbf{x})$ | $\mathrm{Bernoulli}(\hat{p})$ | Binary cross-entropy $-y\log\hat{p} - (1-y)\log(1-\hat{p})$ |
-| Softmax vector $\hat{\mathbf{p}} \in \Delta^{K-1}$ over $K$ classes | $\mathrm{Categorical}(\hat{\mathbf{p}})$ | Multi-class cross-entropy $-\sum_{k=1}^K y_k \log \hat{p}_k$ |
-| Real-valued regression mean $\hat{y} \in \mathbb{R}$ | Gaussian $\mathcal{N}(\hat{y}, \sigma^2)$ | Squared error $\frac{1}{2\sigma^2}(y - \hat{y})^2 + \text{const}$ |
-| Outlier-robust regression median $\hat{y} \in \mathbb{R}$ | $\mathrm{Laplace}(\hat{y}, b)$ | Absolute error ($L_1$ loss) $\frac{1}{b}\|y - \hat{y}\| + \text{const}$ |
-
-::: {.d2l-note .warn}
-**Why distribution assumptions matter beyond point predictions:** Choosing a distribution whose variance is too narrow (e.g., fitting a Poisson model when request counts arrive in correlated bursts) makes every confidence interval and error bar dangerously overconfident.
+::: {.col .fig .big}
+@fig:ch35-prob-loss-dist-map
+:::
 :::
 :::
 
@@ -1559,27 +1558,35 @@ Every predictive model in deep learning implicitly chooses a probability distrib
 ::: {.slide title="The Bernoulli Distribution: One Binary Trial"}
 [Single 0/1 Outcome]{.kicker}
 
-A random variable $X \sim \mathrm{Bernoulli}(p)$ takes value $1$ with probability $p \in [0, 1]$ and $0$ with probability $1 - p$. Both branches combine into a single algebraic switch:
-
+::: {.cols .vc}
+::: {.col}
 $$P(X = x) = p^x(1 - p)^{1 - x}, \qquad x \in \{0, 1\}$$
 
-- **Moments via $X^2 = X$:** Because $0^2 = 0$ and $1^2 = 1$, the first and second raw moments are identical:
-  $$\mathbb{E}[X] = 1\cdot p + 0\cdot(1-p) = p, \qquad \mathrm{Var}(X) = \mathbb{E}[X^2] - (\mathbb{E}[X])^2 = p - p^2 = p(1 - p)$$
-- **Variance profile:** $\mathrm{Var}(X) = p(1 - p)$ vanishes when the outcome is deterministic ($p = 0$ or $p = 1$) and reaches its global maximum of **$1/4 = 0.25$** for a fair coin ($p = 1/2$).
-- **Two coins in our running example:** A fair hypothesis coin ($p = 1/2$, variance $0.25$) vs. the empirical coin matching $9$ heads in $13$ flips ($p = 9/13 \approx 0.692$, variance $\frac{9}{13}\cdot\frac{4}{13} \approx 0.213$).
+- **Moments via $X^2 = X$:** $\mathbb{E}[X] = p$ and $\mathrm{Var}(X) = \mathbb{E}[X^2] - p^2 = p(1 - p)$.
+- **Variance parabola:** $\mathrm{Var}(X) = p(1-p)$ vanishes at $p \in \{0, 1\}$ and peaks at **$1/4 = 0.25$** for a fair coin ($p = 1/2$), compared with $0.213$ at $p = 9/13$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-bernoulli-var
+:::
+:::
 :::
 
 ::: {.slide title="The Binomial Distribution: Counting Heads in n Flips"}
 [Sum of Independent Bernoulli Trials]{.kicker}
 
-Summing $n$ independent and identically distributed indicators $X_1, \dots, X_n \sim \mathrm{Bernoulli}(p)$ produces $X = \sum_{i=1}^n X_i \sim \mathrm{Binomial}(n, p)$:
+::: {.cols .vc}
+::: {.col}
+$$P(X = k) = \binom{n}{k} p^k (1 - p)^{n - k}, \qquad k \in \{0, 1, \dots, n\}$$
 
-$$P(X = k) = \binom{n}{k} p^k (1 - p)^{n - k}, \qquad k \in \{0, 1, \dots, n\}, \qquad \binom{n}{k} = \frac{n!}{k!\,(n - k)!}$$
+- **Combinatorial structure:** $\binom{n}{k}$ distinct orderings of $k$ heads and $n-k$ tails, each having probability $p^k(1-p)^{n-k}$.
+- **Moments from $X = \sum_{i=1}^n X_i$:** $\mathbb{E}[X] = np$ and, by independence, $\mathrm{Var}(X) = np(1 - p)$ (if all $13$ flips copied one fair flip, variance would jump $13\times$ from $3.25$ to $42.25$).
+:::
 
-- **Combinatorial structure:** There are $\binom{n}{k}$ distinct orderings of $k$ heads and $n - k$ tails, and by independence each specific ordering has probability $p^k(1 - p)^{n - k}$.
-- **One-line moments from the sum representation $X = \sum_{i=1}^n X_i$:**
-  $$\mathbb{E}[X] = \sum_{i=1}^n \mathbb{E}[X_i] = np, \qquad \mathrm{Var}(X) = \sum_{i=1}^n \mathrm{Var}(X_i) = np(1 - p)$$
-- **Why independence is critical for the variance:** Linearity $\mathbb{E}[X] = np$ holds even for dependent flips, but if all $13$ flips were copies of a single fair flip ($X \in \{0, 13\}$), the variance would jump $13\times$ from $13(1/4) = 3.25$ to $13^2(1/4) = 42.25$!
+::: {.col .fig}
+@fig:ch35-prob-binomial-grid
+:::
+:::
 :::
 
 ::: {.slide title="Factorial-Free Binomial Evaluation via Ratios"}
@@ -1597,13 +1604,18 @@ $$\frac{P(X = k + 1)}{P(X = k)} = \frac{n - k}{k + 1}\cdot\frac{p}{1 - p}, \qqua
 ::: {.slide title="The Law of Rare Events: From Binomial to Poisson"}
 [Unbounded Counts in Continuous Time]{.kicker}
 
-Suppose a web server receives $\lambda = 4$ requests per minute on average. Slice the minute into $n$ tiny subintervals, each holding an independent arrival with probability $p_n = \lambda/n$. As $n \to \infty$ with $k$ fixed, $\mathrm{Binomial}(n, \lambda/n)$ factors into four pieces:
+::: {.cols .vc}
+::: {.col}
+$$P(X = k) = \lim_{n \to \infty} \binom{n}{k}\left(\frac{\lambda}{n}\right)^k\left(1 - \frac{\lambda}{n}\right)^{n-k} = \frac{\lambda^k e^{-\lambda}}{k!}$$
 
-$$\binom{n}{k}\left(\frac{\lambda}{n}\right)^k\left(1 - \frac{\lambda}{n}\right)^{n-k} = \underbrace{\frac{n(n-1)\cdots(n-k+1)}{n^k}}_{\to\,1} \cdot \frac{\lambda^k}{k!} \cdot \underbrace{\left(1 - \frac{\lambda}{n}\right)^n}_{\to\,e^{-\lambda}} \cdot \underbrace{\left(1 - \frac{\lambda}{n}\right)^{-k}}_{\to\,1}$$
+- **Slicing continuous time:** Divide a minute into $n$ tiny slots of arrival probability $p_n = \lambda/n$; as $n \to \infty$, $(1 - \lambda/n)^n \to e^{-\lambda}$ and $\binom{n}{k}n^{-k} \to 1/k!$.
+- **Mean equals variance:** For $X \sim \mathrm{Poisson}(\lambda)$, $\mathbb{E}[X] = \mathrm{Var}(X) = \lambda$.
+:::
 
-- **The Poisson PMF ($X \sim \mathrm{Poisson}(\lambda)$):**
-  $$P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}, \qquad k \in \{0, 1, 2, \dots\} \quad \left(\sum_{k=0}^{\infty} \frac{\lambda^k}{k!} = e^\lambda\right)$$
-- **Equality of mean and variance ($\mathbb{E}[X] = \mathrm{Var}(X) = \lambda$):** Canceling $k$ against $k! = k(k-1)!$ gives $\mathbb{E}[X] = \lambda \sum_{j \ge 0} e^{-\lambda}\lambda^j/j! = \lambda$ and $\mathbb{E}[X(X-1)] = \lambda^2 \implies \mathrm{Var}(X) = \lambda^2 + \lambda - \lambda^2 = \lambda$.
+::: {.col .fig}
+@fig:ch35-prob-poisson-slicing
+:::
+:::
 :::
 
 ::: {.slide title="Convergence to the Poisson Limit & Overdispersion"}
@@ -1679,14 +1691,18 @@ Evaluating softmax on logits $\mathbf{z} = (2, 1, 0.1, -1)$ and verifying freque
 ::: {.slide title="The Continuous Uniform Distribution"}
 [Constant Density & Moments]{.kicker}
 
-Every pseudo-random sampler begins with $U \sim \mathrm{Unif}(0, 1)$. More generally, the **continuous uniform distribution** $U(a, b)$ on $[a, b]$ assigns constant density across the interval:
+::: {.cols .vc}
+::: {.col}
+$$p(x) = \frac{1}{b - a} \mathbf{1}_{x \in [a, b]}, \qquad \mathbb{E}[X] = \frac{a + b}{2}, \qquad \mathrm{Var}(X) = \frac{(b - a)^2}{12}$$
 
-$$p(x) = \begin{cases} \frac{1}{b - a} & \text{if } x \in [a, b], \\ 0 & \text{otherwise,} \end{cases} \qquad \mathbb{E}[X] = \frac{a + b}{2}, \qquad \mathrm{Var}(X) = \frac{(b - a)^2}{12}$$
+- **Variance by centering:** Shifting $[a, b]$ to $[-c, c]$ with $c = (b-a)/2$ gives $\mathrm{Var}(X) = \int_{-c}^c \frac{y^2}{2c}\,dy = \frac{c^2}{3} = \frac{(b-a)^2}{12}$.
+- **Key benchmarks:** $U(0, 1)$ has variance $1/12$; $U(-\sqrt{3}, \sqrt{3})$ has mean $0$ and unit variance $1$.
+:::
 
-- **Clean variance derivation by centering:** Shift $[a, b]$ to its midpoint so it spans $[-c, c]$ with half-width $c = \frac{b - a}{2}$. By shift invariance of variance:
-  $$\mathrm{Var}(X) = \int_{-c}^{c} \frac{y^2}{2c}\,dy = \left[\frac{y^3}{6c}\right]_{-c}^{c} = \frac{c^2}{3} = \frac{(b - a)^2}{12}$$
-- **Benchmarks:** $U(0, 1)$ has mean $\frac{1}{2}$ and variance $\frac{1}{12}$; $U(-\sqrt{3}, \sqrt{3})$ has mean $0$ and unit variance $1$.
-- **Continuous limit of discrete uniform:** $n$ grid points spaced by $h$ with $nh = b - a$ have variance $\frac{h^2(n^2 - 1)}{12} \to \frac{(b - a)^2}{12}$.
+::: {.col .fig}
+@fig:ch35-prob-uniform-center
+:::
+:::
 :::
 
 ::: {.slide title="From the Binomial Ratio to the Gaussian Parabola"}

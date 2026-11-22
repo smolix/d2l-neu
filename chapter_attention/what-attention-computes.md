@@ -1114,44 +1114,49 @@ Attention Circuits: The Residual Stream, QK/OV Decomposition, and Induction Head
 ::: {.slide title="Why Attention Heatmaps Alone Cannot Explain a Head"}
 [Motivation]{.kicker}
 
-An attention weight heatmap shows *where* a head looks, which is only half of its computation—what the head actually writes to the network's output depends on its value and output projections:
-
 ::: {.cols .vc}
 ::: {.col}
-- **A Positional Shortcut Can Mimic Retrieval:** A 1-block attention model trained on 64-token sequences that repeat a random 32-token pattern reaches **$100\%$ accuracy** on the second copy by attending $31$ positions back.
+- **A Positional Shortcut Can Mimic Retrieval:** A 1-block model trained on 64-token sequences repeating a random 32-token pattern reaches **$100\%$ accuracy** on the second copy by looking $31$ positions back.
+- **Testing on Period 24 Exposes the Illusion:** Evaluated on 24-token patterns, its accuracy collapses to **$1.6\%$ (chance)** because its heads still stare blindly at offset $-31$!
 :::
 
-::: {.col}
-- **Testing on Period 24 Exposes the Illusion:** Evaluated on 24-token patterns, its accuracy collapses to **$1.6\%$ (chance is $1/64$)** because its heads still stare blindly at offset $-31$ regardless of token content!
+::: {.col .fig .big}
+@fig:ch10-attn-circ-shortcut-illusion
 :::
-:::
-
-::: {.d2l-note}
-Following Elhage et al. (2021) and Olsson et al. (2022), we decompose heads into **QK and OV circuits** on the **residual stream** and validate our mechanistic reading via weight inspection and causal ablations.
 :::
 :::
 
 ::: {.slide title="Decomposing Multi-Head Output into a Sum Over Heads"}
 [Additive Head Decomposition]{.kicker}
 
-Writing token representations as column vectors $\mathbf{h}_j \in \mathbb{R}^d$, partition the output matrix $\mathbf{W}_o \in \mathbb{R}^{d \times H d_h}$ into $H$ column slices $\mathbf{W}_o^m \in \mathbb{R}^{d \times d_h}$ (one slice per head $m = 1, \ldots, H$):
+::: {.cols .vc}
+::: {.col}
+- Partitioning $\mathbf{W}_o \in \mathbb{R}^{d \times H d_h}$ into $H$ column slices $\mathbf{W}_o^m \in \mathbb{R}^{d \times d_h}$ rewrites multi-head attention as a sum of $H$ independent updates:
+  $$\sum_{m=1}^H \mathbf{W}_o^m \mathbf{u}_m = \sum_{m=1}^H \sum_{j \le i} \alpha_{ij}^m\,\big(\mathbf{W}_o^m \mathbf{W}_v^m\big)\,\mathbf{h}_j$$
+- **Only the Product $\mathbf{W}_o^m \mathbf{W}_v^m$ Matters:** Value projection $\mathbf{W}_v^m$ and output slice $\mathbf{W}_o^m$ act exclusively through their rank-$d_h$ product.
+:::
 
-$$\mathbf{W}_o \begin{bmatrix} \mathbf{u}_1 \\ \vdots \\ \mathbf{u}_H \end{bmatrix} = \sum_{m=1}^H \mathbf{W}_o^m \mathbf{u}_m = \sum_{m=1}^H \sum_{j \le i} \alpha_{ij}^m\,\big(\mathbf{W}_o^m \mathbf{W}_v^m\big)\,\mathbf{h}_j$$
-
-- **Concatenate-Then-Project Is a Sum:** Concatenating $H$ head outputs $\mathbf{u}_m = \sum_{j \le i} \alpha_{ij}^m \mathbf{W}_v^m \mathbf{h}_j \in \mathbb{R}^{d_h}$ and multiplying by $\mathbf{W}_o$ is mathematically identical to summing $H$ independent $d$-dimensional updates!
-- **Only the Product $\mathbf{W}_o^m \mathbf{W}_v^m$ Matters:** Value projection $\mathbf{W}_v^m \in \mathbb{R}^{d_h \times d}$ and output slice $\mathbf{W}_o^m \in \mathbb{R}^{d \times d_h}$ act exclusively through their rank-$d_h$ product.
+::: {.col .fig}
+@fig:ch10-attn-circ-additive-heads
+:::
+:::
 :::
 
 ::: {.slide title="Every Head Is Two Rank-d_h Matrices: QK and OV"}
 [QK and OV Circuits]{.kicker}
 
-Each attention head of width $d_h$ is completely specified by two $d \times d$ matrices of rank at most $d_h$ (Elhage et al., 2021):
+::: {.cols .vc}
+::: {.col}
+- Each attention head of width $d_h$ is completely specified by two $d \times d$ matrices of rank $\le d_h$ (Elhage et al., 2021):
+  $$\mathbf{W}_{\mathrm{QK}} = \mathbf{W}_q^\top \mathbf{W}_k, \qquad \mathbf{W}_{\mathrm{OV}} = \mathbf{W}_o \mathbf{W}_v$$
+- **QK Circuit ($\mathbf{W}_{\mathrm{QK}}$):** Bilinear form governing *where* the head attends ($\alpha_{ij}$).
+- **OV Circuit ($\mathbf{W}_{\mathrm{OV}}$):** Linear operator governing *what* vector $\mathbf{W}_{\mathrm{OV}}\mathbf{h}_j$ is added to destination $i$.
+:::
 
-$$s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}}\,\mathbf{h}_j}{\sqrt{d_h}}, \qquad \mathbf{W}_{\mathrm{QK}} \stackrel{\textrm{def}}{=} \mathbf{W}_q^\top \mathbf{W}_k \in \mathbb{R}^{d \times d}, \qquad \mathbf{W}_{\mathrm{OV}} \stackrel{\textrm{def}}{=} \mathbf{W}_o \mathbf{W}_v \in \mathbb{R}^{d \times d}$$
-
-- **The QK Circuit ($\mathbf{W}_{\mathrm{QK}}$, or $\mathbf{W}_q^\top \mathbf{R}_{j-i} \mathbf{W}_k$ with RoPE):** Bilinear form governing *where* the head attends (which source positions $j$ receive high weight $\alpha_{ij}$ from destination $i$).
-- **The OV Circuit ($\mathbf{W}_{\mathrm{OV}}$):** Linear operator governing *what* vector $\mathbf{W}_{\mathrm{OV}}\mathbf{h}_j$ the head writes into destination position $i$ when source $j$ is attended to.
-- **Gauge Invariance & Rank Bottleneck:** Replacing $(\mathbf{W}_o, \mathbf{W}_v) \mapsto (\mathbf{W}_o \mathbf{G}^{-1}, \mathbf{G}\mathbf{W}_v)$ for any invertible $\mathbf{G} \in \mathbb{R}^{d_h \times d_h}$ leaves $\mathbf{W}_{\mathrm{OV}}$ unchanged; in `TinyCharLM` ($d = 128, d_h = 32$), each head's $\mathbf{W}_{\mathrm{OV}}$ has rank at most $32$.
+::: {.col .fig}
+@fig:ch10-attn-circ-qkov-factorization
+:::
+:::
 :::
 
 ::: {.slide title="The Residual Stream as a Shared Communication Bus"}
@@ -1173,13 +1178,18 @@ $$s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}}\,\mathbf{h}_j}{\sqrt
 ::: {.slide title="What 0 and 1 Attention Layers Can Express"}
 [Expressivity by Depth]{.kicker}
 
-Expanding the residual stream equation for $N = 0$ and $N = 1$ blocks reveals the exact functional class of shallow attention-only networks:
+::: {.cols .vc}
+::: {.col}
+- Expanding the residual stream for $N = 1$ reveals 0-layer bigram and 1-layer skip-trigram terms:
+  $$\mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i} + \sum_{m=1}^H \sum_{j \le i} \alpha_{ij}^m\,\mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^m\,\mathbf{e}_{x_j}$$
+- **Zero Blocks ($N = 0$):** Symmetric table $\mathbf{E}\mathbf{E}^\top$ (cannot express asymmetric cycles).
+- **One Block ($N = 1$):** Skip-trigrams $x_j \ldots x_i \to x_{\textrm{next}}$, but **cannot** complete novel $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}] \to [\mathrm{B}]$ because $[\mathrm{B}]$'s key knows nothing about its predecessor $[\mathrm{A}]$!
+:::
 
-$$\mathbf{z}_i = \underbrace{\mathbf{E}\,\mathbf{e}_{x_i}}_{\textrm{0-layer bigram term}} + \sum_{m=1}^H \sum_{j \le i} \alpha_{ij}^m\,\underbrace{\mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^m\,\mathbf{e}_{x_j}}_{\textrm{1-layer skip-trigram terms}}$$
-
-- **Zero Blocks ($N = 0$):** Logit of token $b$ after $a$ is $\mathbf{e}_b^\top \mathbf{e}_a$ (row $a$ of $\mathbf{E}\mathbf{E}^\top$), a symmetric positive semidefinite table that cannot represent asymmetric cycles like `t` $\to$ `h` $\to$ `e` $\to$ `␣` $\to$ `t`!
-- **One Block ($N = 1$, Skip-Trigrams):** Each head implements rules of the form $x_j \ldots x_i \to x_{\textrm{next}}$: attending from current token $x_i$ to an earlier token $x_j$ and boosting $\mathbf{E}\mathbf{W}_{\mathrm{OV}}^m \mathbf{e}_{x_j}$ (including **single-token copying** when $\mathbf{E}\mathbf{W}_{\mathrm{OV}}^m \approx \mathbf{I}$).
-- **What 1 Layer Cannot Compute:** It cannot complete a novel in-context pattern $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}]$ $\to$ $[\mathrm{B}]$, because the key at $[\mathrm{B}]$'s position $j$ depends only on $\mathbf{e}_{[\mathrm{B}]}$ and knows nothing about its predecessor $x_{j-1} = [\mathrm{A}]$!
+::: {.col .fig}
+@fig:ch10-attn-circ-depth-hierarchy
+:::
+:::
 :::
 
 ::: {.slide title="Two Layers Form an Induction Head via K-Composition"}
@@ -1278,12 +1288,17 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 ::: {.slide title="Evidence Level 2: Reading the OV Copy Matrix"}
 [Weight-Space Circuit Analysis]{.kicker}
 
-Attending to position $j$ predicts token $x_j$ only if Block 2's OV circuit boosts the logit of $x_j$. Define the $64 \times 64$ **copy matrix** $\mathbf{C}$ of a block:
-
-$$C_{ab} \stackrel{\textrm{def}}{=} \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}}\,\bar{\mathbf{h}}_a, \qquad \textrm{Diagonal Share} = \frac{1}{|\mathcal{V}|}\sum_{a=1}^{|\mathcal{V}|} \mathbb{I}\!\left[\arg\max_b C_{ab} = a\right]$$
-
-- **Physical Meaning:** $C_{ab}$ is the logit change assigned to output token $b$ when the block's summed OV matrix $\mathbf{W}_{\mathrm{OV}} = \sum_{m=1}^H \mathbf{W}_o^m \mathbf{W}_v^m$ reads the mean residual-stream vector $\bar{\mathbf{h}}_a$ entering the block at positions holding token $a$.
+::: {.cols .vc}
+::: {.col}
+- Attending to position $j$ predicts token $x_j$ only if Block 2's OV circuit boosts the logit of $x_j$:
+  $$C_{ab} \stackrel{\textrm{def}}{=} \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}}\,\bar{\mathbf{h}}_a$$
 - **Signature of Copying:** If the OV circuit copies token identity, the largest entry in row $a$ lies on the diagonal ($b = a$) across nearly $100\%$ of the $64$ tokens (versus $1/64 \approx 0.02$ at random initialization).
+:::
+
+::: {.col .fig}
+@fig:ch10-attn-circ-copy-matrix-probe
+:::
+:::
 :::
 
 ::: {.slide title="OV Copy Matrix Results and Two Crucial Subtleties"}
@@ -1355,11 +1370,17 @@ On unique pattern tokens ($K = 1$, $70\%$ of positions), `model_two` achieves **
 ::: {.slide title="In-Context Gradient Descent via Linear Attention"}
 [Beyond Copying]{.kicker}
 
-In-context learning is not limited to verbatim copying—a single attention head can also execute an **in-context gradient descent step** on a regression task $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^n$ (Oswald et al., 2023):
+::: {.cols .vc}
+::: {.col}
+- A single linear-attention head can also execute **one step of gradient descent** on an in-context regression task $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^n$ (Oswald et al., 2023):
+  $$\mathbf{w}_1 = \eta \sum_{i=1}^n y_i\,\mathbf{x}_i \;\Longrightarrow\; \hat{y}_q = \sum_{i=1}^n (\mathbf{x}_q^\top \mathbf{x}_i)\,(\eta y_i)$$
+- Packing examples as $\mathbf{z}_i = [\mathbf{x}_i; y_i]$ and query as $\mathbf{z}_q = [\mathbf{x}_q; 0]$ computes $\hat{y}_q$ in a single forward pass without updating model weights!
+:::
 
-- **One Step of Gradient Descent on $\mathcal{L}(\mathbf{w}) = \frac{1}{2}\sum_{i=1}^n (y_i - \mathbf{w}^\top \mathbf{x}_i)^2$ from $\mathbf{w}_0 = \mathbf{0}$:**
-  $$\mathbf{w}_1 = \eta \sum_{i=1}^n y_i\,\mathbf{x}_i \quad\Longrightarrow\quad \hat{y}_q = \mathbf{w}_1^\top \mathbf{x}_q = \sum_{i=1}^n (\mathbf{x}_q^\top \mathbf{x}_i)\,(\eta y_i)$$
-- **Exact Identification with Linear Attention:** Packing each context example into a token $\mathbf{z}_i = [\mathbf{x}_i; y_i] \in \mathbb{R}^{p+1}$ and the test query into $\mathbf{z}_q = [\mathbf{x}_q; 0]$, setting $\mathbf{W}_q, \mathbf{W}_k$ to extract $\mathbf{x}$ and $\mathbf{W}_v$ to extract $\eta y$ computes the exact gradient-descent prediction $\hat{y}_q$ in a single forward pass without updating any model weights!
+::: {.col .fig}
+@fig:ch10-attn-circ-icl-gd
+:::
+:::
 :::
 
 ::: {.slide title="Hierarchy of Mechanistic Evidence"}

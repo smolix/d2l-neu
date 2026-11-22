@@ -1299,13 +1299,17 @@ Latent Diffusion and Diffusion Transformers (DiT)<br>**perceptual compression (V
 ::: {.slide title="Why Pixel-Space Diffusion Hits a Compute Wall"}
 [Motivation]{.kicker}
 
-Evaluating a denoising network across every pixel at every sampling step becomes prohibitively expensive as image resolution scales:
+::: {.cols .vc}
+::: {.col}
+- **Quadratic & quartic spatial scaling:** A $512 \times 512 \times 3$ image has $786{,}432$ values ($1{,}000\times$ more than $28 \times 28$); self-attention scales as $(HW)^2$ across all $50$ sampling steps.
+- **Imperceptible high-frequency bits:** Most pixel dimensions carry fine grain that human viewers barely notice.
+- **Two breakthroughs:** Compress via a perceptual autoencoder into latents (Rombach et al., 2022) and replace U-Nets with patch-token Diffusion Transformers (Peebles & Xie, 2023).
+:::
 
-- **Quadratic & quartic spatial scaling:** A $512 \times 512 \times 3$ photograph contains $786{,}432$ numbers ($1{,}000\times$ more than $28 \times 28$ Fashion-MNIST). Across $50$ sampling steps, a pixel U-Net touches every pixel $50$ times, while self-attention over pixels scales with $(H \times W)^2$.
-- **Most pixel dimensions carry imperceptible high-frequency texture:** As §17.6 showed, image power drops $1{,}000\times$ across spatial frequencies; likelihood models spend most of their bits on fine grain that human viewers barely notice.
-- **Two architectural breakthroughs:**
-  1. **Latent Diffusion (Rombach et al., 2022):** Compress images via a perceptual autoencoder into a compact spatial grid of latents, diffuse in latent space, and decode once.
-  2. **Diffusion Transformers (DiT; Peebles & Xie, 2023):** Replace the convolutional U-Net with patch tokens modulated by `adaLN-Zero`.
+::: {.col .fig .big}
+@fig:ch17-diff-pixel-compute-wall
+:::
+:::
 :::
 
 ::: {.slide title="Perceptual vs. Semantic Compression"}
@@ -1333,12 +1337,18 @@ Latent diffusion factors image generation into a frozen **perceptual autoencoder
 ::: {.slide title="Regularizing the Autoencoder Latent Space"}
 [Why Plain Autoencoders Fail for Diffusion]{.kicker}
 
-What properties must a latent code $\mathbf{z}_0$ satisfy for Gaussian diffusion $\mathbf{z}_t = (1 - t)\mathbf{z}_0 + t\boldsymbol\epsilon$ to succeed?
+::: {.cols .vc}
+::: {.col}
+$$\mathcal{L}_{\textrm{AE}}(\mathbf{x}) = \frac{1}{784}\|\mathbf{x} - \mathcal{D}(\mathbf{z})\|^2 + \frac{\beta}{196}\sum_{j=1}^{196} \frac{1}{2}\big(\mu_j^2 + s_j^2 - 1 - \log s_j^2\big)$$
 
-- **Three requirements for a diffusable latent space:** (1) a calibrated unit scale matching $\boldsymbol\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$, (2) no heavy-tailed outliers, and (3) a smooth decoding manifold so small sampling errors decode to plausible images.
-- **KL-regularized variational autoencoder objective:** The encoder outputs mean $\boldsymbol\mu(\mathbf{x})$ and standard deviation $\mathbf{s}(\mathbf{x})$ per latent channel, samples $\mathbf{z} = \boldsymbol\mu + \mathbf{s} \odot \boldsymbol\xi$, and minimizes reconstruction MSE plus a KL penalty toward $\mathcal{N}(\mathbf{0}, \mathbf{I})$:
-  $$\mathcal{L}_{\textrm{AE}}(\mathbf{x}) = \frac{1}{784}\|\mathbf{x} - \mathcal{D}(\mathbf{z})\|^2 + \frac{\beta}{196}\sum_{j=1}^{196} \frac{1}{2}\big(\mu_j^2 + s_j^2 - 1 - \log s_j^2\big)$$
-- **Light KL weighting ($\beta = 10^{-4}$):** Anchors the latent scale near $1$ and prevents posterior collapse ($s_j \to 0$) while keeping reconstruction sharpness in charge.
+- **Three requirements for diffusable latents:** (1) unit scale matching $\boldsymbol\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$, (2) no heavy-tailed outliers, and (3) a smooth decoding manifold via $\mathbf{z} = \boldsymbol\mu + \mathbf{s} \odot \boldsymbol\xi$.
+- **Light KL weighting ($\beta = 10^{-4}$):** Anchors scale near $1$ and prevents posterior collapse ($s_j \to 0$) while preserving sharp reconstructions.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-kl-vae-reg
+:::
+:::
 :::
 
 ::: {.slide title="Implementing the KL-Regularized Autoencoder"}
@@ -1381,12 +1391,18 @@ We train our residual convolutional `Autoencoder` ($2.1\text{M}$ parameters) for
 ::: {.slide title="Calibrating Latent Scale and Tail Kurtosis"}
 [Matching the Unit-Variance Noise Schedule]{.kicker}
 
-Before training a diffusion model on latents $\mathbf{z} = \boldsymbol\mu + \mathbf{s} \odot \boldsymbol\xi$, we inspect their empirical standard deviation, encoder noise level $\mathbf{s}$, and excess kurtosis across the $60{,}000$ training images:
-
+::: {.cols .vc}
+::: {.col}
 @latent-diffusion-the-autoencoder-5
 
-- **Why the scale factor $c = 1 / \mathrm{std}(\mathbf{z}) \approx 1.05$ is mandatory:** If raw latents had standard deviation $\varsigma$ instead of $1$, the effective signal-to-noise ratio at time $t$ would shift by $\log \varsigma^2$ (e.g., Stable Diffusion's raw latents have $\varsigma \approx 5.5$, requiring multiplication by $c = 0.18215$ to avoid a $+\log 30 \approx +3.4$ log-SNR shift!).
-- **Gaussian-like tails:** Excess kurtosis $\mathbb{E}[z^4]/\sigma_z^4 - 3 \le 0$ confirms the KL term eliminated heavy-tailed outliers.
+- **Mandatory scale factor $c = 1/\mathrm{std}(\mathbf{z})$:** Unscaled latents of std $\varsigma$ shift log-SNR by $+\log \varsigma^2$ (Stable Diffusion's $\varsigma \approx 5.5$ uses $c = 0.18215$ to prevent a $+3.4\text{ nat}$ shift!).
+- **Sub-Gaussian tails:** Excess kurtosis $\le 0$ confirms the KL penalty eliminated heavy-tailed outliers.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-latent-scale-factor
+:::
+:::
 :::
 
 ::: {.slide title="Pixel U-Net vs. Latent U-Net: Quality and FLOPs"}
@@ -1434,13 +1450,17 @@ Training two latent U-Nets (seeds 10, 11) on each autoencoder's latents settles 
 ::: {.slide title="Diffusion Transformers (DiT): Patchifying Images"}
 [Replacing Convolutions with Sequence Attention]{.kicker}
 
-Instead of hard-coding translation-equivariant $3 \times 3$ convolutions, a **Diffusion Transformer (DiT)** (Peebles & Xie, 2023) treats the noisy image or latent grid as a sequence of patch tokens:
+::: {.cols .vc}
+::: {.col}
+- **Patch tokenization (`PatchEmbedding`):** A stride-$p$, $p \times p$ conv partitions $H \times W \times C$ into $L = (H/p)(W/p)$ tokens of dim $d$ ($L = 49$ for $28 \times 28$ pixels at $p = 4$, or $7 \times 7$ latents at $p = 1$).
+- **Quadratic attention governed by $p$:** Self-attention scales as $L^2 = (HW/p^2)^2$ ($p = 1$ on $28 \times 28$ pixels costs $256\times$ more attention FLOPs than $p = 4$).
+- **Linear unpatchify head:** Projects each token $\mathbb{R}^d \to \mathbb{R}^{p^2 C}$ and reshapes back to $(H, W, C)$.
+:::
 
-- **Patch tokenization (`PatchEmbedding`):** A stride-$p$ convolution of kernel size $p \times p$ partitions an $H \times W \times C$ input into $L = (H/p)(W/p)$ tokens of dimension $d$, plus learned 2D position embeddings:
-  - *On $28 \times 28 \times 1$ pixels with $p = 4$:* $L = 7 \times 7 = \mathbf{49\text{ tokens}}$ (each carrying $4 \times 4 \times 1 = 16$ pixel values).
-  - *On $7 \times 7 \times 4$ latents with $p = 1$:* $L = 7 \times 7 = \mathbf{49\text{ tokens}}$ (each carrying $1 \times 1 \times 4 = 4$ latent channels).
-- **Why patch size $p$ governs compute:** Self-attention scales quadratically with token count $L^2 = (HW/p^2)^2$—using $p = 1$ on $28 \times 28$ pixels would create $784$ tokens ($16\times$ more tokens, **$256\times$ more attention FLOPs**).
-- **Linear unpatchify head:** Maps each final token $\mathbb{R}^d \to \mathbb{R}^{p^2 C}$ and reshapes back to $(H, W, C)$.
+::: {.col .fig .big}
+@fig:ch17-diff-dit-patchify
+:::
+:::
 :::
 
 ::: {.slide title="Conditioning Transformers via adaLN-Zero"}
@@ -1475,12 +1495,18 @@ $$\mathbf{X} \leftarrow \mathbf{X} + \mathbf{g}_2 \odot \mathrm{MLP}\!\Big(\math
 ::: {.slide title="Text Conditioning: Cross-Attention vs. Multimodal DiT"}
 [Conditioning on Variable-Length Token Sequences]{.kicker}
 
-While a scalar time $t$ or class label $y$ reduces to a single conditioning vector $\mathbf{c} \in \mathbb{R}^d$ for `adaLN-Zero`, a text prompt is a sequence of $n$ token embeddings $\mathbf{X}_{\textrm{text}} \in \mathbb{R}^{n \times d}$ from a frozen text encoder:
+::: {.cols .vc}
+::: {.col}
+$$\mathrm{CrossAttn}(\mathbf{Y}, \mathbf{X}_{\textrm{text}}) = \mathrm{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d}}\right)\mathbf{V} \in \mathbb{R}^{m \times d}$$
 
-- **Cross-attention lookup (Rombach et al., 2022):** Image tokens $\mathbf{Y} \in \mathbb{R}^{m \times d}$ supply queries $\mathbf{Q} = \mathbf{Y}\mathbf{W}_q$, while caption tokens supply keys $\mathbf{K} = \mathbf{X}_{\textrm{text}}\mathbf{W}_k$ and values $\mathbf{V} = \mathbf{X}_{\textrm{text}}\mathbf{W}_v$:
-  $$\mathrm{CrossAttn}(\mathbf{Y}, \mathbf{X}_{\textrm{text}}) = \mathrm{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d}}\right)\mathbf{V} \in \mathbb{R}^{m \times d}$$
-  Because $\mathbf{K}$ and $\mathbf{V}$ do not depend on $\mathbf{x}_t$, they can be precomputed **once per prompt** outside the 50-step sampling loop!
-- **Joint Multimodal DiT (MM-DiT; Esser et al., 2024):** Concatenates the $m$ image tokens and $n$ text tokens into one joint sequence of length $m + n$, allowing bidirectional attention to update both representations in every block.
+- **Cross-attention lookup (Rombach et al., 2022):** Image tokens supply queries $\mathbf{Q}$; frozen text embeddings supply keys/values $\mathbf{K}, \mathbf{V}$ (precomputed once per prompt outside the 50-step sampling loop).
+- **Joint Multimodal DiT (MM-DiT; Esser et al., 2024):** Concatenates $m$ image and $n$ text tokens into one sequence of length $m + n$ for bidirectional self-attention in every block.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-cross-vs-mmdit
+:::
+:::
 :::
 
 ::: {.slide title="Verifying DiT Shapes, Parameters, and Zero Init"}
@@ -1526,16 +1552,19 @@ Generating eight samples from the exact same initial noise tensor across all fou
 ::: {.slide title="Combining Latents and Transformers: When Each Wins"}
 [Architectural Decision Matrix]{.kicker}
 
-Training `DiT-M` on our $7 \times 7 \times 4$ latents with `patch_size = 1` ($L = 49$ tokens, $\approx 200\text{ GFLOP/step}$) yields $\mathrm{FD} \approx 2.0$—matching the $12\text{-GFLOP}$ latent U-Net, because both are bottlenecked by the $7 \times 7 \times 4$ latent representation:
-
+::: {.cols .vc}
+::: {.col}
 @latent-diffusion-scaling-with-compute-4
 
-| Resolution & Compute Regime | Recommended Space & Backbone | Systems & Statistical Rationale |
-| :--- | :--- | :--- |
-| **Low resolution ($\le 64 \times 64$)** | **Pixel space + U-Net** | Pixel FLOPs are already cheap; avoids autoencoder distortion & modelability gap |
-| **High resolution ($512^2$–$1024^2$) with U-Net** | **Latent space ($64 \times 64 \times 4$) + U-Net** | Cuts spatial positions and U-Net convolution FLOPs by **$64\times$** at every step |
-| **High resolution ($512^2$–$1024^2$) at scale** | **Latent space + DiT ($p = 2$)** | $1{,}024$ latent tokens avoid linear projection of $16 \times 16 \times 3 = 768$ noisy pixels |
-| **Modern pixel Transformers** | **Pixel space + clean-image $\hat{\mathbf{x}}_0$ or Hourglass** | Predicting $\hat{\mathbf{x}}_0$ on large patches (Li & He, 2026) projects out 768-D orthogonal noise |
+- **Low resolution ($\le 64^2$):** Use **Pixel U-Net**; pixel FLOPs are cheap and avoid the autoencoder modelability gap ($\mathrm{FD} \approx 1.5$ vs. $2.0$).
+- **High resolution ($512^2+$) at scale:** Use **Latent DiT ($p=2$)**; cuts spatial positions $64\times$ while Transformer tokens scale cleanly with GFLOPs.
+- **Large-patch pixel DiTs (Li & He, 2026):** Predict clean $\hat{\mathbf{x}}_0$ to project out high-D orthogonal noise.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-backbone-matrix
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Latent Scaling, adaLN-Zero & Tokens"}

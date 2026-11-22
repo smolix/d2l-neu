@@ -68,7 +68,17 @@ book-referenced ids (an `img/<id>.svg` exists) are copied to `img/`. Each
 step is byte-idempotent; re-running any of them on a finished file is a
 no-op.
 
-One id (after editing its module), from the repo root:
+One module (after editing its `.mjs` file), from the repo root:
+
+```bash
+NODE_PATH=/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
+/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
+tools/build_module_diagrams.mjs diagrams/<module>.mjs
+```
+
+`tools/build_module_diagrams.mjs` renders all diagrams in `<module>.mjs`, checks every SVG in headless Chromium for **4 classes of visual defects** (`*-intersects-text` when a line/curve/arrow/circle/ellipse intersects a text label, `rect-*-edge-cuts-text` when a box border cuts through a label, `text-overlap`, and `text-outside-viewbox`), writes `img/auto/<id>.svg`, and runs `tools/figstyle/outline_svg.py` on those files.
+
+Alternatively, for one id via `remake_ch02.py`:
 
 ```bash
 .venv-pytorch/bin/python tools/figstyle/remake_ch02.py --js <id> [<id> ...]

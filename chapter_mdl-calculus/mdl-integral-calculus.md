@@ -972,18 +972,14 @@ Integral Calculus<br>**Riemann sums · Fundamental Theorem · improper integrals
 ::: {.slide title="Why Continuous Probabilities Require Integration"}
 [Motivation]{.kicker}
 
-Every continuous probability, expected loss, and normalizing constant in machine learning is an area or volume under a density function:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The standard normal paradox:** A standard normal random variable $Z \sim \mathcal{N}(0, 1)$ has density $p(z) = \frac{1}{\sqrt{2\pi}}e^{-z^2/2}$. At $z = 0$ the density peaks at $p(0) \approx 0.40$, yet the probability of landing on the single point $0$ is $P(Z = 0) = 0$.
-- **Intervals carry probability:** Because $p(z)$ measures probability *per unit length*, only intervals enclose positive area: $P(-1 \le Z \le 1) = \int_{-1}^1 p(z)\,dz \approx 0.683$.
+- **The Standard Normal Paradox:** For $Z \sim \mathcal{N}(0, 1)$, density height peaks at $p(0) \approx 0.40$, yet single-point probability is $P(Z = 0) = 0$; only intervals carry positive area ($P(-1 \le Z \le 1) = \int_{-1}^1 p(z)\,dz \approx 0.683$).
+- **Two Foundational Questions:** How do we evaluate definite integrals via antiderivatives, and why does $\int_{-\infty}^\infty e^{-z^2/2}\,dz = \sqrt{2\pi}$?
 :::
 
-::: {.col}
-- **Two foundational questions:**
-  1. How do we add up a continuously varying height $f(x)$ over an interval $[a, b]$ without evaluating infinite sums by hand?
-  2. Where does the normalizing constant $\sqrt{2\pi} = \int_{-\infty}^\infty e^{-z^2/2}\,dz$ come from when $e^{-z^2/2}$ has no elementary antiderivative?
+::: {.col .fig .big}
+@fig:ch34-calc-density-area-paradox
 :::
 :::
 :::
@@ -1071,16 +1067,17 @@ On our running integral $\int_0^2 \frac{x}{1 + x^2}\,dx = \tfrac{1}{2}\log 5 \ap
 ::: {.slide title="The Evaluation Rule and Antiderivative Pitfalls"}
 [Computing Integrals]{.kicker}
 
-The Fundamental Theorem converts integration (an infinite limit of sums) into **antidifferentiation** (reading the derivative table backward):
-
-::: {.d2l-note .rule}
-**Evaluation Rule (FTC Part 2):** If $f$ is continuous on $[a, b]$ and $G$ is any antiderivative of $f$ ($G'(x) = f(x)$ for **all** $x \in [a, b]$), then
-$$\int_a^b f(x)\,dx = G(b) - G(a)$$
+::: {.cols .vc}
+::: {.col}
+- **Evaluation Rule (FTC Part 2):** If $f$ is continuous on $[a, b]$ and $G'(x) = f(x)$ for **all** $x \in [a, b]$, then $\int_a^b f(x)\,dx = G(b) - G(a)$.
+- **Running Example:** $\int_0^2 \frac{x}{1+x^2}\,dx = [\tfrac{1}{2}\log(1+x^2)]_0^2 = \tfrac{1}{2}\log 5$.
+- **Singular Antiderivative Trap:** Writing $\int_{-1}^1 x^{-2}\,dx = [-1/x]_{-1}^1 = -2$ is false because $-1/x$ blows up at $x = 0 \in [-1, 1]$.
 :::
 
-- **Why any antiderivative $G$ works:** Since $(G - F)' = f - f = 0$ on $(a, b)$, the Mean Value Theorem (§34.1) implies $G(x) - F(x) = C$ is constant, so $G(b) - G(a) = F(b) - F(a) = \int_a^b f(x)\,dx$.
-- **Running example solved in one line:** For $f(x) = \frac{x}{1+x^2}$, the chain rule gives $\frac{d}{dx}\bigl[\tfrac{1}{2}\log(1+x^2)\bigr] = \frac{x}{1+x^2}$, so $\int_0^2 \frac{x}{1+x^2}\,dx = \tfrac{1}{2}\log 5 - \tfrac{1}{2}\log 1 = \tfrac{1}{2}\log 5$.
-- **Critical pitfall ($G' = f$ must hold on all of $[a, b]$):** Writing $\int_{-1}^1 x^{-2}\,dx = [-1/x]_{-1}^1 = -2$ is false (and negative for a positive integrand!) because $-1/x$ blows up at $x = 0 \in [-1, 1]$.
+::: {.col .fig .big}
+@fig:ch34-calc-ftc-eval-pitfall
+:::
+:::
 :::
 
 ::: {.slide title="Verifying the Area-So-Far Function Across [0, 2]"}
@@ -1094,15 +1091,17 @@ Comparing the cumulative left-endpoint sum $F(x) = \int_0^x \frac{y}{1+y^2}\,dy$
 ::: {.slide title="Improper Integrals and Heavy-Tailed Power Laws"}
 [Unbounded Domains & Blow-Ups]{.kicker}
 
-Probability densities on $[a, \infty)$ or $\mathbb{R}$ are integrated by taking limits of finite intervals, $\int_a^\infty f(x)\,dx = \lim_{b \to \infty} \int_a^b f(x)\,dx$ (and on $(-\infty, \infty)$, **both** tails $\int_{-\infty}^0$ and $\int_0^\infty$ must converge independently):
+::: {.cols .vc}
+::: {.col}
+- **Power-Law Convergence Thresholds:**
+  - Unbounded tail $\int_1^\infty x^{-s}\,dx = \frac{1}{s-1}$ converges iff $s > 1$.
+  - Endpoint blow-up $\int_0^1 x^{-s}\,dx = \frac{1}{1-s}$ converges iff $s < 1$.
+- **Heavy-Tailed Moment Existence ($p(x) \propto x^{-s}$):** Normalizable for $s > 1$, finite mean for $s > 2$, and finite variance for $s > 3$.
+:::
 
-| Power-Law Regime ($s > 0$) | Definite Integral Before Limit | Convergence Threshold & Value |
-| :--- | :--- | :--- |
-| **Unbounded tail $\int_1^\infty x^{-s}\,dx$** | $\int_1^b x^{-s}\,dx = \dfrac{b^{1-s} - 1}{1 - s}$ ($\log b$ if $s=1$) | **Converges iff $s > 1$** to $\dfrac{1}{s - 1}$ (diverges for $s \le 1$) |
-| **Endpoint blow-up $\int_0^1 x^{-s}\,dx$** | $\int_a^1 x^{-s}\,dx = \dfrac{1 - a^{1-s}}{1 - s}$ ($-\log a$ if $s=1$) | **Converges iff $s < 1$** to $\dfrac{1}{1 - s}$ (diverges for $s \ge 1$) |
-
-::: {.d2l-note .warn}
-**Heavy-tailed distributions ($p(x) \propto x^{-s}$ as $x \to \infty$):** A power-law tail is normalizable ($\int_1^\infty x^{-s}dx < \infty$) only for $s > 1$, has a finite mean ($\int_1^\infty x \cdot x^{-s}dx < \infty$) only for $s > 2$, and has a finite variance ($\int_1^\infty x^2 \cdot x^{-s}dx < \infty$) only for $s > 3$. The Cauchy density $\frac{1}{\pi(1+x^2)}$ ($s = 2$) is normalized but has **no defined mean**!
+::: {.col .fig .big}
+@fig:ch34-calc-improper-power-laws
+:::
 :::
 :::
 
@@ -1121,14 +1120,16 @@ Increasing the cutoff $b$ from $1$ to $20$ drives the truncation error $e^{-b}$ 
 ::: {.slide title="Integration by Parts and Stein's Identity"}
 [Reversing the Product Rule]{.kicker}
 
-Integrating the product rule $(uv)' = u'v + uv'$ across $[a, b]$ shifts a derivative from one factor to the other at the cost of a boundary term:
+::: {.cols .vc}
+::: {.col}
+- **Integration by Parts:** $\int_a^b u(x)v'(x)\,dx = [u(x)v(x)]_a^b - \int_a^b u'(x)v(x)\,dx$.
+- **Stein's Identity for $w(z) = e^{-z^2/2}$ ($w' = -zw$):** Integrating $g'(z)w(z)$ by parts gives $\mathbb{E}[Z\,g(Z)] = \mathbb{E}[g'(Z)]$ for $Z \sim \mathcal{N}(0, 1)$, yielding $\mathbb{E}[Z^2] = 1$ and $\mathbb{E}[Z^4] = 3$ without antiderivatives.
+:::
 
-$$\int_a^b u(x)\,v'(x)\,dx = \Bigl[u(x)\,v(x)\Bigr]_a^b - \int_a^b u'(x)\,v(x)\,dx$$
-
-- **Exponential mean:** Setting $u = x$ and $v' = e^{-x}$ ($v = -e^{-x}$) gives $\int_0^\infty x e^{-x}\,dx = [-x e^{-x}]_0^\infty + \int_0^\infty e^{-x}\,dx = 0 + 1 = 1$.
-- **Stein's identity for the Gaussian bell $w(z) = e^{-z^2/2}$:** Because $w'(z) = -z\,w(z)$, integrating $g'(z)w(z)$ by parts when $g(z)w(z) \to 0$ at $\pm\infty$ gives:
-  $$\int_{-\infty}^\infty g'(z)\,w(z)\,dz = \Bigl[g(z)w(z)\Bigr]_{-\infty}^\infty - \int_{-\infty}^\infty g(z)\bigl(-z\,w(z)\bigr)\,dz = \int_{-\infty}^\infty z\,g(z)\,w(z)\,dz$$
-- **Normal moments without a single antiderivative:** For $Z \sim \mathcal{N}(0, 1)$, $\mathbb{E}[g'(Z)] = \mathbb{E}[Z\,g(Z)]$: setting $g(z) = z$ gives $\mathbb{E}[Z^2] = \mathbb{E}[1] = 1$, and setting $g(z) = z^3$ gives $\mathbb{E}[Z^4] = 3\mathbb{E}[Z^2] = 3$!
+::: {.col .fig .big}
+@fig:ch34-calc-ibp-stein
+:::
+:::
 :::
 
 ::: {.slide title="Change of Variables (Substitution) in 1D"}
@@ -1202,13 +1203,17 @@ $$\int_a^b u(x)\,v'(x)\,dx = \Bigl[u(x)\,v(x)\Bigr]_a^b - \int_a^b u'(x)\,v(x)\,
 ::: {.slide title="Density Transformation in Normalizing Flows"}
 [Deep Generative Models]{.kicker}
 
-In deep generative modeling, a **normalizing flow** transforms a simple base random vector $\mathbf{X} \sim p_{\mathbf{X}}$ (such as an isotropic Gaussian) through an invertible neural network $\mathbf{Y} = \boldsymbol{\phi}(\mathbf{X})$:
+::: {.cols .vc}
+::: {.col}
+- **Conservation of Probability Mass ($\mathbf{Y} = \boldsymbol{\phi}(\mathbf{X})$):** $P(\mathbf{Y} \in \boldsymbol{\phi}(\Omega)) = P(\mathbf{X} \in \Omega)$ forces $p_{\mathbf{Y}}(\boldsymbol{\phi}(\mathbf{x}))\,|\det\mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})| = p_{\mathbf{X}}(\mathbf{x})$.
+- **Exact Log-Likelihood Formula:** $\log p_{\mathbf{Y}}(\boldsymbol{\phi}(\mathbf{x})) = \log p_{\mathbf{X}}(\mathbf{x}) - \log|\det\mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})|$.
+- **Architectural Impact:** Triangular/coupling flow layers evaluate $\log|\det\mathbf{J}_{\boldsymbol{\phi}}|$ in $O(n)$ instead of $O(n^3)$.
+:::
 
-- **Conservation of probability mass:** For any region $A = \boldsymbol{\phi}(\Omega)$, the probability $P(\mathbf{Y} \in A) = P(\mathbf{X} \in \Omega)$ gives:
-  $$\int_{\Omega} p_{\mathbf{X}}(\mathbf{x})\,d\mathbf{x} = \int_{\boldsymbol{\phi}(\Omega)} p_{\mathbf{Y}}(\mathbf{y})\,d\mathbf{y} = \int_{\Omega} p_{\mathbf{Y}}\bigl(\boldsymbol{\phi}(\mathbf{x})\bigr)\,\bigl|\det \mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})\bigr|\,d\mathbf{x}$$
-- **Exact log-likelihood training formula:** Since this equality holds for every region $\Omega$, the densities are related pointwise by:
-  $$p_{\mathbf{Y}}\bigl(\boldsymbol{\phi}(\mathbf{x})\bigr) = p_{\mathbf{X}}(\mathbf{x})\,\bigl|\det \mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})\bigr|^{-1} \implies \log p_{\mathbf{Y}}\bigl(\boldsymbol{\phi}(\mathbf{x})\bigr) = \log p_{\mathbf{X}}(\mathbf{x}) - \log\bigl|\det \mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})\bigr|$$
-- **Architectural impact:** Flow layers (RealNVP, Glow) are designed with triangular or coupling Jacobians so that $\log|\det \mathbf{J}_{\boldsymbol{\phi}}|$ is a fast $O(n)$ sum of log-diagonal entries rather than an $O(n^3)$ determinant.
+::: {.col .fig .big}
+@fig:ch34-calc-flow-density-transform
+:::
+:::
 :::
 
 ::: {.slide title="Evaluating the Gaussian Integral via Polar Coords"}

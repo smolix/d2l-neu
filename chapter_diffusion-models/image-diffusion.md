@@ -1210,12 +1210,17 @@ Image Diffusion Architectures, Evaluation, and Guidance<br>**multi-scale U-Net �
 ::: {.slide title="Scaling Diffusion from the 2D Plane to 784-D Images"}
 [Motivation]{.kicker}
 
-The velocity regression $\mathbb{E}\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\boldsymbol\epsilon - \mathbf{x}_0)\|^2$ and probability-flow ODE carry over unchanged from $\mathbb{R}^2$ to $28 \times 28$ images ($\mathbb{R}^{784}$), but require four new systems components:
+::: {.cols .vc}
+::: {.col}
+- **1. Multi-resolution U-Net:** Global $28 \times 28$ receptive field at high noise ($t \to 1$) and full-resolution skip connections at low noise ($t \to 0$).
+- **2. Weight EMA & label dropout:** EMA damps minibatch SGD noise; $10\%$ random label dropout trains conditional and unconditional fields in one network.
+- **3. Calibrated FD & Classifier-Free Guidance (CFG):** Benchmark $5{,}000$ samples against the $1/n$ real-vs.-real floor, and extrapolate from $\mathbf{u}_\varnothing$ to $\mathbf{u}_c$ at scale $\gamma$.
+:::
 
-- **1. Multi-resolution spatial architecture (U-Net):** At high noise ($t \to 1$), deciding whether a blurry blob is a sneaker or a coat requires a global $28 \times 28$ receptive field, whereas at low noise ($t \to 0$) sharpening a collar edge requires pixel-level resolution.
-- **2. Stable parameter averaging & dual conditioning:** Exponential moving averaging (EMA) damps minibatch SGD noise, while $10\%$ random label dropout trains conditional and unconditional fields in one network.
-- **3. Calibrated distributional evaluation (FD):** Comparing $5{,}000$ generated and real images in classifier feature space against the finite-sample $1/n$ reference floor.
-- **4. Classifier-Free Guidance (CFG):** Extrapolating from the unconditional to the conditional prediction to trade sample diversity for class fidelity.
+::: {.col .fig .big}
+@fig:ch17-diff-scaling-4pillars
+:::
+:::
 :::
 
 ::: {.slide title="The Time- and Class-Conditioned Denoising U-Net"}
@@ -1239,22 +1244,35 @@ A stack of full-resolution $3 \times 3$ convolutions would need $14$ layers just
 ::: {.slide title="Where Parameters Live vs. Where FLOPs Are Spent"}
 [Systems Profile of the U-Net]{.kicker}
 
-A $3 \times 3$ convolution with $C_{\textrm{in}} \times C_{\textrm{out}}$ channels has $9\,C_{\textrm{in}}C_{\textrm{out}}$ weights regardless of spatial resolution, but executes once per pixel ($H \times W$):
-
+::: {.cols .vc}
+::: {.col}
 @image-diffusion-skips-resolutions-and-the-time-embedding-3
 
-- **Low resolution holds the capacity:** The $14 \times 14$ and $7 \times 7$ stages hold **$83\%$ of the $1.20\text{M}$ parameters** ($38\%$ in the $7 \times 7$ bottleneck alone for just $8\%$ of the compute).
-- **Full resolution dominates the arithmetic:** The $28 \times 28$ blocks hold only $17\%$ of the weights but consume **$59\%$ of the $247\text{M}$ multiply-adds** per forward pass ($16\times$ more compute per parameter than at $7 \times 7$).
+- **Low resolution holds the capacity:** The $14 \times 14$ and $7 \times 7$ stages hold **$83\%$ of the $1.20\text{M}$ parameters** ($38\%$ in the $7 \times 7$ bottleneck for just $8\%$ of the compute).
+- **Full resolution dominates the arithmetic:** The $28 \times 28$ blocks hold $17\%$ of the weights but consume **$59\%$ of the $247\text{M}$ MACs** ($16\times$ more compute per weight than $7 \times 7$).
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-unet-profile
+:::
+:::
 :::
 
 ::: {.slide title="Joint Conditioning via Random Label Dropout"}
 [One Network, Two Vector Fields]{.kicker}
 
-To steer generation by garment class $c \in \{0, \ldots, 9\}$ and support classifier-free guidance, we add an embedding table `nn.Embedding(num_classes + 1, emb_dim)` whose extra row (index $10$) represents the **null label** $\varnothing$:
+::: {.cols .vc}
+::: {.col}
+$$\mathcal{L}(\boldsymbol\theta) = \mathbb{E}_{\mathbf{x}_0, c, t, \boldsymbol\epsilon}\Big[\big\|\mathbf{u}_{\boldsymbol\theta}\big((1-t)\mathbf{x}_0 + t\boldsymbol\epsilon,\; t,\; \tilde{c}\big) - (\boldsymbol\epsilon - \mathbf{x}_0)\big\|^2\Big]$$
 
-- **Random label dropout ($p_{\textrm{drop}} = 0.1$):** In every training minibatch of $128$ images, $10\%$ of the class labels are randomly replaced with $\varnothing = 10$ before evaluating the velocity regression loss:
-  $$\mathcal{L}(\boldsymbol\theta) = \mathbb{E}_{\mathbf{x}_0, c, t, \boldsymbol\epsilon}\Big[\big\|\mathbf{u}_{\boldsymbol\theta}\big((1-t)\mathbf{x}_0 + t\boldsymbol\epsilon,\; t,\; \tilde{c}\big) - (\boldsymbol\epsilon - \mathbf{x}_0)\big\|^2\Big]$$
-- **Shared representation:** One network learns both the class-conditional velocity $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$ ($90\%$ of updates) and the unconditional velocity $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ ($10\%$ of updates) with negligible parameter or training overhead.
+- **Null label token ($\varnothing = 10$):** In every minibatch of $128$ images, $10\%$ of class labels are randomly replaced with $\varnothing = 10$ in `nn.Embedding(11, emb_dim)`.
+- **Shared representation:** One U-Net learns both the class-conditional velocity $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$ ($90\%$) and unconditional velocity $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ ($10\%$) with zero parameter overhead.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-label-dropout
+:::
+:::
 :::
 
 ::: {.slide title="Training Cost vs. Sampling Cost in Image Diffusion"}
@@ -1303,12 +1321,18 @@ At any time $t \in [0, 1]$, the network's velocity implies a clean-image posteri
 ::: {.slide title="Exponential Moving Average (EMA) of Model Weights"}
 [Stabilizing Stochastic Gradient Iterates]{.kicker}
 
-Because each minibatch of $128$ images draws random times $t$ and noise $\boldsymbol\epsilon$, Adam iterates $\boldsymbol\theta_k$ at a constant learning rate wander in a noisy cloud around the optimum (Polyak & Juditsky, 1992):
-
+::: {.cols .vc}
+::: {.col}
 $$\bar{\boldsymbol\theta}_k = \beta_{\textrm{EMA}}\,\bar{\boldsymbol\theta}_{k-1} + (1 - \beta_{\textrm{EMA}})\,\boldsymbol\theta_k, \qquad \beta_{\textrm{EMA}} = 2^{-1 / n_{1/2}}$$
 
-- **Half-life parameterization ($n_{1/2}$):** Setting $n_{1/2} = 1{,}000$ updates means weights from $1{,}000$ steps ago carry half the weight of the current iterate ($\beta_{\textrm{EMA}} = 2^{-1/1000} \approx 0.9993$, closing $0.07\%$ of the gap per step).
-- **Sizing $n_{1/2}$ to the training budget:** Too short a half-life retains minibatch jitter; too long drags in underfit early weights (DDPM used $\beta_{\textrm{EMA}} = 0.9999$, or $n_{1/2} \approx 7{,}000$, across $800{,}000$ updates).
+- **Half-life parameterization ($n_{1/2} = 1{,}000$):** Weights from $1{,}000$ updates ago carry half the weight of the current iterate ($\beta_{\textrm{EMA}} \approx 0.9993$), damping random minibatch $(t, \boldsymbol\epsilon)$ jitter.
+- **Sizing $n_{1/2}$ to the budget:** Too short retains SGD noise; too long drags in underfit early weights.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-ema-smoothing
+:::
+:::
 :::
 
 ::: {.slide title="Evaluating Sample Distributions: Fréchet Distance"}
@@ -1324,15 +1348,17 @@ $$\mathrm{FD}(p, q) = \underbrace{\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2}_{\t
 ::: {.slide title="Calibrating FD: The 1/n Finite-Sample Floor"}
 [Why Raw FD Numbers Require a Reference Scale]{.kicker}
 
-Even two disjoint sets of $n$ **real** images have a strictly positive plug-in FD because sample covariances fluctuate by $O(1/\sqrt{n})$, creating an upward trace bias proportional to $1/n$:
-
+::: {.cols .vc}
+::: {.col}
 @image-diffusion-reading-the-number-1
 
-::: {.d2l-note .warn}
-**Two iron laws of Fréchet distance evaluation:**
+- **Why disjoint real sets score $> 0$:** Sample covariances fluctuate by $O(1/\sqrt{n})$, creating an upward $+O(1/n)$ bias through $(\boldsymbol\Sigma_p^{1/2}\boldsymbol\Sigma_q\boldsymbol\Sigma_p^{1/2})^{1/2}$.
+- **Two iron laws:** (1) Never compare FD across different sample sizes $n$ (real floor drops $5\times$ from $0.87$ at $n = 1{,}000$ to $0.17$ at $n = 5{,}000$); (2) ignore differences smaller than the multi-seed noise floor ($\pm 0.05$ at $n = 5{,}000$).
+:::
 
-1. **Never compare FDs across different sample sizes $n$:** Real-vs.-real FD drops $5\times$ from $\mathbf{0.87}$ at $n = 1{,}000$ to $\mathbf{0.17}$ at $n = 5{,}000$ (so our model's FD of $0.82$ at $n = 5{,}000$ is $\approx 5\times$ the real floor, whereas at $n = 1{,}000$ it would equal the real floor!).
-2. **Respect the run-to-run noise floor:** At $n = 5{,}000$, disjoint real sets vary by $\pm 0.05$ ($\pm 0.18$ at $n = 1{,}000$); differences smaller than this range are statistical noise.
+::: {.col .fig}
+@fig:ch17-diff-fd-floor
+:::
 :::
 :::
 
@@ -1362,13 +1388,18 @@ $$\nabla_{\mathbf{x}} \log p_t(\mathbf{x} \mid c) = \nabla_{\mathbf{x}} \log p_t
 ::: {.slide title="Classifier-Free Guidance (CFG): Implicit Steering"}
 [Eliminating the External Classifier]{.kicker}
 
-**Classifier-Free Guidance (CFG)** (Ho & Salimans, 2022) inverts Bayes' score identity to express the classifier gradient as the difference between the conditional and unconditional scores:
+::: {.cols .vc}
+::: {.col}
+$$\tilde{\mathbf{u}}(\mathbf{x}, t, c) = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing) + \gamma\,\big(\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, c) - \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing)\big)$$
 
-$$\nabla_{\mathbf{x}} \log p_t(c \mid \mathbf{x}) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x} \mid c) - \nabla_{\mathbf{x}} \log p_t(\mathbf{x}) = \mathbf{s}_c(\mathbf{x}, t) - \mathbf{s}_\varnothing(\mathbf{x}, t)$$
+- **Implicit Bayes classifier gradient (Ho & Salimans, 2022):** Inverts Bayes' rule so $\nabla_{\mathbf{x}}\log p_t(c \mid \mathbf{x}) = \mathbf{s}_c(\mathbf{x}, t) - \mathbf{s}_\varnothing(\mathbf{x}, t)$.
+- **Universal dictionary invariance:** Because $(1 - \gamma) + \gamma = 1$, the exact same linear extrapolation applies identically to $\hat{\mathbf{x}}_0$, $\hat{\boldsymbol\epsilon}$, $\hat{\mathbf{v}}$, score, and velocity predictions!
+:::
 
-- **Linear extrapolation in score and velocity space:** Because velocity $\mathbf{u}_t(\mathbf{x}) = -(\mathbf{x} + t\,\mathbf{s}_t(\mathbf{x}))/(1 - t)$ is affine in the score and the weights $(1 - \gamma) + \gamma = 1$ sum to one, the $-\mathbf{x}/(1 - t)$ offset passes through unchanged:
-  $$\tilde{\mathbf{u}}(\mathbf{x}, t, c) = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing) + \gamma\,\big(\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, c) - \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing)\big)$$
-- **Universal dictionary invariance:** The exact same linear combination $(1 - \gamma)\hat{\mathbf{y}}_\varnothing + \gamma\hat{\mathbf{y}}_c$ applies identically to $\hat{\mathbf{x}}_0$, $\hat{\boldsymbol\epsilon}$, $\hat{\mathbf{v}}$, score, and velocity predictions!
+::: {.col .fig}
+@fig:ch17-diff-cfg-derivation
+:::
+:::
 :::
 
 ::: {.slide title="Geometry and Batched Implementation of CFG"}
@@ -1429,25 +1460,35 @@ Why is the unconditional FD ($\gamma = 0$, $\mathrm{FD} \approx 2.75$) more than
 ::: {.slide title="Theory: Why Guided ODE Trajectories Overshoot the Tilt"}
 [Exact Analysis on Gaussian Classes]{.kicker}
 
-At any fixed $t$, the guided score $\nabla \log p_t(\mathbf{x}) + \gamma\nabla \log p_t(c \mid \mathbf{x})$ is the score of the **tilted density** $\tilde{p}_t(\mathbf{x}) \propto p_t(\mathbf{x})^{1-\gamma}\,p_t(\mathbf{x} \mid c)^\gamma$. For a Gaussian class $\mathcal{N}(\boldsymbol\mu_c, s^2\mathbf{I})$ inside a broader prior $\mathcal{N}(\mathbf{0}, S^2\mathbf{I})$ ($S^2 > s^2$), the $t = 0$ tilted Gaussian has variance $v$ and mean:
-
+::: {.cols .vc}
+::: {.col}
 $$\frac{1}{v} = \frac{\gamma}{s^2} - \frac{\gamma - 1}{S^2} > \frac{1}{s^2}, \qquad \boldsymbol\mu_{\textrm{tilt}} = \frac{\gamma v}{s^2}\,\boldsymbol\mu_c$$
 
 - **Static tilt vs. dynamic ODE overshoot ($\mu_c = 1, s = 0.5, S^2 = 2, \gamma = 4$):**
-  - The static $t = 0$ tilted distribution narrows width by $2\times$ ($s = 0.50 \to \sqrt{v} = 0.26$) and shifts the mean to $1.10$.
-  - Integrating the guided probability-flow ODE from $t = 1$ to $0$ shrinks the final width **$25\times$ to $0.02$** and shifts the mean to $1.23$!
+  - Static $t = 0$ tilted density $\tilde{p}_0 \propto p_0^{1-\gamma}p_0(\cdot \mid c)^\gamma$ narrows width $2\times$ ($0.50 \to 0.26$) and shifts mean to $1.10$.
+  - Integrating the guided ODE from $t = 1 \to 0$ shrinks width **$25\times$ to $0.02$** and shifts the mean to $1.23$!
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-guided-overshoot
+:::
+:::
 :::
 
 ::: {.slide title="Why High-Noise Guidance Breaks the Curvature Bound"}
 [Path Inconsistency & Modern Remedies]{.kicker}
 
-Why does integrating the guided field from $t = 1$ to $0$ contract variance so much more violently than the $t = 0$ tilted density?
+::: {.cols .vc}
+::: {.col}
+- **Gaussian convolution curvature ceiling:** Any valid marginal density $p_t = p_0 * \mathcal{N}(\mathbf{0}, \sigma_t^2\mathbf{I})$ obeys $-\nabla^2\log p_t(\mathbf{x}) \preceq (1/\sigma_t^2)\mathbf{I}$.
+- **Violation at high noise:** For $\gamma > S^2/(S^2 - s^2) = 8/7$, the guided precision $1/v_t$ exceeds $1/t^2$ near $t = 1$ (violating the bound across $t \in (0.24, 1]$ at $\gamma = 4$).
+- **Modern remedies:** Apply $\gamma > 1$ only in a middle **guidance interval** (Kynkäänniemi et al., 2024) or use **autoguidance** against a weaker conditional model (Karras et al., 2024).
+:::
 
-- **The Gaussian convolution curvature ceiling:** Any valid marginal density $p_t = p_0 * \mathcal{N}(\mathbf{0}, \sigma_t^2\mathbf{I})$ obeys $-\nabla^2 \log p_t(\mathbf{x}) \preceq \frac{1}{\sigma_t^2}\mathbf{I}$ (a density blurred by variance $\sigma_t^2$ cannot curve more sharply than the noise kernel itself).
-- **Violation at high noise:** On our Gaussian example ($\sigma_t = t$), the tilted precision $1/v_t$ exceeds $1/t^2$ near $t = 1$ whenever $\gamma > S^2/(S^2 - s^2) = 8/7$ (for $\gamma = 4$, it violates the bound across all $t \in (0.24, 1]$!).
-- **Two practical remedies in modern image generators:**
-  1. **Guidance intervals (Kynkäänniemi et al., 2024):** Disable guidance ($\gamma = 1$) at high noise and low noise, applying $\gamma > 1$ only in the middle band where class structure commits.
-  2. **Autoguidance (Karras et al., 2024):** Extrapolate away from a smaller/undertrained conditional model rather than $\mathbf{u}_\varnothing$, removing model errors without destroying class diversity.
+::: {.col .fig .big}
+@fig:ch17-diff-curvature-ceiling
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Receptive Fields, FD Floors & CFG"}

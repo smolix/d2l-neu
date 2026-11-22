@@ -1722,25 +1722,36 @@ $$\theta\mathbf{x} + (1 - \theta)\mathbf{y} \in C$$
 ::: {.slide title="Intersections and Convex Hulls Build New Sets"}
 [Convex Sets]{.kicker}
 
-We rarely verify the line-segment definition from scratch; instead, we construct complex convex sets using two closure operations:
-
-- **Arbitrary intersections preserve convexity:** If $\mathbf{x}, \mathbf{y} \in \bigcap_{i \in \mathcal{I}} C_i$, the segment between them lies in every convex $C_i$ and thus in their intersection. (Unions generally fail: $[0, 1] \cup [2, 3]$ has a gap.)
-  - *Simplex $\Delta$:* Intersection of one hyperplane ($\mathbf{1}^\top\mathbf{p} = 1$) and $d$ half-spaces ($-p_i \le 0$).
-  - *Positive semidefinite (PSD) cone:* $\mathbb{S}_+^d = \bigcap_{\mathbf{z} \in \mathbb{R}^d} \{\mathbf{A} \in \mathbb{S}^d : \mathbf{z}^\top\mathbf{A}\mathbf{z} \ge 0\}$ is an infinite intersection of linear half-spaces in the matrix entries.
-- **Convex hull (building from the inside out):** The smallest convex set containing $S$ is the set of all convex combinations of points in $S$:
+::: {.cols .vc}
+::: {.col}
+- **Arbitrary intersections preserve convexity:** If every $C_i$ is convex, then $\bigcap_{i \in \mathcal{I}} C_i$ is convex (e.g., the simplex $\Delta$ and the PSD cone $\mathbb{S}_+^d$).
+- **Convex hull (from the inside out):** The smallest convex set containing $S$ is the set of all convex combinations:
   $$\mathrm{conv}(S) = \left\{\sum_{i=1}^m \theta_i \mathbf{x}_i : \mathbf{x}_i \in S,\; \theta_i \ge 0,\; \sum_{i=1}^m \theta_i = 1\right\}$$
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-intersection-hull
+:::
+:::
 :::
 
 ::: {.slide title="The Zero-Order Test: Chords Lie Above the Graph"}
 [Convex Functions]{.kicker}
 
-A function $f : C \to \mathbb{R}$ on a convex domain $C$ is **convex** if its graph lies on or below every chord connecting two points on the graph:
+::: {.cols .vc}
+::: {.col}
+A function $f : C \to \mathbb{R}$ on a convex set $C$ is **convex** if every chord lies on or above its graph ($\theta \in [0, 1]$):
 
-$$f\big(\theta\mathbf{x} + (1 - \theta)\mathbf{y}\big) \le \theta\,f(\mathbf{x}) + (1 - \theta)\,f(\mathbf{y}) \qquad \forall\,\mathbf{x}, \mathbf{y} \in C,\; \theta \in [0, 1]$$
+$$f\big(\theta\mathbf{x} + (1 - \theta)\mathbf{y}\big) \le \theta\,f(\mathbf{x}) + (1 - \theta)\,f(\mathbf{y})$$
 
-- **Strict convexity and concavity:** $f$ is *strictly convex* if the inequality is strict for all $\mathbf{x} \neq \mathbf{y}$ and $\theta \in (0, 1)$; $f$ is *concave* if $-f$ is convex.
-- **Quadratic chord gap:** For $f(x) = x^2$, expanding squares shows that the chord height minus graph height is $\theta x^2 + (1-\theta)y^2 - (\theta x + (1-\theta)y)^2 = \theta(1-\theta)(x - y)^2 \ge 0$.
-- **Epigraphs and sublevel sets:** $f$ is convex if and only if its **epigraph** $\mathrm{epi}(f) = \{(\mathbf{x}, t) : t \ge f(\mathbf{x})\}$ is a convex set. Every **sublevel set** $\{\mathbf{x} \in C : f(\mathbf{x}) \le c\}$ of a convex function is convex (though the converse fails: $f(x) = \sqrt{|x|}$ has convex interval sublevel sets but is not convex).
+- **Epigraphs:** $f$ is convex iff $\mathrm{epi}(f) = \{(\mathbf{x}, t) : t \ge f(\mathbf{x})\}$ is a convex set.
+- **Sublevel sets:** Every sublevel set $\{\mathbf{x} : f(\mathbf{x}) \le c\}$ of a convex function is convex (though the converse fails for $\sqrt{|x|}$).
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-epigraph-sublevel
+:::
+:::
 :::
 
 ::: {.slide title="Every Local Minimum of a Convex Function Is Global"}
@@ -1808,13 +1819,19 @@ $$\nabla^2 f(\mathbf{x}) \succeq \mathbf{0} \iff \mathbf{v}^\top \nabla^2 f(\mat
 ::: {.slide title="How the Three Characterizations Prove Each Other"}
 [Equivalence Proof]{.kicker}
 
-All three tests—chords, tangents, and PSD Hessians—define the exact same class of functions:
+::: {.cols .vc}
+::: {.col}
+All three tests define the exact same class of smooth functions:
 
-1. **Chord $\Rightarrow$ First-Order:** Rearrange the chord inequality at $\mathbf{x} + \theta(\mathbf{y} - \mathbf{x})$ and take the limit $\theta \downarrow 0$:
-   $$\frac{f\big(\mathbf{x} + \theta(\mathbf{y} - \mathbf{x})\big) - f(\mathbf{x})}{\theta} \le f(\mathbf{y}) - f(\mathbf{x}) \xrightarrow{\theta \downarrow 0} \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) \le f(\mathbf{y}) - f(\mathbf{x})$$
-2. **First-Order $\Rightarrow$ Chord:** Let $\mathbf{z} = \theta\mathbf{x} + (1-\theta)\mathbf{y}$ and apply the tangent bound at $\mathbf{z}$ toward $\mathbf{x}$ and toward $\mathbf{y}$:
-   $$\theta f(\mathbf{x}) + (1-\theta)f(\mathbf{y}) \ge f(\mathbf{z}) + \nabla f(\mathbf{z})^\top\big(\theta(\mathbf{x}-\mathbf{z}) + (1-\theta)(\mathbf{y}-\mathbf{z})\big) = f(\mathbf{z})$$
-3. **First-Order $\iff$ Second-Order:** Along $g(t) = f(\mathbf{x} + t(\mathbf{y}-\mathbf{x}))$, Taylor's theorem gives $f(\mathbf{y}) = f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x}) + \tfrac12(\mathbf{y}-\mathbf{x})^\top\nabla^2 f(\mathbf{z}_\tau)(\mathbf{y}-\mathbf{x})$, which is $\ge$ the tangent iff $\nabla^2 f \succeq \mathbf{0}$.
+- **0th $\Rightarrow$ 1st-Order:** Divide the chord inequality at $\mathbf{x} + \theta(\mathbf{y} - \mathbf{x})$ by $\theta$ and let $\theta \downarrow 0$.
+- **1st $\Rightarrow$ 0th-Order:** Apply the tangent bound at $\mathbf{z} = \theta\mathbf{x} + (1-\theta)\mathbf{y}$ toward $\mathbf{x}$ and $\mathbf{y}$, then take their weighted sum.
+- **1st $\iff$ 2nd-Order:** By 1D Taylor expansion along $\mathbf{x} + t(\mathbf{y}-\mathbf{x})$, the gap above the tangent is $\tfrac12(\mathbf{y}-\mathbf{x})^\top\nabla^2 f(\mathbf{z}_\tau)(\mathbf{y}-\mathbf{x}) \ge 0$.
+:::
+
+::: {.col .fig .big}
+@fig:ch36-opt-three-tests-triangle
+:::
+:::
 :::
 
 ::: {.slide title="Testing Chords, Tangents, and Hessians in Code"}
@@ -1883,15 +1900,20 @@ $$f(\mathbf{y}) \ge f(\mathbf{x}) + \mathbf{g}^\top(\mathbf{y} - \mathbf{x})$$
 ::: {.slide title="Jensen's Inequality: Expectations of Convex Functions"}
 [Consequences of Convexity]{.kicker}
 
-For any convex function $f : C \to \mathbb{R}$ and any integrable random vector $\mathbf{Z} \in C$ with mean $\mathbf{m} = \mathbb{E}[\mathbf{Z}]$ in the interior of $C$, evaluating $f$ at the mean never exceeds the mean of $f$:
+::: {.cols .vc}
+::: {.col}
+For any convex $f : C \to \mathbb{R}$ and random vector $\mathbf{Z} \in C$ with mean $\mathbf{m} = \mathbb{E}[\mathbf{Z}]$:
 
 $$f\big(\mathbb{E}[\mathbf{Z}]\big) \le \mathbb{E}\big[f(\mathbf{Z})\big]$$
 
-- **Three-line subgradient proof:**
-  1. Because $\mathbf{m} = \mathbb{E}[\mathbf{Z}]$ lies in the interior of $C$, $f$ has at least one subgradient $\mathbf{g} \in \partial f(\mathbf{m})$.
-  2. By the subgradient inequality, $f(\mathbf{Z}) \ge f(\mathbf{m}) + \mathbf{g}^\top(\mathbf{Z} - \mathbf{m})$ holds for every outcome $\mathbf{Z}$.
-  3. Taking expectations of both sides annihilates the linear term $\mathbf{g}^\top\mathbb{E}[\mathbf{Z} - \mathbf{m}] = 0$, leaving $\mathbb{E}[f(\mathbf{Z})] \ge f(\mathbf{m})$.
-- **Equality condition:** If $f$ is strictly convex, equality holds if and only if $\mathbf{Z} = \mathbf{m}$ with probability $1$ (for $f(x) = x^2$, the Jensen gap $\mathbb{E}[Z^2] - (\mathbb{E}[Z])^2 = \mathrm{Var}(Z)$ is literally the variance).
+- **Three-line proof:** Pick a subgradient $\mathbf{g} \in \partial f(\mathbf{m})$ so $f(\mathbf{Z}) \ge f(\mathbf{m}) + \mathbf{g}^\top(\mathbf{Z} - \mathbf{m})$; taking expectations kills the linear term $\mathbf{g}^\top\mathbb{E}[\mathbf{Z} - \mathbf{m}] = 0$.
+- **Strict equality certificate:** For strictly convex $f$, equality holds iff $\mathbf{Z} = \mathbf{m}$ almost surely.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-jensen-gap-variance
+:::
+:::
 :::
 
 ::: {.slide title="Jensen's Inequality Proves KL Divergence ≥ 0"}
@@ -1966,12 +1988,17 @@ Testing gradient descent with $\eta = 1/L$ on a least-squares problem with eigen
 ::: {.slide title="Four Closure Rules for Recognizing Convex Losses"}
 [Convex Calculus]{.kicker}
 
-Instead of computing Hessians by hand, we certify almost all convex machine learning objectives from elementary convex atoms using four operations that preserve convexity:
+::: {.cols .vc}
+::: {.col}
+- **Nonnegative sums & affine inputs:** $\sum_{i=1}^m w_i f_i(\mathbf{x})$ ($w_i \ge 0$) and $\mathbf{w} \mapsto f(\mathbf{X}\mathbf{w} + \mathbf{b})$ preserve convexity.
+- **Pointwise maximum:** $\max_i f_i(\mathbf{x})$ is convex because $\mathrm{epi}(\max_i f_i) = \bigcap_i \mathrm{epi}(f_i)$ (certifies hinge loss and $\|\mathbf{w}\|_1$).
+- **Monotone composition:** $h(g(\mathbf{x}))$ is convex when $g$ is convex and $h$ is convex *and nondecreasing* (dropping monotonicity gives the nonconvex double well $(x^2 - 1)^2$).
+:::
 
-1. **Nonnegative weighted sums:** If $f_1, \ldots, f_m$ are convex and $w_i \ge 0$, then $\sum_{i=1}^m w_i f_i(\mathbf{x})$ is convex (e.g., averaging per-example losses plus regularizers).
-2. **Affine pre-composition:** If $f$ is convex, then $\mathbf{w} \mapsto f(\mathbf{X}\mathbf{w} + \mathbf{b})$ is convex (any loss convex in predictions is automatically convex in linear-model weights).
-3. **Pointwise maximum / supremum:** If each $f_i$ is convex, $\max_i f_i(\mathbf{x})$ is convex because its epigraph is the intersection of $\mathrm{epi}(f_i)$ (certifies hinge loss $\max(0, 1 - y\mathbf{w}^\top\mathbf{x})$ and $\| \mathbf{w} \|_1 = \sum_i \max(w_i, -w_i)$).
-4. **Monotone composition:** If $g$ is convex and $h$ is convex *and nondecreasing*, $h(g(\mathbf{x}))$ is convex. (Dropping monotonicity fails: $t^2 \circ (x^2 - 1) = (x^2 - 1)^2$ is the nonconvex double well!)
+::: {.col .fig .big}
+@fig:ch36-opt-closure-rules
+:::
+:::
 :::
 
 ::: {.slide title="Log-Sum-Exp and the Softmax Covariance Hessian"}

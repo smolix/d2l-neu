@@ -1731,21 +1731,14 @@ Point Estimation, Hypothesis Testing, Confidence Intervals, and the Bootstrap<br
 ::: {.slide title="Is 921/1,000 Truly Better Than 912/1,000?"}
 [Motivation]{.kicker}
 
-Every benchmark number in deep learning—a test accuracy, a validation loss, or an ablation gap—is a random variable drawn from a finite sample of data:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The 1,000-question test set:** Classifier A answers $912$ of $1{,}000$ questions correctly ($\hat{\theta}_A = 91.2\%$), while Classifier B answers $921$ correctly ($\hat{\theta}_B = 92.1\%$).
-- **Finite-sample uncertainty:** On a fresh draw of $1{,}000$ questions from the same distribution, $\hat{\theta}_A$ fluctuates with standard error
-  $$\mathrm{se}(\hat{\theta}_A) = \sqrt{\frac{0.912 \times 0.088}{1000}} \approx 0.0090 \quad (\pm 1.8\% \text{ at } 95\%)$$
+- **The 1,000-question test set:** Classifier A scores $912/1000$ ($91.2\%$) and Classifier B scores $921/1000$ ($92.1\%$), with single-model standard error $\mathrm{se} \approx 0.90\%$.
+- **Unpaired vs. paired comparison:** Treated as two independent test sets, the $+0.9\%$ gap is buried inside $\mathrm{se} = 1.24\%$; pairing on the *same* $1{,}000$ questions cancels shared item difficulty and cuts required labels $9\times$.
 :::
 
-::: {.col}
-- **Why naive comparisons fail:** Treated as independent test sets, the observed $+0.9\%$ gap has standard error $\sqrt{0.90^2 + 0.85^2}\% \approx 1.24\%$, burying the signal inside the noise ($0.7\,\mathrm{se}$).
-- **What statistical inference provides:**
-  1. **Bias & variance** of point estimators (§36.5.1).
-  2. **Hypothesis tests & power** for model comparisons (§36.5.2).
-  3. **Confidence intervals & the bootstrap** for error bars (§36.5.3–36.5.4).
+::: {.col .fig .big}
+@fig:ch35-prob-paired-vs-unpaired
 :::
 :::
 :::
@@ -1789,13 +1782,18 @@ An **estimator** $\hat{\theta}_n = T(x_1, \dots, x_n)$ is any rule that maps a r
 ::: {.slide title="Why Dividing by n Underestimates Variance"}
 [Bessel's n − 1 Correction & Degrees of Freedom]{.kicker}
 
-To estimate $\sigma^2$ from data, the naive plug-in variance $s_0^2 = \frac{1}{n}\sum_{i=1}^n (x_i - \bar{x})^2$ is systematically too small because $\bar{x}$ minimizes $\sum_i (x_i - c)^2$ for the sample in hand ($\sum_i (x_i - \bar{x})^2 < \sum_i (x_i - \mu)^2$):
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}\!\left[\sum_{i=1}^n (x_i - \bar{x})^2\right] = n\sigma^2 - n\,\mathrm{Var}(\bar{x}) = (n - 1)\sigma^2$$
 
-- **Algebraic proof of the exact shrinkage:** Write $x_i - \bar{x} = (x_i - \mu) - (\bar{x} - \mu)$ and expand the sum of squares:
-  $$\sum_{i=1}^n (x_i - \bar{x})^2 = \sum_{i=1}^n (x_i - \mu)^2 - 2n(\bar{x} - \mu)^2 + n(\bar{x} - \mu)^2 = \sum_{i=1}^n (x_i - \mu)^2 - n(\bar{x} - \mu)^2$$
-- Taking expectations uses $\mathbb{E}[(x_i - \mu)^2] = \sigma^2$ and $\mathbb{E}[(\bar{x} - \mu)^2] = \mathrm{Var}(\bar{x}) = \sigma^2/n$:
-  $$\mathbb{E}\!\left[\sum_{i=1}^n (x_i - \bar{x})^2\right] = n\sigma^2 - n\left(\frac{\sigma^2}{n}\right) = (n - 1)\sigma^2 \implies s^2 = \frac{1}{n - 1}\sum_{i=1}^n (x_i - \bar{x})^2 \text{ has } \mathbb{E}[s^2] = \sigma^2$$
-- **Degrees of freedom (`ddof=1`):** Since $\sum_{i=1}^n (x_i - \bar{x}) = 0$, estimating $\bar{x}$ consumes $1$ of the $n$ degrees of freedom (at $n=2$, $\sum_{i=1}^2 (x_i - \bar{x})^2 = \frac{1}{2}(x_1 - x_2)^2$ has mean $\sigma^2$, so dividing by $n=2$ underestimates $\sigma^2$ by $50\%$).
+- **Why $\bar{x}$ shrinks residuals:** The sample mean $\bar{x}$ minimizes $\sum_i (x_i - c)^2$ for the sample in hand, making $\sum_i (x_i - \bar{x})^2$ smaller than $\sum_i (x_i - \mu)^2$ by exactly $n(\bar{x} - \mu)^2$.
+- **Bessel's correction (`ddof=1`):** Dividing by $n - 1$ degrees of freedom makes $s^2 = \frac{1}{n-1}\sum_{i=1}^n (x_i - \bar{x})^2$ unbiased ($\mathbb{E}[s^2] = \sigma^2$).
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-bessel-dof
+:::
+:::
 :::
 
 ::: {.slide title="The Bias–Variance Decomposition as Pythagoras"}
@@ -1863,15 +1861,18 @@ $$P\bigl(|\hat{\theta}_n - \theta| > \varepsilon\bigr) \le \frac{\mathrm{MSE}(\h
 ::: {.slide title="Monte Carlo Estimation vs. Deterministic Grids"}
 [Beating the Curse of Dimensionality]{.kicker}
 
-To approximate a $d$-dimensional expectation $\mathbb{E}[g(X)] = \int_{\mathbb{R}^d} g(\mathbf{x})p(\mathbf{x})\,d\mathbf{x}$, **Monte Carlo estimation** draws $N$ i.i.d. samples $\mathbf{x}_1, \dots, \mathbf{x}_N \sim p$ and averages $g(\mathbf{x}_i)$:
+::: {.cols .vc}
+::: {.col}
+$$\hat{I}_N = \frac{1}{N}\sum_{i=1}^N g(\mathbf{x}_i), \qquad \mathrm{RMSE}(\hat{I}_N) = \frac{\sigma}{\sqrt{N}} = O\bigl(N^{-1/2}\bigr)$$
 
-$$\hat{I}_N = \frac{1}{N}\sum_{i=1}^N g(\mathbf{x}_i), \qquad \mathbb{E}[\hat{I}_N] = \mathbb{E}[g(X)], \qquad \mathrm{RMSE}(\hat{I}_N) = \sqrt{\mathrm{Var}(\hat{I}_N)} = \frac{\sigma}{\sqrt{N}} = O\bigl(N^{-1/2}\bigr)$$
+- **Curse of dimensionality on grids:** A second-order midpoint grid of $N = \epsilon^{-d}$ points has error $O(\epsilon^2) = O(N^{-2/d})$, collapsing in high dimensions.
+- **Dimension-free Monte Carlo:** Averaging $N$ i.i.d. draws converges at $\sigma N^{-1/2}$ in *every* dimension $d$, tying midpoint grids at $d = 4$ and winning for all $d > 4$.
+:::
 
-| Integration Method in $d$ Dimensions | Number of Points for Spacing $\epsilon$ | Error Rate for $N$ Function Evaluations | Rate at $d = 1$ | Rate at $d = 4$ | Rate at $d = 10$ |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Left-endpoint Riemann grid** | $N = \epsilon^{-d}$ ($\epsilon = N^{-1/d}$) | $O(\epsilon) = O(N^{-1/d})$ | $N^{-1}$ | $N^{-1/4}$ | $N^{-1/10}$ |
-| **Second-order midpoint grid** | $N = \epsilon^{-d}$ ($\epsilon = N^{-1/d}$) | $O(\epsilon^2) = O(N^{-2/d})$ | $N^{-2}$ | **$N^{-1/2}$ (tie)** | $N^{-1/5}$ |
-| **Monte Carlo sampling** | Any sample budget $N$ | **$\sigma N^{-1/2}$ (dimension-free!)** | $N^{-1/2}$ | **$N^{-1/2}$ (tie)** | **$N^{-1/2}$ (wins!)** |
+::: {.col .fig}
+@fig:ch35-prob-mc-vs-grid
+:::
+:::
 :::
 
 ::: {.slide title="Monte Carlo Convergence: Single Run vs. RMS Error"}
@@ -2005,13 +2006,17 @@ Evaluating Classifier A ($912/1000$) and Classifier B ($921/1000$) on the *same*
 ::: {.slide title="Multiple Testing, p-Hacking, and Bonferroni"}
 [Controlling False Discoveries in Hyperparameter Sweeps]{.kicker}
 
-Every guarantee $P_{H_0}(p \le \alpha) = \alpha$ assumes a *single* hypothesis test chosen before seeing the data. What happens when a hyperparameter sweep compares $m = 20$ null configurations against a baseline at $\alpha = 0.05$?
+::: {.cols .vc}
+::: {.col}
+- **False-positive inflation:** Testing $m = 20$ null models at $\alpha = 0.05$ produces at least one false discovery with probability $1 - 0.95^{20} \approx \mathbf{64.2\%}$.
+- **Bonferroni correction ($\alpha/m$):** Rejecting only when $p_j \le \alpha/m$ guarantees $\mathrm{FWER} \le m(\alpha/m) = \alpha$ via the union bound, even for correlated tests.
+- **Benjamini–Hochberg (FDR $\le \alpha$):** Sorting $p_{(1)} \le \dots \le p_{(m)}$ and finding the largest $k$ with $p_{(k)} \le \frac{k}{m}\alpha$ preserves power across large sweeps ($m \gg 100$).
+:::
 
-- **Inflation of false positives (Family-Wise Error Rate):** If the $20$ tests are independent and all $20$ configurations are no better than the baseline, the probability of at least one false "breakthrough" is:
-  $$P(\text{at least one false positive}) = 1 - (1 - 0.05)^{20} = 1 - 0.95^{20} \approx \mathbf{64.2\%}$$
-- **The Bonferroni Correction ($\alpha / m$):** Testing each of the $m$ hypotheses at threshold $\alpha / m$ controls the probability of *any* false discovery via the union bound—**regardless of how the tests are correlated**:
-  $$P\!\left(\bigcup_{j=1}^m \{p_j \le \alpha/m\}\right) \le \sum_{j=1}^m P(p_j \le \alpha/m) = m \cdot \frac{\alpha}{m} = \alpha$$
-- **Large-scale screening ($m \gg 100$):** When $\alpha/m$ is too conservative, the **Benjamini–Hochberg (BH)** step-up rule sorts $p_{(1)} \le \dots \le p_{(m)}$ and rejects up to the largest $k$ with $p_{(k)} \le \frac{k}{m}\alpha$, bounding the **False Discovery Rate (FDR)** $\le \alpha$.
+::: {.col .fig .big}
+@fig:ch35-prob-bonferroni-fdr
+:::
+:::
 :::
 
 ::: {.slide title="Confidence Intervals: Procedure Hit Rate vs. Truth"}

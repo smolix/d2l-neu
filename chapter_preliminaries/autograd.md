@@ -695,16 +695,16 @@ Automatic Differentiation: Computational Graphs, Reverse-Mode AD, and Dynamic Pr
 ::: {.slide title="Three Ways to Differentiate Code: Why Deep Learning Needs Autograd"}
 [Motivation]{.kicker}
 
-Training a modern network requires the gradient $\nabla_{\mathbf{w}} L \in \mathbb{R}^n$ of a scalar loss across $n = 10^8\text{--}10^{11}$ parameters at every optimization step:
+::: {.cols .vc}
+::: {.col}
+- **Symbolic algebra:** Exponential expression swell; fails on Python loops and branches.
+- **Numerical finite differences:** Costs $O(n)$ forward evaluations ($10^9$ per step!) and loses half of `float32` precision to subtraction cancellation.
+- **Reverse-mode autograd:** Applies exact local VJP rules along the execution trace to compute $\nabla_{\mathbf{w}} L \in \mathbb{R}^n$ in **one backward sweep**.
+:::
 
-| Method | Mechanism | Cost for $n$ Parameters | Accuracy & Failure Mode |
-| :--- | :--- | :--- | :--- |
-| **Symbolic Differentiation** | Algebraic rule rewriting (Mathematica, SymPy) | Exponential **expression swell** | Exact, but requires closed-form algebra (no loops or branches) |
-| **Numerical Finite Differences** | $\frac{\partial L}{\partial w_i} \approx \frac{L(\mathbf{w} + h\mathbf{e}_i) - L(\mathbf{w} - h\mathbf{e}_i)}{2h}$ | **$O(n)$ forward passes** ($10^9$ evals/step!) | **Truncation + roundoff error** ($\approx 3\text{--}4$ digits in `float32`) |
-| **Automatic Differentiation (Autograd)** | Chain rule over primitive ops along the execution trace | **$O(1)$ sweeps** (one backward pass) | **Exact to machine precision**, handles arbitrary Python control flow |
-
-::: {.d2l-note}
-Autograd is neither symbolic algebra nor finite differencing: it applies **exact elementary derivative rules to concrete intermediate tensors** recorded along the program's execution trace.
+::: {.col .fig .big}
+@fig:autograd-three-methods
+:::
 :::
 :::
 
@@ -747,16 +747,15 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 
 ::: {.cols .vc}
 ::: {.col}
-- Because recording graph nodes and keeping intermediate activations alive consumes VRAM, frameworks only track tensors **explicitly marked for gradients**:
-  - **PyTorch:** `w.requires_grad_(True)` (or `requires_grad=True` at creation) records operations into a dynamic DAG (`grad_fn=<SumBackward0>`).
-  - **TensorFlow:** Wrapping `w = tf.Variable(w)` records operations executed inside a `with tf.GradientTape() as t:` block.
-  - **MXNet:** `w.attach_grad()` allocates `w.grad` and records operations inside `with autograd.record():`.
-:::
+- **Explicit opt-in saves VRAM:** Frameworks only record DAG nodes for parameters marked via `w.requires_grad_(True)`, `tf.Variable` + `GradientTape`, or `w.attach_grad()`.
 
-::: {.col}
 @autograd-a-simple-function-2
 
 @autograd-a-simple-function-3
+:::
+
+::: {.col .fig}
+@fig:autograd-imperative-vs-functional
 :::
 :::
 :::
@@ -766,15 +765,15 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 
 ::: {.cols .vc}
 ::: {.col}
-- Unlike imperative frameworks where tensors carry mutable `.grad` buffers, **JAX is purely functional**: arrays carry no gradient flags or hidden state.
-- Calling `loss(w)` directly executes normal untraced array arithmetic ($L = 1.0$).
-- **`jax.grad(loss)`** is a higher-order function transformation: it traces `loss` during evaluation and returns a pure function computing $\nabla_{\mathbf{w}} L(\mathbf{w}) = [2, 4]^\top$ directly!
-:::
+- **Pure functional transform:** JAX arrays carry no `.grad` state; `jax.grad(loss)` transforms `loss(w)` into a pure function returning $\nabla_{\mathbf{w}} L(\mathbf{w}) = [2, 4]^\top$.
 
-::: {.col}
 @autograd-a-simple-function-3
 
 @autograd-a-simple-function-4
+:::
+
+::: {.col .fig}
+@fig:autograd-imperative-vs-functional
 :::
 :::
 :::
@@ -821,17 +820,14 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 
 ::: {.cols .vc}
 ::: {.col}
-- What happens when we run a second backward pass at the same parameter vector $\mathbf{w}$?
-- **PyTorch accumulates (`w.grad += new_grad`):** `w.grad` doubles from `[2., 4.]` to **`[4., 8.]`**. Accumulation is designed for **micro-batch gradient accumulation** (simulating a large batch when GPU memory is limited) and shared weights.
-- **MXNet & TensorFlow:** MXNet overwrites `w.grad` by default (`grad_req='write'`), while TensorFlow's `t.gradient(L, w)` returns a fresh tensor without mutating `w`.
-:::
+- **Accumulation by default (`w.grad += g`):** Enables summing gradients across micro-batches when a full batch exceeds GPU memory.
+- **Classic bug:** Forgetting `w.grad.zero_()` before the next step adds onto stale gradients (`(2, 4) + (4, 0) = (6, 4)`).
 
-::: {.col}
 @autograd-a-simple-function-6
-
-::: {.d2l-note .warn}
-**Classic PyTorch bug:** Forgetting `w.grad.zero_()` (or `optimizer.zero_grad()`) before the next step corrupts every parameter update with stale gradients!
 :::
+
+::: {.col .fig}
+@fig:autograd-grad-accumulation
 :::
 :::
 :::
@@ -841,17 +837,13 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 
 ::: {.cols .vc}
 ::: {.col}
-- **Stateful frameworks (PyTorch):** Store gradients in a mutable `w.grad` attribute and **accumulate** (`w.grad += new_grad`) on each `.backward()` call—so forgetting `w.grad.zero_()` doubles `[2., 4.]` into `[4., 8.]` and silently corrupts training!
-- **Functional purity (JAX):** `jax.grad(loss)(w)` returns a **brand-new array** on every call and stores no state on `w`.
-- To accumulate gradients across micro-batches in JAX, sum the returned gradient arrays explicitly (`g_total = g_1 + g_2`).
-:::
+- **Stateful `.grad` vs. pure `jax.grad`:** PyTorch accumulates into `w.grad` (risking stale-gradient corruption if `zero_()` is omitted), whereas `jax.grad(loss)(w)` returns a fresh array every call.
 
-::: {.col}
 @autograd-a-simple-function-4
-
-::: {.d2l-note}
-Because JAX arrays carry no mutable `.grad` buffer, stale-gradient accumulation bugs are impossible by design.
 :::
+
+::: {.col .fig}
+@fig:autograd-grad-accumulation
 :::
 :::
 :::
@@ -861,14 +853,13 @@ Because JAX arrays carry no mutable `.grad` buffer, stale-gradient accumulation 
 
 ::: {.cols .vc}
 ::: {.col}
-- Differentiating a **vector output** $\mathbf{u}(\mathbf{w}) \in \mathbb{R}^m$ (e.g., per-example losses) never materializes an $n \times n$ Jacobian ($10^{18}$ floats for $n = 10^9$).
-- Instead, `.backward(v)` (or `jax.vjp`) takes an upstream seed $\mathbf{v} \in \mathbb{R}^m$ and computes the **Vector–Jacobian Product**:
-  $$\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{w}}\!\left(\mathbf{v}^\top \mathbf{u}(\mathbf{w})\right)$$
-- Passing $\mathbf{v} = \mathbf{1}$ computes $\nabla_{\mathbf{w}} \sum_i u_i$ (`losses.sum().backward()`).
+- Differentiating $\mathbf{u}(\mathbf{w}) \in \mathbb{R}^m$ never forms an $m \times n$ Jacobian; `.backward(v)` contracts upstream seed $\mathbf{v} \in \mathbb{R}^m$ via $\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{w}}(\mathbf{v}^\top \mathbf{u})$ ($\mathbf{v} = \mathbf{1}$ sums per-example gradients).
+
+@autograd-backward-for-non-scalar-variables
 :::
 
-::: {.col}
-@autograd-backward-for-non-scalar-variables
+::: {.col .fig}
+@fig:autograd-vjp-seed
 :::
 :::
 :::
@@ -915,14 +906,14 @@ Because JAX arrays carry no mutable `.grad` buffer, stale-gradient accumulation 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why reverse-mode AD is memory-hungry:** Backward rules depend on forward intermediates ($\frac{\partial (\mathbf{r}^2)}{\partial \mathbf{r}} = 2\mathbf{r}$ needs $\mathbf{r}$; $\frac{\partial (\mathbf{X}\mathbf{w})}{\partial \mathbf{w}} = \mathbf{X}^\top$ needs $\mathbf{X}$), so autograd **caches every layer's forward activations in VRAM** until backward finishes!
-- **Disable tracking (`torch.no_grad()` / outside tape):**
-  1. **Validation & inference:** Frees activations immediately ($3\text{--}10\times$ less VRAM).
-  2. **Parameter steps ($\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L$):** Keeps updates off the graph.
+- **Training caches $O(L)$ activations:** Backward VJPs need forward intermediates ($\mathbf{r}$ for $2\mathbf{r}$, $\mathbf{X}$ for $\mathbf{X}^\top$), pinning every layer's activations in HBM until `backward()`.
+- **`torch.no_grad()` inference:** Frees each layer buffer immediately ($O(1)$ depth memory) and keeps SGD steps off the tape.
+
+@autograd-turning-off-gradient-tracking-1
 :::
 
-::: {.col}
-@autograd-turning-off-gradient-tracking-1
+::: {.col .fig}
+@fig:autograd-activation-memory
 :::
 :::
 :::

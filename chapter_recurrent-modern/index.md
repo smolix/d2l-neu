@@ -36,77 +36,64 @@ State Space Models and Modern Recurrent Architectures<br>**gated recurrences · 
 ::: {.slide title="The Long-Context Dilemma: KV Cache vs. Fixed State"}
 [Motivation]{.kicker}
 
-Answering questions over a long report or codebase exposes a fundamental memory trade-off between attention and recurrence:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Causal Attention ($O(T)$ KV Cache):** Retains a key and value vector for every past token. With $8$ KV heads of width $128$ in $16$-bit floats, each layer stores $2 \times 8 \times 128 \times 2 = 4\text{ KB}$ per token—reaching **$512\text{ MB}$ per layer** ($16\text{ GB}$ across $32$ layers) at $T = 128\text{K}$ tokens.
-- **Quadratic training work:** Pairwise scores grow as $O(T^2 d)$, dominating projection FLOPs once $T \gg d$.
+- **Causal Attention ($O(T)$ KV Cache):** Stores 4 KB/token ($8$ KV heads $\times 128$ fp16), growing to **$512\text{ MB}$/layer** at $T = 128\text{K}$ with $O(T^2 d)$ score FLOPs.
+- **Recurrent State ($O(1)$ Memory):** Compresses history into a fixed **$2\text{ MB}$** state (Mamba-2 at $d=4{,}096$), crossing the KV cache at $T = 512$ tokens.
+- **Central Question:** Can an $O(1)$ state train in parallel on GPUs and match Transformer recall?
 :::
 
-::: {.col}
-- **Modern Recurrent Layers ($O(1)$ State):** Compress past context into a fixed-size state. A Mamba-2 layer at width $4{,}096$ ($8{,}192$ channels $\times$ $128$ states in $16$-bit floats) stores **$2\text{ MB}$ total** at any sequence length.
-- **Crossover at 512 tokens:** Beyond $2\text{ MB} / 4\text{ KB} = 512$ tokens, the recurrent state is smaller, and generating token $1{,}000{,}000$ costs the same as token $10$.
+::: {.col .fig .big}
+@fig:ch12-mrnn-kv-vs-state
 :::
-:::
-
-::: {.d2l-note}
-Can a fixed-size recurrent state train in parallel on GPUs and match Transformer quality—and what can no fixed state ever recall?
 :::
 :::
 
 ::: {.slide title="Two Obstacles to Modernizing Recurrent Networks"}
 [Core Challenges]{.kicker}
 
-Classical RNNs fell behind Transformers for two structural reasons that this chapter resolves step by step:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Obstacle 1 — Sequential Training ($O(T)$ Depth):** Classical RNNs, LSTMs, and GRUs pass $\mathbf{h}_{t-1}$ through nonlinear activations at every step, forcing $T$ sequential updates that leave GPU Tensor Cores idle.
-- **The Parallel Fix (§12.3–12.5):** Make the state transition *affine* in the state so steps compose via parallel associative scans in $O(\log_2 T)$ rounds or FFT convolutions.
+- **Obstacle 1 — $O(T)$ Sequential Depth:** Nonlinear $\tanh(\mathbf{W}_{\textrm{hh}}\mathbf{h}_{t-1})$ blocks GPU parallelism; affine transitions (§12.3–12.5) run in $O(\log_2 T)$ parallel scan rounds.
+- **Obstacle 2 — Fixed-Vector Decay:** A 1D state $\mathbf{h}_t \in \mathbb{R}^d$ blurs facts; multi-timescale $\Delta_t$, matrix states $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$, and the delta rule (§12.4–12.7) add key-value addressing.
+- **Unifying State-Space View:** Every mixer has a **state**, a **write update**, and a **readout**.
 :::
 
-::: {.col}
-- **Obstacle 2 — Fixed-Capacity Forgetting:** A fixed state vector overwrites old signals or superposes values without key-addressable lookup or targeted erasure.
-- **The Memory Fix (§12.4–12.8):** Discretize multi-timescale decay rates, make step sizes input-selective, expand the state into a key–value matrix updated by the delta rule, and interleave sparse attention.
+::: {.col .fig .big}
+@fig:ch12-mrnn-two-obstacles
 :::
-:::
-
-::: {.d2l-note .rule}
-**Unifying Abstraction:** Every sequence mixer in this chapter is defined by a **state**, a **transition/write update** folding in token $t$, and a **readout** producing the output.
 :::
 :::
 
 ::: {.slide title="Architectural Progression Across Chapter 12"}
 [Chapter Roadmap]{.kicker}
 
-Each section upgrades one mathematical component of the recurrent state machine:
+::: {.cols .vc}
+::: {.col}
+- **From Gates to Linear Scans (§12.1–12.5):** Progresses from sequential LSTM/GRU gates and Seq2Seq bottlenecks to parallel `minGRU` scans, multi-timescale `S4D`, and selective `Mamba`.
+- **From Vectors to Matrix Memories (§12.6–12.7):** Expands the state into an outer-product key–value matrix (`GLA`) sharpened by online read-before-write error correction (`GatedDeltaNet`).
+- **Sparse Attention Hybrids (§12.8):** Interleaves 1 full attention layer per 3 recurrent layers to break the Welch overlap ceiling.
+:::
 
-| Section | Core Innovation | State Transition & Write Rule | Training Algorithm |
-| :--- | :--- | :--- | :--- |
-| **§12.1 Gated RNNs** | Learned elementwise decay gates (LSTM, GRU) | $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$ | Sequential ($T$ steps) |
-| **§12.2 Seq2Seq** | Single-vector encoder–decoder bottleneck | $\mathbf{c} = \mathbf{h}_T^{\text{enc}} \to \mathbf{s}_{t'} = g(y_{t'-1}, \mathbf{c}, \mathbf{s}_{t'-1})$ | Sequential ($T + T'$ steps) |
-| **§12.3 Linear Recurrence** | Input-only gates (`MinGRU`) & associative scan | $\mathbf{h}_t = \mathbf{a}(\mathbf{x}_t) \odot \mathbf{h}_{t-1} + \mathbf{b}(\mathbf{x}_t)$ | Parallel scan ($\lceil\log_2 T\rceil$ rounds) |
-| **§12.4 State Space Models** | Discretized ODE rates $\lambda_n$ & step $\Delta$ (`S4D`) | $h_{t,n} = e^{\Delta \lambda_n} h_{t-1,n} + \bar{b}_n x_t$ | FFT convolution or scan |
-| **§12.5 Selective SSMs** | Token-dependent $\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ (`Mamba`) | $\mathbf{S}_t = \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t \odot \mathbf{x}_t)\mathbf{B}_t^\top$ | Parallel scan + reverse-scan VJP |
-| **§12.6 Matrix-State RNNs** | Outer-product KV memory & duality (`GLA`) | $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ | Chunked matmuls + scan |
-| **§12.7 The Delta Rule** | Read-before-write error step (`GatedDeltaNet`) | $\mathbf{S}_t = a_t \mathbf{S}_{t-1}(\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top$ | Chunked triangular solve + scan |
-| **§12.8 Hybrid Models** | Sparse full attention among recurrent blocks | Fixed matrix states + sparse KV caches | Chunked recurrence + attention |
+::: {.col .fig .big}
+@fig:ch12-mrnn-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Synthetic Stress Tests and the Language Benchmark"}
 [Empirical Methodology]{.kicker}
 
-We pair synthetic tasks that isolate individual memory mechanisms with a unified byte-level language model (`SeqLM`):
+::: {.cols .vc}
+::: {.col}
+- **Five Targeted Capability Probes:** Delayed Recall (half-life horizon), String Reversal (bits/float capacity), Selective Copying (token-dependent $\Delta_t$), Associative Recall (Welch rank limit), and Key Rebinding (delta rule erasure).
+- **Unified Language Benchmark (`SeqLM`):** Every sequence mixer is evaluated inside the exact same 4-block pre-norm residual stack on byte-level WikiText-103.
+:::
 
-| Benchmark Task | Task Structure | What It Measures & Where It Appears |
-| :--- | :--- | :--- |
-| **Delayed Recall** | 1 target symbol followed by $T-1$ fillers ($T \le 1{,}000$) | Gradient propagation & initial decay timescales (**§12.1, §12.4**) |
-| **String Reversal** | Reversing $T \in [8, 64]$ random letters through 1 state vector | Effective bits packed per state coordinate (**§12.2**) |
-| **Selective Copying** | 4 marked symbols at random positions among $1{,}024$ fillers | Content-selective gating vs. time-invariant lag filters (**§12.5**) |
-| **Associative Recall** | $n \in [4, 64]$ key–value pairs queried in random order | Outer-product capacity $O(d_k d_v)$ & Welch overlap floor (**§12.6, §12.8**) |
-| **Key Rebinding** | Overwriting 8 of 16 keys with new values after a short gap | Error-correcting delta rule vs. additive superposition (**§12.7**) |
-| **WikiText-103 Bytes** | 4-block pre-norm `SeqLM` ($d = 256$, $128$-byte windows) | Controlled language modeling loss (nats/byte) & step latency (**§12.1–12.8**) |
+::: {.col .fig .big}
+@fig:ch12-mrnn-stress-tests
+:::
+:::
 :::
 
 ::: {.slide title="How to Navigate Chapter 12"}

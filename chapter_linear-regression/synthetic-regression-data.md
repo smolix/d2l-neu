@@ -286,53 +286,70 @@ Synthetic Regression Data: Ground-Truth Verification<br>
 ::: {.slide title="Why Debug Machine Learning Code on Synthetic Data?"}
 [The Debugging Dilemma]{.kicker}
 
-When a newly implemented algorithm achieves a disappointing loss on real-world data, three suspects are confounded:
+::: {.cols .vc}
+::: {.col}
+- **Real-world ambiguity:** When loss plateaus on real data, is the model misspecified, are the labels corrupted, or does the code contain a silent bug?
+- **Controlled ground truth:** Generating $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ with $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and $\sigma = 0.01$ makes the linear model and squared loss statistically optimal by construction.
+- **Quantitative pass/fail oracle:** Any failure to hit the loss floor $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$ or recover $(\mathbf{w}^*, b^*)$ within $\sim 3\sigma/\sqrt{n} \approx 10^{-3}$ convicts the code.
+:::
 
-- **Real-world ambiguity:** Is the model class misspecified for the domain, is the dataset noisy or corrupted, or does the optimizer/code contain a silent bug?
-- **Controlled synthetic ground truth:** By generating labels from $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ with known $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and $\sigma = 0.01$, we guarantee that the linear model and squared loss are statistically optimal by construction.
-- **Quantitative pass/fail oracle:** Any failure to reach the theoretical loss floor $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$ or to recover $(\mathbf{w}^*, b^*)$ within a few standard errors $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$ immediately convicts the training code or hyperparameter choices.
-
-::: {.d2l-note}
-Always verify a new model or training loop on a synthetic benchmark with known parameters before trusting it on real datasets.
+::: {.col .fig .big}
+@fig:ch02-lr-synth-oracle
+:::
 :::
 :::
 
 ::: {.slide title="The Ground-Truth Data-Generating Process"}
 [Mathematical Specification]{.kicker}
 
-We generate $n = 1{,}000$ training examples and $1{,}000$ validation examples in $d = 2$ dimensions from an isotropic Gaussian design:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}, \qquad X_{ij} \sim \mathcal{N}(0, 1), \quad \epsilon^{(i)} \sim \mathcal{N}(0, \sigma^2)$$
 
-$$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}, \qquad X_{ij} \stackrel{\textrm{i.i.d.}}{\sim} \mathcal{N}(0, 1), \quad \epsilon^{(i)} \stackrel{\textrm{i.i.d.}}{\sim} \mathcal{N}(0, \sigma^2)$$
+- **True parameters & high SNR:** Weights $\mathbf{w}^* = (2, -3.4)^\top$, bias $b^* = 4.2$, and signal standard deviation $\sqrt{2^2 + (-3.4)^2} \approx 3.94$ ($400\times$ larger than noise $\sigma = 0.01$).
+- **Train/validation split:** Drawing $2{,}000$ i.i.d. examples provides $1{,}000$ training examples for fitting and $1{,}000$ validation examples for out-of-sample evaluation.
+:::
 
-- **True parameters:** Weights $\mathbf{w}^* = (2, -3.4)^\top \in \mathbb{R}^2$ and scalar intercept $b^* = 4.2$.
-- **High signal-to-noise ratio:** The linear signal $\mathbf{x}^\top\mathbf{w}^*$ has variance $\|\mathbf{w}^*\|_2^2 = 2^2 + (-3.4)^2 = 15.56$ (standard deviation $\approx 3.94$), whereas the noise standard deviation $\sigma = 0.01$ is nearly $400\times$ smaller.
-- **Train/validation split:** Drawing $2{,}000$ independent pairs from the exact same distribution provides $1{,}000$ training examples for fitting and $1{,}000$ untouched validation examples for measuring out-of-sample generalization.
+::: {.col .fig}
+@fig:ch02-lr-synth-dgp
+:::
+:::
 :::
 
 ::: {.slide title="Implementing the Synthetic Generator"}
 [Vectorized Data Generation]{.kicker}
 
-The helper `synthetic_data` draws the $(n, d)$ design matrix `X` and the $(n, 1)$ noise column `eps` in two vectorized calls:
-
+::: {.cols .vc}
+::: {.col}
 @synthetic-regression-data-generating-the-data-1
 
-- **Explicit column shape `(-1, 1)`:** Reshaping `w` to `(d, 1)` ensures `matmul(X, w)` produces an `(n, 1)` column vector matching `eps` of shape `(n, 1)`.
-- **Avoiding the `(n, n)` broadcasting trap:** If `matmul(X, w)` had shape `(n,)` while `eps` had shape `(n, 1)`, adding them would broadcast into an `(n, n)` matrix and exhaust gigabytes of memory!
+- **Explicit column shape `(-1, 1)`:** Reshaping `w` to `(d, 1)` ensures `matmul(X, w)` produces an `(n, 1)` column matching `eps` of shape `(n, 1)`, avoiding an `(n, n)` outer-sum broadcasting catastrophe.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-synth-shapes
+:::
+:::
 :::
 
 ::: {.slide title="Explicit PRNG Key Splitting in JAX" only="jax"}
 [Stateless Randomness · JAX]{.kicker}
 
-Unlike PyTorch, TensorFlow, and MXNet—which mutate a hidden global random number generator—JAX requires an explicit PRNG `key` for every random draw:
-
+::: {.cols .vc}
+::: {.col}
 ```{.python #synthetic-regression-data-exercises}
 key1, key2 = jax.random.split(key)
 X = jax.random.normal(key1, (n, w.shape[0]))
 eps = jax.random.normal(key2, (n, 1)) * noise
 ```
 
-- **Why split keys:** Passing the *same* `key` to both `X` and `eps` would draw identical underlying normal variates, making the label noise deterministically correlated with the features!
-- **Reproducibility vs. fresh runs:** Calling `jax.random.split(key)` deterministically forks independent subkeys `key1` and `key2`, while `d2l.get_key()` advances a session stream so each benchmark call draws a fresh dataset.
+- **Why split keys:** Passing the *same* `key` to both `X` and `eps` would draw identical normal variates; `jax.random.split` deterministically forks independent subkeys `key1` and `key2`.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-jax-key-split
+:::
+:::
 :::
 
 ::: {.slide title="Inspecting Generated Tensors and Realized Noise"}
@@ -373,63 +390,88 @@ Marginal 2D scatter plots of a multivariate function always fold the variation o
 ::: {.slide title="The Irreducible Loss Floor of the True Parameters"}
 [Theoretical Benchmark]{.kicker}
 
-Before running any optimizer, what empirical loss would an oracle achieve if it plugged the exact ground-truth parameters $(\mathbf{w}^*, b^*)$ into $L(\mathbf{w}, b) = \frac{1}{2n}\sum_{i=1}^n (\hat{y}^{(i)} - y^{(i)})^2$?
-
-$$\mathbb{E}\bigl[L(\mathbf{w}^*, b^*)\bigr] = \frac{1}{2}\,\mathbb{E}\bigl[(\hat{y} - y)^2\bigr] = \frac{1}{2}\,\mathbb{E}\bigl[(-\epsilon)^2\bigr] = \frac{\sigma^2}{2} = \frac{(0.01)^2}{2} = 5 \times 10^{-5}$$
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}\bigl[L(\mathbf{w}^*, b^*)\bigr] = \frac{1}{2}\,\mathbb{E}\bigl[(-\epsilon)^2\bigr] = \frac{\sigma^2}{2} = 5 \times 10^{-5}$$
 
 - **Irreducible noise floor:** Because future noise draws $\epsilon \sim \mathcal{N}(0, \sigma^2)$ are independent of $\mathbf{x}$, *no* predictor can achieve an expected validation loss below $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$.
-- **Finite-sample fluctuation:** Over $n' = 1{,}000$ validation examples, the sample average of $\frac{1}{2}\epsilon^2$ fluctuates around $5 \times 10^{-5}$ with standard error $\frac{\sigma^2}{\sqrt{2n'}} \approx 2.2 \times 10^{-6}$ (about $4.5\%$ of the floor).
+- **Finite-sample fluctuation:** Over $n' = 1{,}000$ validation examples, the sample average of $\frac{1}{2}\epsilon^2$ fluctuates around $5 \times 10^{-5}$ with standard error $\sigma^2/\sqrt{2n'} \approx 2.2 \times 10^{-6}$.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-noise-floor
+:::
+:::
 :::
 
 ::: {.slide title="Recovery I: Estimation Error Is Linear in the Noise"}
 [Statistical Recovery Analysis]{.kicker}
 
-How close to $\tilde{\mathbf{w}}^* = (2, -3.4, 4.2)^\top$ can the exact least-squares fit $\hat{\tilde{\mathbf{w}}}$ on $n = 1{,}000$ noisy training examples possibly come?
+::: {.cols .vc}
+::: {.col}
+$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = \bigl(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\bigr)^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$$
 
-$$\mathbf{y} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \boldsymbol{\epsilon}, \qquad \tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}] \in \mathbb{R}^{n \times 3}$$
+- **Signal cancellation:** Substituting $\mathbf{y} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \boldsymbol{\epsilon}$ into the normal equations cancels the true parameter vector $\tilde{\mathbf{w}}^*$.
+- **Unbiasedness & noiseless limit:** Because $\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}$, $\hat{\tilde{\mathbf{w}}}$ is unbiased ($\mathbb{E}[\hat{\tilde{\mathbf{w}}}] = \tilde{\mathbf{w}}^*$) and recovers $\tilde{\mathbf{w}}^*$ to machine precision when $\sigma = 0$.
+:::
 
-- **Substitute $\mathbf{y}$ into the normal equations:** Multiplying $\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}}$ by $\tilde{\mathbf{X}}^\top$ and using $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top\mathbf{y} = \tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$ cancels the signal term:
-  $$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = \bigl(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\bigr)^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$$
-- **Exact recovery at zero noise:** The parameter estimation error $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$ is a purely linear function of the noise vector $\boldsymbol{\epsilon}$; when $\sigma = 0$, least squares recovers $\tilde{\mathbf{w}}^*$ to machine precision.
+::: {.col .fig}
+@fig:ch02-lr-recovery-decomp
+:::
+:::
 :::
 
 ::: {.slide title="Recovery II: Isotropic Features Make X̃ᵀX̃ ≈ nI"}
 [Law of Large Numbers on the Gram Matrix]{.kicker}
 
-For arbitrary correlated features, inverting $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ couples all coordinates, but for independent standard normal features $x_j \sim \mathcal{N}(0, 1)$, the sample Gram matrix concentrates tightly around the identity:
+::: {.cols .vc}
+::: {.col}
+$$\frac{1}{n}\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} \approx \mathbf{I}_3 \quad\Longrightarrow\quad \hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* \approx \frac{1}{n}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$$
 
-| Entry of $\frac{1}{n}\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ | Sample Average Over $n = 1{,}000$ Examples | Population Expectation |
-|---|---|---|
-| **Diagonal ($j = k$)** | $\frac{1}{n}\sum_{i=1}^n (x_j^{(i)})^2$ or $\frac{1}{n}\sum_{i=1}^n 1^2$ | $\mathbb{E}[x_j^2] = 1$ (and $1$ for the bias column) |
-| **Off-diagonal ($j \neq k$)** | $\frac{1}{n}\sum_{i=1}^n x_j^{(i)} x_k^{(i)}$ or $\frac{1}{n}\sum_{i=1}^n x_j^{(i)} \cdot 1$ | $\mathbb{E}[x_j x_k] = 0$ and $\mathbb{E}[x_j] = 0$ |
+- **Diagonal concentration:** Sample variances $\frac{1}{n}\sum_{i=1}^n (x_j^{(i)})^2$ concentrate tightly around $\mathbb{E}[x_j^2] = 1$.
+- **Off-diagonal decoupling:** Sample cross-products $\frac{1}{n}\sum_{i=1}^n x_j^{(i)} x_k^{(i)}$ concentrate around $\mathbb{E}[x_j x_k] = 0$, decoupling the three parameter errors.
+:::
 
-$$\frac{1}{n}\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} \approx \mathbf{I}_3 \quad\Longrightarrow\quad \hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* \approx \frac{1}{n}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\tilde{\mathbf{x}}^{(i)}$$
+::: {.col .fig}
+@fig:ch02-lr-gram-concentration
+:::
+:::
 :::
 
 ::: {.slide title="Recovery III: The σ/√n Standard Error Floor"}
 [The Statistical Limit]{.kicker}
 
-Each coordinate $j \in \{1, 2, 3\}$ of the estimation error $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$ is the sample mean of $n$ independent zero-mean products $\epsilon^{(i)}\tilde{x}_j^{(i)}$ with variance $\mathbb{E}[(\epsilon^{(i)})^2]\,\mathbb{E}[(\tilde{x}_j^{(i)})^2] = \sigma^2 \cdot 1 = \sigma^2$:
-
-::: {.d2l-note .rule}
+::: {.cols .vc}
+::: {.col}
 $$\operatorname{SE}(\hat{w}_j) = \operatorname{SE}(\hat{b}) \approx \frac{\sigma}{\sqrt{n}} = \frac{0.01}{\sqrt{1000}} \approx 3.16 \times 10^{-4}$$
+
+- **Square-root sample scaling:** Reducing estimation error by $10\times$ requires $100\times$ more training examples ($n = 100{,}000$), whereas reducing $\sigma$ by $10\times$ shrinks error by $10\times$ immediately.
+- **Exact covariance:** $\operatorname{Cov}(\hat{\tilde{\mathbf{w}}} \mid \tilde{\mathbf{X}}) = \sigma^2 (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}$ inflates when features are collinear.
 :::
 
-- **Square-root sample scaling:** Reducing estimation error by $10\times$ requires $100\times$ more training examples ($n = 100{,}000$), whereas reducing label noise $\sigma$ by $10\times$ shrinks estimation error by $10\times$ immediately.
-- **Exact covariance formula:** Conditioned on $\tilde{\mathbf{X}}$, the exact parameter covariance matrix is $\operatorname{Cov}(\hat{\tilde{\mathbf{w}}} \mid \tilde{\mathbf{X}}) = \sigma^2 (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}$; strong feature collinearity inflates $(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}$ and amplifies parameter error.
+::: {.col .fig}
+@fig:ch02-lr-se-scaling
+:::
+:::
 :::
 
 ::: {.slide title="Verifying the Least-Squares Reference Fit in Code"}
 [Gold-Standard Benchmark]{.kicker}
 
-We solve the normal equations on our $n = 1{,}000$ training examples with `lstsq` and compare the actual parameter errors against $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$:
+::: {.cols .vc}
+::: {.col}
+We solve the normal equations on our $n = 1{,}000$ training examples with `lstsq` and compare actual parameter errors against $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$:
 
 @synthetic-regression-data-recovering-the-parameters-1
 
 @synthetic-regression-data-recovering-the-parameters-2
 
-::: {.d2l-note}
-Even an exact solver misses $(2, -3.4, 4.2)$ by a few times $10^{-4}$ because the $1{,}000$ random noise draws happen to correlate slightly with the columns of $\tilde{\mathbf{X}}$. Any converged iterative optimizer in §2.3–§2.5 must land within $\sim 10^{-3}$ (roughly three standard errors) of $(\mathbf{w}^*, b^*)$.
+- **Pass/fail tolerance:** Any converged iterative optimizer in §2.3–§2.5 must land within $\sim 10^{-3}$ ($\approx 3\text{ SE}$) of $(\mathbf{w}^*, b^*)$.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-lstsq-reference
+:::
 :::
 :::
 

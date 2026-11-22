@@ -1423,39 +1423,49 @@ Vectors, Angles, and Projections<br>**dot products · orthogonal shadows · Cauc
 ::: {.slide title="Orthogonality and Pythagoras in Any Dimension"}
 [Orthogonal Projection]{.kicker}
 
-The optimal projection splits any vector $\mathbf{v}$ into a component aligned with $\mathbf{w} \neq \mathbf{0}$ and an orthogonal residual $\mathbf{r}$:
-
-::: {.d2l-note .rule}
-**Proposition (Orthogonal Projection).** The closest multiple of $\mathbf{w}$ to $\mathbf{v}$ is $\operatorname{proj}_{\mathbf{w}}\mathbf{v} = \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\,\mathbf{w}$, and its residual $\mathbf{r} = \mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v}$ satisfies $\mathbf{r}\cdot\mathbf{w} = \mathbf{v}\cdot\mathbf{w} - t^\star(\mathbf{w}\cdot\mathbf{w}) = 0$.
+::: {.cols .vc}
+::: {.col}
+- **Orthogonal Projection Formula:** The closest multiple of $\mathbf{w} \neq \mathbf{0}$ to $\mathbf{v}$ is $\operatorname{proj}_{\mathbf{w}}\mathbf{v} = \frac{\mathbf{v}\cdot\mathbf{w}}{\mathbf{w}\cdot\mathbf{w}}\mathbf{w}$, leaving residual $\mathbf{r} = \mathbf{v} - \operatorname{proj}_{\mathbf{w}}\mathbf{v} \perp \mathbf{w}$.
+- **Pythagoras' Theorem ($\mathbf{a}\cdot\mathbf{b} = 0$):** Cross terms vanish, so $\|\mathbf{v}\|^2 = \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 + \|\mathbf{r}\|^2$ ($10 = 5 + 5$).
+- **Signed Shadow Length:** Multiplying $t^\star$ by $\|\mathbf{w}\|$ gives $(\mathbf{v}\cdot\mathbf{w})/\|\mathbf{w}\|$.
 :::
 
-- **Pythagoras' Theorem ($\mathbf{a}\cdot\mathbf{b} = 0$):** When two vectors meet at a right angle, the cross term $2\,\mathbf{a}\cdot\mathbf{b}$ in $\|\mathbf{a} + \mathbf{b}\|^2 = \|\mathbf{a}\|^2 + 2\,\mathbf{a}\cdot\mathbf{b} + \|\mathbf{b}\|^2$ vanishes, so squared lengths add cleanly: $\|\mathbf{v}\|^2 = \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 + \|\mathbf{r}\|^2$ ($10 = 5 + 5$).
-- **Signed Shadow Length:** Multiplying $t^\star$ by $\|\mathbf{w}\|$ gives the signed shadow length $(\mathbf{v}\cdot\mathbf{w})/\|\mathbf{w}\|$ ($+\sqrt{5}$ here), recording both magnitude and whether the shadow points along or against $\mathbf{w}$.
+::: {.col .fig .big}
+@fig:ch33-la-pythagoras-split
+:::
+:::
 :::
 
 ::: {.slide title="Cauchy–Schwarz From a Right Triangle"}
 [Angles in High Dimensions]{.kicker}
 
-Can the shadow of a vector ever be longer than the vector itself? Pythagoras turns the right triangle of projection into a one-line proof for all dimensions:
-
-::: {.d2l-note .rule}
-**Proposition (Cauchy–Schwarz Inequality).** For all $\mathbf{v}, \mathbf{w} \in \mathbb{R}^d$, $|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\,\|\mathbf{w}\|$, with equality if and only if $\mathbf{v}$ and $\mathbf{w}$ are collinear (one is a scalar multiple of the other).
+::: {.cols .vc}
+::: {.col}
+- **Cauchy–Schwarz Inequality:** For all $\mathbf{v}, \mathbf{w} \in \mathbb{R}^d$, $|\mathbf{v}\cdot\mathbf{w}| \le \|\mathbf{v}\|\,\|\mathbf{w}\|$, with equality iff $\mathbf{v}$ and $\mathbf{w}$ are collinear.
+- **One-Line Proof:** Dropping $\|\mathbf{r}\|^2 \ge 0$ from Pythagoras gives $\|\mathbf{v}\|^2 \ge \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 = (\mathbf{v}\cdot\mathbf{w})^2/\|\mathbf{w}\|^2$.
+- **Triangle Inequality:** Bounding $2\mathbf{v}\cdot\mathbf{w} \le 2\|\mathbf{v}\|\|\mathbf{w}\|$ proves $\|\mathbf{v} + \mathbf{w}\| \le \|\mathbf{v}\| + \|\mathbf{w}\|$.
 :::
 
-- **Geometric Proof:** When $\mathbf{w} \neq \mathbf{0}$, dropping the non-negative squared residual $\|\mathbf{r}\|^2 \ge 0$ from Pythagoras gives:
-  $$\|\mathbf{v}\|^2 = \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 + \|\mathbf{r}\|^2 \ge \|\operatorname{proj}_{\mathbf{w}}\mathbf{v}\|^2 = \frac{(\mathbf{v}\cdot\mathbf{w})^2}{\|\mathbf{w}\|^2}$$
-- **Equality & Triangle Inequality:** Equality holds precisely when $\mathbf{r} = \mathbf{0}$ ($\mathbf{v} = t^\star\mathbf{w}$). Bounding the cross term in $\|\mathbf{v} + \mathbf{w}\|^2$ by $2\|\mathbf{v}\|\|\mathbf{w}\|$ immediately yields the triangle inequality $\|\mathbf{v} + \mathbf{w}\| \le \|\mathbf{v}\| + \|\mathbf{w}\|$.
+::: {.col .fig .big}
+@fig:ch33-la-cauchy-schwarz
+:::
+:::
 :::
 
 ::: {.slide title="Defining Angles and Guarding Against Roundoff"}
 [Angles in High Dimensions]{.kicker}
 
-- **Algebraic Angle Definition:** Cauchy–Schwarz guarantees that $(\mathbf{v}\cdot\mathbf{w})/(\|\mathbf{v}\|\|\mathbf{w}\|) \in [-1, 1]$, allowing us to define $\theta = \arccos\!\left(\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}\right) \in [0, \pi]$ in any dimension $\mathbb{R}^d$, matching a planar protractor in $\operatorname{span}(\mathbf{v}, \mathbf{w})$.
+::: {.cols .vc}
+::: {.col}
+- **High-Dimensional Angle:** Cauchy–Schwarz keeps the cosine ratio in $[-1, 1]$, defining $\theta = \arccos\!\left(\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf{w}\|}\right) \in [0, \pi]$.
+- **Floating-Point Guard:** Collinear vectors can round to $1 + 2.2\times 10^{-16}$; always wrap ratios in `np.clip(cos, -1, 1)`.
 
 @geometry-linear-algebraic-ops-dot-products-and-angles
+:::
 
-::: {.d2l-note .warn}
-**Floating-Point Hazard:** For collinear vectors like $\mathbf{v}$ and $3\mathbf{v}$, IEEE-754 rounding can nudge the computed cosine to $1 + 2.2\times 10^{-16}$, causing unclipped `np.arccos` to return `nan`. Always wrap cosine ratios in `np.clip(cos, -1, 1)`.
+::: {.col .fig}
+@fig:ch33-la-angle-clip
+:::
 :::
 :::
 
@@ -1495,36 +1505,50 @@ Can the shadow of a vector ever be longer than the vector itself? Pythagoras tur
 ::: {.slide title="Subspace Projection Matrix P = QQᵀ"}
 [Least Squares]{.kicker}
 
-Assemble an orthonormal basis $\mathbf{q}_1, \ldots, \mathbf{q}_k$ of $S \subseteq \mathbb{R}^n$ into the columns of $\mathbf{Q} \in \mathbb{R}^{n \times k}$, so $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}_k$:
-
-::: {.d2l-note .rule}
-**Proposition (Subspace Projection).** The matrix $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$ projects $\mathbb{R}^n$ orthogonally onto $S$:
-(i) $\mathbf{P}\mathbf{x} \in S$ and $\mathbf{x} - \mathbf{P}\mathbf{x} \perp S$; (ii) $\mathbf{P}\mathbf{x}$ is the unique closest point in $S$ to $\mathbf{x}$; (iii) $\mathbf{P}^2 = \mathbf{P}$ and $\mathbf{P}^\top = \mathbf{P}$.
+::: {.cols .vc}
+::: {.col}
+- **Orthonormal Basis Matrix $\mathbf{Q} \in \mathbb{R}^{n \times k}$:** Columns $\mathbf{q}_1, \ldots, \mathbf{q}_k$ span $S$ with $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}_k$.
+- **Unique Closest Point:** $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$ projects onto $S$ with $\mathbf{x} - \mathbf{P}\mathbf{x} \perp S$, minimizing $\|\mathbf{x} - \mathbf{s}\|^2 = \|\mathbf{x} - \mathbf{P}\mathbf{x}\|^2 + \|\mathbf{P}\mathbf{x} - \mathbf{s}\|^2$.
+- **Projector Algebra:** Idempotent ($\mathbf{P}^2 = \mathbf{P}$) and symmetric ($\mathbf{P}^\top = \mathbf{P}$).
 :::
 
-- **Why Closest (Pythagoras):** For any competitor $\mathbf{s} \in S$, the difference $\mathbf{P}\mathbf{x} - \mathbf{s}$ lies in $S$ while $\mathbf{x} - \mathbf{P}\mathbf{x} \perp S$, so $\|\mathbf{x} - \mathbf{s}\|^2 = \|\mathbf{x} - \mathbf{P}\mathbf{x}\|^2 + \|\mathbf{P}\mathbf{x} - \mathbf{s}\|^2 \ge \|\mathbf{x} - \mathbf{P}\mathbf{x}\|^2$.
-- **Idempotence & Symmetry:** Projecting twice changes nothing ($\mathbf{P}^2 = \mathbf{Q}(\mathbf{Q}^\top\mathbf{Q})\mathbf{Q}^\top = \mathbf{P}$), while symmetry ($\mathbf{P}^\top = \mathbf{P}$) ensures the projection is orthogonal rather than oblique.
+::: {.col .fig .big}
+@fig:ch33-la-projector-qqt
+:::
+:::
 :::
 
 ::: {.slide title="Normal Equations vs. Orthonormal Projection"}
 [Least Squares]{.kicker}
 
-- **Normal Equations:** Minimizing $\|\mathbf{A}\mathbf{x} - \mathbf{y}\|^2$ seeks the closest point in $\operatorname{col}(\mathbf{A})$. Requiring the residual $\mathbf{y} - \mathbf{A}\hat{\mathbf{x}}$ to be orthogonal to every column of $\mathbf{A}$ yields $\mathbf{A}^\top(\mathbf{y} - \mathbf{A}\hat{\mathbf{x}}) = \mathbf{0}$, or $\mathbf{A}^\top\mathbf{A}\hat{\mathbf{x}} = \mathbf{A}^\top\mathbf{y}$.
+::: {.cols .vc}
+::: {.col}
+- **Normal Equations:** $\mathbf{A}^\top(\mathbf{y} - \mathbf{A}\hat{\mathbf{x}}) = \mathbf{0} \implies \mathbf{A}^\top\mathbf{A}\hat{\mathbf{x}} = \mathbf{A}^\top\mathbf{y}$.
+- **Why Solvers Prefer QR:** Forming $\mathbf{A}^\top\mathbf{A}$ squares $\kappa(\mathbf{A})$, whereas $\mathbf{A} = \mathbf{Q}\mathbf{R}$ preserves conditioning.
 
 @mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace
+:::
 
-::: {.d2l-note .warn}
-**Why Solvers Prefer QR Over $\mathbf{A}^\top\mathbf{A}$:** When columns of $\mathbf{A}$ are nearly dependent, forming $\mathbf{A}^\top\mathbf{A}$ squares the condition number $\kappa(\mathbf{A})$, doubling the digits lost to roundoff. Production solvers project via an orthonormal basis $\mathbf{Q}$ instead.
+::: {.col .fig}
+@fig:ch33-la-normal-vs-qr
+:::
 :::
 :::
 
 ::: {.slide title="Gram–Schmidt and the QR Factorization"}
 [Orthonormalization]{.kicker}
 
-- **Sequential Projection:** Given independent vectors $\mathbf{a}_1, \ldots, \mathbf{a}_k$, Gram–Schmidt builds an orthonormal basis by subtracting from each $\mathbf{a}_j$ its projections onto $\mathbf{q}_1, \ldots, \mathbf{q}_{j-1}$ and normalizing the remainder:
-  $$\mathbf{v}_j = \mathbf{a}_j - \sum_{i=1}^{j-1} (\mathbf{q}_i \cdot \mathbf{a}_j)\,\mathbf{q}_i, \qquad \mathbf{q}_j = \frac{\mathbf{v}_j}{\|\mathbf{v}_j\|}$$
-- **Worked $2 \times 2$ Example:** For $\mathbf{a}_1 = (3, 4)$ and $\mathbf{a}_2 = (1, 0)$, we get $\mathbf{q}_1 = \mathbf{a}_1/5 = (0.6, 0.8)$, remainder $\mathbf{v}_2 = (1, 0) - 0.6(0.6, 0.8) = (0.64, -0.48)$ of length $0.8$, and $\mathbf{q}_2 = (0.8, -0.6)$.
-- **Upper-Triangular Reconstruction ($\mathbf{A} = \mathbf{Q}\mathbf{R}$):** Reading the steps in reverse writes $\mathbf{a}_1 = 5\mathbf{q}_1$ and $\mathbf{a}_2 = 0.6\mathbf{q}_1 + 0.8\mathbf{q}_2$, factoring $\mathbf{A} = \mathbf{Q}\mathbf{R}$ with upper-triangular $r_{ij} = \mathbf{q}_i\cdot\mathbf{a}_j$ ($i \le j$).
+::: {.cols .vc}
+::: {.col}
+- **Sequential Projection:** Subtract projections onto $\mathbf{q}_1, \ldots, \mathbf{q}_{j-1}$ and normalize: $\mathbf{v}_j = \mathbf{a}_j - \sum_{i<j}(\mathbf{q}_i\cdot\mathbf{a}_j)\mathbf{q}_i$, $\mathbf{q}_j = \mathbf{v}_j/\|\mathbf{v}_j\|$.
+- **Worked $2 \times 2$ Pair:** $\mathbf{a}_1 = (3, 4) \implies \mathbf{q}_1 = (0.6, 0.8)$; $\mathbf{a}_2 = (1, 0) \implies \mathbf{v}_2 = (0.64, -0.48) \implies \mathbf{q}_2 = (0.8, -0.6)$.
+- **Upper-Triangular $\mathbf{A} = \mathbf{Q}\mathbf{R}$:** Reversing steps gives $r_{ij} = \mathbf{q}_i\cdot\mathbf{a}_j$ ($i \le j$).
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-gram-schmidt-qr
+:::
+:::
 :::
 
 ::: {.slide title="Gram–Schmidt by Hand vs. Householder QR"}
@@ -1542,10 +1566,17 @@ Comparing our two-step Gram–Schmidt orthogonalization against `np.linalg.qr` c
 ::: {.slide title="Cosine Similarity in High-Dimensional Space"}
 [High-Dimensional Geometry]{.kicker}
 
-- **Scale-Invariant Direction Metric:** Cosine similarity normalizes the dot product by both vector lengths, measuring pure directional alignment in $[-1, 1]$:
-  $$\cos\theta = \frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\,\|\mathbf{w}\|} \in [-1, 1]$$
-- **Why Embeddings Use Cosine:** Dimming an image to $10\%$ brightness moves it far away in Euclidean distance $\|\mathbf{v} - \mathbf{w}\|$, yet leaves its direction—and its cosine similarity of $1$—completely unchanged.
-- **Contrastive Learning vs. Attention:** Contrastive objectives (SimCLR, CLIP) and vector retrieval normalize embeddings onto the unit sphere, whereas dot-product attention uses unnormalized $\mathbf{q}\cdot\mathbf{k}/\sqrt{d}$ so vector magnitudes can modulate confidence.
+::: {.cols .vc}
+::: {.col}
+- **Scale-Invariant Direction Metric:** Cosine similarity $\cos\theta = (\mathbf{v}\cdot\mathbf{w})/(\|\mathbf{v}\|\|\mathbf{w}\|) \in [-1, 1]$ measures pure directional alignment.
+- **Brightness Invariance:** Dimming an image to $10\%$ changes Euclidean distance but leaves $\cos\theta = 1$.
+- **Retrieval vs. Attention:** Contrastive learning (SimCLR, CLIP) normalizes vectors, while attention uses $\mathbf{q}\cdot\mathbf{k}/\sqrt{d}$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-cosine-scale-invariance
+:::
+:::
 :::
 
 ::: {.slide title="Random Directions in ℝᵈ Are Nearly Orthogonal"}
@@ -1578,23 +1609,33 @@ Normalizing standard Gaussian vectors confirms the $1/\sqrt{784} \approx 0.036$ 
 ::: {.slide title="Why Real Data Depart From the Isotropic Baseline"}
 [Data Geometry]{.kicker}
 
-- **Positive-Orthant Shift ($\approx 0.60 \pm 0.18$):** Raw pixel intensities lie in $[0, 1]^{784}$, confining all images to the non-negative orthant where dot products can never be negative.
-- **Low Effective Dimension After Centering ($\approx 0.00 \pm 0.34$):** Subtracting the mean training image centers the cosine distribution at $0$, but its standard deviation $0.34$ is nearly $10\times$ wider than $1/\sqrt{784} = 0.036$.
-- **Effective Dimension $d_{\text{eff}} = 1/\sigma^2 \approx 8.6$:** Matching $\operatorname{Std}(\cos\theta) \approx 0.34$ to $1/\sqrt{d_{\text{eff}}}$ reveals that centered Fashion-MNIST images concentrate near an $8$- to $9$-dimensional subspace rather than filling $\mathbb{R}^{784}$.
+::: {.cols .vc}
+::: {.col}
+- **Positive-Orthant Shift ($\approx 0.60 \pm 0.18$):** Raw pixels in $[0, 1]^{784}$ lie in the non-negative orthant where dot products are never negative.
+- **Low Effective Dimension After Centering ($\approx 0.00 \pm 0.34$):** Subtracting the mean image centers cosines at $0$, but spread $0.34$ matches $d_{\text{eff}} = 1/0.34^2 \approx 8.6$ dimensions.
+- **Retrieval Benchmark Rule:** Always compare cosines against random pairs from the *same* data distribution.
+:::
 
-::: {.d2l-note}
-**Practical Lesson for Retrieval:** An observed cosine of $0.5$ is enormous for isotropic vectors in $\mathbb{R}^{784}$ ($14$ standard deviations), but completely unremarkable for raw uncentered images. Always benchmark against random pairs from the *same* distribution.
+::: {.col .fig .big}
+@fig:ch33-la-isotropic-vs-data
+:::
 :::
 :::
 
 ::: {.slide title="Why Dot-Product Attention Divides by √d"}
 [Transformer Geometry]{.kicker}
 
-- **Variance of Unnormalized Dot Products:** If query $\mathbf{q}$ and key $\mathbf{k}$ in $\mathbb{R}^d$ have independent entries of mean $0$ and variance $1$, each product $q_i k_i$ has mean $0$ and variance $1$, and the $d$ uncorrelated terms add:
-  $$\operatorname{Var}(\mathbf{q}\cdot\mathbf{k}) = \sum_{i=1}^d \operatorname{Var}(q_i k_i) = d \implies \operatorname{Std}(\mathbf{q}\cdot\mathbf{k}) = \sqrt{d}$$
-- **Geometric View of the Same Scaling:** Typical vectors have length $\|\mathbf{q}\|, \|\mathbf{k}\| \approx \sqrt{d}$ while their random cosine has scale $1/\sqrt{d}$, producing dot products of typical magnitude $\sqrt{d} \cdot \sqrt{d} \cdot (1/\sqrt{d}) = \sqrt{d}$.
-- **Preventing Softmax Saturation:** At head dimension $d = 64$, raw scores have standard deviation $8$, pushing two scores separated by $1\sigma$ to near-one-hot softmax weights ($0.9997$ vs. $0.0003$) with vanishing gradients; dividing by $\sqrt{d} = 8$ restores unit variance ($0.73$ vs. $0.27$).
-- **Extreme-Value Bar Across $n$ Keys:** Among $n$ unrelated keys, the maximum background cosine grows like $\sqrt{2\ln n / d}$ ($\approx 0.30$ for $n = 10^5, d = 256$), setting the threshold a true match must clear.
+::: {.cols .vc}
+::: {.col}
+- **Variance Growth ($\operatorname{Var}(\mathbf{q}\cdot\mathbf{k}) = d$):** For independent unit-variance entries, $d$ uncorrelated products $q_i k_i$ add to standard deviation $\sqrt{d}$.
+- **Preventing Softmax Saturation:** At $d = 64$, raw scores have $\sigma = 8$, driving a $1\sigma$ gap to $(0.9997, 0.0003)$; dividing by $\sqrt{d} = 8$ restores $(0.73, 0.27)$.
+- **Retrieval Threshold Across $n$ Keys:** Maximum background cosine among $n$ random keys scales as $\sqrt{2\ln n / d}$.
+:::
+
+::: {.col .fig .big}
+@fig:ch33-la-attention-sqrt-d
+:::
+:::
 :::
 
 ::: {.slide title="Hyperplanes and Signed Distance to the Boundary"}
@@ -1617,11 +1658,18 @@ Normalizing standard Gaussian vectors confirms the $1/\sqrt{784} \approx 0.036$ 
 ::: {.slide title="Nearest-Mean Classification Is One Hyperplane"}
 [Linear Classifiers]{.kicker}
 
-- **Canceling the Quadratic Term:** Assigning $\mathbf{x}$ to class $1$ when it lies closer to $\bar{\mathbf{x}}_1$ than to $\bar{\mathbf{x}}_0$ expands to a linear inequality because $\|\mathbf{x}\|^2$ cancels on both sides:
-  $$\|\mathbf{x} - \bar{\mathbf{x}}_1\|^2 < \|\mathbf{x} - \bar{\mathbf{x}}_0\|^2 \iff (\bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0)\cdot\mathbf{x} - \tfrac{1}{2}\bigl(\|\bar{\mathbf{x}}_1\|^2 - \|\bar{\mathbf{x}}_0\|^2\bigr) > 0$$
-- **Perpendicular Bisector Normal & Offset:** Using $\|\bar{\mathbf{x}}_1\|^2 - \|\bar{\mathbf{x}}_0\|^2 = (\bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0)\cdot(\bar{\mathbf{x}}_0 + \bar{\mathbf{x}}_1)$, the boundary is $\mathbf{w}\cdot\mathbf{x} + b = 0$ with normal $\mathbf{w} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$ and midpoint offset $b = -\mathbf{w}\cdot\tfrac{1}{2}(\bar{\mathbf{x}}_0 + \bar{\mathbf{x}}_1)$.
+::: {.cols .vc}
+::: {.col}
+- **Quadratic Cancellation:** In $\|\mathbf{x} - \bar{\mathbf{x}}_1\|^2 < \|\mathbf{x} - \bar{\mathbf{x}}_0\|^2$, $\|\mathbf{x}\|^2$ cancels on both sides.
+- **Perpendicular Bisector:** Normal $\mathbf{w} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$ and midpoint offset $b = -\mathbf{w}\cdot\tfrac{1}{2}(\bar{\mathbf{x}}_0 + \bar{\mathbf{x}}_1)$ reach $92\%$ accuracy on t-shirts vs. trousers.
 
 @geometry-linear-algebraic-ops-hyperplanes-4
+:::
+
+::: {.col .fig}
+@fig:ch33-la-nearest-mean-bisector
+:::
+:::
 :::
 
 ::: {.slide title="Signed-Distance Histogram and Class Overlap"}

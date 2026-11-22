@@ -557,80 +557,100 @@ Linear Recurrences and Parallel Associative Scans<br>**affine state transitions 
 ::: {.slide title="The GPU Parallelism Bottleneck of Nonlinear Recurrence"}
 [Motivation]{.kicker}
 
-The gated networks of §12.1 retain information over hundreds of steps, yet underutilize modern accelerators during training:
+::: {.cols .vc}
+::: {.col}
+- **Sequential Bottleneck:** On $T = 4{,}096$ tokens, a nonlinear GRU launches $4{,}096$ serial steps because step $t$ waits for $\mathbf{h}_{t-1}$ inside $\tanh(\cdot)$.
+- **The Linearization Breakthrough:** Removing $\mathbf{h}_{t-1}$ from the gates makes the transition affine ($\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$).
+- **Logarithmic Depth:** Affine transitions compose associatively in $\log_2 4{,}096 = 12$ parallel rounds.
+:::
 
-- **Sequential step dependency:** On a sequence of $T = 4{,}096$ tokens, a standard GRU executes $4{,}096$ sequential kernel launches because step $t$'s gates and candidate depend nonlinearly on $\mathbf{h}_{t-1}$.
-- **Idle Tensor Cores:** While a Transformer processes all $4{,}096$ tokens in parallel via large matrix multiplications, a step-by-step RNN processes one slice of shape $(B, d)$ at a time.
-
-::: {.d2l-note .rule}
-**The linearization breakthrough:** Remove $\mathbf{h}_{t-1}$ from the nonlinear gates so the update is **affine in the state** ($\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$). Affine maps compose associatively, evaluating all $4{,}096$ states in $\log_2 4{,}096 = 12$ parallel rounds!
+::: {.col .fig .big}
+@fig:ch12-mrnn-seq-vs-parallel-gpu
+:::
 :::
 :::
 
 ::: {.slide title="Scalar Linear Recurrence as an Exponential Moving Sum"}
 [Linear Recurrence Basics]{.kicker}
 
-Start with a scalar state $h_t$ that retains a fixed fraction $a \in (0, 1)$ of its previous value and adds the input $x_t$ from $h_0 = 0$:
+::: {.cols .vc}
+::: {.col}
+$$h_t = a\, h_{t-1} + x_t = \sum_{s=1}^{t} a^{t-s} x_s$$
 
-$$h_t = a\, h_{t-1} + x_t \quad\Longrightarrow\quad h_t = \sum_{s=1}^{t} a^{t-s} x_s$$
+- **Impulse Response:** A unit pulse at $s=1$ decays geometrically as $a^{t-1}$ with half-life $\tau_{1/2} = \ln 2 / \ln(1/a)$.
+- **Forward-Backward Symmetry:** The backward sensitivity $\partial h_t / \partial x_s = a^{t-s}$ matches the forward retention weight identically.
+:::
 
-- **Closed-form impulse response:** A unit pulse $x_1 = 1$ with $a = 0.9$ produces the exponentially decaying trace $1, 0.9, 0.81, 0.729, \ldots$ with half-life $\tau_{1/2} = \ln 2 / \ln(1/a)$ ($\approx 7$ steps at $a = 0.9$; $\approx 693$ steps at $a = 0.999$).
-- **Forward retention equals backward gradient flow:** Because the recurrence is linear, the Jacobian is simply $\partial h_t / \partial x_s = a^{t-s}$—the exact decay factor that forgets an old input also attenuates its gradient.
+::: {.col .fig}
+@fig:ch12-mrnn-scalar-ema-impulse
+:::
+:::
 :::
 
 ::: {.slide title="Input-Dependent Affine Vector Recurrences"}
 [Time-Varying Decays]{.kicker}
 
-To let each token decide whether to preserve or flush each coordinate, we make the elementwise decay $\mathbf{a}_t \in (0, 1)^d$ and **write vector** $\mathbf{b}_t \in \mathbb{R}^d$ functions of the current input $\mathbf{x}_t$ alone:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{h}_t = \mathbf{a}(\mathbf{x}_t) \odot \mathbf{h}_{t-1} + \mathbf{b}(\mathbf{x}_t)$$
 
-$$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t, \qquad \mathbf{a}_t = \mathbf{a}(\mathbf{x}_t), \quad \mathbf{b}_t = \mathbf{b}(\mathbf{x}_t)$$
+- **Parallel Pre-Computation:** Because $\mathbf{a}_t, \mathbf{b}_t$ depend only on $\mathbf{x}_t$, all $T$ gates and writes are computed in one batched GEMM.
+- **Selective Clock Gating:** Salient tokens set $a_{t,i} \approx 0$ to write new facts; filler tokens set $a_{t,i} \approx 1$ to freeze memory without decay.
+:::
 
-$$\mathbf{h}_t = \sum_{s=1}^{t} \Big(\prod_{r=s+1}^{t} \mathbf{a}_r\Big) \odot \mathbf{b}_s$$
-
-- **Parallel pre-computation:** Because neither $\mathbf{a}_t$ nor $\mathbf{b}_t$ reads $\mathbf{h}_{t-1}$, all $T$ decay and write vectors across the sequence are computed in one batched matrix multiplication before the recurrence runs.
-- **Selective retention:** A write $\mathbf{b}_s$ survives to step $t$ as long as intermediate tokens choose $\mathbf{a}_r \approx \mathbf{1}$, and is erased whenever a later token sets $\mathbf{a}_r \approx \mathbf{0}$.
+::: {.col .fig}
+@fig:ch12-mrnn-affine-precompute
+:::
+:::
 :::
 
 ::: {.slide title="Deriving the Minimal GRU (minGRU) from the Standard GRU"}
 [The minGRU Architecture]{.kicker}
 
-Inspect the three places where $\mathbf{h}_{t-1}$ enters the gates and candidate of the standard GRU (§12.1):
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z}), \quad \mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$$
 
-$$\mathbf{z}_t = \sigma(\mathbf{W}_{\textrm{xz}}\mathbf{x}_t + \underbrace{\mathbf{W}_{\textrm{hz}}\mathbf{h}_{t-1}}_{\text{drop}} + \mathbf{b}_\textrm{z}), \quad \mathbf{r}_t = \sigma(\mathbf{W}_{\textrm{xr}}\mathbf{x}_t + \underbrace{\mathbf{W}_{\textrm{hr}}\mathbf{h}_{t-1}}_{\text{drop}} + \mathbf{b}_\textrm{r}), \quad \tilde{\mathbf{h}}_t = \tanh\big(\mathbf{W}_{\textrm{xh}}\mathbf{x}_t + \underbrace{\mathbf{W}_{\textrm{hh}}(\mathbf{r}_t \odot \mathbf{h}_{t-1})}_{\text{drop}} + \mathbf{b}_\textrm{h}\big)$$
+- **Drop Recurrent Gate Inputs:** Removes $\mathbf{W}_{\textrm{hz}}\mathbf{h}_{t-1}$, $\mathbf{W}_{\textrm{hr}}\mathbf{h}_{t-1}$, and $\mathbf{W}_{\textrm{hh}}(\mathbf{r}_t \odot \mathbf{h}_{t-1})$ from the standard GRU (Feng et al., 2024).
+- **Compact & Scan-Ready:** Cuts parameters by $3\times$ ($6d^2 \to 2d^2$) and fits $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ directly.
+:::
 
-Dropping those three recurrent terms eliminates the reset gate $\mathbf{r}_t$ and yields the **minimal GRU (minGRU)** (Feng et al., 2024):
-
-$$\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z}), \qquad \tilde{\mathbf{h}}_t = \tanh(\mathbf{W}_\textrm{h}\mathbf{x}_t + \mathbf{b}_\textrm{h}), \qquad \mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$$
-
-- **Affine form:** Matches $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ with decay $\mathbf{a}_t = \mathbf{z}_t$ and bounded write $\mathbf{b}_t = (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$, while reducing layer weights from $6d^2$ to $2d^2$.
+::: {.col .fig}
+@fig:ch12-mrnn-gru-to-mingru
+:::
+:::
 :::
 
 ::: {.slide title="What One Linear Layer Loses—and What Depth Restores"}
 [Expressivity Trade-Off]{.kicker}
 
-What does dropping $\mathbf{W}_{\textrm{hz}}\mathbf{h}_{t-1}$ from the update gate sacrifice within a single layer? Consider a 1-unit task: *"Store the **first** digit seen in the sequence and ignore all subsequent digits."*
+::: {.cols .vc}
+::: {.col}
+- **Single-Layer Blindness:** Because $\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z})$ cannot inspect $\mathbf{h}_{t-1}$, a 1-layer `minGRU` cannot tell whether a memory slot is already full and overwrites on later digits.
+- **Depth Restores State Conditioning:** In a 2-block stack, Layer 1's state $\mathbf{h}_t^{(1)}$ summarizes history so Layer 2's gate $\mathbf{z}_t^{(2)}$ can lock the slot while keeping parallel scan training.
+:::
 
-| Architecture | Gate Formula | On the 1st Digit | On the 2nd Digit |
-| :--- | :--- | :--- | :--- |
-| **Standard GRU** | $\sigma(\mathbf{W}_{\textrm{xz}}\mathbf{x}_t + \mathbf{W}_{\textrm{hz}}\mathbf{h}_{t-1} + \mathbf{b}_\textrm{z})$ | $h_{t-1} = 0 \implies z_t \approx 0$ (writes digit) | $h_{t-1} \neq 0 \implies z_t \approx 1$ (keeps 1st digit) |
-| **Single minGRU** | $\sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z})$ | Sees a digit $\implies z_t \approx 0$ (writes digit) | Sees a digit $\implies z_t \approx 0$ (**overwrites!**) |
-
-::: {.d2l-note}
-A single minGRU layer's gate cannot tell whether its state is already occupied. However, stacking multiple minGRU blocks separated by positionwise MLPs lets **layer 2's gates** condition on the state history summarized by **layer 1**!
+::: {.col .fig .big}
+@fig:ch12-mrnn-depth-restores-gating
+:::
 :::
 :::
 
 ::: {.slide title="Associative Composition of Affine State Transitions"}
 [Algebra of Parallel Scans]{.kicker}
 
-Evaluating the unrolled sum $\sum_{s \le t} (\prod_{r=s+1}^t \mathbf{a}_r) \odot \mathbf{b}_s$ term-by-term for all $t \le T$ would cost $O(T^2 d)$ work. Instead, represent step $t$'s affine function $f_t(\mathbf{h}) = \mathbf{a}_t \odot \mathbf{h} + \mathbf{b}_t$ by its coefficient pair $(\mathbf{a}_t, \mathbf{b}_t)$:
-
-$$f_2(f_1(\mathbf{h})) = \mathbf{a}_2 \odot (\mathbf{a}_1 \odot \mathbf{h} + \mathbf{b}_1) + \mathbf{b}_2 = (\mathbf{a}_1 \odot \mathbf{a}_2) \odot \mathbf{h} + (\mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2)$$
-
+::: {.cols .vc}
+::: {.col}
 $$(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) = (\mathbf{a}_1 \odot \mathbf{a}_2,\; \mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2)$$
 
-- **Closure & associativity:** The composition of *any* block of $k$ affine steps is still a single $(\mathbf{a}, \mathbf{b})$ pair of width $d$, and function composition satisfies $(f_3 \circ f_2) \circ f_1 = f_3 \circ (f_2 \circ f_1)$.
-- **Prefix readout:** Starting from $\mathbf{h}_0 = \mathbf{0}$, the state $\mathbf{h}_t$ is simply the second component of the prefix product $(\mathbf{a}_1, \mathbf{b}_1) \bullet \cdots \bullet (\mathbf{a}_t, \mathbf{b}_t)$.
+- **Closure Under Composition:** Composing two affine steps $f_2(f_1(\mathbf{h}))$ produces a single affine pair $(\mathbf{A}, \mathbf{B})$ of width $d$ in $O(d)$ elementwise work.
+- **Associative (Not Commutative):** Grouping order does not matter, unlocking parallel tree reductions across time.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-affine-combine-op
+:::
+:::
 :::
 
 ::: {.slide title="The Hillis–Steele Parallel Doubling Scan Schedule"}
@@ -719,17 +739,16 @@ Inspecting the update gates $\mathbf{z}_t \in (0, 1)^d$ of the first `minGRU` bl
 ::: {.slide title="Asymptotic Complexity: GRU vs. Scan vs. Attention"}
 [Work, Depth, and Memory]{.kicker}
 
-Comparing one sequence-mixing layer of width $d$ across $T$ tokens up to constant factors:
+::: {.cols .vc}
+::: {.col}
+- **Sequential `GRU`:** $\Theta(T d^2)$ FLOPs across $\Theta(T)$ serial steps with $\Theta(d)$ generation state.
+- **Parallel `minGRU` Scan:** $\Theta(T d^2)$ projection FLOPs in $\Theta(\log_2 T)$ depth while keeping $\Theta(d)$ inference state.
+- **Causal Attention Crossover:** Pairwise attention scores ($2T^2 d$) overtake projections ($8Td^2$) once $\mathbf{T > 4d}$.
+:::
 
-| Layer / Algorithm | Training FLOPs | Sequential Depth | Generation State Memory |
-| :--- | :--- | :--- | :--- |
-| **Sequential GRU** | $\Theta(T d^2)$ | $\Theta(T)$ matrix-vector steps | $\Theta(d)$ |
-| **minGRU (doubling scan)** | $\Theta(T d^2 + T d \log_2 T)$ | $\Theta(\log_2 T)$ elementwise rounds | $\Theta(d)$ |
-| **minGRU (work-efficient scan)** | $\Theta(T d^2 + T d)$ | $\Theta(\log_2 T)$ elementwise rounds | $\Theta(d)$ |
-| **Causal Attention** | $\Theta(T d^2 + T^2 d)$ | $\Theta(1)$ large GEMMs | $\Theta(T d)$ KV cache |
-
-::: {.d2l-note .rule}
-**The attention FLOP crossover:** Causal attention performs $8Td^2$ projection FLOPs and $\approx 2T^2 d$ attention score/mixing FLOPs. The quadratic term overtakes projections at $2T^2 d = 8Td^2 \implies \mathbf{T = 4d}$ ($T = 1{,}024$ at $d = 256$).
+::: {.col .fig .big}
+@fig:ch12-mrnn-complexity-crossover
+:::
 :::
 :::
 

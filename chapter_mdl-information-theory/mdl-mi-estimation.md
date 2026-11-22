@@ -1630,43 +1630,50 @@ On $d$ independent copies of the $\rho = 0.9$ Gaussian pair (true $I = 0.830\,d\
 ::: {.slide title="The McAllester–Stratos Distribution-Free Limit"}
 [Four-Step Collision Proof]{.kicker}
 
-Can *any* estimator guarantee a high-confidence lower bound $B \le I(X; Y)$ from $n$ samples without parametric assumptions?
-
-::: {.d2l-note .rule}
-**Theorem (McAllester & Stratos, 2020):** Any distribution-free lower bound $B(S_n)$ satisfying $\Pr(B(S_n) \le I(X; Y)) \ge 0.95$ for all distributions is at most $\mathcal{O}(\log n)$.
+::: {.cols .vc}
+::: {.col}
+- **Theorem (McAllester & Stratos, 2020):** Any distribution-free estimator $B(S_n)$ satisfying $\Pr(B(S_n) \le I(X; Y)) \ge 0.95$ for all distributions is capped at $\mathcal{O}(\log n)$ ($\approx 2\log n$).
+- **Birthday collision proof:** On $M = n^2$ uniform symbols ($H = 2\log n$), all $n$ draws are distinct with probability $> 1/2$, forcing any label-invariant bound to output $\le 2\log n$ on *every* collision-free sample!
 :::
 
-- **Four-step proof for discrete entropy ($Y = X \implies I(X; Y) = H(X)$):**
-  1. **Birthday collision bound:** On $M$ uniform symbols, the probability that any two of $n$ draws collide is at most $\binom{n}{2}\frac{1}{M} = \frac{n(n-1)}{2M}$.
-  2. **Test on $M = n^2$ uniform symbols ($H(X) = 2\log n$):** By assumption, $\Pr(B \le 2\log n) \ge 0.95$.
-  3. **All-distinct overlap:** For $M = n^2$, all $n$ draws are distinct with probability $> 1 - \frac{n(n-1)}{2n^2} > \frac{1}{2}$. Since $0.95 + 0.5 > 1$, $B \le 2\log n$ on at least one all-distinct sample.
-  4. **Label invariance:** Any estimator that treats symbols as arbitrary labels depends only on the repetition pattern (*type*), so it must output $\le 2\log n$ on *every* all-distinct sample ($27.6\text{ nats}$ at $n = 10^6$, even when true $H = 177\text{ nats}$ for 256-bit keys!). $\blacksquare$
+::: {.col .fig .big}
+@fig:ch37-info-mcallester-stratos-wall
+:::
+:::
 :::
 
 ::: {.slide title="Resolving the Deep Network Compression Debate"}
 [What Binned Activations Actually Measure]{.kicker}
 
-Shwartz-Ziv & Tishby (2017) binned hidden activations $Z$ of a deterministic $\tanh$ network on $4{,}096$ binary inputs into $30$ intervals and observed $I(X; Z_{\textrm{bin}})$ rise and then fall during training (a "compression phase"). Saxe et al. (2018) showed that ReLU networks exhibit no such fall yet generalize equally well:
+::: {.cols .vc}
+::: {.col}
+In a deterministic network, binned activations $Z_{\textrm{bin}} = f_{\textrm{bin}}(X)$ have $H(Z_{\textrm{bin}} \mid X) = 0$, so:
 
-- **What $I(X; Z_{\textrm{bin}})$ actually computes in a deterministic network:**
-  Because $Z_{\textrm{bin}} = f_{\textrm{bin}}(X)$ is a deterministic function of $X$, $H(Z_{\textrm{bin}} \mid X) = 0$, so:
-  $$I(X; Z_{\textrm{bin}}) = H(Z_{\textrm{bin}}) - \underbrace{H(Z_{\textrm{bin}} \mid X)}_{= 0} = H(Z_{\textrm{bin}}) \le \ln 4096 = 8.32\text{ nats}$$
-- **Why $\tanh$ fell while true $I(X; Z)$ never changed:** As weights grow, $\tanh(z)$ saturates near $\pm 1$, collapsing distinct inputs into the two extreme histogram bins and lowering $H(Z_{\textrm{bin}})$, whereas the true unbinned mapping remains injective ($I(X; Z) = H(X)$ on finite inputs, or $\infty$ on continuous inputs).
+$$I(X; Z_{\textrm{bin}}) = H(Z_{\textrm{bin}}) - H(Z_{\textrm{bin}} \mid X) = H(Z_{\textrm{bin}})$$
+
+- **Saturation vs. true MI:** As weights grow, $\tanh(z)$ saturates near $\pm 1$, collapsing inputs into the two extreme histogram bins and lowering $H(Z_{\textrm{bin}})$, whereas ReLU does not saturate and true unbinned $I(X; Z)$ never drops!
+:::
+
+::: {.col .fig}
+@fig:ch37-info-tishby-tanh-binning
+:::
+:::
 :::
 
 ::: {.slide title="Variational Lower Bounds: Estimation as Optimization"}
 [Poole et al. Unified Framework]{.kicker}
 
-To estimate or maximize mutual information between high-dimensional vectors $(X, Y)$, variational methods replace unknown densities with a learned auxiliary model so the population expectation is a **guaranteed lower bound** on $I(X; Y)$:
+::: {.cols .vc}
+::: {.col}
+- **Barber–Agakov (BA):** Uses a normalized decoder $q(x \mid y)$ to certify $I(X; Y) \ge H(X) + \mathbb{E}[\log q(x \mid y)]$.
+- **Donsker–Varadhan (DV / MINE) & NWJ:** Use an unconstrained scalar critic $T(x, y)$ ($T^* = \textrm{pmi} + c$), but suffer from $\textrm{Var}_Q(e^{\textrm{pmi}}) = e^{2I} - 1$.
+- **InfoNCE (Contrastive):** Normalizes $e^{T(x,y)}$ across $N$ in-batch candidates, trading a smooth $\log N$ ceiling for low variance.
+:::
 
-| Variational Bound | Auxiliary Model | Population Lower Bound on $I(X; Y)$ | Optimal Model & Ceiling |
-|:--|:---|:---|:---|
-| **Barber–Agakov (BA)** | Normalized decoder $q(x \mid y)$ | $H(X) + \mathbb{E}_{P_{X,Y}}[\log q(x \mid y)]$ | $q^*(x \mid y) = p(x \mid y)$; requires $H(X)$ |
-| **Donsker–Varadhan (DV / MINE)** | Unconstrained critic $T(x, y)$ | $\mathbb{E}_{P_{X,Y}}[T] - \log \mathbb{E}_{P_X \otimes P_Y}[e^T]$ | $T^* = \textrm{pmi}(x, y) + c$; biased on batches |
-| **NWJ ($f$-GAN KL Dual)** | Unconstrained critic $T(x, y)$ | $\mathbb{E}_{P_{X,Y}}[T] - e^{-1}\mathbb{E}_{P_X \otimes P_Y}[e^T]$ | $T^* = 1 + \textrm{pmi}(x, y)$; unbiased, high var |
-| **InfoNCE (Contrastive)** | Critic $T(x, y)$ on $N$ candidates | $\log N - \mathcal{L}_{\textrm{NCE}}(T, N)$ | $T^* = \textrm{pmi}(x, y) + c(x)$; capped at $\log N$ |
-
-- Every proof rests on **Gibbs' inequality** ($D_{\textrm{KL}} \ge 0$), and every empirical reading combines **critic approximation error** with **finite-batch sampling error**.
+::: {.col .fig .big}
+@fig:ch37-info-variational-mi-bounds
+:::
+:::
 :::
 
 ::: {.slide title="The Barber–Agakov Variational Decoder Bound"}
@@ -1683,13 +1690,20 @@ $$I(X; Y) \ge H(X) + \mathbb{E}_{(x, y) \sim P_{X,Y}}\big[\log q(x \mid y)\big] 
 ::: {.slide title="The Donsker–Varadhan (DV) and MINE Critic Bound"}
 [Exponential Tilting Without H(X)]{.kicker}
 
-To avoid knowing $H(X)$ or normalizing a decoder $q(x \mid y)$, the **Donsker–Varadhan representation** (1983) lower-bounds $D_{\textrm{KL}}(P \| Q)$ using any unconstrained scalar critic $T$:
+::: {.cols .vc}
+::: {.col}
+With tilted density $\tilde{q}(x) = q(x)e^{T(x)} / Z$ ($Z = \mathbb{E}_Q[e^T]$), the DV gap equals $D_{\textrm{KL}}(P \| \tilde{Q}) \ge 0$:
 
 $$D_{\textrm{KL}}(P \| Q) \ge \mathbb{E}_{P}[T] - \log \mathbb{E}_{Q}\big[e^T\big]$$
 
-- **Three-line proof via exponential tilting:** Define the normalized tilted distribution $\tilde{q}(x) = \frac{q(x)e^{T(x)}}{Z}$ with $Z = \mathbb{E}_Q[e^T]$. Then the gap between $D_{\textrm{KL}}(P \| Q)$ and the bound is an exact KL divergence:
-  $$D_{\textrm{KL}}(P \| Q) - \big(\mathbb{E}_P[T] - \log Z\big) = \mathbb{E}_P\!\left[\log\frac{p}{q} - T + \log Z\right] = \mathbb{E}_P\!\left[\log\frac{p}{\tilde{q}}\right] = D_{\textrm{KL}}(P \| \tilde{Q}) \ge 0 \quad \blacksquare$$
-- **Specialization to Mutual Information (MINE, Belghazi et al., 2018):** Set $P = P_{X,Y}$ and $Q = P_X \otimes P_Y$. Equality $P = \tilde{Q}$ holds if and only if $T^*(x, y) = \log\frac{p(x, y)}{p(x)p(y)} + c = \textrm{pmi}(x, y) + c$.
+- **MINE specialization:** Setting $P = P_{X,Y}$ and $Q = P_X \otimes P_Y$ attains $I(X; Y)$ at $T^*(x, y) = \textrm{pmi}(x, y) + c$.
+- **NWJ linearization:** Applying $\log Z \le Z/e$ gives $\mathbb{E}_P[T] - e^{-1}\mathbb{E}_Q[e^T]$ (unbiased on minibatches, tight at $T^* = 1 + \textrm{pmi}$).
+:::
+
+::: {.col .fig}
+@fig:ch37-info-dv-nwj-tilting
+:::
+:::
 :::
 
 ::: {.slide title="The NWJ Bound: Unbiased Batch Estimates"}
@@ -1727,13 +1741,19 @@ Instead of averaging an unnormalized exponential $e^{T(x, y)}$, **InfoNCE** (van
 ::: {.slide title="Three-Step Proof of the InfoNCE Lower Bound"}
 [Barber–Agakov on a Bag of N Candidates]{.kicker}
 
-Why does $N$-way classification among 1 positive and $N - 1$ marginal negatives lower-bound $I(X; Y)$? Collect the candidates into a bag $V = (Y_1, Y_2, \ldots, Y_N)$ where $Y_1 = Y^+$ and $Y_{2:N} \sim P_Y^{\otimes(N-1)}$ are independent of $(X, Y_1)$:
+::: {.cols .vc}
+::: {.col}
+For a bag $V = (Y_1, \ldots, Y_N)$ with $Y_1 = Y^+$ and $Y_{2:N} \sim P_Y^{\otimes(N-1)}$:
 
-- **Step 1 (Independent negatives add zero mutual information):** By the chain rule:
-  $$I(X; V) = I(X; Y_1) + \underbrace{I(X; Y_{2:N} \mid Y_1)}_{= 0 \text{ (independent)}} = I(X; Y)$$
-- **Step 2 (Rescaled softmax defines a normalized density $q(v \mid x)$):** Let $p(v) = \prod_{j=1}^N p_Y(y_j)$ be the i.i.d. bag distribution and define $\gamma(x, v) = \frac{e^{T(x, y_1)}}{\frac{1}{N}\sum_{j=1}^N e^{T(x, y_j)}}$. By permutation symmetry of $p(v)$, all $N$ slots have equal expectation, so $\mathbb{E}_{p(v)}[\gamma(x, V)] = \frac{1}{N}\sum_{i=1}^N \mathbb{E}_{p(v)}\!\left[\frac{e^{T(x, Y_i)}}{\frac{1}{N}\sum_j e^{T(x, Y_j)}}\right] = 1$, making $q(v \mid x) = p(v)\gamma(x, v)$ a valid probability density!
-- **Step 3 (Apply Barber–Agakov to $(X, V)$):** Since the marginal of $V$ is $p(v)$, the ratio form of Barber–Agakov yields:
-  $$I(X; Y) = I(X; V) \ge \mathbb{E}\!\left[\log\frac{q(V \mid X)}{p(V)}\right] = \mathbb{E}\big[\log \gamma(X, V)\big] = \log N - \mathcal{L}_{\textrm{NCE}} \quad \blacksquare$$
+$$I(X; Y) = I(X; V) \ge \mathbb{E}\!\left[\log\frac{q(V \mid X)}{p(V)}\right] = \log N - \mathcal{L}_{\textrm{NCE}}$$
+
+- **Why it works:** Independent negatives add zero MI ($I(X; V) = I(X; Y_1)$), and by permutation symmetry of $p(v) = \prod_j p_Y(y_j)$, $q(v \mid x) = p(v)\frac{N e^{T(x,y_1)}}{\sum_j e^{T(x,y_j)}}$ integrates to $1$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-infonce-bag-proof
+:::
+:::
 :::
 
 ::: {.slide title="Why InfoNCE Bends Smoothly Below Its ln N Ceiling"}
@@ -1759,12 +1779,16 @@ Sweeping true $I(X; Y) \in [0.25, 7]$ with the exact critic $T^* = \textrm{pmi}$
 ::: {.slide title="Starved vs. Hit Batches in DV and NWJ Bounds"}
 [Why Unnormalized Critics Explode Above ln N]{.kicker}
 
-Why don't DV and NWJ escape the $\log N$ barrier when evaluated on minibatches of $N = 128$ pairs?
+::: {.cols .vc}
+::: {.col}
+- **Rare-pair lottery under $P_X \otimes P_Y$:** A plausible pair ($\textrm{pmi} \approx I$, weight $e^I$) occurs by chance with probability $\sim e^{-I}$, so a batch of $N$ negatives sees $N e^{-I}$ hits on average.
+- **Starved vs. hit batches ($I > \log N \implies N e^{-I} < 1$):** Most batches are *starved* ($\overline{e^{\textrm{pmi}}} \ll 1$), causing DV and NWJ to overshoot $I$ wildly, while rare *hit* batches explode with standard deviation $\sqrt{(e^{2I}-1)/N}$!
+:::
 
-- **The rare-pair lottery under $P_X \otimes P_Y$:** A typical true pair has $\textrm{pmi}(x, y) \approx I$, which occurs under independent draws $P_X \otimes P_Y$ with probability $p(x)p(y) \approx p(x, y)e^{-I}$ ($\sim e^{-I}$) and weight $e^{\textrm{pmi}} \approx e^I$.
-- **Expected plausible mismatched pairs per batch ($N e^{-I}$):**
-  - When $I \ll \log N$ ($N e^{-I} \gg 1$, e.g., $17$ pairs at $I = 2$): Every batch samples several plausible pairs, $\overline{e^{\textrm{pmi}}} \approx 1$, and DV, NWJ, and InfoNCE all agree.
-  - When $I > \log N$ ($N e^{-I} < 1$, e.g., $0.3$ pairs at $I = 6$): Most batches ($> 50\%$) are **starved** ($\overline{e^{\textrm{pmi}}} < 0.1$), causing NWJ to report $\approx I + 1$ and DV to overshoot by many nats; only rare **hit** batches ($\max e^{\textrm{pmi}} \ge N$) pull NWJ's mean back to $I$, with batch standard deviation $\sqrt{(e^{2I}-1)/N} = 36\text{ nats}$!
+::: {.col .fig .big}
+@fig:ch37-info-starved-vs-hit-batches
+:::
+:::
 :::
 
 ::: {.slide title="Comparing DV, NWJ, and InfoNCE on Exact Critics"}

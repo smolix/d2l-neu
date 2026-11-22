@@ -380,40 +380,51 @@ Learning-Rate Schedules: Warmup, Cosine Decay, and WSD<br>**cumulative budget B_
 ::: {.slide title="Why the Learning Rate Must Rise Early and Fall Late"}
 [Motivation]{.kicker}
 
-Throughout §9.1–§9.6, we held the learning rate $\eta$ constant—and uncovered two opposite failure modes at the start and end of training:
+::: {.cols .vc}
+::: {.col}
+- **Opening hazard ($t = 1..W$):** Under cold-start AdamW, step 1 moves every coordinate by $\pm\eta_0$ from a single noisy minibatch before $(\mathbf{m}_t, \mathbf{v}_t)$ fill and before entering a flat basin ($\lambda_{\max} \le 2/\eta_0$).
+- **Terminal hazard ($t \to T$):** Constant $\eta_0$ traps SGD in a noise ball $\frac{\eta\sigma^2}{2\lambda b}$ and forces AdamW/Muon to keep taking $O(\eta_0)$ steps.
+- **Schedule remedy:** Ramp linearly $0 \to \eta_0$, hold a high travel plateau $B_T$, and decay $\eta_T \to 0$.
+:::
 
-| Training Phase | Failure Mode of a Constant Learning Rate $\eta$ | Schedule Remedy |
-| :--- | :--- | :--- |
-| **Opening steps ($t = 1, \ldots, W$)** | Under AdamW, step 1 moves every coordinate by $\pm\eta_0$ from a single noisy minibatch before moments $(\mathbf{m}_t, \mathbf{v}_t)$ stabilize, and before the iterate enters a flat region ($\lambda_{\max} \le 2/\eta_0$) | **Linear warmup:** Ramp $\eta_t$ linearly from $0 \to \eta_0$ over the first $1\%\text{--}5\%$ of steps |
-| **Final steps ($t \to T$)** | Constant-rate SGD stalls in a stationary noise ball of variance $\frac{\eta\sigma^2}{2\lambda b}$, while normalized methods (AdamW, Muon) keep taking $O(\eta)$ steps regardless of how small $\|\nabla f\|$ becomes | **Learning-rate decay:** Lower $\eta_t \to \eta_T \approx 0$ gradually so iterates settle into the minimum |
-
-::: {.d2l-note}
-A time-varying **learning-rate schedule** $\eta_t$ ($t = 0, \ldots, T-1$) resolves both problems by ramping up to a high peak rate $\eta_0$ for rapid traversal and decaying at the end to eliminate step noise.
+::: {.col .fig .big}
+@fig:ch09-opt-sched-early-late
+:::
 :::
 :::
 
 ::: {.slide title="Bias–Variance Decomposition Under a Schedule η_t"}
 [Analytical Model on the Noisy Valley]{.kicker}
 
-Along an eigendirection of curvature $\lambda > 0$ with zero-mean gradient noise $\xi_t$ of variance $\sigma^2$, time-varying step sizes $\eta_t$ evolve as $x_{t+1} = (1 - \eta_t\lambda)x_t - \eta_t\xi_t$:
+::: {.cols .vc}
+::: {.col}
+- **Time-varying noisy quadratic recursion:**
+  $$\mathbb{E}\big[x_t^2\big] \approx \underbrace{e^{-2\lambda B_t}\,x_0^2}_{\text{Travel term}} + \underbrace{\frac{\eta_t\,\sigma^2}{2\lambda}}_{\text{Noise ball}}, \quad B_t = \sum_{s=0}^{t-1} \eta_s$$
+- **Cumulative budget $B_T = \sum_{t<T} \eta_t$:** Area under the LR curve erases initial bias exponentially as $e^{-2\lambda B_T}$.
+- **Terminal rate $\eta_T$:** Sets the final noise floor $\frac{\eta_T\sigma^2}{2\lambda}$ provided $\eta_t$ decays slowly enough ($R_s \gtrsim 1/\lambda_{\min}$).
+:::
 
-$$\mathbb{E}\big[x_t^2\big] \approx \underbrace{e^{-2\lambda B_t}\,x_0^2}_{\text{Initial distance (travel term)}} + \underbrace{\frac{\eta_t\,\sigma^2}{2\lambda}}_{\text{Instantaneous noise ball}}, \qquad B_t = \sum_{s=0}^{t-1} \eta_s$$
-
-- **1. Cumulative learning-rate budget $B_t = \sum_{s < t} \eta_s$:** The area under the learning-rate curve up to step $t$. Deterministic error decays exponentially with $B_t$ as $\prod_{s < t}(1 - \eta_s\lambda) \approx e^{-\lambda B_t}$ (e.g., on the flat axis $\lambda_1 = 0.2$, a budget of $B_T = 25$ shrinks $x_0^2$ by $e^{-10} \approx 4.5 \times 10^{-5}$).
-- **2. Terminal learning rate $\eta_T$ (and slow-change condition):** Provided $\eta_t$ decays slowly enough that the remaining budget after step $s$, $R_s = \sum_{u=s}^{T-1}\eta_u \gtrsim 1/\lambda_{\min}$, contracts earlier noise, the terminal variance tracks the instantaneous noise ball $\frac{\eta_T\sigma^2}{2\lambda}$.
+::: {.col .fig}
+@fig:ch09-opt-sched-budget-vs-floor
+:::
+:::
 :::
 
 ::: {.slide title="Classical Parametric Decay Families and Their Budgets"}
 [Four Schedules on the Valley]{.kicker}
 
-We compare four classical schedules over $T = 3{,}000$ steps on the noisy valley ($\lambda_1 = 0.2, \lambda_2 = 4.0, \sigma^2 = 1$) from $(-5, -2)$, with decaying runs starting at $\eta_0 = 0.4$:
+::: {.cols .vc}
+::: {.col}
+- Comparing four schedules over $T = 3{,}000$ noisy valley steps ($\lambda_1 = 0.2, \lambda_2 = 4.0, \sigma^2 = 1$):
+  - **Constant ($\eta_t = 0.1$):** Huge budget ($B = 300$), stalls at stationary noise ball ($0.268$).
+  - **Polynomial $\alpha = 1/2$ and $\alpha = 1$:** Budgets $200.5$ and $48.2$; cleanly track the instantaneous noise ball down to $0.098$ and $0.009$.
+  - **Exponential ($0.4 \times 0.98^t$):** Finite budget $B_\infty = 20$ erases $x_0$, yet **freezes at variance $0.125$** despite $\eta_T \approx 10^{-27}$!
+:::
 
-| Schedule Family | Formula $\eta_t$ | Cumulative Budget $B_{3000} = \sum_{t=0}^{2999}\eta_t$ | Terminal Rate $\eta_{2999}$ | Naive Noise-Ball Prediction $\sum_i \frac{\eta_T\sigma^2}{2\lambda_i}$ |
-| :--- | :--- | :---: | :---: | :---: |
-| **Constant** | $\eta_t = 0.1$ | $300.0$ | $0.1000$ | $0.25 + 0.016 \approx 0.268$ |
-| **Exponential ($\gamma = 0.98$)** | $\eta_t = \eta_0\,\gamma^t$ | $\frac{\eta_0}{1 - \gamma} = 20.0$ | $\approx 1.9 \times 10^{-27}$ | $\approx 0$ (**fails—freezes at $0.125$!**) |
-| **Polynomial ($\alpha = 1/2$)** | $\eta_t = \eta_0(1 + t/25)^{-1/2}$ | $200.5$ | $0.0364$ | $0.268 \times 0.364 \approx 0.098$ |
-| **Polynomial ($\alpha = 1$)** | $\eta_t = \eta_0(1 + t/25)^{-1}$ | $48.2$ | $0.0033$ | $0.268 \times 0.033 \approx 0.009$ |
+::: {.col .fig .big}
+@fig:ch09-opt-sched-classical-families
+:::
+:::
 :::
 
 ::: {.slide title="1,000 Valley Runs: Why Exponential Decay Freezes"}
@@ -436,13 +447,18 @@ We compare four classical schedules over $T = 3{,}000$ steps on the noisy valley
 ::: {.slide title="Noise Is Removed Only by Budget Still to Come (R_s)"}
 [The Frozen-Noise Mechanism]{.kicker}
 
-Why did exponential decay $\eta_t = \eta_0\gamma^t$ freeze at variance $0.125$ even though its total budget $B_\infty = 20$ easily erased the initial position ($25\,e^{-8} < 0.01$)?
-
-- **Remaining budget after step $s$:** Noise $\eta_s^2\sigma^2$ injected at step $s$ is contracted only by steps *after* $s$, via the **remaining budget** $R_s = \sum_{u > s} \eta_u$:
+::: {.cols .vc}
+::: {.col}
+- **Remaining budget after step $s$ ($R_s = \sum_{u > s} \eta_u$):**
   $$\mathbb{E}\big[x_T^2\big] \approx e^{-2\lambda B_T}x_0^2 + \sigma^2 \sum_{s=0}^{T-1} \eta_s^2\,e^{-2\lambda R_s}$$
-- **Geometric starvation:** Under $\eta_s = \eta_0\gamma^s$, the remaining budget is only $R_s \approx \frac{\eta_s}{1 - \gamma} = 50\,\eta_s$. Once $\eta_s$ drops below $\frac{1-\gamma}{2\lambda_1} = \frac{0.02}{0.4} = 0.05$, $2\lambda_1 R_s < 1$ and all subsequent contraction stops!
-- Integrating $\sigma^2 \int_0^\infty \eta_s^2 e^{-2\lambda\eta_s/(1-\gamma)} ds$ gives the exact frozen variance along curvature $\lambda$:
-  $$\mathbb{E}\big[x_\infty^2\big]_{\text{exp}} \approx \frac{(1 - \gamma)\,\sigma^2}{4\lambda^2} = \frac{0.02 \times 1}{4 \times 0.2^2} = 0.125$$
+- **Geometric tail starvation:** Under $\eta_s = \eta_0\gamma^s$, $R_s \approx \frac{\eta_s}{1-\gamma}$. Once $\eta_s < \frac{1-\gamma}{2\lambda_1} = 0.05$, $2\lambda_1 R_s < 1$ and all subsequent contraction stops!
+- **Exact frozen variance:** $\mathbb{E}[x_\infty^2]_{\text{exp}} \approx \frac{(1-\gamma)\sigma^2}{4\lambda^2} = 0.125$.
+:::
+
+::: {.col .fig}
+@fig:ch09-opt-sched-remaining-budget
+:::
+:::
 :::
 
 ::: {.slide title="Modern Finite-Horizon Schedule Shapes"}
@@ -484,30 +500,31 @@ On a fixed budget of $T = 2{,}000$ steps with peak learning rate $\eta_0 = 3 \ti
 ::: {.slide title="Why Late Decay Wins and Mid-Run Comparisons Mislead"}
 [Budget vs. Noise Floor]{.kicker}
 
-| Schedule Shape ($\eta_0 = 3 \times 10^{-3}, T = 2{,}000$) | Cumulative Budget $B_T$ | Terminal Rate $\eta_T$ | Validation Drop (Steps $1{,}500 \to 2{,}000$) | Final Validation Loss |
-| :--- | :---: | :---: | :---: | :---: |
-| **Constant** | $6.0$ ($100\%$) | $3 \times 10^{-3}$ | $0.04\text{--}0.05$ nats | $1.56\text{--}1.60$ |
-| **Cosine Decay** | $3.0$ ($50\%$) | $0$ | $0.02\text{--}0.03$ nats | $1.55\text{--}1.57$ |
-| **Stable–then–Decay ($80\%$ plateau, $20\%$ linear)** | **$5.4$ ($90\%$)** | **$0$** | **$0.10$ nats** | **$1.50\text{--}1.51$** |
+::: {.cols .vc}
+::: {.col}
+- **Why late decay beats cosine on compute-bound runs:** Holding $\eta_0$ for $80\%$ of steps preserves **$90\%$ of the travel budget** ($B_T = 5.4$ vs. cosine's $3.0$) while still finishing at $\eta_T = 0$ ($1.50$ vs. $1.56$ nats).
+- **Never rank schedules mid-run before cooldown:** At step $1{,}500$, uncooled plateau weights carry $O(\eta_0)$ step jitter that vanishes as soon as the $400$-step linear cooldown drops $\eta_t \to 0$ (Wen et al., 2025).
+:::
 
-::: {.d2l-note .rule}
-**Two practical lessons:**
-
-1. **Why late decay wins on compute-bound runs:** When a model is still actively learning at step $T$, sacrificing $50\%$ of the travel budget $B_T$ under cosine decay costs as much progress as its zero terminal rate saves; holding $\eta_0$ for $80\%$ of steps keeps $90\%$ of the budget while still finishing at $\eta_T = 0$.
-2. **Never rank schedules or optimizers mid-run before cooldown:** An uncooled plateau checkpoint includes $O(\eta_0)$ step oscillation that disappears as soon as $\eta_t \to 0$ (Wen et al., 2025).
+::: {.col .fig .big}
+@fig:ch09-opt-sched-late-decay-win
+:::
 :::
 :::
 
 ::: {.slide title="Why High Peak Rates Fail Cold: Adam's First Step"}
 [The Mechanics of Learning-Rate Warmup]{.kicker}
 
-Why does AdamW on `TinyLM` stall near $2.8$ nats when started cold at $\eta_0 = 0.03$, yet train cleanly when ramped linearly over just $W = 20$ steps ($\eta_t = \eta_0 \min(1, \frac{t+1}{W})$)?
+::: {.cols .vc}
+::: {.col}
+- **Unaveraged step-1 sign jump:** At $t = 1$, Adam moves every weight by $\pm\eta_0$ from a single batch. On `TinyLM` ($\text{RMS}(\mathbf{W}_0) \approx 0.045$), cold $\eta_0 = 0.03$ jumps by **$67\%$ of initial weight magnitude** on step 1!
+- **20-step linear ramp ($\eta_t = \eta_0\min(1, \frac{t+1}{W})$):** Starts at $\eta_0/20 = 0.0015$ ($3.3\%$ step), letting $\mathbf{m}_t, \mathbf{v}_t$ fill over $\tau_1 = 10$ steps while steering below $2/\eta_t$.
+:::
 
-1. **Unaveraged step-1 sign jump:** At $t = 1$, Adam's bias-corrected moments come from a single minibatch, moving every weight coordinate by $\pm\eta_0$:
-   - `TinyLM`'s linear weight matrices initialize at $\text{RMS}(\mathbf{W}_0) \approx 0.045$.
-   - A cold start at $\eta_0 = 0.03$ changes every weight by **$\frac{0.03}{0.045} = 67\%$ of its initial magnitude on step 1**, scrambling the representation before $\mathbf{m}_t$ and $\mathbf{v}_t$ fill over their $\tau_1 = 10$-step window!
-   - A $20$-step ramp starts at $\eta_0 / 20 = 0.0015$ (**$3.3\%$ relative step**), allowing $\mathbf{m}_t, \mathbf{v}_t$ to stabilize before reaching $\eta_0$.
-2. **Progressive sharpening guidance (§9.1):** Gradually raising $\eta_t$ lowers the sharpness ceiling $2/\eta_t$ smoothly, steering iterates into a flat region before $\eta_t$ hits $\eta_0$ (Kalra & Barkeshli, 2024).
+::: {.col .fig .big}
+@fig:ch09-opt-sched-warmup-mechanics
+:::
+:::
 :::
 
 ::: {.slide title="A 20-Step Warmup Rescues Training at η₀ = 0.03"}
@@ -541,14 +558,18 @@ Warmup rescues an aggressive peak learning rate $\eta_0 = 0.03$ from cold-start 
 ::: {.slide title="Cosine Decay vs. Warmup–Stable–Decay (WSD)"}
 [Fixed Horizon vs. Anytime Stopping]{.kicker}
 
-Why has **Warmup–Stable–Decay (WSD)** (Hu et al., 2024; Hägele et al., 2024) become a popular alternative to cosine decay in large language model pretraining?
+::: {.cols .vc}
+::: {.col}
+- **Cosine decay requires fixing $T$ at step 0:** Spends $50\%$ of peak travel budget ($B_T = 0.5\eta_0 T$) and cannot be extended without LR re-warming.
+- **Warmup–Stable–Decay (WSD, Hu et al., 2024):**
+  - Holds constant plateau $\eta_0$ (**horizon-free**, $85\text{--}90\%$ travel budget).
+  - Forks a short $10\text{--}20\%$ cooldown branch from **any** plateau checkpoint to produce finished models across multiple token budgets from one run!
+:::
 
-| Scheduling Dimension | Cosine Decay | Warmup–Stable–Decay (WSD) |
-| :--- | :--- | :--- |
-| **Commitment to step horizon $T$** | Must fix exact $T$ before step $t = 1$ | **Horizon-free during plateau:** Decide when to stop on the fly |
-| **Mid-run checkpoint usability** | Unfinished ($\eta_t$ is still elevated; needs full run) | Branch a short $10\text{--}20\%$ cooldown from **any** plateau checkpoint |
-| **Continual pretraining / extension** | Requires learning-rate re-warming and schedule splicing | Simply continue the constant-rate plateau to any new token budget |
-| **Cumulative travel budget $B_T$** | $0.50\,\eta_0 T$ (half of peak rectangle) | **$0.85\text{--}0.90\,\eta_0 T$** (nearly full peak rectangle) |
+::: {.col .fig .big}
+@fig:ch09-opt-sched-cosine-vs-wsd
+:::
+:::
 :::
 
 ::: {.slide title="The River-Valley Geometry of Warmup–Stable–Decay"}

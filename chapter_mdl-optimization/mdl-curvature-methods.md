@@ -771,56 +771,73 @@ Curvature Methods: Newton, Quasi-Newton, and Trust Regions<br>**Newton's step ·
 ::: {.slide title="Respecting Curvature vs. Modeling Curvature"}
 [Motivation]{.kicker}
 
-First-order methods never measure the curvature of the objective; they merely endure it. On our running benchmark $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ from $(1, 1)$, compare what happens when an optimizer models curvature directly:
+::: {.cols .vc}
+::: {.col}
+On $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ from $(1, 1)$, modeling curvature transforms the iteration count:
 
-| Optimization Strategy | Curvature Information Used | Steps to $10^{-6}$ Accuracy | Why It Behaves This Way |
-| :--- | :--- | :--- | :--- |
-| **Gradient Descent** | Single scalar ceiling $L = 1000$ | $6{,}908$ steps | Steep axis caps $\eta < 2/L$; flat axis crawls |
-| **Heavy-Ball Momentum** | Extreme eigenvalues $\mu = 1, L = 1000$ | $315$ steps | Velocity memory equalizes mode contraction to $\sqrt{\kappa}$ |
-| **Exact Curvature Scaling** | Full Hessian $\nabla^2 f = \mathrm{diag}(1, 1000)$ | **$1$ step** | Rescales each gradient entry by its exact curvature |
+- **Gradient Descent ($6{,}908$ steps):** Uses a single scalar ceiling $L = 1000$, so the steep axis caps $\eta < 2/L$ while the flat axis crawls.
+- **Heavy-Ball Momentum ($315$ steps):** Uses $\mu = 1, L = 1000$ to equalize mode decay to $\sqrt{\kappa}$.
+- **Newton's Method ($1$ step):** Uses the full Hessian $\nabla^2 f = \mathrm{diag}(1, 1000)$ to rescale each coordinate by its exact curvature.
+:::
 
-::: {.d2l-note}
-Modeling second-order curvature eliminates the condition number $\kappa$ from the iteration count—but introduces new challenges of $O(d^3)$ compute cost and attraction to saddle points.
+::: {.col .fig .big}
+@fig:ch36-opt-curvature-vs-first-order
+:::
 :::
 :::
 
 ::: {.slide title="The Second-Order Taylor Model and Newton Step"}
 [Newton's Method]{.kicker}
 
-Because a linear Taylor approximation has no minimum, gradient descent cannot choose its own step length. **Newton's method** fits a local quadratic model $m_k(\mathbf{p})$ in the displacement $\mathbf{p}$ around $\mathbf{x}_k$:
+::: {.cols .vc}
+::: {.col}
+**Newton's method** minimizes the local quadratic Taylor approximation $m_k(\mathbf{p})$ around $\mathbf{x}_k$:
 
-$$m_k(\mathbf{p}) = f(\mathbf{x}_k) + \mathbf{g}_k^\top \mathbf{p} + \tfrac12\,\mathbf{p}^\top \nabla^2 f(\mathbf{x}_k)\,\mathbf{p}, \qquad \mathbf{g}_k = \nabla f(\mathbf{x}_k)$$
+$$m_k(\mathbf{p}) = f(\mathbf{x}_k) + \mathbf{g}_k^\top \mathbf{p} + \tfrac12\,\mathbf{p}^\top \nabla^2 f(\mathbf{x}_k)\,\mathbf{p}$$
 
-- **Minimizing the quadratic model:** When $\nabla^2 f(\mathbf{x}_k) \succ \mathbf{0}$, $m_k(\mathbf{p})$ is a strictly convex bowl whose unique minimizer satisfies $\nabla m_k(\mathbf{p}) = \mathbf{g}_k + \nabla^2 f(\mathbf{x}_k)\mathbf{p} = \mathbf{0}$.
-- **The pure Newton update:**
-  $$\mathbf{x}_{k+1} = \mathbf{x}_k - \big(\nabla^2 f(\mathbf{x}_k)\big)^{-1}\nabla f(\mathbf{x}_k)$$
-- **Natural unit step size:** No external learning rate $\eta$ is needed; the inverse Hessian automatically sets both the direction and the physical units of the step.
+- **Unique bowl minimum:** When $\nabla^2 f(\mathbf{x}_k) \succ \mathbf{0}$, setting $\nabla m_k(\mathbf{p}) = \mathbf{0}$ yields $\mathbf{x}_{k+1} = \mathbf{x}_k - (\nabla^2 f(\mathbf{x}_k))^{-1}\nabla f(\mathbf{x}_k)$.
+- **Natural unit step:** The inverse Hessian automatically sets both the direction and the physical units of the step ($\eta = 1$).
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-newton-quadratic-model
+:::
+:::
 :::
 
 ::: {.slide title="Preconditioned Steepest Descent and Geometry"}
 [Newton's Method]{.kicker}
 
-Newton's update is the prototype of a **preconditioned gradient step** $\mathbf{d} = -\mathbf{P}^{-1}\nabla f(\mathbf{x})$ with a symmetric positive-definite matrix $\mathbf{P} \succ \mathbf{0}$:
+::: {.cols .vc}
+::: {.col}
+For any symmetric positive-definite preconditioner $\mathbf{P} \succ \mathbf{0}$, the step $\mathbf{d} = -\mathbf{P}^{-1}\nabla f(\mathbf{x})$ is steepest descent in the Mahalanobis norm $\|\mathbf{d}\|_{\mathbf{P}} = \sqrt{\mathbf{d}^\top \mathbf{P}\mathbf{d}}$:
 
-- **Guaranteed descent direction:** Whenever $\mathbf{P} \succ \mathbf{0}$, we have $\mathbf{P}^{-1} \succ \mathbf{0}$, so the directional derivative is strictly negative for any $\nabla f(\mathbf{x}) \neq \mathbf{0}$:
-  $$\nabla f(\mathbf{x})^\top \mathbf{d} = -\nabla f(\mathbf{x})^\top \mathbf{P}^{-1}\nabla f(\mathbf{x}) < 0$$
-- **Steepest descent in the Hessian norm:** If we measure step length in the local Mahalanobis norm $\|\mathbf{d}\|_{\mathbf{P}} = \sqrt{\mathbf{d}^\top \mathbf{P}\mathbf{d}}$ instead of the Euclidean norm $\|\mathbf{d}\|_2$, minimizing $\nabla f(\mathbf{x})^\top \mathbf{d}$ over $\|\mathbf{d}\|_{\mathbf{P}} = 1$ yields $\mathbf{d} \propto -\mathbf{P}^{-1}\nabla f(\mathbf{x})$.
-- **Special cases:** $\mathbf{P} = \mathbf{I}$ recovers gradient descent; $\mathbf{P} = \nabla^2 f(\mathbf{x}_k)$ gives Newton's method; diagonal $\mathbf{P}$ gives adaptive methods (AdaGrad, RMSProp, Adam).
+$$\nabla f(\mathbf{x})^\top \mathbf{d} = -\nabla f(\mathbf{x})^\top \mathbf{P}^{-1}\nabla f(\mathbf{x}) < 0$$
+
+- **Unifies optimization families:** $\mathbf{P} = \mathbf{I}$ recovers GD; diagonal $\mathbf{P}$ gives AdaGrad/Adam; $\mathbf{P} = \nabla^2 f(\mathbf{x}_k)$ gives Newton's method.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-mahalanobis-steepest
+:::
+:::
 :::
 
 ::: {.slide title="Affine Invariance Eliminates the Condition Number"}
 [Newton's Method]{.kicker}
 
-Why does Newton's method solve *any* positive-definite quadratic $f(\mathbf{x}) = \tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ in a single step ($\mathbf{x}_1 = \mathbf{x}_0 - \mathbf{A}^{-1}\mathbf{A}\mathbf{x}_0 = \mathbf{0}$), regardless of $\kappa(\mathbf{A})$?
+::: {.cols .vc}
+::: {.col}
+Under any invertible coordinate change $\mathbf{x} = \mathbf{T}\mathbf{y}$ with $h(\mathbf{y}) = f(\mathbf{T}\mathbf{y})$, the gradient and Hessian transform as $\nabla h = \mathbf{T}^\top \nabla f$ and $\nabla^2 h = \mathbf{T}^\top \nabla^2 f\,\mathbf{T}$, so:
 
-- **Coordinate reparametrization:** Let $\mathbf{x} = \mathbf{T}\mathbf{y}$ for any invertible matrix $\mathbf{T} \in \mathbb{R}^{d \times d}$, and define $h(\mathbf{y}) = f(\mathbf{T}\mathbf{y})$.
-- **Chain rule for gradient and Hessian:**
-  $$\nabla h(\mathbf{y}) = \mathbf{T}^\top \nabla f(\mathbf{T}\mathbf{y}), \qquad \nabla^2 h(\mathbf{y}) = \mathbf{T}^\top \nabla^2 f(\mathbf{T}\mathbf{y})\,\mathbf{T}$$
-- **Trajectory invariance:** One Newton step in $\mathbf{y}$-coordinates maps directly to the Newton step in $\mathbf{x}$-coordinates:
-  $$\mathbf{T}\mathbf{y}_{k+1} = \mathbf{T}\mathbf{y}_k - \mathbf{T}\big(\mathbf{T}^\top \nabla^2 f(\mathbf{x}_k)\mathbf{T}\big)^{-1}\mathbf{T}^\top \nabla f(\mathbf{x}_k) = \mathbf{x}_k - \big(\nabla^2 f(\mathbf{x}_k)\big)^{-1}\nabla f(\mathbf{x}_k) = \mathbf{x}_{k+1}$$
+$$\mathbf{T}\mathbf{y}_{k+1} = \mathbf{x}_k - \big(\nabla^2 f(\mathbf{x}_k)\big)^{-1}\nabla f(\mathbf{x}_k) = \mathbf{x}_{k+1}$$
 
-::: {.d2l-note .rule}
-Because $\mathbf{T} = \mathbf{A}^{-1/2}$ transforms any elongated quadratic valley into an isotropic sphere ($\kappa = 1$), Newton's trajectory is completely blind to the condition number.
+- **Complete $\kappa$-invariance:** Because $\mathbf{T} = \mathbf{A}^{-1/2}$ maps any elongated quadratic valley $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ into an isotropic sphere ($\kappa = 1$), Newton's trajectory is completely blind to the condition number.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-affine-invariance
+:::
 :::
 :::
 
@@ -839,12 +856,20 @@ Near a non-quadratic minimizer $\mathbf{x}^\star$ where $\nabla f(\mathbf{x}^\st
 ::: {.slide title="Local Quadratic Convergence: Doubling Digits"}
 [Convergence Proof]{.kicker}
 
-Suppose on a ball around $\mathbf{x}^\star$ that $\nabla^2 f(\mathbf{x}) \succeq \mu\mathbf{I}$ and the Hessian is $L_2$-Lipschitz: $\|\nabla^2 f(\mathbf{x}) - \nabla^2 f(\mathbf{y})\| \le L_2\|\mathbf{x} - \mathbf{y}\|$.
+::: {.cols .vc}
+::: {.col}
+When $\nabla^2 f(\mathbf{x}) \succeq \mu\mathbf{I}$ and $\nabla^2 f$ is $L_2$-Lipschitz near $\mathbf{x}^\star$, the integral residual is at most $\tfrac{L_2}{2}\|\mathbf{e}_k\|^2$:
 
-- **Bounding the integral:** Since $\mathbf{x}_k$ and $\mathbf{x}^\star + t\mathbf{e}_k$ are separated by $(1 - t)\|\mathbf{e}_k\|$, the integral norm is at most $\int_0^1 L_2(1 - t)\|\mathbf{e}_k\|^2\,dt = \tfrac{L_2}{2}\|\mathbf{e}_k\|^2$.
-- **Quadratic error recursion:** Combining with $\|(\nabla^2 f_k)^{-1}\| \le 1/\mu$ proves:
-  $$\|\mathbf{e}_{k+1}\| \le \frac{L_2}{2\mu}\,\|\mathbf{e}_k\|^2 \iff \left(\frac{L_2}{2\mu}\|\mathbf{e}_{k+1}\|\right) \le \left(\frac{L_2}{2\mu}\|\mathbf{e}_k\|\right)^{\!2}$$
-- **Doubling accurate digits:** Once the scaled error drops below $10^{-1}$, successive steps plunge through $10^{-2}$ $\to$ $10^{-4}$ $\to$ $10^{-8}$ $\to$ $10^{-16}$. Far from $\mathbf{x}^\star$, **damped Newton** backtracks $\alpha_k \le 1$ along $\mathbf{p}_k$ using the Armijo condition, automatically accepting $\alpha_k = 1$ near $\mathbf{x}^\star$.
+$$\|\mathbf{e}_{k+1}\| \le \frac{L_2}{2\mu}\,\|\mathbf{e}_k\|^2$$
+
+- **Doubling accurate digits:** Once the scaled error $\frac{L_2}{2\mu}\|\mathbf{e}_k\| < 10^{-1}$, each Newton step squares the error ($10^{-1} \to 10^{-2} \to 10^{-4} \to 10^{-8} \to 10^{-16}$).
+- **Damped Newton:** Far from $\mathbf{x}^\star$, Armijo backtracking along $\mathbf{p}_k$ ensures descent and automatically accepts $\alpha_k = 1$ near $\mathbf{x}^\star$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-quadratic-doubling-digits
+:::
+:::
 :::
 
 ::: {.slide title="Newton's Method on Valleys and Logistic Loss"}
@@ -861,29 +886,35 @@ We test Newton's method on the $\kappa = 1000$ quadratic $\mathrm{diag}(1, 1000)
 ::: {.slide title="Why Exact Newton Fails at Deep Learning Scale"}
 [Computational Cost]{.kicker}
 
-Comparing iteration counts alone flatters Newton's method. Forming the $d \times d$ Hessian costs $O(d^2)$ memory and solving $(\nabla^2 f_k)\mathbf{p}_k = -\mathbf{g}_k$ costs $O(d^3)$ operations per step:
+::: {.cols .vc}
+::: {.col}
+- **Quadratic memory & cubic compute:** Storing $\nabla^2 f(\mathbf{x}_k)$ costs $O(d^2)$ memory and solving $(\nabla^2 f_k)\mathbf{p}_k = -\mathbf{g}_k$ costs $O(d^3)$ FLOPs per step.
+- **Scale wall:** Manageable for a $d = 10^4$ linear layer ($400\text{ MB}$), but a $d = 10^8$ ConvNet/ViT requires $40\text{ PB}$ and a $d = 10^{11}$ LLM requires $10^{33}\text{ FLOPs}$.
+- **Remedy:** Low-memory quasi-Newton updates (L-BFGS) and diagonal/Kronecker preconditioners.
+:::
 
-| Model Scale | Parameter Count $d$ | Hessian Entries $d^2$ | Linear Solve Cost $\sim d^3$ FLOPs | Feasibility |
-| :--- | :--- | :--- | :--- | :--- |
-| **Toy Logistic Model** | $5$ | $25$ ($200$ B) | $125$ | Instantaneous |
-| **Small Linear Layer** | $10^4$ | $10^8$ ($400$ MB) | $10^{12}$ | Seconds per step |
-| **Modest ConvNet / ViT** | $10^8$ | $10^{16}$ ($40$ PB) | $10^{24}$ | Impossible to store or invert |
-| **Frontier LLM** | $10^{11}$ | $10^{22}$ ($4 \times 10^7$ PB) | $10^{33}$ | Out of reach by $15$ orders of magnitude |
-
-::: {.d2l-note .warn}
-Even a single exact Newton step is impossible for modern neural networks—motivating low-memory quasi-Newton approximations and structured/diagonal preconditioners.
+::: {.col .fig .big}
+@fig:ch36-opt-hessian-scale-wall
+:::
 :::
 :::
 
 ::: {.slide title="Saddle-Point Attraction on Nonconvex Surfaces"}
 [Nonconvex Pitfalls]{.kicker}
 
-Cost is not Newton's only flaw. Because the Newton step solves $\nabla m_k(\mathbf{p}) = \mathbf{0}$, it jumps to the stationary point of the local quadratic model *whether that point is a minimum, a maximum, or a saddle*:
+::: {.cols .vc}
+::: {.col}
+Because Newton jumps to $\nabla m_k(\mathbf{p}) = \mathbf{0}$, it is attracted to saddles and maxima whenever $\nabla^2 f$ has negative eigenvalues:
 
-- **Indefinite Hessian:** Return to $f(x, y) = \tfrac12 x^2 + \cos y$ at $(0.5, 0.3)$, where $\nabla f = (0.5, -\sin 0.3) = (0.5, -0.296)$ and $\nabla^2 f = \mathrm{diag}(1, -\cos 0.3) = \mathrm{diag}(1, -0.955)$.
-- **Wrong-way step along negative curvature:** Along $y$, the surface curves *downward* ($f_{yy} < 0$). Dividing the negative gradient $-\sin y$ by the negative second derivative $-\cos y$ reverses the sign of the update:
-  $$y_{k+1} = y_k - \frac{-\sin y_k}{-\cos y_k} = y_k - \tan y_k \approx -\frac{y_k^3}{3}$$
-- Instead of moving downhill toward the minimum at $y = \pi$, Newton's method converges cubically *uphill* along $y$ straight into the saddle point $(0, 0)$!
+$$y_{k+1} = y_k - \frac{-\sin y_k}{-\cos y_k} = y_k - \tan y_k \approx -\frac{y_k^3}{3}$$
+
+- **Wrong-way step:** On $f(x,y) = \tfrac12 x^2 + \cos y$ at $(0.5, 0.3)$, dividing $-\sin y$ by $f_{yy} = -\cos y < 0$ flips the update sign and pulls Newton uphill into the saddle $(0, 0)$!
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-saddle-wrong-way
+:::
+:::
 :::
 
 ::: {.slide title="Newton vs. Gradient Descent Near a Saddle"}
@@ -901,13 +932,19 @@ Newton's method is pulled into the saddle $(0, 0)$ with $f = 1$ in three steps, 
 ::: {.slide title="Inferring Curvature from Gradients: Secant Rule"}
 [Quasi-Newton Methods]{.kicker}
 
-Can we recover curvature information using only first derivatives? When the gradient changes rapidly along a step, the curvature in that direction must be large. In one dimension, the **secant method** replaces $f''(x_k)$ with a finite difference of the last two gradients:
+::: {.cols .vc}
+::: {.col}
+In 1D, the **secant method** estimates $f''(x_k)$ from the last two gradients:
 
 $$h_k = \frac{f'(x_k) - f'(x_{k-1})}{x_k - x_{k-1}}, \qquad x_{k+1} = x_k - \frac{f'(x_k)}{h_k}$$
 
-- **Superlinear convergence without second derivatives:** On $f(x) = e^x - 2x$ (minimizer $x^\star = \log 2 \approx 0.6931$) from $x_0 = 0, x_1 = 1$:
-- The error $|x_k - x^\star|$ drops through $1.1 \times 10^{-1} \to 1.6 \times 10^{-2} \to 9.3 \times 10^{-4} \to 7.7 \times 10^{-6} \to 3.6 \times 10^{-9}$.
-- Each error is proportional to the product of the previous two ($e_{k+1} \approx C e_k e_{k-1}$), multiplying the number of accurate digits by the golden ratio $\approx 1.618$ per step at the cost of just one gradient evaluation.
+- **Superlinear convergence:** Errors obey $e_{k+1} \approx C e_k e_{k-1}$, multiplying accurate digits by the golden ratio $\approx 1.618$ per step using only first derivatives.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-secant-chord-slope
+:::
+:::
 :::
 
 ::: {.slide title="The Multivariate Secant Equation and BFGS"}
@@ -926,12 +963,20 @@ $$\mathbf{s}_k = \mathbf{x}_{k+1} - \mathbf{x}_k, \qquad \mathbf{y}_k = \nabla f
 ::: {.slide title="How BFGS Preserves Positive Definiteness"}
 [Quasi-Newton Methods]{.kicker}
 
-Reading the BFGS formula algebraically explains both why it satisfies the secant equation and when it guarantees a descent direction:
+::: {.cols .vc}
+::: {.col}
+With $\mathbf{w} = (\mathbf{I} - \gamma_k\mathbf{y}_k\mathbf{s}_k^\top)\mathbf{z}$ and $\gamma_k = 1/(\mathbf{y}_k^\top\mathbf{s}_k)$, the BFGS quadratic form is:
 
-- **Erase-and-write mechanism:** Because $\gamma_k(\mathbf{y}_k^\top\mathbf{s}_k) = 1$, the right factor $(\mathbf{I} - \gamma_k\mathbf{y}_k\mathbf{s}_k^\top)$ maps $\mathbf{y}_k$ to $\mathbf{0}$ while leaving every vector orthogonal to $\mathbf{s}_k$ untouched. The first term erases $\mathbf{M}_k$'s old prediction along $\mathbf{y}_k$, and the second term writes in $\gamma_k\mathbf{s}_k(\mathbf{s}_k^\top\mathbf{y}_k) = \mathbf{s}_k$.
-- **Preserving $\mathbf{M}_{k+1} \succ \mathbf{0}$:** For any nonzero $\mathbf{z} \in \mathbb{R}^d$, let $\mathbf{w} = (\mathbf{I} - \gamma_k\mathbf{y}_k\mathbf{s}_k^\top)\mathbf{z}$:
-  $$\mathbf{z}^\top \mathbf{M}_{k+1}\mathbf{z} = \mathbf{w}^\top \mathbf{M}_k\mathbf{w} + \gamma_k(\mathbf{s}_k^\top\mathbf{z})^2$$
-- **Curvature condition:** If $\mathbf{M}_k \succ \mathbf{0}$ and $\mathbf{y}_k^\top\mathbf{s}_k > 0$ ($\gamma_k > 0$), both terms are nonnegative and cannot vanish simultaneously. Thus $\mathbf{M}_{k+1} \succ \mathbf{0}$ holds whenever the directional slope increases along the step (enforced in practice via the Wolfe line-search conditions).
+$$\mathbf{z}^\top \mathbf{M}_{k+1}\mathbf{z} = \mathbf{w}^\top \mathbf{M}_k\mathbf{w} + \gamma_k(\mathbf{s}_k^\top\mathbf{z})^2$$
+
+- **Erase-and-write:** $(\mathbf{I} - \gamma_k\mathbf{y}_k\mathbf{s}_k^\top)$ zeroes out $\mathbf{y}_k$, and $+\gamma_k\mathbf{s}_k\mathbf{s}_k^\top$ writes in $\mathbf{M}_{k+1}\mathbf{y}_k = \mathbf{s}_k$.
+- **Curvature condition:** Whenever $\mathbf{M}_k \succ \mathbf{0}$ and $\mathbf{y}_k^\top\mathbf{s}_k > 0$ (enforced by Wolfe line search), $\mathbf{M}_{k+1} \succ \mathbf{0}$ is guaranteed.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-bfgs-erase-write
+:::
+:::
 :::
 
 ::: {.slide title="BFGS Recovers the Exact Inverse Hessian in d Steps"}
@@ -958,13 +1003,20 @@ $$\min_{\|\mathbf{p}\| \le \Delta_k} m_k(\mathbf{p}) = f(\mathbf{x}_k) + \mathbf
 ::: {.slide title="Optimality Conditions for the Trust-Region Ball"}
 [Trust Regions]{.kicker}
 
-A vector $\mathbf{p}$ with $\|\mathbf{p}\| \le \Delta$ is a global minimizer of the trust-region subproblem if and only if there exists a scalar shift $\tau \ge 0$ satisfying:
+::: {.cols .vc}
+::: {.col}
+A vector $\|\mathbf{p}\| \le \Delta$ globally minimizes $m_k(\mathbf{p})$ inside the ball iff there exists $\tau \ge 0$ satisfying:
 
-$$(\mathbf{B} + \tau\mathbf{I})\,\mathbf{p} = -\mathbf{g}, \qquad \mathbf{B} + \tau\mathbf{I} \succeq \mathbf{0}, \qquad \tau\,(\Delta - \|\mathbf{p}\|) = 0$$
+$$(\mathbf{B} + \tau\mathbf{I})\,\mathbf{p} = -\mathbf{g}, \quad \mathbf{B} + \tau\mathbf{I} \succeq \mathbf{0}, \quad \tau(\Delta - \|\mathbf{p}\|) = 0$$
 
-- **Interior case ($\tau = 0$):** When $\mathbf{B} \succ \mathbf{0}$ and the unconstrained Newton step satisfies $\|\mathbf{B}^{-1}\mathbf{g}\| \le \Delta$, we take the pure Newton step $\mathbf{p} = -\mathbf{B}^{-1}\mathbf{g}$ with $\tau = 0$.
-- **Boundary case ($\tau > 0$):** Whenever $\mathbf{B}$ has negative eigenvalues or the Newton step exceeds $\Delta$, the solution sits on the boundary $\|\mathbf{p}\| = \Delta$.
-- **Spectral damping:** The multiplier $\tau > -\lambda_{\min}(\mathbf{B})$ shifts every eigenvalue of $\mathbf{B}$ upward until $\mathbf{B} + \tau\mathbf{I} \succ \mathbf{0}$ and $\|(\mathbf{B} + \tau\mathbf{I})^{-1}\mathbf{g}\| = \Delta$ (solved via 1D bisection or Newton root-finding on $\tau$).
+- **Interior ($\tau = 0$):** When $\mathbf{B} \succ \mathbf{0}$ and $\|\mathbf{B}^{-1}\mathbf{g}\| \le \Delta$, take the pure Newton step.
+- **Boundary ($\tau > -\lambda_{\min}(\mathbf{B})$):** Shifts all eigenvalues upward until $\mathbf{B} + \tau\mathbf{I} \succ \mathbf{0}$ and $\|(\mathbf{B} + \tau\mathbf{I})^{-1}\mathbf{g}\| = \Delta$, flipping negative-curvature directions to escape saddles.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-trust-region-damping
+:::
+:::
 :::
 
 ::: {.slide title="Escaping a Saddle with a Trust-Region Step"}

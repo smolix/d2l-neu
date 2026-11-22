@@ -340,18 +340,14 @@ Differential Calculus: Derivatives, Gradients, Jacobians, and the Chain Rule<br>
 ::: {.slide title="Why Calculus Drives Learning: The Compass of Optimization"}
 [Motivation]{.kicker}
 
-Training a deep network means finding parameters $\mathbf{w} \in \mathbb{R}^d$ (where $d$ ranges from $10^6$ to $10^{12}$) that minimize a differentiable scalar loss $\mathcal{L}(\mathbf{w})$.
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Why trial-and-error probing fails:** Perturbing one coordinate $w_i \mapsto w_i + h$ to test whether $\mathcal{L}$ decreases requires **$d + 1$ forward passes** for a *single* parameter update—utterly infeasible at $d = 10^9$.
-- **Why smooth surrogate losses matter:** Classification accuracy is flat ($0$ derivative) almost everywhere and jumps discontinuously when a prediction flips; we minimize smooth surrogates (squared error, cross-entropy) instead.
+- **Smooth surrogates replace flat 0–1 accuracy:** Step-function error has zero slope almost everywhere; smooth losses (cross-entropy, MSE) provide a local tangent $f(x+h) \approx f(x) + f'(x)h$.
+- **One gradient vs. $d+1$ blind probes:** Perturbing $d = 10^9$ weights one-by-one takes $10^9$ forward passes, whereas $\nabla_{\mathbf{w}}\mathcal{L}$ points uphill across all $d$ coordinates in one backward pass.
 :::
 
-::: {.col}
-- **First-order linear approximation:** Differential calculus approximates any smooth function locally by its tangent:
-  $$f(x + h) \approx f(x) + f'(x)\,h$$
-- Knowing the derivative $f'(x)$ (or gradient $\nabla_{\mathbf{w}}\mathcal{L}$) reveals **which direction** decreases the loss and **at what rate** across all $d$ parameters simultaneously.
+::: {.col .fig .big}
+@fig:calculus-surrogate-vs-step
 :::
 :::
 :::
@@ -493,32 +489,19 @@ $$f(\mathbf{x} + \boldsymbol{\epsilon}) \approx f(\mathbf{x}) + \nabla_{\mathbf{
 ::: {.slide title="Worked Example: Summing Parallel Paths on a Computation DAG"}
 [Multivariate Chain Rule in Action]{.kicker}
 
-Consider $z = u^2 + v$ where $u = x_1 x_2$ and $v = x_2^2$, evaluated at $\mathbf{x} = (x_1, x_2) = (1, 2)$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-**1. Forward Pass (Inputs $\to$ Output)**
+For $z = u^2 + v$ with $u = x_1 x_2$ and $v = x_2^2$ at $(x_1, x_2) = (1, 2)$:
 
-- Evaluate intermediate nodes at $(x_1, x_2) = (1, 2)$:
-  $$u = x_1 x_2 = 1 \cdot 2 = 2, \qquad v = x_2^2 = 2^2 = 4$$
-- Evaluate final output:
-  $$z = u^2 + v = 2^2 + 4 = 8$$
-- Notice that $x_1$ influences $z$ through **one path** ($x_1 \to u \to z$), whereas $x_2$ fans out across **two parallel paths** ($x_2 \to u \to z$ and $x_2 \to v \to z$).
+- **Forward (blue):** $u = 2,\; v = 4 \implies z = 2^2 + 4 = 8$.
+- **Backward (red):** Upstream adjoints are $\frac{\partial z}{\partial u} = 2u = 4$ and $\frac{\partial z}{\partial v} = 1$:
+  $$\frac{\partial z}{\partial x_1} = 4 \cdot 2 = 8, \quad \frac{\partial z}{\partial x_2} = 4(1) + 1(4) = 8$$
+- Reusing $\frac{\partial z}{\partial u} = 4$ avoids symbolic expansion of $z(x_1, x_2)$.
 :::
 
-::: {.col}
-**2. Backward Pass (Output $\to$ Inputs)**
-
-- Upstream sensitivities: $\frac{\partial z}{\partial u} = 2u = 4$ and $\frac{\partial z}{\partial v} = 1$.
-- **Gradient w.r.t. $x_1$ (single path via $u$):**
-  $$\frac{\partial z}{\partial x_1} = \frac{\partial z}{\partial u}\frac{\partial u}{\partial x_1} = (2u)(x_2) = 4 \cdot 2 = 8$$
-- **Gradient w.r.t. $x_2$ (sum of two paths via $u$ and $v$):**
-  $$\frac{\partial z}{\partial x_2} = \frac{\partial z}{\partial u}\frac{\partial u}{\partial x_2} + \frac{\partial z}{\partial v}\frac{\partial v}{\partial x_2} = 2u x_1 + 2x_2 = 4(1) + 4 = 8$$
+::: {.col .fig}
+@fig:calculus-parallel-dag
 :::
-:::
-
-::: {.d2l-note}
-Assembling both coordinates yields $\nabla_{\mathbf{x}} z(1, 2) = [8, 8]^\top$—computed by reusing $\frac{\partial z}{\partial u} = 4$ and $\frac{\partial z}{\partial v} = 1$ without ever expanding $z(x_1, x_2) = x_1^2 x_2^2 + x_2^2$ symbolically.
 :::
 :::
 
@@ -543,15 +526,14 @@ For any affine map $\mathbf{u} = \mathbf{A}\mathbf{x} + \mathbf{b}$, $\mathbf{J}
 
 ::: {.cols .vc}
 ::: {.col}
-Decompose $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|_2^2$ into a 2-stage graph $\mathbf{w} \to \mathbf{r} \to L$:
+- **Two-stage graph ($\mathbf{w} \to \mathbf{r} \to L$):** Forward computes $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ and $L = \|\mathbf{r}\|_2^2$.
+- **Backward VJP:** Propagates $\nabla_{\mathbf{r}} L = 2\mathbf{r}$ into $\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r})$ in $O(mn)$ FLOPs:
 
-1. **Forward pass:** Compute residual $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y} \in \mathbb{R}^m$ ($\mathbf{J}_{\mathbf{r}} = \mathbf{X}$) and loss $L = \|\mathbf{r}\|_2^2$.
-2. **Backward pass (VJP):** Propagate sensitivity from $L$ to $\mathbf{w}$ in $O(mn)$ FLOPs:
-   $$\nabla_{\mathbf{r}} L = 2\mathbf{r} \;\Longrightarrow\; \nabla_{\mathbf{w}} L = \mathbf{J}_{\mathbf{r}}^\top \nabla_{\mathbf{r}} L = \mathbf{X}^\top (2\mathbf{r})$$
+@calculus-functions-of-many-variables
 :::
 
-::: {.col}
-@calculus-functions-of-many-variables
+::: {.col .fig}
+@fig:calculus-vjp-pipeline
 :::
 :::
 :::

@@ -1195,77 +1195,98 @@ Parameters, State, and Memory<br>**the state tree · trainable parameters vs. bu
 ::: {.slide title="Why an 8B Model Needs 128 GB Before Batch Size 1"}
 [The Systems Memory Budget]{.kicker}
 
-Storing 8 billion weights in 32-bit floating point (`fp32`, 4 bytes per number) takes `32 GB`, yet **training** that model with Adam demands four times as much static memory:
+::: {.cols .vc}
+::: {.col}
+- **Four full-precision copies ($16\text{ B/param}$):** `fp32` Adam stores weights $\mathbf{w}$ ($4\text{ B}$), gradients $\mathbf{g}$ ($4\text{ B}$), first moment $\mathbf{m}$ ($4\text{ B}$), and second moment $\mathbf{v}$ ($4\text{ B}$).
+- **8B parameter static floor:** $8 \times 10^9 \times 16\text{ B} = 128\text{ GB}$—exceeding an `80 GB` GPU before loading a single input batch!
+- **Why state tree literacy matters:** Budgeting memory, saving checkpoints, and freezing layers require tracking every tensor in the state tree.
+:::
 
-| Persistent Training State | Precision | Bytes / Parameter | 8B Model Footprint |
-|:---|:---|---:|---:|
-| **Model weights ($\mathbf{w}$)** | `float32` | $4\text{ B}$ | $32\text{ GB}$ |
-| **Parameter gradients ($\mathbf{g}$)** | `float32` | $4\text{ B}$ | $32\text{ GB}$ |
-| **Adam 1st moment ($\mathbf{m}$, mean of $\mathbf{g}$)** | `float32` | $4\text{ B}$ | $32\text{ GB}$ |
-| **Adam 2nd moment ($\mathbf{v}$, mean of $\mathbf{g}^2$)** | `float32` | $4\text{ B}$ | $32\text{ GB}$ |
-| **Total static training state** | | **$16\text{ B}$** | **$128\text{ GB}$** |
-
-::: {.d2l-note .warn}
-**Exceeds an 80 GB GPU Before Any Data Arrives:** Accurately budgeting memory, saving checkpoints, and freezing layers requires knowing every tensor in the state tree and its exact role.
+::: {.col .fig .big}
+@fig:ch05-bg-adam-16b-floor
+:::
 :::
 :::
 
 ::: {.slide title="Our Running Testbed: A Two-Block Residual MLP"}
 [Constructing the State Tree]{.kicker}
 
-We inspect state traversal on a compact residual MLP ($20 \to 64 \to \text{ two } 64\text{-wide residual blocks } \to 10$) containing 6 linear layers and 12 parameter tensors:
+::: {.cols .vc}
+::: {.col}
+- We inspect state traversal on a compact residual MLP ($20 \to 64 \to \text{ two } 64\text{-wide residual blocks } \to 10$) containing 6 linear layers and 12 parameter tensors:
 
 @-parameters-state-memory-accessing-parameters-1
+:::
 
-- **Hierarchical composition:** Two `ResidualBlock(64)` instances sit inside an outer `Sequential` container between the $20 \to 64$ input layer and $64 \to 10$ output head.
+::: {.col .fig}
+@fig:ch05-bg-state-tree-paths
+:::
+:::
 :::
 
 ::: {.slide title="Accessing Parameters by Their Path in the State Tree"}
 [Tree Traversal]{.kicker}
 
-Parameters sit at the leaves of the module tree; full-tree iterators (`named_parameters()`, `collect_params()`, `net.weights`, `nnx.state`) yield every leaf alongside its path:
+::: {.cols .vc}
+::: {.col}
+- Full-tree iterators (`named_parameters()`, `collect_params()`, `net.weights`, `nnx.state`) yield every leaf alongside its dotted path (e.g., `1.body.0.weight`):
 
 @parameters-state-memory-accessing-parameters-5
 
 @parameters-state-memory-accessing-parameters-6
+:::
 
-- **Path mirrors Python indexing:** A key like `1.body.0.weight` addresses child `1` (first residual block) $\to$ `body` $\to$ layer `0` $\to$ `weight`.
+::: {.col .fig}
+@fig:ch05-bg-state-tree-paths
+:::
+:::
 :::
 
 ::: {.slide title="The Three-Way Classification of Tensors in a Layer"}
 [Parameters vs. Buffers]{.kicker}
 
-Not every persistent tensor in a model should be modified by gradient descent. Frameworks distinguish four categories of values by how they are registered:
+::: {.cols .vc}
+::: {.col}
+- **Parameters (`nn.Parameter`):** Updated by optimizer, saved in checkpoints, and moved to GPUs ($\mathbf{W}, \mathbf{b}, \mathbf{g}$).
+- **Registered buffers (`register_buffer`):** Skipped by optimizer, but saved in checkpoints and moved/cast with the model (feature $\boldsymbol{\mu}, \boldsymbol{\sigma}$, BatchNorm running stats).
+- **Plain attributes:** Invisible to checkpoints and `.to(gpu)`—never store persistent tensors as plain Python attributes!
+:::
 
-| State Category | Updated by Optimizer? | Saved in Checkpoint? | Moved to GPU / Cast? | Canonical Deep Learning Examples |
-|:---|:---:|:---:|:---:|:---|
-| **Parameter** | **Yes** | **Yes** | **Yes** | Linear weights $\mathbf{W}$, biases $\mathbf{b}$, RMSNorm gain $\mathbf{g}$ |
-| **Buffer** | No | **Yes** | **Yes** | Precomputed feature mean/std, BatchNorm running $\bar{\boldsymbol{\mu}}, \bar{\boldsymbol{\sigma}}^2$ |
-| **Plain attribute** | No | No | No | Architectural constants (`num_hiddens = 64`, `eps = 1e-6`) |
-| **Local variable** | No | No | No | Forward activations cached for a single backward pass |
-
-::: {.d2l-note .rule}
-**The Buffer Invariant:** Register any tensor that inference or device movement needs—but gradient descent must never alter—as a **buffer**, never as a plain Python attribute.
+::: {.col .fig .big}
+@fig:ch05-bg-four-tensor-kinds
+:::
 :::
 :::
 
 ::: {.slide title="Registering Non-Trainable Buffers in a Standardizer"}
 [Buffers in Code]{.kicker}
 
-A `Standardizer` layer that normalizes inputs using training-set statistics $\boldsymbol{\mu}$ and $\boldsymbol{\sigma}$ registers them as buffers (`register_buffer`, `gluon.Constant`, `trainable=False`, or an `nnx.Variable` subclass):
+::: {.cols .vc}
+::: {.col}
+- A `Standardizer` layer registers training-set statistics $\boldsymbol{\mu}$ and $\boldsymbol{\sigma}$ as buffers (`register_buffer`, `gluon.Constant`, `trainable=False`, or `nnx.Variable`):
 
 @parameters-state-memory-parameters-and-buffers-1
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-standardizer-buffer
+:::
+:::
 :::
 
 ::: {.slide title="Checkpoints Include Buffers; Optimizers Skip Them"}
 [Filtering the State Tree]{.kicker}
 
-Comparing the full state tree against the trainable parameter view confirms that `mean` and `std` travel with the model while the optimizer updates only the linear layer's `weight` and `bias`:
+::: {.cols .vc}
+::: {.col}
+- Comparing the full state tree against trainable parameters confirms that `mean` and `std` travel to disk and GPU while the optimizer updates only `weight` and `bias`:
 
 @parameters-state-memory-parameters-and-buffers-2
+:::
 
-::: {.d2l-note .warn}
-**Why Unregistered Tensors Fail on GPUs:** Device transfers (`net.to(gpu)`) and dtype casts (`net.bfloat16()`) walk registered parameters and buffers. An unregistered tensor attribute stays behind on the CPU in `float32`, crashing the forward pass.
+::: {.col .fig}
+@fig:ch05-bg-standardizer-buffer
+:::
 :::
 :::
 
@@ -1287,29 +1308,49 @@ We can verify the parameter count of our residual MLP analytically and convert i
 ::: {.slide title="Verifying That Adam Allocates Two Full Model Copies"}
 [Optimizer State Allocation]{.kicker}
 
-Adam allocates its running first and second moments ($\mathbf{m}$ and $\mathbf{v}$) lazily on the first optimizer step, adding $2 \times 18{,}634 = 37{,}268$ floats ($8\text{ B/param}$) to memory:
+::: {.cols .vc}
+::: {.col}
+- Adam allocates its running first and second moments ($\mathbf{m}$ and $\mathbf{v}$) lazily on the first optimizer step, adding $2 \times 18{,}634 = 37{,}268$ floats ($8\text{ B/param}$):
 
 @parameters-state-memory-counting-parameters-counting-bytes-2
+:::
 
-- **Why 16 B/param is a strict lower bound:** It excludes intermediate activations (which scale with batch size $B$ and sequence length $T$) and mixed-precision master copies (§5.5).
+::: {.col .fig}
+@fig:ch05-bg-lazy-adam-moments
+:::
+:::
 :::
 
 ::: {.slide title="Counting Parameters Abstractly Without Allocating RAM"}
 [Meta Devices & Shape Tracing]{.kicker}
 
-Checking whether an 8B model fits in memory should not require allocating `32 GB` first. Frameworks can trace constructors abstractly using shapes and dtypes alone:
+::: {.cols .vc}
+::: {.col}
+- Frameworks trace constructors abstractly using shapes and dtypes alone—auditing Llama 3 8B's $525.3\text{M}$-parameter (`2.1 GB`) output head with **zero bytes** allocated:
 
 @parameters-state-memory-counting-without-allocating-1
+:::
 
-- **Llama 3 8B output head:** A $4096 \times 128{,}256$ un-biased linear projection contains $525{,}336{,}576$ parameters (`2.1 GB` in `fp32`), counted above with **zero bytes** of tensor storage allocated.
+::: {.col .fig}
+@fig:ch05-bg-meta-shape-trace
+:::
+:::
 :::
 
 ::: {.slide title="Materializing a Meta-Device Model on Target Hardware" only="pytorch"}
 [Zero-Waste Checkpoint Loading]{.kicker}
 
-In PyTorch, constructing a model inside `with torch.device('meta'):` and calling `to_empty(device=...)` before `load_state_dict` avoids wasting time randomly initializing weights that are immediately overwritten:
+::: {.cols .vc}
+::: {.col}
+- Constructing on `torch.device('meta')` and calling `to_empty(device=...)` before `load_state_dict` skips wasted CPU random initialization:
 
 @parameters-state-memory-counting-without-allocating-2
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-meta-shape-trace
+:::
+:::
 :::
 
 ::: {.slide title="Weight Tying: One Parameter Tensor in Multiple Roles"}
@@ -1340,21 +1381,33 @@ In `ToyLM` ($|V| = 100, d = 16$), we alias the output projection directly to the
 ::: {.slide title="Tied Tensors Are Deduplicated and Counted Once"}
 [Parameter Deduplication]{.kicker}
 
-Comparing the tied `ToyLM` against an untied counterpart confirms that tree walkers deduplicate shared storage so the $100 \times 16 = 1{,}600$ embedding table is counted only once:
+::: {.cols .vc}
+::: {.col}
+- Tree walkers deduplicate shared storage so the $100 \times 16 = 1{,}600$ embedding table is counted only once ($1{,}872$ tied vs. $3{,}472$ untied):
 
 @parameters-state-memory-tied-parameters-2
+:::
 
-- **Tied vs. untied totals:** Tied `ToyLM` has $1{,}600\text{ (table)} + (16 \times 16 + 16)\text{ (body)} = 1{,}872$ parameters; untied adds a second $1{,}600$-entry table for $3{,}472$ parameters.
+::: {.col .fig}
+@fig:ch05-bg-tied-dedup-grad
+:::
+:::
 :::
 
 ::: {.slide title="Gradients from All Call Sites Sum Into a Tied Tensor"}
 [Multivariable Chain Rule]{.kicker}
 
-When a parameter matrix $\mathbf{W}$ is used at both the embedding lookup and the output head, backpropagation accumulates the sum of both partial derivatives:
-
+::: {.cols .vc}
+::: {.col}
 $$\frac{\partial L}{\partial \mathbf{W}} = \frac{\partial L}{\partial \mathbf{W}_{\text{emb}}} + \frac{\partial L}{\partial \mathbf{W}_{\text{head}}}$$
 
 @parameters-state-memory-tied-parameters-4
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-tied-dedup-grad
+:::
+:::
 :::
 
 ::: {.slide title="Freezing Parameters for Transfer Learning"}
@@ -1372,12 +1425,18 @@ When fine-tuning a pretrained backbone on a small dataset, we **freeze** the bac
 ::: {.slide title="Two Silent Pitfalls of Freezing Parameters"}
 [Systems Hazards of Freezing]{.kicker}
 
-Freezing parameter gradients (`requires_grad = False`, `grad_req = 'null'`, `trainable = False`, or an `nnx.Param` filter) does **not** automatically freeze everything else:
-
+::: {.cols .vc}
+::: {.col}
 @parameters-state-memory-freezing-parameters-4
 
-- **Pitfall 1 — Existing optimizer moments stay in RAM:** If Adam stepped *before* you froze a layer, its $8\text{ B/param}$ running averages remain allocated unless you rebuild the optimizer over only the unfrozen parameters.
-- **Pitfall 2 — BatchNorm running statistics still drift:** In PyTorch, Gluon, and NNX, a frozen BatchNorm layer left in training mode continues updating its running mean and variance buffers during forward passes (`bn.eval()` is required too).
+- **Pitfall 1:** Existing Adam moments ($8\text{ B/param}$) stay in RAM unless the optimizer is built strictly over unfrozen parameters.
+- **Pitfall 2:** Frozen BatchNorm layers in `.train()` mode still mutate their running mean/variance buffers unless set to `.eval()`.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-freezing-pitfalls
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Memory Budgets & Parameter Sharing"}
@@ -1401,11 +1460,15 @@ Test your understanding on the 8-billion-parameter language model (`fp32`, Adam,
 ::: {.slide title="Summary: Parameters, State, and Memory"}
 [Key Takeaways]{.kicker}
 
-| Concept | Mechanism / Rule | Practical Systems Implication |
-|:---|:---|:---|
-| **Parameters vs. buffers** | Parameters get gradients; buffers (`register_buffer`) do not | Both are saved in checkpoints and moved to GPUs; plain attributes are not |
-| **Static training floor** | `fp32` Adam stores $\mathbf{w}$ ($4\text{ B}$) $+$ $\mathbf{g}$ ($4\text{ B}$) $+$ $\mathbf{m}, \mathbf{v}$ ($8\text{ B}$) $= 16\text{ B/param}$ | 8B model requires `128 GB` before storing a single activation |
-| **Abstract counting** | `torch.device('meta')`, `nnx.eval_shape`, uninitialized layers | Audits exact parameter counts and memory budgets with zero RAM allocation |
-| **Weight tying** | Alias two layers to one tensor; $\nabla_{\mathbf{W}} L = \nabla_{\mathbf{W}_{\text{emb}}} L + \nabla_{\mathbf{W}_{\text{head}}} L$ | Saves $|V| \times d$ parameters ($31\%$ of GPT-2 small); counted once |
-| **Parameter freezing** | Disable gradients on backbone; build optimizer on trainable subset | Must also set evaluation mode (`eval()`) to lock BatchNorm running stats |
+::: {.cols .vc}
+::: {.col}
+- **Parameters vs. buffers:** Both travel to checkpoints and GPUs, while optimizers update only trainable parameters.
+- **Static memory & meta counting:** `fp32` Adam costs $16\text{ B/param}$ (`128 GB` for 8B); meta devices audit exact byte budgets with zero physical allocation.
+- **Weight tying & freezing:** Shared tensors are counted once and sum gradients across call sites; freezing requires filtering the optimizer and setting BatchNorm to `.eval()`.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-state-summary
+:::
+:::
 :::

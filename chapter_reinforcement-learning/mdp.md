@@ -546,16 +546,18 @@ Before we can optimize decisions over time, we must specify what the agent knows
 ::: {.slide title="The Markov Decision Process Tuple"}
 [Mathematical Formulation]{.kicker}
 
-Bellman (1957) formalized sequential decision problems by packing all relevant past history into the present state:
-
+::: {.cols .vc}
+::: {.col}
 $$\textrm{MDP}: \quad (\mathcal{S}, \mathcal{A}, P, r)$$
 
-- **State space $\mathcal{S}$ and action space $\mathcal{A}$:** On FrozenLake, $|\mathcal{S}| = 16$ cell indices ($0, \ldots, 15$) and $|\mathcal{A}| = 4$ directional commands (*left*, *down*, *right*, *up*).
-- **Transition kernel $P(s' \mid s, a)$:** A conditional probability distribution over next states $s' \in \mathcal{S}$ satisfying $\sum_{s' \in \mathcal{S}} P(s' \mid s, a) = 1$ for every pair $(s, a)$.
-- **Expected reward $r(s, a)$:** The immediate reward averaged over the landing state, $r(s, a) = \sum_{s'} P(s' \mid s, a)\,\rho(s, a, s')$, which preserves all expected returns.
+- **States $\mathcal{S}$ and actions $\mathcal{A}$:** On FrozenLake, $|\mathcal{S}| = 16$ cell indices and $|\mathcal{A}| = 4$ directional commands.
+- **Transition kernel $P(s' \mid s, a)$:** Conditional landing probabilities satisfying $\sum_{s'} P(s' \mid s, a) = 1$.
+- **Expected reward $r(s, a)$:** Immediate reward averaged over landing states, $r(s, a) = \sum_{s'} P(s' \mid s, a)\,\rho(s, a, s')$.
+:::
 
-::: {.d2l-note .rule}
-The triple $(\mathcal{S}, \mathcal{A}, P)$ describes the physics of the environment; the reward function $r(s, a)$ defines the task objective chosen by the designer.
+::: {.col .fig}
+@fig:ch14-rl-mdp-tuple
+:::
 :::
 :::
 
@@ -574,12 +576,17 @@ Commanding *down* (`1`) from state 9 branches into three equally likely outcomes
 ::: {.slide title="Vectorizing the MDP into Dense Tensors"}
 [Array Representation]{.kicker}
 
-To replace dictionary loops with matrix products in dynamic programming, `TabularMDP.from_gym` packs the model into dense arrays `P[s, a, s']` of shape `(16, 4, 16)` and `r[s, a]` of shape `(16, 4)`:
+::: {.cols .vc}
+::: {.col}
+- **Dense tensor packing:** `TabularMDP.from_gym` packs `P[s, a, s']` into shape `(16, 4, 16)` and `r[s, a]` into shape `(16, 4)` for matrix backups.
+- **Wall-bounce accumulation:** Multiple slips landing on the same boundary cell accumulate via `P[s, a, s_next] += p`.
 
 @mdp-states-actions-and-the-transition-kernel-3
+:::
 
-::: {.d2l-note}
-Multiple transitions that land on the same cell (such as bouncing off a boundary wall) are accumulated via `P[s, a, s_next] += p` so every row remains a valid probability distribution.
+::: {.col .fig}
+@fig:ch14-rl-tensor-kernel
+:::
 :::
 :::
 
@@ -607,12 +614,18 @@ A stochastic policy $\pi(a \mid s)$ defines action probabilities at each state, 
 ::: {.slide title="Discounted Return and Geometric Tail Bounds"}
 [The Optimization Objective]{.kicker}
 
-Because cyclic policies (such as always commanding *up* against the top wall) can run forever, we weight step-$t$ rewards by a discount factor $\gamma \in [0, 1)$:
+::: {.cols .vc}
+::: {.col}
+$$R(\tau) = \sum_{t=0}^{\infty} \gamma^t r_t, \qquad \Big|\sum_{t \geq k} \gamma^t r_t\Big| \leq \frac{\gamma^k\,r_{\max}}{1 - \gamma}$$
 
-$$R(\tau) = \sum_{t=0}^{\infty} \gamma^t r_t, \qquad |R(\tau)| \leq \frac{r_{\max}}{1 - \gamma}, \qquad \Big|\sum_{t \geq k} \gamma^t r_t\Big| \leq \frac{\gamma^k\,r_{\max}}{1 - \gamma}$$
+- **Finite objective:** Whenever $|r_t| \leq r_{\max}$ and $\gamma \in [0, 1)$, the infinite sum converges and its tail beyond step $k$ shrinks as $\gamma^k$.
+- **Uniformly optimal policy:** Every finite MDP with $\gamma < 1$ admits a deterministic stationary policy $\pi^*(s)$ optimal from all start states.
+:::
 
-- **Finite objective:** Whenever per-step rewards satisfy $|r_t| \leq r_{\max}$, the infinite sum converges absolutely and its tail beyond step $k$ shrinks geometrically as $\gamma^k$.
-- **Uniformly optimal policy:** In any finite MDP with $\gamma < 1$, there exists a deterministic, stationary policy $\pi^*(s)$ that maximizes expected return from every start state simultaneously.
+::: {.col .fig}
+@fig:ch14-rl-geometric-tail
+:::
+:::
 :::
 
 ::: {.slide title="The Effective Planning Horizon"}
@@ -675,26 +688,34 @@ Representing terminal states consistently keeps matrix equations and finite-hori
 ::: {.slide title="The Markov Property and State Augmentation"}
 [Designing the State Representation]{.kicker}
 
-The transition kernel $P(s_{t+1} \mid s_t, a_t)$ assumes the **Markov property**: given present state $s_t$ and action $a_t$, the future is conditionally independent of earlier history $s_0, \ldots, s_{t-1}$:
+::: {.cols .vc}
+::: {.col}
+$$s_{t+1} = f(s_t, a_t, s_{t-1}) \implies \tilde{s}_t = (p_t, v_t)^\top$$
 
-$$s_{t+1} = f(s_t, a_t, s_{t-1}) \quad \Longrightarrow \quad \tilde{s}_t = (p_t, v_t)^\top \text{ restores Markovianity}$$
+- **Why position alone fails:** For a vehicle driven by acceleration $a_t$, next position $p_{t+1}$ depends on velocity $v_t \propto p_t - p_{t-1}$.
+- **State augmentation:** Enlarging the state to $\tilde{s}_t = (p_t, v_t)^\top$ (or appending remaining time $H - t$) restores a first-order Markov kernel.
+:::
 
-- **Why position alone fails:** For a vehicle controlled by acceleration $a_t$, next position $p_{t+1}$ depends on current velocity $v_t \propto p_t - p_{t-1}$, violating Markovianity if $s_t = p_t$.
-- **State augmentation:** Enlarging the state to $\tilde{s}_t = (p_t, v_t)^\top$ (or appending remaining steps $h_t = H - t$ when a hard time limit is part of the task) restores a first-order Markov transition.
-
-::: {.d2l-note .rule}
-The Markov property is a property of our chosen state representation, not merely of the underlying physical system.
+::: {.col .fig}
+@fig:ch14-rl-state-augmentation
+:::
 :::
 :::
 
 ::: {.slide title="Partial Observability, Belief States, and Memory"}
 [When the Full State Is Hidden]{.kicker}
 
-When the agent receives only a partial observation $o_t \sim O(\cdot \mid s_t)$—such as a single video frame or a poker hand with hidden opponent cards—the system is a **POMDP**:
+::: {.cols .vc}
+::: {.col}
+- **Exact Bayesian belief state:** Tracking $\beta_t(s) = \Pr(s_t = s \mid o_{0:t}, a_{0:t-1})$ restores a continuous Markov state via Bayes' rule.
+- **Frame stacking in control:** Stacking the 4 most recent video frames lets filters infer velocities from finite differences.
+- **Recurrent and attention contexts:** Modern agents and LLMs attend over the trajectory prefix $(o_0, a_0, \ldots, o_t)$.
+:::
 
-- **Exact Bayesian belief state:** Tracking the posterior distribution $\beta_t(s) = \Pr(s_t = s \mid o_0, a_0, \ldots, o_t)$ restores a continuous Markov state via Bayes' rule.
-- **Frame stacking in control:** Early Atari agents stacked the 4 most recent frames so convolutional filters could infer ball and paddle velocities from finite differences.
-- **Recurrent and attention contexts:** Modern agents and autoregressive language models maintain a recurrent hidden state or attend over the full trajectory prefix $(o_0, a_0, \ldots, o_t)$.
+::: {.col .fig .big}
+@fig:ch14-rl-pomdp-belief
+:::
+:::
 :::
 
 ::: {.slide title="Reward Hacking: The Looping Progress Bonus"}
@@ -712,13 +733,19 @@ $$\tilde{r}(s, a, s') = r(s, a) + 0.3\,\mathbf{1}\big(\ell(s') < \ell(s)\big)$$
 ::: {.slide title="Potential-Based Reward Shaping Invariance"}
 [Safe Dense Rewards]{.kicker}
 
-To prevent reward-hacking loops, any shaping bonus must charge for moving away exactly what it pays for moving closer (Ng, Harada, and Russell, 1999):
-
+::: {.cols .vc}
+::: {.col}
 $$\tilde{r}(s, a, s') = r(s, a) + \gamma\Phi(s') - \Phi(s)$$
 
-- **Telescoping sum:** Along any path, consecutive potential terms cancel up to discounting; with $\Phi(s) = -0.3\,\ell(s)$, moving $13 \to 14$ pays $+0.315$ while retreating $14 \to 13$ costs $-0.270$.
-- **Optimal policy preservation:** Shuttling forever from cell 14 nets only $-\Phi(14) = +0.3$, keeping the goal ($1.3$) ahead by the exact $+1.0$ terminal reward.
-- **Terminal boundary condition:** We must enforce $\Phi(s_{\textrm{term}}) = 0$ at all terminal states (both goal and holes) so stopping the episode leaves no residual terminal bias.
+- **Telescoping sum (Ng et al., 1999):** With $\Phi(s) = -0.3\,\ell(s)$, moving $13 \to 14$ pays $+0.315$ while retreating $14 \to 13$ charges $-0.270$.
+- **Optimal policy preservation:** Shuttling forever nets at most $-\Phi(14) = +0.3$, keeping the goal ($1.3$) ahead by $+1.0$.
+- **Boundary condition:** Enforce $\Phi(s_{\textrm{term}}) = 0$ at all terminal states.
+:::
+
+::: {.col .fig}
+@fig:ch14-rl-potential-shaping
+:::
+:::
 :::
 
 ::: {.slide title="Language Generation as a Collapsed One-Step MDP"}

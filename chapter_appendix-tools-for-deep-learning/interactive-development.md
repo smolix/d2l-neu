@@ -387,21 +387,16 @@ Notebooks: Local Interactive Development, Kernel State, and Remote GPUs<br>**doc
 ::: {.slide title="Why Interactive Notebooks Create a New Failure Mode"}
 [Motivation]{.kicker}
 
-A Python script executes top-to-bottom in a fresh interpreter on every run, whereas a Jupyter notebook keeps a persistent Python **kernel** alive across cell edits:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Why interactive state is powerful:** You can load and preprocess a multi-gigabyte dataset once, keep it resident in RAM or GPU memory, and iterate rapidly on model architectures and plots one cell at a time.
-- **Why persistent state is hazardous:** Variable bindings in the kernel outlive the code cells that created them—editing, moving, or deleting a cell does not erase its side effects from memory.
+- **Why interactive state is powerful:** Keep a multi-gigabyte dataset resident in RAM or VRAM while iterating on model layers and plots cell by cell.
+- **Why persistent state is hazardous:** Variable bindings outlive the cells that created them—editing or deleting a cell does not erase its side effects from memory.
+- **Core discipline:** Explore interactively cell by cell, but always verify by replaying the entire document from a fresh kernel in reading order.
 :::
 
-::: {.col}
-- **The reproducibility gap:** Because a kernel remembers the chronological order in which you *ran* cells rather than the top-to-bottom order on the page, a saved notebook can display outputs that no reader—including its author tomorrow—can reproduce.
+::: {.col .fig .big}
+@fig:ch39-tools-script-vs-notebook
 :::
-:::
-
-::: {.d2l-note .rule}
-**Core discipline:** Interactive exploration happens cell by cell, but verification always requires replaying the entire document from a blank kernel in reading order.
 :::
 :::
 
@@ -446,64 +441,46 @@ Cross-cell state is benign when dependencies flow strictly downward in reading o
 ::: {.slide title="Three Categories of Hidden Kernel State"}
 [Reproducibility Hazards]{.kicker}
 
-Even when execution counters appear sequential ($1, 2, \dots, n$), empirical studies of public notebooks (Pimentel et al., 2019) identify three sources of hidden state:
+::: {.cols .vc}
+::: {.col}
+- **1. Out-of-order / re-executed cells:** Running a lower cell (`lr = 1e-4`) and re-running an upper training cell causes silent numerical drift on a fresh top-to-bottom replay (`lr = 1e-2`).
+- **2. In-place self-mutation:** Re-running `pixels = pixels / 255` twice scales data by $1/255^2$ interactively vs. $1/255$ on a clean run.
+- **3. Deleted or edited-after-run cells:** Leaves stale variables in RAM (`NameError` on replay) or displayed code that no longer matches its saved output.
+:::
 
-| Hidden-State Mechanism | How It Happens During Editing | Failure Mode on Fresh Replay |
-| :--- | :--- | :--- |
-| **1. Out-of-order / re-executed cell** | Running a lower cell that sets `lr = 1e-4`, then re-running an upper training cell | **Silent numerical drift:** Fresh run uses the earlier `lr = 1e-2` without raising an error |
-| **2. In-place self-mutation** | Re-running `pixels = pixels / 255` twice in the same cell | **Silent scale bug:** Interactive run trained on $1/255^2$; fresh run trains on $1/255$ |
-| **3. Edited-after-run or deleted cell** | Deleting a helper import or editing a cell's formula without re-running it | **Loud crash (`NameError`)** or mismatch between displayed code and saved output |
-
-::: {.d2l-note .warn}
-**Silent value drift is more dangerous than a `NameError`:** An exception stops execution immediately, whereas an overwritten hyperparameter produces plausible-looking metrics that no longer match the code on the page.
+::: {.col .fig .big}
+@fig:ch39-tools-hidden-state-types
+:::
 :::
 :::
 
 ::: {.slide title="The Golden Rule: Restart Kernel and Run All Cells"}
 [Verification]{.kicker}
 
-**Restart Kernel and Run All Cells** terminates the live Python process, releases all RAM and GPU allocations, and replays every cell from top to bottom:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **What Restart & Run All catches:**
-  - Use-before-define bugs (`NameError` from upward dependencies or deleted cells).
-  - Double-scaling mutations from repeated in-place execution of a single cell.
-  - Desynchronized outputs left behind after editing a cell's source code.
+- **What Restart & Run All catches:** Terminates the Python process, frees all RAM/VRAM, and catches use-before-define `NameError`s, double in-place mutations, and stale un-executed edits.
+- **What still escapes a local clean run:** Uncommitted local cache files (`features.npy`), hard-coded personal paths (`/home/alice/...`), and unseeded random generators.
 :::
 
-::: {.col}
-- **What still escapes a local clean run:**
-  - Cached local files (`features.npy`) not committed to the repository whose fallback generation code has a bug.
-  - Hard-coded personal paths (`/home/alice/data.csv`) or shell environment variables.
-  - Unseeded random generators whose fresh run contradicts prose claims.
+::: {.col .fig .big}
+@fig:ch39-tools-restart-run-all
 :::
-:::
-
-::: {.d2l-note}
-The D2L build pipeline enforces the full test: every notebook is executed top-to-bottom in a fresh kernel inside a clean, lock-pinned environment.
 :::
 :::
 
 ::: {.slide title="Deterministic Local Environments with uv Lock Files"}
 [Local Setup]{.kicker}
 
-Because numerical behavior and framework APIs shift across package releases, D2L ships exact `uv` lock files for CPU (`pylock.cpu.toml`) and Linux NVIDIA GPU (`pylock.gpu.toml`) environments:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-```bash
-uv venv --python 3.12
-uv pip sync pylock.cpu.toml
-uv run --no-sync jupyter lab
-```
-
-- **Why `uv pip sync`:** Makes the virtual environment match the lock file exactly, removing stray packages that could shadow dependencies.
+- **Exact lock sync (`uv pip sync pylock.*.toml`):** Installs pinned dependencies and removes stray packages that could shadow imports.
+- **Locked launch (`uv run --no-sync jupyter lab`):** Starts JupyterLab without re-resolving or altering the locked `.venv`.
+- **Server vs. kernel:** Always verify the notebook's selected kernel actually points to `.venv/bin/python`!
 :::
 
-::: {.col}
-- **Why `--no-sync` on launch:** Prevents `uv run` from re-resolving or modifying the locked environment when starting JupyterLab.
-- **Server vs. kernel process:** A single JupyterLab server can see many registered kernels; launching the server inside `.venv` does not guarantee a notebook selected the `.venv` kernel!
+::: {.col .fig .big}
+@fig:ch39-tools-uv-lock-flow
 :::
 :::
 :::
@@ -529,17 +506,15 @@ Before running experiments or debugging import errors, execute a compact identit
 ::: {.slide title="Working Effectively in JupyterLab"}
 [Editor Workflow]{.kicker}
 
-JupyterLab integrates notebooks, terminals, file browsers, and an active kernel manager into one workspace:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Keyboard & terminal synergy:** Execute cells with `Shift+Enter` while keeping a terminal tab open for `uv`, Git operations, and `nvidia-smi` monitoring.
-- **Interrupt before restart:** Stop a hung training loop with **Interrupt Kernel** (`I, I`) to inspect the stack trace; use **Restart Kernel** (`0, 0`) to wipe Python state and release GPU memory.
+- **Interrupt (`I, I`) vs. Restart (`0, 0`):** Interrupt stops a hung loop while preserving the stack trace for inspection; Restart wipes Python state and frees GPU VRAM.
+- **Beware of orphaned GPU kernels:** Closing a browser tab **does not kill its kernel process**—a single forgotten notebook tab can hold 10–20 GB of VRAM indefinitely.
+- **Running panel audit:** Shut down idle kernels explicitly in the **Running Terminals and Kernels** sidebar.
 :::
 
-::: {.col}
-- **Beware of orphaned GPU kernels:** Closing a notebook's browser tab **does not terminate its kernel process**.
-- **The Running panel audit:** Always open JupyterLab's **Running Terminals and Kernels** sidebar to shut down idle notebooks—a single forgotten kernel can hold 10–20 GB of GPU VRAM indefinitely.
+::: {.col .fig .big}
+@fig:ch39-tools-orphaned-kernels
 :::
 :::
 :::
@@ -547,17 +522,14 @@ JupyterLab integrates notebooks, terminals, file browsers, and an active kernel 
 ::: {.slide title="Scaling from Notebooks to Modules in VS Code"}
 [Project Architecture]{.kicker}
 
-As an experiment matures into a research codebase, VS Code bridges interactive notebooks and software engineering tools:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Notebook IDE features:** Built-in variable explorer, cell-by-cell breakpoints, jump-to-definition, and structured notebook Git diffs.
-- **Separate reusable logic from narrative:** Move tested data loaders, model classes, and loss functions into `.py` modules, keeping the notebook for explanation, visualization, and experiment records.
+- **Separate reusable logic from narrative:** Move tested data loaders, model classes, and losses into `.py` modules while keeping the notebook for narrative, plots, and ablations.
+- **Why `.py` modules fix `DataLoader(num_workers > 0)`:** Worker processes under `spawn` (macOS/Windows) and `forkserver` (Python 3.14+ Linux) import functions by module path and fail on notebook `__main__` definitions.
 :::
 
-::: {.col}
-- **Why `.py` modules fix `multiprocessing`:** Python worker pools (`DataLoader(..., num_workers > 0)`) serialize task functions via `pickle` by module name.
-- Under `spawn` (macOS/Windows default) and `forkserver` (Python 3.14+ Linux default), workers start fresh interpreters where functions defined inside notebook `__main__` cells do not exist—importing them from a `.py` file works under every start method.
+::: {.col .fig .big}
+@fig:ch39-tools-notebook-to-module
 :::
 :::
 :::
@@ -565,16 +537,15 @@ As an experiment matures into a research codebase, VS Code bridges interactive n
 ::: {.slide title="Post-Mortem Debugging with %debug"}
 [Diagnosing Failures]{.kicker}
 
-When a cell raises an exception, the cell stops but the kernel keeps the entire call stack and local tensors alive in memory:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Instant post-mortem inspection:** Running `%debug` in the next cell opens `ipdb` directly inside the stack frame where the exception occurred—letting you print tensor shapes, dtypes, and `NaN` counts without re-running a 10-minute setup step.
-- **Visual cell debugger:** Both JupyterLab (`ipykernel`) and VS Code let you set line breakpoints inside a cell and step through tensor transformations interactively.
+- **Instant post-mortem inspection:** When a cell raises an exception, running `%debug` in the next cell opens `ipdb` right inside the failed stack frame with all local tensors still in memory.
+- **Visual breakpoints:** Set line breakpoints directly inside JupyterLab or VS Code cells to step through tensor shapes and `NaN`s.
+- **Avoid broad `try / except`:** Catching and printing `"failed"` destroys the stack frame needed by `%debug`.
 :::
 
-::: {.col}
-- **Anti-pattern — broad `try / except` blocks:** Wrapping model calls in `except Exception: print("failed")` destroys the exception type, line number, and stack frame needed for diagnosis. Let exceptions surface cleanly!
+::: {.col .fig .big}
+@fig:ch39-tools-postmortem-debug
 :::
 :::
 :::
@@ -620,27 +591,14 @@ Your browser or editor UI, the Jupyter server, the Python kernel, and the GPU ne
 ::: {.slide title="Secure Remote Access via SSH Port Forwarding"}
 [Network & Multi-User Safety]{.kicker}
 
-Never bind an unauthenticated Jupyter server to all network interfaces (`0.0.0.0`): anyone who reaches the port can execute arbitrary shell and Python commands under your user account.
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-**1. Bind to Loopback & Tunnel Over SSH**
-
-```bash
-# On remote GPU machine (loopback only)
-uv run --no-sync jupyter lab \
-  --no-browser --ip 127.0.0.1 --port 8888
-
-# On local laptop
-ssh -N -L 8888:127.0.0.1:8888 myserver
-```
+- **Never bind `--ip 0.0.0.0`:** Anyone reaching an exposed Jupyter port can run arbitrary shell commands as you; always bind `--ip 127.0.0.1` and tunnel over SSH (`ssh -N -L`).
+- **Remote & local port collisions:** On shared servers, port `8888` may already belong to a colleague (token mismatch) or your own laptop's local server; use a distinct port and `-o ExitOnForwardFailure=yes`.
 :::
 
-::: {.col}
-**2. Pitfalls on Shared Multi-User Servers**
-
-- **Remote port collision:** If another user holds remote port `8888`, Jupyter silently falls back to `8889`, while your tunnel `-L 8888:127.0.0.1:8888` connects to *their* server (failing token login).
-- **Local port collision:** If your laptop already runs a local Jupyter on `8888`, `ssh` warns and leaves `localhost:8888` pointing to your **laptop** instead of the server! Use `ExitOnForwardFailure=yes` and distinct ports.
+::: {.col .fig .big}
+@fig:ch39-tools-ssh-port-collisions
 :::
 :::
 :::
@@ -666,12 +624,15 @@ Work through these three diagnostic questions:
 ::: {.slide title="Summary: Reproducible Interactive Development"}
 [Key Takeaways]{.kicker}
 
-| Workflow Concern | Common Pitfall | Engineering Best Practice |
-| :--- | :--- | :--- |
-| **Execution order** | Trusting outputs produced by out-of-order cell runs | Always run **Restart Kernel and Run All Cells** before saving or sharing |
-| **Environment setup** | Installing floating packages into system Python | Sync exact dependencies with `uv pip sync pylock.*.toml` and launch with `--no-sync` |
-| **Kernel selection** | Notebook attaches to a global kernel outside `.venv` | Check `sys.executable` and `os.getcwd()` in an identity cell at the top |
-| **GPU memory leaks** | Closing a browser tab while the kernel stays alive | Shut down unused kernels explicitly in JupyterLab's **Running** panel |
-| **Accelerator timing** | Timing asynchronous kernel launches on the CPU clock | Warm up once, synchronize device streams explicitly, and log shapes/dtypes |
-| **Remote GPU access** | Exposing `--ip 0.0.0.0` or colliding on port `8888` | Bind to `127.0.0.1`, tunnel via SSH with `ExitOnForwardFailure=yes`, or use VS Code Remote SSH |
+::: {.cols .vc}
+::: {.col}
+- **Reproducibility & Environment:** Always run **Restart Kernel and Run All Cells**, lock dependencies with `uv pip sync`, and verify `sys.executable` in cell 1.
+- **Resource & Timing Discipline:** Shut down orphaned GPU kernels in JupyterLab's **Running** panel, and synchronize GPU streams before stopping benchmark timers.
+- **Remote Safety:** Bind Jupyter to `127.0.0.1` and tunnel via SSH with `ExitOnForwardFailure=yes` or VS Code Remote SSH.
+:::
+
+::: {.col .fig .big}
+@fig:ch39-tools-notebook-checklist
+:::
+:::
 :::

@@ -130,14 +130,15 @@ Every theoretical claim and architectural choice is tested on controlled benchma
 ::: {.slide title="Chapter 17 Roadmap: From Score Matching to Tokens"}
 [Study Guide]{.kicker}
 
-The nine sections progress from exact 2D mathematical foundations to image architectures, fast solvers, design ablations, and discrete tokens:
+::: {.cols .vc}
+::: {.col}
+- **§§17.1–17.3 Core Theory:** Denoising score matching, Tweedie's formula, Gaussian paths ($\lambda_t$), and reverse ODE/SDE transport (trained MLP matches exact 2D oracle weights within $0.004$).
+- **§§17.4–17.6 Images, Fast Solvers & Design Space:** U-Net + CFG ($\approx 90\%$ class agreement), 20-NFE Heun and multistep solvers, continuous ELBO ($w(\lambda) \equiv 1$), and EDM preconditioning.
+- **§§17.7–17.9 Latents, Few-Step & Discrete Tokens:** KL-autoencoders + `adaLN-Zero` DiT ($>10\times$ fewer FLOPs), two-time flow-map distillation ($2$ jumps match $15$ Euler steps), and absorbing masked diffusion ($0.17$ bpp).
+:::
 
-| Section | Core Problem Addressed | Key Quantitative Result in Chapter 17 |
-| :--- | :--- | :--- |
-| **§17.1–17.3 Core Theory** | Score matching, Gaussian paths, ODE/SDE transport | Trained MLP matches exact oracle mode weights within $0.004$ |
-| **§17.4 Image Diffusion** | Multi-scale U-Net, EMA weights, Fréchet distance, CFG | 1,000-step chain and 50-step Euler ODE reach $\approx 90\%$ class agreement |
-| **§17.5 Fast Samplers** | DDIM ($\eta$), Heun, multistep solvers, ODE inversion | 2nd-order Heun on linear grid matches 1,000-step FD in $20$ evaluations |
-| **§17.6 Design Space** | Variational bound (ELBO), $w(\lambda)$ weightings, EDM | Continuous ELBO & ODE flow NLL match true mixture entropy within $0.005$ nats |
-| **§17.7 Latents & DiT** | KL-autoencoder compression & `adaLN-Zero` Transformers | Latent U-Net cuts step FLOPs $>10\times$; DiT exhibits steeper compute scaling |
-| **§17.8–17.9 Few-Step & Discrete** | Flow-map distillation, MeanFlow, absorbing token chains | 2–4 student jumps match 10–20 teacher steps; binary garments hit $0.17$ bpp |
+::: {.col .fig .big}
+@fig:ch17-diff-roadmap
+:::
+:::
 :::

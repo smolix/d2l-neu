@@ -503,50 +503,67 @@ Dropout: Regularization via Multiplicative Hidden Noise<br>**co-adaptation · in
 ::: {.slide title="Why Inject Random Noise Into Hidden Units?"}
 [Motivation & Co-Adaptation]{.kicker}
 
-In §4.5 we saw that overparameterized MLPs trained for many epochs on noisy data eventually memorize wrong labels and degrade on unseen images. How can we disrupt memorization *during* each forward pass?
+::: {.cols .vc}
+::: {.col}
+- **Three complementary regularizers:** Weight decay (§2.7) penalizes large weight norms $\|\mathbf{W}\|_{\textrm{F}}^2$; early stopping (§4.5) halts before late-stage noise memorization; **dropout** (Srivastava et al., 2014) randomly zeroes out each hidden unit with probability $p$ on every training step.
+- **Preventing hidden-unit co-adaptation:** When units are always present together, groups of neurons can conspire to fix isolated training errors. Random masking forces every unit to extract features useful alongside random subsets of partners.
+:::
 
-- **Three complementary regularizers:** Weight decay (§2.7) penalizes large weight norms $\|\mathbf{W}\|_{\textrm{F}}^2$; early stopping (§4.5) halts training before late-stage noise memorization; **dropout** (Hinton et al., 2012; Srivastava et al., 2014) randomly zeroes out each hidden unit with probability $p$ on every training step.
-- **Preventing hidden-unit co-adaptation:** When units are always present together, groups of neurons can conspire to fix isolated training errors (*co-adaptation*). Random masking forces every unit to extract features that remain useful alongside random subsets of partners.
+::: {.col .fig .big}
+@fig:ch04-mlp-coadaptation
+:::
+:::
 :::
 
 ::: {.slide title="Warm-Up: Input Noise Equals L2 Weight Decay"}
 [Noise as Regularization]{.kicker}
 
-Why does injecting zero-mean noise during training act as a regularizer? Consider a linear predictor $\mathbf{w}^\top\mathbf{x} + b$ trained under squared error when inputs are perturbed by $\mathbf{x} + \boldsymbol{\epsilon}$ with i.i.d. noise of mean $0$ and variance $s^2$ (Bishop, 1995):
-
-$$\mathbb{E}_{\boldsymbol{\epsilon}}\!\left[\bigl(\mathbf{w}^\top(\mathbf{x} + \boldsymbol{\epsilon}) + b - y\bigr)^2\right] = (\mathbf{w}^\top\mathbf{x} + b - y)^2 + 2(\mathbf{w}^\top\mathbf{x} + b - y)\,\mathbf{w}^\top\underbrace{\mathbb{E}[\boldsymbol{\epsilon}]}_{\mathbf{0}} + \mathbb{E}\!\left[(\mathbf{w}^\top\boldsymbol{\epsilon})^2\right]$$
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbb{E}_{\boldsymbol{\epsilon}}\!\left[\bigl(\mathbf{w}^\top(\mathbf{x} + \boldsymbol{\epsilon}) + b - y\bigr)^2\right] = (\mathbf{w}^\top\mathbf{x} + b - y)^2 + s^2\|\mathbf{w}\|_2^2$$
 
-::: {.d2l-note .rule}
-Expectation of noisy squared error equals clean squared error **plus an exact $\ell_2$ ridge penalty $s^2\|\mathbf{w}\|_2^2$**! Dropout extends noise injection from small additive input jitter to multiplicative binary masking across every hidden layer.
+- **Bishop's equivalence (1995):** Perturbing inputs by zero-mean noise $\boldsymbol{\epsilon}$ with variance $s^2$ has zero cross-term ($\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}$) and adds an exact $\ell_2$ ridge penalty $s^2\|\mathbf{w}\|_2^2$.
+- **From additive to multiplicative noise:** Dropout extends noise injection to binary multiplicative masking across every hidden layer.
+:::
+
+::: {.col .fig}
+@fig:ch04-mlp-input-noise-ridge
+:::
 :::
 :::
 
 ::: {.slide title="Inverted Dropout: Masking and 1/(1 − p) Rescaling"}
 [Mathematical Formulation]{.kicker}
 
-For each hidden activation $h_j$ and dropout probability $p \in [0, 1)$, on every training forward pass we draw an independent Bernoulli gate $\xi_j \sim \mathrm{Bernoulli}(1 - p)$ ($P(\xi_j = 0) = p$, $P(\xi_j = 1) = 1 - p$) and compute:
+::: {.cols .vc}
+::: {.col}
+$$h_j' = \frac{\xi_j\, h_j}{1 - p}, \qquad \xi_j \sim \mathrm{Bernoulli}(1 - p)$$
 
-$$h_j' = \frac{\xi_j\, h_j}{1 - p} = \begin{cases} 0 & \textrm{with probability } p \\ \dfrac{h_j}{1 - p} & \textrm{with probability } 1 - p \end{cases}$$
+- **Unbiased training expectation ($\mathbb{E}[h_j'] = h_j$):** Dividing surviving units by $1 - p$ during training ensures $\mathbb{E}[h_j'] = p \cdot 0 + (1 - p)\frac{h_j}{1 - p} = h_j$.
+- **Zero test-time overhead:** At inference time we simply disable dropout ($h_j' = h_j$) with no weight rescaling needed.
+:::
 
-- **Unbiased expectation ($\mathbb{E}[h_j'] = h_j$):** Dividing surviving units by $1 - p$ during training ensures $\mathbb{E}[h_j'] = p \cdot 0 + (1 - p)\frac{h_j}{1 - p} = h_j$.
-- **Zero test-time overhead:** Because training activations already have the full expected scale $h_j$, **at inference time we simply disable dropout ($h_j' = h_j$)** with no weight rescaling needed.
+::: {.col .fig}
+@fig:ch04-mlp-inverted-dropout
+:::
+:::
 :::
 
 ::: {.slide title="Variance Inflation Under Inverted Dropout"}
 [Second-Moment Scaling]{.kicker}
 
-While inverted dropout preserves the mean $\mathbb{E}[h_j'] = h_j$, it injects substantial multiplicative variance proportional to $h_j^2$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}\bigl[(h_j')^2\bigr] = \frac{h_j^2}{1 - p}, \qquad \mathrm{Var}[h_j'] = \frac{p}{1 - p}\,h_j^2$$
 
-$$\mathbb{E}\bigl[(h_j')^2\bigr] = (1 - p)\,\frac{h_j^2}{(1 - p)^2} = \frac{h_j^2}{1 - p}, \qquad \mathrm{Var}[h_j'] = \mathbb{E}\bigl[(h_j')^2\bigr] - h_j^2 = \frac{p}{1 - p}\,h_j^2$$
+- **Multiplicative noise scale:** At $p = 0.5$, survivors double ($2\times$) and the injected standard deviation equals $100\%$ of $|h_j|$; at $p = 0.8$, survivors scale by $5\times$ ($\textrm{std} = 2|h_j|$).
+- **Second-moment shift:** Because training inflates $\mathbb{E}[(h_j')^2]$ by $\frac{1}{1-p}$, placing dropout directly before BatchNorm shifts its running variance between training and inference.
+:::
 
-| Dropout Rate $p$ | Survival Rate $1 - p$ | Survivor Scale $\frac{1}{1-p}$ | Second-Moment Inflation $\frac{1}{1-p}$ | Variance $\mathrm{Var}[h_j']$ (for $h_j = 1$) |
-|:--:|:--:|:--:|:--:|:--:|
-| $p = 0.0$ | $100\%$ | $1.00\times$ | $1.00\times$ | $0.00$ |
-| $p = 0.2$ | $80\%$ | $1.25\times$ | $1.25\times$ | $0.25$ ($\textrm{std} = 0.5$) |
-| $p = 0.5$ | $50\%$ | $2.00\times$ | $2.00\times$ | $1.00$ ($\textrm{std} = 1.0$) |
-| $p = 0.8$ | $20\%$ | $5.00\times$ | $5.00\times$ | $4.00$ ($\textrm{std} = 2.0$) |
+::: {.col .fig}
+@fig:ch04-mlp-dropout-variance
+:::
+:::
 :::
 
 ::: {.slide title="Adaptive Ridge Penalty vs. Nonlinear Test-Time Mismatch"}
@@ -657,26 +674,33 @@ We return to the $1{,}000$-image noisy-label benchmark from §4.5, redrawing $40
 ::: {.slide title="Three Complementary Interpretations of Dropout"}
 [Theoretical Perspectives]{.kicker}
 
-Why does random binary masking improve generalization across diverse tasks? Three perspectives each capture part of the mechanism:
+::: {.cols .vc}
+::: {.col}
+- **Adaptive noise regularization:** Injects multiplicative variance $\mathrm{Var}[h_j'] = \frac{p}{1-p}h_j^2$, penalizing high-energy feature weights $\propto \frac{p}{1-p}x_j^2 w_j^2$.
+- **Anti-co-adaptation (Hinton et al.):** Any pair of units co-occurs with probability $(1 - p)^2$ ($25\%$ at $p = 0.5$), breaking fragile multi-unit conspiracies on noisy labels.
+- **Implicit subnetwork ensemble:** Shares weights across $2^h$ thinned subnetworks ($2^{512} \approx 10^{154}$ masks in our 2-layer MLP).
+:::
 
-| Theoretical View | Core Mechanism | Scope & Limitation |
-|:--|:--|:--|
-| **1. Adaptive Noise Regularization** | Injects multiplicative variance $\mathrm{Var}[h_j'] = \frac{p}{1-p}h_j^2$, penalizing high-energy weights $\propto \frac{p}{1-p}h_j^2 w_j^2$ | Exact closed-form ridge penalty for linear regression; state-dependent in deep nets |
-| **2. Anti-Co-Adaptation (Hinton et al.)** | Any pair of units co-occurs with probability $(1 - p)^2$ ($25\%$ at $p = 0.5$), preventing fragile multi-unit conspiracies | Explains why dropout slows the memorization of isolated wrong labels |
-| **3. Implicit Geometric Ensemble** | Shares weights across $2^h$ thinned subnetworks ($2^{512} \approx 10^{154}$ masks in our 2-layer MLP) | Exact geometric mean of softmax probabilities only for the final hidden layer; approximate across deep ReLUs |
+::: {.col .fig .big}
+@fig:ch04-mlp-dropout-three-views
+:::
+:::
 :::
 
 ::: {.slide title="When to Use Dropout—and When to Avoid It"}
 [Modern Engineering Guidelines]{.kicker}
 
-Comparing our two experiments with modern deep-learning architectures clarifies where dropout belongs in your toolkit:
+::: {.cols .vc}
+::: {.col}
+- **Dense layers on small/noisy data ($p \in [0.2, 0.5]$):** High $p/n$ ratio across many epochs creates strong co-adaptation risk.
+- **Multi-epoch Transformers ($p \approx 0.1$) vs. single-epoch LLMs ($p = 0.0$):** Single-pass pretraining over trillions of tokens sees fresh data every step, so epoch memorization cannot build up.
+- **Avoid directly before BatchNorm ($p = 0.0$):** Training second-moment inflation $\frac{1}{1-p}$ causes a train/test variance shift in BatchNorm's running statistics (Li et al., 2019).
+:::
 
-| Regime / Architecture | Typical Dropout Rate $p$ | Engineering Rationale |
-|:--|:--:|:--|
-| **Large dense layers on small/noisy data** (e.g., AlexNet classifier head, tabular MLPs) | $p \in [0.2, 0.5]$ | Parameters dwarf sample count over many epochs; strong co-adaptation risk |
-| **Multi-epoch Transformers / Vision backbones** | $p \approx 0.1$ | Light regularization on residual/attention outputs across multi-epoch runs |
-| **Single-epoch LLM pretraining** (trillions of tokens, $1$ pass per document) | $p = 0.0$ | Every gradient step sees fresh data; memorization cannot build across epochs |
-| **Directly before Batch Normalization (§7.3)** | **Avoid ($p = 0.0$)** | Dropout inflates training second moment by $\frac{1}{1-p}$, causing a train/test variance shift in BatchNorm's running statistics (Li et al., 2019) |
+::: {.col .fig .big}
+@fig:ch04-mlp-dropout-guidelines
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Inverted Dropout, Partners & Variance"}
@@ -700,12 +724,16 @@ Test your command of dropout mathematics and systems behavior:
 ::: {.slide title="Summary: Dropout Regularization"}
 [Key Takeaways]{.kicker}
 
-| Aspect | Mathematical / Code Specification | Key Property | Deep Learning Role |
-|:--|:--|:--|:--|
-| **Inverted Dropout Mask** | $h_j' = \frac{\xi_j h_j}{1 - p}$ with $\xi_j \sim \mathrm{Bernoulli}(1 - p)$ | $\mathbb{E}[h_j'] = h_j$ during training | Leaves test-time network completely unscaled ($h_j' = h_j$) |
-| **Injected Noise Variance** | $\mathrm{Var}[h_j'] = \frac{p}{1 - p}h_j^2$, $\mathbb{E}[(h_j')^2] = \frac{h_j^2}{1 - p}$ | $\textrm{std}(h_j') = |h_j|$ at $p = 0.5$ | Large multiplicative perturbation prevents co-adaptation |
-| **Linear Regression Limit** | $\mathbb{E}[(\mathbf{w}^\top\mathbf{x}' + b - y)^2] = \textrm{MSE} + \frac{p}{1-p}\sum_j x_j^2 w_j^2$ | Feature-scaled $\ell_2$ ridge penalty | Explains why dropout regularizes high-energy features most |
-| **Label-Noise Benchmark** | $1{,}000$ images, $40\%$ labels redrawn, $p = 0.5$ | Cuts wrong-label memorization; $+3$ to $+5$ pts val acc | Complements early stopping when training data is noisy/scarce |
-| **Interaction with He Init / BN** | Multiplies pre-activation mean square by $\frac{1}{1 - p}$ in train | $1.25\times$ at $p = 0.2$; $2\times$ at $p = 0.5$ | Explains why dropout before BatchNorm causes train-test shift |
+::: {.cols .vc}
+::: {.col}
+- **Unbiased inverted mask:** $h_j' = \frac{\xi_j h_j}{1 - p}$ keeps $\mathbb{E}[h_j'] = h_j$ during training so the test-time network runs completely unscaled ($h_j' = h_j$).
+- **Adaptive regularization:** Injects multiplicative variance $\mathrm{Var}[h_j'] = \frac{p}{1-p}h_j^2$, acting as an energy-weighted $\ell_2$ penalty on linear layers.
+- **Empirical impact:** On $40\%$-corrupted Fashion-MNIST ($n = 1{,}000$), $p = 0.5$ curbs wrong-label memorization and lifts validation accuracy by $3$–$5$ percentage points.
+:::
+
+::: {.col .fig .big}
+@fig:ch04-mlp-dropout-summary
+:::
+:::
 :::
 

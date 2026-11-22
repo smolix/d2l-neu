@@ -647,23 +647,35 @@ Unconditional generators draw random samples from the marginal image distributio
 ::: {.slide title="The Conditional Minimax Game on (x, c) Pairs"}
 [Formulation & Optimal Critic]{.kicker}
 
-Let real data–condition pairs $(x, c) \sim p(x, c)$ be compared against generated pairs where $c \sim p(c)$ is drawn from the real data marginal and $x' = G(z, c) \sim q(\cdot \mid c)$:
+::: {.cols .vc}
+::: {.col}
+$$D^\star(x, c) = \log \frac{p(x, c)}{q(x, c)} = \log \frac{p(c)\,p(x \mid c)}{p(c)\,q(x \mid c)} = \log \frac{p(x \mid c)}{q(x \mid c)}$$
 
-$$V(D) = \mathbb{E}_{(x, c) \sim p}\big[\log \sigma(D(x, c))\big] + \mathbb{E}_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log \sigma(-D(x', c))\big]$$
+- **Joint real vs. generated pairs:** Compare real pairs $(x, c) \sim p(x, c)$ against generated pairs where $c \sim p(c)$ is drawn from the real marginal and $x' = G(z, c) \sim q(\cdot \mid c)$.
+- **Cancellation of the shared prior $p(c)$:** Pointwise optimization on $\mathcal{X} \times \mathcal{C}$ cancels $p(c)$ in numerator and denominator, recovering the exact slice-wise log density ratio.
+:::
 
-- **Cancellation of the shared prior $p(c)$:** Because the real joint density is $p(x, c) = p(c)p(x \mid c)$ and the generated joint density is $q(x, c) = p(c)q(x \mid c)$, pointwise optimization over $D(x, c)$ on $\mathcal{X} \times \mathcal{C}$ recovers the slice-wise log density ratio:
-  $$D^\star(x, c) = \log \frac{p(x, c)}{q(x, c)} = \log \frac{p(c)\,p(x \mid c)}{p(c)\,q(x \mid c)} = \log \frac{p(x \mid c)}{q(x \mid c)}$$
+::: {.col .fig}
+@fig:ch16-gan-cond-game
+:::
+:::
 :::
 
 ::: {.slide title="Expected Conditional JS Divergence and Rare Classes"}
 [Population Value & Class Imbalance]{.kicker}
 
-Substituting $D^\star(x, c)$ back into $V(D)$ shows that the conditional objective plays an independent GAN game inside each condition slice $c$, weighted by $p(c)$:
-
+::: {.cols .vc}
+::: {.col}
 $$\max_D V(D) = \mathbb{E}_{c \sim p(c)}\Big[2\,\mathrm{JS}\big(p(\cdot \mid c),\; q(\cdot \mid c)\big)\Big] - 2\log 2$$
 
-- **Global minimum ($-2\log 2$):** Attained if and only if $q(\cdot \mid c) = p(\cdot \mid c)$ for **every** condition $c$ with $p(c) > 0$. On the cyclic label-shift example ($q(\cdot \mid c) = p(\cdot \mid c + 1)$ with disjoint class supports), every slice has $\mathrm{JS} = \log 2$, giving $\max_D V(D) = 0$ (the worst possible value!).
-- **Rare-class pitfall:** Because slice $c$ is weighted by its prior frequency $p(c)$, a rare condition with probability $p(c) = \epsilon = 10^{-3}$ contributes at most $2\epsilon\log 2 \approx 0.0014$ nats to the total objective—so imbalanced datasets require class-balanced minibatch sampling.
+- **Independent game per condition slice $c$:** Attains global minimum $-2\log 2$ iff $q(\cdot \mid c) = p(\cdot \mid c)$ for every $c$ with $p(c) > 0$ (detecting cyclic label shifts immediately).
+- **Rare-class pitfall:** Because slice $c$ is weighted by $p(c)$, a rare class with $p(c) = 10^{-3}$ contributes at most $0.0014$ nats—motivating class-balanced minibatch sampling.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-slice-js
+:::
+:::
 :::
 
 ::: {.slide title="Three Architectural Mechanisms for Conditioning"}
@@ -695,23 +707,35 @@ $$\max_D V(D) = \mathbb{E}_{c \sim p(c)}\Big[2\,\mathrm{JS}\big(p(\cdot \mid c),
 ::: {.slide title="Deriving the Projection Head via Bayes' Rule"}
 [Miyato & Koyama Decomposition]{.kicker}
 
-Applying Bayes' rule $p(x \mid c) = \frac{p(c \mid x)p(x)}{p(c)}$ to the numerator and denominator of $D^\star(x, c) = \log \frac{p(x \mid c)}{q(x \mid c)}$ decomposes the optimal conditional critic into two additive terms:
+::: {.cols .vc}
+::: {.col}
+$$\log \frac{p(x \mid c)}{q(x \mid c)} = \log \frac{p(c \mid x)}{q(c \mid x)} + \log \frac{p(x)}{q(x)} \implies D(x, c) = e_c^\top \phi(x) + \psi_0(x)$$
 
-$$\log \frac{p(x \mid c)}{q(x \mid c)} = \underbrace{\log \frac{p(c \mid x)}{q(c \mid x)}}_{\textrm{class alignment}} + \underbrace{\log \frac{p(x)}{q(x)}}_{\textrm{unconditional realism}}$$
+- **Additive decomposition:** Bayes' rule splits the conditional log-ratio into **class alignment** $\log(p(c \mid x)/q(c \mid x))$ plus **unconditional realism** $\log(p(x)/q(x))$.
+- **Inner-product head (Miyato & Koyama, 2018):** Modeling $p(c \mid x)$ and $q(c \mid x)$ as softmax classifiers over critic features $\phi(x)$ makes their log-ratio linear in $\phi(x)$ with class embedding $e_c = u_c - w_c$.
+:::
 
-- **Softmax posteriors over shared features $\phi(x)$:** Modeling $p(c \mid x) \propto \exp(u_c^\top \phi(x))$ and $q(c \mid x) \propto \exp(w_c^\top \phi(x))$ makes their log ratio linear in $\phi(x)$ up to a $c$-independent log-partition difference, which we absorb together with $\log(p(x)/q(x))$ into the scalar head $\psi_0(x)$:
-  $$D(x, c) = e_c^\top \phi(x) + \psi_0(x), \qquad e_c = u_c - w_c$$
+::: {.col .fig}
+@fig:ch16-gan-projection-head
+:::
+:::
 :::
 
 ::: {.slide title="Projection Discriminator vs. Auxiliary Classifier"}
 [Why Not Force Low Class Entropy?]{.kicker}
 
-Why use the projection head $e_c^\top \phi(x) + \psi_0(x)$ instead of training an **Auxiliary Classifier GAN (AC-GAN; Odena et al., 2017)** that adds cross-entropy $-\mathbb{E}_{c, x' \sim q(\cdot \mid c)}[\log C(c \mid x')]$ to the generator loss?
+::: {.cols .vc}
+::: {.col}
+$$-\mathbb{E}_{c, x'}\big[\log C(c \mid x')\big] = \mathbb{E}_{x' \sim q}\Big[H\big(q(\cdot \mid x')\big) + D_{\textrm{KL}}\big(q(\cdot \mid x') \,\|\, C(\cdot \mid x')\big)\Big]$$
 
-- **Entropy-reduction bias of AC-GAN:** The auxiliary classifier loss on generated samples decomposes into:
-  $$-\mathbb{E}_{c,\; x' \sim q(\cdot \mid c)}\big[\log C(c \mid x')\big] = \mathbb{E}_{x' \sim q}\Big[H\big(q(\cdot \mid x')\big) + D_{\textrm{KL}}\big(q(\cdot \mid x') \,\|\, C(\cdot \mid x')\big)\Big]$$
-  Even when $C(c \mid x) = p(c \mid x)$, minimizing $H(q(\cdot \mid x'))$ penalizes the generator for placing samples in regions where true classes overlap ($H(p(\cdot \mid x)) > 0$), artificially shrinking within-class diversity toward exaggerated canonical prototypes!
-- **Unbiased projection critic:** The projection head estimates the log ratio $\log \frac{p(c \mid x)}{q(c \mid x)}$, which vanishes at $q(\cdot \mid c) = p(\cdot \mid c)$ without forcing $H(q(\cdot \mid x))$ to zero.
+- **Entropy-reduction bias of AC-GAN (Odena et al., 2017):** Minimizing $H(q(\cdot \mid x'))$ penalizes the generator for placing samples where true classes overlap ($H(p(\cdot \mid x)) > 0$), collapsing intra-class diversity toward exaggerated canonical prototypes.
+- **Unbiased projection critic:** Estimates $\log(p(c \mid x)/q(c \mid x))$, which vanishes at $q(\cdot \mid c) = p(\cdot \mid c)$ without forcing conditional entropy to zero.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-acgan-bias
+:::
+:::
 :::
 
 ::: {.slide title="Implementing CondGenerator and ProjectionCritic"}
@@ -758,16 +782,16 @@ Generating $9$ random latent draws for each of the $10$ requested CIFAR-10 class
 ::: {.slide title="Three Orthogonal Failure Axes in Evaluation"}
 [Evaluation Taxonomy]{.kicker}
 
-A conditional generator can fail along three distinct axes, and no single scalar metric captures all three:
+::: {.cols .vc}
+::: {.col}
+- **Axis 1 — Wrong class ($q(\cdot \mid c) = p(\cdot \mid c')$):** Detected immediately by an independent **referee classifier**, whereas marginal FD and $\mathrm{MMD}^2$ are completely blind if the marginal mixture matches!
+- **Axis 2 — Poor sample fidelity (blur/artifacts):** Detected by **marginal FD** and **per-class $K$-NN precision**.
+- **Axis 3 — Low intra-class diversity (prototype collapse):** Referee accuracy and precision actually *reward* canonical prototypes; **per-class $K$-NN recall** is required to catch mode dropping within class $c$.
+:::
 
-| Failure Mode | Class Alignment (Referee Acc.) | Marginal FD & $\mathrm{MMD}^2$ (Labels Ignored) | Per-Class $K$-NN Precision | Per-Class $K$-NN Recall |
-| :--- | :--- | :--- | :--- | :--- |
-| **1. Wrong class ($q(\cdot \mid c) = p(\cdot \mid c')$)** | **Detects** (drops to chance) | **Blind** (marginals match) | **Detects** | **Detects** |
-| **2. Poor image fidelity (artifacts)** | Partial | **Detects** | **Detects** | Partial |
-| **3. Low intra-class diversity (prototypes)** | **Blind** (often *rewards*!) | **Detects** (covariance shrinks) | **Blind** (often *rewards*!) | **Detects** (collapses) |
-
-::: {.d2l-note}
-We therefore combine an independent **referee classifier** (for condition alignment) with marginal feature distances (FD, $\mathrm{MMD}^2$) and **per-class** $3$-NN precision and recall.
+::: {.col .fig .big}
+@fig:ch16-gan-three-eval-axes
+:::
 :::
 :::
 

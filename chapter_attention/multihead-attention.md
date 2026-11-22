@@ -774,44 +774,51 @@ Self-Attention, Multi-Head Attention, and Key–Value Sharing<br>**self-attentio
 ::: {.slide title="Why One Sequence Must Query Itself in Multiple Ways"}
 [Motivation]{.kicker}
 
-In a decoder-only language model, there is only one sequence: to build contextual representations, every token must query the other tokens in the same sentence:
-
 ::: {.cols .vc}
 ::: {.col}
 - **Multiple Syntactic Arguments:** In *"Alice gave Bob the book"*, interpreting the verb *gave* requires identifying the giver (*Alice*), the recipient (*Bob*), and the object (*book*).
-:::
-
-::: {.col}
 - **The Single-Head Bottleneck:** A single attention head computes *one* probability distribution per query and returns a single blended vector ($64$ floats in GPT-2 small), averaging all attended arguments together.
-:::
+- **Parallel Subspace Heads:** Running $H$ independent lookups in parallel lets a token retrieve multiple distinct arguments simultaneously.
 :::
 
-::: {.d2l-note}
-In this section we formulate **self-attention**, prove why a single head loses at least half the variance when retrieving two independent values, and construct **multi-head** and **grouped-query attention**.
+::: {.col .fig .big}
+@fig:ch10-attn-mha-multi-arg
+:::
 :::
 :::
 
 ::: {.slide title="Self-Attention: Three Learned Projections per Token"}
 [Self-Attention Formulation]{.kicker}
 
-Given $n$ token representations stacked as rows of $\mathbf{X} \in \mathbb{R}^{n \times d}$, a self-attention head applies three distinct linear projections $\mathbf{W}_q, \mathbf{W}_k \in \mathbb{R}^{d \times d_h}$ and $\mathbf{W}_v \in \mathbb{R}^{d \times d_v}$:
+::: {.cols .vc}
+::: {.col}
+- **Three Distinct Roles from One Input $\mathbf{X} \in \mathbb{R}^{n \times d}$:**
+  $$\textrm{SelfAttention}(\mathbf{X}) = \mathrm{softmax}\!\left(\frac{(\mathbf{X}\mathbf{W}_q)(\mathbf{X}\mathbf{W}_k)^\top}{\sqrt{d_h}}\right)\mathbf{X}\mathbf{W}_v$$
+- **Query ($\mathbf{q}_i = \mathbf{x}_i \mathbf{W}_q$):** What contextual features position $i$ seeks.
+- **Key ($\mathbf{k}_j = \mathbf{x}_j \mathbf{W}_k$) & Value ($\mathbf{v}_j = \mathbf{x}_j \mathbf{W}_v$):** What position $j$ advertises and what content vector it returns when selected.
+:::
 
-$$\textrm{SelfAttention}(\mathbf{X}) = \mathrm{softmax}\!\left(\frac{(\mathbf{X}\mathbf{W}_q)(\mathbf{X}\mathbf{W}_k)^\top}{\sqrt{d_h}}\right)\mathbf{X}\mathbf{W}_v \in \mathbb{R}^{n \times d_v}$$
-
-- **Query ($\mathbf{q}_i = \mathbf{x}_i \mathbf{W}_q$):** What contextual features position $i$ seeks from the sequence.
-- **Key ($\mathbf{k}_j = \mathbf{x}_j \mathbf{W}_k$):** What features position $j$ advertises when queried by other tokens.
-- **Value ($\mathbf{v}_j = \mathbf{x}_j \mathbf{W}_v$):** The content vector position $j$ contributes to the weighted sum when selected.
+::: {.col .fig}
+@fig:ch10-attn-mha-qkv-projections
+:::
+:::
 :::
 
 ::: {.slide title="Why Queries and Keys Require Separate Matrices"}
 [Asymmetry of Lookup]{.kicker}
 
-What goes wrong if we tie the query and key projections into a single matrix $\mathbf{W}_q = \mathbf{W}_k = \mathbf{W}$, setting $\mathbf{u}_i = \mathbf{x}_i \mathbf{W}$?
+::: {.cols .vc}
+::: {.col}
+- **Symmetric PSD Trap ($\mathbf{W}_q = \mathbf{W}_k = \mathbf{W}$):** Setting $\mathbf{u}_i = \mathbf{x}_i \mathbf{W}$ makes the score matrix $s_{ij} = \mathbf{u}_i^\top \mathbf{u}_j / \sqrt{d_h}$ symmetric and positive semidefinite.
+- **Cauchy–Schwarz Self-Affinity Bound:**
+  $$s_{ij} \le \sqrt{s_{ii}\,s_{jj}}$$
+- **Linguistic Failure Mode:** Under a shared projection, no token of equal norm can prefer a *different* token over itself—separate $\mathbf{W}_q \neq \mathbf{W}_k$ break this symmetry!
+:::
 
-- **Symmetric Positive Semidefinite Scores:** The pre-softmax score matrix $s_{ij} = \mathbf{u}_i^\top \mathbf{u}_j / \sqrt{d_h}$ becomes symmetric ($s_{ij} = s_{ji}$) and positive semidefinite.
-- **Cauchy–Schwarz Self-Affinity Bound:** Every cross-token score is bounded by the geometric mean of the two tokens' self-scores:
-  $$s_{ij} = \frac{\mathbf{u}_i^\top \mathbf{u}_j}{\sqrt{d_h}} \le \frac{\|\mathbf{u}_i\|\,\|\mathbf{u}_j\|}{\sqrt{d_h}} = \sqrt{s_{ii}\,s_{jj}}$$
-- **Linguistic Failure Mode:** Under a shared projection, no token of equal norm can ever prefer a *different* token over itself—a verb cannot selectively seek nouns without attending to itself at least as strongly! Separate $\mathbf{W}_q$ and $\mathbf{W}_k$ break this symmetry.
+::: {.col .fig}
+@fig:ch10-attn-mha-asymmetry
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: One Head on a Five-Word Sentence"}
@@ -870,11 +877,17 @@ In our sentence, *gave* received an equal blend $0.29\,\mathbf{v}_{\textrm{Alice
 ::: {.slide title="Theorem: Any Single Head Loses Half the Variance"}
 [Lower Bound Proof]{.kicker}
 
-**Proposition.** For any single head with fixed softmax weights $(\alpha_1, \alpha_2)$ on independent $\mathbf{v}_1, \mathbf{v}_2 \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_{d_v})$, the minimum relative mean-squared error of any readout predicting $\mathbf{t} = [\mathbf{v}_1; \mathbf{v}_2]$ from $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2$ is **$1/2$** (RMS relative error $\sqrt{1/2} \approx 0.707$).
+::: {.cols .vc}
+::: {.col}
+- **Optimal Bayes Estimator:** Given $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2$, the minimum MSE estimator of $\mathbf{v}_1$ is $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}] = \frac{\alpha_1}{\alpha_1^2 + \alpha_2^2}\,\mathbf{m}$, leaving residual variance $\frac{\alpha_2^2}{\alpha_1^2 + \alpha_2^2}$.
+- **Conservation of Error:** Estimating $\mathbf{v}_2$ leaves residual variance $\frac{\alpha_1^2}{\alpha_1^2 + \alpha_2^2}$; their sum is $1$ out of target variance $2$, giving relative MSE **$1/2$** (RMS error $\sqrt{1/2} \approx 0.707$) for *every* $(\alpha_1, \alpha_2)$!
+- **Two Heads Invert Exactly:** Two distinct weightings form an invertible $2 \times 2$ mixing matrix.
+:::
 
-- **Optimal Bayes Estimator:** For joint Gaussians, the minimum MSE estimator of $\mathbf{v}_1$ given $\mathbf{m}$ is the linear conditional expectation:
-  $$\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}] = \frac{\alpha_1}{\alpha_1^2 + \alpha_2^2}\,\mathbf{m}, \qquad \textrm{Residual Variance} = 1 - \frac{\alpha_1^2}{\alpha_1^2 + \alpha_2^2} = \frac{\alpha_2^2}{\alpha_1^2 + \alpha_2^2}$$
-- **Conservation of Error:** By symmetry, estimating $\mathbf{v}_2$ leaves residual variance $\frac{\alpha_1^2}{\alpha_1^2 + \alpha_2^2}$ per coordinate. Summing the two errors gives $\frac{\alpha_2^2 + \alpha_1^2}{\alpha_1^2 + \alpha_2^2} = 1$ out of target variance $1 + 1 = 2$, yielding relative squared error **$1/2$** for *every* $(\alpha_1, \alpha_2)$!
+::: {.col .fig}
+@fig:ch10-attn-mha-copy-both-bound
+:::
+:::
 :::
 
 ::: {.slide title="Two Heads Invert the Mixture to Machine Precision"}
@@ -909,12 +922,18 @@ Recovering $k$ independent $d_v$-dimensional values requires two resources simul
 ::: {.slide title="Parameter and FLOP Counts Are Independent of H"}
 [Computational Complexity]{.kicker}
 
-Setting $d_h = d / H$ means the $H$ stacked projection matrices $\big[\mathbf{W}_1^{(q)}, \ldots, \mathbf{W}_H^{(q)}\big]$ form a single $d \times d$ matrix for $\mathbf{Q}$, $\mathbf{K}$, $\mathbf{V}$, and $\mathbf{O}$ (counting $1\text{ multiply-add} = 2\text{ FLOPs}$):
+::: {.cols .vc}
+::: {.col}
+- **Leading Complexity (with $d_h = d / H$):**
+  $$\textrm{Params} = 4d^2, \qquad \textrm{FLOPs} = 8nd^2 + 4n^2 d$$
+- **GPT-2 Small Layer ($d = 768, n = 1{,}024$):** $2.36\text{M}$ parameters, $4.83\text{ GFLOPs}$ for projections, and $3.22\text{ GFLOPs}$ for scores and value mixing—identical whether $H = 1$ or $H = 12$!
+- **Why Not $H = d$ ($d_h = 1$)?** At $d_h = 1$, scalar scores $q_i k_j$ are monotone in $k_j$, so queries can only sharpen onto extremal keys.
+:::
 
-$$\textrm{Parameters} = 4d^2, \qquad \textrm{FLOPs} = \underbrace{8nd^2}_{\textrm{Q, K, V, O projections}} + \underbrace{4n^2 d}_{\textrm{scores } \mathbf{Q}\mathbf{K}^\top \textrm{ and mixing } \mathbf{A}\mathbf{V}}$$
-
-- **Concrete Numbers (GPT-2 Small Layer, $d = 768, n = 1{,}024$):** $4d^2 \approx 2.36\text{M}$ parameters, $8nd^2 \approx 4.83\text{ GFLOPs}$ for projections, and $4n^2 d \approx 3.22\text{ GFLOPs}$ for scores and value mixing—**identical whether $H = 1$ or $H = 12$**!
-- **Why Not Set $H = d$ ($d_h = 1$)?** When $d_h = 1$, scalar scores $q_i k_j$ are strictly monotone in $k_j$, so a query can only sharpen onto the maximum or minimum key; moreover, the $O(Hn^2)$ softmax overhead grows linearly with $H$. Standard models use $d_h \in \{64, 128\}$.
+::: {.col .fig}
+@fig:ch10-attn-mha-flop-invariance
+:::
+:::
 :::
 
 ::: {.slide title="Comparing Convolution, Recurrence, and Attention"}
@@ -964,21 +983,18 @@ $$\textrm{Parameters} = 4d^2, \qquad \textrm{FLOPs} = \underbrace{8nd^2}_{\textr
 ::: {.slide title="Pitfall: Reshaping Directly to (B, H, n, d_h)"}
 [Silent Tensor Bug]{.kicker}
 
-Why must `split_heads` call `.reshape(B, n, H, d_h).transpose(1, 2)` in two steps instead of calling `.reshape(B, H, n, d_h)` directly?
-
 ::: {.cols .vc}
 ::: {.col}
-- **Correct (`reshape` then `transpose`):** Slices each token's $d$-dimensional vector into $H$ contiguous blocks of width $d_h$, so head $h$ receives every token's features $[h d_h : (h+1) d_h]$.
-- **Buggy (`X.reshape(B, H, n, d_h)`):** Because memory is row-major along the sequence axis $n$, reshaping directly packs the first $n/H$ *tokens* into "head 0" and scrambles tokens across features!
+- **Correct (`reshape` then `transpose`):** Slices each token's $d$-dimensional vector into $H$ contiguous blocks of width $d_h$.
+- **Buggy (`X.reshape(B, H, n, d_h)`):** Because memory is row-major along the sequence axis $n$, reshaping directly packs the first $n/H$ *tokens* into "head 0"!
+- **Insidious Shape Match:** Both return `(B, H, n, d_h)`, so no shape check catches the bug.
+
+@multihead-attention-implementation-2
 :::
 
 ::: {.col .fig}
-@multihead-attention-implementation-2
+@fig:ch10-attn-mha-reshape-bug
 :::
-:::
-
-::: {.d2l-note .warn}
-**Why this bug is insidious:** Both expressions return the exact same shape `(B, H, n, d_h)`, so no shape check or compiler assertion will ever catch it!
 :::
 :::
 
@@ -1023,15 +1039,16 @@ Evaluating $(H, H_{\textrm{kv}}) \in \{(2, 1), (4, 2), (4, 1)\}$ with $d = 16$ a
 ::: {.slide title="Self-Attention vs. Cross-Attention"}
 [Input Routing]{.kicker}
 
-The exact same `MultiHeadAttention` module implements both self-attention and cross-attention depending solely on which tensors are passed as `(queries, keys, values)`:
+::: {.cols .vc}
+::: {.col}
+- **Self-Attention (`attention(X, X, X)`):** Queries, keys, and values all come from the same sequence $\mathbf{X} \in \mathbb{R}^{n \times d}$, producing an $n \times n$ score matrix.
+- **Cross-Attention (`attention(A, B, B)`):** Queries come from target $\mathbf{A} \in \mathbb{R}^{n \times d}$ while keys and values come from source $\mathbf{B} \in \mathbb{R}^{m \times d}$, producing an $n \times m$ score matrix.
+- **Source Permutation Invariance:** In unmasked cross-attention, permuting rows of $\mathbf{B} \mapsto \boldsymbol{\Pi}\mathbf{B}$ leaves the output at every query of $\mathbf{A}$ unchanged.
+:::
 
-| Mode | Function Call | Query Source | Key & Value Source | Score Matrix Shape | Primary Architectural Use Cases |
-| :--- | :--- | :--- | :--- | :---: | :--- |
-| **Self-Attention** | `attention(X, X, X)` | Sequence $\mathbf{X} \in \mathbb{R}^{n \times d}$ | Same sequence $\mathbf{X} \in \mathbb{R}^{n \times d}$ | $n \times n$ | Encoder blocks and causal decoder-only LLMs |
-| **Cross-Attention** | `attention(A, B, B)` | Target $\mathbf{A} \in \mathbb{R}^{n \times d}$ | Source $\mathbf{B} \in \mathbb{R}^{m \times d}$ | $n \times m$ | Seq2seq translation decoders; multimodal vision-to-text conditioning |
-
-::: {.d2l-note}
-In unmasked cross-attention, permuting the rows of the source $\mathbf{B} \mapsto \boldsymbol{\Pi}\mathbf{B}$ leaves the output at every query of $\mathbf{A}$ completely unchanged!
+::: {.col .fig .big}
+@fig:ch10-attn-mha-self-vs-cross
+:::
 :::
 :::
 

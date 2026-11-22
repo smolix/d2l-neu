@@ -803,12 +803,18 @@ Decoding and Generation<br>**greedy search · beam search & length normalization
 ::: {.slide title="The Decoding Problem: 10¹⁵⁰ Candidate Continuations"}
 [Motivation & Combinatorial Search Space]{.kicker}
 
-A trained autoregressive language model outputs one conditional distribution $P(x_t \mid x_{<t})$ per time step. **Decoding** is the algorithm that converts these next-token distributions into a concrete output sequence $(x_1, \ldots, x_T)$:
-
+::: {.cols .vc}
+::: {.col}
 $$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t})$$
 
-- **Exact global maximization is intractable:** Over our 1,027-token BPE vocabulary and a 50-token horizon, there are $1027^{50} > 10^{150}$ candidate continuations—no algorithm can enumerate the full search tree.
-- **The maximization vs. sampling dilemma:** Greedily picking the single most probable token at every step rapidly traps the generator in deterministic repetition loops, whereas sampling from the raw distribution occasionally draws an absurd low-probability tail token that derails the remainder of the passage.
+- **Exact global maximization is intractable:** Over our 1,027-token BPE vocabulary and a 50-token horizon, $1027^{50} > 10^{150}$ continuations exist—no decoder can enumerate the search tree.
+- **The maximization vs. sampling dilemma:** Greedy argmax rapidly traps the generator in deterministic repetition loops, whereas unpruned sampling draws low-probability tail tokens that derail the rollout.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-search-space-explosion
+:::
+:::
 :::
 
 ::: {.slide title="Two Families of Decoders: Maximization vs. Sampling"}
@@ -841,17 +847,18 @@ Every decoding algorithm in this section interacts with our trained RNN language
 ::: {.slide title="Greedy Decoding and the Myopia Trap"}
 [Maximization Family I: Greedy Search]{.kicker}
 
-**Greedy decoding** commits irreversibly at each step $t$ to the single token with highest immediate conditional probability:
-
+::: {.cols .vc}
+::: {.col}
 $$x_t = \operatorname*{argmax}_{x \in \mathcal{V}} P(x \mid x_{<t})$$
 
-- **One model call per token, completely deterministic:** Given the same prefix, greedy decoding always emits the exact same continuation.
-- **Why local argmax misses the global optimum (Myopia):** Stringing together locally maximal factors does not maximize the product $P(x_1, x_2) = P(x_1)\,P(x_2 \mid x_1)$:
+- **One model call per token:** Deterministic and fast, committing irreversibly to the top token at each step.
+- **Why local argmax is myopic:** Committing to $A$ at step 1 ($0.50 > 0.40$) leads to a diffuse step 2 ($0.50 \times 0.30 = 0.15$), pruning branch $B$ whose confident continuation yields $0.40 \times 0.90 = 0.36$ ($2.4\times$ higher!).
+:::
 
-| Candidate Path | Step-1 Probability $P(x_1)$ | Best Step-2 Probability $\max_{x_2} P(x_2 \mid x_1)$ | Joint Sequence Probability $P(x_1, x_2)$ |
-|---|--:|--:|--:|
-| **Path $A$ (chosen by greedy)** | $P(A) = \mathbf{0.50}$ | $0.30$ (uncertain diffuse step) | $0.50 \times 0.30 = 0.15$ |
-| **Path $B$ (pruned at step 1)** | $P(B) = 0.40$ | $\mathbf{0.90}$ (confident commitment) | $0.40 \times 0.90 = \mathbf{0.36}$ ($2.4\times$ higher!) |
+::: {.col .fig}
+@fig:ch08-rnn-greedy-myopia-tree
+:::
+:::
 :::
 
 ::: {.slide title="Neural Text Degeneration: Deterministic Limit Cycles"}
@@ -887,14 +894,18 @@ Running greedy decoding for 50 tokens after `'The Time Traveller'` and `'It seem
 ::: {.slide title="Length Normalization for Early-Stopping Beams"}
 [Comparing Variable-Length Hypotheses]{.kicker}
 
-When sequences can terminate early by emitting `<eos>`, raw cumulative log-probability $\sum_{t=t_0+1}^{t_0+T} \log P(x_t \mid x_{<t})$ is strictly unfair across lengths because every log-probability is non-positive ($\log P \le 0$), so adding tokens only lowers the sum!
+::: {.cols .vc}
+::: {.col}
+$$\textrm{score}\bigl(x_{t_0+1:t_0+T}\bigr) = \frac{1}{T^\beta}\sum_{t=t_0+1}^{t_0+T} \log P(x_t \mid x_{<t})$$
 
-$$\textrm{score}\bigl(x_{t_0+1:t_0+T}\bigr) = \frac{1}{T^\beta}\sum_{t=t_0+1}^{t_0+T} \log P(x_t \mid x_{<t}), \qquad \beta \in [0, 1]$$
+- **Why raw log-likelihood ($\beta = 0$) biases short:** Every term $\log P \le 0$ is non-positive, so adding tokens monotonically lowers cumulative log-probability and favors premature `<eos>`.
+- **Interpolating exponent $\beta \in [0, 1]$ (Wu et al., 2016):** $\beta \approx 0.75$ balances cumulative likelihood against per-token average ($\beta = 1$).
+:::
 
-- **Interpolating exponent $\beta$ (Wu et al., 2016):**
-  - $\beta = 0$: Unnormalized total log-probability (heavily biases toward short, premature `<eos>` outputs).
-  - $\beta = 1$: Per-token average log-probability (can over-favor long continuations).
-  - $\beta \approx 0.75$ (standard in production MT/ASR): Balances length penalty against cumulative likelihood.
+::: {.col .fig}
+@fig:ch08-rnn-length-norm-curves
+:::
+:::
 :::
 
 ::: {.slide title="Implementing Length-Normalized Beam Search"}
@@ -912,12 +923,18 @@ Because at most $w$ extensions of any single beam can survive into the global to
 ::: {.slide title="Ancestral Sampling and the Unreliable Tail Problem"}
 [Sampling Family: Motivation]{.kicker}
 
-To break out of deterministic cycles and restore the natural diversity of open-ended language, **ancestral sampling** draws each token stochastically from the predicted conditional distribution:
-
+::: {.cols .vc}
+::: {.col}
 $$x_t \sim P(x_t \mid x_{<t})$$
 
-- **Why pure sampling derails:** Softmax assigns strictly positive probability to every token in $\mathcal{V}$. Even if 900 implausible tail tokens each receive probability $0.0002$, together they hold $18\%$ of the total probability mass at *every single step*!
-- **The probability of surviving 50 steps without a tail draw:** At an $18\%$ tail-draw rate per step, the chance of generating 50 tokens without drawing a single incoherent tail word is $(1 - 0.18)^{50} \approx 0.00005$. Once a nonsensical token is sampled and fed back into the prefix, exposure bias derails the rest of the rollout.
+- **Why pure sampling derails (Holtzman et al., 2020):** Softmax assigns positive probability to all $|\mathcal{V}|$ tokens; $\sim 900$ implausible tail tokens at $0.0002$ each sum to **$18\%$ collective mass at every step**.
+- **50-step compounding failure:** At an $18\%$ tail-draw rate per step, $(1 - 0.18)^{50} \approx 0.00005$ of 50-token rollouts avoid drawing a tail token that derails subsequent context.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-unreliable-tail-rollout
+:::
+:::
 :::
 
 ::: {.slide title="Temperature Scaling: Reshaping Softmax Entropy"}
@@ -1022,16 +1039,16 @@ A common pitfall in language modeling is attempting to use perplexity (or model 
 ::: {.slide title="Inference Complexity: Stateless O(T²) vs. Cached O(T)"}
 [Systems Cost of Autoregressive Generation]{.kicker}
 
-Our model-agnostic `step_fn(ids)` re-fed the entire growing prefix `ids` of length $t$ into `model(X)` at every generated step $t = 1, \ldots, T$. How much work does that waste, and how does carrying state fix it?
+::: {.cols .vc}
+::: {.col}
+- **Stateless prefix re-evaluation (`step_fn(ids)`):** Re-running the network over $x_{1:t}$ at step $t$ performs $\sum_{t=1}^T t = O(T^2)$ cell updates.
+- **Stateful recurrent carry (`predict`):** Passing $\mathbf{H}_{t-1} \in \mathbb{R}^h$ forward costs **1 cell update per token** ($O(T)$ total) and a fixed $512$-byte state at any sequence length.
+- **Next horizon (Chapters 10–12):** Upgrade $\mathbf{H}_t$ with gates/SSMs so gradients survive in $O(1)$ space (Ch 12), or retain all past token K/V vectors via self-attention at $O(T)$ memory cost (Ch 10–11).
+:::
 
-| Decoding Implementation | Cell Updates at Step $t$ | Total Cell Updates for $T$ Tokens | Inference Memory Footprint |
-|---|---|---|---|
-| **Stateless Prefix Re-Evaluation (`step_fn(ids)`)** | $t$ updates (re-reads prefix $x_{1:t}$) | $\sum_{t=1}^T t = \frac{T(T+1)}{2} = \mathbf{O(T^2)}$ | $O(T)$ token IDs |
-| **Stateful Recurrent Carry (`RNNLMScratch.predict`)** | $\mathbf{1}$ update: $\mathbf{H}_t = g(\mathbf{H}_{t-1}, x_t)$ | $T \times 1 = \mathbf{O(T)}$ (**$O(1)$ per token**) | **$O(h) = 512$ bytes ($O(1)$)** |
-| **Transformer with KV Cache (Chapter 11 preview)** | attends over $t$ cached K/V vectors | $O(T^2)$ attention + $O(T)$ MLP | $O(T)$ KV cache (grows with $T$) |
-
-::: {.d2l-note}
-**Looking Ahead to Part II (*Advanced*):** Our vanilla RNN generates tokens in $O(1)$ time and $512$ bytes of state, yet uses only $\sim 3$ tokens of history because gradients vanish (§8.5). **Chapter 12** redesigns the recurrence (LSTMs, GRUs, state space models) so gradients survive over long horizons in $O(1)$ state; **Chapters 10–11** replace fixed-size state compression with **self-attention**, keeping every past token's representation at $O(T)$ memory cost.
+::: {.col .fig .big}
+@fig:ch08-rnn-stateless-vs-stateful-decode
+:::
 :::
 :::
 

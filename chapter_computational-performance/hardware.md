@@ -516,14 +516,16 @@ Hardware Anatomy: CPUs, GPUs, Tensor Cores, and Memory Hierarchy<br>**memory hie
 ::: {.slide title="Why a 165-TFLOP/s GPU Decodes Only 450 Tokens/s"}
 [Motivation]{.kicker}
 
-Consider generating text one token at a time with a 1B-parameter GPT ($2\text{ GB}$ of `bfloat16` weights) on an RTX 4090 ($P = 165\text{ TFLOP/s}$, achieved $\beta \approx 0.9\text{ TB/s}$):
+::: {.cols .vc}
+::: {.col}
+- **Arithmetic time ($12\,\mu\text{s}$):** Executing $2N = 2 \times 10^9\text{ FLOPs}$ per token on a 1B GPT takes $12\,\mu\text{s}$ at $165\text{ TFLOP/s}$.
+- **Memory transfer time ($2.2\text{ ms}$):** Streaming all $2\text{ GB}$ of `bf16` weights from GDDR6X at $0.9\text{ TB/s}$ takes $2.2\text{ ms}$—nearly **$200\times$ longer**!
+- **Throughput ceiling ($\sim 450\text{ tok/s}$):** Single-stream decoding leaves Tensor Cores idle over $99\%$ of the time.
+:::
 
-- **Arithmetic time per token:** Executing $2N = 2 \times 10^9\text{ FLOPs}$ on the Tensor Cores takes $\frac{2 \times 10^9}{1.65 \times 10^{14}} \approx \mathbf{12\,\mu\text{s}}$.
-- **Memory transfer time per token:** Streaming all $2\text{ GB}$ of `bfloat16` weights from GDDR6X memory takes $\frac{2 \times 10^9}{0.9 \times 10^{12}} \approx \mathbf{2.2\text{ ms}}$—nearly $200\times$ longer!
-- **Throughput ceiling:** A single sequence decodes at most $\sim 450\text{ tokens/s}$, leaving the arithmetic units **idle over $99\%$ of the time**.
-
-::: {.d2l-note}
-Three physical laws explain this gap: data must cross chip boundaries, off-chip wires scale with die perimeter rather than die area, and moving a byte costs hundreds of times more energy than computing on it.
+::: {.col .fig .big}
+@fig:ch13-perf-decode-bottleneck
+:::
 :::
 :::
 
@@ -583,12 +585,18 @@ GPU DRAM achieves its rated bandwidth $\beta$ only on sequential, coalesced addr
 ::: {.slide title="Block Transfers and Half-Bandwidth Size n_1/2"}
 [Hockney Transfer Model]{.kicker}
 
-Transferring a contiguous block of $n$ bytes across a data path with start-up latency $\alpha$ and peak bandwidth $\beta$ takes:
+::: {.cols .vc}
+::: {.col}
+$$t(n) \;=\; \alpha + \frac{n}{\beta}, \qquad \beta_{\textrm{eff}}(n) \;=\; \frac{\beta}{1 + \alpha\beta / n}$$
 
-$$t(n) \;=\; \alpha + \frac{n}{\beta}, \qquad \beta_{\textrm{eff}}(n) \;=\; \frac{n}{t(n)} \;=\; \frac{\beta}{1 + \alpha\beta / n}$$
+- **Half-performance size ($n_{1/2} = \alpha\beta$):** The payload size where transfer time $n/\beta$ equals start-up latency $\alpha$, achieving $\frac{1}{2}\beta$.
+- **NVMe disk shuffling ($\alpha \approx 70\,\mu\text{s}$, $\beta = 14\text{ GB/s}$):** $n_{1/2} \approx \mathbf{1\text{ MB}}$; random $4\text{ KB}$ reads waste $>99\%$ of drive bandwidth, so datasets must be stored in megabyte shards.
+:::
 
-- **Half-performance size ($n_{1/2} = \alpha\beta$):** The transfer size at which payload transfer time $n/\beta$ equals start-up latency $\alpha$, achieving $\frac{1}{2}\beta$.
-- **NVMe disk shuffling ($\alpha \approx 70\,\mu\text{s}$, $\beta = 14\text{ GB/s}$):** $n_{1/2} = 70 \times 10^{-6} \times 1.4 \times 10^{10} \approx \mathbf{1\text{ MB}}$. Reading individual kilobyte training examples randomly from disk wastes $>99\%$ of drive bandwidth; datasets must be stored and shuffled in megabyte-scale shards.
+::: {.col .fig}
+@fig:ch13-perf-hockney-transfer
+:::
+:::
 :::
 
 ::: {.slide title="The Shoreline Bottleneck: Compute Is Area, I/O Is Edge"}
@@ -610,17 +618,16 @@ $$t(n) \;=\; \alpha + \frac{n}{\beta}, \qquad \beta_{\textrm{eff}}(n) \;=\; \fra
 ::: {.slide title="Generational Scaling: Compute Outgrows Bandwidth"}
 [Hardware Trends]{.kicker}
 
-Across NVIDIA data-center generations from V100 (2017) to B200 (2024), 16-bit Tensor Core throughput grew by $\sim 2.6\times$ per generation while HBM bandwidth grew by $\sim 2.0\text{x}$ and capacity by $\sim 1.8\times$:
+::: {.cols .vc}
+::: {.col}
+- **Disproportionate scaling (2017–2024):** Across V100 $\to$ A100 $\to$ H100 $\to$ B200, 16-bit Tensor Core peak $P$ grew $18\times$ while HBM bandwidth $\beta$ grew $8.9\times$.
+- **Doubled ridge point ($I^* = P/\beta$):** The threshold intensity to saturate compute rose from $139\text{ FLOP/B}$ (V100) to $281\text{--}295\text{ FLOP/B}$ (B200/H100).
+- **Systems consequence:** An operation at $I = 200\text{ FLOP/B}$ that was compute-bound on V100 is **bandwidth-bound** on H100 and B200!
+:::
 
-| Accelerator (Year) | 16-Bit Dense Peak $P$ | Memory Bandwidth $\beta$ | Capacity $C$ | Ridge Point $I^* = P/\beta$ |
-| :--- | :---: | :---: | :---: | :---: |
-| **V100** (2017, `fp16`) | $125\text{ TFLOP/s}$ | $0.90\text{ TB/s}$ | $16\text{--}32\text{ GB}$ | **$139\text{ FLOP/byte}$** |
-| **A100** (2020, `bf16`) | $312\text{ TFLOP/s}$ | $2.04\text{ TB/s}$ | $40\text{--}80\text{ GB}$ | **$153\text{ FLOP/byte}$** |
-| **H100 SXM** (2022, `bf16`) | $989\text{ TFLOP/s}$ | $3.35\text{ TB/s}$ | $80\text{ GB}$ | **$295\text{ FLOP/byte}$** |
-| **B200** (2024, `bf16`) | $2{,}250\text{ TFLOP/s}$ | $8.00\text{ TB/s}$ | $180\text{ GB}$ | **$281\text{ FLOP/byte}$** |
-
-::: {.d2l-note}
-Because the ridge point doubled from $139$ to $\sim 290\text{ FLOP/byte}$, an operation with intensity $I = 200\text{ FLOP/byte}$ that was compute-bound on a V100 is **bandwidth-bound** on an H100 or B200.
+::: {.col .fig .big}
+@fig:ch13-perf-generational-ridge
+:::
 :::
 :::
 
@@ -643,26 +650,35 @@ Because the ridge point doubled from $139$ to $\sim 290\text{ FLOP/byte}$, an op
 ::: {.slide title="Streaming Multiprocessors and Latency Hiding"}
 [GPU Execution Model]{.kicker}
 
-A GPU partitions its compute engines into **Streaming Multiprocessors** (SMs; $128$ on the RTX 4090), each executing threads in lockstep groups of $32$ called **warps**:
+::: {.cols .vc}
+::: {.col}
+$$\textrm{Bytes in flight} \;=\; \beta \times \textrm{latency} \;\approx\; 250\textrm{ KB}$$
 
-$$\textrm{Bytes in flight to saturate }\beta \;=\; \beta \times \textrm{DRAM latency} \;=\; 1.0\textrm{ TB/s} \times 250\textrm{ ns} \;\approx\; 250\textrm{ KB}$$
+- **Zero-overhead warp switching:** Each of the $128$ SMs executes threads in 32-thread **warps**, switching resident warps every cycle whenever one stalls on a $250\text{ ns}$ DRAM load.
+- **Little's Law occupancy floor:** Sustaining $1.0\text{ TB/s}$ requires $\ge 250\text{ KB}$ in flight ($\sim 16$ active warps/SM issuing 4-byte loads); tiny grids cannot hide DRAM latency.
+:::
 
-- **Zero-overhead warp switching (Little's Law):** Instead of dedicating die area to massive CPU-style caches, an SM keeps dozens of warps resident in its register file and switches warps every cycle whenever a warp stalls on a memory load.
-- **Occupancy requirement:** Keeping $250\text{ KB}$ in flight across $128$ SMs requires $\sim 2\text{ KB/SM}$ (at least $16$ active warps per SM each issuing a 4-byte load per thread). Small kernels that launch too few thread blocks cannot hide DRAM latency.
+::: {.col .fig}
+@fig:ch13-perf-sm-latency-hiding
+:::
+:::
 :::
 
 ::: {.slide title="Deriving Peak FLOP/s from SMs, Clock, and Tensor Cores"}
 [Tensor Cores]{.kicker}
 
-We can compute the RTX 4090's scalar `float32` peak directly from its hardware architecture ($128\text{ SMs} \times 128\text{ FP32 units/SM} = 16{,}384$ units, each executing $1$ fused multiply-add $= 2\text{ FLOPs/cycle}$ at $2.52\text{ GHz}$):
+::: {.cols .vc}
+::: {.col}
+$$P_{\textrm{fp32}} \;=\; 128 \times 128 \times 2 \times 2.52\textrm{ GHz} \;\approx\; 82.6\textrm{ TFLOP/s}$$
 
-$$P_{\textrm{fp32}} \;=\; 16{,}384 \times 2\textrm{ FLOP/cycle} \times 2.52 \times 10^9\textrm{ cycle/s} \;\approx\; 82.6\textrm{ TFLOP/s}$$
+- **Systolic tile multipliers:** Tensor Cores amortize instruction fetch and register access across matrix tiles in a single instruction with `fp32` accumulation.
+- **Throughput scaling by precision:** `tf32` reaches $82.6\text{ TFLOP/s}$ ($1\times$), `bf16`/`fp16` doubles to $165.2\text{ TFLOP/s}$ ($2\times$), and `fp8` quadruples to $330.4\text{ TFLOP/s}$ ($4\times$).
+:::
 
-- **Tensor Core systolic tile multipliers:** Amortize instruction fetch and register access across small matrix tiles in a single instruction.
-- **Throughput scaling by precision (with `fp32` accumulation):**
-  - `tf32` (19-bit Tensor Core mode on 32-bit inputs): **$1\times = 82.6\text{ TFLOP/s}$** on RTX 4090.
-  - `bfloat16` / `float16` (16-bit inputs): **$2\times = 165.2\text{ TFLOP/s}$** on RTX 4090 (up to $15\times$ over scalar `fp32` on H100).
-  - `fp8` (8-bit inputs): **$4\times = 330.4\text{ TFLOP/s}$** on RTX 4090.
+::: {.col .fig}
+@fig:ch13-perf-tensor-core-math
+:::
+:::
 :::
 
 ::: {.slide title="Floating-Point Formats: Exponent Range and Precision"}
@@ -730,17 +746,17 @@ $$\textrm{Prefill ($n$ prompt tokens): } I \approx n \;\textrm{(compute-bound)},
 ::: {.slide title="The 20 ms Memory Sweep Time and Batched Decoding"}
 [Capacity & Sweep Time]{.kicker}
 
-The **memory sweep time** $C/\beta$ is the time required to read every byte of a GPU's DRAM capacity $C$ once at peak bandwidth $\beta$:
+::: {.cols .vc}
+::: {.col}
+- **Universal $\sim 20\text{ ms}$ sweep invariant ($C/\beta$):** Reading a full GPU's DRAM once takes $18\text{--}24\text{ ms}$ across RTX 4090, RTX 5090, H100, and B200 alike.
+- **Full-card 1-stream ceiling:** Any model whose weights fill its card decodes a single sequence at $\beta/C \approx \mathbf{42\text{--}56\text{ tokens/s}}$.
+- **Batched decoding ($B$ streams):** Shares each weight read across $B$ tokens ($I \approx B$), multiplying total throughput linearly until $B \approx I^*$.
+:::
 
-| Accelerator | Capacity $C$ | Bandwidth $\beta$ | Sweep Time $C / \beta$ | Max Full-Card 1-Stream Decode |
-| :--- | :---: | :---: | :---: | :---: |
-| **H100 SXM** | $80\text{ GB}$ | $3.35\text{ TB/s}$ | **$23.9\text{ ms}$** | $\approx 42\text{ tokens/s}$ |
-| **B200** | $180\text{ GB}$ | $8.00\text{ TB/s}$ | **$22.5\text{ ms}$** | $\approx 44\text{ tokens/s}$ |
-| **RTX 4090** | $24\text{ GB}$ | $1.01\text{ TB/s}$ | **$23.8\text{ ms}$** | $\approx 42\text{ tokens/s}$ |
-| **RTX 5090** | $32\text{ GB}$ | $1.79\text{ TB/s}$ | **$17.9\text{ ms}$** | $\approx 56\text{ tokens/s}$ |
-
-- **Universal $\sim 20\text{ ms}$ sweep invariant:** Any model whose weights fill its GPU decodes a single stream at $\sim 40\text{--}55\text{ tokens/s}$, whether on a consumer card or a data-center GPU.
-- **Batched decoding ($B$ concurrent sequences):** Amortizes weight reads across $B$ tokens ($I_{\textrm{weights}} \approx B$), raising total throughput linearly with $B$ until reaching the ridge point $I^*$ (or until per-sequence KV-cache traffic dominates).
+::: {.col .fig .big}
+@fig:ch13-perf-sweep-time-invariant
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Hardware Bandwidth, Formats, and Decode"}

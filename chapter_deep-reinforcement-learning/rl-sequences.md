@@ -398,17 +398,14 @@ Reinforcement Learning for Sequence Generation and LLMs<br>**token-level MDP · 
 ::: {.slide title="From Next-Token Imitation to Verifier Post-Training"}
 [Motivation]{.kicker}
 
-Pretraining a language model by cross-entropy is **behavior cloning** on a static corpus, where every token position has a ground-truth target token to copy. Post-training changes the supervision structure completely:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Outcome-Level Supervision:** The model generates an entire response $y = (a_1, \dots, a_T)$ to a prompt $x$, and a reward model or deterministic **verifier** (unit test, compiler, math checker) returns a single scalar score $r(x, y)$ at EOS.
-- **No Target Tokens to Imitate:** When a reasoning chain fails a test, the checker says $r = 0$, not which intermediate token went wrong.
+- **Outcome-Level Supervision:** The model generates a full completion $y = (a_1, \dots, a_T)$ to prompt $x$, and a deterministic **verifier** returns a single scalar score $r(x, y)$ at EOS.
+- **The 4-Prompt Verifier Benchmark:** Reference $\pi_{\textrm{ref}}$ passes the exact checker on $6.2\%$ of prompts (ceiling $50\%$), while a lenient substring checker rewards the hedged reply on every prompt.
 :::
 
-::: {.col}
-- **The 4-Prompt Verifier Benchmark:** Across 4 arithmetic prompts and 9 candidate replies, the pretrained reference policy $\pi_{\textrm{ref}}$ passes the exact checker only $6.2\%$ of the time (ceiling $50\%$).
-- **The Loophole Threat:** A lenient substring checker accidentally rewards the hedged reply *"one of 4, 12, 64 or 81"* on every prompt!
+::: {.col .fig .big}
+@fig:ch15-drl-sft-vs-rlvr
 :::
 :::
 :::
@@ -453,26 +450,33 @@ Evaluating the whole-response weight $r(x, y) - V(x)$ alongside the prefix-condi
 ::: {.slide title="Orthogonal Variance Decomposition Across Tokens"}
 [Why Per-Token Credit Matters]{.kicker}
 
-Although $r(x, y) - V(x)$ and $A(s_1, a_1)$ have the exact same *expected* gradient for the first token ($\mathbb{E}[r - V(x, a_1) \mid s_1, a_1] = 0$), the response weight is the sum of all per-token advantages:
+::: {.cols .vc}
+::: {.col}
+$$r(x, y) - V(x) = A(s_1, a_1) + A(s_2, a_2)$$
 
-$$r(x, y) - V(x) = \underbrace{\big(V(x, a_1) - V(x)\big)}_{A(s_1, a_1)} + \underbrace{\big(r(x, y) - V(x, a_1)\big)}_{A(s_2, a_2)}$$
+- **Uncorrelated increments:** Because $\mathbb{E}[A(s_2, a_2) \mid s_1, a_1] = 0$, token advantages are orthogonal and their variances add: $0.0009 + 0.0090 = 0.0099$.
+- **The $11\times$ variance tax:** Using the whole-response weight inflates the first token's gradient variance $11\times$ by injecting downstream token noise.
+:::
 
-- **Uncorrelated Increments:** Because $\mathbb{E}[A(s_2, a_2) \mid s_1, a_1] = 0$, the token advantages are orthogonal and their variances add:
-  $$\textrm{Var}\big(r - V(x)\big) = \textrm{Var}\big(A(s_1, a_1)\big) + \textrm{Var}\big(A(s_2, a_2)\big) = 0.0009 + 0.0090 = 0.0099$$
-- **The $11\times$ Variance Tax:** Using the whole-response weight inflates the first token's gradient variance **$11\times$** by injecting the random noise of all downstream tokens $t' > t$.
+::: {.col .fig}
+@fig:ch15-drl-token-variance-decomp
+:::
+:::
 :::
 
 ::: {.slide title="What the Token MDP Simplifies and What Remains"}
 [Architectural Simplifications]{.kicker}
 
-Known deterministic transitions ($s_{t+1} = \textrm{concat}(s_t, a_t)$) and finite responses ($\gamma = 1$) eliminate half the machinery of Chapter 15:
+::: {.cols .vc}
+::: {.col}
+- **Eliminated in single-turn LLM RL:** No learned world model is needed because token concatenation is exact, and no replay Q-network is used because $|\mathcal{A}| \sim 10^5$ tokens creates severe $\max_a$ bias.
+- **Essential surviving mechanisms:** Group baselines (GRPO/RLOO) or prefix critics reduce variance, while ratio clipping and KL penalties guard multi-epoch updates and prevent reward hacking.
+:::
 
-| Deep RL Component | Needed in Single-Turn LLM Post-Training? | Reason / Alternative Used in Practice |
-| :--- | :---: | :--- |
-| **Learned World Model (§15.6)** | **No** | Token concatenation is exact and known; rollouts can branch from any prefix |
-| **Off-Policy Q-Network (§15.4)** | **No** | $|\mathcal{A}| \sim 10^5$ tokens creates severe $\max_a$ bias; fresh group rollouts avoid replay |
-| **Learned Value Critic (§15.1)** | **Optional** | Group baseline $\bar{r}$ (GRPO / RLOO) is unbiased without a critic; prefix critic buys token credit |
-| **Clipped Ratio & KL Penalty** | **Essential** | Guards multi-epoch updates across inference/trainer precision gaps and prevents reward hacking |
+::: {.col .fig .big}
+@fig:ch15-drl-token-mdp-stack
+:::
+:::
 :::
 
 ::: {.slide title="Verifiable Rewards (RLVR) and Grader Loopholes"}
@@ -498,12 +502,18 @@ To restrain the policy from collapsing onto the loophole, `kl_group_step` folds 
 ::: {.slide title="Closed-Form Prediction of the Loophole Threshold"}
 [Exact Threshold Analysis]{.kicker}
 
-When does the KL penalty stop the policy from exploiting `sloppy_checker` via the hedged reply $y_{\textrm{hedge}} =$ *"one of 4, 12, 64 or 81"*?
+::: {.cols .vc}
+::: {.col}
+$$\frac{\pi^\star(y_{\textrm{hedge}} \mid x)}{\pi^\star(y_{\textrm{ord}} \mid x)} = \frac{\pi_{\textrm{ref}}(y_{\textrm{hedge}} \mid x)}{\pi_{\textrm{ref}}(y_{\textrm{ord}} \mid x)}\, e^{(1 - 0)/\beta} = e^{1/\beta - 4}$$
 
-- **Reference Odds:** Under $\pi_{\textrm{ref}}$, the hedge has logit $-4$ against $0$ for each of the 8 ordinary candidates, so its prior odds are $\pi_{\textrm{ref}}(y_{\textrm{hedge}}) / \pi_{\textrm{ref}}(y_{\textrm{ord}}) = e^{-4} \approx 0.018$.
-- **Tilted Optimum Odds (§15.3):** On prompts `8*8` and `9*9` (where no ordinary candidate is correct), `sloppy_checker` pays $r = 1$ to the hedge and $r = 0$ to all 8 ordinary candidates, tilting the posterior odds to:
-  $$\frac{\pi^\star(y_{\textrm{hedge}} \mid x)}{\pi^\star(y_{\textrm{ord}} \mid x)} = \frac{\pi_{\textrm{ref}}(y_{\textrm{hedge}} \mid x)}{\pi_{\textrm{ref}}(y_{\textrm{ord}} \mid x)}\, e^{(1 - 0)/\beta} = e^{1/\beta - 4}$$
-- **Critical Threshold ($\beta = 1/4 = 0.25$):** The hedge beats each ordinary candidate whenever $\beta < 0.25$, and is suppressed below them whenever **$\beta > 0.25$**!
+- **Reference odds:** Under $\pi_{\textrm{ref}}$, the hedge has logit $-4$ vs. $0$ for ordinary replies ($e^{-4} \approx 0.018$).
+- **Critical threshold ($\beta = 1/4 = 0.25$):** The hedge dominates unsolvable prompts for $\beta < 0.25$ and is suppressed for **$\beta > 0.25$**.
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-loophole-threshold
+:::
+:::
 :::
 
 ::: {.slide title="Empirical Beta Sweep vs. Exact Tilted Optima"}
@@ -521,17 +531,14 @@ Training with `kl_group_step` ($K = 32$ samples per prompt, 400 updates) across 
 ::: {.slide title="Stale Samples, Sequence Ratios, and Asymmetric Clipping"}
 [Scale Systems Nuances]{.kicker}
 
-In large-scale LLM post-training, decoupled inference engines (vLLM/SGLang in `fp8`/`bf16`) generate rollouts in parallel while the trainer takes multiple gradient steps per batch:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Token vs. Sequence Ratios (GSPO):** The exact trajectory ratio $W = \prod_{t=1}^T \rho_t$ has log-variance $O(T)$ that explodes over thousands of reasoning tokens; **GSPO** (Zheng et al., 2025) clips the length-normalized geometric mean:
-  $$\bar{\rho} = W^{1/T} = \exp\Big(\frac{1}{T}\sum_{t=1}^{T} \log \rho_t\Big)$$
+- **Sequence Geometric Mean (GSPO; Zheng et al., 2025):** Replaces exploding product $W = \prod_{t=1}^T \rho_t$ with $\bar{\rho} = W^{1/T} = \exp(\frac{1}{T}\sum_t \log \rho_t)$ on long chain-of-thought rollouts.
+- **Asymmetric Clipping (`Clip-Higher` in DAPO; Yu et al., 2025):** Widens the band to $[0.80, 1.28]$ so rare high-advantage reasoning tokens can grow faster without entropy collapse.
 :::
 
-::: {.col}
-- **Asymmetric Clipping (`Clip-Higher` in DAPO):** With symmetric $\epsilon_{\textrm{clip}} = 0.2$, a rare reasoning token at $\pi_{\textrm{old}} = 0.01$ stops receiving gradient at $0.012$, while a common token at $0.60$ grows to $0.72$.
-- **DAPO (Yu et al., 2025)** decouples the band to $[1 - \epsilon_{\textrm{low}}, 1 + \epsilon_{\textrm{high}}] = [0.80, 1.28]$, letting rare high-advantage tokens grow faster and preventing entropy collapse.
+::: {.col .fig .big}
+@fig:ch15-drl-gspo-dapo-clip
 :::
 :::
 :::
@@ -539,11 +546,19 @@ In large-scale LLM post-training, decoupled inference engines (vLLM/SGLang in `f
 ::: {.slide title="Group Relative Policy Optimization (GRPO)"}
 [The Complete GRPO Update]{.kicker}
 
-**GRPO** (Shao et al., 2024) eliminates the value network by sampling a group of $K$ responses $\{y_1, \dots, y_K\} \sim \pi_{\theta_{\textrm{old}}}(\cdot \mid x)$ per prompt, standardizing their rewards within the group, and optimizing the clipped surrogate minus the per-token $k_3$ KL penalty:
+::: {.cols .vc}
+::: {.col}
+$$\hat{A}_j = \frac{r_j - \bar{r}}{\sigma_r + 10^{-8}}$$
 
-$$\hat{A}_j = \frac{r_j - \bar{r}}{\sigma_r + 10^{-8}}, \qquad L^{\textrm{GRPO}}(\theta) = \frac{1}{K}\sum_{j=1}^{K} \frac{1}{T_j}\sum_{t=1}^{T_j}\Big[\min\big(\rho_{j,t}\hat{A}_j,\ \textrm{clip}(\rho_{j,t}, 1-\epsilon, 1+\epsilon)\hat{A}_j\big) - \beta\, k_3(j, t)\Big]$$
+- **Critic-free group baseline (Shao et al., 2024):** Standardizes rewards across $K$ parallel completions per prompt and optimizes the clipped surrogate minus $\beta k_3$.
 
 @rl-sequences-group-relative-policy-optimization-1
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-grpo-architecture
+:::
+:::
 :::
 
 ::: {.slide title="Multi-Epoch Group Reuse in GRPO"}
@@ -559,29 +574,33 @@ Reusing a single group of $K = 32$ responses per prompt for 4 epochs (`grpo_step
 ::: {.slide title="The k3 KL Estimator and Its Forward-KL Gradient"}
 [KL Loss Subtlety]{.kicker}
 
-Instead of folding $-\beta \log(\pi_\theta/\pi_{\textrm{ref}})$ into the reward, GRPO differentiates the nonnegative per-token estimator $k_3 = \frac{\pi_{\textrm{ref}}}{\pi_\theta} - \log \frac{\pi_{\textrm{ref}}}{\pi_\theta} - 1 = e^{-h} + h - 1$ (where $h = \log(\pi_\theta/\pi_{\textrm{ref}})$) directly with the sampled tokens held fixed (Tang & Munos, 2025):
+::: {.cols .vc}
+::: {.col}
+- **Direct loss vs. reward penalty (Tang & Munos, 2025):** With $h = \log(\pi_\theta/\pi_{\textrm{ref}})$, differentiating $k_1 = h$ directly gives zero expected gradient, while $k_2 = \frac{1}{2}h^2$ (or folding $h$ into the reward) gives the **reverse-KL gradient** (suppressing the hedge to $0.017$).
+- **Forward-KL trap of $k_3 = e^{-h} + h - 1$:** Differentiating $k_3$ directly yields the **forward-KL gradient** $\nabla_\theta D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$, leaving the rare hedge unrestrained at $0.500$!
+:::
 
-| Estimator ($h = \log(\pi_\theta / \pi_{\textrm{ref}})$) | Expectation $\mathbb{E}_{y \sim \pi_\theta}[k_i(y)]$ | Expected Direct Gradient $\mathbb{E}_{y \sim \pi_\theta}[\nabla_\theta k_i(y)]$ | Hedge Prob on `8*8` ($\beta = 0.5$) |
-| :--- | :---: | :---: | :---: |
-| **$k_1 = h$** | $D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})$ | **$0$** (useless as a direct loss!) | — |
-| **$k_2 = \frac{1}{2} h^2$ ( or $h$ in reward)** | $\frac{1}{2}\mathbb{E}[h^2]$ | **$\nabla_\theta D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})$ (Reverse KL)** | **$0.017$** (exponential suppression) |
-| **$k_3 = e^{-h} + h - 1$ (GRPO)** | $D_{\textrm{KL}}(\pi_\theta \Vert \pi_{\textrm{ref}})$ | **$\nabla_\theta D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$ (Forward KL)** | **$0.500$** (barely restrains rare loophole!) |
-
-::: {.d2l-note .warn}
-Because forward KL $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$ penalizes dropping mass on responses that $\pi_{\textrm{ref}}$ *frequently* takes rather than adding mass to responses $\pi_{\textrm{ref}}$ *rarely* takes ($e^{-4}$), differentiating $k_3$ directly leaves the hedge at $0.50$ probability!
+::: {.col .fig .big}
+@fig:ch15-drl-kl-estimators
+:::
 :::
 :::
 
 ::: {.slide title="Direct Preference Optimization: Inverting the Tilt"}
 [Offline Preference Learning]{.kicker}
 
-Instead of fitting a reward model $\hat{r}$ and running online RL, **Direct Preference Optimization (DPO)** (Rafailov et al., 2023) solves the closed-form tilted optimum $\pi^\star(y \mid x) = \frac{1}{Z(x)} \pi_{\textrm{ref}}(y \mid x) e^{r(x, y)/\beta}$ **backwards for the reward $r(x, y)$**:
-
+::: {.cols .vc}
+::: {.col}
 $$r(x, y) = \beta \log \frac{\pi^\star(y \mid x)}{\pi_{\textrm{ref}}(y \mid x)} + \beta \log Z(x)$$
 
-- **Cancellation of the Partition Function $Z(x)$:** Substituting this reparameterized reward into the Bradley–Terry preference likelihood $P(y_w \succ y_l \mid x) = \sigma\big(r(x, y_w) - r(x, y_l)\big)$ cancels $\beta \log Z(x)$:
-  $$\mathcal{L}_{\textrm{DPO}}(\theta) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}}\Big[\log \sigma\Big(\beta \log \frac{\pi_\theta(y_w \mid x)}{\pi_{\textrm{ref}}(y_w \mid x)} - \beta \log \frac{\pi_\theta(y_l \mid x)}{\pi_{\textrm{ref}}(y_l \mid x)}\Big)\Big]$$
-- **Purely Offline Classification:** DPO trains the policy directly on a fixed preference log via binary cross-entropy—inheriting both the simplicity of supervised learning and the offline coverage pitfalls of §15.7.
+- **Partition cancellation (Rafailov et al., 2023):** Substituting $r(x, y)$ into the Bradley–Terry difference $r(x, y_w) - r(x, y_l)$ cancels $\beta \log Z(x)$ completely.
+- **Offline binary cross-entropy:** Trains $\pi_\theta$ directly on logged preference pairs $(y_w \succ y_l)$ without a separate reward model or online rollouts.
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-dpo-inversion
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Token Credit, Clipping, and Tools"}

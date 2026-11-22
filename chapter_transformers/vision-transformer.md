@@ -536,35 +536,29 @@ Transformers for Vision (ViT)<br>**patches as tokens · strided conv stem · `<c
 ::: {.slide title="Why Pixel-Level Self-Attention Explodes Quadratically"}
 [Motivation]{.kicker}
 
-A standard Transformer encoder (§11.4) makes no assumption that its input tokens are words—yet applying self-attention directly to individual image pixels hits an immediate $O(N^2)$ wall:
+::: {.cols .vc}
+::: {.col}
+- **Pixel tokens ($96 \times 96$):** $m = 9{,}216$ tokens $\to$ $m^2 = 84.9\text{M}$ attention pairs per head and layer ($2.52\text{B}$ pairs on $224 \times 224$ ImageNet!).
+- **$16 \times 16$ Patch tokens (`ViT`):** Partitioning an image into non-overlapping $p \times p$ patches reduces sequence length by $p^2$ ($256\times$) and attention scores by $p^4$ (**$65{,}536\times$ fewer pairs**).
+:::
 
-| Image Representation | Sequence Length $m$ | Attention Scores $m^2$ per Head & Layer |
-| :--- | :---: | :---: |
-| **$96 \times 96$ image, 1 token per pixel** | $9{,}216$ | $8.49 \times 10^7$ ($85\text{ million}$) |
-| **$224 \times 224$ image, 1 token per pixel** | $50{,}176$ | $2.52 \times 10^9$ ($2.5\text{ billion}$) |
-| **$96 \times 96$ image, $16 \times 16$ patches (`ViT`)** | **$36$** | **$1{,}296$ ($65{,}536\times$ fewer!)** |
-
-::: {.d2l-note}
-Dosovitskiy et al. (2021) showed that partitioning an image into non-overlapping $p \times p$ **patches** reduces the sequence length by $p^2$ ($256\times$ at $p = 16$) andattention pairs by $p^4$ ($65{,}536\times$), letting an unmodified Transformer encoder classify images directly.
+::: {.col .fig .big}
+@fig:ch11-tf-vit-pixel-vs-patch
+:::
 :::
 :::
 
 ::: {.slide title="Inductive Bias: CNN Locality vs. Global Patch Mixing"}
 [Architectural Trade-Off]{.kicker}
 
-Convolutional neural networks and Vision Transformers sit at opposite ends of the **inductive bias vs. generality** spectrum:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Convolutional networks (CNNs):**
-  - **2D spatial locality:** A $k \times k$ kernel couples only adjacent pixels; distant corners interact only after many layers.
-  - **Translation equivariance:** Shifting the image shifts internal feature maps by the same 2D offset, sharing weights across all $(r, c)$ locations.
+- **Convolutional networks (CNNs):** Bake in 2D spatial locality ($k \times k$ sliding filters) and translation equivariance; receptive field grows gradually across depth.
+- **Vision Transformers (ViTs):** Global all-pairs receptive field from layer 1 ($m \times m$ attention), but zero built-in 2D grid prior without positional embeddings.
 :::
 
-::: {.col}
-- **Vision Transformers (ViTs):**
-  - **Global receptive field from layer 1:** Every patch token attends to all $m$ patches in block 1 regardless of 2D distance.
-  - **No built-in 2D grid prior:** Without positional embeddings, a ViT treats the $m$ patches as an unordered bag of tiles and must learn spatial geometry from data.
+::: {.col .fig .big}
+@fig:ch11-tf-vit-cnn-vs-vit-bias
 :::
 :::
 :::
@@ -588,11 +582,16 @@ Convolutional neural networks and Vision Transformers sit at opposite ends of th
 ::: {.slide title="Patchifying and Projecting in One Strided Convolution"}
 [The Patch Embedding Stem]{.kicker}
 
-Given an image of height $H$, width $W$, and $C$ channels, cutting it into $m = (H/p)(W/p)$ non-overlapping $p \times p$ patches and multiplying each flattened patch $\mathbf{x}_k \in \mathbb{R}^{C p^2}$ by $\mathbf{W}_E \in \mathbb{R}^{C p^2 \times d}$ is mathematically identical to a **2D convolution with kernel size $p \times p$ and stride $p$**:
+::: {.cols .vc}
+::: {.col}
+- Cutting an $(H, W, C)$ image into $m = (H/p)(W/p)$ non-overlapping $p \times p$ patches and multiplying each by $\mathbf{W}_E \in \mathbb{R}^{C p^2 \times d}$ is identical to a **2D convolution with `kernel_size=p, stride=p`**.
+- Reshaping the $(B, d, H/p, W/p)$ conv output to $(B, m, d)$ produces the token sequence in one fused GPU kernel.
+:::
 
-- **Non-overlapping tiling (`kernel_size=p, stride=p`):** The convolutional window steps by $p$ pixels horizontally and vertically, visiting each $p \times p$ patch exactly once.
-- **Channel projection ($C \to d$):** Each of the $d$ conv filters of shape $(C, p, p)$ computes one column of $\mathbf{x}_k \mathbf{W}_E$.
-- **Spatial flattening:** Reshaping the $(B, d, H/p, W/p)$ conv output to $(B, m, d)$ produces the token sequence in one fused GPU kernel.
+::: {.col .fig .big}
+@fig:ch11-tf-vit-strided-conv-stem
+:::
+:::
 :::
 
 ::: {.slide title="Implementing and Verifying PatchEmbedding"}
@@ -662,23 +661,32 @@ Global average pooling across the $m$ patch outputs (`X[:, 1:].mean(axis=1)`) wo
 ::: {.slide title="Encoding 2D Spatial Position in a 1D Sequence"}
 [Positional Encodings for Grids]{.kicker}
 
-Without `pos_embedding`, permuting the $m = 36$ patches leaves the `<cls>` output bit-for-bit identical! How can we encode the $(r, c)$ grid coordinates of each patch?
+::: {.cols .vc}
+::: {.col}
+- **Learned 1D Table (Original ViT):** Free vector $\mathbf{p}_k \in \mathbb{R}^d$ for each raster index $k \in \{0, \dots, m\}$; must discover 2D grid topology from data.
+- **2D Sinusoidal Code:** Concatenates $d/2$-dim row code $\mathbf{s}_r$ and $d/2$-dim column code $\mathbf{s}_c$.
+- **2D Axial RoPE:** Rotates half of query/key channels by row $r$ and half by column $c$ (used in DINOv2 / SigLIP 2).
+:::
 
-| Positional Scheme | Mechanism | Grid Prior & Resolution Flexibility |
-| :--- | :--- | :--- |
-| **Learned 1D Table** (Original ViT) | Free vector $\mathbf{p}_k \in \mathbb{R}^d$ for each raster index $k \in \{0, \dots, m\}$ | Zero built-in 2D structure; must discover row/col neighbors from data |
-| **2D Sinusoidal Code** | Concatenates $d/2$-dim row code $\mathbf{s}_r$ and $d/2$-dim column code $\mathbf{s}_c$ | Hard-codes 2D grid topology at initialization; zero parameters |
-| **2D Axial RoPE** | Rotates half of query/key channels by row $r$ and half by column $c$ | Relative 2D translation invariance; scales across image resolutions |
+::: {.col .fig .big}
+@fig:ch11-tf-vit-2d-pos-schemes
+:::
+:::
 :::
 
 ::: {.slide title="Optimizer Sensitivity: Why ViTs Demand AdamW"}
 [Optimization Recipe]{.kicker}
 
-Unlike ResNets (which train reliably with SGD + momentum), Vision Transformers suffer a severe accuracy drop under SGD (losing $>7$ percentage points on ImageNet in the DeiT study, Touvron et al. 2021):
+::: {.cols .vc}
+::: {.col}
+- Unlike ResNets (which train reliably under SGD + momentum), ViTs lose $>7$ percentage points under SGD because attention projections ($\mathbf{W}_q, \mathbf{W}_k$) and MLPs have vastly different gradient scales.
+- **The ViT recipe:** AdamW ($\eta_{\max} = 3 \times 10^{-4}$), selective weight decay ($\lambda = 0.05$ on 2D/4D weights only), and 1-epoch linear warmup + cosine decay.
+:::
 
-- **Adaptive per-coordinate scaling:** Attention projections ($\mathbf{W}_q, \mathbf{W}_k$) and patch embeddings exhibit vastly different gradient magnitudes from MLP layers; **AdamW** normalizes update scales per parameter.
-- **Selective weight decay ($\lambda = 0.05$):** Decays 2D linear matrices and 4D conv kernels while exempting 1D `LayerNorm` scales, biases, `cls_token`, and `pos_embedding`.
-- **Linear warmup + cosine decay:** Warms up over the first $10\%$ of steps (1 epoch) to peak learning rate $3 \times 10^{-4}$ before annealing along a half-cosine to $0$.
+::: {.col .fig .big}
+@fig:ch11-tf-vit-adamw-recipe
+:::
+:::
 :::
 
 ::: {.slide title="Training Our 6.5M-Parameter ViT on Fashion-MNIST"}
@@ -726,14 +734,16 @@ We test how strongly the trained `ViT` depends on 2D spatial layout by permuting
 ::: {.slide title="A Controlled Comparison: ViT vs. Matched ResNet"}
 [Experimental Design]{.kicker}
 
-To test the value of convolutional inductive bias fairly, we build `CompactResNet`—a 7-block residual CNN matched to our `ViT` across all four experimental axes:
+::: {.cols .vc}
+::: {.col}
+- To isolate convolutional inductive bias fairly, `CompactResNet` (7 residual blocks) matches `ViT` ($L = 2, d = 512, p = 16$) across all four experimental axes:
+- **Identical budget:** $6.46\text{M}$ vs. $6.45\text{M}$ parameters, $0.48$ vs. $0.55\text{ GFLOPs/image}$, 10 epochs on $96 \times 96$ Fashion-MNIST, and AdamW ($\lambda = 0.05$) with warmup + cosine decay.
+:::
 
-| Experimental Axis | `ViT` ($L = 2, d = 512, p = 16$) | `CompactResNet` (Stem + 7 Residual Blocks) |
-| :--- | :---: | :---: |
-| **Total Trainable Parameters** | **$6.46\text{M}$** | **$6.45\text{M}$** |
-| **Forward Compute per Image** | **$0.48\text{ GFLOPs}$** | **$0.55\text{ GFLOPs}$** |
-| **Dataset & Training Budget** | $96 \times 96$ Fashion-MNIST, 10 epochs | $96 \times 96$ Fashion-MNIST, 10 epochs |
-| **Optimizer & LR Schedule** | AdamW ($\lambda = 0.05$), warmup + cosine ($3 \times 10^{-4}$) | AdamW ($\lambda = 0.05$), warmup + cosine ($10^{-3}$) |
+::: {.col .fig .big}
+@fig:ch11-tf-vit-matched-budget
+:::
+:::
 :::
 
 ::: {.slide title="In the Small-Data Regime, the CNN Leads by 5 Points"}
@@ -754,14 +764,15 @@ To test the value of convolutional inductive bias fairly, we build `CompactResNe
 ::: {.slide title="When Does ViT Overtake CNNs? Scale and Pretraining"}
 [Scaling Laws for Vision]{.kicker}
 
-Why did Vision Transformers replace CNNs as the dominant backbone for foundation vision and multimodal models despite trailing on small unaugmented runs?
+::: {.cols .vc}
+::: {.col}
+- **Dataset scale crossover (Dosovitskiy et al. 2021):** ResNets lead below $10\text{M}$ images, but ViTs overtake ResNets at $30\text{M}\text{--}300\text{M}$ images where global attention outgrows fixed local filters.
+- **Unified multimodal interface:** Because ViT turns images into standard token vectors, feeding visual patches into an LLM or Perceiver resampler requires **zero architectural change**.
+:::
 
-- **Longer training & data augmentation (DeiT / Hassani et al. 2021):** Training compact ViTs for $300$ epochs with heavy augmentation and finer patches ($p = 8$ or $p = 4$) closes the gap on Fashion-MNIST ($94.5\%\text{--}95.0\%$ vs. ResNet-18's $94.8\%$).
-- **Dataset scale crossover (Dosovitskiy et al. 2021):** On JFT-300M subsets, ResNets lead below $10\text{M}$ images, but ViTs overtake ResNets at $30\text{M}\text{--}300\text{M}$ images where flexible global attention outgrows hard-coded local filters.
-- **Unified multimodal token interface:** Because ViT turns images into standard token vectors, feeding visual patches into an LLM or Perceiver resampler (§11.4) requires **zero architectural change**.
-
-::: {.d2l-note .rule}
-**Practical rule:** When training from scratch on a small dataset, use a CNN (or hybrid conv stem); in practice, almost always **fine-tune a pretrained ViT** (CLIP, SigLIP, DINOv2).
+::: {.col .fig .big}
+@fig:ch11-tf-vit-scale-crossover
+:::
 :::
 :::
 
@@ -786,11 +797,15 @@ Work through these three quantitative questions:
 ::: {.slide title="Summary: Vision Transformers vs. Convolutional Networks"}
 [Key Takeaways]{.kicker}
 
-| Aspect | Vision Transformer (`ViT`) | Convolutional Network (`ResNet`) |
-| :--- | :--- | :--- |
-| **Input Tokenization** | Stride-$p$ conv stem: $(C, H, W) \to m = \frac{HW}{p^2}$ tokens | Sliding $k \times k$ conv pyramid over dense pixel grids |
-| **Spatial Inductive Bias** | None built-in; learned via 1D/2D positional embeddings | Hard-coded 2D locality and translation equivariance |
-| **Receptive Field** | Global ($m \times m$ all-pairs attention from layer 1) | Local at early layers; grows linearly/exponentially with depth |
-| **Parameter vs. Patch Scaling** | Block params $12 L d^2$ independent of $m$; FLOPs scale as $O(m d^2 + m^2 d)$ | Params scale with kernel size $k^2 C_{\text{in}} C_{\text{out}}$; FLOPs scale with $HW$ |
-| **Small-Data vs. Large-Data** | Trails matched CNN by $\sim 5\%$ from scratch on Fashion-MNIST | Wins on small unaugmented data; overtaken by pretrained ViTs at scale |
+::: {.cols .vc}
+::: {.col}
+- **Stride-$p$ Patch Stem:** Maps $(C, H, W) \to m = HW / p^2$ tokens in one conv layer while keeping block parameters ($12 L d^2$) independent of $m$.
+- **Spatial Inductive Bias:** Without positional embeddings, ViT is permutation-invariant over patches; shuffling patches at test time drops accuracy from $89\% \to 39\%$.
+- **Small Data vs. Scale:** Matched ResNet leads by $5\%$ from scratch on small data, whereas pretrained ViTs dominate at foundation scale.
+:::
+
+::: {.col .fig .big}
+@fig:ch11-tf-vit-summary
+:::
+:::
 :::

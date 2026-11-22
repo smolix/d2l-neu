@@ -1261,42 +1261,68 @@ Custom Layers and Functions<br>**stateless modules · RMSNorm · fixed-buffer Ra
 ::: {.slide title="Why Every Practitioner Must Extend the Library"}
 [Beyond Built-In Primitives]{.kicker}
 
-Research architectures and systems optimizations routinely require operations that standard libraries either do not yet include or cannot differentiate out of the box:
+::: {.cols .vc}
+::: {.col}
+- **Lag between research and libraries:** *RMSNorm* was published in 2019 and used across Llama and Gopher, yet did not enter `torch.nn` until 2024.
+- **First-class composability:** Custom layers must expose learnable weights to optimizers, serialize buffers into checkpoints, and move across devices automatically.
+- **Non-differentiable forward ops:** 4-bit weight quantization $\text{round}(w)$ has zero derivative almost everywhere, requiring a custom surrogate backward pass.
+:::
 
-- **Lag between research and standard libraries:** *RMSNorm* was published in 2019 and used across Llama and Gopher, yet did not enter `torch.nn` until 2024; every codebase wrote its own module.
-- **First-class composability requirement:** Any custom layer must automatically expose its learnable weights to optimizers, serialize its buffers into checkpoints, and move cleanly across devices.
-- **Non-differentiable forward operations:** Quantizing an 8B model's weights to 4-bit integers shrinks memory from `16 GB` (`bf16`) to `4 GB`, but $\text{round}(w)$ has zero derivative almost everywhere, halting gradient descent unless we supply a custom backward pass.
+::: {.col .fig .big}
+@fig:ch05-bg-custom-layer-needs
+:::
+:::
 :::
 
 ::: {.slide title="Stateless Custom Layers: Subclassing the Base Module"}
 [Layers Without Parameters]{.kicker}
 
-A layer that holds no persistent state—such as `CenteredLayer`, which subtracts the mean from its input—only needs to subclass the base module and define its forward pass:
+::: {.cols .vc}
+::: {.col}
+- A layer with no persistent state (`CenteredLayer`) only needs to subclass the base module and define its forward pass:
 
 @custom-layers-layers-without-parameters-1
 
 @custom-layers-layers-without-parameters-2
 :::
 
+::: {.col .fig}
+@fig:ch05-bg-stateless-centered
+:::
+:::
+:::
+
 ::: {.slide title="Stateless Layers Compose Inside Sequential Containers"}
 [Container Integration]{.kicker}
 
-Because `CenteredLayer` inherits the module interface (`__call__`, hooks, tree traversal), it slots directly into sequential pipelines alongside parameterized layers:
+::: {.cols .vc}
+::: {.col}
+- Because `CenteredLayer` inherits the module interface, it slots directly into sequential pipelines (`output.mean() ≈ 10⁻⁸`):
 
 @custom-layers-layers-without-parameters-3
+:::
 
-- **Floating-point residual:** The output mean vanishes up to $\sim 10^{-8}$ (`float32` machine epsilon $\approx 1.2 \times 10^{-7}$).
+::: {.col .fig}
+@fig:ch05-bg-stateless-centered
+:::
+:::
 :::
 
 ::: {.slide title="RMSNorm: Root-Mean-Square Layer Normalization"}
 [Parameterized Custom Layers]{.kicker}
 
-To prevent activation magnitudes from drifting across deep stacks, **RMSNorm** divides each activation vector $\mathbf{x} \in \mathbb{R}^d$ by its root mean square and scales elementwise by a learned gain parameter $\mathbf{g} \in \mathbb{R}^d$:
-
+::: {.cols .vc}
+::: {.col}
 $$\text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^{d} x_i^2 + \epsilon}} \odot \mathbf{g}$$
 
-- **Scale invariance:** For $\mathbf{x} = (3, 4)$, the mean square is $(9+16)/2 = 12.5$ and $\text{RMS}(\mathbf{x}) = \sqrt{12.5} \approx 3.536$, mapping both $(3, 4)$ and $(300, 400)$ to $(0.849, 1.131)$ when $\mathbf{g} = \mathbf{1}$.
-- **Streamlined LayerNorm:** Unlike LayerNorm, RMSNorm omits mean-centering and bias shifting, saving compute across all 65 normalization sites in Llama 3 8B.
+- **Scale invariance:** Maps both $(3, 4)$ and $(300, 400)$ to $(0.849, 1.131)$ when $\mathbf{g} = \mathbf{1}$.
+- **Streamlined LayerNorm:** Omits mean-centering and bias shifting across all 65 normalization sites in Llama 3 8B.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-rmsnorm-formula
+:::
+:::
 :::
 
 ::: {.slide title="Geometric View of RMSNorm in Two Dimensions"}
@@ -1310,55 +1336,85 @@ $$\text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^{d
 ::: {.slide title="Implementing RMSNorm by Registering the Gain Parameter"}
 [RMSNorm in Code]{.kicker}
 
-Registering `self.gain` as a trainable parameter (`nn.Parameter`, `gluon.Parameter`, `add_weight`, or `nnx.Param`) initialized to ones is all it takes:
+::: {.cols .vc}
+::: {.col}
+- Registering `self.gain` as a trainable parameter (`nn.Parameter`, `gluon.Parameter`, `add_weight`, or `nnx.Param`) initialized to ones is all it takes:
 
 @custom-layers-layers-with-parameters-rmsnorm-1
 
 @custom-layers-layers-with-parameters-rmsnorm-2
 :::
 
+::: {.col .fig}
+@fig:ch05-bg-rmsnorm-composable
+:::
+:::
+:::
+
 ::: {.slide title="Registration Guarantees End-to-End Composability"}
 [Verifying Optimization & Serialization]{.kicker}
 
-Because `self.gain` is registered in the module tree, placing `RMSNorm` inside a sequential container automatically wires it into the optimizer and state dictionary:
+::: {.cols .vc}
+::: {.col}
+- One SGD step updates `gain` away from ones, and loading the saved state into a fresh clone reproduces the trained outputs bit for bit:
 
 @custom-layers-the-composability-guarantee-3
+:::
 
-- **Zero boilerplate:** One SGD step updates `gain` away from ones, and loading the saved state into a fresh clone reproduces the trained outputs bit for bit.
+::: {.col .fig}
+@fig:ch05-bg-rmsnorm-composable
+:::
+:::
 :::
 
 ::: {.slide title="Verifying a Custom Layer Against a Native Implementation" except="mxnet"}
 [Numerical Sanity Check]{.kicker}
 
-Whenever a framework later adds a native version (`nn.RMSNorm`, `tf.keras.layers.RMSNormalization`, `nnx.RMSNorm`), test your custom layer against it using non-trivial weights (`linspace(0.5, 1.5, 8)`):
+::: {.cols .vc}
+::: {.col}
+- Test custom layers against native versions (`nn.RMSNorm`, `RMSNormalization`, `nnx.RMSNorm`) using non-trivial weights (`linspace(0.5, 1.5, 8)`):
 
 @custom-layers-checking-against-the-built-in
+:::
 
-::: {.d2l-note}
-**Production Rule:** Prefer native library layers when available so you benefit from fused CUDA/XLA kernels, and reserve custom modules for novel operations.
+::: {.col .fig}
+@fig:ch05-bg-custom-layer-checks
+:::
 :::
 :::
 
 ::: {.slide title="Testing Custom Layers When No Native Equivalent Exists" only="mxnet"}
 [Numerical Sanity Check]{.kicker}
 
-Because Gluon provides `nn.LayerNorm` but no built-in `RMSNorm`, our custom `RMSNorm` class serves as the production implementation:
-
+::: {.cols .vc}
+::: {.col}
 - **Three verification checks for any novel layer:**
-  1. **Analytical hand-check:** Verify scale invariance on known inputs like $(3, 4)$ and $(300, 400) \mapsto (0.849, 1.131)$.
-  2. **Gradient flow:** Confirm that a single optimizer step updates every registered parameter away from its initialization.
-  3. **Serialization round-trip:** Save and reload the parent network's parameters into a fresh clone and verify exact output equality.
+  1. **Analytical hand-check:** Verify scale invariance on $(3, 4)$ and $(300, 400) \mapsto (0.849, 1.131)$ with non-unit gain.
+  2. **Gradient flow:** Confirm that 1 optimizer step updates every registered parameter away from initialization.
+  3. **Serialization round-trip:** Save and reload into a fresh clone and verify exact output equality.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-custom-layer-checks
+:::
+:::
 :::
 
 ::: {.slide title="Layers With Fixed State: Random Fourier Features"}
 [Non-Trainable Buffers in Custom Layers]{.kicker}
 
-A **random features** layer (Rahimi & Recht, 2007) projects inputs $\mathbf{X} \in \mathbb{R}^{n \times d}$ through a fixed standard-normal matrix $\mathbf{W} \in \mathbb{R}^{d \times D}$ and uniform phase shift $\mathbf{b} \in [0, 2\pi]^D$:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{Z} = \sqrt{\frac{2}{D}}\, \cos(\mathbf{X}\mathbf{W} + \mathbf{b})$$
 
-- **Kernel approximation:** As $D$ grows, inner products $\mathbf{z}(\mathbf{x})^\top \mathbf{z}(\mathbf{x}')$ converge to the Gaussian RBF kernel $\exp(-\|\mathbf{x} - \mathbf{x}'\|_2^2 / 2)$, letting a simple linear head learn rich nonlinear functions.
-- **Why $\mathbf{W}$ and $\mathbf{b}$ must be buffers:** The optimizer must never update them, yet checkpoints **must** save them so the trained linear head receives the exact same feature basis at inference time.
+- **Kernel approximation (Rahimi & Recht, 2007):** Fixed $\mathbf{W} \sim \mathcal{N}(0, 1)$ and $\mathbf{b} \sim \mathcal{U}(0, 2\pi)$ approximate the Gaussian RBF kernel so a linear head can fit nonlinear targets.
+- **Why $\mathbf{W}, \mathbf{b}$ must be buffers:** The optimizer must never alter them, yet checkpoints must save them.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-random-fourier-features
+:::
+:::
 :::
 
 ::: {.slide title="Implementing RandomFeatures With Registered Buffers"}
@@ -1380,21 +1436,33 @@ Stacking a single trainable linear layer (`500 -> 1`) on top of `RandomFeatures(
 ::: {.slide title="Pitfall: Saving Only the Linear Head Destroys the Fit"}
 [Why Buffers Must Be Checkpointed]{.kicker}
 
-If we reload only the trained linear weights into a fresh model whose `RandomFeatures` layer drew a different random $\mathbf{W}$ and $\mathbf{b}$, the MSE explodes by $>100\times$:
+::: {.cols .vc}
+::: {.col}
+- Reloading only the linear head into a fresh `RandomFeatures` layer (with different random $\mathbf{W}', \mathbf{b}'$) blows up MSE by $>100\times$, whereas loading the full state dict restores $0.002$ MSE:
 
 @custom-layers-precomputed-state-buffers-2
+:::
 
-- **Full-state restoration:** Loading the complete state dictionary (parameters + buffers) restores both the random feature basis and the linear head, recovering the $0.002$ MSE fit identically.
+::: {.col .fig}
+@fig:ch05-bg-missing-buffer-disaster
+:::
+:::
 :::
 
 ::: {.slide title="When True Derivatives Fail: Quantization and Rounding"}
 [The Zero-Gradient Obstacle]{.kicker}
 
-Quantization-aware training rounds continuous weights $\mathbf{w}$ to integers during the forward pass. Because $\text{round}(w)$ is a step function, its true derivative is zero everywhere except at half-integers:
+::: {.cols .vc}
+::: {.col}
+- Because $\text{round}(w)$ is a step function, its true derivative is zero everywhere except at half-integers, freezing weights behind rounding:
 
 @custom-layers-custom-gradients-1
+:::
 
-- **Exact calculus, broken optimization:** Automatic differentiation faithfully returns $\nabla_{\mathbf{w}} L = \mathbf{0}$, freezing every weight behind a rounding operation.
+::: {.col .fig}
+@fig:ch05-bg-quantization-zero-grad
+:::
+:::
 :::
 
 ::: {.slide title="The Straight-Through Estimator (STE)"}
@@ -1438,9 +1506,17 @@ Fitting an 8-weight linear model whose weights are rounded to integers on every 
 ::: {.slide title="The Stop-Gradient Shortcut for Identity Surrogates"}
 [One-Line STE Implementation]{.kicker}
 
-We can verify that `X + stop_gradient(round(X) - X)` matches our custom `RoundSTE` function in both forward outputs and backward gradients:
+::: {.cols .vc}
+::: {.col}
+- We verify that `X + stop_gradient(round(X) - X)` matches our custom `RoundSTE` function in both forward outputs and backward gradients:
 
 @custom-layers-custom-gradients-4
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-stop-gradient-trick
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Custom Layers & Surrogate Gradients"}
@@ -1464,11 +1540,15 @@ Answer these three design questions:
 ::: {.slide title="Summary: Custom Layers and Functions"}
 [Key Takeaways]{.kicker}
 
-| Extension Type | Framework Mechanism | Example & Key Invariant |
-|:---|:---|:---|
-| **Stateless layer** | Subclass base module, implement `forward` / `call` | `CenteredLayer`: $X - \bar{X}$; inherits container and hook support |
-| **Parameterized layer** | Register learnable tensors via `Parameter` / `add_weight` | `RMSNorm`: $\frac{\mathbf{x}}{\text{RMS}(\mathbf{x})} \odot \mathbf{g}$; scale-invariant ($c\mathbf{x} \mapsto \text{same output}$) |
-| **Fixed-state layer** | Register non-trainable tensors as buffers (`register_buffer`) | `RandomFeatures`: $\sqrt{2/D}\cos(\mathbf{X}\mathbf{W}+\mathbf{b})$; saved & moved, never trained |
-| **Custom backward** | `autograd.Function`, `@tf.custom_gradient`, `@jax.custom_vjp` | Straight-Through Estimator: rounds forward, passes $\nabla_{\mathbf{y}} L$ backward |
-| **Stop-gradient STE** | `X + stop_gradient(f(X) - X)` (`detach()` in PyTorch) | Implements any identity-surrogate backward rule in a single expression |
+::: {.cols .vc}
+::: {.col}
+- **Stateless & parameterized layers:** Subclass `Module` (`CenteredLayer`) and register learnable weights as `Parameter` (`RMSNorm`).
+- **Fixed-state buffers:** Register non-trainable tensors via `register_buffer` (`RandomFeatures`) so they save in checkpoints and move to GPUs.
+- **Surrogate gradients:** Implement custom VJPs (`RoundSTE`) or the one-liner `X + stop_gradient(f(X) - X)` to train through discrete operations.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-custom-layers-summary
+:::
+:::
 :::

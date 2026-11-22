@@ -101,64 +101,64 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 ::: {.slide title="Why Deep Learning Needs Statistical Foundations"}
 [Motivation]{.kicker}
 
-Every decision in deep learning—training with cross-entropy or squared error, reporting an accuracy on $1{,}000$ test examples, or picking the best model from 20 runs—is an inference from a finite random sample.
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The Running Coin ($9$ Heads in $13$ Flips):** The natural bias estimate is $\hat{\theta} = 9/13 \approx 0.692$, yet a fair coin ($\theta = 0.5$) produces $\ge 9$ heads $1093/8192 \approx 13.3\%$ of the time. A test accuracy is the exact same coin flipped once per test example.
-- **Forward vs. Backward Reasoning:** *Probability* (§36.1–36.4) maps a known distribution to outcome frequencies; *statistics* (§36.5–36.8) maps observed finite data back to parameter estimates, error bars, and posteriors.
+- **The Running Coin ($9$ Heads in $13$ Flips):** $\hat{\theta} = 9/13 \approx 0.692$, yet a fair coin ($\theta = 0.5$) yields $\ge 9$ heads $13.3\%$ of the time—just like test accuracy on a finite holdout set.
+- **Forward vs. Backward Reasoning:** *Probability* (§36.1–36.4) maps a known model to outcome frequencies; *statistics* (§36.5–36.8) maps finite data back to estimates, error bars, and posteriors.
+- **Post-Selection Guarantees (§36.9–36.10):** Picking the best model across validation runs is multiple testing in disguise and requires uniform convergence bounds.
 :::
 
-::: {.col}
-- **Sampling Spread vs. Posterior Spread:** The scatter of an estimator $\hat{\theta}_n$ across hypothetical datasets we *did not draw* (frequentist confidence interval) is distinct from the spread of a posterior $p(\theta \mid \mathcal{D})$ conditioned on the data *in hand* (Bayesian credible interval).
-- **Post-Selection Guarantees (§36.9–36.10):** Choosing a model *after* inspecting validation scores is multiple testing in disguise and requires uniform convergence bounds.
+::: {.col .fig .big}
+@fig:ch35-prob-coin-thread
 :::
-:::
-
-::: {.d2l-note}
-A single mathematical thread connects continuous densities, the exponential family, maximum likelihood losses, variational bounds, and finite-sample generalization guarantees.
 :::
 :::
 
 ::: {.slide title="Four Pillars of Probabilistic Learning"}
 [Chapter Architecture]{.kicker}
 
-Chapter 36 progresses from the calculus of continuous distributions to estimation, latent-variable inference, and distribution-free generalization bounds:
+::: {.cols .vc}
+::: {.col}
+- **1. Distributions & Unified Form (§36.1–36.4):** Densities, Jacobians, named distributions, and the exponential family $h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x}) - A(\boldsymbol{\eta})}$.
+- **2. Estimation, Tests & Likelihood (§36.5–36.6):** Bias–variance trade-off, $p$-values, confidence intervals, MLE as KL projection, and Fisher information.
+- **3. Latent Models & Posteriors (§36.7–36.8):** Marginal likelihood $\log p(\mathbf{x})$, Jensen's inequality, ELBO, EM, Laplace approximation, VI, and MCMC.
+- **4. Concentration & Generalization (§36.9–36.11):** Chernoff/Hoeffding bounds, high-$d$ shell geometry, Rademacher complexity, and Naive Bayes.
+:::
 
-| Pillar | Sections | Central Mathematical Objects | Deep Learning Payoff |
-| :--- | :--- | :--- | :--- |
-| **1. Distributions & Unified Form** | **§36.1–36.4** | PDFs, CDFs, Jacobians, named distributions, exponential family $h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x}) - A(\boldsymbol{\eta})}$ | Inverse-transform & Cholesky sampling, normalizing flows, GLM gradient $\mathbf{x}(\boldsymbol{\mu} - T(y))^\top$ |
-| **2. Estimation, Tests & Likelihood** | **§36.5–36.6** | Bias–variance decomposition, $p$-values, power, confidence intervals, MLE, Fisher information | Test-set sizing, paired model evaluation, bootstrap SEs, cross-entropy & weight decay |
-| **3. Latent Models & Posteriors** | **§36.7–36.8** | Marginal likelihood $\log p(\mathbf{x})$, Jensen's inequality, ELBO, EM, Laplace, VI, MCMC | Gaussian mixtures, variational autoencoders (VAEs), posterior predictive uncertainty |
-| **4. Concentration & Generalization** | **§36.9–36.11** | Chernoff & Hoeffding bounds, high-$d$ geometry, union bound, Rademacher complexity | Finite-sample risk bounds after model selection, end-to-end Naive Bayes image classifier |
+::: {.col .fig .big}
+@fig:ch35-prob-four-pillars
+:::
+:::
 :::
 
 ::: {.slide title="Roadmap: Distributions to Posteriors (§36.1–36.8)"}
 [Section Guide (Part I)]{.kicker}
 
-| Section | Core Theorems & Derivations | Concrete Running Benchmark |
-| :--- | :--- | :--- |
-| **§36.1 Random Variables** | $F'(x) = p(x)$, $X = F^{-1}(U)$, Markov & Chebyshev bounds | Dart distance $R$ on unit disk ($p(r)=2r$); Cauchy vs. Gaussian averages |
-| **§36.2 Joint Distributions** | Marginals, conditioning, Eve's law, Jacobian $\|\det J_g\|^{-1}$ | Dart coordinates $(X, Y)$ (dependent yet $\mathrm{Cov}=0$); log-normal density |
-| **§36.3 Distributions** | Poisson limit, exponential waits, CLT, MVN Schur conditioning | $9/13$ coin flips; server at $4\text{ req/min}$; bivariate $\boldsymbol{\Sigma}$ with rows $(2,1),(1,2)$ |
-| **§36.4 Exponential Family** | $\nabla A = \mathbb{E}[T]$, $\nabla^2 A = \mathrm{Cov}(T)$, maximum entropy, conjugacy | Loaded die ($\mathbb{E}=4.5$); Gumbel-max softmax; $\mathrm{Beta}(10, 5)$ coin posterior |
-| **§36.5 Statistics** | $\mathrm{MSE} = \mathrm{Bias}^2 + \mathrm{Var}$, uniform $p$-values, power, bootstrap | $912/1000$ vs. $921/1000$ paired test accuracy; shrunk mean $0.65\bar{x}$ |
-| **§36.6 Maximum Likelihood** | KL projection, score $\mathbb{E}[s]=0$, Fisher information, Cramér–Rao | Curvature $nI(\theta)$ of coin NLL; MAP as $L_2$/$L_1$ regularization; BIC |
-| **§36.7–36.8 EM, ELBO & Bayes** | EM monotonic ascent via ELBO; Laplace, variational inference, MCMC | 2-component GMM on Old Faithful; Bayesian logistic regression posteriors |
+::: {.cols .vc}
+::: {.col}
+- **§36.1–36.2 (Continuous Calculus):** $F'(x) = p(x)$, inverse-transform sampling $X = F^{-1}(U)$, Eve's law, and Jacobian volume stretch $|\det J_g|^{-1}$.
+- **§36.3–36.4 (Catalog & Exponential Family):** Binomial-to-Poisson and CLT limits, Schur Gaussian conditioning, cumulant derivatives $\nabla A = \mathbb{E}[T]$, and conjugate updates.
+- **§36.5–36.8 (Inference & Latent Variables):** $\mathrm{MSE} = \mathrm{Bias}^2 + \mathrm{Var}$, paired tests, bootstrap, Fisher curvature $nI(\theta)$, EM via ELBO, and MCMC/VI posteriors.
+:::
+
+::: {.col .fig .big}
+@fig:ch35-prob-roadmap-p1
+:::
+:::
 :::
 
 ::: {.slide title="Roadmap: Guarantees and Synthesis (§36.9–36.11)"}
 [Section Guide (Part II)]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **§36.9 Concentration Inequalities:** Upgrades Chebyshev's polynomial $1/(n\varepsilon^2)$ bound to exponential decay $\exp(-2n\varepsilon^2)$ via Markov's inequality on $e^{\lambda X}$ (Chernoff & Hoeffding bounds), and proves why high-dimensional Gaussian vectors concentrate on a thin spherical shell of radius $\sqrt{d}$.
-- **§36.10 Generalization Bounds:** Explains why selecting the best model $\hat{h}$ from a class $\mathcal{H}$ invalidates single-test guarantees, and bounds $\sup_{h \in \mathcal{H}} |R(h) - \hat{R}_n(h)|$ via union bounds and Rademacher complexity.
+- **§36.9 Concentration Inequalities:** Upgrades Chebyshev's $1/(n\varepsilon^2)$ bound to exponential decay $\exp(-2n\varepsilon^2)$ via Chernoff/Hoeffding and proves why high-$d$ Gaussians concentrate on a thin shell of radius $\sqrt{d}$.
+- **§36.10 Generalization Bounds:** Bounds worst-case generalization error $\sup_{h \in \mathcal{H}} |R(h) - \hat{R}_n(h)|$ across model search via union bounds, Rademacher complexity, and benign overfitting.
+- **§36.11 Naive Bayes Classifier:** Combines categorical/Bernoulli likelihoods and Laplace add-one smoothing into an end-to-end generative image classifier.
 :::
 
-::: {.col}
-- **§36.11 Naive Bayes Classifier:** Puts distributions, maximum likelihood, and Dirichlet/Beta conjugate smoothing ($\text{add-}1$ Laplace rule) to work together in a closed-form generative image classifier trained from pixel counts alone.
-- **One Coin Across Eleven Sections:** The $9$-heads-in-$13$-flips coin anchors binomial tail probabilities (§36.3), log-odds & Beta posteriors (§36.4), Wald vs. exact intervals (§36.5), Fisher information (§36.6), and Hoeffding bounds (§36.9).
+::: {.col .fig .big}
+@fig:ch35-prob-roadmap-p2
 :::
 :::
 :::

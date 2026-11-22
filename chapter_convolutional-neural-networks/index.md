@@ -120,14 +120,16 @@ Convolutional Neural Networks: Geometry-Aware Vision Layers<br>**locality · tra
 ::: {.slide title="Flattening Images Destroys Spatial Geometry"}
 [Motivation & Inductive Bias]{.kicker}
 
-Standard multilayer perceptrons flatten every 2D image grid into an unordered 1D vector, discarding which pixels sit next to one another:
+::: {.cols .vc}
+::: {.col}
+- **Permutation blindness:** Scrambling all 784 pixels of Fashion-MNIST with one fixed permutation leaves an MLP's accuracy unchanged ($\approx 87\%$).
+- **Parameter explosion at scale:** A 1-megapixel RGB dense layer needs $(3 \times 10^6)^2 = 9 \times 10^{12}$ weights (**36 TB** in `float32`).
+- **Geometric prior:** Enforcing **locality** and **translation equivariance** collapses trillions of weights into a shared kernel of a few hundred parameters.
+:::
 
-- **Permutation blindness:** Applying one fixed random permutation to all 784 pixels of Fashion-MNIST leaves an MLP's accuracy unchanged ($\approx 87\%$), even though the scrambled images look like pure static to human eyes.
-- **Parameter explosion at scale:** Mapping a 1-megapixel ($1000 \times 1000$) RGB image to a full-resolution 3-channel hidden representation requires $(3 \times 10^6)^2 = 9 \times 10^{12}$ weights (**36 TB** in `float32`; 3.6 TB even for a 1000-pixel grayscale map).
-- **Biological and geometric clue:** Visual features (edges, corners, textures) are formed by *neighboring* pixels and carry the same meaning regardless of where they appear in the frame.
-
-::: {.d2l-note}
-Building **locality** and **translation equivariance** directly into the linear layer collapses trillions of free weights down to a small shared kernel of a few hundred parameters.
+::: {.col .fig .big}
+@fig:ch06-cnn-flatten-vs-grid
+:::
 :::
 :::
 
@@ -145,42 +147,47 @@ Hubel and Wiesel discovered that early visual cortex neurons respond to oriented
 ::: {.slide title="Mathematical and Architectural Roadmap of Chapter 6"}
 [Chapter Architecture]{.kicker}
 
-Each section introduces one structural mechanism that transforms a dense layer into a complete convolutional classifier:
+::: {.cols .vc}
+::: {.col}
+- **§§6.1–6.2 (Symmetry & Conv Layer):** Translation equivariance and locality yield 2D cross-correlation $\mathbf{Y} = \mathbf{X} \star \mathbf{K}$, executed via `im2col` GEMM.
+- **§§6.3–6.4 (Geometry & Channels):** Padding $p$, stride $s$, dilation $d$, 4D filter banks $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$, and $1 \times 1$ bottlenecks.
+- **§§6.5–6.6 (Pooling & LeNet):** Parameter-free pooling and end-to-end LeNet verification against our MLP.
+:::
 
-| Section | Core Mechanism | Mathematical Form / Invariant |
-|---|---|---|
-| **§6.1 Why Convolutions** | Translation equivariance & locality | $f(T_v \mathbf{X}) = T_v f(\mathbf{X}) \implies [\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ |
-| **§6.2 Conv Layers** | 2D cross-correlation & *im2col* | $[\mathbf{Y}]_{i,j} = \sum_{a,b} [\mathbf{K}]_{a,b}[\mathbf{X}]_{i+a,j+b}$, RF $r = 1 + \sum (k_l - 1)$ |
-| **§6.3 Padding & Stride** | Boundary control, downsampling, dilation | Output size $\lfloor (n + 2p - d(k-1) - 1)/s \rfloor + 1$ |
-| **§6.4 Channels** | Multi-channel tensors & $1 \times 1$ bottlenecks | $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$ params (independent of $H \times W$) |
-| **§6.5 Pooling** | Local shift tolerance & global invariance | Max/mean reduction over $k \times k$ windows (0 params) |
-| **§6.6 LeNet** | Full CNN encoder + dense head | $61{,}706$ params, $416{,}520$ MACs, pixel-shuffle test |
+::: {.col .fig .big}
+@fig:ch06-cnn-roadmap-pipeline
+:::
+:::
 :::
 
 ::: {.slide title="Concrete Benchmarks Across Chapter 6"}
 [Quantitative Anchors]{.kicker}
 
-Every section grounds its math and systems trade-offs in exact parameter, FLOP, and shape calculations:
+::: {.cols .vc}
+::: {.col}
+- **Resolution-independent weights:** A $3 \times 3$ RGB-to-64-channel stem uses $1{,}792$ parameters at any image resolution; $1 \times 1$ bottlenecks cut deep $3 \times 3$ cost by $8.5\times$.
+- **Geometric reach & shift tolerance:** Strides $(2,2,1)$ or dilations $(1,2,4)$ double 3-layer reach from $r=7$ to $r=15$; $2 \times 2$ pooling absorbs $50\%$ of 1-px shifts.
+- **LeNet resource split:** Convolutions hold $4.2\%$ of weights yet perform $85.9\%$ of MACs.
+:::
 
-| Section | Concrete Benchmark & Systems Takeaway |
-|---|---|
-| **§6.1 Why Convolutions** | A $3 \times 3$ layer mapping RGB ($c_\textrm{i}=3$) to $c_\textrm{o}=64$ channels uses $1{,}792$ parameters at any resolution |
-| **§6.2 Conv Layers** | Gradient descent recovers the vertical edge kernel $[1, -1]$ from input–output pairs in 9 steps |
-| **§6.3 Padding & Stride** | Three $3 \times 3$ layers with strides $(2,2,1)$ or dilations $(1,2,4)$ both achieve a 15-pixel receptive field |
-| **§6.4 Channels** | A $1 \times 1 \to 3 \times 3 \to 1 \times 1$ bottleneck ($256 \to 64 \to 256$) cuts weights $8.5\times$ ($589{,}824 \to 69{,}632$) |
-| **§6.5 Pooling** | $2 \times 2$ stride-2 pooling absorbs 50% of 1-pixel shifts; max-pooling pads borders with $-\infty$ |
-| **§6.6 LeNet** | Convolutions hold 4% of LeNet's weights but do 86% of its MACs; pixel shuffling erases its gain over MLP |
+::: {.col .fig .big}
+@fig:ch06-cnn-benchmarks-overview
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check & Chapter Study Strategy"}
 [Check & Synthesis]{.kicker}
 
-Before diving into §6.1, test the core scaling intuition separating dense layers from convolutions:
+::: {.cols .vc}
+::: {.col}
+- **1. Resolution scaling ($224^2 \to 448^2$):** How do parameter count, MACs, and activation RAM scale when height and width double?
+- **2. Inductive bias test:** Why does a CNN beat an MLP on natural images, yet lose that advantage under a fixed random pixel permutation?
+- **Answer:** Parameters stay **$1\times$** (fixed by $c_\textrm{o}, c_\textrm{i}, k$), while MACs and activations scale **$4\times$** with area $H \times W$. Shuffling destroys 2D locality.
+:::
 
-1. **Resolution scaling:** If you double an input image's height and width from $224 \times 224$ to $448 \times 448$, how do the parameter count and the multiply-add (MAC) count of a $3 \times 3$ convolutional layer change?
-2. **Inductive bias test:** Why does a CNN beat an MLP on natural images, yet lose that advantage when all images undergo the same random pixel permutation?
-
-::: {.d2l-note .fragment .fade-up}
-**Answers:** (1) The parameter count is **completely unchanged** ($c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$ depends only on kernel and channel dimensions), whereas the MAC count and activation memory **quadruple** ($4\times$ as many output spatial positions). (2) A CNN's shared local kernels assume nearby pixels form meaningful patterns; permuting pixels destroys spatial locality while leaving an MLP's dense weight matrix statistically unchanged.
+::: {.col .fig .big}
+@fig:ch06-cnn-resolution-scaling
+:::
 :::
 :::

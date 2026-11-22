@@ -244,7 +244,7 @@ quantification.
 @gp-priors-gaussian-process-priors
 :::
 
-::: {.slide title="Sampling from a simple GP"}
+::: {.slide title="Sampling from a simple GP" except="pytorch"}
 Pick a kernel, evaluate it at a grid → covariance matrix
 → multivariate normal sample. Each sample is a smooth
 function:
@@ -252,7 +252,23 @@ function:
 @gp-priors-a-simple-gaussian-process
 :::
 
-::: {.slide title="The RBF kernel"}
+::: {.slide title="Sampling from a simple GP" only="pytorch"}
+Pick a kernel, evaluate it at a grid → covariance matrix
+→ multivariate normal sample. Each sample is a smooth
+function:
+
+::: {.cols .vc}
+::: {.col}
+@-gp-priors-a-simple-gaussian-process
+:::
+
+::: {.col .fig}
+@!gp-priors-a-simple-gaussian-process
+:::
+:::
+:::
+
+::: {.slide title="The RBF kernel" except="pytorch"}
 $$k(x, x') = \sigma^2 \exp\!\left(-\frac{(x - x')^2}{2 \ell^2}\right).$$
 
 Two hyperparameters: amplitude $\sigma$ and length-scale
@@ -261,6 +277,25 @@ wiggly functions. Most-used kernel for general-purpose
 regression:
 
 @gp-priors-the-radial-basis-function-rbf-kernel
+:::
+
+::: {.slide title="The RBF kernel" only="pytorch"}
+$$k(x, x') = \sigma^2 \exp\!\left(-\frac{(x - x')^2}{2 \ell^2}\right).$$
+
+Two hyperparameters: amplitude $\sigma$ and length-scale
+$\ell$. Long $\ell$ → smooth functions; short $\ell$ →
+wiggly functions. Most-used kernel for general-purpose
+regression:
+
+::: {.cols .vc}
+::: {.col}
+@-gp-priors-the-radial-basis-function-rbf-kernel
+:::
+
+::: {.col .fig}
+@!gp-priors-the-radial-basis-function-rbf-kernel
+:::
+:::
 :::
 
 ::: {.slide title="Neural network kernels"}

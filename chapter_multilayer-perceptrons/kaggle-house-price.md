@@ -647,9 +647,17 @@ Before tuning an MLP, we benchmark `d2l.LinearRegression` across our $5$ folds (
 :::
 
 ::: {.col .fig}
-@!kaggle-house-price-mlp-select
+@!kaggle-house-price-mlp-select[out=2]
 :::
 :::
+:::
+
+::: {.slide title="Cross-Validating Weight Decay (cont.)"}
+[The Printed Sweep]{.kicker}
+
+For each weight decay: mean training and validation RMSE over the $5$ folds, and the range of the per-fold validation RMSE:
+
+@!kaggle-house-price-mlp-select[out=1]
 :::
 
 ::: {.slide title="Paired Fold-by-Fold Comparison vs. Linear Baseline"}

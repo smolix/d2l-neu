@@ -335,11 +335,15 @@ RMSE only over observed positions (mask out the zeros):
 Standard SGD; the masked loss is the trick that turns
 autoencoder loss into a recommender:
 
-@autorec-training-and-evaluating-the-model
+@-autorec-training-and-evaluating-the-model
+:::
 
+::: {.slide title="Only observed ratings contribute (cont.)"}
 Watch the plot for two signals: training loss should fall, and
 test RMSE should stabilize rather than diverge. Overfitting shows
 up when reconstruction keeps improving but held-out RMSE worsens.
+
+@!autorec-training-and-evaluating-the-model
 :::
 
 ::: {.slide title="AutoRec replaces a bilinear score with nonlinear reconstruction"}

@@ -412,11 +412,26 @@ likelihood** — Bayesian Occam's razor in closed form.
 @gp-inference-posterior-inference-for-regression
 :::
 
-::: {.slide title="From-Scratch Setup"}
+::: {.slide title="From-Scratch Setup" except="pytorch"}
 Build the training and test inputs, choose a kernel, and prepare
 the covariance matrices used by the GP posterior:
 
 @gp-inference-worked-example-from-scratch-1
+:::
+
+::: {.slide title="From-Scratch Setup" only="pytorch"}
+Build the training and test inputs, choose a kernel, and prepare
+the covariance matrices used by the GP posterior:
+
+::: {.cols .vc}
+::: {.col}
+@-gp-inference-worked-example-from-scratch-1
+:::
+
+::: {.col .fig}
+@!gp-inference-worked-example-from-scratch-1
+:::
+:::
 :::
 
 ::: {.slide title="Posterior Mean and Variance"}
@@ -442,7 +457,7 @@ between training points and at the edges of the data:
 @gp-inference-worked-example-from-scratch-4
 :::
 
-::: {.slide title="Latent-function uncertainty"}
+::: {.slide title="Latent-function uncertainty" except="pytorch"}
 The shaded region below is a credible set for the **noise-free latent
 function**, not for future noisy observations. It should contain the
 true function, but it should not be expected to contain every data
@@ -451,7 +466,24 @@ point:
 @gp-inference-worked-example-from-scratch-5
 :::
 
-::: {.slide title="Two kinds of uncertainty"}
+::: {.slide title="Latent-function uncertainty" only="pytorch"}
+The shaded region on the right is a credible set for the **noise-free latent
+function**, not for future noisy observations. It should contain the
+true function, but it should not be expected to contain every data
+point:
+
+::: {.cols .vc}
+::: {.col}
+@-gp-inference-worked-example-from-scratch-5
+:::
+
+::: {.col .fig}
+@!gp-inference-worked-example-from-scratch-5
+:::
+:::
+:::
+
+::: {.slide title="Two kinds of uncertainty" except="pytorch"}
 For noisy observations, uncertainty has two components:
 
 - **Epistemic**: reducible uncertainty about the latent function,
@@ -464,6 +496,31 @@ For noisy observations, uncertainty has two components:
 . . .
 
 @gp-inference-worked-example-from-scratch-7
+:::
+
+::: {.slide title="Two kinds of uncertainty" only="pytorch"}
+For noisy observations, uncertainty has two components:
+
+- **Epistemic**: reducible uncertainty about the latent function,
+  captured by `diag(post_cov)`.
+- **Aleatoric**: irreducible observation noise, captured by
+  `post_sig_est**2`.
+
+@gp-inference-worked-example-from-scratch-6
+:::
+
+::: {.slide title="Two kinds of uncertainty (cont.)" only="pytorch"}
+Plot the posterior mean, posterior samples and both bands:
+
+::: {.cols .vc}
+::: {.col}
+@-gp-inference-worked-example-from-scratch-7
+:::
+
+::: {.col .fig}
+@!gp-inference-worked-example-from-scratch-7
+:::
+:::
 :::
 
 ::: {.slide title="Production GPs with GPyTorch"}
@@ -483,9 +540,7 @@ hyperparameters:
 :::
 
 ::: {.slide title="Optimizing GP Hyperparameters"}
-The printed length-scale and noise values should settle as the
-marginal likelihood improves. This is full-batch optimization,
-not minibatch SGD over independent examples:
+Length-scale and noise settle as the marginal likelihood improves; this is full-batch, not minibatch SGD:
 
 @gp-inference-making-life-easy-with-gpytorch-3
 :::
@@ -507,7 +562,7 @@ points, grid structure, and solver tolerance; it is not generically
 linear in $n$.
 :::
 
-::: {.slide title="GPyTorch (cont.)"}
+::: {.slide title="GPyTorch (cont.)" except="pytorch"}
 Switch to evaluation mode to compute the predictive posterior, then
 plot the mean and 95% credible set in observation space:
 
@@ -516,6 +571,27 @@ plot the mean and 95% credible set in observation space:
 . . .
 
 @gp-inference-making-life-easy-with-gpytorch-5
+:::
+
+::: {.slide title="GPyTorch (cont.)" only="pytorch"}
+Switch to evaluation mode to compute the predictive posterior, then
+plot the mean and 95% credible set in observation space:
+
+@gp-inference-making-life-easy-with-gpytorch-4
+:::
+
+::: {.slide title="GPyTorch (cont.): the predictive posterior" only="pytorch"}
+The resulting predictive mean and 95% credible set:
+
+::: {.cols .vc}
+::: {.col}
+@-gp-inference-making-life-easy-with-gpytorch-5
+:::
+
+::: {.col .fig}
+@!gp-inference-making-life-easy-with-gpytorch-5
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}

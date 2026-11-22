@@ -334,6 +334,8 @@ multi-fidelity HPO algorithm.
 <!-- slides -->
 
 ::: {.slide title="Multi-Fidelity HPO"}
+::: {.cols .vc}
+::: {.col}
 Random search wastes most of its compute on bad configs —
 training each one to convergence to find out. But you
 often *know after a few epochs* that a config is hopeless:
@@ -343,14 +345,26 @@ the training loss curve barely moves.
 evaluations (few epochs, small subset of data) to *prune*
 bad configs early, spending the saved compute on the
 promising ones.
+:::
 
-![Learning curves of random configs: most diverge fast; a few rise to the top.](../img/samples_lc.svg){width=68%}
+::: {.col .fig .big}
+![Learning curves of random configs: most diverge fast; a few rise to the top.](../img/samples_lc.svg)
+:::
+:::
+:::
 
-The classic algorithm: **successive halving**. Run $N$
+::: {.slide title="Successive Halving"}
+::: {.cols .vc}
+::: {.col}
+The classic multi-fidelity algorithm is **successive halving**. Run $N$
 configs for a small budget; keep the top $1/\eta$, run for
 $\eta\times$ longer; repeat.
+:::
 
-![Successive halving: prune bad configs at every rung, double the budget for survivors.](../img/sh.svg){width=72%}
+::: {.col .fig .big}
+![Successive halving: prune bad configs at every rung, double the budget for survivors.](../img/sh.svg)
+:::
+:::
 :::
 
 ::: {.slide title="Setup"}
@@ -374,20 +388,28 @@ $n_i r_i \approx n_0 r_0$: later rungs spend the same
 budget on fewer, better configurations.
 :::
 
-::: {.slide title="Implementation"}
+::: {.slide title="Implementation: Rungs and Bookkeeping"}
+The constructor fixes the rung levels $r_{\min}\eta^k$ (capped at $r_{\max}$) and the per-rung records:
+
 @sh-intro-successive-halving-1
-
-. . .
-
-@sh-intro-successive-halving-2
 :::
 
-::: {.slide title="Implementation (cont.)"}
-@sh-intro-successive-halving-3
+::: {.slide title="Implementation: Sampling and Ranking"}
+`suggest` starts a new round with $n_0$ configs at $r_{\min}$ epochs:
+
+@sh-intro-successive-halving-2
 
 . . .
 
+A helper returns the $n$ best configs observed at a rung:
+
 @sh-intro-successive-halving-4
+:::
+
+::: {.slide title="Implementation: Promoting the Survivors"}
+`update` records each result; once a rung is complete, its top $1/\eta$ move to the next rung:
+
+@sh-intro-successive-halving-3
 :::
 
 ::: {.slide title="Running it"}
@@ -405,7 +427,15 @@ random search but allocates much more of it to the good
 configs — better best-seen score after a fixed
 wall-clock budget:
 
-@sh-intro-successive-halving-7
+::: {.cols .vc}
+::: {.col}
+@-sh-intro-successive-halving-7
+:::
+
+::: {.col .fig}
+@!sh-intro-successive-halving-7[out=2]
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}

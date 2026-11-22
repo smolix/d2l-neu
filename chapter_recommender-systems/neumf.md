@@ -536,16 +536,16 @@ elementwise product on one side, concat→MLP on the other;
 final concat → linear raw score:
 
 ![NeuMF architecture: GMF and MLP pathways are fused before scoring a user-item pair.](../img/rec-neumf.svg)
+:::
 
-. . .
+::: {.slide title="GMF and MLP feature maps (cont.)"}
+The implementation keeps one embedding table per branch and side:
 
 @neumf-model-implementation
 :::
 
 ::: {.slide title="Unobserved items are sampled comparisons, not dislikes"}
-Each training instance: a (user, positive item) plus
-sampled negatives. The dataset class handles negative
-sampling on the fly:
+Each training instance: a (user, positive item) plus sampled negatives, drawn on the fly by the dataset:
 
 @neumf-customized-dataset-with-negative-sampling
 :::
@@ -562,16 +562,16 @@ Standard ranking metrics:
 $$\textrm{Hit@}K = \mathbf{1}\{\textrm{rank}(i^+) \le K\}.$$
 
 @neumf-evaluator-1
+:::
 
-. . .
+::: {.slide title="Hit@50 and AUC (cont.)"}
+`evaluate_ranking` ranks the candidate items for each user and averages both metrics:
 
 @neumf-evaluator-2
 :::
 
 ::: {.slide title="Training and evaluation use different candidate roles"}
-BPR loss + Adam. Each minibatch contains a user, one positive
-item, and one sampled negative item; the update increases the
-positive score relative to the negative score:
+BPR loss + Adam: each update raises a positive item's score above a sampled negative's:
 
 @neumf-training-and-evaluating-the-model-1
 :::
@@ -591,11 +591,19 @@ the two branches at comparable initial scales:
 :::
 
 ::: {.slide title="Metrics depend on the evaluation candidate set"}
+::: {.cols .vc}
+::: {.col}
 The final printout should be read as ranking quality: higher
 Hit@50 and AUC mean the held-out item is placed above more
 unobserved candidates. They are not rating-prediction metrics:
 
-@neumf-training-and-evaluating-the-model-4
+@-neumf-training-and-evaluating-the-model-4
+:::
+
+::: {.col .fig}
+@!neumf-training-and-evaluating-the-model-4
+:::
+:::
 :::
 
 ::: {.slide title="NeuMF learns a score from two interaction maps"}

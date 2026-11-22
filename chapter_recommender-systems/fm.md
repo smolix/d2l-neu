@@ -261,7 +261,13 @@ categorical fields per row:
 ::: {.slide title="Binary log loss trains the click logit"}
 Binary cross-entropy + Adam:
 
-@fm-train-the-model
+@-fm-train-the-model
+:::
+
+::: {.slide title="Binary log loss trains the click logit (cont.)"}
+Loss and accuracy over the training epochs:
+
+@!fm-train-the-model
 :::
 
 ::: {.slide title="Low-rank coefficients share information across pairs"}

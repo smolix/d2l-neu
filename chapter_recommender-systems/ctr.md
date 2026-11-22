@@ -237,8 +237,10 @@ Build per-field vocabularies, encode each row as a sparse
 feature index vector, yield (features, label) pairs:
 
 @ctr-dataset-wrapper-1
+:::
 
-. . .
+::: {.slide title="Per-field vocabularies (cont.)"}
+One training example: the feature-index vector and its click label:
 
 @ctr-dataset-wrapper-2
 :::

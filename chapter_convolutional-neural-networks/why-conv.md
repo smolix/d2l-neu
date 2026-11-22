@@ -634,6 +634,6 @@ Work out these three questions from first principles:
 | **Cross-Correlation vs. Conv** | $(\mathbf{X} \star \mathbf{K})_{i,j} = (\mathbf{K}' * \mathbf{X})_{i,j}$ | Identical | Unflipped indexing $(i+a, j+b)$ implemented by all frameworks |
 
 ::: {.d2l-note}
-**Next (§6.2):** We implement 2D cross-correlation in code, hand-craft and *learn* an edge-detection kernel via gradient descent, recast convolution as matrix multiplication (*im2col*), and analyze multi-layer receptive fields.
+**Next (§{sec_conv_layer}):** We implement 2D cross-correlation in code, hand-craft and *learn* an edge-detection kernel via gradient descent, recast convolution as matrix multiplication (*im2col*), and analyze multi-layer receptive fields.
 :::
 :::

@@ -606,7 +606,7 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 
 ::: {.cols .vc}
 ::: {.col}
-- At any non-zero learning rate $\eta$, the live weights $\mathbf{x}_t$ represent a single random draw from the stationary noise ball (§9.2).
+- At any non-zero learning rate $\eta$, the live weights $\mathbf{x}_t$ represent a single random draw from the stationary noise ball (§{sec_sgd}).
 - Maintaining an **exponential moving average (EMA)** $\bar{\mathbf{x}}_t$ of the live parameters with decay $\alpha \in [0.99, 0.9999]$ (Polyak & Juditsky, 1992):
   $$\bar{\mathbf{x}}_t = \alpha\,\bar{\mathbf{x}}_{t-1} + (1 - \alpha)\,\mathbf{x}_t$$
   averages over a trailing window of **$\tau_{\text{EMA}} = \frac{1}{1 - \alpha}$ steps** without altering the live training trajectory.

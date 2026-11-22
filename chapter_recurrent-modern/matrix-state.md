@@ -861,7 +861,7 @@ $$\mathbf{S}_t = a_t\, \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top, \qquad
 ::: {.slide title="Mamba and Mamba-2 as Decayed Matrix-State Recurrences"}
 [Unifying SSMs and Linear Attention]{.kicker}
 
-Stacking the $H$ channel states $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ of Mamba's selective SSM (§12.5) as rows of a matrix $\mathbf{S}_t \in \mathbb{R}^{H \times N}$ exposes the exact same outer-product memory structure:
+Stacking the $H$ channel states $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ of Mamba's selective SSM (§{sec_mamba}) as rows of a matrix $\mathbf{S}_t \in \mathbb{R}^{H \times N}$ exposes the exact same outer-product memory structure:
 
 $$\mathbf{S}_t = \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t \odot \mathbf{x}_t)\,\mathbf{B}_t^\top, \qquad \mathbf{y}_t = \mathbf{S}_t \mathbf{C}_t$$
 
@@ -871,7 +871,7 @@ $$\mathbf{S}_t = \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t \o
 | **RetNet** | $\mathbf{v}_t \in \mathbb{R}^{d_v}$ | $\mathbf{k}_t, \mathbf{q}_t \in \mathbb{R}^{d_k}$ | Fixed scalar $a \in (0, 1)$ per head |
 | **Mamba-2 / Scalar GLA** | $\mathbf{v}_t \in \mathbb{R}^{d_v}$ | $\mathbf{k}_t, \mathbf{q}_t \in \mathbb{R}^{d_k}$ | Input-dependent scalar $a_t \in (0, 1)$ per head |
 | **Vector-Decay GLA** | $\mathbf{v}_t \in \mathbb{R}^{d_v}$ | $\mathbf{k}_t, \mathbf{q}_t \in \mathbb{R}^{d_k}$ | Per-key-coordinate $\mathbf{S}_{t-1}\textrm{diag}(\boldsymbol{\alpha}_t)$ ($\boldsymbol{\alpha}_t \in (0, 1)^{d_k}$) |
-| **Mamba-1 (§12.5)** | $\boldsymbol{\Delta}_t \odot \mathbf{x}_t \in \mathbb{R}^H$ | $\mathbf{B}_t, \mathbf{C}_t \in \mathbb{R}^N$ | Full entrywise matrix $\mathbf{E}_t = \exp(\textrm{diag}(\boldsymbol{\Delta}_t)\boldsymbol{\Lambda})$ |
+| **Mamba-1 (§{sec_mamba})** | $\boldsymbol{\Delta}_t \odot \mathbf{x}_t \in \mathbb{R}^H$ | $\mathbf{B}_t, \mathbf{C}_t \in \mathbb{R}^N$ | Full entrywise matrix $\mathbf{E}_t = \exp(\textrm{diag}(\boldsymbol{\Delta}_t)\boldsymbol{\Lambda})$ |
 :::
 
 ::: {.slide title="State Space Duality (SSD): Recurrence vs. Masked Dual"}
@@ -960,7 +960,7 @@ We fix a 2-block `SeqLM` at width $d = 32$ ($\sim 36{,}200$ parameters) and part
 The multi-query recall curves confirm the theoretical scaling law and expose one remaining flaw:
 
 - **Capacity scales with state entries $h \cdot d_h^2$:** At $4$ pairs, all three head configurations achieve $\ge 98\%$ accuracy. At $64$ pairs, doubling state entries from $128$ ($8 \times 4^2$) to $256$ ($4 \times 8^2$) lifts recall from $\sim 0.50$ to $\sim 0.75$—roughly doubling the number of pairs recalled at a fixed accuracy level without adding a single trainable parameter!
-- **The additive overwrite flaw:** Because $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ only *adds* outer products, binding an existing key $\mathbf{k}$ to a new value $\mathbf{v}^{\text{new}}$ returns a superposition of old and new values. Teaching the matrix state to **read before writing** is the goal of §12.7.
+- **The additive overwrite flaw:** Because $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ only *adds* outer products, binding an existing key $\mathbf{k}$ to a new value $\mathbf{v}^{\text{new}}$ returns a superposition of old and new values. Teaching the matrix state to **read before writing** is the goal of §{sec_deltanet}.
 :::
 
 ::: {.slide title="Concept Check: Capacity, Chunk Memory, and Duality"}

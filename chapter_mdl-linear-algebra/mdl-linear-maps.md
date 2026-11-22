@@ -1749,8 +1749,8 @@ For an $n \times n$ square matrix $\mathbf{A}$, being one-to-one and being onto 
 
 - **Why One Scalar Is Not Enough:** The determinant multiplies the directional stretches across all $n$ dimensions into a single product, hiding whether a matrix stretches every axis evenly or crushes one axis while blowing up another.
 - **Running Matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$:**
-  - Its eigenvalues are $\lambda_{1,2} = 2 \pm i$, whose product is $(2+i)(2-i) = 5 = \det\mathbf{A}$ (§33.3).
-  - Its singular values are $\sigma_1 \approx 3.618$ and $\sigma_2 \approx 1.382$, whose product is $3.618 \times 1.382 = 5 = |\det\mathbf{A}|$ (§33.5).
+  - Its eigenvalues are $\lambda_{1,2} = 2 \pm i$, whose product is $(2+i)(2-i) = 5 = \det\mathbf{A}$ (§{sec_mdl-eigendecompositions}).
+  - Its singular values are $\sigma_1 \approx 3.618$ and $\sigma_2 \approx 1.382$, whose product is $3.618 \times 1.382 = 5 = |\det\mathbf{A}|$ (§{sec_mdl-svd-low-rank}).
 - **True Proximity to Singularity:** The ratio $\kappa(\mathbf{A}) = \sigma_1/\sigma_n$—not $\det\mathbf{A}$—measures how close a matrix is to collapsing space.
 :::
 

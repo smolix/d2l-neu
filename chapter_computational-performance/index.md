@@ -134,14 +134,14 @@ $$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes
 :::
 :::
 
-::: {.slide title="Architectural Roadmap of Chapter 13"}
+::: {.slide title="Architectural Roadmap of Chapter §{num:chap_performance}"}
 [Chapter Structure]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **§13.1–13.2 Roofline & Hardware:** Arithmetic intensity, synchronized timing, memory hierarchy, SMs, Tensor Cores, and the $20\text{ ms}$ sweep invariant.
-- **§13.3–13.4 Compilers & Memory:** Symbolic tracing, operator fusion ($9\times$), CUDA graphs, $16N$ Adam state, `bf16`, rematerialization, and accumulation.
-- **§13.5–13.8 Multi-GPU & Case Study:** Ring allreduce, DDP bucketing, ZeRO/FSDP sharding, and a $6\times$ step-by-step GPT speedup.
+- **§{sec_perf_model}–§{num:sec_hardware} Roofline & Hardware:** Arithmetic intensity, synchronized timing, memory hierarchy, SMs, Tensor Cores, and the $20\text{ ms}$ sweep invariant.
+- **§{sec_compilation}–§{num:sec_memory_precision} Compilers & Memory:** Symbolic tracing, operator fusion ($9\times$), CUDA graphs, $16N$ Adam state, `bf16`, rematerialization, and accumulation.
+- **§{sec_multi_gpu}–§{num:sec_fast_transformer} Multi-GPU & Case Study:** Ring allreduce, DDP bucketing, ZeRO/FSDP sharding, and a $6\times$ step-by-step GPT speedup.
 :::
 
 ::: {.col .fig .big}
@@ -164,6 +164,6 @@ $$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes
 :::
 
 ::: {.d2l-note}
-**Up next (§13.1 The Performance Model):** Defining arithmetic intensity, constructing the roofline bound, avoiding asynchronous timing traps, and profiling a complete MLP training step.
+**Up next (§{sec_perf_model} The Performance Model):** Defining arithmetic intensity, constructing the roofline bound, avoiding asynchronous timing traps, and profiling a complete MLP training step.
 :::
 :::

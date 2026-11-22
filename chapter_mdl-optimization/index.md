@@ -149,14 +149,14 @@ We test every theorem against $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ ($
 :::
 :::
 
-::: {.slide title="Architecture of Chapter 35: Three Core Parts"}
+::: {.slide title="Architecture of Chapter §{num:chap_mdl-optimization}: Three Core Parts"}
 [Chapter Roadmap]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Part I — Exact Gradients & Geometry (§§35.1–35.3):** $L$-smoothness descent lemma, $\kappa$ vs. $\sqrt{\kappa}$ momentum law, Newton/BFGS/trust regions, and convexity guarantees.
-- **Part II — Stochastic & Adaptive Methods (§§35.4–35.5):** The $1/b$ variance law, stationary noise floors, Robbins–Monro schedules, AdamW, and matrix preconditioning (K-FAC, Muon).
-- **Part III — Constraints, Duality & Numerics (§§35.6–35.8):** KKT conditions, projections, proximal ISTA, Fenchel duality, and floating-point conditioning.
+- **Part I — Exact Gradients & Geometry (§§{sec_mdl-gradient-based-optimization}–§{num:sec_mdl-convexity}):** $L$-smoothness descent lemma, $\kappa$ vs. $\sqrt{\kappa}$ momentum law, Newton/BFGS/trust regions, and convexity guarantees.
+- **Part II — Stochastic & Adaptive Methods (§§{sec_mdl-stochastic-gradient-methods}–§{num:sec_mdl-adaptive-stochastic-methods}):** The $1/b$ variance law, stationary noise floors, Robbins–Monro schedules, AdamW, and matrix preconditioning (K-FAC, Muon).
+- **Part III — Constraints, Duality & Numerics (§§{sec_mdl-constrained-optimization-duality}–§{num:sec_mdl-numerical-stability-conditioning}):** KKT conditions, projections, proximal ISTA, Fenchel duality, and floating-point conditioning.
 :::
 
 ::: {.col .fig .big}
@@ -195,9 +195,9 @@ We test every theorem against $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ ($
 
 ::: {.cols .vc}
 ::: {.col}
-- **Essential Core (§35.1 & §35.3):** Start here for the $2/L$ step ceiling, $\sqrt{\kappa}$ momentum speedup, tangent lower bounds, Jensen's inequality, and global convergence rates.
-- **Deep Learning Workhorses (§35.4 & §35.5):** Read next for SGD noise floors, cosine/WSD schedules, Adam scale invariance, decoupled AdamW, and Muon.
-- **On-Demand Deep Dives (§35.2, §§35.6–35.8):** Consult for L-BFGS/trust regions, KKT/projections/ISTA, Fenchel duality, and `bf16` numerical stability.
+- **Essential Core (§{sec_mdl-gradient-based-optimization} & §{sec_mdl-convexity}):** Start here for the $2/L$ step ceiling, $\sqrt{\kappa}$ momentum speedup, tangent lower bounds, Jensen's inequality, and global convergence rates.
+- **Deep Learning Workhorses (§{sec_mdl-stochastic-gradient-methods} & §{sec_mdl-adaptive-stochastic-methods}):** Read next for SGD noise floors, cosine/WSD schedules, Adam scale invariance, decoupled AdamW, and Muon.
+- **On-Demand Deep Dives (§{sec_mdl-curvature-methods}, §§{sec_mdl-constrained-optimization-duality}–§{num:sec_mdl-numerical-stability-conditioning}):** Consult for L-BFGS/trust regions, KKT/projections/ISTA, Fenchel duality, and `bf16` numerical stability.
 :::
 
 ::: {.col .fig .big}

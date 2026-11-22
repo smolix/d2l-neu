@@ -388,7 +388,7 @@ Environment & Distribution Shift: Covariate, Label & Concept Shift<br>**joint fa
 ::: {.slide title="When High Test Accuracy Collapses in Deployment"}
 [The Deployment Gap]{.kicker}
 
-Every statistical guarantee in §3.5 assumed that deployment data come from the exact same distribution $p_S(\mathbf{x}, y)$ as our training and test splits. In practice, deployment distributions $p_T(\mathbf{x}, y)$ drift constantly:
+Every statistical guarantee in §{chap_classification_generalization} assumed that deployment data come from the exact same distribution $p_S(\mathbf{x}, y)$ as our training and test splits. In practice, deployment distributions $p_T(\mathbf{x}, y)$ drift constantly:
 
 ::: {.cols .vc}
 ::: {.col}

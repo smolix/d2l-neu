@@ -726,6 +726,6 @@ Test your understanding of pooling shapes, compute cost, and shift tolerance:
 | **Global Pooling ($H \times W$)** | $\max$ or $\textrm{mean}$ over all $(i,j)$ | No padding needed | Output shape $(c_\textrm{i}, 1, 1) \to \mathbb{R}^{c_\textrm{i}}$ | Replaces dense flatten head; invariant to interior shifts |
 
 ::: {.d2l-note}
-**Next (§6.6):** We assemble convolutions, padding, multi-channel feature maps, and pooling into a complete end-to-end CNN—**LeNet**—and pit it against our MLP on ordered and pixel-shuffled Fashion-MNIST images.
+**Next (§{sec_lenet}):** We assemble convolutions, padding, multi-channel feature maps, and pooling into a complete end-to-end CNN—**LeNet**—and pit it against our MLP on ordered and pixel-shuffled Fashion-MNIST images.
 :::
 :::

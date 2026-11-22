@@ -955,7 +955,7 @@ From Text to Tokens<br>**characters vs. words · UTF-8 bytes · byte pair encodi
 
 ::: {.cols .vc}
 ::: {.col}
-- **Embedding & output parameter footprint:** Every token in $\mathcal{V}$ claims a row in $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ and a column in $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$ ($89\%$ of our §8.4 RNN parameters).
+- **Embedding & output parameter footprint:** Every token in $\mathcal{V}$ claims a row in $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ and a column in $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$ ($89\%$ of our §{sec_rnn} RNN parameters).
 - **Effective context horizon ($T$):** Splitting *The Time Machine* into characters produces $173{,}428$ time steps, forcing subject–verb agreement to span dozens of recurrent updates.
 - **Open-vocabulary robustness:** Splitting into $32{,}775$ whole words ($4{,}579$ types) breaks on any unseen word (*out-of-vocabulary*, OOV) at test time; subword BPE interpolates with zero OOVs.
 :::
@@ -1016,7 +1016,7 @@ Character-level and word-level tokenization occupy opposite extremes of the trad
 ::: {.col .fig}
 @fig:ch08-rnn-vocab-unk
 
-- **The `<unk>` collapse:** Mapping every rare (`< min_freq`) or unseen word to index `0 (<unk>)` erases morphological stems and incurs an explicit character-spelling penalty during evaluation (§8.3).
+- **The `<unk>` collapse:** Mapping every rare (`< min_freq`) or unseen word to index `0 (<unk>)` erases morphological stems and incurs an explicit character-spelling penalty during evaluation (§{sec_language-model}).
 :::
 :::
 :::

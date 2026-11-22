@@ -709,7 +709,7 @@ Before running our 36-block GPT on $k = 2$ GPUs, we calibrate $\beta_{\textrm{li
 
 @!sharding-memory-and-communication-1
 
-- **Consistent host-staged link rate:** Each GPU sends $(k-1)/k = 1/2$ of the $256\text{ MiB}$ output ($128\text{ MiB}$) at a bus bandwidth of $\sim 2.2\text{--}2.3\text{ GB/s}$ ($\beta_{\textrm{link}} \approx 0.43\text{--}0.45\text{ ns/B}$), matching the bare allreduce link rate from §13.6.
+- **Consistent host-staged link rate:** Each GPU sends $(k-1)/k = 1/2$ of the $256\text{ MiB}$ output ($128\text{ MiB}$) at a bus bandwidth of $\sim 2.2\text{--}2.3\text{ GB/s}$ ($\beta_{\textrm{link}} \approx 0.43\text{--}0.45\text{ ns/B}$), matching the bare allreduce link rate from §{sec_multi_gpu_concise}.
 :::
 
 ::: {.slide title="Predicting Memory, Comm, and Compute for the 1.9B GPT"}

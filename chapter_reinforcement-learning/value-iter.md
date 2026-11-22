@@ -835,7 +835,7 @@ Every Bellman equation assembles the value at a root node from the values one st
 ![](../img/mdl-rl-backups.svg){.nostretch width=95%}
 
 - **Expectation vs. optimality (a–c):** $V^\pi$ and $Q^\pi$ average over policy actions $\pi(a \mid s)$, whereas the optimality operator replaces the action average with $\max_a$ (drawn as an arc).
-- **Sampled backup (d):** When $P$ is unknown (§14.3), the learner follows a single realized environment transition (blue) instead of summing over $P(s' \mid s, a)$.
+- **Sampled backup (d):** When $P$ is unknown (§{sec_qlearning}), the learner follows a single realized environment transition (blue) instead of summing over $P(s' \mid s, a)$.
 :::
 
 ::: {.slide title="Value Iteration: Sweeping the Bellman Operator"}

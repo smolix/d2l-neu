@@ -71,15 +71,15 @@ Our regression training pipeline—minibatch loaders, vectorized GEMM, autodiff,
 :::
 :::
 
-::: {.slide title="Architecture and Roadmap of Chapter 3"}
+::: {.slide title="Architecture and Roadmap of Chapter §{num:chap_classification}"}
 [Chapter Roadmap]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 The six sections progress from mathematical formulation and benchmark data to implementation, decision metrics, statistical guarantees, and deployment robustness:
 
-- **Model & pipeline (§3.1–§3.3):** Softmax probabilities, cross-entropy loss, Fashion-MNIST `DataModule` ($60\text{k} + 10\text{k}$ garments), `Classifier` base class, $10\times 10$ confusion matrices, and fused LogSumExp loss.
-- **Decisions, bounds & shift (§3.4–§3.6):** Precision/recall, Bayes cost thresholds, ECE calibration, test-set error bars ($\le 0.5/\sqrt{n}$), adaptive overfitting, VC dimension, and covariate/label shift correction.
+- **Model & pipeline (§{sec_softmax}–§{sec_softmax_scratch}):** Softmax probabilities, cross-entropy loss, Fashion-MNIST `DataModule` ($60\text{k} + 10\text{k}$ garments), `Classifier` base class, $10\times 10$ confusion matrices, and fused LogSumExp loss.
+- **Decisions, bounds & shift (§{sec_classification}–§{sec_environment-and-distribution-shift}):** Precision/recall, Bayes cost thresholds, ECE calibration, test-set error bars ($\le 0.5/\sqrt{n}$), adaptive overfitting, VC dimension, and covariate/label shift correction.
 :::
 
 ::: {.col .fig .big}
@@ -95,8 +95,8 @@ The six sections progress from mathematical formulation and benchmark data to im
 ::: {.col}
 Every concept in this chapter is anchored to concrete numbers and reproducible experiments:
 
-- **Core model (§3.1–§3.3):** $2\times 2$ toy logits $(1.0, 2.2, 0.3) \to (0.21, 0.69, 0.10)$ ($0.37\text{ nats}$); $7{,}850$-parameter Fashion-MNIST classifier reaching $\sim 83\%$ validation accuracy in $10$ epochs.
-- **Auditing & shift (§3.4–§3.6):** $1\%$-prevalence screening ($90\%$ recall $\to 15.4\%$ precision, $\tau^* \approx 1\%$ at $100:1$ cost); $\pm 0.7\%$ normal vs. $\pm 1.4\%$ Hoeffding radius at $n=10\text{k}$; importance weighting ($\sim 55\% \to 95\%$) and $\mathbf{C}^{-1}\boldsymbol{\mu}$ label-shift recovery.
+- **Core model (§{sec_softmax}–§{sec_softmax_scratch}):** $2\times 2$ toy logits $(1.0, 2.2, 0.3) \to (0.21, 0.69, 0.10)$ ($0.37\text{ nats}$); $7{,}850$-parameter Fashion-MNIST classifier reaching $\sim 83\%$ validation accuracy in $10$ epochs.
+- **Auditing & shift (§{sec_classification}–§{sec_environment-and-distribution-shift}):** $1\%$-prevalence screening ($90\%$ recall $\to 15.4\%$ precision, $\tau^* \approx 1\%$ at $100:1$ cost); $\pm 0.7\%$ normal vs. $\pm 1.4\%$ Hoeffding radius at $n=10\text{k}$; importance weighting ($\sim 55\% \to 95\%$) and $\mathbf{C}^{-1}\boldsymbol{\mu}$ label-shift recovery.
 :::
 
 ::: {.col .fig .big}
@@ -108,7 +108,7 @@ Every concept in this chapter is anchored to concrete numbers and reproducible e
 ::: {.slide title="Concept Check & Chapter Study Guide"}
 [Self-Assessment]{.kicker}
 
-Before diving into §3.1, test your intuition on three foundational questions that motivate the chapter:
+Before diving into §{sec_softmax}, test your intuition on three foundational questions that motivate the chapter:
 
 1. **Output count:** Why does a 10-class linear classifier on $28 \times 28$ images require $7{,}850$ parameters instead of the $785$ parameters used in linear regression?
 2. **Numerical range:** In single-precision floating point (`float32`), why does evaluating $\exp(1000) / (\exp(1000) + \exp(0) + \exp(0))$ return `NaN` even though the mathematical ratio is $1$?

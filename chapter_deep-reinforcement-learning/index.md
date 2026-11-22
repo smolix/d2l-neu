@@ -54,10 +54,10 @@ Deep Reinforcement Learning: Sample Efficiency and Function Approximation<br>**b
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Bootstrap a Critic (§15.1, §15.4–5):** Replaces episode tail $\hat{G}_{t+1}$ at the cost of young-critic bias $e(s')$.
-- **2. Reuse Old Transitions (§15.2, §15.4–7):** Replaces fresh rollouts at the cost of distribution shift and moving targets.
-- **3. Bound Policy Shifts (§15.2–3, §15.8):** Restrains steps via ratio clipping or a KL leash to $\pi_{\textrm{ref}}$.
-- **4. Plan in a World Model (§15.6):** Substitutes test-time imagination for real trials at the cost of compounding rollout error.
+- **1. Bootstrap a Critic (§{sec_actorcritic}, §{sec_dqn}–§{num:sec_sac}):** Replaces episode tail $\hat{G}_{t+1}$ at the cost of young-critic bias $e(s')$.
+- **2. Reuse Old Transitions (§{sec_ppo}, §{sec_dqn}–§{num:sec_offline}):** Replaces fresh rollouts at the cost of distribution shift and moving targets.
+- **3. Bound Policy Shifts (§{sec_ppo}–§{num:sec_regularized}, §{sec_rl_sequences}):** Restrains steps via ratio clipping or a KL leash to $\pi_{\textrm{ref}}$.
+- **4. Plan in a World Model (§{sec_model_based}):** Substitutes test-time imagination for real trials at the cost of compounding rollout error.
 :::
 
 ::: {.col .fig .big}
@@ -73,7 +73,7 @@ Deep Reinforcement Learning: Sample Efficiency and Function Approximation<br>**b
 ::: {.col}
 - **1. Bootstrapping:** Targets $y = r + \gamma \hat{V}_w(s')$ move with the network's own predictions.
 - **2. Function Approximation:** Shared parameters $w$ couple all states globally.
-- **3. Off-Policy Data:** Transitions come from a replay buffer or fixed log rather than the current policy, driving $\|\mathbf{w}\|_\infty \to \infty$ even on Baird's linear MDP (§15.4).
+- **3. Off-Policy Data:** Transitions come from a replay buffer or fixed log rather than the current policy, driving $\|\mathbf{w}\|_\infty \to \infty$ even on Baird's linear MDP (§{sec_dqn}).
 :::
 
 ::: {.col .fig .big}
@@ -87,8 +87,8 @@ Deep Reinforcement Learning: Sample Efficiency and Function Approximation<br>**b
 
 ::: {.cols .vc}
 ::: {.col}
-- **Two organizing axes:** Every method in Chapters 14 and 15 is positioned by *what it learns* (policy, action-value, or dynamics model) and *which data drive the update* (on-policy, off-policy replay, or fixed offline logs).
-- **Left to right progression:** We move from strict on-policy rollouts (§15.1) to bounded multi-epoch batch reuse (§15.2), off-policy replay buffers (§15.4–15.6), and purely offline datasets (§15.7–15.8).
+- **Two organizing axes:** Every method in Chapters §{num:chap_reinforcement_learning} and §{num:chap_deep_rl} is positioned by *what it learns* (policy, action-value, or dynamics model) and *which data drive the update* (on-policy, off-policy replay, or fixed offline logs).
+- **Left to right progression:** We move from strict on-policy rollouts (§{sec_actorcritic}) to bounded multi-epoch batch reuse (§{sec_ppo}), off-policy replay buffers (§{sec_dqn}–§{num:sec_model_based}), and purely offline datasets (§{sec_offline}–§{num:sec_rl_sequences}).
 :::
 
 ::: {.col .fig .big}
@@ -102,9 +102,9 @@ Deep Reinforcement Learning: Sample Efficiency and Function Approximation<br>**b
 
 ::: {.cols .vc}
 ::: {.col}
-- **Continuous Pendulum-v1 ($\ge -200$ goal):** Sample cost drops from $\sim 300\text{k}$ steps (REINFORCE) to $2.4\text{k}$–$11\text{k}$ (SAC, §15.5) and $200$–$600$ steps (World-Model MPC, §15.6).
-- **Discrete CartPole-v1 ($500$ ceiling):** Multi-epoch PPO (§15.2) halves the sample cost of 1-step Actor–Critic ($\sim 60\text{k} \to \sim 25\text{k}$ steps), with DQN (§15.4) solving in $\sim 40\text{k}$ steps.
-- **Exact tabular & verifier audits:** Diagnose reward hacking (§15.3, §15.8) and offline overestimation (§15.7) against closed-form optima.
+- **Continuous Pendulum-v1 ($\ge -200$ goal):** Sample cost drops from $\sim 300\text{k}$ steps (REINFORCE) to $2.4\text{k}$–$11\text{k}$ (SAC, §{sec_sac}) and $200$–$600$ steps (World-Model MPC, §{sec_model_based}).
+- **Discrete CartPole-v1 ($500$ ceiling):** Multi-epoch PPO (§{sec_ppo}) halves the sample cost of 1-step Actor–Critic ($\sim 60\text{k} \to \sim 25\text{k}$ steps), with DQN (§{sec_dqn}) solving in $\sim 40\text{k}$ steps.
+- **Exact tabular & verifier audits:** Diagnose reward hacking (§{sec_regularized}, §{sec_rl_sequences}) and offline overestimation (§{sec_offline}) against closed-form optima.
 :::
 
 ::: {.col .fig .big}
@@ -113,17 +113,17 @@ Deep Reinforcement Learning: Sample Efficiency and Function Approximation<br>**b
 :::
 :::
 
-::: {.slide title="Chapter 15 Roadmap: Eight Core Questions"}
+::: {.slide title="Chapter §{num:chap_deep_rl} Roadmap: Eight Core Questions"}
 [Study Guide]{.kicker}
 
 | Section | Central Question | Core Mathematical Mechanism |
 | :--- | :--- | :--- |
-| **§15.1 Actor-Critic & GAE** | Must a policy wait for the episode to end? | TD error $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ and backward scan $\sum_l (\gamma\lambda)^l \delta_{t+l}$ |
-| **§15.2 Trust Regions & PPO** | How many updates can one batch safely drive? | Per-step importance ratio $\rho_t(\theta)$ and clipped surrogate $\min(\rho_t \hat{A}_t, \textrm{clip}(\rho_t)\hat{A}_t)$ |
-| **§15.3 KL-Regularized RL** | How far may a policy stray from preference data? | Reference tilt $\pi^\star(a) \propto \pi_{\textrm{ref}}(a) e^{r(a)/\beta}$ and soft backup $V_\beta = \beta \log \sum_a \pi_{\textrm{ref}} e^{Q_\beta/\beta}$ |
-| **§15.4 Deep Q-Networks** | Can a network learn values from any transition? | Uniform experience replay, frozen target network $Q_{w^-}$, and Double DQN decoupling |
-| **§15.5 Soft Actor-Critic** | How do we learn continuous control in $3{,}000$ steps? | Maximum-entropy target $-\beta \log \pi$, squashed Gaussian Jacobian, twin critics $\min_j Q_j$ |
-| **§15.6 World Models & MPC** | Can a learned physics model plan a swing-up? | State-delta regression $\hat{f}_\phi(s,a)$, warm-started random shooting, policy distillation |
-| **§15.7 Offline RL** | What can be learned when no new trial is allowed? | Empirical MDP stitching and pessimistic penalty $-\kappa/\sqrt{n(s,a)}$ (CQL / TD3+BC) |
-| **§15.8 RL for Sequences** | What survives when actions are tokens? | Token credit decomposition, verifiable rewards, GRPO with $k_3$ KL loss, and DPO |
+| **§{sec_actorcritic} Actor-Critic & GAE** | Must a policy wait for the episode to end? | TD error $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ and backward scan $\sum_l (\gamma\lambda)^l \delta_{t+l}$ |
+| **§{sec_ppo} Trust Regions & PPO** | How many updates can one batch safely drive? | Per-step importance ratio $\rho_t(\theta)$ and clipped surrogate $\min(\rho_t \hat{A}_t, \textrm{clip}(\rho_t)\hat{A}_t)$ |
+| **§{sec_regularized} KL-Regularized RL** | How far may a policy stray from preference data? | Reference tilt $\pi^\star(a) \propto \pi_{\textrm{ref}}(a) e^{r(a)/\beta}$ and soft backup $V_\beta = \beta \log \sum_a \pi_{\textrm{ref}} e^{Q_\beta/\beta}$ |
+| **§{sec_dqn} Deep Q-Networks** | Can a network learn values from any transition? | Uniform experience replay, frozen target network $Q_{w^-}$, and Double DQN decoupling |
+| **§{sec_sac} Soft Actor-Critic** | How do we learn continuous control in $3{,}000$ steps? | Maximum-entropy target $-\beta \log \pi$, squashed Gaussian Jacobian, twin critics $\min_j Q_j$ |
+| **§{sec_model_based} World Models & MPC** | Can a learned physics model plan a swing-up? | State-delta regression $\hat{f}_\phi(s,a)$, warm-started random shooting, policy distillation |
+| **§{sec_offline} Offline RL** | What can be learned when no new trial is allowed? | Empirical MDP stitching and pessimistic penalty $-\kappa/\sqrt{n(s,a)}$ (CQL / TD3+BC) |
+| **§{sec_rl_sequences} RL for Sequences** | What survives when actions are tokens? | Token credit decomposition, verifiable rewards, GRPO with $k_3$ KL loss, and DPO |
 :::

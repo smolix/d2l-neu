@@ -1830,7 +1830,7 @@ Flow Matching, Rectified Flows, and Optimal Transport<br>**probability paths · 
 ::: {.slide title="Time Convention: Data at t = 0 and Noise at t = 1"}
 [Unified Chapter Clock]{.kicker}
 
-To compare score-based diffusion (§38.6) and flow matching (§38.7) on the exact same footing, this book keeps **one clock** throughout: data $\mathbf{x}_0 \sim p_0$ sit at $t = 0$, and standard Gaussian noise $\mathbf{x}_1 = \boldsymbol{\epsilon} \sim p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ sits at $t = 1$.
+To compare score-based diffusion (§{sec_mdl-score-matching-diffusion-flow}) and flow matching (§{sec_mdl-flow-matching-transport}) on the exact same footing, this book keeps **one clock** throughout: data $\mathbf{x}_0 \sim p_0$ sit at $t = 0$, and standard Gaussian noise $\mathbf{x}_1 = \boldsymbol{\epsilon} \sim p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ sits at $t = 1$.
 
 ![](../img/mdl-dyn-time-conventions.svg)
 

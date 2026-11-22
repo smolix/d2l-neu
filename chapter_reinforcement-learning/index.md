@@ -140,14 +140,14 @@ Our first running benchmark is $4 \times 4$ `FrozenLake-v1`, small enough to sol
 :::
 :::
 
-::: {.slide title="Chapter 14 Roadmap: From Exact Tables to Neural Critics"}
+::: {.slide title="Chapter §{num:chap_reinforcement_learning} Roadmap: From Exact Tables to Neural Critics"}
 [Architectural & Algorithmic Progression]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Known to unknown physics (§§14.1–14.4):** Formulate MDPs, solve Bellman contraction sweeps, learn $Q^*$ from single samples, and bound exploration regret via UCB and Thompson sampling.
-- **Demonstrations & continuous physics (§§14.5–14.6):** Diagnose $O(\varepsilon T^2)$ cloning shift (DAgger), and solve continuous linear/nonlinear control via Riccati LQR, iLQR, and receding-horizon MPC.
-- **Policy gradients & neural critics (§§14.7–14.9):** Differentiate stochastic policies via REINFORCE, baselines, RLOO, GRPO, and `tanh` MLP critics.
+- **Known to unknown physics (§§{sec_mdp}–§{num:sec_exploration}):** Formulate MDPs, solve Bellman contraction sweeps, learn $Q^*$ from single samples, and bound exploration regret via UCB and Thompson sampling.
+- **Demonstrations & continuous physics (§§{sec_imitation}–§{num:sec_optimal_control}):** Diagnose $O(\varepsilon T^2)$ cloning shift (DAgger), and solve continuous linear/nonlinear control via Riccati LQR, iLQR, and receding-horizon MPC.
+- **Policy gradients & neural critics (§§{sec_policygradient}–§{num:sec_deeprl}):** Differentiate stochastic policies via REINFORCE, baselines, RLOO, GRPO, and `tanh` MLP critics.
 :::
 
 ::: {.col .fig .big}
@@ -159,7 +159,7 @@ Our first running benchmark is $4 \times 4$ `FrozenLake-v1`, small enough to sol
 ::: {.slide title="Concept Check: Framing Sequential Decision Problems"}
 [Check Your Understanding]{.kicker}
 
-Work through these three foundational questions before diving into §14.1:
+Work through these three foundational questions before diving into §{sec_mdp}:
 
 1. **Credit assignment & discounting:** Which discount factor $\gamma$ gives an effective planning horizon $1/(1-\gamma)$ of $50$ steps, and how much weight does a reward $50$ steps away receive?
 2. **Stochastic control:** At cell 9 of slippery FrozenLake (hole 5 directly above), why does the optimal policy command *down* even though *down* slides sideways two times in three?

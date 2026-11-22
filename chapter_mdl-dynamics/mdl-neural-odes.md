@@ -1619,7 +1619,7 @@ What happens if we evaluate the trained vector fields at finer step counts ($N =
 ::: {.col}
 - **Unrolled Forward Euler ($N = 10$):** Costs $10$ fwd $+ 10$ bwd evaluations and $O(N)$ memory, but fits the coarse 10-step discretization (refining $N$ at test time increases error!).
 - **Unrolled Classical RK4 ($N = 10$):** Costs $40$ fwd $+ 40$ bwd evaluations, matching the true continuous flow to $O(h^4)$ across all test-time solvers.
-- **Score & Flow Matching (§§38.6–38.7):** Regresses directly onto closed-form targets in **1 fwd + 1 bwd evaluation** and $O(1)$ memory with no ODE solver in the training loop!
+- **Score & Flow Matching (§§{sec_mdl-score-matching-diffusion-flow}–§{num:sec_mdl-flow-matching-transport}):** Regresses directly onto closed-form targets in **1 fwd + 1 bwd evaluation** and $O(1)$ memory with no ODE solver in the training loop!
 :::
 
 ::: {.col .fig .big}

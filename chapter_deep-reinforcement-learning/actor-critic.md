@@ -997,7 +997,7 @@ $$\hat{A}^{\textrm{GAE}}_t = \sum_{l=0}^{\infty} (\gamma\lambda)^l\, \delta_{t+l
 ::: {.slide title="Generalized Advantage Estimation in Two Lines"}
 [GAE Implementation]{.kicker}
 
-Because $\hat{A}^{\textrm{GAE}}_t = \delta_t + \gamma\lambda\, \hat{A}^{\textrm{GAE}}_{t+1}$, GAE is identical to the `backward_scan` used for reward-to-go in Chapter 14, run on $\delta_t$ with discount factor $\gamma\lambda$:
+Because $\hat{A}^{\textrm{GAE}}_t = \delta_t + \gamma\lambda\, \hat{A}^{\textrm{GAE}}_{t+1}$, GAE is identical to the `backward_scan` used for reward-to-go in Chapter §{num:chap_reinforcement_learning}, run on $\delta_t$ with discount factor $\gamma\lambda$:
 
 @actor-critic-gae-in-one-old-function-1
 
@@ -1041,8 +1041,8 @@ Across the 8 frozen agents, increasing $\lambda$ from $0$ to $1$ drives bias to 
 
 | Estimator Architecture | Reward Structure | Episode Horizon | Extra Cost | Canonical Use Case |
 | :--- | :--- | :--- | :--- | :--- |
-| **Learned Critic + GAE** | Dense per-step rewards | Long or continuing | Value network + critic bias | Robotics, games, PPO (§15.2) |
-| **Group Baseline (GRPO)** | Single terminal verdict | Single completion | $K$ parallel rollouts per prompt | LLM reasoning with verifiers (§15.8) |
+| **Learned Critic + GAE** | Dense per-step rewards | Long or continuing | Value network + critic bias | Robotics, games, PPO (§{sec_ppo}) |
+| **Group Baseline (GRPO)** | Single terminal verdict | Single completion | $K$ parallel rollouts per prompt | LLM reasoning with verifiers (§{sec_rl_sequences}) |
 :::
 
 ::: {.slide title="Concept Check: TD Errors, GAE Horizons, and Critic Bias"}

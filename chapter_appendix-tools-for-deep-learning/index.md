@@ -119,8 +119,8 @@ Tools for Deep Learning: From Local Notebooks to Distributed Clusters and Servin
 ::: {.col}
 $$M_{\text{train}} \approx 16 N + M_{\text{act}}, \qquad \text{tok/s} \lesssim \frac{\beta}{B_w + b n B_{\text{kv}}}$$
 
-- **Training state & compute (§39.2, §39.4, §39.6):** Mixed-precision Adam uses $16\text{ B/param}$ and $C \approx 6ND\text{ FLOPs}$ across $N$ parameters and $D$ tokens.
-- **Decode & checkpoint intervals (§39.2–39.7):** Batch-1 decode streams $B_w + B_{\text{kv}}$ at bandwidth $\beta$, and Young's law checkpoints every $\tau^* = \sqrt{2\delta M}$.
+- **Training state & compute (§{sec_hosted_notebooks}, §{sec_hardware_buyers}, §{sec_training_systems}):** Mixed-precision Adam uses $16\text{ B/param}$ and $C \approx 6ND\text{ FLOPs}$ across $N$ parameters and $D$ tokens.
+- **Decode & checkpoint intervals (§{sec_hosted_notebooks}–§{num:sec_model_serving}):** Batch-1 decode streams $B_w + B_{\text{kv}}$ at bandwidth $\beta$, and Young's law checkpoints every $\tau^* = \sqrt{2\delta M}$.
 :::
 
 ::: {.col .fig}
@@ -129,14 +129,14 @@ $$M_{\text{train}} \approx 16 N + M_{\text{act}}, \qquad \text{tok/s} \lesssim \
 :::
 :::
 
-::: {.slide title="Roadmap of Chapter 39: From Laptop to Production"}
+::: {.slide title="Roadmap of Chapter §{num:chap_appendix_tools}: From Laptop to Production"}
 [Chapter Architecture]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **§39.1–39.3 Notebooks, Hosted VMs & Cloud:** Kernel state discipline, `uv` lock files, Colab/Kaggle persistence, and cloud cost per completed result.
-- **§39.4–39.5 Hardware & Ecosystem:** Capacity vs. bandwidth rooflines, unified memory for MoE, Arena Elo resolution, and `safetensors`/SHA pinning.
-- **§39.6–39.9 Scaling, Serving & D2L Internals:** DDP/FSDP2, 3D parallelism, continuous batching, PagedAttention, and the D2L single-source build.
+- **§{sec_interactive_development}–§{num:sec_cloud_instances} Notebooks, Hosted VMs & Cloud:** Kernel state discipline, `uv` lock files, Colab/Kaggle persistence, and cloud cost per completed result.
+- **§{sec_hardware_buyers}–§{num:sec_software_ecosystem} Hardware & Ecosystem:** Capacity vs. bandwidth rooflines, unified memory for MoE, Arena Elo resolution, and `safetensors`/SHA pinning.
+- **§{sec_training_systems}–§{num:sec_utils} Scaling, Serving & D2L Internals:** DDP/FSDP2, 3D parallelism, continuous batching, PagedAttention, and the D2L single-source build.
 :::
 
 ::: {.col .fig .big}
@@ -150,9 +150,9 @@ $$M_{\text{train}} \approx 16 N + M_{\text{act}}, \qquad \text{tok/s} \lesssim \
 
 ::: {.cols .vc}
 ::: {.col}
-- **Reproducible setups & economics (§39.1–39.3):** `uv pip sync`, environment fingerprints, and engineer-inclusive cloud cost models across 4090 / A100 / H100.
-- **Sizing & verification (§39.4–39.5):** 7B training memory ($86\text{ GiB}$ vs. $4\text{ GiB}$ QLoRA), decode bounds, Bradley-Terry SE ($347/\sqrt{v}$), and frozen manifests.
-- **Distributed training, serving & the build (§39.6–39.8):** 8-GPU FSDP2 ($22\text{ GiB}$ vs. $95\text{ GiB}$ DDP), continuous batching simulators, and prefix output hashing.
+- **Reproducible setups & economics (§{sec_interactive_development}–§{num:sec_cloud_instances}):** `uv pip sync`, environment fingerprints, and engineer-inclusive cloud cost models across 4090 / A100 / H100.
+- **Sizing & verification (§{sec_hardware_buyers}–§{num:sec_software_ecosystem}):** 7B training memory ($86\text{ GiB}$ vs. $4\text{ GiB}$ QLoRA), decode bounds, Bradley-Terry SE ($347/\sqrt{v}$), and frozen manifests.
+- **Distributed training, serving & the build (§{sec_training_systems}–§{num:sec_developers_guide}):** 8-GPU FSDP2 ($22\text{ GiB}$ vs. $95\text{ GiB}$ DDP), continuous batching simulators, and prefix output hashing.
 :::
 
 ::: {.col .fig .big}
@@ -166,17 +166,17 @@ $$M_{\text{train}} \approx 16 N + M_{\text{act}}, \qquad \text{tok/s} \lesssim \
 
 ::: {.cols}
 ::: {.col}
-- **Immediate setup (§39.1–39.2):** Start here to run the book's notebooks locally with `uv` or on Colab and Kaggle without losing work to ephemeral sessions.
-- **Infrastructure decisions (§39.3–39.5):** Read these sections before renting cloud GPUs, building a workstation, or adopting an open-weight checkpoint from Hugging Face.
+- **Immediate setup (§{sec_interactive_development}–§{num:sec_hosted_notebooks}):** Start here to run the book's notebooks locally with `uv` or on Colab and Kaggle without losing work to ephemeral sessions.
+- **Infrastructure decisions (§{sec_cloud_instances}–§{num:sec_software_ecosystem}):** Read these sections before renting cloud GPUs, building a workstation, or adopting an open-weight checkpoint from Hugging Face.
 :::
 
 ::: {.col}
-- **Scaling and contributing (§39.6–39.9):** Study §39.6–39.7 alongside Chapter 13 (*Computational Performance*) for multi-GPU training and LLM serving, §39.8 to contribute to D2L, and §39.9 for `d2l` utilities.
+- **Scaling and contributing (§{sec_training_systems}–§{num:sec_utils}):** Study §{sec_training_systems}–§{num:sec_model_serving} alongside Chapter §{num:chap_performance} (*Computational Performance*) for multi-GPU training and LLM serving, §{sec_developers_guide} to contribute to D2L, and §{sec_utils} for `d2l` utilities.
 - **Companion references:** Pair this chapter with DeepMind's *How to Scale Your Model*, Hugging Face's *Ultra-Scale Playbook*, and Stanford CS336.
 :::
 :::
 
 ::: {.d2l-note}
-**Up next (§39.1 Notebooks):** How the Jupyter kernel execution model works, why hidden state breaks reproducibility, and how to set up deterministic local environments with `uv`.
+**Up next (§{sec_interactive_development} Notebooks):** How the Jupyter kernel execution model works, why hidden state breaks reproducibility, and how to set up deterministic local environments with `uv`.
 :::
 :::

@@ -54,8 +54,8 @@ State Space Models and Modern Recurrent Architectures<br>**gated recurrences · 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Obstacle 1 — $O(T)$ Sequential Depth:** Nonlinear $\tanh(\mathbf{W}_{\textrm{hh}}\mathbf{h}_{t-1})$ blocks GPU parallelism; affine transitions (§12.3–12.5) run in $O(\log_2 T)$ parallel scan rounds.
-- **Obstacle 2 — Fixed-Vector Decay:** A 1D state $\mathbf{h}_t \in \mathbb{R}^d$ blurs facts; multi-timescale $\Delta_t$, matrix states $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$, and the delta rule (§12.4–12.7) add key-value addressing.
+- **Obstacle 1 — $O(T)$ Sequential Depth:** Nonlinear $\tanh(\mathbf{W}_{\textrm{hh}}\mathbf{h}_{t-1})$ blocks GPU parallelism; affine transitions (§{sec_linear-recurrence}–§{num:sec_mamba}) run in $O(\log_2 T)$ parallel scan rounds.
+- **Obstacle 2 — Fixed-Vector Decay:** A 1D state $\mathbf{h}_t \in \mathbb{R}^d$ blurs facts; multi-timescale $\Delta_t$, matrix states $\mathbf{S}_t \in \mathbb{R}^{d_v \times d_k}$, and the delta rule (§{sec_ssm}–§{num:sec_deltanet}) add key-value addressing.
 - **Unifying State-Space View:** Every mixer has a **state**, a **write update**, and a **readout**.
 :::
 
@@ -65,14 +65,14 @@ State Space Models and Modern Recurrent Architectures<br>**gated recurrences · 
 :::
 :::
 
-::: {.slide title="Architectural Progression Across Chapter 12"}
+::: {.slide title="Architectural Progression Across Chapter §{num:chap_modern_rnn}"}
 [Chapter Roadmap]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **From Gates to Linear Scans (§12.1–12.5):** Progresses from sequential LSTM/GRU gates and Seq2Seq bottlenecks to parallel `minGRU` scans, multi-timescale `S4D`, and selective `Mamba`.
-- **From Vectors to Matrix Memories (§12.6–12.7):** Expands the state into an outer-product key–value matrix (`GLA`) sharpened by online read-before-write error correction (`GatedDeltaNet`).
-- **Sparse Attention Hybrids (§12.8):** Interleaves 1 full attention layer per 3 recurrent layers to break the Welch overlap ceiling.
+- **From Gates to Linear Scans (§{sec_lstm}–§{num:sec_mamba}):** Progresses from sequential LSTM/GRU gates and Seq2Seq bottlenecks to parallel `minGRU` scans, multi-timescale `S4D`, and selective `Mamba`.
+- **From Vectors to Matrix Memories (§{sec_matrix-state}–§{num:sec_deltanet}):** Expands the state into an outer-product key–value matrix (`GLA`) sharpened by online read-before-write error correction (`GatedDeltaNet`).
+- **Sparse Attention Hybrids (§{sec_hybrids}):** Interleaves 1 full attention layer per 3 recurrent layers to break the Welch overlap ceiling.
 :::
 
 ::: {.col .fig .big}
@@ -96,23 +96,23 @@ State Space Models and Modern Recurrent Architectures<br>**gated recurrences · 
 :::
 :::
 
-::: {.slide title="How to Navigate Chapter 12"}
+::: {.slide title="How to Navigate Chapter §{num:chap_modern_rnn}"}
 [Study Guide]{.kicker}
 
 ::: {.cols}
 ::: {.col}
-- **Core architectural line:** Follow **§12.1 (Gates)** $\to$ **§12.3 (Linear Recurrences & Parallel Scans)** $\to$ **§12.5 (Selective SSMs / Mamba)** $\to$ **§12.6–12.7 (Matrix Memories & DeltaNet)** $\to$ **§12.8 (Hybrid Architectures)**.
-- **Historical & information-theoretic foundation (§12.2):** Revisits the 2014 encoder–decoder and translation metrics (`chrF`, `BLEU`) to measure how rapidly a single state vector saturates as input length grows.
+- **Core architectural line:** Follow **§{sec_lstm} (Gates)** $\to$ **§{sec_linear-recurrence} (Linear Recurrences & Parallel Scans)** $\to$ **§{sec_mamba} (Selective SSMs / Mamba)** $\to$ **§{sec_matrix-state}–§{num:sec_deltanet} (Matrix Memories & DeltaNet)** $\to$ **§{sec_hybrids} (Hybrid Architectures)**.
+- **Historical & information-theoretic foundation (§{sec_seq2seq}):** Revisits the 2014 encoder–decoder and translation metrics (`chrF`, `BLEU`) to measure how rapidly a single state vector saturates as input length grows.
 :::
 
 ::: {.col}
-- **Mathematical derivations that can wait on first reading:** Continuous-time zero-order-hold discretization in **§12.4** and the block-semiseparable chunked algorithms in **§12.6–12.7**.
+- **Mathematical derivations that can wait on first reading:** Continuous-time zero-order-hold discretization in **§{sec_ssm}** and the block-semiseparable chunked algorithms in **§{sec_matrix-state}–§{num:sec_deltanet}**.
 - **Controlled code comparisons:** Every mixer plugs into the identical pre-norm residual `SeqLM` backbone with LeCun initialization so differences reflect the sequence mixer alone.
 :::
 :::
 
 ::: {.d2l-note}
-**Up next (§12.1 Gated Recurrent Networks):** How sigmoid gates create a learned elementwise decay path—and why gate bias initialization decides whether training discovers long-range memory.
+**Up next (§{sec_lstm} Gated Recurrent Networks):** How sigmoid gates create a learned elementwise decay path—and why gate bias initialization decides whether training discovers long-range memory.
 :::
 :::
 

@@ -840,6 +840,6 @@ Test your mastery of the unified shape and receptive-field equations:
 | **Master Formula** | $\lfloor (n + 2p - d(k-1) - 1)/s \rfloor + 1$ | $1 + \sum_{i=1}^L d_i(k_i - 1)\prod_{j<i} s_j$ | Governs all 1D, 2D, and 3D convolutional & pooling layers |
 
 ::: {.d2l-note}
-**Next (§6.4):** Extending convolutions from single-channel 2D grids to 3D stacks of input and output channels, accounting for the $c_\textrm{i} c_\textrm{o}$ compute/memory cost, and building $1 \times 1$ bottleneck layers.
+**Next (§{sec_channels}):** Extending convolutions from single-channel 2D grids to 3D stacks of input and output channels, accounting for the $c_\textrm{i} c_\textrm{o}$ compute/memory cost, and building $1 \times 1$ bottleneck layers.
 :::
 :::

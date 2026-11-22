@@ -113,9 +113,9 @@ Attention Mechanisms: Differentiable Content-Based Retrieval<br>**queries, keys 
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Order Blindness:** A weighted sum $\sum_i \alpha_i \mathbf{v}_i$ is permutation equivariant and ignores word order, requiring absolute tables, **RoPE**, or **ALiBi** (**§10.4**).
-- **2. Quadratic Cost:** Scoring all pairs of $n$ tokens costs $\Theta(n^2 d)$ FLOPs and $O(n^2)$ naive memory ($64\text{ GiB}$ at $n=128\text{K}$), motivating **FlashAttention** (**§10.5**), windows, and **linear attention** (**§10.6**).
-- **3. Mechanistic Opacity:** Attention weights show *where* a head looks, not *what* function it computes across the residual stream via **QK/OV circuits** (**§10.7**).
+- **1. Order Blindness:** A weighted sum $\sum_i \alpha_i \mathbf{v}_i$ is permutation equivariant and ignores word order, requiring absolute tables, **RoPE**, or **ALiBi** (**§{sec_positional-information}**).
+- **2. Quadratic Cost:** Scoring all pairs of $n$ tokens costs $\Theta(n^2 d)$ FLOPs and $O(n^2)$ naive memory ($64\text{ GiB}$ at $n=128\text{K}$), motivating **FlashAttention** (**§{sec_attention-at-scale}**), windows, and **linear attention** (**§{sec_windowed-linear-attention}**).
+- **3. Mechanistic Opacity:** Attention weights show *where* a head looks, not *what* function it computes across the residual stream via **QK/OV circuits** (**§{sec_what-attention-computes}**).
 :::
 
 ::: {.col .fig .big}
@@ -124,14 +124,14 @@ Attention Mechanisms: Differentiable Content-Based Retrieval<br>**queries, keys 
 :::
 :::
 
-::: {.slide title="Architecture and Roadmap of Chapter 10"}
+::: {.slide title="Architecture and Roadmap of Chapter §{num:chap_attention}"}
 [Chapter Roadmap]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Part 1 — Build the Layer (§§10.1–10.3):** Soft key–value lookup, Nadaraya–Watson kernel pooling, $1/\sqrt{d}$ scaled dot-product scoring, boolean mask algebra, and multi-head & grouped-query attention.
-- **Part 2 — Sequence Order (§10.4):** Permutation equivariance, sinusoidal rotations, **RoPE**, **ALiBi**, and zero-shot context extension.
-- **Part 3 & Part 4 — Scale & Circuits (§§10.5–10.7):** Blockwise online softmax (**FlashAttention**), sliding windows, linear attention recurrences, and two-layer **induction heads**.
+- **Part 1 — Build the Layer (§§{sec_queries-keys-values}–§{num:sec_multihead-attention}):** Soft key–value lookup, Nadaraya–Watson kernel pooling, $1/\sqrt{d}$ scaled dot-product scoring, boolean mask algebra, and multi-head & grouped-query attention.
+- **Part 2 — Sequence Order (§{sec_positional-information}):** Permutation equivariance, sinusoidal rotations, **RoPE**, **ALiBi**, and zero-shot context extension.
+- **Part 3 & Part 4 — Scale & Circuits (§§{sec_attention-at-scale}–§{num:sec_what-attention-computes}):** Blockwise online softmax (**FlashAttention**), sliding windows, linear attention recurrences, and two-layer **induction heads**.
 :::
 
 ::: {.col .fig .big}
@@ -147,13 +147,13 @@ Every section tests its claims on an executable benchmark and counts exact FLOPs
 
 | Section | Executable Benchmark / Model | Key Quantitative Takeaway |
 | :--- | :--- | :--- |
-| **§10.1–10.2** | Nadaraya–Watson 1D regression; `ToyAligner` permutation task | Bandwidth $\sigma$ and $1/\sqrt{d}$ act as softmax temperatures preventing gradient saturation |
-| **§10.3** | *"Alice gave Bob the book"*; Gaussian **copy-both** task | One head incurs $\ge 1/2$ relative MSE; two heads reach $\sim 10^{-7}$ at identical $4d^2$ params |
-| **§10.4** | `TinyCharLM` on WikiText-103 bytes ($n = 128$ $\to$ $512$) | RoPE gives lowest in-range perplexity ($7.3$); slow-pair interpolation repairs $4\times$ context |
-| **§10.5–10.6** | Chunked online softmax; fused Flash/FlexAttention up to $n = 32\text{K}$ | Online softmax cuts memory from $O(n^2)$ to $O(n)$; window $w = 128$ gives $> 30\times$ speedup |
-| **§10.7** | `TinyCharLM` on variable-period repeated random patterns | Two blocks learn in-context induction ($\sim 90\%$ accuracy); one block stalls at $\sim 10\%$ |
+| **§{sec_queries-keys-values}–§{num:sec_attention-scoring-functions}** | Nadaraya–Watson 1D regression; `ToyAligner` permutation task | Bandwidth $\sigma$ and $1/\sqrt{d}$ act as softmax temperatures preventing gradient saturation |
+| **§{sec_multihead-attention}** | *"Alice gave Bob the book"*; Gaussian **copy-both** task | One head incurs $\ge 1/2$ relative MSE; two heads reach $\sim 10^{-7}$ at identical $4d^2$ params |
+| **§{sec_positional-information}** | `TinyCharLM` on WikiText-103 bytes ($n = 128$ $\to$ $512$) | RoPE gives lowest in-range perplexity ($7.3$); slow-pair interpolation repairs $4\times$ context |
+| **§{sec_attention-at-scale}–§{num:sec_windowed-linear-attention}** | Chunked online softmax; fused Flash/FlexAttention up to $n = 32\text{K}$ | Online softmax cuts memory from $O(n^2)$ to $O(n)$; window $w = 128$ gives $> 30\times$ speedup |
+| **§{sec_what-attention-computes}** | `TinyCharLM` on variable-period repeated random patterns | Two blocks learn in-context induction ($\sim 90\%$ accuracy); one block stalls at $\sim 10\%$ |
 
 ::: {.d2l-note}
-**Fast track to Chapter 11 (Transformers):** Read **§10.1–10.4** and the residual-stream opening of **§10.7**; study **§10.5–10.6** alongside KV caching and modern RNNs.
+**Fast track to Chapter §{num:chap_transformers} (Transformers):** Read **§{sec_queries-keys-values}–§{num:sec_positional-information}** and the residual-stream opening of **§{sec_what-attention-computes}**; study **§{sec_attention-at-scale}–§{num:sec_windowed-linear-attention}** alongside KV caching and modern RNNs.
 :::
 :::

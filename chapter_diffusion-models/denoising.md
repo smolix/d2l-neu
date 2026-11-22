@@ -1347,5 +1347,5 @@ Test your intuition on three foundational score-matching calculations:
 | **Tweedie's Formula** | $\hat{\mathbf{x}}_0 = \tilde{\mathbf{x}} + \sigma^2\hat{\mathbf{s}} = \tilde{\mathbf{x}} - \sigma\hat{\boldsymbol\epsilon}$ | Affine map linking $\hat{\mathbf{x}}_0$, $\hat{\mathbf{s}}$, and $\hat{\boldsymbol\epsilon}$ | Unifies denoising, noise, and score predictors |
 | **Small-$\sigma$ Regime** | Target $-\boldsymbol\epsilon/\sigma$, normal slope $-1/\sigma^2$ | Loss floor $\propto d/\sigma^2$; Kramers time $\propto e^{\Delta U}$ | Sharp local modes, but chains trap & miss weights |
 | **Large-$\sigma$ Regime** | Blurred density $p_\sigma = p * \mathcal{N}(\mathbf{0}, \sigma^2\mathbf{I})$ | Score bias $\propto \sigma^4$; mode variance $s^2 + \sigma^2$ | Fast global mode mixing, but heavily blurred samples |
-| **Next (§17.2 Paths)** | $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol\epsilon$ ($t \in [0, 1]$) | Anneals from pure noise ($t=1$) to data ($t=0$) | Combines coarse-level mixing with fine-level sharpness |
+| **Next (§{sec_diffusion-gaussian-paths} Paths)** | $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol\epsilon$ ($t \in [0, 1]$) | Anneals from pure noise ($t=1$) to data ($t=0$) | Combines coarse-level mixing with fine-level sharpness |
 :::

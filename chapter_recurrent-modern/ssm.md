@@ -679,7 +679,7 @@ Why did we use *identical blank fillers* (`blank_fillers=True`) in the $1{,}000$
 - **Cannot ignore noisy fillers or variable lags:** If salient tokens appear at unpredictable positions among varying filler tokens, any fixed filter $K_k$ blends target tokens and filler noise with fixed weights.
 
 ::: {.d2l-note}
-**Up next (§12.5 Selective State Space Models):** Make the step size $\boldsymbol{\Delta}_t$, write vector $\mathbf{B}_t$, and read vector $\mathbf{C}_t$ functions of the input token $\mathbf{x}_t$—combining S4D's multi-timescale state bank with `minGRU`'s content-based gating.
+**Up next (§{sec_mamba} Selective State Space Models):** Make the step size $\boldsymbol{\Delta}_t$, write vector $\mathbf{B}_t$, and read vector $\mathbf{C}_t$ functions of the input token $\mathbf{x}_t$—combining S4D's multi-timescale state bank with `minGRU`'s content-based gating.
 :::
 :::
 
@@ -711,6 +711,6 @@ Test your grasp of continuous-time state space models with these three questions
 | **Factored Half-Life** | $\tau_{1/2} = \ln 2 / (\Delta|\lambda_n|)$ | Rates $\lambda_n = -n$ separate states; $\Delta \in [10^{-3}, 10^{-1}]$ scales half-lives to $693$ steps |
 | **Convolutional Duality** | $K_k = \sum_{n=1}^N c_n \bar{a}_n^k \bar{b}_n$, $y = \mathbf{K} * x + D x$ | Zero-padded length-$2T$ FFT evaluates LTI training pass in $O(Td\log T)$ |
 | **Real vs. Complex Rates** | $\lambda_n \in \mathbb{R}_-$ vs. $\lambda_n = -\alpha + i\omega$ | Real rates form smooth window averages; complex rates fit sharp delay spikes |
-| **LTI Limitation** | Fixed lag weights $K_k$ independent of $x_{t-k}$ | Solves $1{,}000$-step fixed-lag recall, but fails when target positions vary (§12.5) |
+| **LTI Limitation** | Fixed lag weights $K_k$ independent of $x_{t-k}$ | Solves $1{,}000$-step fixed-lag recall, but fails when target positions vary (§{sec_mamba}) |
 :::
 

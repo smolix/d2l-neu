@@ -722,7 +722,7 @@ Two Test Models: TinyLM and FashionCNN<br>**byte-level Transformer · convolutio
 ::: {.col}
 To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct structural groups:
 
-- **1. Dense 2D weight matrices ($425{,}984$ params, $90.5\%$):** Four block matrices per layer (`qkv` $128 \to 384$, `proj` $128 \to 128$, `mlp` $128 \to 512 \to 128$) plus output `head` ($128 \to 256$). Decayed in AdamW (§9.5); internal matrices orthogonalized in Muon (§9.6).
+- **1. Dense 2D weight matrices ($425{,}984$ params, $90.5\%$):** Four block matrices per layer (`qkv` $128 \to 384$, `proj` $128 \to 128$, `mlp` $128 \to 512 \to 128$) plus output `head` ($128 \to 256$). Decayed in AdamW (§{sec_adam}); internal matrices orthogonalized in Muon (§{sec_muon}).
 - **2. Embedding lookup tables ($40{,}960$ params, $8.7\%$):** `token_emb` ($256 \times 128$) and `pos_emb` ($64 \times 128$); receive sparse row gradients proportional to byte frequency.
 - **3. 1D vectors ($3{,}840$ params, $0.8\%$):** Linear biases and LayerNorm scales/shifts.
 :::
@@ -826,7 +826,7 @@ To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct
 ::: {.cols .vc}
 ::: {.col}
 - **$\eta = 0.1$ (Under-budgeted travel):** Smooth descent still dropping at step $2{,}000$; cumulative travel $B_T = \eta T = 200$ is too small $\to$ **raise $\eta$**.
-- **$\eta = 0.5$ (Near initial sharpness edge $2/L$):** Early $>1$-nat spike in steps $1\text{--}30$, then fast descent to $2.13$ nats $\to$ **add warmup (§9.7) or clipping (§9.10)**.
+- **$\eta = 0.5$ (Near initial sharpness edge $2/L$):** Early $>1$-nat spike in steps $1\text{--}30$, then fast descent to $2.13$ nats $\to$ **add warmup (§{sec_scheduler}) or clipping (§{sec_practice})**.
 - **$\eta = 2.5$ (Exceeds $2/\lambda_{\max}$):** Step 1 overshoots into a steeper basin and diverges to `inf` $\to$ **lower $\eta$**.
 :::
 
@@ -844,7 +844,7 @@ To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct
 - Running the exact same $2{,}000$-step `train_steps` loop on `FashionCNN` ($b = 256$ images) with plain SGD at $\eta = 0.3$ establishes our image classification baseline:
   - **Final training loss:** $\approx 0.22\text{--}0.23$ nats (down from uniform $\ln 10 \approx 2.30$).
   - **Held-out test accuracy:** $\approx 89.5\%\text{--}90.5\%$.
-- Together, **`TinyLM` ($2.13$ nats under plain SGD)** and **`FashionCNN` ($0.22$ loss / $90\%$ test accuracy)** serve as the reference baselines for §9.4–§9.10.
+- Together, **`TinyLM` ($2.13$ nats under plain SGD)** and **`FashionCNN` ($0.22$ loss / $90\%$ test accuracy)** serve as the reference baselines for §{sec_momentum}–§{sec_practice}.
 :::
 
 ::: {.col .fig}
@@ -877,7 +877,7 @@ When evaluating a learning-rate sweep `lr_sweep` on a log-spaced grid (e.g., fac
 - **1. Tuned score at the grid optimum $\eta^\star$:** The lowest `final_loss` (or validation loss) achieved across the grid points tested, starting from identical initial weights.
 - **2. Usable learning-rate range:** The span of grid learning rates that finish within **$+0.15$ nats** of the optimum ($>10\times$ the multi-seed spread).
   - *Example on `TinyLM`:* Under plain SGD across $\{0.1, 0.5, 2.5\}$, only a single grid point ($\eta = 0.5$ at $2.13$ nats) is usable ($\eta = 0.1$ is $+0.34$ nats worse; $\eta = 2.5$ diverges to `inf`).
-  - As we will see in §9.5–§9.6, adaptive and orthogonalized optimizers widen this usable window across an order of magnitude ($10^{-3}$ to $10^{-2}$ or $3 \times 10^{-2}$).
+  - As we will see in §{sec_adam}–§{sec_muon}, adaptive and orthogonalized optimizers widen this usable window across an order of magnitude ($10^{-3}$ to $10^{-2}$ or $3 \times 10^{-2}$).
 :::
 
 ::: {.slide title="Multi-Seed Spread and the 3× Significance Threshold"}

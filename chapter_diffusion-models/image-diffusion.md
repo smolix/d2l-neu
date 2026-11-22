@@ -1382,7 +1382,7 @@ Using three shared draws of $5{,}000$ initial noise tensors, we compare 50 Euler
 @image-diffusion-reading-the-number-3
 
 - **EMA provides a massive $\approx +0.5$ FD win:** In every draw, raw final weights score $\approx 1.3$–$1.5$ vs. $\approx 0.8$ for EMA, while EMA varies by only $\pm 0.02$ across noise seeds.
-- **1,000-step ancestral chain gains $\approx 0.15$ FD:** Achieves $\approx 0.65$ FD at **$20\times$ the compute cost** of 50 Euler steps (motivating the fast higher-order solvers of §17.5).
+- **1,000-step ancestral chain gains $\approx 0.15$ FD:** Achieves $\approx 0.65$ FD at **$20\times$ the compute cost** of 50 Euler steps (motivating the fast higher-order solvers of §{sec_diffusion-samplers}).
 :::
 
 ::: {.slide title="Bayes' Rule on Scores and Classifier Guidance"}

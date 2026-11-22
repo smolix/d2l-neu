@@ -706,7 +706,7 @@ Comparing the three panels below shows how local LQR, trajectory optimization, a
 ::: {.col}
 - **Variables & objective:** Optimal control minimizes stage cost $\sum_t c(\mathbf{x}_t, \mathbf{u}_t)$ over $(\mathbf{x}_t, \mathbf{u}_t) \in \mathbb{R}^d \times \mathbb{R}^m$; RL maximizes discounted return $\mathbb{E}[\sum_t \gamma^t r(s_t, a_t)]$.
 - **Backups:** Riccati recursion on $\mathbf{x}^\top\mathbf{P}_t\mathbf{x}$ mirrors Bellman operator $\mathcal{T}$ on $V(s), Q(s, a)$.
-- **Unknown physics:** System identification + MPC bridges directly to model-based RL (§15.6) and model-free policy gradients (§14.7).
+- **Unknown physics:** System identification + MPC bridges directly to model-based RL (§{sec_model_based}) and model-free policy gradients (§{sec_policygradient}).
 :::
 
 ::: {.col .fig .big}

@@ -82,14 +82,14 @@ Sequence Models and Recurrent Neural Networks<br>**autoregression · BPE subword
 :::
 :::
 
-::: {.slide title="Chapter 8 Roadmap: From Time Series to Decoding"}
+::: {.slide title="Chapter §{num:chap_rnn} Roadmap: From Time Series to Decoding"}
 [Architectural Progression]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Data & representation (§§8.1–8.2):** Formulate chain-rule autoregression ($m$-step windows vs. latent state $\mathbf{h}_t$) and convert raw UTF-8 strings into subword IDs via pre-tokenized Byte Pair Encoding (BPE).
-- **Probabilistic scoring & RNNs (§§8.3–8.4):** Benchmark Kneser–Ney $n$-grams in tokenizer-invariant bits per byte ($\textrm{bpb}$), then replace count tables with a shared-weight $\tanh$ recurrent cell stabilized by global gradient clipping.
-- **Credit assignment & decoding (§§8.5–8.6):** Derive Backpropagation Through Time (BPTT) to explain why gradients vanish or explode, and compare beam search against truncated samplers ($\text{top-}k$, $\text{top-}p$, $\text{min-}p$).
+- **Data & representation (§§{sec_sequence}–§{num:sec_text-sequence}):** Formulate chain-rule autoregression ($m$-step windows vs. latent state $\mathbf{h}_t$) and convert raw UTF-8 strings into subword IDs via pre-tokenized Byte Pair Encoding (BPE).
+- **Probabilistic scoring & RNNs (§§{sec_language-model}–§{num:sec_rnn}):** Benchmark Kneser–Ney $n$-grams in tokenizer-invariant bits per byte ($\textrm{bpb}$), then replace count tables with a shared-weight $\tanh$ recurrent cell stabilized by global gradient clipping.
+- **Credit assignment & decoding (§§{sec_bptt}–§{num:sec_decoding}):** Derive Backpropagation Through Time (BPTT) to explain why gradients vanish or explode, and compare beam search against truncated samplers ($\text{top-}k$, $\text{top-}p$, $\text{min-}p$).
 :::
 
 ::: {.col .fig}
@@ -103,9 +103,9 @@ Sequence Models and Recurrent Neural Networks<br>**autoregression · BPE subword
 
 ::: {.cols .vc}
 ::: {.col}
-- **Rollout drift & subword compression (§§8.1–8.2):** Linear AR($4$) achieves $0.05$ 1-step MSE on a noisy sine wave but degrades $5\times$ to $0.25$ on 64-step rollout; BPE-1024 compresses *The Time Machine* to $2.78$ bytes/token with zero OOVs.
-- **Count vs. neural language models (§§8.3–8.4):** Kneser–Ney cuts word trigram PPL from $2{,}481 \to 300$ ($1.90$ bpb on BPE-1024); clipped `RNNLMScratch` ($512$-byte state, $89\%$ params in vocabulary layers) reaches $2.12$ bpb.
-- **Gradient horizon & generation (§§8.5–8.6):** Despite $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$, $\tanh'$ contraction ($\approx 0.27$) decays gradients below $1\%$ within $8$ steps; truncated samplers restore `distinct-3` $\approx 0.99$.
+- **Rollout drift & subword compression (§§{sec_sequence}–§{num:sec_text-sequence}):** Linear AR($4$) achieves $0.05$ 1-step MSE on a noisy sine wave but degrades $5\times$ to $0.25$ on 64-step rollout; BPE-1024 compresses *The Time Machine* to $2.78$ bytes/token with zero OOVs.
+- **Count vs. neural language models (§§{sec_language-model}–§{num:sec_rnn}):** Kneser–Ney cuts word trigram PPL from $2{,}481 \to 300$ ($1.90$ bpb on BPE-1024); clipped `RNNLMScratch` ($512$-byte state, $89\%$ params in vocabulary layers) reaches $2.12$ bpb.
+- **Gradient horizon & generation (§§{sec_bptt}–§{num:sec_decoding}):** Despite $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$, $\tanh'$ contraction ($\approx 0.27$) decays gradients below $1\%$ within $8$ steps; truncated samplers restore `distinct-3` $\approx 0.99$.
 :::
 
 ::: {.col .fig}
@@ -117,7 +117,7 @@ Sequence Models and Recurrent Neural Networks<br>**autoregression · BPE subword
 ::: {.slide title="Concept Check: Designing an End-to-End Language Model"}
 [Check Your Understanding]{.kicker}
 
-Before diving into §8.1, test how the components of the sequence modeling pipeline interact:
+Before diving into §{sec_sequence}, test how the components of the sequence modeling pipeline interact:
 
 1. **Tokenizer vs. Perplexity:** Model A uses a 27-character vocabulary and achieves test perplexity $\textrm{PPL} = 6.5$. Model B uses a 1,024-token BPE vocabulary ($2.78$ bytes/token) and achieves $\textrm{PPL} = 60.0$. Which model compresses the test text better in bits per byte?
 2. **State Memory vs. Sequence Length:** How many bytes of hidden-state memory does a single-layer `float32` RNN with $h = 128$ units require to process a 32-token window versus a 1,000,000-token book?
@@ -137,9 +137,9 @@ Before diving into §8.1, test how the components of the sequence modeling pipel
 
 ::: {.cols .vc}
 ::: {.col}
-- **Universal subwords & invariant scoring (§§8.2–8.3):** Pre-tokenized byte-level BPE eliminates `<unk>` tokens while reserving special IDs above $|\mathcal{V}_{\textrm{BPE}}|$; bits per byte ($\textrm{bpb}$) compares any tokenization on a common lossless-compression scale.
-- **Constant-memory recurrence & BPTT (§§8.4–8.5):** Shared weights update a fixed-size state $\mathbf{H}_t \in \mathbb{R}^{b \times h}$ in $O(1)$ per step; truncated BPTT bounds memory to $O(T_0 bh)$ and global norm clipping prevents exploding gradient steps.
-- **Controlled autoregressive decoding (§8.6):** Length-normalized beam search serves constrained tasks, while temperature + $\text{top-}p / \text{min-}p$ tail truncation eliminates repetition loops in open-ended generation.
+- **Universal subwords & invariant scoring (§§{sec_text-sequence}–§{num:sec_language-model}):** Pre-tokenized byte-level BPE eliminates `<unk>` tokens while reserving special IDs above $|\mathcal{V}_{\textrm{BPE}}|$; bits per byte ($\textrm{bpb}$) compares any tokenization on a common lossless-compression scale.
+- **Constant-memory recurrence & BPTT (§§{sec_rnn}–§{num:sec_bptt}):** Shared weights update a fixed-size state $\mathbf{H}_t \in \mathbb{R}^{b \times h}$ in $O(1)$ per step; truncated BPTT bounds memory to $O(T_0 bh)$ and global norm clipping prevents exploding gradient steps.
+- **Controlled autoregressive decoding (§{sec_decoding}):** Length-normalized beam search serves constrained tasks, while temperature + $\text{top-}p / \text{min-}p$ tail truncation eliminates repetition loops in open-ended generation.
 :::
 
 ::: {.col .fig .big}

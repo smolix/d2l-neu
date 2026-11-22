@@ -649,6 +649,6 @@ Work out these three calculations:
 | **$1 \times 1$ Convolution** | $\mathbf{Y} = \textrm{reshape}(\mathbf{K}\,\textrm{reshape}(\mathsf{X}))$ | $c_\textrm{o} c_\textrm{i} + c_\textrm{o}$ params | Per-pixel channel MLP; bottleneck projections cut cost $8.5\times$ |
 
 ::: {.d2l-note}
-**Next (§6.5):** How to summarize local neighborhoods, absorb small spatial jitters, and collapse spatial feature maps into translation-invariant vectors via **pooling layers**.
+**Next (§{sec_pooling}):** How to summarize local neighborhoods, absorb small spatial jitters, and collapse spatial feature maps into translation-invariant vectors via **pooling layers**.
 :::
 :::

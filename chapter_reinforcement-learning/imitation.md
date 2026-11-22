@@ -706,7 +706,7 @@ A **demonstration** is an expert trajectory $(s_0, a_0^*, s_1, a_1^*, \ldots)$; 
 
 `Policy` wraps a neural or tabular score model with an Adam optimizer and computes $\log \pi_\theta(a \mid s)$ via `log_softmax`:
 
-```python
+```{.python #imitation-exercises}
 class Policy(nn.Module):
     def __init__(self, policy, lr=1e-2):
         super().__init__()
@@ -745,7 +745,7 @@ class Policy(nnx.Module):
 ::: {.slide title="Weighted Log-Likelihood Ascent Step"}
 [The Shared Policy Optimization Primitive]{.kicker}
 
-Both behavior cloning and policy gradient methods (§14.7–§14.9) call `policy_step` to take one ascent step on $\frac{1}{n}\sum_{i=1}^n w_i \log \pi_\theta(a_i \mid s_i)$:
+Both behavior cloning and policy gradient methods (§{sec_policygradient}–§{sec_deeprl}) call `policy_step` to take one ascent step on $\frac{1}{n}\sum_{i=1}^n w_i \log \pi_\theta(a_i \mid s_i)$:
 
 @imitation-the-reduction-to-classification-5
 
@@ -903,7 +903,7 @@ Running 4 rounds of DAgger (10 learner episodes per round across 10 seeds) close
 ::: {.slide title="Supervised Fine-Tuning and On-Policy Distillation"}
 [Imitation Learning in Large Language Models]{.kicker}
 
-In the token-level MDP of §14.1, standard post-training stages of large language models map directly onto behavior cloning and DAgger:
+In the token-level MDP of §{sec_mdp}, standard post-training stages of large language models map directly onto behavior cloning and DAgger:
 
 | Imitation Learning Concept | Language Model Post-Training Counterpart |
 |:--|:--|
@@ -944,7 +944,7 @@ Test your understanding of distribution shift, compounding error, and DAgger:
 | **On-Policy Distillation** | Student prefixes relabeled by teacher | Implements DAgger for LLMs using teacher logits $\pi^*(\cdot \mid x, y_{<t})$ |
 
 ::: {.d2l-note}
-**Up next (§14.6 Optimal Control & §14.7 Policy Gradient):** When no expert is available to imitate, we either differentiate directly through known continuous physics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, \mathbf{u}_t)$ via LQR, iLQR, and MPC (§14.6), or optimize a parameterized policy $\pi_\theta(a \mid s)$ from sampled scalar rewards via the score-function policy gradient (§14.7).
+**Up next (§{sec_optimal_control} Optimal Control & §{sec_policygradient} Policy Gradient):** When no expert is available to imitate, we either differentiate directly through known continuous physics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, \mathbf{u}_t)$ via LQR, iLQR, and MPC (§{sec_optimal_control}), or optimize a parameterized policy $\pi_\theta(a \mid s)$ from sampled scalar rewards via the score-function policy gradient (§{sec_policygradient}).
 :::
 :::
 

@@ -734,7 +734,7 @@ Work out the exact numerical answer for each scenario:
 
 1. **$\eta_{\max} = 2/\lambda_{\max} = 0.2$**; **$\kappa = 10 / 0.05 = 200$**; and **$t \approx \frac{200}{2} \times 4 = 400$ steps**.
 2. Sharpness arrests at the stability ceiling **$\lambda_{\max} \approx 2/\eta = 2/0.5 = 4.0$**.
-3. At $45^\circ$, $H_{11} = H_{22} = \frac{0.2 + 4.0}{2} = 2.1$ are identical! Dividing by $\operatorname{diag}(\mathbf{H})$ merely rescales $\eta$ by $1/2.1$, leaving **$\kappa = 20$ unchanged**—motivating momentum (§9.4) and full-matrix preconditioning (§9.6).
+3. At $45^\circ$, $H_{11} = H_{22} = \frac{0.2 + 4.0}{2} = 2.1$ are identical! Dividing by $\operatorname{diag}(\mathbf{H})$ merely rescales $\eta$ by $1/2.1$, leaving **$\kappa = 20$ unchanged**—motivating momentum (§{sec_momentum}) and full-matrix preconditioning (§{sec_muon}).
 :::
 :::
 

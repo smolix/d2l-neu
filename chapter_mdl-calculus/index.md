@@ -98,9 +98,9 @@ Calculus and Automatic Differentiation: From Local Models to Backpropagation<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- **Pillar 1 — The Descent Lemma (§§34.1–34.2):** Taylor's Lagrange remainder converts a curvature bound $|f''| \le L$ into safe step sizes $0 < \eta < 2/L$ ($\eta^\star = 1/L$).
-- **Pillar 2 — Reverse-Mode Jacobian Products (§§34.3–34.5):** Associating $((\mathbf{u}^\top\mathbf{J}_K)\mathbf{J}_{K-1})\cdots\mathbf{J}_1$ from the output backward computes all gradients in $O(1)$ sweeps.
-- **Pillar 3 — Differentiating Expectations (§§34.6–34.7):** Score-function (REINFORCE) vs. pathwise reparameterization trade generality against Monte Carlo variance.
+- **Pillar 1 — The Descent Lemma (§§{sec_mdl-single_variable_calculus}–§{num:sec_mdl-multivariable_calculus}):** Taylor's Lagrange remainder converts a curvature bound $|f''| \le L$ into safe step sizes $0 < \eta < 2/L$ ($\eta^\star = 1/L$).
+- **Pillar 2 — Reverse-Mode Jacobian Products (§§{sec_mdl-chain-rule-graphs}–§{num:sec_mdl-matrix-calculus-autodiff}):** Associating $((\mathbf{u}^\top\mathbf{J}_K)\mathbf{J}_{K-1})\cdots\mathbf{J}_1$ from the output backward computes all gradients in $O(1)$ sweeps.
+- **Pillar 3 — Differentiating Expectations (§§{sec_mdl-integral_calculus}–§{num:sec_mdl-expectation-gradients}):** Score-function (REINFORCE) vs. pathwise reparameterization trade generality against Monte Carlo variance.
 :::
 
 ::: {.col .fig .big}
@@ -109,14 +109,14 @@ Calculus and Automatic Differentiation: From Local Models to Backpropagation<br>
 :::
 :::
 
-::: {.slide title="Chapter 34 Roadmap: From 1D Slices to Sampling"}
+::: {.slide title="Chapter §{num:chap_mdl-calculus} Roadmap: From 1D Slices to Sampling"}
 [Architectural Progression]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Part I — Local Models (§§34.1–34.2):** Taylor polynomials, Lagrange remainders, descent lemma, gradients $\nabla f \perp$ level sets, and symmetric Hessians $\mathbf{H}_f$.
-- **Part II — Chain Rule & Autodiff (§§34.3–34.5):** Path sums on DAGs, differential method $df = \langle \nabla f, d\mathbf{X}\rangle$, dual numbers, Wengert tape, $2\sqrt{T}$ checkpointing, HVPs, and implicit diff.
-- **Part III — Integrals & Expectations (§§34.6–34.7):** Riemann sums, FTC, Fubini, $|\det\mathbf{J}_{\boldsymbol{\phi}}|$ in flows, Leibniz rule, REINFORCE, and pathwise gradients.
+- **Part I — Local Models (§§{sec_mdl-single_variable_calculus}–§{num:sec_mdl-multivariable_calculus}):** Taylor polynomials, Lagrange remainders, descent lemma, gradients $\nabla f \perp$ level sets, and symmetric Hessians $\mathbf{H}_f$.
+- **Part II — Chain Rule & Autodiff (§§{sec_mdl-chain-rule-graphs}–§{num:sec_mdl-matrix-calculus-autodiff}):** Path sums on DAGs, differential method $df = \langle \nabla f, d\mathbf{X}\rangle$, dual numbers, Wengert tape, $2\sqrt{T}$ checkpointing, HVPs, and implicit diff.
+- **Part III — Integrals & Expectations (§§{sec_mdl-integral_calculus}–§{num:sec_mdl-expectation-gradients}):** Riemann sums, FTC, Fubini, $|\det\mathbf{J}_{\boldsymbol{\phi}}|$ in flows, Leibniz rule, REINFORCE, and pathwise gradients.
 :::
 
 ::: {.col .fig .big}
@@ -130,8 +130,8 @@ Calculus and Automatic Differentiation: From Local Models to Backpropagation<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- **Local & Matrix Models (§§34.1–34.4):** Logistic loss $\ell(w) = \log(1+e^{-w})$ ($L = 1/4$), log-sum-exp at $(0, \log 2)$ ($\nabla f = (\tfrac{1}{3}, \tfrac{2}{3})^\top$), 4-input integer DAG ($\bar{w} = 73{,}472$), and 2-2-1 ReLU MLP.
-- **Autodiff & Stochastic Calculus (§§34.5–34.7):** From-scratch `Dual`/`Var` engines ($802$ vs. $80{,}200$ ops), polar Gaussian integral $\sqrt{2\pi}$, and $\mathbb{E}[X^2]$ variance ($\sigma = 2.0$ vs. $7.18$).
+- **Local & Matrix Models (§§{sec_mdl-single_variable_calculus}–§{num:sec_mdl-matrix-calculus}):** Logistic loss $\ell(w) = \log(1+e^{-w})$ ($L = 1/4$), log-sum-exp at $(0, \log 2)$ ($\nabla f = (\tfrac{1}{3}, \tfrac{2}{3})^\top$), 4-input integer DAG ($\bar{w} = 73{,}472$), and 2-2-1 ReLU MLP.
+- **Autodiff & Stochastic Calculus (§§{sec_mdl-matrix-calculus-autodiff}–§{num:sec_mdl-expectation-gradients}):** From-scratch `Dual`/`Var` engines ($802$ vs. $80{,}200$ ops), polar Gaussian integral $\sqrt{2\pi}$, and $\mathbb{E}[X^2]$ variance ($\sigma = 2.0$ vs. $7.18$).
 :::
 
 ::: {.col .fig .big}
@@ -140,22 +140,22 @@ Calculus and Automatic Differentiation: From Local Models to Backpropagation<br>
 :::
 :::
 
-::: {.slide title="How to Navigate Chapter 34"}
+::: {.slide title="How to Navigate Chapter §{num:chap_mdl-calculus}"}
 [Study Guide]{.kicker}
 
 ::: {.cols}
 ::: {.col}
-- **If you know introductory calculus:** Skim the differentiation table in §34.1 and the Riemann sum / antiderivative review in §34.6, and jump directly to the **Mean Value Theorem, Lagrange remainder, and descent lemma** (§34.1) and **change of variables in $\mathbb{R}^n$** (§34.6).
-- **Essential for deep learning theory & derivations:** Master the **differential method** $df = \langle \nabla f, d\mathbf{X}\rangle$ and trace move rule in §34.4—it replaces hundred-entry matrix derivative tables and prevents silent transpose bugs on square matrices.
+- **If you know introductory calculus:** Skim the differentiation table in §{sec_mdl-single_variable_calculus} and the Riemann sum / antiderivative review in §{sec_mdl-integral_calculus}, and jump directly to the **Mean Value Theorem, Lagrange remainder, and descent lemma** (§{sec_mdl-single_variable_calculus}) and **change of variables in $\mathbb{R}^n$** (§{sec_mdl-integral_calculus}).
+- **Essential for deep learning theory & derivations:** Master the **differential method** $df = \langle \nabla f, d\mathbf{X}\rangle$ and trace move rule in §{sec_mdl-matrix-calculus}—it replaces hundred-entry matrix derivative tables and prevents silent transpose bugs on square matrices.
 :::
 
 ::: {.col}
-- **Essential for systems & modern ML:** Study **§34.5 (Automatic Differentiation)** for why reverse mode costs ~3 forward passes, how activation checkpointing shrinks memory from $O(T)$ to $2\sqrt{T}$, how forward-over-reverse computes $\mathbf{H}\mathbf{v}$ without a 4 TB Hessian, and **§34.7** for Monte Carlo gradient variance.
+- **Essential for systems & modern ML:** Study **§{sec_mdl-matrix-calculus-autodiff} (Automatic Differentiation)** for why reverse mode costs ~3 forward passes, how activation checkpointing shrinks memory from $O(T)$ to $2\sqrt{T}$, how forward-over-reverse computes $\mathbf{H}\mathbf{v}$ without a 4 TB Hessian, and **§{sec_mdl-expectation-gradients}** for Monte Carlo gradient variance.
 :::
 :::
 
 ::: {.d2l-note}
-**Up next (§34.1 Single-Variable Calculus):** How first and second derivatives build local linear and quadratic models, bound approximation error, and certify safe step sizes for gradient descent.
+**Up next (§{sec_mdl-single_variable_calculus} Single-Variable Calculus):** How first and second derivatives build local linear and quadratic models, bound approximation error, and certify safe step sizes for gradient descent.
 :::
 :::
 

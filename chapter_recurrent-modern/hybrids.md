@@ -485,26 +485,26 @@ During autoregressive decoding at scale ($16$-bit `float16` / `bfloat16`), per-s
 :::
 :::
 
-::: {.slide title="Master Comparison of Chapter 12 Sequence Mixers (1/2)"}
+::: {.slide title="Master Comparison of Chapter §{num:chap_modern_rnn} Sequence Mixers (1/2)"}
 [Architectural Synthesis]{.kicker}
 
 | Sequence Mixer | Generation State / Layer | Parallel Training Method | Key Synthetic Benchmark Result | WikiText-103 ($d=256$) |
 | :--- | :---: | :--- | :--- | :---: |
-| **LSTM / GRU (§12.1)** | $2d$ / $d$ | Sequential ($T$ steps) | $1.00$ at $T=200$ recall with $+5$ keep-gate bias | **$1.29$–$1.30$** ($4.3\text{M}$ / $3.8\text{M}$) |
-| **minGRU (§12.3)** | $d$ | Associative scan | $1.00$ at $T=1000$ recall with S4D timescales | $1.34$–$1.35$ ($2.8\text{M}$) |
-| **S4D (§12.4)** | $dN$ | FFT conv or scan | $1.00$ at $T=1000$ fixed delay; $\le 0.20$ selective copy | — |
-| **Mamba (§12.5)** | $HN$ ($H=2d$) | Scan + adjoint scan | **$0.99$–$1.00$** on $1{,}024$-step selective copying | **$1.30$** ($4.0\text{M}$) |
+| **LSTM / GRU (§{sec_lstm})** | $2d$ / $d$ | Sequential ($T$ steps) | $1.00$ at $T=200$ recall with $+5$ keep-gate bias | **$1.29$–$1.30$** ($4.3\text{M}$ / $3.8\text{M}$) |
+| **minGRU (§{sec_linear-recurrence})** | $d$ | Associative scan | $1.00$ at $T=1000$ recall with S4D timescales | $1.34$–$1.35$ ($2.8\text{M}$) |
+| **S4D (§{sec_ssm})** | $dN$ | FFT conv or scan | $1.00$ at $T=1000$ fixed delay; $\le 0.20$ selective copy | — |
+| **Mamba (§{sec_mamba})** | $HN$ ($H=2d$) | Scan + adjoint scan | **$0.99$–$1.00$** on $1{,}024$-step selective copying | **$1.30$** ($4.0\text{M}$) |
 :::
 
-::: {.slide title="Master Comparison of Chapter 12 Sequence Mixers (2/2)"}
+::: {.slide title="Master Comparison of Chapter §{num:chap_modern_rnn} Sequence Mixers (2/2)"}
 [Architectural Synthesis]{.kicker}
 
 | Sequence Mixer | Generation State / Layer | Parallel Training Method | Key Synthetic Benchmark Result | WikiText-103 ($d=256$) |
 | :--- | :---: | :--- | :--- | :---: |
-| **Gated Linear Attn (§12.6)** | $d^2 / h$ | Chunked GEMM + scan | Recall scales $\propto d^2/h$; superposes rebound keys | — |
-| **Gated DeltaNet (§12.7)** | $d^2 / h$ | Chunked solve + scan | **$0.96+$** on short-gap rebound keys; saturates at $n \gg d_k$ | $1.32$–$1.33$ ($3.6\text{M}$) |
+| **Gated Linear Attn (§{sec_matrix-state})** | $d^2 / h$ | Chunked GEMM + scan | Recall scales $\propto d^2/h$; superposes rebound keys | — |
+| **Gated DeltaNet (§{sec_deltanet})** | $d^2 / h$ | Chunked solve + scan | **$0.96+$** on short-gap rebound keys; saturates at $n \gg d_k$ | $1.32$–$1.33$ ($3.6\text{M}$) |
 | **Causal Attention** | $2dT$ | Flash / fused GEMMs | **$1.00$** at all pair loads; $O(T^2)$ compute & $O(T)$ cache | $1.37$–$1.39$ ($3.3\text{M}$) |
-| **Hybrid (`GA` / `GGGA`, §12.8)** | Fixed states + sparse $2dT$ | Chunked + attention | **$1.00$** at all pair loads with $4\times$–$8\times$ smaller cache | $1.33$–$1.34$ ($3.5\text{M}$) |
+| **Hybrid (`GA` / `GGGA`, §{sec_hybrids})** | Fixed states + sparse $2dT$ | Chunked + attention | **$1.00$** at all pair loads with $4\times$–$8\times$ smaller cache | $1.33$–$1.34$ ($3.5\text{M}$) |
 :::
 
 ::: {.slide title="When to Choose Which Sequence Architecture"}

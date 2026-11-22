@@ -67,11 +67,11 @@ Optimization Algorithms: Geometry, Stochasticity, and Scaling<br>**ill-condition
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Step Direction & Preconditioning (§§9.4–9.6):**
+- **1. Step Direction & Preconditioning (§§{sec_momentum}–§{num:sec_muon}):**
   - Replace $-\nabla f(\mathbf{x})$ with momentum velocity ($\mathbf{v}_t$), per-coordinate RMS normalization (AdamW), or spectral orthogonalization ($\mathbf{U}\mathbf{V}^\top$, Muon).
-- **2. Step-Size Schedule $\eta_t$ (§9.7):**
+- **2. Step-Size Schedule $\eta_t$ (§{sec_scheduler}):**
   - Ramp $\eta_t$ during warmup to steer below $2/\eta_0$, hold a high travel budget $B_T = \sum_t \eta_t$, and decay $\eta_T \to 0$.
-- **3. Batch Size, Width Scaling & Guards (§§9.8–9.10):**
+- **3. Batch Size, Width Scaling & Guards (§§{sec_batch_size}–§{num:sec_practice}):**
   - Match $b$ to $b_{\text{noise}}$, transfer LRs across widths via $\mu\text{P}$ ($\eta/m$), and guard with global-norm clipping and weight EMA.
 :::
 
@@ -86,9 +86,9 @@ Optimization Algorithms: Geometry, Stochasticity, and Scaling<br>**ill-condition
 
 ::: {.cols .vc}
 ::: {.col}
-- **Analytical quadratics & linear data (§§9.1–9.2):**
+- **Analytical quadratics & linear data (§§{sec_gd}–§{num:sec_sgd}):**
   - Solve exact stability ceilings, $\sqrt{\kappa}$ critical damping, and excess loss $\frac{\eta\operatorname{tr}\boldsymbol{\Sigma}}{4b}$ on the $\kappa=20$ valley and NASA airfoil dataset ($n=1{,}500, d=6$).
-- **Two complementary neural networks (§§9.3–9.10):**
+- **Two complementary neural networks (§§{sec_test_models}–§{num:sec_practice}):**
   - **`FashionCNN` ($421\text{K}$ params):** Multi-epoch image classification ($8.5$ epochs in $2{,}000$ steps at $b = 256$) with held-out test accuracy.
   - **`TinyLM` ($471\text{K}$ / $3.3\text{M}$ params):** Single-pass byte-level Transformer on WikiText-103 ($40\times$ layer gradient spread).
 :::
@@ -99,16 +99,16 @@ Optimization Algorithms: Geometry, Stochasticity, and Scaling<br>**ill-condition
 :::
 :::
 
-::: {.slide title="Chapter 9 Roadmap: Sections and Core Invariants"}
+::: {.slide title="Chapter §{num:chap_optimization} Roadmap: Sections and Core Invariants"}
 [Chapter Map]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Foundations & Benchmarks (§§9.1–9.3):**
+- **Foundations & Benchmarks (§§{sec_gd}–§{num:sec_test_models}):**
   - Stability $\eta < 2/\lambda_{\max}$, edge of stability $\lambda_{\max} \approx 2/\eta$, noise ball $\frac{\eta\sigma^2}{2\lambda b}$, count landmarks, and $3\times$ multi-seed thresholds.
-- **Preconditioned Directions (§§9.4–9.6):**
+- **Preconditioned Directions (§§{sec_momentum}–§{num:sec_muon}):**
   - Momentum $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$ ($O(\sqrt{\kappa})$), AdamW timescale $\tau = \frac{1}{\eta\lambda}$, and Muon 5-step Newton–Schulz orthogonalization $-\eta\mathbf{U}\mathbf{V}^\top$.
-- **Schedules, Scaling & Operations (§§9.7–9.10):**
+- **Schedules, Scaling & Operations (§§{sec_scheduler}–§{num:sec_practice}):**
   - Warmup + WSD/cosine budget $B_T$, critical batch size $b_{\text{noise}} = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{\|\nabla f\|^2}$, $\mu\text{P}$ hidden LR $\eta/m$, clipping ($\theta=1$), and weight EMA.
 :::
 
@@ -118,26 +118,26 @@ Optimization Algorithms: Geometry, Stochasticity, and Scaling<br>**ill-condition
 :::
 :::
 
-::: {.slide title="How to Navigate Chapter 9 and the Math Appendix"}
+::: {.slide title="How to Navigate Chapter §{num:chap_optimization} and the Math Appendix"}
 [Study Guide]{.kicker}
 
 ::: {.cols}
 ::: {.col}
-- **Core practitioner sequence (§9.1–§9.5, §9.7–§9.8, §9.10):**
-  - Master the two bottlenecks (**§9.1–§9.2**), experimental benchmarking (**§9.3**), momentum and AdamW (**§9.4–§9.5**), learning-rate schedules (**§9.7**), critical batch size (**§9.8**), and production diagnostics (**§9.10**).
-- **Advanced scaling & matrix methods (§9.6, §9.9):**
-  - Study **§9.6 (Muon)** for spectral-norm steepest descent via Newton–Schulz polynomials and **§9.9 (Scaling Up)** for zero-shot learning-rate transfer across widths via $\mu\text{P}$.
+- **Core practitioner sequence (§{sec_gd}–§{sec_adam}, §{sec_scheduler}–§{sec_batch_size}, §{sec_practice}):**
+  - Master the two bottlenecks (**§{sec_gd}–§{sec_sgd}**), experimental benchmarking (**§{sec_test_models}**), momentum and AdamW (**§{sec_momentum}–§{sec_adam}**), learning-rate schedules (**§{sec_scheduler}**), critical batch size (**§{sec_batch_size}**), and production diagnostics (**§{sec_practice}**).
+- **Advanced scaling & matrix methods (§{sec_muon}, §{sec_scaling}):**
+  - Study **§{sec_muon} (Muon)** for spectral-norm steepest descent via Newton–Schulz polynomials and **§{sec_scaling} (Scaling Up)** for zero-shot learning-rate transfer across widths via $\mu\text{P}$.
 :::
 
 ::: {.col}
 - **Connection to subsequent chapters & proofs:**
   - `TinyLM`, its WikiText-103 byte loader, and its AdamW/schedule harness return in the chapters on Attention, Transformers, State Space Models, and Performance.
-  - Concise derivations that directly guide hyperparameter choices appear inline; full convergence proofs and convex analysis live in **Chapter 35 (*Mathematics for Deep Learning: Optimization*)**.
+  - Concise derivations that directly guide hyperparameter choices appear inline; full convergence proofs and convex analysis live in **Chapter §{num:chap_mdl-optimization} (*Mathematics for Deep Learning: Optimization*)**.
 :::
 :::
 
 ::: {.d2l-note}
-**Up next (§9.1 Landscapes and Gradient Descent):** How directional curvature and the condition number $\kappa = \lambda_{\max}/\lambda_{\min}$ determine the maximum stable step size and the edge of stability.
+**Up next (§{sec_gd} Landscapes and Gradient Descent):** How directional curvature and the condition number $\kappa = \lambda_{\max}/\lambda_{\min}$ determine the maximum stable step size and the edge of stability.
 :::
 :::
 

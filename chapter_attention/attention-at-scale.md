@@ -760,7 +760,7 @@ Comparing `naive`, `fused` (causal), and `fused, no mask` separates two distinct
 ::: {.cols .vc}
 ::: {.col}
 - **What FlashAttention solves:** Eliminates the $\Theta(n^2)$ HBM score and weight matrices, reducing peak scratch memory to $\Theta(n d_h)$ and HBM traffic to $\Theta(n^2 d_h^2 / M)$.
-- **What remains $\Theta(n^2)$:** Total arithmetic FLOPs still scale as $\Theta(n^2 d)$, and the autoregressive KV cache still grows as $O(n d)$—motivating **sliding windows** and **linear attention** (§10.6).
+- **What remains $\Theta(n^2)$:** Total arithmetic FLOPs still scale as $\Theta(n^2 d)$, and the autoregressive KV cache still grows as $O(n d)$—motivating **sliding windows** and **linear attention** (§{sec_windowed-linear-attention}).
 :::
 
 ::: {.col .fig .big}

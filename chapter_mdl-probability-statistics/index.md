@@ -104,8 +104,8 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 ::: {.cols .vc}
 ::: {.col}
 - **The Running Coin ($9$ Heads in $13$ Flips):** $\hat{\theta} = 9/13 \approx 0.692$, yet a fair coin ($\theta = 0.5$) yields $\ge 9$ heads $13.3\%$ of the time—just like test accuracy on a finite holdout set.
-- **Forward vs. Backward Reasoning:** *Probability* (§36.1–36.4) maps a known model to outcome frequencies; *statistics* (§36.5–36.8) maps finite data back to estimates, error bars, and posteriors.
-- **Post-Selection Guarantees (§36.9–36.10):** Picking the best model across validation runs is multiple testing in disguise and requires uniform convergence bounds.
+- **Forward vs. Backward Reasoning:** *Probability* (§{sec_mdl-random_variables}–§{num:sec_mdl-exponential-family}) maps a known model to outcome frequencies; *statistics* (§{sec_mdl-statistics}–§{num:sec_mdl-bayesian-computation}) maps finite data back to estimates, error bars, and posteriors.
+- **Post-Selection Guarantees (§{sec_mdl-concentration-generalization}–§{num:sec_mdl-generalization-bounds}):** Picking the best model across validation runs is multiple testing in disguise and requires uniform convergence bounds.
 :::
 
 ::: {.col .fig .big}
@@ -119,10 +119,10 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Distributions & Unified Form (§36.1–36.4):** Densities, Jacobians, named distributions, and the exponential family $h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x}) - A(\boldsymbol{\eta})}$.
-- **2. Estimation, Tests & Likelihood (§36.5–36.6):** Bias–variance trade-off, $p$-values, confidence intervals, MLE as KL projection, and Fisher information.
-- **3. Latent Models & Posteriors (§36.7–36.8):** Marginal likelihood $\log p(\mathbf{x})$, Jensen's inequality, ELBO, EM, Laplace approximation, VI, and MCMC.
-- **4. Concentration & Generalization (§36.9–36.11):** Chernoff/Hoeffding bounds, high-$d$ shell geometry, Rademacher complexity, and Naive Bayes.
+- **1. Distributions & Unified Form (§{sec_mdl-random_variables}–§{num:sec_mdl-exponential-family}):** Densities, Jacobians, named distributions, and the exponential family $h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x}) - A(\boldsymbol{\eta})}$.
+- **2. Estimation, Tests & Likelihood (§{sec_mdl-statistics}–§{num:sec_mdl-maximum_likelihood}):** Bias–variance trade-off, $p$-values, confidence intervals, MLE as KL projection, and Fisher information.
+- **3. Latent Models & Posteriors (§{sec_mdl-latent-em-elbo}–§{num:sec_mdl-bayesian-computation}):** Marginal likelihood $\log p(\mathbf{x})$, Jensen's inequality, ELBO, EM, Laplace approximation, VI, and MCMC.
+- **4. Concentration & Generalization (§{sec_mdl-concentration-generalization}–§{num:sec_mdl-naive_bayes}):** Chernoff/Hoeffding bounds, high-$d$ shell geometry, Rademacher complexity, and Naive Bayes.
 :::
 
 ::: {.col .fig .big}
@@ -131,14 +131,14 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 :::
 :::
 
-::: {.slide title="Roadmap: Distributions to Posteriors (§36.1–36.8)"}
+::: {.slide title="Roadmap: Distributions to Posteriors (§{sec_mdl-random_variables}–§{num:sec_mdl-bayesian-computation})"}
 [Section Guide (Part I)]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **§36.1–36.2 (Continuous Calculus):** $F'(x) = p(x)$, inverse-transform sampling $X = F^{-1}(U)$, Eve's law, and Jacobian volume stretch $|\det J_g|^{-1}$.
-- **§36.3–36.4 (Catalog & Exponential Family):** Binomial-to-Poisson and CLT limits, Schur Gaussian conditioning, cumulant derivatives $\nabla A = \mathbb{E}[T]$, and conjugate updates.
-- **§36.5–36.8 (Inference & Latent Variables):** $\mathrm{MSE} = \mathrm{Bias}^2 + \mathrm{Var}$, paired tests, bootstrap, Fisher curvature $nI(\theta)$, EM via ELBO, and MCMC/VI posteriors.
+- **§{sec_mdl-random_variables}–§{num:sec_mdl-joint-distributions} (Continuous Calculus):** $F'(x) = p(x)$, inverse-transform sampling $X = F^{-1}(U)$, Eve's law, and Jacobian volume stretch $|\det J_g|^{-1}$.
+- **§{sec_mdl-distributions}–§{num:sec_mdl-exponential-family} (Catalog & Exponential Family):** Binomial-to-Poisson and CLT limits, Schur Gaussian conditioning, cumulant derivatives $\nabla A = \mathbb{E}[T]$, and conjugate updates.
+- **§{sec_mdl-statistics}–§{num:sec_mdl-bayesian-computation} (Inference & Latent Variables):** $\mathrm{MSE} = \mathrm{Bias}^2 + \mathrm{Var}$, paired tests, bootstrap, Fisher curvature $nI(\theta)$, EM via ELBO, and MCMC/VI posteriors.
 :::
 
 ::: {.col .fig .big}
@@ -147,14 +147,14 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 :::
 :::
 
-::: {.slide title="Roadmap: Guarantees and Synthesis (§36.9–36.11)"}
+::: {.slide title="Roadmap: Guarantees and Synthesis (§{sec_mdl-concentration-generalization}–§{num:sec_mdl-naive_bayes})"}
 [Section Guide (Part II)]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **§36.9 Concentration Inequalities:** Upgrades Chebyshev's $1/(n\varepsilon^2)$ bound to exponential decay $\exp(-2n\varepsilon^2)$ via Chernoff/Hoeffding and proves why high-$d$ Gaussians concentrate on a thin shell of radius $\sqrt{d}$.
-- **§36.10 Generalization Bounds:** Bounds worst-case generalization error $\sup_{h \in \mathcal{H}} |R(h) - \hat{R}_n(h)|$ across model search via union bounds, Rademacher complexity, and benign overfitting.
-- **§36.11 Naive Bayes Classifier:** Combines categorical/Bernoulli likelihoods and Laplace add-one smoothing into an end-to-end generative image classifier.
+- **§{sec_mdl-concentration-generalization} Concentration Inequalities:** Upgrades Chebyshev's $1/(n\varepsilon^2)$ bound to exponential decay $\exp(-2n\varepsilon^2)$ via Chernoff/Hoeffding and proves why high-$d$ Gaussians concentrate on a thin shell of radius $\sqrt{d}$.
+- **§{sec_mdl-generalization-bounds} Generalization Bounds:** Bounds worst-case generalization error $\sup_{h \in \mathcal{H}} |R(h) - \hat{R}_n(h)|$ across model search via union bounds, Rademacher complexity, and benign overfitting.
+- **§{sec_mdl-naive_bayes} Naive Bayes Classifier:** Combines categorical/Bernoulli likelihoods and Laplace add-one smoothing into an end-to-end generative image classifier.
 :::
 
 ::: {.col .fig .big}
@@ -163,23 +163,23 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 :::
 :::
 
-::: {.slide title="How to Navigate Chapter 36"}
+::: {.slide title="How to Navigate Chapter §{num:chap_mdl-probability-statistics}"}
 [Study Guide]{.kicker}
 
 ::: {.cols}
 ::: {.col}
-- **Core theoretical backbone:** Read **§36.1–36.6** in sequence to see how continuous densities and the exponential family unify every supervised loss function and statistical error bar in the main text.
-- **Fast-track option:** If you are already comfortable with §1.6 (preliminary discrete probability), skim the basic moment algebra in §36.1–36.2 and focus on inverse-transform sampling, Eve's law, Jacobian determinants, and Gaussian conditioning.
+- **Core theoretical backbone:** Read **§{sec_mdl-random_variables}–§{num:sec_mdl-maximum_likelihood}** in sequence to see how continuous densities and the exponential family unify every supervised loss function and statistical error bar in the main text.
+- **Fast-track option:** If you are already comfortable with §{sec_prob} (preliminary discrete probability), skim the basic moment algebra in §{sec_mdl-random_variables}–§{num:sec_mdl-joint-distributions} and focus on inverse-transform sampling, Eve's law, Jacobian determinants, and Gaussian conditioning.
 :::
 
 ::: {.col}
-- **Modular advanced topics:** **§36.8 (Bayesian Computation)** and **§36.11 (Naive Bayes)** are self-contained and can be skipped on a first pass without breaking later dependencies.
-- **Connections to other math chapters:** Linear-algebraic spectra and positive definiteness come from **Chapter 33**, multivariable Jacobians and convexity from **Chapters 34–35**, and full entropy/KL theory continues in **Chapter 37**.
+- **Modular advanced topics:** **§{sec_mdl-bayesian-computation} (Bayesian Computation)** and **§{sec_mdl-naive_bayes} (Naive Bayes)** are self-contained and can be skipped on a first pass without breaking later dependencies.
+- **Connections to other math chapters:** Linear-algebraic spectra and positive definiteness come from **Chapter §{num:chap_mdl-linear-algebra}**, multivariable Jacobians and convexity from **Chapters §{num:chap_mdl-calculus}–§{num:chap_mdl-optimization}**, and full entropy/KL theory continues in **Chapter §{num:chap_mdl-information-theory}**.
 :::
 :::
 
 ::: {.d2l-note}
-**Up next (§36.1 Random Variables):** Why continuous outcomes have zero point probability, how densities and CDFs relate via $F'(x) = p(x)$, and why heavy tails break sample averages.
+**Up next (§{sec_mdl-random_variables} Random Variables):** Why continuous outcomes have zero point probability, how densities and CDFs relate via $F'(x) = p(x)$, and why heavy tails break sample averages.
 :::
 :::
 

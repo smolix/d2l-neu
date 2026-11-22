@@ -628,7 +628,7 @@ $$\frac{d}{d\theta}\int_{a(\theta)}^{b(\theta)} f(x, \theta)\,dx = \int_{a(\thet
 ::: {.cols .vc}
 ::: {.col}
 - **Interior shift + sweeping boundaries:** When $a(\theta)$ and $b(\theta)$ move with $\theta$, the total area changes both because the integrand roof shifts vertically ($\int_a^b \partial_\theta f\,dx$) and because the endpoints sweep horizontally ($f(b,\theta)b' - f(a,\theta)a'$).
-- **Proof via multivariable chain rule (§34.3):** Set $H(\alpha, \beta, \theta) = \int_\alpha^\beta f(x, \theta)\,dx$. By FTC, $\partial_\beta H = f(\beta, \theta)$ and $\partial_\alpha H = -f(\alpha, \theta)$, while the bounded swap gives $\partial_\theta H = \int_\alpha^\beta \partial_\theta f\,dx$. Evaluating $\frac{d}{d\theta}H(a(\theta), b(\theta), \theta)$ sums all three path products.
+- **Proof via multivariable chain rule (§{sec_mdl-chain-rule-graphs}):** Set $H(\alpha, \beta, \theta) = \int_\alpha^\beta f(x, \theta)\,dx$. By FTC, $\partial_\beta H = f(\beta, \theta)$ and $\partial_\alpha H = -f(\alpha, \theta)$, while the bounded swap gives $\partial_\theta H = \int_\alpha^\beta \partial_\theta f\,dx$. Evaluating $\frac{d}{d\theta}H(a(\theta), b(\theta), \theta)$ sums all three path products.
 :::
 
 ::: {.col .fig}

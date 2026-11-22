@@ -1629,7 +1629,7 @@ We implement `fuse_bn` and `fuse_block`, verify exact equivalence in `float32`, 
 
 Work out these three quantitative efficiency checks:
 
-1. **Separable $7\times 7$ savings:** In ConvNeXt (§7.7), a block uses a $7\times 7$ depthwise convolution followed by a $1\times 1$ convolution at width $c_{\textrm{i}} = c_{\textrm{o}} = 96$. By what factor is this depthwise-separable pair cheaper than a dense $7\times 7$ convolution at $c = 96$?
+1. **Separable $7\times 7$ savings:** In ConvNeXt (§{sec_convnext}), a block uses a $7\times 7$ depthwise convolution followed by a $1\times 1$ convolution at width $c_{\textrm{i}} = c_{\textrm{o}} = 96$. By what factor is this depthwise-separable pair cheaper than a dense $7\times 7$ convolution at $c = 96$?
 2. **Squeeze-and-Excitation overhead:** On a stage with $c = 256$ channels at $14\times 14$ resolution, compare the multiply-adds of an SE gate ($r = 4$) against one dense $3\times 3$ convolution ($256 \to 256$).
 3. **BN folding by hand:** A bias-free conv channel ($b_o = 0$) has kernel $\mathbf{W}_o$ followed by BatchNorm with running mean $\mu_o = 0.5$, running variance $\sigma_o^2 + \epsilon = 0.25$, scale $\gamma_o = 1$, and shift $\beta_o = 0$. What are the folded kernel $\hat{\mathbf{W}}_o$ and bias $\hat{b}_o$?
 

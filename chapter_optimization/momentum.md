@@ -608,6 +608,6 @@ Work out the quantitative answer for each momentum scenario:
 | **Heavy-Ball Velocity** | $\mathbf{v}_t = \beta\mathbf{v}_{t-1} + \mathbf{g}_t,\; \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\mathbf{v}_t$ | Unrolls to $\sum_{k=0}^{t-1} \beta^k \mathbf{g}_{t-k}$ | Default $\beta = 0.9$; adds 1 state buffer per parameter |
 | **Effective Step & Window** | $\eta_{\text{eff}} = \frac{\eta}{1-\beta},\quad \tau = \frac{1}{1-\beta}$ | Damps alternating steps to $\frac{\eta}{1+\beta}$; ceiling $\eta\lambda < 2(1+\beta)$ | Scale $\eta \propto (1-\beta)$ when changing $\beta$ under noise |
 | **Critical Damping & $\sqrt{\kappa}$** | $\beta_{\text{c}}(\lambda) = (1 - \sqrt{\eta\lambda})^2,\; \rho^\star = \frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}$ | Complex roots for $\beta \ge \beta_{\text{c}}$ have modulus $|z| = \sqrt{\beta}$ | Cuts curvature-limited step complexity from $O(\kappa)$ to $O(\sqrt{\kappa})$ |
-| **Nesterov Look-Ahead** | $\mathbf{v}_t = \beta\mathbf{v}_{t-1} + \nabla f(\mathbf{x}_t - \eta\beta\mathbf{v}_{t-1})$ | Evaluates curvature at predicted position $\tilde{\mathbf{x}}_t$ | Suppresses underdamped ringing; forms the base of Muon (§9.6) |
+| **Nesterov Look-Ahead** | $\mathbf{v}_t = \beta\mathbf{v}_{t-1} + \nabla f(\mathbf{x}_t - \eta\beta\mathbf{v}_{t-1})$ | Evaluates curvature at predicted position $\tilde{\mathbf{x}}_t$ | Suppresses underdamped ringing; forms the base of Muon (§{sec_muon}) |
 :::
 

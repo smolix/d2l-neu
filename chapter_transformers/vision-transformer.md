@@ -611,7 +611,7 @@ Transformers for Vision (ViT)<br>**patches as tokens · strided conv stem · `<c
 ::: {.slide title="The ViT Encoder Block (ViTBlock)"}
 [Encoder Block]{.kicker}
 
-Following Dosovitskiy et al. (2021), `ViTBlock` configures our `d2l.TransformerBlock` (§11.1) with pre-norm `LayerNorm`, unmasked multi-head self-attention, and a two-layer exact-`GELU` MLP:
+Following Dosovitskiy et al. (2021), `ViTBlock` configures our `d2l.TransformerBlock` (§{sec_transformer-block}) with pre-norm `LayerNorm`, unmasked multi-head self-attention, and a two-layer exact-`GELU` MLP:
 
 $$\mathbf{H} = \mathbf{X} + \mathrm{MHA}\bigl(\mathrm{LN}_1(\mathbf{X})\bigr), \qquad \mathbf{Y} = \mathbf{H} + \mathrm{MLP}\bigl(\mathrm{LN}_2(\mathbf{H})\bigr)$$
 

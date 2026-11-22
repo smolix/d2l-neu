@@ -699,7 +699,7 @@ $$\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} 
 ::: {.cols .vc}
 ::: {.col}
 - **1. Cold-start step amplification:** From $\mathbf{v}_0 = \mathbf{0}$, step 1 evaluates $\mathbf{v}_1 = (1-\beta_2)\mathbf{g}_1^2$, producing an oversized jump $|\Delta x_{1,i}| = \frac{\eta}{\sqrt{1-\beta_2}}$ ($3.16\,\eta$ at $\beta_2=0.9$; **$31.6\,\eta$** at $\beta_2=0.999$).
-- **2. Non-vanishing late-stage steps:** Near a minimum where $|g_t|$ is locally steady, $\sqrt{v_t} \approx |g_t|$ and the update becomes $-\eta\,\operatorname{sign}(g_t)$ of fixed length $\eta$, hopping within $\pm\eta/2$ until $\eta_t \to 0$ (§9.7).
+- **2. Non-vanishing late-stage steps:** Near a minimum where $|g_t|$ is locally steady, $\sqrt{v_t} \approx |g_t|$ and the update becomes $-\eta\,\operatorname{sign}(g_t)$ of fixed length $\eta$, hopping within $\pm\eta/2$ until $\eta_t \to 0$ (§{sec_scheduler}).
 :::
 
 ::: {.col .fig .big}

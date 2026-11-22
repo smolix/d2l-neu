@@ -687,8 +687,8 @@ Running iterative exponentiated gradient ascent $\pi \leftarrow \pi \odot \exp\b
 | :--- | :--- | :--- |
 | **1. Unregularized Limit ($\beta \to 0$)** | Concentrates on $\operatorname{argmax}_{a \in \textrm{supp}(\pi_{\textrm{ref}})} r(a)$ | Without a penalty, the optimal policy is deterministic |
 | **2. Heavy Penalty ($\beta \to \infty$)** | $\pi^\star(a) \to \pi_{\textrm{ref}}(a)$ with $D_{\textrm{KL}} \to 0$ | $\beta$ smoothly interpolates from $\pi_{\textrm{ref}}$ to greedy argmax |
-| **3. Uniform Reference ($\pi_{\textrm{ref}} = 1/|\mathcal{A}|$)** | $-D_{\textrm{KL}}(\pi \Vert \textrm{unif}) = H(\pi) - \log |\mathcal{A}| \implies \pi^\star = \textrm{softmax}(r/\beta)$ | Maximum-entropy RL (§15.5 SAC) and Boltzmann exploration |
-| **4. Bayesian Variational Form** | Prior $\pi_{\textrm{ref}}(a) \times$ Likelihood $e^{r(a)/\beta} / Z = \textrm{Posterior } \pi^\star(a)$ | Control-as-inference and Direct Preference Optimization (§15.8) |
+| **3. Uniform Reference ($\pi_{\textrm{ref}} = 1/|\mathcal{A}|$)** | $-D_{\textrm{KL}}(\pi \Vert \textrm{unif}) = H(\pi) - \log |\mathcal{A}| \implies \pi^\star = \textrm{softmax}(r/\beta)$ | Maximum-entropy RL (§{sec_sac} SAC) and Boltzmann exploration |
+| **4. Bayesian Variational Form** | Prior $\pi_{\textrm{ref}}(a) \times$ Likelihood $e^{r(a)/\beta} / Z = \textrm{Posterior } \pi^\star(a)$ | Control-as-inference and Direct Preference Optimization (§{sec_rl_sequences}) |
 :::
 
 ::: {.slide title="The Concave Reward–Divergence Frontier"}
@@ -712,7 +712,7 @@ Running iterative exponentiated gradient ascent $\pi \leftarrow \pi \odot \exp\b
 
 ::: {.cols .vc}
 ::: {.col}
-- **Moving Trust Region (§15.2) vs. Fixed Penalty (§15.3):** Penalizing divergence to the *previous iterate* $\pi_k$ accumulates tilts $\pi_k(a) \propto \pi_{\textrm{ref}}(a) e^{k\,r(a)/\tilde{\beta}}$ and still converges to the greedy argmax; only a **frozen** $\pi_{\textrm{ref}}$ changes the destination.
+- **Moving Trust Region (§{sec_ppo}) vs. Fixed Penalty (§{sec_regularized}):** Penalizing divergence to the *previous iterate* $\pi_k$ accumulates tilts $\pi_k(a) \propto \pi_{\textrm{ref}}(a) e^{k\,r(a)/\tilde{\beta}}$ and still converges to the greedy argmax; only a **frozen** $\pi_{\textrm{ref}}$ changes the destination.
 - **Reverse vs. Forward KL:** Reverse KL $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ suppresses poor actions exponentially ($\propto e^{-\Delta(a)/\beta}$), whereas forward KL keeps a linear floor ($\approx \beta / \Delta(a)$).
 :::
 

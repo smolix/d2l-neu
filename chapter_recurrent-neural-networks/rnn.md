@@ -1842,7 +1842,7 @@ How does our trained RNN ($\approx 2.12$ bpb) compare against interpolated Knese
 To uncover why a recurrent network fed 32 tokens of history failed to pull ahead of a 3-gram, we plot validation bits per byte separately at each window position $k \in \{1, \ldots, 32\}$ (where position $k$ conditions on $k$ tokens of context):
 
 - **Sharp drop from $k = 1 \to 3$, then flat:** Validation loss drops from $\approx 2.30$ bpb at 1 token of context to $\approx 2.12$ bpb at 3 tokens of context, and then **stays completely flat at $2.12$ bpb from position 4 through position 32**!
-- **Forward capacity vs. backward learnability:** Although $\mathbf{H}_{32}$ is mathematically a function of all 32 tokens in the forward pass, gradient-based training failed to teach the cell to use any token more than $\sim 3$ steps back—the exact vanishing-gradient phenomenon we analyze in §8.5.
+- **Forward capacity vs. backward learnability:** Although $\mathbf{H}_{32}$ is mathematically a function of all 32 tokens in the forward pass, gradient-based training failed to teach the cell to use any token more than $\sim 3$ steps back—the exact vanishing-gradient phenomenon we analyze in §{sec_bptt}.
 :::
 
 ::: {.col .fig}
@@ -1865,7 +1865,7 @@ The `predict` method first runs a **prefix warm-up loop** feeding the user's pro
 @!rnn-implementation-generating-text-2
 
 ::: {.d2l-note .warn}
-**Why Greedy Decoding (`temperature=0.0`) Loops:** Because both the recurrent update and $\operatorname*{argmax}_i o_i$ are deterministic functions, once the hidden state $\mathbf{H}_t$ revisits a state near an earlier phrase, the trajectory locks into an infinite periodic cycle (§8.6).
+**Why Greedy Decoding (`temperature=0.0`) Loops:** Because both the recurrent update and $\operatorname*{argmax}_i o_i$ are deterministic functions, once the hidden state $\mathbf{H}_t$ revisits a state near an earlier phrase, the trajectory locks into an infinite periodic cycle (§{sec_decoding}).
 :::
 :::
 

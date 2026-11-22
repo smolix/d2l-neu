@@ -763,7 +763,7 @@ $$\pi_e(a \mid s) = \begin{cases} 1 - \epsilon + \epsilon / |\mathcal{A}| & \tex
 
 `q_learning` decays $\epsilon$ linearly from $1.0$ to $0.05$ over the first half of training and scales each pair's step size by its visit count `visits[s, a]`:
 
-```python
+```{.python #qlearning-exercises}
 for episode in range(num_episodes):
     s, done, ret = env.reset()[0], False, 0.0
     while not done:

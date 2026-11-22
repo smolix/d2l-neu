@@ -122,13 +122,13 @@ Deep Learning Computation: From Prototype Code to Production Systems<br>**module
 :::
 :::
 
-::: {.slide title="Chapter 5 Roadmap: Architecture, State, and Execution"}
+::: {.slide title="Chapter §{num:chap_computation} Roadmap: Architecture, State, and Execution"}
 [Architectural & Systems Roadmap]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Model structure & state (§§5.1–5.4):** Module trees and `__setattr__` registration, the $16\text{ B/param}$ `fp32` Adam floor, weight tying, $(1+g^2)^N$ residual variance scaling ($g = 1/\sqrt{N}$), `RMSNorm`, fixed buffers, and the Straight-Through Estimator.
-- **Precision, I/O & hardware (§§5.5–5.8):** `fp32` master weights with `bf16`/`fp16` compute, zero-copy `safetensors` and 5-part atomic checkpoints, asynchronous GPU queues, $O(\sqrt{K})$ activation checkpointing, PRNG seeding, and forward/backward hooks.
+- **Model structure & state (§§{sec_model_construction}–§{num:sec_custom_layer}):** Module trees and `__setattr__` registration, the $16\text{ B/param}$ `fp32` Adam floor, weight tying, $(1+g^2)^N$ residual variance scaling ($g = 1/\sqrt{N}$), `RMSNorm`, fixed buffers, and the Straight-Through Estimator.
+- **Precision, I/O & hardware (§§{sec_numerics}–§{num:sec_repro}):** `fp32` master weights with `bf16`/`fp16` compute, zero-copy `safetensors` and 5-part atomic checkpoints, asynchronous GPU queues, $O(\sqrt{K})$ activation checkpointing, PRNG seeding, and forward/backward hooks.
 :::
 
 ::: {.col .fig .big}
@@ -142,9 +142,9 @@ Deep Learning Computation: From Prototype Code to Production Systems<br>**module
 
 ::: {.cols .vc}
 ::: {.col}
-- **Parameter & memory scaling (§§5.1–5.2, §5.5):** Toy 4-block Residual MLP ($729{,}866$ params) vs. Llama 3 8B ($291$ tensors, `16 GB` `bf16` inference, `128 GB` `fp32` Adam training floor).
-- **Signal stability & I/O (§5.3, §5.6):** $g = 1/\sqrt{N}$ caps 32-block std growth at $\sqrt{e} \approx 1.65\times$ (vs. $65{,}536\times$ unscaled); 5-part `96 GB` checkpoints resume bit for bit.
-- **Activation memory (§5.7):** Segmenting $K = 16$ blocks by $s = \sqrt{K} = 4$ cuts peak step RAM from $1.1\text{ GiB} \to 0.45\text{ GiB}$.
+- **Parameter & memory scaling (§§{sec_model_construction}–§{num:sec_parameters}, §{sec_numerics}):** Toy 4-block Residual MLP ($729{,}866$ params) vs. Llama 3 8B ($291$ tensors, `16 GB` `bf16` inference, `128 GB` `fp32` Adam training floor).
+- **Signal stability & I/O (§{sec_init_param}, §{sec_read_write}):** $g = 1/\sqrt{N}$ caps 32-block std growth at $\sqrt{e} \approx 1.65\times$ (vs. $65{,}536\times$ unscaled); 5-part `96 GB` checkpoints resume bit for bit.
+- **Activation memory (§{sec_use_gpu}):** Segmenting $K = 16$ blocks by $s = \sqrt{K} = 4$ cuts peak step RAM from $1.1\text{ GiB} \to 0.45\text{ GiB}$.
 :::
 
 ::: {.col .fig .big}
@@ -158,7 +158,7 @@ Deep Learning Computation: From Prototype Code to Production Systems<br>**module
 
 Each section combines runnable multi-framework code with systems diagnostics that prevent silent training failures:
 
-- **Core path for all readers:** Read **§5.1–§5.3** to master module registration, parameter/buffer accounting, and residual variance scaling, then **§5.5–§5.7** for mixed precision, safe checkpointing, and GPU memory management.
+- **Core path for all readers:** Read **§{sec_model_construction}–§{sec_init_param}** to master module registration, parameter/buffer accounting, and residual variance scaling, then **§{sec_numerics}–§{sec_use_gpu}** for mixed precision, safe checkpointing, and GPU memory management.
 - **Framework-specific idioms:** Pay close attention to how your framework handles list containers, lazy shapes, PRNG state, and graph compilation.
 - **Diagnostic habits to adopt immediately:** Count parameter and activation bytes before launching a job, verify initial activation standard deviations with a single forward pass, and audit missing/unexpected keys whenever loading external weights.
 :::

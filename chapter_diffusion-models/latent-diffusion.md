@@ -1356,7 +1356,7 @@ $$\mathcal{L}_{\textrm{AE}}(\mathbf{x}) = \frac{1}{784}\|\mathbf{x} - \mathcal{D
 
 Our `Autoencoder` downsamples $28 \times 28 \times 1 \to 14 \times 14 \to 7 \times 7 \times 8$ (splitting into $4$ mean and $4$ clamped log-variance channels) and mirrors the hierarchy in the decoder:
 
-```python
+```{.python #latent-diffusion-exercises}
 class Autoencoder(nn.Module):
     def encode(self, x):
         mean, log_var = self.encoder(x).chunk(2, dim=1)
@@ -1619,7 +1619,7 @@ Test your understanding of latent diffusion autoencoders and Diffusion Transform
 ::: {.slide title="Summary: Latent Diffusion and Transformer Backbones"}
 [Key Takeaways]{.kicker}
 
-| Component / Concept | Mathematical / Architectural Form | Empirical Finding in §17.7 | Design Recommendation |
+| Component / Concept | Mathematical / Architectural Form | Empirical Finding in §{sec_diffusion-latent} | Design Recommendation |
 | :--- | :--- | :--- | :--- |
 | **Perceptual Autoencoder** | $\frac{1}{d}\|\mathbf{x} - \hat{\mathbf{x}}\|^2 + \frac{\beta}{d_z}D_{\mathrm{KL}}(\mathcal{N}(\boldsymbol\mu, \mathbf{s}^2) \,\|\, \mathcal{N}(\mathbf{0}, \mathbf{I}))$ | $\beta = 10^{-4}$ gives $\mathrm{FD}_{\textrm{rec}} \approx 0.7$, kurtosis $\le 0$ | Keep KL weight light ($\beta \approx 10^{-4}$) to preserve modelability |
 | **Latent Rescaling** | $\mathbf{z}_0 = c\,(\boldsymbol\mu + \mathbf{s} \odot \boldsymbol\xi), \quad c = 1 / \mathrm{std}(\mathbf{z})$ | $c \approx 1.05$ here ($c = 0.18215$ in Stable Diffusion) | Mandatory so latent signal variance matches unit noise $\boldsymbol\epsilon$ |

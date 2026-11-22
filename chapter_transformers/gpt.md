@@ -1114,8 +1114,8 @@ Evaluating the loaded `124.4M`-parameter `gpt2` model on *The Time Machine* yiel
 ::: {.col}
 - Every major open-weights decoder-only family (2023–2025) shares our default `GPT` backbone (`RMSNorm`, `RoPE`, `SwiGLU`).
 - **Two frontier axes of differentiation:**
-  1. **KV-cache compression (§11.3):** GQA ($32{:}8$ or $64{:}8$), $5{:}1$ local/global windows (Gemma 3), or low-rank MLA (DeepSeek-V3).
-  2. **FFN sparsity (§11.7):** Dense `SwiGLU` vs. fine-grained MoE ($128$–$256$ experts).
+  1. **KV-cache compression (§{sec_kv-cache}):** GQA ($32{:}8$ or $64{:}8$), $5{:}1$ local/global windows (Gemma 3), or low-rank MLA (DeepSeek-V3).
+  2. **FFN sparsity (§{sec_moe}):** Dense `SwiGLU` vs. fine-grained MoE ($128$–$256$ experts).
 :::
 
 ::: {.col .fig .big}

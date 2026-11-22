@@ -98,8 +98,8 @@ Linear Algebra: Geometry, Spectra, and Low-Rank Structure<br>**projections · li
 
 ::: {.cols .vc}
 ::: {.col}
-- **Stage 1 — Standard Coordinates (§§33.1–33.2):** Measure similarity, project onto subspaces ($\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, $\mathbf{A} = \mathbf{Q}\mathbf{R}$), and track surviving vs. collapsed dimensions ($\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, $\det\mathbf{A}$).
-- **Stage 2 — Matrix-Tailored Coordinates (§§33.3–33.5):** Diagonalize repeated square maps ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$), analyze power iteration and non-normal growth, and factor any $m \times n$ matrix via SVD ($\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$).
+- **Stage 1 — Standard Coordinates (§§{sec_mdl-geometry-linear-algebraic-ops}–§{num:sec_mdl-linear-maps}):** Measure similarity, project onto subspaces ($\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, $\mathbf{A} = \mathbf{Q}\mathbf{R}$), and track surviving vs. collapsed dimensions ($\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, $\det\mathbf{A}$).
+- **Stage 2 — Matrix-Tailored Coordinates (§§{sec_mdl-eigendecompositions}–§{num:sec_mdl-svd-low-rank}):** Diagonalize repeated square maps ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$), analyze power iteration and non-normal growth, and factor any $m \times n$ matrix via SVD ($\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$).
 :::
 
 ::: {.col .fig .big}
@@ -108,7 +108,7 @@ Linear Algebra: Geometry, Spectra, and Low-Rank Structure<br>**projections · li
 :::
 :::
 
-::: {.slide title="Three Landmark Theorems of Chapter 33"}
+::: {.slide title="Three Landmark Theorems of Chapter §{num:chap_mdl-linear-algebra}"}
 [Core Theory]{.kicker}
 
 ::: {.cols .vc}
@@ -144,8 +144,8 @@ Linear Algebra: Geometry, Spectra, and Low-Rank Structure<br>**projections · li
 
 ::: {.cols}
 ::: {.col}
-- **First-Pass Essentials:** Focus on orthogonal projections and $1/\sqrt{d}$ attention scaling (§33.1), column/null spaces and rank–nullity (§33.2), the spectral theorem and positive definiteness (§33.3), power iteration and transient growth (§33.4), and the full SVD / LoRA / conditioning workflow (§33.5).
-- **What to Skim on First Reading:** The axiomatic $n$-dimensional permutation determinant (§33.2), Gershgorin discs, PageRank, and $\varepsilon$-pseudospectra (§33.4) can be skipped without losing the main thread.
+- **First-Pass Essentials:** Focus on orthogonal projections and $1/\sqrt{d}$ attention scaling (§{sec_mdl-geometry-linear-algebraic-ops}), column/null spaces and rank–nullity (§{sec_mdl-linear-maps}), the spectral theorem and positive definiteness (§{sec_mdl-eigendecompositions}), power iteration and transient growth (§{sec_mdl-spectra-in-practice}), and the full SVD / LoRA / conditioning workflow (§{sec_mdl-svd-low-rank}).
+- **What to Skim on First Reading:** The axiomatic $n$-dimensional permutation determinant (§{sec_mdl-linear-maps}), Gershgorin discs, PageRank, and $\varepsilon$-pseudospectra (§{sec_mdl-spectra-in-practice}) can be skipped without losing the main thread.
 :::
 
 ::: {.col}
@@ -155,7 +155,7 @@ Linear Algebra: Geometry, Spectra, and Low-Rank Structure<br>**projections · li
 :::
 
 ::: {.d2l-note}
-**Up next (§33.1 Vectors, Angles, and Projections):** How the dot product extends planar lengths, angles, orthogonal shadows, and separating hyperplanes to 784 dimensions.
+**Up next (§{sec_mdl-geometry-linear-algebraic-ops} Vectors, Angles, and Projections):** How the dot product extends planar lengths, angles, orthogonal shadows, and separating hyperplanes to 784 dimensions.
 :::
 :::
 

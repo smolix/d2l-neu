@@ -513,8 +513,8 @@ Three quantitative findings stand out from the reversal capacity table:
 
 ::: {.cols .vc}
 ::: {.col}
-- **Route 1 — Cross-Attention (Ch. 11):** Retains all $T$ encoder states $[\mathbf{h}_1, \ldots, \mathbf{h}_T]$ for exact dynamic lookup at $O(T)$ memory cost.
-- **Route 2 — Structured & Matrix States (§§12.3–12.8):** Keeps $O(1)$ inference state by upgrading to parallel linear scans, $d_v \times d_k$ outer-product key–value matrices, delta-rule erasure, and sparse 3:1 attention hybrids.
+- **Route 1 — Cross-Attention (Ch. §{num:chap_transformers}):** Retains all $T$ encoder states $[\mathbf{h}_1, \ldots, \mathbf{h}_T]$ for exact dynamic lookup at $O(T)$ memory cost.
+- **Route 2 — Structured & Matrix States (§§{sec_linear-recurrence}–§{num:sec_hybrids}):** Keeps $O(1)$ inference state by upgrading to parallel linear scans, $d_v \times d_k$ outer-product key–value matrices, delta-rule erasure, and sparse 3:1 attention hybrids.
 :::
 
 ::: {.col .fig .big}
@@ -551,6 +551,6 @@ Test your understanding with these three questions:
 | **chrF Metric** | $F_2 = \frac{5PR}{4P + R}$ on character $1\ldots 6$-grams | Robust to inflections & tokenization; rewards partial stem overlap |
 | **BLEU Metric** | $\exp(\min(0, 1 - \ell_{\text{ref}}/\ell_{\text{cand}})) \prod_{n=1}^k p_n^{w_n}$ | Geometric product collapses to $0$ on sentence level if any $p_n = 0$ |
 | **Fixed-Vector Bottleneck** | $4T$ bits of random string in $d$ floats | Trained GRU packs $< 1\text{ bit/float}$ ($0.99 \to 0.26$ from $T=8 \to 64$ at $d=64$) |
-| **Architectural Remedies** | Cross-attention ($O(T)$ cache) vs. Matrix state ($O(1)$) | Attention stores all tokens; §12.3–12.8 build fast, high-capacity states |
+| **Architectural Remedies** | Cross-attention ($O(T)$ cache) vs. Matrix state ($O(1)$) | Attention stores all tokens; §{sec_linear-recurrence}–§{num:sec_hybrids} build fast, high-capacity states |
 :::
 

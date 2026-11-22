@@ -747,7 +747,7 @@ $$\mathbf{S}_m = \mathbf{S}_0\,\underbrace{(\gamma_m \mathbf{I} - \mathbf{Z}^\to
 ::: {.slide title="Implementing GatedDeltaNet as a Drop-In GLA Subclass"}
 [Clean Object-Oriented Design]{.kicker}
 
-Because `GatedLinearAttention` (§12.6) isolated its state recurrence inside `memory(X, Q, K, V, log_a)`, `GatedDeltaNet` adds just one linear projection `W_beta` ($d \to h$) and overrides `memory`:
+Because `GatedLinearAttention` (§{sec_matrix-state}) isolated its state recurrence inside `memory(X, Q, K, V, log_a)`, `GatedDeltaNet` adds just one linear projection `W_beta` ($d \to h$) and overrides `memory`:
 
 @-deltanet-the-layer
 

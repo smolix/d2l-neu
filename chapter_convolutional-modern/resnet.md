@@ -1435,7 +1435,7 @@ Because batch normalization follows every convolution, ResNet-18 trains reliably
 ::: {.cols .vc}
 ::: {.col}
 - **High accuracy at $4\times$ fewer weights than VGG:** Reaches **$\approx 93\%$** validation accuracy with $11.2\text{M}$ parameters ($319\text{M}$ multiply-adds at $96\times 96$), matching quarter-width VGG ($43.1\text{M}$ parameters at $224\times 224$).
-- **Memorization gap without modern regularization:** ResNet-18 drives training loss below $0.01$ while validation loss plateaus near $0.27$—motivating the data augmentation and regularization recipes of §7.6.
+- **Memorization gap without modern regularization:** ResNet-18 drives training loss below $0.01$ while validation loss plateaus near $0.27$—motivating the data augmentation and regularization recipes of §{sec_training_recipes}.
 :::
 
 ::: {.col .fig}

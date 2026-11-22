@@ -1873,7 +1873,7 @@ Utility Functions and Classes: The Internal Plumbing of the `d2l` Package<br>**H
 ::: {.col}
 - **Zero hidden magic:** Every helper in `d2l` (`plot`, `ProgressBoard`, `Trainer`, `FeatureCNN`, `Embed`) is defined in an executable notebook cell marked with `#@save`.
 - **Automatic extraction (`make lib`):** Generates `d2l/torch.py`, `d2l/jax.py`, `d2l/tensorflow.py`, and `d2l/mxnet.py` directly from chapter sources.
-- **Active vs. legacy helpers:** §39.9 houses core PyTorch/JAX plotting, RL, and vision utilities alongside legacy MXNet/TF loops (`train_ch6`).
+- **Active vs. legacy helpers:** §{sec_utils} houses core PyTorch/JAX plotting, RL, and vision utilities alongside legacy MXNet/TF loops (`train_ch6`).
 :::
 
 ::: {.col .fig .big}
@@ -2070,7 +2070,7 @@ In `d2l.ProgressBoard.show()`, why does the method check `os.environ.get('D2L_NB
 :::
 :::
 
-::: {.slide title="Summary: Core Utilities in Section 39.9"}
+::: {.slide title="Summary: Core Utilities in Section §{num:sec_utils}"}
 [Key Takeaways]{.kicker}
 
 | Category | Key Symbols (`d2l.*`) | Primary Engineering Mechanism |

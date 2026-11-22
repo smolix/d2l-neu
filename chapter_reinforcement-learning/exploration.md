@@ -1052,7 +1052,7 @@ On stochastic MDPs, a single visit cannot identify $P(\cdot \mid s, a)$, while o
 ::: {.slide title="Group Exploration on the Verifier Task"}
 [Contextual Bandits and pass@K in LLM Post-Training]{.kicker}
 
-In group-based policy optimization (such as GRPO in §14.8), the learner samples $K$ responses per prompt $x$ from $\pi_\theta(\cdot \mid x)$ and updates toward responses that beat the group average:
+In group-based policy optimization (such as GRPO in §{sec_baselines}), the learner samples $K$ responses per prompt $x$ from $\pi_\theta(\cdot \mid x)$ and updates toward responses that beat the group average:
 
 $$P(\text{all } K \text{ responses score identically}) = (1 - p)^K + p^K, \qquad p = \pi_\theta(\textrm{correct} \mid x)$$
 

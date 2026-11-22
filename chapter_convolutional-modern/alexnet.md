@@ -576,7 +576,7 @@ AlexNet and Learned Image Representations<br>**end-to-end features · data & GPU
 
 ::: {.cols .vc}
 ::: {.col}
-- **Static descriptors (1990s–2011):** SIFT/HOG + SVM updated only the linear classifier, freezing features and plateauing at **25.8% top-5 error** on ImageNet.
+- **Static descriptors (1990s–2011):** SIFT/HOG + SVM updated only the linear classifier, freezing features and plateauing at **26.2% top-5 error** on ImageNet.
 - **2012 AlexNet breakthrough:** Trained 8 layers end-to-end from pixels across 1.2M images, slashing top-5 error to **15.3%**.
 - **Three catalysts:** Million-image data, GPU parallelism, and non-saturating ReLU optimization.
 :::
@@ -830,7 +830,7 @@ Work out these two systems and architectural questions:
 
 | Concept / Component | Mathematical / Structural Form | Role & Systems Takeaway |
 |:--|:--|:--|
-| **End-to-end representation learning** | Backprop updates Conv1–Conv5 jointly with Dense1–3 | Slashed ImageNet top-5 error from 25.8% to 15.3%, replacing SIFT/HOG |
+| **End-to-end representation learning** | Backprop updates Conv1–Conv5 jointly with Dense1–3 | Slashed ImageNet top-5 error from 26.2% to 15.3%, replacing SIFT/HOG |
 | **ReLU + He initialization** | $\max(x, 0)$ with $W \sim \mathcal{N}(0, 2/(c_{\textrm{i}}k^2))$ | Derivative $1$ on active units prevents $4^{-K}$ sigmoid gradient decay |
 | **Overlapping max-pooling** | $3\times 3$ window, stride $2$: $n \mapsto \lfloor(n-3)/2\rfloor + 1$ | Downsamples $224$ $\to$ $54$ $\to$ $26$ $\to$ $12$ $\to$ $5$ while keeping strongest activations |
 | **Compute vs. parameter split** | Convs: 3.7M params (8%), 895M MACs (95%)<br>Dense head: 43.0M params (92%), 43M MACs (5%) | Convolutions reuse weights spatially; dense head bloats memory and requires Dropout($0.5$) |

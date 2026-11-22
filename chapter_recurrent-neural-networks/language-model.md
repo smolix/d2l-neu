@@ -1079,7 +1079,7 @@ $$\hat{P}_\alpha(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) = \frac{N(x_{t-n+1}, \ldot
 ::: {.col}
 $$P_{\textrm{KN}}(w \mid u) = \frac{\max(N(u, w) - D,\, 0)}{N(u)} + \frac{D\,S(u)}{N(u)}\,P_{\textrm{KN}}(w \mid u')$$
 
-- **Absolute discounting ($D \approx 0.90$):** Subtracts $D = c_1 / (c_1 + 2c_2)$ from every nonzero count to correct singleton selection bias, freeing mass $D\,S(u)/N(u)$.
+- **Absolute discounting ($D \approx 0.93$):** Subtracts $D = c_1 / (c_1 + 2c_2)$ from every nonzero count to correct singleton selection bias, freeing mass $D\,S(u)/N(u)$.
 - **Recursive interpolation:** Allocates the freed mass to the backed-off suffix context $u' = u_{2:}$ down to the uniform floor $1/|\mathcal{V}|$.
 - **Continuation counts at lower orders:** Lower orders count how many *distinct predecessors* precede $w$ (rewarding versatile `"said"` over context-bound `"traveller"`).
 :::
@@ -1107,8 +1107,8 @@ Comparing Kneser–Ney against Laplace ($\alpha = 0.01$) after context `"the tim
 
 @!language-model-kneser-ney-smoothing-2
 
-- **Preserving frequent $n$-grams:** For seen `"traveller"` ($N = 47$), subtracting $D = 0.90$ keeps $P_{\textrm{KN}} = 0.54 \approx 47/87$, whereas Laplace wastes a third of the mass ($\hat{P}_\alpha = 0.36$) on $4{,}316 \times 0.01 = 43.16$ phantom counts.
-- **Discriminating unseen continuations:** Laplace gives unseen `"was"` and `"filby"` the exact same probability ($7.7 \times 10^{-5}$), whereas Kneser–Ney scores versatile `"was"` **$16\times$ higher** than context-bound `"filby"`, cutting held-out trigram perplexity by $8\times$ ($2{,}481.2 \to 300.1$).
+- **Preserving frequent $n$-grams:** For seen `"traveller"` ($N = 47$), subtracting $D \approx 0.93$ keeps $P_{\textrm{KN}} = 0.53 \approx 47/87$, whereas Laplace wastes a third of the mass ($\hat{P}_\alpha = 0.36$) on $4{,}316 \times 0.01 = 43.16$ phantom counts.
+- **Discriminating unseen continuations:** Laplace gives unseen `"was"` and `"filby"` the exact same probability ($7.7 \times 10^{-5}$), whereas Kneser–Ney scores versatile `"was"` **$16\times$ higher** than context-bound `"filby"`, cutting held-out trigram perplexity by $8\times$ ($2{,}481.4 \to 300.1$).
 :::
 
 ::: {.slide title="Why Perplexity Cannot Compare Different Tokenizers"}
@@ -1118,7 +1118,7 @@ Comparing Kneser–Ney against Laplace ($\alpha = 0.01$) after context `"the tim
 ::: {.col}
 $$\textrm{bpb} = \frac{1}{B}\sum_{t=1}^T -\log_2 P(x_t \mid x_{<t}) = \frac{T}{B}\log_2 \textrm{PPL}$$
 
-- **The scale mismatch:** Perplexity divides by token count $T$, so a character model ($\textrm{PPL} \approx 6.5$), BPE-1024 model ($\textrm{PPL} \approx 52$), and word model ($\textrm{PPL} \approx 300$) lie on incompatible scales.
+- **The scale mismatch:** Perplexity divides by token count $T$, so a character model ($\textrm{PPL} \approx 6.4$), BPE-1024 model ($\textrm{PPL} \approx 63$), and word model ($\textrm{PPL} \approx 300$) lie on incompatible scales.
 - **Bits per Byte ($\textrm{bpb}$):** Normalizing total base-2 surprisal by the invariant UTF-8 byte length $B$ measures the exact lossless compression rate ($\textrm{bpb}/8$).
 :::
 
@@ -1135,7 +1135,7 @@ Evaluating trigram models across character, BPE-1024, and word tokenizations on 
 
 @!language-model-bits-per-byte
 
-- **From $400\times$ PPL gap to $0.3$ bpb:** While Laplace perplexities span $6.5$ to $2{,}481.2$, Laplace bits per byte sit within $2.50\text{--}2.81$ bpb.
+- **From $400\times$ PPL gap to $0.2$ bpb:** While Laplace perplexities span $6.4$ to $2{,}481.4$, Laplace bits per byte sit within $2.58\text{--}2.81$ bpb.
 - **Why BPE-1024 wins ($1.90$ KN bpb):** Two BPE tokens span $\sim 5.6$ characters (vs. 2 characters for a character trigram) while incurring **zero `<unk>` spelling penalty** (which costs the word trigram $\approx 0.6$ bpb).
 :::
 

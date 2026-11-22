@@ -1101,7 +1101,7 @@ $$\textrm{BN}(a\mathbf{w}^\top \mathbf{h}_i) = \textrm{BN}(\mathbf{w}^\top \math
 ::: {.cols .vc}
 ::: {.col}
 - **Dense layers ($m \times d$):** Pools over axis `0` ($m$ examples per feature, shape $1 \times d$).
-- **Conv layers ($m \times c \times p \times q$):** Pools over `(0, 2, 3)` ($m \cdot p \cdot q$ values per channel, shape $1 \times c \times 1 \times 1$) to preserve spatial translation equivariance ($100{,}352$ values/channel in LeNet Conv1).
+- **Conv layers ($m$ examples, $c$ channels, $p \times q$ pixels):** Pools over the batch and both spatial axes ($m \cdot p \cdot q$ values per channel, one statistic per channel) to preserve spatial translation equivariance ($100{,}352$ values/channel in LeNet Conv1).
 :::
 
 ::: {.col .fig .big}
@@ -1118,7 +1118,7 @@ $$\textrm{BN}(a\mathbf{w}^\top \mathbf{h}_i) = \textrm{BN}(\mathbf{w}^\top \math
 $$\hat{\mu} \leftarrow \rho\,\hat{\mu} + (1 - \rho)\,\hat{\mu}_\mathcal{B}, \qquad \hat{\sigma}^2 \leftarrow \rho\,\hat{\sigma}^2 + (1 - \rho)\,\hat{\sigma}^2_\mathcal{B}$$
 
 - **Train vs. eval split:** Training uses live batch stats $(\hat{\mu}_\mathcal{B}, \hat{\sigma}^2_\mathcal{B})$ and updates running buffers; eval freezes $(\hat{\mu}, \hat{\sigma}^2)$ for deterministic $N=1$ scoring.
-- **Pitfall:** PyTorch `momentum` is $1-\rho = 0.1$ whereas Keras/Flax `momentum` is $\rho = 0.9$.
+- **Pitfall:** Framework BatchNorm layers call the mixing weight `momentum`, but some mean $1-\rho$ (e.g. $0.1$) and others $\rho$ (e.g. $0.9$); check which one yours uses.
 :::
 
 ::: {.col .fig}

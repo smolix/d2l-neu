@@ -826,7 +826,7 @@ Cross-correlating `X` with the $1 \times 2$ kernel $\mathbf{K} = \begin{bmatrix}
 ::: {.col}
 @conv-layer-learning-a-kernel-1
 
-- **4D framework tensors:** Reshape `X` to $(1, 1, 6, 8)$ and `Y` to $(1, 1, 6, 7)$ and minimize $\mathcal{L} = \|\hat{\mathbf{Y}} - \mathbf{Y}\|_2^2$ at $\eta = 0.03$.
+- **4D framework tensors:** Reshape `X` and `Y` to 4D tensors (one example, one channel) and minimize $\mathcal{L} = \|\hat{\mathbf{Y}} - \mathbf{Y}\|_2^2$ at $\eta = 0.03$.
 :::
 
 ::: {.col .fig}

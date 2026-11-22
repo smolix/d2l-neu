@@ -1141,7 +1141,7 @@ Do architectural changes validated on $224\times 224$ ImageNet transfer blindly 
 @!convnext-eval
 
 - **Body + LN tie at $\approx 94.0\%$:** Matches `CompactResNet18` when keeping the overlapping stem.
-- **Patchify pitfall ($-2.5\%$):** Non-overlapping $4 \times 4_{s4}$ stem is too coarse on $64 \times 64$ thumbnails.
+- **Patchify pitfall ($\approx -2$ points):** Non-overlapping $4 \times 4_{s4}$ stem is too coarse on $64 \times 64$ thumbnails.
 :::
 
 ::: {.col .fig}

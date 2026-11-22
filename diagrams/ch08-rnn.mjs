@@ -93,7 +93,7 @@ function wellsBenchmarks() {
   const cards = [
     { x: 16,  y: 60, s: '§8.1 Sine Wave AR(4)', m: '0.05 → 0.25 MSE', d: '1-step vs 64-step rollout', f: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 276, y: 60, s: '§8.2 Pre-Tokenized BPE', m: '2.78 bytes / token', d: '0 OOVs · matches tiktoken', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 16,  y: 132, s: '§8.3 Kneser–Ney 3-Gram', m: '1.90 bpb (PPL 300)', d: '8× lower PPL than Laplace', f: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 16,  y: 132, s: '§8.3 Kneser–Ney 3-Gram', m: '1.90 bpb (BPE-1024 KN)', d: 'Word PPL 2,481 → 300', f: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 276, y: 132, s: '§8.4 Clipped RNNLM', m: '2.12 bpb · 512 B state', d: '89% params in E & W_hq', f: C.lgreen, st: C.green, dk: D.green.dark },
     { x: 16,  y: 204, s: '§8.5 BPTT Decay Probe', m: '< 1% norm by lag 8', d: 'ρ=1.80 × tanh\' 0.27 ≈ 0.49', f: D.red.tint, st: D.red.base, dk: D.red.dark },
     { x: 276, y: 204, s: '§8.6 Truncated Samplers', m: 'distinct-3 ≈ 0.99', d: 'min-p / top-p break loops', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
@@ -222,7 +222,7 @@ function chainRule() {
   const cards = [
     { x: 18,  title: 'P("the")', val: '0.05', logv: '−3.00 nats', f: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 194, title: 'P("cat" | "the")', val: '0.01', logv: '−4.61 nats', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 370, title: 'P("sat" | "the","cat")', val: '0.20', logv: '−1.61 nats', f: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 370, title: 'P("sat"|"the","cat")', val: '0.20', logv: '−1.61 nats', f: C.lblue, st: C.blue, dk: D.blue.dark },
   ];
   cards.forEach((c, i) => {
     o += box(c.x, 20, 152, 86, c.f, c.st, 8, 2);
@@ -590,14 +590,14 @@ function kneserNeyFlow() {
   let o = '';
   o += box(16, 12, 508, 48, D.purple.tint, C.purple, 8, 2);
   o += tx(270, 28, 'P_KN(w|u) = max(N(u,w) − D, 0) / N(u)  +  λ(u) · P_KN(w|u\')', { mono: true, fs: 12, fw: 700, fill: D.purple.dark });
-  o += tx(270, 48, 'Closed-form absolute discount: D = c₁ / (c₁ + 2c₂) ≈ 0.90 on word trigrams', { fs: 12, fw: 600, fill: C.ink });
+  o += tx(270, 48, 'Closed-form absolute discount: D = c₁ / (c₁ + 2c₂) ≈ 0.93 on word trigrams', { fs: 12, fw: 600, fill: C.ink });
 
   // Left: Discounted highest order
   o += box(16, 76, 246, 176, C.lblue, C.blue, 8, 2);
-  o += tx(139, 98, '1. Absolute Discounting (D ≈ 0.9)', { fs: 13, fw: 700, fill: D.blue.dark });
+  o += tx(139, 98, '1. Absolute Discounting (D ≈ 0.93)', { fs: 13, fw: 700, fill: D.blue.dark });
   o += box(26, 114, 226, 56, '#FFFFFF', C.blue, 6, 1.5);
   o += tx(139, 132, 'Seen: "the time traveller"', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
-  o += tx(139, 152, '(47 − 0.9) / 87 ≈ 0.54', { mono: true, fs: 11.5, fw: 700, fill: D.blue.dark });
+  o += tx(139, 152, '(47 − 0.93) / 87 ≈ 0.53', { mono: true, fs: 11.5, fw: 700, fill: D.blue.dark });
   o += box(26, 180, 226, 56, '#FFFFFF', C.blue, 6, 1.5);
   o += tx(139, 198, 'Freed mass λ(u) = D·S(u)/N(u)', { mono: true, fs: 11.5, fw: 700, fill: D.blue.dark });
   o += tx(139, 218, 'Passed recursively to suffix u\'', { fs: 11.5, fill: C.muted });
@@ -610,7 +610,7 @@ function kneserNeyFlow() {
   o += tx(401, 152, 'P_KN("said" | u) = 0.0018', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
   o += box(288, 180, 226, 56, D.red.tint, D.red.base, 6, 1.5);
   o += tx(401, 198, '"filby": few predecessors', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
-  o += tx(401, 218, 'P_KN("filby" | u) = 0.00011', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
+  o += tx(401, 218, 'P_KN("filby" | u) = 2.3·10⁻⁵', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
 
@@ -623,9 +623,9 @@ function pplVsBpb() {
   o += tx(138, 36, 'Raw Perplexity (Per Token T)', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += tx(138, 56, 'Incomparable across granularities!', { fs: 12, fw: 600, fill: D.red.dark });
   const ppls = [
-    ['Character (|V|=27)', 'PPL = 6.5'],
-    ['BPE-1024 (|V|=1024)', 'PPL = 52.0'],
-    ['Word (|V|=4316)', 'PPL = 300.1'],
+    ['Character (|V|=27)', 'PPL ≈ 6.4'],
+    ['BPE-1024 (|V|=1024)', 'PPL ≈ 63'],
+    ['Word (|V|=4316)', 'PPL ≈ 300'],
   ];
   ppls.forEach((p, i) => {
     const y = 72 + i * 36;
@@ -638,9 +638,9 @@ function pplVsBpb() {
   o += tx(402, 36, 'Bits per Byte (Per UTF-8 Byte B)', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(402, 56, 'bpb = (T / B) log₂ PPL', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   const bpbs = [
-    ['Character (1.0 B/tok)', '2.70 bpb'],
-    ['BPE-1024 (2.8 B/tok)', '1.90 bpb ★'],
-    ['Word (+ <unk> spell)', '2.19 bpb'],
+    ['Character (1.0 B/tok)', '2.67 bpb'],
+    ['BPE-1024 (3.1 B/tok)', '1.90 bpb ★'],
+    ['Word (+ <unk> spell)', '2.22 bpb'],
   ];
   bpbs.forEach((p, i) => {
     const y = 72 + i * 36;
@@ -740,7 +740,7 @@ function cellDimensions() {
 
   // Center tanh state
   o += box(212, 86, 132, 80, C.lgreen, C.green, 8, 2);
-  o += tx(278, 110, 'Hₜ = tanh(… + b_h)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(278, 110, 'Hₜ = tanh(… + b_h)', { mono: true, fs: 11, fw: 700, fill: D.green.dark });
   o += tx(278, 134, 'shape: (b, 128)', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
   o += tx(278, 152, '512 B per seq', { fs: 11.5, fill: C.muted });
 
@@ -777,14 +777,14 @@ function batchedInputGemm() {
   const steps = [
     ['Step t = 1', 'tanh(U₁ + H₀W_hh)'],
     ['Step t = 2', 'tanh(U₂ + H₁W_hh)'],
-    ['Step t = T', 'tanh(U_T + H_{T-1}W)'],
+    ['Step t = T', 'tanh(U_T+H_{T−1}W_hh)'],
   ];
   steps.forEach((s, i) => {
-    const x = 28 + i * 168;
-    o += box(x, 172, 148, 54, '#FFFFFF', C.amber, 6, 1.6);
-    o += tx(x + 74, 190, s[0], { fs: 12, fw: 700, fill: D.orange.dark });
-    o += tx(x + 74, 210, s[1], { mono: true, fs: 11, fw: 700, fill: C.ink });
-    if (i < 2) o += arrow(x + 150, 199, x + 166, 199, D.orange.base);
+    const x = 26 + i * 168;
+    o += box(x, 172, 156, 54, '#FFFFFF', C.amber, 6, 1.6);
+    o += tx(x + 78, 190, s[0], { fs: 12, fw: 700, fill: D.orange.dark });
+    o += tx(x + 78, 210, s[1], { mono: true, fs: 11, fw: 700, fill: C.ink });
+    if (i < 2) o += arrow(x + 158, 199, x + 166, 199, D.orange.base);
   });
   return svg(W, H, o);
 }
@@ -914,7 +914,7 @@ function forwardVsReverseBptt() {
   // Left: Naive Forward Expansion O(T^2)
   o += box(16, 14, 244, 224, D.red.tint, D.red.base, 8, 2);
   o += tx(138, 36, 'Naive Pairwise Sums: O(T²)', { fs: 14, fw: 700, fill: D.red.dark });
-  const pairs = ['t = 1: c₁', 't = 2: c₂ + c₂c₁', 't = 3: c₃ + c₃c₂ + c₃c₂c₁', 't = T: ∑ᵢ (∏ⱼ cⱼ) uᵢ'];
+  const pairs = ['t = 1: u₁', 't = 2: u₂ + c₂u₁', 't = 3: u₃ + c₃u₂ + c₃c₂u₁', 't = T: ∑ᵢ (∏ⱼ cⱼ) uᵢ'];
   pairs.forEach((p, i) => {
     const y = 56 + i * 36;
     o += box(26, y, 224, 28, '#FFFFFF', D.red.base, 5, 1.4);
@@ -971,7 +971,7 @@ function adjointNodeRecursion() {
   o += tx(75, 172, '← Gₜ W_hh^T', { mono: true, fs: 11, fill: C.ink });
 
   o += box(24, 206, 492, 36, C.lgreen, C.green, 6, 1.6);
-  o += tx(270, 224, 'Gₜ = (∂L / ∂Oₜ) W_hq^T  +  Gₜ₊₁ W_hh^T     (with boundary G_{T+1} = 0)', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(270, 224, 'Gₜ = (∂L/∂Oₜ) W_hq^T + Gₜ₊₁ W_hh^T   (boundary G_{T+1} = 0)', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -1072,33 +1072,33 @@ function clippingLagRatios() {
 
   // Left: Before clipping
   o += box(16, 40, 242, 198, D.red.tint, D.red.base, 8, 2);
-  o += tx(137, 62, 'Before Clipping (||g|| = 10)', { fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(137, 62, 'Before Clipping (||g|| ≈ 10)', { fs: 13.5, fw: 700, fill: D.red.dark });
   const bars1 = [
-    { y: 84,  lab: 'Lag 0:', w: 130, val: '8.0' },
-    { y: 122, lab: 'Lag 2:', w: 32,  val: '2.0' },
-    { y: 160, lab: 'Lag 8:', w: 4,   val: '0.03' },
+    { y: 84,  lab: 'Lag 0:', w: 130, val: '9.8' },
+    { y: 122, lab: 'Lag 2:', w: 31,  val: '2.35' },
+    { y: 160, lab: 'Lag 8:', w: 4,   val: '0.033' },
   ];
   bars1.forEach((b) => {
     o += tx(30, b.y + 12, b.lab, { mono: true, fs: 12, fw: 700, fill: C.ink, anchor: 'start' });
     o += box(84, b.y, b.w, 24, '#FFFFFF', D.red.base, 4, 1.6);
     o += tx(84 + b.w + 8, b.y + 12, b.val, { mono: true, fs: 12, fw: 700, fill: D.red.dark, anchor: 'start' });
   });
-  o += tx(137, 214, 'Lag 0 : Lag 8 ratio = 267 : 1', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
+  o += tx(137, 214, 'Lag 0 : Lag 8 ratio ≈ 300 : 1', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
 
   // Right: After clipping
   o += box(282, 40, 242, 198, C.lgreen, C.green, 8, 2);
   o += tx(403, 62, 'After Clipping by 0.1 (||g|| = 1)', { fs: 13.5, fw: 700, fill: D.green.dark });
   const bars2 = [
-    { y: 84,  lab: 'Lag 0:', w: 80, val: '0.80' },
-    { y: 122, lab: 'Lag 2:', w: 20, val: '0.20' },
-    { y: 160, lab: 'Lag 8:', w: 4,  val: '0.003' },
+    { y: 84,  lab: 'Lag 0:', w: 80, val: '0.98' },
+    { y: 122, lab: 'Lag 2:', w: 19, val: '0.235' },
+    { y: 160, lab: 'Lag 8:', w: 4,  val: '0.0033' },
   ];
   bars2.forEach((b) => {
     o += tx(296, b.y + 12, b.lab, { mono: true, fs: 12, fw: 700, fill: C.ink, anchor: 'start' });
     o += box(350, b.y, b.w, 24, '#FFFFFF', C.green, 4, 1.6);
     o += tx(350 + b.w + 8, b.y + 12, b.val, { mono: true, fs: 12, fw: 700, fill: D.green.dark, anchor: 'start' });
   });
-  o += tx(403, 214, 'Same 267 : 1 lag ratio!', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(403, 214, 'Same ≈ 300 : 1 lag ratio!', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -1231,12 +1231,12 @@ function unreliableTailRollout() {
 
   // Head vs Tail distribution bar
   o += box(18, 44, 240, 82, C.lgreen, C.green, 8, 2);
-  o += tx(138, 66, 'Calibrated Head (~30 Tokens)', { fs: 13.5, fw: 700, fill: D.green.dark });
+  o += tx(138, 66, 'Calibrated Head (~50 Tokens)', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(138, 88, '82% of probability mass', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
   o += tx(138, 108, 'Plausible continuations', { fs: 12, fill: C.muted });
 
   o += box(272, 44, 250, 82, D.red.tint, D.red.base, 8, 2);
-  o += tx(397, 66, 'Unreliable Tail (~1,000 Tokens)', { fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(397, 66, 'Unreliable Tail (~900 Tokens)', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += tx(397, 88, '18% collective mass per step!', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
   o += tx(397, 108, 'Individually tiny, collectively huge', { fs: 12, fill: C.ink });
 
@@ -1270,7 +1270,7 @@ function statelessVsStatefulDecode() {
   cSteps.forEach((s, i) => {
     const x = 28 + i * 166;
     o += box(x, 172, 152, 36, '#FFFFFF', C.green, 5, 1.8);
-    o += tx(x + 76, 190, s, { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+    o += tx(x + 76, 190, s, { mono: true, fs: 11, fw: 700, fill: D.green.dark });
     if (i < 2) o += arrow(x + 154, 190, x + 164, 190, C.green);
   });
   o += tx(270, 230, '1 cell update per token (O(T) total) · constant 512-byte state memory!', { fs: 12, fw: 700, fill: D.green.dark });

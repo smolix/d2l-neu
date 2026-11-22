@@ -1663,7 +1663,7 @@ Replacing a finite window with a recursive hidden state creates a fundamental tr
 
 - **Tasks impossible for any finite window $m$ (Parity):** Suppose a model must output at every step $t$ whether the running sum of bits $x_1 + \cdots + x_t$ is even or odd. Flipping bit $x_{t-m}$ flips the true parity at step $t$ without altering the last $m$ bits $(x_{t-m+1}, \ldots, x_t)$, so *every* $m$-window model fails on sequences of length $T > m$. A 2-unit threshold RNN solves parity for arbitrary $T$.
 - **Constant 512-byte memory footprint:** Because $\mathbf{H}_t$ depends only on $(\mathbf{H}_{t-1}, \mathbf{X}_t)$, older activations can be discarded during inference. With $h = 128$ `float32` units, the entire state of a sequence occupies **$128 \times 4 = 512$ bytes** whether the prefix has 10 tokens or $10^6$ tokens.
-- **The lossy compression bottleneck:** Every detail remembered from the entire past must squeeze through those 512 bytes—recording new information inevitably overwrites older state dimensions (unlike Chapter 11's attention mechanism, whose KV cache grows as $O(T)$).
+- **The lossy compression bottleneck:** Every detail remembered from the entire past must squeeze through those 512 bytes—recording new information inevitably overwrites older state dimensions (unlike attention, whose KV cache grows as $O(T)$).
 :::
 
 ::: {.slide title="RNN Language Model Architecture & Teacher Forcing"}
@@ -1860,7 +1860,7 @@ The `predict` method first runs a **prefix warm-up loop** feeding the user's pro
 ::: {.slide title="Concise Implementation with Framework RNN Kernels"}
 [High-Level Framework APIs]{.kicker}
 
-Framework layers (`nn.RNN`, `keras.layers.SimpleRNN`, `nnx.RNN(nnx.SimpleCell)`) replace our Python `for X in inputs:` loop with fused C++/CUDA or XLA `scan` kernels while `RNNLM` swaps in built-in `Embedding` and `Linear`/`Dense` layers:
+The framework's built-in RNN layer replaces our Python `for X in inputs:` loop with a fused kernel, while `RNNLM` swaps in the built-in embedding and dense layers:
 
 @-rnn-implementation-concise-implementation-1
 

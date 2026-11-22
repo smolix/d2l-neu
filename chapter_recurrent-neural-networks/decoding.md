@@ -841,7 +841,7 @@ Every decoding algorithm in this section interacts with our trained RNN language
 
 @-decoding-a-model-to-decode-from-4
 
-- **Architecture and framework invariance:** Because `step_fn` takes a list of integer token IDs and returns next-token logits as a NumPy array, the exact same decoder code drives an RNN, a state space model, or a Transformer across PyTorch, JAX, TensorFlow, and MXNet.
+- **Architecture and framework invariance:** Because `step_fn` takes a list of integer token IDs and returns next-token logits as a NumPy array, the exact same decoder code drives an RNN, a state space model, or a Transformer in any framework.
 :::
 
 ::: {.slide title="Greedy Decoding and the Myopia Trap"}

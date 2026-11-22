@@ -999,7 +999,7 @@ Character-level and word-level tokenization occupy opposite extremes of the trad
 :::
 :::
 
-::: {.slide title="Classical Indexing: Vocab and the <unk> Fallback"}
+::: {.slide title="Classical Indexing: Vocab and the `<unk>` Fallback"}
 [Classical Word & Character Vocabularies]{.kicker}
 
 ::: {.cols .vc}

@@ -1270,7 +1270,7 @@ Residual Networks: ResNet, ResNeXt, and DenseNet<br>**the degradation paradox ·
 
 ::: {.cols .vc}
 ::: {.col}
-- **Deeper plain nets fit training data worse:** A 56-layer plain convnet ends with higher *training* loss ($0.27$) than a 20-layer plain convnet ($0.20$), ruling out overfitting.
+- **Deeper plain nets fit training data worse:** A 56-layer plain convnet ends with higher *training* loss ($\approx 0.28$) than a 20-layer plain convnet ($0.20$), ruling out overfitting.
 - **Constructive existence proof:** Copying the 20-layer net and setting the remaining 36 layers to the identity $f(\mathbf{x}) = \mathbf{x}$ proves a deeper solution $\le 0.20$ exists—SGD simply fails to approximate $f(\mathbf{x}) = \mathbf{x}$ across plain nonlinear layers.
 :::
 

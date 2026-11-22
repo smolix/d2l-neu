@@ -110,7 +110,7 @@ Models such as BERT :cite:`Devlin.Chang.Lee.ea.2018` and GPT-2
 \times d}$ as a trainable embedding table with one parameter row per position
 up to a fixed maximum length $L_{\max}$. Because rows beyond the training
 context length never receive gradients, a learned table cannot extrapolate to
-unseen positions (Exercise :exref:`ex_positional-information-untrained-rows`).
+unseen positions.
 
 ### Sinusoidal Encodings
 :label:`subsec_pos-sinusoidal`
@@ -855,23 +855,6 @@ length eliminates the remaining gap (Exercise
        of :numref:`subsec_pos-sinusoidal`.
    :exlabel:`ex_positional-information-distinct-positions-distinct-codes`
 
-1. [code] **Untrained rows.** The table `pos_emb` of `models['learned']`
-   has `max_len = 512` rows, of which training at context 128 used only the
-   first 128.
-    1. Construct a new `TinyCharLM` with `pos='learned'`, copy its table
-       `pos_emb` before training, and train it as in the experiment
-       of :numref:`subsec_pos-experiment`. Explain from Adam's two moment
-       estimates why rows 128 to 511 of the trained table are bitwise equal
-       to the copy, and check the claim. By
-       what factor would decoupled weight decay with coefficient $0.1$ at
-       the learning rate $10^{-3}$ have shrunk these rows over the 3000
-       training steps?
-    1. Compute the cosine similarities between all 512 rows of the trained
-       table and display them with `d2l.show_heatmaps`. Describe the three
-       blocks of the result: trained rows against trained rows, untrained
-       against untrained, and trained against untrained.
-   :exlabel:`ex_positional-information-untrained-rows`
-
 1. **Additive codes in the score.** With the additive encoding of
    :numref:`subsec_pos-sinusoidal`, a first-layer head scores the inputs at
    positions $i$ and $j$ by the four terms of :eqref:`eq_pos-four-terms`,
@@ -956,23 +939,6 @@ length eliminates the remaining gap (Exercise
        pairs set the gap between the score at $-1$ and the scores at its
        neighbors?
    :exlabel:`ex_positional-information-offset-preference-rope`
-
-1. [code] **The RoPE base.** ● In :eqref:`eq_rope-def` the frequencies are
-   $\omega_m = 10000^{-2m/d_h}$, and the constant $10000$ is a choice.
-    1. For the head width $d_h = 32$ of `TinyCharLM`, compute the periods
-       $2\pi/\omega_m$ of the 16 pairs for the bases $100$, $10^4$, and
-       $10^6$, and count the pairs that complete at least one full rotation
-       within 128 positions. Which period does not depend on the base?
-    1. Retrain the `'rope'` variant of `TinyCharLM` with bases $100$ and
-       $10^6$ by setting its attribute `rope_base` after construction.
-       Train three models with each of the two bases, and compare them with
-       the three base-$10^4$ models of the experiment, so that differences
-       between bases can be set against the variation across runs. Compare
-       perplexity at 128, 256, and 512.
-    1. Explain from the counts why the base is expected to matter more at
-       length 512 than at 128, and check the expectation against your
-       results.
-   :exlabel:`ex_positional-information-rope-base`
 
 1. [extended] **Position interpolation.** ● The last cell of
    :numref:`subsec_pos-context-extension` rescales the angles of the

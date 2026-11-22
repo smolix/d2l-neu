@@ -599,25 +599,6 @@ output at *gave* unchanged. Injecting sequence order is the subject of
 
 ## Exercises
 
-1. **Self-attention by hand.** Three tokens have the inputs
-   $\mathbf{x}_1 = (1, 0)$, $\mathbf{x}_2 = (0, 1)$, and $\mathbf{x}_3 =
-   (1, 1)$. One head of width $d_h = 2$ uses
-   $\mathbf{W}_q = \sqrt{2}\,\mathbf{I}$, the swap
-   $\mathbf{W}_k = \left(\begin{smallmatrix} 0 & 1 \\ 1 & 0
-   \end{smallmatrix}\right)$, and $\mathbf{W}_v = \mathbf{I}$, so that the
-   factor $\sqrt{2}$ cancels the scale $1/\sqrt{d_h}$.
-    1. Compute the queries, keys, and values, the $3 \times 3$ matrix of
-       scaled scores, the weights, and the three outputs, each to two
-       decimals. Which token does the first token attend to least, and why?
-    1. Apply a causal mask and recompute. Which rows change, and why does
-       the last row stay as it was?
-    1. Replace $\mathbf{W}_k$ by the identity, so that each key points the
-       same way as the query of its token. Recompute the weights of the
-       first token. Why can no key of the same length as $\mathbf{x}_1$
-       score higher than the first token's own key, and why does the key of
-       the third token score as high anyway?
-    1. Check your numbers with `d2l.DotProductAttention`.
-
 1. [code] **Narrow heads.** With $d_h = d/H$, the leading count of
    :eqref:`eq_multihead-flops` does not depend on $H$, so the number of heads
    looks free up to $H = d$. Consider one head with scores
@@ -673,24 +654,6 @@ output at *gave* unchanged. Injecting sequence order is the subject of
        $\mathbf{B}$ as valid. Which permutations leave the output unchanged
        when the mask stays fixed?
    :exlabel:`ex_multihead-permuting-the-source`
-
-1. [code] **Nonlinear readouts.** ● For Gaussian values, the proof of the
-   proposition in :numref:`subsec_one-mixture-bottleneck` shows that the
-   conditional mean $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}]$ is linear in
-   the mixture. Hence no readout, linear or not, improves on the relative
-   error $\sqrt{1/2}$ that `readout_error` measures.
-    1. Train a small multilayer perceptron to predict `target` from the
-       mixture $\mathbf{m} = a\,\mathbf{v}_1 + (1 - a)\,\mathbf{v}_2$
-       formed from `V1` and `V2`, for $a = 0.5$ and $a = 0.7$. Compare its
-       relative error on held-out samples with that of the linear readout.
-    1. Now draw the values uniformly from $\{-1, +1\}^{d_v}$. For $a = 0.5$,
-       compute $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}]$ coordinate by
-       coordinate, show that it is again linear in $\mathbf{m}$, and
-       conclude that the error stays at $\sqrt{1/2}$ for every readout.
-    1. For $a = 0.7$ and the same discrete values, show that the map
-       $(v_{1j}, v_{2j}) \mapsto m_j$ is injective. Train the perceptron
-       again and report its held-out error. Explain why this escape from
-       the bound does not contradict the proposition.
 
 1. [code] **Nearly identical heads.** ● Two heads with weights
    $(0.5 + \epsilon, 0.5 - \epsilon)$ and $(0.5 - \epsilon, 0.5 +

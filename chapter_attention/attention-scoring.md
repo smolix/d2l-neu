@@ -760,24 +760,6 @@ across sequence lengths (:numref:`sec_positional-information`).
 
 ## Exercises
 
-1. **Attention by hand.** Let $d = 2$, with keys $\mathbf{k}_1 = (1, 0)$,
-   $\mathbf{k}_2 = (0, 1)$, $\mathbf{k}_3 = (1, 1)$, values
-   $\mathbf{v}_1 = (1, 0)$, $\mathbf{v}_2 = (0, 1)$,
-   $\mathbf{v}_3 = (1, 1)$, and queries $\mathbf{q}_1 = (2, 0)$ and
-   $\mathbf{q}_2 = (0, 2)$. Use a calculator.
-    1. Compute the scaled scores :eqref:`eq_dot_product_attention`, the
-       weights, and the outputs of both queries.
-    1. The first query gives $\mathbf{k}_1$ and $\mathbf{k}_3$ the same
-       score, although $\mathbf{k}_1$ is the closer key. Recompute its
-       weights with the Gaussian score
-       $-\tfrac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2$ and use
-       :eqref:`eq_gaussian-expansion` to explain the difference.
-    1. Let the two queries be the last two of three positions, so that a
-       causal mask lets $\mathbf{q}_1$ see $\mathbf{k}_1$ and
-       $\mathbf{k}_2$ and lets $\mathbf{q}_2$ see all three keys.
-       Recompute the weights and outputs, and check your answers with
-       `DotProductAttention` and `causal_mask(2, 3)`.
-
 1. **Invariances of the score.** The Gaussian score
    :eqref:`eq_gaussian-expansion` and the scaled dot product
    :eqref:`eq_dot_product_attention` both define attention weights through

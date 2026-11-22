@@ -21,8 +21,8 @@ function delayedCredit() {
   o += tx(280, 20, 'Delayed Credit Assignment Across Horizon H = 1 / (1 − γ)', { fs: 15.5, fw: 700, fill: C.ink });
 
   o += box(20, 38, 520, 46, N.panel, C.gray, 7, 1.8);
-  o += tx(280, 52, 'Supervised Learning: immediate label y_t at every step t', { fs: 13.5, fw: 700, fill: C.ink });
-  o += tx(280, 71, 'x₀ → y₀ (loss L₀)     x₁ → y₁ (loss L₁)     x₂ → y₂ (loss L₂)', { mono: true, fs: 12, fill: C.muted });
+  o += tx(280, 50, 'Supervised Learning: immediate label y_t at every step t', { fs: 13.5, fw: 700, fill: C.ink });
+  o += tx(280, 72, 'x₀ → y₀ (loss L₀)     x₁ → y₁ (loss L₁)     x₂ → y₂ (loss L₂)', { mono: true, fs: 12, fill: C.muted });
 
   o += box(20, 98, 520, 150, C.lblue, C.blue, 9, 2);
   o += tx(280, 118, 'Reinforcement Learning: sparse reward arrives only at goal', { fs: 14, fw: 700, fill: D.blue.dark });
@@ -34,8 +34,8 @@ function delayedCredit() {
     const isGoal = i === 3;
     const bw = isGoal ? 96 : 84;
     o += box(cx - bw / 2, ny - 22, bw, 44, isGoal ? C.lgreen : '#FFFFFF', isGoal ? C.green : C.blue, 6, 2);
-    o += tx(cx, ny - 7, labs[i], { mono: true, fs: 12.5, fw: 700, fill: isGoal ? D.green.dark : C.ink });
-    o += tx(cx, ny + 11, rews[i], { mono: true, fs: 12, fw: 600, fill: isGoal ? D.green.dark : C.muted });
+    o += tx(cx, ny - 9, labs[i], { mono: true, fs: 12.5, fw: 700, fill: isGoal ? D.green.dark : C.ink });
+    o += tx(cx, ny + 9, rews[i], { mono: true, fs: 12, fw: 600, fill: isGoal ? D.green.dark : C.muted });
   });
   o += arrow(118, ny, 154, ny, C.blue);
   o += arrow(242, ny, 278, ny, C.blue);
@@ -215,7 +215,7 @@ function geometricTail() {
 function stateAugmentation() {
   const W = 560, H = 264;
   let o = '';
-  o += box(20, 16, 520, 106, D.red.tint, D.red.base, 8, 2);
+  o += box(20, 16, 520, 112, D.red.tint, D.red.base, 8, 2);
   o += tx(280, 36, '(a) Position Only s_t = p_t Violates the Markov Property', { fs: 14.5, fw: 700, fill: D.red.dark });
   const xs = [104, 280, 456], ny1 = 80;
   ['p_{t-1}', 'p_t, a_t', 'p_{t+1}'].forEach((lab, i) => {
@@ -224,7 +224,7 @@ function stateAugmentation() {
   });
   o += arrow(156, ny1, 228, ny1, C.gray);
   o += arrow(332, ny1, 404, ny1, D.red.base);
-  o += tx(280, 112, 'p_{t+1} depends on velocity v_t ∝ p_t − p_{t-1} (history leak!)', { fs: 12.2, fw: 700, fill: D.red.dark });
+  o += tx(280, 114, 'p_{t+1} depends on velocity v_t ∝ p_t − p_{t-1} (history leak!)', { fs: 12.2, fw: 700, fill: D.red.dark });
 
   o += box(20, 138, 520, 110, C.lgreen, C.green, 8, 2);
   o += tx(280, 158, '(b) Augmented State s̃_t = (p_t, v_t)ᵀ Restores First-Order Markov', { fs: 14.5, fw: 700, fill: D.green.dark });
@@ -305,7 +305,7 @@ function potentialShaping() {
   o += arrow(448, 144, 384, 144, D.orange.base);
   o += tx(416, 166, '−0.270 charge', { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
 
-  o += tx(416, 202, 'Telescopes: Ṽ^π(s) = V^π(s) − Φ(s)', { fs: 12.2, fw: 700, fill: D.green.dark });
+  o += tx(416, 202, 'Telescopes: Ṽ^{π}(s) = V^π(s) − Φ(s)', { fs: 12.2, fw: 700, fill: D.green.dark });
   o += tx(416, 226, 'Preserves optimal policy π*!', { fs: 12.8, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
@@ -329,7 +329,7 @@ function vVsQ() {
     o += tx(ax, 162, `a_${i}`, { mono: true, fs: 12.5, fw: 700, fill: D.purple.dark });
   });
   o += tx(144, 200, 'Averages over policy π(a | s):', { fs: 12.5, fw: 600, fill: C.ink });
-  o += tx(144, 220, 'V^π(s) = ∑_a π(a|s) Q^π(s, a)', { mono: true, fs: 11.8, fw: 700, fill: D.blue.dark });
+  o += tx(144, 220, 'V^π(s) = ∑_{a} π(a|s) Q^π(s, a)', { mono: true, fs: 11.8, fw: 700, fill: D.blue.dark });
 
   o += box(292, 18, 248, 222, C.lgreen, C.green, 9, 2);
   o += tx(416, 40, 'Action Value Q^π(s, a)', { fs: 15, fw: 700, fill: D.green.dark });
@@ -357,7 +357,7 @@ function bellmanOptimality() {
   o += tx(144, 109, '1-step lookahead P @ V*', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += arrow(144, 134, 144, 162, D.orange.base);
   o += box(36, 166, 216, 52, '#FFFFFF', C.amber, 6, 1.8);
-  o += tx(144, 184, 'π*(s) = argmax_a', { mono: true, fs: 12, fw: 700, fill: D.orange.dark });
+  o += tx(144, 184, 'π*(s) = argmax_{a}', { mono: true, fs: 12, fw: 700, fill: D.orange.dark });
   o += tx(144, 204, "r(s,a) + γ ∑ P(s'|s,a) V*(s')", { mono: true, fs: 10.8, fill: C.ink });
 
   o += box(292, 18, 248, 220, C.lgreen, C.green, 9, 2);
@@ -367,7 +367,7 @@ function bellmanOptimality() {
   o += tx(416, 109, "Row Q*(s, ·) caches E_{s'}", { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += arrow(416, 134, 416, 162, C.green);
   o += box(308, 166, 216, 52, '#FFFFFF', C.green, 6, 1.8);
-  o += tx(416, 184, 'π*(s) = argmax_a Q*(s, a)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(416, 184, 'π*(s) = argmax_{a} Q*(s, a)', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   o += tx(416, 204, 'O(|A|) lookup, no P needed', { fs: 12, fw: 600, fill: C.ink });
   return svg(W, H, o);
 }
@@ -391,10 +391,10 @@ function stoppingCertificate() {
   });
 
   o += arrow(80, 62, 196, 62, C.blue);
-  o += tx(138, 44, 'Δ_k = ||V_k − V_{k-1}||_∞', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
+  o += tx(138, 44, 'Δ_k = ||V_k − V_{k-1}||_{∞}', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
 
   o += arrow(196, 148, 468, 148, D.orange.base);
-  o += tx(332, 168, '||V_k − V*||_∞ ≤ [γ / (1 − γ)] · Δ_k = 19 · Δ_k', { mono: true, fs: 12, fw: 700, fill: D.orange.dark });
+  o += tx(332, 168, '||V_k − V*||_{∞} ≤ [γ / (1 − γ)] · Δ_k = 19 · Δ_k', { mono: true, fs: 12, fw: 700, fill: D.orange.dark });
 
   o += box(20, 194, 520, 44, C.lamber, C.amber, 7, 1.8);
   o += tx(280, 216, 'At γ = 0.95: Δ_k ≤ 10⁻⁶ leaves 1.1×10⁻⁵ error; wait for 19·Δ_k ≤ 10⁻⁶!', { fs: 12.5, fw: 700, fill: C.ink });
@@ -436,8 +436,8 @@ function maxExpectationOrder() {
   o += box(20, 18, 248, 220, D.red.tint, D.red.base, 9, 2);
   o += tx(144, 42, 'State Value V*(s)', { fs: 15, fw: 700, fill: D.red.dark });
   o += box(34, 66, 220, 48, '#FFFFFF', D.red.base, 6, 1.8);
-  o += tx(144, 90, "max_a E_{s'}[r + γ V*(s')]", { mono: true, fs: 11.3, fw: 700, fill: C.ink });
-  o += tx(144, 140, "max_a sits OUTSIDE E_{s'}", { fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(144, 90, "max_{a} E_{s'}[r + γ V*(s')]", { mono: true, fs: 11.3, fw: 700, fill: C.ink });
+  o += tx(144, 140, "max_{a} sits OUTSIDE E_{s'}", { fs: 13.5, fw: 700, fill: D.red.dark });
   o += tx(144, 168, '1 sample reveals only 1 action', { fs: 12.2, fill: C.ink });
   o += tx(144, 192, 'and cannot compare actions', { fs: 12.2, fill: C.ink });
   o += tx(144, 216, 'without transition model P!', { fs: 12.2, fw: 700, fill: D.red.dark });
@@ -678,7 +678,7 @@ function thompsonBeta() {
   o += tx(368, 64, 'Arm 2: Beta(19, 3)', { fs: 12.2, fw: 700, fill: D.green.dark });
 
   o += box(24, 204, 512, 42, C.lgreen, C.green, 7, 1.8);
-  o += tx(280, 225, 'Sample μ̃_a ~ Beta(1 + w_a, 1 + n_a − w_a) per arm → pull argmax_a μ̃_a', { fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(280, 225, 'Sample μ̃_a ~ Beta(1 + w_a, 1 + n_a − w_a) per arm → pull argmax_{a} μ̃_a', { fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -745,7 +745,7 @@ function visitationMarkov() {
   o += tx(280, 20, 'Exact State-Visitation Propagation via Markov Matrix P_π', { fs: 15.5, fw: 700, fill: C.ink });
 
   const xs = [72, 208, 344], cy = 112;
-  const labs = [['d₀^π', '[1, 0, ..., 0]'], ['d₁ = d₀ P_π', 'step 1 mass'], ['d_T = d₀ P_π^T', 'T = 100 steps']];
+  const labs = [['d₀^{π}', '[1, 0, ..., 0]'], ['d₁ = d₀ P_π', 'step 1 mass'], ['d_T = d₀ P_π^T', 'T = 100 steps']];
   xs.forEach((cx, i) => {
     o += box(cx - 54, cy - 34, 108, 68, C.lblue, C.blue, 8, 2);
     o += tx(cx, cy - 10, labs[i][0], { mono: true, fs: 11.8, fw: 700, fill: D.blue.dark });
@@ -779,7 +779,7 @@ function hybridTelescoping() {
   o += box(34, 86, 220, 72, '#FFFFFF', D.red.base, 6, 1.8);
   o += tx(144, 108, 'Mistake at step t forfeits', { fs: 12.2, fill: C.ink });
   o += tx(144, 128, 'all (T − t + 1) remaining steps:', { fs: 12.2, fill: C.ink });
-  o += tx(144, 148, '∑_{t=1}^T ε(T−t+1) = εT(T+1)/2', { mono: true, fs: 11, fw: 700, fill: D.red.dark });
+  o += tx(144, 148, '∑_{t=1}^{T} ε(T−t+1) = εT(T+1)/2', { mono: true, fs: 11, fw: 700, fill: D.red.dark });
   o += tx(144, 188, '64-step chain (ε = 0.01):', { fs: 12.2, fw: 600, fill: C.ink });
   o += tx(144, 212, 'Loses 17.07 of 64 rewards!', { fs: 13.2, fw: 700, fill: D.red.dark });
 
@@ -804,7 +804,7 @@ function daggerLoop() {
   const bw = 224, bh = 74;
   const boxes = [
     { x: 24,  y: 44,  t: '1. Roll Out Learner π̂_k', s: 'Visit states s_t ~ d^{π̂_k}', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 312, y: 44,  t: '2. Query Expert π*(s_t)', s: 'Relabel with a*_t = π*(s_t)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 312, y: 44,  t: '2. Query Expert π*(s_t)', s: 'Relabel with a*_{t} = π*(s_t)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 312, y: 162, t: '3. Aggregate Dataset D_k', s: 'D_k = D_{k−1} ∪ D_new', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 24,  y: 162, t: '4. Refit Policy π̂_{k+1}', s: 'Cross-entropy on all of D_k', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
@@ -857,7 +857,7 @@ function lqrLoop() {
 
   o += box(24, 60, 190, 82, C.lgreen, C.green, 8, 2);
   o += tx(119, 86, 'Linear Feedback Law', { fs: 14, fw: 700, fill: D.green.dark });
-  o += tx(119, 114, 'u*_t = −K_t x_t', { mono: true, fs: 13.5, fw: 700, fill: C.ink });
+  o += tx(119, 114, 'u*_{t} = −K_t x_t', { mono: true, fs: 13.5, fw: 700, fill: C.ink });
 
   o += arrow(216, 101, 298, 101, C.blue);
   o += tx(257, 83, 'u_t ∈ R^m', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
@@ -1021,11 +1021,11 @@ function cloningToReinforce() {
   o += tx(280, 20, 'Shared Log-Likelihood Primitive: Cloning Weights vs. Return Weights', { fs: 14.8, fw: 700, fill: C.ink });
 
   o += box(28, 38, 504, 42, D.purple.tint, C.purple, 7, 2);
-  o += tx(280, 59, 'policy_step: ascend  (1/N) ∑_t w_t · ∇_θ log π_θ(a_t | s_t)', { mono: true, fs: 13, fw: 700, fill: D.purple.dark });
+  o += tx(280, 59, 'policy_step: ascend  (1/N) ∑_{t} w_t · ∇_θ log π_θ(a_t | s_t)', { mono: true, fs: 13, fw: 700, fill: D.purple.dark });
 
   o += box(20, 96, 248, 140, C.lblue, C.blue, 8, 2);
   o += tx(144, 120, 'Behavior Cloning (§14.5)', { fs: 14.5, fw: 700, fill: D.blue.dark });
-  o += tx(144, 148, 'Data: Expert demos (s_t, a*_t)', { fs: 12.5, fill: C.ink });
+  o += tx(144, 148, 'Data: Expert demos (s_t, a*_{t})', { fs: 12.5, fill: C.ink });
   o += tx(144, 176, 'Weight: w_t = 1 (always)', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
   o += tx(144, 206, 'Requires interactive/logged expert', { fs: 12, fill: C.muted });
 
@@ -1067,8 +1067,8 @@ function logDerivative() {
   o += tx(280, 20, 'The Log-Derivative Trick: Turning ∇_θ E[R] into a Sampleable Expectation', { fs: 14.5, fw: 700, fill: C.ink });
 
   const steps = [
-    { y: 42,  t: '1. Differentiate expectation:', f: '∇_θ J(θ) = ∑_τ [∇_θ P(τ; θ)] · R(τ)   (cannot sample ∇_θ P)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 112, t: '2. Apply identity ∇_θ P = P · ∇_θ log P:', f: '∇_θ J(θ) = ∑_τ P(τ; θ) · [R(τ) ∇_θ log P(τ; θ)]', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { y: 42,  t: '1. Differentiate expectation:', f: '∇_θ J(θ) = ∑_{τ} [∇_θ P(τ; θ)] · R(τ)   (cannot sample ∇_θ P)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { y: 112, t: '2. Apply identity ∇_θ P = P · ∇_θ log P:', f: '∇_θ J(θ) = ∑_{τ} P(τ; θ) · [R(τ) ∇_θ log P(τ; θ)]', fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { y: 182, t: '3. Rewrite as expectation over τ ~ P(·; θ):', f: '∇_θ J(θ) = E_{τ ~ P}[ R(τ) ∑_{t=0}^{T−1} ∇_θ log π_θ(a_t | s_t) ]', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   steps.forEach((s, i) => {

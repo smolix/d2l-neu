@@ -359,7 +359,7 @@ function seqlmBackbone() {
   const stages = [
     ['Byte Tokens', 'x_{1:T}', 'Embed d=256', C.slate, 14, 82],
     ['Sub-layer 1', 'H ← H +', 'Mixer(LN(H))', C.blue, 108, 116],
-    ['Sub-layer 2', 'H ← H +', 'MLP_4d(LN(H))', C.purple, 236, 118],
+    ['Sub-layer 2', 'H ← H +', 'MLP_{4d}(LN(H))', C.purple, 236, 118],
     ['Repeat ×4', '4 Residual', 'Blocks', C.green, 366, 76],
     ['LM Head', 'LN(H) W_out', 'Nats / Byte', C.amber, 454, 72],
   ];
@@ -423,7 +423,7 @@ function conditionedDecoder() {
 
   body += rbox(16, 36, 508, 44, C.purple.bg, C.purple.bd);
   body += tx(W / 2, 53, 'P(y | x) = ∏ P(y_{t\'} | y_{<t\'}, c),   s_{t\'} = f([e(y_{t\'-1}); c], s_{t\'-1})', { fs: 9.5, fw: 700, fill: C.purple.tx, mono: true });
-  body += tx(W / 2, 70, 'Injecting c at BOTH s_0 = c and every input [e(y_{t\'-1}); c] shortens gradient path ∂L_t\'/∂c to 1 hop', { fs: 9.5, fill: C.text });
+  body += tx(W / 2, 70, 'Injecting c at BOTH s_0 = c and every input [e(y_{t\'-1}); c] shortens gradient path ∂L_{t\'}/∂c to 1 hop', { fs: 9.5, fill: C.text });
 
   body += rbox(16, 94, 246, 142, C.blue.bg, C.blue.bd);
   body += tx(139, 114, 'Training: Teacher Forcing', { fs: 11.5, fw: 700, fill: C.blue.tx });
@@ -626,7 +626,7 @@ function scalarEmaImpulse() {
   body += tx(W / 2, 18, 'Scalar Linear Recurrence: Closed-Form Moving Sum & Gradient', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 36, 508, 48, C.blue.bg, C.blue.bd);
-  body += tx(W / 2, 53, 'Recurrence: h_t = a h_{t-1} + x_t    ⇔    Closed Form: h_t = ∑_{s=1}^t a^{t-s} x_s', { fs: 10.5, fw: 700, fill: C.blue.tx, mono: true });
+  body += tx(W / 2, 53, 'Recurrence: h_t = a h_{t-1} + x_t    ⇔    Closed Form: h_t = ∑_{s=1}^{t} a^{t-s} x_s', { fs: 10.5, fw: 700, fill: C.blue.tx, mono: true });
   body += tx(W / 2, 71, 'Exact Backward Sensitivity:  ∂h_t / ∂x_s = a^{t-s}   (identical to impulse response w_{t-s}!)', { fs: 10, fill: C.text });
 
   const lags = [
@@ -972,7 +972,7 @@ function realVsComplexBasis() {
   body += tx(139, 114, 'All basis curves decay monotonically', { fs: 9.5, fw: 700, fill: C.coral.tx });
   body += tx(139, 134, 'Must cancel 16 nearly parallel curves', { fs: 9.5, fill: C.muted });
   body += tx(139, 170, '• Vandermonde condition κ > 10¹²', { fs: 10, fill: C.text });
-  body += tx(139, 190, '• Readout weights explode: ||c||_∞ ~ 10¹¹', { fs: 10, fw: 700, fill: C.coral.tx });
+  body += tx(139, 190, '• Readout weights explode: ||c||_{∞} ~ 10¹¹', { fs: 10, fw: 700, fill: C.coral.tx });
   body += tx(139, 212, '• Float32 rounding destroys filter!', { fs: 10, fill: C.text });
 
   body += rbox(278, 38, 246, 198, C.green.bg, C.green.bd);
@@ -982,7 +982,7 @@ function realVsComplexBasis() {
   body += tx(401, 114, 'e^{−Δk/2} cos(ω_m Δ k) is orthogonal', { fs: 9.5, fw: 700, fill: C.green.tx });
   body += tx(401, 134, 'Constructive interference at k = k*', { fs: 9.5, fill: C.muted });
   body += tx(401, 170, '• Well-conditioned Fourier-like basis', { fs: 10, fill: C.text });
-  body += tx(401, 190, '• Bounded weights: ||c||_∞ ~ O(1)', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(401, 190, '• Bounded weights: ||c||_{∞} ~ O(1)', { fs: 10, fw: 700, fill: C.green.tx });
   body += tx(401, 212, '• Clean lag-20 impulse spike in float32!', { fs: 10, fill: C.text });
   return svg(W, H, body);
 }
@@ -1089,7 +1089,7 @@ function selectiveSsmDataflow() {
   body += tx(58, 122, 'x_t ∈ R^H', { fs: 10, fw: 700, fill: C.slate.tx, mono: true });
 
   const branches = [
-    ['Δ_t = softplus(W_2 W_1 x_t)', 'Rank-R step size ∈ R_+^H', C.amber, 36],
+    ['Δ_t = softplus(W_2 W_1 x_t)', 'Rank-R step size ∈ R_{+}^{H}', C.amber, 36],
     ['B_t = W_B x_t ∈ R^N', 'Token write vector across H', C.blue, 96],
     ['C_t = W_C x_t ∈ R^N', 'Token readout query across H', C.purple, 156],
   ];
@@ -1162,7 +1162,7 @@ function stateContributionFormula() {
   body += tx(W / 2, 18, 'Exact Decomposition of Final State h_T by Source Position s', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 36, 508, 52, C.purple.bg, C.purple.bd);
-  body += tx(W / 2, 54, 'h_T = ∑_{s=1}^T exp( ∑_{r=s+1}^T ln a_r ) ⊙ b_s', { fs: 11, fw: 700, fill: C.purple.tx, mono: true });
+  body += tx(W / 2, 54, 'h_T = ∑_{s=1}^{T} exp( ∑_{r=s+1}^{T} ln a_r ) ⊙ b_s', { fs: 11, fw: 700, fill: C.purple.tx, mono: true });
   body += tx(W / 2, 74, 'Contribution norm ||c_s|| shows how much token s survives into summary state h_T', { fs: 10, fill: C.text });
 
   body += rbox(16, 102, 246, 130, C.amber.bg, C.amber.bd);
@@ -1347,7 +1347,7 @@ function ssdDuality() {
   body += rbox(292, 40, 232, 124, C.green.bg, C.green.bd);
   body += tx(408, 60, 'Dual Masked Linear Attention', { fs: 11, fw: 700, fill: C.green.tx });
   body += tx(408, 84, 'Y = ( L ⊙ (Q Kᵀ) ) V', { fs: 10.5, fw: 700, fill: C.text, mono: true });
-  body += tx(408, 106, 'L_{ts} = ∏_{r=s+1}^t a_r  (t ≥ s)', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
+  body += tx(408, 106, 'L_{ts} = ∏_{r=s+1}^{t} a_r  (t ≥ s)', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
   body += tx(408, 132, 'O(T² d) parallel Tensor-Core GEMM', { fs: 9.5, fill: C.muted });
 
   body += rbox(16, 178, 508, 56, C.purple.bg, C.purple.bd);
@@ -1380,7 +1380,7 @@ function glaBlock() {
 
   body += rbox(16, 150, 508, 82, C.amber.bg, C.amber.bd);
   body += tx(W / 2, 170, 'Why Query/Key L2 Normalization + RMSNorm Output Gate Are Essential', { fs: 11, fw: 700, fill: C.amber.tx });
-  body += tx(W / 2, 192, '• Unit-norm k̂_t bounds each outer-product write ||v_t k̂_tᵀ||_2 = ||v_t||_2 without softmax normalization', { fs: 9.5, fill: C.text });
+  body += tx(W / 2, 192, '• Unit-norm k̂_t bounds each outer-product write ||v_t k̂_tᵀ||₂ = ||v_t||₂ without softmax normalization', { fs: 9.5, fill: C.text });
   body += tx(W / 2, 212, '• Per-head RMSNorm stabilizes accumulated S_t q̂_t scale before multiplying by the SiLU output gate', { fs: 9.5, fill: C.text });
   return svg(W, H, body);
 }
@@ -1420,7 +1420,7 @@ function eigenvalueParity() {
   body += tx(W / 2, 18, 'Spectrum of I − β_t k_t k_tᵀ for Unit Keys (||k_t||₂ = 1)', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 36, 508, 46, C.slate.bg, C.slate.bd);
-  body += tx(W / 2, 53, 'Eigenvalues:  λ = 1 on k_t^⊥ (d_k − 1 dims untouched),   λ_k = 1 − β_t along k_t', { fs: 10.5, fw: 700, fill: C.text, mono: true });
+  body += tx(W / 2, 53, 'Eigenvalues:  λ = 1 on k_t^{⊥} (d_k − 1 dims untouched),   λ_k = 1 − β_t along k_t', { fs: 10.5, fw: 700, fill: C.text, mono: true });
   body += tx(W / 2, 71, 'Non-expansive stability condition:  |1 − β_t| ≤ 1   ⇔   0 ≤ β_t ≤ 2', { fs: 10, fill: C.blue.tx, mono: true });
 
   const modes = [
@@ -1579,7 +1579,7 @@ function fastSlowWeights() {
   body += tx(139, 60, 'Inner Loop: Fast Weights S_t', { fs: 11.5, fw: 700, fill: C.green.tx });
   body += tx(139, 82, 'Runs at inference time inside 1 prompt', { fs: 9.5, fill: C.muted });
   body += rbox(30, 98, 218, 52, '#FFFFFF', C.green.bd, 5, 1.1);
-  body += tx(139, 116, 'min_S ∑ γ_{t,s} ||S k_s − v_s||²', { fs: 10, fw: 700, fill: C.text, mono: true });
+  body += tx(139, 116, 'min_{S} ∑ γ_{t,s} ||S k_s − v_s||²', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(139, 134, 'Updated at every token t = 1..T', { fs: 9.5, fill: C.green.tx });
   body += tx(139, 172, '• GLA: 1 gradient step from S = 0', { fs: 9.5, fill: C.text });
   body += tx(139, 192, '• DeltaNet: Online SGD from S_{t-1}', { fs: 9.5, fill: C.text });
@@ -1663,10 +1663,10 @@ function welchBoundGeometry() {
 
   body += rbox(16, 40, 246, 130, C.blue.bg, C.blue.bd);
   body += tx(139, 60, 'Gram Matrix Rank Deficit', { fs: 11, fw: 700, fill: C.blue.tx });
-  body += tx(139, 84, 'G = ∑_{i=1}^m k_i k_iᵀ ∈ R^{d_k×d_k}', { fs: 10.5, fw: 700, fill: C.text, mono: true });
+  body += tx(139, 84, 'G = ∑_{i=1}^{m} k_i k_iᵀ ∈ R^{d_k×d_k}', { fs: 10.5, fw: 700, fill: C.text, mono: true });
   body += tx(139, 108, 'trace(G) = m,   rank(G) ≤ d_k', { fs: 10, fill: C.blue.tx, mono: true });
   body += tx(139, 132, 'Cauchy-Schwarz on eigenvalues λ_r:', { fs: 9.5, fill: C.muted });
-  body += tx(139, 152, '||G||_F² = ∑ λ_r² ≥ m² / d_k', { fs: 10, fw: 700, fill: C.text, mono: true });
+  body += tx(139, 152, '||G||_{F}² = ∑ λ_r² ≥ m² / d_k', { fs: 10, fw: 700, fill: C.text, mono: true });
 
   body += rbox(278, 40, 246, 130, C.coral.bg, C.coral.bd);
   body += tx(401, 60, 'Welch Lower Bound (m > d_k)', { fs: 11, fw: 700, fill: C.coral.tx });
@@ -1752,7 +1752,7 @@ function conv4KeyValueBinding() {
 
   body += rbox(278, 94, 246, 144, C.green.bg, C.green.bd);
   body += tx(401, 114, 'With Width-4 Causal Conv (Default)', { fs: 11, fw: 700, fill: C.green.tx });
-  body += tx(401, 138, 'Depthwise conv mixes (x_{t-3}..x_t):', { fs: 9.5, fill: C.muted });
+  body += tx(401, 138, 'Depthwise conv mixes (x_{t-3}, …, x_{t}):', { fs: 9.5, fill: C.muted });
   body += tx(401, 158, 'k_t = f_k(x_{t-1}),  v_t = f_v(x_t)', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(401, 182, '• Step t writes v_i k_iᵀ into S_t!', { fs: 9.5, fill: C.green.tx });
   body += tx(401, 202, '• Acts as an implicit induction head', { fs: 9.5, fill: C.text });

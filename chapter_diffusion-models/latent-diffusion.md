@@ -1410,7 +1410,7 @@ We train our residual convolutional `Autoencoder` ($2.1\text{M}$ parameters) for
 ::: {.col}
 @latent-diffusion-the-autoencoder-5
 
-- **Mandatory scale factor $c = 1/\mathrm{std}(\mathbf{z})$:** Unscaled latents of std $\varsigma$ shift log-SNR by $+\log \varsigma^2$ (Stable Diffusion's $\varsigma \approx 5.5$ uses $c = 0.18215$ to prevent a $+3.4\text{ nat}$ shift!).
+- **Mandatory scale factor $c = 1/\mathrm{std}(\mathbf{z})$:** Unscaled latents of std $\varsigma$ shift log-SNR by $+\log \varsigma^2$ (Stable Diffusion's $\varsigma \approx 5.5$ uses $c = 0.18215$ to avoid a $+3.4\text{ nat}$ shift)..
 - **Sub-Gaussian tails:** Excess kurtosis $\le 0$ confirms the KL penalty eliminated heavy-tailed outliers.
 :::
 
@@ -1556,11 +1556,11 @@ We train two Transformer sizes (`DiT-S`: width 128, depth 4; `DiT-M`: width 256,
 ::: {.slide title="Visualizing Samples Across Backbones and Scales"}
 [Comparing DiT-S, DiT-M, U-Net 32, and U-Net 64]{.kicker}
 
-Generating eight samples from the exact same initial noise tensor across all four trained pixel models shows how deterministic ODE trajectories align across distinct architectures:
+Eight samples from the same initial noise in all four pixel models show their ODE trajectories align:
 
 @!latent-diffusion-scaling-with-compute-3
 
-- **Shared ODE mapping:** In almost every column, both DiTs and both U-Nets map the same initial noise image to the same garment category and pose—demonstrating that all four approximate the same underlying probability-flow ODE!
+- **Shared ODE mapping:** In almost every column, both DiTs and both U-Nets map the same initial noise to the same garment and pose: all four approximate the same probability-flow ODE.
 - **Why human eyes need FD:** While 8 thumbnails look visually comparable between row 1 (`DiT-S`, $\mathrm{FD} \approx 4.7$) and row 4 (`U-Net 64`, $\mathrm{FD} \approx 1.5$), FD over $5{,}000$ samples detects subtle edge distortion and covariance drift.
 :::
 

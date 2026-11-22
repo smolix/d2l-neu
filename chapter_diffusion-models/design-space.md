@@ -1182,15 +1182,9 @@ $$\mathcal{L}_w(\boldsymbol\theta) = \frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{
 
 Computing $w(\lambda) = 2\,c(t)\,|dt/d\lambda|$ numerically via forward-mode AD confirms that linear-path velocity regression and cosine-path $\mathbf{v}$-prediction share the exact same $e^{-\lambda/2}$ weighting:
 
-::: {.cols .vc}
-::: {.col}
 @!design-space-weightings-of-published-objectives
-:::
 
-::: {.col .fig}
-![](../img/mdl-diffusion-weightings.svg){.nostretch width=100%}
-:::
-:::
+![](../img/mdl-diffusion-weightings.svg){.nostretch width=60%}
 :::
 
 ::: {.slide title="Why Monotone Weightings Are Likelihood Bounds"}
@@ -1231,7 +1225,15 @@ $$D_{\boldsymbol\theta}(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}(\bar\s
 
 In path coordinates $\mathbf{x} = \alpha\mathbf{x}_0 + \sigma\boldsymbol\epsilon$, the normalizing denominator $n = \sqrt{\sigma^2 + (\alpha\sigma_{\mathrm{data}})^2}$ stays strictly positive even when $\alpha_1 = 0$:
 
-@design-space-edm-s-table
+@-design-space-edm-s-table[1-12]
+:::
+
+::: {.slide title="Implementing EDM Preconditioning and Log-Normal Loss (cont.)"}
+[Wrapping Any Path in Unit-Variance Coordinates]{.kicker}
+
+`edm_loss` draws log-normal noise levels $\bar\sigma$ and weights each squared error by $1/c_{\mathrm{out}}^2$:
+
+@design-space-edm-s-table[13-]
 :::
 
 ::: {.slide title="Why White Noise Acts as a Spatial Low-Pass Filter" layout="tight"}
@@ -1316,13 +1318,23 @@ Test your command of the diffusion likelihood bound and design space:
 
 1. **Why $L_0$ can be negative in continuous space:** For 2D data ($d = 2$) at minimum noise ratio $e^{-\lambda_{\max}} = \sigma_{\min}^2/\alpha_{\min}^2 = 10^{-4}$ where irreducible noise error is $\mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2 \approx 2$, what is the reconstruction term $L_0 = \frac{d}{2}\log(2\pi e^{-\lambda_{\max}}) + \frac{1}{2}\mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2$?
 2. **Identifying valid likelihood bounds:** On the linear path with $t \sim U(0, 1)$, the noise loss has $w(\lambda) \propto \operatorname{sech}^2(\lambda/4)$ while the velocity loss has $w(\lambda) \propto e^{-\lambda/2}$. Which one is a valid likelihood bound on noise-augmented data, and why?
-3. **Shifting schedules across resolutions:** If a log-SNR schedule $\lambda_t$ is tuned for $28 \times 28$ images, by how many log-SNR units must $\lambda_t$ be shifted for $56 \times 56$ images and for $112 \times 112$ images?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. $L_0 = \log(2\pi \times 10^{-4}) + \frac{1}{2}(2) \approx -7.37 + 1.00 = \mathbf{-6.37\text{ nats}}$ (a differential log-density term!). Added to the log-SNR integral ($\approx +8.84$ nats), the total bound is $\approx \mathbf{+2.47\text{ nats}}$.
 2. **The velocity loss ($w(\lambda) \propto e^{-\lambda/2}$):** Because $e^{-\lambda/2}$ is **monotonically decreasing** in $\lambda$, it is a positive mixture of step-function ELBOs on noise-augmented data; $\operatorname{sech}^2(\lambda/4)$ peaks at $\lambda = 0$.
+:::
+:::
+
+::: {.slide title="Concept Check: ELBO Splits, Weightings & Resolution (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Shifting schedules across resolutions:** If a log-SNR schedule $\lambda_t$ is tuned for $28 \times 28$ images, by how many log-SNR units must $\lambda_t$ be shifted for $56 \times 56$ images and for $112 \times 112$ images?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. Shift downward by $\log(r^2) = 2\log r$: for $56 \times 56$ ($r = 2$), shift by **$-\log 4 \approx -1.39$**; for $112 \times 112$ ($r = 4$), shift by **$-\log 16 \approx -2.77$**.
 :::
 :::

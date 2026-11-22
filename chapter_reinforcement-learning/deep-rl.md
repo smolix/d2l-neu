@@ -853,7 +853,7 @@ $$\Delta \hat{V}_w(s) \approx \eta_V\big(y - \hat{V}_w(s_0)\big)\,k(s, s_0)$$
 @deep-rl-the-swap-as-a-three-line-diff-1
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 @fig:ch14-rl-actor-critic-mlps
 :::
 :::
@@ -862,7 +862,7 @@ $$\Delta \hat{V}_w(s) \approx \eta_V\big(y - \hat{V}_w(s_0)\big)\,k(s, s_0)$$
 ::: {.slide title="Multi-Step Value Regression per Batch"}
 [Keeping the Critic Baseline Accurate]{.kicker}
 
-Whereas our tabular baseline updated $\hat{V}(s_t)$ in place with step size $\eta_V = 0.1$, a neural value network must regress onto return targets $y_t$ of magnitude $\sim 100$ using Adam steps of size $10^{-2}$:
+Unlike the in-place tabular update ($\eta_V = 0.1$), a value net fits targets $y_t \sim 100$ via Adam steps of $10^{-2}$:
 
 @deep-rl-the-swap-as-a-three-line-diff-2
 

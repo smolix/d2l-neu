@@ -1309,7 +1309,7 @@ Integrating the EMA U-Net velocity field with $50$ Euler steps (`ode_sample` on 
 ::: {.slide title="Coarse-to-Fine Trajectory: Shape Early, Detail Late"}
 [Inspecting the Implied Clean Image Along Time]{.kicker}
 
-At any time $t \in [0, 1]$, the network's velocity implies a clean-image posterior mean $\hat{\mathbf{x}}_0(\mathbf{x}_t) = \mathbf{x}_t - t\,\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$. Comparing forward noising (rows 1–2) against a 50-step reverse sampling trajectory (row 3) reveals when spatial structure forms:
+The velocity implies a clean-image posterior mean $\hat{\mathbf{x}}_0(\mathbf{x}_t) = \mathbf{x}_t - t\,\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$; forward noising (rows 1–2) vs. a 50-step reverse trajectory (row 3) shows when structure forms:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1377,7 +1377,7 @@ $$\mathrm{FD}(p, q) = \underbrace{\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2}_{\t
 ::: {.slide title="Paired Ablation: EMA Weights vs. 1,000-Step Chain"}
 [Measuring EMA and Step Count on Shared Noise]{.kicker}
 
-Using three shared draws of $5{,}000$ initial noise tensors, we compare 50 Euler steps on the EMA weights (`ema`), 50 Euler steps on the raw final Adam iterate (`net`), and 1,000 ancestral steps on the VP path (via `make_pred` log-SNR translation):
+On three shared draws of $5{,}000$ noise tensors: 50 Euler steps on the EMA weights (`ema`) and on the raw final iterate (`net`), and 1,000 ancestral VP steps (via `make_pred`):
 
 @image-diffusion-reading-the-number-3
 
@@ -1417,7 +1417,7 @@ $$\tilde{\mathbf{u}}(\mathbf{x}, t, c) = \mathbf{u}_{\boldsymbol\theta}(\mathbf{
 ::: {.slide title="Geometry and Batched Implementation of CFG"}
 [Extrapolating Beyond the Conditional Mean]{.kicker}
 
-For $\gamma > 1$, the guided prediction $\hat{\mathbf{x}}_0^\gamma = \hat{\mathbf{x}}_0^\varnothing + \gamma(\hat{\mathbf{x}}_0^c - \hat{\mathbf{x}}_0^\varnothing)$ extrapolates along the ray from the unconditional posterior mean through the class posterior mean:
+For $\gamma > 1$, $\hat{\mathbf{x}}_0^\gamma = \hat{\mathbf{x}}_0^\varnothing + \gamma(\hat{\mathbf{x}}_0^c - \hat{\mathbf{x}}_0^\varnothing)$ extrapolates past the class posterior mean:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1426,7 +1426,7 @@ For $\gamma > 1$, the guided prediction $\hat{\mathbf{x}}_0^\gamma = \hat{\mathb
 - **Doubled batch per step:** For $\gamma \neq 1$, `cfg` concatenates $[\mathbf{x}, \mathbf{x}]$ with labels $[c, \varnothing]$, doubling per-step compute ($100$ U-Net passes for $50$ Euler steps).
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 ![](../img/mdl-diffusion-guidance.svg){.nostretch width=100%}
 :::
 :::
@@ -1464,7 +1464,7 @@ Comparing the $40$ samples generated from the exact same initial noise at $\gamm
 :::
 :::
 
-::: {.slide title="Diagnosing the Unconditional (γ = 0) FD Degradation"}
+::: {.slide title="Diagnosing the Unconditional (γ = 0) FD Degradation" layout="code"}
 [Class Skew vs. Within-Class Sample Quality]{.kicker}
 
 Why is the unconditional FD ($\gamma = 0$, $\mathrm{FD} \approx 2.75$) more than three times higher than the conditional FD ($\gamma = 1$, $\mathrm{FD} \approx 0.82$)? We test whether skewed class proportions explain the gap:

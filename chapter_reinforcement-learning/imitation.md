@@ -831,7 +831,7 @@ $$J(\pi^*) - J(\hat{\pi}) \leq \begin{cases} \varepsilon\,T(T + 1)/2 & \text{err
 ::: {.slide title="Quadratic vs. Linear Error Growth on a 64-Step Chain"}
 [Visualizing the Horizon Penalty]{.kicker}
 
-On a $T$-step chain where the expert earns $1$ per step and two imitators err with $\varepsilon = 0.01$, the cloned imitator (unrecoverable exit) diverges sharply from the recovering imitator ($u = 1$):
+On a $T$-step chain (expert earns $1$ per step, imitators err with $\varepsilon = 0.01$), cloning diverges from recovery ($u = 1$):
 
 ::: {.cols .vc}
 ::: {.col}

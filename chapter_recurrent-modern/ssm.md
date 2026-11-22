@@ -576,7 +576,7 @@ $$y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D\, x_t, \qquad K_k = \sum_{n=1}^{N} c_
 ::: {.slide title="One System, Three Views: ODE, Recurrence, Convolution"}
 [The SSM Trinity]{.kicker}
 
-![](../img/mdl-modernrnn-ssm-views.svg){.nostretch width=92%}
+![](../img/mdl-modernrnn-ssm-views.svg){.nostretch width=82%}
 
 | Representation | Mathematical Form | Primary Deep Learning Role |
 | :--- | :--- | :--- |

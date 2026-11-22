@@ -1119,7 +1119,7 @@ Four GPUs achieve **$3.1\text{--}3.3\times$ single-GPU throughput** ($77\text{--
 ::: {.slide title="Strong Scaling on Four GPUs: Shrinking Compute Share"}
 [Strong Scaling Measured]{.kicker}
 
-Fixing the global batch size at $B = 512$ images ($b = 512/k$ per GPU) measures strong scaling across $k \in \{1, 2, 4\}$ GPUs:
+Strong scaling at a fixed global batch $B = 512$ ($b = 512/k$ per GPU), $k \in \{1, 2, 4\}$:
 
 @!multi-gpu-practice-ddp-really-run-4
 

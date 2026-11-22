@@ -755,12 +755,52 @@ $$\min_{\phi} \sum_{i=1}^{N} \big\|\hat{f}_\phi(s_i, a_i) - (s'_i, r_i)\big\|^2$
 :::
 :::
 
-::: {.slide title="DynamicsModel Architecture and Standardization"}
+::: {.slide title="DynamicsModel Architecture and Standardization" only="pytorch"}
 [Model Implementation]{.kicker}
 
 `DynamicsModel` uses a 2-layer MLP with $64$ smooth `SiLU` units and stores the dataset's standardization statistics $(\mu_x, \sigma_x, \mu_y, \sigma_y)$ directly inside the module:
 
-@model-based-regression-in-place-of-counting-3
+@-model-based-regression-in-place-of-counting-3[1-13]
+:::
+
+::: {.slide title="DynamicsModel Architecture and Standardization (cont.)" only="pytorch"}
+[Model Implementation]{.kicker}
+
+`forward` maps the network output back to data units, and `make_model` pairs the model with its Adam optimizer:
+
+@-model-based-regression-in-place-of-counting-3[14-23]
+:::
+
+::: {.slide title="DynamicsModel Architecture and Standardization (fitting)" only="pytorch"}
+[Model Implementation]{.kicker}
+
+`fit_model` copies the data statistics into the module, then regresses the network on standardized inputs and targets:
+
+@model-based-regression-in-place-of-counting-3[24-]
+:::
+
+::: {.slide title="DynamicsModel Architecture and Standardization" only="jax"}
+[Model Implementation]{.kicker}
+
+`DynamicsModel` uses a 2-layer MLP with $64$ smooth `SiLU` units and stores the dataset's standardization statistics $(\mu_x, \sigma_x, \mu_y, \sigma_y)$ directly inside the module:
+
+@-model-based-regression-in-place-of-counting-3[1-12]
+:::
+
+::: {.slide title="DynamicsModel Architecture and Standardization (cont.)" only="jax"}
+[Model Implementation]{.kicker}
+
+`__call__` maps the network output back to data units; `make_model` and the compiled `model_step` set up training:
+
+@-model-based-regression-in-place-of-counting-3[13-28]
+:::
+
+::: {.slide title="DynamicsModel Architecture and Standardization (fitting)" only="jax"}
+[Model Implementation]{.kicker}
+
+`fit_model` copies the data statistics into the module, then regresses the network on standardized inputs and targets:
+
+@model-based-regression-in-place-of-counting-3[29-]
 :::
 
 ::: {.slide title="One-Step Accuracy on a Single Random Episode"}

@@ -889,12 +889,32 @@ $$\Delta w = \alpha\, \delta_t\, \nabla_w \hat{V}_w(s_t)$$
 :::
 :::
 
-::: {.slide title="Capping Actor Gradients Under Adam"}
+::: {.slide title="Capping Actor Gradients Under Adam" only="pytorch"}
 [Optimization Mechanics]{.kicker}
 
 We step the actor on raw (unnormalized) TD errors while capping the gradient norm at `grad_clip = 0.5`:
 
 @actor-critic-a2c-by-name-1
+
+::: {.d2l-note}
+**Why raw $\delta_t$ with Adam?** As the critic converges, $\textrm{std}(\delta_t)$ shrinks from $\sim 3.0$ to $\le 0.1$ (mostly critic noise). Because Adam divides by a long running average of squared gradients ($\beta_2 = 0.999$), shrinking raw TD errors naturally anneal the effective step size $\sim 8\times$ near the ceiling, whereas batch-standardized TD errors would amplify late critic noise!
+:::
+:::
+
+::: {.slide title="Capping Actor Gradients Under Adam" only="jax"}
+[Optimization Mechanics]{.kicker}
+
+We step the actor on raw (unnormalized) TD errors while capping the gradient norm at `grad_clip = 0.5`:
+
+@-actor-critic-a2c-by-name-1[1-16]
+:::
+
+::: {.slide title="Capping Actor Gradients Under Adam (cont.)" only="jax"}
+[Optimization Mechanics]{.kicker}
+
+`policy_step_clip` pads the batch and runs the compiled, capped step:
+
+@actor-critic-a2c-by-name-1[17-]
 
 ::: {.d2l-note}
 **Why raw $\delta_t$ with Adam?** As the critic converges, $\textrm{std}(\delta_t)$ shrinks from $\sim 3.0$ to $\le 0.1$ (mostly critic noise). Because Adam divides by a long running average of squared gradients ($\beta_2 = 0.999$), shrinking raw TD errors naturally anneal the effective step size $\sim 8\times$ near the ceiling, whereas batch-standardized TD errors would amplify late critic noise!
@@ -1008,16 +1028,18 @@ Because $\hat{A}^{\textrm{GAE}}_t = \delta_t + \gamma\lambda\, \hat{A}^{\textrm{
 [Empirical Sweep]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .narrow}
-- When using GAE, the critic fits the **$\lambda$-return** $G^\lambda_t = \hat{A}^{\textrm{GAE}}_t + \hat{V}(s_t)$, and the actor uses standardized GAE advantages.
+::: {.col}
+- With GAE, the critic fits the **$\lambda$-return** $G^\lambda_t = \hat{A}^{\textrm{GAE}}_t + \hat{V}(s_t)$; the actor uses standardized advantages.
 - On a short budget (50 updates of 4 episodes, 5 seeds), heavily bootstrapped estimators ($\lambda = 0$ and $\lambda = 0.5$) stall at median returns of $150$–$250$.
 - Longer-horizon mixtures ($\lambda \in \{0.9, 0.95, 1.0\}$) reach nearly $500$, because downweighting the young critic's bias outweighs the extra reward noise.
 :::
 
-::: {.col}
-@!actor-critic-measuring-the-dial-2
+::: {.col .narrow}
+@!actor-critic-measuring-the-dial-2[out=2]
 :::
 :::
+
+@!actor-critic-measuring-the-dial-2[out=1]
 :::
 
 ::: {.slide title="Measuring Gradient Bias and Variance at Frozen Policies"}

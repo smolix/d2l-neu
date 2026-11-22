@@ -511,7 +511,7 @@ $$x = c + b + 0.05\,\xi, \qquad b \in \{-1, +1\}\text{ w.p. }\tfrac{1}{2}$$
 :::
 :::
 
-::: {.slide title="Training Squared-Error vs. Adversarial Predictors"}
+::: {.slide title="Training Squared-Error vs. Adversarial Predictors" only="pytorch"}
 [Controlled Code Comparison]{.kicker}
 
 We train two identical 2-hidden-layer $\tanh$ MLPs (`g_mse` and `g_adv`, $1 \to 32 \to 32 \to 1$) from the same initial weights. `g_adv` adds the data's observation noise $0.05\,\xi'$ and trains against a leaky-ReLU critic $D(x, c)$ via `gan_loss_D` and `gan_loss_G`:
@@ -525,6 +525,22 @@ We train two identical 2-hidden-layer $\tanh$ MLPs (`g_mse` and `g_adv`, $1 \to 
 @adversarial-losses-two-bands-2
 :::
 :::
+:::
+
+::: {.slide title="Training Squared-Error vs. Adversarial Predictors" only="jax"}
+[Controlled Code Comparison]{.kicker}
+
+We train two identical 2-hidden-layer $\tanh$ MLPs (`g_mse` and `g_adv`, $1 \to 32 \to 32 \to 1$) from the same initial weights. `g_adv` adds the data's observation noise $0.05\,\xi'$ and trains against a leaky-ReLU critic $D(x, c)$ via `gan_loss_D` and `gan_loss_G`:
+
+@adversarial-losses-two-bands-1
+:::
+
+::: {.slide title="Training Squared-Error vs. Adversarial Predictors (cont.)" only="jax"}
+[Controlled Code Comparison]{.kicker}
+
+`g_adv` instead trains against the critic, one `gan_loss_D` and one `gan_loss_G` step per batch:
+
+@adversarial-losses-two-bands-2
 :::
 
 ::: {.slide title="Two-Band Results: Corridor vs. Mode Commitment"}
@@ -613,12 +629,36 @@ $$\mathbb{E}\big[c + b \mid \tilde{x}, c\big] = c + \tanh\!\left(\frac{\tilde{x}
 :::
 :::
 
-::: {.slide title="Implementing One-Step Distillation with a Critic"}
+::: {.slide title="Implementing One-Step Distillation with a Critic" only="pytorch"}
 [Code Experiment]{.kicker}
 
 `train_student` trains a stochastic student $g(c, z)$ ($z \sim \mathcal{N}(0, 1)$) using either the frozen denoising teacher regression loss ($\tau = 2.0$), an adversarial critic $D(x, c)$, or both combined (`critic + regression`):
 
-@adversarial-losses-distillation-on-two-bands-1
+@-adversarial-losses-distillation-on-two-bands-1[1-10]
+:::
+
+::: {.slide title="Implementing One-Step Distillation with a Critic (cont.)" only="pytorch"}
+[Code Experiment]{.kicker}
+
+Each step updates the critic (if any), then moves the student toward the critic and toward the teacher's fixed estimate:
+
+@adversarial-losses-distillation-on-two-bands-1[11-]
+:::
+
+::: {.slide title="Implementing One-Step Distillation with a Critic" only="jax"}
+[Code Experiment]{.kicker}
+
+`train_student` trains a stochastic student $g(c, z)$ ($z \sim \mathcal{N}(0, 1)$) using either the frozen denoising teacher regression loss ($\tau = 2.0$), an adversarial critic $D(x, c)$, or both combined (`critic + regression`):
+
+@-adversarial-losses-distillation-on-two-bands-1[1-16]
+:::
+
+::: {.slide title="Implementing One-Step Distillation with a Critic (cont.)" only="jax"}
+[Code Experiment]{.kicker}
+
+The student's loss adds the critic's term to $\lambda$ times the squared error toward the teacher's fixed estimate:
+
+@adversarial-losses-distillation-on-two-bands-1[17-]
 :::
 
 ::: {.slide title="Distillation Results: Critic Restores Both Bands"}

@@ -975,12 +975,36 @@ In our CartPole setup (`ActorCritic.mlp(4, 2)` with 64-unit `tanh` layers and Ad
 :::
 :::
 
-::: {.slide title="Multi-Epoch Actor Updates and Live Diagnostics" layout="tight"}
+::: {.slide title="Multi-Epoch Actor Updates and Live Diagnostics" layout="tight" only="pytorch"}
 [The Inner Epoch Loop]{.kicker}
 
 Before each of the `num_epochs` passes over the frozen batch `(obs, act, adv, logp_old)`, `ppo_epochs` logs three diagnostic scalars—the **clip fraction**, the **approximate KL** $\frac{1}{N}\sum (\log \pi_{\theta_{\textrm{old}}} - \log \pi_\theta)$, and the **policy entropy**:
 
-@ppo-the-implementation-4
+@-ppo-the-implementation-4[1-9]
+:::
+
+::: {.slide title="Multi-Epoch Actor Updates and Live Diagnostics (cont.)" layout="tight" only="pytorch"}
+[The Inner Epoch Loop]{.kicker}
+
+Each pass steps the actor on the mean clipped surrogate plus an entropy bonus and records the three diagnostics:
+
+@ppo-the-implementation-4[10-]
+:::
+
+::: {.slide title="Multi-Epoch Actor Updates and Live Diagnostics" layout="tight" only="jax"}
+[The Inner Epoch Loop]{.kicker}
+
+Before each of the `num_epochs` passes over the frozen batch `(obs, act, adv, logp_old)`, `ppo_epochs` logs three diagnostic scalars—the **clip fraction**, the **approximate KL** $\frac{1}{N}\sum (\log \pi_{\theta_{\textrm{old}}} - \log \pi_\theta)$, and the **policy entropy**:
+
+@-ppo-the-implementation-4[1-14]
+:::
+
+::: {.slide title="Multi-Epoch Actor Updates and Live Diagnostics (cont.)" layout="tight" only="jax"}
+[The Inner Epoch Loop]{.kicker}
+
+One compiled step returns the diagnostics measured before it updates; `ppo_epochs` runs `num_epochs` of them on the padded batch:
+
+@ppo-the-implementation-4[15-]
 :::
 
 ::: {.slide title="The Complete PPO Training Loop"}
@@ -988,7 +1012,15 @@ Before each of the `num_epochs` passes over the frozen batch `(obs, act, adv, lo
 
 Each outer iteration collects 8 episodes, freezes the standardized GAE advantages (evaluated with the pre-fit critic) and old log-probabilities, refits the critic for 20 steps toward the $\lambda$-return, and runs `ppo_epochs`:
 
-@ppo-the-implementation-5
+@-ppo-the-implementation-5[1-10]
+:::
+
+::: {.slide title="The Complete PPO Training Loop (cont.)"}
+[Outer Loop]{.kicker}
+
+Each iteration: roll out, freeze advantages and old log-probabilities, refit the critic, then run the actor epochs:
+
+@ppo-the-implementation-5[11-]
 :::
 
 ::: {.slide title="Batch Reuse Halves the Environment Steps Required"}

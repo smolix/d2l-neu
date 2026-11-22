@@ -1175,7 +1175,31 @@ $$L_\pi(\theta) = \mathbb{E}_{s \sim \mathcal{D},\, z \sim \mathcal{N}(0, I)}\Bi
 
 `SquashedGaussianPolicy` wraps a 2-layer ReLU trunk and state-dependent mean and log-std heads (`state_std=True`), computing $\log \pi(a \mid s)$ directly from the pre-squash draw $u$ without ever calling `arctanh`:
 
-@sac-the-change-of-variables
+@-sac-the-change-of-variables[1-12]
+:::
+
+::: {.slide title="Implementing the Squashed Gaussian Policy (cont.)"}
+[Policy Implementation]{.kicker}
+
+The change of variables: `log_prob_u` scores the pre-squash draw $u$, and `sample` draws a reparameterized action with its log-probability:
+
+@-sac-the-change-of-variables[14-25]
+:::
+
+::: {.slide title="Implementing the Squashed Gaussian Policy (acting)"}
+[Policy Implementation]{.kicker}
+
+Acting in the environment takes numpy states: `_draw` samples $u$ from the head with the noise of `rng`, and `act` squashes it:
+
+@-sac-the-change-of-variables[27-37]
+:::
+
+::: {.slide title="Implementing the Squashed Gaussian Policy (acting, cont.)"}
+[Policy Implementation]{.kicker}
+
+`act_logp` also returns $\log \pi(a \mid s)$, and `act_greedy` squashes the mean for evaluation:
+
+@sac-the-change-of-variables[38-]
 :::
 
 ::: {.slide title="Numerically Stable Log-Determinant and Quadrature Check"}
@@ -1231,12 +1255,36 @@ $$J(\beta) = -\log \beta\, \mathbb{E}_{s \sim \mathcal{D},\, a \sim \pi_\theta}\
 @sac-the-update-step-and-the-loop-2
 :::
 
-::: {.slide title="Executing One Complete SAC Update Step" layout="tight"}
+::: {.slide title="Executing One Complete SAC Update Step" layout="tight" only="pytorch"}
 [The Update Step]{.kicker}
 
 Each call to `sac_step` regresses both critics onto the shared twin-minimum soft target $y$, updates the actor via the pathwise gradient of $\beta \log \pi_\theta - \min_j Q_{w_j}$, updates $\log \beta$ toward $\bar{H} = -1$, and blends the target networks by $\nu = 0.005$:
 
-@sac-one-update-1
+@-sac-one-update-1[1-16]
+:::
+
+::: {.slide title="Executing One Complete SAC Update Step (cont.)" layout="tight" only="pytorch"}
+[The Update Step]{.kicker}
+
+The temperature step moves $\log \beta$ toward the target entropy, and Polyak averaging drifts the target critics:
+
+@sac-one-update-1[17-]
+:::
+
+::: {.slide title="Executing One Complete SAC Update Step" layout="tight" only="jax"}
+[The Update Step]{.kicker}
+
+Each call to `sac_step` regresses both critics onto the shared twin-minimum soft target $y$, updates the actor via the pathwise gradient of $\beta \log \pi_\theta - \min_j Q_{w_j}$, updates $\log \beta$ toward $\bar{H} = -1$, and blends the target networks by $\nu = 0.005$:
+
+@-sac-one-update-1[1-13]
+:::
+
+::: {.slide title="Executing One Complete SAC Update Step (cont.)" layout="tight" only="jax"}
+[The Update Step]{.kicker}
+
+The temperature step moves $\log \beta$ toward the target entropy, and Polyak averaging drifts the target critics:
+
+@sac-one-update-1[14-]
 :::
 
 ::: {.slide title="The Off-Policy Continuous Training Loop"}
@@ -1244,7 +1292,15 @@ Each call to `sac_step` regresses both critics onto the shared twin-minimum soft
 
 After `warmup = 1000` uniformly random steps, `train_sac` executes `utd` (**update-to-data ratio**) gradient steps per environment step—allowing us to trade compute for real-world interaction:
 
-@sac-the-update-step-and-the-loop-3
+@-sac-the-update-step-and-the-loop-3[1-11]
+:::
+
+::: {.slide title="The Off-Policy Continuous Training Loop (cont.)"}
+[Training Loop]{.kicker}
+
+Each environment step acts (uniformly during warm-up), stores the transition, and runs `utd` updates; episode ends report return, entropy, and $\beta$:
+
+@sac-the-update-step-and-the-loop-3[12-]
 :::
 
 ::: {.slide title="Sample Efficiency on Pendulum: UTD 1 vs. UTD 10"}

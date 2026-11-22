@@ -678,7 +678,7 @@ $$\mathbb{E}[\mathbf{S}_t \mathbf{k}_i] = \Big(1 - \frac{1}{d_k}\Big)^m \mathbf{
 :::
 :::
 
-::: {.slide title="Benchmarking Four Write Rules Across Three Regimes"}
+::: {.slide title="Benchmarking Four Write Rules Across Three Regimes" layout="code"}
 [Additive vs. Delta vs. Least Squares]{.kicker}
 
 Comparing `additive`, `delta, β = 1`, `delta, β = 0.5`, and offline `least squares` ($\mathbf{S}^\star = \mathbf{V}^\top \mathbf{K}(\mathbf{K}^\top \mathbf{K})^+$, fitting all pairs simultaneously) at width $d = 64$:

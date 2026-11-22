@@ -555,9 +555,16 @@ operator. If the shape or values differ, the usual culprits
 are padding semantics or channel layout:
 
 @transposed-conv-basic-operation-2
+:::
 
-. . .
+::: {.slide title="Verify on a small example (cont.)" except="jax,tensorflow"}
+Same result via the framework op (PyTorch
+`ConvTranspose2d`, etc.):
 
+@transposed-conv-basic-operation-3
+:::
+
+::: {.slide title="Verify on a small example (cont.)" only="jax,tensorflow" layout="code"}
 Same result via the framework op (PyTorch
 `ConvTranspose2d`, etc.):
 
@@ -566,21 +573,31 @@ Same result via the framework op (PyTorch
 
 ::: {.slide title="Padding, stride, channels"}
 Padding here *removes* output rows/columns instead of
-adding them — it's the inverse interpretation.
+adding them — it's the inverse interpretation:
 
+@transposed-conv-padding-strides-and-multiple-channels-1
+:::
+
+::: {.slide title="Stride"}
 Stride > 1 inserts zeros *between* input elements before
 the scatter — that's how transposed conv upsamples:
 
 ![Stride-2 transposed conv: each input element's kernel is placed at twice-spaced positions, then summed.](../img/trans_conv_stride2.svg){width=68%}
+:::
 
-@transposed-conv-padding-strides-and-multiple-channels-1
-
-. . .
+::: {.slide title="Stride (cont.)" except="jax,tensorflow"}
+With stride 2, the $2 \times 2$ input becomes a $4 \times 4$ output:
 
 @transposed-conv-padding-strides-and-multiple-channels-2
+:::
 
-. . .
+::: {.slide title="Stride (cont.)" only="jax,tensorflow" layout="code"}
+With stride 2, the $2 \times 2$ input becomes a $4 \times 4$ output:
 
+@transposed-conv-padding-strides-and-multiple-channels-2
+:::
+
+::: {.slide title="Multiple channels"}
 Multi-channel works as expected: input channels reduce-add
 through the kernel, output channels stack in parallel:
 
@@ -597,8 +614,11 @@ $\mathbf{x}' = \mathbf{K}^\top \mathbf{y}$. That's where
 the name comes from.
 
 @transposed-conv-connection-to-matrix-transposition-1
+:::
 
-. . .
+::: {.slide title="Connection to matrix transposition (cont.)"}
+Write the $2 \times 2$ kernel as a sparse $4 \times 9$ matrix
+$\mathbf{W}$, one row per output element:
 
 @transposed-conv-connection-to-matrix-transposition-2
 :::

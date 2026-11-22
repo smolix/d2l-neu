@@ -1492,7 +1492,21 @@ pixel (not $nm$):
 
 $$\text{anchor width} = w s\sqrt{r}, \quad \text{anchor height} = h s / \sqrt{r}.$$
 
-@anchor-generating-multiple-anchor-boxes-1
+@-anchor-generating-multiple-anchor-boxes-1[1-13]
+:::
+
+::: {.slide title="Generating anchors: centers and sizes"}
+Anchor centers sit at pixel centers in normalized coordinates;
+widths and heights follow the formula above:
+
+@-anchor-generating-multiple-anchor-boxes-1[15-27]
+:::
+
+::: {.slide title="Generating anchors: corners"}
+Pair every center with each of its $n + m - 1$ half-widths and
+half-heights; the sums are the corners $(x_1, y_1, x_2, y_2)$:
+
+@-anchor-generating-multiple-anchor-boxes-1[28-37]
 :::
 
 ::: {.slide title="Anchor tensor shape"}
@@ -1506,13 +1520,16 @@ Stored as a tensor of shape `(1, num_anchors, 4)`:
 @anchor-generating-multiple-anchor-boxes-3
 :::
 
+::: {.slide title="Drawing boxes"}
+`show_bboxes` draws a list of boxes, with optional labels, on a
+matplotlib axis:
+
+@-anchor-generating-multiple-anchor-boxes-4
+:::
+
 ::: {.slide title="Anchors at one pixel"}
 Visualize the $n + m - 1$ anchors centered at a single
 pixel — different scales and ratios:
-
-@anchor-generating-multiple-anchor-boxes-4
-
-. . .
 
 @anchor-generating-multiple-anchor-boxes-5
 :::
@@ -1524,6 +1541,11 @@ which anchor matches which ground truth.
 $$\text{IoU}(A, B) = \frac{|A \cap B|}{|A \cup B|}.$$
 
 ![IoU = intersection area / union area.](../img/iou.svg){width=42%}
+:::
+
+::: {.slide title="Intersection over Union (cont.)"}
+`box_iou` computes all pairwise IoUs between two lists of boxes
+at once, as an $(n_1, n_2)$ matrix:
 
 @anchor-intersection-over-union-iou
 :::
@@ -1535,7 +1557,9 @@ by highest IoU, with a threshold (e.g. 0.5) for "positive"
 matches:
 
 ![Anchor → GT assignment by IoU.](../img/anchor-label.svg){width=58%}
+:::
 
+::: {.slide title="Matching anchors to ground truth (cont.)"}
 @anchor-assigning-ground-truth-bounding-boxes-to-anchor-boxes
 :::
 
@@ -1563,10 +1587,12 @@ Hand-pick ground truth (dog, cat) and a few anchors; plot
 them:
 
 @anchor-an-example-1
+:::
 
-. . .
-
-Run the labeler:
+::: {.slide title="Worked example: run the labeler"}
+Run the labeler. It returns offsets, an offset mask, and class
+labels; class label 0 means background, and positive labels are
+shifted by one:
 
 @anchor-an-example-2
 
@@ -1575,11 +1601,9 @@ Run the labeler:
 @anchor-an-example-3
 :::
 
-::: {.slide title="Worked example (cont.)"}
-The returned tensors are easier to read with the contract in mind:
-class label 0 means background, positive labels are shifted by one,
-and the offset mask zeros out anchors that should not contribute to
-the localization loss.
+::: {.slide title="Worked example: masks and offsets"}
+The offset mask zeros out anchors that should not contribute to
+the localization loss; background anchors get zero offsets.
 
 @anchor-an-example-4
 
@@ -1605,23 +1629,29 @@ $\text{IoU} > \tau$ to it:
 3. Remove lower-scoring boxes whose IoU with it exceeds
    $\tau$.
 4. Repeat until no candidates remain.
+:::
+
+::: {.slide title="NMS in code"}
+`nms` returns the indices of the kept boxes, highest score first:
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-2
+:::
 
-. . .
+::: {.slide title="Detection with NMS"}
+`multibox_detection`: invert offsets, run NMS, mark dropped boxes $-1$:
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-3
 :::
 
 ::: {.slide title="NMS demo"}
-Four overlapping predictions; NMS picks the top-scoring
-one and suppresses the rest. If a lower-score box covers
-the same object, it should disappear; if it covers a
-different object, its IoU should be low enough to survive:
+Four overlapping predictions. A lower-score box on the same
+object should disappear; one on a different object survives:
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-4
+:::
 
-. . .
+::: {.slide title="NMS demo (cont.)"}
+All four predictions before NMS: three dog boxes and one cat box.
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-5
 :::
@@ -1632,8 +1662,10 @@ Rows with class `-1` have been suppressed or filtered out;
 the remaining rows are the detector's final boxes.
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-6
+:::
 
-. . .
+::: {.slide title="End-to-end output (cont.)"}
+Drawing only the surviving boxes leaves one box per object:
 
 @anchor-predicting-bounding-boxes-with-non-maximum-suppression-7
 :::

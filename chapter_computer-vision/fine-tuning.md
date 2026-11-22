@@ -934,7 +934,7 @@ the default recipe.
 @fine-tuning-hot-dog-recognition
 :::
 
-::: {.slide title="The hot-dog dataset"}
+::: {.slide title="The hot-dog dataset" except="jax,tensorflow"}
 A tiny binary classification dataset (hot dog / not hot
 dog) — too small to train a CNN from scratch, perfect for
 transfer learning:
@@ -944,16 +944,30 @@ transfer learning:
 . . .
 
 @fine-tuning-reading-the-dataset-2
+:::
 
-. . .
+::: {.slide title="The hot-dog dataset" only="jax,tensorflow"}
+A tiny binary classification dataset (hot dog / not hot
+dog) — too small to train a CNN from scratch, perfect for
+transfer learning:
+
+@fine-tuning-reading-the-dataset-1
+:::
+
+::: {.slide title="The hot-dog dataset (cont.)" only="jax,tensorflow"}
+@-fine-tuning-reading-the-dataset-2
+:::
+
+::: {.slide title="Hot dogs and not hot dogs"}
+The first eight positive and the last eight negative training
+images; sizes and aspect ratios vary:
 
 @fine-tuning-reading-the-dataset-3
 :::
 
 ::: {.slide title="Augmentation pipelines"}
-Standard ImageNet recipe — random resized crop + flip for
-training, center crop for eval. Match the preprocessing
-convention that the pretrained model expects:
+Random resized crop + flip for training, center crop for eval,
+and the preprocessing the pretrained model expects:
 
 @fine-tuning-reading-the-dataset-4
 :::

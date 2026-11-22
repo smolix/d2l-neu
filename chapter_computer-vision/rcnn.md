@@ -472,7 +472,19 @@ variable rectangle to a fixed-size feature:
 ![Fast R-CNN: shared backbone + RoI pooling per proposal.](../img/fast-rcnn.svg){width=72%}
 :::
 
-::: {.slide title="RoI pooling"}
+::: {.slide title="RoI pooling" except="tensorflow"}
+Variable rectangle in feature space → fixed grid (e.g.
+$2 \times 2$). Each output cell is the max over its
+sub-region of the rectangle. Differentiable, fast,
+batchable:
+
+![$2 \times 2$ RoI pooling: max-pool each sub-region of the proposal to a fixed-size output.](../img/roi.svg){width=58%}
+
+@rcnn-fast-r-cnn-1
+@rcnn-fast-r-cnn-4
+:::
+
+::: {.slide title="RoI pooling" only="tensorflow" layout="code"}
 Variable rectangle in feature space → fixed grid (e.g.
 $2 \times 2$). Each output cell is the max over its
 sub-region of the rectangle. Differentiable, fast,
@@ -492,12 +504,54 @@ shared feature map before pooling:
 @rcnn-fast-r-cnn-2
 :::
 
-::: {.slide title="RoI pooling output"}
+::: {.slide title="RoI pooling output" except="jax,tensorflow"}
 No matter how large the proposal is, the result has fixed shape
 `(num_rois, channels, pooled_h, pooled_w)`. That fixed-size tensor
 is what lets Fast R-CNN batch all region heads:
 
 @rcnn-fast-r-cnn-3
+:::
+
+::: {.slide title="RoI pooling from scratch" only="jax"}
+There is no built-in RoI pooling op here, so we write one: map
+each RoI onto the feature map and split it into bins:
+
+@-rcnn-fast-r-cnn-3[1-13]
+:::
+
+::: {.slide title="RoI pooling from scratch (cont.)" only="jax"}
+Each bin max-pools its subwindow; an empty subwindow outputs 0:
+
+@-rcnn-fast-r-cnn-3[14-25]
+:::
+
+::: {.slide title="RoI pooling from scratch" only="tensorflow"}
+There is no built-in RoI pooling op here, so we write one: map
+each RoI onto the feature map and split it into bins:
+
+@-rcnn-fast-r-cnn-3[1-15]
+:::
+
+::: {.slide title="RoI pooling from scratch (cont.)" only="tensorflow"}
+Each bin max-pools its subwindow; an empty subwindow outputs 0:
+
+@-rcnn-fast-r-cnn-3[16-32]
+:::
+
+::: {.slide title="RoI pooling output" only="jax"}
+No matter how large the proposal is, the result has fixed shape
+`(num_rois, channels, pooled_h, pooled_w)`. That fixed-size tensor
+is what lets Fast R-CNN batch all region heads:
+
+@rcnn-fast-r-cnn-3[27]
+:::
+
+::: {.slide title="RoI pooling output" only="tensorflow" layout="code"}
+No matter how large the proposal is, the result has fixed shape
+`(num_rois, channels, pooled_h, pooled_w)`. That fixed-size tensor
+is what lets Fast R-CNN batch all region heads:
+
+@rcnn-fast-r-cnn-3[34]
 :::
 
 ::: {.slide title="Faster R-CNN"}

@@ -1006,10 +1006,14 @@ image's pixels.
 :::
 
 ::: {.slide title="Loading content and style"}
+The content image, whose layout the result keeps:
+
 @neural-style-reading-the-content-and-style-images-1
 @neural-style-reading-the-content-and-style-images-4
+:::
 
-. . .
+::: {.slide title="Loading content and style (cont.)"}
+The style image, whose colors and textures we transfer:
 
 @neural-style-reading-the-content-and-style-images-2
 :::
@@ -1036,10 +1040,21 @@ Content is matched at one deeper layer (Conv4_2):
 @neural-style-extracting-features-3
 :::
 
-::: {.slide title="Feature extractor (cont.)"}
+::: {.slide title="Feature extractor (cont.)" except="jax,tensorflow"}
 @neural-style-extracting-features-4
 
 . . .
+
+@neural-style-extracting-features-5
+:::
+
+::: {.slide title="Feature extractor (cont.)" only="jax,tensorflow"}
+@neural-style-extracting-features-4
+:::
+
+::: {.slide title="Content and style targets" only="jax,tensorflow"}
+Extract the content features of the content image and the style
+features of the style image once, before optimization starts:
 
 @neural-style-extracting-features-5
 :::
@@ -1093,14 +1108,12 @@ variable; the network parameters are frozen:
 :::
 
 ::: {.slide title="Optimization loop"}
-Adam (or LBFGS) optimizes the synthesized image itself.
-The CNN stays frozen; gradients flow through VGG features
-back to pixels:
+Adam updates the image pixels; the VGG weights stay frozen:
 
 @neural-style-training-1
 :::
 
-::: {.slide title="Optimization result"}
+::: {.slide title="Optimization result" except="jax"}
 After a few hundred iterations, the content layout should
 remain recognizable while colors and local textures move
 toward the style image. The three plotted losses are
@@ -1108,6 +1121,16 @@ weighted differently, so compare their trends rather than
 their raw magnitudes:
 
 @neural-style-training-2
+:::
+
+::: {.slide title="Optimization result" only="jax"}
+After a few hundred iterations, the content layout should
+remain recognizable while colors and local textures move
+toward the style image. The three plotted losses are
+weighted differently, so compare their trends rather than
+their raw magnitudes:
+
+@neural-style-training-2[out=2]
 :::
 
 ::: {.slide title="Recap"}

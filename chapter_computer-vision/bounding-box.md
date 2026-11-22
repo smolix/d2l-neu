@@ -229,6 +229,10 @@ parameterizations:
 Models predict one or the other; we need conversion
 helpers. This deck sets up the basic plumbing; later
 sections build SSD and R-CNN on top.
+:::
+
+::: {.slide title="A sample image"}
+One image with a dog and a cat; we will annotate both:
 
 @bounding-box-object-detection-and-bounding-boxes-1
 
@@ -249,7 +253,13 @@ c_y=\frac{y_1+y_2}{2},\quad
 w=x_2-x_1,\quad h=y_2-y_1.
 $$
 
-@bounding-box-bounding-boxes-1
+@-bounding-box-bounding-boxes-1[1-10]
+:::
+
+::: {.slide title="Box format conversion (cont.)"}
+The inverse map, from center to corner coordinates:
+
+@-bounding-box-bounding-boxes-1[13-21]
 :::
 
 ::: {.slide title="Annotating an image"}
@@ -270,8 +280,11 @@ on a matplotlib axis. We'll reuse it everywhere in this
 chapter:
 
 @bounding-box-bounding-boxes-4
+:::
 
-. . .
+::: {.slide title="Drawing boxes (cont.)"}
+Both boxes drawn on the image; they should frame the dog and
+the cat tightly:
 
 @bounding-box-bounding-boxes-5
 :::

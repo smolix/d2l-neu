@@ -558,7 +558,7 @@ $$\frac{\partial L}{\partial \mathbf{W}_{\textrm{hh}}} = \sum_{t=1}^T \mathbf{H}
 - **Transient non-normal growth:** If $\mathbf{W}_{\textrm{hh}}$ is asymmetric with $\sigma_{\max}(\mathbf{W}_{\textrm{hh}}) > 1 > \rho$, norms can hump at small lags before $\rho^k$ decays.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:ch08-rnn-spectral-radius-regimes
 :::
 :::
@@ -591,16 +591,16 @@ To measure how far gradients actually travel inside our trained language model f
 
 @-bptt-vanishing-and-exploding-gradients-5
 
-- **Isolating the lag-$k$ sensitivity:** We take the cross-entropy loss at the final position $t = L$ ($\partial L_L / \partial \mathbf{O}_L = \textrm{softmax}(\mathbf{O}_L) - \mathbf{Y}_L$) and propagate $\mathbf{G}_t$ backward 64 steps via $\mathbf{G}_{t-1} = (\mathbf{G}_t \odot (1 - \mathbf{H}_t^2))\mathbf{W}_{\textrm{hh}}^\top$ without adding intermediate output losses.
+- **Isolating the lag-$k$ sensitivity:** We take the cross-entropy loss at the final position $t = L$ and propagate $\mathbf{G}_t$ backward 64 steps via $\mathbf{G}_{t-1} = (\mathbf{G}_t \odot (1 - \mathbf{H}_t^2))\mathbf{W}_{\textrm{hh}}^\top$ without adding intermediate output losses.
 :::
 
 ::: {.slide title="Measured Gradient Decay Inside the Trained RNN"}
 [Empirical Probe Results]{.kicker}
 
-Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ on a logarithmic axis against lag $k \in \{0, \ldots, 63\}$ resolves the puzzle from §8.4:
-
 ::: {.cols .vc}
 ::: {.col}
+Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ on a logarithmic axis against lag $k \in \{0, \ldots, 63\}$ resolves the puzzle from §8.4:
+
 - **Large weights, yet fast vanishing:** The trained recurrent matrix has spectral radius $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$ (which would explode as $1.80^k$ in a linear RNN!), yet the mean $\tanh$ derivative is $\overline{1 - H^2} \approx 0.27$.
 - **Halving every step ($1.80 \times 0.27 \approx 0.49$):** The gradient norm drops by roughly half at every step back in time—falling **below $1\%$ within $k = 8$ steps** and shrinking to $\sim 10^{-9}$ across 32 tokens.
 - **Explains the 3-token horizon:** Tokens at lag $k \ge 4$ contribute almost zero gradient to $\mathbf{W}_{\textrm{hh}}$ during training!
@@ -692,7 +692,12 @@ Test your understanding of matrix powers, graph detachment, and gradient horizon
 2. **The Missing Detach Bug:** Suppose you train an RNN over 1,000 consecutive 32-token segments on a GPU, carrying `state` from segment $s$ into segment $s+1$, but you forget to detach `state` (stop its gradient) at the end of each segment. What happens to GPU memory and backward runtime on segment $s = 1, 2, 3, \ldots$?
 3. **Widening the Window on a Vanilla RNN:** If you retrain our vanilla $\tanh$ RNN from §8.4 with `num_steps = 128` instead of `num_steps = 32`, will its validation loss-by-position curve keep improving beyond token 3? Why or why not?
 
-::: {.d2l-note .fragment .fade-up}
+:::
+
+::: {.slide title="Concept Check: BPTT Jacobians, Clipping & Detach (Answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **$31$ Jacobians:** At $\rho = 0.9$, $0.9^{31} \approx 0.038$ ($96\%$ lost); at $\rho = 1.1$, $1.1^{31} \approx 19.2$. Shifting $\rho$ by $\pm 10\%$ around $1.0$ changes the 32-step gradient norm by **$500\times$**.

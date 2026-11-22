@@ -689,7 +689,7 @@ AlexNet preserves LeNet's macro template—a convolutional feature trunk feeding
 ::: {.slide title="Implementing AlexNet in Code"}
 [Model Definition]{.kicker}
 
-We assemble the five convolutional stages, three overlapping max-pooling layers, and two dropout-regularized dense layers:
+Five conv layers, three overlapping max-pools, and two dropout-regularized dense layers:
 
 @alexnet-capacity-control-and-preprocessing-1
 :::

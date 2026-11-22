@@ -1271,15 +1271,19 @@ When `num_classes` is passed to the final `nin_block`, omitting the ReLU after t
 
 ::: {.cols .vc}
 ::: {.col}
-@nin-training-2
-
-@!nin-training-3
+@-nin-training-2
 :::
 
 ::: {.col .fig}
 @fig:ch07-mcnn-vgg-vs-pooled-vgg
 :::
 :::
+:::
+
+::: {.slide title="Controlled Ablation: Global Average Pooling on VGG (cont.)"}
+[Head Ablation: VGG vs. PooledVGG]{.kicker}
+
+@!nin-training-3
 :::
 
 ::: {.slide title="GoogLeNet: Multi-Scale Parallel Branches and Bottlenecks"}
@@ -1306,7 +1310,7 @@ Objects in natural images appear at wildly different spatial scales. Rather than
 ::: {.slide title="Implementing the Four-Branch Inception Block"}
 [GoogLeNet: Block Code]{.kicker}
 
-Every branch uses "same" padding ($p=1$ for $3\times 3$, $p=2$ for $5\times 5$, $p=1$ for stride-1 $3\times 3$ max-pooling) so the four output tensors share identical spatial height and width before channel concatenation:
+"Same" padding keeps all four branch outputs the same size for channel concatenation:
 
 @googlenet-inception-blocks
 :::

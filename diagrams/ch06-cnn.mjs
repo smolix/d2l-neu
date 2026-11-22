@@ -1516,9 +1516,9 @@ function orderedVsShuffledAcc() {
   const W = 540, H = 260;
   let o = '';
   const bars = [
-    { y: 24,  label: 'LeNet (Ordered Pixels)', acc: '89.5%', w: 300, fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { y: 24,  label: 'LeNet (Ordered Pixels)', acc: '≈89–90%', w: 300, fill: C.lgreen, st: C.green, dk: D.green.dark },
     { y: 90,  label: 'MLP (Ordered = Shuffled)', acc: '87.0%', w: 230, fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 156, label: 'LeNet (Shuffled Pixels)', acc: '85.5%', w: 180, fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { y: 156, label: 'LeNet (Shuffled Pixels)', acc: '≈85–86%', w: 180, fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   bars.forEach((b) => {
     o += box(16, b.y, 196, 46, '#FFFFFF', b.st, 6, 1.8);

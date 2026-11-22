@@ -972,6 +972,10 @@ From Text to Tokens<br>**characters vs. words · UTF-8 bytes · byte pair encodi
 Our running corpus is H. G. Wells' *The Time Machine* (~30,000 words, 179,462 UTF-8 bytes). Classical character/word pipelines normalize text aggressively, whereas our byte-level BPE tokenizer processes `raw_text` losslessly:
 
 @text-sequence-reading-the-dataset-1
+:::
+
+::: {.slide title="Ingesting and Normalizing The Time Machine (cont.)"}
+[Corpus Pipeline]{.kicker}
 
 @text-sequence-reading-the-dataset-2
 
@@ -1007,12 +1011,12 @@ Character-level and word-level tokenization occupy opposite extremes of the trad
 @text-sequence-vocabulary-2
 
 @text-sequence-putting-it-all-together
-
-- **The `<unk>` collapse:** Mapping every rare (`< min_freq`) or unseen word to index `0 (<unk>)` erases morphological stems and incurs an explicit character-spelling penalty during evaluation (§8.3).
 :::
 
 ::: {.col .fig}
 @fig:ch08-rnn-vocab-unk
+
+- **The `<unk>` collapse:** Mapping every rare (`< min_freq`) or unseen word to index `0 (<unk>)` erases morphological stems and incurs an explicit character-spelling penalty during evaluation (§8.3).
 :::
 :::
 :::
@@ -1028,7 +1032,7 @@ Character-level and word-level tokenization occupy opposite extremes of the trad
 - **Variable byte width:** UTF-8 spends 1 byte on ASCII, 2 on Latin diacritics/Greek, 3 on CJK, and 4 on emoji ($179{,}462$ bytes across the novella).
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @fig:ch08-rnn-utf8-bytes
 :::
 :::
@@ -1072,7 +1076,7 @@ Because later merges combine tokens created by earlier merges (`'h'` + `'ug'` $\
 ::: {.slide title="Implementing the Left-to-Right Pair Merge Step"}
 [From-Scratch Implementation]{.kicker}
 
-Both BPE training and encoding rely on a single primitive `_merge(ids, pair, new_id)` that scans an ID list left to right, replacing non-overlapping occurrences of `pair` with `new_id`:
+BPE training and encoding share one primitive, `_merge(ids, pair, new_id)`:
 
 @text-sequence-implementation-3
 
@@ -1095,20 +1099,18 @@ To train `vocab_size - 256` merges, we tally unique pre-tokenized chunks once vi
 ::: {.slide title="Encoding New Text Strictly by Merge Rank Order"}
 [Encoding & Decoding Mechanics]{.kicker}
 
-To encode an arbitrary byte chunk, `_encode_chunk` repeatedly merges the adjacent pair with the **lowest merge rank** (smallest `new_id`) until no adjacent pair appears in `self.merges`:
-
-::: {.cols .vc}
-::: {.col}
 @-text-sequence-encoding-and-decoding-1
 :::
 
-::: {.col .fig}
+::: {.slide title="Encoding New Text Strictly by Merge Rank Order (cont.)"}
+[Encoding & Decoding Mechanics]{.kicker}
+
+To encode an arbitrary byte chunk, `_encode_chunk` repeatedly merges the adjacent pair with the **lowest merge rank** (smallest `new_id`) until no adjacent pair appears in `self.merges`:
+
 @!text-sequence-encoding-and-decoding-2
 
 - **The merge table is the tokenizer:** Encoding never consults corpus counts—only merge ranks.
 - **Why rank order is mandatory:** During training, merge $r$ was learned on sequences where all merges $< r$ had *already* been exhausted; applying the lowest-rank pair first faithfully retraces training.
-:::
-:::
 :::
 
 ::: {.slide title="What Unconstrained BPE Learns on Wells' Novella"}
@@ -1148,9 +1150,14 @@ Without boundary constraints, 108 of the 768 learned merges in our 1,024-token v
 
 @!text-sequence-pre-tokenization-telling-bpe-where-words-end-1
 
+- **Why multi-word tokens hurt generalization:** Slots spent on `'of the '`, `'in the '`, and `'to the '` cannot represent content words, and the word `"of"` is fragmented across dozens of incompatible token IDs depending on what follows it.
+:::
+
+::: {.slide title="Why Unconstrained BPE Leaks Across Word Boundaries (cont.)"}
+[The Pre-Tokenization Motivation]{.kicker}
+
 @text-sequence-pre-tokenization-telling-bpe-where-words-end-2
 
-- **Why multi-word tokens hurt generalization:** Slots spent on `'of the '`, `'in the '`, and `'to the '` cannot represent content words, and the word `"of"` is fragmented across dozens of incompatible token IDs depending on what follows it.
 - **GPT-2's 5-branch regex (`GPT2_PATTERN`):** Splits contractions (`'s`, `'ve`, `'ll`), attaches each **leading space** to its following letter run (` ?\p{L}+`) or digit run (` ?\p{N}+`), isolates punctuation (` ?[^\s\p{L}\p{N}]+`), and confines BPE merges strictly *within* each chunk.
 :::
 
@@ -1255,6 +1262,13 @@ Test your understanding of BPE encoding mechanics and production pre-tokenizatio
 | **Character-Level** | Normalized ASCII / Unicode chars | $27$ (normalized) to $\sim 150\textrm{k}$ (Unicode) | $173{,}428$ | None on ASCII; breaks on unseen Unicode scripts | Tiny softmax layer, but sequences are $5\times$ longer and semantically weak |
 | **Word-Level** | Whitespace-split word types | $4{,}579 + \texttt{<unk>}$ (unbounded with corpus) | $32{,}775$ | Unseen words collapse into `<unk>` | Short sequences, but massive softmax layer and severe OOV/inflection sparsity |
 | **Raw UTF-8 Bytes** | Single bytes `0..255` | $256$ (fixed universal) | $179{,}462$ | **Zero OOV** on any string in any language | Universal coverage, but $5.5\times$ longer sequences ($2\text{--}4\times$ extra for non-ASCII) |
+:::
+
+::: {.slide title="Summary: Tokenization Schemes Compared (cont.)"}
+[Section Takeaways]{.kicker}
+
+| Tokenization Scheme | Base Alphabet | Vocab Size $|\mathcal{V}|$ (*Time Machine*) | Sequence Length $T$ | Out-of-Vocabulary (OOV) Behavior | Primary Architectural Trade-Off |
+|---|---|---|---|---|---|
 | **Unconstrained BPE** | UTF-8 bytes + greedy pair merges | Chosen hyperparameter (e.g., $1{,}024$) | $\sim 61{,}000$ | **Zero OOV** (unseen stems fall back to bytes) | Over-merges across spaces (`'of the '`), fragmenting single-word statistics |
 | **Pre-Tokenized BPE (GPT-2 / Llama)** | Regex chunks + byte-level BPE + high-ID specials | $1{,}024 + 3$ (ours) or $50\textrm{k}\text{--}200\textrm{k}$ (prod) | $65{,}741$ ($2.78$ B/tok) | **Zero OOV** + prompt-injection-safe specials | Industry standard balancing sequence compression, softmax cost, and open vocabulary |
 :::

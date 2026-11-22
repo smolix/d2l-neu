@@ -1138,7 +1138,7 @@ Our `batch_norm` function branches on `training`, pooling over axis `0` for dens
 ::: {.slide title="Implementing the Stateful BatchNorm Layer"}
 [Trainable Params vs. Running Buffers]{.kicker}
 
-A `BatchNorm` module separates learnable parameters (`gamma`, `beta`) updated by SGD/Adam from non-trainable running buffers (`moving_mean`, `moving_var`) updated by exponential moving averages and saved in checkpoints:
+`BatchNorm` separates learnable `gamma`, `beta` from running buffers `moving_mean`, `moving_var`:
 
 @batch-norm-implementation-from-scratch-2
 :::
@@ -1160,7 +1160,7 @@ A `BatchNorm` module separates learnable parameters (`gamma`, `beta`) updated by
 ::: {.slide title="Adding Batch Normalization to LeNet (BNLeNet)"}
 [Concise Implementation]{.kicker}
 
-We insert batch normalization before each of LeNet's four hidden sigmoid activations and disable the redundant layer biases (adding only $6 + 16 + 120 + 84 = 226$ net trainable parameters to LeNet's $61{,}706$):
+BatchNorm before LeNet's four hidden sigmoids adds only $226$ parameters to $61{,}706$:
 
 @batch-norm-concise-implementation-1
 :::

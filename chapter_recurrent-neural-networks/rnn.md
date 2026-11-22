@@ -1708,6 +1708,10 @@ An RNN language model wraps the recurrent cell between an input embedding table 
 `RNNScratch` initializes $\mathbf{W}_{\textrm{xh}}, \mathbf{W}_{\textrm{hh}} \sim \mathcal{N}(0, \sigma^2)$ with $\sigma = 0.01$ (so initial spectral radius $\rho(\mathbf{W}_{\textrm{hh}}) \approx \sigma\sqrt{h} \approx 0.11$, ensuring stable initial decay) and loops over the leading time axis of `inputs` of shape `(num_steps, batch_size, num_inputs)`:
 
 @-rnn-implementation-the-recurrent-cell-1
+:::
+
+::: {.slide title="Implementing the Recurrent Cell from Scratch (cont.)"}
+[From-Scratch Implementation]{.kicker}
 
 @-rnn-implementation-the-recurrent-cell-2
 :::
@@ -1718,6 +1722,10 @@ An RNN language model wraps the recurrent cell between an input embedding table 
 `RNNLMScratch` transposes batch-major token IDs `X` of shape `(b, T)` to time-major `(T, b)` before indexing `self.E` ($\mathcal{N}(0, 1)$), runs `self.rnn`, and projects all stacked hidden states `(b, T, h)` to logits `(b, T, |V|)` in one batched matrix product:
 
 @-rnn-implementation-from-token-ids-to-embeddings-2
+:::
+
+::: {.slide title="Embedding Lookup and Batched Output Projection (cont.)"}
+[From-Scratch Language Model Wrapper]{.kicker}
 
 @-rnn-implementation-the-output-layer-1
 
@@ -1731,15 +1739,15 @@ An RNN language model wraps the recurrent cell between an input embedding table 
 
 ::: {.cols .vc}
 ::: {.col}
-$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)\mathbf{g}$$
-
 @-rnn-implementation-gradient-clipping
-
-- **Radial ball projection:** Caps the global Euclidean gradient norm $\|\mathbf{g}\|$ at $\theta$ without distorting the update direction, preventing rare Jacobian spikes from catapulting weights out of the basin.
 :::
 
 ::: {.col .fig}
+$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)\mathbf{g}$$
+
 @fig:ch08-rnn-grad-clipping-ball
+
+- **Radial ball projection:** Caps the global Euclidean gradient norm $\|\mathbf{g}\|$ at $\theta$ without distorting the update direction, preventing rare Jacobian spikes from catapulting weights out of the basin.
 :::
 :::
 :::
@@ -1747,10 +1755,10 @@ $$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)\mathbf
 ::: {.slide title="Training the Plain RNN Baseline with Clipping"}
 [Baseline Training & Bits-per-Byte Evaluation]{.kicker}
 
-We train the 222,915-parameter baseline ($d = 64, h = 128$, no dropout) on $50{,}000$ overlapping 32-token windows (`batch_size = 1024`) for 10 epochs of SGD at $\eta = 4$ with global gradient clipping at $\theta = 1$:
-
 ::: {.cols .vc}
 ::: {.col}
+We train the 222,915-parameter baseline ($d = 64, h = 128$, no dropout) on $50{,}000$ overlapping 32-token windows (`batch_size = 1024`) for 10 epochs of SGD at $\eta = 4$ with global gradient clipping at $\theta = 1$:
+
 @!rnn-implementation-training-4
 
 @!rnn-implementation-training-5
@@ -1829,10 +1837,10 @@ How does our trained RNN ($\approx 2.12$ bpb) compare against interpolated Knese
 ::: {.slide title="Diagnosing the RNN's Effective Context Horizon"}
 [Why the RNN Tied the Trigram]{.kicker}
 
-To uncover why a recurrent network fed 32 tokens of history failed to pull ahead of a 3-gram, we plot validation bits per byte separately at each window position $k \in \{1, \ldots, 32\}$ (where position $k$ conditions on $k$ tokens of context):
-
 ::: {.cols .vc}
 ::: {.col}
+To uncover why a recurrent network fed 32 tokens of history failed to pull ahead of a 3-gram, we plot validation bits per byte separately at each window position $k \in \{1, \ldots, 32\}$ (where position $k$ conditions on $k$ tokens of context):
+
 - **Sharp drop from $k = 1 \to 3$, then flat:** Validation loss drops from $\approx 2.30$ bpb at 1 token of context to $\approx 2.12$ bpb at 3 tokens of context, and then **stays completely flat at $2.12$ bpb from position 4 through position 32**!
 - **Forward capacity vs. backward learnability:** Although $\mathbf{H}_{32}$ is mathematically a function of all 32 tokens in the forward pass, gradient-based training failed to teach the cell to use any token more than $\sim 3$ steps back—the exact vanishing-gradient phenomenon we analyze in §8.5.
 :::
@@ -1849,6 +1857,10 @@ To uncover why a recurrent network fed 32 tokens of history failed to pull ahead
 The `predict` method first runs a **prefix warm-up loop** feeding the user's prompt tokens one by one to build $\mathbf{H}_t$, and then runs an **autoregressive generation loop** feeding each newly chosen token back in as the next step's input:
 
 @-rnn-implementation-generating-text-1
+:::
+
+::: {.slide title="Autoregressive Text Generation and Greedy Loops (cont.)"}
+[Inference & Rollout Behavior]{.kicker}
 
 @!rnn-implementation-generating-text-2
 
@@ -1860,9 +1872,15 @@ The `predict` method first runs a **prefix warm-up loop** feeding the user's pro
 ::: {.slide title="Concise Implementation with Framework RNN Kernels"}
 [High-Level Framework APIs]{.kicker}
 
-The framework's built-in RNN layer replaces our Python `for X in inputs:` loop with a fused kernel, while `RNNLM` swaps in the built-in embedding and dense layers:
+The framework's built-in RNN layer replaces our Python `for X in inputs:` loop with a fused kernel:
 
 @-rnn-implementation-concise-implementation-1
+:::
+
+::: {.slide title="Concise Implementation with Framework RNN Kernels (cont.)"}
+[High-Level Framework APIs]{.kicker}
+
+`RNNLM` swaps in the built-in embedding and dense layers:
 
 @-rnn-implementation-concise-implementation-2
 :::
@@ -1894,7 +1912,12 @@ Test your grasp of RNN parameter scaling, batched projections, and model ensembl
 2. **Batched Input Projection at Training vs. Inference:** During teacher-forced training on a window of $T = 32$ steps, we can compute $\mathbf{X}_{1:T}\mathbf{W}_{\textrm{xh}}$ for all 32 steps in a single matrix product before the time loop. Why does this optimization *not* apply during 32 steps of autoregressive text generation?
 3. **Why a 50/50 Probability Mixture Bounds Surprisal:** Suppose on token $A$, $P_{\textrm{RNN}}(A) = 0.50$ and $P_{\textrm{KN}}(A) = 0.02$, while on token $B$, $P_{\textrm{RNN}}(B) = 0.02$ and $P_{\textrm{KN}}(B) = 0.50$. Compare the total bits of surprisal $-\log_2 P(A) - \log_2 P(B)$ of each standalone model against their linear mixture $P_{\textrm{mix}} = \frac{1}{2}P_{\textrm{RNN}} + \frac{1}{2}P_{\textrm{KN}}$.
 
-::: {.d2l-note .fragment .fade-up}
+:::
+
+::: {.slide title="Concept Check: Shapes, Scaling & Context Horizon (Answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **(a) $1\times$** ($\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ is independent of $h$); **(b) $2\times$** ($\mathbf{W}_{\textrm{xh}} \in \mathbb{R}^{d \times h}$ and $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$ scale linearly with $h$); **(c) $4\times$** ($\mathbf{W}_{\textrm{hh}} \in \mathbb{R}^{h \times h}$ scales quadratically as $h^2$: $16{,}384 \to 65{,}536$).

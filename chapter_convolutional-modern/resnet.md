@@ -1355,7 +1355,7 @@ ResNet's basic `Residual` block stacks two bias-free $3\times 3$ convolutions wi
 ::: {.slide title="Implementing the Residual Block"}
 [Code Implementation]{.kicker}
 
-Notice that `use_1x1conv or strides != 1` automatically enables the stride-matched $1\times 1$ projection shortcut `conv3` + `bn3`:
+Setting `use_1x1conv` or `strides != 1` enables the $1\times 1$ projection shortcut `conv3` + `bn3`:
 
 @resnet-residual-blocks-1
 :::
@@ -1456,8 +1456,8 @@ Doubling channel width quadruples dense convolution cost ($c_{\textrm{i}} c_{\te
 - **Wider at matched cost:** ResNet-50 ($c=256, b=64, g=1$) uses $2(256)(64) + 9(64^2) = 69{,}632$ weights; ResNeXt-50 ($b=128, g=32$) doubles bottleneck width to $128$ using $2(256)(128) + 9(128^2)/32 = 70{,}144$ weights (+0.7%), cutting ImageNet top-1 error from **23.9% to 22.2%**.
 :::
 
-::: {.col .fig}
-![](../img/arch-resnext-block.svg){.nostretch width=48%}
+::: {.col .fig .narrow}
+![](../img/arch-resnext-block.svg){.nostretch width=60%}
 :::
 :::
 :::
@@ -1465,7 +1465,7 @@ Doubling channel width quadruples dense convolution cost ($c_{\textrm{i}} c_{\te
 ::: {.slide title="Implementing the ResNeXt Block"}
 [ResNeXt Code]{.kicker}
 
-`ResNeXtBlock` generalizes `Residual` and ResNet-50's bottleneck (`groups=1, bot_mul=0.25`) into a single reusable module that powers our AnyNet/RegNet design spaces in §7.8:
+`ResNeXtBlock` generalizes `Residual` and ResNet-50's bottleneck into one reusable module:
 
 @resnet-resnext-1
 :::

@@ -488,9 +488,15 @@ Iterating `corr2d_multi_in(X, k)` over each 3D kernel `k` in the 4D tensor `K` a
 
 @channels-multiple-output-channels-1
 
+::: {.cols}
+::: {.col}
 @channels-multiple-output-channels-2
+:::
 
+::: {.col}
 @channels-multiple-output-channels-3
+:::
+:::
 :::
 
 ::: {.slide title="Mental-Math Verification of Multi-Channel Outputs"}

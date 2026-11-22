@@ -973,11 +973,9 @@ $$\hat{P}(x_t \mid x_{<t}) \approx \hat{P}(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) 
 ::: {.slide title="Building and Sampling Count-Based n-Gram Models"}
 [From-Scratch Implementation]{.kicker}
 
-On the 90%/10% train/validation word split of *The Time Machine* ($|\mathcal{V}| = 4{,}316$ known training words plus `<unk>`), `NGramLM` indexes every observed $(n - 1)$-token context tuple to a `Counter` of its observed successors:
+`NGramLM` maps every observed $(n - 1)$-token context to a `Counter` of its successors:
 
 @-language-model-markov-models-and-counting-2
-
-- **Storage complexity:** Instead of allocating a dense $|\mathcal{V}|^n$ array ($4316^3 \approx 8 \times 10^{10}$ cells), a nested hash map `self.cont[ctx][token]` stores only the $n$-grams that actually occur with nonzero count in training.
 :::
 
 ::: {.slide title="The Memorization Illusion in Higher-Order n-Grams"}
@@ -1000,6 +998,7 @@ Why do higher-order $n$-grams collapse into memorization on training text and fa
 @!language-model-the-sparsity-wall
 
 - **Catastrophic zero counts on held-out text:** On the final $10\%$ of *The Time Machine*, $8.1\%$ of unigrams (mapped to `<unk>`), $52.8\%$ of word bigrams, and **$87.0\%$ of word trigrams** never occurred in the training split.
+- **Storage complexity:** Instead of allocating a dense $|\mathcal{V}|^n$ array ($4316^3 \approx 8 \times 10^{10}$ cells), a nested hash map `self.cont[ctx][token]` stores only the $n$-grams that actually occur with nonzero count in training.
 - **Zero-probability collapse:** Under maximum likelihood estimation ($\hat{P} = N(\text{trigram}) / N(\text{bigram})$), any unseen $n$-gram receives probability $0$, causing a single novel word triple to assign $\prod_{t=1}^T \hat{P}(x_t \mid x_{<t}) = 0$ to the entire validation passage.
 :::
 
@@ -1010,15 +1009,15 @@ Count tables go sparse so rapidly because word frequencies in natural language a
 
 ::: {.cols .vc}
 ::: {.col}
-$$n_i \propto \frac{1}{i^s} \iff \log n_i = -s \log i + c$$
-
 @!language-model-word-frequency-and-zipf-s-law-1
 
 - **Stop-word dominance:** The top 10 words (*the, I, and, of, a, to, was, in, that, my*) are function words; rank 10 (`'my'`, $440$) is already $5\times$ rarer than rank 1 (`'the'`, $2{,}261$).
 - **Linear log–log slope:** Fitting over ranks $10\text{--}1000$ gives Zipf exponent $s = 1.03 \approx 1$.
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
+$$n_i \propto \frac{1}{i^s} \iff \log n_i = -s \log i + c$$
+
 @!language-model-word-frequency-and-zipf-s-law-2
 :::
 :::
@@ -1027,16 +1026,16 @@ $$n_i \propto \frac{1}{i^s} \iff \log n_i = -s \log i + c$$
 ::: {.slide title="Heavy Singleton Tails Across Unigrams to Trigrams"}
 [Zipfian Sparsity Scaling]{.kicker}
 
-Plotting rank–frequency curves for word unigrams, bigrams, and trigrams on the same log–log axes reveals how power-law tails flatten and become dominated by singletons ($N = 1$) as $n$ increases:
-
 ::: {.cols .vc}
 ::: {.col}
+Plotting rank–frequency curves for word unigrams, bigrams, and trigrams on the same log–log axes reveals how power-law tails flatten and become dominated by singletons ($N = 1$) as $n$ increases:
+
 - **Flattening Zipf exponents:** The power-law slope drops from $s = 1.03$ (unigrams) to $s = 0.68$ (bigrams) and $s = 0.49$ (trigrams).
 - **Singleton explosion:** Exactly **$50\%$ of distinct words**, **$80\%$ of distinct bigrams**, and **$92\%$ of distinct trigrams** in *The Time Machine* occur only *once* in the entire corpus.
 - **Implication:** Estimating each context tuple independently requires exponentially larger corpora for each additional token of context.
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!language-model-word-frequency-and-zipf-s-law-3
 :::
 :::
@@ -1093,7 +1092,7 @@ $$P_{\textrm{KN}}(w \mid u) = \frac{\max(N(u, w) - D,\, 0)}{N(u)} + \frac{D\,S(u
 ::: {.slide title="Implementing Interpolated Kneser–Ney in Python"}
 [From-Scratch Implementation]{.kicker}
 
-Our 24-line `kneser_ney` function tallies highest-order $n$-gram counts, derives continuation counts for orders $k = n-1, \ldots, 1$ by counting distinct $(k+1)$-gram types `g[1:]`, estimates $D_k = c_1 / (c_1 + 2c_2)$, and evaluates the recursion:
+`kneser_ney` derives continuation counts, estimates $D_k = c_1 / (c_1 + 2c_2)$, and evaluates the recursion:
 
 @-language-model-kneser-ney-smoothing
 :::
@@ -1160,10 +1159,14 @@ To train the neural language models of §8.4–§8.6 with minibatch SGD, we slic
 ::: {.slide title="Preventing Train–Validation Leakage Across Windows"}
 [Data Pipeline Implementation & Leakage Guard]{.kicker}
 
+@-language-model-partitioning-sequences-1
+:::
+
+::: {.slide title="Preventing Train–Validation Leakage Across Windows (cont.)"}
+[Data Pipeline Implementation & Leakage Guard]{.kicker}
+
 ::: {.cols .vc}
 ::: {.col}
-@-language-model-partitioning-sequences-1
-
 - **Why drop `num_steps` boundary windows:** Adjacent length-$T$ windows overlap in $T - 1$ tokens; skipping `windows[num_train : num_train + num_steps]` ensures no validation token ever appeared as a training target.
 :::
 
@@ -1190,7 +1193,12 @@ Work through these three quantitative questions on smoothing, bits per byte, and
 2. **Perplexity to Bits per Byte:** A neural BPE language model achieves validation perplexity $\textrm{PPL} = 64.0$ on text where each BPE token averages $2.80$ UTF-8 bytes. What is its bits per byte ($\textrm{bpb}$), and to what percentage of the original UTF-8 byte size could an arithmetic coder compress the text?
 3. **Continuation Counts in Kneser–Ney:** The word `"Francisco"` has high raw frequency in news corpora, yet appears almost exclusively after `"San"`. Compare its unigram MLE probability against its Kneser–Ney unigram continuation probability after an unseen bigram context like `"ate ___"`.
 
-::: {.d2l-note .fragment .fade-up}
+:::
+
+::: {.slide title="Concept Check: Smoothing, Perplexity & Leakage (Answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **$\alpha = 0.01$:** $(47 + 0.01) / (87 + 43.16) = 47.01 / 130.16 \approx 0.361$. **$\alpha = 1.0$:** $(47 + 1) / (87 + 4316) = 48 / 4403 \approx 0.0109$—the $4{,}316$ uniform pseudocounts swamp the $87$ real observations by $50\times$.

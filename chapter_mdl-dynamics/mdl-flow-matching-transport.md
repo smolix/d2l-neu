@@ -1959,7 +1959,7 @@ Training a 2-hidden-layer `tanh` MLP (64 units per layer) with Adam and cosine l
 
 @!mdl-flow-matching-transport-example-two-moons-1
 
-- **Why a Loss of $1.40$ Is a Good Fit:** By the CFM theorem, $\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$. The network's terminal loss of $1.40$ sits only $\approx 0.03$ above the population floor $C \approx 1.37$, meaning $\mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) \approx 0.03$ per coordinate.
+- **Why a Loss of $1.4$ Is a Good Fit:** By the CFM theorem, $\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$. The network's terminal loss of $\approx 1.43$ sits only $\approx 0.06$ above the population floor $C \approx 1.37$, meaning $\mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) \approx 0.06$ per coordinate.
 :::
 
 ::: {.slide title="Sampling Quality vs. Euler Steps on Two Moons"}
@@ -2003,14 +2003,14 @@ $$\mathbb{E}\!\left[\|\mathbf{Z}_1 - \mathbf{Z}_0\|^2\right] \le \mathbb{E}\!\le
 :::
 :::
 
-::: {.slide title="One Reflow Round Drops the Loss From 1.40 to 0.002"}
+::: {.slide title="One Reflow Round Drops the Loss From 1.4 to ≈0.002"}
 [Eliminating Segment Crossings]{.kicker}
 
 Generating $8{,}192$ coupled pairs $(\hat{\mathbf{x}}_0(\boldsymbol{\epsilon}), \boldsymbol{\epsilon})$ by integrating the first network for $32$ Euler steps and retraining the exact same architecture on these re-paired endpoints:
 
 @!mdl-score-matching-diffusion-flow-one-reflow-round-measured
 
-- **Crossing Floor Vanishes:** Because trajectories of the deterministic ODE flow never cross, the straight chords joining $\boldsymbol{\epsilon}$ to $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ almost never cross in space-time, collapsing the training loss floor from $1.37$ down to $< 0.002$!
+- **Crossing Floor Vanishes:** Because trajectories of the deterministic ODE flow never cross, the straight chords joining $\boldsymbol{\epsilon}$ to $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ almost never cross in space-time, collapsing the training loss floor from $1.37$ down to $\approx 0.001$–$0.003$!
 :::
 
 ::: {.slide title="After One Reflow Round, 1 Step Matches 32 Steps"}
@@ -2020,7 +2020,7 @@ Comparing the original and reflowed networks across $K \in \{1, 2, 32\}$ Euler s
 
 @!mdl-flow-matching-transport-reflow-1
 
-- **32x Speedup at Test Time:** A **single Euler step** of the reflowed network achieves the exact same squared energy distance ($\approx 0.004$) as $32$ steps of the original model, while mean squared pair length drops $13\times$ ($4.00 \to 0.30$, well below the theoretical bound $4.00 - 2.75 = 1.25$).
+- **32x Speedup at Test Time:** A **single Euler step** of the reflowed network achieves the exact same squared energy distance ($\approx 0.001$–$0.008$) as $32$ steps of the original model, while mean squared pair length drops about $15\times$ ($\approx 4.0 \to \approx 0.27$, well below the theoretical bound $4.00 - 2.75 = 1.25$).
 :::
 
 ::: {.slide title="Measuring Trajectory Straightness via Chord Deviation"}
@@ -2030,7 +2030,7 @@ How far do the $32$-step ODE trajectories wander from the straight line segment 
 
 @!mdl-flow-matching-transport-reflow-2
 
-- **25x Straighter Trajectories:** Original trajectories curve inward toward the origin $\mathbf{0}$ before turning out to the moons (mean chord deviation $0.25$), whereas reflowed trajectories travel along nearly straight lines (mean chord deviation $0.01$).
+- **20–35x Straighter Trajectories:** Original trajectories curve inward toward the origin $\mathbf{0}$ before turning out to the moons (mean chord deviation $0.25$), whereas reflowed trajectories travel along nearly straight lines (mean chord deviation $0.01$).
 :::
 
 ::: {.slide title="Optimal Transport, Wasserstein Distance, & Rotations"}

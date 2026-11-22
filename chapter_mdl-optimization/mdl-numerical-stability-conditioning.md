@@ -1691,7 +1691,7 @@ Numerical Stability and Conditioning<br>**IEEE floating point · max-shifted sof
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-nan-vs-silent-drift
+@fig:ch35-opt-nan-vs-silent-drift
 :::
 :::
 :::
@@ -1867,7 +1867,7 @@ $$\kappa_f(x) = \left|\frac{x\,f'(x)}{f(x)}\right|, \qquad \text{and for subtrac
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-log1p-detour
+@fig:ch35-opt-log1p-detour
 :::
 :::
 :::
@@ -1919,7 +1919,7 @@ $$d_k = x_k - m_{k-1}, \quad m_k = m_{k-1} + \frac{d_k}{k}, \quad M_k = M_{k-1} 
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-welford-vs-naive
+@fig:ch35-opt-welford-vs-naive
 :::
 :::
 :::
@@ -1990,7 +1990,7 @@ $$\frac{\|\hat{\mathbf{x}} - \mathbf{x}\|_2}{\|\hat{\mathbf{x}}\|_2} \le \kappa(
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-backward-forward-error
+@fig:ch35-opt-backward-forward-error
 :::
 :::
 :::

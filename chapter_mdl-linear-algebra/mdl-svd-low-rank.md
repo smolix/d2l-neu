@@ -1794,6 +1794,10 @@ Singular Value Decomposition and Low-Rank Approximation<br>**two orthonormal bas
 
 - **Golden-Ratio Stretches:** For $\mathbf{T} = \left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, $\mathbf{T}^\top\mathbf{T} = \left(\begin{smallmatrix}1&1\\1&2\end{smallmatrix}\right)$ has $\operatorname{tr} = 3, \det = 1$, and eigenvalues $\lambda = (3 \pm \sqrt{5})/2 = \varphi^2, \varphi^{-2}$ where $\varphi = (1+\sqrt{5})/2 \approx 1.618$, giving $\sigma_1 = \varphi \approx 1.618$ and $\sigma_2 = 1/\varphi \approx 0.618$.
 - **Input and Output Angles:** Solving $(\mathbf{T}^\top\mathbf{T} - \varphi^2\mathbf{I})\mathbf{v}_1 = \mathbf{0}$ yields $\mathbf{v}_1 \propto (1, \varphi)$ at $58.3^\circ$ and $\mathbf{u}_1 = \mathbf{T}\mathbf{v}_1/\varphi \propto (\varphi, 1)$ at $31.7^\circ$, so $\mathbf{T} = \mathbf{R}_{31.7^\circ}\operatorname{diag}(\varphi, 1/\varphi)\mathbf{R}_{58.3^\circ}^\top$:
+:::
+
+::: {.slide title="Worked Example: SVD of the Defective Shear T (cont.)"}
+[By-Hand & Numerical SVD]{.kicker}
 
 @svd-defective-shear
 :::
@@ -1918,9 +1922,15 @@ Carrying out the proof recipe on a $3 \times 2$ matrix ($\mathbf{A}^\top\mathbf{
 - **Frobenius Energy Ratio:** The fraction of total squared energy retained at rank $k$ directly determines the relative Frobenius error:
   $$\text{Energy}(k) = \frac{\sum_{i \le k} \sigma_i^2}{\sum_{i=1}^r \sigma_i^2} = 1 - \frac{\|\mathbf{A} - \mathbf{A}_k\|_F^2}{\|\mathbf{A}\|_F^2}$$
 
-@mdl-svd-low-rank-rotate-scale-rotate
-
 - **Mean Dominance & Gavish–Donoho Denoising:** On the uncentered photo, $\sigma_1^2$ holds $89\%$ of the energy simply from average brightness; under additive noise $\mathbf{A} = \mathbf{B} + \mathbf{N}$ ($\sigma_{\text{noise}}$), optimal hard thresholding discards singular values below $\tfrac{4}{\sqrt{3}}\sqrt{n}\,\sigma_{\text{noise}} \approx 2.309\sqrt{n}\,\sigma_{\text{noise}}$.
+
+@!mdl-svd-low-rank-rotate-scale-rotate
+:::
+
+::: {.slide title="Energy Ratio, Centering, and SVD Denoising (cont.)"}
+[Choosing the Rank k]{.kicker}
+
+@-mdl-svd-low-rank-rotate-scale-rotate
 :::
 
 ::: {.slide title="Principal Component Analysis via Centered SVD"}
@@ -1975,6 +1985,10 @@ On a 300-point cloud rotated by $36^\circ$ with population standard deviations $
 - **Why Small Singular Values Are Dangerous:** In $\mathbf{A}^+\mathbf{b} = \sum_{i \le r} \frac{\mathbf{u}_i^\top\mathbf{b}}{\sigma_i}\mathbf{v}_i$, dividing by a tiny $\sigma_i$ amplifies measurement noise along $\mathbf{u}_i$ by $1/\sigma_i$.
 - **Ridge vs. Truncated SVD Filter Factors:** Ridge regression $\min_{\mathbf{x}} \|\mathbf{A}\mathbf{x} - \mathbf{b}\|^2 + \lambda\|\mathbf{x}\|^2$ (weight decay) smoothly damps directions with $\sigma_i^2 \ll \lambda$ instead of cutting them off sharply:
   $$\mathbf{x}_\lambda = (\mathbf{A}^\top\mathbf{A} + \lambda\mathbf{I})^{-1}\mathbf{A}^\top\mathbf{b} = \sum_{i=1}^r \underbrace{\frac{\sigma_i^2}{\sigma_i^2 + \lambda}}_{\text{ridge filter}} \frac{\mathbf{u}_i^\top\mathbf{b}}{\sigma_i}\,\mathbf{v}_i$$
+:::
+
+::: {.slide title="Ridge Regression as a Spectral Filter (cont.)"}
+[Regularized Least Squares]{.kicker}
 
 @svd-least-squares
 :::
@@ -2035,14 +2049,18 @@ On a 300-point cloud rotated by $36^\circ$ with population standard deviations $
 ::: {.col}
 - **Polar Factor ($\mathbf{Q} = \mathbf{U}\mathbf{V}^\top$):** Closest orthogonal matrix ($\sigma_i \to 1$), used by Muon to update all active directions at unit scale.
 - **Matrix-Multiply Newton–Schulz Loop:** Iterating $\mathbf{X}_{t+1} = \tfrac{1}{2}(3\mathbf{X}_t - \mathbf{X}_t\mathbf{X}_t^\top\mathbf{X}_t)$ from $\mathbf{M}/\|\mathbf{M}\|_F$ applies $p(\sigma) = \tfrac{1}{2}(3\sigma - \sigma^3) \to 1$.
-
-@mdl-svd-low-rank-the-svd-in-modern-deep-learning-1
 :::
 
 ::: {.col .fig}
 @fig:ch33-la-muon-newton-schulz
 :::
 :::
+:::
+
+::: {.slide title="Polar Decomposition and Muon's Newton–Schulz Loop (cont.)"}
+[Orthogonalized Matrix Updates]{.kicker}
+
+@mdl-svd-low-rank-the-svd-in-modern-deep-learning-1
 :::
 
 ::: {.slide title="Spectral Normalization & Measuring Decay"}

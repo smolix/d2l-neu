@@ -1037,10 +1037,10 @@ Both explicit solvers require only a loop over $n$ steps of size $h = T/n$ and v
 ::: {.slide title="Order of Accuracy at Equal Computational Work"}
 [Benchmarking on the Spiral]{.kicker}
 
-On the planar spiral $\mathbf{A} = -\frac{1}{2}\mathbf{I} + \mathbf{K}$ ($\lambda = -0.5 \pm \mathrm{i}$, $|\lambda T|^2 = 5$ at $T = 2$), $R(z)$ predicts global errors of $1.84/n$ for Euler and $0.343/n^4$ for RK4:
-
 ::: {.cols .vc}
 ::: {.col}
+On the planar spiral $\mathbf{A} = -\frac{1}{2}\mathbf{I} + \mathbf{K}$ ($\lambda = -0.5 \pm \mathrm{i}$, $|\lambda T|^2 = 5$ at $T = 2$), $R(z)$ predicts global errors of $1.84/n$ for Euler and $0.343/n^4$ for RK4:
+
 - **Measured Log–Log Slopes:** Linear regression confirms order $1.04$ for Euler and $4.02$ for RK4.
 - **Equal Budget (512 Evaluations):** $512$ Euler steps give error $3.6 \times 10^{-3}$, whereas $128$ RK4 steps ($4 \times 128 = 512$ evaluations) reach $1.3 \times 10^{-9}$—six orders of magnitude more accurate!
 - **Euler Cost to Match RK4:** Achieving $1.3 \times 10^{-9}$ with Euler requires $n \approx 1.4 \times 10^9$ evaluations.

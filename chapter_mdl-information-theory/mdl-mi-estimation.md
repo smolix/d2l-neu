@@ -1791,7 +1791,7 @@ Sweeping true $I(X; Y) \in [0.25, 7]$ with the exact critic $T^* = \textrm{pmi}$
 :::
 :::
 
-::: {.slide title="Comparing DV, NWJ, and InfoNCE on Exact Critics"}
+::: {.slide title="Comparing DV, NWJ, and InfoNCE on Exact Critics" layout="tight"}
 [200-Batch Quartile Experiment]{.kicker}
 
 Evaluating $200$ batches of size $N = 128$ with exact critics shows DV and NWJ destabilizing once $I > 3$, while InfoNCE maintains an interquartile range under $0.1\text{ nat}$:
@@ -1803,8 +1803,16 @@ Evaluating $200$ batches of size $N = 128$ with exact critics shows DV and NWJ d
 [Separable Inner-Product Architecture]{.kicker}
 
 In practice $\textrm{pmi}(x, y)$ is unknown. Systems like SimCLR and CLIP train a **separable dual-encoder critic** $T(x, y) = g(x)^\top h(y)$ with embeddings $g, h : \mathcal{X} \to \mathbb{R}^d$, computing all $N \times N$ in-batch scores via one matrix product ($2N$ encoder passes instead of $N^2$):
+:::
+
+::: {.slide title="Training a Dual-Encoder Contrastive Critic (cont.)"}
+[Separable Inner-Product Architecture]{.kicker}
 
 @mdl-mi-estimation-training-a-critic-2
+:::
+
+::: {.slide title="Training the Dual-Encoder Critic With InfoNCE"}
+[Separable Inner-Product Architecture]{.kicker}
 
 @mutual-information-infonce-train
 :::
@@ -1816,7 +1824,7 @@ Evaluating our trained dual-encoder critic alongside the exact $\textrm{pmi}$ cr
 
 @!mdl-mi-estimation-training-a-critic-3
 
-- **Bound slack vs. temperature ceiling:** The learned critic matches the exact critic within $0.02\text{ nats}$ at every $N$, proving that the $1.41\text{ nat}$ reading at $N = 8$ ($\ln 8 = 2.08 > 1.96$) is pure smooth-minimum slack. Moreover, for cosine similarity $T(x, y) = \mathrm{sim}(z_x, z_y)/\tau \in [-1/\tau, 1/\tau]$, the score gap is at most $2/\tau$, imposing a second ceiling $\hat{I}_{\textrm{NCE}} < 2/\tau$!
+- **Bound slack vs. temperature ceiling:** The learned critic matches the exact critic within $0.02\text{ nats}$ at every $N$, proving that the $\approx 1.4\text{ nat}$ reading at $N = 8$ ($\ln 8 = 2.08 > 1.96$) is pure smooth-minimum slack. Moreover, for cosine similarity $T(x, y) = \mathrm{sim}(z_x, z_y)/\tau \in [-1/\tau, 1/\tau]$, the score gap is at most $2/\tau$, imposing a second ceiling $\hat{I}_{\textrm{NCE}} < 2/\tau$!
 :::
 
 ::: {.slide title="Practical Guidelines for MI Estimation & Learning"}

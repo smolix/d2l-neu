@@ -1730,7 +1730,7 @@ $$\theta\mathbf{x} + (1 - \theta)\mathbf{y} \in C$$
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-intersection-hull
+@fig:ch35-opt-intersection-hull
 :::
 :::
 :::
@@ -1749,7 +1749,7 @@ $$f\big(\theta\mathbf{x} + (1 - \theta)\mathbf{y}\big) \le \theta\,f(\mathbf{x})
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-epigraph-sublevel
+@fig:ch35-opt-epigraph-sublevel
 :::
 :::
 :::
@@ -1829,7 +1829,7 @@ All three tests define the exact same class of smooth functions:
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-three-tests-triangle
+@fig:ch35-opt-three-tests-triangle
 :::
 :::
 :::
@@ -1911,7 +1911,7 @@ $$f\big(\mathbb{E}[\mathbf{Z}]\big) \le \mathbb{E}\big[f(\mathbf{Z})\big]$$
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-jensen-gap-variance
+@fig:ch35-opt-jensen-gap-variance
 :::
 :::
 :::
@@ -1996,7 +1996,7 @@ Testing gradient descent with $\eta = 1/L$ on a least-squares problem with eigen
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-closure-rules
+@fig:ch35-opt-closure-rules
 :::
 :::
 :::

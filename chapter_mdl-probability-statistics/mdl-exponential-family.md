@@ -1439,7 +1439,7 @@ $$\nabla_{\mathbf{W}} \mathcal{L} = \mathbf{x}\bigl(\text{prediction} - \text{ob
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-four-regressions
+@fig:ch36-prob-four-regressions
 :::
 :::
 :::
@@ -1456,7 +1456,7 @@ $$\log P(X = x) = x\underbrace{\log\frac{p}{1 - p}}_{\eta} - \underbrace{\log(1 
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-bernoulli-logit
+@fig:ch36-prob-bernoulli-logit
 :::
 :::
 :::
@@ -1473,7 +1473,7 @@ $$p(\mathbf{x} \mid \boldsymbol{\eta}) = h(\mathbf{x})\,\exp\bigl(\boldsymbol{\e
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-exp-anatomy
+@fig:ch36-prob-exp-anatomy
 :::
 :::
 :::
@@ -1504,7 +1504,7 @@ Every row below writes $p(\mathbf{x} \mid \boldsymbol{\eta}) = h(\mathbf{x})\exp
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-outside-exp
+@fig:ch36-prob-outside-exp
 :::
 :::
 :::
@@ -1551,7 +1551,7 @@ $$D_{\mathrm{KL}}(q \| p) = \sum_{\mathbf{x}:\,q(\mathbf{x}) > 0} q(\mathbf{x})\
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-gibbs-tangent
+@fig:ch36-prob-gibbs-tangent
 :::
 :::
 :::
@@ -1584,7 +1584,7 @@ $$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \mathbb{E}\bigl[T(\mathbf{x}
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-cumulant-derivs
+@fig:ch36-prob-cumulant-derivs
 :::
 :::
 :::
@@ -1594,6 +1594,10 @@ $$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \mathbb{E}\bigl[T(\mathbf{x}
 
 - **Bernoulli ($A(\eta) = \log(1 + e^\eta)$):** $A'(\eta) = \mathrm{sigmoid}(\eta) = p$ and $A''(\eta) = \mathrm{sigmoid}(\eta)(1 - \mathrm{sigmoid}(\eta)) = p(1 - p)$.
 - **Poisson ($A(\eta) = e^\eta$ with $\eta = \log\lambda$):** Since $e^\eta$ is its own derivative, $A'(\eta) = A''(\eta) = e^\eta = \lambda$, explaining in one line why the Poisson mean equals its variance!
+:::
+
+::: {.slide title="Computing Moments via Automatic Differentiation (cont.)"}
+[Analytical & Autograd Verification]{.kicker}
 
 @distributions-exp-family
 :::
@@ -1626,7 +1630,7 @@ $$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \mathbb{E}\bigl[T(\mathbf{x}
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-boundary-minimal
+@fig:ch36-prob-boundary-minimal
 :::
 :::
 :::
@@ -1643,7 +1647,7 @@ $$\nabla_{\mathbf{W}}\bigl(-\log p(y \mid \mathbf{x})\bigr) = \mathbf{x}\,\bigl(
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-glm-head
+@fig:ch36-prob-glm-head
 :::
 :::
 :::
@@ -1662,19 +1666,17 @@ Suppose a decision maker picks the class with the highest noise-perturbed score 
 ::: {.slide title="The Gumbel-Max Trick and Temperature Scaling"}
 [Three Converging Views of Softmax]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 - **1. Gumbel-Max sampler:** Since $\operatorname{argmax}_k(z_k + T\epsilon_k) = \operatorname{argmax}_k(z_k/T + \epsilon_k)$, adding Gumbel noise of scale $T > 0$ and taking the argmax draws exact samples from $\mathrm{softmax}(\mathbf{z}/T)$.
 - **2. Statistical physics (Boltzmann law):** At temperature $T$ with state energy $E_k = -z_k$, thermal equilibrium assigns $p_k \propto e^{-E_k/T} = e^{z_k/T}$ (also the MaxEnt distribution at fixed expected logit $\sum_k p_k z_k$).
 - **3. Probit vs. logit tails:** While $|\mathrm{sigmoid}(1.7x) - \Phi(x)| < 0.01$, on a mislabeled outlier ($m \gg 0$) logit loss grows linearly ($\sim m$) while probit loss grows quadratically ($\sim m^2/4s^2$).
 :::
 
-::: {.col}
+::: {.slide title="The Gumbel-Max Trick and Temperature Scaling (cont.)"}
+[Three Converging Views of Softmax]{.kicker}
+
 Verifying the Gumbel-max sampler on $\mathbf{z} = (2, 1, 0.1, -1)$ across $10^5$ trials at $T = 1$ and $T = 2$:
 
 @mdl-exponential-family-noisy-choices-and-gumbel-noise
-:::
-:::
 :::
 
 ::: {.slide title="Bayesian Updating and the Beta Conjugate Prior"}
@@ -1689,7 +1691,7 @@ $$\mathrm{Beta}(\theta \mid a, b) \cdot \theta^x(1-\theta)^{n-x} \propto \mathrm
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-conjugate-add
+@fig:ch36-prob-conjugate-add
 :::
 :::
 :::

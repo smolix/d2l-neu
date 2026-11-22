@@ -2,6 +2,7 @@
 // Rendered and audited by tools/build_module_diagrams.mjs with 0 visual defects.
 
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { textWidth } from './mdl-textwidth.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -18,33 +19,99 @@ const circle = (cx, cy, r, fill, stroke, sw = 2, dash = false) =>
 const path = (d, stroke, fill = 'none', sw = 2.5, dash = false) =>
   `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 
-function fitTx(x, y, t, maxW, o = {}) {
-  const str = String(t);
-  const charW = o.mono ? 0.68 : 0.60;
-  const len = Math.max(1, str.length);
-  const capFs = Math.floor(((maxW - 22) / (len * charW)) * 10) / 10;
-  const fs = Math.max(7.0, Math.min(o.fs || 14.5, capFs));
-  return tx(x, y, str, { ...o, fs });
+// Text that does not fit is shrunk, but never below MIN_FS. A mono string
+// still too wide at MIN_FS is set in the (narrower) sans face instead; a
+// string still too wide after that is wrapped onto two lines at the space
+// nearest its middle. Widths come from the real font metrics
+// (mdl-textwidth.mjs).
+const MIN_FS = 11;
+export const _fitLog = [];
+function split2(s) {
+  const mid = s.length / 2;
+  let best = -1;
+  for (let i = 1; i < s.length - 1; i++) {
+    if (s[i] === ' ' && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
+  }
+  return best < 0 ? null : [s.slice(0, best).trimEnd(), s.slice(best + 1).trimStart()];
 }
 
-function card(x, y, w, h, fill, stroke, lines, opts = {}) {
-  let o = rect(x, y, w, h, fill, stroke, opts.rx || 8, opts.sw || 2, opts.dash || false);
-  const cx = x + w / 2;
-  const n = lines.length;
-  const spacing = opts.spacing || (n <= 1 ? 0 : Math.min(22, (h - 24) / (n - 1)));
-  const startY = y + h / 2 - ((n - 1) * spacing) / 2;
-  lines.forEach((ln, i) => {
-    const item = typeof ln === 'string' ? { t: ln } : ln;
-    o += fitTx(cx, startY + i * spacing, item.t, w, {
-      fs: item.fs || (i === 0 ? 15 : 13.5),
-      fw: item.fw || (i === 0 ? 700 : 500),
-      mono: item.mono || false,
-      fill: item.fill || (i === 0 ? C.ink : C.muted),
+// { lines: [one or two strings], fs, mono } for text t in a box of width maxW.
+function fitLines(t, maxW, o = {}) {
+  const str = String(t);
+  const avail = maxW - 22;
+  const base = o.fs || 14.5;
+  const bold = (o.fw || 500) >= 600;
+  const fit1 = (mono) => {
+    const w = textWidth(str, base, mono, bold);
+    return w <= avail ? base : Math.floor((base * avail / w) * 10) / 10;
+  };
+  let mono = !!o.mono;
+  let fs = fit1(mono);
+  if (fs < MIN_FS && mono) { mono = false; fs = fit1(false); }
+  if (fs >= MIN_FS) return { lines: [str], fs, mono };
+  const parts = split2(str);
+  if (!parts) {
+    _fitLog.push(['over', str, MIN_FS]);
+    return { lines: [str], fs: MIN_FS, mono };
+  }
+  const w2 = Math.max(...parts.map(p => textWidth(p, base, mono, bold)));
+  fs = Math.max(MIN_FS, Math.min(base, Math.floor((base * avail / w2) * 10) / 10));
+  _fitLog.push(['wrap', str, fs, w2 * fs / base > avail]);
+  return { lines: parts, fs, mono };
+}
+
+// Centred text fitted to width maxW (one line, or two around y).
+function fitTx(x, y, t, maxW, o = {}) {
+  const { lines, fs, mono } = fitLines(t, maxW, o);
+  if (lines.length === 1) return tx(x, y, lines[0], { ...o, fs, mono });
+  const dy = 0.6 * fs;
+  return tx(x, y - dy, lines[0], { ...o, fs, mono }) + tx(x, y + dy, lines[1], { ...o, fs, mono });
+}
+
+// Stack fitted items: a wrapped item adds 1.2 fs of height between its two
+// lines; sp separates items. Returns the markup.
+function stackLines(cx, cy, items, maxW, sp) {
+  const fitted = items.map(it => ({ it, ...fitLines(it.t, maxW, it) }));
+  const extra = fitted.map(f => (f.lines.length > 1 ? 1.2 * f.fs : 0));
+  const total = (fitted.length - 1) * sp + extra.reduce((a, b) => a + b, 0);
+  let y = cy - total / 2;
+  let o = '';
+  fitted.forEach((f, i) => {
+    f.lines.forEach((ln, j) => {
+      o += tx(cx, y + j * 1.2 * f.fs, ln, { ...f.it, fs: f.fs, mono: f.mono });
     });
+    y += extra[i] + sp;
   });
   return o;
 }
 
+function wrapExtra(items, maxW) {
+  return items.reduce((a, it) => {
+    const f = fitLines(it.t, maxW, it);
+    return a + (f.lines.length > 1 ? 1.2 * f.fs : 0);
+  }, 0);
+}
+
+// High-level clean card with lines of text guaranteed inside borders
+function card(x, y, w, h, fill, stroke, lines, opts = {}) {
+  let o = rect(x, y, w, h, fill, stroke, opts.rx || 8, opts.sw || 2, opts.dash || false);
+  const n = lines.length;
+  const items = lines.map((ln, i) => {
+    const item = typeof ln === 'string' ? { t: ln } : ln;
+    return {
+      t: item.t,
+      fs: item.fs || (i === 0 ? 15 : 13.5),
+      fw: item.fw || (i === 0 ? 700 : 500),
+      mono: item.mono || false,
+      fill: item.fill || (i === 0 ? C.ink : C.muted),
+    };
+  });
+  const ex = wrapExtra(items, w);
+  const spacing = opts.spacing || (n <= 1 ? 0 : Math.min(22, (h - 24 - ex) / (n - 1)));
+  return o + stackLines(x + w / 2, y + h / 2, items, w, spacing);
+}
+
+// Header bar + body card
 function titledPanel(x, y, w, h, title, accent, bodyLines, opts = {}) {
   let o = rect(x, y, w, h, opts.fill || '#FFFFFF', accent.base, 10, 2);
   o += rect(x + 6, y + 6, w - 12, 30, accent.tint, 'none', 6, 0);
@@ -52,18 +119,19 @@ function titledPanel(x, y, w, h, title, accent, bodyLines, opts = {}) {
   const bodyTop = y + 40;
   const bodyH = h - 44;
   const n = bodyLines.length;
-  const sp = opts.spacing || (n <= 1 ? 0 : Math.min(22, (bodyH - 20) / (n - 1)));
-  const sy = bodyTop + bodyH / 2 - ((n - 1) * sp) / 2;
-  bodyLines.forEach((ln, i) => {
+  const items = bodyLines.map(ln => {
     const item = typeof ln === 'string' ? { t: ln } : ln;
-    o += fitTx(x + w / 2, sy + i * sp, item.t, w, {
+    return {
+      t: item.t,
       fs: item.fs || 13.5,
       fw: item.fw || 600,
       mono: item.mono || false,
       fill: item.fill || C.ink,
-    });
+    };
   });
-  return o;
+  const ex = wrapExtra(items, w);
+  const sp = opts.spacing || (n <= 1 ? 0 : Math.min(22, (bodyH - 20 - ex) / (n - 1)));
+  return o + stackLines(x + w / 2, bodyTop + bodyH / 2, items, w, sp);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -268,8 +336,8 @@ function entropyChainRule() {
   ]);
 
   o += card(20, 206, 500, 62, C.lamber, C.amber, [
-    { t: 'Autoregressive Sequence Chain Rule:  H(X₁, …, Xₙ) = ∑_{i=1}^n H(Xᵢ | X₁, …, Xᵢ₋₁)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
-    { t: 'Total Dyadic Uncertainty: H₂(X, Y) = 1.00 + 0.75 = 1.75 bits = H₂(½, ¼, ⅛, ⅛)', mono: true, fs: 13, fill: C.ink },
+    { t: 'Sequence Chain Rule: H(X₁, …, Xₙ) = ∑_{i=1}^n H(Xᵢ | X₁, …, Xᵢ₋₁)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
+    { t: 'Total: H₂(X, Y) = 1.00 + 0.75 = 1.75 bits = H₂(½, ¼, ⅛, ⅛)', mono: true, fs: 13, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -382,7 +450,7 @@ function kraftDyadicIntervals() {
   const W = 540, H = 282;
   let o = '';
   o += card(20, 12, 500, 42, C.lblue, C.blue, [
-    { t: 'Kraft’s Inequality via Disjoint Dyadic Subintervals of [0, 1):   ∑_{i=1}^k 2⁻ℓᵢ ≤ 1', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
+    { t: 'Kraft’s Inequality via Dyadic Intervals: ∑_{i=1}^k 2⁻ℓᵢ ≤ 1', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
   ]);
 
   // Unit interval bar [0, 1) split into 1/2, 1/4, 1/8, 1/8
@@ -412,8 +480,8 @@ function kraftDyadicIntervals() {
 
   o += titledPanel(280, 152, 240, 116, 'Sufficiency (≤ 1 ⇒ Construct)', D.green, [
     { t: 'Sort ℓ₁ ≤ ⋯ ≤ ℓₖ & pack left-to-right', fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: 'Start sᵢ = ∑_{m<i} 2⁻ℓₘ is a multiple', mono: true, fs: 12, fill: C.ink },
-    { t: 'of 2⁻ℓᵢ ⇒ valid dyadic codeword', fs: 12.5, fill: C.ink },
+    { t: 'Start sᵢ = ∑_{m<i} 2⁻ℓₘ', mono: true, fs: 12.5, fill: C.ink },
+    { t: 'is a multiple of 2⁻ℓᵢ ⇒ valid codeword', fs: 12.5, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -422,7 +490,7 @@ function entropyWasteSplit() {
   const W = 540, H = 280;
   let o = '';
   o += card(20, 12, 500, 44, D.purple.tint, C.purple, [
-    { t: 'Exact Prefix-Code Length Decomposition (Z = ∑ 2⁻ℓᵢ ≤ 1,  qᵢ = 2⁻ℓᵢ / Z)', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
+    { t: 'Prefix-Code Length Decomposition (Z = ∑ 2⁻ℓᵢ ≤ 1, qᵢ = 2⁻ℓᵢ/Z)', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
   ]);
 
   o += card(20, 70, 156, 126, C.lblue, C.blue, [
@@ -549,9 +617,9 @@ function mdlTwoPartCode() {
   ]);
 
   o += titledPanel(280, 70, 240, 134, 'Data Cost L(D | M): Log-Loss', D.green, [
-    { t: 'Fair Coin M₀: 0 + 1000 = 1000 bits', mono: true, fs: 12.5, fill: C.ink },
-    { t: '• 600 heads: 5 + 971 = 976 bits (M₁✓)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
-    { t: '• 520 heads: 5 + 998.8 = 1003.8 (M₀✓)', mono: true, fs: 12, fw: 700, fill: D.red.dark },
+    { t: 'Fair Coin M₀: 0 + 1000 = 1000 bits', fs: 12.5, fill: C.ink },
+    { t: '• 600 heads: 5 + 971 = 976 bits (M₁✓)', fs: 12, fw: 700, fill: D.green.dark },
+    { t: '• 520 heads: 5 + 998.8 = 1003.8 (M₀✓)', fs: 12, fw: 700, fill: D.red.dark },
     { t: 'Automatic Occam’s Razor!', fs: 13, fw: 700, fill: D.green.dark },
   ]);
 
@@ -629,10 +697,10 @@ function disjointPointMasses() {
   ]);
 
   o += titledPanel(20, 66, 240, 146, 'f-Divergences (Density Ratio p/q)', D.red, [
-    { t: 'D_f(δ₀ ‖ δ_d) = f(0) + f\'(∞)', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
-    { t: '• KL(P ‖ Q) = ∞  (undefined slope)', mono: true, fs: 12, fill: C.ink },
-    { t: '• JS(P, Q) = log 2 ≈ 0.693  (∂_d = 0)', mono: true, fs: 12, fill: C.ink },
-    { t: '• TV(P, Q) = 1.000  (∂_d = 0)', mono: true, fs: 12, fill: C.ink },
+    { t: 'D_f(δ₀ ‖ δ_d) = f(0) + f\'(∞)', fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: '• KL(P ‖ Q) = ∞  (undefined slope)', fs: 12, fill: C.ink },
+    { t: '• JS(P, Q) = log 2 ≈ 0.693  (∂_d = 0)', fs: 12, fill: C.ink },
+    { t: '• TV(P, Q) = 1.000  (∂_d = 0)', fs: 12, fill: C.ink },
   ]);
 
   o += titledPanel(280, 66, 240, 146, 'Geometry-Aware Metrics', D.green, [
@@ -652,17 +720,17 @@ function divergenceVsMetric() {
   const W = 540, H = 282;
   let o = '';
   o += titledPanel(20, 14, 240, 188, 'General Divergence D(P, Q)', D.blue, [
-    { t: '1. Non-negativity: D(P, Q) ≥ 0', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
-    { t: '2. Positivity: D(P, Q) = 0 ⇔ P = Q', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: '1. Non-negativity: D(P, Q) ≥ 0', fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: '2. Positivity: D(P, Q) = 0 ⇔ P = Q', fs: 12.5, fw: 700, fill: D.blue.dark },
     { t: 'KL fails symmetry:', fs: 13, fw: 700, fill: D.red.dark },
-    { t: 'KL(N(0,1)‖N(0,4)) = 0.318 ≠ 0.807', mono: true, fs: 11.5, fill: C.ink },
-    { t: 'KL fails triangle: 2 > ½ + ½', mono: true, fs: 12, fill: D.red.dark },
+    { t: 'KL(N(0,1)‖N(0,4)) = 0.318 ≠ 0.807', fs: 11.5, fill: C.ink },
+    { t: 'KL fails triangle: 2 > ½ + ½', fs: 12, fill: D.red.dark },
   ]);
 
   o += titledPanel(280, 14, 240, 188, 'True Probability Metric d(P, Q)', D.green, [
     { t: '1 & 2. Divergence axioms hold', fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: '3. Symmetry: d(P, Q) = d(Q, P)', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: '4. Triangle: d(P,R) ≤ d(P,Q)+d(Q,R)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: '3. Symmetry: d(P, Q) = d(Q, P)', fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: '4. Triangle: d(P,R) ≤ d(P,Q)+d(Q,R)', fs: 12, fw: 700, fill: D.green.dark },
     { t: 'Examples: TV, Hellinger d_H, √JS,', fs: 12.5, fill: C.ink },
     { t: 'RBF-MMD, Wasserstein W₁ & W₂', fs: 12.5, fill: C.ink },
   ]);
@@ -990,7 +1058,7 @@ function mmdKernelExpansion() {
 
   o += card(20, 72, 148, 118, C.lblue, C.blue, [
     { t: 'Within-P Similarity', fs: 13.5, fw: 700, fill: D.blue.dark },
-    { t: '+ E_{x,x\'~P}[k(x,x\')]', mono: true, fs: 12.5, fw: 700, fill: C.ink },
+    { t: '+ E_{x,x\'~P}[k(x,x\')]', fs: 12.5, fw: 700, fill: C.ink },
     { t: 'Average kernel on', fs: 12.5, fill: C.muted },
     { t: 'pairs from P', fs: 12.5, fill: C.muted },
   ]);
@@ -999,7 +1067,7 @@ function mmdKernelExpansion() {
 
   o += card(192, 72, 148, 118, C.lgreen, C.green, [
     { t: 'Within-Q Similarity', fs: 13.5, fw: 700, fill: D.green.dark },
-    { t: '+ E_{y,y\'~Q}[k(y,y\')]', mono: true, fs: 12.5, fw: 700, fill: C.ink },
+    { t: '+ E_{y,y\'~Q}[k(y,y\')]', fs: 12.5, fw: 700, fill: C.ink },
     { t: 'Average kernel on', fs: 12.5, fill: C.muted },
     { t: 'pairs from Q', fs: 12.5, fill: C.muted },
   ]);
@@ -1008,7 +1076,7 @@ function mmdKernelExpansion() {
 
   o += card(368, 72, 152, 118, D.red.tint, D.red.base, [
     { t: 'Cross Similarity', fs: 13.5, fw: 700, fill: D.red.dark },
-    { t: '2 E_{x~P,y~Q}[k(x,y)]', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: '2 E_{x~P,y~Q}[k(x,y)]', fs: 12.5, fw: 700, fill: D.red.dark },
     { t: 'Cancels within-group', fs: 12, fill: C.ink },
     { t: 'terms iff P = Q', fs: 12.5, fill: C.ink },
   ]);
@@ -1184,23 +1252,23 @@ function fisherModeBlindness() {
   ]);
 
   o += titledPanel(20, 68, 156, 138, 'Left Mode (x ≈ −5)', D.blue, [
-    { t: 'r₁(x) ≈ 1 for both w', mono: true, fs: 12.5, fill: C.ink },
-    { t: 's_{0.7}(x) ≈ −(x + 5)', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
-    { t: 's_{0.3}(x) ≈ −(x + 5)', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: 'r₁(x) ≈ 1 for both w', fs: 12.5, fill: C.ink },
+    { t: 's_{0.7}(x) ≈ −(x + 5)', fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: 's_{0.3}(x) ≈ −(x + 5)', fs: 12.5, fw: 700, fill: D.blue.dark },
     { t: 'Scores identical!', fs: 13, fw: 700, fill: D.red.dark },
   ]);
 
   o += titledPanel(192, 68, 156, 138, 'Valley (x ≈ 0)', D.red, [
     { t: 'Zero crossing shifts', fs: 12.5, fill: C.ink },
-    { t: 'to x = c_w/m = ±0.085', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
-    { t: 'But p(0) ~ e^{−m²/2}', mono: true, fs: 12.5, fill: C.ink },
-    { t: '≈ 1.5 × 10⁻⁶ (Empty!)', mono: true, fs: 12, fw: 700, fill: D.red.dark },
+    { t: 'to x = c_w/m = ±0.085', fs: 11.5, fw: 700, fill: D.red.dark },
+    { t: 'But p(0) ~ e^{−m²/2}', fs: 12.5, fill: C.ink },
+    { t: '≈ 1.5 × 10⁻⁶ (Empty!)', fs: 12, fw: 700, fill: D.red.dark },
   ]);
 
   o += titledPanel(364, 68, 156, 138, 'Right Mode (x ≈ +5)', D.blue, [
-    { t: 'r₂(x) ≈ 1 for both w', mono: true, fs: 12.5, fill: C.ink },
-    { t: 's_{0.7}(x) ≈ −(x − 5)', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
-    { t: 's_{0.3}(x) ≈ −(x − 5)', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: 'r₂(x) ≈ 1 for both w', fs: 12.5, fill: C.ink },
+    { t: 's_{0.7}(x) ≈ −(x − 5)', fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: 's_{0.3}(x) ≈ −(x − 5)', fs: 12.5, fw: 700, fill: D.blue.dark },
     { t: 'Scores identical!', fs: 13, fw: 700, fill: D.red.dark },
   ]);
 
@@ -1358,7 +1426,7 @@ function masterLossGuide() {
   o += card(20, 172, 156, 106, D.teal.tint, D.teal.base, [
     { t: '4. Kernel MMD / KID', fs: 13.5, fw: 700, fill: D.teal.dark },
     { t: 'Needs: Samples + k', fs: 12, fill: C.ink },
-    { t: 'δ₀ vs δ_d: √(2−2e⁻ᵈ²)', mono: true, fs: 11, fill: C.ink },
+    { t: 'δ₀ vs δ_d: √(2−2e⁻ᵈ²), 2ℓ² = 1', mono: true, fs: 11, fill: C.ink },
     { t: 'O(N⁻¹/²) in any dim', fs: 12, fill: D.teal.dark },
   ]);
 
@@ -1483,8 +1551,8 @@ function ibRateDistortion() {
 
   o += card(192, 70, 156, 126, C.lgreen, C.green, [
     { t: 'KL Distortion d_IB', fs: 14, fw: 700, fill: D.green.dark },
-    { t: 'I(X;Y) − I(Y;Z) =', mono: true, fs: 12.5, fw: 700, fill: C.ink },
-    { t: 'E[D_KL(p(y|x)‖p(y|z))]', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
+    { t: 'I(X;Y) − I(Y;Z) =', fs: 13, fw: 700, fill: C.ink },
+    { t: 'E[D_KL(p(y|x)‖p(y|z))]', fs: 12.5, fw: 700, fill: D.green.dark },
     { t: 'Exact RD problem!', fs: 12.5, fill: D.green.dark },
   ]);
 
@@ -1607,7 +1675,7 @@ function dvNwjTilting() {
 
   o += titledPanel(280, 70, 240, 136, 'NWJ Linearization (log Z ≤ Z / e)', D.purple, [
     { t: 'Tangent bound at Z = e gives:', fs: 12.5, fill: C.ink },
-    { t: ' −log Z ≥ 1 − Z/e  (drops log!)', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: '−log Z ≥ −Z/e  (drops log!)', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
     { t: 'Bound: E_P[T] − e⁻¹ E_Q[e^T]', mono: true, fs: 12.5, fw: 700, fill: C.ink },
     { t: 'Tight at Z = e  ⇔  T* = 1 + pmi', mono: true, fs: 12, fill: D.green.dark },
   ]);

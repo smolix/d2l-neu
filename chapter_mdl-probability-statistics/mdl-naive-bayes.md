@@ -1235,7 +1235,7 @@ $$\hat{y} = \mathop{\mathrm{argmax}}_{y \in \{1,\dots,K\}} p(y \mid \mathbf{x}) 
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-gen-vs-disc-route
+@fig:ch36-prob-gen-vs-disc-route
 :::
 :::
 :::
@@ -1269,7 +1269,7 @@ $$\frac{p(\text{spam} \mid \mathbf{x})}{p(\text{ordinary} \mid \mathbf{x})} = \f
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-spam-odds
+@fig:ch36-prob-spam-odds
 :::
 :::
 :::
@@ -1441,7 +1441,7 @@ $$\log\frac{p_{\mathrm{NB}}(y=1 \mid \mathbf{x})}{p_{\mathrm{NB}}(y=0 \mid \math
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-dup-evidence
+@fig:ch36-prob-dup-evidence
 :::
 :::
 :::
@@ -1469,7 +1469,7 @@ $$p(\mathbf{x}_{\mathcal{V}} \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \m
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-missing-pixels
+@fig:ch36-prob-missing-pixels
 :::
 :::
 :::
@@ -1484,7 +1484,7 @@ $$p(\mathbf{x}_{\mathcal{V}} \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \m
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-ng-jordan-crossover
+@fig:ch36-prob-ng-jordan-crossover
 :::
 :::
 :::

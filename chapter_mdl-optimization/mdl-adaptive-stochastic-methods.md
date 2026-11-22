@@ -1384,7 +1384,7 @@ On a diagonal bowl $f(\mathbf{x}) = \tfrac12\sum_i h_i x_i^2$, each coordinate u
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-diagonal-precond-proxy
+@fig:ch35-opt-diagonal-precond-proxy
 :::
 :::
 :::
@@ -1403,7 +1403,7 @@ $$\mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t \odot \mathbf{g}_t, \qquad \mat
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-adagrad-rare-frequent
+@fig:ch35-opt-adagrad-rare-frequent
 :::
 :::
 :::
@@ -1433,7 +1433,7 @@ $$\mathbf{v}_t = \beta_2\,\mathbf{v}_{t-1} + (1 - \beta_2)\,\mathbf{g}_t^2, \qqu
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-rmsprop-ema-window
+@fig:ch35-opt-rmsprop-ema-window
 :::
 :::
 :::
@@ -1452,7 +1452,7 @@ $$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1 - \beta_1^t}, \quad \hat{\mathbf{v}
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-adam-dual-moment-flow
+@fig:ch35-opt-adam-dual-moment-flow
 :::
 :::
 :::
@@ -1489,7 +1489,7 @@ $$\frac{\hat{\tilde{m}}_{t,i}}{\sqrt{\hat{\tilde{v}}_{t,i}}} = \frac{c_i\,\hat{m
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-adam-scale-invariance
+@fig:ch35-opt-adam-scale-invariance
 :::
 :::
 :::
@@ -1526,7 +1526,7 @@ We compare optimally tuned GD and Heavy Ball (given the exact eigenvalues $\mu =
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-rotated-valley-failure
+@fig:ch35-opt-rotated-valley-failure
 :::
 :::
 :::
@@ -1553,7 +1553,7 @@ On $x \in [-1, 1]$, consider the 3-periodic convex losses $(+4x, -x, -x)$ with a
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-reddi-cycle-drift
+@fig:ch35-opt-reddi-cycle-drift
 :::
 :::
 :::
@@ -1605,7 +1605,7 @@ $$\lambda\,w_i\big(|g_i| + \epsilon\big) = -g_i \implies |w_i| = \frac{|g_i|}{\l
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-adamw-linf-box
+@fig:ch35-opt-adamw-linf-box
 :::
 :::
 :::
@@ -1628,6 +1628,10 @@ $$\mathbf{x}_2 = \mathbf{x}_1 - \eta\,\frac{\mathbf{g}_1}{|\mathbf{g}_1| + \epsi
 Tracking the RMS update (in units of $\eta$) across $20{,}000$ independent noise coordinates separates the role of the momentum window, bias correction, and linear warmup:
 
 @!mdl-adaptive-stochastic-methods-warmup
+:::
+
+::: {.slide title="Decomposing Early Instability: Momentum vs. Bias (cont.)"}
+[Warmup Dynamics]{.kicker}
 
 - Replacing $\hat{\mathbf{v}}_t$ with the exact variance $\sigma^2 = 1$ leaves the $1.00 \to 0.23$ curve unchanged: early step inflation on noisy coordinates comes from the $10$-step momentum window (tamed by a $20$-step warmup), whereas longer warmups in deep nets guard against high initial Hessian sharpness $\lambda_{\max}$.
 :::
@@ -1666,7 +1670,7 @@ $$\big(\mathbf{G}\mathbf{G}^\top\big)^{-1/4}\,\mathbf{G}\,\big(\mathbf{G}^\top\m
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-preconditioning-ladder
+@fig:ch35-opt-preconditioning-ladder
 :::
 :::
 :::

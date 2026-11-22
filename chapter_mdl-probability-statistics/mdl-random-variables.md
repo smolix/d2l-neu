@@ -952,7 +952,7 @@ Random Variables: Densities, Cumulative Distributions, Moments, and Tail Bounds<
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-dart-bins
+@fig:ch36-prob-dart-bins
 :::
 :::
 :::
@@ -970,7 +970,7 @@ $$p(x) = \lim_{\epsilon \downarrow 0} \frac{P(x \le X < x + \epsilon)}{\epsilon}
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-dart-density
+@fig:ch36-prob-dart-density
 :::
 :::
 :::
@@ -1017,7 +1017,7 @@ To throw darts uniformly on the unit disk without formulas, we sample uniformly 
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-mixed-relu
+@fig:ch36-prob-mixed-relu
 :::
 :::
 :::
@@ -1034,7 +1034,7 @@ $$F(x) = P(X \le x) = \int_{-\infty}^x p(t)\,dt$$
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-cdf-types
+@fig:ch36-prob-cdf-types
 :::
 :::
 :::
@@ -1099,7 +1099,7 @@ $$\mu_X = \mathbb{E}[X] = \int_{-\infty}^{\infty} x\,p(x)\,dx, \qquad \mathbb{E}
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-mean-lotus
+@fig:ch36-prob-mean-lotus
 :::
 :::
 :::
@@ -1137,7 +1137,7 @@ $$\sigma_X^2 = \mathrm{Var}(X) = \mathbb{E}\bigl[(X - \mu_X)^2\bigr] = \mathbb{E
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-var-affine
+@fig:ch36-prob-var-affine
 :::
 :::
 :::
@@ -1154,7 +1154,7 @@ $$P(X \ge t) \le \frac{\mathbb{E}[X]}{t} \quad \text{for } X \ge 0,\ t > 0$$
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-markov-step
+@fig:ch36-prob-markov-step
 :::
 :::
 :::
@@ -1205,7 +1205,7 @@ $$p(x) = \frac{1}{\pi(1 + x^2)}, \qquad x \in \mathbb{R}$$
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-cauchy-tail
+@fig:ch36-prob-cauchy-tail
 :::
 :::
 :::

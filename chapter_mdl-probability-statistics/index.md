@@ -109,7 +109,7 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-coin-thread
+@fig:ch36-prob-coin-thread
 :::
 :::
 :::
@@ -126,7 +126,7 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-four-pillars
+@fig:ch36-prob-four-pillars
 :::
 :::
 :::
@@ -142,7 +142,7 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-roadmap-p1
+@fig:ch36-prob-roadmap-p1
 :::
 :::
 :::
@@ -158,7 +158,7 @@ Probability and Statistical Learning: Foundations of Inference Under Uncertainty
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-roadmap-p2
+@fig:ch36-prob-roadmap-p2
 :::
 :::
 :::

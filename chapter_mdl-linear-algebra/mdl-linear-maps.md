@@ -1479,10 +1479,16 @@ Matrices as Linear Maps<br>**column geometry · composition & einsum · rank–n
 ::: {.slide title="Six Geometric Actions on the Unit Square"}
 [Linear Map Gallery]{.kicker}
 
-![](../img/mdl-la-map-gallery.svg){.nostretch width=74%}
-
+::: {.cols .vc}
+::: {.col}
 - **Full-Rank vs. Rank-Deficient Maps:** Scaling, rotation $\mathbf{R}_{90} = \left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$, shear $\mathbf{T} = \left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, and reflection map the unit square to a 2D parallelogram, whereas projection (e) and dependent columns (f) squash the entire plane onto a 1D line.
 - **Affine Layers ($\mathbf{W}\mathbf{x} + \mathbf{b}$):** A nonzero bias translation moves the origin ($\mathbf{0} \mapsto \mathbf{b}$), making an affine layer a linear map followed by a shift.
+:::
+
+::: {.col .fig}
+![](../img/mdl-la-map-gallery.svg){width=100%}
+:::
+:::
 :::
 
 ::: {.slide title="Matrix Multiplication Is Map Composition"}

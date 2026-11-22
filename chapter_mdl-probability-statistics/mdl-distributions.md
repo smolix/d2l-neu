@@ -1513,7 +1513,7 @@ Common Probability Distributions: From a Single Coin Flip to the Multivariate Ga
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-loss-dist-map
+@fig:ch36-prob-loss-dist-map
 :::
 :::
 :::
@@ -1567,7 +1567,7 @@ $$P(X = x) = p^x(1 - p)^{1 - x}, \qquad x \in \{0, 1\}$$
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-bernoulli-var
+@fig:ch36-prob-bernoulli-var
 :::
 :::
 :::
@@ -1584,7 +1584,7 @@ $$P(X = k) = \binom{n}{k} p^k (1 - p)^{n - k}, \qquad k \in \{0, 1, \dots, n\}$$
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-binomial-grid
+@fig:ch36-prob-binomial-grid
 :::
 :::
 :::
@@ -1597,6 +1597,10 @@ Evaluating $n!$ overflows 64-bit floats for $n > 170$. Taking the ratio of conse
 $$\frac{P(X = k + 1)}{P(X = k)} = \frac{n - k}{k + 1}\cdot\frac{p}{1 - p}, \qquad P(X = 0) = (1 - p)^n$$
 
 - **Combinatorial meaning & peak:** From $k$ heads, any of $n - k$ tails can flip to a head in $k + 1$ equivalent ways; the ratio exceeds $1$ iff $k + 1 < (n + 1)p$, proving the binomial rises to a single peak near $np$.
+:::
+
+::: {.slide title="Factorial-Free Binomial Evaluation via Ratios (cont.)"}
+[Numerical Stability & Unimodality]{.kicker}
 
 @distributions-binomial
 :::
@@ -1613,7 +1617,7 @@ $$P(X = k) = \lim_{n \to \infty} \binom{n}{k}\left(\frac{\lambda}{n}\right)^k\le
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-poisson-slicing
+@fig:ch36-prob-poisson-slicing
 :::
 :::
 :::
@@ -1700,7 +1704,7 @@ $$p(x) = \frac{1}{b - a} \mathbf{1}_{x \in [a, b]}, \qquad \mathbb{E}[X] = \frac
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-uniform-center
+@fig:ch36-prob-uniform-center
 :::
 :::
 :::

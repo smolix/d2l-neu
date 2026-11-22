@@ -1593,7 +1593,7 @@ Suppose an iterative solver for $\min_{\|\mathbf{x}\|_2 \le 1}\tfrac12\|\mathbf{
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-dual-lower-bound-cert
+@fig:ch35-opt-dual-lower-bound-cert
 :::
 :::
 :::
@@ -1646,7 +1646,7 @@ $$q(\boldsymbol{\lambda}, \boldsymbol{\nu}) = \inf_{\mathbf{x} \in \mathcal{D}}\
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-concave-infimum-envelope
+@fig:ch35-opt-concave-infimum-envelope
 :::
 :::
 :::
@@ -1673,7 +1673,7 @@ $$d^\star = \sup_{\boldsymbol{\lambda} \succeq \mathbf{0},\, \boldsymbol{\nu}} q
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-slater-interior-point
+@fig:ch35-opt-slater-interior-point
 :::
 :::
 :::
@@ -1711,7 +1711,7 @@ $$d^\star = \sup_{\boldsymbol{\lambda} \succeq \mathbf{0}, \boldsymbol{\nu}}\inf
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-saddle-minmax-game
+@fig:ch35-opt-saddle-minmax-game
 :::
 :::
 :::
@@ -1726,7 +1726,7 @@ $$d^\star = \sup_{\boldsymbol{\lambda} \succeq \mathbf{0}, \boldsymbol{\nu}}\inf
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-bilinear-gda-spiral
+@fig:ch35-opt-bilinear-gda-spiral
 :::
 :::
 :::
@@ -1758,7 +1758,7 @@ $$\min_{\mathbf{w}}\;\ell(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}\|_2^2 \;\L
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-weight-decay-norm-ball
+@fig:ch35-opt-weight-decay-norm-ball
 :::
 :::
 :::
@@ -1805,7 +1805,7 @@ $$f^*(\mathbf{y}) = \sup_{\mathbf{x} \in \mathcal{D}}\big(\mathbf{y}^\top\mathbf
 :::
 
 ::: {.col .fig .big}
-@fig:ch36-opt-fenchel-conjugate-pairs
+@fig:ch35-opt-fenchel-conjugate-pairs
 :::
 :::
 :::
@@ -1836,7 +1836,7 @@ $$\mathrm{lse}^*(\mathbf{p}) = \sum_{i=1}^n p_i\log p_i = -H(\mathbf{p}) \quad (
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-lse-entropy-duality
+@fig:ch35-opt-lse-entropy-duality
 :::
 :::
 :::
@@ -1868,7 +1868,7 @@ $$\max_{\boldsymbol{\alpha} \succeq \mathbf{0},\, \sum \alpha_i y_i = 0}\;\sum_{
 :::
 
 ::: {.col .fig}
-@fig:ch36-opt-svm-margin-support
+@fig:ch35-opt-svm-margin-support
 :::
 :::
 :::

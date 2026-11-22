@@ -1,5 +1,6 @@
 // Slide diagrams for ch33-mdl-la.mjs (§33 Linear Algebra)
 import { C, TOKENS, grid, tx as rawTx, arrow, svg as rawSvg } from "./engine.mjs";
+import { textWidth } from "./mdl-textwidth.mjs";
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -10,22 +11,46 @@ const RED = [D.red.tint, D.red.base, false, D.red.dark];
 const PURPLE = [D.purple.tint, C.purple, false, D.purple.dark];
 
 let _boxes = [];
-function estUnits(str, mono = false) {
-  let u = 0;
-  for (const ch of String(str ?? '')) {
-    const code = ch.codePointAt(0);
-    if (code > 0x7f || (ch >= 'A' && ch <= 'Z') || ch === 'm' || ch === 'w' || ch === '@') {
-      u += mono ? 0.78 : 0.74;
-    } else {
-      u += mono ? 0.65 : 0.58;
-    }
+// Text that does not fit its box is shrunk, but never below MIN_FS; a string
+// still too wide at MIN_FS is wrapped onto two lines at the space nearest its
+// middle. Widths come from the real font metrics (mdl-textwidth.mjs).
+const MIN_FS = 11;
+export const _fitLog = [];
+function split2(s) {
+  // Prefer a gap of two or more spaces (between clauses) near the middle,
+  // else the space nearest the middle.
+  const mid = s.length / 2;
+  let best = -1, bestScore = Infinity;
+  for (let i = 1; i < s.length - 1; i++) {
+    if (s[i] !== ' ') continue;
+    const wide = s[i - 1] === ' ' || s[i + 1] === ' ';
+    const score = Math.abs(i - mid) - (wide ? 0.3 * s.length : 0);
+    if (score < bestScore) { best = i; bestScore = score; }
   }
-  return Math.max(u, 1);
+  return best < 0 ? null : [s.slice(0, best).trimEnd(), s.slice(best + 1).trimStart()];
 }
 const box = (x, y, w, h, fill, stroke, rx = 8, sw = 2, dash = false) => {
   if (w >= 40 && h >= 28) _boxes.push({ x, y, w, h });
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 };
+// { lines: [one or two strings], fs } for text s in width maxW.
+function fitText(s, maxW, opts) {
+  const baseFs = opts.fs || 14;
+  const mono = !!opts.mono, bold = (opts.fw || 500) >= 600;
+  const w = textWidth(s, baseFs, mono, bold);
+  if (w <= maxW) return { lines: [s], fs: baseFs };
+  const fit = +(baseFs * maxW / w).toFixed(2);
+  if (fit >= MIN_FS) return { lines: [s], fs: fit };
+  const parts = split2(s);
+  if (parts) {
+    const w2 = Math.max(...parts.map(p => textWidth(p, baseFs, mono, bold)));
+    const fs2 = Math.max(MIN_FS, Math.min(baseFs, +(baseFs * maxW / w2).toFixed(2)));
+    _fitLog.push(['wrap', s, fs2, w2 * fs2 / baseFs > maxW]);
+    return { lines: parts, fs: fs2 };
+  }
+  _fitLog.push(['over', s, MIN_FS]);
+  return { lines: [s], fs: MIN_FS };
+}
 const tx = (x, y, text, opts = {}) => {
   const s = String(text ?? '');
   if (!s) return '';
@@ -37,10 +62,10 @@ const tx = (x, y, text, opts = {}) => {
     maxW = 2 * Math.min(x - b.x, b.x + b.w - x) - 16;
     yy = Math.max(b.y + 12, Math.min(b.y + b.h - 12, y));
   }
-  const baseFs = opts.fs || 14;
-  const u = estUnits(s, !!opts.mono);
-  const fs = u * baseFs > maxW ? Math.max(7.5, +(maxW / u).toFixed(2)) : baseFs;
-  return rawTx(x, yy, s, { ...opts, fs });
+  const { lines, fs } = fitText(s, maxW, opts);
+  if (lines.length === 1) return rawTx(x, yy, lines[0], { ...opts, fs });
+  const dy = 0.6 * fs;
+  return rawTx(x, yy - dy, lines[0], { ...opts, fs }) + rawTx(x, yy + dy, lines[1], { ...opts, fs });
 };
 const svg = (W, H, body) => {
   _boxes = [];
@@ -49,17 +74,41 @@ const svg = (W, H, body) => {
 const line = (x1, y1, x2, y2, color, w = 2, dash = false) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 const hline = (x1, x2, y) => line(x1, y, x2, y, N.hairline, 1.5, true);
+// A titled card: title, a mono line and a muted line at fixed offsets. If
+// any of them wraps, the lines flow down from the title instead.
 const card = (x, y, w, h, fill, st, title, sub1, sub2, dk) => {
   const compact = h <= 76;
-  const y1 = compact ? y + 16 : y + 18;
-  const y2 = compact ? y + 36 : y + 39;
-  const y3 = compact ? y + 54 : y + 59;
-  return (
-    box(x, y, w, h, fill, st) +
-    tx(x + w / 2, y1, title, { fs: compact ? 14 : 14.5, fw: 700, fill: dk }) +
-    (sub1 ? tx(x + w / 2, y2, sub1, { mono: true, fs: 12.5, fw: 600, fill: C.ink }) : '') +
-    (sub2 ? tx(x + w / 2, y3, sub2, { fs: 12.5, fill: C.muted }) : '')
-  );
+  const ys = compact ? [y + 16, y + 36, y + 54] : [y + 18, y + 39, y + 59];
+  const items = [
+    [title, { fs: compact ? 14 : 14.5, fw: 700, fill: dk }],
+    [sub1, { mono: true, fs: 12.5, fw: 600, fill: C.ink }],
+    [sub2, { fs: 12.5, fill: C.muted }],
+  ];
+  let o = box(x, y, w, h, fill, st);
+  const fitted = items.map(([t, op]) => (t ? fitText(String(t), w - 16, op) : null));
+  if (!fitted.some(f => f && f.lines.length > 1)) {
+    items.forEach(([t, op], i) => { if (t) o += tx(x + w / 2, ys[i], t, op); });
+    return o;
+  }
+  // Line centres: 1.15 fs inside a wrapped item, `gap` between items; the
+  // gaps shrink (to no less than 1.25 fs) when the stack would leave the card.
+  const live = fitted.map((f, i) => [f, i]).filter(([f]) => f);
+  const inner = live.reduce((a, [f]) => a + (f.lines.length - 1) * 1.15 * f.fs, 0);
+  let gap = compact ? 19 : 20.5;
+  const room = y + h - 11 - ys[0] - inner;
+  if (live.length > 1 && gap * (live.length - 1) > room) {
+    gap = Math.max(1.25 * Math.max(...live.map(([f]) => f.fs)), room / (live.length - 1));
+    _fitLog.push(['squeeze', String(title), +gap.toFixed(1), h]);
+  }
+  let cy = ys[0];
+  live.forEach(([f, i]) => {
+    f.lines.forEach((ln, j) => {
+      if (j > 0) cy += 1.15 * f.fs;
+      o += rawTx(x + w / 2, +cy.toFixed(2), ln, { ...items[i][1], fs: f.fs });
+    });
+    cy += gap;
+  });
+  return o;
 };
 
 // ── index.md (4 diagrams) ──
@@ -81,7 +130,7 @@ function roadmapTwoStage() {
   let o = tx(270, 20, 'Stage 1: Single Map in Standard Coordinates', { fs: 15.5, fw: 700, fill: D.blue.dark });
   o += card(24, 36, 230, 74, C.lblue, C.blue, '§33.1 Vectors & Projections', 'P = QQᵀ · A = QR · 1/√d', 'Attention & Least Squares', D.blue.dark);
   o += arrow(258, 73, 282, 73, C.blue);
-  o += card(286, 36, 230, 74, C.lblue, C.blue, '§33.2 Linear Maps & Volume', 'rank(A) + null(A) = n', 'Inverses & det(AB)', D.blue.dark);
+  o += card(286, 36, 230, 74, C.lblue, C.blue, '§33.2 Linear Maps & Volume', 'rank(A) + dim ker(A) = n', 'Inverses & det(AB)', D.blue.dark);
   o += hline(24, 516, 128);
   o += tx(270, 148, 'Stage 2: Natural Coordinates Tailored to the Matrix', { fs: 15.5, fw: 700, fill: D.purple.dark });
   o += card(16, 166, 156, 86, C.lamber, C.amber, '§33.3 Eigen', 'A = VΛV⁻¹', 'Sym: VΛVᵀ', D.orange.dark);
@@ -103,12 +152,13 @@ function runningBenchmarks() {
   let o = card(16, 16, 160, 108, C.lblue, C.blue, 'Running Matrix A', '[1, 2; −1, 3]', 'det = 5 · λ = 2 ± i', D.blue.dark);
   o += tx(96, 104, 'σ = 3.62, 1.38', { mono: true, fs: 13, fw: 700, fill: D.blue.dark });
   o += card(190, 16, 160, 108, C.lamber, C.amber, 'Defective Shear T', '[1, 1; 0, 1]', 'λ = 1 (g=1 < a=2)', D.orange.dark);
-  o += tx(270, 104, 'Tᵏ=[1,k;0,1] · σ=φ,1/φ', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
+  o += tx(270, 104, 'Tᵏ=[1,k;0,1]  σ=φ,1/φ', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += card(364, 16, 160, 108, D.red.tint, D.red.base, 'Singular Matrix B', '[2, 1; 4, 2]', 'rank = 1 · det = 0', D.red.dark);
   o += tx(444, 104, 'ker = span{(1, −2)}', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
   o += card(16, 140, 244, 104, D.purple.tint, C.purple, 'Fashion-MNIST (ℝ⁷⁸⁴)', '70,000 images (28×28)', 'Random cos ~ 1/√784 ≈ 0.036', D.purple.dark);
   o += tx(138, 224, '92% nearest-mean hyperplane', { fs: 13, fw: 700, fill: D.purple.dark });
-  o += card(280, 140, 244, 104, C.lgreen, C.green, 'Cat Photo (400 × 500)', '200,000 pixels · σᵢ ∝ i⁻¹·¹', 'Rank-20 SVD: 9% params, 8% err', D.green.dark);
+  o += card(280, 140, 244, 104, C.lgreen, C.green, 'Cat Photo (400 × 500)', '200,000 pixels · σᵢ ∝ i@@', 'Rank-20 SVD: 9% params, 8% err', D.green.dark)
+    .replace('i@@<', 'i<tspan baseline-shift="super" font-size="70%">−1.1</tspan><');
   o += tx(402, 224, 'Eckart–Young vs Gaussian bulk', { fs: 13, fw: 700, fill: D.green.dark });
   return svg(540, 260, o);
 }
@@ -136,7 +186,7 @@ function cauchySchwarz() {
 }
 
 function angleClip() {
-  let o = card(20, 16, 500, 70, C.lblue, C.blue, 'Exact Arithmetic: Cauchy–Schwarz Bounds Cosine', 'cos θ = (v · w) / (∥v∥ ∥w∥) ∈ [−1, +1]   ⇒   θ = arccos(cos θ) ∈ [0, π]', 'Worked pair v=(1,3), w=(2,1): cos θ = 5/(√10√5) = 1/√2 ⇒ θ = π/4', D.blue.dark);
+  let o = card(20, 16, 500, 70, C.lblue, C.blue, 'Exact Arithmetic: Cauchy–Schwarz Bounds Cosine', 'cos θ = (v·w)/(∥v∥ ∥w∥) ∈ [−1, 1]  ⇒  θ = arccos(cos θ) ∈ [0, π]', 'Worked pair v=(1,3), w=(2,1): cos θ = 5/(√10√5) = 1/√2 ⇒ θ = π/4', D.blue.dark);
   o += card(20, 104, 232, 132, D.red.tint, D.red.base, 'Float64 Roundoff Hazard', 'w = 3v, v = (10⁸+1, 3, 7)', 'cos = 1 + 2.2×10⁻¹⁶ > 1', D.red.dark);
   o += tx(136, 210, 'np.arccos(cos) → NaN!', { mono: true, fs: 13.5, fw: 700, fill: D.red.dark });
   o += arrow(256, 170, 282, 170, C.green);
@@ -155,7 +205,7 @@ function projectorQQT() {
 }
 
 function normalVsQr() {
-  let o = card(20, 14, 500, 52, D.purple.tint, C.purple, 'Least Squares: min_x ∥Ax − y∥²  (A = [1, t], y = (6, 0, 0))', 'Both routes yield x̂ = (5, −3), Py = (5, 2, −1), residual r = (1, −2, 1)', '', D.purple.dark);
+  let o = card(20, 14, 500, 52, D.purple.tint, C.purple, 'Least Squares: min_x ∥Ax − y∥²  (A = [1, t], y = (6, 0, 0))', 'Both routes: x̂ = (5, −3), Py = (5, 2, −1), r = (1, −2, 1)', '', D.purple.dark);
   o += card(20, 82, 238, 160, D.red.tint, D.red.base, 'Route 1: Normal Equations', 'AᵀA x̂ = Aᵀy', '[3, 3; 3, 5] x̂ = [6; 0]', D.red.dark);
   o += tx(139, 190, 'Condition number SQUARES:', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += tx(139, 216, 'κ(AᵀA) = κ(A)²  (roundoff loss)', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
@@ -176,7 +226,7 @@ function gramSchmidtQr() {
 }
 
 function cosineScaleInvariance() {
-  let o = card(20, 16, 238, 118, C.lblue, C.blue, 'Cosine Similarity (Normalized)', 'cos θ = (v · w) / (∥v∥ ∥w∥)', 'Invariance: cos(c v, w) = cos(v, w)', D.blue.dark);
+  let o = card(20, 16, 238, 118, C.lblue, C.blue, 'Cosine Similarity (Normalized)', 'cos θ = (v · w) / (∥v∥ ∥w∥)', 'cos(c v, w) = cos(v, w) for c > 0', D.blue.dark);
   o += tx(139, 110, 'Image & 10% dimmed copy: cos = 1', { fs: 13, fw: 700, fill: D.blue.dark });
   o += card(282, 16, 238, 118, C.lamber, C.amber, 'Scaled Dot Product (Attention)', 's(q, k) = (q · k) / √d', 'Retains lengths ∥q∥ and ∥k∥', D.orange.dark);
   o += tx(401, 110, 'Magnitude modulates confidence', { fs: 13, fw: 700, fill: D.orange.dark });
@@ -251,7 +301,7 @@ function einsumUnification() {
 }
 
 function einsumAttention() {
-  let o = card(20, 14, 500, 88, C.lblue, C.blue, "Multi-Head Attention Contraction: einsum('bhij,bhtj->bhit', Q, K)", 'Q: (b=2, h=3, i=4, j=8)   ·   K: (b=2, h=3, t=5, j=8)   →   S: (2, 3, 4, 5)', 'Kept axes: b (batch), h (head), i (query), t (key)  |  Summed axis: j (width=8)', D.blue.dark);
+  let o = card(20, 14, 500, 88, C.lblue, C.blue, "Multi-Head Attention Contraction: einsum('bhij,bhtj->bhit', Q, K)", 'Q: (b=2, h=3, i=4, j=8) · K: (b=2, h=3, t=5, j=8)   →   S: (2, 3, 4, 5)', 'Kept axes: b (batch), h (head), i (query), t (key)  |  Summed axis: j (width=8)', D.blue.dark);
   o += card(20, 118, 238, 124, D.red.tint, D.red.base, 'Bad Order: (AB)v', 'Matrix–Matrix first: O(n³)', 'n = 1000  ⇒  10⁹ mult-adds', D.red.dark);
   o += tx(139, 214, '500× slower!', { fs: 14, fw: 700, fill: D.red.dark });
   o += arrow(262, 180, 278, 180, C.green);
@@ -306,10 +356,11 @@ function inverse2x2Wheel() {
 
 function detAxioms() {
   let o = tx(270, 20, 'Three Geometric Volume Axioms Uniquely Fix det(A)', { fs: 16, fw: 700, fill: C.ink });
-  o += card(16, 38, 160, 114, C.lblue, C.blue, '1. Multilinear', 'Linear in each col aⱼ', 'det(…,ca+b,…) =', D.blue.dark);
+  o += card(16, 38, 160, 114, C.lblue, C.blue, '1. Multilinear', 'Linear in each aⱼ', 'det(…,ca+b,…) =', D.blue.dark);
   o += tx(96, 128, 'c det(a) + det(b)', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
-  o += card(190, 38, 160, 114, C.lamber, C.amber, '2. Alternating', 'Zero if aᵢ = aⱼ (i≠j)', 'Swap flips sign:', D.orange.dark);
-  o += tx(270, 128, 'det(…,u,w,…)=−det(…,w,u,…)', { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
+  o += card(190, 38, 160, 114, C.lamber, C.amber, '2. Alternating', 'aᵢ = aⱼ ⇒ det = 0', 'Swap flips sign:', D.orange.dark);
+  o += tx(270, 120, 'det(…,u,w,…)', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
+  o += tx(270, 139, '= −det(…,w,u,…)', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += card(364, 38, 160, 114, C.lgreen, C.green, '3. Normalized', 'Unit cube volume = 1', 'det(Iₙ) = 1', D.green.dark);
   o += tx(444, 128, 'sgn(σ) = ±1', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
   o += card(16, 168, 508, 76, D.purple.tint, C.purple, 'Unique Consequence: The n! Permutation Formula', 'det(A) = ∑_{σ ∈ Sₙ} sgn(σ) a_{σ(1),1} a_{σ(2),2} ⋯ a_{σ(n),n}', 'Any multilinear alternating f satisfies f(A) = f(I) det(A)', D.purple.dark);
@@ -334,7 +385,8 @@ function detMultiplicativity() {
   o += card(194, 16, 152, 88, C.lamber, C.amber, 'Image B(Ω)', 'Vol = |det B| · V', '', D.orange.dark);
   o += arrow(350, 60, 376, 60, C.amber);
   o += tx(363, 44, 'A', { mono: true, fs: 14, fw: 700, fill: D.orange.dark });
-  o += card(380, 16, 144, 88, C.lgreen, C.green, 'Image A(B(Ω))', 'Vol = |det A||det B|V', '', D.green.dark);
+  o += card(380, 16, 144, 88, C.lgreen, C.green, 'Image A(B(Ω))', 'Vol = |det A| ·', '', D.green.dark);
+  o += tx(452, 76, '|det B| · V', { mono: true, fs: 12.5, fw: 600, fill: C.ink });
   o += card(16, 120, 246, 60, D.purple.tint, C.purple, '1. Scalar Commutativity', 'det(AB) = det(A)det(B) = det(BA)', '', D.purple.dark);
   o += card(278, 120, 246, 60, D.purple.tint, C.purple, '2. Similarity Invariance', 'det(VAV⁻¹) = det(A)', '', D.purple.dark);
   o += card(16, 190, 246, 60, C.lblue, C.blue, '3. Inverse Volume', 'det(A⁻¹) = 1 / det(A)', '', D.blue.dark);
@@ -362,12 +414,12 @@ function diagPowers() {
   o += card(194, 38, 152, 94, C.lamber, C.amber, '2. Scalar Powers', 'Λᵏc = (λᵢᵏ cᵢ)', 'V⁻¹V = I cancels!', D.orange.dark);
   o += arrow(350, 85, 368, 85, C.amber);
   o += card(372, 38, 152, 94, C.lgreen, C.green, '3. Back to ℝⁿ', 'Aᵏx = V(Λᵏc)', '= ∑ cᵢ λᵢᵏ vᵢ', D.green.dark);
-  o += card(16, 150, 508, 96, D.purple.tint, C.purple, 'Two-Page Surfer Trajectory: Pᵏp₀ = ⅓(1, 2) + ⅔(¼)ᵏ(1, −1)', 'λ₁ = 1 keeps stationary state π = (⅓, ⅔)  |  λ₂ = ¼ shrinks error 4× per click!', 'At k = 50: (¼)⁵⁰ < 10⁻³⁰  (converged to machine precision)', D.purple.dark);
+  o += card(16, 150, 508, 96, D.purple.tint, C.purple, 'Two-Page Surfer Trajectory: Pᵏp₀ = ⅓(1, 2) + ⅔(¼)ᵏ(1, −1)', 'λ₁ = 1 keeps stationary state π = (⅓, ⅔);  λ₂ = ¼ shrinks error 4× per click!', 'At k = 50: (¼)⁵⁰ < 10⁻³⁰  (converged to machine precision)', D.purple.dark);
   return svg(540, 260, o);
 }
 
 function similarityInvariants() {
-  let o = card(20, 14, 500, 74, D.purple.tint, C.purple, 'Similar Matrices A′ = BAB⁻¹ Share the Characteristic Polynomial', 'det(BAB⁻¹ − λI) = det(B) det(A − λI) det(B⁻¹) = det(A − λI) = ∏(λᵢ − λ)', 'Samelinear map in different coordinates ⇒ identical eigenvalues & multiplicities', D.purple.dark);
+  let o = card(20, 14, 500, 74, D.purple.tint, C.purple, 'Similar Matrices A′ = BAB⁻¹ Share the Characteristic Polynomial', 'det(BAB⁻¹ − λI) = det(B) det(A − λI) det(B⁻¹) = ∏(λᵢ − λ)', 'Same linear map in different coordinates ⇒ identical eigenvalues & multiplicities', D.purple.dark);
   o += card(20, 104, 238, 140, C.lblue, C.blue, 'Trace = Sum of λᵢ', 'tr(A) = tr(VΛV⁻¹) = tr(Λ)', 'tr(A) = λ₁ + λ₂ + ⋯ + λₙ', D.blue.dark);
   o += tx(139, 216, 'Surfer P: ½ + ¾ = 5/4 = 1 + ¼', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
   o += card(282, 104, 238, 140, C.lgreen, C.green, 'Determinant = Product of λᵢ', 'det(A) = det(V)det(Λ)det(V⁻¹)', 'det(A) = λ₁ · λ₂ ⋯ λₙ', D.green.dark);
@@ -376,12 +428,12 @@ function similarityInvariants() {
 }
 
 function multiplicityGap() {
-  let o = card(20, 14, 500, 72, C.lblue, C.blue, 'Algebraic vs. Geometric Multiplicity: 1 ≤ g(λ) ≤ a(λ)', 'a(λ) = root multiplicity in det(A − λI)     g(λ) = dim ker(A − λI) (# indep. eigenvectors)', 'Block triangular proof: p(t) = (λ − t)ᵍ det(Y − tI)  ⇒  g(λ) ≤ a(λ)', D.blue.dark);
-  o += card(20, 102, 238, 142, C.lgreen, C.green, 'Diagonalizable (g = a ∀λ)', 'Full eigenbasis V ∈ ℂⁿˣⁿ', 'Always holds if λ₁..λₙ distinct!', D.green.dark);
-  o += tx(139, 214, 'A = VΛV⁻¹  (pure λᵢᵏ powers)', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
-  o += card(282, 102, 238, 142, D.red.tint, D.red.base, 'Defective (g < a for some λ)', 'Missing eigenvectors!', 'Shear T = [1,1; 0,1]: a(1)=2, g(1)=1', D.red.dark);
-  o += tx(401, 214, 'Needs Jordan blocks Jₘ(λ)', { mono: true, fs: 13, fw: 700, fill: D.red.dark });
-  return svg(540, 258, o);
+  let o = card(20, 14, 500, 86, C.lblue, C.blue, 'Algebraic vs. Geometric Multiplicity: 1 ≤ g(λ) ≤ a(λ)', 'a(λ) = root multiplicity in det(A − λI)     g(λ) = dim ker(A − λI) (# indep. eigenvectors)', 'Block triangular proof: p(t) = (λ − t)ᵍ det(Y − tI)  ⇒  g(λ) ≤ a(λ)', D.blue.dark);
+  o += card(20, 116, 238, 142, C.lgreen, C.green, 'Diagonalizable (g = a ∀λ)', 'Full eigenbasis V ∈ ℂⁿˣⁿ', 'Always holds if λ₁..λₙ distinct!', D.green.dark);
+  o += tx(139, 228, 'A = VΛV⁻¹  (pure λᵢᵏ powers)', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
+  o += card(282, 116, 238, 142, D.red.tint, D.red.base, 'Defective (g < a for some λ)', 'Missing eigenvectors!', 'Shear T = [1,1; 0,1]: a(1)=2, g(1)=1', D.red.dark);
+  o += tx(401, 228, 'Needs Jordan blocks Jₘ(λ)', { mono: true, fs: 13, fw: 700, fill: D.red.dark });
+  return svg(540, 272, o);
 }
 
 function jordanTransient() {
@@ -409,11 +461,11 @@ function realJordanCases() {
   o += tx(96, 184, 'Ex: Surfer P (1, ¼)', { fs: 13, fill: C.ink });
   o += tx(96, 210, 'Symmetric S (3, 1)', { fs: 13, fill: C.muted });
   o += card(190, 38, 160, 198, C.lamber, C.amber, '2. Defective Jordan', '[λ, 1; 0, λ]', 'g(λ) < a(λ) shortage', D.orange.dark);
-  o += tx(270, 152, 'Aᵏ → k λᵏ⁻¹ polynomial', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
+  o += tx(270, 152, 'Aᵏ → k λᵏ⁻¹  polynomial', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += tx(270, 184, 'Ex: Shear T = J₂(1)', { fs: 13, fill: C.ink });
   o += tx(270, 210, 'J₂(0.99) peaks at 37', { fs: 13, fill: C.muted });
-  o += card(364, 38, 160, 198, C.lblue, C.blue, '3. Complex Pair', '[a, −b; b, a] = r R_θ', 'λ = a ± ib (b ≠ 0)', D.blue.dark);
-  o += tx(444, 152, 'Aᵏ → rᵏ R_{kθ} spiral', { mono: true, fs: 13, fw: 700, fill: D.blue.dark });
+  o += card(364, 38, 160, 198, C.lblue, C.blue, '3. Complex Pair', '[a,−b; b,a] = r R_θ', 'λ = a ± ib (b ≠ 0)', D.blue.dark);
+  o += tx(444, 152, 'Aᵏ → rᵏ R_{kθ}', { mono: true, fs: 13, fw: 700, fill: D.blue.dark });
   o += tx(444, 184, 'Ex: Running A (2±i)', { fs: 13, fill: C.ink });
   o += tx(444, 210, 'r = √5, θ = 26.6°', { fs: 13, fill: C.muted });
   return svg(540, 252, o);
@@ -445,7 +497,7 @@ function rayleighQuotient() {
 }
 
 function marchenkoPastur() {
-  let o = card(20, 14, 500, 70, C.lblue, C.blue, 'Sample Covariance of Pure Noise: C = (1/n) XᵀX  (Xᵢⱼ ~ N(0, 1), c = d/n)', 'Eigenvalues do NOT cluster at 1! They spread across [(1 − √c)², (1 + √c)²]', 'For c = d/n = 1000/4000 = 1/4: noise bulk spans [0.25, 2.25]', D.blue.dark);
+  let o = card(20, 14, 500, 70, C.lblue, C.blue, 'Sample Covariance of Pure Noise: C = (1/n) XᵀX  (Xᵢⱼ ~ N(0, 1), c = d/n)', 'Eigenvalues spread over [(1 − √c)², (1 + √c)²], not at 1!', 'For c = d/n = 1000/4000 = 1/4: noise bulk spans [0.25, 2.25]', D.blue.dark);
   o += card(20, 100, 310, 142, C.lamber, C.amber, 'Marchenko–Pastur Noise Bulk', 'λ ∈ [(1 − √c)², (1 + √c)²] = [0.25, 2.25]', 'Indistinguishable from random noise!', D.orange.dark);
   o += tx(175, 214, 'Even at 4 samples/dim, max noise λ = 2.25', { fs: 13, fw: 700, fill: D.orange.dark });
   o += card(346, 100, 174, 142, C.lgreen, C.green, 'Signal Outliers', 'λ > (1 + √c)²', 'Escapes above 2.25', D.green.dark);
@@ -482,10 +534,10 @@ function pagerankDamping() {
 }
 
 function gelfandVsFinite() {
-  let o = card(20, 14, 500, 68, D.purple.tint, C.purple, "Gelfand's Formula Governs Only the Distant Limit k → ∞", 'ρ(A) = maxᵢ |λᵢ| = lim_{k→∞} ∥Aᵏ∥^{1/k}     (and ρ(A)ᵏ ≤ ∥Aᵏ∥₂ for all k ≥ 1)', '', D.purple.dark);
+  let o = card(20, 14, 500, 68, D.purple.tint, C.purple, "Gelfand's Formula Governs Only the Distant Limit k → ∞", 'ρ(A) = maxᵢ |λᵢ| = lim_{k→∞} ∥Aᵏ∥^{1/k}', 'and ρ(A)ᵏ ≤ ∥Aᵏ∥₂ for all k ≥ 1', D.purple.dark);
   o += card(20, 98, 238, 144, C.lamber, C.amber, 'Counterexample 1: Shear T', 'T = [1, 1; 0, 1]  has ρ(T) = 1', 'Yet Tᵏ = [1, k; 0, 1]', D.orange.dark);
   o += tx(139, 212, '∥Tᵏ∥₂ ≈ k → ∞ (unbounded!)', { mono: true, fs: 13, fw: 700, fill: D.orange.dark });
-  o += card(282, 98, 238, 144, D.red.tint, D.red.base, 'Counterexample 2: J₂(0.99)', 'ρ(J₂(0.99)) = 0.99 < 1', 'Yet ∥Jᵏ∥₂ climbs to 37 at k=100', D.red.dark);
+  o += card(282, 98, 238, 144, D.red.tint, D.red.base, 'Counterexample 2: J₂(0.99)', 'ρ(J₂(0.99)) = 0.99 < 1', 'Yet ∥J₂(0.99)ᵏ∥₂ ≈ 37 at k=100', D.red.dark);
   o += tx(401, 212, 'Transient blowup before decay!', { fs: 13.5, fw: 700, fill: D.red.dark });
   return svg(540, 258, o);
 }
@@ -495,26 +547,26 @@ function normalVsNonnormal() {
   o += tx(139, 122, '∥Aᵏ∥₂ = ρ(A)ᵏ  for ALL k ≥ 1', { mono: true, fs: 13, fw: 700, fill: D.green.dark });
   o += card(282, 16, 238, 134, D.red.tint, D.red.base, 'Non-Normal (AᵀA ≠ AAᵀ)', 'Non-orthogonal V: κ₂(V) > 1', 'A = VΛV⁻¹  (nearly parallel vᵢ)', D.red.dark);
   o += tx(401, 122, '∥Aᵏ∥₂ ≤ κ₂(V) ρ(A)ᵏ', { mono: true, fs: 13.5, fw: 700, fill: D.red.dark });
-  o += card(20, 166, 500, 80, C.lamber, C.amber, 'Geometric Cause of Transient Amplification: Unraveling Cancellation', 'When ∠2(v₁, v₂) = 1.4° (κ₂(V) = 80), unit vector e₂ = 40v₁ + v₂ is a difference of huge components;', 'as v₁ and v₂ decay at different rates (0.9ᵏ vs 0.8ᵏ), cancellation breaks and ∥M⁶e₂∥ balloons 10.8×!', D.orange.dark);
+  o += card(20, 166, 500, 80, C.lamber, C.amber, 'Geometric Cause of Transient Amplification: Unraveling Cancellation', 'At ∠(v₁, v₂) = 1.4° (κ₂(V) = 80), e₂ = 40v₁ + v₂ cancels huge parts;', 'they decay at 0.9ᵏ vs 0.8ᵏ, cancellation breaks and ∥M⁶e₂∥ grows 10.8×!', D.orange.dark);
   return svg(540, 260, o);
 }
 
 function bpttNilpotent() {
-  let o = card(20, 14, 500, 68, C.lblue, C.blue, 'Backpropagation Through Time (BPTT) Multiplies Changing Jacobians', '∇_{h₀} L = D₁ᵀ D₂ᵀ ⋯ D_Tᵀ ∇_{h_T} L     where Dₜ = ∂hₜ / ∂hₜ₋₁ changes at every step t', '', D.blue.dark);
-  o += card(16, 98, 152, 86, C.lamber, C.amber, 'Factor D₁', '[0, 2; 0, 0]', 'λ = 0,0  (ρ = 0)', D.orange.dark);
-  o += tx(178, 141, '·', { fs: 28, fw: 700, fill: C.ink });
-  o += card(190, 98, 152, 86, C.lamber, C.amber, 'Factor D₂', '[0, 0; 2, 0]', 'λ = 0,0  (ρ = 0)', D.orange.dark);
-  o += tx(354, 141, '=', { fs: 24, fw: 700, fill: C.ink });
-  o += card(368, 98, 156, 86, D.red.tint, D.red.base, 'Product D₂D₁', '[0, 0; 0, 4]', 'ρ(D₂D₁) = 4!', D.red.dark);
-  o += box(16, 198, 508, 48, D.red.tint, D.red.base);
-  o += tx(270, 222, 'Both factors have ρ = 0 (D₁² = D₂² = 0), yet alternating (D₂D₁)^{T/2} explodes as 4^{T/2}!', { fs: 13.5, fw: 700, fill: D.red.dark });
-  return svg(540, 260, o);
+  let o = card(20, 14, 500, 82, C.lblue, C.blue, 'Backpropagation Through Time (BPTT) Multiplies Changing Jacobians', '∇_{h₀} L = D₁ᵀ D₂ᵀ ⋯ D_Tᵀ ∇_{h_T} L     where Dₜ = ∂hₜ / ∂hₜ₋₁ changes at every step t', '', D.blue.dark);
+  o += card(16, 112, 152, 86, C.lamber, C.amber, 'Factor D₁', '[0, 2; 0, 0]', 'λ = 0,0  (ρ = 0)', D.orange.dark);
+  o += tx(178, 155, '·', { fs: 28, fw: 700, fill: C.ink });
+  o += card(190, 112, 152, 86, C.lamber, C.amber, 'Factor D₂', '[0, 0; 2, 0]', 'λ = 0,0  (ρ = 0)', D.orange.dark);
+  o += tx(354, 155, '=', { fs: 24, fw: 700, fill: C.ink });
+  o += card(368, 112, 156, 86, D.red.tint, D.red.base, 'Product D₂D₁', '[0, 0; 0, 4]', 'ρ(D₂D₁) = 4!', D.red.dark);
+  o += box(16, 212, 508, 48, D.red.tint, D.red.base);
+  o += tx(270, 236, 'Both factors have ρ = 0 (D₁² = D₂² = 0), yet alternating (D₂D₁)^{T/2} explodes as 4^{T/2}!', { fs: 13.5, fw: 700, fill: D.red.dark });
+  return svg(540, 274, o);
 }
 
 function stabilityHierarchy() {
   let o = card(20, 14, 500, 72, C.lblue, C.blue, '1. Spectral Radius: ρ(A) = maxᵢ |λᵢ| = lim_{k→∞} ∥Aᵏ∥^{1/k}', 'Governs: Asymptotic (k → ∞) rate of powers of ONE FIXED matrix A', 'Blind to finite-step non-normal transient growth and changing Jacobian factors', D.blue.dark);
-  o += card(20, 98, 500, 72, C.lgreen, C.green, '2. Spectral Norm: ∥A∥₂ = σ₁(A) = max_{∥x∥=1} ∥Ax∥', 'Governs: Worst-case 1-step stretch & finite products ∥D_T⋯D₁∥₂ ≤ ∏ₜ ∥Dₜ∥₂', 'DL Remedies: Orthogonal initialization (∥W∥₂ = 1), spectral normalization, gradient clipping', D.green.dark);
-  o += card(20, 182, 500, 72, D.purple.tint, C.purple, '3. Top Lyapunov Exponent: μ = lim_{T→∞} (1/T) log ∥D_T⋯D₁ x₀∥', 'Governs: Long-run exponential growth (μ > 0) or decay (μ < 0) of CHANGING matrices', 'DL Remedies: Gated recurrences (LSTM / GRU) & residual connections keep μ ≈ 0', D.purple.dark);
+  o += card(20, 98, 500, 72, C.lgreen, C.green, '2. Spectral Norm: ∥A∥₂ = σ₁(A) = max_{∥x∥=1} ∥Ax∥', 'Governs: worst-case stretch, ∥D_T⋯D₁∥₂ ≤ ∏ₜ ∥Dₜ∥₂', 'DL Remedies: Orthogonal initialization (∥W∥₂ = 1), spectral normalization, gradient clipping', D.green.dark);
+  o += card(20, 182, 500, 72, D.purple.tint, C.purple, '3. Top Lyapunov Exponent: μ = lim_{T→∞} (1/T) log ∥D_T⋯D₁ x₀∥', 'Governs: long-run growth (μ > 0) / decay (μ < 0), CHANGING Dₜ', 'DL Remedies: Gated recurrences (LSTM / GRU) & residual connections keep μ ≈ 0', D.purple.dark);
   return svg(540, 268, o);
 }
 
@@ -528,7 +580,9 @@ function randomMatrixGap() {
 }
 
 function eigenToSvdBridge() {
-  let o = card(16, 16, 238, 224, D.red.tint, D.red.base, 'Where Eigenvalues Fall Short', '1. Rectangular m × n layers', '2. Defective matrices (T)', D.red.dark);
+  let o = card(16, 16, 238, 224, D.red.tint, D.red.base, 'Where Eigenvalues Fall Short', '', '', D.red.dark);
+  o += tx(135, 66, '1. Rectangular m × n layers', { fs: 13.5, fw: 600, fill: C.ink });
+  o += tx(135, 92, '2. Defective matrices (T)', { fs: 13.5, fw: 600, fill: C.ink });
   o += tx(135, 118, '3. Non-normal 10× growth', { fs: 13.5, fw: 600, fill: C.ink });
   o += tx(135, 144, '4. Random matrix 2× gap', { fs: 13.5, fw: 600, fill: C.ink });
   o += tx(135, 184, 'Single basis V cannot stay', { fs: 13, fill: C.muted });
@@ -537,8 +591,8 @@ function eigenToSvdBridge() {
   o += card(286, 16, 238, 224, C.lgreen, C.green, 'The SVD Solution (§33.5)', 'Two orthonormal bases V, U', 'A vᵢ = σᵢ uᵢ  (σ₁ ≥ σ₂ ≥ ⋯ ≥ 0)', D.green.dark);
   o += tx(405, 118, '• Exists for ANY m × n matrix', { fs: 13.5, fw: 600, fill: C.ink });
   o += tx(405, 144, '• Measures 1-step stretch σ₁', { fs: 13.5, fw: 600, fill: C.ink });
-  o += tx(405, 184, '• Gives optimal rank-k Aₖ,', { fs: 13, fill: D.green.dark });
-  o += tx(405, 206, '  pseudoinverse A⁺ & κ(A)', { fs: 13, fw: 700, fill: D.green.dark });
+  o += tx(405, 170, '• Gives optimal rank-k Aₖ,', { fs: 13.5, fw: 600, fill: C.ink });
+  o += tx(405, 194, 'pseudoinverse A⁺ & κ(A)', { fs: 13.5, fw: 600, fill: C.ink });
   return svg(540, 256, o);
 }
 
@@ -581,7 +635,7 @@ function svdExistenceProof() {
   o += arrow(175, 89, 189, 89, C.blue);
   o += card(192, 38, 156, 102, C.lamber, C.amber, '2. Eigenbasis of AᵀA', 'AᵀA vᵢ = λᵢ vᵢ', 'σᵢ = √λᵢ  (r: σᵢ > 0)', D.orange.dark);
   o += arrow(351, 89, 365, 89, C.green);
-  o += card(368, 38, 156, 102, C.lgreen, C.green, '3. Push Forward uᵢ', 'uᵢ = A vᵢ / σᵢ (i ≤ r)', 'Complete u_{r+1..m}', D.green.dark);
+  o += card(368, 38, 156, 102, C.lgreen, C.green, '3. Push Forward uᵢ', 'uᵢ = Avᵢ/σᵢ (i ≤ r)', 'Complete u_{r+1..m}', D.green.dark);
   o += card(16, 156, 508, 88, D.purple.tint, C.purple, 'Crucial Check: Why Output Directions u₁, …, uᵣ Are Automatically Orthonormal', 'uᵢᵀ uⱼ = (vᵢᵀ AᵀA vⱼ) / (σᵢ σⱼ) = (σⱼ² vᵢᵀ vⱼ) / (σᵢ σⱼ) = δᵢⱼ', 'And for i > r: ∥Avᵢ∥² = λᵢ = 0  ⇒  Avᵢ = 0, so AV = UΣ  ⇒  A = UΣVᵀ', D.purple.dark);
   return svg(540, 258, o);
 }
@@ -596,7 +650,7 @@ function svdVsEigen() {
 }
 
 function eckartYoungBounds() {
-  let o = tx(270, 20, 'Dyadic Energy Split: A = Aₖ (Kept Rank k) + (A − Aₖ) (Dropped Tail)', { fs: 15.5, fw: 700, fill: C.ink });
+  let o = tx(270, 16, 'Dyadic Energy Split: A = Aₖ (Kept Rank k) + (A − Aₖ) (Dropped Tail)', { fs: 14.5, fw: 700, fill: C.ink });
   const bars = [
     ['σ₁', 92, C.lgreen, C.green, D.green.dark],
     ['σ₂', 72, C.lgreen, C.green, D.green.dark],
@@ -614,22 +668,22 @@ function eckartYoungBounds() {
   o += tx(148, 36, 'Kept in Aₖ (rank k)', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(392, 36, 'Tail A − Aₖ (error)', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += card(20, 174, 238, 70, C.lblue, C.blue, 'Spectral Norm Error', 'min_{rank(B)≤k} ∥A − B∥₂ = σₖ₊₁', '', D.blue.dark);
-  o += card(282, 174, 238, 70, C.lamber, C.amber, 'Frobenius Norm Error', 'min_{rank(B)≤k} ∥A − B∥_F² = ∑_{i>k} σᵢ²', '', D.orange.dark);
+  o += card(282, 174, 238, 70, C.lamber, C.amber, 'Frobenius Norm Error', 'min_{rank(B)≤k}  ∥A − B∥_F² = ∑_{i>k} σᵢ²', '', D.orange.dark);
   return svg(540, 258, o);
 }
 
 function weylFrobenius() {
-  let o = card(20, 14, 500, 72, D.purple.tint, C.purple, "Weyl's Inequality for Singular Values (from Spectral Eckart–Young)", 'σ_{i+j−1}(X + Y)  ≤  ∥(X − X_{i−1}) + (Y − Y_{j−1})∥₂  ≤  σᵢ(X) + σⱼ(Y)', 'Proof: X_{i−1} + Y_{j−1} has rank ≤ i + j − 2', D.purple.dark);
+  let o = card(20, 14, 500, 72, D.purple.tint, C.purple, "Weyl's Inequality for Singular Values (from Spectral Eckart–Young)", 'σ_{i+j−1}(X + Y) ≤ ∥(X − X_{i−1}) + (Y − Y_{j−1})∥₂ ≤ σᵢ(X) + σⱼ(Y)', 'Proof: X_{i−1} + Y_{j−1} has rank ≤ i + j − 2', D.purple.dark);
   o += card(20, 102, 238, 142, C.lblue, C.blue, '1. Perturbation Bound (j = 1)', '|σᵢ(A + E) − σᵢ(A)| ≤ σ₁(E) = ∥E∥₂', 'Singular values are 1-Lipschitz!', D.blue.dark);
   o += tx(139, 214, 'Roundoff shifts σᵢ by ≤ ∥E∥₂', { fs: 13, fw: 700, fill: D.blue.dark });
-  o += card(282, 102, 238, 142, C.lgreen, C.green, '2. Frobenius Eckart–Young', 'X = A−B, Y = B, j = k+1 (σ_{k+1}(B)=0)', '⇒  σᵢ(A − B) ≥ σ_{k+i}(A)  ∀i ≥ 1', D.green.dark);
+  o += card(282, 102, 238, 142, C.lgreen, C.green, '2. Frobenius Eckart–Young', 'X = A−B, Y = B, j = k+1  (σ_{k+1}(B)=0)', '⇒  σᵢ(A − B) ≥ σ_{k+i}(A)  ∀i ≥ 1', D.green.dark);
   o += tx(401, 214, 'Sum squares: ∥A−B∥_F² ≥ ∑_{i>k} σᵢ²', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   return svg(540, 258, o);
 }
 
 function condErrorBound() {
-  let o = card(20, 14, 500, 72, C.lblue, C.blue, 'Condition Number κ(A) = σ₁ / σᵣ ≥ 1: Ratio of Extreme Stretches', 'Perturbed system A(x + δx) = b + δb   ⇒   δx = A⁻¹ δb', '∥δx∥ ≤ σₙ⁻¹ ∥δb∥   and   ∥b∥ = ∥Ax∥ ≤ σ₁ ∥x∥   (⇒ 1/∥x∥ ≤ σ₁/∥b∥)', D.blue.dark);
-  o += card(20, 102, 238, 142, D.red.tint, D.red.base, 'Relative Error Bound', '∥δx∥/∥x∥ ≤ κ(A) · (∥δb∥/∥b∥)', 'Worst case: b ∥ u₁,  δb ∥ uₙ', D.red.dark);
+  let o = card(20, 14, 500, 72, C.lblue, C.blue, 'Condition Number κ(A) = σ₁ / σᵣ ≥ 1: Ratio of Extreme Stretches', 'Perturbed system A(x + δx) = b + δb   ⇒   δx = A⁻¹ δb', '∥δx∥ ≤ σᵣ⁻¹ ∥δb∥   and   ∥b∥ = ∥Ax∥ ≤ σ₁ ∥x∥   (⇒ 1/∥x∥ ≤ σ₁/∥b∥)', D.blue.dark);
+  o += card(20, 102, 238, 142, D.red.tint, D.red.base, 'Relative Error Bound', '∥δx∥/∥x∥ ≤ κ(A) · (∥δb∥/∥b∥)', 'Worst case: b ∥ u₁,  δb ∥ uᵣ', D.red.dark);
   o += tx(139, 214, 'Loses up to log₁₀ κ(A) digits', { fs: 13, fw: 700, fill: D.red.dark });
   o += card(282, 102, 238, 142, C.lamber, C.amber, 'Gram Squaring Hazard', 'σᵢ(AᵀA) = σᵢ(A)²', '⇒  κ(AᵀA) = (σ₁/σᵣ)² = κ(A)²', D.orange.dark);
   o += tx(401, 214, 'Why QR/SVD beat normal eqs!', { fs: 13, fw: 700, fill: D.orange.dark });
@@ -637,12 +691,12 @@ function condErrorBound() {
 }
 
 function muonNewtonSchulz() {
-  let o = card(20, 14, 500, 72, C.lblue, C.blue, 'Polar Decomposition: A = UΣVᵀ = (UVᵀ)(VΣVᵀ) = Q P', 'Polar factor Q = UVᵀ replaces every singular value σᵢ → 1 (closest orthogonal matrix)', 'Muon optimizer orthogonalizes momentum M so all active directions update at unit scale', D.blue.dark);
+  let o = card(20, 14, 500, 72, C.lblue, C.blue, 'Polar Decomposition: A = UΣVᵀ = (UVᵀ)(VΣVᵀ) = Q P', 'Q = UVᵀ sets every σᵢ → 1: the closest orthogonal matrix', 'Muon optimizer orthogonalizes momentum M so all active directions update at unit scale', D.blue.dark);
   o += card(20, 102, 240, 142, D.purple.tint, C.purple, 'Newton–Schulz Iteration', 'X_{t+1} = ½ (3Xₜ − Xₜ Xₜᵀ Xₜ)', 'Start: X₀ = M / ∥M∥_F  (σᵢ ∈ (0, 1])', D.purple.dark);
   o += tx(140, 214, 'Pure GPU matmuls — no SVD call!', { fs: 13, fw: 700, fill: D.purple.dark });
   o += arrow(264, 173, 282, 173, C.green);
   o += card(286, 102, 234, 142, C.lgreen, C.green, 'Cubic Singular Map p(σ)', 'Xₜ = U p(Σ) Vᵀ', 'p(σ) = ½(3σ − σ³) → 1', D.green.dark);
-  o += tx(403, 214, 'Quadratic convergence in ~5 steps', { fs: 13, fw: 700, fill: D.green.dark });
+  o += tx(403, 214, '×1.5 near 0, then error squares', { fs: 13, fw: 700, fill: D.green.dark });
   return svg(540, 258, o);
 }
 

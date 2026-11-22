@@ -987,7 +987,7 @@ Joint Distributions and Transformations: Conditioning, Covariance, and Jacobians
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-dart-three-questions
+@fig:ch36-prob-dart-three-questions
 :::
 :::
 :::
@@ -1004,7 +1004,7 @@ $$P\bigl((X, Y) \in \mathcal{D}\bigr) = \iint_{\mathcal{D}} p_{X,Y}(x, y)\,dx\,d
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-joint-disk
+@fig:ch36-prob-joint-disk
 :::
 :::
 :::
@@ -1056,7 +1056,7 @@ $$p_{X \mid Y}(x \mid y) = \frac{p_{Y \mid X}(y \mid x)\,p_X(x)}{\int p_{Y \mid 
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-bayes-convolution
+@fig:ch36-prob-bayes-convolution
 :::
 :::
 :::
@@ -1086,7 +1086,7 @@ $$\mathrm{Var}(X) = \mathbb{E}\bigl[\mathrm{Var}(X \mid Y)\bigr] + \mathrm{Var}\
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-eves-law
+@fig:ch36-prob-eves-law
 :::
 :::
 :::
@@ -1103,7 +1103,7 @@ $$\mathbb{E}\bigl[(X - h(Y))^2\bigr] = \mathbb{E}\bigl[\mathrm{Var}(X \mid Y)\bi
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-optimal-mse
+@fig:ch36-prob-optimal-mse
 :::
 :::
 :::
@@ -1158,7 +1158,7 @@ $$\mathrm{Var}\!\left(\sum_{i=1}^n X_i\right) = \sum_{i=1}^n \mathrm{Var}(X_i) +
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-sum-var-mc
+@fig:ch36-prob-sum-var-mc
 :::
 :::
 :::
@@ -1193,7 +1193,7 @@ $$\mathrm{Var}\!\left(\sum_{i=1}^n X_i\right) = \sum_{i=1}^n \mathrm{Var}(X_i) +
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-uncorr-dep
+@fig:ch36-prob-uncorr-dep
 :::
 :::
 :::
@@ -1258,7 +1258,7 @@ $$\log p_{\mathbf{Y}}(\mathbf{y}) = \log p_{\mathbf{X}}(\mathbf{x}) - \log\bigl|
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-flow-coupling
+@fig:ch36-prob-flow-coupling
 :::
 :::
 :::
@@ -1301,6 +1301,13 @@ Test your grasp of joint distributions and density transformations on three prob
 | **Marginalization** | $p_X(x) = \int_{-\infty}^\infty p_{X,Y}(x, y)\,dy$ | Flat disk $1/\pi \to$ semicircle $\frac{2}{\pi}\sqrt{1-x^2}$ | Integrating out latent variables |
 | **Conditioning & Independence** | $p_{X\mid Y}(x\mid y) = \frac{p_{X,Y}(x,y)}{p_Y(y)}$; $X \perp Y \iff p_{X,Y} = p_X p_Y$ | Uniform on chord $\|x\| \le \sqrt{1-y^2}$ (dependent) | Discriminative & autoregressive models |
 | **Optimal MSE Predictor** | $\mathbb{E}[(X-h(Y))^2] = \mathbb{E}[\mathrm{Var}(X\mid Y)] + \mathbb{E}[(\mathbb{E}[X\mid Y]-h(Y))^2]$ | Best predictor $h^\star(Y) = \mathbb{E}[X \mid Y]$ | Neural networks trained with $L_2$ loss |
+:::
+
+::: {.slide title="Summary: Joint Distributions and Transformations (cont.)"}
+[Key Takeaways]{.kicker}
+
+| Operation / Theorem | Mathematical Formula | Dart / Worked Benchmark | Deep Learning Role |
+| :--- | :--- | :--- | :--- |
 | **Law of Total Variance** | $\mathrm{Var}(X) = \mathbb{E}[\mathrm{Var}(X \mid Y)] + \mathrm{Var}(\mathbb{E}[X \mid Y])$ | Mixture: $1.00\text{ (within)} + 2.56\text{ (between)} = 3.56$ | ANOVA, $R^2$ ceiling & noise decomposition |
 | **Covariance & Sum Variance** | $\mathrm{Cov}(X,Y) = \mathbb{E}[XY]-\mu_X\mu_Y$; $\mathrm{Var}(\bar{X}_n) = \sigma^2/n$ | $\mathrm{Cov}(X,Y)=0$ on disk despite dependence | Monte Carlo $\sigma/\sqrt{n}$ & ensemble diversity |
 | **Covariance Matrix $\boldsymbol{\Sigma}$** | $\boldsymbol{\Sigma} = \mathbb{E}[(\mathbf{X}-\boldsymbol{\mu})(\mathbf{X}-\boldsymbol{\mu})^\top]$; $\mathrm{Var}(\mathbf{a}^\top\mathbf{X}) = \mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a} \ge 0$ | Disk $\boldsymbol{\Sigma} = \mathrm{diag}(1/4, 1/4)$ | PCA, feature whitening & Mahalanobis metrics |

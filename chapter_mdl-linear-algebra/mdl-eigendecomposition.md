@@ -1433,14 +1433,18 @@ Fifty matrix multiplications $\mathbf{P}^{50}\mathbf{p}_0$ and the scalar power 
 ::: {.col}
 - **Jordan Block ($\mathbf{J}_m(\lambda) = \lambda\mathbf{I} + \mathbf{N}$):** Nilpotent shift $\mathbf{N}^m = \mathbf{0}$ gives $\mathbf{J}_2(\lambda)^k = \lambda^k\mathbf{I} + k\lambda^{k-1}\mathbf{N}$.
 - **Transient Amplification:** At $\lambda = 0.99$, $k(0.99)^{k-1}$ climbs to $37.0$ at $k = 100$ before decaying.
-
-@mdl-eigendecomposition-jordan-power
 :::
 
 ::: {.col .fig}
 @fig:ch33-la-jordan-transient
 :::
 :::
+:::
+
+::: {.slide title="Jordan Blocks Multiply λᵏ by a Polynomial in k (cont.)"}
+[Jordan Normal Form]{.kicker}
+
+@mdl-eigendecomposition-jordan-power
 :::
 
 ::: {.slide title="Complex Eigenvalues Encode Rotation Plus Scaling"}
@@ -1464,7 +1468,13 @@ Fifty matrix multiplications $\mathbf{P}^{50}\mathbf{p}_0$ and the scalar power 
 
 Extracting the real and imaginary parts of the complex eigenvector transforms $\mathbf{A}$ into the exact block $\left(\begin{smallmatrix}2&-1\\1&2\end{smallmatrix}\right)$, while standard coordinates show non-uniform per-step norm ratios:
 
-@mdl-eigendecomposition-complex-eigenvalues-are-rotations-1
+@-mdl-eigendecomposition-complex-eigenvalues-are-rotations-1
+:::
+
+::: {.slide title="Elliptical Spirals of the Running Matrix A (cont.)"}
+[Complex Spectra in Code]{.kicker}
+
+@!mdl-eigendecomposition-complex-eigenvalues-are-rotations-1
 
 ::: {.d2l-note}
 **Why Per-Step Ratios Swing Between $1.4$ and $3.5$:** The rotation–scaling is uniform only in the non-orthogonal basis $(\mathbf{v}, \mathbf{u})$; in standard coordinates, iterates spiral along tilted ellipses whose geometric average growth rate settles to $\sqrt{5} \approx 2.236$.

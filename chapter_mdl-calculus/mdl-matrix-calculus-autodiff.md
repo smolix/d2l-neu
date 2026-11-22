@@ -1499,7 +1499,7 @@ Both the function value $4.662209$ and the derivative $3.360101$ match the analy
 ::: {.slide title="Toy Tape vs. Production Framework Autograd"}
 [Code Verification]{.kicker}
 
-Both our 40-line `Var` tape and production framework autograd (which scales `Var` to tensor VJPs via dynamic tapes in PyTorch/TF or functional tracers in JAX) return $\partial y/\partial u = 16$ and $\partial y/\partial v = -16$:
+Both our 40-line `Var` tape and production framework autograd (which scales `Var` to tensor VJPs) return $\partial y/\partial u = 16$ and $\partial y/\partial v = -16$:
 
 @!mdl-matrix-calculus-autodiff-the-tape-1
 
@@ -1558,7 +1558,7 @@ Both our 40-line `Var` tape and production framework autograd (which scales `Var
 :::
 :::
 
-::: {.slide title="Composable Primitives: JVP and VJP in Frameworks"}
+::: {.slide title="Composable Primitives: JVP and VJP in Frameworks" only="pytorch,tensorflow,jax"}
 [Framework APIs]{.kicker}
 
 Modern frameworks expose both linear operators—forward-mode `jvp` ($\mathbf{J}\mathbf{v}$) and reverse-mode `vjp` ($\mathbf{u}^\top\mathbf{J}$)—as composable higher-order transformations. On $\mathbf{f}(x, y) = (x + \sin y,\ y + x^2/2)^\top$ at $(0.5, 0.5)^\top$ with $\mathbf{v} = \mathbf{u} = (1, 2)^\top$:
@@ -1567,6 +1567,18 @@ Modern frameworks expose both linear operators—forward-mode `jvp` ($\mathbf{J}
 
 ::: {.d2l-note}
 Both $\mathbf{J}\mathbf{v} = (2.7552, 2.5)^\top$ and $\mathbf{u}^\top\mathbf{J} = (2.0, 2.8776)$ require only a single sweep and never allocate an $m \times n$ matrix. Materialize the dense Jacobian $\mathbf{J}$ only when $\min(m, n)$ is small or when $\det \mathbf{J}$ is needed (e.g., normalizing flows).
+:::
+:::
+
+::: {.slide title="Composable Primitives: JVP and VJP in Frameworks" only="mxnet"}
+[Framework APIs]{.kicker}
+
+Forward mode gives $\mathbf{J}\mathbf{v}$ and reverse mode gives $\mathbf{u}^\top\mathbf{J}$. On $\mathbf{f}(x, y) = (x + \sin y,\ y + x^2/2)^\top$ at $(0.5, 0.5)^\top$ with $\mathbf{v} = \mathbf{u} = (1, 2)^\top$:
+
+@!mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products
+
+::: {.d2l-note}
+MXNet's autograd supports reverse mode only. This tab builds $\mathbf{J}$ from two VJPs, one per row, and then multiplies it by $\mathbf{v}$; on a $2\times2$ map that costs no more than two JVPs. Materialize the dense Jacobian $\mathbf{J}$ only when $\min(m, n)$ is small or when $\det \mathbf{J}$ is needed (e.g., normalizing flows).
 :::
 :::
 
@@ -1585,7 +1597,7 @@ Both $\mathbf{J}\mathbf{v} = (2.7552, 2.5)^\top$ and $\mathbf{u}^\top\mathbf{J} 
 :::
 :::
 
-::: {.slide title="Verifying Forward-Over-Reverse HVP on Log-Sum-Exp"}
+::: {.slide title="Verifying Forward-Over-Reverse HVP on Log-Sum-Exp" only="pytorch,tensorflow,jax"}
 [Closed-Form Check]{.kicker}
 
 For log-sum-exp $\ell(\mathbf{x}) = \log\sum_j e^{x_j}$, the gradient is $\mathbf{p} = \operatorname{softmax}(\mathbf{x})$ and the Hessian is $\mathbf{H} = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$, so $\mathbf{H}\mathbf{v} = \mathbf{p} \odot \mathbf{v} - \mathbf{p}(\mathbf{p}^\top\mathbf{v})$ in $3n$ scalar multiplications:
@@ -1593,7 +1605,19 @@ For log-sum-exp $\ell(\mathbf{x}) = \log\sum_j e^{x_j}$, the gradient is $\mathb
 @!mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up
 
 ::: {.d2l-note}
-At $\mathbf{x} = (1, -0.5, 2)^\top$ and $\mathbf{v} = (1, 0.5, -1)^\top$, `jvp(grad(lse), (x,), (v,))` returns $(0.3571, 0.0514, -0.4085)^\top$, matching $\mathbf{p}\odot\mathbf{v} - \mathbf{p}(\mathbf{p}^\top\mathbf{v})$ to every digit without building a $3 \times 3$ matrix.
+At $\mathbf{x} = (1, -0.5, 2)^\top$ and $\mathbf{v} = (1, 0.5, -1)^\top$, forward-over-reverse returns $(0.3571, 0.0514, -0.4085)^\top$, matching $\mathbf{p}\odot\mathbf{v} - \mathbf{p}(\mathbf{p}^\top\mathbf{v})$ to every digit without building a $3 \times 3$ matrix.
+:::
+:::
+
+::: {.slide title="Verifying the HVP on Log-Sum-Exp" only="mxnet"}
+[Closed-Form Check]{.kicker}
+
+For log-sum-exp $\ell(\mathbf{x}) = \log\sum_j e^{x_j}$, the gradient is $\mathbf{p} = \operatorname{softmax}(\mathbf{x})$ and the Hessian is $\mathbf{H} = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$, so $\mathbf{H}\mathbf{v} = \mathbf{p} \odot \mathbf{v} - \mathbf{p}(\mathbf{p}^\top\mathbf{v})$ in $3n$ scalar multiplications:
+
+@!mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up
+
+::: {.d2l-note}
+MXNet lacks forward mode, and its second-order autograd does not cover `exp`. This tab therefore evaluates $\mathbf{H}\mathbf{v}$ as a central difference of the reverse-mode gradient with step $h=10^{-4}$ in float64: at $\mathbf{x} = (1, -0.5, 2)^\top$ and $\mathbf{v} = (1, 0.5, -1)^\top$ it returns $(0.3571, 0.0514, -0.4085)^\top$, matching $\mathbf{p}\odot\mathbf{v} - \mathbf{p}(\mathbf{p}^\top\mathbf{v})$ without building a $3 \times 3$ matrix.
 :::
 :::
 
@@ -1664,8 +1688,12 @@ Test your grasp of forward vs. reverse mode, checkpointing, and implicit differe
 1. **Choosing the cheaper mode:** Suppose an encoder $\mathbf{f} : \mathbb{R}^{3} \to \mathbb{R}^{1000}$ maps 3 camera pose parameters to a 1000-pixel rendered column, and we need its full $1000 \times 3$ Jacobian $\mathbf{J}$. How many sweeps does forward mode need vs. reverse mode?
 2. **Activation checkpointing budget:** A deep recurrent network unrolls for $T = 10{,}000$ time steps. How many intermediate states must plain reverse mode store, and what is the minimum peak memory $2\sqrt{T}$ achieved by optimal single-level checkpointing?
 3. **Adjoint implicit solve:** In ridge regression $\mathbf{w}^\star(\boldsymbol{\lambda})$ with $d = 5000$ regularization penalties $\lambda_j$, computing $\partial\mathbf{w}^\star/\partial\boldsymbol{\lambda}$ directly requires $5000$ linear solves. How many linear solves does the VJP adjoint route require to compute the gradient of scalar validation loss $V(\mathbf{w}^\star(\boldsymbol{\lambda}))$ with respect to all $5000$ penalties?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Automatic Differentiation (cont.)"}
+[Review & Practice]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. Here $n = 3 \ll m = 1000$: **forward mode needs only $3$ JVP sweeps** (one per input column $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ with zero tape memory), whereas reverse mode would require $1000$ VJP sweeps!

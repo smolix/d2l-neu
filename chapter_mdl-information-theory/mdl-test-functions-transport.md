@@ -1309,8 +1309,12 @@ Test your understanding of IPMs and optimal transport:
 1. **Empirical Total Variation failure:** You draw two independent samples of $N = 1{,}000$ points each from $\mathcal{N}(0, 1)$. What is the exact Total Variation distance between the two empirical distributions $\hat{P}_N$ and $\hat{Q}_N$, and what does the unbiased RBF-$\textrm{MMD}^2$ estimator report instead?
 2. **1D Wasserstein vs. TV under rescaling:** For $P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$ supported on atoms $\{0, 1, 2\}$, compute $\textrm{TV}(P, Q)$ and $W_1(P, Q)$. What happens to both quantities if the atoms are stretched to $\{0, 2, 4\}$?
 3. **Optimal critic for variance shift:** For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(0, 4)$, the 1D monotone coupling maps $X \mapsto Y = 2X$. Use this coupling to compute $W_1(P, Q)$ and identify the optimal 1-Lipschitz critic $g^\star(x)$.
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Empirical TV, 1D W₁, and Critics (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **Empirical TV:** Because continuous draws share zero points almost surely, the indicator of the first sample gives $\textrm{TV}(\hat{P}_N, \hat{Q}_N) = 1.0$, whereas unbiased RBF-$\textrm{MMD}^2$ cancels first-order noise and reports $\approx 0.000 \pm 0.002$.

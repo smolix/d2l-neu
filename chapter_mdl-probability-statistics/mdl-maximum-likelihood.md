@@ -1552,7 +1552,7 @@ Maximum Likelihood, Fisher Information, and MAP Estimation<br>**likelihood & NLL
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-coin-three-q
+@fig:ch36-prob-coin-three-q
 :::
 :::
 :::
@@ -1569,7 +1569,7 @@ $$\hat{\boldsymbol{\theta}}_{\mathrm{MLE}} = \mathop{\mathrm{argmax}}_{\boldsymb
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-lik-vs-prob
+@fig:ch36-prob-lik-vs-prob
 :::
 :::
 :::
@@ -1603,7 +1603,7 @@ $$\ell(\boldsymbol{\theta}) = -\log P(X \mid \boldsymbol{\theta}) = -\sum_{i=1}^
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-underflow-nll
+@fig:ch36-prob-underflow-nll
 :::
 :::
 :::
@@ -1632,7 +1632,7 @@ $$\frac{1}{n}\ell(\boldsymbol{\theta}) = \mathrm{CE}(\hat{p}_{\mathrm{data}}, p_
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-ce-kl-split
+@fig:ch36-prob-ce-kl-split
 :::
 :::
 :::
@@ -1710,7 +1710,7 @@ $$s(x; \boldsymbol{\theta}) = \nabla_{\boldsymbol{\theta}} \log p(x \mid \boldsy
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-score-zero
+@fig:ch36-prob-score-zero
 :::
 :::
 :::
@@ -1727,7 +1727,7 @@ $$I(\boldsymbol{\theta}) = \operatorname{Var}_{\boldsymbol{\theta}}\bigl[s(x; \b
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-fisher-duality
+@fig:ch36-prob-fisher-duality
 :::
 :::
 :::
@@ -1752,7 +1752,7 @@ $$I(\boldsymbol{\theta}) = \operatorname{Var}_{\boldsymbol{\theta}}\bigl[s(x; \b
 ::: {.slide title="Verifying the Information Identity via Autodiff"}
 [Automatic Differentiation]{.kicker}
 
-When closed-form integration is tedious, vectorized automatic differentiation (`vmap` composed with `grad`) evaluates both forms of the Fisher information directly on $10{,}000$ Cauchy draws at $\theta^\star = 0$:
+When closed-form integration is tedious, per-example automatic differentiation of the score and its derivative evaluates both forms of the Fisher information directly on $10{,}000$ Cauchy draws at $\theta^\star = 0$:
 
 @!maximum-likelihood-fisher-information
 
@@ -1773,7 +1773,7 @@ $$\widehat{\mathrm{se}}(\hat{\theta}) = \frac{1}{\sqrt{\ell''(\hat{\theta})}} = 
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-nll-se-readout
+@fig:ch36-prob-nll-se-readout
 :::
 :::
 :::
@@ -1802,7 +1802,7 @@ $$\sqrt{n}\bigl(\hat{\boldsymbol{\theta}} - \boldsymbol{\theta}^\star\bigr) \app
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-asymptotic-norm
+@fig:ch36-prob-asymptotic-norm
 :::
 :::
 :::
@@ -1858,7 +1858,7 @@ $$\hat{\boldsymbol{\theta}}_{\mathrm{MAP}} = \mathop{\mathrm{argmin}}_{\boldsymb
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-map-hhh
+@fig:ch36-prob-map-hhh
 :::
 :::
 :::

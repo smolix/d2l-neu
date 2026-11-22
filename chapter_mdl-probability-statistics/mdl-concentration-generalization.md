@@ -1176,7 +1176,7 @@ Concentration Inequalities and High-Dimensional Measure<br>**Chernoff method · 
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-three-intervals
+@fig:ch36-prob-three-intervals
 :::
 :::
 :::
@@ -1220,7 +1220,7 @@ $$P\bigl(\lvert\hat{p} - \tfrac{1}{2}\rvert \ge t\bigr) \le 2\,e^{-2nt^2}$$
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-fair-coin-mgf
+@fig:ch36-prob-fair-coin-mgf
 :::
 :::
 :::
@@ -1237,7 +1237,7 @@ $$\mathbb{E}\bigl[e^{\lambda X}\bigr] \le \exp\!\left(\frac{\lambda^2(b-a)^2}{8}
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-hoeffding-tilting
+@fig:ch36-prob-hoeffding-tilting
 :::
 :::
 :::
@@ -1305,7 +1305,7 @@ $$P\bigl(\lvert\bar{X} - \mathbb{E}[\bar{X}]\rvert \ge t\bigr) \le 2\exp\!\left(
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-subexp-window
+@fig:ch36-prob-subexp-window
 :::
 :::
 :::
@@ -1373,7 +1373,7 @@ $$P\bigl(\lvert\cos(\mathbf{x}, \mathbf{u})\rvert \ge \varepsilon\bigr) \le 2e^{
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-random-ortho
+@fig:ch36-prob-random-ortho
 :::
 :::
 :::
@@ -1390,7 +1390,7 @@ $$P\Bigl(\max_{i < j} \lvert\cos(\mathbf{x}_i, \mathbf{x}_j)\rvert \ge \varepsil
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-exponential-packing
+@fig:ch36-prob-exponential-packing
 :::
 :::
 :::
@@ -1417,7 +1417,7 @@ $$\rho_k = \frac{\|\mathbf{h}_k\|^2}{\|\mathbf{h}_{k-1}\|^2}, \qquad \mathbb{E}[
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-depth-norm-drift
+@fig:ch36-prob-depth-norm-drift
 :::
 :::
 :::
@@ -1432,7 +1432,7 @@ $$\rho_k = \frac{\|\mathbf{h}_k\|^2}{\|\mathbf{h}_{k-1}\|^2}, \qquad \mathbb{E}[
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-slerp-vs-lerp
+@fig:ch36-prob-slerp-vs-lerp
 :::
 :::
 :::
@@ -1461,7 +1461,7 @@ Every concentration inequality in this section—Hoeffding, Bernstein, and sub-e
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-tail-bounds-ladder
+@fig:ch36-prob-tail-bounds-ladder
 :::
 :::
 :::

@@ -1602,6 +1602,10 @@ Comparing our two-step Gram–Schmidt orthogonalization against `np.linalg.qr` c
 Normalizing standard Gaussian vectors confirms the $1/\sqrt{784} \approx 0.036$ spread, whereas real Fashion-MNIST test images behave very differently:
 
 @mdl-geometry-linear-algebraic-ops-near-orthogonality-of-random-directions-1
+:::
+
+::: {.slide title="Simulating Random vs. Real Image Cosines (cont.)"}
+[Concentration of Measure]{.kicker}
 
 @mdl-geometry-linear-algebraic-ops-near-orthogonality-of-random-directions-2
 :::

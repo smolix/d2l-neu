@@ -1325,7 +1325,7 @@ $$\bigl\lvert\hat{R}_S(\hat{f}) - R(\hat{f})\bigr\rvert \le \sup_{f \in \mathcal
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-uniform-sup
+@fig:ch36-prob-uniform-sup
 :::
 :::
 :::
@@ -1342,7 +1342,7 @@ $$\sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert \le \sqrt{\
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-union-log-cost
+@fig:ch36-prob-union-log-cost
 :::
 :::
 :::
@@ -1357,7 +1357,7 @@ $$\sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert \le \sqrt{\
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-leaderboard-attack
+@fig:ch36-prob-leaderboard-attack
 :::
 :::
 :::
@@ -1374,7 +1374,7 @@ $$\widehat{\mathfrak{R}}_S(\mathcal{F}) = \mathbb{E}_{\boldsymbol{\varepsilon}}\
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-rademacher-noise
+@fig:ch36-prob-rademacher-noise
 :::
 :::
 :::
@@ -1417,7 +1417,7 @@ $$\mathbb{E}_S\Bigl[\sup_{g \in \mathcal{G}}\bigl(R(g) - \hat{R}_S(g)\bigr)\Bigr
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-symmetrization-ghost
+@fig:ch36-prob-symmetrization-ghost
 :::
 :::
 :::
@@ -1462,7 +1462,7 @@ $$P\bigl(y\langle\mathbf{w}, \mathbf{x}\rangle \le 0\bigr) \le \hat{R}_\gamma(\m
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-ramp-margin
+@fig:ch36-prob-ramp-margin
 :::
 :::
 :::
@@ -1500,7 +1500,7 @@ $$\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y} = \sum_{i=1}^{\min(n,p)} \frac{\lan
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-svd-interpolant
+@fig:ch36-prob-svd-interpolant
 :::
 :::
 :::
@@ -1528,7 +1528,7 @@ Inspecting all nine diagnostics across $p \in \{15, 38, 40, 42, 50, 80, 400\}$ r
 
 @!mdl-generalization-bounds-a-double-descent-sweep-2
 
-- **Training error is blind past $p = 40$:** For every $p \ge 40$, training MSE sits at floating-point zero ($\sim 10^{-28}$), yet test MSE drops $200\times$ from $p = 40$ to $p = 400$—tracked cleanly by $\sigma_{\min}$ ($0.02 \to 2.8$) and $\|\mathbf{w}\|_2$ ($11 \to 0.44$).
+- **Training error is blind past $p = 40$:** For every $p \ge 40$, training MSE sits at floating-point zero ($\sim 10^{-28}$), yet test MSE drops more than $100\times$ from $p = 40$ to $p = 400$—tracked cleanly by $\sigma_{\min}$ ($0.02 \to 2.8$) and $\|\mathbf{w}\|_2$ ($10$–$30 \to 0.4$).
 - **Target misspecification alone triggers the spike:** Even at $p = 40$, the noise-free `clean` error exceeds the `noise` error because a linear teacher is poorly approximated by $40$ ReLU ridges along $\mathbf{u}_n$.
 - **Well-specified small models still win:** While $p = 400$ beats every smaller ReLU model, ordinary least squares directly on the $15$ raw inputs achieves $\mathrm{MSE} \approx 0.006$—another $10\times$ lower!
 :::
@@ -1545,7 +1545,7 @@ $$\mathbb{E}_{\boldsymbol{\xi}}\bigl[\mathrm{MSE}_{\mathrm{test}}\bigr] = \frac{
 :::
 
 ::: {.col .fig}
-@fig:ch35-prob-clean-vs-noise
+@fig:ch36-prob-clean-vs-noise
 :::
 :::
 :::
@@ -1555,12 +1555,12 @@ $$\mathbb{E}_{\boldsymbol{\xi}}\bigl[\mathrm{MSE}_{\mathrm{test}}\bigr] = \frac{
 
 ::: {.cols .vc}
 ::: {.col}
-- **Threshold $p = n = 40$ (catastrophic):** $\mathbf{v}_n$ is an accidental pinch on the $40$ training points ($\sigma_{\min}^2/n \approx 10^{-5}$) while test inputs carry $O(1)$ energy, giving a $\sim 1{,}000\times$ energy ratio!
+- **Threshold $p = n = 40$ (catastrophic):** $\mathbf{v}_n$ is an accidental pinch on the $40$ training points ($\sigma_{\min}^2/n \approx 10^{-5}$) while test inputs carry $O(1)$ energy, giving a $\sim 10^4\times$ energy ratio!
 - **Wide limit $p = 400$ (benign overfitting):** Label noise is absorbed into genuinely low-variance directions where test inputs *also* have small projections, keeping the mean energy ratio $\approx 0.9\times$.
 :::
 
 ::: {.col .fig .big}
-@fig:ch35-prob-benign-directions
+@fig:ch36-prob-benign-directions
 :::
 :::
 :::
@@ -1600,7 +1600,7 @@ How do we reconcile our Rademacher margin bound $\frac{Br}{\gamma\sqrt{n}}$ with
 
 1. Doubling $\lvert\mathcal{F}\rvert$ adds $\log 2 \approx 0.693$ to $\log\lvert\mathcal{F}\rvert$, requiring $\frac{\log 2}{2(0.01)^2} \approx 3{,}466$ additional validation examples regardless of the current pool size.
 2. Since $\mathcal{F}$ matches every $\boldsymbol{\varepsilon}$ exactly, $\widehat{\mathfrak{R}}_S(\mathcal{F}) = 1$. For the $0\text{--}1$ loss class $\mathcal{G}$, $\widehat{\mathfrak{R}}_S(\mathcal{G}) = \frac{1}{2}\widehat{\mathfrak{R}}_S(\mathcal{F}) = \frac{1}{2}$, so the complexity penalty $2\widehat{\mathfrak{R}}_S(\mathcal{G}) = 1.0$ ($100\%$) makes the bound vacuous.
-3. From $p = 42$ to $p = 400$: (1) the solution norm $\|\mathbf{w}\|_2$ drops from $\sim 5.0$ to $0.44$; (2) the smallest singular value $\sigma_{\min}$ rises from $\sim 0.08$ to $2.8$; and (3) the test-to-train feature energy ratio along $\mathbf{v}_{\min}$ drops from $\sim 40$ to $\sim 2$.
+3. From $p = 42$ to $p = 400$: (1) the solution norm $\|\mathbf{w}\|_2$ drops from $\sim 5$ to $0.4$; (2) the smallest singular value $\sigma_{\min}$ rises from $\sim 0.08$ to $2.8$; and (3) the test-to-train feature energy ratio along $\mathbf{v}_{\min}$ drops from $\sim 500$–$800$ to $\sim 2$.
 :::
 :::
 

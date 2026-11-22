@@ -684,7 +684,7 @@ Working with Sequences<br>**autoregression · fixed windows vs. latent state · 
 - **The multistep forecasting gap:** On $x_t = \sin(0.01t) + \epsilon_t$, a linear model on 4 past values achieves near-optimal 1-step MSE ($\approx 0.05$) yet fails when rolled out 64 steps ahead (MSE $\approx 0.25$).
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:ch08-rnn-iid-vs-temporal
 :::
 :::
@@ -948,13 +948,19 @@ Because the 4-lag moving average predicts roughly the level of the series $k$ st
 
 $$\textrm{MSE}(k) \approx 0.05 + \frac{1}{2\pi}\int_0^{2\pi} \bigl(\sin(a + 0.01\,k) - \sin a\bigr)^2\,da = 0.05 + 1 - \cos(0.01\,k)$$
 
+::: {.cols .vc}
+::: {.col}
 @sequence-error-accumulation-2
+:::
 
+::: {.col}
 ::: {.d2l-note .warn}
 **Two Distinct Rollout Failure Modes:**
 
 1. **Short-horizon objective mismatch (seen here):** The averaging model *damps* perturbations ($\sum w_i < 1$), so errors do not explode; rather, 1-step training never rewarded learning the curvature needed at $k = 64$.
 2. **Compounding rollout drift (exposure bias):** In models that *amplify* perturbations (such as autoregressive text generators or physics simulators), each step's prediction error shifts the input distribution at step $t+1$, causing errors to compound rapidly over long rollouts.
+:::
+:::
 :::
 :::
 

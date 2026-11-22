@@ -558,7 +558,7 @@ $$\frac{\partial L}{\partial \mathbf{W}_{\textrm{hh}}} = \sum_{t=1}^T \mathbf{H}
 - **Transient non-normal growth:** If $\mathbf{W}_{\textrm{hh}}$ is asymmetric with $\sigma_{\max}(\mathbf{W}_{\textrm{hh}}) > 1 > \rho$, norms can hump at small lags before $\rho^k$ decays.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:ch08-rnn-spectral-radius-regimes
 :::
 :::
@@ -591,16 +591,16 @@ To measure how far gradients actually travel inside our trained language model f
 
 @-bptt-vanishing-and-exploding-gradients-5
 
-- **Isolating the lag-$k$ sensitivity:** We take the cross-entropy loss at the final position $t = L$ ($\partial L_L / \partial \mathbf{O}_L = \textrm{softmax}(\mathbf{O}_L) - \mathbf{Y}_L$) and propagate $\mathbf{G}_t$ backward 64 steps via $\mathbf{G}_{t-1} = (\mathbf{G}_t \odot (1 - \mathbf{H}_t^2))\mathbf{W}_{\textrm{hh}}^\top$ without adding intermediate output losses.
+- **Isolating the lag-$k$ sensitivity:** We take the cross-entropy loss at the final position $t = L$ and propagate $\mathbf{G}_t$ backward 64 steps via $\mathbf{G}_{t-1} = (\mathbf{G}_t \odot (1 - \mathbf{H}_t^2))\mathbf{W}_{\textrm{hh}}^\top$ without adding intermediate output losses.
 :::
 
 ::: {.slide title="Measured Gradient Decay Inside the Trained RNN"}
 [Empirical Probe Results]{.kicker}
 
-Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ on a logarithmic axis against lag $k \in \{0, \ldots, 63\}$ resolves the puzzle from §8.4:
-
 ::: {.cols .vc}
 ::: {.col}
+Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ on a logarithmic axis against lag $k \in \{0, \ldots, 63\}$ resolves the puzzle from §8.4:
+
 - **Large weights, yet fast vanishing:** The trained recurrent matrix has spectral radius $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$ (which would explode as $1.80^k$ in a linear RNN!), yet the mean $\tanh$ derivative is $\overline{1 - H^2} \approx 0.27$.
 - **Halving every step ($1.80 \times 0.27 \approx 0.49$):** The gradient norm drops by roughly half at every step back in time—falling **below $1\%$ within $k = 8$ steps** and shrinking to $\sim 10^{-9}$ across 32 tokens.
 - **Explains the 3-token horizon:** Tokens at lag $k \ge 4$ contribute almost zero gradient to $\mathbf{W}_{\textrm{hh}}$ during training!
@@ -630,15 +630,15 @@ $$\mathbf{G}_t = \sum_{j=t}^T \frac{\partial L}{\partial \mathbf{O}_j}\mathbf{W}
 :::
 
 ::: {.slide title="Architectural Remedies: Gates and Linear Recurrences"}
-[Preview of Chapter 12 (Modern RNNs & SSMs)]{.kicker}
+[Preview of the State Space Models Chapter]{.kicker}
 
 Overcoming vanishing gradients requires redesigning the recurrent state transition $g$ so that the step-to-step Jacobian $\mathbf{J}_t = \partial \mathbf{H}_t / \partial \mathbf{H}_{t-1}$ has eigenvalues near $1$ along memory directions:
 
 | Architectural Family | Core State Transition Mechanism | Why State Jacobians Stay Near Unity ($\mathbf{J}_t \approx \mathbf{I}$) |
 |---|---|---|
 | **Vanilla $\tanh$ RNN (§8.4)** | $\mathbf{H}_t = \tanh(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}})$ | $\mathbf{J}_t = \textrm{diag}(1 - \mathbf{H}_t^2)\mathbf{W}_{\textrm{hh}}^\top$ contracts by $\sim 0.5\times$ per step whenever units saturate |
-| **Gated RNNs (LSTM, GRU — §12.1–§12.3)** | Additive cell state $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$ with learned sigmoid gates $\mathbf{F}_t \in (0, 1)^h$ | When forget gate $\mathbf{F}_t \approx \mathbf{1}$, $\partial \mathbf{C}_t / \partial \mathbf{C}_{t-1} = \textrm{diag}(\mathbf{F}_t) \approx \mathbf{I}$, creating an unattenuated gradient highway |
-| **Structured State Space Models (SSMs / Linear RNNs — §12.4+)** | Linear state recurrence $\mathbf{h}_t = \mathbf{A}\mathbf{h}_{t-1} + \mathbf{B}\mathbf{x}_t$ with nonlinear readout layers | Removes recurrent $\tanh$ saturation altogether and constrains eigenvalues of $\mathbf{A}$ near the unit disk ($|\lambda_i| \le 1$) |
+| **Gated RNNs (LSTM, GRU — Gated Recurrent Networks section)** | Additive cell state $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$ with learned sigmoid gates $\mathbf{F}_t \in (0, 1)^h$ | When forget gate $\mathbf{F}_t \approx \mathbf{1}$, $\partial \mathbf{C}_t / \partial \mathbf{C}_{t-1} = \textrm{diag}(\mathbf{F}_t) \approx \mathbf{I}$, creating an unattenuated gradient highway |
+| **Structured State Space Models (SSMs / Linear RNNs — Linear Recurrences and State Space Models sections)** | Linear state recurrence $\mathbf{h}_t = \mathbf{A}\mathbf{h}_{t-1} + \mathbf{B}\mathbf{x}_t$ with nonlinear readout layers | Removes recurrent $\tanh$ saturation altogether and constrains eigenvalues of $\mathbf{A}$ near the unit disk ($|\lambda_i| \le 1$) |
 :::
 
 ::: {.slide title="The Memory and Compute Cost of Full-Sequence BPTT"}
@@ -663,7 +663,7 @@ Overcoming vanishing gradients requires redesigning the recurrent state transiti
 
 ::: {.cols .vc}
 ::: {.col}
-- **Forward state carries over, backward gradient stops:** When streaming through contiguous segments, the final state $\mathbf{H}_{T_0}$ is passed as the initial state of the next segment after **detaching** it from the autograd graph (`state = state.detach()` in PyTorch or `jax.lax.stop_gradient(state)` in JAX).
+- **Forward state carries over, backward gradient stops:** When streaming through contiguous segments, the final state $\mathbf{H}_{T_0}$ is passed as the initial state of the next segment after **detaching** it from the autograd graph (stopping its gradient).
 - **$O(T_0 bh)$ memory and frequent updates:** Autograd frees each segment's computation graph immediately after its update, bounding memory to $T_0$ states.
 :::
 
@@ -689,14 +689,19 @@ Truncating backpropagation to windows of length $T_0$ trades long-range gradient
 Test your understanding of matrix powers, graph detachment, and gradient horizons:
 
 1. **Sensitivity Across a 32-Token Window:** In a linear RNN over a window of $T_0 = 32$ tokens, how many step Jacobians separate the final loss at $t = 32$ from the initial state $\mathbf{H}_1$, and by what factor does that sensitivity scale if $\rho(\mathbf{W}_{\textrm{hh}}) = 0.9$ versus $\rho(\mathbf{W}_{\textrm{hh}}) = 1.1$?
-2. **The Missing `detach()` Bug:** Suppose you train an RNN over 1,000 consecutive 32-token segments on a GPU, carrying `state` from segment $s$ into segment $s+1$, but you forget to call `state = state.detach()` (`stop_gradient`) at the end of each segment. What happens to GPU memory and backward runtime on segment $s = 1, 2, 3, \ldots$?
+2. **The Missing Detach Bug:** Suppose you train an RNN over 1,000 consecutive 32-token segments on a GPU, carrying `state` from segment $s$ into segment $s+1$, but you forget to detach `state` (stop its gradient) at the end of each segment. What happens to GPU memory and backward runtime on segment $s = 1, 2, 3, \ldots$?
 3. **Widening the Window on a Vanilla RNN:** If you retrain our vanilla $\tanh$ RNN from §8.4 with `num_steps = 128` instead of `num_steps = 32`, will its validation loss-by-position curve keep improving beyond token 3? Why or why not?
 
-::: {.d2l-note .fragment .fade-up}
+:::
+
+::: {.slide title="Concept Check: BPTT Jacobians, Clipping & Detach (Answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **$31$ Jacobians:** At $\rho = 0.9$, $0.9^{31} \approx 0.038$ ($96\%$ lost); at $\rho = 1.1$, $1.1^{31} \approx 19.2$. Shifting $\rho$ by $\pm 10\%$ around $1.0$ changes the 32-step gradient norm by **$500\times$**.
-2. **Unbounded graph growth (OOM):** Without `detach()`, segment $s$ stays connected to the computational graphs of all previous segments $1, \ldots, s-1$. Backward runtime and GPU memory grow linearly as $O(s \cdot T_0)$ at every step until `loss.backward()` crashes with an out-of-memory or "backward through graph a second time" error.
+2. **Unbounded graph growth (OOM):** Without the detach, segment $s$ stays connected to the computational graphs of all previous segments $1, \ldots, s-1$. Backward runtime and GPU memory grow linearly as $O(s \cdot T_0)$ at every step until the backward pass runs out of memory.
 3. **No:** Because $\overline{(1 - H^2)}\,\rho(\mathbf{W}_{\textrm{hh}}) \approx 0.49$ attenuates gradients below $1\%$ within 8 steps regardless of window length, extending $T_0$ from $32 \to 128$ adds zero usable long-range gradient signal.
 :::
 :::

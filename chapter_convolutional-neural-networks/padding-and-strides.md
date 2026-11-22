@@ -618,7 +618,7 @@ Padding, Stride, and Dilation<br>**boundary control · spatial downsampling · d
 
 Even in a single unpadded $k \times k$ layer, pixels near the edge of the frame participate in far fewer sliding windows than interior pixels:
 
-![](../img/conv-reuse.svg){.nostretch width=82% fig-align="center"}
+![](../img/conv-reuse.svg){.nostretch width=62% fig-align="center"}
 
 - **Interior vs. corner disparity:** Any interior pixel at distance $\ge k-1$ from the border participates in $k^2$ windows ($25$ windows for a $5 \times 5$ kernel), an edge pixel appears in at most $k$ windows, and a corner pixel appears in **only 1 window**.
 - **Cumulative center bias:** Across stacked layers, unpadded convolutions exponentially down-weight information located near the perimeter of the image.
@@ -790,7 +790,7 @@ $$n_\textrm{out} = \left\lfloor \frac{n + 2p - d(k - 1) - 1}{s} \right\rfloor + 
 
 Replacing $k_i - 1$ with $k'_i - 1 = d_i(k_i - 1)$ in our receptive-field formula shows that doubling dilation rates $d_i = 2^{i-1}$ at stride 1 grows the receptive field **exponentially** ($r = 2^{L+1} - 1$ for $3 \times 3$ kernels):
 
-![](../img/conv-rf-towers.svg){.nostretch width=82% fig-align="center"}
+![](../img/conv-rf-towers.svg){.nostretch width=60% fig-align="center"}
 
 - **(a) Strided tower ($s = 2, 2, 1$, $d = 1, 1, 1$):** Reaches $r = 1 + 2 + 4 + 8 = 15$ input pixels, subsampling to every 4th spatial location ($16\times$ cheaper in 2D).
 - **(b) Dilated tower ($s = 1, 1, 1$, $d = 1, 2, 4$):** Reaches the exact same $r = 1 + 2(1) + 2(2) + 2(4) = 15$ input pixels through identical tap wiring, while evaluating **every spatial position** at full resolution.

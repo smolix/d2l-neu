@@ -985,13 +985,13 @@ Sampling $n = 500$ models per space at $\approx 400\text{M}$ multiply-adds and t
 
 ::: {.cols .vc}
 ::: {.col}
-- **$\text{AnyNetX}_A \to \text{AnyNetX}_B$ (shared $b_i = b$):** Tying one bottleneck ratio across all 4 stages leaves the error CDF unchanged (mean error $49.3\% \to 49.1\%$), eliminating 3 degrees of freedom for free.
+- **$\text{AnyNetX}_A \to \text{AnyNetX}_B$ (shared $b_i = b$):** Tying one bottleneck ratio across all 4 stages leaves the error CDF unchanged (mean error $49.3\% \to 49.1\%$), removing 3 knobs for free.
 - **$\text{AnyNetX}_B \to \text{AnyNetX}_C$ (shared $g_i = g$):** Tying one group width across stages also preserves the CDF ($49.1\%$, removing 3 more knobs).
 - **$\text{AnyNetX}_C \to \text{AnyNetX}_D$ (growing widths $c_{i+1} \ge c_i$):** Slashes mean error by **6 full points to $43.3\%$** (whereas shrinking widths $c_{i+1} < c_i$ crash to $63.0\%$).
 - **$\text{AnyNetX}_D \to \text{AnyNetX}_E$ (growing depths $d_{i+1} \ge d_i$):** Trims mean error further to **$42.8\%$** (down from $16$ free stage knobs to $10$ constrained ones).
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 ![](../img/regnet-fig.png){.nostretch width=100%}
 :::
 :::
@@ -1128,7 +1128,12 @@ Test your understanding of design spaces and RegNet parameterization:
 2. **Quantized linear staircase:** Suppose a RegNet has initial width $u_0 = 24$, slope $a = 36$, and geometric step ratio $m = 2.5$. For block $j = 2$, what is the unquantized linear width $u_2$, what stage index $s_2 = \operatorname{round}(\log(u_2/u_0)/\log m)$ does it snap to, and what is $\tilde{u}_2 = u_0 m^{s_2}$?
 3. **Reading empirical CDFs:** Suppose space $\mathcal{A}$ has a single outlier model with $18\%$ error but mean error $52\%$, while space $\mathcal{B}$ has minimum error $19\%$ and mean error $42\%$ with $\hat{F}_\mathcal{B}(e) > \hat{F}_\mathcal{A}(e)$ for all $e > 20\%$. Why does design-space methodology prefer $\mathcal{B}$?
 
-::: {.d2l-note .fragment .fade-up}
+:::
+
+::: {.slide title="Concept Check: Quantized Staircases, Group Counts & EDFs (Answers)"}
+[Concept Check]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **Stage 1:** $64 / 16 = \mathbf{4\text{ groups}}$. **Stage 2:** $160 / 16 = \mathbf{10\text{ groups}}$. Keeping group width $g = 16$ constant forces the number of parallel groups (cardinality) to grow proportionally with stage width.

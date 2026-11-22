@@ -1466,7 +1466,7 @@ MobileNetV1 replaces every standard convolutional layer after the stem with a `D
 ::: {.slide title="Implementing a Depthwise-Separable Block in Code"}
 [Mini-MobileNet Block]{.kicker}
 
-In code, setting `groups=in_channels` (or `DepthwiseConv2D` / `feature_group_count=in_channels`) turns a $3\times 3$ convolution into a depthwise filter, followed by a $1\times 1$ pointwise channel mixer:
+A depthwise $3\times 3$ conv (one filter per channel), then a $1\times 1$ pointwise channel mixer:
 
 @efficient-convnets-a-mini-mobilenet-1
 :::
@@ -1552,12 +1552,12 @@ $$\text{MACs} \propto d \cdot w^2 \cdot r^2$$
 ::: {.cols .vc}
 ::: {.col}
 @cnn-design-squeeze-and-excitation-gates
-
-- **Squeeze $\to$ Excite $\to$ Rescale:** Pools $(C, H, W) \to (C, 1, 1)$ and runs a $C \to C/r \to C$ gating MLP ($\sigma$) for $<0.03\%$ extra MACs.
 :::
 
 ::: {.col .fig}
 @fig:ch07-mcnn-se-channel-gating
+
+- **Squeeze $\to$ Excite $\to$ Rescale:** Pools $(C, H, W) \to (C, 1, 1)$ and runs a $C \to C/r \to C$ gating MLP ($\sigma$) for $<0.03\%$ extra MACs.
 :::
 :::
 :::
@@ -1602,7 +1602,7 @@ Collapsing a trained `RepVGGBlock` into one $3\times 3$ layer $(\hat{\mathbf{W}}
 ::: {.slide title="Implementing Branch Fusion (`fuse_bn` and `fuse_block`)"}
 [RepVGG Fusion Code]{.kicker}
 
-We fold each branch's frozen BatchNorm into its $3\times 3$-padded kernel and sum the three folded kernels and biases into a single `Conv2d` layer:
+Fold each branch's BatchNorm into a $3\times 3$ kernel, then sum all three into one conv:
 
 @efficient-convnets-fusing-the-branches-1
 :::

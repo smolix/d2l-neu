@@ -573,13 +573,13 @@ The function `pool2d` mirrors `corr2d`, stepping the top-left corner by `stride`
 ::: {.cols .vc}
 ::: {.col}
 @pooling-tolerance-to-small-shifts
+:::
+
+::: {.col .fig .narrow}
+@fig:ch06-cnn-block-boundary-shift
 
 - **Within-block absorption ($j=0 \to 1$):** Output is $100\%$ unchanged.
 - **Cross-boundary jump ($j=1 \to 2$):** Peak enters the right $2 \times 2$ block.
-:::
-
-::: {.col .fig}
-@fig:ch06-cnn-block-boundary-shift
 :::
 :::
 :::
@@ -589,7 +589,7 @@ The function `pool2d` mirrors `corr2d`, stepping the top-left corner by `stride`
 
 Tracing the impulse across all four columns of the $4 \times 4$ grid contrasts local $2 \times 2$ stride-2 pooling (middle) against global pooling over the entire grid (bottom):
 
-![](../img/pooling-shift.svg){.nostretch width=76% fig-align="center"}
+![](../img/pooling-shift.svg){.nostretch width=48% fig-align="center"}
 
 - **Local pooling ($k \times k$, stride $k$):** Absorbs a 1-pixel horizontal shift whenever the peak does not sit in the rightmost column of its block—a fraction $(k - 1)/k$ of starting columns ($50\%$ for $k = 2$, $67\%$ for $k = 3$).
 - **Max vs. average signal strength:** Max-pooling preserves the full impulse amplitude ($1.0$) anywhere in the block (*"Did the feature occur?"*), whereas average pooling dilutes an isolated response by $1/k^2 = 0.25$ (*"What fraction of the block did it cover?"*).

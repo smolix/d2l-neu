@@ -472,7 +472,7 @@ In Python, `corr2d_multi_in` zips the channel slices of `X` and `K`, calls `d2l.
 $$\mathbf{Y}_o = u_o + \sum_{c=1}^{c_\textrm{i}} \mathbf{X}_c \star \mathbf{K}_{o, c}, \qquad o = 1, \ldots, c_\textrm{o}$$
 
 - **4D filter bank $\mathsf{K} \in \mathbb{R}^{c_\textrm{o} \times c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}}$:** Stacks $c_\textrm{o}$ independent 3D kernels to produce $c_\textrm{o}$ output feature maps.
-- **Memory layouts:** Channels-first $(B, C, H, W)$ in PyTorch/MXNet vs. channels-last $(B, H, W, C)$ in JAX/TensorFlow.
+- **Memory layouts:** Depending on the framework, the channel axis comes first, $(B, C, H, W)$, or last, $(B, H, W, C)$; the arithmetic is identical.
 :::
 
 ::: {.col .fig}
@@ -488,9 +488,15 @@ Iterating `corr2d_multi_in(X, k)` over each 3D kernel `k` in the 4D tensor `K` a
 
 @channels-multiple-output-channels-1
 
+::: {.cols}
+::: {.col}
 @channels-multiple-output-channels-2
+:::
 
+::: {.col}
 @channels-multiple-output-channels-3
+:::
+:::
 :::
 
 ::: {.slide title="Mental-Math Verification of Multi-Channel Outputs"}

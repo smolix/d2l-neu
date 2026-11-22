@@ -825,13 +825,14 @@ Cross-correlating `X` with the $1 \times 2$ kernel $\mathbf{K} = \begin{bmatrix}
 ::: {.cols .vc}
 ::: {.col}
 @conv-layer-learning-a-kernel-1
-
-- **4D framework tensors:** Reshape `X` to $(1, 1, 6, 8)$ and `Y` to $(1, 1, 6, 7)$ and minimize $\mathcal{L} = \|\hat{\mathbf{Y}} - \mathbf{Y}\|_2^2$ at $\eta = 0.03$.
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @fig:ch06-cnn-learning-edge-loop
+
+- **4D framework tensors:** Reshape `X` and `Y` to 4D tensors (one example, one channel) and minimize $\mathcal{L} = \|\hat{\mathbf{Y}} - \mathbf{Y}\|_2^2$ at $\eta = 0.03$.
 :::
+
 :::
 :::
 
@@ -860,11 +861,12 @@ Cross-correlating `X` with the $1 \times 2$ kernel $\mathbf{K} = \begin{bmatrix}
 @conv-layer-convolution-as-matrix-multiplication-1
 
 - **Single dense GEMM:** Flatten each $k_\textrm{h} \times k_\textrm{w}$ window into a row of `patches` $\in \mathbb{R}^{(h_\textrm{o} w_\textrm{o}) \times (k_\textrm{h} k_\textrm{w})}$ and multiply by $\textrm{vec}(\mathbf{K})$.
-- **Trade-off:** Peak GPU Tensor Core speed at the cost of $k_\textrm{h} k_\textrm{w}\times$ patch workspace duplication.
 :::
 
 ::: {.col .fig}
 @fig:ch06-cnn-im2col-gemm
+
+- **Trade-off:** Peak GPU Tensor Core speed at the cost of $k_\textrm{h} k_\textrm{w}\times$ patch workspace duplication.
 :::
 :::
 :::
@@ -874,7 +876,7 @@ Cross-correlating `X` with the $1 \times 2$ kernel $\mathbf{K} = \begin{bmatrix}
 
 Instead of unfolding the input image into duplicated patches, we can unroll the *kernel* into a sparse banded matrix $\mathbf{W}$ that multiplies the flattened input vector $\textrm{vec}(\mathbf{X})$:
 
-![](../img/why-conv-weight-sharing.svg){.nostretch width=84% fig-align="center"}
+![](../img/why-conv-weight-sharing.svg){.nostretch width=46% fig-align="center"}
 
 - **Matrix–vector form:** $\textrm{vec}(\mathbf{Y}) = \mathbf{W}\,\textrm{vec}(\mathbf{X})$, where $\mathbf{W}$ has $(n_\textrm{h}-k_\textrm{h}+1)(n_\textrm{w}-k_\textrm{w}+1)$ rows and $n_\textrm{h} n_\textrm{w}$ columns.
 - **Connection to §6.1 and backprop:** Every row of $\mathbf{W}$ holds the same $k_\textrm{h} k_\textrm{w}$ kernel entries shifted across columns (panel c), making the backward pass with respect to $\mathbf{X}$ simply multiplication by $\mathbf{W}^\top$ (a transposed convolution).

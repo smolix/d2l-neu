@@ -57,9 +57,9 @@ Linear Neural Networks for Regression<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- **Theory & Synthetic Oracle (§§2.1–2.2):** Formulate the affine model, squared loss, normal equations, and minibatch SGD, then verify against known ground truth $(\mathbf{w}^*, b^*)$ and noise floor $\sigma^2/2$.
-- **Three Implementation Tiers (§§2.3–2.5):** Build the tensor autograd loop from scratch, decouple into `Module` / `DataModule` / `Trainer`, and swap in framework `LazyLinear` / `Dense` layers and optimizers.
-- **Generalization & Weight Decay (§§2.6–2.7):** Diagnose underfitting vs. overfitting via bias–variance and $K$-fold CV, and damp collinear noise with $\ell_2$ ridge shrinkage.
+- **Theory & Synthetic Oracle:** Formulate the affine model, squared loss, normal equations, and minibatch SGD, then verify against known ground truth $(\mathbf{w}^*, b^*)$ and noise floor $\sigma^2/2$.
+- **Three Implementation Tiers:** Build the tensor autograd loop from scratch, decouple into `Module` / `DataModule` / `Trainer`, and swap in the framework's dense layers and optimizers.
+- **Generalization & Weight Decay:** Diagnose underfitting vs. overfitting via bias–variance and $K$-fold CV, and damp collinear noise with $\ell_2$ ridge shrinkage.
 :::
 
 ::: {.col .fig .big}
@@ -73,9 +73,9 @@ Linear Neural Networks for Regression<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- **§2.1 Projection & §§2.2–2.5 Synthetic Testbed:** The 3-point line $(0,1),(1,1),(2,0)$ yields $\hat{\mathbf{w}} = (7/6, -1/2)^\top$ with $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$; on $n = 1{,}000$ examples with $\mathbf{w}^* = (2, -3.4)^\top, b^* = 4.2, \sigma = 0.01$, loss drops from $16.6$ to $\sigma^2/2 = 5 \times 10^{-5}$.
-- **§2.6 Polynomial Curve Fitting ($n = 20$):** Noisy samples of cubic $5 + 1.2x - 3.4x^2 + 5.6x^3$ ($\sigma = 0.1$) show degree $1$ underfitting, degree $3$ hitting $\sigma^2 = 0.01$, and degree $19$ exploding.
-- **§2.7 High-Dimensional Ridge ($d = 200, n = 300$):** Prior penalty $\lambda = \sigma^2/(n\tau^2) = 1/3$ shrinks effective parameters to $\operatorname{df} \approx 127$ and prevents noise memorization.
+- **Projection & Synthetic Testbed:** The 3-point line $(0,1),(1,1),(2,0)$ yields $\hat{\mathbf{w}} = (7/6, -1/2)^\top$ with $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$; on $n = 1{,}000$ examples, with $\mathbf{w}^* = (2, -3.4)^\top, b^* = 4.2, \sigma = 0.01$, loss drops from $16.6$ to $\sigma^2/2 = 5 \times 10^{-5}$.
+- **Polynomial Curve Fitting ($n = 20$):** Noisy samples of a cubic ($\sigma = 0.1$): degree $1$ underfits, degree $3$ hits $\sigma^2 = 0.01$, degree $19$ explodes.
+- **High-Dimensional Ridge ($d = 200, n = 300$):** The prior penalty $\lambda = \sigma^2/(n\tau^2) = 1/3$ shrinks the effective parameters to $\operatorname{df} \approx 127$.
 :::
 
 ::: {.col .fig .big}
@@ -87,7 +87,7 @@ Linear Neural Networks for Regression<br>
 ::: {.slide title="The Complete Supervised Learning Loop"}
 [End-to-End Perspective]{.kicker}
 
-Every model in the rest of this book—from multilayer perceptrons to Transformers—reuses the exact pipeline we construct in Chapter 2:
+Every model in the rest of this book—from multilayer perceptrons to Transformers—reuses the exact pipeline we construct in this chapter:
 
 ::: {.cols .vc}
 ::: {.col}

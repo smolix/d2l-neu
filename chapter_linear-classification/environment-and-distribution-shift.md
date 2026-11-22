@@ -443,12 +443,12 @@ $$p(\mathbf{x}, y) = p(\mathbf{x})\,p(y \mid \mathbf{x}) = p(y)\,p(\mathbf{x} \m
 ::: {.slide title="Comparing the Three Shift Regimes Geometrically"}
 [1D Input Densities and Optimal Bayes Boundaries]{.kicker}
 
-Comparing source (top row) and target (bottom row) joint densities $p(x, y)$ for two classes shows how each shift affects the Bayes-optimal decision boundary (dotted vertical line):
+Source (top) vs. target (bottom) joint densities $p(x, y)$; the dotted line is the Bayes-optimal boundary:
 
-![](../img/mdl-clf-shift-types.svg){.nostretch width=82% fig-align="center"}
+![](../img/mdl-clf-shift-types.svg){.nostretch width=50% fig-align="center"}
 
-- **Covariate shift (left):** $p(x)$ shifts right while $p(y \mid x)$ and the true Bayes boundary stay fixed—yet a misspecified linear model fitted where $p_S(x)$ is dense can fail badly where $p_T(x)$ lives.
-- **Label shift (middle) & Concept shift (right):** Changing $p(y)$ shifts the Bayes boundary toward the rarer class via $p(y \mid x) \propto p(x \mid y)p(y)$, whereas concept shift alters $p(y \mid x)$ directly.
+- **Covariate shift (left):** $p(x)$ shifts right while $p(y \mid x)$ and the Bayes boundary stay fixed—yet a misspecified model fitted where $p_S(x)$ is dense can fail where $p_T(x)$ lives.
+- **Label shift (middle) & concept shift (right):** Changing $p(y)$ moves the boundary toward the rarer class via $p(y \mid x) \propto p(x \mid y)p(y)$; concept shift alters $p(y \mid x)$ directly.
 :::
 
 ::: {.slide title="Covariate vs. Label Shift in Detail"}
@@ -456,12 +456,12 @@ Comparing source (top row) and target (bottom row) joint densities $p(x, y)$ for
 
 ::: {.cols .vc}
 ::: {.col}
-- **Covariate shift ($p(y \mid \mathbf{x})$ fixed):** If our hypothesis class $\mathcal{F}$ contained the exact true $p(y \mid \mathbf{x})$, fitting on infinite source data would already be optimal everywhere. In practice, models have limited capacity (e.g., fitting a line to a curved boundary), so unweighted ERM sacrifices accuracy in target regions where $p_S(\mathbf{x})$ is small.
-- **Label shift ($p(\mathbf{x} \mid y)$ fixed):** Because $y \in \{1, \ldots, q\}$ is discrete, adaptation requires estimating only **$q$ scalar class proportions** $p_T(y)$ rather than a high-dimensional density ratio over $\mathbb{R}^d$.
+- **Covariate shift ($p(y \mid \mathbf{x})$ fixed):** If $\mathcal{F}$ contained the true $p(y \mid \mathbf{x})$, fitting on infinite source data would be optimal everywhere. A limited model (a line for a curved boundary) instead sacrifices accuracy where $p_S(\mathbf{x})$ is small.
+- **Label shift ($p(\mathbf{x} \mid y)$ fixed):** Adaptation needs only **$q$ class proportions** $p_T(y)$, not a density ratio over $\mathbb{R}^d$.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-clf-shift-covariate.svg){.nostretch width=88%}
+![](../img/mdl-clf-shift-covariate.svg){.nostretch width=76%}
 :::
 :::
 :::
@@ -536,18 +536,22 @@ $$\frac{P(z = 1 \mid \mathbf{x})}{P(z = 0 \mid \mathbf{x})} = \frac{m}{n}\,\frac
 :::
 :::
 
-::: {.slide title="2D Covariate Shift Benchmark: Setup & Domain Classifier"}
+::: {.slide title="2D Covariate Shift Benchmark: Setup"}
+[Parabolic True Boundary Under a Shifted Gaussian]{.kicker}
+
+Let $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\top, \mathbf{I}_2)$, and true invariant rule $y = \mathbf{1}(x_2 > \frac{1}{2}x_1^2 - 1)$:
+
+@-environment-and-distribution-shift-covariate-shift-correction-1
+:::
+
+::: {.slide title="The Domain Classifier Recovers the Log-Ratio"}
 [Parabolic True Boundary Under a Shifted Gaussian]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Let $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\top, \mathbf{I}_2)$, and true invariant rule $y = \mathbf{1}(x_2 > \frac{1}{2}x_1^2 - 1)$:
-
-@-environment-and-distribution-shift-covariate-shift-correction-1
-
 @environment-and-distribution-shift-covariate-shift-correction-2
 
-- **Exact log-ratio & clipping:** Learned $h(\mathbf{x}) \approx 2x_1 - 2$ matches $\log(p_T/p_S)$, while clipping $\beta_i \le 5$ lifts $n_{\mathrm{eff}}$ from $\sim 20$ to $\sim 200$.
+- **Exact log-ratio & clipping:** Learned $h(\mathbf{x}) \approx 2x_1 - 2$ matches $\log(p_T/p_S)$, while clipping $\beta_i \le 5$ lifts $n_{\mathrm{eff}}$ from $\sim 30$–$120$ to $\sim 200$.
 :::
 
 ::: {.col .fig}
@@ -556,22 +560,28 @@ Let $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\to
 :::
 :::
 
-::: {.slide title="Weighted Logistic Regression Lifts Target Accuracy"}
+::: {.slide title="Importance-Weighted Logistic Regression"}
 [Unweighted vs. Importance-Weighted vs. Clipped ERM]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Weighting each source example's gradient residual by $\beta_i = \exp(h(\mathbf{x}^{(i)}))$ inside `fit_logreg` lifts target accuracy from $\sim 55\%$ to $\sim 95\%$ without a single target label:
+Weighting each source example's gradient residual by $\beta_i = \exp(h(\mathbf{x}^{(i)}))$ inside `fit_logreg`:
 
 @-environment-and-distribution-shift-a-two-dimensional-example-2
-
-@environment-and-distribution-shift-covariate-shift-correction-3
 :::
 
 ::: {.col .fig}
 @fig:ch03-cls-weighted-grad
 :::
 :::
+:::
+
+::: {.slide title="Weighted Logistic Regression Lifts Target Accuracy"}
+[Unweighted vs. Importance-Weighted vs. Clipped ERM]{.kicker}
+
+Reweighting lifts target accuracy from $\sim 55\%$ to $\sim 95\%$ without a single target label:
+
+@environment-and-distribution-shift-covariate-shift-correction-3
 :::
 
 ::: {.slide title="How Importance Weights Tilt the Linear Decision Boundary"}
@@ -630,15 +640,20 @@ Whenever $\mathbf{C}$ is invertible (guaranteed if per-class recall $C_{jj} > 1/
 ::: {.slide title="Unscrambling Label Shift on Fashion-MNIST"}
 [50% Shirt Surge & Instant Bayes Logit Adjustment]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 Estimating $\mathbf{C}$ on $5{,}000$ balanced validation images and testing on an unlabeled target set where **shirts surge from $10\%$ to $50\%$**:
 
 @!environment-and-distribution-shift-label-shift-on-fashion-mnist-2
 
 @environment-and-distribution-shift-label-shift-on-fashion-mnist-3
+:::
 
-- **Instant Bayes logit adjustment:** Adding $\log\frac{\hat{p}_T(y)}{p_S(y)}$ to each class logit lifts target accuracy by $\sim 5\text{--}7$ points in zero gradient steps!
+::: {.slide title="Instant Bayes Logit Adjustment"}
+[50% Shirt Surge & Instant Bayes Logit Adjustment]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Instant Bayes logit adjustment:** Adding $\log\frac{\hat{p}_T(y)}{p_S(y)}$ to each class logit lifts target accuracy by $\sim 6\text{--}13$ points in zero gradient steps!
+- **No retraining:** The source weights stay fixed; only the class priors move.
 :::
 
 ::: {.col .fig}

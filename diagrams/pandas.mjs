@@ -170,9 +170,9 @@ function xySplit() {
   const W = 540, H = 260; let o = '';
   const heads = ['NumRooms', 'RoofType', 'Area', 'Price'];
   const rows = [
-    ['NaN', 'NaN',   '1200', '127500'],
-    ['2.0', 'NaN',   '850',  '106000'],
-    ['4.0', 'Slate', '1700', '178100'],
+    ['3.0', 'Slate', '1500', '210000'],
+    ['NaN', 'Tile',  '2100', '290000'],
+    ['2.0', 'NaN',   '850',  '127500'],
   ];
   const cw = 88, ch = 32, g = 4;
   // Left: X = data.drop(columns=['Price'])
@@ -203,34 +203,41 @@ function xySplit() {
 function imputationShrinkage() {
   const W = 540, H = 278; let o = '';
   const x0 = 84, x1 = 492, mx = (x0 + x1) / 2;
-  // Panel (a): Observed spread vs mean-imputed pileup at mu = 3.0
-  o += name(16, 20, '(a) Plugging μ = 3.0 into missing rows shrinks spread σ', D.orange.dark, { anchor: 'start', fs: 15.5 });
+  // Panel (a): the 7 observed NumRooms (2,2,3,3,4,4,5; mean 23/7 = 3.29)
+  // vs the same 7 plus the 3 missing rows imputed at the mean
+  o += name(16, 20, '(a) Plugging μ ≈ 3.29 into missing rows shrinks spread σ', D.orange.dark, { anchor: 'start', fs: 15.5 });
   const y1 = 68, y2 = 132;
-  o += note(16, y1, 'true', C.muted, { anchor: 'start', fs: 14 });
+  const mu = 23 / 7, k = 70;
+  const vx = (v) => mx + (v - mu) * k;
+  const observed = [2, 2, 3, 3, 4, 4, 5];
+  const dots = (y) => {
+    const seen = {};
+    observed.forEach(v => {
+      const j = seen[v] = (seen[v] || 0) + 1;
+      o += `<circle cx="${vx(v).toFixed(1)}" cy="${y - (j - 1) * 11}" r="5.5" fill="${C.blue}"/>`;
+    });
+  };
+  o += note(16, y1, 'observed', C.muted, { anchor: 'start', fs: 14 });
   o += line(x0, y1, x1, y1, C.ink, 2);
-  [-160, -110, -70, -25, 30, 80, 125, 165].forEach(dx => {
-    o += `<circle cx="${mx + dx}" cy="${y1}" r="5.5" fill="${C.blue}"/>`;
-  });
+  dots(y1);
 
   o += note(16, y2, 'imputed', D.orange.dark, { anchor: 'start', fs: 14 });
   o += line(x0, y2, x1, y2, C.ink, 2);
-  [-110, -25, 30, 125].forEach(dx => {
-    o += `<circle cx="${mx + dx}" cy="${y2}" r="5.5" fill="${C.blue}"/>`;
-  });
-  // Stack of 4 imputed dots piled at the exact mean mx
-  for (let k = 0; k < 4; k++) {
-    o += `<circle cx="${mx}" cy="${y2 - k * 11}" r="5.5" fill="${C.amber}" stroke="${D.orange.dark}" stroke-width="1.5"/>`;
+  dots(y2);
+  // Stack of 3 imputed dots piled at the mean
+  for (let k2 = 0; k2 < 3; k2++) {
+    o += `<circle cx="${mx}" cy="${y2 - k2 * 11}" r="5.5" fill="${C.amber}" stroke="${D.orange.dark}" stroke-width="1.5"/>`;
   }
-  o += code(mx, y2 + 22, 'μ = 3.0 (4 imputed rows pile here → σ shrinks!)', D.orange.dark, { fs: 13.5 });
+  o += code(mx, y2 + 22, 'μ ≈ 3.29 (3 imputed rows pile here → σ shrinks!)', D.orange.dark, { fs: 13.5 });
 
   // Panel (b): Adding binary indicator feature NumRooms_isna
   o += `<line x1="16" y1="176" x2="524" y2="176" stroke="${N.hairline}" stroke-width="1.5"/>`;
   o += name(16, 200, '(b) Solution: pair imputed value with binary is_na indicator', D.purple.dark, { anchor: 'start', fs: 15.5 });
-  o += wcell(40, 222, 136, 36, GREEN, 'NumRooms = 3.0');
+  o += wcell(28, 222, 156, 36, GREEN, 'NumRooms = 3.29');
   o += tx(196, 240, '+', { fs: 22, fw: 700, fill: C.ink });
   o += wcell(216, 222, 164, 36, PURPLE, 'NumRooms_isna = 1');
-  o += arrow(390, 240, 424, 240, C.purple);
-  o += code(480, 240, 'w₁·3 + w₂·1', D.purple.dark, { fs: 14.5, fw: 700 });
+  o += arrow(386, 240, 406, 240, C.purple);
+  o += code(412, 240, 'w₁·3.29 + w₂·1', D.purple.dark, { fs: 14.5, fw: 700, anchor: 'start' });
   return svg(W, H, o);
 }
 

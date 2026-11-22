@@ -79,7 +79,7 @@ function reduceAxes() {
   o += line(dx, ay - 26, dx, by + s + 44, TOKENS.neutrals.hairline, 1.5);
   // right: keepdims=True keeps a (2, 1) column; broadcasting stretches it
   // (dashed copies) across the 3 columns, so A can be divided by it
-  const title = 'A.sum(axis=1, keepdims=True)';
+  const title = 'sum over axis 1, keepdims';
   const hw = 0.3 * 15 * title.length;       // half width of the mono title
   const kx = dx + hw - Aw / 2 + 18;         // keep the title clear of the divider
   o += lab(kx + Aw / 2, ay - 18, title, D.orange.dark);
@@ -183,10 +183,10 @@ function transpose() {
   o += t(104, 184, 'rows 0, 1, 2', { fs: 13.5, fw: 600, fill: C.muted });
 
   o += arrow(202, 104, 256, 104, C.purple);
-  o += t(229, 86, 'A.T', { mono: true, fs: 15, fw: 700, fill: D.purple.dark });
+  o += t(229, 86, 'Aᵀ', { mono: true, fs: 15, fw: 700, fill: D.purple.dark });
   o += t(229, 126, '(Aᵀ)ᵢⱼ = Aⱼᵢ', { fs: 13.5, fw: 600, fill: D.purple.dark });
 
-  o += t(330, 24, 'A.T: shape (4, 3)', { mono: true, fs: 15, fw: 700, fill: C.ink });
+  o += t(330, 24, 'Aᵀ: shape (4, 3)', { mono: true, fs: 15, fw: 700, fill: C.ink });
   o += cells(AT, 270, 44, s, g, (r, c) => rowCols[c]);
   o += t(330, 226, 'become columns 0, 1, 2', { fs: 13.5, fw: 600, fill: C.muted });
 

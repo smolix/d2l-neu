@@ -339,7 +339,7 @@ Measuring Classifiers: Precision, Recall, Costs & Calibration<br>**class imbalan
 
 ::: {.cols .vc}
 ::: {.col}
-Our Fashion-MNIST classifier achieved $\sim 83\%$ accuracy because all $10$ garment classes are balanced and every mistake carries equal weight. In real deployments, three conditions break that symmetry:
+Our Fashion-MNIST classifier reached $\sim 83\%$ accuracy on $10$ balanced classes where every mistake costs the same. Three conditions break that symmetry:
 
 - **Severe class imbalance:** Under $1\%$ disease prevalence, always predicting *healthy* scores $99\%$ accuracy while detecting **zero** positive cases.
 - **Asymmetric error costs:** Missing an illness ($\mathrm{FN}$) is vastly costlier than ordering a confirmatory test ($\mathrm{FP}$).
@@ -391,13 +391,19 @@ $$\mathrm{recall} = \frac{\mathrm{TP}}{\mathrm{TP} + \mathrm{FN}}, \qquad \mathr
 ::: {.slide title="How Precision Scales with Population Prevalence"}
 [Bayes' Theorem in Classifier Evaluation]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 Holding intrinsic recall ($0.90$) and false-alarm rate ($\mathrm{FPR} = 0.05$) fixed while sweeping disease prevalence $\pi = P(\text{sick})$:
 
 @classification-beyond-accuracy
+:::
 
-- **Intrinsic vs. prevalence-dependent:** Recall and $\mathrm{FPR}$ belong to the *classifier alone*, whereas precision $P(\text{sick} \mid \text{flagged}) = \frac{\text{recall}\cdot\pi}{\text{recall}\cdot\pi + \mathrm{FPR}\cdot(1-\pi)}$ scales with population prevalence $\pi$ via Bayes' rule.
+::: {.slide title="Precision Depends on Prevalence via Bayes' Rule"}
+[Bayes' Theorem in Classifier Evaluation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Intrinsic vs. prevalence-dependent:** Recall and $\mathrm{FPR}$ belong to the *classifier alone*, whereas precision
+  $$P(\text{sick} \mid \text{flagged}) = \frac{\text{recall}\cdot\pi}{\text{recall}\cdot\pi + \mathrm{FPR}\cdot(1-\pi)}$$
+  scales with population prevalence $\pi$ via Bayes' rule.
 :::
 
 ::: {.col .fig}
@@ -491,10 +497,6 @@ Partition $[0, 1]$ into $B = 10$ confidence bins $I_b = [\frac{b-1}{B}, \frac{b}
 
 $$\mathrm{ECE} = \sum_{b=1}^B \frac{n_b}{n}\,\big|a_b - \bar{c}_b\big|$$
 
-@-classification-calibration-1
-
-@classification-calibration-2
-
 - **Empty low bins:** By the pigeonhole principle, $\max_j \hat{y}_j \ge 1/10$, so bin $[0, 0.1)$ always has $n_1 = 0$.
 :::
 
@@ -504,26 +506,39 @@ $$\mathrm{ECE} = \sum_{b=1}^B \frac{n_b}{n}\,\big|a_b - \bar{c}_b\big|$$
 :::
 :::
 
+::: {.slide title="Computing Reliability Bins and ECE"}
+[Quantifying Miscalibration]{.kicker}
+
+@-classification-calibration-1
+
+@classification-calibration-2
+:::
+
 ::: {.slide title="Auditing Calibration of Softmax Regression"}
 [Per-Bin Reliability Table on Fashion-MNIST]{.kicker}
 
-Computing `reliability(conf, correct)` across the $10{,}000$ Fashion-MNIST validation predictions reveals how closely empirical accuracy tracks predicted confidence:
+Computing `reliability(conf, correct)` across the $10{,}000$ Fashion-MNIST validation predictions:
 
-@softmax-regression-concise-calibration-2
+@-softmax-regression-concise-calibration-2
+:::
 
-- **Interpreting the bin counts:** Across all well-populated bins ($[0.4, 0.5)$ through $[0.9, 1.0]$, holding $99\%$ of predictions), empirical accuracy matches mean confidence within $1\text{--}4$ percentage points, yielding an overall $\mathrm{ECE} < 0.03$.
+::: {.slide title="Reading the Per-Bin Reliability Table"}
+[Per-Bin Reliability Table on Fashion-MNIST]{.kicker}
+
+@!softmax-regression-concise-calibration-2
+
+- **Interpreting the bin counts:** Across the bins $[0.4, 0.5)$ through $[0.9, 1.0]$ (about $96\%$ of predictions), empirical accuracy matches mean confidence within about $1\text{--}6$ percentage points, yielding an overall $\mathrm{ECE} < 0.03$.
 :::
 
 ::: {.slide title="Visualizing the Reliability Diagram"}
 [Overconfidence vs. Underconfidence]{.kicker}
 
-Plotting bin accuracy $a_b$ against mean confidence $\bar{c}_b$ for all bins with $n_b \ge 100$ produces the **reliability diagram**:
-
 ::: {.cols .vc}
 ::: {.col}
-- **Diagonal reference ($a_b = \bar{c}_b$):** A perfectly calibrated classifier lies directly along the dotted diagonal line.
+- **Reliability diagram:** Plots $a_b$ against $\bar{c}_b$ for all bins with $n_b \ge 100$.
+- **Diagonal reference ($a_b = \bar{c}_b$):** A perfectly calibrated classifier lies on the dotted diagonal.
 - **Above vs. below the diagonal:** Points *above* the diagonal indicate an **underconfident** model ($a_b > \bar{c}_b$); points *below* indicate an **overconfident** model ($a_b < \bar{c}_b$).
-- **Shallow vs. deep networks:** Our linear Fashion-MNIST model sits slightly above the diagonal (mean confidence $\approx 81\%$ vs. accuracy $\approx 83\%$), whereas deep modern neural networks typically sag well below the diagonal ($T > 1$ needed).
+- **Shallow vs. deep networks:** Our linear model sits slightly above the diagonal (confidence $\approx 81\%$ vs. accuracy $\approx 83\%$); deep networks typically sag well below it ($T > 1$ needed).
 :::
 
 ::: {.col .fig}
@@ -537,9 +552,7 @@ Plotting bin accuracy $a_b$ against mean confidence $\bar{c}_b$ for all bins wit
 
 ::: {.cols .vc}
 ::: {.col}
-**Temperature scaling** (Guo et al., 2017) freezes trained weights and fits a single scalar $T > 0$ on a held-out validation split to minimize validation NLL of $\mathrm{softmax}(\mathbf{o} / T)$:
-
-@classification-temperature-scaling
+**Temperature scaling** (Guo et al., 2017) freezes trained weights and fits a single scalar $T > 0$ on a held-out validation split to minimize validation NLL of $\mathrm{softmax}(\mathbf{o} / T)$.
 
 - **Why held-out data & zero accuracy loss:** Fitting $T$ on validation data reflects generalization margins, and because $T > 0$ preserves logit ranking, every class prediction and overall accuracy stay **100% unchanged**.
 :::
@@ -548,6 +561,12 @@ Plotting bin accuracy $a_b$ against mean confidence $\bar{c}_b$ for all bins wit
 @fig:ch03-cls-temp-recalibration
 :::
 :::
+:::
+
+::: {.slide title="Fitting the Temperature on Held-Out Data"}
+[One-Parameter Convex Calibration Fix]{.kicker}
+
+@classification-temperature-scaling
 :::
 
 ::: {.slide title="Concept Check: Screening Precision, Reject Option & ECE"}

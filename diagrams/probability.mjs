@@ -318,14 +318,14 @@ function pairedComparison() {
   o += tx(34, 94, 'Model B (90.0%)', { mono: true, fs: 13.5, fw: 700, fill: DK.amber, anchor: 'start' });
   o += line(180, 94, 360, 94, C.amber, 3);
   o += dot(270, 94, 5.5, C.amber);
-  o += tx(464, 68, 'SE = 0.42%', { mono: true, fs: 13, fw: 700, fill: RED.dark });
-  o += tx(464, 88, '(1.2 SE: noisy)', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
+  o += tx(452, 68, 'SE = 0.42%', { mono: true, fs: 13, fw: 700, fill: RED.dark });
+  o += tx(452, 88, '(1.2 SE: noisy)', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
 
   // Panel (b): Paired comparison on the SAME 10,000 images cancels shared 9,700
   o += tx(16, 146, '(b) Paired on Same 10,000 Images: 9,700 Agreements Cancel (Cov > 0)', { fs: 15, fw: 700, fill: DK.green, anchor: 'start' });
   o += `<rect x="20" y="164" width="320" height="54" rx="6" fill="${C.lgray}" stroke="${C.gray}" stroke-width="2"/>`;
   o += tx(180, 184, '9,700 images: A = B (both right or both wrong)', { fs: 13.5, fw: 700, fill: C.ink });
-  o += tx(180, 204, 'di = Xi − Yi = 0  →  contributes 0 variance!', { mono: true, fs: 12.5, fill: C.muted });
+  o += tx(180, 204, 'di = Xi − Yi = 0  →  adds 0 variance', { mono: true, fs: 12.5, fill: C.muted });
 
   o += `<rect x="352" y="164" width="168" height="54" rx="6" fill="${C.lgreen}" stroke="${C.green}" stroke-width="2"/>`;
   o += tx(436, 184, '300 disagreements', { fs: 14, fw: 700, fill: DK.green });

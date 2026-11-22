@@ -466,7 +466,7 @@ We solve the normal equations on our $n = 1{,}000$ training examples with `lstsq
 
 @synthetic-regression-data-recovering-the-parameters-2
 
-- **Pass/fail tolerance:** Any converged iterative optimizer in §2.3–§2.5 must land within $\sim 10^{-3}$ ($\approx 3\text{ SE}$) of $(\mathbf{w}^*, b^*)$.
+- **Pass/fail tolerance:** Any converged iterative optimizer in this chapter must land within $\sim 10^{-3}$ ($\approx 3\text{ SE}$) of $(\mathbf{w}^*, b^*)$.
 :::
 
 ::: {.col .fig}
@@ -493,10 +493,10 @@ Predict the quantitative effect of each modification to our synthetic benchmark:
 :::
 :::
 
-::: {.slide title="Section 2.2 Summary & Key Takeaways"}
+::: {.slide title="Summary & Key Takeaways"}
 [Summary]{.kicker}
 
-| Benchmark Quantity | Formula / Definition | Value on Running Example | Diagnostic Role in §2.3–§2.5 |
+| Benchmark Quantity | Formula / Definition | Value on Running Example | Diagnostic Role in Later Sections |
 |---|---|---|---|
 | **Data Generator** | $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ | $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, $\sigma = 0.01$ | Ground-truth linear testbed ($n = 1{,}000$ train, $1{,}000$ val) |
 | **Irreducible Loss Floor** | $\mathbb{E}[L(\mathbf{w}^*, b^*)] = \frac{1}{2}\sigma^2$ | $5 \times 10^{-5}$ (or $\sigma^2 = 10^{-4}$ without $\frac{1}{2}$) | Target plateau for training and validation loss curves |

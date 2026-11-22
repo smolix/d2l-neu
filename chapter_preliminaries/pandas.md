@@ -414,7 +414,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 ::: {.cols .vc}
 ::: {.col}
 - **Row-sum invariant:** In every row, `Slate + Tile + nan = 1.0`, placing categories at orthogonal corners of $\mathbb{R}^K$.
-- **High-cardinality limit ($K \gg 10^2$):** For $K = 50{,}000$ ZIP codes or tokens, one-hot vectors waste memory ($99.99\%$ zeros)—use learned dense **embeddings** $\mathbf{E} \in \mathbb{R}^{K \times d}$ ($d \ll K$) instead.
+- **High-cardinality limit:** For $K = 50{,}000$ ZIP codes or tokens, one-hot vectors are $99.99\%$ zeros—use learned **embeddings** $\mathbf{E} \in \mathbb{R}^{K \times d}$ ($d \ll K$) instead.
 
 @pandas-encoding-categorical-features-1
 :::

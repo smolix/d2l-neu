@@ -1223,8 +1223,8 @@ earlier cells have already raised it.
 Without checkpointing, the backward pass holds activations for all 16 blocks at
 once; grouping into four-block segments keeps only four segment boundaries plus
 one active segment, cutting step memory from roughly 1.1 GiB down to 0.4–0.5 GiB
-for roughly 25% more compute time—slightly better than our back-of-the-envelope
-33% estimate. That favorable exchange makes activation checkpointing standard
+for roughly a quarter more compute time—within our back-of-the-envelope
+33% bound. That favorable exchange makes activation checkpointing standard
 practice when training large transformers and deep vision models.
 
 ## Device-Aware Trainer

@@ -856,7 +856,7 @@ Per $8{,}192$ tokens, the final step spends about $7\text{ ms}$ in matrix produc
 
 - A kernel profile classifies a training step's bottleneck and bounds the gain of each optimization before it is applied: reducing host dispatch saves at most the device idle time, kernel fusion saves at most the non-matmul device time, and doubling tensor-core precision throughput gives a speedup between $1/(1 - f/2)$ and $2$ when matrix products take a fraction $f$ of the step.
 - Optimizations must be verified for numerical correctness and measured cumulatively, because removing one bottleneck shifts the remaining share of the step.
-- On a single RTX 4090, our 19M-parameter GPT step doubled in speed (reaching ~50% MFU), driven almost entirely by bf16 matrix products and kernel fusion.
+- On a single RTX 4090, our 19M-parameter GPT step doubled in speed (reaching 45–50% MFU), driven almost entirely by bf16 matrix products and kernel fusion.
 - The data-parallel cost model $t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k)$ accurately predicted both a slowdown on 2 GPUs for the short fp32 step ($22\text{ ms}$ step vs. $31\text{ ms}$ PCIe allreduce) and a $\sim 3\times$ speedup on 4 GPUs for the longer batch-512 bf16 step ($90\text{--}100\text{ ms}$ step vs. $48\text{ ms}$ allreduce).
 
 ## Exercises

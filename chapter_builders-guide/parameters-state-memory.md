@@ -466,7 +466,7 @@ $20 \times 64 + 64 = 1344$ parameters, each residual block contributes
 $2 \times (64 \times 64 + 64) = 8320$, and the output layer adds
 $64 \times 10 + 10 = 650$, totaling 18,634 parameters. Adam's optimizer state is
 not just a theoretical entry in a table—it is real memory allocated tensor by
-tensor on the first update, adding two full copies of the model:
+tensor, adding two full copies of the model:
 
 ```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-2}
 %%tab mxnet
@@ -520,6 +520,20 @@ each parameter's first update, its updater creates two zero arrays shaped
 like the weight. It does offer `save_states`, which serializes that state,
 so apart from a little packaging the file holds Adam's two running
 averages: 8 bytes per parameter, two more copies of the model.
+:end_tab:
+
+:begin_tab:`pytorch`
+`Adam` allocates the two moments of each parameter on its first `step()`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras's `Adam` allocates the two moments of each weight on its first
+`apply_gradients` call.
+:end_tab:
+
+:begin_tab:`jax`
+`nnx.Optimizer` allocates both moments when it is constructed, before any
+update.
 :end_tab:
 
 For our tiny MLP, that baseline is a negligible 0.28 MiB, which is why memory

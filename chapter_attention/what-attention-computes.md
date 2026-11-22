@@ -694,7 +694,7 @@ for name, cols in table.items():
 ```
 
 Ablating block 1's previous-token heads collapses later-copy accuracy to
-$\le 0.10$, confirming their necessity. Interestingly, ablating block 1's
+about $0.1$ or below, confirming their necessity. Interestingly, ablating block 1's
 *other* heads also breaks retrieval: because `copy_matrix` relied on block 1's
 transformed stream (and zero-ablation shifts stream norms in an unnormalized
 network; see Exercise :exref:`ex_what-attention-computes-circuit-ablation` on

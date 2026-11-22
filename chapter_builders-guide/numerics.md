@@ -1269,7 +1269,7 @@ We can inspect `max` (largest finite value), `tiny` (smallest positive normal nu
 :::
 :::
 
-::: {.slide title="Dtype Promotion Rules Across Frameworks" except="tensorflow"}
+::: {.slide title="Dtype Promotion Rules for Mixed Operands" except="tensorflow"}
 [Mixed-Operand Arithmetic]{.kicker}
 
 ::: {.cols .vc}
@@ -1296,7 +1296,7 @@ We can inspect `max` (largest finite value), `tiny` (smallest positive normal nu
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-dtype-promotion
+@fig:ch05-bg-dtype-promotion@tensorflow
 :::
 :::
 :::
@@ -1306,11 +1306,7 @@ We can inspect `max` (largest finite value), `tiny` (smallest positive normal nu
 
 ::: {.cols .vc}
 ::: {.col}
-- Walking the state tree to cast parameters to 16 bits cuts weight memory in half (`814,120 B -> 407,060 B`):
-
-@-numerics-dtype-rules-promotion-parameters-and-casts-2
-
-@numerics-dtype-rules-promotion-parameters-and-casts-3
+- Walking the state tree to cast parameters to 16 bits cuts weight memory in half (`814,120 B -> 407,060 B`).
 :::
 
 ::: {.col .fig}
@@ -1319,12 +1315,26 @@ We can inspect `max` (largest finite value), `tiny` (smallest positive normal nu
 :::
 :::
 
+::: {.slide title="Casting Every Parameter to 16 Bits"}
+[Whole-Model Dtype Casting]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@-numerics-dtype-rules-promotion-parameters-and-casts-2
+:::
+
+::: {.col}
+@numerics-dtype-rules-promotion-parameters-and-casts-3
+:::
+:::
+:::
+
 ::: {.slide title="Mixed Precision: fp32 Master Weights + 16-Bit Compute"}
 [The AMP Training Loop]{.kicker}
 
-**Mixed-precision training** (Micikevicius et al., 2018) gets both 16-bit Tensor Core speed and 32-bit update accuracy by decoupling compute precision from storage precision:
+**Mixed-precision training** (Micikevicius et al., 2018) decouples compute precision from storage precision:
 
-![](../img/bg-amp-loop.svg){.nostretch width=95%}
+![](../img/bg-amp-loop.svg){.nostretch width=82%}
 
 1. **Cast for compute:** Cast `fp32` master weights to `bf16` (or `fp16`) for forward and backward matrix multiplications and activation storage.
 2. **Reduce in `fp32`:** Compute loss functions, softmaxes, and layer normalizations in `fp32`.
@@ -1334,7 +1344,7 @@ We can inspect `max` (largest finite value), `tiny` (smallest positive normal nu
 ::: {.slide title="Enabling Mixed Precision in Four Lines of Code"}
 [Framework Autocast & Policies]{.kicker}
 
-Each framework provides a clean policy or context manager (`torch.autocast`, `'mixed_bfloat16'`, `dtype=jnp.bfloat16`, or `multi_precision=True`) that keeps weights in `fp32` while outputting 16-bit activations:
+A precision policy or context manager keeps weights in `fp32` while outputting 16-bit activations:
 
 @numerics-mixed-precision-training-1
 :::
@@ -1371,7 +1381,7 @@ Training identical Fashion-MNIST MLPs for $1{,}000$ SGD steps at $\eta = 0.01$ a
 ::: {.col}
 @numerics-loss-scaling-for-fp16-3
 
-- Multiplying the loss by $S = 2^{16} = 65{,}536$ before `backward()` lifts all $33\%$ subnormal gradients into normal `fp16` range before unscaling in `fp32`.
+- Scaling the loss by $S = 2^{16}$ before `backward()` lifts the $\sim 32\%$ subnormal gradients into normal `fp16` range.
 :::
 
 ::: {.col .fig}
@@ -1385,13 +1395,13 @@ Training identical Fashion-MNIST MLPs for $1{,}000$ SGD steps at $\eta = 0.01$ a
 
 ::: {.cols .vc}
 ::: {.col}
-- **Dynamic loss scaling** starts with a large scale factor $S$, skips the optimizer step and halves $S$ whenever an `inf`/`NaN` gradient appears, and doubles $S$ after a clean streak:
-
-@numerics-loss-scaling-for-fp16-2
+@-numerics-loss-scaling-for-fp16-2
 :::
 
-::: {.col .fig}
-@fig:ch05-bg-fp16-loss-scaling
+::: {.col .narrow}
+- **Dynamic loss scaling** starts with a large scale factor $S$, skips the optimizer step and halves $S$ whenever an `inf`/`NaN` gradient appears, and doubles $S$ after a clean streak:
+
+@!numerics-loss-scaling-for-fp16-2
 :::
 :::
 :::

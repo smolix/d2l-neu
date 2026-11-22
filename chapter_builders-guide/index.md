@@ -111,7 +111,7 @@ Deep Learning Computation: From Prototype Code to Production Systems<br>**module
 
 ::: {.cols .vc}
 ::: {.col}
-- **Structured path addressing:** Every parameter and non-trainable buffer is uniquely addressed by its dotted path from the root module (e.g., `1.body.0.weight`).
+- **Structured path addressing:** Every parameter and non-trainable buffer is uniquely addressed by its path from the root module (e.g., block 1, layer 0, weight).
 - **Unified tree traversals:** Optimizer setup, initialization, `safetensors` serialization, dtype casting, GPU placement, and hooks all walk registered children recursively.
 - **The silent registration invariant:** Any layer or tensor stored in a plain Python attribute or list outside the module registry is invisible to optimizers, checkpoints, and GPUs.
 :::
@@ -159,6 +159,6 @@ Deep Learning Computation: From Prototype Code to Production Systems<br>**module
 Each section combines runnable multi-framework code with systems diagnostics that prevent silent training failures:
 
 - **Core path for all readers:** Read **§5.1–§5.3** to master module registration, parameter/buffer accounting, and residual variance scaling, then **§5.5–§5.7** for mixed precision, safe checkpointing, and GPU memory management.
-- **Framework-specific idioms:** Pay close attention to how imperative frameworks (PyTorch, MXNet) differ from traced functional or deferred-build frameworks (JAX/Flax NNX, TensorFlow/Keras) on list containers, lazy shapes, PRNG state, and graph compilation.
+- **Framework-specific idioms:** Pay close attention to how your framework handles list containers, lazy shapes, PRNG state, and graph compilation.
 - **Diagnostic habits to adopt immediately:** Count parameter and activation bytes before launching a job, verify initial activation standard deviations with a single forward pass, and audit missing/unexpected keys whenever loading external weights.
 :::

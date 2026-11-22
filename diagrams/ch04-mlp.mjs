@@ -32,23 +32,83 @@ const hline = (x1, x2, y, color = N.hairline, dash = true) =>
 const vline = (x, y1, y2, color = N.hairline, dash = true) =>
   `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="${color}" stroke-width="1.5"${dash ? ' stroke-dasharray="4 4"' : ''}/>`;
 
-// Fit-checked text helper: scales fs down smoothly so string always fits inside maxW.
+// Text fitting. Widths are the bundled faces' advances (Source Sans 3
+// Regular / Bold, chars 32-126, in 1/100 em; weight 500 is measured as
+// Regular plus 3%), and 0.60 em for JetBrains Mono, so a fit estimate
+// matches the outlined SVG. A label is shrunk no further than FIT_FLOOR px:
+// a card line that would need more is wrapped onto two lines instead.
+const ADV = {
+  r: '2029435050826125303042502531253550505050505050505050252550505042855459576253496265264858497365665766575354645279514854303530505054505546565029505425255026835554565635423454477245474230243050',
+  b: '2034545353866730343446533033303453535353535353535353303053535346905760586455526467305161527666686068615656665681575254343434535056535747575234535728285529865756575740443857527851524634273453',
+};
+const FIT_FLOOR = 11;
+const FIT_PAD = 10;
+
+function emWidth(s, o = {}) {
+  let w = 0;
+  const bold = (o.fw || 500) >= 600;
+  for (const ch of String(s)) {
+    const c = ch.codePointAt(0);
+    if (c >= 0x300 && c <= 0x36f) continue;          // combining mark
+    if (o.mono) { w += 0.6; continue; }
+    if (c >= 32 && c < 127) {
+      const t = bold ? ADV.b : ADV.r;
+      w += +t.substr((c - 32) * 2, 2) / 100;
+    } else {
+      w += 0.58;
+    }
+  }
+  return o.mono || bold ? w : w * 1.03;
+}
+
+// Largest font size (<= o.fs) at which str fits in maxW (no floor).
+function fitSize(str, maxW, o = {}) {
+  const base = o.fs || 13.5;
+  const em = emWidth(str, o);
+  if (!maxW || em * base <= maxW - FIT_PAD) return base;
+  return +((maxW - FIT_PAD) / em).toFixed(2);
+}
+
+// Split str at a space into two lines: the longer half as short as possible,
+// preferring breaks after punctuation and separators, and avoiding breaks
+// inside brackets or in front of an operator.
+function splitTwo(str, o = {}) {
+  const s = String(str);
+  let best = null, depth = 0;
+  for (let i = 1; i < s.length - 1; i++) {
+    const ch = s[i];
+    if ('([{'.includes(ch)) depth++;
+    if (')]}'.includes(ch)) depth = Math.max(0, depth - 1);
+    if (ch !== ' ') continue;
+    const a = s.slice(0, i).trimEnd(), b = s.slice(i + 1).trimStart();
+    if (!a || !b) continue;
+    const prev = a[a.length - 1], next = b[0];
+    let pen = 0.12;
+    if (',;:·|→—–'.includes(prev)) pen = 0;
+    if ('·=+×→⇒|−-–—)]}≈≤≥<>'.includes(next)) pen += 0.5;
+    if (depth > 0) pen += 0.5;
+    const m = Math.max(emWidth(a, o), emWidth(b, o)) * (1 + pen);
+    if (!best || m < best.m) best = { a, b, m };
+  }
+  return best ? [best.a, best.b] : null;
+}
+
+function fitWarn(msg) {
+  if (globalThis.__fitLog) globalThis.__fitLog.push(msg);
+}
+
+// One label, shrunk to fit maxW but never below FIT_FLOOR.
 function fitTx(x, y, str, maxW, o = {}) {
   const s = String(str);
-  const baseFs = o.fs || 13.5;
-  const perChar = o.mono ? 0.68 : 0.58;
-  let effLen = 0;
-  for (const ch of s) effLen += ch.charCodeAt(0) > 127 ? 1.35 : 1.0;
-  const estW = effLen * baseFs * perChar;
-  const pad = 20;
-  const fs = (maxW && estW > maxW - pad)
-    ? Math.max(7.2, +((maxW - pad) / (effLen * perChar)).toFixed(2))
-    : baseFs;
-  return tx(x, y, s, { ...o, fs });
+  const f = fitSize(s, maxW, o);
+  if (f < FIT_FLOOR) fitWarn(`"${s}" needs ${f}px in ${maxW}`);
+  return tx(x, y, s, { ...o, fs: Math.max(FIT_FLOOR, f) });
 }
 
 // Multi-line card with guaranteed internal padding so text never touches borders.
-// lines: array of { t, fs, fw, fill, mono } or plain strings.
+// lines: array of { t, fs, fw, fill, mono } or plain strings. A line that
+// would shrink below FIT_FLOOR (or by more than 15%, when the card has the
+// height for it) is wrapped onto two lines; a '\n' in a line sets the break.
 function card(x, y, w, h, themeKey, lines, opts = {}) {
   const p = PAL[themeKey] || PAL.slate;
   const fill = opts.white ? '#FFFFFF' : p.fill;
@@ -59,31 +119,86 @@ function card(x, y, w, h, themeKey, lines, opts = {}) {
   }
   const n = lines.length;
   if (n === 0) return o;
-  const maxStep = n <= 2 ? 19 : 20;
-  const span = n <= 1 ? 0 : Math.min((n - 1) * maxStep, h - 22);
-  const y0 = y + h / 2 - span / 2;
-  const step = n <= 1 ? 0 : span / (n - 1);
   const cx = opts.anchor === 'start' ? x + (opts.rail ? 14 : 12) : x + w / 2;
   const availW = w - (opts.rail ? 20 : 14);
-  lines.forEach((ln, i) => {
-    const ly = n === 1 ? y + h / 2 : y0 + i * step;
-    if (typeof ln === 'string') {
-      const isTitle = i === 0;
-      o += fitTx(cx, ly, ln, availW, {
-        fs: isTitle ? 14 : 12.8,
-        fw: isTitle ? 700 : 500,
-        fill: isTitle ? p.dark : C.ink,
-        anchor: opts.anchor || 'middle',
-      });
-    } else {
-      o += fitTx(cx, ly, ln.t, availW, {
-        fs: ln.fs || (i === 0 ? 14 : 12.8),
-        fw: ln.fw || (i === 0 ? 700 : 500),
-        fill: ln.fill || (i === 0 ? p.dark : C.ink),
-        mono: ln.mono || false,
-        anchor: ln.anchor || opts.anchor || 'middle',
-      });
+  const items = lines.map((ln, i) => {
+    const obj = typeof ln === 'string' ? {} : ln;
+    const st = {
+      fs: obj.fs || (i === 0 ? 14 : 12.8),
+      fw: obj.fw || (i === 0 ? 700 : 500),
+      fill: obj.fill || (i === 0 ? p.dark : C.ink),
+      anchor: obj.anchor || opts.anchor || 'middle',
+    };
+    if (obj.mono) st.mono = true;
+    const t = String(typeof ln === 'string' ? ln : ln.t);
+    if (t.includes('\n')) {   // an explicit line break
+      const two = t.split('\n', 2);
+      const fs = Math.min(...two.map((s) => fitSize(s, availW, st)));
+      return { t: two.join(' '), st, f: fs, parts: { two, fs }, fixed: true };
     }
+    return { t, st, f: fitSize(t, availW, st), parts: null };
+  });
+  // Wrapping plan: lines under the floor must wrap; lines shrunk by >15% wrap
+  // when the card is tall enough to take the extra row.
+  const wrapOf = (it) => {
+    const two = splitTwo(it.t, it.st);
+    if (!two) return null;
+    let fs = Math.min(...two.map((s) => fitSize(s, availW, it.st)));
+    if (n === 1) fs = Math.min(fs, +((h - 5) / 2.18).toFixed(2));   // two rows must fit the height
+    return fs > it.f ? { two, fs } : null;
+  };
+  const layout = () => {
+    const rows = [];
+    items.forEach((it, i) => {
+      if (it.parts) {
+        rows.push({ t: it.parts.two[0], st: { ...it.st, fs: Math.max(FIT_FLOOR, it.parts.fs) }, gap: i ? null : 0 });
+        rows.push({ t: it.parts.two[1], st: { ...it.st, fs: Math.max(FIT_FLOOR, it.parts.fs) }, gap: +(Math.max(FIT_FLOOR, it.parts.fs) * 1.18).toFixed(2) });
+      } else {
+        rows.push({ t: it.t, st: { ...it.st, fs: Math.max(FIT_FLOOR, it.f) }, gap: i ? null : 0 });
+      }
+    });
+    const wrapSum = rows.reduce((a, r) => a + (r.gap || 0), 0);
+    const maxStep = n <= 2 ? 19 : 20;
+    const itemStep = n <= 1 ? 0 : Math.min(maxStep, (h - 22 - wrapSum) / (n - 1));
+    const gapOf = (r) => (r.gap === null ? itemStep : r.gap);
+    const ok = rows.every((r, i) => !i || gapOf(r) >= 0.575 * (r.st.fs + rows[i - 1].st.fs))
+      && wrapSum + (n - 1) * itemStep + (rows[0].st.fs + rows[rows.length - 1].st.fs) / 2 <= h - 4.5;
+    return { rows, itemStep, wrapSum, ok };
+  };
+  for (const it of items) {
+    if (it.fixed) {
+      if (it.f < FIT_FLOOR) fitWarn(`"${it.t}" needs ${it.f}px even wrapped, in ${availW}`);
+    } else if (it.f < FIT_FLOOR) {
+      it.parts = wrapOf(it);
+      if (!it.parts) fitWarn(`"${it.t}" needs ${it.f}px in ${availW} and has no space to wrap`);
+      else if (it.parts.fs < FIT_FLOOR) fitWarn(`"${it.t}" needs ${it.parts.fs}px even wrapped, in ${availW}`);
+    }
+  }
+  for (const it of items) {
+    if (!it.parts && it.f < 0.85 * it.st.fs) {
+      it.parts = wrapOf(it);
+      if (it.parts && !layout().ok) it.parts = null;
+    }
+  }
+  if (!items.some((it) => it.parts)) {
+    // No wrapping: the original even spacing.
+    const maxStep = n <= 2 ? 19 : 20;
+    const span = n <= 1 ? 0 : Math.min((n - 1) * maxStep, h - 22);
+    const y0 = y + h / 2 - span / 2;
+    const step = n <= 1 ? 0 : span / (n - 1);
+    items.forEach((it, i) => {
+      const ly = n === 1 ? y + h / 2 : y0 + i * step;
+      o += fitTx(cx, ly, it.t, availW, it.st);
+    });
+    return o;
+  }
+  const L = layout();
+  if (!L.ok) fitWarn(`card at (${x},${y}) ${w}x${h} too short for wrapped text "${items.map((it) => it.t).join(' | ')}"`);
+  const span = L.wrapSum + (n - 1) * L.itemStep;
+  let ly = y + h / 2 - span / 2;
+  L.rows.forEach((r, i) => {
+    if (i) ly += r.gap === null ? L.itemStep : r.gap;
+    o += tx(cx, +ly.toFixed(2), r.t, r.st);
   });
   return o;
 }
@@ -160,17 +275,17 @@ function threeChallenges() {
   const cols = [
     {
       x: 16, theme: 'blue',
-      head: '§4.3 Backpropagation',
+      head: 'Backpropagation',
       lines: ['203,530 Gradients', { t: '1 reverse VJP sweep', mono: true, fill: D.blue.dark }, 'Cost: ~2× fwd FLOPs', { t: 'RAM: O(n·K·h) cache', mono: true }],
     },
     {
       x: 190, theme: 'orange',
-      head: '§4.4 Numerical Stability',
+      head: 'Numerical Stability',
       lines: ['K-Layer Matrix Product', { t: 'h·τ²·E[φ\'(z)²] = 1', mono: true, fill: D.orange.dark }, 'Xavier: 2/(n_in+n_out)', { t: 'He (ReLU): 2 / n_in', mono: true }],
     },
     {
       x: 364, theme: 'green',
-      head: '§§4.5–4.6 Generalization',
+      head: 'Generalization',
       lines: ['p = 203.5K > n = 60K', { t: 'Memorizes random y', mono: true, fill: D.green.dark }, 'Min-norm SGD bias', { t: 'Dropout: ξ·h/(1−p)', mono: true }],
     },
   ];
@@ -181,7 +296,7 @@ function threeChallenges() {
   });
 
   o += card(16, 226, 508, 32, 'slate', [
-    'All three converge in §4.7: End-to-End Kaggle House Price Prediction',
+    'All three converge in End-to-End Kaggle House Price Prediction',
   ]);
   return svg(W, H, o);
 }
@@ -193,11 +308,11 @@ function benchmarkLadder() {
   o += card(16, 10, 508, 32, 'slate', ['Fashion-MNIST Running Benchmark (d=784, q=10, B=256, η=0.1)']);
 
   const rows = [
-    { y: 50,  theme: 'slate',  arch: 'Softmax (784→10)',             params: '7.85K params · 0.8 MB', acc: '~84% val', w: 120 },
-    { y: 94,  theme: 'blue',   arch: '1-Hidden MLP (784→256→10)',    params: '203.5K params · 1.1 MB', acc: '~87% val', w: 156 },
-    { y: 138, theme: 'purple', arch: '2-Hidden Dropout (256→256)',   params: '269.3K params · 1.3 MB', acc: '~87% val', w: 156 },
-    { y: 182, theme: 'red',    arch: '10-Layer MLP · N(0, 0.01²)',   params: '795.7K params · 3.4 MB', acc: '10% stuck!', w: 28 },
-    { y: 226, theme: 'green',  arch: '10-Layer MLP · He Init (2/h)', params: '795.7K params · 3.4 MB', acc: '~85% val', w: 144 },
+    { y: 50,  theme: 'slate',  arch: 'Softmax (784→10)',             params: '7.85K params · 0.8 MB', acc: '~84% val', w: 126 },
+    { y: 94,  theme: 'blue',   arch: '1-Hidden MLP (784→256→10)',    params: '203.5K params · 1.1 MB', acc: '~87% val', w: 130 },
+    { y: 138, theme: 'purple', arch: '2-Hidden Dropout (256→256)',   params: '269.3K params · 1.3 MB', acc: '~87% val', w: 130 },
+    { y: 182, theme: 'red',    arch: '10-Layer MLP · N(0, 0.01²)',   params: '795.7K params · 3.4 MB', acc: '10% stuck!', w: 15 },
+    { y: 226, theme: 'green',  arch: '10-Layer MLP · He Init (2/h)', params: '795.7K params · 3.4 MB', acc: '~85% val', w: 128 },
   ];
 
   rows.forEach((r) => {
@@ -218,10 +333,10 @@ function chapterRoadmap() {
   let o = '';
   // Top row: §§4.1 -> 4.2 -> 4.3 -> 4.4
   const top = [
-    { x: 14,  theme: 'blue',   sec: '§4.1 MLP & φ',     sub: '2^m depth folds' },
-    { x: 146, theme: 'blue',   sec: '§4.2 Fashion MLP', sub: '203.5K → 87%' },
-    { x: 278, theme: 'red',    sec: '§4.3 Backprop',    sub: '3 matrix VJP rules' },
-    { x: 410, theme: 'orange', sec: '§4.4 He / Xavier', sub: 'h·τ²·E[φ\'²] = 1' },
+    { x: 14,  theme: 'blue',   sec: 'MLP & φ',     sub: '2^m depth folds' },
+    { x: 146, theme: 'blue',   sec: 'Fashion MLP', sub: '203.5K → 87%' },
+    { x: 278, theme: 'red',    sec: 'Backprop',    sub: '3 matrix VJP rules' },
+    { x: 410, theme: 'orange', sec: 'He / Xavier', sub: 'h·τ²·E[φ\'²] = 1' },
   ];
   top.forEach((b, i) => {
     o += card(b.x, 18, 116, 74, b.theme, [
@@ -236,9 +351,9 @@ function chapterRoadmap() {
 
   // Bottom row (right to left): §4.5 -> §4.6 -> §4.7
   const bot = [
-    { x: 368, theme: 'purple', sec: '§4.5 Generalization', sub: 'Double descent & bias' },
-    { x: 192, theme: 'purple', sec: '§4.6 Dropout Mask',   sub: 'h\' = ξ·h / (1 − p)' },
-    { x: 14,  theme: 'green',  sec: '§4.7 Kaggle Houses',  sub: '5-fold CV & log-RMSE' },
+    { x: 368, theme: 'purple', sec: 'Generalization', sub: 'Double descent & bias' },
+    { x: 192, theme: 'purple', sec: 'Dropout Mask',   sub: 'h\' = ξ·h / (1 − p)' },
+    { x: 14,  theme: 'green',  sec: 'Kaggle Houses',  sub: '5-fold CV & log-RMSE' },
   ];
   bot.forEach((b, i) => {
     o += card(b.x, 146, 158, 76, b.theme, [
@@ -249,7 +364,7 @@ function chapterRoadmap() {
   });
 
   o += card(14, 232, 512, 24, 'slate', [
-    { t: 'Representation (§§4.1–4.2)  →  Optimization (§§4.3–4.4)  →  Generalization (§§4.5–4.7)', fs: 12.5, fw: 600 },
+    { t: 'Representation  →  Optimization  →  Generalization', fs: 12.5, fw: 600 },
   ]);
   return svg(W, H, o);
 }
@@ -283,7 +398,7 @@ function monotonicityLimits() {
   // Right panel: Context-blind features
   o += card(278, 12, 248, 34, 'orange', ['Failure 2: Zero Feature Interactions']);
   o += card(278, 52, 248, 88, 'orange', [
-    { t: 'Linear: ∂o_j / ∂x_i = w_ij (fixed)', mono: true, fs: 13, fw: 700, fill: D.orange.dark },
+    { t: 'Linear: ∂o_j/∂x_i = w_ij (fixed)', mono: true, fs: 13, fw: 700, fill: D.orange.dark },
     'Pixel x_i adds the exact same vote',
     'regardless of neighboring pixels x_k',
   ], { white: true, rail: true });
@@ -305,7 +420,7 @@ function xorImpossibility() {
   o += box(14, 52, 236, 200, '#FFFFFF', C.purple, 8, 1.8);
 
   // Square corners at (64, 194) = (0,0), (194, 194) = (1,0), (64, 84) = (0,1), (194, 84) = (1,1)
-  const x0 = 68, x1 = 192, y0 = 196, y1 = 84;
+  const x0 = 68, x1 = 192, y0 = 200, y1 = 98;
   o += box(x0, y1, x1 - x0, y0 - y1, N.panel, C.gray, 2, 1.5, true);
   // Diagonals crossing at midpoint (130, 140)
   o += `<line x1="${x0 + 12}" y1="${y0 - 12}" x2="${x1 - 12}" y2="${y1 + 12}" stroke="${C.blue}" stroke-width="2"/>`;
@@ -504,7 +619,7 @@ function implGoals() {
   const W = 540, H = 256;
   let o = '';
   o += card(14, 12, 240, 94, 'slate', [
-    'Chapter 3 Softmax Baseline',
+    'Softmax Regression Baseline',
     { t: '784 → 10 (7,850 params)', mono: true, fs: 13 },
     'Global whole-garment templates',
     'Plateaus at ~84% val accuracy',
@@ -513,7 +628,7 @@ function implGoals() {
   o += hArrow(258, 282, 59, C.blue);
 
   o += card(286, 12, 240, 94, 'blue', [
-    '§4.2 1-Hidden-Layer ReLU MLP',
+    '1-Hidden-Layer ReLU MLP',
     { t: '784 → 256 → 10 (203,530 params)', mono: true, fs: 12.5, fill: D.blue.dark },
     '256 localized edge/part detectors',
     'Reaches ~87% (−20% error rate!)',
@@ -558,8 +673,8 @@ function symmetryBreaking() {
   ], { white: true, rail: true });
 
   o += card(14, 202, 512, 50, 'orange', [
-    'Framework Pitfall: Never reuse one seeded Initializer object across layers in Keras',
-    '(instantiate a fresh RandomNormal per weight tensor so layers do not share draws)',
+    'Pitfall: every weight tensor needs its own random draw',
+    '(two layers that replay the same random stream start with identical weights)',
   ]);
   return svg(W, H, o);
 }
@@ -588,7 +703,7 @@ function forwardDataflow() {
 
   o += card(14, 172, 512, 64, 'green', [
     'Three Millisecond Pre-Training Sanity Checks on Untrained Network:',
-    { t: '✓ H.shape == (8, 256) & O.shape == (8, 10)   ✓ loss ≈ log 10 ≈ 2.303   ✓ (H > 0).mean ≈ 0.50', mono: true, fs: 12, fill: D.green.dark },
+    { t: '✓ H.shape == (8, 256) & O.shape == (8, 10)\n✓ loss ≈ log 10 ≈ 2.303   ✓ (H > 0).mean ≈ 0.50', mono: true, fs: 12, fill: D.green.dark },
   ], { white: true, rail: true });
   return svg(W, H, o);
 }
@@ -599,20 +714,24 @@ function frameworkInits() {
   let o = '';
   o += card(14, 10, 512, 32, 'orange', ['Framework Default Linear Initializers Differ—Override for Fair Benchmarks!']);
 
-  const fws = [
-    { y: 50,  theme: 'blue',   fw: 'PyTorch LazyLinear',  def: 'U(−1/√n_in, 1/√n_in) · σ≈0.021', ov: 'nn.init.normal_(std=0.01)' },
-    { y: 98,  theme: 'purple', fw: 'JAX / Flax nnx.Linear', def: 'LeCun N(0, 1/n_in) · σ≈0.036',   ov: 'initializers.normal(0.01)' },
-    { y: 146, theme: 'orange', fw: 'TensorFlow Dense',    def: 'Glorot U(±√(6/(n_in+n_out)))',    ov: 'RandomNormal(stddev=0.01)' },
-    { y: 194, theme: 'teal',   fw: 'MXNet nn.Dense',      def: 'Uniform U(−0.07, 0.07) · σ≈0.04', ov: 'init.Normal(sigma=0.01)' },
-  ];
+  o += card(14, 54, 238, 124, 'slate', [
+    'Built-In Default (Dense Layer)',
+    'Fan-in-scaled uniform or normal draw,',
+    'chosen differently by each framework',
+    { t: 'σ ≈ 0.02–0.04 at n_in = 784', mono: true, fs: 12.5, fw: 700, fill: C.ink },
+  ], { white: true, rail: true });
+  o += arrow(256, 116, 284, 116, C.green);
+  o += card(288, 54, 238, 124, 'green', [
+    'Explicit Override',
+    { t: 'W ~ N(0, 0.01²),  b = 0', mono: true, fs: 13, fw: 700, fill: D.green.dark },
+    'Same draw as MLPScratch',
+    'in every layer',
+  ], { white: true, rail: true });
 
-  fws.forEach((f) => {
-    o += card(14, f.y, 148, 40, f.theme, [{ t: f.fw, fs: 12.5, fw: 700 }]);
-    o += card(168, f.y, 184, 40, f.theme, [{ t: f.def, mono: true, fs: 11.5, fill: C.ink }], { white: true });
-    o += card(358, f.y, 168, 40, 'green', [{ t: f.ov, mono: true, fs: 11.5, fw: 700, fill: D.green.dark }]);
-  });
-
-  o += fitTx(270, 250, 'In §4.4 we prove why He initialization σ = √(2/n_in) is optimal for deep ReLU stacks.', 512, { fs: 12.5, fw: 600, fill: C.ink });
+  o += card(14, 190, 512, 34, 'green', [
+    { t: 'Identical starting scale ⇒ MLP matches MLPScratch trajectory-for-trajectory', fs: 13, fw: 700, fill: D.green.dark },
+  ]);
+  o += fitTx(270, 246, 'He initialization σ = √(2/n_in) later replaces σ = 0.01 for deep ReLU stacks.', 512, { fs: 12.5, fw: 600, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -621,7 +740,7 @@ function implSummary() {
   const W = 540, H = 266;
   let o = '';
   const items = [
-    { x: 14,  y: 14,  theme: 'blue',   t1: '1. Parameter Budget',  t2: '203,530 floats (0.81 MB)', t3: '98.7% in W⁽¹⁾ (784×256)' },
+    { x: 14,  y: 14,  theme: 'blue',   t1: '1. Parameter Budget',  t2: '203,530 floats (0.81 MB)', t3: '98.6% in W⁽¹⁾ (784×256)' },
     { x: 276, y: 14,  theme: 'purple', t1: '2. Raw Logits Forward', t2: 'H = relu(XW⁽¹⁾+b⁽¹⁾)',   t3: 'Return O (no softmax!)' },
     { x: 14,  y: 98,  theme: 'green',  t1: '3. Pre-Train Checks',  t2: 'loss ≈ 2.303, 50% active', t3: 'Catches bugs in < 1 ms' },
     { x: 276, y: 98,  theme: 'orange', t1: '4. Explicit Init',     t2: 'Override framework defaults', t3: 'Avoid epoch-1 confounding' },
@@ -651,7 +770,7 @@ function backpropEfficiency() {
     { t: '(J(w+ε) − J(w−ε)) / 2ε', mono: true, fs: 12.5, fill: D.red.dark },
     'Perturbs 1 scalar weight at a time:',
     { t: '203,530 forward sweeps / step!', fw: 700, fill: D.red.dark },
-    '(~4 × 10¹⁰ FLOPs per minibatch)',
+    '(~4 × 10¹⁰ MACs per example)',
   ], { white: true, rail: true });
 
   o += card(278, 12, 248, 114, 'green', [
@@ -659,7 +778,7 @@ function backpropEfficiency() {
     { t: 'Seed ∂J/∂J = 1 at scalar loss', mono: true, fs: 12.5, fill: D.green.dark },
     'Reuses shared upstream ∂J/∂Z⁽ᵏ⁾:',
     { t: '1 backward sweep → ALL 203,530!', fw: 700, fill: D.green.dark },
-    '(~2× forward FLOPs ≈ 6 × 10⁵)',
+    '(fwd + bwd ≈ 4 × 10⁵ MACs per example)',
   ], { white: true, rail: true });
 
   o += card(14, 140, 512, 110, 'blue', [
@@ -829,8 +948,8 @@ function workedNumbers() {
   o += card(14, 150, 158, 98, 'red', [
     '6. Layer-1 Weight Grad',
     { t: '∂L/∂W⁽¹⁾ = Xᵀ(∂L/∂Z)', mono: true, fs: 12 },
-    { t: 'Col 1 = [0, 0]ᵀ (frozen)', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
-    { t: 'Col 2 = [2, 4]ᵀ (learns)', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'Col 1: [0,0]ᵀ frozen', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: 'Col 2: [2,4]ᵀ learns', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
   ], { white: true });
   return svg(W, H, o);
 }
@@ -870,7 +989,7 @@ function activationMemory() {
 function flopRatio() {
   const W = 540, H = 262;
   let o = '';
-  o += card(14, 12, 512, 34, 'purple', ['Why a Full Training Step Costs ~3× the FLOPs of Forward Inference']);
+  o += card(14, 12, 512, 34, 'purple', ['Why a Training Step Costs ~3× Forward FLOPs (Interior Layers)']);
 
   // 1x Forward vs 2x Backward
   o += card(14, 58, 248, 124, 'blue', [
@@ -921,8 +1040,8 @@ function depthRegimes() {
       lines: [
         { t: 'Multiplier: 128× / layer', mono: true, fs: 12, fill: D.orange.dark },
         { t: '9 hops → 10¹⁹ (exploded!)', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark },
-        'Overflows float32 (>3.4×10³⁸)',
-        'to inf / NaN on step 1',
+        'Deeper stacks overflow float32',
+        '(>3.4×10³⁸) to inf / NaN',
       ],
     },
     {
@@ -951,21 +1070,20 @@ function productChain() {
 
   // Chain of 4 boxes from right (Layer K-1) to left (Layer k)
   const nodes = [
-    { x: 396, theme: 'green',  t1: '∂L/∂H⁽ᴷ⁻¹⁾', t2: 'top hidden grad' },
-    { x: 266, theme: 'orange', t1: '⊙φ\'(Z⁽ᴷ⁻¹⁾)W⁽ᴷ⁻¹⁾ᵀ', t2: 'layer K−1 factor' },
-    { x: 136, theme: 'orange', t1: '⋯ ⊙φ\'(Z⁽ᵏ⁺¹⁾)W⁽ᵏ⁺¹⁾ᵀ', t2: 't matrix factors' },
-    { x: 14,  theme: 'red',    t1: '∂L/∂H⁽ᵏ⁾', t2: 'early layer grad' },
+    { x: 426, w: 100, theme: 'green',  t1: '∂L/∂H⁽ᴷ⁻¹⁾', t2: 'top hidden grad' },
+    { x: 276, w: 136, theme: 'orange', t1: '⊙φ\'(Z⁽ᴷ⁻¹⁾)W⁽ᴷ⁻¹⁾ᵀ', t2: 'layer K−1 factor' },
+    { x: 127, w: 136, theme: 'orange', t1: '⊙φ\'(Z⁽ᵏ⁺¹⁾)W⁽ᵏ⁺¹⁾ᵀ', t2: '⋯ t matrix factors' },
+    { x: 14,  w: 100, theme: 'red',    t1: '∂L/∂H⁽ᵏ⁾', t2: 'early layer grad' },
   ];
-  nodes.forEach((n, i) => {
-    const w = i === 3 ? 104 : 114;
-    o += card(n.x, 58, w, 68, n.theme, [
+  nodes.forEach((n) => {
+    o += card(n.x, 58, n.w, 68, n.theme, [
       { t: n.t1, mono: true, fs: 12, fw: 700 },
       { t: n.t2, fs: 12, fill: C.muted },
     ]);
   });
-  o += arrow(392, 92, 382, 92, D.red.base);
-  o += arrow(262, 92, 252, 92, D.red.base);
-  o += arrow(132, 92, 120, 92, D.red.base);
+  o += arrow(424, 92, 414, 92, D.red.base);
+  o += arrow(274, 92, 265, 92, D.red.base);
+  o += arrow(125, 92, 116, 92, D.red.base);
 
   // Exponential drift comparison at depth t = 50
   o += card(14, 142, 164, 98, 'red', [
@@ -996,7 +1114,7 @@ function varianceMultiplier() {
   ]);
 
   const rows = [
-    { y: 78,  theme: 'red',    name: 'ReLU, τ = 0.01',     ephi: 'E[φ\'²] = 1/2', mult: '256 · 10⁻⁴ · ½ = 0.0128',   hops: '0.0128⁹ ≈ 9.3×10⁻¹⁸' },
+    { y: 78,  theme: 'red',    name: 'ReLU, τ = 0.01',     ephi: 'E[φ\'²] = 1/2', mult: '256 · 10⁻⁴ · ½ = 0.0128',   hops: '0.0128⁹ ≈ 9.2×10⁻¹⁸' },
     { y: 126, theme: 'orange', name: 'ReLU, τ = 1.00',     ephi: 'E[φ\'²] = 1/2', mult: '256 · 1 · ½ = 128.0',       hops: '128⁹ ≈ 9.2×10¹⁸' },
     { y: 174, theme: 'purple', name: 'Sigmoid, τ = 1/16',  ephi: 'E[σ\'²] ≤ 1/16', mult: '256 · (1/256) · 1/16 ≤ 1/16', hops: '16⁻⁹ ≈ 1.5×10⁻¹¹' },
     { y: 222, theme: 'green',  name: 'ReLU He, τ = √(2/h)', ephi: 'E[φ\'²] = 1/2', mult: '256 · (2/256) · ½ = 1.000', hops: '1.0⁹ = 1.00 (flat!)' },
@@ -1044,14 +1162,14 @@ function sigmoidDilemma() {
 function xavierBalance() {
   const W = 540, H = 260;
   let o = '';
-  o += card(14, 12, 232, 96, 'blue', [
+  o += card(14, 12, 252, 96, 'blue', [
     'Forward Variance Condition',
     { t: 'o_j = Σ_{i=1}^{n_in} x_i w_ij', mono: true, fs: 12.5 },
     { t: 'Var[o_j] = (n_in · τ²) Var[x_i]', mono: true, fs: 12.5, fill: D.blue.dark },
     { t: 'Requires:  n_in · τ² = 1', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
   ], { white: true, rail: true });
 
-  o += card(294, 12, 232, 96, 'red', [
+  o += card(274, 12, 252, 96, 'red', [
     'Backward Variance Condition',
     { t: 'g_i = Σ_{j=1}^{n_out} w_ij g\'_j', mono: true, fs: 12.5 },
     { t: 'Var[g_i] = (n_out · τ²) Var[g\'_j]', mono: true, fs: 12.5, fill: D.red.dark },
@@ -1064,7 +1182,7 @@ function xavierBalance() {
   o += card(14, 148, 512, 98, 'purple', [
     'Xavier / Glorot Compromise (Glorot & Bengio, 2010): Average Fan-In and Fan-Out',
     { t: '½(n_in + n_out) τ² = 1   ⇒   τ² = 2 / (n_in + n_out)', mono: true, fs: 14, fw: 700, fill: D.purple.dark },
-    { t: 'Gaussian: N(0, 2/(n_in+n_out))     |     Uniform: U(−√(6/(n_in+n_out)), +√(6/(n_in+n_out)))', mono: true, fs: 12, fill: C.ink },
+    { t: 'Gaussian: N(0, 2/(n_in+n_out))\nUniform: U(−√(6/(n_in+n_out)), +√(6/(n_in+n_out)))', mono: true, fs: 12, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -1078,7 +1196,7 @@ function heReluHalving() {
     '1. Pre-Activation z',
     { t: 'z = Σ x_i w_ij', mono: true, fs: 13 },
     'Symmetric zero-mean',
-    { t: 'E[z²] = n_in · τ² · v⁽ᵏ⁻¹⁾', mono: true, fs: 12, fw: 700, fill: D.blue.dark },
+    { t: 'E[z²] =\nn_in · τ² · v⁽ᵏ⁻¹⁾', mono: true, fs: 12, fw: 700, fill: D.blue.dark },
   ], { white: true, rail: true });
 
   o += arrow(174, 81, 190, 81, C.purple);
@@ -1101,8 +1219,8 @@ function heReluHalving() {
 
   o += card(14, 164, 512, 82, 'purple', [
     'Why Xavier Decays by 2⁻¹⁰ ≈ 10⁻³ Across 10 ReLU Layers While He Stays at 1.0:',
-    { t: 'Xavier (τ² = 1/h):  v⁽ᵏ⁾ = ½ · h · (1/h) v⁽ᵏ⁻¹⁾ = ½ v⁽ᵏ⁻¹⁾   (loses 50% energy per layer)', mono: true, fs: 12, fill: D.red.dark },
-    { t: 'He     (τ² = 2/h):  v⁽ᵏ⁾ = ½ · h · (2/h) v⁽ᵏ⁻¹⁾ = 1 · v⁽ᵏ⁻¹⁾ (preserves energy at any depth)', mono: true, fs: 12, fill: D.green.dark },
+    { t: 'Xavier (τ² = 1/h):  v⁽ᵏ⁾ = ½ · h · (1/h) v⁽ᵏ⁻¹⁾ = ½ v⁽ᵏ⁻¹⁾\n(loses 50% energy per layer)', mono: true, fs: 12, fill: D.red.dark },
+    { t: 'He (τ² = 2/h):  v⁽ᵏ⁾ = ½ · h · (2/h) v⁽ᵏ⁻¹⁾ = 1 · v⁽ᵏ⁻¹⁾\n(preserves energy at any depth)', mono: true, fs: 12, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1124,7 +1242,7 @@ function initLimits() {
     },
     {
       x: 362, theme: 'green', title: '3. Depth K ≥ 50 Stack',
-      lines: ['Very deep networks pair', 'He / Xavier init with:', '• BatchNorm / LayerNorm', '• Residual skips x + f(x)', '(Chapters 5, 7 & 11)'],
+      lines: ['Very deep networks pair', 'He / Xavier init with:', '• BatchNorm / LayerNorm', '• Residual skips x + f(x)', '(in later chapters)'],
     },
   ];
   cards.forEach((c) => {
@@ -1168,7 +1286,7 @@ function overparamParadox() {
     { t: 'p / n = 203.5 params/img', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     'Interpolates 100% train,',
     'yet no catastrophic blowup:',
-    { t: 'Test acc > 81%!', fw: 700, fill: D.green.dark },
+    { t: 'Test acc > 80%!', fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(14, 202, 512, 46, 'slate', [
@@ -1183,7 +1301,7 @@ function vacuousVcBound() {
   let o = '';
   o += card(14, 12, 512, 48, 'purple', [
     'Distribution-Free Uniform Convergence Bound (VC Dimension / Rademacher)',
-    { t: 'ε(f)  ≤  ε_S(f)  +  B(ℱ, n, δ)     [where B depends ONLY on class ℱ and sample size n]', mono: true, fs: 12.5, fill: C.ink },
+    { t: 'ε(f) ≤ ε_S(f) + B(ℱ, n, δ)   [B depends only on ℱ and n]', mono: true, fs: 12.5, fill: C.ink },
   ]);
 
   o += card(14, 72, 248, 114, 'red', [
@@ -1201,7 +1319,7 @@ function vacuousVcBound() {
     { t: 'Because B(ℱ, n, δ) is label-blind:', mono: true, fs: 12 },
     'ε(f_true) ≤ 0.00 + B(ℱ, n, δ) ≥ 0.90',
     'Cannot guarantee better than 90% error',
-    { t: 'even though real test error is ~19%!', fw: 700, fill: D.orange.dark },
+    { t: 'even though real test error is < 20%!', fw: 700, fill: D.orange.dark },
   ], { white: true, rail: true });
 
   o += card(14, 198, 512, 52, 'green', [
@@ -1220,7 +1338,7 @@ function inductiveBiasMap() {
   const items = [
     { x: 14,  y: 54,  theme: 'slate',  t1: 'Linear / Softmax',      t2: 'Interpolates only if d ≥ n', t3: 'Bias: flat linear halfspaces' },
     { x: 276, y: 54,  theme: 'blue',   t1: 'Ridge / Weight Decay',  t2: 'Does not interpolate (λ > 0)', t3: 'Bias: small ‖w‖₂ smooth fits' },
-    { x: 14,  y: 144, theme: 'teal',   t1: '1-Nearest Neighbor',    t2: '100% train accuracy always!', t3: 'Bias: local Voronoi cells (≤2ε*)' },
+    { x: 14,  y: 144, theme: 'teal',   t1: '1-Nearest Neighbor',    t2: '100% train accuracy always!', t3: 'Bias: Voronoi cells (asympt. ≤ 2ε*)' },
     { x: 276, y: 144, theme: 'green',  t1: 'Overparam MLP + SGD',   t2: '100% train accuracy (p ≫ n)', t3: 'Bias: min-norm / max-margin path' },
   ];
   items.forEach((it) => {
@@ -1232,7 +1350,7 @@ function inductiveBiasMap() {
   });
 
   o += card(14, 232, 512, 24, 'purple', [
-    { t: '1-NN proves 100% training accuracy (interpolation) is fully compatible with strong test generalization!', fs: 12.5, fw: 700 },
+    { t: '1-NN proves 100% training accuracy (interpolation) is compatible with strong test generalization!', fs: 12.5, fw: 700 },
   ]);
   return svg(W, H, o);
 }
@@ -1243,7 +1361,7 @@ function genSummary() {
   let o = '';
   const rows = [
     { y: 12,  theme: 'red',    t1: '1. Random-Label Memorization', t2: '100% train acc on noise ⇒ class-only VC bounds B(ℱ,n) ≥ 0.9 are vacuous' },
-    { y: 62,  theme: 'orange', t1: '2. Double Descent at h = n',   t2: 'Square H has s_min ≈ 10⁻⁵ (explodes ‖W‖); h ≫ n heals s_min & shrinks norm' },
+    { y: 62,  theme: 'orange', t1: '2. Double Descent at h = n',   t2: 'Square H has s_min ≈ 10⁻⁵–10⁻³ (explodes ‖W‖); h ≫ n heals s_min & shrinks norm' },
     { y: 112, theme: 'blue',   t1: '3. Min-Norm Implicit Bias',    t2: 'Squared-loss GD from w₀ = 0 stays in row(H) ⇒ converges to min-‖w‖₂ fit' },
     { y: 162, theme: 'purple', t1: '4. Max-Margin Logistic Bias',  t2: 'Cross-entropy GD sends ‖w_t‖ → ∞ while w_t/‖w_t‖ → hard-margin SVM' },
     { y: 212, theme: 'green',  t1: '5. Clean-First & Early Stop',  t2: 'SGD fits coherent clean structure in ~20 epochs before memorizing noise' },
@@ -1284,7 +1402,7 @@ function coadaptation() {
   ], { white: true, rail: true });
 
   o += card(14, 202, 512, 44, 'purple', [
-    'Three Complementary Regularizers:  L₂ Weight Decay (‖W‖²)  ·  Early Stopping  ·  Dropout Masking',
+    'Three Complementary Regularizers:\nL₂ Weight Decay (‖W‖²)  ·  Early Stopping  ·  Dropout Masking',
   ]);
   return svg(W, H, o);
 }
@@ -1333,34 +1451,34 @@ function invertedDropout() {
   const W = 540, H = 264;
   let o = '';
   // Top: Training mode
-  o += card(14, 12, 512, 30, 'orange', ['(a) Training Mode (self.training = True): Mask & Rescale by 1 / (1 − p)']);
-  o += card(14, 50, 144, 68, 'blue', [
+  o += card(14, 12, 512, 30, 'orange', ['(a) Training Mode: Mask & Rescale by 1 / (1 − p)']);
+  o += card(14, 50, 160, 68, 'blue', [
     'Activations h',
-    { t: '[ 0.8, 1.2, 0.4, 2.0 ]', mono: true, fs: 11.5, fw: 700 },
+    { t: '[0.8, 1.2, 0.4, 2.0]', mono: true, fs: 11.5, fw: 700 },
   ], { white: true });
-  o += arrow(162, 84, 188, 84, C.amber);
-  o += card(192, 50, 152, 68, 'orange', [
+  o += arrow(178, 84, 196, 84, C.amber);
+  o += card(200, 50, 140, 68, 'orange', [
     'Gate ξ ~ Bern(0.5)',
-    { t: '[ 1,   0,   0,   1 ]', mono: true, fs: 12, fw: 700, fill: D.orange.dark },
-    { t: 'scale × 1/(1−0.5) = 2', mono: true, fs: 11.5 },
+    { t: '[1, 0, 0, 1]', mono: true, fs: 12, fw: 700, fill: D.orange.dark },
+    { t: 'scale 1/(1−p) = 2', mono: true, fs: 11.5 },
   ], { white: true });
-  o += arrow(348, 84, 374, 84, C.amber);
-  o += card(378, 50, 148, 68, 'green', [
+  o += arrow(344, 84, 362, 84, C.amber);
+  o += card(366, 50, 160, 68, 'green', [
     'Output h\' = ξh/(1−p)',
-    { t: '[ 1.6, 0.0, 0.0, 4.0 ]', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
-    { t: 'E[h\'_j] = h_j (unbiased)', mono: true, fs: 11.5 },
+    { t: '[1.6, 0.0, 0.0, 4.0]', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
+    { t: 'E[h\'] = h (unbiased)', fs: 11.5 },
   ], { white: true });
 
   o += hline(14, 526, 134);
 
   // Bottom: Evaluation / Test mode
-  o += card(14, 146, 512, 30, 'green', ['(b) Evaluation / Inference Mode (self.training = False): Exact Identity Pass']);
-  o += card(14, 184, 232, 66, 'blue', [
+  o += card(14, 146, 512, 30, 'green', ['(b) Evaluation Mode: Exact Identity Pass']);
+  o += card(14, 184, 212, 66, 'blue', [
     'Activations h',
     { t: '[ 0.8, 1.2, 0.4, 2.0 ]', mono: true, fs: 12, fw: 700 },
   ], { white: true });
-  o += hArrow(250, 290, 217, C.green, 'h\' = h');
-  o += card(294, 184, 232, 66, 'green', [
+  o += hArrow(232, 296, 217, C.green, 'h\' = h');
+  o += card(300, 184, 226, 66, 'green', [
     'No Mask, No Scaling at Test Time!',
     'Expected scale already matched during training',
   ]);
@@ -1462,7 +1580,7 @@ function dropoutSummary() {
     { y: 62,  theme: 'purple', t1: 'Test-Time Identity', t2: 'Disable mask at eval (h\'_j = h_j): zero test FLOP or memory overhead' },
     { y: 112, theme: 'orange', t1: 'Injected Variance',  t2: 'Var[h\'_j] = (p / (1 − p)) h_j²   (std = |h_j| at p = 0.5; 2|h_j| at p = 0.8)' },
     { y: 162, theme: 'green',  t1: 'Noisy-Label Gain',   t2: 'On 40%-corrupted Fashion-MNIST (n=1,000), p=0.5 boosts val acc by +3 to +5 pts' },
-    { y: 212, theme: 'red',    t1: 'Mode-Switch Guard',  t2: 'Always toggle net.train() / net.eval() so validation is deterministic' },
+    { y: 212, theme: 'red',    t1: 'Mode-Switch Guard',  t2: 'Always switch to evaluation mode for validation so it is deterministic' },
   ];
   rows.forEach((r) => {
     o += card(14, r.y, 148, 42, r.theme, [{ t: r.t1, fs: 13, fw: 700 }]);
@@ -1480,7 +1598,7 @@ function imagesVsTabular() {
   const W = 540, H = 264;
   let o = '';
   o += card(14, 12, 248, 182, 'blue', [
-    'Fashion-MNIST Images (§§3.2–4.6)',
+    'Fashion-MNIST Images',
     { t: 'n = 60,000 labeled images', mono: true, fs: 12.5, fill: D.blue.dark },
     '• 784 homogeneous pixel columns',
     '• Identical [0, 1] scale, 0 NaNs',
@@ -1489,7 +1607,7 @@ function imagesVsTabular() {
   ], { white: true, rail: true });
 
   o += card(278, 12, 248, 182, 'orange', [
-    'Kaggle Ames Houses (§4.7)',
+    'Kaggle Ames Houses',
     { t: 'n = 1,460 train (+1,459 test)', mono: true, fs: 12.5, fill: D.orange.dark },
     '• 79 heterogeneous columns',
     '  (35 numeric, 44 categorical)',
@@ -1572,6 +1690,9 @@ function leakageFreeStd() {
 }
 
 // 46. ch04-mlp-onehot-nan
+// Pad a mono table row to a fixed width with no-break spaces.
+const nbRow = (s) => s.padEnd(37).replace(/ /g, '\u00a0');
+
 function onehotNan() {
   const W = 540, H = 262;
   let o = '';
@@ -1590,10 +1711,11 @@ function onehotNan() {
   // Right: Expanded binary columns including _nan
   o += card(210, 58, 316, 124, 'green', [
     'One-Hot + Explicit _nan Indicator (345 cols)',
-    { t: '       _RL   _RM   _FV   _nan', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: 'Row 1:   1     0     0     0', mono: true, fs: 12.5 },
-    { t: 'Row 2:   0     1     0     0', mono: true, fs: 12.5 },
-    { t: 'Row 3:   0     0     0     1  (PoolQC=NaN)', mono: true, fs: 12, fw: 700, fill: D.purple.dark },
+    // No-break spaces keep the columns aligned (SVG collapses plain spaces).
+    { t: nbRow('       _RL _RM _FV _nan'), mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: nbRow('Row 1:  1   0   0   0'), mono: true, fs: 12 },
+    { t: nbRow('Row 2:  0   1   0   0'), mono: true, fs: 12 },
+    { t: nbRow('Row 3:  0   0   0   1  (MSZoning=NaN)'), mono: true, fs: 12, fw: 700, fill: D.purple.dark },
   ], { white: true });
 
   o += card(14, 196, 512, 54, 'blue', [
@@ -1617,7 +1739,7 @@ function targetCentering() {
 
   o += card(278, 12, 248, 124, 'green', [
     'Centered Target (z − offset)',
-    { t: 'offset = mean(log y_train) ≈ 12.02', mono: true, fs: 12 },
+    { t: 'offset = mean(log y_train)\n≈ 12.02', mono: true, fs: 12 },
     { t: 'Step-0 RMSE ≈ std(log y) ≈ 0.40!', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     'Gradients immediately shape',
     'feature weights from epoch 1',

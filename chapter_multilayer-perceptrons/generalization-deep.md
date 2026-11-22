@@ -480,7 +480,7 @@ Generalization in Deep Learning<br>**random-label memorization · double descent
 ::: {.cols .vc}
 ::: {.col}
 - **Classical threshold ($p / n = 1.0$):** A degree-19 polynomial ($p = 20$) interpolating $n = 20$ noisy points oscillates wildly (test MSE $>1{,}000\times$ the true cubic).
-- **Overparameterized MLPs ($p \gg n$):** Our 256-unit MLP ($p = 203{,}530$) reaches $\sim 87\%$ test accuracy on $n = 60{,}000$ images ($p/n = 3.4$) and $>81\%$ test accuracy on $n = 1{,}000$ images ($p/n = 203.5$) despite $100\%$ training accuracy!
+- **Overparameterized MLPs ($p \gg n$):** Our 256-unit MLP ($p = 203{,}530$) reaches $\sim 87\%$ test accuracy on $n = 60{,}000$ images ($p/n = 3.4$) and $>80\%$ test accuracy on $n = 1{,}000$ images ($p/n = 203.5$) despite $100\%$ training accuracy!
 - **The puzzle:** Resolving why $p/n = 203.5$ generalizes requires testing capacity, conditioning at $h = n$, and SGD's implicit bias.
 :::
 
@@ -582,8 +582,8 @@ Inspecting the smallest singular value $s_{\min}(\mathbf{H})$ and the weight nor
 
 @!generalization-deep-conditioning-at-the-threshold-1
 
-- **At $h = n = 1{,}000$:** $\mathbf{H}$ is a square $1000 \times 1000$ matrix with a single unique exact inverse $\mathbf{W}^{(2)} = \mathbf{H}^{-1}\mathbf{Y}$. Because random features have nearly collinear directions ($s_{\min} \approx 10^{-5}$), inverting $\mathbf{H}$ divides label noise by $s_{\min}$ and blows up $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$.
-- **At $h = 10{,}000 \gg n$:** Extra features provide a $9{,}000$-dimensional subspace of exact interpolators, allowing the minimum-norm fit to spread weights across well-conditioned directions ($s_{\min} \approx 30$, $\|\mathbf{W}^{(2)}\|_{\textrm{F}} \approx 2.2$).
+- **At $h = n = 1{,}000$:** $\mathbf{H}$ is a square $1000 \times 1000$ matrix with a single unique exact inverse $\mathbf{W}^{(2)} = \mathbf{H}^{-1}\mathbf{Y}$. Because random features have nearly collinear directions ($s_{\min} \approx 10^{-5}$–$10^{-3}$), inverting $\mathbf{H}$ divides label noise by $s_{\min}$ and blows up $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$.
+- **At $h = 10{,}000 \gg n$:** Extra features provide a $9{,}000$-dimensional subspace of exact interpolators, allowing the minimum-norm fit to spread weights across well-conditioned directions ($s_{\min} \approx 2$, $\|\mathbf{W}^{(2)}\|_{\textrm{F}} \approx 2.4$).
 :::
 
 ::: {.slide title="When Adding More Training Data Hurts Test Accuracy"}

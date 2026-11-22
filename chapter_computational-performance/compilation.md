@@ -659,7 +659,7 @@ for small models and batches.
 ::: {.cover}
 [Dive into Deep Learning · §13.3]{.kicker}
 
-Compilers, Operator Fusion, and Graph Capture (`torch.compile`, `jax.jit`)<br>**graph capture & tracing · value branches & dynamic shapes · operator fusion · whole-step compilation · CUDA graphs**
+Compilers, Operator Fusion, and Graph Capture<br>**graph capture & tracing · value branches & dynamic shapes · operator fusion · whole-step compilation · CUDA graphs**
 :::
 :::
 
@@ -688,27 +688,52 @@ Compilers, Operator Fusion, and Graph Capture (`torch.compile`, `jax.jit`)<br>**
 - **Ahead-of-time graph capture:** To fuse `add` into `relu` or schedule memory reuse, a compiler must capture the forward and backward computation graphs *before* executing the kernels.
 :::
 
-::: {.slide title="Symbolic Tracing and Compilation Pipelines"}
+::: {.slide title="Symbolic Tracing and Compilation Pipelines" only="pytorch"}
 [Tracing Placeholders]{.kicker}
 
 ![](../img/mdl-perf-compile-pipelines.svg){width=88%}
 
 - **How tracing works:** On the first call, the framework executes the Python function using symbolic **placeholders** (tracers) carrying `shape` and `dtype` but no numerical values, recording every tensor primitive into a graph while unrolling static Python loops.
-- **Lowering & caching (`torch.compile` / `jax.jit`):** In PyTorch, TorchDynamo intercepts bytecode, AOTAutograd traces the backward pass, and Inductor emits fused Triton/C++ kernels guarded by shape/dtype checks; in JAX, `jax.jit` traces a typed `jaxpr` lowered by XLA.
+- **Lowering & caching (`torch.compile`):** TorchDynamo intercepts bytecode, AOTAutograd traces the backward pass, and Inductor emits fused Triton/C++ kernels guarded by shape/dtype checks.
 :::
 
-::: {.slide title="Three Ways a Tracer Handles Data-Dependent Branches"}
+::: {.slide title="Symbolic Tracing and Compilation Pipelines" only="jax"}
+[Tracing Placeholders]{.kicker}
+
+![](../img/mdl-perf-compile-pipelines.svg){width=88%}
+
+- **How tracing works:** On the first call, the framework executes the Python function using symbolic **placeholders** (tracers) carrying `shape` and `dtype` but no numerical values, recording every tensor primitive into a graph while unrolling static Python loops.
+- **Lowering & caching (`jax.jit`):** `jax.jit` traces a typed `jaxpr`, which XLA lowers into fused GPU kernels cached by input shape and dtype.
+:::
+
+::: {.slide title="Three Ways a Tracer Handles Data-Dependent Branches" only="pytorch"}
 [Control Flow]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **1. Freeze (`torch.jit.trace`):** Records only the branch taken by one example input—fast, but **silently wrong** when new inputs take the other branch.
-- **2. Refuse (`jax.jit`, `fullgraph=True`):** Raises a trace-time error and requires graph primitives (`where`/`select` or `cond`) inside a single fused program.
+- **2. Refuse (`fullgraph=True`):** Raises a trace-time error and requires graph primitives (`torch.where` or `torch.cond`) inside a single fused program.
 - **3. Fall back (`torch.compile` default):** Inserts a **graph break**, synchronizing the GPU with Python to evaluate `if` before launching Graph 2.
 :::
 
 ::: {.col .fig .big}
-@fig:ch13-perf-branch-strategies
+@fig:ch13-perf-branch-strategies@pytorch
+:::
+:::
+:::
+
+::: {.slide title="Three Ways a Tracer Handles Data-Dependent Branches" only="jax"}
+[Control Flow]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **1. Freeze:** Records only the branch taken by one example input—fast, but **silently wrong** when new inputs take the other branch.
+- **2. Refuse (`jax.jit`):** Raises a trace-time error and requires graph primitives (`jnp.where`/`lax.select` or `lax.cond`) inside a single fused program.
+- **3. Fall back:** Inserts a **graph break**, synchronizing the GPU with Python to evaluate `if` before launching Graph 2.
+:::
+
+::: {.col .fig .big}
+@fig:ch13-perf-branch-strategies@jax
 :::
 :::
 :::
@@ -762,7 +787,7 @@ Because compiled kernels specialize tile sizes and loop bounds to tensor shapes,
 ::: {.col}
 - **Unpadded ragged lengths ($100, 128, 75$):** Every new sequence length triggers a multi-second compilation pause, thrashing the training loop.
 - **Power-of-two / multiple-of-64 bucketing:** Padding lengths $100$ and $75$ with masked tokens to bucket $128$ compiles and caches **only 1 kernel**.
-- **Epoch tail batches:** Always pass `drop_last=True` (or pad the final batch) when using `jax.jit` or static-shape `torch.compile` / CUDA graphs.
+- **Epoch tail batches:** Always pass `drop_last=True` (or pad the final batch) when compiling for static shapes or replaying CUDA graphs.
 :::
 
 ::: {.col .fig .big}
@@ -863,7 +888,7 @@ Because graph capture, optimization, and kernel code generation take an upfront 
 $$n^* \;=\; \frac{t_{\textrm{compile}}}{t_{\textrm{eager}} - t_{\textrm{compiled}}}$$
 
 - **Worked example:** If compilation takes $t_{\textrm{compile}} = 30\text{ s}$ and saves $t_{\textrm{eager}} - t_{\textrm{compiled}} = 10\text{ ms/step}$, the run breaks even at $n^* = 3{,}000\text{ steps}$—tiny next to a $100{,}000$-step training run, but a net loss for a $200$-step quick evaluation.
-- **Persistent compilation caches:** Both PyTorch Inductor and JAX XLA cache compiled binaries on disk, reducing $t_{\textrm{compile}}$ on subsequent process runs from tens of seconds to a fraction of a second.
+- **Persistent compilation caches:** Compilers can cache compiled binaries on disk, reducing $t_{\textrm{compile}}$ on subsequent process runs from tens of seconds to a fraction of a second.
 :::
 
 ::: {.slide title="When Fusion Is Not Enough: Thin-Layer Launch Overhead"}
@@ -928,12 +953,12 @@ Applying `mode='reduce-overhead'` to our 4-layer MLP training step records CUDA 
 ::: {.slide title="When Not to Compile: Practical Failure Modes"}
 [Practical Pitfalls]{.kicker}
 
-Before wrapping a model or training step in `torch.compile` or `jax.jit`, check four practical failure modes:
+Before compiling a model or training step, check four practical failure modes:
 
 - **Short runs ($N_{\textrm{steps}} < n^*$):** If a script runs only a few dozen evaluation batches, compilation time $t_{\textrm{compile}}$ will exceed the total execution time saved.
 - **Ragged shapes per step:** Calling a compiled function on a sequence that grows by $1$ token every step triggers continuous recompilation unless padded into fixed buckets.
 - **In-graph host reads & logging:** Calling `print(loss)` or `if loss.item() < 0.1:` inside the compiled step forces graph breaks or trace errors; keep logging outside the compiled step function.
-- **Line-by-line debugging:** Stack traces and breakpoints inside fused kernels do not map line-by-line to Python; always debug numerical correctness in eager mode first (`torch._dynamo.reset()` / `jax.disable_jit()`).
+- **Line-by-line debugging:** Stack traces and breakpoints inside fused kernels do not map line-by-line to Python; always debug numerical correctness in eager mode first.
 :::
 
 ::: {.slide title="Concept Check: Fusion Speedups, Replay, and Padding"}
@@ -943,7 +968,7 @@ Test your understanding with three compiler design scenarios:
 
 1. A row-wise softmax over an $R \times d$ `float32` matrix runs in eager mode as $5$ kernels: `m = max(x)` (1 read), `y = x - m` (1 read, 1 write), `e = exp(y)` (1 read, 1 write), `s = sum(e)` (1 read), `p = e / s` (1 read, 1 write). Assuming each row fits in on-chip SRAM, what is the memory-traffic speedup of fusing softmax into 1 kernel?
 2. A step launches $400$ small kernels at $h = 8\,\mu\text{s}$ of host dispatch time each, while total GPU kernel execution time is $1.5\text{ ms}$. Which regime binds, and what is the maximum speedup from CUDA graph replay?
-3. A single step consists of one $8192 \times 8192$ `bfloat16` matrix product. How much will `torch.compile` or `jax.jit` speed it up?
+3. A single step consists of one $8192 \times 8192$ `bfloat16` matrix product. How much will compiling it speed it up?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
@@ -954,14 +979,26 @@ Test your understanding with three compiler design scenarios:
 :::
 :::
 
-::: {.slide title="Summary: Graph Capture, Operator Fusion, and Replay"}
+::: {.slide title="Summary: Graph Capture, Operator Fusion, and Replay" only="pytorch"}
 [Key Takeaways]{.kicker}
 
 | Compiler Mechanism | Target Regime | How It Works | Concrete Chapter Benchmark |
 | :--- | :--- | :--- | :--- |
-| **Symbolic Tracing** | Prerequisite | Runs Python once on shape/dtype placeholders (`TorchDynamo` / `jaxpr`) | Captures static loops; value branches need `where`/`select` or `cond` |
-| **Shape Specialization** | Prerequisite | Specializes tile sizes to input shapes (`SymInt` guards / static cache) | Ragged sequences must be padded/bucketed to avoid recompilation |
+| **Symbolic Tracing** | Prerequisite | Runs Python once on shape/dtype placeholders (`TorchDynamo`) | Captures static loops; value branches need `torch.where` or `torch.cond` |
+| **Shape Specialization** | Prerequisite | Specializes tile sizes to input shapes (`SymInt` guards) | Ragged sequences must be padded/bucketed to avoid recompilation |
 | **Operator Fusion** | **Bandwidth-bound** | Merges elementwise chains & SRAM row reductions into 1 DRAM read + 1 write | 8-op `gelu_ish` traffic cut from $18 \to 2$ arrays (**$9\times$ speedup**) |
-| **CUDA Graph Replay** | **Overhead-bound** | Records kernel launch descriptors & pointers; replays all in 1 host call | 60-layer width-256 stack sped up **$7\times$** (PyTorch) / **$30\times$** (JAX) |
+| **CUDA Graph Replay** | **Overhead-bound** | Records kernel launch descriptors & pointers; replays all in 1 host call | 60-layer width-256 stack sped up **$7\times$** |
+| **Break-Even Step $n^*$** | Cost check | $n^* = t_{\textrm{compile}} / (t_{\textrm{eager}} - t_{\textrm{compiled}})$ | Amortizes multi-second compile cost over $> 10^3$ training steps |
+:::
+
+::: {.slide title="Summary: Graph Capture, Operator Fusion, and Replay" only="jax"}
+[Key Takeaways]{.kicker}
+
+| Compiler Mechanism | Target Regime | How It Works | Concrete Chapter Benchmark |
+| :--- | :--- | :--- | :--- |
+| **Symbolic Tracing** | Prerequisite | Runs Python once on shape/dtype placeholders (`jaxpr`) | Captures static loops; value branches need `lax.select` or `lax.cond` |
+| **Shape Specialization** | Prerequisite | Specializes tile sizes to input shapes (static shape cache) | Ragged sequences must be padded/bucketed to avoid recompilation |
+| **Operator Fusion** | **Bandwidth-bound** | Merges elementwise chains & SRAM row reductions into 1 DRAM read + 1 write | 8-op `gelu_ish` traffic cut from $18 \to 2$ arrays (**$9\times$ speedup**) |
+| **CUDA Graph Replay** | **Overhead-bound** | Records kernel launch descriptors & pointers; replays all in 1 host call | 60-layer width-256 stack sped up **$30\times$** |
 | **Break-Even Step $n^*$** | Cost check | $n^* = t_{\textrm{compile}} / (t_{\textrm{eager}} - t_{\textrm{compiled}})$ | Amortizes multi-second compile cost over $> 10^3$ training steps |
 :::

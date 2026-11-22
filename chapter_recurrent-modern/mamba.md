@@ -913,7 +913,7 @@ Every tensor in `SelectiveSSM` has a clear structural role across the $H = 2d$ e
 ::: {.cols .vc}
 ::: {.col}
 - **No FFT Shortcut:** Time-varying $\boldsymbol{\Delta}_t$ breaks LTI convolution, requiring a 4D parallel scan over $(B, T, H, N)$.
-- **32× State Expansion ($H = 2d, N = 16$):** Naive autograd stores $\sim 20$ intermediate doubling-round tensors—consuming $\sim 2\text{ GB}$/layer in toy runs and $>300\text{ GB}$ at LLM scale.
+- **32× State Expansion ($H = 2d, N = 16$):** Naive autograd stores $\sim 20$ intermediate doubling-round tensors—consuming $\sim 2\text{ GB}$/layer in toy runs and $\sim 190\text{ GB}$/layer at LLM scale.
 :::
 
 ::: {.col .fig .big}

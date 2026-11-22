@@ -59,9 +59,9 @@ Multilayer Perceptrons: Breaking the Linear Barrier<br>
 
 ::: {.cols .vc}
 ::: {.col}
-1. **Efficient gradient computation (§4.3):** Finite differences would require $203{,}530$ forward passes per step; *backpropagation* computes every gradient in one reverse sweep by caching forward activations in GPU RAM.
-2. **Numerical stability across depth (§4.4):** Across $K$ layers, signals and gradients pass through a product of $K$ weight and slope matrices, requiring variance-preserving *Xavier* and *He* initialization.
-3. **Generalization past interpolation (§4.5–§4.6):** Overparameterized MLPs can memorize random noise yet generalize on real data via SGD's implicit bias, early stopping, and *dropout*.
+1. **Efficient gradient computation:** Finite differences would require $203{,}530$ forward passes per step; *backpropagation* computes every gradient in one reverse sweep by caching forward activations in GPU RAM.
+2. **Numerical stability across depth:** Across $K$ layers, signals and gradients pass through a product of $K$ weight and slope matrices, requiring variance-preserving *Xavier* and *He* initialization.
+3. **Generalization past interpolation:** Overparameterized MLPs can memorize random noise yet generalize on real data via SGD's implicit bias, early stopping, and *dropout*.
 :::
 
 ::: {.col .fig .big}
@@ -70,7 +70,7 @@ Multilayer Perceptrons: Breaking the Linear Barrier<br>
 :::
 :::
 
-::: {.slide title="Running Benchmark: Fashion-MNIST Across Chapter 4"}
+::: {.slide title="Running Benchmark: Fashion-MNIST Across the Chapter"}
 [Running Example]{.kicker}
 
 ::: {.cols .vc}
@@ -86,14 +86,14 @@ Multilayer Perceptrons: Breaking the Linear Barrier<br>
 :::
 :::
 
-::: {.slide title="Architectural & Mathematical Roadmap of Chapter 4"}
+::: {.slide title="Architectural & Mathematical Roadmap of the Chapter"}
 [Chapter Roadmap]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Representation & features (§§4.1–4.2):** Nonlinear activations prevent linear collapse, fold space into $2^m$ pieces with depth, and learn localized garment-part filters.
-- **Optimization & stability (§§4.3–4.4):** Three local VJP rules ($\mathbf{X}^\top\mathbf{G}$, $\mathbf{G}\mathbf{W}^\top$, $\odot\,\phi'$) run in $\sim 2\times$ forward FLOPs; setting $h\tau^2\mathbb{E}[\phi'(z)^2] = 1$ prevents vanishing/exploding products.
-- **Generalization & tabular ML (§§4.5–4.7):** Double descent, minimum-norm implicit bias, inverted dropout $h' = \xi h / (1 - p)$, and leakage-free 5-fold Kaggle cross-validation.
+- **Representation & features:** Nonlinear activations prevent linear collapse, fold space into $2^m$ pieces with depth, and learn localized garment-part filters.
+- **Optimization & stability:** Three local VJP rules ($\mathbf{X}^\top\mathbf{G}$, $\mathbf{G}\mathbf{W}^\top$, $\odot\,\phi'$) run in $\sim 2\times$ forward FLOPs; setting $h\tau^2\mathbb{E}[\phi'(z)^2] = 1$ prevents vanishing/exploding products.
+- **Generalization & tabular ML:** Double descent, minimum-norm implicit bias, inverted dropout $h' = \xi h / (1 - p)$, and leakage-free 5-fold Kaggle cross-validation.
 :::
 
 ::: {.col .fig .big}
@@ -102,10 +102,10 @@ Multilayer Perceptrons: Breaking the Linear Barrier<br>
 :::
 :::
 
-::: {.slide title="Concept Check & Study Guide for Chapter 4"}
+::: {.slide title="Concept Check & Study Guide for the Chapter"}
 [Check & Synthesis]{.kicker}
 
-Before diving into §4.1, test your intuition on two foundational questions that connect the sections ahead:
+Before diving into the first section, test your intuition on two foundational questions that connect the sections ahead:
 
 1. **Linear collapse:** If we stack 10 fully connected layers of width $256$ without activation functions ($\phi(z) = z$), does the network have more expressive power than a single $784 \times 10$ linear layer?
 2. **Memory vs. parameters:** When training a deep network on minibatches of size $n = 256$, why can activation memory easily exceed parameter memory even when every hidden layer is narrower than the input?

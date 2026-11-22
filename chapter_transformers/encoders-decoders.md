@@ -731,8 +731,8 @@ Bidirectional Encoders, Encoder–Decoders, and Cross-Attention<br>**three block
 
 ::: {.cols .vc}
 ::: {.col}
-- **Cloze disambiguation:** In `Homarus gammarus, known as _he European lobster`, the left prefix `known as ` permits hundreds of completions, whereas the right context `he European` uniquely pins the missing byte to `t` ($99\%$ probability).
-- **Two-sided context gain:** On WikiText-103 byte windows, reconstructing a masked byte drops from **$\sim 2.4\text{ nats}$** at the 1-sided window boundary to **$1.57\text{ nats}$** in the 2-sided interior.
+- **Cloze disambiguation:** In `Homarus gammarus, known as _he European lobster`, the left prefix `known as ` permits hundreds of completions, whereas the right context `he European` uniquely pins the missing byte to `t` ($96\text{--}97\%$ probability).
+- **Two-sided context gain:** On WikiText-103 byte windows, reconstructing a masked byte drops from **$\sim 2.4\text{ nats}$** at the 1-sided window boundary to **$\approx 1.55\text{ nats}$** in the 2-sided interior.
 :::
 
 ::: {.col .fig .big}
@@ -830,8 +830,8 @@ Evaluating our trained 4-block byte-level `MaskedLM` across window positions $t 
 
 @!encoders-decoders-what-the-second-side-is-worth-1
 
-- **Symmetric bathtub (U-shaped) profile:** Interior positions ($t \in [16, 47]$) enjoy both left and right context, achieving a flat mean loss of **$1.57\text{ nats/byte}$** ($54\%$ exact byte accuracy).
-- **Edge penalty at $t = 0$ and $t = 63$:** At the two window boundaries where one side of the context is truncated, loss jumps to **$2.40\text{--}2.45\text{ nats/byte}$**—quantifying the $\sim 0.85\text{-nat}$ advantage of having the second side of context!
+- **Symmetric bathtub (U-shaped) profile:** Interior positions ($t \in [16, 47]$) enjoy both left and right context, achieving a flat mean loss of **$\approx 1.55\text{ nats/byte}$** ($\approx 53\%$ exact byte accuracy).
+- **Edge penalty at $t = 0$ and $t = 63$:** At the two window boundaries where one side of the context is truncated, loss jumps to **$2.36\text{--}2.44\text{ nats/byte}$**—quantifying the $\sim 0.85\text{-nat}$ advantage of having the second side of context!
 :::
 
 ::: {.slide title="How Right-Hand Context Resolves Ambiguous Gaps"}
@@ -840,7 +840,7 @@ Evaluating our trained 4-block byte-level `MaskedLM` across window positions $t 
 ::: {.cols .vc}
 ::: {.col}
 - Masking individual bytes in `'Homarus gammarus , known as the European lobster'` shows how bidirectional attention fuses left and right spelling constraints:
-- At position 28 (`known as _he European`), the encoder assigns $99\%$ probability to `'t'`; at position 22 (`known_as`), it assigns $85\%$ to `' '`.
+- At position 28 (`known as _he European`), the encoder assigns $96\text{--}97\%$ probability to `'t'`; at position 22 (`kno_n as`), it assigns $47\text{--}66\%$ to `'w'`.
 
 @encoders-decoders-what-the-second-side-is-worth-2
 :::

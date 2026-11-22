@@ -521,7 +521,7 @@ Dropout: Regularization via Multiplicative Hidden Noise<br>**co-adaptation · in
 
 ::: {.cols .vc}
 ::: {.col}
-- **Three complementary regularizers:** Weight decay (§2.7) penalizes large weight norms $\|\mathbf{W}\|_{\textrm{F}}^2$; early stopping (§4.5) halts before late-stage noise memorization; **dropout** (Srivastava et al., 2014) randomly zeroes out each hidden unit with probability $p$ on every training step.
+- **Three complementary regularizers:** Weight decay penalizes large weight norms $\|\mathbf{W}\|_{\textrm{F}}^2$; early stopping halts before late-stage noise memorization; **dropout** (Srivastava et al., 2014) randomly zeroes out each hidden unit with probability $p$ on every training step.
 - **Preventing hidden-unit co-adaptation:** When units are always present together, groups of neurons can conspire to fix isolated training errors. Random masking forces every unit to extract features useful alongside random subsets of partners.
 :::
 
@@ -640,7 +640,7 @@ We insert dropout immediately after each hidden layer's ReLU activation—active
 ::: {.slide title="Defining and Training DropoutMLPScratch"}
 [From-Scratch Model]{.kicker}
 
-In `DropoutMLPScratch`, we guard each `dropout_layer` call with the framework's training-mode flag (`self.training`, `autograd.is_training()`, or `not self.deterministic`):
+In `DropoutMLPScratch`, we guard each `dropout_layer` call with the framework's training-mode flag:
 
 @dropout-defining-the-model
 :::
@@ -648,7 +648,7 @@ In `DropoutMLPScratch`, we guard each `dropout_layer` call with the framework's 
 ::: {.slide title="20-Epoch Training Curve on Full Fashion-MNIST"}
 [Full-Dataset Benchmark]{.kicker}
 
-Training `DropoutMLPScratch` for $20$ epochs on all $60{,}000$ Fashion-MNIST images ($n = 256, \eta = 0.1$) reaches $\sim 87\%$ validation accuracy:
+Training `DropoutMLPScratch` for $20$ epochs on all $60{,}000$ images reaches $\sim 87\%$ validation accuracy:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -673,7 +673,7 @@ Framework `Sequential` containers interleave `Dropout(p)` modules after each `Re
 ::: {.slide title="Combatting Memorization Under 40% Label Corruption"}
 [Label-Noise Stress Test]{.kicker}
 
-We return to the $1{,}000$-image noisy-label benchmark from §4.5, redrawing $40\%$ of the training labels at random ($\sim 36\%$ genuinely wrong labels) and training `DropoutMLP` for $200$ epochs with $p = 0$ vs. $p = 0.5$ in both hidden layers:
+On the $1{,}000$-image benchmark with $40\%$ of labels redrawn ($\sim 36\%$ wrong), we train `DropoutMLP` for $200$ epochs with $p = 0$ vs. $p = 0.5$:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -726,7 +726,7 @@ Test your command of dropout mathematics and systems behavior:
 
 1. **Extreme dropout ($p = 0.8$):** If a hidden unit has activation $h_j = 1.0$ and we apply inverted dropout with $p = 0.8$, what value does a surviving unit take, and what are $\mathbb{E}[h_j']$ and $\mathrm{Var}[h_j']$?
 2. **Pairwise co-adaptation probability:** In a 256-unit hidden layer with $p = 0.5$, how many units survive on average per example, and on what fraction of training steps are three specific partner units $(j_1, j_2, j_3)$ *all* active together?
-3. **Forgetting to turn off dropout at test time:** What symptoms appear if you accidentally leave `self.training = True` during validation?
+3. **Forgetting to turn off dropout at test time:** What symptoms appear if you accidentally leave the model in training mode during validation?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**

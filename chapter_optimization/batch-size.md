@@ -755,7 +755,7 @@ Why does **Adam / AdamW** require **square-root scaling** $\eta(b) = \sqrt{b/b_0
   - **Linear rule ($64\times = 2^6$, $+6$ grid steps):** Overshoots into the unstable right wall ($>0.10$ nats worse).
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!batch-size-learning-rate-rules-3
 :::
 :::

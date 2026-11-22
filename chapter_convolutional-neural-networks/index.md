@@ -138,10 +138,16 @@ Convolutional Neural Networks: Geometry-Aware Vision Layers<br>**locality · tra
 
 Hubel and Wiesel discovered that early visual cortex neurons respond to oriented edges within localized *receptive fields*, inspiring hierarchical filter banks swept across space:
 
-![](../img/field-visual.png){.nostretch width=76% fig-align="center"}
+::: {.cols .vc}
+::: {.col .fig}
+![](../img/field-visual.png){.nostretch width=100%}
+:::
 
+::: {.col}
 - **Local filter bank (left $\to$ right):** Six oriented edge filters convolved with a natural image produce sparse activation maps that highlight local contours at different orientations and scales.
 - **End-to-end learning:** Rather than hand-crafting filter banks, convolutional neural networks (CNNs) learn the kernel weights across all layers simultaneously via backpropagation.
+:::
+:::
 :::
 
 ::: {.slide title="Mathematical and Architectural Roadmap of Chapter 6"}

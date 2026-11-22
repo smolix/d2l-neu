@@ -676,7 +676,7 @@ $$(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) = (\mathbf{a
 ::: {.col}
 - **Doubling stride schedule (Hillis & Steele, 1986):** In round $r = 0, 1, \ldots, \lceil \log_2 T \rceil - 1$, every position $t > 2^r$ combines with position $t - 2^r$ in parallel:
   $$\text{stride } s = 1 \to 2 \to 4 \to \cdots \to 2^{\lceil\log_2 T\rceil - 1}$$
-- **Doubling vs. work-efficient trees:** Hillis–Steele performs $O(T \log_2 T)$ combines across $\lceil \log_2 T \rceil$ rounds (`associative_scan` in PyTorch), whereas Blelloch's up-sweep/down-sweep tree (Blelloch, 1990; used by XLA's `jax.lax.associative_scan`) performs $\sim 2T$ combines across $2\lceil \log_2 T \rceil$ rounds.
+- **Doubling vs. work-efficient trees:** Hillis–Steele performs $O(T \log_2 T)$ combines across $\lceil \log_2 T \rceil$ rounds, whereas Blelloch's up-sweep/down-sweep tree (Blelloch, 1990) performs $\sim 2T$ combines across $2\lceil \log_2 T \rceil$ rounds.
 :::
 
 ::: {.col .fig}
@@ -685,12 +685,12 @@ $$(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) = (\mathbf{a
 :::
 :::
 
-::: {.slide title="Implementing associative_scan and linear_scan"}
+::: {.slide title="Implementing associative_scan and linear_scan" only="pytorch"}
 [Scan Code Architecture]{.kicker}
 
-In PyTorch, `associative_scan` slices `earlier = x[:, :-s]` and `later = x[:, s:]` at doubling strides $s = 1, 2, 4, \ldots$, while JAX delegates directly to `jax.lax.associative_scan`:
+`associative_scan` slices `earlier = x[:, :-s]` and `later = x[:, s:]` at doubling strides $s = 1, 2, 4, \ldots$:
 
-```python
+```{.python #linear-recurrence-exercises-1}
 s = 1
 while s < elems[0].shape[1]:  # Combine every position with the one s steps back
     earlier, later = tuple(x[:, :-s] for x in elems), tuple(x[:, s:] for x in elems)
@@ -701,12 +701,22 @@ while s < elems[0].shape[1]:  # Combine every position with the one s steps back
 - **Handling initial states (`h0`):** `linear_scan(a, b, h0)` folds a nonzero initial state $\mathbf{h}_0$ into the first step's write ($\mathbf{b}_1 \leftarrow \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$) before launching the prefix scan, enabling chunk-by-chunk state passing.
 :::
 
+::: {.slide title="Implementing linear_scan with jax.lax.associative_scan" only="jax"}
+[Scan Code Architecture]{.kicker}
+
+`linear_scan` hands the affine `combine` to XLA's work-efficient `jax.lax.associative_scan`:
+
+@-ssm-implementation-1
+
+- **Handling initial states (`h0`):** `linear_scan(a, b, h0)` folds a nonzero initial state $\mathbf{h}_0$ into the first step's write ($\mathbf{b}_1 \leftarrow \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$) before launching the prefix scan, enabling chunk-by-chunk state passing.
+:::
+
 ::: {.slide title="Verifying the Parallel Scan Against Sequential Stepping"}
 [Scan Implementation]{.kicker}
 
 `linear_scan(a, b, h0)` folds an optional initial state $\mathbf{h}_0$ into the first write ($\mathbf{b}_1 \leftarrow \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$) and runs the associative prefix scan along the time axis:
 
-```python
+```{.python #linear-recurrence-exercises-2}
 def combine(earlier, later):
     (a1, b1), (a2, b2) = earlier, later
     return a1 * a2, a2 * b1 + b2

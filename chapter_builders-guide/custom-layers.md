@@ -1270,7 +1270,7 @@ Custom Layers and Functions<br>**stateless modules · RMSNorm · fixed-buffer Ra
 
 ::: {.cols .vc}
 ::: {.col}
-- **Lag between research and libraries:** *RMSNorm* was published in 2019 and used across Llama and Gopher, yet did not enter `torch.nn` until 2024.
+- **Lag between research and libraries:** *RMSNorm* was published in 2019 and used across Llama and Gopher, yet reached some major libraries only years later.
 - **First-class composability:** Custom layers must expose learnable weights to optimizers, serialize buffers into checkpoints, and move across devices automatically.
 - **Non-differentiable forward ops:** 4-bit weight quantization $\text{round}(w)$ has zero derivative almost everywhere, requiring a custom surrogate backward pass.
 :::
@@ -1335,7 +1335,7 @@ $$\text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^{d
 ::: {.slide title="Geometric View of RMSNorm in Two Dimensions"}
 [Direction Preservation & Axis Scaling]{.kicker}
 
-![](../img/bg-rmsnorm.svg){.nostretch width=92%}
+![](../img/bg-rmsnorm.svg){.nostretch width=80%}
 
 - **Projection onto a sphere:** Dividing by $\text{RMS}(\mathbf{x}) = \|\mathbf{x}\|_2 / \sqrt{d}$ projects every ray from the origin onto the sphere of radius $\sqrt{d}$ (left), after which $\mathbf{g}$ stretches the sphere into an axis-aligned ellipsoid (right).
 :::
@@ -1345,8 +1345,6 @@ $$\text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^{d
 
 ::: {.cols .vc}
 ::: {.col}
-- Registering `self.gain` as a trainable parameter (`nn.Parameter`, `gluon.Parameter`, `add_weight`, or `nnx.Param`) initialized to ones is all it takes:
-
 @custom-layers-layers-with-parameters-rmsnorm-1
 
 @custom-layers-layers-with-parameters-rmsnorm-2
@@ -1363,13 +1361,13 @@ $$\text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^{d
 
 ::: {.cols .vc}
 ::: {.col}
-- One SGD step updates `gain` away from ones, and loading the saved state into a fresh clone reproduces the trained outputs bit for bit:
-
-@custom-layers-the-composability-guarantee-3
+@-custom-layers-the-composability-guarantee-3
 :::
 
-::: {.col .fig}
-@fig:ch05-bg-rmsnorm-composable
+::: {.col .narrow}
+- One SGD step moves `gain` off ones; a clone loaded from the saved state reproduces the outputs bit for bit:
+
+@!custom-layers-the-composability-guarantee-3
 :::
 :::
 :::
@@ -1379,7 +1377,7 @@ $$\text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^{d
 
 ::: {.cols .vc}
 ::: {.col}
-- Test custom layers against native versions (`nn.RMSNorm`, `RMSNormalization`, `nnx.RMSNorm`) using non-trivial weights (`linspace(0.5, 1.5, 8)`):
+- Test custom layers against the framework's native version using non-trivial weights (`linspace(0.5, 1.5, 8)`):
 
 @custom-layers-checking-against-the-built-in
 :::
@@ -1427,7 +1425,7 @@ $$\mathbf{Z} = \sqrt{\frac{2}{D}}\, \cos(\mathbf{X}\mathbf{W} + \mathbf{b})$$
 ::: {.slide title="Implementing RandomFeatures With Registered Buffers"}
 [Buffers in Code]{.kicker}
 
-We register `W` and `b` as non-trainable buffers (`register_buffer`, `gluon.Constant`, `trainable=False`, or `Buffer(nnx.Variable)`):
+We register `W` and `b` as non-trainable buffers:
 
 @custom-layers-precomputed-state-buffers-1
 :::
@@ -1445,7 +1443,7 @@ Stacking a single trainable linear layer (`500 -> 1`) on top of `RandomFeatures(
 
 ::: {.cols .vc}
 ::: {.col}
-- Reloading only the linear head into a fresh `RandomFeatures` layer (with different random $\mathbf{W}', \mathbf{b}'$) blows up MSE by $>100\times$, whereas loading the full state dict restores $0.002$ MSE:
+- Reloading only the linear head into a fresh `RandomFeatures` layer (with different random $\mathbf{W}', \mathbf{b}'$) is more than $100\times$ worse, whereas loading the full state restores the trained fit:
 
 @custom-layers-precomputed-state-buffers-2
 :::
@@ -1493,7 +1491,7 @@ The **Straight-Through Estimator** (Bengio et al., 2013) decouples the forward a
 ::: {.slide title="Defining a Custom Backward Function"}
 [Custom Autograd Primitives]{.kicker}
 
-When the backward rule differs from the derivative of the forward pass, we define both directions explicitly (`autograd.Function`, `@tf.custom_gradient`, or `@jax.custom_vjp`):
+When the backward rule differs from the derivative of the forward pass, we define both directions explicitly:
 
 @custom-layers-custom-gradients-2
 
@@ -1507,7 +1505,7 @@ Fitting an 8-weight linear model whose weights are rounded to integers on every 
 
 @!custom-layers-custom-gradients-5
 
-- **The stop-gradient one-liner:** For an identity surrogate, writing `X + stop_gradient(round(X) - X)` (`X + (X.round() - X).detach()` in PyTorch) evaluates to `round(X)` forward and differentiates through `X` backward without a custom class!
+- **The stop-gradient one-liner:** For an identity surrogate, writing `X + stop_gradient(round(X) - X)` evaluates to `round(X)` forward and differentiates through `X` backward without a custom class!
 :::
 
 ::: {.slide title="The Stop-Gradient Shortcut for Identity Surrogates"}
@@ -1532,14 +1530,14 @@ Fitting an 8-weight linear model whose weights are rounded to integers on every 
 Answer these three design questions:
 
 1. In Llama 3 8B (32 blocks, hidden width $d = 4096$), each block has two `RMSNorm` layers plus one final `RMSNorm` before the output head. How many total parameters belong to `RMSNorm` gains, and what fraction of the 8B model do they represent?
-2. If you store `self.W = torch.randn(d, D)` as a plain attribute on `RandomFeatures` instead of calling `register_buffer`, what two failures occur when you save a checkpoint and move the model to a GPU?
+2. If you store the random matrix `W` as a plain attribute on `RandomFeatures` instead of registering it as a buffer, what two failures occur when you save a checkpoint and move the model to a GPU?
 3. Under straight-through rounding `round_ste`, what is the gradient of $L(\mathbf{w}) = \sum_i (\text{round\_ste}(w_i))^2$ at $\mathbf{w} = (0.9, 1.4, 2.6)$?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. **$65 \times 4096 = 266{,}240$ parameters ($\approx 0.0033\%$ of 8B):** Tiny in memory footprint, yet critical for stabilizing every residual branch.
-2. **Checkpoint corruption & GPU crash:** `W` is omitted from `state_dict()` (reloaded models draw a mismatched basis) and stays on CPU after `.to(gpu)`.
+2. **Checkpoint corruption & GPU crash:** `W` is omitted from the saved state (reloaded models draw a mismatched basis) and stays on the CPU when the model moves to the GPU.
 3. **$\nabla_{\mathbf{w}} L = 2\,\text{round}(\mathbf{w}) = (2, 2, 6)$:** The outer square uses the forward rounded values $(1, 1, 3)$, while STE replaces $\text{round}'(w_i) = 0$ with $1$.
 :::
 :::
@@ -1550,7 +1548,7 @@ Answer these three design questions:
 ::: {.cols .vc}
 ::: {.col}
 - **Stateless & parameterized layers:** Subclass `Module` (`CenteredLayer`) and register learnable weights as `Parameter` (`RMSNorm`).
-- **Fixed-state buffers:** Register non-trainable tensors via `register_buffer` (`RandomFeatures`) so they save in checkpoints and move to GPUs.
+- **Fixed-state buffers:** Register non-trainable tensors as buffers (`RandomFeatures`) so they save in checkpoints and move to GPUs.
 - **Surrogate gradients:** Implement custom VJPs (`RoundSTE`) or the one-liner `X + stop_gradient(f(X) - X)` to train through discrete operations.
 :::
 

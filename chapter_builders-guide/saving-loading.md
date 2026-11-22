@@ -1115,7 +1115,7 @@ File I/O, Checkpoints, and Serialization<br>**state dictionaries · pickle RCE v
 
 ::: {.cols .vc}
 ::: {.col}
-- The state dictionary stores only `(path, shape, dtype, raw_bytes)`—no trace of the `MLP` class or `ReLU` activation function:
+- The state dictionary stores only `(path, shape, dtype, raw_bytes)`, with no trace of the `MLP` class:
 
 @saving-loading-state-not-code-2
 :::
@@ -1149,7 +1149,7 @@ File I/O, Checkpoints, and Serialization<br>**state dictionaries · pickle RCE v
 
 ::: {.cols .vc}
 ::: {.col}
-- `torch.load(..., weights_only=True)` and `np.load(..., allow_pickle=False)` block arbitrary classes, while `safetensors` eliminates the opcode parser attack surface completely:
+- Hardened loaders refuse arbitrary pickled objects, while `safetensors` eliminates the opcode parser attack surface completely:
 
 @saving-loading-safetensors-the-interchange-format-2
 :::
@@ -1163,9 +1163,9 @@ File I/O, Checkpoints, and Serialization<br>**state dictionaries · pickle RCE v
 ::: {.slide title="The safetensors Format: Zero Code, Zero-Copy mmap"}
 [Safe Weight Interchange]{.kicker}
 
-The `safetensors` format stores strictly passive metadata and contiguous raw tensor buffers in three flat segments:
+A `safetensors` file holds passive metadata and raw tensor bytes in three flat segments:
 
-![](../img/bg-safetensors-layout.svg){.nostretch width=95%}
+![](../img/bg-safetensors-layout.svg){.nostretch width=85%}
 
 1. **8-byte unsigned little-endian integer (`<Q`):** Exact byte length $n$ of the JSON header.
 2. **UTF-8 JSON header ($n$ bytes):** Maps each tensor's path name to its `dtype`, `shape`, and `[begin, end]` byte offsets relative to the data segment.
@@ -1177,17 +1177,25 @@ The `safetensors` format stores strictly passive metadata and contiguous raw ten
 
 ::: {.cols .vc}
 ::: {.col}
-- We save our MLP to `mlp.safetensors`, verify bit-for-bit restoration, and parse its header using standard `struct` and `json`:
-
-@-saving-loading-safetensors-the-interchange-format-3
-
-@saving-loading-safetensors-the-interchange-format-4
+- We save our MLP to `mlp.safetensors`, verify bit-for-bit restoration, and parse its header using standard `struct` and `json`.
 :::
 
 ::: {.col .fig}
 @fig:ch05-bg-safetensors-audit
 :::
 :::
+:::
+
+::: {.slide title="Saving and Restoring a safetensors File"}
+[safetensors Round-Trip & Header Inspection]{.kicker}
+
+@-saving-loading-safetensors-the-interchange-format-3
+:::
+
+::: {.slide title="Parsing the safetensors Header by Hand"}
+[safetensors Round-Trip & Header Inspection]{.kicker}
+
+@saving-loading-safetensors-the-interchange-format-4
 :::
 
 ::: {.slide title="Why Resuming Training Requires Optimizer State"}
@@ -1217,7 +1225,7 @@ $$\mathbf{w} \leftarrow \mathbf{w} - \eta \, \frac{\hat{\mathbf{m}}}{\sqrt{\hat{
 :::
 
 ::: {.col .fig .big}
-![](../img/bg-checkpoint-contents.svg){.nostretch width=100%}
+![](../img/bg-checkpoint-contents.svg){.nostretch width=90%}
 :::
 :::
 :::
@@ -1242,15 +1250,19 @@ $$\mathbf{w} \leftarrow \mathbf{w} - \eta \, \frac{\hat{\mathbf{m}}}{\sqrt{\hat{
 
 ::: {.cols .vc}
 ::: {.col}
-- Our `save_checkpoint` helper bundles all five compartments and commits them atomically via `os.replace`:
-
-@-saving-loading-checkpointing-a-training-run-1
+- Our `save_checkpoint` helper bundles all five compartments and commits them atomically via `os.replace`.
 :::
 
 ::: {.col .fig}
 @fig:ch05-bg-atomic-write-replace
 :::
 :::
+:::
+
+::: {.slide title="Atomic Save and Load Helpers in Code" only="pytorch,mxnet"}
+[Crash-Safe Checkpointing in Code]{.kicker}
+
+@-saving-loading-checkpointing-a-training-run-1
 :::
 
 ::: {.slide title="Testing Bit-for-Bit Resumption After 200 Steps"}
@@ -1274,7 +1286,7 @@ $$\mathbf{w} \leftarrow \mathbf{w} - \eta \, \frac{\hat{\mathbf{m}}}{\sqrt{\hat{
 
 ::: {.cols .vc}
 ::: {.col}
-- Resuming from step 200 with saved weights and RNG state—but a **freshly initialized Adam optimizer**—causes the loss to explode by $>200\times$ on step 201:
+- Resuming from step 200 with saved weights and RNG state—but a **freshly initialized Adam optimizer**—makes the loss jump by roughly three orders of magnitude right after its first update:
 
 @saving-loading-checkpointing-a-training-run-4
 :::
@@ -1298,15 +1310,19 @@ When adapting an ImageNet-pretrained ResNet-50 ($\sim 25\text{M}$ parameters, $1
 
 ::: {.cols .vc}
 ::: {.col}
-- When loading external weights into a modified architecture (`strict=False`), always inspect `missing_keys` and `unexpected_keys`:
-
-@saving-loading-loading-weights-you-did-not-train-2
+- When loading external weights into a modified architecture non-strictly, always inspect the missing and unexpected keys.
 :::
 
 ::: {.col .fig}
 @fig:ch05-bg-transfer-key-audit
 :::
 :::
+:::
+
+::: {.slide title="Reading the Key Audit of a Partial Load"}
+[Catching Silent Checkpoint Mismatches]{.kicker}
+
+@saving-loading-loading-weights-you-did-not-train-2
 :::
 
 ::: {.slide title="Concept Check: Serialization & Checkpoint Resumption"}

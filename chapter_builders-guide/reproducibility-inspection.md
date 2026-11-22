@@ -1392,7 +1392,7 @@ Reproducibility, Debugging, and Model Inspection<br>**PRNG seeds & keys · data-
 ::: {.cols .vc}
 ::: {.col}
 - **Model & layer randomness:** Weight initialization ($\mathbf{W}_0$) and stochastic forward masks (Dropout $\boldsymbol{\xi}_j$).
-- **Data & worker randomness:** Epoch minibatch shuffling, random data augmentations, and forked multi-process `DataLoader` workers (which clone identical NumPy RNG state unless re-seeded per worker!).
+- **Data & worker randomness:** Epoch minibatch shuffling, random data augmentations, and forked multi-process data-loader workers (which clone identical NumPy RNG state unless re-seeded per worker!).
 :::
 
 ::: {.col .fig .big}
@@ -1404,11 +1404,11 @@ Reproducibility, Debugging, and Model Inspection<br>**PRNG seeds & keys · data-
 ::: {.slide title="Seeding Repeats a Training Trajectory Bit for Bit"}
 [Global Seeds vs. Explicit Keys]{.kicker}
 
-When we seed every PRNG the loop touches (`torch.manual_seed`, `mnp.random.seed`, `set_random_seed`, or explicit `jax.random.split` keys), two runs with `seed=0` produce identical losses and weights down to the last bit:
+When we seed every PRNG the loop touches, two runs with `seed=0` produce identical losses and weights down to the last bit:
 
 @!reproducibility-inspection-seeds-and-randomness
 
-- **Coverage caveat:** `torch.manual_seed` and `mnp.random.seed` do **not** seed Python's `random` or NumPy's `np.random`—if your dataset uses NumPy, seed it explicitly too.
+- **Coverage caveat:** A framework seed does **not** seed Python's `random` or NumPy's `np.random`—if your dataset uses NumPy, seed it explicitly too.
 :::
 
 ::: {.slide title="Private Generator Objects Prevent Stream Coupling"}
@@ -1416,7 +1416,7 @@ When we seed every PRNG the loop touches (`torch.manual_seed`, `mnp.random.seed`
 
 ::: {.cols .vc}
 ::: {.col}
-- A private **generator object** (`torch.Generator`, `tf.random.Generator`, or split JAX keys) isolates a random stream so adding a debug call never shifts downstream weights or batches:
+- A private **generator object** (or a split key) isolates a random stream so adding a debug call never shifts downstream weights or batches:
 
 @reproducibility-inspection-generator-objects
 :::
@@ -1506,7 +1506,7 @@ On a GPU, thousands of threads accumulate partial sums into shared bins (in `sca
 
 @!reproducibility-inspection-determinism-and-its-price-2
 
-- **Enabling bitwise GPU determinism:** Turning on deterministic kernels (`torch.use_deterministic_algorithms(True)`, `enable_op_determinism()`, `xla_gpu_deterministic_ops`, or fixed-order GEMM reductions) enforces a fixed reduction tree so consecutive GPU runs match bit for bit.
+- **Enabling bitwise GPU determinism:** Turning on deterministic kernels enforces a fixed reduction tree so consecutive GPU runs match bit for bit.
 :::
 
 ::: {.slide title="Bitwise Determinism vs. Scientific Reproducibility"}
@@ -1531,7 +1531,7 @@ When debugging a deep network or a locked third-party library model, editing eve
 
 ![](../img/bg-hooks.svg){.nostretch width=85%}
 
-- **Pipeline around `forward`:** Invoking `net(X)` runs registered pre-hooks, executes `forward(X)`, and passes `(module, inputs, output)` to registered forward hooks (`register_forward_hook` or `nnx.capture`).
+- **Pipeline around `forward`:** Invoking `net(X)` runs registered pre-hooks, executes `forward(X)`, and passes `(module, inputs, output)` to registered forward hooks.
 :::
 
 ::: {.slide title="Building an 8-Block Residual Testbed for Inspection"}
@@ -1539,15 +1539,19 @@ When debugging a deep network or a locked third-party library model, editing eve
 
 ::: {.cols .vc}
 ::: {.col}
-- We construct an 8-block residual MLP ($20 \to 64 \to 8\text{ blocks of width } 64 \to 10$) initialized with Xavier uniform weights and zero biases:
-
-@-reproducibility-inspection-hooks-looking-inside
+- We construct an 8-block residual MLP ($20 \to 64 \to 8\text{ blocks of width } 64 \to 10$) initialized with Xavier uniform weights and zero biases.
 :::
 
 ::: {.col .fig}
 @fig:ch05-bg-xavier-res-15x
 :::
 :::
+:::
+
+::: {.slide title="The 8-Block Residual Testbed in Code"}
+[Unscaled Xavier Residual Stack]{.kicker}
+
+@-reproducibility-inspection-hooks-looking-inside
 :::
 
 ::: {.slide title="Profiling Activation Standard Deviations Across Depth"}
@@ -1622,14 +1626,14 @@ Inspecting gradient norms at each residual block's output during backpropagation
 
 Test your diagnostic skills on these three questions:
 
-1. A PyTorch training script calls `torch.manual_seed(0)` at the top. Inside `Dataset.__getitem__`, it adds Gaussian noise using `self.rng = np.random.default_rng()` created in `Dataset.__init__`. Will two runs with `num_workers=0` match? What happens with `num_workers=4` under `fork`?
+1. A training script seeds the framework PRNG with `0` at the top. Inside the dataset's `__getitem__`, it adds Gaussian noise using `self.rng = np.random.default_rng()` created in its `__init__`. Will two single-process runs match? What happens with 4 data-loader workers under `fork`?
 2. In our Xavier-initialized residual stack, activation standard deviation grows by $\sqrt{1.5} \approx 1.225$ per block. After how many blocks $k$ does the activation standard deviation exceed $100\times$ its post-input value?
 3. What happens to GPU memory during training if a forward hook executes `history.append(output)` on every step without calling `.detach()`?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **With `num_workers=0`, two runs differ** because `np.random.default_rng()` draws fresh OS entropy ignoring `torch.manual_seed(0)`. **With `num_workers=4` (`fork`), all 4 workers inherit identical clones** of `self.rng` and apply identical noise!
+1. **Single-process runs differ** because `np.random.default_rng()` draws fresh OS entropy ignoring the framework seed. **With 4 forked workers, all 4 inherit identical clones** of `self.rng` and apply identical noise!
 2. **$1.5^{k/2} \ge 100 \implies k \ge \frac{2 \ln 100}{\ln 1.5} \approx 22.7$ (23 blocks).**
 3. **Out-of-memory (OOM) crash:** Each `output` keeps its entire autograd graph and intermediate activations alive in `history` forever.
 :::

@@ -835,10 +835,10 @@ Running our 36-block, $1.92\text{B}$-parameter GPT step on two $24\text{ GiB}$ R
 ::: {.slide title="Concept Check: ZeRO Memory, FSDP Traffic, and Links"}
 [Check Your Understanding]{.kicker}
 
-Work out the memory and communication counts for three sharding scenarios ($S = 4N$ denotes the byte size of one full copy of `float32` weights or gradients):
+Work out three sharding scenarios ($S = 4N$: bytes of one full `float32` copy of the weights or gradients):
 
-1. A model with $N = 4 \times 10^9$ parameters ($16N = 64\text{ GB}$ of `float32` Adam state) is trained across $k = 4$ GPUs. How many gigabytes of training state does each GPU hold at the end of the backward pass under **DDP**, **ZeRO-1**, **ZeRO-2**, and **ZeRO-3 (FSDP)**?
-2. Mixed-precision FSDP keeps each GPU's $1/k$ master weight and Adam moment shards in `float32`, but all-gathers weights in `bfloat16` ($2\text{ B}$) and reduce-scatters gradients in `bfloat16` ($2\text{ B}$). How many bytes per GPU does mixed-precision FSDP transmit per step compared to `float32` DDP?
+1. $N = 4 \times 10^9$ parameters ($16N = 64\text{ GB}$ of `float32` Adam state) on $k = 4$ GPUs: how many GB of state does each GPU hold after the backward pass under **DDP**, **ZeRO-1**, **ZeRO-2**, and **ZeRO-3 (FSDP)**?
+2. Mixed-precision FSDP keeps its `float32` shards but all-gathers weights and reduce-scatters gradients in `bfloat16` ($2\text{ B}$). How many bytes per GPU does it transmit per step compared to `float32` DDP?
 3. As you scale FSDP from $k = 2$ GPUs to $k = 64$ GPUs, by what factor does per-GPU state memory change, and by what factor does per-GPU communication volume per step change?
 
 ::: {.d2l-note .fragment .fade-up}

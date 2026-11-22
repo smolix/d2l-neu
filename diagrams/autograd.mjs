@@ -297,46 +297,51 @@ function threeMethods() {
 
   // 3. Reverse-Mode Autograd
   o += box(14, 194, 512, 82, C.lgreen, C.green, false, 8, 2);
-  o += tx(28, 216, '3. Reverse-Mode Autograd (PyTorch / JAX / TF / MXNet)', { fs: 15.5, fw: 700, fill: GREEN_DK, anchor: 'start' });
+  o += tx(28, 216, '3. Reverse-Mode Autograd', { fs: 15.5, fw: 700, fill: GREEN_DK, anchor: 'start' });
   o += mono(28, 240, 'Cost: 1 forward trace + 1 backward VJP sweep = O(1) sweeps!', { fill: GREEN_DK, anchor: 'start', fs: 13, fw: 700 });
   o += tx(28, 260, '✓ Exact to machine precision; differentiates arbitrary dynamic Python code', { fs: 13.5, fw: 600, fill: C.ink, anchor: 'start' });
   return svg(W, H, o);
 }
 
-// ── Imperative stateful tape (.grad) vs Functional transform (jax.grad) ─
-function imperativeVsFunctional() {
-  const W = 540, H = 276; let o = '';
-  const PURPLE_DK = TOKENS.accents.purple.dark;
-  const GREEN_DK = TOKENS.accents.green.dark;
-  // Top: Imperative tape (PyTorch / TF / MXNet)
+// ── Imperative tape vs functional transform ─────────────────────────
+// Two single-panel variants, one per framework family, so no deck shows
+// another framework's API: the base id is the recorded tape (PyTorch,
+// TensorFlow, MXNet decks), `-jax` the pure functional transform.
+function imperativeTape() {
+  const W = 540, H = 142; let o = '';
   o += box(14, 14, 512, 114, C.lblue, C.blue, false, 9, 2);
-  o += tx(26, 36, '(a) Imperative Stateful Tape (PyTorch / TensorFlow / MXNet)', { fs: 15.5, fw: 700, fill: BLUE_DARK, anchor: 'start' });
+  o += tx(26, 36, 'Imperative Tape: Record the Forward Pass, Then Sweep Back', { fs: 15.5, fw: 700, fill: BLUE_DARK, anchor: 'start' });
   o += box(26, 54, 136, 56, '#fff', C.blue, false, 6, 2);
-  o += mono(94, 73, 'w.requires_grad_', { fill: C.ink, fs: 12.5, fw: 700 });
-  o += mono(94, 94, 'w.grad = None', { fill: C.muted, fs: 12.5 });
+  o += mono(94, 73, 'mark w', { fill: C.ink, fs: 12.5, fw: 700 });
+  o += mono(94, 94, 'track gradients', { fill: C.muted, fs: 12.5 });
   o += arrow(166, 82, 206, 82, C.blue);
   o += box(210, 54, 134, 56, '#fff', C.blue, false, 6, 2);
   o += mono(277, 73, 'L = loss(w)', { fill: BLUE_DARK, fs: 13, fw: 700 });
-  o += mono(277, 94, 'L.backward()', { fill: RED.dark, fs: 13, fw: 700 });
+  o += mono(277, 94, 'backward sweep', { fill: RED.dark, fs: 13, fw: 700 });
   o += arrow(348, 82, 388, 82, RED.base);
   o += box(392, 54, 120, 56, RED.tint, RED.base, false, 6, 2);
-  o += mono(452, 73, 'mutates w.grad', { fill: RED.dark, fs: 12.5, fw: 700 });
-  o += mono(452, 94, 'in place: (2, 4)', { fill: C.ink, fs: 12.5 });
+  o += mono(452, 73, 'gradient', { fill: RED.dark, fs: 12.5, fw: 700 });
+  o += mono(452, 94, '(2, 4)', { fill: C.ink, fs: 12.5 });
+  return svg(W, H, o);
+}
 
-  // Bottom: Functional transform (JAX)
-  o += box(14, 146, 512, 114, TOKENS.accents.purple.tint, C.purple, false, 9, 2);
-  o += tx(26, 168, '(b) Pure Functional Transformation (JAX: jax.grad)', { fs: 15, fw: 700, fill: PURPLE_DK, anchor: 'start' });
-  o += box(26, 186, 136, 56, '#fff', C.purple, false, 6, 2);
-  o += mono(94, 205, 'def loss(w):', { fill: C.ink, fs: 13, fw: 700 });
-  o += mono(94, 226, '  return L', { fill: C.muted, fs: 12.5 });
-  o += arrow(166, 214, 206, 214, C.purple);
-  o += box(210, 186, 144, 56, '#fff', C.purple, false, 6, 2);
-  o += mono(282, 205, 'g_fn = jax.grad(', { fill: PURPLE_DK, fs: 12.5, fw: 700 });
-  o += mono(282, 226, '         loss)', { fill: PURPLE_DK, fs: 12.5, fw: 700 });
-  o += arrow(358, 214, 394, 214, C.green);
-  o += box(398, 186, 114, 56, C.lgreen, C.green, false, 6, 2);
-  o += mono(455, 205, 'g = g_fn(w)', { fill: GREEN_DK, fs: 13, fw: 700 });
-  o += mono(455, 226, 'returns (2, 4)', { fill: C.ink, fs: 12.5 });
+function functionalTransform() {
+  const W = 540, H = 142; let o = '';
+  const PURPLE_DK = TOKENS.accents.purple.dark;
+  const GREEN_DK = TOKENS.accents.green.dark;
+  o += box(14, 14, 512, 114, TOKENS.accents.purple.tint, C.purple, false, 9, 2);
+  o += tx(26, 36, 'Pure Functional Transformation (jax.grad)', { fs: 15.5, fw: 700, fill: PURPLE_DK, anchor: 'start' });
+  o += box(26, 54, 136, 56, '#fff', C.purple, false, 6, 2);
+  o += mono(94, 73, 'def loss(w):', { fill: C.ink, fs: 13, fw: 700 });
+  o += mono(94, 94, '  return L', { fill: C.muted, fs: 12.5 });
+  o += arrow(166, 82, 206, 82, C.purple);
+  o += box(210, 54, 144, 56, '#fff', C.purple, false, 6, 2);
+  o += mono(282, 73, 'g_fn = jax.grad(', { fill: PURPLE_DK, fs: 12.5, fw: 700 });
+  o += mono(282, 94, '         loss)', { fill: PURPLE_DK, fs: 12.5, fw: 700 });
+  o += arrow(358, 82, 394, 82, C.green);
+  o += box(398, 54, 114, 56, C.lgreen, C.green, false, 6, 2);
+  o += mono(455, 73, 'g = g_fn(w)', { fill: GREEN_DK, fs: 13, fw: 700 });
+  o += mono(455, 94, 'returns (2, 4)', { fill: C.ink, fs: 12.5 });
   return svg(W, H, o);
 }
 
@@ -369,11 +374,11 @@ function gradAccumulation() {
   o += mono(193, 194, 'no clear', { fill: RED.dark, fs: 11.5, fw: 700 });
   o += box(226, 184, 136, 58, '#fff', RED.base, false, 6, 2);
   o += mono(294, 204, 'Step 2 backward', { fill: C.ink, fs: 12.5, fw: 700 });
-  o += mono(294, 226, 'adds +(4, 0)', { fill: RED.dark, fs: 12.5, fw: 700 });
+  o += mono(294, 226, 'adds +(2, 4)', { fill: RED.dark, fs: 12.5, fw: 700 });
   o += arrow(366, 213, 396, 213, RED.base);
   o += box(400, 184, 114, 58, '#fff', RED.base, false, 6, 2);
   o += mono(457, 204, 'corrupted!', { fill: RED.dark, fs: 13, fw: 700 });
-  o += mono(457, 226, '(6, 4) ≠ (4, 0)', { fill: RED.dark, fs: 12.5, fw: 700 });
+  o += mono(457, 226, '(4,8) ≠ (2,4)', { fill: RED.dark, fs: 12.5, fw: 700 });
   return svg(W, H, o);
 }
 
@@ -381,7 +386,7 @@ function gradAccumulation() {
 function vjpSeed() {
   const W = 540, H = 250; let o = '';
   const GREEN_DK = TOKENS.accents.green.dark;
-  o += tx(16, 22, 'Why y.backward(v) Needs a Seed Vector v ∈ Rᵐ for Non-Scalar y:', { fs: 15, fw: 700, fill: C.ink, anchor: 'start' });
+  o += tx(16, 22, 'Why Backward on a Non-Scalar y Needs a Seed Vector v ∈ ℝᵐ', { fs: 15, fw: 700, fill: C.ink, anchor: 'start' });
 
   // v^T (1 x m)
   o += box(24, 96, 84, 32, C.lamber, C.amber, false, 5, 2);
@@ -413,7 +418,7 @@ function activationMemory() {
   const W = 540, H = 276; let o = '';
   const GREEN_DK = TOKENS.accents.green.dark;
   // Top: Training caches all L intermediate activations in VRAM
-  o += tx(16, 22, '(a) Training (grad enabled): caches L layer activations until backward()', { fs: 14.5, fw: 700, fill: RED.dark, anchor: 'start' });
+  o += tx(16, 22, '(a) Training (grad enabled): caches L layer activations until backward', { fs: 14.5, fw: 700, fill: RED.dark, anchor: 'start' });
   const layers = ['h₁ (cached)', 'h₂ (cached)', 'h₃ (cached)', 'h₄ (cached)'];
   layers.forEach((lab, i) => {
     const x = 20 + i * 128;
@@ -427,7 +432,7 @@ function activationMemory() {
   o += line(16, 134, 524, 134, HAIR, 1.5);
 
   // Bottom: Inference with no_grad() frees each buffer immediately
-  o += tx(16, 158, '(b) Inference (torch.no_grad / stop_gradient): O(1) buffer reuse', { fs: 14.5, fw: 700, fill: GREEN_DK, anchor: 'start' });
+  o += tx(16, 158, '(b) Inference (tracking off): O(1) buffer reuse', { fs: 14.5, fw: 700, fill: GREEN_DK, anchor: 'start' });
   const inf = [
     ['h₁ (freed)', '#fff', C.gray, true, C.muted],
     ['h₂ (freed)', '#fff', C.gray, true, C.muted],
@@ -450,7 +455,8 @@ export const diagrams = {
   'autograd-fwd-vs-rev': fwdVsRev,
   'autograd-dynamic':    dynamic,
   'autograd-three-methods':            threeMethods,
-  'autograd-imperative-vs-functional': imperativeVsFunctional,
+  'autograd-imperative-vs-functional': imperativeTape,
+  'autograd-imperative-vs-functional-jax': functionalTransform,
   'autograd-grad-accumulation':        gradAccumulation,
   'autograd-vjp-seed':                 vjpSeed,
   'autograd-activation-memory':        activationMemory,

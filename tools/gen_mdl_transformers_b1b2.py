@@ -152,6 +152,7 @@ def fig_block_anatomy() -> None:
             s.set_visible(False)
     fig.subplots_adjust(wspace=0.06)
     fl.save(fig, "mdl-transformers-block-anatomy")
+    _unitless(fl.WRITTEN[-1])
 
 
 # --------------------------------------------------------------------------- #
@@ -242,7 +243,7 @@ def fig_norm_taxonomy() -> None:
         (["attn"], True, "post-LN\n(2017)"),
         (["pre", "attn"], False, "pre-LN\n(default)"),
         (["attn", "post"], False, "post-sublayer\n(OLMo 2)"),
-        (["pre", "attn", "post"], False, "pre + post\n(Gemma 3)"),
+        (["pre", "attn", "post"], False, "Peri-LN\n(Gemma 3)"),
     ]
     for ax, (slots, stream_norm, title) in zip(axes, panels):
         _mini_panel(ax, slots, stream_norm, title)

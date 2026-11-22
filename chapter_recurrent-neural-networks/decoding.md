@@ -841,7 +841,7 @@ Every decoding algorithm in this section interacts with our trained RNN language
 
 @-decoding-a-model-to-decode-from-4
 
-- **Architecture and framework invariance:** Because `step_fn` takes a list of integer token IDs and returns next-token logits as a NumPy array, the exact same decoder code drives an RNN, a state space model, or a Transformer across PyTorch, JAX, TensorFlow, and MXNet.
+- **Architecture and framework invariance:** Because `step_fn` takes a list of integer token IDs and returns next-token logits as a NumPy array, the exact same decoder code drives an RNN, a state space model, or a Transformer in any framework.
 :::
 
 ::: {.slide title="Greedy Decoding and the Myopia Trap"}
@@ -875,17 +875,17 @@ Running greedy decoding for 50 tokens after `'The Time Traveller'` and `'It seem
 ::: {.slide title="Beam Search: Retaining the Top-w Partial Hypotheses"}
 [Maximization Family II: Beam Search]{.kicker}
 
-**Beam search** mitigates greedy myopia by maintaining a beam of the $w$ highest-scoring partial prefixes at every step (where **beam width** $w = 1$ recovers greedy search and $w \to \infty$ approaches exhaustive search):
-
 ::: {.cols .vc}
 ::: {.col}
+**Beam search** mitigates greedy myopia by maintaining a beam of the $w$ highest-scoring partial prefixes at every step (where **beam width** $w = 1$ recovers greedy search and $w \to \infty$ approaches exhaustive search):
+
 - **Expand-and-prune loop (width $w = 2$, $|\mathcal{V}| = 5$):**
   1. **Step 1:** Keep the $w = 2$ most probable first tokens ($A$ and $C$).
   2. **Step 2:** Expand each active beam across all $|\mathcal{V}|$ tokens ($w|\mathcal{V}| = 10$ candidates), score by cumulative log-probability $\log P(x_1) + \log P(x_2 \mid x_1)$, and prune back to the top $w = 2$ ($AB$ and $CE$).
   3. **Step $T$:** Total evaluations scale linearly as $O(w|\mathcal{V}|T)$ ($5 + 10 + 10 = 25$ instead of $|\mathcal{V}|^3 = 125$).
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 ![](../img/mdl-rnn-beam-tree.svg){.nostretch width=100%}
 :::
 :::
@@ -911,9 +911,13 @@ $$\textrm{score}\bigl(x_{t_0+1:t_0+T}\bigr) = \frac{1}{T^\beta}\sum_{t=t_0+1}^{t
 ::: {.slide title="Implementing Length-Normalized Beam Search"}
 [From-Scratch Implementation & Evaluation]{.kicker}
 
-Because at most $w$ extensions of any single beam can survive into the global top $w$, `beam_search` only needs to inspect the top $w$ tokens per active beam (`best[:beam_size]`):
+At most $w$ extensions per beam can survive, so each beam keeps only its top $w$ tokens:
 
 @-decoding-beam-search-1
+:::
+
+::: {.slide title="Implementing Length-Normalized Beam Search (cont.)"}
+[From-Scratch Implementation & Evaluation]{.kicker}
 
 @!decoding-beam-search-2
 
@@ -967,9 +971,13 @@ Rather than distorting the head of the distribution, **truncated samplers** sort
 ::: {.slide title="A Unified Composable Sampler in Fifteen Lines"}
 [From-Scratch Implementation]{.kicker}
 
-Because temperature, top-$k$, top-$p$, and min-$p$ all reduce to choosing how many sorted head tokens `keep` survive before renormalization, `sample_next` composes any combination of them cleanly:
+Each rule reduces to choosing how many sorted head tokens `keep` survive renormalization:
 
 @-decoding-a-unified-sampler-1
+:::
+
+::: {.slide title="A Unified Composable Sampler in Fifteen Lines (cont.)"}
+[From-Scratch Implementation]{.kicker}
 
 @-decoding-a-unified-sampler-2
 :::
@@ -1061,7 +1069,12 @@ Test your mastery of decoding algorithms and their computational properties:
 2. **Top-$p$ vs. Min-$p$ on a Peaked Distribution:** Suppose at step $t$, the top token has probability $P(x_{(1)}) = 0.95$, the runner-up has $P(x_{(2)}) = 0.04$, and the remaining 1,025 tokens share $0.01$. Which exact token(s) survive under (a) top-$p$ with $p = 0.90$ versus (b) min-$p$ with $p_{\min} = 0.05$?
 3. **Temperature Invariance of Cutoffs:** `sample_next` applies top-$k$, top-$p$, and min-$p$ *after* temperature scaling $P_\tau(x) \propto P(x)^{1/\tau}$. Which of the three rules keeps the **exact same support set of tokens** at every temperature $\tau > 0$?
 
-::: {.d2l-note .fragment .fade-up}
+:::
+
+::: {.slide title="Concept Check: Beam Search, Cutoffs & Complexity (Answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **`beam_search` makes $1 + 49 \times 4 = 197$ calls to `step_fn`** (1 call on the initial prompt at step 1, then $w = 4$ calls per step for steps $2, \ldots, 50$, scoring $1027 + 49 \times 4 \times 1027 = 202{,}319$ candidate extensions), versus $> 10^{150}$ sequences in exhaustive search.
@@ -1078,6 +1091,13 @@ Test your mastery of decoding algorithms and their computational properties:
 | **Greedy Decoding** | $x_t = \operatorname*{argmax}_{x} P(x \mid x_{<t})$ | None ($\tau = 0$) | Deterministic single peak | $1$ | Fast baseline; myopic and locks into deterministic repetition loops |
 | **Beam Search** | Keep top-$w$ prefixes by $\frac{1}{T^\beta}\sum \log P$ | Width $w$, length exp. $\beta \approx 0.75$ | Tracks $w$ paths in parallel | $w$ | Standard for constrained tasks (MT, ASR); still loops on open-ended text |
 | **Temperature Sampling** | Sample $P_\tau(x) \propto \exp(o_x / \tau)$ | Temperature $\tau > 0$ | Uniformly sharpens ($\tau < 1$) or flattens ($\tau > 1$) | $1$ | Reshapes entropy globally; cooling tail also kills head diversity |
+:::
+
+::: {.slide title="Summary: Decoding Strategies Compared (cont.)"}
+[Section Takeaways]{.kicker}
+
+| Strategy | Selection / Truncation Rule | Key Hyperparameter | Adaptivity to Distribution Shape | Per-Step Model Calls | Primary Use Case & Failure Mode |
+|---|---|---|---|---|---|
 | **Top-$k$ Sampling** | Sample from top $k$ ranks of $P_\tau$ | Count $k \in \{1, \ldots, \lvert\mathcal{V}\rvert\}$ | **Fixed size $k$** regardless of model confidence | $1$ | Cuts tail beyond rank $k$; admits $k-1$ bad tokens when distribution is peaked |
 | **Top-$p$ (Nucleus)** | Smallest head with $\sum_{i=1}^K P_\tau(x_{(i)}) \ge p$ | Cumulative mass $p \in (0, 1)$ (e.g. $0.9$) | **Mass-adaptive** (shrinks when peaked, widens when flat) | $1$ | Adapts to entropy; can reach hundreds of tokens into a flat tail at high $\tau$ |
 | **Min-$p$ Sampling** | Keep $\{x : P_\tau(x) \ge p_{\min} P_\tau(x_{(1)})\}$ | Relative floor $p_{\min}$ (e.g. $0.05$) | **Confidence-adaptive** (scales directly with leader $P_{\max}$) | $1$ | Robust across temperatures; prevents flat distributions from sweeping in noise tail |

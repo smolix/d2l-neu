@@ -1630,7 +1630,7 @@ Every tensor lives on a specific device (`cpu()`, `gpu(i)`). Our `try_gpu(i)` he
 ::: {.slide title="Explicit Device Transfers: Copy Once at the Boundary"}
 [Moving Tensors Between Devices]{.kicker}
 
-To combine tensors from different devices, copy `X` explicitly onto `Y`'s device (`X.to(device)`, `X.copyto(device)`, `jax.device_put`, or `tf.identity` inside a device scope):
+To combine tensors from different devices, copy `X` explicitly onto `Y`'s device:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1664,7 +1664,7 @@ To combine tensors from different devices, copy `X` explicitly onto `Y`'s device
 ::: {.slide title="Asynchronous GPU Execution: The Command Queue"}
 [How Python Drives a GPU]{.kicker}
 
-When Python executes `B = A @ A`, it does not wait for the GPU to multiply the matrices. It pushes a kernel launch command onto the GPU's **execution queue** and immediately moves to the next Python line:
+Python does not wait for `B = A @ A`: it pushes a kernel launch onto the GPU's **execution queue** and moves on:
 
 @gpus-devices-memory-don-t-break-the-pipeline-1
 
@@ -1674,7 +1674,7 @@ When Python executes `B = A @ A`, it does not wait for the GPU to multiply the m
 ::: {.slide title="Synchronization Points Stall the CPU–GPU Pipeline"}
 [Don't Break the Pipeline]{.kicker}
 
-![](../img/bg-async-queue.svg){.nostretch width=88%}
+![](../img/bg-async-queue.svg){.nostretch width=82%}
 
 - **What triggers a synchronization stall:** Calling `loss.item()`, `float(loss)`, `print(tensor)`, `.numpy()`, or branching on a tensor value (`if loss < best:`) forces the CPU to block until the GPU finishes all queued work, leaving the GPU idle while Python catches up.
 - **Systems best practice:** Accumulate per-step losses inside an on-device tensor and convert to a Python float only at the end of the epoch.
@@ -1685,8 +1685,6 @@ When Python executes `B = A @ A`, it does not wait for the GPU to multiply the m
 
 ::: {.cols .vc}
 ::: {.col}
-@-gpus-devices-memory-the-execution-queue-1
-
 - **Warmup + Dual Sync:** Run warmup iterations, synchronize before starting `perf_counter()`, and synchronize before stopping the clock.
 :::
 
@@ -1694,6 +1692,12 @@ When Python executes `B = A @ A`, it does not wait for the GPU to multiply the m
 @fig:ch05-bg-benchmark-four-rules
 :::
 :::
+:::
+
+::: {.slide title="A Benchmark Helper That Follows the Rules"}
+[Timing Asynchronous Kernels]{.kicker}
+
+@-gpus-devices-memory-the-execution-queue-1
 :::
 
 ::: {.slide title="4096×4096 Matmul vs. PCIe Host-to-Device Copy"}
@@ -1769,12 +1773,12 @@ Tracing live GPU memory across one training step of a 3-hidden-layer MLP ($1024 
 ::: {.slide title="Activation Checkpointing: O(√K) Memory for 1 Extra Pass"}
 [Trading Compute for Activation Memory]{.kicker}
 
-Standard backpropagation caches all $K$ layer activations during the forward sweep. **Activation checkpointing** (Chen et al., 2016) saves only segment boundaries every $s$ layers and recomputes interior activations on the fly during `backward`:
+**Activation checkpointing** (Chen et al., 2016) stores only segment boundaries and recomputes the rest during `backward`:
 
-![](../img/bg-activation-checkpoint.svg){.nostretch width=82%}
+![](../img/bg-activation-checkpoint.svg){.nostretch width=55%}
 
 - **$O(K) \to O(\sqrt{K})$ peak activations:** Partitioning $K$ layers into segments of size $s$ holds $K/s$ boundary tensors plus $s$ live interior tensors ($K/s + s$ total, minimized at $s = \sqrt{K}$ with $2\sqrt{K}$ tensors).
-- **Bounded compute overhead:** Recomputing each segment adds one extra forward pass ($\sim 25\text{--}33\%$ extra step time).
+- **Bounded compute overhead:** Recomputing each segment adds one extra forward pass (roughly $20\text{--}30\%$ extra step time).
 :::
 
 ::: {.slide title="Implementing Per-Segment Activation Checkpointing" except="mxnet"}
@@ -1782,9 +1786,21 @@ Standard backpropagation caches all $K$ layer activations during the forward swe
 
 ::: {.cols .vc}
 ::: {.col}
-- Grouping `ResidualBlock` modules into segments of `segment_size = 4` and wrapping each segment in `checkpoint` / `recompute_grad` produces exact gradients in $O(\sqrt{K})$ memory:
-
 @-gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1
+:::
+
+::: {.col .narrow}
+- Grouping `ResidualBlock` modules into segments of `segment_size = 4` and wrapping each segment in the framework's checkpoint wrapper produces exact gradients in $O(\sqrt{K})$ memory.
+:::
+:::
+:::
+
+::: {.slide title="Checkpointed Gradients Match Ordinary Backpropagation" except="mxnet"}
+[Checkpointing a Stack of Residual Blocks]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Recomputing activations must never alter the math: on an eight-block stack split into two segments, every gradient matches standard backpropagation:
 
 @gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2
 :::
@@ -1798,7 +1814,7 @@ Standard backpropagation caches all $K$ layer activations during the forward swe
 ::: {.slide title="Measured: >50% Less Step Memory for ~25% More Time" except="mxnet"}
 [16 Residual Blocks on a GPU]{.kicker}
 
-On a 16-block residual stack ($d = 1024$, batch size $B = 8192$, four-block segments), activation checkpointing cuts peak step memory from $\sim 1.1\text{ GiB}$ down to $\sim 0.45\text{ GiB}$:
+On a 16-block residual stack ($d = 1024$, batch size $B = 8192$, four-block segments), activation checkpointing cuts peak step memory from $\sim 1.1\text{ GiB}$ down to $\sim 0.45\text{--}0.5\text{ GiB}$:
 
 @!gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3
 :::
@@ -1809,7 +1825,7 @@ On a 16-block residual stack ($d = 1024$, batch size $B = 8192$, four-block segm
 ::: {.cols .vc}
 ::: {.col}
 - **Linear batch-size scaling (accumulated gradients):** Halving physical minibatch size $B$ halves activation memory while accumulating over 2 half-batches preserves the effective step.
-- **Analytical $\sqrt{K}$ checkpointing rule:** Splitting $K = 16$ blocks into $s = \sqrt{16} = 4$-block segments cuts stored activations from $16$ to $16/4 + 4 = 8$ tensors ($\sim 1.1\text{ GiB} \to 0.45\text{ GiB}$).
+- **Analytical $\sqrt{K}$ checkpointing rule:** Splitting $K = 16$ blocks into $s = \sqrt{16} = 4$-block segments cuts stored activations from $16$ to $16/4 + 4 = 8$ tensors.
 :::
 
 ::: {.col .fig .big}
@@ -1821,9 +1837,19 @@ On a 16-block residual stack ($d = 1024$, batch size $B = 8192$, four-block segm
 ::: {.slide title="Wiring Automatic Device Placement Into d2l.Trainer"}
 [The Device-Aware Trainer]{.kicker}
 
-Our `d2l.Trainer` places the model on `self.gpus[0]` once in `prepare_model` and transfers each minibatch onto `self.gpus[0]` in `prepare_batch`, falling back to CPU when `num_gpus=0` or no GPU exists:
-
+::: {.cols .vc}
+::: {.col}
 @-gpus-devices-memory-the-trainer-now-with-devices-1
+:::
+
+::: {.col .narrow}
+- `d2l.Trainer` moves the model to `self.gpus[0]` in `prepare_model` and each minibatch in `prepare_batch`, falling back to CPU without a GPU.
+:::
+:::
+:::
+
+::: {.slide title="Timing the Device-Aware Trainer on CPU and GPU"}
+[The Device-Aware Trainer]{.kicker}
 
 @!gpus-devices-memory-the-trainer-now-with-devices-4
 
@@ -1837,14 +1863,14 @@ Test your systems intuition on these three scenarios:
 
 1. A training loop executes `if loss < best_loss: best_loss = loss` on every minibatch step on a GPU. Why does this single `if` statement hurt GPU utilization, and how should you rewrite it?
 2. A deep transformer stacks $K = 36$ identical blocks. How many block-input activation tensors are held at peak during the backward pass without checkpointing ($s = 36$), with every-block checkpointing ($s = 1$), and with optimal segment size $s = \sqrt{36} = 6$?
-3. When you run `del tensor` on a `2 GiB` GPU tensor in PyTorch, `torch.cuda.memory_allocated()` drops by `2 GiB`, but `nvidia-smi` shows zero change. Why?
+3. When you delete a `2 GiB` GPU tensor, the framework's allocated-memory counter drops by `2 GiB`, but `nvidia-smi` shows zero change. Why?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **Evaluating a Python `bool` (`loss < best_loss`) forces a CPU–GPU synchronization on every step**, draining the command queue. Fix: update `best_loss = torch.minimum(best_loss, loss.detach())` on-device and read `.item()` once per epoch.
+1. **Evaluating a Python `bool` (`loss < best_loss`) forces a CPU–GPU synchronization on every step**, draining the command queue. Fix: update `best_loss = minimum(best_loss, loss)` on-device and read it back once per epoch.
 2. **Peak stored block activations ($K/s + s$):** Uncheckpointed holds $36$; $s = 1$ holds $36/1 + 1 = 37$; optimal $s = 6$ holds only $36/6 + 6 = 12$ ($3\times$ reduction!).
-3. **The caching allocator keeps freed slabs in its reserved pool** (`memory_reserved()`) for future tensors without returning them to the CUDA driver (`nvidia-smi`).
+3. **The caching allocator keeps freed slabs in its reserved pool** for future tensors without returning them to the CUDA driver (`nvidia-smi`).
 :::
 :::
 

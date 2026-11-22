@@ -743,10 +743,16 @@ $$\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\mathrm{RMS}(\mathbf{x})} \od
 
 Scaling $\mathbf{W}_q$ and $\mathbf{W}_k$ by $\lambda \in \{1, 4, 16\}$ on $n = 64$ random tokens ($d_h = 64$, uniform entropy $\ln 64 \approx 4.16$ nats) demonstrates softmax collapse and `QK-Norm` recovery:
 
-@transformer-block-normalizing-queries-and-keys
+@-transformer-block-normalizing-queries-and-keys
+:::
+
+::: {.slide title="QK-Norm Holds Logit Spread and Entropy Fixed"}
+[QK-Norm Verification]{.kicker}
+
+@!transformer-block-normalizing-queries-and-keys
 
 ::: {.d2l-note}
-Without `QK-Norm`, a $16\times$ weight growth inflates logit standard deviation by $16^2 = 256\times$ and collapses attention entropy to $0.05$ nats (one-hot); with `QK-Norm`, logit spread ($0.99$) and entropy ($3.70$) remain completely invariant.
+Without `QK-Norm`, a $16\times$ weight growth inflates logit standard deviation by $16^2 = 256\times$ and collapses attention entropy to $\approx 0.01\text{--}0.02$ nats (one-hot); with `QK-Norm`, logit spread ($\approx 1.0$) and entropy ($\approx 3.7$) remain completely invariant.
 :::
 :::
 

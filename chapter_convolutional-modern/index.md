@@ -42,7 +42,7 @@ Modern Convolutional Neural Networks<br>**AlexNet · blocks · normalization · 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Signal & degradation drift:** Sigmoids shrink gradients by $\le 1/4^L$; even with ReLU + BN, a 56-layer plain network trains worse than a 20-layer one ($0.27$ vs. $0.20$ loss).
+- **Signal & degradation drift:** Sigmoids shrink gradients by $\le 1/4^L$; even with ReLU + BN, a 56-layer plain network trains worse than a 20-layer one ($\approx 0.28$ vs. $0.20$ loss).
 - **92% dense-head bloat & FLOPs vs. latency:** AlexNet/VGG put $>92\%$ of weights in the head; depthwise convs cut MACs $8\times$ yet hit GPU memory bandwidth limits.
 - **Confounded recipes:** Modern training recipes alone add $+4.3\%$ to an unchanged ResNet-50.
 :::

@@ -714,7 +714,7 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 - On our axis-aligned valley ($\operatorname{diag}(\mathbf{H}) = (0.2, 4)$), both coordinates contract by $1 - \eta$, collapsing $\kappa = 20 \to 1$ and reaching $1\%$ error in **$7$ steps** at $\eta = 0.5$ ($0.5^7 \approx 0.0078$) instead of $47$!
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!gd-preconditioning
 :::
 :::

@@ -747,13 +747,9 @@ $$\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} 
 ::: {.slide title="Implementing Adam from Scratch"}
 [Code Implementation]{.kicker}
 
-Each trainable parameter tensor maintains a step counter $t$ and two floating-point buffers $(\mathbf{m}, \mathbf{v})$ of identical shape:
+Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\mathbf{m}, \mathbf{v})$ of its shape:
 
 @-adam-adam-both-moments-debiased-1
-
-::: {.d2l-note}
-Notice that `(1 - beta1)` and `(1 - beta2)` are already included inside the moving averages `m` and `v`, so an effective step length of $\eta \approx 3 \times 10^{-3}$ in Adam corresponds to $\frac{\eta}{\text{scale}}$ in normalized SGD.
-:::
 :::
 
 ::: {.slide title="40× Gradient Disparity vs. 2× Adam Step Disparity"}

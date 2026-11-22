@@ -911,20 +911,25 @@ Because nearly every baseline model trains with minibatch stochastic gradient de
 
 @classification-the-classifier-class-2
 
-- **Automatic parameter discovery:** The framework optimizer automatically collects all registered learnable parameters (`model.parameters()` in PyTorch, `nnx.state` in JAX, `trainable_variables` in TensorFlow, `collect_params()` in MXNet).
+- **Automatic parameter discovery:** The framework optimizer automatically collects all registered learnable parameters of the model.
 :::
 
 ::: {.slide title="Registering Scratch Parameters and the Forward Pass"}
 [7,850 Learnable Parameters]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 Flattening a $28 \times 28$ Fashion-MNIST image yields $d = 784$ features for $q = 10$ garment classes ($\mathbf{W} \in \mathbb{R}^{784 \times 10}$ from $\mathcal{N}(0, 0.01^2)$, $\mathbf{b} = \mathbf{0} \in \mathbb{R}^{10}$):
 
 @softmax-regression-scratch-the-model-1
 
 @softmax-regression-scratch-the-model-2
+:::
 
+::: {.slide title="Parameter Shapes and the Initial-Loss Check"}
+[7,850 Learnable Parameters]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Parameter count:** $784 \times 10$ weights plus $10$ biases give $7{,}850$ learnable parameters.
 - **Initial-loss sanity check:** With $\mathbf{W} \approx \mathbf{0}$, $\hat{y}_j \approx 0.1$ and initial cross-entropy sits near $-\log(0.1) = \log 10 \approx 2.30\text{ nats}$.
 :::
 
@@ -937,14 +942,19 @@ Flattening a $28 \times 28$ Fashion-MNIST image yields $d = 784$ features for $q
 ::: {.slide title="Vectorized Cross-Entropy by Integer Indexing"}
 [O(n) Indexing vs. O(nq) One-Hot Products]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-Instead of allocating an $n \times q$ one-hot matrix $\mathbf{Y}$, we pluck out each row's true-class probability $\hat{Y}_{i, y_i}$ in one $O(n)$ integer-indexing gather:
+Instead of an $n \times q$ one-hot matrix, one $O(n)$ integer-indexing gather plucks out each row's $\hat{Y}_{i, y_i}$:
 
 @softmax-regression-scratch-the-cross-entropy-loss-1
 
 @softmax-regression-scratch-the-cross-entropy-loss-2
+:::
 
+::: {.slide title="Gather vs. One-Hot, and the Clamp's Blind Spot"}
+[O(n) Indexing vs. O(nq) One-Hot Products]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Linear cost:** The gather touches $n$ entries, while a one-hot product multiplies all $nq$ entries, almost all of them zero.
 - **Why the `1e-12` clamp is only a stopgap:** Wherever $\max(\hat{y}_y, 10^{-12})$ triggers, the derivative is **zero**—killing the gradient on the worst mistakes!
 :::
 
@@ -963,8 +973,10 @@ We train `SoftmaxRegressionScratch` for $10$ epochs on Fashion-MNIST with miniba
 ::: {.col}
 - **Rapid convergence:** Validation accuracy climbs past $75\%$ in the first epoch and settles near $83\%$ by epoch $10$, while cross-entropy loss drops from $\approx 2.30$ to $\approx 0.45$.
 - **Evaluation on full splits:** Evaluating across all $10{,}000$ validation images and $60{,}000$ training images shows a tiny $\sim 1\%$ generalization gap:
-  @!softmax-regression-scratch-prediction-accuracy
-  @!softmax-regression-scratch-the-training-run-2
+
+@!softmax-regression-scratch-prediction-accuracy
+
+@!softmax-regression-scratch-the-training-run-2
 :::
 
 ::: {.col .fig}
@@ -990,13 +1002,13 @@ In the first validation minibatch of $256$ images, roughly $40$ garments are mis
 
 ::: {.cols .vc}
 ::: {.col}
-To tally all $10{,}000$ validation predictions without Python loops, we form one-hot matrices $\mathbf{P}, \mathbf{Y} \in \{0, 1\}^{n \times 10}$ and accumulate $\mathbf{N} \mathrel{+}= \mathbf{P}^\top\mathbf{Y}$:
+One-hot matrices $\mathbf{P}, \mathbf{Y} \in \{0, 1\}^{n \times 10}$ tally all predictions via $\mathbf{N} \mathrel{+}= \mathbf{P}^\top\mathbf{Y}$:
 
 @-softmax-regression-scratch-the-confusion-matrix-1
 
 @!softmax-regression-scratch-the-confusion-matrix-2
 
-- **Column convention:** True class $j$ in columns and predicted class $i$ in rows ensures column normalization yields $C_{ij} = P(\hat{c} = i \mid y = j)$.
+- **Columns = true class:** Normalizing columns gives $C_{ij} = P(\hat{c} = i \mid y = j)$.
 :::
 
 ::: {.col .fig}
@@ -1038,12 +1050,16 @@ Because $o_j = \mathbf{w}_j^\top\mathbf{x} + b_j$ is an inner product between im
 ::: {.slide title="Concise Model: Returning Raw Logits"}
 [Concise Framework Implementation]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-In `SoftmaxRegression(d2l.Classifier)`, a flattening layer and a single built-in linear layer (`LazyLinear` / `Dense` / `nnx.Linear`) replace manual parameter management:
+In `SoftmaxRegression(d2l.Classifier)`, a flattening layer and a single built-in linear layer replace manual parameter management:
 
 @softmax-regression-concise-defining-the-model
+:::
 
+::: {.slide title="Why forward Stops at the Logits"}
+[Concise Framework Implementation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
 - **Critical invariant — `forward` returns raw logits $\mathbf{O}$:** Both `Classifier.accuracy` ($\operatorname{argmax}_j O_{ij}$) and fused cross-entropy consume unnormalized logits directly. Putting softmax inside `forward` would apply softmax **twice**!
 :::
 
@@ -1075,7 +1091,7 @@ $$l(y, \mathbf{o}) = o_{\max} + \log \sum_{k=1}^q \exp(o_k - o_{\max}) - o_y$$
 ::: {.slide title="Installing Fused Cross-Entropy on Classifier"}
 [Framework Logit Losses]{.kicker}
 
-We install each framework's fused LogSumExp cross-entropy (`F.cross_entropy`, `SoftmaxCrossEntropyLoss`, `SparseCategoricalCrossentropy(from_logits=True)`, `optax.softmax_cross_entropy_with_integer_labels`) on `d2l.Classifier.loss` and test it on extreme logits $(1000, 0, 0)$:
+We install the framework's fused LogSumExp cross-entropy on `d2l.Classifier.loss` and test it on extreme logits $(1000, 0, 0)$:
 
 @softmax-regression-concise-softmax-revisited
 
@@ -1105,7 +1121,7 @@ Training `SoftmaxRegression` with `d2l.Trainer` takes four lines of code and rep
 Test your understanding of numerical stability and implementation pitfalls:
 
 1. **Extreme negative logits:** What does our unshifted scratch `softmax` return on $\mathbf{o} = (-1000, -1000, -1000)$ in `float32`, and what does the shifted formula return?
-2. **The double-softmax bug:** Suppose a developer accidentally puts `softmax` at the end of `forward` before passing the output to `F.cross_entropy`. For $q = 10$ classes, what is the lowest loss value the model can ever reach, even when it predicts a deterministic one-hot vector $\mathbf{p} = (1, 0, \ldots, 0)$?
+2. **The double-softmax bug:** Suppose a developer accidentally puts `softmax` at the end of `forward` before passing the output to the framework's cross-entropy loss. For $q = 10$ classes, what is the lowest loss value the model can ever reach, even when it predicts a deterministic one-hot vector $\mathbf{p} = (1, 0, \ldots, 0)$?
 3. **Vocabulary scaling:** In a language model with hidden size $d = 1024$, batch size $n = 256$, and vocabulary $q = 10^6$ tokens, how much `float32` memory do the output weight matrix $\mathbf{W} \in \mathbb{R}^{d \times q}$ and logit matrix $\mathbf{O} \in \mathbb{R}^{n \times q}$ occupy?
 
 ::: {.d2l-note .fragment .fade-up}
@@ -1118,7 +1134,7 @@ Test your understanding of numerical stability and implementation pitfalls:
 
 | Component | From-Scratch Implementation | Concise Framework Implementation |
 |:--|:--|:--|
-| **Parameters** | Manual $\mathbf{W} \in \mathbb{R}^{784\times 10},\; \mathbf{b} \in \mathbb{R}^{10}$ ($7{,}850$ params) | Built-in `LazyLinear(10)` / `Dense(10)` / `nnx.Linear` |
+| **Parameters** | Manual $\mathbf{W} \in \mathbb{R}^{784\times 10},\; \mathbf{b} \in \mathbb{R}^{10}$ ($7{,}850$ params) | Built-in linear layer with $10$ outputs |
 | **Forward output** | Probability matrix $\hat{\mathbf{Y}} = \mathrm{softmax}(\mathbf{X}\mathbf{W}+\mathbf{b})$ | Raw logit matrix $\mathbf{O} = \mathbf{X}\mathbf{W}+\mathbf{b}$ (no softmax!) |
 | **Cross-entropy loss** | $-\log \max(\hat{Y}_{i, y_i}, 10^{-12})$ (clamped indexing) | Fused LogSumExp: $o_{\max} + \log\sum_k \exp(o_k - o_{\max}) - o_y$ |
 | **Numerical stability** | Overflows for $o > 88.7$; clamp zeroes gradient on underflow | Immune to overflow & underflow; exact gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$ |

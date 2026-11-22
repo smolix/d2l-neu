@@ -1388,11 +1388,16 @@ Modules and Model Construction<br>**module trees · child registration · contai
 ::: {.slide title="A Model Is a Tree of Modules Addressed by Path"}
 [The Module Tree]{.kicker}
 
-Every layer, composite block, and complete network is a **module** that owns parameters, registers child modules, and defines a forward pass:
+::: {.cols .vc}
+::: {.col}
+- **Modules all the way down:** Every layer, composite block, and complete network is a **module** that owns parameters, registers child modules, and defines a forward pass.
+- **Hierarchical paths:** Each edge carries the attribute or index name under which the parent registered the child, so every leaf parameter is uniquely named by its path from the root (e.g., block 1, layer 0, weight).
+:::
 
-![](../img/bg-module-names.svg){.nostretch width=74%}
-
-- **Hierarchical paths:** Each edge carries the attribute or index name under which the parent registered the child, so every leaf parameter is uniquely named by its path from the root (e.g., `1.body.0.weight`).
+::: {.col .fig}
+![](../img/bg-module-names.svg){.nostretch width=100%}
+:::
+:::
 :::
 
 ::: {.slide title="Sequential Containers Chain Registered Children"}
@@ -1428,8 +1433,8 @@ When layers form a straight pipeline, a sequential container registers each chil
 
 ::: {.cols .vc}
 ::: {.col}
-- **Five recursive tree walks:** Optimizer setup (`parameters()`), checkpointing (`state_dict()`), device transfer (`.to(gpu)`), initialization (`.apply(fn)`), and mode/hook toggling (`train()`/`eval()`) all walk registered children.
-- **Consequence of an unregistered layer:** Its weights never update, are omitted from checkpoints, stay on CPU when `.to(gpu)` runs, and keep training-mode Dropout/BatchNorm during evaluation.
+- **Five recursive tree walks:** Optimizer setup, checkpointing, device transfer, initialization, and mode/hook toggling all walk registered children.
+- **Consequence of an unregistered layer:** Its weights never update, are omitted from checkpoints, stay behind when the model moves to the GPU, and keep training-mode Dropout/BatchNorm during evaluation.
 :::
 
 ::: {.col .fig .big}
@@ -1443,7 +1448,7 @@ When layers form a straight pipeline, a sequential container registers each chil
 
 ::: {.cols .vc}
 ::: {.col}
-- A sequential container has only two duties—registering children in `__init__` and looping over them in `forward`:
+- A sequential container only registers children in `__init__` and loops over them in `forward`:
 
 @-model-construction-sequential-and-friends-containers-1
 
@@ -1461,17 +1466,21 @@ When layers form a straight pipeline, a sequential container registers each chil
 
 ::: {.cols .vc}
 ::: {.col}
-- A sequential container has only two duties—registering children in `add` and looping over them in `forward`:
-
-@-model-construction-sequential-and-friends-containers-1
-
-@model-construction-sequential-and-friends-containers-2
+- A sequential container only registers children in `add` and loops over them in `forward`.
 :::
 
 ::: {.col .fig}
 @fig:ch05-bg-sequential-loop
 :::
 :::
+:::
+
+::: {.slide title="A Sequential Container in Code" only="mxnet"}
+[Building a Container]{.kicker}
+
+@-model-construction-sequential-and-friends-containers-1
+
+@model-construction-sequential-and-friends-containers-2
 :::
 
 ::: {.slide title="Pitfall: Plain Python Lists Hide Layers from PyTorch" only="pytorch"}
@@ -1485,7 +1494,7 @@ When layers form a straight pipeline, a sequential container registers each chil
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-plain-list-trap
+@fig:ch05-bg-plain-list-trap@pytorch
 :::
 :::
 :::
@@ -1495,13 +1504,13 @@ When layers form a straight pipeline, a sequential container registers each chil
 
 ::: {.cols .vc}
 ::: {.col}
-- Storing layers inside an ordinary Python `list` (`self.layers = [...]`) hides them from `net.initialize()` and `net.collect_params()` (`0` parameters instead of `7,946`):
+- Layers in a plain Python `list` are hidden from `net.initialize()` and `net.collect_params()` (`0` parameters, not `7,946`):
 
 @model-construction-sequential-and-friends-containers-3
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-plain-list-trap
+@fig:ch05-bg-plain-list-trap@mxnet
 :::
 :::
 :::
@@ -1509,13 +1518,13 @@ When layers form a straight pipeline, a sequential container registers each chil
 ::: {.slide title="A Partly Registered Model Silently Freezes Inner Layers" only="pytorch,mxnet"}
 [The Silent Training Bug]{.kicker}
 
-If outer layers are assigned to attributes (`self.first`, `self.last`) while middle layers sit in a plain Python list (`self.blocks`), the optimizer accepts the model without complaint:
+Outer layers as attributes, middle layers in a plain list: the optimizer accepts the model silently.
 
 @-model-construction-layers-in-a-plain-list-1
 
 @!model-construction-layers-in-a-plain-list-2
 
-- **Gradients flow, weights stay frozen:** Backpropagation differentiates through `self.blocks` so `self.first` updates (`True`), but the optimizer never received `self.blocks`, leaving their weights permanently untouched (`False, False`).
+- **Gradients flow, weights stay frozen:** `self.first` updates (`True`), but the optimizer never received `self.blocks`, so their weights never change (`False, False`).
 :::
 
 ::: {.slide title="Keras Scans Python Lists Assigned to Attributes" only="tensorflow"}
@@ -1529,7 +1538,7 @@ If outer layers are assigned to attributes (`self.first`, `self.last`) while mid
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-plain-list-trap
+@fig:ch05-bg-plain-list-trap@tensorflow
 :::
 :::
 :::
@@ -1545,7 +1554,7 @@ If outer layers are assigned to attributes (`self.first`, `self.last`) while mid
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-plain-list-trap
+@fig:ch05-bg-plain-list-trap@jax
 :::
 :::
 :::
@@ -1561,7 +1570,7 @@ If outer layers are assigned to attributes (`self.first`, `self.last`) while mid
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-plain-list-trap
+@fig:ch05-bg-plain-list-trap@pytorch
 :::
 :::
 :::
@@ -1577,7 +1586,7 @@ If outer layers are assigned to attributes (`self.first`, `self.last`) while mid
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-plain-list-trap
+@fig:ch05-bg-plain-list-trap@mxnet
 :::
 :::
 :::
@@ -1593,7 +1602,7 @@ If outer layers are assigned to attributes (`self.first`, `self.last`) while mid
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-plain-list-trap
+@fig:ch05-bg-plain-list-trap@tensorflow
 :::
 :::
 :::
@@ -1609,7 +1618,7 @@ If outer layers are assigned to attributes (`self.first`, `self.last`) while mid
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-plain-list-trap
+@fig:ch05-bg-plain-list-trap@jax
 :::
 :::
 :::
@@ -1628,7 +1637,7 @@ $$\mathbf{y} = \mathbf{x} + f(\mathbf{x})$$
 :::
 
 ::: {.col .fig}
-![](../img/bg-residual-block.svg){.nostretch width=100%}
+![](../img/bg-residual-block.svg){.nostretch width=60%}
 :::
 :::
 :::
@@ -1648,7 +1657,7 @@ No special framework primitive is needed for a skip connection—the forward met
 
 ::: {.cols .vc}
 ::: {.col}
-- `d2l.Trainer` compiles training steps (`tf.function` or `nnx.jit`) by tracing `forward` once on symbolic tensors:
+- `d2l.Trainer` compiles training steps by tracing `forward` once on symbolic tensors:
 
 @model-construction-forward-is-just-python-4
 :::
@@ -1665,7 +1674,7 @@ No special framework primitive is needed for a skip connection—the forward met
 ::: {.cols .vc}
 ::: {.col}
 - **Eager execution (default):** Runs line-by-line on concrete values so data-dependent `if`/`while` loops and `print` debugging work directly.
-- **Compiled graph tracing (`torch.compile` / `hybridize()`):** Static loops over registered modules (`for block in self.blocks:`) unroll cleanly, whereas data-dependent branches require symbolic control flow.
+- **Compiled graph tracing:** Static loops over registered modules (`for block in self.blocks:`) unroll cleanly, whereas data-dependent branches require symbolic control flow.
 :::
 
 ::: {.col .fig .big}
@@ -1703,12 +1712,12 @@ No special framework primitive is needed for a skip connection—the forward met
 :::
 
 ::: {.col .fig}
-@fig:ch05-bg-lazy-dry-run
+@fig:ch05-bg-lazy-dry-run@jax
 :::
 :::
 :::
 
-::: {.slide title="Initializing Lazy Models After a Dry Run"}
+::: {.slide title="Initializing Lazy Models After a Dry Run" except="jax"}
 [Materializing Shapes Before Training]{.kicker}
 
 ::: {.cols .vc}
@@ -1729,15 +1738,25 @@ No special framework primitive is needed for a skip connection—the forward met
 
 ::: {.cols .vc}
 ::: {.col}
-- Production code factors hyperparameters into a serializable `@dataclass` paired with a `build` function:
-
-@-model-construction-building-from-a-config-1
-
-@model-construction-building-from-a-config-2
+- Production code factors hyperparameters into a serializable `@dataclass` paired with a `build` function.
 :::
 
 ::: {.col .fig}
 @fig:ch05-bg-config-builder
+:::
+:::
+:::
+
+::: {.slide title="Building a Model from a Config"}
+[Dataclass Configurations]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@-model-construction-building-from-a-config-1
+:::
+
+::: {.col}
+@model-construction-building-from-a-config-2
 :::
 :::
 :::
@@ -1762,7 +1781,7 @@ With explicit widths in `MLPConfig(num_inputs=784, num_hiddens=256, num_blocks=4
 
 Work out both questions from the `MLPConfig` architecture ($d_{\text{in}}=784$, $K$ residual blocks of width $d$, $d_{\text{out}}=10$):
 
-1. Suppose a programmer stores the 4 residual blocks (`d = 256`) in a plain Python `list` in PyTorch or Gluon while assigning the input and output layers to `self.first` and `self.last`. How many parameters does the optimizer receive, and what happens on a GPU?
+1. Suppose a programmer stores the 4 residual blocks (`d = 256`) in a plain Python `list` (in a framework that does not scan lists) while assigning the input and output layers to `self.first` and `self.last`. How many parameters does the optimizer receive, and what happens on a GPU?
 2. Why does doubling both `num_hiddens` ($256 \to 512$) and `num_blocks` ($4 \to 8$) increase the total parameter count by more than $6\times$ ($729{,}866 \to 4{,}609{,}546$)?
 
 ::: {.d2l-note .fragment .fade-up}
@@ -1779,8 +1798,8 @@ Work out both questions from the `MLPConfig` architecture ($d_{\text{in}}=784$, 
 | Concept | Mechanism / Rule | Practical Systems Implication |
 |:---|:---|:---|
 | **Module tree** | Recursive hierarchy of layers/blocks; leaves hold parameters | Every parameter is uniquely addressed by its dotted root-to-leaf path |
-| **Registration** | `__setattr__` and module containers (`Sequential`, `ModuleList`, `nnx.List`) | Unregistered plain lists hide layers from optimizers, checkpoints, and GPUs |
-| **Custom `forward`** | Arbitrary Python tensor code (e.g., $\mathbf{x} + f(\mathbf{x})$); call via `net(X)` | Compiled steps (`jit`, `tf.function`) forbid branching on tensor values |
+| **Registration** | `__setattr__` and registered module containers | Unregistered plain lists hide layers from optimizers, checkpoints, and GPUs |
+| **Custom `forward`** | Arbitrary Python tensor code (e.g., $\mathbf{x} + f(\mathbf{x})$); call via `net(X)` | Compiled steps forbid branching on tensor values |
 | **Lazy layers** | Infer $n_{\text{in}}$ on the first minibatch; initialize after a dry run | Handy for quick prototypes; explicit widths are preferred for production |
 | **Config + builder** | Serializable `@dataclass` hyperparameters + `build(cfg)` factory | Reconstructing a model requires weights + config + builder code |
 :::

@@ -749,7 +749,7 @@ We benchmark `causal_attention` against the framework's fused FlashAttention ker
 
 Comparing `naive`, `fused` (causal), and `fused, no mask` separates two distinct sources of speedup:
 
-- **1. Eliminating HBM Score Traffic (`naive` $\to$ `fused, no mask`):** Cuts peak temporary memory from $\sim 4{,}096\text{ MiB}$ ($16 \times 4n^2$ bytes) down to the $16\text{ MiB}$ output tensor ($> 200\times$ memory reduction) and speeds up execution several-fold by running near peak Tensor Core throughput ($2.7 \times 10^{11}\text{ FLOPs}$).
+- **1. Eliminating HBM Score Traffic (`naive` $\to$ `fused, no mask`):** Cuts peak temporary memory from $\sim 4{,}096\text{ MiB}$ ($16 \times 4n^2$ bytes) down to a small multiple of the $16\text{ MiB}$ output tensor ($> 80\times$ memory reduction) and speeds up execution several-fold by running near peak Tensor Core throughput ($2.7 \times 10^{11}\text{ FLOPs}$).
 - **2. Causal Tile Skipping (`fused, no mask` $\to$ `fused`):** Because a causal mask zeroes all entries above the diagonal ($j > i$), a tiled kernel skips the entire upper triangle of empty tiles without computing them.
 - **Why Causal Skipping Gives $\sim 1.5\times$ Instead of $2\times$:** Diagonal tiles straddle $j = i$ and must apply elementwise masking, and thread-block scheduling across variable-length causal rows incurs small load-balancing overhead.
 :::
@@ -792,7 +792,7 @@ Work through these three systems and algorithmic questions:
 
 ::: {.cols .vc}
 ::: {.col}
-- **The $O(n^2)$ HBM Wall:** Naive attention allocates $8 H n^2$ bytes ($64\text{ GiB}$ at $n = 128\text{K}$) and is severely HBM-bandwidth bound.
+- **The $O(n^2)$ HBM Wall:** Naive attention allocates $8n^2$ bytes per head ($128\text{ GiB}$ at $n = 128\text{K}$) and is severely HBM-bandwidth bound.
 - **Online Softmax Recurrence:** Updates running $(m, s, \mathbf{o})$ in one streaming pass via $e^{m - m'}$ rescaling.
 - **FlashAttention Tiling:** Fuses $\mathbf{Q}\mathbf{K}^\top$, softmax, and $\mathbf{P}\mathbf{V}$ inside on-chip SRAM in $\Theta(n)$ HBM memory while skipping empty upper-triangular causal tiles.
 :::

@@ -791,7 +791,7 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 
 ::: {.cols .vc}
 ::: {.col}
-- Tiled GPU kernels (FlashAttention, PyTorch `flex_attention`, cuDNN) partition the $n \times n$ score matrix into $b \times b$ tiles (typically $b = 128$) and skip a tile **only if all $b^2$ of its entries are masked out**.
+- Tiled GPU kernels (FlashAttention, flex-attention-style kernels, cuDNN) partition the $n \times n$ score matrix into $b \times b$ tiles (typically $b = 128$) and skip a tile **only if all $b^2$ of its entries are masked out**.
 - At $n = 2{,}048$ and $b = w = 128$ ($T = n/b = 16$ tile rows):
   - **Causal mask:** Visits $T(T+1)/2 = 136$ of $256$ tiles (**$53.1\%$**).
   - **Sliding window ($w = 128$):** Visits only the diagonal tile and its immediate left neighbor per row: $2T - 1 = 31$ tiles (**$12.1\%$**).
@@ -805,7 +805,7 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 :::
 :::
 
-::: {.slide title="Benchmarking Windowed vs. Dense Causal Kernels"}
+::: {.slide title="Benchmarking Windowed vs. Dense Causal Kernels" layout="tight"}
 [Wall-Clock Scaling up to 32K]{.kicker}
 
 ::: {.cols .vc}
@@ -815,7 +815,7 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 - **$> 30\times$ Speedup at $32\text{K}$:** Slightly below the $64.4\times$ tile ratio because every visited window tile straddles the mask boundary and applies elementwise masking, whereas interior causal tiles run unmasked.
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!attention-at-scale-the-price-of-attention-measured
 :::
 :::
@@ -938,8 +938,6 @@ Compressing an unbounded history of key–value pairs into a fixed $d_h \times d
 
 ::: {.slide title="Concept Check: Tiles, Caches, and Linear Kernels"}
 [Check Your Understanding]{.kicker}
-
-Work out these three quantitative design questions:
 
 1. **Sub-Tile Window Width:** In a fused kernel with tile size $b = 128$ at sequence length $n = 2{,}048$ ($T = 16$ tile rows), a causal window of width $w = 128$ visits $2T - 1 = 31$ tiles. How many $128 \times 128$ tiles does the kernel visit if you shrink the window to $w = 32$?
 2. **ReLU Feature Map Scaling:** If you use $\phi(x) = \mathrm{relu}(x)$ in linear attention and multiply a query vector $\mathbf{q}_t$ by $\beta = 16$ (assuming $\phi(\mathbf{q}_t)^\top \mathbf{z}_t > 0$), by how much do the attention weights change?

@@ -881,7 +881,7 @@ The KV Cache, the Hardware Roofline, and Cache Reduction<br>**KV caching · pref
 
 ::: {.cols .vc}
 ::: {.col}
-- **Naive `GPT.generate` ($O(T^2)$ work):** Re-runs the full prefix $3{,}584, 3{,}585, \dots, 3{,}839$ at every generated token ($950{,}016$ token evaluations).
+- **Naive `GPT.generate` ($O(T^2)$ work):** Re-runs the full prefix $3{,}584, 3{,}585, \dots, 3{,}839$ at every generated token ($950{,}144$ token evaluations).
 - **Why past recomputation is redundant:** Under a causal mask, $(\mathbf{k}_s, \mathbf{v}_s)$ at position $s < t$ never changes when token $t$ arrives.
 - **Cached generation ($O(T)$ work):** Processes the prompt once and each new token once ($3{,}840$ evaluations—**$250\times$ less work**).
 :::
@@ -914,7 +914,7 @@ The KV Cache, the Hardware Roofline, and Cache Reduction<br>**KV caching · pref
 ::: {.cols .vc}
 ::: {.col}
 - **Fixed-shape buffer allocation (`init_cache`):** Pre-allocates zeroed tensors `ks[i], vs[i]` of shape $(B, H_{\text{kv}}, T_{\max}, d_h)$ per block before generation begins.
-- **Position offset `t` & boolean mask:** Rotates queries/keys at offset $t$ and masks unwritten slots $> t$ (`arange(T_max) <= pos[:, None]`), keeping tensor shapes static so `torch.compile` / XLA compiles the decode step **once**.
+- **Position offset `t` & boolean mask:** Rotates queries/keys at offset $t$ and masks unwritten slots $> t$ (`arange(T_max) <= pos[:, None]`), keeping tensor shapes static so the compiler compiles the decode step **once**.
 :::
 
 ::: {.col .fig .big}
@@ -969,13 +969,9 @@ Passing `donate_argnames=('ks', 'vs')` to `@jax.jit` around `jax.lax.fori_loop` 
 ::: {.slide title="Verifying Exact Logit Equivalence"}
 [Correctness Verification]{.kicker}
 
-Prefilling $16$ tokens and stepping through $32$ tokens one by one produces the **exact same logits** (to within floating-point rounding $\sim 10^{-7}$) as a single uncached pass over all $48$ tokens:
+KV caching is **not an approximation**: prefilling $16$ tokens and stepping through $32$ tokens one by one produces the **exact same logits** (to within floating-point rounding $\sim 10^{-7}$) as a single uncached pass over all $48$ tokens, for rotary and learned positions alike:
 
 @kv-cache-same-logits-measured-1
-
-::: {.d2l-note .rule}
-KV caching is **not an approximation**: for both rotary (`pos='rope'`) and learned absolute (`pos='learned'`) positions, the mathematical function computed at step $t$ is identical to full causal evaluation.
-:::
 :::
 
 ::: {.slide title="Empirical Speedup: Over 20× Faster at 4,000 Tokens"}
@@ -983,7 +979,7 @@ KV caching is **not an approximation**: for both rotary (`pos='rope'`) and learn
 
 ::: {.cols .vc}
 ::: {.col}
-- **Naive step time grows linearly with context $n$:** Recomputing the entire prefix on a 124M-parameter model reaches $\sim 25\text{ ms/token}$ at $n = 4{,}032$, making a 256-token continuation take over $6\text{ seconds}$.
+- **Naive step time grows linearly with context $n$:** Recomputing the entire prefix on a 124M-parameter model reaches $33\text{--}53\text{ ms/token}$ at $n = 4{,}032$, making a 256-token continuation take over $8\text{ seconds}$.
 - **Cached step time stays flat ($\sim 1\text{ ms/token}$):** Projecting a single token takes $0.8\text{--}1.3\text{ ms}$ across the entire $4{,}096$-token range.
 
 @!kv-cache-same-logits-measured-3
@@ -1033,7 +1029,7 @@ KV caching is **not an approximation**: for both rotary (`pos='rope'`) and learn
 
 ::: {.cols .vc}
 ::: {.col}
-- **Arithmetic intensity ($I = \text{FLOPs} / \text{Bytes}$):** The ratio of peak compute ($83\text{ TFLOP/s}$) to HBM bandwidth ($1\text{ TB/s}$) defines the hardware **ridge point** at $I^* \approx 83\text{ FLOPs/byte}$.
+- **Arithmetic intensity ($I = \text{FLOPs} / \text{Bytes}$):** The ratio of peak compute ($83\text{ TFLOP/s}$) to HBM bandwidth ($1\text{ TB/s}$) defines the hardware **ridge point** at $I^* \approx 82\text{ FLOPs/byte}$.
 - **Decode ($n = 1, B = 1$):** Performs $2N$ FLOPs while reading $4N + M_{\text{KV}}$ bytes ($I \approx 0.38\text{ FLOPs/byte}$ at context $2{,}048$)—$200\times$ below the ridge point (**bandwidth-bound**).
 - **Prefill ($n = 2{,}048$ in parallel):** Reuses each weight read across $2{,}048$ tokens ($I \approx 780\text{ FLOPs/byte}$)—well above the ridge point (**compute-bound**).
 :::
@@ -1068,16 +1064,14 @@ Decoding $B$ sequences simultaneously reads the model weights $M_{\text{weights}
 
 $$\mathrm{Throughput}(B, n) \le \frac{B \, \mathcal{B}_{\mathrm{HBM}}}{M_{\mathrm{weights}} + B \, M_{\mathrm{KV}}(n, 1)} \;\xrightarrow{\;B \to \infty\;}\; \frac{\mathcal{B}_{\mathrm{HBM}}}{M_{\mathrm{KV}}(n, 1)}$$
 
-::: {.cols}
-::: {.col}
 - **Small-batch regime ($B \, M_{\text{KV}} \ll M_{\text{weights}}$):** Weight reads dominate HBM traffic, so total throughput scales nearly linearly with $B$ ("free batching").
 - **Half-saturation batch size ($B_{1/2} = M_{\text{weights}} / M_{\text{KV}}(n, 1)$):** The batch size where total KV cache bytes equal the model weight bytes ($B_{1/2} \approx 53$ at $n = 128$, but $B_{1/2} \approx 6.6$ at $n = 1{,}024$).
 :::
 
-::: {.col .fig}
+::: {.slide title="Measured Decode Throughput vs. Batch Size"}
+[Amortizing Weight Reads]{.kicker}
+
 @!kv-cache-batched-decoding
-:::
-:::
 :::
 
 ::: {.slide title="Three Orthogonal Axes for Shrinking the KV Cache"}
@@ -1148,7 +1142,7 @@ $$\mathbf{W}_k^{(\mathcal{G})} = \frac{1}{G}\sum_{h \in \mathcal{G}} \mathbf{W}_
 
 ::: {.cols .vc}
 ::: {.col}
-- On pretrained GPT-2, a pure sliding window ($w = 256, s = 0$) causes tail perplexity to explode from **$36$ to $3{,}828$**!
+- On pretrained GPT-2, a pure sliding window ($w = 256, s = 0$) causes tail perplexity to explode from **$36$ to $\approx 3{,}840$**!
 - **Why?** Because softmax weights must sum to $1$, idle heads dump $30\%\text{--}57\%$ of their weight onto **token 0**. Evicting token 0 once $t \ge w$ scrambles the residual stream!
 
 @!kv-cache-a-window-needs-a-sink-1
@@ -1168,7 +1162,7 @@ Retaining just $s \in \{1, 4\}$ initial **attention sink** tokens permanently in
 @!kv-cache-a-window-needs-a-sink-2
 
 ::: {.d2l-note}
-Keeping a single sink token ($s = 1$) drops perplexity from $3{,}828$ back to $47$ ($s = 4$ reaches $43$, vs. $36$ for full $1{,}024$-token attention). Modern architectures (such as `gpt-oss`) go one step further by giving each attention head a learnable virtual sink bias in the softmax denominator.
+Keeping a single sink token ($s = 1$) drops perplexity from $\approx 3{,}840$ back to $47$ ($s = 4$ reaches $43$, vs. $36$ for full $1{,}024$-token attention). Modern architectures (such as `gpt-oss`) go one step further by giving each attention head a learnable virtual sink bias in the softmax denominator.
 :::
 :::
 

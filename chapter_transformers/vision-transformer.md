@@ -600,6 +600,10 @@ Transformers for Vision (ViT)<br>**patches as tokens · strided conv stem · `<c
 `PatchEmbedding` verifies that `patch_size` tiles `img_size` evenly (`96 % 16 == 0`) so partial border pixels are never silently dropped, turning a batch of four $96 \times 96$ images into shape `(4, 36, 512)`:
 
 @vision-transformer-patches-as-tokens-1
+:::
+
+::: {.slide title="Verifying PatchEmbedding on Four Images"}
+[Stem Implementation]{.kicker}
 
 @vision-transformer-patches-as-tokens-2
 :::
@@ -618,7 +622,7 @@ Why does ViT use `LayerNorm` and `GELU` rather than `RMSNorm` and `SwiGLU`? Only
 :::
 :::
 
-::: {.slide title="The <cls> Readout Token and ViT Forward Pass" only="pytorch"}
+::: {.slide title="The `<cls>` Readout Token and ViT Forward Pass" only="pytorch"}
 [Readout & Forward Pass]{.kicker}
 
 To pool $m = 36$ patch tokens into a single image representation without favoring any specific patch location, `ViT` prepends `self.cls_token` at index $0$ and reads `X[:, 0]` after $L$ blocks:
@@ -638,7 +642,7 @@ Global average pooling across the $m$ patch outputs (`X[:, 1:].mean(dim=1)`) wor
 :::
 :::
 
-::: {.slide title="The <cls> Readout Token and ViT Forward Pass" only="jax"}
+::: {.slide title="The `<cls>` Readout Token and ViT Forward Pass" only="jax"}
 [Readout & Forward Pass]{.kicker}
 
 To pool $m = 36$ patch tokens into a single image representation without favoring any specific patch location, `ViT` prepends `self.cls_token` at index $0$ and reads `X[:, 0]` after $L$ blocks:
@@ -711,24 +715,22 @@ We test how strongly the trained `ViT` depends on 2D spatial layout by permuting
 
 @!vision-transformer-does-the-vit-use-position-2
 
-- **Strong spatial reliance ($89\% \to 33\%\text{--}45\%$):** Scrambling where patches land cuts accuracy by roughly **45–55 percentage points**, proving the classifier relies heavily on patch positions.
+- **Strong spatial reliance ($89\% \to 31\%\text{--}45\%$):** Scrambling where patches land cuts accuracy by roughly **45–55 percentage points**, proving the classifier relies heavily on patch positions.
 - **Bag-of-patches floor ($\gg 10\%$ random guessing):** Even scrambled images remain $3\text{--}4\times$ above the $10\%$ chance floor because local $16 \times 16$ textures (boot soles, collar cutouts) identify several garment classes without global geometry.
 :::
 
 ::: {.slide title="Do Learned Position Embeddings Discover the 2D Grid?"}
 [Probing Position Geometry]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 - **Cosine similarity by Chebyshev grid distance $k = \max(|r - r'|, |c - c'|)$:** We compare the trained $36 \times 512$ position table against a hard-coded 2D sinusoidal grid and random vectors.
-- **Faint local structure after 10 epochs:** Only adjacent patches ($k = 1$) show positive excess similarity ($+0.07$ vs. $-0.03$ for random noise), whereas the 2D sinusoidal code drops sharply from $+0.76$ to $-0.22$.
+- **Faint local structure after 10 epochs:** Only adjacent patches ($k = 1$) show positive excess similarity ($+0.05$ vs. $-0.03$ for random noise), whereas the 2D sinusoidal code drops sharply from $+0.76$ to $-0.46$.
 - **Why?** Discovering full 2D grid topology from 1D raster IDs requires large datasets and hundreds of epochs (Dosovitskiy et al., 2021).
 :::
 
-::: {.col .fig}
+::: {.slide title="Position Similarity by Grid Distance"}
+[Probing Position Geometry]{.kicker}
+
 @!vision-transformer-do-the-position-embeddings-discover-the-grid
-:::
-:::
 :::
 
 ::: {.slide title="A Controlled Comparison: ViT vs. Matched ResNet"}
@@ -751,7 +753,7 @@ We test how strongly the trained `ViT` depends on 2D spatial layout by permuting
 
 ::: {.cols .vc}
 ::: {.col}
-- **Consistent 5-point CNN advantage:** Across independent runs (seed spread $\le 0.1\%$), `CompactResNet` reaches **$93.8\%$** validation accuracy versus **$88.9\%$** for `ViT`.
+- **Consistent 5-point CNN advantage:** Across independent runs (seed spread $\le 0.1\%$), `CompactResNet` reaches **$\approx 94\%$** validation accuracy versus **$\approx 89\%$** for `ViT`.
 - **Faster early convergence:** Built-in 2D locality and translation equivariance give the CNN an immediate 6-point lead at epoch 1 that persists through epoch 10.
 :::
 
@@ -800,7 +802,7 @@ Work through these three quantitative questions:
 ::: {.cols .vc}
 ::: {.col}
 - **Stride-$p$ Patch Stem:** Maps $(C, H, W) \to m = HW / p^2$ tokens in one conv layer while keeping block parameters ($12 L d^2$) independent of $m$.
-- **Spatial Inductive Bias:** Without positional embeddings, ViT is permutation-invariant over patches; shuffling patches at test time drops accuracy from $89\% \to 39\%$.
+- **Spatial Inductive Bias:** Without positional embeddings, ViT is permutation-invariant over patches; shuffling patches at test time drops accuracy from $89\%$ to $31\%\text{--}45\%$.
 - **Small Data vs. Scale:** Matched ResNet leads by $5\%$ from scratch on small data, whereas pretrained ViTs dominate at foundation scale.
 :::
 

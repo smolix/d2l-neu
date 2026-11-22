@@ -16,27 +16,65 @@ const box = (x, y, w, h, fill, stroke, rx = 8, sw = 2, dash = false) =>
 const line = (x1, y1, x2, y2, color, w = 2, dash = false) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 
-// Helper for 2-line or 3-line labeled card with automatic width-safe font scaling
-function fitTx(cx, cy, t, maxW, o = {}) {
+// Width-safe text: realistic glyph widths (Source Sans 3 ≈ 0.50 em, a little
+// more in bold; mono ≈ 0.60 em), a modest shrink (never below FIT_MIN_FS),
+// and a two-line wrap at the space nearest the middle when the text still
+// does not fit. fitLines() returns { fs, lines }.
+const FIT_MIN_FS = 11;
+const fitCharW = (o) => (o.mono ? 0.60 : (o.fw >= 700 ? 0.52 : 0.50));
+function fitLines(t, maxW, o = {}) {
   const str = String(t);
-  const charFactor = o.mono ? 0.68 : 0.62;
-  const maxFs = Math.max(7.5, +((maxW - 24) / Math.max(1, str.length * charFactor)).toFixed(2));
-  const fs = Math.min(o.fs || 13.5, maxFs);
-  return tx(cx, cy, str, { ...o, fs });
+  const fs0 = o.fs || 13.5;
+  const avail = maxW - 24;
+  const cw = fitCharW(o);
+  const fsFor = (s) => avail / (Math.max(1, s.length) * cw);
+  const floor = Math.max(FIT_MIN_FS, Math.min(fs0, 0.85 * fs0));
+  if (fsFor(str) >= floor) return { fs: +Math.min(fs0, fsFor(str)).toFixed(2), lines: [str] };
+  // two lines: split at the space that minimizes the longer half
+  // Prefer a break after punctuation or before a separator (·, →, +, …)
+  // when it costs at most ~20% more width than the most balanced break.
+  const cands = [];
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] !== ' ') continue;
+    const a = str.slice(0, i).trimEnd(), b = str.slice(i + 1).trimStart();
+    if (!a || !b) continue;
+    const nice = /[,;:·)]$/.test(a) || /^[·→⇒(]/.test(b);
+    const bad = /=$/.test(a) || /^=/.test(b);
+    cands.push({ a, b, m: Math.max(a.length, b.length), nice, bad });
+  }
+  let best = null;
+  const mMin = Math.min(...cands.map((c) => c.m));
+  for (const c of cands) {
+    const score = c.m - (c.nice && c.m <= 1.2 * mMin ? 0.2 * mMin : 0) + (c.bad ? 0.3 * mMin : 0);
+    if (!best || score < best.score) best = { ...c, score };
+  }
+  if (!best) return { fs: +Math.max(FIT_MIN_FS, Math.min(fs0, fsFor(str))).toFixed(2), lines: [str] };
+  const fs = Math.max(FIT_MIN_FS, Math.min(fs0, avail / (best.m * cw)));
+  return { fs: +fs.toFixed(2), lines: [best.a, best.b] };
+}
+
+function fitTx(cx, cy, t, maxW, o = {}) {
+  const { fs, lines } = fitLines(t, maxW, o);
+  if (lines.length === 1) return tx(cx, cy, lines[0], { ...o, fs });
+  const d = 0.6 * fs;
+  return tx(cx, cy - d, lines[0], { ...o, fs }) + tx(cx, cy + d, lines[1], { ...o, fs });
 }
 
 function card(x, y, w, h, fill, stroke, lines) {
   let o = box(x, y, w, h, fill, stroke, 8, 2);
-  const step = h / (lines.length + 1);
-  lines.forEach((l, idx) => {
-    const ly = y + step * (idx + 1);
-    o += fitTx(x + w / 2, ly, l.t, w, {
-      fs: l.fs || 13.5,
-      fw: l.fw || 600,
-      mono: !!l.mono,
-      fill: l.fill || C.ink,
-    });
-  });
+  const opts = (l) => ({ fs: l.fs || 13.5, fw: l.fw || 600, mono: !!l.mono, fill: l.fill || C.ink });
+  const fitted = lines.map((l) => ({ ...fitLines(l.t, w, opts(l)), o: opts(l) }));
+  if (fitted.every((f) => f.lines.length === 1)) {
+    const step = h / (lines.length + 1);
+    fitted.forEach((f, idx) => { o += tx(x + w / 2, y + step * (idx + 1), f.lines[0], { ...f.o, fs: f.fs }); });
+    return o;
+  }
+  // A line wrapped: stack all rows at 1.2 × their size, spread the slack evenly.
+  const rows = fitted.flatMap((f) => f.lines.map((s) => ({ s, fs: f.fs, o: f.o })));
+  const used = rows.reduce((a, r) => a + 1.2 * r.fs, 0);
+  const gap = Math.max(0, (h - used) / (rows.length + 1));
+  let cy = y + gap;
+  rows.forEach((r) => { cy += 0.6 * r.fs; o += tx(x + w / 2, cy, r.s, { ...r.o, fs: r.fs }); cy += 0.6 * r.fs + gap; });
   return o;
 }
 
@@ -108,7 +146,7 @@ function benchmarksOverview() {
   let o = '';
   const rows = [
     { sec: '§6.1', label: '3×3 RGB→64ch Kernel', metric: '1,792 params at any H×W', col: C.blue, bg: C.lblue, dk: D.blue.dark },
-    { sec: '§6.2', label: 'Learned Edge [1, -1]', metric: 'Loss 12.0 → 0.003 in 9 steps', col: C.blue, bg: C.lblue, dk: D.blue.dark },
+    { sec: '§6.2', label: 'Learned Edge [1, -1]', metric: 'Loss 12.0 → 0.004 in 9 steps', col: C.blue, bg: C.lblue, dk: D.blue.dark },
     { sec: '§6.3', label: 'Strided / Dilated 3×3×3', metric: 'Receptive field r = 7 → 15 px', col: C.purple, bg: D.purple.tint, dk: D.purple.dark },
     { sec: '§6.4', label: '1×1 Bottleneck (256→64→256)', metric: '589K → 69.6K weights (8.5× cut)', col: C.amber, bg: C.lamber, dk: D.orange.dark },
     { sec: '§6.5', label: '2×2 Stride-2 MaxPool', metric: '50% 1-px shift absorbed, −∞ pad', col: C.amber, bg: C.lamber, dk: D.orange.dark },
@@ -362,7 +400,7 @@ function convVsXcorr() {
   o += tx(134, 38, 'Cross-Correlation (X ★ K)', { fs: 14.5, fw: 700, fill: D.blue.dark });
   o += tx(134, 60, 'Unflipped indices (i+a, j+b)', { mono: true, fs: 12.5, fw: 600, fill: C.ink });
   o += grid([['a', 'b'], ['c', 'd']], 88, 82, 42, 6, { fs: 15, fill: () => BLUE });
-  o += tx(134, 194, 'Framework Conv2d default', { fs: 13, fw: 700, fill: D.blue.dark });
+  o += tx(134, 194, 'Framework conv layer default', { fs: 13, fw: 700, fill: D.blue.dark });
   o += tx(134, 218, 'Σ K_{a,b} X_{i+a, j+b}', { mono: true, fs: 12.5, fill: C.ink });
 
   o += tx(270, 132, '⇔', { fs: 26, fw: 700, fill: D.purple.dark });
@@ -370,7 +408,7 @@ function convVsXcorr() {
   // Right: Mathematical convolution
   o += box(288, 16, 236, 232, C.lgreen, C.green, 10, 2);
   o += tx(406, 38, "Math Convolution (K' * X)", { fs: 14.5, fw: 700, fill: D.green.dark });
-  o += tx(406, 60, '180° flipped indices (i−a, j−b)', { mono: true, fs: 12.5, fw: 600, fill: C.ink });
+  o += tx(406, 60, 'Flipped indices (i−a, j−b)', { mono: true, fs: 12.5, fw: 600, fill: C.ink });
   o += grid([['d', 'c'], ['b', 'a']], 360, 82, 42, 6, { fs: 15, fill: () => GREEN });
   o += tx(406, 194, "K'_{a,b} = K_{-a,-b}", { mono: true, fs: 13, fw: 700, fill: D.green.dark });
   o += tx(406, 218, "Same learned function family!", { fs: 12.5, fw: 700, fill: C.ink });
@@ -432,35 +470,39 @@ function modalities1d2d3d() {
 function verticalEdgeMotiv() {
   const W = 540, H = 260;
   let o = '';
-  o += tx(105, 22, '6×8 Stripe Image X', { fs: 14, fw: 700, fill: D.blue.dark });
+  o += tx(92, 22, '6×8 Stripe Image X', { fs: 14, fw: 700, fill: D.blue.dark });
   const X = [
     [1, 1, 0, 0, 0, 0, 1, 1],
     [1, 1, 0, 0, 0, 0, 1, 1],
     [1, 1, 0, 0, 0, 0, 1, 1],
     [1, 1, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 1, 1],
   ];
-  o += grid(X, 16, 38, 21, 2, {
+  o += grid(X, 16, 38, 16, 3, {
     fs: 11.5,
     fill: (r, c, v) => v === 1 ? BLUE : GRAY,
   });
-  o += tx(226, 86, '★', { fs: 22, fw: 700, fill: D.purple.dark });
-  o += tx(276, 52, 'Kernel K', { fs: 13.5, fw: 700, fill: D.purple.dark });
-  o += grid([[1, -1]], 246, 68, 28, 3, { fs: 12.5, fill: () => PURPLE });
-  o += arrow(314, 84, 342, 84, C.green);
+  o += tx(226, 95, '★', { fs: 22, fw: 700, fill: D.purple.dark });
+  o += tx(276, 62, 'Kernel K', { fs: 13.5, fw: 700, fill: D.purple.dark });
+  o += grid([[1, -1]], 246, 78, 28, 3, { fs: 12.5, fill: () => PURPLE });
+  o += arrow(314, 94, 342, 94, C.green);
 
-  o += tx(434, 22, 'Edge Map Y (6×7)', { fs: 14, fw: 700, fill: D.green.dark });
+  o += tx(418, 22, 'Edge Map Y (6×7)', { fs: 14, fw: 700, fill: D.green.dark });
   const Y = [
     [0, 1, 0, 0, 0, -1, 0],
     [0, 1, 0, 0, 0, -1, 0],
     [0, 1, 0, 0, 0, -1, 0],
     [0, 1, 0, 0, 0, -1, 0],
+    [0, 1, 0, 0, 0, -1, 0],
+    [0, 1, 0, 0, 0, -1, 0],
   ];
-  o += grid(Y, 352, 38, 22, 2, {
+  o += grid(Y, 352, 38, 16, 3, {
     fs: 11,
     fill: (r, c, v) => v === 1 ? GREEN : v === -1 ? AMBER : [N.panel, N.hairline, false, C.muted],
   });
 
-  o += card(16, 152, 508, 92, C.lgreen, C.green, [
+  o += card(16, 162, 508, 86, C.lgreen, C.green, [
     { t: 'Horizontal Finite Difference:  Y_{i,j} = X_{i,j} − X_{i,j+1}', mono: true, fs: 14, fw: 700, fill: D.green.dark },
     { t: '+1 at white→black edge (col 1)  ·  −1 at black→white edge (col 5)  ·  0 on flat regions', fs: 12.5, fw: 600, fill: C.ink },
   ]);
@@ -522,7 +564,7 @@ function resolutionIndependence() {
   o += arrow(168, 66, 206, 110, C.purple);
   o += arrow(168, 182, 206, 138, C.purple);
   o += card(212, 66, 152, 116, D.purple.tint, C.purple, [
-    { t: 'Same Conv2D(2,2)', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
+    { t: 'Same 2×2 conv', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
     { t: '4 weights + 1 bias', fs: 13, fw: 700, fill: C.ink },
     { t: '= 5 parameters', fs: 13, fw: 700, fill: D.purple.dark },
   ]);
@@ -558,12 +600,12 @@ function orientationSelectivity() {
   // Right: Horizontal stripe X.T with [1, -1]
   o += box(282, 16, 242, 232, D.red.tint, D.red.base, 10, 2);
   o += tx(403, 38, 'Horizontal Stripe: Xᵀ ★ [1, −1]', { fs: 14, fw: 700, fill: D.red.dark });
-  o += grid([[1, 1, 1, 1], [0, 0, 0, 0], [1, 1, 1, 1]], 292, 62, 23, 3, {
+  o += grid([[1, 1, 1], [0, 0, 0], [0, 0, 0], [1, 1, 1]], 316, 60, 23, 3, {
     fs: 11.5,
     fill: (r, c, v) => v ? BLUE : GRAY,
   });
-  o += arrow(396, 99, 418, 99, D.red.base);
-  o += grid([[0, 0, 0], [0, 0, 0], [0, 0, 0]], 424, 62, 24, 3, {
+  o += arrow(398, 111, 420, 111, D.red.base);
+  o += grid([[0, 0], [0, 0], [0, 0], [0, 0]], 426, 60, 24, 3, {
     fs: 11,
     fill: () => GRAY,
   });
@@ -576,9 +618,9 @@ function kernelGdConvergence() {
   const W = 540, H = 260;
   let o = '';
   const steps = [
-    { x: 16,  t: 'Step 0 (Init)', k: 'K ≈ [0.00, 0.00]', l: 'Loss = 12.000', sub: 'Misses twelve ±1 edges', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { x: 194, t: 'Step 3 (SGD)', k: 'K ≈ [0.78, −0.78]', l: 'Loss = 0.640', sub: 'η = 0.03 updates K', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 372, t: 'Step 9 (Converged)', k: 'K = [0.99, −0.99]', l: 'Loss = 0.003', sub: 'Recovers [1, −1]!', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  t: 'Step 0 (Init)', k: 'K ≈ [0.00, 0.00]', l: 'Loss ≈ 12.0', sub: 'Misses twelve ±1 edges', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: 194, t: 'Step 3 (SGD)', k: 'K ≈ [0.74, −0.74]', l: 'Loss ≈ 0.83', sub: 'η = 0.03 updates K', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 372, t: 'Step 9 (Converged)', k: 'K = [0.99, −0.99]', l: 'Loss ≈ 0.004', sub: 'Recovers [1, −1]!', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   steps.forEach((s) => {
     o += card(s.x, 18, 152, 128, s.fill, s.st, [
@@ -601,9 +643,9 @@ function im2colGemm() {
   const W = 540, H = 270;
   let o = '';
   o += tx(68, 22, 'Input X (3×3)', { fs: 13.5, fw: 700, fill: D.blue.dark });
-  o += grid([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 26, 40, 26, 3, { fs: 12, fill: () => BLUE });
-  o += arrow(118, 82, 146, 82, C.purple);
-  o += tx(132, 62, 'im2col', { mono: true, fs: 11.5, fw: 700, fill: D.purple.dark });
+  o += grid([[0, 1, 2], [3, 4, 5], [6, 7, 8]], 26, 40, 24, 3, { fs: 12, fill: () => BLUE });
+  o += arrow(110, 82, 148, 82, C.purple);
+  o += tx(129, 66, 'im2col', { fs: 12, fw: 700, fill: D.purple.dark });
 
   o += tx(214, 22, 'Patches (4×4)', { fs: 13.5, fw: 700, fill: D.purple.dark });
   const P = [[0, 1, 3, 4], [1, 2, 4, 5], [3, 4, 6, 7], [4, 5, 7, 8]];
@@ -675,7 +717,7 @@ function learningEdgeLoop() {
   o += card(16, 20, 146, 96, C.lblue, C.blue, [
     { t: 'Forward Pass', fs: 14, fw: 700, fill: D.blue.dark },
     { t: 'Ŷ = conv2d(X)', mono: true, fs: 12.5, fw: 700, fill: C.ink },
-    { t: 'Shape (1, 1, 6, 7)', mono: true, fs: 11.5, fill: C.muted },
+    { t: '6 × 7 map', mono: true, fs: 11.5, fill: C.muted },
   ]);
   o += arrow(168, 68, 192, 68, C.amber);
   o += card(198, 20, 146, 96, C.lamber, C.amber, [
@@ -1093,8 +1135,8 @@ function groupedDepthwisePreview() {
   let o = '';
   const items = [
     { x: 16,  t: 'Standard Conv', w: 'c_o · c_i · k²', s: '1× baseline', role: 'All-to-all channels', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 194, t: 'Grouped (g groups)', w: '(c_o · c_i · k²) / g', s: 'g× cheaper', role: 'Block-diagonal (ResNeXt)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 372, t: 'Depthwise-Separable', w: 'c_i · k² + c_o · c_i', s: '~8–9× cheaper (3×3)', role: 'Space ⊥ Channel (MobileNet)', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 194, t: 'Grouped (g groups)', w: '(c_o·c_i·k²)/g', s: 'g× cheaper', role: 'Block-diagonal (ResNeXt)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 372, t: 'Depthwise-Separable', w: 'c_i·k² + c_o·c_i', s: '~8–9× cheaper (3×3)', role: 'Space ⊥ Channel (MobileNet)', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   items.forEach((it) => {
     o += card(it.x, 20, 152, 220, it.fill, it.st, [
@@ -1235,16 +1277,16 @@ function nonoverlappingDefaultStride() {
   let o = '';
   o += card(16, 20, 242, 220, C.lblue, C.blue, [
     { t: 'Default Pool Stride: s = k', fs: 14.5, fw: 700, fill: D.blue.dark },
-    { t: 'MaxPool2d(3) on 4×4 input', mono: true, fs: 12.5, fw: 700, fill: C.ink },
+    { t: '3×3 max-pool on 4×4 input', mono: true, fs: 12.5, fw: 700, fill: C.ink },
     { t: 'k=3, p=0, s=3 (non-overlapping)', mono: true, fs: 12, fill: C.muted },
-    { t: '⌊(4 − 3)/3⌋ + 1 = 1 × 1 output', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
+    { t: '⌊(4−3)/3⌋ + 1 = 1 × 1 output', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
     { t: 'Output: [[10.]]', mono: true, fs: 13.5, fw: 700, fill: C.ink },
   ]);
   o += card(282, 20, 242, 220, C.lgreen, C.green, [
     { t: 'Custom Pool: p = 1, s = 2', fs: 14.5, fw: 700, fill: D.green.dark },
-    { t: 'MaxPool2d(3, padding=1, stride=2)', mono: true, fs: 11.5, fw: 700, fill: C.ink },
+    { t: '3×3 max-pool, pad 1, stride 2', mono: true, fs: 11.5, fw: 700, fill: C.ink },
     { t: 'Overlapping 3×3 windows', fs: 12, fill: C.muted },
-    { t: '⌊(4 + 2 − 3)/2⌋ + 1 = 2 × 2 output', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: '⌊(4+2−3)/2⌋ + 1 = 2 × 2 output', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     { t: 'Output: [[5, 7], [13, 15]]', mono: true, fs: 13, fw: 700, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -1267,7 +1309,7 @@ function negInfPadding() {
   ]);
   o += card(16, 166, 508, 80, C.lamber, C.amber, [
     { t: 'Algebraic Neutral Elements:  0 for Sum (+)   vs.   −∞ for Max (max)', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
-    { t: 'For AvgPool, use count_include_pad=False so border windows divide only by real pixel count', fs: 12.5, fw: 600, fill: C.ink },
+    { t: 'For average pooling, divide border windows only by their real pixel count', fs: 12.5, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -1301,7 +1343,7 @@ function classicalVsModernPooling() {
     { t: '• Local Pool after every Conv stage', fs: 12.5, fw: 600, fill: C.ink },
     { t: '• Fixed max/avg downsampling rule', fs: 12.5, fill: C.muted },
     { t: '• Flatten + 3 huge Dense layers', fs: 12.5, fw: 700, fill: D.red.dark },
-    { t: '(78%–93% of all parameters!)', fs: 12, fill: D.red.dark },
+    { t: '(≈90–96% of all parameters!)', fs: 12, fill: D.red.dark },
   ]);
   o += card(282, 18, 242, 224, C.lgreen, C.green, [
     { t: 'Modern CNNs (ResNet / ConvNeXt)', fs: 14.5, fw: 700, fill: D.green.dark },
@@ -1386,7 +1428,7 @@ function sigmoidGradientAttenuation() {
     const x = 392 - i * 124;
     o += card(x, 28, 108, 82, i === 3 ? D.red.tint : C.lamber, i === 3 ? D.red.base : C.amber, [
       { t: l, fs: 12.5, fw: 700, fill: i === 3 ? D.red.dark : D.orange.dark },
-      { t: `scale ≤ 1/${4 ** (i + 1)}`, mono: true, fs: 12, fw: 700, fill: C.ink },
+      { t: `≤ 1/${4 ** (i + 1)}`, mono: true, fs: 13, fw: 700, fill: C.ink },
     ]);
     if (i < 3) {
       o += arrow(x - 3, 69, x - 13, 69, D.red.base);
@@ -1474,9 +1516,9 @@ function orderedVsShuffledAcc() {
   const W = 540, H = 260;
   let o = '';
   const bars = [
-    { y: 24,  label: 'LeNet (Ordered Pixels)', acc: '89.5%', w: 300, fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { y: 24,  label: 'LeNet (Ordered Pixels)', acc: '≈89–90%', w: 300, fill: C.lgreen, st: C.green, dk: D.green.dark },
     { y: 90,  label: 'MLP (Ordered = Shuffled)', acc: '87.0%', w: 230, fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 156, label: 'LeNet (Shuffled Pixels)', acc: '85.5%', w: 180, fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { y: 156, label: 'LeNet (Shuffled Pixels)', acc: '≈85–86%', w: 180, fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   bars.forEach((b) => {
     o += box(16, b.y, 196, 46, '#FFFFFF', b.st, 6, 1.8);

@@ -1074,7 +1074,7 @@ Whereas ResNet downsamples *inside* the first residual block of each stage via a
 :::
 
 ::: {.col .fig}
-![](../img/arch-convnext.svg){.nostretch width=100%}
+![](../img/arch-convnext.svg){.nostretch width=60%}
 :::
 :::
 :::
@@ -1096,7 +1096,7 @@ Whereas ResNet downsamples *inside* the first residual block of each stage via a
 ::: {.slide title="Assembling the Full ConvNeXt Class"}
 [Backbone Implementation]{.kicker}
 
-`ConvNeXt` loops over `arch = ((2, 40), (2, 80), (6, 160), (2, 320))`, inserting a separate `norm + Conv2d(kernel_size=2, stride=2)` downsampling layer before stages 2, 3, and 4 and ramping stochastic depth linearly across blocks:
+`ConvNeXt` downsamples between stages and ramps drop-path linearly across blocks:
 
 @convnext-model
 :::
@@ -1120,7 +1120,7 @@ Whereas ResNet downsamples *inside* the first residual block of each stage via a
 ::: {.slide title="The Shared ModernRecipe Mixin for Fair Ablation"}
 [Controlled Training Protocol]{.kicker}
 
-To ensure every step in our Fashion-MNIST roadmap uses the exact same optimizer and regularization, we package AdamW ($\eta_0 = 2\times 10^{-3}, \lambda = 0.05$), 10% cosine warmup, Mixup ($\alpha = 0.2$), and label smoothing ($0.1$) into a `ModernRecipe` mixin:
+`ModernRecipe` fixes the optimizer and regularization for every roadmap step:
 
 @convnext-recipe
 :::
@@ -1128,7 +1128,7 @@ To ensure every step in our Fashion-MNIST roadmap uses the exact same optimizer 
 ::: {.slide title="Controlled Three-Step Ablation on 64×64 Fashion-MNIST"}
 [Local Modernization Roadmap]{.kicker}
 
-Do architectural changes validated on $224\times 224$ ImageNet transfer blindly to $64\times 64$ Fashion-MNIST? We hold `ModernRecipe` fixed (20 epochs, AdamW $\eta_0 = 2\times 10^{-3}$, weight decay $0.05$, Mixup $\alpha=0.2$, label smoothing $0.1$) and transform a parameter-matched `CompactResNet18` (base width 35, $3.35\text{M}$ params) into `ConvNeXt` ($3.38\text{M}$ params) in three cumulative steps:
+With `ModernRecipe` fixed, three steps turn a parameter-matched `CompactResNet18` into `ConvNeXt`:
 
 @convnext-roadmap-1
 :::
@@ -1141,7 +1141,7 @@ Do architectural changes validated on $224\times 224$ ImageNet transfer blindly 
 @!convnext-eval
 
 - **Body + LN tie at $\approx 94.0\%$:** Matches `CompactResNet18` when keeping the overlapping stem.
-- **Patchify pitfall ($-2.5\%$):** Non-overlapping $4 \times 4_{s4}$ stem is too coarse on $64 \times 64$ thumbnails.
+- **Patchify pitfall ($\approx -2$ points):** Non-overlapping $4 \times 4_{s4}$ stem is too coarse on $64 \times 64$ thumbnails.
 :::
 
 ::: {.col .fig}

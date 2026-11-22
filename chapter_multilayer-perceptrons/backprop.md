@@ -446,7 +446,7 @@ Backpropagation & Computational Graphs in MLPs<br>**reverse-mode DAGs · local m
 
 ::: {.cols .vc}
 ::: {.col}
-- **Finite differences vs. reverse mode:** Perturbing each scalar weight $w \pm \epsilon$ would require $203{,}530$ forward passes per step; reverse-mode differentiation computes *all* parameter gradients in **$\sim 2\times$ the FLOPs of one forward pass**.
+- **Finite differences vs. reverse mode:** Perturbing each scalar weight $w \pm \epsilon$ would require $203{,}530$ forward passes per step; reverse-mode differentiation computes *all* parameter gradients in **at most $\sim 2\times$ the FLOPs of one forward pass**.
 - **Shared intermediate layer errors:** Backpropagation computes each layer's upstream sensitivity $\partial J / \partial \mathbf{Z}^{(k)}$ *once* from top to bottom and reads off $\partial J / \partial \mathbf{W}^{(k)}$ with a single matrix product.
 - **The memory price of training:** Forming $\mathbf{H}^{(k-1)\top}\mathbf{G}_{\mathbf{Z}^{(k)}}$ requires caching every hidden layer's forward activation in $O(nKh)$ GPU RAM.
 :::
@@ -552,7 +552,7 @@ $$\frac{\partial J}{\partial \mathbf{b}} = \mathbf{G}^\top\mathbf{1}_n, \qquad \
 $$\frac{\partial J}{\partial \mathbf{Z}^{(k)}} = \Bigl(\frac{\partial J}{\partial \mathbf{Z}^{(k+1)}}\, \mathbf{W}^{(k+1)\top}\Bigr) \odot \phi'\bigl(\mathbf{Z}^{(k)}\bigr)$$
 
 - **Two-step layer module:** Every hidden layer $k = K - 1, \ldots, 1$ projects upstream errors through $\mathbf{W}^{(k+1)\top}$, gates by $\odot\,\phi'(\mathbf{Z}^{(k)})$, and reads off $\mathbf{H}^{(k-1)\top}\mathbf{G}_{\mathbf{Z}^{(k)}}$.
-- **Product chain across depth:** Repeatedly multiplying by $\mathbf{W}^{(k)\top}$ and $\phi'(\mathbf{Z}^{(k)})$ explains why gradients vanish or explode in §4.4.
+- **Product chain across depth:** Repeatedly multiplying by $\mathbf{W}^{(k)\top}$ and $\phi'(\mathbf{Z}^{(k)})$ explains why gradients vanish or explode in deep networks.
 :::
 
 ::: {.col .fig}

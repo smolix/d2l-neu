@@ -1060,7 +1060,7 @@ Applying `d2l.to_bf16` sets `dtype=jnp.bfloat16` on all linear projections while
 
 @!fast-transformer-rungs-each-one-measured-2
 
-- **Why `bf16` alone gave $1.45\times$ (matching the $1.48\times$ matmul-only bound):** Unlike PyTorch (whose `scaled_dot_product_attention` already called FlashAttention), default `jax.nn.dot_product_attention` uses an XLA implementation that materializes the full $T \times T$ attention matrix in DRAM!
+- **Why `bf16` alone gave $1.45\times$ (matching the $1.48\times$ matmul-only bound):** Default `jax.nn.dot_product_attention` uses an XLA implementation that materializes the full $T \times T$ attention matrix in DRAM!
 :::
 
 ::: {.slide title="Rung 2b: cuDNN Fused FlashAttention Adds Another 1.3×" only="jax"}
@@ -1108,7 +1108,7 @@ Even though batch size $512$ easily fits in $24\text{ GiB}$, what happens if we 
 ::: {.slide title="Measuring Checkpointing: Fused Remat Beats the Floor"}
 [Checkpointing Measured]{.kicker}
 
-Wrapping all 6 Transformer blocks in `Checkpointed` (`checkpoint` / `nnx.remat`) cuts activation memory by two-thirds ($8\text{ GiB} \to 2.5\text{--}3.1\text{ GiB}$) while retaining **$0.79\text{--}0.85\times$** of throughput—beating both the $0.75\times$ FLOP bound and the $0.77\times$ forward-timing bound:
+Wrapping all 6 Transformer blocks in `Checkpointed` cuts activation memory by two-thirds ($7\text{--}9\text{ GiB} \to 2.6\text{--}3.2\text{ GiB}$) while retaining **$0.79\text{--}0.85\times$** of throughput—beating both the $0.75\times$ FLOP bound and the $0.77\times$ forward-timing bound:
 
 @!fast-transformer-rungs-each-one-measured-4
 
@@ -1122,7 +1122,7 @@ Summarizing all single-GPU rungs side by side converts token throughput into ach
 
 @!fast-transformer-the-waterfall
 
-- **Takeaway:** Cumulative single-GPU optimizations **double throughput ($\sim 2.0\text{--}2.1\times$)**, reaching **$\sim 48\text{--}51\%$ MFU** on the RTX 4090—driven overwhelmingly by `bfloat16` Tensor Cores and operator/attention fusion.
+- **Takeaway:** Cumulative single-GPU optimizations **double throughput ($\sim 2.0\text{--}2.1\times$)**, reaching **$\sim 45\text{--}50\%$ MFU** on the RTX 4090—driven overwhelmingly by `bfloat16` Tensor Cores and operator/attention fusion.
 :::
 
 ::: {.slide title="Predicting Multi-GPU Scaling From Step and Link Times"}
@@ -1133,7 +1133,7 @@ Summarizing all single-GPU rungs side by side converts token throughput into ach
 $$\textrm{Speedup}(k) \;\gtrsim\; \frac{k\, t_{\textrm{step}}(1)}{t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k)}$$
 
 - **Fixed $76\text{ MB}$ allreduce cost:** Over host-staged PCIe ($\beta_{\textrm{link}} \approx 0.42\text{ ns/B}$), syncing $19\text{M}$ `fp32` grads takes $31\text{ ms}$ ($k=2$) and $47\text{ ms}$ ($k=4$).
-- **Two opposite predictions:** At batch $64$ ($t_{\textrm{step}}(1) \approx 22\text{ ms} < 31\text{ ms}$), $k=2$ **slows down** ($\sim 0.85\times$); at batch $512$ ($t_{\textrm{step}}(1) \approx 95\text{ ms}$), $k=4$ achieves **$\ge 2.65\times$**!
+- **Two opposite predictions:** At batch $64$ ($t_{\textrm{step}}(1) \approx 22\text{ ms} < 31\text{ ms}$), $k=2$ **slows down** ($\sim 0.85\times$); at batch $512$ ($t_{\textrm{step}}(1) \approx 95\text{ ms}$), $k=4$ achieves **$\approx 2.6\text{--}2.7\times$**!
 :::
 
 ::: {.col .fig}
@@ -1145,12 +1145,12 @@ $$\textrm{Speedup}(k) \;\gtrsim\; \frac{k\, t_{\textrm{step}}(1)}{t_{\textrm{ste
 ::: {.slide title="Measured Scaling: Batch 64 Loses, Batch 512 Hits 3×"}
 [Multi-GPU Measured]{.kicker}
 
-Running production data parallelism (`DDP` / sharded `nnx.jit_partial`) on $k = 1, 2, 4$ GPUs tests both predictions of opposite sign:
+Running production data parallelism on $k = 1, 2, 4$ GPUs tests both predictions of opposite sign:
 
 @!fast-transformer-rungs-each-one-measured-8
 
 ::: {.d2l-note .rule}
-**Both predictions hold:** The standalone $76\text{ MB}$ allreduce measures $31\text{ ms}$ ($k=2$) and $48\text{ ms}$ ($k=4$). At batch $64$, adding a second GPU slows training down ($\sim 0.85\text{--}0.95\times$); at batch $512$ in `bfloat16`, $4$ GPUs achieve **$\sim 2.9\text{--}3.1\times$ single-GPU throughput** ($\sim 2.1\text{M tokens/s}$, or **$6\times$ our single-GPU baseline**), with backward-pass bucket overlap providing the margin above the no-overlap floor!
+**Both predictions hold:** The standalone $76\text{ MB}$ allreduce measures $31\text{ ms}$ ($k=2$) and $48\text{ ms}$ ($k=4$). At batch $64$, adding a second GPU slows training down ($\sim 0.85\text{--}0.95\times$); at batch $512$ in `bfloat16`, $4$ GPUs achieve **$\sim 2.9\text{--}3.2\times$ single-GPU throughput** ($\sim 1.9\text{--}2.3\text{M tokens/s}$, or **$6\text{--}7\times$ our single-GPU baseline**), with backward-pass bucket overlap providing the margin above the no-overlap floor!
 :::
 :::
 
@@ -1210,15 +1210,28 @@ Use the final millisecond accounting ($7\text{ ms}$ in matrix products near `bf1
 :::
 :::
 
-::: {.slide title="Summary: Step-by-Step Transformer Optimization"}
+::: {.slide title="Summary: Step-by-Step Transformer Optimization" only="pytorch"}
 [Key Takeaways]{.kicker}
 
 | Optimization Rung | Bottleneck Targeted | Amdahl Prediction | Measured Gain | Cumulative Speedup / MFU |
 | :--- | :--- | :---: | :---: | :---: |
-| **0. Baseline (`fp32`/`tf32`)** | Reference ($24\text{--}25\text{ ms}$ / $8192$ tok) | — | $1.00\times$ | $1.00\times$ ($\sim 23\text{--}24\%$ MFU) |
-| **1. Compile / `jit_partial`** | Non-matmul traffic & host dispatch | $\le 1.6\times$ (PT) / $1.02\times$ (JAX) | $1.13\times$ / $1.01\times$ | $1.01\text{--}1.13\times$ ($\sim 25\text{--}27\%$ MFU) |
-| **2. `bf16` + FlashAttention** | Tensor Core GEMMs & $T \times T$ attn | $1.5\text{--}2.0\times$ | $1.75\times$ / $1.93\times$ | $\approx 1.95\text{--}1.98\times$ ($\sim 46\text{--}49\%$ MFU) |
-| **3. Batch $64 \to 512$** | Fixed $40\text{ B/param}$ step work ($0.75\text{ ms}$) | $\approx 1.05\times$ | $1.03\text{--}1.06\times$ | **$\approx 2.0\text{--}2.1\times$ ($\sim 48\text{--}51\%$ MFU)** |
-| **Branch: Checkpointing** | Activation memory ($8 \to 2.5\text{ GiB}$) | $\ge 0.75\text{--}0.77\times$ | $0.79\text{--}0.85\times$ | Memory saver (not kept) |
-| **4. 4-GPU Data Parallel** | Single-GPU ceiling ($48\text{ ms}$ allreduce) | $\ge 2.65\times$ (batch 512) | **$\approx 3.0\times$** over 1 GPU | **$\approx 6\times$ over 1-GPU baseline** |
+| **0. Baseline (`fp32`/`tf32`)** | Reference ($26\text{ ms}$ / $8192$ tok) | — | $1.00\times$ | $1.00\times$ ($\sim 22\%$ MFU) |
+| **1. `torch.compile`** | Non-matmul traffic & host dispatch | $\le 1.6\times$ | $1.16\times$ | $1.16\times$ ($\sim 25\%$ MFU) |
+| **2. `bf16` (FlashAttention already on)** | Tensor Core GEMMs | $1.5\text{--}2.0\times$ | $1.74\times$ | $\approx 2.0\times$ ($\sim 44\%$ MFU) |
+| **3. Batch $64 \to 512$** | Fixed $40\text{ B/param}$ step work ($0.75\text{ ms}$) | $\approx 1.05\times$ | $1.02\times$ | **$\approx 2.1\times$ ($\sim 45\%$ MFU)** |
+| **Branch: Checkpointing** | Activation memory ($8.6 \to 3.2\text{ GiB}$) | $\ge 0.77\times$ | $0.85\times$ | Memory saver (not kept) |
+| **4. 4-GPU Data Parallel** | Single-GPU ceiling ($48\text{ ms}$ allreduce) | $\approx 2.7\times$ (batch 512) | **$\approx 2.9\times$** over 1 GPU | **$\approx 6\times$ over 1-GPU baseline** |
+:::
+
+::: {.slide title="Summary: Step-by-Step Transformer Optimization" only="jax"}
+[Key Takeaways]{.kicker}
+
+| Optimization Rung | Bottleneck Targeted | Amdahl Prediction | Measured Gain | Cumulative Speedup / MFU |
+| :--- | :--- | :---: | :---: | :---: |
+| **0. Baseline (`fp32`/`tf32`)** | Reference ($24\text{ ms}$ / $8192$ tok) | — | $1.00\times$ | $1.00\times$ ($\sim 23\%$ MFU) |
+| **1. `jit_partial`** | Host dispatch | $1.02\times$ | $1.01\times$ | $1.01\times$ ($\sim 24\%$ MFU) |
+| **2. `bf16` + fused attention** | Tensor Core GEMMs & $T \times T$ attn | $1.5\text{--}2.0\times$ | $1.45\times$, then $1.35\times$ | $\approx 2.0\times$ ($\sim 47\%$ MFU) |
+| **3. Batch $64 \to 512$** | Fixed $40\text{ B/param}$ step work ($0.75\text{ ms}$) | $\approx 1.05\times$ | $1.06\times$ | **$\approx 2.1\times$ ($\sim 50\%$ MFU)** |
+| **Branch: Checkpointing** | Activation memory ($7.4 \to 2.6\text{ GiB}$) | $\ge 0.76\times$ | $0.79\times$ | Memory saver (not kept) |
+| **4. 4-GPU Data Parallel** | Single-GPU ceiling ($48\text{ ms}$ allreduce) | $\approx 2.6\times$ (batch 512) | **$\approx 3.2\times$** over 1 GPU | **$\approx 7\times$ over 1-GPU baseline** |
 :::

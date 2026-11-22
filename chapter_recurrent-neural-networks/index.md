@@ -92,7 +92,7 @@ Sequence Models and Recurrent Neural Networks<br>**autoregression · BPE subword
 - **Credit assignment & decoding (§§8.5–8.6):** Derive Backpropagation Through Time (BPTT) to explain why gradients vanish or explode, and compare beam search against truncated samplers ($\text{top-}k$, $\text{top-}p$, $\text{min-}p$).
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:ch08-rnn-roadmap
 :::
 :::
@@ -108,7 +108,7 @@ Sequence Models and Recurrent Neural Networks<br>**autoregression · BPE subword
 - **Gradient horizon & generation (§§8.5–8.6):** Despite $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$, $\tanh'$ contraction ($\approx 0.27$) decays gradients below $1\%$ within $8$ steps; truncated samplers restore `distinct-3` $\approx 0.99$.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:ch08-rnn-wells-benchmarks
 :::
 :::

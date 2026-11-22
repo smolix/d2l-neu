@@ -431,10 +431,16 @@ Finding a target pattern in a cluttered visual scene illustrates the two geometr
 
 When $f$ scores every $2 \times 2$ window against a $2 \times 2$ patch of ones, both paths around the diagram produce the identical output grid:
 
-![](../img/why-conv-equivariance.svg){.nostretch width=68% fig-align="center"}
+::: {.cols .vc}
+::: {.col .fig}
+![](../img/why-conv-equivariance.svg){.nostretch width=100%}
+:::
 
+::: {.col}
 ::: {.d2l-note .rule}
 **Commutation invariant:** Shifting the input by $v = (3, 2)$ and then applying the filter $f$ (bottom path) yields the exact same response map as applying $f$ first and shifting the output by $v$ (right path).
+:::
+:::
 :::
 :::
 
@@ -443,7 +449,7 @@ When $f$ scores every $2 \times 2$ window against a $2 \times 2$ patch of ones, 
 
 On an 8-sample 1D signal mapped to 8 hidden units ($h_i = u_i + \sum_k W_{i,k} x_k$), each geometric constraint prunes the $8 \times 8$ weight matrix $\mathbf{W}$:
 
-![](../img/why-conv-weight-sharing.svg){.nostretch width=92% fig-align="center"}
+![](../img/why-conv-weight-sharing.svg){.nostretch width=46% fig-align="center"}
 
 - **(a) Fully connected (64 weights):** Every entry $W_{i,k}$ is independent.
 - **(b) Equivariant / Toeplitz (15 weights):** Shifting a unit impulse at $k$ to $k+1$ shifts the output down one row ($W_{i+1,k+1} = W_{i,k}$), making $\mathbf{W}$ constant along each diagonal $a = k - i \in \{-7,\dots,7\}$.

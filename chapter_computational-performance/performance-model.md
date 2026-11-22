@@ -1053,7 +1053,7 @@ The GPU finishes either operation in $\sim 2\,\mu\text{s}$; the remaining $10\te
 :::
 :::
 
-::: {.slide title="The Three-Floor Time Bound and Crossover Knee"}
+::: {.slide title="The Three-Floor Time Bound and Crossover Knee" only="pytorch"}
 [Unified Time Model]{.kicker}
 
 ::: {.cols .vc}
@@ -1061,12 +1061,30 @@ The GPU finishes either operation in $\sim 2\,\mu\text{s}$; the remaining $10\te
 $$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes}}{\beta}\right)$$
 
 - **The dominant floor names the regime:** Overhead-bound ($h$), compute-bound ($\textrm{FLOPs}/P$), or bandwidth-bound ($\textrm{bytes}/\beta$).
-- **Overhead knee ($n^* \approx (hP/2)^{1/3}$):** Square matmul compute overtakes host launch at $n^* \approx 1{,}000$ in PyTorch ($h \approx 13\,\mu\text{s}$) and $n^* \approx 1{,}800$ in single-op JAX ($h \approx 70\,\mu\text{s}$).
+- **Overhead knee ($n^* \approx (hP/2)^{1/3}$):** Square matmul compute overtakes host launch at $n^* \approx 1{,}000$ ($h \approx 13\,\mu\text{s}$ per op).
 - **Faster GPUs need wider matrices:** A $14\times$ faster GPU raises $n^*$ by $14^{1/3} \approx 2.4\times$.
 :::
 
 ::: {.col .fig}
-@fig:ch13-perf-overhead-knee
+@fig:ch13-perf-overhead-knee@pytorch
+:::
+:::
+:::
+
+::: {.slide title="The Three-Floor Time Bound and Crossover Knee" only="jax"}
+[Unified Time Model]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes}}{\beta}\right)$$
+
+- **The dominant floor names the regime:** Overhead-bound ($h$), compute-bound ($\textrm{FLOPs}/P$), or bandwidth-bound ($\textrm{bytes}/\beta$).
+- **Overhead knee ($n^* \approx (hP/2)^{1/3}$):** Square matmul compute overtakes host launch at $n^* \approx 1{,}800$ for single-op dispatch ($h \approx 70\,\mu\text{s}$).
+- **Faster GPUs need wider matrices:** A $14\times$ faster GPU raises $n^*$ by $14^{1/3} \approx 2.4\times$.
+:::
+
+::: {.col .fig}
+@fig:ch13-perf-overhead-knee@jax
 :::
 :::
 :::
@@ -1080,7 +1098,7 @@ $$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes
 | :--- | :--- | :--- |
 | **Compute-bound** | GPU busy $\approx 100\%$; $I > I^*$; time $\propto \textrm{FLOPs}$ | Narrower precision (`bf16`/`fp8`), fewer FLOPs, more GPUs |
 | **Bandwidth-bound** | GPU busy $\approx 100\%$; $I < I^*$; time $\propto \textrm{bytes}$ | Operator fusion, larger batch $B$, narrower types, on-chip tiling |
-| **Overhead-bound** | GPU idle between kernels; time $\approx h$ independent of size | Compile whole step (`jax.jit`), CUDA graph replay, larger batches |
+| **Overhead-bound** | GPU idle between kernels; time $\approx h$ independent of size | Compile the whole step, CUDA graph replay, larger batches |
 :::
 
 ::: {.slide title="Predicting and Profiling a Complete MLP Training Step"}
@@ -1093,7 +1111,7 @@ Consider one SGD step of a 3-layer MLP ($4096 \to 4096 \to 4096 \to 10$) on batc
 @!performance-model-profiling-a-training-step-2
 
 ::: {.d2l-note}
-The profile matches our $2.5\text{ ms}$ paper prediction within $10\%$: the GPU is busy nearly $100\%$ of the step, and `gemm` kernels account for $> 75\%$ of device time (with XLA fusing the SGD update directly into the backward matmuls in JAX).
+The profile matches our $2.5\text{ ms}$ paper prediction within $10\%$: the GPU is busy nearly $100\%$ of the step, and `gemm` kernels account for $> 75\%$ of device time.
 :::
 :::
 

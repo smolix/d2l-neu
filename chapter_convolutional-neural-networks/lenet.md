@@ -741,7 +741,7 @@ LeNet divides into a **convolutional encoder** (trading spatial resolution $28 \
 ::: {.slide title="Implementing LeNet as a Sequential Module"}
 [Xavier Uniform Weight Initialization and Sequential Layer Stack]{.kicker}
 
-We initialize all convolutional and linear weights with Xavier uniform initialization and stack the encoder and dense head inside a single `Sequential` container:
+We Xavier-initialize all weights and stack the encoder and dense head in one `Sequential`:
 
 @lenet-2
 :::
@@ -749,15 +749,15 @@ We initialize all convolutional and linear weights with Xavier uniform initializ
 ::: {.slide title="Tracing Tensor Shapes Through LeNet"}
 [Verifying Spatial Shrinkage and Channel Expansion Before Training]{.kicker}
 
-A single mismatched padding or stride shifts every downstream shape and breaks the flatten boundary ($16 \times 5 \times 5 = 400$). Our `layer_summary` diagnostic traces a dummy $(1, 1, 28, 28)$ tensor layer by layer:
+`layer_summary` traces a dummy $(1, 1, 28, 28)$ input through every layer:
 
 ::: {.cols .vc}
 ::: {.col}
 @lenet-3
 :::
 
-::: {.col .fig}
-![](../img/lenet-vert.svg){.nostretch width=52% fig-align="center"}
+::: {.col .fig .narrow}
+![](../img/lenet-vert.svg){.nostretch width=42% fig-align="center"}
 :::
 :::
 :::
@@ -863,9 +863,15 @@ Every permuted image still contains the exact same 784 pixel intensities in a co
 ::: {.slide title="Ordered vs. Shuffled Pixels: The Spatial Prior"}
 [Retraining LeNet on Shuffled Fashion-MNIST]{.kicker}
 
+@-lenet-shuffled-pixels-4
+:::
+
+::: {.slide title="Ordered vs. Shuffled Pixels: The Spatial Prior (cont.)"}
+[Retraining LeNet on Shuffled Fashion-MNIST]{.kicker}
+
 ::: {.cols .vc}
 ::: {.col}
-@lenet-shuffled-pixels-4
+@!lenet-shuffled-pixels-4
 
 - **Inductive bias isolated:** Destroying 2D spatial locality drops LeNet by $3\text{--}4$ points ($\approx 85\text{--}86\%$), erasing 100% of its gain over the MLP.
 :::

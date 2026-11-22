@@ -388,7 +388,7 @@ Setting the right-hand side to $\delta$ yields the simultaneous confidence radiu
 
 $$r(k, n, \delta) = \sqrt{\frac{\log(2k/\delta)}{2n}}$$
 
-- **Benign $\sqrt{\log k}$ growth:** At $n = 10{,}000, \delta = 0.05$, the radius grows gently from $1.36\%$ ($k = 1$) to $2.30\%$ ($k = 10^3$) and $2.99\%$ ($k = 10^6$).
+- **Benign $\sqrt{\log k}$ growth:** At $n = 10{,}000, \delta = 0.05$, the radius grows gently from $1.36\%$ ($k = 1$) to $2.30\%$ ($k = 10^3$) and $2.96\%$ ($k = 10^6$).
 :::
 
 ::: {.col .fig}
@@ -474,7 +474,7 @@ What if $|\mathcal{F}| = \infty$, such as continuous linear halfspaces $f(\mathb
 
 Consider oriented linear halfplanes $f(\mathbf{x}) = \operatorname{sign}(w_1 x_1 + w_2 x_2 + b)$ in $\mathbb{R}^2$:
 
-![](../img/mdl-clf-shattering.svg){.nostretch width=88% fig-align="center"}
+![](../img/mdl-clf-shattering.svg){.nostretch width=78% fig-align="center"}
 
 - **$\mathrm{VC} \ge 3$ (left):** Any $3$ non-collinear points in $\mathbb{R}^2$ can be partitioned in all $2^3 = 8$ ways by a straight line.
 - **$\mathrm{VC} < 4$ (middle & right):** *No* set of $4$ points in $\mathbb{R}^2$ can ever be shattered! If the $4$ points form a convex quadrilateral (middle), a straight line cannot separate opposite diagonal corners (`+` vs. `-`); if one point lies inside the triangle of the other three (right), any halfplane containing the three vertices contains the interior point. Thus $\mathrm{VC} = 3$.

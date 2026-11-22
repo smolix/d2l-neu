@@ -1201,9 +1201,15 @@ $$\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + \frac{b}{1 - p_\ell}\,f(\mathbf{x}_\el
 ::: {.slide title="Implementing and Verifying `drop_path`"}
 [Stochastic Depth Code]{.kicker}
 
+@-training-recipes-stochastic-depth
+:::
+
+::: {.slide title="Implementing and Verifying `drop_path` (cont.)"}
+[Stochastic Depth Code]{.kicker}
+
 Sampling one Bernoulli mask per example (`shape = (B, 1, 1, 1)`) and passing 1,000 inputs through `StochasticResidual(p=0.5)` confirms that half of the examples bypass the branch and equal $\textrm{ReLU}(\mathbf{X})$ identically:
 
-@training-recipes-stochastic-depth
+@!training-recipes-stochastic-depth
 :::
 
 ::: {.slide title="Exponential Moving Average (EMA) of Model Weights"}
@@ -1243,7 +1249,7 @@ Near convergence, minibatch noise causes SGD/AdamW iterates $\boldsymbol{\theta}
 ::: {.slide title="Implementing Classic vs. Modern Training Steps"}
 [Recipe Implementation]{.kicker}
 
-In code, `ClassicRecipe` and `ModernRecipe` inherit the exact same `ResNet18` backbone and differ only in `configure_optimizers` and `training_step`:
+`ClassicRecipe` and `ModernRecipe` share `ResNet18`, differing only in two methods:
 
 @training-recipes-one-network-two-recipes-2
 :::

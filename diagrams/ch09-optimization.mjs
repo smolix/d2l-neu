@@ -24,6 +24,11 @@ const card = (x, y, w, h, accent, tint, title, l1, l2, l3) => {
     o += tx(cx, y + 44, l1, { fs: 12.5, fw: 600, fill: C.ink });
     o += tx(cx, y + 66, l2, { mono: true, fs: 11.5, fw: 600, fill: C.ink });
     o += tx(cx, y + 88, l3, { fs: 12, fw: 600, fill: C.muted });
+  } else if (l2 && h < 90) {
+    // short card: pull the three lines up so the mono l2 line clears the border
+    o += tx(cx, y + 20, title, { fs: 14, fw: 700, fill: accent });
+    if (l1) o += tx(cx, y + 42, l1, { fs: 12.5, fw: 600, fill: C.ink });
+    o += tx(cx, y + 62, l2, { mono: true, fs: 12, fw: 600, fill: C.muted });
   } else {
     o += tx(cx, y + 22, title, { fs: 14, fw: 700, fill: accent });
     if (l1) o += tx(cx, y + 48, l1, { fs: 12.5, fw: 600, fill: C.ink });
@@ -106,8 +111,6 @@ function fourTestbeds() {
     '470,784 params (2 pre-LN blocks)',
     '0.03 epochs on WikiText bytes',
     '40× grad spread · AdamW & Muon');
-  o += arrow(272, 71, 288, 71, C.gray);
-  o += arrow(272, 201, 288, 201, C.gray);
   return svg(W, H, o);
 }
 
@@ -132,6 +135,8 @@ function roadmap() {
   o += arrow(364, 69, 378, 69, C.blue);
   o += arrow(182, 207, 196, 207, C.amber);
   o += arrow(364, 207, 378, 207, C.green);
+  o += line(462, 125, 462, 138, C.blue) + line(462, 138, 98, 138, C.blue);
+  o += arrow(98, 137, 98, 151, C.blue);
   return svg(W, H, o);
 }
 
@@ -229,7 +234,7 @@ function gdDescentLemma() {
     'Overshoot',
     'η ≥ 2 / L',
     '1 − ηL/2 ≤ 0',
-    'Bound increases');
+    'No descent guarantee');
   return svg(W, H, o);
 }
 
@@ -358,7 +363,7 @@ function sgdThreeLaws() {
   o += card(16, 102, 528, 78, D.blue.dark, C.lblue,
     'Law 2: Inverse Curvature Scaling (E[x_∞²] ∝ 1 / λ)',
     'Flat λ₁ = 0.2 has var 0.253 vs. steep λ₂ = 4 var 0.016',
-    'Noise cloud has 20× higher variance (4× wider std) along flat axis');
+    'Noise cloud has 16× higher variance (4× wider std) along flat axis');
   o += card(16, 192, 528, 78, D.green.dark, C.lgreen,
     'Law 3: Linear η / b Scaling (E[x_∞²] ∝ η / b)',
     'Halving η or doubling batch size b halves stationary variance',
@@ -497,12 +502,12 @@ function testHarnessFlow() {
   o += card(290, 16, 254, 110, D.blue.dark, C.lblue,
     '2. train_steps(T=2000)',
     'Fixed 2,000-step budget',
-    'PyTorch & JAX parity');
-  o += card(16, 144, 254, 110, D.orange.dark, C.lamber,
+    'Same loop for every optimizer');
+  o += card(290, 144, 254, 110, D.orange.dark, C.lamber,
     '3. final_loss & steps_to',
     'Mean of last k=100 steps',
     '25-step block threshold');
-  o += card(290, 144, 254, 110, D.green.dark, C.lgreen,
+  o += card(16, 144, 254, 110, D.green.dark, C.lgreen,
     '4. Held-Out Evaluation',
     '1.1M WikiText val bytes',
     '10K Fashion-MNIST test');
@@ -513,21 +518,27 @@ function testHarnessFlow() {
 }
 
 function testLossLandmarks() {
-  const W = 560, H = 280;
+  // Bar length is proportional to the loss in nats (36 px per nat).
+  const W = 560, H = 280, X0 = 206, K = 36;
   let o = '';
   const bars = [
-    { y: 16,  w: 360, val: '5.71 nats (303)', title: 'Untrained TinyLM (step 1)', sub: 'ln 256 + s²/2 (s² ≈ 1/3)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { y: 72,  w: 330, val: '5.55 nats (256)', title: 'Uniform Random Guess', sub: 'p = 1/256 per byte', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { y: 128, w: 260, val: '3.18 nats (24.5)', title: 'Unigram Byte Counts', sub: 'Marginal p(b) frequency', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 184, w: 220, val: '2.50 nats (12.2)', title: 'Bigram Byte-Pair Table', sub: 'p(b_t | b_{t−1}) 1-byte ctx', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { y: 238, w: 260, val: '2.13 → 1.50 nats', title: 'Trained TinyLM (64-B ctx)', sub: '', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { y: 16,  v: 5.71, val: '5.71 nats (303)', title: 'Untrained TinyLM (step 1)', sub: 'ln 256 + s²/2 (s² ≈ 1/3)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { y: 70,  v: 5.55, val: '5.55 nats (256)', title: 'Uniform Random Guess', sub: 'p = 1/256 per byte', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { y: 124, v: 3.18, val: '3.18 nats (24.0)', title: 'Unigram Byte Counts', sub: 'Marginal p(b) frequency', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { y: 178, v: 2.50, val: '2.50 nats (12.2)', title: 'Bigram Byte-Pair Table', sub: 'p(b_t | b_{t−1}) 1-byte ctx', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { y: 232, v: 2.13, v2: 1.50, val: '2.13 → 1.50 nats', title: 'Trained TinyLM (64-B ctx)', sub: '', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   bars.forEach(b => {
-    const h = b.sub ? 46 : 32;
-    o += box(16, b.y, b.w, h, b.fill, b.st, 6, 2);
-    o += tx(28, b.y + 16, b.title, { fs: 13, fw: 700, fill: b.dk, anchor: 'start' });
-    if (b.sub) o += tx(28, b.y + 34, b.sub, { fs: 11.5, fw: 500, fill: C.ink, anchor: 'start' });
-    o += tx(540, b.y + h / 2, b.val, { mono: true, fs: 12.5, fw: 700, fill: b.dk, anchor: 'end' });
+    const cy = b.y + 20;
+    o += tx(16, b.sub ? b.y + 11 : cy, b.title, { fs: 13, fw: 700, fill: b.dk, anchor: 'start' });
+    if (b.sub) o += tx(16, b.y + 30, b.sub, { fs: 11.5, fw: 500, fill: C.ink, anchor: 'start' });
+    if (b.v2) {
+      o += box(X0, cy - 13, b.v * K, 26, '#FFFFFF', b.st, 5, 1.8, true);
+      o += box(X0, cy - 13, b.v2 * K, 26, b.fill, b.st, 5, 2);
+    } else {
+      o += box(X0, cy - 13, b.v * K, 26, b.fill, b.st, 5, 2);
+    }
+    o += tx(X0 + b.v * K + 8, cy, b.val, { mono: true, fs: 12.5, fw: 700, fill: b.dk, anchor: 'start' });
   });
   return svg(W, H, o);
 }
@@ -537,7 +548,7 @@ function testLrDiagnosis() {
   let o = '';
   o += card(16, 12, 528, 78, D.blue.dark, C.lblue,
     'η = 0.1 (Too Low — Under-Budgeted Travel B_T = 200)',
-    'Smooth monotonic drop; still descending at step 2,000 (2.47 nats)',
+    'Smooth monotonic drop; still descending at step 2,000 (2.48 nats)',
     'Action: Raise η (short of travel budget, not trapped in noise ball)');
   o += card(16, 102, 528, 78, D.green.dark, C.lgreen,
     'η = 0.5 (Workable — Near Initial Sharpness Ceiling 2/L)',
@@ -757,12 +768,12 @@ function adamColdStartJump() {
 function adamDualMoments() {
   const W = 560, H = 278;
   let o = '';
-  o += box(16, 22, 108, 86, N.panel, C.gray, 8, 2);
-  o += tx(70, 50, 'Gradient', { fs: 14, fw: 700, fill: C.ink });
-  o += tx(70, 78, 'g_t', { mono: true, fs: 15, fw: 700, fill: D.red.dark });
+  o += box(16, 22, 108, 118, N.panel, C.gray, 8, 2);
+  o += tx(70, 68, 'Gradient', { fs: 14, fw: 700, fill: C.ink });
+  o += tx(70, 96, 'g_t', { mono: true, fs: 15, fw: 700, fill: D.red.dark });
 
-  o += arrow(126, 46, 158, 46, C.blue);
-  o += arrow(126, 82, 158, 82, C.amber);
+  o += arrow(126, 44, 158, 44, C.blue);
+  o += arrow(126, 122, 158, 122, C.amber);
 
   o += card(160, 10, 212, 68, D.blue.dark, C.lblue,
     '1st Moment m_t (β₁=0.9)',
@@ -1081,14 +1092,14 @@ function schedClassicalFamilies() {
     'FREEZES at MSE 0.125!');
   o += card(16, 146, 254, 118, D.orange.dark, C.lamber,
     'Polynomial α = 1/2',
-    'B_{3000} = 200.5 · η_T = 0.036',
+    'B_{3000} = 200.2 · η_T = 0.036',
     'η_0 (1 + t/25)⁻⁰·⁵',
-    'Tracks noise ball to 0.097');
+    'Tracks noise ball to ≈0.09–0.10');
   o += card(290, 146, 254, 118, D.green.dark, C.lgreen,
     'Polynomial α = 1',
     'B_{3000} = 48.2 · η_T = 0.0033',
     'η_0 (1 + t/25)⁻¹',
-    'Tracks noise ball to 0.011');
+    'Tracks noise ball to ≈0.011–0.012');
   return svg(W, H, o);
 }
 
@@ -1119,21 +1130,21 @@ function schedLateDecayWin() {
     'Constant',
     'Budget 100%',
     'B_T = 6.0',
-    'Ends 1.58 nats');
+    'Ends ≈1.56 nats');
   o += card(198, 14, 164, 148, D.purple.dark, D.purple.tint,
     'Cosine Decay',
     'Budget 50%',
     'B_T = 3.0',
-    'Ends 1.56 nats');
+    'Ends ≈1.56 nats');
   o += card(380, 14, 164, 148, D.green.dark, C.lgreen,
     'Stable–Decay',
     'Budget 90%',
     'B_T = 5.4',
-    'Wins: 1.50 nats!');
+    'Wins: ≈1.51 nats!');
 
   o += box(16, 178, 528, 78, C.lamber, C.amber, 8, 2);
   o += tx(280, 202, 'Never Rank Schedules Mid-Run Before Cooldown (Step 1,500 vs. 2,000):', { fs: 13.5, fw: 700, fill: D.orange.dark });
-  o += tx(280, 226, 'At step 1,500 cosine leads (1.57 vs 1.62); during steps 1,600–2,000', { fs: 12, fw: 600, fill: C.ink });
+  o += tx(280, 226, 'At step 1,500 cosine leads (≈1.58 vs ≈1.61); during steps 1,600–2,000', { fs: 12, fw: 600, fill: C.ink });
   o += tx(280, 245, 'late decay sheds 0.10 nats of noise and wins by 0.05 nats!', { fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
@@ -1356,7 +1367,7 @@ function mupCoherentSum() {
   o += box(16, 178, 528, 78, C.lamber, C.amber, 8, 2);
   o += tx(280, 202, 'The Fan-In Blow-Up Law Under Standard Parametrization:', { fs: 13.5, fw: 700, fill: D.orange.dark });
   o += tx(280, 226, 'At η = 0.0039, step 1 shifts features by 0.5× at n=128 vs. 32× at n=8,192!', { fs: 12, fw: 600, fill: C.ink });
-  o += tx(280, 245, 'Keeping Δz = ΔW h = Θ(1) requires scaling hidden Adam LR as η_hidden ∝ 1/n', { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
+  o += tx(280, 245, 'Keeping Δz = ΔW h = Θ(1) needs hidden Adam LR η_hidden ∝ 1/n', { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
   return svg(W, H, o);
 }
 
@@ -1531,7 +1542,7 @@ function pracGuardVsBrake() {
 
   o += box(16, 178, 528, 78, C.lamber, C.amber, 8, 2);
   o += tx(280, 202, 'Golden Rule for Global-Norm Gradient Clipping Threshold θ:', { fs: 13.5, fw: 700, fill: D.orange.dark });
-  o += tx(280, 230, 'When clipping fires on >20%–50% of steps, LOWER η first — never lower θ!', { fs: 12.5, fw: 700, fill: C.ink });
+  o += tx(280, 230, 'When clipping fires on >20%–50% of steps, LOWER η first, then tune θ', { fs: 12.5, fw: 700, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -1597,7 +1608,7 @@ function pracFrontierRecipes() {
   o += card(16, 144, 528, 116, D.green.dark, C.lgreen,
     'Kimi K2 1T (MuonClip) & Shared Frontier Consensus',
     'Muon on 2D hidden matrices + AdamW on embeddings/head/1D · WSD cooldown',
-    'Defaults: (β₁,β₂)=(0.9,0.95), 2D λ=0.1, clip θ=1.0, warmup');
+    'Defaults: (β₁,β₂)=(0.9,0.95), 2D λ=0.1, clip θ=1.0 + warmup');
   return svg(W, H, o);
 }
 
@@ -1611,7 +1622,7 @@ function pracDiagnosticTree() {
   o += card(290, 12, 254, 78, D.orange.dark, C.lamber,
     'Stalls High / Clips > 20%',
     'Peak rate η₀ globally too high',
-    '→ Lower η₀ by 2–3× (not θ!)');
+    '→ Lower η₀ by 2–3× first');
   o += card(16, 102, 254, 78, D.blue.dark, C.lblue,
     'Plateaus with High Jitter',
     'Trapped in noise ball at η/b',

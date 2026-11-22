@@ -559,7 +559,7 @@ Linear Regression Implementation from Scratch<br>
 ::: {.col}
 @linear-regression-scratch-the-parameters
 
-- **Framework gradient hooks:** PyTorch sets `requires_grad=True`, MXNet calls `attach_grad()`, TensorFlow uses `tf.Variable`, and JAX differentiates pure functions directly via `jax.grad`.
+- **Gradient tracking:** The parameters are created so that the framework can differentiate the loss with respect to them.
 :::
 
 ::: {.col .fig}
@@ -642,7 +642,7 @@ Linear Regression Implementation from Scratch<br>
 ::: {.col}
 @linear-regression-scratch-the-training-loop
 
-- **Two critical autograd guards:** Parameter updates must run outside the autograd tape (`torch.no_grad()`), and `param.grad.zero_()` must clear accumulated gradients before the next backward pass.
+- **Autograd guard:** The parameter update runs outside gradient recording, and each step uses only the current minibatch's gradient.
 :::
 
 ::: {.col .fig}
@@ -712,7 +712,7 @@ On a log-scale plot, exponential convergence $(1 - \eta)^{64k}$ appears as a str
 ::: {.col}
 @linear-regression-scratch-the-learning-rate
 
-- **Stability boundary ($0 < \eta < 2/\mu_{\max}$):** $\eta = 0.003$ crawls (loss $\approx 2.4$); $\eta \in \{0.03, 0.3\}$ hits the $5 \times 10^{-5}$ floor; $\eta = 3 > 2$ multiplies error by $1 - 3 = -2$ per step and overflows to `nan`.
+- **Stability boundary ($0 < \eta < 2/\mu_{\max}$):** $\eta = 0.003$ crawls (loss $\approx 2$–$3$); $\eta \in \{0.03, 0.3\}$ hits the $5 \times 10^{-5}$ floor; $\eta = 3 > 2$ multiplies error by $1 - 3 = -2$ per step and overflows to `nan`.
 :::
 
 ::: {.col .fig}
@@ -721,12 +721,12 @@ On a log-scale plot, exponential convergence $(1 - \eta)^{64k}$ appears as a str
 :::
 :::
 
-::: {.slide title="Concept Check: Gradients, Loss Scaling & Stability"}
+::: {.slide title="Concept Check: Gradients, Loss Scaling & Stability" only="pytorch"}
 [Check Your Understanding]{.kicker}
 
 Test your understanding of training loop mechanics on these three scenarios:
 
-1. **Forgotten `zero_grad()`:** In PyTorch, if you omit `param.grad.zero_()` inside the training loop, what vector does step $t$ subtract from `param`, and how do the iterates behave on a quadratic bowl?
+1. **Forgotten `zero_grad()`:** If you omit `param.grad.zero_()` inside the training loop, what vector does step $t$ subtract from `param`, and how do the iterates behave on a quadratic bowl?
 2. **Summed loss vs. mean loss:** Suppose a loss function computes the *sum* $\sum_{i \in \mathcal{B}} (\hat{y}^{(i)} - y^{(i)})^2$ over a minibatch of $|\mathcal{B}| = 32$ without dividing by $2|\mathcal{B}|$. Which learning rate $\eta$ reproduces our scratch step at $\eta_{\textrm{scratch}} = 0.03$?
 3. **Rescaled feature stability:** If you multiply feature $x_1$ by $10$ (so its variance becomes $100$ instead of $1$), what happens to the maximum stable learning rate $\eta_{\max}$?
 
@@ -739,17 +739,33 @@ Test your understanding of training loop mechanics on these three scenarios:
 :::
 :::
 
-::: {.slide title="Section 2.3 Summary & Key Takeaways"}
+::: {.slide title="Concept Check: Gradients, Loss Scaling & Stability" except="pytorch"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of training loop mechanics on these two scenarios:
+
+1. **Summed loss vs. mean loss:** Suppose a loss function computes the *sum* $\sum_{i \in \mathcal{B}} (\hat{y}^{(i)} - y^{(i)})^2$ over a minibatch of $|\mathcal{B}| = 32$ without dividing by $2|\mathcal{B}|$. Which learning rate $\eta$ reproduces our scratch step at $\eta_{\textrm{scratch}} = 0.03$?
+2. **Rescaled feature stability:** If you multiply feature $x_1$ by $10$ (so its variance becomes $100$ instead of $1$), what happens to the maximum stable learning rate $\eta_{\max}$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. The summed loss is $2|\mathcal{B}| = 64$ times larger than our scratch loss, so its gradient is $64\mathbf{g}$; we must divide the learning rate by $64$ to $\eta = 0.03 / 64 \approx 4.69 \times 10^{-4}$.
+2. Scaling $x_1$ by $10$ increases the largest eigenvalue of the Hessian $\mathbf{H} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$ by $10^2 = 100$, shrinking the stability ceiling $\eta_{\max} = 2 / \mu_{\max}$ by $100\times$ (from $\approx 2$ down to $\approx 0.02$).
+:::
+:::
+
+::: {.slide title="Summary & Key Takeaways"}
 [Summary]{.kicker}
 
 | Training Stage | Mathematical Operation | Systems / Implementation Guard | Quantitative Check ($\sigma = 0.01, n = 1000$) |
 |---|---|---|---|
 | **1. Forward & Loss** | $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$, $L_{\mathcal{B}} = \frac{1}{2|\mathcal{B}|}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ | Reshape `y` to `(-1, 1)` to prevent `(B,) - (B, 1) -> (B, B)` broadcasting | Initial loss $\mathbb{E}[L(\mathbf{0}, 0)] \approx 16.6$ |
 | **2. Backward Pass** | $\nabla_{\mathbf{w}} L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{X}^\top(\hat{\mathbf{y}} - \mathbf{y})$ | Verify `autograd` against hand formula on 1 batch | Max discrepancy $\lesssim 10^{-7}$ (`float32` eps) |
-| **3. SGD Update** | $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta \nabla L_{\mathcal{B}}$ | Run update outside autograd tape (`no_grad`) and clear `.grad` | Stable for $0 < \eta < 2/\mu_{\max}$; $\eta=0.03$ drops loss $7\times$/epoch |
+| **3. SGD Update** | $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta \nabla L_{\mathcal{B}}$ | Run update outside the autograd tape; use only the current gradient | Stable for $0 < \eta < 2/\mu_{\max}$; $\eta=0.03$ drops loss $7\times$/epoch |
 | **4. Epoch Reshuffle** | Uniform permutation of $\{0, \ldots, n-1\}$ | Re-create generator each epoch so it does not exhaust after epoch 1 | Loss plateaus at $\sigma^2/2 = 5 \times 10^{-5}$; $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_\infty \lesssim 10^{-3}$ |
 
 ::: {.d2l-note}
-**Up next (§2.4 Object-Oriented Design & §2.5 Concise Implementation):** We first package this bare loop into reusable `Module`, `DataModule`, and `Trainer` classes (`LinearRegressionScratch`, §2.4), and then swap in high-level framework layers, MSE losses, and optimizers (`LinearRegression`, §2.5).
+**Up next (object-oriented design & concise implementation):** We first package this bare loop into reusable `Module`, `DataModule`, and `Trainer` classes (`LinearRegressionScratch`), and then swap in high-level framework layers, MSE losses, and optimizers (`LinearRegression`).
 :::
 :::

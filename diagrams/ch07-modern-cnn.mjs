@@ -16,26 +16,65 @@ const box = (x, y, w, h, fill, stroke, rx = 8, sw = 2, dash = false) =>
 const line = (x1, y1, x2, y2, color, w = 2, dash = false) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${w}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
 
-function fitTx(cx, cy, t, maxW, o = {}) {
+// Width-safe text: realistic glyph widths (Source Sans 3 ≈ 0.50 em, a little
+// more in bold; mono ≈ 0.60 em), a modest shrink (never below FIT_MIN_FS),
+// and a two-line wrap at the space nearest the middle when the text still
+// does not fit. fitLines() returns { fs, lines }.
+const FIT_MIN_FS = 11;
+const fitCharW = (o) => (o.mono ? 0.60 : (o.fw >= 700 ? 0.52 : 0.50));
+function fitLines(t, maxW, o = {}) {
   const str = String(t);
-  const charFactor = o.mono ? 0.68 : 0.62;
-  const maxFs = Math.max(7.5, +((maxW - 24) / Math.max(1, str.length * charFactor)).toFixed(2));
-  const fs = Math.min(o.fs || 13.5, maxFs);
-  return tx(cx, cy, str, { ...o, fs });
+  const fs0 = o.fs || 13.5;
+  const avail = maxW - 24;
+  const cw = fitCharW(o);
+  const fsFor = (s) => avail / (Math.max(1, s.length) * cw);
+  const floor = Math.max(FIT_MIN_FS, Math.min(fs0, 0.85 * fs0));
+  if (fsFor(str) >= floor) return { fs: +Math.min(fs0, fsFor(str)).toFixed(2), lines: [str] };
+  // two lines: split at the space that minimizes the longer half
+  // Prefer a break after punctuation or before a separator (·, →, +, …)
+  // when it costs at most ~20% more width than the most balanced break.
+  const cands = [];
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] !== ' ') continue;
+    const a = str.slice(0, i).trimEnd(), b = str.slice(i + 1).trimStart();
+    if (!a || !b) continue;
+    const nice = /[,;:·)]$/.test(a) || /^[·→⇒(]/.test(b);
+    const bad = /=$/.test(a) || /^=/.test(b);
+    cands.push({ a, b, m: Math.max(a.length, b.length), nice, bad });
+  }
+  let best = null;
+  const mMin = Math.min(...cands.map((c) => c.m));
+  for (const c of cands) {
+    const score = c.m - (c.nice && c.m <= 1.2 * mMin ? 0.2 * mMin : 0) + (c.bad ? 0.3 * mMin : 0);
+    if (!best || score < best.score) best = { ...c, score };
+  }
+  if (!best) return { fs: +Math.max(FIT_MIN_FS, Math.min(fs0, fsFor(str))).toFixed(2), lines: [str] };
+  const fs = Math.max(FIT_MIN_FS, Math.min(fs0, avail / (best.m * cw)));
+  return { fs: +fs.toFixed(2), lines: [best.a, best.b] };
+}
+
+function fitTx(cx, cy, t, maxW, o = {}) {
+  const { fs, lines } = fitLines(t, maxW, o);
+  if (lines.length === 1) return tx(cx, cy, lines[0], { ...o, fs });
+  const d = 0.6 * fs;
+  return tx(cx, cy - d, lines[0], { ...o, fs }) + tx(cx, cy + d, lines[1], { ...o, fs });
 }
 
 function card(x, y, w, h, fill, stroke, lines) {
   let o = box(x, y, w, h, fill, stroke, 8, 2);
-  const step = h / (lines.length + 1);
-  lines.forEach((l, idx) => {
-    const ly = y + step * (idx + 1);
-    o += fitTx(x + w / 2, ly, l.t, w, {
-      fs: l.fs || 13.5,
-      fw: l.fw || 600,
-      mono: !!l.mono,
-      fill: l.fill || C.ink,
-    });
-  });
+  const opts = (l) => ({ fs: l.fs || 13.5, fw: l.fw || 600, mono: !!l.mono, fill: l.fill || C.ink });
+  const fitted = lines.map((l) => ({ ...fitLines(l.t, w, opts(l)), o: opts(l) }));
+  if (fitted.every((f) => f.lines.length === 1)) {
+    const step = h / (lines.length + 1);
+    fitted.forEach((f, idx) => { o += tx(x + w / 2, y + step * (idx + 1), f.lines[0], { ...f.o, fs: f.fs }); });
+    return o;
+  }
+  // A line wrapped: stack all rows at 1.2 × their size, spread the slack evenly.
+  const rows = fitted.flatMap((f) => f.lines.map((s) => ({ s, fs: f.fs, o: f.o })));
+  const used = rows.reduce((a, r) => a + 1.2 * r.fs, 0);
+  const gap = Math.max(0, (h - used) / (rows.length + 1));
+  let cy = y + gap;
+  rows.forEach((r) => { cy += 0.6 * r.fs; o += tx(x + w / 2, cy, r.s, { ...r.o, fs: r.fs }); cy += 0.6 * r.fs + gap; });
   return o;
 }
 
@@ -45,7 +84,7 @@ function fourScalingBarriers() {
   const W = 540, H = 264;
   let o = '';
   const b = [
-    { x: 16,  y: 16,  t: '1. Signal & Degradation Drift', s1: 'Sigmoids shrink grads ≤ 1/4^L', s2: 'Plain-56 loss > Plain-20 (0.27>0.20)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: 16,  y: 16,  t: '1. Signal & Degradation Drift', s1: 'Sigmoids shrink grads ≤ 1/4^L', s2: 'Plain-56 loss > Plain-20 (0.28>0.20)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
     { x: 278, y: 16,  t: '2. 92% Dense-Head Bloat', s1: 'AlexNet/VGG: >92% params in head', s2: 'Contributes <5% of total MACs', fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 16,  y: 140, t: '3. FLOPs ≠ GPU Latency', s1: 'Depthwise convs cut MACs 8–9×', s2: 'Only 9 MACs/read → memory-bound', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 278, y: 140, t: '4. Confounded Recipes', s1: 'AdamW + Mixup + smoothing + EMA', s2: 'Adds +4.3% to unchanged ResNet-50', fill: C.lblue, st: C.blue, dk: D.blue.dark },
@@ -134,7 +173,7 @@ function handcraftedVsE2e() {
   let o = '';
   // Top: Hand-crafted
   o += box(16, 16, 508, 104, D.red.tint, D.red.base, 10, 2);
-  o += tx(270, 36, 'Pre-2012 Pipeline: Fixed Hand-Crafted Features (25.8% Top-5 Error)', { fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(270, 36, 'Pre-2012 Pipeline: Fixed Hand-Crafted Features (26.2% Top-5 Error)', { fs: 13.5, fw: 700, fill: D.red.dark });
   o += card(28, 52, 134, 54, '#FFFFFF', C.gray, [{ t: 'Raw Pixels X', fs: 13, fw: 700 }]);
   o += arrow(168, 79, 194, 79, C.gray);
   o += card(200, 52, 156, 54, N.panel, C.gray, [
@@ -201,13 +240,13 @@ function gpuVsCpuBudget() {
     { t: '2012 Quad-Core CPU', fs: 14.5, fw: 700, fill: D.red.dark },
     { t: 'Peak: ~0.2 TFLOPS', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'DRAM Bandwidth: ~20 GB/s', mono: true, fs: 12, fill: C.muted },
-    { t: 'Wall-Clock: > 35–40 Days!', fs: 13.5, fw: 700, fill: D.red.dark },
+    { t: 'Wall-Clock: > 45 Days!', fs: 13.5, fw: 700, fill: D.red.dark },
   ]);
   o += card(282, 104, 242, 138, C.lgreen, C.green, [
     { t: '2× NVIDIA GTX 580 GPUs', fs: 14.5, fw: 700, fill: D.green.dark },
     { t: 'Peak: 2 × 1.6 = 3.2 TFLOPS', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'VRAM Bandwidth: 2 × 192 GB/s', mono: true, fs: 12, fill: C.muted },
-    { t: 'Wall-Clock: 5–6 Days (16× faster)', fs: 13.5, fw: 700, fill: D.green.dark },
+    { t: 'Wall-Clock: 5–6 Days (16× peak FLOPS)', fs: 13.5, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }
@@ -267,7 +306,7 @@ function alexnetParamMacSplit() {
     { t: 'Dense1 Intensity: 0.25 MACs / byte!', mono: true, fs: 11.5, fill: D.red.dark },
   ]);
   o += card(16, 166, 508, 82, C.lamber, C.amber, [
-    { t: 'Batch-1 Inference Roofline Bottleneck:  172 MB of Dense Weights Streamed for 43M MACs', fs: 13.5, fw: 700, fill: D.orange.dark },
+    { t: 'Batch-1 Roofline: 172 MB of Dense Weights Streamed for 43M MACs', fs: 13.5, fw: 700, fill: D.orange.dark },
     { t: 'Dense1 (6400×4096 = 26.2M params) holds 56% of the entire network just to read the 5×5 grid', fs: 12, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -330,20 +369,20 @@ function vggRfEfficiency() {
   let o = '';
   o += card(16, 16, 242, 112, C.lblue, C.blue, [
     { t: '5×5 Receptive Field', fs: 14.5, fw: 700, fill: D.blue.dark },
-    { t: '1 × (5×5) conv: 25 c² weights (1 ReLU)', mono: true, fs: 12, fill: C.ink },
-    { t: '2 × (3×3) conv: 18 c² weights (2 ReLUs)', mono: true, fs: 12, fw: 700, fill: D.blue.dark },
+    { t: '1×(5×5): 25c² (1 ReLU)', mono: true, fs: 12, fill: C.ink },
+    { t: '2×(3×3): 18c² (2 ReLUs)', mono: true, fs: 12, fw: 700, fill: D.blue.dark },
     { t: '28% fewer weights & FLOPs!', fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   o += card(282, 16, 242, 112, C.lgreen, C.green, [
     { t: '7×7 Receptive Field', fs: 14.5, fw: 700, fill: D.green.dark },
-    { t: '1 × (7×7) conv: 49 c² weights (1 ReLU)', mono: true, fs: 12, fill: C.ink },
-    { t: '3 × (3×3) conv: 27 c² weights (3 ReLUs)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: '1×(7×7): 49c² (1 ReLU)', mono: true, fs: 12, fill: C.ink },
+    { t: '3×(3×3): 27c² (3 ReLUs)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     { t: '45% fewer weights & FLOPs!', fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   o += card(16, 146, 508, 100, D.purple.tint, C.purple, [
     { t: 'Constant Per-Stage Compute Invariant in VGG', fs: 14.5, fw: 700, fill: D.purple.dark },
-    { t: 'Each 2×2 stride-2 MaxPool halves H and W (area ÷ 4) while stage channels double (c × 2 ⇒ c² × 4)', fs: 12.5, fw: 600, fill: C.ink },
-    { t: 'Per-layer multiply-adds  (H/2)(W/2) · 9(2c)² = H W · 9c²  remain constant across stages!', mono: true, fs: 12, fw: 700, fill: D.purple.dark },
+    { t: 'Each stride-2 max-pool quarters the area H·W while the channels double (c² × 4)', fs: 12.5, fw: 600, fill: C.ink },
+    { t: 'Per-layer MACs (H/2)(W/2) · 9(2c)² = HW · 9c² stay constant!', mono: true, fs: 12, fw: 700, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
 }
@@ -475,8 +514,8 @@ function bnForwardPipeline() {
   const steps = [
     { x: 16,  t: '1. Minibatch B', s1: '{x₁, …, x_m}', s2: 'Pre-activations', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 146, t: '2. Moments', s1: 'μ̂_B = mean(x)', s2: 'σ̂²_B = var(x)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 276, t: '3. Standardize', s1: 'x̂_i = (x_i − μ̂_B)', s2: '÷ √(σ̂²_B + ε)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 406, t: '4. Scale & Shift', s1: 'y_i = γ x̂_i + β', s2: 'Learned γ, β', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 276, t: '3. Standardize', s1: 'x̂ = (x − μ̂_B)', s2: '÷ √(σ̂²_B + ε)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 406, t: '4. Scale & Shift', s1: 'y = γ x̂ + β', s2: 'Learned γ, β', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   steps.forEach((s, i) => {
     o += card(s.x, 26, 118, 106, s.fill, s.st, [
@@ -514,7 +553,7 @@ function bnBiasCancellation() {
     { t: 'Any pre-BN bias +b cancels', fs: 12, fw: 600, fill: D.red.dark },
     { t: 'in (x_i + b) − (μ̂_B + b)!', mono: true, fs: 12, fw: 700, fill: D.red.dark },
   ]);
-  o += tx(270, 234, 'Always set use_bias=False / bias=False on layers immediately preceding BatchNorm', { fs: 13, fw: 700, fill: D.green.dark });
+  o += tx(270, 234, 'Always disable the bias of layers immediately preceding BatchNorm', { fs: 13, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -544,16 +583,16 @@ function bnDenseVsConv() {
   const W = 540, H = 260;
   let o = '';
   o += card(16, 18, 242, 224, C.lblue, C.blue, [
-    { t: 'BatchNorm1d (Dense Layer)', fs: 14.5, fw: 700, fill: D.blue.dark },
+    { t: 'BatchNorm on a Dense Layer', fs: 14.5, fw: 700, fill: D.blue.dark },
     { t: 'Input shape: (m, d)', mono: true, fs: 13, fw: 700, fill: C.ink },
-    { t: 'Reduction axis: (0,)', mono: true, fs: 12.5, fill: D.blue.dark },
+    { t: 'Reduce over the batch axis', mono: true, fs: 12.5, fill: D.blue.dark },
     { t: '1 mean & var per unit j ∈ {1..d}', fs: 12.5, fill: C.ink },
     { t: 'Pools m = 128 values / feature', mono: true, fs: 12, fill: C.muted },
   ]);
   o += card(282, 18, 242, 224, C.lgreen, C.green, [
-    { t: 'BatchNorm2d (Conv Layer)', fs: 14.5, fw: 700, fill: D.green.dark },
-    { t: 'Input shape: (m, c, H, W)', mono: true, fs: 13, fw: 700, fill: C.ink },
-    { t: 'Reduction axes: (0, 2, 3)', mono: true, fs: 12.5, fill: D.green.dark },
+    { t: 'BatchNorm on a Conv Layer', fs: 14.5, fw: 700, fill: D.green.dark },
+    { t: 'Input: m × (c channels, H × W)', mono: true, fs: 13, fw: 700, fill: C.ink },
+    { t: 'Reduce over batch, H and W', mono: true, fs: 12.5, fill: D.green.dark },
     { t: '1 mean, var, γ, β per channel c', fs: 12.5, fill: C.ink },
     { t: 'Pools m·H·W = 100,352 values!', mono: true, fs: 12, fw: 700, fill: D.green.dark },
   ]);
@@ -578,7 +617,7 @@ function bnTrainVsEvalMode() {
     { t: 'Works at batch size m = 1!', fs: 12, fw: 700, fill: D.green.dark },
   ]);
   o += card(16, 172, 508, 76, D.red.tint, D.red.base, [
-    { t: 'API Pitfall: PyTorch momentum = 1 − ρ = 0.1  vs.  Keras/Flax/MXNet momentum = ρ = 0.9', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: 'API pitfall: a momentum of 0.1 means 1 − ρ in some frameworks; 0.9 means ρ in others', fs: 13, fw: 700, fill: D.red.dark },
     { t: 'Cosine LR decay to 0 lets weights settle at the end of training so running stats lock on cleanly', fs: 12, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -590,7 +629,7 @@ function bnDistributionShift() {
   o += card(16, 28, 152, 108, C.lamber, C.amber, [
     { t: 'Input Batch X', fs: 14, fw: 700, fill: D.orange.dark },
     { t: 'X ~ N(2.0, 3.0²)', mono: true, fs: 13, fw: 700, fill: C.ink },
-    { t: '(128, 6, 28, 28)', mono: true, fs: 12, fill: C.muted },
+    { t: '128 × 6 ch × 28×28', mono: true, fs: 12, fill: C.muted },
   ]);
   o += arrow(172, 82, 190, 82, C.blue);
   o += card(194, 28, 152, 108, C.lblue, C.blue, [
@@ -606,7 +645,7 @@ function bnDistributionShift() {
   ]);
   o += card(16, 154, 508, 84, D.purple.tint, C.purple, [
     { t: 'After 1 Step:  moving_mean = 0.9(0) + 0.1(2.0) = 0.20', mono: true, fs: 14, fw: 700, fill: D.purple.dark },
-    { t: 'Matches framework BatchNorm2d within 10⁻⁶ single-precision floating-point roundoff', fs: 12.5, fw: 600, fill: C.ink },
+    { t: 'Matches the framework BatchNorm layer within 10⁻⁶ single-precision floating-point roundoff', fs: 12.5, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -622,7 +661,7 @@ function bnSmallBatchCollapse() {
   ]);
   o += card(282, 18, 242, 132, D.red.tint, D.red.base, [
     { t: 'Micro-Batch (2 images / GPU)', fs: 14, fw: 700, fill: D.red.dark },
-    { t: 'BatchNorm Spikes to: 34.7%! (+11%)', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: 'BatchNorm: 34.7%! (+11%)', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
     { t: 'GroupNorm Holds Steady: 24.1%!', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     { t: 'At N=1, Dense BN outputs ≡ β!', fs: 12, fw: 700, fill: D.red.dark },
   ]);
@@ -638,7 +677,7 @@ function nfnetWeightStd() {
   let o = '';
   o += card(16, 20, 242, 126, D.purple.tint, C.purple, [
     { t: '1. Scaled Weight Standardization', fs: 13.5, fw: 700, fill: D.purple.dark },
-    { t: 'Ŵ_{o,i,k} = γ (W − μ_W)/(√N_in σ_W)', mono: true, fs: 11.5, fw: 700, fill: C.ink },
+    { t: 'Ŵ = γ (W − μ_W)/(√N_in σ_W)', mono: true, fs: 11.5, fw: 700, fill: C.ink },
     { t: 'Normalizes filter weights directly', fs: 12, fill: C.ink },
     { t: 'Preserves variance at every step', fs: 12, fill: C.muted },
   ]);
@@ -682,7 +721,7 @@ function degradationParadox() {
   o += card(16, 18, 242, 134, D.red.tint, D.red.base, [
     { t: 'Empirical Plain-Net Paradox', fs: 14, fw: 700, fill: D.red.dark },
     { t: '20-Layer Plain Train Loss: 0.20', mono: true, fs: 12.5, fw: 700, fill: C.ink },
-    { t: '56-Layer Plain Train Loss: 0.27!', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: '56-Layer Plain Train Loss: ≈0.28!', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
     { t: 'Worse on TRAINING set (not overfitting)', fs: 11.5, fw: 700, fill: D.red.dark },
   ]);
   o += card(282, 18, 242, 134, C.lgreen, C.green, [
@@ -725,16 +764,16 @@ function residualShapeTransition() {
   o += card(16, 18, 242, 220, C.lblue, C.blue, [
     { t: 'Identity Block: Residual(3)', mono: true, fs: 14, fw: 700, fill: D.blue.dark },
     { t: 'use_1x1conv=False, strides=1', mono: true, fs: 12, fill: C.muted },
-    { t: 'Input:  (4, 3, 6, 6)', mono: true, fs: 13, fw: 700, fill: C.ink },
+    { t: 'Input:  4 × 3 ch × 6×6', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'Shortcut: direct X (0 params)', fs: 12.5, fw: 600, fill: D.blue.dark },
-    { t: 'Output: (4, 3, 6, 6)', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
+    { t: 'Output: 4 × 3 ch × 6×6', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
   ]);
   o += card(282, 18, 242, 220, C.lgreen, C.green, [
-    { t: 'Projection Block: Residual(6, s=2)', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
+    { t: 'Projection: Residual(6, s=2)', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
     { t: 'use_1x1conv=True, strides=2', mono: true, fs: 12, fill: C.muted },
-    { t: 'Input:  (4, 3, 6, 6)', mono: true, fs: 13, fw: 700, fill: C.ink },
-    { t: 'Shortcut: 1×1_s2 + BN → (4,6,3,3)', mono: true, fs: 12, fw: 600, fill: D.green.dark },
-    { t: 'Output: (4, 6, 3, 3) (2×C, ½H, ½W)', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'Input:  4 × 3 ch × 6×6', mono: true, fs: 13, fw: 700, fill: C.ink },
+    { t: 'Shortcut: 1×1_s2 + BN', mono: true, fs: 12, fw: 600, fill: D.green.dark },
+    { t: 'Output: 4 × 6 ch × 3×3', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }
@@ -878,7 +917,7 @@ function seChannelGating() {
     { x: 16,  t: 'Feature Map X', s1: '(C, H, W)', s2: 'Local conv out', fill: C.lblue, col: C.blue, dk: D.blue.dark },
     { x: 146, t: '1. Squeeze (GAP)', s1: 'z = mean(H,W)', s2: 'Shape (C, 1, 1)', fill: D.purple.tint, col: C.purple, dk: D.purple.dark },
     { x: 276, t: '2. Excite MLP', s1: 'C → C/r → C', s2: 's = σ(W₂ReLU(W₁z))', fill: C.lamber, col: C.amber, dk: D.orange.dark },
-    { x: 406, t: '3. Rescale ⊙', s1: 'Y_c = s_c · X_c', s2: 'Shape (C, H, W)', fill: C.lgreen, col: C.green, dk: D.green.dark },
+    { x: 406, t: '3. Rescale ⊙', s1: 'Y_c = s_c X_c', s2: 'Shape (C, H, W)', fill: C.lgreen, col: C.green, dk: D.green.dark },
   ];
   st.forEach((s, i) => {
     o += card(s.x, 24, 118, 104, s.fill, s.col, [
@@ -954,7 +993,7 @@ function adamwDecoupledDecay() {
   ]);
   o += card(16, 168, 508, 76, C.lamber, C.amber, [
     { t: 'Comparing Decay Across Optimizers:  Compare Product  η₀ × λ', mono: true, fs: 13.5, fw: 700, fill: D.orange.dark },
-    { t: 'AdamW (η₀=0.002, λ=0.05) ⇒ 10⁻⁴/step   vs.   SGD (η₀=0.05, λ=5·10⁻⁴, mom=0.9) ⇒ 2.5·10⁻⁴/step', mono: true, fs: 12, fw: 600, fill: C.ink },
+    { t: 'AdamW (η₀=0.002, λ=0.05) ⇒ 10⁻⁴/step   vs.   SGD (η₀=0.05, λ=5·10⁻⁴, mom=0.9) ⇒ 2.5·10⁻⁵/step', mono: true, fs: 12, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -971,7 +1010,7 @@ function mixupVsCutmix() {
   o += card(282, 18, 242, 136, C.lgreen, C.green, [
     { t: 'CutMix (Spatial Patch Paste)', fs: 14, fw: 700, fill: D.green.dark },
     { t: 'x̃ = M ⊙ x_i + (1 − M) ⊙ x_j', mono: true, fs: 12.5, fw: 700, fill: C.ink },
-    { t: 'ỹ = λ y_i + (1 − λ) y_j  (λ = area)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'ỹ = λy_i + (1−λ)y_j, λ = area', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     { t: 'Locally natural pixel statistics!', fs: 12, fw: 700, fill: D.green.dark },
   ]);
   o += card(16, 170, 508, 74, D.purple.tint, C.purple, [
@@ -1104,7 +1143,7 @@ function resnetVsPatchifyStem() {
     { t: 'ConvNeXt / ViT Patchify Stem', fs: 14, fw: 700, fill: D.purple.dark },
     { t: '4×4 Conv (s=4, p=0) + LayerNorm', mono: true, fs: 11.5, fw: 700, fill: C.ink },
     { t: 'Non-overlapping 4×4 tiles → H/4 × W/4', mono: true, fs: 11.5, fill: C.ink },
-    { t: '+0.1% on 224² (but −2.5% on 64²!)', fs: 12, fw: 700, fill: D.red.dark },
+    { t: '+0.1% on 224² (but ≈ −2 pts on 64²!)', fs: 12, fw: 700, fill: D.red.dark },
   ]);
   o += card(16, 168, 508, 76, C.lgreen, C.green, [
     { t: 'Stage Depth Allocation:  (3, 4, 6, 3)  →  (3, 3, 9, 3)  (1 : 1 : 3 : 1 Ratio)', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
@@ -1142,7 +1181,7 @@ function convnextBlockDataflow() {
     { x: 16,  t: 'DWConv 7×7', s1: 'c → c (groups=c)', s2: '+ LayerNorm(c)', fill: C.lblue, col: C.blue, dk: D.blue.dark },
     { x: 146, t: '1×1 Expand', s1: 'c → 4c', s2: '+ Single GELU', fill: D.purple.tint, col: C.purple, dk: D.purple.dark },
     { x: 276, t: '1×1 Project', s1: '4c → c (linear)', s2: '× LayerScale γ', fill: C.lamber, col: C.amber, dk: D.orange.dark },
-    { x: 406, t: 'DropPath + X', s1: 'X + drop(γ ⊙ Y)', s2: 'Init γ = 10⁻⁶', fill: C.lgreen, col: C.green, dk: D.green.dark },
+    { x: 406, t: 'DropPath + X', s1: 'X + drop(γ⊙Y)', s2: 'Init γ = 10⁻⁶', fill: C.lgreen, col: C.green, dk: D.green.dark },
   ];
   st.forEach((s, i) => {
     o += card(s.x, 26, 118, 104, s.fill, s.col, [
@@ -1154,7 +1193,7 @@ function convnextBlockDataflow() {
   });
   o += card(16, 150, 508, 88, C.lgreen, C.green, [
     { t: 'Only 1 Activation (GELU) and 1 Normalization (LN) per Block (+0.9% on ImageNet!)', fs: 13.5, fw: 700, fill: D.green.dark },
-    { t: 'In NHWC layout, LayerNorm2d and both 1×1 convolutions execute as standard last-axis Linear layers', fs: 12, fw: 600, fill: C.ink },
+    { t: 'In channels-last layout, LayerNorm and both 1×1 convolutions run as standard last-axis linear layers', fs: 12, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -1190,7 +1229,7 @@ function localAblationSteps() {
     { t: '0. Compact ResNet-18 (base=35, BN)', p: '3.35M', m: '43.2M MACs', a: '≈ 94.0%', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { t: '1. + ConvNeXt Body & Stages (with BN)', p: '3.38M', m: '46.1M MACs', a: '≈ 94.0%', fill: C.lgreen, st: C.green, dk: D.green.dark },
     { t: '2. + Swap BatchNorm → LayerNorm', p: '3.38M', m: '46.1M MACs', a: '≈ 94.0%', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { t: '3. + Swap Stem → 4×4_s4 Patchify', p: '3.38M', m: '44.3M MACs', a: '≈ 91.5% (−2.5%!)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { t: '3. + Swap Stem → 4×4_s4 Patchify', p: '3.38M', m: '44.3M MACs', a: '≈ 91.7% (−2 pts!)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   rows.forEach((r, i) => {
     const y = 16 + i * 58;

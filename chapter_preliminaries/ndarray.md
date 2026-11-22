@@ -1024,7 +1024,7 @@ Tensors as Contiguous Memory, Geometric Views, and Parallel Compute<br>**storage
 ::: {.cols .vc}
 ::: {.col}
 - **Batch scale:** One 256-image Fashion-MNIST batch ($28 \times 28$) holds $200{,}704$ pixels; modern networks update billions of parameters per step.
-- **Python lists (`PyObject*`):** Chasing 8-byte pointers to scattered 28-byte heap boxes causes cache misses and interpreter loop overhead.
+- **Python lists (`PyObject*`):** Chasing 8-byte pointers to scattered 24-byte heap boxes causes cache misses and interpreter loop overhead.
 - **Contiguous tensor buffers:** Unboxed values (`uint8`, `float32`, `bfloat16`) sit back-to-back in RAM/HBM, feeding one vectorized CPU/GPU kernel + autograd.
 :::
 
@@ -1043,7 +1043,7 @@ Every tensor pairs a **1D contiguous storage buffer** with a small **metadata he
 
 $$\textrm{index}(i_0, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r s_r$$
 
-- **$O(1)$ zero-copy views** (`reshape`, slices `X[1:3]`, `X.T`, broadcasting $s_r = 0$) create a new header pointing to the *same* buffer.
+- **$O(1)$ zero-copy views** (`reshape`, slices `X[1:3]`, transpose, broadcasting $s_r = 0$) create a new header pointing to the *same* buffer.
 - **$O(N)$ allocations** (`X + Y`, gather, mask, `cat`) write a brand-new buffer.
 :::
 
@@ -1117,14 +1117,30 @@ $$\textrm{index}(i_0, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r 
 :::
 :::
 
-::: {.slide title="Reproducible Randomness: Seeds and PRNG State"}
+::: {.slide title="Reproducible Randomness: Seeds and PRNG State" except="jax"}
 [Reproducibility]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - Training uses randomness everywhere: weight initialization, minibatch shuffling, dropout masks, and data augmentation.
 - Pseudorandom number generators (PRNGs) are deterministic state machines: resetting the **seed** reproduces the exact sequence of draws for repeatable experiments.
-- **Global vs. explicit state:** PyTorch, TensorFlow, and MXNet advance a stateful generator; JAX splits an explicit `PRNGKey` so parallel JIT code stays pure.
+- **Global state:** The framework advances a stateful generator with every draw, so a seed fixes the whole sequence that follows.
+:::
+
+::: {.col}
+@ndarray-initial-values-1
+:::
+:::
+:::
+
+::: {.slide title="Reproducible Randomness: Seeds and PRNG State" only="jax"}
+[Reproducibility]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Training uses randomness everywhere: weight initialization, minibatch shuffling, dropout masks, and data augmentation.
+- Pseudorandom number generators (PRNGs) are deterministic state machines: resetting the **seed** reproduces the exact sequence of draws for repeatable experiments.
+- **Explicit state:** JAX splits an explicit `PRNGKey` instead of advancing a global generator, so parallel JIT code stays pure.
 :::
 
 ::: {.col}
@@ -1207,8 +1223,8 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Integer gather (`X[rows, cols]`):** Pairs row and column indices—used in cross-entropy (`log_probs[arange(B), labels]`) to pluck the true-class score per example.
-- **Mask (`X[mask]`) vs. `where`:** `X[mask]` collapses matches to a **1D vector**, whereas `where(mask, X, 0)` preserves the 2D shape for ReLU and attention masks.
+- **Integer gather:** Pairs row and column indices—used in cross-entropy to pluck the true-class score per example.
+- **Mask vs. `where`:** Masking collapses matches to a **1D vector**, whereas `where(mask, X, 0)` preserves the 2D shape for ReLU and attention masks.
 
 @ndarray-indexing-and-slicing-5
 :::

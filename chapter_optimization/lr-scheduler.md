@@ -417,7 +417,7 @@ Learning-Rate Schedules: Warmup, Cosine Decay, and WSD<br>**cumulative budget B_
 ::: {.col}
 - Comparing four schedules over $T = 3{,}000$ noisy valley steps ($\lambda_1 = 0.2, \lambda_2 = 4.0, \sigma^2 = 1$):
   - **Constant ($\eta_t = 0.1$):** Huge budget ($B = 300$), stalls at stationary noise ball ($0.268$).
-  - **Polynomial $\alpha = 1/2$ and $\alpha = 1$:** Budgets $200.5$ and $48.2$; cleanly track the instantaneous noise ball down to $0.098$ and $0.009$.
+  - **Polynomial $\alpha = 1/2$ and $\alpha = 1$:** Budgets $200.2$ and $48.2$; cleanly track the instantaneous noise ball down to $\approx 0.09\text{--}0.10$ and $\approx 0.011\text{--}0.012$.
   - **Exponential ($0.4 \times 0.98^t$):** Finite budget $B_\infty = 20$ erases $x_0$, yet **freezes at variance $0.125$** despite $\eta_T \approx 10^{-27}$!
 :::
 
@@ -434,11 +434,11 @@ Learning-Rate Schedules: Warmup, Cosine Decay, and WSD<br>**cumulative budget B_
 ::: {.col}
 - Averaging $1{,}000$ independent noisy valley trajectories over $T = 3{,}000$ steps:
   - **Constant ($\eta = 0.1$):** Plateaus at its stationary noise ball ($0.268$).
-  - **Polynomial $\alpha = 1/2$ and $\alpha = 1$:** Track the instantaneous noise ball cleanly down to $0.097$ and $0.011$, respectively!
-  - **Exponential ($\gamma = 0.98$):** Despite reaching $\eta_T \approx 10^{-27}$, the iterate **freezes at a mean-squared distance of $0.126$** from step $250$ onward!
+  - **Polynomial $\alpha = 1/2$ and $\alpha = 1$:** Track the instantaneous noise ball cleanly down to $0.09\text{--}0.10$ and $0.011\text{--}0.012$, respectively!
+  - **Exponential ($\gamma = 0.98$):** Despite reaching $\eta_T \approx 10^{-27}$, the iterate **freezes at a mean-squared distance of $0.12\text{--}0.13$** from step $250$ onward!
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!lr-scheduler-four-schedules-on-the-valley
 :::
 :::
@@ -487,11 +487,11 @@ On a fixed budget of $T = 2{,}000$ steps with peak learning rate $\eta_0 = 3 \ti
 ::: {.cols .vc}
 ::: {.col}
 - Training `TinyLM` with AdamW ($\lambda = 0$) across two seeds and evaluating validation loss at step $1{,}500$ and step $2{,}000$:
-  - **At step $1{,}500$ (before late decay starts):** Cosine decay leads ($1.57\text{--}1.58$ vs. $1.60\text{--}1.64$) because $\eta_{1500}$ has already fallen to $15\%$ of $\eta_0$, damping step noise.
-  - **At step $2{,}000$ (after late decay completes):** Between steps $1{,}600$ and $2{,}000$, `stable_decay` drops sharply by **$\sim 0.10$ nats** to **$1.50$ nats**, beating the constant run by $0.06\text{--}0.09$ nats and cosine decay by $\sim 0.05$ nats!
+  - **At step $1{,}500$ (before late decay starts):** Cosine decay leads ($1.58\text{--}1.59$ vs. $1.61$) because $\eta_{1500}$ has already fallen to $15\%$ of $\eta_0$, damping step noise.
+  - **At step $2{,}000$ (after late decay completes):** Between steps $1{,}600$ and $2{,}000$, `stable_decay` drops sharply by **$\sim 0.10$ nats** to **$1.51$ nats**, beating the constant run by $0.05\text{--}0.06$ nats and cosine decay by $\sim 0.05$ nats!
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @!lr-scheduler-decay-on-a-language-model-1
 :::
 :::
@@ -502,7 +502,7 @@ On a fixed budget of $T = 2{,}000$ steps with peak learning rate $\eta_0 = 3 \ti
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why late decay beats cosine on compute-bound runs:** Holding $\eta_0$ for $80\%$ of steps preserves **$90\%$ of the travel budget** ($B_T = 5.4$ vs. cosine's $3.0$) while still finishing at $\eta_T = 0$ ($1.50$ vs. $1.56$ nats).
+- **Why late decay beats cosine on compute-bound runs:** Holding $\eta_0$ for $80\%$ of steps preserves **$90\%$ of the travel budget** ($B_T = 5.4$ vs. cosine's $3.0$) while still finishing at $\eta_T = 0$ ($1.51$ vs. $1.56$ nats).
 - **Never rank schedules mid-run before cooldown:** At step $1{,}500$, uncooled plateau weights carry $O(\eta_0)$ step jitter that vanishes as soon as the $400$-step linear cooldown drops $\eta_t \to 0$ (Wen et al., 2025).
 :::
 

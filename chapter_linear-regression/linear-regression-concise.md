@@ -415,9 +415,9 @@ Concise Implementation of Linear Regression<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- **Hardware-tuned layers:** Replace manual `w, b` allocation and `matmul(X, w) + b` with a single dense layer (`LazyLinear(1)`, `Dense(1)`, or `nnx.Linear(2, 1)`).
-- **Tested losses & optimizers:** Replace manual `squared_loss` and parameter loops with built-in MSE (`nn.MSELoss`, `L2Loss`, `MeanSquaredError`, `optax.squared_error`) and `SGD`.
-- **Zero Trainer changes:** Reuses the exact same `SyntheticRegressionData` and `d2l.Trainer` from §2.4.
+- **Hardware-tuned layers:** Replace manual `w, b` allocation and `matmul(X, w) + b` with the framework's single dense layer.
+- **Tested losses & optimizers:** Replace manual `squared_loss` and parameter loops with the framework's built-in MSE and `SGD`.
+- **Zero Trainer changes:** Reuses the exact same `SyntheticRegressionData` and `d2l.Trainer` from the object-oriented design section.
 :::
 
 ::: {.col .fig .big}
@@ -426,14 +426,14 @@ Concise Implementation of Linear Regression<br>
 :::
 :::
 
-::: {.slide title="Concise Model: A Single Fully Connected Layer"}
+::: {.slide title="Concise Model: A Single Fully Connected Layer" except="jax"}
 [Framework Layer API]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 @linear-regression-concise-defining-the-model-1
 
-- **Inherited `forward` & lazy shape inference:** `d2l.Module.forward(X)` delegates directly to `self.net(X)`; `LazyLinear(1)` and `Dense(1)` infer input dimension $d = 2$ automatically on the first minibatch.
+- **Inherited `forward` & lazy shape inference:** `d2l.Module.forward(X)` delegates directly to `self.net(X)`; the framework's dense layer infers input dimension $d = 2$ automatically on the first minibatch.
 :::
 
 ::: {.col .fig}
@@ -442,18 +442,68 @@ Concise Implementation of Linear Regression<br>
 :::
 :::
 
-::: {.slide title="Parameter Initialization: Lazy vs. Eager Across Frameworks"}
+::: {.slide title="Concise Model: A Single Fully Connected Layer" only="jax"}
+[Framework Layer API]{.kicker}
+
+@linear-regression-concise-defining-the-model-1
+
+- **Inherited `forward` & eager shapes:** `d2l.Module.forward(X)` delegates directly to `self.net(X)`; `nnx.Linear` allocates its parameters at construction, so we pass the input dimension $d = 2$ explicitly.
+:::
+
+::: {.slide title="Parameter Initialization: Small Gaussian Weights, Zero Bias" only="pytorch"}
 [Weight & Bias Initialization]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **PyTorch (`LazyLinear`):** Materialize shapes with a dummy call `model(data.X[:1])`, then apply `normal_(0, 0.01)` and `zeros_`.
-- **MXNet & TensorFlow/Keras (`Dense`):** Attach deferred `init.Normal(0.01)` or `RandomNormal(stddev=0.01)` at construction; weights materialize on batch 1.
-- **JAX / Flax NNX (`nnx.Linear`):** Eagerly allocates arrays at construction using `num_inputs=2`, `kernel_init=normal(0.01)`, and `rngs`.
+- **Lazy layer (`LazyLinear`):** Materialize shapes with a dummy call `model(data.X[:1])`, then apply `normal_(0, 0.01)` to the weight and `zeros_` to the bias.
+
+@-linear-regression-concise-training-1
 :::
 
 ::: {.col .fig .big}
-@fig:ch02-lr-lazy-vs-eager
+@fig:ch02-lr-lazy-vs-eager@pytorch
+:::
+:::
+:::
+
+::: {.slide title="Parameter Initialization: Small Gaussian Weights, Zero Bias" only="tensorflow"}
+[Weight & Bias Initialization]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Deferred initializer (`Dense`):** Attach `RandomNormal(stddev=0.01)` at construction; the weights materialize on the first minibatch, and the bias starts at zero.
+:::
+
+::: {.col .fig .big}
+@fig:ch02-lr-lazy-vs-eager@tensorflow
+:::
+:::
+:::
+
+::: {.slide title="Parameter Initialization: Small Gaussian Weights, Zero Bias" only="mxnet"}
+[Weight & Bias Initialization]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Deferred initializer (`Dense`):** Attach `init.Normal(0.01)` at construction; the weights materialize on the first minibatch, and the bias starts at zero.
+:::
+
+::: {.col .fig .big}
+@fig:ch02-lr-lazy-vs-eager@mxnet
+:::
+:::
+:::
+
+::: {.slide title="Parameter Initialization: Small Gaussian Weights, Zero Bias" only="jax"}
+[Weight & Bias Initialization]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Eager layer (`nnx.Linear`):** Allocates the arrays at construction using `num_inputs=2`, `kernel_init=normal(0.01)`, and `rngs`; the bias starts at zero.
+:::
+
+::: {.col .fig .big}
+@fig:ch02-lr-lazy-vs-eager@jax
 :::
 :::
 :::
@@ -481,7 +531,7 @@ Concise Implementation of Linear Regression<br>
 ::: {.col}
 @linear-regression-concise-defining-the-optimization-algorithm
 
-- **Automatic parameter discovery:** `self.parameters()` (PyTorch), `collect_params()` (MXNet), `trainable_variables` (Keras), and `nnx.Param` (Flax NNX) traverse the module tree automatically.
+- **Automatic parameter discovery:** The framework collects every registered parameter by traversing the module tree, so the optimizer needs no hand-made list of tensors.
 :::
 
 ::: {.col .fig}
@@ -519,7 +569,7 @@ Fitting `LinearRegression(lr=0.015)` with `d2l.Trainer(max_epochs=10)` reproduce
 
 @!linear-regression-concise-training-3
 
-- **Matching ground truth:** Both weights and bias match $(\mathbf{w}^*, b^*)$ within $\sim \sigma / \sqrt{n} \approx 3 \times 10^{-4}$.
+- **Matching ground truth:** Both weights and bias match $(\mathbf{w}^*, b^*)$ within a few $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$.
 :::
 
 ::: {.col .fig}
@@ -528,14 +578,14 @@ Fitting `LinearRegression(lr=0.015)` with `d2l.Trainer(max_epochs=10)` reproduce
 :::
 :::
 
-::: {.slide title="Three Levels of Abstraction: §§2.3 -> 2.4 -> 2.5"}
-[The Chapter 2 Pedagogical Progression]{.kicker}
+::: {.slide title="Three Levels of Abstraction: Scratch → OO Scratch → Concise"}
+[The Chapter’s Pedagogical Progression]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **§2.3 Bare Functions:** Raw tensors `w, b`, manual `linreg` & `squared_loss`, manual `backward()`, and a one-pass `minibatches` generator.
-- **§2.4 OO Scratch (`LinearRegressionScratch`):** Wraps raw tensors and custom `SGD(lr=0.03)` inside `d2l.Module`, trained via `SyntheticRegressionData` and `d2l.Trainer`.
-- **§2.5 Concise (`LinearRegression`):** Swaps in framework dense layers, `MSELoss`, and built-in `SGD(lr=0.015)` while reusing `DataModule` and `Trainer` unchanged.
+- **Bare Functions:** Raw tensors `w, b`, manual `linreg` & `squared_loss`, a manual backward pass, and a one-pass `minibatches` generator.
+- **OO Scratch (`LinearRegressionScratch`):** Wraps raw tensors and custom `SGD(lr=0.03)` inside `d2l.Module`, trained via `SyntheticRegressionData` and `d2l.Trainer`.
+- **Concise (`LinearRegression`):** Swaps in framework dense layers, built-in MSE, and built-in `SGD(lr=0.015)` while reusing `DataModule` and `Trainer` unchanged.
 :::
 
 ::: {.col .fig .big}
@@ -549,7 +599,7 @@ Fitting `LinearRegression(lr=0.015)` with `d2l.Trainer(max_epochs=10)` reproduce
 
 Test your understanding of framework layer and loss conventions on these three questions:
 
-1. **Why the concise loss plateaus twice as high:** Why does our concise run plateau near $10^{-4}$ while our scratch run in §2.3–§2.4 plateaued near $5 \times 10^{-5}$ on the exact same synthetic generator?
+1. **Why the concise loss plateaus twice as high:** Why does our concise run plateau near $10^{-4}$ while our scratch run plateaued near $5 \times 10^{-5}$ on the exact same synthetic generator?
 2. **Omitting the bias (`bias=False`):** If you disable the bias in `LinearRegression` on our dataset ($b^* = 4.2$, zero-mean features $\mathbf{x} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$), what value does the validation MSE plateau at?
 3. **Two-output MSE scaling:** If `LinearRegression` predicts $2$ outputs instead of $1$, framework MSE averages over all $2|\mathcal{B}|$ entries of the residual matrix. How does that affect each output's gradient and equivalent learning rate?
 
@@ -562,13 +612,13 @@ Test your understanding of framework layer and loss conventions on these three q
 :::
 :::
 
-::: {.slide title="Section 2.5 Summary & Key Takeaways"}
+::: {.slide title="Summary & Key Takeaways"}
 [Summary]{.kicker}
 
-| Component | From-Scratch (§2.3–§2.4) | Concise Framework (§2.5) | Key Invariant / Takeaway |
+| Component | From-Scratch | Concise Framework | Key Invariant / Takeaway |
 |---|---|---|---|
-| **Model & Parameters** | `LinearRegressionScratch` (`self.w`, `self.b`) | `LinearRegression` (`LazyLinear(1)` / `Dense(1)` / `nnx.Linear`) | Inherits `Module.forward(X) -> self.net(X)` |
-| **Loss Function** | $\frac{1}{2|\mathcal{B}|}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ | `MSELoss` / $2\times\text{L2Loss}$ / `MeanSquaredError` / `squared_error` | Omits $1/2 \implies$ loss & gradient are $2\times$ larger |
+| **Model & Parameters** | `LinearRegressionScratch` (`self.w`, `self.b`) | `LinearRegression` (the framework's dense layer) | Inherits `Module.forward(X) -> self.net(X)` |
+| **Loss Function** | $\frac{1}{2|\mathcal{B}|}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ | Built-in MSE | Omits $1/2 \implies$ loss & gradient are $2\times$ larger |
 | **Optimizer & Step Size** | Custom `SGD` at $\eta = 0.03$ | Built-in `SGD` at $\eta = 0.015$ | Halving $\eta$ preserves the exact parameter update $-\eta\nabla L$ |
 | **Noise Floor & Recovery** | Floor $\sigma^2/2 = 5 \times 10^{-5}$ | Floor $\sigma^2 = 10^{-4}$ ($\sqrt{\text{MSE}} = \sigma = 0.01$) | Both recover $(\mathbf{w}^*, b^*)$ within $\sim 3\sigma/\sqrt{n} \approx 10^{-3}$ |
 :::

@@ -496,13 +496,18 @@ Fashion-MNIST contains $6{,}000$ training and $1{,}000$ test images for each of 
 ::: {.slide title="Encapsulating Fashion-MNIST in a DataModule"}
 [Object-Oriented Data Pipeline]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-`FashionMNIST` subclasses `d2l.DataModule` so every classifier in later chapters can swap datasets or resolutions via `resize=(h, w)` without changing training code:
+`FashionMNIST` subclasses `d2l.DataModule`; `resize=(h, w)` changes resolution without new training code:
 
 @-image-classification-dataset-loading-the-dataset-1
+:::
 
+::: {.slide title="Rescaling Pixels at Transform Time"}
+[Object-Oriented Data Pipeline]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
 - **Normalization at transform time:** Raw 8-bit pixels (`uint8` in $[0, 255]$, dark background $= 0$) rescale to `float32` in $[0, 1]$.
+- **One place to change:** Because the transform lives in the `DataModule`, every model that loads Fashion-MNIST sees the same $[0, 1]$ inputs.
 :::
 
 ::: {.col .fig}
@@ -547,15 +552,19 @@ Why does MXNet parse the official `*-ubyte.gz` files directly instead of calling
 :::
 :::
 
-::: {.slide title="Building the Minibatch DataLoader"}
+::: {.slide title="Building the Minibatch Loader"}
+[Shuffling & Batching]{.kicker}
+
+The `get_dataloader(train)` method wraps the dataset in an iterable minibatch loader:
+
+@image-classification-dataset-reading-a-minibatch-1
+:::
+
+::: {.slide title="Epoch Reshuffling and the Short Final Batch"}
 [Shuffling & Batching]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The `get_dataloader(train)` method wraps the dataset in an iterable minibatch loader:
-
-@image-classification-dataset-reading-a-minibatch-1
-
 - **Epoch reshuffling (`shuffle=train`):** Training reshuffles all $60{,}000$ indices every epoch; validation iterates in deterministic order.
 - **Retaining the short final minibatch:** At `batch_size=64`, $60{,}000 = 937 \times 64 + 32$ yields $938$ batches per epoch with zero dropped examples.
 :::
@@ -566,7 +575,7 @@ The `get_dataloader(train)` method wraps the dataset in an iterable minibatch lo
 :::
 :::
 
-::: {.slide title="Single-Image Layouts: Channel-First vs. Channel-Last"}
+::: {.slide title="Single-Image Layouts: Channel-First vs. Channel-Last" only="pytorch,mxnet"}
 [Framework Tensor Conventions]{.kicker}
 
 ::: {.cols .vc}
@@ -575,8 +584,27 @@ A single grayscale image ($c = 1$, $h = 28$, $w = 28$) is stored as a 3D tensor 
 
 @image-classification-dataset-loading-the-dataset-3
 
-- **Channel-first $(c, h, w) = (1, 28, 28)$:** Used by PyTorch and MXNet (`NCHW`).
-- **Channel-last $(h, w, c) = (28, 28, 1)$:** Used by TensorFlow and JAX (`NHWC`).
+- **Channel-first $(c, h, w) = (1, 28, 28)$:** This framework puts the channel axis first (`NCHW` for a minibatch).
+- **The other convention:** Channel-last $(h, w, c)$ (`NHWC`) stores the channels of each pixel together; both flatten to the same $784$ features.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-nchw-vs-nhwc
+:::
+:::
+:::
+
+::: {.slide title="Single-Image Layouts: Channel-First vs. Channel-Last" only="tensorflow,jax"}
+[Framework Tensor Conventions]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A single grayscale image ($c = 1$, $h = 28$, $w = 28$) is stored as a 3D tensor whose channel-axis position depends on the framework:
+
+@image-classification-dataset-loading-the-dataset-3
+
+- **Channel-last $(h, w, c) = (28, 28, 1)$:** This framework puts the channel axis last (`NHWC` for a minibatch).
+- **The other convention:** Channel-first $(c, h, w)$ (`NCHW`) stores each channel as one contiguous plane; both flatten to the same $784$ features.
 :::
 
 ::: {.col .fig}
@@ -604,7 +632,7 @@ Stacking $n = 64$ images prepends a leading batch axis to `X` and pairs it with 
 :::
 :::
 
-::: {.slide title="Benchmarking DataLoader Throughput in Isolation"}
+::: {.slide title="Benchmarking Loader Throughput in Isolation"}
 [Systems Bottleneck Analysis]{.kicker}
 
 Before attaching any neural network, always time one complete pass over `train_dataloader()` by itself:
@@ -684,7 +712,7 @@ Test your understanding of the `FashionMNIST` pipeline on three practical questi
 |:--|:--|:--|
 | **Dataset splits** | $60{,}000$ train / $10{,}000$ val ($6\text{k} / 1\text{k}$ per class) | Perfectly balanced across $10$ apparel categories; $\approx 188\text{ MB}$ in `float32` |
 | **Pixel encoding** | Raw `uint8` $\in [0, 255]$ $\to$ `float32` $\in [0, 1]$ | Dark background $= 0$; rescaling keeps initial linear logits $\mathbf{W}^\top\mathbf{x}$ near $0$ |
-| **Minibatch tensor `X`** | `(n, 1, 28, 28)` (PyTorch/MXNet) or `(n, 28, 28, 1)` (TF/JAX) | $n = 64 \to 200\text{ KB}$; $n = 256 \to 803\text{ KB}$; flattens to `(n, 784)` for linear layers |
+| **Minibatch tensor `X`** | `(n, 1, 28, 28)` (channel-first) or `(n, 28, 28, 1)` (channel-last), per the framework | $n = 64 \to 200\text{ KB}$; $n = 256 \to 803\text{ KB}$; flattens to `(n, 784)` for linear layers |
 | **Label vector `y`** | 1D integer tensor `(n,)` with values in $\{0, \ldots, 9\}$ | Stores $0$-based class index directly; `text_labels` maps indices to garment names |
 | **Epoch iteration** | $938$ batches at $n=64$ ($235$ at $n=256$) | Shuffles training split every epoch; retains partial final batch so no data are dropped |
 | **Throughput bound** | $T_{\text{epoch}} \ge \max(T_{\text{load}}, T_{\text{compute}})$ | Always benchmark the standalone loader; tune `batch_size` and worker parallelism |

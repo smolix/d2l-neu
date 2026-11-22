@@ -498,8 +498,8 @@ Flattening each $28 \times 28$ image in a minibatch of size $n$ into a row of $\
 - **Total count:** $785 \times 256 + 257 \times 10 = 203{,}530$ trainable floats ($\approx 0.81\textrm{ MB}$ in `float32`).
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-mlp-arch.svg){.nostretch width=100%}
+::: {.col .fig}
+![](../img/mdl-mlp-arch.svg){.nostretch width=62%}
 :::
 :::
 :::
@@ -511,7 +511,7 @@ Flattening each $28 \times 28$ image in a minibatch of size $n$ into a row of $\
 ::: {.col}
 - **Symmetry breaking requires randomness:** If all columns of $\mathbf{W}^{(1)}$ started equal, every hidden unit would compute the exact same activation and receive the exact same gradient forever—collapsing $256$ units into $1$.
 - **Small initial scale ($\sigma = 0.01$):** Keeps initial logits near $0$ so softmax starts near uniform probabilities ($\hat{y}_j \approx 1/10$, loss $\approx \log 10 \approx 2.303$).
-- **Fresh initializer instances:** In Keras, always instantiate a new `RandomNormal(stddev=0.01)` per layer so weights do not replay the same random seed.
+- **Fresh random draws:** Every layer's weights need their own draw, so layers do not replay the same random values.
 :::
 
 ::: {.col .fig .big}
@@ -523,7 +523,7 @@ Flattening each $28 \times 28$ image in a minibatch of size $n$ into a row of $\
 ::: {.slide title="Allocating and Registering Parameters from Scratch"}
 [From-Scratch Implementation]{.kicker}
 
-Wrapping each array in the framework's parameter class (`nn.Parameter`, `gluon.Parameter`, `add_weight`, or `nnx.Param`) registers it so `Trainer`'s SGD optimizer discovers and updates all four tensors automatically:
+Wrapping each array in the framework's parameter class registers it so `Trainer`'s SGD optimizer discovers and updates all four tensors automatically:
 
 @mlp-implementation-initializing-model-parameters
 :::
@@ -565,7 +565,7 @@ We train `MLPScratch` for $30$ epochs with minibatch size $n = 256$ and learning
 
 ::: {.cols .vc}
 ::: {.col}
-- **Smooth convergence:** Training loss drops steadily from $2.30$ below $0.35$, while training accuracy climbs to $\sim 89\%$.
+- **Smooth convergence:** Training loss drops steadily from $2.30$ below $0.35$, while training accuracy climbs to $87\text{--}90\%$.
 - **Validation plateau:** Held-out accuracy reaches $\sim 87\%$ (up from $\sim 84\%$ for softmax regression), with $\sim 1$ percentage point of epoch-to-epoch minibatch jitter.
 :::
 
@@ -583,14 +583,14 @@ Using each framework's `Sequential` container and built-in linear and ReLU layer
 @mlp-implementation-model-2-2
 :::
 
-::: {.slide title="Matching Weight Initialization Across Frameworks"}
+::: {.slide title="Overriding the Default Weight Initialization"}
 [Framework Defaults vs. Explicit Init]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Different built-in defaults:** PyTorch uses uniform $\pm 1/\sqrt{n_{\textrm{in}}}$, JAX/Flax uses LeCun normal, TensorFlow uses Glorot uniform, and MXNet uses $U(-0.07, 0.07)$.
+- **Built-in defaults:** The framework's dense layer draws fan-in-scaled uniform or normal weights by default, with $\sigma \approx 0.02$–$0.04$ here.
 - **Controlled comparison:** Explicitly setting $\mathcal{N}(0, 0.01^2)$ and zero biases ensures `MLP` matches `MLPScratch` trajectory-for-trajectory.
-- **Preview of §4.4:** For deep ReLU stacks, we will replace $\sigma = 0.01$ with variance-preserving He initialization ($\sigma = \sqrt{2/n_{\textrm{in}}}$).
+- **Preview of numerical stability:** For deep ReLU stacks, we will replace $\sigma = 0.01$ with variance-preserving He initialization ($\sigma = \sqrt{2/n_{\textrm{in}}}$).
 :::
 
 ::: {.col .fig .big}
@@ -602,7 +602,7 @@ Using each framework's `Sequential` container and built-in linear and ReLU layer
 ::: {.slide title="Head-to-Head Accuracy: MLP vs. Softmax Regression"}
 [Empirical Comparison]{.kicker}
 
-Training `MLPScratch`, concise `MLP`, and `SoftmaxRegression` for $30$ epochs under identical hyperparameters reveals two key phenomena:
+Training both MLPs and softmax regression for $30$ epochs with identical settings:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -624,7 +624,7 @@ Averaging validation accuracy over epochs 26–30 smooths out single-epoch SGD f
 @!mlp-implementation-accuracy-3
 
 ::: {.d2l-note}
-With $\sim 89\%$ training accuracy and $\sim 87\%$ validation accuracy on $60{,}000$ images, our $203{,}530$-parameter MLP shows only a modest $2$-point generalization gap after $30$ epochs.
+With $87\text{--}90\%$ training accuracy and $\sim 87\%$ validation accuracy on $60{,}000$ images, our $203{,}530$-parameter MLP shows only a modest generalization gap of a few points after $30$ epochs.
 :::
 :::
 
@@ -648,7 +648,7 @@ Why does $26\times$ more matrix arithmetic cost almost zero extra wall-clock tim
 ::: {.slide title="Learned Features: Localized Garment-Part Detectors"}
 [Visualizing First-Layer Weights]{.kicker}
 
-In Chapter 3, softmax regression's $10$ weight columns had to act as blurred whole-garment templates. Reshaping the $10$ highest-norm columns of $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}$ into $28 \times 28$ images reveals how hidden units collaborate:
+In softmax regression, the $10$ weight columns had to act as blurred whole-garment templates. Reshaping the $10$ highest-norm columns of $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}$ into $28 \times 28$ images reveals how hidden units collaborate:
 
 @!mlp-implementation-what-the-hidden-units-compute-2
 

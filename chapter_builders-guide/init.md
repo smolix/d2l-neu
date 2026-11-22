@@ -763,15 +763,58 @@ Parameter Initialization<br>**framework defaults · tree-wide initializers · tr
 :::
 :::
 
-::: {.slide title="Framework Defaults Do Not Use He Initialization"}
+::: {.slide title="Default Initializers Do Not Use He Initialization" only="pytorch"}
 [Why Defaults Collapse Deep ReLU Stacks]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Default variance multipliers per ReLU layer ($\frac{1}{2}n_{\text{in}}\sigma^2$):**
-  - PyTorch `nn.Linear` ($\sigma^2 = \frac{1}{3n_{\text{in}}}$): $\times \frac{1}{6}$ ($6^{-10} \approx 1.7 \times 10^{-8}$ after 10 layers).
-  - Flax `nnx.Linear` & Keras `Dense` ($\sigma^2 = \frac{1}{n_{\text{in}}}$): $\times \frac{1}{2}$ ($2^{-10} \approx 9.8 \times 10^{-4}$).
-  - Gluon `nn.Dense` ($U(-0.07, 0.07)$): $\times 0.21$ at width $256$ ($\approx 1.6 \times 10^{-7}$).
+- **Default variance multiplier per ReLU layer ($\frac{1}{2}n_{\text{in}}\sigma^2$):** `nn.Linear` draws $U(\pm 1/\sqrt{n_{\text{in}}})$, so $\sigma^2 = \frac{1}{3n_{\text{in}}}$ and each layer multiplies the mean square by $\frac{1}{6}$ ($6^{-10} \approx 1.7 \times 10^{-8}$ after 10 layers).
+- **He initialization** ($\sigma^2 = 2/n_{\text{in}}$) keeps the multiplier at exactly $1$.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-default-init-decay
+:::
+:::
+:::
+
+::: {.slide title="Default Initializers Do Not Use He Initialization" only="tensorflow"}
+[Why Defaults Collapse Deep ReLU Stacks]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Default variance multiplier per ReLU layer ($\frac{1}{2}n_{\text{in}}\sigma^2$):** `Dense` uses Glorot uniform; at $n_{\text{in}} = n_{\text{out}}$ this gives $\sigma^2 = \frac{1}{n_{\text{in}}}$ and a multiplier of $\frac{1}{2}$ ($2^{-10} \approx 9.8 \times 10^{-4}$ after 10 layers).
+- **He initialization** ($\sigma^2 = 2/n_{\text{in}}$) keeps the multiplier at exactly $1$.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-default-init-decay
+:::
+:::
+:::
+
+::: {.slide title="Default Initializers Do Not Use He Initialization" only="jax"}
+[Why Defaults Collapse Deep ReLU Stacks]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Default variance multiplier per ReLU layer ($\frac{1}{2}n_{\text{in}}\sigma^2$):** `nnx.Linear` uses LeCun normal, $\sigma^2 = \frac{1}{n_{\text{in}}}$, so each layer multiplies the mean square by $\frac{1}{2}$ ($2^{-10} \approx 9.8 \times 10^{-4}$ after 10 layers).
+- **He initialization** ($\sigma^2 = 2/n_{\text{in}}$) keeps the multiplier at exactly $1$.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-default-init-decay
+:::
+:::
+:::
+
+::: {.slide title="Default Initializers Do Not Use He Initialization" only="mxnet"}
+[Why Defaults Collapse Deep ReLU Stacks]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Default variance multiplier per ReLU layer ($\frac{1}{2}n_{\text{in}}\sigma^2$):** `nn.Dense` draws $U(-0.07, 0.07)$, a multiplier of $0.21$ at width $256$ ($\approx 1.6 \times 10^{-7}$ after 10 layers).
+- **He initialization** ($\sigma^2 = 2/n_{\text{in}}$) keeps the multiplier at exactly $1$.
 :::
 
 ::: {.col .fig .big}
@@ -785,9 +828,7 @@ Parameter Initialization<br>**framework defaults · tree-wide initializers · tr
 
 ::: {.cols .vc}
 ::: {.col}
-- Walking the module tree (`net.apply`, `net.initialize`, or iterating over submodules) to apply He initialization ($\sigma = \sqrt{2 / n_{\text{in}}}$) restores the output mean square of a 10-layer ReLU stack to $\approx 1$:
-
-@init-applying-initializers-1
+- Walking the module tree to apply He initialization ($\sigma = \sqrt{2 / n_{\text{in}}}$) restores the output mean square of a 10-layer ReLU stack to order one.
 :::
 
 ::: {.col .fig}
@@ -796,12 +837,18 @@ Parameter Initialization<br>**framework defaults · tree-wide initializers · tr
 :::
 :::
 
+::: {.slide title="Walking the Tree to Apply He Initialization"}
+[Tree-Wide Initialization]{.kicker}
+
+@init-applying-initializers-1
+:::
+
 ::: {.slide title="Truncated Normals Eliminate Extreme Initial Outliers"}
 [Bounding Tail Draws at Scale]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- Across $10^8$ weights, a standard Gaussian produces dozens of $>5\sigma$ outliers. Foundation models (BERT, ViT) use a **truncated normal** that redraws samples outside $\pm 2\sigma$ (shrinking empirical std by $\approx 0.88\times$):
+- Across $10^8$ weights, a Gaussian yields dozens of $>5\sigma$ outliers. BERT and ViT use a **truncated normal** that redraws samples outside $\pm 2\sigma$ (std $\approx 0.88\times$):
 
 @init-truncated-normals
 :::
@@ -812,12 +859,12 @@ Parameter Initialization<br>**framework defaults · tree-wide initializers · tr
 :::
 :::
 
-::: {.slide title="Writing a Gain-Parameterized Custom Initializer"}
+::: {.slide title="Writing a Gain-Parameterized Custom Initializer" only="pytorch,mxnet"}
 [Custom Initializer Interface]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- We implement a reusable normal initializer with standard deviation $\sigma = g / \sqrt{n_{\text{in}}}$ (watching `(n_out, n_in)` in PyTorch/Gluon vs. `(n_in, n_out)` in Keras/NNX):
+- We implement a reusable normal initializer with standard deviation $\sigma = g / \sqrt{n_{\text{in}}}$ (weights are stored as `(n_out, n_in)`):
 
 @init-custom-initializers-1
 :::
@@ -828,10 +875,26 @@ Parameter Initialization<br>**framework defaults · tree-wide initializers · tr
 :::
 :::
 
+::: {.slide title="Writing a Gain-Parameterized Custom Initializer" only="tensorflow,jax"}
+[Custom Initializer Interface]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- We implement a reusable normal initializer with standard deviation $\sigma = g / \sqrt{n_{\text{in}}}$ (kernels are stored as `(n_in, n_out)`):
+
+@init-custom-initializers-1
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-weight-shape-conventions-in-out
+:::
+:::
+:::
+
 ::: {.slide title="Editing Parameter Tensors Directly in Place"}
 [Direct Weight Manipulation]{.kicker}
 
-We can also rescale or edit parameter tensors directly in place (inside `torch.no_grad()` in PyTorch or `.assign()` in Keras). Because ReLU is positively homogeneous, halving the final layer's weights quarters the output mean square:
+We can also rescale or edit parameter tensors directly in place. Because ReLU is positively homogeneous, halving the final layer's weights quarters the output mean square:
 
 @init-custom-initializers-2
 :::
@@ -922,11 +985,11 @@ We test all three schedules on a $d \to 4d \to d$ residual block (`WideResidualB
 ::: {.slide title="Empirical Verification Across 32 Residual Blocks"}
 [Theory Meets Measurement]{.kicker}
 
-Comparing `unscaled` ($g=1$), `scaled` ($g=1/\sqrt{N}$), and `zero` ($g=0$) across $N \in \{2, 8, 32\}$ blocks confirms the $(1+g^2)^N$ derivation:
+Measuring $g = 1$, $1/\sqrt{N}$ and $0$ over $N \in \{2, 8, 32\}$ blocks confirms $(1+g^2)^N$:
 
 @!init-watching-the-variance-compound-3
 
-- **Always run a step-0 forward check:** Passing one synthetic unit-variance batch through a newly built architecture catches variance explosion in milliseconds before wasting GPU hours.
+- **Always run a step-0 forward check:** one unit-variance batch through a new architecture catches variance explosion in milliseconds.
 :::
 
 ::: {.slide title="Concept Check: Initialization & Residual Scaling"}
@@ -934,7 +997,7 @@ Comparing `unscaled` ($g=1$), `scaled` ($g=1/\sqrt{N}$), and `zero` ($g=0$) acro
 
 Work out the variance multipliers for these three initialization scenarios:
 
-1. A 10-layer ReLU MLP ($256 \to 256$, no biases) uses PyTorch's default $\mathcal{U}(-1/\sqrt{n_{\text{in}}}, 1/\sqrt{n_{\text{in}}})$ initializer. By what factor does each layer multiply the activation mean square, and what happens after 10 layers?
+1. A 10-layer ReLU MLP ($256 \to 256$, no biases) uses a $\mathcal{U}(-1/\sqrt{n_{\text{in}}}, 1/\sqrt{n_{\text{in}}})$ initializer. By what factor does each layer multiply the activation mean square, and what happens after 10 layers?
 2. An initializer draws from $\mathcal{N}(0, \sigma^2)$, truncates at $\pm 2\sigma$ (which shrinks std by $0.88$), and rescales so the final std is $\sigma = 0.02$. What is the maximum possible magnitude $|w|$ after rescaling?
 3. What is the largest output-projection gain $g$ that keeps the mean square after $N = 100$ residual blocks within $3\times$ the input mean square?
 

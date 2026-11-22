@@ -940,14 +940,14 @@ $$\mathcal{L}(\boldsymbol{\theta}) = -\frac{1}{BT} \sum_{b=1}^{B} \sum_{t=1}^{T}
 ::: {.slide title="Byte-Level Language Modeling on WikiText-103"}
 [Corpus & Initialization Check]{.kicker}
 
-We train a 6-block byte-level `GPT` ($V = 256, d = 256, H = 8, L = 6, T = 128$, $4.85\text{M}$ parameters) on $270\text{M}$ raw UTF-8 bytes of **WikiText-103**:
+We train a 6-block byte-level `GPT` ($V = 256, d = 256, H = 8, L = 6, T = 128$, $4.79\text{M}$ parameters) on $270\text{M}$ raw UTF-8 bytes of **WikiText-103**:
 
 @gpt-training-the-model-1
 
 @gpt-from-blocks-to-a-language-model-2
 
 ::: {.d2l-note}
-**Sanity check before training:** At step $0$, random logits assign roughly uniform probability $1/256$ to every byte, so the initial loss ($5.56\text{ nats/byte}$) matches $\ln 256 \approx 5.55\text{ nats/byte}$.
+**Sanity check before training:** At step $0$, random logits assign roughly uniform probability $1/256$ to every byte, so the initial loss ($5.5\text{--}5.7\text{ nats/byte}$) is close to $\ln 256 \approx 5.55\text{ nats/byte}$.
 :::
 :::
 
@@ -972,7 +972,7 @@ We train a 6-block byte-level `GPT` ($V = 256, d = 256, H = 8, L = 6, T = 128$, 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Rapid convergence:** In $1{,}000$ steps ($8.2\text{M}$ bytes, $\sim 3\%$ of the corpus), validation cross-entropy drops from $5.56$ to **$1.34\text{ nats/byte}$** ($\approx 1.93\text{ bits/byte}$).
+- **Rapid convergence:** In $1{,}000$ steps ($8.2\text{M}$ bytes, $\sim 3\%$ of the corpus), validation cross-entropy drops from $\approx 5.6$ to **$1.34\text{ nats/byte}$** ($\approx 1.93\text{ bits/byte}$).
 - **Count-based benchmarks on the same bytes:**
   - Uniform guess ($\ln 256$): **$5.55\text{ nats/byte}$**
   - Empirical unigram frequencies: **$3.17\text{ nats/byte}$**
@@ -995,7 +995,7 @@ To distinguish genuine architectural improvements from random initialization noi
 @!gpt-run-to-run-spread
 
 - **Tight run-to-run repeatability:** Across three random seeds, validation loss varies by only **$0.008\text{--}0.012\text{ nats/byte}$**.
-- **Statistically clear `SwiGLU` win:** At identical parameter count ($4.85\text{M}$) and step time, `SwiGLU` beats `GELU` by **$\sim 0.06\text{ nats/byte}$** ($> 5\times$ the seed spread).
+- **Statistically clear `SwiGLU` win:** At identical parameter count ($4.79\text{M}$) and step time, `SwiGLU` beats `GELU` by **$\sim 0.06\text{ nats/byte}$** ($> 5\times$ the seed spread).
 - **Post-norm pitfall:** Switching `pre_norm=False` without warmup causes training to stall permanently at the unigram floor ($3.17\text{ nats/byte}$) as early updates collapse token diversity and starve lower-layer gradients.
 :::
 
@@ -1074,7 +1074,7 @@ for i, blk in enumerate(gpt2.blks):
 ::: {.slide title="Matching Conv1D and nnx.Linear Layouts in JAX" only="jax"}
 [Weight Layout Pitfall]{.kicker}
 
-OpenAI's original TensorFlow GPT-2 code used `Conv1D` layers that store weight matrices as `(in_features, out_features)`—the exact kernel layout of Flax's `nnx.Linear` (unlike PyTorch's `(out, in)`):
+OpenAI's original TensorFlow GPT-2 code used `Conv1D` layers that store weight matrices as `(in_features, out_features)`—the exact kernel layout of Flax's `nnx.Linear`:
 
 ```{.python #gpt-exercises-5}
 for i, blk in enumerate(gpt2.blks):
@@ -1097,6 +1097,10 @@ for i, blk in enumerate(gpt2.blks):
 Evaluating the loaded `124.4M`-parameter `gpt2` model on *The Time Machine* yields a per-token cross-entropy of $3.89\text{ nats}$ (perplexity $e^{3.89} \approx 49$, compared to $50{,}257$ for uniform guessing) and coherent greedy/sampled continuations:
 
 @gpt-loading-gpt-2-3
+:::
+
+::: {.slide title="Greedy and Sampled Continuations from GPT-2 Small"}
+[Checkpoint Verification]{.kicker}
 
 @!gpt-loading-gpt-2-4
 

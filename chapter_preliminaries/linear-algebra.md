@@ -888,9 +888,9 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 ::: {.cols .vc}
 ::: {.col}
 - Reductions (`.sum()`, `.mean()`) aggregate entries along a chosen axis and **remove that axis from the shape**:
-  - **All axes (`A.sum()`):** collapses `(2, 3) -> ()` ($0^\textrm{th}$-order scalar).
-  - **Down rows (`axis=0`):** sums over row index $i$ ($c_j = \sum_{i=1}^m a_{ij}$), collapsing axis 0 and leaving column totals of shape **`(3,)`**.
-  - **Across columns (`axis=1`):** sums over column index $j$ ($r_i = \sum_{j=1}^n a_{ij}$), collapsing axis 1 and leaving row totals of shape **`(2,)`**.
+  - **All axes (`A.sum()`):** collapses `(2, 3) -> ()`, a scalar.
+  - **Down rows (`axis=0`):** $c_j = \sum_{i=1}^m a_{ij}$ leaves column totals of shape **`(3,)`**.
+  - **Across columns (`axis=1`):** $r_i = \sum_{j=1}^n a_{ij}$ leaves row totals of shape **`(2,)`**.
 
 @linear-algebra-reduction-2
 :::
@@ -963,7 +963,7 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 
 ::: {.cols .vc}
 ::: {.col}
-- A matrix $\mathbf{A} \in \mathbb{R}^{m \times n}$ defines a linear map $\mathbb{R}^n \to \mathbb{R}^m$ (`A @ x` or `tf.linalg.matvec(A, x)`), with two complementary views:
+- A matrix $\mathbf{A} \in \mathbb{R}^{m \times n}$ defines a linear map $\mathbb{R}^n \to \mathbb{R}^m$, with two complementary views:
   1. **Row-wise ($m$ parallel dot products):** $[\mathbf{A}\mathbf{x}]_i = \mathbf{a}_i^\top \mathbf{x}$ projects input $\mathbf{x}$ onto each of the $m$ row templates of $\mathbf{A}$.
   2. **Column-wise (basis combination):** $\mathbf{A}\mathbf{x} = \sum_{j=1}^n x_j \mathbf{a}_{:,j}$ forms a linear combination of the columns of $\mathbf{A}$ weighted by the coordinates of $\mathbf{x}$.
 

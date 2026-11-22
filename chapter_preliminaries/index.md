@@ -34,9 +34,9 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 ::: {.cols .vc}
 ::: {.col}
 - **Scale breaks scalar code:** One 256-image Fashion-MNIST batch holds $200{,}704$ pixels; foundation models update $10^9\text{--}10^{12}$ weights per step.
-- **Pillar 1 — Contiguous Tensor Kernels (§§1.1–1.3):** Pack data into unboxed RAM/VRAM buffers and transform whole batches on SIMD/GPU lanes.
-- **Pillar 2 — Reverse-Mode Autograd (§§1.4–1.5):** Record the execution DAG to obtain all parameter gradients $\nabla_{\mathbf{w}} L$ in a single backward sweep.
-- **Statistical Foundation (§1.6):** Bound test-set uncertainty ($\sigma/\sqrt{n}$) and update beliefs via Bayes' rule.
+- **Pillar 1 — Contiguous Tensor Kernels** Pack data into unboxed RAM/VRAM buffers and transform whole batches on SIMD/GPU lanes.
+- **Pillar 2 — Reverse-Mode Autograd** Record the execution DAG to obtain all parameter gradients $\nabla_{\mathbf{w}} L$ in a single backward sweep.
+- **Statistical Foundation:** Bound test-set uncertainty ($\sigma/\sqrt{n}$) and update beliefs via Bayes' rule.
 :::
 
 ::: {.col .fig .big}
@@ -50,10 +50,10 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 
 ::: {.cols .vc}
 ::: {.col}
-- **Data to tensors (§§1.2, 1.1):** Parse raw tables, impute gaps without leakage, and pack batches into contiguous `float32` / `bfloat16` buffers.
-- **Forward pass (§1.3):** Project inputs to class logits via batched matrix products $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$.
-- **Loss & backward sweep (§§1.4, 1.5):** Evaluate scalar loss $L$ and propagate Vector–Jacobian Products backward to compute $\nabla_{\mathbf{W}} L$.
-- **Step & statistical evaluation (§1.6):** Update parameters and quantify finite-sample error bars.
+- **Data to tensors:** Parse raw tables, impute gaps without leakage, and pack batches into contiguous `float32` / `bfloat16` buffers.
+- **Forward pass:** Project inputs to class logits via batched matrix products $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$.
+- **Loss & backward sweep:** Evaluate scalar loss $L$ and propagate Vector–Jacobian Products backward to compute $\nabla_{\mathbf{W}} L$.
+- **Step & statistical evaluation:** Update parameters and quantify finite-sample error bars.
 :::
 
 ::: {.col .fig .big}
@@ -67,10 +67,10 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 
 ::: {.cols .vc}
 ::: {.col}
-- **§§1.1 & 1.3 (`images` batch):** Fashion-MNIST minibatch `(256, 1, 28, 28)` flattened to $\mathbf{X} \in \mathbb{R}^{256 \times 784}$ and multiplied by $\mathbf{W} \in \mathbb{R}^{784 \times 10}$.
-- **§1.2 (`house_tiny.csv`):** 10 homes with missing rooms, categorical roofs, and $500\times$ scale gaps.
-- **§§1.4–1.5 (Line loss & control flow):** Fitting $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|_2^2$ on 3 points and differentiating through Python loops.
-- **§1.6 (Coin tosses & screening):** $1/\sqrt{n}$ confidence bands and two-stage Bayesian medical diagnosis.
+- **Tensors & linear algebra (`images` batch):** Fashion-MNIST minibatch `(256, 1, 28, 28)` flattened to $\mathbf{X} \in \mathbb{R}^{256 \times 784}$ and multiplied by $\mathbf{W} \in \mathbb{R}^{784 \times 10}$.
+- **Data preprocessing (`house_tiny.csv`):** 10 homes with missing rooms, categorical roofs, and $500\times$ scale gaps.
+- **Calculus & autograd (line loss & control flow):** Fitting $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|_2^2$ on 3 points and differentiating through Python loops.
+- **Probability (coin tosses & screening):** $1/\sqrt{n}$ confidence bands and two-stage Bayesian medical diagnosis.
 :::
 
 ::: {.col .fig .big}
@@ -79,14 +79,14 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 :::
 :::
 
-::: {.slide title="How to Navigate Chapter 1 and the Math Appendix"}
+::: {.slide title="How to Navigate the Preliminaries and the Math Appendix"}
 [Study Guide]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Hands-on systems focus (§§1.1–1.6):** Every concept pairs directly with executable framework code for shapes, dtypes, memory aliasing, and gradients.
-- **Must-read sections:** Even if you know NumPy and calculus, study **§1.5 (Autograd)** for DAG semantics (`detach`, in-place hazards) and **§1.6 (Probability)** for finite-sample standard errors.
-- **Deep theoretical proofs:** Jump to **Chapters 33–35 (MDL Appendix)** for SVD, matrix calculus identities, and MLE asymptotics.
+- **Hands-on systems focus:** Every concept pairs directly with executable framework code for shapes, dtypes, memory aliasing, and gradients.
+- **Must-read sections:** Even if you know NumPy and calculus, study **the autograd section** for DAG semantics (`detach`, in-place hazards) and **the probability section** for finite-sample standard errors.
+- **Deep theoretical proofs:** Jump to **Chapters 33–36 (Math Appendix)** for SVD, matrix calculus identities, and MLE asymptotics.
 :::
 
 ::: {.col .fig .big}

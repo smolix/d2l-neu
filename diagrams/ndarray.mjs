@@ -243,14 +243,14 @@ function numpyShare() {
 function pointersVsContiguous() {
   const W = 540, H = 324; let o = '';
   // Top panel: Python list of boxed floats
-  o += name(20, 20, '(a) Python list: 8-byte pointers chasing scattered 28-byte heap boxes', D.red.dark, { anchor: 'start', fs: 15 });
+  o += name(20, 20, '(a) Python list: 8-byte pointers chasing scattered 24-byte heap boxes', D.red.dark, { anchor: 'start', fs: 15 });
   const ps = 44, pg = 6, px = 24, py = 36;
   for (let i = 0; i < 4; i++) {
     const x = px + i * (ps + pg);
     o += rect(x, py, ps, 30, D.red.tint, D.red.base);
     o += code(x + ps / 2, py + 15, `p${i}`, D.red.dark, { fs: 13.5 });
   }
-  o += tx(240, 51, 'cache misses + 28 B/float + GIL loop', { fs: 13.5, fw: 600, fill: D.red.dark, anchor: 'start' });
+  o += tx(240, 51, 'cache misses + 24 B/float + GIL loop', { fs: 13.5, fw: 600, fill: D.red.dark, anchor: 'start' });
   // Place scattered heap boxes below p0..p3 so every arrow runs strictly in the y=68..104 gap
   const boxes = [
     [20,  106, '1.0', px + 0 * (ps + pg) + ps / 2],
@@ -292,7 +292,7 @@ function headerBuffer() {
   o += code(134, 76, 'offset:0  dtype:float32', C.muted, { fs: 12.5 });
 
   o += rect(292, 14, 228, 78, D.purple.tint, C.purple);
-  o += name(406, 34, 'View X.T — O(1) zero-copy', D.purple.dark, { fs: 15.5 });
+  o += name(406, 34, 'View Xᵀ — O(1) zero-copy', D.purple.dark, { fs: 15.5 });
   o += code(406, 56, 'shape:(4,3) strides:(1,4)', C.ink, { fs: 13 });
   o += code(406, 76, 'offset:0  (same pointer!)', D.purple.dark, { fs: 12.5 });
 
@@ -308,7 +308,7 @@ function headerBuffer() {
   // Contrast: O(n) copy allocates a brand-new buffer
   const cy = 236;
   o += arrow(190, by + s + 6, 190, cy - 6, C.amber, true);
-  o += code(202, (by + s + cy) / 2, 'X.clone() → O(n) new buffer copy', D.orange.dark, { anchor: 'start', fs: 13.5 });
+  o += code(202, (by + s + cy) / 2, 'copy → O(n) new buffer', D.orange.dark, { anchor: 'start', fs: 13.5 });
   o += grid(row, bx0, cy, s, g, { fs: 13.5, fill: () => AMBER });
   o += code(270, cy + s + 18, 'New 1D Storage Buffer (independent bytes)', D.orange.dark, { fs: 13.5 });
   return svg(W, H, o);
@@ -397,22 +397,22 @@ function gatherMask() {
   const s = 34, g = 4;
   const M = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]];
   // Panel (a): Integer gather picks [row i, label_i]
-  o += name(16, 20, '(a) Integer gather: X[arange(3), [2, 0, 3]]', D.orange.dark, { anchor: 'start', fs: 15.5 });
-  const picks = [2, 0, 3];
+  o += name(16, 20, '(a) Integer gather: columns [3, 0, 2], one per row', D.orange.dark, { anchor: 'start', fs: 15.5 });
+  const picks = [3, 0, 2];
   o += grid(M, 24, 38, s, g, {
     fs: 14,
     fill: (r, c) => picks[r] === c ? AMBER : BLUE,
   });
   o += arrow(186, 92, 254, 92, C.amber);
   o += code(220, 74, 'gather', D.orange.dark, { fs: 13.5 });
-  o += grid([[2, 4, 11]], 264, 75, s, g, { fs: 14, fill: () => AMBER });
+  o += grid([[3, 4, 10]], 264, 75, s, g, { fs: 14, fill: () => AMBER });
   o += code(318, 128, 'shape (3,) — 1 logit per example', D.orange.dark, { fs: 13.5 });
 
   o += hline(16, 524, 158);
 
   // Panel (b): Boolean mask X > 5: X[mask] (1D) vs where(mask, X, 0) (2D)
   o += name(16, 182, '(b) Boolean mask (X > 5): 1D filter vs. 2D where', D.green.dark, { anchor: 'start', fs: 15.5 });
-  o += code(116, 206, 'X[X > 5] → 1D shape (6,)', D.purple.dark, { fs: 13.5 });
+  o += code(116, 206, 'mask X > 5 → 1D shape (6,)', D.purple.dark, { fs: 13.5 });
   o += grid([[6, 7, 8, 9, 10, 11]], 20, 222, 30, 3, { fs: 13, fill: () => GREEN });
   o += tx(116, 272, 'drops 2D grid coordinates', { fs: 13, fill: C.muted });
 
@@ -439,7 +439,7 @@ function broadcastBug() {
 
   o += tx(166, 104, '=', { fs: 20, fw: 700, fill: D.red.dark });
   const outer = [[1, -9, -19], [11, 1, -9], [21, 11, 1]];
-  o += code(226, 46, '3×3 outer diffs!', D.red.dark, { fs: 12.5 });
+  o += code(222, 46, '3×3 outer diffs!', D.red.dark, { fs: 12 });
   o += grid(outer, 180, 60, s, g, {
     fs: 12,
     fill: (r, c) => r === c ? [D.red.tint, D.red.base, false, D.red.dark] : [D.red.tint, D.red.base, true, D.red.dark],
@@ -449,7 +449,7 @@ function broadcastBug() {
   o += `<line x1="286" y1="16" x2="286" y2="182" stroke="${N.hairline}" stroke-width="1.5"/>`;
 
   // Right panel: Fix (3, 1) - (3, 1) -> (3, 1) aligned column
-  o += name(414, 20, 'Fix: y.reshape(-1, 1) → (3, 1)', D.green.dark, { fs: 15.5 });
+  o += name(414, 20, 'Fix: reshape y to (3, 1)', D.green.dark, { fs: 15.5 });
   o += code(324, 46, 'ŷ:(3,1)', D.blue.dark, { fs: 12.5 });
   o += grid([[10], [20], [30]], 308, 60, 32, 4, { fs: 13, fill: () => BLUE });
   o += tx(358, 112, '−', { fs: 24, fw: 700, fill: C.ink });

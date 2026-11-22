@@ -281,5 +281,5 @@ for (const p of writtenPaths) {
   if (fs.existsSync(book)) { fs.copyFileSync(p, book); copied++; }
 }
 
-console.log(`\nSUCCESS: Rendered, verified (0 visual defects), and outlined ${writtenPaths.length} diagram(s)`
+console.log(`\nSUCCESS: Rendered, verified (${totalDefects} visual defects), and outlined ${writtenPaths.length} diagram(s)`
   + ` (${cropPaths.length} re-cropped, ${copied} book copies refreshed).`);

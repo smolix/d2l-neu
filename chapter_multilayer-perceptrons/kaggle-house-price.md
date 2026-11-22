@@ -630,7 +630,7 @@ Before tuning an MLP, we benchmark `d2l.LinearRegression` across our $5$ folds (
 ::: {.slide title="Building HouseMLP: 64 ReLU Units With Weight Decay"}
 [Regularized MLP Architecture]{.kicker}
 
-Next we construct `HouseMLP`: a one-hidden-layer ReLU network ($345 \to 64 \to 1$, $\sim 22{,}200$ parameters, or $19$ parameters per training house) with He initialization and $\ell_2$ weight decay applied strictly to the weight matrices $\mathbf{W}^{(1)}, \mathbf{W}^{(2)}$ (excluding biases):
+`HouseMLP` ($345 \to 64 \to 1$, $\sim 22{,}200$ parameters): He init, weight decay on weights only:
 
 @kaggle-house-price-mlp-model
 :::
@@ -638,16 +638,15 @@ Next we construct `HouseMLP`: a one-hidden-layer ReLU network ($345 \to 64 \to 1
 ::: {.slide title="Cross-Validating Weight Decay: The U-Curve in Action"}
 [Hyperparameter Sweep]{.kicker}
 
-Sweeping weight decay `wd` across $\{0.001, 0.003, 0.01, 0.03, 0.1, 0.3\}$ on our $5$ shared folds traces a textbook generalization U-curve:
-
 ::: {.cols .vc}
 ::: {.col}
-- **Under-regularized (`wd = 0.001`):** Overfits the $1{,}168$ training homes (train RMSE $\sim 0.09$), pushing validation RMSE to $\sim 0.16$—worse than linear regression!
-- **Sweet spot (`wd = 0.03` or `0.1`):** Constrains weight norms so validation RMSE drops to **$\sim 0.135$–$0.140$**, beating the linear baseline.
+- Sweeping `wd` over $\{0.001, \ldots, 0.3\}$ on our $5$ shared folds traces a textbook U-curve:
+- **Under-regularized (`wd = 0.001`):** Overfits the $1{,}168$ training homes (train RMSE $\sim 0.09$), pushing validation RMSE to $\sim 0.15$–$0.18$, no better than linear regression.
+- **Sweet spot (`wd = 0.03` or `0.1`):** Constrains weight norms so validation RMSE drops to **$\sim 0.13$–$0.15$**, beating the linear baseline.
 - **Over-regularized (`wd = 0.3`):** Shrinks weights too aggressively, underfitting both training and validation splits ($\sim 0.17$).
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!kaggle-house-price-mlp-select
 :::
 :::

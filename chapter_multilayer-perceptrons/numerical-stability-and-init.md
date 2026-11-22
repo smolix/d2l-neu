@@ -598,10 +598,9 @@ $$\mathbb{E}[g_i^2] = \underbrace{h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr]}
 ::: {.slide title="Empirical Verification across 10 Layers"}
 [Measuring Vanishing & Exploding Gradients]{.kicker}
 
-We measure the activation and gradient mean squares across a 10-layer, width-256 network at initialization for our three regimes:
-
 ::: {.cols .vc}
 ::: {.col}
+- **Setup:** Activation and gradient mean squares of a 10-layer, width-256 network at initialization, for our three regimes.
 - **Exact exponential lines on a log axis:** Every layer multiplies the mean square by a constant factor, producing straight lines on a semilog plot.
 - **Predicted vs. measured at Layer 1:**
   - ReLU, $\tau = 0.01$: $\sim 10^{-17}$ (vanished)
@@ -609,7 +608,7 @@ We measure the activation and gradient mean squares across a 10-layer, width-256
   - Sigmoid, $\tau = 1/16$: $\sim 5 \times 10^{-12}$
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!numerical-stability-and-init-exploding-gradients
 :::
 :::
@@ -667,16 +666,15 @@ $$v^{(k)} = \frac{1}{2}\, n_{\textrm{in}}\, \tau^2\, v^{(k-1)} \quad \Longrighta
 ::: {.slide title="Measured Activation Variance Across 10 ReLU Layers"}
 [Xavier vs. He in Depth]{.kicker}
 
-Comparing $\mathcal{N}(0, 0.01^2)$, Xavier ($\tau^2 = 1/256$), and He ($\tau^2 = 2/256$) across 10 ReLU layers of width $h = 256$ confirms the factor-of-2 difference per layer:
-
 ::: {.cols .vc}
 ::: {.col}
+- **Setup:** 10 ReLU layers of width $h = 256$ under three initializations; Xavier and He differ by a factor of 2 per layer.
 - **$\mathcal{N}(0, 0.01^2)$:** Collapses to $\sim 10^{-19}$ by layer 10.
 - **Xavier ($\tau^2 = 1/h$):** Loses a factor of $1/2$ at every ReLU layer, decaying by $2^{-10} \approx 10^{-3}$ across 10 layers.
 - **He ($\tau^2 = 2/h$):** Holds both activation mean squares ($\approx 1.0$) and backward gradient mean squares ($\approx 0.5$) flat across all 10 layers!
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!numerical-stability-and-init-depth-sweep
 :::
 :::
@@ -693,22 +691,21 @@ To test how initial weight scale determines trainability, `DeepMLP(std, lr, dept
 ::: {.slide title="Training a 10-Layer MLP on Fashion-MNIST"}
 [Impact on Real Training]{.kicker}
 
-Training a 10-hidden-layer ReLU `DeepMLP` ($784 \to 256 \times 10 \to 10$, $795{,}658$ parameters) on Fashion-MNIST for 10 epochs at $\eta = 0.05$ shows our variance analysis in action:
-
 ::: {.cols .vc}
 ::: {.col}
+- **Setup:** A 10-hidden-layer ReLU `DeepMLP` ($784 \to 256 \times 10 \to 10$), 10 epochs on Fashion-MNIST at $\eta = 0.05$.
 - **$\mathcal{N}(0, 0.01^2)$:** Completely untrainable—loss stays flat at $\log 10 \approx 2.30$ ($10\%$ accuracy).
 - **Xavier:** Starts slowly on epoch 1 (due to the $2^{-10}$ signal attenuation) before recovering to $\sim 85\%$ accuracy.
 - **He initialization:** Drops the training loss steeply from epoch 1 and reaches $\sim 85\%$ validation accuracy cleanly.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!numerical-stability-and-init-training-a-deep-network-2
 :::
 :::
 :::
 
-::: {.slide title="Beware: Framework Default Initializers Are Rarely He"}
+::: {.slide title="Beware: Framework Default Initializers Are Rarely He" only="pytorch"}
 [Framework Defaults Pitfall]{.kicker}
 
 Standard framework linear layers do *not* default to He initialization—leaving defaults untouched in a deep plain ReLU stack causes progressive signal decay:
@@ -716,10 +713,40 @@ Standard framework linear layers do *not* default to He initialization—leaving
 | Framework Layer | Built-In Default Distribution | Weight Variance $\tau^2$ | ReLU Multiplier $\frac{1}{2}h\tau^2$ ($h = 256$) |
 |:--|:--|--:|--:|
 | **PyTorch** `nn.Linear` | $U(-1/\sqrt{n_{\textrm{in}}}, 1/\sqrt{n_{\textrm{in}}})$ | $\frac{1}{3 n_{\textrm{in}}}$ | $\frac{1}{6} \approx 0.167$ per layer |
-| **JAX / Flax** `nnx.Linear` | LeCun normal $\mathcal{N}(0, 1/n_{\textrm{in}})$ | $\frac{1}{n_{\textrm{in}}}$ | $\frac{1}{2} = 0.500$ per layer |
+| **Explicit He Normal** | $\mathcal{N}(0, 2/n_{\textrm{in}})$ | $\frac{2}{n_{\textrm{in}}}$ | **$1.000$ per layer** |
+:::
+
+::: {.slide title="Beware: Framework Default Initializers Are Rarely He" only="tensorflow"}
+[Framework Defaults Pitfall]{.kicker}
+
+Standard framework linear layers do *not* default to He initialization—leaving defaults untouched in a deep plain ReLU stack causes progressive signal decay:
+
+| Framework Layer | Built-In Default Distribution | Weight Variance $\tau^2$ | ReLU Multiplier $\frac{1}{2}h\tau^2$ ($h = 256$) |
+|:--|:--|--:|--:|
 | **TensorFlow** `Dense` | Glorot uniform ($n_{\textrm{in}} = n_{\textrm{out}} = h$) | $\frac{1}{n_{\textrm{in}}}$ | $\frac{1}{2} = 0.500$ per layer |
+| **Explicit He Normal** | $\mathcal{N}(0, 2/n_{\textrm{in}})$ | $\frac{2}{n_{\textrm{in}}}$ | **$1.000$ per layer** |
+:::
+
+::: {.slide title="Beware: Framework Default Initializers Are Rarely He" only="jax"}
+[Framework Defaults Pitfall]{.kicker}
+
+Standard framework linear layers do *not* default to He initialization—leaving defaults untouched in a deep plain ReLU stack causes progressive signal decay:
+
+| Framework Layer | Built-In Default Distribution | Weight Variance $\tau^2$ | ReLU Multiplier $\frac{1}{2}h\tau^2$ ($h = 256$) |
+|:--|:--|--:|--:|
+| **JAX / Flax** `nnx.Linear` | LeCun normal $\mathcal{N}(0, 1/n_{\textrm{in}})$ | $\frac{1}{n_{\textrm{in}}}$ | $\frac{1}{2} = 0.500$ per layer |
+| **Explicit He Normal** | $\mathcal{N}(0, 2/n_{\textrm{in}})$ | $\frac{2}{n_{\textrm{in}}}$ | **$1.000$ per layer** |
+:::
+
+::: {.slide title="Beware: Framework Default Initializers Are Rarely He" only="mxnet"}
+[Framework Defaults Pitfall]{.kicker}
+
+Standard framework linear layers do *not* default to He initialization—leaving defaults untouched in a deep plain ReLU stack causes progressive signal decay:
+
+| Framework Layer | Built-In Default Distribution | Weight Variance $\tau^2$ | ReLU Multiplier $\frac{1}{2}h\tau^2$ ($h = 256$) |
+|:--|:--|--:|--:|
 | **MXNet** `nn.Dense` | Uniform $U(-0.07, 0.07)$ | $\frac{0.07^2}{3} \approx 0.00163$ | $\approx 0.209$ per layer |
-| **Explicit He Normal** | $\mathcal{N}(0, 2/n_{\textrm{in}})$ (`kaiming_normal_`) | $\frac{2}{n_{\textrm{in}}}$ | **$1.000$ per layer** |
+| **Explicit He Normal** | $\mathcal{N}(0, 2/n_{\textrm{in}})$ | $\frac{2}{n_{\textrm{in}}}$ | **$1.000$ per layer** |
 :::
 
 ::: {.slide title="Symmetry Breaking: Why Weights Cannot Be Constant"}

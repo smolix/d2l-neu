@@ -1229,7 +1229,7 @@ Parameters, State, and Memory<br>**the state tree · trainable parameters vs. bu
 
 ::: {.cols .vc}
 ::: {.col}
-- Full-tree iterators (`named_parameters()`, `collect_params()`, `net.weights`, `nnx.state`) yield every leaf alongside its dotted path (e.g., `1.body.0.weight`):
+- A full-tree iterator yields every leaf alongside its path in the tree:
 
 @parameters-state-memory-accessing-parameters-5
 
@@ -1247,9 +1247,9 @@ Parameters, State, and Memory<br>**the state tree · trainable parameters vs. bu
 
 ::: {.cols .vc}
 ::: {.col}
-- **Parameters (`nn.Parameter`):** Updated by optimizer, saved in checkpoints, and moved to GPUs ($\mathbf{W}, \mathbf{b}, \mathbf{g}$).
-- **Registered buffers (`register_buffer`):** Skipped by optimizer, but saved in checkpoints and moved/cast with the model (feature $\boldsymbol{\mu}, \boldsymbol{\sigma}$, BatchNorm running stats).
-- **Plain attributes:** Invisible to checkpoints and `.to(gpu)`—never store persistent tensors as plain Python attributes!
+- **Parameters:** Updated by optimizer, saved in checkpoints, and moved to GPUs ($\mathbf{W}, \mathbf{b}, \mathbf{g}$).
+- **Registered buffers:** Skipped by optimizer, but saved in checkpoints and moved/cast with the model (feature $\boldsymbol{\mu}, \boldsymbol{\sigma}$, BatchNorm running stats).
+- **Plain attributes:** Invisible to checkpoints and device moves—never store persistent tensors as plain Python attributes!
 :::
 
 ::: {.col .fig .big}
@@ -1263,13 +1263,25 @@ Parameters, State, and Memory<br>**the state tree · trainable parameters vs. bu
 
 ::: {.cols .vc}
 ::: {.col}
-- A `Standardizer` layer registers training-set statistics $\boldsymbol{\mu}$ and $\boldsymbol{\sigma}$ as buffers (`register_buffer`, `gluon.Constant`, `trainable=False`, or `nnx.Variable`):
-
-@parameters-state-memory-parameters-and-buffers-1
+- A `Standardizer` layer registers training-set statistics $\boldsymbol{\mu}$ and $\boldsymbol{\sigma}$ as non-trainable buffers.
 :::
 
 ::: {.col .fig}
 @fig:ch05-bg-standardizer-buffer
+:::
+:::
+:::
+
+::: {.slide title="A Standardizer Layer with Two Buffers"}
+[Buffers in Code]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@-parameters-state-memory-parameters-and-buffers-1
+:::
+
+::: {.col .narrow}
+@!parameters-state-memory-parameters-and-buffers-1
 :::
 :::
 :::
@@ -1305,18 +1317,34 @@ We can verify the parameter count of our residual MLP analytically and convert i
 @!parameters-state-memory-counting-parameters-counting-bytes-1
 :::
 
-::: {.slide title="Verifying That Adam Allocates Two Full Model Copies"}
+::: {.slide title="Verifying That Adam Allocates Two Full Model Copies" except="jax"}
 [Optimizer State Allocation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- Adam allocates its running first and second moments ($\mathbf{m}$ and $\mathbf{v}$) lazily on the first optimizer step, adding $2 \times 18{,}634 = 37{,}268$ floats ($8\text{ B/param}$):
+- Adam keeps running first and second moments ($\mathbf{m}$ and $\mathbf{v}$) for every parameter, adding $2 \times 18{,}634 = 37{,}268$ floats ($8\text{ B/param}$):
 
 @parameters-state-memory-counting-parameters-counting-bytes-2
 :::
 
 ::: {.col .fig}
 @fig:ch05-bg-lazy-adam-moments
+:::
+:::
+:::
+
+::: {.slide title="Verifying That Adam Allocates Two Full Model Copies" only="jax"}
+[Optimizer State Allocation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Adam keeps running first and second moments ($\mathbf{m}$ and $\mathbf{v}$) for every parameter, adding $2 \times 18{,}634 = 37{,}268$ floats ($8\text{ B/param}$):
+
+@parameters-state-memory-counting-parameters-counting-bytes-2
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-lazy-adam-moments@jax
 :::
 :::
 :::
@@ -1373,9 +1401,17 @@ Language models map input token IDs to $d$-vectors via a $|V| \times d$ embeddin
 ::: {.slide title="Implementing Weight Tying in a Miniature Language Model"}
 [Tying in Code]{.kicker}
 
-In `ToyLM` ($|V| = 100, d = 16$), we alias the output projection directly to the input embedding table:
+::: {.cols .vc}
+::: {.col}
+@-parameters-state-memory-tied-parameters-1
+:::
 
-@parameters-state-memory-tied-parameters-1
+::: {.col .narrow}
+- In `ToyLM` ($|V| = 100, d = 16$), the output projection is an alias of the input embedding table, so the table is stored once:
+
+@!parameters-state-memory-tied-parameters-1
+:::
+:::
 :::
 
 ::: {.slide title="Tied Tensors Are Deduplicated and Counted Once"}
@@ -1416,10 +1452,20 @@ $$\frac{\partial L}{\partial \mathbf{W}} = \frac{\partial L}{\partial \mathbf{W}
 When fine-tuning a pretrained backbone on a small dataset, we **freeze** the backbone weights and train only the output head ($650$ of $18{,}634$ parameters in our residual MLP):
 
 @parameters-state-memory-freezing-parameters-1
+:::
 
+::: {.slide title="After Freezing, Only the Head Trains"}
+[Selective Optimization]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
 @-parameters-state-memory-freezing-parameters-2
+:::
 
+::: {.col .narrow}
 @!parameters-state-memory-freezing-parameters-2
+:::
+:::
 :::
 
 ::: {.slide title="Two Silent Pitfalls of Freezing Parameters"}
@@ -1429,7 +1475,7 @@ When fine-tuning a pretrained backbone on a small dataset, we **freeze** the bac
 ::: {.col}
 @parameters-state-memory-freezing-parameters-4
 
-- **Pitfall 1:** Existing Adam moments ($8\text{ B/param}$) stay in RAM unless the optimizer is built strictly over unfrozen parameters.
+- **Pitfall 1:** Adam moments ($8\text{ B/param}$) stay in memory unless the optimizer covers only unfrozen parameters.
 - **Pitfall 2:** Frozen BatchNorm layers in `.train()` mode still mutate their running mean/variance buffers unless set to `.eval()`.
 :::
 
@@ -1446,7 +1492,7 @@ Test your understanding on the 8-billion-parameter language model (`fp32`, Adam,
 
 1. Suppose you freeze the entire 8B backbone except the $525\text{M}$-parameter output head and construct Adam over the head alone. How much persistent state memory is required in `fp32`, and does it fit on a single `80 GB` GPU?
 2. What if you instead constructed Adam over all 8B parameters, ran 1 warmup step, and *then* froze the backbone without recreating the optimizer?
-3. If two layers share a weight matrix $\mathbf{W}$ and you freeze $\mathbf{W}$ via `self.emb.weight.requires_grad = False`, can `self.head` still adapt?
+3. If two layers share a weight matrix $\mathbf{W}$ and you freeze $\mathbf{W}$ through the embedding layer, can `self.head` still adapt?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**

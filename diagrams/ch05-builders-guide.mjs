@@ -28,53 +28,173 @@ const fillRect = (x, y, w, h, fill, rx = 4) =>
 const hline = (x1, x2, y, color = N.hairline, dash = true) =>
   `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="1.5"${dash ? ' stroke-dasharray="4 4"' : ''}/>`;
 
-function fitTx(x, y, str, maxW, o = {}) {
-  const s = String(str);
-  const baseFs = o.fs || 13.5;
-  const perChar = o.mono ? 0.68 : 0.58;
-  let effLen = 0;
-  for (const ch of s) effLen += ch.charCodeAt(0) > 127 ? 1.35 : 1.0;
-  const estW = effLen * baseFs * perChar;
-  const pad = 20;
-  const fs = (maxW && estW > maxW - pad)
-    ? Math.max(7.2, +((maxW - pad) / (effLen * perChar)).toFixed(2))
-    : baseFs;
-  return tx(x, y, s, { ...o, fs });
+// Text fitting. Widths are the bundled faces' advances (Source Sans 3
+// Regular / Bold, chars 32-126, in 1/100 em; weight 500 is measured as
+// Regular plus 3%), and 0.60 em for JetBrains Mono, so a fit estimate
+// matches the outlined SVG. A label is shrunk no further than FIT_FLOOR px:
+// a card line that would need more is wrapped onto two lines instead.
+const ADV = {
+  r: '2029435050826125303042502531253550505050505050505050252550505042855459576253496265264858497365665766575354645279514854303530505054505546565029505425255026835554565635423454477245474230243050',
+  b: '2034545353866730343446533033303453535353535353535353303053535346905760586455526467305161527666686068615656665681575254343434535056535747575234535728285529865756575740443857527851524634273453',
+};
+const FIT_FLOOR = 11;
+const FIT_PAD = 10;
+
+function emWidth(s, o = {}) {
+  let w = 0;
+  const bold = (o.fw || 500) >= 600;
+  for (const ch of String(s)) {
+    const c = ch.codePointAt(0);
+    if (c >= 0x300 && c <= 0x36f) continue;          // combining mark
+    if (o.mono) { w += 0.6; continue; }
+    if (c >= 32 && c < 127) {
+      const t = bold ? ADV.b : ADV.r;
+      w += +t.substr((c - 32) * 2, 2) / 100;
+    } else {
+      w += 0.58;
+    }
+  }
+  return o.mono || bold ? w : w * 1.03;
 }
 
+// Largest font size (<= o.fs) at which str fits in maxW (no floor).
+function fitSize(str, maxW, o = {}) {
+  const base = o.fs || 13.5;
+  const em = emWidth(str, o);
+  if (!maxW || em * base <= maxW - FIT_PAD) return base;
+  return +((maxW - FIT_PAD) / em).toFixed(2);
+}
+
+// Split str at a space into two lines: the longer half as short as possible,
+// preferring breaks after punctuation and separators, and avoiding breaks
+// inside brackets or in front of an operator.
+function splitTwo(str, o = {}) {
+  const s = String(str);
+  let best = null, depth = 0;
+  for (let i = 1; i < s.length - 1; i++) {
+    const ch = s[i];
+    if ('([{'.includes(ch)) depth++;
+    if (')]}'.includes(ch)) depth = Math.max(0, depth - 1);
+    if (ch !== ' ') continue;
+    const a = s.slice(0, i).trimEnd(), b = s.slice(i + 1).trimStart();
+    if (!a || !b) continue;
+    const prev = a[a.length - 1], next = b[0];
+    let pen = 0.12;
+    if (',;:·|→—–'.includes(prev)) pen = 0;
+    if ('·=+×→⇒|−-–—)]}≈≤≥<>'.includes(next)) pen += 0.5;
+    if (depth > 0) pen += 0.5;
+    const m = Math.max(emWidth(a, o), emWidth(b, o)) * (1 + pen);
+    if (!best || m < best.m) best = { a, b, m };
+  }
+  return best ? [best.a, best.b] : null;
+}
+
+function fitWarn(msg) {
+  if (globalThis.__fitLog) globalThis.__fitLog.push(msg);
+}
+
+// One label, shrunk to fit maxW but never below FIT_FLOOR.
+function fitTx(x, y, str, maxW, o = {}) {
+  const s = String(str);
+  const f = fitSize(s, maxW, o);
+  if (f < FIT_FLOOR) fitWarn(`"${s}" needs ${f}px in ${maxW}`);
+  return tx(x, y, s, { ...o, fs: Math.max(FIT_FLOOR, f) });
+}
+
+// Multi-line card with guaranteed internal padding so text never touches borders.
+// lines: array of { t, fs, fw, fill, mono } or plain strings. A line that
+// would shrink below FIT_FLOOR (or by more than 15%, when the card has the
+// height for it) is wrapped onto two lines; a '\n' in a line sets the break.
 function card(x, y, w, h, themeKey, lines, opts = {}) {
   const p = PAL[themeKey] || PAL.slate;
   const fill = opts.white ? '#FFFFFF' : p.fill;
   const stroke = p.stroke;
   let o = box(x, y, w, h, fill, stroke, opts.rx || 8, opts.sw || 2, opts.dash || false);
-  if (opts.rail) o += fillRect(x + 1, y + 2, 5, h - 4, p.rail, 3);
+  if (opts.rail) {
+    o += fillRect(x + 1, y + 2, 5, h - 4, p.rail, 3);
+  }
   const n = lines.length;
   if (n === 0) return o;
-  const maxStep = n <= 2 ? 19 : 20;
-  const span = n <= 1 ? 0 : Math.min((n - 1) * maxStep, h - 22);
-  const y0 = y + h / 2 - span / 2;
-  const step = n <= 1 ? 0 : span / (n - 1);
   const cx = opts.anchor === 'start' ? x + (opts.rail ? 14 : 12) : x + w / 2;
   const availW = w - (opts.rail ? 20 : 14);
-  lines.forEach((ln, i) => {
-    const ly = n === 1 ? y + h / 2 : y0 + i * step;
-    if (typeof ln === 'string') {
-      const isTitle = i === 0;
-      o += fitTx(cx, ly, ln, availW, {
-        fs: isTitle ? 14 : 12.8,
-        fw: isTitle ? 700 : 500,
-        fill: isTitle ? p.dark : C.ink,
-        anchor: opts.anchor || 'middle',
-      });
-    } else {
-      o += fitTx(cx, ly, ln.t, availW, {
-        fs: ln.fs || (i === 0 ? 14 : 12.8),
-        fw: ln.fw || (i === 0 ? 700 : 500),
-        fill: ln.fill || (i === 0 ? p.dark : C.ink),
-        mono: ln.mono || false,
-        anchor: ln.anchor || opts.anchor || 'middle',
-      });
+  const items = lines.map((ln, i) => {
+    const obj = typeof ln === 'string' ? {} : ln;
+    const st = {
+      fs: obj.fs || (i === 0 ? 14 : 12.8),
+      fw: obj.fw || (i === 0 ? 700 : 500),
+      fill: obj.fill || (i === 0 ? p.dark : C.ink),
+      anchor: obj.anchor || opts.anchor || 'middle',
+    };
+    if (obj.mono) st.mono = true;
+    const t = String(typeof ln === 'string' ? ln : ln.t);
+    if (t.includes('\n')) {   // an explicit line break
+      const two = t.split('\n', 2);
+      const fs = Math.min(...two.map((s) => fitSize(s, availW, st)));
+      return { t: two.join(' '), st, f: fs, parts: { two, fs }, fixed: true };
     }
+    return { t, st, f: fitSize(t, availW, st), parts: null };
+  });
+  // Wrapping plan: lines under the floor must wrap; lines shrunk by >15% wrap
+  // when the card is tall enough to take the extra row.
+  const wrapOf = (it) => {
+    const two = splitTwo(it.t, it.st);
+    if (!two) return null;
+    let fs = Math.min(...two.map((s) => fitSize(s, availW, it.st)));
+    if (n === 1) fs = Math.min(fs, +((h - 5) / 2.18).toFixed(2));   // two rows must fit the height
+    return fs > it.f ? { two, fs } : null;
+  };
+  const layout = () => {
+    const rows = [];
+    items.forEach((it, i) => {
+      if (it.parts) {
+        rows.push({ t: it.parts.two[0], st: { ...it.st, fs: Math.max(FIT_FLOOR, it.parts.fs) }, gap: i ? null : 0 });
+        rows.push({ t: it.parts.two[1], st: { ...it.st, fs: Math.max(FIT_FLOOR, it.parts.fs) }, gap: +(Math.max(FIT_FLOOR, it.parts.fs) * 1.18).toFixed(2) });
+      } else {
+        rows.push({ t: it.t, st: { ...it.st, fs: Math.max(FIT_FLOOR, it.f) }, gap: i ? null : 0 });
+      }
+    });
+    const wrapSum = rows.reduce((a, r) => a + (r.gap || 0), 0);
+    const maxStep = n <= 2 ? 19 : 20;
+    const itemStep = n <= 1 ? 0 : Math.min(maxStep, (h - 22 - wrapSum) / (n - 1));
+    const gapOf = (r) => (r.gap === null ? itemStep : r.gap);
+    const ok = rows.every((r, i) => !i || gapOf(r) >= 0.575 * (r.st.fs + rows[i - 1].st.fs))
+      && wrapSum + (n - 1) * itemStep + (rows[0].st.fs + rows[rows.length - 1].st.fs) / 2 <= h - 4.5;
+    return { rows, itemStep, wrapSum, ok };
+  };
+  for (const it of items) {
+    if (it.fixed) {
+      if (it.f < FIT_FLOOR) fitWarn(`"${it.t}" needs ${it.f}px even wrapped, in ${availW}`);
+    } else if (it.f < FIT_FLOOR) {
+      it.parts = wrapOf(it);
+      if (!it.parts) fitWarn(`"${it.t}" needs ${it.f}px in ${availW} and has no space to wrap`);
+      else if (it.parts.fs < FIT_FLOOR) fitWarn(`"${it.t}" needs ${it.parts.fs}px even wrapped, in ${availW}`);
+    }
+  }
+  for (const it of items) {
+    if (!it.parts && it.f < 0.85 * it.st.fs) {
+      it.parts = wrapOf(it);
+      if (it.parts && !layout().ok) it.parts = null;
+    }
+  }
+  if (!items.some((it) => it.parts)) {
+    // No wrapping: the original even spacing.
+    const maxStep = n <= 2 ? 19 : 20;
+    const span = n <= 1 ? 0 : Math.min((n - 1) * maxStep, h - 22);
+    const y0 = y + h / 2 - span / 2;
+    const step = n <= 1 ? 0 : span / (n - 1);
+    items.forEach((it, i) => {
+      const ly = n === 1 ? y + h / 2 : y0 + i * step;
+      o += fitTx(cx, ly, it.t, availW, it.st);
+    });
+    return o;
+  }
+  const L = layout();
+  if (!L.ok) fitWarn(`card at (${x},${y}) ${w}x${h} too short for wrapped text "${items.map((it) => it.t).join(' | ')}"`);
+  const span = L.wrapSum + (n - 1) * L.itemStep;
+  let ly = y + h / 2 - span / 2;
+  L.rows.forEach((r, i) => {
+    if (i) ly += r.gap === null ? L.itemStep : r.gap;
+    o += tx(cx, +ly.toFixed(2), r.t, r.st);
   });
   return o;
 }
@@ -163,26 +283,26 @@ function moduleTreeHub() {
   // Center tree box
   o += card(172, 86, 196, 86, 'purple', [
     'Registered Module Tree',
-    { t: 'net → 1.body.0.weight', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: 'net → blocks → layers → tensors', fs: 12, fw: 700, fill: D.purple.dark },
     'Parameters + Buffers',
   ]);
   // 6 surrounding subsystem badges
   const ops = [
-    { x: 14,  y: 52,  theme: 'blue',   t1: '1. Optimizer',   t2: 'net.parameters()' },
-    { x: 14,  y: 112, theme: 'orange', t1: '2. Initializer', t2: 'net.apply(init)' },
-    { x: 14,  y: 172, theme: 'green',  t1: '3. Checkpoint',  t2: 'state_dict() / mmap' },
-    { x: 394, y: 52,  theme: 'teal',   t1: '4. Dtype Cast',  t2: 'net.bfloat16()' },
-    { x: 394, y: 112, theme: 'blue',   t1: '5. GPU Move',    t2: 'net.to(gpu)' },
-    { x: 394, y: 172, theme: 'purple', t1: '6. Hooks/Modes', t2: 'train() & NaN trap' },
+    { x: 14,  y: 52,  theme: 'blue',   t1: '1. Optimizer',   t2: 'collect params' },
+    { x: 14,  y: 112, theme: 'orange', t1: '2. Initializer', t2: 'init every weight' },
+    { x: 14,  y: 172, theme: 'green',  t1: '3. Checkpoint',  t2: 'save / load state' },
+    { x: 394, y: 52,  theme: 'teal',   t1: '4. Dtype Cast',  t2: 'cast all tensors' },
+    { x: 394, y: 112, theme: 'blue',   t1: '5. GPU Move',    t2: 'move to device' },
+    { x: 394, y: 172, theme: 'purple', t1: '6. Hooks/Modes', t2: 'train/eval & hooks' },
   ];
   ops.forEach((op) => {
     o += card(op.x, op.y, 132, 48, op.theme, [
       { t: op.t1, fs: 13, fw: 700 },
-      { t: op.t2, mono: true, fs: 11.5, fill: C.ink },
+      { t: op.t2, fs: 12, fill: C.ink },
     ], { white: true });
   });
   o += card(14, 228, 512, 26, 'red', [
-    { t: 'Invariant: Unregistered plain attributes/lists run in forward() but are invisible to all 6 walks!', fs: 12.5, fw: 700 },
+    { t: 'Invariant: Unregistered attributes run in the forward pass but are invisible to all 6 walks!', fs: 12.5, fw: 700 },
   ]);
   return svg(W, H, o);
 }
@@ -251,7 +371,7 @@ function setattrRegistry() {
     '2. __setattr__ Hook',
     'Detects Module / Param',
     '& inserts into dict:',
-    { t: '_modules["hidden"]', mono: true, fs: 11.5, fill: D.purple.dark },
+    { t: 'child "hidden"', mono: true, fs: 11.5, fill: D.purple.dark },
   ], { white: true });
   o += arrow(354, 95, 374, 95, C.purple);
   o += card(378, 54, 148, 82, 'green', [
@@ -270,11 +390,11 @@ function setattrRegistry() {
 }
 
 const treeWalkOps = () => fiveRowDiagram([
-  { theme: 'blue',   k: '1. Optimizer Setup',  v: 'Walks net.parameters() → Unregistered layer never gets gradient updates!' },
-  { theme: 'green',  k: '2. Checkpointing',    v: 'Walks state_dict() → Unregistered layer omitted from disk & stays random' },
-  { theme: 'teal',   k: '3. Device Placement', v: 'Walks net.to(gpu) → Unregistered layer stays on CPU & crashes forward()' },
-  { theme: 'orange', k: '4. Initialization',   v: 'Walks net.apply(fn) → Unregistered layer keeps unscaled default weights' },
-  { theme: 'purple', k: '5. Modes & Hooks',    v: 'Walks train()/eval() → Unregistered Dropout/BN stays stuck in train mode' },
+  { theme: 'blue',   k: '1. Optimizer Setup',  v: 'Collects registered params → an unregistered layer never gets updates' },
+  { theme: 'green',  k: '2. Checkpointing',    v: 'Saves registered state → an unregistered layer is lost & reloads random' },
+  { theme: 'teal',   k: '3. Device Placement', v: 'Moves registered tensors → an unregistered layer stays on the CPU' },
+  { theme: 'orange', k: '4. Initialization',   v: 'Re-inits registered layers → an unregistered layer keeps default weights' },
+  { theme: 'purple', k: '5. Modes & Hooks',    v: 'Toggles train/eval → an unregistered Dropout/BN stays in train mode' },
 ]);
 
 function sequentialLoop() {
@@ -301,32 +421,54 @@ function sequentialLoop() {
   return svg(W, H, o);
 }
 
-function plainListTrap() {
+// One variant per framework: each deck shows only its own container rules.
+const PLAIN_LIST = {
+  pytorch: {
+    bad: ['Broken: Plain Python List', { t: 'self.layers = [L1, L2]', mono: true, fs: 13, fill: D.red.dark },
+      'forward() still runs, but', { t: 'net.parameters() → 0 params', mono: true, fs: 12, fw: 700, fill: D.red.dark },
+      'The optimizer never sees L1, L2'],
+    good: ['Fixed: nn.ModuleList', { t: 'nn.ModuleList([L1, L2])', mono: true, fs: 12.5, fill: D.green.dark },
+      'All 20×256+256+256×10+10 =', { t: '7,946 parameters registered!', fw: 700, fill: D.green.dark }],
+    foot: ['Silent Bug: self.first & self.last as attributes, self.blocks as a plain list:',
+      'gradients flow through self.blocks, but its weights stay permanently frozen!'],
+  },
+  mxnet: {
+    bad: ['Broken: Plain Python List', { t: 'self.layers = [L1, L2]', mono: true, fs: 13, fill: D.red.dark },
+      'forward() still runs, but', { t: 'collect_params() → 0 params', mono: true, fs: 12, fw: 700, fill: D.red.dark },
+      'Gluon only warns about the list'],
+    good: ['Fixed: register_child', { t: 'self.register_child(blk)', mono: true, fs: 12.5, fill: D.green.dark },
+      'All 20×256+256+256×10+10 =', { t: '7,946 parameters registered!', fw: 700, fill: D.green.dark }],
+    foot: ['Silent Bug: self.first & self.last as attributes, self.blocks as a plain list:',
+      'gradients flow through self.blocks, but its weights stay permanently frozen!'],
+  },
+  tensorflow: {
+    good: ['Keras Tracks Python Lists', { t: 'self.layers = [L1, L2]', mono: true, fs: 13, fill: D.green.dark },
+      'Attribute assignment scans', 'lists, tuples and dicts:', { t: '7,946 parameters tracked', fw: 700, fill: D.green.dark }],
+    bad: ['But: No New Layers After Build', { t: 'net.extra = Dense(10)', mono: true, fs: 12.5, fill: D.red.dark },
+      'after the variables exist', { t: '→ ValueError', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+      'cannot add state to a built layer'],
+    foot: ['Keras locks the layer tree once its variables are built,',
+      'so declare every sublayer in __init__ before the first call.'],
+  },
+  jax: {
+    bad: ['Rejected: Plain Python List', { t: 'self.layers = [L1, L2]', mono: true, fs: 13, fill: D.red.dark },
+      'NNX raises at construction:', { t: '→ ValueError', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+      'list assigned to a static attribute'],
+    good: ['Fixed: nnx.List', { t: 'nnx.List([L1, L2])', mono: true, fs: 12.5, fill: D.green.dark },
+      'All 7,946 parameters appear in', { t: 'nnx.state(net, nnx.Param)', mono: true, fs: 12, fw: 700, fill: D.green.dark }],
+    foot: ['NNX fails loudly at construction, so a plain list',
+      'can never silently hide layers from the optimizer.'],
+  },
+};
+function plainListTrap(fw) {
   const W = 540, H = 264;
+  const v = PLAIN_LIST[fw];
+  const left = fw === 'tensorflow' ? ['green', v.good] : ['red', v.bad];
+  const right = fw === 'tensorflow' ? ['red', v.bad] : ['green', v.good];
   let o = '';
-  o += card(14, 12, 248, 174, 'red', [
-    'Broken: Plain Python List',
-    { t: 'self.layers = [L1, L2]', mono: true, fs: 13, fill: D.red.dark },
-    '• PyTorch/Gluon: 0 params found!',
-    '  (inner layers stay frozen at init)',
-    '• Flax NNX: raises ValueError!',
-    '• Keras: scans list in __init__,',
-    '  but forbids post-build append',
-  ], { white: true, rail: true });
-
-  o += card(278, 12, 248, 174, 'green', [
-    'Fixed: Registered List Container',
-    { t: 'PyTorch: nn.ModuleList([L1, L2])', mono: true, fs: 12, fill: D.green.dark },
-    { t: 'Flax NNX: nnx.List([L1, L2])', mono: true, fs: 12, fill: D.green.dark },
-    { t: 'Gluon: self.register_child(blk)', mono: true, fs: 12, fill: D.green.dark },
-    'All 20×256+256+256×10+10 =',
-    { t: '7,946 parameters registered!', fw: 700, fill: D.green.dark },
-  ], { white: true, rail: true });
-
-  o += card(14, 198, 512, 54, 'orange', [
-    'Silent Partly-Registered Bug: If self.first & self.last are attributes while self.blocks is a plain list,',
-    'gradients flow through self.blocks so self.first updates, while self.blocks stays permanently frozen!',
-  ]);
+  o += card(14, 12, 248, 174, left[0], left[1], { white: true, rail: true });
+  o += card(278, 12, 248, 174, right[0], right[1], { white: true, rail: true });
+  o += card(14, 198, 512, 54, 'orange', v.foot);
   return svg(W, H, o);
 }
 
@@ -344,7 +486,7 @@ function eagerVsTrace() {
 
   o += card(278, 12, 248, 168, 'purple', [
     'Compiled Graph Tracing',
-    { t: 'nnx.jit / tf.function / compile', mono: true, fs: 12.5, fill: D.purple.dark },
+    { t: 'jit-compile the step', fs: 12.5, fill: D.purple.dark },
     '• Traces forward() ONCE on abstract',
     '  shape/dtype symbols (no values!)',
     '• Static structure loops (for m in',
@@ -353,7 +495,7 @@ function eagerVsTrace() {
 
   o += card(14, 192, 512, 56, 'orange', [
     'Tracing Rule: Loops over static model structure always compile;',
-    'loops conditioned on runtime tensor values require jax.lax.while_loop / tf.while_loop.',
+    'loops conditioned on runtime tensor values must become symbolic control flow\n(by hand or by the compiler).',
   ]);
   return svg(W, H, o);
 }
@@ -361,12 +503,12 @@ function eagerVsTrace() {
 function lazyDryRun() {
   const W = 540, H = 256;
   let o = '';
-  o += card(14, 12, 512, 32, 'blue', ['Three-Stage Lifecycle of Lazy Shape Inference (LazyLinear / Dense)']);
+  o += card(14, 12, 512, 32, 'blue', ['Three-Stage Lifecycle of Lazy Shape Inference']);
 
   o += card(14, 56, 156, 122, 'orange', [
     '1. Construct Lazy',
-    { t: 'LazyLinear(256)', mono: true, fs: 12.5 },
-    { t: 'in_features = ?', mono: true, fs: 12.5, fill: D.orange.dark },
+    { t: 'n_out = 256', mono: true, fs: 12.5 },
+    { t: 'n_in  = ?', mono: true, fs: 12.5, fill: D.orange.dark },
     'Weight shape unknown;',
     '0 bytes allocated yet',
   ], { white: true, rail: true });
@@ -374,22 +516,58 @@ function lazyDryRun() {
   o += card(194, 56, 156, 122, 'blue', [
     '2. Dry Run net(X)',
     { t: 'X : (2, 20)', mono: true, fs: 13 },
-    'Infers in_features = 20;',
-    'allocates W:(256, 20)',
-    '& runs default init',
+    'Infers n_in = 20;',
+    'allocates 20 × 256 W',
+    '& runs the initializer',
   ], { white: true, rail: true });
   o += arrow(354, 117, 370, 117, C.green);
   o += card(374, 56, 152, 122, 'green', [
     '3. Custom Init',
-    { t: 'net.apply(he_init)', mono: true, fs: 12 },
+    'Apply He init',
     'Now n_in = 20 is known',
     'so σ = √(2/n_in) can',
-    'overwrite W in place!',
+    'be computed!',
   ], { white: true, rail: true });
 
   o += card(14, 192, 512, 52, 'purple', [
-    'Flax NNX Contrast: nnx.Linear(20, 256, rngs=rngs) requires explicit (n_in, n_out) upfront',
-    'so all parameters are allocated and inspectable immediately at construction without a dry run.',
+    'Dry-Run Rule: Variance-scaling initializers need n_in, so push one dummy batch',
+    'through a lazy model before applying a custom initializer.',
+  ]);
+  return svg(W, H, o);
+}
+
+function lazyDryRunJax() {
+  const W = 540, H = 256;
+  let o = '';
+  o += card(14, 12, 512, 32, 'blue', ['Explicit Shapes: Parameters Exist as Soon as the Constructor Returns']);
+
+  o += card(14, 56, 156, 122, 'orange', [
+    '1. Construct',
+    { t: 'Linear(20, 256)', mono: true, fs: 12.5 },
+    'n_in and n_out given;',
+    'weights allocated',
+    'right away',
+  ], { white: true, rail: true });
+  o += arrow(174, 117, 190, 117, C.blue);
+  o += card(194, 56, 156, 122, 'blue', [
+    '2. Inspect',
+    { t: 'kernel : (20, 256)', mono: true, fs: 12.5 },
+    'Shapes and bytes',
+    'are known before',
+    'any data arrives',
+  ], { white: true, rail: true });
+  o += arrow(354, 117, 370, 117, C.green);
+  o += card(374, 56, 152, 122, 'green', [
+    '3. Custom Init',
+    'Apply He init',
+    'n_in = 20 known',
+    'so σ = √(2/n_in)',
+    'applies at once',
+  ], { white: true, rail: true });
+
+  o += card(14, 192, 512, 52, 'purple', [
+    'No Dry Run Needed: every parameter is allocated and inspectable',
+    'immediately, so custom initialization can follow construction directly.',
   ]);
   return svg(W, H, o);
 }
@@ -466,22 +644,22 @@ function stateTreePaths() {
   o += card(14, 10, 512, 32, 'blue', ['Two-Block Residual MLP Testbed: 12 Leaf Tensors (18,634 Parameters)']);
 
   const cols = [
-    { x: 14,  theme: 'blue',   k: 'Child "0" (Input)',   sh: '20 → 64 Linear',   p: '0.weight (64,20) + 0.bias (64)', c: '1,344 params' },
-    { x: 188, theme: 'purple', k: 'Children "1" & "2"',  sh: '2 × ResidualBlock', p: '1.body.0.weight … 2.body.2.bias', c: '16,640 params' },
-    { x: 362, theme: 'green',  k: 'Child "3" (Output)',  sh: '64 → 10 Linear',   p: '3.weight (10,64) + 3.bias (10)', c: '650 params' },
+    { x: 14,  theme: 'blue',   k: 'Child "0" (Input)',   sh: '20 → 64 Linear',   p: 'weight 20×64 + bias 64', c: '1,344 params' },
+    { x: 188, theme: 'purple', k: 'Children "1" & "2"',  sh: '2 × ResidualBlock', p: '2 blocks × 2 layers × (W, b)', c: '16,640 params' },
+    { x: 362, theme: 'green',  k: 'Child "3" (Output)',  sh: '64 → 10 Linear',   p: 'weight 64×10 + bias 10', c: '650 params' },
   ];
   cols.forEach((c) => {
     o += card(c.x, 52, 164, 134, c.theme, [
       c.k,
       { t: c.sh, fs: 12.5, fw: 600 },
-      { t: c.p, mono: true, fs: 11, fill: C.ink },
+      { t: c.p, fs: 12, fill: C.ink },
       { t: c.c, mono: true, fs: 13.5, fw: 700, fill: PAL[c.theme].dark },
     ], { white: true, rail: true });
   });
 
   o += card(14, 198, 512, 52, 'slate', [
-    'Dotted Path Addressing Mirrors Python Traversal:',
-    { t: 'net[1].body[0].weight   ⇔   state_dict()["1.body.0.weight"]   (18,634 params × 16 B = 0.28 MiB)', mono: true, fs: 12, fill: D.purple.dark },
+    'Path Addressing Mirrors Attribute Traversal:',
+    { t: 'block 1 → body → layer 0 → weight   (18,634 params × 16 B = 0.28 MiB)', fs: 12.5, fw: 600, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
 }
@@ -489,13 +667,13 @@ function stateTreePaths() {
 function fourTensorKinds() {
   const W = 540, H = 268;
   let o = '';
-  o += card(14, 10, 512, 32, 'purple', ['Four Categories of Values Inside a Module: Lifecycle Matrix']);
+  o += card(14, 10, 512, 32, 'purple', ['Where Each Kind of Value Inside a Module Goes']);
 
   const rows = [
-    { y: 50,  theme: 'green',  kind: '1. Parameter',       flags: 'Opt: YES  |  Ckpt: YES  |  GPU: YES', ex: 'Weights W, biases b, RMSNorm gain g' },
-    { y: 104, theme: 'blue',   kind: '2. Registered Buffer', flags: 'Opt: NO   |  Ckpt: YES  |  GPU: YES', ex: 'Feature μ, σ, RandomFeatures W, BN stats' },
-    { y: 158, theme: 'orange', kind: '3. Plain Attribute', flags: 'Opt: NO   |  Ckpt: NO   |  GPU: NO!', ex: 'Python floats/ints (eps=1e-6); NEVER tensors!' },
-    { y: 212, theme: 'slate',  kind: '4. Local Variable',  flags: 'Opt: NO   |  Ckpt: NO   |  GPU: Live', ex: 'Forward activations cached for 1 backward' },
+    { y: 50,  theme: 'green',  kind: '1. Parameter',       flags: 'Opt: YES\nCkpt: YES · GPU: YES', ex: 'Weights W, biases b, RMSNorm gain g' },
+    { y: 104, theme: 'blue',   kind: '2. Registered Buffer', flags: 'Opt: NO\nCkpt: YES · GPU: YES', ex: 'Feature μ, σ, RandomFeatures W, BN stats' },
+    { y: 158, theme: 'orange', kind: '3. Plain Attribute', flags: 'Opt: NO\nCkpt: NO · GPU: NO!', ex: 'Python floats/ints (eps=1e-6); NEVER tensors!' },
+    { y: 212, theme: 'slate',  kind: '4. Local Variable',  flags: 'Opt: NO\nCkpt: NO · GPU: Live', ex: 'Forward activations cached for 1 backward' },
   ];
   rows.forEach((r) => {
     o += card(14,  r.y, 146, 44, r.theme, [{ t: r.kind, fs: 13, fw: 700 }]);
@@ -510,58 +688,70 @@ function standardizerBuffer() {
   let o = '';
   o += card(14, 12, 512, 56, 'blue', [
     'Sequential( Standardizer(μ, σ),  Linear(W, b) )   —   Full State Tree',
-    { t: 'Buffers: 0.mean, 0.std (register_buffer)     |     Parameters: 1.weight, 1.bias (nn.Parameter)', mono: true, fs: 12, fill: C.ink },
+    { t: 'Buffers: mean, std (non-trainable)\nParameters: weight, bias (trainable)', mono: true, fs: 12, fill: C.ink },
   ]);
 
   o += vArrow(138, 72, 102, C.green, 'all 4 tensors');
-  o += vArrow(402, 72, 102, C.purple, 'trainable filter');
+  o += vArrow(402, 72, 102, C.purple, 'trainable only');
 
   o += card(14, 106, 248, 138, 'green', [
-    'Checkpoints & .to(gpu)',
-    { t: 'state_dict() → 4 keys:', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: '• 0.mean, 0.std (buffers)', mono: true, fs: 12 },
-    { t: '• 1.weight, 1.bias (params)', mono: true, fs: 12 },
+    'Checkpoints & Device Moves',
+    { t: 'saved state → 4 tensors:', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: '• mean, std (buffers)', mono: true, fs: 12 },
+    { t: '• weight, bias (params)', mono: true, fs: 12 },
     'Preprocessing travels with model',
     'to disk and to GPU HBM!',
   ], { white: true, rail: true });
 
   o += card(278, 106, 248, 138, 'purple', [
     'Optimizer (SGD / Adam)',
-    { t: 'parameters() → 2 keys:', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
-    { t: '• 1.weight, 1.bias ONLY', mono: true, fs: 12 },
-    'Skips 0.mean & 0.std so',
+    { t: 'trainable → 2 tensors:', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    { t: '• weight, bias ONLY', mono: true, fs: 12 },
+    'Skips mean & std so',
     'gradient descent never',
     'corrupts training-set stats!',
   ], { white: true, rail: true });
   return svg(W, H, o);
 }
 
-function lazyAdamMoments() {
+function lazyAdamMoments(fw) {
   const W = 540, H = 254;
+  const eager = fw === 'jax';
   let o = '';
-  o += card(14, 12, 512, 32, 'orange', ['Adam Allocates Its Two Moment Buffers (m, v) Lazily on Step 1']);
+  o += card(14, 12, 512, 32, 'orange', [eager
+    ? 'Adam Allocates Its Two Moment Buffers (m, v) When It Is Constructed'
+    : 'Adam Allocates Its Two Moment Buffers (m, v) Lazily on Step 1']);
 
-  o += card(14, 56, 230, 122, 'blue', [
-    'Before First optimizer.step()',
+  o += card(14, 56, 230, 122, 'blue', eager ? [
+    'Before the Optimizer Exists',
+    { t: 'Model params: 18,634 floats', mono: true, fs: 12.5, fill: D.blue.dark },
+    { t: 'Optimizer state: none yet', mono: true, fs: 13, fw: 700, fill: D.orange.dark },
+    'Only weights (and later',
+    'gradients) occupy memory',
+  ] : [
+    'Before the First Update',
     { t: 'Model params: 18,634 floats', mono: true, fs: 12.5, fill: D.blue.dark },
     { t: 'Optimizer state: 0 floats!', mono: true, fs: 13, fw: 700, fill: D.orange.dark },
-    'Adam dictionary is empty',
-    'right after Adam(net.params())',
+    'Adam holds no moments',
+    'right after construction',
   ], { white: true, rail: true });
 
-  o += hArrow(248, 292, 117, C.purple, 'step 1');
+  o += hArrow(248, 292, 117, C.purple, eager ? 'init' : 'step 1');
 
   o += card(296, 56, 230, 122, 'purple', [
-    'After First optimizer.step()',
+    eager ? 'After Constructing Adam' : 'After the First Update',
     { t: 'm (1st moment): 18,634 floats', mono: true, fs: 12, fill: D.purple.dark },
     { t: 'v (2nd moment): 18,634 floats', mono: true, fs: 12, fill: D.purple.dark },
     { t: 'Optimizer state = 37,268 floats', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
     '(2× full model copies added!)',
   ], { white: true, rail: true });
 
-  o += card(14, 192, 512, 50, 'slate', [
-    'Systems Consequence: A training job that fits during forward() and backward() can still OOM',
-    'on the very first optimizer.step() when Adam suddenly allocates +8 B/param (64 GB for 8B)!',
+  o += card(14, 192, 512, 50, 'slate', eager ? [
+    'Systems Consequence: Adam adds +8 B/param (64 GB for an 8B model) the moment it is',
+    'constructed, so budget for it before the first forward pass ever runs!',
+  ] : [
+    'Systems Consequence: A training job that fits during the forward and backward pass can still OOM',
+    'on the very first optimizer step, when Adam suddenly allocates +8 B/param (64 GB for 8B)!',
   ]);
   return svg(W, H, o);
 }
@@ -578,17 +768,17 @@ function metaShapeTrace() {
   ], { white: true, rail: true });
 
   o += card(278, 12, 248, 124, 'green', [
-    'Meta Device / eval_shape',
-    { t: 'with torch.device("meta"):', mono: true, fs: 12.5, fill: D.green.dark },
+    'Abstract Shape Tracing',
+    { t: 'Trace constructor on shapes only', fs: 12, fw: 700, fill: D.green.dark },
     'Records shape (128256, 4096)',
     'and dtype float32 in header:',
     { t: '0 Bytes RAM allocated!', mono: true, fs: 13.5, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(14, 150, 512, 92, 'blue', [
-    'Zero-Waste Pretrained Checkpoint Loading Pipeline (PyTorch Meta Device):',
-    { t: '1. Build on "meta" (0 B)  ──►  2. net.to_empty(gpu) (uninitialized HBM)  ──►  3. load_state_dict(mmap=True)', mono: true, fs: 11.5, fw: 700, fill: D.blue.dark },
-    'Skips random initialization on CPU and avoids allocating duplicate host memory!',
+    'Abstract Tracing Records Only (shape, dtype) Pairs:',
+    { t: '525,336,576 × 4 B = 2.10 GB counted   ──►   0 B allocated', mono: true, fs: 12, fw: 700, fill: D.blue.dark },
+    'Audit a model\'s exact memory budget before touching real hardware!',
   ]);
   return svg(W, H, o);
 }
@@ -600,7 +790,7 @@ function tiedDedupGrad() {
 
   o += card(14, 56, 248, 126, 'blue', [
     '1. Storage Deduplication',
-    { t: 'self.head.weight = self.emb.weight', mono: true, fs: 11.5, fill: D.blue.dark },
+    { t: 'head reuses the embedding W', fs: 12, fw: 700, fill: D.blue.dark },
     'Untied: 1600 + 272 + 1600 = 3,472',
     'Tied:   1600 + 272        = 1,872',
     { t: 'Tree walk counts shared W once!', fw: 700, fill: D.blue.dark },
@@ -611,31 +801,31 @@ function tiedDedupGrad() {
     { t: 'W used at lookup AND logits:', mono: true, fs: 12 },
     { t: '∂L/∂W = ∂L/∂W_emb + ∂L/∂W_head', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
     'Autograd sums gradients from',
-    'both call sites into W.grad!',
+    'both call sites into one grad!',
   ], { white: true, rail: true });
 
   o += card(14, 194, 512, 54, 'green', [
-    'GPT-2 Small Scale (|V| = 50,257, d = 768): Tying saves 38.6M parameters (31% of the 124M model)',
-    'and forces input token embeddings and output logit vectors to share one geometric space.',
+    'GPT-2 Small (|V| = 50,257, d = 768): tying saves 38.6M of 124M parameters (31%)',
+    'and makes input embeddings and output logits share one geometric space.',
   ]);
   return svg(W, H, o);
 }
 
 const freezingPitfalls = () => quadDiagram(
   'red', 'Two Silent Systems Pitfalls When Freezing Backbone Parameters',
-  { theme: 'red',   lines: ['Pitfall 1: Stale Adam Moments', { t: 'step() BEFORE requires_grad=False', mono: true, fill: D.red.dark }, '64 GB of m, v stay allocated in RAM!'] },
-  { theme: 'green', lines: ['Fix 1: Filter Optimizer Upfront', { t: 'Adam([p for p if p.requires_grad])', mono: true, fill: D.green.dark }, 'Allocates moments ONLY for head (4.2 GB)'] },
-  { theme: 'orange', lines: ['Pitfall 2: Drifting BatchNorm Buffers', { t: 'requires_grad=False in .train() mode', mono: true, fill: D.orange.dark }, 'Running mean/var buffers still mutate!'] },
-  { theme: 'green', lines: ['Fix 2: Lock Evaluation Mode Too', { t: 'backbone.eval() + requires_grad=False', mono: true, fill: D.green.dark }, 'Freezes both weights AND running stats'] },
+  { theme: 'red',   lines: ['Pitfall 1: Stale Adam Moments', { t: 'Optimizer built before freezing', fw: 700, fill: D.red.dark }, '64 GB of m, v stay allocated in RAM!'] },
+  { theme: 'green', lines: ['Fix 1: Filter Optimizer Upfront', { t: 'Adam over trainable params only', fw: 700, fill: D.green.dark }, 'Allocates moments ONLY for head (4.2 GB)'] },
+  { theme: 'orange', lines: ['Pitfall 2: Drifting BatchNorm Buffers', { t: 'Frozen weights, still in train mode', fw: 700, fill: D.orange.dark }, 'Running mean/var buffers still mutate!'] },
+  { theme: 'green', lines: ['Fix 2: Lock Evaluation Mode Too', { t: 'Eval mode + frozen weights', fw: 700, fill: D.green.dark }, 'Freezes both weights AND running stats'] },
   'slate', 'Head-only 8B fine-tuning fits in 38.3 GB (32 GB weights + 6.3 GB head grad/Adam) on one 80 GB GPU!'
 );
 
 const stateSummary = () => fiveRowDiagram([
   { theme: 'green',  k: 'Parameters vs Buffers', v: 'Both saved in checkpoints & moved to GPU; only Parameters get gradients' },
   { theme: 'red',    k: '16 B/param Adam Floor', v: 'fp32 w (4 B) + g (4 B) + m (4 B) + v (4 B) = 128 GB for 8B model' },
-  { theme: 'blue',   k: 'Abstract Counting',     v: 'Meta device / eval_shape audits exact byte budgets with 0 B physical RAM' },
+  { theme: 'blue',   k: 'Abstract Counting',     v: 'Abstract shape tracing audits exact byte budgets with 0 B physical RAM' },
   { theme: 'purple', k: 'Weight Tying',          v: 'Aliases embedding & head to one tensor; deduplicated in count, grads sum' },
-  { theme: 'orange', k: 'Safe Freezing',         v: 'Build optimizer on unfrozen subset only + set frozen BatchNorm to eval()' },
+  { theme: 'orange', k: 'Safe Freezing',         v: 'Build optimizer on unfrozen subset only + frozen BatchNorm in eval mode' },
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -670,30 +860,30 @@ function resExplosion() {
 }
 
 const defaultInitDecay = () => fiveRowDiagram([
-  { theme: 'red',    k: 'PyTorch nn.Linear',  v: 'U(±1/√n_in) → σ² = 1/(3n_in) → ReLU mult ×1/6 (10 layers → 1.7×10⁻⁸)' },
-  { theme: 'orange', k: 'Flax nnx.Linear',    v: 'LeCun N(0, 1/n_in) → σ² = 1/n_in → ReLU mult ×1/2 (10 layers → 9.8×10⁻⁴)' },
-  { theme: 'orange', k: 'Keras Dense',        v: 'Glorot U (n_in=n_out) → σ² = 1/n_in → ReLU mult ×1/2 (10 layers → 9.8×10⁻⁴)' },
-  { theme: 'red',    k: 'Gluon nn.Dense',     v: 'U(−0.07, 0.07) → σ² ≈ 0.00163 → ReLU mult ×0.21 (10 layers → 1.6×10⁻⁷)' },
-  { theme: 'green',  k: 'Explicit He Normal', v: 'N(0, 2/n_in) → σ² = 2/n_in → ReLU mult ×1.00 (10 layers → 1.00 preserved!)' },
+  { theme: 'red',    k: 'Uniform ±1/√n_in',   v: 'σ² = 1/(3n_in) → ReLU mult ×1/6 (10 layers → 1.7×10⁻⁸)' },
+  { theme: 'orange', k: 'LeCun Normal',       v: 'N(0, 1/n_in) → σ² = 1/n_in → ReLU mult ×1/2 (10 layers → 9.8×10⁻⁴)' },
+  { theme: 'orange', k: 'Glorot Uniform',     v: 'n_in = n_out → σ² = 1/n_in → ReLU mult ×1/2 (10 layers → 9.8×10⁻⁴)' },
+  { theme: 'red',    k: 'Uniform ±0.07',      v: 'σ² ≈ 0.00163 → ReLU mult ×0.21 (10 layers → 1.6×10⁻⁷)' },
+  { theme: 'green',  k: 'Explicit He Normal', v: 'N(0, 2/n_in) → σ² = 2/n_in → ReLU mult ×1 (10 layers → 1.00 preserved!)' },
 ]);
 
 function treeApplyInit() {
   const W = 540, H = 254;
   let o = '';
-  o += card(14, 12, 512, 32, 'blue', ['Tree-Wide Initialization: net.apply(he_init) Walks Every Submodule']);
+  o += card(14, 12, 512, 32, 'blue', ['Tree-Wide Initialization: He Init Applied to Every Submodule']);
   o += card(14, 56, 156, 118, 'red', [
     '1. Default Stack',
     '10 ReLU Linear layers',
-    'with framework defaults:',
-    { t: 'Output E[y²] ≈ 10⁻⁸', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+    'with default init:',
+    { t: 'E[y²] ≈ 10⁻⁸–10⁻³', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
     '(signal collapsed!)',
   ], { white: true, rail: true });
   o += arrow(174, 115, 190, 115, C.blue);
   o += card(194, 56, 156, 118, 'purple', [
     '2. Recursive Walk',
-    { t: 'net.apply(he_init)', mono: true, fs: 12.5, fw: 700 },
-    'Overwrites each Linear',
-    'weight tensor in place',
+    'Visits every Linear',
+    'layer and redraws its',
+    'weight in place',
     'with σ = √(2/n_in)',
   ], { white: true, rail: true });
   o += arrow(354, 115, 370, 115, C.green);
@@ -701,12 +891,12 @@ function treeApplyInit() {
     '3. Restored Scale',
     'Parameter references',
     'remain intact;',
-    { t: 'Output E[y²] ≈ 1.0!', mono: true, fs: 13, fw: 700, fill: D.green.dark },
+    { t: 'E[y²] ≈ 0.6–1.1', mono: true, fs: 13, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(14, 188, 512, 54, 'orange', [
-    'In-Place Invariant: Always modify w.data / nn.init.*_ in place so any existing',
-    'references or tied weights continue pointing to the exact same storage buffer.',
+    'In-Place Invariant: Overwrite each weight in place so existing references',
+    'and tied weights keep pointing to the same parameter.',
   ]);
   return svg(W, H, o);
 }
@@ -732,35 +922,37 @@ function truncatedNormal() {
 
   o += card(14, 180, 512, 66, 'purple', [
     'Variance Shrinkage Factor of ±2σ Truncation:',
-    { t: 'Clipping tails reduces std by 0.8796×  (e.g. σ = 0.02 → empirical std ≈ 0.0176)', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
-    'Frameworks offering variance-compensated truncated_normal divide by 0.8796 automatically.',
+    { t: 'std shrinks by 0.8796×  (σ = 0.02 → std ≈ 0.0176)', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    'Variance-compensated initializers divide by 0.8796 to restore σ.',
   ]);
   return svg(W, H, o);
 }
 
-function weightShapeConventions() {
+function weightShapeConventions(layout) {
   const W = 540, H = 256;
+  const outIn = layout === 'out-in';
+  const nm = outIn ? 'W' : 'K';
+  const [ai, ao] = outIn ? [1, 0] : [0, 1];
   let o = '';
   o += card(14, 12, 512, 32, 'blue', ['Finding Fan-In n_in for Custom Initializers σ = g / √n_in']);
 
   o += card(14, 56, 248, 128, 'blue', [
-    'PyTorch & Gluon Convention',
-    { t: 'y = x Wᵀ + b', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
-    { t: 'W.shape == (n_out, n_in)', mono: true, fs: 13, fw: 700 },
-    'Fan-in is axis 1:  n_in = W.shape[1]',
-    'Fan-out is axis 0: n_out = W.shape[0]',
+    'Weight Layout',
+    { t: outIn ? 'y = x Wᵀ + b' : 'y = x K + b', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
+    { t: outIn ? 'W.shape == (n_out, n_in)' : 'K.shape == (n_in, n_out)', mono: true, fs: 13, fw: 700 },
+    `Fan-in is axis ${ai}:  n_in = ${nm}.shape[${ai}]`,
+    `Fan-out is axis ${ao}: n_out = ${nm}.shape[${ao}]`,
   ], { white: true, rail: true });
 
   o += card(278, 56, 248, 128, 'purple', [
-    'Keras & Flax NNX Convention',
-    { t: 'y = x K + b', mono: true, fs: 13.5, fw: 700, fill: D.purple.dark },
-    { t: 'K.shape == (n_in, n_out)', mono: true, fs: 13, fw: 700 },
-    'Fan-in is axis 0:  n_in = K.shape[0]',
-    'Fan-out is axis 1: n_out = K.shape[1]',
+    'Example: d → 4d Expansion',
+    { t: outIn ? 'W.shape == (4d, d)' : 'K.shape == (d, 4d)', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
+    { t: `n_in = ${nm}.shape[${ai}] = d`, mono: true, fs: 13, fw: 700 },
+    'so σ = g / √d',
   ], { white: true, rail: true });
 
   o += card(14, 196, 512, 48, 'red', [
-    'Bug Alert: Reading shape[0] as n_in in PyTorch on a d → 4d expansion layer',
+    `Bug Alert: Reading shape[${ao}] as n_in on a d → 4d expansion layer`,
     'uses 4d instead of d, making initial weights 2× too small (4× too little variance)!',
   ]);
   return svg(W, H, o);
@@ -884,10 +1076,10 @@ const initSummary = () => fiveRowDiagram([
 
 const customLayerNeeds = () => threeColDiagram(
   'purple', 'Three Reasons Every Deep Learning Engineer Writes Custom Modules',
-  { theme: 'blue',   head: '1. Research Velocity', lines: ['RMSNorm (2019) drove', 'Llama & Gopher years', 'before entering', { t: 'torch.nn (2024)!', mono: true, fill: D.blue.dark }] },
-  { theme: 'green',  head: '2. Tree Composability', lines: ['Custom modules auto-', 'integrate with:', '• Optimizers (Param)', '• Checkpoints (Buffer)', '• GPU .to(device)'] },
+  { theme: 'blue',   head: '1. Research Velocity', lines: ['RMSNorm (2019) drove', 'Llama & Gopher years', 'before reaching', { t: 'major libraries', fw: 700, fill: D.blue.dark }] },
+  { theme: 'green',  head: '2. Tree Composability', lines: ['Custom modules auto-', 'integrate with:', '• Optimizers (Param)', '• Checkpoints (Buffer)', '• Device moves'] },
   { theme: 'orange', head: '3. Surrogate Grads',   lines: ['4-bit quantization', { t: 'y = round(w)', mono: true, fill: D.orange.dark }, 'has ∂y/∂w = 0; needs', 'custom STE backward!'] },
-  'slate', 'Subclassing Module + registering Parameters/Buffers gives custom code native framework superpowers.'
+  'slate', 'Subclass the base module and register parameters and buffers to make custom layers first-class.'
 );
 
 function statelessCentered() {
@@ -924,8 +1116,8 @@ function rmsnormFormula() {
   const W = 540, H = 262;
   let o = '';
   o += card(14, 10, 512, 48, 'purple', [
-    'RMSNorm: Root-Mean-Square Layer Normalization (Zhang & Sennrich, 2019)',
-    { t: 'RMS(x) = √( (1/d) Σ_{i=1}^d x_i² + ε )       ⇒       RMSNorm(x) = ( x / RMS(x) ) ⊙ g', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
+    'RMSNorm (Zhang & Sennrich, 2019)',
+    { t: 'RMS(x) = √((1/d) Σ_{i=1}^d x_i² + ε)  ⇒  RMSNorm(x) = (x / RMS(x)) ⊙ g', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
   ]);
 
   o += card(14, 70, 248, 116, 'blue', [
@@ -952,12 +1144,12 @@ function rmsnormFormula() {
 function rmsnormComposable() {
   const W = 540, H = 256;
   let o = '';
-  o += card(14, 12, 512, 32, 'green', ['Registering self.gain as a Parameter Guarantees Full Composability']);
+  o += card(14, 12, 512, 32, 'green', ['Registering the Gain as a Parameter Guarantees Full Composability']);
 
   o += card(14, 56, 158, 118, 'purple', [
     '1. Register Gain g',
-    { t: 'self.gain = Parameter(', mono: true, fs: 11.5 },
-    { t: '    ones(num_hiddens))', mono: true, fs: 11.5 },
+    { t: 'gain = Parameter(ones(d))', mono: true, fs: 11 },
+    'registered as trainable',
     'Initialized to 1 ∈ ℝᵈ',
   ], { white: true, rail: true });
   o += arrow(176, 115, 190, 115, C.blue);
@@ -970,7 +1162,7 @@ function rmsnormComposable() {
   o += arrow(354, 115, 368, 115, C.green);
   o += card(372, 56, 154, 118, 'green', [
     '3. Checkpoint Clone',
-    { t: 'clone.load(net.state)', mono: true, fs: 11.5 },
+    'Load saved state into clone',
     'Restores trained gain;',
     { t: 'clone(X) == net(X)!', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
@@ -985,16 +1177,16 @@ const customLayerChecks = () => threeColDiagram(
   'blue', 'Three-Point Verification Protocol for Any Custom Layer',
   { theme: 'orange', head: '1. Non-Trivial Weights', lines: ['Never test at g = 1!', { t: 'g = linspace(0.5, 1.5)', mono: true, fill: D.orange.dark }, 'Catches forgotten', '⊙ g multiplication!'] },
   { theme: 'blue',   head: '2. Forward & Grad Parity', lines: ['Compare vs. native or', 'hand-calculated values:', { t: 'max |y − y_ref| < 10⁻⁶', mono: true, fill: D.blue.dark }, '& verify ∂L/∂g ≠ 0'] },
-  { theme: 'green',  head: '3. State Round-Trip',    lines: ['Save state_dict(), load', 'into fresh clone:', { t: 'clone(X) == net(X)', mono: true, fill: D.green.dark }, 'Catches missing buffers!'] },
-  'purple', 'Prefer native fused kernels (nn.RMSNorm) when available; use custom layers for novel ops.'
+  { theme: 'green',  head: '3. State Round-Trip',    lines: ['Save the state, load', 'into fresh clone:', { t: 'clone(X) == net(X)', mono: true, fill: D.green.dark }, 'Catches missing buffers!'] },
+  'purple', 'Run all three checks whenever a custom layer reimplements or extends an op.'
 );
 
 function randomFourierFeatures() {
   const W = 540, H = 258;
   let o = '';
   o += card(14, 12, 512, 46, 'blue', [
-    'Random Fourier Features (Rahimi & Recht, 2007): Kernel Approximation via Fixed Buffers',
-    { t: 'Z = √(2 / D) · cos( X W + b )     with fixed W ~ N(0, 1)^{d×D},  b ~ U(0, 2π)^D', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
+    'Random Fourier Features (Rahimi & Recht, 2007): Fixed Random Buffers',
+    { t: 'Z = √(2/D) · cos(XW + b),  fixed W ~ N(0, 1)^{d×D},  b ~ U(0, 2π)^D', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
   ]);
 
   o += card(14, 72, 152, 108, 'slate', [
@@ -1014,7 +1206,7 @@ function randomFourierFeatures() {
     'Linear(500 → 1)',
     { t: 'Params: w_head, b_head', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
     'Fits sin(3x) to',
-    { t: 'MSE < 0.003!', mono: true, fs: 13, fw: 700, fill: D.green.dark },
+    { t: 'MSE < 0.01', mono: true, fs: 13, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(14, 194, 512, 52, 'purple', [
@@ -1033,21 +1225,21 @@ function missingBufferDisaster() {
     'Fresh model draws new random W\' ≠ W',
     'and b\' ≠ b; trained head weights now',
     'multiply completely wrong features:',
-    { t: 'MSE explodes: 0.002 → 0.55 (>250×)!', mono: true, fs: 12, fw: 700, fill: D.red.dark },
+    { t: 'MSE >100× worse than full state', fs: 12, fw: 700, fill: D.red.dark },
   ], { white: true, rail: true });
 
   o += card(278, 12, 248, 168, 'green', [
     'Fix: Save Full State (Params + Buffers)',
-    { t: 'register_buffer("W", W), ("b", b)', mono: true, fs: 12, fill: D.green.dark },
-    'state_dict() serializes both the',
-    'frozen basis (0.W, 0.b) and the',
-    'trained linear head (1.weight, 1.bias):',
-    { t: 'MSE restored: 0.002 (bit-for-bit!)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'W and b registered as buffers', fs: 12, fill: D.green.dark },
+    'The saved state holds both the',
+    'frozen random basis (W, b) and',
+    'the trained linear head:',
+    { t: 'Trained fit restored exactly', fs: 12, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(14, 192, 512, 52, 'orange', [
-    'Diagnostic Habit: Always test checkpoint round-trips by instantiating a brand-new model',
-    'with a different random seed before calling load_state_dict()!',
+    'Diagnostic Habit: Always test checkpoint round-trips by loading into a brand-new model',
+    'built with a different random seed!',
   ]);
   return svg(W, H, o);
 }
@@ -1084,8 +1276,8 @@ function stopGradientTrick() {
   const W = 540, H = 262;
   let o = '';
   o += card(14, 10, 512, 48, 'purple', [
-    'The Stop-Gradient One-Liner for Identity Surrogates (No Custom Class Needed!)',
-    { t: 'y  =  x  +  stop_gradient( round(x) − x )       [PyTorch: x + (x.round() − x).detach()]', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
+    'The Stop-Gradient One-Liner for Identity Surrogates',
+    { t: 'y  =  x  +  stop_gradient( round(x) − x )', mono: true, fs: 12.5, fw: 700, fill: D.purple.dark },
   ]);
 
   o += card(14, 70, 248, 118, 'blue', [
@@ -1103,8 +1295,8 @@ function stopGradientTrick() {
   ], { white: true, rail: true });
 
   o += card(14, 200, 512, 50, 'slate', [
-    'Works identically across PyTorch (.detach()), TensorFlow (tf.stop_gradient),',
-    'JAX (jax.lax.stop_gradient), and MXNet (npx.stop_gradient) for any discrete forward op f(x).',
+    'The same identity works for any discrete forward op f(x): x + stop_gradient(f(x) − x)',
+    'evaluates to f(x) forward and passes the gradient through unchanged backward.',
   ]);
   return svg(W, H, o);
 }
@@ -1114,7 +1306,7 @@ const customLayersSummary = () => fiveRowDiagram([
   { theme: 'purple', k: 'Parameterized Layer',  v: 'RMSNorm: (x / RMS(x)) ⊙ g; registers gain g as trainable Parameter' },
   { theme: 'green',  k: 'Fixed-Buffer Layer',   v: 'RandomFeatures: √(2/D)cos(XW+b); registers W, b as non-trainable buffers' },
   { theme: 'orange', k: 'Custom VJP / STE',     v: 'RoundSTE: forward evaluates round(x), backward passes upstream grad 1×' },
-  { theme: 'teal',   k: 'Stop-Gradient Trick',  v: 'x + stop_gradient(f(x) − x) implements STE in 1 line across all frameworks' },
+  { theme: 'teal',   k: 'Stop-Gradient Trick',  v: 'x + stop_gradient(f(x) − x) implements the STE in one line' },
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1138,8 +1330,8 @@ function stateNotCode() {
     'Live Model in Python Memory',
     '1. Python Code: forward(X), ReLU',
     '2. State Tree: parameters + buffers',
-    { t: '   "0.weight" → Tensor(256, 20)', mono: true, fs: 11.5, fill: D.purple.dark },
-    { t: '   "2.weight" → Tensor(10, 256)', mono: true, fs: 11.5, fill: D.purple.dark },
+    { t: 'hidden: weight, bias', mono: true, fs: 11.5, fill: D.purple.dark },
+    { t: 'output: weight, bias', mono: true, fs: 11.5, fill: D.purple.dark },
   ], { white: true, rail: true });
 
   o += hArrow(250, 290, 117, C.green, 'save');
@@ -1147,14 +1339,14 @@ function stateNotCode() {
   o += card(294, 56, 232, 122, 'green', [
     'Saved File on Disk',
     'Stores ONLY path → tensor bytes:',
-    { t: '{ "0.weight": (256,20,fp32), … }', mono: true, fs: 11.5, fill: D.green.dark },
+    { t: '{ "hidden…weight": fp32 bytes, … }', mono: true, fs: 11.5, fill: D.green.dark },
     'Contains ZERO Python code and',
     'zero record of ReLU or wiring!',
   ], { white: true, rail: true });
 
   o += card(14, 192, 512, 52, 'orange', [
     'Reconstruction Contract: To load weights, you must first instantiate matching Python',
-    'architecture code with identical attribute names (renaming self.out → self.head breaks keys!).',
+    'architecture code with identical attribute names (renaming self.output → self.head breaks keys!).',
   ]);
   return svg(W, H, o);
 }
@@ -1163,13 +1355,13 @@ function pickleRceVsSafe() {
   const W = 540, H = 260;
   let o = '';
   o += card(14, 12, 248, 174, 'red', [
-    'Python Pickle (.pt / .pkl / .npy)',
+    'Python Pickle Files',
     'Stack-based virtual machine!',
     'Executes arbitrary callables in:',
     { t: '__reduce__ → (os.system, ("sh",))', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
     '• RCE the instant load() runs',
-    '• Even weights_only=True still',
-    '  parses restricted VM opcodes',
+    '• Even restricted unpicklers',
+    '  still parse VM opcodes',
   ], { white: true, rail: true });
 
   o += card(278, 12, 248, 174, 'green', [
@@ -1183,7 +1375,7 @@ function pickleRceVsSafe() {
   ], { white: true, rail: true });
 
   o += card(14, 198, 512, 50, 'purple', [
-    'Security Rule: Never call torch.load(weights_only=False) or np.load(allow_pickle=True) on external files.',
+    'Security Rule: Never enable unrestricted unpickling for files from the internet.',
   ]);
   return svg(W, H, o);
 }
@@ -1191,25 +1383,25 @@ function pickleRceVsSafe() {
 function safetensorsAudit() {
   const W = 540, H = 258;
   let o = '';
-  o += card(14, 12, 512, 32, 'blue', ['Auditing mlp.safetensors (7,946 float32 Params = 32,072 Total Bytes)']);
+  o += card(14, 12, 512, 32, 'blue', ['Auditing mlp.safetensors (7,946 float32 Params = 31,784 Data Bytes)']);
 
   o += card(14, 56, 124, 118, 'purple', [
     'Bytes 0..8',
     { t: 'struct "<Q"', mono: true, fs: 12.5, fw: 700 },
     '64-bit uint:',
-    { t: 'n = 280 B', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
+    { t: 'n ≈ 300 B', mono: true, fs: 13, fw: 700, fill: D.purple.dark },
   ], { white: true });
   o += arrow(142, 115, 158, 115, C.blue);
   o += card(162, 56, 188, 118, 'blue', [
-    'Bytes 8..288 (JSON Header)',
-    { t: '"0.weight": {', mono: true, fs: 11.5 },
+    'Bytes 8..8+n (JSON Header)',
+    { t: '"…hidden…bias": {', mono: true, fs: 11.5 },
     { t: '  "dtype": "F32",', mono: true, fs: 11.5 },
-    { t: '  "shape": [256, 20],', mono: true, fs: 11.5 },
-    { t: '  "data_offsets":[0,20480]}', mono: true, fs: 11, fill: D.blue.dark },
+    { t: '  "shape": [256],', mono: true, fs: 11.5 },
+    { t: ' "data_offsets":[0,1024]}', mono: true, fs: 11, fill: D.blue.dark },
   ], { white: true });
   o += arrow(354, 115, 370, 115, C.green);
   o += card(374, 56, 152, 118, 'green', [
-    'Bytes 288..32072',
+    'Bytes 8+n .. end',
     { t: '31,784 Raw Bytes', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     '4 contiguous fp32',
     'buffers (zero-copy',
@@ -1217,8 +1409,8 @@ function safetensorsAudit() {
   ], { white: true });
 
   o += card(14, 188, 512, 56, 'slate', [
-    'Random-Access Loading: Because every tensor\'s [begin, end] byte offset is in the 280-byte header,',
-    'a loader can mmap a single layer out of a 100 GB file in microseconds without reading the rest!',
+    'Random Access: every tensor\'s [begin, end] byte offset sits in the short header,',
+    'so a loader can mmap one layer out of a 100 GB file without reading the rest!',
   ]);
   return svg(W, H, o);
 }
@@ -1226,7 +1418,7 @@ function safetensorsAudit() {
 function freshAdamShock() {
   const W = 540, H = 262;
   let o = '';
-  o += card(14, 12, 512, 32, 'red', ['Why Resuming From Saved Weights With a Fresh Adam Spikes the Loss >200×']);
+  o += card(14, 12, 512, 32, 'red', ['Why Resuming With a Fresh Adam Spikes the Loss by Orders of Magnitude']);
 
   o += card(14, 54, 248, 128, 'red', [
     'Fresh Adam on Step 201 (m₀ = v₀ = 0)',
@@ -1295,14 +1487,14 @@ function atomicWriteReplace() {
   o += card(278, 56, 248, 118, 'green', [
     'Crash-Safe: Write .tmp + os.replace',
     { t: '1. save(state, "ckpt.pt.tmp")', mono: true, fs: 12, fill: D.green.dark },
-    { t: '2. os.replace("ckpt.pt.tmp","ckpt.pt")', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
+    { t: '2. os.replace(tmp, "ckpt.pt")', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
     'POSIX atomic directory rename:',
     'ckpt.pt is ALWAYS complete!',
   ], { white: true, rail: true });
 
   o += card(14, 188, 512, 56, 'blue', [
     'Five Mandatory Compartments Inside ckpt.pt:',
-    { t: '1. Model State (w + buffers)   2. Optimizer State (m, v)   3. PRNG States   4. Step t   5. Config', mono: true, fs: 11.8, fw: 700, fill: D.blue.dark },
+    { t: '1. Model State (w + buffers)   2. Optimizer State (m, v)\n3. PRNG States   4. Step t   5. Config', mono: true, fs: 11.8, fw: 700, fill: D.blue.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1310,8 +1502,8 @@ function atomicWriteReplace() {
 const bitwiseResumeTest = () => threeColDiagram(
   'green', 'Resuming at Step 200 → Step 205: What Each Compartment Controls',
   { theme: 'green',  head: 'Full 5-Part Resume', lines: ['Restores w, Adam m/v,', 'PRNG state, & step 200:', { t: 'max |w − w_ref| = 0.0', mono: true, fw: 700, fill: D.green.dark }, 'Exact bitwise match!'] },
-  { theme: 'orange', head: 'Omit PRNG State',     lines: ['Restores w & Adam m/v,', 'but resets RNG seed:', { t: 'Replays step-1 batches!', fw: 700, fill: D.orange.dark }, 'Trajectory drifts (~0.06)'] },
-  { theme: 'red',    head: 'Omit Adam State',     lines: ['Restores w & RNG,', 'but fresh m=0, v=0:', { t: 'Step-201 loss ×200!', mono: true, fw: 700, fill: D.red.dark }, 'Destroys convergence'] },
+  { theme: 'orange', head: 'Omit PRNG State',     lines: ['Restores w & Adam m/v,', 'but resets RNG seed:', { t: 'Replays step-1 batches!', fw: 700, fill: D.orange.dark }, 'Trajectory drifts (~0.01)'] },
+  { theme: 'red',    head: 'Omit Adam State',     lines: ['Restores w & RNG,', 'but fresh m=0, v=0:', { t: 'Loss ~1000× from step 202!', mono: true, fw: 700, fill: D.red.dark }, 'Destroys convergence'] },
   'slate', 'Bit-for-bit resumption proves no hidden state was left outside your checkpoint dictionary.'
 );
 
@@ -1322,23 +1514,23 @@ function transferKeyAudit() {
 
   o += card(14, 56, 248, 124, 'blue', [
     '1. Expected Head Diff (OK)',
-    'Replace 1000-way ImageNet fc head',
-    'with new 10-way head & load:',
-    { t: 'missing_keys: ["fc.weight","fc.bias"]', mono: true, fs: 11.2, fill: D.blue.dark },
-    { t: 'unexpected_keys: [] (filtered out)', mono: true, fs: 11.2, fill: D.green.dark },
+    'Replace 1000-way ImageNet head',
+    'with a new 10-way head & load:',
+    { t: 'missing: head weight + bias', mono: true, fs: 11.5, fill: D.blue.dark },
+    { t: 'unexpected: [] (filtered out)', mono: true, fs: 11.5, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(278, 56, 248, 124, 'red', [
-    '2. Silent Backbone Typo (BUG!)',
-    'If layer4 was renamed or omitted',
-    'under strict=False:',
-    { t: 'missing_keys: ["layer4.0.conv1…"]', mono: true, fs: 11.2, fw: 700, fill: D.red.dark },
+    '2. Silent Backbone Gap (BUG!)',
+    'If the last stage was renamed or',
+    'dropped under a non-strict load:',
+    { t: 'missing: last stage (50–60 keys)', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
     'Whole stage stays random with no error!',
   ], { white: true, rail: true });
 
   o += card(14, 194, 512, 54, 'green', [
     'Mandatory Assertion After Any Non-Strict Load:',
-    { t: 'assert set(missing_keys) == {"fc.weight", "fc.bias"} and len(unexpected_keys) == 0', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'assert set(missing) == head_keys and not unexpected', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1348,7 +1540,7 @@ const ioSummary = () => fiveRowDiagram([
   { theme: 'green',  k: 'safetensors Format',  v: '8-byte length + JSON header + aligned raw bytes; zero RCE, zero-copy mmap' },
   { theme: 'purple', k: '5-Part Checkpoint',   v: 'Model state + Optimizer m,v + PRNG states + step t + config (12 B/param)' },
   { theme: 'orange', k: 'Atomic Commit',       v: 'Write to path + ".tmp" then os.replace() so crashes never corrupt ckpt' },
-  { theme: 'red',    k: 'Strict Key Audit',    v: 'Always assert missing_keys and unexpected_keys equal only replaced layers' },
+  { theme: 'red',    k: 'Strict Key Audit',    v: 'Always assert the missing and unexpected keys match only replaced layers' },
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1357,7 +1549,7 @@ const ioSummary = () => fiveRowDiagram([
 
 const gpuThreeConstraints = () => threeColDiagram(
   'blue', 'Three Hardware Laws Governing GPU Deep Learning Systems',
-  { theme: 'green',  head: '1. Compute Speed',   lines: ['4096 × 4096 matmul:', 'CPU fp32: > 200 ms', { t: 'GPU TensorCore: < 2 ms', mono: true, fw: 700, fill: D.green.dark }, '(100–1000× speedup!)'] },
+  { theme: 'green',  head: '1. Compute Speed',   lines: ['4096 × 4096 matmul:', 'CPU fp32: 0.1–2 s', { t: 'GPU TensorCore: < 2 ms', mono: true, fw: 700, fill: D.green.dark }, '(~100–1000× speedup!)'] },
   { theme: 'red',    head: '2. PCIe Bottleneck', lines: ['Copying 64 MiB matrix', 'CPU RAM → GPU HBM', { t: 'takes 3–5× LONGER', mono: true, fw: 700, fill: D.red.dark }, 'than the 4096³ matmul!'] },
   { theme: 'purple', head: '3. Async & HBM Cap', lines: ['Python queues kernels', 'without waiting; HBM', 'is fixed (24 / 80 GB)', { t: 'vs 128 GB fp32 Adam', mono: true, fill: D.purple.dark }] },
   'slate', 'Golden Rule: Move the model once, copy each batch once at the boundary, and never sync per step.'
@@ -1366,22 +1558,22 @@ const gpuThreeConstraints = () => threeColDiagram(
 function deviceMismatchGuard() {
   const W = 540, H = 256;
   let o = '';
-  o += card(14, 12, 512, 32, 'red', ['Why Frameworks Reject Cross-Device Operations Instead of Auto-Copying']);
+  o += card(14, 12, 512, 32, 'red', ['Rejecting Cross-Device Operations Instead of Auto-Copying']);
 
   o += card(14, 56, 168, 114, 'blue', [
     'Tensor X',
-    { t: 'device = cuda:0', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
+    { t: 'device = GPU 0', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
     'Lives in GPU 0 HBM',
   ], { white: true });
 
   o += card(196, 80, 148, 66, 'red', [
-    { t: 'X + Y  →  RuntimeError!', mono: true, fs: 12, fw: 700 },
+    { t: 'X + Y  →  error!', mono: true, fs: 12.5, fw: 700 },
     'Refuses implicit PCIe copy',
   ]);
 
   o += card(358, 56, 168, 114, 'orange', [
     'Tensor Y',
-    { t: 'device = cpu (or cuda:1)', mono: true, fs: 12, fw: 700, fill: D.orange.dark },
+    { t: 'device = CPU (or GPU 1)', mono: true, fs: 12, fw: 700, fill: D.orange.dark },
     'Lives in Host RAM',
   ], { white: true });
 
@@ -1398,22 +1590,22 @@ function modelOptimizerPlacement() {
   o += card(14, 12, 512, 32, 'blue', ['Mandatory Device Initialization Order for Models, Optimizers, and Batches']);
 
   const steps = [
-    { x: 14,  theme: 'blue',   t1: '1. Move Model First',  t2: 'net.to(gpu)',              t3: 'All params & buffers on GPU' },
-    { x: 188, theme: 'purple', t1: '2. Build Optimizer',   t2: 'Adam(net.parameters())',   t3: 'Allocates m, v on GPU HBM' },
-    { x: 362, theme: 'green',  t1: '3. Move Each Batch',   t2: 'X, y = X.to(gpu), y.to(gpu)', t3: 'Co-locates inputs with net' },
+    { x: 14,  theme: 'blue',   t1: '1. Move Model First',  t2: 'model → GPU',          t3: 'All params & buffers on GPU' },
+    { x: 188, theme: 'purple', t1: '2. Build Optimizer',   t2: 'Adam on GPU params',   t3: 'Allocates m, v on GPU HBM' },
+    { x: 362, theme: 'green',  t1: '3. Move Each Batch',   t2: 'X, y → GPU',           t3: 'Co-locates inputs with net' },
   ];
   steps.forEach((s, i) => {
     o += card(s.x, 56, 164, 118, s.theme, [
       s.t1,
-      { t: s.t2, mono: true, fs: 11.5, fw: 700, fill: PAL[s.theme].dark },
+      { t: s.t2, fs: 12.5, fw: 700, fill: PAL[s.theme].dark },
       { t: s.t3, fs: 12, fill: C.ink },
     ], { white: true, rail: true });
     if (i < 2) o += arrow(s.x + 166, 115, steps[i + 1].x - 2, 115, C.blue);
   });
 
   o += card(14, 188, 512, 52, 'red', [
-    'Inside forward(X): Never allocate new tensors on default CPU (torch.zeros(shape))—',
-    'always pass device=X.device (or torch.zeros_like(X)) so temporaries match the input device!',
+    'Inside forward(X): Never allocate new tensors on the default device;',
+    "create temporaries on X's device (e.g. zeros_like(X)) so they match the input!",
   ]);
   return svg(W, H, o);
 }
@@ -1424,10 +1616,10 @@ function benchmarkFourRules() {
   o += card(14, 12, 512, 32, 'purple', ['Four Mandatory Rules for Benchmarking Asynchronous GPU Kernels']);
 
   const rules = [
-    { x: 14,  theme: 'orange', t1: '1. Warmup',     t2: 'Run 3 untimed steps', t3: 'absorbs JIT/cuBLAS init' },
-    { x: 146, theme: 'blue',   t1: '2. Pre-Sync',   t2: 'synchronize()',       t3: 'drain prior queue' },
-    { x: 278, theme: 'purple', t1: '3. Timed Loop', t2: 't0 = perf_counter()', t3: 'enqueue N kernel runs' },
-    { x: 410, theme: 'green',  t1: '4. Post-Sync!', t2: 'synchronize() → t1',  t3: 'wait for GPU finish!' },
+    { x: 14,  theme: 'orange', t1: '1. Warmup',     t2: 'Run 3 untimed steps', t3: 'absorbs compile & init' },
+    { x: 146, theme: 'blue',   t1: '2. Pre-Sync',   t2: 'device sync',         t3: 'drain prior queue' },
+    { x: 278, theme: 'purple', t1: '3. Timed Loop', t2: 't0 = time()',        t3: 'enqueue N kernel runs' },
+    { x: 410, theme: 'green',  t1: '4. Post-Sync!', t2: 'sync → t1',           t3: 'wait for GPU finish!' },
   ];
   rules.forEach((r, i) => {
     o += card(r.x, 56, 116, 116, r.theme, [
@@ -1439,7 +1631,7 @@ function benchmarkFourRules() {
   });
 
   o += card(14, 186, 512, 58, 'red', [
-    'Without Rule 4 (synchronize / block_until_ready / waitall): Your timer stops as soon as',
+    'Without Rule 4 (a final device sync): Your timer stops as soon as',
     'Python finishes pushing commands into the queue (~0.02 ms), underreporting GPU time by 100×!',
   ]);
   return svg(W, H, o);
@@ -1490,28 +1682,28 @@ function sqrtKSegments() {
     'Caches all K = 16 block inputs',
     'simultaneously during forward():',
     { t: 'Peak = 16 activation tensors', mono: true, fs: 13, fw: 700, fill: D.red.dark },
-    { t: 'Measured: ~1.10 GiB step RAM', mono: true, fs: 12.5, fill: D.red.dark },
+    { t: 'Memory grows linearly in K', fs: 12.5, fill: D.red.dark },
   ], { white: true, rail: true });
 
   o += card(278, 54, 248, 126, 'green', [
     'Segmented Checkpointing (s = 4)',
-    'Caches K/s = 4 segment boundaries +',
-    'recomputes s = 4 blocks one segment at a time:',
+    'Caches K/s = 4 boundaries and',
+    'recomputes one 4-block segment:',
     { t: 'Peak = K/s + s = 4 + 4 = 8 tensors!', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: 'Measured: ~0.45 GiB (−59% RAM!)', mono: true, fs: 12.5, fill: D.green.dark },
+    { t: 'Half the stored tensors of K = 16', fs: 12.5, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(14, 192, 512, 56, 'blue', [
-    'Optimal Segment Formula: Peak stored tensors (K/s + s) is minimized at s = √K (giving 2√K tensors)',
-    'at the fixed cost of 1 extra forward pass per segment (~25–33% extra wall-clock step time).',
+    'Optimal Segment Size: peak stored tensors K/s + s is smallest at s = √K (2√K tensors),',
+    'at the cost of one extra forward pass per segment (roughly 20–30% extra step time).',
   ]);
   return svg(W, H, o);
 }
 
 const gpuSummary = () => fiveRowDiagram([
-  { theme: 'blue',   k: 'Boundary Transfers',  v: 'net.to(gpu) before optimizer; batch.to(gpu) once per step; 0 inner copies' },
-  { theme: 'orange', k: 'Async Command Queue', v: 'Avoid per-step .item() / print / Python if on tensors; accumulate on GPU' },
-  { theme: 'purple', k: 'Synced Benchmarking', v: '3 warmup steps + synchronize() before t0 + synchronize() before t1' },
+  { theme: 'blue',   k: 'Boundary Transfers',  v: 'Model to GPU before building the optimizer; copy each batch once per step' },
+  { theme: 'orange', k: 'Async Command Queue', v: 'Avoid per-step scalar readouts, prints and Python ifs on tensors' },
+  { theme: 'purple', k: 'Synced Benchmarking', v: '3 warmup steps + device sync before t0 + device sync before t1' },
   { theme: 'teal',   k: '3 Memory Views',      v: 'Live allocated ⊆ Caching allocator pool (reserved) ⊆ CUDA driver (nvidia-smi)' },
   { theme: 'green',  k: '√K Checkpointing',    v: 'Save every s = √K boundary & recompute interior: O(K) → O(√K) act RAM' },
 ]);
@@ -1583,27 +1775,48 @@ function updateSwamping() {
   return svg(W, H, o);
 }
 
-function dtypePromotion() {
+function dtypePromotion(fw) {
   const W = 540, H = 258;
   let o = '';
+  if (fw === 'tensorflow') {
+    o += card(14, 12, 248, 168, 'orange', [
+      'Strict Dtype Policy',
+      'Refuses implicit cross-dtype',
+      'promotion between tensors:',
+      { t: 'x16 + y32 → InvalidArgumentError', mono: true, fs: 11.2, fw: 700, fill: D.red.dark },
+      'Requires an explicit',
+      { t: 'tf.cast(x, dtype)', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark },
+    ], { white: true, rail: true });
+    o += card(278, 12, 248, 168, 'green', [
+      'Python Literals Adapt',
+      'A literal constant takes on',
+      "the tensor's dtype:",
+      { t: 'x16 + 1.0  →  fp16', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+      'Only tensor-tensor mixes',
+      'must be cast by hand',
+    ], { white: true, rail: true });
+    o += card(14, 192, 512, 54, 'red', [
+      'Upside of Strictness: a stray fp32 bias or buffer inside a 16-bit forward pass fails loudly',
+      'instead of silently promoting every downstream activation back to fp32 (2× RAM).',
+    ]);
+    return svg(W, H, o);
+  }
   o += card(14, 12, 248, 168, 'blue', [
-    'PyTorch / JAX / MXNet Promotion',
+    'Mixed Float Widths Promote',
     'Mixed operands promote to the',
     'smallest format covering both:',
     { t: 'fp16 + fp32  →  fp32', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
     { t: 'bf16 + fp32  →  fp32', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
     { t: 'fp16 + bf16  →  fp32 (needs both!)', mono: true, fs: 12, fw: 700, fill: D.purple.dark },
   ], { white: true, rail: true });
-
-  o += card(278, 12, 248, 168, 'orange', [
-    'TensorFlow Strict Dtype Policy',
-    'Refuses implicit cross-dtype promotion:',
-    { t: 'x_fp16 + y_fp32 → InvalidArgumentError', mono: true, fs: 11.2, fw: 700, fill: D.red.dark },
-    'Requires explicit tf.cast(x, dtype);',
-    'prevents accidental fp32 promotion,',
-    'while Python literals (x16 + 1.0) match x16',
+  o += card(278, 12, 248, 168, 'green', [
+    'Scalars and Ints Do Not Widen',
+    'A Python float or an int tensor',
+    "keeps the fp16 tensor's dtype:",
+    { t: 'x16 + 1.0  →  fp16', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'x16 + int  →  fp16', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    'Only float-float mixes promote',
   ], { white: true, rail: true });
-
   o += card(14, 192, 512, 54, 'red', [
     'Stray fp32 Buffer Contamination Hazard: Leaving a single bias or buffer in fp32 inside a',
     '16-bit forward pass silently promotes every downstream activation tensor back to fp32 (2× RAM)!',
@@ -1623,7 +1836,7 @@ function modelCastHalving() {
     '8B scale: 32.0 GB weights',
   ], { white: true, rail: true });
 
-  o += hArrow(244, 296, 115, C.green, 'bfloat16()');
+  o += hArrow(244, 296, 115, C.green, 'cast');
 
   o += card(300, 56, 226, 118, 'green', [
     'Cast 16-Bit Model',
@@ -1654,7 +1867,7 @@ function fp16LossScaling() {
 
   const steps = [
     { x: 14,  theme: 'red',    t1: '1. Scale Loss',     t2: 'L_scaled = S · L',       t3: 'S = 2¹⁶ = 65,536' },
-    { x: 146, theme: 'orange', t1: '2. Backward (fp16)', t2: '∇(S·L) = S · ∇L',        t3: 'lifts 33% subnormals!' },
+    { x: 146, theme: 'orange', t1: '2. Backward (fp16)', t2: '∇(S·L) = S · ∇L',        t3: 'lifts ~32% subnormals!' },
     { x: 278, theme: 'blue',   t1: '3. Unscale (fp32)', t2: 'g_fp32 = (S·∇L) / S',    t3: 'check for inf / NaN' },
     { x: 410, theme: 'green',  t1: '4. Step or Backoff', t2: 'finite → Adam.step()',   t3: 'inf → skip & S ← S/2' },
   ];
@@ -1687,7 +1900,7 @@ function logsumexpAndSums() {
   let o = '';
   o += card(14, 12, 248, 238, 'red', [
     'Hazard A: Log-Sum-Exp Overflow',
-    { t: 'x = [10, 12, 9] in fp16 (max 65,504)', mono: true, fs: 11.5 },
+    { t: 'x = [12, 11, 10] in fp16 (max 65,504)', mono: true, fs: 11.5 },
     { t: 'Naive: exp(12) ≈ 162,755 → inf!', mono: true, fs: 12, fw: 700, fill: D.red.dark },
     { t: 'Fix: Shift by m = max_i x_i = 12', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     { t: 'm + log Σ exp(x_i − m)', mono: true, fs: 13, fw: 700, fill: D.green.dark },
@@ -1697,12 +1910,12 @@ function logsumexpAndSums() {
 
   o += card(278, 12, 248, 238, 'orange', [
     'Hazard B: 16-Bit Running Sum Stall',
-    { t: 'Add 2⁻¹⁰ ≈ 0.000977 for 10,000 steps', mono: true, fs: 11.5 },
+    { t: 'Add 2⁻¹⁰ ≈ 0.000977 for 4,096 steps', mono: true, fs: 11.5 },
     { t: 'fp16 accumulator freezes at 2.000!', mono: true, fs: 12, fw: 700, fill: D.red.dark },
     'Because fp16 spacing on [2, 4) is 2⁻⁹,',
     'every +2⁻¹⁰ increment rounds to +0!',
     { t: 'Fix: Accumulate sums/means in fp32', mono: true, fs: 12, fw: 700, fill: D.green.dark },
-    { t: 'sum(x, dtype=float32) → 10.9765', mono: true, fs: 12.5, fill: D.green.dark },
+    { t: 'fp32 accumulator → 4.0 (exact)', mono: true, fs: 12.5, fill: D.green.dark },
   ], { white: true, rail: true });
   return svg(W, H, o);
 }
@@ -1761,7 +1974,7 @@ function privateGenerators() {
 
   o += card(14, 54, 248, 134, 'red', [
     'Fragile: Shared Global PRNG',
-    { t: 'torch.manual_seed(0)  (1 global stream)', mono: true, fs: 11.2, fill: D.red.dark },
+    { t: 'One global seed → one shared stream', fs: 12, fw: 700, fill: D.red.dark },
     'Adding 1 extra randn() call in logging',
     'or changing num_batches shifts the',
     'entire downstream random sequence for',
@@ -1770,15 +1983,15 @@ function privateGenerators() {
 
   o += card(278, 54, 248, 134, 'green', [
     'Robust: Isolated Stream Objects',
-    { t: 'g = torch.Generator().manual_seed(0)', mono: true, fs: 11.2, fill: D.green.dark },
-    { t: 'key1, key2 = jax.random.split(key)', mono: true, fs: 11.2, fill: D.green.dark },
-    { t: 'w_key = fold_in(base_key, worker_id)', mono: true, fs: 11.2, fill: D.green.dark },
-    'Data shuffling, augmentation, & model',
-    'init each advance their own stream!',
+    { t: 'Private generator or split key', fs: 12, fw: 700, fill: D.green.dark },
+    '• one stream for shuffling',
+    '• one stream for model init',
+    '• one stream per data worker',
+    'Each advances independently!',
   ], { white: true, rail: true });
 
   o += card(14, 200, 512, 48, 'blue', [
-    'Full-Stack Seeding Checklist: Framework PRNG + NumPy np.random + Python random + worker_init_fn.',
+    'Full-Stack Seeding Checklist: framework PRNG + NumPy + Python random + every data worker.',
   ]);
   return svg(W, H, o);
 }
@@ -1806,7 +2019,7 @@ function floatNonassociative() {
 
   o += card(14, 188, 512, 58, 'purple', [
     'Why Seeded GPU Runs Still Diverge: Parallel GPU threads accumulate partial sums via',
-    'non-deterministic atomicAdd arrival orders unless use_deterministic_algorithms(True) is enabled.',
+    'non-deterministic atomicAdd arrival orders unless deterministic kernels are enabled.',
   ]);
   return svg(W, H, o);
 }
@@ -1816,7 +2029,7 @@ function determinismTiers() {
   let o = '';
   o += card(14, 12, 248, 174, 'purple', [
     'Tier 1: Bitwise Determinism',
-    { t: 'use_deterministic_algorithms(True)', mono: true, fs: 11.2, fill: D.purple.dark },
+    { t: 'Deterministic kernels switched on', fs: 12, fw: 700, fill: D.purple.dark },
     '• Same machine & GPU architecture',
     '• Same CUDA / framework version',
     '• Same batch/world size',
@@ -1860,7 +2073,7 @@ function xavierRes15x() {
 
   o += card(14, 154, 512, 94, 'green', [
     'Combine Skip + Body:  Var[h_k] = Var[x_k] + Var[body(x_k)] = v_k + 0.5 v_k = 1.5 v_k',
-    { t: 'Per-block std multiplier = √1.5 ≈ 1.225×   ⇒   After 8 blocks: 0.69 × (1.5)⁴ ≈ 3.50 (matches hook!)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'Per-block std multiplier = √1.5 ≈ 1.225×   ⇒   After 8 blocks: 0.69 × (1.5)⁴ ≈ 3.5 (hooks: 3.2–4.5)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
   return svg(W, H, o);
 }
@@ -1872,18 +2085,18 @@ function hookMemoryLeak() {
     'Bug: Storing Live Hook Tensors',
     { t: 'def hook(m, inp, out):', mono: true, fs: 11.5 },
     { t: '    history.append(out)  # LEAK!', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
-    'out holds grad_fn pointer to the',
-    'ENTIRE backward computation graph;',
+    'out still points into the ENTIRE',
+    'recorded backward graph;',
     'retains all step activations → OOM!',
   ], { white: true, rail: true });
 
   o += card(278, 12, 248, 174, 'green', [
     'Fix: Detach + Remove Handle',
     { t: 'def hook(m, inp, out):', mono: true, fs: 11.5 },
-    { t: '    history.append(out.detach().std().item())', mono: true, fs: 10.5, fw: 700, fill: D.green.dark },
-    { t: 'handle.remove()  # in finally block', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
-    'Severs autograd graph & unregisters',
-    'callback when inspection finishes!',
+    { t: '    s = out.detach().std()', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
+    { t: '    history.append(float(s))', mono: true, fs: 11.5, fw: 700, fill: D.green.dark },
+    'Remove the hook handle when done:',
+    'severs the graph & unregisters!',
   ], { white: true, rail: true });
 
   o += card(14, 198, 512, 48, 'purple', [
@@ -1893,11 +2106,11 @@ function hookMemoryLeak() {
 }
 
 const reproSummary = () => fiveRowDiagram([
-  { theme: 'blue',   k: 'Full-Stack Seeding',  v: 'Seed framework + NumPy + Python random + DataLoader worker_init_fn' },
+  { theme: 'blue',   k: 'Full-Stack Seeding',  v: 'Seed the framework, NumPy, Python random and every data worker' },
   { theme: 'green',  k: 'Statistical Claims',  v: 'Single-seed deltas (<1–4%) are noise; report mean ± std over N ≥ 5 seeds' },
-  { theme: 'purple', k: 'Deterministic Ops',   v: 'use_deterministic_algorithms(True) fixes parallel GPU atomicAdd order' },
+  { theme: 'purple', k: 'Deterministic Ops',   v: 'Deterministic kernels fix the parallel GPU atomicAdd order' },
   { theme: 'orange', k: 'Forward Hooks',       v: 'Profile activation stds & trap first NaN layer without editing model code' },
-  { theme: 'red',    k: 'Leak-Free Cleanup',   v: 'Always .detach() tensors saved in hooks and call handle.remove() after use' },
+  { theme: 'red',    k: 'Leak-Free Cleanup',   v: 'Always detach tensors saved in hooks and remove the hook handle after use' },
 ]);
 
 export const diagrams = {
@@ -1911,16 +2124,21 @@ export const diagrams = {
   'ch05-bg-setattr-registry':         setattrRegistry,
   'ch05-bg-tree-walk-ops':            treeWalkOps,
   'ch05-bg-sequential-loop':          sequentialLoop,
-  'ch05-bg-plain-list-trap':          plainListTrap,
+  'ch05-bg-plain-list-trap-pytorch':    () => plainListTrap('pytorch'),
+  'ch05-bg-plain-list-trap-tensorflow': () => plainListTrap('tensorflow'),
+  'ch05-bg-plain-list-trap-jax':        () => plainListTrap('jax'),
+  'ch05-bg-plain-list-trap-mxnet':      () => plainListTrap('mxnet'),
   'ch05-bg-eager-vs-trace':           eagerVsTrace,
   'ch05-bg-lazy-dry-run':             lazyDryRun,
+  'ch05-bg-lazy-dry-run-jax':         lazyDryRunJax,
   'ch05-bg-config-builder':           configBuilder,
   // §5.2 parameters-state-memory.md
   'ch05-bg-adam-16b-floor':           adam16bFloor,
   'ch05-bg-state-tree-paths':         stateTreePaths,
   'ch05-bg-four-tensor-kinds':        fourTensorKinds,
   'ch05-bg-standardizer-buffer':      standardizerBuffer,
-  'ch05-bg-lazy-adam-moments':        lazyAdamMoments,
+  'ch05-bg-lazy-adam-moments':        () => lazyAdamMoments('lazy'),
+  'ch05-bg-lazy-adam-moments-jax':    () => lazyAdamMoments('jax'),
   'ch05-bg-meta-shape-trace':         metaShapeTrace,
   'ch05-bg-tied-dedup-grad':          tiedDedupGrad,
   'ch05-bg-freezing-pitfalls':        freezingPitfalls,
@@ -1930,7 +2148,8 @@ export const diagrams = {
   'ch05-bg-default-init-decay':       defaultInitDecay,
   'ch05-bg-tree-apply-init':          treeApplyInit,
   'ch05-bg-truncated-normal':         truncatedNormal,
-  'ch05-bg-weight-shape-conventions': weightShapeConventions,
+  'ch05-bg-weight-shape-conventions': () => weightShapeConventions('out-in'),
+  'ch05-bg-weight-shape-conventions-in-out': () => weightShapeConventions('in-out'),
   'ch05-bg-res-variance-derivation':  resVarianceDerivation,
   'ch05-bg-three-gain-schedules':     threeGainSchedules,
   'ch05-bg-gpt2-sqrt-n-bound':        gpt2SqrtNBound,
@@ -1971,7 +2190,8 @@ export const diagrams = {
   'ch05-bg-16bit-two-hazards':        sixteenBitTwoHazards,
   'ch05-bg-range-vs-precision':       rangeVsPrecision,
   'ch05-bg-update-swamping':          updateSwamping,
-  'ch05-bg-dtype-promotion':          dtypePromotion,
+  'ch05-bg-dtype-promotion':          () => dtypePromotion('promote'),
+  'ch05-bg-dtype-promotion-tensorflow': () => dtypePromotion('tensorflow'),
   'ch05-bg-model-cast-halving':       modelCastHalving,
   'ch05-bg-amp-memory-audit':         ampMemoryAudit,
   'ch05-bg-fp16-loss-scaling':        fp16LossScaling,

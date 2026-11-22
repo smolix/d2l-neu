@@ -28,6 +28,7 @@ fontTools + PIL (both in .venv-pytorch).
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -44,7 +45,8 @@ AUTO = os.path.join(IMG, "auto")
 
 def js_figures(ids=None):
     """Re-render the ENTIRE JS registry (every id belongs to a chapter-2
-    module) or just `ids`, outline the text, tight-crop, and sync
+    module) or just `ids`, outline the text, tight-crop the files that
+    were cropped before, and sync
     book-referenced copies img/auto -> img/.
 
     Outline BEFORE cropping: the crop then measures the glyphs that ship,
@@ -55,11 +57,25 @@ def js_figures(ids=None):
         out = subprocess.run(["node", render, "--list"], check=True,
                              capture_output=True, text=True, cwd=REPO)
         ids = out.stdout.split()
+    def view_box(path):
+        if not os.path.exists(path):
+            return None
+        with open(path, encoding="utf-8") as fh:
+            m = re.search(r'<svg\b[^>]*\sviewBox="([^"]*)"', fh.read())
+        return m and m.group(1)
+
+    before = {fid: view_box(os.path.join(AUTO, f"{fid}.svg")) for fid in ids}
     subprocess.run(["node", render, "--out", AUTO, *ids], check=True, cwd=REPO)
     for fid in sorted(ids):
         src = os.path.join(AUTO, f"{fid}.svg")
+        fresh = view_box(src)
         print(outline(src))
-        print(crop(src))
+        # Crop only a file that was cropped before (its committed viewBox is
+        # not the fresh render's): most module diagrams ship uncropped
+        # (tools/build_module_diagrams.mjs), and cropping them all would
+        # rewrite every root viewBox.  Same rule as that script.
+        if before[fid] is not None and before[fid] != fresh:
+            print(crop(src))
         dst = os.path.join(IMG, f"{fid}.svg")
         if os.path.exists(dst):          # book-referenced copy stays in sync
             shutil.copyfile(src, dst)

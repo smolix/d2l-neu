@@ -68,42 +68,71 @@ book-referenced ids (an `img/<id>.svg` exists) are copied to `img/`. Each
 step is byte-idempotent; re-running any of them on a finished file is a
 no-op.
 
-One module (after editing its `.mjs` file), from the repo root:
+**The regeneration command.** One module (after editing its `.mjs` file),
+from the repo root:
 
 ```bash
-NODE_PATH=/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
-/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
-tools/build_module_diagrams.mjs diagrams/<module>.mjs
+node tools/build_module_diagrams.mjs diagrams/<module>.mjs            # whole module
+node tools/build_module_diagrams.mjs --ids=<id>,<id> diagrams/<module>.mjs   # some ids
 ```
 
-`tools/build_module_diagrams.mjs` renders all diagrams in `<module>.mjs`, checks every SVG in headless Chromium for **4 classes of visual defects** (`*-intersects-text` when a line/curve/arrow/circle/ellipse intersects a text label, `rect-*-edge-cuts-text` when a box border cuts through a label, `text-overlap`, and `text-outside-viewbox`), writes `img/auto/<id>.svg`, and runs `tools/figstyle/outline_svg.py` on those files.
+It resolves the repo from its own location (override: `D2L_REPO`), runs
+Python from `.venv-pytorch` (override: `D2L_PYTHON`), and takes Chromium
+from the `playwright` npm package or, failing that, from the playwright-core
+driver inside `.venv-build`'s Python playwright wheel (override:
+`PLAYWRIGHT_CORE=<package dir>`); no npm install is needed on the GPU box.
+It renders the diagrams, checks every SVG in headless Chromium for **4
+classes of visual defects** (`*-intersects-text` when a line/curve/arrow/
+circle/ellipse intersects a text label, `rect-*-edge-cuts-text` when a box
+border cuts through a label, `text-overlap`, and `text-outside-viewbox`),
+and only if the check passes writes `img/auto/<id>.svg`, runs
+`tools/figstyle/outline_svg.py` on those files, and refreshes the book copy
+`img/<id>.svg` where one exists. `--warn` reports defects but writes anyway:
+the check measures live text in whatever fonts the host's Chromium has, so
+its verdict on an untouched diagram can differ between machines; use it to
+regenerate after an outliner-only change. Run one module at a time (one
+Chromium).
 
-Alternatively, for one id via `remake_ch02.py`:
+**Cropping.** Module diagrams ship **uncropped** (root `viewBox="0 0 W H"`
+as drawn). About 34 older preliminaries diagrams (`ndarray-*`, `pandas-*`,
+some `autograd-*`/`calculus-*`/`linear-algebra-*`/`probability-*`) were
+made by the legacy `remake_ch02.py --js` path and are tight-cropped. Both
+tools now keep each file's state: they re-crop a file only when its
+committed viewBox differs from the fresh render's. So a re-run on an
+unchanged `.mjs` reproduces the committed SVG byte for byte, and
+`git status img/auto` lists only the diagrams you changed.
+
+Legacy alternative, for one id:
 
 ```bash
 .venv-pytorch/bin/python tools/figstyle/remake_ch02.py --js <id> [<id> ...]
 ```
 
-which runs, per id:
-
-```bash
-node diagrams/render.mjs --out img/auto <id>
-.venv-pytorch/bin/python tools/figstyle/outline_svg.py img/auto/<id>.svg
-.venv-pytorch/bin/python tools/figstyle/tightcrop.py img/auto/<id>.svg
-[ -f img/<id>.svg ] && cp img/auto/<id>.svg img/<id>.svg   # book copy, if referenced
-```
-
-(`.venv-pytorch` has fontTools and PIL; system `python3` usually does not.)
-All ids: `remake_ch02.py --js` with no ids. A NEW book figure needs one
-manual `cp img/auto/<id>.svg img/` first; after that the copy stays in sync.
-Run `tightcrop.py` only on this pipeline's files: it is not meant for the
-matplotlib SVGs that share `img/auto/`. Then render the PNG and look:
+which renders with `node diagrams/render.mjs --out img/auto <id>` (no
+check), outlines, crops if the file was cropped before, and syncs the book
+copy. (`.venv-pytorch` has fontTools and PIL; system `python3` usually does
+not.) A NEW book figure needs one manual `cp img/auto/<id>.svg img/` first;
+after that the copy stays in sync. Run `tightcrop.py` only on this
+pipeline's files: it is not meant for the matplotlib SVGs that share
+`img/auto/`. Then render the PNG and look:
 `rsvg-convert -z 2 img/auto/<id>.svg -o /tmp/<id>.png`.
 
 `outline_svg.py` reports a character that no bundled font has and draws it
 from matplotlib's DejaVu/STIX fonts (pinned with matplotlib); a character no
 font has is an error. It refuses text features it cannot reproduce
 (`textPath`, per-glyph `rotate`, `textLength`, vertical writing).
+
+Combining marks (U+0300–036F: hat, tilde, bar, dot, …) are positioned by
+the outliner, not the font: each is centred over its base glyph's ink (along
+the italic slant) and lifted clear of a tall base, keeping the gap the face
+leaves above x-height; U+0305 is drawn as a bar over the base's full advance,
+so consecutive overlined letters join. So `'x̂'`, `'ū'`, `'Ā'` are fine in
+mono and sans text. A super- or subscript character (`ⁿ`, `⁻`, `ᵢ`, …)
+whose glyph in the chosen face is missing or sits at the wrong height
+(Inconsolata's `ⁿ` and `⁻` are full-size, on the baseline) is drawn from the
+next face that has a real one. There is no Unicode superscript ℓ: write
+`2⁻ℓ` as a `<tspan baseline-shift="super">` run, not as `⁻` plus a
+full-size letter.
 
 ## Add a diagram
 

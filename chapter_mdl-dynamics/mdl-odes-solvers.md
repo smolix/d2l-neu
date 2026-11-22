@@ -1054,35 +1054,31 @@ Ordinary Differential Equations, Phase Portraits, and Flows<br>**vector fields �
 ::: {.slide title="When Does a Velocity Field Determine a Unique Motion?"}
 [Motivation]{.kicker}
 
-A residual layer, a gradient step, and a diffusion sampler all move a state along a prescribed velocity arrow $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$. Before analyzing discrete steps, we must know when the continuous equation itself is well-posed:
+::: {.cols .vc}
+::: {.col}
+- **Global Lipschitz ($\dot{x} = -x, x_0 = 1$):** Unique solution $x(t) = e^{-t}$ on all $[0, T]$, defining an invertible flow $\Phi_t(x_0) = e^{-t}x_0$.
+- **Non-Lipschitz ($\dot{x} = \sqrt{|x|}, x_0 = 0$):** Infinitely many solutions $x_c(t) = (t-c)^2/4$ branch from $0$, breaking uniqueness and invertibility.
+- **Local Lipschitz only ($\dot{x} = x^2, x_0 > 0$):** Unique locally, but blows up to $\infty$ at finite time $t^\star = 1/x_0$.
+:::
 
-| Velocity Rule | Initial State | Solutions on $[0, T]$ | Consequence for Deep Learning |
-| :--- | :--- | :--- | :--- |
-| $\dot{x} = -x$ | $x(0) = 1$ | Unique: $x(t) = e^{-t}$ | Invertible flow map $\Phi_t(x_0) = e^{-t}x_0$ |
-| $\dot{x} = \sqrt{\lvert x \rvert}$ | $x(0) = 0$ | Infinitely many: $x \equiv 0$ and $x_c(t) = (t-c)^2/4$ | Ambiguous forward pass; non-invertible |
-| $\dot{x} = x^2$ | $x(0) = x_0 > 0$ | Unique locally, but blows up at $t = 1/x_0$ | Finite-horizon divergence before time $T$ |
-
-::: {.d2l-note .warn}
-A generative flow or Neural ODE defines its output as the time-$T$ state of an ODE. It requires **existence**, **uniqueness**, and **reversibility** for every input $\mathbf{x}_0 \in \mathbb{R}^d$.
+::: {.col .fig .big}
+@fig:ch38-dyn-well-posed-triad
+:::
 :::
 :::
 
 ::: {.slide title="Elementary Motions: Exponential Decay and Rotation"}
 [Building Blocks]{.kicker}
 
-Every linear differential equation decomposes into two elementary planar motions—radial scaling and orthogonal turning:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Exponential Decay ($\dot{x} = -x$):** The velocity points toward the origin in proportion to distance, yielding $x(t) = e^{-t}x_0$. Each unit of time shrinks the distance by $e^{-1} \approx 0.37$.
-- **Pure Rotation ($\dot{\mathbf{x}} = \mathbf{K}\mathbf{x}$):** The skew-symmetric generator $\mathbf{K} = \left(\begin{smallmatrix}0 & -1 \\ 1 & 0\end{smallmatrix}\right)$ turns the position vector by $90^\circ$:
-  $$\mathbf{x}^\top \mathbf{K}\mathbf{x} = -x_1 x_2 + x_2 x_1 = 0$$
+- **Radial decay ($\dot{x} = -x$):** Velocity points inward in proportion to distance, shrinking $|x(t)| = e^{-t}|x_0|$.
+- **Orthogonal rotation ($\dot{\mathbf{x}} = \mathbf{K}\mathbf{x}$ with $\mathbf{K} = \left(\begin{smallmatrix}0 & -1 \\ 1 & 0\end{smallmatrix}\right)$):** Because $\mathbf{x}^\top\mathbf{K}\mathbf{x} = 0$, the velocity is perpendicular to position, conserving length $\frac{d}{dt}\|\mathbf{x}\|^2 = 0$ at unit angular speed.
+- **Combined planar spiral ($\mathbf{A} = -\tfrac12\mathbf{I} + \mathbf{K}$):** Eigenvalues $\lambda = -0.5 \pm \mathrm{i}$ decay as $e^{-t/2}$ while rotating at $1\text{ rad/s}$.
 :::
 
-::: {.col}
-- **Conservation of Euclidean Norm:** Because the velocity $\mathbf{K}\mathbf{x}$ is everywhere perpendicular to the position $\mathbf{x}$, the squared length never changes:
-  $$\frac{d}{dt}\|\mathbf{x}(t)\|^2 = 2\,\mathbf{x}^\top \dot{\mathbf{x}} = 2\,\mathbf{x}^\top \mathbf{K}\mathbf{x} = 0$$
-- **Constant Angular Speed:** A state moves along a circle of radius $\|\mathbf{x}_0\|$ at unit angular speed ($1$ radian per unit time, period $2\pi$).
+::: {.col .fig .big}
+@fig:ch38-dyn-decay-plus-rotation
 :::
 :::
 :::
@@ -1142,13 +1138,20 @@ If the velocity changes too abruptly near a point, a single initial condition ca
 ::: {.slide title="Picard Iteration: Building Solutions by Integration"}
 [Constructive Existence]{.kicker}
 
-To prove that a well-behaved ODE has a unique solution, we turn the integral form into an iterative fixed-point operator $P$ on continuous paths $\boldsymbol{\varphi}$:
+::: {.cols .vc}
+::: {.col}
+The **Picard integral operator** $P$ maps any continuous path $\boldsymbol{\varphi}$ to a refined path:
 
 $$(P\boldsymbol{\varphi})(t) = \mathbf{x}_0 + \int_0^t \mathbf{f}(\boldsymbol{\varphi}(s), s)\,ds$$
 
-- **Fixed-Point Characterization:** A continuous curve $\boldsymbol{\varphi}$ solves the initial-value problem on $[0, \delta]$ if and only if $\boldsymbol{\varphi} = P\boldsymbol{\varphi}$.
-- **Worked Example ($\dot{x} = x$, $x_0 = 1$):** Starting from the constant guess $\varphi_0(t) \equiv 1$ and applying $\varphi_{k+1}(t) = 1 + \int_0^t \varphi_k(s)\,ds$ generates the Taylor series of $e^t$ term by term:
-  $$\varphi_1(t) = 1 + t \;\longrightarrow\; \varphi_2(t) = 1 + t + \frac{t^2}{2} \;\longrightarrow\; \varphi_3(t) = 1 + t + \frac{t^2}{2} + \frac{t^3}{6} \;\longrightarrow\; e^t$$
+- **Fixed-point equivalence:** $\boldsymbol{\varphi} = P\boldsymbol{\varphi}$ iff $\boldsymbol{\varphi}$ solves the ODE.
+- **Banach contraction:** When $\mathbf{f}$ is globally $L$-Lipschitz, choosing $\delta = 1/(2L)$ halves path distance at every step, and $\lceil 2LT \rceil$ uniform restarts cover any horizon $[0, T]$.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-picard-fixed-point
+:::
+:::
 :::
 
 ::: {.slide title="The Picard–Lindelöf Existence and Uniqueness Theorem"}
@@ -1170,29 +1173,36 @@ then $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$, $\mathbf{x}(0) = \mathbf{x}
 ::: {.slide title="Local Lipschitz Without Global Bounds: Blow-Up"}
 [Limits of the Theorem]{.kicker}
 
-What happens if $\mathbf{f}$ is smooth (and therefore Lipschitz on every bounded ball $|\mathbf{x}| \le \rho$), but its Lipschitz constant grows without bound as $\|\mathbf{x}\| \to \infty$?
+::: {.cols .vc}
+::: {.col}
+When $f(x) = x^2$ is only *locally* Lipschitz ($L_\rho = 2\rho$ on $|x| \le \rho$), the solution escapes to $+\infty$ in finite time:
 
-$$
-\dot{x} = x^2, \quad x(0) = x_0 > 0 \;\Longrightarrow\; \frac{d}{dt}\left(-\frac{1}{x}\right) = \frac{\dot{x}}{x^2} = 1 \;\Longrightarrow\; x(t) = \frac{x_0}{1 - x_0 t}
-$$
+$$\dot{x} = x^2, \quad x(0) = x_0 > 0 \;\Longrightarrow\; x(t) = \frac{x_0}{1 - x_0 t}$$
 
-- **Finite-Time Explosion:** Even though $f(x) = x^2$ is analytic everywhere, the trajectory escapes to $+\infty$ at the finite horizon $t^\star = 1 / x_0$.
-- **Why the Restart Argument Stops:** On $|x| \le \rho$, $|x^2 - y^2| = |x + y|\,|x - y| \le 2\rho\,|x - y|$, so the local Lipschitz constant is $L_\rho = 2\rho$.
-- **Shrinking Step Lengths:** As $x(t)$ grows, the safe Picard interval $\delta_\rho = \frac{1}{2L_\rho} = \frac{1}{4\rho}$ shrinks rapidly enough that infinitely many restarts sum to the finite blow-up time $1/x_0$.
+- **Why restarts stall at $t^\star = 1/x_0$:** As $x(t)$ grows, the safe Picard step $\delta_\rho = 1/(2L_\rho) = 1/(4\rho)$ shrinks rapidly enough that infinitely many restarts sum to $1/x_0$.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-finite-time-blowup
+:::
+:::
 :::
 
 ::: {.slide title="The Flow Map Is a Smooth Bijection of Space"}
 [Flow Maps & Invertibility]{.kicker}
 
-Fixing a globally Lipschitz vector field and varying the initial state $\mathbf{x}_0$ defines the **flow map** $\Phi_t(\mathbf{x}_0) = \mathbf{x}(t)$ across all of $\mathbb{R}^d$:
+::: {.cols .vc}
+::: {.col}
+Fixing a globally Lipschitz vector field and varying $\mathbf{x}_0$ defines the **flow map** $\Phi_t(\mathbf{x}_0) = \mathbf{x}(t)$:
 
-- **Autonomous Group Law:** When $\mathbf{f}(\mathbf{x})$ is time-independent, flowing for time $s$ and then for time $t$ equals flowing for $t + s$:
-  $$\Phi_0 = \mathrm{id}, \qquad \Phi_{t+s} = \Phi_t \circ \Phi_s, \qquad \Phi_t^{-1} = \Phi_{-t}$$
-- **Time-Reversal Proof:** Running trajectories backward from time $T$ solves $\dot{\mathbf{y}}(s) = -\mathbf{f}(\mathbf{y}(s), T - s)$, which is also globally $L$-Lipschitz. By Picard–Lindelöf, every endpoint $\mathbf{z} \in \mathbb{R}^d$ traces back to **exactly one** starting state $\mathbf{x}_0$.
-- **Trajectories Can Never Cross:** Two distinct trajectories can never occupy the same point at the same time—otherwise, integrating backward from their meeting point would violate uniqueness.
+$$\Phi_0 = \mathrm{id}, \qquad \Phi_{t+s} = \Phi_t \circ \Phi_s, \qquad \Phi_t^{-1} = \Phi_{-t}$$
 
-::: {.d2l-note .rule}
-**Why Generative Flows Need Lipschitz Networks:** A neural network layer $\mathbf{f}(\mathbf{x}) = \mathbf{W}_2 \tanh(\mathbf{W}_1 \mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2$ is globally Lipschitz with $L \le \|\mathbf{W}_2\|_2 \|\mathbf{W}_1\|_2$, guaranteeing that $\Phi_T: \mathbb{R}^d \to \mathbb{R}^d$ is an invertible bijection.
+- **Bijection & non-crossing:** Reversing time ($\dot{\mathbf{y}} = -\mathbf{f}(\mathbf{y}, T-s)$) is also globally $L$-Lipschitz, so distinct trajectories can never cross in space-time and $\Phi_T : \mathbb{R}^d \to \mathbb{R}^d$ is a smooth bijection.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-flow-group-bijection
+:::
 :::
 :::
 
@@ -1211,27 +1221,37 @@ $$e^{\mathbf{A}t} = \sum_{k=0}^\infty \frac{(\mathbf{A}t)^k}{k!} = \mathbf{I} + 
 ::: {.slide title="Spectral Decoupling into Independent Eigenmodes"}
 [Eigendecomposition]{.kicker}
 
-An infinite series of matrix powers is opaque until we diagonalize $\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$ with eigenvectors $\mathbf{V} = (\mathbf{v}_1, \ldots, \mathbf{v}_d)$ and eigenvalues $\boldsymbol{\Lambda} = \mathrm{diag}(\lambda_1, \ldots, \lambda_d)$:
+::: {.cols .vc}
+::: {.col}
+Diagonalizing $\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$ telescopes $(\mathbf{A}t)^k = \mathbf{V}(\boldsymbol{\Lambda}t)^k\mathbf{V}^{-1}$ and decouples the matrix exponential:
 
-$$e^{\mathbf{A}t} = \mathbf{V}e^{\boldsymbol{\Lambda}t}\mathbf{V}^{-1} = \mathbf{V}\,\mathrm{diag}\!\left(e^{\lambda_1 t}, \ldots, e^{\lambda_d t}\right)\mathbf{V}^{-1}$$
+$$e^{\mathbf{A}t} = \mathbf{V}\,\mathrm{diag}\!\left(e^{\lambda_1 t}, \ldots, e^{\lambda_d t}\right)\mathbf{V}^{-1}$$
 
-- **Telescoping Matrix Powers:** Because $(\mathbf{A}t)^k = \mathbf{V}(\boldsymbol{\Lambda}t)^k\mathbf{V}^{-1}$, summing the power series acts independently on each diagonal eigenvalue entry.
-- **Superposition of Modes:** Expanding the initial state in the eigenbasis as $\mathbf{x}_0 = \sum_{j=1}^d c_j \mathbf{v}_j$ decouples the $d$-dimensional coupled system into $d$ independent scalar exponentials:
-  $$\mathbf{x}(t) = \sum_{j=1}^d c_j\, e^{\lambda_j t}\, \mathbf{v}_j$$
+- **Mode superposition:** Expanding $\mathbf{x}_0 = \sum_{j=1}^d c_j\mathbf{v}_j$ decouples the system into $d$ independent scalar exponentials $\mathbf{x}(t) = \sum_{j=1}^d c_j e^{\lambda_j t}\mathbf{v}_j$.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-spectral-decoupling
+:::
+:::
 :::
 
 ::: {.slide title="Closed-Form Matrix Exponential for the Planar Spiral"}
 [Commuting Matrices]{.kicker}
 
-When two matrices commute ($\mathbf{P}\mathbf{Q} = \mathbf{Q}\mathbf{P}$), the binomial theorem holds and $e^{\mathbf{P}+\mathbf{Q}} = e^{\mathbf{P}}e^{\mathbf{Q}}$. For our spiral $\mathbf{A} = -\tfrac{1}{2}\mathbf{I} + \mathbf{K}$, the identity $\mathbf{I}$ commutes with $\mathbf{K}$:
+::: {.cols .vc}
+::: {.col}
+Because $-\tfrac12\mathbf{I}$ and $\mathbf{K}$ commute, $e^{(-\frac12\mathbf{I} + \mathbf{K})t} = e^{-t/2\mathbf{I}}e^{\mathbf{K}t}$:
 
-$$e^{\mathbf{A}t} = e^{-t/2\mathbf{I}}e^{\mathbf{K}t} = e^{-t/2}\left(\cos t\,\mathbf{I} + \sin t\,\mathbf{K}\right) = e^{-t/2}\begin{pmatrix}\cos t & -\sin t \\ \sin t & \cos t\end{pmatrix}$$
+$$e^{\mathbf{A}t} = e^{-t/2}\begin{pmatrix}\cos t & -\sin t \\ \sin t & \cos t\end{pmatrix}$$
 
-- **Cyclic Powers of $\mathbf{K}$:** Because $\mathbf{K}^2 = -\mathbf{I}$, $\mathbf{K}^3 = -\mathbf{K}$, and $\mathbf{K}^4 = \mathbf{I}$, the even powers of $e^{\mathbf{K}t}$ sum to $\cos t\,\mathbf{I}$ and the odd powers sum to $\sin t\,\mathbf{K}$.
-- **Exact Spiral Endpoint:** From $\mathbf{x}_0 = (2, 0)$ at $t = 2$, $\mathbf{x}(2) = 2e^{-1}(\cos 2, \sin 2) = (-0.3062, 0.6690)$ with Euclidean norm $2e^{-1} \approx 0.7358$.
+- **Cyclic powers of $\mathbf{K}$:** Since $\mathbf{K}^2 = -\mathbf{I}$, even powers sum to $\cos t\,\mathbf{I}$ and odd powers sum to $\sin t\,\mathbf{K}$.
+- **Non-commuting warning:** When $\mathbf{P}\mathbf{Q} \neq \mathbf{Q}\mathbf{P}$, $e^{\mathbf{P}+\mathbf{Q}} \neq e^{\mathbf{P}}e^{\mathbf{Q}}$.
+:::
 
-::: {.d2l-note .warn}
-**Non-Commuting Pitfall:** When $\mathbf{P}\mathbf{Q} \ne \mathbf{Q}\mathbf{P}$, $e^{\mathbf{P}+\mathbf{Q}} \ne e^{\mathbf{P}}e^{\mathbf{Q}}$. For $\mathbf{P} = \left(\begin{smallmatrix}0 & 1 \\ 0 & 0\end{smallmatrix}\right)$ and $\mathbf{Q} = \mathbf{P}^\top$, $e^{\mathbf{P}}e^{\mathbf{Q}} = \left(\begin{smallmatrix}2 & 1 \\ 1 & 1\end{smallmatrix}\right)$, whereas $e^{\mathbf{P}+\mathbf{Q}}$ has $\cosh 1 \approx 1.54$ on both diagonal entries.
+::: {.col .fig}
+@fig:ch38-dyn-spiral-matrix-exp
+:::
 :::
 :::
 
@@ -1279,13 +1299,19 @@ $$\dot{\mathbf{x}}(t) = \mathbf{A}\mathbf{x}(t) + \mathbf{B}\mathbf{u}(t), \qqua
 ::: {.slide title="Zero-Order Hold: Exact Discretization for SSMs"}
 [Exact Recurrence]{.kicker}
 
-Sequence models receive discrete tokens $\mathbf{u}_n$ at grid times $t_n = nh$. Holding the input constant over each step ($\mathbf{u}(s) = \mathbf{u}_n$ for $s \in [t_n, t_n + h)$) turns the integral into an **exact linear recurrence**:
+::: {.cols .vc}
+::: {.col}
+Holding the input constant over each step ($\mathbf{u}(s) = \mathbf{u}_n$ on $[t_n, t_n + h)$) yields the **exact ZOH recurrence** for State Space Models (S4, Mamba):
 
-$$\mathbf{x}_{n+1} = \bar{\mathbf{A}}\,\mathbf{x}_n + \bar{\mathbf{B}}\,\mathbf{u}_n, \qquad \bar{\mathbf{A}} = e^{\mathbf{A}h}, \qquad \bar{\mathbf{B}} = \left(\int_0^h e^{\mathbf{A}\tau}\,d\tau\right)\mathbf{B} = \mathbf{A}^{-1}\big(e^{\mathbf{A}h} - \mathbf{I}\big)\mathbf{B}$$
+$$\mathbf{x}_{n+1} = \bar{\mathbf{A}}\,\mathbf{x}_n + \bar{\mathbf{B}}\,\mathbf{u}_n, \quad \bar{\mathbf{A}} = e^{\mathbf{A}h}, \quad \bar{\mathbf{B}} = \mathbf{A}^{-1}\big(e^{\mathbf{A}h} - \mathbf{I}\big)\mathbf{B}$$
 
-- **Scalar SSM Coefficients:** For $\dot{x} = \lambda x + bu(t)$, the discrete multipliers are $\bar{a} = e^{h\lambda}$ and $\bar{b} = \frac{e^{h\lambda} - 1}{\lambda}b$.
-- **Unconditional Stability:** Whenever $\operatorname{Re}\lambda < 0$, the exact multiplier satisfies $|\bar{a}| = e^{h\operatorname{Re}\lambda} < 1$ for **every** step size $h > 0$.
-- **Contrast with Naive Step ($1 + h\lambda$):** On a fast mode $\lambda = -50$ with step $h = 0.05$, the exact ZOH factor decays smoothly ($\bar{a} = e^{-2.5} \approx 0.082$), whereas a naive linear step multiplies by $1 + h\lambda = -1.5$, flipping signs and exploding.
+- **Unconditional stability:** Whenever $\operatorname{Re}\lambda < 0$, $|\bar{a}| = e^{h\operatorname{Re}\lambda} < 1$ for *every* step size $h > 0$ (at $\lambda = -50, h = 0.05$, $\bar{a} = e^{-2.5} \approx 0.082$, whereas Euler's $1 + h\lambda = -1.5$ explodes).
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-zoh-exact-ssm
+:::
+:::
 :::
 
 ::: {.slide title="Measuring Zero-Order Hold Across Fast and Slow Modes"}
@@ -1303,27 +1329,36 @@ At $\lambda = -50$ and $h = 0.5$, the step is $25\times$ longer than the relaxat
 ::: {.slide title="Non-Normal Matrices and Transient Growth Before Decay"}
 [Transient Dynamics]{.kicker}
 
-Negative eigenvalues guarantee that $\mathbf{x}(t) \to \mathbf{0}$ as $t \to \infty$, but when $\mathbf{A}$ has nearly parallel eigenvectors ($\mathbf{A}\mathbf{A}^\top \ne \mathbf{A}^\top\mathbf{A}$), $\|\mathbf{x}(t)\|$ can grow substantially before decaying:
+::: {.cols .vc}
+::: {.col}
+When $\mathbf{A}\mathbf{A}^\top \neq \mathbf{A}^\top\mathbf{A}$, nearly parallel eigenvectors can cause substantial transient growth before asymptotic decay:
 
-$$\dot{\mathbf{x}} = \begin{pmatrix}-1 & 10 \\ 0 & -2\end{pmatrix}\mathbf{x}, \quad \mathbf{x}_0 = \begin{pmatrix}0 \\ 1\end{pmatrix} \;\Longrightarrow\; x_1(t) = 10\left(e^{-t} - e^{-2t}\right), \quad x_2(t) = e^{-2t}$$
+$$\dot{\mathbf{x}} = \begin{pmatrix}-1 & 10 \\ 0 & -2\end{pmatrix}\mathbf{x}, \quad \mathbf{x}_0 = \begin{pmatrix}0 \\ 1\end{pmatrix} \;\Longrightarrow\; x_1(t) = 10\left(e^{-t} - e^{-2t}\right)$$
 
-- **2.5x Norm Amplification:** Although both eigenvalues are negative ($\lambda_1 = -1, \lambda_2 = -2$), $x_1(t)$ rises from $0$ to a peak of $2.5$ at $t = \log 2 \approx 0.69$ ($\|\mathbf{x}(\log 2)\| \approx 2.51$) before decaying like $10e^{-t}$.
-- **Geometric Mechanism:** The eigenvectors $\mathbf{v}_1 = (1, 0)$ and $\mathbf{v}_2 = (0.995, -0.0995)$ lie only $5.7^\circ$ apart. The unit initial state $\mathbf{x}_0 = 10.0\,\mathbf{v}_1 - 10.05\,\mathbf{v}_2$ is a delicate cancellation of two huge modes; as $\mathbf{v}_2$ decays faster ($e^{-2t}$) than $\mathbf{v}_1$ ($e^{-t}$), the cancellation breaks down.
-- **Deep Learning Takeaway:** Heavy-ball momentum uses a non-normal transition matrix, which is why a converging momentum training run often exhibits an initial spike in loss or parameter norm.
+- **$2.5\times$ norm spike:** Although $\lambda_1 = -1, \lambda_2 = -2 < 0$, the eigenvectors sit $5.7^\circ$ apart, so $\|\mathbf{x}(t)\|$ climbs to $2.51$ at $t = \log 2$ before decaying (explaining early momentum spikes).
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-nonnormal-transient
+:::
+:::
 :::
 
 ::: {.slide title="Local Linearization at Hyperbolic Fixed Points"}
 [Nonlinear Systems]{.kicker}
 
-Near a **fixed point** $\mathbf{x}^\star$ where $\mathbf{f}(\mathbf{x}^\star) = \mathbf{0}$, a smooth nonlinear system behaves like the linear system defined by its Jacobian matrix $\mathbf{J} = \frac{\partial\mathbf{f}}{\partial\mathbf{x}}(\mathbf{x}^\star)$:
+::: {.cols .vc}
+::: {.col}
+Near a fixed point $\mathbf{f}(\mathbf{x}^\star) = \mathbf{0}$, a smooth nonlinear ODE behaves like its Jacobian linearization $\dot{\boldsymbol{\delta}} = \mathbf{J}(\mathbf{x}^\star)\boldsymbol{\delta}$:
 
-$$\dot{\boldsymbol{\delta}} = \mathbf{f}(\mathbf{x}^\star + \boldsymbol{\delta}) = \mathbf{J}\boldsymbol{\delta} + o(\|\boldsymbol{\delta}\|), \qquad \boldsymbol{\delta}(t) = \mathbf{x}(t) - \mathbf{x}^\star$$
+- **Hartman–Grobman Theorem:** If $\mathbf{x}^\star$ is **hyperbolic** ($\operatorname{Re}\lambda_j \neq 0$ for all $j$), the local nonlinear flow is topologically conjugate to $\dot{\boldsymbol{\delta}} = \mathbf{J}\boldsymbol{\delta}$.
+- **Damped pendulum ($\ddot{\phi} + 0.5\dot{\phi} + \sin\phi = 0$):** Hanging bottom $(0, 0)$ has $\lambda = -0.25 \pm 0.97\mathrm{i}$ (stable spiral); upright top $(\pi, 0)$ has $\lambda = +0.78, -1.28$ (unstable saddle).
+:::
 
-- **Hartman–Grobman Theorem:** If $\mathbf{x}^\star$ is **hyperbolic** (no eigenvalue of $\mathbf{J}$ has $\operatorname{Re}\lambda_j = 0$), the nonlinear trajectories near $\mathbf{x}^\star$ are topologically conjugate to the linear flow $\dot{\boldsymbol{\delta}} = \mathbf{J}\boldsymbol{\delta}$.
-- **Example — The Damped Pendulum ($\dot{\phi} = \omega$, $\dot{\omega} = -\sin\phi - c\omega$, $c = 0.5$):**
-  - **Hanging Bottom $(\phi, \omega) = (0, 0)$:** $\mathbf{J} = \left(\begin{smallmatrix}0 & 1 \\ -1 & -0.5\end{smallmatrix}\right)$ has $\lambda = -0.25 \pm 0.97\mathrm{i}$ (**stable spiral**; swings down to rest with amplitude $e^{-t/4}$).
-  - **Upright Top $(\phi, \omega) = (\pi, 0)$:** $\mathbf{J} = \left(\begin{smallmatrix}0 & 1 \\ 1 & -0.5\end{smallmatrix}\right)$ has $\lambda = 0.78, -1.28$ (**saddle point**; unstable balance).
-- **Non-Hyperbolic Boundary ($\operatorname{Re}\lambda = 0$):** When eigenvalues lie on the imaginary axis, higher-order terms decide stability ($\dot{x} = -x^3$ is stable while $\dot{x} = +x^3$ blows up, though both have $J(0) = 0$).
+::: {.col .fig .big}
+@fig:ch38-dyn-hartman-grobman-pendulum
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Uniqueness, Spectra, and Discretization"}

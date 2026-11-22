@@ -475,22 +475,33 @@ Optimal Control, LQR, and Model Predictive Control<br>**linear-quadratic regulat
 ::: {.slide title="Continuous State Spaces and Bellman's Curse"}
 [Motivation & Mental Model]{.kicker}
 
-Tabular dynamic programming (§14.2) swept a table of $16$ cells, but physical systems have continuous states $\mathbf{x}_t \in \mathbb{R}^d$ and continuous controls $\mathbf{u}_t \in \mathbb{R}^m$:
+::: {.cols .vc}
+::: {.col}
+- **The curse of dimensionality:** Discretizing each of $d$ state coordinates into $100$ bins requires $100^d$ grid cells ($10^{28}$ for a 7-joint robot arm with $d = 14$).
+- **Kalman's algebraic insight (1960):** Linear dynamics and quadratic stage costs preserve an exact quadratic value function $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$ with only $d(d+1)/2$ unique matrix entries.
+:::
 
-- **The curse of dimensionality:** Discretizing each of $d$ state coordinates into $100$ bins requires $100^d$ grid cells—already $10^{28}$ cells for a 7-joint robot arm ($d = 14$ angles and velocities).
-- **Kalman's algebraic insight (1960):** When the dynamics are linear in $(\mathbf{x}_t, \mathbf{u}_t)$ and the stage cost is quadratic, Bellman's backward dynamic programming preserves the exact quadratic form of the value function at every step.
-- **Polynomial complexity:** Instead of $100^d$ grid entries, $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$ is parameterized by a symmetric $d \times d$ matrix $\mathbf{P}_t$ with only $d(d+1)/2$ independent numbers.
+::: {.col .fig .big}
+@fig:ch14-rl-grid-vs-quadratic
+:::
+:::
 :::
 
 ::: {.slide title="The Linear-Quadratic Regulator (LQR) Problem"}
 [Linear Dynamics and Quadratic Costs]{.kicker}
 
-In optimal control notation, we drive a discrete-time linear system toward the origin $\mathbf{x} = \mathbf{0}$ by minimizing cumulative quadratic cost over horizon $H$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t$$
+$$J = \sum_{t=0}^{H-1}\big(\mathbf{x}_t^\top\mathbf{Q}\mathbf{x}_t + \mathbf{u}_t^\top\mathbf{R}\mathbf{u}_t\big) + \mathbf{x}_H^\top\mathbf{Q}_H\mathbf{x}_H$$
 
-$$\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t, \qquad J(\mathbf{x}_0, \mathbf{u}_{0:H-1}) = \sum_{t=0}^{H-1}\big(\mathbf{x}_t^\top\mathbf{Q}\mathbf{x}_t + \mathbf{u}_t^\top\mathbf{R}\mathbf{u}_t\big) + \mathbf{x}_H^\top\mathbf{Q}_H\mathbf{x}_H$$
+- **Dynamics & penalties:** $\mathbf{A}, \mathbf{B}$ govern state evolution; $\mathbf{Q} \succeq \mathbf{0}$ penalizes state error and $\mathbf{R} \succ \mathbf{0}$ strictly penalizes control effort.
+:::
 
-- **Dynamics matrices:** $\mathbf{A} \in \mathbb{R}^{d \times d}$ governs unforced state evolution and $\mathbf{B} \in \mathbb{R}^{d \times m}$ maps control inputs into state changes.
-- **State and control penalties:** $\mathbf{Q} \succeq \mathbf{0}$ and $\mathbf{Q}_H \succeq \mathbf{0}$ penalize state deviations from the origin, while $\mathbf{R} \succ \mathbf{0}$ strictly penalizes control effort so every one-step minimization has a unique finite solution.
+::: {.col .fig}
+@fig:ch14-rl-lqr-loop
+:::
+:::
 :::
 
 ::: {.slide title="Exact Continuous Dynamic Programming"}
@@ -507,12 +518,18 @@ $$V_t(\mathbf{x}) = \min_{\mathbf{u} \in \mathbb{R}^m} \Big\{\mathbf{x}^\top\mat
 ::: {.slide title="The Backward Riccati Recursion and Gain Matrix"}
 [Closed-Form Linear State Feedback]{.kicker}
 
-Solving $\nabla_{\mathbf{u}} Q_t = \mathbf{0}$ yields a linear state-feedback law $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$ and the backward **discrete-time Riccati recursion** for $\mathbf{P}_t$:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{K}_t = (\mathbf{R} + \mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B})^{-1}\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A}$$
-$$\mathbf{P}_t = \mathbf{Q} + \mathbf{A}^\top\mathbf{P}_{t+1}\mathbf{A} - \mathbf{A}^\top\mathbf{P}_{t+1}\mathbf{B}(\mathbf{R} + \mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B})^{-1}\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A}$$
+$$\mathbf{P}_t = \mathbf{Q} + \mathbf{A}^\top\mathbf{P}_{t+1}(\mathbf{A} - \mathbf{B}\mathbf{K}_t)$$
 
-- **Three structural properties:** (1) Each backup costs $O(d^3 + m^3)$ matrix arithmetic; (2) the optimal gain $\mathbf{K}_t$ is independent of the start state $\mathbf{x}_0$; (3) additive zero-mean Gaussian transition noise $\mathbf{w}_t \sim \mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma})$ leaves $\mathbf{K}_t$ completely unchanged (*certainty equivalence*).
+- **Three structural properties:** (1) $O(d^3 + m^3)$ per step; (2) $\mathbf{K}_t$ is independent of start state $\mathbf{x}_0$; (3) additive Gaussian noise $\mathbf{w}_t \sim \mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma})$ leaves $\mathbf{K}_t$ unchanged (*certainty equivalence*).
+:::
+
+::: {.col .fig}
+@fig:ch14-rl-riccati-backward
+:::
+:::
 :::
 
 ::: {.slide title="The Double Integrator: LQR Derives a PD Controller"}
@@ -545,13 +562,18 @@ Sweeping the control penalty $R \in \{0.01, 0.10, 1.00\}$ from initial position 
 ::: {.slide title="The Pendulum-v1 Continuous-Control Benchmark"}
 [Our Running Nonlinear Control Testbed]{.kicker}
 
-To test control methods beyond linear dynamics, we introduce the physical **`Pendulum-v1`** benchmark (revisited by model-free policy gradients in §14.9, off-policy SAC in §15.5, and learned world models in §15.6):
+::: {.cols .vc}
+::: {.col}
+$$\dot{\vartheta}_{t+1} = \textrm{clip}\!\left(\dot{\vartheta}_t + \Big(\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t\Big)\Delta t,\; -8,\; 8\right)$$
 
-$$\dot{\vartheta}_{t+1} = \textrm{clip}\!\left(\dot{\vartheta}_t + \Big(\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t\Big)\Delta t,\; -8,\; 8\right), \qquad \vartheta_{t+1} = \vartheta_t + \dot{\vartheta}_{t+1}\Delta t$$
+- **Severe underactuation:** Motor torque is clipped to $u_t \in [-2, 2]$, whereas peak gravity at horizontal ($\vartheta = \pi/2$) is $\frac{1}{2}mgl = 5 > 2$.
+- **Stage cost & balancing bar:** $c_t = \vartheta_t^2 + 0.1\,\dot{\vartheta}_t^2 + 0.001\,u_t^2$; random play scores $\approx -1{,}200$, while swing-up and balance scores **$\ge -200$**.
+:::
 
-- **Physical constants & state:** Uniform rod of mass $m = 1$ and length $l = 1$ in gravity $g = 10$ with step $\Delta t = 0.05\text{ s}$; state $\mathbf{x}_t = (\vartheta_t, \dot{\vartheta}_t)^\top \in \mathbb{R}^2$ measures angle from upright ($\vartheta = 0$ top, $\vartheta = \pi$ hanging bottom).
-- **Severe underactuation:** Motor torque is clipped to $u_t \in [-2, 2]$, whereas peak gravitational torque at horizontal ($\vartheta = \pi/2$) is $\frac{1}{2}mgl = 5 > 2$—the motor *cannot* lift the rod directly against gravity in a single push!
-- **Quadratic stage cost & balancing bar:** Step cost $c(\mathbf{x}_t, u_t) = \vartheta_t^2 + 0.1\,\dot{\vartheta}_t^2 + 0.001\,u_t^2$ (reward $r_t = -c_t$). Over a 200-step ($10\text{ s}$) episode from a random start, random torques score $\approx -1{,}200$, while a policy that swings up and holds upright scores **$\ge -200$** (paying cost only during the initial swing-up).
+::: {.col .fig}
+@fig:ch14-rl-pendulum-physics
+:::
+:::
 :::
 
 ::: {.slide title="Linearizing Nonlinear Physics at an Equilibrium"}
@@ -588,12 +610,18 @@ Gravity pulls the pendulum down with torque $\frac{1}{2}mgl\sin\vartheta = 5\sin
 ::: {.slide title="Iterative LQR (iLQR): Trajectory Linearization"}
 [Gauss-Newton Trajectory Optimization]{.kicker}
 
-Instead of linearizing at a single point, **iterative LQR** (Li & Todorov, 2004) repeatedly linearizes the dynamics and quadratizes the cost around an entire nominal trajectory $(\bar{\mathbf{x}}_{0:H}, \bar{v}_{0:H-1})$:
+::: {.cols .vc}
+::: {.col}
+$$v_t^{\textrm{new}} = \bar{v}_t + \alpha\,k_t + \mathbf{K}_t(\mathbf{x}_t^{\textrm{new}} - \bar{\mathbf{x}}_t)$$
 
-$$\mathbf{A}_t = \frac{\partial f}{\partial \mathbf{x}}(\bar{\mathbf{x}}_t, \bar{v}_t), \quad \mathbf{B}_t = \frac{\partial f}{\partial v}(\bar{\mathbf{x}}_t, \bar{v}_t), \quad v_t^{\textrm{new}} = \bar{v}_t + \alpha\,k_t + \mathbf{K}_t(\mathbf{x}_t^{\textrm{new}} - \bar{\mathbf{x}}_t)$$
+- **Smooth torque squashing:** $u_t = 2\tanh(v_t)$ enforces $u_t \in (-2, 2)$ differentiably.
+- **Backward Riccati + forward line search:** Compute time-varying Jacobians $(\mathbf{A}_t, \mathbf{B}_t)$, solve backward for $(k_t, \mathbf{K}_t)$, and roll out true nonlinear physics with backtracking $\alpha$.
+:::
 
-- **Smooth torque squashing:** Parameterizing $u_t = 2\tanh(v_t)$ enforces $u_t \in (-2, 2)$ differentiably without hard-clipping kinks.
-- **Backward Riccati pass + forward line search:** The backward pass computes feedforward improvements $k_t = -q_{v,t}/q_{vv,t}$ and time-varying feedback gains $\mathbf{K}_t = -\mathbf{q}_{v\mathbf{x},t}/q_{vv,t}$; the forward pass rolls out the *true nonlinear dynamics* with backtracking step $\alpha \in \{1, 1/2, \ldots\}$.
+::: {.col .fig}
+@fig:ch14-rl-ilqr-cycle
+:::
+:::
 :::
 
 ::: {.slide title="iLQR Discovers Multi-Phase Energy Pumping"}
@@ -617,11 +645,17 @@ In 35 iterations from the hanging equilibrium $(\pi, 0)$, iLQR discovers a three
 ::: {.slide title="Open-Loop vs. TV-LQR vs. Receding-Horizon MPC"}
 [From Trajectory Plans to Closed-Loop Control]{.kicker}
 
-An optimal trajectory $(\bar{\mathbf{x}}_{0:H}, \bar{u}_{0:H-1})$ can be executed in three ways when unexpected disturbances strike:
+::: {.cols .vc}
+::: {.col}
+1. **Open-loop ($u_t = \bar{u}_t$):** Applies precomputed torques blind to state $\mathbf{x}_t$; any knock causes the unstable top saddle to fall.
+2. **TV-LQR ($v_t = \bar{v}_t + \mathbf{K}_t(\mathbf{x}_t - \bar{\mathbf{x}}_t)$):** Wraps the path in a local feedback tube at zero online cost, but fails if pushed out of the tube.
+3. **Receding-horizon MPC:** Re-solves horizon-$H_{\textrm{mpc}}$ iLQR from measured $\mathbf{x}_t$ at every step, applies $u_{t|t}^*$, and re-plans at $t+1$.
+:::
 
-1. **Open-loop execution ($u_t = \bar{u}_t$):** Applies the precomputed torques blind to $\mathbf{x}_t$; even tiny drift or a knock at the top causes the unstable saddle to fall away.
-2. **Time-varying LQR tracking ($v_t = \bar{v}_t + \mathbf{K}_t(\mathbf{x}_t - \bar{\mathbf{x}}_t)$):** Wraps the nominal path in a local linear feedback tube using iLQR's backward gains $\mathbf{K}_t$ at zero online planning cost, but fails if a strong knock pushes $\mathbf{x}_t$ out of the tube.
-3. **Receding-horizon Model Predictive Control (MPC):** At every step $t$, re-solves the finite-horizon iLQR problem over lookahead $H_{\textrm{mpc}}$ starting from the current measured state $\mathbf{x}_t$, applies *only the first control* $u_{t|t}^*$, and re-plans at $t+1$.
+::: {.col .fig .big}
+@fig:ch14-rl-control-hierarchy
+:::
+:::
 :::
 
 ::: {.slide title="Disturbance Rejection Under an Impulse at t = 45"}
@@ -646,14 +680,17 @@ Comparing the three panels below shows how local LQR, trajectory optimization, a
 ::: {.slide title="Classical Optimal Control vs. Reinforcement Learning"}
 [Unifying Dictionary Across Communities]{.kicker}
 
-Classical optimal control and reinforcement learning solve the same sequential decision problem under different assumptions about dynamics and differentiability:
+::: {.cols .vc}
+::: {.col}
+- **Variables & objective:** Optimal control minimizes stage cost $\sum_t c(\mathbf{x}_t, \mathbf{u}_t)$ over $(\mathbf{x}_t, \mathbf{u}_t) \in \mathbb{R}^d \times \mathbb{R}^m$; RL maximizes discounted return $\mathbb{E}[\sum_t \gamma^t r(s_t, a_t)]$.
+- **Backups:** Riccati recursion on $\mathbf{x}^\top\mathbf{P}_t\mathbf{x}$ mirrors Bellman operator $\mathcal{T}$ on $V(s), Q(s, a)$.
+- **Unknown physics:** System identification + MPC bridges directly to model-based RL (§15.6) and model-free policy gradients (§14.7).
+:::
 
-| Concept | Classical Optimal Control | Reinforcement Learning |
-|:--|:--|:--|
-| **Variables & objective** | State $\mathbf{x}_t \in \mathbb{R}^d$, control $\mathbf{u}_t \in \mathbb{R}^m$; min cost $\sum_t c_t$ | State $s_t \in \mathcal{S}$, action $a_t \in \mathcal{A}$; max return $\mathbb{E}[\sum_t \gamma^t r_t]$ |
-| **Value & backup** | Cost-to-go $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$; Riccati recursion | Value $V^\pi(s)$ or $Q^\pi(s, a)$; Bellman operator $\mathcal{T}$ |
-| **Known nonlinear $f$** | Gradient-based iLQR / DDP + receding-horizon MPC | Tree search or sampling-based MPC (CEM / MPPI) |
-| **Unknown dynamics** | System identification $\hat{f}_\phi$ + certainty-equivalent MPC | Model-based RL (§15.6) or model-free policy gradients (§14.7) |
+::: {.col .fig .big}
+@fig:ch14-rl-control-vs-rl
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: LQR, iLQR, and MPC"}

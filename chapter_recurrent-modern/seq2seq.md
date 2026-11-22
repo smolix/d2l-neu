@@ -341,11 +341,17 @@ Sequence-to-Sequence Learning and the Fixed-State Bottleneck<br>**encoder–deco
 ::: {.slide title="From Single-Stream Prediction to Sequence Transduction"}
 [Motivation]{.kicker}
 
-Autoregressive language models continue a single stream of tokens, whereas many tasks map a source sequence $x_{1:T}$ to a target sequence $y_{1:T'}$ of different length ($T' \neq T$) without one-to-one positional alignment:
+::: {.cols .vc}
+::: {.col}
+- **Unaligned Transduction:** Translation, speech recognition, and summarization map source $x_{1:T}$ to target $y_{1:T'}$ with $T' \neq T$ and non-monotonic reordering.
+- **The 2014 Bottleneck Design:** An encoder RNN compresses $x_{1:T}$ into one fixed vector $\mathbf{c} \in \mathbb{R}^d$, from which a decoder RNN generates $y_{1:T'}$.
+- **Why Measure It:** Quantifies the exact bit capacity of a single recurrent vector.
+:::
 
-- **Sequence transduction tasks:** Machine translation (English $\to$ French), speech recognition (audio frames $\to$ words), and text summarization.
-- **The 2014 recurrent solution:** An **encoder** RNN summarizes the entire source into a single fixed-width vector $\mathbf{c} \in \mathbb{R}^d$, and a **decoder** RNN generates the target from $\mathbf{c}$.
-- **Why study the single-vector design now?** Every recurrent layer in this chapter compresses its past into a fixed-size state. Measuring how much information fits through one state vector reveals the exact ceiling that matrix memories (§12.6–12.7) and hybrids (§12.8) overcome.
+::: {.col .fig .big}
+@fig:ch12-mrnn-transduction-bottleneck
+:::
+:::
 :::
 
 ::: {.slide title="The Encoder–Decoder Architecture"}
@@ -364,50 +370,68 @@ Autoregressive language models continue a single stream of tokens, whereas many 
 ::: {.slide title="The Decoder as a Conditioned Autoregressive Model"}
 [Probabilistic Formulation]{.kicker}
 
-Given source $x_1, \ldots, x_T$ and encoder summary $\mathbf{c}$, the decoder factorizes the conditional target distribution via the chain rule:
+::: {.cols .vc}
+::: {.col}
+$$P(y_{1:T'} \mid x_{1:T}) = \prod_{t'=1}^{T'} P(y_{t'} \mid y_{<t'}, \mathbf{c})$$
 
-$$P(y_1, \ldots, y_{T'} \mid x_1, \ldots, x_T) = \prod_{t'=1}^{T'} P(y_{t'} \mid y_1, \ldots, y_{t'-1}, \mathbf{c})$$
+- **Sufficient-Statistic Assumption:** Holds only if $\mathbf{c}$ retains every source detail needed by $y_{1:T'}$.
+- **Training vs. Inference:** Trained in parallel via **teacher forcing** on ground-truth prefixes; decoded autoregressively until `<eos>`.
+:::
 
-- **Sufficient-statistic assumption:** The source tokens $x_{1:T}$ disappear on the right-hand side; the equality holds *only* if $\mathbf{c}$ preserves every detail of the source needed to predict $y_{1:T'}$.
-- **Training vs. inference:** Trained by minimizing next-token cross-entropy under **teacher forcing** (feeding ground-truth $y_{t'-1}$); evaluated autoregressively by feeding back emitted tokens $\hat{y}_{t'-1}$.
-- **Enduring abstraction:** Modern speech (Whisper) and vision-language models keep this exact encoder–decoder split, replacing the single vector $\mathbf{c}$ with one vector per source position via cross-attention.
+::: {.col .fig}
+@fig:ch12-mrnn-conditioned-decoder
+:::
+:::
 :::
 
 ::: {.slide title="The 2014 Neural Machine Translation Breakthrough"}
 [Historical Context]{.kicker}
 
-Two landmark 2014 papers established end-to-end neural sequence-to-sequence learning:
+::: {.cols .vc}
+::: {.col}
+- **Cho et al. & Sutskever et al. (2014):** Introduced GRU phrase scoring and 4-layer LSTM English$\to$French translation through a single vector $\mathbf{c}$.
+- **Source-Reversal Trick:** Feeding $x_T, \ldots, x_1$ placed $x_1$ adjacent to $y_1$, cutting early lag from $T+1$ to $2$ steps.
+- **The 20-Word Wall:** Quality still collapsed once sentences exceeded $20$–$30$ words.
+:::
 
-- **GRU phrase scoring (Cho et al., 2014):** Introduced the GRU inside an encoder–decoder that passed $\mathbf{c}$ to every decoder step to score phrase tables.
-- **Deep LSTM translation (Sutskever, Vinyals & Le, 2014):** Translated English to French end-to-end with 4-layer LSTMs, initializing the decoder solely with the encoder's final state $\mathbf{c}$.
-- **Sutskever's source-reversal trick:** Feeding source sentences *backward* ($x_T, \ldots, x_1$) placed $x_1$ right next to $y_1$ across the encoder–decoder boundary, shortening early gradient paths without changing total state capacity.
-
-::: {.d2l-note .warn}
-**The empirical wall:** Right after these results, Cho et al. (2014) showed that single-vector translation quality degrades sharply as sentences grow past $20$–$30$ words.
+::: {.col .fig .big}
+@fig:ch12-mrnn-sutskever-reversal
+:::
 :::
 :::
 
 ::: {.slide title="Lexical Evaluation: Character N-Gram F-Score (chrF)"}
 [Translation Metrics]{.kicker}
 
-Because human evaluation cannot run inside a training loop, translations are scored by $n$-gram overlap against a reference. Modern benchmarks recommend **chrF** (Popović, 2015; Kocmi et al., 2021):
-
+::: {.cols .vc}
+::: {.col}
 $$F_\beta = \frac{(1 + \beta^2)\, P R}{\beta^2 P + R}, \qquad \beta = 2$$
 
-- **Character $n$-grams ($n = 1, \ldots, 6$):** Strips whitespace and counts character substrings of length $1$ to $6$, avoiding subword tokenizer sensitivity and rewarding shared morphological stems.
-- **Clipped multiset overlap (`p & r`):** A candidate $n$-gram repeated more often than in the reference is clipped at its reference count.
-- **Recall-weighted ($\beta = 2$):** Averages precision $P$ (fraction of candidate $n$-grams in reference) and recall $R$ (fraction of reference $n$-grams in candidate) across $n=1\ldots 6$, weighting recall $4\times$ as heavily as precision.
+- **Character $1\ldots 6$-Grams:** Strips spaces and counts character substrings, rewarding shared stems without tokenizer sensitivity.
+- **Recall-Weighted ($\beta = 2$):** Clips candidate counts at reference counts (`p & r`) and weights recall $4\times$ over precision.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-chrf-pipeline
+:::
+:::
 :::
 
 ::: {.slide title="Word N-Gram Precision and Brevity Penalty (BLEU)"}
 [Translation Metrics]{.kicker}
 
-The classical **BLEU** metric (Papineni et al., 2002) combines clipped word $n$-gram precisions $p_1, \ldots, p_k$ with a brevity penalty:
+::: {.cols .vc}
+::: {.col}
+$$\text{BLEU} = \exp\!\left(\min\!\left(0, 1 - \frac{\text{len}_{\text{label}}}{\text{len}_{\text{pred}}}\right)\right) \prod_{n=1}^{k} p_n^{w_n}$$
 
-$$\text{BLEU} = \underbrace{\exp\!\left(\min\!\left(0, 1 - \frac{\text{len}_{\text{label}}}{\text{len}_{\text{pred}}}\right)\right)}_{\text{brevity penalty (BP)}} \prod_{n=1}^{k} p_n^{w_n}$$
+- **Brevity Penalty (BP):** Exponentially penalizes overly short candidates that game 1-gram precision.
+- **Zero-Match Fragility:** Any single $p_n = 0$ collapses the entire sentence-level BLEU product to $0$.
+:::
 
-- **Why a brevity penalty instead of recall?** A 2-word candidate `"the"` or `"we will"` can achieve $p_1 = p_2 = 1.0$; when $\text{len}_{\text{pred}} < \text{len}_{\text{label}}$, $\text{BP} < 1$ penalizes incomplete translations exponentially.
-- **Multiplicative fragility:** Because BLEU takes a geometric product over orders $n \le k$, **any single $p_n = 0$ forces the entire sentence-level BLEU score to $0$** (whereas standard corpus-level sacreBLEU pools counts across the full test set).
+::: {.col .fig}
+@fig:ch12-mrnn-bleu-formula
+:::
+:::
 :::
 
 ::: {.slide title="Pitfall: Sentence-Level BLEU Zeroes vs. Paraphrases"}
@@ -428,11 +452,17 @@ Pair character-level `chrF` (or corpus `sacreBLEU`) with learned semantic evalua
 ::: {.slide title="Isolating State Capacity with Random String Reversal"}
 [The Bottleneck Experiment]{.kicker}
 
-How many tokens can a single recurrent state vector actually carry? Natural text confounds length with predictability, so we isolate state capacity using **synthetic string reversal**:
+::: {.cols .vc}
+::: {.col}
+- **Uniform i.i.d. Strings ($V = 16$):** Reversing $T$ random letters ($4\text{ bits/letter}$) forces all $4T$ bits through $\mathbf{c} \in \mathbb{R}^d$.
+- **Zero Language-Model Shortcut:** Previously decoded letters $y_{<t'}$ give zero mutual information about $y_{t'}$.
+- **Optimal Initial Ordering:** Last input $x_T$ is emitted first ($y_1 = x_T$), while $x_1$ must survive $2T$ steps.
+:::
 
-- **Independent uniform symbols:** Draw a random string of $T$ independent characters from an alphabet of $V = 16$ letters; the target is the reversed string $x_T, x_{T-1}, \ldots, x_1$.
-- **Zero target-side language-model shortcut:** Because the characters are i.i.d. uniform, previously decoded characters $y_1, \ldots, y_{t'-1}$ provide **zero mutual information** about $y_{t'}$—every character must travel through $\mathbf{c}$.
-- **Shortest possible initial lag:** Because the target is reversed, the last token read by the encoder ($x_T$) is the very first token written by the decoder ($y_1 = x_T$), matching Sutskever et al.'s optimal ordering.
+::: {.col .fig .big}
+@fig:ch12-mrnn-reversal-task
+:::
+:::
 :::
 
 ::: {.slide title="Unrolled GRU Encoder–Decoder on String Reversal"}
@@ -448,16 +478,15 @@ $$\mathbf{s}_{t'} = g(y_{t'-1}, \mathbf{c}, \mathbf{s}_{t'-1}), \qquad \mathbf{s
 ::: {.slide title="Information-Theoretic Capacity vs. Learned Packing"}
 [Bit-Counting Analysis]{.kicker}
 
-Before training, compare the raw information content of a length-$T$ string against the raw bit size of the state vector $\mathbf{c} \in \mathbb{R}^d$:
+::: {.cols .vc}
+::: {.col}
+- **Raw Hardware Bits vs. String Entropy:** A $d = 64$ `float32` vector holds $2{,}048$ raw bits, whereas $T \in \{8, 16, 64\}$ letters require only $32, 64, 256$ bits ($0.5$ to $4.0$ bits/float).
+- **Teacher-Forced Probe:** Measures how many bits gradient descent actually packs into $\mathbf{c}$ without compounding rollout errors.
+:::
 
-| Quantity | Formula | At $T = 8$ | At $T = 16$ | At $T = 64$ |
-| :--- | :--- | :---: | :---: | :---: |
-| **String entropy ($V = 16$)** | $T \log_2 16 = 4T\text{ bits}$ | $32\text{ bits}$ | $64\text{ bits}$ | $256\text{ bits}$ |
-| **Raw `float32` bits ($d = 64$)** | $64 \times 32\text{ bits}$ | $2{,}048\text{ bits}$ | $2{,}048\text{ bits}$ | $2{,}048\text{ bits}$ |
-| **Required bits per state float ($d = 64$)** | $4T / 64\text{ bits/float}$ | $0.5\text{ bits}$ | $1.0\text{ bit}$ | $4.0\text{ bits}$ |
-
-::: {.d2l-note}
-In raw bit count, $64$ single-precision floats ($2{,}048$ bits) could encode $512$ random letters. Teacher-forced evaluation measures how many letters gradient descent actually packs and unpacks without compounding early decoding errors.
+::: {.col .fig .big}
+@fig:ch12-mrnn-bit-budget-bars
+:::
 :::
 :::
 
@@ -482,19 +511,14 @@ Three quantitative findings stand out from the reversal capacity table:
 ::: {.slide title="Two Escape Routes from the Single-Vector Bottleneck"}
 [Architectural Crossroads]{.kicker}
 
-When a single recurrent vector saturates on long sequences, deep learning offers two distinct remedies:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Route 1 — Cross-Attention (Bahdanau, Cho & Bengio, 2015):** Retain *every* encoder hidden state $\mathbf{h}_1, \ldots, \mathbf{h}_T$ and let the decoder query them dynamically.
-- **Trade-off:** Solves length-$12$ reversal to $100\%$ accuracy in $300$ steps, but replaces the fixed state with an $O(T)$ KV cache that grows without bound.
+- **Route 1 — Cross-Attention (Ch. 11):** Retains all $T$ encoder states $[\mathbf{h}_1, \ldots, \mathbf{h}_T]$ for exact dynamic lookup at $O(T)$ memory cost.
+- **Route 2 — Structured & Matrix States (§§12.3–12.8):** Keeps $O(1)$ inference state by upgrading to parallel linear scans, $d_v \times d_k$ outer-product key–value matrices, delta-rule erasure, and sparse 3:1 attention hybrids.
 :::
 
-::: {.col}
-- **Route 2 — Structured & Matrix States (§12.3–12.8):** Keep a fixed-size state $O(1)$ in sequence length, but upgrade its geometry and update dynamics:
-  1. Linearize transitions for $O(\log T)$ parallel scans (§12.3–12.5).
-  2. Expand the $O(d)$ vector into an $O(d^2/h)$ key–value matrix memory updated by the delta rule (§12.6–12.7).
-  3. Interleave a few full attention layers for exact lookup (§12.8).
+::: {.col .fig .big}
+@fig:ch12-mrnn-two-escape-routes
 :::
 :::
 :::

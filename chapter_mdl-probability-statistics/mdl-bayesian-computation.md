@@ -1666,13 +1666,18 @@ Bayesian Computation: Laplace, Importance Sampling, MCMC, and VI<br>**posterior 
 ::: {.slide title="The Posterior Predictive and Unnormalized Target"}
 [The Integration Problem]{.kicker}
 
-Instead of trusting a single point estimate $\hat{\boldsymbol{\theta}}$, Bayesian prediction averages the predictions of all parameter vectors weighted by their posterior density:
-
+::: {.cols .vc}
+::: {.col}
 $$p(y_\star \mid \mathbf{x}_\star, \mathcal{D}) = \int p(y_\star \mid \mathbf{x}_\star, \boldsymbol{\theta})\,p(\boldsymbol{\theta} \mid \mathcal{D})\,d\boldsymbol{\theta}$$
 
-- **Bayesian logistic regression target:** With inputs $\mathbf{z}_i = (1, x_i)^\top$, likelihood $P(y_i = 1 \mid x_i, \boldsymbol{\theta}) = \operatorname{sigmoid}(\mathbf{z}_i^\top \boldsymbol{\theta})$, and prior $\theta_j \sim \mathcal{N}(0, \tau^2)$ ($\tau^2 = 4$), the unnormalized joint density is:
-  $$\widetilde{p}(\boldsymbol{\theta}) = p(\mathcal{D}, \boldsymbol{\theta}) = \Biggl[\prod_{i=1}^n \operatorname{sigmoid}(\mathbf{z}_i^\top \boldsymbol{\theta})^{y_i}\bigl(1 - \operatorname{sigmoid}(\mathbf{z}_i^\top \boldsymbol{\theta})\bigr)^{1-y_i}\Biggr] \exp\!\left(-\frac{\|\boldsymbol{\theta}\|^2}{2\tau^2}\right)$$
-- **The intractable normalizer:** A Gaussian prior is not conjugate to the logistic likelihood, so the evidence $p(\mathcal{D}) = \int \widetilde{p}(\boldsymbol{\theta})\,d\boldsymbol{\theta}$ has no closed form. Every algorithm in this section works solely with ratios or differences where $p(\mathcal{D})$ cancels.
+- **Unnormalized joint density:** In Bayesian logistic regression, $\widetilde{p}(\boldsymbol{\theta}) = p(\mathcal{D} \mid \boldsymbol{\theta})p(\boldsymbol{\theta})$ and its derivatives $\nabla \log \widetilde{p}, \mathbf{H}(\boldsymbol{\theta})$ evaluate in $O(n)$ time.
+- **How $p(\mathcal{D})$ cancels:** Because the evidence $p(\mathcal{D}) = \int \widetilde{p}(\boldsymbol{\theta})\,d\boldsymbol{\theta}$ is intractable, Laplace, importance sampling, MCMC, and VI all work with ratios or differences where $p(\mathcal{D})$ drops out.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-predictive-integral
+:::
+:::
 :::
 
 ::: {.slide title="Slope and Curvature of the Log-Posterior"}
@@ -1739,15 +1744,16 @@ Comparing the MAP plug-in $\operatorname{sigmoid}(\mathbf{z}_\star^\top \boldsym
 ::: {.slide title="Accounting for the 1.51-Nat Predictive Shift at x = -3"}
 [Dissecting the Log-Probability]{.kicker}
 
-If the logit $a = \mathbf{z}_\star^\top \boldsymbol{\theta}$ at $x_\star = -3$ were exactly Gaussian $\mathcal{N}(\mu, s^2)$, its MGF would give $\log \mathbb{E}[e^a] = \mu + s^2/2$, predicting a $+2.87$-nat boost. Walking from the MAP plug-in to the exact predictive explains why the actual boost is $+1.51$ nats ($4.6\times$):
+::: {.cols .vc}
+::: {.col}
+- **Quadratic variance boost ($+2.87$ nats):** A Gaussian logit $a \sim \mathcal{N}(\mu, s^2)$ has $\log \mathbb{E}[e^a] = \mu + s^2/2$, lifting log-probability from $-6.06$ to $-3.19$.
+- **Three counter-shifts ($-1.36$ nats total):** Skewness from mode to mean ($-0.57$), a short upper logit tail ($-0.47$), and sigmoid saturation $\operatorname{sigmoid}(a) < e^a$ ($-0.32$) yield the net $+1.51$-nat ($4.6\times$) boost.
+:::
 
-| Step in the Decomposition at $x_\star = -3$ | Log-Probability | Incremental Shift | Physical Explanation |
-| :--- | :---: | :---: | :--- |
-| **1. MAP plug-in** ($\log \operatorname{sigmoid}(\mathbf{z}_\star^\top \boldsymbol{\theta}_{\mathrm{MAP}})$) | $-5.49$ | — | Single point prediction at the posterior mode |
-| **2. Shift from mode logit to mean logit** ($\mu$) | $-6.06$ | $-0.57$ | Posterior skewness makes the mean slope steeper than MAP |
-| **3. Gaussian variance boost** ($\mu + s^2/2$) | $-3.19$ | $+2.87$ | Quadratic logit variance $s^2 = \mathbf{z}_\star^\top \operatorname{Cov}(\boldsymbol{\theta})\mathbf{z}_\star$ |
-| **4. Exact MGF of skewed logit** ($\log \mathbb{E}[e^a]$) | $-3.66$ | $-0.47$ | Short upper tail toward $0$ trims the Gaussian MGF |
-| **5. Sigmoid saturation** ($\log \mathbb{E}[\operatorname{sigmoid}(a)]$) | $-3.98$ | $-0.32$ | $\operatorname{sigmoid}(a) < e^a$ for the shallow-slope draws that dominate |
+::: {.col .fig .big}
+@fig:ch35-prob-predictive-shift
+:::
+:::
 :::
 
 ::: {.slide title="Rejection Sampling and Dimensional Collapse"}
@@ -1838,14 +1844,18 @@ Comparing the broad Gaussian prior ($N = 20{,}000$) against the targeted Laplace
 ::: {.slide title="Detailed Balance Guarantees Posterior Stationarity"}
 [The Fundamental MCMC Theorem]{.kicker}
 
-A transition rule $T(\boldsymbol{\theta}' \mid \boldsymbol{\theta})$ satisfies **detailed balance** with respect to $\pi$ if the probability flux from $\boldsymbol{\theta}$ to $\boldsymbol{\theta}'$ equals the reverse flux from $\boldsymbol{\theta}'$ to $\boldsymbol{\theta}$ for every pair of states:
-
+::: {.cols .vc}
+::: {.col}
 $$\pi(\boldsymbol{\theta})\,T(\boldsymbol{\theta}' \mid \boldsymbol{\theta}) = \pi(\boldsymbol{\theta}')\,T(\boldsymbol{\theta} \mid \boldsymbol{\theta}')$$
 
-1. **Proof that Metropolis–Hastings satisfies detailed balance:** For $\boldsymbol{\theta}' \neq \boldsymbol{\theta}$, a transition occurs if and only if $\boldsymbol{\theta}'$ is proposed and accepted. Pulling $\pi(\boldsymbol{\theta})g(\boldsymbol{\theta}'\mid\boldsymbol{\theta}) > 0$ inside the minimum gives:
-   $$\pi(\boldsymbol{\theta})\,g(\boldsymbol{\theta}' \mid \boldsymbol{\theta})\,\alpha(\boldsymbol{\theta}, \boldsymbol{\theta}') = \min\bigl\{\pi(\boldsymbol{\theta})\,g(\boldsymbol{\theta}' \mid \boldsymbol{\theta}),\; \pi(\boldsymbol{\theta}')\,g(\boldsymbol{\theta} \mid \boldsymbol{\theta}')\bigr\}$$
-   which is symmetric in $\boldsymbol{\theta}$ and $\boldsymbol{\theta}'$.
-2. **Proof that detailed balance implies stationarity:** Summing (or integrating) both sides over $\boldsymbol{\theta}$ gives $\sum_{\boldsymbol{\theta}} \pi(\boldsymbol{\theta})T(\boldsymbol{\theta}' \mid \boldsymbol{\theta}) = \pi(\boldsymbol{\theta}')\sum_{\boldsymbol{\theta}} T(\boldsymbol{\theta} \mid \boldsymbol{\theta}') = \pi(\boldsymbol{\theta}')$.
+- **Symmetric flux under Metropolis–Hastings:** For $\boldsymbol{\theta}' \ne \boldsymbol{\theta}$, $\pi(\boldsymbol{\theta})g(\boldsymbol{\theta}'\mid\boldsymbol{\theta})\alpha(\boldsymbol{\theta}, \boldsymbol{\theta}') = \min\bigl\{\pi(\boldsymbol{\theta})g(\boldsymbol{\theta}'\mid\boldsymbol{\theta}),\, \pi(\boldsymbol{\theta}')g(\boldsymbol{\theta}\mid\boldsymbol{\theta}')\bigr\}$.
+- **Detailed balance $\implies$ stationarity:** Integrating both sides over $\boldsymbol{\theta}$ gives $\int \pi(\boldsymbol{\theta})T(\boldsymbol{\theta}'\mid\boldsymbol{\theta})\,d\boldsymbol{\theta} = \pi(\boldsymbol{\theta}')$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-detailed-balance
+:::
+:::
 :::
 
 ::: {.slide title="Implementing Preconditioned Metropolis in NumPy"}

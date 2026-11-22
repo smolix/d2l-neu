@@ -24,11 +24,16 @@ A deck must teach on its own at the level of an upper-division or graduate cours
   - **Long or mathematically dense section notebook (e.g., *Mathematics for Deep Learning* or multi-stage architectures):** **20–30+ slides**. Never cram two distinct concepts or a long derivation onto one crowded slide to save slide count—add slides so every slide breathes and fits the 14" MacBook viewport cleanly.
 - **Narrative arc of every section deck:**
   1. **Cover slide (`::: {.cover}`):** Section kicker (`[Dive into Deep Learning · §N.M]{.kicker}`, automatically updated by `gen_slides.py`), 1-line descriptive subtitle, and bold dot-separated keyword bar.
-  2. **Motivation & Core Mental Model (Slide 2):** Why does this concept exist? Anchor immediately with concrete tensor shapes, parameter counts, computational costs, or failure modes of naive approaches.
-  3. **Core Concepts, Mechanics & Visual/Code Evidence (Body Slides):** Develop one concept per slide, pairing mathematical definitions or algorithms with geometric diagrams (`@fig:...`), chapter SVG figures (`![](../img/...)`), or live code/output cards (`@cell-id`).
-  4. **Practical Systems / Statistical Pitfalls:** Highlight what goes wrong in real deep learning workflows (e.g., memory aliasing, silent broadcasting into `(B, B)`, data leakage from fitting preprocessing on the test set, numerical underflow/overflow, vanishing/exploding gradients).
+  2. **Motivation & Core Mental Model (Slide 2):** Why does this concept exist? Anchor immediately with a conceptual/systems diagram (`@fig:...`), concrete tensor shapes, parameter counts, computational costs, or failure modes of naive approaches.
+  3. **Core Concepts, Mechanics & Visual/Code Evidence (Body Slides):** Develop one concept per slide, pairing mathematical definitions or algorithms with geometric/structural diagrams (`@fig:...`), chapter SVG figures (`![](../img/...)`), or live code/output cards (`@cell-id`).
+  4. **Practical Systems / Statistical Pitfalls:** Highlight what goes wrong in real deep learning workflows (e.g., memory aliasing, silent broadcasting into `(B, B)`, data leakage from fitting preprocessing on the test set, numerical underflow/overflow, vanishing/exploding gradients) and illustrate the failure mode visually with a diagram.
   5. **Interactive Concept Check (Second-to-last slide):** 2–3 concrete design or calculation questions the class can work out in 60 seconds, with answers revealed in a `::: {.d2l-note .fragment .fade-up}` callout.
   6. **Summary / Key Takeaways Table (Final slide):** A structured markdown table or synthesis contrasting the section's operations, mathematical forms, complexity/scaling, and deep learning roles.
+
+### Visual Density & De-Densification Standard ($\ge 65\%$ Visual Slides)
+- **Visual-first teaching:** At least **$65\text{--}75\%$ of the slides in every section deck** (and at least **3 of 5 slides in every chapter opener `index.md`**) must carry a visual anchor: an inline diagram (`@fig:<id>`), a chapter figure (`![](../img/<name>.svg)`), or a plot output (`@!<cell-id>`).
+- **De-densify when adding a diagram:** Never squeeze an existing full-width wall of text, wide markdown table, or multi-line algebraic derivation into a narrower column next to a diagram. Instead, let the diagram carry the spatial, architectural, or worked-example story and trim the paired left column (`::: {.col}`) down to **2–3 concise bullets** (plus at most one compact display equation or one compact `@cell-id` card).
+- **Fullscreen & Mobile/iPad View Mode:** `_d2l-slides-overlay.html` and `_d2l-slides.scss` provide a **Fullscreen toggle button** in both the top navigation bar (`#d2l-nav-fullscreen`) and the bottom-left control cluster (`#d2l-deck-fullscreen`, shortcut `F`). Toggling fullscreen invokes the browser's native Fullscreen API (on desktop, iPad, and Android) AND applies a CSS viewport-fullscreen fallback (`body.d2l-deck-fullscreen`, supporting iPhone iOS Safari and embedded iframes) that hides `.d2l-deck-nav`, expands `.reveal-viewport` to `100dvh`, and triggers `Reveal.layout()`.
 
 ---
 
@@ -117,9 +122,24 @@ All decks are rendered onto a `1280×720` Reveal.js canvas and reviewed on a 14"
 
 ---
 
-## 5. Automated Verification Workflow (Lint + Render + Playwright/KaTeX Audit)
+## 5. Automated Verification Workflow (SVG Defect Audit + Lint + Render + Playwright/KaTeX Audit)
 
-Before committing or opening a PR for any slide deck, run the source linter, render the slides (`pytorch` and `jax`), and run the headless Chromium + local KaTeX audit script to verify **0 layout/linebreak issues**:
+Before committing or opening a PR for any slide deck or slide diagram module, run all three automated checks:
+
+### Step 1 — Build, Visually Audit, and Outline Slide Diagrams (`tools/build_module_diagrams.mjs`)
+Every slide diagram module (`diagrams/<module>.mjs`) must pass the Playwright SVG geometry intersection audit before its `<text>` elements are outlined to glyph paths in `img/auto/<id>.svg`. The audit rejects any diagram where:
+1. A graph curve, line, arrow shaft, circle, or ellipse intersects a `<text>` bounding box (`*-intersects-text`).
+2. A `<rect>` border edge cuts through or clips a `<text>` label (`rect-*-edge-cuts-text`).
+3. Two `<text>` labels overlap each other (`text-overlap`).
+4. Any `<text>` extends outside the SVG `viewBox` (`text-outside-viewbox`).
+
+```bash
+NODE_PATH=/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
+/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
+tools/build_module_diagrams.mjs diagrams/<module>.mjs
+```
+
+### Step 2 — Lint Markdown Sources and Render Slides (`pytorch` and `jax`)
 
 ```bash
 # 1. Lint markdown sources
@@ -130,7 +150,8 @@ rm -f _slides/*/.deckhashes.json
 python3 tools/gen_slides.py . _slides --frameworks pytorch jax --render --files chapter_<name>/*.md
 ```
 
-Then run the Playwright audit (routing KaTeX CDN URLs to local KaTeX assets so offline Chromium measures authentic rendered math boxes):
+### Step 3 — Run the Playwright + KaTeX Slide Layout Audit
+Run the Playwright audit (routing KaTeX CDN URLs to local KaTeX assets and navigating vertical slide stacks via `Reveal.slide(0, idx)`):
 
 ```bash
 NODE_PATH=/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
@@ -164,7 +185,7 @@ const files = process.argv.slice(1);
     const total = await page.evaluate(() => Reveal.getTotalSlides());
     const issues = [];
     for (let i = 0; i < total; i++) {
-      await page.evaluate((idx) => Reveal.slide(idx), i);
+      await page.evaluate((idx) => Reveal.slide(0, idx), i);
       await page.waitForTimeout(20);
       const res = await page.evaluate((idx) => {
         const s = Reveal.getCurrentSlide();

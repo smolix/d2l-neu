@@ -47,63 +47,75 @@ Optimization Algorithms: Geometry, Stochasticity, and Scaling<br>**ill-condition
 ::: {.slide title="Two Obstacles Limit Every Deep Learning Optimizer"}
 [The Central Problem]{.kicker}
 
-Training a neural network minimizes an empirical risk $f(\mathbf{x}) = \frac{1}{n}\sum_{i=1}^n f_i(\mathbf{x})$ over $d = 10^6\text{--}10^{12}$ parameters across a non-convex loss surface governed by two geometric and statistical bottlenecks:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Obstacle 1 — Ill-Conditioning (Uneven Curvature):**
-  - On the valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$, curvature is $\lambda_2 = 4$ across the steep wall and $\lambda_1 = 0.2$ along the flat floor ($\kappa = \lambda_{\max}/\lambda_{\min} = 20$).
-  - Stability along $x_2$ requires $|1 - 4\eta| < 1$ ($\eta < 0.5$), forcing the flat axis $x_1$ to shrink by $<10\%$ per step ($47$ steps to reach $1\%$ error at $\eta^\star = 0.476$).
+- **Obstacle 1 — Ill-Conditioning ($\kappa = \lambda_{\max}/\lambda_{\min} \gg 1$):**
+  - On $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$ ($\lambda_1 = 0.2, \lambda_2 = 4, \kappa = 20$), stability along $x_2$ caps $\eta < 2/\lambda_2 = 0.5$, forcing $x_1$ to shrink by $<10\%$ per step ($47$ steps to $1\%$ error).
+- **Obstacle 2 — Minibatch Gradient Noise ($\operatorname{tr}(\boldsymbol{\Sigma})/b$):**
+  - Sampling $b$ examples traps constant-rate iterates inside a stationary **noise ball** of variance $\eta\sigma^2 / (2\lambda b)$.
+- **Chapter thesis:** Every modern optimizer lever attacks one of these two bottlenecks.
 :::
 
-::: {.col}
-- **Obstacle 2 — Minibatch Gradient Noise:**
-  - Estimating $\nabla f(\mathbf{x})$ from a random minibatch of $b$ examples injects sampling variance $\operatorname{tr}(\boldsymbol{\Sigma})/b$.
-  - At a constant learning rate $\eta$, iterates cannot settle at a minimum; they fluctuate inside a stationary **noise ball** whose variance scales as $\eta\sigma^2 / (2\lambda b)$.
+::: {.col .fig .big}
+@fig:ch09-opt-two-obstacles
 :::
-:::
-
-::: {.d2l-note}
-Every component of a modern training recipe—momentum, AdamW, Muon, warmup, cosine/WSD decay, critical batch size, and $\mu\text{P}$—is an explicit engineering answer to one of these two obstacles.
 :::
 :::
 
 ::: {.slide title="Three Design Levers of a Modern Training Recipe"}
 [Architectural Framework]{.kicker}
 
-Modern optimization algorithms attack ill-conditioning and gradient noise through three orthogonal levers:
+::: {.cols .vc}
+::: {.col}
+- **1. Step Direction & Preconditioning (§§9.4–9.6):**
+  - Replace $-\nabla f(\mathbf{x})$ with momentum velocity ($\mathbf{v}_t$), per-coordinate RMS normalization (AdamW), or spectral orthogonalization ($\mathbf{U}\mathbf{V}^\top$, Muon).
+- **2. Step-Size Schedule $\eta_t$ (§9.7):**
+  - Ramp $\eta_t$ during warmup to steer below $2/\eta_0$, hold a high travel budget $B_T = \sum_t \eta_t$, and decay $\eta_T \to 0$.
+- **3. Batch Size, Width Scaling & Guards (§§9.8–9.10):**
+  - Match $b$ to $b_{\text{noise}}$, transfer LRs across widths via $\mu\text{P}$ ($\eta/m$), and guard with global-norm clipping and weight EMA.
+:::
 
-| Design Lever | Target Obstacle | Core Mechanism | Chapter 9 Sections |
-| :--- | :--- | :--- | :--- |
-| **1. Step Direction & Preconditioning** | Ill-conditioning ($\kappa \gg 1$) & heterogeneous layer scales | Replace $-\nabla f(\mathbf{x})$ with a temporal velocity average, per-coordinate RMS scaling, or spectral orthogonalization | **§9.4 Momentum**, **§9.5 Adam & AdamW**, **§9.6 Muon** |
-| **2. Step-Size Schedule $\eta_t$** | Early sharpness instability & late-stage noise floor | Ramp $\eta_t$ up during warmup to steer below $2/\eta_0$, hold a high travel budget $B_T = \sum_t \eta_t$, and decay $\eta_T \to 0$ | **§9.7 Schedules (Warmup, Cosine, WSD)** |
-| **3. Batch Size, Width Scaling & Guards** | Sampling variance $\operatorname{tr}(\boldsymbol{\Sigma})/b$, width drift, & loss spikes | Match $b$ to the gradient-noise scale $b_{\text{noise}}$, scale layer LRs via $\mu\text{P}$, and guard with clipping & weight EMA | **§9.8 Batch Size**, **§9.9 Scaling Up ($\mu\text{P}$)**, **§9.10 Practice** |
+::: {.col .fig .big}
+@fig:ch09-opt-three-levers
+:::
+:::
 :::
 
 ::: {.slide title="From Exact Analytical Models to Neural Benchmarks"}
 [Pedagogical Methodology]{.kicker}
 
-We develop every optimizer by first deriving exact predictions on tractable analytical models and then testing those predictions under a controlled multi-seed protocol on real neural networks:
+::: {.cols .vc}
+::: {.col}
+- **Analytical quadratics & linear data (§§9.1–9.2):**
+  - Solve exact stability ceilings, $\sqrt{\kappa}$ critical damping, and excess loss $\frac{\eta\operatorname{tr}\boldsymbol{\Sigma}}{4b}$ on the $\kappa=20$ valley and NASA airfoil dataset ($n=1{,}500, d=6$).
+- **Two complementary neural networks (§§9.3–9.10):**
+  - **`FashionCNN` ($421\text{K}$ params):** Multi-epoch image classification ($8.5$ epochs in $2{,}000$ steps at $b = 256$) with held-out test accuracy.
+  - **`TinyLM` ($471\text{K}$ / $3.3\text{M}$ params):** Single-pass byte-level Transformer on WikiText-103 ($40\times$ layer gradient spread).
+:::
 
-| Running Testbed | Scale & Geometry | What It Isolates and Measures |
-| :--- | :--- | :--- |
-| **Quadratic Valley** ($f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$) | $d = 2$, $\lambda_1 = 0.2, \lambda_2 = 4$, $\kappa = 20$ | Exact stability ceilings, contraction rates, critical damping ($\sqrt{\kappa}$), and noise-ball variance |
-| **NASA Airfoil Linear Regression** | $n = 1{,}500$ examples, $d = 6$ weights | Exact Hessian $L = 2.10$ and gradient covariance $\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{w}^\star) = 3.24$ to verify excess loss $\eta\operatorname{tr}\boldsymbol{\Sigma}/(4b)$ |
-| **`FashionCNN` on Fashion-MNIST** | $421{,}642$ params ($2$ conv + $2$ FC layers) | Multi-epoch classification ($8.5$ epochs in $2{,}000$ steps at $b = 256$), test accuracy, and weight EMA |
-| **`TinyLM` on WikiText-103 Bytes** | $470{,}784$ params ($2$-block Transformer; $3.3\text{M}$ in §9.10) | Single-pass language modeling ($3\%$ of $270\text{M}$ bytes in $2{,}000$ steps), $40\times$ gradient scale spread, AdamW & Muon |
+::: {.col .fig .big}
+@fig:ch09-opt-four-testbeds
+:::
+:::
 :::
 
 ::: {.slide title="Chapter 9 Roadmap: Sections and Core Invariants"}
 [Chapter Map]{.kicker}
 
-| Section | Core Mathematical Relation or Invariant | Practical Takeaway |
-| :--- | :--- | :--- |
-| **§9.1 Gradient Descent** | Stability $\eta < 2/\lambda_{\max}$; steps $t \approx \frac{\kappa}{2}\log\frac{1}{\epsilon}$; edge of stability $\lambda_{\max} \approx 2/\eta$ | Scalar learning rates are bottlenecked by condition number $\kappa = \lambda_{\max}/\lambda_{\min}$ |
-| **§9.2 Minibatch SGD** | Noise ball $\mathbb{E}[x_\infty^2] \approx \frac{\eta\sigma^2}{2\lambda b}$; excess loss $\frac{\eta\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star)}{4b}$ | $\eta/b$ governs the steady-state noise floor; minibatches amortize hardware overhead |
-| **§9.3 Two Test Models** | Initial loss $\ln V + s^2/2$; $3\times$ five-seed range threshold ($0.05$ nats on `TinyLM`) | Treat $\eta$ as a nuisance parameter swept per optimizer from shared initial weights |
-| **§9.4 Momentum** | Effective step $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$; critical damping $\rho^\star = \frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1} \approx 1 - \frac{2}{\sqrt{\kappa}}$ | Accelerates curvature-limited runs from $O(\kappa)$ to $O(\sqrt{\kappa})$; rescales $\eta \propto 1-\beta$ under noise |
-| **§9.5 Adam & AdamW** | Step $\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t}+\epsilon}$; decay timescale $\tau = \frac{1}{\eta\lambda}$; equilibrium RMS $\sqrt{\frac{\eta}{2\lambda}}$ | Equalizes $40\times$ layer gradient disparities; decouple weight decay on 2D matrices only |
-| **§9.6–9.10 Muon & Run** | Spectral step $-\eta\mathbf{U}\mathbf{V}^\top$; budget $B_T$; $b_{\text{noise}} = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{\|\nabla f\|^2}$; $\mu\text{P}$ hidden LR $\eta/m$ | Orthogonalize 2D hidden matrices; pair warmup + WSD/cosine decay with $b_{\text{crit}}$ and $\mu\text{P}$ |
+::: {.cols .vc}
+::: {.col}
+- **Foundations & Benchmarks (§§9.1–9.3):**
+  - Stability $\eta < 2/\lambda_{\max}$, edge of stability $\lambda_{\max} \approx 2/\eta$, noise ball $\frac{\eta\sigma^2}{2\lambda b}$, count landmarks, and $3\times$ multi-seed thresholds.
+- **Preconditioned Directions (§§9.4–9.6):**
+  - Momentum $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$ ($O(\sqrt{\kappa})$), AdamW timescale $\tau = \frac{1}{\eta\lambda}$, and Muon 5-step Newton–Schulz orthogonalization $-\eta\mathbf{U}\mathbf{V}^\top$.
+- **Schedules, Scaling & Operations (§§9.7–9.10):**
+  - Warmup + WSD/cosine budget $B_T$, critical batch size $b_{\text{noise}} = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{\|\nabla f\|^2}$, $\mu\text{P}$ hidden LR $\eta/m$, clipping ($\theta=1$), and weight EMA.
+:::
+
+::: {.col .fig .big}
+@fig:ch09-opt-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="How to Navigate Chapter 9 and the Math Appendix"}

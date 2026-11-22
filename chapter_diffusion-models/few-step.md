@@ -1152,13 +1152,17 @@ Few-Step Generation: Flow Maps, Consistency, and Distillation<br>**curved ODE tr
 ::: {.slide title="Why Can a Standard Diffusion Model Not Take One Step?"}
 [Motivation]{.kicker}
 
-Fast ODE solvers (§17.5) reduced sampling from $1{,}000$ ancestral steps to $20$–$50$ evaluations, and latent diffusion (§17.7) cut the FLOPs per evaluation—yet a single-step GAN takes only **1** forward pass. Why does a 1-step Euler jump fail on a velocity model?
+::: {.cols .vc}
+::: {.col}
+- **Velocity $\neq$ displacement:** A velocity network $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t)$ predicts the instantaneous tangent $d\mathbf{x}_t/dt$ at time $t$, not the chord to $t = 0$.
+- **Curved trajectories cause tangent overshoot:** Even with the exact field $\mathbf{u}_t$, a 1-step Euler jump from $t = 1$ follows $\mathbf{u}_1(\mathbf{x}_1) = \mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0]$ and collapses all samples onto the global mean $\mathbb{E}[\mathbf{x}_0]$!
+- **Two routes to 1–4 steps:** Straighten or integrate trajectories via **Reflow / Flow Maps**, or match densities directly via **DMD / ADD**.
+:::
 
-- **Velocity $\neq$ displacement:** A velocity network $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t)$ predicts the instantaneous tangent $d\mathbf{x}_t/dt$ of the probability-flow ODE trajectory at time $t$.
-- **Curved trajectories cause tangent overshoot:** Even with the **exact** analytical velocity field $\mathbf{u}_t$, taking a single Euler step of length $1$ from $t = 1$ to $t = 0$ follows the initial tangent $\mathbf{u}_1(\mathbf{x}_1) = \mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0]$ and collapses every sample onto the global data mean $\mathbb{E}[\mathbf{x}_0]$!
-- **Two routes to 1–4 step generation:**
-  1. **Trajectory straightening / Flow maps:** Straighten trajectories via **Reflow**, or train a student network to predict the **integrated flow map** $\Phi_{t \to s}(\mathbf{x}_t)$ (Consistency Models & MeanFlow).
-  2. **Distribution matching:** Match output densities directly via score or adversarial distillation (DMD / ADD).
+::: {.col .fig .big}
+@fig:ch17-diff-tangent-overshoot
+:::
+:::
 :::
 
 ::: {.slide title="Quantifying Few-Step Euler Failure on the Exact Field"}
@@ -1182,12 +1186,18 @@ Running Euler's method on the exact mixture velocity `mix.velocity` from $20{,}0
 ::: {.slide title="Rectified Flow and Reflow: Straightening Trajectories"}
 [Re-Pairing Noise and Data Along ODE Chords]{.kicker}
 
-Why do probability-flow ODE trajectories curve in the first place?
+::: {.cols .vc}
+::: {.col}
+$$\mathcal{L}_{\textrm{Reflow}}(\boldsymbol\theta) = \mathbb{E}_{\mathbf{z}, t}\Big[\big\|\mathbf{u}_{\boldsymbol\theta}\big((1 - t)\hat{\mathbf{x}}_0 + t\mathbf{z},\; t\big) - (\mathbf{z} - \hat{\mathbf{x}}_0)\big\|^2\Big]$$
 
-- **Independent coupling creates crossing chords:** During standard flow-matching training, data $\mathbf{x}_0 \sim p_0$ and noise $\boldsymbol\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ are drawn independently. Their straight segments $(1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$ cross everywhere, forcing the non-crossing marginal ODE trajectories to bend around intersections.
-- **Reflow (Liu, Gong & Liu, 2022):** Uses a trained teacher ODE to map noise vectors $\mathbf{z}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ deterministically to generated endpoints $\hat{\mathbf{x}}_0^{(i)} = \Phi_{1 \to 0}(\mathbf{z}_i)$, then retrains a new velocity model on the **coupled pairs** $(\hat{\mathbf{x}}_0^{(i)}, \mathbf{z}_i)$:
-  $$\mathcal{L}_{\textrm{Reflow}}(\boldsymbol\theta) = \mathbb{E}_{\mathbf{z}, t}\Big[\big\|\mathbf{u}_{\boldsymbol\theta}\big((1 - t)\hat{\mathbf{x}}_0 + t\mathbf{z},\; t\big) - (\mathbf{z} - \hat{\mathbf{x}}_0)\big\|^2\Big]$$
-- **Benefits and limits:** Because ODE trajectories never cross, their chords $(\hat{\mathbf{x}}_0, \mathbf{z})$ rarely cross, making reflowed trajectories nearly straight. However, every Reflow round requires a full dataset generation + training pass and **inherits all distributional errors** of the teacher's samples $\hat{\mathbf{x}}_0$.
+- **Why independent chords curve the ODE:** Independently drawn segments $(1-t)\mathbf{x}_0 + t\boldsymbol\epsilon$ cross everywhere, forcing non-crossing marginal ODE trajectories to bend around intersections.
+- **Reflow (Liu, Gong & Liu, 2022):** Pairs noise $\mathbf{z}$ with teacher ODE endpoints $\hat{\mathbf{x}}_0 = \Phi_{1 \to 0}(\mathbf{z})$ to obtain nearly non-crossing chords, though it requires full synthetic dataset generation and inherits teacher errors.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-reflow-straightening
+:::
+:::
 :::
 
 ::: {.slide title="Flow Maps and the Average Velocity Field"}
@@ -1214,67 +1224,85 @@ $$\Phi_{t \to s}(\mathbf{x}_t) = \mathbf{x}_t - \int_s^t \mathbf{u}_\tau(\mathbf
 ::: {.slide title="Worked Example: Exact Flow Map on 1D Gaussian Data"}
 [Why Average Velocity Preserves Spread While Euler Collapses]{.kicker}
 
-For 1D Gaussian data $x_0 \sim \mathcal{N}(m, \varsigma^2)$ on the linear path, $x_t \sim \mathcal{N}\big((1 - t)m, k_t^2\big)$ with $k_t = \sqrt{(1 - t)^2\varsigma^2 + t^2}$. Because 1D ODE trajectories preserve quantiles, the exact flow map preserves the standardized z-score:
-
+::: {.cols .vc}
+::: {.col}
 $$\Phi_{t \to s}(x) = (1 - s)\,m + \frac{k_s}{k_t}\big(x - (1 - t)\,m\big)$$
 
-| Quantity ($m = 2, \varsigma = 0.5$, jump $t = 1 \to s = 0$) | Mathematical Expression | Resulting Distribution from $x_1 \sim \mathcal{N}(0, 1)$ |
-| :--- | :--- | :--- |
-| **Instantaneous velocity at $t = 1$** | $u_1(x) = x - m = x - 2$ | — |
-| **1-Step Euler jump** $x - u_1(x)$ | $x - (x - 2) = \mathbf{2}$ | Point mass at $2$ (**zero variance!**) |
-| **Average velocity on $[0, 1]$** | $\bar{u}(x, 0, 1) = (1 - \varsigma)x - m = \mathbf{0.5\,x - 2}$ | — |
-| **1-Step Flow-Map jump** $x - \bar{u}(x, 0, 1)$ | $x - (0.5\,x - 2) = \mathbf{2 + 0.5\,x}$ | Exact data distribution $\mathcal{N}(2, 0.5^2)$! |
+- **Exact quantile preservation:** For $x_0 \sim \mathcal{N}(2, 0.5^2)$ with $k_t = \sqrt{0.25(1-t)^2 + t^2}$, the 1D ODE preserves the standardized z-score from $t=1$ ($k_1 = 1$) to $s=0$ ($k_0 = 0.5$).
+- **1-Step Euler jump ($u_1(x) = x - 2$):** Lands at $x - (x - 2) = \mathbf{2}$, collapsing variance to zero!
+- **1-Step Flow-Map jump ($\bar{u}(x, 0, 1) = 0.5x - 2$):** Lands at $x - (0.5x - 2) = \mathbf{2 + 0.5x} \sim \mathcal{N}(2, 0.5^2)$.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-1d-flow-map
+:::
+:::
 :::
 
 ::: {.slide title="Three Differential Identities Characterizing Flow Maps"}
 [Compositional, Lagrangian, and Eulerian Formulations]{.kicker}
 
-How can a neural network learn $\Phi_{t \to s}$ without solving the entire ODE during training? Any valid flow map along a trajectory $\mathbf{x}_\tau$ ($s \le r \le t$) is uniquely pinned down by $\Phi_{t \to t}(\mathbf{x}) = \mathbf{x}$ and any one of three invariance identities (Boffi et al., 2025):
+::: {.cols .vc}
+::: {.col}
+- **1. Compositional (Semigroup):** $\Phi_{r \to s}(\Phi_{t \to r}(\mathbf{x}_t)) = \Phi_{t \to s}(\mathbf{x}_t)$ — uses two student passes at $r$ and no derivatives (Progressive Distillation, Shortcut Models).
+- **2. Lagrangian (Moving endpoint $s$):** $\partial_s \Phi_{t \to s}(\mathbf{x}_t) = \mathbf{u}_s(\Phi_{t \to s}(\mathbf{x}_t))$ — evaluates velocity $\mathbf{u}_s$ at the landing point $\Phi_{t \to s}(\mathbf{x}_t)$.
+- **3. Eulerian (Moving start $t$):** $\partial_t \Phi_{t \to s} + (\nabla_{\mathbf{x}}\Phi_{t \to s})\mathbf{u}_t = \mathbf{0}$ — evaluates velocity $\mathbf{u}_t$ at the start point $\mathbf{x}_t$ via 1 forward-mode JVP (Consistency Models, MeanFlow).
+:::
 
-| Identity Family | Mathematical Invariance ($s \le r \le t$) | What a Training Loss Requires | Representative Methods |
-| :--- | :--- | :--- | :--- |
-| **1. Compositional** (Semigroup) | $\Phi_{r \to s}\big(\Phi_{t \to r}(\mathbf{x}_t)\big) = \Phi_{t \to s}(\mathbf{x}_t)$ | Two student forward passes at $r$; no derivatives | Progressive Distillation (Salimans & Ho, 2022), Shortcut Models (Frans et al., 2025) |
-| **2. Lagrangian** (Moving endpoint $s$) | $\partial_s \Phi_{t \to s}(\mathbf{x}_t) = \mathbf{u}_s\big(\Phi_{t \to s}(\mathbf{x}_t)\big)$ | Velocity $\mathbf{u}_s$ evaluated at the **landing point** $\Phi_{t \to s}(\mathbf{x}_t)$ | Lagrangian Flow Maps (Boffi et al., 2025) |
-| **3. Eulerian** (Moving start $t$) | $\frac{d}{dt}\Phi_{t \to s}(\mathbf{x}_t) = \partial_t \Phi_{t \to s} + (\nabla_{\mathbf{x}}\Phi_{t \to s})\mathbf{u}_t = \mathbf{0}$ | Velocity $\mathbf{u}_t$ at the **start point** $\mathbf{x}_t$ + 1 forward-mode JVP | Consistency Models (Song et al., 2023), MeanFlow (Geng et al., 2025) |
+::: {.col .fig .big}
+@fig:ch17-diff-three-flowmap-ids
+:::
+:::
 :::
 
 ::: {.slide title="Consistency Models: Learning the Jump to t = 0"}
 [Enforcing Invariance Along Trajectories]{.kicker}
 
-A **consistency model** $f_{\boldsymbol\theta}(\mathbf{x}_t, t) = \Phi_{t \to 0}(\mathbf{x}_t)$ (Song et al., 2023; Lu & Song, 2025) restricts the flow map to fixed endpoint $s = 0$, enforcing self-consistency $f_{\boldsymbol\theta}(\mathbf{x}_t, t) = f_{\boldsymbol\theta}(\mathbf{x}_{t'}, t')$ along every trajectory with boundary condition $f_{\boldsymbol\theta}(\mathbf{x}_0, 0) = \mathbf{x}_0$:
-
+::: {.cols .vc}
+::: {.col}
 $$\frac{d}{dt}f_{\boldsymbol\theta}(\mathbf{x}_t, t) = \partial_t f_{\boldsymbol\theta}(\mathbf{x}_t, t) + \big(\nabla_{\mathbf{x}} f_{\boldsymbol\theta}(\mathbf{x}_t, t)\big)\,\mathbf{u}_t(\mathbf{x}_t) = \mathbf{0}$$
 
-- **Consistency Distillation (CD) vs. Consistency Training (CT):** CD uses a pretrained teacher's velocity $\hat{\mathbf{u}}_t(\mathbf{x}_t)$ to step along the trajectory; CT replaces the teacher with per-example conditional velocity $\boldsymbol\epsilon - \mathbf{x}_0$.
-- **Why multi-step consistency sampling requires stochastic re-noising:** Because $f_{\boldsymbol\theta}(\mathbf{x}_t, t)$ only maps to $s = 0$, taking a second step requires corrupting the first prediction back to $t = 0.5$ with **fresh noise** $\boldsymbol\epsilon'$ ($\mathbf{x}_{0.5} = 0.5\,\hat{\mathbf{x}}_0 + 0.5\,\boldsymbol\epsilon'$) before applying $f_{\boldsymbol\theta}(\mathbf{x}_{0.5}, 0.5)$—losing the deterministic noise-to-image bijection!
+- **Fixed endpoint $s = 0$ (Song et al., 2023):** Enforces $f_{\boldsymbol\theta}(\mathbf{x}_t, t) = \Phi_{t \to 0}(\mathbf{x}_t)$ along every trajectory with boundary condition $f_{\boldsymbol\theta}(\mathbf{x}_0, 0) = \mathbf{x}_0$.
+- **Why multi-step sampling requires stochastic re-noising:** Because $f_{\boldsymbol\theta}$ only jumps to $s = 0$, a second step must re-corrupt $\hat{\mathbf{x}}_0$ to $t = 0.5$ with fresh noise $\boldsymbol\epsilon'$, losing the deterministic ODE bijection.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-consistency-renoise
+:::
+:::
 :::
 
 ::: {.slide title="Deriving the Two-Time MeanFlow Identity"}
 [Exact Regression Target for Average Velocity]{.kicker}
 
-Retaining both start time $t$ and end time $s \le t$ in the average velocity $\bar{\mathbf{u}}(\mathbf{x}_t, s, t)$ enables deterministic multi-step jumping along a single ODE trajectory without re-noising. Differentiating $(t - s)\,\bar{\mathbf{u}}(\mathbf{x}_t, s, t) = \int_s^t \mathbf{u}_\tau(\mathbf{x}_\tau)\,d\tau$ with respect to $t$ at fixed $s$ by the product rule:
+::: {.cols .vc}
+::: {.col}
+$$\bar{\mathbf{u}}(\mathbf{x}_t, s, t) = \mathbf{u}_t(\mathbf{x}_t) - (t - s)\,\frac{d}{dt}\bar{\mathbf{u}}(\mathbf{x}_t, s, t)$$
 
-$$\frac{d}{dt}\Big[(t - s)\,\bar{\mathbf{u}}(\mathbf{x}_t, s, t)\Big] = \bar{\mathbf{u}}(\mathbf{x}_t, s, t) + (t - s)\,\frac{d}{dt}\bar{\mathbf{u}}(\mathbf{x}_t, s, t) = \mathbf{u}_t(\mathbf{x}_t)$$
+- **Product-rule derivation (Geng et al., 2025):** Differentiating $(t - s)\,\bar{\mathbf{u}}(\mathbf{x}_t, s, t) = \int_s^t \mathbf{u}_\tau(\mathbf{x}_\tau)\,d\tau$ with respect to $t$ at fixed $s$ yields an explicit fixed-point target for $\bar{\mathbf{u}}$.
+- **Single forward-mode JVP:** Along $d\mathbf{x}_t/dt = \mathbf{u}_t$, the total derivative $\frac{d}{dt}\bar{\mathbf{u}} = \partial_t\bar{\mathbf{u}} + (\nabla_{\mathbf{x}}\bar{\mathbf{u}})\mathbf{u}_t$ is one JVP along tangent $(\mathbf{u}_t, 1)$.
+:::
 
-- **The MeanFlow identity (Geng et al., 2025):** Rearranging yields an explicit fixed-point target for $\bar{\mathbf{u}}$:
-  $$\bar{\mathbf{u}}(\mathbf{x}_t, s, t) = \mathbf{u}_t(\mathbf{x}_t) - (t - s)\,\frac{d}{dt}\bar{\mathbf{u}}(\mathbf{x}_t, s, t)$$
-- **Computing $\frac{d}{dt}\bar{\mathbf{u}}$ via one forward-mode JVP:** By the chain rule along $d\mathbf{x}_t/dt = \mathbf{u}_t$, the total derivative $\frac{d}{dt}\bar{\mathbf{u}} = \partial_t\bar{\mathbf{u}} + (\nabla_{\mathbf{x}}\bar{\mathbf{u}})\mathbf{u}_t$ is a single **Jacobian–vector product (JVP)** of $(\mathbf{x}, t) \mapsto \bar{\mathbf{u}}(\mathbf{x}, s, t)$ along tangent vector $(\mathbf{u}_t, 1)$.
+::: {.col .fig}
+@fig:ch17-diff-meanflow-jvp
+:::
+:::
 :::
 
 ::: {.slide title="The Unified Flow-Map Loss and Stop-Gradient Rule"}
 [Four Few-Step Methods in One Equation]{.kicker}
 
-Turning the MeanFlow identity into a least-squares regression objective unifies four major few-step paradigms:
+::: {.cols .vc}
+::: {.col}
+$$\mathcal{L}_{\textrm{FM}}(\boldsymbol\theta) = \mathbb{E}\!\left[\Big\|\bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\!\Big[\mathbf{u}_{\textrm{ref}} - (t - s)\,\big(\partial_t\bar{\mathbf{u}}_{\boldsymbol\theta} + (\nabla_{\mathbf{x}}\bar{\mathbf{u}}_{\boldsymbol\theta})\mathbf{u}_{\textrm{ref}}\big)\Big]\Big\|^2\right]$$
 
-$$\mathcal{L}_{\textrm{FM}}(\boldsymbol\theta) = \mathbb{E}_{s, t, \mathbf{x}_0, \boldsymbol\epsilon}\!\left[\Big\|\bar{\mathbf{u}}_{\boldsymbol\theta}(\mathbf{x}_t, s, t) - \mathrm{sg}\!\Big[\mathbf{u}_{\textrm{ref}} - (t - s)\,\Big(\partial_t\bar{\mathbf{u}}_{\boldsymbol\theta} + (\nabla_{\mathbf{x}}\bar{\mathbf{u}}_{\boldsymbol\theta})\mathbf{u}_{\textrm{ref}}\Big)\Big]\Big\|^2\right]$$
+- **2×2 unification:** Choosing teacher $\hat{\mathbf{u}}_{\boldsymbol\phi}$ vs. conditional $\boldsymbol\epsilon - \mathbf{x}_0$ and $s = 0$ vs. $s \le t$ recovers **Consistency Distillation**, **Flow-Map Distillation**, **Consistency Training**, and **MeanFlow**.
+- **Mandatory stop-gradient $\mathrm{sg}[\cdot]$:** Freezing $\boldsymbol\theta$ inside the target prevents the student from minimizing variance by collapsing $\nabla_{\mathbf{x}}\bar{\mathbf{u}}_{\boldsymbol\theta}$.
+:::
 
-| Reference Velocity $\mathbf{u}_{\textrm{ref}}$ | Fixed Endpoint ($s = 0$) | Arbitrary Interval ($0 \le s \le t \le 1$) |
-| :--- | :--- | :--- |
-| **Pretrained Teacher** $\hat{\mathbf{u}}_{\boldsymbol\phi}(\mathbf{x}_t, t)$ | **Consistency Distillation** (Song et al., 2023; Lu & Song, 2025) | **Flow-Map Distillation** (Kim et al., 2024; Boffi et al., 2025) |
-| **Conditional Pair** $\boldsymbol\epsilon - \mathbf{x}_0$ (Teacher-Free) | **Consistency Training** (Song et al., 2023) | **MeanFlow** (Geng et al., 2025) |
-
-::: {.d2l-note .warn}
-**Why the stop-gradient $\mathrm{sg}[\cdot]$ (`.detach()`) is mandatory:** The conditional expectation $\mathbb{E}[\mathbf{u}_{\textrm{ref}} - (t-s)d\bar{\mathbf{u}}/dt \mid \mathbf{x}_t] = \mathbf{u}_t - (t-s)d\bar{\mathbf{u}}/dt$ only acts as the regression target if $\boldsymbol\theta$ is frozen inside $\mathrm{sg}[\cdot]$. Differentiating through the target lets the network minimize variance by collapsing $\nabla_{\mathbf{x}}\bar{\mathbf{u}}_{\boldsymbol\theta}$ instead of satisfying the identity!
+::: {.col .fig}
+@fig:ch17-diff-unified-fm-loss
+:::
 :::
 :::
 
@@ -1371,12 +1399,18 @@ Because `UNetFlowMap` integrates the teacher's deterministic ODE without re-nois
 ::: {.slide title="Distribution Matching Distillation (DMD) and Critics"}
 [Matching Marginal Densities Instead of ODE Trajectories]{.kicker}
 
-Flow-map distillation is upper-bounded by the teacher's ODE trajectories. An alternative paradigm trains a 1-step generator $\hat{\mathbf{x}}_0 = g_{\boldsymbol\theta}(\mathbf{z})$ to match the **output distribution** $q_{\boldsymbol\theta}$ to $p_{\textrm{data}}$:
+::: {.cols .vc}
+::: {.col}
+$$\nabla_{\boldsymbol\theta} D_{\textrm{KL}}\big(q_{\boldsymbol\theta, t} \,\|\, p_t\big) = \mathbb{E}_{\mathbf{z}, \boldsymbol\epsilon}\!\left[\big(\underbrace{\nabla \log q_{\boldsymbol\theta, t}(\mathbf{x}_t)}_{\text{online fake score}} - \underbrace{\nabla \log p_t(\mathbf{x}_t)}_{\text{frozen teacher score}}\big)^\top \frac{\partial \mathbf{x}_t}{\partial \boldsymbol\theta}\right]$$
 
-- **Why naive MSE regression onto teacher pairs $(\mathbf{z}, \Phi_{1 \to 0}(\mathbf{z}))$ blurs:** A single forward pass of a small network has limited capacity and averages nearby noise codes into blurry images.
-- **Distribution Matching Distillation (DMD; Yin et al., 2024):** Corrupts generated samples $\mathbf{x}_t = (1 - t)g_{\boldsymbol\theta}(\mathbf{z}) + t\boldsymbol\epsilon \sim q_{\boldsymbol\theta, t}$ and descends the KL divergence gradient across noise levels $t$ using two score networks:
-  $$\nabla_{\boldsymbol\theta} D_{\textrm{KL}}\big(q_{\boldsymbol\theta, t} \,\|\, p_t\big) = \mathbb{E}_{\mathbf{z}, \boldsymbol\epsilon}\!\left[\big(\underbrace{\nabla \log q_{\boldsymbol\theta, t}(\mathbf{x}_t)}_{\text{online fake score}} - \underbrace{\nabla \log p_t(\mathbf{x}_t)}_{\text{frozen teacher score}}\big)^\top \frac{\partial \mathbf{x}_t}{\partial \boldsymbol\theta}\right]$$
-- **Trade-off vs. Flow Maps:** Adding an adversarial discriminator on real images (ADD / DMD2; Sauer et al., 2023; Yin et al., 2024) lets 1-step generators even surpass the teacher's FD, but abandons the ODE trajectory bijection $\mathbf{z} \leftrightarrow \mathbf{x}_0$ needed for multi-step refinement and inversion.
+- **Distribution Matching Distillation (DMD; Yin et al., 2024):** Re-noises 1-step fake samples $\mathbf{x}_t = (1-t)g_{\boldsymbol\theta}(\mathbf{z}) + t\boldsymbol\epsilon$ and descends the reverse-KL score difference across noise levels $t$.
+- **Trade-off vs. Flow Maps:** Adding a real-image adversarial critic (ADD / DMD2) can surpass teacher FD in 1 step, but abandons the deterministic ODE trajectory bijection $\mathbf{z} \leftrightarrow \mathbf{x}_0$.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-dmd-two-scores
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Flow Maps, MeanFlow & Stop-Gradients"}

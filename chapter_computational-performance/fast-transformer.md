@@ -907,30 +907,34 @@ Case Study: Making a Transformer Fast Step by Step<br>**profile-guided Amdahl bo
 ::: {.slide title="A GPT Step Needs 6 ms of Math but Takes 25 ms"}
 [Motivation]{.kicker}
 
-Every preceding section isolated one performance bottleneck; in a real training loop, multiple bottlenecks coexist and removing one shifts the limit to the next. Consider our 6-block, width-512 GPT ($N = 19\text{M}$ parameters) trained on $64$ windows of $128$ bytes ($n = 8{,}192$ tokens/step):
+::: {.cols .vc}
+::: {.col}
+- **Hardware speed limit ($5.7\text{ ms}$):** One step of our 6-block, width-512 GPT ($N = 19\text{M}$, $n = 8{,}192$ tokens) performs $6Nn \approx 0.93\text{ TFLOP}$, requiring only $5.7\text{ ms}$ at $165.2\text{ TFLOP/s}$ (`bf16`).
+- **Measured `fp32` baseline ($\sim 25\text{ ms}$):** Runs $> 4\times$ slower than the `bf16` compute floor ($\sim 23\%$ MFU).
+- **Decomposing the gap:** Half comes from `tf32` vs. `bf16` Tensor Core rate; half comes from unfused bandwidth-bound kernels and dispatch gaps.
+:::
 
-- **Arithmetic per step:** $6 N n \approx 6 \times (1.9 \times 10^7) \times 8{,}192 \approx \mathbf{0.93\text{ TFLOP}}$ ($2N$ forward + $4N$ backward per token).
-- **Hardware speed limit on one RTX 4090:** At $165.2\text{ TFLOP/s}$ in `bfloat16`, the arithmetic requires only **$5.7\text{ ms}$** (or $11.3\text{ ms}$ at $82.6\text{ TFLOP/s}$ in `tf32`).
-- **Measured `float32` baseline with AdamW:** Takes **$\sim 25\text{ ms/step}$**—over $4\times$ longer than the `bfloat16` compute floor!
-
-::: {.d2l-note}
-Half of the $4\times$ gap comes from the number format (`tf32` vs. `bf16`); the other half comes from bandwidth-bound kernels and dispatch gaps that we will diagnose and eliminate one rung at a time.
+::: {.col .fig .big}
+@fig:ch13-perf-gpt-gap-overview
+:::
 :::
 :::
 
 ::: {.slide title="Choosing Model Width 512: Placing Matmuls Above I*"}
 [Roofline Positioning]{.kicker}
 
-Why did we double the GPT width from $d = 256$ to $d = 512$ for this case study? Let us check the arithmetic intensity of multiplying $n = 8{,}192$ token rows by a $d \times d'$ block projection weight matrix ($d' \in [d, 4d]$, $b$ bytes per element):
-
+::: {.cols .vc}
+::: {.col}
 $$I \;=\; \frac{2 n d d'}{b\,(n d + d d' + n d')}$$
 
-| Number Format ($b$ Bytes) | Matmul Intensity at $d = 512$ ($n = 8192$) | RTX 4090 Ridge Point $I^* = P/\beta$ | Roofline Regime at $d = 512$ |
-| :--- | :---: | :---: | :--- |
-| **`tf32` Tensor Cores ($b = 4\text{ B}$)** | $125\text{--}185\text{ FLOP/byte}$ | $82\text{ FLOP/byte}$ | **Compute-bound** ($I > I^*$) |
-| **`bfloat16` Tensor Cores ($b = 2\text{ B}$)** | $250\text{--}370\text{ FLOP/byte}$ | $164\text{ FLOP/byte}$ | **Compute-bound** ($I > I^*$) |
+- **Clearing the ridge point:** At $d = 512$ and $n = 8{,}192$ tokens, block projections achieve $I = 125\text{--}185\text{ FLOP/B}$ in `tf32` ($> I^* = 82$) and $250\text{--}370\text{ FLOP/B}$ in `bf16` ($> I^* = 164$).
+- **Why width 512 matters:** Because every GEMM sits firmly on the compute roof, doubling Tensor Core $P$ from `tf32` to `bf16` cuts GEMM time directly in half.
+:::
 
-- **Consequence:** Because all block projections clear the ridge point at width $512$, doubling Tensor Core throughput from `tf32` to `bfloat16` shortens the matrix products directly (whereas at $d = 256$ they straddle the ridge).
+::: {.col .fig}
+@fig:ch13-perf-width512-roofline
+:::
+:::
 :::
 
 ::: {.slide title="End-to-End Experimental Setup and Timing Protocol"}
@@ -947,15 +951,17 @@ To ensure every optimization is judged on equal footing, our benchmark holds the
 ::: {.slide title="Using the Previous Profile to Bound the Next Speedup"}
 [Predictive Method]{.kicker}
 
-Before applying any optimization, the kernel profile of the *current* step gives an Amdahl upper bound on what the *next* optimization can gain:
+::: {.cols .vc}
+::: {.col}
+- **Host dispatch & fusion bounds:** Removing idle launch gaps bounds speedup by $t_{\textrm{step}}/t_{\textrm{busy}}$, while fusing non-matmul kernels ($t_{\textrm{other}}$) bounds speedup by $t_{\textrm{step}}/t_{\textrm{products}}$.
+- **Precision (`tf32` $\to$ `bf16`):** When GEMMs take share $f$ of the step, doubling GEMM rate gives $\ge \frac{1}{1 - f/2}$ (up to $2.0\times$ as activation traffic also halves).
+- **Batch sizing & remat:** Growing $B \to 8B$ amortizes only fixed $40\text{ B/param}$ work ($\le 1.05\times$), while remat costs $+2N\text{ FLOPs/tok}$ ($\ge 0.75\times$).
+:::
 
-| Optimization Candidate | Target Share of Current Step | Maximum Possible Speedup Bound |
-| :--- | :--- | :--- |
-| **1. Eliminating host dispatch overhead** | Idle gap $t_{\textrm{step}} - t_{\textrm{busy}}$ | $\le \dfrac{t_{\textrm{step}}}{t_{\textrm{busy}}}$ |
-| **2. Operator fusion (`torch.compile` / XLA)** | Non-matmul kernel time $t_{\textrm{other}}$ | $\le \dfrac{t_{\textrm{step}}}{t_{\textrm{products}}}$ (if $t_{\textrm{other}} \to 0$) |
-| **3. Switching `tf32` $\to$ `bf16` (matmul share $f$)** | Matmul time $f \cdot t_{\textrm{step}}$ (plus activation bytes) | Between $\dfrac{1}{1 - f/2}$ (matmuls only) and $2.0\times$ |
-| **4. Enlarging minibatch ($B \to 8B$)** | Fixed per-step parameter work $t_{\textrm{fixed}}$ | $\le \dfrac{t_{\textrm{step}}}{t_{\textrm{step}} - \frac{7}{8}t_{\textrm{fixed}}}$ |
-| **5. Activation checkpointing** | Extra block forward pass ($+2N$ FLOPs/tok) | **Slowdown:** $\ge \dfrac{6}{8} = 0.75\times$ (or $\dfrac{t_{\textrm{step}}}{t_{\textrm{step}} + t_{\textrm{fwd}}}$) |
+::: {.col .fig .big}
+@fig:ch13-perf-amdahl-bounds
+:::
+:::
 :::
 
 ::: {.slide title="Rung 0 (Baseline): Profiling the Eager fp32 Step" only="pytorch"}
@@ -1114,16 +1120,18 @@ Summarizing all single-GPU rungs side by side converts token throughput into ach
 ::: {.slide title="Predicting Multi-GPU Scaling From Step and Link Times"}
 [Data-Parallel Cost Model]{.kicker}
 
-Now we scale across $k \in \{1, 2, 4\}$ RTX 4090s using weak scaling (fixing the per-GPU batch size so total tokens scale as $k$). Without overlap, our §13.5 cost model gives a lower bound on weak-scaling speedup:
+::: {.cols .vc}
+::: {.col}
+$$\textrm{Speedup}(k) \;\gtrsim\; \frac{k\, t_{\textrm{step}}(1)}{t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k)}$$
 
-$$t_{\textrm{step}}(k) \;\approx\; t_{\textrm{step}}(1) \;+\; \frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}, \qquad \textrm{Speedup}(k) \;\gtrsim\; \frac{k\, t_{\textrm{step}}(1)}{t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k)}$$
+- **Fixed $76\text{ MB}$ allreduce cost:** Over host-staged PCIe ($\beta_{\textrm{link}} \approx 0.42\text{ ns/B}$), syncing $19\text{M}$ `fp32` grads takes $31\text{ ms}$ ($k=2$) and $47\text{ ms}$ ($k=4$).
+- **Two opposite predictions:** At batch $64$ ($t_{\textrm{step}}(1) \approx 22\text{ ms} < 31\text{ ms}$), $k=2$ **slows down** ($\sim 0.85\times$); at batch $512$ ($t_{\textrm{step}}(1) \approx 95\text{ ms}$), $k=4$ achieves **$\ge 2.65\times$**!
+:::
 
-- **Allreduce time for $N = 19\text{M}$ `float32` gradients ($S = 76\text{ MB}$, $\beta_{\textrm{link}} \approx 0.42\text{ ns/B}$):**
-  - **$k = 2$ GPUs:** $t_{\textrm{allreduce}}(2) = S\beta_{\textrm{link}} \approx \mathbf{31\text{ ms}}$.
-  - **$k = 4$ GPUs:** $t_{\textrm{allreduce}}(4) = 1.5\,S\beta_{\textrm{link}} \approx \mathbf{47\text{ ms}}$.
-- **Two opposite predictions:**
-  1. **Compiled `fp32` at batch 64/GPU ($t_{\textrm{step}}(1) \approx 22\text{ ms} < 31\text{ ms}$):** The allreduce takes longer than the step! Equation predicts a **slowdown on 2 GPUs ($\sim 0.85\times$)** and only $\sim 1.3\times$ on 4 GPUs.
-  2. **Compiled `bf16` at batch 512/GPU ($t_{\textrm{step}}(1) \approx 95\text{ ms} \gg 31\text{ ms}$):** Predicts **$\ge 1.5\times$ on 2 GPUs** and **$\ge 2.6\text{--}2.7\times$ on 4 GPUs**.
+::: {.col .fig}
+@fig:ch13-perf-multigpu-batch-crossover
+:::
+:::
 :::
 
 ::: {.slide title="Measured Scaling: Batch 64 Loses, Batch 512 Hits 3×"}
@@ -1151,11 +1159,17 @@ A $2\times$ faster single-GPU step is only valid if it learns the same represent
 ::: {.slide title="Throughput vs. Time-to-Target-Loss"}
 [Optimization Caveat]{.kicker}
 
-Why did $200$ steps at batch size $512$ ($13.1\text{M}$ tokens, validation loss $\sim 2.08$) finish at a higher loss than $1{,}000$ steps at batch size $64$ ($8.2\text{M}$ tokens, validation loss $\sim 1.35$ in Chapter 11)?
+::: {.cols .vc}
+::: {.col}
+- **The critical batch size ($b_{\textrm{noise}}$):** Training at batch size $b$ requires $E(b) = E_{\min}(1 + b/b_{\textrm{noise}})$ total tokens to reach a target validation loss.
+- **Diminishing returns past $b_{\textrm{noise}}$:** When $b \gg b_{\textrm{noise}}$, cleaner gradient estimates make nearly the same parameter progress per step as smaller batches, needing more total tokens.
+- **Systems rule:** Batch-preserving speedups (`compile`, `bf16`, FlashAttention, strong-scaling DP) always cut time-to-loss; batch-growing changes help only while $b \lesssim b_{\textrm{noise}}$.
+:::
 
-- **The critical batch size ($b_{\textrm{noise}}$):** By the gradient-noise-scale model, training at batch size $b$ requires $E(b) = E_{\min}(1 + b / b_{\textrm{noise}})$ total tokens to reach a target loss.
-- **Diminishing statistical returns past $b_{\textrm{noise}}$:** When $b \ll b_{\textrm{noise}}$, doubling batch size halves the steps needed; when $b \gg b_{\textrm{noise}}$, larger batches compute cleaner gradient estimates that make nearly the same parameter progress per step as a smaller batch— requiring more total tokens $E(b)$.
-- **Systems takeaway:** Systems optimizations that preserve batch size (`compile`, `bf16`, FlashAttention, strong-scaling DP) reduce time-to-target-loss unconditionally; batch-enlarging changes (`+ batch 512`, weak-scaling DP) reduce time-to-target-loss only while global batch size remains near or below $b_{\textrm{noise}}$.
+::: {.col .fig .big}
+@fig:ch13-perf-critical-batch-noise
+:::
+:::
 :::
 
 ::: {.slide title="Millisecond Accounting of the Final Step"}

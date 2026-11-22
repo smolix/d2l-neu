@@ -337,105 +337,157 @@ Measuring Classifiers: Precision, Recall, Costs & Calibration<br>**class imbalan
 ::: {.slide title="When Higher Accuracy Means a Worse Classifier"}
 [The Limits of Raw Accuracy]{.kicker}
 
-Our Fashion-MNIST classifier achieved $\sim 83\%$ accuracy because all $10$ garment classes are balanced and every mistake carries equal weight. In real deployments, three everyday conditions break that symmetry:
+::: {.cols .vc}
+::: {.col}
+Our Fashion-MNIST classifier achieved $\sim 83\%$ accuracy because all $10$ garment classes are balanced and every mistake carries equal weight. In real deployments, three conditions break that symmetry:
 
-- **Severe class imbalance:** When only $1\%$ of patients carry a disease (or $0.1\%$ of credit-card transactions are fraudulent), a trivial rule that always predicts the majority class scores $99\%$ or $99.9\%$ accuracy while detecting **zero** positive cases.
-- **Asymmetric error costs:** Missing a life-threatening illness (a false negative) is vastly costlier than ordering a confirmatory lab test (a false positive).
-- **Probability-driven decisions:** Downstream decision rules act directly on the numerical value of $\hat{p} = P(y \mid \mathbf{x})$, which is valid only if predicted confidences match empirical accuracy (*calibration*).
+- **Severe class imbalance:** Under $1\%$ disease prevalence, always predicting *healthy* scores $99\%$ accuracy while detecting **zero** positive cases.
+- **Asymmetric error costs:** Missing an illness ($\mathrm{FN}$) is vastly costlier than ordering a confirmatory test ($\mathrm{FP}$).
+- **Probability-driven decisions:** Threshold rules act directly on $\hat{p} = P(y \mid \mathbf{x})$, requiring predicted confidences to match empirical accuracy (*calibration*).
+:::
+
+::: {.col .fig .big}
+@fig:ch03-cls-accuracy-limits
+:::
+:::
 :::
 
 ::: {.slide title="The Binary Confusion Matrix Under Class Imbalance"}
 [1% Disease Prevalence Benchmark]{.kicker}
 
-Suppose we screen $100{,}000$ people for a disease with $1\%$ prevalence ($1{,}000$ sick, $99{,}000$ healthy) using a test that detects $90\%$ of sick patients while falsely flagging $5\%$ of healthy people:
-
-| Prediction \ True Status | Sick (Positive, $1{,}000$) | Healthy (Negative, $99{,}000$) | Row Total |
-|:--|--:|--:|--:|
-| **Predicted Sick** | $\mathrm{TP} = 900$ | $\mathrm{FP} = 4{,}950$ | $5{,}850$ flagged |
-| **Predicted Healthy** | $\mathrm{FN} = 100$ | $\mathrm{TN} = 94{,}050$ | $94{,}150$ cleared |
+::: {.cols .vc}
+::: {.col}
+Screening $100{,}000$ people at $1\%$ prevalence ($1{,}000$ sick, $99{,}000$ healthy) with a test that detects $90\%$ of sick patients ($\mathrm{TP}=900, \mathrm{FN}=100$) and falsely flags $5\%$ of healthy people ($\mathrm{FP}=4{,}950, \mathrm{TN}=94{,}050$):
 
 - **The accuracy paradox:** Summing the diagonal gives $(900 + 94{,}050) / 100{,}000 = 94.95\%$ accuracy—so raw accuracy ranks the useless *"always-healthy"* rule ($99.0\%$) ahead of a test that catches $90\%$ of sick patients!
+- **Why accuracy fails:** True negatives ($\mathrm{TN} = 94{,}050$) swamp the denominator while the $1{,}000$ sick patients contribute at most $1\%$.
+:::
 
-::: {.d2l-note .warn}
-Because $99\%$ of the population is healthy, true negatives ($\mathrm{TN}$) swamp the accuracy denominator while the $1{,}000$ sick patients contribute at most $1\%$ to overall accuracy.
+::: {.col .fig .big}
+@fig:ch03-cls-imbalance-matrix
+:::
 :::
 :::
 
 ::: {.slide title="Isolating Positive Detection: Recall and Precision"}
 [Column vs. Row Ratios]{.kicker}
 
-To evaluate performance on the positive class without being swamped by true negatives ($\mathrm{TN}$), we pair two complementary ratios from the binary confusion matrix:
+::: {.cols .vc}
+::: {.col}
+To evaluate positive detection without being swamped by $\mathrm{TN}$, we pair two complementary ratios:
 
 $$\mathrm{recall} = \frac{\mathrm{TP}}{\mathrm{TP} + \mathrm{FN}}, \qquad \mathrm{precision} = \frac{\mathrm{TP}}{\mathrm{TP} + \mathrm{FP}}$$
 
-- **Recall (sensitivity / true-positive rate):** Reads down the *Sick* column—the fraction of truly sick patients caught ($900 / 1{,}000 = 0.90$, versus $0.00$ for *"always healthy"*).
-- **Precision (positive predictive value):** Reads across the *Predicted Sick* row—the fraction of positive flags that are genuinely sick ($900 / 5{,}850 \approx 0.154$).
-- **Why $15\%$ precision is still clinically valuable:** In two-stage screening, the cheap first test catches $90\%$ of cases and sends only the $5{,}850$ flagged patients ($5.85\%$ of the population) to a definitive follow-up test.
+- **Recall ($900/1{,}000 = 0.90$):** Fraction of truly sick patients caught (vs. $0.00$ for *"always healthy"*).
+- **Precision ($900/5{,}850 \approx 0.154$):** Fraction of positive flags that are genuinely sick—sending only $5.85\%$ of the population to confirmatory testing.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-recall-vs-precision
+:::
+:::
 :::
 
 ::: {.slide title="How Precision Scales with Population Prevalence"}
 [Bayes' Theorem in Classifier Evaluation]{.kicker}
 
-Holding our test's intrinsic recall ($0.90$) and false-alarm rate ($\mathrm{FPR} = \mathrm{FP}/(\mathrm{FP}+\mathrm{TN}) = 0.05$) fixed while sweeping the disease prevalence $\pi = P(\text{sick})$ shows what depends on the population:
+::: {.cols .vc}
+::: {.col}
+Holding intrinsic recall ($0.90$) and false-alarm rate ($\mathrm{FPR} = 0.05$) fixed while sweeping disease prevalence $\pi = P(\text{sick})$:
 
 @classification-beyond-accuracy
 
-::: {.d2l-note .rule}
-**Intrinsic vs. prevalence-dependent metrics:** Recall $P(\text{flagged} \mid \text{sick})$ and false-alarm rate $P(\text{flagged} \mid \text{healthy})$ are properties of the *classifier alone*, whereas precision $P(\text{sick} \mid \text{flagged}) = \frac{\text{recall}\cdot\pi}{\text{recall}\cdot\pi + \text{FPR}\cdot(1-\pi)}$ depends strongly on population prevalence $\pi$ via Bayes' theorem.
+- **Intrinsic vs. prevalence-dependent:** Recall and $\mathrm{FPR}$ belong to the *classifier alone*, whereas precision $P(\text{sick} \mid \text{flagged}) = \frac{\text{recall}\cdot\pi}{\text{recall}\cdot\pi + \mathrm{FPR}\cdot(1-\pi)}$ scales with population prevalence $\pi$ via Bayes' rule.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-prevalence-bayes
+:::
 :::
 :::
 
 ::: {.slide title="Asymmetric Error Costs and Expected Risk"}
 [Cost-Sensitive Evaluation]{.kicker}
 
-When false negatives and false positives carry unequal penalties $\kappa_{\mathrm{FN}}$ and $\kappa_{\mathrm{FP}}$ (with correct classifications costing $0$), we evaluate classifiers by their **expected cost per person**:
+::: {.cols .vc}
+::: {.col}
+When false negatives and false positives carry unequal penalties $\kappa_{\mathrm{FN}}$ and $\kappa_{\mathrm{FP}}$, we evaluate classifiers by **expected cost per person**:
 
 $$\text{Expected Cost} = \frac{\kappa_{\mathrm{FN}}\cdot\mathrm{FN} + \kappa_{\mathrm{FP}}\cdot\mathrm{FP}}{n}$$
 
 - **Numerical comparison ($\kappa_{\mathrm{FN}} = 100,\; \kappa_{\mathrm{FP}} = 1$):**
-  - *"Always healthy"* ($\mathrm{FN} = 1{,}000,\; \mathrm{FP} = 0$): costs $(100 \times 1{,}000) / 100{,}000 = 1.00$ per person.
-  - *Screening test* ($\mathrm{FN} = 100,\; \mathrm{FP} = 4{,}950$): costs $(100 \times 100 + 1 \times 4{,}950) / 100{,}000 = 0.1495$ per person—nearly **$7\times$ lower cost** despite $4$ points lower accuracy!
+  - *"Always healthy"* ($\mathrm{FN} = 1{,}000,\; \mathrm{FP} = 0$): costs $1.00$ per person.
+  - *Screening test* ($\mathrm{FN} = 100,\; \mathrm{FP} = 4{,}950$): costs $0.1495$ per person—**$6.7\times$ lower cost** despite $4$ points lower accuracy!
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-asymmetric-cost
+:::
+:::
 :::
 
 ::: {.slide title="Deriving the Bayes-Optimal Decision Threshold"}
 [From Probabilities to Optimal Actions]{.kicker}
 
-Given a calibrated probability estimate $p = P(\text{sick} \mid \mathbf{x})$ for an individual, what decision minimizes expected cost?
+::: {.cols .vc}
+::: {.col}
+Given a calibrated probability $p = P(\text{sick} \mid \mathbf{x})$, predicting *healthy* costs $p\,\kappa_{\mathrm{FN}}$ in expectation while predicting *sick* costs $(1 - p)\,\kappa_{\mathrm{FP}}$:
 
-- **Expected cost of each action:** Predicting *healthy* incurs expected cost $p\,\kappa_{\mathrm{FN}}$, while predicting *sick* incurs expected cost $(1 - p)\,\kappa_{\mathrm{FP}}$.
-- **Optimal threshold rule:** Flag the patient as *sick* whenever predicting *sick* is cheaper than predicting *healthy*:
-  $$p\,\kappa_{\mathrm{FN}} > (1 - p)\,\kappa_{\mathrm{FP}} \quad \Longleftrightarrow \quad p > \tau^* = \frac{\kappa_{\mathrm{FP}}}{\kappa_{\mathrm{FP}} + \kappa_{\mathrm{FN}}}$$
-- **Concrete impact:** Equal costs ($\kappa_{\mathrm{FN}} = \kappa_{\mathrm{FP}}$) recover the standard $\tau^* = 1/2$ ($\operatorname{argmax}$) rule. When $\kappa_{\mathrm{FN}} = 100$ and $\kappa_{\mathrm{FP}} = 1$, the threshold drops to $\tau^* = 1/101 \approx 0.01$: even a $2\%$ predicted risk warrants flagging the patient!
+$$p\,\kappa_{\mathrm{FN}} > (1 - p)\,\kappa_{\mathrm{FP}} \quad \Longleftrightarrow \quad p > \tau^* = \frac{\kappa_{\mathrm{FP}}}{\kappa_{\mathrm{FP}} + \kappa_{\mathrm{FN}}}$$
+
+- **Equal costs ($\kappa_{\mathrm{FN}} = \kappa_{\mathrm{FP}}$):** Recovers standard $\tau^* = 1/2$ ($\operatorname{argmax}$).
+- **100:1 cost ratio:** Drops threshold to $\tau^* = 1/101 \approx 0.01$—even a $2\%$ predicted risk warrants flagging!
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-cost-threshold
+:::
+:::
 :::
 
 ::: {.slide title="Threshold Trade-Offs: Precision, Recall, F1 & ROC"}
 [Sweeping the Decision Threshold]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Varying the decision threshold $\tau \in [0, 1]$ trades recall directly against precision and false alarms:
 
-- **Lowering $\tau$ ($\tau \downarrow$):** Flags more examples, which monotonically **increases recall** ($\mathrm{TP} \uparrow$) while **decreasing precision** ($\mathrm{FP} \uparrow$).
-- **F1 score (when explicit costs are unavailable):** Summarizes precision and recall at a chosen threshold via their harmonic mean, $\mathrm{F1} = \frac{2\,\mathrm{precision}\cdot\mathrm{recall}}{\mathrm{precision} + \mathrm{recall}}$, which is small whenever either precision or recall is small.
-- **Threshold-free curves (Exercises 4–5):**
-  - **ROC curve:** Plots recall ($\mathrm{TPR}$) against false-positive rate ($\mathrm{FPR}$) as $\tau$ sweeps from $1$ to $0$; its area (**AUC**) equals the probability that a random positive ranks above a random negative and is invariant to class prevalence.
-  - **Precision–Recall curve:** Plots precision against recall; far more informative than ROC under severe class imbalance ($1\%$ positives).
+- **Lowering $\tau$ ($\tau \downarrow$):** Monotonically **increases recall** ($\mathrm{TP} \uparrow$) while **decreasing precision** ($\mathrm{FP} \uparrow$).
+- **F1 score:** Harmonic mean $\mathrm{F1} = \frac{2\,\mathrm{precision}\cdot\mathrm{recall}}{\mathrm{precision} + \mathrm{recall}}$, which is small whenever either precision or recall is small.
+- **Threshold-free curves:** **ROC** ($\mathrm{TPR}$ vs. $\mathrm{FPR}$, prevalence-invariant $\mathrm{AUC}$) and **Precision–Recall** (far more informative under $1\%$ imbalance).
+:::
+
+::: {.col .fig .big}
+@fig:ch03-cls-threshold-sweep
+:::
+:::
 :::
 
 ::: {.slide title="What Does It Mean for a Classifier to Be Calibrated?"}
 [Trustworthy Probability Estimates]{.kicker}
 
-Cost-sensitive decision rules ($p > \kappa_{\mathrm{FP}}/(\kappa_{\mathrm{FP}}+\kappa_{\mathrm{FN}})$) take the model's output probability literally. For a $q$-class classifier, define each prediction's **confidence** and **correctness**:
+::: {.cols .vc}
+::: {.col}
+For a $q$-class classifier, define each prediction's **confidence** and **correctness**:
 
-$$\hat{p}^{(i)} = \max_{j \in \{1,\ldots,q\}} \hat{y}^{(i)}_j, \qquad c^{(i)} = \mathbf{1}\!\Big(\operatorname*{argmax}_j \hat{y}^{(i)}_j = y^{(i)}\Big)$$
+$$\hat{p}^{(i)} = \max_{j} \hat{y}^{(i)}_j, \qquad c^{(i)} = \mathbf{1}\!\Big(\operatorname*{argmax}_j \hat{y}^{(i)}_j = y^{(i)}\Big)$$
 
-- **Top-class calibration condition:** Among all examples where the classifier reports confidence $\hat{p} \approx \alpha$, the empirical fraction of correct predictions should equal $\alpha$:
-  $$P\big(c = 1 \;\big|\; \hat{p} = \alpha\big) = \alpha \quad \text{for all } \alpha \in [1/q, 1]$$
-- **Accuracy vs. calibration are orthogonal:** A trivial classifier on $10$ balanced classes that always predicts uniform probabilities $(0.1, \ldots, 0.1)$ has $10\%$ accuracy at $0.10$ confidence—**perfectly calibrated, yet useless**! Conversely, a $95\%$-accurate model that always reports confidence $1.00$ is sharp but miscalibrated.
+- **Top-class calibration:** Among examples where the model reports confidence $\hat{p} \approx \alpha$, the empirical accuracy satisfies $P(c = 1 \mid \hat{p} = \alpha) = \alpha$.
+- **Orthogonal to accuracy:** Predicting uniform $(0.1, \ldots, 0.1)$ on $10$ balanced classes is perfectly calibrated ($10\%$ accuracy at $0.10$ confidence) yet useless!
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-calibration-meaning
+:::
+:::
 :::
 
 ::: {.slide title="Reliability Bins and Expected Calibration Error (ECE)"}
 [Quantifying Miscalibration]{.kicker}
 
-To measure calibration on $n$ validation examples, we partition $[0, 1]$ into $B = 10$ equal-width confidence bins $I_b = [\frac{b-1}{B}, \frac{b}{B})$ and compare each bin's mean confidence $\bar{c}_b$ against its empirical accuracy $a_b$:
+::: {.cols .vc}
+::: {.col}
+Partition $[0, 1]$ into $B = 10$ confidence bins $I_b = [\frac{b-1}{B}, \frac{b}{B})$ and compare each bin's mean confidence $\bar{c}_b$ against empirical accuracy $a_b$:
 
 $$\mathrm{ECE} = \sum_{b=1}^B \frac{n_b}{n}\,\big|a_b - \bar{c}_b\big|$$
 
@@ -443,7 +495,13 @@ $$\mathrm{ECE} = \sum_{b=1}^B \frac{n_b}{n}\,\big|a_b - \bar{c}_b\big|$$
 
 @classification-calibration-2
 
-- **Empty low-confidence bins:** Because the maximum of $q = 10$ probabilities summing to $1$ is always at least $1/10 = 0.10$ (by the pigeonhole principle), bin $[0, 0.1)$ is mathematically guaranteed to have $n_1 = 0$.
+- **Empty low bins:** By the pigeonhole principle, $\max_j \hat{y}_j \ge 1/10$, so bin $[0, 0.1)$ always has $n_1 = 0$.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-ece-bins
+:::
+:::
 :::
 
 ::: {.slide title="Auditing Calibration of Softmax Regression"}
@@ -477,12 +535,18 @@ Plotting bin accuracy $a_b$ against mean confidence $\bar{c}_b$ for all bins wit
 ::: {.slide title="Post-Hoc Recalibration via Temperature Scaling"}
 [One-Parameter Convex Calibration Fix]{.kicker}
 
-When a classifier is miscalibrated, **temperature scaling** (Guo et al., 2017) freezes the trained weights and fits a single scalar temperature $T > 0$ on a held-out validation split to minimize the negative log-likelihood of $\mathrm{softmax}(\mathbf{o} / T)$:
+::: {.cols .vc}
+::: {.col}
+**Temperature scaling** (Guo et al., 2017) freezes trained weights and fits a single scalar $T > 0$ on a held-out validation split to minimize validation NLL of $\mathrm{softmax}(\mathbf{o} / T)$:
 
 @classification-temperature-scaling
 
-::: {.d2l-note .rule}
-**Why fit $T$ on held-out data?** Fitting $T$ on the training set would reflect the model's overfitted training margins rather than its generalization margins. Because $T > 0$ preserves logit order, temperature scaling recalibrates confidence while leaving every class decision and overall accuracy **100% unchanged**.
+- **Why held-out data & zero accuracy loss:** Fitting $T$ on validation data reflects generalization margins, and because $T > 0$ preserves logit ranking, every class prediction and overall accuracy stay **100% unchanged**.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-temp-recalibration
+:::
 :::
 :::
 

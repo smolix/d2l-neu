@@ -943,12 +943,18 @@ Language Models, Perplexity, and Bits per Byte<br>**chain-rule factorization · 
 ::: {.slide title="The Core Problem of Statistical Language Modeling"}
 [Motivation & Chain-Rule Formulation]{.kicker}
 
-Whether an automatic speech recognizer is deciding between the acoustically identical phrases *"to recognize speech"* and *"to wreck a nice beach"*, or an LLM is answering *"The Time Machine was written by ___"*, the core requirement is a **language model** that assigns a probability $P(x_1, \ldots, x_T)$ to any sequence of tokens $x_t \in \mathcal{V}$:
+::: {.cols .vc}
+::: {.col}
+$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t})$$
 
-$$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}), \qquad x_{<t} = (x_1, \ldots, x_{t-1})$$
+- **Overcoming the $10^{30}$ sequence explosion:** Over a 1,024-token vocabulary, $1024^{10} \approx 10^{30}$ length-10 sequences exist, yet the chain rule reduces joint density estimation to next-token classification at each step $t$.
+- **One distribution, two operations:** The conditionals $P(x_t \mid x_{<t})$ both **score** candidate passages (e.g., disambiguating acoustic homophones in ASR) and **generate** new text via left-to-right ancestral sampling.
+:::
 
-- **Overcoming the $10^{30}$ sequence explosion:** Over our 1,024-token BPE vocabulary, there are $1024^{10} \approx 1.27 \times 10^{30}$ sequences of length 10—impossible to tabulate jointly, yet exact chain-rule factorization reduces the task to predicting a categorical distribution over $|\mathcal{V}|$ next tokens at each step $t$.
-- **One distribution, two operations:** The exact same next-token conditionals $P(x_t \mid x_{<t})$ let us **score** any candidate passage (by summing $\log P(x_t \mid x_{<t})$) and **generate** new text (by sampling $x_t \sim P(x_t \mid x_{<t})$ left to right).
+::: {.col .fig}
+@fig:ch08-rnn-lm-scoring-generation
+:::
+:::
 :::
 
 ::: {.slide title="Markov Truncation and n-Gram Maximum Likelihood"}
@@ -1039,15 +1045,18 @@ Plotting rank–frequency curves for word unigrams, bigrams, and trigrams on the
 ::: {.slide title="Perplexity: Effective Branching Factor per Token"}
 [Quantitative Evaluation Metric]{.kicker}
 
-To evaluate language models objectively across passages of any length $T$, we measure the exponential of the average per-token cross-entropy (surprisal in nats), known as **perplexity** ($\textrm{PPL}$):
+::: {.cols .vc}
+::: {.col}
+$$\textrm{PPL} = \exp\left(-\frac{1}{T}\sum_{t=1}^T \log P(x_t \mid x_{<t})\right)$$
 
-$$\textrm{PPL} = \exp\left(-\frac{1}{T}\sum_{t=1}^T \log P(x_t \mid x_{<t})\right) = \left(\prod_{t=1}^T \frac{1}{P(x_t \mid x_{<t})}\right)^{1/T}$$
+- **Effective branching factor:** Assigning probability $1/k$ to every target token yields $\textrm{PPL} = k$—matching the uncertainty of rolling a fair $k$-sided die at each step.
+- **Calibration scale:** Ranges from $\textrm{PPL} = 1$ (deterministic oracle) to $|\mathcal{V}|$ (uniform guessing) and $\infty$ whenever any test token receives probability $0$.
+:::
 
-- **Intuition (effective branching factor):** If a model assigns probability $1/k$ to every observed target token, its perplexity is $\exp(\log k) = k$—equivalent to rolling a fair $k$-sided die at every token position.
-- **Three calibration anchors:**
-  1. **Perfect oracle ($P = 1$):** $\textrm{PPL} = \exp(0) = 1$ (minimum possible perplexity).
-  2. **Uniform random guessing ($P = 1/|\mathcal{V}|$):** $\textrm{PPL} = |\mathcal{V}|$ (any useful model must beat $|\mathcal{V}|$).
-  3. **Zero probability on any test token ($P = 0$):** $\textrm{PPL} = \infty$ (unsmoothed MLE $n$-grams fail immediately).
+::: {.col .fig}
+@fig:ch08-rnn-perplexity-scale
+:::
+:::
 :::
 
 ::: {.slide title="Laplace (Add-α) Smoothing and Its Failure Modes"}
@@ -1066,13 +1075,19 @@ $$\hat{P}_\alpha(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) = \frac{N(x_{t-n+1}, \ldot
 ::: {.slide title="Interpolated Kneser–Ney: Discounting & Backoff"}
 [State-of-the-Art Count Smoothing]{.kicker}
 
-**Interpolated Kneser–Ney smoothing** (Kneser & Ney, 1995; Chen & Goodman, 1999) repairs both defects of Laplace smoothing by combining three statistical mechanisms for context $u$, target $w$, and backed-off suffix $u' = u_{2:}$:
+::: {.cols .vc}
+::: {.col}
+$$P_{\textrm{KN}}(w \mid u) = \frac{\max(N(u, w) - D,\, 0)}{N(u)} + \frac{D\,S(u)}{N(u)}\,P_{\textrm{KN}}(w \mid u')$$
 
-$$P_{\textrm{KN}}(w \mid u) = \frac{\max\bigl(N(u, w) - D,\, 0\bigr)}{N(u)} + \frac{D\,S(u)}{N(u)}\,P_{\textrm{KN}}(w \mid u')$$
+- **Absolute discounting ($D \approx 0.90$):** Subtracts $D = c_1 / (c_1 + 2c_2)$ from every nonzero count to correct singleton selection bias, freeing mass $D\,S(u)/N(u)$.
+- **Recursive interpolation:** Allocates the freed mass to the backed-off suffix context $u' = u_{2:}$ down to the uniform floor $1/|\mathcal{V}|$.
+- **Continuation counts at lower orders:** Lower orders count how many *distinct predecessors* precede $w$ (rewarding versatile `"said"` over context-bound `"traveller"`).
+:::
 
-1. **Absolute discounting ($0 < D < 1$):** Empirical counts of singletons ($N = 1$) systematically overestimate true rates due to selection bias; subtracting $D = c_1 / (c_1 + 2c_2) \approx 0.90$ frees probability mass $D\,S(u)/N(u)$, where $S(u)$ is the number of distinct successors observed after $u$.
-2. **Recursive interpolation with shorter contexts:** Instead of spreading the freed mass uniformly, Kneser–Ney allocates $\lambda(u) = D\,S(u)/N(u)$ to the next-lower-order distribution $P_{\textrm{KN}}(w \mid u')$, down to $1/|\mathcal{V}|$.
-3. **Lower-order continuation counts:** Because $P_{\textrm{KN}}(w \mid u')$ is queried when the longer context $(u, w)$ is *unseen*, lower orders replace raw occurrence counts with the **number of distinct preceding tokens** $w$ has appeared after (e.g., `"traveller"` appears $49$ times after only $2$ words, whereas `"said"` appears $76$ times after $48$ distinct words).
+::: {.col .fig}
+@fig:ch08-rnn-kneser-ney-flow
+:::
+:::
 :::
 
 ::: {.slide title="Implementing Interpolated Kneser–Ney in Python"}
@@ -1099,12 +1114,18 @@ Comparing Kneser–Ney against Laplace ($\alpha = 0.01$) after context `"the tim
 ::: {.slide title="Why Perplexity Cannot Compare Different Tokenizers"}
 [Tokenizer-Invariant Evaluation]{.kicker}
 
-Perplexity measures branching uncertainty **per token**, making it impossible to compare models that segment the same text into different numbers of tokens:
+::: {.cols .vc}
+::: {.col}
+$$\textrm{bpb} = \frac{1}{B}\sum_{t=1}^T -\log_2 P(x_t \mid x_{<t}) = \frac{T}{B}\log_2 \textrm{PPL}$$
 
-- **The scale mismatch:** A character model chooses among $|\mathcal{V}| = 27$ symbols ($\textrm{PPL} \approx 6.5$), a BPE-1024 model among $1{,}024$ subwords ($\textrm{PPL} \approx 52$), and a word model among $4{,}316$ words ($\textrm{PPL} \approx 300$).
-- **Bits per Byte ($\textrm{bpb}$):** Replacing the token count $T$ in the denominator by the fixed UTF-8 byte length $B$ of the evaluated text—and using base-2 logarithms—yields a **tokenizer-invariant** metric:
-  $$\textrm{bpb} = \frac{1}{B}\sum_{t=1}^T -\log_2 P(x_t \mid x_{<t}) = \frac{T}{B}\log_2 \textrm{PPL} = \frac{\log_2 \textrm{PPL}}{\text{bytes per token}}$$
-- **Lossless compression interpretation:** Coupled with an arithmetic coder, a language model achieving $\textrm{bpb}$ bits per byte compresses the raw text to $\textrm{bpb} / 8$ of its original UTF-8 byte size.
+- **The scale mismatch:** Perplexity divides by token count $T$, so a character model ($\textrm{PPL} \approx 6.5$), BPE-1024 model ($\textrm{PPL} \approx 52$), and word model ($\textrm{PPL} \approx 300$) lie on incompatible scales.
+- **Bits per Byte ($\textrm{bpb}$):** Normalizing total base-2 surprisal by the invariant UTF-8 byte length $B$ measures the exact lossless compression rate ($\textrm{bpb}/8$).
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-ppl-vs-bpb
+:::
+:::
 :::
 
 ::: {.slide title="Comparing Characters, BPE, and Words in Bits/Byte"}
@@ -1139,13 +1160,16 @@ To train the neural language models of §8.4–§8.6 with minibatch SGD, we slic
 ::: {.slide title="Preventing Train–Validation Leakage Across Windows"}
 [Data Pipeline Implementation & Leakage Guard]{.kicker}
 
-In `d2l.TimeMachine`, consecutive rows of `windows` overlap in $T - 1$ tokens, creating a subtle data-leakage trap at the boundary between training and validation splits:
-
+::: {.cols .vc}
+::: {.col}
 @-language-model-partitioning-sequences-1
 
-::: {.d2l-note .warn}
-**Why We Drop `num_steps` Boundary Windows (`windows[num_train + num_steps:]`):**
-Training window `num_train - 1` covers corpus tokens `num_train - 1` through `num_train + num_steps - 1`. If validation started at window `num_train`, its first $T - 1$ target tokens would already have been memorized as training targets! Dropping `num_steps` boundary windows guarantees zero target overlap.
+- **Why drop `num_steps` boundary windows:** Adjacent length-$T$ windows overlap in $T - 1$ tokens; skipping `windows[num_train : num_train + num_steps]` ensures no validation token ever appeared as a training target.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-window-leakage-guard
+:::
 :::
 :::
 

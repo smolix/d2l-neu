@@ -1168,14 +1168,16 @@ Concentration Inequalities and High-Dimensional Measure<br>**Chernoff method · 
 ::: {.slide title="830 Errors in 10,000 Images: Can We Trust the Average?"}
 [Motivation & Core Problem]{.kicker}
 
-Suppose a trained classifier makes $830$ mistakes on $n = 10{,}000$ held-out test images, giving an empirical error rate of $\hat{p} = 8.3\%$. How far can the true population error stray from $8.3\%$?
+::: {.cols .vc}
+::: {.col}
+- **Asymptotic CLT ($\pm 0.54\%$ at $95\%$):** Narrow, but exact only as $n \to \infty$ and reliant on plug-in $\hat{\sigma}$.
+- **Chebyshev's polynomial tail ($\sigma^2 / nt^2 \le \delta$):** Gives $\pm 2.24\%$ at $\delta = 0.05$, and explodes to a useless **$\pm 500\%$** at $\delta = 10^{-6}$.
+- **Exponential concentration (Hoeffding & Bernstein):** Certifies **$\pm 1.36\%$** at $\delta = 0.05$ and **$\pm 2.69\%$** at $\delta = 10^{-6}$ (tightened by variance-aware Bernstein to **$\pm 0.79\%$** and **$\pm 1.62\%$**).
+:::
 
-- **Asymptotic Gaussian CLT ($\pm 1.96\,\hat{\sigma}/\sqrt{n} = \pm 0.54\%$):** Convenient and narrow, but exact only as $n \to \infty$ and reliant on plugging in the estimated standard deviation $\hat{\sigma}$.
-- **Chebyshev's finite-sample bound ($\sigma^2 / (nt^2) \le \delta$):** Using $\sigma^2 \le 1/4$ gives $\pm 2.2\%$ at $95\%$ confidence ($\delta = 0.05$), and collapses to a useless **$\pm 500\%$** when we demand one-in-a-million reliability ($\delta = 10^{-6}$).
-- **Exponential concentration (Hoeffding & Bernstein):** Capturing exponential tail decay in $n$ certifies **$\pm 1.36\%$** at $95\%$ confidence and **$\pm 2.7\%$** at $\delta = 10^{-6}$ (tightened further by Bernstein to **$\pm 0.79\%$**).
-
-::: {.d2l-note}
-Why care about $\delta = 10^{-6}$? When a learner compares thousands of candidate models, we need *none* of them to look good by chance—and only exponential tail bounds make union bounds affordable.
+::: {.col .fig .big}
+@fig:ch35-prob-three-intervals
+:::
 :::
 :::
 
@@ -1209,24 +1211,35 @@ Applying Markov's inequality to the squared deviation $(\bar{X} - \mu)^2$ yields
 ::: {.slide title="Worked Derivation: The Fair Coin Exponential Tail"}
 [Chernoff on Centered Coin Flips]{.kicker}
 
-For a single fair coin centered at zero, $Z_i = X_i - \frac{1}{2} \in \{-\frac{1}{2}, +\frac{1}{2}\}$ with equal probability, its moment generating function is $\mathbb{E}[e^{\lambda Z_i}] = \frac{1}{2}(e^{\lambda/2} + e^{-\lambda/2}) = \cosh(\lambda/2)$:
+::: {.cols .vc}
+::: {.col}
+$$P\bigl(\lvert\hat{p} - \tfrac{1}{2}\rvert \ge t\bigr) \le 2\,e^{-2nt^2}$$
 
-1. **Taylor series MGF bound:** Since $(2k)! \ge 2 \cdot 4 \cdots (2k) = 2^k k!$, comparing power series term-by-term gives:
-   $$\cosh u = \sum_{k=0}^\infty \frac{u^{2k}}{(2k)!} \le \sum_{k=0}^\infty \frac{(u^2/2)^k}{k!} = e^{u^2/2} \implies \mathbb{E}\bigl[e^{\lambda Z_i}\bigr] \le e^{\lambda^2 / 8}$$
-2. **Chernoff bound on $n$ flips:** By independence, $P\bigl(\hat{p} - \frac{1}{2} \ge t\bigr) = P\bigl(\sum_{i=1}^n Z_i \ge nt\bigr) \le e^{-\lambda n t}\prod_{i=1}^n \mathbb{E}[e^{\lambda Z_i}] \le \exp\bigl(-\lambda nt + \frac{n\lambda^2}{8}\bigr)$.
-3. **Optimize over $\lambda > 0$:** The parabola $-\lambda nt + \frac{n\lambda^2}{8}$ reaches its minimum at $\lambda^* = 4t$, giving $e^{-2nt^2}$ for the upper tail and $P\bigl(\lvert\hat{p} - \frac{1}{2}\rvert \ge t\bigr) \le 2e^{-2nt^2}$ for both tails.
+- **1. Single-flip MGF bound:** For $Z_i \in \{-\frac{1}{2}, +\frac{1}{2}\}$, $\mathbb{E}[e^{\lambda Z_i}] = \cosh(\lambda/2) \le e^{\lambda^2/8}$ because $(2k)! \ge 2^k k!$.
+- **2. Factorize & optimize:** Chernoff on $\sum_{i=1}^n Z_i \ge nt$ gives $\exp(-\lambda nt + n\lambda^2/8)$, minimized at vertex $\lambda^* = 4t$ to yield $e^{-2nt^2}$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-fair-coin-mgf
+:::
+:::
 :::
 
 ::: {.slide title="Hoeffding's Lemma for General Bounded Variables"}
 [Bounding the Cumulant Generating Function]{.kicker}
 
-What if $X$ is an asymmetric or continuous variable confined to $[a, b]$ with $\mathbb{E}[X] = 0$? **Hoeffding's lemma** proves that its MGF never exceeds that of a Gaussian with standard deviation $(b-a)/2$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}\bigl[e^{\lambda X}\bigr] \le \exp\!\left(\frac{\lambda^2(b-a)^2}{8}\right) \quad \text{for } X \in [a, b],\ \mathbb{E}[X] = 0$$
 
-$$\mathbb{E}\bigl[e^{\lambda X}\bigr] \le \exp\!\left(\frac{\lambda^2(b-a)^2}{8}\right) \qquad \text{for all } \lambda \in \mathbb{R}$$
+- **Max variance on $[a, b]$:** Any distribution on $[a, b]$ satisfies $\operatorname{Var}(Y) \le (b-a)^2/4$.
+- **Tilted curvature bound:** The log-MGF $\psi(\lambda) = \log \mathbb{E}[e^{\lambda X}]$ has $\psi(0) = \psi'(0) = 0$ and second derivative $\psi''(\lambda) = \operatorname{Var}_{q_\lambda}(X) \le (b-a)^2/4$, so Taylor's theorem gives $\psi(\lambda) \le \lambda^2(b-a)^2/8$.
+:::
 
-- **Step 1 (Maximum variance on $[a,b]$):** For any $Y \in [a,b]$, centering at the midpoint $c = \frac{a+b}{2}$ gives $\operatorname{Var}(Y) \le \mathbb{E}\bigl[\bigl(Y - \frac{a+b}{2}\bigr)^2\bigr] \le \frac{(b-a)^2}{4}$.
-- **Step 2 (Curvature of the log-MGF):** Let $\psi(\lambda) = \log \mathbb{E}[e^{\lambda X}]$. Then $\psi(0) = 0$, $\psi'(0) = \mathbb{E}[X] = 0$, and $\psi''(\lambda) = \operatorname{Var}_{q_\lambda}(X)$, where $q_\lambda(dx) \propto e^{\lambda x}p(dx)$ is the exponentially tilted distribution—still supported inside $[a,b]$, so $\psi''(\lambda) \le \frac{(b-a)^2}{4}$ everywhere.
-- **Step 3 (Second-order Taylor bound):** $\psi(\lambda) = \psi(0) + \lambda\psi'(0) + \frac{\lambda^2}{2}\psi''(\xi) \le \frac{\lambda^2(b-a)^2}{8}$.
+::: {.col .fig}
+@fig:ch35-prob-hoeffding-tilting
+:::
+:::
 :::
 
 ::: {.slide title="Hoeffding's Inequality for Bounded Independent Sums"}
@@ -1283,12 +1296,18 @@ $$\mathbb{E}\bigl[e^{\lambda(X - \mathbb{E}[X])}\bigr] \le \exp\!\left(\frac{\la
 ::: {.slide title="Why Squared Gaussians Are Only Sub-Exponential"}
 [Two-Regime MGF Bounds]{.kicker}
 
-To analyze the squared norm $\|\mathbf{x}\|^2 = \sum_{i=1}^d x_i^2$ of a Gaussian vector, we need the MGF of $x_i^2 - 1$ for $x_i \sim \mathcal{N}(0, 1)$. Completing the square in the Gaussian integral gives $\mathbb{E}[e^{\lambda(x_i^2 - 1)}] = \frac{e^{-\lambda}}{\sqrt{1 - 2\lambda}}$ for $\lambda < \frac{1}{2}$, which **diverges to $+\infty$** for $\lambda \ge \frac{1}{2}$!
+::: {.cols .vc}
+::: {.col}
+$$P\bigl(\lvert\bar{X} - \mathbb{E}[\bar{X}]\rvert \ge t\bigr) \le 2\exp\!\left(-\frac{n}{2}\min\!\left(\frac{t^2}{\nu^2},\, \frac{t}{\alpha}\right)\right)$$
 
-- **Sub-exponential definition:** A variable $X$ is $(\nu, \alpha)$-**sub-exponential** if its MGF is bounded by a Gaussian MGF on a restricted window around the origin:
-  $$\mathbb{E}\bigl[e^{\lambda(X - \mathbb{E}[X])}\bigr] \le \exp\!\left(\frac{\lambda^2 \nu^2}{2}\right) \qquad \text{for all } \lvert\lambda\rvert \le \frac{1}{\alpha}$$
-- **Two-regime Chernoff tail bound:** Optimizing $-\lambda nt + \frac{n\lambda^2\nu^2}{2}$ over $0 < \lambda \le 1/\alpha$ picks the unconstrained vertex $\lambda^* = t/\nu^2$ for small deviations ($t \le \nu^2/\alpha$) and clamps at the boundary $\lambda^* = 1/\alpha$ for large deviations ($t > \nu^2/\alpha$):
-  $$P\bigl(\lvert\bar{X} - \mathbb{E}[\bar{X}]\rvert \ge t\bigr) \le 2\exp\!\left(-\frac{n}{2}\min\!\left(\frac{t^2}{\nu^2},\, \frac{t}{\alpha}\right)\right)$$
+- **MGF pole at $\lambda = 1/2$:** For $x_i \sim \mathcal{N}(0, 1)$, $\mathbb{E}[e^{\lambda(x_i^2 - 1)}] = e^{-\lambda}/\sqrt{1 - 2\lambda}$ blows up at $\lambda \ge 1/2$, so it is bounded by $e^{\lambda^2\nu^2/2}$ only inside $|\lambda| \le 1/\alpha$.
+- **Two tail regimes:** Unconstrained Gaussian tail $e^{-nt^2/(2\nu^2)}$ for small $t \le \nu^2/\alpha$; boundary-clamped exponential tail $e^{-nt/(2\alpha)}$ for large $t > \nu^2/\alpha$.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-subexp-window
+:::
+:::
 :::
 
 ::: {.slide title="Bernstein's Inequality: Exploiting Small Variance"}
@@ -1345,25 +1364,35 @@ $$\|\mathbf{x}\| = \sqrt{\|\mathbf{x}\|^2} \approx \sqrt{d} + \frac{\|\mathbf{x}
 ::: {.slide title="Near-Orthogonality of High-Dimensional Random Vectors"}
 [Angles in High Dimension]{.kicker}
 
-What is the angle between a fixed unit vector $\mathbf{u} \in \mathbb{R}^d$ ($\|\mathbf{u}\|_2 = 1$) and a random sign vector $\mathbf{x} \in \{-1, +1\}^d$ (or a standard Gaussian $\mathbf{x} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$)?
+::: {.cols .vc}
+::: {.col}
+$$P\bigl(\lvert\cos(\mathbf{x}, \mathbf{u})\rvert \ge \varepsilon\bigr) \le 2e^{-d\varepsilon^2 / 2}, \qquad \mathbb{E}\bigl[\lvert\cos(\mathbf{x}, \mathbf{y})\rvert\bigr] \approx \sqrt{\frac{2}{\pi d}}$$
 
-- **Inner product stays $O(1)$:** Each term $Y_i = u_i x_i$ has mean zero and lies in $[-\lvert u_i\rvert, \lvert u_i\rvert]$ of width $2\lvert u_i\rvert$. Since $\sum_{i=1}^d (2\lvert u_i\rvert)^2 = 4\|\mathbf{u}\|_2^2 = 4$, unequal-range Hoeffding gives:
-  $$P\bigl(\lvert\langle\mathbf{x}, \mathbf{u}\rangle\rvert \ge s\bigr) \le 2e^{-s^2 / 2}$$
-- **Cosine concentrates around zero at rate $1/\sqrt{d}$:** Since $\|\mathbf{x}\|_2 = \sqrt{d}$, setting $s = \varepsilon\sqrt{d}$ proves:
-  $$P\bigl(\lvert\cos(\mathbf{x}, \mathbf{u})\rvert \ge \varepsilon\bigr) \le 2e^{-d\varepsilon^2 / 2}, \qquad \mathbb{E}\bigl[\lvert\cos(\mathbf{x}, \mathbf{y})\rvert\bigr] \approx \sqrt{\frac{2}{\pi d}}$$
-- **Null baseline for embeddings:** In $d = 784$, two independent random vectors have typical cosine similarity $\sqrt{2/(784\pi)} \approx 0.028$ ($\mathrm{sd} = 1/\sqrt{784} = 0.036$), so a learned cosine similarity of $0.30$ sits more than $8$ standard deviations above random chance.
+- **Unequal-range Hoeffding:** For unit $\mathbf{u}$ and random signs $\mathbf{x} \in \{\pm 1\}^d$, $Y_i = u_i x_i \in [-|u_i|, |u_i|]$ has $\sum (2|u_i|)^2 = 4$, keeping $\langle\mathbf{x}, \mathbf{u}\rangle = O(1)$ while $\|\mathbf{x}\| = \sqrt{d}$.
+- **Embedding baseline ($d = 784$):** Random vectors have $\mathrm{sd}(\cos) = 1/\sqrt{784} = 0.036$ ($89.9^\circ \pm 2.0^\circ$), so $\cos = 0.30$ is an $>8\sigma$ signal!
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-random-ortho
+:::
+:::
 :::
 
 ::: {.slide title="Packing Exponentially Many Quasi-Orthogonal Vectors"}
 [The Union Bound in R^d]{.kicker}
 
-In $\mathbb{R}^d$, strictly orthogonal vectors can number at most $d$. How many *nearly* orthogonal vectors ($\lvert\cos(\mathbf{x}_i, \mathbf{x}_j)\rvert < \varepsilon$ for all pairs $i \neq j$) can we pack simultaneously?
+::: {.cols .vc}
+::: {.col}
+$$P\Bigl(\max_{i < j} \lvert\cos(\mathbf{x}_i, \mathbf{x}_j)\rvert \ge \varepsilon\Bigr) < m^2 e^{-d\varepsilon^2 / 2} \le \delta \iff m \le \sqrt{\delta}\,\exp\!\left(\frac{d\varepsilon^2}{4}\right)$$
 
-- **Applying the union bound over all $\binom{m}{2} < \frac{m^2}{2}$ pairs:** Drawing $m$ independent random sign vectors in $\mathbb{R}^d$, the probability that *any* pair exceeds cosine similarity $\varepsilon$ is bounded by the sum of pairwise failure probabilities:
-  $$P\Bigl(\max_{i < j} \lvert\cos(\mathbf{x}_i, \mathbf{x}_j)\rvert \ge \varepsilon\Bigr) \le \frac{m(m-1)}{2}\cdot 2e^{-d\varepsilon^2 / 2} < m^2 e^{-d\varepsilon^2 / 2}$$
-- **Exponential packing capacity:** Setting $m^2 e^{-d\varepsilon^2/2} \le \delta$ guarantees that all $\binom{m}{2}$ pairs have $\lvert\cos\rvert < \varepsilon$ with probability at least $1 - \delta$ whenever:
-  $$m \le \sqrt{\delta}\,\exp\!\left(\frac{d\varepsilon^2}{4}\right)$$
-- **Concrete capacity at $d = 784, \delta = 0.05$:** Even this worst-case union bound certifies $m \approx 570$ vectors with all pairwise $\lvert\cos\rvert < 0.2$, and **$m \approx 10^7$ vectors** with all pairwise $\lvert\cos\rvert < 0.3$.
+- **Strict vs. quasi-orthogonal capacity:** Strict orthogonality ($\cos = 0$) fits at most $m = d$ vectors in $\mathbb{R}^d$.
+- **Exponential room in $\mathbb{R}^{784}$:** Allowing $|\cos| < \varepsilon$ packs $m \approx 570$ vectors at $\varepsilon = 0.2$ and **$m \approx 10^7$ vectors** at $\varepsilon = 0.3$ ($\delta = 0.05$).
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-exponential-packing
+:::
+:::
 :::
 
 ::: {.slide title="Collapse of Pairwise Euclidean Distance Contrast"}
@@ -1379,23 +1408,33 @@ For two independent Gaussian vectors $\mathbf{x}, \mathbf{y} \sim \mathcal{N}(\m
 ::: {.slide title="Consequence 1: Weight Initialization Across Depth"}
 [LeCun & He Initialization Fluctuations]{.kicker}
 
-Classical initialization schemes choose weight variance $\frac{1}{d}$ (LeCun) or $\frac{2}{d}$ (He for ReLU) so that expected activation energy is preserved ($\mathbb{E}[\|\mathbf{h}_k\|^2 / \|\mathbf{h}_{k-1}\|^2] = 1$). Concentration reveals when a *single* initialized network actually obeys that expectation:
+::: {.cols .vc}
+::: {.col}
+$$\rho_k = \frac{\|\mathbf{h}_k\|^2}{\|\mathbf{h}_{k-1}\|^2}, \qquad \mathbb{E}[\rho_k] = 1, \qquad \operatorname{Var}(\rho_k) = \frac{5}{d}$$
 
-- **Single-layer norm fluctuation:** For a width-$d$ ReLU layer $\mathbf{h}_k = \mathrm{ReLU}(\mathbf{W}_k \mathbf{h}_{k-1})$ with $W_{ij} \sim \mathcal{N}(0, 2/d)$, the squared-norm multiplier $\rho_k = \|\mathbf{h}_k\|^2 / \|\mathbf{h}_{k-1}\|^2$ is distributed as $\frac{2}{d}\sum_{j=1}^d \mathrm{ReLU}(g_j)^2$ ($g_j \sim \mathcal{N}(0,1)$), which has mean $1$ and variance:
-  $$\operatorname{Var}(\rho_k) = \frac{5}{d} \implies \operatorname{sd}(\rho_k) = \sqrt{\frac{5}{d}} \approx 10\% \text{ at } d = 512$$
-- **Accumulation across depth $K$:** Across $K$ independent layers, $\log\frac{\|\mathbf{h}_K\|^2}{\|\mathbf{h}_0\|^2} = \sum_{k=1}^K \log \rho_k$ accumulates variance $\approx \frac{5K}{d}$.
-- **Aspect ratio rule ($K \ll d$):** Initialization preserves norms in a single network only when depth $K \ll$ width $d$; at $K = 50, d = 512$, $\frac{5K}{d} \approx 0.5$, so activation norms already drift by $2\times$ before step $1$ of training.
+- **Single-layer fluctuation:** Under He initialization ($W_{ij} \sim \mathcal{N}(0, 2/d)$), a width-$d$ ReLU layer fluctuates by $\operatorname{sd}(\rho_k) = \sqrt{5/d} \approx 10\%$ at $d = 512$.
+- **Aspect ratio $K/d$:** Across depth $K$, $\operatorname{Var}\bigl(\log\frac{\|\mathbf{h}_K\|^2}{\|\mathbf{h}_0\|^2}\bigr) \approx \frac{5K}{d}$, requiring $K \ll d$ (or LayerNorm / residual connections) to prevent norm drift.
+:::
+
+::: {.col .fig}
+@fig:ch35-prob-depth-norm-drift
+:::
+:::
 :::
 
 ::: {.slide title="Johnson–Lindenstrauss and Spherical Latent Arcs"}
 [Random Projections & Generative Interpolation]{.kicker}
 
-High-dimensional norm concentration directly powers two foundational algorithms in representation learning and generative modeling:
+::: {.cols .vc}
+::: {.col}
+- **Johnson–Lindenstrauss projections:** A random matrix $\mathbf{A} \in \mathbb{R}^{k \times d}$ with $\mathcal{N}(0, 1/k)$ entries preserves all pairwise distances among $n$ points within $1 \pm \varepsilon$ once $k \ge \frac{8}{\varepsilon^2}\log\frac{n^2}{\delta}$ (independent of $d$).
+- **Spherical interpolation (Slerp) vs. Lerp:** Because $\mathbf{z}_1, \mathbf{z}_2 \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$ have norm $\approx \sqrt{d}$ and angle $\theta \approx 90^\circ$, their linear midpoint has norm $\sqrt{d/2} \approx 0.71\sqrt{d}$ (falling into the empty interior), whereas Slerp stays on the $\sqrt{d}$ training shell.
+:::
 
-- **1. Johnson–Lindenstrauss Random Projections:** Multiplying $n$ points in $\mathbb{R}^d$ by a random projection matrix $\mathbf{A} \in \mathbb{R}^{k \times d}$ with entries $\mathcal{N}(0, 1/k)$ preserves every pairwise Euclidean distance within $1 \pm \varepsilon$ with probability $\ge 1 - \delta$ once:
-  $$k \ge \frac{8}{\varepsilon^2}\log\frac{n^2}{\delta}$$
-  completely independent of the ambient dimension $d$.
-- **2. Spherical Interpolation (Slerp) in Generative Latent Spaces:** A decoder trained on $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$ only ever sees latent codes on the thin shell of radius $\sqrt{d}$. Because two independent codes $\mathbf{z}_1, \mathbf{z}_2$ are nearly orthogonal ($\theta \approx \pi/2$), their linear midpoint $\frac{1}{2}(\mathbf{z}_1 + \mathbf{z}_2) \sim \mathcal{N}(\mathbf{0}, \frac{1}{2}\mathbf{I}_d)$ has norm $\approx \sqrt{d/2}$—plunging into the empty interior where the decoder was never trained. Interpolating along the great-circle arc $\tilde{\mathbf{z}}(\gamma) = \frac{\sin((1-\gamma)\theta)}{\sin\theta}\mathbf{z}_1 + \frac{\sin(\gamma\theta)}{\sin\theta}\mathbf{z}_2$ keeps $\|\tilde{\mathbf{z}}(\gamma)\| \approx \sqrt{d}$ for all $\gamma \in [0, 1]$.
+::: {.col .fig .big}
+@fig:ch35-prob-slerp-vs-lerp
+:::
+:::
 :::
 
 ::: {.slide title="Pitfall: Single-Average Bounds Fail After Selection"}
@@ -1414,16 +1453,17 @@ Every concentration inequality in this section—Hoeffding, Bernstein, and sub-e
 ::: {.slide title="Comparing Concentration Tail Bounds"}
 [Markov, Chebyshev, Hoeffding, Bernstein, Sub-Exponential]{.kicker}
 
-Each concentration inequality trades stronger moment or boundedness assumptions for dramatically sharper tail decay:
+::: {.cols .vc}
+::: {.col}
+- **Polynomial vs. exponential:** Markov ($1/\delta$) and Chebyshev ($1/(\delta t^2)$) use only one or two moments and explode at small $\delta$.
+- **MGF-powered exponential tails:** Sub-exponential, Hoeffding, and Bernstein bounds harness all moments via $e^{\lambda X}$, scaling sample size logarithmically as $\log(2/\delta)$.
+- **Variance awareness:** Bernstein replaces Hoeffding's worst-case range $(b-a)^2$ with the true variance $\sigma^2$.
+:::
 
-| Inequality | Assumptions on Independent $X_1, \dots, X_n$ | Tail Bound on $P(\lvert\bar{X} - \mu\rvert \ge t)$ | Scaling of $n$ with Failure $\delta$ |
-| :--- | :--- | :--- | :--- |
-| **Markov** | Nonnegative $X \ge 0$ (single variable) | $P(X \ge t) \le \frac{\mathbb{E}[X]}{t}$ | Linear in $1/\delta$ |
-| **Chebyshev** | Finite variance $\operatorname{Var}(X_i) \le \sigma^2$ | $\frac{\sigma^2}{nt^2}$ | Polynomial: $n \propto \frac{1}{\delta t^2}$ |
-| **Hoeffding** | Bounded range $X_i \in [a, b]$ | $2\exp\!\left(-\frac{2nt^2}{(b-a)^2}\right)$ | Logarithmic: $n \propto \frac{(b-a)^2\log(2/\delta)}{t^2}$ |
-| **Sub-Gaussian** | $\mathbb{E}[e^{\lambda(X_i-\mu)}] \le e^{\lambda^2\sigma^2/2}$ ($\forall \lambda \in \mathbb{R}$) | $2\exp\!\left(-\frac{nt^2}{2\sigma^2}\right)$ | Logarithmic: $n \propto \frac{\sigma^2\log(2/\delta)}{t^2}$ |
-| **Sub-Exponential** | $\mathbb{E}[e^{\lambda(X_i-\mu)}] \le e^{\lambda^2\nu^2/2}$ ($\lvert\lambda\rvert \le 1/\alpha$) | $2\exp\!\left(-\frac{n}{2}\min\!\left(\frac{t^2}{\nu^2},\, \frac{t}{\alpha}\right)\right)$ | Gaussian for $t \le \frac{\nu^2}{\alpha}$; exponential for $t > \frac{\nu^2}{\alpha}$ |
-| **Bernstein** | $\lvert X_i - \mu\rvert \le M$ and $\operatorname{Var}(X_i) \le \sigma^2$ | $2\exp\!\left(-\frac{nt^2}{2(\sigma^2 + Mt/3)}\right)$ | Replaces worst-case range $(b-a)^2$ with true $\sigma^2$ |
+::: {.col .fig .big}
+@fig:ch35-prob-tail-bounds-ladder
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Concentration and High Dimensions"}

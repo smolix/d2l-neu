@@ -1203,29 +1203,35 @@ Numerical Precision and Mixed-Precision Training<br>**fp32 vs. bf16 vs. fp16 · 
 ::: {.slide title="16-Bit Formats Halve Memory but Bring Two Hazards"}
 [The Low-Precision Trade-Off]{.kicker}
 
-Dropping from 32-bit floating point (`fp32`) to 16-bit precision cuts an 8B model's weight storage from `32 GB` to `16 GB` and doubles GPU Tensor Core throughput, but introduces two silent failure modes:
-
+::: {.cols .vc}
+::: {.col}
 @numerics-the-dtype-zoo-1
 
-- **Range overflow in `fp16`:** Squaring a modest value like $300.0$ overflows straight to `inf` because `fp16`'s maximum finite number is $65{,}504$.
-- **Precision rounding in `bf16`:** `bf16` keeps $300^2$ finite, yet rounds $90{,}000$ to $90{,}112$—and adding $10^{-3}$ to $1.0$ rounds right back to $1.0$, silently freezing parameter updates.
+- **Range overflow in `fp16`:** Squaring $300.0$ overflows to `inf` ($\max = 65{,}504$).
+- **Precision rounding in `bf16`:** `bf16` keeps $300^2$ finite ($90{,}112$), yet $1.0 + 10^{-3}$ rounds back to $1.0$, freezing direct 16-bit weight updates.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-16bit-two-hazards
+:::
+:::
 :::
 
 ::: {.slide title="Anatomy of a Floating-Point Number: Range vs. Precision"}
 [Exponent vs. Mantissa Bits]{.kicker}
 
-Any normal IEEE floating-point number encodes a sign bit $s$, an exponent $e$, and a $t$-bit mantissa fraction $f \in [0, 1)$:
-
+::: {.cols .vc}
+::: {.col}
 $$x = (-1)^s \cdot 2^e \cdot (1 + f)$$
 
-- **Exponent bits govern dynamic range:** More exponent bits let $2^e$ span much smaller (`tiny`) and much larger (`max`) magnitudes before underflowing to $0$ or overflowing to `inf`.
-- **Mantissa bits govern relative precision:** Within any octave $[2^e, 2^{e+1})$, adjacent representable numbers sit $2^{e-t}$ apart, maintaining uniform relative spacing $\text{eps} = 2^{-t}$ across all scales.
+- **Exponent bits govern dynamic range:** 8 exponent bits give `fp32` and `bf16` the same $\sim 10^{\pm 38}$ range, whereas 5 exponent bits cap `fp16` at $65{,}504$.
+- **Mantissa bits ($t$) govern relative precision:** Within any octave $[2^e, 2^{e+1})$, adjacent numbers sit $2^{e-t}$ apart ($\text{eps} = 2^{-t}$).
+:::
 
-| Format | Total Bits | Sign | Exponent Bits | Mantissa Bits ($t$) | Max Finite Value | Relative Spacing at $1$ ($2^{-t}$) |
-|:---|---:|---:|---:|---:|---:|---:|
-| **`float32` (`fp32`)** | 32 | 1 | **8** | **23** | $3.40 \times 10^{38}$ | $1.19 \times 10^{-7}$ ($\sim 7$ digits) |
-| **`bfloat16` (`bf16`)** | 16 | 1 | **8** | **7** | $3.39 \times 10^{38}$ | $7.81 \times 10^{-3}$ ($\sim 2\text{--}3$ digits) |
-| **`float16` (`fp16`)** | 16 | 1 | **5** | **10** | $6.55 \times 10^{4}$ | $9.77 \times 10^{-4}$ ($\sim 3\text{--}4$ digits) |
+::: {.col .fig}
+@fig:ch05-bg-range-vs-precision
+:::
+:::
 :::
 
 ::: {.slide title="Bit Layouts of fp32, bf16, and fp16 Compared"}
@@ -1250,46 +1256,67 @@ We can inspect `max` (largest finite value), `tiny` (smallest positive normal nu
 ::: {.slide title="Why 16-Bit Weights Stall Training: Small-Update Rounding"}
 [The Parameter Update Swamping Trap]{.kicker}
 
-A typical gradient descent update $\Delta w = -\eta g$ shifts a weight by $10^{-3}$ or less of its magnitude. Under round-to-nearest-even, any update smaller than $\frac{1}{2}\text{eps}\cdot |w|$ rounds to zero:
-
+::: {.cols .vc}
+::: {.col}
 @numerics-rounding-of-small-updates
 
-::: {.d2l-note .rule}
-**Master Weights Rule:** Near $w = 1.0$, `bf16` spacing is $2^{-7} \approx 0.0078$, so both $1 + 10^{-3}$ and $1 + 10^{-4}$ evaluate to $1.0000000$. Training **must** accumulate parameter updates in `fp32`.
+- **Master weights rule:** Near $w = 1.0$, `bf16` spacing is $2^{-7} \approx 0.0078$, so any update $|\Delta w| < 0.0039$ snaps back to $1.0$ unless accumulated in `fp32`.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-update-swamping
+:::
 :::
 :::
 
 ::: {.slide title="Dtype Promotion Rules Across Frameworks" except="tensorflow"}
 [Mixed-Operand Arithmetic]{.kicker}
 
-When an expression combines two floating-point tensors of different widths, PyTorch, JAX, and MXNet promote the result to the wider format (`fp16 + fp32 -> fp32`, and `fp16 + bf16 -> fp32`):
+::: {.cols .vc}
+::: {.col}
+- Combining different float widths promotes to the wider format (`fp16 + fp32 -> fp32`, `fp16 + bf16 -> fp32`), so a single stray `fp32` buffer contaminates a 16-bit pass:
 
 @numerics-dtype-rules-promotion-parameters-and-casts-1
+:::
 
-- **The stray `fp32` contamination bug:** A single uncast `fp32` buffer or bias silently promotes the entire downstream 16-bit forward pass back to `fp32`, doubling activation memory.
-- **Weak Python scalars:** Adding a Python literal (`x16 + 1.0`) or integer tensor keeps `x16` in 16-bit precision.
+::: {.col .fig}
+@fig:ch05-bg-dtype-promotion
+:::
+:::
 :::
 
 ::: {.slide title="Explicit Dtype Checking in TensorFlow" only="tensorflow"}
 [Mixed-Operand Arithmetic]{.kicker}
 
-Unlike PyTorch and JAX, TensorFlow refuses to promote across distinct tensor dtypes—combining `fp16` and `fp32` raises an immediate `InvalidArgumentError`:
+::: {.cols .vc}
+::: {.col}
+- TensorFlow refuses implicit cross-dtype promotion (`InvalidArgumentError`), requiring explicit `tf.cast`:
 
 @numerics-dtype-rules-promotion-parameters-and-casts-1
+:::
 
-- **Explicit `tf.cast` discipline:** Every cross-dtype interaction must be written explicitly with `tf.cast`, while Python float literals (`x16 + 1.0`) automatically adopt the tensor's dtype.
+::: {.col .fig}
+@fig:ch05-bg-dtype-promotion
+:::
+:::
 :::
 
 ::: {.slide title="Casting a Model to 16 Bits Halves Inference Memory"}
 [Whole-Model Dtype Casting]{.kicker}
 
-Our Fashion-MNIST MLP ($784 \to 256 \to 10$) holds $203{,}530$ parameters (`814,120 bytes` in `fp32`). Walking the state tree to cast parameters to 16 bits cuts weight memory in half to `407,060 bytes`:
+::: {.cols .vc}
+::: {.col}
+- Walking the state tree to cast parameters to 16 bits cuts weight memory in half (`814,120 B -> 407,060 B`):
 
 @-numerics-dtype-rules-promotion-parameters-and-casts-2
 
 @numerics-dtype-rules-promotion-parameters-and-casts-3
+:::
 
-- **Ideal for inference, flawed for training:** Pure 16-bit weights halve inference memory bandwidth, but training them directly hits the small-update rounding trap.
+::: {.col .fig}
+@fig:ch05-bg-model-cast-halving
+:::
+:::
 :::
 
 ::: {.slide title="Mixed Precision: fp32 Master Weights + 16-Bit Compute"}
@@ -1325,66 +1352,98 @@ Training identical Fashion-MNIST MLPs for $1{,}000$ SGD steps at $\eta = 0.01$ a
 ::: {.slide title="Why Mixed Precision Keeps the 128 GB Static Floor"}
 [Training vs. Inference Memory]{.kicker}
 
-A common misconception is that mixed-precision training halves total GPU memory. Let's audit the persistent per-parameter state for our 8B model under Adam:
+::: {.cols .vc}
+::: {.col}
+- **Static training floor stays `112–128 GB`:** Mixed precision must retain `fp32` master weights (`32 GB`) and `fp32` Adam moments $\mathbf{m}, \mathbf{v}$ (`64 GB`) alongside 16-bit weights/gradients.
+- **Where mixed precision wins:** It halves dynamic **forward activation memory** and doubles Tensor Core matrix-multiply throughput!
+:::
 
-| Persistent Tensor | Pure `fp32` Training | Mixed-Precision Training (`bf16` / `fp16`) | Pure `bf16` Inference |
-|:---|---:|---:|---:|
-| **`fp32` Master weights** | $4\text{ B}$ (`32 GB`) | $4\text{ B}$ (`32 GB`) | — (`0 GB`) |
-| **16-bit weights / Gradients** | $4\text{ B}$ (`32 GB`) | $2\text{--}4\text{ B}$ (`16–32 GB`) | $2\text{ B}$ (`16 GB`) |
-| **Adam `fp32` moments ($\mathbf{m}, \mathbf{v}$)** | $8\text{ B}$ (`64 GB`) | $8\text{ B}$ (`64 GB`) | — (`0 GB`) |
-| **Static Parameter Floor (8B)** | **$16\text{ B}$ (`128 GB`)** | **$\ge 14\text{--}16\text{ B}$ (`112–128 GB`)** | **$2\text{ B}$ (`16 GB`)** |
-
-- **Where mixed precision saves memory:** It halves the **activation tensors** cached during the forward pass (which often dominate large-batch or long-context training) and doubles matrix-multiply speed.
+::: {.col .fig .big}
+@fig:ch05-bg-amp-memory-audit
+:::
+:::
 :::
 
 ::: {.slide title="Gradient Underflow in fp16 and Dynamic Loss Scaling"}
 [Why fp16 Needs Loss Scaling]{.kicker}
 
-Unlike `bf16`, `fp16`'s narrow 5-bit exponent drops into subnormals below $2^{-14} \approx 6.1 \times 10^{-5}$ and underflows to exact zero below $3 \times 10^{-8}$. Measuring our MLP's first-layer gradients on batch 0 reveals the damage:
-
+::: {.cols .vc}
+::: {.col}
 @numerics-loss-scaling-for-fp16-3
 
-- **Linearity of differentiation:** Multiplying the loss by $S = 2^{16} = 65{,}536$ before `backward()` scales every intermediate gradient by $S$, lifting all $33\%$ subnormal gradients into normal `fp16` range, after which we divide gradients by $S$ in `fp32` before `optimizer.step()`.
+- Multiplying the loss by $S = 2^{16} = 65{,}536$ before `backward()` lifts all $33\%$ subnormal gradients into normal `fp16` range before unscaling in `fp32`.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-fp16-loss-scaling
+:::
+:::
 :::
 
 ::: {.slide title="Automatic Dynamic Loss Scaling in Practice" only="pytorch,tensorflow"}
 [GradScaler & LossScaleOptimizer]{.kicker}
 
-**Dynamic loss scaling** starts with a large scale factor $S$, skips the optimizer step and halves $S$ whenever an `inf` or `NaN` gradient appears, and doubles $S$ after a streak of finite steps:
+::: {.cols .vc}
+::: {.col}
+- **Dynamic loss scaling** starts with a large scale factor $S$, skips the optimizer step and halves $S$ whenever an `inf`/`NaN` gradient appears, and doubles $S$ after a clean streak:
 
 @numerics-loss-scaling-for-fp16-2
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-fp16-loss-scaling
+:::
+:::
 :::
 
 ::: {.slide title="When to Use bf16 vs. fp16 vs. TF32"}
 [Hardware Precision Selection Guide]{.kicker}
 
-Modern accelerators offer three distinct faster-than-`fp32` execution modes on Tensor Cores:
+::: {.cols .vc}
+::: {.col}
+- **`bfloat16` mixed precision (Ampere/Hopper/TPU default):** `fp32` master weights + `bf16` compute with **no loss scaling needed**.
+- **`float16` mixed precision + `GradScaler` (Volta/Turing GPUs):** Prevents 5-bit exponent gradient underflow.
+- **TensorFloat-32 (`TF32`) math mode:** Operates on `fp32` tensors while rounding internal matmul inputs to 10 mantissa bits.
+:::
 
-- **`bfloat16` mixed precision (Default on Ampere/Hopper/TPU):** Uses `fp32` master weights + `bf16` compute with **no loss scaling needed** because `bf16` shares `fp32`'s 8-bit exponent range.
-- **`float16` mixed precision + dynamic loss scaling (Older Volta/Turing GPUs):** Uses `fp32` master weights + `fp16` compute + `GradScaler` to prevent gradient underflow.
-- **TensorFloat-32 (`TF32`) math mode:** Operates on standard `fp32` tensors without code changes; Tensor Cores round matrix-multiply inputs internally to 10 mantissa bits (8-bit exponent) and accumulate inner products in full `fp32`.
+::: {.col .fig .big}
+@fig:ch05-bg-precision-selector
+:::
+:::
 :::
 
 ::: {.slide title="Numerical Hazards: Overflow to NaN and Log-Sum-Exp"}
 [Guarding 16-Bit Range]{.kicker}
 
-In `fp16`, intermediate values exceeding $65{,}504$ overflow to `inf`—and subsequent indeterminate arithmetic (`inf - inf`) turns the loss into `NaN`:
-
+::: {.cols .vc}
+::: {.col}
 @numerics-when-numerics-bite-1
 
 @numerics-when-numerics-bite-2
 
-- **Shifted Log-Sum-Exp:** Subtracting $m = \max_i x_i$ before exponentiating ($\log \sum_i e^{x_i} = m + \log \sum_i e^{x_i - m}$) prevents $e^{12} \approx 163{,}000 > 65{,}504$ from overflowing while keeping the largest term at $e^0 = 1$.
+- **Shifted Log-Sum-Exp:** Subtracting $m = \max_i x_i$ before exponentiating prevents $e^{12} \approx 163{,}000 > 65{,}504$ from overflowing to `inf` and `NaN`.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-logsumexp-and-sums
+:::
+:::
 :::
 
 ::: {.slide title="Numerical Hazard: Running Sums Stall in 16 Bits"}
 [Accumulating Reductions in fp32]{.kicker}
 
-Long reductions accumulated in 16 bits freeze once individual summands fall below half the accumulator's grid spacing:
-
+::: {.cols .vc}
+::: {.col}
 @numerics-when-numerics-bite-3
 
-- **Why `total16` freezes at `2.0`:** Between $2$ and $4$, adjacent `fp16` numbers sit $2^{-9}$ apart, so $2 + 2^{-10}$ hits the exact midpoint and round-to-nearest-even snaps back to $2.0$ forever; always accumulate sums, means, and normalizations in `fp32`.
+- Between $2$ and $4$, adjacent `fp16` numbers sit $2^{-9}$ apart, so $2 + 2^{-10}$ rounds back to $2.0$ forever; always accumulate sums and normalizations in `fp32`.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-logsumexp-and-sums
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Floating-Point Formats & Mixed Precision"}
@@ -1408,11 +1467,15 @@ Work out these three numerical precision questions by hand:
 ::: {.slide title="Summary: Numerical Formats and Mixed Precision"}
 [Key Takeaways]{.kicker}
 
-| Format / Technique | Bit Layout / Rule | Role in Deep Learning Systems |
-|:---|:---|:---|
-| **`fp32` (`float32`)** | 1 sign, 8 exp, 23 mantissa ($\text{eps} \approx 1.2 \times 10^{-7}$) | Master weights, Adam moments $\mathbf{m}, \mathbf{v}$, losses, and reductions |
-| **`bf16` (`bfloat16`)** | 1 sign, 8 exp, 7 mantissa ($\text{eps} \approx 0.0078$) | Preferred 16-bit compute/activation format; `fp32` range without loss scaling |
-| **`fp16` (`float16`)** | 1 sign, 5 exp, 10 mantissa ($\max = 65{,}504$) | Requires dynamic loss scaling ($S \cdot L$) to prevent gradient underflow |
-| **Mixed precision** | `fp32` master weights $+$ 16-bit matmuls/activations | Matches `fp32` convergence while halving activation RAM & doubling speed |
-| **Stable reductions** | Shifted $\text{logsumexp}$ and `fp32` sum accumulators | Prevents $e^x > 65{,}504$ overflow and running-sum stagnation |
+::: {.cols .vc}
+::: {.col}
+- **Format trade-offs:** `fp32` ($1+8+23$) holds master weights, Adam moments, and reductions; `bf16` ($1+8+7$) matches `fp32` range without loss scaling; `fp16` ($1+5+10$) requires dynamic loss scaling $S \cdot L$.
+- **Mixed precision (AMP):** Casts `fp32` master weights to 16 bits for matmuls and activations, matching `fp32` convergence while halving activation memory.
+- **Stable reductions:** Use shifted `logsumexp` and `fp32` accumulators to prevent overflow and running-sum stagnation.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-numerics-summary
+:::
+:::
 :::

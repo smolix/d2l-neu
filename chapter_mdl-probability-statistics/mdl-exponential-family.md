@@ -1430,22 +1430,16 @@ The Exponential Family: Sufficient Statistics, Cumulants, Maximum Entropy, and C
 ::: {.slide title="Four Regressions, Four Losses, One Gradient"}
 [Motivation]{.kicker}
 
-Linear, logistic, softmax, and Poisson regression minimize four distinct loss functions, yet differentiating each loss with respect to its linear weights $\mathbf{W}$ yields the exact same training rule:
-
+::: {.cols .vc}
+::: {.col}
 $$\nabla_{\mathbf{W}} \mathcal{L} = \mathbf{x}\bigl(\text{prediction} - \text{observation}\bigr)^\top$$
 
-::: {.cols}
-::: {.col}
-- **Why predict log-odds instead of probability?** For our coin with $9$ heads in $13$ flips ($\hat{p} = 9/13 \approx 0.692$), a classifier's linear layer outputs the log-odds $\hat{\eta} = \log(9/4) \approx 0.811$ and applies $\mathrm{sigmoid}(\hat{\eta}) = 9/13$.
-- **Why did every distribution in §36.3 need a separate moment trick?** In canonical form, every mean and variance is simply the first and second derivative of one function $A(\boldsymbol{\eta})$.
+- **One universal training rule:** Linear, logistic, softmax, and Poisson regression all share the exact same gradient formula because their target distributions belong to the **exponential family**.
+- **Four payoffs of canonical form:** Cumulant derivatives ($\nabla A = \mathbb{E}[T]$, $\nabla^2 A = \mathrm{Cov}(T)$), convex moment-matching MLE, maximum entropy, and additive conjugate priors.
 :::
 
-::: {.col}
-- **Four consequences of one canonical template:**
-  1. **Cumulant generation:** $\nabla A(\boldsymbol{\eta}) = \mathbb{E}[T(\mathbf{x})]$ and $\nabla^2 A(\boldsymbol{\eta}) = \mathrm{Cov}(T(\mathbf{x})) \succeq \mathbf{0}$.
-  2. **Convex MLE & moment matching:** $\nabla A(\hat{\boldsymbol{\eta}}) = \bar{T}$.
-  3. **Maximum entropy:** Least-committal distribution with given mean statistics $\mathbb{E}[T]$.
-  4. **Universal conjugacy:** Priors update by adding sufficient statistics.
+::: {.col .fig}
+@fig:ch35-prob-four-regressions
 :::
 :::
 :::
@@ -1453,29 +1447,35 @@ $$\nabla_{\mathbf{W}} \mathcal{L} = \mathbf{x}\bigl(\text{prediction} - \text{ob
 ::: {.slide title="Rewriting the Bernoulli Into Exponential Form"}
 [How Log-Odds and Softplus Emerge]{.kicker}
 
-Take the logarithm of the Bernoulli PMF $P(X = x) = p^x(1 - p)^{1 - x}$ for $x \in \{0, 1\}$ and group terms multiplying $x$:
+::: {.cols .vc}
+::: {.col}
+$$\log P(X = x) = x\underbrace{\log\frac{p}{1 - p}}_{\eta} - \underbrace{\log(1 + e^\eta)}_{A(\eta)}$$
 
-$$\log P(X = x) = x\log p + (1 - x)\log(1 - p) = x\underbrace{\log\frac{p}{1 - p}}_{\eta} + \underbrace{\log(1 - p)}_{-A(\eta)}$$
+- **Natural parameter (logit):** $\eta = \log\frac{p}{1-p} \in \mathbb{R}$, inverted by the logistic sigmoid $p = \mathrm{sigmoid}(\eta) = (1 + e^{-\eta})^{-1}$.
+- **Log-partition (softplus):** $A(\eta) = -\log(1-p) = \log(1 + e^\eta)$ normalizes $P(X = x) = \exp(\eta x - A(\eta))$.
+:::
 
-- **Natural parameter (log-odds / logit):** $\eta = \log\frac{p}{1 - p} \in \mathbb{R} \iff p = \frac{e^\eta}{1 + e^\eta} = \mathrm{sigmoid}(\eta) = \frac{1}{1 + e^{-\eta}}$.
-- **Log-partition function (softplus):** Since $1 - p = \frac{1}{1 + e^\eta}$, the normalizing constant is $A(\eta) = -\log(1 - p) = \log(1 + e^\eta)$, giving
-  $$P(X = x) = \exp\bigl(\eta x - \log(1 + e^\eta)\bigr), \qquad x \in \{0, 1\}$$
-- **Nobody had to invent the sigmoid:** The logistic sigmoid $\mathrm{sigmoid}(\eta)$ is simply the inverse map from the Bernoulli's natural parameter $\eta$ back to its mean $p = \mathbb{E}[X]$ (for $9/13$ heads, $\hat{\eta} = \log(9/4) \approx 0.811$).
+::: {.col .fig}
+@fig:ch35-prob-bernoulli-logit
+:::
+:::
 :::
 
 ::: {.slide title="The Canonical Exponential Family"}
 [General Definition & Sufficient Statistics]{.kicker}
 
-A family of distributions belongs to the **exponential family** if its PMF or density takes the canonical form:
+::: {.cols .vc}
+::: {.col}
+$$p(\mathbf{x} \mid \boldsymbol{\eta}) = h(\mathbf{x})\,\exp\bigl(\boldsymbol{\eta}^\top T(\mathbf{x}) - A(\boldsymbol{\eta})\bigr)$$
 
-$$p(\mathbf{x} \mid \boldsymbol{\eta}) = h(\mathbf{x})\,\exp\bigl(\boldsymbol{\eta}^\top T(\mathbf{x}) - A(\boldsymbol{\eta})\bigr), \qquad A(\boldsymbol{\eta}) = \log \int h(\mathbf{x})\,\exp\bigl(\boldsymbol{\eta}^\top T(\mathbf{x})\bigr)\,d\mathbf{x}$$
+- **Four building blocks:** Parameter-free base measure $h(\mathbf{x}) \ge 0$, sufficient statistic $T(\mathbf{x}) \in \mathbb{R}^d$, natural parameter $\boldsymbol{\eta} \in \mathbb{R}^d$, and log-partition normalizer $A(\boldsymbol{\eta}) = \log \int h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x})}\,d\mathbf{x}$.
+- **Why $T(\mathbf{x})$ is sufficient:** Across $n$ i.i.d. draws, $\boldsymbol{\eta}$ interacts with the dataset solely through the fixed-size sum $\sum_{i=1}^n T(\mathbf{x}_i)$.
+:::
 
-- **Four structural components:**
-  1. **Base measure $h(\mathbf{x}) \ge 0$:** Parameter-free baseline weight defining the fixed support $\{\mathbf{x} : h(\mathbf{x}) > 0\}$.
-  2. **Sufficient statistics $T(\mathbf{x}) \in \mathbb{R}^d$:** Data features that interact with the parameters.
-  3. **Natural parameters $\boldsymbol{\eta} \in \mathbb{R}^d$:** Coordinates multiplying $T(\mathbf{x})$ inside the exponent.
-  4. **Log-partition (cumulant) function $A(\boldsymbol{\eta})$:** Logarithm of the normalizer ensuring $\int p(\mathbf{x} \mid \boldsymbol{\eta})\,d\mathbf{x} = 1$.
-- **Why $T(\mathbf{x})$ is called *sufficient*:** For $n$ i.i.d. observations, $\prod_{i=1}^n p(\mathbf{x}_i \mid \boldsymbol{\eta}) = \left(\prod_i h(\mathbf{x}_i)\right)\exp\!\left(\boldsymbol{\eta}^\top \sum_{i=1}^n T(\mathbf{x}_i) - nA(\boldsymbol{\eta})\right)$, so the parameters touch the dataset **only through the sum $\sum_{i=1}^n T(\mathbf{x}_i)$**.
+::: {.col .fig}
+@fig:ch35-prob-exp-anatomy
+:::
+:::
 :::
 
 ::: {.slide title="Catalog of Exponential Family Members"}
@@ -1497,22 +1497,14 @@ Every row below writes $p(\mathbf{x} \mid \boldsymbol{\eta}) = h(\mathbf{x})\exp
 ::: {.slide title="What Lies Outside the Exponential Family?"}
 [Moving Support & Heavy-Tailed Non-Convexity]{.kicker}
 
-Two classic distributions fall outside the exponential family for reasons that drastically alter parameter estimation:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-**1. Moving Support: $\mathrm{Unif}(0, \theta)$**
-
-- Density $p(x \mid \theta) = \frac{1}{\theta}\mathbf{1}_{0 \le x \le \theta}$ has support $[0, \theta]$ that depends on $\theta$ (whereas $h(\mathbf{x}) > 0$ must be parameter-free).
-- For $n$ draws, $\prod_{i=1}^n p(x_i \mid \theta) = \theta^{-n}\mathbf{1}_{\max_i x_i \le \theta}$, so the MLE is the sample maximum $\hat{\theta}_{\mathrm{MLE}} = \max_i x_i$.
-- **Moment-matching failure:** On data $\{0.1, 0.2, 0.9\}$, $\hat{\theta}_{\mathrm{MLE}} = 0.9$, whereas matching the mean $\theta/2 = \bar{x} = 0.4$ gives $\hat{\theta} = 0.8 < 0.9$ (making the observed $0.9$ impossible!).
+- **Moving support ($\mathrm{Unif}(0, \theta)$):** Because the support $[0, \theta]$ depends on $\theta$, the MLE is the sample extreme $\hat{\theta}_{\mathrm{MLE}} = \max_i x_i$ rather than a moment-matching average.
+- **Algebraic heavy tails (Student's $t_\nu(\mu)$):** The product $\prod_{i=1}^n \bigl(1 + (x_i-\mu)^2/\nu\bigr)^{-(\nu+1)/2}$ has no fixed-size sufficient statistic (Pitman–Koopman–Darmois theorem), making its NLL **non-convex** with multiple local minima.
 :::
 
-::: {.col}
-**2. Algebraic Heavy Tails: Student's $t_\nu(\mu)$**
-
-- Product likelihood $\prod_{i=1}^n \left(1 + \frac{(x_i - \mu)^2}{\nu}\right)^{-(\nu+1)/2}$ cannot be compressed into any fixed-dimension sum $\sum_i T(x_i)$ (*Pitman–Koopman–Darmois theorem*).
-- **Loss of convexity:** Because Student-$t$ is not an exponential family, its negative log-likelihood for location $\mu$ is **non-convex** and develops multiple local minima when data cluster into separated groups.
+::: {.col .fig .big}
+@fig:ch35-prob-outside-exp
 :::
 :::
 :::
@@ -1550,14 +1542,18 @@ Because the expected roll $\sum_{k=1}^6 k\,p_k(\eta)$ increases strictly with $\
 ::: {.slide title="Gibbs' Inequality: KL Divergence Is Non-Negative"}
 [One Tangent Line Proves Global Optimality]{.kicker}
 
-To prove that exponential-family distributions maximize entropy without Lagrange multipliers, we compare any candidate $q$ against $p$ via the **Kullback–Leibler (KL) divergence**:
+::: {.cols .vc}
+::: {.col}
+$$D_{\mathrm{KL}}(q \| p) = \sum_{\mathbf{x}:\,q(\mathbf{x}) > 0} q(\mathbf{x})\log\frac{q(\mathbf{x})}{p(\mathbf{x})} \ge 0$$
 
-$$D_{\mathrm{KL}}(q \| p) = \sum_{\mathbf{x}:\,q(\mathbf{x}) > 0} q(\mathbf{x})\log\frac{q(\mathbf{x})}{p(\mathbf{x})} \ge 0 \qquad (\text{with equality iff } q = p)$$
+- **Tangent-line proof ($\log u \le u - 1$):** Substituting $u = p(\mathbf{x})/q(\mathbf{x})$ gives $-D_{\mathrm{KL}}(q \| p) \le \sum_{q>0} q(\mathbf{x})\bigl(\frac{p(\mathbf{x})}{q(\mathbf{x})} - 1\bigr) = \sum_{q>0} p(\mathbf{x}) - 1 \le 0$.
+- **Uniqueness:** Equality $\log u = u - 1$ holds only at $u = 1$, forcing $p(\mathbf{x}) = q(\mathbf{x})$ everywhere.
+:::
 
-- **Complete proof from $\log u \le u - 1$ (concavity of $\log$ with equality only at $u = 1$):**
-  Set $u = p(\mathbf{x})/q(\mathbf{x})$ and sum over all outcomes with $q(\mathbf{x}) > 0$:
-  $$-D_{\mathrm{KL}}(q \| p) = \sum_{q > 0} q(\mathbf{x})\log\frac{p(\mathbf{x})}{q(\mathbf{x})} \le \sum_{q > 0} q(\mathbf{x})\left(\frac{p(\mathbf{x})}{q(\mathbf{x})} - 1\right) = \sum_{q > 0} p(\mathbf{x}) - 1 \le 0$$
-- Equality holds if and only if $p(\mathbf{x})/q(\mathbf{x}) = 1$ wherever $q(\mathbf{x}) > 0$, which forces $\sum_{q>0} p(\mathbf{x}) = 1$ and $p = q$ everywhere. $\blacksquare$
+::: {.col .fig}
+@fig:ch35-prob-gibbs-tangent
+:::
+:::
 :::
 
 ::: {.slide title="The Maximum-Entropy Theorem and Its Corollaries"}
@@ -1579,13 +1575,18 @@ $$H_h[q] = H_h[p] - D_{\mathrm{KL}}(q \| p) \le H_h[p] \qquad (\text{with equali
 ::: {.slide title="The Moment Property: Derivatives of A(η)"}
 [Cumulant Generation & Convexity]{.kicker}
 
-Write $Z(\boldsymbol{\eta}) = e^{A(\boldsymbol{\eta})} = \int h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x})}\,d\mathbf{x}$. Differentiating $A(\boldsymbol{\eta}) = \log Z(\boldsymbol{\eta})$ under the integral sign generates all moments of $T(\mathbf{x})$:
+::: {.cols .vc}
+::: {.col}
+$$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \mathbb{E}\bigl[T(\mathbf{x})\bigr], \qquad \nabla_{\boldsymbol{\eta}}^2 A(\boldsymbol{\eta}) = \mathrm{Cov}\bigl(T(\mathbf{x})\bigr) \succeq \mathbf{0}$$
 
-$$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \frac{\nabla Z(\boldsymbol{\eta})}{Z(\boldsymbol{\eta})} = \int T(\mathbf{x})\,\underbrace{h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x}) - A(\boldsymbol{\eta})}}_{p(\mathbf{x} \mid \boldsymbol{\eta})}\,d\mathbf{x} = \mathbb{E}\bigl[T(\mathbf{x})\bigr]$$
+- **Moment generation by differentiation:** Differentiating $A(\boldsymbol{\eta}) = \log \int h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x})}\,d\mathbf{x}$ once yields the mean of $T(\mathbf{x})$; differentiating twice yields its covariance matrix.
+- **Universal convexity:** Because every covariance matrix is positive semidefinite, $A(\boldsymbol{\eta})$ and the negative log-likelihood are **always convex** in $\boldsymbol{\eta}$!
+:::
 
-- **Second derivative (Hessian) is the covariance matrix of $T(\mathbf{x})$:**
-  $$\nabla_{\boldsymbol{\eta}}^2 A(\boldsymbol{\eta}) = \frac{\nabla^2 Z}{Z} - \frac{(\nabla Z)(\nabla Z)^\top}{Z^2} = \mathbb{E}\bigl[T(\mathbf{x})T(\mathbf{x})^\top\bigr] - \mathbb{E}[T(\mathbf{x})]\,\mathbb{E}[T(\mathbf{x})]^\top = \mathrm{Cov}\bigl(T(\mathbf{x})\bigr) \succeq \mathbf{0}$$
-- **Universal convexity:** Because every covariance matrix is positive semidefinite ($\mathbf{v}^\top \mathrm{Cov}(T)\mathbf{v} = \mathrm{Var}(\mathbf{v}^\top T) \ge 0$), the log-partition function $A(\boldsymbol{\eta})$ is **always convex**!
+::: {.col .fig}
+@fig:ch35-prob-cumulant-derivs
+:::
+:::
 :::
 
 ::: {.slide title="Computing Moments via Automatic Differentiation"}
@@ -1618,23 +1619,14 @@ $$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \frac{\nabla Z(\boldsymbol{\
 ::: {.slide title="Boundary Divergence and Redundant Logits"}
 [When Moment Matching Has No Finite or Unique Solution]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-**1. Unattainable Boundary Means ($13/13$ Heads)**
-
-- The equation $\nabla A(\hat{\boldsymbol{\eta}}) = \bar{T}$ has a finite solution only when $\bar{T}$ lies in the interior of attainable expectations.
-- For a coin, $\mathrm{sigmoid}(\eta) \in (0, 1)$ is strictly open. If all $13$ flips land heads, $\bar{T} = 1 \notin (0, 1)$, and
-  $$\mathcal{L}(\eta) = 13\log(1 + e^{-\eta}) \xrightarrow{\eta \to \infty} 0$$
-  decreases monotonically without a finite minimizer ($\hat{\eta} \to +\infty$).
-- **Linearly separable logistic regression:** Hits this exact runaway regime ($\|\mathbf{w}\| \to \infty$) unless regularized by weight decay or a prior!
+- **Unattainable boundary means ($13/13$ heads):** Since $\mathrm{sigmoid}(\eta) \in (0, 1)$ is open, $\bar{T} = 1$ has no finite solution ($\hat{\eta} \to +\infty$, just like linearly separable logistic regression without weight decay).
+- **Non-minimal softmax logits:** Because one-hot coordinates sum to $\mathbf{1}^\top \mathbf{y} = 1$, shifting $\mathbf{z} \to \mathbf{z} + c\mathbf{1}$ leaves probabilities unchanged—exploited by `logsumexp` ($c = \max_k z_k$) to prevent overflow.
 :::
 
-::: {.col}
-**2. Non-Minimal Parameterizations ($K$ Softmax Logits)**
-
-- Strict convexity ($\nabla^2 A(\boldsymbol{\eta}) \succ \mathbf{0}$) holds iff no linear combination of $T(\mathbf{x})$ is constant (**minimal** representation).
-- One-hot categorical vectors satisfy $\mathbf{1}^\top \mathbf{y} = \sum_{k=1}^K y_k = 1$, so shifting $\mathbf{z} \to \mathbf{z} + c\mathbf{1}$ leaves all softmax probabilities unchanged ($\nabla^2 A(\mathbf{z})\mathbf{1} = \mathbf{0}$).
-- **Practical benefit:** Frameworks keep all $K$ logits and subtract $c = \max_k z_k$ before exponentiating (`logsumexp` trick) to prevent floating-point overflow.
+::: {.col .fig .big}
+@fig:ch35-prob-boundary-minimal
 :::
 :::
 :::
@@ -1642,19 +1634,17 @@ $$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \frac{\nabla Z(\boldsymbol{\
 ::: {.slide title="Generalized Linear Models and Canonical Links"}
 [Why Every Standard Loss Has Gradient Input × (Prediction − Target)]{.kicker}
 
-A **generalized linear model (GLM)** with the **canonical link** sets the natural parameter directly to a linear map of the features, $\boldsymbol{\eta} = \mathbf{W}^\top \mathbf{x}$. Writing $\boldsymbol{\mu}(\mathbf{x}) = \nabla A(\boldsymbol{\eta}) = \mathbb{E}[T(y) \mid \mathbf{x}]$, the chain rule gives:
+::: {.cols .vc}
+::: {.col}
+$$\nabla_{\mathbf{W}}\bigl(-\log p(y \mid \mathbf{x})\bigr) = \mathbf{x}\,\bigl(\boldsymbol{\mu}(\mathbf{x}) - T(y)\bigr)^\top$$
 
-$$\nabla_{\mathbf{W}}\bigl(-\log p(y \mid \mathbf{x})\bigr) = \mathbf{x}\,\bigl(\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) - T(y)\bigr)^\top = \mathbf{x}\,\bigl(\boldsymbol{\mu}(\mathbf{x}) - T(y)\bigr)^\top$$
+- **Canonical link ($\boldsymbol{\eta} = \mathbf{W}^\top\mathbf{x}$):** The chain rule through $\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \boldsymbol{\mu}(\mathbf{x})$ yields input times prediction error for every exponential-family loss.
+- **Four GLM heads:** Identity $\eta$ (linear regression), $\mathrm{sigmoid}(\eta)$ (logistic), $\mathrm{softmax}(\boldsymbol{\eta})$ (multi-class), and $e^\eta$ (Poisson count regression).
+:::
 
-| Target Label $y$ | Exponential Family | Statistic $T(y)$ | Canonical Mean Map $\boldsymbol{\mu}(\mathbf{x}) = \nabla A(\boldsymbol{\eta})$ | Generalized Linear Model |
-| :--- | :--- | :--- | :--- | :--- |
-| Real scalar $y \in \mathbb{R}$ | Gaussian ($\sigma^2 = 1$) | $y$ | Identity $\eta$ | Linear regression ($L_2$ loss) |
-| Binary $y \in \{0, 1\}$ | Bernoulli | $y$ | $\mathrm{sigmoid}(\eta) = (1 + e^{-\eta})^{-1}$ | Logistic regression (BCE) |
-| Class ID $y \in \{1, \dots, K\}$ | Categorical | One-hot $\mathbf{y}$ | $\mathrm{softmax}(\boldsymbol{\eta})$ | Softmax regression (CE) |
-| Count $y \in \{0, 1, 2, \dots\}$ | Poisson | $y$ | Exponential $e^\eta$ | Poisson count regression |
-
-::: {.d2l-note}
-**Deep neural networks:** A deep network replaces raw input $\mathbf{x}$ with a learned representation $\mathbf{h}_\theta(\mathbf{x})$ feeding into a canonical GLM output head, preserving the exact output-layer gradient $\boldsymbol{\mu}(\mathbf{x}) - T(y)$.
+::: {.col .fig}
+@fig:ch35-prob-glm-head
+:::
 :::
 :::
 
@@ -1690,15 +1680,18 @@ Verifying the Gumbel-max sampler on $\mathbf{z} = (2, 1, 0.1, -1)$ across $10^5$
 ::: {.slide title="Bayesian Updating and the Beta Conjugate Prior"}
 [From Point Estimates to Posterior Distributions]{.kicker}
 
-The point estimate $\hat{\theta} = 9/13 \approx 0.692$ cannot distinguish $9/13$ flips from $900/1300$ flips. Treating the bias $\theta \in [0, 1]$ as a random variable with a **Beta prior** $\mathrm{Beta}(\theta \mid a, b)$ ($a, b > 0$) gives:
+::: {.cols .vc}
+::: {.col}
+$$\mathrm{Beta}(\theta \mid a, b) \cdot \theta^x(1-\theta)^{n-x} \propto \mathrm{Beta}(\theta \mid a + x,\ b + n - x)$$
 
-$$\mathrm{Beta}(\theta \mid a, b) = \frac{\theta^{a-1}(1 - \theta)^{b-1}}{B(a, b)}, \qquad B(a, b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a + b)}, \qquad \mathbb{E}[\theta] = \frac{a}{a + b}, \qquad \mathrm{Var}(\theta) = \frac{\mathbb{E}[\theta](1 - \mathbb{E}[\theta])}{a + b + 1}$$
+- **Additive pseudo-counts:** Prior parameters $(a, b)$ act as virtual heads and tails added directly to observed counts $(x, n-x)$.
+- **Mean vs. mode:** Posterior mean $\frac{a+x}{a+b+n}$ uses pseudo-counts $(a, b)$ (giving Laplace's rule $\frac{x+1}{n+2} = \frac{2}{3}$ under $\mathrm{Beta}(1,1)$), whereas mode $\frac{a+x-1}{a+b+n-2}$ uses $(a-1, b-1)$.
+:::
 
-- **Conjugate multiplication by the binomial likelihood $\theta^x(1 - \theta)^{n - x}$:**
-  $$p(\theta \mid x) \propto \underbrace{\theta^{a-1}(1 - \theta)^{b-1}}_{\text{prior}} \cdot \underbrace{\theta^x(1 - \theta)^{n - x}}_{\text{likelihood}} = \theta^{(a + x) - 1}(1 - \theta)^{(b + n - x) - 1} \implies \theta \mid x \sim \mathrm{Beta}(a + x,\ b + n - x)$$
-- **Mean vs. mode pseudo-counts:**
-  - **Posterior mean (and next-flip predictive probability):** $\mathbb{E}[\theta \mid x] = \frac{a + x}{a + b + n}$ ($a, b$ act as prior pseudo-counts; for $\mathrm{Beta}(1, 1)$, this gives **Laplace's rule of succession** $\frac{x + 1}{n + 2} = \frac{10}{15} = \frac{2}{3}$).
-  - **Posterior mode (MAP):** $\hat{\theta}_{\mathrm{MAP}} = \frac{a + x - 1}{a + b + n - 2}$ ($a - 1, b - 1$ act as mode pseudo-counts; for $\mathrm{Beta}(1, 1)$, mode $= \frac{9}{13}$).
+::: {.col .fig}
+@fig:ch35-prob-conjugate-add
+:::
+:::
 :::
 
 ::: {.slide title="Posterior Contraction and Non-Conjugate Grid Priors"}

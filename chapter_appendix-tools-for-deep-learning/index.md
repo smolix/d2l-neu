@@ -99,17 +99,15 @@ Tools for Deep Learning: From Local Notebooks to Distributed Clusters and Servin
 ::: {.slide title="Four Systems Questions Behind Every Tooling Choice"}
 [Motivation]{.kicker}
 
-Product names, cloud prices, and library versions change every few months, but every decision about what to run, rent, buy, or deploy reduces to four durable systems questions:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. Does the workload fit in memory?** Training holds parameters, gradients, optimizer moments, and activations in device RAM; if peak memory exceeds capacity, the job fails before compute speed matters.
-- **2. What physical limit bounds throughput?** Training and prompt prefill reuse weights across many tokens (compute-bound), whereas autoregressive decoding reads every active weight per token (bandwidth-bound).
+- **1. Does it fit in memory?** Training holds parameters, gradients, optimizer moments ($16N$), and activations in VRAM; OOM stops a run before FLOP/s matters.
+- **2. What bounds throughput?** Training and prompt prefill are compute-bound, whereas batch-1 autoregressive decoding is memory-bandwidth bound.
+- **3. Cost & Reproducibility:** Optimize total cost per completed result (including setup, egress, and spot recovery) and lock environments/SHAs from cell one.
 :::
 
-::: {.col}
-- **3. What does a completed result cost?** The cheapest GPU per hour is rarely the cheapest experiment if slower iterations, egress fees, or uncheckpointed spot interruptions multiply wall time and engineering hours.
-- **4. Can another person reproduce the output?** Hidden kernel state, unpinned container images, and floating Hub branches silently invalidate empirical claims unless reproducibility is built in from cell one.
+::: {.col .fig .big}
+@fig:ch39-tools-four-questions
 :::
 :::
 :::
@@ -117,21 +115,16 @@ Product names, cloud prices, and library versions change every few months, but e
 ::: {.slide title="Three First-Principles Equations for Systems Sizing"}
 [Quantitative Rules]{.kicker}
 
-Before benchmarking a machine or launching a cluster, back-of-the-envelope arithmetic predicts whether a job fits, how fast it runs, and how often it must checkpoint:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Peak mixed-precision training state (§39.4, §39.6):** With BF16 weights/gradients and FP32 master weights plus Adam moments ($2 + 2 + 4 + 8 = 16\text{ B/param}$):
-  $$M_{\text{train}} \approx 16 N + M_{\text{activations}} + M_{\text{workspace}}$$
-- **Autoregressive decode bandwidth bound (§39.4, §39.7):** Streaming active weights $B_w$ and KV cache $B_{\text{kv}}$ at memory bandwidth $\beta$:
-  $$\text{tokens/s} \lesssim \frac{\beta}{B_w + b \, n \, B_{\text{kv}}}$$
+$$M_{\text{train}} \approx 16 N + M_{\text{act}}, \qquad \text{tok/s} \lesssim \frac{\beta}{B_w + b n B_{\text{kv}}}$$
+
+- **Training state & compute (§39.2, §39.4, §39.6):** Mixed-precision Adam uses $16\text{ B/param}$ and $C \approx 6ND\text{ FLOPs}$ across $N$ parameters and $D$ tokens.
+- **Decode & checkpoint intervals (§39.2–39.7):** Batch-1 decode streams $B_w + B_{\text{kv}}$ at bandwidth $\beta$, and Young's law checkpoints every $\tau^* = \sqrt{2\delta M}$.
 :::
 
-::: {.col}
-- **Compute cost of training (§39.2, §39.6):** Forward ($2ND$) plus backward ($4ND$) floating-point operations across $N$ parameters and $D$ tokens:
-  $$C \approx 6 N D \text{ FLOPs}$$
-- **Young's optimal checkpoint interval (§39.2, §39.3):** Balancing checkpoint write duration $\delta$ against mean time between interruptions $M$:
-  $$\tau^* = \sqrt{2 \delta M}$$
+::: {.col .fig}
+@fig:ch39-tools-sizing-equations
 :::
 :::
 :::
@@ -139,32 +132,33 @@ Before benchmarking a machine or launching a cluster, back-of-the-envelope arith
 ::: {.slide title="Roadmap of Chapter 39: From Laptop to Production"}
 [Chapter Architecture]{.kicker}
 
-Each section addresses one stage of the engineering lifecycle as a project outgrows a single browser tab:
+::: {.cols .vc}
+::: {.col}
+- **§39.1–39.3 Notebooks, Hosted VMs & Cloud:** Kernel state discipline, `uv` lock files, Colab/Kaggle persistence, and cloud cost per completed result.
+- **§39.4–39.5 Hardware & Ecosystem:** Capacity vs. bandwidth rooflines, unified memory for MoE, Arena Elo resolution, and `safetensors`/SHA pinning.
+- **§39.6–39.9 Scaling, Serving & D2L Internals:** DDP/FSDP2, 3D parallelism, continuous batching, PagedAttention, and the D2L single-source build.
+:::
 
-| Section | Core Engineering Question | Primary Bottleneck or Risk |
-| :--- | :--- | :--- |
-| **§39.1 Notebooks** | How do we run notebooks locally without hidden state? | Out-of-order kernel mutations & wrong-venv kernels |
-| **§39.2 Colab & Kaggle** | How do we work on free, borrowed browser VMs? | Ephemeral disks, 12-hour disconnects & image drift |
-| **§39.3 Cloud Computing** | When do we rent GPUs and how do we price a run? | Cost per completed result, spot preemption & egress |
-| **§39.4 Hardware** | Which machine should we buy for training or local LLMs? | VRAM capacity vs. memory bandwidth vs. TCO break-even |
-| **§39.5 Ecosystem** | How do we select, verify, and pin open models & data? | Benchmark contamination, commit drift & pickle exploits |
-| **§39.6 Distributed Training** | How do we scale training across multiple GPUs/nodes? | State sharding (FSDP), interconnect bandwidth & faults |
-| **§39.7 Model Serving** | How do we serve many concurrent users under an SLO? | KV-cache fragmentation, TTFT/TPOT & batch scheduling |
+::: {.col .fig .big}
+@fig:ch39-tools-lifecycle-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Concrete Worked Benchmarks Across the Chapter"}
 [Pedagogical Thread]{.kicker}
 
-Every section pairs its systems principles with executable sizing models and dated empirical snapshots (November 2026):
+::: {.cols .vc}
+::: {.col}
+- **Reproducible setups & economics (§39.1–39.3):** `uv pip sync`, environment fingerprints, and engineer-inclusive cloud cost models across 4090 / A100 / H100.
+- **Sizing & verification (§39.4–39.5):** 7B training memory ($86\text{ GiB}$ vs. $4\text{ GiB}$ QLoRA), decode bounds, Bradley-Terry SE ($347/\sqrt{v}$), and frozen manifests.
+- **Distributed & serving engines (§39.6–39.8):** 8-GPU FSDP2 ($22\text{ GiB}$ vs. $95\text{ GiB}$ DDP), continuous batching simulators, and prefix output hashing.
+:::
 
-| Section | Worked Quantitative Model / Live Code Cell | Key Systems Takeaway |
-| :--- | :--- | :--- |
-| **§39.1–39.2** | `uv` lock sync, environment fingerprint & path adapter | Reconstructible setups survive kernel restarts and VM resets |
-| **§39.3** | Invoice vs. engineer-inclusive cost across 4090 / A100 / H100 | One extra 30-min debugging round outweighs a $6\times$ hourly gap |
-| **§39.4** | 7B training memory ($86\text{ GiB}$ vs. $4\text{ GiB}$ QLoRA) & decode bounds | Discrete GPUs win on bandwidth; unified memory wins on capacity |
-| **§39.5** | Bradley-Terry Arena SE ($347/\sqrt{v}$) & frozen `Artifact` manifest | Aggregate Elo hides domain reversals; pin 40-char commit SHAs |
-| **§39.6** | 8-GPU 7B memory budget: DDP ($95\text{ GiB}$) vs. FSDP ($22\text{ GiB}$) | Shard state with FSDP2 inside nodes; checkpoint atomically |
-| **§39.7–39.8** | Continuous batching simulator & D2L single-source build pipeline | Paged caches + continuous batching maximize goodput under SLOs |
+::: {.col .fig .big}
+@fig:ch39-tools-worked-benchmarks
+:::
+:::
 :::
 
 ::: {.slide title="How to Navigate This Chapter and Stay Current"}

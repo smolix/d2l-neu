@@ -93,57 +93,64 @@ Deep Learning Computation: From Prototype Code to Production Systems<br>**module
 ::: {.slide title="Scaling From a 4-Array MLP to an 8B Foundation Model"}
 [The Systems Challenge]{.kicker}
 
-Moving from a textbook prototype to an 8-billion-parameter language model exposes four engineering bottlenecks that exist around every neural architecture:
-
+::: {.cols .vc}
+::: {.col}
 - **Memory capacity (`128 GB` floor):** Storing 8B weights takes `16 GB` in `bfloat16`, yet training with Adam in `float32` requires `128 GB` of parameters, gradients, and optimizer moments before computing a single activation.
-- **Numerical stability & precision:** Unscaled residual branches blow up activation variance by $2^{32}$ across 32 blocks, while storing weights directly in 16-bit formats silently rounds away small gradient updates.
-- **Fault tolerance & security:** Multi-GPU pre-training suffers hardware interruptions every few hours; checkpoints must resume bit for bit without executing untrusted `pickle` bytecode on load.
-- **Hardware execution & debugging:** Asynchronous GPU command queues distort naive wall-clock timers, parallel atomic reductions break bitwise determinism, and silent `NaN`s require non-invasive layer hooks.
+- **Numerical stability & precision:** Unscaled residual branches blow up activation variance by $2^{32}$ across 32 blocks, while 16-bit weights silently round away small updates.
+- **Fault tolerance, security & async GPUs:** Atomic checkpoints (`96 GB`), `safetensors` vs. `pickle` RCE, synced GPU timers, and non-invasive layer hooks.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-four-bottlenecks
+:::
+:::
 :::
 
 ::: {.slide title="The Unifying Abstraction: A Model Is a Tree of Modules"}
 [Core Mental Model]{.kicker}
 
-Every deep learning framework represents a network as a recursive **module tree** whose internal nodes are containers or blocks and whose leaves hold persistent tensor **state**:
+::: {.cols .vc}
+::: {.col}
+- **Structured path addressing:** Every parameter and non-trainable buffer is uniquely addressed by its dotted path from the root module (e.g., `1.body.0.weight`).
+- **Unified tree traversals:** Optimizer setup, initialization, `safetensors` serialization, dtype casting, GPU placement, and hooks all walk registered children recursively.
+- **The silent registration invariant:** Any layer or tensor stored in a plain Python attribute or list outside the module registry is invisible to optimizers, checkpoints, and GPUs.
+:::
 
-- **Structured path addressing:** Every parameter and non-trainable buffer is uniquely addressed by its dotted path from the root module (e.g., `1.body.0.weight`), matching Python attribute traversal.
-- **Unified tree traversals:** Optimizer construction, weight initialization, `safetensors` serialization, dtype casting, GPU placement, and diagnostic hooks all execute as recursive walks over registered children.
-- **The silent registration invariant:** Any layer or tensor stored in a plain Python attribute or list outside the module registry still runs during the forward pass, but is silently invisible to optimizers, checkpoints, and device transfers.
-
-::: {.d2l-note .rule}
-**One Data Structure, Eight Operations:** Master how a module registers its children, parameters, and buffers, and every framework subsystem in this chapter follows the exact same traversal pattern.
+::: {.col .fig .big}
+@fig:ch05-bg-module-tree-hub
+:::
 :::
 :::
 
 ::: {.slide title="Chapter 5 Roadmap: Architecture, State, and Execution"}
 [Architectural & Systems Roadmap]{.kicker}
 
-The eight sections progress from assembling and initializing the module tree to controlling numerical formats, persistent storage, hardware placement, and runtime diagnostics:
+::: {.cols .vc}
+::: {.col}
+- **Model structure & state (§§5.1–5.4):** Module trees and `__setattr__` registration, the $16\text{ B/param}$ `fp32` Adam floor, weight tying, $(1+g^2)^N$ residual variance scaling ($g = 1/\sqrt{N}$), `RMSNorm`, fixed buffers, and the Straight-Through Estimator.
+- **Precision, I/O & hardware (§§5.5–5.8):** `fp32` master weights with `bf16`/`fp16` compute, zero-copy `safetensors` and 5-part atomic checkpoints, asynchronous GPU queues, $O(\sqrt{K})$ activation checkpointing, PRNG seeding, and forward/backward hooks.
+:::
 
-| Section | Core Systems Question | Key Mechanism & Mathematical Rule |
-|:---|:---|:---|
-| **§5.1 Modules & Construction** | How are 291 weight arrays organized? | Module trees, `__setattr__` registration, residual blocks $\mathbf{x} + f(\mathbf{x})$, dataclass configs |
-| **§5.2 Parameters & Memory** | What state exists and what does training cost? | Trainable parameters vs. fixed buffers, $16\text{ B/param}$ fp32 Adam floor, weight tying |
-| **§5.3 Initialization** | Why do deep residual networks explode at step 0? | Tree-wide initializers, truncated normals, residual variance $(1+g^2)^N$ and $1/\sqrt{N}$ scaling |
-| **§5.4 Custom Layers** | How do we add new layers or non-differentiable ops? | Stateless layers, `RMSNorm`, fixed-buffer `RandomFeatures`, Straight-Through Estimator |
-| **§5.5 Numerical Formats** | How do we compute in 16 bits without losing updates? | `fp32` vs. `bf16` vs. `fp16` exponent/mantissa split, `fp32` master weights, dynamic loss scaling |
-| **§5.6 Saving & Checkpoints** | How do we share weights safely and resume crashes? | `pickle` RCE hazards vs. zero-copy `safetensors`, 5-part atomic checkpoints, key auditing |
-| **§5.7 GPUs & Memory Budgets** | What fills GPU HBM and how do we time async kernels? | Explicit device transfers, command-queue sync, caching allocator, $O(\sqrt{K})$ activation checkpointing |
-| **§5.8 Reproducibility & Hooks** | When do runs agree and how do we inspect live layers? | PRNG seeds/keys, non-associative GPU atomics, forward/backward hooks and `NaN` traps |
+::: {.col .fig .big}
+@fig:ch05-bg-systems-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Concrete Running Benchmarks Across the Chapter"}
 [Quantitative Anchors]{.kicker}
 
-Throughout all eight sections, we pair compact runnable models with exact back-of-the-envelope calculations for an **8-billion-parameter transformer** (32 blocks, hidden width $d = 4096$, vocabulary $|V| = 128{,}256$):
+::: {.cols .vc}
+::: {.col}
+- **Parameter & memory scaling (§§5.1–5.2, §5.5):** Toy 4-block Residual MLP ($729{,}866$ params) vs. Llama 3 8B ($291$ tensors, `16 GB` `bf16` inference, `128 GB` `fp32` Adam training floor).
+- **Signal stability & I/O (§5.3, §5.6):** $g = 1/\sqrt{N}$ caps 32-block std growth at $\sqrt{e} \approx 1.65\times$ (vs. $65{,}536\times$ unscaled); 5-part `96 GB` checkpoints resume bit for bit.
+- **Activation memory (§5.7):** Segmenting $K = 16$ blocks by $s = \sqrt{K} = 4$ cuts peak step RAM from $1.1\text{ GiB} \to 0.45\text{ GiB}$.
+:::
 
-| Systems Dimension | Toy / Notebook Verification | Production 8B-Parameter Scale |
-|:---|:---|:---|
-| **Parameter Inventory (§5.1–5.2)** | 4-block Residual MLP ($784 \to 256 \to 10$): **729,866** params | 32 blocks $\times$ 9 arrays $+$ 3 global arrays $=$ **291 tensors** |
-| **Static Memory Floor (§5.2, §5.5)** | 2-block Residual MLP (18,634 params): **0.28 MiB** in fp32 Adam | `16 GB` bf16 inference; **128 GB** fp32 Adam training state |
-| **Residual Signal Scale (§5.3, §5.8)** | 32 blocks with unscaled $g=1$: activation std balloons by **$2^{16} = 65{,}536\times$** | Output projection gain $g = 1/\sqrt{N}$ caps growth at **$\sqrt{e} \approx 1.65\times$** |
-| **Checkpoint Footprint (§5.6)** | 200-step regressor checkpoint resumes step 201–205 **bit for bit** | Weights (`32 GB`) $+$ Adam $\mathbf{m}, \mathbf{v}$ (`64 GB`) $=$ **96 GB** per checkpoint |
-| **Activation Memory (§5.7)** | 16 blocks ($B=8192, d=1024$): checkpointing cuts **1.1 GiB $\to$ 0.45 GiB** | Segment size $s = \sqrt{K}$ reduces stored activations from $O(K)$ to **$O(\sqrt{K})$** |
+::: {.col .fig .big}
+@fig:ch05-bg-8b-benchmarks
+:::
+:::
 :::
 
 ::: {.slide title="How to Navigate This Chapter"}

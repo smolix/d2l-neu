@@ -332,17 +332,15 @@ Neural Scaling Laws and Compute-Optimal Training (Chinchilla)<br>**N ≈ 12Ld² 
 ::: {.slide title="Why a 10²⁵-FLOP Run Must Be Planned Before It Starts"}
 [Motivation]{.kicker}
 
-Pretraining a frontier language model is a single, non-repeatable capital expenditure spanning thousands of GPUs for months:
+::: {.cols .vc}
+::: {.col}
+- Pretraining a frontier language model is a single, non-repeatable capital expenditure spanning thousands of GPUs for months ($3.8 \times 10^{25}\text{ FLOPs}$ for Llama 3 405B).
+- **The fundamental allocation question:** Given a fixed training compute budget $C \approx 6 N D$, how should we split $C$ between model parameters $N$ and training tokens $D$ to minimize validation loss $\mathcal{L}(N, D)$?
+:::
 
-| Pretraining Run | Non-Embedding / Total Params $N$ | Training Tokens $D$ | Total Compute $C \approx 6ND$ |
-| :--- | :---: | :---: | :---: |
-| **Our §11.2 Byte-Level GPT** (1 GPU, $< 1\text{ min}$) | $4.78\text{M}$ ($4.85\text{M}$) | $8.19\text{M}$ | $2.4 \times 10^{14}\text{ FLOPs}$ |
-| **GPT-2 Small** (2019) | $85.0\text{M}$ ($124.4\text{M}$) | $\sim 10\text{B}$ | $7.5 \times 10^{18}\text{ FLOPs}$ |
-| **Chinchilla 70B** (Hoffmann et al., 2022) | $70\text{B}$ | $1.4\text{T}$ | $5.9 \times 10^{23}\text{ FLOPs}$ |
-| **Llama 3 405B** (2024) | $405\text{B}$ | $15.6\text{T}$ | $3.8 \times 10^{25}\text{ FLOPs}$ |
-
-::: {.d2l-note .warn}
-**The fundamental resource allocation problem:** Given a fixed training compute budget $C$ (in FLOPs), how should we split $C$ between model parameters $N$ and training tokens $D$ to achieve the lowest validation cross-entropy $\mathcal{L}(N, D)$?
+::: {.col .fig .big}
+@fig:ch11-tf-scale-budget-tradeoff
+:::
 :::
 :::
 
@@ -362,28 +360,34 @@ $$N_{\mathrm{blocks}} = 12 L d^2, \qquad N_{\mathrm{total}} = 12 L d^2 + V d + \
 ::: {.slide title="Why Training Costs Six FLOPs per Parameter and Token"}
 [The C ≈ 6ND Law]{.kicker}
 
-Consider a single linear layer $\mathbf{Y} = \mathbf{X}\mathbf{W}$ with $\mathbf{W} \in \mathbb{R}^{d_{\text{in}} \times d_{\text{out}}}$ ($P = d_{\text{in}} d_{\text{out}}$ parameters) processing $D$ token rows:
+::: {.cols .vc}
+::: {.col}
+- For each linear projection $\mathbf{Y} = \mathbf{X}\mathbf{W}$ with $P = d_{\text{in}} d_{\text{out}}$ parameters across $D$ tokens:
+  $$C \approx \underbrace{2 N D}_{\text{forward}} + \underbrace{4 N D}_{\text{backward}} = 6 N D$$
+- **Forward ($2P$ FLOPs/token):** $\mathbf{Y} = \mathbf{X}\mathbf{W}$.
+- **Backward ($4P$ FLOPs/token):** Activation gradient $\nabla_{\mathbf{X}}\mathcal{L} = (\nabla_{\mathbf{Y}}\mathcal{L})\mathbf{W}^\top$ ($2P$) + weight gradient $\nabla_{\mathbf{W}}\mathcal{L} = \mathbf{X}^\top(\nabla_{\mathbf{Y}}\mathcal{L})$ ($2P$).
+:::
 
-$$C \approx \underbrace{2 N D}_{\text{forward pass}} + \underbrace{4 N D}_{\text{backward pass}} = 6 N D$$
-
-- **Forward pass ($2 P$ FLOPs/token):** Each token row $\mathbf{x} \in \mathbb{R}^{d_{\text{in}}}$ performs $d_{\text{in}} d_{\text{out}}$ multiply–accumulate pairs ($1\text{ multiply} + 1\text{ add} = 2 P$ FLOPs).
-- **Backward pass ($4 P$ FLOPs/token):** Given upstream gradient $\nabla_{\mathbf{Y}}\mathcal{L}$, backpropagation computes *two* matrix products of size $P$ per token:
-  1. **Activation gradient:** $\nabla_{\mathbf{X}}\mathcal{L} = (\nabla_{\mathbf{Y}}\mathcal{L})\mathbf{W}^\top$ ($2 P$ FLOPs/token) to propagate down the stack.
-  2. **Parameter gradient:** $\nabla_{\mathbf{W}}\mathcal{L} = \mathbf{X}^\top(\nabla_{\mathbf{Y}}\mathcal{L})$ ($2 P$ FLOPs/token) for the optimizer step.
+::: {.col .fig}
+@fig:ch11-tf-scale-six-nd
+:::
+:::
 :::
 
 ::: {.slide title="Accounting for Attention Score Dot Products"}
 [The Attention FLOP Term]{.kicker}
 
-What does $C \approx 6 N D$ omit? Inside each block, attention also computes the token-to-token score matrix $\mathbf{Q}\mathbf{K}^\top$ and weighted value sum $\mathbf{A}\mathbf{V}$ over window length $T$:
+::: {.cols .vc}
+::: {.col}
+- Inside each block, attention also computes $\mathbf{Q}\mathbf{K}^\top$ and $\mathbf{A}\mathbf{V}$ ($4Td$ forward FLOPs/token vs. $24d^2$ linear projection FLOPs/token), giving a relative correction of $T / (6d)$ (or $T / (12d)$ with causal tile skipping).
+- **Short context ($T \ll 6d$):** Only $+8.2\%$ in our byte-level GPT ($T = 128, d = 256$).
+- **Long-context crossover ($T \ge 6d$):** Equals projection FLOPs at $T = 6d = 24{,}576$ tokens in Llama 3 8B ($d = 4{,}096$).
+:::
 
-| Operation per Block and Token (Forward Pass) | FLOPs per Token | Ratio to Linear Projections |
-| :--- | :---: | :---: |
-| **Linear projections ($\mathbf{W}_{q,k,v,o}$ and FFN, $12 d^2$ params)** | $24 d^2$ | $1.00$ (baseline) |
-| **Attention scores ($\mathbf{q}_t^\top \mathbf{k}_s$) + value mix ($\sum_s \alpha_{t,s}\mathbf{v}_s$)** | $4 T d$ (unmasked) | $\frac{4 T d}{24 d^2} = \frac{T}{6 d}$ |
-
-- **Short/medium context ($T \ll 6d$):** In our byte-level GPT ($T = 128, d = 256, N = 4.78\text{M}$ including the tied output head), attention adds $\frac{4 L T d}{2 N} = \mathbf{8.2\%}$ to the linear-projection FLOPs.
-- **Long-context crossover ($T \ge 6d$):** At $d = 4{,}096$ (Llama 3 8B), quadratic attention FLOPs equal the linear-projection FLOPs once context length reaches $T = 6 d = 24{,}576$ tokens.
+::: {.col .fig .big}
+@fig:ch11-tf-scale-attn-crossover
+:::
+:::
 :::
 
 ::: {.slide title="Verifying C ≈ 6ND Against Exact Hardware Counters"}
@@ -414,11 +418,16 @@ To observe neural scaling laws firsthand, we train a $5 \times 3$ grid of **15 b
 ::: {.slide title="Pitfall: Fixed Horizons Distort Scaling Exponents"}
 [Experimental Methodology Pitfall]{.kicker}
 
-Why did we train three separate runs ($s = 500, 1000, 2000$) for each model size instead of training one $2{,}000$-step run and reading validation loss at steps $500$, $1{,}000$, and $2{,}000$?
-
-- **Hoffmann et al. (2022)'s key correction to Kaplan et al. (2020):** In a $2{,}000$-step cosine schedule, the learning rate at step $500$ is still near its peak ($\eta_{500} \approx 0.9\,\eta_{\max}$), preventing the weights from settling into a local minimum.
+::: {.cols .vc}
+::: {.col}
+- **Hoffmann et al. (2022)'s correction to Kaplan et al. (2020):** In a single $2{,}000$-step cosine schedule, the learning rate at step $500$ is still near its peak ($\eta_{500} \approx 0.9\,\eta_{\max}$).
 - **Systematic small-budget bias:** Reading intermediate checkpoints of an un-annealed schedule artificially inflates the loss of short runs, making extra tokens $D$ look less valuable than extra parameters $N$.
-- **Width-dependent warmup:** Small widths ($d = 96$, peak LR $5.3 \times 10^{-3}$) require at least $100$ warmup steps so early Adam updates do not overshoot.
+:::
+
+::: {.col .fig .big}
+@fig:ch11-tf-scale-cosine-horizon
+:::
+:::
 :::
 
 ::: {.slide title="Grid Results: Diminishing Returns in N Alone"}
@@ -457,13 +466,18 @@ Why did we train three separate runs ($s = 500, 1000, 2000$) for each model size
 ::: {.slide title="The Chinchilla Parametric Scaling Law"}
 [Parametric Loss Surface]{.kicker}
 
-Hoffmann et al. (2022) decompose validation cross-entropy $\mathcal{L}(N, D)$ into three additive terms fitted across $400+$ training runs ($70\text{M}\text{--}16\text{B}$ parameters, $5\text{B}\text{--}500\text{B}$ tokens):
+::: {.cols .vc}
+::: {.col}
+- Hoffmann et al. (2022) decompose validation loss $\mathcal{L}(N, D)$ into three additive terms:
+  $$\mathcal{L}(N, D) = L_\infty + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$
+- **Entropy floor ($L_\infty \approx 1.7\text{--}1.8$):** Irreducible entropy of natural language.
+- **Model capacity ($A / N^\alpha$) & Data sample ($B / D^\beta$):** Power-law penalties with $\alpha \approx 0.35, \beta \approx 0.37$.
+:::
 
-$$\mathcal{L}(N, D) = L_\infty + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$
-
-- **Irreducible entropy floor ($L_\infty \approx 1.69\text{--}1.82\text{ nats/token}$):** The fundamental Shannon entropy of natural text that no finite model or dataset can eliminate.
-- **Finite-capacity approximation penalty ($A / N^\alpha$):** Excess loss from approximating the true distribution with a finite $N$-parameter network ($\alpha \approx 0.35$).
-- **Finite-data estimation penalty ($B / D^\beta$):** Excess loss from training on a finite sample of $D$ tokens ($\beta \approx 0.37$).
+::: {.col .fig}
+@fig:ch11-tf-scale-chinchilla-surface
+:::
+:::
 :::
 
 ::: {.slide title="Deriving the Compute-Optimal Split N*(C) and D*(C)"}
@@ -500,16 +514,15 @@ $$\frac{d}{dN}\left(L_\infty + A N^{-\alpha} + B (C/6)^{-\beta} N^\beta\right) =
 ::: {.slide title="Reconciling Kaplan (2020) vs. Chinchilla (2022)"}
 [Why Exponents Shifted]{.kicker}
 
-Why did Kaplan et al. (2020) conclude $N^* \propto C^{0.73}, D^* \propto C^{0.27}$ (recommending huge models trained on few tokens, like GPT-3 175B on 300B tokens), whereas Chinchilla found $N^* \propto C^{0.50}, D^* \propto C^{0.50}$?
+::: {.cols .vc}
+::: {.col}
+- **Kaplan et al. (2020):** Found $N^* \propto C^{0.73}, D^* \propto C^{0.27}$ by reading intermediate losses from un-annealed LR schedules and omitting embedding parameters $V d$.
+- **Chinchilla (2022) & replications:** Matching the cosine decay horizon to each budget $s$ and accounting for total parameters/FLOPs yields $N^* \propto C^{0.50}, D^* \propto C^{0.50}$ ($D^* / N^* \approx 20$).
+:::
 
-| Methodological Factor | Kaplan et al. (2020) ($a = 0.73$) | Chinchilla (2022) & Refits ($a \approx 0.50$) |
-| :--- | :--- | :--- |
-| **1. Learning-rate schedule** | Fixed long horizon; intermediate losses read at high LR | Cosine schedule decayed to minimum LR at the end of *every* run |
-| **2. Parameter counting ($N$)** | Counted **non-embedding** $N = 12 L d^2$ only | Included embedding/head $V d$ (or corrected small-model distortion) |
-| **3. Small-model tuning** | Fixed warmup length across sizes (starving small runs) | Tuned warmup and peak LR $\propto 1/d$ per model size |
-
-::: {.d2l-note}
-Subsequent replication studies (Pearce & Song 2024; Porian et al. 2024) confirmed that accounting for embedding FLOPs and per-horizon LR decay moves the exponent directly from $0.73$ to $0.50$.
+::: {.col .fig .big}
+@fig:ch11-tf-scale-kaplan-vs-chinchilla
+:::
 :::
 :::
 
@@ -527,14 +540,17 @@ Look at where recent open-weights models sit relative to their Chinchilla pretra
 ::: {.slide title="Lifetime Compute: Balancing Pretraining and Serving"}
 [Total Cost of Ownership]{.kicker}
 
-If a model of size $N$ is trained on $D$ tokens and then deployed to generate $D_{\text{inf}}$ tokens over its lifetime, total lifetime compute is:
+::: {.cols .vc}
+::: {.col}
+- Total lifetime compute across $D$ training tokens and $D_{\text{inf}}$ generated inference tokens is:
+  $$C_{\mathrm{lifetime}}(N, D) = 6 N D + 2 N D_{\mathrm{inf}}$$
+- **Payback threshold for Llama 3 8B ($D = 15\text{T}$) vs. an equal-loss 34B Chinchilla model:** The extra $5.9 \times 10^{23}$ upfront training FLOPs save $5.2 \times 10^{10}\text{ FLOPs}$ per generated token, paying for themselves after **$D_{\text{inf}} \approx 11.3\text{T}$ inference tokens**!
+:::
 
-$$C_{\mathrm{lifetime}}(N, D) = \underbrace{6 N D}_{\text{pretraining}} + \underbrace{2 N D_{\mathrm{inf}}}_{\text{inference serving}}$$
-
-- **Break-even point for Llama 3 8B ($D = 15\text{T}$) vs. an equal-loss Chinchilla model ($N_{\text{Chin}} \approx 34\text{B}, D_{\text{Chin}} \approx 0.64\text{T}$):**
-  - Extra pretraining FLOPs paid upfront by the 8B model: $6(8\text{B})(15\text{T}) - 6(34\text{B})(0.64\text{T}) \approx \mathbf{5.9 \times 10^{23}\text{ FLOPs}}$.
-  - Inference FLOPs saved on every generated token: $2(34\text{B} - 8\text{B}) = \mathbf{5.2 \times 10^{10}\text{ FLOPs/token}}$.
-  - **Payback threshold:** The upfront over-training pays for itself after serving just $D_{\text{inf}} \approx 11.3\text{T}$ generated tokens!
+::: {.col .fig}
+@fig:ch11-tf-scale-lifetime-tco
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: FLOP Accounting and Budget Allocation"}

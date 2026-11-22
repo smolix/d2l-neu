@@ -534,17 +534,14 @@ Offline Reinforcement Learning: Distribution Shift and Pessimism<br>**fixed data
 ::: {.slide title="Learning When No New Action May Be Tried"}
 [Motivation]{.kicker}
 
-Every algorithm in §15.1–§15.6 relied on **online interaction** to correct its mistakes: if a Q-network or world model overrated an action, the agent tried that action, observed the disappointing outcome, and updated its estimate.
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Purely Offline Settings:** Clinical treatment logs, historical recommender trajectories, and teleoperated robot demonstrations provide a fixed dataset $\mathcal{D}$ collected by a behavior policy $\pi_e$, with **zero further interaction**.
-- **The Offline Dilemma:** To outperform $\pi_e$, the learner must select actions that $\pi_e$ took rarely—yet rarely sampled actions have the noisiest value estimates!
+- **Purely Offline Settings:** Clinical logs, recommenders, and robot teleoperation logs provide a fixed dataset $\mathcal{D}$ with **zero further environment interaction**.
+- **Unchecked Maximization Bias:** On 100 narrow FrozenLake episodes ($V^*(s_0) = 0.180$), naive offline Q-learning predicts **$0.25$** while earning only **$0.10$** because no rollout ever refutes lucky thin-support actions.
 :::
 
-::: {.col}
-- **Unchecked Maximization Bias:** On the slippery $4 \times 4$ FrozenLake ($\gamma = 0.95$, exact optimum $V^*(s_0) = 0.180$), running Q-learning on 100 logged episodes predicts **$0.25$** at the start cell while its policy actually earns only **$0.10$**.
-- **The Remedy (Pessimism):** Distrust every value estimate in proportion to its epistemic uncertainty $1/\sqrt{n(s, a)}$.
+::: {.col .fig .big}
+@fig:ch15-drl-online-vs-offline
 :::
 :::
 :::
@@ -598,12 +595,18 @@ Because every sweep revisits the exact same logged transitions, incremental Q-le
 ::: {.slide title="Behavior Cloning and Trajectory Stitching"}
 [Stitching Sub-Trajectories]{.kicker}
 
-Our baseline learner is **Behavior Cloning** (`clone_policy`), which recovers the empirical action frequencies $\hat{\pi}_e(a \mid s) = n(s, a) / n(s)$ and predicts the log's mean discounted episode return:
+::: {.cols .vc}
+::: {.col}
+- **Behavior Cloning (`clone_policy`):** Copies empirical frequencies $\hat{\pi}_e(a \mid s) = n(s, a)/n(s)$ without improvement.
+- **Trajectory Stitching:** Bellman backups propagate Episode 2's goal continuation at cell 10 backward along Episode 1's fast prefix.
 
 @offline-rl-the-experiment-with-a-behavior-cloning-bar-2
+:::
 
-- **How Offline Q-Learning Outperforms Its Collector (Stitching):** Suppose Episode 1 reaches cell 10 from the start and falls into a hole, while Episode 2 reaches cell 10 by a long detour and slides into the goal.
-- Per-transition Bellman backups propagate Episode 2's goal continuation at cell 10 backward along Episode 1's prefix—composing a high-value path that no single logged episode ever executed!
+::: {.col .fig}
+@fig:ch15-drl-trajectory-stitching
+:::
+:::
 :::
 
 ::: {.slide title="Naive Offline Q-Learning vs. Behavior Cloning"}
@@ -648,12 +651,18 @@ Pooling the greedy policy's chosen state-action pairs across all 40 narrow datas
 ::: {.slide title="Pessimism Under Uncertainty: A Two-Armed Bandit"}
 [Lower Confidence Bounds]{.kicker}
 
-Consider an offline bandit log with $n(1) = 100$ pulls of deterministic Arm 1 ($r(1) = 0.5$) and $n(2) = 1$ lucky pull of Bernoulli Arm 2 (true mean $r(2) = 0.25$, logged $\hat{r}(2) = 1.0$ with probability $1/4$):
+::: {.cols .vc}
+::: {.col}
+$$\hat{r}_{\textrm{LCB}}(a) = \hat{r}(a) - \sqrt{\frac{\log(2K/q)}{2\,n(a)}}$$
 
-- **Naive Empirical Argmax:** Picks Arm 2 whenever its single pull paid $1$ ($\hat{r}(2) = 1.0 > 0.5$), earning expected return $\frac{3}{4}(0.5) + \frac{1}{4}(0.25) = \mathbf{0.4375}$.
-- **Lower Confidence Bound (LCB):** Subtract Hoeffding's uncertainty radius $b(a) = \sqrt{\log(2K/q) / (2n(a))}$ (at $K = 2, q = 0.1$: $b(1) = 0.136$, $b(2) = 1.358$):
-  $$\hat{r}_{\textrm{LCB}}(1) = 0.500 - 0.136 = \mathbf{+0.364} \quad > \quad \hat{r}_{\textrm{LCB}}(2) = 1.000 - 1.358 = \mathbf{-0.358}$$
-- **The Price of Pessimism:** LCB safely picks Arm 1 (earning **$0.50$**), but if Arm 2 actually had true mean $0.70$, LCB would refuse it until the log contained at least **$n(2) \ge 17$ pulls**!
+- **Naive empirical argmax:** Tricked by 1 lucky draw of Arm 2 ($\hat{r}(2) = 1.0$, true mean $0.25$), earning expected return $0.4375$.
+- **Lower Confidence Bound (LCB):** Subtracts uncertainty radius $b(1) = 0.136$ vs. $b(2) = 1.358$, safely selecting well-supported Arm 1 ($+0.364 > -0.358$).
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-lcb-bandit
+:::
+:::
 :::
 
 ::: {.slide title="Pessimistic Value Iteration on the Lake"}
@@ -691,14 +700,16 @@ What happens if we crank the penalty up to $\kappa = 0.3$ on the 100-episode nar
 ::: {.slide title="Deep Offline RL: Policy Constraints and Value Penalties"}
 [Beyond Tabular Counts]{.kicker}
 
-In continuous or high-dimensional spaces where exact visit counts $n(s, a)$ do not exist, deep offline RL algorithms enforce pessimism through two neural mechanisms:
+::: {.cols .vc}
+::: {.col}
+- **1. Policy Constraints (TD3+BC, IQL, DPO):** Keep $\pi(\cdot \mid s)$ close to the behavior policy $\pi_e(\cdot \mid s)$ via KL or $L_2$ action penalties.
+- **2. Conservative Q-Learning (CQL; Kumar et al., 2020):** Adds $\alpha_{\textrm{c}}\mathbb{E}_s[\log\sum_{a'} e^{Q_w(s,a')} - Q_w(s, a_{\textrm{log}})]$ to push down all action values (suppressing OOD peaks) while pulling up logged actions in proportion to $\hat{\pi}_e(a \mid s)$.
+:::
 
-| Offline RL Family | Mathematical Objective / Loss Modification | Tabular Counterpart | Representative Deep Methods |
-| :--- | :--- | :--- | :--- |
-| **1. Policy Constraint** | $\max_\pi \mathbb{E}_{a \sim \pi}[\hat{Q}(s, a)] - \beta D_{\textrm{KL}}(\pi(\cdot \mid s) \Vert \pi_e(\cdot \mid s))$ | Behavior cloning ($\beta \to \infty$) | **TD3+BC** (adds $+\lambda \|a - a_{\textrm{log}}\|^2$), **IQL**, **DPO** (§15.8) |
-| **2. Value Penalty** | $\min_w \mathcal{L}_{\textrm{TD}}(w) + \alpha_{\textrm{c}}\, \mathbb{E}_s\big[\log \sum_{a'} e^{Q_w(s, a')} - Q_w(s, a_{\textrm{log}})\big]$ | $-\kappa / \sqrt{n(s, a)}$ inside backup | **Conservative Q-Learning (CQL)** (Kumar et al., 2020) |
-
-- **How CQL Works Without Counts:** Minimizing $\log \sum_{a'} \exp(Q_w(s, a'))$ pushes *down* all action values (especially high out-of-distribution peaks), while $-Q_w(s, a_{\textrm{log}})$ pushes *up* actions proportional to their empirical dataset frequency $\hat{\pi}_e(a \mid s)$!
+::: {.col .fig .big}
+@fig:ch15-drl-cql-push-pull
+:::
+:::
 :::
 
 ::: {.slide title="Return-Conditioned Sequence Modeling and Its Traps"}

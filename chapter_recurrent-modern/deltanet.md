@@ -609,15 +609,18 @@ Even with $8\times$ more dimensions than keys, additive recall of the latest val
 ::: {.slide title="The Delta Rule: One Online Gradient Step on Recall Loss"}
 [Read Before Writing]{.kicker}
 
-To replace the value stored under $\mathbf{k}_t$ without disturbing orthogonal keys, measure the state's instantaneous squared recall error on $(\mathbf{k}_t, \mathbf{v}_t)$ and take one gradient descent step of size (**write strength**) $\beta_t$:
+::: {.cols .vc}
+::: {.col}
+$$\ell_t(\mathbf{S}) = \tfrac{1}{2}\,\|\mathbf{S}\mathbf{k}_t - \mathbf{v}_t\|^2 \implies \mathbf{S}_t = \mathbf{S}_{t-1} + \beta_t(\mathbf{v}_t - \mathbf{S}_{t-1}\mathbf{k}_t)\mathbf{k}_t^\top$$
 
-$$\ell_t(\mathbf{S}) = \tfrac{1}{2}\,\|\mathbf{S}\mathbf{k}_t - \mathbf{v}_t\|^2 \quad\Longrightarrow\quad \mathbf{S}_t = \mathbf{S}_{t-1} - \beta_t \nabla_{\mathbf{S}}\ell_t(\mathbf{S}_{t-1}) = \mathbf{S}_{t-1} + \beta_t(\mathbf{v}_t - \mathbf{S}_{t-1}\mathbf{k}_t)\mathbf{k}_t^\top$$
+- **Read Before Writing:** Reads prediction $\hat{\mathbf{v}}_t = \mathbf{S}_{t-1}\mathbf{k}_t$ first, then writes the scaled error residual $\beta_t(\mathbf{v}_t - \hat{\mathbf{v}}_t)\mathbf{k}_t^\top$.
+- **Exact Replacement at $\beta_t = 1$:** For $\|\mathbf{k}_t\| = 1$, $\mathbf{S}_t \mathbf{k}_t = \mathbf{v}_t$ in one step.
+:::
 
-1. **Read current prediction:** $\hat{\mathbf{v}}_t = \mathbf{S}_{t-1}\mathbf{k}_t$.
-2. **Write scaled residual:** Add the rank-$1$ correction $\beta_t(\mathbf{v}_t - \hat{\mathbf{v}}_t)\mathbf{k}_t^\top$ (Widrow & Hoff, 1960; Schlag et al., 2021).
-
-- **Exact replacement at $\beta_t = 1$:** For a unit key ($\|\mathbf{k}_t\| = 1$), $\mathbf{S}_t \mathbf{k}_t = (1 - \beta_t)\hat{\mathbf{v}}_t + \beta_t \mathbf{v}_t$.
-- **Contrast with additive writes:** $\mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ is gradient *ascent* on linear alignment $\mathbf{v}_t^\top \mathbf{S}\mathbf{k}_t$, which has no minimum and never stops accumulating!
+::: {.col .fig}
+@fig:ch12-mrnn-delta-read-before-write
+:::
+:::
 :::
 
 ::: {.slide title="Projection Geometry of the Delta Transition Matrix"}
@@ -646,23 +649,33 @@ For a unit key $\|\mathbf{k}_t\| = 1$, $\mathbf{I} - \beta_t \mathbf{k}_t \mathb
 ::: {.slide title="Unit-Key Stability and Householder Parity Reflections"}
 [Spectral Properties]{.kicker}
 
-For an arbitrary key vector $\mathbf{k}_t$, the transition $\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top$ has eigenvalue $\lambda_{\mathbf{k}} = 1 - \beta_t \|\mathbf{k}_t\|^2$ along $\mathbf{k}_t$:
+::: {.cols .vc}
+::: {.col}
+- **Mandatory Key $\ell_2$-Normalization:** Along $\mathbf{k}_t$, eigenvalue $\lambda_{\mathbf{k}} = 1 - \beta_t\|\mathbf{k}_t\|^2$ stays in $[-1, 1]$ for $\beta_t \in [0, 2]$ only when $\|\mathbf{k}_t\| = 1$.
+- **Negative Eigenvalues Unlock Parity:** Positive decays $a_t > 0$ cannot count modulo $2$; at $\beta_t = 2$, Householder reflection ($\lambda_{\mathbf{k}} = -1$) toggles readout $\mathbf{0} \leftrightarrow 2\mathbf{v}$.
+:::
 
-- **Why $\ell_2$-normalizing keys ($\|\mathbf{k}_t\| = 1$) is mandatory:** Without key normalization, any key with $\|\mathbf{k}_t\|^2 > 2/\beta_t$ pushes $|\lambda_{\mathbf{k}}| > 1$, causing repeated writes to explode geometrically. With $\|\mathbf{k}_t\| = 1$ and $\beta_t \in [0, 2]$, every eigenvalue lies in $[-1, 1]$.
-- **Why negative eigenvalues ($\beta_t \in (1, 2]$) enable parity tracking:** Non-negative transition eigenvalues in $[0, 1]$ can only contract or preserve a state, which in finite precision cannot count modulo $2$ over arbitrary lengths (Grazzi et al., 2025). At $\beta_t = 2$, writing a fixed pair $(\mathbf{k}, \mathbf{v})$ reflects the readout $\mathbf{r} \mapsto 2\mathbf{v} - \mathbf{r}$, alternating $\mathbf{0} \leftrightarrow 2\mathbf{v}$ forever!
+::: {.col .fig .big}
+@fig:ch12-mrnn-eigenvalue-parity
+:::
+:::
 :::
 
 ::: {.slide title="The Hidden Cost of Correction: Signal Erosion"}
 [Crowded Random Keys]{.kicker}
 
-On orthonormal keys ($n \le d_k$), $\beta_t = 1$ erases old values cleanly without touching any other key. What happens when $n > d_k$ or keys are random unit vectors with nonzero overlap $\mathbf{k}_t^\top \mathbf{k}_i \neq 0$?
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}[\mathbf{S}_t \mathbf{k}_i] = \Big(1 - \frac{1}{d_k}\Big)^m \mathbf{v}_i \approx e^{-m / d_k}\mathbf{v}_i$$
 
-$$(\mathbf{v}_i \mathbf{k}_i^\top)(\mathbf{I} - \mathbf{k}_t \mathbf{k}_t^\top)\mathbf{k}_i = \big(1 - (\mathbf{k}_t^\top \mathbf{k}_i)^2\big)\,\mathbf{v}_i$$
+- **Collateral Contraction:** Every later random unit key $\mathbf{k}_s$ has expected squared overlap $1/d_k$ with $\mathbf{k}_i$, shrinking $\mathbf{v}_i$ by $1 - 1/d_k$ per step.
+- **Crowded Decay:** After $m = 2d_k$ random writes with $\beta = 1$, early signals erode to $e^{-2} \approx 13.5\%$.
+:::
 
-- **Collateral contraction on every write:** Each later write along a random unit key $\mathbf{k}_t$ has expected squared overlap $\mathbb{E}[(\mathbf{k}_t^\top \mathbf{k}_i)^2] = 1/d_k$, shrinking key $i$'s stored signal by a factor of $1 - 1/d_k$ per step.
-- **Exponential signal erosion over $m$ subsequent writes:**
-  $$\Big(1 - \frac{1}{d_k}\Big)^m \approx e^{-m / d_k}$$
-  At $d_k = 64$ and $n = 128$ random keys written once, the earliest key's signal shrinks to $e^{-127/64} \approx e^{-2} \approx \mathbf{14\%}$ of its initial amplitude!
+::: {.col .fig}
+@fig:ch12-mrnn-signal-erosion
+:::
+:::
 :::
 
 ::: {.slide title="Benchmarking Four Write Rules Across Three Regimes"}
@@ -686,24 +699,37 @@ The benchmark exposes three distinct regimes that motivate learning an input-dep
 ::: {.slide title="Gated DeltaNet: Global Decay Plus Targeted Overwriting"}
 [The Gated DeltaNet Recurrence]{.kicker}
 
-Because the delta rule modifies $\mathbf{S}_{t-1}$ only along the current key $\mathbf{k}_t$, stale content in orthogonal directions never decays. **Gated DeltaNet** (Yang, Kautz & Hatamizadeh, 2024) pairs a scalar per-head decay $a_t \in (0, 1)$ with an input-dependent write strength $\beta_t \in (0, 1)$:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{S}_t = a_t\,\mathbf{S}_{t-1}(\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top$$
 
-- **Complementary forgetting mechanisms:**
-  - **Global decay ($a_t \to 0$):** Flushes the entire head matrix at document, paragraph, or scope boundaries.
-  - **Targeted erasure ($a_t \approx 1, \beta_t \to 1$):** Overwrites the single key $\mathbf{k}_t$ while preserving all other orthogonal associations in $\mathbf{S}_{t-1}$.
-  - **Gentle accumulation ($a_t \approx 1, \beta_t \in (0, 0.5)$):** Writes new facts with minimal signal erosion on overlapping keys.
+- **Three Operating Modes (Yang et al., 2024):**
+  1. **Global Flush ($a_t \to 0$):** Wipes the entire matrix at topic boundaries.
+  2. **Surgical Key Update ($a_t \approx 1, \beta_t \to 1$):** Overwrites $\mathbf{k}_t$ while preserving $\mathbf{k}_t^\perp$.
+  3. **Gentle Accumulation ($a_t \approx 1, \beta_t \approx 0.2$):** Low-erosion associative write.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-gated-deltanet-modes
+:::
+:::
 :::
 
 ::: {.slide title="Chunked Evaluation via Lower-Triangular Solve (WY Form)"}
 [Intra-Chunk Triangular System]{.kicker}
 
-Scanning the $d_k \times d_k$ transition matrices $a_t(\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top)$ token-by-token would cost $O(T d_k^3)$. Yang et al. (2024) reduce this to $O(T d_k^2)$ by writing $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{u}_t \mathbf{k}_t^\top$ in terms of the **effective corrected value** $\mathbf{u}_t = \beta_t(\mathbf{v}_t - a_t \mathbf{S}_{t-1}\mathbf{k}_t)$. Inside a length-$m$ chunk starting at $\mathbf{S}_0$:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{u}_t + \beta_t \sum_{s < t} L_{ts}\,(\mathbf{k}_s^\top \mathbf{k}_t)\,\mathbf{u}_s = \beta_t\big(\mathbf{v}_t - \gamma_t \mathbf{S}_0 \mathbf{k}_t\big)$$
 
-- **Parallel $m \times m$ unit-lower-triangular solve (`delta_rule_writes`):** Let $\mathbf{M} = \mathbf{I} + \textrm{diag}(\boldsymbol{\beta})\,\textrm{tril}_{-1}(\mathbf{L} \odot \mathbf{K}\mathbf{K}^\top) \in \mathbb{R}^{m \times m}$. Because the RHS is affine in $\mathbf{S}_0$, we solve $\mathbf{M}\mathbf{W} = \boldsymbol{\beta} \odot \mathbf{V}$ and $\mathbf{M}\mathbf{Z} = (\boldsymbol{\beta} \odot \boldsymbol{\gamma}) \odot \mathbf{K}$ **for all chunks in parallel before the inter-chunk scan runs**, giving $\mathbf{U} = \mathbf{W} - \mathbf{Z}\mathbf{S}_0^\top$!
+- **WY Representation:** Rewrites the delta recurrence as $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{u}_t \mathbf{k}_t^\top$ with corrected values $\mathbf{u}_t$.
+- **Parallel $m \times m$ Triangular Solve:** Solves $\mathbf{M}\mathbf{W} = \boldsymbol{\beta} \odot \mathbf{V}$ and $\mathbf{M}\mathbf{Z} = (\boldsymbol{\beta} \odot \boldsymbol{\gamma}) \odot \mathbf{K}$ across all chunks in parallel to obtain $\mathbf{U} = \mathbf{W} - \mathbf{Z}\mathbf{S}_0^\top$.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-wy-triangular-solve
+:::
+:::
 :::
 
 ::: {.slide title="Inter-Chunk Matrix Scan and Numerical Verification"}
@@ -754,38 +780,50 @@ We compare a 1-block `GatedLinearAttention` model against a 1-block `GatedDeltaN
 ::: {.slide title="Why We Tested 1 Block: Depth Approximates a Delta Step"}
 [Multi-Layer Interaction]{.kicker}
 
-Why did our rebinding experiment use a **single-block** `SeqLM` rather than a 2-block stack?
+::: {.cols .vc}
+::: {.col}
+- **Two Additive Layers Emulate One Delta Step:** Block 1 (`GLA`) can query $\hat{\mathbf{v}}_t = \mathbf{S}_{t-1}^{(1)}\mathbf{k}_t$ into the residual stream so Block 2 (`GLA`) writes $(\mathbf{v}_t - \hat{\mathbf{v}}_t)\mathbf{k}_t^\top$.
+- **Why In-Layer Delta Wins:** `GatedDeltaNet` performs read-before-write inside *every single layer* for arbitrary rebindings $R$, freeing deeper layers for reasoning.
+:::
 
-- **Two additive layers can emulate one read-before-write step across depth:**
-  1. **Block 1 (`GLA`):** Queries its additive memory at the rebinding position $t$ with $\mathbf{q}_t^{(1)} = \mathbf{k}_t$ to retrieve the stale value $\hat{\mathbf{v}}_t = \mathbf{S}_{t-1}^{(1)}\mathbf{k}_t$ into the residual stream.
-  2. **MLP + Block 2 (`GLA`):** Subtracts $\hat{\mathbf{v}}_t$ from the new value $\mathbf{v}_t$ and writes the difference $(\mathbf{v}_t - \hat{\mathbf{v}}_t)\mathbf{k}_t^\top$ into Block 2's additive memory!
-- **Why in-layer delta updates still win:** Emulating one delta step via two additive layers consumes two layers of depth and handles only a *single* overwrite ($R = 2$), whereas `GatedDeltaNet` performs exact iterative error correction *within every single layer* for any number of rebindings $R$.
+::: {.col .fig .big}
+@fig:ch12-mrnn-two-block-emulation
+:::
+:::
 :::
 
 ::: {.slide title="The Implicit Proximal Delta Step (Longhorn)"}
 [Unconditional Stability Without Key Normalization]{.kicker}
 
-Instead of an explicit forward-gradient step on $\ell_t(\mathbf{S}_{t-1})$, **Longhorn** (Liu et al., 2024) solves the implicit proximal objective:
-
-$$\mathbf{S}_t = \arg\min_{\mathbf{S}}\Big\{\tfrac{1}{2}\,\|\mathbf{S} - \mathbf{S}_{t-1}\|_F^2 + \tfrac{\beta_t}{2}\,\|\mathbf{S}\mathbf{k}_t - \mathbf{v}_t\|^2\Big\}$$
-
-Setting the gradient with respect to $\mathbf{S}$ to zero and solving for $\mathbf{S}_t \mathbf{k}_t$ yields the exact closed-form update:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{S}_t = \mathbf{S}_{t-1} + \frac{\beta_t}{1 + \beta_t \|\mathbf{k}_t\|^2}\,(\mathbf{v}_t - \mathbf{S}_{t-1}\mathbf{k}_t)\mathbf{k}_t^\top$$
 
-- **Automatic step normalization:** The effective step size $\tilde{\beta}_t = \frac{\beta_t}{1 + \beta_t\|\mathbf{k}_t\|^2}$ gives directional eigenvalue $\frac{1}{1 + \beta_t\|\mathbf{k}_t\|^2} \in (0, 1)$ for **any** $\beta_t > 0$ and **any** key norm $\|\mathbf{k}_t\|$—preventing overshoot without $\ell_2$ key normalization, though losing negative eigenvalues ($\lambda = -1$) for parity.
+- **Implicit Proximal Objective (Liu et al., 2024):** Minimizes $\frac{1}{2}\|\mathbf{S} - \mathbf{S}_{t-1}\|_F^2 + \frac{\beta_t}{2}\|\mathbf{S}\mathbf{k}_t - \mathbf{v}_t\|^2$ at the *new* state $\mathbf{S}_t$.
+- **Unconditional Stability:** Directional eigenvalue $\frac{1}{1 + \beta_t\|\mathbf{k}_t\|^2} \in (0, 1)$ for any $\|\mathbf{k}_t\|$ and $\beta_t > 0$.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-explicit-vs-implicit-step
+:::
+:::
 :::
 
 ::: {.slide title="Unifying Sequence Mixers as Online Regression Solvers"}
 [Test-Time Regression View]{.kicker}
 
-Every matrix memory in this chapter can be understood as fitting an online linear regression $\mathbf{S}_t \mathbf{k}_s \approx \mathbf{v}_s$ across the context tokens $s \le t$ during the forward pass (Wang, Shi & Fox, 2025):
+::: {.cols .vc}
+::: {.col}
+$$\min_{\mathbf{S} \in \mathbb{R}^{d_v \times d_k}} \sum_{s=1}^{t} \tfrac{1}{2}\,\|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2$$
 
-$$\min_{\mathbf{S} \in \mathbb{R}^{d_v \times d_k}} \sum_{s=1}^{t} \tfrac{1}{2}\,\|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2 \quad\Longrightarrow\quad \mathbf{S}_t^\star = \underbrace{\mathbf{V}_t^\top \mathbf{K}_t}_{\text{cross-moment}} \underbrace{(\mathbf{K}_t^\top \mathbf{K}_t)^{-1}}_{\text{Gram inverse}}$$
+- **Fast Weights ($\mathbf{S}_t$):** Solve an in-context linear regression $\mathbf{S}_t \mathbf{k}_s \approx \mathbf{v}_s$ across tokens $1\ldots t$ during the forward pass.
+- **Slow Weights ($\theta$):** Trained by outer-loop AdamW to shape $(\mathbf{q}_t, \mathbf{k}_t, \mathbf{v}_t, a_t, \beta_t)$.
+:::
 
-- **Two-timescale learning:**
-  1. **Fast weights (state $\mathbf{S}_t$):** Updated at *every token step* during the forward pass (both training and inference) to store the in-context associations of the current sequence.
-  2. **Slow weights ($\mathbf{W}_{qkv}, \mathbf{W}_a, \mathbf{W}_\beta$):** Updated across minibatches by backpropagation to shape the feature geometry $(\mathbf{q}_t, \mathbf{k}_t, \mathbf{v}_t)$ and learning rates $(a_t, \beta_t)$ of the fast-weight solver.
+::: {.col .fig}
+@fig:ch12-mrnn-fast-slow-weights
+:::
+:::
 :::
 
 ::: {.slide title="Taxonomy of Sequence Memories as Regression Algorithms"}

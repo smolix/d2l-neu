@@ -879,11 +879,17 @@ The KV Cache, the Hardware Roofline, and Cache Reduction<br>**KV caching · pref
 ::: {.slide title="Naive Generation Performs 250× Redundant Work"}
 [Motivation]{.kicker}
 
-Suppose GPT-2 Small ($N = 124\text{M}$ parameters) generates $256$ new tokens after a $3{,}584$-token prompt:
+::: {.cols .vc}
+::: {.col}
+- **Naive `GPT.generate` ($O(T^2)$ work):** Re-runs the full prefix $3{,}584, 3{,}585, \dots, 3{,}839$ at every generated token ($950{,}016$ token evaluations).
+- **Why past recomputation is redundant:** Under a causal mask, $(\mathbf{k}_s, \mathbf{v}_s)$ at position $s < t$ never changes when token $t$ arrives.
+- **Cached generation ($O(T)$ work):** Processes the prompt once and each new token once ($3{,}840$ evaluations—**$250\times$ less work**).
+:::
 
-- **Naive `GPT.generate` ($O(T^2)$ work):** Runs a full forward pass over $3{,}584, 3{,}585, \dots, 3{,}839$ tokens in turn, performing $2N \sum_{t=3584}^{3839} t \approx 2.4 \times 10^{14}\text{ FLOPs}$ and discarding every intermediate activation after reading only the last logit vector $\mathbf{z}_t$.
-- **Why past recomputation is redundant:** Under a lower-triangular causal mask, representation $\mathbf{h}_s^{(\ell)}$ at position $s < t$ depends *only* on prefix tokens $1, \dots, s$—never on token $t$.
-- **Cached generation ($O(T)$ work):** Processing the prompt once ($3{,}584$ tokens) and each generated token once ($256$ steps) requires only $2N \times 3{,}840 \approx 9.5 \times 10^{11}\text{ FLOPs}$—a **$250\times$ reduction in arithmetic**!
+::: {.col .fig .big}
+@fig:ch11-tf-kv-recompute-vs-cache
+:::
+:::
 :::
 
 ::: {.slide title="Causality Freezes Past Keys and Values"}
@@ -905,11 +911,16 @@ Suppose GPT-2 Small ($N = 124\text{M}$ parameters) generates $256$ new tokens af
 ::: {.slide title="Pre-Allocated Static Buffers and Position Offsets"}
 [Buffer Architecture]{.kicker}
 
-Allocating or concatenating tensors inside an autoregressive loop fragments GPU memory and forces JIT recompilation on every token:
+::: {.cols .vc}
+::: {.col}
+- **Fixed-shape buffer allocation (`init_cache`):** Pre-allocates zeroed tensors `ks[i], vs[i]` of shape $(B, H_{\text{kv}}, T_{\max}, d_h)$ per block before generation begins.
+- **Position offset `t` & boolean mask:** Rotates queries/keys at offset $t$ and masks unwritten slots $> t$ (`arange(T_max) <= pos[:, None]`), keeping tensor shapes static so `torch.compile` / XLA compiles the decode step **once**.
+:::
 
-- **Fixed-shape buffer allocation (`init_cache`):** Pre-allocates zeroed key and value tensors `ks[i], vs[i]` of shape $(B, H_{\text{kv}}, T_{\max}, d_h)$ for each of the $L$ blocks before generation begins.
-- **Position offset `t`:** When feeding a slice `X` of $T$ new tokens starting at position $t$, `forward_cached` rotates queries and keys at absolute positions $t, t+1, \dots, t+T-1$ (`d2l.rope_tables(T, head_width, t)`).
-- **Masked read over static length $T_{\max}$:** A boolean mask `arange(T_max) <= pos[:, None]` hides unwritten slots $> t + i$, keeping tensor shapes invariant across every decode step so `torch.compile` (CUDA graphs) or `jax.lax.fori_loop` compiles the step **once**.
+::: {.col .fig .big}
+@fig:ch11-tf-kv-static-ring-buffer
+:::
+:::
 :::
 
 ::: {.slide title="The Cached Step: Write One Slot, Read the Prefix" only="pytorch"}
@@ -987,27 +998,34 @@ KV caching is **not an approximation**: for both rotary (`pos='rope'`) and learn
 ::: {.slide title="The KV Cache Memory Footprint Formula"}
 [Memory Accounting]{.kicker}
 
-Across $L$ blocks, batch size $B$, sequence length $n$, and $H_{\text{kv}}$ key–value heads of width $d_h$ stored at $b$ bytes per element ($b = 4$ for FP32, $2$ for BF16/FP16, $1$ for FP8), storing both $\mathbf{K}$ and $\mathbf{V}$ requires:
-
-$$M_{\mathrm{KV}}(n, B) = 2 \, b \, B \, L \, n \, H_{\mathrm{kv}} \, d_h \;\;\text{bytes}$$
+::: {.cols .vc}
+::: {.col}
+- Storing both $\mathbf{K}$ and $\mathbf{V}$ across $L$ blocks, batch size $B$, length $n$, and $H_{\text{kv}}$ heads of width $d_h$ at $b$ bytes/element requires:
+  $$M_{\mathrm{KV}}(n, B) = 2 \, b \, B \, L \, n \, H_{\mathrm{kv}} \, d_h \;\;\text{bytes}$$
+- In GPT-2 Small (FP32, $72\text{ KiB/token}$), $n = 4{,}096$ occupies $288\text{ MiB}$ at $B = 1$ and **$4.5\text{ GiB}$ at $B = 16$** ($10\times$ the weights!).
 
 @kv-cache-the-memory-bill
+:::
 
-- **Per-token rate in GPT-2 Small (FP32):** $2 \times 4 \times 12 \times 12 \times 64 = 73{,}728\text{ B} = \mathbf{72\text{ KiB/token}}$.
-- **At $n = 4{,}096$ tokens ($B = 1$):** The KV cache occupies **$288\text{ MiB}$**—more than half the size of the model weights ($475\text{ MiB}$), and at $B = 16$ it reaches $4.5\text{ GiB}$ ($10\times$ the weights!).
+::: {.col .fig}
+@fig:ch11-tf-kv-footprint-formula
+:::
+:::
 :::
 
 ::: {.slide title="Why Single-Token Decode Is Memory-Bandwidth Bound"}
 [The Bandwidth Floor]{.kicker}
 
-Why does a single cached decode step on GPT-2 Small take $\sim 0.9\text{ ms}$ when its $2N \approx 2.5 \times 10^8\text{ FLOPs}$ would take only $0.003\text{ ms}$ at an RTX 4090's $83\text{ TFLOP/s}$ FP32 compute peak?
+::: {.cols .vc}
+::: {.col}
+- **Compute vs. memory transfer:** On GPT-2 Small ($B = 1$), $2N \approx 2.5 \times 10^8\text{ FLOPs}$ takes $0.003\text{ ms}$ at $83\text{ TFLOP/s}$, yet streaming $498\text{ MB}$ of FP32 weights across $1\text{ TB/s}$ HBM imposes a hard **$0.50\text{ ms/token}$** transfer floor!
+- **Measured latency ($0.8\text{--}1.3\text{ ms/token}$):** Sits within $1.6\text{--}2\times$ of the physical HBM bandwidth limit.
+:::
 
-| Hardware & Model Quantity (GPT-2 Small, FP32, $B = 1$) | Value | Implication |
-| :--- | :---: | :--- |
-| **FP32 model weight footprint ($M_{\text{weights}} = 4N$)** | $498\text{ MB}$ ($475\text{ MiB}$) | Must be streamed from HBM on *every* generated token |
-| **RTX 4090 HBM memory bandwidth ($\mathcal{B}_{\text{HBM}}$)** | $\approx 1{,}000\text{ GB/s}$ ($1\text{ TB/s}$) | Physical speed limit for moving bytes from VRAM to registers |
-| **Absolute bandwidth time floor ($M_{\text{weights}} / \mathcal{B}_{\text{HBM}}$)** | **$\approx 0.50\text{ ms/token}$** | No kernel can decode 1 token faster than one weight read |
-| **Measured single-token decode latency ($n = 256 \dots 4032$)** | **$0.8\text{--}1.3\text{ ms/token}$** | Within $1.6\text{--}2\times$ of the hardware bandwidth ceiling |
+::: {.col .fig .big}
+@fig:ch11-tf-kv-bandwidth-floor
+:::
+:::
 :::
 
 ::: {.slide title="Prefill vs. Decode on the Hardware Roofline"}
@@ -1029,12 +1047,17 @@ Why does a single cached decode step on GPT-2 Small take $\sim 0.9\text{ ms}$ wh
 ::: {.slide title="Measuring Prefill vs. Decode Throughput"}
 [Roofline Verification]{.kicker}
 
-Benchmarking a 2,048-token prefill against a single-token decode step at context $2{,}048$ on the same model and GPU confirms the $100\times$ gap between the two serving regimes:
+::: {.cols .vc}
+::: {.col}
+- Benchmarking a 2,048-token prefill against a single-token decode step at context $2{,}048$ confirms the $100\times$ gap between the two serving regimes:
+- **TTFT** is governed by compute-bound prefill, whereas **ITL** is governed by memory-bandwidth-bound decode.
 
 @kv-cache-prefill-and-decode-1
+:::
 
-::: {.d2l-note}
-Because prefill and decode sit on opposite sides of the roofline ridge point, production LLM serving reports two separate metrics: **Time to First Token (TTFT)**, governed by compute-bound prefill, and **Inter-Token Latency (ITL)**, governed by memory-bandwidth-bound decode.
+::: {.col .fig}
+@fig:ch11-tf-kv-ttft-vs-itl
+:::
 :::
 :::
 
@@ -1060,13 +1083,18 @@ $$\mathrm{Throughput}(B, n) \le \frac{B \, \mathcal{B}_{\mathrm{HBM}}}{M_{\mathr
 ::: {.slide title="Three Orthogonal Axes for Shrinking the KV Cache"}
 [Cache Compression Overview]{.kicker}
 
-Because both GPU memory capacity and the large-batch decode throughput ceiling $\mathcal{B}_{\text{HBM}} / M_{\text{KV}}(n, 1)$ are inversely proportional to $M_{\text{KV}}(n, 1) = 2 b L n H_{\text{kv}} d_h$, modern LLMs compress the three factors $H_{\text{kv}} \cdot d_h \cdot n$:
+::: {.cols .vc}
+::: {.col}
+- Because both VRAM capacity and the large-batch throughput ceiling $\mathcal{B}_{\text{HBM}} / M_{\text{KV}}(n, 1)$ scale inversely with $M_{\text{KV}}(n, 1) = 2 b L n H_{\text{kv}} d_h$, modern LLMs compress all three factors:
+  1. **Head count ($H_{\text{kv}}$):** GQA and MQA ($4\text{--}8\times$).
+  2. **Feature width ($2 H_{\text{kv}} d_h$):** Low-rank SVD / MLA ($6\text{--}16\times$).
+  3. **Sequence length ($n$):** Sliding window $w$ + $s$ sinks.
+:::
 
-| Compression Axis | Architectural Mechanism | Factor Reduced in $2 b L n H_{\text{kv}} d_h$ | Typical Compression Ratio |
-| :--- | :--- | :---: | :---: |
-| **1. Head Count** | **Grouped-Query (GQA)** & **Multi-Query (MQA)** | $H_{\text{kv}} \leftarrow H / G$ | $4\times\text{--}8\times$ (GQA) or $H\times$ (MQA) |
-| **2. Feature Width** | **Low-Rank KV Projections** & **MLA** | $2 H_{\text{kv}} d_h \leftarrow r$ | $6\times$ (SVD) to $16\times+$ (DeepSeek MLA) |
-| **3. Context Length** | **Sliding Window + Attention Sinks** | $n \leftarrow w + s$ | Bounded $O(w + s)$ at any length $n$ |
+::: {.col .fig .big}
+@fig:ch11-tf-kv-three-axes
+:::
+:::
 :::
 
 ::: {.slide title="Axis 1: Grouped-Query (GQA) and Multi-Query Attention"}
@@ -1101,23 +1129,35 @@ $$\mathbf{W}_k^{(\mathcal{G})} = \frac{1}{G}\sum_{h \in \mathcal{G}} \mathbf{W}_
 ::: {.slide title="Axis 2: Low-Rank KV Subspaces & Latent Attention (MLA)"}
 [Low-Rank KV Compression]{.kicker}
 
-In every block of GPT-2 Small ($d = 768$), the concatenated key–value vector $[\mathbf{k}_t; \mathbf{v}_t] \in \mathbb{R}^{1536}$ is an affine image of the normalized $768$-dimensional stream input $\mathbf{x}_t$—so its intrinsic rank is at most $d = 768$!
+::: {.cols .vc}
+::: {.col}
+- **Post-hoc SVD projection ($6\times$):** Projecting GPT-2's $1{,}536$-dim $[\mathbf{k}_t; \mathbf{v}_t]$ onto its top $r = 256$ singular vectors preserves perplexity ($37$ vs. $36$).
+- **Multi-Head Latent Attention (MLA, DeepSeek-V2/V3):** Caches a shared latent $\mathbf{c}_t \in \mathbb{R}^{r}$ ($r = 512$) and absorbs the up-projections into $\mathbf{W}_q$ and $\mathbf{W}_o$ during decode!
 
 @!kv-cache-low-rank-keys-and-values
+:::
 
-- **Post-hoc SVD projection:** Projecting GPT-2's keys and values onto the top $r = 256$ singular vectors fitted on a separate calibration passage ($6\times$ compression from $1{,}536$ numbers) leaves perplexity virtually unchanged ($37$ vs. $36$).
-- **Multi-Head Latent Attention (MLA, DeepSeek-V2/V3):** Trains a low-rank down-projection $\mathbf{c}_t = \mathbf{x}_t \mathbf{W}_{DKV} \in \mathbb{R}^{r}$ ($r = 512$) end-to-end and **absorbs** the key/value up-projections into $\mathbf{W}_q$ and $\mathbf{W}_o$ during inference so full keys and values are never materialized in HBM!
+::: {.col .fig}
+@fig:ch11-tf-kv-mla-absorption
+:::
+:::
 :::
 
 ::: {.slide title="Axis 3: Sliding Windows Fail Without Attention Sinks"}
 [The Attention Sink Phenomenon]{.kicker}
 
-Restricting attention to a rolling window of the $w = 256$ most recent tokens bounds the cache to $w$ slots—but on pretrained GPT-2, a pure sliding window causes tail perplexity to explode from **$36$ to $3{,}828$**!
+::: {.cols .vc}
+::: {.col}
+- On pretrained GPT-2, a pure sliding window ($w = 256, s = 0$) causes tail perplexity to explode from **$36$ to $3{,}828$**!
+- **Why?** Because softmax weights must sum to $1$, idle heads dump $30\%\text{--}57\%$ of their weight onto **token 0**. Evicting token 0 once $t \ge w$ scrambles the residual stream!
 
 @!kv-cache-a-window-needs-a-sink-1
+:::
 
-- **Where does idle attention mass go?** Because softmax probabilities must sum to $1$, an attention head that finds no informative match in the local context dumps $30\%\text{--}57\%$ of its weight onto **token 0** (the only token visible to every causal query).
-- **Evicting token 0 breaks the softmax denominator:** Once $t \ge w$, a pure sliding window drops token 0, forcing that $30\%\text{--}57\%$ idle probability mass onto local window tokens and corrupting the residual stream.
+::: {.col .fig}
+@fig:ch11-tf-kv-sink-window
+:::
+:::
 :::
 
 ::: {.slide title="Restoring Sliding-Window Perplexity With Sink Tokens"}

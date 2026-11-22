@@ -441,16 +441,15 @@ Width Parameterization and μP Scaling<br>**standard parametrization drift · co
 ::: {.slide title="Why Proxy Learning Rates Fail as Networks Widen"}
 [Motivation]{.kicker}
 
-Because a multi-billion-parameter model cannot afford a learning-rate grid search, practitioners tune hyperparameters on a small **proxy model** and transfer them to the wide target network. Under default **Standard Parametrization (SP)**, that transferred learning rate fails:
+::: {.cols .vc}
+::: {.col}
+- **Standard Parametrization (SP) drift:** Tuning Adam on a narrow proxy ($n = 128$, $\eta^\star \approx 3.9 \times 10^{-3}$) and transferring to a $64\times$ wider network ($n = 8{,}192$) wipes out the entire $1{,}000\times$ parameter increase ($0.34$ vs. retuned $0.23$ loss) because $\eta^\star$ drifted down $16\times$!
+- **Maximal Update Parametrization ($\mu\text{P}$, Yang et al., 2022):** Scales layer LRs and readout multipliers by $m = n/n_{\text{base}}$ so $\eta^\star$ transfers zero-shot across widths.
+:::
 
-| MLP Width $n$ ($784 \to n \to n \to n \to 10$) | Parameter Count | Learning Rate Policy ($400$ Adam Steps) | Final Training Loss |
-| :--- | :---: | :--- | :---: |
-| **Narrow proxy ($n = 128$)** | $135{,}000$ | Tuned at width $128$ ($\eta^\star \approx 3.9 \times 10^{-3}$) | $0.32\text{--}0.33$ |
-| **Wide target ($n = 8{,}192$, $64\times$ wider)** | $141{,}000{,}000$ | **Transferred from width $128$ ($\eta = 3.9 \times 10^{-3}$)** | **$0.31\text{--}0.38$ (wipes out $1{,}000\times$ scale!)** |
-| **Wide target ($n = 8{,}192$)** | $141{,}000{,}000$ | Retuned at width $8{,}192$ ($\eta^\star \approx 2.4 \times 10^{-4}$, $16\times$ smaller) | **$0.22\text{--}0.24$** |
-
-::: {.d2l-note}
-**Maximal Update Parametrization ($\mu\text{P}$, Yang & Hu, 2021; Yang et al., 2022)** scales each layer's learning rate and output multiplier by its fan-in/fan-out growth so that the optimal learning rate $\eta^\star$ stays invariant across widths—allowing GPT-3 6.7B to be tuned on a 40M proxy for $7\%$ of pretraining compute!
+::: {.col .fig .big}
+@fig:ch09-opt-mup-proxy-transfer
+:::
 :::
 :::
 
@@ -493,12 +492,17 @@ In our 3-hidden-layer ReLU MLP $784 \to n \to n \to n \to 10$ across $n \in \{12
 ::: {.slide title="Why Initialization Is Θ(1) While Adam Step 1 Is Θ(ηn)"}
 [Coherent vs. Incoherent Sums]{.kicker}
 
-Why does standard $1/\text{fan-in}$ initialization keep forward activations $\mathbf{z} = \mathbf{W}\mathbf{h}$ at $\Theta(1)$ as width $n \to \infty$, yet the very first Adam update $\Delta\mathbf{W}$ blows up the activation change $\Delta\mathbf{z} = \Delta\mathbf{W}\,\mathbf{h}$ by $\Theta(\eta n)$?
+::: {.cols .vc}
+::: {.col}
+- **At initialization (incoherent random signs $\to \Theta(1)$):** $W_{ij} \sim \mathcal{N}(0, 1/n)$ is independent of $h_j = \Theta(1)$, so $z_i = \sum_{j=1}^n W_{ij}h_j$ sums in quadrature to $\operatorname{Var}(z_i) = \Theta(1)$.
+- **After 1 Adam step (aligned signs $\to \Theta(\eta n)$):** $\Delta\mathbf{W} = -\eta\operatorname{sign}(\boldsymbol{\delta})\operatorname{sign}(\mathbf{h})^\top$ aligns every sign with $\mathbf{h}$:
+  $$(\Delta\mathbf{W}\,\mathbf{h})_i = -\eta\,\operatorname{sign}(\delta_i)\sum_{j=1}^n |h_j| = -\eta\,\operatorname{sign}(\delta_i)\,n\,\overline{|h|}$$
+:::
 
-- **At initialization (incoherent random signs $\to \Theta(1)$):** Because $W_{ij} \sim \mathcal{N}(0, 1/n)$ is independent of incoming activations $h_j = \Theta(1)$, the $n$ terms in $z_i = \sum_{j=1}^n W_{ij} h_j$ have random uncorrelated signs and sum in quadrature:
-  $$\operatorname{Var}(z_i) = \sum_{j=1}^n \frac{1}{n}\,\mathbb{E}[h_j^2] = \Theta(1)$$
-- **After one Adam step (coherent aligned signs $\to \Theta(\eta n)$):** For backpropagated gradient $\boldsymbol{\delta} = \partial\ell/\partial\mathbf{z}$, the weight gradient is $\mathbf{G} = \boldsymbol{\delta}\mathbf{h}^\top$, and Adam's first step is $\Delta\mathbf{W} = -\eta\,\operatorname{sign}(\mathbf{G}) = -\eta\,\operatorname{sign}(\boldsymbol{\delta})\operatorname{sign}(\mathbf{h})^\top$. Multiplying by $\mathbf{h}$ aligns every sign:
-  $$(\Delta\mathbf{W}\,\mathbf{h})_i = -\eta\sum_{j=1}^n \operatorname{sign}(\delta_i h_j)\,h_j = -\eta\,\operatorname{sign}(\delta_i)\sum_{j=1}^n |h_j| = -\eta\,\operatorname{sign}(\delta_i)\,n\,\overline{|h|}$$
+::: {.col .fig}
+@fig:ch09-opt-mup-coherent-sum
+:::
+:::
 :::
 
 ::: {.slide title="The Fan-In Law: One Adam Step Shifts Outputs by Θ(ηn)"}
@@ -521,26 +525,34 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 ::: {.slide title="Maximal Update Parametrization (μP) Rules for Adam"}
 [Three Per-Layer Rules]{.kicker}
 
-Relative to a reference **base width** $n_{\text{base}}$ with **width multiplier** $m = n / n_{\text{base}}$, $\mu\text{P}$ (Yang et al., 2022) ensures every layer's activations and updates remain $\Theta(1)$ as $m \to \infty$:
+::: {.cols .vc}
+::: {.col}
+- Relative to base width $n_{\text{base}}$ with width multiplier $m = n / n_{\text{base}}$, $\mu\text{P}$ (Yang et al., 2022) keeps every layer's activations and updates $\Theta(1)$ as $m \to \infty$:
+  - **1. Input weights & 1D biases:** Init variance $1/\text{fan-in}$, Adam LR $\eta$.
+  - **2. Hidden matrices ($n \times n$):** Init variance $1/n$, scaled Adam LR **$\eta / m$**.
+  - **3. Output readout ($n \to d_{\text{out}}$):** Init variance **$1/n_{\text{base}}$**, Adam LR $\eta$, forward multiplier **$1/m$**.
+:::
 
-| Parameter Group | Fan-In / Fan-Out vs. $n$ | Initial Weight Variance | Adam Learning Rate | Forward Pass Multiplier |
-| :--- | :--- | :---: | :---: | :---: |
-| **1. Input weights & all 1D biases** | Fixed fan-in ($d_{\text{in}}$) | $1 / \text{fan-in}$ (biases $0$) | $\eta$ | $1$ |
-| **2. Hidden matrices ($n \times n$)** | Both fan-in & fan-out $\propto n$ | $1 / \text{fan-in} = 1 / n$ | **$\eta / m$** | $1$ |
-| **3. Output readout ($n \times d_{\text{out}}$)** | Fan-in $\propto n$, fixed fan-out | **$1 / n_{\text{base}}$** | $\eta$ | **$1 / m$** |
-
-::: {.d2l-note .rule}
-**"Maximal" update principle:** Every hidden layer receives the largest possible update ($\Theta(1)$) that does not explode as $n \to \infty$; smaller updates ($o(1)$) freeze wide layers at their random initialization (the neural tangent kernel limit).
+::: {.col .fig .big}
+@fig:ch09-opt-mup-three-rules
+:::
 :::
 :::
 
 ::: {.slide title="Why the Output Layer Must Average (1/n) and Base Width"}
 [Output Scaling & Reference Anchor]{.kicker}
 
-- **Why the output readout matrix $\mathbf{W}_{\text{out}} \in \mathbb{R}^{d_{\text{out}} \times n}$ needs two changes:**
-  1. **Its own weight update $\Delta\mathbf{W}_{\text{out}}\,\mathbf{h}$:** Sums $n$ sign-aligned terms into each logit; dividing the forward logits by **$m = n/n_{\text{base}}$** keeps $\frac{1}{m}\Delta\mathbf{W}_{\text{out}}\,\mathbf{h} = \Theta(1)$ at learning rate $\eta$.
-  2. **Incoming feature updates $\mathbf{W}_{\text{out}}\,\Delta\mathbf{h}$:** Backpropagation aligns $\Delta\mathbf{h}$ with the rows of $\mathbf{W}_{\text{out}}$, so $\frac{1}{m}\mathbf{W}_{\text{out}}\,\Delta\mathbf{h}$ sums $n$ aligned terms of size $|\frac{1}{m}W_{\text{out},ij}|$. Keeping this sum $\Theta(1)$ requires effective weights of size $O(1/n)$, achieved by fixing the unscaled initialization variance at **$1/n_{\text{base}}$**!
-- **Role of the base width $n_{\text{base}}$:** At $n = n_{\text{base}}$ ($m = 1$), $\mu\text{P}$ coincides identically with Standard Parametrization (SP), fixing the constant ratios between input and hidden learning rates.
+::: {.cols .vc}
+::: {.col}
+- **1. Readout weight update $\frac{1}{m}\Delta\mathbf{W}_{\text{out}}\,\mathbf{h}$:** Sums $n$ sign-aligned terms; dividing logits by $m = n/n_{\text{base}}$ keeps the logit update $\Theta(1)$ at LR $\eta$.
+- **2. Incoming feature update $\frac{1}{m}\mathbf{W}_{\text{out}}\,\Delta\mathbf{h}$:** Aligned $\Delta\mathbf{h}$ sums $n$ terms of size $|\frac{1}{m}W_{\text{out},ij}|$; keeping unscaled init variance at $1/n_{\text{base}}$ makes effective weights $O(1/n)$ so the sum stays $\Theta(1)$.
+- **Base width $n_{\text{base}}$:** At $n = n_{\text{base}}$ ($m = 1$), $\mu\text{P}$ coincides identically with SP.
+:::
+
+::: {.col .fig .big}
+@fig:ch09-opt-mup-output-layer
+:::
+:::
 :::
 
 ::: {.slide title="Implementing μP in 15 Lines of Code"}
@@ -633,45 +645,50 @@ Relative to a reference **base width** $n_{\text{base}}$ with **width multiplier
 ::: {.slide title="Extending μP to Transformers: The 1/d_k Attention Rule"}
 [Transformer Parameterization]{.kicker}
 
-Applying $\mu\text{P}$ to a Transformer of model width $d$ ($m = d / d_{\text{base}}$, head dimension $d_k \propto d$) follows the exact same fan-in/fan-out taxonomy, plus one rule for attention dot products:
+::: {.cols .vc}
+::: {.col}
+- **Embeddings & 1D norms/biases (fan-in $= 1$):** Standard init, full AdamW learning rate $\eta$.
+- **Internal 2D matrices (`qkv`, `proj`, `mlp`):** Init variance $1/\text{fan-in}$, scaled AdamW LR **$\eta / m$** ($m = d/d_{\text{base}}$).
+- **Readout `head` ($d \to V$):** Init variance $1/d_{\text{base}}$, forward logits **$\times 1/m$**, LR $\eta$.
+- **Attention scores ($\mathbf{q}^\top\mathbf{k}$ over $d_k \propto d$):** Scale by **$1/d_k$** instead of $1/\sqrt{d_k}$ because aligned updates $\Delta\mathbf{q}, \Delta\mathbf{k}$ sum $d_k$ coherent products ($\Theta(d_k)$)!
+:::
 
-| Transformer Component | Fan-In / Fan-Out Scaling | $\mu\text{P}$ Rule under Adam / AdamW |
-| :--- | :--- | :--- |
-| **Token & position embeddings** | One-hot lookup (fan-in $= 1$) | Init variance $1$, learning rate $\eta$ |
-| **1D biases & LayerNorm gains/shifts** | Elementwise (fan-in $= 1$) | Learning rate $\eta$ |
-| **Internal 2D block matrices (`qkv`, `proj`, `mlp1`, `mlp2`)** | Both fan-in and fan-out $\propto d$ | Init variance $1/\text{fan-in}$, learning rate **$\eta / m$** |
-| **Vocabulary readout `head` ($d \to V$)** | Fan-in $\propto d$, fixed vocab $V$ | Init variance $1/d_{\text{base}}$, forward logits **$\times 1/m$**, learning rate $\eta$ |
-| **Attention scores ($\mathbf{q}^\top\mathbf{k}$ over $d_k \propto d$)** | Inner product of two learned vectors | Scale by **$1 / d_k$** instead of $1/\sqrt{d_k}$ (extra factor $1/\sqrt{m}$) |
-
-- **Why $1/d_k$ instead of $1/\sqrt{d_k}$ in attention?** At initialization $\mathbf{q}, \mathbf{k}$ are independent ($\mathbf{q}^\top\mathbf{k} = O(\sqrt{d_k})$), but after one gradient step $\Delta\mathbf{q}$ and $\Delta\mathbf{k}$ become aligned, making $\mathbf{q}^\top\mathbf{k} = \Theta(d_k)$!
+::: {.col .fig .big}
+@fig:ch09-opt-mup-transformer-rules
+:::
+:::
 :::
 
 ::: {.slide title="The Spectral Condition: ||ΔW||₂ = Θ(√(d_out/d_in))"}
 [Operator-Norm Unification]{.kicker}
 
-Yang, Simon & Bernstein (2023) showed that all $\mu\text{P}$ rules reduce to a single **spectral norm condition**: for a layer mapping $\mathbf{h} \in \mathbb{R}^{d_{\text{in}}}$ with $\|\mathbf{h}\|_2 = \Theta(\sqrt{d_{\text{in}}})$ to $\mathbf{z} = \mathbf{W}\mathbf{h} \in \mathbb{R}^{d_{\text{out}}}$ with $\|\mathbf{z}\|_2 = \Theta(\sqrt{d_{\text{out}}})$, keeping entrywise activations and updates $\Theta(1)$ requires:
+::: {.cols .vc}
+::: {.col}
+- **Universal spectral condition (Yang, Simon & Bernstein, 2023):** Keeping activations $\mathbf{h} \in \mathbb{R}^{d_{\text{in}}}$ and $\mathbf{z} = \mathbf{W}\mathbf{h} \in \mathbb{R}^{d_{\text{out}}}$ at $\Theta(1)$ per entry requires:
+  $$\|\mathbf{W}\|_2 = \Theta\!\left(\sqrt{\frac{d_{\text{out}}}{d_{\text{in}}}}\right), \quad \|\Delta\mathbf{W}\|_2 = \Theta\!\left(\sqrt{\frac{d_{\text{out}}}{d_{\text{in}}}}\right)$$
+- **Adam step 1 is a rank-1 sign outer product:** $\|\Delta\mathbf{W}\|_2 = \eta\|\mathbf{s}\|_2\|\mathbf{t}\|_2 = \Theta(\eta\sqrt{d_{\text{out}}d_{\text{in}}})$, which matches $\Theta(\sqrt{d_{\text{out}}/d_{\text{in}}})$ iff **$\eta \propto 1/d_{\text{in}}$**!
+:::
 
-$$\|\mathbf{W}\|_2 = \Theta\!\left(\sqrt{\frac{d_{\text{out}}}{d_{\text{in}}}}\right) \qquad \text{and} \qquad \|\Delta\mathbf{W}\|_2 = \Theta\!\left(\sqrt{\frac{d_{\text{out}}}{d_{\text{in}}}}\right)$$
-
-- **Why Adam's first update has spectral norm $\Theta(\eta\sqrt{d_{\text{out}} d_{\text{in}}})$:**
-  - On step 1, $\Delta\mathbf{W} = -\eta\,\mathbf{s}\mathbf{t}^\top$ is a rank-1 outer product of sign vectors $\mathbf{s} = \operatorname{sign}(\boldsymbol{\delta})$ and $\mathbf{t} = \operatorname{sign}(\mathbf{h})$ with $k_{\text{out}} = \Theta(d_{\text{out}})$ and $k_{\text{in}} = \Theta(d_{\text{in}})$ nonzero entries:
-    $$\|\Delta\mathbf{W}\|_2 = \eta\,\|\mathbf{s}\|_2\,\|\mathbf{t}\|_2 = \eta\sqrt{k_{\text{out}}\,k_{\text{in}}} = \Theta\!\left(\eta\sqrt{d_{\text{out}}\,d_{\text{in}}}\right)$$
-  - Matching $\Theta\!\left(\sqrt{d_{\text{out}}/d_{\text{in}}}\right)$ immediately requires **$\eta \propto 1/d_{\text{in}}$**!
+::: {.col .fig}
+@fig:ch09-opt-mup-spectral-condition
+:::
+:::
 :::
 
 ::: {.slide title="Width Scaling for Spectral Optimizers (Muon vs. AdamW)"}
 [Comparing Update Spectral Norms]{.kicker}
 
-For a square $n \times n$ hidden matrix, the spectral condition $\|\Delta\mathbf{W}\|_2 = \Theta(\sqrt{n/n}) = \Theta(1)$ reveals how $\eta$ must scale with width $n$ under different matrix optimizers:
+::: {.cols .vc}
+::: {.col}
+- For an $n \times n$ hidden matrix, requiring $\|\Delta\mathbf{W}\|_2 = \Theta(\sqrt{n/n}) = \Theta(1)$ dictates how $\eta$ scales with width $n$:
+  - **AdamW:** $\|\Delta\mathbf{W}\|_2 = \Theta(\eta n) \implies$ **$\eta \propto 1/n$** ($\eta/m$).
+  - **Muon ($0.2\sqrt{n}\,\mathrm{NS}_5$):** $\|\Delta\mathbf{W}\|_2 = \Theta(\eta\sqrt{n}) \implies$ **$\eta \propto 1/\sqrt{n}$** ($\eta/\sqrt{m}$).
+  - **Spectral-scaled Muon ($\sqrt{d_{\text{out}}/d_{\text{in}}}\,\mathrm{NS}_5$):** $\|\Delta\mathbf{W}\|_2 = \Theta(\eta) \implies$ **$\eta = \Theta(1)$** (transfers with no $1/m$ factor!).
+:::
 
-| Optimizer Update on an $n \times n$ Hidden Matrix | Spectral Norm $\|\Delta\mathbf{W}\|_2$ of Update | Required $\eta$ Scaling with Width $n$ |
-| :--- | :---: | :---: |
-| **Adam step 1:** $-\eta\,\operatorname{sign}(\boldsymbol{\delta})\operatorname{sign}(\mathbf{h})^\top$ (rank $1$, $k \approx n/2$ nonzeros) | $\eta\sqrt{k_{\text{out}}k_{\text{in}}} \approx \frac{1}{2}\eta\,n = \Theta(\eta n)$ | **$\eta \propto 1 / n$** ($\mu\text{P}$ rule $\eta / m$) |
-| **Muon (AdamW-RMS scale §9.6):** $-0.2\eta\sqrt{n}\,\mathrm{NS}_5(\cdot)$ | $0.2\,\eta\sqrt{n} = \Theta(\eta\sqrt{n})$ | **$\eta \propto 1 / \sqrt{n}$** ($\eta / \sqrt{m}$) |
-| **Muon (spectral $\mu\text{P}$ scale, Bernstein 2025):** $-\eta\sqrt{d_{\text{out}}/d_{\text{in}}}\,\mathrm{NS}_5(\cdot)$ | $\eta = \Theta(\eta)$ | **$\eta = \Theta(1)$ (transfers with no $1/m$ factor!)** |
-
-::: {.d2l-note}
-Because $\mathrm{NS}_5(\cdot)$ already normalizes the spectral norm of the update to $\approx 1$, scaling Muon by $\sqrt{d_{\text{out}}/d_{\text{in}}}$ satisfies the spectral $\mu\text{P}$ condition automatically across all matrix shapes!
+::: {.col .fig .big}
+@fig:ch09-opt-mup-muon-vs-adam
+:::
 :::
 :::
 

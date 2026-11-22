@@ -542,99 +542,133 @@ Linear Regression Implementation from Scratch<br>
 ::: {.slide title="Why a Falling Loss Curve Never Proves Correctness"}
 [The Systems Debugging Hazard]{.kicker}
 
-In deep learning code, many severe bugs raise no runtime exceptions and still produce a steadily decreasing training loss:
+::: {.cols .vc}
+::: {.col}
+- **Silent broadcasting bug:** Subtracting a 1D label tensor `y` of shape `(32,)` from `y_hat` of shape `(32, 1)` broadcasts into a `(32, 32)` matrix of all $1{,}024$ pairwise differences!
+- **Deceptive loss curve:** Minimizing the $32 \times 32$ mean pulls predictions toward $\bar{y}$, causing loss to drop smoothly while $\mathbf{w} \to \mathbf{0}$ instead of $\mathbf{w}^* = (2, -3.4)^\top$.
+- **Dual verification:** Always check both the validation loss floor ($\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$) and parameter recovery ($\|\hat{\mathbf{w}} - \mathbf{w}^*\|_\infty \lesssim 10^{-3}$).
+:::
 
-- **Silent broadcasting bug:** Subtracting a 1D label tensor `y` of shape `(32,)` from a 2D prediction tensor `y_hat` of shape `(32, 1)` broadcasts into a `(32, 32)` matrix of all $1{,}024$ pairwise differences!
-- **Deceptive loss curve:** Minimizing the mean of that $32 \times 32$ matrix pulls every prediction toward the batch average $\bar{y}$, causing the reported loss to drop smoothly while $\mathbf{w}$ converges toward $\mathbf{0}$ instead of $\mathbf{w}^* = (2, -3.4)^\top$.
-- **Quantitative ground-truth test:** By training on our synthetic dataset ($\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, $\sigma = 0.01$), we demand both that the validation loss hit $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$ and that $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_\infty \lesssim 10^{-3}$.
+::: {.col .fig .big}
+@fig:ch02-lr-broadcast-trap
+:::
+:::
 :::
 
 ::: {.slide title="Initializing Parameters With Gradient Tracking"}
 [From-Scratch Setup]{.kicker}
 
-We allocate a weight column vector $\mathbf{w} \in \mathbb{R}^{2 \times 1}$ drawn from $\mathcal{N}(0, 0.01^2)$ and a scalar bias $b = 0 \in \mathbb{R}^1$, enabling automatic differentiation on both tensors:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-scratch-the-parameters
 
-- **Framework gradient hooks:** PyTorch sets `requires_grad=True`, MXNet calls `attach_grad()`, TensorFlow wraps tensors in `tf.Variable`, and JAX differentiates pure functions of immutable arrays directly via `jax.grad`.
-- **Why random initialization:** For convex linear regression, starting at $\mathbf{w} = \mathbf{0}$ converges identically, but small random weights will become essential in Chapter 4 to break symmetry across hidden units.
+- **Framework gradient hooks:** PyTorch sets `requires_grad=True`, MXNet calls `attach_grad()`, TensorFlow uses `tf.Variable`, and JAX differentiates pure functions directly via `jax.grad`.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-param-init
+:::
+:::
 :::
 
 ::: {.slide title="Forward Pass and the Defensive Reshape in Squared Loss"}
 [Model & Loss Primitives]{.kicker}
 
-On a minibatch $\mathbf{X} \in \mathbb{R}^{32 \times 2}$, the forward pass is a single $(32 \times 2)(2 \times 1)$ matrix-vector product plus a broadcasted scalar bias:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-scratch-the-forward-pass
 
 @linear-regression-scratch-the-loss
 
-::: {.d2l-note .warn}
-**Defensive shape alignment:** `squared_loss` explicitly calls `d2l.reshape(y, (-1, 1))` (or `y.reshape(y_hat.shape)`) before subtracting, guaranteeing an elementwise `(32, 1)` residual vector even if a caller passes a 1D label vector of shape `(32,)`.
+- **Defensive shape alignment:** `squared_loss` calls `d2l.reshape(y, (-1, 1))` before subtracting, guaranteeing an elementwise `(32, 1)` residual vector.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-defensive-reshape
+:::
 :::
 :::
 
 ::: {.slide title="Verifying Autograd Against the Analytical Gradient"}
 [Gradient Check]{.kicker}
 
-For residual vector $\mathbf{r} = \mathbf{X}\mathbf{w} + b - \mathbf{y} \in \mathbb{R}^{|\mathcal{B}| \times 1}$, differentiating $L_{\mathcal{B}} = \frac{1}{2|\mathcal{B}|}\|\mathbf{r}\|_2^2$ by hand yields $\nabla_{\mathbf{w}} L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{X}^\top\mathbf{r}$ and $\partial_b L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{1}^\top\mathbf{r}$:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-scratch-the-gradient-2
 
-::: {.d2l-note .rule}
-Comparing reverse-mode `autograd` against the analytical formula on a 32-example minibatch confirms agreement to within `float32` machine epsilon ($\sim 10^{-7}$).
+- **Exact match:** Comparing reverse-mode `autograd` against $\nabla_{\mathbf{w}} L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{X}^\top\mathbf{r}$ and $\partial_b L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{1}^\top\mathbf{r}$ confirms agreement to `float32` machine epsilon ($\sim 10^{-7}$).
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-grad-verify
+:::
 :::
 :::
 
 ::: {.slide title="Why Reshuffling Every Epoch Is Essential for SGD"}
 [Stochastic Sampling Invariant]{.kicker}
 
-Why must our minibatch iterator draw a fresh random permutation of $\{0, \ldots, n-1\}$ at the start of every epoch rather than slicing examples in a fixed order?
+::: {.cols .vc}
+::: {.col}
+- **Unbiasedness requires random sampling:** A uniformly sampled minibatch satisfies $\mathbb{E}[\nabla L_{\mathcal{B}}] = \nabla L$, with batch mean $\bar{y}_{\mathcal{B}} \approx 4.2 \pm 0.7$ stepping $b$ steadily upward toward $b^* = 4.2$.
+- **Pathology of sorted data:** If examples are sorted by label, batch 1 holds the 32 most negative labels ($\bar{y}_{\mathcal{B}} \approx -4.6$), pushing $b$ downward *away* from $4.2$ and causing parameters to cycle wildly every epoch.
+:::
 
-| Minibatch Selection ($|\mathcal{B}| = 32$, at $\mathbf{w}=\mathbf{0}, b=0$) | Batch Mean Label $\bar{y}_{\mathcal{B}}$ | Bias Gradient $\partial_b L_{\mathcal{B}} = -\bar{y}_{\mathcal{B}}$ | Resulting Parameter Step on $b$ |
-|---|---|---|---|
-| **Uniform random minibatch** | $4.2 \pm 0.7$ | $\approx -4.2$ | Steps upward toward $b^* = 4.2$ |
-| **Sorted order (32 smallest labels)** | $\approx -4.6$ | $\approx +4.6$ | Steps *downward*, away from $b^* = 4.2$! |
-
-- **Unbiasedness requires random sampling:** A uniformly sampled minibatch satisfies $\mathbb{E}[\nabla L_{\mathcal{B}}] = \nabla L$. Iterating over examples sorted by label or time feeds systematically biased gradients for dozens of consecutive steps, causing the parameters to cycle wildly across each epoch.
+::: {.col .fig .big}
+@fig:ch02-lr-reshuffle-bias
+:::
+:::
 :::
 
 ::: {.slide title="The Minibatch Generator and One-Pass Exhaustion"}
 [Data Iteration Pitfall]{.kicker}
 
-Our `minibatches` function permutes indices with `np.random.permutation(len(X))` and `yield`s slices of size $32$ ($\lceil 1000 / 32 \rceil = 31$ batches of $32$ plus $1$ remainder batch of $8$):
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-scratch-minibatches-1
 
 @synthetic-regression-data-reading-the-data-in-minibatches-1
 
-::: {.d2l-note .warn}
-**Python generator exhaustion:** A generator object (`loader = minibatches(...)`) runs out after a single pass and silently yields $0$ batches on a second `for` loop! The training loop must call `minibatches(X_train, y_train, batch_size)` fresh inside every epoch (or use a reusable `DataLoader`, §2.4).
+- **Single-use generator exhaustion:** A Python generator object runs out after one pass and yields $0$ batches on a second `for` loop—call `minibatches(...)` fresh inside each epoch!
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-gen-exhaustion
+:::
 :::
 :::
 
 ::: {.slide title="The Four-Step Update and Dozen-Line Training Loop"}
 [Complete From-Scratch Loop]{.kicker}
 
-Every minibatch update executes four operations in strict sequence: (1) forward pass and loss, (2) backward pass, (3) unrecorded parameter step, and (4) clearing stored gradients:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-scratch-the-training-loop
 
-::: {.d2l-note .rule}
-**Two critical autograd guards:** In imperative frameworks (PyTorch), parameter updates must run inside `torch.no_grad()` so the update itself is not appended to the computation graph, and `param.grad.zero_()` must clear accumulated gradients before the next minibatch backward pass.
+- **Two critical autograd guards:** Parameter updates must run outside the autograd tape (`torch.no_grad()`), and `param.grad.zero_()` must clear accumulated gradients before the next backward pass.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-four-step-loop
+:::
 :::
 :::
 
 ::: {.slide title="Predicting the Convergence Rate Before Running Code"}
 [Quantitative Theory of the Loss Curve]{.kicker}
 
-Because our features are independent standard normals ($\mathbb{E}[\mathbf{x}\mathbf{x}^\top] = \mathbf{I}_2$, $\mathbb{E}[\mathbf{x}] = \mathbf{0}$) independent of $\epsilon \sim \mathcal{N}(0, \sigma^2)$, the expected population loss has an exact analytical form:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbb{E}\bigl[L(\mathbf{w}, b)\bigr] = \frac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|_2^2 + \frac{1}{2}(b - b^*)^2 + \frac{1}{2}\sigma^2$$
 
-- **Initial excess loss:** Starting near $(\mathbf{w}, b) \approx (\mathbf{0}, 0)$, the initial loss is $\frac{1}{2}(2^2 + (-3.4)^2 + 4.2^2) + 5 \times 10^{-5} \approx 16.6$, more than five orders of magnitude above the noise floor $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$.
-- **Per-step contraction factor:** The expected gradient is $(\mathbf{w} - \mathbf{w}^*, b - b^*)$, so each step of size $\eta = 0.03$ multiplies the parameter error by $(1 - \eta) = 0.97$ and the excess loss by $(1 - \eta)^2 = 0.97^2$.
-- **Per-epoch contraction ($32$ steps):** One epoch of $32$ minibatch steps shrinks the excess loss by $0.97^{64} \approx 0.142$—a drop of roughly **$7\times$ per epoch**!
+- **Initial excess loss:** Starting near $(\mathbf{0}, 0)$, initial loss is $\frac{1}{2}(2^2 + (-3.4)^2 + 4.2^2) \approx 16.6$, over $5$ orders of magnitude above the floor $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$.
+- **Per-epoch contraction ($32$ steps at $\eta = 0.03$):** Each step multiplies parameter error by $(1 - \eta) = 0.97$ and excess loss by $0.97^2$, so one epoch shrinks excess loss by $0.97^{64} \approx 1/7$ (**$7\times$ per epoch**).
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-contraction-rate
+:::
+:::
 :::
 
 ::: {.slide title="Training Run: Exponential Decay to the Noise Floor"}
@@ -660,28 +694,34 @@ On a log-scale plot, exponential convergence $(1 - \eta)^{64k}$ appears as a str
 ::: {.slide title="Verifying Parameter Recovery Toward (2, −3.4) and 4.2"}
 [Parameter Accuracy Check]{.kicker}
 
-Inspecting $\hat{\mathbf{w}} - \mathbf{w}^*$ and $\hat{b} - b^*$ after 10 epochs confirms recovery within a few times $10^{-4}$ ($\approx \sigma/\sqrt{n}$):
-
+::: {.cols .vc}
+::: {.col}
 @!linear-regression-scratch-training-4
 
-- **Statistical vs. numerical error:** Even exact least squares (`lstsq`) deviates from $(\mathbf{w}^*, b^*)$ by $\sigma / \sqrt{n} = 0.01 / \sqrt{1000} \approx 3.2 \times 10^{-4}$.
-- **Why loss alone is blind to $10^{-3}$ parameter drift:** A parameter error of $5 \times 10^{-4}$ raises the validation loss by only $\frac{1}{2} \cdot 3 \cdot (5 \times 10^{-4})^2 \approx 4 \times 10^{-7}$—less than $1\%$ of the $5 \times 10^{-5}$ noise floor!
+- **Statistical vs. numerical error:** Learned weights match $(\mathbf{w}^*, b^*)$ within $\sim \sigma / \sqrt{n} \approx 3.2 \times 10^{-4}$.
+- **Why loss alone is blind to $10^{-3}$ drift:** A parameter drift of $5 \times 10^{-4}$ raises validation loss by only $\sim 4 \times 10^{-7}$ ($<1\%$ of the $5 \times 10^{-5}$ noise floor).
+:::
 
-::: {.d2l-note .rule}
-Comparing recovered parameters against ground truth catches subtle gradient and broadcasting bugs that a loss plot hides.
+::: {.col .fig}
+@fig:ch02-lr-param-recovery
+:::
 :::
 :::
 
 ::: {.slide title="Learning-Rate Stability: Crawling vs. Divergence"}
 [Step-Size Limits]{.kicker}
 
-Sweeping $\eta \in \{0.003, 0.03, 0.3, 3\}$ over two orders of magnitude maps out the stability boundary of minibatch SGD:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-scratch-the-learning-rate
 
-- **Too small ($\eta = 0.003$):** Parameter error contracts by only $0.997$ per step, leaving the validation loss around $2.4$ after 10 epochs ($16.6 \times 0.997^{640} \approx 2.4$).
-- **Well tuned ($\eta = 0.03$ and $\eta = 0.3$):** Loss plunges exponentially to the $5 \times 10^{-5}$ noise floor within $1$ to $7$ epochs.
-- **Unstable ($\eta = 3 > 2 / \mu_{\max}$):** Because each step multiplies error along eigendirection $j$ of the Hessian $\mathbf{H} \approx \mathbf{I}$ by $(1 - \eta \mu_j)$, at $\eta = 3$ the error multiplies by $1 - 3 = -2$ per step, oscillating with doubling amplitude until overflow (`nan`).
+- **Stability boundary ($0 < \eta < 2/\mu_{\max}$):** $\eta = 0.003$ crawls (loss $\approx 2.4$); $\eta \in \{0.03, 0.3\}$ hits the $5 \times 10^{-5}$ floor; $\eta = 3 > 2$ multiplies error by $1 - 3 = -2$ per step and overflows to `nan`.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-lr-regimes
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Gradients, Loss Scaling & Stability"}

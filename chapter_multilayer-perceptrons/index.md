@@ -41,59 +41,65 @@ Multilayer Perceptrons: Breaking the Linear Barrier<br>
 ::: {.slide title="Why Linear Classifiers Hit a Ceiling on Real Tasks"}
 [The Central Problem]{.kicker}
 
-In Chapter 3, softmax regression scored each class by taking a fixed affine weighted sum of the $784$ input pixels, baking in two fundamental flaws:
-
+::: {.cols .vc}
+::: {.col}
 - **No feature interactions (XOR):** Flipping input bit $x_1$ in exclusive-OR reverses the output depending on $x_2$; no single hyperplane can separate all four corners of $\{0, 1\}^2$.
 - **Context-blind pixel weights:** In Fashion-MNIST, a bright pixel contributes the exact same vote toward a class whether its neighbors form a collar, a sleeve, or a handbag strap, capping linear accuracy at $\sim 84\%$.
-- **The deep-learning solution:** Insert one or more fully connected *hidden layers* $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ that learn nonlinear feature combinations jointly with the output classifier.
+- **The deep-learning solution:** Insert hidden layers $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ that learn nonlinear feature combinations jointly with the output classifier ($\sim 87\%$ accuracy).
+:::
 
-::: {.d2l-note}
-Adding a single 256-unit ReLU hidden layer lifts Fashion-MNIST accuracy to $\sim 87\%$ (cutting errors by $\sim 20\%$), while multiplying parameters 26-fold to $203{,}530$.
+::: {.col .fig .big}
+@fig:ch04-mlp-xor-ceiling
+:::
 :::
 :::
 
 ::: {.slide title="Three Fundamental Challenges of Deep Networks"}
 [What Depth Introduces]{.kicker}
 
-Moving from a single linear layer to stacked nonlinear layers preserves our cross-entropy loss and minibatch SGD loop, but introduces three new core problems:
+::: {.cols .vc}
+::: {.col}
+1. **Efficient gradient computation (§4.3):** Finite differences would require $203{,}530$ forward passes per step; *backpropagation* computes every gradient in one reverse sweep by caching forward activations in GPU RAM.
+2. **Numerical stability across depth (§4.4):** Across $K$ layers, signals and gradients pass through a product of $K$ weight and slope matrices, requiring variance-preserving *Xavier* and *He* initialization.
+3. **Generalization past interpolation (§4.5–§4.6):** Overparameterized MLPs can memorize random noise yet generalize on real data via SGD's implicit bias, early stopping, and *dropout*.
+:::
 
-1. **Efficient gradient computation (§4.3):** Finite differences would require $203{,}530$ forward passes per step; *backpropagation* computes every gradient in one reverse sweep at the cost of caching forward activations in GPU RAM.
-2. **Numerical stability across depth (§4.4):** Across $K$ layers, signals and gradients pass through a product of $K$ weight and slope matrices, vanishing to $0$ or exploding to `NaN` unless initial weight variance matches the fan-in and activation (*Xavier* and *He* initialization).
-3. **Generalization past interpolation (§4.5–§4.6):** With $203{,}530$ parameters for $60{,}000$ images ($3.4$ parameters per image), the MLP can memorize random noise, yet generalizes on real data via the implicit bias of gradient descent, early stopping, and *dropout*.
+::: {.col .fig .big}
+@fig:ch04-mlp-three-challenges
+:::
+:::
 :::
 
 ::: {.slide title="Running Benchmark: Fashion-MNIST Across Chapter 4"}
 [Running Example]{.kicker}
 
-Throughout this chapter, we benchmark our models head-to-head on Fashion-MNIST ($d = 784$ pixels, $q = 10$ classes, minibatch size $n = 256$, learning rate $\eta = 0.1$):
+::: {.cols .vc}
+::: {.col}
+- **Softmax baseline ($784 \to 10$):** $7{,}850$ parameters ($0.8\textrm{ MB}$ activations at $n = 256$) plateau at $\sim 84\%$ validation accuracy.
+- **1- and 2-hidden-layer ReLU MLPs:** Expand to $203{,}530$–$269{,}322$ parameters and reach $\sim 87\%$ accuracy at nearly the exact same GPU wall-clock time per epoch.
+- **10-layer depth test ($795{,}658$ params):** Stays frozen at $10\%$ chance under $\mathcal{N}(0, 0.01^2)$ initialization, but trains cleanly to $\sim 85\%$ under He initialization ($\tau = \sqrt{2/n_{\textrm{in}}}$).
+:::
 
-| Architecture | Parameters | Multiply-Adds / Image | Activation Memory ($n = 256$) | Validation Accuracy |
-|:--|--:|--:|--:|--:|
-| Softmax regression ($784 \to 10$) | $7{,}850$ | $7{,}840$ | $0.8\textrm{ MB}$ | $\sim 84\%$ (30 epochs) |
-| 1-hidden-layer MLP ($784 \to 256 \to 10$) | $203{,}530$ | $203{,}264$ | $1.1\textrm{ MB}$ | $\sim 87\%$ (30 epochs) |
-| 2-hidden-layer Dropout MLP ($784 \to 256 \to 256 \to 10$) | $269{,}322$ | $268{,}800$ | $1.3\textrm{ MB}$ | $\sim 87\%$ (20 epochs) |
-| 10-layer MLP with $\mathcal{N}(0, 0.01^2)$ init | $795{,}658$ | $793{,}088$ | $3.4\textrm{ MB}$ | $10\%$ (frozen at $\log 10$) |
-| 10-layer MLP with He init ($\tau = \sqrt{2/n_{\textrm{in}}}$) | $795{,}658$ | $793{,}088$ | $3.4\textrm{ MB}$ | $\sim 85\%$ (10 epochs) |
-
-::: {.d2l-note}
-On a GPU, the 256-unit MLP trains in nearly the exact same wall-clock time per epoch as softmax regression because data loading and kernel launch overhead dominate dense matrix arithmetic at width $256$.
+::: {.col .fig .big}
+@fig:ch04-mlp-benchmark-ladder
+:::
 :::
 :::
 
 ::: {.slide title="Architectural & Mathematical Roadmap of Chapter 4"}
 [Chapter Roadmap]{.kicker}
 
-Each section solves one concrete link in the chain from representation power to real-world tabular deployment:
+::: {.cols .vc}
+::: {.col}
+- **Representation & features (§§4.1–4.2):** Nonlinear activations prevent linear collapse, fold space into $2^m$ pieces with depth, and learn localized garment-part filters.
+- **Optimization & stability (§§4.3–4.4):** Three local VJP rules ($\mathbf{X}^\top\mathbf{G}$, $\mathbf{G}\mathbf{W}^\top$, $\odot\,\phi'$) run in $\sim 2\times$ forward FLOPs; setting $h\tau^2\mathbb{E}[\phi'(z)^2] = 1$ prevents vanishing/exploding products.
+- **Generalization & tabular ML (§§4.5–4.7):** Double descent, minimum-norm implicit bias, inverted dropout $h' = \xi h / (1 - p)$, and leakage-free 5-fold Kaggle cross-validation.
+:::
 
-| Section | Core Question | Key Mathematical / Systems Takeaway |
-|:--|:--|:--|
-| **§4.1 Multilayer Perceptrons** | What functions can hidden layers represent? | Without nonlinear $\phi$, layers collapse; depth folds space into $2^m$ pieces with $2m$ units. |
-| **§4.2 Implementation** | What do hidden units actually learn on images? | Pre-training sanity checks ($\text{loss} \approx \log 10$, $50\%$ active ReLUs); localized garment-part filters. |
-| **§4.3 Backpropagation** | How does one pass compute $203{,}530$ derivatives? | Three local rules ($\mathbf{X}^\top\mathbf{G}$, $\mathbf{G}\mathbf{W}^\top$, $\odot\,\phi'$) at $\sim 2\times$ forward FLOPs and $O(nKh)$ memory. |
-| **§4.4 Numerical Stability & Init** | Why do 10-layer gradients vanish or explode? | Per-layer variance factor $h\tau^2\mathbb{E}[\phi'(z)^2] = 1$ yields Xavier ($2/(n_{\textrm{in}}+n_{\textrm{out}})$) and He ($2/n_{\textrm{in}}$). |
-| **§4.5 Generalization in Deep Learning** | Why doesn't a memorizing network overfit? | Random-label memorization breaks VC bounds; double descent at $h = n$; minimum-norm implicit bias. |
-| **§4.6 Dropout** | How does random masking curb memorization? | Inverted dropout $h' = \xi h / (1 - p)$ keeps $\mathbb{E}[h'] = h$ at test time and slows noisy-label overfitting. |
-| **§4.7 Kaggle House Prices** | How does the full pipeline run on messy tables? | Leakage-free standardization/imputation, log-RMSE target centering, and shared 5-fold cross-validation. |
+::: {.col .fig .big}
+@fig:ch04-mlp-chapter-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check & Study Guide for Chapter 4"}

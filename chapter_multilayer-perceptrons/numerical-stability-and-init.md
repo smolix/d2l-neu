@@ -548,39 +548,51 @@ Numerical Stability & Variance-Preserving Initialization<br>**vanishing & explod
 ::: {.slide title="Why a 10-Layer MLP Fails with N(0, 0.01²) or N(0, 1)"}
 [The Depth Bottleneck]{.kicker}
 
-In §4.2, initializing a 1-hidden-layer MLP with $\mathcal{N}(0, 0.01^2)$ weights gave a slow first epoch before reaching $87\%$ accuracy. What happens if we stack **10 hidden ReLU layers** of width $h = 256$?
+::: {.cols .vc}
+::: {.col}
+- **Too small ($\mathcal{N}(0, 0.01^2)$):** Across $9$ hidden hops of width $h = 256$, gradient mean squares shrink by $10^{-17}$, leaving the loss frozen at $\log 10 \approx 2.30$ ($10\%$ random guessing).
+- **Too large ($\mathcal{N}(0, 1)$):** Across $9$ hops, gradient mean squares explode by $10^{19}$; deeper stacks overflow `float32` past $3.4 \times 10^{38}$ to `inf`/`NaN` on step $1$.
+- **Variance-preservation principle:** Both forward activations and backward gradients must maintain $O(1)$ variance across every layer from step $0$.
+:::
 
-- **Too small ($\mathcal{N}(0, 0.01^2)$):** Across $9$ hidden hops, the gradient mean square shrinks by $10^{-17}$ (the gradient norm shrinks $>10^8$-fold). Ten epochs of SGD leave the loss frozen at $\log 10 \approx 2.30$ ($10\%$ random guessing).
-- **Too large ($\mathcal{N}(0, 1)$):** Across $9$ hops, the gradient mean square explodes by $10^{19}$; in deeper networks, `float32` overflows past $3.4 \times 10^{38}$ to `inf` and `NaN` on step $1$.
-- **The variance-preservation principle:** Both forward activations and backward gradients must maintain an order-unity variance across every layer from step $0$.
+::: {.col .fig .big}
+@fig:ch04-mlp-depth-regimes
+:::
+:::
 :::
 
 ::: {.slide title="The Backward Gradient Is a Product of Layer Matrices"}
 [Vanishing & Exploding Products]{.kicker}
 
-Unrolling the backward recurrence from §4.3 from the top hidden layer $K - 1$ down to layer $k$ writes $\partial L / \partial \mathbf{H}^{(k)}$ as a product of $K - 1 - k$ matrix-slope operators:
-
+::: {.cols .vc}
+::: {.col}
 $$\frac{\partial L}{\partial \mathbf{H}^{(k-1)}} = \Bigl(\frac{\partial L}{\partial \mathbf{H}^{(k)}} \odot \phi'\bigl(\mathbf{Z}^{(k)}\bigr)\Bigr)\, \mathbf{W}^{(k)\top}$$
 
-$$\frac{\partial L}{\partial \mathbf{H}^{(k)}} = \frac{\partial L}{\partial \mathbf{H}^{(K-1)}}\; \underbrace{\odot\, \phi'\bigl(\mathbf{Z}^{(K-1)}\bigr)\, \mathbf{W}^{(K-1)\top}}_{\textrm{layer } K-1} \;\cdots\; \underbrace{\odot\, \phi'\bigl(\mathbf{Z}^{(k+1)}\bigr)\, \mathbf{W}^{(k+1)\top}}_{\textrm{layer } k+1}$$
+- **Matrix product across depth:** Unrolling from layer $K-1$ down to layer $k$ multiplies $t = K - 1 - k$ matrix-slope operators $\odot\,\phi'(\mathbf{Z}^{(l)})\mathbf{W}^{(l)\top}$.
+- **Exponential sensitivity:** Even a $10\%$ per-layer drift compounds across $50$ layers to $0.9^{50} \approx 0.005$ (vanishing) or $1.1^{50} \approx 117$ (exploding).
+:::
 
-::: {.d2l-note .rule}
-Any product of $t$ factors behaves exponentially in depth $t$: even a modest per-layer drift gives $0.9^{50} \approx 0.005$ (vanishing) or $1.1^{50} \approx 117$ (exploding).
+::: {.col .fig}
+@fig:ch04-mlp-product-chain
+:::
 :::
 :::
 
 ::: {.slide title="Per-Layer Gradient Variance Multiplier: hτ²𝔼[φ′(z)²]"}
 [Analytical Variance Scaling]{.kicker}
 
-Consider one backward step $g_i = \sum_{j=1}^h w_{ij}\,\phi'(z_j)\,g'_j$ across a layer of width $h$ with i.i.d. weights of mean $0$ and variance $\tau^2$. Treating weights, slopes, and upstream gradients as approximately independent at initialization:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}[g_i^2] = \underbrace{h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr]}_{\textrm{per-layer multiplier}}\, \mathbb{E}[(g'_j)^2]$$
 
-$$\mathbb{E}[g_i^2] = \sum_{j=1}^h \mathbb{E}[w_{ij}^2]\,\mathbb{E}[\phi'(z_j)^2]\,\mathbb{E}[(g'_j)^2] = \underbrace{h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr]}_{\textrm{per-layer multiplier}}\, \mathbb{E}[(g'_j)^2]$$
+- **ReLU ($\mathbb{E}[\phi'(z)^2] = 1/2$):** At $h = 256$, $\tau = 0.01$ multiplies variance by $0.0128\times$ per layer ($10^{-17}$ after $9$ hops), while $\tau = 1$ multiplies by $128\times$ ($10^{19}$ after $9$ hops).
+- **Sigmoid ($\mathbb{E}[\sigma'(z)^2] \le 1/16$):** Even with $h\tau^2 = 1$, variance shrinks by at least $16\times$ per layer ($\le 1.5 \times 10^{-11}$ after $9$ hops).
+:::
 
-| Activation & Weight Scale ($h = 256$) | $\mathbb{E}[\phi'(z)^2]$ | Per-Layer Multiplier | After $9$ Hops (Layer $10 \to 1$) |
-|:--|:--:|--:|--:|
-| ReLU with $\tau = 0.01$ ($\tau^2 = 10^{-4}$) | $1/2$ | $256 \times 10^{-4} \times \frac{1}{2} = 0.0128$ | $0.0128^9 \approx 9.3 \times 10^{-18}$ |
-| ReLU with $\tau = 1.0$ ($\tau^2 = 1$) | $1/2$ | $256 \times 1 \times \frac{1}{2} = 128$ | $128^9 \approx 9.2 \times 10^{18}$ |
-| Sigmoid with $h\tau^2 = 1$ ($\tau = 1/16$) | $\le 1/16$ | $1 \times \mathbb{E}[\sigma'(z)^2] \le 0.0625$ | $\le 16^{-9} \approx 1.5 \times 10^{-11}$ |
+::: {.col .fig}
+@fig:ch04-mlp-variance-multiplier
+:::
+:::
 :::
 
 ::: {.slide title="Empirical Verification across 10 Layers"}
@@ -606,34 +618,50 @@ We measure the activation and gradient mean squares across a 10-layer, width-256
 ::: {.slide title="Why Sigmoid Vanishes Even with Scaled Weights"}
 [Vanishing & Exploding Mechanisms]{.kicker}
 
-Comparing the two failure modes clarifies what weight rescaling can and cannot fix:
+::: {.cols .vc}
+::: {.col}
+- **The sigmoid catch-22:** Since $\sigma'(z) \le 1/4$, setting $h\tau^2 = 1$ divides gradient variance by $\ge 16$ per layer—and inflating weights ($h\tau^2 \ge 16$) pushes pre-activations $z$ into the saturated tails ($|z| \gg 3$) where $\sigma'(z) \to 0$ even faster!
+- **Exploding gradients ruin step-size conditioning:** When layer-1 gradients are $10^9\times$ larger than layer-10 gradients, no single learning rate $\eta$ can train both layers simultaneously.
+:::
 
-- **Sigmoid attenuation cannot be fixed by weight scaling:** Since $\sigma'(z) = \sigma(z)(1 - \sigma(z)) \le 1/4$, setting $h\tau^2 = 1$ still divides gradient variance by at least $16$ per layer—and trying to compensate with larger weights ($h\tau^2 \ge 16$) pushes pre-activations $z$ into the saturated tails ($|z| \gg 3$) where $\sigma'(z) \to 0$ even faster!
-- **Exploding gradients destroy step-size conditioning:** When layer-1 gradients are $10^9\times$ larger than layer-10 gradients, any learning rate $\eta$ small enough to keep layer 1 stable freezes layer 10, while any $\eta$ large enough to move layer 10 causes layer 1 to diverge to `NaN`.
+::: {.col .fig .big}
+@fig:ch04-mlp-sigmoid-dilemma
+:::
+:::
 :::
 
 ::: {.slide title="Forward & Backward Variance Balance: Xavier Init"}
 [Xavier (Glorot) Initialization]{.kicker}
 
-For a linear (or unit-slope zero-centered $\tanh$) layer $o_j = \sum_{i=1}^{n_{\textrm{in}}} x_i w_{ij}$ with fan-in $n_{\textrm{in}}$, fan-out $n_{\textrm{out}}$, independent zero-mean weights of variance $\tau^2$, and uncorrelated zero-mean inputs of variance $\gamma^2$:
+::: {.cols .vc}
+::: {.col}
+$$\mathrm{Var}[o_j] = \bigl(n_{\textrm{in}}\,\tau^2\bigr)\,\gamma^2, \qquad \mathrm{Var}[g_i] = \bigl(n_{\textrm{out}}\,\tau^2\bigr)\,\mathrm{Var}[g'_j]$$
 
-$$\mathrm{Var}[o_j] = \sum_{i=1}^{n_{\textrm{in}}} \mathbb{E}[x_i^2]\,\mathbb{E}[w_{ij}^2] = \bigl(n_{\textrm{in}}\,\tau^2\bigr)\,\gamma^2, \qquad \mathrm{Var}[g_i] = \bigl(n_{\textrm{out}}\,\tau^2\bigr)\,\mathrm{Var}[g'_j]$$
+- **Dual preservation criteria:** Forward variance preservation requires $n_{\textrm{in}}\tau^2 = 1$; backward gradient preservation requires $n_{\textrm{out}}\tau^2 = 1$.
+- **Xavier compromise (Glorot & Bengio, 2010):** Average the two fan counts $\frac{1}{2}(n_{\textrm{in}} + n_{\textrm{out}})\tau^2 = 1 \implies \tau^2 = \frac{2}{n_{\textrm{in}} + n_{\textrm{out}}}$.
+:::
 
-- **Dual preservation criteria:** Forward variance preservation requires $n_{\textrm{in}}\tau^2 = 1$; backward gradient variance preservation requires $n_{\textrm{out}}\tau^2 = 1$.
-- **Xavier compromise (Glorot & Bengio, 2010):** Average the two fan counts $\frac{1}{2}(n_{\textrm{in}} + n_{\textrm{out}})\tau^2 = 1$:
-  $$\tau^2 = \frac{2}{n_{\textrm{in}} + n_{\textrm{out}}} \quad \Longrightarrow \quad w_{ij} \sim \mathcal{N}\!\left(0, \frac{2}{n_{\textrm{in}} + n_{\textrm{out}}}\right) \;\;\textrm{or}\;\; U\!\left(-\sqrt{\frac{6}{n_{\textrm{in}} + n_{\textrm{out}}}}, \sqrt{\frac{6}{n_{\textrm{in}} + n_{\textrm{out}}}}\right)$$
+::: {.col .fig}
+@fig:ch04-mlp-xavier-balance
+:::
+:::
 :::
 
 ::: {.slide title="He (Kaiming) Initialization for ReLU Networks"}
 [He Initialization]{.kicker}
 
-Why does Xavier initialization still shrink signals by $1/2$ per layer in a ReLU network?
+::: {.cols .vc}
+::: {.col}
+$$v^{(k)} = \frac{1}{2}\, n_{\textrm{in}}\, \tau^2\, v^{(k-1)} \quad \Longrightarrow \quad \tau^2 = \frac{2}{n_{\textrm{in}}}$$
 
-- **ReLU halves the second moment:** For a symmetric zero-mean pre-activation $z$, $\mathrm{ReLU}(z) = \max(z, 0)$ zeroes out the negative half of the distribution, so $\mathbb{E}[\mathrm{ReLU}(z)^2] = \frac{1}{2}\mathbb{E}[z^2]$.
-- **Second-moment recurrence across ReLU layers:** Even though $h_i^{(k-1)} = \mathrm{ReLU}(z_i^{(k-1)}) \ge 0$ has positive mean, independent zero-mean weights $w_{ij}^{(k)}$ ensure cross terms vanish ($\mathbb{E}[w_{ij} w_{i'j}] = 0$ for $i \neq i'$), so the activation mean square $v^{(k)} = \mathbb{E}[(h_j^{(k)})^2]$ satisfies:
-  $$v^{(k)} = \frac{1}{2}\, n_{\textrm{in}}\, \tau^2\, v^{(k-1)}$$
-- **He / Kaiming rule (He et al., 2015):** Double the variance to compensate for the ReLU half-line projection:
-  $$\tau^2 = \frac{2}{n_{\textrm{in}}} \quad \Longrightarrow \quad w_{ij} \sim \mathcal{N}\!\left(0, \frac{2}{n_{\textrm{in}}}\right)$$
+- **ReLU halves the second moment:** Zeroing out the negative half of a symmetric zero-mean pre-activation $z$ gives $\mathbb{E}[\mathrm{ReLU}(z)^2] = \frac{1}{2}\mathbb{E}[z^2]$.
+- **He / Kaiming rule (He et al., 2015):** Double the weight variance to $\tau^2 = 2 / n_{\textrm{in}}$ so $\frac{1}{2}n_{\textrm{in}}\tau^2 = 1$ holds across arbitrarily deep ReLU stacks.
+:::
+
+::: {.col .fig}
+@fig:ch04-mlp-he-relu-halving
+:::
+:::
 :::
 
 ::: {.slide title="Measured Activation Variance Across 10 ReLU Layers"}
@@ -708,11 +736,17 @@ Why not initialize every entry of $\mathbf{W}^{(1)}$ deterministically to the co
 ::: {.slide title="What Initialization Alone Cannot Fix During Training"}
 [Limits of Initialization]{.kicker}
 
-Variance-preserving initialization (Xavier and He) guarantees healthy signal and gradient magnitudes **at step 0**, but has three important boundaries:
+::: {.cols .vc}
+::: {.col}
+- **Post-step-1 correlation drift:** $\mathrm{Var}[o_j] = n_{\textrm{in}}\tau^2\gamma^2$ assumes independent weights and inputs at step $0$; once SGD updates $\mathbf{W}^{(k)}$, layer gains can drift away from $1$.
+- **ReLU rescaling symmetry:** Because $\mathrm{ReLU}(\alpha z) = \alpha\,\mathrm{ReLU}(z)$ for $\alpha > 0$, multiplying incoming weights by $\alpha$ and outgoing weights by $1/\alpha$ preserves the function while distorting gradient norms.
+- **Deep architectural stabilizers ($K \ge 50$):** Combine He/Xavier init with **BatchNorm / LayerNorm** and **residual skip connections**.
+:::
 
-- **Weights become correlated with activations after step 1:** The derivation $\mathrm{Var}[o_j] = n_{\textrm{in}}\tau^2\gamma^2$ relies on independent weights and inputs. Once SGD updates $\mathbf{W}^{(k)}$, layer gains can drift away from $1$—which is why our 10-layer plain MLP needed $\eta = 0.05$ rather than $\eta = 0.1$.
-- **Rescaling symmetries in ReLU networks:** Because $\mathrm{ReLU}(\alpha z) = \alpha\,\mathrm{ReLU}(z)$ for $\alpha > 0$, multiplying incoming weights by $\alpha$ and dividing outgoing weights by $\alpha$ leaves the network function identical while distorting layerwise gradient norms.
-- **Architectural stabilizers for $K \ge 50$ layers:** Training dozens or hundreds of layers reliably combines He/Xavier initialization with **normalization layers** (BatchNorm / LayerNorm, §7.3 & §11.1) and **residual skip connections** (ResNets, §7.4).
+::: {.col .fig .big}
+@fig:ch04-mlp-init-limits
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Initialization Scales & Symmetry"}

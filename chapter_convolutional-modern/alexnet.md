@@ -574,14 +574,16 @@ AlexNet and Learned Image Representations<br>**end-to-end features · data & GPU
 ::: {.slide title="Hand-Crafted Vision Pipelines Stalled on ImageNet"}
 [Motivation & Historical Bottleneck]{.kicker}
 
-For two decades after LeNet (1989), mainstream computer vision decoupled fixed feature extraction from a shallow trainable classifier:
+::: {.cols .vc}
+::: {.col}
+- **Static descriptors (1990s–2011):** SIFT/HOG + SVM updated only the linear classifier, freezing features and plateauing at **25.8% top-5 error** on ImageNet.
+- **2012 AlexNet breakthrough:** Trained 8 layers end-to-end from pixels across 1.2M images, slashing top-5 error to **15.3%**.
+- **Three catalysts:** Million-image data, GPU parallelism, and non-saturating ReLU optimization.
+:::
 
-- **Fixed feature pipelines:** Descriptors such as SIFT, HOG, and bags of visual words mapped raw pixels into static feature vectors before feeding an SVM or linear classifier.
-- **No gradient feedback to features:** Because the classification loss updated only the final classifier weights, representation quality depended entirely on human feature engineering.
-- **The 2012 ImageNet breakthrough:** On 1.2M training images across 1,000 categories, hand-tuned pipelines plateaued at 28.2% (2010) and 25.8% (2011) top-5 error; AlexNet trained an 8-layer convnet end-to-end from pixels and slashed top-5 error to **15.3%**.
-
-::: {.d2l-note}
-Architecturally, AlexNet is LeNet scaled up. Its sudden victory came from three converging catalysts: **million-image data**, **GPU parallelism**, and **non-saturating ReLU optimization**.
+::: {.col .fig .big}
+@fig:ch07-mcnn-handcrafted-vs-e2e
+:::
 :::
 :::
 
@@ -606,23 +608,33 @@ Minimizing cross-entropy loss alone forces early convolutional layers to learn s
 ::: {.slide title="Catalyst 1: ImageNet Scale and On-the-Fly Augmentation"}
 [Data vs. Capacity]{.kicker}
 
-A 60-million-parameter network rapidly memorizes small benchmarks such as PASCAL VOC ($\sim 10^4$ images); scaling required both dataset breadth and synthetic view diversity:
+::: {.cols .vc}
+::: {.col}
+- **ILSVRC-2012 scale:** $1.2 \times 10^6$ training images across $1{,}000$ categories ($\sim 1{,}200$ per class).
+- **Geometric augmentation:** Random $224 \times 224$ crops and horizontal flips from $256 \times 256$ images generate $32^2 \times 2 = 2{,}048$ views per image.
+- **Photometric PCA jitter:** Perturbs RGB intensities along dataset eigenvectors for illumination invariance.
+:::
 
-- **ImageNet ILSVRC-2012 scale:** Supplied $1.2\times 10^6$ training photographs across 1,000 fine-grained object categories ($\sim 1{,}200$ examples per class).
-- **Geometric data augmentation:** Extracting random $224\times 224$ crops and horizontal reflections from $256\times 256$ images multiplies each photograph into $32 \times 32 \times 2 = 2{,}048$ distinct training views.
-- **Photometric jittering:** Perturbing RGB channel intensities along the dataset's principal components builds invariance to illumination color and intensity.
-- **Capacity still exceeds data:** Even with $1.2\text{M} \times 2{,}048$ virtual views, AlexNet severely overfit without heavy dropout regularization in its dense head.
+::: {.col .fig .big}
+@fig:ch07-mcnn-imagenet-augmentation
+:::
+:::
 :::
 
 ::: {.slide title="Catalyst 2: GPU Throughput and Arithmetic Budget"}
 [Hardware Scaling]{.kicker}
 
-Convolving filters across spatial grids executes billions of independent multiply-adds—the exact workload GPUs were engineered to run across parallel cores and high-bandwidth memory:
+::: {.cols .vc}
+::: {.col}
+- **Per-image cost:** One $224 \times 224$ forward pass executes $\approx 10^9$ MACs ($2 \times 10^9$ FLOPs).
+- **90-epoch training budget:** Counting backward passes ($3\times$ forward) over $1.2\textrm{M}$ images totals $\approx 6.5 \times 10^{17}$ FLOPs.
+- **CPU vs. GPU:** Two GTX 580 GPUs ($1.6\textrm{ TFLOPS}$, $192\textrm{ GB/s}$ each) cut a $>45$-day CPU run down to **5–6 days**.
+:::
 
-- **Per-image forward cost:** One $224\times 224$ forward pass requires $\approx 10^9$ multiply-adds ($2\times 10^9$ FLOPs).
-- **Full training budget (90 epochs over 1.2M images):** Counting backward passes at $2\times$ the forward pass ($3\times$ total) and 2 FLOPs per multiply-add yields:
-  $$\text{Total FLOPs} = 10^9 \times 3 \times 2 \times (1.2 \times 10^6) \times 90 \approx 6.5 \times 10^{17}\text{ FLOPs}$$
-- **CPU vs. GPU wall-clock time:** A 2012 quad-core CPU ($\sim 0.2$ TFLOPS, 20 GB/s bandwidth) would take **over a month**; two NVIDIA GTX 580 GPUs ($\sim 1.6$ TFLOPS and 192 GB/s each) finished training in **5–6 days**.
+::: {.col .fig .big}
+@fig:ch07-mcnn-gpu-vs-cpu-budget
+:::
+:::
 :::
 
 ::: {.slide title="Comparing LeNet and AlexNet Side by Side"}
@@ -646,26 +658,32 @@ AlexNet preserves LeNet's macro template—a convolutional feature trunk feeding
 ::: {.slide title="LeNet vs. AlexNet: Architectural Comparison"}
 [Structural Upgrades]{.kicker}
 
-Beyond raw parameter scale, AlexNet modernized the activation function, pooling operator, and regularization scheme:
+::: {.cols .vc}
+::: {.col}
+- **Scale jump:** Input resolution grows $64\times$ ($28^2 \to 224^2$), parameters grow $760\times$ ($61.7\textrm{K} \to 46.8\textrm{M}$), and MACs grow $2{,}250\times$ ($0.42\textrm{M} \to 938\textrm{M}$).
+- **Modernized primitives:** Overlapping $3 \times 3$ stride-2 MaxPool replaces AvgPool; non-saturating **ReLU** replaces Sigmoid; **Dropout ($p=0.5$)** regularizes the two 4096-unit dense layers.
+:::
 
-| Dimension / Component | LeNet (1989 / §6.6) | AlexNet (2012 / §7.1 Variant) | Why the Change Matters |
-|:--|:--|:--|:--|
-| **Input resolution** | $1 \times 28 \times 28$ | $1 \times 224 \times 224$ (3ch on ImageNet) | Captures fine spatial textures and object parts |
-| **Convolutional trunk** | 2 layers ($5\times 5$; 6, 16 ch) | 5 layers ($11\times 11_s4$, $5\times 5$, $3\times 3^3$; 96–384 ch) | Hierarchical composition over large receptive fields |
-| **Spatial pooling** | $2\times 2$ average pooling, $s=2$ | $3\times 3$ overlapping max-pooling, $s=2$ | Preserves sharpest local feature activations |
-| **Activation function** | Sigmoid $\sigma(x)$ | $\textrm{ReLU}(x) = \max(x, 0)$ | Prevents gradient attenuation across depth |
-| **Classifier head** | Dense $120 \to 84 \to 10$ | Dense $4096 \to 4096 \to 10$ + Dropout($0.5$) | High capacity paired with co-adaptation control |
-| **Total cost (10 classes)** | 61.7K params · 0.42M MACs | 46.8M params ($760\times$) · 938M MACs ($2{,}250\times$) | Massive shift in memory and compute footprint |
+::: {.col .fig .big}
+@fig:ch07-mcnn-lenet-vs-alexnet-scale
+:::
+:::
 :::
 
 ::: {.slide title="Catalyst 3: ReLU, He Initialization, and Dropout"}
 [Optimization & Regularization]{.kicker}
 
-Three modeling choices made an 8-layer, 47M-parameter network trainable without pretraining or memorization collapse:
+::: {.cols .vc}
+::: {.col}
+- **1. Non-saturating ReLU:** Active slope $\textrm{ReLU}'(x) = 1$ for $x>0$ eliminates the $4^{-K}$ sigmoid attenuation ($6\times$ faster convergence).
+- **2. He variance scaling:** Drawing $W \sim \mathcal{N}(0, 2/(c_\textrm{i} k^2))$ compensates for ReLU zeroing half of activations.
+- **3. Dropout ($p=0.5$):** Zeroes half of the 4096 dense units during training (scaling survivors by $2\times$).
+:::
 
-- **Non-saturating ReLU gradients:** Sigmoid derivatives satisfy $\sigma'(x) = \sigma(x)(1-\sigma(x)) \le 1/4$, shrinking $K$-layer backward paths by $4^{-K}$. Active ReLUs have derivative $\textrm{ReLU}'(x) = 1$ for all $x > 0$, reaching 25% CIFAR-10 training error **$6\times$ faster** than $\tanh$.
-- **He variance scaling:** Because ReLU zeroes half of its activations, drawing weights from $\mathcal{N}(0, 2/n_{\textrm{in}})$ with $n_{\textrm{in}} = c_{\textrm{i}} k^2$ preserves forward activation variance and backward gradient variance at step zero.
-- **Dropout ($p = 0.5$) in the dense head:** Randomly zeroing half the 4096 hidden units on each forward pass (and scaling survivors by $1/(1-p) = 2$) prevents the 43M-parameter classifier head from memorizing training examples.
+::: {.col .fig .big}
+@fig:ch07-mcnn-relu-he-dropout-triad
+:::
+:::
 :::
 
 ::: {.slide title="Implementing AlexNet in Code"}
@@ -715,27 +733,33 @@ A convolutional layer reuses each of its $c_{\textrm{i}} c_{\textrm{o}} k^2$ wei
 ::: {.slide title="The Stark Parameter vs. Compute Asymmetry"}
 [Systems Bottleneck]{.kicker}
 
-Tallying the convolutional trunk against the dense classifier head exposes an architectural imbalance that motivated NiN and GoogLeNet (§7.2):
+::: {.cols .vc}
+::: {.col}
+- **Convolutions (8% params, 95.4% MACs):** Five conv layers hold $3.72\textrm{M}$ weights ($15\textrm{ MB}$) yet execute $895.1\textrm{M}$ MACs.
+- **Dense head (92% params, 4.6% MACs):** Holds $43.04\textrm{M}$ weights ($172\textrm{ MB}$) for just $43.0\textrm{M}$ MACs ($0.25$ MACs/byte at $B=1$, severely memory-bandwidth bound).
+:::
 
-- **Convolutions dominate compute (95% of MACs, 8% of weights):** The five convolutional layers hold only $3.72\text{M}$ parameters ($15\text{ MB}$ in `float32`) yet execute $895\text{M}$ of the $938\text{M}$ multiply-adds because every kernel is swept across hundreds of spatial positions.
-- **Dense layers dominate memory (92% of weights, 5% of MACs):** The three dense layers consume $43.04\text{M}$ parameters ($\approx 172\text{ MB}$ in `float32`) while performing just $43\text{M}$ multiply-adds ($1$ multiply-add per weight per example).
-- **Single-layer bottleneck:** The first dense matrix ($6400 \times 4096 = 26.2\text{M}$ weights, $105\text{ MB}$) holds 56% of the entire network's parameters just to summarize the final $5\times 5$ spatial grid.
-
-::: {.d2l-note .warn}
-**Systems Pitfall (Batch-1 Inference Memory Bandwidth):** At batch size $B=1$, evaluating AlexNet's dense head requires streaming $172\text{ MB}$ of weights from DRAM to perform only $43\text{M}$ multiply-adds (arithmetic intensity $\approx 0.25$ MACs/byte), making the head severely memory-bandwidth bound.
+::: {.col .fig .big}
+@fig:ch07-mcnn-alexnet-param-mac-split
+:::
 :::
 :::
 
 ::: {.slide title="Cosine Learning-Rate Schedule with Linear Warmup"}
 [Optimization Schedule]{.kicker}
 
-A constant step size is either too aggressive at step 0 (when random weights can diverge) or too noisy at step $T$ (bouncing around a minimum):
-
-- **Linear warmup ($0 \le t < t_{\textrm{w}}$):** Ramps the learning rate linearly from $0$ to peak $\eta_0$ over the first $t_{\textrm{w}} = T/10$ steps ($\eta_t = \eta_0 \cdot t / t_{\textrm{w}}$), stabilizing early gradients before full-size steps begin.
-- **Half-cosine decay ($t_{\textrm{w}} \le t \le T$):** Smoothly anneals the step size to $0$ without manual plateau thresholds:
-  $$\eta_t = \frac{\eta_0}{2} \left(1 + \cos \frac{\pi (t - t_{\textrm{w}})}{T - t_{\textrm{w}}}\right)$$
-
+::: {.cols .vc}
+::: {.col}
 @alexnet-training-on-fashion-mnist-1
+
+- **Warmup ($t < t_\textrm{w}$):** Linearly ramps $0 \to \eta_0$ over $T/10$ steps.
+- **Half-cosine decay:** Smoothly anneals $\eta_t \to 0$ at step $T$.
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-cosine-warmup-curve
+:::
+:::
 :::
 
 ::: {.slide title="Stepping the Schedule per Minibatch"}

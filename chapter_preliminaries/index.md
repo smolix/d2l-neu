@@ -31,69 +31,66 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 ::: {.slide title="Why Deep Learning Needs Two New Software Pillars"}
 [Motivation]{.kicker}
 
-Classical machine learning rests on linear algebra, multivariable calculus, and probability—what deep learning adds is **scale**, applying them to millions or billions of parameters where hand derivation and scalar Python loops break down.
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The Scale of One Minibatch:** One Fashion-MNIST batch of 256 images ($28 \times 28$) holds $200{,}704$ pixels; a 10-class linear layer uses $7{,}850$ weights, while foundation models update $10^9$–$10^{12}$ weights per step.
-- **Pillar 1 — Tensor Libraries (§1.1–1.3):** Replace scattered Python objects and loops with contiguous memory buffers and parallel SIMD/GPU kernels that transform entire minibatches at once.
+- **Scale breaks scalar code:** One 256-image Fashion-MNIST batch holds $200{,}704$ pixels; foundation models update $10^9\text{--}10^{12}$ weights per step.
+- **Pillar 1 — Contiguous Tensor Kernels (§§1.1–1.3):** Pack data into unboxed RAM/VRAM buffers and transform whole batches on SIMD/GPU lanes.
+- **Pillar 2 — Reverse-Mode Autograd (§§1.4–1.5):** Record the execution DAG to obtain all parameter gradients $\nabla_{\mathbf{w}} L$ in a single backward sweep.
+- **Statistical Foundation (§1.6):** Bound test-set uncertainty ($\sigma/\sqrt{n}$) and update beliefs via Bayes' rule.
 :::
 
-::: {.col}
-- **Pillar 2 — Automatic Differentiation (§1.4–1.5):** Tracks computational graphs to apply the chain rule mechanically across arbitrary numerical programs without hand-coded derivatives.
-- **Statistical Reasoning (§1.6):** Quantifies uncertainty under finite-sample noise so we can distinguish genuine generalization improvements from random fluctuations and update beliefs from evidence.
+::: {.col .fig .big}
+@fig:prelim-pillars
 :::
-:::
-
-::: {.d2l-note}
-Every architecture in this book—from linear regression to Transformers—is built by composing these exact primitives inside an iterative training loop.
 :::
 :::
 
 ::: {.slide title="Anatomy of a Complete Machine Learning Iteration"}
 [The Learning Loop]{.kicker}
 
-Every supervised learning pipeline executes a closed feedback loop from raw records on disk to statistically validated predictions:
+::: {.cols .vc}
+::: {.col}
+- **Data to tensors (§§1.2, 1.1):** Parse raw tables, impute gaps without leakage, and pack batches into contiguous `float32` / `bfloat16` buffers.
+- **Forward pass (§1.3):** Project inputs to class logits via batched matrix products $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$.
+- **Loss & backward sweep (§§1.4, 1.5):** Evaluate scalar loss $L$ and propagate Vector–Jacobian Products backward to compute $\nabla_{\mathbf{W}} L$.
+- **Step & statistical evaluation (§1.6):** Update parameters and quantify finite-sample error bars.
+:::
 
-| Stage in the Loop | Mathematical & Computational Operation | Chapter 1 Section |
-| :--- | :--- | :--- |
-| **1. Ingest & Clean** | Parse raw tables, impute `NaN`s, encode categories, standardize scales | **§1.2 Data Preprocessing** |
-| **2. Store & Batch** | Pack examples into contiguous `float32` / `bfloat16` tensor buffers | **§1.1 Data Manipulation** |
-| **3. Forward Pass** | Transform minibatch representations via matrix products $\mathbf{X}\mathbf{W} + \mathbf{b}$ | **§1.3 Linear Algebra** |
-| **4. Measure & Differentiate** | Evaluate scalar loss $\mathcal{L}$ and relate parameter perturbations to $\nabla \mathcal{L}$ | **§1.4 Calculus** |
-| **5. Backpropagate** | Traverse the reverse computational graph to accumulate parameter gradients | **§1.5 Automatic Differentiation** |
-| **6. Evaluate Under Noise** | Bound test-set uncertainty via standard errors and Bayesian inference | **§1.6 Probability & Statistics** |
+::: {.col .fig .big}
+@fig:prelim-ml-loop
+:::
+:::
 :::
 
 ::: {.slide title="Concrete Running Examples Anchoring Each Section"}
 [Pedagogical Thread]{.kicker}
 
-Rather than treating mathematics in the abstract, each section develops its tools around a concrete numerical dataset or estimation problem:
+::: {.cols .vc}
+::: {.col}
+- **§§1.1 & 1.3 (`images` batch):** Fashion-MNIST minibatch `(256, 1, 28, 28)` flattened to $\mathbf{X} \in \mathbb{R}^{256 \times 784}$ and multiplied by $\mathbf{W} \in \mathbb{R}^{784 \times 10}$.
+- **§1.2 (`house_tiny.csv`):** 10 homes with missing rooms, categorical roofs, and $500\times$ scale gaps.
+- **§§1.4–1.5 (Line loss & control flow):** Fitting $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|_2^2$ on 3 points and differentiating through Python loops.
+- **§1.6 (Coin tosses & screening):** $1/\sqrt{n}$ confidence bands and two-stage Bayesian medical diagnosis.
+:::
 
-| Section | Core Abstraction | Concrete Running Benchmark in Chapter 1 |
-| :--- | :--- | :--- |
-| **§1.1 Data Manipulation** | Strided storage buffers & views | `images`: Fashion-MNIST minibatch `(256, 1, 28, 28)` in `uint8` $\to$ `float32` |
-| **§1.2 Data Preprocessing** | Leakage-free tabular pipelines | `house_tiny.csv`: 10 homes with missing rooms, text roofs, and $500\times$ scale gaps |
-| **§1.3 Linear Algebra** | Batched matmuls, norms, spectra | Flattened batch $\mathbf{X} \in \mathbb{R}^{256 \times 784}$ multiplying weight matrix $\mathbf{W} \in \mathbb{R}^{784 \times 10}$ |
-| **§1.4–1.5 Calculus & Autograd** | Jacobians, chain rule, reverse-mode AD | Fitting a line to 3 data points; backpropagating through Python control flow |
-| **§1.6 Probability & Statistics** | Bayes' rule & confidence intervals | Diagnostic testing under low prevalence ($P(\text{disease} \mid +)$) & coin-bias standard error |
+::: {.col .fig .big}
+@fig:prelim-running-example
+:::
+:::
 :::
 
 ::: {.slide title="How to Navigate Chapter 1 and the Math Appendix"}
 [Study Guide]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Hands-on systems focus:** Every concept in §1.1–1.6 is paired immediately with executable framework code so you build intuition for shapes, dtypes, memory aliasing, and gradients before training neural networks in Chapter 2.
-- **Where not to skip:** Even if you know NumPy and multivariable calculus well, study **§1.5 (Automatic Differentiation)** for computational graph semantics (`detach`, in-place mutation hazards) and **§1.6 (Probability)** for standard errors on finite test sets.
+- **Hands-on systems focus (§§1.1–1.6):** Every concept pairs directly with executable framework code for shapes, dtypes, memory aliasing, and gradients.
+- **Must-read sections:** Even if you know NumPy and calculus, study **§1.5 (Autograd)** for DAG semantics (`detach`, in-place hazards) and **§1.6 (Probability)** for finite-sample standard errors.
+- **Deep theoretical proofs:** Jump to **Chapters 33–35 (MDL Appendix)** for SVD, matrix calculus identities, and MLE asymptotics.
 :::
 
-::: {.col}
-- **Deeper proofs and derivations:** When you want full theoretical developments—singular value decomposition, matrix calculus identities, measure-theoretic probability, or maximum likelihood asymptotics—consult the *Mathematics for Deep Learning* appendix.
+::: {.col .fig .big}
+@fig:prelim-study-roadmap
 :::
-:::
-
-::: {.d2l-note}
-**Up next (§1.1 Data Manipulation):** How tensors represent multidimensional arrays in contiguous memory and execute parallel operations without Python loops.
 :::
 :::

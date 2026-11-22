@@ -853,51 +853,64 @@ Distributed Data Parallel (DDP) in Practice: Bucketing and Overlap<br>**multi-pr
 ::: {.slide title="From Toy LeNet to Compute-Heavy ResNet-18"}
 [Motivation]{.kicker}
 
-In §13.5, our hand-written loop slowed LeNet down on two GPUs for two structural reasons: a single Python thread issued work to both GPUs sequentially, and the gradient allreduce waited until the entire backward pass completed.
+::: {.cols .vc}
+::: {.col}
+- **Why LeNet stalled in §13.5:** One Python thread dispatched sequentially to both GPUs ($k \cdot h_{\textrm{step}}$), and the allreduce waited until `backward()` finished.
+- **Production DDP remedies:** Spawns **1 process per GPU** (`torchrun`) or **1 compiled multi-GPU program** (`jax.jit`), launching bucketed allreduces *during* `backward()`.
+- **ResNet-18 benchmark ($64 \times 64$, $b=256$):** Keeps each RTX 4090 busy for $\sim 100\text{ ms/step}$ across $11.2\text{M}$ params ($S = 45\text{ MB}$), exposing true communication overlap.
+:::
 
-- **Production remedies:** Frameworks eliminate single-thread dispatch (via **one process per GPU** in PyTorch DDP or **one compiled multi-device program** in JAX) and pack gradients into **buckets** whose allreduces start *during* the backward pass.
-- **A realistic benchmark (ResNet-18 at $64 \times 64$):** Performs $2.2\text{G}$ multiply-adds per image across $11.2\text{M}$ parameters ($S = 45\text{ MB}$ of `float32` gradients, or $\sim 50\text{ FLOP/byte}$ of gradient vs. $< 2$ for LeNet), keeping one RTX 4090 busy for $\sim 100\text{ ms}$ per 256-image step.
-
-::: {.d2l-note}
-With $\sim 100\text{ ms}$ of device compute per step, host launch overhead vanishes and we can directly measure how much of the $45\text{ MB}$ gradient exchange is hidden by backward-pass overlap across $1, 2,$ and $4$ GPUs.
+::: {.col .fig .big}
+@fig:ch13-perf-lenet-vs-resnet18
+:::
 :::
 :::
 
 ::: {.slide title="Two SPMD Execution Models: Multi-Process vs. Compiler"}
 [Execution Models]{.kicker}
 
-Modern frameworks drive $k$ GPUs using one of two *Single Program, Multiple Data* (SPMD) architectures:
+::: {.cols .vc}
+::: {.col}
+- **Multi-Process SPMD (`torchrun` + `DDP`):** Spawns $k$ independent Python processes (1 per GPU); autograd hooks fire asynchronous NCCL bucket allreduces during `backward()`.
+- **Compiler-Partitioned SPMD (`jax.jit` + `Mesh`):** One process traces a single-device function annotated with `NamedSharding`; XLA (GSPMD/Shardy) inserts and overlaps NCCL collectives in HLO.
+:::
 
-| Architectural Dimension | Multi-Process SPMD (`torchrun` + `DDP`) | Compiler-Partitioned SPMD (`jax.jit` + `Mesh`) |
-| :--- | :--- | :--- |
-| **Host Execution** | $k$ independent Python processes (ranks $0 \ldots k-1$), 1 CPU thread per GPU | 1 Python process dispatches 1 compiled multi-GPU XLA executable |
-| **Language Flexibility** | Arbitrary dynamic Python code in every process | Function must be traceable with static shapes |
-| **Data & Model Placement** | Each rank slices its own $B/k$ shard and holds a local model replica | User annotates `NamedSharding(mesh, P('data'))` vs. replicated `P()` |
-| **Collective Insertion** | Autograd backward hooks trigger asynchronous NCCL bucket allreduces | Compiler (GSPMD / Shardy) inserts & schedules NCCL collectives in HLO |
+::: {.col .fig .big}
+@fig:ch13-perf-spmd-models
+:::
+:::
 :::
 
 ::: {.slide title="How Production DDP Fixes the Hand-Written Loop" only="pytorch"}
 [PyTorch DDP]{.kicker}
 
-Comparing our §13.5 loop against `torch.nn.parallel.DistributedDataParallel` (DDP) shows how each bottleneck is removed:
+::: {.cols .vc}
+::: {.col}
+- **Parallel host dispatch ($1 \cdot h_{\textrm{step}}$):** Each of the $k$ `torchrun` ranks drives its own GPU concurrently, eliminating the $k \cdot h_{\textrm{step}}$ single-thread bottleneck.
+- **Ring/Tree NCCL collectives:** Replaces the $O(kS)$ hub-bottlenecked star gather/scatter with bandwidth-optimal $\frac{2(k-1)}{k}S$ NCCL collectives.
+- **Pipelined backward hooks:** Fires asynchronous allreduces on $25\text{ MiB}$ reverse-order buckets while earlier layers are still backpropagating.
+:::
 
-| System Bottleneck | §13.5 Hand-Written Loop | Production `torchrun` + `DDP` |
-| :--- | :--- | :--- |
-| **Host kernel dispatch** | 1 Python thread loops over $k$ GPUs ($k \cdot h_{\textrm{step}}$) | $k$ OS processes dispatch to their own GPUs in parallel ($1 \cdot h_{\textrm{step}}$) |
-| **Collective topology** | Star gather/scatter through GPU 0 ($(k-1)S$ bytes) | NCCL ring or tree allreduce ($\frac{2(k-1)}{k}S$ bytes) |
-| **When communication runs** | After the entire backward pass finishes | Per-bucket allreduce launched asynchronously during `backward()` |
+::: {.col .fig .big}
+@fig:ch13-perf-torchrun-ddp
+:::
+:::
 :::
 
 ::: {.slide title="How Compiler Partitioning Automates Data Parallelism" only="jax"}
 [JAX Sharded JIT]{.kicker}
 
-Comparing our §13.5 `shard_map` loop against `nnx.jit` with `Auto` mesh sharding shows how XLA automates collective scheduling:
+::: {.cols .vc}
+::: {.col}
+- **Single-device user code:** You write a standard `train_step(model, opt, X, y, idx)` without manual `shard_map`, `ravel_pytree`, or `lax.psum`.
+- **Automatic collective synthesis:** Marking weights replicated (`P()`) and batch indices sharded (`P('data')`) tells XLA to insert gradient allreduces automatically.
+- **30 MiB asynchronous combining:** XLA merges allreduces up to $30\text{ MiB}$ and schedules backward compute between `all-reduce-start` and `all-reduce-done`.
+:::
 
-| System Component | §13.5 Hand-Written `shard_map` | Production `nnx.jit` + `NamedSharding` |
-| :--- | :--- | :--- |
-| **User code** | Explicit `shard_map`, `pcast`, `ravel_pytree`, and `lax.psum` | Standard single-device function `train_step(model, opt, X, y, idx)` |
-| **Collective synthesis** | Manual flat allreduce at end of backward pass | Compiler derives allreduces from `P()` weights + `P('data')` batch |
-| **Overlap scheduling** | Synchronous single buffer after backpropagation | XLA combines buffers up to $30\text{ MiB}$ and overlaps `all-reduce-start`/`done` |
+::: {.col .fig .big}
+@fig:ch13-perf-jax-mesh-sharding
+:::
+:::
 :::
 
 ::: {.slide title="One Process per GPU with torchrun and DDP" only="pytorch"}
@@ -955,12 +968,18 @@ Because `model` is replicated (`P()`) while `idx` is sharded (`P('data')`), diff
 ::: {.slide title="The Bucket Size Trade-Off and the Ideal Bucket Model"}
 [Bucket Model]{.kicker}
 
-Choosing the bucket capacity balances per-call latency $\alpha$ against overlap delay:
+::: {.cols .vc}
+::: {.col}
+$$t_{\textrm{exposed (ideal)}} \;=\; \frac{2(k-1)}{k}\, S_{\textrm{last\_bucket}}\, \beta_{\textrm{link}}$$
 
-- **Too many tiny buckets ($c \gg 1$):** Starts communication immediately, but pays start-up latency $c\,\alpha$ dozens of times and fragments link bandwidth.
-- **One giant bucket ($c = 1$):** Pays $\alpha$ once, but cannot start communicating until the very first layer's gradient finishes at the end of `backward()`.
-- **The ideal bucket model of overlap:** If (1) inter-GPU links finish each bucket before the next bucket fills and (2) communication kernels do not slow down concurrent backward compute kernels, then **every bucket except the final bucket is completely hidden** behind the backward pass:
-  $$t_{\textrm{exposed (ideal)}} \;=\; \frac{2(k-1)}{k}\, S_{\textrm{last\_bucket}}\, \beta_{\textrm{link}} \qquad \textrm{vs.} \qquad t_{\textrm{exposed (no overlap)}} \;=\; \frac{2(k-1)}{k}\, S\, \beta_{\textrm{link}}$$
+- **Tiny buckets ($c \gg 1$) vs. 1 giant bucket ($c = 1$):** Tiny buckets pay latency $c\alpha$ dozens of times; one giant bucket waits until the entire backward pass finishes.
+- **25–30 MiB sweet spot:** Under ideal overlap (fast links, zero SM contention), every bucket except the final bucket $S_{\textrm{last}}$ is hidden behind backpropagation.
+:::
+
+::: {.col .fig}
+@fig:ch13-perf-bucket-tradeoff
+:::
+:::
 :::
 
 ::: {.slide title="Reverse-Order Bucketing in PyTorch DDP (1 & 25 MiB)" only="pytorch"}
@@ -1023,11 +1042,17 @@ Parsing the compiled HLO text (`compiled.as_text()`) with `allreduce_megabytes` 
 ::: {.slide title="Silent Data-Sharding Bugs in Distributed Training"}
 [Practical Pitfalls]{.kicker}
 
-Two common data-loading bugs silently corrupt multi-GPU training without raising any runtime exception:
+::: {.cols .vc}
+::: {.col}
+- **Bug 1 — Identical shards across ranks:** Omitting `rank` in the slice offset (or sharding indices with `P()`) makes all $k$ GPUs compute on the exact same $b$ examples—wasting $k-1$ GPUs!
+- **Bug 2 — Unseeded per-rank shuffles:** Independent random permutations sample examples *with replacement* across ranks instead of partitioning the epoch.
+- **Step-1 defense:** Assert that minibatch checksums differ across ranks while sharing the epoch seed.
+:::
 
-- **Bug 1 — Identical shards across ranks (forgetting `rank` in the slice offset, or placing indices with `P()` in JAX):** Every GPU processes the **exact same $b$ examples**. Reported throughput looks $k\times$ higher (counting $kb$ examples/step), but the averaged gradient is that of $b$ examples—wasting $k-1$ GPUs completely!
-- **Bug 2 — Independent unseeded shuffles per rank:** If each rank generates its own independent random permutation without a shared seed, examples are sampled *with replacement* across ranks within a step instead of forming a disjoint partition of the epoch.
-- **Defensive check:** Always assert on step 1 that minibatch checksums differ across ranks while sharing the same global epoch permutation seed.
+::: {.col .fig .big}
+@fig:ch13-perf-data-shard-bugs
+:::
+:::
 :::
 
 ::: {.slide title="Bounding Exposed Communication: No Overlap vs. Bucket"}
@@ -1092,15 +1117,17 @@ Offloading host-staged copies to DMA copy engines (`NCCL_SHM_USE_CUDA_MEMCPY=1`)
 ::: {.slide title="PCIe Host Staging vs. NVLink Fabrics"}
 [Interconnect Impact]{.kicker}
 
-Our cost model $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + t_{\textrm{exposed}}(\beta_{\textrm{link}})$ explains how the exact same ResNet-18 training step behaves on a data-center NVLink node:
+::: {.cols .vc}
+::: {.col}
+- **Consumer PCIe 4.0 via Host DRAM ($\sim 2.4\text{ GB/s}$ bus):** A $45\text{ MB}$ allreduce at $k=4$ takes $\sim 28\text{ ms}$ and competes for SMs, yielding $77\text{--}83\%$ weak-scaling efficiency ($3.1\text{--}3.3\times$).
+- **Data-Center NVLink 4/5 ($450\text{--}900\text{ GB/s}$):** The same $45\text{ MB}$ allreduce finishes in $< 0.2\text{ ms}$ via dedicated fabric engines, achieving $>99\%$ scaling efficiency ($\approx 4.0\times$).
+- **Next wall:** Even on NVLink, DDP replicates all $16N$ bytes of state on every GPU (§13.7).
+:::
 
-| Interconnect Architecture | One-Way Link Rate | Allreduce Time ($S = 45\text{ MB}$, $k=4$) | Weak-Scaling Efficiency ($b=256$, $100\text{ ms}$ step) |
-| :--- | :---: | :---: | :---: |
-| **Consumer PCIe 4.0 via Host DRAM** | $\le 23\text{ GB/s}$ ($\sim 2.4\text{ GB/s}$ bus) | $\approx 28\text{ ms}$ (plus SM contention) | **$77\text{--}83\%$** ($3.1\text{--}3.3\times$ on 4 GPUs) |
-| **Data-Center NVLink 4 (H100)** | $450\text{ GB/s}$ | $< 0.2\text{ ms}$ | **$> 99\%$** ($\approx 4.0\times$ on 4 GPUs) |
-| **Data-Center NVLink 5 (B200)** | $900\text{ GB/s}$ | $< 0.1\text{ ms}$ | **$> 99\%$** ($\approx 4.0\times$ on 4 GPUs) |
-
-- **Next bottleneck:** Even on NVLink where data-parallel communication is nearly free, every GPU still holds a full $16N$-byte copy of the model, gradients, and Adam state—motivating **state sharding (ZeRO / FSDP)** in §13.7.
+::: {.col .fig .big}
+@fig:ch13-perf-pcie-vs-nvlink-ddp
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Bucketing, BatchNorm, and Scaling"}
@@ -1124,11 +1151,15 @@ Test your grasp of production data parallelism with three diagnostic questions:
 ::: {.slide title="Summary: Production Data Parallelism and Overlap"}
 [Key Takeaways]{.kicker}
 
-| System Mechanism | PyTorch (`torchrun` + `DDP`) | JAX (`nnx.jit` + `NamedSharding`) | Systems Purpose & Caveat |
-| :--- | :--- | :--- | :--- |
-| **Execution Model** | $k$ processes (1 per GPU) + NCCL | 1 process, compiler-partitioned HLO | Eliminates single-thread $k \cdot h_{\textrm{step}}$ dispatch bottleneck |
-| **Gradient Bucketing** | Reverse order: $1\text{ MiB}$ first, then $25\text{ MiB}$ | XLA combiner up to $30\text{ MiB}$ buffers | Amortizes $\alpha$ while starting allreduces during `backward()` |
-| **BatchNorm Default** | Per-shard stats (`SyncBatchNorm` optional) | Global stats across `'data'` mesh axis | Verified via 1-step check against full vs. accumulated-halves |
-| **Ideal Bucket Overlap** | Exposes only final bucket ($S_{\textrm{last}}$) | Exposes only final combined buffer | Requires fast links ($\tau < t_{\textrm{bwd}}$) and zero SM contention |
-| **Host-Staged PCIe NCCL** | $\sim 2.4\text{ GB/s}$ bus BW; SM copy kernels | $\sim 2.4\text{ GB/s}$ bus BW; SM copy kernels | Concurrent NCCL SM kernels slow backward compute by $\sim 10\text{ ms}$ |
+::: {.cols .vc}
+::: {.col}
+- **SPMD Execution:** `torchrun` + `DDP` ($k$ processes) and `jax.jit` + `NamedSharding` (1 compiled program) both eliminate the single-thread $k \cdot h_{\textrm{step}}$ bottleneck.
+- **Reverse-Order Bucketing:** Packing gradients into $25\text{--}30\text{ MiB}$ reverse-order buckets pipelines NCCL allreduces with backpropagation.
+- **Verification & Contention:** Always run a 1-step check (catching BatchNorm and sharding bugs) and profile SM contention on host-staged PCIe links.
+:::
+
+::: {.col .fig .big}
+@fig:ch13-perf-ddp-summary
+:::
+:::
 :::

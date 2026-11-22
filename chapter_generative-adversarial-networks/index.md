@@ -98,29 +98,33 @@ Goodfellow et al. (2014) turned two-sample binary classification into a generati
 ::: {.slide title="Three Design Axes of Every Adversarial Game"}
 [Unifying Framework]{.kicker}
 
-When generated samples miss the data support, the classic minimax value $\max_D V(D) = 2\,\mathrm{JS}(p, q) - 2\log 2$ saturates at $\mathrm{JS}(p, q) = \log 2 \approx 0.6931$ nats with vanishing slope. Every adversarial formulation in this chapter modifies one of three design axes:
+::: {.cols .vc}
+::: {.col}
+- **Why classic minimax saturates:** When generated samples miss the data support, $\max_D V(D) = 2\,\mathrm{JS}(p, q) - 2\log 2$ flattens at $\mathrm{JS}(p, q) = \log 2 \approx 0.6931$ nats with vanishing gradient.
+- **Three orthogonal modifications:** Every GAN objective changes what the critic estimates ($D^\star(\lambda)$ vs. witness $T$), how samples are scored (single-sample vs. Bradley–Terry pairs), or how critic gradients are regularized ($R_1 + R_2$).
+- **Modernized R3GAN recipe (Huang et al., 2024):** Combines pairwise ranking (`RpGAN`) with zero-centered penalties $R_1 + R_2$ to damp rotational dynamics without BatchNorm.
+:::
 
-| Design Axis | Classical Minimax Choice (§16.1) | Generalized Alternatives (§16.2–16.4) |
-| :--- | :--- | :--- |
-| **1. What the critic estimates** | Pointwise log density ratio $\lambda(x) = \log(p(x)/q(x))$ | Monotone link $D^\star(\lambda)$ ($f$-divergences: LSGAN, hinge) or smooth spatial potential / witness ($W_1$, MMD) |
-| **2. How samples are scored** | Single-sample classification against fixed threshold $0$ | Pairwise Bradley–Terry ranking $\sigma(D(x) - D(x'))$ (RpGAN) or difference of expectations $\mathbb{E}_p[T] - \mathbb{E}_q[T]$ |
-| **3. How the critic is regularized** | Unconstrained network ($\mathrm{JS}$ saturates on disjoint supports) | 1-Lipschitz constraint (spectral norm, WGAN-GP) or zero-centered gradient penalties $R_1 + R_2$ |
-
-::: {.d2l-note}
-**The modernized R3GAN reference recipe (Huang et al., 2024):** Combines relativistic pairwise ranking (`RpGAN`) with zero-centered input-gradient penalties on both real ($R_1$) and generated ($R_2$) samples to damp rotational minimax dynamics without batch normalization.
+::: {.col .fig .big}
+@fig:ch16-gan-three-axes
+:::
 :::
 :::
 
 ::: {.slide title="Chapter 16 Roadmap: Theory, Dynamics, and Systems"}
 [Architectural & Mathematical Roadmap]{.kicker}
 
-The chapter progresses from exact population divergences to dynamical stability, convolutional image synthesis, and modern perceptual discriminators:
+::: {.cols .vc}
+::: {.col}
+- **Part I — Objectives & Divergences (§§16.1–16.3):** From log-loss density-ratio estimation ($D^\star = \log(p/q)$) and non-saturating weights ($2\,D_{\textrm{KL}}(m \,\|\, p)$) to $f$-divergences, IPMs ($W_1$, MMD), and relativistic pairing ($d_{\mathrm{Rp}}$).
+- **Part II — Dynamics & Convergence (§16.4):** Why unpenalized minimax steps orbit or spiral outward on the Dirac-GAN, and how zero-centered penalties $R_1 + R_2$ shift Jacobian eigenvalues into the open left half-plane.
+- **Part III — Images, Conditioning & Applications (§§16.5–16.7):** DCGAN vs. normalization-free backbones, FID/KID and $K$-NN precision/recall, projection critics, and diffusion distillation (ADD/DMD2).
+:::
 
-| Part | Sections | Core Mathematical & Systems Questions |
-| :--- | :--- | :--- |
-| **I. Objectives & Divergences** | **§16.1** Generative Adversarial Networks<br>**§16.2** Objectives & Divergences<br>**§16.3** Relativistic Objectives | Why does log loss yield $D^\star = \log(p/q)$ and $\mathrm{JS}(p, q) = I(x; y)$? How do non-saturating weights ($2\,D_{\textrm{KL}}(m \,\|\, p)$), $f$-divergences, IPMs ($W_1$, MMD), and Bradley–Terry pairing ($d_{\mathrm{Rp}}$) behave when supports separate? |
-| **II. Dynamics & Convergence** | **§16.4** Gradient Penalties & Convergence | Why do minimax gradient updates orbit or spiral outward on the Dirac-GAN? How do $R_1 + R_2$ shift Jacobian eigenvalues into the left half-plane and act as a dual Sobolev low-pass filter? |
-| **III. Images, Conditioning & Applications** | **§16.5** Adversarial Image Generation<br>**§16.6** Conditional Generation<br>**§16.7** Adversarial Losses Beyond GANs | How do DCGAN and normalization-free backbones scale to $64 \times 64$ images? How are FID, KID, precision/recall, and projection critics evaluated? Why do diffusion distillation, VQGAN, and HiFi-GAN still need a critic? |
+::: {.col .fig .big}
+@fig:ch16-gan-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Running Benchmarks and Study Guide"}
@@ -161,12 +165,15 @@ Test your intuition on three foundational scenarios from the chapter overview:
 ::: {.slide title="Summary: Core Notation and Chapter Synthesis"}
 [Key Takeaways]{.kicker}
 
-| Symbol / Concept | Mathematical Definition | Equilibrium Value | Role Across Chapter 16 |
-| :--- | :--- | :--- | :--- |
-| **Densities & Mixture** | $x \sim p$ (data), $x' = G(z) \sim q$ (gen.), $m = \frac{1}{2}(p + q)$ | $q = p = m$ | Two-sample comparison domain |
-| **Density Ratio & Log-Ratio** | $\rho(x) = \frac{p(x)}{q(x)}$, $\;\lambda(x) = \log \frac{p(x)}{q(x)}$ | $\rho(x) = 1, \;\lambda(x) = 0$ | Target estimated by optimal critic $D^\star(x)$ |
-| **Bayes Class Posterior** | $\eta(x) = \frac{p(x)}{p(x) + q(x)}$ $= \sigma(\lambda(x))$ | $\eta(x) = \frac{1}{2}$ | Pointwise realness probability |
-| **Generator Gradient Weights** | $w_{\textrm{sat}} = \sigma(D(x'))$, $w_{\textrm{ns}} = \sigma(-D(x'))$, $w_{\textrm{Rp}} = \mathbb{E}_p[\sigma(D(x') - D(x))]$ | $w = \frac{1}{2}$ | Rescales $\nabla_\theta D(G_\theta(z))$ per sample |
-| **Pairing Objective & Divergence** | $\Phi(D) = \mathbb{E}_{p,q}[\log\sigma(D(x) - D(x'))]$, $d_{\mathrm{Rp}} = \mathrm{JS}(p \otimes q, q \otimes p)$ | $\Phi = -\log 2$, $d_{\mathrm{Rp}} = 0$ | Shift-invariant Bradley–Terry ranking (§16.3) |
-| **Zero-Centered Penalties** | $R_1 = \frac{\gamma}{2}\mathbb{E}_p[\|\nabla_x D\|^2]$, $R_2 = \frac{\gamma}{2}\mathbb{E}_q[\|\nabla_{x'} D\|^2]$ | $R_1 = R_2 = 0$ ($\nabla_x D^\star = \mathbf{0}$) | Damps rotational vector fields (§16.4–16.6) |
+::: {.cols .vc}
+::: {.col}
+- **Two-sample domain & log-ratio:** Real draws $x \sim p$ and generated draws $x' = G(z) \sim q$ form the balanced mixture $m = \frac{1}{2}(p + q)$, with optimal critic target $\lambda(x) = \log(p(x)/q(x))$ and Bayes posterior $\eta(x) = \sigma(\lambda(x))$.
+- **Per-sample generator weights:** Rescale $\nabla_\theta D(G_\theta(z))$ by $w_{\textrm{sat}} = \sigma(D(x'))$, $w_{\textrm{ns}} = \sigma(-D(x'))$, or shift-invariant $1 - w_{\textrm{Rp}} = \mathbb{E}_p[\sigma(D(x) - D(x'))]$.
+- **Equilibrium damping:** Zero-centered penalties $R_1 + R_2 = \frac{\gamma}{2}(\mathbb{E}_p\|\nabla_x D\|^2 + \mathbb{E}_q\|\nabla_{x'} D\|^2)$ vanish at $q = p$ ($\nabla_x D^\star = \mathbf{0}$) while stabilizing minimax trajectories.
+:::
+
+::: {.col .fig .big}
+@fig:ch16-gan-notation-map
+:::
+:::
 :::

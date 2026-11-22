@@ -880,48 +880,51 @@ Gated Recurrent Networks: LSTM and GRU<br>**vanishing gradients · sigmoid decay
 ::: {.slide title="Why Plain RNNs Lose Long-Range Grammatical Context"}
 [Motivation]{.kicker}
 
-Consider predicting the verb in *"The **keys** to the cabinet in the hall **are**"*—choosing *"are"* over *"is"* requires remembering a plural noun $30$ characters back:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{h}_t = \tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \mathbf{W}_\textrm{xh}\mathbf{x}_t + \mathbf{b}_\textrm{h})$$
 
-- **Full-state overwriting:** Every step multiplies the entire state vector $\mathbf{h}_{t-1}$ by the same dense matrix $\mathbf{W}_\textrm{hh}$ and squashes it through $\tanh$.
-- **Exponential decay:** For a scalar unit with recurrent weight $w = 0.9$, each step scales perturbations by $w(1 - h_s^2) \le 0.9$—shrinking to $0.9^{30} \approx 4\%$ after $30$ steps and $0.9^{100} \approx 0.003\%$ after $100$ steps.
+- **Full-State Overwriting:** Every step multiplies $\mathbf{h}_{t-1}$ by $\mathbf{W}_\textrm{hh}$ and squashes it through $\tanh$.
+- **Geometric Signal Decay:** At $w = 0.9$, perturbations shrink to $0.9^{30} \approx 4\%$ across $30$ steps and $0.9^{100} \approx 0.003\%$ across $100$ steps.
+:::
 
-::: {.d2l-note}
-Both forward memory signals and backward training gradients traverse the exact same chain of step multipliers.
+::: {.col .fig}
+@fig:ch12-mrnn-grammar-decay
+:::
 :::
 :::
 
 ::: {.slide title="Jacobian Products and the Spectral Radius Borderline"}
 [Vanishing & Exploding Gradients]{.kicker}
 
-Backpropagating $k$ steps through a plain RNN multiplies $k$ step Jacobians $\mathbf{J}_s = \textrm{diag}(1 - \mathbf{h}_s^2)\,\mathbf{W}_\textrm{hh}$:
+::: {.cols .vc}
+::: {.col}
+$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-k}} = \prod_{s=t-k+1}^{t} \textrm{diag}(1 - \mathbf{h}_s^2)\,\mathbf{W}_\textrm{hh}$$
 
-$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-k}} = \mathbf{J}_t \mathbf{J}_{t-1} \cdots \mathbf{J}_{t-k+1}$$
+- **Contractive vs. Expansive Regimes:** Since $|1 - h_s^2| \le 1$, powers scale as $\rho^k$ ($\rho = \max_i |\lambda_i(\mathbf{W}_\textrm{hh})|$)—vanishing when $\rho < 1$ and exploding when $\rho > 1$.
+- **Asymmetry of Failure:** Clipping caps explosions, but cannot recover underflowed long-lag gradients.
+:::
 
-- **Contractive guarantee:** Since $|1 - h_{s,j}^2| \le 1$, if the largest singular value satisfies $\|\mathbf{W}_\textrm{hh}\|_2 < 1$, every step contracts every vector and gradients vanish exponentially.
-- **Asymptotic spectral scaling:** Over many steps, matrix powers scale as $\rho^k$, where the **spectral radius** $\rho = \max_i |\lambda_i(\mathbf{W}_\textrm{hh})| \le \|\mathbf{W}_\textrm{hh}\|_2$.
-- **The $\rho \approx 1$ borderline:** When $\rho \approx 1$ and states remain in the linear region of $\tanh$, components along leading eigenvectors can survive—but any drift away causes explosion or collapse.
-
-::: {.d2l-note .warn}
-**Asymmetry of failure:** Gradient clipping caps exploding gradients, but no post-hoc rescaling can recover a gradient that has underflowed to zero.
+::: {.col .fig}
+@fig:ch12-mrnn-jacobian-chain
+:::
 :::
 :::
 
 ::: {.slide title="From Unbounded Running Sums to Learned Decay Gates"}
 [The Gating Principle]{.kicker}
 
-A pure running sum $c_t = c_{t-1} + x_t$ has unit Jacobian ($\partial c_t / \partial c_{t-k} = 1$), but never forgets and grows unboundedly in variance. Gated networks introduce a learned retention fraction $f_t \in (0, 1)$ and input fraction $i_t \in (0, 1)$:
+::: {.cols .vc}
+::: {.col}
+$$c_t = f_t\, c_{t-1} + i_t\, \tilde{c}_t, \qquad \tau_{1/2} = \frac{\ln 2}{\ln(1/f)}$$
 
-$$c_t = f_t\, c_{t-1} + i_t\, \tilde{c}_t$$
+- **Elementwise Gradient Highway:** Along the direct memory rail, $\partial c_t / \partial c_{t-k} = \prod_{s=t-k+1}^t f_s \le 1$ with no $\mathbf{W}_\textrm{hh}$ matrix product.
+- **Tunable Horizon:** Holding $f_t \approx 0.99$–$0.999$ stretches the memory half-life from $1$ step to $69$–$693$ steps.
+:::
 
-| Constant keep gate $f$ | $0.5$ | $0.9$ | $0.99$ | $0.999$ |
-| :--- | :---: | :---: | :---: | :---: |
-| **Half-life** $\tau_{1/2} = \ln 2 / \ln(1/f)$ | $1\text{ step}$ | $7\text{ steps}$ | $69\text{ steps}$ | $693\text{ steps}$ |
-| **Signal remaining after $50$ steps** ($f^{50}$) | $9 \times 10^{-16}$ | $5.2 \times 10^{-3}$ | $0.605$ | $0.951$ |
-
-::: {.d2l-note .rule}
-**Elementwise gradient highway:** Along the direct memory path, $\partial c_t / \partial c_{t-k} = \prod_{s=t-k+1}^t f_s \le 1$. Because $f_s \in (0, 1)$, the direct path cannot explode, and holding $f_s \approx 1$ prevents vanishing.
+::: {.col .fig}
+@fig:ch12-mrnn-gate-halflife
+:::
 :::
 :::
 
@@ -948,13 +951,17 @@ The LSTM (Hochreiter & Schmidhuber, 1997; Gers et al., 2000) maintains an intern
 ::: {.slide title="Decoupling Internal Storage from Exposed Output"}
 [Silent Retention & Gradient Highway]{.kicker}
 
-Separating the linear cell rail $\mathbf{c}_t$ from the squashed readout $\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)$ serves two purposes:
+::: {.cols .vc}
+::: {.col}
+- **Silent Storage Until Needed:** Holding $f_t = 0.95, i_t = 0.1$ preserves $c_t = 0.71$ while a closed output gate ($o_t = 0.2$) shields downstream layers ($h_t = 0.12$).
+- **Bounding Cell Magnitude:** Squashing $\tanh(\mathbf{c}_t)$ at readout keeps $\mathbf{h}_t \in (-1, 1)^d$ even when repeated writes push $|c_t| > 1$.
+- **Direct Cell Jacobian:** Along the top cell rail, $\partial \mathbf{c}_t / \partial \mathbf{c}_{t-1} = \textrm{diag}(\mathbf{f}_t)$.
+:::
 
-- **Silent storage until needed:** Suppose unit $j$ holds $c_{t-1} = 0.8$ and encounters an irrelevant word with $f_t = 0.95$, $i_t = 0.1$, $\tilde{c}_t = -0.5$, and $o_t = 0.2$:
-  $$c_t = 0.95(0.8) + 0.1(-0.5) = 0.71, \qquad h_t = 0.2\tanh(0.71) = 0.12$$
-  The cell preserves the plural feature ($0.71$) while shielding downstream layers ($0.12$) until the verb arrives and opens $o_t \to 1$.
-- **Bounding accumulated cell state:** When $f_t \approx 1$, repeated positive writes can push $|c_t| > 1$; applying $\tanh(\mathbf{c}_t)$ at readout keeps $\mathbf{h}_t \in (-1, 1)^d$ so gate pre-activations at step $t+1$ do not saturate.
-- **Direct cell Jacobian:** Treating gates as fixed, $\partial \mathbf{c}_t / \partial \mathbf{c}_{t-1} = \textrm{diag}(\mathbf{f}_t)$ (the top rail of the diagram).
+::: {.col .fig .big}
+@fig:ch12-mrnn-silent-storage
+:::
+:::
 :::
 
 ::: {.slide title="Fused 4-Gate Matrix Projection and Verification"}
@@ -998,16 +1005,16 @@ The GRU (Cho et al., 2014) merges the cell and hidden state into a single vector
 ::: {.slide title="LSTM vs. GRU: Structural and Systems Trade-Offs"}
 [Architectural Comparison]{.kicker}
 
-Both architectures create an elementwise linear retention path, differing in how they bound and expose the state:
+::: {.cols .vc}
+::: {.col}
+- **State & Gate Count:** LSTM carries two vectors $(\mathbf{c}_t, \mathbf{h}_t)$ controlled by 3 independent gates ($8d^2$ params); GRU carries one vector $\mathbf{h}_t$ with 2 gates ($6d^2$ params, $25\%$ smaller).
+- **Bounding Mechanism:** LSTM bounds $\mathbf{h}_t$ via readout $\tanh(\mathbf{c}_t)$, whereas GRU's convex blend $\mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$ keeps $\mathbf{h}_t \in [-1, 1]^d$ automatically.
+:::
 
-| Property | Long Short-Term Memory (LSTM) | Gated Recurrent Unit (GRU) |
-| :--- | :--- | :--- |
-| **Carried state per layer** | Two vectors: cell $\mathbf{c}_t \in \mathbb{R}^d$, hidden $\mathbf{h}_t \in \mathbb{R}^d$ | Single vector: $\mathbf{h}_t \in \mathbb{R}^d$ |
-| **Gates per step** | $3$ ($\mathbf{i}_t$ input, $\mathbf{f}_t$ forget, $\mathbf{o}_t$ output) | $2$ ($\mathbf{r}_t$ reset, $\mathbf{z}_t$ update) |
-| **Weight count ($d_\textrm{in} = d$)** | $4 \times 2d^2 = 8d^2$ parameters | $3 \times 2d^2 = 6d^2$ parameters ($25\%$ fewer) |
-| **Forget–write coupling** | Independent $\mathbf{f}_t$ and $\mathbf{i}_t$ | Coupled convex blend: keep $\mathbf{z}_t$, write $1 - \mathbf{z}_t$ |
-| **State magnitude bound** | Unbounded $\mathbf{c}_t$ squashed by readout $\tanh(\mathbf{c}_t)$ | Convex blend of $[-1, 1]$ values stays in $[-1, 1]$ |
-| **Fused kernel optimization** | Single GEMM for $\mathbf{W}_\textrm{x}\mathbf{x}_t + \mathbf{W}_\textrm{h}\mathbf{h}_{t-1}$ | Applies $\mathbf{r}_t$ *after* $\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1}$ to batch all 3 GEMMs |
+::: {.col .fig .big}
+@fig:ch12-mrnn-lstm-vs-gru
+:::
+:::
 :::
 
 ::: {.slide title="Synthetic Stress Test: The Delayed Recall Benchmark"}
@@ -1024,25 +1031,31 @@ Gated equations *represent* long memories, but does gradient descent actually di
 ::: {.slide title="Pitfall: Zero-Bias Gates Start with a 1-Step Memory"}
 [Initialization Hazard]{.kicker}
 
-Under standard zero-bias initialization ($\mathbf{b}_\textrm{f} = \mathbf{0}$ or $\mathbf{b}_\textrm{z} = \mathbf{0}$), initial gate pre-activations cluster near zero:
+::: {.cols .vc}
+::: {.col}
+- **One-Step Initial Half-Life:** With $\mathbf{b}_\textrm{f} = \mathbf{0}$, gates start at $\sigma(0) = 1/2$, attenuating the direct gradient from step $T$ to step $1$ by $2^{-(T-1)}$.
+- **Underflow Wall at $T \ge 50$:** While $2^{-19} \approx 1.9 \times 10^{-6}$ at $T=20$ survives in `float32`, $2^{-49} \approx 1.8 \times 10^{-15}$ at $T=50$ vanishes when added to recent $O(1)$ gradients.
+:::
 
-- **One-step initial half-life:** Every forget or update gate starts near $\sigma(0) = 1/2$, attenuating the direct gradient from step $T$ back to step $1$ by $2^{-(T-1)}$.
-- **Survivable at $T = 20$:** $2^{-19} \approx 1.9 \times 10^{-6}$, which remains above `float32` machine epsilon ($\sim 1.2 \times 10^{-7}$) and provides enough gradient signal to pry the gates open.
-- **Fatal at $T \ge 50$:** $2^{-49} \approx 1.8 \times 10^{-15}$ vanishes completely when added to recent tokens' $O(1)$ parameter gradients in $32$-bit floating-point arithmetic.
-
-::: {.d2l-note .warn}
-Without a gradient reaching step $1$, the network never learns that opening the forget gate at step $1$ would reduce the loss at step $T$!
+::: {.col .fig .big}
+@fig:ch12-mrnn-zero-bias-underflow
+:::
 :::
 :::
 
 ::: {.slide title="Keep-Gate Initialization and Cell Magnitude Bounding"}
 [Chrono & Keep-Gate Bias]{.kicker}
 
-`init_keep_gate` starts the memory highway open by setting the forget/update gate bias to $+5$ (Jozefowicz et al., 2015; Tallec & Ollivier, 2018):
+::: {.cols .vc}
+::: {.col}
+- **100-Step Initial Horizon:** Setting $b_\textrm{f} = +5$ starts gates at $\sigma(5) \approx 0.9933$ ($\tau_{1/2} \approx 103$ steps), preserving $0.9933^{50} \approx 71\%$ of the gradient across $50$ steps.
+- **Paired Input Bias ($b_\textrm{i} = -5$):** Leaving $b_\textrm{i} = 0$ lets LSTM cells grow to $|c_t| \le 0.5 / 0.0067 \approx 75$; setting $b_\textrm{i} = -b_\textrm{f} = -5$ couples $i_t = 1 - f_t$ so $|c_t| \le 1$.
+:::
 
-- **100-step initial half-life:** $\sigma(5) \approx 0.9933$, giving an initial half-life of $\ln 2 / \ln(1/0.9933) \approx 103$ steps so $0.9933^{50} \approx 0.71$ of the gradient survives across $50$ steps.
-- **Why the LSTM also needs $b_\textrm{i} = -5$:** If $f_t = \sigma(5) \approx 0.9933$ while $i_t = \sigma(0) = 0.5$, repeated filler writes can accumulate up to $|c_t| \le i_{\max}/(1 - f_{\max}) \approx 0.5 / 0.0067 \approx 75$, saturating $\tanh(c_t)$ and killing readout gradients.
-- **Matched convex bound:** Pairing $b_\textrm{i} = -b_\textrm{f} = -5$ sets $\sigma(-5) = 1 - \sigma(5) \approx 0.0067$, bounding $|c_t| \le 1$ across any number of filler steps—just like the GRU's built-in $1 - \mathbf{z}_t$ coupling.
+::: {.col .fig .big}
+@fig:ch12-mrnn-keep-gate-init
+:::
+:::
 :::
 
 ::: {.slide title="Plain RNN Initialization: Borderline vs. Contracting"}
@@ -1085,13 +1098,18 @@ Gates replace fragile whole-matrix eigenvalue tuning with **per-unit learned dec
 ::: {.slide title="Fair Language Benchmarks via a Shared Residual Stack"}
 [The SeqLM Backbone]{.kicker}
 
-In Chapter 11, a single wide plain RNN fell behind a 6-block GPT after 16 bytes. To compare sequence mixers without confounding recurrence against residual depth and MLPs, every model in Chapter 12 uses the same pre-norm `SeqLM` backbone:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{H} \leftarrow \mathbf{H} + \textrm{mixer}(\textrm{LN}(\mathbf{H})), \quad \mathbf{H} \leftarrow \mathbf{H} + \textrm{MLP}(\textrm{LN}(\mathbf{H}))$$
 
-$$\mathbf{H} \leftarrow \mathbf{H} + \textrm{mixer}(\textrm{LN}(\mathbf{H})), \qquad \mathbf{H} \leftarrow \mathbf{H} + \textrm{MLP}(\textrm{LN}(\mathbf{H}))$$
+- **Controlled Architecture:** Byte embedding $\to$ $4$ pre-norm residual blocks ($d = 256$, $4d$ GELU MLP) $\to$ LayerNorm + output head on 128-byte WikiText-103 windows.
+- **Isolating the Mixer:** Only `mixer(·)` changes across §§12.1–12.8.
+:::
 
-- **Identical surrounding architecture:** Token embedding $\to$ $4$ residual blocks at width $d = 256$ (each with a two-layer $4d$ GELU MLP) $\to$ final LayerNorm and output head, all LeCun-initialized.
-- **Identical training protocol:** Byte-level WikiText-103 (`batch_size=64`, windows of $T = 128$ bytes), trained for $1{,}000$ steps of AdamW ($100$-step warmup to $2 \times 10^{-3}$, cosine decay).
-- **Only the sequence mixer changes:** Plain RNN, LSTM, GRU, causal multi-head attention with RoPE (`AttentionMixer`), and a parameter-matched wider plain RNN (`RNN, d=302`).
+::: {.col .fig}
+@fig:ch12-mrnn-seqlm-backbone
+:::
+:::
 :::
 
 ::: {.slide title="Byte-Level WikiText-103: Mixers Compared Head-to-Head"}

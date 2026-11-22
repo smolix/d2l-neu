@@ -357,18 +357,15 @@ Ecosystem: Pretrained Models, Datasets, Leaderboards, and Supply-Chain Safety<br
 ::: {.slide title="External Artifacts Are Supply-Chain Dependencies"}
 [Motivation]{.kicker}
 
-While textbook chapters train models from scratch to keep every line of math visible, production and research projects almost always build on external artifacts:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Three questions every practitioner faces:**
-  1. **Discovery & selection:** Out of 100,000+ candidate checkpoints on a public hub, which one should you try first, and will its leaderboard score hold on your domain data?
-  2. **Identity & reproducibility:** Will the checkpoint or dataset you load six months from now be bitwise identical to the one you evaluated today?
+- **1. Discovery & domain selection:** Out of 100,000+ public checkpoints, shortlist candidates and verify whether leaderboard scores hold on your domain data.
+- **2. Bitwise identity & reproducibility:** Lock the exact 40-character Git commit SHA of weights, config, and tokenizer so runs stay identical six months later.
+- **3. Security & legal compliance:** Use `safetensors` to prevent pickle RCE exploits and verify the commit's license terms before deployment.
 :::
 
-::: {.col}
-  3. **Security & legal compliance:** Can loading a downloaded weight file execute arbitrary code on your machine, and does its license permit commercial deployment?
-- **The engineering mindset:** Treat pretrained weights, tokenizers, and datasets with the same version-pinning, checksum, and security discipline as third-party software libraries.
+::: {.col .fig .big}
+@fig:ch39-tools-artifact-supply-chain
 :::
 :::
 :::
@@ -376,35 +373,30 @@ While textbook chapters train models from scratch to keep every line of math vis
 ::: {.slide title="Where the Community Hosts Models and Weights"}
 [Model Repositories]{.kicker}
 
-Open-weight checkpoints live across general hubs and specialized domain collections (snapshot as of November 2026):
+::: {.cols .vc}
+::: {.col}
+- **Foundation & global hubs:** Hugging Face Hub ($3\text{M+}$ Git-backed repos with `safetensors` and model cards) and ModelScope ($280\text{K+}$ models).
+- **Hosted & local inference catalogs:** Kaggle Models mount directly at `/kaggle/input` without download, while Ollama bundles quantized GGUF weights + chat templates.
+- **Domain collections:** `timm` standardizes PyTorch vision backbones and Civitai hosts diffusion adapters.
+:::
 
-| Repository / Hub | Scale & Focus | Key Engineering Characteristics |
-| :--- | :--- | :--- |
-| **Hugging Face Hub** | $3{,}000{,}000+$ public models | Git-backed repos, model cards, `transformers` / `safetensors` integration |
-| **ModelScope** | $280{,}000+$ models | Alibaba's hub; primary home for much of the Chinese open-model ecosystem |
-| **Kaggle Models** | Curated competition & foundation weights | Mounted directly at `/kaggle/input` inside Kaggle notebooks without download |
-| **Ollama Library** | Curated local-inference catalog | Quantized GGUF bundles packaged with chat templates for one-command local runs |
-| **`timm` & Civitai** | Vision backbones & diffusion adapters | Standardized PyTorch image backbones (`timm`) and community image LoRAs (Civitai) |
+::: {.col .fig .big}
+@fig:ch39-tools-model-hubs-map
+:::
+:::
 :::
 
 ::: {.slide title="Open Datasets and Web-Scale Pretraining Lineage"}
 [Data Repositories]{.kicker}
 
-Public datasets span supervised task collections and multi-trillion-token pretraining corpora:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Supervised & task datasets:**
-  - **Hugging Face Datasets ($1{,}000{,}000+$ datasets)** and **Kaggle Datasets** provide standardized streaming, Arrow caching, and split definitions.
-- **Multimodal & archival distributions:**
-  - **DataComp** curates controlled image–text filtering benchmarks as an auditable alternative to raw LAION crawls.
-  - **Academic Torrents** distributes legacy and multi-terabyte research corpora peer-to-peer.
+- **Web-scale text pretraining lineage:** Raw Common Crawl WARC archives $\to$ filtered **C4** (T5, 2019) $\to$ **FineWeb** ($15\text{T}\to 18.5\text{T+}$ deduplicated tokens) and **FineWeb2** ($1{,}000+$ languages).
+- **Supervised & multimodal corpora:** HF/Kaggle Datasets provide Arrow streaming, **DataComp** curates auditable image–text pairs, and Academic Torrents distributes multi-TB archives.
 :::
 
-::: {.col}
-- **Web-scale text pretraining lineage:**
-  - Raw **Common Crawl** WARC archives $\to$ filtered **C4** (released with T5 in 2019) $\to$ **FineWeb** ($15\text{T}$ tokens in 2024, expanding past $18.5\text{T}$ tokens across newer crawls) and **FineWeb2** ($1{,}000+$ languages).
-  - Always inspect dataset cards for deduplication rules, PII/toxicity filtering, licensing, and known domain biases before training.
+::: {.col .fig .big}
+@fig:ch39-tools-pretraining-lineage
 :::
 :::
 :::
@@ -412,20 +404,14 @@ Public datasets span supervised task collections and multi-trillion-token pretra
 ::: {.slide title="Tracking Papers, Code, and Replications"}
 [Research Discovery]{.kicker}
 
-A paper's claims are only the starting point; released code, issue trackers, and independent replications provide the real evidence:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Where new work appears:**
-  - **arXiv (`cs.LG`, `cs.CL`, `cs.CV`):** Primary preprint server.
-  - **Hugging Face Papers:** Daily curated front page linking preprints directly to models, datasets, and GitHub repositories.
-  - **Semantic Scholar & alphaXiv:** Citation graphs and inline community discussion threads.
+- **Primary discovery channels:** **arXiv** (`cs.LG`, `cs.CL`, `cs.CV`), **Hugging Face Papers** (linking preprints directly to weights, datasets, and GitHub code), and **Semantic Scholar / alphaXiv**.
+- **Lesson of Papers with Code (closed July 2025):** Central benchmark indexes can shut down—never make your build or evaluation pipeline depend on a single external site staying online.
 :::
 
-::: {.col}
-- **The lesson of Papers with Code (closed July 2025):**
-  - For years, Papers with Code was the central index mapping papers to benchmarks; its URL now redirects to Hugging Face Papers, with historical tables preserved only as a frozen GitHub archive.
-  - **Resilience rule:** Never make your project's build or evaluation pipeline depend on a single external index staying online.
+::: {.col .fig .big}
+@fig:ch39-tools-papers-to-code
 :::
 :::
 :::
@@ -433,20 +419,14 @@ A paper's claims are only the starting point; released code, issue trackers, and
 ::: {.slide title="Why Static Leaderboards Age and Saturate"}
 [Benchmark Decay]{.kicker}
 
-A static public benchmark loses discriminative power over time through Goodhart's law—once a metric becomes a target, training pipelines optimize for it directly:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Three mechanisms of benchmark decay:**
-  1. **Data contamination:** Test prompts or close paraphrases leak into web-scraped pretraining or post-training sets.
-  2. **Overfitting via model selection:** Evaluating thousands of checkpoint blends against a fixed public test set selects for test-set quirks.
-  3. **Ceiling saturation & flawed grading tests:** Top models cluster near the ceiling where noisy or overly rigid unit tests dominate differences.
+- **Three decay mechanisms (Goodhart's Law):** Test-set contamination in web scrapes, selection overfitting across thousands of checkpoint merges, and ceiling saturation on flawed unit tests.
+- **Landmark retirements:** The static **Open LLM Leaderboard** retired in 2025 after task saturation, and **SWE-bench Verified** was superseded by contamination-resistant **SWE-bench Pro** (Feb 2026).
 :::
 
-::: {.col}
-- **Two landmark benchmark retirements:**
-  - **Open LLM Leaderboard (retired 2025):** After evaluating $10{,}000+$ open models, fixed tasks saturated in 2024 and the leaderboard was retired in 2025.
-  - **SWE-bench Verified $\to$ SWE-bench Pro (Feb 2026):** OpenAI stopped reporting SWE-bench Verified after documenting benchmark contamination and overly narrow unit tests that rejected valid patches.
+::: {.col .fig .big}
+@fig:ch39-tools-benchmark-decay
 :::
 :::
 :::
@@ -454,41 +434,31 @@ A static public benchmark loses discriminative power over time through Goodhart'
 ::: {.slide title="Five Complementary Types of Model Evidence"}
 [Evaluating Candidates]{.kicker}
 
-Because no single leaderboard captures task fitness, model shortlisting combines five distinct measurement paradigms:
+::: {.cols .vc}
+::: {.col}
+- **Human preference & dynamic tests:** **Arena** (`arena.ai`) measures blind pairwise human preference (Elo), while **LiveBench** rotates withheld objective questions to defeat contamination.
+- **Capabilities, economics & volume:** Combine domain capability suites (SWE-bench Pro), **Artificial Analysis** (Quality vs. tok/s and $\$/\text{M}$ tokens), and **OpenRouter** production token volume.
+:::
 
-| Evaluation Source | What It Measures | Strength | Blind Spot |
-| :--- | :--- | :--- | :--- |
-| **Arena** (`arena.ai`) | Blind pairwise human preference (Bradley-Terry Elo) | Reflects live, open-ended human judgment | Skewed toward general chat style over domain accuracy |
-| **LiveBench** (`livebench.ai`) | Objective tasks with regularly rotated, withheld questions | Strongly resists pretraining contamination | Covers general reasoning rather than your private schema |
-| **Capability Benchmarks** | Domain suites (e.g., SWE-bench Pro, math, long context) | Tests specific agentic or structural skills | Narrow scope; eventually saturates as labs target it |
-| **Artificial Analysis** | Quality vs. throughput (tok/s), TTFT, and $\$/\text{M}$ tokens | Essential Pareto frontier for deployment economics | Aggregate quality index still averages across generic tasks |
-| **OpenRouter Rankings** | Real production token volume routed by paying customers | **Revealed preference** under real cost/latency constraints | Lags brand-new releases; reflects popular consumer apps |
+::: {.col .fig .big}
+@fig:ch39-tools-five-evidence-types
+:::
+:::
 :::
 
 ::: {.slide title="Statistical Resolution of Pairwise Arena Ratings"}
 [Bradley-Terry Elo Math]{.kicker}
 
-Arena fits the Bradley-Terry model on pairwise human votes and reports scores on the Elo scale, where model $A$ beats model $B$ (ignoring ties) with probability:
-
-$$P(A \succ B) = \frac{1}{1 + 10^{-(R_A - R_B)/400}}$$
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **How large is an Elo gap?**
-  - $\Delta R = 10\text{ pts}$ $\implies$ $P(A \succ B) \approx 51.4\%$
-  - $\Delta R = 20\text{ pts}$ $\implies$ $P(A \succ B) \approx 52.9\%$
-  - $\Delta R = 50\text{ pts}$ $\implies$ $P(A \succ B) \approx 57.1\%$
-  - $\Delta R = 100\text{ pts}$ $\implies$ $P(A \succ B) \approx 64.0\%$
-- **Standard error near $R_A \approx R_B$:** Linearizing around $\Delta R = 0$ over $v$ independent votes gives:
-  $$\text{SE}(\hat{R}_A - \hat{R}_B) \approx \frac{347}{\sqrt{v}}$$
-  Resolving a $20$-point gap at $2\,\text{SE}$ ($\text{SE} \le 10$) requires **$v \ge (347/10)^2 \approx 1{,}204$ head-to-head votes**!
+$$P(A \succ B) = \frac{1}{1 + 10^{-\Delta R/400}}, \qquad \text{SE} \approx \frac{347}{\sqrt{v}}$$
+
+- **Sample size requirement:** A $+20$ Elo gap ($52.9\%$ win rate) requires **$v \ge (347/10)^2 \approx 1{,}204$ head-to-head votes** just to reach $2\,\text{SE}$!
+- **Domain mixture reversal:** A model leading by $+20$ Elo globally can still lose **$40\%\text{--}60\%$** on the $10\%$ of prompts matching your domain task.
 :::
 
-::: {.col}
-- **Why aggregate Elo can invert on your task:**
-  - Suppose model $A$ leads model $B$ by $+20$ Elo overall ($52.9\%$ aggregate win rate).
-  - On the **$10\%$ of prompts matching your domain**, $B$ actually beats $A$ **$60\%$ of the time** (while $A$ wins $54.3\%$ on the remaining $90\%$ of generic chat prompts).
-  - Relying on the global leaderboard picks the worse model for your application!
+::: {.col .fig}
+@fig:ch39-tools-arena-elo-resolution
 :::
 :::
 :::
@@ -496,20 +466,15 @@ $$P(A \succ B) = \frac{1}{1 + 10^{-(R_A - R_B)/400}}$$
 ::: {.slide title="Task-Specific Evaluation Discipline"}
 [Selecting for Your Domain]{.kicker}
 
-Use public leaderboards only to form a **shortlist of 3–4 candidates**, then run your own paired evaluation:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. Build a representative domain eval set:**
-  - Sample real inputs from your target workflow (e.g., support tickets, extraction schemas, repository diffs).
-  - Size the test set ($n$ examples) using paired-comparison standard errors ($\text{SE} = \sqrt{(p_{10} + p_{01})/n}$) to resolve the smallest accuracy difference $\Delta$ that would change your decision.
+- **1. Shortlist 3–4 candidates:** Filter public leaderboards by license, parameter count, and VRAM/latency ceiling.
+- **2. Size a paired domain eval set:** Sample real workflow inputs, size $n$ via paired standard error $\text{SE} = \sqrt{(p_{10} + p_{01})/n}$, and include trivial + fast heuristic baselines.
+- **3. Inspect discordant pairs:** Audit examples where Model A $\neq$ Model B before shipping.
 :::
 
-::: {.col}
-- **2. Anchor against non-LLM baselines:**
-  - Always include a trivial baseline (majority class / random) and a fast heuristic or small-model baseline (regex, BM25, or previous production model).
-- **3. Inspect discordant pairs:**
-  - Examine the specific examples where Candidate A succeeds and Candidate B fails—error analysis reveals formatting brittle points and latency outliers that averages hide.
+::: {.col .fig .big}
+@fig:ch39-tools-domain-eval-pipeline
 :::
 :::
 :::
@@ -561,21 +526,14 @@ Hub repositories are Git repositories: the `main` branch, a version tag (`v1.0`)
 ::: {.slide title="Checkpoint Security: Pickle Exploits vs. Safetensors"}
 [Safe Deserialization]{.kicker}
 
-Why did the deep learning ecosystem migrate from legacy `pytorch_model.bin` (`.pt` / `.pkl`) files to **`model.safetensors`**?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **How `pickle` executes code on load:**
-  - Python's `pickle` reconstructs objects by invoking whatever callable an object's `__reduce__` method specifies.
-  - Loading a malicious pickle with `torch.load(..., weights_only=False)` can run `os.system(...)` before returning a single tensor!
-  - Even `weights_only=True` still parses the pickle opcode stream against an allowlist—which suffered arbitrary-code-execution bypasses in PyTorch $\le 2.5.1$ (**CVE-2025-32434**).
+- **Why legacy `pickle` (`.bin` / `.pt`) is dangerous:** `pickle` is a stack VM whose `__reduce__` opcode invokes arbitrary Python callables on load; even `weights_only=True` suffered allowlist bypasses (**CVE-2025-32434**).
+- **Why `safetensors` is secure by construction:** Stores an 8-byte header size, a pure UTF-8 JSON header (`dtype`, `shape`, `[begin, end)` offsets), and flat tensor bytes—zero executable opcodes and instant zero-copy `mmap`!
 :::
 
-::: {.col}
-- **Why `safetensors` is secure by construction:**
-  - Simple binary layout: **8-byte little-endian header length $N$** $\to$ **$N$-byte UTF-8 JSON header** (mapping tensor names to `dtype`, `shape`, and `[begin, end)` byte offsets) $\to$ **flat contiguous byte buffer**.
-  - **No opcode interpreter or callable execution exists** in the format, and tensors can be zero-copy memory-mapped (`mmap`) directly from disk!
-  - A loader only needs to validate header bounds (non-overlapping offsets matching $\prod \text{shape}_i \times \text{itemsize}$ within file length).
+::: {.col .fig .big}
+@fig:ch39-tools-pickle-vs-safetensors
 :::
 :::
 :::
@@ -583,24 +541,15 @@ Why did the deep learning ecosystem migrate from legacy `pytorch_model.bin` (`.p
 ::: {.slide title="Auditing Remote Code, Licenses, and Local Cache Bloat"}
 [Supply-Chain Operations]{.kicker}
 
-Even with `safetensors` weights, three operational hazards require explicit engineering controls:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. `trust_remote_code=True` executes repo Python:**
-  - Custom architectures often load Python files listed in `config.json`'s `auto_map`.
-  - If `auto_map` references an external repo (`"other-org/shared-code--modeling.MyModel"`), pinning only the main model's `revision` leaves the external code repo floating on `main` unless pinned explicitly!
-- **2. "Open weight" $\neq$ open-source license:**
-  - Distinguishing **Apache-2.0 / MIT** from acceptable-use licenses (MAU caps, output restrictions), **research-only** CC-BY-NC weights, and **gated** agreements. Record the license of the *pinned commit*, as licenses can change across commits.
+- **1. `trust_remote_code=True` & `auto_map`:** Executes repository `.py` files; if `config.json` references an external code repo, pin **both** commit SHAs!
+- **2. License at the pinned SHA:** Distinguish Apache-2.0/MIT from custom acceptable-use caps (MAU limits) or non-commercial CC-BY-NC weights.
+- **3. Cache disk hygiene:** Inspect and purge stale blobs in `~/.cache/huggingface` with `hf cache ls`, `hf cache rm`, and `hf cache prune`.
 :::
 
-::: {.col}
-- **3. Managing `~/.cache/huggingface` disk bloat:**
-  - Hub clients cache every downloaded revision in full; active workstations routinely accumulate $100\text{--}500\text{ GB}$ of stale blobs.
-  - Use the Hugging Face CLI cache tools regularly:
-    - `hf cache ls` — inspect cached repos and sizes
-    - `hf cache rm` — remove a specific repo or revision
-    - `hf cache prune` — purge detached revisions and partial downloads
+::: {.col .fig .big}
+@fig:ch39-tools-remote-code-audit
 :::
 :::
 :::

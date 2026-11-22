@@ -1684,15 +1684,19 @@ For data $x \sim \mathcal{N}(0, v)$ and linear score model $s_w(x) = -x/w$, the 
 ::: {.slide title="The Regression Lemma: Least Squares Fits E[Y | X]"}
 [Foundational Identity]{.kicker}
 
-Both Denoising Score Matching (§38.6) and Conditional Flow Matching (§38.7) rest on one elementary property of $L^2$ regression:
+::: {.cols .vc}
+::: {.col}
+For any pair $(X, Y)$ with conditional expectation $\mathbf{m}(X) = \mathbb{E}[Y \mid X]$, the tower rule eliminates the cross term:
 
-::: {.d2l-note .rule}
-**Lemma (Regression to the Conditional Mean):** For any jointly distributed pair $(X, Y)$ with $\mathbb{E}\|Y\|^2 < \infty$ and conditional expectation $\mathbf{m}(X) = \mathbb{E}[Y \mid X]$,
-$$\mathbb{E}\!\left[\|\mathbf{v}(X) - Y\|^2\right] = \underbrace{\mathbb{E}\!\left[\|\mathbf{v}(X) - \mathbf{m}(X)\|^2\right]}_{\text{excess risk (minimized at } \mathbf{v} = \mathbf{m})} + \underbrace{\mathbb{E}\!\left[\|Y - \mathbf{m}(X)\|^2\right]}_{\text{irreducible Bayes-risk floor } C}$$
+$$\mathbb{E}\!\left[\|\mathbf{v}(X) - Y\|^2\right] = \mathbb{E}\!\left[\|\mathbf{v}(X) - \mathbf{m}(X)\|^2\right] + \mathbb{E}\!\left[\|Y - \mathbf{m}(X)\|^2\right]$$
+
+- **Trace-free consequence:** Regressing $\mathbf{v}(X)$ onto a noisy per-sample target $Y$ has the **exact same gradients and minimizer** as regressing onto the intractable conditional mean $\mathbf{m}(X) = \mathbb{E}[Y \mid X]$!
 :::
 
-- **One-Line Proof:** Add and subtract $\mathbf{m}(X)$ inside the norm; by the tower rule $\mathbb{E}[\,\cdot\,] = \mathbb{E}[\mathbb{E}[\,\cdot \mid X]]$, the cross term $2\mathbb{E}\big[(\mathbf{v}(X) - \mathbf{m}(X))^\top(\mathbf{m}(X) - Y)\big]$ vanishes because $\mathbb{E}[\mathbf{m}(X) - Y \mid X] = \mathbf{0}$.
-- **Crucial Consequence:** Regressing a network $\mathbf{v}(X)$ onto a noisy per-sample target $Y$ has the **exact same gradients and minimizer** as regressing onto the intractable conditional mean $\mathbf{m}(X) = \mathbb{E}[Y \mid X]$!
+::: {.col .fig}
+@fig:ch38-dyn-regression-lemma-floor
+:::
+:::
 :::
 
 ::: {.slide title="Denoising Score Matching and Vincent's Theorem"}
@@ -1810,15 +1814,19 @@ Training a single time-conditioned score network $\mathbf{s}_{\boldsymbol{\theta
 ::: {.slide title="The Noise-Conditional DSM Loss and Level Weightings"}
 [Training Across All Levels]{.kicker}
 
-Averaging the DSM loss over noise levels $t \sim \mathcal{U}[\varepsilon, T]$ with a positive weight schedule $w(t) > 0$ defines the **noise-conditional score matching** objective:
+::: {.cols .vc}
+::: {.col}
+Averaging the DSM loss over noise levels $t \sim \mathcal{U}[\varepsilon, T]$ with weight schedule $w(t) > 0$:
 
 $$\mathcal{L}(\boldsymbol{\theta}) = \frac{1}{2}\mathbb{E}_{t}\!\left[w(t)\,\mathbb{E}_{\mathbf{x}_0, \boldsymbol{\epsilon}}\!\left[\left\|\mathbf{s}_{\boldsymbol{\theta}}(\alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol{\epsilon}, t) + \frac{\boldsymbol{\epsilon}}{\sigma_t}\right\|^2\right]\right]$$
 
-| Weight Schedule $w(t)$ | Behavior of Weighted Floor $w(t)R(t)$ as $\sigma_t \to 0$ | Optimization & Statistical Property |
-| :--- | :--- | :--- |
-| **Unweighted ($w(t) = 1$)** | Explodes as $d/\sigma_t^2 \sim d/(\beta_{\min}t)$ | Gradients dominated by the tiniest noise levels |
-| **DDPM Simple ($w(t) = \sigma_t^2$)** | Bounded: $\sigma_t^2(d/\sigma_t^2) = d = O(1)$ | Equalizes loss magnitude across all noise levels |
-| **Likelihood ($w(t) = g(t)^2 = \beta(t)$)** | Diverges as $d/t$ ($\int_\varepsilon^T \frac{d}{t}\,dt = d\log\frac{T}{\varepsilon}$) | Bounds KL divergence $D_{\text{KL}}(p_0 \parallel p_{\boldsymbol{\theta}, 0})$ of the reverse SDE |
+- **Three weight schedules:** Unweighted $w(t) = 1$ explodes as $d/\sigma_t^2$; **DDPM Simple** $w(t) = \sigma_t^2$ equalizes the floor to $d = O(1)$ across all levels ($\tfrac12\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_{\boldsymbol{\theta}}\|^2$); **Likelihood** $w(t) = g(t)^2$ bounds reverse-SDE KL.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-dsm-weight-schedules
+:::
+:::
 :::
 
 ::: {.slide title="DDPM Is the Variance-Preserving SDE in Discrete Time"}
@@ -1849,13 +1857,19 @@ Parameterizing the score model via a noise-prediction network $\mathbf{s}_{\bold
 ::: {.slide title="DDIM: Fast Deterministic Sampling as Forward Euler"}
 [Skipping Levels via the PF-ODE]{.kicker}
 
-To sample in $K \ll 1000$ steps without injecting fresh noise, **Denoising Diffusion Implicit Models (DDIM)** predict the clean point $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sqrt{1-\bar{\alpha}_t}\boldsymbol{\epsilon}_{\boldsymbol{\theta}})/\sqrt{\bar{\alpha}_t}$ and jump directly to an earlier level $t' < t$:
+::: {.cols .vc}
+::: {.col}
+**DDIM** predicts $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sqrt{1-\bar{\alpha}_t}\boldsymbol{\epsilon}_{\boldsymbol{\theta}})/\sqrt{\bar{\alpha}_t}$ and jumps directly to an earlier level $t' < t$. In rescaled coordinates $\bar{\mathbf{x}}_t = \mathbf{x}_t/\sqrt{\bar{\alpha}_t}$ and $\bar{\sigma}_t = \sqrt{(1-\bar{\alpha}_t)/\bar{\alpha}_t}$:
 
-$$\mathbf{x}_{t'} = \sqrt{\bar{\alpha}_{t'}}\,\hat{\mathbf{x}}_0 + \sqrt{1 - \bar{\alpha}_{t'}}\,\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$$
+$$\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar{\sigma}_{t'} - \bar{\sigma}_t)\,\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$$
 
-- **Proposition (DDIM Is Forward Euler in VE Coordinates):** Rescaling to $\bar{\mathbf{x}}_t = \mathbf{x}_t / \sqrt{\bar{\alpha}_t} = \mathbf{x}_0 + \bar{\sigma}_t\boldsymbol{\epsilon}$ with noise-to-signal ratio $\bar{\sigma}_t = \sqrt{(1 - \bar{\alpha}_t)/\bar{\alpha}_t} \in [0.01, 157]$ simplifies the DDIM update to:
-  $$\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar{\sigma}_{t'} - \bar{\sigma}_t)\,\boldsymbol{\epsilon}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$$
-  which is **one forward-Euler step** of the VP probability-flow ODE $\frac{d\bar{\mathbf{x}}}{d\bar{\sigma}} = -\bar{\sigma}\nabla_{\bar{\mathbf{x}}}\log \bar{p}(\bar{\mathbf{x}}) = \mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t]$.
+- **Exact forward-Euler step:** DDIM is 1st-order forward Euler on the VP probability-flow ODE $\frac{d\bar{\mathbf{x}}}{d\bar{\sigma}} = \mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t]$, enabling 20–50 deterministic strides.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-ddpm-to-ddim-euler
+:::
+:::
 :::
 
 ::: {.slide title="DDIM Stride Error: Point Masses vs. Gaussian Shrinkage"}
@@ -1902,13 +1916,19 @@ Fitting our 17-feature linear model by ridge least squares at each of the $50$ n
 ::: {.slide title="Classifier and Classifier-Free Guidance via Bayes' Rule"}
 [Conditional Steering]{.kicker}
 
-To steer generation toward a class or text prompt $y$, Bayes' rule $p_t(\mathbf{x} \mid y) = \frac{p_t(\mathbf{x})\,p_t(y \mid \mathbf{x})}{p(y)}$ turns into vector addition on scores:
+::: {.cols .vc}
+::: {.col}
+By Bayes' rule, $\nabla\log p_t(y \mid \mathbf{x}) = \mathbf{s}_y - \mathbf{s}_\varnothing$. **Classifier-Free Guidance (CFG)** amplifies this class difference by guidance scale $\gamma \ge 1$:
 
-$$\nabla_{\mathbf{x}}\log p_t(\mathbf{x} \mid y) = \nabla_{\mathbf{x}}\log p_t(\mathbf{x}) + \nabla_{\mathbf{x}}\log p_t(y \mid \mathbf{x})$$
+$$\tilde{\mathbf{s}}_{\boldsymbol{\theta}}(\mathbf{x}, t, y) = \mathbf{s}_\varnothing + \gamma\big(\mathbf{s}_y - \mathbf{s}_\varnothing\big) = (1 - \gamma)\mathbf{s}_\varnothing + \gamma\mathbf{s}_y$$
 
-- **Classifier-Free Guidance (CFG):** Eliminates the external classifier by substituting $\nabla\log p_t(y \mid \mathbf{x}) = \nabla\log p_t(\mathbf{x} \mid y) - \nabla\log p_t(\mathbf{x})$ and amplifying the difference by a **guidance scale** $\gamma \ge 1$:
-  $$\tilde{\mathbf{s}}_{\boldsymbol{\theta}}(\mathbf{x}, t, y) = \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing) + \gamma\Big[\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, y) - \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing)\Big] = (1 - \gamma)\mathbf{s}_\varnothing + \gamma\mathbf{s}_y$$
-- **Broken Curvature Bound for $\gamma > 1$:** The guided field is the score of a tilted density $\tilde{p}_t(\mathbf{x}) \propto p_t(\mathbf{x})\,p_t(y \mid \mathbf{x})^\gamma$. Once $\gamma > 1 + \frac{v_0 v_t}{\sigma_t^2 m^2} \approx 1.09$, $-\nabla^2\log \tilde{p}_t$ exceeds the universal $1/\sigma_t^2$ bound—so $\tilde{p}_t$ is **not** the noised marginal of any clean distribution!
+- **Broken curvature bound ($\gamma > 1$):** Once $\gamma$ is large, $-\nabla^2\log\tilde{p}_t$ exceeds the universal $1/\sigma_t^2$ bound of any true noised density, sharpening and shifting the terminal mode outward!
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-cfg-extrapolation
+:::
+:::
 :::
 
 ::: {.slide title="Measuring Mode Shift Under High Guidance Scales"}

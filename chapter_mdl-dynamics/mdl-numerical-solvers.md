@@ -915,31 +915,36 @@ The differential equation $\dot{x} = -50x$ is completely stable—the **numerica
 ::: {.slide title="Forward Euler as Compound Interest on a Vector Field"}
 [First-Order Solver]{.kicker}
 
-Given step size $h = T/n$ and grid times $t_n = nh$, **forward Euler** freezes the velocity arrow at the start of each step:
+::: {.cols .vc}
+::: {.col}
+With step size $h = T/n$ and grid times $t_n = nh$, **forward Euler** freezes the velocity arrow at the start of each step:
 
 $$\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_n, t_n)$$
 
-On $\dot{x} = x$ from $x_0 = 1$ to $T = 1$, $n$ Euler steps of size $h = 1/n$ compute $x_n = (1 + 1/n)^n$:
+- **Compound interest on $\dot{x} = x$ ($x_0 = 1, T = 1$):** $n$ steps compute $x_n = (1 + 1/n)^n \to e \approx 2.7183$.
+- **First-order accuracy ($p = 1$):** Doubling $n$ cuts the endpoint error $|x_n - e| \approx \frac{e}{2n} \approx 1.36\,h$ in half.
+:::
 
-| Steps $n$ | $1$ | $2$ | $4$ | $8$ | $16$ | $32$ | $365$ |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Euler Endpoint $(1+1/n)^n$** | $2.000$ | $2.250$ | $2.441$ | $2.566$ | $2.638$ | $2.677$ | $2.7146$ |
-| **Global Error $|x_n - e|$** | $0.718$ | $0.468$ | $0.277$ | $0.153$ | $0.080$ | $0.041$ | $0.0037$ |
-
-::: {.d2l-note .rule}
-Doubling the step count $n$ cuts the endpoint error in half ($\text{error} \approx \frac{e}{2n} \approx 1.36\,h$): forward Euler is a **first-order** method ($p = 1$).
+::: {.col .fig}
+@fig:ch38-dyn-euler-compound-table
+:::
 :::
 :::
 
 ::: {.slide title="Local Truncation Error vs. Global Error Accumulation"}
 [Error Analysis I]{.kicker}
 
-Why does an $O(h^2)$ Taylor error in a single step degrade to an $O(h)$ error at the final horizon $T$?
+::: {.cols .vc}
+::: {.col}
+- **Local truncation error ($\|\mathbf{r}_n\| \le \frac12 M h^2$):** A single Euler step started on the true trajectory errs by $O(h^2)$.
+- **One-step error recursion:** For an $L$-Lipschitz field, global error $\varepsilon_n = \|\mathbf{x}_n - \mathbf{x}(t_n)\|$ obeys $\varepsilon_{n+1} \le (1 + hL)\varepsilon_n + \frac12 M h^2$.
+- **Why one power of $h$ is lost:** Summing $n = T/h$ steps divides by $h$, yielding global order $p = 1$: $\varepsilon_n \le \frac{Mh}{2L}(e^{LT} - 1) = O(h)$.
+:::
 
-- **Local Truncation Error ($\mathbf{r}_n$):** Expanding the true solution $\mathbf{x}(t_{n+1})$ around $t_n$ when $\|\ddot{\mathbf{x}}(t)\| \le M$ shows that a single step started on the true trajectory errs by $O(h^2)$:
-  $$\mathbf{x}(t_{n+1}) = \mathbf{x}(t_n) + h\,\mathbf{f}(\mathbf{x}(t_n), t_n) + \mathbf{r}_n, \qquad \|\mathbf{r}_n\| \le \frac{M h^2}{2}$$
-- **One-Step Error Recursion:** Subtracting this Taylor identity from $\mathbf{x}_{n+1} = \mathbf{x}_n + h\mathbf{f}(\mathbf{x}_n, t_n)$ for an $L$-Lipschitz field bounds the global error $\varepsilon_n = \|\mathbf{x}_n - \mathbf{x}(t_n)\|$:
-  $$\varepsilon_{n+1} \le \underbrace{(1 + hL)\,\varepsilon_n}_{\text{amplification of prior error}} + \underbrace{\frac{M h^2}{2}}_{\text{fresh local error}}$$
+::: {.col .fig .big}
+@fig:ch38-dyn-local-to-global-error
+:::
+:::
 :::
 
 ::: {.slide title="Proof of Order-1 Global Convergence for Forward Euler"}
@@ -989,32 +994,35 @@ Evaluating the vector field **twice per step** matches the $O(h^2)$ second deriv
 ::: {.slide title="Classical Fourth-Order Runge–Kutta (RK4)"}
 [The Workhorse Solver]{.kicker}
 
-Probing four slopes per step—the start, two midpoint refinements, and the endpoint—and combining them with Simpson's quadrature weights $\frac{1}{6}(1, 2, 2, 1)$ achieves **fourth-order** global accuracy ($O(h^4)$):
-
-$$\begin{aligned}
-\mathbf{k}_1 &= \mathbf{f}(\mathbf{x}_n, t_n), & \mathbf{k}_2 &= \mathbf{f}\!\left(\mathbf{x}_n + \tfrac{h}{2}\mathbf{k}_1, t_n + \tfrac{h}{2}\right), \\
-\mathbf{k}_3 &= \mathbf{f}\!\left(\mathbf{x}_n + \tfrac{h}{2}\mathbf{k}_2, t_n + \tfrac{h}{2}\right), & \mathbf{k}_4 &= \mathbf{f}\!\left(\mathbf{x}_n + h\mathbf{k}_3, t_n + h\right),
-\end{aligned}$$
+::: {.cols .vc}
+::: {.col}
+**Classical RK4** probes four slopes per step—start $\mathbf{k}_1$, two midpoints $\mathbf{k}_2, \mathbf{k}_3$, and endpoint $\mathbf{k}_4$—combined with Simpson's weights:
 
 $$\mathbf{x}_{n+1} = \mathbf{x}_n + \frac{h}{6}\left(\mathbf{k}_1 + 2\mathbf{k}_2 + 2\mathbf{k}_3 + \mathbf{k}_4\right)$$
 
-- **Accuracy Gain:** Halving the step size $h$ shrinks the global error of RK4 by $2^4 = 16\times$ (compared to $2\times$ for Euler and $4\times$ for Heun), at the cost of $4$ vector-field evaluations per step.
+- **Fourth-order accuracy ($O(h^4)$):** Halving $h$ shrinks global error by $2^4 = 16\times$ (vs. $2\times$ for Euler and $4\times$ for Heun) at a cost of $4$ field evaluations per step.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-rk4-four-stage-probes
+:::
+:::
 :::
 
 ::: {.slide title="The Stability Function R(z) on the Test Equation"}
 [Unifying Polynomial]{.kicker}
 
-Applying a solver to the scalar test equation $\dot{y} = \lambda y$ (one eigenmode of $\dot{\mathbf{x}} = \mathbf{A}\mathbf{x}$) multiplies the state at each step by a polynomial **stability function** $R(z)$ of $z = h\lambda$:
+::: {.cols .vc}
+::: {.col}
+On a scalar eigenmode $\dot{y} = \lambda y$ ($z = h\lambda$), one solver step multiplies the state by its **stability function** $y_{n+1} = R(z)y_n$:
 
-| Solver | Single-Step Multiplier $R(z)$ ($z = h\lambda$) | Local Gap $e^z - R(z)$ | Global Order $p$ |
-| :--- | :--- | :--- | :--- |
-| **Forward Euler** | $1 + z$ | $\frac{1}{2}z^2 + O(z^3)$ | $1$ |
-| **Midpoint / Heun** | $1 + z + \frac{1}{2}z^2$ | $\frac{1}{6}z^3 + O(z^4)$ | $2$ |
-| **Classical RK4** | $1 + z + \frac{1}{2}z^2 + \frac{1}{6}z^3 + \frac{1}{24}z^4$ | $\frac{1}{120}z^5 + O(z^6)$ | $4$ |
-| **Backward Euler** | $(1 - z)^{-1} = 1 + z + z^2 + \cdots$ | $-\frac{1}{2}z^2 + O(z^3)$ | $1$ (implicit) |
+- **Explicit Taylor polynomials:** Euler $R(z) = 1 + z$ ($p=1$); Midpoint/Heun $R(z) = 1 + z + \tfrac12 z^2$ ($p=2$); RK4 truncates $e^z$ through $\frac{1}{24}z^4$ ($p=4$).
+- **Two roles of $R(z)$:** Matching $e^z$ near $z = 0$ sets the **order of accuracy** $p$; the region $\{|R(z)| < 1\}$ sets **numerical stability**.
+:::
 
-::: {.d2l-note .rule}
-**Two Roles of $R(z)$:** How closely $R(z)$ matches the Taylor series of $e^z$ near $z = 0$ determines the **order of accuracy**; where $|R(z)| < 1$ in the complex plane determines **numerical stability**.
+::: {.col .fig .big}
+@fig:ch38-dyn-stability-polynomials
+:::
 :::
 :::
 
@@ -1047,16 +1055,14 @@ On the planar spiral $\mathbf{A} = -\frac{1}{2}\mathbf{I} + \mathbf{K}$ ($\lambd
 ::: {.slide title="Adaptive Step Sizes and Symplectic Integrators"}
 [Specialized Solvers]{.kicker}
 
-Beyond fixed-step Runge–Kutta methods, scientific computing and machine learning rely on two structural enhancements:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Adaptive Step-Size Control (Dormand–Prince):** Embedded pairs evaluate two orders (e.g., Euler order 1 and Heun order 2, or RK45 orders 4 and 5) from the same stages and use their difference $\Delta = \frac{h}{2}\|\mathbf{k}_2 - \mathbf{k}_1\|$ to adjust $h$ dynamically:
-  $$h \leftarrow h \cdot 0.9\left(\frac{\text{tol}}{\Delta}\right)^{1/(p+1)}$$
+- **Adaptive step control (Dormand–Prince RK45):** Compares embedded orders $p$ and $p+1$ on the same stages ($\Delta = \|\hat{\mathbf{x}} - \mathbf{x}\|$) and scales $h \leftarrow 0.9\,h(\text{tol}/\Delta)^{1/(p+1)}$.
+- **Symplectic Euler & Leapfrog (HMC):** Updating $q_{n+1} = q_n + h p_n$ then $p_{n+1} = p_n - h q_{n+1}$ on Hamiltonian oscillators preserves phase-space area exactly ($\det\mathbf{S}_h = 1$) for all time when $h < 2$.
 :::
 
-::: {.col}
-- **Symplectic Euler & Leapfrog (HMC):** On conservative oscillators ($\dot{q} = p, \dot{p} = -q$), forward Euler spirals outward ($\det = 1 + h^2$) and backward Euler spirals inward. Updating $q_{n+1} = q_n + hp_n$ then $p_{n+1} = p_n - hq_{n+1}$ preserves phase-space area exactly ($\det \mathbf{S}_h = 1$) and conserves a modified energy for all time when $h < 2$.
+::: {.col .fig .big}
+@fig:ch38-dyn-adaptive-and-symplectic
 :::
 :::
 :::
@@ -1064,26 +1070,38 @@ Beyond fixed-step Runge–Kutta methods, scientific computing and machine learni
 ::: {.slide title="Stiffness: Vanished Fast Modes Still Cap the Step"}
 [The Stiffness Bottleneck]{.kicker}
 
-A system is **stiff** when rapidly decaying eigenmodes force an explicit solver to take tiny steps long after those fast modes have died out:
+::: {.cols .vc}
+::: {.col}
+A system is **stiff** when a fast decaying mode forces tiny explicit steps long after that mode has vanished:
 
-$$\dot{\mathbf{x}} = \begin{pmatrix}-50 & 0 \\ 0 & -1\end{pmatrix}\mathbf{x}, \quad \mathbf{x}(0) = \begin{pmatrix}1 \\ 1\end{pmatrix} \;\Longrightarrow\; \mathbf{x}(t) = \begin{pmatrix}e^{-50t} \\ e^{-t}\end{pmatrix}$$
+$$\dot{\mathbf{x}} = \begin{pmatrix}-50 & 0 \\ 0 & -1\end{pmatrix}\mathbf{x} \;\Longrightarrow\; \mathbf{x}(t) = \begin{pmatrix}e^{-50t} \\ e^{-t}\end{pmatrix}$$
 
-- **Scale Separation:** By $t = 0.1$, the fast mode $x_1(t) = e^{-50t}$ is negligible ($e^{-5} \approx 0.0067$, and $10^{-22}$ at $T = 1$), so only the slow mode $e^{-t}$ remains.
-- **The Stability Trap:** To follow the slow mode $e^{-t}$ to $5\%$ accuracy, a coarse step $h = 0.1$ suffices. Yet forward Euler multiplies the fast mode by $R(-50h) = 1 - 50h = -4$ at every step, amplifying any residual or rounding error by $4^{10} \approx 10^6$ over $[0, 1]$.
-- **Explicit Step Ceiling:** Decay $|1 + h\lambda| < 1$ requires $h < \frac{2}{|\lambda_{\max}|} = \frac{2}{50} = 0.04$ throughout the entire integration.
+- **The stability trap:** By $t = 0.1$, $x_1(t) = e^{-50t}$ is gone, and $h = 0.1$ tracks $e^{-t}$ to $5\%$. Yet forward Euler multiplies $x_1$ by $1 - 50(0.1) = -4$ per step, exploding unless $h < 2/50 = 0.04$!
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-stiff-two-mode-trap
+:::
+:::
 :::
 
 ::: {.slide title="Backward Euler and Unconditional A-Stability"}
 [Implicit Solvers]{.kicker}
 
-To break the explicit step-size ceiling on stiff equations, **backward Euler** evaluates the velocity arrow at the *endpoint* of the step:
+::: {.cols .vc}
+::: {.col}
+**Backward Euler** evaluates the velocity arrow at the *endpoint* of the step:
 
-$$\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_{n+1}, t_{n+1})$$
+$$\mathbf{x}_{n+1} = \mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_{n+1}, t_{n+1}) \implies R_{\text{bwd}}(z) = \frac{1}{1 - z}$$
 
-- **Stability Function on $\dot{y} = \lambda y$:** Solving $y_{n+1} = y_n + h\lambda y_{n+1}$ gives $y_{n+1} = R(z)y_n$ with:
-  $$R_{\text{bwd}}(z) = \frac{1}{1 - z}, \qquad |R_{\text{bwd}}(z)| < 1 \quad \text{for all } \operatorname{Re}z < 0$$
-- **Geometric Intuition:** Forward Euler extrapolates blindly along the steep current slope and overshoots zero. Backward Euler searches for a future point whose own slope points back to $\mathbf{x}_n$; where the mode has decayed near zero, the slope is flat, so no overshoot is possible.
-- **The Computational Trade-Off:** Each implicit step solves an equation—$(\mathbf{I} - h\mathbf{A})\mathbf{x}_{n+1} = \mathbf{x}_n$ for linear fields, or Newton iterations for nonlinear fields.
+- **Unconditional A-stability:** $|(1 - z)^{-1}| < 1$ across the entire left half-plane $\operatorname{Re}z < 0$ (at $h = 0.1, \lambda = -50$, it damps by $1/6$ per step instead of exploding).
+- **Compute trade-off:** Requires a linear or Newton solve per step.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-backward-euler-implicit
+:::
+:::
 :::
 
 ::: {.slide title="Measuring Stiffness: Explicit vs. Implicit Steps"}
@@ -1143,17 +1161,17 @@ Integrating the gradient flow $\dot{\mathbf{x}} = -\mathbf{H}\mathbf{x}$ on $\ma
 ::: {.slide title="Why Deep Learning Optimizers Use Euler (and Momentum)"}
 [Systems Trade-Offs]{.kicker}
 
-If RK4 has a higher learning-rate ceiling and backward Euler has no ceiling at all, why does deep learning train with forward Euler (gradient descent) and momentum?
+::: {.cols .vc}
+::: {.col}
+- **Max flow time per gradient:** On $\lambda_{\max} = 10$, Euler advances $0.200$ units of flow time per gradient evaluation, whereas 4-stage RK4 advances only $0.279/4 = 0.070$ units per gradient!
+- **Endpoints vs. paths:** Optimization only cares about reaching $\mathbf{x}^\star$, and Euler's backward error implicitly regularizes $\mathcal{L}(\mathbf{x}) + \frac{\eta}{4}\|\nabla\mathcal{L}(\mathbf{x})\|^2$.
+- **Momentum changes the ODE:** Heavy-ball momentum discretizes a second-order damped oscillator $m\ddot{\mathbf{x}} + c\dot{\mathbf{x}} = -\nabla\mathcal{L}$ to achieve $\sqrt{\kappa}$ scaling at $1$ gradient/step.
+:::
 
-| Solver on $\dot{\mathbf{x}} = -\nabla\mathcal{L}$ | Max Stable $\eta$ ($\lambda_{\max}=10$) | Cost per Step | Max Flow Time per Gradient |
-| :--- | :--- | :--- | :--- |
-| **Forward Euler (GD)** | $0.200$ | $1$ gradient | $0.200$ |
-| **Classical RK4** | $0.279$ | $4$ gradients | $0.279 / 4 = 0.070$ |
-| **Backward Euler (Proximal)** | $\infty$ | Sub-optimization $\min_{\mathbf{x}} \mathcal{L}(\mathbf{x}) + \frac{1}{2\eta}\|\mathbf{x}-\mathbf{x}_k\|^2$ | N/A |
-
-- **Endpoints vs. Paths:** An optimizer only cares about reaching the minimum $\mathbf{x}^\star$, not tracking the curved trajectory at $O(\eta^4)$ precision. RK4 spends $4\times$ the gradients for only $1.4\times$ the step ceiling.
-- **Implicit Gradient Regularization:** By backward error analysis, Euler iterates follow the exact gradient flow of a modified loss $\tilde{\mathcal{L}}(\mathbf{x}) = \mathcal{L}(\mathbf{x}) + \frac{\eta}{4}\|\nabla\mathcal{L}(\mathbf{x})\|^2$ that penalizes sharp valleys.
-- **Momentum Changes the ODE:** Heavy-ball momentum discretizes a second-order damped oscillator $m\ddot{\mathbf{x}} + c\dot{\mathbf{x}} = -\nabla\mathcal{L}(\mathbf{x})$ rather than using a higher-order solver on first-order gradient flow.
+::: {.col .fig .big}
+@fig:ch38-dyn-why-gd-uses-euler
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Order, Stiffness, and Stability Regions"}

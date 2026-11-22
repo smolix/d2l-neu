@@ -752,17 +752,14 @@ Deep Q-Networks, Replay Buffers, and Double DQN<br>**the deadly triad · Baird's
 ::: {.slide title="Why Naive Neural Q-Learning Explodes Past 10^8"}
 [Motivation]{.kicker}
 
-In §14.3, tabular Q-learning converged reliably from any off-policy transitions. What happens if we simply replace the table $Q(s, a)$ with a neural network $Q_w(s, a)$ on CartPole?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The Continuing Ceiling:** CartPole pays $+1$ per step with $\gamma = 0.99$, so balancing forever is worth at most $1/(1 - \gamma) = 100$.
-- **Naive Neural Update:** Regressing $Q_w(s, a)$ directly toward $y = r + \gamma \max_{a'} Q_w(s', a')$ causes start-state predictions to explode past **$10^8$** within $50{,}000$ steps!
+- **Runaway feedback loop:** On CartPole ($V^\infty = 100$ at $\gamma = 0.99$), regressing $Q_w(s, a)$ directly onto $1 + \gamma \max_{a'} Q_w(s', a')$ lifts $Q_w(s', \cdot)$ via shared weights, driving predictions past **$10^8$** while greedy return collapses to $\sim 9$.
+- **The DQN breakthrough (Mnih et al., 2015):** Experience replay and a frozen target network $Q_{w^-}$ stabilize off-policy value learning.
 :::
 
-::: {.col}
-- **Catastrophic Policy Collapse:** While its value estimates climb to $10^8$, the network's greedy policy balances the pole for only $\sim 9$ steps (worse than a random policy's $\sim 20$).
-- **The DQN Breakthrough (Mnih et al., 2013, 2015):** Two structural devices—an **experience replay buffer** and a **frozen target network**—stabilize off-policy value learning.
+::: {.col .fig .big}
+@fig:ch15-drl-naive-q-explosion
 :::
 :::
 :::
@@ -770,13 +767,18 @@ In §14.3, tabular Q-learning converged reliably from any off-policy transitions
 ::: {.slide title="Why Semi-Gradient Backups Conflict with Least Squares"}
 [Sources of Instability]{.kicker}
 
-Replacing a lookup table with a parameterized network $Q_w$ breaks the supremum-norm contraction proof of tabular value iteration:
-
+::: {.cols .vc}
+::: {.col}
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w(s', a')$$
 
-- **Moving Regression Targets:** Each semi-gradient step holds $y$ fixed while updating $w$, so the sequence of updates is *not* gradient descent on any fixed objective function.
-- **Norm Mismatch:** The Bellman backup contracts in the worst-case supremum norm $\|\cdot\|_\infty$ across all states, whereas least-squares regression projects onto the network's function class under a **visitation-weighted $L_2$ norm**.
-- **Two Practical Couplings:** (1) Consecutive transitions from one trajectory are strongly correlated in state space, overwriting distant states; (2) Shared weights immediately lift $Q_w(s', \cdot)$ whenever $Q_w(s, a)$ is pushed up toward $1 + \gamma \max_{a'} Q_w(s', a')$.
+- **Moving targets:** Semi-gradient steps hold $y$ fixed while updating $w$, so they are not gradient descent on any fixed loss.
+- **Norm mismatch:** The Bellman backup contracts in the supremum norm $\|\cdot\|_\infty$, whereas neural regression projects in a visitation-weighted $L_2(d)$ norm that can expand $\|\cdot\|_\infty$.
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-norm-mismatch
+:::
+:::
 :::
 
 ::: {.slide title="The Deadly Triad and Baird's Counterexample"}
@@ -831,12 +833,16 @@ $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w
 ::: {.slide title="Experience Replay: Preallocated Ring Buffer"}
 [Replay Mechanics]{.kicker}
 
-Because the Q-learning target does not depend on which behavior policy selected action $a$, uniform minibatches of $128$ transitions drawn from a $200{,}000$-slot ring buffer remain valid samples of the optimality backup:
+::: {.cols .vc}
+::: {.col}
+- **Circular ring buffer ($200{,}000$ slots):** Overwrites oldest transitions at `ptr = (ptr + 1) % cap` and samples uniform minibatches of $128$ uncorrelated 1-step fragments.
 
 @dqn-replay-and-the-off-policy-licence
+:::
 
-::: {.d2l-note}
-Uniform sampling scrambles episode order, so each sampled transition is treated as a 1-step fragment (`ep_ends = np.arange(1, batch_size + 1)`) and paired with one-step `td_target`.
+::: {.col .fig}
+@fig:ch15-drl-ring-buffer
+:::
 :::
 :::
 
@@ -932,14 +938,18 @@ A high greedy return shows that the *argmax ranking* is good, not that the *valu
 ::: {.slide title="Double DQN: Decoupling Selection from Evaluation"}
 [Double DQN]{.kicker}
 
-**Double DQN** (van Hasselt, Guez, & Silver, 2016) reuses the online network $Q_w$ to *select* the greedy next action and the target network $Q_{w^-}$ to *evaluate* it—requiring no extra networks and only one additional forward pass:
+::: {.cols .vc}
+::: {.col}
+$$y^{\textrm{DDQN}} = r + \gamma\,(1 - \textrm{term})\, Q_{w^-}\Big(s',\ \underset{a'}{\operatorname{argmax}}\, Q_w(s', a')\Big)$$
 
-$$y^{\textrm{DDQN}} = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\, Q_{w^-}\Big(s',\ \underset{a'}{\operatorname{argmax}}\, Q_w(s', a')\Big)$$
+- **Decoupled selection & evaluation (van Hasselt et al., 2016):** Reuses online network $Q_w$ to *select* $a^\star$ and target network $Q_{w^-}$ to *evaluate* it.
 
 @dqn-double-dqn-in-three-lines-1
+:::
 
-::: {.d2l-note}
-Because $w^-$ is a delayed copy of $w$ (correlated with coefficient $\rho$), Double DQN reduces the maximization bias to a fraction $\rho$ of standard DQN's bias.
+::: {.col .fig}
+@fig:ch15-drl-double-dqn-split
+:::
 :::
 :::
 

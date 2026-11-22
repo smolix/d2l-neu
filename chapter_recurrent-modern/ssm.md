@@ -458,68 +458,84 @@ Structured State Space Models (S4D)<br>**continuous-time dynamics · zero-order-
 ::: {.slide title="Why Multi-Timescale Memory Needs Structured Decays"}
 [Motivation]{.kicker}
 
-Language dependencies span three orders of magnitude—a verb agrees across $10$ tokens, a paragraph topic persists for $200$ tokens, and a character's name matters for $1{,}000+$ tokens:
+::: {.cols .vc}
+::: {.col}
+- **Three Orders of Magnitude:** Language spans 10-token syntax, 200-token paragraph topics, and 1,000+ token entity persistence.
+- **Zero-Bias Underflow:** Gates at $\sigma(0) = 0.5$ attenuate a 1,000-step signal by $2^{-1000} = 0$ in `float32`.
+- **Structured State Bank:** Continuous-time SSMs give each channel $N$ log-spaced decay rates $\lambda_1, \ldots, \lambda_N$ scaled by $\Delta$.
+:::
 
-- **The zero-bias underflow wall:** Holding a signal across $1{,}000$ steps requires a per-step decay near $\bar{a} = 0.999$ ($\tau_{1/2} \approx 693$ steps). Gates initialized at $\sigma(0) = 1/2$ ($\tau_{1/2} = 1$ step) attenuate a $1{,}000$-step gradient by $2^{-1000} = 0$ in `float32`.
-- **Single-timescale limitation:** Even if we shift a `minGRU` gate bias to a single positive constant, every unit starts at the *same* timescale and each channel holds only one scalar memory.
-
-::: {.d2l-note}
-Continuous-time dynamical systems give each channel a **bank of $N$ decay rates** $\lambda_1, \ldots, \lambda_N$ scaled by a **step size** $\Delta$, covering half-lives from $< 1$ to $\sim 700$ steps before training begins.
+::: {.col .fig .big}
+@fig:ch12-mrnn-timescale-hierarchy
+:::
 :::
 :::
 
 ::: {.slide title="Continuous-Time Linear State Space Models (ODE View)"}
 [Continuous-Time Dynamics]{.kicker}
 
-Start with a scalar state $h(t)$ decaying at rate $\lambda < 0$ under continuous input $x(t)$, then generalize to an $N$-dimensional state vector $\mathbf{h}(t) \in \mathbb{R}^N$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{h}'(t) = \mathbf{A}\,\mathbf{h}(t) + \mathbf{B}\,x(t), \qquad y(t) = \mathbf{C}\,\mathbf{h}(t) + D\,x(t)$$
 
-$$h'(t) = \lambda\, h(t) + x(t) \quad\longrightarrow\quad \mathbf{h}'(t) = \mathbf{A}\,\mathbf{h}(t) + \mathbf{B}\,x(t), \qquad y(t) = \mathbf{C}\,\mathbf{h}(t) + D\,x(t)$$
+- **Exponential Stability:** Negative real parts $\textrm{Re}(\lambda_n) < 0$ ensure homogeneous solutions $e^{\lambda_n t}$ decay smoothly without explosion.
+- **Four Operators:** Write vector $\mathbf{B}$, state evolution matrix $\mathbf{A} \in \mathbb{C}^{N \times N}$, readout $\mathbf{C}$, and skip $D$.
+:::
 
-- **Exponential stability ($\lambda < 0$):** With $x(t) = 0$, the homogeneous solution is $h(t) = e^{\lambda t} h(0)$. At $\lambda = -1$, a fraction $e^{-1} \approx 0.37$ remains after one unit of *continuous time* (not one token step!).
-- **Four structural operators:** $\mathbf{B} \in \mathbb{R}^N$ writes the scalar channel input into the state, the **state matrix** $\mathbf{A} \in \mathbb{R}^{N \times N}$ governs autonomous decay/rotation, $\mathbf{C} \in \mathbb{R}^{1 \times N}$ projects the state to the output, and $D \in \mathbb{R}$ is a direct skip connection.
+::: {.col .fig}
+@fig:ch12-mrnn-continuous-ssm-block
+:::
+:::
 :::
 
 ::: {.slide title="Diagonal State Matrices: N Leaky Integrators/Channel"}
 [Diagonal Structure]{.kicker}
 
-While a dense state matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$ costs $O(N^2)$ per step and $O(N^3)$ per associative scan combine, restricting $\mathbf{A} = \textrm{diag}(\lambda_1, \ldots, \lambda_N)$ to be diagonal decouples the ODE into $N$ independent scalar equations:
+::: {.cols .vc}
+::: {.col}
+$$h_n'(t) = \lambda_n\, h_n(t) + b_n\, x(t), \quad y(t) = \sum_{n=1}^{N} c_n\, h_n(t) + D\, x(t)$$
 
-$$h_n'(t) = \lambda_n\, h_n(t) + b_n\, x(t) \quad (n = 1, \ldots, N), \qquad y(t) = \sum_{n=1}^{N} c_n\, h_n(t) + D\, x(t)$$
+- **Decoupled $O(N)$ Bank:** Diagonal $\mathbf{A} = \textrm{diag}(\lambda_1, \ldots, \lambda_N)$ turns an $O(N^2)$ matrix ODE into $N$ parallel scalar leaky integrators per channel ($d \times N$ total state).
+- **Real vs. Complex Diagonal:** Real rates $\lambda_n = -e^{\theta_n}$ give smooth decay windows; complex rates add oscillation.
+:::
 
-- **Independent channels, $N$-times wider state:** An SSM layer of width $d$ runs one such $N$-state bank per channel, expanding total layer state to $d \times N$ numbers ($N\times$ larger than a width-$d$ `minGRU`) at $O(dN)$ cost per step.
-- **Why diagonal loses almost nothing:** Over $\mathbb{C}$, almost every matrix is diagonalizable and $(\mathbf{B}, \mathbf{C})$ absorb the eigenvector basis change (Gu et al., 2022). Using **real rates** $\lambda_n = -e^{\theta_n} < 0$ trades oscillatory modes ($\lambda = -\alpha + i\omega$) for purely real arithmetic.
+::: {.col .fig}
+@fig:ch12-mrnn-diagonal-ode-bank
+:::
+:::
 :::
 
 ::: {.slide title="Exact Discretization via Zero-Order Hold (ZOH)"}
 [From Continuous to Discrete]{.kicker}
 
-To apply $h'(t) = \lambda h(t) + x(t)$ to discrete tokens, sample at step size $\Delta > 0$ ($t_k = k\Delta$) and hold the input constant at $x_t$ over $((t-1)\Delta, t\Delta]$ (**zero-order hold**):
+::: {.cols .vc}
+::: {.col}
+$$h_t = \bar{a}\, h_{t-1} + \bar{b}\, x_t, \quad \bar{a} = e^{\Delta\lambda}, \quad \bar{b} = \frac{e^{\Delta\lambda} - 1}{\lambda}$$
 
-1. **Shift to a homogeneous ODE:** Since $x_t$ is constant on the interval, $\frac{\textrm{d}}{\textrm{d}\tau}\big(h(\tau) + \frac{x_t}{\lambda}\big) = \lambda\big(h(\tau) + \frac{x_t}{\lambda}\big)$.
-2. **Integrate across one interval of length $\Delta$:** $h_t + \frac{x_t}{\lambda} = e^{\Delta\lambda}\big(h_{t-1} + \frac{x_t}{\lambda}\big)$.
-3. **Rearrange into an exact discrete linear recurrence:**
+- **Zero-Order Hold:** Holding $x(\tau) \equiv x_t$ constant on $((t-1)\Delta, t\Delta]$ integrates the linear ODE in closed form.
+- **Numerical Stability:** Evaluate $\bar{b}$ via `expm1(dt * rate) / rate` to avoid cancellation when $\Delta|\lambda| \ll 1$.
+:::
 
-$$h_t = \bar{a}\, h_{t-1} + \bar{b}\, x_t, \qquad \bar{a} = e^{\Delta\lambda}, \qquad \bar{b} = \frac{e^{\Delta\lambda} - 1}{\lambda}$$
-
-::: {.d2l-note}
-In code, always evaluate $(e^{\Delta\lambda} - 1)/\lambda$ as `expm1(dt * rate) / rate` to avoid catastrophic cancellation when $\Delta|\lambda| \ll 1$.
+::: {.col .fig}
+@fig:ch12-mrnn-zoh-step-hold
+:::
 :::
 :::
 
 ::: {.slide title="The Step Size Δ Acts as a Timescale Dilation Gate"}
 [Step Size vs. Update Gate]{.kicker}
 
-At rate $\lambda = -1$, zero-order hold yields $\bar{b} = 1 - e^{-\Delta} = 1 - \bar{a}$, turning the discretized ODE into the exact convex blend of a GRU / `minGRU`:
+::: {.cols .vc}
+::: {.col}
+$$h_t = e^{-\Delta}\, h_{t-1} + (1 - e^{-\Delta})\, x_t, \qquad \tau_{1/2} = \frac{\ln 2}{\Delta|\lambda|}$$
 
-$$h_t = \bar{a}\, h_{t-1} + (1 - \bar{a})\, x_t, \qquad \bar{a} = e^{-\Delta} \in (0, 1)$$
+- **Exact Convex Blend ($\lambda = -1$):** Discretized ZOH matches the GRU/`minGRU` update with keep gate $\bar{a} = e^{-\Delta}$.
+- **Inverse Timescale Law:** Shrinking $\Delta$ from $1.0$ to $0.001$ dilates discrete memory half-life from $0.7$ to $693$ steps.
+:::
 
-| Step size $\Delta$ (at $\lambda = -1$) | $\Delta = 0.001$ | $\Delta = 0.01$ | $\Delta = 0.1$ | $\Delta = 1.0$ |
-| :--- | :---: | :---: | :---: | :---: |
-| **Discrete retention** $\bar{a} = e^{-\Delta}$ | $0.9990$ | $0.9900$ | $0.9048$ | $0.3679$ |
-| **Half-life** $\tau_{1/2} = \ln 2 / (\Delta|\lambda|)$ | **$693\text{ steps}$** | **$69\text{ steps}$** | **$7\text{ steps}$** | **$0.7\text{ steps}$** |
-
-::: {.d2l-note .rule}
-**Inverse scaling law:** A smaller continuous time step $\Delta$ means fine-grained sampling and a **longer discrete memory** ($\tau_{1/2} \propto 1/\Delta$).
+::: {.col .fig}
+@fig:ch12-mrnn-delta-dilation-table
+:::
 :::
 :::
 
@@ -543,12 +559,18 @@ $$h_t = \bar{a}\, h_{t-1} + (1 - \bar{a})\, x_t, \qquad \bar{a} = e^{-\Delta} \i
 ::: {.slide title="The Convolutional View of Time-Invariant SSMs"}
 [LTI Duality]{.kicker}
 
-When $(\bar{a}_n, \bar{b}_n, c_n)$ are **linear time-invariant (LTI)**—fixed across token positions $t$—unrolling $h_{t,n} = \bar{a}_n h_{t-1,n} + \bar{b}_n x_t$ from $\mathbf{h}_0 = \mathbf{0}$ turns the readout into a 1D causal convolution:
-
+::: {.cols .vc}
+::: {.col}
 $$y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D\, x_t, \qquad K_k = \sum_{n=1}^{N} c_n\, \bar{a}_n^k\, \bar{b}_n$$
 
-- **Multi-exponential impulse response:** The length-$T$ filter $\mathbf{K} = (K_0, K_1, \ldots, K_{T-1})$ is a learned linear combination of $N$ decaying exponentials $\bar{a}_n^k$.
-- **Fast Fourier Transform (FFT) evaluation:** Instead of materializing the 4D state tensor $(B, T, d, N)$ across the minibatch, we compute $\mathbf{K} \in \mathbb{R}^{d \times T}$ once per batch and convolve all $T$ positions in $O(T \log T)$ via zero-padded length-$2T$ `rfft` / `irfft`.
+- **Impulse Filter:** When $(\bar{a}_n, \bar{b}_n, c_n)$ are time-invariant, unrolling the recurrence yields a length-$T$ causal filter $\mathbf{K}$.
+- **$O(T \log T)$ FFT Training:** Zero-padding $\mathbf{X}$ and $\mathbf{K}$ to length $2T$ evaluates all $T$ outputs in parallel via `rfft` / `irfft`.
+:::
+
+::: {.col .fig}
+@fig:ch12-mrnn-fft-conv-pipeline
+:::
+:::
 :::
 
 ::: {.slide title="One System, Three Views: ODE, Recurrence, Convolution"}
@@ -578,11 +600,16 @@ Can a sum of $N$ monotone real exponentials $K_k = \sum_{n=1}^N c_n \bar{a}_n^k 
 ::: {.slide title="Pitfall: Ill-Conditioning of Real Exponential Bases"}
 [Why Real SSMs Average Windows]{.kicker}
 
-Why do real-exponential fits require $\|\mathbf{c}\|_\infty \sim 10^{11}$ to peak away from $k = 0$?
+::: {.cols .vc}
+::: {.col}
+- **Vandermonde Ill-Conditioning:** Real modes $e^{-n\Delta k}$ decay monotonically; forming a delayed bump at $k^*=20$ requires subtracting nearly colinear curves with $\|\mathbf{c}\|_\infty \sim 10^{11}$.
+- **Complex Conjugate Rates (`S4D-Lin`):** Adding imaginary parts $\lambda_m = -1/2 \pm i\pi m$ creates orthogonal damped cosines $e^{-\Delta k/2}\cos(\omega_m \Delta k)$ that fit delayed spikes with $O(1)$ weights.
+:::
 
-- **Non-orthogonal monotone basis:** Every real mode $e^{-n\Delta k}$ peaks at $k = 0$ and decays monotonically; creating a bump at $k = 20$ requires subtracting nearly colinear curves with huge opposite coefficients (**Vandermonde ill-conditioning**).
-- **Unreachable by gradient descent:** First-order optimizers (Adam/SGD) initialized with $O(1/\sqrt{N})$ weights never reach $10^{11}$ cancelling weights, so real-valued S4D kernels act as **smooth multi-scale moving averages** that encode *roughly when* an input occurred, not *exactly which step*.
-- **When exact lag filters matter:** Using complex conjugate rates $\lambda_m = -\alpha \pm i\omega_m$ (`S4D-Lin`) produces damped sinusoids $e^{-\alpha\Delta k}\cos(\omega_m \Delta k + \varphi)$—an orthogonal Fourier-like basis that fits delayed spikes with $O(1)$ weights (Exercise 3).
+::: {.col .fig .big}
+@fig:ch12-mrnn-real-vs-complex-basis
+:::
+:::
 :::
 
 ::: {.slide title="Implementing S4D: Discretization, FFT, and Step"}
@@ -615,14 +642,16 @@ All three evaluation algorithms compute the exact same mathematical function up 
 ::: {.slide title="Disentangling Timescales from Architecture on Recall"}
 [Controlled Ablation Design]{.kicker}
 
-Does `S4D` solve long-range recall because of its $N$-state convolutional architecture, or because of its initial decay timescales? We test a $2 \times 2$ design on delayed recall across $T = 100$ and $T = 1{,}000$ identical blank fillers:
+::: {.cols .vc}
+::: {.col}
+- **2×2 Experimental Matrix:** Crosses architecture (`minGRU` with $N=1$ vs. `S4D` with $N=16$) against initial half-life spectrum ($\le 7$ steps vs. $693$ steps) on delayed recall ($T \in \{100, 1{,}000\}$).
+- **Transferring S4D Timescales to Gates:** Setting $b_c = -\log(e^{\Delta_c} - 1)$ aligns `minGRU`'s initial gate $\sigma(b_c) = e^{-\Delta_c}$ with S4D's log-uniform horizon.
+:::
 
-| Model Configuration | States / Channel | Initial Step Sizes / Biases | Initial Half-Life Range |
-| :--- | :---: | :--- | :--- |
-| **`minGRU` (default)** | $1$ | Zero gate bias ($\mathbf{b}_\textrm{z} = \mathbf{0}$) | $\approx 1\text{ step}$ ($\sigma(0) = 0.5$) |
-| **`S4D` (default)** | $16$ | $\Delta \in [0.001, 0.1]$ log-uniform | $0.43\text{ to } \mathbf{693\text{ steps}}$ |
-| **`S4D, short timescales`** | $16$ | $\Delta \in [0.1, 1.0]$ log-uniform | $0.04\text{ to } \mathbf{6.9\text{ steps}}$ |
-| **`minGRU, S4D timescales`** | $1$ | $b_c = -\log(e^{\Delta_c} - 1)$ ($\sigma(b_c) = e^{-\Delta_c}$) | $6.9\text{ to } \mathbf{693\text{ steps}}$ |
+::: {.col .fig .big}
+@fig:ch12-mrnn-recall-2x2-grid
+:::
+:::
 :::
 
 ::: {.slide title="1,000-Step Delayed Recall: Initial Timescales Decide"}

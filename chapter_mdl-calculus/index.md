@@ -81,36 +81,30 @@ Calculus and Automatic Differentiation: From Local Models to Backpropagation<br>
 ::: {.slide title="Two Core Questions Behind Every Training Step"}
 [Motivation]{.kicker}
 
-Every deep learning training loop evaluates a scalar loss $\ell(\mathbf{w})$, calls `backward()` for its gradient, and updates $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla \ell(\mathbf{w})$—raising two fundamental mathematical questions:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. How far can a local slope be trusted?** Doubling the learning rate $\eta$ can make training diverge even though $\nabla \ell(\mathbf{w})$ is exact. The gradient is only a first-order linear model; how rapidly curvature bends the loss away from that tangent plane determines which step sizes are safe.
+- **1. How far can a local slope be trusted?** The gradient $\nabla\ell(\mathbf{w})$ is a first-order linear model; how rapidly curvature bends the loss away determines which learning rates $\eta$ are safe.
+- **2. Why is the gradient of $10^8$ weights so cheap?** Perturbing $10^8$ weights one by one would take ~12 days, whereas one backward pass returns all $10^8$ exact partial derivatives in ~30 ms.
 :::
 
-::: {.col}
-- **2. Why is the gradient of $10^8$ weights so cheap?** Perturbing $10^8$ parameters one at a time via finite differences would require $10^8$ forward passes (~12 days at 10 ms/pass). A single backward pass returns all $10^8$ exact partial derivatives in roughly three forward-pass times (~30 ms).
+::: {.col .fig .big}
+@fig:ch34-calc-two-questions
 :::
-:::
-
-::: {.d2l-note}
-Differential calculus answers both questions, while integral calculus enters as soon as models sample from parameterized probability distributions (VAEs, normalizing flows, and policy gradients).
 :::
 :::
 
 ::: {.slide title="Three Pillars Carrying Deep Learning Calculus"}
 [Unifying Principles]{.kicker}
 
-Three mathematical results connect classical analysis directly to modern deep learning optimization and software systems:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Pillar 1 — The Descent Lemma (§34.1–34.2):** Taylor's theorem with Lagrange remainder converts a bound $L$ on curvature ($|f''| \le L$) into a quadratic upper ceiling, proving that any step size $0 < \eta < 2/L$ strictly decreases the loss and $\eta = 1/L$ maximizes the guaranteed drop.
-- **Pillar 2 — Reverse-Mode Jacobian Products (§34.3–34.5):** A $K$-layer network has Jacobian $\mathbf{J} = \mathbf{J}_K \cdots \mathbf{J}_1$. Associating from the scalar loss backward, $((\mathbf{u}^\top \mathbf{J}_K)\mathbf{J}_{K-1})\cdots \mathbf{J}_1$, keeps every step a matrix–vector product and computes all parameter gradients in $O(1)$ sweeps.
+- **Pillar 1 — The Descent Lemma (§§34.1–34.2):** Taylor's Lagrange remainder converts a curvature bound $|f''| \le L$ into safe step sizes $0 < \eta < 2/L$ ($\eta^\star = 1/L$).
+- **Pillar 2 — Reverse-Mode Jacobian Products (§§34.3–34.5):** Associating $((\mathbf{u}^\top\mathbf{J}_K)\mathbf{J}_{K-1})\cdots\mathbf{J}_1$ from the output backward computes all gradients in $O(1)$ sweeps.
+- **Pillar 3 — Differentiating Expectations (§§34.6–34.7):** Score-function (REINFORCE) vs. pathwise reparameterization trade generality against Monte Carlo variance.
 :::
 
-::: {.col}
-- **Pillar 3 — Differentiating Expectations (§34.6–34.7):** To differentiate $\mathbb{E}_{X \sim p_{\boldsymbol{\theta}}}[g(X)]$, we pass $\nabla_{\boldsymbol{\theta}}$ inside the integral and either differentiate the log-density (**score-function / REINFORCE**, general but high variance) or differentiate a reparameterized sample $X = T_{\boldsymbol{\theta}}(\mathbf{z})$ (**pathwise trick**, low variance when $g$ is smooth).
+::: {.col .fig .big}
+@fig:ch34-calc-three-pillars
 :::
 :::
 :::
@@ -118,32 +112,32 @@ Three mathematical results connect classical analysis directly to modern deep le
 ::: {.slide title="Chapter 34 Roadmap: From 1D Slices to Sampling"}
 [Architectural Progression]{.kicker}
 
-The chapter develops in three parts—local polynomial approximations, chain rule and automatic differentiation across layers, and integration with stochastic gradient estimation:
+::: {.cols .vc}
+::: {.col}
+- **Part I — Local Models (§§34.1–34.2):** Taylor polynomials, Lagrange remainders, descent lemma, gradients $\nabla f \perp$ level sets, and symmetric Hessians $\mathbf{H}_f$.
+- **Part II — Chain Rule & Autodiff (§§34.3–34.5):** Path sums on DAGs, differential method $df = \langle \nabla f, d\mathbf{X}\rangle$, dual numbers, Wengert tape, $2\sqrt{T}$ checkpointing, HVPs, and implicit diff.
+- **Part III — Integrals & Expectations (§§34.6–34.7):** Riemann sums, FTC, Fubini, $|\det\mathbf{J}_{\boldsymbol{\phi}}|$ in flows, Leibniz rule, REINFORCE, and pathwise gradients.
+:::
 
-| Section | Core Mathematical Object | Role in Deep Learning |
-| :--- | :--- | :--- |
-| **§34.1 Single-Variable Calculus** | $f'(x)$, Taylor polynomial $P_n$, Lagrange remainder $R_n$, $\partial f(x)$ | Safe step sizes $\eta < 2/L$, Newton's method, subgradients at $\mathrm{ReLU}$ kinks |
-| **§34.2 Multivariable Calculus** | Gradient $\nabla f \in \mathbb{R}^n$, symmetric Hessian $\mathbf{H}_f \in \mathbb{R}^{n \times n}$ | Steepest descent, contour orthogonality, saddle vs. minimum classification |
-| **§34.3 Chain Rule on Graphs** | Edge partials $\partial c/\partial n$ vs. total adjoints $\bar{n} = \mathrm{d}f/\mathrm{d}n$ | Path-sum chain rule on DAGs, skip connections, reverse topological sweep |
-| **§34.4 Matrix Calculus** | Jacobian $\mathbf{J}_{\mathbf{f}} \in \mathbb{R}^{m \times n}$, differential $df = \langle \nabla f, d\mathbf{X}\rangle$ | Layer backward rules ($\bar{\mathbf{X}} = \bar{\mathbf{Y}}\mathbf{W}^\top$, $\bar{\mathbf{W}} = \mathbf{X}^\top\bar{\mathbf{Y}}$), softmax-CE $\mathbf{p} - \mathbf{y}$ |
-| **§34.5 Automatic Differentiation** | Dual numbers $a + b\varepsilon$ ($\varepsilon^2=0$), Wengert tape, JVPs & VJPs | Forward vs. reverse cost, $2\sqrt{T}$ checkpointing, $\mathbf{H}\mathbf{v}$ products, implicit diff |
-| **§34.6 Integral Calculus** | Riemann sums, Fundamental Theorem, Fubini, $\|\det \mathbf{J}_{\boldsymbol{\phi}}\|$ | Probability densities, normalizing flows volume factor, Gaussian normalizer $\sqrt{2\pi}$ |
-| **§34.7 Expectation Gradients** | Leibniz boundary rule, score $\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}$, pathwise map $T_{\boldsymbol{\theta}}(\mathbf{z})$ | REINFORCE with baselines vs. VAE reparameterization variance trade-offs |
+::: {.col .fig .big}
+@fig:ch34-calc-roadmap-three-parts
+:::
+:::
 :::
 
 ::: {.slide title="Running Benchmarks Anchoring Each Section"}
 [Concrete Pedagogical Thread]{.kicker}
 
-Every theorem and algorithm in this chapter is verified numerically on a concrete analytical benchmark:
+::: {.cols .vc}
+::: {.col}
+- **Local & Matrix Models (§§34.1–34.4):** Logistic loss $\ell(w) = \log(1+e^{-w})$ ($L = 1/4$), log-sum-exp at $(0, \log 2)$ ($\nabla f = (\tfrac{1}{3}, \tfrac{2}{3})^\top$), 4-input integer DAG ($\bar{w} = 73{,}472$), and 2-2-1 ReLU MLP.
+- **Autodiff & Stochastic Calculus (§§34.5–34.7):** From-scratch `Dual`/`Var` engines ($802$ vs. $80{,}200$ ops), polar Gaussian integral $\sqrt{2\pi}$, and $\mathbb{E}[X^2]$ variance ($\sigma = 2.0$ vs. $7.18$).
+:::
 
-| Section | Running Mathematical Benchmark | Key Quantitative Result Verified in Code |
-| :--- | :--- | :--- |
-| **§34.1** | Softplus $s(x)=\log(1+e^x)$ & logistic loss $\ell(w)=s(-w)$ | $\ell(0.1)$ linear gap $0.00125 \approx \frac{1}{2}\ell''(0)(0.1)^2$; $L=\frac{1}{4} \Rightarrow \eta < 8$ safe |
-| **§34.2** | Log-sum-exp $f(x,y)=\log(e^x+e^y)$ at $(0, \log 2)$ | $\nabla f = (\frac{1}{3}, \frac{2}{3})$ (softmax); $\mathbf{H}_f$ eigenvalues $0$ (along $\mathbf{1}$) and $\frac{4}{9}$ |
-| **§34.3** | 4-input squaring DAG & 5-node skip-edge DAG | Exact integer adjoints $\bar{w}=73472, \bar{y}=-68224$ in $12$ multiplies vs. $24$ |
-| **§34.4** | 2-2-1 $\mathrm{ReLU}$ network & curved map $(x+\sin y, y+x^2/2)$ | Left-to-right VJP costs $3\times 10^6$ multiplies vs. $2\times 10^9$ right-to-left |
-| **§34.5** | `Dual` & `Var` engines on $(\sum_{j=1}^{200} x_j^2)^2$ and $y=(uv+u)^2$ | Reverse sweep takes $802$ ops vs. $80{,}200$ in forward mode ($100\times$ speedup) |
-| **§34.6–34.7** | Gaussian $\mathcal{N}(0,1)$ polar integral & $\ell(\theta)=\mathbb{E}_{X\sim\mathcal{N}(\theta,1)}[X^2]$ | $\int e^{-z^2/2}dz = \sqrt{2\pi}$; pathwise SD $2.0$ vs. score-function SD $7.18$ at $\theta=1.5$ |
+::: {.col .fig .big}
+@fig:ch34-calc-running-benchmarks
+:::
+:::
 :::
 
 ::: {.slide title="How to Navigate Chapter 34"}

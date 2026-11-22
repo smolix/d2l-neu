@@ -444,11 +444,17 @@ Backpropagation & Computational Graphs in MLPs<br>**reverse-mode DAGs · local m
 ::: {.slide title="Why One Backward Pass Computes All 203,530 Gradients"}
 [Opening the Black Box]{.kicker}
 
-In §4.2, calling `backward()` computed all $203{,}530$ partial derivatives of our Fashion-MNIST MLP in one sweep. How does reverse-mode differentiation achieve that efficiency, and at what systems cost?
+::: {.cols .vc}
+::: {.col}
+- **Finite differences vs. reverse mode:** Perturbing each scalar weight $w \pm \epsilon$ would require $203{,}530$ forward passes per step; reverse-mode differentiation computes *all* parameter gradients in **$\sim 2\times$ the FLOPs of one forward pass**.
+- **Shared intermediate layer errors:** Backpropagation computes each layer's upstream sensitivity $\partial J / \partial \mathbf{Z}^{(k)}$ *once* from top to bottom and reads off $\partial J / \partial \mathbf{W}^{(k)}$ with a single matrix product.
+- **The memory price of training:** Forming $\mathbf{H}^{(k-1)\top}\mathbf{G}_{\mathbf{Z}^{(k)}}$ requires caching every hidden layer's forward activation in $O(nKh)$ GPU RAM.
+:::
 
-- **Finite differences vs. reverse mode:** Perturbing each scalar weight $w \pm \epsilon$ would require $203{,}530$ extra forward passes per minibatch; reverse-mode differentiation computes *all* parameter gradients in roughly **$2\times$ the FLOPs of one forward pass**.
-- **Shared intermediate layer errors:** Instead of differentiating from each weight forward to the loss, backpropagation computes each layer's upstream sensitivity $\partial J / \partial \mathbf{Z}^{(k)}$ *once* from top to bottom and reads off $\partial J / \partial \mathbf{W}^{(k)}$ with a single matrix product.
-- **The memory price of training:** Because local weight derivatives multiply upstream gradients by forward activations, training must cache every hidden layer's output across the forward pass—consuming $O(nKh)$ GPU memory that inference can discard.
+::: {.col .fig .big}
+@fig:ch04-mlp-backprop-efficiency
+:::
+:::
 :::
 
 ::: {.slide title="A Three-Node Computational Graph: Forward & Reverse"}
@@ -492,40 +498,33 @@ For a minibatch $\mathbf{X} \in \mathbb{R}^{n \times d}$, our one-hidden-layer M
 ::: {.slide title="Local Rule 1: Matrix Multiplication A = XW"}
 [Local Matrix Calculus]{.kicker}
 
-Let $\mathbf{A} = \mathbf{X}\mathbf{W}$ with $\mathbf{X} \in \mathbb{R}^{n \times d}$ and $\mathbf{W} \in \mathbb{R}^{d \times h}$, and let $\mathbf{G} = \partial J / \partial \mathbf{A} \in \mathbb{R}^{n \times h}$ be the upstream gradient arriving at $\mathbf{A}$:
+::: {.cols .vc}
+::: {.col}
+$$\frac{\partial J}{\partial \mathbf{W}} = \mathbf{X}^\top\mathbf{G} \in \mathbb{R}^{d \times h}, \qquad \frac{\partial J}{\partial \mathbf{X}} = \mathbf{G}\mathbf{W}^\top \in \mathbb{R}^{n \times d}$$
 
-- **Coordinate expansion:** Since $a_{ij} = \sum_{r=1}^d x_{ir} w_{rj}$, entry $w_{rj}$ influences every example $i$ in column $j$, while entry $x_{ir}$ influences every output unit $j$ in row $i$:
-  $$\frac{\partial J}{\partial w_{rj}} = \sum_{i=1}^n x_{ir}\,g_{ij} = [\mathbf{X}^\top\mathbf{G}]_{rj}, \qquad \frac{\partial J}{\partial x_{ir}} = \sum_{j=1}^h g_{ij}\,w_{rj} = [\mathbf{G}\mathbf{W}^\top]_{ir}$$
-- **Matrix form and shape lock:**
-  $$\frac{\partial J}{\partial \mathbf{W}} = \mathbf{X}^\top\mathbf{G} \in \mathbb{R}^{d \times h}, \qquad \frac{\partial J}{\partial \mathbf{X}} = \mathbf{G}\mathbf{W}^\top \in \mathbb{R}^{n \times d}$$
+- **Coordinate expansion:** Entry $w_{rj}$ influences every example $i$ in column $j$ ($\sum_i x_{ir} g_{ij}$), while entry $x_{ir}$ influences every output unit $j$ in row $i$ ($\sum_j g_{ij} w_{rj}$).
+- **Shape-lock check:** $\mathbf{X}^\top\mathbf{G}$ is the *only* way to multiply $(n \times d)$ and $(n \times h)$ into $(d \times h)$—requiring the cached forward input $\mathbf{X}$.
+:::
 
-::: {.d2l-note .rule}
-Dimension check: there is only one way to multiply $\mathbf{X}$ ($n \times d$) and $\mathbf{G}$ ($n \times h$) to match $\mathbf{W}$ ($d \times h$), namely $\mathbf{X}^\top\mathbf{G}$—which requires caching the forward input $\mathbf{X}$!
+::: {.col .fig}
+@fig:ch04-mlp-local-matmul-rule
+:::
 :::
 :::
 
 ::: {.slide title="Local Rules 2 & 3: Broadcasted Biases and Activations"}
 [Local Matrix Calculus]{.kicker}
 
-The remaining two building blocks of an MLP—broadcasted row biases and elementwise activations—have equally clean vector-Jacobian products:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-**2. Broadcasted bias ($\mathbf{Z} = \mathbf{A} + \mathbf{b}$):**
+$$\frac{\partial J}{\partial \mathbf{b}} = \mathbf{G}^\top\mathbf{1}_n, \qquad \frac{\partial J}{\partial \mathbf{Z}} = \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z})$$
 
-$$\frac{\partial J}{\partial \mathbf{b}} = \mathbf{G}^\top\mathbf{1}_n$$
-
-- Adding $\mathbf{b} \in \mathbb{R}^h$ to every row $i \in \{1, \ldots, n\}$ means $b_j$ branches into all $n$ examples.
-- The backward pass copies $\partial J / \partial \mathbf{A} = \mathbf{G}$ unchanged to $\mathbf{A}$ and sums $\mathbf{G}$ across the batch axis (`G.sum(axis=0)`).
+- **Broadcasted bias ($\mathbf{Z} = \mathbf{A} + \mathbf{b}$):** Copies $\mathbf{G}$ unchanged to $\mathbf{A}$ and sums across the batch axis (`G.sum(axis=0)`).
+- **Elementwise activation ($\mathbf{H} = \phi(\mathbf{Z})$):** Gates the upstream gradient entry-by-entry (Hadamard product $\odot$) by the local slope $\phi'(z_{ij})$.
 :::
 
-::: {.col}
-**3. Elementwise activation ($\mathbf{H} = \phi(\mathbf{Z})$):**
-
-$$\frac{\partial J}{\partial \mathbf{Z}} = \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z})$$
-
-- Because $h_{ij} = \phi(z_{ij})$ acts entry by entry, its Jacobian is diagonal.
-- The upstream gradient is gated entrywise (Hadamard product $\odot$) by the local slope $\phi'(z_{ij})$—passing $100\%$ where ReLU is active ($z_{ij} > 0$) and $0$ where inactive.
+::: {.col .fig}
+@fig:ch04-mlp-local-bias-act-rules
 :::
 :::
 :::
@@ -533,49 +532,49 @@ $$\frac{\partial J}{\partial \mathbf{Z}} = \frac{\partial J}{\partial \mathbf{H}
 ::: {.slide title="The Complete Five-Line Backward Pass of an MLP"}
 [Assembling the Backward Sweep]{.kicker}
 
-Starting from the mean cross-entropy logit gradient $\partial J / \partial \mathbf{O} = \frac{1}{n}(\hat{\mathbf{Y}} - \mathbf{Y})$ (where $\hat{\mathbf{Y}} = \mathrm{softmax}(\mathbf{O})$) and adding $\partial s / \partial \mathbf{W}^{(k)} = \lambda \mathbf{W}^{(k)}$, our three local rules yield the entire backward sweep in five equations:
+::: {.cols .vc}
+::: {.col}
+- **Top-down credit assignment:** Seeds $\mathbf{G}_{\mathbf{O}} = \frac{1}{n}(\hat{\mathbf{Y}} - \mathbf{Y})$ at the softmax logits and reads off $\nabla\mathbf{W}^{(2)} = \mathbf{H}^\top\mathbf{G}_{\mathbf{O}} + \lambda\mathbf{W}^{(2)}$.
+- **Hidden error routing:** Projects $\mathbf{G}_{\mathbf{O}}\mathbf{W}^{(2)\top}$ back to hidden units, gates by $\odot\,\phi'(\mathbf{Z})$, and forms $\nabla\mathbf{W}^{(1)} = \mathbf{X}^\top\mathbf{G}_{\mathbf{Z}} + \lambda\mathbf{W}^{(1)}$.
+:::
 
-$$
-\begin{aligned}
-\mathbf{G}_{\mathbf{O}} = \frac{\partial J}{\partial \mathbf{O}} &= \frac{1}{n}\bigl(\hat{\mathbf{Y}} - \mathbf{Y}\bigr) \\
-\frac{\partial J}{\partial \mathbf{W}^{(2)}} &= \mathbf{H}^\top \mathbf{G}_{\mathbf{O}} + \lambda \mathbf{W}^{(2)}, \qquad \frac{\partial J}{\partial \mathbf{b}^{(2)}} = \mathbf{G}_{\mathbf{O}}^\top \mathbf{1}_n \\
-\frac{\partial J}{\partial \mathbf{H}} &= \mathbf{G}_{\mathbf{O}}\, \mathbf{W}^{(2)\top} \\
-\mathbf{G}_{\mathbf{Z}} = \frac{\partial J}{\partial \mathbf{Z}} &= \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z}) \\
-\frac{\partial J}{\partial \mathbf{W}^{(1)}} &= \mathbf{X}^\top \mathbf{G}_{\mathbf{Z}} + \lambda \mathbf{W}^{(1)}, \qquad \frac{\partial J}{\partial \mathbf{b}^{(1)}} = \mathbf{G}_{\mathbf{Z}}^\top \mathbf{1}_n
-\end{aligned}
-$$
-
-::: {.d2l-note}
-How does hidden unit $j$ know how to adjust its weights without a target label of its own? Line 3 ($\mathbf{G}_{\mathbf{O}}\mathbf{W}^{(2)\top}$) sends each class's prediction error $\hat{y}_{ik} - y_{ik}$ back to unit $j$ weighted by $w^{(2)}_{jk}$, and Line 4 gates that credit by $\phi'(z_{ij})$.
+::: {.col .fig .big}
+@fig:ch04-mlp-five-line-sweep
+:::
 :::
 :::
 
 ::: {.slide title="Generalizing to K Layers: The Backward Recurrence"}
 [Deep MLP Recurrence]{.kicker}
 
-In a $K$-layer MLP ($\mathbf{Z}^{(k)} = \mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}$ and $\mathbf{H}^{(k)} = \phi(\mathbf{Z}^{(k)})$ with $\mathbf{H}^{(0)} = \mathbf{X}$), every hidden layer $k = K - 1, \ldots, 1$ executes the exact same two-step module:
-
+::: {.cols .vc}
+::: {.col}
 $$\frac{\partial J}{\partial \mathbf{Z}^{(k)}} = \Bigl(\frac{\partial J}{\partial \mathbf{Z}^{(k+1)}}\, \mathbf{W}^{(k+1)\top}\Bigr) \odot \phi'\bigl(\mathbf{Z}^{(k)}\bigr)$$
 
-$$\frac{\partial J}{\partial \mathbf{W}^{(k)}} = \mathbf{H}^{(k-1)\top} \frac{\partial J}{\partial \mathbf{Z}^{(k)}} + \lambda \mathbf{W}^{(k)}, \qquad \frac{\partial J}{\partial \mathbf{b}^{(k)}} = \Bigl(\frac{\partial J}{\partial \mathbf{Z}^{(k)}}\Bigr)^\top \mathbf{1}_n$$
+- **Two-step layer module:** Every hidden layer $k = K - 1, \ldots, 1$ projects upstream errors through $\mathbf{W}^{(k+1)\top}$, gates by $\odot\,\phi'(\mathbf{Z}^{(k)})$, and reads off $\mathbf{H}^{(k-1)\top}\mathbf{G}_{\mathbf{Z}^{(k)}}$.
+- **Product chain across depth:** Repeatedly multiplying by $\mathbf{W}^{(k)\top}$ and $\phi'(\mathbf{Z}^{(k)})$ explains why gradients vanish or explode in §4.4.
+:::
 
-::: {.d2l-note .rule}
-Notice the product chain: as error signals travel from layer $K$ down to layer $1$, they are repeatedly multiplied by $\mathbf{W}^{(k+1)\top}$ and gated by $\phi'(\mathbf{Z}^{(k)})$. In §4.4, we analyze why this product vanishes or explodes across depth.
+::: {.col .fig}
+@fig:ch04-mlp-k-layer-recurrence
+:::
 :::
 :::
 
 ::: {.slide title="Worked Numerical Example: Forward & Backward by Hand"}
 [Worked Example · Numbers]{.kicker}
 
-Trace a $2 \to 2 \to 1$ ReLU network ($n = 1$, zero biases, $\lambda = 0$, squared loss $L = \frac{1}{2}(o - y)^2$ with $y = 0$):
+::: {.cols .vc}
+::: {.col}
+- **Setup ($2 \to 2 \to 1$ ReLU):** $\mathbf{X} = [1, 2]$, $\mathbf{W}^{(1)} = \begin{bmatrix} 1 & 0 \\ -1 & 1 \end{bmatrix}$, $\mathbf{W}^{(2)} = [2, -1]^\top$, $y = 0$, $L = \frac{1}{2}(o - y)^2$.
+- **Forward:** $\mathbf{Z} = [-1, 2] \to \mathbf{H} = [0, 2] \to o = -2 \to L = 2$.
+- **Backward:** $\partial L/\partial o = -2 \implies \nabla\mathbf{H} = [-4, 2] \implies \nabla\mathbf{Z} = [-4, 2] \odot [0, 1] = [0, 2]$, zeroing out column 1 of $\nabla\mathbf{W}^{(1)}$.
+:::
 
-$$\mathbf{X} = \begin{bmatrix} 1 & 2 \end{bmatrix},\quad \mathbf{W}^{(1)} = \begin{bmatrix} \phantom{-}1 & 0 \\ -1 & 1 \end{bmatrix},\quad \mathbf{W}^{(2)} = \begin{bmatrix} \phantom{-}2 \\ -1 \end{bmatrix}$$
-
-- **Forward pass:** $\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} = \begin{bmatrix} -1 & 2 \end{bmatrix}$ $\to$ $\mathbf{H} = \mathrm{ReLU}(\mathbf{Z}) = \begin{bmatrix} 0 & 2 \end{bmatrix}$ $\to$ $o = \mathbf{H}\mathbf{W}^{(2)} = -2$ $\to$ $L = 2$.
-- **Backward pass:** Seed $\partial L / \partial o = o - y = -2$:
-  - Output weights: $\partial L / \partial \mathbf{W}^{(2)} = \mathbf{H}^\top(-2) = \begin{bmatrix} 0 & -4 \end{bmatrix}^\top$.
-  - Hidden activations & ReLU gate: $\partial L / \partial \mathbf{H} = (-2)\mathbf{W}^{(2)\top} = \begin{bmatrix} -4 & 2 \end{bmatrix}$ $\to$ $\partial L / \partial \mathbf{Z} = \begin{bmatrix} -4 & 2 \end{bmatrix} \odot \begin{bmatrix} 0 & 1 \end{bmatrix} = \begin{bmatrix} 0 & 2 \end{bmatrix}$.
-  - First-layer weights: $\partial L / \partial \mathbf{W}^{(1)} = \mathbf{X}^\top(\partial L / \partial \mathbf{Z}) = \begin{bmatrix} 1 \\ 2 \end{bmatrix}\begin{bmatrix} 0 & 2 \end{bmatrix} = \begin{bmatrix} 0 & 2 \\ 0 & 4 \end{bmatrix}$.
+::: {.col .fig .big}
+@fig:ch04-mlp-worked-numbers
+:::
+:::
 :::
 
 ::: {.slide title="Visualizing the Dead ReLU Gate in the Backward Graph"}
@@ -618,35 +617,32 @@ Running both `mlp_backward` and framework `autograd` in 64-bit floating point (`
 ::: {.slide title="Why Training Uses More Memory Than Inference"}
 [Systems Cost · Activation Memory]{.kicker}
 
-During inference, each layer's activation tensor can be overwritten as soon as the next layer finishes. During training, the backward pass reads forward activations to form $\mathbf{H}^{(k-1)\top}\mathbf{G}_{\mathbf{Z}^{(k)}}$:
+::: {.cols .vc}
+::: {.col}
+- **Inference ($O(nh)$ RAM):** Overwrites each layer's activation buffer as soon as the next layer finishes.
+- **Training ($O(nKh)$ RAM):** Must cache $\mathbf{X}$ ($0.80\textrm{ MB}$), $\mathbf{H}$ ($0.26\textrm{ MB}$), and $\hat{\mathbf{Y}}$ ($0.01\textrm{ MB}$) until the backward pass forms $\mathbf{H}^{(k-1)\top}\mathbf{G}_{\mathbf{Z}^{(k)}}$.
+- **Batch scaling:** Even for a 1-hidden-layer MLP at $n = 256$, cached activations ($1.08\textrm{ MB}$) exceed model parameters ($0.81\textrm{ MB}$).
+:::
 
-| Cached Forward Tensor ($n = 256$) | Shape | `float32` Elements | Memory Footprint |
-|:--|:--|--:|--:|
-| Flattened minibatch inputs $\mathbf{X}$ | $256 \times 784$ | $200{,}704$ | $0.80\textrm{ MB}$ |
-| Hidden activations $\mathbf{H}$ (plus ReLU mask) | $256 \times 256$ | $65{,}536$ | $0.26\textrm{ MB}$ |
-| Output softmax probabilities $\hat{\mathbf{Y}}$ | $256 \times 10$ | $2{,}560$ | $0.01\textrm{ MB}$ |
-| **Total cached activations per batch** | | **$268{,}800$** | **$1.08\textrm{ MB}$** |
-| **Total model parameters ($\mathbf{W}^{(1)}, \mathbf{b}^{(1)}, \mathbf{W}^{(2)}, \mathbf{b}^{(2)}$)** | | **$203{,}530$** | **$0.81\textrm{ MB}$** |
-
-::: {.d2l-note .warn}
-Even for a 1-hidden-layer MLP at batch size $n = 256$, cached activations ($1.08\textrm{ MB}$) already exceed the model parameters ($0.81\textrm{ MB}$)! Across $K$ hidden layers of width $h$, activation memory scales as $O(nKh)$—doubling batch size $n$ doubles activation memory.
+::: {.col .fig .big}
+@fig:ch04-mlp-activation-memory
+:::
 :::
 :::
 
 ::: {.slide title="Arithmetic Cost: Why Backward Costs ~2× Forward"}
 [Systems Cost · FLOPs]{.kicker}
 
-Tallying matrix multiply-adds per example shows why a full forward-plus-backward training step costs roughly $2\times$ to $3\times$ a forward inference pass:
+::: {.cols .vc}
+::: {.col}
+- **Forward pass ($203{,}264$ MACs / image):** Computes one matrix product per layer ($\mathbf{X}\mathbf{W}^{(1)}$ and $\mathbf{H}\mathbf{W}^{(2)}$).
+- **Backward pass ($205{,}824$ MACs / image):** Every interior forward matmul $\mathbf{H}^{(k-1)}\mathbf{W}^{(k)}$ spawns **two** backward matmuls of identical FLOP count ($\mathbf{H}^{(k-1)\top}\mathbf{G}$ and $\mathbf{G}\mathbf{W}^{(k)\top}$).
+- **3× rule of thumb:** Backward costs $\approx 2\times$ forward FLOPs, so a full training step costs $\approx 3\times$ inference FLOPs.
+:::
 
-- **Forward pass ($203{,}264$ multiply-adds / image):**
-  - Layer 1 ($\mathbf{X}\mathbf{W}^{(1)}$): $784 \times 256 = 200{,}704$ multiply-adds.
-  - Layer 2 ($\mathbf{H}\mathbf{W}^{(2)}$): $256 \times 10 = 2{,}560$ multiply-adds.
-- **Backward pass ($205{,}824$ multiply-adds / image):**
-  - Layer 2 weight & activation grads ($\mathbf{H}^\top\mathbf{G}_{\mathbf{O}}$ and $\mathbf{G}_{\mathbf{O}}\mathbf{W}^{(2)\top}$): $2 \times (256 \times 10) = 5{,}120$ multiply-adds.
-  - Layer 1 weight grad ($\mathbf{X}^\top\mathbf{G}_{\mathbf{Z}}$; $\partial J / \partial \mathbf{X}$ is not needed): $784 \times 256 = 200{,}704$ multiply-adds.
-
-::: {.d2l-note .rule}
-In a deep network of $K$ interior layers, every forward matrix multiply $\mathbf{H}^{(k-1)}\mathbf{W}^{(k)}$ spawns **two** backward matrix multiplies of identical FLOP count ($\mathbf{H}^{(k-1)\top}\mathbf{G}$ and $\mathbf{G}\mathbf{W}^{(k)\top}$), making backward $\approx 2\times$ forward FLOPs and a full training step $\approx 3\times$ inference FLOPs.
+::: {.col .fig .big}
+@fig:ch04-mlp-flop-ratio
+:::
 :::
 :::
 

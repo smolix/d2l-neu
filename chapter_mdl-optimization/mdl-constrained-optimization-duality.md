@@ -1431,18 +1431,18 @@ Constrained Optimization<br>**Lagrange multipliers · KKT conditions · Euclidea
 ::: {.slide title="When the Optimum Has a Nonzero Gradient"}
 [Motivation]{.kicker}
 
-In unconstrained optimization, we hunt for stationary points where $\nabla f(\mathbf{x}) = \mathbf{0}$. When parameters must stay inside a feasible set $C$, the gradient rarely vanishes at the optimum:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Concrete example (gradient clipping):** Project $\mathbf{y} = (3, 4)$ onto the unit disk $\|\mathbf{x}\|_2 \le 1$ by minimizing $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{y}\|^2$ subject to $g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|^2 - 1) \le 0$.
-- **Nonzero gradient at the optimum:** The closest point in the disk is $\mathbf{x}^\star = (0.6, 0.8)$ with optimal value $f(\mathbf{x}^\star) = 8$, yet $\nabla f(\mathbf{x}^\star) = \mathbf{x}^\star - \mathbf{y} = (-2.4, -3.2) \neq \mathbf{0}$.
+Projecting $\mathbf{y} = (3, 4)$ onto the unit disk $g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|_2^2 - 1) \le 0$ minimizes $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{y}\|_2^2$:
+
+$$\nabla f(\mathbf{x}^\star) + 4\,\nabla g(\mathbf{x}^\star) = (-2.4, -3.2) + 4(0.6, 0.8) = \mathbf{0}$$
+
+- **Nonzero gradient at $\mathbf{x}^\star = (0.6, 0.8)$:** $\nabla f(\mathbf{x}^\star) = (-2.4, -3.2) \neq \mathbf{0}$.
+- **Force balance:** No feasible move lowers $f$ because the outward boundary normal $\nabla g(\mathbf{x}^\star)$ pushes back with multiplier $\lambda^\star = 4$.
 :::
 
-::: {.col}
-- **What makes $(0.6, 0.8)$ optimal?** No *feasible* move lowers $f$: every direction that stays inside the unit disk makes an acute or right angle with $\nabla f(\mathbf{x}^\star)$.
-- **Force balance via a multiplier:** At $\mathbf{x}^\star$, the boundary's outward normal $\nabla g(\mathbf{x}^\star) = \mathbf{x}^\star = (0.6, 0.8)$ pushes back with multiplier $\lambda^\star = 4$:
-  $$\nabla f(\mathbf{x}^\star) + 4\,\nabla g(\mathbf{x}^\star) = (-2.4, -3.2) + 4(0.6, 0.8) = \mathbf{0}$$
+::: {.col .fig}
+@fig:ch36-opt-boundary-force-balance
 :::
 :::
 :::
@@ -1483,26 +1483,38 @@ $$\mathcal{L}(\mathbf{x}, \nu) = f(\mathbf{x}) + \nu\,h(\mathbf{x}) \implies \na
 ::: {.slide title="Closest Point on a Hyperplane and Shadow Prices"}
 [Lagrange Multipliers]{.kicker}
 
-Find the point on the hyperplane $h(\mathbf{x}) = \mathbf{a}^\top\mathbf{x} - b = 0$ closest to the origin by minimizing $f(\mathbf{x}) = \tfrac12\|\mathbf{x}\|^2$:
+::: {.cols .vc}
+::: {.col}
+Minimizing $f(\mathbf{x}) = \tfrac12\|\mathbf{x}\|_2^2$ on the hyperplane $h(\mathbf{x}) = \mathbf{a}^\top\mathbf{x} - b = 0$ gives $\mathbf{x} = -\nu\mathbf{a}$ and:
 
-$$\mathcal{L}(\mathbf{x}, \nu) = \tfrac12\|\mathbf{x}\|^2 + \nu(\mathbf{a}^\top\mathbf{x} - b) \implies \nabla_{\mathbf{x}}\mathcal{L} = \mathbf{x} + \nu\mathbf{a} = \mathbf{0} \implies \mathbf{x} = -\nu\mathbf{a}$$
+$$\nu^\star = -\frac{b}{\|\mathbf{a}\|^2}, \qquad \mathbf{x}^\star = \frac{b}{\|\mathbf{a}\|^2}\,\mathbf{a}, \qquad p^\star(b) = \frac{b^2}{2\|\mathbf{a}\|^2}$$
 
-- **Closed-form projection and multiplier:** Substituting $\mathbf{x} = -\nu\mathbf{a}$ into $\mathbf{a}^\top\mathbf{x} = b$ gives $-\nu\|\mathbf{a}\|^2 = b$:
-  $$\nu^\star = -\frac{b}{\|\mathbf{a}\|^2}, \qquad \mathbf{x}^\star = \frac{b}{\|\mathbf{a}\|^2}\,\mathbf{a}, \qquad p^\star(b) = f(\mathbf{x}^\star) = \frac{b^2}{2\|\mathbf{a}\|^2}$$
-- **Economic meaning of the multiplier:** Differentiating the optimal value $p^\star(b)$ with respect to the constraint threshold $b$ reveals:
-  $$\frac{\partial p^\star(b)}{\partial b} = \frac{b}{\|\mathbf{a}\|^2} = -\nu^\star$$
-  For $\mathbf{a} = (3, 4)$ and $b = 5$, we get $\mathbf{x}^\star = (0.6, 0.8)$, $p^\star = 0.5$, and $\nu^\star = -0.2$: shifting $b$ from $5$ to $5.1$ raises $p^\star$ by $\approx -\nu^\star(0.1) = +0.02$.
+- **Shadow price:** Differentiating $p^\star(b)$ with respect to threshold $b$ reveals $\frac{\partial p^\star(b)}{\partial b} = -\nu^\star$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-hyperplane-shadow-price
+:::
+:::
 :::
 
 ::: {.slide title="Inequality Constraints: Active vs. Inactive Walls"}
 [Inequality Constraints]{.kicker}
 
-Now replace the boundary circle with the solid ball $g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|^2 - r^2) \le 0$ while minimizing $f(\mathbf{x}) = \tfrac12\|\mathbf{x} - \mathbf{y}\|^2$. With multiplier $\lambda$, stationarity gives $\mathbf{x} = \mathbf{y}/(1 + \lambda)$, splitting into two regimes:
+::: {.cols .vc}
+::: {.col}
+Minimizing $\tfrac12\|\mathbf{x} - \mathbf{y}\|_2^2$ over the solid ball $g(\mathbf{x}) = \tfrac12(\|\mathbf{x}\|_2^2 - r^2) \le 0$ splits into two regimes:
 
-- **Regime 1 — Inactive constraint ($g(\mathbf{x}^\star) < 0$):** If $\|\mathbf{y}\| < r$, the unconstrained minimum $\mathbf{x}^\star = \mathbf{y}$ already lies strictly inside the ball. The boundary exerts zero force, so **$\lambda^\star = 0$**.
-- **Regime 2 — Active constraint ($g(\mathbf{x}^\star) = 0$):** If $\|\mathbf{y}\| \ge r$, the solution must sit on the boundary sphere $\|\mathbf{x}^\star\| = r$, forcing $1 + \lambda^\star = \|\mathbf{y}\|/r \implies \mathbf{\lambda^\star = \|\mathbf{y}\|/r - 1 \ge 0}$.
-- **Unified gradient-clipping formula:** Both regimes combine into a single expression:
-  $$\mathbf{x}^\star = \frac{\mathbf{y}}{\max\big(1,\, \|\mathbf{y}\|/r\big)}, \qquad \lambda^\star = \max\!\left(0,\, \frac{\|\mathbf{y}\|}{r} - 1\right)$$
+$$\mathbf{x}^\star = \frac{\mathbf{y}}{\max\big(1,\, \|\mathbf{y}\|/r\big)}, \qquad \lambda^\star = \max\!\left(0,\, \frac{\|\mathbf{y}\|}{r} - 1\right)$$
+
+- **Inactive ($g(\mathbf{x}^\star) < 0$, $\|\mathbf{y}\| < r$):** $\mathbf{x}^\star = \mathbf{y}$ lies inside the ball and $\lambda^\star = 0$.
+- **Active ($g(\mathbf{x}^\star) = 0$, $\|\mathbf{y}\| \ge r$):** $\mathbf{x}^\star = r\mathbf{y}/\|\mathbf{y}\|$ sits on the boundary sphere with $\lambda^\star \ge 0$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-active-vs-inactive-ball
+:::
+:::
 :::
 
 ::: {.slide title="Verifying Force Balance in Gradient Clipping"}
@@ -1520,13 +1532,20 @@ For $\mathbf{y} = (3, 4)$ and radius $r = 1$, the active constraint formula yiel
 ::: {.slide title="The Four Karush–Kuhn–Tucker (KKT) Conditions"}
 [KKT Conditions]{.kicker}
 
-For the general constrained optimization problem $\min_{\mathbf{x}} f(\mathbf{x})$ subject to $g_i(\mathbf{x}) \le 0$ ($i = 1, \ldots, m$) and $h_j(\mathbf{x}) = 0$ ($j = 1, \ldots, p$), form the Lagrangian $\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu}) = f(\mathbf{x}) + \sum_{i=1}^m \lambda_i g_i(\mathbf{x}) + \sum_{j=1}^p \nu_j h_j(\mathbf{x})$. At any local minimum satisfying a constraint qualification, optimal multipliers $(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$ satisfy:
+::: {.cols .vc}
+::: {.col}
+For $\min_{\mathbf{x}} f(\mathbf{x})$ subject to $g_i(\mathbf{x}) \le 0$ and $h_j(\mathbf{x}) = 0$, form $\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu}) = f(\mathbf{x}) + \sum_i \lambda_i g_i(\mathbf{x}) + \sum_j \nu_j h_j(\mathbf{x})$:
 
-1. **Stationarity (force balance):**
-   $$\nabla f(\mathbf{x}^\star) + \sum_{i=1}^m \lambda_i^\star\,\nabla g_i(\mathbf{x}^\star) + \sum_{j=1}^p \nu_j^\star\,\nabla h_j(\mathbf{x}^\star) = \mathbf{0}$$
-2. **Primal feasibility:** $g_i(\mathbf{x}^\star) \le 0$ for all $i = 1, \ldots, m$, and $h_j(\mathbf{x}^\star) = 0$ for all $j = 1, \ldots, p$.
-3. **Dual feasibility (one-way walls):** $\lambda_i^\star \ge 0$ for all $i = 1, \ldots, m$.
-4. **Complementary slackness:** $\lambda_i^\star\,g_i(\mathbf{x}^\star) = 0$ for every $i = 1, \ldots, m$ (either constraint $i$ is active, $g_i(\mathbf{x}^\star) = 0$, or its multiplier vanishes, $\lambda_i^\star = 0$).
+$$\nabla f(\mathbf{x}^\star) + \sum_{i=1}^m \lambda_i^\star\nabla g_i(\mathbf{x}^\star) + \sum_{j=1}^p \nu_j^\star\nabla h_j(\mathbf{x}^\star) = \mathbf{0}$$
+
+- **Feasibility:** Primal ($g_i(\mathbf{x}^\star) \le 0, h_j(\mathbf{x}^\star) = 0$) and Dual ($\lambda_i^\star \ge 0$).
+- **Complementary slackness:** $\lambda_i^\star g_i(\mathbf{x}^\star) = 0$ for every $i$ (inactive walls exert zero force).
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-kkt-four-conditions
+:::
+:::
 :::
 
 ::: {.slide title="Normal Cone Geometry of Active Constraints"}
@@ -1612,28 +1631,37 @@ $$\big(\mathbf{y} - \Pi_C(\mathbf{y})\big)^\top\big(\mathbf{x} - \Pi_C(\mathbf{y
 ::: {.slide title="Proving Projections Are Nonexpansive"}
 [Projections]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Projecting two points onto a closed convex set $C$ never increases the Euclidean distance between them:
 
-$$\|\Pi_C(\mathbf{x}) - \Pi_C(\mathbf{y})\|_2 \le \|\mathbf{x} - \mathbf{y}\|_2 \qquad \forall\,\mathbf{x}, \mathbf{y} \in \mathbb{R}^n$$
+$$\|\Pi_C(\mathbf{x}) - \Pi_C(\mathbf{y})\|_2 \le \|\mathbf{x} - \mathbf{y}\|_2$$
 
-- **Three-line proof from the obtuse-angle inequality:** Let $\mathbf{u} = \Pi_C(\mathbf{x}) \in C$ and $\mathbf{v} = \Pi_C(\mathbf{y}) \in C$.
-  1. Apply the obtuse-angle inequality at $\mathbf{x}$ toward $\mathbf{v} \in C$, and at $\mathbf{y}$ toward $\mathbf{u} \in C$:
-     $$(\mathbf{x} - \mathbf{u})^\top(\mathbf{v} - \mathbf{u}) \le 0 \qquad \text{and} \qquad (\mathbf{y} - \mathbf{v})^\top(\mathbf{u} - \mathbf{v}) \le 0$$
-  2. Add the two inequalities and rearrange:
-     $$\|\mathbf{u} - \mathbf{v}\|_2^2 \le (\mathbf{x} - \mathbf{y})^\top(\mathbf{u} - \mathbf{v}) \le \|\mathbf{x} - \mathbf{y}\|_2\,\|\mathbf{u} - \mathbf{v}\|_2 \quad \text{(by Cauchy–Schwarz)}$$
-  3. Divide both sides by $\|\mathbf{u} - \mathbf{v}\|_2$ to obtain $\|\mathbf{u} - \mathbf{v}\|_2 \le \|\mathbf{x} - \mathbf{y}\|_2$. (Convexity is essential: projecting $\pm 0.01$ onto the nonconvex set $\{-1, +1\}$ jumps from distance $0.02$ to distance $2$!)
+- **Three-line proof:** Sum the obtuse-angle inequalities $(\mathbf{x} - \mathbf{u})^\top(\mathbf{v} - \mathbf{u}) \le 0$ and $(\mathbf{y} - \mathbf{v})^\top(\mathbf{u} - \mathbf{v}) \le 0$ (where $\mathbf{u} = \Pi_C(\mathbf{x}), \mathbf{v} = \Pi_C(\mathbf{y})$) to get $\|\mathbf{u} - \mathbf{v}\|_2^2 \le (\mathbf{x} - \mathbf{y})^\top(\mathbf{u} - \mathbf{v})$, and apply Cauchy–Schwarz.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-projection-nonexpansive
+:::
+:::
 :::
 
 ::: {.slide title="Projected Gradient Descent and Fixed Points"}
 [Projected Gradient Descent]{.kicker}
 
-**Projected Gradient Descent (PGD)** alternates an unconstrained gradient step with Euclidean projection back onto $C$:
+::: {.cols .vc}
+::: {.col}
+**Projected Gradient Descent (PGD)** alternates a gradient step with Euclidean projection onto $C$:
 
 $$\mathbf{x}_{k+1} = \Pi_C\big(\mathbf{x}_k - \eta\,\nabla f(\mathbf{x}_k)\big)$$
 
-- **Exact characterization of PGD fixed points:** For any $\eta > 0$, a point $\mathbf{x}^\star \in C$ satisfies $\mathbf{x}^\star = \Pi_C(\mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star))$ if and only if $\mathbf{y} = \mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star)$ satisfies the obtuse-angle inequality at $\mathbf{x}^\star$:
-  $$\big((\mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star)) - \mathbf{x}^\star\big)^\top(\mathbf{x} - \mathbf{x}^\star) \le 0 \iff \nabla f(\mathbf{x}^\star)^\top(\mathbf{x} - \mathbf{x}^\star) \ge 0 \quad \forall\,\mathbf{x} \in C$$
-- **Geometric meaning:** No feasible direction $\mathbf{x} - \mathbf{x}^\star$ into $C$ is a descent direction. When $f$ is convex, the tangent inequality $f(\mathbf{x}) \ge f(\mathbf{x}^\star) + \nabla f(\mathbf{x}^\star)^\top(\mathbf{x} - \mathbf{x}^\star) \ge f(\mathbf{x}^\star)$ immediately certifies that every PGD fixed point is a global minimizer over $C$.
+- **Fixed-point certificate:** $\mathbf{x}^\star = \Pi_C(\mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star))$ iff $\nabla f(\mathbf{x}^\star)^\top(\mathbf{x} - \mathbf{x}^\star) \ge 0$ for all $\mathbf{x} \in C$ (no feasible descent direction; global optimum when $f$ is convex).
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-pgd-step-cycle
+:::
+:::
 :::
 
 ::: {.slide title="Why PGD Contracts as Fast as Unconstrained GD"}
@@ -1701,16 +1729,19 @@ The **lasso** minimizes $F(\mathbf{w}) = \tfrac12\|\mathbf{A}\mathbf{w} - \mathb
 ::: {.slide title="Soft-Thresholding and the Proximal Operator"}
 [Proximal Operators]{.kicker}
 
-Instead of linearizing a kinked penalty $\psi(\mathbf{x})$, the **proximal operator** minimizes $\psi(\mathbf{x})$ exactly against a quadratic proximity tether to $\mathbf{z}$:
+::: {.cols .vc}
+::: {.col}
+The **proximal operator** minimizes a nonsmooth convex penalty $\psi(\mathbf{x})$ against a quadratic tether to $\mathbf{z}$:
 
 $$\mathrm{prox}_\psi(\mathbf{z}) = \mathop{\mathrm{argmin}}_{\mathbf{x} \in \mathbb{R}^d}\left(\psi(\mathbf{x}) + \tfrac12\|\mathbf{x} - \mathbf{z}\|_2^2\right)$$
 
-- **1D soft-thresholding ($\psi(x) = \lambda|x|$):** By Fermat's subgradient rule $0 \in \lambda\,\partial|x| + (x - z)$,
-  - $x > 0 \implies \lambda + x - z = 0 \implies x = z - \lambda$ (valid for $z > \lambda$).
-  - $x < 0 \implies -\lambda + x - z = 0 \implies x = z + \lambda$ (valid for $z < -\lambda$).
-  - $x = 0 \implies 0 \in [-\lambda, \lambda] - z \iff |z| \le \lambda$ (the **dead zone** that creates exact sparsity!).
-  $$\mathrm{prox}_{\lambda|\cdot|}(z) = \mathrm{sign}(z)\,\max\big(|z| - \lambda,\, 0\big)$$
-- **Unifying projections and penalties:** When $\psi = I_C$ (the $0/\infty$ indicator of a closed convex set $C$), $\mathrm{prox}_{I_C}(\mathbf{z}) = \Pi_C(\mathbf{z})$.
+- **1D soft-thresholding ($\psi(x) = \lambda|x|$):** By Fermat's rule $0 \in \lambda\partial|x| + (x - z)$, $\mathrm{prox}_{\lambda|\cdot|}(z) = \mathrm{sign}(z)\max(|z| - \lambda, 0)$, with an exact zero **dead zone** for $|z| \le \lambda$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-soft-thresholding-prox
+:::
+:::
 :::
 
 ::: {.slide title="Proximal Gradient Descent (ISTA) Recovers Exact Zeros"}

@@ -38,63 +38,71 @@ Linear Neural Networks for Classification: From Logits to Trusted Decisions<br>*
 ::: {.slide title="Why Classification Needs Its Own Loss and Diagnostics"}
 [The Central Challenge]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Predicting an unordered discrete category ($y \in \{1, \ldots, q\}$) departs from continuous regression in three fundamental ways:
 
-- **Arbitrary integer codes distort geometry:** Numbering ten garments $1$ through $10$ and applying squared loss makes a prediction of $5.5$ fall halfway between coat and sandal, while penalizing T-shirt ($1$) $\to$ ankle boot ($10$) $81\times$ more heavily than T-shirt ($1$) $\to$ trouser ($2$).
-- **Raw accuracy hides asymmetric failures:** When $1\%$ of patients carry a disease, a trivial classifier that always predicts *healthy* scores $99\%$ accuracy while detecting $0\%$ of sick patients.
-- **Test sets vouch only for their own distribution:** A linear model that achieves $85\%$ accuracy on source data can drop to $\sim 50\%$ on shifted deployment inputs—worse than guessing the majority class.
+- **Arbitrary integer codes distort geometry:** Numbering ten garments $1$ through $10$ under squared loss penalizes T-shirt ($1$) $\to$ boot ($10$) $81\times$ more than T-shirt ($1$) $\to$ trouser ($2$).
+- **Raw accuracy hides asymmetric failures:** Under $1\%$ disease prevalence, always predicting *healthy* scores $99\%$ accuracy while detecting $0\%$ of sick patients.
+- **Test sets vouch only for their own distribution:** A linear model at $85\%$ source accuracy can collapse to $\sim 50\%$ under deployment shift.
+:::
 
-::: {.d2l-note}
-A neural classifier must output calibrated class probabilities $\hat{\mathbf{y}}$, optimize a proper likelihood loss, and be audited against finite-sample error bars and deployment shifts.
+::: {.col .fig .big}
+@fig:ch03-cls-why-classification
+:::
 :::
 :::
 
 ::: {.slide title="From Regression to Classification: What Changes"}
 [The Modelling Recipe]{.kicker}
 
-Almost all of our regression training pipeline—minibatch data loaders, vectorized matrix products, automatic differentiation, and minibatch SGD—carries straight over with three targeted replacements:
+::: {.cols .vc}
+::: {.col}
+Our regression training pipeline—minibatch loaders, vectorized GEMM, autodiff, and SGD—carries over with three targeted upgrades:
 
-| Component | Linear Regression (§2) | Softmax Regression (§3) |
-|:--|:--|:--|
-| **Target representation** | Continuous scalar $y \in \mathbb{R}$ | Discrete class $y \in \{1, \ldots, q\}$, one-hot $\mathbf{y} \in \{0, 1\}^q$ |
-| **Forward model** | Single affine score $\hat{y} = \mathbf{w}^\top\mathbf{x} + b$ | $q$ logits $\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$ normalized via $\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o})$ |
-| **Noise / label model** | Gaussian $P(y \mid \mathbf{x}) = \mathcal{N}(y; \hat{y}, \sigma^2)$ | Categorical $P(y \mid \mathbf{x}) = \hat{y}_y = \prod_{j=1}^q \hat{y}_j^{y_j}$ |
-| **Maximum-likelihood loss** | Squared error $\frac{1}{2}(\hat{y} - y)^2$ | Cross-entropy $l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y$ |
-| **Logit / output gradient** | Residual $\partial_{\hat{y}} l = \hat{y} - y$ | Residual vector $\nabla_{\mathbf{o}}\, l = \hat{\mathbf{y}} - \mathbf{y}$ |
+- **One-hot target & multi-logit head:** Replace scalar $y \in \mathbb{R}$ and $\hat{y}$ with one-hot $\mathbf{y} \in \{0, 1\}^q$ and $q$ affine logits $\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$ normalized via $\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o})$.
+- **Cross-entropy likelihood loss:** Replace Gaussian squared error with categorical negative log-likelihood $l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y$.
+- **Identical residual gradient form:** The logit gradient simplifies to $\nabla_{\mathbf{o}}\, l = \hat{\mathbf{y}} - \mathbf{y}$ (prediction minus target).
+:::
 
-::: {.d2l-note .rule}
-Virtually every neural classifier—from this chapter's $7{,}850$-parameter baseline to frontier language models—terminates in a linear logit layer paired with the fused softmax cross-entropy loss.
+::: {.col .fig .big}
+@fig:ch03-cls-reg-vs-cls
+:::
 :::
 :::
 
 ::: {.slide title="Architecture and Roadmap of Chapter 3"}
 [Chapter Roadmap]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 The six sections progress from mathematical formulation and benchmark data to implementation, decision metrics, statistical guarantees, and deployment robustness:
 
-| Section | Core Question | Key Mathematical & Systems Tools |
-|:--|:--|:--|
-| **§3.1 Softmax Regression** | How does a linear model output valid class probabilities? | One-hot vectors, $\mathrm{softmax}(\mathbf{o})$, cross-entropy, $\nabla_{\mathbf{o}} l = \hat{\mathbf{y}} - \mathbf{y}$, temperature $T$ |
-| **§3.2 Image Classification Data** | Which benchmark separates weak and strong models in seconds? | Fashion-MNIST ($60\text{k} + 10\text{k}$ $28\times 28$ garments), `DataModule` throughput |
-| **§3.3 Softmax Implementation** | How do we prevent float32 overflow/underflow and inspect errors? | `Classifier` base class, $10\times 10$ confusion matrix, templates, fused LogSumExp loss |
-| **§3.4 Measuring Classifiers** | When does higher accuracy yield a worse decision system? | Precision, recall, Bayes cost threshold $\kappa_{\mathrm{FP}}/(\kappa_{\mathrm{FP}}+\kappa_{\mathrm{FN}})$, ECE, temperature scaling |
-| **§3.5 Generalization** | How far can we trust a finite test score or training fit? | Standard error $\le 0.5/\sqrt{n}$, Hoeffding & union bounds, adaptive overfitting, VC dimension |
-| **§3.6 Distribution Shift** | How do we adapt when deployment data drift from training data? | Covariate vs. label vs. concept shift, domain-classifier $\beta(\mathbf{x})$, $\mathbf{C}\mathbf{p}_T = \boldsymbol{\mu}$, feedback loops |
+- **Model & pipeline (§3.1–§3.3):** Softmax probabilities, cross-entropy loss, Fashion-MNIST `DataModule` ($60\text{k} + 10\text{k}$ garments), `Classifier` base class, $10\times 10$ confusion matrices, and fused LogSumExp loss.
+- **Decisions, bounds & shift (§3.4–§3.6):** Precision/recall, Bayes cost thresholds, ECE calibration, test-set error bars ($\le 0.5/\sqrt{n}$), adaptive overfitting, VC dimension, and covariate/label shift correction.
+:::
+
+::: {.col .fig .big}
+@fig:ch03-cls-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Concrete Running Benchmarks Across Every Section"}
 [Empirical Anchors]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Every concept in this chapter is anchored to concrete numbers and reproducible experiments:
 
-| Section | Running Quantitative Anchor |
-|:--|:--|
-| **§3.1 Softmax Regression** | $2\times 2$ image with cat/chicken/dog logits $(1.0, 2.2, 0.3)$ $\to$ probabilities $(0.21, 0.69, 0.10)$ and chicken loss $-\log 0.69 \approx 0.37\text{ nats}$ |
-| **§3.2 Fashion-MNIST Data** | $60{,}000$ train / $10{,}000$ val grayscale $28\times 28$ images across $10$ classes; minibatches of $64$ ($\approx 200\text{ KB}$) or $256$ ($\approx 0.8\text{ MB}$) in `float32` |
-| **§3.3 Implementation** | $784 \times 10 + 10 = 7{,}850$ parameters reach $\sim 83\%$ val / $\sim 84\%$ train accuracy in $10$ epochs; fused LogSumExp handles logits $(1000, 0, 0)$ |
-| **§3.4 Measuring Classifiers** | $1\%$ disease prevalence: $90\%$-recall / $5\%$-FPR screener has $95\%$ accuracy and $15\%$ precision; cost ratio $100:1$ sets threshold at $1/101 \approx 1\%$ |
-| **§3.5 Generalization** | $n = 10{,}000$ test images give $\pm 0.7\%$ ($95\%$ normal) or $\pm 1.4\%$ (Hoeffding); majority vote of lucky coin-flippers jumps from $50\%$ to $\sim 70\%$ |
-| **§3.6 Distribution Shift** | 2D Gaussian shift $(0,0) \to (2,0)$: importance weights lift target accuracy from $\sim 55\%$ to $\sim 95\%$; $\mathbf{C}^{-1}\boldsymbol{\mu}$ recovers a $50\%$ target shirt prior |
+- **Core model (§3.1–§3.3):** $2\times 2$ toy logits $(1.0, 2.2, 0.3) \to (0.21, 0.69, 0.10)$ ($0.37\text{ nats}$); $7{,}850$-parameter Fashion-MNIST classifier reaching $\sim 83\%$ validation accuracy in $10$ epochs.
+- **Auditing & shift (§3.4–§3.6):** $1\%$-prevalence screening ($90\%$ recall $\to 15.4\%$ precision, $\tau^* \approx 1\%$ at $100:1$ cost); $\pm 0.7\%$ normal vs. $\pm 1.4\%$ Hoeffding radius at $n=10\text{k}$; importance weighting ($\sim 55\% \to 95\%$) and $\mathbf{C}^{-1}\boldsymbol{\mu}$ label-shift recovery.
+:::
+
+::: {.col .fig .big}
+@fig:ch03-cls-benchmarks
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check & Chapter Study Guide"}

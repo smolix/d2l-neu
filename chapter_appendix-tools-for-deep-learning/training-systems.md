@@ -446,22 +446,15 @@ Distributed Model Training: DDP, FSDP/ZeRO, 3D Parallelism, and Fault Tolerance<
 ::: {.slide title="Why Single-Accelerator Training Hits a Wall"}
 [Motivation]{.kicker}
 
-A 7-billion-parameter language model trained with mixed-precision Adam requires **$112\text{ GB}$ just for its parameters, gradients, and optimizer moments** before storing a single activation—exceeding an $80\text{ GB}$ H100 and taking years on a single card:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **What distributed training partitions:**
-  - **The minibatch** (Data Parallelism / DDP)
-  - **The training state** (FSDP / ZeRO stages 1–3)
-  - **Intra-layer matrix products** (Tensor Parallelism)
-  - **Layer groups, sequence tokens, or MoE experts** (Pipeline, Context, Expert Parallelism)
+- **The 7B single-GPU memory wall ($112\text{ GB}$):** Mixed-precision Adam holds BF16 weights ($14\text{ GB}$), BF16 grads ($14\text{ GB}$), FP32 master weights ($28\text{ GB}$), and FP32 Adam $m, v$ ($56\text{ GB}$)—exceeding an $80\text{ GB}$ H100 before any activations!
+- **Four partitioning axes:** Split the batch (DDP), training state (FSDP/ZeRO), layer matrices/stages (TP/PP), or sequence/experts (CP/EP).
+- **Golden rule:** Start from a verified 1-GPU baseline and climb one rung at a time.
 :::
 
-::: {.col}
-- **Every partition adds a tax:**
-  - More collective communication across PCIe, NVLink, or InfiniBand/RoCE.
-  - More failure points as worker count grows from 1 GPU to 512+ GPUs.
-- **Golden rule:** Start from a measured single-GPU baseline and climb the scaling ladder one rung at a time, adding only the simplest technique that removes an observed memory or throughput bottleneck.
+::: {.col .fig .big}
+@fig:ch39-tools-7b-wall
 :::
 :::
 :::
@@ -488,22 +481,14 @@ Climb the scaling ladder in strict order of increasing communication volume and 
 ::: {.slide title="Data Parallelism (DDP) vs. FSDP2 / NamedSharding"}
 [Rungs 2 and 3]{.kicker}
 
-Modern PyTorch and JAX express data and state parallelism through unified distributed tensor abstractions:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **PyTorch (`torchrun` + `DistributedDataParallel` / `fully_shard`):**
-  ```bash
-  torchrun --standalone --nproc-per-node=4 train.py
-  ```
-  - **DDP:** `DistributedDataParallel(model)` buckets and averages gradients across ranks during backward.
-  - **FSDP2:** `fully_shard(model)` represents each sharded parameter as a **`DTensor`**, dividing per-GPU state memory by $W$ while overlapping `all_gather` and `reduce_scatter` collectives with compute.
+- **Rung 2 — DDP (`DistributedDataParallel`):** Replicates all $16N$ state on every GPU and averages bucketed gradients via `all_reduce` ($\approx 2S$ traffic); best choice whenever state fits!
+- **Rung 3 — FSDP2 (`fully_shard` / `DTensor` & JAX `NamedSharding`):** Divides parameters, gradients, and Adam moments by $W$ ($16N/W$), overlapping per-layer `all_gather` and `reduce_scatter` ($\approx 3S = 1.5\times$ DDP traffic).
 :::
 
-::: {.col}
-- **JAX (`jax.sharding.Mesh` + `NamedSharding`):**
-  - Arrays carry declarative placement specs (`PartitionSpec`) over a logical device mesh (e.g., `('data', 'fsdp', 'tensor')`).
-  - `jax.jit` and the XLA compiler automatically insert the required `all-gather`, `reduce-scatter`, and `all-reduce` collectives during compilation.
+::: {.col .fig .big}
+@fig:ch39-tools-ddp-vs-fsdp2
 :::
 :::
 :::
@@ -511,20 +496,14 @@ Modern PyTorch and JAX express data and state parallelism through unified distri
 ::: {.slide title="Tensor, Pipeline, Context, and Expert Parallelism"}
 [Rung 4: Model & Sequence Axes]{.kicker}
 
-When even a single layer's weights or long-context activations exceed one GPU, we compose four additional axes of parallelism:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Tensor Parallelism (TP):** Splits weight matrices inside every attention and MLP block across GPUs, exchanging activations via `all-reduce` / `all-gather` **twice per transformer layer**.
-- **Pipeline Parallelism (PP):** Assigns consecutive blocks of layers to different GPUs, passing activations point-to-point only at **stage boundaries**.
-- **Context (CP) & Expert Parallelism (EP):** Shards the sequence length $T$ across GPUs (ring/Ulysses attention) or places distinct MoE experts on different devices (`all-to-all` token routing).
+- **Intra-layer vs. inter-layer splits:** Tensor Parallelism (TP) splits matrices inside every block (2 collectives/layer on the critical path), whereas Pipeline Parallelism (PP) passes activations point-to-point at stage boundaries.
+- **Hardware topology rule (*Ultra-Scale Playbook*):** Keep high-frequency **TP inside an 8-GPU NVLink node** ($450\text{--}900\text{ GB/s}$; stretching TP across nodes costs $-43\%$), and scale **PP + FSDP/DDP across nodes**!
 :::
 
-::: {.col}
-- **Mapping collectives to physical topology (*Ultra-Scale Playbook*, 4,000+ runs up to 512 GPUs):**
-  - Stretching **TP** across two 8-GPU nodes over inter-node network links cost **$\sim 43\%$ of throughput**.
-  - Stretching **PP** across two nodes cost only **$\sim 14\%$**.
-  - **Topology rule:** Keep high-frequency **TP inside a single node** on fast NVLink ($450\text{--}900\text{ GB/s}$), and use PP + FSDP/DDP across nodes!
+::: {.col .fig .big}
+@fig:ch39-tools-node-topology-mapping
 :::
 :::
 :::
@@ -532,23 +511,16 @@ When even a single layer's weights or long-context activations exceed one GPU, w
 ::: {.slide title="Pipeline Schedules: GPipe vs. 1F1B Bubble and Memory"}
 [Pipeline Mechanics]{.kicker}
 
-Splitting a model across $p$ pipeline stages running $m$ microbatches per optimizer step introduces an idle **pipeline bubble** ($t_b \approx 2 t_f$):
-
-$$\text{Bubble Fraction} = \frac{T_{\text{step}} - m(t_f + t_b)}{m(t_f + t_b)} = \frac{p - 1}{m}$$
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **GPipe (all forwards, then all backwards):**
-  - Runs all $m$ forward microbatches before starting backward passes.
-  - Bubble fraction is $(p - 1)/m$, so shrinking the bubble requires $m \gg p$ (e.g., $m = 32$ for $p = 8$ gives $7/32 \approx 22\%$ bubble).
-  - **Memory penalty:** Stage 1 must hold saved activations for **all $m$ microbatches simultaneously** ($O(m)$ activation memory)!
+$$\text{Bubble Fraction} = \frac{p - 1}{m}$$
+
+- **GPipe (all $m$ forwards, then all $m$ backwards):** Needs $m \gg p$ to shrink the bubble, forcing stage 1 to hold **all $m$ microbatch activations at once** ($O(m)$ memory).
+- **1F1B Schedule:** Alternates 1 Forward and 1 Backward after warmup, achieving the same $(p-1)/m$ bubble while capping live activations at **$\le p$ microbatches**!
 :::
 
-::: {.col}
-- **1F1B Schedule (Narayanan et al., 2021):**
-  - Runs $p - s$ warm-up forward passes on stage $s$, then alternates **1 Forward and 1 Backward** pass, freeing each microbatch's activations immediately after its backward pass.
-  - **Same bubble fraction $(p - 1)/m$, but caps in-flight activations at $\le p$ microbatches** regardless of how large $m$ grows!
-  - Interleaving $v$ virtual stages per device shrinks the bubble further to $(p - 1)/(m v)$ at the cost of $v\times$ more point-to-point transfers.
+::: {.col .fig}
+@fig:ch39-tools-gpipe-vs-1f1b
 :::
 :::
 :::
@@ -556,20 +528,16 @@ $$\text{Bubble Fraction} = \frac{T_{\text{step}} - m(t_f + t_b)}{m(t_f + t_b)} =
 ::: {.slide title="The Global Batch Size Invariant Across Every Rung"}
 [Optimization Semantics]{.kicker}
 
-Regardless of how many GPUs shard the state or layers, the optimizer sees one mathematically well-defined **global batch size**:
-
+::: {.cols .vc}
+::: {.col}
 $$B_{\text{global}} = B_{\text{device}} \cdot N_{\text{ranks}} \cdot N_{\text{accumulation}}$$
 
-::: {.cols}
-::: {.col}
-- **Why scaling GPUs can silently break convergence:**
-  - If you move a script from $N_{\text{ranks}} = 64$ to $128$ GPUs without halving $B_{\text{device}}$ or $N_{\text{accumulation}}$, $B_{\text{global}}$ **doubles** and the number of optimizer steps for a fixed token budget **halves**!
-  - Keep $B_{\text{global}}$ invariant by reducing $N_{\text{accumulation}}$ as $N_{\text{ranks}}$ grows (up to the point where $N_{\text{accumulation}} = 1$).
+- **Preserving optimization dynamics:** Doubling $N_{\text{ranks}}$ from $64 \to 128$ without halving $N_{\text{accumulation}}$ silently **doubles $B_{\text{global}}$** and halves optimizer steps.
+- **When $B_{\text{global}}$ genuinely grows:** Scale Adam learning rate by $\sqrt{B/B_0}$ and define warmup in **tokens** rather than steps.
 :::
 
-::: {.col}
-- **When $B_{\text{global}}$ genuinely increases:**
-  - Scale the learning rate (e.g., square-root rule $\eta(B) = \eta_0 \sqrt{B / B_0}$ for Adam) and specify warmup in **tokens** rather than steps so the warmup fraction stays constant.
+::: {.col .fig}
+@fig:ch39-tools-global-batch-invariant
 :::
 :::
 :::
@@ -577,20 +545,16 @@ $$B_{\text{global}} = B_{\text{device}} \cdot N_{\text{ranks}} \cdot N_{\text{ac
 ::: {.slide title="Distributed Samplers and Exact Metric Aggregation"}
 [Correctness Pitfalls]{.kicker}
 
-Why does a multi-GPU run sometimes report a slightly different validation accuracy than a single-GPU run on the exact same checkpoint?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Pitfall 1 — Padded `DistributedSampler` duplicates:**
-  - To give every rank an identical batch count, `DistributedSampler(dataset, num_replicas=8)` pads an evaluation set of $10{,}001$ examples to $8 \times \lceil 10001 / 8 \rceil = 10{,}008$ indices by **repeating the first 7 examples**.
-  - Conversely, `drop_last=True` silently **discards** trailing examples without evaluating them.
+$$\text{Acc}_{\text{exact}} = \frac{\sum_{r=0}^{W-1} c_r}{\sum_{r=0}^{W-1} n_r} \neq \frac{1}{W} \sum_{r=0}^{W-1} \frac{c_r}{n_r}$$
+
+- **Padded `DistributedSampler` bug:** Default padding repeats leading examples so every rank gets $\lceil N/W \rceil$ items, skewing validation metrics.
+- **Exact distributed evaluation:** Split examples without padding, tally local `(correct_r, count_r)` integers, and `all_reduce(SUM)` numerator and denominator once.
 :::
 
-::: {.col}
-- **Pitfall 2 — Averaging per-rank accuracy ratios:**
-  - When unpadded shards have unequal sizes ($n_r$ examples on rank $r$), the unweighted mean $\frac{1}{W}\sum_r (c_r / n_r)$ is mathematically wrong:
-    $$\text{Acc}_{\text{exact}} = \frac{\sum_{r=0}^{W-1} c_r}{\sum_{r=0}^{W-1} n_r} \neq \frac{1}{W} \sum_{r=0}^{W-1} \frac{c_r}{n_r}$$
-  - **Fix:** Partition evaluation examples without padding, accumulate local `(correct, total)` counts on each rank, and run a single `all_reduce(SUM)` on the two integers.
+::: {.col .fig}
+@fig:ch39-tools-eval-sampler-pitfalls
 :::
 :::
 :::
@@ -637,33 +601,29 @@ Even leaving out the $28\text{ GB}$ master-weight copy ($84\text{ GiB}$ state $+
 ::: {.slide title="Five Orthogonal Memory-Reduction Techniques"}
 [Memory Optimization Trade-Offs]{.kicker}
 
-Each memory technique targets a specific term of the memory sum and charges a distinct systems tax:
+::: {.cols .vc}
+::: {.col}
+- **Sharding & Checkpointing:** FSDP2/ZeRO divides $16N$ state by $W$ ($\sim 1.5\times$ comm), while activation checkpointing trades $+25\text{--}33\%$ FLOPs to shrink saved activations from $O(L) \to O(1)$.
+- **Accumulation, Offload & Adapters:** Gradient accumulation shrinks microbatch $B_{\text{device}}$, CPU offload moves master weights/Adam across PCIe, and LoRA/QLoRA freezes base weights to drop $>98\%$ of gradient/optimizer state.
+:::
 
-| Technique | Memory Term Reduced | Systems Cost / Trade-Off |
-| :--- | :--- | :--- |
-| **FSDP / ZeRO-1,2,3** | Optimizer state, gradients, parameters ($\div W$) | Extra `all_gather` + `reduce_scatter` collectives ($\sim 1.5\times$ DDP traffic) |
-| **Activation Checkpointing** | Saved forward activations ($O(L)$ $\to$ $O(\sqrt{L})$ or $1$ block) | $+25\%\text{--}33\%$ extra forward FLOPs during backpropagation |
-| **Gradient Accumulation** | Per-step activation memory ($B_{\text{device}} \div N_{\text{acc}}$) | $N_{\text{acc}}$ serial microbatch passes per optimizer update |
-| **CPU / NVMe Offload** | Moves optimizer moments & master weights to host RAM/SSD | PCIe transfer latency + host DDR bandwidth ceiling every step |
-| **LoRA / QLoRA** | Freezes base weights (4-bit in QLoRA); drops $99\%$ of grads/moments | Restricts update to low-rank adapter subspace |
+::: {.col .fig .big}
+@fig:ch39-tools-five-memory-knobs
+:::
+:::
 :::
 
 ::: {.slide title="Arithmetic of CPU Optimizer Offload (ZeRO-Offload)"}
 [Host-Device Roofline]{.kicker}
 
-When does offloading FP32 master weights and Adam moments to CPU RAM keep GPU utilization high, and when does PCIe/CPU bandwidth stall training?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Per-step transfer & CPU update time (7B model, $50\text{ GB/s}$ PCIe, $200\text{ GB/s}$ CPU DDR):**
-  - **PCIe transfers:** Send $14\text{ GB}$ BF16 gradients GPU$\to$CPU ($0.28\text{ s}$) + send $14\text{ GB}$ updated BF16 weights CPU$\to$GPU ($0.28\text{ s}$) $= \mathbf{0.56\text{ s}}$ serial transfer.
-  - **CPU Adam kernel:** Reads BF16 grad ($2\text{ B}$) + reads/writes FP32 master weight ($4+4\text{ B}$) + reads/writes FP32 $m, v$ ($8+8\text{ B}$) + writes BF16 weight ($2\text{ B}$) $= 28\text{ B/param}$ $\implies$ $196\text{ GB} / (200\text{ GB/s}) = \mathbf{0.98\text{ s}}$.
+- **Per-step offload cost ($1.54\text{ s}$ for 7B):** Sending $14\text{ GB}$ BF16 grads and receiving $14\text{ GB}$ BF16 weights over $50\text{ GB/s}$ PCIe takes $0.56\text{ s}$, plus $0.98\text{ s}$ to stream $196\text{ GB}$ ($28\text{ B/param}$) through $200\text{ GB/s}$ CPU DDR.
+- **Amortization & delayed update:** Keeping offload $< 20\%$ of step time at $400\text{ TFLOP/s}$ requires $\ge 58{,}700\text{ tok/step}$ (or a 1-step delayed CPU update).
 :::
 
-::: {.col}
-- **Amortizing the $1.54\text{ s}$ offload tax:**
-  - At $400\text{ TFLOP/s}$ GPU compute ($6N = 42\text{ GFLOPs/token}$), keeping $1.54\text{ s}$ below $20\%$ of step time requires $t_{\text{GPU}} \ge 6.16\text{ s}$ $\implies$ **$b \ge 58{,}700\text{ tokens/step}$** via gradient accumulation!
-  - **One-step delayed update:** Overlapping CPU Adam on step $k$'s gradients with GPU forward/backward on step $k+1$ hides the CPU time whenever $t_{\text{GPU}} \ge \max(t_{\text{PCIe}}, t_{\text{CPU}})$, at the cost of 1 step of gradient staleness.
+::: {.col .fig .big}
+@fig:ch39-tools-zero-offload-pipeline
 :::
 :::
 :::
@@ -671,35 +631,29 @@ When does offloading FP32 master weights and Adam moments to CPU RAM keep GPU ut
 ::: {.slide title="Selecting the Simplest Tool for Your Scale (Nov 2026)"}
 [Software Ecosystem]{.kicker}
 
-Use the highest-level library that satisfies your measured memory and node count constraints:
+::: {.cols .vc}
+::: {.col}
+- **1 GPU to 1 Node (2–8 GPUs):** Use **Unsloth** or **HF PEFT** for single-GPU LoRA/QLoRA, and **HF Accelerate**, **Axolotl**, or **LLaMA-Factory** for single-node DDP/FSDP2.
+- **Multi-Node & RL Post-Training:** Use **PyTorch FSDP2 (`fully_shard`)** or **DeepSpeed** across a few nodes, **TorchTitan / Megatron Core / MaxText** at 64–512+ GPUs, and **TRL / veRL / OpenRLHF** for DPO/GRPO.
+:::
 
-| Hardware Scale | Typical Training Workload | Recommended Software Stack (Nov 2026) |
-| :--- | :--- | :--- |
-| **1 GPU ($\ge 8\text{--}16\text{ GB}$)** | LoRA / QLoRA fine-tune up to 8B | **Unsloth** (fused kernels) or **HF PEFT + Trainer** |
-| **1 Node (2–8 GPUs)** | Full fine-tune up to $\sim 30\text{B}$ (DDP / FSDP2) | **HF Accelerate**, **Axolotl**, or **LLaMA-Factory** |
-| **Few Nodes (16–64 GPUs)** | Large fine-tune or continual pretraining | **PyTorch FSDP2 (`fully_shard`) + `torchrun`** or **DeepSpeed** |
-| **Many Nodes (64–512+ GPUs)** | Foundation model pretraining & large MoE (3D/4D) | **TorchTitan**, **NVIDIA Megatron Core**, or **JAX MaxText / Marin** |
-| **RL Post-Training** | DPO / GRPO rollout + policy update loops | **TRL** (single node) or **veRL / OpenRLHF** (FSDP2/Megatron + vLLM/SGLang) |
+::: {.col .fig .big}
+@fig:ch39-tools-scale-tool-selector
+:::
+:::
 :::
 
 ::: {.slide title="Fault Tolerance: Complete and Atomic Checkpointing"}
 [Surviving Hardware Failures]{.kicker}
 
-In multi-week runs across dozens of GPUs, hardware drops, NCCL timeouts, and preemptions are guaranteed. A run that crashes on day 10 without a valid checkpoint produces nothing:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **1. Checkpoint completeness (for bitwise resume parity):**
-  - Model parameter shards & optimizer moment shards (`DTensor` / per-rank state).
-  - LR scheduler state and global step / token counter.
-  - Deterministic **data-loader cursor** (epoch seed + microbatch index consumed).
-  - Per-rank **PRNG states** (Python, NumPy, CPU/CUDA `torch.Generator` or JAX keys).
+- **Bitwise-complete checkpoint bundle:** Save sharded model weights, Adam moments, **LR scheduler state**, step/token counters, deterministic **data cursor**, and per-rank **PRNG states**.
+- **Crash-safe atomic rename:** Never overwrite `ckpt.pt` in place; write to `ckpt.tmp`, call `f.flush()` + `os.fsync()`, swap via **`os.replace("ckpt.tmp", "ckpt.pt")`**, and `fsync` the directory.
 :::
 
-::: {.col}
-- **2. Atomic writes prevent corrupted saves:**
-  - Never overwrite `checkpoint.pt` directly in place—if the process crashes halfway through `torch.save`, both the new and previous checkpoint are destroyed!
-  - **Atomic rename pattern:** Write to a temporary file in the same directory, flush buffers (`f.flush(); os.fsync(f.fileno())`), atomically swap via **`os.replace(tmp, final)`**, and `fsync` the parent directory so even a sudden power loss leaves either the complete old or complete new checkpoint intact.
+::: {.col .fig .big}
+@fig:ch39-tools-atomic-checkpoint
 :::
 :::
 :::

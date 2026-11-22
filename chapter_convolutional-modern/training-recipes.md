@@ -1070,38 +1070,49 @@ Modern Training Recipes for Convnets<br>**AdamW · cosine warmup · label smooth
 ::: {.slide title="Why Reported Architecture Gains Are Often Recipe Gains"}
 [Motivation & Benchmark Confounding]{.kicker}
 
-Published papers frequently train a new architecture with state-of-the-art optimization and regularization while quoting a baseline trained with a recipe from years earlier:
+::: {.cols .vc}
+::: {.col}
+- **ResNet-50 Strikes Back (Wightman et al., 2021):** Upgrading the training recipe lifts an *unchanged* 2015 ResNet-50 from **$76.1\%$ to $80.4\%$** (+4.3 points) on ImageNet!
+- **Scientific rule:** Always compare architectures under matched training recipes; a 1–2 point gain over an un-retrained baseline confounds recipe with architecture.
+:::
 
-- **ResNet-50 Strikes Back (Wightman et al., 2021):** Without altering a single layer of the 2015 ResNet-50 architecture, upgrading its training recipe lifts ImageNet top-1 accuracy by **+4.3 percentage points**:
-  - **2015 Baseline (90 epochs, SGD + step decay, crops/flips):** $76.1\%$
-  - **Modern A3 (100 epochs, LAMB/cosine, Mixup, smoothing):** $78.1\%$
-  - **Modern A1 (600 epochs, strong augmentation + stochastic depth + EMA):** **$80.4\%$**
-- **The scientific rule:** A 1- or 2-point victory over an un-retrained baseline cannot distinguish architectural improvement from training-recipe improvement.
+::: {.col .fig .big}
+@fig:ch07-mcnn-resnet50-strikes-back
+:::
+:::
 :::
 
 ::: {.slide title="Evolution of Vision Training Recipes (2015 vs. 2022)"}
 [The Modern Recipe Menu]{.kicker}
 
-Between 2015 and 2022, researchers upgraded every stage of the supervised training loop—and the exact same toolkit trains both modern convnets and Vision Transformers:
+::: {.cols .vc}
+::: {.col}
+- **Data & forward pass:** RandAugment + Mixup + CutMix + Stochastic Depth (`drop_path`).
+- **Objective & optimizer:** Label smoothing ($\epsilon = 0.1$) + AdamW (decoupled weight decay) + linear warmup & half-cosine decay over 300–600 epochs.
+- **Checkpoint:** Shadow exponential moving average (EMA) $\bar{\boldsymbol{\theta}}_T$.
+:::
 
-| Pipeline Ingredient | Classic 2015 Recipe (He et al.) | Modern Early-2020s Recipe | Why the Upgrade Helps |
-|:--|:--|:--|:--|
-| **Optimizer & weight decay** | SGD + momentum ($0.9$), coupled L2 | **AdamW** or LAMB (decoupled decay) | Decouples weight shrinkage from adaptive gradient rescaling |
-| **Learning-rate schedule** | Step decay ($\div 10$ at epochs 30, 60) | **Linear warmup + half-cosine decay** | Stabilizes early steps and removes discrete drop-epoch hyperparameters |
-| **Data augmentation** | Random resized crops + horizontal flips | **RandAugment + Mixup + CutMix** | Enforces smooth linear interpolation between training examples |
-| **Loss & regularization** | One-hot cross-entropy + L2 decay | **Label smoothing + stochastic depth** | Prevents unbounded logit overconfidence and trains subnetwork ensembles |
-| **Duration & checkpoint** | 90 epochs, final iterate $\theta_T$ | **300–600 epochs, shadow EMA $\bar{\theta}_T$** | Stronger regularization requires longer horizons; EMA averages basin noise |
+::: {.col .fig .big}
+@fig:ch07-mcnn-recipe-pipeline-2015-2022
+:::
+:::
 :::
 
 ::: {.slide title="Decoupled Weight Decay in AdamW vs. Coupled SGD"}
 [Optimizer Mechanics]{.kicker}
 
-Why did standard Adam underperform SGD with momentum on ImageNet for years until *AdamW* (Loshchilov & Hutter, 2019)?
+::: {.cols .vc}
+::: {.col}
+$$\boldsymbol{\theta}_{t+1} = (1 - \eta_t \lambda)\,\boldsymbol{\theta}_t - \eta_t \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
 
-- **The L2 coupling bug in classic Adam:** Adding $\lambda \boldsymbol{\theta}$ to the gradient $\mathbf{g}_t$ *before* dividing by the adaptive second-moment estimate $\sqrt{\hat{\mathbf{v}}_t}$ shrinks weights with large historical gradients *less* than weights with small gradients.
-- **Decoupled weight decay (AdamW):** Applies the multiplicative decay directly to the parameters outside the adaptive gradient term:
-  $$\boldsymbol{\theta}_{t+1} = (1 - \eta_t \lambda)\,\boldsymbol{\theta}_t - \eta_t \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
-- **Calibrating weight-decay numbers across optimizers:** Always compare the *per-step fractional shrinkage* $\eta_0 \lambda$. At peak learning rate, AdamW ($\eta_0 = 0.002, \lambda = 0.05$) shrinks weights by $\eta_0 \lambda = 10^{-4}$ per step, whereas SGD ($\eta_0 = 0.05, \lambda = 5\times 10^{-4}$) shrinks by $2.5\times 10^{-5}$ before $1/(1-\beta) = 10\times$ momentum amplification.
+- **Why L2 fails in Adam:** Dividing $\lambda \boldsymbol{\theta}_t$ by $\sqrt{\hat{\mathbf{v}}_t}$ shrinks high-gradient weights *less*.
+- **Comparing across optimizers:** Compare per-step fractional decay $\eta_0 \lambda$ ($0.002 \times 0.05 = 10^{-4}$ for AdamW).
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-adamw-decoupled-decay
+:::
+:::
 :::
 
 ::: {.slide title="Label Smoothing: Bounding Optimal Logit Margins"}
@@ -1139,13 +1150,17 @@ Plotting our 30-epoch step schedule against our 45-epoch cosine warmup schedule 
 ::: {.slide title="Mixup and CutMix: Blending Examples and Labels"}
 [Data Augmentation]{.kicker}
 
-Instead of training solely on individual images, *Mixup* (Zhang et al., 2018) trains on random convex combinations of image pairs $(\mathbf{x}_i, \mathbf{y}_i)$ and $(\mathbf{x}_j, \mathbf{y}_j)$ with $\lambda \sim \mathrm{Beta}(\alpha, \alpha)$:
-
-$$\tilde{\mathbf{x}} = \lambda \mathbf{x}_i + (1 - \lambda)\mathbf{x}_j, \qquad \tilde{\mathbf{y}} = \lambda \mathbf{y}_i + (1 - \lambda)\mathbf{y}_j$$
-
-- **Linearity of cross-entropy:** Because cross-entropy is linear in the target vector $\tilde{\mathbf{y}}$, the mixed loss is simply $\lambda\,l(\hat{\mathbf{y}}, y_i) + (1-\lambda)\,l(\hat{\mathbf{y}}, y_j)$.
-
+::: {.cols .vc}
+::: {.col}
 @training-recipes-mixup-1
+
+- **Convex combinations ($\lambda \sim \mathrm{Beta}(\alpha, \alpha)$):** Mixup blends whole images; CutMix pastes a rectangular patch of area $1-\lambda$ and mixes labels by area.
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-mixup-vs-cutmix
+:::
+:::
 :::
 
 ::: {.slide title="Visualizing Mixup and Contrasting with CutMix"}
@@ -1168,12 +1183,18 @@ During training, $\alpha = 0.2$ concentrates $\lambda$ near $0$ and $1$; below w
 ::: {.slide title="Stochastic Depth: Dropping Whole Residual Branches"}
 [Structural Regularization]{.kicker}
 
-Whereas standard dropout zeroes individual scalar activations, *stochastic depth* (Huang et al., 2016) randomly bypasses entire residual branches per training example:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + \frac{b}{1 - p_\ell}\,f(\mathbf{x}_\ell), \qquad b \sim \mathrm{Bernoulli}(1 - p_\ell)$$
 
-$$\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + \frac{b}{1 - p}\,f(\mathbf{x}_\ell), \qquad b \sim \mathrm{Bernoulli}(1 - p)$$
+- **Implicit ensemble of depths:** Drops entire residual branches per example with linear schedule $p_\ell = (\ell/L)p_{\max}$.
+- **Expectation preservation:** Scaling by $1/(1-p_\ell)$ keeps $\mathbb{E}[\mathbf{x}_{\ell+1}] = \mathbf{x}_\ell + f(\mathbf{x}_\ell)$ so $b \equiv 1$ at eval.
+:::
 
-- **Expectation invariance:** Scaling surviving branches by $1/(1-p)$ ensures $\mathbb{E}[b/(1-p)] = 1$, so the full deterministic network ($b \equiv 1$) runs at evaluation time without weight rescaling.
-- **Linear depth schedule:** Drop rate $p_\ell$ ramps linearly from $0$ at block 1 to $p_{\max} \in [0.1, 0.5]$ at the deepest block.
+::: {.col .fig}
+@fig:ch07-mcnn-stochastic-depth-gate
+:::
+:::
 :::
 
 ::: {.slide title="Implementing and Verifying `drop_path`"}
@@ -1206,14 +1227,16 @@ Near convergence, minibatch noise causes SGD/AdamW iterates $\boldsymbol{\theta}
 ::: {.slide title="Controlled Experiment: One ResNet-18 Under Two Recipes"}
 [Head-to-Head Comparison]{.kicker}
 
-We train the exact same 11.2M-parameter `ResNet18` on a shared 10,000-image subset of $96\times 96$ Fashion-MNIST (`FashionMNIST10k`, 79 steps/epoch) under `ClassicRecipe` vs. `ModernRecipe`:
+::: {.cols .vc}
+::: {.col}
+- **Same 11.2M ResNet-18 on `FashionMNIST10k`:** Compares `ClassicRecipe` (30 ep, SGD $\eta_0=0.05$, step drops, 1-hot CE) against `ModernRecipe` (45 ep, AdamW $\eta_0=0.002$, cosine warmup, Mixup $0.2$, label smoothing $0.1$).
+- **Result:** `ModernRecipe` wins every paired run by **+0.5 to +1.5 percentage points** ($90.5\text{--}91.0\%$ vs. $89.0\text{--}90.5\%$).
+:::
 
-| Setting | `ClassicRecipe` (2015 Baseline) | `ModernRecipe` (Compact 2022) |
-|:--|:--|:--|
-| **Optimizer & base LR** | SGD ($\eta_0 = 0.05$, momentum $0.9$, coupled L2 $5\cdot 10^{-4}$) | AdamW ($\eta_0 = 0.002$, decoupled WD $0.05$) |
-| **Schedule & horizon** | 2-ep warmup + $\div 10$ step drops at 60%, 85% (30 epochs) | 3-ep warmup + half-cosine decay (45 epochs) |
-| **Training objective** | Standard 1-hot cross-entropy | Label smoothing ($\epsilon = 0.1$) + Mixup ($\alpha = 0.2$) |
-| **Validation accuracy** | **$89.0\text{--}90.5\%$** | **$90.5\text{--}91.0\%$ (+0.5 to +1.5 pts in every pair)** |
+::: {.col .fig .big}
+@fig:ch07-mcnn-classic-vs-modern-setup
+:::
+:::
 :::
 
 ::: {.slide title="Implementing Classic vs. Modern Training Steps"}
@@ -1252,11 +1275,17 @@ Inspecting the training and validation curves of `ModernRecipe` reveals a diagno
 ::: {.slide title="Reading Leaderboards: Ablations & Distribution Shift"}
 [Benchmark Methodology]{.kicker}
 
-Three methodological rules govern how we interpret modern vision benchmarks:
+::: {.cols .vc}
+::: {.col}
+- **1. Always retune LR on optimizer swap:** AdamW ($\eta_0 = 0.002$) vs. SGD ($\eta_0 = 0.05$) differ by $25\times$.
+- **2. ImageNet-V2 distribution shift (Recht et al., 2019):** Drops all models by $11\text{--}14\%$ while preserving relative model rankings linearly.
+- **3. Downstream transfer:** Once ImageNet top-1 nears its multi-label floor, test backbones on COCO detection and segmentation.
+:::
 
-- **One-at-a-time ablations and LR retuning:** Because AdamW's optimal base learning rate ($0.002$) is $25\times$ smaller than momentum SGD's ($0.05$), swapping an optimizer or schedule in an ablation without retuning $\eta_0$ measures miscalibration rather than method quality.
-- **ImageNet-V2 distribution shift (Recht et al., 2019):** Evaluating models on a freshly collected ImageNet test set drops every architecture's top-1 accuracy by $11\text{--}14$ points while preserving model rankings almost linearly—showing that benchmark progress transferred across distribution shift.
-- **Downstream transfer vs. saturated top-1:** Once backbones cluster within $0.5\%$ on ImageNet (where multi-label ambiguity sets an irreducible floor, Beyer et al., 2020), transfer to object detection and segmentation separates representation quality far better.
+::: {.col .fig .big}
+@fig:ch07-mcnn-leaderboard-methodology
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Smoothed Logits, EMA & Weight Decay"}

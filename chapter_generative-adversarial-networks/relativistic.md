@@ -441,12 +441,18 @@ $$\Phi(D) = \mathbb{E}_{x \sim p,\; x' \sim q}\Big[\log \sigma\big(D(x) - D(x')\
 ::: {.slide title="Shift Invariance and the Optimal Pairing Critic"}
 [Optimality Theorem]{.kicker}
 
-Unlike the single-sample log-loss objective $V(D)$, which decouples pointwise across $x$, the pairing objective $\Phi(D)$ couples all points in $\mathcal{X}$ through differences $D(x) - D(x')$:
+::: {.cols .vc}
+::: {.col}
+$$\frac{\delta \Phi}{\delta D(t)} = 0 \quad \Longleftrightarrow \quad D^\star(x) = \log \frac{p(x)}{q(x)} + c = \lambda(x) + c$$
 
-- **Shift invariance:** For any constant $b \in \mathbb{R}$, $\Phi(D + b) = \Phi(D)$. Consequently, the sign of an individual score $D(x')$ is arbitrary; the natural diagnostic is the **pairwise ranking accuracy** $P(D(x) > D(x'))$.
-- **Proposition (Optimal Ranker):** Because $D \mapsto D(x) - D(x')$ is linear and $\log \sigma$ is strictly concave, $\Phi(D)$ is concave in $D$. Setting its functional derivative with respect to $D(t)$ to zero:
-  $$\frac{\delta \Phi}{\delta D(t)} = p(t)\,\mathbb{E}_{x' \sim q}\big[\sigma(D(x') - D(t))\big] - q(t)\,\mathbb{E}_{x \sim p}\big[\sigma(D(t) - D(x))\big] = 0$$
-  Substituting $D(x) = \lambda(x) = \log \rho(x)$ ($\rho = p/q$) gives $\sigma(\lambda(x') - \lambda(t)) = \frac{\rho(x')}{\rho(x') + \rho(t)}$; using $q(t)\rho(t) = p(t)$, both terms equal $p(t)\int \frac{p(x)}{\rho(x) + \rho(t)}dx$. Thus $D^\star(x) = \lambda(x) + c$ is the unique maximizer up to an additive constant $c$.
+- **Shift invariance:** For any constant $b \in \mathbb{R}$, $\Phi(D + b) = \Phi(D)$. The sign of an individual score $D(x')$ is arbitrary; monitor the **pairwise ranking accuracy** $P(D(x) > D(x'))$.
+- **Unique optimal ranker:** Because $\log \sigma$ is strictly concave, setting the functional derivative $\delta \Phi / \delta D(t)$ to zero identifies $D^\star(x) = \lambda(x) + c$ uniquely up to an additive shift $c$.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-shift-invariance
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Pairwise Ranking on Two States"}
@@ -468,65 +474,86 @@ Consider a two-state space $\{0, 1\}$ with $p = (0.8, 0.2)$ and $q = (0.2, 0.8)$
 ::: {.slide title="Lifting to Product Space: Why Differences Suffice"}
 [The Lifting Lemma]{.kicker}
 
-We can prove this identity for arbitrary distributions by viewing the ordered pair $(a_1, a_2) \in \mathcal{X} \times \mathcal{X}$ as a single observation drawn from $P = p \otimes q$ (real first) or $Q = q \otimes p$ (real second) in a standard log-loss game $V_{P,Q}(\mathcal{D})$:
+::: {.cols .vc}
+::: {.col}
+$$\log \frac{dP}{dQ}(a_1, a_2) = \log \frac{p(a_1)\,q(a_2)}{q(a_1)\,p(a_2)} = \lambda(a_1) - \lambda(a_2)$$
 
-$$V_{P,Q}(\mathcal{D}) = \mathbb{E}_{(a_1, a_2) \sim P}\big[\log \sigma(\mathcal{D}(a_1, a_2))\big] + \mathbb{E}_{(a_1, a_2) \sim Q}\big[\log \sigma(-\mathcal{D}(a_1, a_2))\big]$$
+- **Product-space log-loss game:** View an ordered pair $(a_1, a_2)$ as a single draw from $P = p \otimes q$ (real first) vs. $Q = q \otimes p$ (real second).
+- **Zero restriction gap:** Because the unconstrained pair maximizer $\mathcal{D}^\star(a_1, a_2) = \lambda(a_1) - \lambda(a_2)$ already has difference form, restricting critics to $\mathcal{D}(a_1, a_2) = D(a_1) - D(a_2)$ achieves the exact supremum $V_{P,Q} = 2\,\Phi(D)$.
+:::
 
-1. **Additive separation of the product log density ratio:**
-   $$\log \frac{dP}{dQ}(a_1, a_2) = \log \frac{p(a_1)\,q(a_2)}{q(a_1)\,p(a_2)} = \lambda(a_1) - \lambda(a_2)$$
-2. **Antisymmetric difference critics earn $2\,\Phi(D)$:** Setting $\mathcal{D}(a_1, a_2) = D(a_1) - D(a_2)$ makes both expectations in $V_{P,Q}(\mathcal{D})$ equal $\Phi(D)$, so $V_{P,Q}(\mathcal{D}) = 2\,\Phi(D)$.
-3. **Zero restriction gap:** Because the unconstrained pair maximizer $\mathcal{D}^\star(a_1, a_2) = \lambda(a_1) - \lambda(a_2)$ already has difference form, restricting $\mathcal{D}$ to $D(a_1) - D(a_2)$ does not reduce the supremum!
+::: {.col .fig}
+@fig:ch16-gan-lifting-product
+:::
+:::
 :::
 
 ::: {.slide title="Theorem: The Calibrated Pairing Divergence"}
 [Product-Space Jensen–Shannon]{.kicker}
 
-Combining the Lifting Lemma with $\sup_{\mathcal{D}} V_{P,Q}(\mathcal{D}) = 2\,\mathrm{JS}(P, Q) - 2\log 2$ establishes the exact population divergence measured by RpGAN:
+::: {.cols .vc}
+::: {.col}
+$$d_{\mathrm{Rp}}(p, q) := \sup_D \Phi(D) + \log 2 = \mathrm{JS}\big(p \otimes q,\; q \otimes p\big)$$
 
-$$d_{\mathrm{Rp}}(p, q) := \sup_D \Phi(D) + \log 2 = \mathrm{JS}\big(p \otimes q,\; q \otimes p\big) = H\!\left(\tfrac{1}{2}(p \otimes q + q \otimes p)\right) - H(p) - H(q)$$
+- **Entropy and explicit expectation forms:** Equals $H(\frac{1}{2}(p \otimes q + q \otimes p)) - H(p) - H(q) = \log 2 - \mathbb{E}_{p,q}[\log(1 + \frac{q(x)p(x')}{p(x)q(x')})]$.
+- **Mutual-information interpretation:** For a randomly ordered pair $(a_1, a_2)$ with ordering label $y \in \{0, 1\}$, $d_{\mathrm{Rp}}(p, q) = I((a_1, a_2); y)$ is the information the pair carries about which member is real.
+:::
 
-- **Explicit expectation form (at $D^\star = \lambda$):**
-  $$d_{\mathrm{Rp}}(p, q) = \log 2 - \mathbb{E}_{x \sim p,\; x' \sim q}\!\left[\log\!\left(1 + \frac{q(x)\,p(x')}{p(x)\,q(x')}\right)\right]$$
-- **Mutual-information interpretation:** For a randomly ordered pair $(a_1, a_2)$ with ordering label $y \in \{0, 1\}$, $d_{\mathrm{Rp}}(p, q) = I((a_1, a_2); y) = \log 2 - H(y \mid a_1, a_2)$ is the information (in nats) that the pair carries about which member is real.
+::: {.col .fig}
+@fig:ch16-gan-drp-entropy
+:::
+:::
 :::
 
 ::: {.slide title="Information Bounds: Comparing d_Rp and JS"}
 [Chain Rule of Mutual Information]{.kicker}
 
-How much more information does a real–generated pair $(a_1, a_2)$ carry about the ordering label $y$ than a single sample? Each marginal draw $a_k \sim m = \frac{1}{2}(p + q)$ carries $I(a_k; y) = \mathrm{JS}(p, q)$ nats, and $a_1 \perp a_2 \mid y$. By the chain rule of mutual information:
-
+::: {.cols .vc}
+::: {.col}
 $$d_{\mathrm{Rp}}(p, q) = I(a_1; y) + I(a_2; y \mid a_1) = 2\,\mathrm{JS}(p, q) - I(a_1; a_2)$$
 
-| Regime | Relationship Between $d_{\mathrm{Rp}}(p, q)$ and $\mathrm{JS}(p, q)$ | Information-Theoretic Reason |
-| :--- | :--- | :--- |
-| **General sandwich bound** | $\mathrm{JS}(p, q) \le d_{\mathrm{Rp}}(p, q) \le \min\big(2\,\mathrm{JS}(p, q),\; \log 2\big)$ | $I(a_2; y \mid a_1) \ge 0$, $I(a_1; a_2) \ge 0$, and binary label $y$ has entropy $\log 2$ |
-| **Near equilibrium ($q \to p$)** | $d_{\mathrm{Rp}}(p, q) \approx 2\,\mathrm{JS}(p, q)$ | $\mathrm{JS}(p, q) = \Theta(\|p - q\|^2)$ whereas redundancy $I(a_1; a_2) = \Theta(\|p - q\|^4)$ |
-| **Disjoint supports** | $d_{\mathrm{Rp}}(p, q) = \mathrm{JS}(p, q) = \log 2$ | First member $a_1$ already determines $y$ ($I(a_1; a_2) = \log 2$); still saturates! |
+- **Near equilibrium ($q \to p$):** Redundancy $I(a_1; a_2) = \Theta(\|p - q\|^4)$ vanishes faster than $\mathrm{JS}(p, q) = \Theta(\|p - q\|^2)$, so $d_{\mathrm{Rp}}(p, q) \approx 2\,\mathrm{JS}(p, q)$.
+- **General sandwich bound:** $\mathrm{JS}(p, q) \le d_{\mathrm{Rp}}(p, q) \le \min(2\,\mathrm{JS}(p, q), \log 2)$, still saturating at $\log 2$ on disjoint supports.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-mi-sandwich
+:::
+:::
 :::
 
 ::: {.slide title="The Relativistic Rank Weight in Generator Updates"}
 [Per-Sample Gradient Weighting]{.kicker}
 
-Differentiating $\Phi(D)$ with respect to the generator parameters $\theta$ through $x' = G_\theta(z)$ shows that every generated sample is pushed uphill along $\nabla_\theta D(G_\theta(z))$ weighted by its expected win probability against real data:
+::: {.cols .vc}
+::: {.col}
+$$\nabla_\theta \Phi = -\mathbb{E}_z\Big[w_{\textrm{Rp}}(G_\theta(z))\,\nabla_\theta D(G_\theta(z))\Big], \quad w_{\textrm{Rp}}(x') = \mathbb{E}_{x \sim p}\Big[\sigma\big(D(x') - D(x)\big)\Big]$$
 
-$$\nabla_\theta \Phi = -\mathbb{E}_z\Big[w_{\textrm{Rp}}(G_\theta(z))\,\nabla_\theta D(G_\theta(z))\Big], \qquad w_{\textrm{Rp}}(x') = \mathbb{E}_{x \sim p}\Big[\sigma\big(D(x') - D(x)\big)\Big]$$
+- **Saturating vs. non-saturating rank weight:** $w_{\textrm{Rp}}(x')$ is the expected win probability of $x'$ against real data $x \sim p$; `rpgan_loss_G` uses $1 - w_{\textrm{Rp}}(x') = \mathbb{E}_p[\sigma(D(x) - D(x'))] \approx 1$ when $D(x') \ll D(x)$.
+- **Shift-invariant comparison:** Compares $D(x')$ against the live distribution of real scores $D(x)$ rather than a fixed zero threshold.
+:::
 
-- **Saturating rank weight $w_{\textrm{Rp}}(x')$:** Softened probability that $x'$ outranks a randomly drawn real sample $x \sim p$.
-- **Non-saturating rank weight $1 - w_{\textrm{Rp}}(x')$:** Used by `rpgan_loss_G`; equals $\mathbb{E}_{x \sim p}[\sigma(D(x) - D(x'))]$, which remains near $1$ even when $D(x') \ll D(x)$.
-- **Shift-invariant comparison:** Unlike single-sample weights $\sigma(\pm D(x'))$, which compare $D(x')$ against a fixed zero level, $w_{\textrm{Rp}}(x')$ compares $D(x')$ against the live distribution of real scores $D(x)$ and is invariant to constant shifts of $D$.
+::: {.col .fig}
+@fig:ch16-gan-rank-weight
+:::
+:::
 :::
 
 ::: {.slide title="Discrete Mode-Coverage Landscapes: Three Objectives"}
 [Sun, Fang, and Schwing Analysis]{.kicker}
 
-Does pairwise ranking eliminate mode-dropping local minima? Sun, Fang, and Schwing (2020) analyzed $n$ distinct real points $x_1, \ldots, x_n$ and $n$ freely movable generated points $x'_1, \ldots, x'_n$ evaluated against the exact best-response critic $D$:
-
-$$\mathcal{E}_{\mathrm{GAN}} = \sup_D \frac{1}{2n}\sum_{i=1}^n \big[\log\sigma(D(x_i)) + \log\sigma(-D(x'_i))\big] = \mathrm{JS}(\hat{p}, \hat{q}) - \log 2$$
-
+::: {.cols .vc}
+::: {.col}
 $$\mathcal{E}_{\mathrm{diag}} = \sup_D \frac{1}{n}\sum_{i=1}^n \log\sigma\big(D(x_i) - D(x'_i)\big), \qquad \mathcal{E}_{\mathrm{all}} = \sup_D \frac{1}{n^2}\sum_{i,j=1}^n \log\sigma\big(D(x_i) - D(x'_j)\big)$$
 
-- **Three coupling regimes:** $\mathcal{E}_{\mathrm{GAN}}$ is classic single-sample log loss; $\mathcal{E}_{\mathrm{diag}}$ permanently pairs real point $x_i$ with generated point $x'_i$ (**fixed one-to-one coupling**); $\mathcal{E}_{\mathrm{all}}$ averages over all $n^2$ pairs $= d_{\mathrm{Rp}}(\hat{p}, \hat{q}) - \log 2$.
-- **Collisions:** A configuration where every $x'_i$ sits on a real point $\{x_1, \ldots, x_n\}$ but at least two coincide ($n^n - n!$ configurations), leaving at least one real point uncovered.
+- **Three coupling regimes:** $\mathcal{E}_{\mathrm{GAN}} = \mathrm{JS}(\hat{p}, \hat{q}) - \log 2$ (single-sample), $\mathcal{E}_{\mathrm{diag}}$ (permanent 1-to-1 coupling $x_i \leftrightarrow x'_i$), and $\mathcal{E}_{\mathrm{all}} = d_{\mathrm{Rp}}(\hat{p}, \hat{q}) - \log 2$ (all $n^2$ pairs).
+- **Collisions ($n^n - n!$ configurations):** Every $x'_i$ sits on a real point $\{x_1, \ldots, x_n\}$ but at least two coincide, leaving a real mode uncovered.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-collision-graphs
+:::
+:::
 :::
 
 ::: {.slide title="Stepping Off a Collision: Fixed vs. All-Pairs"}
@@ -553,14 +580,16 @@ We can test every discrete assignment in $\{0, \ldots, n-1\}^n$ for $n = 2$ and 
 ::: {.slide title="Why Minibatch Training Faces All-Pairs Collisions"}
 [Practical Pitfall]{.kicker}
 
-The exact enumeration reveals a crucial distinction between fixed-coupling theory and minibatch stochastic gradient training:
+::: {.cols .vc}
+::: {.col}
+- **What Sun et al. (2020) proved:** The fixed one-to-one coupling objective $\mathcal{E}_{\mathrm{diag}}$ has **$0$** suboptimal collision local minima ($0$ vs. $n^n - n!$), because any colliding point $x'_i$ not on a directed cycle can move toward $x_i$ along a flat plateau.
+- **What happens under minibatch re-pairing:** Drawing fresh independent minibatches from $p$ and $q$ at every step averages over random pairings, evaluating the **all-pairs expectation** $\mathcal{E}_{\mathrm{all}} = d_{\mathrm{Rp}}(\hat{p}, \hat{q}) - \log 2$ (which retains all $n^n - n!$ collision minima!).
+- **Takeaway:** In §16.4, our $2 \times 2$ experiment on 25 Gaussians confirms that $R_1 + R_2$ gradient penalties—not pairing alone—drive mode coverage.
+:::
 
-- **What Sun et al. (2020) proved:** The fixed one-to-one coupling objective $\mathcal{E}_{\mathrm{diag}}$ has **$0$** suboptimal collision local minima ($0$ vs. $n^n - n!$), because any colliding point $x'_i$ not lying on a directed cycle can move toward its assigned partner $x_i$ along a flat plateau.
-- **What happens under minibatch re-pairing:** Standard GAN training does *not* maintain a permanent one-to-one assignment $x_i \leftrightarrow x'_i$ across the training set; instead, it draws independent random minibatches from $p$ and $q$ at every step.
-- Averaging $\log\sigma(D(x_i) - D(x'_i))$ over independent random pairings evaluates the **all-pairs expectation** $\mathcal{E}_{\mathrm{all}} = d_{\mathrm{Rp}}(\hat{p}, \hat{q}) - \log 2$, which retains all $n^n - n!$ collision minima ($2$ for $n=2$, $21$ for $n=3$)!
-
-::: {.d2l-note .warn}
-**Takeaway:** The mode-coverage guarantee belongs to the *fixed coupling* $\mathcal{E}_{\mathrm{diag}}$, not to pairwise comparison alone. In §16.4, our $2 \times 2$ experiment on 25 Gaussians confirms that $R_1 + R_2$ gradient penalties—not pairing—drive mode coverage.
+::: {.col .fig .big}
+@fig:ch16-gan-minibatch-repair
+:::
 :::
 :::
 

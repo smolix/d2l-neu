@@ -752,60 +752,82 @@ Parameter Initialization<br>**framework defaults · tree-wide initializers · tr
 ::: {.slide title="Why Per-Layer He Init Still Explodes in ResNets"}
 [The Residual Initialization Paradox]{.kicker}
 
-In a plain feedforward layer with $n_{\text{in}}$ inputs, drawing weights with standard deviation $\sigma = g / \sqrt{n_{\text{in}}}$ preserves activation variance ($g = \sqrt{2}$ before ReLU, $g = 1$ for linear layers). In a **residual network**, however, per-layer variance preservation is not enough:
-
+::: {.cols .vc}
+::: {.col}
 - **Additive skip connections:** Every residual block computes $\mathbf{x}_{k+1} = \mathbf{x}_k + f_k(\mathbf{x}_k)$.
-- **Uncorrelated variances add:** When both $\mathbf{x}_k$ and the body output $f_k(\mathbf{x}_k)$ have unit mean square and are uncorrelated, their sum $\mathbf{x}_{k+1}$ has **double** the mean square ($2\times$ variance per block).
-- **Exponential blow-up with depth:** Across $N = 32$ residual blocks, activation standard deviation compounds by $2^{32/2} = 2^{16} = 65{,}536\times$ before a single gradient step is taken!
+- **Uncorrelated variances add:** When both $\mathbf{x}_k$ and $f_k(\mathbf{x}_k)$ have unit mean square and are uncorrelated, their sum has **double** the mean square ($2\times$ variance per block).
+- **Exponential blow-up with depth:** Across $N = 32$ residual blocks, activation standard deviation compounds by $2^{32/2} = 2^{16} = 65{,}536\times$ at step $0$!
+:::
 
-::: {.d2l-note .rule}
-**Architecture-Aware Initialization:** Sound initialization depends on how blocks are wired together across the whole module tree, not just on individual layer types in isolation.
+::: {.col .fig .big}
+@fig:ch05-bg-res-explosion
+:::
 :::
 :::
 
 ::: {.slide title="Framework Defaults Do Not Use He Initialization"}
 [Why Defaults Collapse Deep ReLU Stacks]{.kicker}
 
-No major deep learning framework defaults to He initialization ($\sigma^2 = 2 / n_{\text{in}}$) for linear layers:
+::: {.cols .vc}
+::: {.col}
+- **Default variance multipliers per ReLU layer ($\frac{1}{2}n_{\text{in}}\sigma^2$):**
+  - PyTorch `nn.Linear` ($\sigma^2 = \frac{1}{3n_{\text{in}}}$): $\times \frac{1}{6}$ ($6^{-10} \approx 1.7 \times 10^{-8}$ after 10 layers).
+  - Flax `nnx.Linear` & Keras `Dense` ($\sigma^2 = \frac{1}{n_{\text{in}}}$): $\times \frac{1}{2}$ ($2^{-10} \approx 9.8 \times 10^{-4}$).
+  - Gluon `nn.Dense` ($U(-0.07, 0.07)$): $\times 0.21$ at width $256$ ($\approx 1.6 \times 10^{-7}$).
+:::
 
-| Framework Layer | Default Weight Distribution | Variance $\sigma^2$ | Variance Multiplier per ReLU Layer ($\frac{1}{2} n_{\text{in}} \sigma^2$) |
-|:---|:---|:---|:---|
-| **PyTorch `nn.Linear`** | $\mathcal{U}(-1/\sqrt{n_{\text{in}}},\, 1/\sqrt{n_{\text{in}}})$ | $\frac{1}{3 n_{\text{in}}}$ | $\times \frac{1}{6}$ (10 layers $\to 6^{-10} \approx 1.7 \times 10^{-8}$) |
-| **Flax `nnx.Linear`** | Truncated LeCun Normal | $\frac{1}{n_{\text{in}}}$ | $\times \frac{1}{2}$ (10 layers $\to 2^{-10} \approx 9.8 \times 10^{-4}$) |
-| **Keras `Dense`** | Glorot Uniform ($n_{\text{in}}=n_{\text{out}}$) | $\frac{1}{n_{\text{in}}}$ | $\times \frac{1}{2}$ (10 layers $\to 2^{-10} \approx 9.8 \times 10^{-4}$) |
-| **Gluon `nn.Dense`** | $\mathcal{U}(-0.07,\, 0.07)$ | $\frac{0.07^2}{3}$ | $\times 0.21$ at $n_{\text{in}}=256$ (10 layers $\to 1.6 \times 10^{-7}$) |
+::: {.col .fig .big}
+@fig:ch05-bg-default-init-decay
+:::
+:::
 :::
 
 ::: {.slide title="Applying He Initialization Across a 10-Layer Module Tree"}
 [Tree-Wide Initialization]{.kicker}
 
-Walking the module tree (`net.apply`, `net.initialize`, or iterating over submodules) to apply He initialization ($\sigma = \sqrt{2 / n_{\text{in}}}$) restores the output mean square of a 10-layer ReLU stack from near zero back to $\approx 1$:
+::: {.cols .vc}
+::: {.col}
+- Walking the module tree (`net.apply`, `net.initialize`, or iterating over submodules) to apply He initialization ($\sigma = \sqrt{2 / n_{\text{in}}}$) restores the output mean square of a 10-layer ReLU stack to $\approx 1$:
 
 @init-applying-initializers-1
+:::
 
-::: {.d2l-note .warn}
-**Keras Initializer Pitfall:** In Keras, an unseeded initializer instance replays the same random draw if reused across layers; always instantiate a fresh initializer object per layer.
+::: {.col .fig}
+@fig:ch05-bg-tree-apply-init
+:::
 :::
 :::
 
 ::: {.slide title="Truncated Normals Eliminate Extreme Initial Outliers"}
 [Bounding Tail Draws at Scale]{.kicker}
 
-A standard Gaussian gets the variance right, but across $10^8$ weights dozens of entries will land beyond $\pm 5\sigma$. Foundation models (BERT, ViT) draw from a **truncated normal** that rejects and redraws samples outside $\pm 2\sigma$:
+::: {.cols .vc}
+::: {.col}
+- Across $10^8$ weights, a standard Gaussian produces dozens of $>5\sigma$ outliers. Foundation models (BERT, ViT) use a **truncated normal** that redraws samples outside $\pm 2\sigma$ (shrinking empirical std by $\approx 0.88\times$):
 
 @init-truncated-normals
+:::
 
-- **Variance reduction from clipping tails:** Truncating $\mathcal{N}(0, \sigma^2)$ at $\pm 2\sigma$ caps $|w| \le 2\sigma$ and shrinks the empirical standard deviation by a factor of $\approx 0.88$ ($\sigma = 0.02 \to 0.0176$).
+::: {.col .fig}
+@fig:ch05-bg-truncated-normal
+:::
+:::
 :::
 
 ::: {.slide title="Writing a Gain-Parameterized Custom Initializer"}
 [Custom Initializer Interface]{.kicker}
 
-To test arbitrary variance scales, we implement a reusable normal initializer with standard deviation $\sigma = g / \sqrt{n_{\text{in}}}$ for any gain $g$:
+::: {.cols .vc}
+::: {.col}
+- We implement a reusable normal initializer with standard deviation $\sigma = g / \sqrt{n_{\text{in}}}$ (watching `(n_out, n_in)` in PyTorch/Gluon vs. `(n_in, n_out)` in Keras/NNX):
 
 @init-custom-initializers-1
+:::
 
-- **Shape conventions:** PyTorch and Gluon store linear weights as $(n_{\text{out}}, n_{\text{in}})$ (`shape[1]` is $n_{\text{in}}$), whereas Keras and Flax NNX store kernels as $(n_{\text{in}}, n_{\text{out}})$ (`shape[0]` is $n_{\text{in}}$).
+::: {.col .fig}
+@fig:ch05-bg-weight-shape-conventions
+:::
+:::
 :::
 
 ::: {.slide title="Editing Parameter Tensors Directly in Place"}
@@ -819,46 +841,68 @@ We can also rescale or edit parameter tensors directly in place (inside `torch.n
 ::: {.slide title="Deriving Variance Growth Across a Residual Block"}
 [Residual Block Variance Analysis]{.kicker}
 
-Consider a transformer-style residual block $\mathbf{x}_{k+1} = \mathbf{x}_k + f_k(\mathbf{x}_k)$ whose body $f_k$ expands width $d \to 4d$ (He init, gain $\sqrt{2}$), applies ReLU, and projects $4d \to d$ via an **output projection** with gain $g$:
-
-1. **Expansion + ReLU preserves input scale:** Letting $m_k = \mathbb{E}[x_{k,i}^2]$ denote the input mean square, the $d \to 4d$ linear layer with variance $2/d$ doubles the mean square to $2 m_k$, and ReLU halves it back to $m_k$.
-2. **Output projection scales by $g^2$:** The $4d \to d$ projection has weight variance $g^2 / (4d)$ across $4d$ inputs, giving the body output $f_k(\mathbf{x}_k)$ mean square $4d \cdot \frac{g^2}{4d} m_k = g^2 m_k$.
-3. **Uncorrelated skip and body signals add:** Because the fresh random weights of $f_k$ have zero mean and are independent of $\mathbf{x}_k$, $\mathbb{E}[\mathbf{x}_k^\top f_k(\mathbf{x}_k)] = 0$, so their mean squares add at every block:
-
+::: {.cols .vc}
+::: {.col}
 $$m_{k+1} = m_k + g^2 m_k = (1 + g^2)\, m_k$$
+
+1. **Expansion + ReLU preserves input scale:** The $d \to 4d$ He layer ($\text{Var} = 2/d$) doubles mean square to $2m_k$, and ReLU halves it back to $m_k$.
+2. **Output projection scales by $g^2$:** The $4d \to d$ projection ($\text{Var} = g^2/(4d)$) yields body mean square $g^2 m_k$.
+3. **Uncorrelated skip and body add:** $\mathbb{E}[\mathbf{x}_k^\top f_k(\mathbf{x}_k)] = 0 \implies m_N = (1 + g^2)^N m_0$.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-res-variance-derivation
+:::
+:::
 :::
 
 ::: {.slide title="Three Gain Schedules for Depth-N Residual Stacks"}
 [Controlling Compounding Across Depth]{.kicker}
 
-Compounding $m_{k+1} = (1 + g^2) m_k$ across $N$ residual blocks yields $m_N = (1 + g^2)^N m_0$. Choosing the output projection gain $g$ controls how signal scale behaves at arbitrary depth $N$:
+::: {.cols .vc}
+::: {.col}
+- **Unscaled ($g = 1$):** Doubles variance per block ($m_N = 2^N m_0$), blowing up activation std by $2^{16} = 65{,}536\times$ at $N = 32$.
+- **Depth-scaled ($g = 1/\sqrt{N}$, GPT-2):** Multiplies variance by $1 + 1/N$ per block, bounding $m_N \le e\,m_0$ ($\text{std} \le \sqrt{e} \approx 1.65\times$).
+- **Zero-initialized ($g = 0$, Fixup):** Starts every residual block as an exact identity map ($m_N = m_0$, $\text{std} = 1.00\times$).
+:::
 
-| Schedule Name | Output Projection Gain $g$ | Per-Block Variance Factor | Mean Square $m_N / m_0$ After $N$ Blocks | Activation Std at $N = 32$ |
-|:---|:---:|:---:|:---:|:---:|
-| **Unscaled (Standard)** | $g = 1$ | $\times 2$ | $2^N$ | $2^{16} = 65{,}536$ |
-| **Depth-scaled (GPT-2)** | $g = 1 / \sqrt{N}$ | $\times \left(1 + \frac{1}{N}\right)$ | $\left(1 + \frac{1}{N}\right)^N \le e \approx 2.72$ | $\le \sqrt{e} \approx 1.65$ |
-| **Zero-initialized (Fixup)** | $g = 0$ | $\times 1$ | $1$ | $1.00$ |
+::: {.col .fig .big}
+@fig:ch05-bg-three-gain-schedules
+:::
+:::
 :::
 
 ::: {.slide title="Why Scaling by 1/√N Caps Growth at √e for Any Depth"}
 [The GPT-2 Residual Scaling Rule]{.kicker}
 
-Setting $g = 1 / \sqrt{N}$ on the final linear projection of each residual branch makes the per-block variance factor shrink inversely with total network depth $N$:
-
+::: {.cols .vc}
+::: {.col}
 $$m_N = \left(1 + \frac{1}{N}\right)^N m_0 \le e \, m_0 \approx 2.718 \, m_0$$
 
-- **Depth-independent bound:** Since $(1 + 1/N)^N$ increases monotonically toward Euler's constant $e$, the activation standard deviation never exceeds $\sqrt{e} \approx 1.65\times$ the input scale—whether the model has 8 blocks, 32 blocks, or 1,000 blocks.
-- **Used across foundation models:** GPT-2, GPT-3, and Llama variants scale every residual branch's output projection by $1/\sqrt{N}$ (where $N$ counts all attention and MLP residual branches).
+- **Depth-independent bound:** Since $(1 + 1/N)^N \nearrow e$, the activation standard deviation never exceeds $\sqrt{e} \approx 1.65\times$ the input scale—whether the model has 8, 32, or 1,000 blocks.
+- **Standard in foundation models:** GPT-2, GPT-3, and Llama scale every residual branch's output projection by $1/\sqrt{N}$.
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-gpt2-sqrt-n-bound
+:::
+:::
 :::
 
 ::: {.slide title="Why Zeroing Output Projections Avoids the Symmetry Trap"}
 [Zero Output Projections (g = 0)]{.kicker}
 
-Zeroing *all* weights in a network is fatal because every hidden unit computes the exact same zero function forever. Zeroing **only** the output projection of each residual body ($g = 0$) works cleanly:
+::: {.cols .vc}
+::: {.col}
+- **Step 0 (Identity network):** Zeroing *only* the output projection ($\mathbf{W}_{\text{out}} = \mathbf{0}$) sets $f_k(\mathbf{x}_k) = \mathbf{0}$ so $\mathbf{x}_{k+1} = \mathbf{x}_k$ with unit variance.
+- **Step 1 backward pass (Breaking zero):** Because the expansion layer ($d \to 4d$) has random He weights, its post-ReLU activations $\mathbf{h}_k$ are nonzero and distinct.
+- **Immediate wake-up:** $\nabla_{\mathbf{W}_{\text{out}}} L = (\nabla_{\mathbf{x}_{k+1}} L)\mathbf{h}_k^\top \neq \mathbf{0}$ updates $\mathbf{W}_{\text{out}}$ on step 1 so gradients flow into the body from step 2 onward.
+:::
 
-- **Step 0 (Identity network):** Every body outputs $f_k(\mathbf{x}_k) = \mathbf{0}$, so every block starts as an exact identity map $\mathbf{x}_{k+1} = \mathbf{x}_k$ with unit activation variance.
-- **Step 1 backward pass (Breaking zero):** Because the body's *first* layer ($d \to 4d$) was initialized with random He weights ($\sigma = \sqrt{2/d}$), its post-ReLU activations $\mathbf{h}_k$ are nonzero and distinct across units.
-- **Immediate wake-up:** The output projection receives a nonzero gradient $\frac{\partial L}{\partial \mathbf{W}_{\text{out}}} = (\nabla_{\mathbf{x}_{k+1}} L)\mathbf{h}_k^\top \neq \mathbf{0}$ on the very first step, moving off zero so gradients flow through the entire body from step 2 onward.
+::: {.col .fig .big}
+@fig:ch05-bg-zero-out-proj-wakeup
+:::
+:::
 :::
 
 ::: {.slide title="WideResidualBlock With Configurable Output Gain"}
@@ -908,11 +952,15 @@ Work out the variance multipliers for these three initialization scenarios:
 ::: {.slide title="Summary: Parameter Initialization"}
 [Key Takeaways]{.kicker}
 
-| Concept | Mathematical Rule / Mechanism | Practical Systems Implication |
-|:---|:---|:---|
-| **Single-layer scale** | $\sigma = g / \sqrt{n_{\text{in}}}$ ($g = \sqrt{2}$ for ReLU, $g = 1$ linear) | Framework defaults ($\frac{1}{6}$ or $\frac{1}{2}$ per ReLU layer) collapse deep stacks |
-| **Tree-wide application** | `net.apply(fn)`, `net.initialize()`, or submodule loop | Overwrites default weights in place while keeping parameter references intact |
-| **Truncated normal** | Redraw entries outside $\pm 2\sigma$ (shrinks std by $0.88$) | Prevents $>5\sigma$ initial outliers across $10^8+$ foundation-model weights |
-| **Residual variance** | $m_{k+1} = (1 + g^2) m_k \implies m_N = (1 + g^2)^N m_0$ | Unscaled $g=1$ doubles variance per block ($65{,}536\times$ std after 32 blocks) |
-| **Output-proj scaling** | $g = 1/\sqrt{N}$ (GPT-2) or $g = 0$ (zero output proj) | Caps depth-$N$ std growth at $\sqrt{e} \approx 1.65\times$ or starts at $1.0\times$ without symmetry lock |
+::: {.cols .vc}
+::: {.col}
+- **Single-layer & tree-wide init:** $\sigma = g/\sqrt{n_{\text{in}}}$ ($g = \sqrt{2}$ for ReLU) applied across the module tree prevents deep signal decay; truncated normals clip $>2\sigma$ outliers.
+- **Residual variance compounding:** $m_{k+1} = (1 + g^2)m_k \implies m_N = (1 + g^2)^N m_0$ explodes as $2^N$ when $g = 1$.
+- **Residual branch scaling:** Setting output-projection gain to $g = 1/\sqrt{N}$ caps std growth at $\sqrt{e} \approx 1.65\times$, while $g = 0$ starts as an exact identity map.
+:::
+
+::: {.col .fig .big}
+@fig:ch05-bg-init-summary
+:::
+:::
 :::

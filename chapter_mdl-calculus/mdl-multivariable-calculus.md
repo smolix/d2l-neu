@@ -1094,65 +1094,62 @@ Multivariable Calculus<br>**partial derivatives · the gradient · directional d
 ::: {.slide title="Joint Parameter Moves Across Millions of Weights"}
 [Motivation]{.kicker}
 
-In single-variable calculus we varied one weight while freezing the rest, but every step of gradient descent updates all $N = 10^6$ weights simultaneously:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **From coordinate slices to joint perturbations:** Knowing a million separate coordinate slopes $\partial \ell / \partial w_i$ does not automatically tell us how $\ell(\mathbf{w} + \boldsymbol{\epsilon})$ responds when all coordinates move together by $\boldsymbol{\epsilon} \in \mathbb{R}^N$.
-- **One vector for all first-order slopes:** When $\ell$ is differentiable, a single column vector—the **gradient** $\nabla_{\mathbf{w}}\ell$—predicts the effect of every small joint move via a dot product and points in the direction of steepest ascent.
+- **From Slices to Joint Steps:** Gradient descent updates all $N = 10^6$ weights simultaneously by $\boldsymbol{\epsilon} \in \mathbb{R}^N$.
+- **One Vector for First-Order Slopes:** The column **gradient** $\nabla_{\mathbf{w}}\ell$ predicts any small joint move via $\boldsymbol{\epsilon}\cdot\nabla_{\mathbf{w}}\ell$ and points along steepest ascent.
+- **One Matrix for Surface Curvature:** The symmetric **Hessian** $\mathbf{H}_\ell$ captures directional bending and classifies minima vs. saddle points.
 :::
 
-::: {.col}
-- **One symmetric matrix for surface curvature:** First-order slopes vanish at minima, maxima, and saddle points alike. The **Hessian** matrix $\mathbf{H}_\ell$ of second partial derivatives captures how the surface bends in every direction and classifies critical points through its eigenvalues.
+::: {.col .fig .big}
+@fig:ch34-calc-joint-perturbation
 :::
-:::
-
-::: {.d2l-note}
-Our running benchmark throughout this section is the two-variable log-sum-exp function $f(x, y) = \log(e^x + e^y)$ at $(0, \log 2)$, whose gradient is the softmax distribution.
 :::
 :::
 
 ::: {.slide title="Partial Derivatives and the Log-Sum-Exp Benchmark"}
 [Coordinate Slices]{.kicker}
 
-Freezing every coordinate of $\ell(w_1, \ldots, w_N)$ except $w_i$ produces a one-dimensional slice whose ordinary derivative is the **partial derivative** $\frac{\partial \ell}{\partial w_i}$:
+::: {.cols .vc}
+::: {.col}
+- **Coordinate Slice Derivative:** Freezing all coordinates except $w_i$ defines the partial derivative $\partial\ell/\partial w_i$.
+- **Log-Sum-Exp $f(x, y) = \log(e^x + e^y)$:** $\frac{\partial f}{\partial x} = \frac{e^x}{e^x+e^y}$ and $\frac{\partial f}{\partial y} = \frac{e^y}{e^x+e^y}$ form the probability vector $\mathbf{p} = \operatorname{softmax}(x, y)$.
+- **At $(0, \log 2)$:** $f = \log 3$ and $\nabla f = (\tfrac{1}{3}, \tfrac{2}{3})^\top$.
+:::
 
-$$\ell(w_1 + \epsilon_1, w_2, \ldots, w_N) \approx \ell(w_1, w_2, \ldots, w_N) + \epsilon_1 \frac{\partial \ell}{\partial w_1}(w_1, w_2, \ldots, w_N)$$
-
-- **Differentiating log-sum-exp $f(x, y) = \log(e^x + e^y)$:** Holding $y$ fixed gives $\frac{\partial f}{\partial x} = \frac{e^x}{e^x + e^y}$, and holding $x$ fixed gives $\frac{\partial f}{\partial y} = \frac{e^y}{e^x + e^y}$.
-- **Evaluating at $(0, \log 2)$:** Here $e^x = 1$ and $e^y = 2$, so $f(0, \log 2) = \log 3 \approx 1.0986$, $\frac{\partial f}{\partial x} = \tfrac{1}{3}$, and $\frac{\partial f}{\partial y} = \tfrac{2}{3}$—nudging $y$ raises $f$ twice as fast as nudging $x$.
-- **Log-sum-exp $\to$ Softmax:** At every point $(x, y)$, the partial derivatives are positive and sum to $1$, forming the probability vector $\mathbf{p} = \operatorname{softmax}(x, y)$.
+::: {.col .fig .big}
+@fig:ch34-calc-lse-partials
+:::
+:::
 :::
 
 ::: {.slide title="Multivariable Differentiability and the Gradient"}
 [First-Order Linear Model]{.kicker}
 
-For coordinate changes to add up under a joint step $\boldsymbol{\epsilon} = (\epsilon_1, \ldots, \epsilon_N)^\top$, the function $\ell$ must admit a genuine linear approximation near $\mathbf{w}$:
-
-::: {.d2l-note .rule}
-**Definition (Multivariable Differentiability & Gradient):** A function $\ell : \mathbb{R}^N \to \mathbb{R}$ is *differentiable* at $\mathbf{w}$ if there exists a linear map $\Lambda$ such that $\ell(\mathbf{w} + \boldsymbol{\epsilon}) = \ell(\mathbf{w}) + \Lambda(\boldsymbol{\epsilon}) + o(\|\boldsymbol{\epsilon}\|)$. That linear map is uniquely given by the dot product with the column **gradient** $\nabla_{\mathbf{w}}\ell = \bigl[\frac{\partial \ell}{\partial w_1}, \ldots, \frac{\partial \ell}{\partial w_N}\bigr]^\top$:
-$$\ell(\mathbf{w} + \boldsymbol{\epsilon}) = \ell(\mathbf{w}) + \boldsymbol{\epsilon} \cdot \nabla_{\mathbf{w}}\ell(\mathbf{w}) + o(\|\boldsymbol{\epsilon}\|)$$
+::: {.cols .vc}
+::: {.col}
+- **Multivariable Differentiability:** $\ell(\mathbf{w} + \boldsymbol{\epsilon}) = \ell(\mathbf{w}) + \boldsymbol{\epsilon}\cdot\nabla_{\mathbf{w}}\ell(\mathbf{w}) + o(\|\boldsymbol{\epsilon}\|)$.
+- **Why Partials Fix the Linear Map:** Probing along $\boldsymbol{\epsilon} = h\mathbf{e}_i$ forces $\Lambda(\mathbf{e}_i) = \partial\ell/\partial w_i$, so $\Lambda(\boldsymbol{\epsilon}) = \sum_i \epsilon_i \frac{\partial\ell}{\partial w_i}$.
+- **Joint Prediction at $(0, \log 2)$:** Step $\boldsymbol{\epsilon} = (0.01, -0.03)$ predicts $\Delta f \approx \tfrac{1}{3}(0.01) + \tfrac{2}{3}(-0.03) = -0.01667$.
 :::
 
-- **Why partial derivatives fix $\Lambda$:** Probing along a single axis $\boldsymbol{\epsilon} = h\mathbf{e}_i$, dividing by $h$, and taking $h \to 0$ forces $\Lambda(\mathbf{e}_i) = \partial \ell / \partial w_i$, and linearity gives $\Lambda(\sum_i \epsilon_i \mathbf{e}_i) = \sum_i \epsilon_i \frac{\partial \ell}{\partial w_i} = \boldsymbol{\epsilon} \cdot \nabla_{\mathbf{w}}\ell$.
-- **Predicting a joint move on log-sum-exp:** From $(0, \log 2)$ with $\nabla f = [\tfrac{1}{3}, \tfrac{2}{3}]^\top$, a step $\boldsymbol{\epsilon} = (0.01, -0.03)$ predicts $f(0.01, \log 2 - 0.03) \approx \log 3 + \tfrac{1}{3}(0.01) + \tfrac{2}{3}(-0.03) \approx 1.081946$.
+::: {.col .fig .big}
+@fig:ch34-calc-multivar-gradient
+:::
+:::
 :::
 
 ::: {.slide title="Why Partial Derivatives Alone Do Not Suffice"}
 [Differentiability Pitfall]{.kicker}
 
-Merely having partial derivatives along the coordinate axes does not guarantee that a linear plane fits the surface along diagonal directions:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **A pathological ridge at the origin:** Set $f(0, 0) = 0$ and for $(x, y) \ne (0, 0)$ define:
-  $$f(x, y) = \frac{2xy}{x^2 + y^2}$$
-- **Zero along both coordinate axes:** Since $f(x, 0) = 0$ and $f(0, y) = 0$ for all $x, y$, both partial derivatives at the origin are $\frac{\partial f}{\partial x}(0,0) = \frac{\partial f}{\partial y}(0,0) = 0$.
+- **Pathological Ridge $f(x, y) = \frac{2xy}{x^2+y^2}$ ($f(0,0)=0$):** Vanishes identically along both axes ($\partial_x f(0,0) = \partial_y f(0,0) = 0$), yet equals $1$ along the diagonal $y = x \neq 0$.
+- **The $C^1$ Sufficient Condition:** If all partial derivatives exist in a neighborhood of $\mathbf{w}$ and are **continuous** at $\mathbf{w}$, $\ell$ is guaranteed to be differentiable at $\mathbf{w}$.
 :::
 
-::: {.col}
-- **Failure along the diagonal:** The only candidate linear approximation is the zero plane $0$, yet along the ray $y = x \ne 0$ we have $f(x, x) = \frac{2x^2}{2x^2} = 1$ arbitrarily close to $(0, 0)$.
-- **The $C^1$ sufficient condition:** If all partial derivatives $\partial \ell / \partial w_i$ exist in a neighborhood of $\mathbf{w}$ and are **continuous** at $\mathbf{w}$, then $\ell$ is guaranteed to be differentiable at $\mathbf{w}$.
+::: {.col .fig .big}
+@fig:ch34-calc-ridge-counterexample
 :::
 :::
 :::
@@ -1172,15 +1169,19 @@ At $\|\boldsymbol{\epsilon}\| = 3.2 \times 10^{-2}$, the linear model misses by 
 ::: {.slide title="Directional Derivatives: Slopes Along Any Ray"}
 [Projections of the Gradient]{.kicker}
 
-Setting $\boldsymbol{\epsilon} = h\mathbf{u}$ for any unit vector $\mathbf{u}$ ($\|\mathbf{u}\|_2 = 1$) in the linear approximation and dividing by $h \to 0$ gives the **directional derivative**—the instantaneous slope of $\ell$ along $\mathbf{u}$:
+::: {.cols .vc}
+::: {.col}
+- **Directional Derivative Formula:** For any unit vector $\mathbf{u}$ ($\|\mathbf{u}\|_2 = 1$), $D_{\mathbf{u}}\ell(\mathbf{w}) = \lim_{h \to 0}\frac{\ell(\mathbf{w}+h\mathbf{u})-\ell(\mathbf{w})}{h} = \mathbf{u}\cdot\nabla_{\mathbf{w}}\ell(\mathbf{w})$.
+- **Three Rays at $(0, \log 2)$ with $\nabla f = (\tfrac{1}{3}, \tfrac{2}{3})^\top$:**
+  - Shift ray $(1, 1)/\sqrt{2}$ gives $+1/\sqrt{2} \approx +0.707$.
+  - Steepest descent $-(1, 2)/\sqrt{5}$ gives $-\sqrt{5}/3 \approx -0.745$.
+  - Contour tangent $(2, -1)/\sqrt{5}$ gives $0$.
+:::
 
-$$D_{\mathbf{u}}\ell(\mathbf{w}) = \lim_{h \to 0} \frac{\ell(\mathbf{w} + h\mathbf{u}) - \ell(\mathbf{w})}{h} = \mathbf{u} \cdot \nabla_{\mathbf{w}}\ell(\mathbf{w})$$
-
-| Unit Direction $\mathbf{u}$ at $(0, \log 2)$ | Dot Product $\mathbf{u} \cdot \nabla f$ with $\nabla f = (\tfrac{1}{3}, \tfrac{2}{3})^\top$ | Geometric Interpretation |
-| :--- | :--- | :--- |
-| **$\mathbf{u} = \frac{1}{\sqrt{2}}(1, 1)^\top$** | $\frac{1}{\sqrt{2}}(\tfrac{1}{3} + \tfrac{2}{3}) = \frac{1}{\sqrt{2}} \approx +0.707$ | Exact linear growth $f(x+t, y+t) = f(x,y) + t$ everywhere |
-| **$\mathbf{u} = -\frac{1}{\sqrt{5}}(1, 2)^\top$** | $-\frac{1}{\sqrt{5}}(\tfrac{1}{3} + \tfrac{4}{3}) = -\frac{\sqrt{5}}{3} \approx -0.745$ | Pointing directly opposite $\nabla f$: steepest descent |
-| **$\mathbf{u} = \frac{1}{\sqrt{5}}(2, -1)^\top$** | $\frac{1}{\sqrt{5}}(\tfrac{2}{3} - \tfrac{2}{3}) = 0$ | Orthogonal to $\nabla f$: tangent to the level curve $e^x + e^y = 3$ |
+::: {.col .fig .big}
+@fig:ch34-calc-directional-rays
+:::
+:::
 :::
 
 ::: {.slide title="Steepest Descent via Cauchy-Schwarz"}
@@ -1203,12 +1204,16 @@ $$D_{\mathbf{u}}\ell(\mathbf{w}) = \lim_{h \to 0} \frac{\ell(\mathbf{w} + h\math
 ::: {.slide title="Gradients Stand Orthogonal to Level Sets"}
 [Contour Geometry]{.kicker}
 
-On a contour map of $\ell$, every gradient arrow crosses its level curve $\{\mathbf{x} : \ell(\mathbf{x}) = c\}$ at a right angle and is longest where contour lines are packed most tightly:
+::: {.cols .vc}
+::: {.col}
+- **Proof via Level-Set Curves:** For any curve $\boldsymbol{\gamma}(t)$ inside $\{\ell(\mathbf{x}) = c\}$ with $\boldsymbol{\gamma}(0) = \mathbf{x}$ and velocity $\mathbf{v} = \boldsymbol{\gamma}'(0)$, differentiating $\ell(\boldsymbol{\gamma}(t)) = c$ gives $0 = \mathbf{v}\cdot\nabla\ell(\mathbf{x})$.
+- **LSE Check at $(0, \log 2)$:** Level curve $e^x + e^y = 3$ has tangent $\mathbf{v} = (e^y, -e^x) = (2, -1)$, orthogonal to $\nabla f = (\tfrac{1}{3}, \tfrac{2}{3})^\top$.
+:::
 
-- **Proof via level-set curves:** Let $\boldsymbol{\gamma}(t)$ be any differentiable curve lying entirely inside the level set $\{\ell = c\}$ with $\boldsymbol{\gamma}(0) = \mathbf{x}$ and tangent velocity $\mathbf{v} = \boldsymbol{\gamma}'(0)$.
-- **Differentiating along the contour:** Because $\ell(\boldsymbol{\gamma}(t)) = c$ is constant, its derivative at $t = 0$ vanishes; expanding $\boldsymbol{\gamma}(t) = \mathbf{x} + t\mathbf{v} + o(t)$ in the multivariable linear model gives:
-  $$0 = \left.\frac{d}{dt}\ell(\boldsymbol{\gamma}(t))\right|_{t=0} = \mathbf{v} \cdot \nabla \ell(\mathbf{x})$$
-- **Log-sum-exp contour verification:** The level curve through $(0, \log 2)$ is $e^x + e^y = 3$. Differentiating gives $e^x dx + e^y dy = 0$, so the tangent vector at $(0, \log 2)$ is $(e^y, -e^x) = (2, -1)$, which satisfies $(2, -1) \cdot (\tfrac{1}{3}, \tfrac{2}{3}) = 0$.
+::: {.col .fig .big}
+@fig:ch34-calc-level-set-orthogonality
+:::
+:::
 :::
 
 ::: {.slide title="Tangent Planes to Loss Surfaces"}
@@ -1231,18 +1236,15 @@ On a contour map of $\ell$, every gradient arrow crosses its level curve $\{\mat
 ::: {.slide title="Critical Points and Global Existence Checks"}
 [First-Order Optimality]{.kicker}
 
-Gradient descent stops at **critical points** where $\nabla f(\mathbf{x}_0) = \mathbf{0}$, because anywhere $\nabla f(\mathbf{x}_0) \ne \mathbf{0}$, a small step $\boldsymbol{\epsilon} = -\eta \nabla f(\mathbf{x}_0)$ changes $f$ by $-\eta \|\nabla f(\mathbf{x}_0)\|^2 + o(\eta) < 0$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Finding critical points of $\psi(x, y) = x e^{-x^2 - y^2}$:** Setting its gradient to zero,
-  $$\nabla \psi(x, y) = \begin{bmatrix} 1 - 2x^2 \\ -2xy \end{bmatrix} e^{-x^2-y^2} = \mathbf{0}$$
-  forces $y = 0$ (since $x = 0$ gives $\partial_x \psi = e^{-y^2} \ne 0$) and $x = \pm 1/\sqrt{2}$, with values $\psi(\mp 1/\sqrt{2}, 0) \approx \mp 0.4289$.
+- **Critical Points ($\nabla f(\mathbf{x}_0) = \mathbf{0}$):** For $\psi(x, y) = x e^{-x^2 - y^2}$, setting $\nabla\psi = \mathbf{0}$ forces $y = 0$ and $x = \pm 1/\sqrt{2}$ ($\psi \approx \mp 0.4289$).
+- **Why Global Checks Are Mandatory:** $\nabla f = \mathbf{0}$ alone does not prove a minimum exists ($x^3$ at $0$).
+- **Compact Disc Bound:** Outside $R = 2$, $|\psi| \le 2e^{-4} < 0.04$, so Extreme Value Theorem certifies $(-1/\sqrt{2}, 0)$ as the global minimum.
 :::
 
-::: {.col}
-- **Why a global existence check is mandatory:** Having a unique critical point does not prove a minimum exists ($f(x) = x^3$ has $f'(0) = 0$ and no minimum).
-- **Compact disc bound:** Outside the closed disc of radius $R = 2$, $|\psi(x,y)| \le R e^{-R^2} < 0.04$, whereas inside the disc $\psi(-1/\sqrt{2}, 0) \approx -0.43$. By the extreme value theorem on the closed disc, $(-1/\sqrt{2}, 0)$ is the global minimum.
+::: {.col .fig .big}
+@fig:ch34-calc-critical-disc-bound
 :::
 :::
 :::
@@ -1250,41 +1252,49 @@ Gradient descent stops at **critical points** where $\nabla f(\mathbf{x}_0) = \m
 ::: {.slide title="The Hessian Matrix and Log-Sum-Exp Curvature"}
 [Second Partial Derivatives]{.kicker}
 
-To distinguish a local minimum from a maximum or a saddle point, we collect all $n^2$ second partial derivatives into the **Hessian matrix** $\mathbf{H}_f(\mathbf{x}) = \nabla^2 f(\mathbf{x})$:
+::: {.cols .vc}
+::: {.col}
+- **Hessian Entries:** $[\mathbf{H}_f(\mathbf{x})]_{ij} = \frac{\partial^2 f}{\partial x_i \partial x_j}(\mathbf{x})$ measures how slope $j$ changes along axis $i$.
+- **Log-Sum-Exp Hessian:** Differentiating $p_i = e^{x_i}/\sum_k e^{x_k}$ gives $\mathbf{H}_f(\mathbf{x}) = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top$.
+- **Spectrum at $(0, \log 2)$:** Eigenvalue $0$ along $(1, 1)^\top$ (flat shift ray) and $\tfrac{4}{9}$ along $(1, -1)^\top$.
+:::
 
-$$[\mathbf{H}_f(\mathbf{x})]_{ij} = \frac{\partial^2 f}{\partial x_i \partial x_j}(\mathbf{x}) = \frac{\partial}{\partial x_i}\left(\frac{\partial f}{\partial x_j}\right)$$
-
-- **Entry $(i, j)$ meaning:** Measures how rapidly the $j$-th coordinate slope $\partial f / \partial x_j$ changes as we move along coordinate $x_i$.
-- **Hessian of log-sum-exp:** Differentiating the softmax entries $p_i = e^{x_i}/\sum_k e^{x_k}$ via the quotient rule gives $\frac{\partial p_i}{\partial x_j} = p_i \delta_{ij} - p_i p_j$, or in matrix form:
-  $$\mathbf{H}_f(\mathbf{x}) = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top, \qquad \mathbf{H}_f(0, \log 2) = \frac{2}{9}\begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}$$
-- **Eigenvalues of $\mathbf{H}_f(0, \log 2)$:** Eigenvalue $0$ along eigenvector $(1, 1)^\top$ (where $f(x+t, y+t) = f(x,y) + t$ is completely flat) and $\tfrac{4}{9}$ along $(1, -1)^\top$.
+::: {.col .fig .big}
+@fig:ch34-calc-hessian-lse
+:::
+:::
 :::
 
 ::: {.slide title="Symmetry of the Hessian: Clairaut-Schwarz Theorem"}
 [Mixed Partials]{.kicker}
 
-Why do the off-diagonal entries $\frac{\partial^2 f}{\partial x_i \partial x_j}$ and $\frac{\partial^2 f}{\partial x_j \partial x_i}$ agree? Both mixed partials are limits of the same symmetric second difference $\Delta_h$:
-
-::: {.d2l-note .rule}
-**Proposition (Clairaut–Schwarz Theorem):** If the first partials and mixed second partials $\frac{\partial^2 f}{\partial x_i \partial x_j}$ and $\frac{\partial^2 f}{\partial x_j \partial x_i}$ exist near $\mathbf{x}$ and the mixed partials are continuous at $\mathbf{x}$, then $\frac{\partial^2 f}{\partial x_i \partial x_j}(\mathbf{x}) = \frac{\partial^2 f}{\partial x_j \partial x_i}(\mathbf{x})$, so $\mathbf{H}_f(\mathbf{x}) = \mathbf{H}_f(\mathbf{x})^\top$.
+::: {.cols .vc}
+::: {.col}
+- **Clairaut–Schwarz Theorem:** When mixed partials $\partial^2_{ij}f$ and $\partial^2_{ji}f$ are continuous at $\mathbf{x}$, they are equal, so $\mathbf{H}_f(\mathbf{x}) = \mathbf{H}_f(\mathbf{x})^\top$.
+- **Symmetric Second Difference Proof:** Both orders are limits of the same $i \leftrightarrow j$ symmetric four-corner ratio $\Delta_h$.
+- **Spectral Theorem Payoff:** Every $C^2$ Hessian has real eigenvalues and an orthonormal eigenbasis.
 :::
 
-- **Proof via symmetric second difference:** Define
-  $$\Delta_h = \frac{f(\mathbf{x} + h\mathbf{e}_i + h\mathbf{e}_j) - f(\mathbf{x} + h\mathbf{e}_i) - f(\mathbf{x} + h\mathbf{e}_j) + f(\mathbf{x})}{h^2}$$
-  which is unchanged if we swap $i$ and $j$. Applying the 1D Mean Value Theorem twice (first along $x_i$, then along $x_j$) yields $\Delta_h = \frac{\partial^2 f}{\partial x_j \partial x_i}(\boldsymbol{\xi}_h)$ at a point $\boldsymbol{\xi}_h$ within $\sqrt{2}|h|$ of $\mathbf{x}$.
-- **Why symmetry matters:** By the spectral theorem, a real symmetric Hessian always has **real eigenvalues** and an **orthonormal basis of eigenvectors**.
+::: {.col .fig .big}
+@fig:ch34-calc-clairaut-schwarz
+:::
+:::
 :::
 
 ::: {.slide title="The Multivariable Second-Order Taylor Expansion"}
 [Quadratic Approximation]{.kicker}
 
-Restricting $f$ to the line segment $\varphi(t) = f(\mathbf{x}_0 + t\boldsymbol{\delta})$ for displacement $\boldsymbol{\delta} = \mathbf{x} - \mathbf{x}_0$ reduces multivariable Taylor expansion directly to the 1D Lagrange remainder:
+::: {.cols .vc}
+::: {.col}
+- **1D Slice Reduction ($\varphi(t) = f(\mathbf{x}_0 + t\boldsymbol{\delta})$):** $\varphi'(t) = \nabla f\cdot\boldsymbol{\delta}$ and $\varphi''(t) = \boldsymbol{\delta}^\top\mathbf{H}_f\boldsymbol{\delta}$.
+- **Exact Lagrange Form:** $f(\mathbf{x}_0 + \boldsymbol{\delta}) = f(\mathbf{x}_0) + \nabla f(\mathbf{x}_0)\cdot\boldsymbol{\delta} + \tfrac{1}{2}\boldsymbol{\delta}^\top\mathbf{H}_f(\boldsymbol{\xi})\boldsymbol{\delta}$ for $\boldsymbol{\xi}$ on the segment.
+- **Local Quadratic Bowl:** Replacing $\mathbf{H}_f(\boldsymbol{\xi})$ by $\mathbf{H}_f(\mathbf{x}_0)$ leaves an $o(\|\boldsymbol{\delta}\|^2)$ remainder ($O(\|\boldsymbol{\delta}\|^3)$ for $C^3$).
+:::
 
-- **1D slice derivatives:** By the chain rule, $\varphi'(t) = \nabla f(\mathbf{x}_0 + t\boldsymbol{\delta}) \cdot \boldsymbol{\delta}$ and $\varphi''(t) = \boldsymbol{\delta}^\top \mathbf{H}_f(\mathbf{x}_0 + t\boldsymbol{\delta})\,\boldsymbol{\delta}$ (the **second directional derivative**, measuring curvature along $\boldsymbol{\delta}$).
-- **Exact Lagrange form ($n = 1$ on $t \in [0, 1]$):** For some intermediate point $\boldsymbol{\xi} = \mathbf{x}_0 + \tau\boldsymbol{\delta}$ with $\tau \in (0, 1)$,
-  $$f(\mathbf{x}_0 + \boldsymbol{\delta}) = f(\mathbf{x}_0) + \nabla f(\mathbf{x}_0) \cdot \boldsymbol{\delta} + \tfrac{1}{2}\boldsymbol{\delta}^\top \mathbf{H}_f(\boldsymbol{\xi})\,\boldsymbol{\delta}$$
-- **Local quadratic model at $\mathbf{x}_0$:** By continuity of $\mathbf{H}_f$, replacing $\mathbf{H}_f(\boldsymbol{\xi})$ with $\mathbf{H}_f(\mathbf{x}_0)$ introduces an error of at most $\tfrac{1}{2}\|\mathbf{H}_f(\boldsymbol{\xi}) - \mathbf{H}_f(\mathbf{x}_0)\|\,\|\boldsymbol{\delta}\|^2 = o(\|\boldsymbol{\delta}\|^2)$:
-  $$f(\mathbf{x}) = f(\mathbf{x}_0) + \nabla f(\mathbf{x}_0) \cdot (\mathbf{x} - \mathbf{x}_0) + \tfrac{1}{2}(\mathbf{x} - \mathbf{x}_0)^\top \mathbf{H}_f(\mathbf{x}_0)(\mathbf{x} - \mathbf{x}_0) + o(\|\mathbf{x} - \mathbf{x}_0\|^2)$$
+::: {.col .fig .big}
+@fig:ch34-calc-second-order-taylor
+:::
+:::
 :::
 
 ::: {.slide title="Predicting the Linear Model Gap with the Hessian"}
@@ -1369,17 +1379,14 @@ On the trough $x^2 + y^4$ at $(0, 0)$, the true second partial $\partial_{yy} f(
 ::: {.slide title="Why Saddles Dominate High-Dimensional Landscapes"}
 [Random Matrix Theory]{.kicker}
 
-In $n$ dimensions, a nondegenerate local minimum requires all $n$ eigenvalues of $\mathbf{H}$ to be positive—an event whose probability decays even faster than the independent coin-flip heuristic $2^{-n}$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Eigenvalue repulsion in random Hessians:** For $n \times n$ Gaussian Orthogonal Ensemble (GOE) random symmetric matrices, eigenvalues repel one another and strongly resist crowding onto the positive half-line.
-- **Exact $n = 2$ and asymptotic $n \gg 1$ scaling:** At $n = 2$, $P(\mathbf{H} \succ 0) = \tfrac{1}{2}(1 - 1/\sqrt{2}) \approx 0.146 < 0.25$. For large $n$, Dean & Majumdar (2006) proved quadratic exponential decay:
-  $$P(\mathbf{H} \succ 0) \sim \exp\!\left(-\frac{\ln 3}{4}n^2\right) \ll 2^{-n}$$
+- **Eigenvalue Repulsion in Random Hessians:** In $n$ dimensions, a local minimum requires all $n$ eigenvalues to be positive. For GOE random symmetric matrices, $P(\mathbf{H} \succ 0) \sim \exp(-\frac{\ln 3}{4}n^2) \ll 2^{-n}$.
+- **Loss vs. Index (Dauphin et al., 2014):** High-loss critical points are overwhelmingly saddle points (high fraction of negative $\lambda_i$), while local minima concentrate near the global minimum loss floor.
 :::
 
-::: {.col}
-- **Loss vs. index in neural networks:** Bray & Dean (2007) and Dauphin et al. (2014) showed that in high-dimensional random and neural loss landscapes, critical points at high loss have a large fraction of negative eigenvalues (saddles), and the spectrum shifts positive so local minima emerge only near the global minimum loss level.
+::: {.col .fig .big}
+@fig:ch34-calc-highd-saddles
 :::
 :::
 :::

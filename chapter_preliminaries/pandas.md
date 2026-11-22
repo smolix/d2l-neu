@@ -343,16 +343,14 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 
 ::: {.cols .vc}
 ::: {.col}
-- **Isolate $y$ before transforming $X$:** Split input features (`NumRooms`, `RoofType`, `Area`) from the supervised target (`Price`) *before* imputation, encoding, or scaling so target information never leaks into feature transformations.
-- **Positional slicing (`.iloc`) vs. name selection:** `data.iloc[:, :3]` slices columns by integer position ($0$-based)—compact for quick scripts, but fragile in production if an upstream schema change inserts or reorders columns.
-:::
+- **Isolate $y$ before transforming $X$:** Split features from target `Price` *before* imputation or scaling so target statistics never leak into $\mathbf{X}$.
+- **Select by column name, not position:** `data.drop(columns='Price')` survives upstream schema changes that would break `.iloc[:, :3]`.
 
-::: {.col}
 @pandas-separating-inputs-and-targets-1
-
-::: {.d2l-note .warn}
-**Production defense:** Select targets and features explicitly by column name (`targets = data['Price']`, `inputs = data.drop(columns='Price')`) so schema shifts never silently swap the target column.
 :::
+
+::: {.col .fig}
+@fig:pandas-xy-split
 :::
 :::
 :::
@@ -383,13 +381,14 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 
 ::: {.cols .vc}
 ::: {.col}
-- **Mean / median imputation:** Replaces numerical `NaN`s with the observed column mean ($\mu_{\text{Rooms}} = 23/7 \approx 3.29$) or median (more robust when heavy-tailed outliers skew the mean).
-- **When missingness itself carries signal:** If unrecorded room counts occur predominantly on luxury estates, mean imputation alone makes mansions look average-sized. Adding a binary **`is_missing` indicator column** ($0/1$) lets a linear weight shift predictions whenever a value went unrecorded.
-- **Variance shrinkage side-effect:** Inserting 3 artificial observations at $\mu$ adds zero squared deviation while increasing $n$ from $7$ to $10$, shrinking sample $\sigma$ from $1.11$ to $0.91$.
+- **Mean / median imputation:** Fills numerical `NaN`s with $\mu_{\text{Rooms}} \approx 3.29$, but piling imputed rows at $\mu$ shrinks sample spread $\sigma$ ($1.11 \to 0.91$).
+- **Missingness indicator (`is_na`):** Adding a binary $0/1$ flag lets linear weights shift predictions when unrecorded values carry signal (e.g., luxury estates).
+
+@pandas-handling-missing-values-3
 :::
 
-::: {.col}
-@pandas-handling-missing-values-3
+::: {.col .fig}
+@fig:pandas-imputation-shrinkage
 :::
 :::
 :::
@@ -414,12 +413,14 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 
 ::: {.cols .vc}
 ::: {.col}
-- **Row-sum invariant:** In every row, `RoofType_Slate + RoofType_Tile + RoofType_nan = 1.0`. (With an intercept bias $b$, one column is algebraically redundant; for a strictly binary feature without gaps, a single $0/1$ column suffices.)
-- **High-cardinality breakdown:** One-hot encoding works well for modest vocabularies ($K \lesssim 10^2$). For $K = 10^4$ ZIP codes across $N = 10^6$ rows, a dense `float64` matrix occupies $80\text{ GB}$ and is $99.99\%$ zeros—requiring learnable dense **embeddings** instead.
+- **Row-sum invariant:** In every row, `Slate + Tile + nan = 1.0`, placing categories at orthogonal corners of $\mathbb{R}^K$.
+- **High-cardinality limit ($K \gg 10^2$):** For $K = 50{,}000$ ZIP codes or tokens, one-hot vectors waste memory ($99.99\%$ zeros)—use learned dense **embeddings** $\mathbf{E} \in \mathbb{R}^{K \times d}$ ($d \ll K$) instead.
+
+@pandas-encoding-categorical-features-1
 :::
 
-::: {.col}
-@pandas-encoding-categorical-features-1
+::: {.col .fig}
+@fig:pandas-categorical-pitfalls
 :::
 :::
 :::
@@ -460,25 +461,16 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 ::: {.slide title="The Golden Rule of Preprocessing: Fit on Train, Apply to Test"}
 [Methodological Invariant]{.kicker}
 
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **How preprocessing leaks the future:** Computing imputation means or standardization $(\mu, \sigma)$ across the *entire* table before splitting allows held-out test distribution information to bleed into the training features (**data leakage**).
-- **Quantifying leakage on `house_tiny.csv`:**
-  - Whole-table stats (rows 0–9): Row 6 scales to $(1.89, 1.70)$.
-  - Training-only stats (rows 0–7): Row 6 scales to $(1.86, 1.66)$, and test rows 8–9 are evaluated using $(\mu_{\text{train}}, \sigma_{\text{train}})$ unchanged.
+- **How leakage happens:** Computing imputation means, category schemas, or $(\mu, \sigma)$ on the full table before splitting leaks test distribution statistics into training features.
+- **Fit on $\mathcal{D}_{\text{train}}$ only:** Freeze $(\mu_{\text{train}}, \sigma_{\text{train}})$ and apply unchanged to $\mathcal{D}_{\text{val}}$ and $\mathcal{D}_{\text{test}}$.
+- **Zero-variance guard:** If $\sigma_{\text{train}} = 0$, clamp $\sigma \leftarrow \max(\sigma, \epsilon)$ to avoid dividing by zero.
 :::
 
-::: {.col}
-| Preprocessing Statistic | Fit On | Apply Unchanged To |
-| :--- | :--- | :--- |
-| Imputation mean / median | $\mathcal{D}_{\text{train}}$ only | $\mathcal{D}_{\text{train}}, \mathcal{D}_{\text{val}}, \mathcal{D}_{\text{test}}$ |
-| One-hot category schema | $\mathcal{D}_{\text{train}}$ only | $\mathcal{D}_{\text{train}}, \mathcal{D}_{\text{val}}, \mathcal{D}_{\text{test}}$ |
-| Standardization $(\mu_{\text{train}}, \sigma_{\text{train}})$ | $\mathcal{D}_{\text{train}}$ only | $\mathcal{D}_{\text{train}}, \mathcal{D}_{\text{val}}, \mathcal{D}_{\text{test}}$ |
+::: {.col .fig .big}
+@fig:pandas-leakage-split
 :::
-:::
-
-::: {.d2l-note .warn}
-**Edge case — zero-variance features:** If a column is constant on $\mathcal{D}_{\text{train}}$ ($\sigma_{\text{train}} = 0$), $(x - \mu)/\sigma$ divides by zero (`NaN`/`Inf`). Drop zero-variance columns or clamp $\sigma \leftarrow \max(\sigma, \epsilon)$.
 :::
 :::
 
@@ -505,16 +497,13 @@ Identify the statistical or systems bug in each preprocessing snippet:
 
 ::: {.cols .vc}
 ::: {.col}
-- **Downcasting from `float64` to `float32`:** By default, pandas stores floating-point columns in 64-bit precision (`float64`, 8 B/element). Deep learning hardware optimizes for 32-bit (`float32`, 4 B) or 16-bit (`bfloat16`, 2 B) arithmetic.
-- **Contiguous buffer extraction:** `.to_numpy(dtype='float32')` packs the 2D table into a contiguous C-order NumPy array, which the framework wraps into design matrix $\mathbf{X} \in \mathbb{R}^{10 \times 5}$ and target vector $\mathbf{y} \in \mathbb{R}^{10}$.
-:::
+- **Downcast `float64` $\to$ `float32`:** Pandas defaults to 64-bit floats (8 B) or mixed `bool`/`object` columns; `.to_numpy(dtype='float32')` halves memory (4 B) and matches GPU layer weights.
 
-::: {.col}
 @pandas-conversion-to-tensor-format
-
-::: {.d2l-note}
-**Ready for §1.3 Linear Algebra:** Each row $\mathbf{x}_i \in \mathbb{R}^5$ of $\mathbf{X}$ combines 2 standardized continuous features and 3 orthogonal one-hot roof indicators.
 :::
+
+::: {.col .fig}
+@fig:pandas-dtype-cast
 :::
 :::
 :::

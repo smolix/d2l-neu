@@ -935,87 +935,99 @@ Attention Scoring Functions, Scaled Dot-Product, and Masking<br>**dot-product vs
 ::: {.slide title="Two Requirements for a Trainable Attention Layer"}
 [Motivation]{.kicker}
 
-Turning soft key–value lookup into a general sequence-modeling layer requires solving two computational and structural problems at scale:
-
 ::: {.cols .vc}
 ::: {.col}
-- **1. Fast, Learnable Scoring ($n^2$ Pairs):** A single attention head reading $n = 1{,}024$ tokens evaluates $1{,}024^2 = 1{,}048{,}576$ query–key pairs per layer. The scoring rule $a(\mathbf{q}, \mathbf{k})$ must map directly onto dense GPU matrix-multiplication hardware.
+- **1. Fast, Learnable Scoring ($n^2$ Pairs):** A single attention head reading $n = 1{,}024$ tokens evaluates $1{,}024^2 = 1{,}048{,}576$ query–key pairs per layer; the scoring rule $a(\mathbf{q}, \mathbf{k})$ must map directly onto dense GPU matrix-multiplication hardware.
+- **2. Excluding Invalid Pairs (Masking):** Padded minibatches contain `<blank>` tokens, and causal language models must block $n(n-1)/2 = 523{,}776$ future pairs so position $t$ cannot peek at tokens $> t$.
 :::
 
-::: {.col}
-- **2. Excluding Invalid Pairs (Masking):** Not every stored key is legal to read: padded minibatches contain `<blank>` tokens, and causal language models must block $n(n-1)/2 = 523{,}776$ future pairs so position $t$ cannot peek at tokens $> t$.
+::: {.col .fig .big}
+@fig:ch10-attn-score-two-reqs
 :::
-:::
-
-::: {.d2l-note}
-In this section we derive **scaled dot-product attention** ($\mathbf{q}^\top\mathbf{k}/\sqrt{d}$), prove why $1/\sqrt{d}$ prevents gradient collapse, and build a composable boolean mask algebra.
 :::
 :::
 
 ::: {.slide title="From Gaussian Distance to the Dot-Product Score"}
 [Deriving the Score]{.kicker}
 
-Expanding the negative squared Euclidean distance of the unit-bandwidth Gaussian kernel reveals an inner product plus two squared norms:
+::: {.cols .vc}
+::: {.col}
+- **Gaussian Distance Expansion:**
+  $$-\frac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2 = \mathbf{q}^\top \mathbf{k}_i - \frac{1}{2}\|\mathbf{k}_i\|^2 - \frac{1}{2}\|\mathbf{q}\|^2$$
+- **Query Norm Cancels:** Because $-\frac{1}{2}\|\mathbf{q}\|^2$ is constant across all keys $i$, softmax shift invariance cancels it out.
+- **Key Length as a Prior:** Dropping $-\frac{1}{2}\|\mathbf{k}_i\|^2$ yields $a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$, allowing $\|\mathbf{k}_i\|$ to act as a multiplicative salience prior.
+:::
 
-$$a(\mathbf{q}, \mathbf{k}_i) = -\frac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2 = \mathbf{q}^\top \mathbf{k}_i - \frac{1}{2}\|\mathbf{k}_i\|^2 - \frac{1}{2}\|\mathbf{q}\|^2$$
-
-- **Query Norm Cancels Exactly:** Because $-\frac{1}{2}\|\mathbf{q}\|^2$ is identical across all keys $i = 1, \ldots, m$, softmax shift invariance cancels it out completely.
-- **Key Norm Cancels Under Unit Normalization:** If all keys have equal norm $\|\mathbf{k}_i\| = c$, the term $-\frac{1}{2}\|\mathbf{k}_i\|^2$ also cancels in the softmax.
-- **Dropping Norms Turns Key Length into a Prior:** Defining $a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$ without norm penalties lets the network use $\|\mathbf{k}_i\|$ as a multiplicative prior: longer keys attract larger weight from every aligned query.
+::: {.col .fig}
+@fig:ch10-attn-score-gaussian-to-dot
+:::
+:::
 :::
 
 ::: {.slide title="Additive (MLP) vs. Dot-Product Scoring"}
 [Hardware Efficiency]{.kicker}
 
-Early neural machine translation (Bahdanau et al., 2014) scored query–key pairs with a one-hidden-layer MLP called **additive attention**:
+::: {.cols .vc}
+::: {.col}
+- **Additive Attention (Bahdanau et al., 2014):** $a_{\textrm{add}}(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k})$ materializes a 3D $(n, m, r)$ intermediate activation tensor.
+- **Small-Weight Hazard:** Near $0$, $\tanh(u) \approx u$ is linear, so query terms $\mathbf{W}_q\mathbf{q}$ cancel across keys in the softmax!
+- **Scaled Dot-Product ($\mathbf{Q}\mathbf{K}^\top / \sqrt{d}$):** Computes all $n \times m$ scores in a single Tensor Core GEMM and couples $\mathbf{q}$ and $\mathbf{k}$ bilinearly at all scales.
+:::
 
-$$a_{\textrm{add}}(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k}), \qquad a_{\textrm{dot}}(\mathbf{q}, \mathbf{k}) = \frac{(\mathbf{W}_q \mathbf{q})^\top (\mathbf{W}_k \mathbf{k})}{\sqrt{d}}$$
-
-| Property | Additive Attention ($\mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k})$) | Scaled Dot-Product Attention ($\mathbf{Q}\mathbf{K}^\top / \sqrt{d}$) |
-| :--- | :--- | :--- |
-| **Asymptotic FLOPs ($n$ queries, $m$ keys)** | $O(nmr)$ where $r$ is MLP hidden width | $O(nmd)$ where $d$ is head width |
-| **Intermediate Memory Tensor** | Materializes a 3D $(n, m, r)$ activation tensor | Materializes only the 2D $(n, m)$ score matrix |
-| **Hardware Kernel Primitive** | Broadcasted 3D elementwise addition + `tanh` | Single Tensor Core GEMM ($\mathbf{Q}\mathbf{K}^\top$) |
-| **Small-Weight Initialization Hazard** | Near $0$, $\tanh(u) \approx u$ is linear, so query terms cancel in softmax! | Bilinear product $(\mathbf{W}_q\mathbf{q})^\top(\mathbf{W}_k\mathbf{k})$ couples $\mathbf{q}$ and $\mathbf{k}$ at all scales |
+::: {.col .fig .big}
+@fig:ch10-attn-score-additive-vs-dot
+:::
+:::
 :::
 
 ::: {.slide title="Why Unscaled Dot Products Grow as √d"}
 [Variance Calibration]{.kicker}
 
-Suppose the coordinates of $\mathbf{q}, \mathbf{k} \in \mathbb{R}^d$ are independent random variables with mean $0$ and variance $1$:
+::: {.cols .vc}
+::: {.col}
+- **Linear Variance Growth:** For independent unit-variance coordinates $q_j, k_j$:
+  $$\mathbb{E}[\mathbf{q}^\top \mathbf{k}] = 0, \qquad \textrm{Var}(\mathbf{q}^\top \mathbf{k}) = d$$
+- **Growing Spread:** Unscaled dot products have standard deviation $\sqrt{d}$ ($8$ at $d = 64$; $22.6$ at $d = 512$), pushing softmax into saturation.
+- **Automatic Temperature ($1/\sqrt{d}$):** Dividing by $\sqrt{d}$ restores unit score variance across all head widths $d$.
+:::
 
-$$\mathbb{E}[\mathbf{q}^\top \mathbf{k}] = \sum_{j=1}^d \mathbb{E}[q_j]\,\mathbb{E}[k_j] = 0, \qquad \textrm{Var}(\mathbf{q}^\top \mathbf{k}) = \sum_{j=1}^d \textrm{Var}(q_j k_j) = d$$
-
-- **Growing Spread:** At head width $d = 64$ (GPT-2 small), unscaled dot products have standard deviation $\sqrt{64} = 8$; at $d = 512$, standard deviation reaches $\approx 22.6$.
-- **Restoring Unit Variance:** Dividing by $\sqrt{d}$ rescales the score variance to $1$ for every head width $d$:
-  $$a(\mathbf{q}, \mathbf{k}_i) = \frac{\mathbf{q}^\top \mathbf{k}_i}{\sqrt{d}}, \qquad \alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(\mathbf{q}^\top \mathbf{k}_i / \sqrt{d})}{\sum_{j=1}^m \exp(\mathbf{q}^\top \mathbf{k}_j / \sqrt{d})}$$
-- **Automatic Temperature:** The factor $1/\sqrt{d}$ acts as the inverse bandwidth $1/\sigma^2$ of §10.1, keeping initial softmax sharpness invariant to head width.
+::: {.col .fig}
+@fig:ch10-attn-score-variance-scaling
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Scaled Dot-Product by Hand"}
 [Step-by-Step Trace]{.kicker}
 
-Let $d = 4$ ($1/\sqrt{d} = 1/2$) with queries $\mathbf{q}_1 = (2,2,0,0)$, $\mathbf{q}_2 = (0,0,2,0)$, keys $\mathbf{k}_1 = (1,1,0,0)$, $\mathbf{k}_2 = (0,0,1,1)$, $\mathbf{k}_3 = (0,0,1,-1)$, and values $\mathbf{v}_1 = (1,0)$, $\mathbf{v}_2 = (0,1)$, $\mathbf{v}_3 = (1,1)$:
+::: {.cols .vc}
+::: {.col}
+- **Setup ($d = 4$, scale $1/\sqrt{4} = 1/2$):** Queries $\mathbf{q}_1 = (2,2,0,0)$, $\mathbf{q}_2 = (0,0,2,0)$ attend to keys $\mathbf{k}_1 = (1,1,0,0)$, $\mathbf{k}_2 = (0,0,1,1)$, $\mathbf{k}_3 = (0,0,1,-1)$.
+- **Orthogonal Keys Still Receive Weight:** Keys $\mathbf{k}_2, \mathbf{k}_3$ have dot product $0$ with $\mathbf{q}_1$, yet $e^0 = 1$ gives each $10.7\%$ weight.
+- **Effect of Scaling:** Omitting the $1/2$ scale factor sharpens $\mathbf{q}_1$'s weight on $\mathbf{k}_1$ from $0.787$ to $0.965$.
+:::
 
-| Query | Raw Dots $\mathbf{q}^\top\mathbf{k}_j$ | Scaled Scores $\mathbf{q}^\top\mathbf{k}_j / 2$ | Softmax Weights $\boldsymbol{\alpha}$ | Output $\sum_j \alpha_j \mathbf{v}_j$ |
-| :--- | :---: | :---: | :---: | :---: |
-| **$\mathbf{q}_1 = (2, 2, 0, 0)$** | $(4,\; 0,\; 0)$ | $(2,\; 0,\; 0)$ | $\left(\frac{e^2}{e^2+2}, \frac{1}{e^2+2}, \frac{1}{e^2+2}\right) \approx (0.787, 0.107, 0.107)$ | $(0.893,\; 0.213)$ |
-| **$\mathbf{q}_2 = (0, 0, 2, 0)$** | $(0,\; 2,\; 2)$ | $(0,\; 1,\; 1)$ | $\left(\frac{1}{1+2e}, \frac{e}{1+2e}, \frac{e}{1+2e}\right) \approx (0.155, 0.422, 0.422)$ | $(0.578,\; 0.845)$ |
-
-- **Orthogonal Keys Still Receive Weight:** Keys $\mathbf{k}_2, \mathbf{k}_3$ are orthogonal to $\mathbf{q}_1$ (score $0$), yet $e^0 = 1$ gives each $10.7\%$ of the weight.
-- **Effect of $1/\sqrt{d}$:** Omitting the $1/2$ factor sharpens $\mathbf{q}_1$'s weight on $\mathbf{k}_1$ from $0.787$ to $e^4 / (e^4 + 2) \approx 0.965$.
+::: {.col .fig .big}
+@fig:ch10-attn-score-worked-trace
+:::
+:::
 :::
 
 ::: {.slide title="Softmax Saturation and the Softmax Jacobian"}
 [Gradient Dynamics]{.kicker}
 
-Why does a sharp softmax distribution at initialization stall gradient descent? Differentiating $\boldsymbol{\alpha} = \mathrm{softmax}(\mathbf{a})$ with respect to the score vector $\mathbf{a} \in \mathbb{R}^m$ yields the symmetric Jacobian matrix:
+::: {.cols .vc}
+::: {.col}
+- **Symmetric Softmax Jacobian:**
+  $$\frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top$$
+- **Vanishing at One-Hot Corners:** As $\boldsymbol{\alpha} \to \mathbf{e}_{i^*}$, every diagonal entry $\alpha_i(1 - \alpha_i) \to 0$ and off-diagonal $-\alpha_i \alpha_j \to 0$.
+- **Training Consequence:** In a saturated row, backpropagated score gradients $\partial \mathcal{L} / \partial \mathbf{a}$ vanish, freezing unselected keys.
+:::
 
-$$\frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top, \qquad \frac{\partial \alpha_i}{\partial a_j} = \alpha_i(\delta_{ij} - \alpha_j)$$
-
-- **Vanishing Jacobian at One-Hot Corners:** When one score dominates ($\alpha_{i^*} \to 1$ and $\alpha_j \to 0$ for $j \neq i^*$), every diagonal entry $\alpha_i(1 - \alpha_i) \to 0$ and every off-diagonal entry $-\alpha_i \alpha_j \to 0$:
-  $$\mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top \;\xrightarrow{\;\boldsymbol{\alpha} \to \mathbf{e}_{i^*}\;}\; \mathbf{0}$$
-- **Training Consequence:** In a saturated row, backpropagated score gradients $\partial \mathcal{L} / \partial \mathbf{a} = (\partial \boldsymbol{\alpha}/\partial \mathbf{a})\,\partial \mathcal{L}/\partial \boldsymbol{\alpha}$ vanish, making it hard for unselected keys to ever gain weight.
+::: {.col .fig}
+@fig:ch10-attn-score-jacobian-saturation
+:::
+:::
 :::
 
 ::: {.slide title="Measuring Entropy Collapse Across Head Widths"}
@@ -1067,16 +1079,16 @@ Dense GPU matrix multiplication evaluates all $n \times m$ query–key pairs at 
 ::: {.slide title="Pitfall: Choosing the Fill Value for Masked Softmax"}
 [Floating-Point Hazards]{.kicker}
 
-Replacing excluded scores (`~mask`) with a negative fill value before `softmax` has two subtle floating-point traps across `float32`, `bfloat16`, and `float16`:
+::: {.cols .vc}
+::: {.col}
+- **Hardcoded `-1e6`:** Overflows `float16` (whose maximum finite magnitude is $65{,}504$).
+- **Literal `-inf`:** On any fully masked row (`all False`), the row maximum is $-\infty$, so max-subtraction evaluates $-\infty - (-\infty) = \mathrm{NaN}$ and infects every token in the next layer's GEMM!
+- **`finfo(dtype).min` + Zeroing:** Underflows excluded exponentials to `0.0` in `float16`, `bfloat16`, and `float32`, while `where(mask.any(-1))` zeroes empty rows cleanly.
+:::
 
-| Candidate Fill Value | Behavior on Partially Masked Row | Behavior on Fully Masked Row (`all False`) | Low-Precision (`float16`) Safety |
-| :--- | :--- | :--- | :--- |
-| **Hardcoded `-1e6` or `-1e9`** | Excluded weights underflow to `0.0` in `float32` | Returns uniform $1/m$ weights over invalid keys! | **Fails in `float16`** (max finite magnitude is $65{,}504$) |
-| **Literal `-inf`** | Excluded weights evaluate to $\exp(-\infty) = 0$ | **Produces `NaN`!** Row max is $-\infty$, giving $-\infty - (-\infty) = \mathrm{NaN}$ | Safe on non-empty rows; **corrupts entire network** if any row is empty |
-| **`finfo(dtype).min` + zeroing** | Underflows $\exp$ to exact `0.0` in every dtype | Finite subtraction gives $0$, then `where(mask.any(-1))` zeroes the row | **Works identically in `float16`, `bfloat16`, and `float32`** |
-
-::: {.d2l-note .warn}
-Even if a fully masked padding query's output is discarded in layer 1, a `NaN` in its vector enters layer 2's matrix multiplication $\mathbf{Q}\mathbf{K}^\top$ and infects *every* valid token (`0 * NaN = NaN`)!
+::: {.col .fig .big}
+@fig:ch10-attn-score-mask-fill-hazards
+:::
 :::
 :::
 
@@ -1230,12 +1242,15 @@ Test your understanding of scaled dot-product scoring and boolean masking:
 ::: {.slide title="Summary: Attention Scoring and Masking"}
 [Key Takeaways]{.kicker}
 
-| Mechanism / Operation | Mathematical Form / Rule | Complexity / Behavior | Deep Learning Purpose |
-| :--- | :--- | :--- | :--- |
-| **Scaled Dot-Product** | $a(\mathbf{q}, \mathbf{k}) = \dfrac{\mathbf{q}^\top \mathbf{k}}{\sqrt{d}}$ | $2nmd$ FLOPs via one GEMM $\mathbf{Q}\mathbf{K}^\top$ | Fast, hardware-native pairwise similarity scoring |
-| **Additive Scoring** | $\mathbf{w}_v^\top \tanh(\mathbf{W}_q\mathbf{q} + \mathbf{W}_k\mathbf{k})$ | $O(nmr)$ FLOPs, $n \times m \times r$ memory | Historical NMT score; superseded by projected dot products |
-| **$1/\sqrt{d}$ Scaling** | $\textrm{Var}(\mathbf{q}^\top\mathbf{k}/\sqrt{d}) = 1$ | Keeps entropy $\approx \log m - \frac{1}{2}$ at init | Prevents softmax Jacobian $\mathrm{diag}(\boldsymbol{\alpha})-\boldsymbol{\alpha}\boldsymbol{\alpha}^\top \to \mathbf{0}$ |
-| **Padding Mask** | `keys < valid_lens[..., None]` | Shape `(batch, 1, m)` broadcasts to queries | Excludes `<blank>` tokens in variable-length minibatches |
-| **Causal Mask** | `j <= i + (m - n)` | Excludes $n(n-1)/2$ upper-triangular pairs | Prevents autoregressive models from peeking at future tokens |
-| **Mask Algebra & Fill** | `mask1 & mask2`, fill `finfo(dtype).min` | Zeroes all-`False` rows via `where(mask.any(-1))` | Composes constraints without `float16` overflow or `NaN` |
+::: {.cols .vc}
+::: {.col}
+- **Scaled Dot-Product ($\mathbf{q}^\top\mathbf{k} / \sqrt{d}$):** Evaluates all $n \times m$ pairs in a single GEMM ($2nmd$ FLOPs) while keeping $\textrm{Var}(a) = 1$ so the softmax Jacobian $\mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top$ never vanishes.
+- **Additive Scoring:** Handles $d_q \neq d_k$ via $\mathbf{w}_v^\top \tanh(\mathbf{W}_q\mathbf{q} + \mathbf{W}_k\mathbf{k})$ at $O(nmr)$ memory cost.
+- **Safe Mask Algebra:** Combines padding and causal masks via boolean `&` and fills forbidden scores before softmax.
+:::
+
+::: {.col .fig .big}
+@fig:ch10-attn-score-summary
+:::
+:::
 :::

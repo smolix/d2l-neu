@@ -377,32 +377,34 @@ Stochastic and Minibatch Gradient Descent<br>**sampled gradients · stationary n
 ::: {.slide title="Why Full-Batch Gradient Descent Is Prohibitive"}
 [Motivation]{.kicker}
 
-In §9.1, every parameter update evaluated the exact gradient $\nabla f(\mathbf{x}) = \frac{1}{n}\sum_{i=1}^n \nabla f_i(\mathbf{x})$ across all $n$ training examples. At modern dataset scales, full-batch updates are orders of magnitude too slow:
+::: {.cols .vc}
+::: {.col}
+- **Full-batch cost explosion:** Evaluating $\nabla f(\mathbf{x}) = \frac{1}{n}\sum_{i=1}^n \nabla f_i(\mathbf{x})$ over ImageNet ($n = 1.28\text{M}$) for $450{,}000$ updates would require $450{,}000$ full dataset passes ($5{,}000\times$ more compute than $90$ epochs at $b = 256$).
+- **Minibatch efficiency ($b = 256$):** Estimates the downhill direction at $1/5{,}000$th the cost per step.
+- **The fundamental trade-off:** Sampling $b \ll n$ examples injects **gradient noise** that traps constant-rate iterates in a stationary noise ball.
+:::
 
-| Training Quantity (ResNet-50 on ImageNet, Goyal et al., 2017) | Minibatch SGD ($b = 256$) | Full-Batch GD ($b = 1.28\text{M}$) |
-| :--- | :---: | :---: |
-| **Dataset size $n$** | $1{,}280{,}000$ images | $1{,}280{,}000$ images |
-| **Examples evaluated per parameter update** | $256$ images | $1{,}280{,}000$ images |
-| **Total parameter updates in $90$ epochs** | $450{,}000$ updates | $450{,}000$ updates |
-| **Full passes over ImageNet required** | **$90$ passes** | **$450{,}000$ passes ($5{,}000\times$ more compute!)** |
-
-::: {.d2l-note .warn}
-**The fundamental trade-off:** A random minibatch of $b = 256$ images estimates the downhill direction at $1/5{,}000$th the cost, but injects **sampling noise** that prevents constant-step iterates from settling at a point minimum.
+::: {.col .fig .big}
+@fig:ch09-opt-sgd-cost-vs-noise
+:::
 :::
 :::
 
 ::: {.slide title="Unbiased Sampled Gradients and the Noise Decomposition"}
 [Stochastic Gradients]{.kicker}
 
-For an empirical risk $f(\mathbf{x}) = \frac{1}{n}\sum_{i=1}^n f_i(\mathbf{x})$, single-example **stochastic gradient descent (SGD)** draws an index $i \sim \text{Uniform}\{1, \ldots, n\}$ at each step and updates:
-
-$$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta \nabla f_i(\mathbf{x}_t)$$
-
-- **Unbiased direction:** Because every example is equally likely, the expected stochastic gradient equals the true full-batch gradient:
-  $$\mathbb{E}_i[\nabla f_i(\mathbf{x})] = \frac{1}{n}\sum_{i=1}^n \nabla f_i(\mathbf{x}) = \nabla f(\mathbf{x})$$
-- **Additive zero-mean gradient noise:** We decompose the stochastic gradient into deterministic signal plus random sampling fluctuation $\boldsymbol{\xi}_t$:
+::: {.cols .vc}
+::: {.col}
+- **Unbiased estimator:** Drawing $i \sim \text{Uniform}\{1, \ldots, n\}$ gives $\mathbb{E}_i[\nabla f_i(\mathbf{x})] = \nabla f(\mathbf{x})$.
+- **Signal-plus-noise decomposition:**
   $$\nabla f_i(\mathbf{x}_t) = \nabla f(\mathbf{x}_t) + \boldsymbol{\xi}_t, \qquad \mathbb{E}[\boldsymbol{\xi}_t \mid \mathbf{x}_t] = \mathbf{0}$$
-- Even at the global minimizer $\mathbf{x}^\star$ where $\nabla f(\mathbf{x}^\star) = \mathbf{0}$, individual example gradients $\nabla f_i(\mathbf{x}^\star)$ remain nonzero whenever examples disagree.
+- **Non-vanishing noise at $\mathbf{x}^\star$:** Even where $\nabla f(\mathbf{x}^\star) = \mathbf{0}$, individual gradients $\nabla f_i(\mathbf{x}^\star) \neq \mathbf{0}$ whenever examples disagree, continuously kicking constant-rate iterates off $\mathbf{x}^\star$.
+:::
+
+::: {.col .fig}
+@fig:ch09-opt-sgd-signal-plus-noise
+:::
+:::
 :::
 
 ::: {.slide title="SGD on the Valley: Transient Descent into a Noise Cloud"}
@@ -426,29 +428,33 @@ $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta \nabla f_i(\mathbf{x}_t)$$
 ::: {.slide title="Deriving the Stationary Variance of the Noise Ball"}
 [Second-Moment Recursion]{.kicker}
 
-Along an eigendirection of curvature $\lambda > 0$ with zero-mean gradient noise $\xi_t$ of variance $\sigma^2$, a single constant-rate SGD step evolves as:
-
-$$x_{t+1} = x_t - \eta(\lambda x_t + \xi_t) = (1 - \eta\lambda)x_t - \eta\xi_t$$
-
-- **Second-moment recursion:** Squaring both sides and taking expectations (since $\mathbb{E}[x_t \xi_t] = 0$) separates deterministic contraction from noise injection:
+::: {.cols .vc}
+::: {.col}
+- **1D noisy evolution ($x_{t+1} = (1 - \eta\lambda)x_t - \eta\xi_t$):** Squaring and taking expectations ($\mathbb{E}[x_t\xi_t] = 0$) separates deterministic contraction from noise injection:
   $$\mathbb{E}\big[x_{t+1}^2\big] = (1 - \eta\lambda)^2\,\mathbb{E}\big[x_t^2\big] + \eta^2 \sigma^2$$
-- **Stationary fixed point ($0 < \eta < 2/\lambda$):** Setting $\mathbb{E}[x_{t+1}^2] = \mathbb{E}[x_t^2] = \mathbb{E}[x_\infty^2]$ where per-step contraction balances injected noise variance yields the **noise ball**:
-  $$\mathbb{E}\big[x_\infty^2\big] = \frac{\eta^2 \sigma^2}{1 - (1 - \eta\lambda)^2} = \frac{\eta\,\sigma^2}{\lambda\,(2 - \eta\lambda)} \approx \frac{\eta\,\sigma^2}{2\lambda} \quad (\text{for } \eta\lambda \ll 1)$$
+- **Stationary balance ($0 < \eta < 2/\lambda$):** Setting $\mathbb{E}[x_{t+1}^2] = \mathbb{E}[x_t^2] = \mathbb{E}[x_\infty^2]$ yields the **noise ball**:
+  $$\mathbb{E}\big[x_\infty^2\big] = \frac{\eta\,\sigma^2}{\lambda\,(2 - \eta\lambda)} \approx \frac{\eta\,\sigma^2}{2\lambda}$$
+:::
+
+::: {.col .fig}
+@fig:ch09-opt-sgd-noise-equilibrium
+:::
+:::
 :::
 
 ::: {.slide title="Three Laws Governing the Stationary Noise Ball"}
 [Geometric Interpretation]{.kicker}
 
-The exact stationary variance $\mathbb{E}[x_\infty^2] = \frac{\eta\sigma^2}{\lambda(2 - \eta\lambda)}$ explains how curvature and step size shape late-stage SGD fluctuations:
+::: {.cols .vc}
+::: {.col}
+- **1. Stability ceiling preserved:** $(2 - \eta\lambda) \to 0$ as $\eta \to 2/\lambda$; variance explodes at the deterministic limit ($\eta < 0.5$ on the valley).
+- **2. Inverse curvature scaling ($\propto 1/\lambda$):** Flat directions suffer both slower transient decay ($\eta\lambda$) and wider stationary fluctuations ($20\times$ higher variance along $\lambda_1 = 0.2$ than $\lambda_2 = 4.0$).
+- **3. Linear $\eta/b$ scaling:** For $\eta\lambda \ll 1$, stationary variance scales as $\frac{\eta\sigma^2}{2\lambda b}$; halving $\eta$ or doubling $b$ halves the noise ball.
+:::
 
-| Property | Mathematical Behavior | Numerical Value on the Valley ($\eta = 0.1, \sigma^2 = 1$) |
-| :--- | :--- | :--- |
-| **1. Stability ceiling preserved** | Denominator $(2 - \eta\lambda) \to 0$ as $\eta \to 2/\lambda$; variance blows up at the deterministic limit | Steep ceiling $\eta < 2/4 = 0.5$ unchanged by additive noise |
-| **2. Inverse curvature scaling** | Stationary variance scales as $\propto 1/\lambda$ (standard deviation $\propto 1/\sqrt{\lambda}$) | Flat $x_1$ ($\lambda_1 = 0.2$): $\text{var} = 0.2525$ ($\text{std} = 0.50$)<br>Steep $x_2$ ($\lambda_2 = 4.0$): $\text{var} = 0.0156$ ($\text{std} = 0.125$, **$4\times$ narrower**) |
-| **3. Linear step-size scaling** | For $\eta\lambda \ll 1$, stationary variance scales linearly with $\eta$ ($\propto \eta$) | Halving $\eta: 0.1 \to 0.05$ halves variance along every coordinate |
-
-::: {.d2l-note .rule}
-**Flat directions suffer twice:** Weak curvature $\lambda \ll 1$ slows down initial transient convergence ($\text{rate } \eta\lambda$) and permits the widest steady-state noise excursions ($\text{variance } \propto 1/\lambda$).
+::: {.col .fig .big}
+@fig:ch09-opt-sgd-three-laws
+:::
 :::
 :::
 
@@ -471,13 +477,18 @@ The exact stationary variance $\mathbb{E}[x_\infty^2] = \frac{\eta\sigma^2}{\lam
 ::: {.slide title="Eliminating the Noise Floor: Robbins–Monro Conditions"}
 [Decaying Step Sizes]{.kicker}
 
-At a constant learning rate $\eta$, shrinking the noise ball ($\propto \eta$) requires slowing down initial transient travel ($\propto 1/\eta$). Converging to the exact minimizer $\mathbf{x}^\star$ requires a time-decaying schedule $\eta_t$ satisfying (Robbins & Monro, 1951):
+::: {.cols .vc}
+::: {.col}
+- **Robbins–Monro conditions (1951)** for exact convergence $\mathbf{x}_t \to \mathbf{x}^\star$ under noise:
+  $$\sum_{t=1}^{\infty} \eta_t = \infty \qquad \text{and} \qquad \sum_{t=1}^{\infty} \eta_t^2 < \infty$$
+- **Infinite travel budget ($\sum \eta_t = \infty$):** Reaches $\mathbf{x}^\star$ from any initialization (violated by geometric decay $\eta_0\gamma^t$, which freezes early).
+- **Finite cumulative noise ($\sum \eta_t^2 < \infty$):** Contracts tail variance to zero (achieved by $\eta_t = \frac{c}{t+t_0}$ with $O(1/t)$ MSE decay).
+:::
 
-$$\sum_{t=1}^{\infty} \eta_t = \infty \qquad \text{and} \qquad \sum_{t=1}^{\infty} \eta_t^2 < \infty$$
-
-- **Infinite travel budget ($\sum_t \eta_t = \infty$):** Ensures the iterate can reach $\mathbf{x}^\star$ from arbitrarily far away (violated by geometric decay $\eta_0\gamma^t$, which freezes early).
-- **Finite cumulative noise ($\sum_t \eta_t^2 < \infty$):** Ensures the tail variance injected by $\eta_t\boldsymbol{\xi}_t$ decays to zero (violated by constant $\eta_t = \eta$).
-- **Polynomial $1/t$ rate vs. deterministic geometric rate:** Setting $\eta_t = \frac{c}{t + t_0}$ with $c > \frac{1}{2\lambda_{\min}}$ achieves $\mathbb{E}[\|\mathbf{x}_t - \mathbf{x}^\star\|^2] = O(1/t)$—slower than full-batch GD's $O(\rho^{2t})$ per step, but $n$ times cheaper per step!
+::: {.col .fig}
+@fig:ch09-opt-sgd-robbins-monro
+:::
+:::
 :::
 
 ::: {.slide title="Minibatch Averaging and the 1/b Variance Reduction Law"}
@@ -496,13 +507,18 @@ $$\mathbf{g}_t = \frac{1}{b}\sum_{i \in \mathcal{B}_t} \nabla f_i(\mathbf{x}_t)$
 ::: {.slide title="Stationary Excess Loss: Why Curvature Cancels Out"}
 [Where Training Stalls]{.kicker}
 
-How much does fluctuating inside the noise ball raise the expected objective $\mathbb{E}[f(\mathbf{x}_\infty)]$ above the minimum $f(\mathbf{x}^\star)$?
-
-- Along the $k$-th Hessian eigenvector (curvature $\lambda_k$, per-example gradient variance $\sigma_k^2$), the stationary iterate variance is $v_k = \mathbb{E}[x_{\infty,k}^2] \approx \frac{\eta\sigma_k^2}{2\lambda_k b}$.
-- **Curvature cancellation in the quadratic loss:** A displacement of variance $v_k$ along curvature $\lambda_k$ adds $\frac{1}{2}\lambda_k v_k$ to the expected loss:
-  $$\frac{1}{2}\lambda_k \left(\frac{\eta\,\sigma_k^2}{2\lambda_k b}\right) = \frac{\eta\,\sigma_k^2}{4b}$$
-- **Total stationary excess loss:** Summing over all $d$ orthogonal eigenvectors ($\sum_{k=1}^d \sigma_k^2 = \operatorname{tr}\boldsymbol{\Sigma}$) yields a curvature-free law:
+::: {.cols .vc}
+::: {.col}
+- **Coordinate variance vs. loss curvature:** Along eigenvector $k$ (curvature $\lambda_k$, noise variance $\sigma_k^2$), stationary parameter variance is $v_k \approx \frac{\eta\sigma_k^2}{2\lambda_k b}$.
+- **Exact $\lambda_k$ cancellation:** Multiplying by $\frac{1}{2}\lambda_k$ in the quadratic loss cancels $\lambda_k$ in every mode: $\frac{1}{2}\lambda_k v_k = \frac{\eta\sigma_k^2}{4b}$.
+- **Curvature-free total excess loss:** Summing over all $d$ modes ($\sum_k \sigma_k^2 = \operatorname{tr}\boldsymbol{\Sigma}$) gives:
   $$\mathbb{E}\big[f(\mathbf{x}_\infty)\big] - f(\mathbf{x}^\star) \approx \frac{\eta\,\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star)}{4b}$$
+:::
+
+::: {.col .fig}
+@fig:ch09-opt-sgd-curvature-cancel
+:::
+:::
 :::
 
 ::: {.slide title="Testing Excess Loss on the NASA Airfoil Dataset"}

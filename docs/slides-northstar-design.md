@@ -211,17 +211,15 @@ helpers (`grid`, `arrow`, `block`, `chip`, `tx`, `rc`, `svg`) in
   so a palette change restyles everything. (`C` mirrors the scss tokens; keep
   them in sync, or generate `C` from the scss later.)
 
-### 5.2 Render
+### 5.2 Render, Audit for Visual Defects, and Outline (`tools/build_module_diagrams.mjs`)
 
 ```bash
-node diagrams/render.mjs --out <repo>/img/auto            # all
-node diagrams/render.mjs --out <repo>/img/auto ndarray-broadcasting   # one
-node diagrams/render.mjs --list                           # known ids
+NODE_PATH=/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
+/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
+tools/build_module_diagrams.mjs diagrams/<module>.mjs
 ```
 
-Writes standalone `img/auto/<id>.svg` (XML namespace + width/height; ready for
-`<img>`, inline, and rsvg→PDF). **Commit the SVGs** (reviewable diffs, no reader
-build dependency).
+`tools/build_module_diagrams.mjs` renders every diagram in `<module>.mjs`, loads the live-text SVG in headless Chromium to check for **4 classes of visual defects** (`*-intersects-text` when a curve/line/arrow/circle/ellipse intersects a text bounding box, `rect-*-edge-cuts-text` when a box border cuts through text, `text-overlap` when two labels collide, and `text-outside-viewbox` when a label extends past the SVG canvas), writes `img/auto/<id>.svg`, and runs `tools/figstyle/outline_svg.py` to convert all `<text>` to outlined font paths. **Commit the outlined SVGs** (reviewable diffs, no reader build dependency).
 
 ### 5.3 Reference from a slide
 
@@ -320,6 +318,8 @@ all four `outputs/<fw>/<chapter>/<file>.json` before deciding.
 ## 8. Acceptance checklist (run before handing off)
 
 - [ ] No wall of code or text on any slide; one idea per slide.
+- [ ] **Visual density $\ge 65\%$:** At least $65\text{--}75\%$ of slides in every section deck (and at least 3 of 5 slides in every chapter opener `index.md`) carry a diagram (`@fig:<id>`), chapter figure, or plot (`@!<cell-id>`), with the paired left column de-densified to 2–3 concise bullets.
+- [ ] **Zero SVG visual defects:** `tools/build_module_diagrams.mjs` reports `0` text-vs-graph intersections, box-border cuts, text overlaps, or `viewBox` overflows.
 - [ ] Code cells appear in notebook order; non-teaching cells dropped.
 - [ ] Shown outputs match the executed notebook; noisy outputs trimmed.
 - [ ] Captions are original and concise — no pasted chapter prose.

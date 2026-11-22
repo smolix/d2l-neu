@@ -726,17 +726,14 @@ Model-Based Deep RL: Learned World Models and Planning<br>**dynamics regression 
 ::: {.slide title="Why Each Transition Teaches More Than a Scalar Value"}
 [Motivation]{.kicker}
 
-In §14.6, receding-horizon MPC swung up `Pendulum-v1` immediately when given the exact equations of motion; in §15.5, model-free Soft Actor–Critic needed $2{,}400$–$7{,}500$ steps because each transition $(s_t, a_t, r_t, s_{t+1})$ served solely as a scalar critic target $y_t \in \mathbb{R}$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Richer Supervisory Signal:** Every transition also reveals the underlying *physics* $s_{t+1} - s_t \in \mathbb{R}^3$ and reward $r_t \in \mathbb{R}$ produced by torque $a_t$ at state $s_t$.
-- **Global Physics Generalization:** Because gravity and inertia obey the same differential equations everywhere, fitting a smooth network $\hat{f}_\phi(s, a) \to (\hat{s}', \hat{r})$ transfers knowledge across nearby angles.
+- **Richer Supervisory Signal:** Model-free SAC extracts only a 1D scalar critic target $y_t \in \mathbb{R}$ from each step, whereas a world model regresses onto the full 4D physics vector $(s_{t+1} - s_t, r_t) \in \mathbb{R}^4$.
+- **From Thousands of Steps to Hundreds:** Planning in a learned dynamics model $\hat{f}_\phi$ swings up Pendulum after just **1 to 3 episodes ($200$–$600$ real steps)**.
 :::
 
-::: {.col}
-- **Substituting Compute for Experience:** Inside a learned world model, an agent can simulate $12{,}500$ imagined steps before executing a single real motor command.
-- **From Thousands of Steps to Hundreds:** Planning in a learned dynamics model swings up the pendulum after just **1 to 3 episodes ($200$–$600$ real steps)**—with no critic and no policy network required!
+::: {.col .fig .big}
+@fig:ch15-drl-scalar-vs-physics
 :::
 :::
 :::
@@ -744,12 +741,18 @@ In §14.6, receding-horizon MPC swung up `Pendulum-v1` immediately when given th
 ::: {.slide title="Fitting a Neural Dynamics Model by Least Squares"}
 [World Model Regression]{.kicker}
 
-On the discrete FrozenLake (§14.3), we estimated $\hat{P}(s' \mid s, a)$ by counting visits. For continuous states $s = (\cos\vartheta, \sin\vartheta, \dot\vartheta) \in \mathbb{R}^3$ and torques $a \in [-2, 2]$, we fit a neural network $\hat{f}_\phi(s, a) = (\hat{s}', \hat{r})$ by least squares:
-
+::: {.cols .vc}
+::: {.col}
 $$\min_{\phi} \sum_{i=1}^{N} \big\|\hat{f}_\phi(s_i, a_i) - (s'_i, r_i)\big\|^2$$
 
-- **1. Predict State Deltas ($s' - s$):** Over one control step ($\Delta t = 0.05\text{ s}$), the state changes only slightly; predicting the residual $\Delta s = s' - s$ and adding it back ($\hat{s}' = s + \Delta\hat{s}$) prevents the network from wasting capacity on the identity map.
-- **2. Coordinate Standardization:** Because $\cos\vartheta, \sin\vartheta \in [-1, 1]$, angular velocity $\dot\vartheta \in [-8, 8]$, and reward $r \in [-16.2, 0]$, we standardize every input and target dimension to zero mean and unit variance so the reward does not dominate the $L_2$ loss.
+- **1. Predict State Deltas ($s' - s$):** Over $\Delta t = 0.05\text{ s}$, $s' \approx s$; predicting the residual $\Delta s = s' - s$ with a skip connection $\hat{s}' = s + \Delta\hat{s}$ focuses capacity on the change.
+- **2. Coordinate Standardization:** Z-scoring every input and target dimension prevents the high-variance reward $r \in [-16.2, 0]$ from dominating the $L_2$ loss.
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-delta-residual-net
+:::
+:::
 :::
 
 ::: {.slide title="DynamicsModel Architecture and Standardization"}
@@ -858,34 +861,48 @@ Why did seeds 3 and 4 score $\sim -1{,}500$ after the first random episode (200 
 ::: {.slide title="Experience vs. Computation: MPC Planner vs. SAC"}
 [Systems Trade-off]{.kicker}
 
-| Method on Pendulum-v1 | Real Steps to Score $\ge -200$ | Compute per Real Step | Test-Time Action Latency |
-| :--- | :---: | :--- | :--- |
-| **Warm-Started MPC Planner** | **$200$ to $800$ steps** ($1$–$4$ eps) | $1{,}000$ Adam steps / ep | **$12{,}500$ model calls** ($\sim \text{ms}$, must fit $50\text{ ms}$ control loop) |
-| **SAC (`UTD = 10`)** | $1{,}600$ to $4{,}000$ steps | $10$ critic/actor gradient steps | **$1$ actor forward pass** ($\sim \mu\text{s}$) |
-| **SAC (`UTD = 1`)** | $5{,}000$ to $7{,}500$ steps | $1$ critic/actor gradient step | **$1$ actor forward pass** ($\sim \mu\text{s}$) |
-| **REINFORCE + Baseline** | $240{,}000$ to $480{,}000$ steps | $1$ update per $1{,}600$ steps | **$1$ actor forward pass** ($\sim \mu\text{s}$) |
+::: {.cols .vc}
+::: {.col}
+- **Warm-Started MPC Planner:** Solves Pendulum in **$200$–$800$ real steps**, but evaluates $500 \times 25 = 12{,}500$ model calls ($\sim\text{ms}$) at every test-time control step.
+- **Model-Free SAC (`UTD = 1` to `10`):** Needs **$1{,}600$–$7{,}500$ real steps**, but executes a single actor forward pass ($\sim\mu\text{s}$) at test time by amortizing planning into policy weights $\theta$.
+:::
 
-::: {.d2l-note}
-A world model does not make control free—it shifts the bottleneck from **physical interaction** (scarce on hardware) to **test-time computation** (scarce on embedded microcontrollers).
+::: {.col .fig .big}
+@fig:ch15-drl-experience-vs-compute
+:::
 :::
 :::
 
 ::: {.slide title="Search as a Policy Improvement Operator"}
 [Actor-Seeded Search]{.kicker}
 
-To get fast test-time execution without losing planning power, we seed the search with a policy network $\bar{a}_\theta(s) = c\tanh\mu_\theta(s)$ (`actor_plan`) and use `improve` as an expert policy improvement operator:
+::: {.cols .vc}
+::: {.col}
+- **Monotonic improvement inside $\hat{f}_\phi$:** Seeding Candidate $0$ of `plan` with the actor's own unperturbed rollout guarantees that the winning candidate achieves predicted return at least as high as the actor's plan.
 
 @model-based-search-seeded-by-the-actor
+:::
 
-- **Monotonic Improvement Inside the Model:** Because candidate $0$ of `plan` is the actor's own unperturbed rollout, the winning candidate always achieves a predicted $n$-step return **at least as high as the actor's own plan**.
+::: {.col .fig}
+@fig:ch15-drl-actor-seeded-search
+:::
+:::
 :::
 
 ::: {.slide title="Distilling Search Labels into an Actor Network"}
 [Policy Distillation]{.kicker}
 
-Because `improve(model, actor, obs)` returns continuous torques improved by 500-candidate lookahead search, we can train the actor's deterministic mean $c\tanh\mu_\theta(s)$ to imitate the search via $L_2$ regression (`distill`):
+::: {.cols .vc}
+::: {.col}
+- **Amortizing search into $\pi_\theta$:** Regress the actor's deterministic mean $c\tanh\mu_\theta(s)$ onto the 500-candidate search actions `improve(model, actor, obs)` via $L_2$ loss (`distill`).
 
 @model-based-distillation-into-the-actor-1
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-search-distillation
+:::
+:::
 :::
 
 ::: {.slide title="Iterated Search and Distillation (AlphaZero Loop)"}
@@ -907,15 +924,15 @@ Because `improve(model, actor, obs)` returns continuous torques improved by 500-
 ::: {.slide title="Dyna and MBPO: Imagined Transitions vs. High UTD"}
 [Model-Generated Data]{.kicker}
 
-Instead of planning at test time, **Dyna** (Sutton, 1990) and **MBPO** (Janner et al., 2019) branch short $k=3$-step rollouts from buffer states inside $\hat{f}_\phi$ to supply synthetic training transitions for SAC:
+::: {.cols .vc}
+::: {.col}
+- **Short branched rollouts (Janner et al., 2019):** Branch $k = 3$-step rollouts from real buffer states inside $\hat{f}_\phi$ so synthetic data stay anchored near the true state distribution without long-horizon drift.
+- **Matched-UTD ablation (Chen et al., 2021):** At a matched `UTD = 10`, $100\%$ real replay transitions match $95\%$ imagined rollouts ($1{,}500$–$2{,}500$ real steps to $-200$) without risking model bias.
+:::
 
-| Training Configuration (5 Seeds, $\beta = 0.2$, `UTD = 10`) | Batch Composition | Real Environment Steps to Score $\ge -200$ |
-| :--- | :--- | :---: |
-| **MBPO-Style SAC + Learned World Model** | $5\%$ real + $95\%$ imagined ($3$-step rollouts) | **$1{,}500$ to $3{,}000$ steps** |
-| **Model-Free SAC at Matched Update Ratio** | $100\%$ real replay transitions (`UTD = 10`) | **$1{,}500$ to $2{,}500$ steps** |
-
-::: {.d2l-note}
-**Crucial Ablation Lesson (Chen et al., 2021):** Much of MBPO's headline speedup over `UTD = 1` SAC comes from taking $10$–$20$ gradient updates per environment step; at a matched `UTD = 10`, real replay data match 3-step synthetic rollouts on Pendulum without risking compounding model bias!
+::: {.col .fig .big}
+@fig:ch15-drl-mbpo-branched-rollout
+:::
 :::
 :::
 

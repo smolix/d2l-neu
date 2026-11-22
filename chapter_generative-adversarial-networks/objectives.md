@@ -907,57 +907,71 @@ Adversarial Objectives and Divergences<br>**classification payoffs & $f$-diverge
 ::: {.slide title="Why GAN Codebases Offer a Menu of Objectives"}
 [Motivation]{.kicker}
 
-Standard GAN repositories treat training objectives (`logistic`, `least squares`, `hinge`, `Wasserstein`, `MMD`) as interchangeable configuration flags. When a generator stalls far from the data distribution $p$, three distinct mechanisms could be responsible:
+::: {.cols .vc}
+::: {.col}
+- **1. Population divergence saturation:** When supports separate (e.g., $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(7, 1)$), $\mathrm{JS}(p, q)$ sits within $0.1\%$ of $\log 2$ with derivative $0.0013$.
+- **2. Critic function-class geometry ($\mathcal{T}$):** Does the critic $D \in \mathcal{T}$ jump discontinuously between supports, or maintain a nonzero spatial gradient $\nabla_x D(x')$ across the empty gap?
+- **3. Generator loss weighting:** Does the generator loss transmit $\nabla_x D(x')$ (`w_ns ≈ 1`) or multiply it by an exponentially vanishing weight (`w_sat ≈ e^D → 0`)?
+:::
 
-- **1. Population divergence saturation:** In §16.1, $\mathrm{JS}(p, q)$ flattened once supports separated—for $p = \mathcal{N}(0, 1)$ vs. $q = \mathcal{N}(7, 1)$, $\mathrm{JS}(p, q)$ lies within $0.1\%$ of $\log 2$ with derivative $0.0013$.
-- **2. Critic function-class geometry ($\mathcal{T}$):** Does the critic $D \in \mathcal{T}$ jump abruptly between the supports of $p$ and $q$, or does it maintain a nonzero spatial gradient $\nabla_x D(x')$ across the empty gap?
-- **3. Generator loss weighting:** Does the generator objective transmit the critic's spatial slope $\nabla_x D(x')$ or multiply it by an exponentially vanishing weight?
+::: {.col .fig .big}
+@fig:ch16-gan-three-stall
+:::
+:::
 :::
 
 ::: {.slide title="A General Template for Adversarial Discrepancies"}
 [Unifying Formulation]{.kicker}
 
-Replacing the log-likelihood terms of §16.1 with general real and generated payoff functions $(\ell_p, \ell_q)$ over a critic function class $\mathcal{T}$ defines a unified family of adversarial discrepancies:
-
+::: {.cols .vc}
+::: {.col}
 $$d(p, q) = \sup_{T \in \mathcal{T}} \Big\{ \mathbb{E}_{x \sim p}\big[\ell_p(T(x))\big] + \mathbb{E}_{x' \sim q}\big[\ell_q(T(x'))\big] \Big\}$$
 
-| Critic Input Arity | Unconstrained Critic Class $\mathcal{T}$ | Constrained or Penalized Critic Class $\mathcal{T}$ |
-| :--- | :--- | :--- |
-| **Single sample $x$** | Classification losses (logistic, LSGAN, hinge) $\to$ **$f$-divergences** of $p/q$ | Linear payoffs on RKHS unit ball (**MMD**) or 1-Lipschitz ball (**$W_1$**); hinge + spectral norm |
-| **Ordered pair $(x, x')$** | Relativistic pairing (**RpGAN**, §16.3) $\to$ $\mathrm{JS}(p \otimes q, q \otimes p)$ | Pairing + zero-centered penalties $R_1 + R_2$ (**R3GAN**, §16.4–16.6) |
+- **Classification payoffs ($\mathcal{T}$ unconstrained):** Nonlinear margin losses $(\ell_p, \ell_q)$ estimate monotone links of $\lambda(x) = \log(p/q)$ and evaluate **$f$-divergences** (or product-space JS under pairing).
+- **Integral probability metrics ($\mathcal{T}$ constrained):** Linear payoffs $\ell_p(t) = t, \ell_q(t) = -t$ on an RKHS ball (**MMD**) or 1-Lipschitz ball (**$W_1$**).
+- **Convexity in measure space:** As a supremum of linear expectations in $q$, $d(p, q)$ is always convex in $q$ (though nonconvex in generator weights $\theta$).
+:::
 
-::: {.d2l-note}
-**Convexity in measure space vs. parameter space:** For any fixed critic $T$, the expectation is linear in the probability measure $q$, so the supremum $d(p, q)$ is always convex in $q$—even though it is nonconvex in the neural generator weights $\theta$.
+::: {.col .fig}
+@fig:ch16-gan-general-sup
+:::
 :::
 :::
 
 ::: {.slide title="From Posterior Probability to Bayes-Risk Gaps"}
 [Two-Outcome Intuition]{.kicker}
 
-Consider a binary outcome space (heads and tails) with $p = (\frac{3}{4}, \frac{1}{4})$ and $q = (\frac{1}{4}, \frac{3}{4})$ under equal priors $\frac{1}{2}$. Observing an outcome gives the Bayes posterior $\eta(x) = P(y = 1 \mid x) = \frac{p(x)}{p(x) + q(x)}$ ($\frac{3}{4}$ on heads, $\frac{1}{4}$ on tails), whereas a blind guess ($D = 0$) predicts $\frac{1}{2}$:
+::: {.cols .vc}
+::: {.col}
+- **Two-state example ($p = (\frac{3}{4}, \frac{1}{4}), q = (\frac{1}{4}, \frac{3}{4})$):** Every classification loss scores the exact same Bayes posterior $\eta(x) = \frac{p(x)}{p(x) + q(x)}$ ($\frac{3}{4}$ on heads, $\frac{1}{4}$ on tails) against the blind-guess baseline $\eta = \frac{1}{2}$.
+- **Induced divergences from the Bayes-risk gap $\Delta_\ell = L(\frac{1}{2}) - \mathbb{E}_m[L(\eta)]$:**
+  - **Logistic:** $\log 2 - H_b(\frac{3}{4}) \approx 0.131\text{ nats} = \mathrm{JS}(p, q)$.
+  - **Squared (LSGAN):** $\frac{1}{4} - \frac{3}{16} = \frac{1}{16} = \frac{1}{4}\chi^2(p \,\|\, m)$.
+  - **Hinge:** $1 - \frac{1}{2} = \frac{1}{2} = \mathrm{TV}(p, q)$.
+:::
 
-| Classification Loss | Blind Risk $L(\tfrac{1}{2})$ | Optimal Bayes Risk $\mathbb{E}_m[L(\eta)]$ | Bayes-Risk Gap $\Delta_\ell(p, q)$ | Induced Divergence |
-| :--- | :--- | :--- | :--- | :--- |
-| **Logistic (log loss)** | $\log 2 \approx 0.693$ | $H_b(\tfrac{3}{4}) \approx 0.562$ | **$0.131\text{ nats}$** | Jensen–Shannon $\mathrm{JS}(p, q)$ |
-| **Squared error (LSGAN)** | $\tfrac{1}{4} = 0.250$ | $\tfrac{3}{4} \cdot \tfrac{1}{4} = \tfrac{3}{16}$ | **$\tfrac{1}{16} = 0.0625$** | $\tfrac{1}{4}$ Vincze–Le Cam $\chi^2(p \,\|\, m)$ |
-| **Hinge loss** | $1.000$ | $2 \cdot \tfrac{1}{4} = \tfrac{1}{2}$ | **$\tfrac{1}{2} = 0.500$** | Total variation $\mathrm{TV}(p, q) = \tfrac{1}{2}\sum |p - q|$ |
-
-::: {.d2l-note}
-Every classification loss scores the exact same posterior $\eta(x) = p(x)/(p(x) + q(x))$, mapping $(p, q)$ to a different nonnegative divergence that vanishes if and only if $q = p$.
+::: {.col .fig .big}
+@fig:ch16-gan-bayes-risk-gap
+:::
 :::
 :::
 
 ::: {.slide title="Theorem: Every Classification Loss Is an f-Divergence"}
 [The Bayes-Risk Gap]{.kicker}
 
-Symmetric classification losses apply a margin payoff $\ell(t)$ to $+D(x)$ on real data and $-D(x')$ on generated samples:
+::: {.cols .vc}
+::: {.col}
+$$\Delta_\ell(p, q) = D_f(p \,\|\, q), \qquad f(u) = L(\tfrac{1}{2}) - \frac{u + 1}{2}\,L\!\left(\frac{u}{u + 1}\right)$$
 
-$$V_\ell(D) = \mathbb{E}_{x \sim p}\big[\ell(D(x))\big] + \mathbb{E}_{x' \sim q}\big[\ell(-D(x'))\big]$$
+- **Concave conditional Bayes risk:** $L(\eta) = \inf_t \{-\eta\,\ell(t) - (1 - \eta)\,\ell(-t)\}$ is concave on $[0, 1]$ as an infimum of affine functions of $\eta$.
+- **Convex $f$-divergence generator:** Changing to the density ratio $u = p(x)/q(x)$ (where $\eta = u/(u+1)$) makes $f(u)$ convex on $[0, \infty)$ with $f(1) = 0$.
+- **Monotone critic link $D^\star(\lambda)$:** The pointwise optimal critic is a monotone function of the log density ratio $\lambda = \log(p/q)$.
+:::
 
-- **Conditional Bayes risk $L(\eta)$:** At posterior $\eta(x) = p(x)/(2m(x))$, the minimum pointwise expected loss is $L(\eta) = \inf_t \{-\eta\,\ell(t) - (1 - \eta)\,\ell(-t)\}$, which is concave on $[0, 1]$ as an infimum of affine functions of $\eta$.
-- **Bayes-risk gap $\Delta_\ell(p, q) = L(\frac{1}{2}) - \mathbb{E}_{x \sim m}[L(\eta(x))]$:** Substituting $u = \rho(x) = p(x)/q(x)$ (so $m = q(u+1)/2$ and $\eta = u/(u+1)$) expresses $\Delta_\ell(p, q)$ as an **$f$-divergence** $D_f(p \,\|\, q) = \mathbb{E}_{x \sim q}[f(p(x)/q(x))]$:
-  $$\Delta_\ell(p, q) = D_f(p \,\|\, q) \qquad \text{with} \qquad f(u) = L(\tfrac{1}{2}) - \frac{u + 1}{2}\,L\!\left(\frac{u}{u + 1}\right)$$
-  where concavity of $L$ guarantees that $f(u)$ is convex on $[0, \infty)$ with $f(1) = 0$.
+::: {.col .fig}
+@fig:ch16-gan-f-divergence
+:::
+:::
 :::
 
 ::: {.slide title="Standard Classification Losses and Critic Links"}
@@ -978,12 +992,18 @@ Each margin loss $-\ell(t)$ defines a specific $f$-divergence gap $\Delta_\ell(p
 ::: {.slide title="The Fenchel–Young Variational Bound (f-GAN)"}
 [Asymmetric & Unbounded Divergences]{.kicker}
 
-Because symmetric margin losses satisfy $L(\eta) = L(1 - \eta)$, their gap $\Delta_\ell(p, q)$ is always symmetric and bounded above by $L(\frac{1}{2})$. Reaching asymmetric or unbounded $f$-divergences—such as forward KL $D_{\textrm{KL}}(p \,\|\, q)$—requires asymmetric payoffs $\ell_p \neq \ell_q$:
+::: {.cols .vc}
+::: {.col}
+$$D_f(p \,\|\, q) \ge \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim q}\big[f^*(T(x'))\big]$$
 
-- **Convex conjugate $f^*(t) = \sup_u \{ut - f(u)\}$:** By the Fenchel–Young inequality, $f(u) \ge ut - f^*(t)$ for all $u, t$, with equality when $t = f'(u)$.
-- **$f$-GAN variational lower bound (Nowozin et al., 2016):** Setting $u = \rho(x) = p(x)/q(x)$ and $t = T(x)$ and taking expectations under $q$ (using $\mathbb{E}_q[\rho\,T] = \mathbb{E}_p[T]$) gives:
-  $$D_f(p \,\|\, q) \ge \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim q}\big[f^*(T(x'))\big]$$
-- **Tightness:** Attained at the optimal critic $T^\star(x) = f'(p(x)/q(x))$. For forward KL ($f(u) = u\log u$), $f^*(t) = e^{t - 1}$ and $T^\star(x) = 1 + \log(p(x)/q(x)) = 1 + \lambda(x)$.
+- **Why asymmetric payoffs $\ell_p \neq \ell_q$ are needed:** Any symmetric margin loss has bounded gap $\Delta_\ell \le L(\frac{1}{2})$ and cannot represent unbounded asymmetric divergences like forward KL $D_{\textrm{KL}}(p \,\|\, q)$.
+- **Fenchel conjugate $f^*(t) = \sup_u \{ut - f(u)\}$:** Tight at $T^\star(x) = f'(p(x)/q(x))$; for forward KL ($f(u) = u\log u$), $f^*(t) = e^{t-1}$ and $T^\star(x) = 1 + \lambda(x)$.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-fenchel-dual
+:::
+:::
 :::
 
 ::: {.slide title="Empirical Verification of Critic Link Functions"}
@@ -1028,25 +1048,34 @@ Whereas $f$-divergences pair an unconstrained critic with nonlinear payoffs, **i
 ::: {.slide title="Wasserstein-1 Distance and Lipschitz Critics"}
 [Optimal Transport Duality]{.kicker}
 
-Choosing $\mathcal{F}$ to be the class of **1-Lipschitz functions** ($|T(x) - T(y)| \le \|x - y\|$ for all $x, y$) yields the **Wasserstein-1 (Earth Mover's) distance** via Kantorovich–Rubinstein duality:
+::: {.cols .vc}
+::: {.col}
+$$W_1(p, q) = \sup_{\|T\|_{\mathrm{Lip}} \le 1} \Big\{ \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim q}\big[T(x')\big] \Big\}$$
 
-$$W_1(p, q) = \sup_{\|T\|_{\mathrm{Lip}} \le 1} \Big\{ \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim q}\big[T(x')\big] \Big\} = \inf_{\pi \in \Pi(p, q)} \mathbb{E}_{(x, x') \sim \pi}\big[\|x - x'\|\big]$$
+- **Kantorovich–Rubinstein duality:** Constraining the IPM witness class $\mathcal{F}$ to **1-Lipschitz functions** ($|T(x) - T(y)| \le \|x - y\|$) recovers the Earth Mover's distance $W_1(p, q)$.
+- **Three neural enforcement mechanisms:** Weight clipping (restricts capacity), WGAN-GP ray gradient penalty (two-sided unit-slope target creates a barrier at $q = p$), and spectral normalization ($W \leftarrow W/\sigma_{\max}(W)$).
+:::
 
-| Lipschitz Enforcement Mechanism | How It Constrains the Neural Critic $T$ | Practical Trade-Off |
-| :--- | :--- | :--- |
-| **Weight clipping (WGAN, 2017)** | Clamps every weight to $[-c, c]$ after each step | Enforces $\kappa$-Lipschitzness for unknown $\kappa$, but severely restricts capacity |
-| **Gradient penalty (WGAN-GP, 2017)** | Adds $\gamma\,\mathbb{E}[(\|\nabla_x T(\tilde{x})\| - 1)^2]$ at interpolants $\tilde{x} = ux + (1-u)x'$ | Soft constraint along rays; two-sided penalty creates a zero-slope barrier at $q = p$ |
-| **Spectral normalization (SN-GAN, 2018)** | Divides each weight matrix by its largest singular value $\sigma_{\max}(W)$ | Bounds each linear layer's Lipschitz constant by $1$; widely paired with hinge loss |
+::: {.col .fig}
+@fig:ch16-gan-w1-lipschitz
+:::
+:::
 :::
 
 ::: {.slide title="Sample Complexity in High Dimensions: MMD vs. W₁"}
 [Statistical Scaling Pitfalls]{.kicker}
 
-How reliably can finite minibatches of size $n$ estimate these population discrepancies in dimension $d_x$?
+::: {.cols .vc}
+::: {.col}
+- **Fixed-kernel MMD ($O(n^{-1/2})$ in any dimension):** The unbiased U-statistic estimator `mmd2_unbiased` converges at the parametric rate $O(n^{-1/2})$ independent of $d_x$.
+- **Empirical $W_1$ ($O(n^{-1/d_x})$ for $d_x > 2$):** True empirical optimal transport suffers from the curse of dimensionality (Weed & Bach, 2019); WGAN works in practice because its smooth neural architecture acts as a parametric witness.
+- **Variational $f$-GAN variance explosion:** In the forward-KL dual, $e^{T^\star(x')-1} = p(x')/q(x')$ has variance $\chi^2(p \,\|\, q)$, which can diverge even when $D_{\textrm{KL}}(p \,\|\, q) < \infty$.
+:::
 
-- **Fixed-kernel MMD ($O(n^{-1/2})$ in any dimension):** Because $\mathrm{MMD}^2$ averages pairwise kernel evaluations, the unbiased U-statistic estimator `mmd2_unbiased` converges at the parametric rate $O(n^{-1/2})$ independent of $d_x$.
-- **Empirical $W_1$ ($O(n^{-1/d_x})$ for $d_x > 2$):** Plug-in empirical optimal transport suffers from the curse of dimensionality (Weed & Bach, 2019)—halving estimation error requires $2^{d_x}$ times more samples! In practice, a WGAN critic never computes true $W_1$ between minibatches; its smooth network architecture acts as a parametric witness providing a descent direction.
-- **Variational $f$-GAN variance explosion:** In the forward-KL dual $\mathbb{E}_p[T] - \mathbb{E}_q[e^{T - 1}]$, the exponential term $e^{T^\star(x') - 1} = p(x')/q(x')$ has variance $\chi^2(p \,\|\, q)$ under $q$, which can diverge even when $D_{\textrm{KL}}(p \,\|\, q) < \infty$.
+::: {.col .fig .big}
+@fig:ch16-gan-sample-complexity
+:::
+:::
 :::
 
 ::: {.slide title="Population Divergence Slope vs. Separation"}

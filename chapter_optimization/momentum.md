@@ -340,27 +340,36 @@ Momentum and Nesterov Accelerated Gradient<br>**velocity recursion · effective 
 ::: {.slide title="Why Memoryless Gradient Descent Struggles on Valleys"}
 [Motivation]{.kicker}
 
-On the quadratic valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$ ($\lambda_1 = 0.2, \lambda_2 = 4.0, \kappa = 20$), plain gradient descent at its optimal rate $\eta^\star = \frac{2}{0.2+4} \approx 0.476$ needs **$47$ steps** to reach $1\%$ error and **$139$ steps** to reach $10^{-6}$ error:
+::: {.cols .vc}
+::: {.col}
+- **Memoryless $O(\kappa)$ bottleneck:** On $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$ ($\kappa = 20$), plain GD takes $47$ steps to $1\%$ error ($139$ steps to $10^{-6}$) because it ignores temporal gradient alignment:
+  - **Along the flat floor ($x_1$):** Gradients point **persistently in the same direction**.
+  - **Across the steep walls ($x_2$):** Gradients **alternate in sign** on every step.
+- **Polyak's heavy-ball idea (1964):** Accumulate an exponentially decaying velocity sum so floor gradients reinforce and wall oscillations cancel.
+:::
 
-- **Why memoryless steps are bottlenecked by $O(\kappa)$:** Each step $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\mathbf{g}_t$ looks only at the instantaneous gradient $\mathbf{g}_t$, ignoring the clear geometric signal in consecutive gradients:
-  - **Along the flat valley floor ($x_1$):** Successive gradients point **persistently in the same direction**, begging for a larger step.
-  - **Across the steep valley walls ($x_2$):** Successive gradients **alternate in sign** as the iterate zigzags from wall to wall.
-
-::: {.d2l-note}
-**Polyak's heavy-ball idea (1964):** Step along an exponentially decaying sum of past gradients (**velocity**) so persistent floor gradients accumulate while oscillating wall gradients cancel!
+::: {.col .fig .big}
+@fig:ch09-opt-mom-persistent-vs-alt
+:::
 :::
 :::
 
 ::: {.slide title="Heavy-Ball Momentum: The Velocity Recursion"}
 [Update Equations]{.kicker}
 
-Given gradient $\mathbf{g}_t$ at step $t$ (exact or minibatch), heavy-ball momentum maintains a velocity buffer $\mathbf{v}_t \in \mathbb{R}^d$ initialized at $\mathbf{v}_0 = \mathbf{0}$ and updates with momentum coefficient $\beta \in [0, 1)$:
+::: {.cols .vc}
+::: {.col}
+- **Velocity update ($\beta \in [0, 1)$, $\mathbf{v}_0 = \mathbf{0}$):**
+  $$\mathbf{v}_t = \beta\,\mathbf{v}_{t-1} + \mathbf{g}_t, \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\mathbf{v}_t$$
+- **Unrolled geometric history:**
+  $$\mathbf{v}_t = \sum_{k=0}^{t-1} \beta^k \mathbf{g}_{t-k}$$
+- **Physical analogy:** A heavy ball rolling down $f(\mathbf{x})$ with inertia $\beta$ and viscous friction $1 - \beta$ over memory window $\tau = \frac{1}{1-\beta}$.
+:::
 
-$$\mathbf{v}_t = \beta\,\mathbf{v}_{t-1} + \mathbf{g}_t, \qquad \mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\mathbf{v}_t$$
-
-- **Unrolled exponentially weighted sum:** Expanding the recursion expresses $\mathbf{v}_t$ as a geometric history of all past gradients:
-  $$\mathbf{v}_t = \sum_{k=0}^{t-1} \beta^k \mathbf{g}_{t-k} = \mathbf{g}_t + \beta\,\mathbf{g}_{t-1} + \beta^2\,\mathbf{g}_{t-2} + \cdots + \beta^{t-1}\,\mathbf{g}_1$$
-- **Physical analogy:** A heavy ball rolling down a potential surface $f(\mathbf{x})$ where $\beta$ controls inertia and $1 - \beta$ acts as viscous friction ($\beta = 0$ recovers memoryless gradient descent).
+::: {.col .fig}
+@fig:ch09-opt-mom-velocity-unroll
+:::
+:::
 :::
 
 ::: {.slide title="Momentum Stabilizes a Divergent Learning Rate (η = 0.6)"}
@@ -382,15 +391,16 @@ $$\mathbf{v}_t = \beta\,\mathbf{v}_{t-1} + \mathbf{g}_t, \qquad \mathbf{x}_{t+1}
 ::: {.slide title="Persistent Amplification vs. Alternating Cancellation"}
 [The Effective Step Size]{.kicker}
 
-Evaluating the geometric series $\mathbf{v}_t = \sum_{k \ge 0} \beta^k \mathbf{g}_{t-k}$ in two limiting regimes resolves the paradox:
+::: {.cols .vc}
+::: {.col}
+- **Persistent floor mode ($\mathbf{g}_{t-k} \approx \mathbf{g}$):** Geometric sum $\sum_{k \ge 0}\beta^k = \frac{1}{1-\beta}$ yields effective step **$\eta_{\text{eff}} = \frac{\eta}{1-\beta}$** ($1.2$ at $\eta=0.6, \beta=0.5$).
+- **Alternating wall mode ($\mathbf{g}_{t-k} \approx (-1)^k\mathbf{g}$):** Alternating sum $\sum_{k \ge 0}(-\beta)^k = \frac{1}{1+\beta}$ damps step to **$\eta_{\text{alt}} = \frac{\eta}{1+\beta}$** ($0.4 < 0.5$, stable!).
+- **Expanded stability ceiling:** $\eta\lambda_{\max} < 2(1+\beta)$, unlocking $\frac{1+\beta}{1-\beta}$ times larger floor steps than plain GD.
+:::
 
-| Gradient History Pattern | Geometric Series for Velocity $\mathbf{v}_t$ | Effective Step Multiplier | Value at $\eta = 0.6, \beta = 0.5$ |
-| :--- | :--- | :---: | :---: |
-| **Persistent ($\mathbf{g}_{t-k} \approx \mathbf{g}$, flat floor)** | $(1 + \beta + \beta^2 + \cdots)\,\mathbf{g} = \frac{1}{1 - \beta}\,\mathbf{g}$ | **$\eta_{\text{eff}} = \frac{\eta}{1 - \beta}$** | $\frac{0.6}{0.5} =$ **$1.2$** ($2\times$ faster!) |
-| **Alternating ($\mathbf{g}_{t-k} \approx (-1)^k\mathbf{g}$, steep wall)** | $(1 - \beta + \beta^2 - \cdots)\,\mathbf{g} = \frac{1}{1 + \beta}\,\mathbf{g}$ | **$\eta_{\text{alt}} = \frac{\eta}{1 + \beta}$** | $\frac{0.6}{1.5} =$ **$0.4 < 0.5$** (stable!) |
-
-::: {.d2l-note .rule}
-**Dual directional filter:** Momentum amplifies persistent floor progress by $\frac{1}{1-\beta}$ while attenuating high-frequency wall oscillations by $\frac{1}{1+\beta}$—acting as a directional low-pass filter without ever computing the Hessian.
+::: {.col .fig .big}
+@fig:ch09-opt-mom-dual-filter
+:::
 :::
 :::
 
@@ -427,30 +437,35 @@ Because a sign-flipping mode $x_t \propto (-1)^t$ experiences the damped step si
 ::: {.slide title="Momentum Under Minibatch Noise: Same Noise Floor"}
 [Interaction with Stochastic Noise]{.kicker}
 
-When gradients carry minibatch sampling noise $\mathbf{g}_t = \nabla f(\mathbf{x}_t) + \boldsymbol{\xi}_t$, does averaging over $\tau = \frac{1}{1-\beta}$ steps shrink the stationary noise ball of §9.2?
-
-- **Follow a single noise impulse $\boldsymbol{\xi}_t$:** Injected into $\mathbf{v}_t$ with weight $1$ at step $t$, $\boldsymbol{\xi}_t$ persists in $\mathbf{v}_{t+k}$ with weight $\beta^k$, contributing a total cumulative parameter displacement over all future steps of:
+::: {.cols .vc}
+::: {.col}
+- **Integrated impulse of a single noise kick $\boldsymbol{\xi}_t$:** Persists in $\mathbf{v}_{t+k}$ with weight $\beta^k$, contributing total cumulative displacement:
   $$-\eta\,(1 + \beta + \beta^2 + \cdots)\,\boldsymbol{\xi}_t = -\frac{\eta}{1 - \beta}\,\boldsymbol{\xi}_t = -\eta_{\text{eff}}\,\boldsymbol{\xi}_t$$
-- **No free noise reduction at matched $\eta_{\text{eff}}$:** Momentum spreads each noise kick across $\tau = \frac{1}{1-\beta}$ steps, but its total integrated impulse equals a single plain SGD step of size $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$.
+- **No free noise-ball reduction at matched $\eta_{\text{eff}}$:** Momentum spreads each noise kick across $\tau = \frac{1}{1-\beta}$ steps, settling into the same stationary variance as plain SGD at step size $\eta_{\text{eff}}$.
+- **Tuning rule:** When enabling $\beta = 0.9$ in a noise-limited run, scale $\eta$ down by $1 - \beta = 0.1$.
+:::
 
-::: {.d2l-note .warn}
-**Practical scaling rule:** At matched effective step size $\eta_{\text{eff}} = \frac{\eta}{1-\beta}$, SGD with and without momentum settle into stationary noise balls of nearly identical variance. When enabling $\beta = 0.9$ in a noise-limited run, scale $\eta$ down by $1 - \beta = 0.1$!
+::: {.col .fig}
+@fig:ch09-opt-mom-noise-impulse
+:::
 :::
 :::
 
 ::: {.slide title="Optimal Quadratic Acceleration: From O(κ) to O(√κ)"}
 [Polyak's Acceleration Law]{.kicker}
 
-On a quadratic with eigenvalues in $[\lambda_{\min}, \lambda_{\max}]$ and condition number $\kappa = \lambda_{\max}/\lambda_{\min}$, Polyak (1964) proved that the optimal constant hyperparameters are:
+::: {.cols .vc}
+::: {.col}
+- **Polyak's optimal tuning (1964):**
+  $$\eta^\star = \frac{4}{\left(\sqrt{\lambda_{\max}} + \sqrt{\lambda_{\min}}\right)^2}, \qquad \beta^\star = \left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^2$$
+- **From $O(\kappa)$ to $O(\sqrt{\kappa})$ steps:** Contraction improves from $\frac{\kappa-1}{\kappa+1} \approx 1 - \frac{2}{\kappa}$ (plain GD) to **$\sqrt{\beta^\star} = \frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1} \approx 1 - \frac{2}{\sqrt{\kappa}}$** ($37\times$ fewer steps at $\kappa = 1{,}400$).
+- **Why $\sqrt{\beta}$?** For $\beta \ge \beta_{\text{c}}(\lambda) = (1-\sqrt{\eta\lambda})^2$, characteristic roots $z_1, z_2$ are complex conjugates with $z_1 z_2 = \beta \implies |z| = \sqrt{\beta}$.
+:::
 
-$$\eta^\star = \frac{4}{\left(\sqrt{\lambda_{\max}} + \sqrt{\lambda_{\min}}\right)^2}, \qquad \beta^\star = \left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^2$$
-
-| Method | Worst-Case Contraction Factor $\rho^\star$ | Asymptotic Rate ($\kappa \gg 1$) | Steps to Accuracy $\epsilon$ |
-| :--- | :---: | :---: | :---: |
-| **Optimal Gradient Descent** | $\frac{\kappa - 1}{\kappa + 1}$ | $1 - \frac{2}{\kappa}$ | $\frac{\kappa}{2}\ln\frac{1}{\epsilon}$ |
-| **Optimal Heavy-Ball Momentum** | **$\sqrt{\beta^\star} = \frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}$** | **$1 - \frac{2}{\sqrt{\kappa}}$** | **$\frac{\sqrt{\kappa}}{2}\ln\frac{1}{\epsilon}$** |
-
-- Replacing $\kappa$ by $\sqrt{\kappa}$ delivers massive speedups on ill-conditioned problems (e.g., at $\kappa = 1{,}400$, where $\beta^\star \approx 0.9$, $\sqrt{\kappa} \approx 37$ cuts the iteration count nearly $37$-fold!).
+::: {.col .fig}
+@fig:ch09-opt-mom-sqrt-kappa
+:::
+:::
 :::
 
 ::: {.slide title="Second-Order Recurrence and the √β Complex-Root Law"}

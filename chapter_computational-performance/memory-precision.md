@@ -912,14 +912,16 @@ Memory Hierarchy, Precision, and Checkpointing<br>**parameter & activation budge
 ::: {.slide title="A 1B-Parameter GPT Fills 15 of 24 GiB Before Any Data"}
 [Motivation]{.kicker}
 
-A fast step is useless if it runs out of GPU memory before completing a single iteration. Consider our 18-block, 1B-parameter GPT ($N = 1.01 \times 10^9$, width $d = 2048$, vocab $V = 50{,}257$) trained with `float32` Adam on a $24\text{ GiB}$ RTX 4090:
+::: {.cols .vc}
+::: {.col}
+- **Fixed parameter state ($16N = 15.1\text{ GiB}$):** On a 18-block, 1B GPT, `fp32` weights ($4N$), gradients ($4N$), and Adam moments ($8N$) leave only $8.9\text{ GiB}$ on a $24\text{ GiB}$ RTX 4090.
+- **Per-token activations ($\sim 3\text{--}4\text{ MiB/tok}$):** Retaining 18 blocks of forward activations fits only **2–3 sequences** of $1{,}024$ tokens per micro-batch.
+- **Closing the batch gap:** Reaching $0.5\text{M+}$ token global batches requires mixed precision, activation checkpointing, and gradient accumulation.
+:::
 
-- **Fixed parameter state ($16N$ bytes):** Weights ($4N$), gradients ($4N$), and Adam's two moments ($8N$) consume **$15.1\text{ GiB}$** before reading a single token.
-- **Per-token activations ($\sim 3\text{--}4\text{ MiB/token}$):** The forward pass must retain intermediate activations across all $18$ blocks for backpropagation, leaving room in the remaining $8.9\text{ GiB}$ for only **2 to 3 sequences** of $1{,}024$ tokens.
-- **The batch-size gap:** Large language models require global batches of $0.5\text{M}\text{--}3.2\text{M}$ tokens per optimizer step for stable convergence.
-
-::: {.d2l-note .warn}
-In this section we decompose training memory into $M(n) \approx \textrm{fixed}(N) + n \cdot \textrm{per\_token}(L, d, V)$ and analyze **mixed precision**, **activation checkpointing**, and **gradient accumulation**.
+::: {.col .fig .big}
+@fig:ch13-perf-24gib-squeeze
+:::
 :::
 :::
 
@@ -950,31 +952,33 @@ The memory occupied by model parameters, gradients, and optimizer state depends 
 ::: {.slide title="Three Differentiation Rules Govern Saved Activations"}
 [Backpropagation Storage]{.kicker}
 
-Why does backpropagation require specific intermediate tensors from the forward pass? Three chain-rule identities determine what every primitive must save:
+::: {.cols .vc}
+::: {.col}
+- **Linear layer ($\mathbf{Y} = \mathbf{X}\mathbf{W}$):** Must save input $\mathbf{X}$ because the weight gradient $\nabla_{\mathbf{W}}\mathcal{L} = \mathbf{X}^\top(\nabla_{\mathbf{Y}}\mathcal{L})$ multiplies by $\mathbf{X}$.
+- **Elementwise nonlinearity ($\mathbf{y} = f(\mathbf{x})$):** Saves $\mathbf{x}$ (or $\mathbf{y}$) to evaluate the derivative $f'(\mathbf{x})$.
+- **Hadamard product ($\mathbf{z} = \mathbf{p} \odot \mathbf{q}$):** Saves **both** $\mathbf{p}$ and $\mathbf{q}$, which is why SwiGLU alone stores four hidden vectors ($\approx 10.7d$ values/token)!
+:::
 
-| Layer / Primitive Operation | Saved Forward Tensor | Mathematical Reason (Backward VJP Rule) |
-| :--- | :--- | :--- |
-| **Linear projection** $\mathbf{Y} = \mathbf{X}\mathbf{W}$ | Input activations $\mathbf{X}$ | Weight gradient $\nabla_{\mathbf{W}} \mathcal{L} = \mathbf{X}^\top (\nabla_{\mathbf{Y}} \mathcal{L})$ multiplies by $\mathbf{X}$ |
-| **Elementwise nonlinearity** $\mathbf{y} = f(\mathbf{x})$ | Input $\mathbf{x}$ (or output $\mathbf{y}$) | Jacobian entry $f'(\mathbf{x})$ is evaluated at $\mathbf{x}$ (or written in terms of $\mathbf{y}$) |
-| **Hadamard product** $\mathbf{z} = \mathbf{p} \odot \mathbf{q}$ | **Both factors** $\mathbf{p}$ and $\mathbf{q}$ | $\nabla_{\mathbf{p}} \mathcal{L} = (\nabla_{\mathbf{z}} \mathcal{L}) \odot \mathbf{q}$ and $\nabla_{\mathbf{q}} \mathcal{L} = (\nabla_{\mathbf{z}} \mathcal{L}) \odot \mathbf{p}$ |
-
-::: {.d2l-note}
-**SwiGLU consequence:** Because $\textrm{SwiGLU}(\mathbf{g}, \mathbf{u}) = \textrm{SiLU}(\mathbf{g}) \odot \mathbf{u}$ chains an elementwise SiLU, an elementwise product, and a linear down-projection, it must save **four vectors of hidden width $\frac{8}{3}d$** ($\mathbf{g}$, $\textrm{SiLU}(\mathbf{g})$, $\mathbf{u}$, and their product $\approx 10.7d$ values/token)!
+::: {.col .fig .big}
+@fig:ch13-perf-vjp-save-rules
+:::
 :::
 :::
 
 ::: {.slide title="Tallying a Transformer Block: ~20d Values per Token"}
 [Per-Token Tally]{.kicker}
 
-Applying the three rules across one pre-norm SwiGLU Transformer block of width $d = 2048$ (with fused FlashAttention) accounts for every stored byte per token:
+::: {.cols .vc}
+::: {.col}
+- **Norms & Attention ($8d\text{--}9d$):** Two RMSNorms + residual inputs save $4d$, while fused FlashAttention saves $\mathbf{Q}, \mathbf{K}, \mathbf{V}, \mathbf{O}$ ($4d\text{--}5d$, avoiding $T \times T$).
+- **SwiGLU FFN ($\approx 10.7d$):** Saves gate $\mathbf{g}$, $\textrm{SiLU}(\mathbf{g})$, up $\mathbf{u}$, and their product at width $\frac{8}{3}d$, bringing each block to **$a \approx 18.7d\text{--}20d$** ($149\text{--}160\text{ KiB/tok}$ in `fp32`).
+- **Output head ($a_{\textrm{out}} + \Delta$):** Final norm, $V$ `fp32` log-probs ($212\text{ KiB/tok}$), plus $8V = 393\text{ KiB/tok}$ backward logit gradient peak.
+:::
 
-| Sublayer Component | Tensors Saved for Backpropagation | Values / Token | `fp32` Bytes ($d=2048$) |
-| :--- | :--- | :---: | :---: |
-| **Two RMSNorms + inputs to QKV & FFN** | Pre-norm residual inputs ($2d$) + normalized outputs ($2d$) | $4d$ | $32\text{ KiB}$ |
-| **Fused Causal Self-Attention** | $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ ($3d$) + attention output ($d$, or $2d$ if copied) | $4d\text{--}5d$ | $32\text{--}40\text{ KiB}$ |
-| **SwiGLU Feed-Forward ($\frac{8}{3}d$)** | Gate $\mathbf{g}$, $\textrm{SiLU}(\mathbf{g})$, up $\mathbf{u}$, and product $\textrm{SiLU}(\mathbf{g}) \odot \mathbf{u}$ | $4 \cdot \tfrac{8}{3}d \approx 10.7d$ | $85\text{ KiB}$ |
-| **One Fused Transformer Block ($a$)** | **Total per block** (independent of sequence length $T$!) | **$18.7d\text{--}19.7d \approx 20d$** | **$\approx 149\text{--}160\text{ KiB}$** |
-| **Output Logits & Cross-Entropy ($a_{\textrm{out}}$)** | Final norm + $V = 50{,}257$ `fp32` log-probabilities | $V + 2d$ | **$212\text{ KiB}$** |
+::: {.col .fig .big}
+@fig:ch13-perf-block-activation-tally
+:::
+:::
 :::
 
 ::: {.slide title="Verifying Saved Bytes: 18.7d per Fused Block" only="pytorch"}
@@ -1042,16 +1046,16 @@ Recording every CUDA caching-allocator event across one Adam step on $4{,}096$ t
 ::: {.slide title="Mixed Precision: Master fp32 State with bf16 Compute"}
 [Mixed Precision]{.kicker}
 
-Mixed-precision training (`torch.autocast` / `bfloat16` linear layers) assigns each tensor to the narrowest format that preserves numerical stability:
+::: {.cols .vc}
+::: {.col}
+- **Linear & Attention Matmuls in `bfloat16` ($2\text{ B}$):** Doubles Tensor Core throughput to $165\text{ TFLOP/s}$ and cuts per-block activation storage by $\sim 40\%$.
+- **Master State & Reductions in `float32` ($4\text{ B}$):** Prevents small updates ($\eta g \sim 10^{-5}w$) from rounding to zero and preserves RMSNorm, residual, and cross-entropy accuracy.
+- **No loss scaling needed:** `bfloat16` shares the 8-bit exponent of `float32` ($\sim 10^{\pm 38}$ range).
+:::
 
-| Tensor / Operation Category | Format (`bf16` Recipe) | Numerical & Systems Rationale |
-| :--- | :---: | :--- |
-| **Linear & Attention Matmuls ($\mathbf{X}\mathbf{W}$, $\mathbf{Q}\mathbf{K}^\top\mathbf{V}$)** | `bfloat16` ($2\text{ B}$) | Runs at $2\times$ Tensor Core throughput ($165\text{ TFLOP/s}$) and halves activation storage |
-| **Master Weights, Gradients & Adam Moments** | `float32` ($4\text{ B}$) | Prevents small update steps ($\eta g \sim 10^{-5} w$) from rounding to zero in a 7-bit mantissa |
-| **Residual Stream, RMSNorm & Cross-Entropy** | `float32` ($4\text{ B}$) | Preserves variance reductions, log-sum-exp precision, and cross-layer gradient accumulation |
-
-::: {.d2l-note}
-Because `bfloat16` has the same 8-bit exponent range as `float32`, it never underflows gradients into subnormals and needs **no dynamic loss scaling** (unlike 5-bit-exponent `float16`).
+::: {.col .fig .big}
+@fig:ch13-perf-mixed-precision-flow
+:::
 :::
 :::
 
@@ -1079,13 +1083,18 @@ Mixed precision is primarily a **speed** optimization. Benchmarking one SGD step
 ::: {.slide title="Activation Checkpointing: O(L) Inputs, One Block Live"}
 [Activation Checkpointing]{.kicker}
 
-To multiply the number of tokens that fit on a card, **activation checkpointing** (rematerialization) discards internal block activations during the forward pass:
+::: {.cols .vc}
+::: {.col}
+$$\textrm{Peak/tok} \;=\; L \cdot 4d \;+\; a \;+\; a_{\textrm{out}} \;+\; \Delta$$
 
-$$\textrm{Peak per-token memory} \;=\; \underbrace{L \cdot 4d}_{\textrm{saved block inputs}} \;+\; \underbrace{a}_{\textrm{1 recomputed block}} \;+\; a_{\textrm{out}} \;+\; \Delta$$
+- **Forward pass:** Stores only the `fp32` input at each of the $L = 18$ block boundaries ($18 \times 8\text{ KiB} = \mathbf{144\text{ KiB/tok}}$, down from $2.7\text{ MiB/tok}$).
+- **Backward pass:** Re-runs block $\ell$'s forward pass just before backpropagating through block $\ell$, keeping only **1 block's** internal activations ($a$) live at a time for $\le 33\%$ extra FLOPs.
+:::
 
-- **Forward pass:** Saves only the `float32` input tensor at each of the $L$ block boundaries ($4d = 8\text{ KiB/token}$ per block, or $18 \times 8 = \mathbf{144\text{ KiB/token}}$ across all 18 blocks—down from $2.7\text{ MiB/token}$!).
-- **Backward pass:** Just before backpropagating through block $\ell$, re-runs block $\ell$'s forward pass from its checkpointed input to rematerialize its $a$ bytes of internal activations, then immediately frees them.
-- **Compute trade-off:** Adds at most one extra forward pass ($2N\text{ FLOPs/token}$ on top of $6N$, or $\le 33\%$ extra compute).
+::: {.col .fig}
+@fig:ch13-perf-activation-checkpointing
+:::
+:::
 :::
 
 ::: {.slide title="Token Capacity Across Precision and Checkpointing"}
@@ -1121,12 +1130,18 @@ Once per-block checkpointing reduces all 18 blocks to $144\text{ KiB/token}$, tw
 ::: {.slide title="Gradient Accumulation and the 2I*/n Traffic Overhead"}
 [Gradient Accumulation]{.kicker}
 
-When a target global batch $B_{\textrm{global}} = m \, B_{\textrm{micro}}$ exceeds single-step memory capacity, **gradient accumulation** runs $m$ sequential forward–backward micro-batches of $n$ tokens, accumulates $\frac{1}{m}\nabla \mathcal{L}_i$ into a persistent gradient buffer, and steps the optimizer once:
-
+::: {.cols .vc}
+::: {.col}
 $$\frac{t_{\textrm{accumulator traffic}}}{t_{\textrm{micro-batch compute}}} \;=\; \frac{12N / \beta}{6Nn / P} \;=\; \frac{2 I^*}{n}$$
 
-- **Where the $2I^*/n$ overhead comes from:** Every accumulating micro-batch reads the running `float32` gradient ($4N$), reads the new gradient ($4N$), and writes their sum ($4N$)—moving $12N$ bytes against $6Nn$ FLOPs of compute.
-- **Rule of thumb:** At $n = 1{,}024$ tokens in `tf32` ($I^* = 82$), accumulator traffic adds $2(82)/1024 \approx 16\%$ overhead; always use the **largest micro-batch $n$ that fits in memory** without unnecessary checkpointing.
+- **Reaching large global batches ($B_{\textrm{global}} = m\,B_{\textrm{micro}}$):** Sums $\frac{1}{m}\nabla\mathcal{L}_i$ across $m$ sequential micro-batches of $n$ tokens before stepping Adam once.
+- **The $2I^*/n$ traffic tax:** Each micro-batch reads old grads ($4N$), new grads ($4N$), and writes their sum ($4N$); always use the largest micro-batch $n$ that fits without extra checkpointing.
+:::
+
+::: {.col .fig}
+@fig:ch13-perf-grad-accumulation
+:::
+:::
 :::
 
 ::: {.slide title="Measuring Accumulation: Halved Peak, Exact Gradients"}

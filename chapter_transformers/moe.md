@@ -594,12 +594,17 @@ Sparse Mixture-of-Experts (MoE) Transformers<br>**stored vs. active capacity · 
 ::: {.slide title="Breaking the Lockstep Between Capacity and FLOPs"}
 [Motivation]{.kicker}
 
-In a dense Transformer (§11.6), every token multiplies every weight matrix: doubling stored knowledge $N$ doubles both pretraining FLOPs ($6 N D$) and per-token inference FLOPs ($2 N$).
+::: {.cols .vc}
+::: {.col}
+- **Dense Transformer:** Every token multiplies every weight matrix ($N_{\text{active}} = N_{\text{total}}$).
+- **Sparse Mixture of Experts (MoE):** Replaces each block's FFN ($8d^2$ of $12d^2$ params) with a bank of $E$ parallel FFN **experts** and routes each token to only its top-$k$ experts ($1 \le k \ll E$).
+- **Frontier scale:** `DeepSeek-V3` stores **$671\text{B}$** parameters while activating only **$37\text{B}$** per token!
+:::
 
-- **Where two-thirds of a block lives:** The position-wise FFN holds $8 d^2$ of each block's $12 d^2$ parameters and processes each token vector $\mathbf{x}_t \in \mathbb{R}^d$ *independently*.
-- **Conditional computation:** A token inside a Python code block and a token inside a French poem do not need the same FFN parameters.
-- **Sparse Mixture of Experts (MoE):** Replaces each block's single FFN with a bank of $E$ parallel FFN **experts** $\{\mathrm{FFN}_1, \dots, \mathrm{FFN}_E\}$ and routes each token to only its top-$k$ experts ($1 \le k \ll E$).
-- **Frontier scale:** `DeepSeek-V3` stores **$671\text{B}$** parameters in memory while activating only **$37\text{B}$** per token!
+::: {.col .fig .big}
+@fig:ch11-tf-moe-dense-vs-sparse
+:::
+:::
 :::
 
 ::: {.slide title="Top-k Routing Inside a Mixture-of-Experts Layer"}
@@ -636,23 +641,34 @@ In an $L$-block MoE with $E$ routed SwiGLU experts of intermediate width $w$ ($3
 ::: {.slide title="How the Router Learns Through Discrete Top-k Selection"}
 [Router Gradients]{.kicker}
 
-Selecting the index set $\mathcal{T}_k(\mathbf{x}) = \operatorname{argtop}_k(\mathbf{p}(\mathbf{x}))$ is a discrete step function with zero derivative—so how does the router matrix $\mathbf{W}_r$ receive gradients from the language-modeling loss $\mathcal{L}$?
-
-- **Multiplying by the differentiable gate $p_e(\mathbf{x})$:** For each selected expert $e \in \mathcal{T}_k(\mathbf{x})$, the chain rule differentiates through the scalar weight $p_e(\mathbf{x})$:
+::: {.cols .vc}
+::: {.col}
+- **Differentiable gate $p_e(\mathbf{x})$:** For each selected expert $e \in \mathcal{T}_k(\mathbf{x})$, the chain rule differentiates through the scalar weight $p_e(\mathbf{x})$:
   $$\frac{\partial \mathcal{L}}{\partial p_e(\mathbf{x})} = \bigl(\nabla_{\mathrm{MoE}(\mathbf{x})} \mathcal{L}\bigr)^\top \mathrm{FFN}_e(\mathbf{x})$$
-  If expert $e$'s output aligns with the negative loss gradient, gradient descent increases $p_e(\mathbf{x})$ (and lowers $p_{j \neq e}$ via the softmax Jacobian).
-- **Critical $k = 1$ renormalization pitfall:** When $k > 1$, some models (like Mixtral) renormalize weights over the selected set: $g_e = p_e / \sum_{j \in \mathcal{T}_k} p_j$. If you renormalize when **$k = 1$** (Switch Transformer), then $g_{e^*} = p_{e^*} / p_{e^*} \equiv 1$, making $\partial \mathrm{MoE}(\mathbf{x}) / \partial \mathbf{W}_r = \mathbf{0}$ so the router never learns!
+- **Critical $k = 1$ renormalization pitfall:** If you renormalize when **$k = 1$**, then $g_{e^*} = p_{e^*} / p_{e^*} \equiv 1$, making $\partial \mathrm{MoE}(\mathbf{x}) / \partial \mathbf{W}_r = \mathbf{0}$ so the router never learns!
+:::
+
+::: {.col .fig}
+@fig:ch11-tf-moe-router-gradient
+:::
+:::
 :::
 
 ::: {.slide title="Fixed-Capacity Buffers and Token Dropping"}
 [Compiled Dispatch]{.kicker}
 
-In a minibatch of $n = B T$ tokens, each token chooses $k$ experts ($n k$ total assignments). Because compiled GPU/TPU kernels require **static tensor shapes**, we cannot allocate variable-length arrays per expert on the fly:
-
-- **Buffer capacity $S$ with capacity factor $\gamma \ge 1$:** Under a perfectly uniform router, each expert receives $n k / E$ tokens. `MoELayer` allocates a fixed buffer of shape $(E, S, d)$ with:
+::: {.cols .vc}
+::: {.col}
+- **Static buffer capacity $S$ ($\gamma \ge 1$):** Compiled GPU/TPU kernels allocate a static buffer of shape $(E, S, d)$ with:
   $$S = \left\lceil \gamma \cdot \frac{n k}{E} \right\rceil$$
-  where $\gamma = 1.25$ (Switch default) provides a $25\%$ slack cushion above even load.
-- **Overflow and token dropping:** Assignments targeting expert $e$ are queued in batch order (`rank = 0, 1, ...`). Any assignment with $\text{rank} \ge S$ is **dropped**—receiving a zero FFN update so the token simply passes unchanged through the block's residual skip connection!
+  where $\gamma = 1.25$ provides a $25\%$ slack cushion above uniform load.
+- **Overflow and token dropping:** Any assignment with queue position $\text{rank} \ge S$ is dropped to a dummy overflow slot and passes unchanged through the residual stream.
+:::
+
+::: {.col .fig}
+@fig:ch11-tf-moe-capacity-buffer
+:::
+:::
 :::
 
 ::: {.slide title="Vectorized Dispatch, Batched SwiGLU, and Gather" only="pytorch"}
@@ -699,33 +715,48 @@ out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
 ::: {.slide title="Why Unbalanced Routing Occurs: Skew and Feedback"}
 [Routing Collapse]{.kicker}
 
-Without explicit load balancing, MoE layers suffer severe load skew from two compounding sources:
+::: {.cols .vc}
+::: {.col}
+- **1. Input distribution skew ($t = 0$):** Frequent bytes (`' '` is $18.9\%$ of WikiText-103, exceeding $\gamma / E = 15.6\%$) and shared mean representations push initial logits toward 1–2 experts.
+- **2. Rich-get-richer positive feedback:** Busiest experts receive more gradient updates, lower loss faster, and are rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with higher $p_e(\mathbf{x})$—leaving $E - k$ experts dead!
+:::
 
-1. **Input distribution skew at initialization ($t = 0$):** Unlike isotropic Gaussian test vectors, real text tokens have skewed frequencies (e.g., spaces `' '` make up $18.9\%$ of WikiText-103 bytes, exceeding a single buffer's $\gamma / E = 1.25 / 8 = 15.6\%$ capacity!) and share a common mean representation that pushes random router logits toward one or two experts immediately.
-2. **Rich-get-richer positive feedback during training:** Whichever expert receives more tokens on early steps accumulates larger gradient updates, lowers the prediction loss faster on those tokens, and is rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with even higher router probabilities—collapsing an $E$-expert layer onto just $k$ overworked experts while $E - k$ experts go dead!
+::: {.col .fig .big}
+@fig:ch11-tf-moe-collapse-loop
+:::
+:::
 :::
 
 ::: {.slide title="Remedy 1: Switch Auxiliary Load-Balancing Loss"}
 [Auxiliary Loss Balancing]{.kicker}
 
-Shazeer et al. (2017) and Switch Transformer (Fedus et al., 2022) add an auxiliary penalty $\alpha \mathcal{L}_{\text{aux}}$ ($\alpha = 0.01$) to the cross-entropy loss for each MoE layer:
+::: {.cols .vc}
+::: {.col}
+- Switch Transformer (Fedus et al., 2022) adds an auxiliary penalty $\alpha \mathcal{L}_{\text{aux}}$ ($\alpha = 0.01$):
+  $$\mathcal{L}_{\mathrm{aux}} = E \sum_{e=1}^{E} f_e \, \bar{p}_e$$
+- Because $f_e$ is stop-gradient while $\bar{p}_e$ is differentiable, $\partial \mathcal{L}_{\text{aux}} / \partial \bar{p}_e = E f_e$ pushes down overloaded experts ($f_e > 1/E$), reaching its minimum $\mathcal{L}_{\text{aux}} = 1$ under uniform routing.
+:::
 
-$$\mathcal{L}_{\mathrm{aux}} = E \sum_{e=1}^{E} f_e \, \bar{p}_e, \qquad f_e = \frac{1}{n k}\sum_{t=1}^{n} \mathbb{I}\bigl[e \in \mathcal{T}_k(\mathbf{x}_t)\bigr], \qquad \bar{p}_e = \frac{1}{n}\sum_{t=1}^{n} p_e(\mathbf{x}_t)$$
-
-- **How the gradient acts:** The empirical assignment fraction $f_e$ is a non-differentiable count (stop-gradient), while $\bar{p}_e$ is differentiable. Because $\frac{\partial \mathcal{L}_{\text{aux}}}{\partial \bar{p}_e} = E f_e$, overloaded experts ($f_e > 1/E$) receive a steeper penalty pushing their probabilities down.
-- **Uniform minimum ($\mathcal{L}_{\text{aux}} = 1$):** When all experts receive equal load $f_e = 1/E$, $\mathcal{L}_{\text{aux}} = E \sum_e \frac{1}{E} \bar{p}_e = \sum_e \bar{p}_e = 1$ (versus $\mathcal{L}_{\text{aux}} = E$ under single-expert collapse).
-- **Trade-off:** $\nabla \mathcal{L}_{\text{aux}}$ competes directly with the language-modeling gradient $\nabla \mathcal{L}_{\text{LM}}$.
+::: {.col .fig}
+@fig:ch11-tf-moe-switch-aux
+:::
+:::
 :::
 
 ::: {.slide title="Remedy 2: Loss-Free Dynamic Router Bias Control"}
 [Loss-Free Balancing]{.kicker}
 
-To eliminate gradient interference between $\mathcal{L}_{\text{aux}}$ and $\mathcal{L}_{\text{LM}}$, **DeepSeek-V3** (Wang et al., 2024; Liu et al., 2024) introduces a **loss-free bias controller**:
+::: {.cols .vc}
+::: {.col}
+- **DeepSeek-V3 loss-free bias controller (Wang et al., 2024):**
+  $$\mathcal{T}_k(\mathbf{x}) = \operatorname{argtop}_k\bigl(\mathbf{p}(\mathbf{x}) + \mathbf{b}\bigr), \qquad b_e \leftarrow b_e + \eta_b \, \mathrm{sign}\!\left(\frac{1}{E} - f_e\right)$$
+- Shifts *only* the $\operatorname{argtop}_k$ selection threshold while keeping the gating weights $p_e(\mathbf{x})$ in $\sum_{e \in \mathcal{T}_k} p_e(\mathbf{x})\,\mathrm{FFN}_e(\mathbf{x})$ completely unbiased (zero gradient interference!).
+:::
 
-$$\mathcal{T}_k(\mathbf{x}) = \operatorname{argtop}_k\bigl(\mathbf{p}(\mathbf{x}) + \mathbf{b}\bigr), \qquad b_e \leftarrow b_e + \eta_b \, \mathrm{sign}\!\left(\frac{1}{E} - f_e\right)$$
-
-- **Decoupling selection from gating weights:** The non-differentiable bias vector $\mathbf{b} \in \mathbb{R}^E$ shifts *only* which $k$ experts win the $\operatorname{argtop}_k$ tournament; the output sum $\sum_{e \in \mathcal{T}_k} p_e(\mathbf{x})\,\mathrm{FFN}_e(\mathbf{x})$ still uses the **unbiased** router probability $p_e(\mathbf{x})$.
-- **Closed-loop feedback step:** After each optimizer step, any overloaded expert ($f_e > 1/E$) has its selection threshold lowered by $-\eta_b$, while any underloaded expert ($f_e < 1/E$) is boosted by $+\eta_b$—balancing loads with **zero interference gradient**!
+::: {.col .fig}
+@fig:ch11-tf-moe-aux-vs-bias
+:::
+:::
 :::
 
 ::: {.slide title="Comparing Five Routing Regimes on WikiText-103"}
@@ -798,14 +829,16 @@ Does sparse conditional capacity beat a dense Transformer at the **exact same ac
 ::: {.slide title="Expert Configurations of Frontier Open-Weights MoEs"}
 [Frontier Comparison]{.kicker}
 
-Comparing released MoE families from 2024–2025 illustrates the shift from coarse 8-expert top-2 routing to fine-grained $128\text{--}256$ experts with high sparsity ratios:
+::: {.cols .vc}
+::: {.col}
+- **Coarse routing (Mixtral 8x7B, 2024):** $E = 8$ full-width experts, top-$2$ active ($47\text{B}$ total / $13\text{B}$ active, $3.6\times$ capacity ratio).
+- **Fine-grained + shared experts (Qwen3, DeepSeek-V3, gpt-oss):** $128\text{--}256$ narrow experts ($w/d \in [0.29, 1.0]$) with top-$4$ or top-$8$ routing achieve **$11\times\text{--}23\times$ stored-to-active capacity**!
+:::
 
-| Model Family | Routed Experts $E$ | Active $k$ | Expert Width / $d$ | Shared Experts | Total / Active Params |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Mixtral 8x7B** (2024) | $8$ | $2$ | $3.50$ | $0$ | $46.7\text{B} / 12.9\text{B}$ ($3.6\times$) |
-| **Qwen3-235B-A22B** (2025) | $128$ | $8$ | $0.38$ | $0$ | $235\text{B} / 22\text{B}$ ($10.7\times$) |
-| **DeepSeek-V3** (2024) | $256$ | $8$ | $0.29$ | $1$ | $671\text{B} / 37\text{B}$ ($18.1\times$) |
-| **gpt-oss-120b** (2025) | $128$ | $4$ | $1.00$ | $0$ | $117\text{B} / 5.1\text{B}$ ($22.9\times$) |
+::: {.col .fig .big}
+@fig:ch11-tf-moe-frontier-spectrum
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: MoE Capacity, Loss, and Data Budgets"}
@@ -829,11 +862,15 @@ Work through these three MoE design calculations:
 ::: {.slide title="Summary: Sparse Mixture-of-Experts Transformers"}
 [Key Takeaways]{.kicker}
 
-| Concept / Mechanism | Mathematical Form | Systems & Modeling Role |
-| :--- | :--- | :--- |
-| **Top-$k$ MoE Routing** | $\mathrm{MoE}(\mathbf{x}) = \sum_{e \in \mathcal{T}_k(\mathbf{x})} p_e(\mathbf{x})\,\mathrm{FFN}_e(\mathbf{x})$ | Decouples total stored capacity $N_{\text{total}}$ from per-token FLOPs $N_{\text{active}}$ |
-| **Fixed-Capacity Buffer** | $S = \lceil \gamma n k / E \rceil$ slots per expert | Compiles all $E$ experts as one static $(E, S, d)$ batched matrix product |
-| **Switch Auxiliary Loss** | $\mathcal{L}_{\text{aux}} = E \sum_{e=1}^E f_e \bar{p}_e \ge 1$ | Penalizes probability on overloaded experts; adds competing gradient |
-| **Loss-Free Bias Control** | $\mathcal{T}_k = \operatorname{argtop}_k(\mathbf{p} + \mathbf{b});\; \Delta b_e = \eta_b \mathrm{sign}(\frac{1}{E}-f_e)$ | Balances expert loads dynamically without distorting gating weights $p_e$ |
-| **Fine-Grained + Shared** | Split $E \to mE, k \to mk$; add $E_{\text{shared}} \ge 1$ | Explodes combinatorial expert mixtures while isolating common features |
+::: {.cols .vc}
+::: {.col}
+- **Top-$k$ Conditional Compute:** $\mathrm{MoE}(\mathbf{x}) = \sum_{e \in \mathcal{T}_k(\mathbf{x})} p_e(\mathbf{x})\,\mathrm{FFN}_e(\mathbf{x})$ decouples stored capacity $N_{\text{total}}$ from per-token FLOPs $N_{\text{active}}$.
+- **Static Buffers & Balancing:** Fixed capacity $S = \lceil \gamma n k / E \rceil$ plus Switch auxiliary loss or loss-free dynamic bias control $b_e$.
+- **Fine-Grained + Shared Experts:** Splitting $E \to mE, k \to mk$ and adding shared experts powers frontier MoEs.
+:::
+
+::: {.col .fig .big}
+@fig:ch11-tf-moe-summary
+:::
+:::
 :::

@@ -273,6 +273,69 @@ function uncertainty() {
   return svg(W, H, o);
 }
 
+// ── Forward probability (model -> data) vs Inverse statistics (data -> model)
+function forwardInverse() {
+  const W = 540, H = 264; let o = '';
+  // Left Box: Data-Generating Process / Parameters theta, p
+  o += `<rect x="18" y="72" width="164" height="120" rx="10" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`;
+  o += tx(100, 100, 'True Model / Params', { fs: 15.5, fw: 700, fill: DK.blue });
+  o += tx(100, 124, 'θ,  p = 0.5', { mono: true, fs: 15, fw: 700, fill: C.ink });
+  o += tx(100, 148, 'latent distribution', { fs: 13.5, fill: C.muted });
+  o += tx(100, 170, 'P(X | θ)', { mono: true, fs: 14, fw: 600, fill: DK.blue });
+
+  // Right Box: Observed Data Sample D
+  o += `<rect x="358" y="72" width="164" height="120" rx="10" fill="${C.lgreen}" stroke="${C.green}" stroke-width="2"/>`;
+  o += tx(440, 100, 'Observed Data D', { fs: 15.5, fw: 700, fill: DK.green });
+  o += tx(440, 124, '{x₁, x₂, …, xₙ}', { mono: true, fs: 14.5, fw: 700, fill: C.ink });
+  o += tx(440, 148, 'empirical counts', { fs: 13.5, fill: C.muted });
+  o += tx(440, 170, 'p̂ₙ ± σ/√n', { mono: true, fs: 14, fw: 600, fill: DK.green });
+
+  // Top arrow: Forward Probability (Deductive)
+  o += arrow(188, 98, 352, 98, C.blue);
+  o += tx(270, 28, '▸ Forward Probability (Deductive)', { fs: 15.5, fw: 700, fill: DK.blue });
+  o += tx(270, 50, 'Given θ, predict sample spread & likelihood', { fs: 13.5, fw: 600, fill: C.ink });
+
+  // Bottom arrow: Inverse Statistical Inference (Inductive)
+  o += arrow(352, 164, 188, 164, C.amber);
+  o += tx(270, 214, '◂ Statistical Inference (Inductive)', { fs: 15.5, fw: 700, fill: DK.amber });
+  o += tx(270, 238, 'Given data D, estimate θ̂, error bars & P(θ | D)', { fs: 13.5, fw: 600, fill: C.ink });
+
+  return svg(W, H, o);
+}
+
+// ── Paired vs Unpaired Classifier Comparison on n = 10,000 test images ─
+function pairedComparison() {
+  const W = 540, H = 290; let o = '';
+  const RED = TOKENS.accents.red;
+  // Panel (a): Unpaired error bars overlap (SE = 0.42%)
+  o += tx(16, 22, '(a) Unpaired Test Sets: Image-Difficulty Noise Drowns Out Δ = +0.5%', { fs: 15, fw: 700, fill: RED.dark, anchor: 'start' });
+  o += `<rect x="20" y="38" width="500" height="82" rx="8" fill="${RED.tint}" stroke="${RED.base}" stroke-width="1.5"/>`;
+  // Model A: 90.5% +/- 0.59%
+  o += tx(34, 62, 'Model A (90.5%)', { mono: true, fs: 13.5, fw: 700, fill: DK.blue, anchor: 'start' });
+  o += line(230, 62, 410, 62, C.blue, 3);
+  o += dot(320, 62, 5.5, C.blue);
+  // Model B: 90.0% +/- 0.59%
+  o += tx(34, 94, 'Model B (90.0%)', { mono: true, fs: 13.5, fw: 700, fill: DK.amber, anchor: 'start' });
+  o += line(180, 94, 360, 94, C.amber, 3);
+  o += dot(270, 94, 5.5, C.amber);
+  o += tx(464, 68, 'SE = 0.42%', { mono: true, fs: 13, fw: 700, fill: RED.dark });
+  o += tx(464, 88, '(1.2 SE: noisy)', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
+
+  // Panel (b): Paired comparison on the SAME 10,000 images cancels shared 9,700
+  o += tx(16, 146, '(b) Paired on Same 10,000 Images: 9,700 Agreements Cancel (Cov > 0)', { fs: 15, fw: 700, fill: DK.green, anchor: 'start' });
+  o += `<rect x="20" y="164" width="320" height="54" rx="6" fill="${C.lgray}" stroke="${C.gray}" stroke-width="2"/>`;
+  o += tx(180, 184, '9,700 images: A = B (both right or both wrong)', { fs: 13.5, fw: 700, fill: C.ink });
+  o += tx(180, 204, 'di = Xi − Yi = 0  →  contributes 0 variance!', { mono: true, fs: 12.5, fill: C.muted });
+
+  o += `<rect x="352" y="164" width="168" height="54" rx="6" fill="${C.lgreen}" stroke="${C.green}" stroke-width="2"/>`;
+  o += tx(436, 184, '300 disagreements', { fs: 14, fw: 700, fill: DK.green });
+  o += tx(436, 204, '175 A wins vs 125 B', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
+
+  o += `<rect x="20" y="232" width="500" height="44" rx="7" fill="${C.lblue}" stroke="${C.blue}" stroke-width="1.5"/>`;
+  o += tx(270, 254, 'Var(X−Y) = Var(X)+Var(Y)−2Cov(X,Y)  ⇒  SE = 0.17% (Δ = 2.9 SE)', { mono: true, fs: 12.5, fw: 700, fill: DK.blue });
+  return svg(W, H, o);
+}
+
 export const diagrams = {
   'probability-natural-frequencies': naturalFrequencies,
   'probability-joint-grid':          jointGrid,
@@ -284,4 +347,6 @@ export const diagrams = {
   'probability-spread':              spread,
   'probability-covariance':          covariance,
   'probability-uncertainty':         uncertainty,
+  'probability-forward-inverse':     forwardInverse,
+  'probability-paired-comparison':   pairedComparison,
 };

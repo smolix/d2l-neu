@@ -1402,22 +1402,16 @@ Single-Variable Calculus<br>**linear approximation · differentiation rules · M
 ::: {.slide title="Local Slope Prediction and Curvature Drift"}
 [Motivation]{.kicker}
 
-Gradient descent inspects a loss surface only through its value and derivatives at the current parameter $w$. How accurately does the local slope predict the loss a short distance away?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Concrete 1D benchmark:** Take a single scalar weight $w$ and the logistic loss $\ell(w) = \log(1 + e^{-w})$, which equals the softplus $s(-w)$ where $s(x) = \log(1 + e^x)$.
-- **First-order prediction at $w = 0$:** The loss is $\ell(0) = \log 2 \approx 0.693147$ and the slope is $\ell'(0) = -\tfrac{1}{2}$. Stepping to $w = 0.1$ along the tangent line predicts $0.693147 - 0.5(0.1) = 0.643147$.
+- **1D Logistic Loss Benchmark:** $\ell(w) = \log(1 + e^{-w}) = s(-w)$ at $w = 0$ has $\ell(0) = \log 2 \approx 0.693147$ and slope $\ell'(0) = -\tfrac{1}{2}$.
+- **First-Order Prediction:** Stepping to $w = 0.1$ along the tangent line predicts $0.693147 - 0.05 = 0.643147$.
+- **Second-Order Curvature Gap:** True loss $\ell(0.1) \approx 0.644397$ differs by $0.001250 = \tfrac{1}{2}\ell''(0)(0.1)^2$ ($\ell''(0) = 1/4$).
 :::
 
-::: {.col}
-- **Second-order curvature gap:** The true loss is $\ell(0.1) \approx 0.644397$, leaving a gap of $0.001250$.
-- **Why the gap has exact structure:** At $w = 0$, the curvature is $\ell''(0) = \tfrac{1}{4}$, and the prediction error is $\tfrac{1}{2}\ell''(0)(0.1)^2 = \tfrac{1}{8}(0.01) = 0.00125$. The slope makes the linear prediction; the curvature governs how fast that prediction drifts as the step grows.
+::: {.col .fig .big}
+@fig:ch34-calc-logistic-curvature-gap
 :::
-:::
-
-::: {.d2l-note}
-Every multivariable loss $\ell(w_1, \ldots, w_n)$ reduces to a single-variable slice when all weights except $w_i$ are held fixed.
 :::
 :::
 
@@ -1475,64 +1469,62 @@ How small must $\epsilon$ be before a finite difference $(f(x+\epsilon)-f(x))/\e
 ::: {.slide title="Linear Approximation and Little-o Remainder"}
 [First-Order Model]{.kicker}
 
-Rearranging the limit definition of $f'(x)$ into a local perturbation expansion provides the workhorse formulation used to prove multivariable and matrix calculus rules:
-
-::: {.d2l-note .rule}
-**Equivalence of Derivative and Linear Approximation:** A function $f$ is differentiable at $x$ with derivative $f'(x)$ if and only if
-$$f(x + \epsilon) = f(x) + \epsilon f'(x) + o(\epsilon)$$
-where the remainder $r(\epsilon) = o(\epsilon)$ vanishes faster than the step itself: $\lim_{\epsilon \to 0} r(\epsilon)/\epsilon = 0$.
+::: {.cols .vc}
+::: {.col}
+- **Linear Approximation Equivalence:** $f$ is differentiable at $x$ with derivative $f'(x)$ iff $f(x + \epsilon) = f(x) + \epsilon f'(x) + o(\epsilon)$, where $\lim_{\epsilon \to 0} r(\epsilon)/\epsilon = 0$.
+- **Proof:** Dividing $r(\epsilon) = f(x+\epsilon) - f(x) - \epsilon a$ by $\epsilon$ shows $r(\epsilon)/\epsilon \to 0 \iff (f(x+\epsilon)-f(x))/\epsilon \to a = f'(x)$.
+- **Continuity:** $f(x+\epsilon) - f(x) = \epsilon f'(x) + o(\epsilon) \to 0$.
 :::
 
-- **Proof of equivalence:** Setting $r(\epsilon) = f(x+\epsilon) - f(x) - \epsilon a$ and dividing by $\epsilon$ gives $\frac{f(x+\epsilon)-f(x)}{\epsilon} - a = \frac{r(\epsilon)}{\epsilon}$, so the right side tends to $0$ as $\epsilon \to 0$ if and only if the difference quotient converges to $a = f'(x)$.
-- **Differentiability implies continuity:** Because $f(x+\epsilon) - f(x) = \epsilon f'(x) + o(\epsilon)$ $\to$ $0$ as $\epsilon \to 0$, every function differentiable at $x$ is necessarily continuous at $x$.
+::: {.col .fig .big}
+@fig:ch34-calc-little-o-linear
+:::
+:::
 :::
 
 ::: {.slide title="Elementary Derivatives and Why Base e Is Special"}
 [Differentiation Rules]{.kicker}
 
-Automatic differentiation engines decompose every loss into a short table of elementary primitives whose derivatives are known in closed form:
+::: {.cols .vc}
+::: {.col}
+- **Closed-Form Primitives:** Autodiff decomposes every loss into constants, powers ($nx^{n-1}$), exponentials ($e^x$), logarithms ($1/x$), and trig functions.
+- **Why Base $e$ Is Unique:** Factoring $(a^{x+\epsilon}-a^x)/\epsilon = a^x(a^\epsilon-1)/\epsilon \to (\log a)a^x$ shows $e$ is the unique base with unit slope at $x = 0$.
+:::
 
-| Primitive Function | Derivative Formula | Domain & Key Property |
-| :--- | :--- | :--- |
-| **Constants & Linear** | $\frac{d}{dx}c = 0$, $\frac{d}{dx}(ax) = a$ | Exact zero curvature everywhere on $\mathbb{R}$ |
-| **Power Rule** | $\frac{d}{dx}x^n = nx^{n-1}$ | All real $n$ on $x > 0$ (via $x^n = e^{n\log x}$) |
-| **Exponential** | $\frac{d}{dx}e^x = e^x$, $\frac{d}{dx}a^x = (\log a)\,a^x$ | Unique base $e$ where slope at $0$ equals $1$ |
-| **Natural Logarithm** | $\frac{d}{dx}\log x = \frac{1}{x}$ | Inverse of $e^x$ on $x > 0$ |
-| **Sine & Cosine** | $\frac{d}{dx}\sin x = \cos x$, $\frac{d}{dx}\cos x = -\sin x$ | Periodic with period $2\pi$ on $\mathbb{R}$ |
-
-::: {.d2l-note}
-**Why $a^x$ has slope proportional to height:** The difference quotient factors as $\frac{a^{x+\epsilon}-a^x}{\epsilon} = a^x \frac{a^\epsilon - 1}{\epsilon}$ $\to$ $c_a a^x$, where $c_a = \lim_{\epsilon \to 0}(a^\epsilon - 1)/\epsilon = \log a$ is the slope at $x = 0$ ($c_2 \approx 0.69315$, $c_e = 1$, $c_{10} \approx 2.30259$).
+::: {.col .fig .big}
+@fig:ch34-calc-elementary-rules
+:::
 :::
 :::
 
 ::: {.slide title="Proving Sum, Product, and Chain Rules Locally"}
 [Algebra of Derivatives]{.kicker}
 
-Substituting the linear approximation $g(x+\epsilon) = g(x) + \epsilon g'(x) + o(\epsilon)$ directly proves the combination rules without fragile divisions by zero:
+::: {.cols .vc}
+::: {.col}
+- **Sum Rule $(g+h)' = g' + h'$:** Adding linear models combines two $o(\epsilon)$ remainders into $o(\epsilon)$.
+- **Product Rule $(gh)' = gh' + g'h$:** Multiplying linear models makes the corner term $\epsilon^2 g'h' = o(\epsilon)$ vanish.
+- **Chain Rule $(g \circ h)'(x) = g'(h(x))h'(x)$:** Composition multiplies local slopes: $\Delta g \approx g'(h(x))\Delta h \approx \epsilon g'(h(x))h'(x)$.
+:::
 
-- **Sum rule $(g + h)'(x) = g'(x) + h'(x)$:** Adding the linear expansions gives $g(x+\epsilon) + h(x+\epsilon) = g(x) + h(x) + \epsilon(g'(x) + h'(x)) + o(\epsilon)$ because the sum of two $o(\epsilon)$ remainders is still $o(\epsilon)$.
-- **Product rule $(gh)'(x) = g(x)h'(x) + g'(x)h(x)$:** Adding and subtracting $g(x+\epsilon)h(x)$ splits the difference quotient into $g(x+\epsilon)\frac{h(x+\epsilon)-h(x)}{\epsilon} + h(x)\frac{g(x+\epsilon)-g(x)}{\epsilon}$, and continuity sends $g(x+\epsilon) \to g(x)$.
-- **Chain rule $\frac{d}{dx}g(h(x)) = g'(h(x))\,h'(x)$:** Write the outer expansion at $y = h(x)$ with error ratio $\rho(t) \to 0$ (extended by $\rho(0) = 0$) so it holds even when $t = h(x+\epsilon) - h(x) = 0$:
-  $$g(h(x) + t) - g(h(x)) = \bigl(g'(h(x)) + \rho(t)\bigr)\bigl(\epsilon h'(x) + o(\epsilon)\bigr) = \epsilon\, g'(h(x))\,h'(x) + o(\epsilon)$$
+::: {.col .fig .big}
+@fig:ch34-calc-sum-product-chain
+:::
+:::
 :::
 
 ::: {.slide title="Inverse Functions, Softplus, Sigmoid, and Logit"}
 [Running Example]{.kicker}
 
-Applying the chain rule and inverse-function rule to our running softplus function $s(x) = \log(1 + e^x)$ yields the core derivatives of binary classification:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Inverse-function rule:** Differentiating $g(f(x)) = x$ gives $g'(f(x))f'(x) = 1$, so $g'(y) = 1/f'(g(y))$ whenever $f'(g(y)) \ne 0$.
-- **Softplus $\to$ Sigmoid:** With outer $\log u$ and inner $u = 1 + e^x$:
-  $$s'(x) = \frac{e^x}{1 + e^x} = \frac{1}{1 + e^{-x}} = \sigma(x)$$
+- **Softplus $\to$ Sigmoid:** Differentiating $s(x) = \log(1 + e^x)$ gives $s'(x) = \frac{e^x}{1+e^x} = \frac{1}{1+e^{-x}} = \sigma(x)$.
+- **Sigmoid Curvature:** $\sigma'(x) = \sigma(x)(1 - \sigma(x)) \le \tfrac{1}{4}$ (peaking at $x = 0$).
+- **Logit Inverse ($\sigma^{-1}(p) = \log\frac{p}{1-p}$):** By $g'(y) = 1/f'(g(y))$, $\mathrm{logit}'(p) = \frac{1}{p(1-p)}$ ($= 4$ at $p = 1/2$).
 :::
 
-::: {.col}
-- **Sigmoid curvature:** Differentiating $\sigma(x) = (1 + e^{-x})^{-1}$ gives:
-  $$\sigma'(x) = \frac{e^{-x}}{(1+e^{-x})^2} = \sigma(x)\bigl(1 - \sigma(x)\bigr)$$
-  which peaks at $x = 0$ with $\sigma(0) = \tfrac{1}{2}$ and $\sigma'(0) = \tfrac{1}{4}$.
-- **Logit inverse:** Since $\mathrm{logit}(p) = \log\frac{p}{1-p} = \sigma^{-1}(p)$, its slope is $\mathrm{logit}'(p) = \frac{1}{p(1-p)}$ (equal to $4 = 1/\sigma'(0)$ at $p = \tfrac{1}{2}$).
+::: {.col .fig .big}
+@fig:ch34-calc-softplus-sigmoid-logit
 :::
 :::
 :::
@@ -1641,16 +1633,17 @@ On $f(x) = x^2$, where $f'(x) = 2x$ and curvature is $f''(x) \equiv 2$, gradient
 ::: {.slide title="Lagrange Remainder: Exact Error via Rolle's Theorem"}
 [Error Bounds]{.kicker}
 
-How far can we trust the degree-$n$ Taylor polynomial $P_n(x)$? Applying Rolle's theorem to a telescoping auxiliary function yields an exact formula for the remainder $R_n(x) = f(x) - P_n(x)$:
-
-::: {.d2l-note .rule}
-**Proposition (Lagrange Remainder):** If $f$ is $(n+1)$-times differentiable on an open interval containing $x_0$ and $x$, then for some $\xi$ strictly between $x_0$ and $x$,
-$$f(x) = P_n(x) + R_n(x), \qquad R_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}(x - x_0)^{n+1}$$
+::: {.cols .vc}
+::: {.col}
+- **Exact Lagrange Remainder:** For $(n+1)$-times differentiable $f$, $f(x) = P_n(x) + \frac{f^{(n+1)}(\xi)}{(n+1)!}(x - x_0)^{n+1}$ for some $\xi$ strictly between $x_0$ and $x$.
+- **Telescoping Proof:** Varying the base point $t$ in $G(t)$ and applying Rolle's theorem ($G'(\xi) = 0$) cancels adjacent terms by the product rule.
+- **Core Special Cases:** $n = 0$ is MVT; $n = 1$ gives $f(x_0) + f'(x_0)u + \tfrac{1}{2}f''(\xi)u^2$.
 :::
 
-- **Proof mechanism:** Fix $x$ and vary the base point $t$ in $G(t) = f(x) - \sum_{k=0}^n \frac{f^{(k)}(t)}{k!}(x-t)^k - M\frac{(x-t)^{n+1}}{(n+1)!}$, choosing $M$ so $G(x_0) = 0$. Since $G(x) = 0$ as well, Rolle's theorem gives an interior $\xi$ with $G'(\xi) = 0$.
-- **Telescoping derivative:** By the product rule, adjacent terms in $G'(t)$ cancel pairwise, leaving $G'(t) = \bigl(M - f^{(n+1)}(t)\bigr)\frac{(x-t)^n}{n!}$, so $G'(\xi) = 0$ forces $M = f^{(n+1)}(\xi)$.
-- **Key special cases:** $n = 0$ recovers the Mean Value Theorem; $n = 1$ gives $f(x) = f(x_0) + f'(x_0)(x-x_0) + \tfrac{1}{2}f''(\xi)(x-x_0)^2$, the engine of the descent lemma and Newton's method.
+::: {.col .fig .big}
+@fig:ch34-calc-lagrange-remainder
+:::
+:::
 :::
 
 ::: {.slide title="Verifying Taylor Remainder Scaling on Log-Log Axes"}

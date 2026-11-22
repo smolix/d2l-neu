@@ -1187,30 +1187,38 @@ Gradient Descent and Curvature<br>**steepest descent · L-smoothness · descent 
 ::: {.slide title="One Downhill Direction, Three Step Lengths"}
 [Motivation]{.kicker}
 
-Every gradient step moves opposite $\nabla f(\mathbf{x})$, so the gradient fixes the direction and the learning rate $\eta$ sets only the distance. Consider the elliptical bowl $f(x, y) = \tfrac12(x^2 + 10y^2)$ from $\mathbf{x}_0 = (2, 1)$, where $f = 7$ and $\nabla f = (2, 10)$:
+::: {.cols .vc}
+::: {.col}
+On $f(x, y) = \tfrac12(x^2 + 10y^2)$ from $\mathbf{x}_0 = (2, 1)$ ($f = 7, \nabla f = (2, 10)$), $-\nabla f$ fixes the direction while $\eta$ sets the step length:
 
-| Learning Rate $\eta$ | New Iterate $\mathbf{x}_1 = (2 - 2\eta,\, 1 - 10\eta)$ | New Loss $f(\mathbf{x}_1)$ | Physical Regime |
-| :--- | :--- | :--- | :--- |
-| **$\eta = 0.01$** | $(1.98,\, 0.90)$ | $6.01$ | Safe but painfully slow progress |
-| **$\eta = 0.10$** | $(1.80,\, 0.00)$ | $1.62$ | Eliminates steep $y$-mode in one step |
-| **$\eta = 0.25$** | $(1.50,\, -1.50)$ | $12.38$ | Overshoots steep wall and diverges |
+- **Too timid ($\eta = 0.01$):** Moves to $(1.98, 0.90)$ with $f = 6.01$—safe but painfully slow.
+- **Just right ($\eta = 0.10 = 1/L$):** Eliminates the steep $y$-mode in one step ($f = 1.62$), while the flat $x$-mode creeps at $0.9\times$ per step.
+- **Too aggressive ($\eta = 0.25 > 2/L$):** Overshoots the steep wall to $(1.50, -1.50)$ ($f = 12.38$) and diverges.
+:::
 
-::: {.d2l-note .warn}
-Every step pointed strictly downhill; only the step length changed. A step small enough to stay stable along the steep $y$-wall creeps along the flat $x$-floor, forcing $69$ steps at $\kappa = 10$ and $6{,}908$ steps at $\kappa = 1000$.
+::: {.col .fig .big}
+@fig:ch36-opt-three-step-regimes
+:::
 :::
 :::
 
 ::: {.slide title="First-Order Taylor Model and Descent Directions"}
 [Steepest Descent]{.kicker}
 
-Expanding a differentiable objective $f : \mathbb{R}^d \to \mathbb{R}$ around $\mathbf{x}$ along a unit direction $\mathbf{d}$ ($\|\mathbf{d}\| = 1$) for a small step $\eta > 0$ gives:
+::: {.cols .vc}
+::: {.col}
+Expanding $f$ around $\mathbf{x}$ along a unit vector $\|\mathbf{d}\| = 1$ for small $\eta > 0$:
 
 $$f(\mathbf{x} + \eta\,\mathbf{d}) = f(\mathbf{x}) + \eta\,\nabla f(\mathbf{x})^\top \mathbf{d} + o(\eta)$$
 
-- **Descent direction criterion:** Any vector $\mathbf{d}$ making an acute angle with $-\nabla f(\mathbf{x})$ satisfies $\nabla f(\mathbf{x})^\top \mathbf{d} < 0$, which guarantees $f(\mathbf{x} + \eta\,\mathbf{d}) < f(\mathbf{x})$ for all sufficiently small $\eta > 0$.
-- **Cauchy–Schwarz optimality:** For every unit vector $\|\mathbf{d}\| = 1$, Cauchy–Schwarz bounds the directional slope from below:
-  $$\nabla f(\mathbf{x})^\top \mathbf{d} \ge -\|\nabla f(\mathbf{x})\|\,\|\mathbf{d}\| = -\|\nabla f(\mathbf{x})\|$$
-- **Unique steepest direction:** Equality holds if and only if $\mathbf{d} = -\nabla f(\mathbf{x}) / \|\nabla f(\mathbf{x})\|$.
+- **Descent half-space:** Any direction with $\nabla f(\mathbf{x})^\top \mathbf{d} < 0$ lowers $f$ for sufficiently small $\eta > 0$.
+- **Cauchy–Schwarz optimality:** $\nabla f(\mathbf{x})^\top \mathbf{d} \ge -\|\nabla f(\mathbf{x})\|$, attained uniquely by $\mathbf{d}^\star = -\nabla f(\mathbf{x}) / \|\nabla f(\mathbf{x})\|$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-steepest-descent-cone
+:::
+:::
 :::
 
 ::: {.slide title="Comparing Directional Slopes Over Finite Steps"}
@@ -1228,14 +1236,20 @@ Differentiability alone guarantees descent only for *infinitesimally* small step
 ::: {.slide title="L-Smoothness and the Global Quadratic Ceiling"}
 [Smoothness]{.kicker}
 
-A differentiable function $f$ is **$L$-smooth** if its gradient is $L$-Lipschitz across the domain:
+::: {.cols .vc}
+::: {.col}
+A differentiable function $f$ is **$L$-smooth** if its gradient is $L$-Lipschitz ($\|\nabla f(\mathbf{x}) - \nabla f(\mathbf{y})\| \le L\|\mathbf{x} - \mathbf{y}\|$):
 
-$$\|\nabla f(\mathbf{x}) - \nabla f(\mathbf{y})\| \le L\,\|\mathbf{x} - \mathbf{y}\| \qquad \text{for all } \mathbf{x}, \mathbf{y}$$
+$$f(\mathbf{y}) \le f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) + \tfrac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2$$
 
-- **Hessian characterization:** When $f$ is twice continuously differentiable, $L$-smoothness is equivalent to requiring all eigenvalues of $\nabla^2 f(\mathbf{x})$ to lie in $[-L, L]$.
-- **Integral derivation of the quadratic ceiling:** Integrate $\psi(t) = f(\mathbf{x} + t(\mathbf{y} - \mathbf{x}))$ from $t = 0$ to $1$ and apply Cauchy–Schwarz with $L$-smoothness:
-  $$f(\mathbf{y}) - f(\mathbf{x}) - \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) = \int_0^1 \big(\nabla f(\mathbf{x} + t(\mathbf{y}-\mathbf{x})) - \nabla f(\mathbf{x})\big)^\top(\mathbf{y}-\mathbf{x})\,dt \le \tfrac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2$$
-- **Geometric meaning:** The graph of $f(\mathbf{y})$ never rises above its tangent plane at $\mathbf{x}$ by more than the isotropic parabola $\tfrac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2$.
+- **Hessian test:** For $C^2$ functions, $L$-smoothness holds iff all eigenvalues of $\nabla^2 f(\mathbf{x})$ lie in $[-L, L]$.
+- **Geometric guarantee:** The graph of $f$ never rises above its tangent plane by more than the isotropic parabola $\tfrac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-lipschitz-quadratic-ceiling
+:::
+:::
 :::
 
 ::: {.slide title="The Descent Lemma and the 2/L Step Ceiling"}
@@ -1287,22 +1301,38 @@ Among the first $K$ iterates, at least one has gradient norm $\|\nabla f(\mathbf
 ::: {.slide title="Why Stationarity Does Not Guarantee a Minimum"}
 [Nonconvex Pitfalls]{.kicker}
 
-A vanishing gradient certifies a stationary point, but without convexity it cannot distinguish a global minimum from a local minimum or a saddle point:
+::: {.cols .vc}
+::: {.col}
+Without convexity, $\nabla f(\mathbf{x}) = \mathbf{0}$ cannot distinguish a minimum from a saddle point:
 
-- **Concrete saddle trap:** Consider $f(x, y) = \tfrac12 x^2 + \cos y$, which is bounded below by $f_{\mathrm{low}} = -1$ and is globally $1$-smooth since $\nabla^2 f(x, y) = \mathrm{diag}(1, -\cos y)$ has eigenvalues in $[-1, 1]$.
-- **Trajectory from $(1, 0)$:** With $\eta = 1/L = 1$, the first step updates $x_1 = 1 - 1(1) = 0$ and $y_1 = 0 - 1(-\sin 0) = 0$.
-- **Premature halt:** At $(0, 0)$, the gradient vanishes ($\nabla f(0, 0) = \mathbf{0}$) and gradient descent stops permanently at $f(0, 0) = 1$—a saddle point curving upward along $x$ and downward along $y$, two full units above the global minimum $f(0, \pi) = -1$.
+- **Saddle trap:** $f(x, y) = \tfrac12 x^2 + \cos y$ is bounded below by $-1$ and is globally $1$-smooth ($\nabla^2 f = \mathrm{diag}(1, -\cos y)$).
+- **One-step halt:** From $(1, 0)$ with $\eta = 1/L = 1$, gradient descent steps directly to $(0, 0)$ where $\nabla f(0, 0) = \mathbf{0}$.
+- **Suboptimal plateau:** GD freezes permanently at the saddle $f(0, 0) = +1$, two units above the global minimum $f(0, \pi) = -1$.
+:::
+
+::: {.col .fig .big}
+@fig:ch36-opt-saddle-halt
+:::
+:::
 :::
 
 ::: {.slide title="Backtracking Line Search and the Armijo Rule"}
 [Adaptive Step Sizes]{.kicker}
 
-In practice $L$ is rarely known in advance, and functions like the quartic $f(x) = \tfrac14 x^4$ ($f''(x) = 3x^2$) have no finite global $L$. **Backtracking line search** adapts $\eta$ to the local curvature:
+::: {.cols .vc}
+::: {.col}
+When $L$ is unknown or varies locally (e.g., $f(x) = \tfrac14 x^4$), **backtracking line search** halves a trial step $\eta \leftarrow \eta/2$ until the Armijo condition holds ($c \in (0, 1)$):
 
-- **Armijo sufficient-decrease condition:** Starting from a trial step $\eta_0$, accept $\eta$ only if the actual loss drop achieves at least a fraction $c \in (0, 1)$ of the first-order Taylor prediction:
-  $$f\big(\mathbf{x}_k - \eta\,\nabla f(\mathbf{x}_k)\big) \le f(\mathbf{x}_k) - c\,\eta\,\|\nabla f(\mathbf{x}_k)\|^2$$
-- **Update rule:** While the Armijo inequality fails, halve the candidate step ($\eta \leftarrow \eta / 2$).
-- **Automatic termination:** By the descent lemma on the local segment, the test is guaranteed to pass as soon as $1 - L_{\mathrm{loc}}\eta/2 \ge c$ $\iff$ $\eta \le 2(1-c)/L_{\mathrm{loc}}$, returning $\eta \ge \min\big(\eta_0,\, (1-c)/L_{\mathrm{loc}}\big)$ without knowing $L_{\mathrm{loc}}$.
+$$f\big(\mathbf{x}_k - \eta\,\nabla f(\mathbf{x}_k)\big) \le f(\mathbf{x}_k) - c\,\eta\,\|\nabla f(\mathbf{x}_k)\|^2$$
+
+- **Sufficient decrease:** Accepts $\eta$ as soon as actual loss reduction reaches fraction $c$ of the linear Taylor drop.
+- **Automatic termination:** Guaranteed to pass once $\eta \le 2(1-c)/L_{\mathrm{loc}}$, returning $\eta \ge \min(\eta_0, (1-c)/L_{\mathrm{loc}})$ without knowing $L_{\mathrm{loc}}$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-armijo-backtracking
+:::
+:::
 :::
 
 ::: {.slide title="Backtracking vs. Fixed Step on a Quartic Bowl"}
@@ -1381,11 +1411,17 @@ $$1 - \eta^\star\lambda_{\min} = \eta^\star\lambda_{\max} - 1 \implies \eta^\sta
 ::: {.slide title="Neural Network Training at the Edge of Stability"}
 [Deep Learning Dynamics]{.kicker}
 
-Why not simply measure the top Hessian eigenvalue (**sharpness**) $\lambda_{\max}(\nabla^2 f)$ of a neural network at initialization and set $\eta < 2/\lambda_{\max}$?
+::: {.cols .vc}
+::: {.col}
+- **Progressive sharpening:** During full-batch GD on deep networks, top Hessian sharpness $\lambda_{\max}(\nabla^2 f(\mathbf{x}_k))$ rises until it hits the stability limit $2/\eta$ and hovers there.
+- **Why loss spikes occur:** Once $\lambda_{\max} > 2/\eta$, the top mode multiplier $1 - \eta\lambda_{\max} < -1$ oscillates with growing amplitude.
+- **Self-stabilization beyond quadratics:** Third-order Taylor terms couple the oscillation to changing curvature, steering the iterate toward flatter regions where $\lambda_{\max} \approx 2/\eta$.
+:::
 
-- **Progressive sharpening:** During full-batch gradient descent on deep networks, $\lambda_{\max}(\nabla^2 f(\mathbf{x}_k))$ steadily grows until it reaches the stability threshold $2/\eta$ and hovers there (*Edge of Stability*).
-- **What the quadratic model explains:** Once $\lambda_{\max} > 2/\eta$, the top eigenvector's multiplier $1 - \eta\lambda_{\max}$ drops below $-1$, causing that coordinate to oscillate with growing amplitude and explaining non-monotone loss spikes on individual steps.
-- **What lies beyond quadratics:** On a fixed quadratic, $\lambda_{\max} > 2/\eta$ diverges to infinity. On a neural network, third-order Taylor terms couple the oscillation to the changing Hessian, steering the iterate toward flatter regions that pull $\lambda_{\max}$ back to $2/\eta$.
+::: {.col .fig .big}
+@fig:ch36-opt-edge-of-stability
+:::
+:::
 :::
 
 ::: {.slide title="How Convexity Upgrades Convergence Guarantees"}
@@ -1456,13 +1492,20 @@ $$\beta^\star = \left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^{\!2}$$
 ::: {.slide title="Nesterov Acceleration and Global Guarantees"}
 [Accelerated Methods]{.kicker}
 
-Heavy ball's $\sqrt{\kappa}$ theorem holds strictly for quadratics; on general smooth strongly convex functions, its fixed tuning can get trapped in a limit cycle. **Nesterov's accelerated gradient** evaluates $\nabla f$ at the look-ahead point $\mathbf{x}_k + \beta\mathbf{v}_k$:
+::: {.cols .vc}
+::: {.col}
+**Nesterov's accelerated gradient** evaluates $\nabla f$ at the look-ahead point $\tilde{\mathbf{x}}_k = \mathbf{x}_k + \beta\mathbf{v}_k$:
 
-$$\mathbf{v}_{k+1} = \beta\,\mathbf{v}_k - \eta\,\nabla f(\mathbf{x}_k + \beta\,\mathbf{v}_k), \qquad \mathbf{x}_{k+1} = \mathbf{x}_k + \mathbf{v}_{k+1}$$
+$$\mathbf{v}_{k+1} = \beta\,\mathbf{v}_k - \eta\,\nabla f(\mathbf{x}_k + \beta\,\mathbf{v}_k)$$
 
-- **Look-ahead braking:** If momentum is about to carry the iterate uphill past the minimum, the gradient at $\mathbf{x}_k + \beta\mathbf{v}_k$ already points backward and applies the brakes before overshooting.
-- **Global optimal rates:** With $\eta = 1/L$ and $\beta = (\sqrt{\kappa}-1)/(\sqrt{\kappa}+1)$, Nesterov achieves $f(\mathbf{x}_k) - f^\star \le C(1 - 1/\sqrt{\kappa})^k$ on *every* $L$-smooth, $\mu$-strongly convex function, and $O(1/k^2)$ on smooth convex functions.
-- **Nemirovski–Yudin lower bound:** When $d \ge 2k+1$, no first-order method using only past gradients can beat $O(1/k^2)$ or the $\sqrt{\kappa}$ scaling in the worst case.
+- **Look-ahead braking:** If momentum carries the iterate uphill, $\nabla f(\tilde{\mathbf{x}}_k)$ points backward and brakes *before* overshooting.
+- **Minimax optimal rates:** Achieves $O(\sqrt{\kappa}\log(1/\epsilon))$ globally on all $L$-smooth, $\mu$-strongly convex objectives and $O(1/k^2)$ on smooth convex objectives (matching the Nemirovski–Yudin lower bound).
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-nesterov-lookahead
+:::
+:::
 :::
 
 ::: {.slide title="Benchmarking Iteration Scaling Across κ"}

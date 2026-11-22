@@ -565,29 +565,35 @@ Fitting a plane to historical sales yields a closed-form pricing rule that gener
 ::: {.slide title="The Affine Model: Weights and Bias"}
 [The Model Class]{.kicker}
 
-A linear regression model forms its prediction $\hat{y}$ as a weighted sum of the $d$ input features plus a scalar intercept:
-
-$$\textrm{price} = w_{\textrm{area}} \cdot \textrm{area} + w_{\textrm{age}} \cdot \textrm{age} + b$$
+::: {.cols .vc}
+::: {.col}
+$$\hat{y} = w_1 x_1 + \cdots + w_d x_d + b = \mathbf{w}^\top \mathbf{x} + b$$
 
 - **Marginal slopes ($\mathbf{w} \in \mathbb{R}^d$):** With $w_{\textrm{area}} = 3{,}000\text{ \$/m}^2$ and $w_{\textrm{age}} = -1{,}000\text{ \$/yr}$, each extra square meter adds $\$3{,}000$ while each year of age subtracts $\$1{,}000$.
-- **Intercept / bias ($b \in \mathbb{R}$):** With $b = \$50{,}000$, our $150\text{ m}^2$, $20$-year-old house is priced at $\$450{,}000 - \$20{,}000 + \$50{,}000 = \$480{,}000$.
-- **Single-example inner product:** Collecting weights into $\mathbf{w} = (w_1, \ldots, w_d)^\top \in \mathbb{R}^d$ writes the prediction compactly as $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$.
+- **Intercept / bias ($b \in \mathbb{R}$):** With $b = \$50{,}000$, our $150\text{ m}^2$, $20$-year-old house is priced at $\$480{,}000$; keeping $b$ frees the fitted hyperplane from the origin $\mathbf{x} = \mathbf{0}$.
+:::
 
-::: {.d2l-note .rule}
-Strictly speaking, $\mathbf{w}^\top \mathbf{x} + b$ is an **affine** function of $\mathbf{x}$. Without the bias $b$, the fitted hyperplane is forced to pass through the origin $\mathbf{x} = \mathbf{0}$, severely restricting the model even when no real house has zero area.
+::: {.col .fig}
+@fig:ch02-lr-affine-plane
+:::
 :::
 :::
 
 ::: {.slide title="Vectorizing Across a Dataset With the Design Matrix"}
 [Matrix Formulation]{.kicker}
 
-To evaluate predictions across all $n$ examples simultaneously, we stack the transpose of each feature vector $\mathbf{x}^{(i)} \in \mathbb{R}^d$ as a row of the design matrix $\mathbf{X} \in \mathbb{R}^{n \times d}$:
+::: {.cols .vc}
+::: {.col}
+$$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b = \tilde{\mathbf{X}}\tilde{\mathbf{w}}$$
 
-$$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b, \qquad \mathbf{X} = \begin{bmatrix} (\mathbf{x}^{(1)})^\top \\ \vdots \\ (\mathbf{x}^{(n)})^\top \end{bmatrix} \in \mathbb{R}^{n \times d}$$
+- **Shape alignment:** Multiplying design matrix $\mathbf{X} \in \mathbb{R}^{n \times d}$ by column vector $\mathbf{w} \in \mathbb{R}^{d \times 1}$ yields $\mathbf{X}\mathbf{w}$ of shape $(n, 1)$, and broadcasting adds $b$ across all $n$ rows.
+- **Absorbing the bias:** Appending a ones column $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}] \in \mathbb{R}^{n \times (d+1)}$ reduces the affine map to a single matrix product $\tilde{\mathbf{X}}\tilde{\mathbf{w}}$.
+:::
 
-- **Shape alignment:** Multiplying $\mathbf{X}$ of shape $(n, d)$ by column vector $\mathbf{w}$ of shape $(d, 1)$ yields $\mathbf{X}\mathbf{w}$ of shape $(n, 1)$, and broadcasting adds the scalar $b$ to all $n$ rows.
-- **Absorbing the bias:** Appending a constant column of ones produces the augmented matrix $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}] \in \mathbb{R}^{n \times (d+1)}$ and parameter vector $\tilde{\mathbf{w}} = (\mathbf{w}^\top, b)^\top \in \mathbb{R}^{d+1}$, reducing the affine map to a pure matrix-vector product $\hat{\mathbf{y}} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}$.
-- **Hardware efficiency:** Expressing all $n$ dot products as a single GEMM call dispatches the entire batch to fused SIMD or GPU tensor cores.
+::: {.col .fig}
+@fig:ch02-lr-design-matrix
+:::
+:::
 :::
 
 ::: {.slide title="The Squared Error Loss Function"}
@@ -613,12 +619,16 @@ $$L(\mathbf{w}, b) = \frac{1}{2n} \sum_{i=1}^{n} \bigl(\hat{y}^{(i)} - y^{(i)}\b
 ::: {.slide title="Pitfall: Squared Loss Sensitivity to Outliers"}
 [Statistical Failure Mode]{.kicker}
 
-Because squared error penalizes residuals quadratically ($r^2$), a single corrupted label exerts a restoring force proportional to its distance from the line:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-loss-function
 
-::: {.d2l-note .warn}
-On 20 points along $y = 2x$, corrupting a single label to $10{,}000$ yanks the least-squares slope from $2.00$ to $23.16$! Under mean absolute error ($\frac{1}{n}\sum_i |\hat{y}^{(i)} - y^{(i)}|$), every point has unit vote $\pm 1$, so the 19 clean points easily outvote the outlier and preserve $w = 2.00$.
+- **Quadratic pull vs. unit vote:** Corrupting a single label to $10{,}000$ yanks the least-squares slope from $2.00$ to $23.16$, whereas mean absolute error ($\frac{1}{n}\sum_i |\hat{y}^{(i)} - y^{(i)}|$) bounds each outlier's subgradient to $\pm 1$ and preserves $w = 2.00$.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-outlier-pull
+:::
 :::
 :::
 
@@ -637,14 +647,16 @@ $$\nabla_{\tilde{\mathbf{w}}} L(\tilde{\mathbf{w}}) = \frac{1}{n}\tilde{\mathbf{
 ::: {.slide title="Worked Example & Numerical Pitfall of Matrix Inversion"}
 [Normal Equations in Code]{.kicker}
 
-Consider fitting a line $w_0 + w_1 x$ to three points $(0, 1), (1, 1), (2, 0)$ with design matrix rows $(1, x^{(i)})$:
-
-$$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} = \begin{bmatrix} 3 & 3 \\ 3 & 5 \end{bmatrix}, \quad \tilde{\mathbf{X}}^\top \mathbf{y} = \begin{bmatrix} 2 \\ 1 \end{bmatrix} \quad\Longrightarrow\quad \hat{\tilde{\mathbf{w}}} = \begin{bmatrix} 7/6 \\ -1/2 \end{bmatrix} \approx (1.1667, -0.5000)^\top$$
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-the-normal-equations
 
-::: {.d2l-note .warn}
-**Never compute `inv(X.T @ X) @ X.T @ y` explicitly in production:** Forming $\mathbf{X}^\top\mathbf{X}$ squares the condition number $\kappa(\mathbf{X}^\top\mathbf{X}) = \kappa(\mathbf{X})^2$, doubling the loss of floating-point significant digits. Dedicated solvers (`lstsq`) factorize $\mathbf{X}$ directly via Householder QR or SVD in $O(nd^2)$ flops.
+- **Why never form `inv(X.T @ X)`:** Multiplying $\mathbf{X}^\top\mathbf{X}$ squares the condition number $\kappa(\mathbf{X}^\top\mathbf{X}) = \kappa(\mathbf{X})^2$; dedicated solvers (`lstsq`) factorize $\mathbf{X}$ directly via QR or SVD in $O(nd^2)$ flops.
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-qr-vs-gram
+:::
 :::
 :::
 
@@ -670,27 +682,34 @@ In observation space $\mathbb{R}^n$, varying $\tilde{\mathbf{w}} \in \mathbb{R}^
 ::: {.slide title="Why Deep Learning Uses Minibatch SGD Instead"}
 [From Closed Form to Iterative Optimization]{.kicker}
 
-If linear regression has an exact one-line analytic solution, why train models iteratively with stochastic gradients?
+::: {.cols .vc}
+::: {.col}
+- **Cubic parameter scaling ($O(nd^2 + d^3)$):** At $d = 10^8$ parameters, storing a $d \times d$ Gram matrix would require $40\text{ petabytes}$ of RAM.
+- **Dataset redundancy ($n \gg |\mathcal{B}|$):** Full-batch GD reads all $n = 10^7$ examples before moving once, whereas $|\mathcal{B}| = 64$ random examples already point in nearly the same descent direction.
+- **Non-analytic deep models:** Cross-entropy and nonlinear hidden layers admit no closed-form normal equations.
+:::
 
-1. **Cubic parameter scaling ($O(nd^2 + d^3)$):** Forming $\mathbf{X}^\top\mathbf{X} \in \mathbb{R}^{d \times d}$ takes $O(nd^2)$ flops and factoring it takes $O(d^3)$ flops and $O(d^2)$ memory. For a neural network with $d = 10^8$ parameters, storing a single $d \times d$ matrix would require $40\text{ petabytes}$ of RAM.
-2. **Dataset redundancy ($n \gg |\mathcal{B}|$):** Full-batch gradient descent costs $O(nd)$ per step because it averages over all $n = 10^7$ examples before moving once, even though a random sample of $|\mathcal{B}| = 64$ examples already points in nearly the same descent direction.
-3. **Non-analytic objectives:** Replace the squared loss with cross-entropy or insert a single nonlinear hidden layer, and no closed-form normal equations exist at all.
-
-::: {.d2l-note}
-Minibatch SGD decouples the per-step compute cost from dataset size $n$: each update touches only $|\mathcal{B}|$ examples and costs $O(|\mathcal{B}|d)$ time and $O(d)$ parameter memory.
+::: {.col .fig .big}
+@fig:ch02-lr-scaling-cost
+:::
 :::
 :::
 
 ::: {.slide title="Minibatch Stochastic Gradient Descent Mechanics"}
 [The Workhorse Update Rule]{.kicker}
 
-At step $t$, we sample a random subset $\mathcal{B}_t \subset \{1, \ldots, n\}$ of size $|\mathcal{B}|$ and step opposite the minibatch mean gradient with learning rate $\eta > 0$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{w} \leftarrow \mathbf{w} - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \mathbf{x}^{(i)} \bigl(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\bigr)$$
 
-$$\mathbf{w} \leftarrow \mathbf{w} - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \mathbf{x}^{(i)} \bigl(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\bigr), \qquad b \leftarrow b - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}_t} \bigl(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\bigr)$$
+- **Error-driven correction:** Each example $i \in \mathcal{B}_t$ pulls $\mathbf{w}$ along $-\mathbf{x}^{(i)}$ in proportion to its residual $r^{(i)} = \hat{y}^{(i)} - y^{(i)}$.
+- **Unbiased estimator:** Uniform sampling gives $\mathbb{E}[\nabla L_{\mathcal{B}_t}] = \nabla L$ with standard error $\propto 1/\sqrt{|\mathcal{B}|}$; $(\mathbf{w}, b)$ are learned *parameters* while $(\eta, |\mathcal{B}|)$ are *hyperparameters*.
+:::
 
-- **Error-driven correction:** Each example $i \in \mathcal{B}_t$ pulls $\mathbf{w}$ along $-\mathbf{x}^{(i)}$ in direct proportion to its signed prediction residual $r^{(i)} = \hat{y}^{(i)} - y^{(i)}$.
-- **Unbiased gradient estimator:** Under uniform sampling, $\mathbb{E}[\nabla L_{\mathcal{B}_t}(\mathbf{w}, b)] = \nabla L(\mathbf{w}, b)$, while the estimator's standard error decays as $1 / \sqrt{|\mathcal{B}|}$.
-- **Parameters vs. hyperparameters:** The weights $\mathbf{w}$ and bias $b$ are learned during training; the learning rate $\eta$ and batch size $|\mathcal{B}|$ (typically $32$ to $256$) are *hyperparameters* set prior to training and tuned on validation data.
+::: {.col .fig}
+@fig:ch02-lr-minibatch-step
+:::
+:::
 :::
 
 ::: {.slide title="Gradient Noise Ball and Learning-Rate Scaling"}
@@ -715,13 +734,17 @@ Even at the exact empirical minimizer $\hat{\mathbf{w}}$ where the full-batch gr
 ::: {.slide title="Vectorization: Python Loops vs. Matrix Kernels"}
 [Systems Performance]{.kicker}
 
-Never implement minibatch updates by looping over examples $i \in \mathcal{B}_t$ in Python. Vectorizing turns $n$ scalar inner products into one compiled matrix multiplication $\mathbf{X}\mathbf{w} + b$:
-
+::: {.cols .vc}
+::: {.col}
 @linear-regression-vectorization-for-speed-3
 
-- **Why Python loops crawl:** Computing `X[i:i+1] @ w + b` 1,000 times pays Python interpreter dispatch, type checking, and kernel launch overhead on every single example.
-- **Why `@` flies:** A single `X @ w + b` call pays dispatch overhead once and streams contiguous memory through SIMD vector registers or GPU tensor cores, running hundreds of times faster.
-- **Asynchronous timing pitfall:** GPU frameworks (CUDA, JAX, MXNet) enqueue kernels asynchronously and return to Python immediately; timing benchmarks must synchronize the device (`torch.cuda.synchronize()`, `jax.block_until_ready`) before stopping the clock.
+- **Eliminating dispatch overhead:** Looping in Python pays interpreter and kernel-launch latency 1,000 times, whereas `X @ w + b` launches one compiled BLAS/GPU kernel (remember to synchronize asynchronous GPU streams when timing!).
+:::
+
+::: {.col .fig}
+@fig:ch02-lr-loop-vs-gemm
+:::
+:::
 :::
 
 ::: {.slide title="Probabilistic Foundation: The Gaussian Noise Model"}

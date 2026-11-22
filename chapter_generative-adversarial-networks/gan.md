@@ -919,63 +919,87 @@ Just as a domain classifier detects covariate shift between training and test in
 ::: {.slide title="The Binary Log-Loss Minimax Objective"}
 [Formulation]{.kicker}
 
-Training the discriminator by binary cross-entropy (maximizing expected log-likelihood of the source label $y \in \{0, 1\}$) defines the minimax value function of Goodfellow et al. (2014):
-
+::: {.cols .vc}
+::: {.col}
 $$V(D) = \mathbb{E}_{x \sim p}\big[\log \sigma(D(x))\big] + \mathbb{E}_{x' \sim q}\big[\log \sigma(-D(x'))\big]$$
 
-- **Discriminator maximization ($\max_D V(D)$):** Pushes $D(x) > 0$ ($\sigma(D(x)) \to 1$) on real data $x \sim p$ and $D(x') < 0$ ($\sigma(-D(x')) = 1 - \sigma(D(x')) \to 1$) on generated samples $x' \sim q$.
-- **Generator minimization ($\min_G \max_D V(D)$):** Affects only the second expectation $\mathbb{E}_{z}[\log \sigma(-D(G(z)))]$ and moves $q$ so that $D$ cannot distinguish $x'$ from $x$.
-- **Random-guessing baseline ($D(x) = 0$):** A constant zero critic predicts $\sigma(0) = \frac{1}{2}$ everywhere, yielding $V(0) = -2\log 2 \approx -1.386$ (so the summed cross-entropy critic loss $-V(0)$ equals **$2\log 2 \approx 1.386$**).
+- **Discriminator ($\max_D V(D)$):** Pushes $D(x) > 0$ on real data $x \sim p$ and $D(x') < 0$ on generated samples $x' \sim q$.
+- **Generator ($\min_G \max_D V(D)$):** Moves $x' = G(z)$ uphill along $D$ so generated draws become indistinguishable from real data.
+- **Random-guessing baseline ($D = 0$):** Predicts $\sigma(0) = \frac{1}{2}$ everywhere, giving $V(0) = -2\log 2 \approx -1.386$.
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-bce-game
+:::
+:::
 :::
 
 ::: {.slide title="Deriving the Optimal Critic: Log Density Ratio"}
 [Pointwise Optimality]{.kicker}
 
-For any fixed generator distribution $q$, maximizing $V(D)$ over all measurable functions $D$ decouples pointwise at each $x \in \mathcal{X}$. Setting $u = \sigma(D(x)) \in (0, 1)$, the pointwise integrand is $p(x)\log u + q(x)\log(1 - u)$:
+::: {.cols .vc}
+::: {.col}
+$$\sigma\big(D^\star(x)\big) = \frac{p(x)}{p(x) + q(x)}, \qquad D^\star(x) = \log \frac{p(x)}{q(x)} = \lambda(x)$$
 
-$$\frac{\partial}{\partial u}\Big[p(x)\log u + q(x)\log(1 - u)\Big] = \frac{p(x)}{u} - \frac{q(x)}{1 - u} = 0$$
+- **Pointwise decoupling:** Setting $u = \sigma(D(x)) \in (0, 1)$, maximizing $p(x)\log u + q(x)\log(1 - u)$ yields $\frac{p(x)}{u} = \frac{q(x)}{1 - u}$.
+- **Exact log density ratio:** Inverting the logistic sigmoid recovers $D^\star(x) = \log(p(x)/q(x)) = \lambda(x)$.
+- **Pinned zero threshold:** $D^\star(x) > 0 \iff p(x) > q(x)$, and $D^\star(x) = 0$ everywhere iff $q = p$.
+:::
 
-- **Exact Bayes posterior and log density ratio:** Solving $p(1 - u) = qu$ uniquely identifies the optimal discriminator probability and logit:
-  $$\sigma\big(D^\star(x)\big) = \frac{p(x)}{p(x) + q(x)} = P(y = 1 \mid x), \qquad D^\star(x) = \log \frac{p(x)}{q(x)} = \lambda(x)$$
-- **Pinned zero threshold:** Unlike pairwise ranking critics (§16.3), log loss strictly identifies the additive constant: $D^\star(x) > 0 \iff p(x) > q(x)$, and shifting $D^\star$ by any constant $b \neq 0$ strictly decreases $V$.
+::: {.col .fig}
+@fig:ch16-gan-pointwise-opt
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Optimal Critic for Two Gaussians"}
 [Analytical Intuition]{.kicker}
 
-Comparing two Gaussian distributions illustrates how the discrepancy between $p$ and $q$ determines the required expressiveness of the discriminator network $D$:
+::: {.cols .vc}
+::: {.col}
+$$D^\star(x) = -\frac{x^2}{2} + \frac{(x - \mu)^2}{2} = \mu\!\left(\frac{\mu}{2} - x\right)$$
 
-- **Equal-variance shift ($p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\mu, 1)$):** The quadratic $x^2/2$ terms cancel in the log density ratio, leaving an **affine** function of $x$ that changes sign at the midpoint $x = \mu / 2$:
-  $$D^\star(x) = \lambda(x) = -\frac{x^2}{2} + \frac{(x - \mu)^2}{2} = \mu\!\left(\frac{\mu}{2} - x\right)$$
-  Here, a simple linear logistic classifier already contains the exact optimal critic $D^\star(x)$!
-- **Unequal covariances ($p = \mathcal{N}(\mu_p, \Sigma_p)$, $q = \mathcal{N}(\mu_q, \Sigma_q)$ with $\Sigma_p \neq \Sigma_q$):** The log density ratio $\lambda(x)$ contains the quadratic term $-\frac{1}{2}x^\top (\Sigma_p^{-1} - \Sigma_q^{-1})x$, so a linear critic cannot separate the distributions—a **nonlinear** neural network (e.g., a leaky-ReLU MLP) is required.
+- **Equal-variance shift ($p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\mu, 1)$):** The quadratic $x^2/2$ terms cancel, leaving an **affine** critic that flips sign at the midpoint $x = \mu/2$.
+- **Unequal covariances ($\Sigma_p \neq \Sigma_q$):** The log density ratio retains the quadratic term $-\frac{1}{2}x^\top(\Sigma_p^{-1} - \Sigma_q^{-1})x$, requiring a **nonlinear** neural network (e.g., leaky-ReLU MLP).
+:::
+
+::: {.col .fig}
+@fig:ch16-gan-gaussian-ratio
+:::
+:::
 :::
 
 ::: {.slide title="Minimax Value and the Jensen–Shannon Divergence"}
 [Population Objective]{.kicker}
 
-Substituting $\sigma(D^\star) = \frac{p}{p + q} = \frac{p}{2m}$ and $\sigma(-D^\star) = \frac{q}{2m}$ (where $m = \frac{p+q}{2}$) back into $V(D)$ reveals the exact divergence minimized by the generator against an optimal critic:
+::: {.cols .vc}
+::: {.col}
+$$\max_D V(D) = D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m) - 2\log 2 = 2\,\mathrm{JS}(p, q) - 2\log 2$$
 
-$$V(D^\star) = \int p \log \frac{p}{2m} + \int q \log \frac{q}{2m} = D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m) - 2\log 2$$
+- **Substituting $\sigma(D^\star) = \frac{p}{2m}$:** With mixture $m = \frac{1}{2}(p + q)$, the optimal value function reduces to the **Jensen–Shannon divergence** $\mathrm{JS}(p, q)$.
+- **Unique global equilibrium ($q = p$):** Since $\mathrm{JS}(p, q) \ge 0$ with equality iff $q = p$, minimizing $\max_D V(D)$ uniquely recovers $q = p$ at value $-2\log 2$.
+:::
 
-- Using the definition of the **Jensen–Shannon divergence**, $\mathrm{JS}(p, q) = \frac{1}{2}D_{\textrm{KL}}(p \,\|\, m)$ $+ \frac{1}{2}D_{\textrm{KL}}(q \,\|\, m)$:
-  $$\max_D V(D) = 2\,\mathrm{JS}(p, q) - 2\log 2$$
-- **Unique global equilibrium ($q = p$):** Because $\mathrm{JS}(p, q) \ge 0$ with equality if and only if $q = p$, minimizing $\max_D V(D)$ uniquely recovers the data distribution $q = p$ at value $-2\log 2$ (where $D^\star(x) = 0$ everywhere).
+::: {.col .fig}
+@fig:ch16-gan-js-mixture
+:::
+:::
 :::
 
 ::: {.slide title="Information-Theoretic View and JS Saturation"}
 [Disjoint Supports Hazard]{.kicker}
 
-Expanding $D_{\textrm{KL}}(p \,\|\, m)$ and $D_{\textrm{KL}}(q \,\|\, m)$ in terms of differential entropies identifies $\mathrm{JS}(p, q)$ as the **mutual information** $I(x; y)$ between a sample $x \sim m$ and its binary source label $y \in \{0, 1\}$:
+::: {.cols .vc}
+::: {.col}
+$$\mathrm{JS}(p, q) = H(m) - \frac{H(p) + H(q)}{2} = I(x; y) \in [0, \log 2]$$
 
-$$\mathrm{JS}(p, q) = H(m) - \frac{H(p) + H(q)}{2} = I(x; y), \qquad 0 \le \mathrm{JS}(p, q) \le \log 2 \approx 0.6931\text{ nats}$$
+- **Mutual information identity:** $\mathrm{JS}(p, q)$ equals the mutual information $I(x; y)$ between a draw $x \sim m$ and its binary source label $y \in \{0, 1\}$.
+- **Why $\mathrm{JS}$ saturates in high dimensions:** When $p$ and $q$ lie on disjoint low-dimensional manifolds, every sample reveals its label $y$ with certainty, freezing $\mathrm{JS}(p, q) = \log 2 \approx 0.6931$ nats with zero slope!
+:::
 
-| Separation $\mu$ for $p = \mathcal{N}(0, 1)$ vs. $q = \mathcal{N}(\mu, 1)$ | $\mu = 1$ | $\mu = 2$ | $\mu = 4$ | $\mu = 8$ | Disjoint ($p = \delta_0, q = \delta_\theta, \theta \neq 0$) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **$\mathrm{JS}(p, q)$ (nats)** | $0.109$ | $0.338$ | $0.632$ | **$0.6931$** | **$\log 2 \approx 0.6931$ (constant!)** |
-
-::: {.d2l-note .warn}
-**Why $\mathrm{JS}$ saturates in high dimensions:** Both natural images and generator outputs $G: \mathbb{R}^{d_z} \to \mathbb{R}^{d_x}$ ($d_z \ll d_x$) lie on low-dimensional manifolds whose intersection has measure zero (Arjovsky & Bottou, 2017). When supports are disjoint, every sample identifies its source label $y$ with certainty, freezing $\mathrm{JS}(p, q) = \log 2$ with zero slope!
+::: {.col .fig}
+@fig:ch16-gan-js-saturation
+:::
 :::
 :::
 
@@ -1003,31 +1027,34 @@ In practice, the generator takes a gradient step against a fixed critic $D$. Bot
 ::: {.slide title="Effective Divergence of the Non-Saturating Loss"}
 [Softened Reverse KL]{.kicker}
 
-What divergence does the non-saturating loss descend when the critic is held at its optimal response $D = \lambda = \log(p/q)$? Using $\log \sigma(-D) - \log \sigma(D) = -D$:
+::: {.cols .vc}
+::: {.col}
+$$D_{\textrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q) = 2\,D_{\textrm{KL}}(m \,\|\, p)$$
 
-$$-\mathbb{E}_{x' \sim q}\big[\log \sigma(D(x'))\big] = \mathbb{E}_{x' \sim q}\big[-D(x')\big] - \mathbb{E}_{x' \sim q}\big[\log \sigma(-D(x'))\big]$$
+- **Envelope-theorem identity:** Using $-\log\sigma(D) = -D - \log\sigma(-D)$ at $D = \lambda = \log(p/q)$, the non-saturating generator loss descends the **softened reverse KL** $2\,D_{\textrm{KL}}(m \,\|\, p)$.
+- **Asymmetric penalty:** Spurious samples ($q > 0$ where $p = 0$) incur **infinite** cost ($m\log(m/0) = \infty$), whereas dropped data modes ($q = 0$ where $p > 0$) incur only a small finite cost $p\log\frac{1}{2}$.
+:::
 
-- At $D = \lambda$, the first term has the $q$-gradient of reverse KL $D_{\textrm{KL}}(q \,\|\, p) = \mathbb{E}_q[\log(q/p)]$, while by the envelope theorem the second term has the gradient of $2\,\mathrm{JS}(p, q) = D_{\textrm{KL}}(p \,\|\, m)$ $+ D_{\textrm{KL}}(q \,\|\, m)$:
-  $$D_{\textrm{KL}}(q \,\|\, p) - D_{\textrm{KL}}(p \,\|\, m) - D_{\textrm{KL}}(q \,\|\, m) = \int (p + q)\log \frac{m}{p} = 2\,D_{\textrm{KL}}(m \,\|\, p)$$
-- **Asymmetric error penalty of the softened reverse KL $2\,D_{\textrm{KL}}(m \,\|\, p)$:**
-  - **Spurious samples ($q(x) > 0$ where $p(x) = 0$):** $m(x) > 0 = p(x)$ $\implies$ $2\,D_{\textrm{KL}}(m \,\|\, p) = \infty$ (heavily penalizes unrealistic outputs).
-  - **Dropped data modes ($p(x) > 0$ where $q(x) = 0$):** $m(x) = p(x)/2 \implies$ integrand is $p(x)\log \frac{1}{2}$ (small finite cost).
+::: {.col .fig}
+@fig:ch16-gan-soft-rev-kl
+:::
+:::
 :::
 
 ::: {.slide title="Mode Dropping: Why Losing Half the Data Is Cheap"}
 [Failure Mode Analysis]{.kicker}
 
-Suppose $p$ is an equal mixture of two disjoint modes and $q$ matches one mode perfectly while omitting the other ($q = 2p$ on the covered mode, $q = 0$ on the dropped mode):
+::: {.cols .vc}
+::: {.col}
+- **Dropping 1 of 2 equal modes ($q = 2p$ on mode 1, $q = 0$ on mode 2):**
+  - Maximum likelihood $D_{\textrm{KL}}(p \,\|\, q) = \infty$ strictly forbids dropping a mode.
+  - Non-saturating GAN charges only $2\,D_{\textrm{KL}}(m \,\|\, p) \approx 0.262$ nats (and $\mathrm{JS} \approx 0.216$ nats) to drop half the dataset!
+- **Zero local restoring gradient:** On the covered mode, $D^\star(x) = \log(p/2p) = -\log 2$ is constant across $\operatorname{supp}(q)$, so $\nabla_x D^\star(G(z)) = \mathbf{0}$ provides no pull toward the missing mode.
+:::
 
-| Objective / Divergence | Value When One of Two Equal Modes Is Dropped | Penalty Magnitude |
-| :--- | :--- | :--- |
-| **Forward KL (Maximum Likelihood)** | $D_{\textrm{KL}}(p \,\|\, q) = \infty$ | **Infinite** (forbids zero density on any data mode) |
-| **Reverse KL** | $D_{\textrm{KL}}(q \,\|\, p) = \log 2 \approx 0.693\text{ nats}$ | Moderate ($0.69$ nats; mode-seeking) |
-| **Non-Saturating GAN** | $2\,D_{\textrm{KL}}(m \,\|\, p)$ $= \frac{3}{2}\log \frac{3}{4} + \frac{1}{2}\log \frac{1}{4}$ $\approx 0.262\text{ nats}$ | **Small** ($\approx \frac{1}{4}$ nat to drop half the dataset!) |
-| **Minimax GAN (JS)** | $\mathrm{JS}(p, q) \approx 0.216\text{ nats}$ | **Small** ($< \frac{1}{4}$ nat) |
-
-::: {.d2l-note .warn}
-**Zero local restoring gradient:** On the covered mode, $D^\star(x) = \log(p(x)/q(x)) = -\log 2$ is constant across $\operatorname{supp}(q)$, so $\nabla_x D^\star(G(z)) = \mathbf{0}$: the local gradient vanishes and provides no signal pointing toward the missing mode.
+::: {.col .fig .big}
+@fig:ch16-gan-mode-drop
+:::
 :::
 :::
 

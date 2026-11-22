@@ -1684,21 +1684,14 @@ Numerical Stability and Conditioning<br>**IEEE floating point · max-shifted sof
 ::: {.slide title="Two Faces of Numerical Failure: NaN vs. Silent Drift"}
 [Motivation]{.kicker}
 
-Every derivation so far assumed exact real arithmetic. In finite precision, numerical failure arrives in two fundamentally different ways:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Failure Mode 1 — An unstable algorithm on an easy problem:**
-  - The logits $\mathbf{z} = (1000, 1001, 1002)$ define a completely benign softmax distribution $(0.090, 0.245, 0.665)$.
-  - Yet evaluating $e^{z_i}/\sum_j e^{z_j}$ directly overflows $e^{1000} = \infty$ even in `fp64`, returning `NaN NaN NaN` and halting training.
-  - **Cure:** An algebraically equivalent rewrite (`z - max(z)`) avoids the intermediate overflow and restores full machine accuracy.
+- **Unstable algorithm on an easy problem:** Naive softmax on $\mathbf{z} = (1000, 1001, 1002)$ overflows $e^{1000} = \infty \implies \text{NaN}$, cured completely by the max-shift rewrite $\mathbf{z} - \max(\mathbf{z})$.
+- **Stable solver on an ill-conditioned problem:** On a $12 \times 12$ Hilbert system ($\kappa \approx 1.7 \times 10^{16}$), `np.linalg.solve` has backward error $\omega \approx 10^{-17}$ yet returns an answer off by $30\%$—requiring problem regularization.
 :::
 
-::: {.col}
-- **Failure Mode 2 — A stable solver on an ill-conditioned problem:**
-  - Applying `np.linalg.solve` to a $12 \times 12$ Hilbert system $\mathbf{H}\mathbf{x} = \mathbf{b}$ returns an answer that is **off by $30\%$** in `fp64`—with no warning!
-  - Yet the returned vector is the *exact* solution of a linear system that differs from the stated one only in the $17\text{th}$ decimal digit.
-  - **Cure:** No solver rewrite can fix inherent problem sensitivity; we must change or regularize the problem itself.
+::: {.col .fig .big}
+@fig:ch36-opt-nan-vs-silent-drift
 :::
 :::
 :::
@@ -1866,13 +1859,17 @@ $$\kappa_f(x) = \left|\frac{x\,f'(x)}{f(x)}\right|, \qquad \text{and for subtrac
 ::: {.slide title="Separating an Unstable Algorithm from a Hard Problem"}
 [Catastrophic Cancellation]{.kicker}
 
-In `fp32`, evaluating `np.log(1.0 + x)` at $x = 10^{-8}$ returns $0$ (a $100\%$ relative error), whereas `np.log1p(x)` returns $10^{-8}$ accurate to machine precision. Why?
+::: {.cols .vc}
+::: {.col}
+- **Well-conditioned problem:** $f(x) = \log(1 + x)$ near $x = 0$ has $\kappa_f(x) = \left|\frac{x}{(1+x)\log(1+x)}\right| \to 1$.
+- **Unstable intermediate detour:** Evaluating `log(1.0 + x)` at $x = 10^{-8}$ in `fp32` rounds $y = \mathrm{fl}(1 + 10^{-8}) = 1.0$, and $\log(y)$ near $y = 1$ has $\kappa_{\log}(y) = 1/|\log y| = 10^8$, magnifying the $10^{-8}$ rounding error to $100\%$ error!
+- **Direct series (`log1p`):** Evaluates $x - x^2/2 + \cdots$ directly to full machine precision.
+:::
 
-- **The problem itself is perfectly well-conditioned:** For $f(x) = \log(1 + x)$ near $x = 0$, Taylor expansion $\log(1 + x) = x - \tfrac12 x^2 + \cdots$ gives $\kappa_f(x) = \left|\frac{x}{(1+x)\log(1+x)}\right| \to 1$.
-- **The naive algorithm takes an ill-conditioned detour:** Evaluating `log(1 + x)` decomposes $f$ into two steps:
-  1. $y = \mathrm{fl}(1 + x)$: Because $10^{-8} < u = 2^{-24} \approx 5.96 \times 10^{-8}$, `fp32` rounds $y = 1 + 10^{-8}$ to $1.0$ (a tiny relative error of $10^{-8}$ in $y$).
-  2. $z = \log(y)$ near $y = 1$: Here $\kappa_{\log}(y) = \frac{1}{|\log y|} \approx \frac{1}{x} = 10^8$, which magnifies the $10^{-8}$ rounding error in $y$ by **$10^8\times$** to $100\%$ error!
-- **The golden rule of numerical stability:** *An unstable algorithm routes a well-conditioned problem through an ill-conditioned intermediate step.*
+::: {.col .fig .big}
+@fig:ch36-opt-log1p-detour
+:::
+:::
 :::
 
 ::: {.slide title="Sterbenz's Lemma and Cancellation in Stored Inputs"}
@@ -1912,13 +1909,19 @@ $$\text{Two-Pass:}\quad \frac{1}{N}\sum_{i=1}^N (x_i - m)^2 \qquad \text{vs.} \q
 ::: {.slide title="Welford's Stable One-Pass Variance Recursion"}
 [Catastrophic Cancellation]{.kicker}
 
-**Welford's algorithm (1962)** computes the exact mean and variance in a single streaming pass without ever forming $\sum x_i^2$. Maintain the running mean $m_k$ and running centered sum of squares $M_k = \sum_{i=1}^k (x_i - m_k)^2$ from $m_0 = M_0 = 0$:
+::: {.cols .vc}
+::: {.col}
+**Welford's algorithm (1962)** updates the running mean $m_k$ and centered sum of squares $M_k = \sum_{i=1}^k(x_i - m_k)^2$ in a single streaming pass:
 
-$$d_k = x_k - m_{k-1}, \qquad m_k = m_{k-1} + \frac{d_k}{k}, \qquad M_k = M_{k-1} + d_k\,(x_k - m_k)$$
+$$d_k = x_k - m_{k-1}, \quad m_k = m_{k-1} + \frac{d_k}{k}, \quad M_k = M_{k-1} + d_k(x_k - m_k)$$
 
-- **Why the asymmetric product $d_k(x_k - m_k)$ is exact:** Since $m_k - m_{k-1} = \frac{d_k}{k}$ and $x_k - m_k = \frac{k-1}{k}d_k$, expanding $M_k$ around $m_{k-1}$ gives:
-  $$\sum_{i=1}^k (x_i - m_k)^2 = \sum_{i=1}^{k-1}\left((x_i - m_{k-1}) - \frac{d_k}{k}\right)^{\!2} + (x_k - m_k)^2 = M_{k-1} + \frac{k-1}{k^2}d_k^2 + \frac{(k-1)^2}{k^2}d_k^2 = M_{k-1} + d_k(x_k - m_k)$$
-- **Why Welford stays stable:** Every increment added to $M_k$ is a centered deviation of scale $s^2 = O(1)$ rather than $m^2 = 10^{18}$, achieving the optimal error $O(u|m|/s)$.
+- **Zero cancellation:** Every increment $d_k(x_k - m_k)$ is a centered deviation of scale $s^2 = O(1)$ rather than $m^2 = 10^{18}$, achieving the optimal error $O(u|m|/s)$.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-welford-vs-naive
+:::
+:::
 :::
 
 ::: {.slide title="Naive Variance vs. Welford at Mean 10⁹"}
@@ -1977,13 +1980,19 @@ An algorithm for $\mathbf{A}\mathbf{x} = \mathbf{b}$ is **backward stable** if i
 ::: {.slide title="Forward Error Bound and the Lost-Digits Rule"}
 [Matrix Conditioning]{.kicker}
 
-How does the matrix condition number $\kappa(\mathbf{A}) = \|\mathbf{A}\|_2\,\|\mathbf{A}^{-1}\|_2 = \sigma_1 / \sigma_d$ link backward error $\omega$ to forward error?
+::: {.cols .vc}
+::: {.col}
+With relative backward error $\omega = \frac{\|\mathbf{b} - \mathbf{A}\hat{\mathbf{x}}\|_2}{\|\mathbf{A}\|_2\|\hat{\mathbf{x}}\|_2}$ and $\kappa(\mathbf{A}) = \sigma_1/\sigma_d$:
 
-- **Two-line proof:** Subtract $\mathbf{A}\mathbf{x} = \mathbf{b}$ from $(\mathbf{A} + \Delta\mathbf{A})\hat{\mathbf{x}} = \mathbf{b}$ to obtain $\mathbf{A}(\hat{\mathbf{x}} - \mathbf{x}) = -\Delta\mathbf{A}\hat{\mathbf{x}}$, so $\hat{\mathbf{x}} - \mathbf{x} = -\mathbf{A}^{-1}\Delta\mathbf{A}\hat{\mathbf{x}}$. Taking norms with $\|\Delta\mathbf{A}\|_2 \le \omega\|\mathbf{A}\|_2$ gives:
-  $$\frac{\|\hat{\mathbf{x}} - \mathbf{x}\|_2}{\|\hat{\mathbf{x}}\|_2} \le \|\mathbf{A}^{-1}\|_2\,\|\Delta\mathbf{A}\|_2 \le \|\mathbf{A}^{-1}\|_2\,\|\mathbf{A}\|_2\,\omega = \kappa(\mathbf{A})\,\omega$$
-- **The Lost-Digits Rule of Thumb:** For any backward-stable solver ($\omega \approx u$):
-  $$\text{Accurate decimal digits in }\hat{\mathbf{x}} \;\approx\; \log_{10}(1/u) \;-\; \log_{10}\kappa(\mathbf{A})$$
-  In `fp32` ($\sim 7$ digits), a matrix with $\kappa(\mathbf{A}) = 10^5$ loses up to $5$ digits; in `fp64` ($\sim 16$ digits), a matrix with $\kappa(\mathbf{A}) \ge 10^{16}$ can lose all $16$ digits.
+$$\frac{\|\hat{\mathbf{x}} - \mathbf{x}\|_2}{\|\hat{\mathbf{x}}\|_2} \le \kappa(\mathbf{A})\,\omega$$
+
+- **Lost-Digits Rule of Thumb:** For any backward-stable solver ($\omega \approx u$), $\hat{\mathbf{x}}$ retains roughly $\log_{10}(1/u) - \log_{10}\kappa(\mathbf{A})$ accurate decimal digits.
+:::
+
+::: {.col .fig}
+@fig:ch36-opt-backward-forward-error
+:::
+:::
 :::
 
 ::: {.slide title="Acquitting the Solver on the Hilbert Matrix"}

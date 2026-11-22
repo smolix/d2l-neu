@@ -3,7 +3,7 @@
   `include-after-body`. Mirrors the book's chrome:
     - 280px white box on the left with the d2l logo
     - blue navbar on the right with Book Chapter / Slides / Courses /
-      GitHub / Discuss links
+      GitHub / Discuss links + a Fullscreen toggle button
   Same visual treatment as `_book/index.html` and `_book/slides/index.html`.
 
   Path math, with the deck deployed at
@@ -28,10 +28,25 @@
     <li><a href="https://courses.d2l.ai">Courses</a></li>
     <li><a href="https://github.com/smolix/d2l-neu" title="GitHub">GitHub</a></li>
     <li><a href="https://d2l.discourse.group">Discuss</a></li>
+    <li>
+      <button type="button" id="d2l-nav-fullscreen" class="d2l-nav-fullscreen-btn"
+              title="Toggle fullscreen view (shortcut: F)" aria-label="Toggle fullscreen"
+              aria-pressed="false">
+        <svg class="icon-enter-fs" viewBox="0 0 16 16" width="16" height="16" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 5.5V2h3.5M10.5 2H14v3.5M14 10.5V14h-3.5M5.5 14H2v-3.5"/>
+        </svg>
+        <svg class="icon-exit-fs" viewBox="0 0 16 16" width="16" height="16" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5.5 2v3.5H2M14 5.5h-3.5V2M10.5 14v-3.5H14M2 10.5h3.5V14"/>
+        </svg>
+        <span class="d2l-fs-label">Fullscreen</span>
+      </button>
+    </li>
   </ul>
 </nav>
-<!-- Presenter / speaker-view toggle, parked in the bottom-left control
-     cluster next to reveal's menu + chalkboard icons (not the top navbar). -->
+<!-- Presenter / speaker-view toggle and Fullscreen toggle, parked in the
+     bottom-left control cluster next to reveal's menu + chalkboard icons. -->
 <button id="d2l-deck-presenter" class="d2l-presenter-btn"
         title="Open speaker / presenter view in a second window (shortcut: S)"
         aria-label="Presenter view">
@@ -46,16 +61,92 @@
     <path d="M5.5 8.7a2.5 2.5 0 0 1 5 0z" fill="currentColor" stroke="none"/>
   </svg>
 </button>
+<button id="d2l-deck-fullscreen" class="d2l-fullscreen-btn"
+        title="Toggle fullscreen view for mobile, iPad, or projector (shortcut: F)"
+        aria-label="Toggle fullscreen view"
+        aria-pressed="false">
+  <svg class="icon-enter-fs" viewBox="0 0 16 16" width="19" height="19" fill="none"
+       stroke="currentColor" stroke-width="1.4"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M2 5.5V2h3.5M10.5 2H14v3.5M14 10.5V14h-3.5M5.5 14H2v-3.5"/>
+  </svg>
+  <svg class="icon-exit-fs" viewBox="0 0 16 16" width="19" height="19" fill="none"
+       stroke="currentColor" stroke-width="1.4"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M5.5 2v3.5H2M14 5.5h-3.5V2M10.5 14v-3.5H14M2 10.5h3.5V14"/>
+  </svg>
+</button>
 <script>
 // (1) Rewrite the "Book Chapter" link to the corresponding book HTML
 //     (e.g. /slides/pytorch/chapter_x/foo.html → /chapter_x/foo.html).
 //     The logo link stays pointing at book home.
-// (2) Wire the "Presenter" link to the reveal-notes plugin's open()
-//     API. This is the same call the reveal menu uses for its
-//     "Speaker View" tool item; doing it from a direct user click in
-//     the navbar keeps the popup-blocker happy and gives a visible
-//     affordance for the otherwise-undiscoverable `S` shortcut.
+// (2) Wire the "Presenter" button to the reveal-notes plugin's open() API.
+// (3) Wire the "Fullscreen" buttons (#d2l-deck-fullscreen and #d2l-nav-fullscreen)
+//     to toggle both native browser fullscreen (Desktop, iPad Safari, Android)
+//     AND a CSS viewport-fullscreen class (`body.d2l-deck-fullscreen`) that hides
+//     the top navbar and maximizes the slide canvas (also works on iPhone iOS
+//     Safari and inside iframe embeds where native requestFullscreen is unavailable).
 (function() {
+  function isNativeFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+              document.mozFullScreenElement || document.msFullscreenElement);
+  }
+
+  function isFullscreenActive() {
+    return isNativeFullscreen() || document.body.classList.contains('d2l-deck-fullscreen');
+  }
+
+  function updateFullscreenUI(active) {
+    document.body.classList.toggle('d2l-deck-fullscreen', !!active);
+    var btns = [
+      document.getElementById('d2l-deck-fullscreen'),
+      document.getElementById('d2l-nav-fullscreen')
+    ];
+    for (var k = 0; k < btns.length; k++) {
+      if (btns[k]) {
+        btns[k].setAttribute('aria-pressed', active ? 'true' : 'false');
+        btns[k].setAttribute('title', active
+          ? 'Exit fullscreen view (shortcut: F or Esc)'
+          : 'Toggle fullscreen view (shortcut: F)');
+      }
+    }
+    syncChrome();
+    if (window.Reveal && typeof Reveal.layout === 'function') {
+      setTimeout(function() { Reveal.layout(); }, 30);
+    }
+  }
+
+  function toggleFullscreen(ev) {
+    if (ev) ev.preventDefault();
+    var currentlyActive = isFullscreenActive();
+    if (!currentlyActive) {
+      updateFullscreenUI(true);
+      var root = document.documentElement;
+      var req = root.requestFullscreen || root.webkitRequestFullscreen ||
+                root.mozRequestFullScreen || root.msRequestFullscreen;
+      if (typeof req === 'function') {
+        try {
+          var p = req.call(root);
+          if (p && typeof p.catch === 'function') {
+            p.catch(function() { /* CSS fullscreen fallback remains active */ });
+          }
+        } catch (e) { /* CSS fullscreen fallback remains active */ }
+      }
+    } else {
+      updateFullscreenUI(false);
+      if (isNativeFullscreen()) {
+        var exit = document.exitFullscreen || document.webkitExitFullscreen ||
+                   document.mozCancelFullScreen || document.msExitFullscreen;
+        if (typeof exit === 'function') {
+          try {
+            var p2 = exit.call(document);
+            if (p2 && typeof p2.catch === 'function') p2.catch(function() {});
+          } catch (e) {}
+        }
+      }
+    }
+  }
+
   function init() {
     var parts = window.location.pathname.split('/');
     var i = parts.lastIndexOf('slides');
@@ -81,19 +172,36 @@
             return;
           }
         } catch (e) { /* fall through to keyboard fallback */ }
-        // Fallback: synthesize the `S` keypress the notes plugin
-        // listens for. Works even if the plugin's `open` export is
-        // unavailable (older bundled reveal builds).
         var ev2 = new KeyboardEvent('keydown',
             { key: 'S', code: 'KeyS', keyCode: 83, which: 83,
               bubbles: true, cancelable: true });
         document.dispatchEvent(ev2);
       });
     }
+
+    var fsBtn = document.getElementById('d2l-deck-fullscreen');
+    if (fsBtn) fsBtn.addEventListener('click', toggleFullscreen);
+    var navFsBtn = document.getElementById('d2l-nav-fullscreen');
+    if (navFsBtn) navFsBtn.addEventListener('click', toggleFullscreen);
+
+    // Keep UI synchronized when the user exits native fullscreen via Esc or F
+    var onNativeFsChange = function() {
+      updateFullscreenUI(isNativeFullscreen());
+    };
+    document.addEventListener('fullscreenchange', onNativeFsChange);
+    document.addEventListener('webkitfullscreenchange', onNativeFsChange);
+
+    // Also allow Esc to exit CSS-only fullscreen on mobile/iframe
+    document.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Escape' && document.body.classList.contains('d2l-deck-fullscreen') && !isNativeFullscreen()) {
+        updateFullscreenUI(false);
+      }
+    });
+
     attachChrome();
   }
 
-  // (3) Scale the fixed navbar by the SAME factor reveal scales the slides,
+  // (4) Scale the fixed navbar by the SAME factor reveal scales the slides,
   //     so the whole deck resizes as one unit (otherwise the px-sized navbar
   //     stays huge while the content shrinks). Anchored top-left; width is
   //     pre-divided by the scale so it still spans the viewport after scaling.

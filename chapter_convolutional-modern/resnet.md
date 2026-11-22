@@ -1268,11 +1268,16 @@ Residual Networks: ResNet, ResNeXt, and DenseNet<br>**the degradation paradox ·
 ::: {.slide title="The Degradation Paradox in Deep Plain Networks"}
 [Motivation & Optimization Puzzle]{.kicker}
 
-Even with batch normalization and ReLU activations stabilizing gradient scales, stacking plain VGG-style layers past ~20 layers triggers a counterintuitive failure mode (He et al., 2016):
+::: {.cols .vc}
+::: {.col}
+- **Deeper plain nets fit training data worse:** A 56-layer plain convnet ends with higher *training* loss ($0.27$) than a 20-layer plain convnet ($0.20$), ruling out overfitting.
+- **Constructive existence proof:** Copying the 20-layer net and setting the remaining 36 layers to the identity $f(\mathbf{x}) = \mathbf{x}$ proves a deeper solution $\le 0.20$ exists—SGD simply fails to approximate $f(\mathbf{x}) = \mathbf{x}$ across plain nonlinear layers.
+:::
 
-- **Deeper plain networks fit the training set worse:** On ImageNet, a 34-layer plain convnet ends with higher training error and higher top-1 validation error (28.5% vs. 27.9%) than an 18-layer plain convnet; on CIFAR-10, 56 plain layers train worse than 20.
-- **Not overfitting—an optimization failure:** Because *training* loss degrades, extra capacity is hurting optimization rather than memorizing noise.
-- **The identity paradox:** If the 56-layer network simply copied the 20-layer network and set its remaining 36 layers to the identity map $f(\mathbf{x}) = \mathbf{x}$, its training loss would be *at most* as high. Why does SGD fail to find the identity across plain nonlinear layers?
+::: {.col .fig .big}
+@fig:ch07-mcnn-degradation-paradox
+:::
+:::
 :::
 
 ::: {.slide title="Nested Function Classes Guarantee Monotonic Improvement"}
@@ -1316,15 +1321,16 @@ Instead of forcing a stacked block to parameterize the desired mapping $f(\mathb
 ::: {.slide title="The Identity Gradient Highway Across Depth"}
 [Backward Jacobian Analysis]{.kicker}
 
-Additive shortcuts fundamentally reshape the backward chain rule across stacked blocks $\mathbf{x}_{\ell+1} = \mathbf{x}_\ell + g_{\ell+1}(\mathbf{x}_\ell)$:
+::: {.cols .vc}
+::: {.col}
+$$\frac{\partial L}{\partial \mathbf{x}_\ell} = \frac{\partial L}{\partial \mathbf{x}_L} \left(\mathbf{I} + \frac{\partial}{\partial \mathbf{x}_\ell} \sum_{k=\ell+1}^L g_k(\mathbf{x}_{k-1})\right)$$
 
-- **Single-block Jacobian:** Differentiating $\mathbf{x}_{\ell+1}$ with respect to $\mathbf{x}_\ell$ adds the identity matrix $\mathbf{I}$ directly to the branch Jacobian:
-  $$\frac{\partial \mathbf{x}_{\ell+1}}{\partial \mathbf{x}_\ell} = \mathbf{I} + \frac{\partial g_{\ell+1}(\mathbf{x}_\ell)}{\partial \mathbf{x}_\ell}$$
-- **Unimpeded multi-block gradient path:** Across $L - \ell$ pre-activation blocks, $\mathbf{x}_L = \mathbf{x}_\ell + \sum_{k=\ell+1}^L g_k(\mathbf{x}_{k-1})$, so the loss gradient decomposes into a direct, unattenuated highway plus branch terms:
-  $$\frac{\partial L}{\partial \mathbf{x}_\ell} = \frac{\partial L}{\partial \mathbf{x}_L} \left(\mathbf{I} + \frac{\partial}{\partial \mathbf{x}_\ell} \sum_{k=\ell+1}^L g_k(\mathbf{x}_{k-1})\right)$$
+- **Additive identity $\mathbf{I}$:** Unrolls $\mathbf{x}_L = \mathbf{x}_\ell + \sum g_k$, routing upstream gradients $\partial L / \partial \mathbf{x}_L$ straight to early layers $\mathbf{x}_\ell$ without multiplying through intermediate weight matrices.
+:::
 
-::: {.d2l-note}
-He et al. (2016) verified that batch-normalized plain networks *already* have healthy gradient norms. Residual connections cure degradation not merely by preventing vanishing gradients, but by keeping forward and backward signals coherent with the identity reference frame.
+::: {.col .fig}
+@fig:ch07-mcnn-residual-gradient-highway
+:::
 :::
 :::
 
@@ -1357,11 +1363,17 @@ Notice that `use_1x1conv or strides != 1` automatically enables the stride-match
 ::: {.slide title="Verifying Shape Preservation and Stride-2 Downsampling"}
 [Block Shape Checks]{.kicker}
 
-When input and output widths match at stride 1, `Residual(3)` preserves the $(4, 3, 6, 6)$ tensor shape; passing `num_channels=6, use_1x1conv=True, strides=2` doubles channels while halving spatial height and width:
-
+::: {.cols .vc}
+::: {.col}
 @resnet-residual-blocks-2
 
 @resnet-residual-blocks-3
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-residual-shape-transition
+:::
+:::
 :::
 
 ::: {.slide title="Controlled Test: 20- vs. 56-Layer Plain and ResNets"}
@@ -1480,11 +1492,16 @@ Instead of summing $\mathbf{x}_k = \mathbf{x}_{k-1} + g_k(\mathbf{x}_{k-1})$, *D
 ::: {.slide title="Pre-Activation ResNets and U-Net Skip Connections"}
 [Variants & Extensions]{.kicker}
 
-Two architectural refinements extend how shortcut connections route signals and memory:
+::: {.cols .vc}
+::: {.col}
+- **Pre-activation ResNet (He et al., 2016b):** Moves $\textrm{BN} \to \textrm{ReLU} \to \textrm{Conv}$ inside $g(\mathbf{x})$ and drops the post-add ReLU for an exact $\mathbf{I}$ Jacobian across arbitrary depth.
+- **ResNet-D shortcut (He et al., 2019):** Prepends $2 \times 2$ stride-2 AvgPool before a stride-1 $1 \times 1$ conv so 100% of pixels are sampled instead of 25%.
+:::
 
-- **Pre-activation ResNet (He et al., 2016b):** Moves BatchNorm and ReLU *inside* the residual branch ($\textrm{BN} \to \textrm{ReLU} \to \textrm{Conv}$) and removes the post-addition ReLU, so $\mathbf{x}_L = \mathbf{x}_\ell + \sum_{k=\ell+1}^L g_k(\mathbf{x}_{k-1})$ has an exact, unthresholded identity Jacobian $\mathbf{I}$ across arbitrary depth.
-- **ResNet-D downsampling shortcut (He et al., 2019):** A stride-2 $1\times 1$ shortcut conv samples only $1/4$ of spatial coordinates (top-left of each $2\times 2$ cell); prepending $2\times 2$ stride-2 average pooling before a stride-1 $1\times 1$ conv preserves all pixels at zero parameter cost.
-- **U-Net encoder–decoder concatenation:** In segmentation and diffusion models, concatenating encoder feature maps with decoder maps happens only *once per spatial resolution stage* rather than at every layer, avoiding DenseNet's quadratic memory growth.
+::: {.col .fig .big}
+@fig:ch07-mcnn-post-vs-preactivation
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Shortcuts, ResNeXt Cost & DenseNet Memory"}
@@ -1508,12 +1525,16 @@ Work out these three design calculations:
 ::: {.slide title="Summary: Key Takeaways on Residual Networks"}
 [Summary]{.kicker}
 
-| Architecture / Concept | Mathematical / Structural Form | Optimization & Systems Role |
-|:--|:--|:--|
-| **Degradation problem** | 56-layer plain net has higher *training* loss than 20-layer ($0.27 > 0.20$) | Proves plain deep nets fail via optimization ill-conditioning, not overfitting |
-| **Residual block (`Residual`)** | $\mathbf{x}_{\ell+1} = \textrm{ReLU}(\mathbf{x}_\ell + g(\mathbf{x}_\ell))$ (with $1\times 1$ projection if shape changes) | Places identity at $g = 0$ ($\mathcal{F} \subseteq \mathcal{F}'$) and adds $\mathbf{I}$ to every block Jacobian |
-| **ResNet-18** | $7\times 7_{s2}$ + pool stem $\to$ $(2,2,2,2)$ blocks at $(64,128,256,512)$ $\to$ GAP | 11.2M params, 319M MACs ($96^2$); reaches $\approx 93\%$ on Fashion-MNIST at $\eta_0 = 0.1$ |
-| **ResNeXt block** | $1\times 1 (c\to b) \to$ grouped $3\times 3 (g\text{ groups}) \to 1\times 1 (b\to c)$ | Cuts $3\times 3$ cost by $1/g$ ($2cb + 9b^2/g$ weights), doubling width $b$ at matched FLOPs |
-| **DenseNet block** | $\mathbf{x}_k = [\mathbf{x}_{k-1}, f_k(\mathbf{x}_{k-1})]$ with growth rate $r$ | Maximizes feature reuse across layers, but naive activation memory grows as $\Theta(n^2 r)$ |
+::: {.cols .vc}
+::: {.col}
+- **ResNet ($\mathbf{x} + g(\mathbf{x})$):** Places the identity at $g=0$ ($\mathcal{F} \subseteq \mathcal{F}'$), curing deep plain-net degradation at $O(n \cdot c)$ activation memory.
+- **ResNeXt ($g$ groups):** Cuts $3 \times 3$ weights to $9b^2/g$, doubling bottleneck width $b$ at matched FLOPs.
+- **DenseNet ($[\mathbf{x}, f(\mathbf{x})]$):** Concatenates features with growth rate $r$ at $O(n^2 r)$ naive activation memory.
+:::
+
+::: {.col .fig .big}
+@fig:ch07-mcnn-skip-topology-comparison
+:::
+:::
 :::
 

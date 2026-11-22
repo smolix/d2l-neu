@@ -927,14 +927,16 @@ Distributed Collectives and Data Parallelism from Scratch<br>**parallelism taxon
 ::: {.slide title="When Does a Second GPU Actually Shorten a Step?"}
 [Motivation]{.kicker}
 
-Our workstation contains four RTX 4090 GPUs, each reading its own GDDR6X memory at $1.0\text{ TB/s}$. Suppose we split every training minibatch across $k$ GPUs using **data parallelism**:
+::: {.cols .vc}
+::: {.col}
+- **The compute dividend:** Splitting a minibatch of $B$ examples across $k$ GPUs cuts each GPU's local forward and backward work to $B/k$ examples.
+- **The communication & launch tax:** All $k$ GPUs must sum their $S$-byte gradients over PCIe ($\le 32\text{ GB/s}$ vs. $1\text{ TB/s}$ on-card DRAM), and a single-thread host loop pays $k \cdot h_{\textrm{step}}$.
+- **Break-even rule:** A second GPU speeds up a step **if and only if** compute time saved exceeds inter-GPU transfer plus added dispatch overhead.
+:::
 
-- **The compute dividend:** Each GPU processes only $1/k$ of the minibatch examples during the forward and backward passes.
-- **The communication tax:** Before updating weights, all $k$ GPUs must sum their parameter gradients across the PCIe interconnect staged through host RAM ($\le 32\text{ GB/s}$ per direction—roughly **$30\times$ slower** than on-card memory).
-- **The host-dispatch tax:** If a single Python thread dispatches kernels to all $k$ GPUs sequentially, CPU launch work scales as $k \cdot h_{\textrm{step}}$.
-
-::: {.d2l-note .warn}
-Adding a second GPU speeds up training **if and only if** the device compute time saved on half a minibatch exceeds both the inter-GPU gradient exchange and the added host dispatch overhead.
+::: {.col .fig .big}
+@fig:ch13-perf-second-gpu-tradeoff
+:::
 :::
 :::
 
@@ -970,12 +972,18 @@ Data parallelism relies on two collective communication operations across $k$ de
 ::: {.slide title="Exact Gradient Averaging Across k Equal Shards"}
 [Mathematical Invariant]{.kicker}
 
-Suppose a global minibatch $\mathcal{B}$ of $B$ examples is partitioned into $k$ equal shards $\mathcal{B}_1, \ldots, \mathcal{B}_k$ of size $B/k$. Device $j$ computes the mean-loss gradient $\mathbf{g}_j$ on its shard, and the allreduce sums $\mathbf{g}_1 + \cdots + \mathbf{g}_k$:
+::: {.cols .vc}
+::: {.col}
+$$\frac{1}{k} \sum_{j=1}^{k} \mathbf{g}_j \;=\; \nabla_{\boldsymbol{\theta}} \left(\frac{1}{B} \sum_{i \in \mathcal{B}} \ell_i(\boldsymbol{\theta})\right)$$
 
-$$\mathbf{g}_j \;=\; \nabla_{\boldsymbol{\theta}} \left(\frac{k}{B} \sum_{i \in \mathcal{B}_j} \ell_i(\boldsymbol{\theta})\right) \quad \Longrightarrow \quad \frac{1}{k} \sum_{j=1}^{k} \mathbf{g}_j \;=\; \nabla_{\boldsymbol{\theta}} \left(\frac{1}{B} \sum_{i \in \mathcal{B}} \ell_i(\boldsymbol{\theta})\right)$$
+- **Dividing by $k$ is mandatory:** Because each device computes a local mean-loss gradient $\mathbf{g}_j$ over $B/k$ examples and `allreduce` computes their **sum**, dividing by $k$ recovers the exact global gradient.
+- **Silent bug if omitted:** Forgetting $1/k$ silently multiplies the learning rate by $k$ ($k\eta$), degrading convergence without crashing.
+:::
 
-- **Dividing by $k$ is mandatory:** Because the allreduce computes a **sum** of $k$ per-shard averages, dividing the summed gradient (or the learning rate $\eta$) by $k$ recovers the exact full-batch gradient.
-- **Pitfall of omitting $1/k$:** Forgetting to divide by $k$ silently multiplies the effective learning rate by $k$ ($k\eta$)—a bug that may still converge to a worse optimum without crashing!
+::: {.col .fig}
+@fig:ch13-perf-shard-grad-averaging
+:::
+:::
 :::
 
 ::: {.slide title="The One-Step Gradient Check: 1 GPU vs. 2 GPUs"}
@@ -993,14 +1001,17 @@ The single-GPU and two-GPU parameter updates agree to `float32` floating-point r
 ::: {.slide title="Why Star Allreduce Bottlenecks at the Hub Device"}
 [Star vs. Ring Topology]{.kicker}
 
-Suppose each of $k$ devices holds a gradient vector of $S$ bytes (e.g., $S = 4\text{ GB}$ for our 1B-parameter GPT in `float32`):
+::: {.cols .vc}
+::: {.col}
+- **Star Allreduce ($O(kS)$ at hub):** Device $0$ gathers $(k-1)$ gradient tensors of size $S$, sums them, and scatters $(k-1)$ copies back ($12\text{ GB}$ sent/received at $k=4$ for $S=4\text{ GB}$).
+- **Ring Allreduce ($< 2S$ per GPU):** All $k$ GPUs circulate $S/k$ chunks around a logical ring in $2(k-1)$ steps, sending $\frac{2(k-1)}{k}S$ bytes each ($6\text{ GB}$ at $k=4$).
+- **Bandwidth optimality:** Ring traffic per GPU stays bounded below $2S$ even as $k \to \infty$.
+:::
 
-| Collective Topology | Bytes Sent by Busiest Device | Scaling as $k \to \infty$ | 1B GPT ($S = 4\text{ GB}$) at $k = 4$ |
-| :--- | :---: | :---: | :---: |
-| **Star Allreduce** (device 0 hub) | $(k - 1)\, S$ | Grows linearly: **$O(k S)$** | Hub sends **$12\text{ GB}$** & receives **$12\text{ GB}$** |
-| **Ring Allreduce** (logical ring) | $\frac{2(k - 1)}{k}\, S$ | Bounded above by **$2S$** | Every device sends **$6\text{ GB}$** & receives **$6\text{ GB}$** |
-
-- **Why the star fails at scale:** In a star topology, device $0$ must gather $(k-1)$ tensors of size $S$, add them, and scatter $(k-1)$ copies of the sum back out, leaving $(k-1)$ peer links idle while the hub link saturates.
+::: {.col .fig .big}
+@fig:ch13-perf-star-vs-ring
+:::
+:::
 :::
 
 ::: {.slide title="Ring Allreduce: Reduce-Scatter Followed by All-Gather"}
@@ -1102,15 +1113,16 @@ At global batch $B = 256$, two GPUs run **nearly $2\times$ slower** than one GPU
 ::: {.slide title="Strong Scaling vs. Weak Scaling Conventions"}
 [Scaling Laws]{.kicker}
 
-Every multi-GPU benchmark follows one of two scaling conventions, and confusing them misinterprets reported speedups:
+::: {.cols .vc}
+::: {.col}
+- **Strong scaling (fixed global batch $B$, $b = B/k$):** Preserves exact gradient statistics and aims to cut single-step wall time by $k\times$, but shrinks per-GPU compute relative to communication as $k$ grows.
+- **Weak scaling (fixed per-GPU batch $b$, $B = kb$):** Keeps per-GPU compute constant to achieve $k\times$ throughput ($\text{examples/s}$), subject to the critical batch size $b_{\textrm{noise}}$.
+:::
 
-| Scaling Mode | Batch Size Convention | Ideal $k$-GPU Step Time | Ideal Throughput ($\textrm{ex/s}$) | Optimization Impact |
-| :--- | :--- | :---: | :---: | :--- |
-| **Strong Scaling** | Fixed global batch $B$ ($b = B/k$ per GPU) | $t_{\textrm{step}}(1) / k$ | $k \times$ faster to finish $B$ | Identical gradient statistics & convergence |
-| **Weak Scaling** | Fixed per-GPU batch $b$ ($B = k b$ global) | $t_{\textrm{step}}(1)$ | $k \times$ examples/s | Alters optimization dynamics at very large $kb$ |
-
-- **Weak-scaling speedup condition ($k = 2$ with one launcher):** Two GPUs achieve higher throughput ($2\,t(1)/t(2) > 1$) only when:
-  $$\max\bigl(2h_{\textrm{step}},\; t_{\textrm{dev}}(b)\bigr) + \alpha + S\,\beta_{\textrm{link}} \;<\; 2\max\bigl(h_{\textrm{step}},\; t_{\textrm{dev}}(b)\bigr)$$
+::: {.col .fig .big}
+@fig:ch13-perf-strong-vs-weak-scaling
+:::
+:::
 :::
 
 ::: {.slide title="Crossing the Scaling Threshold with Larger Minibatches"}

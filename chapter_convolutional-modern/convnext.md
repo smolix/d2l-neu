@@ -984,47 +984,63 @@ ConvNeXt: Modernizing a ResNet Step by Step<br>**controlled ablation vs. Swin-T 
 ::: {.slide title="Did Self-Attention Make Convnets Obsolete in 2021?"}
 [Motivation & The Swin-T Challenge]{.kicker}
 
-In 2021, hierarchical Vision Transformers such as *Swin-T* (Liu et al., 2021) overtook classic convnets on ImageNet—achieving **81.3%** top-1 accuracy at $4.5\text{G}$ multiply-adds versus **76.1%** for a 2015 ResNet-50 of matched compute:
+::: {.cols .vc}
+::: {.col}
+- **The 2021 Swin-T challenge:** Swin-T ($4.5\textrm{G}$ MACs) hit **$81.3\%$** ImageNet top-1 vs. **$76.1\%$** for 2015 ResNet-50.
+- **Confounded variables:** Swin-T also changed the 300-epoch AdamW recipe, stage ratio, stem, bottleneck geometry, and normalizer.
+- **ConvNeXt (Liu et al., 2022):** Modernizing ResNet-50 step-by-step reaches **$82.0\%$** with *zero attention layers*!
+:::
 
-- **How a Vision Transformer (ViT / Swin) works:** Chops the image into non-overlapping $4\times 4$ patches, embeds each patch as a token vector, and alternates spatial *self-attention* (within $7\times 7$ local windows in Swin) with a per-position $4\times$-expanded *MLP*.
-- **Confounded variables:** Beyond self-attention, Swin-T differed from 2015 ResNet-50 in its 300-epoch AdamW training recipe, stage depth ratio, stem downsampling, bottleneck geometry, activation count, and normalization layer.
-- **The ConvNeXt question (Liu et al., 2022):** How far does a pure convnet go if we modernize a ResNet-50 one design choice at a time—*without adding a single attention layer*?
+::: {.col .fig .big}
+@fig:ch07-mcnn-resnet-vs-swin-gap
+:::
+:::
 :::
 
 ::: {.slide title="The Eleven-Step ConvNeXt Modernization Roadmap"}
 [Cumulative ImageNet Ablation]{.kicker}
 
-Holding compute fixed near $\approx 4.5\text{G}$ multiply-adds on ImageNet-1K, Liu et al. (2022) measured the cumulative effect of eleven sequential upgrades from ResNet-50 to ConvNeXt-T:
+::: {.cols .vc}
+::: {.col}
+- **Step 1 — 300-ep Modern Recipe (+2.7%):** Lifts untouched ResNet-50 from $76.1\% \to 78.8\%$ (46% of the total gain!).
+- **Steps 2–6 — Macro & $7 \times 7$ InvBot (+1.8%):** $(3,3,9,3)$ stages, $4 \times 4_{s4}$ patchify stem, depthwise $7 \times 7$ at front of $4\times$ inverted bottleneck ($80.6\%$).
+- **Steps 7–11 — Micro Hygiene (+1.4%):** 1 GELU, 1 LayerNorm, layer scale, and separate $2 \times 2_{s2}$ downsamplers (**$82.0\%$**).
+:::
 
-| Step / Cumulative Modification | Architectural or Training Change | ImageNet Top-1 | Step $\Delta$ |
-|:--|:--|--:|--:|
-| **0. Baseline** | ResNet-50 trained with original 90-epoch 2015 recipe | $76.1\%$ | — |
-| **1. Modern training recipe** | 300 epochs, AdamW, Mixup/CutMix, smoothing, stochastic depth | **$78.8\%$** | **$+2.7\%$** |
-| **2–3. Macro stage ratio & stem** | Stages $(3,4,6,3) \to (3,3,9,3)$; $4\times 4$ stride-4 *patchify* stem | $79.5\%$ | $+0.7\%$ |
-| **4. Depthwise convolutions** | Grouped $3\times 3 \to$ depthwise ($g=c$), widen stage 1 from $64 \to 96$ | $80.5\%$ | **$+1.0\%$** |
-| **5–6. Inverted bottleneck & $7\times 7$** | Expand $c \to 4c \to c$; move depthwise conv first & enlarge to $7\times 7$ | $80.6\%$ | $+0.1\%$ |
-| **7–9. Micro activations & norms** | $\textrm{ReLU} \to \textrm{GELU}$; keep **only 1 GELU and 1 norm** per block | $81.4\%$ | **$+0.8\%$** |
-| **10–11. LayerNorm & downsampling** | $\textrm{BN} \to \textrm{LayerNorm}$; separate $\textrm{LN} + 2\times 2_{s2}$ conv between stages | **$82.0\%$** | $+0.6\%$ |
+::: {.col .fig .big}
+@fig:ch07-mcnn-convnext-waterfall
+:::
+:::
 :::
 
 ::: {.slide title="Macro Design: Recipe, 1:1:3:1 Stages & Patchify Stem"}
 [Steps 1–3: Macro Structure]{.kicker}
 
-The first three rows of the roadmap separate training gains from macro-topology alignment:
+::: {.cols .vc}
+::: {.col}
+- **Stage ratio $(3,4,6,3) \to (3,3,9,3)$ (+0.6%):** Concentrates 50% of blocks in Stage 3 ($14 \times 14$ resolution).
+- **Patchify stem (+0.1% on $224^2$):** Replaces overlapping $7 \times 7_{s2}$ + MaxPool with a non-overlapping $4 \times 4$ stride-4 conv (identical to ViT patch embedding, though too coarse for $64 \times 64$ thumbnails).
+:::
 
-- **46% of the total gain comes from the recipe alone:** Upgrading the training recipe lifts an untouched ResNet-50 by $+2.7$ points ($76.1\% \to 78.8\%$). Of the $5.9$-point total jump to ConvNeXt ($82.0\%$), $2.7$ points are training and $3.2$ points are architecture.
-- **Stage compute allocation $(3, 4, 6, 3) \to (3, 3, 9, 3)$:** Concentrating blocks in stage 3 ($14\times 14$ resolution, where spatial grids are $16\times$ smaller than the input) adds $+0.6\%$ at fixed FLOPs.
-- **Patchify stem ($4\times 4$ conv, stride 4):** Replaces ResNet's overlapping $7\times 7_{s2}$ conv + $3\times 3_{s2}$ max-pool with a single non-overlapping $4\times 4$ stride-4 convolution—algebraically identical to a ViT linear patch embedding ($+0.1\%$ on $224\times 224$ ImageNet).
+::: {.col .fig .big}
+@fig:ch07-mcnn-resnet-vs-patchify-stem
+:::
+:::
 :::
 
 ::: {.slide title="Block Geometry: Depthwise + 1×1 Mirrors Transformers"}
 [Steps 4–6: Factorization & 7×7 Kernels]{.kicker}
 
-A Transformer block separates spatial mixing (self-attention) from channel mixing (a $1\times \to 4\times \to 1\times$ pointwise MLP). ConvNeXt adopts the exact same division of labor using convolutions:
+::: {.cols .vc}
+::: {.col}
+- **Move depthwise conv to the front:** Placing $\textrm{DWConv}_{7\times 7}$ *before* the $c \to 4c$ expansion filters $c$ channels instead of $4c$ ($49c$ vs. $196c$ MACs/pixel).
+- **Large spatial kernel for $<6\%$ of block MACs:** Total block compute is $49c + 8c^2$ per pixel; at $c=96$, the $7 \times 7$ spatial filter is only **$6.0\%$** of block MACs ($1.6\%$ at $c=384$)!
+:::
 
-- **Depthwise spatial mixing + widened channels ($+1.0\%$):** Turning the spatial filter depthwise cuts its cost by $\sim 1/c$, freeing budget to widen stage channels from $(64, 128, 256, 512)$ to Swin-T's $(96, 192, 384, 768)$.
-- **Inverted bottleneck ($c \to 4c \to c$):** Because depthwise filtering is cheap, the residual highway stays at width $c$ while two $1\times 1$ pointwise layers expand $c \to 4c$ and project $4c \to c$.
-- **Moving the depthwise filter to the front Enables $7\times 7$ kernels:** Moving the depthwise conv *before* the $4\times$ expansion drops its channels from $4c \to c$ ($4\times$ cheaper), making a $7\times 7$ depthwise filter (matching Swin's $7\times 7$ window) cost only $49c$ MACs/pixel versus $8c^2$ for the two $1\times 1$ layers.
+::: {.col .fig .big}
+@fig:ch07-mcnn-convnext-block-reorder
+:::
+:::
 :::
 
 ::: {.slide title="Micro Design: Why Fewer Activations and Norms Win"}
@@ -1066,11 +1082,15 @@ Whereas ResNet downsamples *inside* the first residual block of each stage via a
 ::: {.slide title="Implementing the ConvNeXt Block"}
 [Code Implementation]{.kicker}
 
-In equation form, each `ConvNeXtBlock` computes:
-
-$$\mathbf{Y} = \mathbf{X} + \textrm{DropPath}\Bigl(\boldsymbol{\gamma} \odot \mathbf{W}_2\,\textrm{GELU}\bigl(\mathbf{W}_1\,\textrm{LN}(\textrm{DWConv}_{7\times 7}(\mathbf{X}))\bigr)\Bigr)$$
-
+::: {.cols .vc}
+::: {.col}
 @convnext-block
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-convnext-block-dataflow
+:::
+:::
 :::
 
 ::: {.slide title="Assembling the Full ConvNeXt Class"}
@@ -1084,12 +1104,16 @@ $$\mathbf{Y} = \mathbf{X} + \textrm{DropPath}\Bigl(\boldsymbol{\gamma} \odot \ma
 ::: {.slide title="Verifying ConvNeXt-Atto Shapes and Parameter Count"}
 [Sanity Check: 3,376,450 Parameters]{.kicker}
 
-For $64\times 64$ Fashion-MNIST, we use the compact *ConvNeXt-atto* configuration—stage depths $(2, 2, 6, 2)$ and widths $(40, 80, 160, 320)$—and verify its exact parameter count ($3{,}376{,}450$, roughly one-third of ResNet-18's $11.2\text{M}$):
-
+::: {.cols .vc}
+::: {.col}
 @convnext-params
 
-::: {.d2l-note}
-On a $64\times 64$ image, the stride-4 patchify stem immediately produces a $16\times 16$ grid, and the three $2\times 2$ stride-2 downsampling layers step resolution down to $8\times 8$ $\to$ $4\times 4$ $\to$ $2\times 2$ before global average pooling.
+- **Compact Atto pyramid:** Depths $(2, 2, 6, 2)$ and widths $(40, 80, 160, 320)$ total $3.38\textrm{M}$ parameters ($1/3$ of ResNet-18).
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-convnext-atto-pyramid
+:::
 :::
 :::
 
@@ -1112,47 +1136,50 @@ Do architectural changes validated on $224\times 224$ ImageNet transfer blindly 
 ::: {.slide title="When ImageNet Design Choices Hurt Small-Image Tasks"}
 [Ablation Results & Resolution Pitfall]{.kicker}
 
-Comparing our four cumulative models against the paper's ImageNet gains reveals a striking lesson about spatial resolution:
-
+::: {.cols .vc}
+::: {.col}
 @!convnext-eval
 
-| Cumulative Step ($64\times 64$ Fashion-MNIST, 20 epochs) | ImageNet $\Delta$ | Params | Multiply-Adds | Fashion-MNIST Val Acc |
-|:--|:--|--:|--:|--:|
-| **0. Compact ResNet-18** (width 35, $7\times 7_{s2}$ + pool stem, BN) | baseline | $3.35\text{M}$ | $43.2\text{M}$ | **$\approx 94.0\%$** |
-| **1. + ConvNeXt blocks, $(2,2,6,2)$ stages & downsampling (with BN)** | $+3.0\%$ | $3.38\text{M}$ | $46.1\text{M}$ | **$\approx 94.0\%$** |
-| **2. + Swap BatchNorm $\to$ per-pixel LayerNorm** | $+0.1\%$ | $3.38\text{M}$ | $46.1\text{M}$ | **$\approx 94.0\%$** |
-| **3. + Swap ResNet stem $\to$ $4\times 4_{s4}$ Patchify stem (Full ConvNeXt)** | $+0.1\%$ | $3.38\text{M}$ | $44.3\text{M}$ | **$\approx 91.5\%$ ($-2.5\%$)** |
+- **Body + LN tie at $\approx 94.0\%$:** Matches `CompactResNet18` when keeping the overlapping stem.
+- **Patchify pitfall ($-2.5\%$):** Non-overlapping $4 \times 4_{s4}$ stem is too coarse on $64 \times 64$ thumbnails.
+:::
 
-::: {.d2l-note .warn}
-**Architectural Pitfall (Patchify Stems on Small Images):** ConvNeXt's modernized blocks and LayerNorm tie with ResNet-18 at $\approx 94\%$. The entire $2.5$-point drop comes from the non-overlapping $4\times 4$ stride-4 patchify stem, which crushes a $64\times 64$ image straight to $16\times 16$ in a single linear projection without overlapping receptive fields.
+::: {.col .fig}
+@fig:ch07-mcnn-local-ablation-steps
+:::
 :::
 :::
 
 ::: {.slide title="Frontiers: Masked Pretraining & Global Response Norm"}
 [ConvNeXt V2 & Open Questions]{.kicker}
 
-While ConvNeXt matched supervised Vision Transformers, two active research frontiers drove *ConvNeXt V2* (Woo et al., 2023) and hybrid architectures:
+::: {.cols .vc}
+::: {.col}
+$$\textrm{GRN}(\mathbf{X})_c = \gamma_c \frac{g_c}{\bar{g} + \epsilon}\mathbf{X}_c + \beta_c + \mathbf{X}_c$$
 
-- **Masked autoencoder (MAE) pretraining on convnets:** Dropping 75% of image patches is trivial for a ViT token sequence, whereas dense sliding convolutions smear zeros across masked borders. ConvNeXt V2 executes *submanifold sparse convolutions* only on visible pixels during pretraining.
-- **Feature collapse in depthwise MLP blocks & GRN:** Under masked pretraining, many ConvNeXt channels saturate or collapse to redundant filters. ConvNeXt V2 replaces layer scale with parameter-efficient **Global Response Normalization (GRN)** after the GELU, normalizing each channel's spatial $\ell_2$ norm $g_c = \|\mathbf{X}_c\|_2$ against the mean norm $\bar{g} = \frac{1}{C}\sum_c g_c$ to enforce inter-channel competition:
-  $$\textrm{GRN}(\mathbf{X})_c = \gamma_c \frac{g_c}{\bar{g} + \epsilon}\mathbf{X}_c + \beta_c + \mathbf{X}_c$$
+- **Sparse MAE pretraining:** Submanifold sparse convs prevent masked zero-bleeding.
+- **Global Response Norm (GRN):** Normalizes channel L2 norms $g_c = \|\mathbf{X}_c\|_2$ against layer mean $\bar{g}$ to prevent dead/collapsed channels.
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-convnextv2-grn
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Block FLOPs, Parameters & Layer Scale"}
 [Concept Check]{.kicker}
 
-Work out these three ConvNeXt design questions:
+::: {.cols .vc}
+::: {.col}
+- **1. Block MAC split ($c=96$):** $7 \times 7$ depthwise costs $49c = 4{,}704$ MACs/px (**only 6.0%**) vs. $8c^2 = 73{,}728$ for the two $1 \times 1$ layers.
+- **2. Why move DW to front:** Filtering $c$ channels instead of $4c$ saves $4\times$ ($49c$ vs. $196c$).
+- **3. LayerScale vs. DropPath:** LayerScale ($\gamma_0 = 10^{-6}$) is a deterministic multiplier kept at eval; DropPath is a random gate turned off ($b \equiv 1$) at eval.
+:::
 
-1. **Where do the multiply-adds live in a ConvNeXt block?** For a `ConvNeXtBlock` of width $c = 96$, compute the multiply-adds per spatial pixel for (a) the $7\times 7$ depthwise conv, (b) the $1\times 1$ expansion ($c \to 4c$), and (c) the $1\times 1$ projection ($4c \to c$). What percentage of the block's compute is spent in the $7\times 7$ spatial filter?
-2. **Why move the depthwise conv before the $4\times$ expansion?** How many multiply-adds per pixel would the $7\times 7$ depthwise conv cost if it were placed *between* the two $1\times 1$ layers (on $4c$ channels, as in MobileNetV2) instead of at the front (on $c$ channels)?
-3. **Layer scale vs. stochastic depth:** Both layer scale ($\gamma_0 = 10^{-6}$) and stochastic depth bias a deep network toward the identity mapping. How do they differ during training and at evaluation time?
-
-::: {.d2l-note .fragment .fade-up}
-**Answers:**
-
-1. **(a) $7\times 7$ depthwise:** $49c = 49(96) = 4{,}704$ MACs. **(b) $1\times 1$ expand:** $4c^2 = 36{,}864$ MACs. **(c) $1\times 1$ project:** $4c^2 = 36{,}864$ MACs. Total $= 49c + 8c^2 = 78{,}432$ MACs/pixel, so the large $7\times 7$ spatial kernel costs **only $6.0\%$ of the block's compute** (and just $1.6\%$ at $c = 384$).
-2. On $4c$ channels, a $7\times 7$ depthwise filter would cost $4 \cdot 49c = 196c = 18{,}816$ MACs/pixel—$4\times$ more expensive.
-3. **Layer scale** is a deterministic, learnable per-channel multiplier ($\boldsymbol{\gamma}$ starts at $10^{-6}$ so gradients flow smoothly at step 0, then grows continuously as each block learns its weight, remaining present at eval time). **Stochastic depth** randomly zeroes whole branches per example with fixed probability $p$ throughout training to regularize co-adaptation, and turns off ($b \equiv 1$) at eval time.
+::: {.col .fig .big}
+@fig:ch07-mcnn-layerscale-vs-droppath
+:::
 :::
 :::
 

@@ -444,17 +444,15 @@ Colab and Kaggle: Ephemeral Hosted Runtimes, Quotas, and Portable Setup<br>**eph
 ::: {.slide title="Borrowed Machines and the Ephemeral Runtime Problem"}
 [Motivation]{.kicker}
 
-Google Colab and Kaggle lend browser-accessible virtual machines with preinstalled deep learning frameworks and free GPUs—requiring zero local installation on a laptop or tablet:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **What happens during a session:** You connect to a fresh container, `pip install` an extra package, download a dataset to local disk, and train a model for an hour.
-- **What vanishes tomorrow:** When the session hits an idle timeout or a 12-hour wall-clock limit, the provider **destroys the virtual machine** and wipes its local scratch disk.
+- **Zero-install browser GPUs:** Colab and Kaggle lend preconfigured containers with free GPUs, ideal for running notebooks from any laptop.
+- **What vanishes on timeout:** Idle timeouts or 12-hour session limits **destroy the VM** and wipe local scratch disks (`/content`), installed packages, and kernel RAM.
+- **Engineering remedy:** Treat every hosted VM as disposable—reconstruct setup in cell 1 and write checkpoints directly to durable storage.
 :::
 
-::: {.col}
-- **What survives:** Only the notebook document itself and artifacts explicitly written to **durable external storage** (Google Drive or Kaggle saved dataset/notebook versions).
-- **The engineering remedy:** Treat every hosted runtime as disposable and reconstructible from the notebook's own first cells.
+::: {.col .fig .big}
+@fig:ch39-tools-ephemeral-vm
 :::
 :::
 :::
@@ -498,19 +496,15 @@ Every code-bearing page in D2L provides a **Run notebook** menu (**Colab**, **Ka
 ::: {.slide title="Security Audit Before Running Any Hosted Badge"}
 [Supply-Chain Safety]{.kicker}
 
-An "Open in Colab" badge on the internet executes someone else's code under your browser session and cloud account permissions:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Inspect the setup cell before pressing Run:**
-  - `!pip install git+https://github.com/user/repo` without a commit SHA executes arbitrary `setup.py` code that the repo owner can change at any time.
-  - `!curl -fsSL https://... | bash` runs uninspected remote shell commands invisible in the notebook.
-  - `drive.mount("/content/drive")` grants the notebook full read/write access to your entire Google Drive!
+- **Audit setup cells before pressing Run:** Unpinned `pip install git+https://...` or `curl ... | bash` executes arbitrary remote code, and `drive.mount` grants full read/write access to your Google Drive.
+- **Pin immutable commit SHAs:** Replace floating branch URLs with 40-character Git commit hashes and inspect scripts before executing.
+- **Never attach untrusted notebooks to a local runtime:** Local runtime mode executes with your personal machine's full user permissions.
 :::
 
-::: {.col}
-- **Pin before running:** Replace floating URLs with immutable 40-character Git commit SHAs and inspect downloaded scripts before execution.
-- **Local runtime boundary shift:** Attaching Colab's UI to a *local* Jupyter runtime moves execution onto your own machine with full local filesystem permissions—never connect untrusted notebooks to a local runtime.
+::: {.col .fig .big}
+@fig:ch39-tools-badge-security
 :::
 :::
 :::
@@ -518,19 +512,14 @@ An "Open in Colab" badge on the internet executes someone else's code under your
 ::: {.slide title="Google Colab: Variable Quotas and Compute Units"}
 [Colab Platform]{.kicker}
 
-Colab optimizes for zero-friction interactive runs from GitHub or Google Drive, but its resource allocations are dynamic:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Free-tier realities (as of Nov 2026):**
-  - Commonly assigns an NVIDIA **T4 (16 GB VRAM)**, though hardware types and usage limits fluctuate with global demand and are not guaranteed.
-  - Maximum session lifetime is **12 hours**, with earlier disconnects if the browser tab goes idle.
+- **Free tier (Nov 2026):** Typically allocates an NVIDIA **T4 (16 GB VRAM)** with a 12-hour max session and aggressive idle disconnects; exact availability fluctuates with demand.
+- **Paid tiers (Pay As You Go, Pro, Pro+):** Sell **compute units** for priority access to L4 or A100 GPUs and background execution, though allocations remain best-effort.
 :::
 
-::: {.col}
-- **Paid tiers (Pay As You Go, Pro, Pro+):**
-  - Sell **compute units** that increase priority for faster GPUs (such as L4 or A100) and longer background execution.
-  - Even with compute units, specific accelerator availability remains best-effort rather than a dedicated reservation.
+::: {.col .fig .big}
+@fig:ch39-tools-colab-tiers
 :::
 :::
 :::
@@ -557,21 +546,14 @@ Because a notebook menu shows the accelerator you *requested* rather than what t
 ::: {.slide title="Pinning Colab Runtime Versions and the Colab CLI"}
 [Image Stability & Automation]{.kicker}
 
-Hosted providers update their container images regularly—upgrading Python, CUDA, or NumPy underneath an unchanged notebook:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Dated runtime versions (since Sept 2025):**
-  - In **Runtime $\to$ Change runtime type**, a notebook can pin a specific dated software image (retained for one year after release; connection takes 2–3 minutes).
-  - Use the latest runtime with pinned packages for active work, and pin a dated runtime for course assignments shared with hundreds of students.
+- **Dated runtime versions:** Pinning a dated container image in **Runtime $\to$ Change runtime type** freezes Python/CUDA/library versions for one year—ideal for course assignments.
+- **Terminal automation (Colab CLI):** `colab new`, `colab exec`, and `colab stop` let local scripts and coding agents drive hosted GPUs without leaving a browser tab open.
 :::
 
-::: {.col}
-- **Driving runtimes from the terminal (Colab CLI, June 2026):**
-  - Available on Linux and macOS for scripts and coding agents:
-  - `colab new` allocates a hosted runtime.
-  - `colab exec` runs a local script or notebook on the remote accelerator.
-  - `colab stop` releases the runtime to stop consuming quota.
+::: {.col .fig .big}
+@fig:ch39-tools-colab-version-cli
 :::
 :::
 :::
@@ -579,19 +561,14 @@ Hosted providers update their container images regularly—upgrading Python, CUD
 ::: {.slide title="Kaggle Notebooks: Directory Semantics and Versioning"}
 [Kaggle Platform]{.kicker}
 
-Kaggle centers its notebook environment around versioned datasets, models, and reproducible batch runs:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Three distinct filesystem zones:**
-  1. **`/kaggle/input/` (Read-Only):** Holds attached datasets, pretrained models, and outputs of earlier notebooks—mounted instantly without in-notebook downloads.
-  2. **`/kaggle/working/` (Durable on Save, 20 GB):** Writable directory whose contents persist into saved notebook versions.
-  3. **All other paths (Ephemeral Scratch):** Wiped as soon as the session ends.
+- **Three filesystem zones:** Read-only `/kaggle/input/` mounts datasets/models instantly; `/kaggle/working/` (20 GB) persists into saved versions; all other paths are ephemeral scratch.
+- **Immutable batch runs (`Save & Run All`):** Replays the entire notebook top-to-bottom in a fresh background container and snapshots code, logs, and `/kaggle/working/` outputs.
 :::
 
-::: {.col}
-- **Built-in reproducibility (`Save & Run All`):** Executes the entire notebook top-to-bottom in a fresh background session and snapshots code, inputs, logs, and `/kaggle/working` outputs as an immutable version.
-- **Offline competition compliance:** Many competitions disable per-notebook internet access; attaching data and wheel packages via `/kaggle/input/` keeps runs self-contained.
+::: {.col .fig .big}
+@fig:ch39-tools-kaggle-fs-zones
 :::
 :::
 :::
@@ -599,19 +576,16 @@ Kaggle centers its notebook environment around versioned datasets, models, and r
 ::: {.slide title="Kaggle Quotas and Free-Tier Pretraining Arithmetic"}
 [Quota Sizing]{.kicker}
 
-As of November 2026, Kaggle grants a published weekly quota of **30 GPU hours** (on $1\times\text{P100}$ or $2\times\text{T4}$) and up to **12 hours per session** (9 hours on TPU). How much training fits inside a free quota?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Back-of-the-envelope FLOP budget ($C \approx 6ND$):**
-  - Pretraining BERT-base ($N = 1.1 \times 10^8$) for $10^6$ steps of 256 sequences ($90\%$ at length 128, $10\%$ at 512, giving $D \approx 4.28 \times 10^{10}$ tokens) requires:
-    $$C \approx 6 N D \approx 2.8 \times 10^{19} \text{ FLOPs}$$
+$$C \approx 6 N D \approx 2.8 \times 10^{19}\text{ FLOPs (BERT-base)}$$
+
+- **Why full pretraining outgrows free tiers:** At $30\%$ of a T4's $65\text{ TFLOP/s}$ peak ($19.5\text{ TFLOP/s}$), BERT-base takes $\sim 400\text{ T4 hours}$—over **33 twelve-hour sessions** or 13+ weeks of Kaggle's 30 h/week quota!
+- **What fits in one 12-hour T4 session ($8.4 \times 10^{17}\text{ FLOPs}$):** All D2L chapter notebooks, 7B–8B LoRA fine-tuning, or training an $\sim 85\text{M}$ model.
 :::
 
-::: {.col}
-- **Mapping to T4 GPU hours:**
-  - At $30\%$ of a T4's $65\text{ TFLOP/s}$ FP16 peak ($19.5\text{ TFLOP/s}$ sustained), BERT pretraining takes $\approx 400\text{ T4 hours}$—over **33 twelve-hour sessions** or **13+ weeks** of a 30 h/week quota!
-  - Conversely, one 12-hour T4 session supplies $\sim 8.4 \times 10^{17}\text{ FLOPs}$: ideal for course notebooks, LoRA fine-tuning, or Chinchilla-optimal ($D \approx 20N$) training of a $\sim 85\text{M}$ model.
+::: {.col .fig}
+@fig:ch39-tools-bert-t4-budget
 :::
 :::
 :::
@@ -619,16 +593,16 @@ As of November 2026, Kaggle grants a published weekly quota of **30 GPU hours** 
 ::: {.slide title="Colab vs. Kaggle: Side-by-Side Trade-Offs"}
 [Choosing a Provider]{.kicker}
 
-Both platforms run the book's notebooks free of charge, but their persistence and quota models suit different workflows (snapshot as of November 2026):
+::: {.cols .vc}
+::: {.col}
+- **Google Colab:** Opens live pointers from GitHub (must **Save a copy in Drive** to keep edits), persists files via `drive.mount`, and sells compute units for L4/A100 access.
+- **Kaggle Notebooks:** Imports an independent copy, publishes a **30 h/week** quota ($1\times\text{P100}$ or $2\times\text{T4}$), mounts versioned datasets at `/kaggle/input`, and captures immutable **Save & Run All** versions.
+:::
 
-| Requirement | Google Colab | Kaggle Notebooks |
-| :--- | :--- | :--- |
-| **Open directly from GitHub** | **Yes** (live pointer fetched on each open) | **Import copy** into your Kaggle account |
-| **Free GPU allocation** | Usually $1\times\text{T4}$ (16 GB); limits unpublished | $1\times\text{P100}$ or $2\times\text{T4}$; **30 h/week** published |
-| **Max session duration** | Up to 12 hours (idle disconnects earlier) | 12 hours on CPU/GPU; 9 hours on TPU |
-| **Persistent file storage** | Google Drive (`drive.mount`) | Versioned `/kaggle/input` & `/kaggle/working` (20 GB) |
-| **Reproducible run capture** | Manual Restart & Run All; pinned runtime dates | Native **Save & Run All** immutable versions |
-| **Best suited for** | Quick interactive reading of a D2L chapter | Dataset-backed experiments & shareable runs |
+::: {.col .fig .big}
+@fig:ch39-tools-colab-vs-kaggle
+:::
+:::
 :::
 
 ::: {.slide title="Writing Idempotent Setup Cells"}
@@ -671,19 +645,16 @@ When a notebook that worked last week suddenly fails on a hosted runtime, a logg
 ::: {.slide title="Portable Paths, Secrets, and Optimal Checkpointing"}
 [Durability & Security]{.kicker}
 
-A portable notebook adapts its paths automatically, keeps credentials out of cell outputs, and checkpoints frequently enough to survive random disconnects:
-
 ::: {.cols .vc}
 ::: {.col}
-- **Path adapter (`pathlib`):** Route outputs to `/kaggle/working`, `/content/drive` (when mounted), or `Path.cwd()` locally rather than hard-coding provider paths.
-- **Secrets belong in the secret manager:** Read API keys from Colab/Kaggle secret stores—never paste or `print()` tokens in an executable publication.
-- **Young's checkpoint interval (1974):** If writing a durable checkpoint takes $\delta$ seconds and random disconnects arrive with mean interval $M \gg \delta$, checkpoint every:
-  $$\tau^* = \sqrt{2 \delta M}$$
-  For $\delta = 30\text{ s}$ and $M = 3\text{ h}$ ($10{,}800\text{ s}$), $\tau^* = \sqrt{648{,}000} \approx 805\text{ s}$ ($\approx 13.4\text{ min}$).
+- **Path adapter & secrets:** Route outputs to `/kaggle/working`, `/content/drive`, or `Path.cwd()` automatically, and keep API tokens in the provider secret store.
+- **Young's checkpoint law ($\tau^* = \sqrt{2\delta M}$):** If saving takes $\delta = 30\text{ s}$ and disconnects arrive every $M = 3\text{ h}$, checkpoint every $\tau^* \approx 13.4\text{ min}$.
+
+@hosted-notebooks-work-directory
 :::
 
 ::: {.col .fig}
-@hosted-notebooks-work-directory
+@fig:ch39-tools-young-checkpoint
 :::
 :::
 :::
@@ -709,12 +680,15 @@ Test your intuition on three practical hosted-notebook scenarios:
 ::: {.slide title="Summary: Portable Hosted Notebook Engineering"}
 [Key Takeaways]{.kicker}
 
-| Dimension | Hazard on Hosted Runtimes | Portable Engineering Remedy |
-| :--- | :--- | :--- |
-| **Notebook edits** | Colab GitHub links discard unsaved browser edits | **Save a copy in Drive** immediately, or use Kaggle's private copy import |
-| **Hardware assignment** | Menu requests a GPU, but quota or availability assigns CPU/different GPU | Inspect `sys.modules`, `/kaggle/working`, and framework device properties in code |
-| **Container image drift** | Provider updates base libraries and breaks last month's notebook | Log a JSON environment fingerprint and pin Colab runtime dates for shared courses |
-| **Package installation** | Unconditional `pip install --upgrade` or post-import installs | Check `find_spec` / package metadata, pin exact versions, and restart if already imported |
-| **Artifact persistence** | Writing checkpoints to `/content` or unversioned scratch paths | Save to mounted Google Drive or `/kaggle/working` (with **Save & Run All**) at interval $\tau^* = \sqrt{2\delta M}$ |
-| **Credentials & security** | Leaking API tokens in cell outputs or running uninspected badge setup scripts | Store keys in the provider secret manager and audit setup cells before execution |
+::: {.cols .vc}
+::: {.col}
+- **Save Edits & Verify Hardware:** Copy GitHub-opened Colab notebooks to Drive immediately, and verify assigned GPU properties in code.
+- **Idempotent Setup & Drift Logs:** Check `find_spec` before installing pinned packages (restarting if already imported) and log a JSON environment fingerprint.
+- **Durable Checkpoints & Secrets:** Write checkpoints to mounted Drive or `/kaggle/working` at interval $\tau^* = \sqrt{2\delta M}$, and keep API keys in the provider secret store.
+:::
+
+::: {.col .fig .big}
+@fig:ch39-tools-portable-summary
+:::
+:::
 :::

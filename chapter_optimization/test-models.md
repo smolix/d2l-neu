@@ -664,16 +664,18 @@ Two Test Models: TinyLM and FashionCNN<br>**byte-level Transformer · convolutio
 ::: {.slide title="From Solvable Quadratics to Neural Network Benchmarks"}
 [Motivation]{.kicker}
 
-Analytical quadratics explain how curvature $\lambda$ and noise $\sigma^2/b$ govern simple updates, but real neural networks have non-quadratic, evolving landscapes where optimizer rankings depend strongly on architecture:
+::: {.cols .vc}
+::: {.col}
+- **Why quadratics aren't enough:** Neural networks have evolving sharpness $\lambda_{\max}(\mathbf{x}_t)$, $40\times$ cross-layer gradient disparities, and stochastic seed variance.
+- **Three experimental pillars:**
+  1. **Two complementary models:** `TinyLM` (single-pass byte Transformer) and `FashionCNN` (multi-epoch image CNN).
+  2. **Untrained loss landmarks:** Closed-form uniform, unigram, and bigram byte entropies.
+  3. **Fair tuning protocol:** Independent LR sweep per arm from shared seed with $3\times$ multi-seed significance thresholds.
+:::
 
-| Optimization Question | Quadratic Valley ($0.1x_1^2 + 2x_2^2$) | Neural Network (`TinyLM` or `FashionCNN`) |
-| :--- | :--- | :--- |
-| **Maximum stable learning rate $\eta_{\max}$** | Exact formula: $2/\lambda_{\max} = 0.5$ | Unknown a priori; varies across layers and training steps |
-| **Why AdamW beats SGD on Transformers** | Both see only 2 coordinates | Transformers have $40\times$ cross-layer gradient scale disparities & sparse tokens |
-| **Is a $0.02$-nat lower loss a real improvement?** | Deterministic trajectory ($0$ variance) | Stochastic init & minibatches cause run-to-run variation across seeds |
-
-::: {.d2l-note}
-Evaluating optimizers scientifically requires **two complementary architectures** (a Transformer and a CNN), **untrained count-based loss landmarks**, and a **fair tuning protocol** with explicit statistical significance thresholds.
+::: {.col .fig .big}
+@fig:ch09-opt-test-quad-vs-net
+:::
 :::
 :::
 
@@ -698,12 +700,19 @@ Evaluating optimizers scientifically requires **two complementary architectures*
 ::: {.slide title="Inside TinyLM: Decoder-Only Transformer Architecture"}
 [Transformer Structure]{.kicker}
 
-`TinyLM` is a two-block pre-LayerNorm causal Transformer with model width $d_{\text{model}} = 128$, $2$ attention heads ($d_k = 64$), and MLP hidden width $4d_{\text{model}} = 512$:
+::: {.cols .vc}
+::: {.col}
+- **Embeddings:** $\mathbf{H}_0 = \mathbf{E}_{\text{tok}}(\mathbf{X}) + \mathbf{E}_{\text{pos}}(0..63) \in \mathbb{R}^{B \times 64 \times 128}$, initialized from $\mathcal{N}(\mathbf{0}, \mathbf{I})$.
+- **Two pre-norm residual blocks ($d_{\text{model}} = 128, 2\text{ heads}$):**
+  $$\mathbf{H} \leftarrow \mathbf{H} + \text{CausalMHA}(\text{LN}_1(\mathbf{H}))$$
+  $$\mathbf{H} \leftarrow \mathbf{H} + \text{MLP}_{\text{GELU}}(\text{LN}_2(\mathbf{H}))$$
+- **Readout head:** $\text{Linear}_{128 \to 256}(\text{LN}(\mathbf{H}))$ initialized from $\mathcal{U}(-1/\sqrt{\text{fan-in}}, 1/\sqrt{\text{fan-in}})$.
+:::
 
-- **Token & positional embeddings:** $\mathbf{H}_0 = \mathbf{E}_{\text{tok}}(\mathbf{X}) + \mathbf{E}_{\text{pos}}(0, \ldots, T-1) \in \mathbb{R}^{B \times 64 \times 128}$, with rows initialized from $\mathcal{N}(\mathbf{0}, \mathbf{I})$.
-- **Two pre-norm residual blocks ($\ell = 1, 2$):**
-  $$\mathbf{H} \leftarrow \mathbf{H} + \text{CausalMHA}(\text{LayerNorm}_1(\mathbf{H})), \qquad \mathbf{H} \leftarrow \mathbf{H} + \text{MLP}_{\text{GELU}}(\text{LayerNorm}_2(\mathbf{H}))$$
-- **Final readout head:** $\text{Logits} = \text{Linear}_{128 \to 256}(\text{LayerNorm}(\mathbf{H})) \in \mathbb{R}^{B \times 64 \times 256}$, with all linear weights and biases initialized from $\mathcal{U}\!\left(-\frac{1}{\sqrt{\text{fan-in}}}, \frac{1}{\sqrt{\text{fan-in}}}\right)$.
+::: {.col .fig}
+@fig:ch09-opt-test-tinylm-arch
+:::
+:::
 :::
 
 ::: {.slide title="Parameter Census of TinyLM: Three Structural Groups"}
@@ -746,44 +755,51 @@ To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct
 ::: {.slide title="Comparing Our Two Neural Testbeds Side by Side"}
 [Complementary Regimes]{.kicker}
 
-| Attribute | `TinyLM` (WikiText-103 Bytes) | `FashionCNN` (Fashion-MNIST) |
-| :--- | :--- | :--- |
-| **Architecture & parameter count** | 2-block causal Transformer ($470{,}784$ params) | 2-conv + 2-linear CNN ($421{,}642$ params) |
-| **Minibatch shape & step budget** | $64$ windows $\times 64$ bytes; $2{,}000$ steps | $256$ grayscale images ($28 \times 28$); $2{,}000$ steps |
-| **Data exposure over $2{,}000$ steps** | **$0.03$ epochs** ($3\%$ of $270\text{M}$ bytes; fresh text every step) | **$8.5$ epochs** ($512{,}000$ image evaluations over $60{,}000$ images) |
-| **Training vs. generalization gap** | Single-pass: training loss *is* an unseen-data loss | Multi-epoch: can overfit; requires held-out test accuracy |
-| **Primary evaluation metrics** | Final $100$-step training loss & validation perplexity / nats | Final $100$-step training loss & validation accuracy (`evaluate_accuracy`) |
+::: {.cols .vc}
+::: {.col}
+- **Single-pass vs. multi-epoch exposure ($2{,}000$ steps):**
+  - `TinyLM` sees $0.03$ epochs ($3\%$ of $270\text{M}$ bytes)—fresh unseen text on every step without memorization.
+  - `FashionCNN` sees $8.5$ epochs ($512\text{K}$ evaluations over $60\text{K}$ images) and requires held-out test accuracy to track overfitting.
+- **Complementary parameter geometry:**
+  - `TinyLM` spreads $90.5\%$ of weights across $9$ Transformer matrices plus sparse embeddings; `FashionCNN` concentrates $95\%$ of weights in `fc1`.
+:::
+
+::: {.col .fig .big}
+@fig:ch09-opt-test-regime-comparison
+:::
+:::
 :::
 
 ::: {.slide title="Shared Training Harness and Evaluation Utilities"}
 [Experimental Infrastructure]{.kicker}
 
-Both benchmarks share a unified training and evaluation harness saved in `d2l`:
+::: {.cols .vc}
+::: {.col}
+- **Controlled sweep & loop (`lr_sweep`, `train_steps`):** Clones shared seed-0 initial weights across a log-spaced $\eta$ grid and runs $T = 2{,}000$ minibatches in PyTorch or JAX.
+- **Smoothed trajectory metrics (`final_loss`, `steps_to_reach`):** Averages the last $k = 100$ step losses and finds the first $25$-step block reaching a target threshold.
+- **Held-out evaluation (`lm_perplexity`, `evaluate_accuracy`):** Scores $1.1\text{M}$ validation bytes or $10{,}000$ test images in eval mode.
+:::
 
-| Helper Function | Mathematical / Operational Definition | Role in Optimizer Comparisons |
-| :--- | :--- | :--- |
-| `train_steps(model, data, opt, T)` | Minimizes mean cross-entropy over $T$ minibatches (or until `stop(step)` holds) | Executes identical step-budget training loops across PyTorch and JAX |
-| `lm_perplexity(model, batches)` | $\exp\!\left(\frac{1}{N}\sum_{t=1}^N -\ln p(y_t \mid \mathbf{x}_{<t})\right)$ in eval mode | Evaluates held-out next-byte perplexity on $1.1\text{M}$ validation bytes |
-| `evaluate_accuracy(model, batches)` | Fraction of held-out images where $\operatorname*{argmax}_c \hat{y}_c = y$ | Evaluates held-out test accuracy on $10{,}000$ Fashion-MNIST test images |
-| `final_loss(losses, k=100)` | Mean of the last $k = 100$ step losses (`inf` if non-finite) | Smooths out $\pm 0.1$-nat single-minibatch noise at the end of a run |
-| `steps_to_reach(losses, target, k=25)` | First step where the $25$-step block-averaged loss drops to `target` | Measures convergence speed in steps to a fixed quality threshold |
-| `lr_sweep(make_model, make_opt, ...)` | Trains across a list of learning rates from **one shared random seed** | Eliminates initialization variance when tuning $\eta$ across a grid |
+::: {.col .fig .big}
+@fig:ch09-opt-test-harness-flow
+:::
+:::
 :::
 
 ::: {.slide title="Information-Theoretic Landmarks Before Any Training"}
 [Calibrating the Loss Scale]{.kicker}
 
-A cross-entropy loss in nats/byte is interpretable only when anchored against closed-form count-based baselines that require no neural network training:
+::: {.cols .vc}
+::: {.col}
+- **Untrained step 1 ($\approx 5.71$ nats):** Random head logits $z_i \sim \mathcal{N}(0, s^2)$ with $s^2 \approx 1/3$ add variance penalty $s^2/2 \approx 0.17$ above uniform.
+- **Uniform random guess ($5.55$ nats):** $\ln 256$ ($\ln 10 \approx 2.30$ on `FashionCNN`).
+- **Unigram byte frequency ($\approx 3.18$ nats):** Marginal UTF-8 counts without context.
+- **Bigram table ($\approx 2.50$ nats):** Conditional $p(b_t \mid b_{t-1})$; beating $2.50$ nats proves multi-byte context learning!
+:::
 
-| Reference Landmark | What the Predictor Knows | Cross-Entropy Loss (nats/byte) | Perplexity ($e^{\text{loss}}$) |
-| :--- | :--- | :---: | :---: |
-| **Untrained `TinyLM` at step 1** | Random logits $z_i \sim \mathcal{N}(0, s^2)$ with $s^2 \approx \frac{1}{3}$ add variance penalty $\frac{s^2}{2} \approx 0.17$ | **$\ln 256 + \frac{1}{6} \approx 5.71$** | $\approx 303$ |
-| **Uniform random guess** | Assigns $p = 1/256$ to every byte ($\ln 256$ on `TinyLM`; $\ln 10 \approx 2.30$ on `FashionCNN`) | **$5.55$** | $256.0$ |
-| **Unigram byte frequencies** | Empirical marginal frequency $p(b)$ of each UTF-8 byte in WikiText-103 | **$\approx 3.17\text{--}3.20$** | $\approx 24.5$ |
-| **Bigram byte-pair table** | Conditional probability $p(b_t \mid b_{t-1})$ given only the immediately preceding byte | **$\approx 2.50$** | $\approx 12.2$ |
-
-::: {.d2l-note .rule}
-Any trained language model that finishes near $3.2$ nats has learned only marginal byte frequencies; beating **$2.5$ nats** proves the network is exploiting multi-byte context across the $64$-byte window.
+::: {.col .fig .big}
+@fig:ch09-opt-test-loss-landmarks
+:::
 :::
 :::
 
@@ -807,13 +823,17 @@ Any trained language model that finishes near $3.2$ nats has learned only margin
 ::: {.slide title="Diagnosing Learning-Rate Failure Modes from Loss Curves"}
 [Reading Training Logs]{.kicker}
 
-Each of the three SGD trajectories provides an actionable diagnostic reading:
+::: {.cols .vc}
+::: {.col}
+- **$\eta = 0.1$ (Under-budgeted travel):** Smooth descent still dropping at step $2{,}000$; cumulative travel $B_T = \eta T = 200$ is too small $\to$ **raise $\eta$**.
+- **$\eta = 0.5$ (Near initial sharpness edge $2/L$):** Early $>1$-nat spike in steps $1\text{--}30$, then fast descent to $2.13$ nats $\to$ **add warmup (§9.7) or clipping (§9.10)**.
+- **$\eta = 2.5$ (Exceeds $2/\lambda_{\max}$):** Step 1 overshoots into a steeper basin and diverges to `inf` $\to$ **lower $\eta$**.
+:::
 
-| Learning Rate | Trajectory Signature | Mechanistic Diagnosis | Action |
-| :--- | :--- | :--- | :--- |
-| **$\eta = 0.1$ (Too Low)** | Smooth from step 1; still descending at step $2{,}000$ ($0.05$-nat drop over steps $1{,}000\text{--}2{,}000$); ends near $2.47$ | Cumulative travel budget $B_T = \eta T = 200$ is too small to traverse flat directions | **Raise $\eta$** (not stuck in a noise ball—short of travel budget) |
-| **$\eta = 0.5$ (Workable / Near Edge)** | Early transient spike ($>1$ nat in steps $1\text{--}30$) where initial sharpness $L$ is high, then steady descent to $2.13$ | Barely below $2/L$ during early transient, then operates efficiently in a flatter basin | **Best constant SGD rate** (warmup §9.7 or clipping §9.10 removes the early spike) |
-| **$\eta = 2.5$ (Too High)** | Step 1 overshoots into a steeper region where $\eta > 2/L_{\text{local}}$; overflows to `inf` within $10$ steps | Exceeds local curvature stability ceiling $2/\lambda_{\max}$ | **Lower $\eta$** |
+::: {.col .fig .big}
+@fig:ch09-opt-test-lr-diagnosis
+:::
+:::
 :::
 
 ::: {.slide title="Baseline Minibatch SGD on FashionCNN"}
@@ -836,13 +856,17 @@ Each of the three SGD trajectories provides an actionable diagnostic reading:
 ::: {.slide title="Fair Comparisons: The Nuisance Parameter Protocol"}
 [Experimental Design]{.kicker}
 
-Why is it scientifically invalid to compare SGD and AdamW at the same learning rate $\eta = 10^{-3}$? Because SGD multiplies raw gradients ($\eta^\star \approx 0.5$) while AdamW normalizes step lengths ($\eta^\star \approx 3 \times 10^{-3}$). Following the *Deep Learning Tuning Playbook* (Godbole et al., 2023):
+::: {.cols .vc}
+::: {.col}
+- **Why fixed-$\eta$ comparisons fail:** Plain SGD multiplies raw gradients ($\eta^\star \approx 0.5$), whereas AdamW normalizes step lengths ($\eta^\star \approx 3 \times 10^{-3}$).
+- **Nuisance hyperparameter tuning (Godbole et al., 2023):** Sweep $\eta$ independently on a log-spaced grid for every optimizer arm from shared seed-0 weights.
+- **Report both peak and width:** Extract the tuned score at $\eta^\star$ *and* the usable LR range finishing within $+0.15$ nats of $\eta^\star$.
+:::
 
-| Hyperparameter Class | Definition | Role in Chapter 9 Experiments |
-| :--- | :--- | :--- |
-| **Scientific hyperparameter** | The algorithmic factor under investigation (each option is an experimental *arm*) | The optimizer update rule (e.g., SGD vs. Momentum vs. Adam vs. AdamW vs. Muon) |
-| **Nuisance hyperparameter** | Must be **tuned independently to its own optimum for every arm** on a log-spaced grid | The learning rate $\eta$ (swept across factors of $2\text{--}3\times$ via `lr_sweep`) |
-| **Fixed conditions** | Held identical across all arms; defines the scope of the comparison claim | Architecture, shared initial weights (`seed`), batch size $b$, step budget $T = 2{,}000$ |
+::: {.col .fig .big}
+@fig:ch09-opt-test-nuisance-protocol
+:::
+:::
 :::
 
 ::: {.slide title="Reporting Both Peak Performance and Usable LR Range"}
@@ -859,16 +883,18 @@ When evaluating a learning-rate sweep `lr_sweep` on a log-spaced grid (e.g., fac
 ::: {.slide title="Multi-Seed Spread and the 3× Significance Threshold"}
 [Statistical Rigor]{.kicker}
 
-Even with identical hyperparameters, two training runs with different random seeds (different initial weights and minibatch draws) finish at slightly different losses:
+::: {.cols .vc}
+::: {.col}
+- **Run-to-run seed variation:** Different initial weights and minibatch draws shift 5-seed ranges by $0.010\text{--}0.015$ nats on `TinyLM` and $0.8\%\text{--}1.0\%$ accuracy on `FashionCNN`.
+- **Single-run $3\times$ decision threshold:**
+  - **`TinyLM`:** Require **$\ge 0.05$ nats/byte** improvement.
+  - **`FashionCNN`:** Require **$\ge 0.06$ loss** or **$\ge 3.0\%$ accuracy** improvement.
+- Smaller single-run gaps are treated as **statistical ties** unless averaged across multiple seeds.
+:::
 
-| Benchmark & Metric | Empirical Range Across $5$ Independent Seeds | $3\times$ Range Margin | Required Single-Run Significance Threshold |
-| :--- | :---: | :---: | :---: |
-| **`TinyLM` training or validation loss** | $\approx 0.010\text{--}0.015$ nats/byte | $0.03\text{--}0.045$ nats | **$\ge 0.05$ nats/byte** |
-| **`FashionCNN` training loss** | $\approx 0.015\text{--}0.020$ nats | $0.045\text{--}0.060$ nats | **$\ge 0.06$ nats** |
-| **`FashionCNN` held-out test accuracy** | $\approx 0.8\%\text{--}1.0\%$ | $2.4\%\text{--}3.0\%$ | **$\ge 3.0$ percentage points** |
-
-::: {.d2l-note .warn}
-**Decision rule:** Any single-run difference smaller than **$0.05$ nats on `TinyLM`** (or **$0.06$ loss / $3\%$ accuracy on `FashionCNN`**) is treated as a **statistical tie** unless replicated across multiple random seeds!
+::: {.col .fig .big}
+@fig:ch09-opt-test-seed-threshold
+:::
 :::
 :::
 

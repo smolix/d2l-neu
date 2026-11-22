@@ -1515,13 +1515,20 @@ Neural ODEs, Adjoint Sensitivity, and Continuous Flows<br>**continuous-depth Res
 ::: {.slide title="Why Discrete Normalizing Flows Hit an O(d³) Wall"}
 [Motivation]{.kicker}
 
-Training an invertible generative network $\mathbf{g}: \mathbb{R}^d \to \mathbb{R}^d$ (a normalizing flow) by maximum likelihood requires the exact density of its outputs via the change-of-variables formula:
+::: {.cols .vc}
+::: {.col}
+Training an invertible discrete layer $\mathbf{g} : \mathbb{R}^d \to \mathbb{R}^d$ by maximum likelihood requires the Jacobian determinant:
 
 $$\log p_{\text{out}}(\mathbf{g}(\mathbf{x})) = \log p_{\text{in}}(\mathbf{x}) - \log\left|\det \mathbf{J}_{\mathbf{g}}(\mathbf{x})\right|$$
 
-- **The Cubic Determinant Bottleneck:** For a single $32 \times 32$ RGB image ($d = 3072$), computing $\det \mathbf{J}_{\mathbf{g}}$ takes $\approx \frac{2}{3}d^3 \approx 2 \times 10^{10}$ FLOPs per layer—about $3{,}000\times$ more work than a $3072 \to 1024$ dense layer ($6 \times 10^6$ FLOPs).
-- **Architectural Straitjackets:** Discrete flows must restrict every layer to have a triangular or low-rank Jacobian so that $\det \mathbf{J}_{\mathbf{g}}$ costs $O(d)$.
-- **The Continuous-Time Escape:** When we replace discrete layers by a continuous differential equation $\dot{\mathbf{x}} = \mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}, t)$, the $O(d^3)$ log-determinant turns into an integral of the **Jacobian trace** $\operatorname{tr}(\mathbf{J})$, which can be estimated unbiasedly in **one** backward pass with no architectural restrictions.
+- **The $O(d^3)$ determinant wall:** For a $32 \times 32$ RGB image ($d = 3072$), $\det\mathbf{J}_{\mathbf{g}}$ costs $\approx 2 \times 10^{10}$ FLOPs/layer, forcing triangular/coupling restrictions.
+- **Continuous-time escape:** Replacing discrete layers with $\dot{\mathbf{x}} = \mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ converts $\log|\det\mathbf{J}|$ into the **trace** integral $-\int_0^T \operatorname{tr}(\mathbf{J})\,dt$, estimated unbiasedly in 1 VJP!
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-cubic-det-vs-trace
+:::
+:::
 :::
 
 ::: {.slide title="Residual Networks as Forward Euler Discretizations"}
@@ -1547,16 +1554,20 @@ Setting a residual block beside a forward-Euler step of an ODE reveals that a Re
 ::: {.slide title="The Neural ODE Limit: Four Gains and Four Catches"}
 [The Continuous Model]{.kicker}
 
-Fixing the horizon $T$, sharing one time-conditioned network $\mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}, t)$, and letting $N \to \infty$ ($h = T/N \to 0$) defines a **Neural ODE** whose output is the exact flow map $\Phi_T(\mathbf{x}_0)$:
+::: {.cols .vc}
+::: {.col}
+Taking the continuous limit $\mathbf{x}(T) = \mathbf{x}_0 + \int_0^T \mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}(t), t)\,dt$ trades four theoretical gains against four practical catches:
 
-$$\mathbf{x}(T) = \mathbf{x}_0 + \int_0^T \mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}(t), t)\,dt$$
+- **1. Bijective flow $\Phi_T$** $\leftrightarrow$ non-crossing paths preserve 1D order.
+- **2. Adaptive test-time solver** $\leftrightarrow$ coarse Euler training fits a discrete program.
+- **3. $O(1)$-memory adjoint ODE** $\leftrightarrow$ backward state integration amplifies rounding by $e^{\lambda T}$.
+- **4. Trace likelihood $-\operatorname{tr}(\mathbf{J})$** $\leftrightarrow$ Hutchinson probes add Monte Carlo variance.
+:::
 
-| Promised Gain of Taking the ODE as the Model | Practical Catch Measured in This Section |
-| :--- | :--- |
-| **1. Guaranteed Invertibility** ($\Phi_T^{-1}$ runs $-\mathbf{f}_{\boldsymbol{\theta}}$ backward) | **Topological Constraint:** Non-crossing trajectories preserve order in 1D |
-| **2. Solver-Independent Depth** (choose step count $N$ at test time) | **Solver Coupling:** Training through coarse Euler fits a program, not a flow |
-| **3. $O(1)$-Memory Gradients** (via the continuous adjoint ODE) | **Backward Drift:** Re-integrating $\mathbf{x}(t)$ backward amplifies errors by $e^{\lambda T}$ |
-| **4. Free-Form Likelihoods** ($\frac{d}{dt}\log p_t = -\operatorname{tr}\mathbf{J}$) | **Estimator Variance:** Hutchinson trace probes add Monte Carlo noise |
+::: {.col .fig .big}
+@fig:ch38-dyn-neural-ode-gains-catches
+:::
+:::
 :::
 
 ::: {.slide title="Catch 1: Continuous Flows on the Line Preserve Order"}
@@ -1604,13 +1615,17 @@ What happens if we evaluate the trained vector fields at finer step counts ($N =
 ::: {.slide title="Three Paradigms for Training Continuous Vector Fields"}
 [Computational Trade-Offs]{.kicker}
 
-How we train a continuous-time model determines both its per-iteration cost and whether the learned vector field is decoupled from the training solver:
+::: {.cols .vc}
+::: {.col}
+- **Unrolled Forward Euler ($N = 10$):** Costs $10$ fwd $+ 10$ bwd evaluations and $O(N)$ memory, but fits the coarse 10-step discretization (refining $N$ at test time increases error!).
+- **Unrolled Classical RK4 ($N = 10$):** Costs $40$ fwd $+ 40$ bwd evaluations, matching the true continuous flow to $O(h^4)$ across all test-time solvers.
+- **Score & Flow Matching (§§38.6–38.7):** Regresses directly onto closed-form targets in **1 fwd + 1 bwd evaluation** and $O(1)$ memory with no ODE solver in the training loop!
+:::
 
-| Training Paradigm | Field Evaluations / Iter | Memory Cost (Unrolled) | Does Fine Test-Time Solver Improve Accuracy? |
-| :--- | :--- | :--- | :--- |
-| **Unrolled Forward Euler ($N = 10$)** | $10$ forward $+ 10$ backward | $O(N)$ stored states | **No** — fitted to the coarse 10-step discretization |
-| **Unrolled Classical RK4 ($N = 10$)** | $40$ forward $+ 40$ backward | $O(4N)$ stored states | **Yes** — $O(h^4)$ matches the exact continuous flow |
-| **Score / Flow Matching (§38.6–38.7)** | $1$ forward $+ 1$ backward | $O(1)$ (no solver in loop) | **Yes** — regresses directly onto closed-form targets |
+::: {.col .fig .big}
+@fig:ch38-dyn-three-training-paradigms
+:::
+:::
 :::
 
 ::: {.slide title="Continuous Backpropagation: The Adjoint State a(t)"}
@@ -1647,16 +1662,19 @@ A parameter perturbation $\delta\theta$ nudges the velocity at instant $t$ by $\
 ::: {.slide title="Pontryagin's Continuous Adjoint Equations"}
 [General Theorem]{.kicker}
 
-For any smooth vector field $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, \boldsymbol{\theta}, t)$ and terminal loss $\mathcal{L} = \ell(\mathbf{x}(T))$, the adjoint state and parameter gradient obey two coupled integrals backward in time:
+::: {.cols .vc}
+::: {.col}
+For $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, \boldsymbol{\theta}, t)$ and terminal loss $\mathcal{L} = \ell(\mathbf{x}(T))$, the adjoint $\mathbf{a}(t) = \frac{\partial\mathcal{L}}{\partial\mathbf{x}(t)}$ and parameter gradient solve backward in time from $\mathbf{a}(T) = \nabla\ell(\mathbf{x}(T))$:
 
-::: {.d2l-note .rule}
-**Proposition (Continuous Adjoint Equations):** The adjoint $\mathbf{a}(t) = \frac{\partial\mathcal{L}}{\partial\mathbf{x}(t)}$ solves the backward linear ODE:
-$$\dot{\mathbf{a}}(t) = -\left(\frac{\partial\mathbf{f}}{\partial\mathbf{x}}(\mathbf{x}(t), \boldsymbol{\theta}, t)\right)^{\!\top}\mathbf{a}(t), \qquad \mathbf{a}(T) = \nabla\ell(\mathbf{x}(T))$$
-and the total gradient with respect to $\boldsymbol{\theta}$ is the time integral:
-$$\frac{\partial\mathcal{L}}{\partial\boldsymbol{\theta}} = \int_0^T \left(\frac{\partial\mathbf{f}}{\partial\boldsymbol{\theta}}(\mathbf{x}(t), \boldsymbol{\theta}, t)\right)^{\!\top}\mathbf{a}(t)\,dt$$
+$$\dot{\mathbf{a}}(t) = -\left(\frac{\partial\mathbf{f}}{\partial\mathbf{x}}\right)^{\!\top}\mathbf{a}(t), \qquad \frac{\partial\mathcal{L}}{\partial\boldsymbol{\theta}} = \int_0^T \left(\frac{\partial\mathbf{f}}{\partial\boldsymbol{\theta}}\right)^{\!\top}\mathbf{a}(t)\,dt$$
+
+- **One VJP per step:** Both products are standard reverse-mode vector–Jacobian products seeded with $\mathbf{a}(t)$, never forming the $d \times d$ Jacobian.
 :::
 
-- **One Reverse-Mode VJP per Step:** Both $(\frac{\partial\mathbf{f}}{\partial\mathbf{x}})^\top\mathbf{a}$ and $(\frac{\partial\mathbf{f}}{\partial\boldsymbol{\theta}})^\top\mathbf{a}$ are **vector–Jacobian products** seeded with $\mathbf{a}(t)$, computed in a single backward pass through $\mathbf{f}$ without ever forming the $d \times d$ Jacobian matrix.
+::: {.col .fig}
+@fig:ch38-dyn-pontryagin-adjoint-vjp
+:::
+:::
 :::
 
 ::: {.slide title="Variational Proof of the Continuous Adjoint Equations"}
@@ -1674,14 +1692,16 @@ Why does the minus sign and transposed Jacobian $-(\frac{\partial\mathbf{f}}{\pa
 ::: {.slide title="Discretize-Then-Optimize vs. Optimize-Then-Discretize"}
 [Discrete vs. Continuous Adjoint]{.kicker}
 
-Backpropagating through $N$ forward-Euler steps $\mathbf{x}_{n+1} = \mathbf{x}_n + h\mathbf{f}(\mathbf{x}_n, \boldsymbol{\theta})$ gives the **discrete adjoint**, which differs by $O(h)$ from an Euler discretization of the **continuous adjoint ODE**:
+::: {.cols .vc}
+::: {.col}
+- **Discretize-then-optimize (Backprop):** Differentiates the $N$-step Euler program exactly via $\mathbf{a}_n = (\mathbf{I} + h\mathbf{J}(\mathbf{x}_n))^\top\mathbf{a}_{n+1}$ (stored with $2\sqrt{N}$ activation checkpoints).
+- **Optimize-then-discretize (Continuous adjoint):** Integrates $\dot{\mathbf{a}} = -\mathbf{J}^\top\mathbf{a}$ backward; if $\mathbf{x}(t)$ is re-integrated backward without checkpoints, a contracting mode $\lambda = 50$ amplifies `fp64` rounding by $e^{50T} \approx 5 \times 10^{21}$!
+:::
 
-| Method | Backward Adjoint Step ($t_{n+1} \to t_n$) | Parameter Gradient Accumulation | What It Differentiates |
-| :--- | :--- | :--- | :--- |
-| **Discrete Adjoint (Backprop)** | $\mathbf{a}_n = \big(\mathbf{I} + h\mathbf{J}(\mathbf{x}_n)\big)^\top \mathbf{a}_{n+1}$ | $\sum_{n=0}^{N-1} h\left(\frac{\partial\mathbf{f}}{\partial\boldsymbol{\theta}}(\mathbf{x}_n)\right)^\top \mathbf{a}_{n+1}$ | Exact gradient of the $N$-step Euler program |
-| **Continuous Adjoint (Euler)** | $\mathbf{a}_n = \big(\mathbf{I} + h\mathbf{J}(\mathbf{x}_{n+1})\big)^\top \mathbf{a}_{n+1}$ | Quadrature of $\int_0^T \left(\frac{\partial\mathbf{f}}{\partial\boldsymbol{\theta}}(\mathbf{x}(t))\right)^\top \mathbf{a}(t)\,dt$ | $O(h)$ approximation to the exact flow gradient |
-
-- **Scalar Benchmark ($\dot{x} = \theta x$ at $\theta = T = x_0 = 1$):** The discrete Euler program $x_N = (1 + h\theta)^N x_0$ has exact gradient $\frac{T x_N^2}{1 + h\theta}$, yielding $6.116$ ($N=10$), $7.244$ ($N=100$), and $7.374$ ($N=1000$) as it converges at $O(1/N)$ to the continuous flow gradient $e^2 \approx 7.389$.
+::: {.col .fig .big}
+@fig:ch38-dyn-discrete-vs-cont-adjoint
+:::
+:::
 :::
 
 ::: {.slide title="Measuring Discrete vs. Continuous Adjoints in 2D"}
@@ -1710,12 +1730,19 @@ Evaluating the Jacobian $\mathbf{J}(\mathbf{x}(t))$ during the backward adjoint 
 ::: {.slide title="Liouville's Equation: Instantaneous Change of Variables"}
 [Continuous Normalizing Flows]{.kicker}
 
-How does a probability density $p_t(\mathbf{x})$ evolve when particles $\mathbf{x}(0) \sim p_0$ are carried along a smooth, globally Lipschitz ODE $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$?
+::: {.cols .vc}
+::: {.col}
+Over a short step $h$, the flow Jacobian $\mathbf{I} + h\mathbf{J} + o(h)$ satisfies $\det(\mathbf{I} + h\mathbf{J}) = 1 + h\operatorname{tr}(\mathbf{J}) + O(h^2)$. Taking $h \to 0$ yields **Liouville's trace rule**:
 
-- **Near-Identity Determinant Lemma:** Over an infinitesimal step $h$, the flow map $\Phi_{t \to t+h}(\mathbf{x}) = \mathbf{x} + h\mathbf{f}(\mathbf{x}, t) + o(h)$ has Jacobian $\mathbf{I} + h\mathbf{J} + o(h)$. Expanding the permutation sum of the determinant shows that any non-identity permutation picks at least two off-diagonal $O(h)$ factors:
-  $$\det(\mathbf{I} + h\mathbf{J}) = \prod_{i=1}^d (1 + h J_{ii}) + O(h^2) = 1 + h\operatorname{tr}(\mathbf{J}) + O(h^2)$$
-- **Taking the Limit $h \to 0$:** Applying the discrete change of variables $\log p_{t+h}(\mathbf{x}(t+h)) = \log p_t(\mathbf{x}(t)) - \log\det(\mathbf{I} + h\mathbf{J} + o(h))$ and using $\log(1 + u) = u + O(u^2)$ yields the **instantaneous change-of-variables rule**:
-  $$\frac{d}{dt}\log p_t(\mathbf{x}(t)) = -\operatorname{tr}\!\left(\frac{\partial\mathbf{f}}{\partial\mathbf{x}}(\mathbf{x}(t), t)\right) = -\nabla \cdot \mathbf{f}(\mathbf{x}(t), t)$$
+$$\frac{d}{dt}\log p_t(\mathbf{x}(t)) = -\operatorname{tr}\!\left(\frac{\partial\mathbf{f}}{\partial\mathbf{x}}(\mathbf{x}(t), t)\right) = -\nabla \cdot \mathbf{f}(\mathbf{x}(t), t)$$
+
+- **Zero $O(d^3)$ determinants:** Integrates log-density along the trajectory using only the first-order trace.
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-liouville-near-identity
+:::
+:::
 :::
 
 ::: {.slide title="Divergence as Volume Contraction and Density Change"}
@@ -1741,15 +1768,19 @@ On a nonlinear 8-unit `tanh` vector field $\mathbf{f}(\mathbf{x}) = \mathbf{W}_2
 ::: {.slide title="Hutchinson's Trace Estimator and FFJORD"}
 [Stochastic Trace Estimation]{.kicker}
 
-Computing the exact trace $\operatorname{tr}(\mathbf{J}) = \sum_{i=1}^d J_{ii}$ of a general network still requires $d$ backward passes (one per basis vector $\mathbf{e}_i$). **Hutchinson's trace estimator** reduces this to a **single** reverse-mode VJP using an isotropic random probe $\boldsymbol{\epsilon}$:
+::: {.cols .vc}
+::: {.col}
+For any isotropic probe $\boldsymbol{\epsilon}$ with $\mathbb{E}[\boldsymbol{\epsilon}\boldsymbol{\epsilon}^\top] = \mathbf{I}$, **Hutchinson's estimator** computes $\operatorname{tr}(\mathbf{J})$ in **one** reverse-mode VJP:
 
-$$\mathbb{E}[\boldsymbol{\epsilon}\boldsymbol{\epsilon}^\top] = \mathbf{I} \;\Longrightarrow\; \mathbb{E}\!\left[\boldsymbol{\epsilon}^\top \mathbf{J} \boldsymbol{\epsilon}\right] = \mathbb{E}\!\left[\operatorname{tr}(\mathbf{J}\boldsymbol{\epsilon}\boldsymbol{\epsilon}^\top)\right] = \operatorname{tr}\!\left(\mathbf{J}\,\mathbb{E}[\boldsymbol{\epsilon}\boldsymbol{\epsilon}^\top]\right) = \operatorname{tr}(\mathbf{J})$$
+$$\mathbb{E}\!\left[\boldsymbol{\epsilon}^\top \mathbf{J} \boldsymbol{\epsilon}\right] = \operatorname{tr}\!\left(\mathbf{J}\,\mathbb{E}[\boldsymbol{\epsilon}\boldsymbol{\epsilon}^\top]\right) = \operatorname{tr}(\mathbf{J})$$
 
-| Probe Distribution $\boldsymbol{\epsilon} \in \mathbb{R}^d$ | Single-Probe Cost | Single-Probe Variance ($\mathbf{S} = \frac{1}{2}(\mathbf{J} + \mathbf{J}^\top)$) |
-| :--- | :--- | :--- |
-| **Exact Diagonal Sum** | $d$ reverse-mode VJPs | $0$ (deterministic) |
-| **Rademacher ($\epsilon_i \in \{\pm 1\}$ i.i.d.)** | $1$ reverse-mode VJP ($\boldsymbol{\epsilon}^\top\mathbf{J}$) | $2\sum_{i \ne j} S_{ij}^2$ (**zero diagonal variance!**) |
-| **Standard Gaussian ($\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$)** | $1$ reverse-mode VJP ($\boldsymbol{\epsilon}^\top\mathbf{J}$) | $2\sum_{i, j} S_{ij}^2 = 2\|\mathbf{S}\|_F^2$ (includes diagonal $2\sum_i J_{ii}^2$) |
+- **Rademacher ($\epsilon_i \in \{\pm 1\}$) beats Gaussian:** Because $\epsilon_i^2 \equiv 1$ deterministically, Rademacher probes have **zero diagonal variance** ($2\sum_{i \neq j} S_{ij}^2$ vs. Gaussian $2\sum_{i,j} S_{ij}^2$).
+:::
+
+::: {.col .fig}
+@fig:ch38-dyn-hutchinson-rademacher
+:::
+:::
 :::
 
 ::: {.slide title="Benchmarking Rademacher vs. Gaussian Probes in d = 50"}

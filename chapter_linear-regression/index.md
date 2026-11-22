@@ -39,44 +39,49 @@ Linear Neural Networks for Regression<br>
 ::: {.slide title="Linear Regression Is Deep Learning in Miniature"}
 [The Proving Ground]{.kicker}
 
-Every essential ingredient of modern neural network training appears in its most transparent, analytically solvable form in linear regression:
+::: {.cols .vc}
+::: {.col}
+- **Parameterized forward pass and loss:** Predict via $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$ and score misfit via $L(\mathbf{w}, b) = \frac{1}{2n}\|\mathbf{X}\mathbf{w} + b - \mathbf{y}\|_2^2$, grounded in Gaussian maximum likelihood.
+- **Exact closed form vs. scalable iteration:** The normal equations $\mathbf{X}^\top\mathbf{X}\mathbf{w}^* = \mathbf{X}^\top\mathbf{y}$ project $\mathbf{y}$ orthogonally in $O(nd^2 + d^3)$, whereas minibatch SGD updates in $O(|\mathcal{B}|d)$ per step.
+- **Two recurring failure modes:** A silent shape bug ($(32,) - (32, 1) \to 32 \times 32$) still lowers loss, and a high-degree polynomial that interpolates 20 noisy points fails on new data.
+:::
 
-- **Parameterized forward pass and loss:** Predict a continuous target via $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$ and score misfit via the squared error $L(\mathbf{w}, b) = \frac{1}{2n}\|\mathbf{X}\mathbf{w} + b - \mathbf{y}\|_2^2$, grounded in Gaussian maximum likelihood.
-- **Exact closed form vs. scalable iteration:** The normal equations $\mathbf{X}^\top\mathbf{X}\mathbf{w}^* = \mathbf{X}^\top\mathbf{y}$ project $\mathbf{y}$ orthogonally in $O(nd^2 + d^3)$ time, whereas minibatch SGD updates parameters in $O(|\mathcal{B}|d)$ per step.
-- **Two recurring failure modes:** A program with a silent shape bug (such as $(32,) - (32, 1)$ broadcasting to $32 \times 32$) still lowers its loss, and a high-degree model that interpolates 20 noisy points fails catastrophically on new data.
-
-::: {.d2l-note}
-In linear regression we can solve the exact optimum, compute the theoretical noise floor $\frac{1}{2}\sigma^2$, and diagnose both code bugs and statistical overfitting from first principles.
+::: {.col .fig .big}
+@fig:ch02-lr-miniature
+:::
 :::
 :::
 
 ::: {.slide title="From First Principles to a Reusable Training Pipeline"}
 [Architectural Roadmap]{.kicker}
 
-We develop linear regression across seven stages, moving from mathematical foundations to an object-oriented training harness, concise framework APIs, and statistical regularization:
+::: {.cols .vc}
+::: {.col}
+- **Theory & Synthetic Oracle (§§2.1–2.2):** Formulate the affine model, squared loss, normal equations, and minibatch SGD, then verify against known ground truth $(\mathbf{w}^*, b^*)$ and noise floor $\sigma^2/2$.
+- **Three Implementation Tiers (§§2.3–2.5):** Build the tensor autograd loop from scratch, decouple into `Module` / `DataModule` / `Trainer`, and swap in framework `LazyLinear` / `Dense` layers and optimizers.
+- **Generalization & Weight Decay (§§2.6–2.7):** Diagnose underfitting vs. overfitting via bias–variance and $K$-fold CV, and damp collinear noise with $\ell_2$ ridge shrinkage.
+:::
 
-| Section | Core Question | Key Mathematical & Systems Concepts |
-|---|---|---|
-| **§2.1 Linear Regression** | How do we formulate and optimize a linear predictor? | Affine model $\mathbf{X}\mathbf{w} + b$, squared loss, normal equations, minibatch SGD, Gaussian MLE |
-| **§2.2 Synthetic Data** | How do we verify an optimizer when real data lack an answer key? | Ground-truth $\mathbf{w}^*, b^*$, noise floor $\sigma^2/2$, standard error $\sigma/\sqrt{n}$ |
-| **§2.3 From Scratch** | What happens inside each step of training when we write it by hand? | Tensor autograd loop, broadcasting guards, learning-rate stability |
-| **§2.4 Object-Oriented Design** | How do we decouple models, datasets, and training loops once for the book? | `Module`, `DataModule`, `Trainer`, size-weighted `Averager`, `ProgressBoard` |
-| **§2.5 Concise Implementation** | How do framework layers, losses, and optimizers replace hand-written parts? | `LazyLinear` / `Dense` / `nnx.Linear`, MSE loss scaling, framework `SGD` |
-| **§2.6 Generalization** | When does a low training loss translate into accurate predictions on new data? | Empirical vs. population risk, bias–variance decomposition, $K$-fold cross-validation |
-| **§2.7 Weight Decay** | How do we control model capacity continuously in high dimensions? | $\ell_2$ ridge penalty vs. $\ell_1$ lasso sparsity, MAP Gaussian prior, spectral shrinkage |
+::: {.col .fig .big}
+@fig:ch02-lr-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Concrete Running Benchmarks Across the Chapter"}
 [Quantitative Anchors]{.kicker}
 
-Every section tests its theory and code against a concrete numerical benchmark where exact error floors and parameter recovery tolerances are known in advance:
+::: {.cols .vc}
+::: {.col}
+- **§2.1 Projection & §§2.2–2.5 Synthetic Testbed:** The 3-point line $(0,1),(1,1),(2,0)$ yields $\hat{\mathbf{w}} = (7/6, -1/2)^\top$ with $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$; on $n = 1{,}000$ examples with $\mathbf{w}^* = (2, -3.4)^\top, b^* = 4.2, \sigma = 0.01$, loss drops from $16.6$ to $\sigma^2/2 = 5 \times 10^{-5}$.
+- **§2.6 Polynomial Curve Fitting ($n = 20$):** Noisy samples of cubic $5 + 1.2x - 3.4x^2 + 5.6x^3$ ($\sigma = 0.1$) show degree $1$ underfitting, degree $3$ hitting $\sigma^2 = 0.01$, and degree $19$ exploding.
+- **§2.7 High-Dimensional Ridge ($d = 200, n = 300$):** Prior penalty $\lambda = \sigma^2/(n\tau^2) = 1/3$ shrinks effective parameters to $\operatorname{df} \approx 127$ and prevents noise memorization.
+:::
 
-| Section | Running Dataset & Ground Truth | Diagnostic Target & Verification Criterion |
-|---|---|---|
-| **§2.1 Theory & Loss** | House pricing ($150\text{ m}^2$, $20\text{ yr} \to \$480\text{k}$); 3-point line $(0,1), (1,1), (2,0)$ | Exact projection $\hat{\mathbf{w}} = (7/6, -1/2)^\top$ with orthogonal residual $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ |
-| **§2.2–§2.5 Synthetic Testbed** | $n = 1{,}000$ train / $1{,}000$ val examples, $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, $\sigma = 0.01$ | Loss drops from $16.6$ to floor $\sigma^2/2 = 5 \times 10^{-5}$ (or $\sigma^2 = 10^{-4}$); weights recovered within $\sim 3\sigma/\sqrt{n} \approx 10^{-3}$ |
-| **§2.6 Polynomial Fitting** | $n = 20$ noisy samples of cubic $5 + 1.2x - 3.4x^2 + 5.6x^3$ on $[-1, 1]$, $\sigma = 0.1$ | Degree $1$ underfits (high bias); degree $3$ hits $\sigma^2 = 0.01$; degree $19$ interpolates noise (huge variance) |
-| **§2.7 High-Dim Ridge** | $d = 200$ features, $n = 300$ noisy examples, $\mathbf{w}^* = (0.1, \ldots, 0.1)^\top$, $\sigma = 1.0$ | Unregularized SGD overfits (val loss $> 1.2$); prior $\lambda = \sigma^2/(n\tau^2) = 1/3$ shrinks effective $\text{df}$ to $\approx 127$ |
+::: {.col .fig .big}
+@fig:ch02-lr-benchmarks
+:::
+:::
 :::
 
 ::: {.slide title="The Complete Supervised Learning Loop"}

@@ -406,29 +406,38 @@ Every statistical guarantee in §3.5 assumed that deployment data come from the 
 ::: {.slide title="Why Unlabeled Adaptation Needs Invariance Assumptions"}
 [Impossibility of Assumption-Free Transfer]{.kicker}
 
-At deployment, we observe labeled **source** examples $\{(\mathbf{x}^{(i)}, y^{(i)})\}_{i=1}^n \sim p_S(\mathbf{x}, y)$ alongside **unlabeled target** inputs $\{\tilde{\mathbf{x}}^{(j)}\}_{j=1}^m \sim p_T(\mathbf{x})$. Can an algorithm adapt to $p_T$ without any structural assumption linking $p_S$ and $p_T$?
+::: {.cols .vc}
+::: {.col}
+At deployment, we observe labeled **source** examples $\{(\mathbf{x}^{(i)}, y^{(i)})\}_{i=1}^n \sim p_S(\mathbf{x}, y)$ and **unlabeled target** inputs $\{\tilde{\mathbf{x}}^{(j)}\}_{j=1}^m \sim p_T(\mathbf{x})$:
 
-- **The adversarial label-flip counterexample:** Suppose the marginal input distribution stays identical ($p_T(\mathbf{x}) = p_S(\mathbf{x})$), while the conditional labels of cats and dogs secretly swap overnight:
-  $$p_T(y = \text{cat} \mid \mathbf{x}) = p_S(y = \text{dog} \mid \mathbf{x})$$
-- **Unidentifiability from unlabeled inputs:** Because $p_T(\mathbf{x}) = p_S(\mathbf{x})$, no statistical test on unlabeled target inputs can ever detect the swap, and a classifier with $100\%$ source accuracy gets $0\%$ target accuracy!
+- **Adversarial label-flip counterexample:** Suppose $p_T(\mathbf{x}) = p_S(\mathbf{x})$, while conditional labels secretly swap overnight ($p_T(y = \text{cat} \mid \mathbf{x}) = p_S(y = \text{dog} \mid \mathbf{x})$).
+- **Unidentifiability from unlabeled inputs:** Because $p_T(\mathbf{x}) = p_S(\mathbf{x})$, no test on unlabeled target inputs can ever detect the swap ($100\%$ source accuracy $\to 0\%$ target accuracy).
+:::
 
-::: {.d2l-note .rule}
-**Fundamental rule of domain adaptation:** Adapting using unlabeled target data is possible *only* when one conditional factor of $p(\mathbf{x}, y)$ remains invariant between source and target.
+::: {.col .fig .big}
+@fig:ch03-cls-label-swap-trap
+:::
 :::
 :::
 
 ::: {.slide title="Two Factorizations Define Three Shift Regimes"}
 [Taxonomy of Distribution Shift]{.kicker}
 
-Every joint distribution $p(\mathbf{x}, y)$ factors in two causal directions—*(1)* draw input $\mathbf{x}$, then label it ($p(\mathbf{x})p(y \mid \mathbf{x})$); or *(2)* draw class $y$, then generate its features ($p(y)p(\mathbf{x} \mid y)$):
+::: {.cols .vc}
+::: {.col}
+Every joint distribution $p(\mathbf{x}, y)$ factors in two causal directions:
 
 $$p(\mathbf{x}, y) = p(\mathbf{x})\,p(y \mid \mathbf{x}) = p(y)\,p(\mathbf{x} \mid y)$$
 
-| Shift Regime | What Drifts | What Stays Invariant | Natural Causal Direction & Example |
-|:--|:--|:--|:--|
-| **Covariate shift** | $p_T(\mathbf{x}) \neq p_S(\mathbf{x})$ | $p_T(y \mid \mathbf{x}) = p_S(y \mid \mathbf{x})$ | $\mathbf{x} \to y$: image pixels determine animal species (photos $\to$ cartoons) |
-| **Label shift** | $p_T(y) \neq p_S(y)$ | $p_T(\mathbf{x} \mid y) = p_S(\mathbf{x} \mid y)$ | $y \to \mathbf{x}$: disease causes symptoms (flu prevalence surges in winter) |
-| **Concept shift** | $p_T(y \mid \mathbf{x}) \neq p_S(y \mid \mathbf{x})$ | Often $p_T(\mathbf{x}) \approx p_S(\mathbf{x})$ | Meaning of $y$ drifts across geography or time ("soda" vs. "pop") |
+- **Covariate shift ($\mathbf{x} \to y$):** $p(\mathbf{x})$ drifts while $p(y \mid \mathbf{x})$ stays invariant (e.g., photos $\to$ cartoons).
+- **Label shift ($y \to \mathbf{x}$):** $p(y)$ drifts while $p(\mathbf{x} \mid y)$ stays invariant (e.g., winter flu surge).
+- **Concept shift:** The conditional rule $p(y \mid \mathbf{x})$ itself drifts across geography or time ("soda" vs. "pop").
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-causal-factorizations
+:::
+:::
 :::
 
 ::: {.slide title="Comparing the Three Shift Regimes Geometrically"}
@@ -475,14 +484,19 @@ Comparing source (top row) and target (bottom row) joint densities $p(x, y)$ for
 ::: {.slide title="Importance Weighting Under Covariate Shift"}
 [Aligning Source Training with Target Risk]{.kicker}
 
-Under covariate shift ($p_T(y \mid \mathbf{x}) = p_S(y \mid \mathbf{x}) = p(y \mid \mathbf{x})$), whenever the source support covers the target ($p_S(\mathbf{x}) > 0$ wherever $p_T(\mathbf{x}) > 0$), multiplying and dividing by $p_S(\mathbf{x})$ rewrites the **target risk** $R_T[f]$ as a weighted expectation over the **source distribution** (Shimodaira, 2000):
+::: {.cols .vc}
+::: {.col}
+Under covariate shift ($p_T(y \mid \mathbf{x}) = p_S(y \mid \mathbf{x}) = p(y \mid \mathbf{x})$) with support overlap ($p_S(\mathbf{x}) > 0$ wherever $p_T(\mathbf{x}) > 0$), target risk rewrites as a weighted expectation over $p_S$ (Shimodaira, 2000):
 
-$$R_T[f] = \sum_y \int l(f(\mathbf{x}), y)\,p(y \mid \mathbf{x})\,p_T(\mathbf{x})\,d\mathbf{x} = \mathbb{E}_{(\mathbf{x}, y)\sim p_S}\!\Big[\beta(\mathbf{x})\,l(f(\mathbf{x}), y)\Big]$$
+$$R_T[f] = \mathbb{E}_{(\mathbf{x}, y)\sim p_S}\!\Big[\beta(\mathbf{x})\,l(f(\mathbf{x}), y)\Big], \qquad \beta(\mathbf{x}) = \frac{p_T(\mathbf{x})}{p_S(\mathbf{x})}$$
 
-where $\beta(\mathbf{x}) = \frac{p_T(\mathbf{x})}{p_S(\mathbf{x})}$ is the **density-ratio importance weight**.
+- **Weighted ERM:** On $n$ labeled source examples, minimize $\frac{1}{n}\sum_{i=1}^n \beta_i\,l(f(\mathbf{x}^{(i)}), y^{(i)})$.
+:::
 
-- **Weighted Empirical Risk Minimization (Weighted ERM):** On $n$ labeled source examples, we minimize:
-  $$\min_{f \in \mathcal{F}} \;\frac{1}{n}\sum_{i=1}^n \beta_i\,l\!\big(f(\mathbf{x}^{(i)}), y^{(i)}\big), \qquad \beta_i = \frac{p_T(\mathbf{x}^{(i)})}{p_S(\mathbf{x}^{(i)})}$$
+::: {.col .fig}
+@fig:ch03-cls-importance-reweight
+:::
+:::
 :::
 
 ::: {.slide title="Support Overlap, Right-Tail Explosion & Weight Clipping"}
@@ -507,39 +521,57 @@ Importance weighting faces two fundamental statistical hazards:
 ::: {.slide title="Estimating Density Ratios via a Domain Classifier"}
 [Avoiding High-Dimensional Density Estimation]{.kicker}
 
-Estimating $p_S(\mathbf{x})$ and $p_T(\mathbf{x})$ separately in $\mathbb{R}^d$ and dividing them amplifies estimation noise catastrophically. Instead, we pool the $n$ source inputs (assigned domain label $z = 0$) with $m$ unlabeled target inputs (assigned domain label $z = 1$) and train a logistic **domain classifier** $P(z = 1 \mid \mathbf{x}) = \sigma(h(\mathbf{x}))$ with logit $h(\mathbf{x})$:
+::: {.cols .vc}
+::: {.col}
+Instead of estimating $p_S(\mathbf{x})$ and $p_T(\mathbf{x})$ separately in $\mathbb{R}^d$, pool $n$ source inputs ($z = 0$) with $m$ unlabeled target inputs ($z = 1$) and train a logistic **domain classifier** $P(z = 1 \mid \mathbf{x}) = \sigma(h(\mathbf{x}))$:
 
-$$\frac{P(z = 1 \mid \mathbf{x})}{P(z = 0 \mid \mathbf{x})} = \frac{P(z = 1)\,p(\mathbf{x} \mid z = 1)}{P(z = 0)\,p(\mathbf{x} \mid z = 0)} = \frac{m}{n}\,\frac{p_T(\mathbf{x})}{p_S(\mathbf{x})} = \exp\!\big(h(\mathbf{x})\big)$$
+$$\frac{P(z = 1 \mid \mathbf{x})}{P(z = 0 \mid \mathbf{x})} = \frac{m}{n}\,\frac{p_T(\mathbf{x})}{p_S(\mathbf{x})} = \exp\!\big(h(\mathbf{x})\big)$$
 
-Solving for $\beta(\mathbf{x}) = p_T(\mathbf{x}) / p_S(\mathbf{x})$ directly from the domain logit $h(\mathbf{x})$ gives:
+- **Direct density-ratio formula:** $\beta(\mathbf{x}) = \frac{n}{m}\exp(h(\mathbf{x})) \propto \exp(h(\mathbf{x}))$, requiring **zero target labels**!
+:::
 
-$$\beta(\mathbf{x}) = \frac{n}{m}\exp\!\big(h(\mathbf{x})\big) \;\propto\; \exp\!\big(h(\mathbf{x})\big)$$
-
-::: {.d2l-note .rule}
-**Zero target labels required:** Training the domain classifier $h(\mathbf{x})$ uses only unlabeled inputs $\mathbf{x}$, and the constant factor $n/m$ scales all weights equally without changing the weighted ERM minimizer.
+::: {.col .fig}
+@fig:ch03-cls-domain-classifier
+:::
 :::
 :::
 
 ::: {.slide title="2D Covariate Shift Benchmark: Setup & Domain Classifier"}
 [Parabolic True Boundary Under a Shifted Gaussian]{.kicker}
 
-Let $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\top, \mathbf{I}_2)$, and let the true invariant rule be $y = \mathbf{1}(x_2 > \frac{1}{2}x_1^2 - 1)$. We fit a logistic domain classifier $h(\mathbf{x})$ to distinguish $n = 1{,}000$ source from $1{,}000$ unlabeled target inputs:
+::: {.cols .vc}
+::: {.col}
+Let $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\top, \mathbf{I}_2)$, and true invariant rule $y = \mathbf{1}(x_2 > \frac{1}{2}x_1^2 - 1)$:
 
 @-environment-and-distribution-shift-covariate-shift-correction-1
 
 @environment-and-distribution-shift-covariate-shift-correction-2
 
-- **Recovering the exact log-ratio:** The learned domain logit $h(\mathbf{x}) \approx 2x_1 - 2$ matches the true analytical log-density ratio $\log(p_T(\mathbf{x})/p_S(\mathbf{x})) = 2x_1 - 2$, while clipping $\beta_i$ at $c = 5$ lifts $n_{\mathrm{eff}}$ from a few dozen to $\sim 200$.
+- **Exact log-ratio & clipping:** Learned $h(\mathbf{x}) \approx 2x_1 - 2$ matches $\log(p_T/p_S)$, while clipping $\beta_i \le 5$ lifts $n_{\mathrm{eff}}$ from $\sim 20$ to $\sim 200$.
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-ess-clipping
+:::
+:::
 :::
 
 ::: {.slide title="Weighted Logistic Regression Lifts Target Accuracy"}
 [Unweighted vs. Importance-Weighted vs. Clipped ERM]{.kicker}
 
-Weighting each source example's gradient residual by $\beta_i = \exp(h(\mathbf{x}^{(i)}))$ inside `fit_logreg` dramatically improves target accuracy without a single target label:
+::: {.cols .vc}
+::: {.col}
+Weighting each source example's gradient residual by $\beta_i = \exp(h(\mathbf{x}^{(i)}))$ inside `fit_logreg` lifts target accuracy from $\sim 55\%$ to $\sim 95\%$ without a single target label:
 
 @-environment-and-distribution-shift-a-two-dimensional-example-2
 
 @environment-and-distribution-shift-covariate-shift-correction-3
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-weighted-grad
+:::
+:::
 :::
 
 ::: {.slide title="How Importance Weights Tilt the Linear Decision Boundary"}
@@ -562,34 +594,57 @@ Plotting the source cloud (circle area $\propto \beta_i$), the shifted target cl
 ::: {.slide title="Label Shift Correction via the Confusion Matrix"}
 [Black-Box Shift Estimation (BBSE / Saerens et al.)]{.kicker}
 
-Under **label shift** ($p_T(\mathbf{x} \mid y) = p_S(\mathbf{x} \mid y)$ while class priors $p_T(y) \neq p_S(y)$ change), the importance weight of a source example depends only on its class label, $\beta(y) = p_T(y) / p_S(y)$. How do we estimate the unknown target class priors $\mathbf{p}_T \in \mathbb{R}^q$ from **unlabeled** target data?
+::: {.cols .vc}
+::: {.col}
+Under **label shift** ($p_T(\mathbf{x} \mid y) = p_S(\mathbf{x} \mid y)$, $p_T(y) \neq p_S(y)$), how do we estimate unknown target priors $\mathbf{p}_T \in \mathbb{R}^q$ from **unlabeled** target inputs?
 
-- **Invariance of the column-normalized confusion matrix $\mathbf{C}$:** Let $\hat{c}(\mathbf{x}) = \operatorname{argmax}_k f_k(\mathbf{x})$ be our fixed source classifier. Because $\hat{c}(\mathbf{x})$ depends only on $\mathbf{x}$ and $p(\mathbf{x} \mid y)$ is invariant, the conditional confusion probabilities match on source and target:
-  $$C_{ij} = P_S(\hat{c}(\mathbf{x}) = i \mid y = j) = P_T(\hat{c}(\mathbf{x}) = i \mid y = j)$$
-- **Law of total probability on target predictions $\boldsymbol{\mu} \in \mathbb{R}^q$:** Let $\mu_i = P_T(\hat{c}(\mathbf{x}) = i)$ be the empirical fraction of unlabeled target inputs predicted as class $i$. Then:
-  $$\mu_i = \sum_{j=1}^q P_T(\hat{c} = i \mid y = j)\,p_T(y = j) = \sum_{j=1}^q C_{ij}\,p_T(y = j) \quad \Longleftrightarrow \quad \mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$$
+- **Invariance of column-normalized confusion matrix $\mathbf{C}$:** Because $p(\mathbf{x} \mid y)$ is invariant, $C_{ij} = P(\hat{c}(\mathbf{x}) = i \mid y = j)$ is identical on source and target!
+- **Law of total probability on target predictions $\boldsymbol{\mu}$:**
+  $$\mu_i = P_T(\hat{c}(\mathbf{x}) = i) = \sum_{j=1}^q C_{ij}\,p_T(y = j) \iff \mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$$
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-bbse-pipeline
+:::
+:::
 :::
 
 ::: {.slide title="Inverting C to Recover Target Class Proportions"}
 [Worked Clinical Example & Invertibility Condition]{.kicker}
 
-Whenever $\mathbf{C}$ is invertible (guaranteed if diagonal recall satisfies $C_{jj} > 1/2$ for all $j$ by strict diagonal dominance), solving the $q \times q$ linear system $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ recovers the target class priors without a single target label!
+::: {.cols .vc}
+::: {.col}
+Whenever $\mathbf{C}$ is invertible (guaranteed if per-class recall $C_{jj} > 1/2$), solving $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ recovers target class priors with zero target labels:
 
-- **Worked clinical screening example:** Recall our test from §3.4 with $90\%$ sensitivity ($C_{22} = 0.90$) and $5\%$ false-alarm rate ($C_{21} = 0.05$). In a new winter clinic, the test flags $\mu_2 = 13.5\%$ of incoming patients:
-  $$\mathbf{C}\,\mathbf{p}_T = \begin{pmatrix} 0.95 & 0.10 \\ 0.05 & 0.90 \end{pmatrix}\begin{pmatrix} 1 - p \\ p \end{pmatrix} = \begin{pmatrix} 0.865 \\ 0.135 \end{pmatrix}$$
-- **Solving the second row:** $0.05(1 - p) + 0.90p = 0.135$ $\implies$ $0.85p = 0.085$ $\implies$ $p = 0.10$ ($10\%$ true flu prevalence, unscrambled from the $4.5\%$ false alarms and $1\%$ missed cases!).
+- **Worked clinical example ($90\%$ sensitivity, $5\%$ FPR):** When a winter clinic sees $\mu_2 = 13.5\%$ positive flags:
+  $$0.05(1 - p) + 0.90p = 0.135 \implies 0.85p = 0.085 \implies p = 0.10$$
+  unscrambling $10\%$ true flu prevalence from the $4.5\%$ false alarms and $1\%$ missed cases!
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-clinical-bbse
+:::
+:::
 :::
 
 ::: {.slide title="Unscrambling Label Shift on Fashion-MNIST"}
 [50% Shirt Surge & Instant Bayes Logit Adjustment]{.kicker}
 
-We test $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ on Fashion-MNIST by estimating $\mathbf{C}$ on $5{,}000$ balanced validation images and evaluating on an unlabeled target set where **shirts surge from $10\%$ to $50\%$** ($400$ shirts + $45$ of each other garment):
+::: {.cols .vc}
+::: {.col}
+Estimating $\mathbf{C}$ on $5{,}000$ balanced validation images and testing on an unlabeled target set where **shirts surge from $10\%$ to $50\%$**:
 
 @!environment-and-distribution-shift-label-shift-on-fashion-mnist-2
 
 @environment-and-distribution-shift-label-shift-on-fashion-mnist-3
 
-- **Instant Bayes adaptation without retraining:** Because $p_T(y \mid \mathbf{x}) \propto p_S(y \mid \mathbf{x})\,\frac{p_T(y)}{p_S(y)}$, simply adding the log-prior ratio $\log\frac{\hat{p}_T(y)}{p_S(y)}$ to each class's logit lifts target accuracy by $\sim 5\text{--}7$ percentage points in zero gradient steps!
+- **Instant Bayes logit adjustment:** Adding $\log\frac{\hat{p}_T(y)}{p_S(y)}$ to each class logit lifts target accuracy by $\sim 5\text{--}7$ points in zero gradient steps!
+:::
+
+::: {.col .fig}
+@fig:ch03-cls-logit-prior-shift
+:::
+:::
 :::
 
 ::: {.slide title="Concept Shift and Performative Feedback Loops"}

@@ -400,90 +400,100 @@ Queries, Keys, and Values: From Nonparametric Smoothing to Attention<br>**differ
 ::: {.slide title="Why Fixed-Size Recurrent States Lose Early Context"}
 [Motivation]{.kicker}
 
-A recurrent language model must compress every token it has read into a single fixed-width state vector before knowing what future predictions will ask:
-
 ::: {.cols .vc}
 ::: {.col}
 - **Concrete Capacity Gap:** In a GPT-2 small scale model ($d = 768$) reading $n = 1{,}024$ tokens, the token representations hold $1{,}024 \times 768 = 786{,}432$ numbers, whereas a recurrent state keeps only $768$ numbers.
 - **Premature Summarization:** An RNN writes $\mathbf{h}_t$ at step $t$ without knowing whether token $t$ will be needed $900$ steps later.
+- **The Database Alternative:** Store all $m$ records verbatim in $O(md)$ memory and retrieve relevant values only when a **query** arrives.
 :::
 
-::: {.col}
-- **The Database Alternative:** A database stores all $m$ records verbatim and decides what to retrieve only when a **query** arrives.
-- **Our Goal:** Turn key–value database retrieval into a continuous, differentiable operator that gradient descent can train end to end.
+::: {.col .fig .big}
+@fig:ch10-attn-qkv-state-vs-db
 :::
-:::
-
-::: {.d2l-note}
-Moving from recurrence to attention trades a fixed $O(d)$ state bottleneck for an $O(md)$ key–value memory that scales linearly with context length $m$.
 :::
 :::
 
 ::: {.slide title="Why Exact Database Lookup Cannot Be Trained"}
 [From Hard to Soft Lookup]{.kicker}
 
-Consider a scalar database $\mathcal{D} = \{(2, 10), (5, 20)\}$ consisting of two `(key, value)` pairs:
+::: {.cols .vc}
+::: {.col}
+- **Discontinuous Hard Lookup:** Given $\mathcal{D} = \{(2, 10), (5, 20)\}$, exact query $q = 5$ returns $20$, whereas $q = 4$ finds no match (or jumps abruptly at midpoint $q = 3.5$).
+- **Zero Gradient Everywhere:** Because a piecewise-constant step function is flat away from jumps, its derivative with respect to queries and keys is zero almost everywhere.
+- **Differentiable Relaxation:** Score *every* key against the query and return a smooth softmax-weighted average of all stored values.
+:::
 
-- **Exact Match ($q = 5$):** Hard lookup finds key $k_2 = 5$ and returns value $v_2 = 20$.
-- **Missing Key ($q = 4$):** Hard lookup finds no exact match in $\{2, 5\}$ and returns nothing (or jumps discontinuously at the midpoint $q = 3.5$ under nearest-neighbor lookup).
-- **Zero Gradient Everywhere:** Because a piecewise-constant lookup jumps abruptly at boundaries and is flat elsewhere, its derivative with respect to the query and keys is zero almost everywhere.
-- **Differentiable Relaxation:** Instead of selecting a single key, we score *every* key against the query and return a smooth weighted average of all stored values.
+::: {.col .fig .big}
+@fig:ch10-attn-qkv-hard-vs-soft
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Soft Lookup on Two Scalar Records"}
 [Scalar Soft Lookup]{.kicker}
 
-Score each key in $\mathcal{D} = \{(2, 10), (5, 20)\}$ against query $q = 4$ using negative squared distance $a(q, k) = -(q - k)^2$, then normalize via softmax:
+::: {.cols .vc}
+::: {.col}
+- **Score with Negative Squared Distance:** At query $q = 4$, keys $k_1 = 2$ and $k_2 = 5$ score $a_1 = -(4-2)^2 = -4$ and $a_2 = -(4-5)^2 = -1$.
+- **Normalize via Softmax:** Exponentiating and dividing by $e^{-4} + e^{-1}$ yields weights $\alpha_1 \approx 0.047$ and $\alpha_2 \approx 0.953$.
+- **Convex Value Sum:**
+  $$\textrm{Attention}(q=4, \mathcal{D}) = 0.047(10) + 0.953(20) \approx 19.53$$
+:::
 
-| Stored Record $i$ | Key $k_i$ | Value $v_i$ | Compatibility Score $a(4, k_i) = -(4 - k_i)^2$ | Unnormalized $\exp(a_i)$ | Softmax Weight $\alpha_i$ |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Record 1** | $2$ | $10$ | $-(4 - 2)^2 = -4$ | $e^{-4} \approx 0.0183$ | $e^{-4} / (e^{-4} + e^{-1}) \approx \mathbf{0.047}$ |
-| **Record 2** | $5$ | $20$ | $-(4 - 5)^2 = -1$ | $e^{-1} \approx 0.3679$ | $e^{-1} / (e^{-4} + e^{-1}) \approx \mathbf{0.953}$ |
-
-$$\textrm{Attention}(q=4, \mathcal{D}) = 0.047 \times 10 + 0.953 \times 20 \approx 19.53$$
-
-::: {.d2l-note .rule}
-Every stored value contributes in proportion to its key's exponentiated score; at the midpoint $q = 3.5$, both keys score $-2.25$, giving weights $(0.5, 0.5)$ and output $15.0$.
+::: {.col .fig}
+@fig:ch10-attn-qkv-scalar-trace
+:::
 :::
 :::
 
 ::: {.slide title="Formalizing Attention Pooling Over Vector Records"}
 [Mathematical Formulation]{.kicker}
 
-Let $\mathcal{D} \stackrel{\textrm{def}}{=} \{(\mathbf{k}_1, \mathbf{v}_1), \ldots, (\mathbf{k}_m, \mathbf{v}_m)\}$ be $m$ key–value pairs with keys $\mathbf{k}_i \in \mathbb{R}^d$ and values $\mathbf{v}_i \in \mathbb{R}^{d_v}$. Given a query $\mathbf{q} \in \mathbb{R}^d$, **attention pooling** computes:
+::: {.cols .vc}
+::: {.col}
+- **Attention Pooling:** Over $m$ records $\mathcal{D} = \{(\mathbf{k}_i, \mathbf{v}_i)\}_{i=1}^m$ with $\mathbf{q}, \mathbf{k}_i \in \mathbb{R}^d$ and $\mathbf{v}_i \in \mathbb{R}^{d_v}$:
+  $$\textrm{Attention}(\mathbf{q}, \mathcal{D}) \stackrel{\textrm{def}}{=} \sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i)\,\mathbf{v}_i \in \mathbb{R}^{d_v}$$
+- **Simplex Constraint:** $\alpha(\mathbf{q}, \mathbf{k}_i) \ge 0$ and $\sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i) = 1$, confining the output to the convex hull of $\{\mathbf{v}_i\}$.
+- **Interpolation Spectrum:** One-hot weights $\mathbf{e}_{i^*}$ recover exact lookup; uniform weights $1/m$ recover average pooling.
+:::
 
-$$\textrm{Attention}(\mathbf{q}, \mathcal{D}) \stackrel{\textrm{def}}{=} \sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i)\,\mathbf{v}_i \in \mathbb{R}^{d_v}$$
-
-- **Simplex Constraint:** The attention weights satisfy $\alpha(\mathbf{q}, \mathbf{k}_i) \ge 0$ and $\sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i) = 1$, so the output is always a **convex combination** of the value vectors.
-- **Decoupled Dimensions:** Queries and keys share a comparison space ($\mathbb{R}^d$) when scored by distance or inner product, whereas values can have any dimension $d_v$.
-- **Interpolation Spectrum:** A one-hot weight vector $\boldsymbol{\alpha} = \mathbf{e}_{i^*}$ recovers exact database lookup ($\mathbf{v}_{i^*}$); uniform weights $\alpha_i = 1/m$ recover global average pooling ($\frac{1}{m}\sum_i \mathbf{v}_i$).
+::: {.col .fig}
+@fig:ch10-attn-qkv-simplex-spectrum
+:::
+:::
 :::
 
 ::: {.slide title="From Compatibility Scores to Softmax Weights"}
 [Softmax Normalization]{.kicker}
 
-Any real-valued compatibility function $a(\mathbf{q}, \mathbf{k}_i) \in \mathbb{R}$ maps to valid convex weights through the softmax transformation:
+::: {.cols .vc}
+::: {.col}
+- **Softmax Map:** Any real compatibility score $a(\mathbf{q}, \mathbf{k}_i) \in \mathbb{R}$ maps to the simplex via:
+  $$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_{j=1}^m \exp(a(\mathbf{q}, \mathbf{k}_j))}$$
+- **Shift Invariance:** Adding any key-independent constant $c(\mathbf{q})$ to all scores cancels out, so weights depend only on differences $a_j - a_i$.
+- **Numerical Stability:** Subtracting $M = \max_j a_j$ bounds all exponents by $0$, preventing overflow or $0/0$ underflow.
+:::
 
-$$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_{j=1}^m \exp(a(\mathbf{q}, \mathbf{k}_j))} = \frac{1}{1 + \sum_{j \neq i} \exp\!\big(a(\mathbf{q}, \mathbf{k}_j) - a(\mathbf{q}, \mathbf{k}_i)\big)}$$
-
-- **Shift Invariance:** Because $\alpha_i$ depends only on pairwise score differences $a_j - a_i$, adding any key-independent constant $c(\mathbf{q})$ to all scores leaves the weights identical.
-- **Numerical Stability:** Subtracting $M = \max_j a(\mathbf{q}, \mathbf{k}_j)$ from every score before exponentiating ensures all exponents are $\le 0$, preventing floating-point overflow or simultaneous underflow to $0/0$.
-- **End-to-End Differentiability:** Provided $a(\mathbf{q}, \mathbf{k})$ is differentiable, gradients flow smoothly back into the query $\mathbf{q}$, every key $\mathbf{k}_i$, and every value $\mathbf{v}_i$.
+::: {.col .fig}
+@fig:ch10-attn-qkv-shift-invariance
+:::
+:::
 :::
 
 ::: {.slide title="Worked Example: Vector Soft Lookup in the Plane"}
 [2D Vector Lookup]{.kicker}
 
-Let $\mathbf{q} = (1, 1)$ query three 2D records under negative squared Euclidean distance $a(\mathbf{q}, \mathbf{k}_i) = -\|\mathbf{q} - \mathbf{k}_i\|^2$:
+::: {.cols .vc}
+::: {.col}
+- **Query $\mathbf{q} = (1, 1)$ over 3 Records:** Under $s_i = -\|\mathbf{q} - \mathbf{k}_i\|^2$, keys $(1,1)$, $(2,1)$, and $(0,0)$ score $0, -1, -2$ and receive weights $(0.67, 0.24, 0.09)$.
+- **Imperfect Commitment:** Even exact match $\mathbf{k}_1 = \mathbf{q}$ captures only $67\%$ of the weight unless scores are scaled up.
+- **Zero-Value Dilution:** Record 2 has value $\mathbf{v}_2 = (0, 0)$, which adds zero to the sum yet absorbs $24\%$ of the weight and pulls $\mathbf{o} \approx (1.03, 2.09)$ toward the origin.
+:::
 
-| Record $i$ | Key $\mathbf{k}_i$ | Value $\mathbf{v}_i$ | Score $s_i = -\|\mathbf{q}-\mathbf{k}_i\|^2$ | $\exp(s_i)$ | Weight $\alpha_i$ | Weighted Value $\alpha_i \mathbf{v}_i$ |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1 (Exact match)** | $(1, 1)$ | $(1, 3)$ | $0$ | $1.000$ | $\mathbf{0.67}$ | $(0.67, 2.00)$ |
-| **2 (Zero value)** | $(2, 1)$ | $(0, 0)$ | $-1$ | $0.368$ | $\mathbf{0.24}$ | $(0.00, 0.00)$ |
-| **3 (Far key)** | $(0, 0)$ | $(4, 1)$ | $-2$ | $0.135$ | $\mathbf{0.09}$ | $(0.36, 0.09)$ |
-
-- **Output Vector:** Summing the weighted values yields $\mathbf{o} = 0.67\,(1, 3) + 0.24\,(0, 0) + 0.09\,(4, 1) \approx (1.03, 2.09)$.
-- **Two Crucial Subtleties:** (1) Even an exact key match ($\mathbf{k}_1 = \mathbf{q}$) captures only $67\%$ of the weight unless scores are scaled up; (2) $\mathbf{v}_2 = (0, 0)$ adds zero to the sum yet absorbs $24\%$ of the weight, diluting the other values toward the origin.
+::: {.col .fig .big}
+@fig:ch10-attn-qkv-vector-trace
+:::
+:::
 :::
 
 ::: {.slide title="Geometric View: Convex Hull of Stored Values"}
@@ -505,17 +515,16 @@ Let $\mathbf{q} = (1, 1)$ query three 2D records under negative squared Euclidea
 ::: {.slide title="Length Independence vs. Linear Memory Scaling"}
 [Systems Scaling]{.kicker}
 
-The attention pooling rule $\sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i)\mathbf{v}_i$ has no parameters tied to the number of stored records $m$:
+::: {.cols .vc}
+::: {.col}
+- **Length-Independent Rule:** The attention pooling operator $\sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i)\mathbf{v}_i$ has no parameters tied to the context length $m$.
+- **Linear Key–Value Memory:** At $m = 1{,}024$ in GPT-2 small ($d = 768, H = 12, d_h = 64$), one head stores $2 \times 1{,}024 \times 64 = 131{,}072$ floats ($1.57\text{M}$ floats across $12$ heads, vs. $768$ in an RNN).
+- **Direct 1-Hop Access:** Token $m$ scores token $1$ directly via $\alpha(\mathbf{q}_m, \mathbf{k}_1)$ without recurrent compression.
+:::
 
-| Property | Recurrent Hidden State ($\mathbf{h}_t \in \mathbb{R}^d$) | Single Attention Head ($\mathbf{K}, \mathbf{V} \in \mathbb{R}^{m \times d_h}$) | Full 12-Head Layer (GPT-2 Small, $d=768$) |
-| :--- | :--- | :--- | :--- |
-| **Output vector width** | $d = 768$ | $d_h = 64$ | $H d_h = 768$ |
-| **Stored floats at $m = 1{,}024$** | $768$ numbers | $2 \times 1{,}024 \times 64 = 131{,}072$ | $12 \times 131{,}072 = 1{,}572{,}864$ |
-| **Memory growth with $m$** | $O(1)$ fixed bottleneck | $O(m d_h)$ linear in context | $O(m d)$ linear in context |
-| **Access to token 1 at step $m$** | Compressed across $m$ recurrent steps | Direct 1-hop score $\alpha(\mathbf{q}_m, \mathbf{k}_1)$ | Direct 1-hop score across $12$ subspaces |
-
-::: {.d2l-note}
-Attention eliminates the informational bottleneck of fixed-size state vectors by shifting the cost from lossy state compression to linear key–value storage.
+::: {.col .fig .big}
+@fig:ch10-attn-qkv-memory-scaling
+:::
 :::
 :::
 
@@ -567,16 +576,17 @@ We draw $n = 40$ noisy observations from $y = 2\sin(x) + x + \epsilon$ with $\ep
 ::: {.slide title="Bandwidth as Inverse Softmax Temperature"}
 [The Sharpness Dial]{.kicker}
 
-Writing the Gaussian kernel normalizer as a softmax exposes the inverse variance $\beta = 1/\sigma^2$ as a **temperature parameter** multiplying raw scores:
+::: {.cols .vc}
+::: {.col}
+- **Inverse Variance as Temperature ($\beta = 1/\sigma^2$):**
+  $$\alpha_i(q) = \mathrm{softmax}_i\!\left(\frac{1}{\sigma^2} \cdot \left(-\frac{1}{2}\|q - k_i\|^2\right)\right)$$
+- **Low Temperature ($\sigma \to 0$, large $1/\sigma^2$):** Stretches pairwise score gaps $\Delta a / \sigma^2 \to \infty$, driving the softmax toward a **one-hot argmax** lookup.
+- **High Temperature ($\sigma \to \infty$, small $1/\sigma^2$):** Compresses score gaps toward zero, driving weights toward **uniform $1/n$** averaging (moving $\sigma: 2.0 \to 0.1$ multiplies score gaps by $400\times$).
+:::
 
-$$\alpha_i(q) = \mathrm{softmax}_i\!\left(\frac{1}{\sigma^2} \cdot \left(-\frac{1}{2}\|q - k_i\|^2\right)\right)$$
-
-- **Low Temperature ($\sigma \to 0$, large $1/\sigma^2$):** Stretches pairwise score gaps $\Delta a / \sigma^2 \to \infty$, driving the softmax distribution toward a **one-hot argmax** lookup.
-- **High Temperature ($\sigma \to \infty$, small $1/\sigma^2$):** Compresses score gaps toward zero, driving the softmax toward a **uniform $1/n$** average with maximum entropy $\log n$.
-- **Quantitative Swing:** Moving from $\sigma = 2.0$ to $\sigma = 0.1$ multiplies every pairwise score gap by $(2.0 / 0.1)^2 = 400$.
-
-::: {.d2l-note .rule}
-In §10.2 we will see that scaled dot-product attention calibrates this exact temperature dial automatically via $1/\sqrt{d}$.
+::: {.col .fig}
+@fig:ch10-attn-qkv-temperature-dial
+:::
 :::
 :::
 
@@ -611,20 +621,16 @@ $$\textrm{Var}\!\left(\sum_{i=1}^n \alpha_i(q)\, y_i \,\middle|\, \mathbf{x}\rig
 ::: {.slide title="Pitfall 1: Out-of-Range Queries and Underflow"}
 [Numerical & Statistical Pitfalls]{.kicker}
 
-What happens when we query `nadaraya_watson` at $q = 15$, far outside the training interval $[0, 5)$ with $\sigma = 0.5$?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Convex-Hull Extrapolation Failure:** Even in exact arithmetic, as $q \to \infty$ the closest boundary key $x_{\max} = \max_i x_i$ dominates all others, so $f(q) \to y_{\max}$ (a flat horizontal asymptote that cannot follow the linear trend $2\sin(x) + x$).
+- **Convex-Hull Clamping:** As $q \to \infty$ beyond $[0, 5)$, the closest boundary key $x_{\max}$ dominates all others, so $f(q) \to y_{\max}$ (a flat asymptote that cannot follow a linear trend).
+- **Float32 Underflow to `NaN`:** At $q = 15, \sigma = 0.5$, exponent $-(q - x_i)^2/(2\sigma^2) < -200$ underflows `float32` $\exp(-200) \to 0.0$, so `k / k.sum()` evaluates `0.0 / 0.0 = NaN`!
+- **Fix:** Pass log-scores $-(q - k_i)^2/(2\sigma^2)$ directly to a max-subtracted `softmax`.
 :::
 
-::: {.col}
-- **Float32 Underflow to `NaN`:** At $q = 15$, the nearest key at $x_i < 5$ has distance $> 10$, giving exponent $-(q - x_i)^2 / (2\sigma^2) < -200$. In `float32`, $\exp(-200)$ underflows to `0.0` (since `float32` flushes below $\approx e^{-103.3}$), so `k / k.sum()` evaluates `0.0 / 0.0 = NaN`!
+::: {.col .fig .big}
+@fig:ch10-attn-qkv-underflow-pitfall
 :::
-:::
-
-::: {.d2l-note .warn}
-**Fix:** Never exponentiate raw kernels and divide manually; pass log-scores $a(q, k_i) = -(q - k_i)^2 / (2\sigma^2)$ to a stable `softmax`, which subtracts $\max_j a_j$ before calling `exp`.
 :::
 :::
 
@@ -659,12 +665,15 @@ Work out these three questions from the softmax attention equations:
 ::: {.slide title="Summary: Differentiable Key–Value Lookup"}
 [Key Takeaways]{.kicker}
 
-| Concept / Regime | Mathematical Expression | Key Property / Complexity | Role in Deep Learning |
-| :--- | :--- | :--- | :--- |
-| **Attention Pooling** | $\sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i)\,\mathbf{v}_i$ | Convex combination ($\alpha_i \ge 0, \sum_i \alpha_i = 1$) | Differentiable content-based retrieval over $m$ items |
-| **Softmax Weights** | $\dfrac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\sum_j \exp(a(\mathbf{q}, \mathbf{k}_j))}$ | Invariant to constant score shifts $a_i \mapsto a_i + c$ | Converts arbitrary real scores into a probability simplex |
-| **Nadaraya–Watson** | $a(q, k_i) = -\dfrac{\|q - k_i\|^2}{2\sigma^2}$ | Zero trainable weights; $O(m)$ memory | Classical nonparametric baseline for attention pooling |
-| **Sharp Limit ($\sigma \to 0$)** | $\boldsymbol{\alpha} \to \mathbf{e}_{i^*}$ (one-hot) | $n_{\textrm{eff}} \to 1$; low bias, high variance | Exact nearest-neighbor / argmax lookup |
-| **Smooth Limit ($\sigma \to \infty$)** | $\alpha_i \to 1/m$ (uniform) | $n_{\textrm{eff}} \to m$; high bias, low variance | Global average pooling across all stored values |
-| **Effective Keys ($n_{\textrm{eff}}$)** | $\left(\sum_{i=1}^m \alpha_i^2\right)^{-1} \in [1, m]$ | Output noise variance scales as $s^2 / n_{\textrm{eff}}$ | Diagnoses attention entropy collapse or over-smoothing |
+::: {.cols .vc}
+::: {.col}
+- **Soft Convex Pooling:** $\textrm{Attention}(\mathbf{q}, \mathcal{D}) = \sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i)\,\mathbf{v}_i$ where $\boldsymbol{\alpha} \in \Delta^{m-1}$.
+- **Temperature & Effective Keys:** Bandwidth $\sigma$ interpolates from nearest-neighbor ($\sigma \to 0, n_{\textrm{eff}} \to 1$) to uniform mean ($\sigma \to \infty, n_{\textrm{eff}} \to m$).
+- **Max-Subtract Stability:** Subtracting $m(\mathbf{q}) = \max_j a(\mathbf{q}, \mathbf{k}_j)$ prevents `0/0 = NaN` underflow.
+:::
+
+::: {.col .fig .big}
+@fig:ch10-attn-qkv-summary
+:::
+:::
 :::

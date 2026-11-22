@@ -784,12 +784,18 @@ On calm ice, following the 6-move shortest path always reaches the goal; on slip
 ::: {.slide title="State-Value and Action-Value Functions"}
 [Scoring States and Commands]{.kicker}
 
-For a fixed policy $\pi(a \mid s)$, the **state value** $V^\pi(s)$ and **action value** $Q^\pi(s, a)$ measure expected discounted return from $s$ (or from $(s, a)$ followed by $\pi$):
+::: {.cols .vc}
+::: {.col}
+$$V^\pi(s_0) = \mathbb{E}_{\pi, P}\Big[\sum_{t=0}^{\infty} \gamma^t r(s_t, a_t)\Big]$$
 
-$$V^\pi(s_0) = \mathbb{E}_{\pi, P}\Big[\sum_{t=0}^{\infty} \gamma^t r(s_t, a_t)\Big], \qquad Q^\pi(s_0, a_0) = r(s_0, a_0) + \mathbb{E}_{\pi, P}\Big[\sum_{t=1}^{\infty} \gamma^t r(s_t, a_t)\Big]$$
+- **Interpretation on FrozenLake:** $V^\pi(s)$ is the probability of reaching the goal from $s$, weighted by $\gamma^t$ for arrival step $t$.
+- **Action value $Q^\pi(s, a)$:** Commits to action $a$ at step $0$, then follows $\pi$ thereafter, satisfying $V^\pi(s) = \sum_a \pi(a \mid s) Q^\pi(s, a)$.
+:::
 
-- **Interpretation on FrozenLake:** Because only entering the goal pays $+1$, $V^\pi(s)$ is the probability of reaching the goal from $s$, weighted by $\gamma^t$ for the arrival step $t$.
-- **Consistency identity:** Averaging $Q^\pi(s, a)$ over the policy's action choice recovers $V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\,Q^\pi(s, a) \leq \max_a Q^\pi(s, a)$.
+::: {.col .fig}
+@fig:ch14-rl-v-vs-q
+:::
+:::
 :::
 
 ::: {.slide title="Bellman Expectation Equations and Tensor Backup"}
@@ -807,12 +813,18 @@ $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\Big[r(s, a) + \gamma \sum_{s
 ::: {.slide title="The Bellman Optimality Equations"}
 [Characterizing Optimal Play]{.kicker}
 
-In any finite MDP with $\gamma < 1$, a deterministic stationary policy $\pi^*$ achieves the maximum value $V^*(s) = \max_\pi V^\pi(s)$ at every state simultaneously:
-
+::: {.cols .vc}
+::: {.col}
 $$V^*(s) = \max_{a \in \mathcal{A}} \Big[r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\,V^*(s')\Big]$$
 
-- **Action-value optimality:** Inserting $V^*(s') = \max_{a'} Q^*(s', a')$ into the bracket yields $Q^*(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) \max_{a'} Q^*(s', a')$.
-- **Model-based vs. model-free extraction:** Extracting $\pi^*(s)$ from $V^*$ requires a one-step lookahead with $P$ and $r$, whereas $\pi^*(s) = \mathrm{argmax}_a Q^*(s, a)$ requires no model.
+- **Action-value optimality:** $Q^*(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) \max_{a'} Q^*(s', a')$.
+- **Model-based vs. model-free extraction:** Extracting $\pi^*$ from $V^*$ requires a lookahead with $P$ and $r$, whereas $\pi^*(s) = \mathrm{argmax}_a Q^*(s, a)$ requires no model.
+:::
+
+::: {.col .fig}
+@fig:ch14-rl-bellman-optimality
+:::
+:::
 :::
 
 ::: {.slide title="Visualizing Exact and Sampled Bellman Backups"}
@@ -876,13 +888,19 @@ $$\|\mathcal{T}V - \mathcal{T}V'\|_\infty \leq \gamma\,\|V - V'\|_\infty$$
 ::: {.slide title="Uniqueness, Convergence Rate, and Certificates"}
 [Four Consequences of Contraction]{.kicker}
 
-Because $\gamma < 1$, Banach's fixed-point theorem guarantees four properties for $\mathcal{T}$ (and for the policy evaluation operator $\mathcal{T}^\pi$):
+::: {.cols .vc}
+::: {.col}
+$$\|V_k - V^*\|_\infty \leq \frac{\gamma}{1 - \gamma}\,\|V_k - V_{k-1}\|_\infty$$
 
-1. **Unique fixed point:** If $V = \mathcal{T}V$ and $V' = \mathcal{T}V'$, then $\|V - V'\|_\infty \leq \gamma\|V - V'\|_\infty$, forcing $V = V' = V^*$.
-2. **Geometric convergence rate:** The true error $e_k = \|V_k - V^*\|_\infty \leq \gamma^k e_0$ decays by at least $\gamma$ per sweep, scaling with the effective horizon $1/(1-\gamma)$.
-3. **Observable stopping certificate:** Because $V^*$ is unknown, we bound the true error using consecutive iterates:
-   $$\|V_k - V^*\|_\infty \leq \frac{\gamma}{1 - \gamma}\,\|V_k - V_{k-1}\|_\infty$$
-4. **Safe greedy extraction:** Any policy $\pi$ that is greedy with respect to $V^*$ satisfies $\mathcal{T}^\pi V^* = \mathcal{T}V^* = V^*$, proving $V^\pi = V^*$.
+1. **Unique fixed point:** $V = \mathcal{T}V$ and $V' = \mathcal{T}V'$ implies $V = V' = V^*$.
+2. **Geometric decay:** Error $e_k \leq \gamma^k e_0$ shrinks by $\gamma$ per sweep.
+3. **Observable stopping certificate:** Bound true distance using consecutive iterates and horizon factor $\gamma/(1-\gamma)$.
+:::
+
+::: {.col .fig}
+@fig:ch14-rl-stopping-certificate
+:::
+:::
 :::
 
 ::: {.slide title="Calm vs. Slippery Optimal Values and Policies"}
@@ -910,11 +928,18 @@ Comparing true distance $\|V_k - V^*\|_\infty$ against the a priori bound $\gamm
 ::: {.slide title="Policy Evaluation: Sweeps vs. Direct Linear Solve"}
 [Scoring a Fixed Policy]{.kicker}
 
-Replacing $\max_a$ with the policy average $\mathcal{T}^\pi$ yields a linear system $V^\pi = r_\pi + \gamma P_\pi V^\pi$ in terms of $P_\pi(s' \mid s) = \sum_a \pi(a \mid s)P(s' \mid s, a)$:
+::: {.cols .vc}
+::: {.col}
+- **Linear Bellman system:** Under a fixed policy $\pi$, $V^\pi = r_\pi + \gamma P_\pi V^\pi$ with $P_\pi(s' \mid s) = \sum_a \pi(a \mid s)P(s' \mid s, a)$.
+- **Exact matrix solve:** For $\gamma < 1$, $V^\pi = (I - \gamma P_\pi)^{-1}r_\pi$ yields the uniform policy's start value $V(s_0) = 0.0078$ in one $O(|\mathcal{S}|^3)$ solve.
 
 @value-iter-policy-evaluation-1
+:::
 
-- **Exact matrix solution:** For $\gamma < 1$, $(I - \gamma P_\pi)$ is invertible and $V^\pi = (I - \gamma P_\pi)^{-1}r_\pi$ gives the uniform policy's start value $V(s_0) = 0.0078$ in one $O(|\mathcal{S}|^3)$ solve.
+::: {.col .fig}
+@fig:ch14-rl-linear-solve
+:::
+:::
 :::
 
 ::: {.slide title="Policy Improvement and Policy Iteration"}

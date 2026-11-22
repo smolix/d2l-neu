@@ -780,22 +780,15 @@ Actor–Critic Methods and Generalized Advantage Estimation<br>**TD error as adv
 ::: {.slide title="Why Wait for an Episode to End Before Updating?"}
 [Motivation]{.kicker}
 
-In Chapter 14, REINFORCE with a learned baseline $\hat{V}(s_t)$ collected eight complete CartPole episodes—up to $4{,}000$ transitions—before taking a single gradient step:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **The Monte Carlo Bottleneck:** The policy weight $\hat{G}_t - \hat{V}(s_t)$ requires the realized reward-to-go $\hat{G}_t = \sum_{k \ge 0} \gamma^k r_{t+k}$ all the way to termination.
-- **High Tail Variance:** Summing dozens or hundreds of future random rewards injects cumulative trajectory noise into step $t$'s credit assignment.
+- **The Monte Carlo Bottleneck:** Weighting by $\hat{G}_t - \hat{V}(s_t)$ waits for termination and accumulates high tail variance over all remaining steps.
+- **The Actor–Critic Synthesis:** Since $\hat{V}(s_{t+1})$ already predicts $\hat{G}_{t+1}$, we substitute the critic's prediction for the sampled tail—trading remaining-episode variance for young-critic bias.
 :::
 
-::: {.col}
-- **The Tabular Q-Learning Lesson:** In §14.3, Q-learning updated after *every single transition* by bootstrapping on its own estimate of the next state.
-- **The Actor–Critic Synthesis:** Since $\hat{V}(s_{t+1})$ already predicts $\hat{G}_{t+1}$, we can substitute the prediction for the sampled tail: the policy becomes the **actor** and $\hat{V}$ its **critic**.
+::: {.col .fig .big}
+@fig:ch15-drl-mc-tail-vs-critic
 :::
-:::
-
-::: {.d2l-note}
-Replacing the sampled future $\hat{G}_{t+1}$ with the critic's prediction $\hat{V}(s_{t+1})$ trades the variance of the remaining episode for the bias of an imperfect critic.
 :::
 :::
 
@@ -816,20 +809,14 @@ $$\delta_t = r_t + \gamma\, \hat{V}(s_{t+1}) - \hat{V}(s_t)$$
 ::: {.slide title="Tracing One Transition by Hand on CartPole"}
 [Concrete Intuition]{.kicker}
 
-On CartPole-v1, every balanced step pays $r_t = +1$ with discount $\gamma = 0.99$, so balancing forever has true value $V^\infty = 1 / (1 - \gamma) = 100$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Calibrated Critic ($\hat{V}(s) = 100$ everywhere):**
-  - *Pole stays upright:* $\delta_t = 1 + 0.99(100) - 100 = 0$. The transition went as predicted, so the action probability is left unchanged.
-  - *Pole falls (`terminated`):* $\delta_t = 1 + 0 - 100 = -99$. The action that dropped the pole receives a strong negative update.
+- **Calibrated Critic ($\hat{V}(s) = 100$):** Survival gives $\delta_t = 1 + 0.99(100) - 100 = 0$; dropping the pole (`terminated`) gives $\delta_t = 1 + 0 - 100 = -99$.
+- **Freshly Initialized Critic ($\hat{V}(s) \approx 0$):** Both survival and falling produce the exact same positive TD error $\delta_t \approx +1$, teaching the actor nothing until the critic catches up.
 :::
 
-::: {.col}
-- **Freshly Initialized Critic ($\hat{V}(s) \approx 0$ everywhere):**
-  - *Pole stays upright:* $\delta_t \approx 1 + 0.99(0) - 0 = +1$.
-  - *Pole falls (`terminated`):* $\delta_t \approx 1 + 0 - 0 = +1$.
-  - Both survival and failure receive the exact same positive weight $+1$, teaching the actor almost nothing until the critic catches up!
+::: {.col .fig .big}
+@fig:ch15-drl-cartpole-td-trace
 :::
 :::
 :::
@@ -837,30 +824,33 @@ On CartPole-v1, every balanced step pays $r_t = +1$ with discount $\gamma = 0.99
 ::: {.slide title="An Exact Critic Yields an Unbiased Advantage Sample"}
 [Theoretical Foundation]{.kicker}
 
-Suppose the critic equals the true value function of the current policy, $\hat{V} = V^\pi$. Taking the conditional expectation of $\delta_t$ over the next state $s_{t+1} \sim P(\cdot \mid s_t, a_t)$ gives:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}\big[\delta_t \mid s_t, a_t\big] = Q^\pi(s_t, a_t) - V^\pi(s_t) = A^\pi(s_t, a_t)$$
 
-$$\mathbb{E}\big[\delta_t \mid s_t, a_t\big] = r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^\pi(s') - V^\pi(s_t) = Q^\pi(s_t, a_t) - V^\pi(s_t) = A^\pi(s_t, a_t)$$
+- **Current-state error vanishes:** Error $e(s_t) = \hat{V}(s_t) - V^\pi(s_t)$ depends only on $s_t$ and averages to zero in the policy gradient.
+- **Next-state coupling:** Error $\gamma e(s_{t+1})$ depends on action $a_t$ via $s_{t+1} \sim P(\cdot \mid s_t, a_t)$ and biases the actor update.
+:::
 
-- **One-Transition Advantage:** With an exact critic, a single reward and two value evaluations produce an unbiased sample of the advantage $A^\pi(s_t, a_t)$.
-- **Where Critic Error Enters as Bias:** When $\hat{V} \neq V^\pi$, the error at the current state $e(s_t) = \hat{V}(s_t) - V^\pi(s_t)$ depends only on $s_t$ and averages to zero in the policy gradient by the baseline identity.
-- **Next-State Coupling:** The error at the next state $\gamma e(s_{t+1})$ depends on the chosen action $a_t$, so it does *not* vanish in expectation and biases the actor's gradient.
+::: {.col .fig}
+@fig:ch15-drl-critic-error-decomp
+:::
+:::
 :::
 
 ::: {.slide title="Semi-Gradient Policy Evaluation in the Critic"}
 [Critic Mechanics]{.kicker}
 
-How does the critic $\hat{V}_w$ learn $V^\pi$ while the actor $\pi_\theta$ is simultaneously improving?
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Sampled Bellman Expectation Backup:** Policy evaluation iterates $V(s) \leftarrow r(s,a) + \gamma \mathbb{E}[V(s')]$. Regressing $\hat{V}_w(s_t)$ toward $y_t = r_t + \gamma \hat{V}_w(s_{t+1})$ approximates this backup from sampled transitions.
-- **Generalized Policy Iteration:** The critic evaluates the current actor $\pi_\theta$, and the actor improves against the critic's TD errors.
+$$\Delta w = \alpha\, \delta_t\, \nabla_w \hat{V}_w(s_t)$$
+
+- **Sampled Bellman backup:** Regresses $\hat{V}_w(s_t)$ toward the one-step target $y_t = r_t + \gamma \hat{V}_w(s_{t+1})$.
+- **Why semi-gradient?** `td_target` stops the gradient through $y_t$ so derivatives are taken only through the prediction $\hat{V}_w(s_t)$.
 :::
 
-::: {.col}
-- **Why Semi-Gradient?** The target $y_t$ depends on $w$, but `td_target` stops the gradient so derivatives are taken only through the prediction $\hat{V}_w(s_t)$:
-  $$\Delta w = \alpha\, \delta_t\, \nabla_w \hat{V}_w(s_t)$$
-- Because the target moves with $w$, this update is not true gradient descent on any fixed loss function.
+::: {.col .fig}
+@fig:ch15-drl-semi-gradient-stop
 :::
 :::
 :::
@@ -922,14 +912,16 @@ Each update collects an 8-episode rollout, refits the critic for `critic_steps =
 ::: {.slide title="Three Systems Choices in Batched Actor-Critic"}
 [Design Decisions]{.kicker}
 
-| Design Choice | Implementation in `td_weight` | Measured Impact on CartPole |
-| :--- | :--- | :--- |
-| **1. Refit critic *before* scoring actor** | Run 20 fitted-TD passes on `b`, then evaluate $\delta_t$ | Brings $\hat{V}_w$ close to $V^\pi$ on the batch; scoring before fitting fails on $\sim 25\%$ of seeds vs. $5\%$ |
-| **2. Recompute target every critic pass** | Call `b.td_target(ac.value_np, gamma)` inside loop | Lets reward information propagate up to 20 steps backward within a single batch |
-| **3. Raw $\delta_t$ + gradient norm cap $0.5$** | No `standardize(delta)`; clip $\|\nabla_\theta\|$ at $0.5$ | Prevents large early TD errors from dominating Adam's second-moment accumulator |
+::: {.cols .vc}
+::: {.col}
+- **1. Refit critic *before* scoring actor:** Running 20 fitted-TD passes on `b` before evaluating $\delta_t$ cuts seed failure rate from $\sim 25\%$ to $5\%$.
+- **2. Recompute targets every pass:** Calling `b.td_target` inside the 20-step loop propagates reward up to 20 steps backward per batch.
+- **3. Raw $\delta_t$ + gradient cap $0.5$:** Avoids amplifying late critic noise while capping large early TD steps under Adam.
+:::
 
-::: {.d2l-note}
-**Contrast with A2C (Mnih et al., 2016):** Synchronous Advantage Actor-Critic collects short fixed-length segments across $N$ parallel environments, computes $n$-step advantages with the pre-update critic, adds an entropy bonus, and takes a single joint gradient step.
+::: {.col .fig .big}
+@fig:ch15-drl-fitted-td-loop
+:::
 :::
 :::
 
@@ -970,28 +962,36 @@ Each update collects an 8-episode rollout, refits the critic for `critic_steps =
 ::: {.slide title="Interpolating Horizons with n-Step Returns"}
 [Multi-Step Returns]{.kicker}
 
-Rather than choosing between a biased 1-step bootstrap and a high-variance full rollout, we can sum $n$ actual rewards before bootstrapping from the critic at step $t+n$:
-
-$$\hat{G}^{(n)}_t = r_t + \gamma\, r_{t+1} + \cdots + \gamma^{n-1} r_{t+n-1} + \gamma^n\, \hat{V}(s_{t+n})$$
-
-Averaging all $n$-step advantage estimates $\hat{G}^{(n)}_t - \hat{V}(s_t)$ with geometric weights $(1 - \lambda)\lambda^{n-1}$ defines **Generalized Advantage Estimation (GAE)** for $\lambda \in [0, 1]$:
-
+::: {.cols .vc}
+::: {.col}
+$$\hat{G}^{(n)}_t = \sum_{l=0}^{n-1} \gamma^l r_{t+l} + \gamma^n\, \hat{V}(s_{t+n})$$
 $$\hat{A}^{\textrm{GAE}}_t = (1 - \lambda) \sum_{n=1}^{\infty} \lambda^{n-1} \big( \hat{G}^{(n)}_t - \hat{V}(s_t) \big)$$
 
 - **Endpoint $\lambda = 0$:** Places all weight on $n = 1$, recovering the one-step TD error $\delta_t$.
-- **Endpoint $\lambda \to 1$:** Places all weight on the full episode return, recovering the Monte Carlo advantage $\hat{G}_t - \hat{V}(s_t)$.
+- **Endpoint $\lambda \to 1$:** Places all weight on the full episode return, recovering $\hat{G}_t - \hat{V}(s_t)$.
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-gae-mixture
+:::
+:::
 :::
 
 ::: {.slide title="Telescoping the Lambda-Return into TD Errors"}
 [Mathematical Derivation]{.kicker}
 
-Computing $\hat{G}^{(n)}_t$ separately for every depth $n$ would take $O(T^2)$ work, but the infinite geometric mixture collapses into a single discounted sum of one-step TD errors:
-
+::: {.cols .vc}
+::: {.col}
 $$\hat{A}^{\textrm{GAE}}_t = \sum_{l=0}^{\infty} (\gamma\lambda)^l\, \delta_{t+l}$$
 
-- **Step 1 (Telescoping Sum):** Every $n$-step advantage is a finite sum of TD errors because interior $\hat{V}(s_{t+l})$ terms cancel in pairs:
-  $$\hat{G}^{(n)}_t - \hat{V}(s_t) = \sum_{l=0}^{n-1} \gamma^l \big(r_{t+l} + \gamma \hat{V}(s_{t+l+1}) - \hat{V}(s_{t+l})\big) = \sum_{l=0}^{n-1} \gamma^l \delta_{t+l}$$
-- **Step 2 (Swapping Sums):** Term $\gamma^l \delta_{t+l}$ appears in every depth $n \ge l + 1$, so its total geometric weight is $(1 - \lambda) \sum_{n=l+1}^\infty \lambda^{n-1} = \lambda^l$.
+- **Telescoping cancellation:** Every $n$-step advantage $\hat{G}^{(n)}_t - \hat{V}(s_t)$ collapses into $\sum_{l=0}^{n-1} \gamma^l \delta_{t+l}$ as interior $\pm \gamma^l \hat{V}(s_{t+l})$ terms cancel in pairs.
+- **Geometric sum:** Term $\gamma^l \delta_{t+l}$ appears in every depth $n \ge l + 1$ with total weight $(1 - \lambda) \sum_{n > l} \lambda^{n-1} = \lambda^l$.
+:::
+
+::: {.col .fig}
+@fig:ch15-drl-gae-telescoping
+:::
+:::
 :::
 
 ::: {.slide title="Generalized Advantage Estimation in Two Lines"}

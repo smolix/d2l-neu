@@ -36,61 +36,49 @@ Deep Reinforcement Learning: Sample Efficiency and Function Approximation<br>**b
 ::: {.slide title="Why Naive Policy Gradients Waste Interactions"}
 [Motivation]{.kicker}
 
-In Chapter 14, swinging up the continuous Pendulum ($u \in [-2, 2]$, where random actions score $-1{,}200$ and upright balance scores $-200$) required $150$–$300$ batches of $1{,}600$ steps each:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Full-Episode Waiting:** Monte Carlo returns $\hat{G}_t$ cannot be evaluated until an episode terminates or hits a truncation limit, stalling learning during long rollouts.
-- **Single-Use Experience:** Every batch of $1{,}600$ environment transitions drives one gradient step and is immediately discarded because the policy distribution has shifted.
+- **Full-Episode Waiting:** Monte Carlo returns $\hat{G}_t$ stall learning until an episode terminates or hits a time limit.
+- **Single-Use Experience:** Every batch of $1{,}600$ transitions drives one gradient step and is immediately discarded.
+- **Unguarded Parameter Steps:** Nothing bounds how far one noisy step shifts action probabilities, risking irreversible policy collapse.
 :::
 
-::: {.col}
-- **Unguarded Parameter Steps:** Nothing bounds how far a single noisy gradient update shifts the action probabilities, risking irreversible policy collapse.
-- **Real-World Bottlenecks:** A physical robot arm wears out long before $300{,}000$ steps, and an LLM post-training run cannot afford to waste sampled completions after one update.
+::: {.col .fig .big}
+@fig:ch15-drl-naive-pg-waste
 :::
-:::
-
-::: {.d2l-note}
-**Central question of Chapter 15:** How much information can we extract from a single transition, and what new failure modes appear when we force each sample to teach more?
 :::
 :::
 
 ::: {.slide title="Four Mechanisms to Extract More from Every Sample"}
 [Core Ideas]{.kicker}
 
-Every major algorithm in deep reinforcement learning trades raw sampling cost for a learned approximation that carries its own statistical error:
+::: {.cols .vc}
+::: {.col}
+- **1. Bootstrap a Critic (§15.1, §15.4–5):** Replaces episode tail $\hat{G}_{t+1}$ at the cost of young-critic bias $e(s')$.
+- **2. Reuse Old Transitions (§15.2, §15.4–7):** Replaces fresh rollouts at the cost of distribution shift and moving targets.
+- **3. Bound Policy Shifts (§15.2–3, §15.8):** Restrains steps via ratio clipping or a KL leash to $\pi_{\textrm{ref}}$.
+- **4. Plan in a World Model (§15.6):** Substitutes test-time imagination for real trials at the cost of compounding rollout error.
+:::
 
-| Mechanism | What It Replaces | New Approximation Error Introduced | Chapter Sections |
-| :--- | :--- | :--- | :--- |
-| **1. Bootstrap a Critic** | Waiting for the episode tail $\hat{G}_{t+1}$ | **Critic bias** while $\hat{V}_w(s')$ is inaccurate | **§15.1, §15.4, §15.5** |
-| **2. Reuse Old Transitions** | Fresh on-policy rollouts at every step | **Distribution shift** and moving regression targets | **§15.2, §15.4–15.7** |
-| **3. Bound Policy Shifts** | Unconstrained parameter steps $\Delta \theta$ | **Local step constraint** (or KL bias toward $\pi_{\textrm{ref}}$) | **§15.2, §15.3, §15.8** |
-| **4. Plan in a World Model** | Trial-and-error in the real environment | **Compounding rollout error** and high per-step compute | **§15.6** |
-
-::: {.d2l-note}
-Each mechanism eliminates a reason to collect fresh environment steps while introducing an estimator whose errors must be actively controlled.
+::: {.col .fig .big}
+@fig:ch15-drl-four-mechanisms
+:::
 :::
 :::
 
 ::: {.slide title="The Deadly Triad: When Value Networks Diverge"}
 [Fundamental Hazard]{.kicker}
 
-Tabular backups contract in the supremum norm and always converge, but combining three ingredients in deep RL can cause value estimates to diverge to infinity:
-
 ::: {.cols .vc}
 ::: {.col}
-- **1. Bootstrapping:** The regression target $y = r + \gamma \hat{V}_w(s')$ depends on the network's own current predictions rather than fixed labels.
-- **2. Function Approximation:** Shared network parameters $w$ couple all states, so reducing error at visited states can inflate predictions at unvisited states.
+- **1. Bootstrapping:** Targets $y = r + \gamma \hat{V}_w(s')$ move with the network's own predictions.
+- **2. Function Approximation:** Shared parameters $w$ couple all states globally.
+- **3. Off-Policy Data:** Transitions come from a replay buffer or fixed log rather than the current policy, driving $\|\mathbf{w}\|_\infty \to \infty$ even on Baird's linear MDP (§15.4).
 :::
 
-::: {.col}
-- **3. Off-Policy Data:** Training transitions come from an older behavior policy or replay buffer rather than the policy currently being evaluated.
-- **Baird's Counterexample (§15.4):** Even with linear features, zero noise, and exact expectations, all three together can drive weights $\|\mathbf{w}\|_\infty \to \infty$.
+::: {.col .fig .big}
+@fig:ch15-drl-triad-overview
 :::
-:::
-
-::: {.d2l-note .warn}
-**Diagnostic imperative:** A falling temporal-difference loss only means the network fits its *current* moving targets—always monitor the predicted values $\hat{V}(s_0)$ or $\hat{Q}(s_0, a)$ directly!
 :::
 :::
 
@@ -112,15 +100,17 @@ Tabular backups contract in the supremum norm and always converge, but combining
 ::: {.slide title="Running Benchmarks and Sample-Efficiency Gains"}
 [Experimental Suite]{.kicker}
 
-We measure sample efficiency and value calibration across five self-contained testbeds that run in CPU minutes:
+::: {.cols .vc}
+::: {.col}
+- **Continuous Pendulum-v1 ($\ge -200$ goal):** Sample cost drops from $\sim 300\text{k}$ steps (REINFORCE) to $2.4\text{k}$–$11\text{k}$ (SAC, §15.5) and $200$–$600$ steps (World-Model MPC, §15.6).
+- **Discrete CartPole-v1 ($500$ ceiling):** Multi-epoch PPO (§15.2) halves the sample cost of 1-step Actor–Critic ($\sim 60\text{k} \to \sim 25\text{k}$ steps), with DQN (§15.4) solving in $\sim 40\text{k}$ steps.
+- **Exact tabular & verifier audits:** Diagnose reward hacking (§15.3, §15.8) and offline overestimation (§15.7) against closed-form optima.
+:::
 
-| Benchmark | State / Action Space | Exact Ceiling or Goal | Method & Environment Steps to Goal |
-| :--- | :--- | :--- | :--- |
-| **CartPole-v1** | $\mathbb{R}^4$, $2$ discrete pushes | Return $500$ ($V^\infty = 100$ at $\gamma=0.99$) | Actor-Critic: $\sim 60\text{k}$ · PPO (4 epochs): $\sim 25\text{k}$ · DQN: $\sim 40\text{k}$ |
-| **Pendulum-v1** | $\mathbb{R}^3$, torque $u \in [-2, 2]$ | Return $\ge -200$ ($200$-step episodes) | REINFORCE: $\sim 300\text{k}$ · SAC: $2.4\text{k}$–$11\text{k}$ · MPC Model: $200$–$600$ |
-| **$4 \times 4$ Hazard Grid** | $16$ states, $4$ moves | True optimal return $V^*(s_0) = +0.59$ | Unregularized plan hacks hazard ($-2.11$); KL penalty peaks at $+0.53$ |
-| **Slippery FrozenLake** | $16$ states, $4$ slippery moves | Exact optimum $V^*(s_0) = 0.180$ | Naive offline Q overestimates ($0.25$); pessimistic LCB restores $0.14$ |
-| **4-Prompt Verifier** | $4$ prompts, $9$ replies | Exact match ceiling $0.50$ (ref $0.062$) | Closed-form KL threshold $\beta = 1/4$ suppresses the lenient hedge |
+::: {.col .fig .big}
+@fig:ch15-drl-benchmark-gains
+:::
+:::
 :::
 
 ::: {.slide title="Chapter 15 Roadmap: Eight Core Questions"}

@@ -469,11 +469,17 @@ Implementing Multilayer Perceptrons on Fashion-MNIST<br>**parameter registration
 ::: {.slide title="From Hand-Crafted XOR to Learned Image Features"}
 [The Empirical Question]{.kicker}
 
-In §4.1 we hand-picked the weights of a 2-unit ReLU network for XOR; on Fashion-MNIST ($28 \times 28$ garment images across $10$ classes), minibatch SGD must discover hidden features automatically:
+::: {.cols .vc}
+::: {.col}
+- **The linear baseline:** Softmax regression uses $784 \times 10 + 10 = 7{,}850$ parameters and plateaus around $84\%$ validation accuracy, confusing upper-body tops of similar silhouette.
+- **The 256-unit ReLU MLP:** Inserting one hidden layer of width $h = 256$ increases capacity to $203{,}530$ parameters ($26\times$ larger) and cuts classification errors by $\sim 20\%$ ($\sim 87\%$ accuracy).
+- **Four engineering goals:** Implement from scratch and via `Sequential`, verify pre-training invariants, benchmark GPU speed, and visualize learned $\mathbf{W}^{(1)}$ filters.
+:::
 
-- **The linear baseline:** Softmax regression uses $784 \times 10 + 10 = 7{,}850$ parameters ($7{,}840$ multiply-adds per image) and plateaus around $84\%$ validation accuracy after $30$ epochs, confusing upper-body tops of similar silhouette (shirt, T-shirt, pullover, coat).
-- **The 256-unit ReLU MLP:** Inserting one hidden layer of width $h = 256$ increases the model to $203{,}530$ parameters and $203{,}264$ multiply-adds per image ($26\times$ larger).
-- **Our four engineering goals:** Implement the MLP from scratch and via framework `Sequential` blocks, verify the untrained model with pre-training checks, benchmark accuracy and GPU wall-clock speed, and inspect the filters learned in $\mathbf{W}^{(1)}$.
+::: {.col .fig .big}
+@fig:ch04-mlp-impl-goals
+:::
+:::
 :::
 
 ::: {.slide title="Architecture and Parameter Budget of Our MLP"}
@@ -497,11 +503,17 @@ Flattening each $28 \times 28$ image in a minibatch of size $n$ into a row of $\
 ::: {.slide title="Why Weights Must Start Small and Random"}
 [Initialization Invariants]{.kicker}
 
-To keep our comparison with softmax regression controlled, we draw weights i.i.d. from $\mathcal{N}(0, 0.01^2)$ and set biases to $0$:
+::: {.cols .vc}
+::: {.col}
+- **Symmetry breaking requires randomness:** If all columns of $\mathbf{W}^{(1)}$ started equal, every hidden unit would compute the exact same activation and receive the exact same gradient forever—collapsing $256$ units into $1$.
+- **Small initial scale ($\sigma = 0.01$):** Keeps initial logits near $0$ so softmax starts near uniform probabilities ($\hat{y}_j \approx 1/10$, loss $\approx \log 10 \approx 2.303$).
+- **Fresh initializer instances:** In Keras, always instantiate a new `RandomNormal(stddev=0.01)` per layer so weights do not replay the same random seed.
+:::
 
-- **Symmetry breaking requires randomness:** If all columns of $\mathbf{W}^{(1)}$ and rows of $\mathbf{W}^{(2)}$ started equal, every hidden unit would compute the exact same activation and receive the exact same backward gradient forever—collapsing $256$ units into $1$.
-- **Small initial scale ($\sigma = 0.01$):** Keeps initial logits near $0$ so softmax starts near uniform probabilities ($\hat{y}_j \approx 1/10$, cross-entropy $\approx \log 10 \approx 2.303$) rather than saturated wrong predictions.
-- **Framework pitfall (Keras initializer reuse):** In TensorFlow/Keras, passing a single `RandomNormal(stddev=0.01)` instance to multiple layers replays the exact same random seed; always instantiate a fresh initializer object per weight tensor.
+::: {.col .fig .big}
+@fig:ch04-mlp-symmetry-breaking
+:::
+:::
 :::
 
 ::: {.slide title="Allocating and Registering Parameters from Scratch"}
@@ -515,11 +527,19 @@ Wrapping each array in the framework's parameter class (`nn.Parameter`, `gluon.P
 ::: {.slide title="Elementwise ReLU and the Two-Line Forward Pass"}
 [Forward Propagation]{.kicker}
 
-We implement `relu(X)` via boolean masking `X * (X > 0)` (which sets the subgradient at $z = 0$ to $0$) and factor the hidden representation into `hidden(X)` so `forward(X)` returns raw class logits $\mathbf{O}$:
+::: {.cols .vc}
+::: {.col}
+- We implement `relu(X)` via boolean masking `X * (X > 0)` and return raw class logits $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$.
 
 @mlp-implementation-model-1
 
 @mlp-implementation-model-2
+:::
+
+::: {.col .fig}
+@fig:ch04-mlp-forward-dataflow
+:::
+:::
 :::
 
 ::: {.slide title="Three Pre-Training Sanity Checks on Eight Images"}
@@ -562,17 +582,16 @@ Using each framework's `Sequential` container and built-in linear and ReLU layer
 ::: {.slide title="Matching Weight Initialization Across Frameworks"}
 [Framework Defaults vs. Explicit Init]{.kicker}
 
-Framework linear layers use different default weight distributions, which would confound a controlled comparison if left unconfigured:
+::: {.cols .vc}
+::: {.col}
+- **Different built-in defaults:** PyTorch uses uniform $\pm 1/\sqrt{n_{\textrm{in}}}$, JAX/Flax uses LeCun normal, TensorFlow uses Glorot uniform, and MXNet uses $U(-0.07, 0.07)$.
+- **Controlled comparison:** Explicitly setting $\mathcal{N}(0, 0.01^2)$ and zero biases ensures `MLP` matches `MLPScratch` trajectory-for-trajectory.
+- **Preview of §4.4:** For deep ReLU stacks, we will replace $\sigma = 0.01$ with variance-preserving He initialization ($\sigma = \sqrt{2/n_{\textrm{in}}}$).
+:::
 
-| Framework Layer | Built-In Default Weight Initialization | Default $\sigma$ ($d = 784 \to 256$) | Explicit Override in `MLP` |
-|:--|:--|--:|:--|
-| **PyTorch** `nn.LazyLinear` | Uniform $U(-1/\sqrt{n_{\textrm{in}}}, 1/\sqrt{n_{\textrm{in}}})$ | $0.021$ / $0.036$ | `nn.init.normal_(w, std=0.01)` |
-| **JAX / Flax** `nnx.Linear` | LeCun normal $\mathcal{N}(0, 1/n_{\textrm{in}})$ | $0.036$ / $0.063$ | `nnx.initializers.normal(0.01)` |
-| **TensorFlow** `Dense` | Glorot uniform $U(-\sqrt{6/(n_{\textrm{in}}+n_{\textrm{out}})}, \dots)$ | $0.044$ / $0.087$ | `RandomNormal(stddev=0.01)` |
-| **MXNet** `nn.Dense` | Uniform $U(-0.07, 0.07)$ | $0.040$ / $0.040$ | `init.Normal(sigma=0.01)` |
-
-::: {.d2l-note .rule}
-Always inspect or set layer initialization explicitly when comparing architectures—in §4.4 we prove why $\sigma = \sqrt{2/n_{\textrm{in}}}$ (He initialization) is optimal for deep ReLU stacks.
+::: {.col .fig .big}
+@fig:ch04-mlp-framework-inits
+:::
 :::
 :::
 
@@ -654,13 +673,16 @@ Test your understanding of MLP implementation and diagnostics:
 ::: {.slide title="Summary: Implementing Multilayer Perceptrons"}
 [Key Takeaways]{.kicker}
 
-| Stage / Component | Implementation Pattern | Expected Diagnostic / Metric | Practical Pitfall Prevented |
-|:--|:--|:--|:--|
-| **Parameter Setup** | $\mathbf{W}^{(k)} \sim \mathcal{N}(0, 0.01^2)$, $\mathbf{b}^{(k)} = \mathbf{0}$ | $203{,}530$ floats ($98.7\%$ in layer 1) | Identical weights lock hidden units into permutation symmetry |
-| **Forward Pass** | `H = relu(X @ W1 + b1)`; `O = H @ W2 + b2` | Returns raw logits $\mathbf{O} \in \mathbb{R}^{n \times 10}$ | Passing softmax probabilities into cross-entropy causes double-softmax bug |
-| **Pre-Training Checks** | Run 1 forward pass on $n = 8$ images | Shapes `(8, 256)` & `(8, 10)`; loss $\approx 2.303$; $50\%$ active | Catches shape mismatches, bad weight scales, and dead ReLUs in $<1\textrm{ ms}$ |
-| **Concise Container** | `Sequential(Flatten, Linear(256), ReLU, Linear(10))` | Matches `MLPScratch` curve to within SGD noise | Unconfigured framework defaults use different initial weight variances |
-| **Accuracy vs. Speed** | 30 epochs, batch size $256$, $\eta = 0.1$ | $\sim 87\%$ val accuracy ($20\%$ fewer errors) at $\sim 1\times$ GPU time | Data-loading overhead masks $26\times$ arithmetic increase at width $256$ |
-| **Learned Features** | Plot top-$10$ columns of $\mathbf{W}^{(1)}$ as $28 \times 28$ grids | Localized red/blue edge & garment-part detectors | Explains why MLPs separate look-alike tops better than global templates |
+::: {.cols .vc}
+::: {.col}
+- **From scratch & concise API:** Registering $\mathbf{W}^{(k)} \sim \mathcal{N}(0, 0.01^2)$ and $\mathbf{b}^{(k)} = \mathbf{0}$ breaks hidden-unit symmetry and matches `Sequential(Flatten, Linear(256), ReLU, Linear(10))`.
+- **Pre-training verification:** Checking `(8, 256)` and `(8, 10)` shapes, $\text{loss} \approx \log 10 \approx 2.303$, and $50\%$ active ReLUs on $8$ images catches bugs in $<1\textrm{ ms}$.
+- **Performance & features:** $26\times$ more FLOPs cost $\sim 1\times$ GPU epoch time while localized $\mathbf{W}^{(1)}$ garment-part detectors lift accuracy from $84\%$ to $87\%$.
+:::
+
+::: {.col .fig .big}
+@fig:ch04-mlp-impl-summary
+:::
+:::
 :::
 

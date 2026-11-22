@@ -836,22 +836,34 @@ Multi-Armed Bandits and Exploration<br>**cumulative regret · greedy & epsilon-g
 ::: {.slide title="The Exploration Tax: Random Steps Cost 19 Points"}
 [Motivation & Mental Model]{.kicker}
 
-Every learner that collects its own data faces the exploration-exploitation dilemma: trying uncertain actions costs immediate reward, but never trying them risks missing the optimum:
+::: {.cols .vc}
+::: {.col}
+- **Cost of blind exploration on FrozenLake:** Forcing the optimal policy $\pi^*$ to act randomly with probability $\epsilon = 0.05$ drops its 100-step success rate from **$73.0\%$ to $54.2\%$**.
+- **Blind vs. directed exploration:** $\epsilon$-greedy wastes trials on actions already known to be disastrous as often as on promising alternatives.
+- **Exploration in LLM post-training:** When all $K$ sampled responses to a prompt receive the same verifier score, the relative group update vanishes.
+:::
 
-- **Cost of blind exploration on FrozenLake:** In §14.3, forcing the optimal policy $\pi^*$ to take a uniformly random action with probability $\epsilon = 0.05$ dropped its 100-step success rate from **$73.0\%$ to $54.2\%$**.
-- **Blind vs. directed exploration:** $\epsilon$-greedy explores uniformly across all actions—wasting trials on actions already known to be disastrous as often as on promising alternatives.
-- **Exploration in LLM post-training:** When a language model samples a group of $K$ responses to a prompt, if all $K$ responses receive the exact same verifier score, the relative update vanishes.
+::: {.col .fig .big}
+@fig:ch14-rl-exploration-tax
+:::
+:::
 :::
 
 ::: {.slide title="Multi-Armed Bandits and Cumulative Regret"}
 [Isolating Exploration in a Single State]{.kicker}
 
-A **multi-armed bandit** is an MDP with a single state and $m$ actions (*arms*), where pulling arm $a$ yields a Bernoulli reward $r \in \{0, 1\}$ with unknown mean $\mu_a$:
+::: {.cols .vc}
+::: {.col}
+$$\textrm{Regret}(t) = \sum_{u=1}^{t} \big(\mu^* - \mu_{a_u}\big) = \sum_{a=1}^{m} \Delta_a\,n_t(a)$$
 
-$$\textrm{Regret}(t) = \sum_{u=1}^{t} \big(\mu^* - \mu_{a_u}\big) = \sum_{a=1}^{m} \Delta_a\,n_t(a), \qquad \Delta_a = \mu^* - \mu_a$$
+- **10-armed benchmark:** Best arm $\mu^* = \mu_2 = 0.90$ and smallest gap $\Delta_{\min} = 0.90 - 0.60 = 0.30$ (arm 6).
+- **Linear vs. sublinear regret:** Pulling a $0.50$ arm forever loses $\Delta_a = 0.40$ per pull; sublinear regret ($\textrm{Regret}(t)/t \to 0$) requires pulling suboptimal arms ever more rarely.
+:::
 
-- **10-armed benchmark:** True arm means $\mu = (0.50, 0.42, \mathbf{0.90}, 0.25, 0.55, 0.38, 0.60, 0.32, 0.50, 0.45)$, with best arm $\mu^* = \mu_2 = 0.90$ and smallest gap $\Delta_{\min} = 0.90 - 0.60 = 0.30$.
-- **Linear vs. sublinear regret:** Pulling a $0.50$ arm forever loses $\Delta_a = 0.40$ per pull ($800$ regret over $2{,}000$ pulls, linear in $t$); sublinear regret ($\textrm{Regret}(t)/t \to 0$) requires pulling suboptimal arms ever more rarely.
+::: {.col .fig}
+@fig:ch14-rl-bandit-regret
+:::
+:::
 :::
 
 ::: {.slide title="The Bandit Simulation Harness"}
@@ -887,12 +899,18 @@ Given a row of estimated values $\hat{Q}(s, \cdot) = (0.20, 0.90, 0.55, 0.10)$, 
 ::: {.slide title="Why Pure Greedy Locks Onto the First Paying Arm"}
 [Failure Mode of Zero Exploration]{.kicker}
 
-When all empirical means start at $\hat{\mu}_0(a) = 0$, the pure greedy rule ($\epsilon = 0$) permanently commits to the very first arm that returns a reward of $1$:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbb{E}\big[\textrm{Regret}_{\textrm{greedy}}(2000)\big] \approx 2000 \sum_{a=1}^{m} \frac{\mu_a}{\sum_b \mu_b}\,\Delta_a \approx 707$$
 
-- **The first-win lottery:** While all estimates read $0$, random tie-breaking pulls arms uniformly; once some arm $a$ returns $1$, its empirical mean $\hat{\mu}(a) > 0$ beats every untried arm ($0$) forever.
-- **Lottery probabilities:** Arm $a$ wins the initial draw with probability $\mu_a / \sum_b \mu_b$; the true best arm ($\mu_2 = 0.90$) wins in only $0.90 / 4.87 \approx 18.5\%$ of runs.
+- **The first-win lottery:** Starting at $\hat{\mu}_0(a) = 0$, once any arm $a$ returns $1$, its empirical mean $\hat{\mu}(a) > 0$ beats every untried arm ($0$) forever.
+- **Lottery odds:** Best arm $\mu_2 = 0.90$ wins the initial draw in only $0.90 / 4.87 \approx 18.5\%$ of runs.
+:::
+
+::: {.col .fig}
+@fig:ch14-rl-greedy-lottery
+:::
+:::
 :::
 
 ::: {.slide title="Fixed vs. Annealed Epsilon-Greedy Regret"}
@@ -937,12 +955,18 @@ After pulling each arm once to initialize $n(a) \geq 1$, UCB concentrates almost
 ::: {.slide title="Posterior Sampling (Thompson Sampling)"}
 [Bayesian Probability Matching]{.kicker}
 
-Thompson (1933) maintains a Bayesian posterior over each arm's mean $\mu_a$, draws one random sample $\tilde{\mu}_a$ from each posterior, and pulls $\mathrm{argmax}_a \tilde{\mu}_a$:
+::: {.cols .vc}
+::: {.col}
+$$\mu_a \mid (w_a, n_a) \sim \mathrm{Beta}(1 + w_a,\; 1 + n_a - w_a)$$
 
-$$\mu_a \mid (w_a, n_a) \sim \mathrm{Beta}(1 + w_a,\; 1 + n_a - w_a), \qquad a_t = \underset{a}{\mathrm{argmax}}\;\tilde{\mu}_a$$
+- **Conjugate Beta-Bernoulli update:** Uniform prior $\mathrm{Beta}(1, 1)$ updated with $w_a$ wins and $n_a - w_a$ losses yields $\mathrm{Beta}(1 + w_a, 1 + n_a - w_a)$.
+- **Probability matching without tuning:** Draw one sample $\tilde{\mu}_a$ per arm and pull $\mathrm{argmax}_a \tilde{\mu}_a$, matching each arm's posterior probability of optimality.
+:::
 
-- **Conjugate Beta-Bernoulli update:** Starting from a uniform prior $\mathrm{Beta}(1, 1)$ on $[0, 1]$, observing $w_a$ wins and $n_a - w_a$ losses yields $\mathrm{Beta}(1 + w_a, 1 + n_a - w_a)$.
-- **Probability matching without tuning constants:** Each arm is pulled with the exact posterior probability that it is optimal; an untried arm $\mathrm{Beta}(1, 1)$ beats an arm with 3 wins in 4 pulls ($\mathrm{Beta}(4, 2)$) with probability $1/3$.
+::: {.col .fig}
+@fig:ch14-rl-thompson-beta
+:::
+:::
 :::
 
 ::: {.slide title="Comparing All Five Bandit Rules on Log-Log Axes"}
@@ -980,12 +1004,16 @@ $$\liminf_{t \to \infty} \frac{\mathbb{E}[n_t(a)]}{\ln t} \geq \frac{1}{D(\mu_a 
 ::: {.slide title="Deep Exploration in MDPs: The N-State Chain"}
 [When Reaching an Unknown State Takes k Steps]{.kicker}
 
-In a multi-state MDP, trying an unvisited pair $(s, a)$ requires executing a multi-step trajectory to reach $s$ first:
+::: {.cols .vc}
+::: {.col}
+- **Geometric decay of random walks:** When action $1$ advances and action $0$ resets to state $0$, reaching state $N-1$ requires $N - 1$ right moves in a row ($2^{-(N-1)}$ random-walk probability).
+- **Zero-initialized Q-learning:** Until the first goal reward is collected, all entries read $0$ and $\epsilon$-greedy wanders as a blind random walk.
+:::
 
-$$0 \xrightarrow{\;a=1\;} 1 \xrightarrow{\;a=1\;} 2 \xrightarrow{\;a=1\;} \cdots \xrightarrow{\;a=1\;} N - 1\;(\text{reward } +1), \qquad s \xrightarrow{\;a=0\;} 0$$
-
-- **Geometric decay of random walks:** In an $N$-state chain where action $1$ advances and action $0$ resets to state $0$, reaching the goal requires $N - 1$ consecutive right moves, which a random walk hits with probability $2^{-(N-1)}$.
-- **Zero-initialized Q-learning:** Until the first goal reward is collected, every table entry remains $0$ and $\epsilon$-greedy acts as a blind random walk regardless of $\epsilon$.
+::: {.col .fig .big}
+@fig:ch14-rl-chain-mdp
+:::
+:::
 :::
 
 ::: {.slide title="Optimistic Initialization vs. Random Walk Scaling"}

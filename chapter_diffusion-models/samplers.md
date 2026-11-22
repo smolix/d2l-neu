@@ -1392,23 +1392,34 @@ Fast Diffusion Samplers, Inversion, and Editing<br>**DDIM family (η) · Heun & 
 ::: {.slide title="Why One Trained Network Supports Many Samplers"}
 [Motivation]{.kicker}
 
-Every sampling step evaluates the denoising network once, making generation latency proportional to the step count. How can we cut $1{,}000$ ancestral steps down to $20$–$50$ evaluations without retraining the network?
+::: {.cols .vc}
+::: {.col}
+- **Training depends only on single-time marginals $p_t(\mathbf{x}_t)$:** The regression loss never depends on the joint transition $q(\mathbf{x}_s, \mathbf{x}_t \mid \mathbf{x}_0)$ between two noise levels $s < t$.
+- **Non-Markovian reverse families (Song, Meng & Ermon, 2020):** Any transition from $t \to s$ that preserves the marginal $\mathcal{N}(\alpha_s\mathbf{x}_0, \sigma_s^2\mathbf{I})$ is consistent with the trained predictor $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$.
+- **Three levers for fast sampling:** Stochasticity $\eta$, higher-order ODE solvers (Heun / multistep), and step-grid placement ($\bar\sigma_i$).
+:::
 
-- **Training depends only on single-time marginals $p_t(\mathbf{x}_t)$:** The regression loss $\mathbb{E}_{t, \mathbf{x}_0, \boldsymbol\epsilon}\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \dot{\mathbf{x}}_t\|^2$ never depends on the joint transition $q(\mathbf{x}_s, \mathbf{x}_t \mid \mathbf{x}_0)$ between two noise levels $s < t$.
-- **Non-Markovian reverse families (Song, Meng & Ermon, 2020):** Any transition from $t$ to $s$ that preserves the marginal $q(\mathbf{x}_s \mid \mathbf{x}_0) = \mathcal{N}(\alpha_s\mathbf{x}_0, \sigma_s^2\mathbf{I})$ is consistent with the trained predictor $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$.
-- **Three levers for fast sampling:** (1) deterministic vs. stochastic transitions ($\eta$), (2) higher-order ODE integration (Heun and multistep solvers), and (3) noise-level grid placement ($\bar\sigma_i$).
+::: {.col .fig .big}
+@fig:ch17-diff-one-net-many-samplers
+:::
+:::
 :::
 
 ::: {.slide title="The DDIM Family: Splitting the Noise Budget"}
 [Marginal-Preserving Reverse Steps]{.kicker}
 
-To step from time $t$ to an earlier time $s < t$, pick any fresh noise standard deviation $0 \le \tilde\sigma \le \sigma_s$ and split the target noise variance $\sigma_s^2$ between the kept noise $\boldsymbol\epsilon$ and independent fresh noise $\boldsymbol\xi \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sqrt{\sigma_s^2 - \tilde\sigma^2}\,\hat{\boldsymbol\epsilon} + \tilde\sigma\,\boldsymbol\xi, \qquad \tilde\sigma = \eta\,\sigma_s\sqrt{1 - \kappa^2}$$
 
-$$\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sqrt{\sigma_s^2 - \tilde\sigma^2}\,\hat{\boldsymbol\epsilon} + \tilde\sigma\,\boldsymbol\xi$$
+- **Marginal preservation for all $\tilde\sigma \in [0, \sigma_s]$:** Conditioned on $\mathbf{x}_0$, the orthogonal kept-noise and fresh-noise terms have variances $(\sigma_s^2 - \tilde\sigma^2) + \tilde\sigma^2 = \sigma_s^2$.
+- **DDIM stochasticity parameter $\eta \ge 0$:** Scales $\tilde\sigma$ relative to the forward-posterior standard deviation using $\kappa = \bar\sigma_s/\bar\sigma_t < 1$.
+:::
 
-- **Why every $\tilde\sigma \in [0, \sigma_s]$ preserves the marginal:** Conditioned on $\mathbf{x}_0$, the two orthogonal Gaussian noise terms have variances $(\sigma_s^2 - \tilde\sigma^2) + \tilde\sigma^2 = \sigma_s^2$, so $\mathbf{x}_s \sim \mathcal{N}(\alpha_s\mathbf{x}_0, \sigma_s^2\mathbf{I})$ for every choice of $\tilde\sigma$.
-- **The DDIM stochasticity parameter $\eta \ge 0$:** Parameterizes $\tilde\sigma$ relative to the Markov forward-posterior standard deviation using the SNR ratio $\kappa = \frac{\sigma_s \alpha_t}{\alpha_s \sigma_t} = \frac{\bar\sigma_s}{\bar\sigma_t} < 1$:
-  $$\tilde\sigma = \eta\,\sigma_s\sqrt{1 - \kappa^2}, \qquad \kappa^2 = \frac{\mathrm{SNR}_t}{\mathrm{SNR}_s}$$
+::: {.col .fig}
+@fig:ch17-diff-ddim-noise-split
+:::
+:::
 :::
 
 ::: {.slide title="Comparing DDIM (η = 0, 1) and the Ancestral Chain"}
@@ -1450,26 +1461,35 @@ Running DDIM ($\eta = 0, 1$) and the ancestral chain with the exact mixture pred
 ::: {.slide title="Second-Order Integration: Heun's Predictor–Corrector"}
 [Cutting Discretization Error from O(h) to O(h²)]{.kicker}
 
-Euler's method (DDIM at $\eta = 0$) holds the slope $\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t)$ constant across the interval $\Delta = \bar\sigma_s - \bar\sigma_t$. **Heun's method** takes an Euler trial step to $\bar{\mathbf{x}}'$ and averages the start and end slopes:
-
+::: {.cols .vc}
+::: {.col}
 $$\bar{\mathbf{x}}' = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\,\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t), \qquad \bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\,\frac{\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t) + \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}', \bar\sigma_s)}{2}$$
 
-| Method on $\mathcal{N}(\mathbf{0}, \mathbf{I})$ ($\bar\sigma_t = 1 \to \bar\sigma_s = 0.5$) | Multiplicative Factor on $\bar{\mathbf{x}}$ | Absolute Error vs. Exact Flow | Function Evaluations (NFE) |
-| :--- | :--- | :--- | :--- |
-| **Exact probability-flow ODE** | $\sqrt{(1 + 0.5^2)/(1 + 1^2)} = \mathbf{0.7906}$ | $0.0000$ | — |
-| **1st-Order Euler (DDIM)** | $1 - 0.5(1 / 2) = \mathbf{0.7500}$ | $-0.0406$ (too narrow) | $1$ evaluation |
-| **2nd-Order Heun** | $\frac{1}{2}(0.75 + 1 - 0.5 \cdot \frac{0.5 \cdot 0.75}{1.25}) = \mathbf{0.8000}$ | $+0.0094$ (**$4.3\times$ smaller error**) | $2$ evaluations |
+- **Trapezoidal slope averaging:** Takes an Euler trial step to $\bar{\mathbf{x}}'$ and averages start and end slopes ($2$ NFE/step), cutting local error from $O(\Delta^2)$ to $O(\Delta^3)$.
+- **Quantitative check on $\mathcal{N}(\mathbf{0}, \mathbf{I})$ ($\bar\sigma: 1 \to 0.5$):** Exact factor is $0.7906$; Euler gives $0.7500$ (error $-0.0406$), whereas Heun gives $0.8000$ ($4.3\times$ smaller error $+0.0094$).
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-heun-2nd-order
+:::
+:::
 :::
 
 ::: {.slide title="Exponential Integrators and Multistep Solvers"}
 [Second-Order Accuracy at One Evaluation per Step]{.kicker}
 
-Can we achieve second-order $O(\Delta^2)$ accuracy without paying for a second network evaluation per step?
+::: {.cols .vc}
+::: {.col}
+$$\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + \Delta\!\left(\hat{\boldsymbol\epsilon}_t + \frac{\Delta}{2\Delta'}\big(\hat{\boldsymbol\epsilon}_t - \hat{\boldsymbol\epsilon}'\big)\right)$$
 
-- **Exponential integrator coordinates:** Transforming from $\mathbf{x}_t$ to $\bar{\mathbf{x}}_t = \mathbf{x}_t / \alpha_t$ integrates the linear drift term $-(\dot\alpha_t/\alpha_t)\mathbf{x}_t$ analytically, leaving $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$ driven purely by the neural network (Zhang & Chen, 2023; Lu et al., 2022).
-- **2nd-order Adams–Bashforth multistep update (`multistep_sample`):** Reuses the cached noise prediction $\hat{\boldsymbol\epsilon}'$ from the previous step of size $\Delta'$ to extrapolate the slope linearly to the midpoint of the current step $\Delta = \bar\sigma_s - \bar\sigma_t$:
-  $$\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + \Delta\!\left(\hat{\boldsymbol\epsilon}_t + \frac{\Delta}{2\Delta'}\big(\hat{\boldsymbol\epsilon}_t - \hat{\boldsymbol\epsilon}'\big)\right) = \hat{\mathbf{x}}_0 + \bar\sigma_s\hat{\boldsymbol\epsilon}_t + \frac{\Delta^2}{2\Delta'}\big(\hat{\boldsymbol\epsilon}_t - \hat{\boldsymbol\epsilon}'\big)$$
-- **DPM-Solver++(2M) (Lu et al., 2025):** Applies this exact two-step extrapolation in log-SNR coordinates ($\log \bar\sigma = -\lambda/2$) to $\hat{\mathbf{x}}_0$, requiring only **1 NFE per step**.
+- **Exponential integrator coordinates ($\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$):** Integrates the linear drift analytically, leaving $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$ driven purely by the neural network.
+- **2nd-order Adams–Bashforth (`multistep_sample` / DPM-Solver++):** Reuses the cached slope $\hat{\boldsymbol\epsilon}'$ from the previous step $\Delta'$ to extrapolate linearly to the midpoint at **1 NFE per step**.
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-multistep-ab2
+:::
+:::
 :::
 
 ::: {.slide title="Step-Grid Placement: Linear vs. VP vs. EDM Grids"}
@@ -1573,11 +1593,17 @@ $$\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar\sigma_{t'} - \bar\sigma_t)\
 ::: {.slide title="Analyzing Round-Trip Inversion Error and Code Norm"}
 [Why Inverted Codes Are Narrower Than N(0, I)]{.kicker}
 
-Why does `ddim_invert` followed by `ddim_sample` have nonzero reconstruction error at finite step counts, and why is `code.std()` around $0.70$–$0.88$ instead of $1.0$?
+::: {.cols .vc}
+::: {.col}
+- **Local slope mismatch:** Forward Euler ($t \to t'$) evaluates $\hat{\boldsymbol\epsilon}$ at the lower end $t$, whereas reverse Euler ($t' \to t$) evaluates $\hat{\boldsymbol\epsilon}$ at the upper end $t'$.
+- **Discretization error, not field roughness:** As step count increases $10 \to 50 \to 200$, round-trip MSE drops $100\times$ ($0.036 \to 0.003 \to 0.0003$) at the same rate on our U-Net and on the exact 2D oracle.
+- **Code norm contraction (`std` $\approx 0.8 < 1$):** Forward Euler under-amplifies variance on curved paths.
+:::
 
-- **Local slope mismatch between forward and reverse Euler:** The forward step from $t$ to $t'$ evaluates $\hat{\boldsymbol\epsilon}$ at the lower end $t$, whereas the reverse step from $t'$ to $t$ evaluates $\hat{\boldsymbol\epsilon}$ at the upper end $t'$.
-- **Discretization error, not field roughness:** As step count increases from $10 \to 50 \to 200$, per-pixel round-trip MSE drops from $0.036 \to 0.003 \to 0.0003$ at the same rate on our trained U-Net as on the exact 2D mixture oracle.
-- **Code norm contraction (`std` $< 1$):** Because finite-step forward Euler under-amplifies variance on curved trajectories, inverted codes have standard deviation $\approx 0.8$—a key pitfall when editing real photographs under strong CFG (motivating null-text optimization).
+::: {.col .fig .big}
+@fig:ch17-diff-roundtrip-inversion
+:::
+:::
 :::
 
 ::: {.slide title="Spherical Interpolation (Slerp) in Latent Space"}

@@ -467,22 +467,16 @@ Landscapes and Gradient Descent<br>**ill-conditioned valleys · condition number
 ::: {.slide title="Why Gradient Descent Crawls or Suddenly Diverges"}
 [Motivation]{.kicker}
 
-Every gradient-based optimizer updates parameters $\mathbf{x} \in \mathbb{R}^d$ by stepping opposite the empirical risk gradient, $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Empirical risk minimization:** While generalization depends on unseen test risk, the optimizer's primary job is to reduce the training objective $f(\mathbf{x})$ rapidly and stably.
-- **Beyond poor local minima:** Classical non-convex folklore blamed bad local minima, but in high-dimensional deep networks ($d \gg 10^6$), two other geometric features dominate training dynamics.
+- **Empirical risk minimization:** Updating $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$ in high dimensions ($d \gg 10^6$) is governed not by bad local minima, but by three geometric properties:
+- **1. Ill-conditioning ($\kappa = \lambda_{\max}/\lambda_{\min} \gg 1$):** Large curvature ratios cap stable step sizes $\eta < 2/\lambda_{\max}$ and starve flat directions.
+- **2. High-dimensional saddles & progressive sharpening:** Critical points at high loss are overwhelmingly saddles, and sharpness $\lambda_{\max}(\nabla^2 f(\mathbf{x}_t))$ climbs dynamically until arresting at $2/\eta$.
 :::
 
-::: {.col}
-- **1. Ill-conditioning (anisotropic curvature):** Huge ratios between the steepest and flattest Hessian directions cap the stable step size $\eta$ and starve flat directions.
-- **2. Saddle points and progressive sharpening:** High-loss critical points are overwhelmingly saddles, and the local sharpness $\lambda_{\max}(\nabla^2 f(\mathbf{x}_t))$ evolves dynamically during training.
+::: {.col .fig .big}
+@fig:ch09-opt-gd-obstacles
 :::
-:::
-
-::: {.d2l-note}
-We first solve gradient descent exactly on a 2D quadratic valley to connect curvature, the stability ceiling $2/\lambda_{\max}$, and the condition number $\kappa = \lambda_{\max}/\lambda_{\min}$.
 :::
 :::
 
@@ -542,13 +536,17 @@ Consider the axis-aligned valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$ with gradie
 ::: {.slide title="General Quadratics and the Condition Number κ"}
 [Eigenbasis Analysis]{.kicker}
 
-For any $d$-dimensional quadratic $f(\mathbf{x}) = \frac{1}{2}\mathbf{x}^\top \mathbf{H}\mathbf{x}$ with symmetric positive-definite Hessian $\mathbf{H} \succ \mathbf{0}$ and eigenvalues $0 < \lambda_{\min} = \lambda_1 \le \cdots \le \lambda_d = \lambda_{\max}$:
+::: {.cols .vc}
+::: {.col}
+- **Decoupled eigenmodes:** For $f(\mathbf{x}) = \frac{1}{2}\mathbf{x}^\top \mathbf{H}\mathbf{x}$ with eigenvalues $0 < \lambda_{\min} \le \cdots \le \lambda_{\max}$, each eigenvector $\mathbf{v}_i$ contracts independently by $(1 - \eta\lambda_i)^t$.
+- **Global stability ceiling:** Contracting every mode requires $|1 - \eta\lambda_i| < 1$, bottlenecked by the sharpest mode: **$\eta < 2/\lambda_{\max}$**.
+- **Condition number $\kappa = \lambda_{\max}/\lambda_{\min}$:** At $\eta^\star = \frac{2}{\lambda_{\min} + \lambda_{\max}}$, worst-case contraction is $\frac{\kappa - 1}{\kappa + 1} \approx 1 - \frac{2}{\kappa}$, requiring **$t \approx \frac{\kappa}{2}\ln\frac{1}{\epsilon}$** steps.
+:::
 
-$$\mathbf{x}_t = (\mathbf{I} - \eta\mathbf{H})^t \sum_{i=1}^d c_i \mathbf{v}_i = \sum_{i=1}^d (1 - \eta\lambda_i)^t c_i \mathbf{v}_i$$
-
-- **Global stability ceiling:** Every eigenmode contracts if and only if $|1 - \eta\lambda_i| < 1$ for all $i$, which is bottlenecked by the sharpest mode: **$\eta < \frac{2}{\lambda_{\max}}$**.
-- **Scale-invariant condition number:** Rescaling $f \to c f$ multiplies all $\lambda_i$ by $c$ and divides $\eta$ by $c$; intrinsic geometric difficulty depends only on **$\kappa = \frac{\lambda_{\max}}{\lambda_{\min}} \ge 1$**.
-- **Optimal constant-rate complexity:** At $\eta^\star = \frac{2}{\lambda_{\min} + \lambda_{\max}}$, the worst-case contraction factor is $\frac{\kappa - 1}{\kappa + 1} \approx 1 - \frac{2}{\kappa}$, requiring **$t \approx \frac{\kappa}{2}\log\frac{1}{\epsilon}$** steps to reach relative error $\epsilon$ ($10\ln 100 \approx 46$ steps for $\kappa = 20, \epsilon = 0.01$).
+::: {.col .fig .big}
+@fig:ch09-opt-gd-eigenmodes
+:::
+:::
 :::
 
 ::: {.slide title="Critical Points: Why Saddle Points Dominate in High d"}
@@ -573,12 +571,18 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 ::: {.slide title="Why Strict Saddle Points Do Not Trap Gradient Descent"}
 [Escaping Saddles]{.kicker}
 
-A **strict saddle point** possesses at least one strictly negative Hessian eigenvalue $\lambda = -\mu < 0$ (downward curvature $\mu > 0$):
+::: {.cols .vc}
+::: {.col}
+- **Exponential repulsion along unstable modes:** At a strict saddle with negative eigenvalue $\lambda = -\mu < 0$, each gradient step amplifies any displacement $c_t$:
+  $$c_{t+1} = (1 + \eta\mu)\, c_t$$
+- **Measure-zero stable manifold:** Random initializations have nonzero unstable projections with probability $1$ (Lee et al., 2016).
+- **Logarithmic escape time:** Escaping from initial offset $\delta > 0$ to distance $1$ takes only $t \approx \frac{\ln(1/\delta)}{\eta\mu}$ steps—and minibatch noise kicks iterates off the ridge even if $\delta = 0$.
+:::
 
-- **Exponential repulsion along unstable modes:** Along an eigenvector with eigenvalue $-\mu < 0$, each gradient step *amplifies* any nonzero displacement $\delta$:
-  $$c_{t+1} = (1 - \eta(-\mu))\, c_t = (1 + \eta\mu)\, c_t$$
-- **Measure-zero stable manifold:** The set of initializations whose unstable components vanish identically has Lebesgue measure zero; random initialization escapes strict saddles with probability $1$ (Lee et al., 2016).
-- **Logarithmic escape time:** Starting at distance $\delta > 0$ from the ridge, reaching distance $1$ along the unstable direction takes $\frac{\log(1/\delta)}{\log(1 + \eta\mu)} \approx \frac{\log(1/\delta)}{\eta\mu}$ steps—and minibatch gradient noise kicks iterates off the ridge even when $\delta = 0$.
+::: {.col .fig}
+@fig:ch09-opt-gd-saddle-escape
+:::
+:::
 :::
 
 ::: {.slide title="Activation Plateaus vs. Outlier-Bulk Hessian Spectra"}
@@ -600,31 +604,35 @@ A **strict saddle point** possesses at least one strictly negative Hessian eigen
 ::: {.slide title="L-Smoothness and the Descent Lemma"}
 [Non-Quadratic Guarantees]{.kicker}
 
-On a general non-convex objective where curvature varies across space, suppose $f$ is **$L$-smooth**, meaning its gradient is $L$-Lipschitz ($\|\nabla^2 f(\mathbf{x})\|_2 \le L$ everywhere):
-
-- **Quadratic upper bound:** Integrating along a step $\boldsymbol{\epsilon}$ bounds $f$ above by an isotropic touching parabola of curvature $L$:
-  $$f(\mathbf{x} + \boldsymbol{\epsilon}) \le f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \frac{L}{2}\|\boldsymbol{\epsilon}\|^2$$
-- **The Descent Lemma:** Substituting the gradient step $\boldsymbol{\epsilon} = -\eta\nabla f(\mathbf{x})$ guarantees:
+::: {.cols .vc}
+::: {.col}
+- **Quadratic upper bound ($L$-smoothness):** If $\|\nabla^2 f(\mathbf{x})\|_2 \le L$ everywhere, $f(\mathbf{x}+\boldsymbol{\epsilon}) \le f(\mathbf{x}) + \boldsymbol{\epsilon}^\top\nabla f(\mathbf{x}) + \frac{L}{2}\|\boldsymbol{\epsilon}\|^2$.
+- **The Descent Lemma ($\boldsymbol{\epsilon} = -\eta\nabla f(\mathbf{x})$):**
   $$f(\mathbf{x} - \eta\nabla f(\mathbf{x})) \le f(\mathbf{x}) - \eta\Big(1 - \frac{\eta L}{2}\Big)\|\nabla f(\mathbf{x})\|^2$$
+- **Guaranteed decrease:** Every $0 < \eta < 2/L$ strictly lowers $f$, with the largest guaranteed single-step drop $\frac{\|\nabla f\|^2}{2L}$ at $\eta = 1/L$.
+:::
 
-::: {.d2l-note .rule}
-**Guaranteed descent:** Every learning rate in $0 < \eta < 2/L$ strictly decreases $f$ at any non-critical point, with the largest guaranteed single-step drop $\frac{\|\nabla f(\mathbf{x})\|^2}{2L}$ achieved at $\eta = \frac{1}{L}$.
+::: {.col .fig}
+@fig:ch09-opt-gd-descent-lemma
+:::
 :::
 :::
 
 ::: {.slide title="How the Learning Rate Selects Minima by Sharpness"}
 [Linear Stability of Minima]{.kicker}
 
-Inverting the stability bound $0 < \eta < 2/\lambda$ reveals which local minima gradient descent can actually inhabit at a fixed learning rate $\eta$:
+::: {.cols .vc}
+::: {.col}
+- **Curvature filter:** Near a minimum $x^\star$ of curvature $\lambda = f''(x^\star) > 0$, one step multiplies displacement $x - x^\star$ by $1 - \eta\lambda$:
+  - **Stable ($\lambda < 2/\eta$):** $|1 - \eta\lambda| < 1$ attracts iterates into $x^\star$.
+  - **Unstable ($\lambda > 2/\eta$):** $1 - \eta\lambda < -1$ ejects iterates out of the basin!
+- **On $f(x) = x\cos(0.15\pi x)$:** At $\eta = 0.5$ ($2/\eta = 4$), both the deep sharp minimum ($f'' = 1.81$) and shallow flat minimum ($f'' = 0.98$) are stable; raising $\eta = 2.0$ ($2/\eta = 1$) destabilizes the deep minimum ($-2.62$) and forces convergence to the flat one.
+:::
 
-- Near any local minimum $x^\star$ with local curvature $\lambda = f''(x^\star) > 0$, one gradient step multiplies a small displacement $x - x^\star$ by $1 - \eta\lambda$:
-  - **Linearly stable ($\lambda < 2/\eta$):** $|1 - \eta\lambda| < 1$, attracting nearby iterates into $x^\star$.
-  - **Linearly unstable ($\lambda > 2/\eta$):** $1 - \eta\lambda < -1$, repelling iterates out of the basin.
-
-| Minimum of $f(x) = x\cos(0.15\pi x)$ | Local Curvature $f''(x^\star)$ | Multiplier $1 - \eta f''$ at $\eta = 0.5$ ($2/\eta = 4$) | Multiplier $1 - \eta f''$ at $\eta = 2.0$ ($2/\eta = 1$) |
-| :--- | :---: | :---: | :---: |
-| **Deep minimum ($x = 7.27$)** | $1.81$ | $+0.09$ (**stable**) | $-2.62$ (**unstable — ejected!**) |
-| **Shallow minimum ($x = -1.83$)** | $0.98$ | $+0.51$ (**stable**) | $-0.96$ (**stable**) |
+::: {.col .fig .big}
+@fig:ch09-opt-gd-sharpness-filter
+:::
+:::
 :::
 
 ::: {.slide title="Sharpness Selection in Action: η = 0.5 vs. η = 2.0"}
@@ -680,15 +688,19 @@ Inverting the stability bound $0 < \eta < 2/\lambda$ reveals which local minima 
 ::: {.slide title="Newton's Method and Why Exact Hessian Inversion Fails"}
 [Second-Order Optimization]{.kicker}
 
-Minimizing the local second-order Taylor quadratic $f(\mathbf{x} + \boldsymbol{\epsilon}) \approx f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \frac{1}{2}\boldsymbol{\epsilon}^\top \mathbf{H}\boldsymbol{\epsilon}$ yields **Newton's method**:
+::: {.cols .vc}
+::: {.col}
+- **Newton's step ($\mathbf{x} \leftarrow \mathbf{x} - \mathbf{H}^{-1}\nabla f(\mathbf{x})$):** Rescales every eigendirection by $1/\lambda_i$, collapsing $\kappa \to 1$ and solving any positive-definite quadratic in $1$ step.
+- **Why exact Newton steps fail in deep learning:**
+  1. **$O(d^2)$ storage & $O(d^3)$ inversion:** $\mathbf{H}$ has $10^{18}$ entries at $d = 10^9$.
+  2. **Saddle attraction:** Negative eigenvalues $\lambda_i < 0$ flip the step sign and drive iterates *uphill* toward saddles or maxima.
+  3. **Noise amplification:** Inverting tiny noisy curvature estimates explodes minibatch variance.
+:::
 
-$$\mathbf{x} \leftarrow \mathbf{x} - \mathbf{H}^{-1}\nabla f(\mathbf{x})$$
-
-- **Ideal quadratic invariance:** Rescales every eigendirection by $1/\lambda_i$, solving any positive-definite quadratic in **1 step** regardless of $\kappa$ and achieving local quadratic convergence.
-- **Three reasons exact Newton steps are impractical in deep learning:**
-  1. **Computational & memory cost:** Storing $\mathbf{H} \in \mathbb{R}^{d \times d}$ takes $10^{18}$ entries at $d = 10^9$; solving $\mathbf{H}\boldsymbol{\epsilon} = -\nabla f$ via Hessian–vector products requires dozens of backprop sweeps per step.
-  2. **Attraction to saddles and maxima:** Negative eigenvalues $\lambda_i < 0$ invert the step sign and drive iterates *uphill* toward saddle points or local maxima.
-  3. **Noise amplification:** Inverting small, noisy minibatch curvature estimates explodes variance.
+::: {.col .fig .big}
+@fig:ch09-opt-gd-newton-hazards
+:::
+:::
 :::
 
 ::: {.slide title="Diagonal Preconditioning: Rescaling Each Coordinate"}

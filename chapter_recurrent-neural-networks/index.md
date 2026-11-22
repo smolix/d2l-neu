@@ -69,45 +69,49 @@ Sequence Models and Recurrent Neural Networks<br>**autoregression · BPE subword
 ::: {.slide title="Why Fixed-Shape Feedforward Models Fail on Sequences"}
 [Motivation & Core Problem]{.kicker}
 
-Feedforward networks and CNNs assume fixed-dimensional inputs $\mathbf{x} \in \mathbb{R}^d$ drawn independently, whereas text, speech, and time series vary in length and depend strictly on temporal order:
-
-- **Unbounded causal context:** Completing the 20-word opening sentence of H. G. Wells' *The Time Machine* (*"The Time Traveller (for so it will be convenient to speak of him) was expounding a recondite matter to ___"*) requires integrating nineteen preceding words in exact order.
-- **Combinatorial context explosion:** Tracking 20 tokens of history over a modest 1,024-token vocabulary yields $1024^{20} \approx 10^{60}$ distinct contexts; even for 3-word triples ($n = 3$), $87\%$ of held-out triples in *The Time Machine* never appear in training.
+::: {.cols .vc}
+::: {.col}
+- **Unbounded causal context:** Completing the 20-word opening sentence of H. G. Wells' *The Time Machine* requires integrating nineteen preceding words in exact temporal order.
+- **Combinatorial context explosion:** Tracking 20 tokens over a 1,024-token vocabulary yields $1024^{20} \approx 10^{60}$ contexts; even for 3-word triples ($n = 3$), $87\%$ of held-out triples never appear in training.
 - **Bounded-state compression:** A sequence model must compress an arbitrarily long prefix $x_{<t} = (x_1, \ldots, x_{t-1})$ into a fixed-size representation with constant parameter count and $O(1)$ compute per step.
+:::
 
-::: {.d2l-note}
-**The Unifying Pipeline:** Even when modern LLMs replace recurrent cells with self-attention or structured state space models, the core pipeline of this chapter—**byte-level BPE tokenization**, **chain-rule language modeling**, **bits-per-byte evaluation**, and **autoregressive decoding**—transfers unchanged.
+::: {.col .fig .big}
+@fig:ch08-rnn-fixed-vs-seq
+:::
 :::
 :::
 
 ::: {.slide title="Chapter 8 Roadmap: From Time Series to Decoding"}
 [Architectural Progression]{.kicker}
 
-Each section builds one layer of an end-to-end autoregressive sequence modeling and generation system:
+::: {.cols .vc}
+::: {.col}
+- **Data & representation (§§8.1–8.2):** Formulate chain-rule autoregression ($m$-step windows vs. latent state $\mathbf{h}_t$) and convert raw UTF-8 strings into subword IDs via pre-tokenized Byte Pair Encoding (BPE).
+- **Probabilistic scoring & RNNs (§§8.3–8.4):** Benchmark Kneser–Ney $n$-grams in tokenizer-invariant bits per byte ($\textrm{bpb}$), then replace count tables with a shared-weight $\tanh$ recurrent cell stabilized by global gradient clipping.
+- **Credit assignment & decoding (§§8.5–8.6):** Derive Backpropagation Through Time (BPTT) to explain why gradients vanish or explode, and compare beam search against truncated samplers ($\text{top-}k$, $\text{top-}p$, $\text{min-}p$).
+:::
 
-| Section | Central Question | Core Mathematical & Systems Mechanism |
-|---|---|---|
-| **§8.1 Working with Sequences** | How do we predict a series from its own past? | Chain-rule factorization, $m$-step Markov windows vs. latent state $\mathbf{h}_t$, 1-step vs. $k$-step rollout drift |
-| **§8.2 From Text to Tokens** | How do we convert raw strings into integer IDs? | Character vs. word granularity trade-off, UTF-8 byte alphabet, Byte Pair Encoding (BPE), regex pre-tokenization |
-| **§8.3 Language Models** | How do we estimate $P(x_{1:T})$ and compare tokenizers? | Count-based $n$-grams, Zipf's law sparsity, Laplace vs. interpolated Kneser–Ney, Perplexity ($\textrm{PPL}$) & Bits per Byte ($\textrm{bpb}$) |
-| **§8.4 Recurrent Neural Networks** | How does a learned hidden state replace fixed windows? | $\mathbf{H}_t = \tanh(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}})$, teacher forcing, global gradient clipping $\min(1, \theta/\|\mathbf{g}\|)$ |
-| **§8.5 Backpropagation Through Time** | Why do vanilla RNN gradients vanish or explode? | Unrolled backward recursion $\mathbf{G}_t = \nabla_{\mathbf{O}_t} L\,\mathbf{W}_{\textrm{hq}}^\top + \mathbf{G}_{t+1}\mathbf{W}_{\textrm{hh}}^\top$, matrix powers $(\mathbf{W}_{\textrm{hh}}^\top)^{j-t}$, truncated BPTT |
-| **§8.6 Decoding and Generation** | How do we turn next-token distributions into fluent text? | Greedy argmax cycles, length-normalized beam search, temperature $\tau$, and tail truncation (top-$k$, top-$p$, min-$p$) |
+::: {.col .fig .big}
+@fig:ch08-rnn-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="End-to-End Quantitative Benchmarks on Wells' Novella"}
 [Empirical Anchors]{.kicker}
 
-Every section validates its mathematical analysis against concrete measurements on *The Time Machine* (~30,000 words, 179,462 UTF-8 bytes, 65,741 BPE-1024 tokens):
+::: {.cols .vc}
+::: {.col}
+- **Rollout drift & subword compression (§§8.1–8.2):** Linear AR($4$) achieves $0.05$ 1-step MSE on a noisy sine wave but degrades $5\times$ to $0.25$ on 64-step rollout; BPE-1024 compresses *The Time Machine* to $2.78$ bytes/token with zero OOVs.
+- **Count vs. neural language models (§§8.3–8.4):** Kneser–Ney cuts word trigram PPL from $2{,}481 \to 300$ ($1.90$ bpb on BPE-1024); clipped `RNNLMScratch` ($512$-byte state, $89\%$ params in vocabulary layers) reaches $2.12$ bpb.
+- **Gradient horizon & generation (§§8.5–8.6):** Despite $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$, $\tanh'$ contraction ($\approx 0.27$) decays gradients below $1\%$ within $8$ steps; truncated samplers restore `distinct-3` $\approx 0.99$.
+:::
 
-| Section | Experimental Setup | Key Empirical Finding |
-|---|---|---|
-| **§8.1 Sequences** | Linear AR ($m = 4$) on $x_t = \sin(0.01t) + \epsilon_t$ ($\sigma = 0.2$) | 1-step MSE $\approx 0.05$ (noise floor), but 64-step rollout MSE degrades $5\times$ to $\approx 0.25$ as learned moving average damps oscillation |
-| **§8.2 BPE Tokens** | Byte-level BPE ($|\mathcal{V}| = 1{,}024 + 3$ specials) with `GPT2_PATTERN` | Matches OpenAI `tiktoken` (`gpt2`) token-for-token; achieves $2.78$ bytes/token ($67\%$ of 50k/200k production vocabularies) with zero OOVs |
-| **§8.3 $n$-Grams** | Unigram, bigram, trigram across characters, BPE-1024, and words | $87\%$ of validation word trigrams are unseen; Kneser–Ney cuts word trigram PPL from $2{,}481 \to 300$ and BPE-1024 trigram to $1.90$ bpb |
-| **§8.4 RNN LM** | `RNNLMScratch` & `RNNLM` ($d = 64 \to 512$, $h = 128$, $T = 32$) | $222{,}915$ baseline parameters ($89\%$ in embedding/output layers, $512$-byte state); clipping at $\theta = 1$ prevents explosion and reaches $\approx 2.1$ bpb |
-| **§8.5 BPTT** | Backward Jacobian norm probe across $L = 64$ validation steps | Despite spectral radius $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.8$, mean $\tanh'$ factor $0.27$ causes gradient norm to decay below $1\%$ within $8$ steps |
-| **§8.6 Decoding** | 100-token rollouts across 20 prompts under 6 decoding strategies | Greedy and beam ($w = 4$) maximize likelihood but collapse into loops (`distinct-3` $\ll 0.5$); top-$k$/top-$p$/min-$p$ restore `distinct-3` $\approx 0.99$ |
+::: {.col .fig .big}
+@fig:ch08-rnn-wells-benchmarks
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Designing an End-to-End Language Model"}
@@ -131,12 +135,16 @@ Before diving into §8.1, test how the components of the sequence modeling pipel
 ::: {.slide title="Key Takeaways: The Sequence Modeling Pipeline"}
 [Chapter Synthesis]{.kicker}
 
-| Pipeline Stage | Classical / Naive Approach | Modern / Neural Solution in Chapter 8 | Core Invariant / Equation |
-|---|---|---|---|
-| **1. Tokenization (§8.2)** | Fixed word list ($+\texttt{<unk>}$) or raw characters | Pre-tokenized byte-level BPE over 256 UTF-8 bytes | Replay learned pair merges in ascending rank order; special IDs sit above $|\mathcal{V}_{\textrm{BPE}}|$ |
-| **2. Sequence Probability (§8.1, §8.3)** | Unsmoothed count tables over $m$-token Markov windows | Chain-rule product of next-token conditionals smoothed or parameterized by neural state | $P(x_{1:T}) = \prod_{t=1}^T P(x_t \mid x_{<t})$, evaluated via $\textrm{bpb} = \frac{1}{B}\sum_{t=1}^T -\log_2 P(x_t \mid x_{<t})$ |
-| **3. Recurrent Representation (§8.4)** | Lookup table or $m$-gram concatenation growing with window | Shared-weight recurrent cell updating a fixed-size latent summary $\mathbf{H}_t \in \mathbb{R}^{b \times h}$ | $\mathbf{H}_t = \tanh(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}})$, $\mathbf{O}_t = \mathbf{H}_t\mathbf{W}_{\textrm{hq}} + \mathbf{b}_{\textrm{q}}$ |
-| **4. Credit Assignment (§8.5)** | Full-corpus backprop or unclipped SGD updates | Truncated BPTT across detached windows of length $T_0$ with global norm clipping | $\mathbf{G}_t = \nabla_{\mathbf{O}_t} L\,\mathbf{W}_{\textrm{hq}}^\top + (\mathbf{G}_{t+1} \odot (1 - \mathbf{H}_{t+1}^2))\mathbf{W}_{\textrm{hh}}^\top$; clip $\mathbf{g} \leftarrow \min(1, \theta/\|\mathbf{g}\|)\mathbf{g}$ |
-| **5. Autoregressive Decoding (§8.6)** | Greedy argmax or raw unpruned multinomial sampling | Length-normalized beam search (constrained tasks) or temperature + top-$k$/top-$p$/min-$p$ (open-ended) | Truncate unreliable tail of $P_\tau(x \mid x_{<t}) \propto \exp(o_x/\tau)$, renormalize, and carry state $\mathbf{H}_t$ in $O(1)$ per step |
+::: {.cols .vc}
+::: {.col}
+- **Universal subwords & invariant scoring (§§8.2–8.3):** Pre-tokenized byte-level BPE eliminates `<unk>` tokens while reserving special IDs above $|\mathcal{V}_{\textrm{BPE}}|$; bits per byte ($\textrm{bpb}$) compares any tokenization on a common lossless-compression scale.
+- **Constant-memory recurrence & BPTT (§§8.4–8.5):** Shared weights update a fixed-size state $\mathbf{H}_t \in \mathbb{R}^{b \times h}$ in $O(1)$ per step; truncated BPTT bounds memory to $O(T_0 bh)$ and global norm clipping prevents exploding gradient steps.
+- **Controlled autoregressive decoding (§8.6):** Length-normalized beam search serves constrained tasks, while temperature + $\text{top-}p / \text{min-}p$ tail truncation eliminates repetition loops in open-ended generation.
+:::
+
+::: {.col .fig .big}
+@fig:ch08-rnn-pipeline-summary
+:::
+:::
 :::
 

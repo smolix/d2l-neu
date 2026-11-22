@@ -744,11 +744,17 @@ Gaussian Probability Paths: Diffusion and Flow Matching<br>**VP, linear & cosine
 ::: {.slide title="Why We Need a Continuum of Noise Levels"}
 [Motivation]{.kicker}
 
-Section 17.1 showed that no single noise level $\sigma$ can both mix across separated modes and resolve sharp local density:
+::: {.cols .vc}
+::: {.col}
+- **High noise ($\sigma \gg s$) resolves global weights:** When Gaussian blur fills the $10\text{--}12$ nat valleys between modes, trajectories establish the true $0.5 / 0.3 / 0.2$ mode proportions.
+- **Low noise ($\sigma \ll s$) resolves local geometry:** As $\sigma \to 0$, $\nabla\log p_\sigma \to \nabla\log p$, pulling points tightly into each mode center.
+- **Unifying continuous path:** Interpolate $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol\epsilon$ across $t \in [0, 1]$ and train **one time-conditioned network** across all scales.
+:::
 
-- **High noise ($\sigma \gg s$) resolves global weights:** When Gaussian blur fills the $10$–$12$ nat valleys between modes, gradient-based chains cross freely and establish the true $0.5 / 0.3 / 0.2$ proportions.
-- **Low noise ($\sigma \ll s$) resolves local geometry:** As $\sigma \to 0$, the smoothed score $\nabla \log p_\sigma$ converges to the sharp data score $\nabla \log p$, pulling points tightly into each mode.
-- **The unifying architecture:** Connect clean data $\mathbf{x}_0 \sim p$ at $t = 0$ to unit Gaussian noise $\boldsymbol\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ at $t = 1$ along a continuous **Gaussian path** $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$, and train **one time-conditioned network** across all $t \in [0, 1]$.
+::: {.col .fig .big}
+@fig:ch17-diff-continuum-scales
+:::
+:::
 :::
 
 ::: {.slide title="Annealed Langevin Dynamics on Exact Scores"}
@@ -792,13 +798,18 @@ $$\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon, \qquad t 
 ::: {.slide title="The Shared Clock: Log Signal-to-Noise Ratio"}
 [Equivalence Across Schedules]{.kicker}
 
-How do we compare a noisy point on the VP path at $t = 0.5$ with a noisy point on the linear path? What a denoiser can infer about $\mathbf{x}_0$ depends solely on the **log signal-to-noise ratio (log-SNR)**:
+::: {.cols .vc}
+::: {.col}
+$$\lambda_t = \log\!\left(\frac{\alpha_t^2}{\sigma_t^2}\right), \qquad c\,\mathbf{x}_t = (1 - t_{\textrm{lin}})\,\mathbf{x}_0 + t_{\textrm{lin}}\,\boldsymbol\epsilon$$
 
-$$\lambda_t = \log\!\left(\frac{\alpha_t^2}{\sigma_t^2}\right) = 2\big(\log \alpha_t - \log \sigma_t\big)$$
+- **Exact rescaling onto the linear path:** Dividing $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol\epsilon$ by $\alpha_t + \sigma_t$ ($c = 1/(\alpha_t + \sigma_t)$) lands on the linear path at $t_{\textrm{lin}} = \sigma_t/(\alpha_t + \sigma_t)$ with identical log-SNR $\lambda_t$.
+- **Schedule = time reparameterization:** All Gaussian paths traverse the exact same family of distributions indexed by $\lambda \in (-\infty, +\infty)$, differing only in clock speed.
+:::
 
-- **Exact rescaling onto the linear path:** Dividing any Gaussian path point $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol\epsilon$ by $c^{-1} = \alpha_t + \sigma_t$ produces a point on the linear path at time $t_{\textrm{lin}} = \sigma_t / (\alpha_t + \sigma_t)$ with identical log-SNR $\lambda$:
-  $$c\,\mathbf{x}_t = (1 - t_{\textrm{lin}})\,\mathbf{x}_0 + t_{\textrm{lin}}\,\boldsymbol\epsilon, \qquad c = \frac{1}{\alpha_t + \sigma_t}$$
-- **Schedule = time reparameterization:** Because multiplying by a known scalar $c$ is invertible, all Gaussian paths traverse the exact same family of distributions indexed by $\lambda \in (-\infty, +\infty)$—differing only in how fast the clock $\lambda_t$ runs.
+::: {.col .fig}
+@fig:ch17-diff-log-snr-clock
+:::
+:::
 :::
 
 ::: {.slide title="Comparing VP, Linear, and Cosine Clocks in Code"}
@@ -838,13 +849,18 @@ $$\mathbf{x}_k = \sqrt{1 - \beta_k}\,\mathbf{x}_{k-1} + \sqrt{\beta_k}\,\boldsym
 ::: {.slide title="Conditional Velocity vs. Marginal Velocity Fields"}
 [Flow Matching Formulation]{.kicker}
 
-To move a sample along a path, a solver needs a velocity vector field. Differentiating $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol\epsilon$ in time gives the **conditional velocity** of a single pair $(\mathbf{x}_0, \boldsymbol\epsilon)$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{u}_t(\mathbf{x}) = \mathbb{E}\big[\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon \,\big|\, \mathbf{x}_t = \mathbf{x}\big] = \dot\alpha_t \hat{\mathbf{x}}_0(\mathbf{x}) + \dot\sigma_t \hat{\boldsymbol\epsilon}(\mathbf{x})$$
 
-$$\dot{\mathbf{x}}_t = \dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon \qquad (\text{on the linear path: } \dot{\mathbf{x}}_t = \boldsymbol\epsilon - \mathbf{x}_0)$$
+- **Conditional velocity $\dot{\mathbf{x}}_t = \dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon$:** Single-pair velocity (on the linear path: $\boldsymbol\epsilon - \mathbf{x}_0$); chords from different pairs cross throughout space.
+- **Marginal velocity field $\mathbf{u}_t(\mathbf{x})$:** Posterior-averaged velocity of all trajectories passing through $(\mathbf{x}, t)$, defining a single-valued vector field that transports $p_t$.
+:::
 
-- **Crossing trajectories:** Many different pairs $(\mathbf{x}_0, \boldsymbol\epsilon)$ pass through the same location $\mathbf{x}$ at time $t$, each traveling in its own direction $\dot{\mathbf{x}}_t$.
-- **The marginal velocity field $\mathbf{u}_t(\mathbf{x})$:** The probability cloud $p_t(\mathbf{x})$ as a whole moves with the posterior-averaged velocity of all trajectories passing through $\mathbf{x}$ at time $t$:
-  $$\mathbf{u}_t(\mathbf{x}) = \mathbb{E}\big[\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon \,\big|\, \mathbf{x}_t = \mathbf{x}\big] = \dot\alpha_t \hat{\mathbf{x}}_0(\mathbf{x}) + \dot\sigma_t \hat{\boldsymbol\epsilon}(\mathbf{x})$$
+::: {.col .fig}
+@fig:ch17-diff-cond-vs-marg-vel
+:::
+:::
 :::
 
 ::: {.slide title="Visualizing Conditional vs. Marginal Fields"}
@@ -869,14 +885,17 @@ On our three-mode mixture, both the single-point conditional path $p_t(\mathbf{x
 ::: {.slide title="Conditional Flow Matching (CFM) Regression"}
 [Training Without the Marginal Field]{.kicker}
 
-We cannot evaluate the marginal integral $\mathbf{u}_t(\mathbf{x})$ on real datasets—yet least-squares regression onto per-example conditional velocities recovers it automatically:
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}_{t, \mathbf{x}_0, \boldsymbol\epsilon}\big[\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon)\|^2\big] = \mathbb{E}_{t, \mathbf{x}_t}\big[\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t)\|^2\big] + C$$
 
-- **The Conditional Flow Matching identity (Lipman et al., 2022):** Expanding the squared error by conditioning on $\mathbf{x}_t$ separates the loss into the marginal error plus a $\boldsymbol\theta$-independent variance floor $C$:
-  $$\mathbb{E}_{t, \mathbf{x}_0, \boldsymbol\epsilon}\big[\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon)\|^2\big] = \mathbb{E}_{t, \mathbf{x}_t}\big[\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t)\|^2\big] + C$$
-- **Identical gradients and minimizer:** Because the conditional variance $C = \mathbb{E}\big[\|(\dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon) - \mathbf{u}_t(\mathbf{x}_t)\|^2\big]$ does not depend on $\boldsymbol\theta$, SGD on random pairs $(\mathbf{x}_0, \boldsymbol\epsilon)$ has the exact same expected gradient as regressing directly onto the unknown oracle $\mathbf{u}_t(\mathbf{x}_t)$.
+- **Conditional Flow Matching identity (Lipman et al., 2022):** Conditioning on $\mathbf{x}_t$ splits the loss into the marginal field error plus a $\boldsymbol\theta$-independent variance floor $C$.
+- **Identical gradients:** Because $\nabla_{\boldsymbol\theta} C = \mathbf{0}$, SGD on random pairs $(\mathbf{x}_0, \boldsymbol\epsilon)$ has the exact same expected gradient as regressing onto the unknown oracle $\mathbf{u}_t(\mathbf{x}_t)$.
+:::
 
-::: {.d2l-note}
-**Unifying principle:** Just as Denoising Score Matching learns $\nabla \log p_\sigma$ by regressing onto $-\boldsymbol\epsilon/\sigma$, Conditional Flow Matching learns $\mathbf{u}_t$ by regressing onto $\dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon$.
+::: {.col .fig}
+@fig:ch17-diff-cfm-identity
+:::
 :::
 :::
 
@@ -901,30 +920,37 @@ Training `TimeMLP(256, 3)` on the linear path draws fresh batches of $512$ mixtu
 ::: {.slide title="The Target Dictionary: Five Views of One Oracle"}
 [Score, Noise, Clean Point, v, and Velocity]{.kicker}
 
-Because $\mathbf{x}_t = \alpha_t \hat{\mathbf{x}}_0 + \sigma_t \hat{\boldsymbol\epsilon}$ holds for the posterior means $\hat{\mathbf{x}}_0 = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$ and $\hat{\boldsymbol\epsilon} = \mathbb{E}[\boldsymbol\epsilon \mid \mathbf{x}_t]$, all five standard targets are affine transformations of one **oracle**:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{x}_t = \alpha_t \hat{\mathbf{x}}_0(\mathbf{x}_t) + \sigma_t \hat{\boldsymbol\epsilon}(\mathbf{x}_t)$$
 
-| Target Kind | Per-Example Target | Marginal Optimum (from $\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon}$) | Inverse Recovery of $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$ from Output $\hat{\mathbf{y}}$ |
-| :--- | :--- | :--- | :--- |
-| **Clean point** `'x0'` | $\mathbf{x}_0$ | $\hat{\mathbf{x}}_0$ | $\hat{\mathbf{x}}_0 = \hat{\mathbf{y}}, \quad \hat{\boldsymbol\epsilon} = (\mathbf{x}_t - \alpha_t\hat{\mathbf{y}})/\sigma_t$ |
-| **Noise** `'eps'` | $\boldsymbol\epsilon$ | $\hat{\boldsymbol\epsilon}$ | $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sigma_t\hat{\mathbf{y}})/\alpha_t, \quad \hat{\boldsymbol\epsilon} = \hat{\mathbf{y}}$ |
-| **Score** `'score'` | $-\boldsymbol\epsilon/\sigma_t$ | $\nabla \log p_t(\mathbf{x}_t) = -\hat{\boldsymbol\epsilon}/\sigma_t$ | $\hat{\mathbf{x}}_0 = (\mathbf{x}_t + \sigma_t^2\hat{\mathbf{y}})/\alpha_t, \quad \hat{\boldsymbol\epsilon} = -\sigma_t\hat{\mathbf{y}}$ |
-| **Angular velocity** `'v'` | $\alpha_t\boldsymbol\epsilon - \sigma_t\mathbf{x}_0$ | $\hat{\mathbf{v}} = \alpha_t\hat{\boldsymbol\epsilon} - \sigma_t\hat{\mathbf{x}}_0$ | $\hat{\mathbf{x}}_0 = \frac{\alpha_t\mathbf{x}_t - \sigma_t\hat{\mathbf{y}}}{\alpha_t^2 + \sigma_t^2}, \quad \hat{\boldsymbol\epsilon} = \frac{\sigma_t\mathbf{x}_t + \alpha_t\hat{\mathbf{y}}}{\alpha_t^2 + \sigma_t^2}$ |
-| **Velocity** `'velocity'` | $\dot\alpha_t\mathbf{x}_0 + \dot\sigma_t\boldsymbol\epsilon$ | $\mathbf{u}_t = \dot\alpha_t\hat{\mathbf{x}}_0 + \dot\sigma_t\hat{\boldsymbol\epsilon}$ | $\hat{\mathbf{x}}_0 = \frac{\dot\sigma_t\mathbf{x}_t - \sigma_t\hat{\mathbf{y}}}{\alpha_t\dot\sigma_t - \sigma_t\dot\alpha_t}, \quad \hat{\boldsymbol\epsilon} = \frac{\alpha_t\hat{\mathbf{y}} - \dot\alpha_t\mathbf{x}_t}{\alpha_t\dot\sigma_t - \sigma_t\dot\alpha_t}$ |
+- **One posterior oracle, five coordinates:** Because conditional expectation is linear, the posterior means $\hat{\mathbf{x}}_0 = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$ and $\hat{\boldsymbol\epsilon} = \mathbb{E}[\boldsymbol\epsilon \mid \mathbf{x}_t]$ determine all five targets:
+  - **Score:** $\nabla\log p_t(\mathbf{x}_t) = -\hat{\boldsymbol\epsilon}/\sigma_t$
+  - **Angular velocity:** $\hat{\mathbf{v}} = \alpha_t\hat{\boldsymbol\epsilon} - \sigma_t\hat{\mathbf{x}}_0$
+  - **Marginal velocity:** $\mathbf{u}_t = \dot\alpha_t\hat{\mathbf{x}}_0 + \dot\sigma_t\hat{\boldsymbol\epsilon}$
+:::
+
+::: {.col .fig}
+@fig:ch17-diff-target-dictionary
+:::
+:::
 :::
 
 ::: {.slide title="The Score–Velocity Identity Across Paths"}
 [Connecting Score Models and Flow Matching]{.kicker}
 
-Eliminating $\hat{\mathbf{x}}_0$ and $\hat{\boldsymbol\epsilon}$ between Tweedie's formula $\alpha_t\hat{\mathbf{x}}_0 = \mathbf{x}_t + \sigma_t^2\nabla \log p_t(\mathbf{x}_t)$ and the marginal velocity $\mathbf{u}_t = \dot\alpha_t\hat{\mathbf{x}}_0 + \dot\sigma_t\hat{\boldsymbol\epsilon}$ yields the **score–velocity identity**:
-
+::: {.cols .vc}
+::: {.col}
 $$\mathbf{u}_t(\mathbf{x}) = \frac{\dot\alpha_t}{\alpha_t}\,\mathbf{x} - \Big(\sigma_t\dot\sigma_t - \sigma_t^2\frac{\dot\alpha_t}{\alpha_t}\Big)\nabla_{\mathbf{x}} \log p_t(\mathbf{x})$$
 
-- **On the linear path ($\alpha_t = 1 - t, \sigma_t = t$):** Substituting $\dot\alpha_t = -1$ and $\dot\sigma_t = 1$ simplifies the relation to:
-  $$\mathbf{u}_t(\mathbf{x}) = \hat{\boldsymbol\epsilon}(\mathbf{x}) - \hat{\mathbf{x}}_0(\mathbf{x}) = -\frac{\mathbf{x} + t\,\nabla_{\mathbf{x}} \log p_t(\mathbf{x})}{1 - t}$$
-- **On the VP path ($\alpha_t^2 + \sigma_t^2 = 1$, $\dot\alpha_t / \alpha_t = -\frac{1}{2}\beta(t)$):** The identity reduces to $\mathbf{u}_t(\mathbf{x}) = -\frac{1}{2}\beta(t)\big(\mathbf{x} + \nabla_{\mathbf{x}} \log p_t(\mathbf{x})\big)$.
+- **Linear path ($\alpha_t = 1 - t, \sigma_t = t$):** $\mathbf{u}_t(\mathbf{x}) = \hat{\boldsymbol\epsilon} - \hat{\mathbf{x}}_0 = -\frac{\mathbf{x} + t\nabla\log p_t(\mathbf{x})}{1 - t}$.
+- **VP path ($\alpha_t^2 + \sigma_t^2 = 1$):** $\mathbf{u}_t(\mathbf{x}) = -\frac{1}{2}\beta(t)\big(\mathbf{x} + \nabla\log p_t(\mathbf{x})\big)$.
+- **Takeaway:** Flow-matching velocity networks and score-based diffusion models learn the exact same object in different coordinates.
+:::
 
-::: {.d2l-note}
-A flow-matching velocity network and a score-based diffusion network learn the exact same mathematical object in different coordinates.
+::: {.col .fig}
+@fig:ch17-diff-score-velocity-id
+:::
 :::
 :::
 
@@ -939,14 +965,16 @@ At $\mathbf{x} = (0.5, -0.5)$ on the VP path at $t = 0.5$ ($\alpha_t = 0.28, \si
 ::: {.slide title="Practical Conditioning: Which Target Fits Which Path?"}
 [Numerical & Weighting Differences]{.kicker}
 
-An infinite-capacity oracle is indifferent to the target choice, but finite neural networks face two practical numerical constraints:
+::: {.cols .vc}
+::: {.col}
+- **Division-by-zero singularity at pure noise ($\alpha_1 = 0$):** Noise prediction (`'eps'`) reconstructs $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sigma_t\hat{\boldsymbol\epsilon})/\alpha_t$, dividing by $\alpha_t \to 0$ on schedules reaching exact pure noise (so `'eps'` requires VP with $\alpha_1 \approx 0.007 > 0$).
+- **Well-conditioned velocity & $\mathbf{v}$-prediction:** Linear velocity ($\hat{\mathbf{x}}_0 = \mathbf{x}_t - t\hat{\mathbf{u}}$) and cosine $\mathbf{v}$-prediction ($\hat{\mathbf{x}}_0 = \alpha_t\mathbf{x}_t - \sigma_t\hat{\mathbf{v}}$) reconstruct $\hat{\mathbf{x}}_0$ without dividing by $\alpha_t$.
+:::
 
-- **1. Division-by-zero singularity at pure noise ($\alpha_1 = 0$):**
-  - A noise predictor recovers the clean point via $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sigma_t\hat{\boldsymbol\epsilon})/\alpha_t$. On paths that reach exact Gaussian noise ($\alpha_1 = 0$, such as the linear or cosine path), dividing by $\alpha_t \to 0$ amplifies any tiny noise-prediction error to infinity!
-  - Noise prediction (`'eps'`) therefore requires a path where $\alpha_1 > 0$ (such as the linear-$\beta$ VP path where $\alpha_1 \approx 0.007$).
-  - By contrast, **velocity** on the linear path ($\hat{\mathbf{x}}_0 = \mathbf{x}_t - t\hat{\mathbf{u}}$) and **$\mathbf{v}$-prediction** on the cosine path ($\hat{\mathbf{x}}_0 = \alpha_t\mathbf{x}_t - \sigma_t\hat{\mathbf{v}}$) reconstruct $\hat{\mathbf{x}}_0$ without dividing by $\alpha_t$.
-- **2. Implicit time weighting across $[0, 1]$:**
-  - On the linear path, $\|\hat{\mathbf{u}} - (\boldsymbol\epsilon - \mathbf{x}_0)\|^2 = \frac{1}{(1-t)^2}\|\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon\|^2 = \frac{1}{t^2}\|\hat{\mathbf{x}}_0 - \mathbf{x}_0\|^2$, naturally demanding accurate $\hat{\boldsymbol\epsilon}$ near $t = 1$ and accurate $\hat{\mathbf{x}}_0$ near $t = 0$.
+::: {.col .fig .big}
+@fig:ch17-diff-target-conditioning
+:::
+:::
 :::
 
 ::: {.slide title="DDPM's Simple Loss vs. Score Matching Weighting"}
@@ -965,16 +993,18 @@ Every milestone generative diffusion family corresponds to selecting one path, o
 ::: {.slide title="Analytical Loss Floors Across Targets and Times"}
 [Why Training Losses Never Reach Zero]{.kicker}
 
-At fixed $\mathbf{x}_t$, substituting $\boldsymbol\epsilon = (\mathbf{x}_t - \alpha_t\mathbf{x}_0)/\sigma_t$ writes every per-example target in the form $c_t \mathbf{x}_0 + f(\mathbf{x}_t)$. Thus every target's irreducible loss floor is a scaled multiple of one posterior covariance trace:
+::: {.cols .vc}
+::: {.col}
+$$\mathrm{floor}(t) = c_t^2\,\mathbb{E}\big[\operatorname{tr}\mathrm{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]\big]$$
 
-$$\mathrm{floor}(t) = \mathbb{E}\big[\|\text{target} - \mathbb{E}[\text{target} \mid \mathbf{x}_t]\|^2\big] = c_t^2\,\mathbb{E}\big[\operatorname{tr}\mathrm{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]\big]$$
+- **Every target is $c_t\mathbf{x}_0 + f(\mathbf{x}_t)$ at fixed $\mathbf{x}_t$:** Thus every target's irreducible loss floor is $c_t^2$ times the posterior covariance trace.
+- **Explaining the $9\times$ plateau gap ($4.91$ vs. $0.54$):** Linear velocity ($c_t = -1/t$) plateaus at $\approx 4.91$ while VP noise ($c_t = -\alpha_t/\sigma_t$) plateaus at $\approx 0.54$ purely because of $c_t^2$.
+:::
 
-| Target & Path | Scaling Factor $c_t$ | Single-Mode Floor ($v = s^2 = 0.25, d = 2$) | Floor at $t = 0.1$ | Behavior as $t \to 0$ vs. $t \to 1$ |
-| :--- | :--- | :--- | :--- | :--- |
-| **Clean point** $\mathbf{x}_0$ | $1$ | $\frac{2s^2\sigma_t^2}{\alpha_t^2 s^2 + \sigma_t^2}$ | $0.082$ (linear) | $0$ at $t \to 0$; $\operatorname{tr}\mathrm{Cov}[\mathbf{x}_0]$ at $t \to 1$ |
-| **Noise** $\boldsymbol\epsilon$ (VP) | $-\alpha_t / \sigma_t$ | $\frac{2\alpha_t^2 s^2}{\alpha_t^2 s^2 + \sigma_t^2}$ | $\mathbf{1.37}$ ($\alpha=0.95$) | $d = 2$ at $t \to 0$; **$0$ at $t \to 1$** |
-| **Velocity** $\boldsymbol\epsilon - \mathbf{x}_0$ (Linear) | $-1 / t$ | $\frac{2s^2}{(1-t)^2 s^2 + t^2}$ | $\mathbf{2.35}$ ($\alpha=0.90$) | $d = 2$ at $t \to 0$; rises to $\approx 9$ near $t = 0.9$ |
-| **Raw Score** $-\boldsymbol\epsilon/\sigma_t$ | $-\alpha_t / \sigma_t^2$ | $\frac{2\alpha_t^2 s^2}{\sigma_t^2(\alpha_t^2 s^2 + \sigma_t^2)}$ | $13.4$ (VP) | **Diverges as $2/\sigma_t^2 \to \infty$** as $t \to 0$! |
+::: {.col .fig}
+@fig:ch17-diff-loss-floors
+:::
+:::
 :::
 
 ::: {.slide title="Measuring Excess Loss Above the Exact Oracle Floor"}

@@ -89,52 +89,65 @@ Information Theory and Divergences<br>**entropy · cross-entropy · source codin
 ::: {.slide title="Why Do We Train Models with Cross-Entropy?"}
 [Central Questions of Chapter 37]{.kicker}
 
-Most models in deep learning minimize cross-entropy or compare distributions through KL penalties and adversarial critics. Information theory gives these objectives exact physical and statistical meaning:
+::: {.cols .vc}
+::: {.col}
+- **What does a loss number measure?** Every cross-entropy loss splits into an irreducible data floor plus a non-negative divergence gap: $\textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P \| Q) \ge H(P)$.
+- **Why is log-loss literally a file size?** Arithmetic coding compresses $n$ symbols under $q(x_i \mid x_{<i})$ into $n\,\textrm{CE}_2(P, Q) + 2$ bits.
+- **What when KL blows up?** Optimal transport ($W_1$), kernel MMD, and score matching compare distributions from samples or slopes alone.
+:::
 
-- **What does a loss value actually measure?** When a language model reports $1.2$ nats per character or a classifier plateaus at $0.6$ nats, how low could any model possibly go on that dataset?
-- **Why is a language model's loss literally a file size?** How does pairing an autoregressive model with an arithmetic coder store a message in its total log-loss in bits plus at most two extra bits?
-- **What happens when KL divergence blows up?** When generated samples miss the data manifold or a model's normalizing constant $Z$ is intractable, how can we compare distributions from samples or slopes alone?
-
-::: {.d2l-note .rule}
-**The Fundamental Decomposition:** Every cross-entropy loss splits into an irreducible data floor plus a non-negative divergence gap: $\textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P \| Q) \ge H(P)$.
+::: {.col .fig .big}
+@fig:ch37-info-ce-decomposition
+:::
 :::
 :::
 
 ::: {.slide title="Three Core Theorems Every Practitioner Needs"}
 [Core Mathematical Pillars]{.kicker}
 
-- **Gibbs' inequality and the irreducible floor (§37.1):** Because $D_{\textrm{KL}}(P \| Q) \ge 0$ with equality if and only if $P = Q$, no classifier can push population cross-entropy below the conditional entropy $\mathbb{E}_{\mathbf{x}}[H(p(\cdot \mid \mathbf{x}))]$ of the labels.
-- **Prediction is lossless compression (§37.2):** Kraft's inequality ($\sum_i 2^{-\ell_i} \le 1$) governs symbol codes, while arithmetic coding turns any sequential predictor $q(x_i \mid x_{<i})$ into a stream compressor achieving rate $\textrm{CE}_2(P, Q)$ bits per symbol.
-- **Sample-based bounds have logarithmic ceilings (§§37.3–37.7):** Variational critics lower-bound divergences ($f$-GAN) and mutual information (InfoNCE) from samples alone, but identifying one true partner among $N$ candidates can certify at most $\log N$ nats.
+::: {.cols .vc}
+::: {.col}
+- **Gibbs' inequality (§37.1):** $D_{\textrm{KL}}(P \| Q) \ge 0$ ($= 0 \iff P = Q$), so no classifier can beat the conditional label entropy $H(Y \mid X)$.
+- **Source coding (§37.2):** Kraft's inequality ($\sum_i 2^{-\ell_i} \le 1$) and arithmetic coding turn any causal LLM into a lossless compressor.
+- **Variational critics (§§37.3–37.7):** $f$-GAN and InfoNCE lower-bound divergences and MI from samples, capped at $\log N$ nats for batch size $N$.
+:::
 
-::: {.d2l-note .warn}
-**The Density-Ratio Blind Spot:** Every $f$-divergence built from $p(\mathbf{x})/q(\mathbf{x})$ freezes at a constant on disjoint supports, giving zero gradient—motivating optimal transport ($W_1$), kernel MMD, and score matching.
+::: {.col .fig .big}
+@fig:ch37-info-three-pillars
+:::
 :::
 :::
 
 ::: {.slide title="Chapter 37 Roadmap: Seven Connected Sections"}
 [Chapter Architecture]{.kicker}
 
-| Section | Core Mathematical Object | Key Theorem / Identity | Deep Learning Role |
-|:--|:---|:---|:---|
-| **§37.1 Entropy & KL** | Surprisal $-\log p(x)$, $H(P)$, $D_{\textrm{KL}}(P \| Q)$ | $\textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P \| Q) \ge H(P)$ | Classification floor, calibration, smoothing, distillation |
-| **§37.2 Coding & Perplexity** | Prefix trees, dyadic intervals, $\textrm{PPL} = e^{\textrm{CE}}$ | Kraft $\sum 2^{-\ell_i} \le 1$; $\ell < -\log_2 q(x_{1:n}) + 2$ | LLM compression, MDL, bits per byte across tokenizers |
-| **§37.3 $f$-Divergences** | Density ratio $u = p/q$, convex $f(1)=0$ | Pinsker $\textrm{TV} \le \sqrt{D_{\textrm{KL}}/2}$; Fenchel dual | Forward vs. reverse KL (MLE vs. VI), $f$-GAN critics |
-| **§37.4 IPMs & Transport** | Test class $\mathcal{G}$, couplings $\gamma \in \Pi(P, Q)$ | Kantorovich–Rubinstein duality for $W_1$ | Kernel MMD two-sample tests, WGAN, Sinkhorn OT |
-| **§37.5 Score Comparisons** | Score $s_Q(\mathbf{x}) = \nabla_{\mathbf{x}} \log q(\mathbf{x})$ | Stein's identity $\mathbb{E}_p[g' + g s_p] = 0$ | Hyvärinen score matching, diffusion noise scales, KSD |
-| **§37.6 Mutual Information** | $I(X; Y) = D_{\textrm{KL}}(P_{X,Y} \| P_X \otimes P_Y)$ | Data processing $I(X; Z) \le I(X; Y)$; Fano | Representation limits, rate–distortion, VAE bottleneck |
-| **§37.7 MI Estimation** | KSG neighbor boxes, critics $T(x, y)$ | InfoNCE $I(X; Y) \ge \log N - \mathcal{L}_{\textrm{NCE}}$ | SimCLR / CLIP contrastive learning, $\log N$ ceiling |
+::: {.cols .vc}
+::: {.col}
+- **Track 1 — Log-Loss, Coding & Perplexity (§§37.1–37.2):** Surprisal, Shannon entropy, Gibbs' floor, label smoothing, distillation, Kraft's inequality, arithmetic coding, MDL, AEP, and perplexity.
+- **Track 2 — Divergences, Transport & Scores (§§37.3–37.5):** $f$-divergences, Pinsker's inequality, $f$-GAN, IPMs, kernel MMD, Wasserstein $W_1$, Sinkhorn OT, Stein's identity, score matching, and KSD.
+- **Track 3 — Dependence & Contrastive Bounds (§§37.6–37.7):** Mutual information, DPI, Fano's inequality, Information Bottleneck, KSG neighbors, McAllester–Stratos ceiling, and InfoNCE.
+:::
+
+::: {.col .fig .big}
+@fig:ch37-info-chapter-roadmap
+:::
+:::
 :::
 
 ::: {.slide title="Choosing a Distribution Comparison by Access"}
 [Practical Decision Guide]{.kicker}
 
-What your model supplies determines how you can train or evaluate it against data $P$:
+::: {.cols .vc}
+::: {.col}
+- **Normalized density $q_{\boldsymbol{\theta}}(\mathbf{x}) > 0$:** Minimize **forward KL** $D_{\textrm{KL}}(P \| Q_{\boldsymbol{\theta}})$ via maximum likelihood (mode-covering).
+- **Unnormalized target $\tilde{p}(\mathbf{z}, \mathbf{x})$ with tractable $q_{\boldsymbol{\theta}}$:** Minimize **reverse KL** $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \| P)$ via variational inference / ELBO (mode-seeking).
+- **Implicit sample generator or EBM:** Use **kernel MMD** / **Wasserstein $W_1$** for sample-only generators, or **Fisher divergence** / **KSD** when only the score $-\nabla_{\mathbf{x}}E_{\boldsymbol{\theta}}$ is tractable.
+:::
 
-- **Tractable normalized density $q_{\boldsymbol{\theta}}(\mathbf{x}) > 0$:** Minimize **forward KL** $D_{\textrm{KL}}(P \| Q_{\boldsymbol{\theta}})$ via maximum likelihood—unbiased from data samples and mode-covering.
-- **Unnormalized target $p(\mathbf{z} \mid \mathbf{x}) \propto \tilde{p}(\mathbf{z}, \mathbf{x})$ with tractable model $q_{\boldsymbol{\theta}}$:** Minimize **reverse KL** $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \| P)$ via variational inference (ELBO)—mode-seeking without needing the target normalizer.
-- **Implicit generator producing samples only:** Compare expectations over test functions using **kernel MMD** (closed-form U-statistic) or **Wasserstein-1 ($W_1$)** via a 1-Lipschitz critic that provides steady gradients even on disjoint supports.
-- **Energy-based model $\tilde{q}_{\boldsymbol{\theta}}(\mathbf{x}) = e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}$ with intractable $Z$:** Match log-density slopes $s_Q(\mathbf{x}) = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x})$ via **Fisher divergence** and Stein integration by parts.
+::: {.col .fig .big}
+@fig:ch37-info-access-decision-tree
+:::
+:::
 :::
 
 ::: {.slide title="Running Benchmarks and Study Paths"}

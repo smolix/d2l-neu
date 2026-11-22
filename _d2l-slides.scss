@@ -406,11 +406,11 @@ $d2l-deck-brand-width: 280px;
 .reveal .d2l-deck-nav-links a:visited,
 .reveal .d2l-deck-nav-links a:hover { border-bottom: none; }
 
-// Presenter / speaker-view button — bottom-left, beside reveal's menu
-// (left 8–43) and chalkboard (left 54–128) icons.
-.d2l-presenter-btn {
+// Presenter / speaker-view button & Fullscreen toggle button — bottom-left,
+// beside reveal's menu (left 8–43) and chalkboard (left 54–128) icons.
+.d2l-presenter-btn,
+.d2l-fullscreen-btn {
   position: fixed;
-  left: 136px;
   bottom: 8px;
   z-index: 1061;
   width: 36px;
@@ -426,10 +426,98 @@ $d2l-deck-brand-width: 280px;
   line-height: 1;
   cursor: pointer;
   opacity: 0.85;
-  transition: opacity 0.12s, color 0.12s;
+  touch-action: manipulation;
+  transition: opacity 0.12s, color 0.12s, background 0.12s;
+  border-radius: 6px;
 }
-.d2l-presenter-btn:hover { opacity: 1; color: $blue-dark; }
-@media print { .d2l-presenter-btn { display: none; } }
+.d2l-presenter-btn { left: 136px; }
+.d2l-fullscreen-btn { left: 174px; }
+.d2l-presenter-btn:hover,
+.d2l-fullscreen-btn:hover {
+  opacity: 1;
+  color: $blue-dark;
+  background: rgba($blue, 0.08);
+}
+
+// Top-navbar Fullscreen button
+.d2l-nav-fullscreen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: white;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 0.36rem 0.75rem;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.12s, border-color 0.12s;
+}
+.d2l-nav-fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+// Icon state switching for enter vs. exit fullscreen
+.d2l-fullscreen-btn .icon-exit-fs,
+.d2l-nav-fullscreen-btn .icon-exit-fs {
+  display: none;
+}
+body.d2l-deck-fullscreen .d2l-fullscreen-btn .icon-enter-fs,
+body.d2l-deck-fullscreen .d2l-nav-fullscreen-btn .icon-enter-fs {
+  display: none;
+}
+body.d2l-deck-fullscreen .d2l-fullscreen-btn .icon-exit-fs,
+body.d2l-deck-fullscreen .d2l-nav-fullscreen-btn .icon-exit-fs {
+  display: block;
+}
+
+// Fullscreen view mode (active via native Fullscreen API OR CSS fallback on
+// iPhone / iPad / mobile / iframe): hides the top navigation bar and expands
+// the Reveal viewport to 100% of the dynamic viewport height (100dvh).
+body.d2l-deck-fullscreen .d2l-deck-nav {
+  display: none !important;
+}
+body.d2l-deck-fullscreen .reveal-viewport {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+}
+body.d2l-deck-fullscreen .reveal .slides section:not(.stack) {
+  padding-top: 36px;
+}
+body.d2l-deck-fullscreen .reveal .slides section:has(> .cover)   { padding-top: 185px; }
+body.d2l-deck-fullscreen .reveal .slides section:has(> .divider) { padding-top: 215px; }
+
+// Touch / mobile / iPad ergonomics: ensure dynamic viewport height is respected
+// and bottom-left controls are easy to tap on touch screens.
+.reveal-viewport {
+  height: 100vh;
+  height: 100dvh;
+}
+@media (pointer: coarse) {
+  .d2l-presenter-btn,
+  .d2l-fullscreen-btn {
+    width: 42px;
+    height: 42px;
+    bottom: 6px;
+  }
+  .d2l-fullscreen-btn {
+    left: 180px;
+    background: rgba($blue, 0.10);
+    opacity: 0.95;
+  }
+}
+
+@media print {
+  .d2l-presenter-btn,
+  .d2l-fullscreen-btn { display: none; }
+}
 
 // Layout per SECTION, not on `.slides` (north-star §42–47). Reveal
 // vertically centers the `.slides` block via translate(-50%,-50%), so

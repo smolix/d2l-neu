@@ -1585,23 +1585,38 @@ Recurrent Neural Networks<br>**hidden state recurrence · weight sharing · cons
 ::: {.slide title="Why Fixed-Window Neural Models Hit a Horizon Wall"}
 [Motivation & Latent Autoregressive State]{.kicker}
 
-Even when we replace discrete count tables ($1024^{20} \approx 10^{60}$ contexts) with a feedforward neural network over a fixed window of $m$ token embeddings (Bengio et al., 2003), two structural bottlenecks remain:
+::: {.cols .vc}
+::: {.col}
+$$P(x_t \mid x_{<t}) \approx P(x_t \mid \mathbf{h}_{t-1}), \qquad \mathbf{h}_t = g(\mathbf{h}_{t-1}, x_t)$$
 
-- **Linear parameter growth and hard cutoff:** Concatenating $m$ embeddings of width $d$ into a hidden layer of width $h$ adds $d \times h$ parameters for every extra lag ($8{,}192$ weights per token at $d = 64, h = 128$) while remaining completely blind to token $t - m - 1$.
-- **The recurrent latent-state alternative:** A **Recurrent Neural Network (RNN)** maintains a fixed-size **hidden state** vector $\mathbf{h}_t \in \mathbb{R}^h$ updated recursively with shared parameters at every step:
-  $$P(x_t \mid x_{<t}) \approx P(x_t \mid \mathbf{h}_{t-1}), \qquad \mathbf{h}_t = g(\mathbf{h}_{t-1}, x_t)$$
-- **Unbounded potential horizon in $O(1)$ space:** Because the transition function $g$ reuses the *exact same weights* at every step $t$, parameter count and per-step compute remain independent of sequence length $T$.
+- **Linear parameter growth & hard cutoff:** Concatenating $m$ embeddings of width $d$ adds $d \times h$ weights per lag ($+8{,}192$ at $d=64, h=128$) while remaining blind to token $t - m - 1$.
+- **Shared-weight recurrent state:** An **RNN** compresses the prefix into a fixed-size vector $\mathbf{h}_t \in \mathbb{R}^h$ updated with shared weights at every step—keeping parameter count and per-step compute $O(1)$ at any length $T$.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-window-vs-recurrent-params
+:::
+:::
 :::
 
 ::: {.slide title="From an MLP Hidden Layer to a Recurrent State"}
 [The Recurrent Layer Formulation]{.kicker}
 
-Starting from an ordinary single-hidden-layer MLP $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}_{\textrm{xh}} + \mathbf{b}_{\textrm{h}})$, we add a recurrent feedback term $\mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}}$ that carries the previous step's hidden state into step $t$:
+::: {.cols .vc}
+::: {.col}
+$$\begin{aligned}
+\mathbf{H}_t &= \phi(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}}) \\
+\mathbf{O}_t &= \mathbf{H}_t\mathbf{W}_{\textrm{hq}} + \mathbf{b}_{\textrm{q}}
+\end{aligned}$$
 
-$$\underbrace{\mathbf{H}_t}_{b \times h} = \phi\Big(\underbrace{\mathbf{X}_t}_{b \times d}\underbrace{\mathbf{W}_{\textrm{xh}}}_{d \times h} + \underbrace{\mathbf{H}_{t-1}}_{b \times h}\underbrace{\mathbf{W}_{\textrm{hh}}}_{h \times h} + \underbrace{\mathbf{b}_{\textrm{h}}}_{1 \times h}\Big), \qquad \underbrace{\mathbf{O}_t}_{b \times q} = \underbrace{\mathbf{H}_t}_{b \times h}\underbrace{\mathbf{W}_{\textrm{hq}}}_{h \times q} + \underbrace{\mathbf{b}_{\textrm{q}}}_{1 \times q}$$
+- **Minibatch conventions:** Batch size $b$, embedding width $d$, hidden state size $h$, vocabulary size $q = |\mathcal{V}|$, and nonlinearity $\phi = \tanh$.
+- **Five shared parameter tensors:** $(\mathbf{W}_{\textrm{xh}}, \mathbf{W}_{\textrm{hh}}, \mathbf{b}_{\textrm{h}}, \mathbf{W}_{\textrm{hq}}, \mathbf{b}_{\textrm{q}})$ are reused at every time step starting from $\mathbf{H}_0 = \mathbf{0}$.
+:::
 
-- **Minibatch tensor conventions:** We denote batch size by $b$ (reserving $n$ for $n$-gram order), input embedding width by $d$, hidden state dimension by $h$, output vocabulary size by $q = |\mathcal{V}|$, and activation by $\phi = \tanh$.
-- **Five shared parameter tensors:** Regardless of whether a sequence has $T = 10$ or $T = 100{,}000$ tokens, the network uses only $(\mathbf{W}_{\textrm{xh}}, \mathbf{W}_{\textrm{hh}}, \mathbf{b}_{\textrm{h}}, \mathbf{W}_{\textrm{hq}}, \mathbf{b}_{\textrm{q}})$ starting from initial state $\mathbf{H}_0 = \mathbf{0}$.
+::: {.col .fig}
+@fig:ch08-rnn-cell-dimensions
+:::
+:::
 :::
 
 ::: {.slide title="Unrolling an RNN Across Time with Shared Weights"}
@@ -1627,12 +1642,18 @@ Unrolled across $T$ time steps, an RNN is a $T$-layer deep feedforward network w
 ::: {.slide title="Concatenated Inputs vs. Batched Input Projections"}
 [Linear Algebra & Systems Optimization]{.kicker}
 
-By block matrix multiplication, summing the input projection and the recurrent projection is mathematically identical to a single dense matrix product on concatenated inputs $[\mathbf{X}_t, \mathbf{H}_{t-1}] \in \mathbb{R}^{b \times (d + h)}$:
-
+::: {.cols .vc}
+::: {.col}
 $$[\mathbf{X}_t, \mathbf{H}_{t-1}] \begin{bmatrix} \mathbf{W}_{\textrm{xh}} \\ \mathbf{W}_{\textrm{hh}} \end{bmatrix} = \mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}$$
 
-- **Why deep learning frameworks keep the two products separate:** During teacher-forced training, all $T$ window inputs $\mathbf{X}_1, \ldots, \mathbf{X}_T$ are known before step $t = 1$ runs!
-- **Hoisting $\mathbf{X}\mathbf{W}_{\textrm{xh}}$ out of the time loop:** A framework can compute $\mathbf{X}_{1:T}\mathbf{W}_{\textrm{xh}}$ for all $T$ steps in a single high-throughput $(Tb \times d) \times (d \times h)$ GEMM call on the GPU, leaving only the $(b \times h) \times (h \times h)$ recurrent product $\mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}}$ inside the sequential loop over $t$.
+- **Why keep the two products separate:** During teacher-forced training, all $T$ window inputs $\mathbf{X}_1, \ldots, \mathbf{X}_T$ are known up front.
+- **Hoisting $\mathbf{X}_{1:T}\mathbf{W}_{\textrm{xh}}$ out of the loop:** Frameworks batch all $T$ input projections into one $(Tb \times d) \times (d \times h)$ GPU GEMM, leaving only $\mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}}$ inside the sequential loop over $t$.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-batched-input-gemm
+:::
+:::
 :::
 
 ::: {.slide title="Expressive Power and the 512-Byte State Bottleneck"}
@@ -1668,18 +1689,16 @@ An RNN language model wraps the recurrent cell between an input embedding table 
 ::: {.slide title="Where Do the Parameters and FLOPs Actually Live?"}
 [Parameter & Compute Accounting]{.kicker}
 
-For our baseline BPE language model on *The Time Machine* ($|\mathcal{V}| = 1{,}027$ token IDs, embedding dimension $d = 64$, hidden state dimension $h = 128$), tallying parameters and per-token multiply-accumulate operations (MACs) reveals a surprise:
+::: {.cols .vc}
+::: {.col}
+- **Baseline model ($|\mathcal{V}| = 1{,}027, d = 64, h = 128$):** Total $222{,}915$ parameters and $156{,}032$ multiply-adds (MACs) per token.
+- **The recurrent cell is tiny ($11.1\%$ params):** $\mathbf{W}_{\textrm{xh}}$ ($8{,}192$) and $\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}}$ ($16{,}512$) account for just $24{,}704$ parameters and $15.8\%$ of the compute.
+- **Vocabulary layers dominate ($88.9\%$ params):** Embedding $\mathbf{E}$ ($65{,}728$ params, $O(1)$ gather) and output projection $\mathbf{W}_{\textrm{hq}} + \mathbf{b}_{\textrm{q}}$ ($132{,}483$ params, $84.2\%$ of FLOPs) dominate the budget.
+:::
 
-| Model Component | Tensor Shape(s) | Parameter Count | Share of Params | Per-Token MACs (per sequence) |
-|---|---|--:|--:|--:|
-| **Embedding Table $\mathbf{E}$** | $1{,}027 \times 64$ | $65{,}728$ | $29.5\%$ | $0$ ($O(1)$ row gather) |
-| **Input Projection $\mathbf{W}_{\textrm{xh}}$** | $64 \times 128$ | $8{,}192$ | $3.7\%$ | $64 \times 128 = 8{,}192$ |
-| **Recurrent Matrix $\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}}$** | $128 \times 128 + 128$ | $16{,}512$ | $7.4\%$ | $128 \times 128 = 16{,}384$ |
-| **Output Layer $\mathbf{W}_{\textrm{hq}} + \mathbf{b}_{\textrm{q}}$** | $128 \times 1{,}027 + 1{,}027$ | $132{,}483$ | $59.4\%$ | $128 \times 1{,}027 = 131{,}456$ |
-| **Total Model** | — | **$222{,}915$** | **$100.0\%$** | **$156{,}032$ MACs / token** |
-
-::: {.d2l-note .rule}
-**Systems Takeaway:** The recurrent cell $(\mathbf{W}_{\textrm{xh}}, \mathbf{W}_{\textrm{hh}}, \mathbf{b}_{\textrm{h}})$ holds only **$11.1\%$ of the parameters** and **$15.8\%$ of the compute**; $88.9\%$ of the parameters and $84.2\%$ of the FLOPs sit in the vocabulary embedding and output projection layers!
+::: {.col .fig .big}
+@fig:ch08-rnn-param-flop-breakdown
+:::
 :::
 :::
 
@@ -1710,11 +1729,19 @@ For our baseline BPE language model on *The Time Machine* ($|\mathcal{V}| = 1{,}
 ::: {.slide title="Global Gradient Norm Clipping Stabilizes Updates"}
 [Optimization Safeguard]{.kicker}
 
-Because backpropagating across $T = 32$ steps multiplies $32$ transition Jacobians (§8.5), occasional minibatches produce massive gradient spikes that overshoot the local loss basin by Euclidean step length $\eta\|\mathbf{g}\|$. **Global gradient norm clipping** projects the full parameter gradient vector $\mathbf{g}$ onto the ball of radius $\theta$:
-
-$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)\mathbf{g}, \qquad \|\mathbf{g}\| = \sqrt{\sum_{\mathbf{p} \in \Theta} \|\nabla_{\mathbf{p}} L\|_F^2}$$
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)\mathbf{g}$$
 
 @-rnn-implementation-gradient-clipping
+
+- **Radial ball projection:** Caps the global Euclidean gradient norm $\|\mathbf{g}\|$ at $\theta$ without distorting the update direction, preventing rare Jacobian spikes from catapulting weights out of the basin.
+:::
+
+::: {.col .fig}
+@fig:ch08-rnn-grad-clipping-ball
+:::
+:::
 :::
 
 ::: {.slide title="Training the Plain RNN Baseline with Clipping"}

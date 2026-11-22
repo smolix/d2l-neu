@@ -80,61 +80,63 @@ Linear Algebra: Geometry, Spectra, and Low-Rank Structure<br>**projections · li
 ::: {.slide title="Why Deep Learning Needs Geometric Linear Algebra"}
 [Motivation]{.kicker}
 
-Every neural network layer—from linear projections and attention heads to recurrent state updates—is built from matrix products whose behavior in $\mathbb{R}^d$ is governed by high-dimensional geometry:
-
-::: {.cols}
+::: {.cols .vc}
 ::: {.col}
-- **Beyond Mechanical Multiplication:** Chapter 1 showed how to compute $\mathbf{X}\mathbf{W}$, but understanding *what* a layer preserves, collapses, or amplifies requires viewing matrices as geometric transformations.
-- **High-Dimensional Intuition:** We cannot draw a 784-pixel Fashion-MNIST image or a 4096-dimensional embedding, yet dot products carry lengths, angles, and orthogonal shadows into any dimension.
+- **Beyond Mechanical Multiplication:** Viewing $\mathbf{X}\mathbf{W}$ geometrically reveals what a layer preserves, collapses, or amplifies in $\mathbb{R}^d$.
+- **High-Dimensional Intuition:** Dot products carry lengths, angles, and orthogonal shadows into 784-pixel images or 4096-D embeddings.
+- **Choosing Natural Axes:** A matrix becomes transparent along orthonormal subspace bases, eigenvectors, or singular vectors.
 :::
 
-::: {.col}
-- **Choosing the Right Coordinates:** A complicated matrix becomes transparent once viewed along its natural axes—orthonormal bases for subspaces, eigenvectors for repeated square maps, and singular vectors for arbitrary rectangular layers.
-- **Three Core Questions:** How similar are two representations? Which input directions does a layer destroy? And what happens when we apply a matrix fifty times in a row?
+::: {.col .fig .big}
+@fig:ch33-la-motivation-axes
 :::
-:::
-
-::: {.d2l-note}
-Three landmark results anchor the chapter: orthogonal projection yields the closest point, every symmetric matrix has an orthonormal eigenbasis, and truncated SVD gives the optimal low-rank approximation.
 :::
 :::
 
 ::: {.slide title="Two-Stage Roadmap: Single Maps to Natural Axes"}
 [Chapter Structure]{.kicker}
 
-The chapter progresses from applying a matrix once in standard coordinates to choosing basis coordinates tailored to the matrix itself:
+::: {.cols .vc}
+::: {.col}
+- **Stage 1 — Standard Coordinates (§§33.1–33.2):** Measure similarity, project onto subspaces ($\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, $\mathbf{A} = \mathbf{Q}\mathbf{R}$), and track surviving vs. collapsed dimensions ($\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, $\det\mathbf{A}$).
+- **Stage 2 — Matrix-Tailored Coordinates (§§33.3–33.5):** Diagonalize repeated square maps ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$), analyze power iteration and non-normal growth, and factor any $m \times n$ matrix via SVD ($\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$).
+:::
 
-| Section | Core Mathematical Question | Key Factorization / Theorem | Deep Learning Connection |
-| :--- | :--- | :--- | :--- |
-| **§33.1 Vectors, Angles & Projections** | How do we measure similarity, distance, and best fits in $\mathbb{R}^d$? | Cauchy–Schwarz, $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, QR ($\mathbf{A} = \mathbf{Q}\mathbf{R}$) | Attention $1/\sqrt{d}$ scaling, cosine retrieval, linear classifiers |
-| **§33.2 Matrices as Linear Maps** | Which inputs collapse to zero, when is a map invertible, and how does volume scale? | Rank–nullity theorem, $\det(\mathbf{A}\mathbf{B}) = \det\mathbf{A}\det\mathbf{B}$ | Bottleneck layers, `einsum` contractions, normalizing flows |
-| **§33.3 Eigendecompositions** | What happens when a square matrix is applied repeatedly, $\mathbf{A}^k\mathbf{x}$? | $\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$, Spectral Theorem ($\mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^\top$) | Markov chains, Hessian curvature, quadratic optimization bowls |
-| **§33.4 Spectra in Practice** | How do we find eigenvalues at scale, and when do eigenvalues mislead us? | Gershgorin discs, Power Iteration, Non-normal transient growth | PageRank, exploding/vanishing RNN gradients, weight initialization |
-| **§33.5 SVD & Low-Rank Approximation** | How does any $m \times n$ matrix stretch space, and what is its best rank-$k$ approximation? | $\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$, Eckart–Young, Pseudoinverse $\mathbf{A}^+$ | PCA, LoRA fine-tuning, Muon Newton–Schulz, conditioning $\kappa(\mathbf{A})$ |
+::: {.col .fig .big}
+@fig:ch33-la-roadmap-two-stage
+:::
+:::
 :::
 
 ::: {.slide title="Three Landmark Theorems of Chapter 33"}
 [Core Theory]{.kicker}
 
-Almost every derivation in deep learning linear algebra reduces to one of three geometric principles:
+::: {.cols .vc}
+::: {.col}
+- **1. Orthogonal Projection ($\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$):** The closest point in $S$ leaves a residual $\mathbf{y} - \mathbf{P}\mathbf{y} \perp S$, turning least squares into a right triangle.
+- **2. Spectral Theorem ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^\top$):** Every real symmetric matrix has real eigenvalues and an orthonormal eigenbasis.
+- **3. Eckart–Young–Mirsky ($\mathbf{A}_k$):** Truncating the SVD at rank $k$ gives the optimal rank-$k$ approximation in spectral and Frobenius norms.
+:::
 
-- **1. Orthogonal Projection ($\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$):** The closest point in a subspace $S$ to $\mathbf{y}$ is the unique point whose residual $\mathbf{y} - \mathbf{P}\mathbf{y}$ is orthogonal to $S$, turning least squares $\min_{\mathbf{x}} \|\mathbf{A}\mathbf{x} - \mathbf{y}\|^2$ into a right-triangle decomposition.
-- **2. The Spectral Theorem ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^\top$):** Every real symmetric matrix possesses real eigenvalues and an orthonormal basis of eigenvectors, turning quadratic forms $\mathbf{x}^\top\mathbf{A}\mathbf{x} = \sum_i \lambda_i (\mathbf{v}_i^\top \mathbf{x})^2$ into weighted sums of squares.
-- **3. Eckart–Young–Mirsky Theorem ($\mathbf{A}_k = \sum_{i=1}^k \sigma_i \mathbf{u}_i \mathbf{v}_i^\top$):** Every $m \times n$ matrix maps one orthonormal basis to another with non-negative stretches $\sigma_1 \ge \sigma_2 \ge \cdots \ge 0$, and keeping the top $k$ terms yields the best rank-$k$ approximation in both spectral and Frobenius norms.
+::: {.col .fig .big}
+@fig:ch33-la-three-theorems
+:::
+:::
 :::
 
 ::: {.slide title="Running Matrices and Empirical Benchmarks"}
 [Pedagogical Thread]{.kicker}
 
-Throughout the chapter, concrete $2 \times 2$ test matrices and real image datasets keep every theorem honest and expose edge cases:
+::: {.cols .vc}
+::: {.col}
+- **Concrete $2 \times 2$ Test Matrices:** Running matrix $\mathbf{A}$ (complex $\lambda = 2 \pm i$, $\det = 5$), defective shear $\mathbf{T}$ ($g = 1 < a = 2$, linear drift), and rank-1 singular matrix $\mathbf{B}$.
+- **Real High-Dimensional Data:** Fashion-MNIST in $\mathbb{R}^{784}$ ($92\%$ nearest-mean hyperplane; non-isotropic cosines) and a $400 \times 500$ cat photo ($9\%$ rank-20 SVD storage at $8\%$ error).
+:::
 
-| Benchmark / Matrix | Definition | What It Illustrates Across Chapter 33 |
-| :--- | :--- | :--- |
-| **Running Matrix $\mathbf{A}$** | $\begin{bmatrix}1 & 2 \\ -1 & 3\end{bmatrix}$ | Invertible map ($\det \mathbf{A} = 5$), complex eigenvalues $\lambda = 2 \pm i$ (rotation-scaling), singular values $\sigma = 3.618, 1.382$ ($\sigma_1\sigma_2 = 5$) |
-| **Defective Shear $\mathbf{T}$** | $\begin{bmatrix}1 & 1 \\ 0 & 1\end{bmatrix}$ | Repeated eigenvalue $\lambda = 1$ with only one eigenvector direction ($g = 1 < a = 2$), linear growth $\mathbf{T}^k$, clean SVD with golden ratio $\sigma = \varphi, 1/\varphi$ |
-| **Singular Matrix $\mathbf{B}$** | $\begin{bmatrix}2 & 1 \\ 4 & 2\end{bmatrix}$ | Rank-1 collapse onto $y = 2x$, 1D null space along $(1, -2)$, $\det \mathbf{B} = 0$, four fundamental subspaces in SVD |
-| **Fashion-MNIST ($d = 784$)** | $70{,}000$ images in $\mathbb{R}^{784}$ | Non-isotropic cosine distribution vs. $1/\sqrt{d}$ random baseline, $92\%$ nearest-mean hyperplane classifier on t-shirts vs. trousers |
-| **Cat Photograph ($400 \times 500$)** | $200{,}000$ grayscale pixels | Power-law singular value decay ($\sigma_i \propto i^{-1.1}$), rank-20 truncated SVD retaining $9\%$ storage at $8\%$ relative error |
+::: {.col .fig .big}
+@fig:ch33-la-running-benchmarks
+:::
+:::
 :::
 
 ::: {.slide title="How to Navigate This Chapter"}

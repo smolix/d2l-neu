@@ -507,11 +507,17 @@ Pooling Layers<br>**max & average pooling · local shift tolerance · aliasing �
 ::: {.slide title="Why Equivariant Feature Maps Need Spatial Aggregation"}
 [Motivation & The Shift-Sensitivity Problem]{.kicker}
 
-Convolutional layers are **translation equivariant**: shifting an image by one pixel shifts every activation in every feature map by one pixel:
+::: {.cols .vc}
+::: {.col}
+- **Equivariance is pixel-sensitive:** Shifting an input image by 1 pixel shifts every edge activation in every feature map by 1 pixel.
+- **Tolerance & downsampling:** Classifiers need local shift stability and progressive spatial coarsening.
+- **Parameter-free pooling:** Summarizes each $k \times k$ patch per channel by its **max** or **mean** ($0$ learnable weights).
+:::
 
-- **Local sensitivity vs. global stability:** Our $[1, -1]$ edge detector fires at the exact column where intensity jumps; a 1-pixel camera jitter moves every response to a neighboring coordinate.
-- **What downstream classifiers need:** Whole-image classification (*"Is this a sneaker or a shirt?"*) and local part detectors require **tolerance to small spatial perturbations** as well as progressive spatial downsampling.
-- **Parameter-free neighborhood summary:** A **pooling layer** slides a fixed window across each channel independently and replaces every patch by its **maximum** or **arithmetic mean**—introducing **zero learnable parameters**.
+::: {.col .fig .big}
+@fig:ch06-cnn-jitter-sensitivity
+:::
+:::
 :::
 
 ::: {.slide title="Maximum Pooling and Average Pooling"}
@@ -548,24 +554,34 @@ The function `pool2d` mirrors `corr2d`, stepping the top-left corner by `stride`
 ::: {.slide title="Comparing Max-Pooling vs. Average Pooling Outputs"}
 [Peak Activation Preservation vs. Spatial Averaging]{.kicker}
 
-Evaluating `pool2d` on our $3 \times 3$ ramp matrix confirms both reductions:
-
+::: {.cols .vc}
+::: {.col}
 @pooling-maximum-pooling-and-average-pooling-2
 
 @pooling-maximum-pooling-and-average-pooling-3
+:::
 
-- **Insensitivity to non-maxima:** In the $3 \times 3$ input, five of the nine entries ($0, 1, 2, 3, 6$) never win any $2 \times 2$ window; perturbing them slightly leaves the max-pooled output completely unchanged.
+::: {.col .fig}
+@fig:ch06-cnn-max-vs-avg-pool
+:::
+:::
 :::
 
 ::: {.slide title="Testing Shift Tolerance on a Moving Impulse"}
 [How a 2×2 Stride-2 Pool Responds to 1-Pixel Shifts]{.kicker}
 
-A $2 \times 2$ pooling layer with stride $s = 2$ partitions a $4 \times 4$ feature map into four disjoint $2 \times 2$ blocks. Let's place a single active response (`1`) at row 1 and shift it across columns $j = 0, 1, 2$:
-
+::: {.cols .vc}
+::: {.col}
 @pooling-tolerance-to-small-shifts
 
-- **Shift $j = 0 \to 1$ (inside the same $2 \times 2$ block):** Both max-pooled and average-pooled outputs stay **100% identical**!
-- **Shift $j = 1 \to 2$ (crossing a block boundary):** The response jumps from the left $2 \times 2$ block into the right $2 \times 2$ block, shifting the pooled activation by 1 column.
+- **Within-block absorption ($j=0 \to 1$):** Output is $100\%$ unchanged.
+- **Cross-boundary jump ($j=1 \to 2$):** Peak enters the right $2 \times 2$ block.
+:::
+
+::: {.col .fig}
+@fig:ch06-cnn-block-boundary-shift
+:::
+:::
 :::
 
 ::: {.slide title="Local Shift Tolerance vs. Global Invariance"}
@@ -582,34 +598,47 @@ Tracing the impulse across all four columns of the $4 \times 4$ grid contrasts l
 ::: {.slide title="Signal-Processing Pitfall: Subsampling & Aliasing"}
 [Why Stride-2 Downsampling Can Flip High-Frequency Signals]{.kicker}
 
-Whenever any layer—whether max-pooling or a strided convolution—subsamples a grid with stride $s > 1$, shifts across block boundaries can severely distort high-frequency patterns:
+::: {.cols .vc}
+::: {.col}
+- **Nyquist aliasing:** On $\mathbf{x} = (1,0,1,0,1,0)$, naive stride-2 subsampling outputs $(1,1,1)$, whereas a 1-pixel shift $T_1 \mathbf{x} = (0,1,0,1,0,1)$ flips the output to $(0,0,0)$!
+- **BlurPool fix (Zhang, 2019):** Low-pass box filtering $[\tfrac{1}{2}, \tfrac{1}{2}]$ before stride-2 subsampling (i.e., $2 \times 2$ AvgPool) maps both to $(0.5, 0.5, 0.5)$.
+:::
 
-- **Nyquist limit violation:** Consider the 1D alternating pattern $\mathbf{x} = (1, 0, 1, 0, 1, 0)$ (frequency $\tfrac{1}{2}$ cycle/pixel) and its 1-pixel shifted copy $T_1 \mathbf{x} = (0, 1, 0, 1, 0, 1)$.
-- **Catastrophic stride-2 aliasing:** Naive stride-2 subsampling ($\mathbf{x}[0::2]$) outputs $(1, 1, 1)$ on $\mathbf{x}$ but $(0, 0, 0)$ on $T_1 \mathbf{x}$—a 1-pixel shift flips the representation from all-ones to all-zeros!
-- **Anti-aliased BlurPool (Zhang, 2019):** Convolving with a low-pass smoothing filter (such as $\begin{bsmallmatrix}1/2 & 1/2\end{bsmallmatrix}$ in 1D, which coincides with stride-2 average pooling!) before subsampling maps both $\mathbf{x}$ and $T_1 \mathbf{x}$ to the stable constant output $(0.5, 0.5, 0.5)$.
+::: {.col .fig .big}
+@fig:ch06-cnn-subsampling-aliasing
+:::
+:::
 :::
 
 ::: {.slide title="Global Pooling and Boundary Caveats"}
 [Collapsing Each Feature Map to a Single Scalar]{.kicker}
 
-Setting the pooling window equal to the entire spatial resolution $H \times W$ (**global max-pooling** or **global average pooling**) reduces a $(c_\textrm{o}, H, W)$ tensor to a $c_\textrm{o}$-dimensional vector:
+::: {.cols .vc}
+::: {.col}
+- **Global pooling ($H \times W \to 1 \times 1$):** Collapses each channel into a single scalar ($c_\textrm{o}$-vector), eliminating dense-head spatial weights.
+- **Exact interior invariance:** Global max is $1$ regardless of impulse coordinate.
+- **Zero-padded border caveat:** Preceding padded convs sample interior pixels in 9 windows vs. 6 at edges (mean $9/16$ vs. $6/16$).
+:::
 
-- **Exact translation invariance in the interior:** Whether a single response sits at column 0, 1, 2, or 3, the global maximum is identically $1$ (bottom row of Slide 7).
-- **Why zero-padded convs slightly break global-average invariance near borders:** Recall from §6.3 that an interior pixel participates in all $9$ windows of a zero-padded $3 \times 3$ convolution, whereas an edge pixel participates in only $6$ (and a corner pixel in $4$).
-- **Interior vs. border global mean:** After a padded $3 \times 3$ convolution of ones on a $4 \times 4$ map, an isolated impulse yields a global average of $9/16$ at interior columns $(1, 2)$ but drops to $6/16$ at border columns $(0, 3)$.
+::: {.col .fig .big}
+@fig:ch06-cnn-global-pooling-collapse
+:::
+:::
 :::
 
 ::: {.slide title="Built-In Pooling Layers: Default Non-Overlapping Stride"}
 [Framework Defaults and 4D Input Tensors]{.kicker}
 
-We construct a 4D tensor `X` containing a single $4 \times 4$ feature map with entries $0, \dots, 15$:
-
+::: {.cols .vc}
+::: {.col}
 @pooling-padding-and-stride-1
 
 @pooling-padding-and-stride-2
+:::
 
-::: {.d2l-note}
-Unlike convolutional layers (which default to $s = 1$), framework pooling layers default to **stride equal to the window size** ($s = k$) so windows tile the input without overlap. On a $4 \times 4$ input, a $3 \times 3$ pool with $s = 3$ fits only once, returning $\max(0,1,2,4,5,6,8,9,10) = 10$.
+::: {.col .fig}
+@fig:ch06-cnn-nonoverlapping-default-stride
+:::
 :::
 :::
 
@@ -624,35 +653,49 @@ Overriding the defaults with `padding=1` and `stride=2` on a $3 \times 3$ window
 ::: {.slide title="Systems Pitfall: Why Max-Pooling Pads Borders with −∞"}
 [Neutral Elements and Shift Equivariance in Activation Value]{.kicker}
 
-In a convolution, $0$ is the additive identity ($0 \cdot w = 0$). What is the identity element for $\max$, and what would happen if max-pooling padded borders with $0$?
-
+::: {.cols .vc}
+::: {.col}
 @pooling-padding-and-stride-5
 
-- **Value shift equivariance ($\max(\mathbf{X} + c) = \max(\mathbf{X}) + c$):** On `X - 16`, every real entry is strictly negative ($-16$ to $-1$). Because max-pooling pads borders with **$-\infty$**, the padded border never wins, and the output cleanly shifts by $-16$ to $(-11, -9, -3, -1)$.
-- **Why zero-padding max-pool is a bug:** If a max-pooling layer padded with $0$, any window touching the border on negative pre-activations would falsely output $0$ instead of the true negative maximum!
-- **Average-pooling denominator flag:** Average pooling has no neutral padding constant; frameworks offer `count_include_pad=False` to divide border sums only by the number of *real* pixels ($4$ or $6$) rather than $k^2 = 9$.
+- **Neutral element $-\infty$:** Ensures padded border cells never beat negative real activations ($\max(\mathbf{X}-16) = \max(\mathbf{X})-16$).
+- **AvgPool option:** Use `count_include_pad=False` to divide only by real pixel counts.
+:::
+
+::: {.col .fig}
+@fig:ch06-cnn-neg-inf-padding
+:::
+:::
 :::
 
 ::: {.slide title="Channel Independence in Pooling Layers"}
 [One Spatial Reduction per Channel, Zero Cross-Channel Mixing]{.kicker}
 
-Whereas a convolutional layer sums across all $c_\textrm{i}$ input channels to change channel count $c_\textrm{i} \to c_\textrm{o}$, a pooling layer processes each channel **completely independently** ($c_\textrm{o} = c_\textrm{i}$):
-
+::: {.cols .vc}
+::: {.col}
 @pooling-multiple-channels-1
 
 @pooling-multiple-channels-2
 :::
 
+::: {.col .fig}
+@fig:ch06-cnn-pooling-channel-indep
+:::
+:::
+:::
+
 ::: {.slide title="Modern Evolution: Strided Convs & Global Avg Pool"}
 [How Contemporary Architectures Separate Downsampling from Invariance]{.kicker}
 
-Classical CNNs like LeNet (§6.6) and AlexNet (§7.1) interleave local pooling layers after almost every convolution and end with multiple dense layers. Modern architectures split pooling's two jobs apart:
+::: {.cols .vc}
+::: {.col}
+- **Intermediate downsampling:** Modern CNNs (ResNet, ConvNeXt) replace fixed local pooling between stages with **stride-2 convolutions** that learn downsampling weights.
+- **Head aggregation:** **Global Average Pooling** ($c \times h \times w \to c$) plus a single linear layer replaces multi-layer flattened dense heads, cutting $>75\%$ of parameters.
+:::
 
-| Design Role | Classical CNNs (LeNet / VGG) | Modern CNNs (ResNet / ConvNeXt) | Why Modern Designs Changed |
-|---|---|---|---|
-| **Intermediate spatial halving** | $2 \times 2$ MaxPool or AvgPool ($s = 2$) | Stride-2 convolution ($3 \times 3$ or $2 \times 2$, $s = 2$) | Lets the network *learn* how to weight and downsample each neighborhood |
-| **Stem downsampling** | Unstrided conv + local pool | $7 \times 7$ ($s=2$) + MaxPool, or $4 \times 4$ ($s=4$) patchify | Rapidly cuts early activation memory |
-| **Final spatial aggregation** | Flatten ($c \times h \times w$) $\to$ 2–3 large Dense layers | **Global Average Pooling** ($c \times h \times w \to c$) + 1 Linear layer | Eliminates $> 75\%$ of parameters and enforces spatial invariance |
+::: {.col .fig .big}
+@fig:ch06-cnn-classical-vs-modern-pooling
+:::
+:::
 :::
 
 ::: {.slide title="Concept Check: Pooling Mechanics & Invariance"}

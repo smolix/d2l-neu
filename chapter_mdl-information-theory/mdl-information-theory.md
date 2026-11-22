@@ -1415,14 +1415,16 @@ Entropy, Cross-Entropy, and KL Divergence<br>**self-information · Shannon entro
 ::: {.slide title="What Do Numbers on a Loss Curve Actually Mean?"}
 [Motivation & Core Question]{.kicker}
 
-When training a $k$-class classifier with cross-entropy loss, we watch the vertical axis fall—but what do the numerical values signify?
+::: {.cols .vc}
+::: {.col}
+- **Untrained 10-class baseline ($\ln 10 \approx 2.30$ nats):** Uniform guessing ($q_j = 1/10$) incurs $2.30$ nats of surprise per example.
+- **Clean vs. noisy floors ($0$ vs. $0.545$ nats):** Clean deterministic labels have floor $0$, whereas $10\%$ symmetric label noise creates an irreducible floor $H(Y \mid X) = 0.545$ nats.
+- **Diagnosing plateaus:** A plateau at $0.60$ nats is poor on clean labels, but within $0.055$ nats of Bayes-optimal under $10\%$ label noise!
+:::
 
-- **Untrained initialization ($\ln 10 \approx 2.30$ nats):** A freshly initialized 10-class network assigns probability $q_j \approx 1/10$ to every class, incurring $-\ln(1/10) = 2.30$ nats of surprise on every example.
-- **Deterministic clean labels ($0$ nats):** When each input $\mathbf{x}$ uniquely determines its label $y$, a high-capacity model can drive the cross-entropy floor all the way to $0$.
-- **Noisy or ambiguous labels ($0.545$ nats at $10\%$ noise):** If $10\%$ of labels in a 10-class dataset are randomly flipped to one of the other $9$ classes, *no model of any size* can achieve a population loss below $0.545$ nats on fresh data.
-
-::: {.d2l-note .warn}
-**Diagnosing Plateaus:** A training plateau at $0.60$ nats indicates a poor model if the labels are clean (floor $0$), but sits within $0.055$ nats of perfection under $10\%$ label noise!
+::: {.col .fig .big}
+@fig:ch37-info-loss-curve-landmarks
+:::
 :::
 :::
 
@@ -1466,13 +1468,20 @@ Surprisal scales logarithmically from single coin flips to vast combinatorial sp
 ::: {.slide title="Shannon Entropy Is Expected Self-Information"}
 [Discrete Entropy]{.kicker}
 
-Before observing an outcome, how surprised do we expect to be on average? For a discrete random variable $X \sim P$ taking values $x_i$ with probabilities $p_i$:
+::: {.cols .vc}
+::: {.col}
+For a discrete random variable $X \sim P$ with probabilities $p_i$, **Shannon entropy** is the expected surprisal:
 
 $$H(X) = H(P) = -\mathbb{E}_{x \sim P}[\log p(x)] = -\sum_i p_i \log p_i$$
 
-- **Zero-probability convention ($0 \log 0 = 0$):** Because $\lim_{t \downarrow 0} t \log t = 0$, impossible outcomes contribute zero expected surprise.
-- **Non-negativity ($H(X) \ge 0$):** Since $0 \le p_i \le 1$, every term $-p_i \log p_i \ge 0$, and $H(X) = 0$ if and only if $X$ is deterministic ($p_i = 1$ for one outcome).
-- **Label invariance:** Entropy depends solely on the probability vector $\mathbf{p} = (p_1, \ldots, p_k)$, never on the numerical values or names of the outcomes $\{x_1, \ldots, x_k\}$.
+- **Zero-probability rule ($0\log 0 = 0$):** Impossible events contribute zero expected surprise.
+- **Range & invariance:** $0 \le H(P) \le \log k$ ($0$ iff deterministic, $\log k$ iff uniform), depending only on $\mathbf{p}$ and never on outcome values.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-shannon-entropy-axioms
+:::
+:::
 :::
 
 ::: {.slide title="Operational Meaning: Optimal Yes/No Questions"}
@@ -1490,12 +1499,20 @@ On a finite set, $H_2(P)$ in bits counts the average number of yes/no questions 
 ::: {.slide title="Joint Entropy, Conditional Entropy, Chain Rule"}
 [Pairs & Sequences]{.kicker}
 
-When inputs come paired with labels $(X, Y)$ or tokens follow a prefix $(X_1, \ldots, X_n)$, uncertainty decomposes additively:
+::: {.cols .vc}
+::: {.col}
+Because $\log p(x, y) = \log p(x) + \log p(y \mid x)$, taking expectations decomposes joint uncertainty additively:
 
-- **Joint and conditional entropy:** $H(X, Y) = -\mathbb{E}[\log p(X, Y)]$ is the uncertainty of the pair, while $H(Y \mid X) = -\mathbb{E}[\log p(Y \mid X)] = \sum_x p(x) H(Y \mid X = x)$ is the average uncertainty remaining in $Y$ after observing $X$.
-- **The chain rule for entropy:** Because $\log p(x, y) = \log p(x) + \log p(y \mid x)$, taking expectations yields:
-  $$H(X, Y) = H(X) + H(Y \mid X) \implies H(X_1, \ldots, X_n) = \sum_{i=1}^n H(X_i \mid X_1, \ldots, X_{i-1})$$
-- **Dyadic questions verification:** Let $X \in \{0, 1\}$ be the answer to *"Is it $a$?"* ($H_2(X) = 1$ bit) and $Y \in \{a, b, c, d\}$ be the symbol. Given *"yes"*, $H_2(Y \mid X=1) = 0$; given *"no"*, $(\tfrac12, \tfrac14, \tfrac14)$ has $1.5$ bits, so $H_2(Y \mid X) = \tfrac12(0) + \tfrac12(1.5) = 0.75$ bits and $H_2(X, Y) = 1 + 0.75 = 1.75$ bits.
+$$H(X, Y) = H(X) + H(Y \mid X)$$
+
+- **Autoregressive sequence chain rule:** $H(X_1, \ldots, X_n) = \sum_{i=1}^n H(X_i \mid X_{<i})$.
+- **Dyadic check:** Asking *"Is it $a$?"* uses $H_2(X) = 1.00$ bit and leaves $H_2(Y \mid X) = \tfrac12(0) + \tfrac12(1.5) = 0.75$ bits, totaling $1.75$ bits.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-entropy-chain-rule
+:::
+:::
 :::
 
 ::: {.slide title="Binary Entropy and the Uniform Upper Bound"}
@@ -1545,17 +1562,20 @@ If a model $Q'$ assigns $q'(x) = 0$ to any event that can actually occur ($p(x) 
 ::: {.slide title="Gibbs' Inequality: No Model Beats the Truth"}
 [Fundamental Theorem]{.kicker}
 
-Can a mismatched model $Q \neq P$ ever achieve lower average surprisal than the true distribution $P$? **Gibbs' inequality** proves that it cannot:
+::: {.cols .vc}
+::: {.col}
+For any distributions $P$ and $Q$, **Gibbs' inequality** states $D_{\textrm{KL}}(P \| Q) \ge 0$, with equality iff $P = Q$:
 
-::: {.d2l-note .rule}
-**Proposition (Gibbs' Inequality):** For any two distributions $P$ and $Q$ on the same space, $D_{\textrm{KL}}(P \| Q) \ge 0$, with equality if and only if $P = Q$.
+$$D_{\textrm{KL}}(P \| Q) = -\mathbb{E}_{P}\!\left[\log\frac{q(x)}{p(x)}\right] \ge -\log Q(\textrm{supp}\,P) \ge 0$$
+
+- **Jensen step:** Strictly concave $\log$ bounds $-\mathbb{E}_P[\log(q/p)] \ge -\log\mathbb{E}_P[q/p] = -\log Q(\textrm{supp}\,P) \ge 0$.
+- **Equality certificate:** Strict concavity forces $q(x)/p(x) = 1$ across $\textrm{supp}\,P$, so $P = Q$.
 :::
 
-- **Step 1 (Apply Jensen's inequality to strictly concave $\log$):** On the support $\textrm{supp}\,P = \{x : p(x) > 0\}$:
-  $$D_{\textrm{KL}}(P \| Q) = -\mathbb{E}_{x \sim P}\!\left[\log \frac{q(x)}{p(x)}\right] \ge -\log \mathbb{E}_{x \sim P}\!\left[\frac{q(x)}{p(x)}\right]$$
-- **Step 2 (Cancel $p(x)$ over the support of $P$):**
-  $$-\log \sum_{x \in \textrm{supp}\,P} p(x)\frac{q(x)}{p(x)} = -\log Q(\textrm{supp}\,P) \ge -\log 1 = 0$$
-- **Step 3 (Equality condition):** Strict concavity of $\log$ requires $q(x)/p(x) = c$ everywhere on $\textrm{supp}\,P$, and $-\log Q(\textrm{supp}\,P) = 0$ forces $c = 1$, so $P = Q$. $\blacksquare$
+::: {.col .fig}
+@fig:ch37-info-gibbs-jensen-proof
+:::
+:::
 :::
 
 ::: {.slide title="Two Immediate Corollaries of Gibbs' Inequality"}
@@ -1606,13 +1626,20 @@ In $k$-class classification, how does the general cross-entropy formula become o
 ::: {.slide title="The Irreducible Classification Loss Floor"}
 [Population Loss Decomposition]{.kicker}
 
-On a finite training set, an overparameterized network can memorize noisy labels and drive training loss to $0$. On fresh test examples drawn from $(\mathbf{x}, y) \sim P$, the true target for input $\mathbf{x}$ is the conditional distribution $p(\cdot \mid \mathbf{x})$:
+::: {.cols .vc}
+::: {.col}
+On fresh test examples $(\mathbf{x}, y) \sim P$, population cross-entropy splits into conditional label entropy plus expected KL:
 
-$$\mathbb{E}_{(\mathbf{x}, y)}\big[-\log q(y \mid \mathbf{x})\big] = \underbrace{\mathbb{E}_{\mathbf{x}}\big[H(p(\cdot \mid \mathbf{x}))\big]}_{\text{irreducible data floor } H(Y \mid X)} + \underbrace{\mathbb{E}_{\mathbf{x}}\big[D_{\textrm{KL}}\big(p(\cdot \mid \mathbf{x}) \,\|\, q(\cdot \mid \mathbf{x})\big)\big]}_{\text{model excess } \ge 0}$$
+$$\mathbb{E}_{(\mathbf{x}, y)}\big[-\log q(y \mid \mathbf{x})\big] = H(Y \mid X) + \mathbb{E}_{\mathbf{x}}\big[D_{\textrm{KL}}\big(p(\cdot \mid \mathbf{x}) \,\|\, q(\cdot \mid \mathbf{x})\big)\big]$$
 
-- **Pointwise proof:** Condition on $\mathbf{x}$ and apply $\textrm{CE} = H + D_{\textrm{KL}}$ to the inner expectation over $y \sim p(\cdot \mid \mathbf{x})$, then average over $\mathbf{x}$.
-- **Unique global optimum:** By Gibbs' inequality, the population loss attains its floor $\mathbb{E}_{\mathbf{x}}[H(p(\cdot \mid \mathbf{x}))]$ if and only if $q(\cdot \mid \mathbf{x}) = p(\cdot \mid \mathbf{x})$ for almost every $\mathbf{x}$.
-- **Symmetric label noise at rate $\rho$:** When the clean label is flipped uniformly to one of the other $k-1$ classes with probability $\rho$, every input has conditional entropy $H_b(\rho) + \rho \log(k-1)$.
+- **Unique global optimum:** Attains $H(Y \mid X)$ iff $q(\cdot \mid \mathbf{x}) = p(\cdot \mid \mathbf{x})$ almost everywhere.
+- **Symmetric noise floor (rate $\rho$, $k$ classes):** $H(Y \mid X) = H_b(\rho) + \rho\log(k - 1)$.
+:::
+
+::: {.col .fig}
+@fig:ch37-info-irreducible-floor-split
+:::
+:::
 :::
 
 ::: {.slide title="Symmetric Label Noise and Overconfidence Cost"}
@@ -1630,13 +1657,17 @@ With $k = 10$ classes and $\rho = 0.1$ label noise, the floor is $H_b(0.1) + 0.1
 ::: {.slide title="Strictly Proper Scoring Rules and Calibration"}
 [Decision Theory & Calibration]{.kicker}
 
-Why does minimizing cross-entropy incentivize a network to report honest probabilities rather than sharp guesses?
+::: {.cols .vc}
+::: {.col}
+- **Strictly proper scoring rule:** A penalty $S(\mathbf{q}, y)$ whose expected score $\mathbb{E}_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is uniquely minimized by reporting $\mathbf{q} = \mathbf{p}$ (guaranteeing calibrated probabilities).
+- **Log score ($-\log q_y$):** Excess over truth is $D_{\textrm{KL}}(\mathbf{p} \| \mathbf{q}) \ge 0$; diverges as $q_y \to 0$, heavily punishing confident errors.
+- **Brier score ($\sum_j(q_j - \mathbf{1}_{j=y})^2$):** Excess over truth is $\|\mathbf{q} - \mathbf{p}\|_2^2 \ge 0$; bounded by $2$ even when $q_y = 0$.
+:::
 
-- **Strictly proper scoring rules:** A penalty $S(\mathbf{q}, y)$ is *strictly proper* if the expected score $\mathbb{E}_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is uniquely minimized by reporting the truth $\mathbf{q} = \mathbf{p}$.
-- **Log score vs. Brier score:**
-  - **Log score** $S_{\textrm{log}}(\mathbf{q}, y) = -\log q_y$: Expected excess over truth is $D_{\textrm{KL}}(\mathbf{p} \| \mathbf{q}) \ge 0$; diverges to $+\infty$ on confident errors ($q_y \to 0$).
-  - **Brier score** $S_{\textrm{Brier}}(\mathbf{q}, y) = \sum_{j=1}^k (q_j - \mathbf{1}(j = y))^2$: Expected excess over truth is $\|\mathbf{q} - \mathbf{p}\|_2^2 \ge 0$; bounded by $2$ even on $q_y = 0$.
-- **Calibration at the optimum:** Because the log score is strictly proper, the population minimizer is *calibrated*—among inputs assigned $80\%$ confidence for class $y$, class $y$ occurs $80\%$ of the time.
+::: {.col .fig .big}
+@fig:ch37-info-proper-scoring-calibration
+:::
+:::
 :::
 
 ::: {.slide title="Label Smoothing Creates a Finite Optimal Gap"}

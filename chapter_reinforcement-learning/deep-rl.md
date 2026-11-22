@@ -813,32 +813,50 @@ Function Approximation in Reinforcement Learning<br>**tables as one-hot linear n
 ::: {.slide title="Why Continuous Control Requires Function Approximation"}
 [Motivation & Mental Model]{.kicker}
 
-In tabular RL (§14.1–§14.8, apart from §14.6 where known differential equations allowed analytical LQR/iLQR planning), every model-free state had its own row in a lookup table, which breaks down when observations are continuous vectors $\mathbf{s}_t \in \mathbb{R}^d$ and dynamics are unknown:
+::: {.cols .vc}
+::: {.col}
+- **Zero state revisits on `CartPole-v1`:** Because $\mathbf{s}_t = (x_t, \dot{x}_t, \vartheta_t, \dot{\vartheta}_t)^\top \in \mathbb{R}^4$ is continuous, an agent never visits the exact same state vector twice across $1{,}000$ episodes.
+- **Shared-weight generalization:** A lookup table learns nothing at $\vartheta + 10^{-4}$ from an update at $\vartheta$, whereas a neural network shares weights $\theta$ across the entire state space.
+:::
 
-- **Zero state revisits on `CartPole-v1`:** The state $\mathbf{s}_t = (x_t, \dot{x}_t, \vartheta_t, \dot{\vartheta}_t)^\top \in \mathbb{R}^4$ consists of four floating-point numbers; across $1{,}000$ episodes an agent never visits the exact same state vector twice.
-- **No generalization in tables:** A lookup table learns nothing about $(x, \dot{x}, \vartheta + 10^{-4}, \dot{\vartheta})$ from an update at $(x, \dot{x}, \vartheta, \dot{\vartheta})$, whereas a neural network shares weights $\theta$ across the entire state space.
-- **Model-free continuous control (`Pendulum-v1`, §14.6):** When the action is a continuous torque $u \in [-2, 2]$ and the physics $f(\mathbf{x}, u)$ are unknown, we replace both the discrete softmax table and §14.6's analytical Jacobians with neural networks.
+::: {.col .fig .big}
+@fig:ch14-rl-continuous-generalization
+:::
+:::
 :::
 
 ::: {.slide title="Tables as One-Hot Linear Nets and the Tangent Kernel"}
 [How One Update Spreads Across States]{.kicker}
 
-A lookup table $\hat{V}_w(s) = \mathbf{w}^\top\mathbf{e}_s$ is simply a linear network on one-hot features $\mathbf{e}_s$; replacing $\mathbf{e}_s$ with a neural network $\hat{V}_w(s)$ couples all states via the **neural tangent kernel** (Jacot et al., 2018):
+::: {.cols .vc}
+::: {.col}
+$$\Delta \hat{V}_w(s) \approx \eta_V\big(y - \hat{V}_w(s_0)\big)\,k(s, s_0)$$
 
-$$\Delta \hat{V}_w(s) \approx \eta_V\big(y - \hat{V}_w(s_0)\big)\,k(s, s_0), \qquad k(s, s_0) = \nabla_w \hat{V}_w(s)^\top \nabla_w \hat{V}_w(s_0)$$
+- **Tabular isolation ($k(s, s_0) = \mathbf{1}(s = s_0)$):** One-hot features $\nabla_w \hat{V}_w(s) = \mathbf{e}_s$ leave every unvisited state untouched.
+- **Neural coupling ($k(s, s_0) = \nabla_w \hat{V}_w(s)^\top \nabla_w \hat{V}_w(s_0)$):** Positive for nearby states $s \approx s_0$ (generalization), but nonzero or negative at distant states (interference).
+:::
 
-- **Tabular isolation ($k(s, s_0) = \mathbf{1}(s = s_0)$):** Because $\nabla_w \hat{V}_w(s) = \mathbf{e}_s$, a gradient step at $s_0$ leaves every other state completely untouched.
-- **Neural generalization and interference:** For an MLP, $k(s, s_0)$ is large and positive for nearby states $s \approx s_0$ (generalization), but can be nonzero or negative at distant states $s$ (catastrophic interference).
+::: {.col .fig}
+@fig:ch14-rl-ntk-coupling
+:::
+:::
 :::
 
 ::: {.slide title="The ActorCritic Container and Tanh MLPs"}
 [Replacing Policy and Value Tables with Networks]{.kicker}
 
-`ActorCritic` subclasses `d2l.Policy` to pair a policy network (*actor*, optimizer `opt_pi`) with a baseline value network (*critic*, optimizer `opt_v`), each built as a 64-unit `tanh` MLP:
+::: {.cols .vc}
+::: {.col}
+- **Separate 64-unit `tanh` MLPs:** `ActorCritic` pairs an actor network (`opt_pi`) with a critic baseline network (`opt_v`).
+- **Why `tanh` activations:** Smooth activation surfaces outperform ReLU on low-dimensional on-policy control benchmarks (Andrychowicz et al., 2021).
 
 @deep-rl-the-swap-as-a-three-line-diff-1
+:::
 
-- **Why `tanh` activations:** Large-scale empirical benchmarks of on-policy RL (Andrychowicz et al., 2021) show `tanh` MLPs consistently outperform ReLU for smooth policy and value surfaces on low-dimensional control tasks.
+::: {.col .fig}
+@fig:ch14-rl-actor-critic-mlps
+:::
+:::
 :::
 
 ::: {.slide title="Multi-Step Value Regression per Batch"}
@@ -854,13 +872,19 @@ Whereas our tabular baseline updated $\hat{V}(s_t)$ in place with step size $\et
 ::: {.slide title="Bootstrapping Time-Limit Truncations"}
 [Preventing Artificial Penalties on Long Episodes]{.kicker}
 
-`CartPole-v1` truncates episodes at $T = 500$ steps and `Pendulum-v1` at $T = 200$ steps; treating a clock cutoff as terminal (`reward_to_go` alone) corrupts the last steps of every successful episode:
-
+::: {.cols .vc}
+::: {.col}
 $$y_t = \hat{G}_t + (1 - \textrm{term}_T)\,\gamma^{T - t}\,\hat{V}_w(s_T)$$
 
-@deep-rl-replacing-the-table-with-a-network-2
+- **Numerical severity on CartPole ($\gamma = 0.99$):** At step $t = 490$ of a 500-step win ($\hat{V} \approx 100$), unbootstrapped $\hat{G}_{490} \approx 9.6$ yields advantage $-90.4$, punishing balanced play.
 
-- **Numerical severity on CartPole ($\gamma = 0.99$):** A balanced pole has true value $\hat{V}(s) \approx 1/(1-\gamma) = 100$; at step $t = 490$ of a 500-step win, unbootstrapped $\hat{G}_{490} \approx 9.6$ gives a weight of $9.6 - 100 = -90.4$, punishing the exact actions that kept the pole upright!
+@deep-rl-replacing-the-table-with-a-network-2
+:::
+
+::: {.col .fig}
+@fig:ch14-rl-truncation-bootstrap
+:::
+:::
 :::
 
 ::: {.slide title="The Neural REINFORCE Training Loop"}

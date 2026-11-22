@@ -641,13 +641,18 @@ Dynamic programming summed over all possible slips using the known tensor $P(s' 
 ::: {.slide title="Why Model-Free Control Learns Action Values Q"}
 [State Values vs. Action Values]{.kicker}
 
-In model-free control, we estimate the action-value table $Q^*(s, a)$ rather than the state-value table $V^*(s)$ because $\max_a$ and $\mathbb{E}_{s'}$ appear in opposite orders:
-
+::: {.cols .vc}
+::: {.col}
 $$(\mathcal{T}Q)(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q(s', a')$$
 
-- **Why $V^*(s)$ cannot be sampled directly:** In $V(s) \leftarrow \max_a \mathbb{E}_{s'}[r + \gamma V(s')]$, the maximum sits *outside* the expectation; a single step reveals one action's outcome and says nothing about the other actions.
-- **Why $Q^*(s, a)$ can be sampled:** For a fixed pair $(s, a)$, the expectation over $s'$ sits *outside* $\max_{a'} Q(s', a')$, so $y = r + \gamma \max_{a'} Q(s', a')$ is an unbiased one-sample estimate of $(\mathcal{T}Q)(s, a)$.
-- **Model-free policy extraction:** Once $Q^*$ is learned, $\pi^*(s) = \mathrm{argmax}_a Q^*(s, a)$ is a simple row lookup requiring no transition model $P$.
+- **Why $V^*(s)$ cannot be sampled:** In $\max_a \mathbb{E}_{s'}[r + \gamma V(s')]$, $\max_a$ sits *outside* the expectation.
+- **Why $Q^*(s, a)$ can be sampled:** For fixed $(s, a)$, $\mathbb{E}_{s'}$ sits *outside* $\max_{a'} Q(s', a')$, making $r + \gamma \max_{a'} Q(s', a')$ an unbiased sample of $(\mathcal{T}Q)(s, a)$.
+:::
+
+::: {.col .fig}
+@fig:ch14-rl-max-expectation-order
+:::
+:::
 :::
 
 ::: {.slide title="From Exact Bellman Backups to Sampled Targets"}
@@ -665,39 +670,49 @@ $$\delta_t = r_t + \gamma \max_{a' \in \mathcal{A}} Q(s_{t+1}, a') - Q(s_t, a_t)
 ::: {.slide title="Bootstrapping vs. Monte Carlo Estimation"}
 [Bias-Variance Trade-Off in Value Targets]{.kicker}
 
-When updating $Q(s_t, a_t)$, we can estimate future return either by waiting for the episode to finish or by bootstrapping from our current table one step later:
+::: {.cols .vc}
+::: {.col}
+- **Monte Carlo target ($R_t = \sum_{k \geq 0} \gamma^k r_{t+k}$):** Must wait until episode termination; unbiased for behavior $Q^{\pi_e}$, but accumulates high transition variance over the full episode tail.
+- **One-step TD target ($y_t = r_t + \gamma \max_{a'} Q(s_{t+1}, a')$):** Updates online after every single transition with low single-step variance, trading tail noise for current table bias while estimating $Q^*$ off-policy.
+:::
 
-| Property | Monte Carlo Target ($R_t = \sum_{k \geq 0} \gamma^k r_{t+k}$) | One-Step TD Target ($y_t = r_t + \gamma \max_{a'} Q(s_{t+1}, a')$) |
-|:--|:--|:--|
-| **Requirement** | Must wait until the episode terminates | Updates online after every single transition |
-| **Statistical bias** | Unbiased for the behavior policy's value $Q^{\pi_e}$ | Biased while the table $Q$ is still inaccurate |
-| **Variance** | High: accumulates transition noise over all remaining steps | Low: carries randomness from only one environment step |
-| **Target policy** | Evaluates the data-collecting behavior policy | Estimates optimal $Q^*$ off-policy via $\max_{a'}$ |
+::: {.col .fig .big}
+@fig:ch14-rl-mc-vs-td
+:::
+:::
 :::
 
 ::: {.slide title="Tracing Backward Value Flow Across Visits"}
 [Worked Hand Calculation]{.kicker}
 
-Starting from $Q = \mathbf{0}$ with $\gamma = 0.95$ and $\alpha = 0.5$, value propagates backward from the goal one cell per realized visit rather than one ring per sweep:
+::: {.cols .vc}
+::: {.col}
+- **First goal entry ($14 \xrightarrow{\textrm{right}} 15$):** Terminal target $y = 1$ updates $Q(14, \textrm{right}) \leftarrow 0.500$.
+- **Step into 14 ($13 \xrightarrow{\textrm{right}} 14$):** Bootstraps $y = 0.95(0.500) = 0.475$, setting $Q(13, \textrm{right}) \leftarrow 0.238$.
+- **Slip to unvisited 10 ($14 \xrightarrow{\textrm{right}} 10$):** Target $y = 0$ pulls $Q(14, \textrm{right}) \leftarrow 0.250$, showing why $\alpha_n$ must decay.
+:::
 
-- **First goal entry ($14 \xrightarrow{\textrm{right}} 15$):** Goal cell 15 is terminal ($r = 1$, continuation $0$), so target $y = 1$ updates $Q(14, \textrm{right}) \leftarrow 0.5(0) + 0.5(1) = 0.500$.
-- **Subsequent step into 14 ($13 \xrightarrow{\textrm{right}} 14$):** Bootstraps from $\max_{a'} Q(14, a') = 0.500$, giving target $y = 0 + 0.95(0.500) = 0.475$ and $Q(13, \textrm{right}) \leftarrow 0.238$.
-- **Slip to an unvisited cell ($14 \xrightarrow{\textrm{right}} 10$):** Cell 10 still holds zeros, so target $y = 0$ pulls $Q(14, \textrm{right}) \leftarrow 0.5(0.500) + 0.5(0) = 0.250$.
-
-::: {.d2l-note}
-Because $Q(14, \textrm{right})$ receives noisy targets ($1$ when slipping into the goal, bootstrapped values when slipping to 10 or 14), a constant $\alpha = 0.5$ causes perpetual oscillation unless $\alpha_n$ decays.
+::: {.col .fig .big}
+@fig:ch14-rl-visit-propagation
+:::
 :::
 :::
 
 ::: {.slide title="Why Q-Learning Is Semi-Gradient, Not Least Squares"}
 [The Double-Sampling Problem]{.kicker}
 
-In expectation, Q-learning performs a damped Bellman step $\mathbb{E}[\delta \mid s, a] = (\mathcal{T}Q)(s, a) - Q(s, a)$ by holding the target $y_i = r_i + \gamma \max_{a'} Q(s_i', a')$ fixed rather than differentiating through $Q(s_i', a')$:
+::: {.cols .vc}
+::: {.col}
+$$L(Q) = \mathbb{E}_d\big[(Q - \mathcal{T}Q)^2\big] + \mathbb{E}_d\big[\textrm{Var}(y \mid s, a)\big]$$
 
-$$L(Q) = \mathbb{E}_d\Big[\big(Q(s, a) - (\mathcal{T}Q)(s, a)\big)^2\Big] + \mathbb{E}_d\Big[\textrm{Var}\big(r + \gamma \max_{a'} Q(s', a') \;\big|\; s, a\big)\Big]$$
+- **Why full gradient on $\delta^2$ fails (Baird, 1995):** Minimizing empirical $\delta_i^2$ penalizes transition variance $\textrm{Var}(y \mid s, a)$, pulling stochastic branch values $Q(u_1), Q(u_2)$ toward each other.
+- **Semi-gradient fix:** Hold $y_i = r_i + \gamma \max_{a'} Q(s_i', a')$ fixed during the step so $\mathbb{E}[\delta \mid s, a] = (\mathcal{T}Q)(s, a) - Q(s, a)$.
+:::
 
-- **Why full gradient descent on $\delta^2$ fails (Baird, 1995):** Minimizing empirical squared TD error $\frac{1}{N}\sum_i \delta_i^2$ minimizes the sum of the squared Bellman residual *plus* the target's transition variance.
-- **Distortion on stochastic branches:** If state $s$ transitions equally to terminal $u_1$ (reward $1$) or $u_2$ (reward $0$), minimizing $L(Q)$ shrinks $\textrm{Var}$ by pulling $Q(u_1)$ and $Q(u_2)$ toward each other away from $1$ and $0$.
+::: {.col .fig}
+@fig:ch14-rl-double-sampling
+:::
+:::
 :::
 
 ::: {.slide title="Robbins-Monro Step Sizes and Convergence"}
@@ -822,13 +837,19 @@ On deterministic calm ice, targets have zero transition variance so constant $\a
 ::: {.slide title="Off-Policy Q-Learning vs. On-Policy SARSA"}
 [Target Policy vs. Behavior Policy]{.kicker}
 
-The $\max_{a'}$ operator in Q-learning evaluates a greedy continuation even when the behavior policy $\pi_e$ explores randomly on the next step:
+::: {.cols .vc}
+::: {.col}
+$$\delta_{\textrm{Q}} = r + \gamma \max_{a'} Q(s', a') - Q(s, a)$$
+$$\delta_{\textrm{SARSA}} = r + \gamma\,Q(s', a') - Q(s, a)$$
 
-$$\delta_{\textrm{Q}} = r + \gamma \max_{a'} Q(s', a') - Q(s, a) \quad \text{vs.} \quad \delta_{\textrm{SARSA}} = r + \gamma\,Q(s', a') - Q(s, a)$$
+- **Off-policy (Q-learning):** Learns $Q^*$ for the greedy target policy regardless of which behavior policy generated $(s, a, r, s')$.
+- **On-policy (SARSA):** Bootstraps from the action $a' \sim \pi_e(\cdot \mid s')$ actually taken next, converging to $Q^{\pi_e}$.
+:::
 
-- **Off-policy (Q-learning):** Learns $Q^*$ for the greedy target policy regardless of which behavior policy generated $(s, a, r, s')$, enabling experience replay and learning from logged data.
-- **On-policy (SARSA):** Bootstraps from the action $a' \sim \pi_e(\cdot \mid s')$ actually taken next, converging to $Q^{\pi_e}$ (which prices in the risk of future $\epsilon$-random slips near holes).
-- **Asymmetric self-correction:** Under $\epsilon$-greedy collection, overestimates in $\hat{Q}$ are selected and quickly corrected downward, whereas underestimates wait for rare random exploration steps.
+::: {.col .fig}
+@fig:ch14-rl-q-vs-sarsa
+:::
+:::
 :::
 
 ::: {.slide title="Maximization Bias and Double Q-Learning"}

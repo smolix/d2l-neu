@@ -477,16 +477,16 @@ Generalization in Deep Learning<br>**random-label memorization · double descent
 ::: {.slide title="The Overparameterization Paradox in Deep Learning"}
 [Classical vs. Modern Intuition]{.kicker}
 
-In classical statistical learning, a model with more parameters than training examples ($p \ge n$) interpolates noise and overfits catastrophically:
+::: {.cols .vc}
+::: {.col}
+- **Classical threshold ($p / n = 1.0$):** A degree-19 polynomial ($p = 20$) interpolating $n = 20$ noisy points oscillates wildly (test MSE $>1{,}000\times$ the true cubic).
+- **Overparameterized MLPs ($p \gg n$):** Our 256-unit MLP ($p = 203{,}530$) reaches $\sim 87\%$ test accuracy on $n = 60{,}000$ images ($p/n = 3.4$) and $>81\%$ test accuracy on $n = 1{,}000$ images ($p/n = 203.5$) despite $100\%$ training accuracy!
+- **The puzzle:** Resolving why $p/n = 203.5$ generalizes requires testing capacity, conditioning at $h = n$, and SGD's implicit bias.
+:::
 
-| Model & Benchmark | Trainable Parameters $p$ | Parameters / Example ($p / n$) | Held-Out Test Performance |
-|:--|--:|--:|:--|
-| Degree-19 polynomial on $n = 20$ points | $20$ | $1.0$ | Test MSE $>1{,}000\times$ the true cubic |
-| 256-unit MLP on $n = 60{,}000$ Fashion-MNIST | $203{,}530$ | $3.4$ | $\sim 87\%$ test accuracy ($\sim 89\%$ train) |
-| 256-unit MLP on $n = 1{,}000$ Fashion-MNIST | $203{,}530$ | $203.5$ | $\sim 81\%$ test accuracy ($100\%$ train) |
-
-::: {.d2l-note}
-Why does an MLP with $203.5$ parameters per training image reach $100\%$ training accuracy yet still generalize above $80\%$ on unseen test images? Answering this requires testing capacity, conditioning, and optimizer bias.
+::: {.col .fig .big}
+@fig:ch04-mlp-overparam-paradox
+:::
 :::
 :::
 
@@ -510,25 +510,34 @@ Following Zhang et al. (2017), we train our He-initialized 256-unit MLP ($203{,}
 ::: {.slide title="Why Distribution-Free Capacity Bounds Are Vacuous"}
 [Memorization & Capacity · Theory]{.kicker}
 
-Classical VC-dimension bounds guarantee that with probability $1 - \delta$ over $n$ i.i.d. examples, every classifier $f \in \mathcal{F}$ satisfies:
+::: {.cols .vc}
+::: {.col}
+$$\epsilon(f) \le \epsilon_{\mathcal{S}}(f) + B(\mathcal{F}, n, \delta)$$
 
-$$\epsilon(f) \le \epsilon_{\mathcal{S}}(f) + B(\mathcal{F}, n, \delta), \qquad B_{\textrm{VC}} \sim c\sqrt{\frac{v + \log(1/\delta)}{n}}$$
+- **Naive parameter count fails:** Approximating VC dimension $v \approx p = 203{,}530$ on $n = 60{,}000$ gives $\sqrt{p/n} \approx 1.84 > 1$.
+- **Random labels break *every* label-blind class bound:** Because $B(\mathcal{F}, n, \delta)$ depends only on the function class $\mathcal{F}$ and sample size $n$, achieving $\epsilon_{\mathcal{S}}(f) = 0$ on random labels ($\epsilon(f) = 0.90$) forces $B(\mathcal{F}, n, \delta) \ge 0.90$ on true labels too!
+:::
 
-- **Naive parameter count fails:** Approximating $v \approx p = 203{,}530$ on $n = 60{,}000$ gives $\sqrt{203{,}530 / 60{,}000} \approx 1.84 > 1$—a vacuous bound on an error rate $\epsilon(f) \in [0, 1]$.
-- **Random labels defeat *every* distribution-free class bound:** Because $B(\mathcal{F}, n, \delta)$ depends only on the function class $\mathcal{F}$ and sample size $n$ (not the label distribution), achieving $\epsilon_{\mathcal{S}}(f) = 0$ on random labels where $\epsilon(f) = 0.90$ forces $B(\mathcal{F}, n, \delta) \ge 0.90$—meaning the bound cannot guarantee better than $90\%$ error on *true* labels either!
+::: {.col .fig}
+@fig:ch04-mlp-vacuous-vc-bound
+:::
+:::
 :::
 
 ::: {.slide title="No Free Lunch and the Role of Inductive Bias"}
 [Inductive Bias]{.kicker}
 
-By Wolpert's *No Free Lunch Theorem* (1996), averaged uniformly over all possible labelings of unseen inputs, every learning algorithm has the exact same expected test error. Generalization comes from matching a learner's **inductive bias** to real data structure:
+::: {.cols .vc}
+::: {.col}
+- **No Free Lunch (Wolpert, 1996):** Averaged uniformly over all possible labelings of unseen inputs, every learning algorithm has the exact same expected test error.
+- **Interpolation $\neq$ overfitting:** 1-Nearest Neighbor achieves $100\%$ training accuracy yet has asymptotic test error $\le 2\epsilon^\star$ via local Voronoi smoothness.
+- **Deep learning inductive bias:** Overparameterized MLPs + SGD select minimum-norm / maximum-margin interpolators that fit coherent signal before noise.
+:::
 
-| Learning Algorithm | Interpolates Training Data? | Inductive Bias (Preferred Function Among Fits) |
-|:--|:--:|:--|
-| Linear / Softmax Regression | Only if $d \ge n$ | Halfspaces / linear score boundaries |
-| Ridge / Weight-Decayed Polynomial | No ($\lambda > 0$) | Small Euclidean weight norm $\|\mathbf{w}\|_2$, smooth curves |
-| 1-Nearest Neighbor (Cover & Hart, 1967) | **Yes ($100\%$ train accuracy)** | Piecewise-constant Voronoi cells; asymptotic error $\le 2\epsilon^\star$ |
-| Overparameterized MLP + SGD | **Yes ($100\%$ train accuracy)** | Minimum-norm / max-margin trajectories; fits clean structure first |
+::: {.col .fig .big}
+@fig:ch04-mlp-inductive-bias-map
+:::
+:::
 :::
 
 ::: {.slide title="Classical Bias-Variance U-Curve vs. Overparameterization"}
@@ -693,12 +702,16 @@ Test your understanding of modern generalization phenomena:
 ::: {.slide title="Summary: Generalization in Deep Learning"}
 [Key Takeaways]{.kicker}
 
-| Phenomenon / Principle | Experimental / Mathematical Signature | What It Explains | Practical Consequence |
-|:--|:--|:--|:--|
-| **Random-Label Memorization** | $100\%$ train accuracy on shuffled labels ($10\%$ test) | Distribution-free bounds ($B(\mathcal{F}, n, \delta)$) are vacuous ($\ge 0.9$) | Generalization depends on data-aligned inductive bias, not raw parameter ceilings |
-| **Double Descent** | Test error peaks at $h = n$ ($s_{\min}(\mathbf{H}) \approx 0$), falls for $h \gg n$ | Unique interpolator at $h = n$ explodes $\|\mathbf{W}^{(2)}\|$; $h \gg n$ shrinks norm | Overparameterized networks ($p \gg n$) avoid the $h = n$ conditioning cliff |
-| **Squared-Loss Implicit Bias** | $\nabla L \in \mathrm{row}(\mathbf{H}) \implies \mathbf{w}_\infty = \mathbf{H}^\top(\mathbf{H}\mathbf{H}^\top)^{-1}\mathbf{y}$ | GD from $\mathbf{w}_0 = \mathbf{0}$ finds minimum-$\ell_2$-norm interpolator | Small initialization is critical; large random $\mathbf{w}_0$ injects null-space noise |
-| **Logistic-Loss Implicit Bias** | $\|\mathbf{w}_t\|_2 \to \infty$, $\frac{\mathbf{w}_t}{\|\mathbf{w}_t\|_2} \to \mathbf{w}_{\textrm{SVM}}$ at $O(1/\log t)$ rate | Cross-entropy GD maximizes classification margin | Continuing training past $100\%$ train accuracy can further reduce test error |
-| **Clean-First & Early Stopping** | Clean examples fit in $\sim 20$ epochs; wrong labels take $>100$ | Coherent gradients align early; noise requires late fine-tuning | Checkpointing best validation accuracy acts like $\lambda \approx 1/(\eta t)$ regularization |
+::: {.cols .vc}
+::: {.col}
+- **Capacity & double descent:** Random-label memorization makes label-blind VC bounds vacuous; test error spikes at $h = n$ ($s_{\min}(\mathbf{H}) \approx 0$) and falls for $h \gg n$.
+- **Spatial implicit bias:** Gradient descent from $\mathbf{w}_0 = \mathbf{0}$ finds the minimum-$\ell_2$-norm interpolator under squared loss and rotates toward the maximum-margin SVM separator under logistic loss.
+- **Temporal implicit bias:** SGD fits coherent clean labels in $\sim 20$ epochs before memorizing noise, making early stopping act like $\lambda \approx 1/(\eta t)$ ridge regularization.
+:::
+
+::: {.col .fig .big}
+@fig:ch04-mlp-gen-summary
+:::
+:::
 :::
 

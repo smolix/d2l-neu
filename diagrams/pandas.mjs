@@ -165,9 +165,167 @@ function scale() {
   return svg(W, y + 110, o);
 }
 
+// ── separating input features X from target labels y by column name ───
+function xySplit() {
+  const W = 540, H = 260; let o = '';
+  const heads = ['NumRooms', 'RoofType', 'Area', 'Price'];
+  const rows = [
+    ['NaN', 'NaN',   '1200', '127500'],
+    ['2.0', 'NaN',   '850',  '106000'],
+    ['4.0', 'Slate', '1700', '178100'],
+  ];
+  const cw = 88, ch = 32, g = 4;
+  // Left: X = data.drop(columns=['Price'])
+  o += code(152, 20, "inputs = data.drop(columns='Price')", D.blue.dark, { fs: 13, fw: 700 });
+  for (let c = 0; c < 3; c++) {
+    const x = 16 + c * (cw + g);
+    o += wcell(x, 38, cw, ch, BLUE, heads[c]);
+    for (let r = 0; r < 3; r++) {
+      o += wcell(x, 38 + (r + 1) * (ch + g), cw, ch, [ '#FFFFFF', C.blue, false, C.ink ], rows[r][c]);
+    }
+  }
+  o += name(152, 202, 'Feature Matrix X (n × 3)', D.blue.dark, { fs: 16 });
+  o += note(152, 224, 'safe against column reordering', C.muted, { fs: 13.5 });
+
+  // Arrow / gap to y = data['Price']
+  o += code(444, 20, "targets = data['Price']", D.green.dark, { fs: 13, fw: 700 });
+  const tx0 = 400;
+  o += wcell(tx0, 38, 96, ch, GREEN, heads[3]);
+  for (let r = 0; r < 3; r++) {
+    o += wcell(tx0, 38 + (r + 1) * (ch + g), 96, ch, [ '#FFFFFF', C.green, false, C.ink ], rows[r][3]);
+  }
+  o += name(448, 202, 'Target Vector y (n,)', D.green.dark, { fs: 16 });
+  o += note(448, 224, 'extracted before imputation', C.muted, { fs: 13.5 });
+  return svg(W, H, o);
+}
+
+// ── mean imputation shrinks variance; indicator column preserves signal ─
+function imputationShrinkage() {
+  const W = 540, H = 278; let o = '';
+  const x0 = 84, x1 = 492, mx = (x0 + x1) / 2;
+  // Panel (a): Observed spread vs mean-imputed pileup at mu = 3.0
+  o += name(16, 20, '(a) Plugging μ = 3.0 into missing rows shrinks spread σ', D.orange.dark, { anchor: 'start', fs: 15.5 });
+  const y1 = 68, y2 = 132;
+  o += note(16, y1, 'true', C.muted, { anchor: 'start', fs: 14 });
+  o += line(x0, y1, x1, y1, C.ink, 2);
+  [-160, -110, -70, -25, 30, 80, 125, 165].forEach(dx => {
+    o += `<circle cx="${mx + dx}" cy="${y1}" r="5.5" fill="${C.blue}"/>`;
+  });
+
+  o += note(16, y2, 'imputed', D.orange.dark, { anchor: 'start', fs: 14 });
+  o += line(x0, y2, x1, y2, C.ink, 2);
+  [-110, -25, 30, 125].forEach(dx => {
+    o += `<circle cx="${mx + dx}" cy="${y2}" r="5.5" fill="${C.blue}"/>`;
+  });
+  // Stack of 4 imputed dots piled at the exact mean mx
+  for (let k = 0; k < 4; k++) {
+    o += `<circle cx="${mx}" cy="${y2 - k * 11}" r="5.5" fill="${C.amber}" stroke="${D.orange.dark}" stroke-width="1.5"/>`;
+  }
+  o += code(mx, y2 + 22, 'μ = 3.0 (4 imputed rows pile here → σ shrinks!)', D.orange.dark, { fs: 13.5 });
+
+  // Panel (b): Adding binary indicator feature NumRooms_isna
+  o += `<line x1="16" y1="176" x2="524" y2="176" stroke="${N.hairline}" stroke-width="1.5"/>`;
+  o += name(16, 200, '(b) Solution: pair imputed value with binary is_na indicator', D.purple.dark, { anchor: 'start', fs: 15.5 });
+  o += wcell(40, 222, 136, 36, GREEN, 'NumRooms = 3.0');
+  o += tx(196, 240, '+', { fs: 22, fw: 700, fill: C.ink });
+  o += wcell(216, 222, 164, 36, PURPLE, 'NumRooms_isna = 1');
+  o += arrow(390, 240, 424, 240, C.purple);
+  o += code(480, 240, 'w₁·3 + w₂·1', D.purple.dark, { fs: 14.5, fw: 700 });
+  return svg(W, H, o);
+}
+
+// ── categorical pitfalls: fake integer order vs one-hot vs embedding ───
+function categoricalPitfalls() {
+  const W = 540, H = 280; let o = '';
+  // 1. Bad: integer IDs imply fake order
+  o += `<rect x="16" y="16" width="508" height="72" rx="8" fill="${D.red.tint}" stroke="${D.red.base}" stroke-width="2"/>`;
+  o += name(28, 38, '✗ Integer IDs invent fake metric ordering:', D.red.dark, { anchor: 'start', fs: 15.5 });
+  o += code(270, 66, 'Slate = 0     Tile = 1     Wood = 2   ⇒   (Slate + Wood)/2 = Tile?!', D.red.dark, { fs: 13.5 });
+
+  // 2. Good for small K: One-hot orthogonal corners
+  o += `<rect x="16" y="104" width="244" height="160" rx="8" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`;
+  o += name(138, 128, '✓ Small K: One-Hot {0, 1}ᴷ', D.blue.dark, { fs: 15.5 });
+  o += code(138, 156, 'Slate → [1, 0, 0]', C.ink, { fs: 13.5 });
+  o += code(138, 180, 'Tile  → [0, 1, 0]', C.ink, { fs: 13.5 });
+  o += code(138, 204, 'Wood  → [0, 0, 1]', C.ink, { fs: 13.5 });
+  o += note(138, 240, 'equidistant orthogonal axes', D.blue.dark, { fs: 13.5 });
+
+  // 3. Good for huge K: Learned dense embedding table
+  o += `<rect x="280" y="104" width="244" height="160" rx="8" fill="${D.purple.tint}" stroke="${C.purple}" stroke-width="2"/>`;
+  o += name(402, 128, '✓ Large K: Embedding Rᴷˣᵈ', D.purple.dark, { fs: 15.5 });
+  o += code(402, 156, 'K = 50,000 zip codes / words', C.ink, { fs: 13 });
+  o += wcell(312, 174, 180, 34, [ '#FFFFFF', C.purple, false, D.purple.dark ], 'e_id = E[id] ∈ R⁶⁴');
+  o += note(402, 240, 'd ≪ K learned dense features', D.purple.dark, { fs: 13.5 });
+  return svg(W, H, o);
+}
+
+// ── data leakage vs fit-on-train / apply-to-test pipeline ─────────────
+function leakageSplit() {
+  const W = 560, H = 286; let o = '';
+  // Top: WRONG (fit before split -> data leakage)
+  o += `<rect x="14" y="14" width="532" height="106" rx="10" fill="${D.red.tint}" stroke="${D.red.base}" stroke-width="2"/>`;
+  o += name(26, 36, '✗ WRONG: Fit on Full Dataset Before Splitting (Test Leakage!)', D.red.dark, { anchor: 'start', fs: 15.5 });
+  o += wcell(26, 56, 134, 44, [ '#FFFFFF', D.red.base, false, C.ink ], 'Train + Test');
+  o += arrow(166, 78, 206, 78, D.red.base);
+  o += wcell(212, 56, 152, 44, [ '#FFFFFF', D.red.base, false, D.red.dark ], 'μ_all, σ_all');
+  o += arrow(370, 78, 410, 78, D.red.base);
+  o += wcell(416, 56, 116, 44, [ '#FFFFFF', D.red.base, false, D.red.dark ], 'optimistic!');
+
+  // Bottom: RIGHT (split first, fit on train only, freeze & apply to test)
+  o += `<rect x="14" y="136" width="532" height="136" rx="10" fill="${C.lgreen}" stroke="${C.green}" stroke-width="2"/>`;
+  o += name(26, 158, '✓ RIGHT: Split First → Fit on Train Only → Apply Frozen Stats', D.green.dark, { anchor: 'start', fs: 15.5 });
+  o += wcell(26, 178, 108, 36, BLUE, 'Train Set');
+  o += wcell(26, 224, 108, 36, AMBER, 'Test Set');
+
+  o += arrow(140, 196, 186, 196, C.blue);
+  o += code(163, 182, 'fit', D.blue.dark, { fs: 13 });
+  o += wcell(192, 178, 154, 36, [ '#FFFFFF', C.green, false, D.green.dark ], 'μ_train, σ_train');
+
+  // Frozen stats arrow feeds both train and test transform
+  o += arrow(352, 196, 396, 196, C.green);
+  o += arrow(269, 216, 269, 242, C.green);
+  o += arrow(269, 242, 396, 242, C.green);
+  o += arrow(140, 242, 396, 242, C.amber);
+
+  o += wcell(402, 178, 130, 36, [ '#FFFFFF', C.blue, false, C.ink ], 'X_train_std');
+  o += wcell(402, 224, 130, 36, [ '#FFFFFF', C.amber, false, C.ink ], 'X_test_std');
+  return svg(W, H, o);
+}
+
+// ── mixed pandas DataFrame dtypes -> contiguous float32 tensor ────────
+function dtypeCast() {
+  const W = 560, H = 250; let o = '';
+  // Left: Mixed DataFrame columns (float64 + bool -> object trap!)
+  o += name(122, 22, 'Mixed DataFrame Columns', C.ink, { fs: 15.5 });
+  o += wcell(14, 42, 104, 42, BLUE, 'float64');
+  o += wcell(124, 42, 104, 42, AMBER, 'bool (T/F)');
+  o += arrow(121, 92, 121, 132, D.red.base, true);
+  o += code(129, 114, 'uncast .to_numpy()', D.red.dark, { anchor: 'start', fs: 12.5 });
+  o += wcell(14, 138, 214, 44, [ D.red.tint, D.red.base, false, D.red.dark ], 'dtype=object error!');
+  o += note(121, 204, '2× RAM if left as float64', D.red.dark, { fs: 13.5 });
+
+  // Arrow across to explicit float32 cast
+  o += arrow(236, 63, 344, 63, C.purple);
+  o += code(290, 44, 'dtype=float32', D.purple.dark, { fs: 12.5, fw: 700 });
+
+  // Right: Contiguous float32 Tensor X & y
+  o += name(448, 22, 'Contiguous GPU Tensors', D.green.dark, { fs: 15.5 });
+  o += `<rect x="352" y="42" width="194" height="140" rx="8" fill="${C.lgreen}" stroke="${C.green}" stroke-width="2"/>`;
+  o += code(449, 74, 'X: float32 (n, d)', D.green.dark, { fs: 15, fw: 700 });
+  o += code(449, 104, 'y: float32 (n, 1)', D.green.dark, { fs: 15, fw: 700 });
+  o += note(449, 140, '✓ 4 bytes/val (50% RAM)', C.ink, { fs: 13 });
+  o += note(449, 164, '✓ matches GPU weights', C.ink, { fs: 13 });
+  return svg(W, H, o);
+}
+
 export const diagrams = {
   'pandas-pipeline': pipeline,
   'pandas-missing':  missing,
   'pandas-onehot':   onehot,
   'pandas-scale':    scale,
+  'pandas-xy-split':             xySplit,
+  'pandas-imputation-shrinkage': imputationShrinkage,
+  'pandas-categorical-pitfalls': categoricalPitfalls,
+  'pandas-leakage-split':        leakageSplit,
+  'pandas-dtype-cast':           dtypeCast,
 };

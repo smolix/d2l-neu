@@ -1386,14 +1386,16 @@ Efficient Convnets<br>**depthwise-separable factorization · inverted bottleneck
 ::: {.slide title="Hard Edge Budgets: Why 15B Multiply-Adds Cannot Ship"}
 [Motivation & Deployment Constraints]{.kicker}
 
-On smartphones, autonomous vehicles, and embedded cameras, latency, SRAM/DRAM footprint, and battery power are hard physical ceilings:
+::: {.cols .vc}
+::: {.col}
+- **Datacenter vs. edge:** VGG-16 demands $15.3\textrm{B}$ MACs/frame and $550\textrm{ MB}$ of fp32 weights; MobileNetV1 hits $70.6\%$ ImageNet top-1 ($-0.9\%$) with **$27\times$ fewer MACs** ($0.57\textrm{B}$) and **$33\times$ fewer weights** ($4.2\textrm{M}$).
+- **Three pillars:** Depthwise-separable factorization, compound scaling + SE gates, and RepVGG train-to-eval branch fusion.
+:::
 
-- **Datacenter backbones bust edge budgets:** VGG-16 requires $15.3\text{B}$ multiply-adds per $224\times 224$ frame ($460\text{B}$ MACs/s at 30 FPS) and $138\text{M}$ float32 weights ($550\text{ MB}$ of RAM).
-- **The MobileNet leap (Howard et al., 2017):** Reaches $70.6\%$ ImageNet top-1 accuracy (within $0.9\%$ of VGG-16's $71.5\%$) using **$0.57\text{B}$ multiply-adds ($27\times$ fewer)** and **$4.2\text{M}$ parameters ($33\times$ fewer)**.
-- **Three orthogonal efficiency pillars:**
-  1. *Layer factorization:* Decouple spatial filtering from cross-channel mixing (MobileNet, MobileNetV2).
-  2. *Scaling & hardware-aware search:* Jointly allocate depth, width, and resolution + global channel gates (EfficientNet, SE).
-  3. *Structural re-parameterization:* Train multi-branch residual blocks, then fold them algebraically into single $3\times 3$ convolutions for deployment (RepVGG).
+::: {.col .fig .big}
+@fig:ch07-mcnn-edge-budget-gap
+:::
+:::
 :::
 
 ::: {.slide title="From Grouped Convolutions to the Depthwise Limit"}
@@ -1472,9 +1474,15 @@ In code, setting `groups=in_channels` (or `DepthwiseConv2D` / `feature_group_cou
 ::: {.slide title="Assembling Mini-MobileNet and Counting Parameters"}
 [Mini-MobileNet Backbone]{.kicker}
 
-A stride-2 32-channel $3\times 3$ stem followed by 7 separable blocks climbing to 512 channels uses $542{,}474$ trainable parameters (versus $4.66\text{M}$ weights if those 7 blocks were dense $3\times 3$ convolutions—an $8.8\times$ reduction):
-
+::: {.cols .vc}
+::: {.col}
 @efficient-convnets-a-mini-mobilenet-3
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-mini-mobilenet-pipeline
+:::
+:::
 :::
 
 ::: {.slide title="MobileNetV2: The Inverted Bottleneck & Linear Projection"}
@@ -1508,40 +1516,50 @@ We compare `MiniMobileNet` ($542\text{K}$ params, $50.3\text{M}$ MACs) against t
 ::: {.slide title="Why 7.7× Fewer FLOPs Yield Only 2–3.5× Faster GPUs"}
 [Systems Analysis: Arithmetic Intensity]{.kicker}
 
-Summarizing the three-model benchmark exposes two foundational systems and statistical lessons:
+::: {.cols .vc}
+::: {.col}
+- **Parameter-matched (`VGGSmall`, 385M MACs):** $7.7\times$ more MACs than `MiniMobileNet` ($50.3\textrm{M}$), yet only $2\text{--}3.5\times$ slower on GPU ($93.8\%$ vs. $91.5\%$ acc).
+- **FLOP-matched (`VGG-style, narrow`, 49.1M MACs):** Beats `MiniMobileNet` in accuracy ($93\%$) *and* runs faster ($0.5\text{--}0.8\times$ time).
+- **Roofline bottleneck:** Depthwise $3 \times 3$ does only $9$ MACs/read vs. $9c_\textrm{o}$ for dense $3 \times 3$.
+:::
 
-| Model ($96\times 96$, 10 epochs) | Parameters | Multiply-Adds | Val Accuracy | Relative GPU Batch Time |
-|:--|--:|--:|--:|--:|
-| **Mini-MobileNet** (separable, width to 512) | $542{,}474$ | $50.3\text{M}$ | $91\text{--}92\%$ | $1.0\times$ |
-| **VGG-style** (dense, parameter-matched) | $583{,}594$ | $384.9\text{M}$ ($7.7\times$) | $93.5\text{--}94\%$ | $2.0\text{--}3.5\times$ |
-| **VGG-style, narrow** (dense, FLOP-matched) | $75{,}854$ | $49.1\text{M}$ ($1.0\times$) | $\approx 93\%$ | $0.5\text{--}0.8\times$ |
-
-::: {.d2l-note .warn}
-**Roofline Pitfall (Memory-Bandwidth Bound Depthwise Convs):** A dense $3\times 3$ layer performs $9c_{\textrm{o}}$ multiply-adds per input activation read from HBM, keeping GPU tensor cores saturated. A depthwise $3\times 3$ layer performs only **$9$ multiply-adds per input read** regardless of $c_{\textrm{o}}$, leaving the GPU stalled on memory bandwidth and kernel-launch overhead.
+::: {.col .fig .big}
+@fig:ch07-mcnn-arithmetic-intensity-roofline
+:::
 :::
 :::
 
 ::: {.slide title="Compound Scaling and Latency-Aware Architecture Search"}
 [EfficientNet & EfficientNetV2]{.kicker}
 
-How should we scale a convnet when compute grows, and why did EfficientNetV2 drop depthwise layers in early stages?
+::: {.cols .vc}
+::: {.col}
+$$\text{MACs} \propto d \cdot w^2 \cdot r^2$$
 
-- **Compute scaling law:** A convnet's multiply-adds scale linearly with depth $d$, quadratically with channel width $w$, and quadratically with image resolution $r$:
-  $$\text{MACs} \propto d \cdot w^2 \cdot r^2$$
-- **Compound scaling (EfficientNet, Tan & Le 2019):** Scaling any single axis alone hits diminishing returns (e.g., high resolution without added depth leaves receptive fields too small). Each compound step $\phi$ scales $(d, w, r)$ by $(1.2^\phi,\; 1.1^\phi,\; 1.15^\phi)$, multiplying compute by $1.2 \times 1.1^2 \times 1.15^2 \approx 1.92\times$ per step.
-- **Hardware-aware NAS (EfficientNetV2, 2021):** Replacing theoretical FLOPs with measured accelerator latency in the search objective automatically **swapped early high-resolution depthwise blocks back to fused dense $3\times 3$ convolutions**, where higher arithmetic intensity runs faster on GPUs/TPUs.
+- **Compound scaling (Tan & Le, 2019):** Each step $\phi$ scales $(d, w, r)$ by $(1.2^\phi, 1.1^\phi, 1.15^\phi)$, multiplying compute by $\approx 1.92^\phi$.
+- **Latency-aware NAS (EfficientNetV2):** Replaces early high-resolution depthwise stages with fused dense $3 \times 3$ convolutions for higher GPU arithmetic intensity.
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-compound-scaling-cube
+:::
+:::
 :::
 
 ::: {.slide title="Squeeze-and-Excitation (SE): Global Channel Attention"}
 [Squeeze-and-Excitation Gates]{.kicker}
 
-Inserted inside MobileNetV3, EfficientNet, and RegNetY blocks, a *Squeeze-and-Excitation* (SE) module (Hu et al., 2018) dynamically reweights channels using global image context at negligible FLOP cost:
-
-- **1. Squeeze (Global spatial pooling):** Averages each of the $c$ feature maps across $H \times W$ into a global descriptor $\mathbf{z} \in \mathbb{R}^c$.
-- **2. Excite (Bottleneck gating MLP):** Passes $\mathbf{z}$ through a two-layer bottleneck ($c \to c/r \to c$, reduction ratio $r=4$, adding only $2c^2/r$ weights and operating on $1\times 1$ vectors) to predict per-channel gates $\mathbf{s} = \sigma(\mathbf{W}_2\,\textrm{ReLU}(\mathbf{W}_1 \mathbf{z})) \in (0, 1)^c$.
-- **3. Rescale:** Multiplies each feature channel $\mathbf{X}_k$ by its scalar gate $s_k$:
-
+::: {.cols .vc}
+::: {.col}
 @cnn-design-squeeze-and-excitation-gates
+
+- **Squeeze $\to$ Excite $\to$ Rescale:** Pools $(C, H, W) \to (C, 1, 1)$ and runs a $C \to C/r \to C$ gating MLP ($\sigma$) for $<0.03\%$ extra MACs.
+:::
+
+::: {.col .fig}
+@fig:ch07-mcnn-se-channel-gating
+:::
+:::
 :::
 
 ::: {.slide title="RepVGG: Multi-Branch Training, Single-Path Inference"}

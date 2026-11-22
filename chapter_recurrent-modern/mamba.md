@@ -806,16 +806,16 @@ Selective State Space Models (Mamba)<br>**selective copying · input-dependent s
 ::: {.slide title="Combining minGRU Selectivity with S4D Multi-Timescales"}
 [Unifying Two Paradigms]{.kicker}
 
-Earlier sections developed two complementary pieces of the puzzle that **Selective State Space Models (Mamba)** (Gu & Dao, 2023) unify:
+::: {.cols .vc}
+::: {.col}
+- **What `MinGRU` (§12.3) Has:** Input-dependent gate $\mathbf{z}_t(\mathbf{x}_t)$, but only $N = 1$ scalar per channel starting at $\tau_{1/2} = 1$.
+- **What `S4D` (§12.4) Has:** $N = 16$ log-spaced decay modes per channel ($\tau_{1/2} \in [0.4, 693]$), but fixed LTI step size $\Delta_c$.
+- **What `Mamba` (§12.5) Unifies:** Token-dependent $(\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t)$ over an $H \times N$ multi-timescale state trained via parallel + adjoint scans.
+:::
 
-| Architecture | Token-Dependent Decay? | Multi-Timescale Initialization? | State per Channel | Parallel Training Algorithm |
-| :--- | :---: | :---: | :---: | :--- |
-| **`MinGRU` (§12.3)** | **Yes** ($\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z})$) | No (starts at $\sigma(0) = 0.5$, $\tau_{1/2} = 1$) | $1$ scalar | Associative scan |
-| **`S4D` (§12.4)** | No (fixed step size $\Delta_c$) | **Yes** ($\lambda_n = -n$, $\tau_{1/2} \in [0.4, 693]$) | $N$ numbers | FFT convolution or scan |
-| **`Mamba` (§12.5)** | **Yes** ($\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ from $\mathbf{x}_t$) | **Yes** ($\lambda_n = -n$, $\Delta_0 \in [10^{-3}, 10^{-1}]$) | $N$ numbers | Associative scan + adjoint scan |
-
-::: {.d2l-note .rule}
-Making the discretization step size $\boldsymbol{\Delta}_t$ a function of the input token $\mathbf{x}_t$ lets each channel freeze its $N$-state bank on fillers ($\Delta_{t,c} \to 0$) and overwrite it on salient tokens ($\Delta_{t,c}$ large).
+::: {.col .fig .big}
+@fig:ch12-mrnn-mamba-unification
+:::
 :::
 :::
 
@@ -844,32 +844,35 @@ Training a 2-block `SeqLM` ($d = 48$) for $1{,}500$ Adam steps ($\text{lr} = 3 \
 ::: {.slide title="Exact Duality: Softplus Step Sizes Are Sigmoid Gates"}
 [Theorem 1 (Gu & Dao, 2023)]{.kicker}
 
-Consider a 1-state SSM ($N = 1$) with rate $\lambda = -1$ under zero-order hold ($h_t = e^{-\Delta_t}h_{t-1} + (1 - e^{-\Delta_t})x_t$). Compute the positive step size via $\Delta_t = \textrm{softplus}(s_t) = \log(1 + e^{s_t})$ from a linear pre-activation $s_t = \mathbf{w}^\top \mathbf{x}_t + b$:
-
+::: {.cols .vc}
+::: {.col}
 $$e^{-\Delta_t} = e^{-\log(1 + e^{s_t})} = \frac{1}{1 + e^{s_t}} = \sigma(-s_t) = z_t$$
 
-| Pre-activation $s_t$ | Step size $\Delta_t = \textrm{softplus}(s_t)$ | Retention $z_t = e^{-\Delta_t} = \sigma(-s_t)$ | Operational Effect on State |
-| :---: | :---: | :---: | :--- |
-| $s_t = -4.6$ (filler) | $\Delta_t \approx 0.01$ | $z_t \approx 0.990$ ($\tau_{1/2} = 69$) | **Freeze time:** ignore filler, preserve state |
-| $s_t = +2.0$ (symbol) | $\Delta_t \approx 2.13$ | $z_t \approx 0.119$ ($\tau_{1/2} = 0.3$) | **Advance time:** flush old state, write symbol |
+- **Exact 1D Equivalence ($N = 1, \lambda = -1$):** Discretizing $h'(t) = -h(t) + x(t)$ with step $\Delta_t = \textrm{softplus}(s_t)$ yields $h_t = z_t h_{t-1} + (1 - z_t)x_t$ (`MinGRU`).
+- **Clock Modulation:** Filler tokens ($s_t = -4.6 \implies \Delta_t \approx 0.01, z_t \approx 0.99$) freeze the state; marked symbols ($s_t = +2.0 \implies \Delta_t \approx 2.13, z_t \approx 0.12$) overwrite it.
+:::
 
-::: {.d2l-note}
-At $N = 1$, a selective SSM is algebraically identical to `MinGRU` ($h_t = z_t h_{t-1} + (1 - z_t)x_t$), while generalizing naturally to $N$ rates $\lambda_1, \ldots, \lambda_N$ driven by one channel step size $\Delta_{t,c}$.
+::: {.col .fig}
+@fig:ch12-mrnn-softplus-sigmoid-duality
+:::
 :::
 :::
 
 ::: {.slide title="Selective SSM Dynamics: Per-Token Δt, Bt, and Ct"}
 [The Selective SSM Equations]{.kicker}
 
-From the $H$-channel input $\mathbf{x}_t \in \mathbb{R}^H$ ($H = 2d$), `SelectiveSSM` projects per-channel step sizes $\boldsymbol{\Delta}_t \in \mathbb{R}_+^H$ alongside a shared write vector $\mathbf{B}_t \in \mathbb{R}^N$ and read vector $\mathbf{C}_t \in \mathbb{R}^N$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{h}_t^{(c)} = e^{\Delta_{t,c}\boldsymbol{\lambda}} \odot \mathbf{h}_{t-1}^{(c)} + \Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t, \quad y_{t,c} = \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}$$
 
-$$\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t + \mathbf{b}_\Delta), \qquad \mathbf{B}_t = \mathbf{W}_B \mathbf{x}_t, \qquad \mathbf{C}_t = \mathbf{W}_C \mathbf{x}_t$$
+- **Input-Dependent Projections:** From $\mathbf{x}_t \in \mathbb{R}^H$, computes rank-$R$ step sizes $\boldsymbol{\Delta}_t \in \mathbb{R}_+^H$ plus shared $\mathbf{B}_t, \mathbf{C}_t \in \mathbb{R}^N$.
+- **Euler Write Factor:** Keeps exact ZOH decay $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ with first-order write $\Delta_{t,c} x_{t,c}\mathbf{B}_t$.
+:::
 
-Each channel $c \in \{1, \ldots, H\}$ updates its $N$-dimensional state $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ with rates $\boldsymbol{\lambda} \in \mathbb{R}_-^N$ and reads out $y_{t,c}$:
-
-$$\mathbf{h}_t^{(c)} = e^{\Delta_{t,c}\boldsymbol{\lambda}} \odot \mathbf{h}_{t-1}^{(c)} + \Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t, \qquad y_{t,c} = \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}$$
-
-- **Euler write approximation:** Following Gu & Dao (2023), the ZOH decay $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ is kept exact while the ZOH write factor $(e^{\Delta\lambda} - 1)/\lambda$ is replaced by its first-order Taylor expansion $\Delta_{t,c}$ (allowing salient tokens with large $\Delta_{t,c}$ to write with unbounded strength).
+::: {.col .fig}
+@fig:ch12-mrnn-selective-ssm-dataflow
+:::
+:::
 :::
 
 ::: {.slide title="Tensor Shapes and Low-Rank Step-Size Projection"}
@@ -906,22 +909,33 @@ Every tensor in `SelectiveSSM` has a clear structural role across the $H = 2d$ e
 ::: {.slide title="Pitfall: Activation Memory Explosion in 4D Scans"}
 [Systems Bottleneck]{.kicker}
 
-Because $\boldsymbol{\Delta}_t$ varies at every token step $t$, the system is no longer time-invariant—the FFT convolution of §12.4 cannot be used!
+::: {.cols .vc}
+::: {.col}
+- **No FFT Shortcut:** Time-varying $\boldsymbol{\Delta}_t$ breaks LTI convolution, requiring a 4D parallel scan over $(B, T, H, N)$.
+- **32× State Expansion ($H = 2d, N = 16$):** Naive autograd stores $\sim 20$ intermediate doubling-round tensors—consuming $\sim 2\text{ GB}$/layer in toy runs and $>300\text{ GB}$ at LLM scale.
+:::
 
-- **Parallel scan still applies:** The state update $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ over $(B, T, H, N)$ remains affine, so `linear_scan` evaluates all $T$ states in $\lceil \log_2 T \rceil$ parallel rounds.
-- **The $2N$ state expansion tax:** Expanding each token's state from $d$ to $H \times N = 2dN$ numbers multiplies state tensor size by $2N$ ($32\times$ at $N = 16$).
-- **Naive autograd memory blow-up:** Differentiating through $\lceil \log_2 T \rceil \approx 11$ doubling rounds retains $\sim 20$ intermediate tensors of shape $(B, T, H, N)$: already **$\sim 2\text{ GB}$ per layer** in our tiny copying model, and **$>300\text{ GB}$ per layer** at LLM scale ($B=8, T=8192, H=4096, N=16$).
+::: {.col .fig .big}
+@fig:ch12-mrnn-4d-scan-memory
+:::
+:::
 :::
 
 ::: {.slide title="The Adjoint Scan: Differentiating via a Reverse Scan"}
 [Memory-Efficient Backpropagation]{.kicker}
 
-Instead of backpropagating through the intermediate rounds of the forward scan, write the chain rule for the state gradient $\mathbf{g}_t = \partial \ell / \partial \mathbf{h}_t$ directly from $\mathbf{h}_{t+1} = \mathbf{a}_{t+1} \odot \mathbf{h}_t + \mathbf{b}_{t+1}$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{g}_t = \frac{\partial \ell}{\partial \mathbf{h}_t}\Big|_\textrm{direct} + \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1}, \quad \frac{\partial \ell}{\partial \mathbf{b}_t} = \mathbf{g}_t, \quad \frac{\partial \ell}{\partial \mathbf{a}_t} = \mathbf{g}_t \odot \mathbf{h}_{t-1}$$
 
-$$\mathbf{g}_t = \frac{\partial \ell}{\partial \mathbf{h}_t}\Big|_\textrm{direct} + \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1}, \qquad \frac{\partial \ell}{\partial \mathbf{b}_t} = \mathbf{g}_t, \qquad \frac{\partial \ell}{\partial \mathbf{a}_t} = \mathbf{g}_t \odot \mathbf{h}_{t-1}$$
+- **Reverse-Time Linear Recurrence:** Evaluates $\mathbf{g}_{T:1}$ via one reverse call to `linear_scan`.
+- **10× Memory Reduction (`adjoint_scan`):** Saves only $2$ tensors $(\mathbf{a}, \mathbf{h})$ instead of $\sim 20$ intermediate scan rounds.
+:::
 
-- **Reverse-time linear recurrence:** The adjoint equation for $\mathbf{g}_t$ is itself an affine recurrence running backward from $t = T$ down to $1$, evaluated by a single call to `linear_scan` on reversed tensors!
-- **10x memory reduction (`adjoint_scan`):** Custom VJP (`torch.autograd.Function` / `@jax.custom_vjp`) saves only $(\mathbf{a}, \mathbf{h})$—**$2$ tensors instead of $\sim 20$**. (Mamba's fused CUDA kernel goes one step further: it keeps $\mathbf{h}$ in on-chip SRAM and recomputes $\mathbf{h}$ during the backward pass.)
+::: {.col .fig}
+@fig:ch12-mrnn-adjoint-reverse-scan
+:::
+:::
 :::
 
 ::: {.slide title="Verifying Custom VJP Adjoint Scan Against Autograd"}
@@ -951,12 +965,18 @@ We train 2-block `Mamba` ($N = 4$) alongside `Mamba, not selective` (`selective=
 ::: {.slide title="Decomposing the Final State by Token Position"}
 [Mechanistic Interpretability]{.kicker}
 
-How does a trained `Mamba` layer retain the $4$ marked symbols across $1{,}024$ steps while discarding the $1{,}020$ filler tokens? Unrolling the recurrence to the first query position $T = 1{,}025$:
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{h}_T = \sum_{s=1}^{T} \exp\!\Big(\sum_{r=s+1}^{T} \log \mathbf{a}_r\Big) \odot \mathbf{b}_s$$
 
-$$\mathbf{h}_T = \sum_{s=1}^{T} \underbrace{\exp\!\Big(\sum_{r=s+1}^{T} \log \mathbf{a}_r\Big) \odot \mathbf{b}_s}_{\text{surviving term from position } s}$$
+- **Per-Position Surviving Norm:** `state_contributions` measures the Euclidean norm of position $s$'s decayed write inside $\mathbf{h}_T$.
+- **Width-4 Conv Windows:** Each marked symbol spreads across $\{s, \ldots, s+3\}$ ($\le 1.6\%$ of the $1{,}025$ tokens).
+:::
 
-- **Per-position state norm (`state_contributions`):** Computing the Euclidean norm of position $s$'s decayed write vector across all $H \times N$ state entries measures how much of position $s$ physically remains inside $\mathbf{h}_T$.
-- **Accounting for the width-4 causal convolution:** Because the depthwise convolution spreads each symbol token across positions $\{s, s+1, s+2, s+3\}$, the four 4-token symbol windows occupy at most $16 / 1025 \approx 1.6\%$ of the sequence.
+::: {.col .fig}
+@fig:ch12-mrnn-state-contribution-formula
+:::
+:::
 :::
 
 ::: {.slide title="Mamba Spikes at Marked Symbols; S4D Tracks Recency"}

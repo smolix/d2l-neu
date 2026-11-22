@@ -26,6 +26,11 @@ The slide builder:
     do not add to the library.
   - Strips `#@save` markers and `%%tab` lines.
   - Flattens `tab.selected()` branches for the deck's framework.
+  - Replaces section-number tokens (`§{sec_x}` → "§9.3", `§{num:sec_x}` →
+    "9.3") from CHAPTER_NUMBERING; an unresolvable one fails the run
+    (tools/section_refs.py).
+  - Writes decks only for the file's frameworks (d2l_preprocess.page_frameworks)
+    and deletes decks an earlier build left for other frameworks or files.
 
 The output `.qmd` has `eval: false` — outputs are injected post-build
 by `tools/inject_outputs.py slides`.
@@ -55,11 +60,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 from d2l_preprocess import (
     FRAMEWORKS, FRAMEWORK_DISPLAY, CHAPTER_NUMBERING,
     extract_tab, is_boilerplate, is_python_block,
-    extract_cell_id, translate_directives,
+    extract_cell_id, translate_directives, page_frameworks,
 )
 from build_lib import flatten_tab_branches
 import preamble
 from exercise_refs import render as render_exercise_refs
+import section_refs
 
 
 # ──────────────────────────────────────────────────────────
@@ -282,21 +288,14 @@ def parse_slide_blocks(text):
 
 
 def has_framework_code(src_path, framework):
-    """Same semantics as before: skip files with no fw-applicable code."""
-    text = Path(src_path).read_text(encoding='utf-8')
-    tabs_found = set()
-    for m in re.finditer(r'^#@tab\s+(.+)$', text, re.MULTILINE):
-        for t in m.group(1).split(','):
-            tabs_found.add(t.strip())
-    for m in re.finditer(r'^%%tab\s+(.+)$', text, re.MULTILINE):
-        for t in m.group(1).split(','):
-            tabs_found.add(t.strip())
-    if not tabs_found:
-        return True  # no tabs anywhere — applies to all frameworks
-    fw_specific = tabs_found - {'all'}
-    if not fw_specific:
-        return True
-    return framework in fw_specific
+    """Does the file get a deck for `framework`? (d2l_preprocess.page_frameworks)
+
+    A file with `#@tab` / `%%tab` tags gets decks for the frameworks they
+    name. An untagged file (a chapter index, a prose-only section) follows its
+    chapter's tagged sections, so the index of a PyTorch+JAX chapter gets no
+    TensorFlow or MXNet deck; with no tagged sibling it gets all four.
+    """
+    return framework in page_frameworks(src_path)
 
 
 # ──────────────────────────────────────────────────────────
@@ -491,6 +490,12 @@ def generate_slides_qmd(src_path, framework, warnings):
         return None
 
     text = Path(src_path).read_text(encoding='utf-8')
+    # Section-number tokens (§{sec_x}, §{num:chap_x}) become the label's
+    # current number (tools/section_refs.py). Done first, on the raw source,
+    # so an error names the source line. Any unresolvable token raises
+    # SectionRefError: never emit a deck with a token left in it.
+    text = section_refs.resolve(text, str(src_path),
+                                root=Path(src_path).resolve().parent.parent)
     # Slides cite exercises by number (":exref:`ex_...`"); render them as the
     # notebooks and the PDF do.
     text = render_exercise_refs(text, src_path, mode='plain')
@@ -732,6 +737,26 @@ def _render_decks_parallel(fw, fw_dir, output_root, rel_paths, base_env,
     return file_errors, time.time() - t0
 
 
+def _remove_deck(fw_dir, rel):
+    """Delete the generated/rendered deck of source `rel` under fw_dir.
+
+    Removes `<stem>.qmd`, `<stem>.html`, `<stem>_files/` and the render-error
+    log. Returns True if anything was there.
+    """
+    base = fw_dir / rel[:-len('.md')]
+    hit = False
+    for p in (base.with_suffix('.qmd'), base.with_suffix('.html'),
+              fw_dir.parent / 'errors' / fw_dir.name / (rel[:-3] + '.log')):
+        if p.is_file():
+            p.unlink()
+            hit = True
+    files_dir = base.parent / f'{base.name}_files'
+    if files_dir.is_dir():
+        shutil.rmtree(files_dir)
+        hit = True
+    return hit
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Generate per-framework Reveal.js slides')
@@ -757,6 +782,24 @@ def main():
     file_filter = set(args.files) if args.files else None
     files = list(CHAPTER_NUMBERING.keys())
 
+    # Section-number tokens (§{label}) must all resolve before any deck is
+    # written: report every bad one with file and line, then fail.
+    token_problems = []
+    for rel in files:
+        if file_filter and rel not in file_filter:
+            continue
+        src_file = src / rel
+        if src_file.exists():
+            token_problems += section_refs.check(
+                src_file.read_text(encoding='utf-8'), str(src_file), root=src)
+    if token_problems:
+        for path, line, msg in token_problems:
+            print(f'{path}:{line}: error: {msg}', file=sys.stderr)
+        print(f'\nERROR: {len(token_problems)} unresolvable section token(s) '
+              f'in slide text (tools/section_refs.py). No decks written.',
+              file=sys.stderr)
+        sys.exit(1)
+
     warnings = []
     render_failures = []   # (framework, deck path, error) across all frameworks
     for fw in args.frameworks:
@@ -764,6 +807,8 @@ def main():
         print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} slides ===')
 
         generated = 0
+        generated_rels = set()
+        removed = []
         for rel in files:
             if file_filter and rel not in file_filter:
                 continue
@@ -773,12 +818,33 @@ def main():
 
             content = generate_slides_qmd(src_file, fw, warnings)
             if content is None:
+                # No deck for this framework (any more): drop what an
+                # earlier build left, so it reaches neither _book/slides
+                # nor the bucket (integrate_slides.sh / upload_r2.sh copy
+                # _slides/ wholesale).
+                if _remove_deck(fw_dir, rel):
+                    removed.append(rel)
                 continue
 
             dst_file = fw_dir / rel.replace('.md', '.qmd')
             dst_file.parent.mkdir(parents=True, exist_ok=True)
             dst_file.write_text(content, encoding='utf-8')
             generated += 1
+            generated_rels.add(rel)
+
+        # A full run also drops decks whose source left the book (a deleted
+        # or moved file): every deck in fw_dir must come from this run.
+        if not file_filter and fw_dir.is_dir():
+            for q in sorted(fw_dir.glob('chapter_*/*.qmd')):
+                rel = q.relative_to(fw_dir).with_suffix('.md').as_posix()
+                if rel not in generated_rels and _remove_deck(fw_dir, rel):
+                    removed.append(rel)
+            for h in sorted(fw_dir.glob('chapter_*/*.html')):
+                rel = h.relative_to(fw_dir).with_suffix('.md').as_posix()
+                if rel not in generated_rels and _remove_deck(fw_dir, rel):
+                    removed.append(rel)
+        for rel in removed:
+            print(f'  removed stale deck {fw}/{rel[:-3]}')
 
         if args.render and generated:
             # img / data symlinks (unchanged from previous behavior)
@@ -914,6 +980,9 @@ def main():
             cur_hashes = {
                 rel: hashlib.sha256((fw_dir / rel).read_bytes()).hexdigest()
                 for rel in all_rel}
+
+            for rel in removed:
+                old_hashes.pop(rel[:-3] + '.qmd', None)
 
             def _needs_render(rel):
                 html = fw_dir / Path(rel).with_suffix('.html')

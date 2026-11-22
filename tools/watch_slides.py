@@ -49,8 +49,16 @@ def _gen_and_inject(source: Path, fw: str, slides_root: Path, log_lock):
     dst = fw_dir / Path(str(rel).replace('.md', '.qmd'))
     dst.parent.mkdir(parents=True, exist_ok=True)
 
+    from section_refs import SectionRefError
+
     warnings = []
-    content = generate_slides_qmd(source, fw, warnings)
+    try:
+        content = generate_slides_qmd(source, fw, warnings)
+    except SectionRefError as e:
+        # An unresolvable §{label} token: report it and keep watching.
+        with log_lock:
+            print(f'[watch] {e}', flush=True)
+        return None
     if content is None:
         with log_lock:
             print(f'[watch] {source}: no slides for {fw}', flush=True)

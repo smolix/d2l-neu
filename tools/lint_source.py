@@ -38,6 +38,9 @@ Checks performed (per file):
   - Unless `--no-preamble` (or D2L_LINT_PREAMBLE=0): an imports cell
     that is not the standard preamble (warn) — the book shows it instead of hiding it. Cells that are
     deliberately different are listed in preamble.UNIQUE_PREAMBLES.
+  - A section-number token (`§{label}`, `§{num:label}`; tools/section_refs.py)
+    that does not resolve to a chapter or section number, or that sits
+    above `<!-- slides -->` (error).
   - A malformed or duplicated `<!-- execution: locked; ... -->` directive
     (error; tools/locks.py is the parser), and a comment that only looks
     like one, e.g. `<!-- executon: locked -->` (warn).
@@ -68,6 +71,7 @@ from add_cell_ids import (slugify, file_slug, collect_fences,
                            HEADING_RE)
 import preamble
 import locks
+import section_refs
 
 # The imports-cell check (`--preamble`) is on: the book's imports cells are
 # the standard preamble (tools/normalize_imports.py), plus the ones listed in
@@ -221,6 +225,12 @@ def lint_file(path: Path, corpus_labels=None, check_preamble=False):
                             'comment looks like a misspelled execution '
                             'directive; the lock form is '
                             '<!-- execution: locked; requires: <class> -->'))
+
+    # ── Section-number tokens (§{label}) in slide text resolve ──
+    if '§{' in text:
+        for _, line_no, msg in section_refs.check(
+                text, str(path), root=path.resolve().parent.parent):
+            issues.append(Issue(path, line_no, 1, 'error', msg))
 
     # ── Display math: `\\` needs an alignment environment ──
     issues += _check_display_math(path, lines)

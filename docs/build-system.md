@@ -2468,6 +2468,40 @@ dependency. With the outputs store:
   `upload_r2.sh --delete`. The `make html` slides-integration block therefore
   scans the staged decks' `../../../img/` refs and copies any missing asset
   from `img/` into `_book/img/` (added 2026-07-19 after exactly this breakage).
+- **Section numbers in slide text are tokens** (2026-11-22). `§{label}` renders
+  as `§N.M` (or `§N` for a chapter label) and `§{num:label}` as the bare
+  `N.M`, resolved by `gen_slides.py` at generation time from
+  `CHAPTER_NUMBERING` and the `:label:` under each numbered page's H1, the
+  same map the book and the cover kickers number from
+  (`tools/section_refs.py`). A token that does not resolve (unknown label,
+  subsection or unnumbered page, or a token above `<!-- slides -->`) stops
+  `gen_slides.py` with `file:line: error:` and a non-zero exit before any deck
+  is written; `lint_source.py` reports the same errors. Authoring details:
+  [`slides.md`](slides.md#section-numbers-label-tokens). The hardcoded
+  `§N.M` / `Chapter N` strings are converted by the one-shot
+  `tools/oneshot/slide_section_tokens.py` (dry run by default, `--apply` to
+  write; it refuses short range ends such as `§15.4–5` and unknown numbers
+  rather than guess). Tests: `tools/test_slide_tokens.py`.
+- **Deck frameworks follow the chapter** (2026-11-22). `has_framework_code`
+  uses `d2l_preprocess.page_frameworks`: a file with `#@tab`/`%%tab` tags gets
+  decks for the frameworks they name; an untagged file (a chapter `index.md`,
+  a prose-only section) takes the union over its tagged siblings in
+  `CHAPTER_NUMBERING` (LIB_ONLY files do not count), and all four only when no
+  sibling is tagged. The Advanced index decks are therefore PyTorch+JAX and
+  the Language Models index decks PyTorch only, while Basics, math and Tools
+  index decks keep all four. The HTML exercise panes (`expand_exercise_tabs`)
+  follow the same set, so a PyTorch+JAX page has no TensorFlow or MXNet
+  exercise list.
+- **Decks that no longer exist are deleted.** When `gen_slides.py` produces no
+  deck for a file and framework, it removes that deck's `.qmd`, `.html`,
+  `_files/` and error log from `_slides/<fw>/`; a run without `--files` also
+  removes decks whose source left the book. `integrate_slides.sh` and
+  `upload_r2.sh` copy `_slides/` wholesale into `_book/slides/`, so a removed
+  deck leaves `_book` on the next `make html` or upload, and
+  `make upload-r2-delete` (part of `make deploy`) deletes it from the bucket; a
+  plain `make upload-r2` leaves the old object in the bucket, unlinked.
+  `build_slides_index.py` lists only decks whose `.html` exists (and no
+  chapter `index` decks at all).
 
 ---
 

@@ -81,6 +81,7 @@ Each rule's reason and details are in `docs/build-guide.md` §5.
 - Slides live in `<!-- slides -->` sections at end-of-file as
   `::: {.slide ...}` divs with `@<id>` (or `@<id>@<fw>`) placeholders
   pointing to code cells. Inline `[**…**]` markers no longer exist.
+  Name other sections by label, never number: `§{sec_x}` → "§9.3", `§{num:sec_x}` → "9.3" (gen_slides fails on an unknown label; `docs/slides.md`).
 - Slide rendering uses `eval: false`; outputs come from
   `tools/inject_outputs.py slides`, matched by cell ID against the committed
   `outputs/<fw>/...` store. Slides need no GPU.

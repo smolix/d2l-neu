@@ -9,7 +9,9 @@ from collections import defaultdict
 from pathlib import Path
 
 
-SLIDE_OPEN_RE = re.compile(r"^(:{3,4})\s*\{\.slide\b([^}]*)\}")
+# Quoted attribute values may hold braces (a `§{label}` section token in a
+# title, tools/section_refs.py).
+SLIDE_OPEN_RE = re.compile(r'^(:{3,4})\s*\{\.slide\b((?:[^{}"]|"[^"]*")*)\}')
 TITLE_RE = re.compile(r'title="([^"]*)"')
 CODE_OPEN_RE = re.compile(r"^```\{\.python\b.*#([A-Za-z0-9][A-Za-z0-9_-]*)")
 PLACEHOLDER_RE = re.compile(r"^@([!-]?)([A-Za-z0-9][A-Za-z0-9_-]*)(?:@[A-Za-z]+)?\s*$")

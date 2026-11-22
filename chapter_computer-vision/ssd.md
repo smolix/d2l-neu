@@ -274,9 +274,23 @@ Suppose further that
 the number of object classes is 10.
 For feature maps `Y1` and `Y2`
 the numbers of channels in the class prediction outputs
-are $5\times(10+1)=55$ and $3\times(10+1)=33$, respectively,
-where either output shape is
-(batch size, number of channels, height, width).
+are $5\times(10+1)=55$ and $3\times(10+1)=33$, respectively.
+
+:begin_tab:`mxnet`
+Either output shape is (batch size, number of channels, height, width).
+:end_tab:
+
+:begin_tab:`pytorch`
+Either output shape is (batch size, number of channels, height, width).
+:end_tab:
+
+:begin_tab:`jax`
+Either output shape is (batch size, height, width, number of channels), since NNX convolutions keep the channels last.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Either output shape is (batch size, height, width, number of channels), since Keras convolutions keep the channels last.
+:end_tab:
 
 ```{.python .input #ssd-concatenating-predictions-for-multiple-scales-1}
 #@tab mxnet
@@ -329,7 +343,23 @@ we will transform these tensors into a more consistent format.
 Note that
 the channel dimension holds the predictions for
 anchor boxes with the same center.
+
+:begin_tab:`mxnet`
 We first move this dimension to the innermost.
+:end_tab:
+
+:begin_tab:`pytorch`
+We first move this dimension to the innermost.
+:end_tab:
+
+:begin_tab:`jax`
+This dimension is already the innermost.
+:end_tab:
+
+:begin_tab:`tensorflow`
+This dimension is already the innermost.
+:end_tab:
+
 Since the batch size remains the same for different scales,
 we can transform the prediction output
 into a two-dimensional tensor
@@ -389,7 +419,7 @@ concat_preds([Y1, Y2]).shape
 ### Downsampling Block
 
 In order to detect objects at multiple scales,
-we define the following downsampling block `down_sample_blk` that
+we define the following downsampling block that
 halves the height and width of input feature maps.
 In fact,
 this block applies the design of VGG blocks
@@ -1673,7 +1703,7 @@ d2l.plt.legend();
     1. In the loss function, assign different weight hyperparameters to the class loss and the offset loss.
     1. Use other methods to evaluate the object detection model, such as those in the single shot multibox detection paper :cite:`Liu.Anguelov.Erhan.ea.2016`.
 1. Apply `d2l.multibox_target` to the anchors returned by `net` and to one minibatch of labels from `train_iter`, and count the positive (non-background) anchors of each image. What fraction of the 5444 anchors is positive? Compute the class error of a trivial model that labels every anchor as background, and compare it with the class error printed after training. What does the comparison say about class error as a measure of detection quality?
-1. The text shows that one `down_sample_blk` gives each output unit a $6 \times 6$ receptive field. Extend the calculation to `TinySSD` with a $256 \times 256$ input, where `blk_0` consists of three downsampling blocks. A layer with kernel size $k$ and stride $s$ enlarges the receptive field by $k-1$ times the accumulated stride $j$ of its input and multiplies $j$ by $s$. For the outputs of `blk_0` to `blk_3`, compute the stride $j$ in input pixels and the receptive field of one unit of the $3 \times 3$ prediction layers applied to them. Compare each receptive field with the anchor sizes at that scale ($256$ times the entries of `sizes`). At which scales is the receptive field smaller than the largest anchor it has to classify? Why does `blk_4` need no such calculation?
+1. The text shows that one downsampling block gives each output unit a $6 \times 6$ receptive field. Extend the calculation to `TinySSD` with a $256 \times 256$ input, where `blk_0` consists of three downsampling blocks. A layer with kernel size $k$ and stride $s$ enlarges the receptive field by $k-1$ times the accumulated stride $j$ of its input and multiplies $j$ by $s$. For the outputs of `blk_0` to `blk_3`, compute the stride $j$ in input pixels and the receptive field of one unit of the $3 \times 3$ prediction layers applied to them. Compare each receptive field with the anchor sizes at that scale ($256$ times the entries of `sizes`). At which scales is the receptive field smaller than the largest anchor it has to classify? Why does `blk_4` need no such calculation?
 1. The training loop omits evaluation. `d2l.load_data_bananas` also returns an iterator over the 100 validation images, each of which contains one banana. For each validation image, take the box with the highest confidence among the outputs of `predict` and compute its IoU with the ground-truth box using `d2l.box_iou`. Report the mean IoU and the fraction of images whose IoU is at least 0.5, and draw the three images with the lowest IoU together with both boxes. What do these failures have in common?
 
 

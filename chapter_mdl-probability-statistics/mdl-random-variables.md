@@ -931,6 +931,10 @@ descends from it.
 [Discussions](https://d2l.discourse.group/t/1095)
 :end_tab:
 
+:begin_tab:`jax`
+[Discussions](https://d2l.discourse.group/t/1095)
+:end_tab:
+
 <!-- slides -->
 
 ::: {.slide}

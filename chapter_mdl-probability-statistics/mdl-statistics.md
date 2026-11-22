@@ -1718,6 +1718,10 @@ for clustered test sets.
 [Discussions](https://d2l.discourse.group/t/1103)
 :end_tab:
 
+:begin_tab:`jax`
+[Discussions](https://d2l.discourse.group/t/1103)
+:end_tab:
+
 <!-- slides -->
 
 ::: {.slide}

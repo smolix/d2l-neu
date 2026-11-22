@@ -463,17 +463,6 @@ d2l.train_ranking(net, train_iter, test_iter, loss, trainer,
 [Discussions](https://d2l.discourse.group/t/404)
 :end_tab:
 
-:begin_tab:`tensorflow,jax`
-This chapter is currently implemented for MXNet and PyTorch only. The
-Caser model relies on a custom `BPRLoss`, a `SeqDataset` that materializes
-sequence windows on demand, and a `train_ranking` / `evaluate_ranking`
-loop, none of which are exposed in `d2l.tensorflow` or `d2l.jax` yet. If
-you would like to follow along, the PyTorch tab uses standard
-operations (`nn.Embedding`, `nn.Conv2d`, BPR / margin loss) that port
-straightforwardly to either framework — see the PyTorch sources as a
-reference implementation.
-:end_tab:
-
 <!-- slides -->
 
 ::: {.slide title="Sequential Recommendation with Caser"}

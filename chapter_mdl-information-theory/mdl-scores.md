@@ -874,8 +874,6 @@ samples, or a score.
        be optimal against every wrong model?
    :exlabel:`ex_mdl-scores-ksd-length-scale`
 
-<!-- Discussions: forum topic to be created at deploy -->
-
 [Discussions](https://d2l.discourse.group/t/36896)
 
 <!-- slides -->

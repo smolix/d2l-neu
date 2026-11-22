@@ -1,7 +1,7 @@
 # Efficient Inference
 :label:`chap_lm_inference`
 
-The reader has a compressed model from Chapter 11 and, from :numref:`sec_kv-cache` and :numref:`sec_hardware`, a bound on how fast one GPU can decode it; the plain generation loop reaches a small fraction of that bound. This chapter takes one request, or a handful, from the eager loop to the bound and then past its per-token form: the kernels that read the weights and the cache at full bandwidth, the reduction orders that make outputs reproducible, the verification trick that checks several tokens per weight read, and the cache compressions that a trained model tolerates. It ends on a laptop, where the same bound holds with a tenth of the bandwidth.
+The reader has a compressed model from :numref:`chap_lm_compression` and, from :numref:`sec_kv-cache` and :numref:`sec_hardware`, a bound on how fast one GPU can decode it; the plain generation loop reaches a small fraction of that bound. This chapter takes one request, or a handful, from the eager loop to the bound and then past its per-token form: the kernels that read the weights and the cache at full bandwidth, the reduction orders that make outputs reproducible, the verification trick that checks several tokens per weight read, and the cache compressions that a trained model tolerates. It ends on a laptop, where the same bound holds with a tenth of the bandwidth.
 
 <!-- Author brief, copied verbatim from the Language Models part plan
 (docs/llm/language_models_part_plan.md, "Chapter 12 Efficient Inference").

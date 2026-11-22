@@ -1021,8 +1021,6 @@ with entropic regularization.
        plan of largest entropy among the optimal plans.
    :exlabel:`ex_mdl-test-functions-transport-sinkhorn-iterations`
 
-<!-- Discussions: forum topic to be created at deploy -->
-
 [Discussions](https://d2l.discourse.group/t/36895)
 
 <!-- slides -->

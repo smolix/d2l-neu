@@ -188,7 +188,7 @@ def read_data_bananas(is_train=True):
 
 By using the `read_data_bananas` function to read images and labels,
 the following `BananasDataset` class
-will allow us to create a customized `Dataset` instance
+will allow us to create a customized dataset class
 for loading the banana detection dataset.
 
 ```{.python .input #object-detection-dataset-reading-the-dataset-2}
@@ -332,14 +332,29 @@ def load_data_bananas(batch_size):
 
 Let's read a minibatch and print the shapes of
 both images and labels in this minibatch.
-The shape of the image minibatch,
-(batch size, number of channels, height, width),
+The shape of the image minibatch
 looks familiar:
 it is the same as in our earlier image classification tasks.
 The shape of the label minibatch is
 (batch size, $m$, 5),
 where $m$ is the largest possible number of bounding boxes
 that any image has in the dataset.
+
+:begin_tab:`mxnet`
+The image minibatch has the shape (batch size, number of channels, height, width).
+:end_tab:
+
+:begin_tab:`pytorch`
+The image minibatch has the shape (batch size, number of channels, height, width).
+:end_tab:
+
+:begin_tab:`jax`
+The image minibatch has the shape (batch size, number of channels, height, width).
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow keeps the channels last, so the image minibatch has the shape (batch size, height, width, number of channels).
+:end_tab:
 
 Although computation in minibatches is more efficient,
 it requires that all the image examples

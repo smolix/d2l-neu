@@ -202,7 +202,7 @@ On this particular split and optimization setting, the plotted DeepFM run reache
    impressions receives a gradient from the data only in minibatches that
    contain one of them, while every weight of the MLP receives one in every
    minibatch. With 15,000 training impressions, batches of 2,048, and
-   `drop_last=True`, compute the expected number of minibatches per epoch
+   incomplete final batches dropped, compute the expected number of minibatches per epoch
    that update the row of a value with $n=4$, the default `min_threshold`.
    How does the default row of each field, which collects all rare values,
    differ? Which of the two kinds of parameters benefits more from Adam's

@@ -958,7 +958,7 @@ derivatives**, $f'_+(0) = +1$ and $f'_-(0) = -1$, and an ordinary derivative
 exists only when the two match. The same calculation for $\mathrm{ReLU}$ at $0$
 gives $f'_-(0) = 0$ on the flat left side and $f'_+(0) = 1$ on the right. No
 tangent slope exists at these corners, yet an automatic differentiation engine
-must still return a number. Let us check what the frameworks actually return.
+must still return a number. Let us check what automatic differentiation actually returns.
 
 ```{.python .input #single-variable-calculus-one-sided}
 #@tab mxnet
@@ -1094,7 +1094,7 @@ Because $\varphi(x)=x$ everywhere, its only true slope at $0$ is $1$. Yet
 applying the chain rule mechanically gives
 $\varphi'(x) = \mathrm{ReLU}'(x) + \mathrm{ReLU}'(-x)$, which equals $1$
 everywhere except at $x=0$, where the convention $\mathrm{ReLU}'(0)=0$ yields
-$0 + 0 = 0$. Let us verify that the deep learning frameworks indeed do this.
+$0 + 0 = 0$. Let us verify that automatic differentiation indeed does this.
 
 ```{.python .input #mdl-single-variable-calculus-why-sgd-shrugs}
 #@tab mxnet

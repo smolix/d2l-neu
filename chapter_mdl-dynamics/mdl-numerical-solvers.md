@@ -884,8 +884,6 @@ ill-conditioning is stiffness.
        step limit?
    :exlabel:`ex_mdl-odes-solvers-heavy-ball-ode`
 
-<!-- COORDINATOR: this page needs its own forum topic (tools/create_forum_topics.py); add the [Discussions](...) line here. -->
-
 [Discussions](https://d2l.discourse.group/t/36897)
 
 <!-- slides -->

@@ -243,6 +243,15 @@ we *standardize* their values channel by channel.
 Concretely,
 the mean value of a channel is subtracted from each value of that channel and then the result is divided by the standard deviation of that channel.
 
+:begin_tab:`jax`
+Images are resized to $256 \times 256$ pixels when they are loaded, so the training crop is a random $224 \times 224$ window of fixed size and aspect ratio, taken without rescaling.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Images are resized to $256 \times 256$ pixels when they are loaded, so the training crop is a random $224 \times 224$ window of fixed size and aspect ratio, taken without rescaling.
+Instead of standardizing, we apply Keras's `resnet50.preprocess_input`, which converts RGB to BGR and subtracts the ImageNet channel means without dividing by the standard deviations, the convention the pretrained Keras weights expect.
+:end_tab:
+
 
 
 ```{.python .input #fine-tuning-reading-the-dataset-4}
@@ -351,7 +360,7 @@ Internet connection is required for download.
 :end_tab:
 
 :begin_tab:`tensorflow`
-We use ResNet-50, which was pretrained on the ImageNet dataset, as the source model. (Keras 3's `keras.applications` does not ship a pretrained ResNet-18, so we use ResNet-50 here even though the PyTorch and MXNet tabs use ResNet-18.) Here, we specify `weights='imagenet'` to automatically download the pretrained model parameters.
+We use ResNet-50, which was pretrained on the ImageNet dataset, as the source model. (Keras 3's `keras.applications` does not ship a pretrained ResNet-18, so we use ResNet-50 here.) Here, we specify `weights='imagenet'` to automatically download the pretrained model parameters.
 If this model is used for the first time,
 Internet connection is required for download.
 :end_tab:
@@ -868,12 +877,23 @@ hotdog_w = weight[:, 934]
 hotdog_w.shape
 ```
 
-5. In the PyTorch and MXNet tabs, `train_augs` applies `RandomResizedCrop(224)`, which by default draws the crop area as a fraction $s$ of the image area uniformly from $[0.08, 1]$ and resizes the crop to $224 \times 224$ pixels, while `test_augs` resizes the image to $256 \times 256$ pixels and keeps the central $224 \times 224$ pixels. Ignore the random aspect ratio of the crop and let the image be a square of side $L$.
+:begin_tab:`mxnet,pytorch`
+5. `train_augs` applies `RandomResizedCrop(224)`, which by default draws the crop area as a fraction $s$ of the image area uniformly from $[0.08, 1]$ and resizes the crop to $224 \times 224$ pixels, while `test_augs` resizes the image to $256 \times 256$ pixels and keeps the central $224 \times 224$ pixels. Ignore the random aspect ratio of the crop and let the image be a square of side $L$.
     1. Show that an object of side $\ell$ in the original image appears with side $224\ell/(\sqrt{s}L)$ during training and with side $256\ell/L$ during testing.
     1. Compute the expected ratio of the training-time to the test-time object size, $\mathbb{E}_s[224/(256\sqrt{s})]$. Do objects look larger or smaller to the network during training, and by what factor?
     1. To what side $R$ would you resize the test images to remove this mismatch on average? Explain why ResNet accepts the larger input without any change to the network.
-    1. The JAX and TensorFlow tabs instead crop a random $224 \times 224$ window from the image resized to $256 \times 256$ pixels. Do they have the same mismatch? What do they give up in exchange?
-1. Fine-tuning should help most when the target dataset is small. Train a fresh copy of `finetune_net` and of `scratch_net` on class-balanced random subsets of 100, 250, 500, and 1000 training images per class, with the test set unchanged. For the smaller subsets, increase `num_epochs` so that every run makes about as many minibatch updates as the run on the full training set. Plot the test accuracy of both models against the number of training images on a logarithmic axis. How many images per class does `scratch_net` need to reach the accuracy that `finetune_net` reaches with 100 images per class, if it reaches it at all in this range?
+    1. Suppose `train_augs` instead cropped a random $224 \times 224$ window from the image resized to $256 \times 256$ pixels. Would it have the same mismatch? What would it give up in exchange?
+:end_tab:
+
+:begin_tab:`jax,tensorflow`
+5. `train_augs` crops a random $224 \times 224$ window from the image resized to $256 \times 256$ pixels, while `test_augs` keeps the central $224 \times 224$ pixels of the same resized image. A common alternative, `RandomResizedCrop(224)` in torchvision, draws the crop area as a fraction $s$ of the image area uniformly from $[0.08, 1]$ and resizes the crop to $224 \times 224$ pixels. Ignore the random aspect ratio of the crop and let the image be a square of side $L$.
+    1. Show that with `RandomResizedCrop(224)` an object of side $\ell$ in the original image appears with side $224\ell/(\sqrt{s}L)$ during training and with side $256\ell/L$ during testing.
+    1. Compute the expected ratio of the training-time to the test-time object size, $\mathbb{E}_s[224/(256\sqrt{s})]$. Do objects look larger or smaller to the network during training, and by what factor?
+    1. To what side $R$ would you resize the test images to remove this mismatch on average? Explain why ResNet accepts the larger input without any change to the network.
+    1. Does the crop of this section have the same mismatch? What does it give up in exchange?
+:end_tab:
+
+6. Fine-tuning should help most when the target dataset is small. Train a fresh copy of `finetune_net` and of `scratch_net` on class-balanced random subsets of 100, 250, 500, and 1000 training images per class, with the test set unchanged. For the smaller subsets, increase `num_epochs` so that every run makes about as many minibatch updates as the run on the full training set. Plot the test accuracy of both models against the number of training images on a logarithmic axis. How many images per class does `scratch_net` need to reach the accuracy that `finetune_net` reaches with 100 images per class, if it reaches it at all in this range?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/368)

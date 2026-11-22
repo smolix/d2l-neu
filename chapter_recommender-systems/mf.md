@@ -76,7 +76,15 @@ import mxnet as mx
 
 ## Model Implementation
 
-First, we implement the matrix factorization model described above. The user and item latent factors can be created with the `nn.Embedding`. The `input_dim` is the number of items/users and the `output_dim` is the dimension of the latent factors $k$.  We can also use `nn.Embedding` to create the user/item biases by setting the `output_dim` to one. In the `forward` function, user and item ids are used to look up the embeddings.
+First, we implement the matrix factorization model described above. The user and item latent factors can be created with the `nn.Embedding`. The number of rows of an embedding is the number of items/users and its width is the dimension of the latent factors $k$.  We can also use `nn.Embedding` to create the user/item biases by setting the width to one. In the `forward` function, user and item ids are used to look up the embeddings.
+
+:begin_tab:`mxnet`
+In Gluon, the number of rows and the width are the `input_dim` and `output_dim` arguments.
+:end_tab:
+
+:begin_tab:`pytorch`
+In PyTorch, the number of rows and the width are the `num_embeddings` and `embedding_dim` arguments.
+:end_tab:
 
 ```{.python .input #mf-model-implementation  n=4}
 #@tab mxnet
@@ -128,7 +136,15 @@ $$
 \textrm{RMSE} = \sqrt{\frac{1}{|\mathcal{T}|}\sum_{(u, i) \in \mathcal{T}}(\mathbf{R}_{ui} -\hat{\mathbf{R}}_{ui})^2}
 $$
 
-where $\mathcal{T}$ is the set consisting of pairs of users and items that you want to evaluate on. $|\mathcal{T}|$ is the size of this set. We can use MXNet's RMSE function provided by `mx.gluon.metric`.
+where $\mathcal{T}$ is the set consisting of pairs of users and items that you want to evaluate on. $|\mathcal{T}|$ is the size of this set.
+
+:begin_tab:`mxnet`
+We can use MXNet's RMSE function provided by `mx.gluon.metric`.
+:end_tab:
+
+:begin_tab:`pytorch`
+We accumulate the squared errors over the test set and take the square root.
+:end_tab:
 
 ```{.python .input #mf-evaluation-measures  n=3}
 #@tab mxnet
@@ -310,7 +326,7 @@ scores
    the settings above and compare their test RMSEs with that of `MF` and with
    that of the constant prediction $\mu$ set to the training mean. How much of
    the improvement of `MF` over the constant comes from the biases?
-1. In `train_recsys_rating`, the `weight_decay` argument of Adam adds
+1. In `train_recsys_rating`, the weight-decay setting of Adam adds
    $\lambda\boldsymbol\theta$ to the gradient of every parameter at every
    step, including the embedding rows of users who do not occur in the
    minibatch. Many SGD implementations instead minimize
@@ -320,7 +336,7 @@ scores
    zero under each scheme and under the objective of the text, which penalizes
    $\|\mathbf P\|_F^2$ once. Which scheme regularizes frequent users more
    strongly than rare ones?
-1. Train `MF` with $k \in \{1, 5, 30, 100\}$ and `weight_decay`
+1. Train `MF` with $k \in \{1, 5, 30, 100\}$ and weight decay
    $\in \{0, 10^{-5}, 10^{-3}\}$, and tabulate the final training loss and the
    test RMSE. The model has $(m+n)(k+1)$ parameters: at which $k$ does it
    have more parameters than training ratings? Does the test RMSE start to

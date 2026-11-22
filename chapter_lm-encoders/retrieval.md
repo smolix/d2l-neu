@@ -292,8 +292,8 @@ a question by retrieving the question. The Attic, two older natural-language
 chapters that this part replaces, and the front matter are left out too. Each
 source file becomes one document under these cleaning rules:
 
-- only the PyTorch version of each tab is kept, so code does not appear four
-  times;
+- only the PyTorch code of each multi-framework cell is kept, so code does not
+  appear several times;
 - slide decks, exercises and cells of little more than imports are cut;
 - cross-references become the titles they point to, and citations are
   removed, so a chunk reads as text;

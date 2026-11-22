@@ -130,9 +130,21 @@ memory all the way down to $O(\log T)$ while requiring $O(T\log T)$
 recomputation :cite:`Griewank.1992`. When every step has the same cost,
 Griewank's binomial checkpointing schedule is provably optimal for any fixed
 memory budget :cite:`Griewank.Walther.2008`. In practice,
-`torch.utils.checkpoint` and `jax.checkpoint` implement one level of
-checkpointing per marked block; in JAX, nesting those blocks lets you build a
+checkpointing utilities implement one level of
+checkpointing per marked block.
+
+:begin_tab:`pytorch`
+PyTorch provides `torch.utils.checkpoint`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow provides `tf.recompute_grad`.
+:end_tab:
+
+:begin_tab:`jax`
+JAX provides `jax.checkpoint`; nesting those blocks lets you build a
 recursive schedule manually.
+:end_tab:
 
 ### Taylor Mode
 
@@ -146,8 +158,11 @@ multiplication convolves the two coefficient sequences in $O(k^2)$ operations,
 and transcendental functions such as $\exp$, $\log$, and $\sin$ follow from
 recurrences of the same $O(k^2)$ cost :cite:`Griewank.Walther.2008`. The
 exercise on computing second derivatives in one forward pass in
-:numref:`sec_mdl-matrix-calculus-autodiff` is the $k=2$ case, while
+:numref:`sec_mdl-matrix-calculus-autodiff` is the $k=2$ case.
+
+:begin_tab:`jax`
 `jax.experimental.jet` implements Taylor mode for arbitrary order $k$.
+:end_tab:
 
 ### Forward Gradients
 

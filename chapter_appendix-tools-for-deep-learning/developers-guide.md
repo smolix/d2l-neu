@@ -437,17 +437,62 @@ Contributor Guide: Single-Source Markdown Build, Framework Tabs, and Git Workflo
 :::
 :::
 
-::: {.slide title="How Output Fingerprinting Detects Stale Notebooks"}
+::: {.slide title="How Output Fingerprinting Detects Stale Notebooks" only="pytorch"}
 [Reproducibility Audit]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Three hashes per output JSON:** (1) Per-cell **prefix code hash** (cells $1\dots k$, trailing spaces stripped), (2) `major.minor.patch` framework version (stripping `+cu128`), and (3) **transitive `d2l.X` symbol hash**.
+- **Three hashes per output JSON:** (1) Per-cell **prefix code hash** (cells $1\dots k$, trailing spaces stripped), (2) **public framework version** (local build tag stripped), and (3) **transitive `d2l.X` symbol hash**.
 - **Surgical invalidation:** Prose edits cause 0 stale cells; editing cell $k$ marks cells $k\dots n$ stale; editing a `#@save` helper marks only downstream notebooks that call it.
 :::
 
 ::: {.col .fig .big}
-@fig:ch39-tools-output-fingerprint
+@fig:ch39-tools-output-fingerprint@pytorch
+:::
+:::
+:::
+
+::: {.slide title="How Output Fingerprinting Detects Stale Notebooks" only="jax"}
+[Reproducibility Audit]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Three hashes per output JSON:** (1) Per-cell **prefix code hash** (cells $1\dots k$, trailing spaces stripped), (2) **public framework version** (local build tag stripped), and (3) **transitive `d2l.X` symbol hash**.
+- **Surgical invalidation:** Prose edits cause 0 stale cells; editing cell $k$ marks cells $k\dots n$ stale; editing a `#@save` helper marks only downstream notebooks that call it.
+:::
+
+::: {.col .fig .big}
+@fig:ch39-tools-output-fingerprint@jax
+:::
+:::
+:::
+
+::: {.slide title="How Output Fingerprinting Detects Stale Notebooks" only="tensorflow"}
+[Reproducibility Audit]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Three hashes per output JSON:** (1) Per-cell **prefix code hash** (cells $1\dots k$, trailing spaces stripped), (2) **public framework version** (local build tag stripped), and (3) **transitive `d2l.X` symbol hash**.
+- **Surgical invalidation:** Prose edits cause 0 stale cells; editing cell $k$ marks cells $k\dots n$ stale; editing a `#@save` helper marks only downstream notebooks that call it.
+:::
+
+::: {.col .fig .big}
+@fig:ch39-tools-output-fingerprint@tensorflow
+:::
+:::
+:::
+
+::: {.slide title="How Output Fingerprinting Detects Stale Notebooks" only="mxnet"}
+[Reproducibility Audit]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Three hashes per output JSON:** (1) Per-cell **prefix code hash** (cells $1\dots k$, trailing spaces stripped), (2) **public framework version** (local build tag stripped), and (3) **transitive `d2l.X` symbol hash**.
+- **Surgical invalidation:** Prose edits cause 0 stale cells; editing cell $k$ marks cells $k\dots n$ stale; editing a `#@save` helper marks only downstream notebooks that call it.
+:::
+
+::: {.col .fig .big}
+@fig:ch39-tools-output-fingerprint@mxnet
 :::
 :::
 :::

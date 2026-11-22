@@ -1283,7 +1283,17 @@ When `num_classes` is passed to the final `nin_block`, omitting the ReLU after t
 ::: {.slide title="Controlled Ablation: Global Average Pooling on VGG (cont.)"}
 [Head Ablation: VGG vs. PooledVGG]{.kicker}
 
-@!nin-training-3
+Training the dense-headed `VGG` at peak rate 0.03:
+
+@!nin-training-3[out=1]
+:::
+
+::: {.slide title="Controlled Ablation: Global Average Pooling on VGG (result)"}
+[Head Ablation: VGG vs. PooledVGG]{.kicker}
+
+Training `PooledVGG` at the same rate, then both final validation accuracies:
+
+@!nin-training-3[out=2-]
 :::
 
 ::: {.slide title="GoogLeNet: Multi-Scale Parallel Branches and Bottlenecks"}

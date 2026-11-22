@@ -534,7 +534,7 @@ Before running experiments or debugging import errors, execute a compact identit
 :::
 :::
 
-::: {.slide title="Post-Mortem Debugging with %debug"}
+::: {.slide title="Post-Mortem Debugging with %debug" only="pytorch"}
 [Diagnosing Failures]{.kicker}
 
 ::: {.cols .vc}
@@ -545,7 +545,55 @@ Before running experiments or debugging import errors, execute a compact identit
 :::
 
 ::: {.col .fig .big}
-@fig:ch39-tools-postmortem-debug
+@fig:ch39-tools-postmortem-debug@pytorch
+:::
+:::
+:::
+
+::: {.slide title="Post-Mortem Debugging with %debug" only="jax"}
+[Diagnosing Failures]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Instant post-mortem inspection:** When a cell raises an exception, running `%debug` in the next cell opens `ipdb` right inside the failed stack frame with all local tensors still in memory.
+- **Visual breakpoints:** Set line breakpoints directly inside JupyterLab or VS Code cells to step through tensor shapes and `NaN`s.
+- **Avoid broad `try / except`:** Catching and printing `"failed"` destroys the stack frame needed by `%debug`.
+:::
+
+::: {.col .fig .big}
+@fig:ch39-tools-postmortem-debug@jax
+:::
+:::
+:::
+
+::: {.slide title="Post-Mortem Debugging with %debug" only="tensorflow"}
+[Diagnosing Failures]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Instant post-mortem inspection:** When a cell raises an exception, running `%debug` in the next cell opens `ipdb` right inside the failed stack frame with all local tensors still in memory.
+- **Visual breakpoints:** Set line breakpoints directly inside JupyterLab or VS Code cells to step through tensor shapes and `NaN`s.
+- **Avoid broad `try / except`:** Catching and printing `"failed"` destroys the stack frame needed by `%debug`.
+:::
+
+::: {.col .fig .big}
+@fig:ch39-tools-postmortem-debug@tensorflow
+:::
+:::
+:::
+
+::: {.slide title="Post-Mortem Debugging with %debug" only="mxnet"}
+[Diagnosing Failures]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Instant post-mortem inspection:** When a cell raises an exception, running `%debug` in the next cell opens `ipdb` right inside the failed stack frame with all local tensors still in memory.
+- **Visual breakpoints:** Set line breakpoints directly inside JupyterLab or VS Code cells to step through tensor shapes and `NaN`s.
+- **Avoid broad `try / except`:** Catching and printing `"failed"` destroys the stack frame needed by `%debug`.
+:::
+
+::: {.col .fig .big}
+@fig:ch39-tools-postmortem-debug@mxnet
 :::
 :::
 :::

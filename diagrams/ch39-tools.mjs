@@ -152,6 +152,86 @@ function threeRows(mainTitle, r1, r2, r3, arrows = true) {
   return svg(W, H, o);
 }
 
+// §39.4 %debug probe, per framework: the exception class a failing cell
+// typically raises and a one-line NaN count at the ipdb prompt (np is
+// mxnet.np in the MXNet notebooks, NumPy in the TensorFlow ones).
+const DEBUG_PROBE = {
+  pytorch:    { err: 'RuntimeError / NaN', probe: 'p x.isnan().sum()' },
+  jax:        { err: 'RuntimeError / NaN', probe: 'p jnp.isnan(x).sum()' },
+  tensorflow: { err: 'OpError / NaN',      probe: 'p np.isnan(x).sum()' },
+  mxnet:      { err: 'RuntimeError / NaN', probe: 'p np.isnan(x).sum()' },
+};
+
+function postmortemDebug(fw) {
+  const { err, probe } = DEBUG_PROBE[fw];
+  return threeCols(
+    'Post-Mortem Inspection in Live Kernel Memory with %debug',
+    { fill: D.red.tint, st: D.red.base, dk: D.red.dark, title: '1. Exception Raised', lines: [
+      { t: err, mono: true, fill: D.red.dark, fw: 700 },
+      'Cell execution stops,',
+      'but kernel process and',
+      'sys.last_traceback stay',
+      'alive in RAM/VRAM!',
+    ]},
+    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: '2. Run %debug Next', lines: [
+      { t: '%debug  (opens ipdb)', mono: true, fill: D.blue.dark, fw: 700 },
+      'Jumps directly into the',
+      'failing stack frame:',
+      { t: 'p x.shape, x.dtype', mono: true, fs: 11.8 },
+      { t: probe, mono: true, fs: 11.8 },
+    ]},
+    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '3. Fix Without Reload', lines: [
+      'No need to re-run',
+      '10-minute dataset prep!',
+      'Never wrap code in',
+      'broad try/except that',
+      'swallows the traceback',
+    ]},
+    { fill: C.lamber, st: C.amber, dk: D.orange.dark,
+      line1: 'Anti-Pattern:  try: train()  except Exception: print("failed")',
+      line2: 'Swallowing exceptions destroys the frame, line number, and tensor state needed for %debug.' },
+    true
+  );
+}
+
+// §39.10 output fingerprint, per framework: the public version the store
+// records (outputs/<fw>/*.json provenance.framework_version) and why a
+// CPU laptop does not see a false alarm.
+const FW_VERSION = {
+  pytorch:    ['torch==2.11.0', 'Strips local build tags', '(+cu128 vs. macOS CPU)', 'so CPU laptops do not', 'trigger false alarms'],
+  jax:        ['jax==0.12.0.1', 'Same public version on', 'CPU and GPU installs,', 'so CPU laptops do not', 'trigger false alarms'],
+  tensorflow: ['tensorflow==2.21.0', 'Same public version on', 'CPU and GPU installs,', 'so CPU laptops do not', 'trigger false alarms'],
+  mxnet:      ['mxnet==2.0.0', 'Strips local build tags', '(+cu133… GPU wheel)', 'so rebuilt wheels do', 'not trigger false alarms'],
+};
+
+function outputFingerprint(fw) {
+  const [pin, ...why] = FW_VERSION[fw];
+  return threeCols(
+    'Three Hashes Inside outputs/<fw>/<chap>/<stem>.json Detect Staleness',
+    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: '1. Cell Prefix Hash', lines: [
+      'SHA of Cell k code',
+      '+ ALL earlier cells 1..k−1',
+      '(trailing spaces stripped)',
+      'Prose edits = 0 stale;',
+      'Cell 3 edit → 3..n stale!',
+    ]},
+    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: '2. Framework Version', lines: [
+      { t: pin, mono: true, fill: D.orange.dark, fw: 700 },
+      ...why,
+    ]},
+    { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: '3. Transitive d2l.X Hash', lines: [
+      'Hashes the #@save block',
+      'of every d2l.X symbol',
+      'used in the section +',
+      'all d2l helpers it calls',
+      'transitively!',
+    ]},
+    { fill: C.lgreen, st: C.green, dk: D.green.dark,
+      line1: 'Audit Gate (tools/audit_outputs.py): Stale text output stops the build with an error;',
+      line2: 'stale image or missing multi-GPU hardware prints a warning so CPU contributors can preview.' }
+  );
+}
+
 export const diagrams = {
   // ── §39.0 index.md (4 diagrams) ─────────────────────────────────────────
   'ch39-tools-four-questions': () => grid2x2(
@@ -372,34 +452,10 @@ export const diagrams = {
       line2: 'use the notebook for interactive narrative, plots, and experiment records.' }
   ),
 
-  'ch39-tools-postmortem-debug': () => threeCols(
-    'Post-Mortem Inspection in Live Kernel Memory with %debug',
-    { fill: D.red.tint, st: D.red.base, dk: D.red.dark, title: '1. Exception Raised', lines: [
-      { t: 'RuntimeError / NaN', mono: true, fill: D.red.dark, fw: 700 },
-      'Cell execution stops,',
-      'but kernel process and',
-      'sys.last_traceback stay',
-      'alive in RAM/VRAM!',
-    ]},
-    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: '2. Run %debug Next', lines: [
-      { t: '%debug  (opens ipdb)', mono: true, fill: D.blue.dark, fw: 700 },
-      'Jumps directly into the',
-      'failing stack frame:',
-      { t: 'p x.shape, x.dtype', mono: true, fs: 11.8 },
-      { t: 'p torch.isnan(x).sum()', mono: true, fs: 11.8 },
-    ]},
-    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '3. Fix Without Reload', lines: [
-      'No need to re-run',
-      '10-minute dataset prep!',
-      'Never wrap code in',
-      'broad try/except that',
-      'swallows the traceback',
-    ]},
-    { fill: C.lamber, st: C.amber, dk: D.orange.dark,
-      line1: 'Anti-Pattern:  try: train()  except Exception: print("failed")',
-      line2: 'Swallowing exceptions destroys the frame, line number, and tensor state needed for %debug.' },
-    true
-  ),
+  'ch39-tools-postmortem-debug-pytorch':    () => postmortemDebug('pytorch'),
+  'ch39-tools-postmortem-debug-jax':        () => postmortemDebug('jax'),
+  'ch39-tools-postmortem-debug-tensorflow': () => postmortemDebug('tensorflow'),
+  'ch39-tools-postmortem-debug-mxnet':      () => postmortemDebug('mxnet'),
 
   'ch39-tools-ssh-port-collisions': () => threeCols(
     'SSH Port Forwarding & Two Multi-User Port Collision Traps',
@@ -1270,9 +1326,9 @@ export const diagrams = {
     { fill: D.red.tint, st: D.red.base, dk: D.red.dark, title: 'Legacy Pickle (.bin / .pt / .pkl)', lines: [
       'Stack-based VM executing pickle opcodes',
       { t: '__reduce__ invokes arbitrary callables!', mono: true, fill: D.red.dark, fw: 700 },
-      'torch.load(..., weights_only=False) runs RCE',
-      'Even weights_only=True opcode allowlist had',
-      { t: 'bypass vulnerabilities (CVE-2025-32434)!', fill: D.red.dark, fw: 700 },
+      'Loading runs code, e.g. torch.load(…,',
+      'weights_only=False); even weights_only=True',
+      { t: 'had allowlist bypasses (CVE-2025-32434)!', fill: D.red.dark, fw: 700 },
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Safetensors (.safetensors Container)', lines: [
       { t: '[8-B len N][N-B UTF-8 JSON][Flat Bytes]', mono: true, fs: 11.5, fill: D.green.dark, fw: 700 },
@@ -1390,9 +1446,9 @@ export const diagrams = {
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '1F1B Schedule (Warmup, Then Alternate)', lines: [
       { t: '[F₁]..[F_p] then [B₁][F_{p+1}][B₂][F_{p+2}]…', mono: true, fs: 11.5, fill: D.green.dark, fw: 700 },
       'Same bubble fraction = (p − 1) / m',
-      'Frees microbatch j activation right after B_j!',
+      'Frees microbatch j activation after B_j!',
       { t: 'Caps live activations at ≤ p microbatches!', fill: D.green.dark, fw: 700 },
-      'Interleaved v chunks cuts bubble to (p−1)/(mv)',
+      'Interleaving v chunks: bubble (p−1)/(mv)',
     ]},
     { fill: C.lblue, st: C.blue, dk: D.blue.dark,
       line1: 'At Fixed Global Batch B_global = 1,024:  m = 1,024 / (d · b) shrinks as DP degree d grows!',
@@ -1402,8 +1458,8 @@ export const diagrams = {
   'ch39-tools-global-batch-invariant': () => twoCols(
     'Preserving the Global Batch Invariant When Scaling GPU Count',
     { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Fixed Global Batch (Exact Equivalence)', lines: [
-      { t: 'B_global = B_device · N_ranks · N_acc', mono: true, fill: D.blue.dark, fw: 700 },
-      'Target: 1,024 seqs (4.2M tok), B_device = 4:',
+      { t: 'B_global = B_device·N_ranks·N_acc', mono: true, fill: D.blue.dark, fw: 700 },
+      'Target 1,024 seqs (4.2M tok), B_device = 4:',
       '• 32 GPUs → N_acc = 8   (2× time/step)',
       '• 64 GPUs → N_acc = 4   (1× time/step)',
       '• 256 GPUs → N_acc = 1  (Max DP world!)',
@@ -1427,7 +1483,7 @@ export const diagrams = {
       'Sampler pads to 8 × 1,251 = 10,008 indices',
       { t: 'Examples 0..6 are evaluated TWICE!', fill: D.red.dark, fw: 700 },
       'Or drop_last=True drops 1..7 examples!',
-      'Averaging rank ratios (1/W)Σ(c_r/n_r) is biased',
+      'Rank-ratio mean (1/W)Σ(c_r/n_r) is biased',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Exact Unpadded Distributed Evaluation', lines: [
       '1. Split 10,001 examples without padding',
@@ -1448,7 +1504,7 @@ export const diagrams = {
       'Cost: ~1.5× collective comm over NVLink/IB',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '2. Activation Checkpointing + Accumulation', lines: [
-      'Checkpointing: acts O(L) → O(1) (+33% FLOPs)',
+      'Checkpointing: acts O(L) → O(1), +33% FLOPs',
       'Accumulation: shrinks microbatch B_device',
     ]},
     { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: '3. CPU / NVMe Offload (ZeRO-Offload)', lines: [
@@ -1511,13 +1567,13 @@ export const diagrams = {
       '2. LR scheduler state (step/warmup counter!)',
       '3. Global step & total tokens consumed',
       '4. Deterministic data-loader cursor (seed + idx)',
-      '5. Per-rank PRNG states (Python/NumPy/CUDA)',
+      '5. Per-rank PRNG states (Python/NumPy/framework)',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Crash-Safe Atomic Rename Protocol', lines: [
-      'In-place torch.save crash corrupts file!',
+      'In-place save + crash = corrupt file!',
       { t: '1. Write to ckpt.tmp in same directory', mono: true, fs: 11.8, fill: C.ink },
       { t: '2. f.flush(); os.fsync(f.fileno())', mono: true, fs: 11.8, fill: C.ink },
-      { t: '3. os.replace("ckpt.tmp", "ckpt.pt")', mono: true, fs: 11.8, fill: D.green.dark, fw: 700 },
+      { t: '3. os.replace("ckpt.tmp", "ckpt")', mono: true, fs: 11.8, fill: D.green.dark, fw: 700 },
       { t: '4. os.fsync(dir_fd)  (power-loss safe!)', mono: true, fs: 11.8, fill: D.green.dark, fw: 700 },
     ]},
     { fill: C.lamber, st: C.amber, dk: D.orange.dark,
@@ -1859,33 +1915,10 @@ export const diagrams = {
     true
   ),
 
-  'ch39-tools-output-fingerprint': () => threeCols(
-    'Three Hashes Inside outputs/<fw>/<chap>/<stem>.json Detect Staleness',
-    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: '1. Cell Prefix Hash', lines: [
-      'SHA of Cell k code',
-      '+ ALL earlier cells 1..k−1',
-      '(trailing spaces stripped)',
-      'Prose edits = 0 stale;',
-      'Cell 3 edit → 3..n stale!',
-    ]},
-    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: '2. Framework Version', lines: [
-      { t: 'torch==2.11.0', mono: true, fill: D.orange.dark, fw: 700 },
-      'Strips local build tags',
-      '(+cu128 vs. macOS CPU)',
-      'so CPU laptops do not',
-      'trigger false alarms',
-    ]},
-    { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: '3. Transitive d2l.X Hash', lines: [
-      'Hashes the #@save block',
-      'of every d2l.X symbol',
-      'used in the section +',
-      'all d2l helpers it calls',
-      'transitively!',
-    ]},
-    { fill: C.lgreen, st: C.green, dk: D.green.dark,
-      line1: 'Audit Gate (tools/audit_outputs.py): Stale text output stops the build with an error;',
-      line2: 'stale image or missing multi-GPU hardware prints a warning so CPU contributors can preview.' }
-  ),
+  'ch39-tools-output-fingerprint-pytorch':    () => outputFingerprint('pytorch'),
+  'ch39-tools-output-fingerprint-jax':        () => outputFingerprint('jax'),
+  'ch39-tools-output-fingerprint-tensorflow': () => outputFingerprint('tensorflow'),
+  'ch39-tools-output-fingerprint-mxnet':      () => outputFingerprint('mxnet'),
 
   'ch39-tools-prefix-vs-ast-staleness': () => twoCols(
     'Why Prefix Hashing Beats Static AST Variable-Name Dataflow',
@@ -1894,7 +1927,7 @@ export const diagrams = {
       '   in Cell 3 changes Cell 8 dropout/init',
       '   without sharing any variable name!',
       '2. In-place weight / dict / attribute mutation',
-      '3. Global state (torch.set_default_dtype, rcParams)',
+      '3. Global state (default dtype, rcParams)',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'D2L Prefix Rule (Cells k..n Marked Stale)', lines: [
       'Any edit to Cell k invalidates Cells k..n',
@@ -1968,11 +2001,11 @@ export const diagrams = {
       'Majority vote (m=7 runs/step) takes 42 runs',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Bayesian Bisection & Fano Lower Bound', lines: [
-      'Maintains posterior P(K = k | runs) over k=1..64',
-      'Updates via Bayes rule after every noisy test',
-      'until max_k P(K = k) ≥ 0.95 (~22–25 runs!)',
-      { t: 'Fano: N ≥ (6 − H_b(P_e) − P_e·log₂63) / C', mono: true, fs: 10.5, fill: D.green.dark, fw: 700 },
-      'Approaches Shannon channel capacity limit C!',
+      'Posterior P(K = k | runs) over k = 1..64',
+      'Bayes update after every noisy test',
+      'until max_{k} P(K=k) ≥ 0.95 (~22–25 runs!)',
+      { t: 'N ≥ (6 − H_b(P_e) − P_e·log₂63)/C', mono: true, fs: 11, fill: D.green.dark, fw: 700 },
+      'Approaches Shannon channel capacity C!',
     ]},
     { fill: C.lblue, st: C.blue, dk: D.blue.dark,
       line1: 'Each noisy training run is a binary channel with capacity C ≈ 0.30 bits/run (p=0.9, q=0.3).',
@@ -2140,7 +2173,7 @@ export const diagrams = {
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '2. Power-of-Two Batch Bucketing (padded)', lines: [
       'Variable episode lengths n trigger XLA re-jits!',
-      { t: '_bucket(n) = 2^max(6, ⌈log₂ n⌉)  (≥ 64)', mono: true, fs: 11.8, fill: D.green.dark, fw: 700 },
+      { t: '_bucket(n) = 2^{max(6, ⌈log₂ n⌉)}  (≥ 64)', mono: true, fs: 11.8, fill: D.green.dark, fw: 700 },
       'Pads arrays to {64, 128, 256, 512, 1024}',
       'and returns binary float32 mask (1=real, 0=pad)',
       { t: 'At most 5 compiled XLA kernels for any n!', fill: D.green.dark, fw: 700 },
@@ -2189,7 +2222,7 @@ export const diagrams = {
       { t: '" " and "e" tokens stall on the SAME row!', fill: D.red.dark, fw: 700 },
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Custom VJP One-Hot GEMM (V ≤ 1,024)', lines: [
-      { t: 'O = jax.nn.one_hot(X, V)  ∈ ℝ^(B×T×V)', mono: true, fs: 11.5, fill: D.green.dark, fw: 700 },
+      { t: 'O = jax.nn.one_hot(X, V)  ∈ ℝ^{B×T×V}', mono: true, fs: 11.5, fill: D.green.dark, fw: 700 },
       { t: '∇_table = einsum("...v,...d->vd", O, grad)', mono: true, fs: 11.2, fill: D.green.dark, fw: 700 },
       'Replaces serialized atomic scatter contention',
       'with one dense parallel Tensor Core matmul!',

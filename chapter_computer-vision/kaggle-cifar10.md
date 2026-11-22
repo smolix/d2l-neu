@@ -1034,17 +1034,29 @@ the folder-per-class layout (`train/<class>/img.png`).
 Build that layout from the labels.csv:
 
 @kaggle-cifar10-organizing-the-dataset-1
+:::
 
-. . .
+::: {.slide title="Organizing the dataset (cont.)"}
+Copy every training image into its class folder; `reorg_train_valid`
+first sizes the validation split from the rarest class:
 
-@kaggle-cifar10-organizing-the-dataset-2
+@-kaggle-cifar10-organizing-the-dataset-2[1-14]
+:::
 
-. . .
+::: {.slide title="Splitting off a validation set"}
+Each class contributes the same number of validation images; the
+rest go to `train`, and all of them to `train_valid`:
 
-@kaggle-cifar10-organizing-the-dataset-3
+@-kaggle-cifar10-organizing-the-dataset-2[15-28]
 :::
 
 ::: {.slide title="Run the reorg"}
+The unlabeled test images go into a single `unknown` folder:
+
+@kaggle-cifar10-organizing-the-dataset-3
+
+. . .
+
 @kaggle-cifar10-organizing-the-dataset-4
 
 . . .
@@ -1063,7 +1075,7 @@ just normalize for eval:
 @kaggle-cifar10-image-augmentation-2
 :::
 
-::: {.slide title="Data loaders"}
+::: {.slide title="Data loaders" except="jax,tensorflow"}
 Folder-based dataset + the augmentation pipelines:
 
 @kaggle-cifar10-reading-the-dataset-1
@@ -1073,11 +1085,21 @@ Folder-based dataset + the augmentation pipelines:
 @kaggle-cifar10-reading-the-dataset-2
 :::
 
+::: {.slide title="Data loaders" only="jax,tensorflow"}
+Folder-based datasets for the four splits:
+
+@kaggle-cifar10-reading-the-dataset-1
+:::
+
+::: {.slide title="Data loaders (cont.)" only="jax,tensorflow"}
+Batch them and attach the augmentation pipelines:
+
+@kaggle-cifar10-reading-the-dataset-2
+:::
+
 ::: {.slide title="ResNet-18 residual block" only="mxnet"}
-No transfer learning this time — CIFAR-10 is small enough
-to train from scratch. The core unit is the same residual
-block from the ResNet chapter: two 3×3 convs plus an
-identity shortcut or a 1×1 projection with batch norm.
+Trained from scratch: the core unit is the ResNet residual
+block, two 3×3 convs plus an identity or 1×1 shortcut.
 
 @kaggle-cifar10-defining-the-model-1
 :::
@@ -1091,9 +1113,8 @@ and a dense layer that emits 10 class logits.
 :::
 
 ::: {.slide title="Assembling ResNet-18" only="mxnet"}
-Four residual stages progressively downsample the image
-and widen channels. Global average pooling removes spatial
-dimensions; the final dense layer emits 10 class logits:
+Four residual stages downsample and widen; global average
+pooling and a dense layer emit 10 class logits:
 
 @kaggle-cifar10-defining-the-model-2
 :::
@@ -1120,19 +1141,22 @@ loop:
 :::
 
 ::: {.slide title="Train"}
-Use the validation split for model selection. Training
-loss should decline smoothly; validation accuracy is the
-signal for whether augmentation and the learning-rate
-schedule are helping rather than just fitting the train
-set.
+Validation accuracy shows whether augmentation and the schedule help:
 
 @kaggle-cifar10-training-and-validating-the-model
 :::
 
 ::: {.slide title="Submit predictions"}
-Run on the test set, write a Kaggle-format CSV:
+Retrain on train + validation data, run on the test set, and
+write a Kaggle-format CSV:
 
-@kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
+@-kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
+:::
+
+::: {.slide title="Submit predictions (cont.)"}
+The retraining run on all labeled data:
+
+@!kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle
 :::
 
 ::: {.slide title="Recap"}

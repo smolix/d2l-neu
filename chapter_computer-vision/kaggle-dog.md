@@ -1058,13 +1058,16 @@ horizontal flip, color jitter, and the same input
 preprocessing convention the pretrained backbone expects:
 
 @kaggle-dog-image-augmentation-1
+:::
 
-. . .
+::: {.slide title="Augmentation (cont.)"}
+At test time there is no randomness: resize, take the center
+224×224 crop, and apply the same normalization:
 
 @kaggle-dog-image-augmentation-2
 :::
 
-::: {.slide title="Data loaders"}
+::: {.slide title="Data loaders" except="jax,tensorflow"}
 @kaggle-dog-reading-the-dataset-1
 
 . . .
@@ -1072,21 +1075,49 @@ preprocessing convention the pretrained backbone expects:
 @kaggle-dog-reading-the-dataset-2
 :::
 
+::: {.slide title="Data loaders" only="jax,tensorflow"}
+Folder-based datasets for the four splits:
+
+@kaggle-dog-reading-the-dataset-1
+:::
+
+::: {.slide title="Data loaders (cont.)" only="jax,tensorflow"}
+Batch them and attach the augmentation pipelines:
+
+@kaggle-dog-reading-the-dataset-2
+:::
+
 ::: {.slide title="Frozen ImageNet features"}
-This competition is close to ImageNet, so we reuse a
-pretrained ResNet as a frozen feature extractor and train
-only a small 120-way breed classifier:
+Close to ImageNet: reuse a pretrained ResNet as a frozen
+feature extractor and train only a small 120-way classifier:
 
 @kaggle-dog-fine-tuning-a-pretrained-model-1
 :::
 
-::: {.slide title="Head loss and validation"}
-Only the custom output network receives gradients. The
-validation loss is computed through the same frozen
-features, so it measures whether the dog-breed head is
-generalizing:
+::: {.slide title="Head loss and validation" except="jax"}
+Only the new head receives gradients; validation loss runs
+through the same frozen features, so it measures the head:
 
 @kaggle-dog-fine-tuning-a-pretrained-model-2
+:::
+
+::: {.slide title="Head loss and validation" only="jax"}
+Only the new head receives gradients; validation loss runs
+through the same frozen features, so it measures the head:
+
+@-kaggle-dog-fine-tuning-a-pretrained-model-2[1-7]
+:::
+
+::: {.slide title="Head loss and validation (cont.)" only="jax"}
+Run the frozen backbone over the data once and cache the features:
+
+@-kaggle-dog-fine-tuning-a-pretrained-model-2[9-20]
+:::
+
+::: {.slide title="Validation loss on cached features" only="jax"}
+The validation loss only runs the small head over cached features:
+
+@-kaggle-dog-fine-tuning-a-pretrained-model-2[22-31]
 :::
 
 ::: {.slide title="Training function"}
@@ -1104,21 +1135,36 @@ memory and time, while keeping most ImageNet visual
 knowledge.
 :::
 
-::: {.slide title="Train"}
-Expect validation loss to be the useful curve here; with
-120 fine-grained classes, top-line accuracy can be noisy on
-the tiny book subset. On the full competition data, train
-longer and tune the head/augmentation strength.
+::: {.slide title="Train" except="jax"}
+Watch validation loss; accuracy on the tiny 120-breed subset is noisy:
 
 @kaggle-dog-training-and-validating-the-model
 :::
 
-::: {.slide title="Submit predictions"}
-Write one probability vector per test image. The CSV has
-image id plus 120 breed probabilities, so the final layer
-must stay aligned with the competition's class order:
+::: {.slide title="Train" only="jax"}
+Watch validation loss; accuracy on the tiny 120-breed subset is noisy:
 
-@kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle
+@-kaggle-dog-training-and-validating-the-model
+:::
+
+::: {.slide title="Train (result)" only="jax"}
+@!kaggle-dog-training-and-validating-the-model
+:::
+
+::: {.slide title="Submit predictions"}
+Retrain on all labeled data, then write one probability vector
+per test image:
+
+@-kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle
+:::
+
+::: {.slide title="Submit predictions (cont.)"}
+The CSV has image id plus 120 breed probabilities, so the final
+layer must stay aligned with the competition's class order. On the
+full competition data, train longer and tune the head and
+augmentation strength.
+
+@!kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle
 :::
 
 ::: {.slide title="Recap"}

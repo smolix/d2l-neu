@@ -979,12 +979,42 @@ class-score map at input resolution.
 @fcn-fully-convolutional-networks
 :::
 
-::: {.slide title="Pretrained backbone"}
+::: {.slide title="Pretrained backbone" except="pytorch,tensorflow"}
 ResNet-18 pretrained on ImageNet. Drop the head (avg pool +
 dense); keep the conv body that produces a $\frac{H}{32} \times \frac{W}{32}$
 feature map:
 
 @fcn-the-model-1
+:::
+
+::: {.slide title="Pretrained backbone" only="pytorch"}
+ResNet-18 pretrained on ImageNet. Drop the head (avg pool +
+dense); keep the conv body that produces a $\frac{H}{32} \times \frac{W}{32}$
+feature map:
+
+@-fcn-the-model-1
+
+The last three children are the final residual stage `layer4`,
+the global average pool, and the 1000-way `fc` layer; the
+FCN drops the last two.
+:::
+
+::: {.slide title="Pretrained backbone" only="tensorflow"}
+ResNet-18 pretrained on ImageNet. Drop the head (avg pool +
+dense); keep the conv body that produces a $\frac{H}{32} \times \frac{W}{32}$
+feature map:
+
+@-fcn-the-model-1[1-16]
+:::
+
+::: {.slide title="Pretrained backbone: ResNet-18 body" only="tensorflow"}
+@-fcn-the-model-1[18-24]
+
+@-fcn-the-model-1[26-37]
+:::
+
+::: {.slide title="Pretrained backbone: head and weights" only="tensorflow"}
+@fcn-the-model-1[38-]
 :::
 
 ::: {.slide title="Building the FCN"}
@@ -1001,9 +1031,8 @@ class logits.
 :::
 
 ::: {.slide title="The class & upsampling head"}
-$1 \times 1$ conv: `num_features` → `num_classes` (21 for
-VOC). Then a transposed conv that upsamples by 32× to
-recover input resolution:
+A $1 \times 1$ conv maps features to the 21 VOC classes; a
+transposed conv then upsamples 32× to input resolution:
 
 @fcn-the-model-4
 :::
@@ -1030,13 +1059,14 @@ random noise:
 :::
 
 ::: {.slide title="Bilinear init (cont.)"}
-The printed shapes should confirm the spatial scale-up.
-Then the same bilinear kernel initializes the FCN's final
-upsampling layer:
+The printed shapes should confirm the spatial scale-up:
 
 @fcn-initializing-transposed-convolutional-layers-4
+:::
 
-. . .
+::: {.slide title="Bilinear init of the FCN head"}
+The same bilinear kernel initializes the FCN's final
+upsampling layer:
 
 @fcn-initializing-transposed-convolutional-layers-5
 :::
@@ -1046,11 +1076,16 @@ upsampling layer:
 :::
 
 ::: {.slide title="Training"}
-Pixel-level cross-entropy. Common trick: freeze the
-backbone, train only the new head — gets reasonable
-results in a few epochs:
+Pixel-level cross-entropy, averaged over every output pixel:
 
-@fcn-training
+@-fcn-training
+:::
+
+::: {.slide title="Training (result)"}
+Common trick: freeze the backbone, train only the new head —
+gets reasonable results in a few epochs:
+
+@!fcn-training
 :::
 
 ::: {.slide title="Predict"}
@@ -1069,7 +1104,11 @@ downsampled feature map and has no skip connections.
 
 . . .
 
-@fcn-prediction-3
+@-fcn-prediction-3
+:::
+
+::: {.slide title="Visualize segmentation masks (result)"}
+@!fcn-prediction-3
 :::
 
 ::: {.slide title="Recap"}

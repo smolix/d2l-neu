@@ -1768,13 +1768,13 @@ channels; the box head outputs $4a$:
 :::
 
 ::: {.slide title="Concatenating across scales"}
-Each level produces predictions of a different shape;
-flatten and concat them so the loss can run on a single
-tensor:
+Two levels give predictions of different shapes:
 
 @ssd-concatenating-predictions-for-multiple-scales-1
+:::
 
-. . .
+::: {.slide title="Concatenating across scales (cont.)"}
+Flatten each level's predictions and concatenate them into one tensor:
 
 @ssd-concatenating-predictions-for-multiple-scales-2
 
@@ -1783,11 +1783,28 @@ tensor:
 @ssd-concatenating-predictions-for-multiple-scales-3
 :::
 
-::: {.slide title="Downsampling block"}
+::: {.slide title="Downsampling block" except="jax"}
 Halves the feature map resolution between scales — two
 3×3 conv-BN-ReLU layers + 2×2 max pool:
 
 @ssd-downsampling-block-1
+
+. . .
+
+@ssd-downsampling-block-2
+:::
+
+::: {.slide title="Downsampling block" only="jax"}
+Two 3×3 conv-BN-ReLU layers + 2×2 max pool halve the resolution:
+
+@-ssd-downsampling-block-1[1-13]
+:::
+
+::: {.slide title="Downsampling block (cont.)" only="jax"}
+The forward pass runs the layers and then pools; the shape check
+shows the halved resolution:
+
+@-ssd-downsampling-block-1[15-19]
 
 . . .
 
@@ -1802,12 +1819,14 @@ useful resolution:
 :::
 
 ::: {.slide title="Five-block pyramid"}
-Stack base network + a few downsampling blocks. Each level
-exposes its feature map for anchor prediction:
+Each level of the pyramid exposes its feature map for anchor prediction:
 
 @ssd-the-complete-model-1
+:::
 
-. . .
+::: {.slide title="Five-block pyramid (cont.)"}
+Each block's forward pass returns its feature map, its anchors, and
+both sets of predictions:
 
 @ssd-the-complete-model-2
 :::
@@ -1873,21 +1892,34 @@ $$
 $$
 
 where $m_i=1$ only for anchors matched to an object.
+:::
+
+::: {.slide title="Multi-task loss (cont.)"}
+Per-anchor cross-entropy plus the masked $L_1$ offset loss,
+each averaged per example:
 
 @ssd-defining-loss-and-evaluation-functions-1
+:::
 
-. . .
+::: {.slide title="Evaluation metrics"}
+Two quantities to monitor: the number of correct class
+predictions and the masked absolute offset error:
 
 @ssd-defining-loss-and-evaluation-functions-2
 :::
 
 ::: {.slide title="Training"}
-Standard SGD loop, two evaluation metrics (class accuracy,
-box mean abs error). Read them together: class accuracy is
-dominated by many background anchors, while box error only
-makes sense on matched positive anchors.
+Standard SGD loop with two evaluation metrics: class error and
+box mean absolute error.
 
-@ssd-training-the-model
+@-ssd-training-the-model
+:::
+
+::: {.slide title="Training (result)"}
+Read the two curves together: class error is dominated by the many
+background anchors, while box error only counts matched positive anchors.
+
+@!ssd-training-the-model
 :::
 
 ::: {.slide title="Inference"}
@@ -1906,13 +1938,38 @@ Visualize all predictions with confidence ≥ 0.9. The useful
 thing to notice is not the raw tensor length, but whether
 NMS leaves one tight high-confidence box per banana:
 
-@ssd-prediction-3
+@-ssd-prediction-3
+:::
 
-. . .
+::: {.slide title="Detect bananas (result)"}
+@!ssd-prediction-3
+:::
+
+::: {.slide title="Exercise: smooth L1 loss" except="mxnet"}
+::: {.cols .vc}
+::: {.col}
+Smooth $L_1$ is quadratic near zero and linear beyond; $\sigma$
+sets the width of the quadratic zone:
+
+@-ssd-exercises-1
+:::
+
+::: {.col .fig .narrow}
+@!ssd-exercises-1
+:::
+:::
+:::
+
+::: {.slide title="Exercise: smooth L1 loss" only="mxnet"}
+Smooth $L_1$ is quadratic near zero and linear beyond; $\sigma$
+sets the width of the quadratic zone:
 
 @ssd-exercises-1
+:::
 
-. . .
+::: {.slide title="Exercise: focal loss"}
+Focal loss $-(1-p)^\gamma \log p$ down-weights examples that are
+already classified well:
 
 @ssd-exercises-2
 :::

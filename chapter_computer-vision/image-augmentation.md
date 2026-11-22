@@ -1171,9 +1171,9 @@ augmentation. It is safe when left/right orientation is not
 part of the label:
 
 @image-augmentation-flipping-and-cropping-1
+:::
 
-. . .
-
+::: {.slide title="Flips and crops (cont.)"}
 Vertical flip — used selectively. It is valid for some
 textures or aerial imagery, but usually wrong for faces,
 street scenes, and text:
@@ -1181,12 +1181,26 @@ street scenes, and text:
 @image-augmentation-flipping-and-cropping-2
 :::
 
-::: {.slide title="Random resized crop"}
+::: {.slide title="Random resized crop" except="jax,tensorflow"}
 Crop a random rectangle, resize back to the input size.
 The single most effective augmentation in vision: scale
 invariance and translation invariance in one trick:
 
 @image-augmentation-flipping-and-cropping-3
+:::
+
+::: {.slide title="Random resized crop" only="jax,tensorflow"}
+Crop a random rectangle, resize back to the input size.
+The single most effective augmentation in vision: scale
+invariance and translation invariance in one trick:
+
+@-image-augmentation-flipping-and-cropping-3[1-17]
+:::
+
+::: {.slide title="Random resized crop (cont.)" only="jax,tensorflow"}
+Resize the crop back to the target size and apply it to the image:
+
+@image-augmentation-flipping-and-cropping-3[18-]
 :::
 
 ::: {.slide title="Color jitter — brightness"}
@@ -1204,11 +1218,24 @@ not itself the label signal:
 @image-augmentation-changing-colors-2
 :::
 
-::: {.slide title="Combined color jitter"}
+::: {.slide title="Combined color jitter" except="jax,tensorflow"}
 Brightness, contrast, saturation, hue — all at once. Tame
 the magnitudes; large jitters destroy semantic content:
 
 @image-augmentation-changing-colors-3
+:::
+
+::: {.slide title="Combined color jitter" only="jax,tensorflow"}
+Brightness, contrast, saturation, hue — all at once. Tame
+the magnitudes; large jitters destroy semantic content:
+
+@-image-augmentation-changing-colors-3[1-16]
+:::
+
+::: {.slide title="Combined color jitter (cont.)" only="jax,tensorflow"}
+All four jitters at strength 0.5:
+
+@image-augmentation-changing-colors-3[18-]
 :::
 
 ::: {.slide title="Composing augmentations"}

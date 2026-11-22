@@ -40,9 +40,20 @@ OUTPUT_END = '<!-- /d2l:output -->'
 MAX_TEXT_LINES_BY_MODE = {
     'html': 40,
     'pdf': 40,
-    'slides': 12,
+    # Slides count *rows* (a wrapped line is several), and the cap is the
+    # whole rendered block, `...` included. 10 rows is what the default
+    # output box holds (`$out-box` in _d2l-slides.scss, 288 px: 10 rows of
+    # 25.2 px at full width, 10 of 21.1 px in a column). A slide layout with
+    # a different box passes its own cap per cell (gen_slides.py
+    # OUTPUT_LINES_OPTION, `#| d2l-output-lines: 13`).
+    'slides': 10,
 }
 MAX_TEXT_LINES = 40  # legacy default; some callers may pass mode='html'/'pdf'
+# Characters a full-width slide output row holds before `white-space:
+# pre-wrap` wraps it (1041 px at 0.6 x 17.4 px JetBrains Mono = 100). A cell
+# in a column, or on a smaller-font layout, gets its own width from
+# gen_slides.py (OUTPUT_WIDTH_OPTION, `#| d2l-output-width: 53`).
+SLIDE_OUTPUT_WIDTH = 100
 
 # Strip ANSI CSI escape sequences (e.g. Keras 3 progress bars). Leaving them
 # in the qmd corrupts Quarto's intermediate markdown — the ESC bytes confuse
@@ -95,10 +106,10 @@ _NOISY_SLIDE_OUTPUT_SUBSTRINGS = (
 
 class QmdCell:
     __slots__ = ('start_line', 'end_line', 'source', 'framework', 'cell_id',
-                 'output_items')
+                 'output_items', 'output_lines', 'output_width')
 
     def __init__(self, start_line, end_line, source, framework, cell_id=None,
-                 output_items=None):
+                 output_items=None, output_lines=None, output_width=None):
         self.start_line = start_line
         self.end_line = end_line
         self.source = source
@@ -107,6 +118,12 @@ class QmdCell:
         # (first, last-or-None) from a `#| d2l-output-items:` option, which
         # gen_slides.py writes for a `@<id>[out=...]` placeholder; None = all.
         self.output_items = output_items
+        # Slide text-output cap in rows and the row width in characters,
+        # from `#| d2l-output-lines:` / `#| d2l-output-width:` (gen_slides.py
+        # writes them for a slide layout or column that changes the output
+        # box); None = the slide defaults.
+        self.output_lines = output_lines
+        self.output_width = output_width
 
 
 _LABEL_LINE_RE = re.compile(r'^#\|\s*label:\s*([a-z][a-z0-9-]*)\s*$')
@@ -145,14 +162,37 @@ _OUTPUT_ITEMS_RE = re.compile(
     r'^#\|\s*d2l-output-items:\s*"?(\d+)(?:(-)(\d+)?)?"?\s*$')
 
 
-def _extract_output_items(code_lines):
-    """Read the `#| d2l-output-items:` option from a cell's option block."""
+def _option_lines(code_lines):
+    """The `#|` option lines at the top of a cell."""
     for ln in code_lines:
         s = ln.strip()
         if not s.startswith('#|'):
             if s:
-                break
+                return
             continue
+        yield s
+
+
+# `#| d2l-output-lines: 13` / `#| d2l-output-width: 53` — the slide output
+# box's row cap and row width (gen_slides.py OUTPUT_LINES_OPTION and
+# OUTPUT_WIDTH_OPTION).
+_OUTPUT_INT_RE = re.compile(
+    r'^#\|\s*d2l-output-(lines|width):\s*"?(\d+)"?\s*$')
+
+
+def _extract_output_fit(code_lines):
+    """(lines, width) from a cell's `#| d2l-output-lines/width:` options."""
+    got = {}
+    for s in _option_lines(code_lines):
+        m = _OUTPUT_INT_RE.match(s)
+        if m:
+            got[m.group(1)] = int(m.group(2))
+    return got.get('lines'), got.get('width')
+
+
+def _extract_output_items(code_lines):
+    """Read the `#| d2l-output-items:` option from a cell's option block."""
+    for s in _option_lines(code_lines):
         m = _OUTPUT_ITEMS_RE.match(s)
         if m:
             a = int(m.group(1))
@@ -234,7 +274,8 @@ def parse_qmd_cells(text):
             fw = current_fw if (True in div_stack) else None
             cid = _extract_cell_id(code_lines) or pending_cell_id
             cells.append(QmdCell(start, end, '\n'.join(code_lines), fw, cid,
-                                 _extract_output_items(code_lines)))
+                                 _extract_output_items(code_lines),
+                                 *_extract_output_fit(code_lines)))
             pending_cell_id = None
             i += 1
             continue
@@ -516,8 +557,43 @@ def is_wide_table(text):
     return aligned >= 0.5 * len(lines)
 
 
+def _row_count(line, width):
+    """Rendered rows of one output line under `white-space: pre-wrap`."""
+    return max(1, -(-len(line.expandtabs()) // width))
+
+
+def fit_slide_rows(lines, max_rows, width):
+    """Truncate slide output `lines` to at most `max_rows` rendered rows.
+
+    A line longer than `width` characters wraps and counts as several rows.
+    An output over the cap keeps a head of ceil((max_rows-1)/2) rows, a `...`
+    line, and the tail in the rows that remain, so the block never renders
+    taller than `max_rows` rows (the output box: no scrollbar). Returns the
+    lines unchanged when they fit.
+    """
+    rows = [_row_count(ln, width) for ln in lines]
+    if sum(rows) <= max_rows:
+        return lines
+    head_budget = -(-(max_rows - 1) // 2)
+    head, used = [], 0
+    for ln, r in zip(lines, rows):
+        if used + r > head_budget:
+            break
+        head.append(ln)
+        used += r
+    tail_budget = max_rows - 1 - used
+    tail, used = [], 0
+    for ln, r in zip(reversed(lines), reversed(rows)):
+        if used + r > tail_budget:
+            break
+        tail.append(ln)
+        used += r
+    return head + ['...'] + tail[::-1]
+
+
 def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode,
-                       item_range=None, where=''):
+                       item_range=None, where='', max_rows=None,
+                       row_width=None):
     """Render notebook outputs as Quarto markdown.
 
     Args:
@@ -529,6 +605,9 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode,
         item_range: (first, last-or-None) to render only those output items
             (select_output_items; a slide's `[out=...]`), or None for all
         where: location named in an out-of-range error
+        max_rows, row_width: slides only — the text-output cap in rendered
+            rows and the characters per row (fit_slide_rows); None = the
+            defaults MAX_TEXT_LINES_BY_MODE['slides'] / SLIDE_OUTPUT_WIDTH
 
     Returns:
         Quarto markdown string, or '' if no renderable output.
@@ -613,8 +692,15 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode,
         wide = (' .d2l-output-wide'
                 if mode == 'html' and is_wide_table(text) else '')
 
-        if n > max_lines:
-            if mode in ('pdf', 'slides'):
+        if mode == 'slides':
+            text = '\n'.join(fit_slide_rows(
+                text_lines, max_rows or max_lines,
+                row_width or SLIDE_OUTPUT_WIDTH))
+            parts.append(
+                f'::: {{.cell-output .cell-output-stdout}}\n'
+                f'```\n{text}\n```\n:::')
+        elif n > max_lines:
+            if mode == 'pdf':
                 half = max_lines // 2
                 text = '\n'.join(
                     text_lines[:half] + ['...'] + text_lines[-half:])
@@ -908,7 +994,8 @@ def _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
             prefix += '-items'
         rendered = format_cell_output(
             outs, img_dir, prefix, qmd_parent, mode,
-            item_range=cell.output_items, where=where)
+            item_range=cell.output_items, where=where,
+            max_rows=cell.output_lines, row_width=cell.output_width)
         if rendered:
             injections.append((cell.end_line, rendered))
 

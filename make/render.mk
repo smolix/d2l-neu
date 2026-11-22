@@ -170,7 +170,7 @@ pdf-parts: $(PDF_PART_FILES)
 # inject that framework's committed outputs (gen_slides.py), so an output change
 # re-renders its decks and an unchanged store lets the recipe skip entirely — no
 # force-rm needed in rebuild-book-artifacts.
-_slides/%/.built: $(SRC_MDS) _d2l-slides.scss _d2l-slides-overlay.html tools/gen_slides.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
+_slides/%/.built: $(SRC_MDS) _d2l-slides.scss _d2l-slides-overlay.html tools/gen_slides.py tools/inject_outputs.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	@# pipefail is global (.SHELLFLAGS) so gen_slides.py's non-zero exit on a

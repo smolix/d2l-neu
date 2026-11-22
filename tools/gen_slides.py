@@ -114,6 +114,34 @@ _PLACEHOLDER_RE = re.compile(
 # tools/inject_outputs.py (which reads it back; Quarto ignores it).
 OUTPUT_ITEMS_OPTION = 'd2l-output-items'
 
+# Cell options that size a text output to the slide's output box: the cap in
+# rendered rows and the characters per row (inject_outputs.fit_slide_rows;
+# its defaults, 10 rows of 100 characters, fit a full-width box on a plain
+# slide and are not written). Measured in the 1280 x 720 slide (docs/slides.md
+# "Output injection"): the box heights are px in _d2l-slides.scss ($out-box*),
+# rows are 25.2 px at full width and 21.1 px in a column (`.cols` code font),
+# 15.1 / 12.7 px on `layout="code"`; a block's code padding takes 10-15 px.
+OUTPUT_LINES_OPTION = 'd2l-output-lines'
+OUTPUT_WIDTH_OPTION = 'd2l-output-width'
+_DEFAULT_OUTPUT_ROWS = 10
+_DEFAULT_OUTPUT_WIDTH = 100
+# (slide layout, in a column) -> rows the output box holds.
+_OUTPUT_ROWS = {
+    (None, False): 10, (None, True): 10,                   # 288 / 240 px
+    ('tall-output', False): 13, ('tall-output', True): 15,  # 352 px
+    ('tight', False): 6, ('tight', True): 7,               # 176 px
+    ('code', False): 14, ('code', True): 16,               # 224 px
+}
+# Font scale of a layout's output text relative to the default (more
+# characters per row): `.slide-code .cell-output { font-size: 0.6em }`.
+_OUTPUT_FONT_SCALE = {'code': 0.6}
+# Characters per row in a `::: {.col}`, from its share f of the content
+# width: a fixed-width column holds 123 f - 12 characters; the plain columns
+# split what the fixed ones leave, less a 4-character gap (measured: two
+# plain columns 47, `.fig` 42 beside a plain 53, `.fig .big` 54 beside 41).
+_COL_FIXED_SHARE = (('big', 0.54), ('narrow', 0.36), ('fig', 0.44))
+_COL_CHARS, _COL_PAD, _COL_GAP = 123, 12, 4
+
 
 class SlideSpecError(ValueError):
     """A placeholder whose selector is malformed or out of range."""
@@ -486,8 +514,81 @@ def _slice_code(code, line_range, framework, where):
     return '\n'.join(frag)
 
 
+def _col_share(classes):
+    """Fixed width share of a `.col` with these classes, or None (plain)."""
+    if 'big' in classes and 'fig' in classes:
+        return 0.54
+    for cls, share in _COL_FIXED_SHARE[1:]:
+        if cls in classes:
+            return share
+    return None
+
+
+def _column_widths(body_lines):
+    """Characters per output row inside each `::: {.col}` of a slide body.
+
+    Returns a list parallel to body_lines: the innermost enclosing column's
+    row width in characters (default-font output), or None outside columns.
+    """
+    children = {}                 # .cols open index -> [child col classes]
+    col_of = {}                   # .col open index -> its .cols open index
+    stack = []
+    for i, line in enumerate(body_lines):
+        m = re.match(r'^:{3,}\s*\{([^}]*)\}', line)
+        if m:
+            classes = set(re.findall(r'\.([\w-]+)', m.group(1)))
+            if 'col' in classes and stack and 'cols' in stack[-1][1]:
+                children.setdefault(stack[-1][0], []).append(classes)
+                col_of[i] = stack[-1][0]
+            stack.append((i, classes))
+        elif _DIV_CLOSE_RE.match(line) and stack:
+            stack.pop()
+
+    def width(i, classes):
+        share = _col_share(classes)
+        if share is not None:
+            return _COL_CHARS * share - _COL_PAD
+        sibs = children.get(col_of.get(i), [classes])
+        fixed = [f for f in map(_col_share, sibs) if f is not None]
+        n_plain = max(1, len(sibs) - len(fixed))
+        return (_COL_CHARS * (1 - sum(fixed)) - _COL_GAP) / n_plain - _COL_PAD
+
+    out, stack = [], []
+    for i, line in enumerate(body_lines):
+        m = re.match(r'^:{3,}\s*\{([^}]*)\}', line)
+        if m:
+            classes = set(re.findall(r'\.([\w-]+)', m.group(1)))
+            w = (int(width(i, classes)) - 1 if 'col' in classes and i in col_of
+                 else (stack[-1] if stack else None))
+            stack.append(w)
+        elif _DIV_CLOSE_RE.match(line) and stack:
+            stack.pop()
+        out.append(stack[-1] if stack else None)
+    return out
+
+
+def output_fit_options(layout, col_width):
+    """`#|` option lines that size a slide's text output to its box.
+
+    `layout` is the slide's `layout=` (None for none), `col_width` the row
+    width in characters of the enclosing column (_column_widths) or None at
+    full width. Only values that differ from inject_outputs' defaults are
+    written.
+    """
+    key = layout if (layout, False) in _OUTPUT_ROWS else None
+    rows = _OUTPUT_ROWS[(key, col_width is not None)]
+    width = col_width if col_width is not None else _DEFAULT_OUTPUT_WIDTH
+    width = int(width / _OUTPUT_FONT_SCALE.get(key, 1.0))
+    opts = []
+    if rows != _DEFAULT_OUTPUT_ROWS:
+        opts.append(f'#| {OUTPUT_LINES_OPTION}: {rows}')
+    if width != _DEFAULT_OUTPUT_WIDTH:
+        opts.append(f'#| {OUTPUT_WIDTH_OPTION}: {width}')
+    return opts
+
+
 def _resolve_body(body_lines, source_cells, framework, slide_path,
-                  warnings):
+                  warnings, layout=None):
     """Replace `@<id>` / `@<id>@<fw>` / `@fig:<id>` placeholder lines.
 
     Code placeholders become Quarto python fences; `@fig:` lines inline a
@@ -495,9 +596,12 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
     A `[...]` selector (parse_selector) slices the code to a line range
     and/or passes an output-item range to inject_outputs.py as the
     `#| d2l-output-items:` cell option; a bad one raises SlideSpecError.
+    `layout` (the slide's `layout=`) and the enclosing column size the text
+    output to its box (output_fit_options).
     """
     out = []
-    for line in body_lines:
+    col_widths = _column_widths(body_lines)
+    for line, col_width in zip(body_lines, col_widths):
         fig = _FIG_RE.match(line)
         if fig:
             out.extend(_inline_diagram(
@@ -561,6 +665,8 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
             out.append('#| echo: false')
         if out_range:
             out.append(f'#| {OUTPUT_ITEMS_OPTION}: "{format_range(out_range)}"')
+        if not code_only:
+            out.extend(output_fit_options(layout, col_width))
         out.append(code)
         out.append('```')
     return out
@@ -595,7 +701,8 @@ def _emit_slide(slide, source_cells, framework, slide_path, warnings,
             out.append('---')
             out.append('')
     out.extend(_resolve_body(slide.body, source_cells, framework,
-                              slide_path, warnings))
+                              slide_path, warnings,
+                              layout=slide.attrs.get('layout')))
     # Subslides (vertical sub-slides under the current slide)
     for ss in slide.subslides:
         if not _slide_applies(ss.attrs, framework):
@@ -607,7 +714,8 @@ def _emit_slide(slide, source_cells, framework, slide_path, warnings,
         out.append(f'### {ss_title}{ss_attr}'.rstrip())
         out.append('')
         out.extend(_resolve_body(ss.body, source_cells, framework,
-                                  slide_path, warnings))
+                                  slide_path, warnings,
+                                  layout=ss.attrs.get('layout')))
     return out
 
 

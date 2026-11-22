@@ -84,7 +84,7 @@ Attributes:
 | `title="…"`            | Optional. Renders as a `## Title` slide heading.       |
 | `only="fw[,fw]"`       | Render this slide **only** for the listed framework decks. For sections whose *framing* (not just code) differs per framework. |
 | `except="fw[,fw]"`     | Render for all decks **except** the listed frameworks. |
-| `layout="…"`           | Legacy section class (`2col`/`figure`/`code` → `.slide-<L>`). Prefer body-level `::: {.cols}` (see *Two-column layout* below). `tight` and `tall-output` adjust output boxes (see *Output injection*). |
+| `layout="…"`           | Legacy section class (`2col`/`figure`/`code` → `.slide-<L>`). Prefer body-level `::: {.cols}` (see *Two-column layout* below). `tight`, `tall-output` and `code` change the output box and its row cap (see *Output injection*). |
 | `transition="…"`       | Reveal.js transition. `fade`, `slide`, `convex`, `concave`, `zoom`, `none`. |
 | `data-background-color="#…"`   | Slide background color.                        |
 | `data-background-image="…"`    | Slide background image.                        |
@@ -418,14 +418,42 @@ python tools/inject_outputs.py slides --framework pytorch
 Output is wrapped between `<!-- d2l:output -->` / `<!-- /d2l:output -->`
 sentinels in the slide `.qmd`, so re-injection is idempotent.
 
-Text output is capped at 12 lines per cell (40 in HTML): a longer output
-shows its first 6 and last 6 lines around a `...` line
-(`MAX_TEXT_LINES_BY_MODE` in `tools/inject_outputs.py`). There is no per-slide
-override. An output that fits the cap can still exceed the output box
-(`.cell-output` has `max-height: 36vh`, 30vh inside `.cols`, and scrolls),
-which hides lines; a slide whose 11–12 line table just misses the box can set
-`layout="tall-output"` (44vh) if the slide still fits 720 px. `tools/check_slide_overflow.py` reports such
-clipped boxes and wrapped code lines along with slide overflow. It runs each
+Text output on a slide is capped at the rows its output box holds, so an
+output never scrolls inside its box (the book keeps 40 lines,
+`MAX_TEXT_LINES_BY_MODE` in `tools/inject_outputs.py`). The cap counts
+rendered *rows*: the box wraps long lines (`white-space: pre-wrap`), so a
+line longer than the row width counts as two or more. An output over the cap
+keeps its first `ceil((cap-1)/2)` rows, a `...` line, and its last rows, the
+whole block at most `cap` rows (`fit_slide_rows`). The PDF keeps its own
+20 + `...` + 20 truncation and the HTML book shows everything.
+
+The box heights are px of the 1280 x 720 slide (`$out-box*` in
+`_d2l-slides.scss`), not vh: Reveal scales the whole slide to the window, so
+a vh box would hold more rows on a tall screen than on a short one, and the
+overflow probe (a 1280 x 800 window) would not show what a projector shows.
+Rows measured in the probe:
+
+| Slide | Box | Row height | Cap (full width / column) |
+|---|---|---|---|
+| default | 288 px (240 px in `.cols`) | 25.2 px (21.1 px in a column) | 10 / 10 |
+| `layout="tall-output"` | 352 px | 25.2 / 21.1 px | 13 / 15 |
+| `layout="tight"` | 176 px | 25.2 / 21.1 px | 6 / 7 |
+| `layout="code"` (0.6em output text) | 224 px | 15.1 / 12.7 px | 14 / 16 |
+
+A full-width row holds 100 characters; a `::: {.col}` holds fewer, from its
+share of the width (`.fig` 44 %, `.fig .big` 54 %, `.narrow` 36 %, plain
+columns split the rest). `gen_slides.py` passes a slide's cap and row width
+to `inject_outputs.py` as the cell options `#| d2l-output-lines: 13` and
+`#| d2l-output-width: 47` (`output_fit_options`; only values that differ from
+the default 10 rows of 100 characters are written). Change a box height and
+the `_OUTPUT_ROWS` table in `gen_slides.py` together, and re-measure with the
+probe.
+
+A slide whose 11–13 row table is the point can set `layout="tall-output"`
+if the slide still fits 720 px; `layout="code"` shrinks the output text
+instead, for 14 rows. `tools/check_slide_overflow.py` reports a box
+that still scrolls (`clipped`; a bug in the caps above) and wrapped code
+lines along with slide overflow. It runs each
 deck in a child process under a watchdog (`--timeout`, default 120 s per deck;
 `--slide-timeout`, default 30 s per slide) and exits 2 with `HANG at leaf
 slide N` when Chromium stops responding, so one bad deck cannot stall a loop.
@@ -671,7 +699,10 @@ regenerating a deck:
    `scrollHeight` should exceed the deck height. If a slide is too tall:
    shorten the intro, make a verbose setup cell `@-` (code-only), split
    it into two slides (`only=`-scoped continuations), or widen the
-   content column. Don't rely on per-slide scrollbars.
+   content column. Don't rely on per-slide scrollbars. A long text output
+   is cut to its box's rows automatically (*Output injection*); to show
+   more of it, use `layout="tall-output"` (13 rows), or split an output of
+   several items with `[out=…]` (one printed stream is a single item).
 
    **Splitting a long cell.** When one cell is the problem, show it in
    parts on consecutive slides (see *Code-cell placeholders*): code lines

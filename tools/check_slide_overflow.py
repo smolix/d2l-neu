@@ -91,7 +91,8 @@ _MEASURE_JS = r"""
 
 
 # Content hidden inside a slide that fits: an output box that scrolls
-# (``.cell-output`` has ``max-height: 44vh``) and code lines that wrap. The
+# (``.cell-output`` has a ``max-height``; gen_slides.py caps text outputs
+# to fit it, so this should not fire) and code lines that wrap. The
 # overflow measure above cannot see either. Runs after it, with every slide
 # displayed so that each one has a layout.
 _CLIP_JS = r"""

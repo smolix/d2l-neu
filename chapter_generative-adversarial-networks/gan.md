@@ -198,10 +198,7 @@ To test the theoretical predictions quantitatively, we first train a linear gene
 
 ### Alternating Update Rules
 
-We define `update_D`, `update_G`, and the alternating training loop `train_gan` once and save them to `d2l` for reuse across the chapter.
-
-- `update_D` performs one discriminator step maximizing :eqref:`eq_gan_V` (minimizing binary cross-entropy with label $1$ for real samples and $0$ for detached generated samples). Dividing the summed loss by the batch size estimates $-V(D)$, which equals $2\log 2 \approx 1.386$ when $D = 0$.
-- `update_G` performs one generator step minimizing the non-saturating loss $-\mathbb{E}[\log \sigma(D(G(z)))]$ (binary cross-entropy with target label $1$), which equals $\log 2 \approx 0.693$ when $D = 0$.
+We define `update_D`, `update_G`, and the alternating training loop `train_gan` once and save them to `d2l` for reuse across the chapter. First, `update_D` performs one discriminator step maximizing :eqref:`eq_gan_V` (minimizing binary cross-entropy with label $1$ for real samples and $0$ for detached generated samples). Dividing the summed loss by the batch size estimates $-V(D)$, which equals $2\log 2 \approx 1.386$ when $D = 0$.
 
 ```{.python .input #gan-the-update-rules-1}
 %%tab pytorch
@@ -242,6 +239,8 @@ def update_D(X, Z, net_D, net_G, optimizer_D):
     optimizer_D.update(net_D, grads_D)
     return loss_D
 ```
+
+Next, `update_G` performs one generator step minimizing the non-saturating loss $-\mathbb{E}[\log \sigma(D(G(z)))]$—implemented as binary cross-entropy on the recomputed discriminator scores `net_D(net_G(Z))` with target label $1$—which equals $\log 2 \approx 0.693$ per sample when $D = 0$:
 
 ```{.python .input #gan-the-update-rules-2}
 %%tab pytorch
@@ -421,6 +420,10 @@ history = train_gan(net_D, net_G, data_iter, num_epochs=20, latent_dim=2,
 fake = net_G(jax.random.normal(jax.random.key(4), (200, 2)))
 ```
 
+We now plot the per-epoch critic and generator losses in `history` against
+their theoretical equilibrium values ($2\log 2$ and $\log 2$) alongside a
+scatter plot of real (`data`) and generated (`fake`) samples:
+
 ```{.python .input #gan-training-3}
 %%tab pytorch, jax
 fig, axes = d2l.plt.subplots(1, 2, figsize=(9, 3.2))
@@ -566,6 +569,10 @@ print(f'correlation {jnp.corrcoef(jnp.stack([lam, D_out]))[0, 1]:.3f}, '
       f'R^2 {r2:.3f}')
 ```
 
+Plotting the critic logits `D_out` against the exact log density ratio `lam`
+across the 200 real and 200 generated samples visualizes how closely $D(x)$
+tracks the identity line $D = \lambda$:
+
 ```{.python .input #gan-the-learned-density-ratio-1}
 %%tab pytorch, jax
 lims = [float(lam.min()), float(lam.max())]
@@ -673,6 +680,10 @@ for name, step in [('non-saturating', update_G),
     print(f'{name}: final KL(q || p) = {", ".join(kls)} nats')
 ```
 
+To see why the final KL divergences differ so starkly, we plot the generated
+point clouds `snaps` at epochs 5 and 20 for each objective alongside their
+critic loss trajectories:
+
 ```{.python .input #gan-saturating-and-non-saturating-losses-compared-1}
 %%tab pytorch, jax
 fig, axes = d2l.plt.subplots(1, 3, figsize=(10.5, 3.2))
@@ -725,6 +736,11 @@ def make_mlp(sizes, act, *, rngs):
     return nnx.Sequential(*layers[:-1])
 ```
 
+Using `make_mlp`, we rescale the 60,000 Fashion-MNIST training images to
+$784$-dimensional vectors in $[-1, 1]$, build the minibatch loader
+`image_iter`, and instantiate the generator `net_G_img` (ending with `tanh`)
+and discriminator `net_D_img`:
+
 ```{.python .input #gan-garments-from-noise-1}
 %%tab pytorch
 torch.manual_seed(0)
@@ -761,6 +777,10 @@ print(f'last epoch: critic loss {history_img[-1, 0]:.2f}, '
       f'generator loss {history_img[-1, 1]:.2f}')
 ```
 
+After training, we draw 30 latent vectors from $\mathcal{N}(0, I_{100})$, pass
+them through `net_G_img`, and reshape the outputs to $28 \times 28$ images to
+inspect the generated garments:
+
 ```{.python .input #gan-garments-from-noise-3}
 %%tab pytorch
 with torch.no_grad():
@@ -773,6 +793,9 @@ d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
 fake_img = net_G_img(jax.random.normal(jax.random.key(2), (30, 100)))
 d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
 ```
+
+We also plot the per-epoch critic and generator losses in `history_img` against
+the reference levels $2\log 2$ and $\log 2$:
 
 ```{.python .input #gan-garments-from-noise-4}
 %%tab pytorch, jax

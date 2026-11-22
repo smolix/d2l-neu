@@ -138,6 +138,8 @@ conf = softmax(O).max(axis=1)  # Confidence of each prediction
 correct = (O.argmax(axis=1) == y).astype(float)
 ```
 
+Next, `reliability(conf, correct, num_bins=10)` groups the validation predictions into ten equal-width confidence bins via `np.bincount`, returning the per-bin sample counts `n`, mean confidences `mean_conf`, empirical accuracies `acc`, and sample-weighted `ece`:
+
 ```{.python .input #softmax-regression-concise-calibration-2}
 def reliability(conf, correct, num_bins=10):
     """Count, mean confidence, and accuracy per confidence bin; the ECE."""
@@ -153,6 +155,8 @@ for b in np.flatnonzero(n):
           f'predictions, mean {mean_conf[b]:.3f}, accuracy {acc[b]:.3f}')
 print(f'ECE: {ece:.3f}')
 ```
+
+Filtering to well-populated bins with at least $100$ predictions (`used = n >= 100`) so noisy small-sample ratios do not distort the curve, we plot `acc[used]` against `mean_conf[used]` alongside the ideal $y = x$ diagonal:
 
 ```{.python .input #softmax-regression-concise-calibration-3}
 used = n >= 100  # Fewer predictions give too noisy an accuracy

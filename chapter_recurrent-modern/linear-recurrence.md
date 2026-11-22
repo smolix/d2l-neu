@@ -238,7 +238,7 @@ class MinGRU(nnx.Module):  #@save
         return linear_scan(*self.coefficients(X))
 ```
 
-How much modeling quality does dropping $\mathbf{h}_{t-1}$ from the gates cost on byte-level WikiText-103? Using the exact setup of :numref:`subsec_deep-rnn` (4 blocks of `d2l.SeqLM`, 128-byte windows, 1,000 steps), we compare `GRU` ($d = 256$, $3.81\textrm{M}$ parameters), `minGRU` at equal width ($d = 256$, $2.76\textrm{M}$ parameters), and `minGRU` widened to equal parameter count (`minGRU, d=302`, $3.81\textrm{M}$ parameters).
+How much modeling quality does dropping $\mathbf{h}_{t-1}$ from the gates cost on byte-level WikiText-103? Using the exact setup of :numref:`subsec_deep-rnn` (4 blocks of `d2l.SeqLM`, 128-byte windows, 1,000 steps), we first define `text_model` and the three comparison `arms`: `GRU` ($d = 256$, $3.81\textrm{M}$ parameters), `minGRU` at equal width ($d = 256$, $2.76\textrm{M}$ parameters), and `minGRU` widened to equal parameter count (`minGRU, d=302`, $3.81\textrm{M}$ parameters):
 
 ```{.python .input #linear-recurrence-a-linear-recurrent-language-model-1}
 %%tab pytorch
@@ -266,6 +266,8 @@ min_gru = lambda d, rngs: MinGRU(d, d, rngs=rngs)
 arms = {'GRU': (gru, 256), 'minGRU': (min_gru, 256),
         'minGRU, d=302': (min_gru, 302)}  # As many parameters as the GRU
 ```
+
+We load the 128-byte `WikiText103` dataset, run `d2l.text_table` across all three arms, and retain the first trained `minGRU` model for inspection:
 
 ```{.python .input #linear-recurrence-a-linear-recurrent-language-model-2}
 %%tab pytorch, jax
@@ -330,6 +332,8 @@ def first_mixer_input(self, X):
     """What the first mixer reads: the normalized token embeddings."""
     return self.norms[0](self.embedding(X))
 ```
+
+Passing a validation minibatch through `first_gates` on both an untrained `minGRU` and our trained `model` tabulates the fraction of update gates exceeding $0.5$, $0.9$, and $0.99$:
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-6}
 %%tab pytorch
@@ -437,6 +441,8 @@ def time_call(layer, T):
     return 1000 * d2l.Benchmark(lambda: forward_backward(layer, X),
                                 warmup=1, repeats=3).time
 ```
+
+Sweeping `time_call` across sequence lengths $T \in \{512, 1024, 2048, 4096, 8192, 16384\}$ compares the wall-clock runtime of `GRU`, `minGRU`, and `attention` on log–log axes:
 
 ```{.python .input #linear-recurrence-cost-against-attention-2}
 %%tab pytorch, jax

@@ -187,6 +187,10 @@ def summary(self, x):
                 spread=round(float(near[inside].mean()), 3))
 ```
 
+To compare 2D point clouds visually alongside these numerical summaries,
+`scatter_panels` plots one or more sample sets side by side on shared axes
+(optionally overlaying a reference dataset `data` in light gray):
+
 ```{.python .input #denoising-the-running-example-2}
 %%tab pytorch, jax
 def scatter_panels(samples, titles=None, data=None, lim=4.5,  #@save
@@ -749,6 +753,11 @@ def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):  #@save
     return d2l.show_images(jnp.repeat(imgs[..., None], 3, -1), num_rows,
                            num_cols, titles, scale)
 ```
+
+With those helpers in place, we load the $[-1, 1]$ Fashion-MNIST images, define
+the noise-prediction objective `noise_loss` at $\sigma = 0.5$, and train two
+seeds of the four-layer convolutional denoiser for 600 steps with
+`d2l.train_regression`:
 
 ```{.python .input #denoising-denoising-images-1}
 %%tab pytorch

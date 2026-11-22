@@ -75,7 +75,7 @@ X, Y = copy_batch(d2l.get_key(), 2, num_fillers=12)
 print(X, Y, sep='\n')
 ```
 
-We train two-block `d2l.SeqLM` models at width $d = 48$ for 1,500 steps of Adam (`lr=3e-3`, batch size 64) using `d2l.train_queries`, and evaluate accuracy across 1,024 fresh test sequences. `copy_runs` trains two seeds per architecture and stores the trained models.
+To evaluate models on selective copying, `train_copy` trains a network for 1,500 steps of Adam (`lr=3e-3`, batch size 64) using `d2l.train_queries` and evaluates query accuracy across 1,024 fresh test sequences:
 
 ```{.python .input #mamba-selective-copying-2}
 %%tab pytorch
@@ -113,6 +113,8 @@ def train_copy(model):
                             for i in range(0, 1024, 128)]).mean())
 ```
 
+The wrapper `copy_runs` trains `num_runs=2` independent seeds of an architecture, prints its parameter count and test accuracies, and returns the trained models:
+
 ```{.python .input #mamba-selective-copying-4}
 %%tab pytorch, jax
 def copy_runs(name, make_model, num_runs=2):
@@ -124,7 +126,7 @@ def copy_runs(name, make_model, num_runs=2):
     return models
 ```
 
-First let us test `S4D` and `minGRU`:
+We first benchmark two-block `d2l.SeqLM` models at width $d = 48$ using time-invariant `d2l.S4D` versus input-selective `d2l.MinGRU` as the sequence mixer:
 
 ```{.python .input #mamba-selective-copying-3}
 %%tab pytorch
@@ -267,6 +269,8 @@ def adjoint_scan(a, b):  #@save
     return _adjoint_scan(jnp.broadcast_to(a, b.shape), b)
 ```
 
+We verify on random sequences of length $T = 100$ that differentiating `adjoint_scan` matches standard autograd through `d2l.linear_scan` to float32 precision:
+
 ```{.python .input #mamba-training-with-a-scan-2}
 %%tab pytorch
 a = torch.rand(2, 100, 8, requires_grad=True)
@@ -360,6 +364,8 @@ class SelectiveSSM(nnx.Module):  #@save
         self.D = nnx.Param(jnp.ones(H))
 ```
 
+We next add `log_coefficients` to compute the per-step log-decays $\Delta_{t,c}\boldsymbol{\lambda}$ and writes $\Delta_{t,c} u_{t,c}\mathbf{B}_t$ of shape `(batch_size, T, H, N)`, and `forward` / `__call__` to run `adjoint_scan` and contract the states with $\mathbf{C}_t$:
+
 ```{.python .input #mamba-the-layer-2}
 %%tab pytorch
 @d2l.add_to_class(SelectiveSSM)  #@save
@@ -402,7 +408,7 @@ def __call__(self, U):  # U: (batch_size, num_steps, num_channels)
     return jnp.einsum('...n,...n->...', H, C) + self.D[...] * U  # Sum over n
 ```
 
-`Mamba` wraps `SelectiveSSM` in the two-branch architecture of :numref:`fig_mamba_block`.
+The `Mamba` module wraps `SelectiveSSM` in the two-branch architecture of :numref:`fig_mamba_block`, expanding width $d$ to $2H = 4d$ via `W_in`, applying the causal depthwise `conv` and SiLU on the SSM branch, gating with `silu(Z)`, and projecting back via `W_out`:
 
 ```{.python .input #mamba-the-layer-3}
 %%tab pytorch
@@ -503,7 +509,7 @@ def state_contributions(log_a, b):
     return jnp.linalg.norm(terms.reshape(*terms.shape[:2], -1), axis=-1)
 ```
 
-Adding `log_coefficients` to `d2l.S4D` lets us compute `first_layer_contributions` identically for `S4D` and both trained `Mamba` runs on a test sequence truncated at the first query token.
+Adding `log_coefficients` to `d2l.S4D` exposes its per-step log-decays and writes in the same `(batch_size, T, d, N)` format as `SelectiveSSM`:
 
 ```{.python .input #mamba-contributions-to-the-state-1}
 %%tab pytorch
@@ -527,6 +533,8 @@ def log_coefficients(self, X):
     return (jnp.broadcast_to(log_a, (*X.shape, log_a.shape[-1])),
             b_bar * X[..., None])
 ```
+
+Using `log_coefficients`, `first_layer_contributions` extracts the first mixer's log-decays and writes on a test sequence `X` truncated at the first query token (`X[:, :-3]`) and evaluates `state_contributions` for `S4D` and both trained `Mamba` runs:
 
 ```{.python .input #mamba-contributions-to-the-state-2}
 %%tab pytorch
@@ -646,12 +654,14 @@ In `S4D`, contributions rise monotonically toward the end of the sequence becaus
 ### Language Modeling
 :label:`subsec_mamba-lm`
 
-Finally, we compare `Mamba`, `minGRU`, and `attention` on our byte-level WikiText-103 benchmark (`d2l.SeqLM`, 4 blocks at width $d = 256$, 128-byte windows, 1,000 steps), alongside a parameter-matched `minGRU, d=309` ($3.99\textrm{M}$ parameters, matching `Mamba`'s expanded-channel parameter count).
+Finally, we compare `Mamba`, `minGRU`, and `attention` on our byte-level WikiText-103 benchmark (`d2l.SeqLM`, 4 blocks at width $d = 256$, 128-byte windows, 1,000 steps). We first load the 128-byte `WikiText103` stream:
 
 ```{.python .input #mamba-language-modeling-4}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 ```
+
+Next we define `text_model(mixer, d)` and configure the four experimental `arms`, including a parameter-matched `minGRU, d=309` ($3.99\textrm{M}$ parameters) that matches `Mamba`'s expanded-channel parameter count:
 
 ```{.python .input #mamba-language-modeling-3}
 %%tab pytorch
@@ -679,6 +689,8 @@ arms = {'Mamba': (mamba, 256), 'minGRU': (min_gru, 256),
         'attention': (attention, 256),
         'minGRU, d=309': (min_gru, 309)}  # As many parameters as Mamba
 ```
+
+Calling `d2l.text_table` trains two seeds of each architecture for $1{,}000$ steps and tabulates validation loss across window position bands alongside step latency:
 
 ```{.python .input #mamba-language-modeling-2}
 %%tab pytorch, jax

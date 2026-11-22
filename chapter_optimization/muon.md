@@ -289,6 +289,8 @@ for group, name in (('muon', 'Muon'), ('adamw', 'AdamW')):
           'parameters')
 ```
 
+We then combine `Muon` (with decoupled weight decay on the hidden 2D matrices) and `AdamW` (without weight decay on the remaining parameters) into a single hybrid optimizer via `muon_adamw`:
+
 ```{.python .input #muon-dividing-the-census-2}
 %%tab pytorch
 class MultiOptimizer:
@@ -323,7 +325,7 @@ def muon_adamw(lr, weight_decay):
 ### Comparison with AdamW
 :label:`subsec_muon-comparison`
 
-We benchmark the Muon+AdamW hybrid against standard AdamW across $\eta \in \{10^{-3}, 3 \times 10^{-3}, 10^{-2}, 3 \times 10^{-2}, 10^{-1}\}$ with $\lambda = 0.1$ on the hidden matrices for $2{,}000$ steps from shared initial weights, evaluating validation loss every $250$ steps:
+We benchmark the Muon+AdamW hybrid against standard AdamW across $\eta \in \{10^{-3}, 3 \times 10^{-3}, 10^{-2}, 3 \times 10^{-2}, 10^{-1}\}$ with $\lambda = 0.1$ on the hidden matrices for $2{,}000$ steps from shared initial weights, evaluating validation loss every $250$ steps. First we run the `adamw` baseline sweep via `run_lm`:
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
 %%tab pytorch
@@ -369,6 +371,8 @@ adamw_lm, adamw_val = run_lm(
     lambda lr: optax.adamw(lr, weight_decay=wd, mask=hidden_only), lrs, seed)
 ```
 
+Next we sweep the `muon_adamw` hybrid across the exact same learning-rate grid `lrs` and initial `seed`:
+
 ```{.python .input #muon-the-race-on-the-language-model-2}
 %%tab pytorch
 muon_lm, muon_val = run_lm(
@@ -379,6 +383,8 @@ muon_lm, muon_val = run_lm(
 %%tab jax
 muon_lm, muon_val = run_lm(lambda lr: muon_adamw(lr, wd), lrs, seed)
 ```
+
+Comparing each optimizer at its best validation learning rate (`best_adamw` and `best_muon`), we plot the smoothed training and validation curves and tabulate the step at which validation loss drops below $1.6$ nats alongside the usable learning-rate window:
 
 ```{.python .input #muon-the-race-on-the-language-model-3}
 %%tab pytorch, jax

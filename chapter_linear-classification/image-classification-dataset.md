@@ -178,7 +178,11 @@ def text_labels(self, indices):
 
 ## Reading Minibatches
 
-In deep learning frameworks, each image in a minibatch of size $n$ with $c$ channels ($c = 1$ for grayscale, $c = 3$ for RGB color), height $h$, and width $w$ is stored either in *channel-first* layout $(n, c, h, w)$ (PyTorch and MXNet) or *channel-last* layout $(n, h, w, c)$ (TensorFlow and JAX). Our `get_dataloader(train)` method wraps each framework's native data loader, reshuffling the training split on every epoch and keeping the final partial minibatch ($60{,}000 = 937 \times 64 + 32$) so every image is visited once per epoch:
+In deep learning frameworks, each image in a minibatch of size $n$ with $c$ channels ($c = 1$ for grayscale, $c = 3$ for RGB color), height $h$, and width $w$ is stored either in *channel-first* layout $(n, c, h, w)$ (PyTorch and MXNet) or *channel-last* layout $(n, h, w, c)$ (TensorFlow and JAX).
+
+:begin_tab:`jax`
+In JAX, we wrap `tf.data.Dataset` in a lightweight `TensorFlowDataLoader` helper that exposes `.as_numpy_iterator()` and `__len__` so each epoch yields NumPy minibatches directly:
+:end_tab:
 
 ```{.python .input #image-classification-dataset-reading-minibatches-1}
 %%tab jax
@@ -193,6 +197,8 @@ class TensorFlowDataLoader:  #@save
     def __len__(self):
         return len(self.dataset)
 ```
+
+Now we attach `get_dataloader(self, train)` to `FashionMNIST` (along with a `batchify` helper in MXNet), wrapping each framework's native data loader so it reshuffles the training split on every epoch and retains the final partial minibatch ($60{,}000 = 937 \times 64 + 32$) so every image is visited once per epoch:
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-1}
 %%tab mxnet

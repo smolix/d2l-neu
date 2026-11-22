@@ -141,9 +141,8 @@ backward pass, nothing in this count grows with sequence length $T$. Finally,
 the cross-entropy loss saves $V = 50{,}257$ fp32 log-probabilities per token
 (**196 KiB**)—more than an entire Transformer block.
 
-We verify this tally by hooking into autograd (`saved_bytes`) and subtracting
-counts across 1 and 2 sequences and across 1 and 2 blocks (so parameter memory
-and head/loss memory separate cleanly).
+To verify this tally empirically, we first define `saved_bytes` to total the
+tensor bytes retained for the backward pass of `gpt_loss`:
 
 ```{.python .input #memory-precision-memory-per-token-1}
 %%tab pytorch
@@ -179,6 +178,11 @@ def gpt_loss(model, X):
     logits = model(X).astype(jnp.float32)
     return optax.softmax_cross_entropy_with_integer_labels(logits, X).mean()
 ```
+
+By evaluating `saved_bytes` on 1-block and 2-block GPT models across batch
+sizes $b \in \{1, 2\}$, `bytes_per_token` isolates the marginal activation
+memory per token of a single Transformer block (`block`) from that of the
+embeddings, output head, and loss (`head`):
 
 ```{.python .input #memory-precision-memory-per-token-2}
 %%tab pytorch
@@ -342,6 +346,12 @@ trace = events()
 torch.cuda.memory._record_memory_history(enabled=None)
 ```
 
+:begin_tab:`pytorch`
+Accumulating the signed byte changes (`alloc` minus `free_completed`) across
+`trace` and segmenting by `forward_end` and `backward_end` plots the live
+memory trajectory across the three phases of the step:
+:end_tab:
+
 ```{.python .input #memory-precision-measuring-memory-2}
 %%tab pytorch
 sign = {'alloc': 1, 'free_completed': -1}  # Other actions change nothing
@@ -452,6 +462,10 @@ step = jax.jit(sgd_step, static_argnums=3)
 args = mlp_params, X_mlp, y_mlp
 ```
 
+Next, we count the exact multiply-accumulate operations (`macs`) and total
+`flops` for the forward and backward matrix products of `mlp` and define
+`report` to benchmark each precision format in milliseconds and TFLOP/s:
+
 ```{.python .input #memory-precision-mixed-precision-3}
 %%tab pytorch, jax
 # Two FLOPs per multiply-add, in the forward pass, the weight gradients, and
@@ -465,6 +479,9 @@ def report(desc, f):
     t = d2l.Benchmark(f).time
     print(f'{desc}: {1000 * t:5.2f} ms, {flops / t / 1e12:3.0f} TFLOP/s')
 ```
+
+We now run `report` across strict scalar `'fp32'`, tensor-core `'tf32'`, and
+mixed-precision `'bf16'`:
 
 ```{.python .input #memory-precision-mixed-precision}
 %%tab pytorch

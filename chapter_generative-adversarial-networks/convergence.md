@@ -449,6 +449,11 @@ def sample_modes(key, centers, n, width=0.05):
     return centers[idx] + width * jax.random.normal(k2, (n, 2))
 ```
 
+To score generated point clouds against the grid `centers`, `mode_stats`
+assigns each sample to its nearest mode center and returns the count of covered
+modes, the fraction of samples within $3\sigma$, and the mean distance to the
+nearest center:
+
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-5}
 %%tab pytorch, jax
 def mode_stats(x, centers, width=0.05):
@@ -584,6 +589,10 @@ for name, (loss_D, loss_G, gamma, n_runs) in arms.items():
 grid = np.asarray(centers)
 ```
 
+We now tabulate `mode_stats` on the 10,000 generated samples from each run
+alongside the critic's final squared gradient norm
+$\mathbb{E}_q[\|\nabla_x D(x')\|^2]$:
+
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-2}
 %%tab pytorch, jax
 print(f'{"arm":28} run  modes  on-mode  distance  E_q|grad D|^2')
@@ -593,6 +602,10 @@ for name, results in runs.items():
         print(f'{name:28} {seed:3}  {modes:2}/25  {on:7.2f}  {dist:8.2f}'
               f'  {trace[-1][2]:13.1e}')
 ```
+
+Plotting 3,000 generated samples from the first run of each of the four main
+arms against the 25 mode centers (`grid`) shows the difference in mode coverage
+directly:
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-7}
 %%tab pytorch, jax

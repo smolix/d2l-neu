@@ -88,12 +88,14 @@ def clipped(tx, num_steps, max_norm=1.0):
 ### Clipping as a Guard vs. a Constant Brake
 :label:`subsec_practice-nan`
 
-In :numref:`sec_adam`, SGD with momentum $0.9$ on `TinyLM` diverged to `inf` at $\eta = 1.0$ within the first $20$ steps. Is $\eta = 1.0$ too large for the entire loss surface, or only during the initial transient steps where freshly initialized weights produce large gradients? We test $(\eta, \theta) \in \{(1.0, \infty), (1.0, 1.0), (0.3, \infty), (3.0, 1.0)\}$ across two seeds, logging how many steps trigger clipping ($\|\mathbf{g}_t\|_2 > \theta$), the last step on which clipping fires, and the median gradient norm:
+In :numref:`sec_adam`, SGD with momentum $0.9$ on `TinyLM` diverged to `inf` at $\eta = 1.0$ within the first $20$ steps. Is $\eta = 1.0$ too large for the entire loss surface, or only during the initial transient steps where freshly initialized weights produce large gradients? We first load the `WikiText103` stream ($b = 64$, window length $64$):
 
 ```{.python .input #practice-a-nan-averted-1}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=64)
 ```
+
+Next, `run(seed, lr, max_norm)` trains `TinyLM` for $2{,}000$ steps of SGD with momentum $0.9$ clipped at `max_norm`, returning both the step losses and the pre-clip gradient norms:
 
 ```{.python .input #practice-preventing-a-numerical-failure-1}
 %%tab pytorch
@@ -123,6 +125,8 @@ def run(seed, lr, max_norm, num_steps=2000):
     losses = d2l.train_steps(model, data, optimizer, num_steps)
     return losses, np.asarray(optimizer.opt_state[0]['norms'][...])
 ```
+
+We now test $(\eta, \theta) \in \{(1.0, \infty), (1.0, 1.0), (0.3, \infty), (3.0, 1.0)\}$ across two seeds, logging how many steps trigger clipping ($\|\mathbf{g}_t\|_2 > \theta$), the last step on which clipping fires, and the median gradient norm:
 
 ```{.python .input #practice-a-nan-averted-2}
 %%tab pytorch, jax
@@ -163,7 +167,7 @@ $$
 
 averages over a trailing window of $1/(1-\alpha)$ steps to cancel noise-ball fluctuations at evaluation time without altering the live training trajectory.
 
-We compare constant-rate SGD ($\eta = 0.3$) with and without weight EMA ($\alpha = 0.999$, window $1{,}000$ steps $\approx 4.2$ epochs, started after epoch $5$ to avoid initial lag) against cosine learning-rate decay over $15$ epochs ($3{,}525$ steps) on `FashionCNN`:
+We compare constant-rate SGD ($\eta = 0.3$) with and without weight EMA ($\alpha = 0.999$, window $1{,}000$ steps $\approx 4.2$ epochs, started after epoch $5$ to avoid initial lag) against cosine learning-rate decay over $15$ epochs ($3{,}525$ steps) on `FashionCNN`. First we load `FashionMNIST` ($b = 256$) and define the validation accuracy helper `test_acc`:
 
 ```{.python .input #practice-weight-averaging-1}
 %%tab pytorch, jax
@@ -171,6 +175,8 @@ fashion = d2l.FashionMNIST(batch_size=256)
 num_epochs, num_batches = 15, len(fashion.train_dataloader())
 test_acc = lambda model: d2l.evaluate_accuracy(model, fashion.val_dataloader())
 ```
+
+Next we define the `warmup_cosine` schedule helper (and in JAX, the `ema_of_weights` transformation and `averaged` model cloner; PyTorch uses `torch.optim.swa_utils.AveragedModel`):
 
 ```{.python .input #practice-weight-averaging-4}
 %%tab pytorch
@@ -209,6 +215,8 @@ def averaged(model, optimizer):
     nnx.update(ema, optimizer.opt_state[-1]['ema'])
     return ema
 ```
+
+The training loop `train_fashion` runs plain SGD under `schedule(t)` for `num_epochs=15` epochs, recording held-out test accuracy at the end of every epoch for both the live weights and their EMA (started at epoch `start=5`):
 
 ```{.python .input #practice-averaging-at-a-constant-learning-rate-1}
 %%tab pytorch
@@ -251,6 +259,8 @@ def train_fashion(seed, schedule, alpha=0.999, start=5):
     return live, avg
 ```
 
+We run `train_fashion` across two seeds for both a constant learning rate ($\eta = 0.3$) and cosine decay ($\eta: 0.3 \to 0$), comparing the range of live accuracies over the last five epochs against the final EMA accuracy:
+
 ```{.python .input #practice-weight-averaging-2}
 %%tab pytorch, jax
 schedules = {'constant rate': lambda t: 0.3,
@@ -264,6 +274,8 @@ for seed in cnn_seeds:
         print(f'{name:<15}{min(live[-5:]):15.3f} to {max(live[-5:]):.3f}'
               f'{live[-1]:13.3f}{avg[-1]:12.3f}')
 ```
+
+Plotting the epoch-by-epoch test accuracy trajectories for the first seed visualizes how the constant-rate EMA eliminates the noise-ball jitter of the live weights:
 
 ```{.python .input #practice-weight-averaging-3}
 %%tab pytorch, jax
@@ -307,7 +319,9 @@ Following :numref:`tab_practice_recipes`, we configure our $3.3\text{M}$-paramet
 1. **Batch size:** $b = 256$ sequences (where hardware throughput saturates and comparable to the post-warmup gradient-noise scale $b_{\text{noise}} \sim 100\text{--}200$).
 2. **Optimizer & guards:** AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$, decoupled weight decay $\lambda = 0.1$ applied exclusively to 2D hidden matrices (:numref:`subsec_adamw-what-not-to-decay`), global-norm gradient clipping at $\theta = 1.0$, and a short-window weight EMA ($\alpha = 0.995$).
 3. **Peak learning rate calibration:** Three $300$-step ($10\%$-horizon) trial runs across $\eta \in \{10^{-3}, 3 \times 10^{-3}, 10^{-2}\}$ identify $\eta_0 = 3 \times 10^{-3}$ as optimal (with $<5\%$ of steps clipped, confirming that $\theta = 1.0$ acts purely as a guard).
-4. **Schedule:** $60$-step linear warmup ($2\%$ of $T = 3{,}000$) followed by cosine decay to zero, which lowers validation loss by $0.05\text{--}0.06$ nats below the constant-rate baseline ($<0.01$-nat seed spread):
+4. **Schedule:** $60$-step linear warmup ($2\%$ of $T = 3{,}000$) followed by cosine decay to zero, which lowers validation loss by $0.05\text{--}0.06$ nats below the constant-rate baseline ($<0.01$-nat seed spread).
+
+We first define `tiny_lm(seed)` to instantiate the $4$-block, width-$256$, $4$-head `TinyLM` and `sample_lm(b)` to draw random training windows for noise-scale estimation:
 
 ```{.python .input #practice-a-worked-configuration-1}
 %%tab pytorch
@@ -337,6 +351,8 @@ def sample_lm(b):  # b windows at random offsets in the training text, on the GP
                         rng.integers(len(data.train) - data.num_steps, size=b))
     return jnp.asarray(X), jnp.asarray(Y)
 ```
+
+The harness `train(seed, schedule, num_steps)` configures AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$ and weight decay $0.1$ restricted to 2D non-embedding matrices, wraps it in global-norm clipping (`max_norm=1.0`) and weight EMA (`alpha=0.995`), and returns the losses, live model, EMA model, and clipping rate:
 
 ```{.python .input #practice-a-worked-configuration-3}
 %%tab pytorch
@@ -384,6 +400,8 @@ def train(seed, schedule, num_steps, max_norm=1.0, alpha=0.995):
     return losses, model, averaged(model, optimizer), float(clip_rate)
 ```
 
+At $b = 256$, we measure `d2l.noise_scale` at initialization, run three $300$-step ($10\%$-horizon) proxy trials across $\eta \in \{10^{-3}, 3 \times 10^{-3}, 10^{-2}\}$ to select the peak learning rate `peak`, and re-estimate `noise_scale` after $300$ steps:
+
 ```{.python .input #practice-a-worked-configuration-4}
 %%tab pytorch, jax
 data.batch_size = 256  # Where the throughput levels off
@@ -399,6 +417,8 @@ peak = min(short, key=lambda lr: short[lr][0])
 print(f'peak rate {peak:g}; noise scale after its 300 steps: '
       f'{d2l.noise_scale(short[peak][1], sample_lm, b_small=8, b_big=256):.0f}')
 ```
+
+Finally, we execute the full $3{,}000$-step run across two seeds comparing our configured schedule (`warmup_cosine(peak, 60, 3000)`) and its weight EMA against a constant-rate baseline at `peak`:
 
 ```{.python .input #practice-a-worked-configuration-5}
 %%tab pytorch, jax

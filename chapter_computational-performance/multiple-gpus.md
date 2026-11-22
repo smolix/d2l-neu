@@ -56,6 +56,11 @@ from jax.flatten_util import ravel_pytree
 from jax.sharding import NamedSharding, PartitionSpec as P
 ```
 
+:begin_tab:`pytorch`
+In PyTorch, we also enable tf32 matrix multiplications and cuDNN convolution
+autotuning so that fixed-shape kernels run at their steady-state speed:
+:end_tab:
+
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles-2}
 %%tab pytorch
 torch.set_float32_matmul_precision('high')
@@ -168,6 +173,10 @@ def to_device(split, sharding):
                            y.astype(np.int32)), sharding)
 ```
 
+We verify that at least two GPUs are available, replicate the Fashion-MNIST
+training split onto both devices (`train_data`), and draw a single shared
+parameter initialization `base` for all experiments below:
+
 ```{.python .input #multiple-gpus-the-model-and-the-data-1}
 %%tab pytorch
 assert d2l.num_gpus() >= 2, 'This section needs two GPUs'
@@ -236,6 +245,10 @@ def allreduce(x, mesh):
     return jax.shard_map(lambda x_j: jax.lax.psum(x_j, 'data'), mesh=mesh,
                          in_specs=P('data'), out_specs=P('data'))(x)
 ```
+
+We can test `allreduce` by placing `[1.0, 1.0]` on device 0 and `[2.0, 2.0]` on
+device 1 and checking that both devices receive the elementwise sum
+`[3.0, 3.0]`:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-3}
 %%tab pytorch
@@ -394,8 +407,8 @@ outlined cell is the chunk that a GPU received in that step, and the ring
 in the last panel shows which GPU sends to which.](../img/mdl-perf-ring-allreduce.svg)
 :label:`fig_ring_allreduce`
 
-We verify the ring indexing and byte count in a NumPy simulation across
-$k \in \{2, 4, 8, 16\}$:
+We implement the two-phase ring in NumPy, tracking both the accumulated chunks
+on each device and the total bytes `sent` per device:
 
 ```{.python .input #multiple-gpus-ring-allreduce-1}
 %%tab pytorch, jax
@@ -417,6 +430,10 @@ def ring_allreduce(xs):
         sent += msgs[0].nbytes
     return [np.concatenate(c) for c in chunks], sent
 ```
+
+Testing `ring_allreduce` on random 1,024-float vectors across
+$k \in \{2, 4, 8, 16\}$ devices confirms that every device receives the exact
+sum while sending $2(k-1)S/k$ bytes:
 
 ```{.python .input #multiple-gpus-ring-allreduce-2}
 %%tab pytorch, jax
@@ -628,8 +645,9 @@ other, so a step whose kernels are short takes about $2h_{\textrm{step}}$
 of host time plus the exchange.](../img/mdl-perf-one-launcher.svg)
 :label:`fig_one_launcher`
 
-We test both predictions over a 5-epoch training run at global batch size 256
-on 1 and 2 GPUs:
+To test both predictions end to end, we write a training loop `train` that runs
+one epoch per pre-generated example permutation in `orders` and returns the
+average step time (excluding the first epoch) and validation accuracy:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-5}
 %%tab pytorch
@@ -673,6 +691,11 @@ def train(params, train_data, test_data, mesh, orders, batch_size=256,
     acc = float((jax.jit(lenet)(params, X).argmax(1) == y).mean())
     return sum(times[1:]) / (len(times) - 1), acc
 ```
+
+We now run `train` for five epochs at global batch size 256 on $k \in \{1, 2\}$
+GPUs and compare the measured two-GPU step time `t_step[2]` against both the
+naive prediction :eqref:`eq_dp_cost` and the single-launcher model
+:eqref:`eq_dp_one-launcher`:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-6}
 %%tab pytorch

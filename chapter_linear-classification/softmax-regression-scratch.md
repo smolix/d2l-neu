@@ -132,7 +132,7 @@ Both metrics flow from the exact same logit vector (:numref:`fig_mdl-clf-loss-ac
 ### The `Classifier` Class
 :label:`subsec_classifier-class`
 
-We package this dual-metric validation behavior into `Classifier(d2l.Module)`, the base class for every classification model in the book. It overrides `validation_step` to return both `'loss'` and `'acc'`, attaches `accuracy(Y_hat, Y, averaged=True)` to compute :eqref:`eq_accuracy`, and installs plain minibatch SGD at learning rate `self.lr` as the default `configure_optimizers` on `d2l.Module`:
+We package this dual-metric validation behavior into `Classifier(d2l.Module)`, the base class for every classification model in the book, starting with `validation_step` returning both `'loss'` and `'acc'` on each validation minibatch:
 
 ```{.python .input #classification-the-classifier-class-1}
 %%tab pytorch, mxnet, jax
@@ -154,6 +154,8 @@ class Classifier(d2l.Module):  #@save
                 'acc': self.accuracy(Y_hat, batch[-1])}
 ```
 
+Next, we attach `accuracy(self, Y_hat, Y, averaged=True)` to `Classifier`: it flattens `Y_hat` to one row of class scores per example, finds the predicted class index via `argmax` along `axis=1`, casts it to `Y.dtype`, and returns either the mean or per-example float32 equality mask `preds == Y`:
+
 ```{.python .input #classification-accuracy-1  n=9}
 @d2l.add_to_class(Classifier)  #@save
 def accuracy(self, Y_hat, Y, averaged=True):
@@ -164,6 +166,7 @@ def accuracy(self, Y_hat, Y, averaged=True):
     return d2l.reduce_mean(compare) if averaged else compare
 ```
 
+Finally, we install plain minibatch SGD at learning rate `self.lr` as the default `configure_optimizers` method on `d2l.Module` so every classifier inherits a working optimizer out of the box:
 
 ```{.python .input #classification-the-classifier-class-2}
 %%tab mxnet
@@ -199,7 +202,7 @@ def configure_optimizers(self):
 
 ### The Parameters and Forward Pass
 
-Flattening each $28 \times 28$ Fashion-MNIST image yields $d = 784$ input features for $q = 10$ classes, so `SoftmaxRegressionScratch` allocates $\mathbf{W} \in \mathbb{R}^{784 \times 10}$ (initialized from $\mathcal{N}(0, 0.01^2)$) and $\mathbf{b} \in \mathbb{R}^{10}$ (initialized to $0$), totaling $7{,}850$ parameters. Notice a quick sanity check: near-zero initial weights produce near-zero logits, so the untrained model starts close to a uniform prediction ($\hat{y}_j \approx 0.1$) with initial cross-entropy loss near $-\log(0.1) = \log 10 \approx 2.30$. In `forward`, we reshape each minibatch of images to `(-1, 784)` and return `softmax(X @ W + b)`:
+Flattening each $28 \times 28$ Fashion-MNIST image yields $d = 784$ input features for $q = 10$ classes, so `SoftmaxRegressionScratch` allocates $\mathbf{W} \in \mathbb{R}^{784 \times 10}$ (initialized from $\mathcal{N}(0, 0.01^2)$) and $\mathbf{b} \in \mathbb{R}^{10}$ (initialized to $0$), totaling $7{,}850$ parameters. Notice a quick sanity check: near-zero initial weights produce near-zero logits, so the untrained model starts close to a uniform prediction ($\hat{y}_j \approx 0.1$) with initial cross-entropy loss near $-\log(0.1) = \log 10 \approx 2.30$:
 
 ```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab pytorch
@@ -251,6 +254,8 @@ class SoftmaxRegressionScratch(Classifier):
             rngs.params.normal((num_inputs, num_outputs)) * std)
         self.b = nnx.Param(jnp.zeros(num_outputs))
 ```
+
+In `forward(self, X)`, we flatten each image in the minibatch into a row vector of length `self.num_inputs` ($784$) via `d2l.reshape(X, (-1, self.num_inputs))` and map the affine logits $\mathbf{X}\mathbf{W} + \mathbf{b}$ through `softmax`:
 
 ```{.python .input #softmax-regression-scratch-the-model-2}
 %%tab pytorch, tensorflow, jax
@@ -349,7 +354,7 @@ def loss(self, y_hat, y):
 
 ### The Training Run
 
-Let us train `SoftmaxRegressionScratch` on Fashion-MNIST for $10$ epochs with minibatch size $256$ and learning rate $\eta = 0.1$, and attach a convenient `trainer.evaluate(model, data, train=False)` helper to score the finished model on the full validation and training splits:
+Let us train `SoftmaxRegressionScratch` on Fashion-MNIST for $10$ epochs with minibatch size $256$ and learning rate $\eta = 0.1$:
 
 ```{.python .input #softmax-regression-scratch-training}
 data = d2l.FashionMNIST(batch_size=256)
@@ -358,6 +363,7 @@ trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
+To score a trained model on an entire dataset split whenever we want, we attach an `evaluate(self, model, data, train=False)` helper to `d2l.Trainer` that binds `self.val_dataloader` to either the validation or training loader and runs `self.validate()`:
 
 ```{.python .input #softmax-regression-scratch-the-training-run-1}
 @d2l.add_to_class(d2l.Trainer)  #@save
@@ -379,7 +385,7 @@ points recorded in `trainer.history['val_loss'][-1]` and
 trainer.evaluate(model, data)
 ```
 
-Our classifier gets roughly 83% of the validation images right—and we
+Our classifier gets roughly $83\%$ of the validation images right; passing `train=True` evaluates the exact same weights across all $60{,}000$ training images:
 
 ```{.python .input #softmax-regression-scratch-the-training-run-2}
 trainer.evaluate(model, data, train=True)
@@ -629,6 +635,7 @@ def loss(self, Y_hat, Y, averaged=True):
     return fn(Y_hat, Y).mean() if averaged else fn(Y_hat, Y)
 ```
 
+Testing `SoftmaxRegression.loss` on the extreme logits `O = [[1000.0, 0.0, 0.0], [1000.0, 0.0, 0.0]]` with true labels `y = [0, 1]` confirms that the fused LogSumExp implementation returns the exact per-example losses `[0., 1000.]` without overflow or underflow:
 
 ```{.python .input #softmax-regression-concise-the-framework-loss}
 O = d2l.tensor([[1000.0, 0.0, 0.0], [1000.0, 0.0, 0.0]])

@@ -916,6 +916,9 @@ for name, make_model in roadmap.items():
     results[name] = (d2l.num_params(model), trainer.history['val_acc'][-1])
 ```
 
+We now iterate through `results` to display the parameter count and 20-epoch
+validation accuracy for each step along the `roadmap`.
+
 ```{.python .input #convnext-eval}
 for name, (params, accuracy) in results.items():
     print(f'{name:34s} {params:>9,} parameters, '

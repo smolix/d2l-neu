@@ -413,6 +413,12 @@ class FusedGPT(d2l.GPT):
                                                 implementation='cudnn')
 ```
 
+:begin_tab:`jax`
+We instantiate `model16` from `FusedGPT` with the same parameters converted to
+bf16, verify that its logits still match the fp32 reference `high` within 1%,
+and benchmark the training step:
+:end_tab:
+
 ```{.python .input #fast-transformer-fused-attention}
 %%tab jax
 model16 = FusedGPT(len(data.vocab), num_hiddens=512,
@@ -490,6 +496,10 @@ X512, _ = next(windows(corpus, 512))  # One minibatch of the last step
 forward = nnx.jit_partial(lambda model, X: model(X), model16, graph=False)
 t_forward = d2l.Benchmark(lambda: forward(X512)).time
 ```
+
+Comparing `t_forward` against the full step duration `t_step` at batch size 512
+predicts the fraction of throughput `1 / (1 + t_forward / t_step)` retained
+when every block's forward pass is repeated:
 
 ```{.python .input #fast-transformer-activation-checkpointing-2}
 %%tab pytorch, jax
@@ -683,6 +693,11 @@ def data_parallel(k, bf16, batch_size):
     return speed, d2l.Benchmark(lambda: psum(grads), repeats=10).time
 ```
 
+We now run `data_parallel` for both the short fp32 step (`batch_size=64`) and
+the long bf16 step (`batch_size=512`) across $k \in \{1, 2, 4\}$ GPUs,
+comparing the no-overlap prediction :eqref:`eq_ft-dp` against the measured
+speedup:
+
 ```{.python .input #fast-transformer-rungs-each-one-measured-8}
 %%tab pytorch, jax
 for bf16, batch_size in ((False, 64), (True, 512)):
@@ -777,6 +792,11 @@ losses = {name: jnp.stack([step(X, Y) for X, Y in minibatches]).tolist()
 validation = {name: math.log(d2l.lm_perplexity(net, data.val_dataloader()))
               for name, net in (('baseline', reference), ('final', learner))}
 ```
+
+We now compare the training loss trajectories at steps 1, 50, 100, and 200
+alongside the final 20-step mean (`late`) and validation log-perplexity
+(`validation`), asserting that both runs beat the $2.45\text{ nats/byte}$
+bigram threshold and agree within $0.15\text{ nats/byte}$:
 
 ```{.python .input #fast-transformer-training-check}
 %%tab pytorch, jax

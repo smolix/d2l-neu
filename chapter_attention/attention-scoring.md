@@ -200,6 +200,8 @@ def jacobian_norm(log_alpha):
     return float(jnp.linalg.norm(J, axis=(-2, -1)).mean())
 ```
 
+Sweeping head width $d$ from $4$ to $512$ on a logarithmic axis shows that unscaled dot-product attention suffers rapid entropy collapse as $d$ grows, whereas scaling by $1/\sqrt{d}$ holds the attention entropy flat across all widths:
+
 ```{.python .input #attention-scoring-score-variance-and-the-1-sqrt-d-factor-1}
 %%tab pytorch, jax
 ds = [2**k for k in range(2, 10)]
@@ -719,6 +721,8 @@ for run in range(1, 4):
     model = train_aligner()
     evaluate_aligner(model, X, Y, f'run {run}')
 ```
+
+Visualizing the attention weight matrix on the first test sequence before and after training confirms that `ToyAligner` turns an unstructured initial distribution into the exact permutation matrix of $\pi$ (with the off-diagonal swap at positions $3$ and $4$):
 
 ```{.python .input #attention-scoring-attention-as-learned-alignment-4}
 %%tab pytorch, jax

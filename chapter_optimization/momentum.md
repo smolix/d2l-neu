@@ -165,7 +165,7 @@ Our analysis predicts two distinct regimes when training on data:
 1. **Curvature-limited regime (accurate gradients, large $\kappa$):** Momentum permits a larger effective step $\eta_{\text{eff}}$ and reduces the required iteration count by a large factor.
 2. **Noise-limited regime (small minibatches):** The stationary noise floor is governed by $\eta_{\text{eff}} = \eta/(1-\beta)$, so adding $\beta = 0.9$ shifts the optimal learning rate down by a factor of $1 - \beta = 0.1$ while achieving comparable convergence speed.
 
-We verify both regimes on Fashion-MNIST by comparing $\beta = 0$ and $\beta = 0.9$ on (1) full-batch softmax regression ($b = 60{,}000$, exact gradients, ill-conditioned due to non-negative pixel intensities) and (2) `FashionCNN` (:numref:`subsec_fashioncnn`) with small minibatches ($b = 32$):
+We verify both regimes on Fashion-MNIST by comparing $\beta = 0$ and $\beta = 0.9$ on (1) full-batch softmax regression ($b = 60{,}000$, exact gradients, ill-conditioned due to non-negative pixel intensities) and (2) `FashionCNN` (:numref:`subsec_fashioncnn`) with small minibatches ($b = 32$). First we preload the normalized Fashion-MNIST tensors onto the accelerator inside an in-memory `Batches` loader:
 
 ```{.python .input #momentum-momentum-on-a-network-1}
 %%tab pytorch
@@ -203,6 +203,8 @@ class Batches:
                 for i in order.reshape(-1, self.batch_size))
 ```
 
+Next we define the zero-initialized linear `softmax_regression` model and the momentum-parameterized SGD constructor `make_sgd(beta)`:
+
 ```{.python .input #momentum-momentum-on-data-1}
 %%tab pytorch
 def softmax_regression():
@@ -228,6 +230,8 @@ def softmax_regression(rngs):
 make_sgd = lambda beta: lambda lr: optax.sgd(lr, momentum=beta)
 new_seed = d2l.get_seed
 ```
+
+We now sweep `d2l.lr_sweep` across `grids` for both models at $\beta \in \{0.0, 0.9\}$, recording each configuration's best learning rate, steps to reach its target loss, and final loss:
 
 ```{.python .input #momentum-momentum-on-a-network-2}
 %%tab pytorch, jax

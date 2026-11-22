@@ -70,6 +70,8 @@ class PatchEmbedding(nnx.Module):  #@save
         return X.reshape(X.shape[0], -1, X.shape[-1])
 ```
 
+On a minibatch of four $96 \times 96$ single-channel images with patch size $p = 16$, `PatchEmbedding` outputs $(96 / 16)^2 = 36$ patch tokens of width $d = 512$:
+
 ```{.python .input #vision-transformer-patches-as-tokens-2}
 %%tab pytorch
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
@@ -240,6 +242,8 @@ hparams = dict(img_size=96, patch_size=16, num_hiddens=512,
                emb_dropout=0.1, blk_dropout=0.1, num_steps=num_steps)
 ```
 
+Before training, we instantiate `model = vit()` and save a copy of its initial random patch position embeddings `pos_init` so we can later measure how much spatial structure training adds beyond initialization:
+
 ```{.python .input #vision-transformer-a-first-run-3}
 %%tab pytorch
 vit = lambda: ViT(**hparams, lr=3e-4)  # A fresh model at the tuned rate
@@ -253,6 +257,8 @@ vit = lambda: ViT(**hparams, lr=3e-4, rngs=nnx.Rngs(d2l.get_key()))
 model = vit()  # A fresh model at the tuned rate
 pos_init = model.pos_embedding[0, 1:]  # The initial noise, a new array
 ```
+
+Fitting `model` for 10 epochs with `d2l.Trainer` reaches roughly $89\%$ validation accuracy on the upsampled $96 \times 96$ Fashion-MNIST images:
 
 ```{.python .input #vision-transformer-a-first-run-2}
 %%tab pytorch, jax
@@ -300,6 +306,8 @@ def shuffled_accuracy(model, data, perm):
     return d2l.evaluate_accuracy(model, ((shuffle_patches(X, perm), y)
                                          for X, y in data.val_dataloader()))
 ```
+
+Evaluating `shuffled_accuracy` across five fixed random permutations of the $36$ patches measures how sharply accuracy drops when the spatial layout is scrambled at test time:
 
 ```{.python .input #vision-transformer-does-the-vit-use-position-2}
 %%tab pytorch, jax
@@ -440,6 +448,8 @@ class CompactResNet(d2l.Classifier):
         return self.net(X)
 ```
 
+We create a factory `compact_cnn` and instantiate `cnn` with peak learning rate $10^{-3}$:
+
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-4}
 %%tab pytorch
 compact_cnn = lambda: CompactResNet(num_steps, lr=1e-3)  # A fresh CNN
@@ -452,6 +462,8 @@ compact_cnn = lambda: CompactResNet(num_steps, lr=1e-3,
                                     rngs=nnx.Rngs(d2l.get_key()))
 cnn = compact_cnn()  # A fresh CNN
 ```
+
+Training `CompactResNet` for 10 epochs (plus a second seed of both `CompactResNet` and `ViT` to check run-to-run stability) compares the two architectures at the exact same $6.5\textrm{M}$-parameter budget:
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-2}
 %%tab pytorch, jax
@@ -473,6 +485,8 @@ print(f'CNN: {cnn_params/1e6:.1f}M parameters, validation accuracy',
 print(f'ViT: {vit_params/1e6:.1f}M parameters, validation accuracy',
       ', '.join(f'{a:.3f}' for a in learned_runs))
 ```
+
+Overlaying the 10-epoch validation accuracy trajectories of `ViT` and `CompactResNet` highlights the sample-efficiency gap across the entire run:
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-3}
 %%tab pytorch, jax

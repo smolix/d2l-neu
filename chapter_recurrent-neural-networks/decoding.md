@@ -108,13 +108,15 @@ default for open-ended generation.
 For our experiments, we use the concise RNN language model from
 :numref:`sec_rnn-concise`: 512-dimensional embeddings, 128 hidden units,
 dropout on both embeddings and hidden states, and an output layer over the
-1,027 BPE tokens of *The Time Machine*, trained for ten epochs on 32-token
-windows with gradient clipping. Let us retrain it with the same settings and
-confirm that its validation perplexity matches our earlier run.
+1,027 BPE tokens of *The Time Machine*. We begin by loading the 32-token
+training and validation windows from `d2l.TimeMachine`.
 
 ```{.python .input #decoding-a-model-to-decode-from-1}
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
 ```
+
+Next, we construct the concise recurrent cell `d2l.RNN` and language model
+`d2l.RNNLM` with $d = 512$, $h = 128$, dropout, and learning rate `lr=4`.
 
 ```{.python .input #decoding-a-model-to-decode-from-2}
 %%tab pytorch, mxnet, jax
@@ -130,6 +132,9 @@ with d2l.try_gpu():
     model = d2l.RNNLM(rnn, vocab_size=len(data.vocab), lr=4, dropout=0.5,
                       emb_dropout=0.1)
 ```
+
+Training `model` for 10 epochs with gradient clipping at `gradient_clip_val=1`
+reproduces a validation perplexity near 60 on *The Time Machine*.
 
 ```{.python .input #decoding-a-model-to-decode-from-3}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)

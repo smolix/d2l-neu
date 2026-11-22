@@ -341,6 +341,9 @@ for e in (1, 4, 20):
     reuse[f'{e} epoch' + 's' * (e > 1)] = d2l.on_grid(runs_e, grid, 1)
 ```
 
+Plotting the interpolated return curves in `reuse` against `grid` shows how
+batch reuse trades extra gradient passes for fewer environment interactions:
+
 ```{.python .input #ppo-reuse-against-environment-steps-2}
 %%tab pytorch, jax
 d2l.plot_curves(reuse, xlabel='environment steps',
@@ -390,6 +393,10 @@ for name, r in runs.items():
     print(f'{name:>13}: {held} of {num_seeds} seeds hold the task, '
           f'{int(dead.sum())} end dead')
 ```
+
+Plotting the batch return trajectories `r[:, :, 1]` across all updates
+contrasts the steady plateau of `'clipped (PPO)'` with the collapse of
+`'no clip'`:
 
 ```{.python .input #ppo-the-ablation-4}
 %%tab pytorch, jax

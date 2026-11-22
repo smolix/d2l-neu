@@ -323,6 +323,10 @@ print(f'last 5,000 steps: critic loss {loss_D:.2f} (+ penalty '
 print(f'first 2,000 steps: pair accuracy {acc_early:.2f}')
 ```
 
+Plotting the full trajectories of `loss_D`, `loss_G`, and held-out `accuracy`
+across all 15,000 steps shows how quickly the projection critic and conditional
+generator settle into a steady game:
+
 ```{.python .input #conditional-training-with-the-chapter-s-loss-4}
 %%tab pytorch, jax
 steps = history['step']
@@ -443,6 +447,10 @@ pred_gen = np.asarray(d2l.batched(cnn, gen).argmax(1))
 align = [float((pred_gen[yg == c] == c).mean()) for c in range(10)]
 ```
 
+Tabulating `align` alongside the referee's accuracy `cls_acc` on real test
+images for each of the 10 classes shows how well `ema_G` respects the requested
+class label:
+
 ```{.python .input #conditional-measuring-condition-alignment-2}
 %%tab pytorch, jax
 print(f'{"class":12s}{"alignment":>11s}{"real":>7s}{"gap":>7s}')
@@ -480,6 +488,11 @@ f_gen = features(gen)
 f_gen2 = features(jnp.clip(generate(8), -1, 1))      # a second draw
 idx, pred_real = np.asarray(idx), np.asarray(pred)
 ```
+
+We now compare the marginal feature distance (`d2l.fid_score`) and squared MMD
+(`d2l.kid_score`) against the reference set `f_real` for the real test floor
+`f_real2` and both generated draws (`f_gen`, `f_gen2`), and check the fraction
+of raw pixel values `out_of_range`:
 
 ```{.python .input #conditional-measuring-condition-alignment-4}
 %%tab pytorch, jax

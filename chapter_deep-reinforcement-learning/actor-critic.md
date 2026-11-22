@@ -249,6 +249,10 @@ runs = {'REINFORCE + baseline': np.array(
     [list(train(s, cartpole_agent(s), mc_weight)) for s in range(num_seeds)])}
 ```
 
+Now we train the `'actor-critic'` arm with `td_weight` on the same three seeds,
+interpolate both arms onto a common step `grid` with `d2l.on_grid`, and plot
+the median batch return and min–max band across seeds:
+
 ```{.python .input #actor-critic-a2c-by-name-9}
 %%tab pytorch, jax
 runs['actor-critic'] = np.array(
@@ -271,6 +275,11 @@ def steps_to(run, level, window):  #@save
     hit = np.flatnonzero(mean >= level)
     return run[hit[0] + window - 1, 0] if len(hit) else np.inf
 ```
+
+Applying `steps_to(run, 450, 10)` to each seed in `runs` summarizes how many
+thousand environment steps each arm needs to sustain a mean return of 450 over
+ten batches, alongside the fraction of updates where the actor gradient norm
+exceeded `grad_clip`:
 
 ```{.python .input #actor-critic-bootstrapped-and-monte-carlo-weights-on-cartpole-1}
 %%tab pytorch, jax
@@ -304,6 +313,11 @@ for _ in train(0, cartpole_agent(0), traced_td_weight):
     pass
 trace = np.array(trace)
 ```
+
+From `trace`, we compare the median standard deviation of the TD error against
+that of the Monte Carlo advantage over the first 10 and last 50 updates,
+compute their median variance ratio, and plot both per-batch variances on a
+logarithmic scale:
 
 ```{.python .input #actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1}
 %%tab pytorch, jax
@@ -424,6 +438,10 @@ def gae_run(seed, lam):
 sweep = {lam: d2l.run_seeds(gae_run, 5, lam=lam) for lam in lams}
 ```
 
+For each $\lambda$ in `sweep`, we report the best 20-update moving-average
+return per seed (along with the cross-seed median) and plot the median batch
+return across the 50 updates:
+
 ```{.python .input #actor-critic-measuring-the-dial-2}
 %%tab pytorch, jax
 for lam, r in sweep.items():
@@ -441,7 +459,7 @@ In the median over seeds, $\lambda = 0$ and $\lambda = 0.5$ reach a best 20-upda
 
 ### A Frozen-Policy Probe
 
-Training curves mix the quality of the estimator with optimization and changing data. To examine the estimator alone, we freeze a partly trained agent, draw many batches at its fixed parameters, and compare the policy-gradient estimate of each $\lambda$ with a reference. The reference is the mean of the $\lambda = 1$ estimates over all draws. When the episodes terminate before the time limit, this approximates the unbiased Monte Carlo gradient without a model of the environment (exercise :exref:`ex_actor-critic-lambda-return-recursion` treats truncated episodes). `grad_vec` returns the gradient of one batch's weighted log-probabilities as a flat vector, and `freeze` trains a fresh agent for 40 actor-critic updates, about a quarter of a full run, when its critic is still wrong.
+Training curves mix the quality of the estimator with optimization and changing data. To examine the estimator alone, we freeze a partly trained agent, draw many batches at its fixed parameters, and compare the policy-gradient estimate of each $\lambda$ with a reference. The reference is the mean of the $\lambda = 1$ estimates over all draws. When the episodes terminate before the time limit, this approximates the unbiased Monte Carlo gradient without a model of the environment (exercise :exref:`ex_actor-critic-lambda-return-recursion` treats truncated episodes). `grad_vec` returns the gradient of one batch's weighted log-probabilities as a flat vector.
 
 ```{.python .input #actor-critic-measuring-the-dial-3}
 %%tab pytorch
@@ -460,6 +478,10 @@ def grad_vec(ac, b, w):
     return np.concatenate([np.asarray(x).ravel()
                            for x in jax.tree.leaves(g)])
 ```
+
+Next, `freeze` trains a fresh agent with `td_weight` for `warmup=40`
+actor-critic updates—about a quarter of a full run—so we can inspect its
+policy-gradient estimates while its critic is still inaccurate:
 
 ```{.python .input #actor-critic-a-frozen-policy-probe-2}
 %%tab pytorch, jax

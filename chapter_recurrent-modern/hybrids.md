@@ -115,6 +115,8 @@ for name, arm in arms.items():
     print(f'{name:25s} {d2l.num_params(models[0]):,} parameters')
 ```
 
+We now average the recall curves across the two runs of each arm and plot accuracy as a function of the number of stored pairs $n \in \{4, 8, 16, 32, 64\}$:
+
 ```{.python .input #hybrids-the-recall-sweep-3}
 %%tab pytorch, jax
 pairs = list(recall['hybrid'][0])
@@ -153,12 +155,14 @@ Removing the width-4 causal convolution degrades recall at every single load (by
 
 ## Language Modeling at Equal Size
 
-How do pure `GatedDeltaNet` (`GGGG`), a 3-to-1 hybrid (`GGGA`), and pure causal `attention` (`AAAA`) compare on our byte-level WikiText-103 benchmark (`d2l.SeqLM`, 4 blocks at width $d = 256$, 128-byte windows, 1,000 steps)?
+How do pure `GatedDeltaNet` (`GGGG`), a 3-to-1 hybrid (`GGGA`), and pure causal `attention` (`AAAA`) compare on our byte-level WikiText-103 benchmark (`d2l.SeqLM`, 4 blocks at width $d = 256$, 128-byte windows, 1,000 steps)? We first load the 128-byte `WikiText103` dataset:
 
 ```{.python .input #hybrids-language-modeling-3}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 ```
+
+Next, `text_model(layout, d)` constructs a 4-block `d2l.SeqLM` whose mixers follow a four-letter `layout` string of `'G'` (`GatedDeltaNet`, 4 heads) and `'A'` (`AttentionMixer`, 8 heads):
 
 ```{.python .input #hybrids-language-modeling-4}
 %%tab pytorch
@@ -182,6 +186,8 @@ def text_model(layout, d):  # 256 byte values; one block per letter
     return d2l.SeqLM(256, d, [text_mixers[c](d, rngs) for c in layout],
                      rngs=rngs)
 ```
+
+We train two runs each of `'GGGG'`, `'GGGA'`, and `'AAAA'` at width $d = 256$ via `d2l.text_table`:
 
 ```{.python .input #hybrids-language-modeling-5}
 %%tab pytorch, jax

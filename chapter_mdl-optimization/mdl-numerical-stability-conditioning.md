@@ -1189,6 +1189,11 @@ def solve_exact(A, b):
     return np.array([float(M[i][n] / M[i][i]) for i in range(n)])
 ```
 
+For dimensions $n \in \{4, 6, 8, 10, 12\}$, we now construct the $n \times n$
+Hilbert matrix `H` and right-hand side `b = H @ x_true`, comparing the
+floating-point solver `np.linalg.solve(H, b)` against `solve_exact(H, b)`
+across condition number, forward error, digits retained, and backward error:
+
 ```{.python .input #numerical-stability-conditioning-hilbert}
 print(' n     kappa  forward error  digits kept  16 - log10 kappa  backward error'
       '  exact solve error')

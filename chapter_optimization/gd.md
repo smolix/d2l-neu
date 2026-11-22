@@ -192,6 +192,8 @@ Thus, the learning rate $\eta$ filters local minima by their **sharpness** rathe
 | Deep ($x = 7.27$) | $1.81$ | $0.09$ (stable) | $-2.62$ (unstable) |
 | Shallow ($x = -1.83$) | $0.98$ | $0.51$ (stable) | $-0.96$ (stable) |
 
+We first define the 1D gradient descent runner `gd` and trajectory plotter `show_trace`:
+
 ```{.python .input #gd-one-dimensional-gradient-descent-3}
 %%tab pytorch, jax
 def gd(eta, f_grad, x=10.0, steps=10):
@@ -210,6 +212,8 @@ def show_trace(f, *runs, legend=None):
              '$x$', '$f(x)$', legend=legend, fmts=['-', '-o', '-s'])
 ```
 
+Next we define $f(x) = x\cos(0.15\pi x)$ along with its first derivative `f_cos_grad` and second derivative `f_cos_hess`:
+
 ```{.python .input #gd-local-minima-1}
 %%tab pytorch, jax
 c = d2l.tensor(0.15 * np.pi)
@@ -223,6 +227,8 @@ def f_cos_grad(x):  # Its derivative
 def f_cos_hess(x):  # Its second derivative
     return -2 * c * d2l.sin(c * x) - c**2 * x * d2l.cos(c * x)
 ```
+
+Evaluating `f_cos_hess` at the two local minima and running `gd` from $x = 10$ at $\eta \in \{0.5, 2\}$ demonstrates how the stability ceiling $2/\eta$ selects between the deep sharp minimum and the shallow flat minimum:
 
 ```{.python .input #gd-local-minima}
 %%tab pytorch, jax
@@ -311,6 +317,8 @@ def gd_sharpness(eta, P, steps=20000, every=500, last=1000):
 P0 = 0.5 * jax.random.normal(d2l.get_key(), (10, 25))  # Ten random starts
 ```
 
+Running `gd_sharpness` from the ten shared initializations `P0` at $\eta = 0.4$ ($2/\eta = 5$) and $\eta = 0.25$ ($2/\eta = 8$) tabulates the initial and final sharpness, final loss, and fraction of late steps on which the loss rose:
+
 ```{.python .input #optimization-intro-the-edge-of-stability-2}
 %%tab pytorch, jax
 runs = {eta: gd_sharpness(eta, P0) for eta in (0.4, 0.25)}
@@ -322,6 +330,8 @@ for i in range(len(P0)):
           + '|'.join(f' {float(s[i, -1]):9.2f} {float(l[i]):7.1e} '
                      f'{float(r[i]):6.0%} ' for s, l, r in runs.values()))
 ```
+
+Plotting the sharpness normalized by the stability threshold, $\lambda_{\max} / (2/\eta)$, over all $20{,}000$ steps shows both learning rates converging to the edge of stability at $1$:
 
 ```{.python .input #gd-the-edge-of-stability-1}
 %%tab pytorch, jax

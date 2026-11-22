@@ -571,6 +571,9 @@ d2l.plot(list(range(1, 6)), [h['train_loss'] for h in history.values()],
          fmts=('b--', 'r--', 'b-', 'r-'))
 ```
 
+We also inspect the final epoch's `train_loss` and `val_acc` recorded in
+`history` for all four 20- and 56-layer configurations.
+
 ```{.python .input #resnet-plain-and-residual-networks-compared-5}
 {name: (round(h['train_loss'][-1], 3), round(h['val_acc'][-1], 3))
  for name, h in history.items()}  # Training loss, validation accuracy
@@ -843,13 +846,15 @@ ResNet18().layer_summary((1, 96, 96, 1))
 
 ### Training
 
-We now train `ResNet18` on Fashion-MNIST resized to $96 \times 96$ for 10
-epochs with batch size 128, reusing `DeepNet`'s cosine warmup optimizer and
-peak learning rate of 0.1.
+To train `ResNet18`, we first attach `DeepNet`'s cosine warmup SGD schedule via
+`configure_optimizers`.
 
 ```{.python .input #resnet-training-schedule}
 ResNet.configure_optimizers = DeepNet.configure_optimizers  # Same schedule
 ```
+
+We now fit `ResNet18` on Fashion-MNIST resized to $96 \times 96$ for 10 epochs
+with batch size 128 and peak learning rate `lr=0.1`.
 
 ```{.python .input #resnet-training}
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
@@ -857,6 +862,9 @@ model = ResNet18(lr=0.1, num_steps=10 * len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(model, data)
 ```
+
+Reading the final entry of `trainer.history['val_acc']` gives the validation
+accuracy at the end of the 10-epoch cosine schedule.
 
 ```{.python .input #resnet-training-readout}
 round(trainer.history['val_acc'][-1], 3)  # Validation accuracy after 10 epochs

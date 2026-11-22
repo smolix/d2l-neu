@@ -56,7 +56,7 @@ import gymnasium as gym
 torch.set_num_threads(1)
 ```
 
-We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps, on a minibatch of 128 stored transitions. Its Q-network maps a state through two hidden layers of 128 units to one value per action, and the greedy action is the argmax. Exploration is $\epsilon$-greedy, with $\epsilon$ falling linearly from 1 to 0.05 over the first 10,000 steps, the `linear_schedule` of :numref:`sec_qlearning`. `make_env` builds the environment and `make_qnet(seed)` a seeded Q-network. Their argument `copies` offers each action several times; it serves the last experiment of the section and is 1 until then.
+We again use CartPole with discount $0.99$, but specify the training budget as $50{,}000$ environment steps because episode length changes as the policy improves. The agent takes one gradient step after every two environment steps, on a minibatch of 128 stored transitions. Its Q-network maps a state through two hidden layers of 128 units to one value per action, and the greedy action is the argmax. Exploration is $\epsilon$-greedy, with $\epsilon$ falling linearly from 1 to 0.05 over the first 10,000 steps, the `linear_schedule` of :numref:`sec_qlearning`. `make_env` builds the environment, whose optional argument `copies` offers each action several times (it serves the last experiment of the section and is 1 until then).
 
 ```{.python .input #dqn-deep-q-networks-2}
 %%tab pytorch, jax
@@ -72,6 +72,10 @@ def make_env(copies=1):
     return env if copies == 1 else gym.wrappers.TransformAction(
         env, lambda a: a % 2, gym.spaces.Discrete(2 * copies))
 ```
+
+Next, `make_qnet(seed, copies=1)` constructs a seeded two-hidden-layer MLP that
+maps the 4-dimensional CartPole state to $2 \times \text{copies}$ action
+values:
 
 ```{.python .input #dqn-deep-q-networks-3}
 %%tab pytorch
@@ -337,6 +341,10 @@ def train_checked(seed, qnet, every=5_000, episodes=10, **kwargs):
     checks.append(d2l.evaluate(env, greedy(qnet), episodes))
     return run, checks
 ```
+
+Using `train_checked`, we now train three seeds for each arm in
+`arms = ('DQN', 'no target network')`, storing the per-episode training records
+in `runs` and the periodic greedy-evaluation scores in `checks`:
 
 ```{.python .input #dqn-the-target-network-ablation-1}
 %%tab pytorch, jax

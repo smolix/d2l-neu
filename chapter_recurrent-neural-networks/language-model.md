@@ -292,9 +292,9 @@ $i^\textrm{th}$ most common word obeys *Zipf's law*:
 $$n_i \propto \frac{1}{i^s}, \quad \textrm{equivalently} \quad \log n_i = -s \log i + c,$$
 :eqlabel:`eq_zipf_law`
 
-for an exponent $s$ and constant $c$. Below, we estimate $s$ by fitting a line
-in log–log space over ranks 10 through 1,000 and plot the fitted curve
-alongside the empirical word counts.
+for an exponent $s$ and constant $c$. The helper `zipf_fit` below estimates $s$
+and $c$ by fitting a straight line in log–log space over ranks 10 through
+1,000.
 
 ```{.python .input #language-model-word-frequency-and-zipf-s-law-4}
 def zipf_fit(freqs, lo=10, hi=1000):
@@ -303,6 +303,10 @@ def zipf_fit(freqs, lo=10, hi=1000):
     slope, c = np.polyfit(np.log(ranks), np.log(freqs[lo - 1:hi]), 1)
     return -slope, c
 ```
+
+Applying `zipf_fit` to the word frequencies `freqs` from `vocab.token_freqs`,
+we print the fitted exponent $s$ and overlay the power-law line on the
+empirical counts.
 
 ```{.python .input #language-model-word-frequency-and-zipf-s-law-2}
 freqs = [freq for token, freq in vocab.token_freqs]
@@ -411,8 +415,9 @@ $1/|\mathcal{V}|$. The idea predates language modeling by two centuries:
 Laplace introduced it with $\alpha = 1$ to estimate the probability that the
 sun will rise tomorrow given that it has risen every day so far.
 
-Let us add a Laplace-smoothed `prob` method to `NGramLM` using the stored
-`alpha`, and evaluate our three word-level models on the held-out split.
+Let us first add a Laplace-smoothed `prob` method to `NGramLM` that implements
+:eqref:`eq_laplace_smoothing` using the model's stored smoothing constant
+`alpha`.
 
 ```{.python .input #language-model-laplace-smoothing-1}
 @d2l.add_to_class(NGramLM)
@@ -422,6 +427,10 @@ def prob(self, context, token):
     num = self.cont.get(ctx, {}).get(token, 0) + self.alpha
     return num / (self.total.get(ctx, 0) + self.alpha * self.vocab_size)
 ```
+
+With `prob` in place, `eval_nll` sums the negative log-likelihood across a
+token sequence so we can compute held-out perplexity on `words_val` for each
+$n$-gram order.
 
 ```{.python .input #language-model-perplexity}
 def eval_nll(model, tokens):

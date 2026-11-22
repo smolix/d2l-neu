@@ -615,7 +615,7 @@ class AttentionMixer(d2l.CausalAttention):  #@save
         return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 ```
 
-We also save three evaluation helpers used across the chapter: `loss_by_position` computes the mean validation cross-entropy at each window position; `train_text` trains a model for 1,000 steps of AdamW (100-step warmup to $2 \times 10^{-3}$ followed by cosine decay); and `text_table` runs two seeds per configuration and reports parameter count, overall validation loss, position-band losses (`0-15`, `16-63`, `64-127`), and milliseconds per training step.
+We also save three evaluation helpers used across the chapter. First, `loss_by_position` computes the mean validation cross-entropy in nats at each position of the context window:
 
 ```{.python .input #lstm-gated-networks-on-text-2}
 %%tab pytorch
@@ -647,6 +647,8 @@ def loss_by_position(model, data):  #@save
         count += len(X)
     return (total / count).tolist()
 ```
+
+Next, `train_text` trains a model for 1,000 steps of AdamW (100-step warmup to $2 \times 10^{-3}$ followed by cosine decay), and `text_table` runs two seeds per configuration to report parameter count, overall and position-band (`0-15`, `16-63`, `64-127`) validation losses, and milliseconds per step:
 
 ```{.python .input #lstm-gated-networks-on-text-3}
 %%tab pytorch, jax
@@ -682,12 +684,14 @@ def text_table(make_model, arms, data, num_runs=2):  #@save
     return trained
 ```
 
-We train on byte-level WikiText-103 (`d2l.WikiText103`, windows of 128 bytes, batch size 64). Each model has 4 residual blocks at width $d = 256$—comparing a plain RNN, an LSTM, a GRU, and 8-head causal attention—plus a parameter-matched plain RNN widened to $d = 302$ ($3.81\textrm{M}$ parameters, matching the GRU stack).
+We now benchmark our recurrent and attention mixers on byte-level WikiText-103 (`d2l.WikiText103`, windows of 128 bytes, batch size 64):
 
 ```{.python .input #lstm-gated-networks-on-text-4}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 ```
+
+Each `text_model` stacks 4 residual blocks at width $d = 256$—comparing a plain `RNN`, an `LSTM`, a `GRU`, and 8-head causal `attention`—plus a parameter-matched plain RNN widened to $d = 302$ ($3.81\textrm{M}$ parameters, matching the GRU stack):
 
 ```{.python .input #lstm-gated-networks-on-text-5}
 %%tab pytorch
@@ -722,6 +726,8 @@ arms = {'RNN': (rnn, 256), 'LSTM': (lstm, 256), 'GRU': (gru, 256),
         'attention': (attention, 256),
         'RNN, d=302': (rnn, 302)}  # As many parameters as the GRU
 ```
+
+Calling `text_table` trains two runs of each arm and prints the side-by-side comparison:
 
 ```{.python .input #lstm-gated-networks-on-text-6}
 %%tab pytorch, jax

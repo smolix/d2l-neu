@@ -44,7 +44,7 @@ Consider a three-hidden-layer ReLU MLP on Fashion-MNIST whose hidden width $n$ v
 * **Hidden layers (`fc_h1`, `fc_h2`, $n \to n$):** both fan-in and fan-out grow with $n$.
 * **Output readout (`fc_out`, $n \to 10$):** fan-in grows with $n$, fan-out is fixed ($10$).
 
-Under standard parametrization (SP), every weight matrix is initialized from $\mathcal{N}(0, 1/\text{fan-in})$, biases are initialized to zero, and all parameters share a single Adam learning rate $\eta$:
+Under standard parametrization (SP), every weight matrix is initialized from $\mathcal{N}(0, 1/\text{fan-in})$, biases are initialized to zero, and all parameters share a single Adam learning rate $\eta$. We first flatten and normalize the $60{,}000$ Fashion-MNIST training images onto the accelerator:
 
 ```{.python .input #scaling-a-family-of-widths-1}
 %%tab pytorch
@@ -60,6 +60,8 @@ fashion = d2l.FashionMNIST()
 X = jnp.asarray(fashion.train[0], dtype=jnp.float32).reshape(-1, 784) / 255
 Y = jnp.asarray(fashion.train[1], dtype=jnp.int32)
 ```
+
+Next we define `MLP(width)` with layers $784 \to n \to n \to n \to 10$ initialized with standard deviation $\text{fan-in}^{-1/2}$ and a single Adam learning rate across all parameters:
 
 ```{.python .input #scaling-a-family-of-widths-2}
 %%tab pytorch
@@ -108,7 +110,7 @@ class MLP(nnx.Module):
         return nnx.Optimizer(self, optax.adam(lr), wrt=nnx.Param)
 ```
 
-We train each width for $400$ steps of Adam ($b = 512$) across a $10$-point log-spaced learning-rate grid $\eta \in \{2^{-14}, \ldots, 2^{-5}\}$ over two seeds, recording the mean training loss over the final $50$ steps (capped at $2.5$ for diverged runs) and the log–log slope of $\eta^\star(n)$ versus $n$:
+To measure how the optimal learning rate varies with width $n$, `train_mlp` trains `arch(width)` for $400$ steps of Adam ($b = 512$) and returns the mean loss over the final $50$ steps (capped at $2.5$ for diverged runs):
 
 ```{.python .input #scaling-a-family-of-widths-3}
 %%tab pytorch
@@ -152,6 +154,8 @@ def train_mlp(arch, width, lr, seed, num_steps=400, batch_size=512):
     return min(v, 2.5) if math.isfinite(v) else 2.5
 ```
 
+The helpers `sweep`, `print_optimum`, and `plot_sweep` evaluate `train_mlp` across a grid of widths, learning rates, and seeds, fit the log–log slope of the optimal learning rate $\eta^\star(n)$ versus $n$, and plot the seed-averaged loss curves:
+
 ```{.python .input #scaling-learning-rate-sweep-1}
 %%tab pytorch, jax
 def sweep(arch, widths, lrs, seeds):
@@ -172,6 +176,8 @@ def plot_sweep(loss, lrs):
              'training loss', xscale='log', ylim=[0.2, 0.8],
              legend=[f'width {w}' for w in loss])
 ```
+
+We now execute `sweep` on `MLP` across widths $n \in \{128, 512, 2048, 8192\}$ and $10$ log-spaced learning rates $\eta \in \{2^{-14}, \ldots, 2^{-5}\}$ over two shared seeds:
 
 ```{.python .input #scaling-the-sweep}
 %%tab pytorch, jax
@@ -274,7 +280,7 @@ class MuMLP(MLP):
 ### The Coordinate Check and Learning-Rate Transfer
 :label:`subsec_scaling-coord-check`
 
-To verify a $\mu\text{P}$ implementation before launching a sweep, the **coordinate check** :cite:`Dey.Anthony.Hestness.2024` takes a single Adam step across widths $n \in \{128, 256, \ldots, 8192\}$ and plots the mean absolute activation $\overline{|h_\ell|}$ of each layer:
+To verify a $\mu\text{P}$ implementation before launching a sweep, the **coordinate check** :cite:`Dey.Anthony.Hestness.2024` takes a single Adam step across widths $n \in \{128, 256, \ldots, 8192\}$ and measures the mean absolute activation $\overline{|h_\ell|}$ of each layer via `activations` and `coord_check`:
 
 ```{.python .input #scaling-the-coordinate-check-1}
 %%tab pytorch
@@ -318,6 +324,8 @@ def coord_check(arch, widths, lr, seed, num_steps=1):
     return list(zip(*sizes))
 ```
 
+Running `coord_check` on the standard-parametrization `MLP` across seven widths $n \in \{128, 256, \ldots, 8192\}$ at width $128$'s optimal learning rate `lr_128` reveals severe activation blow-up with width:
+
 ```{.python .input #scaling-the-coordinate-check-2}
 %%tab pytorch, jax
 check_widths = [128 * 2 ** k for k in range(7)]  # 128 to 8,192
@@ -327,6 +335,8 @@ d2l.plot(check_widths, list(sp_acts), 'width', 'mean |activation|',
          xscale='log', yscale='log', ylim=[0.05, 1000],
          legend=['layer 1', 'layer 2', 'layer 3', 'logits'])
 ```
+
+Running the exact same one-step `coord_check` on `MuMLP` at the base-width learning rate `lr_base` confirms that $\mu\text{P}$ keeps all three hidden layers and the output logits invariant across widths:
 
 ```{.python .input #scaling-the-coordinate-check-3}
 %%tab pytorch, jax
@@ -348,6 +358,8 @@ mup_loss[widths[-1]] = sp_loss[widths[-1]]  # At the base width muP is SP
 print_optimum(mup_loss, lrs)
 plot_sweep(mup_loss, lrs)
 ```
+
+Finally, we compare the training loss achieved at width $8{,}192$ when transferring the learning rate tuned on the narrow width-$128$ proxy versus tuning directly at width $8{,}192$ under both SP and $\mu\text{P}$:
 
 ```{.python .input #scaling-learning-rate-transfer-1}
 %%tab pytorch, jax

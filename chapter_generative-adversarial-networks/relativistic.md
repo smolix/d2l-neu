@@ -253,6 +253,12 @@ for gen in ([0, 0], [0, 0.1]):   # both on x_1; then x'_2 steps off it
     print(f'{str(gen):12s}{np.round(value, 3)}  {np.round(value / np.log(2), 2)}')
 ```
 
+Moving $x'_2$ from $0$ to $0.1$ raises the classical and all-pairs losses
+(confirming that the collision `[0, 0]` is a strict local minimum for both)
+while leaving the fixed-pairing loss unchanged at $-\frac{1}{2}\log 2$. To
+check all $n^n$ configurations systematically, `count_bad_minima(n)` tests
+every assignment against local perturbations from `small_moves(gen)`:
+
 ```{.python .input #relativistic-paired-landscapes-2}
 %%tab pytorch, jax
 def small_moves(gen):
@@ -272,6 +278,10 @@ def count_bad_minima(n):
         count += rises & (value > best + 1e-9)
     return count
 ```
+
+Running `count_bad_minima` for $n \in \{2, 3\}$ compares the number of
+suboptimal strict local minima under each objective against the theoretical
+collision count $n^n - n!$:
 
 ```{.python .input #relativistic-paired-landscapes-3}
 %%tab pytorch, jax

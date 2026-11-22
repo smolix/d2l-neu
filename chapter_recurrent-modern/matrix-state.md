@@ -76,7 +76,7 @@ $$
 
 Notice that retrieval error depends on the load ratio $(n - 1)/d_k$ and not on *when* a pair was written: an additive memory loses pairs through crowding, not aging.
 
-Let us test :eqref:`eq_ms-capacity-law` empirically in NumPy and also measure nearest-neighbor *recall* when values are drawn from a codebook of 256 random unit vectors in $\mathbb{R}^{d_v}$ (with $d_v = d_k$). In addition to independent random keys ($\rho = 0$), we test correlated keys that share a common unit direction with weight $\rho = 0.5$.
+To test :eqref:`eq_ms-capacity-law` empirically in NumPy, `matrix_memory` writes $n$ pairs of unit keys and codebook values into $\mathbf{S} = \sum_{i=1}^n \mathbf{v}_i \mathbf{k}_i^\top$ (with optional shared-direction correlation $\rho$) and returns both the mean squared retrieval error and nearest-neighbor recall over a 256-vector unit codebook:
 
 ```{.python .input #matrix-state-interference-1}
 %%tab pytorch, jax
@@ -101,6 +101,8 @@ def matrix_memory(d_k, nums, rho=0, num_values=256, trials=20, seed=0):
         recalls.append(recall)
     return errors, recalls
 ```
+
+We evaluate `matrix_memory` across pair loads $n \in \{8, 16, \ldots, 512\}$ for independent random keys ($d_k \in \{32, 64, 128\}, \rho = 0$) and correlated keys ($d_k = 64, \rho = 0.5$), plotting the squared read errors against the theoretical line $(n - 1)/d_k$:
 
 ```{.python .input #matrix-state-interference-2}
 %%tab pytorch, jax
@@ -171,7 +173,7 @@ Stacking $\mathbf{q}_t, \mathbf{k}_t, \mathbf{v}_t, \mathbf{y}_t$ as rows of $\m
 $$\mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\, \mathbf{V}.$$
 :eqlabel:`eq_ms-semiseparable`
 
-Equation :eqref:`eq_ms-semiseparable` is causal linear attention with a *learned, input-dependent decay mask* $\mathbf{L}$—a correspondence :citet:`Dao.Gu.2024` term *state space duality* (SSD). Evaluating :eqref:`eq_ms-semiseparable` as a step-by-step recurrence takes $O(T d_v d_k)$ work and $O(d_v d_k)$ memory; evaluating it via the full $T \times T$ matrix $\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top$ runs in parallel matrix multiplications at $O(T^2(d_k + d_v))$ work and $O(T^2)$ memory. Let us write both forms explicitly, computing $\log L_{ts} = \sum_{r=s+1}^t \log a_r$ via cumulative sums in `decay_mask`.
+Equation :eqref:`eq_ms-semiseparable` is causal linear attention with a *learned, input-dependent decay mask* $\mathbf{L}$—a correspondence :citet:`Dao.Gu.2024` term *state space duality* (SSD). Evaluating :eqref:`eq_ms-semiseparable` as a step-by-step recurrence takes $O(T d_v d_k)$ work and $O(d_v d_k)$ memory; evaluating it via the full $T \times T$ matrix $\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top$ runs in parallel matrix multiplications at $O(T^2(d_k + d_v))$ work and $O(T^2)$ memory. Let us write both forms explicitly, starting with the sequential step-by-step recurrence `linear_attention_recurrent`:
 
 ```{.python .input #matrix-state-unrolling-with-decay-1}
 %%tab pytorch
@@ -195,6 +197,8 @@ def linear_attention_recurrent(Q, K, V, a):
     S0 = jnp.zeros((V.shape[-1], K.shape[-1]))
     return jax.lax.scan(step, S0, (Q, K, V, a))[1]
 ```
+
+Next, `decay_mask(log_a)` forms the lower-triangular decay matrix $L_{ts} = \exp(\sum_{r=s+1}^t \log a_r)$ via cumulative sums so `linear_attention_dual` can evaluate $\mathbf{Y} = (\mathbf{L} \odot \mathbf{Q}\mathbf{K}^\top)\mathbf{V}$ across all positions at once:
 
 ```{.python .input #matrix-state-unrolling-with-decay-2}
 %%tab pytorch
@@ -562,7 +566,7 @@ def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,  #@save
             for n in pairs}
 ```
 
-To vary matrix-state capacity *without* changing model width or parameter count, we fix a two-block `SeqLM` at width $d = 32$ and partition the width into $h \in \{8, 4, 2\}$ heads of dimension $e = d / h \in \{4, 8, 16\}$. Because each head maintains an $e \times e$ state matrix, total state entries per layer scale as $h \cdot e^2 = d \cdot e \in \{128, 256, 512\}$ while total parameters stay nearly identical ($\sim 36{,}200$).
+To vary matrix-state capacity *without* changing model width or parameter count, we fix a two-block `SeqLM` at width $d = 32$ in `memory_model(num_heads)` and partition the width into $h \in \{8, 4, 2\}$ heads of dimension $e = d / h \in \{4, 8, 16\}$:
 
 ```{.python .input #matrix-state-associative-recall-2}
 %%tab pytorch
@@ -582,6 +586,8 @@ def memory_model(num_heads, num_hiddens=32, vocab_size=4 + 128 + 1):
         for _ in range(2)], rngs=rngs)
 ```
 
+Because each head maintains an $e \times e$ state matrix, total state entries per layer scale as $h \cdot e^2 = d \cdot e \in \{128, 256, 512\}$ while total parameters stay nearly identical ($\sim 36{,}200$). We train two runs of each head configuration with `train_recall`:
+
 ```{.python .input #matrix-state-associative-recall-3}
 %%tab pytorch, jax
 recall = {}
@@ -592,6 +598,8 @@ for num_heads in (8, 4, 2):
     recall[name] = [train_recall(model, num_keys=128) for model in models]
     print(f'{name:26s} {d2l.num_params(models[0]):,} parameters')
 ```
+
+Plotting and tabulating the mean recall accuracy against the number of pairs $n \in \{4, 8, 16, 32, 64\}$ shows how retrieval capacity scales with total state entries:
 
 ```{.python .input #matrix-state-associative-recall-4}
 %%tab pytorch, jax

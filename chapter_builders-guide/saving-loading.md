@@ -677,12 +677,7 @@ ckptr.wait_until_finished()
 key, uninterrupted = train(net, opt, key, 5)
 ```
 
-Now we simulate restarting in a fresh process: read the saved config to rebuild
-the model and optimizer, load the checkpoint, compute the remaining steps from
-the saved step counter, and run to step 205. We run this twice—once restoring
-the full checkpoint and once omitting the random generator state (as if a script
-simply re-seeded from 0)—and measure the maximum weight discrepancy against the
-uninterrupted run.
+Now we simulate restarting in a fresh process: `resume(path, num_steps, restore_optimizer=True, restore_rng=True)` reads the saved config to rebuild the model and optimizer, loads the checkpoint (optionally skipping the optimizer or RNG state), computes the remaining steps `num_steps - step`, and runs `train`, while `max_diff(a, b)` computes the largest elementwise weight difference between two models:
 
 :begin_tab:`tensorflow`
 Because Keras's `Adam` creates its moment variables lazily on the first update, `resume` calls `opt.build(model.trainable_variables)` before restoring into the optimizer.
@@ -768,6 +763,8 @@ def max_diff(a, b):
     return max(float(jnp.abs(p - q).max()) for p, q in
                zip(jax.tree.leaves(nnx.state(a)), jax.tree.leaves(nnx.state(b))))
 ```
+
+We now call `resume(path, 205, **kwargs)` twice—once restoring the `'full checkpoint'` and once `'without the generator'` (`restore_rng=False`, as if a script simply re-seeded from `0`)—and print `max_diff(resumed, net)` against the uninterrupted 205-step model `net`:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-5}
 for name, kwargs in (('full checkpoint', {}),

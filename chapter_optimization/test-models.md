@@ -127,6 +127,8 @@ class WikiText103(d2l.DataModule):  #@save
             yield self.windows(self.val, starts[i:i + self.batch_size])
 ```
 
+Instantiating `WikiText103(batch_size=64, num_steps=64)` downloads the training and validation shards and decodes the opening $300$ bytes of the corpus:
+
 ```{.python .input #adam-a-tiny-language-model-1}
 %%tab pytorch, jax
 data = WikiText103(batch_size=64, num_steps=64)
@@ -310,6 +312,8 @@ class FashionCNN(nnx.Module):  #@save
         return self.fc2(nnx.relu(self.fc1(X.reshape(X.shape[0], -1))))
 ```
 
+We verify with `d2l.num_params` that `FashionCNN` has $421{,}642$ trainable parameters:
+
 ```{.python .input #test-models-the-image-classifier-1}
 %%tab pytorch
 # nn.Conv2d and nn.Linear draw from U(-a, a), a = 1/sqrt(fan-in), by default;
@@ -383,6 +387,8 @@ Both models map a minibatch to logits and minimize mean cross-entropy loss over 
 | `steps_to_reach` | First step at which the $25$-step smoothed loss drops to `target` (or `None`) |
 | `lr_sweep` | Train from identical initial weights across a list of learning rates and return loss curves and evaluation scores |
 
+We first implement `train_steps`, which minimizes mean cross-entropy over `num_steps` minibatches (ignoring padding label `-100`) or until an optional predicate `stop(step)` holds:
+
 ```{.python .input #adam-a-tiny-language-model-4}
 %%tab pytorch
 def train_steps(model, data, optimizer, num_steps, *, stop=None):  #@save
@@ -442,6 +448,8 @@ def train_steps(model, data, optimizer, num_steps, *, stop=None):  #@save
                 return losses
 ```
 
+Next, `lm_perplexity` evaluates a language model in inference mode over an iterator of minibatches and returns $\exp(\text{mean cross-entropy})$ per token:
+
 ```{.python .input #adam-training-for-a-fixed-number-of-steps-1}
 %%tab pytorch
 def lm_perplexity(model, batches):  #@save
@@ -483,6 +491,8 @@ def lm_perplexity(model, batches):  #@save
     return math.exp(float(total) / count)
 ```
 
+To summarize and plot noisy step-loss histories, `final_loss` averages the last $k = 100$ step losses, `smooth` computes $25$-step block averages, and `steps_to_reach` finds the first step where the smoothed loss reaches `target`:
+
 ```{.python .input #adam-a-tiny-language-model-5}
 %%tab pytorch, jax
 def final_loss(losses, k=100):  #@save
@@ -503,6 +513,8 @@ def steps_to_reach(losses, target, k=25):  #@save
             return k * (i + 1)
     return None
 ```
+
+Finally, `lr_sweep` trains a fresh model from the same random `seed` for every learning rate in `lrs`, optionally running `evaluate(model)` every `every` steps:
 
 ```{.python .input #adam-the-race-on-the-language-model-1}
 %%tab pytorch
@@ -560,7 +572,7 @@ def lr_sweep(make_model, make_tx, data, lrs, seed,  #@save
 
 We now establish our baseline with constant-rate minibatch SGD ($2{,}000$ steps, no momentum or weight decay). On `TinyLM`, an untrained model starts slightly above the uniform-distribution cross-entropy $\ln 256 \approx 5.55$ nats/byte (at $\sim 5.71$ nats/byte due to initial logit variance; Exercise :exref:`ex_test-models-initial-loss`). As reference landmarks on WikiText-103, a unigram byte-frequency table achieves $\sim 3.2$ nats/byte and a bigram byte-pair table achieves $\sim 2.5$ nats/byte (Exercise :exref:`ex_test-models-landmarks`).
 
-Sweeping plain SGD across $\eta \in \{0.1, 0.5, 2.5\}$ exhibits the three canonical learning-rate regimes:
+We first define the model and plain-SGD factory closures `make_lm`, `sgd`, and `new_seed`:
 
 ```{.python .input #test-models-a-first-run-with-minibatch-sgd-1}
 %%tab pytorch
@@ -575,6 +587,8 @@ make_lm = lambda rngs: TinyLM(len(data.vocab), rngs=rngs)
 sgd = optax.sgd
 new_seed = d2l.get_seed
 ```
+
+Running `lr_sweep` on `TinyLM` across $\eta \in \{0.1, 0.5, 2.5\}$ and plotting the step losses against the uniform-guess baseline $\ln 256$ exhibits the three canonical learning-rate regimes:
 
 ```{.python .input #test-models-a-first-run-with-minibatch-sgd-2}
 %%tab pytorch, jax

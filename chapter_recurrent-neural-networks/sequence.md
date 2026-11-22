@@ -292,6 +292,9 @@ class Data(d2l.DataModule):
         self.x = d2l.sin(0.01 * self.time) + noise * 0.2
 ```
 
+Instantiating `Data` and plotting `data.x` against `data.time` shows roughly
+one and a half periods of the noisy oscillation.
+
 ```{.python .input #sequence-training-2}
 data = Data()
 d2l.plot(data.time, data.x, 'time', 'x', xlim=[1, 1000], figsize=(6, 3))
@@ -353,6 +356,9 @@ features, labels = data.lag_features()
 with torch.inference_mode():  # prediction only: record no gradients
     onestep_preds = d2l.numpy(model(features))
 ```
+
+We overlay the one-step predictions `onestep_preds` on the ground-truth
+`labels` across all $T - m = 996$ time steps.
 
 ```{.python .input #sequence-one-step-ahead-prediction-1}
 d2l.plot(data.time[data.m:], [labels, onestep_preds], 'time', 'x',
@@ -495,6 +501,9 @@ def k_step_pred(model, x, m, k):
     return columns[m:]                           # entry j-1: j steps ahead
 ```
 
+Using `k_step_pred`, we roll the trained model forward up to $k = 64$ steps
+ahead from every valid starting window in `data.x`.
+
 ```{.python .input #sequence-prediction-5}
 %%tab mxnet, tensorflow, jax
 steps = (1, 4, 16, 64)
@@ -507,6 +516,9 @@ steps = (1, 4, 16, 64)
 with torch.inference_mode():
     preds = k_step_pred(model, data.x, data.m, steps[-1])
 ```
+
+We now plot the resulting forecast curves at horizons $k \in \{1, 4, 16, 64\}$
+from `preds` to see how errors accumulate with horizon length.
 
 ```{.python .input #sequence-error-accumulation-1}
 d2l.plot([data.time[data.m+k-1 : data.T-steps[-1]+k] for k in steps],

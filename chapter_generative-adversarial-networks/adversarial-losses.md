@@ -176,7 +176,7 @@ def train_adversarial(g, D, key, num_steps=8000, batch_size=128):
 train_adversarial(g_adv, D, key_adv)
 ```
 
-Three numbers summarize each student on a grid of 201 inputs: the mean distance from its curve to the nearer band, the mean distance to the conditional mean $x = c$, and the fraction of inputs at which the curve is more than 0.25 from both bands. A plot then draws both curves over a sample of the data, with the conditional mean dashed.
+Three numbers summarize each student on a grid of 201 inputs: the mean distance from its curve to the nearer band, the mean distance to the conditional mean $x = c$, and the fraction of inputs at which the curve is more than 0.25 from both bands.
 
 ```{.python .input #adversarial-losses-the-capacity-argument-2}
 %%tab pytorch
@@ -200,6 +200,10 @@ for name, x_hat in curves.items():
           f'{jnp.abs(x_hat - cs).mean():.2f} from x = c, '
           f'{(to_band > 0.25).mean():.0%} off the bands')
 ```
+
+Plotting both learned curves in `curves` over the training sample
+`(c_data, x_data)` alongside the dashed conditional mean $x = c$ makes the
+difference between regression and adversarial training immediately visible:
 
 ```{.python .input #adversarial-losses-the-capacity-argument-3}
 %%tab pytorch, jax

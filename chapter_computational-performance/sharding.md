@@ -180,9 +180,8 @@ checkpointing (:numref:`subsec_mp-checkpointing`).
   per GPU or using a faster interconnect reduces the communication share of a
   step.
 
-We measure $\beta_\textrm{link}$ for an all-gather of 256 MiB across two GPUs
-and evaluate our paper predictions for memory, communication time, and compute
-time ($8N$ FLOPs/token with checkpointing at 82.6 TFLOP/s in tf32):
+We first measure $\beta_\textrm{link}$ for an all-gather of 256 MiB across
+$k = 2$ GPUs:
 
 ```{.python .input #sharding-memory-and-communication-1}
 %%tab pytorch
@@ -218,6 +217,11 @@ del x                       # Frees its memory before the training step
 print(f'bus bandwidth = {1e-9 / beta_link:.1f} GB/s in an all-gather on {k} '
       f'GPUs (beta_link = {1e9 * beta_link:.2f} ns/byte)')
 ```
+
+Using the measured $\beta_\textrm{link}$ and the RTX 4090's 82.6 TFLOP/s tf32
+peak (`peak_flops`), we can evaluate our paper predictions for per-GPU state
+memory ($16N/k$), communication time ($3(k-1)S\beta_\textrm{link}/k$), and
+checkpointed compute time ($8NbT/P$):
 
 ```{.python .input #sharding-memory-and-communication-2}
 %%tab pytorch, jax
@@ -305,6 +309,12 @@ dist.destroy_process_group()
 '''
 ```
 
+:begin_tab:`pytorch`
+We now launch `TRAIN_FSDP` across $k$ processes with `d2l.torchrun` and collect
+the peak allocated memory (`peak_bytes`), step durations (`times`), and NCCL
+communication time (`comm`) from rank 0:
+:end_tab:
+
 ```{.python .input #sharding-memory-and-communication-4}
 %%tab pytorch
 ranks = d2l.torchrun(TRAIN_FSDP, k, json.dumps(config), b, T)
@@ -314,9 +324,8 @@ times, comm = ranks[0]['times'], ranks[0]['comm']  # GPU 0
 
 :begin_tab:`jax`
 In JAX, `fsdp_sharding` shards each parameter tensor along its first axis
-divisible by $k$ (`P('data')`), and constraining each block's activation
-output to remain batch-sharded (`data`) causes XLA to emit FSDP's
-all-gathers and reduce-scatters automatically:
+divisible by $k$ (`P('data')`), and `create` applies this sharding constraint
+so each GPU initializes only its own shards of `model` and `opt`:
 :end_tab:
 
 ```{.python .input #sharding-memory-and-communication-5}
@@ -343,6 +352,14 @@ def create(key):
 model, opt = create(d2l.get_key())  # Each GPU computes only its shards
 ```
 
+:begin_tab:`jax`
+Next, we wrap each block in `nnx.remat` for activation checkpointing, constrain
+every block's activation output in `loss_fn` to stay batch-sharded (`data`) so
+XLA emits FSDP's all-gathers and reduce-scatters automatically, and donate
+`model` and `opt` in `train_step` so updated state overwrites the old shards in
+place:
+:end_tab:
+
 ```{.python .input #sharding-memory-and-communication-6}
 %%tab jax
 data = NamedSharding(mesh, P('data'))     # Split along the batch
@@ -363,6 +380,12 @@ def train_step(model, opt, X):
     return loss
 ```
 
+:begin_tab:`jax`
+Before running the step, we compile `train_step` on a batch-sharded token batch
+`X` of shape $(kb, T)$ and query `compiled.memory_analysis()` to check the
+per-GPU footprint of donated state and temporary buffers:
+:end_tab:
+
 ```{.python .input #sharding-memory-and-communication-7}
 %%tab jax
 X = jax.device_put(jax.random.randint(d2l.get_key(), (k * b, T), 0,
@@ -374,6 +397,12 @@ print(f'per GPU: weights and moments '
       f'{mem.alias_size_in_bytes / 2**30:.1f} GiB), temporaries '
       f'{mem.temp_size_in_bytes / 2**30:.1f} GiB')
 ```
+
+:begin_tab:`jax`
+To verify that XLA emitted the expected FSDP collectives, `collective_megabytes`
+parses the compiled HLO text and totals the result bytes of each collective
+operation per GPU:
+:end_tab:
 
 ```{.python .input #sharding-memory-and-communication-8}
 %%tab jax
@@ -393,12 +422,22 @@ def collective_megabytes(compiled):
     return dict(sizes)
 ```
 
+:begin_tab:`jax`
+Tallying the collectives in `compiled` confirms that `all-gather` (twice per
+step) and `reduce-scatter` (once per step) move the predicted byte volumes:
+:end_tab:
+
 ```{.python .input #sharding-memory-and-communication-9}
 %%tab jax
 for kind, mb in sorted(collective_megabytes(compiled).items(),
                        key=lambda kv: -kv[1]):
     print(f'{kind}: {mb / 1e3:.2f} GB')
 ```
+
+:begin_tab:`jax`
+Now we warm up `train_step`, time three repetitions, and profile the step to
+record NCCL communication time (`comm`) and peak device memory (`peak_bytes`):
+:end_tab:
 
 ```{.python .input #sharding-memory-and-communication-10}
 %%tab jax
@@ -409,6 +448,9 @@ kernels = d2l.kernel_times(lambda: train_step(model, opt, X), steps=1)
 comm = sum(ms for name, ms in kernels.items() if 'nccl' in name.lower()) / 1e3
 peak_bytes = jax.devices()[0].memory_stats()['peak_bytes_in_use']
 ```
+
+Finally, we report the measured per-GPU peak memory, median step duration, and
+time spent in NCCL communication kernels on GPU 0:
 
 ```{.python .input #sharding-memory-and-communication-11}
 %%tab pytorch, jax

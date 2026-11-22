@@ -42,7 +42,7 @@ $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x}).$$
 
 Because $\mathbb{E}_i[\nabla f_i(\mathbf{x})] = \nabla f(\mathbf{x})$, the stochastic gradient can be decomposed as $\nabla f_i(\mathbf{x}) = \nabla f(\mathbf{x}) + \boldsymbol{\xi}$, where the gradient noise $\boldsymbol{\xi}$ has mean zero.
 
-To see how $\boldsymbol{\xi}$ interacts with curvature, we add independent zero-mean, unit-variance Gaussian noise to both gradient coordinates of the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ (:numref:`sec_optimization-intro`) and run $300$ steps at $\eta = 0.1$ from $(-5, -2)$:
+To see how $\boldsymbol{\xi}$ interacts with curvature, we first define `sgd_2d` to add independent zero-mean, unit-variance Gaussian noise to both gradient coordinates:
 
 ```{.python .input #sgd-stochastic-gradient-updates-2}
 %%tab pytorch, jax
@@ -51,6 +51,8 @@ def sgd_2d(x1, x2, s1, s2, f_grad, eta, rng):
     n1, n2 = rng.normal(size=2)  # Unit-variance gradient noise
     return x1 - eta * (g1 + n1), x2 - eta * (g2 + n2), 0, 0
 ```
+
+We then run $300$ steps of `sgd_2d` on the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ (:numref:`sec_optimization-intro`) at $\eta = 0.1$ from $(-5, -2)$:
 
 ```{.python .input #sgd-stochastic-gradient-updates-3}
 %%tab pytorch, jax
@@ -195,6 +197,8 @@ tr_Sigma = (G ** 2).sum(axis=1).mean()
 print(f'L = {np.linalg.eigvalsh(H).max():.2f}, tr Sigma = {tr_Sigma:.2f}')
 ```
 
+To measure the empirical excess loss against this prediction, `sgd_runs` simulates `num_runs=400` vectorized minibatch SGD trajectories sampled with replacement, and `excess_loss` evaluates $\frac{1}{2}(\mathbf{w} - \mathbf{w}^\star)^\top \mathbf{H} (\mathbf{w} - \mathbf{w}^\star)$:
+
 ```{.python .input #sgd-where-the-model-stops-2}
 %%tab pytorch, jax
 def sgd_runs(X, y, w, eta, b, num_steps, rng, num_runs=400):
@@ -212,6 +216,8 @@ def excess_loss(W, w_star, H):
     D = W - w_star
     return 0.5 * np.einsum('...d,de,...e->...', D, H, D)
 ```
+
+Starting at $\mathbf{w}^\star$ with batch size $b = 10$, we average `excess_loss` over the third epoch ($150$ steps) at $\eta \in \{0.05, 0.025\}$ and compare with $\eta\operatorname{tr}\boldsymbol{\Sigma}/(4b)$:
 
 ```{.python .input #sgd-where-the-model-stops-3}
 %%tab pytorch, jax
@@ -238,7 +244,7 @@ When $b \ll n$ ($10$ out of $1{,}500$), this factor is nearly unity ($0.994$); w
 
 When $\eta\lambda \ll 1$ and $\eta / b$ is held constant, a single step on a minibatch of size $b$ with learning rate $\eta$ contracts the expected error by $(1 - \eta\lambda)$ and lands in the same noise ball as $b$ single-example steps of learning rate $\eta / b$, since $(1 - \eta\lambda / b)^b \approx 1 - \eta\lambda$. Counted purely in per-example gradient evaluations, increasing $b$ within this linear regime neither speeds up nor slows down learning.
 
-What makes minibatches essential is **hardware amortization**. Every parameter update incurs fixed Python dispatch and kernel-launch overhead independent of $b$, and vector processors (CPUs and GPUs) evaluate $b$ examples in parallel while reading the model weights from memory only once (:numref:`chap_performance`). We benchmark both wall-clock time per epoch and loss versus examples processed on the airfoil dataset across $b \in \{1, 10, 100\}$ at fixed $\eta / b = 0.005$, alongside full-batch gradient descent ($b = 1{,}500$ at $\eta = 0.9 < 2/L \approx 0.95$):
+What makes minibatches essential is **hardware amortization**. Every parameter update incurs fixed Python dispatch and kernel-launch overhead independent of $b$, and vector processors (CPUs and GPUs) evaluate $b$ examples in parallel while reading the model weights from memory only once (:numref:`chap_performance`). To benchmark both wall-clock time per epoch and loss versus examples processed on the airfoil dataset, `train_sgd` runs minibatch SGD on linear regression from $\mathbf{w} = \mathbf{0}$ and returns the full-dataset loss after every update alongside the seconds per epoch:
 
 ```{.python .input #sgd-the-training-function}
 %%tab pytorch
@@ -293,6 +299,8 @@ def train_sgd(lr, batch_size, num_epochs=2):
     return losses, seconds
 ```
 
+We now execute `train_sgd` across $b \in \{1, 10, 100\}$ at fixed ratio $\eta / b = 0.005$, alongside full-batch gradient descent ($b = 1{,}500$ at $\eta = 0.9 < 2/L \approx 0.95$):
+
 ```{.python .input #minibatch-sgd-implementation-from-scratch-3}
 %%tab pytorch, jax
 runs = {}
@@ -304,6 +312,8 @@ for b, lr, num_epochs in ((1500, 0.9, 10), (1, 0.005, 2), (10, 0.05, 2),
           f'({1000 * seconds / updates:.1f} ms/update), '
           f'last-epoch loss {float(runs[b][-updates:].mean()):.3f}')
 ```
+
+Plotting the training loss against total examples processed ($b \times \text{updates}$) overlays the sample efficiency of all four batch sizes:
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-7}
 %%tab pytorch, jax

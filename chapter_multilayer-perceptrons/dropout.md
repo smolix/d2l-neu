@@ -143,7 +143,7 @@ print(f'mean {float(Y.mean()):.3f}, '
 
 ### Defining and Training the Model from Scratch
 
-We apply dropout to the outputs of each hidden layer right after its ReLU activation (:numref:`fig_dropout2`)—active *only* during training (`autograd.is_training()` in MXNet, `self.training` in PyTorch/TensorFlow, and `not self.deterministic` in Flax/JAX). For our two-hidden-layer MLP ($784 \to 256 \to 256 \to 10$, He-initialized), we use `dropout_1 = 0.2` after the first hidden layer and `dropout_2 = 0.5` after the second, and train for 20 epochs on Fashion-MNIST:
+We apply dropout to the outputs of each hidden layer right after its ReLU activation (:numref:`fig_dropout2`)—active *only* during training (`autograd.is_training()` in MXNet, `self.training` in PyTorch/TensorFlow, and `not self.deterministic` in Flax/JAX). Below we define our He-initialized two-hidden-layer classifier `DropoutMLPScratch` ($784 \to 256 \to 256 \to 10$) with separate dropout probabilities `dropout_1` and `dropout_2`:
 
 ![Dropout silences a random subset of hidden units ($h_2$ and $h_5$ shown) and their incident connections on each training step.](../img/dropout2.svg)
 :label:`fig_dropout2`
@@ -268,6 +268,7 @@ class DropoutMLPScratch(d2l.Classifier):
         return H2 @ self.W3 + self.b3
 ```
 
+We now instantiate `DropoutMLPScratch` with `dropout_1 = 0.2` after the first hidden layer, `dropout_2 = 0.5` after the second, and learning rate `lr = 0.1` (packing the hyperparameters into `hparams` for reuse below), and train it for $20$ epochs on Fashion-MNIST:
 
 ```{.python .input #dropout-training}
 hparams = {'num_outputs': 10, 'num_hiddens_1': 256, 'num_hiddens_2': 256,
@@ -365,7 +366,7 @@ class DropoutMLP(d2l.Classifier):
 
 ## Effects of Dropout under Label Noise
 
-On the full $60{,}000$-image Fashion-MNIST dataset over 20 epochs, an unregularized MLP barely overfits, leaving little room for dropout to shine. To watch dropout combat severe memorization, we return to the $1{,}000$-image noisy-label benchmark from :numref:`subsec_early_stopping`, corrupting $40\%$ of the training labels at random ($\sim 36\%$ genuinely wrong labels) and comparing `DropoutMLP` over 200 epochs with $p = 0$ (no dropout) versus $p = 0.5$ in both hidden layers:
+On the full $60{,}000$-image Fashion-MNIST dataset over 20 epochs, an unregularized MLP barely overfits, leaving little room for dropout to shine. To watch dropout combat severe memorization, we return to the $1{,}000$-image noisy-label benchmark from :numref:`subsec_early_stopping`, corrupting $40\%$ of the training labels at random via `d2l.corrupt` ($\sim 36\%$ genuinely wrong labels, indexed by the Boolean mask `wrong = labels != y`):
 
 ```{.python .input #dropout-noisy-labels-1}
 images = d2l.FashionMNIST(batch_size=2000)
@@ -375,6 +376,8 @@ X, y, X_val = X[:1000].reshape(1000, -1), y[:1000], X_val.reshape(2000, -1)
 labels = d2l.corrupt(y, 0.4, np.random.default_rng())
 wrong = labels != y  # The training labels that are now wrong
 ```
+
+We now train `DropoutMLP` for $200$ epochs on `(X, labels)` with dropout probability `p = 0` (no dropout) versus `p = 0.5` in both hidden layers, using `d2l.Tracker` to record accuracy on the corrupted training subset `X[wrong]` alongside held-out validation accuracy on `X_val`:
 
 ```{.python .input #dropout-noisy-labels-2}
 acc = {}

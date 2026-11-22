@@ -235,6 +235,11 @@ def resnet18(num_classes, in_channels=1, *, rngs):  #@save
         nnx.Linear(512, num_classes, kernel_init=he, rngs=rngs))
 ```
 
+Next, we load Fashion-MNIST and compute ResNet-18's parameter count
+`num_params` and fp32 gradient volume `S` (along with the reverse-order 1 MiB
+and 25 MiB gradient `buckets` that PyTorch DDP packs before launching
+allreduces):
+
 ```{.python .input #multi-gpu-practice-the-training-step-1}
 %%tab pytorch
 d2l.FashionMNIST()                   # Download once, before any process runs
@@ -265,6 +270,13 @@ num_params = d2l.num_params(resnet18(10, rngs=nnx.Rngs(d2l.get_key())))
 S = 4 * num_params                   # Gradient bytes in fp32
 print(f'{num_params / 1e6:.1f}M parameters, S = {S / 1e6:.0f} MB')
 ```
+
+We now define the data-parallel training step on $64 \times 64$ Fashion-MNIST
+images: in PyTorch, `TRAIN_DDP` wraps `resnet18` in `DDP` and times
+`train_step` across processes (with optional `model.no_sync()` and kernel
+profiling), while in JAX, `setup` replicates the model and dataset across the
+`'data'` mesh and `train_step` runs a jitted SGD update on sharded minibatch
+indices `idx`.
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-2}
 %%tab pytorch
@@ -465,6 +477,12 @@ def allreduce_megabytes(compiled):  #@save
     return sizes
 ```
 
+:begin_tab:`jax`
+Compiling `train_step` on the multi-GPU mesh and applying `allreduce_megabytes`
+reveals two large gradient allreduces (`big`, with the final buffer recorded as
+`last_bucket`) alongside the small per-channel batch-norm allreduces:
+:end_tab:
+
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3}
 %%tab jax
 mesh, model, opt, (X, y) = setup(jax.device_count(), d2l.get_key())
@@ -559,6 +577,11 @@ def allreduce_beta(env=None):
     return json.loads(run.stdout.splitlines()[-1])['beta_link']
 ```
 
+Calling `allreduce_beta()` yields the measured link cost `beta_link`, from
+which we compute `exposed[k]` for $k \in \{2, 4\}$ GPUs under both the
+un-overlapped ($2(k-1)S\beta_\textrm{link}/k$) and full-overlap (`last_bucket`)
+models:
+
 ```{.python .input #multi-gpu-practice-ddp-really-run-5}
 %%tab pytorch, jax
 if d2l.num_gpus() >= 2:
@@ -573,6 +596,10 @@ if d2l.num_gpus() >= 2:
               f'({ring:.1f} S beta_link), {1e3 * exposed[k][1]:.0f} ms with '
               f'full overlap (last bucket)')
 ```
+
+We now benchmark weak scaling at 256 examples per GPU (`step_time(k, 256)`)
+across $k \in \{1, 2, 4\}$ GPUs and compare the measured throughput, scaling
+efficiency, and exposed overhead `weak[k] - weak[1]` against both predictions:
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-3}
 %%tab pytorch, jax
@@ -666,6 +693,11 @@ def profile_step(k, b, communicate=True):
     comm = sum(ms for name, ms in kernels.items() if 'nccl' in name.lower())
     return t, sum(kernels.values()) - comm, comm
 ```
+
+Running `profile_step` at $b = 256$ examples per GPU across the three
+configurations—one GPU, two GPUs without gradient synchronization, and two GPUs
+with allreduce—separates wall-clock step time into device compute and NCCL
+kernel time:
 
 ```{.python .input #multi-gpu-practice-predicted-and-measured-communication-1}
 %%tab pytorch, jax

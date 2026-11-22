@@ -295,7 +295,9 @@ def fd(imgs):
 print(f'floor, the other 5,000 test images: FD {fd(X_test[5000:]):.2f}')
 ```
 
-We score the reconstructions of the other 5,000 test images.
+Using `fd`, we now encode and decode the remaining 5,000 test images
+`X_test[5000:]` in batches to measure both the per-pixel squared reconstruction
+error and the reconstruction Fréchet distance `fd_rec`:
 
 ```{.python .input #latent-diffusion-the-autoencoder-4}
 %%tab pytorch
@@ -514,6 +516,10 @@ def train_step_gflops(net, loss_fn, shape, batch_size=128):  #@save
                            jax.random.key(0)), jax.devices('cpu')[0])
     return jax.jit(grad).lower(*args).cost_analysis()['flops'] / 1e9
 ```
+
+Evaluating `train_step_gflops` on the four-channel latent U-Net
+(`latent_shape`) and the single-channel pixel U-Net (`image_shape`) compares
+their per-step arithmetic cost directly:
 
 ```{.python .input #latent-diffusion-the-same-regression-on-latents-4}
 %%tab pytorch

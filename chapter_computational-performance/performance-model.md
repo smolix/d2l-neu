@@ -58,6 +58,12 @@ import re
 import time
 ```
 
+:begin_tab:`pytorch`
+In PyTorch, we also set the float32 matrix-multiplication precision to `'high'`
+so that fp32 matrix products use the tf32 tensor cores (matching JAX's default
+on NVIDIA GPUs):
+:end_tab:
+
 ```{.python .input #performance-model-the-performance-model-2}
 %%tab pytorch
 # Run fp32 matrix products on the tf32 tensor cores (PyTorch's default is
@@ -435,6 +441,9 @@ d2l.plot([roof_x, intensity], [roof_y, measured],
          xscale='log', yscale='log', fmts=('-', 'o'))
 ```
 
+Printing the exact per-call latency `t` (in microseconds) and throughput `tf`
+for each matrix size `n` makes the flat-time floor at small $n$ explicit:
+
 ```{.python .input #performance-model-matrix-products-across-sizes-2}
 %%tab pytorch, jax
 for n, t, tf in zip(sizes, times, measured):
@@ -652,6 +661,10 @@ def show_profile(kernels, step_ms, rows=6):  #@save
         name = re.sub(r'^void |\(anonymous namespace\)::|\w+::|\(.*', '', name)
         print(f'{ms:6.2f} ms {ms / busy:4.0%}  {name[:52]}')
 ```
+
+We now apply `show_profile` to the kernel timings of our three-layer MLP step
+(`kernel_times(step)`) and compare busy device time against the measured
+wall-clock duration `1000 * wall`:
 
 ```{.python .input #performance-model-profiling-a-training-step-2}
 %%tab pytorch

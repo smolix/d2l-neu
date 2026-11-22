@@ -584,6 +584,8 @@ val_batch = (jnp.asarray(val_images[:1024, :, :, None], jnp.float32) / 255,
              jnp.asarray(val_labels[:1024], jnp.int32))
 ```
 
+With the deterministic training minibatches `batches` and 1,024-image validation slice `val_batch` preloaded in memory, we now define `train(net, ...)` to run $1{,}000$ SGD steps at $\eta = 0.01$—either updating low-precision weights directly or keeping an `fp32` master copy for the parameter update—and return the per-step losses and final accuracy on `val_batch`:
+
 ```{.python .input #numerics-mixed-precision-training-3}
 %%tab mxnet
 def bf16_round(w):

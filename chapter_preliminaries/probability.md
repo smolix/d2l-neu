@@ -113,7 +113,7 @@ jax.random.multinomial(subkey, 100, fair_probs)
 
 ### Frequencies and Probabilities
 
-Dividing the observed counts by $n$ gives the empirical *frequency* $\hat{p}$, an *estimator* of the true probability $p = P(\textrm{heads}) = 0.5$. Repeating the 100-toss experiment five times shows $\hat{p}$ fluctuating around $0.5$, whereas increasing the sample size to $10{,}000$ tosses pulls $\hat{p}$ much closer to $0.5$:
+Dividing the observed counts by $n$ gives the empirical *frequency* $\hat{p}$, an *estimator* of the true probability $p = P(\textrm{heads}) = 0.5$. Repeating the 100-toss experiment five times simultaneously produces a $5 \times 2$ matrix of empirical frequencies that fluctuate noticeably around $0.5$:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab mxnet
@@ -135,6 +135,8 @@ tfd.Multinomial(100, probs=fair_probs).sample(5) / 100
 key, subkey = jax.random.split(key)
 jax.random.multinomial(subkey, 100, fair_probs, shape=(5,)) / 100
 ```
+
+Increasing the sample size a hundredfold to $n = 10{,}000$ tosses shrinks the typical sampling error by $\sqrt{100} = 10$, pulling the empirical head and tail frequencies much closer to $(0.5, 0.5)$:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab mxnet

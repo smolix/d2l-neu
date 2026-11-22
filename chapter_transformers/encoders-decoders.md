@@ -503,6 +503,8 @@ print('loss at step 25/50/100/200/300: ' + '/'.join(
     f'{sum(losses[k-10:k]) / 10:.3f}' for k in (25, 50, 100, 200, 300)))
 ```
 
+At inference time, `reverse(model, src)` encodes the source sequence once and greedily decodes one target token per step from `<bos>`, achieving near-perfect exact-string match on $1{,}000$ held-out random strings:
+
 ```{.python .input #encoders-decoders-training-and-decoding-2}
 %%tab pytorch
 def reverse(model, src):
@@ -595,6 +597,8 @@ def alignment(model):
     want = jnp.arange(T - 1, -1, -1)  # row t: column T-1-t
     return match, (maps.argmax(-1) == want).mean(), maps[0]
 ```
+
+Running six independent seeds of both `with` and `without` encoder self-attention and plotting the least anti-diagonally aligned cross-attention heatmap from each group contrasts direct positional lookup against multi-layer routing:
 
 ```{.python .input #encoders-decoders-reading-the-alignment}
 %%tab pytorch, jax

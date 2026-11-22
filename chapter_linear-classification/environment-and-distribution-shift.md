@@ -148,6 +148,8 @@ def fit_logreg(X, y, weights=None, lr=0.1, steps=2000):
     return w, b
 ```
 
+First, we pool `X_src` (domain label $z = 0$) and `X_tgt` ($z = 1$) to train our domain classifier `(w_h, b_h)` via `fit_logreg`, compare the learned logit $h(\mathbf{x})$ against the analytical Gaussian log-ratio $2x_1 - 2$, and inspect the resulting source importance weights `beta` and their effective sample size `ess`:
+
 ```{.python .input #environment-and-distribution-shift-covariate-shift-correction-2}
 z = np.concatenate([np.zeros(n), np.ones(n)])      # domain label: 1 = target
 w_h, b_h = fit_logreg(np.concatenate([X_src, X_tgt]), z)
@@ -159,6 +161,7 @@ print(f'largest weight: {beta.max():.0f}; effective sample size: '
       f'{ess(beta):.0f} of {n}, {ess(np.minimum(beta, 5)):.0f} if clipped at 5')
 ```
 
+Next, we train `fit_logreg` on the labeled source data `(X_src, y_src)` under three weighting schemes—`'unweighted'`, raw importance weights `'weighted'` (`beta`), and clipped weights `'clipped'` (`np.minimum(beta, 5)`)—and evaluate each classifier's accuracy on `X_tgt` and `X_src`:
 
 ```{.python .input #environment-and-distribution-shift-covariate-shift-correction-3}
 acc = lambda wb, X, y: ((X @ wb[0] + wb[1] > 0) == (y == 1)).mean()
@@ -170,6 +173,8 @@ for name, wb in models.items():
 print(f'always predicting the most common target class: '
       f'{max(y_tgt.mean(), 1 - y_tgt.mean()):.3f}')
 ```
+
+To visualize why reweighting helps so dramatically, we plot the target and source point clouds (scaling each source marker's area by `beta`) together with the true parabolic curve $x_2 = \frac{1}{2}x_1^2 - 1$ and the `'unweighted'` and `'weighted'` linear decision boundaries:
 
 ```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-3}
 x1 = np.linspace(-2.5, 4.5, 50)
@@ -202,7 +207,7 @@ $$\mu_i = \sum_{j=1}^q P(\hat{c} = i \mid y = j)\, p_T(y = j) = \sum_{j=1}^q C_{
 
 Whenever $\mathbf{C}$ is invertible (which is guaranteed if the classifier gets more than half of each class right, $C_{jj} > 1/2$; see Exercise :exref:`ex_environment-and-distribution-shift-label-shift-system`), solving the $q \times q$ linear system $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ recovers the unknown target class proportions without a single target label! Furthermore, if the source classifier's probabilities are calibrated, Bayes' rule adapts its predictions to the target domain instantly—without even retraining—by adding the log-prior shift $\log(\hat{p}_T(y) / p_S(y))$ to each class's logit.
 
-Let us test confusion-matrix inversion and Bayes logit adjustment on Fashion-MNIST by splitting the $10{,}000$ validation images into a $5{,}000$-image balanced source validation set (to estimate $\mathbf{C}$) and a skewed target set where $50\%$ of all garments are shirts ($400$ shirts and $45$ of each other class):
+Let us test confusion-matrix inversion and Bayes logit adjustment on Fashion-MNIST. We first train `d2l.SoftmaxRegression` on the balanced training split and collect its validation logits `O`, labels `y`, and predicted classes `pred = O.argmax(axis=1)`:
 
 ```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist}
 data = d2l.FashionMNIST(batch_size=256)
@@ -217,6 +222,8 @@ for X, Y in data.val_dataloader():
 O, y = np.concatenate(O), np.concatenate(y)
 pred = O.argmax(axis=1)
 ```
+
+Next, we randomly partition the $10{,}000$ validation examples into a $5{,}000$-image source validation set `src` (used to estimate the column-normalized $10 \times 10$ confusion matrix `C`) and a target pool `pool` from which we draw a skewed target set `tgt` where $50\%$ of all garments are shirts ($400$ shirts and $45$ of each other class), then solve `p_hat = np.linalg.solve(C, mu)` from the unlabeled target prediction frequencies `mu`:
 
 ```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist-2}
 perm = rng.permutation(len(y))
@@ -236,6 +243,7 @@ for j, name in enumerate(data.text_labels(range(10))):
           f'estimated {p_hat[j]:.3f}')
 ```
 
+Finally, we adapt the classifier's predictions to the estimated target distribution by adding the log-prior shift `log_w = np.log(np.maximum(p_hat, 1e-6) / 0.1)` to the target logits `O[tgt]` and comparing target accuracy before and after adjustment:
 
 ```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist-3}
 log_w = np.log(np.maximum(p_hat, 1e-6) / 0.1)  # log p_T(y) - log p_S(y)

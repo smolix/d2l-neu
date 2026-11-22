@@ -104,6 +104,8 @@ def attention(Q, K, V):
     return jax.nn.softmax(scores, axis=-1) @ V
 ```
 
+Evaluating `d2l.peak_memory(attention, Q, Q, Q)` across sequence lengths $n \in \{2048, 4096, 8192, 16384\}$ confirms that each doubling of $n$ quadruples the temporary memory allocation right in line with $8n^2$ bytes:
+
 ```{.python .input #attention-at-scale-counting-memory-3}
 %%tab pytorch
 d_h = 64
@@ -283,6 +285,8 @@ with jax.default_matmul_precision('highest'):
                   - causal_attention(Q, K, V)).max()
 print(f'maximum deviation: {float(err):.2e}')
 ```
+
+Comparing `d2l.peak_memory` across $n \in \{2048, 4096, 8192, 16384\}$ verifies that `chunked_attention` replaces the quadratic $O(n^2)$ memory curve of `causal_attention` with linear $O(nc)$ scaling:
 
 ```{.python .input #attention-at-scale-a-chunked-implementation-3}
 %%tab pytorch

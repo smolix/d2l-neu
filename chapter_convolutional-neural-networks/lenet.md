@@ -114,9 +114,9 @@ $32\times32$ inputs, whereas MNIST and Fashion-MNIST images are $28\times28$
 pixels of padding to our first convolutional layer restores the same
 $28\times28$ output dimensions after the first $5\times5$ convolution.
 
-With modern deep learning frameworks, assembling LeNet requires only a single
-`Sequential` block. We initialize all layer weights with Xavier initialization
-(:numref:`subsec_xavier`) and set biases to zero.
+Before defining the network, we write `init_cnn` to initialize all
+convolutional and linear weights with Xavier uniform initialization
+(:numref:`subsec_xavier`).
 
 ```{.python .input #lenet-1}
 %%tab pytorch
@@ -125,6 +125,10 @@ def init_cnn(module):  #@save
     if type(module) == nn.Linear or type(module) == nn.Conv2d:
         nn.init.xavier_uniform_(module.weight)
 ```
+
+With modern deep learning frameworks, assembling `LeNet` requires only a single
+`Sequential` block `self.net` that chains the two convolutional--pooling stages
+with the three fully connected layers, setting all biases to zero.
 
 ```{.python .input #lenet-2}
 %%tab mxnet
@@ -369,16 +373,18 @@ each hidden unit of an MLP weighted fixed pixel locations
 (:numref:`sec_mlp-implementation`). A convolutional kernel, by contrast, is
 not tied to any particular pixel—it is just a $5\times5$ patch of weights that
 is hard to interpret in isolation. To understand what the first convolutional
-layer has discovered, we visualize both the six learned $5\times5$ kernels
-(top row) and the resulting post-sigmoid feature maps for a validation sneaker
-and shirt (rows below), scaling each panel independently from its minimum
-(black) to its maximum (white).
+layer has discovered, we first pull one sneaker (class 7) and one shirt
+(class 6) from a validation minibatch into a two-image tensor `X`.
 
 ```{.python .input #lenet-the-learned-features-1}
 X, y = trainer.prepare_batch(next(iter(data.val_dataloader())))
 labels = d2l.numpy(y)
 X = d2l.stack([X[int(np.argmax(labels == c))] for c in (7, 6)], 0)
 ```
+
+Next, we pass `X` through the first convolutional layer and its sigmoid
+activation to extract the six $28 \times 28$ feature `maps` alongside the
+learned $5 \times 5$ `kernels`.
 
 ```{.python .input #lenet-the-learned-features-2}
 %%tab mxnet
@@ -411,6 +417,10 @@ maps = layers[1](layers[0](X))  # The first convolution and its sigmoid
 images, maps = d2l.numpy(X[..., 0]), d2l.numpy(maps).transpose(0, 3, 1, 2)
 kernels = d2l.numpy(layers[0].kernel[...])[:, :, 0].transpose(2, 0, 1)
 ```
+
+We can now display the six `kernels` on the top row above the input `images`
+and their six post-sigmoid feature `maps`, scaling each panel independently
+from its minimum (black) to its maximum (white).
 
 ```{.python .input #lenet-the-learned-features-3}
 names = data.text_labels([7, 6])
@@ -455,6 +465,9 @@ def shuffle_pixels(images):
     return images.reshape(len(images), -1)[:, perm].reshape(images.shape)
 ```
 
+We now apply `shuffle_pixels` with this shared permutation `perm` to every
+image in the training and validation splits of `data_shuffled`.
+
 ```{.python .input #lenet-shuffled-pixels-2}
 %%tab mxnet
 data_shuffled = d2l.FashionMNIST(batch_size=128)
@@ -479,7 +492,9 @@ data_shuffled.train, data_shuffled.val = [
     for images, labels in (data_shuffled.train, data_shuffled.val)]
 ```
 
-To human eyes, the permuted garments look like pure static.
+Visualizing a validation minibatch from `data_shuffled` confirms that permuting
+the 784 pixel coordinates destroys all recognizable garment contours, leaving
+patterns that look like pure static to human eyes.
 
 ```{.python .input #lenet-shuffled-pixels-3}
 data_shuffled.visualize(next(iter(data_shuffled.val_dataloader())))

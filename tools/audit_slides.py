@@ -14,7 +14,7 @@ from pathlib import Path
 SLIDE_OPEN_RE = re.compile(r'^(:{3,4})\s*\{\.slide\b((?:[^{}"]|"[^"]*")*)\}')
 TITLE_RE = re.compile(r'title="([^"]*)"')
 CODE_OPEN_RE = re.compile(r"^```\{\.python\b.*#([A-Za-z0-9][A-Za-z0-9_-]*)")
-PLACEHOLDER_RE = re.compile(r"^@([!-]?)([A-Za-z0-9][A-Za-z0-9_-]*)(?:@[A-Za-z]+)?\s*$")
+PLACEHOLDER_RE = re.compile(r"^@([!-]?)([A-Za-z0-9][A-Za-z0-9_-]*)(?:@[A-Za-z]+)?(?:\[[^\]]*\])?\s*$")
 FIG_RE = re.compile(r"^@fig:([a-z0-9][a-z0-9-]*)(?:@[A-Za-z]+)?\s*$")
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 INLINE_MATH_RE = re.compile(r"(?<!\\)\$[^$\n]{2,160}(?<!\\)\$")

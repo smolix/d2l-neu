@@ -217,6 +217,11 @@ slide builder. The forms:
 | `@<id>@<fw>` | force a specific framework's variant (regardless of the deck) |
 | `@!<id>` | **output only** — no code echo (cover/teaser figures) |
 | `@-<id>` | **code only** — no output (verbose setup cells whose output would overflow; emitted without a label so `inject_outputs.py` skips it) |
+| `@-<id>[1-24]` | **code lines 1–24 only**, no output (the first part of a long cell) |
+| `@<id>[25-]` | code lines 25 to the end **and** the cell's output |
+| `@<id>[25-, out=3]` | code lines 25 to the end and output item 3 only |
+| `@!<id>[out=2]` | **output item 2 only**, no code (one of two stacked plots) |
+| `@!<id>[out=2-]` | output items 2 to the last |
 | `@fig:<id>` | inline a committed **diagram** SVG (`img/auto/<id>.svg`) — see *Diagrams* below |
 | `@fig:<id>@<fw>` | prefer a framework variant (`img/auto/<id>-<fw>.svg`), else fall back to `<id>.svg` |
 
@@ -231,6 +236,37 @@ Then we benchmark:
 @vec-loop
 :::
 ```
+
+A `[...]` selector closes any cell form, after `@<fw>` if there is one
+(`@<id>@jax[1-12]`). It holds a line range, an `out=` range, or both,
+comma-separated. A range is `a-b`, `a-` (to the end), `-b` (from the first)
+or a single `a`; numbers are 1-based and inclusive.
+
+- **Lines** count the cell's code as the slide shows it: after the `#@tab`
+  / `%%tab` line, `#@save` markers and `@d2l.add_to_class(...)` decorators
+  are stripped and `tab.selected()` branches are flattened for the deck's
+  framework. So line 1 is the first line on the slide, not the first line
+  of the source fence, and the numbers can differ between framework
+  variants. Blank lines at either end of a slice are dropped.
+- **Output items** are the cell's stored outputs in order, after adjacent
+  printed text of one stream is merged (as `inject_outputs.py` renders it)
+  and error outputs are dropped: each plot (`display_data` image), each
+  `execute_result`, and each run of printed text between them is one item.
+  The usual slide rules then apply to the selection (text capped at 12
+  lines; of more than two plots only the last is shown).
+
+`python3 tools/gen_slides.py . _slides --files <chapter/file.md>
+--frameworks pytorch jax --show-cell <id>` prints the cell numbered as
+the selector counts it and lists its output items; it writes nothing. A
+malformed selector, a line range past the cell's last line, an `out=` past
+its last output item, a line range on `@!` or an `out=` on `@-` fails the
+build (gen_slides.py exits 1 naming the deck and placeholder). The output
+range reaches `inject_outputs.py` as a `#| d2l-output-items: "2-3"` cell
+option in the deck `.qmd`; Quarto ignores it. When several placeholders
+name one cell, each labelled fence is deduped to `<id>-fig<N>` as before
+and all of them match the cell; a fragment's images are written as
+`<stem>-<id>-<fw>-items-<k>.svg`, `k` being the plot's place in the whole
+cell, so two fragments of one cell never overwrite each other's images.
 
 ### Resolution rules
 
@@ -635,6 +671,14 @@ regenerating a deck:
    shorten the intro, make a verbose setup cell `@-` (code-only), split
    it into two slides (`only=`-scoped continuations), or widen the
    content column. Don't rely on per-slide scrollbars.
+
+   **Splitting a long cell.** When one cell is the problem, show it in
+   parts on consecutive slides (see *Code-cell placeholders*): code lines
+   with `@-<id>[1-24]` then `@<id>[25-]` (the second part brings the
+   output), or two stacked plots with `@!<id>[out=1]` then
+   `@!<id>[out=2-]`. Cut code at a block boundary where you can; a
+   fragment that starts mid-block still highlights, it just reads worse.
+   `gen_slides.py --show-cell <id>` prints the numbers to cut at.
 7. **Mind column width.** Cells with matrix/verbose output and long code
    need a *wide* content column; column **prose** is shrunk so it doesn't
    wrap to orphaned words. Wide-short diagrams should be redesigned
@@ -800,9 +844,10 @@ _slides/<fw>/img/outputs/          Injected output images (gitignored)
 tools/add_cell_ids.py              Assigns/maintains #<id> on code fences
 tools/migrate_slide_markers.py     One-shot: inline markers → slide divs
 tools/strip_tab_all.py             One-shot: removes #@tab all / %%tab all
-tools/gen_slides.py                Generates and renders slide .qmd (@fig/@-/@!, only=/except=)
+tools/gen_slides.py                Generates and renders slide .qmd (@fig/@-/@!/[...], only=/except=)
 tools/inject_outputs.py            Injects notebook outputs (slides mode)
 tools/audit_slides.py              Teachability/overflow audit (@fig/@-/@! aware)
+tools/test_slide_cell_split.py     Tests for `@<id>[lines, out=items]` (incl. one real render)
 tools/watch_slides.py              Live preview daemon
 tools/lint_source.py               Source linter
 tools/sync_back.py                 Notebook → source sync

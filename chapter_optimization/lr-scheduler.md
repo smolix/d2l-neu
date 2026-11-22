@@ -439,9 +439,11 @@ Learning-Rate Schedules: Warmup, Cosine Decay, and WSD<br>**cumulative budget B_
 :::
 
 ::: {.col .fig .narrow}
-@!lr-scheduler-four-schedules-on-the-valley
+@!lr-scheduler-four-schedules-on-the-valley[out=2]
 :::
 :::
+
+@!lr-scheduler-four-schedules-on-the-valley[out=1]
 :::
 
 ::: {.slide title="Noise Is Removed Only by Budget Still to Come (R_s)"}
@@ -624,8 +626,12 @@ Solve each scheduling design question quantitatively:
 1. **Frozen noise under exponential decay:** On a 1D quadratic of curvature $\lambda = 0.2$ and noise variance $\sigma^2 = 1$, exponential decay $\eta_t = 0.4 \times \gamma^t$ with $\gamma = 0.98$ froze at variance $\frac{(1-\gamma)\sigma^2}{4\lambda^2} = 0.125$. What happens to the frozen variance if we slow the decay to $\gamma = 0.995$?
 2. **Cosine vs. late decay on a fast quadratic:** On `TinyLM` ($2{,}000$ steps), late linear decay beat cosine decay because `TinyLM` needed the extra travel budget ($B_T = 5.4$ vs. $3.0$). Which schedule finishes lower on a 1D noisy quadratic that already reaches its noise ball in $20$ steps?
 3. **Compute savings of WSD branching:** You want evaluated, cooled checkpoints at horizons $T_1 = 1{,}000$, $T_2 = 2{,}000$, and $T_3 = 3{,}000$ steps, each ending with a $300$-step linear cooldown. How many total training steps do three separate cosine runs require versus one WSD plateau with three branches?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Frozen Noise, Warmup, and WSD Branching (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. At $\gamma = 0.995$, $1 - \gamma = 0.005$ ($4\times$ smaller than $0.02$), so the asymptotic frozen variance drops **$4\times$ to $\frac{0.005}{4 \times 0.04} = 0.03125$**.

@@ -525,14 +525,20 @@ $$\frac{d}{dN}\left(L_\infty + A N^{-\alpha} + B (C/6)^{-\beta} N^\beta\right) =
 - **IsoFLOP budget lines (dashed, slope $-1$ on log–log axes):** Lines of constant training compute $C = 6 N D$.
 - **Compute-optimal ridge (orange line, slope $\approx +1$):** Connects the tangency points $(N^*(C), D^*(C))$ where each budget line touches the lowest possible loss contour.
 - **The 20-tokens-per-parameter rule:** Along the orange path, $D^* / N^* \approx 20$ tokens per parameter (`Chinchilla` 70B on $1.4\text{T}$ tokens).
-
-@scaling-laws-the-optimal-split
 :::
 
 ::: {.col .fig}
 @fig:mdl-transformers-chinchilla
 :::
 :::
+:::
+
+::: {.slide title="IsoFLOP Contours and the Compute-Optimal Path (cont.)"}
+[Geometric Intuition]{.kicker}
+
+Evaluating the closed-form optimum $N^*(C), D^*(C)$ for two published fits at Chinchilla's budget $C = 5.76 \times 10^{23}$ FLOPs:
+
+@scaling-laws-the-optimal-split
 :::
 
 ::: {.slide title="Reconciling Kaplan (2020) vs. Chinchilla (2022)"}

@@ -1186,7 +1186,7 @@ $$(\mathbf{R}_i \mathbf{q})^\top (\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top (\m
 ::: {.slide title="Implementing embed, alibi, and attend"}
 [TinyCharLM Implementation]{.kicker}
 
-In `TinyCharLM`, RoPE rotates `q` and `k` inside every attention block, whereas ALiBi adds the distance bias `-m_h * (i - j)` to the pre-softmax scores:
+RoPE rotates `q` and `k` in every block; ALiBi adds the bias `-m_h * (i - j)` to the scores:
 
 @positional-information-an-attention-only-language-model-2
 :::

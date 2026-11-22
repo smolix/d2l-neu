@@ -969,7 +969,7 @@ Passing `donate_argnames=('ks', 'vs')` to `@jax.jit` around `jax.lax.fori_loop` 
 ::: {.slide title="Verifying Exact Logit Equivalence"}
 [Correctness Verification]{.kicker}
 
-KV caching is **not an approximation**: prefilling $16$ tokens and stepping through $32$ tokens one by one produces the **exact same logits** (to within floating-point rounding $\sim 10^{-7}$) as a single uncached pass over all $48$ tokens, for rotary and learned positions alike:
+KV caching is **not an approximation**: prefilling $16$ tokens and then stepping through $32$ one by one gives the **same logits** as one uncached pass over all $48$ (to rounding, $\sim 10^{-7}$), for rotary and learned positions alike:
 
 @kv-cache-same-logits-measured-1
 :::
@@ -1174,8 +1174,12 @@ Work through these three serving calculations:
 1. **70B GQA cache footprint:** Llama 3.1 70B has $L = 80$ layers, $H = 64$ query heads, $H_{\text{kv}} = 8$ KV heads of width $d_h = 128$, and BF16 weights ($140\text{ GB}$) and cache ($b = 2\text{ B}$). How many kilobytes per token does its KV cache use, and at what context length $n$ does a single sequence's cache equal the $140\text{ GB}$ weights (with GQA vs. MHA)?
 2. **Half-saturation batch size:** For GPT-2 Small in FP32 ($M_{\text{weights}} \approx 498\text{ MB}$, $72\text{ KiB/token}$), at what batch size $B_{1/2}$ does KV cache traffic equal weight traffic at context $n = 4{,}096$, and what is the asymptotic decode throughput ceiling at $1\text{ TB/s}$?
 3. **Window + sink memory:** How much memory does a streaming cache with window $w = 256$ and $s = 4$ sinks use on GPT-2 Small (FP32) when generating $100{,}000$ tokens?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Roofline and KV Cache Sizing (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **$2 \times 2 \times 80 \times 8 \times 128 = 327{,}680\text{ B} = 320\text{ KiB/token}$** under GQA ($8\times$ smaller than MHA's $2.5\text{ MiB/token}$). One sequence equals the $140\text{ GB}$ weights at **$n \approx 427\text{K}$ tokens** with GQA, vs. only **$53\text{K}$ tokens** with MHA!

@@ -936,9 +936,17 @@ Recovering $k$ independent $d_v$-dimensional values requires two resources simul
 ::: {.slide title="Implementing MultiHeadAttention"}
 [Module Implementation]{.kicker}
 
-`MultiHeadAttention` supports both standard multi-head attention (`num_kv_heads = num_heads`) and grouped-query attention (`num_kv_heads < num_heads`):
+One module covers multi-head (`num_kv_heads = num_heads`) and grouped-query attention (`num_kv_heads < num_heads`). The constructor sizes the key and value projections for `num_kv_heads`:
 
-@multihead-attention-implementation-1
+@-multihead-attention-implementation-1[1-16]
+:::
+
+::: {.slide title="Implementing MultiHeadAttention (cont.)"}
+[Module Implementation]{.kicker}
+
+The forward pass splits heads, repeats each key–value head across its query group, and attends:
+
+@multihead-attention-implementation-1[17-]
 :::
 
 ::: {.slide title="Pitfall: Reshaping Directly to (B, H, n, d_h)"}
@@ -946,17 +954,17 @@ Recovering $k$ independent $d_v$-dimensional values requires two resources simul
 
 ::: {.cols .vc}
 ::: {.col}
-- **Correct (reshape, then swap axes 1 and 2):** Slices each token's $d$-dimensional vector into $H$ contiguous blocks of width $d_h$.
+- **Correct (reshape, then swap axes 1 and 2):** Splits each token's $d$-vector into $H$ blocks of width $d_h$.
 - **Buggy (`X.reshape(B, H, n, d_h)`):** Because memory is row-major along the sequence axis $n$, reshaping directly packs the first $n/H$ *tokens* into "head 0"!
 - **Insidious Shape Match:** Both return `(B, H, n, d_h)`, so no shape check catches the bug.
-
-@multihead-attention-implementation-2
 :::
 
 ::: {.col .fig}
 @fig:ch10-attn-mha-reshape-bug
 :::
 :::
+
+@multihead-attention-implementation-2
 :::
 
 ::: {.slide title="Trained Multi-Head Layers on the Copy-Both Task"}

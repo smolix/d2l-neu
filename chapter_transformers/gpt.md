@@ -122,7 +122,7 @@ class CausalAttention(nnx.Module):  #@save
         return self.W_o(Y.reshape(*X.shape[:2], -1))  # (batch, length, d)
 ```
 
-Our `GPT` class stacks `num_blks` configurable `TransformerBlock` modules (`norm='rms'`, `act='swiglu'`, `pos='rope'`, `pre_norm=True` by default, while also supporting GPT-2's `norm='layer'`, `act='gelu'`, `pos='learned'`, `bias=True`) and ties the output projection to `token_emb.weight`:
+Our `GPT` class stacks `num_blks` configurable `TransformerBlock` modules (`norm='rms'`, `act='swiglu'`, `pos='rope'`, `pre_norm=True` by default, while also supporting GPT-2's `norm='layer'`, `act='gelu'`, `pos='learned'`, `bias=True`) and ties the output projection to the token embedding table `token_emb`:
 
 ```{.python .input #gpt-from-blocks-to-a-language-model-1}
 %%tab pytorch
@@ -262,7 +262,15 @@ print(f'{len(data.train) / 1e6:.0f}M training bytes, '
       f'vocabulary of {len(data.vocab)}')
 ```
 
-We also define a convenience constructor `gpt(...)` that places a freshly initialized `GPT` on the accelerator (and compiles it in PyTorch while enabling TF32 matrix multiplications):
+We also define a convenience constructor `gpt(...)` that builds a freshly initialized `GPT` ready to train:
+
+:begin_tab:`pytorch`
+`gpt` moves the model to the GPU, compiles it with `torch.compile`, and lets fp32 matrix products use the tf32 tensor cores.
+:end_tab:
+
+:begin_tab:`jax`
+`gpt` draws fresh random weights from `d2l.get_key()` for every model.
+:end_tab:
 
 ```{.python .input #gpt-training-the-model-3}
 %%tab pytorch
@@ -603,18 +611,26 @@ ids = enc.encode('Attention is all you need.')
 print(ids, [enc.decode([i]) for i in ids])
 ```
 
-:Mapping between OpenAI's GPT-2 `safetensors` checkpoint keys and our `GPT` module attributes (`Conv1D` weights have shape `(in, out)` and are transposed on load in PyTorch).
+:Mapping between OpenAI's GPT-2 `safetensors` checkpoint keys and our `GPT` module attributes (`Conv1D` weights have shape `(in, out)`).
 :label:`tab_gpt2-weight-map`
 
 | Checkpoint tensor | `GPT` attribute | Note |
 |:--|:--|:--|
-| `wte.weight` | `token_emb.weight` | Shared with output head (`V x d`) |
-| `wpe.weight` | `pos_emb.weight` | 1,024 learned position vectors |
+| `wte.weight` | `token_emb` | Shared with output head (`V x d`) |
+| `wpe.weight` | `pos_emb` | 1,024 learned position vectors |
 | `h.i.ln_1`, `h.i.ln_2` | `blks[i].norm1`, `blks[i].norm2` | Pre-attention and pre-FFN LayerNorms |
-| `h.i.attn.c_attn` | `blks[i].attention.W_qkv` | Fused QKV (`Conv1D`, transpose in PyTorch) |
+| `h.i.attn.c_attn` | `blks[i].attention.W_qkv` | Fused QKV (`Conv1D`) |
 | `h.i.attn.c_proj` | `blks[i].attention.W_o` | Output projection (`Conv1D`) |
 | `h.i.mlp.c_fc`, `h.i.mlp.c_proj` | `blks[i].ffn.W_1`, `blks[i].ffn.W_2` | Two-layer GELU MLP (`Conv1D`) |
 | `ln_f` | `norm` | Final LayerNorm before output head |
+
+:begin_tab:`pytorch`
+`nn.Linear` stores `(out, in)`, so `load_gpt2` transposes every `Conv1D` weight.
+:end_tab:
+
+:begin_tab:`jax`
+An `nnx.Linear` kernel is `(in, out)`, the `Conv1D` layout, so `load_gpt2` copies the weights unchanged.
+:end_tab:
 
 ```{.python .input #gpt-loading-gpt-2-2}
 %%tab pytorch
@@ -757,25 +773,25 @@ Comparing the 2019 `load_gpt2()` configuration against our default `GPT` highlig
 ## Exercises
 
 1. **Ablating the training recipe (`LMOptimizer`).** `LMOptimizer` combines four ingredients: selective weight decay ($\lambda = 0.1$ on 2D weight matrices only), linear warmup (100 steps), cosine decay, and global gradient clipping ($\|\nabla \mathcal{L}\|_2 \le 1.0$). Train our 6-block byte-level `GPT` for 1,000 steps while disabling one ingredient at a time: (a) applying weight decay to *all* parameters including embeddings and RMSNorm gains, (b) no warmup (`warmup=0`), (c) constant learning rate (`lr=2e-3` throughout), and (d) no gradient clipping. Which single change hurts validation loss the most?
-:exlabel:`ex_gpt-recipe`
+   :exlabel:`ex_gpt-recipe`
 
-2. **Auditing the GPT-2 checkpoint tensor map.** The GPT-2 `model.safetensors` file holds 148 weight/bias tensors (plus 12 legacy causal mask buffers `h.i.attn.bias`). Write a short check verifying that `sum(p.numel() for p in gpt2.parameters())` equals the total element count of the 148 parameter tensors in the file ($124{,}439{,}808$), and explain why transposing `c_attn.weight` is required in PyTorch (`nn.Linear`) but not in Flax (`nnx.Linear`).
-:exlabel:`ex_gpt-checkpoint-mismatches`
+2. **Auditing the GPT-2 checkpoint tensor map.** The GPT-2 `model.safetensors` file holds 148 weight/bias tensors (plus 12 legacy causal mask buffers `h.i.attn.bias`). Write a short check verifying that `d2l.num_params(gpt2)` equals the total element count of the 148 parameter tensors in the file ($124{,}439{,}808$), and explain from your framework's linear-layer weight layout whether `c_attn.weight` must be transposed on load.
+   :exlabel:`ex_gpt-checkpoint-mismatches`
 
 3. **Zero-layer tied-embedding baseline ($L = 0$).** Consider `GPT` with `num_blks=0`: input token $x_t$ is embedded as $\mathbf{e}_{x_t}$, normalized by `RMSNorm`, and dotted with $\mathbf{E}^\top$ to produce logits $\mathbf{z}_t \propto \mathbf{e}_{x_t} \mathbf{E}^\top$.
    1. What class of statistical language model ($n$-gram order) can a 0-block model represent?
    2. Why does tying the input and output embeddings ($\mathbf{W}_{\textrm{LM}} = \mathbf{E}^\top$) force the symmetric matrix $\mathbf{E}\mathbf{E}^\top$ to assign its largest diagonal entry to $x_{t+1} = x_t$ if all rows of $\mathbf{E}$ have equal norm, and how does the untied or 1-block model break this symmetry?
-:exlabel:`ex_gpt-tied-head`
+   :exlabel:`ex_gpt-tied-head`
 
 4. **Comparing bits-per-byte across tokenizers (Byte-level GPT vs. BPE GPT-2).** A byte-level model reports cross-entropy in nats/byte, whereas GPT-2 reports cross-entropy in nats/subword-token.
    1. Show that on any passage of $N_B$ UTF-8 bytes that `enc.encode` tokenizes into $N_T$ subword tokens, the exact **bits-per-byte (bpb)** of a subword model with mean per-token negative log-likelihood $\mathcal{L}_{\textrm{tok}}$ (in nats/token) is $\textrm{bpb} = \frac{N_T \, \mathcal{L}_{\textrm{tok}}}{N_B \ln 2}$.
    2. Evaluate both our 4.8M-parameter byte-level `model` and pretrained 124M-parameter `gpt2` in bits-per-byte on the first 10,000 bytes of the WikiText-103 validation set.
-:exlabel:`ex_gpt-bits-per-byte`
+   :exlabel:`ex_gpt-bits-per-byte`
 
 5. **Top-$p$ (nucleus) sampling.** Extend `GPT.generate` with an optional `top_p` argument ($0 < p < 1$) :cite:`Holtzman.Buys.Du.ea.2020` that sorts the temperature-scaled probabilities in descending order and masks out tokens beyond the smallest prefix whose cumulative probability exceeds $p$. Compare completions from `gpt2` on the prompt `"Alan Turing theorized that computers would"` using `top_p=0.9, temperature=0.8` versus unfiltered `temperature=1.2`.
 
 6. **Learning-rate stability with QK-Norm.** Train our 6-block byte-level `GPT` across peak learning rates $\eta \in \{2\times 10^{-3}, 6\times 10^{-3}, 1.5\times 10^{-2}\}$ with standard `CausalAttention` versus a variant that applies `RMSNorm(d_h)` to `q` and `k` inside `CausalAttention.qkv` (:numref:`subsec_qk-norm`). How does QK-Norm shift the maximum stable learning rate?
-:exlabel:`ex_gpt-qk-norm-sensitivity`
+   :exlabel:`ex_gpt-qk-norm-sensitivity`
 
 [Discussions](https://d2l.discourse.group/t/36775)
 

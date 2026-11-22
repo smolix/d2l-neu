@@ -223,7 +223,7 @@ The three methods run under `torch.inference_mode`, because nothing they compute
 :end_tab:
 
 :begin_tab:`jax`
-`act` and `act_greedy` run the network through `d2l.forward_np`; `log_prob_np`, and `policy_step` below, pad their batch to a bucket length with `d2l.padded`, so that compiled code is reused across batch sizes; `d2l.shared_adam` gives every agent with the same learning rate one optimizer, so compiled updates are shared. These helpers are in :numref:`sec_utils`. `log_prob` takes an optional `policy` argument because `nnx.value_and_grad` differentiates with respect to the module it is given, and the update passes that module back in. No `no_grad` wrapper is needed: JAX computes gradients only inside such a transformation.
+`act` and `act_greedy` run the network through `d2l.forward_np`; `log_prob_np`, and `policy_step` below, pad their batch to a bucket length with `d2l.padded`, so that compiled code is reused across batch sizes; `d2l.shared_adam` gives every agent with the same learning rate one optimizer, so compiled updates are shared. These helpers are in :numref:`sec_utils`. `log_prob` takes an optional `policy` argument because `nnx.value_and_grad` differentiates with respect to the module it is given, and the update passes that module back in. JAX computes gradients only inside such a transformation.
 :end_tab:
 
 For a policy over a small set of states, `probs` reads the whole table $\pi_\theta(a \mid s)$ off the learner as an array, for the exact computations of this chapter:

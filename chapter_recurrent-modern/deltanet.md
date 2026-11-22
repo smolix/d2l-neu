@@ -461,7 +461,7 @@ for name, layer in (('gated linear attention', d2l.GatedLinearAttention),
           f'{twice[0]:11.3f} {twice[1]:.3f}{once[0]:11.3f} {once[1]:.3f}')
 ```
 
-Adding the 260-parameter `W_beta` head raises recall on rebound keys from $0.88$–$0.92$ (`gated linear attention`) to $0.96$–$0.97$ (`Gated DeltaNet`), bringing rebound keys within $\sim 1$–$2$ percentage points of keys written only once.
+Adding the 260-parameter `W_beta` head raises recall on rebound keys from $0.88$–$0.92$ (`gated linear attention`) to about $0.98$–$0.99$ (`Gated DeltaNet`), bringing rebound keys within $\sim 1$–$2$ percentage points of keys written only once.
 
 ## Memory as Regression
 

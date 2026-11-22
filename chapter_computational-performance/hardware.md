@@ -334,8 +334,15 @@ The pinned transfer reaches ~23 GB/s—about three quarters of PCIe 4.0 ×16's
 32 GB/s theoretical ceiling, and $40\times$ slower than GPU memory—while the
 pageable transfer is slower due to the extra host-memory copy. Datasets that
 fit in GPU memory should stay on the device; minibatches streamed from the
-host should use pinned memory (`pin_memory=True` in PyTorch; `'pinned_host'`
-sharding in JAX) overlapped with compute.
+host should use pinned host memory overlapped with compute.
+
+:begin_tab:`pytorch`
+A `DataLoader` with `pin_memory=True` stages its minibatches in pinned memory.
+:end_tab:
+
+:begin_tab:`jax`
+Arrays placed with the `'pinned_host'` memory kind live in pinned memory.
+:end_tab:
 
 ### Links between GPUs
 :label:`subsec_hw-interconnects`

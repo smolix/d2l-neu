@@ -176,7 +176,15 @@ num_epochs, num_batches = 15, len(fashion.train_dataloader())
 test_acc = lambda model: d2l.evaluate_accuracy(model, fashion.val_dataloader())
 ```
 
-Next we define the `warmup_cosine` schedule helper (and in JAX, the `ema_of_weights` transformation and `averaged` model cloner; PyTorch uses `torch.optim.swa_utils.AveragedModel`):
+Next we define the `warmup_cosine` schedule helper and a weight EMA:
+
+:begin_tab:`pytorch`
+PyTorch's `torch.optim.swa_utils.AveragedModel` keeps the EMA, so only the schedule needs defining here.
+:end_tab:
+
+:begin_tab:`jax`
+`ema_of_weights` is an optax transformation that keeps the EMA in the optimizer state, and `averaged` clones the model with those weights.
+:end_tab:
 
 ```{.python .input #practice-weight-averaging-4}
 %%tab pytorch

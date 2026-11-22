@@ -214,10 +214,16 @@ device).
 ### Broadcast and Allreduce
 
 *Broadcast* copies initial parameters to every device once; *allreduce* sums
-one tensor per device and leaves the total on every device. In PyTorch we
-write a simple *star* allreduce (device 0 gathers and sums all tensors, then
-copies the sum back); in JAX we use `jax.shard_map` with `jax.lax.psum`
-(which delegates to NCCL).
+one tensor per device and leaves the total on every device.
+
+:begin_tab:`pytorch`
+We write a simple *star* allreduce (device 0 gathers and sums all tensors,
+then copies the sum back).
+:end_tab:
+
+:begin_tab:`jax`
+We use `jax.shard_map` with `jax.lax.psum` (which delegates to NCCL).
+:end_tab:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-2}
 %%tab pytorch
@@ -908,8 +914,8 @@ communication.
     1. At $k = 2$, express the half-performance message size $S_{1/2}$ (where
        fixed latency equals transfer time) in terms of $\alpha$ and
        $\beta_{\textrm{link}}$, evaluate it from your measurements in
-       :numref:`subsec_mg-accounting`, and compare it with PyTorch DDP's 25 MB
-       default bucket size.
+       :numref:`subsec_mg-accounting`, and compare it with the gradient-bucket
+       sizes of :numref:`sec_multi_gpu_concise`.
    :exlabel:`ex_mg-latency`
 
 [Discussions](https://d2l.discourse.group/t/36791)

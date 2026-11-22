@@ -7,9 +7,8 @@ both GPUs sequentially, and the allreduce waited until the entire backward pass
 had finished even though the last layers' gradients were ready much earlier.
 
 Production data-parallel tools eliminate both bottlenecks: they either run one
-host process per GPU (`torchrun` + `DistributedDataParallel` in PyTorch) or
-compile a single sharded program across all GPUs (`jax.jit` + `NamedSharding`
-in JAX), and they group gradients into *buckets* whose allreduces start as
+host process per GPU or
+compile a single sharded program across all GPUs, and they group gradients into *buckets* whose allreduces start as
 soon as each bucket fills during the backward pass. To test how much of the
 gradient exchange can be hidden behind backward compute, we move from LeNet to
 ResNet-18 on $64 \times 64$ Fashion-MNIST images (2.2G multiply-adds per
@@ -236,9 +235,12 @@ def resnet18(num_classes, in_channels=1, *, rngs):  #@save
 ```
 
 Next, we load Fashion-MNIST and compute ResNet-18's parameter count
-`num_params` and fp32 gradient volume `S` (along with the reverse-order 1 MiB
-and 25 MiB gradient `buckets` that PyTorch DDP packs before launching
-allreduces):
+`num_params` and fp32 gradient volume `S`:
+
+:begin_tab:`pytorch`
+We also compute the reverse-order 1 MiB and 25 MiB gradient `buckets` that DDP
+packs before launching allreduces.
+:end_tab:
 
 ```{.python .input #multi-gpu-practice-the-training-step-1}
 %%tab pytorch
@@ -272,11 +274,17 @@ print(f'{num_params / 1e6:.1f}M parameters, S = {S / 1e6:.0f} MB')
 ```
 
 We now define the data-parallel training step on $64 \times 64$ Fashion-MNIST
-images: in PyTorch, `TRAIN_DDP` wraps `resnet18` in `DDP` and times
-`train_step` across processes (with optional `model.no_sync()` and kernel
-profiling), while in JAX, `setup` replicates the model and dataset across the
-`'data'` mesh and `train_step` runs a jitted SGD update on sharded minibatch
-indices `idx`.
+images:
+
+:begin_tab:`pytorch`
+`TRAIN_DDP` wraps `resnet18` in `DDP` and times `train_step` across processes
+(with optional `model.no_sync()` and kernel profiling).
+:end_tab:
+
+:begin_tab:`jax`
+`setup` replicates the model and dataset across the `'data'` mesh, and
+`train_step` runs a jitted SGD update on sharded minibatch indices `idx`.
+:end_tab:
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-2}
 %%tab pytorch
@@ -718,10 +726,13 @@ peer-to-peer access, NCCL copies data through host memory using its own GPU
 SM kernels, which occupy streaming multiprocessors and memory bandwidth that
 the backward pass would otherwise use.
 
-Even though an undocumented NCCL flag (`NCCL_SHM_USE_CUDA_MEMCPY=1`, present in
+An undocumented NCCL flag (`NCCL_SHM_USE_CUDA_MEMCPY=1`, present in
 NCCL 2.28–2.30) can offload those host-memory copies to the GPU's DMA copy
-engines in bare microbenchmarks, it deadlocks PyTorch DDP when overlapped with
-backward compute:
+engines in bare microbenchmarks:
+
+:begin_tab:`pytorch`
+The same flag deadlocks DDP when its allreduces overlap with backward compute.
+:end_tab:
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-6}
 %%tab pytorch, jax
@@ -745,13 +756,12 @@ across GPUs.
 ## Summary
 
 Production data parallelism drives $k$ GPUs either via $k$ independent
-processes synchronized through NCCL (`torchrun` + DDP) or via a single
-compiler-partitioned program (`jax.jit` + mesh shardings), grouping gradients
+processes synchronized through NCCL or via a single
+compiler-partitioned program, grouping gradients
 into buckets of 25–30 MiB to overlap allreduces with the backward pass. A
 one-step check against single-GPU references reveals whether batch
-normalization uses per-shard statistics (PyTorch DDP by default) or global
-statistics via extra collectives (JAX `Auto` sharding and PyTorch
-`SyncBatchNorm`). On our four RTX 4090s (communicating through host memory at
+normalization uses per-shard statistics or global
+statistics via extra collectives. On our four RTX 4090s (communicating through host memory at
 2.4 GB/s bus bandwidth), four GPUs deliver $3.1\text{--}3.3\times$ single-GPU
 throughput under weak scaling, and kernel profiling shows that SM contention
 from host-staged NCCL kernels claws back most of the time saved by overlapping

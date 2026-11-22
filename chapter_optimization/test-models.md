@@ -602,7 +602,7 @@ d2l.plot(list(range(1, 2001)),
 
 * **Too high ($\eta = 2.5$):** Exceeds the local stability threshold $2/L$ after the first step and diverges to `inf` within ten steps.
 * **Too low ($\eta = 0.1$):** Descends smoothly but slowly, reaching only $\sim 2.5$ nats/byte (bigram level) at step $2{,}000$.
-* **Well-tuned ($\eta = 0.5$):** Experiences brief early transient spikes as the network navigates initial high-curvature regions, then recovers and reaches $\sim 2.13$ nats/byte.
+* **Well-tuned ($\eta = 0.5$):** Experiences brief early transient spikes as the network navigates initial high-curvature regions, then recovers and reaches about $2.1$ nats/byte.
 
 On `FashionCNN`, plain SGD at $\eta = 0.3$ reaches a training loss of $\sim 0.22$ and a held-out test accuracy of $\sim 90\%$:
 
@@ -638,7 +638,7 @@ Across $5$ independent random seeds at a well-tuned learning rate, the final $10
 1. [code] **The edge of divergence on `TinyLM`.** Sweep plain SGD on `TinyLM` across $\eta \in \{0.7, 1.0, 1.4, 2.0\}$ across $5$ seeds (`lr_sweep(..., verbose=False)`). Record the survival rate, the step at which divergent runs fail, and the lowest surviving loss.
    :exlabel:`ex_test-models-edge`
 
-1. [code] **Multi-seed spread and standard error.** ● Run $20$ seeds of `TinyLM` with `torch.optim.AdamW` / `optax.adamw` (which we analyze in :numref:`sec_adam`) at $\eta = 3 \times 10^{-3}$ (`weight_decay=0`), compare the sample standard deviation $\sigma$ of `final_loss` against the normal range estimator $\text{range}/3.7$, and compute how many seeds $k$ are required to detect a $0.005$-nat difference at two standard errors ($\sigma\sqrt{2/k}$).
+1. [code] **Multi-seed spread and standard error.** ● Run $20$ seeds of `TinyLM` with AdamW (:numref:`sec_adam`) at $\eta = 3 \times 10^{-3}$ (`weight_decay=0`), compare the sample standard deviation $\sigma$ of `final_loss` against the normal range estimator $\text{range}/3.7$, and compute how many seeds $k$ are required to detect a $0.005$-nat difference at two standard errors ($\sigma\sqrt{2/k}$).
    :exlabel:`ex_test-models-range`
 
 1. [code] **Training loss vs. validation loss and overfitting small corpora.**
@@ -646,7 +646,7 @@ Across $5$ independent random seeds at a well-tuned learning rate, the final $10
     1. Explain why `final_loss` (averaged over the last $100$ training steps) is slightly higher ($0.02\text{--}0.03$ nats) than the post-step-$2000$ validation loss on `TinyLM`, and verify by evaluating the final checkpoint on held-out training windows.
     1. Restrict the corpus to $100{,}000$ bytes via `WikiText103(batch_size=64, num_steps=64, num_train=100000)` ($\sim 80$ epochs in $2{,}000$ steps) and plot training vs. validation loss every $250$ steps (`every=250`).
 
-1. [code] **Count-based $n$-gram landmarks.** Compute the empirical byte unigram entropy ($\sim 3.2$ nats) and add-one smoothed bigram ($\sim 2.5$ nats) and trigram cross-entropies from the first $10^7$ training bytes of `WikiText103` evaluated on the validation split, and compare them against the $2{,}000$-step SGD ($2.13$ nats) and AdamW ($1.59$ nats, :numref:`sec_adam`) losses of `TinyLM`.
+1. [code] **Count-based $n$-gram landmarks.** Compute the empirical byte unigram entropy ($\sim 3.2$ nats) and add-one smoothed bigram ($\sim 2.5$ nats) and trigram cross-entropies from the first $10^7$ training bytes of `WikiText103` evaluated on the validation split, and compare them against the $2{,}000$-step SGD (about $2.1$ nats) and AdamW ($1.59$ nats, :numref:`sec_adam`) losses of `TinyLM`.
    :exlabel:`ex_test-models-landmarks`
 
 [Discussions](https://d2l.discourse.group/t/36884)

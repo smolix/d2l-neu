@@ -191,9 +191,16 @@ print(f'window:  {tiles_visited(window_mask(n, w), b):.1%} of tiles')
 ```
 
 Both `windowed_attention` and the framework's fused sliding-window kernel
-(`flex_attention` with `create_block_mask` in PyTorch;
-`dot_product_attention` with `local_window_size=(w - 1, 0)` in JAX) match the
+match the
 dense masked definition up to float32 round-off:
+
+:begin_tab:`pytorch`
+The fused kernel is `flex_attention` with `create_block_mask`.
+:end_tab:
+
+:begin_tab:`jax`
+The fused kernel is `dot_product_attention` with `local_window_size=(w - 1, 0)`.
+:end_tab:
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-2}
 %%tab pytorch

@@ -356,7 +356,11 @@ d2l.plot(list(range(0, 2000, 25)),
                  f'Adam, lr {best_adam:g}'])
 ```
 
-On `TinyLM`, Adam reaches a target loss of $1.8$ nats in nearly half the steps of SGD with momentum ($650\text{--}800$ vs. $1{,}100\text{--}1{,}500$), finishes at a lower final loss, operates across a $10\times$ usable learning-rate window ($10^{-3}$ to $10^{-2}$), and remains finite even at $\eta = 3 \times 10^{-2}$ because its normalized update length is bounded by $\eta$. SGD's best rate, $\eta = 0.3$, sits one grid step below divergence: its worst one-step loss spikes are several times Adam's, one spike can set a run back so far that it never reaches $1.8$, and at $\eta = 0.5$ most runs diverge to `inf`. On larger Transformers with subword vocabularies, this gap widens further due to block-level Hessian heterogeneity :cite:`Zhang.Chen.Ding.ea.2024` and heavy-tailed token frequencies :cite:`Kunstner.Chen.Lavington.ea.2023,Kunstner.Yadav.Milligan.ea.2024`.
+On `TinyLM`, Adam reaches a target loss of $1.8$ nats in nearly half the steps of SGD with momentum ($650\text{--}800$ vs. $1{,}100\text{--}1{,}500$), finishes at a lower final loss, operates across a $10\times$ usable learning-rate window ($10^{-3}$ to $10^{-2}$), and remains finite even at $\eta = 3 \times 10^{-2}$ because its normalized update length is bounded by $\eta$. SGD's best rate, $\eta = 0.3$, sits one grid step below divergence: its worst one-step loss spikes are several times Adam's, and at $\eta = 0.5$ most runs diverge to `inf`. On larger Transformers with subword vocabularies, this gap widens further due to block-level Hessian heterogeneity :cite:`Zhang.Chen.Ding.ea.2024` and heavy-tailed token frequencies :cite:`Kunstner.Chen.Lavington.ea.2023,Kunstner.Yadav.Milligan.ea.2024`.
+
+:begin_tab:`pytorch`
+In this run, one spike sets an SGD seed back so far that it never reaches $1.8$.
+:end_tab:
 
 ### Role of $\epsilon$ and Limits of the Second-Moment Estimate
 :label:`subsec_adam-variance-estimate`
@@ -577,7 +581,7 @@ print(f'decayed: {n_decay} of {n} parameters')
 ### Optimizer State Memory
 :label:`subsec_adamw-memory`
 
-Finally, maintaining the two per-parameter buffers $(\mathbf{m}_t, \mathbf{v}_t)$ doubles the static parameter memory footprint. In 32-bit floating point ($4$ bytes per scalar), each trainable parameter requires **$16$ bytes** of device memory: $4$ bytes for the parameter $\mathbf{x}$, $4$ bytes for the gradient $\mathbf{g}$, and $8$ bytes for the AdamW state $(\mathbf{m}, \mathbf{v})$ (:numref:`sec_memory_precision`). For a $10^9$-parameter model, the optimizer state alone consumes $8\text{ GB}$ before storing any activations. Freezing parameters (`requires_grad=False`) or quantizing/factoring $(\mathbf{m}, \mathbf{v})$ directly eliminates or compresses this $8$-byte-per-parameter overhead.
+Finally, maintaining the two per-parameter buffers $(\mathbf{m}_t, \mathbf{v}_t)$ doubles the static parameter memory footprint. In 32-bit floating point ($4$ bytes per scalar), each trainable parameter requires **$16$ bytes** of device memory: $4$ bytes for the parameter $\mathbf{x}$, $4$ bytes for the gradient $\mathbf{g}$, and $8$ bytes for the AdamW state $(\mathbf{m}, \mathbf{v})$ (:numref:`sec_memory_precision`). For a $10^9$-parameter model, the optimizer state alone consumes $8\text{ GB}$ before storing any activations. Freezing parameters (leaving them out of the optimizer) or quantizing/factoring $(\mathbf{m}, \mathbf{v})$ directly eliminates or compresses this $8$-byte-per-parameter overhead.
 
 While AdamW normalizes each weight entry independently, 2D weight matrices act as linear operators on activation vectors. :numref:`sec_muon` asks whether we can do even better by normalizing the update of each 2D weight matrix as a whole operator rather than entry by entry.
 

@@ -509,7 +509,15 @@ print(f'forward pass {1e3 * t_forward:.1f} ms of a {1e3 * t_step:.1f} ms '
       f'of the throughput')
 ```
 
-Both estimates agree: the forward pass takes about a third of the step, so repeating it should retain at least three-quarters of the throughput (slightly more because embeddings and the output projection are not checkpointed). We now wrap each block in `Checkpointed`—using `torch.utils.checkpoint.checkpoint` in PyTorch and `nnx.remat` in JAX—verify logit equality, and measure both throughput (`kept=False`) and activation memory.
+Both estimates agree: the forward pass takes about a third of the step, so repeating it should retain at least three-quarters of the throughput (slightly more because embeddings and the output projection are not checkpointed). We now wrap each block in `Checkpointed`, verify logit equality, and measure both throughput (`kept=False`) and activation memory.
+
+:begin_tab:`pytorch`
+`Checkpointed` calls `torch.utils.checkpoint.checkpoint`.
+:end_tab:
+
+:begin_tab:`jax`
+`Checkpointed` calls `nnx.remat`.
+:end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab pytorch
@@ -744,7 +752,7 @@ for name, speed in branches.items():  # Measured on top of the last row
           '  (not kept)')
 ```
 
-Cumulatively, the single-GPU optimizations double training throughput, reaching roughly 50% of the RTX 4090's bf16 peak. Nearly all of the gain comes from speeding up the matrix products (bf16) and reducing memory traffic around them (Inductor fusion in PyTorch, cuDNN fused attention in JAX), whereas removing host overhead and enlarging the minibatch contribute a few percent each, just as the profiles predicted.
+Cumulatively, the single-GPU optimizations double training throughput, reaching roughly 50% of the RTX 4090's bf16 peak. Nearly all of the gain comes from speeding up the matrix products (bf16) and reducing memory traffic around them (kernel fusion), whereas removing host overhead and enlarging the minibatch contribute a few percent each, just as the profiles predicted.
 
 Note that each speedup ratio depends on its position in the sequence (Exercise :exref:`ex_ft-order`) and on the hardware balance: on a faster GPU (or with a smaller model), device execution is shorter, making host dispatch removal much more impactful.
 
@@ -848,7 +856,7 @@ Per $8{,}192$ tokens, the final step spends about $7\text{ ms}$ in matrix produc
 
 - A kernel profile classifies a training step's bottleneck and bounds the gain of each optimization before it is applied: reducing host dispatch saves at most the device idle time, kernel fusion saves at most the non-matmul device time, and doubling tensor-core precision throughput gives a speedup between $1/(1 - f/2)$ and $2$ when matrix products take a fraction $f$ of the step.
 - Optimizations must be verified for numerical correctness and measured cumulatively, because removing one bottleneck shifts the remaining share of the step.
-- On a single RTX 4090, our 19M-parameter GPT step doubled in speed (reaching ~50% MFU), driven almost entirely by bf16 matrix products and kernel fusion (Inductor / cuDNN FlashAttention).
+- On a single RTX 4090, our 19M-parameter GPT step doubled in speed (reaching ~50% MFU), driven almost entirely by bf16 matrix products and kernel fusion.
 - The data-parallel cost model $t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k)$ accurately predicted both a slowdown on 2 GPUs for the short fp32 step ($22\text{ ms}$ step vs. $31\text{ ms}$ PCIe allreduce) and a $\sim 3\times$ speedup on 4 GPUs for the longer batch-512 bf16 step ($90\text{--}100\text{ ms}$ step vs. $48\text{ ms}$ allreduce).
 
 ## Exercises
@@ -889,7 +897,7 @@ Per $8{,}192$ tokens, the final step spends about $7\text{ ms}$ in matrix produc
 
 1. [code] **Order of the changes.** Each speedup ratio in the cumulative table depends on the optimizations applied before it.
     1. Using the baseline profile and the bound in :numref:`subsec_ft-precision`, predict the speedup of applying bf16 directly to the uncompiled baseline.
-    1. Measure that speedup and compare it with your prediction and with the `+ bf16` row in the cumulative table. Then apply compilation (`+ compile` / `+ jit_partial`) on top of bf16 and explain how both ratios shifted using the kernel profiles.
+    1. Measure that speedup and compare it with your prediction and with the `+ bf16` row in the cumulative table. Then apply compilation (the table's second row) on top of bf16 and explain how both ratios shifted using the kernel profiles.
    :exlabel:`ex_ft-order`
 
 [Discussions](https://d2l.discourse.group/t/36793)

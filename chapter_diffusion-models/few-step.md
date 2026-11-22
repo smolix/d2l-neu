@@ -330,7 +330,15 @@ which changes how much the target varies between examples, instead of by
 satisfying the identity (Exercise :exref:`ex_few-step-stop-gradient`). Of
 all the steps of the derivation this is the one a reimplementation most
 easily gets wrong, since the code with and without it differs by a single
-`.detach()`.
+stop-gradient call.
+
+:begin_tab:`pytorch`
+The call is `.detach()`.
+:end_tab:
+
+:begin_tab:`jax`
+The call is `jax.lax.stop_gradient`.
+:end_tab:
 
 The loss leaves two choices: where $\mathbf{u}_{\textrm{ref}}$ comes from,
 and whether the end time $s$ is free or fixed at zero. The main methods

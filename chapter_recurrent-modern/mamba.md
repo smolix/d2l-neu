@@ -147,7 +147,7 @@ for name, mixer in (('S4D', lambda: d2l.S4D(48, rngs=rngs)),
         10, 48, [mixer() for _ in range(2)], rngs=rngs))
 ```
 
-As predicted, time-invariant `S4D` stays near chance ($\le 0.20$), whereas input-selective `minGRU` reaches $0.75$–$0.97$ accuracy. Notice why `minGRU` succeeds here despite starting with one-step gate half-lives (which failed on 1,000-step fixed-delay recall in :numref:`sec_ssm`): in selective copying, marked symbols occasionally land close to the queries, providing short-horizon gradients that progressively teach the gates to hold symbols across longer filler spans (Exercise :exref:`ex_mamba-short-memories`).
+As predicted, time-invariant `S4D` stays near chance ($\le 0.20$), whereas input-selective `minGRU` reaches $0.9$–$0.97$ accuracy. Notice why `minGRU` succeeds here despite starting with one-step gate half-lives (which failed on 1,000-step fixed-delay recall in :numref:`sec_ssm`): in selective copying, marked symbols occasionally land close to the queries, providing short-horizon gradients that progressively teach the gates to hold symbols across longer filler spans (Exercise :exref:`ex_mamba-short-memories`).
 
 ## Selective Dynamics
 
@@ -186,7 +186,7 @@ y_{t,c} &= \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}.
 $$
 :eqlabel:`eq_selective_ssm`
 
-Following :citet:`Gu.Dao.2023`, :eqref:`eq_selective_ssm` retains the exact ZOH decay $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ while approximating the ZOH input weight $(e^{\Delta\lambda} - 1)/\lambda$ by the first-order Euler weight $\Delta_{t,c}$ (which agrees when $\Delta|\lambda| \ll 1$ and allows large steps $\Delta_{t,c}$ to write with weight exceeding $1/|\lambda|$; see Exercise 1). The shapes of all quantities in :eqref:`eq_selective_ssm` are summarized below:
+Following :citet:`Gu.Dao.2023`, :eqref:`eq_selective_ssm` retains the exact ZOH decay $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ while approximating the ZOH input weight $(e^{\Delta\lambda} - 1)/\lambda$ by the first-order Euler weight $\Delta_{t,c}$ (which agrees when $\Delta|\lambda| \ll 1$ and allows large steps $\Delta_{t,c}$ to write with weight exceeding $1/|\lambda|$; see Exercise :exref:`ex_mamba-approximate-write`). The shapes of all quantities in :eqref:`eq_selective_ssm` are summarized below:
 
 | Quantity | Shape | Computed from |
 |---|---|---|
@@ -368,7 +368,7 @@ class SelectiveSSM(nnx.Module):  #@save
         self.D = nnx.Param(jnp.ones(H))
 ```
 
-We next add `log_coefficients` to compute the per-step log-decays $\Delta_{t,c}\boldsymbol{\lambda}$ and writes $\Delta_{t,c} u_{t,c}\mathbf{B}_t$ of shape `(batch_size, T, H, N)`, and `forward` / `__call__` to run `adjoint_scan` and contract the states with $\mathbf{C}_t$:
+We next add `log_coefficients` to compute the per-step log-decays $\Delta_{t,c}\boldsymbol{\lambda}$ and writes $\Delta_{t,c} u_{t,c}\mathbf{B}_t$ of shape `(batch_size, T, H, N)`, and the layer's forward pass to run `adjoint_scan` and contract the states with $\mathbf{C}_t$:
 
 ```{.python .input #mamba-the-layer-2}
 %%tab pytorch
@@ -712,6 +712,7 @@ Time-invariant state space models weight past inputs purely by lag and fail on c
 1. **The approximate write.** Mamba keeps the decay $e^{\Delta\lambda}$ of
    the zero-order hold but writes with weight $\Delta$ instead of
    $(e^{\Delta\lambda} - 1)/\lambda$.
+   :exlabel:`ex_mamba-approximate-write`
     1. For $\lambda = -1$, find the largest $\Delta$ for which the two
        weights differ by less than 10%.
     1. For one state with $\lambda = -1$, write vector 1, and the exact weight,

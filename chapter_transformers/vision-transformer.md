@@ -507,15 +507,15 @@ On a small 60,000-image dataset without data augmentation or large-scale pretrai
 1. **Patch size $p$, parameter count, and attention FLOPs.** In our $96 \times 96$ `ViT`, the patch size is $p = 16$ ($m = 36$ patches).
    1. How do the parameter count of `PatchEmbedding`, the parameter count of `pos_embedding`, and the parameter count of the $L$ `ViTBlock` layers change when you halve the patch size to $p = 8$ ($m = 144$) or quarter it to $p = 4$ ($m = 576$)?
    2. By what factor does the per-layer attention score matrix size $(m + 1)^2$ grow from $p = 16$ to $p = 8$ and $p = 4$? Train the $p = 8$ `ViT` for 10 epochs and compare its wall-clock time and validation accuracy against $p = 16$.
-:exlabel:`ex_vision-transformer-parameters-compute`
+   :exlabel:`ex_vision-transformer-parameters-compute`
 
-2. **`<cls>` readout vs. global average pooling.** Replace the `<cls>` token readout in `ViT` with global average pooling across the $m = 36$ patch tokens (`self.head(self.ln(X[:, 1:].mean(dim=1)))`, or removing `cls_token` altogether and averaging all 36 tokens). Train for 10 epochs on Fashion-MNIST and compare validation accuracy against `<cls>` readout.
+2. **`<cls>` readout vs. global average pooling.** Replace the `<cls>` token readout in `ViT` with global average pooling across the $m = 36$ patch tokens (`self.head(X[:, 1:].mean(1))`, or removing `cls_token` altogether and averaging all 36 tokens). Train for 10 epochs on Fashion-MNIST and compare validation accuracy against `<cls>` readout.
 
 3. **Exact permutation invariance without positional embeddings.** Set `model.pos_embedding` to all zeros and switch `model` to evaluation mode (disabling dropout). Prove algebraically—and verify numerically on a validation batch to within $10^{-6}$—that applying `shuffle_patches(X, perm)` for any permutation `perm` of $\{0, \dots, 35\}$ leaves the output logits `model(X)` completely unchanged.
-:exlabel:`ex_vision-transformer-position-information`
+   :exlabel:`ex_vision-transformer-position-information`
 
 4. **Statistical permutation test for 2D grid discovery.** Let $\Delta$ be the difference in `grid_similarity` between adjacent patches (grid distance 1) and patches at grid distance $\ge 4$ for the trained `model.pos_embedding`. Compute the null distribution of $\Delta$ across 1,000 random permutations of the 36 rows of `pos_embedding`, and report the empirical $p$-value. Is the faint grid structure of the learned positional embeddings distinguishable from chance?
-:exlabel:`ex_vision-transformer-grid-test`
+   :exlabel:`ex_vision-transformer-grid-test`
 
 5. **Sub-patch vs. whole-patch translation sensitivity.** In a CNN, shifting an input image by $s$ pixels shifts the internal feature maps by $s$ pixels (up to pooling stride). In `ViT` ($p = 16$), shifting an image by $s = 16$ pixels (one full patch width) merely shifts each patch into the adjacent patch slot, whereas shifting by $s = 8$ pixels (half a patch) cuts across every $16 \times 16$ patch boundary. Evaluate the validation accuracy of our trained `ViT` and `CompactResNet` on validation images shifted right by $s \in \{0, 2, 4, 8, 12, 16\}$ pixels (zero-padding the left border). Why does `ViT` show a non-monotonic dip at $s = 8$ relative to $s = 16$?
 

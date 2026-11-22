@@ -567,7 +567,7 @@ for name, (f, p) in sets.items():
           f'{prec:10.2f}{rec:8.2f}')
 ```
 
-As predicted in :numref:`tab_gan_cond_failures`, the nearest-centroid prototypes achieve near-perfect alignment ($0.90$, higher than random real images!) and precision ($0.98$), but suffer from severely degraded recall ($0.40$ vs. $0.83$) and worse FD ($3.03$ vs. $0.43$) because their feature covariance is artificially contracted. BigGAN's *truncation trick* deliberately trades recall for higher precision and alignment by truncating the latent distribution $z$ toward zero (Exercise :exref:`ex_conditional-biggan-s-truncation-trick`).
+As predicted in :numref:`tab_gan_cond_failures`, the nearest-centroid prototypes achieve near-perfect alignment (about $0.9$, higher than random real images!) and precision (about $0.97$), but suffer from severely degraded recall (under $0.4$ vs. about $0.85$) and worse FD (about $3$ vs. $0.43$) because their feature covariance is artificially contracted. BigGAN's *truncation trick* deliberately trades recall for higher precision and alignment by truncating the latent distribution $z$ toward zero (Exercise :exref:`ex_conditional-biggan-s-truncation-trick`).
 
 ## Summary
 

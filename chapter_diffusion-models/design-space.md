@@ -1017,7 +1017,11 @@ The chapter's default—velocity regression on the linear path with uniform $t$,
     1. (Code.) Upsample Fashion-MNIST to $56 \times 56$ by repeating pixels, and train the base recipe of the comparison on it twice, once on the linear path and once with $\lambda_t$ shifted by $-\log 4$, from two seeds each. Does the shift help by more than the seed spread, as the fourth part leads you to expect?
    :exlabel:`ex_design-space-resolution-schedule`
 1. **The forward posterior.** Derive :eqref:`eq_diffusion-posterior`.
-    1. Write $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \propto q(\mathbf{x}_k \mid \mathbf{x}_{k-1})\, q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$ as a product of two Gaussians in $\mathbf{x}_{k-1}$, add their precisions, and combine their means in proportion to precision.
+    1. Write
+
+       $$q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \propto q(\mathbf{x}_k \mid \mathbf{x}_{k-1})\, q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$$
+
+       as a product of two Gaussians in $\mathbf{x}_{k-1}$, add their precisions, and combine their means in proportion to precision.
     1. Show that $\tilde\beta_k \le \beta_k$, with equality only if $\sigma_{k-1}^2 = 1$. Where in the chain is $\tilde\beta_k$ much smaller than $\beta_k$?
     1. In the two-step example of the text, let the data be $\mathcal{N}(0, a^2)$. Show that the variance $\nu_2$ that minimizes the bound is $\mathrm{Var}(x_1 \mid x_2)$, and that it equals $\tilde\beta_2$ as $a \to 0$ and $\beta_2$ at $a = 1$, the two choices of :citet:`ho2020denoising`.
    :exlabel:`ex_design-space-forward-posterior`

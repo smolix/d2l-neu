@@ -685,7 +685,11 @@ In the penalized runs, the critic loss sits near its equilibrium value ($2\log 2
    :exlabel:`ex_convergence-alternating-updates`
 
 1. [code] **Local quadratic value and low-pass filtering.** ● Write $\mathcal{A} = |\ell''(0)|\,m + \gamma\mathcal{L}_m$ with $\mathcal{L}_m D = -\nabla \cdot (m \nabla D)$.
-    1. Using integration by parts, show that $|\ell''(0)|\int m\,D^2 + \gamma\int m\,\|\nabla_x D\|^2 = \langle D, \mathcal{A}D \rangle$ and derive :eqref:`eq_gan_local_value` by maximizing along rays $t D_0$ and applying Cauchy–Schwarz.
+    1. Using integration by parts, show that
+
+       $$|\ell''(0)|\int m\,D^2 + \gamma\int m\,\|\nabla_x D\|^2 = \langle D, \mathcal{A}D \rangle$$
+
+       and derive :eqref:`eq_gan_local_value` by maximizing along rays $t D_0$ and applying Cauchy–Schwarz.
     1. Let $p = \mathcal{N}(0, 1)$ and $q(x) = p(x)(1 + 0.1\sin(\omega x))$. Using `penalized_value`, compute the ratio of the penalized value at $\gamma \in \{0.01, 0.1, 1\}$ to the unpenalized value at $\gamma = 0$ for $\omega \in \{0.5, 2, 8\}$, and compare against the uniform-$m$ Fourier attenuation factor $(1 + 4\gamma\omega^2)^{-1}$.
    :exlabel:`ex_convergence-prove-eqref-eq-gan`
 

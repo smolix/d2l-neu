@@ -189,9 +189,11 @@ def train_recsys_rating(net, train_iter, test_iter, loss, trainer, num_epochs,
                 preds = [net(*t) for t in zip(*train_feat)]
                 ls = [loss(p, s) for p, s in zip(preds, train_label)]
             [l.backward() for l in ls]
-            l += sum([l.asnumpy() for l in ls]).mean() / len(devices)
+            # Sum of the per-example losses of this batch over all devices
+            batch_l = sum(float(l.sum()) for l in ls)
+            l += batch_l / values[0].shape[0]
             trainer.step(values[0].shape[0])
-            metric.add(l, values[0].shape[0], values[0].size)
+            metric.add(batch_l, values[0].shape[0], values[0].size)
             timer.stop()
         if len(kwargs) > 0:  # It will be used in section AutoRec
             test_rmse = evaluator(net, test_iter, kwargs['inter_mat'],

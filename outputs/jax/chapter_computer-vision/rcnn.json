@@ -29,12 +29,12 @@
       "outputs": []
     },
     "rcnn-fast-r-cnn-3": {
-      "code_fingerprint": "sha256:c300db2a5b331a6a594e6875a3d10e313b256b342b61cdfd962d5661b646f1a0",
+      "code_fingerprint": "sha256:0a2249a08a9f9d4ec23a10c01b3088195c4af06dd3df63d5fef818e3d08cc677",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[[[ 0.,  1.],\n         [ 4.,  5.]]],\n\n\n       [[[ 4.,  6.],\n         [ 8., 10.]]]], dtype=float32)"
+          "text": "Array([[[[ 5.,  6.],\n         [ 9., 10.]]],\n\n\n       [[[ 9., 11.],\n         [13., 15.]]]], dtype=float32)"
         }
       ]
     }

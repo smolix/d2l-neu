@@ -235,7 +235,7 @@ tconv = nnx.ConvTranspose(1, 1, kernel_size=(2, 2), padding='VALID',
                           transpose_kernel=True, use_bias=False,
                           rngs=nnx.Rngs(0))
 tconv.kernel[...] = K
-# Apply then remove the outer border (equivalent to padding=1 in PyTorch)
+# Apply, then remove the outer border (the effect of padding 1)
 tconv(X)[:, 1:-1, 1:-1, :]
 ```
 

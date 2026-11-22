@@ -29,35 +29,35 @@
       "outputs": []
     },
     "mf-training-and-evaluating-the-model-1": {
-      "code_fingerprint": "sha256:43cd6c27ef6042cd247dc5e58b99cfa8212a9264f56ae546cb8987c4d489aa9f",
+      "code_fingerprint": "sha256:f88665c9ad24aed1cd837eabe177987430ec2542c15a46ca757de18037bc81f7",
       "kind": "text",
       "outputs": []
     },
     "mf-training-and-evaluating-the-model-2": {
-      "code_fingerprint": "sha256:90661c65868b2d6ffc9b6652b0c74b0fde3c975844a9ee6caad8429f7a109823",
+      "code_fingerprint": "sha256:09d4404a24e9fbfdbf911a7dbc7cb15e9b406a4f0d4c1958ba706705fa51261b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.123, test RMSE 1.053\n146962.3 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.675, test RMSE 1.045\n97598.5 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mf/mf-training-and-evaluating-the-model-2-1.svg",
           "bytes": 21491,
-          "sha256": "sha256:c9e9f4a61b81ae8cc8488cf95ee88930eb9e2af23fe13f06f9addc5ea6b7e0c9"
+          "sha256": "sha256:01d6a5c2793089d8b4f95e6b65f54085d2ba3e6873ec207be20c356f82e5d314"
         }
       ]
     },
     "mf-training-and-evaluating-the-model-3": {
-      "code_fingerprint": "sha256:368de027318e15ea36a04d1419bf556cd2324c4ded856586cee9915d90ab0778",
+      "code_fingerprint": "sha256:096943d55f1d9e197d05098fa6866610f281fcfaf4e7fc69bd23e2813416de0e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([3.4713945], device=gpu(0))"
+          "text": "array([2.9466844], device=gpu(0))"
         }
       ]
     }

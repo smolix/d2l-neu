@@ -189,12 +189,12 @@ $$
 
 since $\dot x_c=(t-c)/2=\sqrt{x_c}$ for $t>c$. A particle at rest may leave
 at any time. The solutions fan out from the axis, one for each departure
-time (:numref:`fig_mdl-dyn-uniqueness-fan`), and we shall call this picture
-the *fan*. A model defined by this field would not assign one output to its
-input. The cause is the slope of $\sqrt{|x|}$, which is unbounded at $0$: a
+time (panel (a) of :numref:`fig_mdl-dyn-uniqueness-fan`), and we shall call
+this picture the *fan*. A model defined by this field would not assign one
+output to its input. The cause is the slope of $\sqrt{|x|}$, which is unbounded at $0$: a
 small displacement $x$ produces the much larger velocity $\sqrt{|x|}$.
 
-![Solutions of $\dot{x} = \sqrt{|x|}$ through $x(0) = 0$: the constant solution $x \equiv 0$ and a parabolic solution $x_c(t) = (t-c)^2/4$ for every departure time $c$. The slope of $\sqrt{|x|}$ is unbounded at the origin, so no constant bounds how fast the velocity changes there (the Lipschitz condition of the theorem below fails), and the solution is not unique.](../img/mdl-dyn-uniqueness-fan.svg)
+![Two fields that the theorem below does not cover. (a) Solutions of $\dot{x} = \sqrt{|x|}$ through $x(0) = 0$: the constant solution $x \equiv 0$ and a parabolic solution $x_c(t) = (t-c)^2/4$ for every departure time $c$. The slope of $\sqrt{|x|}$ is unbounded at the origin, so no constant bounds how fast the velocity changes there (the Lipschitz condition of the theorem fails), and the solution is not unique. (b) Solutions of $\dot x = x^2$ from $x_0 = 2$, $1$ and $1/2$ (dots). Here the slope of the field is bounded near every point but not by one constant for all $x$, and each solution, $x_0/(1 - x_0 t)$, exists only up to the time $t = 1/x_0$ (dashed), where it reaches infinity.](../img/mdl-dyn-uniqueness-fan.svg)
 :label:`fig_mdl-dyn-uniqueness-fan`
 
 For a well-behaved field a solution can be built by iterating the integral
@@ -297,9 +297,10 @@ $$
 x(t) = \frac{x_0}{1 - x_0 t},
 $$
 
-which from a start $x_0>0$ reaches infinity at the finite time $t=1/x_0$.
-The last step of the proof shows why the theorem does not cover it. On the
-interval $|x|\le\rho$ the field is Lipschitz with $L=2\rho$, since
+which from a start $x_0>0$ reaches infinity at the finite time $t=1/x_0$
+(panel (b) of :numref:`fig_mdl-dyn-uniqueness-fan`). The last step of the
+proof shows why the theorem does not cover it. On the interval
+$|x|\le\rho$ the field is Lipschitz with $L=2\rho$, since
 $|x^2-y^2|=|x+y|\,|x-y|$. The restart length $1/(2L)=1/(4\rho)$ therefore
 shrinks as the solution grows, and the restarts can add up to a finite time.
 A field that is Lipschitz only on bounded sets guarantees a solution only
@@ -369,12 +370,29 @@ exactly one reversed path leaves each point $\mathbf z$. Read forward, it is
 the one trajectory that ends at $\mathbf z$ at time $T$: every end state
 comes from exactly one start. $\blacksquare$
 
-A field that changes in time loses only the law
-:eqref:`eq_mdl-ode-flow-group`. An hour of wind from noon and an hour from
-midnight are different maps, so the map depends on the starting time as well
-as on the duration. We keep the symbol
-$\Phi_t$ for such a field, as the map from the state at time $0$ to the
-state at time $t$.
+A field that changes in time loses the law :eqref:`eq_mdl-ode-flow-group`
+in this form only. An hour of wind from noon and an hour from midnight are
+different maps, so the map depends on the starting time as well as on the
+duration. Write $\Phi_{s\to t}(\mathbf x)$ for the state at time $t$ of the
+trajectory that is at $\mathbf x$ at time $s$. Travelling from $s$ to $r$ and
+on from $r$ to $t$ is travelling from $s$ to $t$, by the same uniqueness
+argument as before:
+
+$$
+\Phi_{s\to s} = \mathrm{id},
+\qquad
+\Phi_{r\to t}\circ\Phi_{s\to r} = \Phi_{s\to t} .
+$$
+:eqlabel:`eq_mdl-ode-two-time-flow`
+
+The three times may come in any order, so $\Phi_{t\to s}$ inverts
+$\Phi_{s\to t}$. For an autonomous field $\Phi_{s\to t}=\Phi_{t-s}$, and
+:eqref:`eq_mdl-ode-two-time-flow` is the old law. We keep the symbol $\Phi_t$
+for a field that depends on time, as short for $\Phi_{0\to t}$. The
+two-time law is not a formality: the few-step samplers of
+:numref:`sec_diffusion-few-step` train a network to imitate
+$\Phi_{s\to t}$ itself, and some of them take the law as their training
+signal: two short jumps of the network must make its long one.
 
 One consequence is that two different trajectories are never at the same
 point at the same time: run backward from such a meeting, the theorem allows
@@ -388,11 +406,10 @@ generative flow needs, and the fields of many neural networks qualify. A
 field built from linear maps and Lipschitz activations, such as
 $\mathbf f(\mathbf x)=\mathbf W_2\tanh(\mathbf W_1\mathbf x+\mathbf b_1)+\mathbf b_2$,
 is globally Lipschitz, with $L$ at most the product of the weight norms and
-the activations' constants ($\|\mathbf W_2\|\,\|\mathbf W_1\|$ here). The continuous-time
+the activations' constants ($\|\mathbf W_2\|\,\|\mathbf W_1\|$ here). The
 model of :numref:`sec_mdl-neural-odes-cnf`, whose field may also depend on
-time (and whose trajectories we will approximate with numerical solvers such as
-forward Euler and RK4 in :numref:`sec_mdl-euler-runge-kutta`), is therefore
-well-posed, and by the corollary its map from input to output is a bijection.
+time, is therefore well-posed, and by the corollary its map from input to
+output is a bijection.
 
 ## Linear ODEs and Stability
 :label:`sec_mdl-linear-odes-stability`
@@ -693,11 +710,9 @@ whenever the equation is. Compare the factor $1+h\lambda$ of one compounding
 period, which follows the field for a time $h$ without looking again. On
 $\dot x=-50x$ with $h=0.05$ the exact factor is $e^{-2.5}=0.08$, while
 $1+h\lambda=-1.5$ flips the sign of the state and enlarges it. Stepping along
-the field in this way is forward Euler's method
-($\mathbf x_{k+1} = \mathbf x_k + h\mathbf f(\mathbf x_k)$), and as we will see
-in the next section (:numref:`sec_mdl-euler-runge-kutta`, alongside higher-order
-Runge--Kutta solvers such as RK4), the factor $-1.5$ explains why an oversized
-step blows up a training run.
+the field in this way is Euler's method, and
+:numref:`sec_mdl-euler-runge-kutta` shows what the factor $-1.5$ does to a
+training run.
 
 The recurrence is exact only while the input is constant over each step, and
 a sequence model reads samples of a signal that moves between them. What
@@ -768,7 +783,11 @@ $10(2e^{-2t}-e^{-t})$ vanishes, at $e^{-t}=\tfrac12$. There, at
 $t=\log2\approx0.69$, it equals $10(\tfrac12-\tfrac14)=2.5$, and
 $x_2=\tfrac14$, so a state that started with length $1$ now has length
 $\sqrt{2.5^2+0.25^2}\approx2.51$. From then on $x_1$ decays, in the long run
-like $10e^{-t}$, the rate of the slower mode.
+like $10e^{-t}$, the rate of the slower mode
+(:numref:`fig_mdl-dyn-nonnormal-transient`).
+
+![The length $\|\mathbf x(t)\|$ of the state of the triangular system, started at $\mathbf x_0=(0,1)$, on a logarithmic axis. It rises to $2.51$ at $t=\log 2$ before it decays like $10e^{-t}$. Dashed: $\|e^{\boldsymbol\Lambda t}\|_2=e^{-t}$ for $\boldsymbol\Lambda=\mathrm{diag}(-1,-2)$, the greatest length that a unit start can have at time $t$ under the diagonal matrix with the same eigenvalues. The two curves end with the same slope, which is all that the eigenvalues determine.](../img/mdl-dyn-nonnormal-transient.svg)
+:label:`fig_mdl-dyn-nonnormal-transient`
 
 The reason is the one of :numref:`subsec_mdl-transient-growth`, which treats
 the discrete-time case in full: the eigenvectors $\mathbf v_1=(1,0)$ and
@@ -979,12 +998,9 @@ exists.
        and compare it with the peak of the trajectory from $(0,1)$. Why can
        the first never be smaller than the second?
     1. Heavy-ball momentum on $\mathcal L(x)=\tfrac\lambda2x^2$ is the
-       recurrence $x_{k+1}=(1+\beta-\eta\lambda)x_k-\beta x_{k-1}$ (which we
-       will also connect to a damped oscillator in the next section,
-       :numref:`sec_mdl-euler-runge-kutta`, Exercise
-       :exref:`ex_mdl-odes-solvers-heavy-ball-ode`, where forward Euler steps via
-       $\mathbf x_{k+1} = \mathbf x_k + h\mathbf f(\mathbf x_k)$ and backward
-       Euler via $\mathbf x_{k+1} = \mathbf x_k + h\mathbf f(\mathbf x_{k+1})$).
+       recurrence $x_{k+1}=(1+\beta-\eta\lambda)x_k-\beta x_{k-1}$, which
+       Exercise :exref:`ex_mdl-odes-solvers-heavy-ball-ode` of
+       :numref:`sec_mdl-euler-runge-kutta` derives from a damped oscillator.
        It is the linear map $(x_{k+1},x_k)=\mathbf M(x_k,x_{k-1})$ with
        $\mathbf M=\left(\begin{smallmatrix}1+\beta-\eta\lambda&-\beta\\1&0\end{smallmatrix}\right)$.
        Show that $\mathbf M$ is not normal, that is,
@@ -1179,7 +1195,7 @@ When $f(x) = x^2$ is only *locally* Lipschitz ($L_\rho = 2\rho$ on $|x| \le \rho
 
 $$\dot{x} = x^2, \quad x(0) = x_0 > 0 \;\Longrightarrow\; x(t) = \frac{x_0}{1 - x_0 t}$$
 
-- **Why restarts stall at $t^\star = 1/x_0$:** As $x(t)$ grows, the safe Picard step $\delta_\rho = 1/(2L_\rho) = 1/(4\rho)$ shrinks rapidly enough that infinitely many restarts sum to $1/x_0$.
+- **Why the theorem gives out:** As $x(t)$ grows, the safe Picard step $\delta_\rho = 1/(2L_\rho) = 1/(4\rho)$ shrinks, and the restarts can add up to a finite time. They guarantee a solution only for a while; the blow-up time $t^\star = 1/x_0$ is read from the formula.
 :::
 
 ::: {.col .fig}

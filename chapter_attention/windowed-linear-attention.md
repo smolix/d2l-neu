@@ -624,8 +624,6 @@ for N in (16, 64, 256, 1024):
                                      for name, hit in recall(N).items()))
 ```
 
-<!-- TODO(rerun): check the values in the next two paragraphs against outputs/{pytorch,jax}/chapter_attention/windowed-linear-attention.json once the recall cell has run. They are rounded from Stage A's CPU table: window about w/N (1.00, 0.25, 0.06, 0.02); elu+1 about 0.2 at N = 16; outer-product state 1.00, 0.99, about 0.66, about 0.09; softmax 1.00 at every N. -->
-
 Softmax attention finds the pair at every $N$. The window finds it only when
 the pair lies among the last $w$, so its recall is about $w/N$: perfect at
 $N = 16$, a quarter at $N = 64$, and a few percent at $N = 1{,}024$. More

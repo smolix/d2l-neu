@@ -251,7 +251,7 @@ d2l.plot(list(range(1, 33)), [s['grad_q'] for s in stats.values()],
 
 In `post-norm`, the query gradient is largest at block 1, around $10^{-2}$, and falls to about $10^{-9}$ at block 32. This is the reverse of the vanishing gradients of a deep MLP, where the layers farthest from the loss receive the least. The gradient is not lost on the way back. It is lost because of what the deep blocks see on the way forward: once the tokens entering a block nearly coincide, every key receives the same score and every value is the same, so moving a query changes nothing in the output. The query gradient accordingly shrinks with the square of the token spread, one factor because the scores differ only through the deviations $\boldsymbol{\delta}_i$ and a second because the values do, and the key gradient shrinks with it. The other weights are not affected. At block 32 the gradients of `W_v` and `W_o` have the same order of magnitude in `post-norm` and `pre-norm` (the last line printed for each arm above).
 
-In `pre-norm`, the identity term $I$ in $\partial \mathbf{X}^{(L)} / \partial \mathbf{X}^{(\ell)} = I + \cdots$ carries the gradient from the loss to every block. Its query gradient is not uniform either: it declines by a factor of about 30 over the stack, as the token spread slowly decays. But it stays above $10^{-3}$ where post-norm loses seven orders of magnitude. :citet:`xiong2020layer` analyze a different imbalance of post-norm Transformers at initialization, namely large gradients for the parameters near the output, and show that this is why post-norm training depends on a learning-rate warmup while pre-norm trains without one.
+In `pre-norm`, the identity term $I$ in $\partial \mathbf{X}^{(L)} / \partial \mathbf{X}^{(\ell)} = I + \cdots$ carries the gradient from the loss to every block. Its query gradient is not uniform either: it declines by a factor of about 30 over the stack, as the token spread slowly decays. But it stays above $10^{-3}$ where post-norm loses more than six orders of magnitude. :citet:`xiong2020layer` analyze a different imbalance of post-norm Transformers at initialization, namely large gradients for the parameters near the output, and show that this is why post-norm training depends on a learning-rate warmup while pre-norm trains without one.
 
 ### RMSNorm
 :label:`subsec_rmsnorm`
@@ -694,7 +694,7 @@ Because an untrained $L$-block stack is a deterministic random function, we can 
 ::: {.cols .vc}
 ::: {.col}
 - **Vanishing $\mathbf{W}_q, \mathbf{W}_k$ gradients at the top:** When incoming tokens $\mathbf{x}_1, \dots, \mathbf{x}_n$ at block 32 are nearly identical, perturbing $\mathbf{W}_q$ or $\mathbf{W}_k$ shifts all attention scores equally and leaves the softmax weighted average unchanged ($\|\nabla_{\mathbf{W}_q^{(32)}} \mathcal{L}\|_F \sim 10^{-9}$).
-- **Not backward attenuation:** The post-norm $\mathbf{W}_q$ gradient is largest at block 1 ($\sim 10^{-2}$) and shrinks with the square of the token spread; $\mathbf{W}_v$ and $\mathbf{W}_o$ gradients at block 32 match pre-norm in order of magnitude. **Pre-norm** (`C1`) loses a factor of about 30 over 32 blocks, not seven orders of magnitude.
+- **Not backward attenuation:** The post-norm $\mathbf{W}_q$ gradient is largest at block 1 ($\sim 10^{-2}$) and shrinks with the square of the token spread; $\mathbf{W}_v$ and $\mathbf{W}_o$ gradients at block 32 match pre-norm in order of magnitude. **Pre-norm** (`C1`) loses a factor of about 30 over 32 blocks, not more than six orders of magnitude.
 :::
 
 ::: {.col .fig}
@@ -763,7 +763,7 @@ Scaling $\mathbf{W}_q$ and $\mathbf{W}_k$ by $\lambda \in \{1, 4, 16\}$ on $n = 
 @!transformer-block-normalizing-queries-and-keys
 
 ::: {.d2l-note}
-Without `QK-Norm`, a $16\times$ weight growth inflates logit standard deviation by $16^2 = 256\times$ and collapses attention entropy to $\approx 0.01\text{--}0.02$ nats (one-hot); with `QK-Norm`, logit spread ($\approx 1.0$) and entropy ($\approx 3.7$) remain completely invariant.
+Without `QK-Norm`, a $16\times$ weight growth inflates logit standard deviation by $16^2 = 256\times$ and collapses attention entropy to $\approx 0.01\text{--}0.03$ nats (one-hot); with `QK-Norm`, logit spread ($\approx 1.0$) and entropy ($\approx 3.7$) remain completely invariant.
 :::
 :::
 

@@ -466,7 +466,7 @@ for name, layer in (('gated linear attention', d2l.GatedLinearAttention),
           f'{twice[0]:11.3f} {twice[1]:.3f}{once[0]:11.3f} {once[1]:.3f}')
 ```
 
-Adding the 260-parameter `W_beta` head raises recall on rebound keys from $0.88$–$0.92$ (`gated linear attention`) to about $0.98$–$0.99$ (`Gated DeltaNet`), bringing rebound keys within $\sim 1$–$2$ percentage points of keys written only once.
+Adding the 260-parameter `W_beta` head raises recall on rebound keys from roughly $0.85$–$0.9$ (`gated linear attention`) to $0.96$ or more (`Gated DeltaNet`), bringing rebound keys within about $2$ percentage points of keys written only once.
 
 ### State Tracking
 :label:`subsec_dn-state-tracking`
@@ -475,7 +475,7 @@ Every experiment so far asked a memory to store something and to return it later
 
 A GRU solves this task the way a program would. Its gates see the previous state $\mathbf{h}_{t-1}$, so one step can compute "flip if the input is 1". The linear recurrences of this chapter gave that up for parallel training: their decays and writes depend on the input alone (:numref:`sec_linear-recurrence`). To flip a stored bit, such a recurrence has to multiply a coordinate of its state by a negative number, and the decay $\mathbf{z}_t \in (0, 1)$ of a minGRU can shrink a coordinate but never change its sign. The delta rule is under the same restriction as long as its write strength is a sigmoid, because the transition :eqref:`eq_dn-transition` then has an eigenvalue $1 - \beta_t \in (0, 1)$ along the key. With $\beta_t \in (0, 2)$ the eigenvalue can reach $-1$. A layer that writes a value $\mathbf{v}$ with $\beta_t = 2$ under one fixed key $\mathbf{k}$ on every 1, and writes nothing on a 0, changes its read by $\mathbf{S}_t\mathbf{k} = 2\mathbf{v} - \mathbf{S}_{t-1}\mathbf{k}$ on every 1. Starting from an empty memory, the read alternates between $2\mathbf{v}$ and $\mathbf{0}$, which is the parity.
 
-The construction exists, then, but does training find it? We train a one-block `d2l.SeqLM` of width 64 on random strings of 64 bits to output, at every step, the parity of the bits so far. We then test it on strings of 256 bits, which separates a model that has learned the rule from one that has only fit the lengths it was trained on. Four mixers compete: a GRU, a minGRU, `GatedDeltaNet`, and `GatedDeltaNetReflect`, which doubles the sigmoid of the write strength and is otherwise the same layer. If the argument above is right, the GRU and the layer with $\beta_t \in (0, 2)$ should be correct at every position, including those beyond the training length, while the minGRU and the sigmoid delta rule should stay near the chance level of $0.5$.
+The construction exists, then, but does training find it? We train a one-block `d2l.SeqLM` of width 64 on random strings of 64 bits to output, at every step, the parity of the bits so far. We then test it on strings of 256 bits, which separates a model that has learned the rule from one that has only fit the lengths it was trained on. Four mixers compete: a GRU, a minGRU, `GatedDeltaNet`, and `GatedDeltaNetReflect`, which doubles the sigmoid of the write strength and is otherwise the same layer. If the argument above is right, the GRU and the layer with $\beta_t \in (0, 2)$ should be correct at every position, including those beyond the training length, while the minGRU and the sigmoid delta rule should fail, and fall to the chance level of $0.5$ once the strings are longer than those they were trained on.
 
 ```{.python .input #deltanet-state-tracking-1}
 %%tab pytorch
@@ -577,7 +577,9 @@ for name, mixer in parity_mixers.items():
     print(f'{name:24s}{a:11.2f}/{c:.2f}{b:7.2f}/{e:.2f}')
 ```
 
-<!-- TODO(rerun): result paragraph for the parity table (cell deltanet-state-tracking-2), about 100-150 words, numbers at the precision both tabs share. It must state: (1) whether the GRU and `Gated DeltaNet, 2σ` reach about 1.00 on positions 1-64 AND keep it on positions 65-256; (2) whether `minGRU` and `Gated DeltaNet` (sigmoid) stay near chance, 0.5, at both ranges (slightly above chance inside the training lengths is expected); (3) the conclusion: what linear recurrence gave up is state-dependent updates, and the range of the transition's eigenvalues, not linearity itself, decides whether a matrix memory can track a state; one block of minGRU gets no round of state-dependent gating (this is what linear-recurrence.md's "one round per layer" sentence points here for); (4) one closing sentence on the limit: a trained layer only approaches beta = 2 (Exercise ex_dn-parity), and harder state tracking (permutations) needs more than one reflection per token. If any arm contradicts the expectation stated before the code, rewrite that expectation paragraph too; do not explain a failed arm away. -->
+The GRU is correct at every position in both runs, at the training lengths and beyond them. The minGRU and the sigmoid delta rule are not. On the first 64 positions they sit above chance, the minGRU at about $0.6$ and Gated DeltaNet between $0.7$ and $0.8$, but neither has learned the rule: beyond position 64 both answer at $0.50$, a coin toss. Doubling the write strength changes this. `GatedDeltaNetReflect` reaches $1.00$ on the training lengths in every run, and in most runs it keeps that accuracy out to 256 bits. Linearity, then, is not the obstacle. What the linear recurrences gave up is an update that depends on the state, and whether a matrix memory can track a state anyway is decided by the range of its transition's eigenvalues. One block of minGRU has neither a negative eigenvalue nor a round of state-dependent gating, and it fails.
+
+The reflection is delicate, though. A doubled sigmoid only approaches $\beta_t = 2$, so every flip also shrinks the stored bit a little, and a run that stops short of 2 loses accuracy on long strings (Exercise :exref:`ex_dn-parity`). Harder state tracking, such as following several cups through their swaps, needs more than one reflection per token.
 
 ## Memory as Regression
 
@@ -882,7 +884,7 @@ We compare a 1-block `GatedLinearAttention` model against a 1-block `GatedDeltaN
 @!deltanet-rebinding-2
 
 - **Why `gap=2` isolates the delta rule:** When a key is overwritten just $2$ pairs after it was first bound, both bindings have nearly the same age—so global decay $a_t$ cannot fade the old value without also erasing keys written once prior to that step.
-- **Reliable overwriting:** Adding the $260$-parameter `W_beta` projection lifts rebound-key accuracy to **$0.98$–$0.99$** across runs, outperforming `GatedLinearAttention` ($0.88$–$0.89$) while matching single-write accuracy ($0.99$–$1.00$).
+- **Reliable overwriting:** Adding the $260$-parameter `W_beta` projection lifts rebound-key accuracy to **$0.96$ or more** across runs, ahead of `GatedLinearAttention` (roughly $0.85$–$0.9$) and within about $2$ points of single-write accuracy.
 :::
 
 ::: {.slide title="Why We Tested 1 Block: Depth Approximates a Delta Step"}

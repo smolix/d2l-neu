@@ -283,9 +283,7 @@ gap = jnp.linalg.norm(steps[0] - steps[1]) / jnp.linalg.norm(steps[0])
 print(f'relative difference: {gap:.1e}')
 ```
 
-<!-- TODO(rerun): cell muon-the-update-and-rms-alignment-1 is new and not yet executed. The paragraph and tab notes below are written from Stage A's CPU check (update RMS / lr 0.175 for both in PyTorch, relative difference about 1.3e-2; 0.176 for both in JAX, relative difference about 1.3e-6). After the re-run of muon.md (pytorch, jax), check in both tabs that the two RMS values agree to two digits and are about 0.18, and that the relative difference is at most a few percent in PyTorch and negligible in JAX; the PyTorch tab note attributes its difference to bfloat16. -->
-
-The two updates agree, and both have an entrywise RMS of about $0.18\,\eta$. This is a little below the nominal $0.2\,\eta$ because five Newton–Schulz iterations leave the singular values spread between $0.68$ and $1.13$, not at $1$. The experiments below keep our own implementation.
+The two updates agree to within about a percent, and both have an entrywise RMS of about $0.18\,\eta$. This is a little below the nominal $0.2\,\eta$ because five Newton–Schulz iterations leave the singular values spread between $0.68$ and $1.13$, not at $1$. The experiments below keep our own implementation.
 
 :begin_tab:`pytorch`
 `torch.optim.Muon` accepts only 2D parameters, so biases, normalization parameters, and embeddings still need a second optimizer. Its setting `adjust_lr_fn='match_rms_adamw'` is the factor $0.2\sqrt{\max(m, n)}$; the default, `'original'`, multiplies by $\sqrt{\max(1, m/n)}$ instead, and the default weight decay is $0.1$. The library runs Newton–Schulz in bfloat16, which accounts for the difference of about a percent between the two updates.
@@ -458,7 +456,7 @@ for name, lr, vals in [('AdamW', best_adamw, adamw_val),
           f'{near[0]:g} to {near[-1]:g}')
 ```
 
-On `TinyLM`, Muon+AdamW establishes a $>0.1$-nat validation lead at step $500$, crosses the $1.6$-nat threshold at least one checkpoint ($250$ steps) earlier than AdamW, and expands the usable learning-rate window up to $\eta = 3 \times 10^{-2}$ (where AdamW finishes near or above $2$ nats because rank-$1$ early gradients under entrywise normalization can have spectral norm $\sqrt{\min(m, n)}$ times larger than an orthogonalized update).
+On `TinyLM`, Muon+AdamW establishes a $>0.1$-nat validation lead at step $500$, crosses the $1.6$-nat threshold at least one checkpoint ($250$ steps) earlier than AdamW, and expands the usable learning-rate window up to $\eta = 3 \times 10^{-2}$ (where AdamW finishes well above $2$ nats because rank-$1$ early gradients under entrywise normalization can have spectral norm $\sqrt{\min(m, n)}$ times larger than an orthogonalized update).
 
 At larger scale the advantage is smaller and less well documented. With full learning-rate decay, :citet:`Wen.Hall.Ma.ea.2025` measure step reductions over heavily tuned AdamW that shrink as the model grows, from about $1.4\times$ at $0.1\text{B}$ parameters to about $1.1\times$ at $1.2\text{B}$. :citet:`Liu.Su.Yao.ea.2025` report roughly twice the compute efficiency of AdamW in their own scaling experiments. The trillion-parameter Kimi K2 was trained with Muon and attention-logit clipping :cite:`Kimi.Team.2025`, but no AdamW run exists at that size to compare it with. The saving in optimizer state, nearly half, does not depend on scale.
 
@@ -711,7 +709,7 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 ::: {.cols .vc}
 ::: {.col}
 - Sweeping both `AdamW` and the `Muon + AdamW` hybrid across $\eta \in \{10^{-3}, 3{\times}10^{-3}, 10^{-2}, 3{\times}10^{-2}, 10^{-1}\}$ ($\lambda = 0.1$ on hidden matrices, $2{,}000$ steps from identical initial weights):
-  - **Fast early progress:** At step $500$, Muon+AdamW leads validation loss by **$>0.10$ nats** ($1.75$ vs. $1.87$ nats, $>6\times$ the multi-seed spread).
+  - **Fast early progress:** At step $500$, Muon+AdamW leads validation loss by **$>0.10$ nats** (about $1.7$–$1.75$ vs. $1.88$ nats).
   - **Earlier threshold crossing:** Crosses $1.60$ validation nats at least **$250$ steps earlier** than AdamW.
 :::
 
@@ -729,14 +727,14 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 ::: {.cols}
 ::: {.col}
 - **AdamW learning-rate sweep:**
-  - At $\eta = 0.03$ ($3\times$ above $\eta^\star = 0.01$), AdamW stalls above $2.0$ nats because early rank-1 sign updates have spectral norm $\sqrt{\min(m,n)} \approx 11\times$ larger than an orthogonalized update of equal entry RMS.
+  - At $\eta = 0.03$ ($3\times$ above the top of its usable window, $\eta = 0.01$), AdamW stalls above $2.4$ nats because early rank-1 sign updates have spectral norm $\sqrt{\min(m,n)} \approx 11\times$ larger than an orthogonalized update of equal entry RMS.
 
 @!muon-the-race-on-the-language-model-1
 :::
 
 ::: {.col}
 - **Muon + AdamW hybrid sweep:**
-  - By bounding the spectral norm of every hidden matrix update, the hybrid remains trainable at $\eta = 0.03$ ($1.65$ validation loss), expanding the usable LR window upward by $3\times$.
+  - By bounding the spectral norm of every hidden matrix update, the hybrid remains trainable at $\eta = 0.03$ (validation loss about $1.67$), expanding the usable LR window upward by $3\times$.
 
 @!muon-the-race-on-the-language-model-2
 :::

@@ -659,7 +659,7 @@ In 35 iterations from the hanging equilibrium $(\pi, 0)$, iLQR discovers a three
 
 - **Steps 0–10 (back-swing):** Pushes left ($u_0 = -1.78$) to $\vartheta_{10} = 2.65\text{ rad}$.
 - **Steps 10–30 (energy pump):** Reverses torque ($u_{20} = +1.68$) to swing through the bottom to $\vartheta_{30} = 4.04\text{ rad}$.
-- **Steps 30–80 (whip & catch):** Reverses again ($u_{40} = -1.83$), hitting peak speed $\dot{\vartheta}_{40} = -4.44\text{ rad/s}$ and braking to rest at $\vartheta_{80} = 0.0001\text{ rad}$.
+- **Steps 30–80 (whip & catch):** Reverses again ($u_{40} = -1.83$), still moving at $\dot{\vartheta}_{40} = -4.44\text{ rad/s}$ on the way up, and braking to rest at $\vartheta_{80} = 0.0001\text{ rad}$.
 :::
 
 ::: {.col}

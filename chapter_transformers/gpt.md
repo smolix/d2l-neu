@@ -458,7 +458,7 @@ for warmup in (100, 0):  # Post-norm blocks, with and without the warmup
     print(f'post-norm, warmup {warmup:>3}: validation {loss:.3f}')
 ```
 
-<!-- TODO(rerun): post-norm result. One or two sentences from the two losses printed above (warmup 100, warmup 0), read against the pre-norm SwiGLU runs at about 1.34 nats/byte. Needs the re-run of gpt.md (pytorch, jax); state only what both tabs show. -->
+It does not. Both post-norm runs end at $3.17$ nats per byte, against about $1.34$ for the pre-norm model. We have seen this number before: it is the unigram entropy computed above, so the post-norm model has learned how often each byte occurs and nothing about the bytes that precede it. At the learning rate of the main run, 100 steps of warmup do not rescue it.
 
 ### Comparing Against a Matched Recurrent Baseline
 :label:`subsec_gpt-rnn-baseline`
@@ -1013,9 +1013,9 @@ To distinguish genuine architectural improvements from random initialization noi
 
 @!gpt-run-to-run-spread
 
-- **Tight run-to-run repeatability:** Across three random seeds, validation loss varies by only **$0.008\text{--}0.012\text{ nats/byte}$**.
+- **Tight run-to-run repeatability:** Across three random seeds, validation loss varies by **less than $0.01\text{ nats/byte}$**.
 - **Statistically clear `SwiGLU` win:** At identical parameter count ($4.79\text{M}$) and step time, `SwiGLU` beats `GELU` by **$\sim 0.06\text{ nats/byte}$** ($> 5\times$ the seed spread).
-- **Post-norm arm:** `train_lm` also trains `pre_norm=False` blocks with and without the 100 warmup steps, testing normalization placement in training and not only at initialization.
+- **Post-norm arm:** With `pre_norm=False` blocks, the same recipe ends at the unigram entropy, **$3.17\text{ nats/byte}$**, with or without the 100 warmup steps: the model learns byte frequencies and nothing about context.
 :::
 
 ::: {.slide title="Comparison With a Parameter-Matched Recurrent Model"}
@@ -1026,7 +1026,7 @@ We train a matched `d2l.RNNLM` ($d_{\text{rnn}} = 1{,}920$, $4.74\text{M}$ param
 @!gpt-against-a-recurrent-network
 
 ::: {.d2l-note}
-**Why the gap widens with context position $t$:** At $t = 0$ (1 byte of context), both models score $2.46\text{ nats}$ (the bigram limit). By $t = 16 \dots 127$, the RNN saturates near $1.41\text{ nats}$ because history must squeeze through $t$ sequential $\tanh$ steps, whereas `GPT` attends directly to any prior byte in $O(1)$ hops ($1.31\text{ nats}$).
+**Why the gap widens with context position $t$:** At $t = 0$ (1 byte of context), both models score about $2.5\text{ nats}$ (the bigram limit is $2.45$). By $t = 16 \dots 127$, the RNN levels off at about $1.4\text{ nats}$ because history must squeeze through $t$ sequential $\tanh$ steps, whereas `GPT` attends directly to any prior byte in $O(1)$ hops (about $1.3\text{ nats}$).
 :::
 :::
 

@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(-2.2239988e-10)"
+          "text": "array(-6.465939e-10)"
         }
       ]
     },
@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([0.99991006, 0.99842036, 1.0034281 , 0.9870582 , 0.996367  ,\n        0.9980115 , 0.9891705 , 0.99926645]),\n True)"
+          "text": "(array([0.9898311 , 0.9988177 , 0.99648666, 0.9885453 , 0.99990636,\n        0.9934175 , 0.99768347, 0.9945247 ]),\n True)"
         }
       ]
     },
@@ -80,14 +80,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error 0.00098\n"
+          "text": "mean squared error 0.00034\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "custom-layers/custom-layers-layers-with-fixed-state-1-1.svg",
-          "bytes": 22311,
-          "sha256": "sha256:d67457cf7135650346bbbc720bfb2030b5d53205fcf98c67c018c53646071c29"
+          "bytes": 22312,
+          "sha256": "sha256:076f4e56fd32a41a15f642f27b0c5e18a0e4bf704631724d5f609f4d3f18f487"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear layer only: mean squared error 0.52\nfull state:        mean squared error 0.00098\n"
+          "text": "linear layer only: mean squared error 0.81\nfull state:        mean squared error 0.00034\n"
         }
       ]
     },
@@ -134,7 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start 162, rounding 162, straight-through 1.3, rounded target 1.01\n"
+          "text": "start 151, rounding 151, straight-through 0.835, rounded target 0.404\n"
         }
       ]
     },
@@ -145,6 +145,16 @@
         {
           "type": "execute_result",
           "text": "(True, True)"
+        }
+      ]
+    },
+    "custom-layers-functions-with-custom-gradients-1": {
+      "code_fingerprint": "sha256:c010667ff640e79df392bdb1216658115b92e90bebffcf845770d59422227b19",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(True, False)"
         }
       ]
     }

@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H: (8, 256) O: (8, 10)\nloss 2.294, fraction of active units 0.48\n"
+          "text": "H: (8, 256) O: (8, 10)\nloss 2.300, fraction of active units 0.50\n"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 37952,
-          "sha256": "sha256:ea9051d58430405126a7f88cbc46ad39c177c3e69c4388015945c40cacef46f9"
+          "bytes": 37959,
+          "sha256": "sha256:9f72834eeca23f2e970dcd6d089b7170aaf61abeda5782ab80b7da26a102489a"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 29414,
-          "sha256": "sha256:e26d7c8a9c7183d31ac61a6432969c26cdeee0dc18ca40b13f862ec01e9176a8"
+          "bytes": 29419,
+          "sha256": "sha256:05161498b3112740854776bda455ef71996de552990fadb530cd93e8516c536c"
         }
       ]
     },
@@ -87,35 +87,51 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.868\n  concise MLP: 0.870\n  softmax regression: 0.841\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.867\n  concise MLP: 0.871\n  softmax regression: 0.841\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training accuracy of the MLP from scratch: 0.898\n"
+          "text": "training accuracy of the MLP from scratch: 0.896\n"
+        }
+      ]
+    },
+    "mlp-implementation-accuracy-4": {
+      "code_fingerprint": "sha256:55b2b8b306734ebcbdd955448721c8c9e011c7ade071f350337415b46e9228e9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "concise MLP: 1302 errors, 799 of them between two tops\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "softmax regression: 1599 errors, 944 of them between two tops\n"
         }
       ]
     },
     "mlp-implementation-what-the-hidden-units-compute-1": {
-      "code_fingerprint": "sha256:ed8fd1f245811c0339a77cdaa314ab4f82e909dd7bde6b33ce055431c420e30e",
+      "code_fingerprint": "sha256:5e380055a285f1b5c3c9d6e30bc0eeeccf42606b48d62edbb50dc3a39cadaf9e",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-what-the-hidden-units-compute-2": {
-      "code_fingerprint": "sha256:923d1bb95a759f790b047874721676d2e8eb67a42877c3f09579a24982067daf",
+      "code_fingerprint": "sha256:45c6777114a253037df4b01423008ac7fba8a533077db36f3e611d80a4cdaa13",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-what-the-hidden-units-compute-2-1.svg",
-          "bytes": 72578,
-          "sha256": "sha256:09b96cf7366742f86e25fbb9aa3178662262e7da49bb5a2b02bbbd77e4648802"
+          "bytes": 71892,
+          "sha256": "sha256:22ff9e777aa54064057b68595e6c30d7e8ba739d344dc49c6ec1de6021f54b44"
         }
       ]
     },
     "mlp-implementation-parameters-computation-and-time": {
-      "code_fingerprint": "sha256:8286e00a4c7f80316229f6160c64f1a9ee53d874b5a14453996abff601ef836e",
+      "code_fingerprint": "sha256:a3223e45fadf302e8553076d7dd7603f086b70b5d95589bd7bbd1a4418ba6027",
       "kind": "text",
       "outputs": [
         {

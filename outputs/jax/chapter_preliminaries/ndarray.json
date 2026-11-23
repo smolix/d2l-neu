@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[-0.90856355, -0.01077863, -0.60968226,  0.6936429 ],\n       [-0.39359364,  2.0331638 , -1.148605  ,  0.7678406 ],\n       [-1.1278664 , -0.47257942,  0.07155217, -2.0377278 ]],      dtype=float32)"
+          "text": "Array([[ 0.21832727,  1.0848601 ,  0.29606727, -0.6687802 ],\n       [-0.3902798 ,  0.5969642 , -0.4338682 , -0.09060081],\n       [-0.19822368, -0.5707412 , -0.9283469 , -2.4065652 ]],      dtype=float32)"
         }
       ]
     },
@@ -123,8 +123,18 @@
         }
       ]
     },
+    "ndarray-reshaping-3": {
+      "code_fingerprint": "sha256:c2ef013fedb50ec26c7c5802d8d56fef969645bf0193fd90b95b054af59e7238",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((256, 28, 28, 1),\n Array([[ 0.,  1.,  2.],\n        [ 3.,  4.,  5.],\n        [ 6.,  7.,  8.],\n        [ 9., 10., 11.]], dtype=float32),\n Array([[ 0.,  4.,  8.],\n        [ 1.,  5.,  9.],\n        [ 2.,  6., 10.],\n        [ 3.,  7., 11.]], dtype=float32))"
+        }
+      ]
+    },
     "ndarray-indexing-and-slicing-1": {
-      "code_fingerprint": "sha256:fe38ce3915bc884e1c7fd72b69a81b5a4a66108036884eda95f74001dd8eb2a6",
+      "code_fingerprint": "sha256:06ecb438f8890cb8e521cc39e9222be3c7d9d00fb14e4d9de9360ffb09b48493",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +144,7 @@
       ]
     },
     "ndarray-indexing-and-slicing-4": {
-      "code_fingerprint": "sha256:84273da34480585297618fdd47001fe2158b5eef5bcb828661963d418b17067f",
+      "code_fingerprint": "sha256:387921a35fd7bff04506c95a0ad20d14254a03751b3cfb6aee9d33e6c1170926",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +154,7 @@
       ]
     },
     "ndarray-indexing-and-slicing-5": {
-      "code_fingerprint": "sha256:594bfc6fe19a0a6d478337462b32666b53370aa87a623f0733d1d93cf24cf180",
+      "code_fingerprint": "sha256:c3437fc7dc2d2f5183d6f6b266d21c564b34c6114077fe24d5c1cad7e36149b9",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +164,7 @@
       ]
     },
     "ndarray-indexing-and-slicing-6": {
-      "code_fingerprint": "sha256:4e163fe245b5220f8ad71e042b6204d9734906d40a82d2b1bee5fe706ed0f280",
+      "code_fingerprint": "sha256:8e54ca9bb3080540e78dfdbf9e7ad52620de73c4f0f36562f37f54b82ec559fd",
       "kind": "text",
       "outputs": [
         {
@@ -164,7 +174,7 @@
       ]
     },
     "ndarray-indexing-and-slicing-7": {
-      "code_fingerprint": "sha256:6e66af3ad89c095f4470d0132963aaf1d0a5eab22b2592f8bf759a46aff0afd3",
+      "code_fingerprint": "sha256:5189ce8ebbf4fda1073aad6bf63727e322facbc3a26d1ac7dbe059726d55e7d6",
       "kind": "text",
       "outputs": [
         {
@@ -174,7 +184,7 @@
       ]
     },
     "ndarray-indexing-and-slicing-2": {
-      "code_fingerprint": "sha256:1fc1fb3cff0542a195d434957699285a92b36b47fae063cb11371275ca5760e1",
+      "code_fingerprint": "sha256:901dd1877938968da0c8978d56437009f8836ce4acf25867555be244166bcafd",
       "kind": "text",
       "outputs": [
         {
@@ -184,7 +194,7 @@
       ]
     },
     "ndarray-indexing-and-slicing-3": {
-      "code_fingerprint": "sha256:352b09d9adf133178f1bab55942dda5ee7c483f2218c78bbc243d015ad830eef",
+      "code_fingerprint": "sha256:a3a493c60c2827ff340d212da81d0ef4e371293430d15e28e3bbe109efe0ef79",
       "kind": "text",
       "outputs": [
         {
@@ -194,7 +204,7 @@
       ]
     },
     "ndarray-operations-2": {
-      "code_fingerprint": "sha256:6b7e83547d638e69dc0d6e4ee52353066a526778776de23108148c8559129570",
+      "code_fingerprint": "sha256:be9ae28bbddddf3312202853ba5265e6ceadbc8db09cf87a7669024103488a6e",
       "kind": "text",
       "outputs": [
         {
@@ -204,7 +214,7 @@
       ]
     },
     "ndarray-operations-1": {
-      "code_fingerprint": "sha256:fc311c648166fab881ed904e85f528ac41ec9119215e2c4a5d0110b8710aa34f",
+      "code_fingerprint": "sha256:0a2b02bb0970c073db7faf3d3b49388a1f88fcdaa8247edd6396c955ead81c76",
       "kind": "text",
       "outputs": [
         {
@@ -214,18 +224,18 @@
       ]
     },
     "ndarray-elementwise-operations-1": {
-      "code_fingerprint": "sha256:7e58394c442ec0ff6692cb0dcef9a33a8bcad0d11a352f8dfb0964a15179a0a4",
+      "code_fingerprint": "sha256:30fd4773006855cf23d7ade757cb23e4374ddd04ca2e58cc49cf94966feb2d59",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "float32\n[172  75 171 227]\n[0.67450976 0.29411763 0.6705882  0.890196  ]\n"
+          "text": "float32\n[204 119 139 153]\n[0.79999995 0.46666664 0.545098   0.59999996]\n"
         }
       ]
     },
     "ndarray-operations-4": {
-      "code_fingerprint": "sha256:14dcfbcc91b98af272c2e14fb97d287e1aaf25d6bb9b73726d3b3027c78a9a3e",
+      "code_fingerprint": "sha256:23b1d1ddee116d6452bb31d8bf8089555d7c7308268db9c81ca37a2593338c0d",
       "kind": "text",
       "outputs": [
         {
@@ -235,7 +245,7 @@
       ]
     },
     "ndarray-operations-5": {
-      "code_fingerprint": "sha256:418a59489d9e589839674d11f024ba21c6ea5caffecabe4b3662191beb68e77e",
+      "code_fingerprint": "sha256:37cc1254a54225409062556a5cf9090ecda0f566b2d20edf2f3c691df51b16eb",
       "kind": "text",
       "outputs": [
         {
@@ -245,7 +255,7 @@
       ]
     },
     "ndarray-broadcasting-4": {
-      "code_fingerprint": "sha256:78602621fd0d84055d14c324f9d1d0b18a65b3d9d20b7f28c9d6722ad512dc65",
+      "code_fingerprint": "sha256:f127b65310d9f7b1280190f6d2842b85e0833fce193797e3bcc9d37a3762ad2f",
       "kind": "text",
       "outputs": [
         {
@@ -255,7 +265,7 @@
       ]
     },
     "ndarray-broadcasting-1": {
-      "code_fingerprint": "sha256:59e10ccdc161d26fbfac18b99bc2e793b0cf1877506f5aa9a478aae936e577ae",
+      "code_fingerprint": "sha256:694d785c14a62a0cd79215db0fe6e4b90b3f0e9b1ab2d4710f11c5e8e20ef1d5",
       "kind": "text",
       "outputs": [
         {
@@ -265,7 +275,7 @@
       ]
     },
     "ndarray-broadcasting-2": {
-      "code_fingerprint": "sha256:e5b452870505cbe8f770a6b13c424b1bc975c90af8ed7fd2e58934d13d19d6d0",
+      "code_fingerprint": "sha256:1861f0c8e2d9932625e0983bbf46541265e67324ba6e4bb13a93032bf27f4085",
       "kind": "text",
       "outputs": [
         {
@@ -275,7 +285,7 @@
       ]
     },
     "ndarray-broadcasting-3": {
-      "code_fingerprint": "sha256:b4bdad2ba0d668f29e925ba068b0cc5ea2e1a1c1d71325c677015c82a7efe724",
+      "code_fingerprint": "sha256:11d8a8749001d8ed8ce7391945c88f5efa1733d443ee7dcd22eff48b84c8f352",
       "kind": "text",
       "outputs": [
         {
@@ -286,7 +296,7 @@
       ]
     },
     "ndarray-operations-3": {
-      "code_fingerprint": "sha256:ea00b32742b41059cdf1960ec1655bb2d229b941c49ee1626ff9bb911a46a4aa",
+      "code_fingerprint": "sha256:5f96f279f65c563d84570823ae7418655afac1319254685ad0ba837180d0e571",
       "kind": "text",
       "outputs": [
         {
@@ -296,7 +306,7 @@
       ]
     },
     "ndarray-concatenation-1": {
-      "code_fingerprint": "sha256:20bc041675099fa81eadfcbc273e750edf0854ca1303991f3df2aa0acd53e1f0",
+      "code_fingerprint": "sha256:86ad096b87a3fa87529d6b9bda76aa10b786c8751fe7b7b9457bd1e43780e29c",
       "kind": "text",
       "outputs": [
         {
@@ -306,7 +316,7 @@
       ]
     },
     "ndarray-saving-memory-1": {
-      "code_fingerprint": "sha256:e21fe55553f0fa3a52527421082867e88341f840259516148875e916d48f219b",
+      "code_fingerprint": "sha256:b627c54cafdfdaeb466d2e9de25f2e434275b9d1b012c774b77882960ea36147",
       "kind": "text",
       "outputs": [
         {
@@ -316,7 +326,7 @@
       ]
     },
     "ndarray-saving-memory-3": {
-      "code_fingerprint": "sha256:a16ff472f13dd5c8268152f2279e0163ebcba9f1cd70e24a9015ad69faf8360e",
+      "code_fingerprint": "sha256:18d451051a79b7f8b15bb247e69695aac418e0eb63b931a4415d09da2fd8fb60",
       "kind": "text",
       "outputs": [
         {
@@ -326,7 +336,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-1": {
-      "code_fingerprint": "sha256:c71ff736c663c501383fb9b1209438836f7f6cd1ec1ebf77cf691fb0994a41b6",
+      "code_fingerprint": "sha256:b635ce9305f765ae99c6b83f17ebb086ed33566fd3053ac056b071d07e0754ea",
       "kind": "text",
       "outputs": [
         {
@@ -336,7 +346,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-3": {
-      "code_fingerprint": "sha256:bc8fa0c2270dae8f6b0d7f5f80101a3b531f77aab85e802eba8925048e59ec75",
+      "code_fingerprint": "sha256:595df37a689798a94d826ea31a691c5af506000a05eb192df94042827e7a79b3",
       "kind": "text",
       "outputs": [
         {
@@ -347,7 +357,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-2": {
-      "code_fingerprint": "sha256:9b5bc91c66f307162be7fe1433cafc743e72329181a269d562ca94b4ab03dfb4",
+      "code_fingerprint": "sha256:9a54e94e6784b10a368e5406ba03a711bb85ecd249802ee871871fbeb5886f7c",
       "kind": "text",
       "outputs": [
         {

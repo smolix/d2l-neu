@@ -106,26 +106,37 @@
       "kind": "text",
       "outputs": []
     },
+    "numerics-training-in-fp32-and-in-16-bits-1": {
+      "code_fingerprint": "sha256:fd11af7111d6e929acbfca023cd66665647ee6671ba64db2ff89a14a4cc44fa2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.01: 91% of updates rounded away, 78% of the update mass\nlr 0.1: 51% of updates rounded away, 14% of the update mass\n"
+        }
+      ]
+    },
     "numerics-mixed-precision-training-4": {
-      "code_fingerprint": "sha256:24ed534d3ab267f8a7ea726226589f860a180257b3865c44fce4481a9cc82b0c",
+      "code_fingerprint": "sha256:4bf444c7e88057d4c73ffad6ed4cc445d41c4a2ce036a7b20971e327ca2fccbc",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.682, bf16 weights 0.646, mixed 0.680\n"
+          "text": "validation accuracy: fp32 0.679, bf16 weights 0.633, mixed 0.676\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 87089,
-          "sha256": "sha256:56c941cf89d88b0c51b5583b6fb08a1eb98bb8710045e012a4c1d582bef90cc2"
+          "bytes": 87526,
+          "sha256": "sha256:da75cf7bcb1a6ffc3a43f62e6baebdfcf3a6bee8167a01b925ad6c87e2c4022b"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-1": {
-      "code_fingerprint": "sha256:cf63c4305b43c2e29042ea4d6650aae1b3019adca5647e51ffc32319c5e0e333",
+      "code_fingerprint": "sha256:45453a63501a122ffa6c7766f99ae9a283503169e72229c90fd42a861cddc32a",
       "kind": "text",
       "outputs": [
         {
@@ -135,29 +146,29 @@
       ]
     },
     "numerics-loss-scaling-for-fp16-3": {
-      "code_fingerprint": "sha256:7d3c8754f1859065a706f8205c11fadaebd35e9fd6449c7fa980e1d26e575cfc",
+      "code_fingerprint": "sha256:69f2af72851503bd31eacbd9c7e436867c2e5edebd519563c73b27999c33739d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 31.7% subnormal, 0.15% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 33.3% subnormal, 0.22% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-2": {
-      "code_fingerprint": "sha256:3d94651a7aeabe2875bc742ed59c590f2c0fc25e0e8efc75bc1f437b581afd9a",
+      "code_fingerprint": "sha256:ad1c4684e221d95d3c5a78d07bbd65aedde5787696d3528b744ecc6d69b6ccf1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.017, loss scale 32768\n"
+          "text": "loss 1.994, loss scale 32768\n"
         }
       ]
     },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:55e20b80928fb1fea4873e1fe243c1c8fe15775ad3808e1033d5057810444fff",
+      "code_fingerprint": "sha256:0c9c5dc96dbbc5f66cca2d05c1a7c96b38f9d657cd218ec915c8ac1a9004b9ce",
       "kind": "text",
       "outputs": [
         {
@@ -167,7 +178,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:d9cbd8338a9807ee0e2d7654cc2e322c9ac68a6fa7909a00c7bf8b3f5f2b3f3e",
+      "code_fingerprint": "sha256:19803a11d9c54f4618387a93c67afe964f61793b3c8b85aa408a10e91600feb6",
       "kind": "text",
       "outputs": [
         {
@@ -177,7 +188,7 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:b148ee9e1644e72185814a0da85708cddb34ed82f8de31c38a82b13f914d77c0",
+      "code_fingerprint": "sha256:757f57907e079740118d071316fe452a2ca4db7d08870bc5d00c3fe70f03862f",
       "kind": "text",
       "outputs": [
         {

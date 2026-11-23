@@ -193,8 +193,18 @@
         }
       ]
     },
+    "linear-algebra-matrix-matrix-products-2": {
+      "code_fingerprint": "sha256:b1ccef4a23d2b909f474ba278cacbff7a11d02f940828a2bfab5706748d34aa2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([3, 2, 4]), <tf.Tensor: shape=(), dtype=bool, numpy=True>)"
+        }
+      ]
+    },
     "linear-algebra-dot-products-3": {
-      "code_fingerprint": "sha256:9f2df203681fe0740372546156dc4247c196cf4b4948e6abedee68191acd59de",
+      "code_fingerprint": "sha256:efb315f9db39348da970d98f68c28aed1bd882b6376105d6804c5450d2939de7",
       "kind": "text",
       "outputs": [
         {
@@ -204,7 +214,7 @@
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:1e11639b72ec5a2b61ec7dfb4aab441271f4f9546a9f0d4bf380ac0569f31c55",
+      "code_fingerprint": "sha256:55a24303bd9dc2b6e230d9492fefca3875ac87308c3799673a4c1634a5b52d88",
       "kind": "text",
       "outputs": [
         {
@@ -214,7 +224,7 @@
       ]
     },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:a0298de9555a1aa3a991055dd438c1323110a4960a7f170a4059d752d69d7c1e",
+      "code_fingerprint": "sha256:6d184be28f587906c7ee71142557fd7d7de89b52785b92f36273215a9eea416a",
       "kind": "text",
       "outputs": [
         {
@@ -224,7 +234,7 @@
       ]
     },
     "linear-algebra-eigenvalues-1": {
-      "code_fingerprint": "sha256:d11ffb2258ef5a0f9f26ad0ad847e4516f62fd191ec0e52571064e3009a119ec",
+      "code_fingerprint": "sha256:03adb366d85511326bc3b0f05862231f698b5650eaa9fde7e1c7dbb84d974972",
       "kind": "text",
       "outputs": [
         {
@@ -234,7 +244,7 @@
       ]
     },
     "linear-algebra-eigenvalues-2": {
-      "code_fingerprint": "sha256:edba7b85bbdac6adcaf269ec778179ebc16e620c7b51771c0547904fc0d336e6",
+      "code_fingerprint": "sha256:00ba9b48a78dc2831f739e31e397ed3a78bfcee0097136d03fef7c7a9b6f1804",
       "kind": "text",
       "outputs": [
         {
@@ -244,12 +254,22 @@
       ]
     },
     "linear-algebra-powers-of-a-matrix-1": {
-      "code_fingerprint": "sha256:4a97876ebb89ce82184b5fcae97fd3762239ad00c2e021ba46b4fe5df0695add",
+      "code_fingerprint": "sha256:4f48f20d6adb6d69279f1e3fef104697a6517c8815a6a703b624336ca9c71922",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "array([1.1739086e+02, 5.1537761e-03], dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-eigenvectors-and-eigenvalues-1": {
+      "code_fingerprint": "sha256:d2c1eb65b611b2060231b502d4c43c744a835ddece116c8b63fa87041f98b979",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(2,), dtype=float32, numpy=array([2.9999998 , 0.99999994], dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([2., 0.], dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([0., 2.], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=int32, numpy=1>)"
         }
       ]
     }

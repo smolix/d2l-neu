@@ -3,7 +3,8 @@
 (``chapter_recurrent-modern``) in the one shared house style defined in
 ``gen_mdl_figures.py``.
 
-Ten figures, by section:
+Fifteen figures, by section (five added in the 2026-11 review pass are
+listed at their definitions):
 
   * "Gated Recurrent Networks" (sec_lstm) -- the LSTM memory cell and the GRU
     cell (house-style redraws of the old ``img/lstm-*.svg``/``gru-*.svg``).
@@ -842,6 +843,369 @@ def fig_delta_geometry():
 
 
 # =========================================================================== #
+# Five figures added in the 2026-11 review pass, one per section:             #
+#   * "Gated Recurrent Networks" -- the shared SeqLM backbone;               #
+#   * "State Space Models" -- the 2x2 design of the long-range recall test;  #
+#   * "Selective State Space Models" -- the selective SSM's data flow;       #
+#   * "Matrix-State Recurrences" -- the gated linear attention layer;        #
+#   * "The Delta Rule" -- the three regimes of Gated DeltaNet's two gates.   #
+# =========================================================================== #
+
+def _wire(ax, pts, color=GRAY, lw=1.9):
+    """A polyline wire through ``pts`` (no arrowhead)."""
+    xs, ys = zip(*pts)
+    ax.plot(xs, ys, color=color, lw=lw, solid_joinstyle="miter",
+            solid_capstyle="butt", zorder=1)
+
+
+def _go(ax, tail, tip, color=GRAY, lw=1.9, mut=13):
+    fl.arrow(ax, tail, tip, color=color, lw=lw, mut=mut)
+
+
+def fig_seqlm_backbone():
+    """d2l.SeqLM as the code builds it: embedding, then per block a pre-norm
+    mixer sub-layer and an MLP sub-layer (with its own LayerNorm) on a
+    residual stream, then a final LayerNorm and the linear head."""
+    fig, ax = plt.subplots(figsize=(8.2, 7.9))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    xs, xb = 2.3, 6.0                 # residual stream x, branch x
+    bh, half = 0.66, 0.33
+    r = 0.27                          # (+) radius
+    y_tok, y_emb = 0.45, 1.75
+    y_ln1, y_mix, y_ln2, y_mlp = 3.25, 4.4, 5.6, 6.75
+    y_top = 7.5                       # end of the block
+    y_norm, y_head, y_out = 8.65, 9.95, 11.25
+
+    _box(ax, xs, y_tok, 3.4, bh, r"bytes $x_1, \ldots, x_T$", BLUE,
+         fontsize=13, weight="normal")
+    _box(ax, xs, y_emb, 3.4, bh, r"embedding, $256 \to d$", BLUE,
+         fontsize=13, weight="normal")
+    _go(ax, (xs, y_tok + half), (xs, y_emb - half))
+
+    # the repeated block: dashed frame around both sub-layers
+    x0, x1 = 0.75, 8.4
+    y0, y1 = 2.65, y_top
+    ax.add_patch(FancyBboxPatch(
+        (x0, y0), x1 - x0, y1 - y0, boxstyle="round,pad=0.02,rounding_size=0.2",
+        linewidth=1.3, edgecolor=GRAY, facecolor="none", ls=(0, (5, 3))))
+    ax.text(x0 + 0.18, (y0 + y1) / 2, r"$L$ blocks", rotation=90, ha="left",
+            va="center", fontsize=13, color="black")
+
+    # residual stream: embedding -> (+) -> (+) -> final norm
+    _wire(ax, [(xs, y_emb + half), (xs, y_mix - r)])
+    _wire(ax, [(xs, y_mix + r), (xs, y_mlp - r)])
+    _go(ax, (xs, y_mlp + r), (xs, y_norm - half))
+    _op(ax, xs, y_mix, r"$+$", r=r)
+    _op(ax, xs, y_mlp, r"$+$", r=r)
+
+    # each sub-layer: branch -> LayerNorm -> mixer or MLP -> back into (+)
+    for y_ln, y_sub, label, color, w in [
+            (y_ln1, y_mix, "mixer", TEAL, 2.1),
+            (y_ln2, y_mlp, r"MLP: $d \to 4d$, GELU, $4d \to d$", PURPLE,
+             4.4)]:
+        _dot(ax, xs, y_ln)
+        _go(ax, (xs, y_ln), (xb - 1.05, y_ln))
+        _box(ax, xb, y_ln, 2.1, bh, "LayerNorm", GRAY, fontsize=13,
+             weight="normal")
+        _go(ax, (xb, y_ln + half), (xb, y_sub - half))
+        _box(ax, xb, y_sub, w, bh, label, color, fontsize=13,
+             weight="normal")
+        _go(ax, (xb - w / 2, y_sub), (xs + r, y_sub))
+
+    # the mixers this chapter trains on text, outside the frame
+    ax.text(x1 + 0.25, y_mix, "mixer:\nRNN, LSTM, GRU,\nminGRU, Mamba,\n"
+            "Gated DeltaNet,\nor attention", ha="left", va="center",
+            fontsize=12.5, color="black", linespacing=1.3)
+
+    _box(ax, xs, y_norm, 3.4, bh, "LayerNorm", GRAY, fontsize=13,
+         weight="normal")
+    _box(ax, xs, y_head, 3.4, bh, r"linear head, $d \to 256$", BLUE,
+         fontsize=13, weight="normal")
+    _box(ax, xs, y_out, 3.4, bh, "next-byte logits", BLUE, fontsize=13,
+         weight="normal")
+    _go(ax, (xs, y_norm + half), (xs, y_head - half))
+    _go(ax, (xs, y_head + half), (xs, y_out - half))
+
+    ax.set_xlim(0.45, 10.9)
+    ax.set_ylim(0.0, 11.7)
+    fl.save(fig, "mdl-modernrnn-seqlm-backbone")
+
+
+def fig_recall_grid():
+    """The long-range recall test as a 2x2 design: layer (minGRU, S4D) by
+    initial timescales (short, long).  Each cell gives the slowest initial
+    half-life and the fraction of a stored value that the slowest state
+    keeps over the 1,000-step delay, computed from the initializations."""
+    T = 1000
+    ln2 = np.log(2)
+    # slowest per-step decay of each configuration (rate -1 for S4D)
+    cells = {
+        ("minGRU", "short"): ("gates start near 1/2", 0.5),
+        ("minGRU", "long"): (r"init_timescales, $\Delta \in [0.001, 0.1]$",
+                             np.exp(-1e-3)),
+        ("S4D", "short"): (r"$\Delta \in [0.1, 1]$", np.exp(-0.1)),
+        ("S4D", "long"): (r"default $\Delta \in [0.001, 0.1]$",
+                          np.exp(-1e-3)),
+    }
+
+    def sci(v):  # m x 10^k for tiny values, two decimals otherwise
+        if v < 1e-3:
+            e = int(np.floor(np.log10(v)))
+            return rf"${v / 10.0 ** e:.0f} \times 10^{{{e}}}$"
+        return f"{v:.2f}"
+
+    fig, ax = plt.subplots(figsize=(9.0, 4.0))
+    ax.set_aspect("equal")
+    ax.axis("off")
+    cw, chh = 4.1, 1.75               # cell size
+    xc = {"short": 3.0, "long": 3.0 + cw + 0.3}
+    yr = {"minGRU": 2.55, "S4D": 0.55}
+    col_color = {"short": ORANGE, "long": TEAL}
+    for (row, col), (init, a) in cells.items():
+        x, y = xc[col], yr[row]
+        _box(ax, x, y, cw, chh, "", col_color[col], lw=1.6)
+        half_life = ln2 / -np.log(a)
+        hl = "1 step" if half_life < 1.5 else f"{half_life:.0f} steps"
+        ax.text(x, y + 0.52, init, ha="center", va="center", fontsize=12.5,
+                color="black")
+        ax.text(x, y + 0.0, f"slowest half-life: {hl}", ha="center",
+                va="center", fontsize=12.5, color="black")
+        ax.text(x, y - 0.52, f"kept after {T:,} steps: " + sci(a ** T),
+                ha="center", va="center", fontsize=12.5, color="black")
+    for row, y in yr.items():
+        ax.text(xc["short"] - cw / 2 - 0.25, y, row, ha="right", va="center",
+                fontsize=14, color="black")
+    ax.text(xc["short"], yr["minGRU"] + chh / 2 + 0.3,
+            "short initial timescales", ha="center", va="bottom",
+            fontsize=14, color=ORANGE_TXT)
+    ax.text(xc["long"], yr["minGRU"] + chh / 2 + 0.3,
+            "long initial timescales", ha="center", va="bottom",
+            fontsize=14, color=TEAL_TXT)
+    ax.set_xlim(-0.3, xc["long"] + cw / 2 + 0.1)
+    ax.set_ylim(yr["S4D"] - chh / 2 - 0.1, yr["minGRU"] + chh / 2 + 0.85)
+    fl.save(fig, "mdl-modernrnn-recall-grid")
+
+
+def fig_gla_layer():
+    """GatedLinearAttention.forward: q, k, v from one projection, a short
+    causal convolution and SiLU, unit-length q and k; a decay per head from
+    its own projection; the chunked matrix memory; RMS normalization per
+    head; a SiLU gate; the output projection."""
+    fig, ax = plt.subplots(figsize=(8.6, 8.4))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    xm, xa, xg = 2.75, 6.4, 8.7       # memory branch, decay, gate
+    bh, half = 0.66, 0.33
+    mh = 1.05                         # memory box height
+    y_in, y_bus = 0.45, 1.35
+    y_qkv, y_conv, y_silu, y_norm = 2.2, 3.45, 4.6, 5.75
+    y_mem = 7.1
+    y_rms, y_mul, y_out, y_top = 8.45, 9.5, 10.6, 11.85
+    y_dec = 4.0                       # decay box
+    xmid = (xm + xg) / 2
+
+    _box(ax, xmid, y_in, 4.0, bh, r"input sequence $(T, d)$", BLUE,
+         fontsize=13, weight="normal")
+    _wire(ax, [(xmid, y_in + half), (xmid, y_bus)])
+    _wire(ax, [(xm, y_bus), (xg, y_bus)])
+    _dot(ax, xmid, y_bus)
+
+    # memory branch: projection, conv, SiLU, heads with unit-length q and k
+    _go(ax, (xm, y_bus), (xm, y_qkv - half))
+    _box(ax, xm, y_qkv, 3.2, bh, r"$\mathbf{W}_{qkv}$: $d \to 3d$", BLUE,
+         fontsize=13, weight="normal")
+    _go(ax, (xm, y_qkv + half), (xm, y_conv - half))
+    _box(ax, xm, y_conv, 3.2, bh, "causal conv, width 4", ORANGE,
+         fontsize=12.5, weight="normal")
+    _go(ax, (xm, y_conv + half), (xm, y_silu - 0.4))
+    _op(ax, xm, y_silu, "SiLU", r=0.40, fontsize=11)
+    _go(ax, (xm, y_silu + 0.4), (xm, y_norm - half))
+    _box(ax, xm, y_norm, 3.6, bh,
+         r"heads; unit-length $\mathbf{q}_t, \mathbf{k}_t$", GRAY,
+         fontsize=12.5, weight="normal")
+    _go(ax, (xm, y_norm + half), (xm, y_mem - mh / 2))
+
+    # decay branch: one scalar per head, from its own projection
+    _dot(ax, xa, y_bus)
+    _box(ax, xa, y_dec, 2.9, 1.15,
+         "decay per head\n"
+         r"$a_{t,h} = \sigma(\mathbf{w}_h^\top \mathbf{x}_t + b_h)$",
+         GREEN, fontsize=12.5, weight="normal")
+    _go(ax, (xa, y_bus), (xa, y_dec - 1.15 / 2))
+    _wire(ax, [(xa, y_dec + 1.15 / 2), (xa, y_mem)])
+    _go(ax, (xa, y_mem), (xm + 2.3, y_mem))
+
+    # the matrix memory of every head
+    _box(ax, xm, y_mem, 4.6, mh,
+         r"$\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t"
+         r" \mathbf{k}_t^\top$" "\n"
+         r"$\mathbf{y}_t = \mathbf{S}_t \mathbf{q}_t$, per head, in chunks",
+         TEAL, fontsize=12.5, weight="normal")
+    _go(ax, (xm, y_mem + mh / 2), (xm, y_rms - half))
+    _box(ax, xm, y_rms, 3.2, bh, "RMS norm per head", GRAY, fontsize=12.5,
+         weight="normal")
+    _wire(ax, [(xm, y_rms + half), (xm, y_mul)])
+    _go(ax, (xm, y_mul), (xmid - 0.27, y_mul))
+
+    # gate branch
+    _go(ax, (xg, y_bus), (xg, y_qkv - half))
+    _box(ax, xg, y_qkv, 1.7, bh, r"$\mathbf{W}_g$: $d \to d$", BLUE,
+         fontsize=13, weight="normal")
+    _go(ax, (xg, y_qkv + half), (xg, y_silu - 0.4))
+    _op(ax, xg, y_silu, "SiLU", r=0.40, fontsize=11)
+    _wire(ax, [(xg, y_silu + 0.4), (xg, y_mul)])
+    _go(ax, (xg, y_mul), (xmid + 0.27, y_mul))
+    ax.text(xg + 0.2, (y_silu + y_mul) / 2, "gate", fontsize=13,
+            color="black", ha="left", va="center")
+
+    _op(ax, xmid, y_mul, r"$\odot$", r=0.27)
+    _go(ax, (xmid, y_mul + 0.27), (xmid, y_out - half))
+    _box(ax, xmid, y_out, 4.0, bh, r"output projection $d \to d$", BLUE,
+         fontsize=13, weight="normal")
+    _go(ax, (xmid, y_out + half), (xmid, y_top - half))
+    _box(ax, xmid, y_top, 4.0, bh, r"output sequence $(T, d)$", BLUE,
+         fontsize=13, weight="normal")
+
+    ax.set_xlim(0.35, 9.85)
+    ax.set_ylim(0.0, 12.3)
+    fl.save(fig, "mdl-modernrnn-gla-layer")
+
+
+def fig_gated_delta_modes():
+    """One step of eq_dn-gated on a 2 x 2 memory, in three regimes of the
+    two gates.  Arrows are the reads S k (along the key k = e_1, blue) and
+    S k_perp (along an orthogonal key, purple), before (dashed) and after
+    (solid) the step; the new value v is the orange dot.  The images are
+    computed by applying the matrices: S_t k = a (1 - beta) S k + beta v and
+    S_t k_perp = a S k_perp."""
+    S = np.array([[1.05, 0.25], [0.35, 1.0]])      # columns: S k, S k_perp
+    k = np.array([1.0, 0.0])
+    v = np.array([-0.9, 0.6])
+    modes = [("flush", 0.05, 1.0), ("overwrite", 0.98, 1.0),
+             ("accumulate", 0.98, 0.2)]
+    fig, axes = plt.subplots(1, 3, figsize=(11.4, 4.3))
+    lim = ((-1.2, 1.35), (-0.25, 1.25))
+    for ax, (name, a, beta) in zip(axes, modes):
+        S_new = a * S @ (np.eye(2) - beta * np.outer(k, k)) \
+            + beta * np.outer(v, k)
+        fl.axis_cross(ax, lim[0], lim[1], color="black")
+        for col, c in [(0, BLUE), (1, PURPLE)]:
+            fl.arrow(ax, (0, 0), S[:, col], color=c, lw=1.6, ls="--",
+                     alpha=0.55, mut=12)
+            if np.linalg.norm(S_new[:, col]) > 0.2:
+                fl.arrow(ax, (0, 0), S_new[:, col], color=c, lw=2.6, mut=15)
+            else:  # Too short for an arrow: mark the point
+                ax.plot(*S_new[:, col], "o", color=c, ms=6, zorder=5)
+        ax.plot(*v, "o", color=ORANGE, ms=9, zorder=6)
+        ax.text(v[0] - 0.1, v[1], r"$\mathbf{v}_t$", ha="right",
+                va="center", fontsize=15, color="black")
+        ax.set_title(f"{name}\n" rf"$a_t = {a:g},\ \beta_t = {beta:g}$",
+                     fontsize=14, linespacing=1.4)
+        fl.clean_axes(ax, lim=lim, hide=True)
+    axes[1].text(0.5, -0.04,
+                 r"reads along the key $\mathbf{k}_t$ (blue) and along an "
+                 "orthogonal key (purple),\nbefore the step (dashed) and "
+                 "after it (solid)", ha="center", va="top", fontsize=12.5,
+                 color="black", transform=axes[1].transAxes)
+    fl.save(fig, "mdl-modernrnn-gated-delta-modes")
+
+
+def fig_selective_ssm():
+    """The selective SSM of eq_selective_ssm for one step, drawn by shape:
+    the H-dimensional input x_t yields the step sizes Delta_t (H), the write
+    vector B_t (N) and the read vector C_t (N); the state is H x N, one row
+    of N states per channel; the output y_t has H entries."""
+    H, N = 6, 4
+    s = 0.5                           # cell size
+    fig, ax = plt.subplots(figsize=(11.0, 5.0))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    def strip(x0, y0, n, vertical, color, fill=0.18):
+        """n cells from (x0, y0) downward (vertical) or rightward."""
+        for i in range(n):
+            x = x0 if vertical else x0 + i * s
+            y = y0 - i * s if vertical else y0
+            ax.add_patch(plt.Rectangle((x, y), s, s, facecolor=color,
+                                       alpha=fill, edgecolor="none"))
+            ax.add_patch(plt.Rectangle((x, y), s, s, facecolor="none",
+                                       edgecolor=color, lw=1.3))
+
+    top = 3.4                         # lower edge of the top row
+    bottom = top - (H - 1) * s        # lower edge of the bottom row
+    y_mid = (bottom + top + s) / 2
+    gap = 0.9                         # between the state and B_t, C_t
+    x_in, x_d, x_g = 0.4, 4.6, 5.2    # x_t, Delta_t, state
+    x_y = x_g + N * s + 1.5           # y_t
+    y_b = top + s + gap               # B_t row
+    y_c = bottom - gap - s            # C_t row
+    xc = x_g + N * s / 2              # centre of the state
+
+    strip(x_in, top, H, True, BLUE)
+    strip(x_d, top, H, True, GREEN)
+    for i in range(H):
+        strip(x_g, top - i * s, N, False, TEAL, fill=0.10)
+    strip(x_g, y_b, N, False, ORANGE)
+    strip(x_g, y_c, N, False, PURPLE)
+    strip(x_y, top, H, True, BLUE)
+    for x, lbl in [(x_in, r"$\mathbf{x}_t$"), (x_d, r"$\boldsymbol{\Delta}_t$"),
+                   (x_y, r"$\mathbf{y}_t$")]:
+        ax.text(x + s / 2, top + s + 0.12, lbl, ha="center", va="bottom",
+                fontsize=15, color="black")
+    ax.text(x_g + N * s + 0.15, y_b + s / 2, r"$\mathbf{B}_t$", ha="left",
+            va="center", fontsize=15, color="black")
+    ax.text(x_g + N * s + 0.15, y_c + s / 2, r"$\mathbf{C}_t$", ha="left",
+            va="center", fontsize=15, color="black")
+    ax.text(x_g + N * s + 0.75, y_mid - 0.15, "state\n" r"$H \times N$",
+            ha="center", va="top", fontsize=12.5, color="black")
+
+    # the three projections of x_t
+    x0 = x_in + s + 0.1
+    _go(ax, (x0, top + s / 2), (x_g - 0.12, y_b + s / 2), color=ORANGE,
+        lw=1.5, mut=11)
+    _go(ax, (x0, y_mid), (x_d - 0.12, y_mid), color=GREEN, lw=1.5, mut=11)
+    _go(ax, (x0, bottom + s / 2), (x_g - 0.12, y_c + s / 2), color=PURPLE,
+        lw=1.5, mut=11)
+    ax.text(2.6, 4.55, r"$\mathbf{W}_B$", ha="center", va="bottom",
+            fontsize=14, color="black")
+    ax.text(2.6, 1.6, r"$\mathbf{W}_C$", ha="center", va="top",
+            fontsize=14, color="black")
+    ax.text((x0 + x_d) / 2, y_mid + 0.1,
+            r"$\mathrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t"
+            r" + \mathbf{b}_\Delta)$", ha="center", va="bottom",
+            fontsize=13, color="black")
+
+    # write into the state, read out of it, output
+    _go(ax, (xc, y_b - 0.04), (xc, top + s + 0.06), color=ORANGE, lw=1.5,
+        mut=11)
+    ax.text(xc + 0.12, top + s + gap / 2, "write", ha="left",
+            va="center", fontsize=12.5, color="black")
+    _go(ax, (xc, y_c + s + 0.04), (xc, bottom - 0.06), color=PURPLE, lw=1.5,
+        mut=11)
+    ax.text(xc + 0.12, bottom - gap / 2, "read", ha="left", va="center",
+            fontsize=12.5, color="black")
+    _go(ax, (x_g + N * s + 0.12, y_mid), (x_y - 0.12, y_mid), color=GRAY,
+        lw=1.5, mut=11)
+
+    # what one step computes, per channel c (one row of the state)
+    xe = x_y + s + 0.35
+    ax.text(xe, y_mid + 0.5,
+            r"$\mathbf{h}_t^{(c)} = e^{\Delta_{t,c}\boldsymbol{\lambda}}"
+            r" \odot \mathbf{h}_{t-1}^{(c)} + \Delta_{t,c}\, x_{t,c}\,"
+            r"\mathbf{B}_t$", ha="left", va="center", fontsize=14,
+            color="black")
+    ax.text(xe, y_mid - 0.5,
+            r"$y_{t,c} = \mathbf{C}_t^\top \mathbf{h}_t^{(c)}"
+            r" + D_c\, x_{t,c}$", ha="left", va="center", fontsize=14,
+            color="black")
+    ax.set_xlim(0.2, 15.3)
+    ax.set_ylim(y_c - 0.2, y_b + s + 0.2)
+    fl.save(fig, "mdl-modernrnn-selective-ssm")
+
+# =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
 
@@ -856,6 +1220,11 @@ FIGURES = [
     fig_selective_copy,
     fig_mamba_block,
     fig_delta_geometry,
+    fig_seqlm_backbone,
+    fig_recall_grid,
+    fig_gla_layer,
+    fig_gated_delta_modes,
+    fig_selective_ssm,
 ]
 
 

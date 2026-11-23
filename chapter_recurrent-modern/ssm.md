@@ -279,12 +279,15 @@ All three views match to $\sim 10^{-7}$. Notice that for LTI layers, the FFT con
 
 To test whether initial timescales govern long-range memory, we return to the delayed recall benchmark of :numref:`sec_lstm` at delays of $T = 100$ and $T = 1{,}000$ steps, using identical blank fillers (`blank_fillers=True`) so the task tests pure retention duration rather than content-based filtering (:numref:`sec_mamba`).
 
-We compare four configurations:
+We compare four configurations, which cross the layer with its initial timescales (:numref:`fig_ssm-recall-design`):
 
 1. **Default `minGRU`**, whose gates start near $1/2$;
 2. **Default `S4D`** ($d = 64, N = 16$, $\Delta \in [0.001, 0.1]$, half-lives up to 693 steps);
 3. **`S4D, short timescales`**, initialized with $\Delta \in [0.1, 1.0]$ so no initial half-life exceeds 7 steps;
 4. **`minGRU, S4D timescales`**, whose update-gate biases are initialized via `init_timescales` so $\sigma(b) = e^{-\Delta}$ with $\Delta \in [0.001, 0.1]$ ($b = -\log(e^\Delta - 1)$), matching the slowest state of each S4D channel.
+
+![The four configurations of the long-range recall experiment: two layers (minGRU and S4D), each with short and with long initial timescales. Every cell gives the slowest half-life at initialization and the fraction of a stored value that this slowest state still holds after the delay of 1,000 steps. If the timescales decide the outcome, the columns will differ; if the layer does, the rows will.](../img/mdl-modernrnn-recall-grid.svg)
+:label:`fig_ssm-recall-design`
 
 ```{.python .input #ssm-long-range-recall-1}
 %%tab pytorch

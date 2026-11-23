@@ -440,11 +440,14 @@ def memory(self, X, Q, K, V, log_a):
     return chunked_linear_attention(Q, K, V, log_a, self.chunk_size)
 ```
 
-In the forward pass:
+In the forward pass (:numref:`fig_ms-gla-layer`):
 
 1. A width-4 depthwise causal convolution and SiLU mix adjacent tokens into $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ so a value token at position $t$ can bind directly to the key token at position $t - 1$ inside a single layer (:numref:`sec_hybrids` ablates this convolution).
 2. Queries and keys are $\ell_2$-normalized to unit length (matching the setting of :eqref:`eq_ms-capacity-law`).
 3. Each head's readout is RMS-normalized, gated by $\textrm{SiLU}(\mathbf{W}_g \mathbf{x}_t)$, and projected back to width $d$ :cite:`Yang.Wang.Shen.ea.2024`.
+
+![The gated linear attention layer. One projection and a short causal convolution give the queries, keys, and values of every head, and a second projection gives each head its decay $a_t$. The matrix memory is computed in chunks. Its readout is RMS-normalized per head, multiplied by a gate computed from the input, and projected back to width $d$.](../img/mdl-modernrnn-gla-layer.svg)
+:label:`fig_ms-gla-layer`
 
 ```{.python .input #matrix-state-the-layer-2}
 %%tab pytorch
@@ -588,7 +591,7 @@ def memory_model(num_heads, num_hiddens=32, vocab_size=4 + 128 + 1):
         for _ in range(2)], rngs=rngs)
 ```
 
-Because each head maintains an $e \times e$ state matrix, total state entries per layer scale as $h \cdot e^2 = d \cdot e \in \{128, 256, 512\}$ while total parameters stay nearly identical ($\sim 36{,}200$). We train two runs of each head configuration with `train_recall`:
+Because each head maintains an $e \times e$ state matrix, total state entries per layer scale as $h \cdot e^2 = d \cdot e \in \{128, 256, 512\}$ while total parameters stay nearly identical (about $37{,}000$). We train two runs of each head configuration with `train_recall`:
 
 ```{.python .input #matrix-state-associative-recall-3}
 %%tab pytorch, jax
@@ -949,7 +952,7 @@ Does a trained neural network obey the $O(d_k d_v)$ capacity law derived for ran
 ::: {.slide title="Varying State Entries at Constant Parameter Count"}
 [Experimental Design & Results]{.kicker}
 
-We fix a 2-block `SeqLM` at width $d = 32$ ($\sim 36{,}200$ parameters) and partition the width into $h \in \{8, 4, 2\}$ heads of dimension $d_h = 32/h \in \{4, 8, 16\}$. Each head holds a $d_h \times d_h$ matrix, so total state entries per layer scale as $h \cdot d_h^2 \in \{128, 256, 512\}$ at **identical parameter count**:
+We fix a 2-block `SeqLM` at width $d = 32$ (about $37{,}000$ parameters) and partition the width into $h \in \{8, 4, 2\}$ heads of dimension $d_h = 32/h \in \{4, 8, 16\}$. Each head holds a $d_h \times d_h$ matrix, so total state entries per layer scale as $h \cdot d_h^2 \in \{128, 256, 512\}$ at **nearly identical parameter count**:
 
 @!matrix-state-associative-recall-4
 :::

@@ -186,7 +186,10 @@ y_{t,c} &= \mathbf{C}_t^\top \mathbf{h}_t^{(c)} + D_c\, x_{t,c}.
 $$
 :eqlabel:`eq_selective_ssm`
 
-Following :citet:`Gu.Dao.2023`, :eqref:`eq_selective_ssm` retains the exact ZOH decay $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ while approximating the ZOH input weight $(e^{\Delta\lambda} - 1)/\lambda$ by the first-order Euler weight $\Delta_{t,c}$ (which agrees when $\Delta|\lambda| \ll 1$ and allows large steps $\Delta_{t,c}$ to write with weight exceeding $1/|\lambda|$; see Exercise :exref:`ex_mamba-approximate-write`). The shapes of all quantities in :eqref:`eq_selective_ssm` are summarized below:
+![One step of the selective SSM. From the input $\mathbf{x}_t$ of $H$ channels, three projections compute the step sizes $\boldsymbol{\Delta}_t$ (one per channel), the write vector $\mathbf{B}_t$, and the read vector $\mathbf{C}_t$ (each of length $N$). Row $c$ of the $H \times N$ state decays by $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ and receives $\Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t$; the output $y_{t,c}$ reads that row with $\mathbf{C}_t$ and adds the skip term $D_c\, x_{t,c}$.](../img/mdl-modernrnn-selective-ssm.svg)
+:label:`fig_selective_ssm`
+
+:numref:`fig_selective_ssm` shows where the three projections act: $\boldsymbol{\Delta}_t$ scales the rows of the state, one channel each, while $\mathbf{B}_t$ and $\mathbf{C}_t$ act along its columns and are shared by all channels. Following :citet:`Gu.Dao.2023`, :eqref:`eq_selective_ssm` retains the exact ZOH decay $e^{\Delta_{t,c}\boldsymbol{\lambda}}$ while approximating the ZOH input weight $(e^{\Delta\lambda} - 1)/\lambda$ by the first-order Euler weight $\Delta_{t,c}$ (which agrees when $\Delta|\lambda| \ll 1$ and allows large steps $\Delta_{t,c}$ to write with weight exceeding $1/|\lambda|$; see Exercise :exref:`ex_mamba-approximate-write`). The shapes of all quantities in :eqref:`eq_selective_ssm` are summarized below:
 
 | Quantity | Shape | Computed from |
 |---|---|---|

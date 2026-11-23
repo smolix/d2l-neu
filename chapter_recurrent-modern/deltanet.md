@@ -116,7 +116,7 @@ For a unit key $\mathbf{k}_t$, the symmetric matrix $\mathbf{I} - \beta_t \mathb
 Two consequences follow from the eigenvalue $1 - \beta_t\|\mathbf{k}_t\|^2$:
 
 1. **Unit-norm keys prevent instability:** With $\|\mathbf{k}_t\| = 1$ and $\beta_t \in [0, 2]$, all eigenvalues of the transition lie in $[-1, 1]$, so homogeneous memory states never blow up geometrically.
-2. **Negative eigenvalues enable modulo-2 counting (parity):** When $\beta_t \in [0, 1]$, all transition eigenvalues are non-negative, which in finite precision cannot track parity over arbitrary sequence lengths :cite:`Grazzi.Siems.Franke.ea.2025`. Extending $\beta_t$ to $2$ allows reflections (eigenvalue $-1$) that toggle a stored state on each counted token, computing exact parity at any length (Exercise :exref:`ex_dn-parity`).
+2. **Negative eigenvalues enable modulo-2 counting (parity):** When $\beta_t \in [0, 1]$, all transition eigenvalues are non-negative, which in finite precision cannot track parity over arbitrary sequence lengths :cite:`Grazzi.Siems.Franke.ea.2025`. Extending $\beta_t$ to $2$ allows reflections (eigenvalue $-1$) that toggle a stored state on each counted token, computing exact parity at any length. :numref:`subsec_dn-state-tracking` tests whether a trained layer finds this solution.
 
 ### The Cost of Correction
 
@@ -181,8 +181,8 @@ for i, measure in enumerate(['squared read error', 'recall']):
 
 The table highlights the trade-off of online projection:
 
-- **Rebinding (`8 orthonormal keys, 4 writes`):** `delta, β = 1` achieves $1.00$ recall ($0.97$ at $\beta = 0.5$), whereas `additive` and unweighted `least squares` average all 4 values bound to each key and score just $0.28$.
-- **Correlated keys (`64 keys, ρ = 0.5`):** Because every key shares a common direction, `additive` piles every value onto that shared component (squared error $8.44$, recall $0.54$), whereas `delta` subtracts the prediction along the shared direction before writing (recall $0.77$ at $\beta = 1$ and $0.89$ at $\beta = 0.5$).
+- **Rebinding (`8 orthonormal keys, 4 writes`):** `delta` achieves $1.00$ recall at both $\beta = 1$ and $\beta = 0.5$ (squared error $0.00$ and $0.33$), whereas `additive` and unweighted `least squares` average all 4 values bound to each key and score just $0.28$.
+- **Correlated keys (`64 keys, ρ = 0.5`):** Because every key shares a common direction, `additive` piles every value onto that shared component (squared error $5.82$, recall $0.54$), whereas `delta` subtracts the prediction along the shared direction before writing (recall $0.77$ at $\beta = 1$ and $0.89$ at $\beta = 0.5$).
 - **Crowded independent keys (`128 keys`, `256 keys`):** Here `delta, β = 1` has lower squared error than `additive` ($1.06$ vs. $1.99$ at $n = 128$), yet *lower* nearest-neighbor recall ($0.53$ vs. $0.96$). Why? Because shrinking old reads toward $\mathbf{0}$ lowers their squared error toward $\|\mathbf{0} - \mathbf{v}_j\|^2 = 1$ while eroding the signal of early pairs relative to later ones. Using a gentler step $\beta = 0.5$ recovers both lower squared error ($0.67$) and much higher recall ($0.82$), motivating making $\beta_t$ an input-dependent gate so the network can use $\beta_t \approx 1$ to overwrite a rebound key and smaller $\beta_t$ when accumulating facts.
 
 ## Gated DeltaNet
@@ -196,6 +196,11 @@ $$
 \mathbf{k}_t\mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top.
 $$
 :eqlabel:`eq_dn-gated`
+
+The two gates do different jobs, and their joint settings give the layer three ways to treat a new pair (:numref:`fig_dn-gate-modes`). With $a_t$ near zero the layer flushes everything it has stored and keeps only the new pair, which is the right response to a change of topic. With $a_t \approx 1$ and $\beta_t = 1$ it replaces the value under the current key and leaves orthogonal keys untouched, as in the rebinding test above. With $a_t \approx 1$ and a small $\beta_t$ it moves the read only part of the way toward the new value, so that several writes under similar keys are averaged rather than the last one winning.
+
+![One step of Gated DeltaNet on a $2 \times 2$ memory under three settings of its gates. The arrows are the reads along the current key $\mathbf{k}_t$ (blue) and along an orthogonal key (purple), before the step (dashed) and after it (solid). A decay $a_t$ near zero flushes the memory, and only the new pair remains. With $a_t \approx 1$, a write strength $\beta_t = 1$ replaces the value under $\mathbf{k}_t$ by $\mathbf{v}_t$ and leaves the other key alone, while a small $\beta_t$ moves the read only part of the way toward $\mathbf{v}_t$.](../img/mdl-modernrnn-gated-delta-modes.svg)
+:label:`fig_dn-gate-modes`
 
 ### Chunked Computation
 
@@ -463,6 +468,117 @@ for name, layer in (('gated linear attention', d2l.GatedLinearAttention),
 
 Adding the 260-parameter `W_beta` head raises recall on rebound keys from $0.88$–$0.92$ (`gated linear attention`) to about $0.98$–$0.99$ (`Gated DeltaNet`), bringing rebound keys within $\sim 1$–$2$ percentage points of keys written only once.
 
+### State Tracking
+:label:`subsec_dn-state-tracking`
+
+Every experiment so far asked a memory to store something and to return it later. A different demand is to *track* a state that every token may change: which cup hides the ball after a series of swaps, whether a quotation is open, or, in the simplest case, whether the number of ones read so far is odd or even. Parity needs a single bit of state. A 1 flips it and a 0 leaves it alone. Nothing has to be kept for long, but nothing may be skipped either, since one missed bit makes every later answer wrong.
+
+A GRU solves this task the way a program would. Its gates see the previous state $\mathbf{h}_{t-1}$, so one step can compute "flip if the input is 1". The linear recurrences of this chapter gave that up for parallel training: their decays and writes depend on the input alone (:numref:`sec_linear-recurrence`). To flip a stored bit, such a recurrence has to multiply a coordinate of its state by a negative number, and the decay $\mathbf{z}_t \in (0, 1)$ of a minGRU can shrink a coordinate but never change its sign. The delta rule is under the same restriction as long as its write strength is a sigmoid, because the transition :eqref:`eq_dn-transition` then has an eigenvalue $1 - \beta_t \in (0, 1)$ along the key. With $\beta_t \in (0, 2)$ the eigenvalue can reach $-1$. A layer that writes a value $\mathbf{v}$ with $\beta_t = 2$ under one fixed key $\mathbf{k}$ on every 1, and writes nothing on a 0, changes its read by $\mathbf{S}_t\mathbf{k} = 2\mathbf{v} - \mathbf{S}_{t-1}\mathbf{k}$ on every 1. Starting from an empty memory, the read alternates between $2\mathbf{v}$ and $\mathbf{0}$, which is the parity.
+
+The construction exists, then, but does training find it? We train a one-block `d2l.SeqLM` of width 64 on random strings of 64 bits to output, at every step, the parity of the bits so far. We then test it on strings of 256 bits, which separates a model that has learned the rule from one that has only fit the lengths it was trained on. Four mixers compete: a GRU, a minGRU, `GatedDeltaNet`, and `GatedDeltaNetReflect`, which doubles the sigmoid of the write strength and is otherwise the same layer. If the argument above is right, the GRU and the layer with $\beta_t \in (0, 2)$ should be correct at every position, including those beyond the training length, while the minGRU and the sigmoid delta rule should stay near the chance level of $0.5$.
+
+```{.python .input #deltanet-state-tracking-1}
+%%tab pytorch
+class GatedDeltaNetReflect(d2l.GatedDeltaNet):
+    """Gated DeltaNet with write strengths in (0, 2), so that the transition
+    can reflect the memory along the key."""
+    def memory(self, X, Q, K, V, log_a):
+        beta = 2 * d2l.heads_to_batch(torch.sigmoid(self.W_beta(X)),
+                                      self.num_heads).squeeze(-1)
+        return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
+
+def running_parity(rng, batch_size, num_steps):
+    """Random bits and, at every step, the parity of the bits so far."""
+    X = rng.integers(0, 2, (batch_size, num_steps))
+    return X, np.cumsum(X, 1) % 2
+
+def train_parity(model, num_updates=1000):
+    """Train on strings of 64 bits; return the accuracy on positions 1-64
+    and on positions 65-256 of new strings of 256 bits."""
+    rng = np.random.default_rng()
+    model.to(d2l.try_gpu())
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2,
+                                  weight_decay=0.01)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (
+        d2l.cosine_warmup(t, num_updates, num_updates // 10)))
+    d2l.train_queries(model, lambda step: running_parity(rng, 128, 64),
+                      num_updates, optimizer, scheduler)
+    X, Y = running_parity(np.random.default_rng(1), 1024, 256)
+    return (float(d2l.query_accuracy(model, X[:, :64], Y[:, :64])),
+            float(d2l.query_accuracy(model, X, Y[:, 64:])))
+
+d = 64  # Width; the delta rules have 4 heads of size 16
+parity_mixers = {
+    'GRU': lambda: d2l.Recurrent(d2l.init_lecun(
+        nn.GRU(d, d, batch_first=True))),
+    'minGRU': lambda: d2l.MinGRU(d, d),
+    'Gated DeltaNet': lambda: d2l.GatedDeltaNet(
+        d, 4, chunk_size=32, timescales=(256, 2048)),
+    'Gated DeltaNet, 2σ': lambda: GatedDeltaNetReflect(
+        d, 4, chunk_size=32, timescales=(256, 2048))}
+
+def parity_model(mixer):  # Tokens and outputs: the bits 0 and 1
+    return d2l.SeqLM(2, d, [mixer()])
+```
+
+```{.python .input #deltanet-state-tracking-1}
+%%tab jax
+class GatedDeltaNetReflect(d2l.GatedDeltaNet):
+    """Gated DeltaNet with write strengths in (0, 2), so that the transition
+    can reflect the memory along the key."""
+    def memory(self, X, Q, K, V, log_a):
+        beta = 2 * d2l.heads_to_batch(jax.nn.sigmoid(self.W_beta(X)),
+                                      self.num_heads)[..., 0]
+        return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
+
+def running_parity(rng, batch_size, num_steps):
+    """Random bits and, at every step, the parity of the bits so far."""
+    X = rng.integers(0, 2, (batch_size, num_steps))
+    return X, np.cumsum(X, 1) % 2
+
+def train_parity(model, num_updates=1000):
+    """Train on strings of 64 bits; return the accuracy on positions 1-64
+    and on positions 65-256 of new strings of 256 bits."""
+    rng = np.random.default_rng()
+    schedule = lambda t: 1e-2 * d2l.cosine_warmup(t, num_updates,
+                                                  num_updates // 10)
+    optimizer = nnx.Optimizer(model, optax.chain(
+        optax.clip_by_global_norm(1.0),
+        optax.adamw(schedule, weight_decay=0.01)), wrt=nnx.Param)
+    d2l.train_queries(model, lambda step: running_parity(rng, 128, 64),
+                      num_updates, optimizer)
+    X, Y = running_parity(np.random.default_rng(1), 1024, 256)
+    return (float(d2l.query_accuracy(model, X[:, :64], Y[:, :64])),
+            float(d2l.query_accuracy(model, X, Y[:, 64:])))
+
+d = 64  # Width; the delta rules have 4 heads of size 16
+lecun = nnx.initializers.lecun_normal()  # For the recurrent matrix
+parity_mixers = {
+    'GRU': lambda rngs: nnx.RNN(nnx.GRUCell(
+        d, d, recurrent_kernel_init=lecun, rngs=rngs), unroll=8),
+    'minGRU': lambda rngs: d2l.MinGRU(d, d, rngs=rngs),
+    'Gated DeltaNet': lambda rngs: d2l.GatedDeltaNet(
+        d, 4, chunk_size=32, timescales=(256, 2048), rngs=rngs),
+    'Gated DeltaNet, 2σ': lambda rngs: GatedDeltaNetReflect(
+        d, 4, chunk_size=32, timescales=(256, 2048), rngs=rngs)}
+
+def parity_model(mixer):  # Tokens and outputs: the bits 0 and 1
+    rngs = nnx.Rngs(d2l.get_key())  # A new initialization each call
+    return d2l.SeqLM(2, d, [mixer(rngs)], rngs=rngs)
+```
+
+We train two runs of each mixer and report the accuracy on positions 1–64, the lengths seen in training, and on positions 65–256:
+
+```{.python .input #deltanet-state-tracking-2}
+%%tab pytorch, jax
+print(f'{"":24s}{"positions 1-64":>16s}{"65-256":>12s}')
+for name, mixer in parity_mixers.items():
+    (a, b), (c, e) = [train_parity(parity_model(mixer)) for _ in range(2)]
+    print(f'{name:24s}{a:11.2f}/{c:.2f}{b:7.2f}/{e:.2f}')
+```
+
+<!-- TODO(rerun): result paragraph for the parity table (cell deltanet-state-tracking-2), about 100-150 words, numbers at the precision both tabs share. It must state: (1) whether the GRU and `Gated DeltaNet, 2σ` reach about 1.00 on positions 1-64 AND keep it on positions 65-256; (2) whether `minGRU` and `Gated DeltaNet` (sigmoid) stay near chance, 0.5, at both ranges (slightly above chance inside the training lengths is expected); (3) the conclusion: what linear recurrence gave up is state-dependent updates, and the range of the transition's eigenvalues, not linearity itself, decides whether a matrix memory can track a state; one block of minGRU gets no round of state-dependent gating (this is what linear-recurrence.md's "one round per layer" sentence points here for); (4) one closing sentence on the limit: a trained layer only approaches beta = 2 (Exercise ex_dn-parity), and harder state tracking (permutations) needs more than one reflection per token. If any arm contradicts the expectation stated before the code, rewrite that expectation paragraph too; do not explain a failed arm away. -->
+
 ## Memory as Regression
 
 Stepping back, every matrix memory in this chapter—as well as softmax attention—can be understood as fitting a regression predictor from keys $\mathbf{K}_t \in \mathbb{R}^{t \times d_k}$ to values $\mathbf{V}_t \in \mathbb{R}^{t \times d_v}$ on the fly as a sequence is read :cite:`Wang.Shi.Fox.2025`. The exact linear least-squares minimizer of $\sum_{s \le t} \|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2$ is:
@@ -551,17 +667,19 @@ Because additive matrix memories superpose every write to the same key, querying
    $(0, 1)$. With $2\sigma(\cdot)$ in place of $\sigma(\cdot)$ it lies in
    $(-1, 1)$.
     1. Even then, a trained layer can only approach $\beta_t = 2$. In the
-       parity construction of the text, write $\beta = 2 - \epsilon$ on every
-       counted token, and show that after $n$ counted tokens the read is
+       parity construction of :numref:`subsec_dn-state-tracking`, write
+       $\beta = 2 - \epsilon$ on every counted token, and show that after
+       $n$ counted tokens the read is
        $\big(1 - (\epsilon - 1)^n\big)\mathbf{v}$. How fast does the
        difference between the reads after an odd and after an even count
        shrink? For $\epsilon = 0.01$, after how many counted tokens is it
        below 1% of $\|\mathbf{v}\|$, and what does that mean for a readout
        with finite precision?
-    1. Train a one-layer `SeqLM` with a `GatedDeltaNet` mixer to output the
-       running parity of random bit strings of length 64. Then replace the
-       sigmoid of the write strength by $2\sigma$ and train again. Compare
-       the accuracies, and test both models on strings of length 256.
+    1. :numref:`subsec_dn-state-tracking` tested its models at four times
+       the training length. Train `Gated DeltaNet, 2σ` again and test it on
+       strings of 1,024 and of 4,096 bits. At what length does the accuracy
+       begin to fall, and is that length consistent with your answer to the
+       first part?
    :exlabel:`ex_dn-parity`
 
 1. [code] **Other routes to rebinding.** The rebinding experiment fixed
@@ -691,8 +809,8 @@ Comparing `additive`, `delta, β = 1`, `delta, β = 0.5`, and offline `least squ
 
 The benchmark exposes three distinct regimes that motivate learning an input-dependent gate $\beta_t \in (0, 1)$:
 
-1. **Key rebinding (`8 orthonormal keys, 4 writes`):** `delta` ($\beta = 1$ or $0.5$) achieves **$0.97$–$1.00$ recall** of the latest value, whereas `additive` and unweighted `least squares` average all $4$ values bound to each key ($0.28$).
-2. **Correlated keys (`64 keys, ρ = 0.5`):** `additive` piles every value onto the shared key direction (error $8.44$, recall $0.54$), whereas `delta` subtracts the shared-direction prediction before writing (recall **$0.89$** at $\beta = 0.5$).
+1. **Key rebinding (`8 orthonormal keys, 4 writes`):** `delta` ($\beta = 1$ or $0.5$) achieves **$1.00$ recall** of the latest value, whereas `additive` and unweighted `least squares` average all $4$ values bound to each key ($0.28$).
+2. **Correlated keys (`64 keys, ρ = 0.5`):** `additive` piles every value onto the shared key direction (error $5.82$, recall $0.54$), whereas `delta` subtracts the shared-direction prediction before writing (recall **$0.89$** at $\beta = 0.5$).
 3. **Crowded independent keys (`128 keys`, `256 keys`):** At $n = 128$, `delta, β = 1` has *lower* squared error than `additive` ($1.06$ vs. $1.99$) yet *worse* recall ($0.53$ vs. $0.96$) because shrinking old reads toward $\mathbf{0}$ caps squared error near $\|\mathbf{0} - \mathbf{v}_j\|^2 = 1$ while eroding early signals. Halving the step to $\beta = 0.5$ restores **$0.82$ recall** with **$0.67$ squared error**.
 :::
 

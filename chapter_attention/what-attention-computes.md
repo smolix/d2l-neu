@@ -159,8 +159,10 @@ synthetic sequences of *repeated random tokens*: each sequence draws a random
 pattern of length $L \in [L_{\min}, L_{\max}]$ uniformly from a vocabulary of
 size $64$ and tiles it to length $64$. Because every pattern is drawn fresh,
 the first copy ($t < L$) is unpredictable (chance cross-entropy $\log 64
-\approx 4.16$ nats), whereas later copies ($t \ge L$) can be predicted
-perfectly by in-context lookup.
+\approx 4.16$ nats). So is the token at position $t = L$, where the pattern
+restarts: nothing in its context has repeated yet, and the model cannot know
+$L$. We therefore count the targets $t \le L$ as the first copy. Later copies
+($t > L$) can be predicted from the context by in-context lookup.
 
 ```{.python .input #what-attention-computes-repetition-as-a-task-1}
 %%tab pytorch
@@ -192,8 +194,8 @@ print(f'pattern lengths: {L.tolist()}')
 print(x)
 ```
 
-`eval_copy` measures the cross-entropy on the first copy ($t < L$), the
-cross-entropy on later copies ($t \ge L$), and the top-1 accuracy on later
+`eval_copy` measures the cross-entropy on the first copy ($t \le L$), the
+cross-entropy on later copies ($t > L$), and the top-1 accuracy on later
 copies:
 
 ```{.python .input #what-attention-computes-repetition-as-a-task-2}
@@ -203,7 +205,7 @@ def eval_copy(model, x, L):
     """First-copy loss, later-copy loss, and later-copy accuracy."""
     logits, Y = model(x[:, :-1]), x[:, 1:]
     ce = F.cross_entropy(logits.transpose(1, 2), Y, reduction='none')
-    later = torch.arange(1, Y.shape[1] + 1, device=Y.device) >= L[:, None]
+    later = torch.arange(1, Y.shape[1] + 1, device=Y.device) > L[:, None]
     acc = (logits.argmax(-1) == Y)[later].float().mean()
     return torch.stack((ce[~later].mean(), ce[later].mean(), acc)).tolist()
 
@@ -242,7 +244,7 @@ def eval_copy(model, x, L):
     """First-copy loss, later-copy loss, and later-copy accuracy."""
     logits, Y = model(x[:, :-1]), x[:, 1:]
     ce = optax.softmax_cross_entropy_with_integer_labels(logits, Y)
-    later = jnp.arange(1, Y.shape[1] + 1)[None, :] >= L[:, None]
+    later = jnp.arange(1, Y.shape[1] + 1)[None, :] > L[:, None]
     acc = ((logits.argmax(-1) == Y) * later).sum() / later.sum()
     first = (ce * ~later).sum() / (~later).sum()
     rep = (ce * later).sum() / later.sum()
@@ -307,7 +309,7 @@ print(f'first copy {first:.2f} nats, second copy {rep:.2f} nats, '
       f'second-copy accuracy {acc:.2f}')
 ```
 
-How can a single layer copy the successor when our circuit analysis proved
+How can a single layer copy the successor when our circuit analysis argued
 that content-based induction requires two layers? When $L = 32$ is constant,
 the target token at position $i + 1$ always equals the token at fixed offset
 $j = i - 31$. A single RoPE head with constant bias queries and keys can
@@ -384,10 +386,16 @@ for num_blks, model, hist in runs:
           f'{drop_step(hist) or "never":>21}')
 ```
 
-All three two-block runs achieve $\sim 90\%$ later-copy accuracy (losses
-$0.3$--$0.4$ nats), whereas the one-block model stalls above $3$ nats ($\sim
-10\%$ accuracy, only boosting the unigram set of tokens present in the
-context). Furthermore, the training curve exhibits an abrupt phase transition
+<!-- TODO(rerun): requote from outputs/{pytorch,jax}/chapter_attention/what-attention-computes.json after the eval_copy re-run (later = t > L). The numbers below are from the old mask (t >= L): accuracy 0.88-0.95, losses 0.22-0.49. Expect about 0.1 nats lower and 2.5 points higher. Also recheck "above 3 nats" and "about 10%" for the one-block run, the ablation paragraph ("about 0.1 or below"), and the slide bullets "Two Blocks Solve Retrieval" / "One Block Fails" (roughly 0.2-0.5 nats, steps 1,000-3,000, 3.3 nats), which quote the same numbers. -->
+
+All three two-block runs achieve $\sim 90\%$ later-copy accuracy (losses of
+roughly $0.2$--$0.5$ nats), whereas the one-block model stalls above $3$ nats
+($\sim 10\%$ accuracy, only boosting the unigram set of tokens present in the
+context). The first-copy loss ends slightly *above* the chance value $\log 64$
+in every run. All four models have learned to favor tokens that already
+occurred in the context, and in the first period this confidence is misplaced:
+when a token repeats there by chance, a two-block model predicts its earlier
+successor. Furthermore, the training curve exhibits an abrupt phase transition
 after an initial plateau:
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-2}
@@ -609,8 +617,8 @@ d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None],
 ```
 
 Notice two instructive subtleties: (1) the one-block control *also* learns a
-diagonal OV copy matrix, proving that OV copying without QK K-composition
-cannot retrieve in-context successors (see Exercise
+diagonal OV copy matrix, showing that OV copying without QK K-composition
+does not retrieve in-context successors (see Exercise
 :exref:`ex_what-attention-computes-k-composition`); and (2) block 2 copies
 much more reliably from the block-1 stream $\bar{\mathbf{h}}_a$ than from raw
 embeddings $\mathbf{e}_a$ alone.
@@ -732,7 +740,7 @@ d2l.plot([jnp.arange(1, 64), [24, 24]], [acc, [0, 1]],
 
 Accuracy jumps from $1/64$ on the first copy (and at the restart boundary
 $t = 24$, where content matching has not yet seen a repeated token) to
-$> 0.90$ from position $25$ onward.
+about $0.9$ from position $25$ onward.
 
 What accounts for the remaining $\sim 10\%$ error after the restart? When a
 token appears $K > 1$ times within the $L$-token pattern with different
@@ -747,10 +755,11 @@ $$
 $$
 
 and $\approx 0.47$ on repeated tokens alone. Splitting test positions by
-$K = 1$ (unique) versus $K > 1$ (repeated) shows that `model_two` reaches
-$\sim 0.99$ on unique tokens and $0.70$--$0.90$ on repeated tokens—exceeding
-the $0.47$ single-token baseline by combining longer $n$-gram context and
-RoPE offset preferences:
+$K = 1$ (unique) versus $K > 1$ (repeated) shows that the three runs reach
+$\sim 0.99$ on unique tokens and roughly $0.7$--$0.9$ on repeated tokens, well
+above the $0.47$ single-token baseline. A plausible reason, which we do not
+test here, is that the model also matches longer $n$-gram context and prefers
+certain RoPE offsets (Exercise :exref:`ex_what-attention-computes-paths`):
 
 ```{.python .input #what-attention-computes-generalization-to-unseen-patterns-1}
 %%tab pytorch
@@ -799,7 +808,20 @@ with the emergence of general in-context learning (Exercise
 completion, attention layers can also implement in-context gradient steps on
 regression tasks (Exercise
 :exref:`ex_what-attention-computes-in-context-regression`,
-:cite:`Oswald.Niklasson.Randazzo.ea.2023,Shen.Mishra.Khashabi.2024`).
+:cite:`Oswald.Niklasson.Randazzo.ea.2023`), although whether pretrained
+language models learn in context this way is disputed
+:cite:`Shen.Mishra.Khashabi.2024`.
+
+Our analysis leaned on a model with no normalization and no MLP, and a real
+transformer block (:numref:`chap_transformers`) has both. Each changes the
+method without changing the idea. Layer normalization rescales the stream by
+its own norm, so the map from stream to logits is linear only once that scale
+is held fixed; circuit analyses freeze it at its observed value and treat the
+rest as before. MLPs add paths that pass through no attention pattern, and a
+head's output may be rewritten by an MLP before a later head reads it. Finally,
+induction heads in trained language models match fuzzily: they complete
+$[\mathrm{A}^*][\mathrm{B}^*] \ldots [\mathrm{A}] \to [\mathrm{B}]$ for tokens
+that are merely similar, not identical, to the ones seen earlier.
 
 ## Attention Weights as Explanations
 
@@ -1155,8 +1177,8 @@ Does gradient descent find this circuit? Each sequence tiles a random pattern of
 
 @-what-attention-computes-repetition-as-a-task-1
 
-- **Unpredictable First Copy ($t < L$):** Each pattern is fresh, so the first period stays at chance (cross-entropy $\log 64 \approx 4.16\text{ nats}$, accuracy $1/64 \approx 1.6\%$).
-- **Deterministic Later Copies ($t \ge L$):** Once the pattern repeats, every token can be predicted with $100\%$ accuracy by looking up the earlier occurrence in context.
+- **Unpredictable First Copy ($t \le L$):** Each pattern is fresh, so the first period stays at chance (cross-entropy $\log 64 \approx 4.16\text{ nats}$, accuracy $1/64 \approx 1.6\%$). So does the restart token at $t = L$: nothing has repeated yet.
+- **Predictable Later Copies ($t > L$):** Once the pattern repeats, each token can be predicted from the context by looking up the earlier occurrence.
 :::
 
 ::: {.slide title="Pitfall: The Fixed-Offset Positional Shortcut"}
@@ -1180,7 +1202,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 
 @!what-attention-computes-two-blocks-learn-to-look-things-up-1
 
-- **Two Blocks Solve Retrieval:** All three 2-block seeds drop below $1\text{ nat}$ between steps $1{,}000$ and $3{,}000$, reaching $0.3$–$0.4\text{ nats}$ and $\sim 90\%$ later-copy accuracy.
+- **Two Blocks Solve Retrieval:** All three 2-block seeds drop below $1\text{ nat}$ between steps $1{,}000$ and $3{,}000$, reaching roughly $0.2$–$0.5\text{ nats}$ and $\sim 90\%$ later-copy accuracy.
 - **One Block Fails:** The 1-block control stalls above $3.3\text{ nats}$ ($10\%$ accuracy)—all it can do is boost the unigram set of tokens that appeared anywhere in the prefix!
 :::
 

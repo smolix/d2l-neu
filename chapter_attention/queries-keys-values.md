@@ -220,7 +220,8 @@ d2l.show_heatmaps(d2l.stack([w_narrow, w_wide])[None],
 
 At $\sigma = 0.1$, weight concentrates in a narrow diagonal band around the
 nearest training inputs; at $\sigma = 2.0$, weight spreads broadly across the
-dataset (peaking near $1/40 = 0.025$).
+dataset: every weight stays within a factor of about two of the uniform value
+$1/40 = 0.025$, and the largest, about $0.05$, belong to queries at the edges.
 
 Two caveats apply when inspecting attention heatmaps in deep networks:
 
@@ -583,7 +584,7 @@ $$\textrm{Var}\!\left(\sum_{i=1}^n \alpha_i(q)\, y_i \,\middle|\, \mathbf{x}\rig
 ::: {.col}
 - **Row-Stochastic Matrix:** Each row of $\mathbf{A} \in \mathbb{R}^{n_q \times n_k}$ is a probability distribution over keys for one query.
 - **Diagonal Band at $\sigma = 0.1$:** Sorted queries and keys form a thin diagonal ridge where each query consults only $2$–$3$ local keys.
-- **Diffuse Sheet at $\sigma = 2.0$:** Probability mass spreads across almost all $40$ keys, peaking near the uniform baseline $1/40 = 0.025$.
+- **Diffuse Sheet at $\sigma = 2.0$:** Probability mass spreads across almost all $40$ keys, within a factor of about two of the uniform baseline $1/40 = 0.025$ (peak $\approx 0.05$ at the edges).
 :::
 
 ::: {.col .fig}

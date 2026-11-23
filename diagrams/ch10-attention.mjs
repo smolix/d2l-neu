@@ -424,7 +424,7 @@ function scoreMaskFillHazards() {
   o += card(192, y, cw, ch, C.lamber, C.amber, 'Literal −inf', 'All-False row max = −inf', '−inf − (−inf) = NaN!', D.orange.dark, 14, 12);
   o += card(366, y, cw, ch, C.lgreen, C.green, 'finfo(dtype).min', 'Finite in fp16/bf16/fp32', '+ where(mask.any(-1))', D.green.dark, 14, 12);
 
-  o += card(18, 186, 504, 72, D.red.tint, D.red.base, 'Why One NaN Padding Row Corrupts Every Token in Layer 2', 'In Layer 2 GEMM QKᵀ, 0.0 × NaN = NaN infects every valid token representation!', null, D.red.dark, 13.5, 12);
+  o += card(18, 186, 504, 72, D.red.tint, D.red.base, 'Why One NaN Padding Row Corrupts Every Token in Layer 2', 'In Layer 2 weights × values, 0.0 weight × NaN value = NaN infects every valid token!', null, D.red.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -478,7 +478,7 @@ function mhaAsymmetry() {
   o += card(20, 20, 236, 112, D.red.tint, D.red.base, 'Tied Map: W_q = W_k = W', 'uᵢ = xᵢ W  ⇒  sᵢⱼ = uᵢᵀuⱼ / √d_h', 'Symmetric PSD matrix (sᵢⱼ = sⱼᵢ)', D.red.dark, 14, 12);
   o += card(284, 20, 236, 112, C.lgreen, C.green, 'Separate Maps: W_q ≠ W_k', 'qᵢ = xᵢ W_q,  kⱼ = xⱼ W_k', 'Asymmetric score matrix (sᵢⱼ ≠ sⱼᵢ)', D.green.dark, 14, 12);
 
-  o += card(20, 152, 236, 94, '#FFFFFF', D.red.base, 'Cauchy–Schwarz Self-Trap', 'sᵢⱼ ≤ √(sᵢᵢ sⱼⱼ) always!', 'verb cannot prefer noun over itself', D.red.dark, 13.5, 12);
+  o += card(20, 152, 236, 94, '#FFFFFF', D.red.base, 'Cauchy–Schwarz Bound', 'sᵢⱼ ≤ √(sᵢᵢ sⱼⱼ) ≤ max(sᵢᵢ, sⱼⱼ)', 'verb and noun cannot each prefer the other over itself', D.red.dark, 13.5, 12);
   o += card(284, 152, 236, 94, C.lblue, C.blue, 'Directed Syntactic Lookup', 'verb query aligns with noun key', 'while self-score sᵢᵢ can be negative', D.blue.dark, 13.5, 12);
   return svg(W, H, o);
 }
@@ -735,10 +735,10 @@ function scaleOnlineTrace() {
 function scaleSramHierarchy() {
   const W = 540, H = 270;
   let o = '';
-  o += card(20, 20, 236, 106, C.lgreen, C.green, 'On-Chip SRAM (Registers/L1)', '~20–50 MiB  ·  ~19 TB/s Bandwidth', '10–20× faster than HBM!', D.green.dark, 14, 12);
-  o += card(284, 20, 236, 106, D.red.tint, D.red.base, 'Off-Chip HBM (GPU VRAM)', '24–80 GiB  ·  ~0.9–3.3 TB/s', 'The bottleneck for naive attention', D.red.dark, 14, 12);
+  o += card(20, 20, 236, 106, C.lgreen, C.green, 'On-Chip SRAM (Registers, L1, L2)', '~0.1 GB  ·  tens of TB/s', 'Holds tiles, never the n × n matrix', D.green.dark, 14, 12);
+  o += card(284, 20, 236, 106, D.red.tint, D.red.base, 'Off-Chip Device Memory', 'HBM: 80 GB at 3.35 TB/s (H100)', 'GDDR6X: 24 GB at 1.0 TB/s (RTX 4090)', D.red.dark, 14, 12);
 
-  o += card(20, 148, 500, 100, C.lblue, C.blue, 'The Compute vs. Bandwidth Gap (165 TFLOP/s vs. 0.9 TB/s)', 'Tensor Cores execute ~180 FP16 operations in the time HBM transfers 1 byte!', 'Fused kernels keep active tiles (Qᵢ, Kⱼ, Vⱼ, mᵢ, sᵢ, Oᵢ) inside SRAM.', D.blue.dark, 14, 12.5);
+  o += card(20, 148, 500, 100, C.lblue, C.blue, 'The Compute vs. Bandwidth Gap (165 TFLOP/s vs. 1.0 TB/s)', 'RTX 4090 Tensor Cores execute ~164 FP16 operations in the time memory transfers 1 byte', 'Fused kernels keep active tiles (Qᵢ, Kⱼ, Vⱼ, mᵢ, sᵢ, Oᵢ) inside SRAM.', D.blue.dark, 14, 12.5);
   return svg(W, H, o);
 }
 
@@ -758,7 +758,7 @@ function scaleHbmPasses() {
     if (i < 3) o += arrow(p.x + 120, 84, passes[i + 1].x - 2, 84, D.red.base);
   });
 
-  o += card(18, 142, 504, 120, C.lamber, C.amber, 'Low Arithmetic Intensity:  2n²(d_h + d_v) FLOPs / (4n² · bytes) → (d_h + d_v) / 4 (FP16)', 'At d_h = d_v = 64 in FP16:  Intensity = 32 FLOPs/byte  (vs. ~180 FLOPs/byte GPU ridge point)', 'Naive attention is severely memory-bandwidth bound at every sequence length n!', D.orange.dark, 13, 12);
+  o += card(18, 142, 504, 120, C.lamber, C.amber, 'Low Arithmetic Intensity:  2n²(d_h + d_v) FLOPs / (4n² · bytes) → (d_h + d_v) / 4 (FP16)', 'At d_h = d_v = 64 in FP16:  Intensity = 32 FLOPs/byte  (vs. ~164 FLOPs/byte RTX 4090 ridge point)', 'Naive attention is severely memory-bandwidth bound at every sequence length n!', D.orange.dark, 13, 12);
   return svg(W, H, o);
 }
 
@@ -1021,7 +1021,7 @@ function winDecisionGuide() {
   let o = '';
   o += card(20, 18, 236, 108, C.lblue, C.blue, 'Short/Medium (n ≤ 32K)', 'Exact Fused FlashAttention', 'Full 1-hop recall · Θ(n²d) time', D.blue.dark, 13.5, 12);
   o += card(284, 18, 236, 108, C.lgreen, C.green, 'Long Context (n = 128K–1M)', 'Interleaved Window + Global (5:1)', '17% KV cache · 1-hop via global layers', D.green.dark, 13.5, 12);
-  o += card(20, 146, 500, 106, C.lamber, C.amber, 'Ultra-Long / Constant-Memory Streaming: Gated Linear + Hybrid Softmax', 'Plain linear attention (elu+1) lacks temperature sharpening and holds ≤ d_h orthogonal keys;', 'Production hybrids (MiniMax-01, Mamba-2/DeltaNet) add data-dependent decay gates γ_t + softmax layers!', D.orange.dark, 13.5, 12);
+  o += card(20, 146, 500, 106, C.lamber, C.amber, 'Ultra-Long / Constant-Memory Streaming: Gated Linear + Hybrid Softmax', 'Plain linear attention (elu+1) lacks temperature sharpening and holds ≤ d_h orthogonal keys;', 'Production hybrids (MiniMax-01, Qwen3-Next, Kimi Linear) interleave gated linear layers with softmax layers', D.orange.dark, 13.5, 12);
   return svg(W, H, o);
 }
 

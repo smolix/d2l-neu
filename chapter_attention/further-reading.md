@@ -160,7 +160,7 @@ in Llama 4 :cite:`Meta.2025`.
 
 Beyond fixed positional windows, hardware-aligned *content-based sparse
 attention* has emerged for long-context training and decoding
-(:numref:`sec_lm_sparse_attention`), including *Natively Sparse Attention*
+(:numref:`sec_lm_sparse_attention`), including *Native Sparse Attention*
 (NSA, :cite:`Yuan.Gao.Dai.ea.2025`), *Mixture of Block Attention* (MoBA,
 :cite:`Lu.Jiang.Liu.ea.2025`), and *DeepSeek Sparse Attention*
 :cite:`Liu.Mei.Lin.ea.2025`.

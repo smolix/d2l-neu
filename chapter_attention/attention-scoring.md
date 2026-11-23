@@ -75,8 +75,9 @@ have similar asymptotic operation counts ($O(nmr)$ versus $O(nmd)$ for $n$
 queries and $m$ keys), additive attention must materialize an $n \times m
 \times r$ tensor of hidden activations and apply $\tanh$ elementwise.
 Dot-product attention computes all $n \times m$ scores in a single matrix
-multiplication $\mathbf{Q}\mathbf{K}^\top$, without losing expressivity when
-queries and keys are already produced by learned linear projections
+multiplication $\mathbf{Q}\mathbf{K}^\top$. A bilinear score is less general
+than an MLP, but the loss is of no practical consequence when queries and keys
+are themselves produced by learned projections
 $(\mathbf{W}_q \mathbf{q})^\top (\mathbf{W}_k \mathbf{k})$ (see also Exercise
 :exref:`ex_attention-scoring-additive-near-zero`).
 
@@ -236,7 +237,22 @@ initialization, and the Jacobian norm falls by half. Scaling by $1/\sqrt{d}$
 decouples initial softmax sharpness from head width while leaving learned
 projections free to sharpen weights during training (once queries and keys
 align, dot products grow as $O(d)$, motivating the $1/d$ scaling in maximal
-update parametrization, :numref:`sec_scaling`).
+update parametrization, :numref:`sec_scaling`). Many recent models do not
+leave the temperature to the projections at all: they normalize queries and
+keys to unit length and learn the score scale as a separate parameter, a
+design called *QK-norm* that we meet in :numref:`sec_transformer-block`.
+
+The scaling fixes the sharpness against the width $d$ but not against the
+number of keys $m$. With unit-variance scores the entropy is about $\log m -
+\tfrac{1}{2}$, so the weights spread over roughly $0.6\,m$ keys: a fixed
+fraction of the context, however long it is. A lookup is diluted in the same
+way. If the matching key leads each of the other $m - 1$ keys by a score gap
+$g$, it receives weight $1/(1 + (m-1)e^{-g})$. A gap of $g = 9$ gives about
+$0.9$ among $1{,}000$ keys and less than $0.1$ among $100{,}000$. To stay
+sharp, the gap must grow like $\log m$. A model trained at one context length
+therefore attends more diffusely at a longer one, which is why some models
+raise the score scale with the length of the context
+(:numref:`sec_attention-further-reading`).
 
 ## Masking
 
@@ -402,6 +418,14 @@ d2l.show_heatmaps(weights[None], xlabel='keys', ylabel='queries',
                   titles=['valid length 6', 'valid length 3'],
                   figsize=(5, 2.5))
 ```
+
+In the shorter sequence, queries $4$ to $6$ are padding themselves, yet each
+still has valid keys, because a causal triangle always reaches back to key
+$1$. This is a property of the shape, not of AND. Had we combined the padding
+mask with a *sliding window*, which lets each query see only its few most
+recent keys, a query whose window lies entirely inside the padding would keep
+no valid key at all. Masks that are harmless alone can leave a row empty
+together, and this is the case that `masked_softmax` zeroes.
 
 The same boolean algebra handles *packed sequences*, where multiple short
 documents are concatenated into a single row to avoid padding overhead.
@@ -680,8 +704,8 @@ def train_aligner(num_steps=100):
 
 Comparing an untrained model against three independent training runs on
 $1{,}000$ test sequences shows that gradient descent reliably converges to
-$100\%$ accuracy, placing over $0.999$ of each output position's weight on
-$\pi(j)$:
+$100\%$ accuracy, placing more than $99\%$ of the weight on $\pi(j)$, on
+average over output positions:
 
 ```{.python .input #attention-scoring-attention-as-learned-alignment-3}
 %%tab pytorch
@@ -1204,7 +1228,7 @@ Can gradient descent discover a word reordering from output supervision alone? I
 
 ::: {.cols .vc}
 ::: {.col}
-- After $100$ Adam steps minimizing negative log-likelihood on random sequences, all three runs reach $100\%$ test accuracy and place $> 0.999$ of their weight on $\pi(j)$:
+- After $100$ Adam steps minimizing negative log-likelihood on random sequences, all three runs reach $100\%$ test accuracy and place more than $99\%$ of their weight on $\pi(j)$ on average:
 - Even when source tokens repeat (`c`, `o`), the learned key projection routes each query cleanly to $\pi(j)$, visible as the off-diagonal crossing in rows 3 and 4.
 :::
 

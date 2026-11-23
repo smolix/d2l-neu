@@ -317,9 +317,12 @@ d2l.plot(lengths, mems, 'sequence length n', 'XLA temp memory (MiB)',
 ### Memory Traffic and Fused Kernels
 
 A GPU's compute units execute matrix arithmetic orders of magnitude faster
-than its off-chip high-bandwidth memory (HBM) can transfer data (e.g., on an
-RTX 4090, $\sim 165$ TFLOP/s in float16 versus $\sim 0.9$ TB/s HBM bandwidth;
-see :numref:`chap_performance`). Naive attention is *memory-bandwidth bound*:
+than its off-chip device memory can transfer data (e.g., on an RTX 4090,
+$\sim 165$ TFLOP/s in float16 versus $\sim 1$ TB/s of memory bandwidth; see
+:numref:`chap_performance`). Data-center cards build this memory from
+high-bandwidth memory (HBM) and the RTX 4090 from GDDR6X. We follow the
+FlashAttention paper and write HBM for the device memory of either kind.
+Naive attention is *memory-bandwidth bound*:
 it writes the $n \times n$ score matrix to HBM, reads it back for softmax,
 writes the $n \times n$ weights to HBM, and reads them again to multiply by
 $\mathbf{V}$—moving $4n^2$ floats across HBM with low arithmetic intensity
@@ -700,8 +703,8 @@ Masking with `finfo(dtype).min`, not $-\infty$, keeps fully masked blocks free o
 
 ::: {.cols .vc}
 ::: {.col}
-- **Tensor Cores vs. HBM:** A GPU executes $\sim 165$–$1{,}000\text{ TFLOP/s}$ in 16-bit matrix arithmetic, while off-chip HBM transfers only $\sim 0.9$–$3.3\text{ TB/s}$ ($\sim 180$ FLOPs per byte transferred!).
-- **On-Chip SRAM ($\sim 19\text{ TB/s}$):** Registers and L1/shared memory are $10$–$20\times$ faster than HBM but hold only $\sim 128$–$256\text{ KiB}$ per SM.
+- **Tensor Cores vs. HBM:** A GPU executes $\sim 165$–$1{,}000\text{ TFLOP/s}$ in 16-bit matrix arithmetic, while off-chip device memory transfers only $\sim 1.0\text{ TB/s}$ (GDDR6X, RTX 4090) to $3.35\text{ TB/s}$ (HBM, H100): $\sim 164$ FLOPs per byte transferred on the RTX 4090. We write HBM for either kind.
+- **On-Chip SRAM (tens of $\text{TB/s}$):** Registers and L1/shared memory are an order of magnitude faster than device memory but hold only $\sim 0.1\text{ GB}$ in total.
 - **Why Python Chunking Is Still Slow:** Launching separate kernels reads and writes every $n \times c$ stripe to slow HBM.
 :::
 
@@ -719,7 +722,7 @@ Masking with `finfo(dtype).min`, not $-\infty$, keeps fully masked blocks free o
 - **Four HBM Passes Over $n^2$ Floats:** Naive attention writes $\mathbf{S}$ to HBM, reads $\mathbf{S}$ for softmax, writes $\mathbf{A}$ to HBM, and reads $\mathbf{A}$ to multiply by $\mathbf{V}$.
 - **Low Arithmetic Intensity:**
   $$\textrm{Intensity} \;\xrightarrow{n \to \infty}\; \frac{d_h + d_v}{4}\;\textrm{FLOPs/byte (fp16)}$$
-- **Memory-Bound Regime:** For $d_h = d_v = 64$ in FP16, intensity is only $32\text{ FLOPs/byte}$—far below the $\sim 180\text{ FLOPs/byte}$ Tensor Core ridge point.
+- **Memory-Bound Regime:** For $d_h = d_v = 64$ in FP16, intensity is only $32\text{ FLOPs/byte}$—far below the $\sim 164\text{ FLOPs/byte}$ ridge point of the RTX 4090.
 :::
 
 ::: {.col .fig}

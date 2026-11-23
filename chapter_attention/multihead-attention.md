@@ -132,9 +132,12 @@ Why use separate matrices $\mathbf{W}_q$ and $\mathbf{W}_k$? If a single
 projection $\mathbf{u}_i = \mathbf{x}_i\mathbf{W}$ served as both query and
 key, the score matrix $s_{ij} = \mathbf{u}_i^\top \mathbf{u}_j / \sqrt{d_h}$
 would be symmetric and positive semidefinite, satisfying $s_{ij} \le
-\sqrt{s_{ii}\, s_{jj}}$ by Cauchy--Schwarz. No token could prefer another
-token over their geometric-mean self-affinity—a verb could not selectively
-seek nouns without seeking itself at least as strongly. Separate query, key,
+\sqrt{s_{ii}\, s_{jj}} \le \max(s_{ii}, s_{jj})$ by Cauchy--Schwarz. Two
+things are then impossible. A verb could not seek a noun more strongly than
+the noun seeks the verb, since $s_{ij} = s_{ji}$. And two tokens could never
+each score the other above themselves: a verb can prefer nouns to itself only
+if nouns have the larger norm, and then nouns prefer themselves to the verb.
+Separate query, key,
 and value projections decouple *who looks*, *who is found*, and *what content
 is passed on*.
 
@@ -539,7 +542,10 @@ error to $\sim 10^{-7}$.
 ### Shared Keys and Values
 :label:`subsec_kv-head-sharing`
 
-During autoregressive generation, past keys and values are cached in memory so each new token can attend to all previous positions without recomputing their projections (a mechanism we analyze in detail in :numref:`sec_kv-cache`). *Grouped-query attention* (GQA)
+During autoregressive generation, past keys and values are cached in memory,
+so that each new token can attend to all previous positions without
+recomputing their projections (:numref:`sec_kv-cache`). *Grouped-query
+attention* (GQA)
 :cite:`Ainslie.Lee-Thorp.Jong.ea.2023` reduces this cache by a factor of
 $H / H_\textrm{kv}$ by sharing each key--value head across a group of $H /
 H_\textrm{kv}$ query heads; setting $H_\textrm{kv} = 1$ gives *multi-query
@@ -775,7 +781,7 @@ Self-Attention, Multi-Head Attention, and Key–Value Sharing<br>**self-attentio
 - **Symmetric PSD Trap ($\mathbf{W}_q = \mathbf{W}_k = \mathbf{W}$):** Setting $\mathbf{u}_i = \mathbf{x}_i \mathbf{W}$ makes the score matrix $s_{ij} = \mathbf{u}_i^\top \mathbf{u}_j / \sqrt{d_h}$ symmetric and positive semidefinite.
 - **Cauchy–Schwarz Self-Affinity Bound:**
   $$s_{ij} \le \sqrt{s_{ii}\,s_{jj}}$$
-- **Linguistic Failure Mode:** Under a shared projection, no token of equal norm can prefer a *different* token over itself—separate $\mathbf{W}_q \neq \mathbf{W}_k$ break this symmetry!
+- **Linguistic Failure Mode:** Scores are symmetric ($s_{ij} = s_{ji}$), and since $s_{ij} \le \max(s_{ii}, s_{jj})$ a verb and a noun can never *each* prefer the other over itself. Separate $\mathbf{W}_q \neq \mathbf{W}_k$ remove both limits.
 :::
 
 ::: {.col .fig}

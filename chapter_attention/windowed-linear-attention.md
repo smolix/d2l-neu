@@ -86,15 +86,19 @@ theoretical receptive field of
 
 $$1 + L(w - 1)$$
 
-tokens. For example, Mistral 7B :cite:`Jiang.Sablayrolles.Mensch.ea.2023`
-uses $w = 4{,}096$ across $L = 32$ layers, spanning up to $131{,}041$
-tokens. However, theoretical reach differs from direct retrieval: whereas
+tokens. For example, Mistral 7B v0.1
+:cite:`Jiang.Sablayrolles.Mensch.ea.2023` used $w = 4{,}096$ across $L = 32$
+layers, spanning up to $131{,}041$ tokens. However, theoretical reach differs from direct retrieval: whereas
 full self-attention connects any two tokens in a single hop, a stack of
 windows requires $\lceil \Delta / (w - 1) \rceil$ sequential hops across
-layers to relay a fact across distance $\Delta$. Under uniform window
-averaging ($w = 4$, $L = 4$), a token at the boundary $\Delta = 12$ arrives
- along a single four-hop path with weight $(1/4)^4 = 1/256$, compared to
-$1/13$ in a single global layer.
+layers to relay a fact across distance $\Delta$. A relayed fact is also
+diluted at every hop. :numref:`fig_window-receptive-field` shows the smallest
+case: under uniform window averaging ($w = 4$, $L = 4$), a token at the
+boundary $\Delta = 12$ arrives along a single four-hop path with weight
+$(1/4)^4 = 1/256$, compared to $1/13$ in a single global layer.
+
+![Stacked windows against one global layer. Left: with four windowed layers of width $w = 4$, the output at the top right depends on a cone of earlier positions, and the input $\Delta = 12$ positions back reaches it along a single path of four hops (blue), with weight $(1/4)^4 = 1/256$ under uniform attention weights. Right: one global layer connects the same two positions in one hop, with weight $1/13$.](../img/mdl-attention-window-receptive-field.svg)
+:label:`fig_window-receptive-field`
 
 ### Global Layers
 
@@ -160,11 +164,12 @@ def windowed_attention(Q, K, V, w):
 
 In a tiled GPU kernel such as FlashAttention or FlexAttention
 :cite:`Dong.Feng.Guessous.ea.2025`, computation proceeds in $b \times b$
-tiles (typically $b = 128$), and a tile is skipped only when *all* $b^2$ of
-its entries are masked out. At $n = 2{,}048$ and $b = w = 128$, the causal
+tiles ($b = 128$ by default in FlexAttention), and a tile is skipped only
+when *all* $b^2$ of its entries are masked out. At $n = 2{,}048$ and $b = w = 128$, the causal
 mask visits $T(T+1)/2$ of the $T^2$ tiles ($53.1\%$ for $T = n/b = 16$),
 whereas the sliding window visits only the diagonal tile and its left
-neighbor in each tile row ($2T - 1 = 31$ tiles, or $12.1\%$):
+neighbor in each tile row ($2T - 1 = 31$ tiles, or $12.1\%$;
+:numref:`fig_window-tiles`):
 
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-3}
 %%tab pytorch
@@ -189,6 +194,9 @@ n, b, w = 2048, 128, 128
 print(f'causal:  {tiles_visited(d2l.causal_mask(n), b):.1%} of tiles')
 print(f'window:  {tiles_visited(window_mask(n, w), b):.1%} of tiles')
 ```
+
+![Tiles visited by a fused kernel, for $T = 16$ tile rows. Solid entries are allowed scores, and the faint remainder of a square marks a tile that the mask cuts but the kernel must still visit. The causal mask (left) visits $T(T+1)/2 = 136$ tiles and cuts only the $16$ on the diagonal. The window of width $w = b$ (right) visits the diagonal tile and its left neighbor in each row, $2T - 1 = 31$ tiles, and cuts every one of them.](../img/mdl-attention-window-tiles.svg)
+:label:`fig_window-tiles`
 
 Both `windowed_attention` and the framework's fused sliding-window kernel
 match the
@@ -295,10 +303,20 @@ d2l.plot(lengths, list(times.values()), 'sequence length n', 'time (ms)',
 
 Beyond $n \approx 2{,}048$, dense causal runtime scales quadratically while
 windowed runtime scales linearly, reaching a $> 30\times$ speedup at $n =
-32{,}768$ (slightly below the $64\times$ raw tile ratio because every active
-tile in a width-$b$ band straddles the mask boundary and incurs elementwise
-masking overhead, whereas interior tiles of the causal triangle run
-unmasked).
+32{,}768$. This is between one half and three quarters of the $64\times$ that
+the tile count predicts. The count treats every visited tile as the same
+amount of work, so it is an upper bound on the gain and not an estimate of it.
+
+:begin_tab:`pytorch`
+In FlexAttention every visited tile of a width-$b$ band is cut by the mask
+boundary (:numref:`fig_window-tiles`) and pays for elementwise masking,
+whereas the interior tiles of the causal triangle run unmasked.
+:end_tab:
+
+:begin_tab:`jax`
+cuDNN does not document how it tiles the score matrix, so $b = 128$ is our
+assumption here.
+:end_tab:
 
 ## Linear Attention
 
@@ -544,6 +562,89 @@ for beta in (1, 4, 16):  # Scale the queries up; 8 keys: uniform is 0.125
           f'{soft.max(-1).mean():.2f}, elu+1 {lin.max(-1).mean():.2f}')
 ```
 
+### Recall Under Each Mechanism
+
+Both limits, and the limit of a window, appear in the simplest lookup we can
+pose. We store $N$ random key--value pairs of width $d_h = 64$, query with one
+of the stored keys, and count a hit when the output has a larger inner product
+with the right value than with any other stored value. Four mechanisms answer
+the query: dense softmax attention; a window that sees only the last $w = 16$
+pairs; linear attention with the elu+1 feature map; and the *outer-product
+state* $\mathbf{q}^\top \sum_i \mathbf{k}_i \mathbf{v}_i^\top$, which is
+linear attention with the identity feature map and no normalizer. The last
+one sets the feature map aside, so that it shows the capacity of a $d_h
+\times d_v$ state by itself:
+
+```{.python .input #windowed-linear-attention-recall-under-each-mechanism}
+%%tab pytorch
+def recall(N, w=16, trials=1000):
+    """Look up one of N stored pairs by its key; fraction of hits per rule."""
+    K, V = (torch.randn(trials, N, d_h, device=d2l.try_gpu())
+            for _ in range(2))
+    target = torch.randint(0, N, (trials,), device=K.device)
+    rows = torch.arange(trials, device=K.device)
+    q = K[rows, target][:, None]                       # (trials, 1, d_h)
+    scores = q @ K.transpose(1, 2) / math.sqrt(d_h)    # (trials, 1, N)
+    recent = torch.arange(N, device=K.device) >= N - w  # The last w pairs
+    lin = phi(q) @ phi(K).transpose(1, 2)
+    outputs = {'softmax': torch.softmax(scores, -1) @ V,
+               f'window (w={w})': d2l.masked_softmax(scores, recent) @ V,
+               'elu+1': lin / lin.sum(-1, keepdim=True) @ V,
+               'outer-product state': q @ (K.transpose(1, 2) @ V)}
+    # A hit: of the N stored values, the target is nearest to the output
+    return {name: float(((O @ V.transpose(1, 2)).argmax(-1)[:, 0] == target)
+                        .float().mean()) for name, O in outputs.items()}
+
+for N in (16, 64, 256, 1024):
+    print(f'N = {N:4}: ' + ', '.join(f'{name} {hit:.2f}'
+                                     for name, hit in recall(N).items()))
+```
+
+```{.python .input #windowed-linear-attention-recall-under-each-mechanism}
+%%tab jax
+def recall(N, w=16, trials=1000):
+    """Look up one of N stored pairs by its key; fraction of hits per rule."""
+    key_K, key_V, key_t = jax.random.split(d2l.get_key(), 3)
+    K, V = (jax.random.normal(k, (trials, N, d_h)) for k in (key_K, key_V))
+    target = jax.random.randint(key_t, (trials,), 0, N)
+    q = K[jnp.arange(trials), target][:, None]         # (trials, 1, d_h)
+    scores = q @ K.swapaxes(1, 2) / math.sqrt(d_h)     # (trials, 1, N)
+    recent = jnp.arange(N) >= N - w                    # The last w pairs
+    lin = phi(q) @ phi(K).swapaxes(1, 2)
+    outputs = {'softmax': jax.nn.softmax(scores, axis=-1) @ V,
+               f'window (w={w})': d2l.masked_softmax(scores, recent) @ V,
+               'elu+1': lin / lin.sum(-1, keepdims=True) @ V,
+               'outer-product state': q @ (K.swapaxes(1, 2) @ V)}
+    # A hit: of the N stored values, the target is nearest to the output
+    return {name: float(((O @ V.swapaxes(1, 2)).argmax(-1)[:, 0] == target)
+                        .mean()) for name, O in outputs.items()}
+
+for N in (16, 64, 256, 1024):
+    print(f'N = {N:4}: ' + ', '.join(f'{name} {hit:.2f}'
+                                     for name, hit in recall(N).items()))
+```
+
+<!-- TODO(rerun): check the values in the next two paragraphs against outputs/{pytorch,jax}/chapter_attention/windowed-linear-attention.json once the recall cell has run. They are rounded from Stage A's CPU table: window about w/N (1.00, 0.25, 0.06, 0.02); elu+1 about 0.2 at N = 16; outer-product state 1.00, 0.99, about 0.66, about 0.09; softmax 1.00 at every N. -->
+
+Softmax attention finds the pair at every $N$. The window finds it only when
+the pair lies among the last $w$, so its recall is about $w/N$: perfect at
+$N = 16$, a quarter at $N = 64$, and a few percent at $N = 1{,}024$. More
+striking is elu+1 linear attention, which fails even at $N = 16$, where the
+state has four times as many rows as there are pairs to store. Its weights
+cannot sharpen, so the output is close to the average of all stored values,
+and the right one barely stands out.
+
+The outer-product state does much better, and it shows the capacity limit
+cleanly. For the query $\mathbf{q} = \mathbf{k}_j$ its output is
+$\|\mathbf{k}_j\|^2\, \mathbf{v}_j \approx d_h \mathbf{v}_j$ plus crosstalk
+$\sum_{i \ne j} (\mathbf{k}_j^\top \mathbf{k}_i)\, \mathbf{v}_i$ from the
+other pairs. Each crosstalk coefficient has size about $\sqrt{d_h}$, so the
+noise relative to the signal is about $\sqrt{(N - 1)/d_h}$. Recall is nearly
+perfect up to $N \approx d_h$, drops to about two thirds at $N = 4 d_h$, and
+has collapsed at $N = 16 d_h$. Softmax attention keeps all $N$ pairs and
+recalls at every $N$; a state of fixed size recalls only while $N$ stays near
+its width.
+
 ## Choosing a Mechanism
 
 * **Exact fused attention** is the default for short-to-medium contexts,
@@ -781,7 +882,7 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 ::: {.col}
 - We time dense causal vs. sliding-window ($w = 128$) attention inside the same compiled `bfloat16` fused kernel ($H = 32, d_h = 64$) from $n = 512$ to $n = 32{,}768$:
 - **Linear vs. Quadratic Slope:** Above $n = 2{,}048$, dense runtime quadruples per doubling of $n$, while windowed runtime grows linearly ($2\times$ per doubling).
-- **$> 30\times$ Speedup at $32\text{K}$:** Slightly below the $64.4\times$ tile ratio because every visited window tile straddles the mask boundary and applies elementwise masking, whereas interior causal tiles run unmasked.
+- **$> 30\times$ Speedup at $32\text{K}$:** One half to three quarters of the $64.4\times$ tile ratio. The tile count treats every visited tile as equal work, so it is an upper bound on the gain.
 
 @!attention-at-scale-the-price-of-attention-measured[out=1]
 :::

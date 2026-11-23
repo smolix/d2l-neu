@@ -64,7 +64,7 @@ $$
 $$
 :eqlabel:`eq_postln-block`
 
-Why did modern architectures switch from :eqref:`eq_postln-block` to :eqref:`eq_preln-block`? We can see the difference directly at initialization without training a single step, using a minimal block `MiniBlock` that supports both `pre_norm=True` and `pre_norm=False` as well as custom output-projection weight scale `std`:
+Why did modern architectures switch from :eqref:`eq_postln-block` to :eqref:`eq_preln-block`? We can see the difference directly at initialization without training a single step, using a minimal block `MiniBlock` whose flag `pre_norm` switches between the two arrangements:
 
 ```{.python .input #transformer-block-two-arrangements}
 %%tab pytorch
@@ -118,7 +118,7 @@ class MiniBlock(nnx.Module):
 ### Signal Propagation and Token Collapse at Initialization
 :label:`subsec_signal-propagation`
 
-Consider passing a batch of random unit-variance token vectors $\mathbf{X}^{(0)} \in \mathbb{R}^{B \times n \times d}$ through $L = 32$ freshly initialized blocks. At each block $\ell \in \{1, \dots, L\}$, we track three quantities:
+Consider passing a batch of random unit-variance token vectors $\mathbf{X}^{(0)} \in \mathbb{R}^{B \times n \times d}$ through $L = 32$ freshly initialized blocks. The function `signal_stats` below draws every weight matrix of the stack afresh, with Xavier initialization as in the 2017 Transformer, or with $\mathcal{N}(0, \textrm{std}^2)$ entries if `std` is given. At each block $\ell \in \{1, \dots, L\}$, we track three quantities:
 
 1. **Stream standard deviation** across all entries of $\mathbf{X}^{(\ell)}$;
 2. **Token spread**, measured as the standard deviation across the $n$ sequence positions (which vanishes if all $n$ tokens collapse onto the same vector); and
@@ -187,23 +187,28 @@ def signal_stats(pre_norm, std=None, num_blks=32, num_hiddens=256):
             'grad_q': jnp.stack(grad_q).tolist(), 'proj': proj}
 ```
 
-Why does post-norm lose token diversity across depth? In each post-norm sublayer, the residual stream $\mathbf{x}_i$ (variance $1$) and the sublayer update $\mathbf{u}_i$ (variance $\sigma^2$) are added and then divided by $\sqrt{1 + \sigma^2}$ to restore unit variance. Because attention averages across tokens, the shared mean component is reinforced while the token-specific difference $\mathbf{x}_i - \mathbf{x}_j$ is scaled down at every block by roughly
+Why does post-norm lose token diversity across depth? Split each token into the part that all tokens share and the part that is its own, $\mathbf{x}_i = \boldsymbol{\mu} + \boldsymbol{\delta}_i$, where $\boldsymbol{\mu} = \frac{1}{n}\sum_j \mathbf{x}_j$ is the mean over the $n$ positions (:numref:`fig_mdl-transformers-token-collapse`). At initialization the attention weights are close to uniform, so every token receives nearly the same update $\mathbf{u} \approx \mathbf{W}_o\mathbf{W}_v\boldsymbol{\mu}$: the deviations average out and only the mean is passed on. Each of the two projections multiplies the squared length of its input by $g^2 = d\sigma^2$, where $\sigma^2$ is the variance of a weight entry, and the random vector $\mathbf{u}$ is nearly orthogonal to $\boldsymbol{\mu}$. The energy of the shared part therefore grows by the factor $1 + g^4$, while the deviations stay as they were. The normalization that follows cannot repair this. It rescales every token by the same factor, which restores the length of the stream but not the balance between the mean and the deviations.
+
+![Token collapse in one post-norm block. Each token splits into the shared mean $\boldsymbol{\mu}$ and its own deviation $\boldsymbol{\delta}_i$. Nearly uniform attention adds the same update $\mathbf{u} \approx \mathbf{W}_o\mathbf{W}_v\boldsymbol{\mu}$ to every token, so only the mean grows. The normalization that follows rescales all tokens by one factor, which shrinks the deviations. Drawn for Xavier initialization ($g = 1$), where $\mathbf{u}$ is as long as $\boldsymbol{\mu}$ and the factor is $1/\sqrt{2}$.](../img/mdl-transformers-token-collapse.svg)
+:label:`fig_mdl-transformers-token-collapse`
+
+Let $\rho = n\|\boldsymbol{\mu}\|^2 / \sum_i \|\boldsymbol{\delta}_i\|^2$ be the ratio of shared to token-specific energy. Each block multiplies $\rho$ by $1 + g^4$. The token spread, the fraction of the stream's norm that lies in the deviations, is $s = (1 + \rho)^{-1/2}$, and $n$ independent random tokens start at $\rho_0 = 1/(n-1)$. After $k$ blocks we thus expect
 
 $$
-r \approx \frac{1}{\sqrt{1 + \sigma_{\textrm{attn}}^2}} \cdot \frac{1}{\sqrt{1 + \sigma_{\textrm{ffn}}^2}} < 1,
+s_k \approx \Bigl(1 + \frac{(1 + g^4)^k}{n - 1}\Bigr)^{-1/2}.
 $$
 :eqlabel:`eq_collapse-rate`
 
-so token spread decays exponentially as $r^L$ across depth $L$.
+Once the mean dominates, the spread shrinks by the factor $1/\sqrt{1 + g^4}$ per block, which is $1/\sqrt{2}$ under Xavier initialization ($g = 1$). Note that the FFN does not appear in :eqref:`eq_collapse-rate`. It acts on each token separately and cannot tell the mean from the deviations, so it changes their ratio very little (Exercise :exref:`ex_transformer-block-ffn-width-rounding`).
 
-Under pre-norm (:eqref:`eq_preln-block`), the residual stream is never divided by a normalization denominator: unrolling $L$ blocks gives a direct sum $\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{2L} \mathbf{U}^{(\ell)}$. Because $2L$ independent sublayer outputs add variance to the stream, the unscaled pre-norm stream RMS grows with depth as $\sqrt{1 + 2\ell\sigma^2}$ (to keep the total variance deposited by all $2L$ sublayers $O(1)$ at any depth $L$, GPT-2 :cite:`Radford.Wu.Child.ea.2019` scales the initialization standard deviation of each block's residual output projections `W_o` and `W_2` by $1/\sqrt{2L}$, as we implement in :numref:`sec_gpt` and test in Exercise :exref:`ex_transformer-block-stream-variance`). Meanwhile, in post-norm, BERT :cite:`Devlin.Chang.Lee.ea.2018` slows down the collapse rate :eqref:`eq_collapse-rate` by initializing all linear weights with a smaller standard deviation $\sigma = 0.02$ (so $g^2 = d\sigma^2 \approx 0.10$ at $d = 256$). Let us compare these three configurations (`post-norm`, `pre-norm`, and `post-norm, std 0.02`) across 32 blocks:
+Under pre-norm (:eqref:`eq_preln-block`), the residual stream is never divided by a normalization denominator: unrolling $L$ blocks gives a direct sum $\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{2L} \mathbf{U}^{(\ell)}$. Because $2L$ independent sublayer outputs add variance to the stream, the unscaled pre-norm stream RMS grows with depth as $\sqrt{1 + 2\ell\sigma^2}$ (to keep the total variance deposited by all $2L$ sublayers $O(1)$ at any depth $L$, GPT-2 :cite:`Radford.Wu.Child.ea.2019` scales the initialization standard deviation of each block's residual output projections `W_o` and `W_2` by $1/\sqrt{2L}$, as we implement in :numref:`sec_gpt` and test in Exercise :exref:`ex_transformer-block-stream-variance`). Meanwhile, in post-norm, BERT :cite:`Devlin.Chang.Lee.ea.2018` slows down the collapse :eqref:`eq_collapse-rate` by initializing all linear weights with a smaller standard deviation $\sigma = 0.02$ (so $g^2 \approx 0.10$ and $g^4 \approx 0.01$ at $d = 256$). Let us compare these three configurations (`post-norm`, `pre-norm`, and `post-norm, std 0.02`) across 32 blocks:
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization}
 %%tab pytorch, jax
 arms = {'post-norm': (False, None), 'pre-norm': (True, None),
         'post-norm, std 0.02': (False, 0.02)}
 stats, predicted = {}, {}
-at = lambda xs: ' '.join(f'{xs[k - 1]:.1e}' for k in (8, 16, 32))
+at = lambda xs, ks=(8, 16, 32): ' '.join(f'{xs[k - 1]:.1e}' for k in ks)
 for name, (pre_norm, std) in arms.items():
     stats[name] = s = signal_stats(pre_norm, std)
     print(f'{name}: stream RMS at k=32 {s["rms"][-1]:.2f}')
@@ -213,11 +218,12 @@ for name, (pre_norm, std) in arms.items():
         predicted[name] = [(1 + (1 + g2 ** 2) ** k / 63) ** -0.5
                            for k in range(1, 33)]
         print(f'  predicted:                 {at(predicted[name])}')
+    print(f'  W_q grad norm at k=1,8,16,32: {at(s["grad_q"], (1, 8, 16, 32))}')
     print('  grad norms at k=32: ' + '  '.join(
         f'{n} {g:.1e}' for n, g in s['proj'].items()))
 ```
 
-Plotting the empirical token spread across blocks $k = 1 \dots 32$ alongside the theoretical post-norm decay curve :eqref:`eq_collapse-rate` confirms how post-norm squeezes token representations together while pre-norm preserves unit spread:
+We plot the measured token spread across blocks $k = 1, \ldots, 32$ next to the prediction :eqref:`eq_collapse-rate` for the two post-norm arms (dotted, with $n = 64$):
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization-3}
 %%tab pytorch, jax
@@ -228,11 +234,11 @@ d2l.plot(list(range(1, 33)), [s['spread'] for s in stats.values()]
          legend_loc='lower left')
 ```
 
-Under standard Xavier post-norm (`post-norm`), token spread collapses to nearly zero ($\sim 10^{-4}$) by layer 32, closely tracking our theoretical curve :eqref:`eq_collapse-rate`: all tokens in the sequence have been squeezed into nearly identical vectors. Shrinking the post-norm initialization (`post-norm, std 0.02`) slows the per-block contraction enough to preserve token spread across 32 blocks, while pre-norm (`pre-norm`) keeps token spread $O(1)$ automatically via its unattenuated identity residual path (with stream RMS growing as $\sqrt{L}$ unless paired with $1/\sqrt{2L}$ output-projection scaling; Exercise :exref:`ex_transformer-block-stream-variance`).
+Under standard Xavier post-norm (`post-norm`), token spread collapses to nearly zero ($\sim 10^{-4}$) by block 32, closely tracking the prediction :eqref:`eq_collapse-rate`: all tokens in the sequence have been squeezed into nearly identical vectors. The measured curve runs slightly below the dotted one, which is the small contribution of the FFN. Shrinking the post-norm initialization (`post-norm, std 0.02`) slows the per-block contraction enough to preserve token spread across 32 blocks. Pre-norm (`pre-norm`) is not immune, since its attention sublayers also add to the shared mean. But its stream grows with depth, so each update weighs less than the one before, and the spread decays slowly: more than a third of it is left after 32 blocks, even at Xavier scale (the stream RMS meanwhile grows as $\sqrt{L}$ unless paired with $1/\sqrt{2L}$ output-projection scaling; Exercise :exref:`ex_transformer-block-stream-variance`).
 
 ### Gradients at Initialization
 
-Plotting the backward gradient norm $\|\partial \mathcal{L} / \partial W_q^{(\ell)}\|_F$ across block index $\ell \in \{1, \dots, 32\}$ reveals the dual problem during backpropagation :cite:`xiong2020layer`:
+Token collapse is a property of the forward pass, but it also decides which weights can learn. We plot the gradient norm $\|\partial \mathcal{L} / \partial W_q^{(\ell)}\|_F$ of the query projection across block index $\ell \in \{1, \dots, 32\}$:
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization-2}
 %%tab pytorch, jax
@@ -243,7 +249,9 @@ d2l.plot(list(range(1, 33)), [s['grad_q'] for s in stats.values()],
          legend_loc='lower left')
 ```
 
-In `post-norm`, differentiating through $2L$ consecutive normalization divisions attenuates the gradient exponentially from layer 32 down to layer 1, starving early layers while leaving top layers with huge gradients (which forces post-norm training to rely on a careful learning-rate warmup schedule). In `pre-norm`, the identity term $I$ in $\partial \mathbf{X}^{(L)} / \partial \mathbf{X}^{(\ell)} = I + \cdots$ delivers a uniform, well-scaled gradient directly from the loss to every block in the stack.
+In `post-norm`, the query gradient is largest at block 1, around $10^{-2}$, and falls to about $10^{-9}$ at block 32. This is the reverse of the vanishing gradients of a deep MLP, where the layers farthest from the loss receive the least. The gradient is not lost on the way back. It is lost because of what the deep blocks see on the way forward: once the tokens entering a block nearly coincide, every key receives the same score and every value is the same, so moving a query changes nothing in the output. The query gradient accordingly shrinks with the square of the token spread, one factor because the scores differ only through the deviations $\boldsymbol{\delta}_i$ and a second because the values do, and the key gradient shrinks with it. The other weights are not affected. At block 32 the gradients of `W_v` and `W_o` have the same order of magnitude in `post-norm` and `pre-norm` (the last line printed for each arm above).
+
+In `pre-norm`, the identity term $I$ in $\partial \mathbf{X}^{(L)} / \partial \mathbf{X}^{(\ell)} = I + \cdots$ carries the gradient from the loss to every block. Its query gradient is not uniform either: it declines by a factor of about 30 over the stack, as the token spread slowly decays. But it stays above $10^{-3}$ where post-norm loses seven orders of magnitude. :citet:`xiong2020layer` analyze a different imbalance of post-norm Transformers at initialization, namely large gradients for the parameters near the output, and show that this is why post-norm training depends on a learning-rate warmup while pre-norm trains without one.
 
 ### RMSNorm
 :label:`subsec_rmsnorm`
@@ -510,7 +518,7 @@ for name, blk in blocks.items():
 ## Summary
 
 * A **Transformer block** separates **token mixing** (multi-head attention across sequence positions) from **channel mixing** (a position-wise FFN across the $d$ features), adding both updates to a shared residual stream.
-* **Pre-norm** (:eqref:`eq_preln-block`) normalizes only the input to each sublayer, preserving an unattenuated identity path for both forward token diversity and backward gradients, whereas **post-norm** (:eqref:`eq_postln-block`) normalizes the residual stream itself and exponentially attenuates early-layer gradients and inter-token differences (:eqref:`eq_collapse-rate`).
+* **Pre-norm** (:eqref:`eq_preln-block`) normalizes only the input to each sublayer and leaves the residual stream an identity path, whereas **post-norm** (:eqref:`eq_postln-block`) normalizes the stream itself. At Xavier scale a deep post-norm stack loses the differences between tokens exponentially fast (:eqref:`eq_collapse-rate`), and with them the query and key gradients of its deep blocks. Pre-norm loses both slowly.
 * Scaling the initialization standard deviation of each block's two residual output projections (`W_o` and `W_2`) by **$1/\sqrt{2L}$** keeps pre-norm residual stream variance $O(1)$ across arbitrary depth $L$.
 * **RMSNorm** (:eqref:`eq_rmsnorm`) drops LayerNorm's mean subtraction and additive bias, while per-head **QK-Norm** bounds attention logits by Cauchy--Schwarz regardless of projection weight growth.
 * **SwiGLU** (:eqref:`eq_swiglu`) replaces the two-matrix $4d$ FFN with a three-matrix gated product at width $d_{\textrm{ff}} = \operatorname{round}(\frac{8}{3}d)$, matching the $8d^2$ parameter and FLOP budget of a standard FFN.
@@ -530,7 +538,10 @@ for name, blk in blocks.items():
 4. **Stream variance budget across depth.** In the pre-norm arrangement, every sublayer adds an update to the residual stream. Run `signal_stats(pre_norm=True, std=0.02 / math.sqrt(2 * L), num_blks=L)` for $L \in \{8, 16, 32, 64\}$ and compare against unscaled `std=None`. Verify that the final stream standard deviation at block $L$ grows as $\sqrt{L}$ without scaling but remains near a constant independent of $L$ under the $1/\sqrt{2L}$ rule.
    :exlabel:`ex_transformer-block-stream-variance`
 
-5. **Rate of token collapse.** :numref:`subsec_signal-propagation` argued that in a post-norm block, only the attention sublayer mixes across tokens, while the FFN acts position-wise. Modify `MiniBlock` so that the attention sublayer is skipped ($\mathbf{H} = \textrm{Norm}(\mathbf{X})$) and only the post-norm FFN runs, and re-run `signal_stats(pre_norm=False)`. Does token spread still collapse to zero across 32 layers, or does it stabilize? Explain how this confirms each factor in :eqref:`eq_collapse-rate`.
+5. **Rate of token collapse.** The prediction :eqref:`eq_collapse-rate` has no factor for the FFN, on the argument that only the attention sublayer mixes across tokens while the FFN acts position-wise.
+   1. Modify `MiniBlock` so that the attention sublayer is skipped ($\mathbf{H} = \textrm{Norm}(\mathbf{X})$) and only the post-norm FFN runs, and re-run `signal_stats(pre_norm=False)` (remove its gradient lines, since no attention weight is used any more). How much token spread is left after 32 blocks?
+   2. Now skip the FFN and keep the attention sublayer. How close does the measured spread come to :eqref:`eq_collapse-rate` at $k = 8, 16, 32$?
+   3. The FFN-only stack does contract a little. Which property of GELU lets a position-wise network add a small vector that all tokens share?
    :exlabel:`ex_transformer-block-ffn-width-rounding`
 
 [Discussions](https://d2l.discourse.group/t/36774)
@@ -551,7 +562,7 @@ The Transformer Block: Pre-Norm, SwiGLU, and Signal Propagation<br>**residual st
 ::: {.cols .vc}
 ::: {.col}
 - **No per-token nonlinearity:** Without a position-wise FFN between attention layers, linear projections collapse to a single low-rank map on each token's channels.
-- **Token collapse & starved gradients:** Stacking $L = 32$ post-norm blocks with Xavier initialization collapses token spread to $\sim 10^{-4}$ and drops layer-1 query gradients $\|\partial \mathcal{L} / \partial \mathbf{W}_q^{(1)}\|_F$ to $\sim 10^{-9}$!
+- **Token collapse & starved gradients:** Stacking $L = 32$ post-norm blocks with Xavier initialization collapses token spread to $\sim 10^{-4}$ and drops the query gradients of block 32, $\|\partial \mathcal{L} / \partial \mathbf{W}_q^{(32)}\|_F$, to $\sim 10^{-9}$.
 :::
 
 ::: {.col .fig .big}
@@ -620,7 +631,7 @@ Because an untrained $L$-block stack is a deterministic random function, we can 
 ::: {.col}
 - Decompose each token vector $\mathbf{x}_i = \boldsymbol{\mu} + \boldsymbol{\delta}_i$ into the sequence mean $\boldsymbol{\mu} = \frac{1}{n}\sum_j \mathbf{x}_j$ and token-specific deviation $\boldsymbol{\delta}_i$.
 - **Random attention reinforces $\boldsymbol{\mu}$:** Uniform initial weights add $\mathbf{W}_o\mathbf{W}_v\boldsymbol{\mu}$ to every token while deviations $\boldsymbol{\delta}_i$ cancel.
-- **Post-norm rescales downward:** Dividing by $\sqrt{1 + \sigma_{\text{attn}}^2}$ shrinks $\boldsymbol{\delta}_i$ at every layer (`LayerNorm` centers *channels*, not tokens!).
+- **Post-norm rescales downward:** Dividing every token by the same factor restores the stream's length but shrinks $\boldsymbol{\delta}_i$ relative to $\boldsymbol{\mu}$ at every layer (`LayerNorm` centers *channels*, not tokens).
 :::
 
 ::: {.col .fig .big}
@@ -652,7 +663,7 @@ Because an untrained $L$-block stack is a deterministic random function, we can 
 ::: {.col}
 - **Post-norm + Xavier (`C0`):** Token spread decays exponentially across depth, falling to $\sim 10^{-4}$ by block 32 (slightly below the attention-only dotted curve because `GELU`'s positive mean adds a small shared vector in the FFN too).
 - **Post-norm + $\mathcal{N}(0, 0.02^2)$ (`C2`):** Small weights keep $g^4 \approx 0.01$, holding token spread at $0.97$ through 32 layers at width $d = 256$.
-- **Pre-norm + Xavier (`C1`):** Even with large Xavier weights ($g = 1$), pre-norm preserves substantial token diversity ($s_{32} \approx 0.33$) without exponential collapse.
+- **Pre-norm + Xavier (`C1`):** Even with large Xavier weights ($g = 1$), pre-norm preserves substantial token diversity ($s_{32} \approx 0.37$) without exponential collapse.
 :::
 
 ::: {.col .fig}
@@ -683,7 +694,7 @@ Because an untrained $L$-block stack is a deterministic random function, we can 
 ::: {.cols .vc}
 ::: {.col}
 - **Vanishing $\mathbf{W}_q, \mathbf{W}_k$ gradients at the top:** When incoming tokens $\mathbf{x}_1, \dots, \mathbf{x}_n$ at block 32 are nearly identical, perturbing $\mathbf{W}_q$ or $\mathbf{W}_k$ shifts all attention scores equally and leaves the softmax weighted average unchanged ($\|\nabla_{\mathbf{W}_q^{(32)}} \mathcal{L}\|_F \sim 10^{-9}$).
-- **Exponential attenuation toward layer 1:** In post-norm, backpropagating through $2L$ normalization Jacobians attenuates gradients across depth, whereas **pre-norm** (`C1`) delivers a flat, uniform gradient norm to every block.
+- **Not backward attenuation:** The post-norm $\mathbf{W}_q$ gradient is largest at block 1 ($\sim 10^{-2}$) and shrinks with the square of the token spread; $\mathbf{W}_v$ and $\mathbf{W}_o$ gradients at block 32 match pre-norm in order of magnitude. **Pre-norm** (`C1`) loses a factor of about 30 over 32 blocks, not seven orders of magnitude.
 :::
 
 ::: {.col .fig}

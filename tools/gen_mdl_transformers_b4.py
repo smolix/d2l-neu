@@ -13,6 +13,9 @@ Figures:
       latents cross-attend into an input of length N (cost O(MN)), then
       process among themselves (cost O(M^2)).  Stream tokens blue, attention
       edges orange; one latent's read drawn in full, the rest as a band.
+  mdl-transformers-leakage.svg -- next-token prediction in one block,
+      without a mask (position t reads x_{t+1}, its target) and with the
+      causal mask.
 
 Run with the repo's pytorch venv:
 
@@ -201,6 +204,67 @@ def fig_latent_bottleneck():
     fl.save(fig, "mdl-transformers-latent-bottleneck")
 
 
+# --------------------------------------------------------------------------- #
+# leakage -- without a mask, position t reads token t + 1, its own target     #
+# --------------------------------------------------------------------------- #
+
+def fig_leakage():
+    n, t = 6, 3                       # six positions; the query is t = 3
+    SQ, PITCH = 0.74, 1.15
+    Y_IN, Y_OUT, Y_TGT = 0.0, 2.7, 3.75
+    xs = [i * PITCH for i in range(n)]
+    fig, axes = plt.subplots(1, 2, figsize=(8.2, 2.9))
+
+    def square(ax, x, y, text, fc, ec="black", lw=0.9):
+        ax.add_patch(FancyBboxPatch(
+            (x - SQ / 2, y - SQ / 2), SQ, SQ,
+            boxstyle="round,pad=0.02,rounding_size=0.10",
+            fc=fc, ec=ec, lw=lw, zorder=3))
+        ax.text(x, y, text, ha="center", va="center", fontsize=14,
+                color="black", zorder=4)
+
+    for ax, causal, title in ((axes[0], False, "no mask"),
+                              (axes[1], True, "causal mask")):
+        hot = t                       # input index of x_{t+1} (0-based)
+        for i, x in enumerate(xs):
+            leak = (i == hot) and not causal
+            square(ax, x, Y_IN, rf"$x_{{{i + 1}}}$",
+                   ATTN.tint if leak else STREAM.tint,
+                   ec=ATTN.dark if leak else "black",
+                   lw=2.2 if leak else 0.9)
+            square(ax, x, Y_OUT, rf"$\mathbf{{h}}_{{{i + 1}}}$",
+                   STREAM.tint if i == t - 1 else "white",
+                   ec=STREAM.dark if i == t - 1 else "black",
+                   lw=2.2 if i == t - 1 else 0.9)
+            ax.text(x, Y_TGT, rf"$x_{{{i + 2}}}$", ha="center",
+                    va="center", fontsize=13, color="black",
+                    bbox=(dict(boxstyle="round,pad=0.18", fc=ATTN.tint,
+                               ec=ATTN.dark, lw=1.6)
+                          if (i == t - 1 and not causal) else None))
+        # the keys query t may read: all six, or positions 1..t
+        q = xs[t - 1]
+        for i, x in enumerate(xs):
+            if causal and i > t - 1:
+                continue
+            leak = (i == hot) and not causal
+            ax.plot([q, x], [Y_OUT - SQ / 2 - 0.03, Y_IN + SQ / 2 + 0.03],
+                    color=ATTN.dark if leak else ATTN.base,
+                    lw=2.6 if leak else 1.1, zorder=2 if leak else 1,
+                    solid_capstyle="butt")
+        ax.text(-0.7, Y_TGT, "target", ha="right", va="center",
+                fontsize=13, color="black", style="italic")
+        ax.text(-0.7, Y_OUT, "block 1", ha="right", va="center",
+                fontsize=13, color="black", style="italic")
+        ax.text(-0.7, Y_IN, "input", ha="right", va="center", fontsize=13,
+                color="black", style="italic")
+        ax.set_title(title, fontsize=14, color="black", pad=4)
+        fl.clean_axes(ax, lim=((-2.15, xs[-1] + 0.5), (-0.5, 4.2)),
+                      hide=True)
+    fig.subplots_adjust(wspace=0.06, left=0.0, right=1.0, bottom=0.0,
+                        top=0.9)
+    fl.save(fig, "mdl-transformers-leakage")
+
+
 def _unitless(path):
     """Rewrite matplotlib's pt-sized root width/height as unitless CSS px
     (1 pt = 4/3 px), keeping the viewBox (figure guide: unitless sizes)."""
@@ -219,6 +283,7 @@ if __name__ == "__main__":
     fl.WRITTEN.clear()
     fig_three_wirings()
     fig_latent_bottleneck()
+    fig_leakage()
     for path in fl.WRITTEN:
         _unitless(path)
         print("wrote", os.path.relpath(path, os.path.dirname(fl.IMG_DIR)))

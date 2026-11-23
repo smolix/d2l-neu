@@ -14,6 +14,9 @@ Figures:
       a shared expert that every token uses, plus top-7 of 63.  Stored and
       active parameters are equal in all three rows; the number of expert
       combinations a token can choose from is not.
+  mdl-transformers-moe-capacity.svg -- dispatch of six tokens (top-2 of four
+      experts) into S = 4 slots per expert, with the ranks of
+      MoELayer.forward; the two assignments past expert 1's slots drop.
 
 Run with the repo's pytorch venv:
 
@@ -183,6 +186,68 @@ def fig_moe_fine():
     fl.save(fig, "mdl-transformers-moe-fine")
 
 
+def fig_moe_capacity():
+    """Six tokens, top-2 of four experts, capacity factor 1.25: S = 4 slots
+    per expert.  Ranks and slots follow MoELayer.forward exactly."""
+    n, k, E_, gamma = 6, 2, 4, 1.25
+    S = int(np.ceil(gamma * n * k / E_))
+    choice = np.array([[0, 1], [0, 2], [0, 1], [0, 3], [0, 2], [0, 1]])
+    e = choice.ravel()                              # expert of each pair
+    onehot = np.eye(E_, dtype=int)[e]
+    rank = (onehot.cumsum(0) * onehot).sum(1) - 1   # place in its queue
+    tok = np.repeat(np.arange(n), k)
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.3))
+    X0, P, W = 2.0, 1.0, 0.82                       # first column, pitch, cell
+    y_tok, y_ch = 5.55, 4.8
+    for i in range(n):
+        x = X0 + i * P
+        _box(ax, x, y_tok, W, W, T.BLUE.tint, ec=BLUE, lw=1.4)
+        ax.text(x, y_tok, f"{i + 1}", ha="center", va="center", fontsize=14,
+                color=INK)
+        ax.text(x, y_ch, f"{choice[i, 0] + 1}, {choice[i, 1] + 1}",
+                ha="center", va="center", fontsize=13, color=INK)
+    ax.text(X0 - 0.75, y_tok, "token", ha="right", va="center",
+            fontsize=13, color=INK)
+    ax.text(X0 - 0.75, y_ch, "its top-2", ha="right", va="center",
+            fontsize=13, color=INK)
+
+    ys = [3.05 - j * 1.0 for j in range(E_)]        # expert rows
+    for j, y in enumerate(ys):
+        ax.text(X0 - 0.75, y, f"expert {j + 1}", ha="right", va="center",
+                fontsize=13, color=INK)
+        for r in range(S):                          # the S slots
+            x = X0 + r * P
+            filled = np.any((e == j) & (rank == r))
+            _box(ax, x, y, W, W, T.GREEN.tint if filled else "white",
+                 ec=T.GREEN.base if filled else T.FAINT,
+                 lw=1.4 if filled else 0.9,
+                 ls="-" if filled else (0, (3, 2)))
+    for p_ in range(n * k):                         # place each assignment
+        j, r = e[p_], rank[p_]
+        x = X0 + r * P + (0.35 if r >= S else 0.0)  # overflow: past the wall
+        y = ys[j]
+        if r >= S:
+            _box(ax, x, y, W, W, T.RED.tint, ec=T.RED.base, lw=1.4,
+                 ls=(0, (3, 2)))
+        ax.text(x, y, f"{tok[p_] + 1}", ha="center", va="center",
+                fontsize=14, color=INK)
+    # the capacity wall after S slots
+    xw = X0 + (S - 0.5) * P + 0.17
+    ax.plot([xw, xw], [ys[-1] - 0.55, ys[0] + 0.55], color=INK, lw=2.0)
+    ax.text(X0 + (S - 1) * P / 2, ys[0] + 0.62,
+            rf"$S = \lceil {gamma}\cdot {n}\cdot {k} / {E_} \rceil = {S}$ slots",
+            ha="center", va="bottom", fontsize=13, color=INK)
+    xd = X0 + (S + 1.5) * P + 0.35 + 0.65
+    ax.text(xd, ys[0], "dropped:\nadds zero", ha="left", va="center",
+            fontsize=13, color=T.RED.dark)
+    ax.set_xlim(-0.45, xd + 1.75)
+    ax.set_ylim(ys[-1] - 0.6, y_tok + 0.55)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fl.save(fig, "mdl-transformers-moe-capacity")
+
+
 def _unitless(path):
     """Rewrite matplotlib's pt-sized root width/height as unitless CSS px
     (1 pt = 4/3 px), keeping the viewBox (figure guide: unitless sizes)."""
@@ -200,6 +265,7 @@ def _unitless(path):
 if __name__ == "__main__":
     fig_moe()
     fig_moe_fine()
+    fig_moe_capacity()
     for p in fl.WRITTEN:
         _unitless(p)
     for p in fl.WRITTEN:

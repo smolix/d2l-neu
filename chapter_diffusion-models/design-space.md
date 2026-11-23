@@ -777,7 +777,7 @@ We can now test the choices on images, one at a time. The base is the recipe of 
 | `t at EDM's levels` | EDM's log-normal noise levels, a control for the next row |
 | `EDM, clean image` | EDM's preconditioned clean image, with its levels and weight |
 
-Each model is an unconditional 64-channel `d2l.UNet`, trained for 5,000 updates, a third of the budget of :numref:`sec_diffusion-images`, from two seeds; the base, the control and EDM, whose comparison is the hardest to read, get four. All are sampled from the same 5,000 noise images by Heun's method and scored by the Fréchet distance (FD) against 5,000 test images. The sampler raises a question of fairness. EDM's own paper samples on its $\rho = 7$ grid, but for a model trained with uniform times :numref:`sec_diffusion-samplers` found that grid no better than the linear one at this budget, and suggested that it suits models trained at EDM's levels. A comparison on one grid could thus favor one recipe, so every model is sampled on both, EDM's grid (49 evaluations) and the linear grid (48). The cell first measures the pixels, for EDM's $\sigma_{\mathrm{data}}$, and the floor of :numref:`subsec_diffusion-fd-reference`, the FD between two sets of real images.
+Each model is an unconditional 64-channel `d2l.UNet`, trained for 5,000 updates, a third of the budget of :numref:`sec_diffusion-images`, from two seeds; the base, the control and EDM, whose comparison is the hardest to read, get four. All are sampled from the same 5,000 noise images by Heun's method and scored by the Fréchet distance (FD) against 5,000 test images. The sampler raises a question of fairness. EDM's own paper samples on its $\rho = 7$ grid, but for a model trained with uniform times :numref:`sec_diffusion-samplers` found that grid no better than the linear one at this budget. It may still suit a model trained at EDM's levels, which the control row lets us check. A comparison on one grid could thus favor one recipe, so every model is sampled on both, EDM's grid (49 evaluations) and the linear grid (48). The cell first measures the pixels, for EDM's $\sigma_{\mathrm{data}}$, and the floor of :numref:`subsec_diffusion-fd-reference`, the FD between two sets of real images.
 
 ```{.python .input #design-space-a-recipe-ablation}
 %%tab pytorch
@@ -922,7 +922,7 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
 
 At 5,000 updates (one-quarter the 20,000-step budget we will use for latent diffusion in :numref:`sec_diffusion-latent`), this table measures sample quality early in training across multiple seeds on two sampling grids:
 
-1. **Sampling grid sensitivity:** Every velocity model trained on the linear path (including the control trained at EDM's noise levels) scores $0.35$–$1.3$ FD lower on the linear grid than on the EDM grid, whereas the preconditioned EDM model is insensitive to the grid choice.
+1. **Sampling grid sensitivity:** Every velocity model trained on the linear path (including the control trained at EDM's noise levels) scores $0.35$–$1.3$ FD lower on the linear grid than on the EDM grid, whereas the preconditioned EDM model is insensitive to the grid choice. Training at EDM's levels does not by itself make its grid the better one.
 2. **Training noise-level distribution:** Centering logit-normal training times at $m = 0$ ($t = 0.5$) degrades FD by $1.1$–$1.3$ on the EDM grid ($0.5$–$0.75$ on the linear grid) relative to uniform $t$. Shifting the logit-normal center toward the data ($m = -0.5$, $t \approx 0.38$) or using EDM's levels ($m = -1.2$, $t \approx 0.23$) eliminates this deficit.
 3. **Target and preconditioning:** On the linear grid, the base velocity recipe, $\mathbf{v}$-prediction on the cosine path, and EDM achieve overlapping FD ranges across seeds.
 
@@ -981,7 +981,7 @@ For a new model, three design rules emerge from our analysis:
 
 1. **Choose a well-conditioned target on a path that reaches pure noise ($\alpha_1 = 0$):** Velocity prediction on the linear path, $\mathbf{v}$-prediction on the cosine path, and EDM preconditioning remain well scaled at both ends of $[0, 1]$, whereas bare noise prediction divides by $\alpha_t \to 0$ when reconstructing $\hat{\mathbf{x}}_0$ at high noise.
 2. **Place training levels where spatial structure forms:** For $28 \times 28$ images, uniform $t$ or a logit-normal shifted toward low noise ($m < 0$) outperforms a $t = 0.5$-centered logit-normal; as image resolution increases by a factor $r$, shift log-SNR downward by $\log r^2$ (:numref:`subsec_diffusion-design-space-scales`).
-3. **Match the loss weighting to the evaluation metric:** The ELBO weighting $w(\lambda) \equiv 1$ optimizes log-likelihood (heavily weighting low-noise fine detail), whereas monotone decaying weightings such as $w(\lambda) = e^{-\lambda/2}$ (flow matching and $\mathbf{v}$-prediction) prioritize perceptual sample quality.
+3. **Choose the loss weighting for the samples, not for the bound:** The weighting $w(\lambda) \equiv 1$ trains the likelihood bound and spends much of its effort on low-noise fine detail. Weightings that discount high log-SNR, such as $w(\lambda) = e^{-\lambda/2}$ (flow matching and $\mathbf{v}$-prediction), are the ones that have given good image samples in practice :cite:`Kingma.Gao.2023`. On our mixture the bound weighting did not even give the small network its best flow likelihood.
 
 The chapter's default—velocity regression on the linear path with uniform $t$, integrated on the linear grid—satisfies these criteria without extra hyperparameters. In :numref:`sec_diffusion-latent` we examine how to avoid spending network evaluations on high-frequency pixel detail by moving diffusion into a learned latent space.
 
@@ -1166,7 +1166,7 @@ With abundant capacity (`width = 256`), any positive weighting reaches the exact
 ::: {.col}
 $$\mathcal{L}_w(\boldsymbol\theta) = \frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{\max}} w(\lambda)\,\mathbb{E}\big[\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\|^2\big]\,d\lambda, \quad w(\lambda) = 2\,c(t)\,p(t)\,\left|\frac{dt}{d\lambda}\right|$$
 
-- **Continuous ELBO ($w(\lambda) = 1$):** Flat across all scales; optimizes exact log-likelihood on clean data.
+- **Continuous ELBO ($w(\lambda) = 1$):** Flat across all scales; trains the likelihood bound on clean data.
 - **Flow matching & cosine $\mathbf{v}$-prediction ($w(\lambda) = e^{-\lambda/2}$):** Monotonically decreasing; equals an ELBO on noise-augmented data.
 - **DDPM simple, linear noise & EDM:** Bell-shaped bumps focused on perceptual mid-SNR structure (not likelihood bounds).
 :::
@@ -1308,7 +1308,7 @@ When configuring a diffusion or flow-matching recipe on a new domain or resoluti
 
 1. **Choose a well-conditioned target on a path reaching pure noise ($\alpha_1 = 0$):** Velocity prediction on the linear path, $\mathbf{v}$-prediction on the cosine path, and EDM preconditioning stay well scaled at both endpoints $[0, 1]$, avoiding both $\alpha_1 \to 0$ division blow-up and brightness leakage ($\lambda_1 > -\infty$).
 2. **Place training noise levels where spatial structure forms:** Small $28 \times 28$ images need uniform $t$ or a logit-normal shifted toward low noise ($m < 0$); as side resolution scales by $r$, shift the log-SNR schedule downward by $2\log r$.
-3. **Match the loss weighting $w(\lambda)$ to your evaluation metric:** Use flat $w(\lambda) \equiv 1$ (`bound`) when optimizing exact log-likelihood (bits/dim), and monotone decaying $w(\lambda) = e^{-\lambda/2}$ (flow matching or $\mathbf{v}$-prediction) when optimizing perceptual sample quality (FD).
+3. **Choose the loss weighting $w(\lambda)$ for the samples, not for the bound:** Flat $w(\lambda) \equiv 1$ (`bound`) trains the likelihood bound; weightings that discount high log-SNR, such as $w(\lambda) = e^{-\lambda/2}$ (flow matching or $\mathbf{v}$-prediction), are the ones that give good samples in practice (Kingma & Gao, 2023). On the mixture the bound weighting did not even give the small network its best flow likelihood.
 :::
 
 ::: {.slide title="Concept Check: ELBO Splits, Weightings & Resolution"}

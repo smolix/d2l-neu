@@ -24,7 +24,9 @@ Figures, by section:
   * ``mdl-diffusion-blueprint`` -- conditional and marginal path and field of
     the linear path on the mixture, exact.
 
-  17.3 integration.md: no figures of its own.
+  17.3 integration.md
+  * ``mdl-diffusion-crossing-paths`` -- conditional straight paths cross;
+    probability-flow trajectories from the same starts do not.
 
   17.4 image-diffusion.md
   * ``mdl-diffusion-unet`` -- the U-Net with its skips and its time/label
@@ -47,7 +49,9 @@ Figures, by section:
 
   17.8 few-step.md
   * ``mdl-diffusion-flow-map`` -- probability-flow trajectories of a 1-D
-    two-Gaussian mixture, a jump of the flow map, and its three identities.
+    two-Gaussian mixture, a jump of the flow map, and its three identities;
+  * ``mdl-diffusion-dmd`` -- distribution matching distillation: the student,
+    the frozen teacher, the second model and the student's gradient.
 
   17.9 discrete-diffusion.md
   * ``mdl-diffusion-masking`` -- the absorbing chain on a token sequence.
@@ -499,6 +503,62 @@ def fig_blueprint():
                handlelength=1.8, columnspacing=1.4)
     fig.tight_layout(w_pad=1.5, h_pad=1.8)
     fl.save(fig, "mdl-diffusion-blueprint")
+
+
+# =========================================================================== #
+# 17.3 integration.md                                                         #
+# =========================================================================== #
+
+def fig_crossing_paths():
+    """The 1-D two-Gaussian mixture of the flow-map figure on the linear path,
+    t = 1 (noise) at the top.  (a) Conditional paths: straight lines from
+    random pairs (x0, eps), which cross.  (b) Probability-flow trajectories
+    from the same starting noises (exact: the 1-D flow keeps quantiles), which
+    never meet.  One start is drawn in orange in both panels."""
+    from scipy.special import erf
+    ts = np.linspace(0, 1, 401)
+    xg = np.linspace(-3.0, 3.0, 301)
+    a_, s_ = linear(ts)
+    sd = np.sqrt((a_[:, None] * FM_STD) ** 2 + s_[:, None] ** 2)
+    dens = (FM_WEIGHTS * np.exp(-(xg[:, None, None] - a_[None, :, None] * FM_MEANS) ** 2
+                                / (2 * sd[None] ** 2)) / sd[None]).sum(-1)
+    dens = dens / dens.max(0, keepdims=True)
+
+    rng = np.random.default_rng(4)
+    n = 9
+    eps = np.sort(rng.uniform(-2.2, 2.2, n))           # spread-out starts
+    comp = rng.choice(2, size=n, p=FM_WEIGHTS)
+    x0 = FM_MEANS[comp] + FM_STD * rng.standard_normal(n)
+    q = 0.5 * (1 + erf(eps / np.sqrt(2)))               # p_1 = N(0, 1)
+    flow = _fm_quantile(q[:, None], ts[None, :])        # (n, n_t)
+    hi = 1                    # the highlighted start: its x0 is in the far mode
+
+    fig, (a, b) = plt.subplots(1, 2, figsize=(8.4, 3.9), sharey=True)
+    for ax in (a, b):
+        ax.imshow(dens.T, origin="lower", extent=(-3, 3, 0, 1), aspect="auto",
+                  cmap=fl.BLUE_CMAP, alpha=0.45, vmin=0, vmax=1.5, zorder=0)
+    for k in range(n):
+        col, lw, z = (ORANGE, 2.4, 3) if k == hi else (INK, 1.3, 2)
+        a.plot([x0[k], eps[k]], [0, 1], color=col, lw=lw, zorder=z)
+        a.plot(x0[k], 0, "x", color=col, ms=7, mew=1.8, zorder=z + 1,
+               clip_on=False)
+        b.plot(flow[k], ts, color=col, lw=lw, zorder=z)
+        b.plot(flow[k, 0], 0, "x", color=col, ms=7, mew=1.8, zorder=z + 1,
+               clip_on=False)
+        for ax in (a, b):
+            ax.plot(eps[k], 1, "o", color=col, ms=6, zorder=z + 1,
+                    clip_on=False)
+    for ax, tag in ((a, "a"), (b, "b")):
+        ax.set_xlim(-3, 3)
+        ax.set_ylim(0, 1)
+        ax.set_yticks([0, 0.5, 1])
+        ax.set_xlabel("$x$", fontsize=LBL)
+        fl.clean_axes(ax, equal=False)
+        _black_axes(ax)
+        _panel_tag(ax, tag, y=1.05)
+    a.set_ylabel("$t$", fontsize=LBL)
+    fig.tight_layout(w_pad=2.0)
+    fl.save(fig, "mdl-diffusion-crossing-paths")
 
 
 # =========================================================================== #
@@ -1186,6 +1246,73 @@ def fig_flow_map():
     fl.save(fig, "mdl-diffusion-flow-map")
 
 
+def fig_dmd():
+    """Distribution matching distillation: the one-step student's samples are
+    noised to time t; the frozen teacher gives the score of the noised data,
+    a second diffusion model trained on the student's samples gives the score
+    of the noised samples, and their difference is the student's gradient."""
+    fig, ax = plt.subplots(figsize=(10.0, 3.9))
+    h = 1.25
+    yc, yu, yd = 0.0, 1.5, -1.5               # main row, teacher, second model
+    # (center, width) of each box on the main row
+    (xz, wz), (xg, wg), (xs, ws), (xn, wn) = (0.0, 1.3), (2.45, 2.2), \
+        (5.3, 2.4), (8.75, 3.2)
+    wm = 3.3                                   # the two score models
+    xj = xn + wn / 2 + 0.75                    # split point toward both scores
+    xm = xj + 0.5 + wm / 2
+    xo = xm + wm / 2 + 1.0                     # the difference
+    _ubox(ax, xz, yc, wz, h, "noise\n$\\mathbf{z}$", GRAY)
+    _ubox(ax, xg, yc, wg, h, "student $g_{\\boldsymbol{\\theta}}$\none step",
+          BLUE, fc=T.BLUE.tint)
+    _ubox(ax, xs, yc, ws, h,
+          "sample\n$\\hat{\\mathbf{x}}_0 = g_{\\boldsymbol{\\theta}}(\\mathbf{z})$",
+          GRAY)
+    _ubox(ax, xn, yc, wn, h, "noise to time $t$\n"
+          "$(1 - t)\\,\\hat{\\mathbf{x}}_0 + t\\boldsymbol{\\epsilon}$", GRAY)
+    _ubox(ax, xm, yu, wm, h, "teacher (frozen)\n$\\nabla \\log p_t$", GRAY,
+          fc=LIGHT)
+    _ubox(ax, xm, yd, wm, h,
+          "second model\n$\\nabla \\log q_{\\boldsymbol{\\theta}, t}$",
+          ORANGE, fc=T.ORANGE.tint)
+    _op(ax, xo, yc, "$-$", r=0.26)
+    # forward data flow, black
+    _arr(ax, (xz + wz / 2, yc), (xg - wg / 2, yc))
+    _arr(ax, (xg + wg / 2, yc), (xs - ws / 2, yc))
+    _arr(ax, (xs + ws / 2, yc), (xn - wn / 2, yc))
+    ax.plot([xn + wn / 2, xj], [yc, yc], color="black", lw=1.4)
+    ax.plot([xj, xj], [yd, yu], color="black", lw=1.4)
+    ax.text((xn + wn / 2 + xj) / 2, yc + 0.1, "$\\mathbf{x}_t$", ha="center",
+            va="bottom", fontsize=LBL, color="black")
+    for y in (yu, yd):
+        _arr(ax, (xj, y), (xm - wm / 2, y))
+    # the two scores into the difference
+    for y in (yu, yd):
+        ax.plot([xm + wm / 2, xo], [y, y], color="black", lw=1.4)
+        _arr(ax, (xo, y), (xo, yc + np.sign(y) * 0.26))
+    # the student's gradient, red, back along the bottom
+    yb = -3.55
+    xr = xo + 0.75
+    ax.plot([xo + 0.26, xr, xr, xg], [yc, yc, yb, yb], color=RED, lw=1.7,
+            ls="--")
+    _arr(ax, (xg, yb), (xg, yc - h / 2), color=RED, lw=1.7, ls="--")
+    ax.text((xg + xr) / 2, yb - 0.15,
+            "gradient for $\\boldsymbol{\\theta}$:  "
+            "$(\\nabla \\log q_{\\boldsymbol{\\theta}, t} - \\nabla \\log p_t)^\\top"
+            "\\, \\partial \\mathbf{x}_t / \\partial \\boldsymbol{\\theta}$",
+            ha="center", va="top", fontsize=TXT, color=T.RED.dark)
+    # the second model's training data, orange, from the student's samples
+    ya = -2.75
+    ax.plot([xs, xs, xm], [yc - h / 2, ya, ya], color=ORANGE, lw=1.7, ls="--")
+    _arr(ax, (xm, ya), (xm, yd - h / 2), color=ORANGE, lw=1.7, ls="--")
+    ax.text((xs + xm - wm / 2) / 2, ya + 0.1, "trained on the student's samples",
+            ha="center", va="bottom", fontsize=TXT, color=T.ORANGE.dark)
+    ax.set_xlim(xz - wz / 2 - 0.1, xr + 0.15)
+    ax.set_ylim(yb - 0.95, yu + h / 2 + 0.1)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fl.save(fig, "mdl-diffusion-dmd")
+
+
 # =========================================================================== #
 # 17.9 discrete-diffusion.md                                                  #
 # =========================================================================== #
@@ -1244,6 +1371,7 @@ FIGURES = [
     fig_paths,
     fig_forward_reverse,
     fig_blueprint,
+    fig_crossing_paths,
     fig_unet,
     fig_guidance,
     fig_two_samplers,
@@ -1252,6 +1380,7 @@ FIGURES = [
     fig_latent_pipeline,
     fig_dit_block,
     fig_flow_map,
+    fig_dmd,
     fig_masking,
 ]
 

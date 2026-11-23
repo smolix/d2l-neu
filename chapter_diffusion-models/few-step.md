@@ -1004,7 +1004,8 @@ student puts there. The teacher supplies $\nabla \log p_t$, since on the
 linear path the score is an affine function of the velocity
 :eqref:`eq_diffusion-linear-dictionary`, and a second diffusion model,
 trained alongside on the student's own samples, supplies
-$\nabla \log q_{\boldsymbol\theta, t}$. Such a student is bounded by
+$\nabla \log q_{\boldsymbol\theta, t}$
+(:numref:`fig_diffusion-dmd`). Such a student is bounded by
 its teacher's distribution rather than its trajectories; only a loss with
 real images in it, a critic as in adversarial distillation or added to
 distribution matching :cite:`Yin.Gharbi.Park.ea.2024`, lets a student
@@ -1013,12 +1014,17 @@ is trained along trajectories of the ODE, so the generator's sample for a
 given noise vector need not be the teacher's, and inversion and editing
 through the ODE no longer apply.
 
+![Distribution matching distillation. The student maps noise $\mathbf{z}$ to a sample in one step, and the sample is noised to a time $t$. The frozen teacher supplies the score $\nabla \log p_t$ of the noised data at $\mathbf{x}_t$. A second diffusion model, trained alongside on the student's samples (orange), supplies the score $\nabla \log q_{\boldsymbol\theta, t}$ of the noised samples. The difference of the two scores is the gradient that reaches the student (red).](../img/mdl-diffusion-dmd.svg)
+:label:`fig_diffusion-dmd`
+
 What to pick follows from the budget. At fifty evaluations a teacher with
 a good solver needs no second training run. When latency matters, distill
 a two-time flow map from the teacher: on Fashion-MNIST two of its jumps
 landed between the teacher's ten and twenty Euler steps. Without a teacher,
-MeanFlow trains a flow map from data alone, but on the mixture it drew
-modes that are too tight. Distribution matching, with or without a critic,
+MeanFlow trains a flow map from data alone, but on the mixture, with the
+plain squared error we used, it drew modes that are too tight; the
+published recipe reweights the loss
+(Exercise :exref:`ex_few-step-stop-gradient`). Distribution matching, with or without a critic,
 also reaches one step, but gives up the map from noise to sample that
 inversion and editing need.
 
@@ -1031,7 +1037,7 @@ sequence of tokens, the subject of :numref:`sec_diffusion-discrete`.
 - A single Euler step of the probability-flow ODE from $t = 1$ to $t = 0$ collapses every starting point onto the data mean $\mathbb{E}[\mathbf{x}_0]$ because it follows the initial tangent of a curved trajectory.
 - A flow map $\Phi_{t \to s}(\mathbf{x}_t) = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s, t)$ predicts the integrated displacement along the ODE trajectory via the average velocity $\bar{\mathbf{u}}$. Differentiating with respect to $t$ yields the Eulerian / MeanFlow identity $\bar{\mathbf{u}} = \mathbf{u}_t - (t - s)\, \frac{d}{dt}\bar{\mathbf{u}}$, which can be trained with one forward-mode Jacobian-vector product and a stop-gradient target.
 - Pairing the reference velocity $\mathbf{u}_{\textrm{ref}}$ (a pretrained teacher $\hat{\mathbf{u}}$ versus the conditional velocity $\boldsymbol\epsilon - \mathbf{x}_0$) with the time domain ($s = 0$ versus $s \le t$) unifies consistency distillation, consistency training, flow-map distillation, and MeanFlow.
-- On the three-mode mixture and Fashion-MNIST, flow-map distillation from a teacher accurately preserves within-mode spread and matches 10–20 teacher Euler steps in 2–4 student jumps, whereas teacher-free MeanFlow contracts mode variance when trained on noisy per-example velocities.
+- On the three-mode mixture and Fashion-MNIST, flow-map distillation from a teacher accurately preserves within-mode spread and matches 10–20 teacher Euler steps in 2–4 student jumps, whereas teacher-free MeanFlow, trained here with plain squared error on noisy per-example velocities, contracts the modes of the mixture.
 
 ## Exercises
 
@@ -1370,7 +1376,7 @@ Comparing the six independent seeds of two-time `distillation` against teacher-f
 | **Teacher (50 Euler steps)** | $0.002$ | $1.5\%$ | **$0.471$** | Matches data distribution closely |
 | **Consistency ($s=0$), 1 jump** | $0.002$–$0.006$ | $1.9\%$–$2.1\%$ | **$0.453$–$0.463$** | Accurate 1-step weights & spread |
 | **Distillation ($s \le t$), 1 / 2 / 4 jumps** | $0.001$–$0.006$ (all seeds!) | $2.0\% \to \mathbf{1.0\%}$ | **$0.452$–$0.463$** | Preserves spread & deterministic map |
-| **MeanFlow (no teacher), 1 / 4 jumps** | $0.002$–$0.007 \to \mathbf{0.023}$ | $3.7\% \to 0.9\%$ | **$0.311$–$0.343$** | **Contracts mode spread by $>25\%$**! |
+| **MeanFlow (no teacher), 1 / 4 jumps** | $\le 0.007 \to$ up to $\mathbf{0.02}$ | $\approx 4\% \to \approx 1\%$ | **$0.31$–$0.34 \to 0.35$–$0.39$** | **Contracts mode spread by $\approx 30\%$ (1 jump), $15$–$25\%$ (4 jumps)** |
 
 ::: {.d2l-note .warn}
 **Why noisy JVP tangents contract spread:** When $\boldsymbol\epsilon - \mathbf{x}_0$ drives the JVP tangent, high variance in the correction term $(t - s)\,d\bar{\mathbf{u}}/dt$ causes the student to under-fit the curvature correction—partially reverting toward a coarse Euler stride that shrinks mode variance!

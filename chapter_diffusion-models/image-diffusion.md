@@ -1247,8 +1247,8 @@ A stack of full-resolution $3 \times 3$ convolutions would need $14$ layers just
 ::: {.cols .vc}
 ::: {.col}
 
-- **Low resolution holds the capacity:** The $14 \times 14$ and $7 \times 7$ stages hold **$83\%$ of the $1.20\text{M}$ parameters** ($38\%$ in the $7 \times 7$ bottleneck for just $8\%$ of the compute).
-- **Full resolution dominates the arithmetic:** The $28 \times 28$ blocks hold $17\%$ of the weights but consume **$59\%$ of the $247\text{M}$ MACs** ($16\times$ more compute per weight than $7 \times 7$).
+- **Low resolution holds the capacity:** The $14 \times 14$ and $7 \times 7$ stages hold **$82\%$ of the $1.20\text{M}$ parameters** ($38\%$ in the $7 \times 7$ bottleneck for just $8\%$ of the compute).
+- **Full resolution dominates the arithmetic:** The $28 \times 28$ blocks hold $18\%$ of the weights but consume **$57\%$ of the $266\text{M}$ MACs** (about $15\times$ more compute per weight than $7 \times 7$).
 :::
 
 ::: {.col .fig}
@@ -1484,7 +1484,7 @@ $$\frac{1}{v} = \frac{\gamma}{s^2} - \frac{\gamma - 1}{S^2} > \frac{1}{s^2}, \qq
 
 - **Static tilt vs. dynamic ODE overshoot ($\mu_c = 1, s = 0.5, S^2 = 2, \gamma = 4$):**
   - Static $t = 0$ tilted density $\tilde{p}_0 \propto p_0^{1-\gamma}p_0(\cdot \mid c)^\gamma$ narrows width $2\times$ ($0.50 \to 0.26$) and shifts mean to $1.10$.
-  - Integrating the guided ODE from $t = 1 \to 0$ shrinks width **$25\times$ to $0.02$** and shifts the mean to $1.23$!
+  - Integrating the guided ODE from $t = 1 \to 0$ shrinks width **about $23\times$ to $0.02$** and shifts the mean to $1.23$!
 :::
 
 ::: {.col .fig}

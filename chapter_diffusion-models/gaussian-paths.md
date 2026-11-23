@@ -686,7 +686,7 @@ print(f'velocity net read as a noise model on vp: loss {floor + gap:.3f},'
       f' excess {gap:.4f}')
 ```
 
-The floors at $t = 0.1$ match our single-mode analytical estimate within $0.01$. Along the path the two floors move in opposite directions: the noise floor is largest near $t = 0$ (where small noise is indistinguishable from within-mode variance) and falls to $0.002$ at $t = 0.9$, whereas the velocity floor rises to $\approx 9$ at $t = 0.9$ before settling to $\operatorname{tr}\textrm{Cov}[\mathbf{x}_0]$ at $t = 1$ (Exercise :exref:`ex_gaussian-paths-loss-floor`). Averaged over $t \sim U(0, 1)$, the floors differ by an order of magnitude ($0.54$ for noise vs. $4.9$ for velocity) purely because of the target scaling $c_t^2$.
+The floors at $t = 0.1$ match our single-mode analytical estimate within $0.01$. Along the path the two floors move in opposite directions: the noise floor is largest near $t = 0$ (where small noise is indistinguishable from within-mode variance) and falls to $0.002$ at $t = 0.9$, whereas the velocity floor rises to $\approx 9$ at $t = 0.9$ before settling to $\operatorname{tr}\textrm{Cov}[\mathbf{x}_0]$ at $t = 1$ (Exercise :exref:`ex_gaussian-paths-loss-floor`). Averaged over $t \sim U(0, 1)$, the floors differ by an order of magnitude ($0.54$ for noise vs. $4.9$ for velocity) because of the target scaling $c_t^2$ and the different clocks of the two paths.
 
 Both trained networks reach their theoretical floors: the mean squared error against the exact oracle (`excess`) is $0.0002$ for the noise network and $0.001$ for the velocity network, well below the Monte Carlo standard error of the floor itself. Moreover, when the linear-path velocity network is queried as a VP noise predictor via `eps_from_velocity`, it achieves the exact same loss ($0.540$) and excess ($0.0002$) as the network trained directly on the VP noise target. Both networks have learned the same underlying posterior mean. (A raw score target $-\boldsymbol\epsilon/\sigma_t$ divides the noise floor by $\sigma_t^2$ and diverges as $t \to 0$, which is why score networks weight the DSM objective by $\sigma_t^2$, reducing it to noise prediction.) Turning these learned fields into samples is the subject of :numref:`sec_diffusion-integration`.
 
@@ -1009,7 +1009,7 @@ Every milestone generative diffusion family corresponds to selecting one path, o
 $$\mathrm{floor}(t) = c_t^2\,\mathbb{E}\big[\operatorname{tr}\mathrm{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]\big]$$
 
 - **Every target is $c_t\mathbf{x}_0 + f(\mathbf{x}_t)$ at fixed $\mathbf{x}_t$:** Thus every target's irreducible loss floor is $c_t^2$ times the posterior covariance trace.
-- **Explaining the $9\times$ plateau gap ($4.91$ vs. $0.54$):** Linear velocity ($c_t = -1/t$) plateaus at $\approx 4.91$ while VP noise ($c_t = -\alpha_t/\sigma_t$) plateaus at $\approx 0.54$ purely because of $c_t^2$.
+- **Explaining the $9\times$ plateau gap ($4.91$ vs. $0.54$):** Linear velocity ($c_t = -1/t$) plateaus at $\approx 4.91$ while VP noise ($c_t = -\alpha_t/\sigma_t$) plateaus at $\approx 0.54$: the targets are scaled by different $c_t^2$, and the two paths run on different clocks.
 :::
 
 ::: {.col .fig}
@@ -1036,7 +1036,7 @@ Using $10^6$ Monte Carlo draws, we decompose the loss of our trained linear-velo
 Because the loss floor scales with $c_t^2$, raw training losses in diffusion and flow matching carry three counterintuitive diagnostic traps:
 
 - **Trap 1 — High plateau $\neq$ underfitting:** A velocity flow-matching loss plateauing at $4.9$ and a DDPM noise loss plateauing at $0.54$ are *both* within $0.001$ of the Bayes-optimal oracle.
-- **Trap 2 — Lower raw loss $\neq$ better model:** The $9\times$ difference between $4.9$ and $0.54$ comes entirely from the magnification factor $c_t^2$ ($1/t^2$ vs. $\alpha_t^2/\sigma_t^2$). Models trained on different targets or schedules must be compared in a **common target unit** (such as $\mathbb{E}\|\hat{\mathbf{x}}_0 - \mathbf{x}_0\|^2$ at matched log-SNR $\lambda$) or by sample quality.
+- **Trap 2 — Lower raw loss $\neq$ better model:** The $9\times$ difference between $4.9$ and $0.54$ comes from the magnification factor $c_t^2$ ($1/t^2$ vs. $\alpha_t^2/\sigma_t^2$) and the different clocks of the two paths. Models trained on different targets or schedules must be compared in a **common target unit** (such as $\mathbb{E}\|\hat{\mathbf{x}}_0 - \mathbf{x}_0\|^2$ at matched log-SNR $\lambda$) or by sample quality.
 - **Trap 3 — Finite-dataset memorization:** The empirical optimum on a small dataset of $N$ points is the exact posterior mean of $N$ Dirac delta masses, which memorizes training examples verbatim (Exercise 17.2.5); neural networks generalize because architectural inductive bias smooths the velocity field across space.
 :::
 

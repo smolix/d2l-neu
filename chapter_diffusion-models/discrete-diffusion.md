@@ -1145,10 +1145,12 @@ reveals is exact, and its loss is the entropy.
 Reveal one token per step in a uniformly random order, and the sampler is
 an *order-agnostic autoregressive model* :cite:`Uria.Murray.Larochelle.2014`,
 whose loss averages the negative log-likelihoods of all orders.
-:citet:`Ou.Nie.Xue.ea.2025` show that this loss is the continuous-time
-bound of :numref:`subsec_diffusion-masked-ce` for a network that ignores
-the time (Exercise :exref:`ex_discrete-diffusion-order-agnostic` derives
-it with a Beta integral). A masked diffusion model is thus trained as a
+:citet:`Hoogeboom.Gritsenko.Bastings.ea.2022` showed that this loss is the
+continuous-time bound of :numref:`subsec_diffusion-masked-ce` for a network
+that ignores the time (Exercise :exref:`ex_discrete-diffusion-order-agnostic`
+derives it with a Beta integral), and :citet:`Ou.Nie.Xue.ea.2025` that
+ignoring the time loses nothing, since the best prediction for a masked
+token depends only on the tokens already revealed. A masked diffusion model is thus trained as a
 language model over all orders at once. For an exact network every order
 gives the same joint likelihood, the entropy of the data, so its
 continuous-time bound is tight. This is the floor of the pair seen from
@@ -1159,6 +1161,18 @@ Reveal several tokens per step, and the sampler incurs the independence
 error: on the pair, $S$ jumps draw $1/S$ of the mass from the product of
 the marginals, and a $T$-step bound rises by $I/T$. In exchange, $S$ network
 evaluations generate $L$ tokens, where a left-to-right model needs $L$.
+
+The two kinds of evaluation are not the same size, though. A left-to-right
+model that caches its keys and values (:numref:`sec_kv-cache`) processes
+one new token per step. The denoiser has no causal mask, so a revealed
+token changes the activations at every position, nothing can be cached,
+and each evaluation is a full pass over all $L$ positions. Counted in
+token passes the costs are about $L$ against $S L$. Parallel decoding
+therefore saves sequential steps, and with them latency, while its total
+arithmetic is typically higher. Fast-dLLM :cite:`Wu.Zhang.Xue.ea.2026`
+recovers part of it by reusing approximate caches across steps, and block
+diffusion :cite:`Arriola.Gokaslan.Chiu.ea.2025` by decoding block after
+block with an exact cache over the finished blocks.
 
 At the far end stands BERT :cite:`Devlin.Chang.Lee.ea.2018`, which hides
 15% of the tokens of a text and predicts them from both sides; the masked
@@ -1182,7 +1196,7 @@ than an autoregressive model to reach the same loss
 it can come out ahead :cite:`Prabhudesai.Wu.Zadeh.ea.2025`, which the
 authors attribute to the random masks acting as data augmentation. The
 case for these models rests on parallel decoding, which writes many tokens
-per network evaluation, and on infilling, which conditions on text on
+per network evaluation and so needs fewer sequential steps, and on infilling, which conditions on text on
 both sides of a gap.
 
 ### Diffusion Models in Retrospect
@@ -1371,8 +1385,9 @@ it surveys (:numref:`sec_lm_architectures_fr`).
    are unmasked. The continuous-time limit of the bound in
    :numref:`subsec_diffusion-masked-ce`, written as an integral over the
    masking probability $u$, is then a weighted sum of the losses
-   $\ell(i, U)$ over $i \notin U$. :citet:`Ou.Nie.Xue.ea.2025` show that
-   it equals the expected negative log-likelihood of an order-agnostic
+   $\ell(i, U)$ over $i \notin U$.
+   :citet:`Hoogeboom.Gritsenko.Bastings.ea.2022` and
+   :citet:`Ou.Nie.Xue.ea.2025` show that it equals the expected negative log-likelihood of an order-agnostic
    autoregressive model :cite:`Uria.Murray.Larochelle.2014`,
 
    $$\mathbb{E}_{\sigma} \Big[ \sum_{k=1}^{L} -\log p_{\boldsymbol{\theta}}\big(\mathbf{x}_0^{\sigma(k)} \mid \mathbf{x}_0^{\sigma(1)}, \ldots, \mathbf{x}_0^{\sigma(k-1)}\big) \Big],$$
@@ -1451,7 +1466,7 @@ Discrete and Masked Diffusion Models<br>**transition matrices Q_t · absorbing (
 ::: {.cols .vc}
 ::: {.col}
 - **No continuous vector addition:** Adding $0.3\,\boldsymbol\epsilon$ to token index `412` (*"cat"*) is meaningless—categorical IDs have no Euclidean metric structure.
-- **Sequential bottleneck of GPT:** Autoregressive decoding of $L = 1{,}024$ tokens requires $1{,}024$ sequential forward passes.
+- **Sequential bottleneck of GPT:** Autoregressive decoding of $L = 1{,}024$ tokens requires $1{,}024$ sequential calls, each a cached pass over one new token.
 - **Discrete diffusion (Austin et al., 2021; Sahoo et al., 2024):** Corrupt tokens into masks $[\textrm{M}]$ via a Markov chain and train a bidirectional denoiser to unmask tokens in parallel!
 :::
 
@@ -1688,7 +1703,7 @@ Unmasking $L = 784$ binary pixels in $S = 4$ jumps ($\approx 196$ per jump) vs. 
 ::: {.cols .vc}
 ::: {.col}
 - **Autoregressive (GPT) & Order-Agnostic AR:** Unmask $1$ token/call ($L$ calls total, $\mathrm{TV} = 0$) along either a causal left-to-right prefix or a random permutation $\sigma$ trained across $u \sim U(0, 1)$ with weight $1/u$.
-- **Masked Diffusion LM (MDLM / LLaDA):** Trained across $u \sim U(0, 1)$ with weight $1/u$, but reveals $\approx L/S$ tokens/call in parallel—trading $\propto 1/S$ independence error for $L/S\times$ speedup.
+- **Masked Diffusion LM (MDLM / LLaDA):** Trained across $u \sim U(0, 1)$ with weight $1/u$, but reveals $\approx L/S$ tokens/call in parallel—trading $\propto 1/S$ independence error for $L/S\times$ fewer sequential calls (each a full pass over all $L$ positions, with no KV cache).
 - **Masked LM (BERT):** Single fixed masking slice $u = 0.15$; cannot generate from the $u = 1.0$ all-mask start.
 :::
 

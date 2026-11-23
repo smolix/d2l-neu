@@ -1,5 +1,6 @@
 // Slide diagrams for Chapter 10 (Attention Mechanisms): chapter_attention/*.md
 import { C, TOKENS, grid, tx as rawTx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -161,9 +162,9 @@ function threeChallenges() {
     o += arrow(x + cw / 2, 172, x + cw / 2, 198, C.green);
   });
 
-  o += card(cols[0], 202, cw, 68, C.lgreen, C.green, '§10.4 Positions', 'RoPE & ALiBi', 'relative offsets', D.green.dark, 13.5, 12);
-  o += card(cols[1], 202, cw, 68, C.lgreen, C.green, '§§10.5–10.6 Scale', 'FlashAttention', 'windows & linear', D.green.dark, 13.5, 12);
-  o += card(cols[2], 202, cw, 68, C.lgreen, C.green, '§10.7 Circuits', 'QK / OV & Stream', '2-layer induction', D.green.dark, 13.5, 12);
+  o += card(cols[0], 202, cw, 68, C.lgreen, C.green, `${sec('sec_positional-information')} Positions`, 'RoPE & ALiBi', 'relative offsets', D.green.dark, 13.5, 12);
+  o += card(cols[1], 202, cw, 68, C.lgreen, C.green, `§§${num('sec_attention-at-scale')}–${num('sec_windowed-linear-attention')} Scale`, 'FlashAttention', 'windows & linear', D.green.dark, 13.5, 12);
+  o += card(cols[2], 202, cw, 68, C.lgreen, C.green, `${sec('sec_what-attention-computes')} Circuits`, 'QK / OV & Stream', '2-layer induction', D.green.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -172,10 +173,10 @@ function roadmap() {
   const W = 540, H = 276;
   let o = '';
   const stages = [
-    { x: 20,  y: 22,  w: 236, h: 96, fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Part 1: Build the Layer', s1: '§10.1 Q, K, V & Kernel Pooling', s2: '§10.2 Scaled Dot & Masking · §10.3 MHA' },
-    { x: 284, y: 22,  w: 236, h: 96, fill: C.lamber, st: C.amber, dk: D.orange.dark, title: 'Part 2: Sequence Order', s1: '§10.4 Positional Information', s2: 'Sinusoidal · RoPE · ALiBi · YaRN' },
-    { x: 284, y: 156, w: 236, h: 96, fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Part 3: Scale & Speed', s1: '§10.5 Online Softmax & FlashAttn', s2: '§10.6 Sliding Windows & Linear Attn' },
-    { x: 20,  y: 156, w: 236, h: 96, fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: 'Part 4: Interpretation', s1: '§10.7 Attention Circuits', s2: 'Residual Stream · QK/OV · Induction' },
+    { x: 20,  y: 22,  w: 236, h: 96, fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Part 1: Build the Layer', s1: `${sec('sec_queries-keys-values')} Q, K, V & Kernel Pooling`, s2: `${sec('sec_attention-scoring-functions')} Scaled Dot & Masking · ${sec('sec_multihead-attention')} MHA` },
+    { x: 284, y: 22,  w: 236, h: 96, fill: C.lamber, st: C.amber, dk: D.orange.dark, title: 'Part 2: Sequence Order', s1: `${sec('sec_positional-information')} Positional Information`, s2: 'Sinusoidal · RoPE · ALiBi · YaRN' },
+    { x: 284, y: 156, w: 236, h: 96, fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Part 3: Scale & Speed', s1: `${sec('sec_attention-at-scale')} Online Softmax & FlashAttn`, s2: `${sec('sec_windowed-linear-attention')} Sliding Windows & Linear Attn` },
+    { x: 20,  y: 156, w: 236, h: 96, fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: 'Part 4: Interpretation', s1: `${sec('sec_what-attention-computes')} Attention Circuits`, s2: 'Residual Stream · QK/OV · Induction' },
   ];
   stages.forEach((s) => {
     o += card(s.x, s.y, s.w, s.h, s.fill, s.st, s.title, s.s1, s.s2, s.dk, 14.5, 12);
@@ -988,7 +989,7 @@ function scaleSolvedVsOpen() {
   let o = '';
   o += card(20, 20, 236, 114, C.lgreen, C.green, 'What Fused Kernels Solve', 'HBM scratch memory: O(n²) → O(n)', 'HBM traffic: Θ(Hn²) → Θ(n²d_h²/M)', D.green.dark, 14, 12);
   o += card(284, 20, 236, 114, D.red.tint, D.red.base, 'What Remains O(n²)', 'Arithmetic FLOPs: still Θ(n² d)', 'Generation KV cache: still O(n d)', D.red.dark, 14, 12);
-  o += card(20, 154, 500, 94, C.lblue, C.blue, 'Why §10.6 Introduces Sliding Windows and Linear Attention', 'FlashAttention is an exact IO-aware reorganization of dense softmax attention;', 'breaking the Θ(n² d) arithmetic floor requires changing the attention operator itself!', D.blue.dark, 13.5, 12);
+  o += card(20, 154, 500, 94, C.lblue, C.blue, `Why ${sec('sec_windowed-linear-attention')} Introduces Sliding Windows and Linear Attention`, 'FlashAttention is an exact IO-aware reorganization of dense softmax attention;', 'breaking the Θ(n² d) arithmetic floor requires changing the attention operator itself!', D.blue.dark, 13.5, 12);
   return svg(W, H, o);
 }
 

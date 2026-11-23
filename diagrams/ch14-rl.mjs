@@ -1,5 +1,6 @@
 // Slide diagrams for chapter_reinforcement-learning (§14 Foundations of RL).
 import { C, TOKENS, grid, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -96,12 +97,12 @@ function chapterRoadmap() {
   o += tx(280, 20, 'Chapter 14 Progression: Relaxing Assumptions Step by Step', { fs: 15.5, fw: 700, fill: C.ink });
 
   const items = [
-    { x: 16,  y: 42,  t: '§14.1–14.2 MDPs & DP', s: 'Known P, r · contraction', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 198, y: 42,  t: '§14.3 Tabular TD', s: 'Q-learning & SARSA', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 380, y: 42,  t: '§14.4 Exploration', s: 'UCB · Thompson · bonus', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 380, y: 156, t: '§14.5 Imitation', s: 'BC · O(εT²) · DAgger', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 198, y: 156, t: '§14.6 Optimal Control', s: 'LQR · iLQR · MPC', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { x: 16,  y: 156, t: '§14.7–14.9 Policy Grad', s: 'REINFORCE · GRPO · MLP', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: 16,  y: 42,  t: `${sec('sec_mdp')}–${num('sec_valueiter')} MDPs & DP`, s: 'Known P, r · contraction', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 198, y: 42,  t: `${sec('sec_qlearning')} Tabular TD`, s: 'Q-learning & SARSA', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 380, y: 42,  t: `${sec('sec_exploration')} Exploration`, s: 'UCB · Thompson · bonus', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 380, y: 156, t: `${sec('sec_imitation')} Imitation`, s: 'BC · O(εT²) · DAgger', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 198, y: 156, t: `${sec('sec_optimal_control')} Optimal Control`, s: 'LQR · iLQR · MPC', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 156, t: `${sec('sec_policygradient')}–${num('sec_deeprl')} Policy Grad`, s: 'REINFORCE · GRPO · MLP', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   const bw = 164, bh = 74;
   items.forEach((it) => {
@@ -1002,7 +1003,7 @@ function controlVsRl() {
   o += tx(424, 122, 'Maximize Return E[∑ γ^t r(s_t, a_t)]', { fs: 12.2, fw: 700, fill: D.green.dark });
   o += tx(424, 152, 'Value Table / Critic V^π, Q^π', { mono: true, fs: 11.5, fill: C.ink });
   o += tx(424, 182, 'Bellman Operator T / Policy Grad', { fs: 12.2, fw: 600, fill: C.ink });
-  o += tx(424, 212, 'Learned World-Model MPC (§15.6)', { fs: 12.8, fw: 700, fill: D.green.dark });
+  o += tx(424, 212, `Learned World-Model MPC (${sec('sec_model_based')})`, { fs: 12.8, fw: 700, fill: D.green.dark });
 
   [92, 122, 152, 182, 212].forEach((ry) => {
     o += arrow(260, ry, 298, ry, C.purple);
@@ -1024,13 +1025,13 @@ function cloningToReinforce() {
   o += tx(280, 59, 'policy_step: ascend  (1/N) ∑_{t} w_t · ∇_θ log π_θ(a_t | s_t)', { mono: true, fs: 13, fw: 700, fill: D.purple.dark });
 
   o += box(20, 96, 248, 140, C.lblue, C.blue, 8, 2);
-  o += tx(144, 120, 'Behavior Cloning (§14.5)', { fs: 14.5, fw: 700, fill: D.blue.dark });
+  o += tx(144, 120, `Behavior Cloning (${sec('sec_imitation')})`, { fs: 14.5, fw: 700, fill: D.blue.dark });
   o += tx(144, 148, 'Data: Expert demos (s_t, a*_{t})', { fs: 12.5, fill: C.ink });
   o += tx(144, 176, 'Weight: w_t = 1 (always)', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
   o += tx(144, 206, 'Requires interactive/logged expert', { fs: 12, fill: C.muted });
 
   o += box(292, 96, 248, 140, C.lgreen, C.green, 8, 2);
-  o += tx(416, 120, 'REINFORCE (§14.7)', { fs: 14.5, fw: 700, fill: D.green.dark });
+  o += tx(416, 120, `REINFORCE (${sec('sec_policygradient')})`, { fs: 14.5, fw: 700, fill: D.green.dark });
   o += tx(416, 148, 'Data: Self-rollouts τ ~ π_θ', { fs: 12.5, fill: C.ink });
   o += tx(416, 176, 'Weight: w_t = R(τ) (return)', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   o += tx(416, 206, 'Learns from trial & error alone!', { fs: 12.2, fw: 600, fill: C.ink });

@@ -1,5 +1,6 @@
 // Slide diagrams for Chapter 17 (Diffusion and Flow-Based Generative Models)
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -111,20 +112,20 @@ export const diagrams = {
   'ch17-diff-roadmap': () => stack3(
     'Chapter 17 Roadmap: Score Matching → Fast Solvers → Tokens',
     {
-      badge: '§§17.1–17.3 Core',
+      badge: `§§${num('sec_diffusion-denoising')}–${num('sec_diffusion-integration')} Core`,
       head: 'Denoising Scores, Gaussian Paths & ODE/SDE Transport',
       sub: 'Trained MLP matches exact 2D oracle weights within 0.004',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
     {
-      badge: '§§17.4–17.6 Images',
-      head: 'U-Net + CFG (§17.4) · Fast Solvers (§17.5) · ELBO (§17.6)',
+      badge: `§§${num('sec_diffusion-images')}–${num('sec_diffusion-design-space')} Images`,
+      head: `U-Net + CFG (${sec('sec_diffusion-images')}) · Fast Solvers (${sec('sec_diffusion-samplers')}) · ELBO (${sec('sec_diffusion-design-space')})`,
       sub: '20-NFE Heun matches 1,000-step FD; ODE NLL matches entropy',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
     {
-      badge: '§§17.7–17.9 Scale',
-      head: 'Latent VAE & DiT (§17.7) · Flow Maps (§17.8) · Tokens',
+      badge: `§§${num('sec_diffusion-latent')}–${num('sec_diffusion-discrete')} Scale`,
+      head: `Latent VAE & DiT (${sec('sec_diffusion-latent')}) · Flow Maps (${sec('sec_diffusion-few-step')}) · Tokens`,
       sub: 'Latent U-Net cuts FLOPs >10×; 2 jumps match 15 Euler steps',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
@@ -713,7 +714,7 @@ export const diagrams = {
       note2: 'E[x₀] = (−0.50, −0.70)!',
       fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
     },
-    { text: 'Curved ODE trajectories require multi-step integration (or a flow map §17.8)' }
+    { text: `Curved ODE trajectories require multi-step integration (or a flow map ${sec('sec_diffusion-few-step')})` }
   ),
 
   'ch17-diff-ve-coordinates': () => pipeline3(

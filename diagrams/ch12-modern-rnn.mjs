@@ -1,4 +1,5 @@
 import { C as EC, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -85,15 +86,15 @@ function twoObstacles() {
 
   body += rbox(16, 152, 246, 92, C.green.bg, C.green.bd);
   body += tx(139, 170, 'Solution 1: Linear Scan & Chunks', { fs: 12, fw: 700, fill: C.green.tx });
-  body += tx(139, 190, 'h_t = a_t ⊙ h_{t-1} + b_t (§12.3–12.5)', { fs: 10, fill: C.text, mono: true });
+  body += tx(139, 190, `h_t = a_t ⊙ h_{t-1} + b_t (${sec('sec_linear-recurrence')}–${num('sec_mamba')})`, { fs: 10, fill: C.text, mono: true });
   body += tx(139, 210, 'Associative scan in O(log₂ T) depth', { fs: 10, fill: C.muted });
-  body += tx(139, 228, 'Chunked Tensor-Core GEMMs (§12.6–12.7)', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(139, 228, `Chunked Tensor-Core GEMMs (${sec('sec_matrix-state')}–${num('sec_deltanet')})`, { fs: 10, fw: 700, fill: C.green.tx });
 
   body += rbox(278, 152, 246, 92, C.blue.bg, C.blue.bd);
   body += tx(401, 170, 'Solution 2: Structured Matrix State', { fs: 12, fw: 700, fill: C.blue.tx });
   body += tx(401, 190, 'Multi-scale Δ_t + S_t ∈ R^{d_v×d_k}', { fs: 10, fill: C.text, mono: true });
-  body += tx(401, 210, 'Delta rule erases old key value (§12.7)', { fs: 10, fill: C.muted });
-  body += tx(401, 228, '3:1 Hybrid adds exact lookup (§12.8)', { fs: 10, fw: 700, fill: C.blue.tx });
+  body += tx(401, 210, `Delta rule erases old key value (${sec('sec_deltanet')})`, { fs: 10, fill: C.muted });
+  body += tx(401, 228, `3:1 Hybrid adds exact lookup (${sec('sec_hybrids')})`, { fs: 10, fw: 700, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
@@ -103,10 +104,10 @@ function roadmap() {
   body += tx(W / 2, 18, 'Chapter 12 Progression: From Classical Gates to Hybrid Blocks', { fs: 13.5, fw: 700 });
 
   const row1 = [
-    ['§12.1 LSTM/GRU', 'Gated vector h_t', 'Sequential O(T)', C.slate],
-    ['§12.2 Seq2Seq', 'Encoder → c → Dec', 'Vector bottleneck', C.slate],
-    ['§12.3 minGRU', 'h_t = a_t⊙h + b_t', 'Parallel scan', C.blue],
-    ['§12.4 S4D SSM', 'N real decay rates', 'O(T log T) FFT', C.blue],
+    [`${sec('sec_lstm')} LSTM/GRU`, 'Gated vector h_t', 'Sequential O(T)', C.slate],
+    [`${sec('sec_seq2seq')} Seq2Seq`, 'Encoder → c → Dec', 'Vector bottleneck', C.slate],
+    [`${sec('sec_linear-recurrence')} minGRU`, 'h_t = a_t⊙h + b_t', 'Parallel scan', C.blue],
+    [`${sec('sec_ssm')} S4D SSM`, 'N real decay rates', 'O(T log T) FFT', C.blue],
   ];
   row1.forEach(([title, sub1, sub2, col], i) => {
     const x = 14 + i * 130;
@@ -118,10 +119,10 @@ function roadmap() {
   });
 
   const row2 = [
-    ['§12.5 Mamba', 'Token Δ_t, B_t, C_t', 'Adjoint 4D scan', C.purple],
-    ['§12.6 GLA Matrix', 'S_t = a_t S + v kᵀ', 'Chunked SSD dual', C.purple],
-    ['§12.7 DeltaNet', 'Read-before-write', 'WY lower-tri solve', C.green],
-    ['§12.8 Hybrids', '3:1 Recurrent+Attn', 'Welch bound escape', C.amber],
+    [`${sec('sec_mamba')} Mamba`, 'Token Δ_t, B_t, C_t', 'Adjoint 4D scan', C.purple],
+    [`${sec('sec_matrix-state')} GLA Matrix`, 'S_t = a_t S + v kᵀ', 'Chunked SSD dual', C.purple],
+    [`${sec('sec_deltanet')} DeltaNet`, 'Read-before-write', 'WY lower-tri solve', C.green],
+    [`${sec('sec_hybrids')} Hybrids`, '3:1 Recurrent+Attn', 'Welch bound escape', C.amber],
   ];
   row2.forEach(([title, sub1, sub2, col], i) => {
     const x = 14 + i * 130;
@@ -375,7 +376,7 @@ function seqlmBackbone() {
   });
 
   body += rbox(16, 150, 508, 82, C.slate.bg, C.slate.bd);
-  body += tx(W / 2, 170, 'Apples-to-Apples Mixer Benchmark Protocol across §§12.1–12.8', { fs: 11.5, fw: 700, fill: C.text });
+  body += tx(W / 2, 170, `Apples-to-Apples Mixer Benchmark Protocol across §§${num('sec_lstm')}–${num('sec_hybrids')}`, { fs: 11.5, fw: 700, fill: C.text });
   body += tx(W / 2, 192, '• Only Mixer(·) changes; on text: RNN, LSTM, GRU, minGRU, Mamba, Gated DeltaNet, attention', { fs: 9.5, fill: C.text });
   body += tx(W / 2, 212, '• Residual highway carries ∂H_L/∂H_l = I + ... while the mixer supplies causal cross-time transport', { fs: 9.5, fill: C.blue.tx });
   return svg(W, H, body);
@@ -581,13 +582,13 @@ function twoEscapeRoutes() {
   body += tx(139, 196, '• O(T) compute per decoded token', { fs: 10, fill: C.coral.tx });
 
   body += rbox(278, 38, 246, 198, C.blue.bg, C.blue.bd);
-  body += tx(401, 58, 'Route 2: Structured State (§§12.3–12.8)', { fs: 11.5, fw: 700, fill: C.blue.tx });
+  body += tx(401, 58, `Route 2: Structured State (§§${num('sec_linear-recurrence')}–${num('sec_hybrids')})`, { fs: 11.5, fw: 700, fill: C.blue.tx });
   body += rbox(292, 74, 218, 38, '#FFFFFF', C.blue.bd, 5, 1.1);
   body += tx(401, 94, 'Upgrade O(1) State Geometry & Rule', { fs: 10, fw: 700, fill: C.text });
-  body += tx(401, 130, '• §§12.3–12.5: Linear scan + Δ_t', { fs: 10, fill: C.text });
-  body += tx(401, 152, '• §12.6: Matrix state S_t ∈ R^{d_v×d_k}', { fs: 10, fill: C.text });
-  body += tx(401, 174, '• §12.7: Delta rule key overwrite', { fs: 10, fill: C.text });
-  body += tx(401, 196, '• §12.8: 3:1 Hybrid with attention', { fs: 10, fw: 700, fill: C.blue.tx });
+  body += tx(401, 130, `• §§${num('sec_linear-recurrence')}–${num('sec_mamba')}: Linear scan + Δ_t`, { fs: 10, fill: C.text });
+  body += tx(401, 152, `• ${sec('sec_matrix-state')}: Matrix state S_t ∈ R^{d_v×d_k}`, { fs: 10, fill: C.text });
+  body += tx(401, 174, `• ${sec('sec_deltanet')}: Delta rule key overwrite`, { fs: 10, fill: C.text });
+  body += tx(401, 196, `• ${sec('sec_hybrids')}: 3:1 Hybrid with attention`, { fs: 10, fw: 700, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
@@ -903,7 +904,7 @@ function zohStepHold() {
 
   body += rbox(16, 172, 508, 62, C.slate.bg, C.slate.bd);
   body += tx(W / 2, 192, 'Resulting Discrete Linear Recurrence:   h_t = ā h_{t-1} + b̄ x_t', { fs: 11, fw: 700, fill: C.text, mono: true });
-  body += tx(W / 2, 214, 'Matches §12.3 linear recurrence! Re(λ) < 0 and Δ > 0 guarantee |ā| = e^{Δ Re(λ)} < 1.', { fs: 9.5, fill: C.blue.tx });
+  body += tx(W / 2, 214, `Matches ${sec('sec_linear-recurrence')} linear recurrence! Re(λ) < 0 and Δ > 0 guarantee |ā| = e^{Δ Re(λ)} < 1.`, { fs: 9.5, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
@@ -1035,12 +1036,12 @@ function mambaUnification() {
   body += tx(W / 2, 18, 'Mamba Unifies minGRU Content Selectivity with S4D State Expansion', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 42, 224, 86, C.blue.bg, C.blue.bd);
-  body += tx(128, 62, '§12.3 minGRU (Selective)', { fs: 11, fw: 700, fill: C.blue.tx });
+  body += tx(128, 62, `${sec('sec_linear-recurrence')} minGRU (Selective)`, { fs: 11, fw: 700, fill: C.blue.tx });
   body += tx(128, 84, '+ Input-dependent gate z_t(x_t)', { fs: 10, fill: C.green.tx });
   body += tx(128, 104, '− Only N = 1 scalar per channel', { fs: 10, fill: C.coral.tx });
 
   body += rbox(300, 42, 224, 86, C.purple.bg, C.purple.bd);
-  body += tx(412, 62, '§12.4 S4D (Multi-Timescale)', { fs: 11, fw: 700, fill: C.purple.tx });
+  body += tx(412, 62, `${sec('sec_ssm')} S4D (Multi-Timescale)`, { fs: 11, fw: 700, fill: C.purple.tx });
   body += tx(412, 84, '+ N = 16 state modes per channel', { fs: 10, fill: C.green.tx });
   body += tx(412, 104, '− Fixed LTI kernel K_k ignores x_t', { fs: 10, fill: C.coral.tx });
 
@@ -1048,7 +1049,7 @@ function mambaUnification() {
   body += arrow(412, 130, 330, 152);
 
   body += rbox(46, 154, 448, 80, C.green.bg, C.green.bd);
-  body += tx(270, 174, '§12.5 Selective SSM / Mamba (Gu & Dao, 2023)', { fs: 11.5, fw: 700, fill: C.green.tx });
+  body += tx(270, 174, `${sec('sec_mamba')} Selective SSM / Mamba (Gu & Dao, 2023)`, { fs: 11.5, fw: 700, fill: C.green.tx });
   body += tx(270, 196, 'Token-dependent (Δ_t, B_t, C_t) over H × N expanded state', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(270, 216, 'Drops FFT convolution (time-varying) in favor of parallel associative scan', { fs: 9.5, fill: C.muted });
   return svg(W, H, body);
@@ -1191,7 +1192,7 @@ function vectorVsMatrixState() {
   body += tx(W / 2, 18, 'Upgrading Recurrent State Geometry: Vector h_t vs. Key-Value Matrix S_t', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 38, 246, 198, C.coral.bg, C.coral.bd);
-  body += tx(139, 58, 'Vector State (§§12.1–12.5)', { fs: 11.5, fw: 700, fill: C.coral.tx });
+  body += tx(139, 58, `Vector State (§§${num('sec_lstm')}–${num('sec_mamba')})`, { fs: 11.5, fw: 700, fill: C.coral.tx });
   body += rbox(30, 74, 218, 44, '#FFFFFF', C.coral.bd, 5, 1.1);
   body += tx(139, 92, 'h_t = a_t ⊙ h_{t-1} + b_t', { fs: 10.5, fw: 700, fill: C.text, mono: true });
   body += tx(139, 108, '1D vector superimposes all facts', { fs: 9.5, fill: C.muted });
@@ -1200,7 +1201,7 @@ function vectorVsMatrixState() {
   body += tx(139, 186, '• Fails multi-pair associative recall', { fs: 10, fw: 700, fill: C.coral.tx });
 
   body += rbox(278, 38, 246, 198, C.green.bg, C.green.bd);
-  body += tx(401, 58, 'Matrix State (§§12.6–12.7)', { fs: 11.5, fw: 700, fill: C.green.tx });
+  body += tx(401, 58, `Matrix State (§§${num('sec_matrix-state')}–${num('sec_deltanet')})`, { fs: 11.5, fw: 700, fill: C.green.tx });
   body += rbox(292, 74, 218, 44, '#FFFFFF', C.green.bd, 5, 1.1);
   body += tx(401, 92, 'S_t = S_{t-1} + v_t k_tᵀ', { fs: 10.5, fw: 700, fill: C.text, mono: true });
   body += tx(401, 108, 'Outer-product store ∈ R^{d_v×d_k}', { fs: 9.5, fill: C.muted });

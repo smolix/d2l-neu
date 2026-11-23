@@ -1,5 +1,6 @@
 // Slide diagrams for Chapter 16 (Generative Adversarial Networks)
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -137,7 +138,7 @@ export const diagrams = {
   'ch16-gan-roadmap': () => pipeline3(
     'Chapter 16 Progression: Divergences → Dynamics → Synthesis',
     {
-      tag: 'Part I · §§16.1–16.3',
+      tag: `Part I · §§${num('sec_basic_gan')}–${num('sec_gan_relativistic')}`,
       head: 'Objectives',
       eq: 'JS, f-GAN, W₁',
       note1: 'Log-ratio & links',
@@ -145,7 +146,7 @@ export const diagrams = {
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
     {
-      tag: 'Part II · §16.4',
+      tag: `Part II · ${sec('sec_gan_convergence')}`,
       head: 'Game Dynamics',
       eq: 'R₁ + R₂ Damping',
       note1: 'Dirac-GAN orbits',
@@ -153,7 +154,7 @@ export const diagrams = {
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     {
-      tag: 'Part III · §§16.5–16.7',
+      tag: `Part III · §§${num('sec_dcgan')}–${num('sec_gan_beyond')}`,
       head: 'Images & Critics',
       eq: 'DCGAN, cGAN, ADD',
       note1: 'FID / KID / P&R',
@@ -419,13 +420,13 @@ export const diagrams = {
     {
       head: 'Ordered Pair · Unconstrained T',
       eq: 'E_{p,q}[log σ(D(x) − D(x\'))]',
-      sub: 'RpGAN (§16.3) → JS(p⊗q, q⊗p)',
+      sub: `RpGAN (${sec('sec_gan_relativistic')}) → JS(p⊗q, q⊗p)`,
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
     {
       head: 'Ordered Pair · Penalized T',
       eq: 'RpGAN − (γ/2)(R₁ + R₂)',
-      sub: 'R3GAN (§16.4) → Dual Sobolev filter',
+      sub: `R3GAN (${sec('sec_gan_convergence')}) → Dual Sobolev filter`,
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     'Always convex in probability measure q (sup of linear expectations), nonconvex in θ'
@@ -735,7 +736,7 @@ export const diagrams = {
       note2: 'Needs R₁ + R₂ penalties!',
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
-    { text: 'In §16.4, our 2×2 experiment on 25 Gaussians proves R₁+R₂ drives mode coverage' }
+    { text: `In ${sec('sec_gan_convergence')}, our 2×2 experiment on 25 Gaussians proves R₁+R₂ drives mode coverage` }
   ),
 
   // ── convergence.md (9 diagrams) ─────────────────────────────────────

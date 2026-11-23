@@ -1,5 +1,6 @@
 // Slide diagrams for chapter_deep-reinforcement-learning (§15 Deep RL).
 import { C, TOKENS, grid, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -45,10 +46,10 @@ function fourMechanisms() {
   o += tx(280, 20, 'Four Sample-Efficiency Mechanisms and Their Approximation Errors', { fs: 14.8, fw: 700, fill: C.ink });
 
   const rows = [
-    { y: 40,  m: '1. Bootstrap Critic (§15.1)', err: "Young-critic bias e(s') in δ_t", fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 94,  m: '2. Reuse Old Data (§15.2–7)', err: 'Distribution shift & moving targets', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { y: 148, m: '3. Bound Shifts (§15.2–3)', err: 'Local clip limit or KL bias to π_ref', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { y: 202, m: '4. World Model (§15.6)', err: 'Compounding rollout error & compute', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { y: 40,  m: `1. Bootstrap Critic (${sec('sec_actorcritic')})`, err: "Young-critic bias e(s') in δ_t", fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { y: 94,  m: `2. Reuse Old Data (${sec('sec_ppo')}–${num('sec_offline')})`, err: 'Distribution shift & moving targets', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { y: 148, m: `3. Bound Shifts (${sec('sec_ppo')}–${num('sec_regularized')})`, err: 'Local clip limit or KL bias to π_ref', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { y: 202, m: `4. World Model (${sec('sec_model_based')})`, err: 'Compounding rollout error & compute', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   rows.forEach((r) => {
     o += box(18, r.y, 240, 44, r.fill, r.st, 7, 2);
@@ -94,9 +95,9 @@ function benchmarkGains() {
   o += box(34, 76, 492, 20, D.red.tint, D.red.base, 4, 1.5);
   o += tx(280, 86, 'Ch 14 REINFORCE: ~300,000 steps', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
   o += box(34, 102, 180, 26, C.lamber, C.amber, 4, 1.8);
-  o += tx(124, 115, '§15.5 SAC: 2.4k–11k', { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
+  o += tx(124, 115, `${sec('sec_sac')} SAC: 2.4k–11k`, { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
   o += box(228, 102, 298, 26, C.lgreen, C.green, 4, 1.8);
-  o += tx(377, 115, '§15.6 World-Model MPC: 200–800 steps!', { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
+  o += tx(377, 115, `${sec('sec_model_based')} World-Model MPC: 200–800 steps!`, { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
 
   o += box(18, 154, 524, 92, C.lgreen, C.green, 8, 2);
   o += tx(34, 176, 'CartPole-v1 (Return 500) & Discrete Exact Benchmarks:', { fs: 13.5, fw: 700, fill: D.green.dark, anchor: 'start' });
@@ -285,7 +286,7 @@ function singleVsMultiEpoch() {
   const cols = [
     { x: 16,  t: '1 Epoch per Batch', s1: '1 gradient step,', s2: 'then discard 4,000 steps', s3: 'Needs ≥ 50k steps', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 198, t: '20 Epochs Unclipped', s1: '20 passes on ρ_t Â_t', s2: 'Ratios explode to 0 / 2', s3: 'Many die at return ≈ 9', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { x: 380, t: 'Clipped PPO (§15.2)', s1: '4–20 passes on L^CLIP', s2: 'Caps incentive at 1±0.2', s3: '~25k steps (8/8 win)!', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 380, t: `Clipped PPO (${sec('sec_ppo')})`, s1: '4–20 passes on L^CLIP', s2: 'Caps incentive at 1±0.2', s3: '~25k steps (8/8 win)!', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   cols.forEach((c) => {
     o += box(c.x, 44, 164, 192, c.fill, c.st, 8, 2);
@@ -481,7 +482,7 @@ function trustVsAnchor() {
   const W = 560, H = 258;
   let o = '';
   o += box(20, 18, 248, 222, C.lamber, C.amber, 9, 2);
-  o += tx(144, 42, 'Moving Trust Region (§15.2)', { fs: 14.5, fw: 700, fill: D.orange.dark });
+  o += tx(144, 42, `Moving Trust Region (${sec('sec_ppo')})`, { fs: 14.5, fw: 700, fill: D.orange.dark });
   o += tx(144, 66, 'Penalty to PREVIOUS iterate π_k', { fs: 12.2, fill: C.ink });
   o += box(28, 84, 232, 62, '#FFFFFF', C.amber, 6, 1.8);
   o += tx(144, 104, 'π_k(a) ∝ π_ref(a) e^{k·r(a)/β̃}', { mono: true, fs: 11.3, fw: 700, fill: D.orange.dark });
@@ -491,7 +492,7 @@ function trustVsAnchor() {
   o += tx(144, 220, 'argmax_{a} r̂(a) (reward hacks!)', { fs: 12.2, fw: 700, fill: D.red.dark });
 
   o += box(292, 18, 248, 222, C.lgreen, C.green, 9, 2);
-  o += tx(416, 42, 'Fixed Reference Penalty (§15.3)', { fs: 14.5, fw: 700, fill: D.green.dark });
+  o += tx(416, 42, `Fixed Reference Penalty (${sec('sec_regularized')})`, { fs: 14.5, fw: 700, fill: D.green.dark });
   o += tx(416, 66, 'Penalty to FROZEN reference π_ref', { fs: 12.2, fill: C.ink });
   o += box(300, 84, 232, 62, '#FFFFFF', C.green, 6, 1.8);
   o += tx(416, 104, 'π*(a) ∝ π_ref(a) e^{r(a)/β}', { mono: true, fs: 11.8, fw: 700, fill: D.green.dark });
@@ -837,7 +838,7 @@ function experienceVsCompute() {
   o += tx(280, 20, 'Trading Physical Interaction for Test-Time Computation', { fs: 15, fw: 700, fill: C.ink });
 
   o += box(20, 44, 248, 194, C.lblue, C.blue, 9, 2);
-  o += tx(144, 68, 'World-Model MPC (§15.6)', { fs: 14.5, fw: 700, fill: D.blue.dark });
+  o += tx(144, 68, `World-Model MPC (${sec('sec_model_based')})`, { fs: 14.5, fw: 700, fill: D.blue.dark });
   o += box(34, 88, 220, 44, '#FFFFFF', C.green, 6, 1.8);
   o += tx(144, 110, 'Data: 200–800 real steps!', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   o += box(34, 142, 220, 44, '#FFFFFF', D.red.base, 6, 1.8);
@@ -845,7 +846,7 @@ function experienceVsCompute() {
   o += tx(144, 212, '500 cands × 25 steps per command', { fs: 12, fw: 600, fill: C.ink });
 
   o += box(292, 44, 248, 194, C.lgreen, C.green, 9, 2);
-  o += tx(416, 68, 'Soft Actor–Critic (§15.5)', { fs: 14.5, fw: 700, fill: D.green.dark });
+  o += tx(416, 68, `Soft Actor–Critic (${sec('sec_sac')})`, { fs: 14.5, fw: 700, fill: D.green.dark });
   o += box(306, 88, 220, 44, '#FFFFFF', C.amber, 6, 1.8);
   o += tx(416, 110, 'Data: 1,600–7,500 real steps', { mono: true, fs: 12, fw: 700, fill: D.orange.dark });
   o += box(306, 142, 220, 44, '#FFFFFF', C.green, 6, 1.8);
@@ -944,7 +945,7 @@ function onlineVsOffline() {
   const W = 560, H = 256;
   let o = '';
   o += box(20, 18, 248, 220, C.lgreen, C.green, 9, 2);
-  o += tx(144, 42, 'Online RL (§15.1–§15.6)', { fs: 14.5, fw: 700, fill: D.green.dark });
+  o += tx(144, 42, `Online RL (${sec('sec_actorcritic')}–${sec('sec_model_based')})`, { fs: 14.5, fw: 700, fill: D.green.dark });
   o += tx(144, 66, 'Closed Self-Correcting Loop', { fs: 12.5, fw: 700, fill: D.green.dark });
   o += box(34, 86, 220, 86, '#FFFFFF', C.green, 6, 1.8);
   o += tx(144, 108, '1. Q̂ overestimates action a', { fs: 12, fill: C.ink });
@@ -954,7 +955,7 @@ function onlineVsOffline() {
   o += tx(144, 222, 'optimistic estimation errors', { fs: 12.2, fill: C.ink });
 
   o += box(292, 18, 248, 220, D.red.tint, D.red.base, 9, 2);
-  o += tx(416, 42, 'Offline RL (§15.7)', { fs: 14.5, fw: 700, fill: D.red.dark });
+  o += tx(416, 42, `Offline RL (${sec('sec_offline')})`, { fs: 14.5, fw: 700, fill: D.red.dark });
   o += tx(416, 66, 'Fixed Log D · Zero New Trials', { fs: 12.5, fw: 700, fill: D.red.dark });
   o += box(306, 86, 220, 86, '#FFFFFF', D.red.base, 6, 1.8);
   o += tx(416, 108, '1. Thin pair (n ≤ 5) gets lucky r', { fs: 12, fill: C.ink });
@@ -1112,19 +1113,19 @@ function tokenMdpStack() {
   o += box(20, 44, 248, 194, N.panel, C.gray, 9, 2);
   o += tx(144, 68, 'Eliminated in Token MDPs', { fs: 14.5, fw: 700, fill: C.muted });
   o += box(34, 88, 220, 60, '#FFFFFF', C.gray, 6, 1.6);
-  o += tx(144, 108, '✗ Learned World Model (§15.6)', { fs: 12.2, fw: 700, fill: C.ink });
+  o += tx(144, 108, `✗ Learned World Model (${sec('sec_model_based')})`, { fs: 12.2, fw: 700, fill: C.ink });
   o += tx(144, 130, 'concat(s_t, a_t) is exact!', { mono: true, fs: 11.2, fill: C.muted });
   o += box(34, 158, 220, 60, '#FFFFFF', C.gray, 6, 1.6);
-  o += tx(144, 178, '✗ Replay Q-Network (§15.4)', { fs: 12.2, fw: 700, fill: C.ink });
+  o += tx(144, 178, `✗ Replay Q-Network (${sec('sec_dqn')})`, { fs: 12.2, fw: 700, fill: C.ink });
   o += tx(144, 200, '10⁵ tokens ⇒ 4.4σ max bias', { mono: true, fs: 11.2, fill: D.red.dark });
 
   o += box(292, 44, 248, 194, C.lgreen, C.green, 9, 2);
   o += tx(416, 68, 'Essential in LLM Post-Training', { fs: 14.2, fw: 700, fill: D.green.dark });
   o += box(306, 88, 220, 60, '#FFFFFF', C.green, 6, 1.8);
-  o += tx(416, 108, '✓ Group Baseline / Critic (§15.1)', { fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(416, 108, `✓ Group Baseline / Critic (${sec('sec_actorcritic')})`, { fs: 12, fw: 700, fill: D.green.dark });
   o += tx(416, 130, 'GRPO/RLOO group mean or V̂(s_t)', { fs: 11.5, fill: C.ink });
   o += box(306, 158, 220, 60, '#FFFFFF', C.green, 6, 1.8);
-  o += tx(416, 178, '✓ Ratio Clip + KL Leash (§15.2–3)', { fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(416, 178, `✓ Ratio Clip + KL Leash (${sec('sec_ppo')}–${num('sec_regularized')})`, { fs: 12, fw: 700, fill: D.green.dark });
   o += tx(416, 200, 'Guards multi-epoch & stops hacking', { fs: 11.5, fill: C.ink });
   return svg(W, H, o);
 }

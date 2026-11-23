@@ -255,11 +255,15 @@ for name, band in bands.items():
     print(f'{name:16s}', ''.join(f'{v:10.3f}' for v in band))
 ```
 
-Longer windows help every model that we trained at both lengths. `Gated DeltaNet` ends between $1.11$ and $1.12$ and the hybrid between $1.07$ and $1.08$, against $1.16$ and $1.15$ on windows of 128 bytes. Attention with the convolution ends at about $1.07$ in most of our runs; we return to the exception below. The `GRU` reaches $1.09$. It is the slowest arm by a wide margin, at about twice the time per step of the next slowest or more, because it alone processes a window one step after another.
+Longer windows help every model that we trained at both lengths. `Gated DeltaNet` ends between $1.11$ and $1.12$ and the hybrid between $1.07$ and $1.08$, against $1.16$ and $1.15$ on windows of 128 bytes. Attention with the convolution ends at about $1.07$ in most runs. About one run in five ends near $1.12$ instead, for a reason that we give below. The `GRU` reaches $1.09$. It is the slowest arm by a wide margin, at about twice the time per step of the next slowest or more, because it alone processes a window one step after another.
 
 The three arms that were level on short windows are level no longer, and the columns of the table show where they part. From the first 128 bytes of a window to the last 512, the loss of the `GRU` falls by about $0.07$ and that of `Gated DeltaNet` by about $0.08$. The hybrid gains about $0.13$, and attention, in most runs, about $0.16$. The plot locates the gain more closely. Up to byte 127 the fixed states hold their own: the `GRU` is lowest in every band, attention is highest in the first bands, and the hybrid cannot be told from pure `Gated DeltaNet`. Beyond byte 128 the `GRU` and `Gated DeltaNet` gain little more, about $0.03$ by the last band. The hybrid keeps falling. It leaves `Gated DeltaNet` behind at byte 128, and from byte 256 on it is below the `GRU` as well. At bytes 512–1,023 it leads `Gated DeltaNet` by about $0.05$ and the `GRU` by about $0.02$. All of this lead comes from the one attention layer in its fourth block.
 
-Attention falls the furthest, though not in every run. In three of our four runs it ended at $1.03$ to $1.04$ on bytes 512–1,023, about $0.02$ ahead of the hybrid and the best of the four models. The fourth run lagged at every position. It ended at $1.12$ overall and at about $1.10$ in the last band, no better than `Gated DeltaNet`, and we do not know why. The plot shows the mean of the two runs in the table, so where one of them is such a run, the attention curve ends above the hybrid's and not below it.
+Attention falls the furthest, though not in every run. In most runs it ends at $1.03$ to $1.04$ on bytes 512–1,023, about $0.02$ ahead of the hybrid and the best of the four models. About one run in five lags. It ends at around $1.12$ overall and at about $1.10$ in the last band, no better than `Gated DeltaNet`. The plot shows the mean of the two runs in the table, so where one of them is such a run, the attention curve ends above the hybrid's and not below it.
+
+The two kinds of run differ by a single event. For the first thousand steps or so, all runs follow the same training loss. In most runs the loss then falls suddenly by about $0.05$, at some step between 1,000 and 5,000. A lagging run declines smoothly and never shows this drop. The drop is the moment at which attention learns to copy. Text repeats itself: a name, a date, or a phrase often recurs within a kilobyte. A model that finds the earlier occurrence of the bytes it has just read, and predicts the byte that followed them there, gains at every such repeat. :citet:`Olsson.Elhage.Nanda.ea.2022` call this circuit an *induction head*, and we met it in :numref:`sec_what-attention-computes`. We can test for it directly. On windows that contain the same passage of 512 bytes twice, a run that has had its drop predicts the second copy at $0.6$ to $0.8$ of the loss of the first. A lagging run predicts both copies at nearly the same loss, through all 8,000 steps. On the first 128 bytes of a window, where there is little to copy from, the two kinds of run cannot be told apart.
+
+A lagging run is not unstable. Its loss does not diverge, and its gradients are as large as those of the other runs. It is simply late. The step at which the circuit forms varies with the seed, and the cosine schedule leaves little learning rate after about step 6,000, so a run that has not formed the circuit by then does not form it at all. The short convolution helps here as it did in the recall task: without it, most runs have had no drop by step 5,000. We also tried other learning rates, no weight decay, and a different number of attention heads. The misses became rarer in one case and disappeared in none. Sudden drops of this kind are typical when a network must assemble a circuit from parts that are of little use on their own, and they are a good reason to train more than one seed before ranking two architectures.
 
 With a long context and enough training, then, text shows a weaker form of what the recall task showed. The growing cache gains the most from distant bytes, a single attention layer among three recurrent ones recovers a good part of that gain, and a fixed state alone gains the least. On windows of 128 bytes there are no distant bytes to use, which is why the short-window table cannot show this.
 
@@ -368,6 +372,16 @@ A fixed-size state of $M$ numbers at $b$ bits each can distinguish at most $2^{M
     1. Repeat with windows of 512 bytes (`num_steps=512`, with fewer
        windows per step). How does the share of marked positions change,
        and with it the difference between the models?
+
+1. [code] **Watching the copy circuit form.** Build validation windows of
+   1,024 bytes whose second half repeats the first. Train attention with
+   the convolution (`'CCCC'`) on ordinary windows of 1,024 bytes, and
+   every 250 steps record the training loss and the ratio of the loss on
+   the second half of the repeated windows to the loss on the first.
+    1. At which step does the ratio fall below 1, and does the training
+       loss drop at the same step?
+    1. Repeat with several seeds. How much does the step of the drop vary,
+       and what does a run look like that has no drop within 8,000 steps?
 
 [Discussions](https://d2l.discourse.group/t/36785)
 
@@ -514,7 +528,7 @@ Comparing 4-block width-256 `Gated DeltaNet` (`GGGG`), a 3-to-1 `hybrid` (`GGGA`
 - **Same bytes per step:** batch size $8$ instead of $64$, windows of $1{,}024$ bytes, $8{,}000$ steps; mean of two runs over bands of positions $[a, 2a)$.
 - **Fixed states flatten:** up to byte $127$ the `GRU` is lowest; past byte $128$ the `GRU` and `GGGG` gain only about $0.03$ more.
 - **The hybrid keeps falling:** level with `GGGG` up to byte $127$, then about $0.05$ ahead of it and $0.02$ ahead of the `GRU` at bytes $512$–$1{,}023$.
-- **Attention gains the most, in most runs:** highest at first, $1.03$–$1.04$ in the last band in three of four runs; one run lagged at about $1.10$, which lifts the averaged curve above the hybrid's.
+- **Attention gains the most, in most runs:** highest at first, $1.03$–$1.04$ in the last band. About one run in five stays near $1.10$: its induction head, which copies what followed an earlier occurrence of the context, has not formed by the time the cosine schedule has used up the learning rate. Such a run lifts the averaged curve above the hybrid's.
 :::
 
 ::: {.col .fig .big}

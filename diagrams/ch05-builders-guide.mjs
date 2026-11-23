@@ -596,14 +596,14 @@ function configBuilder() {
   o += card(370, 56, 156, 118, 'green', [
     '3. State Dictionary',
     { t: '729,866 float32s', mono: true, fs: 12.5, fw: 700 },
-    '22 weight/bias tensors',
+    '20 weight/bias tensors',
     'keyed by tree path in',
     'model.safetensors',
   ], { white: true, rail: true });
 
   o += card(14, 188, 512, 58, 'slate', [
     'Analytical Count Check: Input (784×256+256 = 200,960) + 4 Blocks (8×(256²+256) = 526,336)',
-    '+ Output Head (256×10+10 = 2,570) = 729,866 Total Parameters across 11 Linear layers.',
+    '+ Output Head (256×10+10 = 2,570) = 729,866 Total Parameters across 10 Linear layers.',
   ]);
   return svg(W, H, o);
 }
@@ -998,7 +998,7 @@ function gpt2SqrtNBound() {
   const W = 540, H = 258;
   let o = '';
   o += card(14, 12, 512, 48, 'blue', [
-    'Why Output-Projection Scaling g = 1 / √N Bounds Variance at Euler\'s Constant e',
+    'Why Output-Projection Scaling g = 1 / √N Bounds Variance at Euler\'s Number e',
     { t: 'm_N / m_0  =  ( 1 + g² )^N  =  ( 1 + 1/N )^N  ↗  e ≈ 2.71828   as N → ∞', mono: true, fs: 13.5, fw: 700, fill: D.blue.dark },
   ]);
 
@@ -1017,8 +1017,8 @@ function gpt2SqrtNBound() {
   });
 
   o += card(14, 190, 512, 54, 'purple', [
-    'Production Rule (GPT-2 / GPT-3 / Llama): Count total residual branches N_branches',
-    '(2 per Transformer block: 1 Attention + 1 FFN) and scale each branch\'s output projection by 1/√N_branches.',
+    'The Same 1/√N Scaling in GPT-2 / GPT-3: Count total residual branches N_branches',
+    '(2 per Transformer block: 1 Attention + 1 FFN) and scale each output projection\'s init by 1/√N_branches.',
   ]);
   return svg(W, H, o);
 }
@@ -1125,7 +1125,7 @@ function rmsnormFormula() {
     'Exact Scale Invariance (c·x ↦ same)',
     { t: 'x = (3, 4) ⇒ RMS = √12.5 ≈ 3.536', mono: true, fs: 12 },
     { t: 'x / RMS = (0.849, 1.131)', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
-    { t: '300·x = (300, 400) ⇒ (0.849, 1.131)!', mono: true, fs: 12, fill: D.green.dark },
+    { t: '100·x = (300, 400) ⇒ (0.849, 1.131)!', mono: true, fs: 12, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(278, 70, 248, 116, 'green', [
@@ -1193,7 +1193,7 @@ function randomFourierFeatures() {
   o += card(14, 72, 152, 108, 'slate', [
     '1D Input X',
     { t: 'shape (n, 1)', mono: true, fs: 13 },
-    'x ∈ [−π, π]',
+    'x ∈ [−2, 2]',
   ], { white: true });
   o += arrow(170, 126, 188, 126, C.blue);
   o += card(192, 72, 158, 108, 'blue', [
@@ -1770,7 +1770,7 @@ function updateSwamping() {
   o += tx(430, 144, '1.0078125', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
 
   o += card(14, 180, 512, 70, 'red', [
-    'Any update |Δw| < ½ eps · |w| (i.e. |η·g| < 0.0039 at w = 1.0) rounds back to 1.0000000!',
+    'Any update below half the local bf16 spacing (η·g < 0.0039 upward from w = 1.0) rounds back to w!',
     { t: 'In Fashion-MNIST MLP (η = 0.01), ~90% of pure-bf16 updates vanish—fp32 master weights fix this completely.', fs: 12.2, fill: C.ink },
   ], { white: true, rail: true });
   return svg(W, H, o);
@@ -1856,9 +1856,9 @@ function modelCastHalving() {
 const ampMemoryAudit = () => threeColDiagram(
   'purple', 'Where Mixed Precision Saves Memory on an 8B Model (and Where It Does Not)',
   { theme: 'blue',   head: 'Pure fp32 Training',      lines: ['fp32 weights: 32 GB', 'fp32 grads:   32 GB', 'fp32 Adam m,v: 64 GB', { t: 'Static = 128 GB + 1× Acts', mono: true, fw: 700, fill: D.blue.dark }] },
-  { theme: 'purple', head: 'Mixed Precision (AMP)',   lines: ['fp32 master w: 32 GB', '16b w/g + m,v: 80–96 GB', { t: 'Static = 112–128 GB', mono: true, fill: D.orange.dark }, { t: 'Activations = 0.5× RAM!', mono: true, fw: 700, fill: D.green.dark }] },
+  { theme: 'purple', head: 'Mixed Precision (AMP)',   lines: ['fp32 master w: 32 GB', 'fp32 grads:   32 GB', 'fp32 Adam m,v: 64 GB', { t: 'Static = 128 GB + ½× Acts', mono: true, fw: 700, fill: D.orange.dark }] },
   { theme: 'green',  head: 'Pure bf16 Inference',     lines: ['bf16 weights: 16 GB', 'No grads:      0 GB', 'No Adam m,v:   0 GB', { t: 'Static = 16 GB (fits 24G!)', mono: true, fw: 700, fill: D.green.dark }] },
-  'slate', 'AMP keeps the ~128 GB static parameter floor for accuracy, but halves dynamic activation memory & doubles FLOP/s!'
+  'slate', 'AMP keeps the 128 GB static parameter floor, but halves activation memory and roughly doubles matmul speed.'
 );
 
 function fp16LossScaling() {

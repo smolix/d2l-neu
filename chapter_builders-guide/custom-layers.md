@@ -22,9 +22,11 @@ into sequential and custom containers alongside built-in layers.
 Sometimes the obstacle is not the forward operation at all, but its derivative.
 To squeeze an 8-billion-parameter model (:numref:`sec_model_construction`) into
 tight memory, practitioners often quantize weights down to 4-bit integers,
-cutting storage to just 4 GB—a quarter of 16-bit floating point. Yet rounding to
-integers has derivative zero almost everywhere, so any weight quantized inside
-the forward pass receives zero gradient and stops learning.
+cutting storage to just 4 GB—a quarter of 16-bit floating point. Quantizing a
+finished model needs no gradients. *Training* with quantized weights in the
+forward pass does, and there the rounding is in the way: it has derivative zero
+almost everywhere, so any weight quantized inside the forward pass receives zero
+gradient and stops learning.
 
 In this section, we build both kinds of extensions. Because every framework
 operation—optimization, checkpointing, and device movement—walks registered
@@ -83,6 +85,7 @@ import tempfile
 ```{.python .input #custom-layers-custom-layers-and-functions-1}
 %%tab jax
 from flax import serialization
+from jax.test_util import check_grads
 ```
 
 ## Layers without Parameters
@@ -1095,6 +1098,64 @@ def loss(f, w):
  bool(jnp.allclose(jax.grad(loss, 1)(round_ste, w),
                    jax.grad(loss, 1)(round_ste2, w))))
 ```
+
+A backward rule written by hand can be wrong, and nothing in the forward pass
+will show it. The standard test is a *gradient check*: perturb each input by a
+small amount, measure how much the output changes, and compare this
+finite-difference slope with the gradient that the rule returns. Let's check a
+smooth built-in function and our straight-through rule:
+
+```{.python .input #custom-layers-functions-with-custom-gradients-1}
+%%tab mxnet
+def check(f, eps=1e-6):  # f must act elementwise
+    x = mnp.array([0.9, 1.4, 2.6], dtype='float64')
+    x.attach_grad()
+    with autograd.record():
+        y = f(x).sum()
+    y.backward()
+    numeric = (f(x + eps) - f(x - eps)) / (2 * eps)
+    return bool(mnp.abs(x.grad - numeric).max() < 1e-6)
+
+check(mnp.tanh), check(lambda X: RoundSTE()(X))
+```
+
+```{.python .input #custom-layers-functions-with-custom-gradients-1}
+%%tab pytorch
+def check(f):
+    x = torch.tensor([0.9, 1.4, 2.6], dtype=torch.float64, requires_grad=True)
+    return torch.autograd.gradcheck(f, (x,), raise_exception=False)
+
+check(torch.tanh), check(RoundSTE.apply)
+```
+
+```{.python .input #custom-layers-functions-with-custom-gradients-1}
+%%tab tensorflow
+def check(f):
+    x = tf.constant([0.9, 1.4, 2.6], tf.float64)
+    analytic, numeric = tf.test.compute_gradient(f, [x])
+    return bool(np.allclose(analytic[0], numeric[0]))
+
+check(tf.tanh), check(round_ste)
+```
+
+```{.python .input #custom-layers-functions-with-custom-gradients-1}
+%%tab jax
+def check(f):
+    try:
+        check_grads(f, (jnp.array([0.9, 1.4, 2.6]),), order=1, modes=['rev'])
+        return True
+    except AssertionError:
+        return False
+
+check(jnp.tanh), check(round_ste)
+```
+
+The built-in function passes and the straight-through estimator fails. This
+failure is by design. The forward pass is a staircase, whose slope is zero
+wherever a finite difference can measure it, while our backward rule reports a
+slope of one. A gradient check therefore tells us whether a rule is the
+derivative of its forward pass, not whether the rule is useful. Run it on every
+rule that is meant to be exact, such as the clamp in the exercises.
 
 Keep in mind that a custom gradient overrides the derivative of an expression
 built from existing tensor primitives; writing custom GPU kernels from scratch

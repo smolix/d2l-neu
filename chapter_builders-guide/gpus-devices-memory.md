@@ -947,13 +947,25 @@ The readings trace the exact lifecycle of a training step: weights ($4N$ bytes)
 plus inputs sit in memory first; the forward pass adds the stored activations
 (~192 MiB, exceeding the weights); the backward pass consumes and frees those
 activations while materializing gradients ($4N$); and the first optimizer step
-allocates Adam's two moments ($8N$). From step two onward, memory oscillates
-between the static $16N$ floor and the forward-pass activation peak.
+allocates Adam's two moments ($8N$). :numref:`fig_bg_step-memory` draws the
+four stages without the 16 MiB input batch. From step two onward, memory rises
+and falls within every step: the forward pass stores the activations on top of
+the weights and Adam's moments, and the backward pass replaces them with
+gradients. The peak is at most the static $16N$ plus the activations. It is
+lower, by up to $4N$, when the loop frees the old gradients before the next
+forward pass.
 Shrinking the minibatch size is the quickest lever when activations push memory
 over the edge, since it cuts activation footprint without altering the
 architecture. By contrast, if memory climbs steadily *from step to step*, look
 for a leak keeping old computation graphs alive—the classic culprit being
 appending raw loss tensors to a Python list without detaching them first.
+
+:begin_tab:`pytorch`
+`optimizer.zero_grad()` frees the gradients by default (`set_to_none=True`), so a loop that calls it before the forward pass holds $12N$ bytes, not $16N$, while the activations are stored.
+:end_tab:
+
+![Memory in use after each stage of the first training step, for the MLP of width 4096 at minibatch size 4096. The input batch is not counted. The forward pass adds the three stored activations to the weights ($4N$). The backward pass frees the activations and leaves the gradients ($4N$). The optimizer step adds Adam's two moments ($8N$).](../img/bg-step-memory.svg)
+:label:`fig_bg_step-memory`
 
 ### Activation Checkpointing
 :label:`subsec_activation_checkpointing`

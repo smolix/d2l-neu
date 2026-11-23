@@ -269,7 +269,18 @@ register it as a *buffer* if checkpoints and device transfers need it without
 gradients, and keep it as an ordinary local variable if it lives only for one
 forward/backward pass (such as intermediate activations cached by
 backpropagation in :numref:`sec_backprop`). Architectural constants like layer
-widths remain plain Python attributes.
+widths remain plain Python attributes. :numref:`tab_bg_tensor_kinds` collects
+these rules for later reference.
+
+:The four kinds of value in a layer, and what the optimizer, a checkpoint and a device move do with each.
+:label:`tab_bg_tensor_kinds`
+
+| Kind | Example | Updated by the optimizer | Saved in checkpoints | Moved with the model |
+|---|---|---|---|---|
+| parameter | weights, biases | yes | yes | yes |
+| buffer | input statistics, BatchNorm running means | no | yes | yes |
+| plain attribute | layer widths | no | no | no |
+| local variable | intermediate activations | no | no | no |
 
 To illustrate, we build a `Standardizer` module that normalizes its inputs with
 a precomputed per-feature mean and standard deviation before applying a linear
@@ -543,7 +554,8 @@ of batch size. You might hope that 16-bit *mixed-precision* training
 (:numref:`sec_numerics`) cuts this static floor in half. Surprisingly, it does
 not: mixed precision keeps fp32 master copies of the weights and fp32 Adam
 moments so tiny updates do not vanish under rounding
-:cite:`Micikevicius.Narang.Alben.ea.2018`, with the 16-bit copies sitting on top.
+:cite:`Micikevicius.Narang.Alben.ea.2018`, and the 16-bit values that the
+forward pass uses are cast from them.
 
 ### Counting Without Allocating
 :label:`subsec_count_without_alloc`

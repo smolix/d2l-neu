@@ -266,9 +266,14 @@ for dtype in (jnp.float32, jnp.bfloat16, jnp.float16):
 In fp32, both increments register cleanly. In bf16—whose spacing near 1 is
 $2^{-7} \approx 0.0078$—both round right back to 1, leaving the weight
 completely frozen. In fp16 (spacing $2^{-10} \approx 0.00098$), the $10^{-3}$
-step survives (rounded to one grid step) while $10^{-4}$ disappears. Storing
-weights directly in 16 bits can therefore stall optimization even when every
-gradient is accurate—which is why training keeps master weights in fp32.
+step survives (rounded to one grid step) while $10^{-4}$ disappears.
+:numref:`fig_bg_update-swamping` draws both grids to one scale: an update
+registers only if it carries the weight more than half a grid spacing away.
+Storing weights directly in 16 bits can therefore stall optimization even when
+every gradient is accurate—which is why training keeps master weights in fp32.
+
+![The bf16 grid (top) and the fp16 grid (bottom) near a weight of 1, drawn to one scale. A shaded interval holds the values that round back to 1; it reaches half a grid spacing to each side, and the spacing below 1 is half the spacing above it. In bf16 the update $1 + 10^{-3}$ lies inside the interval and is lost. In fp16 it lies outside and rounds to the next grid point, $1 + 2^{-10}$.](../img/bg-update-swamping.svg)
+:label:`fig_bg_update-swamping`
 
 ## Dtype Promotion and Model Casting
 
@@ -538,11 +543,10 @@ random weights and consume the exact same minibatches in the same order.
 Notice the learning rate: we set $\eta = 0.01$—one-tenth the rate used in
 :numref:`sec_mlp-implementation`—and run for 1000 steps (about four epochs). Our
 rounding analysis explains why $\eta$ matters so dramatically: an update
-$\eta g$ disappears whenever it falls below half the local bf16 grid spacing. At
-$\eta = 0.01$, roughly 90% of first-layer updates vanish—mirroring the
-late-stage learning-rate decay phase of any real training run. At $\eta = 0.1$,
-by contrast, only the smallest 40% of updates (carrying about 2% of total update
-mass) get rounded away, masking the failure until late in training.
+$\eta g$ disappears whenever it falls below half the local bf16 grid spacing, so
+a smaller learning rate loses more updates. A small rate is no artificial
+setting. Every real training run reaches one once its learning rate has decayed.
+Just before training, we will measure how much is lost at each of the two rates.
 
 ```{.python .input #numerics-mixed-precision-training-2}
 %%tab mxnet
@@ -685,6 +689,91 @@ on every single step (:numref:`sec_use_gpu`).
 :begin_tab:`mxnet`
 Because MXNet cannot train bf16 weights directly, `bf16_round` rounds fp32 weights to bf16's 7-bit mantissa after each step, while the mixed-precision run uses fp16 with `multi_precision=True`.
 :end_tab:
+
+Before training, let's check the rounding argument on the first minibatch. Of
+the nonzero first-layer updates $\eta g$ at initialization, what fraction would
+bf16 storage round away at $\eta = 0.01$ and at $\eta = 0.1$, and what share of
+the total update magnitude do the lost updates carry?
+
+```{.python .input #numerics-training-in-fp32-and-in-16-bits-1}
+%%tab mxnet
+net = mlp()
+X, y = batches[0]
+with autograd.record():
+    l = gluon.loss.SoftmaxCrossEntropyLoss()(net(X), y).mean()
+l.backward()
+w, g = net[0].weight.data(), net[0].weight.grad()
+w16, moved = bf16_round(w), g != 0  # Count only the nonzero updates
+for lr in (0.01, 0.1):
+    lost = (bf16_round(w16 - lr * g) == w16) & moved
+    share = float(lost.sum() / moved.sum())
+    mass = float(mnp.abs(g[lost]).sum() / mnp.abs(g).sum())
+    print(f'lr {lr}: {share:.0%} of updates rounded away, '
+          f'{mass:.0%} of the update mass')
+```
+
+```{.python .input #numerics-training-in-fp32-and-in-16-bits-1}
+%%tab pytorch
+net = mlp()
+X, y = batches[0]
+F.cross_entropy(net(X), y).backward()
+w, g = net[1].weight.detach(), net[1].weight.grad
+w16, moved = w.bfloat16(), g != 0  # Count only the nonzero updates
+for lr in (0.01, 0.1):
+    lost = ((w16.float() - lr * g).bfloat16() == w16) & moved
+    share = lost.sum() / moved.sum()
+    mass = g[lost].abs().sum() / g.abs().sum()
+    print(f'lr {lr}: {share:.0%} of updates rounded away, '
+          f'{mass:.0%} of the update mass')
+```
+
+```{.python .input #numerics-training-in-fp32-and-in-16-bits-1}
+%%tab tensorflow
+net = mlp()
+X, y = batches[0]
+with tf.GradientTape() as tape:
+    loss = tf.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(
+        y, net(X), from_logits=True))
+g = tape.gradient(loss, net.layers[1].kernel)
+w16 = tf.cast(net.layers[1].kernel, tf.bfloat16)
+moved = g != 0  # Count only the nonzero updates
+for lr in (0.01, 0.1):
+    new = tf.cast(tf.cast(w16, tf.float32) - lr * g, tf.bfloat16)
+    lost = (new == w16) & moved
+    share = tf.reduce_sum(tf.cast(lost, tf.float32)) / tf.reduce_sum(
+        tf.cast(moved, tf.float32))
+    mass = tf.reduce_sum(tf.abs(g[lost])) / tf.reduce_sum(tf.abs(g))
+    print(f'lr {lr}: {float(share):.0%} of updates rounded away, '
+          f'{float(mass):.0%} of the update mass')
+```
+
+```{.python .input #numerics-training-in-fp32-and-in-16-bits-1}
+%%tab jax
+net = mlp(nnx.Rngs(d2l.get_key()))
+X, y = batches[0]
+def loss_fn(model):
+    return optax.softmax_cross_entropy_with_integer_labels(
+        model(X), y).mean()
+g = nnx.grad(loss_fn)(net)['layers'][1]['kernel'][...]
+w16 = net.layers[1].kernel[...].astype(jnp.bfloat16)
+moved = g != 0  # Count only the nonzero updates
+for lr in (0.01, 0.1):
+    new = (w16.astype(jnp.float32) - lr * g).astype(jnp.bfloat16)
+    lost = (new == w16) & moved
+    share = float(lost.sum() / moved.sum())
+    mass = float(jnp.abs(g[lost]).sum() / jnp.abs(g).sum())
+    print(f'lr {lr}: {share:.0%} of updates rounded away, '
+          f'{mass:.0%} of the update mass')
+```
+
+At $\eta = 0.01$ about nine in ten updates are rounded away, and they carry
+about four-fifths of the total update magnitude (the "mass" in the printout):
+most of the gradient step never reaches the weights. At $\eta = 0.1$ about half
+of the updates are still lost, but they are the small ones and carry only about
+a sixth of the magnitude. Most of the step then lands, and the failure stays
+hidden until the learning rate decays. Now we train all three variants at
+$\eta = 0.01$.
+
 ```{.python .input #numerics-mixed-precision-training-4}
 %%tab mxnet
 def seeded_mlp(seed):
@@ -902,6 +991,10 @@ and big gradients overflow to `inf`. *Dynamic loss scaling* automates the choice
 start with a large $S$, inspect the gradients on every step, and whenever an
 `inf` or NaN appears, skip the optimizer update and halve $S$; after a streak of
 clean steps, double $S$ to stay close to the top of fp16's range.
+:numref:`fig_bg_loss-scaling` shows one step of this loop.
+
+![One step of dynamic loss scaling. The loss is multiplied by $S$, the backward pass runs in fp16, and the gradients are divided by $S$ in fp32. If all of them are finite, the optimizer takes its step, and $S$ doubles after a streak of such steps. If any is `inf` or NaN, the step is skipped and $S$ is halved.](../img/bg-loss-scaling.svg)
+:label:`fig_bg_loss-scaling`
 
 :begin_tab:`mxnet`
 Gluon's `Trainer` provides no automatic loss scaler; if training in fp16, multiply the loss by $S$ before backward and divide gradients by $S$ before the optimizer update.
@@ -1380,7 +1473,7 @@ Training identical Fashion-MNIST MLPs for $1{,}000$ SGD steps at $\eta = 0.01$ a
 
 ::: {.cols .vc}
 ::: {.col}
-- **Static training floor stays `112–128 GB`:** Mixed precision must retain `fp32` master weights (`32 GB`) and `fp32` Adam moments $\mathbf{m}, \mathbf{v}$ (`64 GB`) alongside 16-bit weights/gradients.
+- **Static training floor stays `128 GB`:** Mixed precision must retain `fp32` master weights (`32 GB`), `fp32` gradients (`32 GB`) and `fp32` Adam moments $\mathbf{m}, \mathbf{v}$ (`64 GB`); the 16-bit values of the forward pass are cast from them.
 - **Where mixed precision wins:** It halves dynamic **forward activation memory** and doubles Tensor Core matrix-multiply throughput!
 :::
 

@@ -426,7 +426,11 @@ $d$. All biases start at zero. The first layer uses He initialization
 standard deviation $g/\sqrt{4d}$ for a gain $g$ that we leave free ($g = 1$
 being the standard linear-layer rule from :numref:`sec_numerical_stability`).
 
-Let $m_k$ denote the mean square of the entries of $\mathbf{x}_k$. Passing
+![The mean square of the signal at each point of one residual block. The He layer doubles $m_k$, the ReLU halves it again, and the output projection multiplies it by $g^2$. The identity path carries $m_k$ around the body, and the two mean squares add at the sum.](../img/bg-res-variance.svg)
+:label:`fig_bg_res-variance`
+
+Let $m_k$ denote the mean square of the entries of $\mathbf{x}_k$;
+:numref:`fig_bg_res-variance` follows it through the block. Passing
 through the first linear layer doubles $m_k$, and the ReLU halves it back to
 $m_k$ (:numref:`subsec_he_init`). The output projection then scales the mean
 square by $4d \cdot g^2/(4d) = g^2$, so the body output $f_k(\mathbf{x}_k)$ has
@@ -456,10 +460,15 @@ $$m_N = \left(1 + \frac{1}{N}\right)^N m_0 \leq e\, m_0,$$
 
 because $(1 + 1/N)^N$ increases monotonically to $e$. The activation standard
 deviation now grows by at most $\sqrt{e} \approx 1.65$ regardless of depth
-($1.5$ after 2 blocks, $1.60$ after 8, and $1.64$ after 32). This exact rule is
-widely used in practice: GPT-2 :cite:`Radford.Wu.Child.ea.2019`, for example,
-scales the output projection of every residual *branch* by $1/\sqrt{N}$, where
-$N$ is the total number of residual branches in the network.
+($1.5$ after 2 blocks, $1.60$ after 8, and $1.64$ after 32). The same
+$1/\sqrt{N}$ scaling is widely used in practice: GPT-2
+:cite:`Radford.Wu.Child.ea.2019`, for example, shrinks the initial standard
+deviation of the output projection of every residual *branch* by $1/\sqrt{N}$,
+where $N$ is the total number of residual branches in the network. Its blocks
+normalize their inputs, so the growth is additive rather than multiplicative
+(see the exercises), and the same scaling keeps the sum bounded. Fixup
+:cite:`Zhang.Dauphin.Ma.2019` derives a depth-dependent scaling of this kind
+for residual networks that have no normalization layers at all.
 
 ### Zero Output Projections
 
@@ -473,7 +482,18 @@ during training. Symmetry never freezes learning because the body's first layer
 retains its random weights: on the first backward pass, the output projection
 receives a nonzero gradient (since its ReLU inputs are nonzero), moving away
 from zero immediately, and from the second step onward gradients flow freely
-into the first layer as well.
+into the first layer as well. :numref:`fig_bg_zero-out-proj` lays out the three
+stages and contrasts them with the all-zeros trap.
+
+![Zeroing only the output projection $W_{\mathrm{out}}$ of a residual body. In the first forward pass the body outputs $f = 0$, so the block is the identity, but the hidden activations $\mathbf{h}$ are nonzero. The first backward pass therefore gives $W_{\mathrm{out}}$ the nonzero gradient $\boldsymbol{\delta}\mathbf{h}^\top$, where $\boldsymbol{\delta}$ is the gradient arriving at the body output, while $W_{\mathrm{in}}$ receives none. From the next step on both layers train. Bottom row: with both layers zeroed, $\mathbf{h} = 0$ and neither layer ever receives a gradient.](../img/bg-zero-out-proj.svg)
+:label:`fig_bg_zero-out-proj`
+
+Zero-initialized branches have a clear lineage.
+:citet:`Goyal.Dollar.Girshick.ea.2017` zeroed the final scale factor of each
+residual block to train ResNets with large minibatches. Fixup combines zero
+output projections with its depth-dependent scaling. Later work replaces the
+zero matrix with a single learnable scalar per branch that starts at zero
+:cite:`De.Smith.2020,Bachlechner.Majumder.Mao.ea.2021`.
 
 ### Measuring Variance across Depth
 :label:`subsec_variance_across_depth`
@@ -941,7 +961,7 @@ $$m_{k+1} = m_k + g^2 m_k = (1 + g^2)\, m_k$$
 $$m_N = \left(1 + \frac{1}{N}\right)^N m_0 \le e \, m_0 \approx 2.718 \, m_0$$
 
 - **Depth-independent bound:** Since $(1 + 1/N)^N \nearrow e$, the activation standard deviation never exceeds $\sqrt{e} \approx 1.65\times$ the input scale—whether the model has 8, 32, or 1,000 blocks.
-- **Standard in foundation models:** GPT-2, GPT-3, and Llama scale every residual branch's output projection by $1/\sqrt{N}$.
+- **Used in practice:** GPT-2 shrinks the initial standard deviation of every residual branch's output projection by $1/\sqrt{N}$.
 :::
 
 ::: {.col .fig}

@@ -1771,7 +1771,7 @@ With explicit widths in `MLPConfig(num_inputs=784, num_hiddens=256, num_blocks=4
 | **Input projection (`0`)** | $784 \times 256 + 256$ | $200{,}960$ |
 | **4 Residual blocks (`1..4`)** | $4 \times 2 \times (256 \times 256 + 256)$ | $526{,}336$ |
 | **Output head (`5`)** | $256 \times 10 + 10$ | $2{,}570$ |
-| **Total network** | **11 Linear layers (22 parameter tensors)** | **$729{,}866$** |
+| **Total network** | **10 Linear layers (20 parameter tensors)** | **$729{,}866$** |
 
 @!model-construction-building-from-a-config-4
 :::

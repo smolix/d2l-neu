@@ -758,7 +758,7 @@ Inspecting the update gates $\mathbf{z}_t \in (0, 1)^d$ of the first `minGRU` bl
 
 @!ssm-a-linear-recurrent-language-model-6
 
-- **Emergence of word-scale memories:** At initialization ($\mathbf{b}_\textrm{z} = \mathbf{0}$), only $1.2\%$ of gates exceed $0.9$ (half-life $\ge 7$ bytes); training expands this share more than tenfold to $\sim 18\%$.
+- **Emergence of word-scale memories:** At initialization ($\mathbf{b}_\textrm{z} = \mathbf{0}$), only $1\%$–$2\%$ of gates exceed $0.9$ (half-life $\ge 7$ bytes); training expands this share more than tenfold to $\sim 18\%$.
 - **Why almost no gates exceed $0.99$ (half-life $69$ bytes):** Over 128-byte windows, local word and phrase context dominates the loss, and zero-bias initialization starts far from the $0.99$–$0.999$ regime—a limitation §{sec_ssm} addresses directly.
 :::
 
@@ -802,8 +802,8 @@ With total batch tokens fixed at $B \times T = 65{,}536$, an ideal linear-time l
 With total batch tokens fixed at $B \times T = 65{,}536$, an ideal linear-time layer has a completely horizontal curve:
 
 - **Sequential `GRU` ($O(T)$ depth):** Slowest at every length, growing $>15\times$ from $T = 512$ to $16{,}384$ because doubling $T$ doubles the number of sequential scan steps while halving batch size $B$.
-- **Work-efficient `minGRU` (`jax.lax.associative_scan`):** Performs $\sim 2T$ elementwise combines regardless of $T$, staying **completely flat ($\sim 2.6\text{ ms}$) across a $32\times$ increase in sequence length** and beating attention at every length.
-- **cuDNN `FusedAttention` ($O(T^2 d)$ work):** Flat up to $T = 2{,}048$, then bends upward toward $2\times$ per doubling once quadratic pairwise mixing dominates—trailing `minGRU` by **$>5\times$ at $T = 16{,}384$**.
+- **Work-efficient `minGRU` (`jax.lax.associative_scan`):** Performs $\sim 2T$ elementwise combines regardless of $T$, staying **completely flat ($\sim 1.2\text{ ms}$) across a $32\times$ increase in sequence length** and beating attention at every length.
+- **cuDNN `FusedAttention` ($O(T^2 d)$ work):** Flat up to $T = 2{,}048$, then bends upward toward $2\times$ per doubling once quadratic pairwise mixing dominates—trailing `minGRU` by **about $14\times$ at $T = 16{,}384$**.
 :::
 
 ::: {.slide title="Concept Check: Scan Depth, Closure, and Crossover"}

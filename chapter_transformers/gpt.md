@@ -447,7 +447,7 @@ for act, repeats in (('swiglu', 2), ('gelu', 3)):
 
 Run-to-run variation across random seeds is only $\sim 0.01$ nats/byte, whereas `SwiGLU` consistently beats `GELU` at the same parameter and FLOP budget by $\sim 0.06$ nats/byte.
 
-With `train_lm` we can also test the other design choice of :numref:`sec_transformer-block`, the placement of the normalization. At initialization, :numref:`subsec_signal-propagation` found nothing wrong with post-norm at the weight scale $0.02$ that `init_weights` uses: tokens stay apart and the query gradients survive. Whether post-norm also *trains* as well is a separate question. We train the same model with post-norm blocks (`pre_norm=False`), once with the 100 warmup steps of the main run and once with none:
+With `train_lm` we can also test the other design choice of :numref:`sec_transformer-block`, the placement of the normalization. At initialization, :numref:`subsec_signal-propagation` found nothing wrong with post-norm at the weight scale $0.02$ that `init_weights` uses: tokens stay apart and the query gradients survive. Whether post-norm also *trains* as well is a separate question. We train the same model with post-norm blocks (`pre_norm=False`) three times: with 500 warmup steps, with the 100 steps of the main run, and with none. The peak learning rate is that of the main run in all three:
 
 ```{.python .input #gpt-run-to-run-spread-and-ffn-activation-swiglu-vs-gelu-1}
 %%tab pytorch, jax
@@ -458,7 +458,9 @@ for warmup in (500, 100, 0):  # Post-norm: long, pre-norm's, and no warmup
     print(f'post-norm, warmup {warmup:>3}: validation {loss:.3f}')
 ```
 
-It does not. Both post-norm runs end at $3.17$ nats per byte, against about $1.34$ for the pre-norm model. We have seen this number before: it is the unigram entropy computed above, so the post-norm model has learned how often each byte occurs and nothing about the bytes that precede it. At the learning rate of the main run, 100 steps of warmup do not rescue it.
+The answer depends on the warmup. With the 100 warmup steps that train the pre-norm model to about $1.34$ nats per byte, the post-norm model ends at $3.17$, and so does the run without warmup. We have seen this number before: it is the unigram entropy computed above, so these two models have learned how often each byte occurs and nothing about the bytes that precede it. The early updates are too large. When the learning rate rises to its peak within a few steps, the outputs of the attention and FFN sublayers grow far larger than the normalized residual stream to which they are added. After the normalizations every token then ends with nearly the same final vector, and from the same vector at every position only the byte frequencies can be predicted. The gradients that could pull the tokens apart again shrink with the token spread (:numref:`subsec_signal-propagation`), so training does not recover.
+
+With 500 warmup steps the sublayer outputs stay smaller than the stream, and the post-norm model trains to about $1.38$ nats per byte, a little behind the pre-norm model. The warmup that suffices for pre-norm is thus not enough for post-norm. Where the boundary lies we cannot say: it is not sharp, and at intermediate warmup lengths some runs train and others collapse. This is the behavior :citet:`xiong2020layer` reported for the original Transformer: post-norm needs a long warmup, whereas pre-norm trains without one and converges faster.
 
 ### Comparing Against a Matched Recurrent Baseline
 :label:`subsec_gpt-rnn-baseline`
@@ -1015,7 +1017,7 @@ To distinguish genuine architectural improvements from random initialization noi
 
 - **Tight run-to-run repeatability:** Across three random seeds, validation loss varies by **less than $0.01\text{ nats/byte}$**.
 - **Statistically clear `SwiGLU` win:** At identical parameter count ($4.79\text{M}$) and step time, `SwiGLU` beats `GELU` by **$\sim 0.06\text{ nats/byte}$** ($> 5\times$ the seed spread).
-- **Post-norm arm:** With `pre_norm=False` blocks, the same recipe ends at the unigram entropy, **$3.17\text{ nats/byte}$**, with or without the 100 warmup steps: the model learns byte frequencies and nothing about context.
+- **Post-norm arm:** `pre_norm=False` blocks with the same 100 warmup steps, or none, end at the unigram entropy, **$3.17\text{ nats/byte}$**: the sublayer outputs outgrow the normalized stream, all tokens end with the same vector, and training does not recover. With 500 warmup steps post-norm trains to about $1.38$, a little behind pre-norm ($1.34$).
 :::
 
 ::: {.slide title="Comparison With a Parameter-Matched Recurrent Model"}

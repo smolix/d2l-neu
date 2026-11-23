@@ -138,7 +138,7 @@ for name, r in runs.items():
 
 Both predictions hold:
 
-1. **State capacity scaling in `GatedDeltaNet`:** With 128 state entries/layer (`GG`), recall drops from about $1.00$ at 4 pairs to between $0.6$ and $0.7$ at 32 pairs and about $0.5$ at 64 pairs. Quadrupling the state to 512 entries/layer (`Gated DeltaNet, 4x state`) keeps recall at $0.95$ or more through 16 pairs and at $0.7$ or more all the way to 64 pairs.
+1. **State capacity scaling in `GatedDeltaNet`:** With 128 state entries/layer (`GG`), recall drops from about $1.00$ at 4 pairs to between $0.6$ and $0.7$ at 32 pairs and about $0.5$ at 64 pairs. Quadrupling the state to 512 entries/layer (`Gated DeltaNet, 4x state`) keeps recall near $1.00$ through 32 pairs. At 64 pairs it recalls most pairs, between about $0.8$ and $1.0$ depending on the run.
 2. **One attention layer restores exact recall:** Both `attention` (`AA`) and the `hybrid` (`GA`) achieve $1.00$ recall across every load up to 64 pairs in every run—mirroring the large-scale findings of :citet:`Waleffe.Byeon.Riach.ea.2024`.
 
 ### The Short Convolution
@@ -155,11 +155,11 @@ for name, (a, b) in [('Gated DeltaNet', recall['Gated DeltaNet']),
     print(f'{name:25s}', ''.join(f'{a[n]:6.2f}/{b[n]:.2f}' for n in pairs))
 ```
 
-Removing the width-4 causal convolution degrades recall at every single load (by roughly $10$ to $30$ percentage points, dropping even 4-pair recall to about $0.9$ or below).
+Removing the width-4 causal convolution degrades recall at every single load (by roughly $10$ to $35$ percentage points, dropping even 4-pair recall to between $0.8$ and $0.9$).
 
 ## Language Modeling at Equal Size
 
-How do pure `GatedDeltaNet` (`GGGG`), a 3-to-1 hybrid (`GGGA`), and pure causal `attention` (`AAAA`) compare on our byte-level WikiText-103 benchmark (`d2l.SeqLM`, 4 blocks at width $d = 256$, 1,000 steps)? We ask twice: first on the 128-byte windows used throughout this chapter, and then on windows of 1,024 bytes, to see whether a longer context separates a fixed state from a growing cache.
+How do pure `GatedDeltaNet` (`GGGG`), a 3-to-1 hybrid (`GGGA`), and pure causal `attention` (`AAAA`) compare on our byte-level WikiText-103 benchmark (`d2l.SeqLM`, 4 blocks at width $d = 256$)? We ask twice: first on the 128-byte windows used throughout this chapter, and then on windows of 1,024 bytes, to see whether a longer context separates a fixed state from a growing cache. Both times we train for 8,000 steps and not for the 1,000 steps of the earlier sections, because a model learns to use distant context late in training. The losses below are therefore lower than those of the earlier text tables and cannot be compared with them.
 
 ### Short Windows
 
@@ -208,7 +208,7 @@ def text_model(layout, d):  # 256 byte values; one block per letter
                      rngs=rngs)
 ```
 
-We train two runs each of `'GGGG'`, `'GGGA'`, `'AAAA'`, and `'CCCC'` at width $d = 256$ via `d2l.text_table`:
+We train two runs each of `'GGGG'`, `'GGGA'`, `'AAAA'`, and `'CCCC'` at width $d = 256$ for 8,000 steps via `d2l.text_table`:
 
 ```{.python .input #hybrids-language-modeling-5}
 %%tab pytorch, jax
@@ -218,13 +218,13 @@ arms = {'Gated DeltaNet': ('GGGG', 256), 'hybrid': ('GGGA', 256),
 trained = d2l.text_table(text_model, arms, data, num_steps=8000)
 ```
 
-On 128-byte windows, `Gated DeltaNet` and the `GGGA` hybrid (both about $1.33$) finish $0.05$–$0.06$ nats/byte ahead of `attention` without the convolution (about $1.38$). At this length the loss is dominated by local syntax: it hardly changes after the first 16 bytes of a window (:numref:`subsec_deep-rnn`), so the table mostly measures how well a mixer combines neighboring bytes.
+On 128-byte windows three of the four arms finish together: `Gated DeltaNet` at about $1.16$ nats per byte, and the `GGGA` hybrid and attention with the convolution at about $1.15$. Only `attention` without the convolution stands apart, about $0.03$ behind at $1.18$. At this length the loss is dominated by local syntax: it hardly changes after the first 16 bytes of a window (:numref:`subsec_deep-rnn`), so the table mostly measures how well a mixer combines neighboring bytes.
 
-The convolution accounts for about half of that lead: with it, attention reaches about $1.35$, some $0.03$ better than without. A gap of about $0.02$ to `Gated DeltaNet` remains. It is small, but two runs of the same arm differ by less than $0.01$, so on short windows the matrix memory keeps a modest advantage that local mixing does not explain. The hybrid's single attention layer adds nothing here, and its loss is level with that of pure `Gated DeltaNet`. That layer matters only where exact long-range lookup is needed (Exercise :exref:`ex_hybrids-recall-in-text`).
+The convolution thus accounts for the whole deficit of plain attention. With it, attention is level with the hybrid. Both are ahead of `Gated DeltaNet` by $0.01$ at most, which is about what separates two runs of the same arm, so we read no ranking into it. On short windows neither the matrix memory nor the cache has an advantage that local mixing does not explain, and the hybrid's single attention layer adds nothing that we can measure. That layer matters where exact long-range lookup is needed (Exercise :exref:`ex_hybrids-recall-in-text`). Does it matter on real text once the windows are long enough?
 
 ### Long Windows
 
-Windows of 128 bytes cannot show what a fixed state loses against a growing cache, nor what a vector state loses against a matrix memory. We therefore train four mixers on windows of 1,024 bytes: a stack of `GRU`s (`'RRRR'`), `Gated DeltaNet`, the `GGGA` hybrid, and attention with the convolution. The batch size drops from 64 to 8, so that every step still sees the same number of bytes and the 1,000 steps the same amount of text.
+Windows of 128 bytes cannot show what a fixed state loses against a growing cache, nor what a vector state loses against a matrix memory. We therefore train four mixers on windows of 1,024 bytes: a stack of `GRU`s (`'RRRR'`), `Gated DeltaNet`, the `GGGA` hybrid, and attention with the convolution. The batch size drops from 64 to 8, so that every step still sees the same number of bytes and the 8,000 steps the same amount of text.
 
 ```{.python .input #hybrids-language-modeling-at-equal-size-1}
 %%tab pytorch, jax
@@ -255,11 +255,13 @@ for name, band in bands.items():
     print(f'{name:16s}', ''.join(f'{v:10.3f}' for v in band))
 ```
 
-Longer windows change little. The losses are about $1.29$ for the `GRU`, $1.33$ for `Gated DeltaNet`, $1.34$ for the hybrid, and between $1.38$ and $1.39$ for attention with the convolution. The first three are what the same mixers reach on windows of 128 bytes, and attention is worse than it was there. The `GRU` leads at every position. It is also the slowest arm, at about twice the time per step of any other, because it alone processes a window one step after another.
+Longer windows help every model that we trained at both lengths. `Gated DeltaNet` ends between $1.11$ and $1.12$ and the hybrid between $1.07$ and $1.08$, against $1.16$ and $1.15$ on windows of 128 bytes. Attention with the convolution ends at about $1.07$ in most of our runs; we return to the exception below. The `GRU` reaches $1.09$. It is the slowest arm by a wide margin, at about twice the time per step of the next slowest or more, because it alone processes a window one step after another.
 
-The bands show where each model stops improving. The `GRU` is flat from the first band on, between $1.28$ and $1.30$. `Gated DeltaNet` and the hybrid improve by $0.03$ to $0.04$ between bytes 16–31 and bytes 128–255, and stay level afterwards. Only attention keeps falling, by about $0.14$ from the first band to the last. Nearly all of that happens within the first 128 bytes, however, and only about $0.01$ beyond them, and attention starts so far behind that at bytes 512–1,023 it still trails `Gated DeltaNet` by about $0.05$ and the `GRU` by about $0.08$. Nor does the attention layer of the hybrid help where we hoped it would: the hybrid is not ahead of pure `Gated DeltaNet` in any band.
+The three arms that were level on short windows are level no longer, and the columns of the table show where they part. From the first 128 bytes of a window to the last 512, the loss of the `GRU` falls by about $0.07$ and that of `Gated DeltaNet` by about $0.08$. The hybrid gains about $0.13$, and attention, in most runs, about $0.16$. The plot locates the gain more closely. Up to byte 127 the fixed states hold their own: the `GRU` is lowest in every band, attention is highest in the first bands, and the hybrid cannot be told from pure `Gated DeltaNet`. Beyond byte 128 the `GRU` and `Gated DeltaNet` gain little more, about $0.03$ by the last band. The hybrid keeps falling. It leaves `Gated DeltaNet` behind at byte 128, and from byte 256 on it is below the `GRU` as well. At bytes 512–1,023 it leads `Gated DeltaNet` by about $0.05$ and the `GRU` by about $0.02$. All of this lead comes from the one attention layer in its fourth block.
 
-This experiment, then, does not show a cache beating a state. After 1,000 steps none of the four models has learned to use text that lies more than a hundred or so bytes back, and the ranking is the ranking of the short windows. The limit here is the training budget and not the memory, which is why we had to test recall on a task built for it.
+Attention falls the furthest, though not in every run. In three of our four runs it ended at $1.03$ to $1.04$ on bytes 512–1,023, about $0.02$ ahead of the hybrid and the best of the four models. The fourth run lagged at every position. It ended at $1.12$ overall and at about $1.10$ in the last band, no better than `Gated DeltaNet`, and we do not know why. The plot shows the mean of the two runs in the table, so where one of them is such a run, the attention curve ends above the hybrid's and not below it.
+
+With a long context and enough training, then, text shows a weaker form of what the recall task showed. The growing cache gains the most from distant bytes, a single attention layer among three recurrent ones recovers a good part of that gain, and a fixed state alone gains the least. On windows of 128 bytes there are no distant bytes to use, which is why the short-window table cannot show this.
 
 ## Inference Memory
 
@@ -278,7 +280,7 @@ In a hybrid architecture, only the attention layers accumulate a growing KV cach
 
 :numref:`tab_hy-memories` compares every sequence mixer built in this chapter alongside causal attention and the hybrid (with $d$ denoting model width, $N$ state dimension, $H = 2d$ expanded channels in Mamba, $h$ number of heads, and $T$ sequence length).
 
-:The memories of this chapter. Text: validation loss in nats per byte on byte-level WikiText-103, windows of 128 bytes, two runs per model; parameters in parentheses. Windows of 1,024 bytes give the same ranking.
+:The memories of this chapter. Text: validation loss in nats per byte on byte-level WikiText-103, windows of 128 bytes, two runs per model; parameters in parentheses. The models of this section were trained for 8,000 steps and the others for 1,000, so only losses with the same number of steps can be compared. On windows of 1,024 bytes after 8,000 steps, attention with the convolution leads in most runs, ahead of the hybrid, the GRU, and Gated DeltaNet.
 :label:`tab_hy-memories`
 
 | Memory | State per layer at generation | Training | Synthetic task | Text |
@@ -286,11 +288,11 @@ In a hybrid architecture, only the attention layers accumulate a growing KV cach
 | LSTM, GRU | $2d$, $d$ | one step after another | gates that start near one keep a symbol for 200 steps; started at one half, they lose it by 50 | 1.29 to 1.30 (4.3 M, 3.8 M) |
 | minGRU | $d$ | scan | at chance after 100 steps; with the timescales of S4D, recalls after 1,000 | 1.34 to 1.35 (2.8 M) |
 | S4D | $dN$ | convolution or scan | recalls after 1,000 steps; at most one in five on selective copying | not trained |
-| Mamba | $HN$ | scan | 0.99 to 1.00 on selective copying | 1.30 (4.0 M) |
+| Mamba | $HN$ | scan | 0.98 or more on selective copying | 1.30 (4.0 M) |
 | gated linear attention | $d^2/h$ | chunks | about half of 64 pairs with 128 entries, more with 512 | not trained |
-| Gated DeltaNet | $d^2/h$ | chunks with a triangular solve | 0.95 or more of rewritten keys, against about 0.83 to 0.92 for gated linear attention | 1.32 to 1.33 (3.6 M) |
-| attention | $2dT$ | fused attention over all positions | every pair at every load | 1.38; 1.35 with the width-4 convolution (3.3 M) |
-| hybrid | recurrent states plus $2dT$ per attention layer | both | every pair, with attention in one of two blocks | 1.33 to 1.34 (3.5 M) |
+| Gated DeltaNet | $d^2/h$ | chunks with a triangular solve | 0.95 or more of rewritten keys, against about 0.9 for gated linear attention | 1.16 after 8,000 steps (3.6 M) |
+| attention | $2dT$ | fused attention over all positions | every pair at every load | 1.38 to 1.39; after 8,000 steps 1.18, and 1.15 with the width-4 convolution (3.3 M) |
+| hybrid | recurrent states plus $2dT$ per attention layer | both | every pair, with attention in one of two blocks | 1.15 after 8,000 steps (3.5 M) |
 
 Reading across the columns summarizes the design trade-offs:
 
@@ -299,7 +301,7 @@ Reading across the columns summarizes the design trade-offs:
 
 ## Summary
 
-A fixed-size state of $M$ numbers at $b$ bits each can distinguish at most $2^{Mb}$ histories ($Mb \ge k \log_2 V$ to recall $k$ tokens from vocabulary $V$). In matrix-state layers, capacity is constrained even earlier by geometry: by Welch's bound, $m > d_k$ unit keys in $\mathbb{R}^{d_k}$ must have average squared overlap at least $(m - d_k)/(d_k(m - 1))$, causing cross-key interference under both additive and delta-rule updates. On multi-query associative recall, a pure `GatedDeltaNet` model degrades once pair count outgrows its state entries, whereas quadrupling state entries scales capacity proportionally and replacing a single recurrent block with full attention (`GA`) restores $100\%$ recall across all loads. A width-4 causal convolution in front of the mixer is essential so adjacent key and value tokens can bind within a single layer. On byte-level text none of this shows: the mixers differ by a few hundredths of a nat, about half of plain attention's deficit disappears once it has the same convolution, and windows of 1,024 bytes leave the ranking unchanged, because after 1,000 steps no model uses distant context. During generation, only the attention layers of a hybrid require a growing KV cache, cutting inference cache memory in proportion to the fraction of attention layers.
+A fixed-size state of $M$ numbers at $b$ bits each can distinguish at most $2^{Mb}$ histories ($Mb \ge k \log_2 V$ to recall $k$ tokens from vocabulary $V$). In matrix-state layers, capacity is constrained even earlier by geometry: by Welch's bound, $m > d_k$ unit keys in $\mathbb{R}^{d_k}$ must have average squared overlap at least $(m - d_k)/(d_k(m - 1))$, causing cross-key interference under both additive and delta-rule updates. On multi-query associative recall, a pure `GatedDeltaNet` model degrades once pair count outgrows its state entries, whereas quadrupling state entries scales capacity proportionally and replacing a single recurrent block with full attention (`GA`) restores $100\%$ recall across all loads. A width-4 causal convolution in front of the mixer is essential so adjacent key and value tokens can bind within a single layer. On byte-level text the differences are smaller, and they depend on the length of the window. On windows of 128 bytes, `Gated DeltaNet`, the hybrid, and attention with the convolution finish within about $0.01$ nats per byte of one another after 8,000 steps, and the deficit of plain attention, about $0.03$, disappears once it has the same convolution. On windows of 1,024 bytes the models separate beyond byte 128: attention gains the most from distant context in most runs, the hybrid follows, and pure `Gated DeltaNet` gains the least. During generation, only the attention layers of a hybrid require a growing KV cache, cutting inference cache memory in proportion to the fraction of attention layers.
 
 ## Exercises
 
@@ -475,7 +477,7 @@ Mean recall across two training runs ($2{,}000$ AdamW updates cycling across pai
 
 ::: {.cols .vc}
 ::: {.col}
-- **4× State Scaling (`GG` vs. `GG, 4x state`):** Quadrupling head entries from $128$ to $512$ floats/layer lifts 64-pair recall from **$\approx 0.5$ to $0.7$ or more** at equal parameter count.
+- **4× State Scaling (`GG` vs. `GG, 4x state`):** Quadrupling head entries from $128$ to $512$ floats/layer lifts 64-pair recall from **$\approx 0.5$ to between $0.8$ and $1.0$** at equal parameter count.
 - **Why Short Conv Matters:** Adjacent tokens $(k_i, v_i)$ require width-4 causal convolution so step $t$'s outer product $\mathbf{v}_t \mathbf{k}_t^\top$ binds both tokens together.
 :::
 
@@ -499,20 +501,20 @@ What happens if we remove the width-$4$ depthwise causal convolution in front of
 ::: {.slide title="WikiText-103 Bytes: GGGG, GGGA Hybrid, and Attention"}
 [Language Modeling Benchmark]{.kicker}
 
-Comparing 4-block width-256 `Gated DeltaNet` (`GGGG`), a 3-to-1 `hybrid` (`GGGA`, attention in block 4), pure causal `attention` (`AAAA`), and attention behind the same width-4 causal convolution (`CCCC`) on 128-byte WikiText-103 windows:
+Comparing 4-block width-256 `Gated DeltaNet` (`GGGG`), a 3-to-1 `hybrid` (`GGGA`, attention in block 4), pure causal `attention` (`AAAA`), and attention behind the same width-4 causal convolution (`CCCC`) on 128-byte WikiText-103 windows, trained for $8{,}000$ steps:
 
 @!hybrids-language-modeling-5
 :::
 
 ::: {.slide title="Loss by Position on 1,024-Byte Windows"}
-[Longer Context, Same Ranking]{.kicker}
+[Longer Context Separates the Memories]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Same bytes per step:** batch size $8$ instead of $64$, windows of $1{,}024$ bytes, $1{,}000$ steps; mean of two runs over bands of positions $[a, 2a)$.
-- **States flatten early:** the `GRU` is flat from the first band ($1.28$–$1.30$); `GGGG` and `GGGA` gain $0.03$–$0.04$ up to byte $128$, then stay level.
-- **Attention keeps falling, from far behind:** about $0.14$ in total, but only about $0.01$ past byte $128$; at bytes $512$–$1{,}023$ it still trails `GGGG` by about $0.05$.
-- **Budget, not memory:** after $1{,}000$ steps no arm uses distant context, so text loss says little about recall.
+- **Same bytes per step:** batch size $8$ instead of $64$, windows of $1{,}024$ bytes, $8{,}000$ steps; mean of two runs over bands of positions $[a, 2a)$.
+- **Fixed states flatten:** up to byte $127$ the `GRU` is lowest; past byte $128$ the `GRU` and `GGGG` gain only about $0.03$ more.
+- **The hybrid keeps falling:** level with `GGGG` up to byte $127$, then about $0.05$ ahead of it and $0.02$ ahead of the `GRU` at bytes $512$–$1{,}023$.
+- **Attention gains the most, in most runs:** highest at first, $1.03$–$1.04$ in the last band in three of four runs; one run lagged at about $1.10$, which lifts the averaged curve above the hybrid's.
 :::
 
 ::: {.col .fig .big}
@@ -526,8 +528,8 @@ Comparing 4-block width-256 `Gated DeltaNet` (`GGGG`), a 3-to-1 `hybrid` (`GGGA`
 
 ::: {.cols .vc}
 ::: {.col}
-- **Short-Window Loss (`T = 128`):** `GGGG` ($\approx 1.33$ nats/byte) finishes ahead of `AAAA` ($1.38$), but the same convolution brings attention to $\approx 1.35$: about half of the lead is local mixing. The loss barely changes after byte 16.
-- **Long-Range Recall (`m = 64` pairs, 2 blocks):** `GG` ($d_k = 4$) saturates at $\approx 50\%$, whereas the hybrid `GA` achieves **$100\%$ recall**; the 3:1 `GGGA` scores **$1.33$–$1.34$ nats/byte** at $25\%$ of the KV cache.
+- **Short-Window Loss (`T = 128`, $8{,}000$ steps):** `GGGG` ($\approx 1.16$ nats/byte), `GGGA` and attention with the convolution (both $\approx 1.15$) finish together; plain `AAAA` trails at $1.18$ only for lack of local mixing. The loss barely changes after byte 16 and says nothing about recall.
+- **Long-Range Recall (`m = 64` pairs, 2 blocks):** `GG` ($d_k = 4$) saturates at $\approx 50\%$, whereas the hybrid `GA` achieves **$100\%$ recall**. On $1{,}024$-byte windows the 3:1 `GGGA` (**$1.07$–$1.08$ nats/byte**) leads `GGGG` ($1.11$–$1.12$) at $25\%$ of the KV cache.
 :::
 
 ::: {.col .fig .big}
@@ -573,7 +575,7 @@ During autoregressive decoding at scale ($16$-bit `float16` / `bfloat16`), per-s
 | **LSTM / GRU (§{sec_lstm})** | $2d$ / $d$ | Sequential ($T$ steps) | $1.00$ at $T=200$ recall with $+5$ keep-gate bias | **$1.29$–$1.30$** ($4.3\text{M}$ / $3.8\text{M}$) |
 | **minGRU (§{sec_linear-recurrence})** | $d$ | Associative scan | $1.00$ at $T=1000$ recall with S4D timescales | $1.34$–$1.35$ ($2.8\text{M}$) |
 | **S4D (§{sec_ssm})** | $dN$ | FFT conv or scan | $1.00$ at $T=1000$ fixed delay; $\le 0.20$ selective copy | — |
-| **Mamba (§{sec_mamba})** | $HN$ ($H=2d$) | Scan + adjoint scan | **$0.99$–$1.00$** on $1{,}024$-step selective copying | **$1.30$** ($4.0\text{M}$) |
+| **Mamba (§{sec_mamba})** | $HN$ ($H=2d$) | Scan + adjoint scan | **$0.98+$** on $1{,}024$-step selective copying | **$1.30$** ($4.0\text{M}$) |
 :::
 
 ::: {.slide title="Master Comparison of Chapter §{num:chap_modern_rnn} Sequence Mixers (2/2)"}
@@ -582,9 +584,9 @@ During autoregressive decoding at scale ($16$-bit `float16` / `bfloat16`), per-s
 | Sequence Mixer | Generation State / Layer | Parallel Training Method | Key Synthetic Benchmark Result | WikiText-103 ($d=256$) |
 | :--- | :---: | :--- | :--- | :---: |
 | **Gated Linear Attn (§{sec_matrix-state})** | $d^2 / h$ | Chunked GEMM + scan | Recall scales $\propto d^2/h$; superposes rebound keys | — |
-| **Gated DeltaNet (§{sec_deltanet})** | $d^2 / h$ | Chunked solve + scan | **$0.96+$** on short-gap rebound keys; saturates at $n \gg d_k$ | $1.32$–$1.33$ ($3.6\text{M}$) |
-| **Causal Attention** | $2dT$ | Flash / fused GEMMs | **$1.00$** at all pair loads; $O(T^2)$ compute & $O(T)$ cache | $1.38$; $1.35$ with conv ($3.3\text{M}$) |
-| **Hybrid (`GA` / `GGGA`, §{sec_hybrids})** | Fixed states + sparse $2dT$ | Chunked + attention | **$1.00$** at all pair loads with $4\times$–$8\times$ smaller cache | $1.33$–$1.34$ ($3.5\text{M}$) |
+| **Gated DeltaNet (§{sec_deltanet})** | $d^2 / h$ | Chunked solve + scan | **$0.96+$** on short-gap rebound keys; saturates at $n \gg d_k$ | $1.16$ at $8{,}000$ steps ($3.6\text{M}$) |
+| **Causal Attention** | $2dT$ | Flash / fused GEMMs | **$1.00$** at all pair loads; $O(T^2)$ compute & $O(T)$ cache | $1.38$–$1.39$; at $8{,}000$ steps $1.18$, $1.15$ with conv ($3.3\text{M}$) |
+| **Hybrid (`GA` / `GGGA`, §{sec_hybrids})** | Fixed states + sparse $2dT$ | Chunked + attention | **$1.00$** at all pair loads with $4\times$–$8\times$ smaller cache | $1.15$ at $8{,}000$ steps ($3.5\text{M}$) |
 :::
 
 ::: {.slide title="When to Choose Which Sequence Architecture"}

@@ -509,7 +509,7 @@ for name, cell in cells.items():
 The results confirm the analysis for the GRU and for every delay $T \ge 50$, and they correct it for the LSTM:
 
 - **Default vs. keep-gate LSTM and GRU:** With zero gate biases, the GRU succeeds at $T = 20$ and both cells collapse to chance ($0.12$) at $T \ge 50$. The default LSTM, however, is already unreliable at $T = 20$, where the arithmetic predicted success. That estimate counted only the forget gates. We did not isolate the cause, but the likely one is that the LSTM's symbol must also enter the cell through a half-open input gate and leave it through a half-open output gate and a $\tanh$, which puts $T = 20$ at the edge of what training can recover. With `init_keep_gate`, both achieve $1.00$ accuracy across every run at every delay up to $T = 200$.
-- **Borderline vs. contracting plain RNN:** Because the LeCun normal RNN starts with spectral radius $\rho \approx 1$, some seeds carry the symbol surprisingly far (even to $T = 100$ or $200$), though unreliably across seeds, whereas the $\rho \approx 0.62$ default-scale RNN fails on nearly every seed from $T = 50$ onward. Gates with well-initialized biases turn hit-or-miss spectral retention into dependable, per-unit memory control.
+- **Borderline vs. contracting plain RNN:** Because the LeCun normal RNN starts with spectral radius $\rho \approx 1$, some seeds carry the symbol surprisingly far (even to $T = 100$), though unreliably across seeds, whereas the $\rho \approx 0.62$ default-scale RNN is hit-or-miss up to $T = 50$ and fails on every seed from $T = 100$ onward. Gates with well-initialized biases turn hit-or-miss spectral retention into dependable, per-unit memory control.
 
 ### Gated Networks on Text
 :label:`subsec_deep-rnn`
@@ -752,7 +752,7 @@ trained = text_table(text_model, arms, data)
 
 Three findings stand out from the table:
 
-1. **Residual stacking + gating:** Simply placing 4 narrow $\tanh$ RNN layers inside a pre-norm residual + MLP backbone reaches $\sim 1.35$ nats/byte—already matching the 6-block SwiGLU GPT of :numref:`sec_gpt`. Replacing the plain RNN mixer with an LSTM or GRU lowers validation loss by a further $0.05$ nats/byte (to $\sim 1.30$), whereas widening the plain RNN to match the GRU's parameter count (`RNN, d=302`) closes less than a third of that gap ($1.334$).
+1. **Residual stacking + gating:** Simply placing 4 narrow $\tanh$ RNN layers inside a pre-norm residual + MLP backbone reaches $\sim 1.35$ nats/byte—already matching the 6-block SwiGLU GPT of :numref:`sec_gpt`. Replacing the plain RNN mixer with an LSTM or GRU lowers validation loss by a further $0.05$ nats/byte (to $\sim 1.30$), whereas widening the plain RNN to match the GRU's parameter count (`RNN, d=302`) closes less than a third of that gap (about $1.33$).
 2. **Short-context utilization:** Across all models in this 1,000-step, 128-byte regime, loss drops sharply from band `0-15` to `16-63` and changes by less than $0.005$ beyond byte 16. Here the gates earn their lead by managing short-range byte context more effectively rather than by carrying 100-step memories; the attention stack (about $1.38$) trails the recurrent mixers already in the first 16 bytes at this small training budget.
 3. **Step cost:** Despite fused library loops, the LSTM and GRU take $1.4\times$–$3\times$ longer per training step than the plain RNN. The cause is the work inside each step: three or four gate products where the plain RNN computes one. It is not the sequential evaluation, because the plain RNN waits for the previous step's hidden state $\mathbf{h}_{t-1}$ in the same way. At 128 steps that dependence is not yet the dominant cost, so this table cannot show it. The length sweep of :numref:`subsec_linear-recurrence-cost` isolates it: there the GRU's step time grows more than fifteenfold between 512 and 16,384 tokens.
 
@@ -1117,7 +1117,7 @@ Before training, we also compare two initializations of a $64 \times 64$ plain R
 
 @!lstm-delayed-recall-8
 
-- **LeCun normal ($\mathcal{N}(0, 1/64)$):**By the circular law of random matrix theory, eigenvalues fill the unit disk ($\rho \approx 1.02$) even though the largest singular value is $\approx 1.98$. Small states along leading eigenmodes neither vanish nor explode.
+- **LeCun normal ($\mathcal{N}(0, 1/64)$):**By the circular law of random matrix theory, eigenvalues fill the unit disk ($\rho \approx 1.02$) even though the largest singular value is $\approx 2.0$. Small states along leading eigenmodes neither vanish nor explode.
 - **Default uniform ($\mathcal{U}[-1/8, 1/8]$):** Has $1/3$ the variance of LeCun normal, giving spectral radius $\rho \approx 0.62$ and contracting every signal by $\sim 0.6^k$.
 :::
 
@@ -1138,9 +1138,9 @@ Initializing forget/update biases to $+5$ (`keep gate`) turns complete failure (
 
 Comparing the three model pairs in the delayed recall table isolates architecture from initialization:
 
-- **Zero-bias LSTM & GRU:** The GRU solves $T = 20$ ($1.00$) and the LSTM is unreliable there ($0.25$–$1.00$); both collapse to chance ($0.12$–$0.14$) at $T \in \{50, 100, 200\}$ because a contribution of $2^{-49}$ is rounded away in `float32`.
+- **Zero-bias LSTM & GRU:** The GRU solves $T = 20$ ($1.00$) and the LSTM is unreliable there ($0.2$–$1.00$); both collapse to chance ($0.12$–$0.14$) at $T \in \{50, 100, 200\}$ because a contribution of $2^{-49}$ is rounded away in `float32`.
 - **Keep-gate LSTM & GRU:** Identical architecture and parameter count, yet starting at $\sigma(5) = 0.993$ yields **$1.00$ accuracy on every run** from $T = 20$ to $T = 200$.
-- **Borderline vs. contracting plain RNN:** The $\rho \approx 1.02$ LeCun RNN sporadically carries the symbol to $T = 100$ or $200$ (with large variance between seeds), whereas the $\rho \approx 0.62$ uniform RNN fails from $T = 50$ onward.
+- **Borderline vs. contracting plain RNN:** The $\rho \approx 1.02$ LeCun RNN sporadically carries the symbol to $T = 100$ (with large variance between seeds), whereas the $\rho \approx 0.62$ uniform RNN is hit-or-miss up to $T = 50$ and fails from $T = 100$ onward.
 
 ::: {.d2l-note .rule}
 Gates replace fragile whole-matrix eigenvalue tuning with **per-unit learned decay**, provided initial biases keep the gradient horizon open.
@@ -1178,7 +1178,7 @@ Two runs per configuration reporting parameters, overall validation loss (nats/b
 Three systems and modeling lessons emerge from the WikiText-103 benchmark:
 
 1. **The residual stack closes the plain-RNN gap:** Simply placing $4$ narrow $\tanh$ RNN layers inside `SeqLM` reaches $\sim 1.35$ nats/byte—matching Chapter §{num:chap_transformers}'s 6-block SwiGLU GPT and outperforming the 4-block GELU `attention` stack ($1.38$) at this $1{,}000$-step budget.
-2. **Gating beats raw parameter scaling:** Replacing the plain RNN with an `LSTM` or `GRU` lowers loss by $0.05$ nats/byte to $\sim 1.30$, whereas widening the plain RNN to match the GRU's $3.81\text{M}$ parameters (`RNN, d=302`) closes less than a third of that gap ($1.334$).
+2. **Gating beats raw parameter scaling:** Replacing the plain RNN with an `LSTM` or `GRU` lowers loss by $0.05$ nats/byte to $\sim 1.30$, whereas widening the plain RNN to match the GRU's $3.81\text{M}$ parameters (`RNN, d=302`) closes less than a third of that gap ($\sim 1.33$).
 3. **Step cost:** `LSTM` and `GRU` take **$1.4\times$–$3\times$ longer per step** than the plain RNN because each step computes three or four gate products instead of one. All three wait for $\mathbf{h}_{t-1}$; the length sweep of §{sec_linear-recurrence} isolates that cost.
 :::
 

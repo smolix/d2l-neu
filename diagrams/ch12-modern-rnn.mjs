@@ -1757,7 +1757,7 @@ function conv4KeyValueBinding() {
   body += tx(401, 158, 'k_t = f_k(x_{t-1}),  v_t = f_v(x_t)', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(401, 182, '• Step t writes v_i k_iᵀ into S_t!', { fs: 9.5, fill: C.green.tx });
   body += tx(401, 202, '• Acts as an implicit induction head', { fs: 9.5, fill: C.text });
-  body += tx(401, 222, '• GG recall is 0.48–0.99 (+6 to 38 pts)', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(401, 222, '• GG recall is 0.5–1.0 (≈+10 to 35 pts)', { fs: 10, fw: 700, fill: C.green.tx });
   return svg(W, H, body);
 }
 
@@ -1767,12 +1767,12 @@ function perplexityVsRetrieval() {
   body += tx(W / 2, 18, 'Pitfall: Short-Window Perplexity Hides Long-Context Retrieval Deficits', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 38, 246, 150, C.blue.bg, C.blue.bd);
-  body += tx(139, 58, 'WikiText-103 (T = 128), nats/byte', { fs: 11, fw: 700, fill: C.blue.tx });
+  body += tx(139, 58, 'WikiText-103 (T = 128, 8k steps), nats/byte', { fs: 11, fw: 700, fill: C.blue.tx });
   body += tx(139, 80, 'Dominated by local n-gram statistics', { fs: 9.5, fill: C.muted });
-  body += tx(139, 106, 'GGGG (4× DeltaNet):  1.32–1.33', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
-  body += tx(139, 128, 'GGGA (3:1 Hybrid):   1.33–1.34', { fs: 10, fw: 700, fill: C.blue.tx, mono: true });
-  body += tx(139, 150, 'AAAA (4× Attention): 1.38     ', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
-  body += tx(139, 172, 'Conv4 + decay give GGGG strong local bias', { fs: 9, fill: C.muted });
+  body += tx(139, 106, 'GGGG (4× DeltaNet):  ≈1.16', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
+  body += tx(139, 128, 'GGGA (3:1 Hybrid):   ≈1.15', { fs: 10, fw: 700, fill: C.blue.tx, mono: true });
+  body += tx(139, 150, 'AAAA (4× Attention): ≈1.18', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
+  body += tx(139, 172, 'Conv4 alone brings attention to ≈1.15', { fs: 9, fill: C.muted });
 
   body += rbox(278, 38, 246, 150, C.amber.bg, C.amber.bd);
   body += tx(401, 58, '2-Block Recall (m = 64 Pairs)', { fs: 11, fw: 700, fill: C.amber.tx });

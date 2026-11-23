@@ -466,7 +466,7 @@ for name, layer in (('gated linear attention', d2l.GatedLinearAttention),
           f'{twice[0]:11.3f} {twice[1]:.3f}{once[0]:11.3f} {once[1]:.3f}')
 ```
 
-Adding the 260-parameter `W_beta` head raises recall on rebound keys from roughly $0.85$–$0.9$ (`gated linear attention`) to $0.96$ or more (`Gated DeltaNet`), bringing rebound keys within about $2$ percentage points of keys written only once.
+Adding the 260-parameter `W_beta` head raises recall on rebound keys from about $0.9$ (`gated linear attention`) to $0.96$ or more (`Gated DeltaNet`), bringing rebound keys within about $2$ percentage points of keys written only once.
 
 ### State Tracking
 :label:`subsec_dn-state-tracking`
@@ -475,7 +475,7 @@ Every experiment so far asked a memory to store something and to return it later
 
 A GRU solves this task the way a program would. Its gates see the previous state $\mathbf{h}_{t-1}$, so one step can compute "flip if the input is 1". The linear recurrences of this chapter gave that up for parallel training: their decays and writes depend on the input alone (:numref:`sec_linear-recurrence`). To flip a stored bit, such a recurrence has to multiply a coordinate of its state by a negative number, and the decay $\mathbf{z}_t \in (0, 1)$ of a minGRU can shrink a coordinate but never change its sign. The delta rule is under the same restriction as long as its write strength is a sigmoid, because the transition :eqref:`eq_dn-transition` then has an eigenvalue $1 - \beta_t \in (0, 1)$ along the key. With $\beta_t \in (0, 2)$ the eigenvalue can reach $-1$. A layer that writes a value $\mathbf{v}$ with $\beta_t = 2$ under one fixed key $\mathbf{k}$ on every 1, and writes nothing on a 0, changes its read by $\mathbf{S}_t\mathbf{k} = 2\mathbf{v} - \mathbf{S}_{t-1}\mathbf{k}$ on every 1. Starting from an empty memory, the read alternates between $2\mathbf{v}$ and $\mathbf{0}$, which is the parity.
 
-The construction exists, then, but does training find it? We train a one-block `d2l.SeqLM` of width 64 on random strings of 64 bits to output, at every step, the parity of the bits so far. We then test it on strings of 256 bits, which separates a model that has learned the rule from one that has only fit the lengths it was trained on. Four mixers compete: a GRU, a minGRU, `GatedDeltaNet`, and `GatedDeltaNetReflect`, which doubles the sigmoid of the write strength and is otherwise the same layer. If the argument above is right, the GRU and the layer with $\beta_t \in (0, 2)$ should be correct at every position, including those beyond the training length, while the minGRU and the sigmoid delta rule should fail, and fall to the chance level of $0.5$ once the strings are longer than those they were trained on.
+The construction exists, then, but does training find it? We train a `d2l.SeqLM` of two blocks and width 64, the depth :citet:`Grazzi.Siems.Franke.ea.2025` use for this task, on random strings of 64 bits to output, at every step, the parity of the bits so far. We then test it on strings of 256 bits, which separates a model that has learned the rule from one that has only fit the lengths it was trained on. Four mixers compete: a GRU, a minGRU, `GatedDeltaNet`, and `GatedDeltaNetReflect`, which doubles the sigmoid of the write strength and is otherwise the same layer. If the argument above is right, the GRU and the layer with $\beta_t \in (0, 2)$ should be correct at every position, including those beyond the training length, while the minGRU and the sigmoid delta rule should fail, and fall to the chance level of $0.5$ once the strings are longer than those they were trained on.
 
 ```{.python .input #deltanet-state-tracking-1}
 %%tab pytorch
@@ -579,7 +579,7 @@ for name, mixer in parity_mixers.items():
     print(f'{name:24s}{a:11.2f}/{c:.2f}{b:7.2f}/{e:.2f}')
 ```
 
-The GRU is correct at every position in both runs, at the training lengths and beyond them. The minGRU and the sigmoid delta rule are not. On the first 64 positions they sit above chance, the minGRU at about $0.6$ and Gated DeltaNet between $0.7$ and $0.8$, but neither has learned the rule: beyond position 64 both answer at $0.50$, a coin toss. Doubling the write strength changes this. `GatedDeltaNetReflect` reaches $1.00$ on the training lengths in every run, and in most runs it keeps that accuracy out to 256 bits. Linearity, then, is not the obstacle. What the linear recurrences gave up is an update that depends on the state, and whether a matrix memory can track a state anyway is decided by the range of its transition's eigenvalues. One block of minGRU has neither a negative eigenvalue nor a round of state-dependent gating, and it fails.
+The GRU is correct at every position in both runs, at the training lengths and beyond them. The minGRU and the sigmoid delta rule are not. On the first 64 positions they sit above chance, the minGRU a little above $0.5$ and Gated DeltaNet at about $0.75$ to $0.8$, but neither has learned the rule: beyond position 64 both answer at $0.50$, a coin toss. Doubling the write strength changes this. `GatedDeltaNetReflect` reaches $1.00$ on the training lengths and keeps that accuracy out to 256 bits. This is the typical outcome and not a lucky pair of runs: of some fifty further runs, all but one generalized in this way, and the exception still scored about $0.9$ beyond position 64. Linearity, then, is not the obstacle. What the linear recurrences gave up is an update that depends on the state, and whether a matrix memory can track a state anyway is decided by the range of its transition's eigenvalues. The minGRU has neither a negative eigenvalue nor a gate that sees its state. A second block does not supply the missing sign, and the model fails.
 
 The reflection is delicate, though. A doubled sigmoid only approaches $\beta_t = 2$, so every flip also shrinks the stored bit a little, and a run that stops short of 2 loses accuracy on long strings (Exercise :exref:`ex_dn-parity`). Harder state tracking, such as following several cups through their swaps, needs more than one reflection per token.
 
@@ -598,6 +598,8 @@ where $(\mathbf{K}_t^\top \mathbf{K}_t)^{-1}$ is replaced by the pseudoinverse w
 - **Linear attention** keeps only the first factor, the unnormalized cross-moment $\mathbf{V}_t^\top \mathbf{K}_t = \sum_{s \le t} \mathbf{v}_s \mathbf{k}_s^\top$, omitting the Gram inverse $(\mathbf{K}_t^\top \mathbf{K}_t)^{-1}$ that decorrelates overlapping keys.
 - **The delta rule** takes one online stochastic gradient step per token toward :eqref:`eq_dn-least-squares`, while **Gated DeltaNet** adds weight decay ($a_t < 1$) before each step. Replacing the explicit gradient step by the proximal implicit step $\arg\min_{\mathbf{S}} \frac{1}{2}\|\mathbf{S} - \mathbf{S}_{t-1}\|^2 + \frac{\beta_t}{2}\|\mathbf{S}\mathbf{k}_t - \mathbf{v}_t\|^2$ yields the normalized step size $\beta_t / (1 + \beta_t\|\mathbf{k}_t\|^2)$ of Longhorn :cite:`Liu.Wang.Wu.ea.2024` (Exercise :exref:`ex_dn-implicit`), while carrying $(\mathbf{K}_t^\top \mathbf{K}_t + \lambda\mathbf{I})^{-1}$ explicitly yields recursive least squares (Exercise :exref:`ex_dn-rls`).
 - **Softmax attention** performs *nonparametric* Nadaraya–Watson kernel regression (:numref:`sec_attention-pooling`) at query time over all stored pairs, avoiding parametric compression at the cost of an $O(t)$ KV cache.
+
+The exact fit can also be kept up to date one pair at a time. Each pair changes $\mathbf{K}_t^\top \mathbf{K}_t$ by the rank-one term $\mathbf{k}_t\mathbf{k}_t^\top$, so the Sherman–Morrison formula :eqref:`eq_mdl-sherman-morrison` of :numref:`subsec_mdl-block-matrices` updates the inverse without a new matrix inversion. This is recursive least squares. It carries a second state of size $d_k \times d_k$ next to the memory (Exercise :exref:`ex_dn-rls`).
 
 :Memories as regressions on the pairs read so far.
 :label:`tab_dn-regression`
@@ -655,7 +657,8 @@ Because additive matrix memories superpose every write to the same key, querying
    which approaches :eqref:`eq_dn-least-squares` as $\lambda \to 0$, can be
    updated one pair at a time if the memory also keeps $\mathbf{P}_t =
    (\mathbf{K}_t^\top \mathbf{K}_t + \lambda\mathbf{I})^{-1}$.
-    1. Use the Sherman–Morrison formula to derive the updates of
+    1. Use the Sherman–Morrison formula
+       :eqref:`eq_mdl-sherman-morrison` to derive the updates of
        $\mathbf{P}_t$ and $\mathbf{S}_t$ after one new pair, and show that
        the update of $\mathbf{S}_t$ is a delta rule that writes along
        $\mathbf{P}_t\mathbf{k}_t$ instead of $\mathbf{k}_t$. How many
@@ -886,7 +889,7 @@ We compare a 1-block `GatedLinearAttention` model against a 1-block `GatedDeltaN
 @!deltanet-rebinding-2
 
 - **Why `gap=2` isolates the delta rule:** When a key is overwritten just $2$ pairs after it was first bound, both bindings have nearly the same age—so global decay $a_t$ cannot fade the old value without also erasing keys written once prior to that step.
-- **Reliable overwriting:** Adding the $260$-parameter `W_beta` projection lifts rebound-key accuracy to **$0.96$ or more** across runs, ahead of `GatedLinearAttention` (roughly $0.85$–$0.9$) and within about $2$ points of single-write accuracy.
+- **Reliable overwriting:** Adding the $260$-parameter `W_beta` projection lifts rebound-key accuracy to **$0.96$ or more** across runs, ahead of `GatedLinearAttention` (about $0.9$) and within about $2$ points of single-write accuracy.
 :::
 
 ::: {.slide title="Why We Tested 1 Block: Depth Approximates a Delta Step"}

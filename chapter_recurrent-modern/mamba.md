@@ -147,7 +147,7 @@ for name, mixer in (('S4D', lambda: d2l.S4D(48, rngs=rngs)),
         10, 48, [mixer() for _ in range(2)], rngs=rngs))
 ```
 
-As predicted, time-invariant `S4D` stays near chance ($\le 0.20$), whereas input-selective `minGRU` reaches $0.9$–$0.97$ accuracy. Notice why `minGRU` succeeds here despite starting with one-step gate half-lives (which failed on 1,000-step fixed-delay recall in :numref:`sec_ssm`): in selective copying, marked symbols occasionally land close to the queries, providing short-horizon gradients that progressively teach the gates to hold symbols across longer filler spans (Exercise :exref:`ex_mamba-short-memories`).
+As predicted, time-invariant `S4D` stays near chance ($\le 0.20$), whereas input-selective `minGRU` reaches between about $0.75$ and $0.95$, depending on the run. Notice why `minGRU` succeeds here despite starting with one-step gate half-lives (which failed on 1,000-step fixed-delay recall in :numref:`sec_ssm`): in selective copying, marked symbols occasionally land close to the queries, providing short-horizon gradients that progressively teach the gates to hold symbols across longer filler spans (Exercise :exref:`ex_mamba-short-memories`).
 
 ## Selective Dynamics
 
@@ -492,7 +492,7 @@ for name, selective in (('Mamba', True), ('Mamba, not selective', False)):
         for _ in range(2)], rngs=rngs))
 ```
 
-`Mamba` achieves $99\%$–$100\%$ accuracy across both runs, outperforming both `minGRU` and the non-selective control (`Mamba, not selective`, which drops by more than $30$ percentage points and scatters widely across seeds, matching the ablation reported in :citet:`Gu.Dao.2023`). Exercise :exref:`ex_mamba-longer-sequences` tests zero-shot length extrapolation to $4{,}096$ fillers.
+`Mamba` achieves $98\%$ accuracy or more in both runs, outperforming both `minGRU` and the non-selective control (`Mamba, not selective`, which drops by more than $30$ percentage points and scatters widely across seeds, matching the ablation reported in :citet:`Gu.Dao.2023`). Exercise :exref:`ex_mamba-longer-sequences` tests zero-shot length extrapolation to $4{,}096$ fillers.
 
 ### Contributions to the State
 
@@ -656,7 +656,7 @@ for name, model in probed.items():
     print(f'{name:12s} {float(jnp.median(spike)):8,.1f}')
 ```
 
-In `S4D`, contributions rise monotonically toward the end of the sequence because decay depends only on recency, whereas in `Mamba`, contributions spike by two to three orders of magnitude at the four symbol windows—both because symbols take a large write step $\Delta_t$ and because that same large $\Delta_t$ exponentially attenuates ($e^{\Delta_t\boldsymbol{\lambda}}$) the preceding filler tokens.
+In `S4D`, contributions rise monotonically toward the end of the sequence because decay depends only on recency, whereas in `Mamba`, contributions spike at the four symbol windows, in most runs by two to three orders of magnitude—both because symbols take a large write step $\Delta_t$ and because that same large $\Delta_t$ exponentially attenuates ($e^{\Delta_t\boldsymbol{\lambda}}$) the preceding filler tokens. The size of the spike varies a great deal between runs. We probe the first of the two layers only, and training does not always put the selection there: in an occasional run the first layer's profile stays close to that of `S4D`, with spikes about ten times the neighboring filler and only a few percent of the state coming from the symbol windows, although the model still copies nearly every symbol. In such a run the second layer presumably does the selecting; we have not probed it.
 
 ### Language Modeling
 :label:`subsec_mamba-lm`
@@ -842,7 +842,7 @@ Training a 2-block `SeqLM` ($d = 48$) for $1{,}500$ Adam steps ($\text{lr} = 3 \
 @!mamba-selective-copying-3
 
 - **`S4D` stays near chance ($\le 0.20$):** Fixed lag weights cannot track symbols whose positions shift randomly between sequences.
-- **Why `minGRU` succeeds ($0.75$–$0.97$) despite 1-step initial gates:** Unlike fixed $1{,}000$-step delayed recall (§{sec_ssm}), random placement occasionally puts marked symbols just a few steps before the queries—providing short-range gradients that progressively teach the gates to stay closed on filler tokens `0`.
+- **Why `minGRU` succeeds ($\approx 0.75$–$0.95$) despite 1-step initial gates:** Unlike fixed $1{,}000$-step delayed recall (§{sec_ssm}), random placement occasionally puts marked symbols just a few steps before the queries—providing short-range gradients that progressively teach the gates to stay closed on filler tokens `0`.
 :::
 
 ::: {.slide title="Exact Duality: Softplus Step Sizes Are Sigmoid Gates"}
@@ -962,7 +962,7 @@ We train 2-block `Mamba` ($N = 4$) alongside `Mamba, not selective` (`selective=
 @!mamba-selective-copying-with-mamba
 
 ::: {.d2l-note .rule}
-**Selectivity is the decisive mechanism:** `Mamba` achieves **$0.99$–$1.00$ accuracy** across runs, whereas freezing $\boldsymbol{\Delta}, \mathbf{B}, \mathbf{C}$ inside the identical block drops accuracy by **$>30$ percentage points** (scattering wildly across seeds).
+**Selectivity is the decisive mechanism:** `Mamba` achieves **$0.98$ accuracy or more** across runs, whereas freezing $\boldsymbol{\Delta}, \mathbf{B}, \mathbf{C}$ inside the identical block drops accuracy by **$>30$ percentage points** (scattering wildly across seeds).
 :::
 :::
 
@@ -998,7 +998,7 @@ Measuring the median **spike ratio**—the peak contribution inside each symbol'
 
 @!mamba-contributions-to-the-state-3
 
-- **Orders-of-magnitude amplification:** `Mamba`'s symbol contributions stand **hundreds to thousands of times** above adjacent fillers, whereas `S4D` achieves a ratio of at most $\sim 20$ (solely by learning a larger embedding norm for symbol tokens).
+- **Orders-of-magnitude amplification:** In most runs `Mamba`'s symbol contributions stand **hundreds to thousands of times** above adjacent fillers, whereas `S4D` achieves a ratio of at most $\sim 20$ (solely by learning a larger embedding norm for symbol tokens). An occasional run shows a ratio of only $\sim 10$ in this first layer and still copies nearly every symbol.
 - **Two-for-one gating via $\Delta_{t,c}$:** In `Mamba`, taking a large step $\Delta_{t,c}$ on a marked symbol simultaneously **writes the symbol strongly** ($\Delta_{t,c} x_{t,c}\mathbf{B}_t$) and **exponentially erases prior filler noise** ($e^{\Delta_{t,c}\boldsymbol{\lambda}} \ll 1$), while setting $\Delta_{t,c} \approx 0$ on fillers freezes the stored symbol untouched!
 :::
 
@@ -1040,7 +1040,7 @@ Work out the following three questions:
 | **Softplus–Gate Identity** | $e^{-\textrm{softplus}(s_t)} = \sigma(-s_t)$ | Bridges continuous step size $\Delta_t$ and `MinGRU` update gate $z_t$ |
 | **Selective SSM (`Mamba`)** | $\mathbf{h}_t^{(c)} = e^{\Delta_{t,c}\boldsymbol{\lambda}} \odot \mathbf{h}_{t-1}^{(c)} + \Delta_{t,c} x_{t,c}\mathbf{B}_t$ | Token-dependent $\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ + multi-timescale rates $\lambda_n = -n$ |
 | **Adjoint Scan VJP** | $\mathbf{g}_t = \nabla_{\mathbf{h}_t}\ell + \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1}$ | Differentiates scan via reverse-time scan; saves $2$ tensors instead of $\sim 20$ |
-| **Selective Copying** | $4$ random-position symbols in $1{,}024$ fillers | `Mamba` scores **$0.99$–$1.00$** (`S4D` $\le 0.20$; non-selective Mamba drops $>30$ pts) |
+| **Selective Copying** | $4$ random-position symbols in $1{,}024$ fillers | `Mamba` scores **$0.98$ or more** (`S4D` $\le 0.20$; non-selective Mamba drops $>30$ pts) |
 | **WikiText-103 Bytes** | 4-block `SeqLM` ($d = 256$, $128$ bytes) | `Mamba` reaches **$1.30$ nats/byte** (matches LSTM/GRU; beats `minGRU, d=309` by $0.03$) |
 :::
 

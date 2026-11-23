@@ -122,8 +122,9 @@ def resolve_label(label, root='.'):
 # changed) and the change re-renders every diagram; `make html` refuses to
 # render while the map disagrees with CHAPTER_NUMBERING.
 NUMBERS_JSON = 'diagrams/section-numbers.json'
-# A hardcoded section number in diagram code: "§14.3", "§§7.5–7.6".
-_DIAGRAM_NUM_RE = re.compile(r'§+\s?\d')
+# A hardcoded section or chapter number in diagram code: "§14.3",
+# "§§7.5–7.6", "Chapter 13".
+_DIAGRAM_NUM_RE = re.compile(r'§+\s?\d|\bChapters?\s+\d')
 
 
 def numbers_map(root='.'):

@@ -215,6 +215,9 @@ _slides/%/.pptx-built: _slides/%/.built $(PPTX_TOOLS) | .venv-build/.synced
 slides-pptx-%: _slides/%/.pptx-built
 	@echo "PowerPoint decks for $* in _slides/$*/"
 
+# Phony, so make looks for no implicit rule: as a plain target without a
+# recipe it also matched slides-% and tried to build _slides/pptx/.built.
+.PHONY: slides-pptx
 slides-pptx: $(addprefix slides-pptx-,$(FRAMEWORKS))
 
 # ── Beamer PDFs and their LaTeX source (per-framework) ───
@@ -236,6 +239,9 @@ _slides/%/.beamer-built: _slides/%/.built $(BEAMER_TOOLS) | .venv-build/.synced
 slides-beamer-%: _slides/%/.beamer-built
 	@echo "Beamer PDFs and LaTeX bundles for $* in _slides/$*/"
 
+# Phony, so make looks for no implicit rule: as a plain target without a
+# recipe it also matched slides-% and tried to build _slides/beamer/.built.
+.PHONY: slides-beamer
 slides-beamer: $(addprefix slides-beamer-,$(FRAMEWORKS))
 
 # CPU-only. gen_slides.py parallelizes WITHIN a framework (isolated clone

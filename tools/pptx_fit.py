@@ -427,6 +427,40 @@ def _apply(sp, size, title=False):
     return sp
 
 
+MC_NS = 'http://schemas.openxmlformats.org/markup-compatibility/2006'
+A14_NS = 'http://schemas.microsoft.com/office/drawing/2010/main'
+
+
+def _wrap_table_math(xml):
+    """Declare the math namespace for tables, as pandoc does for text boxes.
+
+    Pandoc writes an equation as <a14:m> and wraps a text box holding one in
+    mc:AlternateContent, whose mc:Choice declares the a14 prefix. A table
+    (p:graphicFrame) with math in a cell gets no wrapper, so the slide's XML
+    has an unbound prefix and PowerPoint reports the deck as damaged.
+    """
+    def frame(m):
+        s = m.group(0)
+        if '<a14:m>' not in s:
+            return s
+        return (f'<mc:AlternateContent xmlns:mc="{MC_NS}">'
+                f'<mc:Choice xmlns:a14="{A14_NS}" Requires="a14">{s}'
+                '</mc:Choice></mc:AlternateContent>')
+    return re.sub(r'(?<!Requires="a14">)<p:graphicFrame>.*?</p:graphicFrame>',
+                  frame, xml, flags=re.S)
+
+
+def _number_shapes(xml):
+    """Give every shape on a slide its own id (1 is the slide's root group).
+
+    Pandoc numbers some shapes 0 or 1, clashing with the root group; nothing
+    in these decks refers to shape ids, so they are renumbered in order.
+    """
+    n = iter(range(1, 1 << 30))
+    return re.sub(r'(<p:cNvPr\b[^>]*?\bid=")\d+"',
+                  lambda m: f'{m.group(1)}{next(n)}"', xml)
+
+
 def fit(pptx: Path, logo: Path = None):
     """Rewrite every slide's text sizes in place; returns per-slide sizes."""
     src = zipfile.ZipFile(pptx)
@@ -470,7 +504,7 @@ def fit(pptx: Path, logo: Path = None):
             return _apply(s, size)
 
         xml = re.sub(r'<p:sp>.*?</p:sp>', sp, xml, flags=re.S)
-        files[name] = xml.encode()
+        files[name] = _number_shapes(_wrap_table_math(xml)).encode()
         report.append((name, sizes))
     # Pandoc keeps the reference deck's master and layouts but not their
     # media, so the logo they point at has to be put back.

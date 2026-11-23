@@ -2336,9 +2336,9 @@ def train_text(model, data, lr=2e-3, num_steps=1000):
                           warmup=1, repeats=num_steps // 50 - 1)
     return loss_by_position(model, data), 1000 * bench.time / 50
 
-def text_table(make_model, arms, data, num_runs=2):
+def text_table(make_model, arms, data, num_runs=2, num_steps=1000):
     """Train num_runs fresh models make_model(*args) for each arm (a name
-    and its args); print the parameters, the validation loss of every run,
+    and its args) for num_steps steps; print the parameters, the validation loss of every run,
     its losses at early, middle, and late positions of the window, and the
     milliseconds per step. Return the trained models of each arm.
 
@@ -2351,7 +2351,8 @@ def text_table(make_model, arms, data, num_runs=2):
     trained = {}
     for name, args in arms.items():
         models = [make_model(*args) for _ in range(num_runs)]
-        runs = [train_text(model, data) for model in models]  # (losses, ms)
+        runs = [train_text(model, data, num_steps=num_steps)  # (losses, ms)
+                for model in models]
         columns = [[np.mean(loss) for loss, _ in runs]] + [
             [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
         print(f'{name:{width}s} {d2l.num_params(models[0]):11,d}',

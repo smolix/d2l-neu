@@ -73,17 +73,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN                1.00/1.00 1.00/0.64 0.74/0.14 0.24/0.27\n"
+          "text": "RNN                1.00/1.00 0.25/1.00 0.52/1.00 0.12/0.23\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN, default scale 1.00/1.00 0.12/0.62 0.13/0.12 0.12/0.25\n"
+          "text": "RNN, default scale 0.24/1.00 0.12/0.72 0.12/0.12 0.11/0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM               1.00/0.63 0.12/0.12 0.13/0.12 0.12/0.13\n"
+          "text": "LSTM               0.49/1.00 0.12/0.12 0.13/0.13 0.12/0.12\n"
         },
         {
           "type": "stream",
@@ -118,22 +118,22 @@
       "outputs": []
     },
     "lstm-gated-networks-on-text-3": {
-      "code_fingerprint": "sha256:bd93ed787c1f6a7407255b40d7d60d79a10ce504101b2873cd57bd476b0a52da",
+      "code_fingerprint": "sha256:7d8af2aab827e9bd4e1217240dc561aece6c0712fa7a97d11b0071f30ab1c474",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-4": {
-      "code_fingerprint": "sha256:7228f0ddac2dfbcca3b2ef2445621bfd16a95d54f8a67ad955d9486cf565931b",
+      "code_fingerprint": "sha256:0abc544f04df80a488e1c2611a35495aad4bc2a928da38f68e5b0f94b8c42a31",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-5": {
-      "code_fingerprint": "sha256:e2cd19796bdbb3b88af253519d9492134b90dc82dd9656869d949ba09b95bd94",
+      "code_fingerprint": "sha256:39b8f916b4df878bd4657dae6642072444cb077fa9666b79a74c4e1e46ed9eb2",
       "kind": "text",
       "outputs": []
     },
     "lstm-gated-networks-on-text-6": {
-      "code_fingerprint": "sha256:85312e07635a206ddc483d22aae8c14481d0e063bf172b9bd7d350284c887cf1",
+      "code_fingerprint": "sha256:c38a5aa171804ff356025541d6a6e6934255d72b2f23e91d9c9cb3701c92bbf7",
       "kind": "text",
       "outputs": [
         {
@@ -144,27 +144,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN          2,763,520 1.348/1.345 1.512/1.511 1.324/1.322 1.325/1.321 11/12\n"
+          "text": "RNN          2,763,520 1.347/1.346 1.511/1.511 1.323/1.323 1.323/1.323 11/12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM         4,339,456 1.293/1.291 1.491/1.488 1.266/1.265 1.264/1.262 27/28\n"
+          "text": "LSTM         4,339,456 1.296/1.296 1.492/1.490 1.270/1.268 1.267/1.267 25/26\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU          3,814,144 1.299/1.299 1.488/1.492 1.273/1.272 1.271/1.271 16/16\n"
+          "text": "GRU          3,814,144 1.298/1.300 1.490/1.491 1.273/1.274 1.269/1.271 16/16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention    3,286,784 1.379/1.379 1.558/1.558 1.355/1.356 1.353/1.352 9/9\n"
+          "text": "attention    3,286,784 1.387/1.386 1.562/1.562 1.363/1.363 1.362/1.360 9/9\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN, d=302   3,815,724 1.334/1.334 1.499/1.501 1.310/1.311 1.310/1.310 15/15\n"
+          "text": "RNN, d=302   3,815,724 1.332/1.337 1.499/1.504 1.308/1.313 1.308/1.313 16/14\n"
         }
       ]
     }

@@ -451,7 +451,7 @@ With `train_lm` we can also test the other design choice of :numref:`sec_transfo
 
 ```{.python .input #gpt-run-to-run-spread-and-ffn-activation-swiglu-vs-gelu-1}
 %%tab pytorch, jax
-for warmup in (100, 0):  # Post-norm blocks, with and without the warmup
+for warmup in (500, 100, 0):  # Post-norm: long, pre-norm's, and no warmup
     net = gpt(len(data.vocab), pre_norm=False, max_len=128)
     train_lm(net, data, warmup=warmup)
     loss = math.log(d2l.lm_perplexity(net, data.val_dataloader()))

@@ -1,6 +1,8 @@
 # Hybrid Architectures
 :label:`sec_hybrids`
 
+<!-- execution: locked; requires: gpu-2h -->
+
 Every model in this chapter has improved *how* a fixed-size state is updated—from gates to selective dynamics to error-correcting delta rules—yet none of them can store more information than the state's size allows. When a user pastes a table of 64 product codes and prices into a prompt and asks for 20 of them, a Transformer looks back across its full KV cache and retrieves the exact tokens, whereas a purely recurrent model has only what it compressed into its fixed state before knowing which items would be queried. In-context retrieval—in few-shot prompting, retrieval-augmented generation, and code editing—is where fixed-state sequence models hit a hard ceiling.
 
 The remedy adopted by the recurrent language models in production use is pragmatic: interleave a small fraction of full attention layers among the recurrent blocks. Below we establish two fundamental limits on fixed-state recall—an information-theoretic bit-counting bound and Welch's geometric lower bound on key overlap—compare pure `GatedDeltaNet`, pure attention, and a `GA` hybrid on multi-query associative recall and byte-level WikiText-103, ablate the short depthwise convolution that pairs adjacent key and value tokens, quantify inference KV-cache savings at 256K context length, and summarize all sequence memories covered in this chapter.
@@ -84,6 +86,8 @@ def recall_model(layout, num_heads=8, conv_width=4, num_hiddens=32):
 
 ```{.python .input #hybrids-four-models-2}
 %%tab jax
+jax.config.update('jax_default_matmul_precision', 'float32')  # Not TF32
+
 def recall_model(layout, num_heads=8, conv_width=4, num_hiddens=32):
     """SeqLM whose mixers are given by letters: G(ated DeltaNet) with
     num_heads heads, A(ttention) with two; tokens: 4 values, 128 keys, and
@@ -187,6 +191,8 @@ def text_model(layout, d):  # 256 byte values; one block per letter
 
 ```{.python .input #hybrids-language-modeling-4}
 %%tab jax
+jax.config.update('jax_default_matmul_precision',
+                  'tensorfloat32')  # fp32 matmuls may use tf32
 text_mixers = {
     'R': lambda d, rngs: nnx.RNN(nnx.GRUCell(
         d, d, recurrent_kernel_init=nnx.initializers.lecun_normal(),
@@ -209,7 +215,7 @@ We train two runs each of `'GGGG'`, `'GGGA'`, `'AAAA'`, and `'CCCC'` at width $d
 arms = {'Gated DeltaNet': ('GGGG', 256), 'hybrid': ('GGGA', 256),
         'attention': ('AAAA', 256),
         'attention, conv': ('CCCC', 256)}  # Width 256, four blocks each
-trained = d2l.text_table(text_model, arms, data)
+trained = d2l.text_table(text_model, arms, data, num_steps=8000)
 ```
 
 On 128-byte windows, `Gated DeltaNet` and the `GGGA` hybrid (both about $1.33$) finish $0.05$–$0.06$ nats/byte ahead of `attention` without the convolution (about $1.38$). At this length the loss is dominated by local syntax: it hardly changes after the first 16 bytes of a window (:numref:`subsec_deep-rnn`), so the table mostly measures how well a mixer combines neighboring bytes.
@@ -225,7 +231,8 @@ Windows of 128 bytes cannot show what a fixed state loses against a growing cach
 long_data = d2l.WikiText103(batch_size=8, num_steps=1024)  # Same bytes/step
 long_arms = {'GRU': ('RRRR', 256), 'Gated DeltaNet': ('GGGG', 256),
              'hybrid': ('GGGA', 256), 'attention, conv': ('CCCC', 256)}
-long_trained = d2l.text_table(text_model, long_arms, long_data)
+long_trained = d2l.text_table(text_model, long_arms, long_data,
+                              num_steps=8000)  # Long context needs training
 ```
 
 The average over a window hides where in the window each model gains. A model that uses its whole context keeps improving as the position grows, whereas one that summarizes only the recent bytes stops improving early. To tell the two apart, we average the validation loss of the two runs over bands of positions $[a, 2a)$ that double in length, from bytes 16–31 up to bytes 512–1,023:

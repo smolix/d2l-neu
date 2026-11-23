@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size 64: relative deviation 3.0e-07\n"
+          "text": "chunk size 64: relative deviation 3.7e-07\n"
         }
       ]
     },
@@ -93,22 +93,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention        73,941      0.850 0.881      0.966 0.965\n"
+          "text": "gated linear attention        73,941      0.895 0.910      0.968 0.977\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet                74,201      0.990 0.993      0.996 0.996\n"
+          "text": "Gated DeltaNet                74,201      0.977 0.990      0.987 0.996\n"
         }
       ]
     },
     "deltanet-state-tracking-1": {
-      "code_fingerprint": "sha256:d58d26eba9f24a4b8694aa32220dd40e2d3690e4ecbb39d80edf92a4be9d74a5",
+      "code_fingerprint": "sha256:f91d516995ff2aa159b1bec3d61e7bde6e81404eb9e1feb7361cbfa5208711a5",
       "kind": "text",
       "outputs": []
     },
     "deltanet-state-tracking-2": {
-      "code_fingerprint": "sha256:c8bb68b16008df55a2ecbfcd42265df195616178534574b787292104713d69be",
+      "code_fingerprint": "sha256:1c3a64e842d664ffa695fa70c944e28f272174363ad0ebc02c8db90914750d1c",
       "kind": "text",
       "outputs": [
         {
@@ -124,17 +124,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU                         0.62/0.63   0.50/0.50\n"
+          "text": "minGRU                         0.58/0.55   0.50/0.50\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet                 0.75/0.78   0.50/0.50\n"
+          "text": "Gated DeltaNet                 0.74/0.81   0.50/0.50\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet, 2σ             1.00/1.00   0.73/1.00\n"
+          "text": "Gated DeltaNet, 2σ             1.00/1.00   0.99/1.00\n"
         }
       ]
     }

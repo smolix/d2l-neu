@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a1914d49cf983a6e976e52478605cd6c5e7ba80370af53aa3250fc54f5e59ab3",
+    "d2l_lib_fingerprint": "sha256:6f59a0b056e6a08e6145346f469528dfef1d1bf95100859e1ee2e2c7744fdec1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,17 +51,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU             3,817,216 1.299/1.298 1.490/1.489 1.272/1.273 1.271/1.270 36/37\n"
+          "text": "GRU             3,817,216 1.299/1.300 1.490/1.491 1.273/1.274 1.270/1.271 33/32\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU          2,764,544 1.348/1.345 1.521/1.522 1.323/1.321 1.323/1.319 27/27\n"
+          "text": "minGRU          2,764,544 1.343/1.348 1.520/1.520 1.319/1.323 1.317/1.324 26/26\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU, d=302   3,816,932 1.328/1.333 1.508/1.509 1.303/1.308 1.303/1.308 27/33\n"
+          "text": "minGRU, d=302   3,816,932 1.328/1.329 1.508/1.507 1.303/1.304 1.301/1.303 26/28\n"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 1.348 nats per byte, with the state reset at every step: 2.482\n"
+          "text": "validation loss: 1.343 nats per byte, with the state reset at every step: 2.481\n"
         }
       ]
     },
@@ -88,7 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gate above  half-life in steps  share at initialization  trained\n       0.5                  1                    50.6%    51.4%\n       0.9                  7                     1.2%    17.9%\n      0.99                 69                     0.0%     0.0%\n"
+          "text": "gate above  half-life in steps  share at initialization  trained\n       0.5                  1                    49.0%    53.4%\n       0.9                  7                     1.3%    17.1%\n      0.99                 69                     0.0%     0.1%\n"
         }
       ]
     },
@@ -104,14 +104,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T             512    1024    2048    4096    8192   16384\nGRU          19.9    34.7    67.9   112.3   199.4   405.5\nminGRU        3.9     4.2     4.4     4.9     5.1     5.6\nattention     2.1     2.5     3.3     5.0     8.4    14.6\n"
+          "text": "T             512    1024    2048    4096    8192   16384\nGRU          20.2    35.6    69.7   113.3   197.6   425.6\nminGRU        4.0     4.3     4.5     5.0     5.2     5.6\nattention     2.1     2.4     3.2     4.7     7.9    13.7\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-recurrence/linear-recurrence-cost-against-attention-2-1.svg",
-          "bytes": 31277,
-          "sha256": "sha256:60aadda928e2051111d1b5836f314075280305db2e8922d97d80480c4bd6f5a7"
+          "bytes": 31281,
+          "sha256": "sha256:d3a3a83075732308c2704d00e641d11e2e5d18ab174f036fdde3eb4f3461dad7"
         }
       ]
     }

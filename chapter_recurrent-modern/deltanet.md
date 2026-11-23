@@ -518,7 +518,7 @@ parity_mixers = {
         d, 4, chunk_size=32, timescales=(256, 2048))}
 
 def parity_model(mixer):  # Tokens and outputs: the bits 0 and 1
-    return d2l.SeqLM(2, d, [mixer()])
+    return d2l.SeqLM(2, d, [mixer(), mixer()])  # Two blocks
 ```
 
 ```{.python .input #deltanet-state-tracking-1}
@@ -545,11 +545,12 @@ def train_parity(model, num_updates=1000):
     optimizer = nnx.Optimizer(model, optax.chain(
         optax.clip_by_global_norm(1.0),
         optax.adamw(schedule, weight_decay=0.01)), wrt=nnx.Param)
-    d2l.train_queries(model, lambda step: running_parity(rng, 128, 64),
-                      num_updates, optimizer)
     X, Y = running_parity(np.random.default_rng(1), 1024, 256)
-    return (float(d2l.query_accuracy(model, X[:, :64], Y[:, :64])),
-            float(d2l.query_accuracy(model, X, Y[:, 64:])))
+    with jax.default_matmul_precision('highest'):  # Full float32, not TF32
+        d2l.train_queries(model, lambda step: running_parity(rng, 128, 64),
+                          num_updates, optimizer)
+        return (float(d2l.query_accuracy(model, X[:, :64], Y[:, :64])),
+                float(d2l.query_accuracy(model, X, Y[:, 64:])))
 
 d = 64  # Width; the delta rules have 4 heads of size 16
 lecun = nnx.initializers.lecun_normal()  # For the recurrent matrix
@@ -564,7 +565,8 @@ parity_mixers = {
 
 def parity_model(mixer):  # Tokens and outputs: the bits 0 and 1
     rngs = nnx.Rngs(d2l.get_key())  # A new initialization each call
-    return d2l.SeqLM(2, d, [mixer(rngs)], rngs=rngs)
+    return d2l.SeqLM(2, d, [mixer(rngs), mixer(rngs)],  # Two blocks
+                     rngs=rngs)
 ```
 
 We train two runs of each mixer and report the accuracy on positions 1–64, the lengths seen in training, and on positions 65–256:

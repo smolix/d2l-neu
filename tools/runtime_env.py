@@ -73,6 +73,9 @@ NOTEBOOK_TIMEOUTS = {
     # judges 200 removals in one run (about 100 min on four RTX 4090s,
     # 2026-11-21); a normal build reads the results in minutes.
     "chapter_lm-data/quality-filtering.ipynb": 10800,
+    # 12.6 trains its 128- and 1,024-byte text tables for 8,000 steps (16
+    # models; about two hours in PyTorch on one RTX 4090, 2026-11-23).
+    "chapter_recurrent-modern/hybrids.ipynb": 14400,
     # 20.5's corpus regeneration rewrites 4.7M tokens with Qwen3.5-2B on one
     # GPU (three parts, about 50 min at batch 96, 2026-11-16 pilot); its judge
     # and proxy runs follow in a second run; a normal build takes minutes.

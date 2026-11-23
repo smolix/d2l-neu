@@ -872,6 +872,49 @@ have Jacobian $0$ at the origin. The first is stable, with
 $x(t)=x_0/\sqrt{1+2x_0^2t}\to0$; the second escapes to infinity at
 $t=1/(2x_0^2)$.
 
+We could tell the two apart only because we could solve them. Lyapunov's
+idea, from 1892, decides such cases without a solution: find a quantity that
+the motion can only decrease. A **Lyapunov function** for a fixed point
+$\mathbf x^\star$ is a continuously differentiable function $V$ of the state
+with $V(\mathbf x^\star)=0$ and $V(\mathbf x)>0$ at every other point
+nearby, whose value does not rise along any trajectory:
+
+$$
+\frac{d}{dt}V(\mathbf x(t))
+=\nabla V(\mathbf x(t))^\top\mathbf f(\mathbf x(t))\le0 .
+$$
+
+The middle expression is the chain rule, and it needs the field but no
+trajectory. A state that starts where $V$ is small can never reach a place
+where $V$ is larger, so it stays near $\mathbf x^\star$: the fixed point is
+stable. If the inequality is strict away from $\mathbf x^\star$, the nearby
+states converge to it. For the two cubic fields take $V(x)=x^2$, with
+derivative $2x\dot x$. Under $\dot x=-x^3$ this is $-2x^4$, and the origin
+is stable. Under $\dot x=x^3$ it is $+2x^4$: now $x^2$ grows along every
+trajectory, and the origin is unstable.
+
+We have in fact used the idea already. For the spiral the squared length
+$V=\|\mathbf x\|^2$ obeyed $\dot V=-V$. For gradient descent in continuous
+time the loss, measured from its value at an isolated minimum, is a Lyapunov
+function near that minimum, since
+$\tfrac{d}{dt}\mathcal L=\nabla\mathcal L^\top\dot{\mathbf x}=-\|\nabla\mathcal L\|^2$
+(Exercise :exref:`ex_mdl-odes-solvers-gradient-flow-orbits`). And the
+pendulum has its energy $E=\tfrac12\omega^2+1-\cos\phi$, kinetic plus
+potential, which is zero at the bottom and changes at the rate
+
+$$
+\dot E=\omega\,\dot\omega+\sin\phi\,\dot\phi
+=\omega(-\sin\phi-c\,\omega)+\omega\sin\phi=-c\,\omega^2\le0 .
+$$
+
+Damping can only remove energy. This holds for swings of any size, far from
+the bottom, where the Jacobian has nothing to say. The inequality is not
+strict, since the energy stands still for an instant at each turning point,
+where $\omega=0$. That the damped pendulum nevertheless comes to rest takes
+one more argument, which we skip. The Jacobian comes with a recipe and a
+Lyapunov function does not. It has to be guessed, and an energy or a loss is
+the usual first guess.
+
 So far a formula has done all the work. For a field given by a network there
 is no formula at all, and a computer can only take steps: read the arrow,
 move a little, read it again. How far do such steps stray from the
@@ -890,8 +933,10 @@ input held constant over each step turns the equation into a recurrence that
 is exact, and stable at every step size when the equation is stable.
 Eigenvalues give the rate of decay in the long run, not the size of the
 transient, and at a hyperbolic fixed point they classify a nonlinear field
-through its Jacobian. None of this computes a trajectory when no formula
-exists.
+through its Jacobian. Where the Jacobian does not decide, or the
+displacement is large, a Lyapunov function does: a quantity such as an
+energy or a loss that no trajectory can increase. None of this computes a
+trajectory when no formula exists.
 
 ## Exercises
 

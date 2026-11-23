@@ -79,7 +79,10 @@ since $\|(\mathbf{U}^\top \mathbf{A} \mathbf{V})\|_2 \le \|\mathbf{A}\|_2 \le 1$
 ![Steepest descent directions under three norm balls: Euclidean $\ell_2$ (gradient direction), coordinate $\ell_\infty$ box (sign descent), and spectral norm $\|\cdot\|_2$ (orthogonalized gradient $\mathbf{U}\mathbf{V}^{\top}$, where every active singular value equals $1$).](../img/mdl-opt-norm-balls.svg)
 :label:`fig_opt_norm_balls`
 
-Whereas Adam equalizes update magnitudes across *individual matrix entries* (which can still collapse onto a rank-$1$ direction, as $\operatorname{sign}\!\begin{bmatrix}3 & 1\\ 1 & 1\end{bmatrix} = \begin{bmatrix}1 & 1\\ 1 & 1\end{bmatrix}$ has singular values $2$ and $0$), spectral steepest descent $-\eta\mathbf{U}\mathbf{V}^\top$ moves with equal step size $\eta$ along every active singular direction $(\mathbf{u}_i, \mathbf{v}_i)$ of the gradient.
+Whereas Adam equalizes update magnitudes across *individual matrix entries* (which can still collapse onto a rank-$1$ direction, as $\operatorname{sign}\!\begin{bmatrix}3 & 1\\ 1 & 1\end{bmatrix} = \begin{bmatrix}1 & 1\\ 1 & 1\end{bmatrix}$ has singular values $2$ and $0$), spectral steepest descent $-\eta\mathbf{U}\mathbf{V}^\top$ moves with equal step size $\eta$ along every active singular direction $(\mathbf{u}_i, \mathbf{v}_i)$ of the gradient. :numref:`fig_opt_muon_spectrum` shows what this does to the spectrum: a gradient dominated by a few directions becomes an update that weights all of them equally.
+
+![Singular values of a gradient matrix $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ relative to the largest, $\sigma_i/\sigma_1$ (left), and of its orthogonalization $\mathbf{U}\mathbf{V}^\top$ (right). Orthogonalization keeps the singular vectors and sets every nonzero singular value to $1$, so the update moves by $\eta$ along each of them.](../img/mdl-opt-muon-spectrum.svg)
+:label:`fig_opt_muon_spectrum`
 
 :Steepest descent under three norm geometries.
 :label:`tab_muon_norms`
@@ -245,6 +248,53 @@ def scratch_muon(learning_rate, momentum=0.95, weight_decay=0.0):
                        optax.scale_by_learning_rate(learning_rate))
 ```
 
+We wrote Muon ourselves to see every step of it, but the framework also ships one. How do its settings relate to the factor $0.2\sqrt{\max(m, n)}$ of :eqref:`eq_muon-update`? To find out, we take a single step from zero weights on a $96 \times 64$ Gaussian gradient, once with our implementation and once with the library's, and compare the two updates:
+
+```{.python .input #muon-the-update-and-rms-alignment-1}
+%%tab pytorch
+grad, steps = torch.randn(96, 64), []
+for make in (lambda p: Muon([p], lr=0.01),
+             lambda p: torch.optim.Muon([p], lr=0.01,
+                                        adjust_lr_fn='match_rms_adamw')):
+    p = nn.Parameter(torch.zeros(96, 64))
+    p.grad = grad.clone()
+    make(p).step()
+    steps.append(p.detach())  # The update, since p started at zero
+for name, step in zip(('ours', 'torch.optim.Muon'), steps):
+    rms = step.pow(2).mean().sqrt()
+    print(f'{name:16s} update RMS / lr = {rms / 0.01:.3f}')
+gap = (steps[0] - steps[1]).norm() / steps[0].norm()
+print(f'relative difference: {gap:.1e}')
+```
+
+```{.python .input #muon-the-update-and-rms-alignment-1}
+%%tab jax
+params = {'w': jnp.zeros((96, 64))}
+grads = {'w': jax.random.normal(d2l.get_key(), (96, 64))}
+steps = []
+for tx in (scratch_muon(0.01),
+           optax.contrib.muon(0.01, consistent_rms=0.2)):
+    updates, _ = tx.update(grads, tx.init(params), params)
+    steps.append(updates['w'])
+for name, step in zip(('ours', 'optax.contrib.muon'), steps):
+    print(f'{name:18s} update RMS / lr = '
+          f'{jnp.sqrt(jnp.mean(step ** 2)) / 0.01:.3f}')
+gap = jnp.linalg.norm(steps[0] - steps[1]) / jnp.linalg.norm(steps[0])
+print(f'relative difference: {gap:.1e}')
+```
+
+<!-- TODO(rerun): cell muon-the-update-and-rms-alignment-1 is new and not yet executed. The paragraph and tab notes below are written from Stage A's CPU check (update RMS / lr 0.175 for both in PyTorch, relative difference about 1.3e-2; 0.176 for both in JAX, relative difference about 1.3e-6). After the re-run of muon.md (pytorch, jax), check in both tabs that the two RMS values agree to two digits and are about 0.18, and that the relative difference is at most a few percent in PyTorch and negligible in JAX; the PyTorch tab note attributes its difference to bfloat16. -->
+
+The two updates agree, and both have an entrywise RMS of about $0.18\,\eta$. This is a little below the nominal $0.2\,\eta$ because five Newton–Schulz iterations leave the singular values spread between $0.68$ and $1.13$, not at $1$. The experiments below keep our own implementation.
+
+:begin_tab:`pytorch`
+`torch.optim.Muon` accepts only 2D parameters, so biases, normalization parameters, and embeddings still need a second optimizer. Its setting `adjust_lr_fn='match_rms_adamw'` is the factor $0.2\sqrt{\max(m, n)}$; the default, `'original'`, multiplies by $\sqrt{\max(1, m/n)}$ instead, and the default weight decay is $0.1$. The library runs Newton–Schulz in bfloat16, which accounts for the difference of about a percent between the two updates.
+:end_tab:
+
+:begin_tab:`jax`
+`optax.contrib.muon` takes the constant of the factor as `consistent_rms`: the value $0.2$ gives $0.2\sqrt{\max(m, n)}$, and without it the update is multiplied by $\sqrt{\max(1, \text{fan-out}/\text{fan-in})}$ instead. It applies Muon to the 2D parameters and Adam to all others, so the whole model can be handed to it.
+:end_tab:
+
 ### Parameter Groups and Hybrid Optimizer
 :label:`subsec_muon-parameter-groups`
 
@@ -408,7 +458,9 @@ for name, lr, vals in [('AdamW', best_adamw, adamw_val),
           f'{near[0]:g} to {near[-1]:g}')
 ```
 
-On `TinyLM`, Muon+AdamW establishes a $>0.1$-nat validation lead at step $500$, crosses the $1.6$-nat threshold at least one checkpoint ($250$ steps) earlier than AdamW, and expands the usable learning-rate window up to $\eta = 3 \times 10^{-2}$ (where AdamW finishes near or above $2$ nats because rank-$1$ early gradients under entrywise normalization can have spectral norm $\sqrt{\min(m, n)}$ times larger than an orthogonalized update). In large-scale pretraining benchmarks with full learning-rate decay ($0.1\text{B}\text{--}1.2\text{B}$ parameters :cite:`Wen.Hall.Ma.ea.2025` and trillion-parameter runs such as Kimi K2 :cite:`Liu.Su.Yao.ea.2025,Kimi.Team.2025`, often paired with attention-logit clipping), Muon achieves $1.1\times\text{--}1.4\times$ step reductions over heavily tuned AdamW while cutting optimizer state memory nearly in half.
+On `TinyLM`, Muon+AdamW establishes a $>0.1$-nat validation lead at step $500$, crosses the $1.6$-nat threshold at least one checkpoint ($250$ steps) earlier than AdamW, and expands the usable learning-rate window up to $\eta = 3 \times 10^{-2}$ (where AdamW finishes near or above $2$ nats because rank-$1$ early gradients under entrywise normalization can have spectral norm $\sqrt{\min(m, n)}$ times larger than an orthogonalized update).
+
+At larger scale the advantage is smaller and less well documented. With full learning-rate decay, :citet:`Wen.Hall.Ma.ea.2025` measure step reductions over heavily tuned AdamW that shrink as the model grows, from about $1.4\times$ at $0.1\text{B}$ parameters to about $1.1\times$ at $1.2\text{B}$. :citet:`Liu.Su.Yao.ea.2025` report roughly twice the compute efficiency of AdamW in their own scaling experiments. The trillion-parameter Kimi K2 was trained with Muon and attention-logit clipping :cite:`Kimi.Team.2025`, but no AdamW run exists at that size to compare it with. The saving in optimizer state, nearly half, does not depend on scale.
 
 ## Summary
 
@@ -696,7 +748,7 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 
 ::: {.cols .vc}
 ::: {.col}
-- **1.1–1.4× step reductions at scale (Wen et al., 2025; Kimi K2 1T, 2025)** require two long-run safeguards:
+- **Step reductions shrink with size: ≈1.4× at 0.1B to ≈1.1× at 1.2B parameters (Wen et al., 2025).** Kimi K2 (1T, 2025) trains with Muon, with no AdamW run to compare. Long runs need two safeguards:
 - **1. Decoupled weight decay ($\lambda > 0$) is mandatory:** Because $\mathrm{NS}_5$ normalizes singular values to $\sim 1$ at every step, weight norms $\|\mathbf{W}\|_F$ grow unboundedly without $(1-\eta\lambda)$ shrinkage.
 - **2. Bilinear QK-Clip:** Attention logits $\mathbf{q}^\top\mathbf{k} = \mathbf{x}^\top\mathbf{W}_Q^\top\mathbf{W}_K\mathbf{x}$ are a product of two matrices; rescaling $\mathbf{W}_Q, \mathbf{W}_K$ when max logits exceed $100$ prevents softmax saturation.
 :::
@@ -737,6 +789,6 @@ Work out the exact numerical answer for each Muon design question:
 | **Spectral Steepest Descent** | $\operatorname*{argmin}_{\|\Delta\mathbf{W}\|_2 \le \eta}\langle\mathbf{G}, \Delta\mathbf{W}\rangle = -\eta\,\mathbf{U}\mathbf{V}^\top$ | Sets all active singular values of $\mathbf{G}$ to $1$; decrease $\eta\|\mathbf{G}\|_*$ | Bounds worst-case activation shift $\|\Delta\mathbf{W}\mathbf{x}\|_2 / \|\mathbf{x}\|_2 \le \eta$ |
 | **Newton–Schulz Quintic** | $p(\mathbf{X}) = 3.4445\mathbf{X} - 4.7750\mathbf{A}\mathbf{X} + 2.0315\mathbf{A}^2\mathbf{X}$ | $5$ matmul iterations lift $\sigma/\|\mathbf{G}\|_F \ge 0.15\%$ into $[0.68, 1.13]$ | Approximates $\mathbf{U}\mathbf{V}^\top$ on GPUs with $\sim 5m/B < 1\%$ FLOP overhead |
 | **Muon Update & Scale** | $\mathbf{W}_{t+1} = (1-\eta\lambda)\mathbf{W}_t - 0.2\eta\sqrt{\max(m,n)}\,\mathrm{NS}_5(\mathbf{G}_t+\beta\mathbf{M}_t)$ | $1$ momentum buffer per matrix ($\beta = 0.95$); entry RMS $\approx 0.2\eta$ | Shares $\eta$ and $\lambda$ directly with AdamW; cuts state memory by $42\%$ |
-| **Muon + AdamW Hybrid** | Muon on hidden 2D matrices ($84\%$); AdamW on emb/head/1D ($16\%$) | $3\times$ higher upper stable LR on `TinyLM`; $1.1\text{--}1.4\times$ speedup at scale | Pair with decoupled weight decay $\lambda > 0$ (and QK-Clip at extreme scale) |
+| **Muon + AdamW Hybrid** | Muon on hidden 2D matrices ($84\%$); AdamW on emb/head/1D ($16\%$) | $3\times$ higher upper stable LR on `TinyLM`; $\approx 1.4\times$ fewer steps at 0.1B, $\approx 1.1\times$ at 1.2B | Pair with decoupled weight decay $\lambda > 0$ (and QK-Clip at extreme scale) |
 :::
 

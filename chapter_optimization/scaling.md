@@ -5,7 +5,7 @@ Neural networks are developed at small scale and deployed at large scale. Becaus
 
 Under the **standard parametrization** (SP) used by default in deep learning frameworks—where layer weights are initialized with variance $1/\text{fan-in}$ and all layers share a single global learning rate $\eta$—the optimal learning rate *does not transfer across model width*. As layer width $n$ increases, a single Adam step changes hidden-layer pre-activations by $O(\eta n)$ because the $n$ terms in the matrix-vector product $\Delta\mathbf{W}\,\mathbf{h}$ align in sign with the incoming activations $\mathbf{h}$. Consequently, the optimal learning rate drifts downward as the model widens.
 
-The **Maximal Update Parametrization** ($\mu\text{P}$, :citet:`Yang.Hu.2021,Yang.Hu.Babuschkin.ea.2022`) eliminates this drift by scaling the learning rate and output multiplier of each layer according to its fan-in and fan-out growth, ensuring that every hidden layer experiences $\Theta(1)$ feature updates as width $n \to \infty$. In this section, we measure the learning-rate drift under SP across a $64\times$ range of MLP widths ($n = 128$ to $8{,}192$), derive the first-step scaling rule, implement $\mu\text{P}$ and verify it with the one-step **coordinate check** :cite:`Dey.Anthony.Hestness.2024`, demonstrate zero-shot learning-rate transfer across widths, and extend the rules to Transformers and spectral-norm optimizers.
+The **Maximal Update Parametrization** ($\mu\text{P}$, :citet:`Yang.Hu.2021,Yang.Hu.Babuschkin.ea.2022`) eliminates this drift by scaling the learning rate and output multiplier of each layer according to its fan-in and fan-out growth, ensuring that every hidden layer experiences $\Theta(1)$ feature updates as width $n \to \infty$. In this section, we measure the learning-rate drift under SP across a $64\times$ range of MLP widths ($n = 128$ to $8{,}192$), derive the first-step scaling rule, implement $\mu\text{P}$ and verify it with the one-step **coordinate check** :cite:`Yang.Hu.Babuschkin.ea.2022,Dey.Anthony.Hestness.2024`, demonstrate zero-shot learning-rate transfer across widths, and extend the rules to Transformers, spectral-norm optimizers, and depth.
 
 ```{.python .input #scaling-scaling-up}
 %%tab pytorch
@@ -282,7 +282,7 @@ class MuMLP(MLP):
 ### The Coordinate Check and Learning-Rate Transfer
 :label:`subsec_scaling-coord-check`
 
-To verify a $\mu\text{P}$ implementation before launching a sweep, the **coordinate check** :cite:`Dey.Anthony.Hestness.2024` takes a single Adam step across widths $n \in \{128, 256, \ldots, 8192\}$ and measures the mean absolute activation $\overline{|h_\ell|}$ of each layer via `activations` and `coord_check`:
+To verify a $\mu\text{P}$ implementation before launching a sweep, the **coordinate check** :cite:`Yang.Hu.Babuschkin.ea.2022,Dey.Anthony.Hestness.2024` takes a single Adam step across widths $n \in \{128, 256, \ldots, 8192\}$ and measures the mean absolute activation $\overline{|h_\ell|}$ of each layer via `activations` and `coord_check`:
 
 ```{.python .input #scaling-the-coordinate-check-1}
 %%tab pytorch
@@ -394,6 +394,7 @@ Applying $\mu\text{P}$ to a Transformer such as `TinyLM` (:numref:`subsec_tinylm
 | Internal block matrices (`qkv`, `proj`, `mlp1`, `mlp2`) | Both fan-in and fan-out $\propto d$ | Learning rate $\eta/m$, init variance $1/\text{fan-in}$ |
 | Output readout `head` | Fan-in $\propto d$, fixed vocabulary size $V$ | Init variance $1/d_{\text{base}}$, logits $\times 1/m$, learning rate $\eta$ |
 | Attention dot-product scores | Inner product of aligned $d_k$-vectors | Scale scores by $1/d_k$ (extra factor $1/\sqrt{m}$) |
+| Residual branches, when the depth $L$ also grows | $L$ branch outputs add in the residual stream | Multiply each branch by $L_{\text{base}}/L$ (:numref:`subsec_scaling-depth`) |
 
 ### The Spectral Scaling Condition and Muon
 
@@ -406,11 +407,23 @@ $$
 
 For a square $n \times n$ hidden matrix, :eqref:`eq_spectral_condition` requires $\|\Delta\mathbf{W}\|_2 = \Theta(1)$. Under Adam, a rank-$1$ sign update has $\|\Delta\mathbf{W}\|_2 = \Theta(\eta n)$, requiring $\eta \propto 1/n$. Under Muon (:numref:`sec_muon`), the orthogonalized update $\mathrm{NS}_5(\cdot)$ has unit spectral norm by construction; if scaled by $\sqrt{d_{\text{out}}/d_{\text{in}}}$ :cite:`Bernstein.2025`, its learning rate transfers across widths directly with no $1/m$ correction (whereas the AdamW-matched factor $0.2\sqrt{\max(d_{\text{out}}, d_{\text{in}})}$ of :eqref:`eq_muon-update` has spectral norm $\Theta(\eta\sqrt{n})$ and therefore scales as $\eta \propto 1/\sqrt{n}$; Exercise :exref:`ex_scaling-spectral`).
 
+### Depth, Weight Decay, and Finite Size
+:label:`subsec_scaling-depth`
+
+So far we have varied the width alone. A real scale-up also adds layers, and under AdamW the weight decay has to follow whatever is done to the learning rate. Both need a rule of their own.
+
+Consider depth first. In a network of $L$ residual blocks, the residual stream is the sum of $L$ branch outputs. If every branch contributes $\Theta(1)$, the sum grows with $L$, and so does the effect of one optimizer step, since every block moves the output. The remedy has the same form as the logit multiplier: multiply each residual branch by $(L_{\text{base}}/L)^{\alpha}$. Two exponents have been proposed. With $\alpha = 1/2$ the branch outputs add like independent random terms, which they are at initialization :cite:`Bordelon.Noci.Li.ea.2024,Yang.Yu.Zhu.ea.2024`. With $\alpha = 1$ they add like aligned terms, which they become once training has correlated them. This is the argument that gave the readout $1/n$ and not $1/\sqrt{n}$. :citet:`Dey.Zhang.Noci.ea.2025` find that in Transformers only $\alpha = 1$ keeps every block learning features as $L$ grows, and that the learning rate then transfers across depth as it does across width.
+
+Weight decay comes next. Under AdamW, the decay timescale $\tau = 1/(\eta\lambda)$ sets how fast the weights approach their equilibrium norm (:numref:`sec_adam`). A rule that divides a layer's learning rate by $m$ and leaves $\lambda$ alone makes that layer's $\tau$ grow $m$-fold, so the wide model is regularized differently from the small one it was tuned on. One consistent choice is to hold $\tau$ fixed: multiply $\lambda$ by $m$ wherever $\eta$ is divided by $m$ :cite:`Wang.Aitchison.2025`.
+
+Finally, all of these rules are exact only in the limit of infinite size. At practical widths the optimum still drifts a little; in our own sweep it moved by one grid step. A transferred learning rate is therefore best used as the center of a narrow sweep at the target size, not as a substitute for one.
+
 ## Summary
 
 * Under standard parametrization (SP), a single Adam step changes the output of a hidden layer with fan-in $n$ by $\Theta(\eta n)$, causing the optimal learning rate $\eta^\star(n)$ to drift downward as the network widens.
 * **Maximal Update Parametrization ($\mu\text{P}$)** scales hidden-matrix learning rates by $1/m$ (where $m = n/n_{\text{base}}$), fixes output-layer initialization variance at $1/n_{\text{base}}$ while scaling logits by $1/m$, and scales Transformer attention scores by $1/d_k$, achieving $\Theta(1)$ feature updates and zero-shot learning-rate transfer across widths.
 * The one-step **coordinate check** verifies across a geometric progression of widths that layer activation magnitudes remain flat after an optimizer step.
+* Depth needs its own rule: residual branches are scaled by $L_{\text{base}}/L$. Under AdamW the decay timescale $\tau = 1/(\eta\lambda)$ should be held fixed as the learning rate is rescaled. All of these rules are exact only in the limit of infinite size.
 
 ## Exercises
 
@@ -577,7 +590,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 
 ::: {.cols .vc}
 ::: {.col}
-- The **coordinate check** (Dey et al., 2024) takes **1 Adam step** on a single minibatch across widths $n \in \{128, 256, \ldots, 8192\}$ and plots the mean absolute activation $\overline{|h_\ell|}$ of each layer.
+- The **coordinate check** (Yang et al., 2022) takes **1 Adam step** on a single minibatch across widths $n \in \{128, 256, \ldots, 8192\}$ and plots the mean absolute activation $\overline{|h_\ell|}$ of each layer.
 - **Under Standard Parametrization (`MLP`):**
   - **Layer 1 (`fc_in`, fan-in $784$):** Flat across all widths ($\Theta(1)$).
   - **Layer 2 (`fc_h1`, fan-in $n$):** Grows linearly with width as **$O(n)$** (slope $+1$).

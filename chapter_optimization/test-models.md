@@ -570,7 +570,10 @@ def lr_sweep(make_model, make_tx, data, lrs, seed,  #@save
 
 ## Baseline Minibatch SGD Runs and Experimental Protocol
 
-We now establish our baseline with constant-rate minibatch SGD ($2{,}000$ steps, no momentum or weight decay). On `TinyLM`, an untrained model starts slightly above the uniform-distribution cross-entropy $\ln 256 \approx 5.55$ nats/byte (at $\sim 5.71$ nats/byte due to initial logit variance; Exercise :exref:`ex_test-models-initial-loss`). As reference landmarks on WikiText-103, a unigram byte-frequency table achieves $\sim 3.2$ nats/byte and a bigram byte-pair table achieves $\sim 2.5$ nats/byte (Exercise :exref:`ex_test-models-landmarks`).
+We now establish our baseline with constant-rate minibatch SGD ($2{,}000$ steps, no momentum or weight decay). On `TinyLM`, an untrained model starts slightly above the uniform-distribution cross-entropy $\ln 256 \approx 5.55$ nats/byte (at $\sim 5.71$ nats/byte due to initial logit variance; Exercise :exref:`ex_test-models-initial-loss`). As reference landmarks on WikiText-103, a unigram byte-frequency table achieves $\sim 3.2$ nats/byte and a bigram byte-pair table achieves $\sim 2.5$ nats/byte (Exercise :exref:`ex_test-models-landmarks`). :numref:`fig_opt_loss_landmarks` places these landmarks on one scale; every loss in this chapter can be read against it.
+
+![Loss landmarks for byte-level language modeling on WikiText-103. Gray: the untrained `TinyLM` and the uniform guess. Blue: unigram and bigram byte tables. Orange: `TinyLM` after $2{,}000$ steps of SGD, measured below, and after the best tuned runs later in this chapter.](../img/mdl-opt-loss-landmarks.svg)
+:label:`fig_opt_loss_landmarks`
 
 We first define the model and plain-SGD factory closures `make_lm`, `sgd`, and `new_seed`:
 

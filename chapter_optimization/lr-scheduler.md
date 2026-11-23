@@ -226,7 +226,7 @@ At step $1{,}500$, cosine decay leads because its learning rate has already fall
 
 While decay settles the iterate at the end of training, **learning-rate warmup** stabilizes the opening steps by ramping $\eta_t$ linearly from $0$ to $\eta_0$ over $W$ steps (typically $1\%\text{--}5\%$ of $T$).
 
-Why is warmup needed? First, under Adam (:numref:`sec_adam`), step $1$ moves every coordinate by $\pm\eta_0$ based on a single minibatch before the momentum average $\mathbf{m}_t$ and second-moment average $\mathbf{v}_t$ have accumulated multi-batch statistics. On `TinyLM`, where initial linear weight matrices have $\text{RMS}(\mathbf{W}_0) \approx 0.045$, a cold start at $\eta_0 = 0.03$ alters every weight by $\sim 67\%$ of its initial magnitude on step $1$, corrupting the initialization and causing the run to stall near $2.8$ nats. Second, as shown in :numref:`subsec_gd-edge-of-stability`, gradually raising $\eta_t$ lowers the sharpness ceiling $2/\eta_t$ progressively, guiding the network into a flat region that can tolerate the peak learning rate :cite:`Goyal.Dollar.Girshick.ea.2017,Kalra.Barkeshli.2024`.
+Why is warmup needed? First, under Adam (:numref:`sec_adam`), step $1$ moves every coordinate by $\pm\eta_0$ based on a single minibatch before the momentum average $\mathbf{m}_t$ and second-moment average $\mathbf{v}_t$ have accumulated multi-batch statistics. On `TinyLM`, where initial linear weight matrices have $\text{RMS}(\mathbf{W}_0) \approx 0.045$, a cold start at $\eta_0 = 0.03$ alters every weight by $\sim 67\%$ of its initial magnitude on step $1$, corrupting the initialization and causing the run to stall near $2.8$ nats. Second, as shown in :numref:`subsec_gd-edge-of-stability`, gradually raising $\eta_t$ lowers the sharpness ceiling progressively ($2/\eta_t$ for gradient descent, about $38/\eta_t$ on the preconditioned sharpness for Adam), guiding the network into a flat region that can tolerate the peak learning rate :cite:`Goyal.Dollar.Girshick.ea.2017,Kalra.Barkeshli.2024`.
 
 Adding a $20$-step linear ramp (`warmup(peak, 20)`, just $1\%$ of the $2{,}000$-step run) caps the initial relative weight change at about $10\%$ and rescues training at $\eta_0 = 0.03$, lowering the final validation loss by about a full nat. To measure the step-by-step weight change, `linear_weights` extracts the 2D non-embedding weight matrices of `TinyLM`:
 
@@ -535,7 +535,7 @@ On a fixed budget of $T = 2{,}000$ steps with peak learning rate $\eta_0 = 3 \ti
 ::: {.cols .vc}
 ::: {.col}
 - Comparing a cold start against a $20$-step linear warmup ($1\%$ of $2{,}000$ steps) at $\eta_0 = 0.03$ from identical initial weights:
-  - **Cold start:** Relative weight change $\|\Delta\mathbf{W}\|_{\text{RMS}}/\|\mathbf{W}\|_{\text{RMS}}$ is **$0.68$ ($68\%$)** on step 1; the network stalls above $2.6\text{--}2.8$ nats.
+  - **Cold start:** Relative weight change $\|\Delta\mathbf{W}\|_{\text{RMS}}/\|\mathbf{W}\|_{\text{RMS}}$ is **$0.68$ ($68\%$)** on step 1; the network stalls near $2.8$ nats.
   - **20-step linear ramp:** Caps relative weight change at **$0.03$** on step 1 and $\le 0.11$ at peak step 20, lowering final validation loss by **nearly a full nat**!
 :::
 

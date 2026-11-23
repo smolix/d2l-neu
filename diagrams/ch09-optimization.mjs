@@ -74,15 +74,15 @@ function threeLevers() {
   const W = 560, H = 290;
   let o = '';
   o += card(16, 12, 528, 80, D.blue.dark, C.lblue,
-    'Lever 1: Step Direction & Preconditioning (§§9.4–9.6)',
+    'Lever 1: Step Direction & Preconditioning',
     'Momentum velocity · AdamW coordinate RMS · Muon spectral UVᵀ',
     'Targets ill-conditioning κ ≫ 1 and 40× layer scale gaps');
   o += card(16, 104, 528, 80, D.purple.dark, D.purple.tint,
-    'Lever 2: Step-Size Schedule η_t (§9.7)',
+    'Lever 2: Step-Size Schedule η_t',
     'Linear warmup (0 → η₀) · Travel budget B_T = Σ η_t · Cooldown',
     'Steers below 2/η₀ early and shrinks terminal noise ball');
   o += card(16, 196, 528, 80, D.green.dark, C.lgreen,
-    'Lever 3: Batch Size, Width Scaling & Guards (§§9.8–9.10)',
+    'Lever 3: Batch Size, Width Scaling & Guards',
     'Critical batch b_crit ≈ b_noise · μP width LR η/m · Clip & EMA',
     'Balances step–data Pareto curve and guards against spikes');
   return svg(W, H, o);
@@ -92,22 +92,22 @@ function fourTestbeds() {
   const W = 560, H = 272;
   let o = '';
   o += card(16, 14, 254, 114, D.blue.dark, C.lblue,
-    '1. Quadratic Valley (§9.1)',
+    '1. Quadratic Valley',
     '0.1 x₁² + 2 x₂² (d = 2, κ = 20)',
     'Exact 2/λ, √κ damping, noise',
     'Closed-form analytical model');
   o += card(290, 14, 254, 114, D.orange.dark, C.lamber,
-    '2. NASA Airfoil Data (§9.2)',
+    '2. NASA Airfoil Data',
     'n = 1,500 examples, d = 6',
     'Exact L = 2.10, tr(Σ) = 3.24',
     'Verifies η tr(Σ) / (4b) floor');
   o += card(16, 144, 254, 114, D.green.dark, C.lgreen,
-    '3. FashionCNN (§9.3+)',
+    '3. FashionCNN',
     '421,642 params (2 Conv + 2 FC)',
     '8.5 epochs in 2,000 steps',
     'Test accuracy & weight EMA');
   o += card(290, 144, 254, 114, D.purple.dark, D.purple.tint,
-    '4. TinyLM Transformer (§9.3+)',
+    '4. TinyLM Transformer',
     '470,784 params (2 pre-LN blocks)',
     '0.03 epochs on WikiText bytes',
     '40× grad spread · AdamW & Muon');
@@ -118,12 +118,12 @@ function roadmap() {
   const W = 560, H = 280;
   let o = '';
   const items = [
-    { x: 16,  y: 14,  sec: '§§9.1–9.2 Basics', title: 'Landscapes & SGD', sub: 'η < 2/λ · ησ²/(2λb)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 198, y: 14,  sec: '§9.3 Testbeds',     title: 'TinyLM & CNN',     sub: 'Landmarks · 3× seed', fill: N.panel, st: C.gray, dk: C.ink },
-    { x: 380, y: 14,  sec: '§9.4 Momentum',     title: 'Heavy-Ball & NAG', sub: 'η/(1−β) · O(√κ)',     fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 16,  y: 152, sec: '§§9.5–9.6 Adaptive', title: 'AdamW & Muon',    sub: 'τ=1/(ηλ) · −ηUVᵀ',    fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 198, y: 152, sec: '§§9.7–9.8 Scaling',  title: 'Schedules & Batch', sub: 'B_T · b_crit ≈ b_noise', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 380, y: 152, sec: '§§9.9–9.10 Recipe',  title: 'μP, Clip & EMA',   sub: 'LR η/m · θ=1.0 · EMA', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 14,  sec: 'Foundations', title: 'Landscapes & SGD', sub: 'η < 2/λ · ησ²/(2λb)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 198, y: 14,  sec: 'Testbeds',     title: 'TinyLM & CNN',     sub: 'Landmarks · 3× seed', fill: N.panel, st: C.gray, dk: C.ink },
+    { x: 380, y: 14,  sec: 'Momentum',     title: 'Heavy-Ball & NAG', sub: 'η/(1−β) · O(√κ)',     fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 16,  y: 152, sec: 'Adaptive', title: 'AdamW & Muon',    sub: 'τ=1/(ηλ) · −ηUVᵀ',    fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 198, y: 152, sec: 'Step Size & Batch',  title: 'Schedules & Batch', sub: 'B_T · b_crit ≈ b_noise', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 380, y: 152, sec: 'Scale & Guards',  title: 'μP, Clip & EMA',   sub: 'LR η/m · θ=1.0 · EMA', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   items.forEach(it => {
     o += box(it.x, it.y, 164, 110, it.fill, it.st, 8, 2);
@@ -242,7 +242,7 @@ function gdSharpnessFilter() {
   const W = 560, H = 268;
   let o = '';
   o += box(16, 14, 528, 52, D.purple.tint, C.purple, 8, 2);
-  o += tx(280, 40, 'Linear Stability of a Minimum x*:  |1 − η f″(x*)| < 1  ⇔  f″(x*) < 2/η', { mono: true, fs: 12.5, fw: 700, fill: D.purple.dark });
+  o += tx(280, 40, 'Linear Stability of a Minimum x*:  |1 − η f″(x*)| < 1  ⇔  f″(x*) < 2/η', { mono: true, fs: 11.5, fw: 700, fill: D.purple.dark });
 
   o += card(16, 82, 254, 170, D.blue.dark, C.lblue,
     'Small LR: η = 0.5 (2/η = 4)',
@@ -553,7 +553,7 @@ function testLrDiagnosis() {
   o += card(16, 102, 528, 78, D.green.dark, C.lgreen,
     'η = 0.5 (Workable — Near Initial Sharpness Ceiling 2/L)',
     'Early >1-nat spike in steps 1–30, then steady descent to 2.13 nats',
-    'Action: Best constant SGD rate; add warmup (§9.7) or clipping (§9.10)');
+    'Action: Best constant SGD rate; add warmup or clipping');
   o += card(16, 192, 528, 78, D.red.dark, D.red.tint,
     'η = 2.5 (Too High — Exceeds Stability Limit η > 2/λ_max)',
     'Step 1 overshoots into steeper region; overflows to inf in 10 steps',
@@ -729,14 +729,14 @@ function adamLayerScales() {
   let o = '';
   o += card(16, 14, 254, 142, D.red.dark, D.red.tint,
     'Raw Gradient RMS (Step 0)',
-    'token_emb: 1.7×10⁻⁴',
-    'biases: 6.8×10⁻³ (40× gap!)',
-    '15× disparity at step 500');
+    'token_emb: 2×10⁻⁴ · biases: 7×10⁻³',
+    'max / min across groups: 39×',
+    '15–16× spread at step 500');
   o += card(290, 14, 254, 142, D.green.dark, C.lgreen,
     'Adam Update RMS ‖Δx‖/η',
     'Divides by coordinate √v̂_{t,i}',
-    'All 8 groups in 0.14–0.28 η',
-    'Compressed into a 2× band!');
+    'All 8 groups in 0.12–0.28 η',
+    'Compressed into a ~2× band');
 
   o += box(16, 172, 528, 84, C.lblue, C.blue, 8, 2);
   o += tx(280, 198, 'Why Nominal η Shifts 160× (SGD 0.5 vs. AdamW 3×10⁻³):', { fs: 13.5, fw: 700, fill: D.blue.dark });
@@ -808,7 +808,7 @@ function adamSignAndEps() {
     'For ε ≫ √v̂_{t,i}, Adam reduces to SGD with momentum at rate (1−β₁)η/ε',
     'Default ε = 10⁻⁸ stays well below typical gradient RMS (10⁻⁴–10⁻²)');
   o += card(16, 192, 528, 78, D.red.dark, D.red.tint,
-    '3. Small-β₂ Pathology (Reddi et al., 2019: Periodic +4, −1, −1)',
+    '3. Small-β₂ Pathology (Reddi et al., 2018: Periodic +4, −1, −1)',
     'Short-memory β₂ shrinks √v_t on −1 steps and inflates √v_t on +4 step',
     'Keeping β₂ ∈ [0.95, 0.999] stabilizes √v̂_t over 20–1,000 steps');
   return svg(W, H, o);
@@ -1156,7 +1156,7 @@ function schedWarmupMechanics() {
     'Cold Start (η₀ = 0.03)',
     'Step 1 moves weights by ±0.03',
     '0.03 / 0.045 = 67% jump!',
-    'Scrambles init → stalls at 2.7');
+    'Scrambles init → stalls near 2.8');
   o += card(290, 14, 254, 148, D.green.dark, C.lgreen,
     '20-Step Linear Warmup',
     'Step 1 starts at η₀/20 = 0.0015',
@@ -1196,13 +1196,13 @@ function bsTwoRegimes() {
   o += card(16, 14, 254, 146, D.green.dark, C.lgreen,
     'Small Batch (b: 4 → 16)',
     'Noise-dominated (b ≪ b_crit)',
-    '>3.3× fewer steps',
-    '~1.2× data cost (near-linear!)');
+    '≈3× fewer steps',
+    '1.2–1.3× data cost (near-linear)');
   o += card(290, 14, 254, 146, D.orange.dark, C.lamber,
     'Large Batch (b: 64 → 256)',
     'Curvature-dominated (b ≳ b_crit)',
-    'Only 1.8× fewer steps',
-    '2.2× data & FLOP bill!');
+    'Only ≈2× fewer steps',
+    '1.8–2.0× data & FLOP bill');
 
   o += box(16, 176, 528, 78, C.lblue, C.blue, 8, 2);
   o += tx(280, 200, 'The Scaling Knee: Critical Batch Size b_crit ≈ b_noise', { fs: 14, fw: 700, fill: D.blue.dark });
@@ -1598,17 +1598,17 @@ function pracFrontierRecipes() {
   const W = 560, H = 276;
   let o = '';
   o += card(16, 14, 254, 116, D.blue.dark, C.lblue,
-    'Llama 3 405B & OLMo 2 7B',
+    'OLMo 2 7B',
     'AdamW (0.9, 0.95) · Clip θ = 1.0',
-    'λ = 0.1 (2D only) · Cosine decay');
+    'λ = 0.1 (not emb) · Cosine decay');
   o += card(290, 14, 254, 116, D.purple.dark, D.purple.tint,
     'DeepSeek-V3 671B',
     'AdamW (0.9, 0.95) · Clip θ = 1.0',
     'λ = 0.1 · WSD schedule + ramp');
   o += card(16, 144, 528, 116, D.green.dark, C.lgreen,
-    'Kimi K2 1T (MuonClip) & Shared Frontier Consensus',
-    'Muon on 2D hidden matrices + AdamW on embeddings/head/1D · WSD cooldown',
-    'Defaults: (β₁,β₂)=(0.9,0.95), 2D λ=0.1, clip θ=1.0 + warmup');
+    'Llama 3 405B & Kimi K2 1T',
+    'Llama 3: AdamW · cosine 8×10⁻⁵ → 8×10⁻⁷ · β, clip, λ unpublished',
+    'Kimi K2: MuonClip on 2D matrices · WSD · λ = 0.1');
   return svg(W, H, o);
 }
 

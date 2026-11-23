@@ -1388,13 +1388,13 @@ Is $71\%$ the best any linear hyperplane classifier can do on binarized $28 \tim
 
 @!mdl-naive-bayes-confusions-and-weights-2
 
-- **A $+12.5$ percentage-point jump within the same model family:** Softmax regression reaches **$83.1\%$** accuracy and cuts pullover$\leftrightarrow$coat confusions in half ($295$ vs $614$) because discriminative gradient descent adjusts weights jointly to avoid double-counting correlated pixel patches.
+- **A $12$ percentage-point jump within the same model family:** Softmax regression reaches **about $83\%$** accuracy and cuts pullover$\leftrightarrow$coat confusions roughly in half (about $300$ vs $614$) because discriminative gradient descent adjusts weights jointly to avoid double-counting correlated pixel patches.
 :::
 
 ::: {.slide title="Analyzing the Confusion Matrix across Garment Groups"}
 [Where Counting Struggles Most]{.kicker}
 
-Extracting the six largest off-diagonal entries of the $10 \times 10$ confusion matrix $N_{ij}$ (where column $j$ is the true class and row $i$ is the predicted class) pinpoints where naive Bayes loses those $12.5$ points:
+Extracting the six largest off-diagonal entries of the $10 \times 10$ confusion matrix $N_{ij}$ (where column $j$ is the true class and row $i$ is the predicted class) pinpoints where naive Bayes loses those $12$ points:
 
 @!mdl-naive-bayes-confusions-and-weights-1
 
@@ -1500,7 +1500,7 @@ $$p(\mathbf{x}_{\mathcal{V}} \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \m
 | **Decision Score $s_y(\mathbf{x})$** | Affine $\mathbf{w}_y^\top \mathbf{x} + b_y$ ($w_{iy} = \log\frac{\theta_{iy}}{1-\theta_{iy}}$) | Affine $\mathbf{w}_y^\top \mathbf{x} + b_y$ (fitted directly by SGD) |
 | **Training Algorithm** | Single-pass closed-form counting ($O(nd)$) | Iterative gradient optimization over epochs |
 | **Sample Complexity** | **$O(\log d)$** examples to reach asymptotic floor | **$O(d)$** examples to reach asymptotic floor |
-| **Asymptotic Accuracy ($n \gg d$)** | Lower ($70.6\%$ on Fashion-MNIST; high bias) | Higher ($83.1\%$ on Fashion-MNIST; low bias) |
+| **Asymptotic Accuracy ($n \gg d$)** | Lower ($70.6\%$ on Fashion-MNIST; high bias) | Higher ($\approx 83\%$ on Fashion-MNIST; low bias) |
 | **Probability Calibration** | Severely overconfident ($\mathrm{ECE} = 0.29$; double-counting) | Well calibrated ($\mathrm{ECE} < 0.03$) |
 | **Missing Features at Test Time** | Exact closed-form marginalization (drop factors) | No marginalization rule; requires imputation |
 :::

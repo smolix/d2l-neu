@@ -416,7 +416,7 @@ print(f'mean {accs.mean():.1f}, max - min {np.ptp(accs):.1f} points')
 ```{.python .input #reproducibility-inspection-seed-spread-1}
 %%tab pytorch
 def train_classifier(seed, data):
-    torch.manual_seed(seed)  # initialization, shuffle order, worker seeds
+    torch.manual_seed(seed)  # initialization and shuffle order
     model = d2l.SoftmaxRegression(num_outputs=10, lr=0.1)
     trainer = d2l.Trainer(max_epochs=3, num_gpus=1)
     trainer.board.display = False
@@ -1434,7 +1434,7 @@ When a `DataLoader` spawns `num_workers=2` processes via OS `fork`, each worker 
 
 @!reproducibility-inspection-dataloader-workers-2
 
-- **Identical batches across workers (Row 1):** Without per-worker re-seeding, Worker 0 and Worker 1 generate the exact same "random" numbers (`[0.549, 0.715, 0.603, 0.545]`).
+- **Identical batches across workers (Row 1):** Without per-worker re-seeding, Worker 0 and Worker 1 generate the exact same "random" numbers, so the two batches in the first line are identical.
 - **The fix (Row 2):** Re-seed each worker's generator inside `worker_init_fn` using `get_worker_info().seed` (or seed per example index `[base_seed, i]`).
 :::
 

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b4bb201e35b919fa83f4bcafd53524c119143719d9fee2ab209e8113a9ef9bd4",
+    "d2l_lib_fingerprint": "sha256:89b7bdedec4129858555ebff0d87aae88fe4cac9ddde60550e07869e592025e1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\np = 0.5: tensor([[ 0.,  2.,  4.,  6.,  0.,  0.,  0.,  0.],\n        [16.,  0., 20.,  0.,  0., 26., 28., 30.]])\np = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\nmean 1.000, variance 0.250\n"
+          "text": "p = 0: tensor([[ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.],\n        [ 8.,  9., 10., 11., 12., 13., 14., 15.]])\np = 0.5: tensor([[ 0.,  2.,  4.,  6.,  8., 10., 12., 14.],\n        [ 0., 18.,  0., 22., 24., 26.,  0., 30.]])\np = 1: tensor([[0., 0., 0., 0., 0., 0., 0., 0.],\n        [0., 0., 0., 0., 0., 0., 0., 0.]])\nmean 1.000, variance 0.250\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 36452,
-          "sha256": "sha256:b8e427f9a1f609b41ad2d30aceb5213c4e1c5f36690da1e4ed9d188202efff63"
+          "bytes": 37045,
+          "sha256": "sha256:9d536021444b323da4fa38231df25d707dd319f1bf2cceafd4902bc2717fb6e4"
         }
       ]
     },
@@ -64,19 +64,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.627\n"
+          "text": "dropout 0: wrong labels reproduced 1.00, validation accuracy over the last 10 epochs 0.595\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout 0.5: wrong labels reproduced 0.83, validation accuracy over the last 10 epochs 0.664\n"
+          "text": "dropout 0.5: wrong labels reproduced 0.80, validation accuracy over the last 10 epochs 0.654\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-noisy-labels-2-1.svg",
-          "bytes": 47863,
-          "sha256": "sha256:9bc7df0ce4f9d4f35d21d0900cb9e173c1207bc221db59bc57610d491890f8c5"
+          "bytes": 48338,
+          "sha256": "sha256:daff56ed433e2a98f00e634615cd4d0e680a9452089817d33032d5c7f3a1691b"
         }
       ]
     }

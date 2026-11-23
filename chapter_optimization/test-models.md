@@ -812,8 +812,8 @@ The census lists every parameter tensor with its shape and size, then the three 
 ::: {.cols .vc}
 ::: {.col}
 - Sweeping plain minibatch SGD (no momentum, no weight decay, $2{,}000$ steps) across $\eta \in \{0.1, 0.5, 2.5\}$ from identical initial weights reveals three distinct trajectories:
-  - **$\eta = 0.1$ (blue):** Smooth, monotonic descent that finishes at **$2.48$ nats**—barely reaching the bigram table landmark ($2.5$).
-  - **$\eta = 0.5$ (orange):** Spikes upward by $>1$ nat in the first $30$ steps, then recovers and reaches **$2.13$ nats**.
+  - **$\eta = 0.1$ (blue):** Smooth, monotonic descent that finishes at **about $2.5$ nats**—barely reaching the bigram table landmark ($2.5$).
+  - **$\eta = 0.5$ (orange):** Spikes upward by $>1$ nat in the first $30$ steps, then recovers and reaches **about $2.1$ nats**.
   - **$\eta = 2.5$ (green):** Drops on step 1, explodes above $6$ nats on step 2, and diverges to **`inf`** within $10$ steps.
 :::
 
@@ -829,7 +829,7 @@ The census lists every parameter tensor with its shape and size, then the three 
 ::: {.cols .vc}
 ::: {.col}
 - **$\eta = 0.1$ (Under-budgeted travel):** Smooth descent still dropping at step $2{,}000$; cumulative travel $B_T = \eta T = 200$ is too small $\to$ **raise $\eta$**.
-- **$\eta = 0.5$ (Near initial sharpness edge $2/L$):** Early $>1$-nat spike in steps $1\text{--}30$, then fast descent to $2.13$ nats $\to$ **add warmup (§{sec_scheduler}) or clipping (§{sec_practice})**.
+- **$\eta = 0.5$ (Near initial sharpness edge $2/L$):** Early $>1$-nat spike in steps $1\text{--}30$, then fast descent to about $2.1$ nats $\to$ **add warmup (§{sec_scheduler}) or clipping (§{sec_practice})**.
 - **$\eta = 2.5$ (Exceeds $2/\lambda_{\max}$):** Step 1 overshoots into a steeper basin and diverges to `inf` $\to$ **lower $\eta$**.
 :::
 
@@ -847,7 +847,7 @@ The census lists every parameter tensor with its shape and size, then the three 
 - Running the exact same $2{,}000$-step `train_steps` loop on `FashionCNN` ($b = 256$ images) with plain SGD at $\eta = 0.3$ establishes our image classification baseline:
   - **Final training loss:** $\approx 0.22\text{--}0.23$ nats (down from uniform $\ln 10 \approx 2.30$).
   - **Held-out test accuracy:** $\approx 89.5\%\text{--}90.5\%$.
-- Together, **`TinyLM` ($2.13$ nats under plain SGD)** and **`FashionCNN` ($0.22$ loss / $90\%$ test accuracy)** serve as the reference baselines for §{sec_momentum}–§{sec_practice}.
+- Together, **`TinyLM` (about $2.1$ nats under plain SGD)** and **`FashionCNN` ($0.22$ loss / $90\%$ test accuracy)** serve as the reference baselines for §{sec_momentum}–§{sec_practice}.
 :::
 
 ::: {.col .fig}
@@ -879,7 +879,7 @@ When evaluating a learning-rate sweep `lr_sweep` on a log-spaced grid (e.g., fac
 
 - **1. Tuned score at the grid optimum $\eta^\star$:** The lowest `final_loss` (or validation loss) achieved across the grid points tested, starting from identical initial weights.
 - **2. Usable learning-rate range:** The span of grid learning rates that finish within **$+0.15$ nats** of the optimum ($>10\times$ the multi-seed spread).
-  - *Example on `TinyLM`:* Under plain SGD across $\{0.1, 0.5, 2.5\}$, only a single grid point ($\eta = 0.5$ at $2.13$ nats) is usable ($\eta = 0.1$ is $+0.34$ nats worse; $\eta = 2.5$ diverges to `inf`).
+  - *Example on `TinyLM`:* Under plain SGD across $\{0.1, 0.5, 2.5\}$, only a single grid point ($\eta = 0.5$ at about $2.1$ nats) is usable ($\eta = 0.1$ is about $0.35$ nats worse; $\eta = 2.5$ diverges to `inf`).
   - As we will see in §{sec_adam}–§{sec_muon}, adaptive and orthogonalized optimizers widen this usable window across an order of magnitude ($10^{-3}$ to $10^{-2}$ or $3 \times 10^{-2}$).
 :::
 
@@ -931,7 +931,7 @@ Apply the experimental protocol of this section to three concrete questions:
 | **`TinyLM` on WikiText-103** | 2-block Transformer, $d=128$, $2$ heads, $64 \times 64$ byte batches | $470{,}784$ params ($90\%$ matrices, $9\%$ emb, $1\%$ vectors); $3\%$ corpus in $2{,}000$ steps | Single-pass pretraining testbed without memorization |
 | **`FashionCNN` on Fashion-MNIST** | 2 Conv-ReLU-Pool stages + 2 FC layers, $b = 256$ images | $421{,}642$ params ($95\%$ in `fc1`); $8.5$ epochs in $2{,}000$ steps | Multi-epoch classification testbed with held-out accuracy |
 | **Untrained Loss Landmarks** | Closed-form / count-based byte predictors | Untrained $5.71 \to$ Uniform $5.55 \to$ Unigram $3.2 \to$ Bigram $2.5$ nats | Anchors what a given nats/byte value means semantically |
-| **Plain SGD Baselines** | $2{,}000$ steps, constant $\eta$, tuned on grid | `TinyLM` at $\eta=0.5$: **$2.13$ nats**; `FashionCNN` at $\eta=0.3$: **$0.22$ loss / $90\%$ acc** | Reference bar that Momentum, AdamW, and Muon must beat |
+| **Plain SGD Baselines** | $2{,}000$ steps, constant $\eta$, tuned on grid | `TinyLM` at $\eta=0.5$: **$\approx 2.1$ nats**; `FashionCNN` at $\eta=0.3$: **$0.22$ loss / $90\%$ acc** | Reference bar that Momentum, AdamW, and Muon must beat |
 | **Comparison & Significance** | Independent LR sweep per arm from shared seed | Single-run threshold: **$0.05$ nats** (`TinyLM`), **$0.06$ loss / $3\%$ acc** (`FashionCNN`) | Separates algorithmic gains from nuisance tuning & seed noise |
 :::
 

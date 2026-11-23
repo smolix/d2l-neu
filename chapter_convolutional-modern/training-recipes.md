@@ -716,7 +716,8 @@ class FashionMNIST10k(d2l.FashionMNIST):
     def __init__(self, batch_size=128, resize=(96, 96), num_train=10000):
         super().__init__(batch_size, resize)
         idx = torch.randperm(len(self.train))[:num_train]
-        self.train = torch.utils.data.Subset(self.train, idx)
+        self.train.data = self.train.data[idx]  # get_dataloader reads these
+        self.train.targets = self.train.targets[idx]
 
 class ResNet18(d2l.Classifier):
     """The ResNet-18 of the residual-networks section, from d2l.Residual."""

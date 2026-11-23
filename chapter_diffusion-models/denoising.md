@@ -868,7 +868,7 @@ for name, xh in outputs.items():               # error of each of 1,000 images
 d2l.show_gray(jnp.concatenate([x[:8], xt[:8], x_lin[:8], x_net[0][:8]]), 4, 8);
 ```
 
-The noisy input has a per-pixel squared error of $\sigma^2 = 0.25$, the optimal linear (Wiener) filter achieves $\approx 0.045$, and both four-layer convolutional networks reach $\approx 0.030$ ($30\%$ lower error, separated by roughly 30 standard errors). While the Wiener filter shrinks every image toward a single global linear subspace—leaving blurred edges and background grain—the convolutional network projects noisy points toward the nonlinear manifold of garment images (compare Exercise :exref:`ex_denoising-data-on-a-line`). Because the posterior mean averages over all clean images consistent with $\tilde{\mathbf{x}}$, however, fine high-frequency texture destroyed by the noise is still replaced by a smooth average. Turning a denoiser into a sharpness-preserving generator requires integrating across noise levels (:numref:`sec_diffusion-gaussian-paths` and :numref:`sec_diffusion-integration`).
+The noisy input has a per-pixel squared error of $\sigma^2 = 0.25$, the optimal linear (Wiener) filter achieves $\approx 0.045$, and both four-layer convolutional networks reach $\approx 0.031$ ($30\%$ lower error, separated by more than 20 standard errors). While the Wiener filter shrinks every image toward a single global linear subspace—leaving blurred edges and background grain—the convolutional network projects noisy points toward the nonlinear manifold of garment images (compare Exercise :exref:`ex_denoising-data-on-a-line`). Because the posterior mean averages over all clean images consistent with $\tilde{\mathbf{x}}$, however, fine high-frequency texture destroyed by the noise is still replaced by a smooth average. Turning a denoiser into a sharpness-preserving generator requires integrating across noise levels (:numref:`sec_diffusion-gaussian-paths` and :numref:`sec_diffusion-integration`).
 
 ## Summary
 
@@ -1023,7 +1023,7 @@ Removing Gaussian noise $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\e
 
 ::: {.cols .vc}
 ::: {.col}
-- **Nonlinear manifold projection:** At noise level $\sigma = 0.5$ ($\textrm{MSE} = 0.25$ per pixel), a 4-layer convnet reduces Fashion-MNIST test error to **$0.030$**—beating the optimal $784 \times 784$ linear Wiener filter ($0.045$) by $33\%$.
+- **Nonlinear manifold projection:** At noise level $\sigma = 0.5$ ($\textrm{MSE} = 0.25$ per pixel), a 4-layer convnet reduces Fashion-MNIST test error to **$0.031$**—beating the optimal $784 \times 784$ linear Wiener filter ($0.045$) by $30\%$.
 - **Denoising $\iff$ score estimation:** By Tweedie's formula, the optimal least-squares denoiser $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$ is directly proportional to the gradient of the log-density $\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}})$.
 - **The single-level question:** If a denoiser implicitly learns the score vector field $\nabla \log p_\sigma$, can we generate fresh images by following that field uphill from noise?
 :::

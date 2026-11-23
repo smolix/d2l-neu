@@ -527,7 +527,7 @@ Computing `reliability(conf, correct)` across the $10{,}000$ Fashion-MNIST valid
 
 @!softmax-regression-concise-calibration-2
 
-- **Interpreting the bin counts:** Across the bins $[0.4, 0.5)$ through $[0.9, 1.0]$ (about $96\%$ of predictions), empirical accuracy matches mean confidence within about $1\text{--}6$ percentage points, yielding an overall $\mathrm{ECE} < 0.03$.
+- **Interpreting the bin counts:** Across the bins $[0.4, 0.5)$ through $[0.9, 1.0]$ (about $97\%$ of predictions), empirical accuracy matches mean confidence within about $6$ percentage points, yielding an overall $\mathrm{ECE} < 0.03$.
 :::
 
 ::: {.slide title="Visualizing the Reliability Diagram"}

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:63e67eda56b30f812e927a6b144dd1f78f99ba39361b9aff678cb71078cffde7",
+    "d2l_lib_fingerprint": "sha256:7920fc6bc7f61481d1dd19c2a1e8034df457659ce77bb22df0e5805898bc46e7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "latent-diffusion/latent-diffusion-the-autoencoder-2-1.png",
-          "bytes": 50803,
-          "sha256": "sha256:fdfeb80287033eb6107ae1e71bbacfe6f89630e3c67d78953d28224bbcb715bb"
+          "bytes": 50646,
+          "sha256": "sha256:ea15f0a9d717cf566da2e0cbd727a826c2fc0de94128e02e21074472f9f0239d"
         }
       ]
     },
@@ -65,7 +65,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "reconstructions: squared error 0.0038 per pixel, FD 0.61\n"
+          "text": "reconstructions: squared error 0.0038 per pixel, FD 0.69\n"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "latent std 0.94 (scale factor 1.06), encoder std 0.026, excess kurtosis -0.21\n"
+          "text": "latent std 0.94 (scale factor 1.06), encoder std 0.026, excess kurtosis -0.20\n"
         }
       ]
     },
@@ -97,14 +97,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD: pixel U-Net 1.50, latent U-Net 2.05\n"
+          "text": "FD: pixel U-Net 1.54, latent U-Net 2.07\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "latent-diffusion/latent-diffusion-the-same-regression-on-latents-3-1.png",
-          "bytes": 47357,
-          "sha256": "sha256:333533c4a2b5990fa0065ed91478cbd6dd29fbb4b84c37fd60c6a1d53d679497"
+          "bytes": 46812,
+          "sha256": "sha256:add9a93b42de74f88931143ac64d87608bb0d41406c10a1c9bf1ff4c1dca8f58"
         }
       ]
     },
@@ -141,42 +141,42 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  encoder std 0.028, reconstructions: error 0.0038, FD 0.61\n"
+          "text": "  encoder std 0.028, reconstructions: error 0.0038, FD 0.69\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  sigma 0.1: change 0.0023 per pixel, FD 0.49\n"
+          "text": "  sigma 0.1: change 0.0023 per pixel, FD 0.55\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  sigma 0.3: change 0.0206 per pixel, FD 0.73\n"
+          "text": "  sigma 0.3: change 0.0205 per pixel, FD 0.71\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  sigma 0.5: change 0.0547 per pixel, FD 3.40\nbeta 0.001\n"
+          "text": "  sigma 0.5: change 0.0545 per pixel, FD 3.46\nbeta 0.001\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  encoder std 0.194, reconstructions: error 0.0041, FD 0.86\n"
+          "text": "  encoder std 0.194, reconstructions: error 0.0041, FD 0.96\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  sigma 0.1: change 0.0026 per pixel, FD 0.77\n"
+          "text": "  sigma 0.1: change 0.0027 per pixel, FD 0.87\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  sigma 0.3: change 0.0232 per pixel, FD 0.51\n"
+          "text": "  sigma 0.3: change 0.0232 per pixel, FD 0.54\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  sigma 0.5: change 0.0618 per pixel, FD 1.32\n"
+          "text": "  sigma 0.5: change 0.0619 per pixel, FD 1.33\n"
         }
       ]
     },
@@ -187,12 +187,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta 0.0001: latent U-Net FD 2.07 and 1.93\n"
+          "text": "beta 0.0001: latent U-Net FD 2.04 and 2.02\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta 0.001: latent U-Net FD 2.72 and 2.58\n"
+          "text": "beta 0.001: latent U-Net FD 2.78 and 2.68\n"
         }
       ]
     },
@@ -213,12 +213,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "images (8, 1, 28, 28) -> tokens (8, 49, 256) -> output (8, 1, 28, 28)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "parameters: DiT 7.39M, U-Net 1.20M\noutput at initialization all zero: True\n"
+          "text": "images (8, 1, 28, 28) -> tokens (8, 49, 256) -> output (8, 1, 28, 28)\nparameters: DiT 7.39M, U-Net 1.20M\noutput at initialization all zero: True\n"
         }
       ]
     },
@@ -229,7 +224,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DiT-S     1.26M parameters   32 GFLOP per step   FD 4.88, 4.87\nDiT-M     7.39M parameters  185 GFLOP per step   FD 1.84, 1.92\nU-Net 32  0.34M parameters   51 GFLOP per step   FD 2.45, 2.50\nU-Net 64  1.20M parameters  203 GFLOP per step   FD 1.50, 1.49\n"
+          "text": "DiT-S     1.26M parameters   32 GFLOP per step   FD 4.82, 4.83\nDiT-M     7.39M parameters  185 GFLOP per step   FD 1.89, 1.89\nU-Net 32  0.34M parameters   51 GFLOP per step   FD 2.47, 2.52\nU-Net 64  1.20M parameters  203 GFLOP per step   FD 1.54, 1.51\n"
         }
       ]
     },
@@ -241,8 +236,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-2-1.svg",
-          "bytes": 29744,
-          "sha256": "sha256:dd3f48987eefd76ad83fd82dd93bde1f9ede4f7198ca2d0d85fd38ccf2189472"
+          "bytes": 29746,
+          "sha256": "sha256:93f83e0e5670313027d54acab523f848fb9f73dca3eaaac32b60b7b91dd3a9f4"
         }
       ]
     },
@@ -254,8 +249,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "latent-diffusion/latent-diffusion-scaling-with-compute-3-1.svg",
-          "bytes": 182561,
-          "sha256": "sha256:dcfab012634ad01d8b9c98c3f2f38c6e385472bd2bdd15ee0cbf4eb7db746af0"
+          "bytes": 182297,
+          "sha256": "sha256:1d069fdde910bc5518635e7126a6a4049b81c4052cba09640405b4a608829c5d"
         }
       ]
     },
@@ -266,7 +261,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "latent DiT-M, 185 GFLOP per step: FD 1.85; latent U-Net 2.05; reconstructions 0.61\n"
+          "text": "latent DiT-M, 185 GFLOP per step: FD 1.89; latent U-Net 2.07; reconstructions 0.69\n"
         }
       ]
     }

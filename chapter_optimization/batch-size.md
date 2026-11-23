@@ -198,7 +198,7 @@ print(f'after 200 steps of Adam: {noise_scale(cnn, sample_fashion):.0f}')
 
 On `TinyLM` at initialization, every window demands the same coarse unigram adjustment, so the signal $\|\nabla f\|^2$ is large and $b_{\text{noise}} \approx 2$ sequences. Once common byte statistics are learned (by step $500$), $\|\nabla f\|^2$ drops while inter-sequence variance $\operatorname{tr}\boldsymbol{\Sigma}$ persists, causing $b_{\text{noise}}$ to grow more than tenfold to $\sim 50\text{--}150$ sequences.
 
-`FashionCNN` behaves differently. Its ten classes are balanced, so an untrained network finds no adjustment that every image agrees on, and the noise scale is of the order of $100$ images from the first step. It hardly moves over the $200$ steps and stays near $100$ images.
+`FashionCNN` behaves differently. Its ten classes are balanced, so an untrained network finds no adjustment that every image agrees on, and the noise scale is of the order of $100$ images from the first step. Over the $200$ steps the estimate moves by less than a factor of two, in either direction depending on the run, and stays of the order of $100$ images.
 
 ## Batch Size, Step Efficiency, and Learning-Rate Scaling
 
@@ -413,7 +413,7 @@ d2l.plot(xs, ys, 'examples / minimum', 'steps / minimum', xscale='log',
          legend=['model', 'TinyLM', 'FashionCNN'])
 ```
 
-Both architectures fall near the universal curve $(E/E_{\min} - 1)(S/S_{\min} - 1) = 1$ (a point close to $E = E_{\min}$ sits on the curve's steep wall, where a small error in the measured step count moves it far up or down) with fitted critical batch sizes $b_{\text{crit}} \sim 100$ sequences for `TinyLM` and $b_{\text{crit}} \sim 200\text{--}400$ images for `FashionCNN`. For `TinyLM` the fit agrees with the two-batch estimate of $b_{\text{noise}}$ measured above, somewhat under $100$ sequences. For `FashionCNN` it is three to four times the estimate of about $100$ images. The simple noise scale ignores curvature, so it gives the order of magnitude of $b_{\text{crit}}$ and not its value.
+Both architectures fall near the universal curve $(E/E_{\min} - 1)(S/S_{\min} - 1) = 1$ (a point close to $E = E_{\min}$ sits on the curve's steep wall, where a small error in the measured step count moves it far up or down) with fitted critical batch sizes $b_{\text{crit}} \sim 100$ sequences for `TinyLM` and $b_{\text{crit}} \sim 200\text{--}400$ images for `FashionCNN`. For `TinyLM` the fit agrees with the two-batch estimate of $b_{\text{noise}}$ measured above, somewhat under $100$ sequences. For `FashionCNN` it is two to four times the estimate of about $100$ images. The simple noise scale ignores curvature, so it gives the order of magnitude of $b_{\text{crit}}$ and not its value.
 
 Finally, we directly verify the linear ($\eta \propto b$) versus square-root ($\eta \propto \sqrt{b}$) learning-rate scaling rules :eqref:`eq_lr-rules` on `FashionCNN` at a fixed data budget of $12{,}800$ images ($1/5$ epoch). The helper `final_loss_at` runs `d2l.lr_sweep` for `num_examples // b` steps at batch size `b` and returns the terminal losses averaged over the final quarter of each run:
 
@@ -689,7 +689,7 @@ Why does **Adam / AdamW** require **square-root scaling** $\eta(b) = \sqrt{b/b_0
 ::: {.col}
 - Training `TinyLM` with Adam ($\eta = 0.003\sqrt{b/64}$) to a held-out validation loss of $1.9$ nats across $b \in \{4, 16, 64, 256\}$ sequences:
   - **$b = 4 \to 16$ ($4\times$):** Steps drop about **$3\times$** ($\approx 4{,}000 \to 1{,}200$), closely tracking the dashed perfect-scaling line ($S \propto 1/b$).
-  - **$b = 64 \to 256$ ($4\times$):** Steps drop by only about **$2\times$** ($\approx 460 \to 225$), doubling the total sequences processed ($\approx 30{,}000 \to 57{,}000$) as $b$ crosses $b_{\text{crit}} \sim 100$.
+  - **$b = 64 \to 256$ ($4\times$):** Steps drop by only about **$2\times$** ($\approx 430 \to 215$), doubling the total sequences processed ($\approx 27{,}000 \to 55{,}000$) as $b$ crosses $b_{\text{crit}} \sim 100$.
 :::
 
 ::: {.col .fig}
@@ -704,7 +704,7 @@ Why does **Adam / AdamW** require **square-root scaling** $\eta(b) = \sqrt{b/b_0
 ::: {.cols .vc}
 ::: {.col}
 - Training `FashionCNN` with Adam to loss $0.35$ across $b \in \{8, 32, 128, 512, 2048\}$ images:
-  - **$b = 8 \to 32 \to 128$:** Near-linear step reductions ($\approx 2{,}900 \to 800 \to 250$ steps) with slowly rising total example cost ($\sim 22{,}000\text{--}32{,}000$ images).
+  - **$b = 8 \to 32 \to 128$:** Near-linear step reductions (from $2{,}300\text{--}3{,}000$ steps to about $700$ and then about $240$) with slowly rising total example cost ($\sim 19{,}000\text{--}32{,}000$ images).
   - **$b = 512 \to 2{,}048$ ($4\times$):** Saves only about a third of the steps ($\approx 120 \to 80$) while nearly tripling the data bill to $163{,}840$ images!
 :::
 
@@ -774,7 +774,7 @@ Why does **Adam / AdamW** require **square-root scaling** $\eta(b) = \sqrt{b/b_0
 - At the same $12{,}800$-image budget, we increase the batch size by **$64\times$ ($b = 2 \to 128$)** under Adam across a $13$-point factor-of-$2$ grid:
   - **No scaling ($1\times$):** $\eta$ is $4\text{--}8\times$ too small at $b = 128$, losing roughly $0.1$ nats.
   - **Square-root rule ($\sqrt{64} = 8\times = 2^3$, $+3$ grid steps):** Lands at the empirical optimum ($\eta = 0.0064$) or within one grid step of it!
-  - **Linear rule ($64\times = 2^6$, $+6$ grid steps):** Overshoots into the unstable right wall: the loss stays at $\log 10 \approx 2.3$, so the network learns nothing.
+  - **Linear rule ($64\times = 2^6$, $+6$ grid steps):** Overshoots onto the unstable right wall: the loss is the worst of the three, and at this rate or one grid step above it the loss stays at $\log 10 \approx 2.3$, so the network learns nothing.
 :::
 
 ::: {.col .fig .narrow}

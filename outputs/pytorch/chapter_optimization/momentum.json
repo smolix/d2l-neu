@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b7320fd36dc2c1b80163e6b77d0638ead3ac78506395b3ae2e78fc1f4a0acdc9",
+    "d2l_lib_fingerprint": "sha256:77c2b9c3839833d524285b3828ebca1a408cf3bd18bd90e31b07467431f5101b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-1-1.svg",
           "bytes": 20333,
-          "sha256": "sha256:4ec906ea6d0a8f745f0b8091c20003d2f84bfb4af45baceb1fb3c35e7f994e8d"
+          "sha256": "sha256:b50925b64b51897b29bb4992ce192ad120d02830c8ce781c5899698921486bf0"
         }
       ]
     },
@@ -72,7 +72,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-acceleration-and-damping-1.svg",
           "bytes": 18186,
-          "sha256": "sha256:edc30bf30febcbea31b39b5a6d429f050e748f35b2f53cd36b49cfd8c97581bd"
+          "sha256": "sha256:651e6c7d818a0873b085a63ce20e9967eb090c960b121de6b1cb1318d357c660"
         }
       ]
     },
@@ -103,12 +103,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FashionCNN          beta=0.0  best lr 0.2    steps to 0.3: 1725  final loss 0.272\n"
+          "text": "FashionCNN          beta=0.0  best lr 0.2    steps to 0.3: 1550  final loss 0.293\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FashionCNN          beta=0.9  best lr 0.04   steps to 0.3: 1200  final loss 0.300\n"
+          "text": "FashionCNN          beta=0.9  best lr 0.02   steps to 0.3: 1425  final loss 0.280\n"
         }
       ]
     },
@@ -126,7 +126,7 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-nesterov-momentum-1-1.svg",
           "bytes": 18106,
-          "sha256": "sha256:fc8d39fec6b08aa2d73b5d48c13d18ad470554a8532bef6a322a2a761fee97eb"
+          "sha256": "sha256:d2d3c02b0cfc9b17dd5c342960c2e048a4ea58610638d65477312cf101d49678"
         }
       ]
     }

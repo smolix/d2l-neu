@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:95cfa137532386057fb216f9c2a0c585240d7f92c8f441325e68ccd609f8dc7b",
+    "d2l_lib_fingerprint": "sha256:bdc78129a4d8ffc3f1747912f275ac912da77f2e11517e6b4063e7291e371d3e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,17 +50,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   1        1       1.616             16    16         0.25               1.4\n"
+          "text": "   1        1       1.626             17    28         0.25               1.8\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 0.3      inf       1.668\n"
+          "text": " 0.3      inf       1.671\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   3        1     103.726           2000  1999        32.92               6.4\n"
+          "text": "   3        1         inf           1997  1996          nan               nan\n"
         },
         {
           "type": "stream",
@@ -70,17 +70,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   1        1       1.617             16    18         0.25               1.6\n"
+          "text": "   1        1       1.619             17    16         0.26               1.8\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 0.3      inf       1.668\n"
+          "text": " 0.3      inf       1.652\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   3        1         inf            774   773          nan               nan\n"
+          "text": "   3        1         inf           1636  1635          nan               nan\n"
         }
       ]
     },
@@ -111,22 +111,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant rate            0.871 to 0.909        0.909       0.915\n"
+          "text": "constant rate            0.792 to 0.913        0.908       0.914\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine decay             0.903 to 0.907        0.907       0.905\n"
+          "text": "cosine decay             0.906 to 0.912        0.911       0.909\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant rate            0.858 to 0.911        0.902       0.917\n"
+          "text": "constant rate            0.870 to 0.902        0.902       0.910\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine decay             0.909 to 0.910        0.910       0.908\n"
+          "text": "cosine decay             0.899 to 0.908        0.908       0.906\n"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 31679,
-          "sha256": "sha256:7c6a3a07306b1040e8f0a75ed21b4239e75859802c6097dc0ef0bd5f0a8ddac4"
+          "bytes": 31766,
+          "sha256": "sha256:4129b2cb72d1f4830b3791e4efad0030c1bd0ed4296e7275f6383a9d96a037d3"
         }
       ]
     },
@@ -165,22 +165,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: loss 1.891 after 300 steps, 2% of the steps clipped\n"
+          "text": "lr 0.001: loss 1.881 after 300 steps, 3% of the steps clipped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: loss 1.730 after 300 steps, 3% of the steps clipped\n"
+          "text": "lr 0.003: loss 1.740 after 300 steps, 3% of the steps clipped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: loss 2.488 after 300 steps, 6% of the steps clipped\n"
+          "text": "lr 0.01: loss 2.498 after 300 steps, 6% of the steps clipped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "peak rate 0.003; noise scale after its 300 steps: 150\n"
+          "text": "peak rate 0.003; noise scale after its 300 steps: 153\n"
         }
       ]
     },
@@ -196,12 +196,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "seed 1                1.245    1.245     0.6%     1.298  0.054\n"
+          "text": "seed 1                1.245    1.245     0.5%     1.303  0.058\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "seed 2                1.252    1.252     0.6%     1.308  0.056\nspread between the seeds: configured 0.007, baseline 0.009\n"
+          "text": "seed 2                1.248    1.249     0.5%     1.300  0.052\nspread between the seeds: configured 0.004, baseline 0.003\n"
         }
       ]
     }

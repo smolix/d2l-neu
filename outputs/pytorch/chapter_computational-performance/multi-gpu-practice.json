@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8711470ed581b0f040daa37a7d5442f6ffe86cc335c793deefa649e4591702fa",
+    "d2l_lib_fingerprint": "sha256:e802b60fcaa3bc7407e564aaca8a383f572af5017b88e7e7c4ee06b97da09c82",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 2.2e-02\nlargest difference from one GPU on all 256: 7.7e-04\nlargest difference from one GPU on two accumulated halves: 1.2e-07\n"
+          "text": "largest update 1.7e-02\nlargest difference from one GPU on all 256: 1.0e-03\nlargest difference from one GPU on two accumulated halves: 1.2e-07\n"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bus bandwidth = 2.43 GB/s (beta_link = 0.41 ns/byte)\nk=2: exposed 18 ms without overlap (1.0 S beta_link), 4 ms with full overlap (last bucket)\nk=4: exposed 28 ms without overlap (1.5 S beta_link), 5 ms with full overlap (last bucket)\n"
+          "text": "bus bandwidth = 2.44 GB/s (beta_link = 0.41 ns/byte)\nk=2: exposed 18 ms without overlap (1.0 S beta_link), 4 ms with full overlap (last bucket)\nk=4: exposed 27 ms without overlap (1.5 S beta_link), 5 ms with full overlap (last bucket)\n"
         }
       ]
     },
@@ -83,7 +83,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2281 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4033 examples/s, speedup 1.77, efficiency 88%\n          predicted 86% without overlap, 97% with full overlap; exposed 15 ms\n4 GPU(s):  7556 examples/s, speedup 3.31, efficiency 83%\n          predicted 80% without overlap, 95% with full overlap; exposed 23 ms\n"
+          "text": "1 GPU(s):  2285 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4039 examples/s, speedup 1.77, efficiency 88%\n          predicted 86% without overlap, 97% with full overlap; exposed 15 ms\n4 GPU(s):  7573 examples/s, speedup 3.31, efficiency 83%\n          predicted 80% without overlap, 95% with full overlap; exposed 23 ms\n"
         }
       ]
     },
@@ -101,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
           "bytes": 25898,
-          "sha256": "sha256:231e913b06b47838118a1cbee2c5ca0377e3e7361b1083b8dd81b633bea840c0"
+          "sha256": "sha256:7462e6758df44ac8848e5861d793dbff8471a5b9c67d32532872cb55e00d6367"
         }
       ]
     },
@@ -117,17 +117,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU:                         112.2 ms per step; GPU 0 computes  111.9 ms, communicates   0.0 ms\n"
+          "text": "1 GPU:                         112.1 ms per step; GPU 0 computes  111.9 ms, communicates   0.0 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPUs without communication:  112.1 ms per step; GPU 0 computes  111.6 ms, communicates   0.0 ms\n"
+          "text": "2 GPUs without communication:  111.9 ms per step; GPU 0 computes  111.5 ms, communicates   0.0 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPUs:                        127.0 ms per step; GPU 0 computes  125.1 ms, communicates  20.0 ms\n"
+          "text": "2 GPUs:                        126.8 ms per step; GPU 0 computes  124.6 ms, communicates  20.0 ms\n"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bus bandwidth 2.43 GB/s by default, 11.47 GB/s with the copy engines (4.7x)\n"
+          "text": "bus bandwidth 2.44 GB/s by default, 11.53 GB/s with the copy engines (4.7x)\n"
         }
       ]
     }

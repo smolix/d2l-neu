@@ -1409,8 +1409,8 @@ Evaluating the teacher ($1$ to $50$ Euler steps) and two distilled students (`se
 ::: {.cols .vc}
 ::: {.col}
 - **1 evaluation:** Teacher Euler collapses onto the gray dataset mean ($\mathrm{FD} \approx 160$), whereas 1 student jump scores **$\mathrm{FD} \approx 11.5$** ($14\times$ lower!).
-- **2 evaluations:** Teacher Euler scores $\mathrm{FD} \approx 80$, while 2 student jumps reach **$\mathrm{FD} \approx 5.0$** (outperforming 10 teacher steps at $7.1$).
-- **4 evaluations:** Student reaches **$\mathrm{FD} \approx 3.7$**, approaching 20 teacher Euler steps ($3.1$) and within $1.4\times$ of the 50-step teacher ($2.6$).
+- **2 evaluations:** Teacher Euler scores $\mathrm{FD} \approx 80$, while 2 student jumps reach **$\mathrm{FD} \approx 4.5$ to $5$** (outperforming 10 teacher steps at about $7$).
+- **4 evaluations:** Student reaches **$\mathrm{FD} \approx 3.7$**, matching 20 teacher Euler steps ($3.5$ to $4$) and within $1.4\times$ of the 50-step teacher ($2.6$).
 :::
 
 ::: {.col}

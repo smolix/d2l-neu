@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c6391ecb3c79313f7a683920c36e054f08accb0798ff327744c3cdde3499b17d",
+    "d2l_lib_fingerprint": "sha256:9ee3fec22c1158d1cddbdd44bef854571e1c8778482c5f46ff4b4df8ac31958d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[0.117, 0.761, 0.904, 0.053], [0.117, 0.761, 0.904, 0.053]]\n"
+          "text": "[[0.61, 0.817, 0.884, 0.742], [0.61, 0.817, 0.884, 0.742]]\n"
         },
         {
           "type": "stream",
@@ -57,7 +57,7 @@
       ]
     },
     "reproducibility-inspection-seed-spread-1": {
-      "code_fingerprint": "sha256:4a946dfa3af6e492d634ac226fab18424f0f382664f9c25fa6ebf1362fbf623e",
+      "code_fingerprint": "sha256:095d13b44fc23cf6654c2e6be8df6bcbc69a0a6240ff58c852664a1e1026cb59",
       "kind": "text",
       "outputs": [
         {
@@ -68,7 +68,7 @@
       ]
     },
     "reproducibility-inspection-seed-spread-2": {
-      "code_fingerprint": "sha256:c06f404559878059b53d93e4465e6decab483e923e656cf420310d23550e8394",
+      "code_fingerprint": "sha256:3431b3e435d160a655bfd1f0322bbb0cd703d1a73e50f526db83390ab3818bbf",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:22e040d9fdf2ab77bc37dec52249d7e8c2c1b9ecadad9068546e24ae0b45615a",
+      "code_fingerprint": "sha256:8a9e3cae0eb0fcd0b2785d83c757e3edc4070d68b09063471719adaee8ccfc2e",
       "kind": "text",
       "outputs": [
         {
@@ -90,13 +90,13 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-2": {
-      "code_fingerprint": "sha256:048fb624569e2b1f133e784b52c13f0df73a055c27f32355bb52ba0ef231ce31",
+      "code_fingerprint": "sha256:f982601668b0482fec735510316b4ce9c82eb5fb1c59009cd6467f8ccfa680c9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "deterministic False: bitwise equal False, largest difference 0.0038\n"
+          "text": "deterministic False: bitwise equal False, largest difference 0.0051\n"
         },
         {
           "type": "stream",
@@ -106,23 +106,23 @@
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:bb8fe7979d0a05605a360409a2a32be38bdc757c49d882b2a1690f820c491b06",
+      "code_fingerprint": "sha256:2dcd7f8bf29c26e8539a07eb5cd7e9054eed9a4bcb8cb3b5b9d9834d3558d9a4",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:cdd86c40c905d712b0b55e1cc54868ae268216c53203983d641eb518a2b8e1aa",
+      "code_fingerprint": "sha256:e1520e404b9832cec65a3d71b9bc668e865a4d8fa41f194fb3bf5b0e5be5df7f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear          std 0.69\nResidualBlock   std 0.84\nResidualBlock   std 1.14\nResidualBlock   std 1.42\nResidualBlock   std 1.87\nResidualBlock   std 2.16\nResidualBlock   std 2.74\nResidualBlock   std 3.37\nResidualBlock   std 3.75\nLinear          std 4.76\n"
+          "text": "Linear          std 0.72\nResidualBlock   std 0.88\nResidualBlock   std 1.09\nResidualBlock   std 1.31\nResidualBlock   std 1.62\nResidualBlock   std 1.98\nResidualBlock   std 2.28\nResidualBlock   std 2.93\nResidualBlock   std 3.58\nLinear          std 3.51\n"
         }
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:0781e525685e6c9e7890102fb329fc155638a0a8602c21a2549ff1f529d78d0c",
+      "code_fingerprint": "sha256:99d7f9a69b1dc6eaa89e3db6d061b746dd5489ab596f34bbb1095bf970d523c0",
       "kind": "text",
       "outputs": [
         {
@@ -133,13 +133,13 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:975f5ab25392811bd3cd289344e841755c1f6fc051345f48529b062c0ae6b488",
+      "code_fingerprint": "sha256:63d468596eb7a531eba96825570498a824cb73fd86da3e63bb8efa0fd08faaab",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block output gradients: 1.46 1.14 0.914 0.715 0.594 0.448 0.347 0.271\nweight 26.8, bias 4.87\n"
+          "text": "block output gradients: 1.04 0.83 0.659 0.489 0.396 0.317 0.257 0.194\nweight 12.9, bias 2.52\n"
         }
       ]
     }

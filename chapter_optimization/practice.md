@@ -294,7 +294,7 @@ d2l.plot(list(range(1, num_epochs + 1)), [live, avg, decayed], 'epoch',
                  'cosine decay, live weights'], legend_loc='outside')
 ```
 
-At a constant learning rate, the live weights jitter over a test-accuracy band of up to $\sim 5\%$ across the last five epochs, whereas their EMA tracks the top of the band smoothly at $>91\%$—matching the final accuracy of the cosine-decayed run without ever lowering the learning rate. Thus, during the constant plateau of a WSD schedule, weight EMA is a cheap approximation to a cooldown branch (:numref:`subsec_scheduler-branching`): it costs no extra steps. It is not a full replacement. On language models, averaging along the plateau recovers part of the cooldown gain, not all of it :cite:`Hagele.Bakouch.Kosson.ea.2024`.
+At a constant learning rate, the live weights jitter over a test-accuracy band of a few percentage points across the last five epochs, and occasionally far more when a single epoch goes badly, whereas their EMA rises smoothly along the top of the band to about $91\%$—matching the final accuracy of the cosine-decayed run without ever lowering the learning rate. Thus, during the constant plateau of a WSD schedule, weight EMA is a cheap approximation to a cooldown branch (:numref:`subsec_scheduler-branching`): it costs no extra steps. It is not a full replacement. On language models, averaging along the plateau recovers part of the cooldown gain, not all of it :cite:`Hagele.Bakouch.Kosson.ea.2024`.
 
 ## A Worked End-to-End Configuration
 
@@ -619,8 +619,8 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 ::: {.cols .vc}
 ::: {.col}
 - Training `FashionCNN` for $15$ epochs ($235$ steps/epoch $= 3{,}525$ steps) with plain SGD at a constant learning rate $\eta = 0.3$:
-  - **Live weights (blue):** Bounce wildly inside the noise ball, jittering across a **$2\text{--}6$ percentage-point test-accuracy band** ($86\%\text{--}91\%$) over the last five epochs!
-  - **Weight EMA ($\alpha = 0.999$, started at epoch 5, orange):** Smoothly tracks the very top of the band at **$>91\%$ test accuracy** on every single epoch, matching the full cosine-decayed trajectory (green)!
+  - **Live weights (blue):** Bounce wildly inside the noise ball, jittering across a **test-accuracy band of several percentage points** below $\approx 91\%$ over the last five epochs, with an occasional much deeper single-epoch drop!
+  - **Weight EMA ($\alpha = 0.999$, started at epoch 5, orange):** Rises smoothly along the top of the band to **about $91\%$ test accuracy**, matching the full cosine-decayed trajectory (green)!
 :::
 
 ::: {.col .fig}
@@ -635,8 +635,8 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 ::: {.cols .vc}
 ::: {.col}
 - Comparing constant-rate SGD ($\eta = 0.3$) against cosine decay ($\eta: 0.3 \to 0$) across two seeds on `FashionCNN`:
-  - **At a constant learning rate:** The EMA improves final test accuracy by $+1\text{--}5$ percentage points over the noisy live checkpoint, matching the **$91.1\%\text{--}91.4\%$** accuracy of a full cosine decay!
-  - **After cosine decay to zero:** The live weights have already settled at the center of the noise ball ($\eta_T = 0$), so taking an EMA on top of a fully decayed run adds nothing (or lags slightly by $0.1\text{--}0.3\%$).
+  - **At a constant learning rate:** The EMA improves final test accuracy by about $0.5\text{--}2$ percentage points over the noisy live checkpoint, matching the **$\approx 91\%$** accuracy of a full cosine decay!
+  - **After cosine decay to zero:** The live weights have already settled at the center of the noise ball ($\eta_T = 0$), so taking an EMA on top of a fully decayed run adds nothing (or lags by a few tenths of a point).
 - **When to use Weight EMA:** During constant-rate / WSD plateau training to obtain a usable model at any step without waiting for a cooldown branch (on language models it recovers part, not all, of the cooldown gain; Hägele et al., 2024).
 :::
 
@@ -707,10 +707,10 @@ We configure a $3{,}000$-step training run for a new $4$-block, width-$256$, $4$
 ::: {.cols .vc}
 ::: {.col}
 - Before launching the $3{,}000$-step run, we execute three $300$-step trial runs ($900$ steps total, $<30\%$ of one full run) across $\eta \in \{10^{-3}, 3{\times}10^{-3}, 10^{-2}\}$:
-  - **$\eta = 10^{-3}$:** Slow ($2.14$ nats, $0\%$ clipped).
-  - **$\eta = 3 \times 10^{-3}$:** **Optimal ($1.84$ nats, $4\%$ early steps clipped—a healthy guard!)**.
-  - **$\eta = 10^{-2}$:** Stalls at $2.50$ nats ($23\%$ clipped).
-- **Noise-scale check:** $b_{\text{noise}}$ grows from $\approx 2$ sequences at step 0 to $\sim 100$ sequences at step 300, confirming that $b = 256$ sits right at the critical batch size knee.
+  - **$\eta = 10^{-3}$:** Slow ($\approx 1.88$ nats, $2\text{--}3\%$ clipped).
+  - **$\eta = 3 \times 10^{-3}$:** **Optimal ($\approx 1.75$ nats, $3\%$ of steps clipped—a healthy guard!)**.
+  - **$\eta = 10^{-2}$:** Stalls at $\approx 2.5$ nats ($6\%$ clipped).
+- **Noise-scale check:** $b_{\text{noise}}$ grows from $\approx 2$ sequences at step 0 to $\sim 150$ sequences at step 300, confirming that $b = 256$ sits near the critical batch size knee.
 :::
 
 ::: {.col .fig}
@@ -725,8 +725,8 @@ We configure a $3{,}000$-step training run for a new $4$-block, width-$256$, $4$
 ::: {.cols .vc}
 ::: {.col}
 - Running the full $3{,}000$-step warmup + cosine schedule at the calibrated peak rate $\eta_0 = 3 \times 10^{-3}$ across two independent seeds:
-  - **Configured recipe:** Reaches **$1.337\text{--}1.339$ validation nats**, beating the constant-rate baseline ($1.390\text{--}1.395$) by **$0.052\text{--}0.056$ nats** ($>25\times$ the $0.002$-nat inter-seed spread!).
-  - **Guard verification:** Clipping fires on only **$0.6\%$ of steps** ($\sim 18$ steps out of $3{,}000$).
+  - **Configured recipe:** Reaches **$\approx 1.25$ validation nats**, beating the constant-rate baseline ($\approx 1.30$) by **$0.05\text{--}0.06$ nats** (several times the $<0.01$-nat inter-seed spread!).
+  - **Guard verification:** Clipping fires on only **$0.5\text{--}0.6\%$ of steps** ($\sim 15\text{--}18$ steps out of $3{,}000$).
   - **Post-decay EMA:** Matches the live weights to within $0.001$ nats because cosine decay already reduced $\eta_T \to 0$.
 :::
 
@@ -741,9 +741,9 @@ We configure a $3{,}000$-step training run for a new $4$-block, width-$256$, $4$
 
 Diagnose and solve each practical training scenario:
 
-1. **Diagnosing a stalled AdamW run:** On the $3.3\text{M}$-parameter `TinyLM` at $\eta = 10^{-2}$ with clipping at $\theta = 1.0$, the loss stalls near $2.5$ nats and clipping fires on $23\%$ of steps. A colleague proposes lowering the clipping threshold to $\theta = 0.2$ to shorten the steps. Will that fix the stall?
+1. **Diagnosing a stalled AdamW run:** On the $3.3\text{M}$-parameter `TinyLM` at $\eta = 10^{-2}$ with clipping at $\theta = 1.0$, the loss stalls near $2.5$ nats and clipping fires on $6\%$ of steps, twice as often as at the smaller rates. A colleague proposes lowering the clipping threshold to $\theta = 0.2$ to shorten the steps. Will that fix the stall?
 2. **AdamW second-moment recovery time:** Suppose an unclipped gradient spike of $100\times$ normal magnitude hits AdamW and multiplies $v_t$ by $1 + (1-\beta_2)10^4$. How many steps does it take for that excess contribution in $v_t$ to decay by $e^{-3} \approx 5\%$ under $\beta_2 = 0.999$ versus $\beta_2 = 0.95$?
-3. **When does Weight EMA add zero gain?** In our final $3{,}000$-step verification table, why did the configured run's live weights and its weight EMA achieve the exact same validation loss ($1.338$ vs. $1.339$)?
+3. **When does Weight EMA add zero gain?** In our final $3{,}000$-step verification table, why did the configured run's live weights and its weight EMA achieve the same validation loss to within $0.001$ nats?
 :::
 
 ::: {.slide title="Concept Check: Clipping, Spike Recovery, and Weight EMA (answers)"}

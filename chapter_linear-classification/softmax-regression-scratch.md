@@ -467,7 +467,7 @@ for k in np.argsort(mistakes, axis=None)[::-1][:5]:
 ```
 
 
-The confusion matrix confirms what our visual inspection in :numref:`sec_fashion_mnist` predicted: trousers, bags, and footwear are recognized $\sim 90\%$ of the time or better, whereas the five largest off-diagonal confusions all occur among the four look-alike upper-body tops (T-shirt, pullover, coat, and shirt)—with shirts recognized only about half the time because their silhouette sits right in the middle of the other three.
+The confusion matrix confirms what our visual inspection in :numref:`sec_fashion_mnist` predicted: trousers, bags, and footwear are recognized $\sim 90\%$ of the time or better, whereas the five largest off-diagonal confusions all occur among the four look-alike upper-body tops (T-shirt, pullover, coat, and shirt)—with shirts recognized only about half the time or less because their silhouette sits right in the middle of the other three.
 
 ### The Learned Templates
 
@@ -1026,7 +1026,7 @@ Plotting $C_{ij} = N_{ij} / \sum_{i'} N_{i'j}$ as a $10 \times 10$ heatmap shows
 ::: {.col}
 - **High-accuracy classes ($\ge 90\%$):** Trousers (`1`), bags (`8`), sandals (`5`), sneakers (`7`), and ankle boots (`9`) have distinct silhouettes and bright diagonal cells.
 - **The upper-body bottleneck:** The five largest off-diagonal confusions all occur among **T-shirt (`0`), pullover (`2`), coat (`4`), and shirt (`6`)**.
-- **Shirts are recognized only $\sim 50\%\text{--}60\%$ of the time:** Their boxy torso overlaps all three rival tops.
+- **Shirts are recognized only about half the time or less:** Their boxy torso overlaps all three rival tops.
 :::
 
 ::: {.col .fig}

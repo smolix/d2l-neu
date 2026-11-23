@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:65ed2f49e06ecc97dac287cf87bbc89291b7e25794ecc088915ed94e9ff00b29",
+    "d2l_lib_fingerprint": "sha256:4d2ca752c0c12bb1a92e6dd920c6eb069a612f21c078781094739ebe0bb206b0",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -103,12 +103,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 2.478\n"
+          "text": "lr 0.1: final loss 2.492\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.5: final loss 2.110\n"
+          "text": "lr 0.5: final loss 2.151\n"
         },
         {
           "type": "stream",
@@ -119,8 +119,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "test-models/test-models-a-first-run-with-minibatch-sgd-2-1.svg",
-          "bytes": 93021,
-          "sha256": "sha256:465c43f2088b85bfbafabda206389beadd1fd9281316accf3ac2abd905a69769"
+          "bytes": 93420,
+          "sha256": "sha256:d45256462f8bc177aa1a1bbb2a4d43802cd54f23b82c2e54550f37f2e331e47f"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.3: final loss 0.216, test accuracy 0.905\n"
+          "text": "lr 0.3: final loss 0.221, test accuracy 0.901\n"
         }
       ]
     }

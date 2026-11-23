@@ -419,7 +419,7 @@ d2l.plot(list(range(1, 201)), [acc[0]['wrong labels'], acc[0.5]['wrong labels'],
 Look at the two trajectories:
 
 - **Without dropout ($p = 0$):** By epoch 100, the MLP memorizes $100\%$ of the corrupted training labels, and validation accuracy degrades by $\sim 10$ percentage points from its early peak.
-- **With dropout ($p = 0.5$):** Memorization of wrong labels slows down. At epoch 200 the MLP reproduces roughly $70$–$85\%$ of them instead of all, and validation accuracy over the final 10 epochs is **3 to 4 percentage points higher** than for the unregularized network. The wrong-label curve is still rising, though: dropout delays the damage rather than removing it, which is why it is combined with early stopping.
+- **With dropout ($p = 0.5$):** Memorization of wrong labels slows down. At epoch 200 the MLP reproduces roughly $70$–$85\%$ of them instead of all, and validation accuracy over the final 10 epochs is **3 to 6 percentage points higher** than for the unregularized network. The wrong-label curve is still rising, though: dropout delays the damage rather than removing it, which is why it is combined with early stopping.
 
 In practice, dropout is most valuable precisely when parameter count dwarfs dataset size and training runs for many epochs (as in early-2010s vision classifiers like AlexNet in :numref:`sec_alexnet`); in single-pass foundation-model pretraining or directly before batch normalization layers (:numref:`sec_batch_norm`, where dropout's $1/(1-p)$ training variance inflation creates a train--test variance shift :cite:`Li.Chen.Hu.ea.2019`), dropout is typically reduced or omitted.
 
@@ -678,7 +678,7 @@ On the $1{,}000$-image benchmark with $40\%$ of labels redrawn ($\sim 36\%$ wron
 ::: {.cols .vc}
 ::: {.col}
 - **No dropout ($p = 0$, blue):** Memorizes $100\%$ of the wrong labels by epoch 100 (`C0--`), dragging validation accuracy (`C0-`) down by $\sim 10$ points from its early peak.
-- **With dropout ($p = 0.5$, orange):** Slows wrong-label memorization (`C1--`, $70$–$85\%$ reproduced at epoch 200 and still rising) and finishes **3 to 4 percentage points higher** in validation accuracy (`C1-`).
+- **With dropout ($p = 0.5$, orange):** Slows wrong-label memorization (`C1--`, $70$–$85\%$ reproduced at epoch 200 and still rising) and finishes **3 to 6 percentage points higher** in validation accuracy (`C1-`).
 :::
 
 ::: {.col .fig .big}
@@ -744,7 +744,7 @@ Test your command of dropout mathematics and systems behavior:
 ::: {.col}
 - **Unbiased inverted mask:** $h_j' = \frac{\xi_j h_j}{1 - p}$ keeps $\mathbb{E}[h_j'] = h_j$ during training so the test-time network runs completely unscaled ($h_j' = h_j$).
 - **Adaptive regularization:** Injects multiplicative variance $\mathrm{Var}[h_j'] = \frac{p}{1-p}h_j^2$, acting as an energy-weighted $\ell_2$ penalty on linear layers.
-- **Empirical impact:** On $40\%$-corrupted Fashion-MNIST ($n = 1{,}000$), $p = 0.5$ slows wrong-label memorization and lifts validation accuracy by $3$–$4$ percentage points.
+- **Empirical impact:** On $40\%$-corrupted Fashion-MNIST ($n = 1{,}000$), $p = 0.5$ slows wrong-label memorization and lifts validation accuracy by $3$–$6$ percentage points.
 :::
 
 ::: {.col .fig .big}

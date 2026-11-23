@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:527d2b788467542f4c73ca89d136bed863737303999fdad4692ffc4a68def2d5",
+    "d2l_lib_fingerprint": "sha256:b3573704730839cf0152404622862db995fba37beaa893047e8733afa02f595f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 32564,
-          "sha256": "sha256:bc9ff643e642d26ef5356fdc1d0ef11050a828bbf844974db269fcaf75537617"
+          "bytes": 33670,
+          "sha256": "sha256:251199b90b21c154d9d25980a85893dfad7e3292037043d09f6dee9888837689"
         }
       ]
     },
@@ -69,14 +69,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean size of the change: 0.042 of the mean size of the initial weights\n"
+          "text": "mean size of the change: 0.044 of the mean size of the initial weights\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-what-the-first-layer-learned-1-1.svg",
-          "bytes": 179999,
-          "sha256": "sha256:2abdb53282f19b1ce05d4f394d0444b3e74b1e4079f34eb3eaf311f897db5796"
+          "bytes": 178979,
+          "sha256": "sha256:db1340aa7d55ea8f52b9ee6e1fc82894ead2411f32bf0524e27d5100361b5e58"
         }
       ]
     }

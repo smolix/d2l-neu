@@ -673,7 +673,7 @@ $$v^{(k)} = \frac{1}{2}\, n_{\textrm{in}}\, \tau^2\, v^{(k-1)} \quad \Longrighta
 - **Setup:** 10 ReLU layers of width $h = 256$ under three initializations; Xavier and He differ by a factor of 2 per layer.
 - **$\mathcal{N}(0, 0.01^2)$:** Collapses to $\sim 10^{-19}$ by layer 10.
 - **Xavier ($\tau^2 = 1/h$):** Loses a factor of $1/2$ at every ReLU layer, decaying by $2^{-10} \approx 10^{-3}$ across 10 layers.
-- **He ($\tau^2 = 2/h$):** Holds both activation mean squares ($\approx 1.0$) and backward gradient mean squares ($\approx 0.5$) flat across all 10 layers!
+- **He ($\tau^2 = 2/h$):** Holds both activation mean squares and backward gradient mean squares near $1$, within a factor of about $2$, across all 10 layers!
 :::
 
 ::: {.col .fig}
@@ -698,7 +698,7 @@ To test how initial weight scale determines trainability, `DeepMLP(std, lr, dept
 - **Setup:** A 10-hidden-layer ReLU `DeepMLP` ($784 \to 256 \times 10 \to 10$), 10 epochs on Fashion-MNIST at $\eta = 0.05$.
 - **$\mathcal{N}(0, 0.01^2)$:** Completely untrainable—loss stays flat at $\log 10 \approx 2.30$ ($10\%$ accuracy).
 - **Xavier:** Starts slowly on epoch 1 (due to the $2^{-10}$ signal attenuation) before recovering to above $80\%$ accuracy.
-- **He initialization:** Drops the training loss steeply from epoch 1 and reaches $\sim 85\%$ validation accuracy cleanly.
+- **He initialization:** Drops the training loss steeply from epoch 1 and reaches $85$–$87\%$ validation accuracy cleanly.
 :::
 
 ::: {.col .fig}

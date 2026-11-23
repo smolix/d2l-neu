@@ -83,7 +83,7 @@ d2l.use_svg_display()
 Fashion-MNIST contains $6{,}000$ training images and $1{,}000$ test images for each of its $10$ garment categories ($60{,}000$ and $10{,}000$ in total), stored as 8-bit unsigned integers in $[0, 255]$ ($0$ = dark background). Following our object-oriented design (:numref:`sec_oo-design`), `FashionMNIST` subclasses `d2l.DataModule` and accepts `batch_size` and an optional spatial `resize` tuple (defaulting to $(28, 28)$):
 
 :begin_tab:`pytorch`
-`torchvision.datasets.FashionMNIST` downloads the dataset and applies a `transforms.Compose` pipeline that resizes each image and scales pixel intensities to float32 tensors in $[0, 1]$.
+`torchvision.datasets.FashionMNIST` downloads the dataset and keeps all images of a split in one `uint8` tensor. The data loader that we define below reads this tensor and converts whole minibatches at a time. The `transforms.Compose` pipeline resizes one image and scales its pixel intensities to a float32 tensor in $[0, 1]$. It applies whenever we index the dataset directly, as in `data.train[i]`, or pass `data.train` to a loader of our own.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -216,6 +216,10 @@ Now we attach `get_dataloader(self, train)` to `FashionMNIST`, wrapping the fram
 A `batchify` helper resizes each minibatch as the loader reads it.
 :end_tab:
 
+:begin_tab:`pytorch`
+A `batchify` helper scales each minibatch to float32 in $[0, 1]$ and resizes it as the loader reads it. One operation on a whole minibatch is much cheaper than a separate operation for each image, which is why the loader does not go through the per-image transform.
+:end_tab:
+
 ```{.python .input #image-classification-dataset-reading-a-minibatch-1}
 %%tab mxnet
 @d2l.add_to_class(FashionMNIST)  #@save
@@ -239,8 +243,20 @@ def batchify(self, examples):
 @d2l.add_to_class(FashionMNIST)  #@save
 def get_dataloader(self, train):
     data = self.train if train else self.val
-    return torch.utils.data.DataLoader(data, self.batch_size, shuffle=train,
-                                       num_workers=self.num_workers)
+    # Serve the 8-bit image tensor directly, not one PIL image at a time
+    X = data.data.unsqueeze(1)  # Add the channel axis
+    return torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(X, data.targets), self.batch_size,
+        shuffle=train, collate_fn=self.batchify)
+
+@d2l.add_to_class(FashionMNIST)  #@save
+def batchify(self, examples):
+    """Stack examples into a minibatch, scale to [0, 1], resize if asked."""
+    X, y = torch.utils.data.default_collate(examples)
+    X = X.float() / 255
+    if X.shape[2:] != tuple(self.resize):
+        X = F.interpolate(X, size=self.resize, mode='bilinear', antialias=True)
+    return X, y
 ```
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-1}
@@ -351,23 +367,6 @@ Even a quick visual scan previews what our linear classifier is up against: trou
        their means are close, and say which pixels carry the difference.
 
 
-:begin_tab:`pytorch`
-2. [code] **Loader throughput.** The time of one pass over the training
-   set depends on the minibatch size and on how many processes prepare the
-   minibatches.
-    1. Time one full pass of `train_dataloader` for `FashionMNIST`
-       constructed with `batch_size` of 1, 16, 64, 256, and 1024, and plot
-       the throughput in images per second against `batch_size`. Explain
-       the shape of the curve in terms of per-batch overhead and per-image
-       work.
-    1. `get_dataloader` passes the `num_workers` attribute, which
-       `DataModule` sets to 4 by default, to `torch.utils.data.DataLoader`.
-       For `data = FashionMNIST()`, time one pass of
-       `data.train_dataloader()` with `data.num_workers` set to 0, 1, 2, 4,
-       and 8, where 0 loads in the main process. State under what
-       conditions more workers stop helping.
-:end_tab:
-
 :begin_tab:`jax`
 2. [code] **Loader throughput.** The time of one pass over the training
    set depends on the minibatch size and on how much of the pipeline runs
@@ -402,7 +401,7 @@ Even a quick visual scan previews what our linear classifier is up against: trou
        more parallelism stops helping.
 :end_tab:
 
-:begin_tab:`mxnet`
+:begin_tab:`mxnet, pytorch`
 2. [code] **Loader throughput.** The time of one pass over the training
    set depends on the minibatch size and on the size of the images that
    the loader delivers.
@@ -501,13 +500,13 @@ Fashion-MNIST contains $6{,}000$ training and $1{,}000$ test images for each of 
 @-image-classification-dataset-loading-the-dataset-1
 :::
 
-::: {.slide title="Rescaling Pixels at Transform Time"}
+::: {.slide title="Rescaling Pixels in the Data Module"}
 [Object-Oriented Data Pipeline]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Normalization at transform time:** Raw 8-bit pixels (`uint8` in $[0, 255]$, dark background $= 0$) rescale to `float32` in $[0, 1]$.
-- **One place to change:** Because the transform lives in the `DataModule`, every model that loads Fashion-MNIST sees the same $[0, 1]$ inputs.
+- **Normalization before the model:** Raw 8-bit pixels (`uint8` in $[0, 255]$, dark background $= 0$) rescale to `float32` in $[0, 1]$ before a minibatch leaves the loader.
+- **One place to change:** Because the rescaling lives in the `DataModule`, every model that loads Fashion-MNIST sees the same $[0, 1]$ inputs.
 :::
 
 ::: {.col .fig}
@@ -651,7 +650,7 @@ When background CPU workers prefetch batch $b + 1$ while the GPU computes on bat
 
 $$T_{\text{epoch}} \;\ge\; \max\!\big(T_{\text{load}},\; T_{\text{compute}}\big)$$
 
-- **Small batch sizes ($n = 1$ or $16$):** Per-batch Python dispatch and IPC overhead dominate (`T_load >> T_compute`), starving the GPU.
+- **Small batch sizes ($n = 1$ or $16$):** Per-batch Python dispatch overhead dominates (`T_load >> T_compute`), starving the GPU.
 - **Worker scaling:** `num_workers=0` blocks serially between steps; once $T_{\text{load}} < T_{\text{compute}}$, extra workers add zero speedup.
 :::
 

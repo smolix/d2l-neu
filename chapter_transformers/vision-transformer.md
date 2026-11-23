@@ -318,7 +318,7 @@ print(f'trained ViT: {vit_acc:.3f} as is, '
       f'{min(accs):.2f} to {max(accs):.2f} with its patches shuffled')
 ```
 
-Scrambling the $6 \times 6$ patch arrangement drops validation accuracy from about 0.89 to roughly 0.3–0.45, depending on the shuffle, so the trained `ViT` relies heavily on where each patch sits. It still stays far above the 0.1 of chance, because local $16 \times 16$ patch textures—like shoe heels or collar shapes—already identify many coarse garment classes as a "bag of patches".
+Scrambling the $6 \times 6$ patch arrangement drops validation accuracy from about 0.89 to roughly 0.25–0.45, depending on the shuffle, so the trained `ViT` relies heavily on where each patch sits. It still stays far above the 0.1 of chance, because local $16 \times 16$ patch textures—like shoe heels or collar shapes—already identify many coarse garment classes as a "bag of patches".
 
 Does the unstructured 1D positional table `pos_embedding` ($36 \times d$) actually discover the 2D geometry of the $6 \times 6$ image grid? Computing the mean cosine similarity between patch position vectors as a function of their 2D grid distance $\max(|r - r'|, |c - c'|)$ on the $6 \times 6$ grid (`grid_similarity`) answers the question; for reference we compute the same curve for a 2D sinusoidal code, which encodes the grid by construction, and for random vectors, which do not:
 
@@ -715,8 +715,8 @@ We test how strongly the trained `ViT` depends on 2D spatial layout by permuting
 
 @!vision-transformer-does-the-vit-use-position-2
 
-- **Strong spatial reliance ($89\% \to 31\%\text{--}45\%$):** Scrambling where patches land cuts accuracy by roughly **45–55 percentage points**, proving the classifier relies heavily on patch positions.
-- **Bag-of-patches floor ($\gg 10\%$ random guessing):** Even scrambled images remain $3\text{--}4\times$ above the $10\%$ chance floor because local $16 \times 16$ textures (boot soles, collar cutouts) identify several garment classes without global geometry.
+- **Strong spatial reliance ($89\% \to 25\%\text{--}45\%$):** Scrambling where patches land cuts accuracy by roughly **45–65 percentage points**, proving the classifier relies heavily on patch positions.
+- **Bag-of-patches floor ($\gg 10\%$ random guessing):** Even scrambled images remain $2.5\text{--}4.5\times$ above the $10\%$ chance floor because local $16 \times 16$ textures (boot soles, collar cutouts) identify several garment classes without global geometry.
 :::
 
 ::: {.slide title="Do Learned Position Embeddings Discover the 2D Grid?"}
@@ -754,7 +754,7 @@ We test how strongly the trained `ViT` depends on 2D spatial layout by permuting
 ::: {.cols .vc}
 ::: {.col}
 - **Consistent 5-point CNN advantage:** Across independent runs (seed spread $\le 0.1\%$), `CompactResNet` reaches **$\approx 94\%$** validation accuracy versus **$\approx 89\%$** for `ViT`.
-- **Faster early convergence:** Built-in 2D locality and translation equivariance give the CNN an immediate 6-point lead at epoch 1 that persists through epoch 10.
+- **Faster early convergence:** Built-in 2D locality and translation equivariance give the CNN a lead of several points at epoch 1 that persists through epoch 10.
 :::
 
 ::: {.col .fig}
@@ -806,7 +806,7 @@ Work through these three quantitative questions:
 ::: {.cols .vc}
 ::: {.col}
 - **Stride-$p$ Patch Stem:** Maps $(C, H, W) \to m = HW / p^2$ tokens in one conv layer while keeping block parameters ($12 L d^2$) independent of $m$.
-- **Spatial Inductive Bias:** Without positional embeddings, ViT is permutation-invariant over patches; shuffling patches at test time drops accuracy from $89\%$ to $31\%\text{--}45\%$.
+- **Spatial Inductive Bias:** Without positional embeddings, ViT is permutation-invariant over patches; shuffling patches at test time drops accuracy from $89\%$ to $25\%\text{--}45\%$.
 - **Small Data vs. Scale:** Matched ResNet leads by $5\%$ from scratch on small data, whereas pretrained ViTs dominate at foundation scale.
 :::
 

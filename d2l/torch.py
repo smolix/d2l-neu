@@ -436,8 +436,21 @@ class FashionMNIST(d2l.DataModule):
 
     def get_dataloader(self, train):
         data = self.train if train else self.val
-        return torch.utils.data.DataLoader(data, self.batch_size, shuffle=train,
-                                           num_workers=self.num_workers)
+        # Serve the 8-bit image tensor directly, not one PIL image at a time
+        X = data.data.unsqueeze(1)  # Add the channel axis
+        return torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X, data.targets), self.batch_size,
+            shuffle=train, collate_fn=self.batchify)
+
+    def batchify(self, examples):
+        """Stack examples into a minibatch, scale to [0, 1], resize if asked.
+
+        Defined in :numref:`sec_fashion_mnist`"""
+        X, y = torch.utils.data.default_collate(examples)
+        X = X.float() / 255
+        if X.shape[2:] != tuple(self.resize):
+            X = F.interpolate(X, size=self.resize, mode='bilinear', antialias=True)
+        return X, y
 
     def visualize(self, batch, nrows=1, ncols=8, labels=None):
         """Show the images of a batch in grayscale, titled by their labels.

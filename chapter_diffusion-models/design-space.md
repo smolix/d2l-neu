@@ -801,7 +801,7 @@ floor = d2l.fid_score(f_test, d2l.fd_features(cnn, X_test[5000:]))
 print(f'FD, real against real: {floor:.2f}')
 ```
 
-Fashion-MNIST is mostly black background: the pixels have a mean of $-0.43$ and a root mean square of $0.83$, well above the paper's $0.5$, and the cell passes the measured value to `EDM`. Two sets of 5,000 real images score about $0.17$ against each other.
+Fashion-MNIST is mostly black background: the pixels have a mean of $-0.43$ and a root mean square of $0.83$, well above the paper's $0.5$, and the cell passes the measured value to `EDM`. Two sets of 5,000 real images score a little under $0.2$ against each other.
 
 `logit_normal_loss` is `regression_loss` with logit-normal times in place of uniform ones. On the linear path $\bar\sigma = t/(1 - t)$, so $\log \bar\sigma = m + s n$: with $m = -1.2$ and $s = 1.2$ the velocity model trains at EDM's log-normal levels, and the row of that name differs from EDM's only in the parameterization and the weight. It is also a logit-normal centered further toward the data than the $m = -0.5$ row, at $t \approx 0.23$.
 
@@ -922,7 +922,7 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
 
 At 5,000 updates (one-quarter the 20,000-step budget we will use for latent diffusion in :numref:`sec_diffusion-latent`), this table measures sample quality early in training across multiple seeds on two sampling grids:
 
-1. **Sampling grid sensitivity:** Every velocity model trained on the linear path (including the control trained at EDM's noise levels) scores $0.35$–$1.3$ FD lower on the linear grid than on the EDM grid, whereas the preconditioned EDM model is insensitive to the grid choice. Training at EDM's levels does not by itself make its grid the better one.
+1. **Sampling grid sensitivity:** Every velocity model trained on the linear path (including the control trained at EDM's noise levels) scores $0.3$–$1.3$ FD lower on the linear grid than on the EDM grid, whereas the preconditioned EDM model is insensitive to the grid choice. Training at EDM's levels does not by itself make its grid the better one.
 2. **Training noise-level distribution:** Centering logit-normal training times at $m = 0$ ($t = 0.5$) degrades FD by $1.1$–$1.3$ on the EDM grid ($0.5$–$0.75$ on the linear grid) relative to uniform $t$. Shifting the logit-normal center toward the data ($m = -0.5$, $t \approx 0.38$) or using EDM's levels ($m = -1.2$, $t \approx 0.23$) eliminates this deficit.
 3. **Target and preconditioning:** On the linear grid, the base velocity recipe, $\mathbf{v}$-prediction on the cosine path, and EDM achieve overlapping FD ranges across seeds.
 

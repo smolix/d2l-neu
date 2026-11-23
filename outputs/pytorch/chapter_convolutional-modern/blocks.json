@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:800e72eef4661d8ca3b4412fbf20c5a6ab7e79accefd7e90fce2e4e9cff07788",
+    "d2l_lib_fingerprint": "sha256:6733257d3de986db6070a2f3110416dd6607d05cd74be22015eafe79be08742d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,12 +30,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential             (1, 64, 112, 112)\nSequential             (1, 128, 56, 56)\nSequential             (1, 256, 28, 28)\nSequential             (1, 512, 14, 14)\nSequential             (1, 512, 7, 7)\nFlatten                (1, 25088)\n"
+          "text": "Sequential             (1, 64, 112, 112)\nSequential             (1, 128, 56, 56)\nSequential             (1, 256, 28, 28)\nSequential             (1, 512, 14, 14)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Linear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 10)\n"
+          "text": "Sequential             (1, 512, 7, 7)\nFlatten                (1, 25088)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Linear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Linear                 (1, 4096)\nReLU                   (1, 4096)\nDropout                (1, 4096)\nLinear                 (1, 10)\n"
         }
       ]
     },
@@ -52,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 31235,
-          "sha256": "sha256:26bf07827edc7f3bd99d9fd2b989b8ae220adb2d6589cb878d7197c3272cc998"
+          "bytes": 32425,
+          "sha256": "sha256:1a47ad32f12ecf202cea65b6a1cfd8d02a423c5b314c57b44228ef6624927592"
         }
       ]
     },
@@ -86,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 31791,
-          "sha256": "sha256:f40d5cff18909136eb5b196b24898605e045ce85ca0c9b84a331a4f9da570649"
+          "bytes": 32983,
+          "sha256": "sha256:80f6705e988123217c83ab5a8cbfde539eb312a92233170f99f1b7050005e5c3"
         }
       ]
     },
@@ -104,19 +114,19 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-3-1.svg",
-          "bytes": 32558,
-          "sha256": "sha256:0e5da7e0d380a46e752c4a79b5649a1fb6547cfaed84e227b537f992b37d4911"
+          "bytes": 31966,
+          "sha256": "sha256:3bed7da4897419a158b17620ca7a984afdbb37e88b38810180ce8386f08bb736"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-3-2.svg",
-          "bytes": 31794,
-          "sha256": "sha256:fb679f53963ca23ef6499e176a4d7e1547c0227a4df3b5115f879d0d51ff9acc"
+          "bytes": 35050,
+          "sha256": "sha256:fa2ebd7570dbd751fb6badb7c2a285291ecd3762234c45ae7f35ada86a8ad7d3"
         },
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.917, 'PooledVGG': 0.895}"
+          "text": "{'VGG': 0.914, 'PooledVGG': 0.891}"
         }
       ]
     },
@@ -154,8 +164,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/blocks-stem-body-and-head-3-1.svg",
-          "bytes": 30887,
-          "sha256": "sha256:139f54cfaa6e636a5f019457ad41b790a8960345c331251125a3b0ef89ec993b"
+          "bytes": 33044,
+          "sha256": "sha256:d1621012604721876843a89b539778d57fdc62a99af0006b0c9c3af8b4ca8169"
         }
       ]
     },
@@ -165,7 +175,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'VGG': 0.93, 'NiN': 0.888, 'PooledVGG': 0.895, 'GoogLeNet': 0.907}"
+          "text": "{'VGG': 0.934, 'NiN': 0.886, 'PooledVGG': 0.891, 'GoogLeNet': 0.907}"
         }
       ]
     }

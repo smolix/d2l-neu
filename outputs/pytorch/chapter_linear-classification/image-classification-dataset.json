@@ -44,12 +44,12 @@
       "outputs": []
     },
     "image-classification-dataset-reading-a-minibatch-1": {
-      "code_fingerprint": "sha256:89ff05d0bd69151766c75e6ee52fa286da6a50d8e95eccda8a78842bd92055d0",
+      "code_fingerprint": "sha256:d4b0f4cbb5131e5f2e3ceeb0b16fe180515df6b323681fe48b55a3a6569aab8e",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-3": {
-      "code_fingerprint": "sha256:5085924ca0a8d7f2dd1218830842ca038763189dd6ce637f95ff93a85a106b5a",
+      "code_fingerprint": "sha256:b0f77fbb9bf398706bc91ae8b7d8bc39cde4bc05cbec15e0692cab5a88d1c7c1",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-2": {
-      "code_fingerprint": "sha256:94a28e1edad783a5d9850d435e699336ac1a34e08902d05a24707c221fd477cc",
+      "code_fingerprint": "sha256:5cddd8d190e976a1fdd6d2627dacec4a0034aee1422ef52ec0715f626a3b5edb",
       "kind": "text",
       "outputs": [
         {
@@ -70,22 +70,22 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-3": {
-      "code_fingerprint": "sha256:aad207e1e5f2b9555bcfdceae6f8fea8f1dcbae748cef5f3ca8ced51775969a3",
+      "code_fingerprint": "sha256:8ee4c15ab5b5212f53382b7d7165c7933ad150f36553403a6442f6ff0b233dbd",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'2.24 sec'"
+          "text": "'0.42 sec'"
         }
       ]
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:b4efac2ed606e89c9d19bb7828e74311e1b390af98dbd7c2ba56d2211abc6147",
+      "code_fingerprint": "sha256:6db31058673d242f5d3b45abab526957f6a24fa0f9f4544142c8e9547e198638",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-inspecting-the-images-1": {
-      "code_fingerprint": "sha256:2635b1edb024451aecf21802d1dbbdbc8dcf9a9854119cfdc97033d36e3e7287",
+      "code_fingerprint": "sha256:3e359c3fd94f5b56be023e73a0836cecb09eaa651f0195bac93ac03d7192b6cf",
       "kind": "asset",
       "outputs": [
         {
@@ -93,7 +93,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-inspecting-the-images-1-1.svg",
           "bytes": 117657,
-          "sha256": "sha256:8f1f53558f8005eda3047a69e0b52d4504718f54d1a8aa8b67203ef9b9219022"
+          "sha256": "sha256:22327c3d88050c9cb30a2def582a5bfda6eb3408f9cad68d462a0cfae2227bfe"
         }
       ]
     }

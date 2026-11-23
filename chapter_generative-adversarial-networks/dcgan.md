@@ -375,7 +375,7 @@ fake = ema.model(jax.random.normal(jax.random.key(2), (20, 100)))
 d2l.show_images(np.asarray(fake) / 2 + 0.5, num_rows=4, num_cols=5);
 ```
 
-The generated sprites show diverse silhouettes and color palettes on white backgrounds, though with somewhat blotchy textures. Notice that the discriminator loss ($\sim 0.45$) remains well below $2\log 2 \approx 1.39$ without causing mode collapse.
+The generated sprites show diverse silhouettes and color palettes on white backgrounds, though with somewhat blotchy textures. Notice that the discriminator loss ($\sim 0.25\text{--}0.45$) remains well below $2\log 2 \approx 1.39$ without causing mode collapse.
 
 ## A Normalization-Free Backbone
 :label:`subsec_gan_r3gan_principles`
@@ -386,12 +386,15 @@ Over the years following DCGAN, large-scale image GANs accumulated numerous arch
 
 We build a minimalist convolutional backbone (:numref:`fig_gan_backbone`) without normalization layers or output $\tanh$:
 
-- The generator concatenates a learned $4 \times 4 \times 128$ constant tensor with a linear projection of $z$ ($4 \times 4 \times 100$)—plus optional extra channels used for class conditioning in :numref:`sec_gan_conditional`—and upsamples four times ($4 \to 8 \to 16 \to 32 \to 64$) via bilinear interpolation followed by a $3 \times 3$ convolution and leaky ReLU ($\text{slope} = 0.2$). Bilinear upsampling followed by a $3 \times 3$ convolution avoids the checkerboard artifacts caused by uneven transposed-convolution overlap :cite:`Odena.Dumoulin.Olah.2016`.
+- The generator concatenates a learned $4 \times 4 \times 128$ constant tensor with a linear projection of $z$ ($4 \times 4 \times 100$)—plus optional extra channels used for class conditioning in :numref:`sec_gan_conditional`—and upsamples four times ($4 \to 8 \to 16 \to 32 \to 64$) via bilinear interpolation followed by a $3 \times 3$ convolution and leaky ReLU ($\text{slope} = 0.2$). Bilinear upsampling followed by a $3 \times 3$ convolution avoids the checkerboard artifacts caused by uneven transposed-convolution overlap (:numref:`fig_gan_transposed_overlap`) :cite:`Odena.Dumoulin.Olah.2016`.
 - The critic mirrors this structure with $3 \times 3$ convolutions, leaky ReLU, and bilinear downsampling down to a $4 \times 4$ feature map $\phi(x)$ followed by a linear head.
 - To preserve activation variance across layers without batch normalization, all weights use He fan-in initialization :cite:`He.Zhang.Ren.ea.2015` scaled for leaky ReLU of slope $0.2$: variance $2 / ((1 + 0.2^2)\,n_{\mathrm{in}})$.
 
 ![The normalization-free convolutional backbone. The generator combines a learned $4 \times 4 \times 128$ constant with a projected latent vector, then applies four stages of bilinear upsampling, $3 \times 3$ convolution, and leaky ReLU. The critic mirrors this hierarchy with bilinear downsampling to a linear head.](../img/mdl-gan-backbone.svg)
 :label:`fig_gan_backbone`
+
+![Overlap counts of a transposed convolution with stride 2. Each input pixel stamps one copy of the kernel onto the output, and each number counts the stamps that cover that output pixel, away from the borders. Two neighboring stamps are outlined. With a $3 \times 3$ kernel (left) the counts alternate between 4, 2 and 1, so even constant weights paint a checkerboard. With a $4 \times 4$ kernel (right), whose size is a multiple of the stride, every pixel is covered four times.](../img/mdl-gan-transposed-overlap.svg)
+:label:`fig_gan_transposed_overlap`
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-1}
 %%tab pytorch
@@ -1051,7 +1054,7 @@ print(f'real pixel values equal to +1: {white:.0%}')
 The table highlights several key lessons:
 
 1. **Real-versus-real baseline floor:** Two disjoint sets of $4{,}059$ real sprites score $\text{FD} \approx 0.2$ (due to finite-sample covariance bias), $\widehat{\mathrm{MMD}}^2 \approx 0.000$, and precision/recall of $0.95$. Evaluating a second draw of latent codes changes FD by $\leq 0.2$.
-2. **Collapse vs. penalized training:** The collapsed unpenalized `NS` arm scores $\text{FD} \approx 64\text{--}72$ with $\text{recall} = 0.00$ and $\text{precision} \leq 0.07$. Adding $R_1 + R_2$ reduces FD by an order of magnitude ($\sim 4\text{--}6$) and raises both precision and recall to $\sim 0.4\text{--}0.5$.
+2. **Collapse vs. penalized training:** The collapsed unpenalized `NS` arm scores $\text{FD} \approx 64\text{--}72$ with $\text{recall} = 0.00$ and $\text{precision} \leq 0.07$. Adding $R_1 + R_2$ reduces FD by an order of magnitude ($\sim 3.5\text{--}5.5$) and raises precision to $\sim 0.35\text{--}0.4$ and recall to $\sim 0.4$.
 3. **Feature-space sensitivity (DCGAN vs. penalized backbone):** Even though the penalized backbone produces cleaner visual outlines and white backgrounds at $64 \times 64$, the 2015 DCGAN achieves a lower FD ($\sim 2$) and $\widehat{\mathrm{MMD}}^2$ in our $32 \times 32$ CIFAR-10 classifier features, where $2 \times 2$ downsampling smooths out DCGAN's high-frequency blotches. Feature-space metrics always reflect the invariance and resolution of their underlying feature network.
 
 ## Latent Interpolation and Critic Overfitting
@@ -1314,7 +1317,7 @@ Training DCGAN for $20$ epochs ($2{,}840$ steps at batch size $256$, $\text{lr} 
 @!dcgan-training-with-the-classic-loss-2
 
 - **Visual inspection:** Generated sprites exhibit diverse silhouettes and color palettes on white backgrounds, though with high-frequency blotchy textures.
-- **Sub-equilibrium critic loss:** Even though `loss_D` ($\sim 0.45$) remains well below the random-guessing level $2\log 2 \approx 1.39$, batch normalization and $\mathcal{N}(0, 0.02^2)$ initialization prevent mode collapse.
+- **Sub-equilibrium critic loss:** Even though `loss_D` ($\sim 0.25\text{--}0.45$) remains well below the random-guessing level $2\log 2 \approx 1.39$, batch normalization and $\mathcal{N}(0, 0.02^2)$ initialization prevent mode collapse.
 :::
 
 ::: {.col .fig}
@@ -1474,7 +1477,7 @@ Using 128D features from our 3-block CIFAR-10 classifier `FeatureCNN` ($64 \time
 ::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor (cont.)"}
 [Scoring 4,059 Sprites]{.kicker}
 
-- **2. Collapse vs. penalized arms:** Unpenalized `NS` scores $\mathrm{FD} \approx 64\text{--}72$ with $\mathrm{recall} = 0.00$; adding $R_1 + R_2$ reduces FD tenfold ($\sim 3.5\text{--}5.4$) and restores precision/recall to $\sim 0.4\text{--}0.5$.
+- **2. Collapse vs. penalized arms:** Unpenalized `NS` scores $\mathrm{FD} \approx 64\text{--}72$ with $\mathrm{recall} = 0.00$; adding $R_1 + R_2$ reduces FD tenfold ($\sim 3.5\text{--}5.5$) and restores precision to $\sim 0.35\text{--}0.4$ and recall to $\sim 0.4$.
 - **3. Feature-network invariance:** Because $2 \times 2$ pooling into $32 \times 32$ `FeatureCNN` smooths out DCGAN's high-frequency blotches, DCGAN achieves the lowest FD ($\sim 2.0$) despite looking blotchier at $64 \times 64$.
 :::
 

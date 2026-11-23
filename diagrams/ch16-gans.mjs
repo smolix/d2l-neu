@@ -461,7 +461,7 @@ export const diagrams = {
       head: 'Bayes Risk L(η)',
       eq: 'inf_{t} E[loss | η]',
       note1: 'Inf of affine funcs of η',
-      note2: 'Strictly concave on [0,1]',
+      note2: 'Concave on [0,1]',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
     {
@@ -902,7 +902,7 @@ export const diagrams = {
       sub: 'Penalizes γ(‖∇_x D‖ − 1)²',
       rows: [
         'Forces unit slope ‖∇D‖ = 1 at q = p',
-        'On Dirac-GAN: parks at |θ| = γ ≠ 0!',
+        'Dirac-GAN: cycles (γ < 2) or parks at |θ| = γ',
         'Cannot rest flat at equilibrium',
       ],
       fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
@@ -966,13 +966,13 @@ export const diagrams = {
     {
       head: 'Arm 3: NS + R₁ + R₂ (γ = 1)',
       eq: 'Classic Logistic + Penalties',
-      sub: '‖∇D‖² ~ 10⁻³; covers 24–25 modes!',
+      sub: '‖∇D‖² ~ 10⁻³; covers all 25 modes',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
     {
       head: 'Arm 4: Pairing + R₁ + R₂ (γ = 1)',
       eq: 'R3GAN (RpGAN + R₁ + R₂)',
-      sub: '‖∇D‖² ~ 10⁻³; covers 24–25 modes!',
+      sub: '‖∇D‖² ~ 10⁻³; covers all 25 modes',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
     'Plus γ = 10 overdamped control: confirms R₁+R₂ penalties drive mode coverage'
@@ -1028,7 +1028,7 @@ export const diagrams = {
     },
     {
       tag: 'RGB Head',
-      head: '1×1 Conv → 64×64×3',
+      head: '3×3 Conv → 64×64×3',
       eq: 'Linear RGB (no tanh)',
       note1: '2.8M total parameters',
       note2: 'Independent batch rows',

@@ -217,7 +217,7 @@ d2l.plot([c_data, cs, cs, cs],
          figsize=(5.5, 3.2))
 ```
 
-As predicted, the squared-error model `g_mse` tracks the conditional mean $\mu(c) = c$ down the empty corridor ($1.00$ unit from either band, with $100\%$ of predictions off the bands). The adversarial model `g_adv` commits to valid data bands (mean distance $0.03$ from the nearest band, with only $1\text{--}2\%$ of points crossing the corridor).
+As predicted, the squared-error model `g_mse` tracks the conditional mean $\mu(c) = c$ down the empty corridor (about one unit from either band, with $100\%$ of predictions off the bands). The adversarial model `g_adv` commits to valid data bands (a few hundredths from the nearest band on average, with at most $2\%$ of points crossing the corridor).
 
 Notice the fundamental perception–distortion trade-off :cite:`Blau.Michaeli.2017`: even an ideal stochastic sampler $\hat x \sim p(x \mid c)$ has expected squared error $2\,\operatorname{Var}(x \mid c)$—twice the MSE (or $3\text{ dB}$ lower PSNR) of the blurry conditional mean $\mu(c)$ (Exercise :exref:`ex_adversarial-losses-perfect-sampler`). Furthermore, because a deterministic function $g(c)$ can output only one value per input $c$, covering *both* bands simultaneously requires passing a stochastic latent variable $z$ alongside $c$: $\hat x = g(c, z)$ (Exercise :exref:`ex_adversarial-losses-latent-bit`).
 
@@ -382,16 +382,16 @@ for name, (has_critic, lam) in students.items():
 
 The three-seed results confirm the fixed-point analysis:
 
-- *Regression onto the high-noise teacher* collapses $100\%$ of outputs into the empty corridor ($1.00$ unit from either band), ignoring the latent $z$.
-- *Critic only* and *Critic + regression* both place $98\text{--}99\%$ of outputs directly on the two data bands (mean distance $0.03\text{--}0.04$), splitting probability mass evenly ($\sim 49\% / 49\%$) between the upper and lower bands via the latent $z$. Because the bands have narrow width $\sigma = 0.05$, the optimal critic's restoring slope ($\delta / 0.05^2 = 400\delta$) easily dominates the gentle inward pull of the high-noise teacher.
+- *Regression onto the high-noise teacher* collapses $100\%$ of outputs into the empty corridor (about one unit from either band), ignoring the latent $z$.
+- *Critic only* and *Critic + regression* both place $98\text{--}99\%$ of outputs directly on the two data bands (mean distance of a few hundredths, always below $0.1$), splitting probability mass evenly ($\sim 49\% / 49\%$) between the upper and lower bands via the latent $z$. Because the bands have narrow width $\sigma = 0.05$, the optimal critic's restoring slope ($\delta / 0.05^2 = 400\delta$) easily dominates the gentle inward pull of the high-noise teacher.
 
 ### Distillation, Autoencoders, and Vocoders at Scale
 
 This combination of a regression or perceptual anchor with an adversarial discriminator appears across three major classes of modern generative systems:
 
-1. **Adversarial Diffusion Distillation (ADD and DMD2):** ADD :cite:`Sauer.Lorenz.Blattmann.ea.2023` trains a one-step image generator by combining a denoising teacher regression loss with a discriminator built on frozen DINOv2 features, finding the same ordering as our experiment above (teacher regression alone produces blurry images, while adding the discriminator yields sharp one-step samples). Distribution Matching Distillation (DMD, :citet:`Yin.Gharbi.Zhang.ea.2024`) uses the difference between a frozen teacher's score $\nabla_x \log p_\tau$ and a fake-distribution diffusion model's score $\nabla_x \log q_\tau$ to descend $D_{\textrm{KL}}(q_\tau \,\|\, p_\tau)$, and DMD2 :cite:`Yin.Gharbi.Park.ea.2024` adds an adversarial discriminator against real images so the one-step student can exceed the teacher's quality.
+1. **Adversarial Diffusion Distillation (ADD and DMD2):** ADD :cite:`Sauer.Lorenz.Blattmann.ea.2023` trains a one-step image generator by combining a denoising teacher regression loss with a discriminator built on frozen DINOv2 features, finding the same ordering as our experiment above (teacher regression alone produces blurry images, while adding the discriminator yields sharp one-step samples). Distribution Matching Distillation (DMD, :citet:`Yin.Gharbi.Zhang.ea.2024`) uses the difference between a frozen teacher's score $\nabla_x \log p_\tau$ and a fake-distribution diffusion model's score $\nabla_x \log q_\tau$ to descend $D_{\textrm{KL}}(q_\tau \,\|\, p_\tau)$. We have met this difference before: $\nabla_x \log p_\tau - \nabla_x \log q_\tau = \nabla_x \lambda_\tau$ is the input gradient of the optimal critic $\lambda_\tau = \log(p_\tau/q_\tau)$ between the noised distributions. DMD's generator update is therefore the unweighted ($w = 1$) reverse-KL update of Exercise :exref:`ex_gan-generator-weight-divergences`, with the critic's slope supplied by two score networks instead of a discriminator. Since both distributions are noised, their supports overlap at every noise level $\tau > 0$, which is the instance noise of :numref:`subsec_gan_disjoint_supports`. DMD2 :cite:`Yin.Gharbi.Park.ea.2024` adds an adversarial discriminator against real images so the one-step student can exceed the teacher's quality.
 2. **Latent Image Autoencoders (Tokenizers):** Latent diffusion models (:numref:`sec_diffusion-latent`) compress images into a lower-dimensional latent space using an autoencoder (such as VQGAN or the Stable Diffusion VAE, :citet:`Esser.Rombach.Ommer.2021,Rombach.Blattmann.Lorenz.ea.2022`). Because the compressed latent code leaves fine-grained local texture underdetermined, training the decoder with pixelwise $L_1/L_2$ and perceptual (LPIPS) losses is augmented with a patch-level discriminator (PatchGAN) to ensure crisp high-frequency textures.
-3. **Neural Speech Vocoders:** Text-to-speech pipelines typically predict a mel-spectrogram (which specifies frame-level frequency magnitudes but discards phase) and use a vocoder such as HiFi-GAN :cite:`Kong.Kim.Bae.2020` to invert the spectrogram into an audio waveform. Because the expected value of a sinusoid $\sin(\omega n + \vartheta)$ over an unknown phase $\vartheta \sim \textrm{Uniform}[-a, a]$ shrinks in amplitude by $\sin(a)/a$ (vanishing completely for $\vartheta \sim \textrm{Uniform}[-\pi, \pi]$, Exercise :exref:`ex_adversarial-losses-phase`), waveform regression collapses to silence; HiFi-GAN instead pairs a multi-resolution spectrogram $L_1$ loss with multi-period and multi-scale waveform discriminators.
+3. **Neural Speech Vocoders:** Text-to-speech pipelines typically predict a mel-spectrogram (which specifies frame-level frequency magnitudes but discards phase) and use a vocoder such as HiFi-GAN :cite:`Kong.Kim.Bae.2020` to invert the spectrogram into an audio waveform. Because the expected value of a sinusoid $\sin(\omega n + \vartheta)$ over an unknown phase $\vartheta \sim \textrm{Uniform}[-a, a]$ shrinks in amplitude by $\sin(a)/a$ (vanishing completely for $\vartheta \sim \textrm{Uniform}[-\pi, \pi]$, Exercise :exref:`ex_adversarial-losses-phase`), waveform regression collapses to silence; HiFi-GAN instead pairs a mel-spectrogram $L_1$ loss and a feature-matching loss on discriminator activations with multi-period and multi-scale waveform discriminators.
 
 ## Comparing the Adversarial Objectives of This Chapter
 :label:`subsec_gan_beyond_verdict`
@@ -552,8 +552,8 @@ Evaluating both trained predictors across $201$ inputs $c \in [-1, 1]$ confirms 
 ::: {.col}
 @!adversarial-losses-the-capacity-argument-2
 
-- **Squared-error student (`g_mse`):** Tracks the conditional mean $x = c$ down the empty corridor ($1.00$ unit from either band; $100\%$ of predictions off the bands).
-- **Adversarial student (`g_adv`):** Commits to a valid data band (mean distance $0.03$ from the nearer band; only $1\text{--}2\%$ of points off the bands where the continuous curve switches branches).
+- **Squared-error student (`g_mse`):** Tracks the conditional mean $x = c$ down the empty corridor (about one unit from either band; $100\%$ of predictions off the bands).
+- **Adversarial student (`g_adv`):** Commits to a valid data band (a few hundredths from the nearer band on average; at most $2\%$ of points off the bands where the continuous curve switches branches).
 :::
 
 ::: {.col .fig}
@@ -668,8 +668,8 @@ Evaluating all three student configurations across $201$ inputs $c$ and $64$ lat
 
 @!adversarial-losses-distillation-on-two-bands-3
 
-- **1. Teacher regression only:** Collapses $100\%$ of outputs into the empty corridor ($1.00$ unit from either band), ignoring $z$.
-- **2. Critic only & Critic + regression:** Both place **$98\text{--}99\%$** of outputs directly on the two data bands ($0.03\text{--}0.04$ distance), splitting probability mass evenly ($\sim 49\% / 49\%$) between the upper and lower bands via $z$. Because the band width is $\sigma = 0.05$, the critic's sharp restoring force ($\sim \delta / 0.05^2 = 400\delta$) easily dominates the gentle inward pull of the high-noise teacher ($\delta \approx 0.008$).
+- **1. Teacher regression only:** Collapses $100\%$ of outputs into the empty corridor (about one unit from either band), ignoring $z$.
+- **2. Critic only & Critic + regression:** Both place **$98\text{--}99\%$** of outputs directly on the two data bands (a few hundredths away), splitting probability mass evenly ($\sim 49\% / 49\%$) between the upper and lower bands via $z$. Because the band width is $\sigma = 0.05$, the critic's sharp restoring force ($\sim \delta / 0.05^2 = 400\delta$) easily dominates the gentle inward pull of the high-noise teacher ($\delta \approx 0.008$).
 :::
 
 ::: {.slide title="Adversarial Diffusion Distillation (ADD & DMD2)"}

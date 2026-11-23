@@ -591,7 +591,74 @@ make slides-pytorch SLIDES_FILTER="chapter_linear-regression/linear-regression.m
 `make slides` runs `gen_slides.py` for each framework, injects
 notebook outputs (when present), and renders to HTML via
 `quarto render --to revealjs` in a thread pool of 8 workers. CPU-only
-— no GPU contention, parallel-safe across frameworks.
+— no GPU contention, parallel-safe across frameworks. It then builds
+the PowerPoint, PDF and LaTeX versions of every deck (next sections).
+
+### PowerPoint export
+
+Every rendered deck also ships as an editable `.pptx` beside its
+`.html`, for lecturers who teach from their own slides. The book's
+right sidebar shows **Slides · <framework>** with four buttons, *HTML*,
+*PDF*, *PowerPoint* and *LaTeX* (the last two download), and the slides
+landing page has *PDF*, *PPTX* and *TeX* links per deck.
+
+```bash
+make slides-pptx-pytorch                 # after make slides-pytorch
+make slides-pptx                         # all frameworks
+python3 tools/slides_to_pptx.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pptx --verbose
+```
+
+- `tools/slides_to_pptx.py` converts the deck's injected `.qmd` to pandoc
+  markdown (diagram and figure SVGs become PNGs, `.cols` become two-column
+  slides, kickers move into the first column, cells become plain code) and
+  calls pandoc's pptx writer. Cells marked `#| echo: false` (output-only on
+  the web) keep only their output. `--tree _slides/<fw>` converts a framework
+  in parallel and skips decks whose `.pptx` is newer than the `.qmd` and
+  the converter.
+- `tools/pptx_fit.py` builds the template (16:9, Calibri/Consolas, the
+  web deck's colours, a blue rule under each title, the D2L logo bottom
+  right, "§N.M Title · d2l.ai" bottom left) and then sets each text box's
+  font size so its content fits. It lays the text out with real font
+  metrics (Carlito is metric-compatible with Calibri; code is measured
+  conservatively) and picks the largest size up to 18 pt, down to 8 pt.
+  Code runs at about three quarters of the body size.
+- Rasters are capped at 1,800 px and re-encoded (256-colour PNG for plots
+  and diagrams, JPEG for photographs): a deck averages under 0.5 MB.
+- The logo and footer live on the slide master, so a lecturer can restyle
+  or remove them once (View → Slide Master). Equations are native,
+  editable PowerPoint math.
+- No PowerPoint renderer is installed on the build box, so the fit is
+  computed, not checked visually: if a slide overflows in PowerPoint,
+  adjust the constants at the top of `pptx_fit.py`.
+
+### Beamer PDF and LaTeX source
+
+`make slides` also writes, beside each deck, `<deck>.pdf` (Beamer) and
+`<deck>-latex.zip`, the self-contained LaTeX source for lecturers who build
+their own decks: `<deck>.tex`, the D2L theme `d2l-beamer.tex`, the fitted
+`sizes.tex`, `figures/` (vector PDFs for diagrams), the logo and a README.
+It compiles with `xelatex <deck>.tex`; fonts fall back from Source Sans 3 /
+Inconsolata to TeX Live's Source Sans Pro / Inconsolata zi4.
+
+```bash
+make slides-beamer-pytorch               # after make slides-pytorch
+make slides-beamer                       # all frameworks
+python3 tools/slides_to_beamer.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pdf \
+    --bundle /tmp/f-latex.zip --keep /tmp/f-src --verbose
+```
+
+- `tools/slides_to_beamer.py` reuses the PowerPoint converter's image
+  handling and writes pandoc markdown for the beamer writer; injected
+  outputs become a framed verbatim box (`tools/beamer/outputs.lua`).
+- The look (`tools/beamer/d2l-beamer.tex`) is the PowerPoint template's,
+  scaled to Beamer's 160 x 90 mm page: body 11.3 pt, title 15.1 pt.
+- The fit is measured, not estimated: every frame records the positions of
+  its first and last line (zref-savepos), and frames that run into the
+  footline are re-set smaller (bisection over up to 7 XeLaTeX passes,
+  11.3 pt down to 5 pt). Code lines too long for their column cap the size
+  up front, but not below 8 pt; past that they wrap.
+- A deck takes about 15 s; `--tree` runs `--workers` decks in parallel and
+  skips decks whose PDF and zip are newer than the `.qmd` and the tools.
 
 ### Outputs
 
@@ -599,6 +666,9 @@ Rendered decks live at:
 
 ```
 _slides/<fw>/<chapter>/<file>.html
+_slides/<fw>/<chapter>/<file>.pptx     # PowerPoint version
+_slides/<fw>/<chapter>/<file>.pdf      # Beamer PDF
+_slides/<fw>/<chapter>/<file>-latex.zip  # its LaTeX source
 _slides/<fw>/<chapter>/<file>_files/   # libraries
 _slides/<fw>/img/outputs/              # injected output images
 ```

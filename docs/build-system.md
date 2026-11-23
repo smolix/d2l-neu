@@ -469,6 +469,15 @@ in JAX `_trainer_train_step`, `_trainer_validation_step`); `d2l.resnet18`
 pulls in `Residual`; `d2l.hpo_objective_lenet` pulls in `HPOTrainer`,
 `Trainer`, `LeNet`, `FashionMNIST` and their closures.
 
+**The scan needs a built library.** It keeps only references that have a
+shard, so with no `d2l/_blocks/` every reference is dropped and every `.d`
+says "no d2l symbols referenced". The audit then flags every notebook stale
+(the empty-set fingerprint `sha256:e3b0c442…`), a capture would store that
+fingerprint, and no `#@save` edit would re-trigger the notebook. In a fresh
+checkout the shard wildcards of the `.d` rule are empty at parse time, so the
+rule takes `d2l/.built` as an order-only prerequisite, and the scan exits
+with an error when a framework has no shards (2026-11-23, fresh worktrees).
+
 **Registry keys are followed from string literals.** Every one-line string
 literal in a notebook's code cells, and in every shard on the closure, is a
 candidate key: if `DATA_HUB.<literal>.py` exists, it joins the list

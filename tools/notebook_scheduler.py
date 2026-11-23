@@ -65,6 +65,21 @@ from runtime_env import (PINNED_GPU_NOTEBOOKS, notebook_resource, file_uses_gpu,
                          notebook_venv)
 import locks
 
+# A caller may give the scheduler a subset of the GPUs: CUDA_VISIBLE_DEVICES=2,3
+# with D2L_GPU_SLOTS_PER=3,3 (and a matching D2L_GPU_VRAM_PER) runs on physical
+# GPUs 2 and 3, so independent runs (e.g. two worktrees) can share a box. The
+# slot pools count GPUs 0..n-1; jobs get CUDA_VISIBLE_DEVICES set to the
+# physical ids, which would otherwise ignore the caller's mask.
+_PARENT_GPUS = ([g.strip() for g in os.environ["CUDA_VISIBLE_DEVICES"].split(",")
+                 if g.strip()] if os.environ.get("CUDA_VISIBLE_DEVICES") else None)
+
+
+def physical_gpus(cuda):
+    """Map scheduler GPU indices ("0,1") through the caller's mask."""
+    if not cuda or not _PARENT_GPUS:
+        return cuda
+    return ",".join(_PARENT_GPUS[int(i)] for i in cuda.split(","))
+
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOKS_DIR = ROOT / "_notebooks"
 FRAMEWORKS = ["pytorch", "tensorflow", "jax", "mxnet"]
@@ -287,7 +302,10 @@ class Scheduler:
                 ["nvidia-smi", "--query-gpu=memory.free",
                  "--format=csv,noheader,nounits"],
                 capture_output=True, text=True, timeout=20).stdout.split()
-            free = [int(x) for x in out][:self.num_gpus]
+            free = [int(x) for x in out]
+            if _PARENT_GPUS:                     # this run's cards only
+                free = [free[int(g)] for g in _PARENT_GPUS]
+            free = free[:self.num_gpus]
         except Exception:
             free = [0] * self.num_gpus           # unknown → admit nothing
         self.live_free = free + [0] * (self.num_gpus - len(free))
@@ -423,7 +441,7 @@ class Scheduler:
     # ---- execution ----
     def _make_env(self, asg):
         env = dict(os.environ)
-        env["D2L_ASSIGNED_CUDA"] = asg["cuda"]
+        env["D2L_ASSIGNED_CUDA"] = physical_gpus(asg["cuda"])
         if asg.get("cpu_cores"):
             env["D2L_ASSIGNED_CPU_CORES"] = ",".join(str(c) for c in asg["cpu_cores"])
         else:

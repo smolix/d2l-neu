@@ -734,6 +734,20 @@ real choice, and here the small one is the right one: the stronger KL term
 made both the reconstructions and the samples worse. Exercise
 :exref:`ex_latent-bottleneck` pushes the weight further in both directions.
 
+What, then, makes a latent easy to model? Work since 2024 points less to
+the KL weight than to what the latent represents. REPA
+:cite:`Yu.Kwak.Jang.ea.2025` adds a loss that aligns the hidden states of
+the diffusion model with the features of a pretrained image encoder such as
+DINOv2, and training reaches a given sample quality several times sooner.
+Representation autoencoders :cite:`Zheng.Ma.Tong.ea.2026` go further and
+drop the KL-regularized encoder altogether: a frozen pretrained encoder
+supplies the latent, and only a decoder is trained to invert it. Such a
+latent has far more channels than a compressive one, which the reasoning
+above would count against it, and yet a diffusion model learns it more
+easily. In these latents nearby points stand for similar objects rather
+than similar pixels. A latent organized by meaning, it seems, matters more
+than one that is merely small and smooth.
+
 At $28 \times 28$ the trade is not attractive. The pixel model is cheap
 anyway, the autoencoder needs a training run of its own, and the latent
 samples score worse.

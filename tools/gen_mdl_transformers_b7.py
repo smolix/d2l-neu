@@ -11,6 +11,9 @@ Figures:
       line, and these points form the compute-optimal path.  Chinchilla
       (70B parameters, 1.4T tokens) lies on the path; Llama 3 8B (15T
       tokens) lies far above it on a budget about a quarter larger.
+  mdl-transformers-kaplan-chinchilla.svg -- compute-optimal N* against C
+      under the exponents 0.73 (Kaplan) and 0.5 (Hoffmann), both lines
+      drawn through the refit optimum at 1e18 FLOPs.
 
 Run with the repo's pytorch venv:
 
@@ -125,6 +128,48 @@ def fig_chinchilla() -> None:
     fl.save(fig, "mdl-transformers-chinchilla")
 
 
+def fig_kaplan_chinchilla() -> None:
+    """Compute-optimal model size against compute under the two published
+    exponents, both drawn through the refit optimum at C0 = 1e18 FLOPs: only
+    the slopes come from the papers, the common anchor is a choice."""
+    fig, ax = plt.subplots(figsize=(5.2, 3.6))
+    C0 = 18.0
+    N0 = np.log10(G * (10 ** C0 / 6) ** (BETA / (ALPHA + BETA)))
+    ax.set_xlim(C0 - 0.2, 25.2)
+    ax.set_ylim(N0 - 0.3, 13.3)   # before the labels: _angle reads them
+    c = np.linspace(C0, 25.0, 50)
+    for a, color, label, xy, va in (
+            (0.73, ORANGE, r"Kaplan et al.: $N^* \propto C^{0.73}$",
+             (20.6, 0.0), "bottom"),
+            (0.50, BLUE, r"Hoffmann et al.: $N^* \propto C^{0.50}$",
+             (21.4, 0.0), "top")):
+        ax.plot(c, N0 + a * (c - C0), color=color, lw=2.0)
+        x = xy[0]
+        off = 0.16 if va == "bottom" else -0.16
+        ax.text(x, N0 + a * (x - C0) + off, label, fontsize=12,
+                color=fl.T.ORANGE.dark if color == ORANGE else T.BLUE.dark,
+                ha="center", va=va, rotation=_angle(ax, a),
+                rotation_mode="anchor")
+    ax.plot(C0, N0, "o", ms=6, color=INK, zorder=5)
+    logC, logN = np.log10(5.76e23), np.log10(70e9)
+    ax.plot(logC, logN, "s", ms=6, color=INK, zorder=5)
+    ax.text(logC + 0.15, logN - 0.12, "Chinchilla", fontsize=12, color=INK,
+            ha="left", va="top")
+    ax.set_xticks(range(18, 26))
+    ax.set_xticklabels([rf"$10^{{{k}}}$" for k in range(18, 26)])
+    ax.set_yticks(range(8, 14))
+    ax.set_yticklabels([rf"$10^{{{k}}}$" for k in range(8, 14)])
+    ax.set_xlabel("training compute $C$ (FLOPs)", fontsize=13, color=INK)
+    ax.set_ylabel("compute-optimal parameters $N^*$", fontsize=13,
+                  color=INK)
+    ax.tick_params(colors=INK, labelsize=12)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(INK)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    fl.save(fig, "mdl-transformers-kaplan-chinchilla")
+
+
 def _unitless(path):
     """Rewrite matplotlib's pt-sized root width/height as unitless CSS px
     (1 pt = 4/3 px), keeping the viewBox (figure guide: unitless sizes)."""
@@ -141,6 +186,7 @@ def _unitless(path):
 
 if __name__ == "__main__":
     fig_chinchilla()
+    fig_kaplan_chinchilla()
     for p in fl.WRITTEN:
         _unitless(p)
         auto = os.path.join(os.path.dirname(p), "auto", os.path.basename(p))

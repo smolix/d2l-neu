@@ -79,7 +79,12 @@ $$
 
 ### Dispatching Tokens to Fixed-Capacity Expert Buffers
 
-In compiled or distributed training, each expert $e \in \{1, \dots, E\}$ pre-allocates a fixed buffer of capacity $S = \lceil \gamma \cdot n k / E \rceil$ slots for a batch of $n$ tokens, where $n k / E$ is the perfectly balanced load per expert and $\gamma \ge 1$ is the **capacity factor** ($\gamma = E$ disables dropping by setting $S = n k$). If more than $S$ token--expert assignments target expert $e$, the excess assignments are **dropped** (contributing zero to :eqref:`eq_moe-layer`, so those tokens pass through the surrounding block's residual skip connection):
+In compiled or distributed training, each expert $e \in \{1, \dots, E\}$ pre-allocates a fixed buffer of capacity $S = \lceil \gamma \cdot n k / E \rceil$ slots for a batch of $n$ tokens, where $n k / E$ is the perfectly balanced load per expert and $\gamma \ge 1$ is the **capacity factor** ($\gamma = E$ disables dropping by setting $S = n k$). If more than $S$ token--expert assignments target expert $e$, the excess assignments are **dropped** (contributing zero to :eqref:`eq_moe-layer`, so those tokens pass through the surrounding block's residual skip connection). :numref:`fig_mdl-transformers-moe-capacity` follows six tokens through this dispatch.
+
+![Dispatching six tokens to four experts, top-2 each, with capacity factor $\gamma = 1.25$, so $S = 4$ slots per expert. Assignments queue per expert in token order. The fifth and sixth assignments to expert 1 fall past its $S$ slots and are dropped, so tokens 5 and 6 get only their second expert. A token whose every assignment is dropped keeps only its residual.](../img/mdl-transformers-moe-capacity.svg)
+:label:`fig_mdl-transformers-moe-capacity`
+
+`MoELayer` implements the router, the dispatch into buffers of $S$ slots, and the drop rule:
 
 ```{.python .input #moe-a-mixture-of-experts-layer-1}
 %%tab pytorch
@@ -260,7 +265,7 @@ print(f'{d2l.num_params(moe)} parameters stored, '
 ### Uneven Load and Positive Feedback
 :label:`subsec_moe-init-load`
 
-Even at initialization, random router weights send more tokens to some experts than others. During training without a load-balancing mechanism, a **positive-feedback loop** amplifies this asymmetry into **routing collapse** :cite:`Shazeer.Mirhoseini.Maziarz.ea.2017`: whichever experts receive more tokens at step 1 receive larger gradient updates, reduce the language-modeling loss faster on step 2, get rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with higher router logits on step 3, and rapidly monopolize $100\%$ of the top-$k$ slots while the remaining $E - k$ experts go dead!
+Even at initialization, random router weights send more tokens to some experts than others. During training without a load-balancing mechanism, a **positive-feedback loop** amplifies this asymmetry into **routing collapse** :cite:`Shazeer.Mirhoseini.Maziarz.ea.2017`: whichever experts receive more tokens at step 1 receive larger gradient updates, reduce the language-modeling loss faster on step 2, get rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with higher router logits on step 3. Left unchecked, the loop can end with a few experts holding most of the top-$k$ slots while the others receive too few tokens to learn anything.
 
 ### Two Solutions: Auxiliary Balancing Loss vs. Loss-Free Bias Controller
 
@@ -273,7 +278,7 @@ Even at initialization, random router weights send more tokens to some experts t
 
    penalizes high probability $\bar{p}_e$ on heavily loaded experts (large $f_e$) and achieves its minimum $\mathcal{L}_{\textrm{aux}} = 1$ when $f_e = 1/E$ for all $e$.
 
-2. **Loss-free dynamic router bias control** (DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024`): Because $\nabla \mathcal{L}_{\textrm{aux}}$ pushes token representations toward uniform routing even when specialization would lower language-modeling loss, DeepSeek-V3 removes the auxiliary gradient entirely. Instead, each expert maintains a non-differentiable selection bias $b_e$ added *only* inside top-$k$ selection ($T(\mathbf{x}) = \textrm{argtop}_k(\mathbf{p}(\mathbf{x}) + \mathbf{b})$, leaving the gating weights $g_e(\mathbf{x})$ unbiased), updated after each step by a sign controller with rate $\eta_b$:
+2. **Loss-free dynamic router bias control** (:citet:`Wang.Gao.Zeng.ea.2024`, used in DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024`): Because $\nabla \mathcal{L}_{\textrm{aux}}$ pushes token representations toward uniform routing even when specialization would lower language-modeling loss, this method balances the load without an auxiliary gradient (DeepSeek-V3 keeps only a very small sequence-wise balance loss next to it). Instead, each expert maintains a non-differentiable selection bias $b_e$ added *only* inside top-$k$ selection ($T(\mathbf{x}) = \textrm{argtop}_k(\mathbf{p}(\mathbf{x}) + \mathbf{b})$, leaving the gating weights $g_e(\mathbf{x})$ unbiased), updated after each step by a sign controller with rate $\eta_b$:
 
    $$
    b_e \;\leftarrow\; b_e \;+\; \eta_b \, \textrm{sign}\!\left(\frac{1}{E} - f_e\right).
@@ -552,9 +557,9 @@ Recent frontier MoE families (:numref:`tab_moe-experts`) refine the coarse 8-exp
 ## Summary
 
 * **Mixture-of-Experts (MoE)** layers (:eqref:`eq_moe-layer`) replace a dense FFN with $E$ routed expert FFNs and activate only the top $k \ll E$ experts per token, decoupling **stored parameters $N_{\textrm{total}}$** (memory capacity) from **active parameters $N_{\textrm{active}}$** (per-token FLOPs).
-* Without load balancing, router--expert positive feedback causes **routing collapse** onto a few experts. Both the **Switch auxiliary loss** $\mathcal{L}_{\textrm{aux}} = E \sum_e f_e \bar{p}_e$ (:eqref:`eq_moe-aux`) and **loss-free dynamic router biases** $b_e \leftarrow b_e + \eta_b \textrm{sign}(1/E - f_e)$ (:eqref:`eq_moe-bias`) keep expert loads balanced near $1/E$.
+* Without load balancing, expert loads are badly skewed: in our run the three busiest of eight experts take about $70\%$ of the tokens. Much of this skew is present at initialization, and feedback between router and experts can amplify it into **routing collapse**. Both the **Switch auxiliary loss** $\mathcal{L}_{\textrm{aux}} = E \sum_e f_e \bar{p}_e$ (:eqref:`eq_moe-aux`) and **loss-free dynamic router biases** $b_e \leftarrow b_e + \eta_b \textrm{sign}(1/E - f_e)$ (:eqref:`eq_moe-bias`) keep expert loads balanced near $1/E$.
 * At matched active parameters and training FLOPs, a balanced MoE language model achieves lower validation cross-entropy than a dense GPT.
-* Modern open-weights MoE models (:numref:`tab_moe-experts`) combine **fine-grained experts** ($E \in [128, 256], k \in [4, 8]$) with **shared experts** (:numref:`fig_moe-fine-grained`) to maximize combinatorial specialization.
+* Recent open-weights MoE models (:numref:`tab_moe-experts`) use **fine-grained experts** ($E \in [128, 256], k \in [4, 8]$) to maximize combinatorial specialization, and DeepSeek-V3 adds an always-active **shared expert** (:numref:`fig_moe-fine-grained`).
 
 ## Exercises
 
@@ -720,7 +725,7 @@ out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
 ::: {.cols .vc}
 ::: {.col}
 - **1. Input distribution skew ($t = 0$):** Frequent bytes (`' '` is $18.9\%$ of WikiText-103, exceeding $\gamma / E = 15.6\%$) and shared mean representations push initial logits toward 1–2 experts.
-- **2. Rich-get-richer positive feedback:** Busiest experts receive more gradient updates, lower loss faster, and are rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with higher $p_e(\mathbf{x})$—leaving $E - k$ experts dead!
+- **2. Rich-get-richer positive feedback:** Busiest experts receive more gradient updates, lower loss faster, and are rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with higher $p_e(\mathbf{x})$, which can leave the idle experts with too few tokens to learn.
 :::
 
 ::: {.col .fig .big}
@@ -777,7 +782,7 @@ We train a 2-block, 8-expert Top-1 byte-level GPT ($d = 128, \gamma = 1.25$) for
 
 ::: {.cols .vc}
 ::: {.col}
-- **Sorted expert shares (busiest expert 1 to idlest expert 8):** Under `no balancing` (`C0`), the top 3 experts monopolize $>75\%$ of tokens while experts 6–8 receive almost zero training signal.
+- **Sorted expert shares (busiest expert 1 to idlest expert 8):** Under `no balancing` (`C0`), the top 3 experts take about $70\%$ of tokens while the idlest receives almost none.
 - **Even utilization ($1/8 = 12.5\%$):** Both the Switch auxiliary loss (`C1`) and the loss-free bias controller (`C2`) hug the horizontal black line of uniform $12.5\%$ utilization across all 8 experts.
 :::
 
@@ -834,7 +839,7 @@ Does sparse conditional capacity beat a dense Transformer at the **exact same ac
 ::: {.cols .vc}
 ::: {.col}
 - **Coarse routing (Mixtral 8x7B, 2024):** $E = 8$ full-width experts, top-$2$ active ($47\text{B}$ total / $13\text{B}$ active, $3.6\times$ capacity ratio).
-- **Fine-grained + shared experts (Qwen3, DeepSeek-V3, gpt-oss):** $128\text{--}256$ narrow experts ($w/d \in [0.29, 1.0]$) with top-$4$ or top-$8$ routing achieve **$11\times\text{--}23\times$ stored-to-active capacity**!
+- **Fine-grained experts (Qwen3, DeepSeek-V3, gpt-oss):** $128\text{--}256$ narrow experts ($w/d \in [0.29, 1.0]$) with top-$4$ or top-$8$ routing achieve **$11\times\text{--}23\times$ stored-to-active capacity**; DeepSeek-V3 adds one shared expert.
 :::
 
 ::: {.col .fig .big}
@@ -868,7 +873,7 @@ Work through these three MoE design calculations:
 ::: {.col}
 - **Top-$k$ Conditional Compute:** $\mathrm{MoE}(\mathbf{x}) = \sum_{e \in \mathcal{T}_k(\mathbf{x})} p_e(\mathbf{x})\,\mathrm{FFN}_e(\mathbf{x})$ decouples stored capacity $N_{\text{total}}$ from per-token FLOPs $N_{\text{active}}$.
 - **Static Buffers & Balancing:** Fixed capacity $S = \lceil \gamma n k / E \rceil$ plus Switch auxiliary loss or loss-free dynamic bias control $b_e$.
-- **Fine-Grained + Shared Experts:** Splitting $E \to mE, k \to mk$ and adding shared experts powers frontier MoEs.
+- **Fine-Grained Experts:** Splitting $E \to mE, k \to mk$ is the pattern of frontier MoEs; DeepSeek-V3 adds a shared expert.
 :::
 
 ::: {.col .fig .big}

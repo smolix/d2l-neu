@@ -120,10 +120,16 @@ $$
 That is, $\mathrm{JS}(p, q)$ equals the mutual information $I(x; y)$ between a sample $x \sim m$ and its binary source label $y$. Because a binary label carries at most $\log 2$ nats of information, $0 \leq \mathrm{JS}(p, q) \leq \log 2$, reaching $\log 2$ whenever $p$ and $q$ have disjoint supports.
 
 ### Disjoint Supports and Vanishing Gradients
+:label:`subsec_gan_disjoint_supports`
 
-Because $\mathrm{JS}(p, q)$ saturates at $\log 2$, the minimax objective becomes constant whenever the supports of $p$ and $q$ do not overlap. For instance, if $p = \delta_0$ and $q_\theta = \delta_\theta$ are point masses on $\mathbb{R}$, then $\mathrm{JS}(p, q_\theta) = \log 2$ for every $\theta \neq 0$, yielding zero gradient with respect to $\theta$ no matter how close $\theta$ is to $0$. Even when supports overlap in their tails—such as $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$—$\mathrm{JS}(p, q)$ equals $0.11$, $0.34$, and $0.63$ nats at $\mu = 1, 2, 4$, and at $\mu = 8$ it lies within $10^{-4}$ of $\log 2 \approx 0.6931$.
+Because $\mathrm{JS}(p, q)$ saturates at $\log 2$, the minimax objective becomes constant whenever the supports of $p$ and $q$ do not overlap. For instance, if $p = \delta_0$ and $q_\theta = \delta_\theta$ are point masses on $\mathbb{R}$, then $\mathrm{JS}(p, q_\theta) = \log 2$ for every $\theta \neq 0$, yielding zero gradient with respect to $\theta$ no matter how close $\theta$ is to $0$. Even when supports overlap in their tails—such as $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$—$\mathrm{JS}(p, q)$ equals $0.11$, $0.34$, and $0.63$ nats at $\mu = 1, 2, 4$, and at $\mu = 8$ it lies within $10^{-4}$ of $\log 2 \approx 0.6931$. :numref:`fig_gan_js_saturation` shows the whole curve: it is flat long before the two Gaussians stop overlapping in any formal sense.
+
+![The Jensen–Shannon divergence between $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ as a function of the shift $\mu$. The divergence reaches its ceiling $\log 2$ within a few standard deviations. Beyond that the curve is flat, and a flat curve gives the generator no gradient.](../img/mdl-gan-js-saturation.svg)
+:label:`fig_gan_js_saturation`
 
 In high dimensions, disjoint supports are the norm rather than the exception: both natural images and the outputs of a generator $G: \mathbb{R}^{d_z} \to \mathbb{R}^{d_x}$ with $d_z \ll d_x$ concentrate on low-dimensional manifolds whose intersection typically has measure zero :cite:`Arjovsky.Bottou.2017`. When the discriminator separates them perfectly, the minimax value saturates.
+
+The most direct remedy is to make the supports overlap. Suppose we add independent Gaussian noise of scale $s$ to every real and every generated sample before the discriminator sees it. The discriminator then compares two smoothed densities, which are positive everywhere. For the point masses above they are $\mathcal{N}(0, s^2)$ and $\mathcal{N}(\theta, s^2)$, and their divergence is the curve of :numref:`fig_gan_js_saturation` read at $\mu = \theta/s$: the generator receives a gradient as long as $\theta$ lies within a few multiples of $s$. This is *instance noise* :cite:`Sonderby.Caballero.Theis.ea.2017,Arjovsky.Bottou.2017`. Unfortunately the generator now matches the blurred data rather than the data, so $s$ has to be annealed toward zero during training. The idea returns in :numref:`sec_gan_beyond`, where the samples are noised by a diffusion model.
 
 ## The Generator's Gradient
 
@@ -177,7 +183,7 @@ $$
 \end{aligned}
 $$
 
-With $D$ fixed at $\lambda$, the first term on the right has the same gradient with respect to $q$ as the reverse KL divergence $D_{\textrm{KL}}(q \,\|\, p) = \mathbb{E}_q[\log(q/p)]$, while by the envelope theorem the second term (the minimax loss) has the gradient of $2\,\mathrm{JS}(p, q) = D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m)$ :cite:`Arjovsky.Bottou.2017` (Exercise :exref:`ex_gan-generator-weight-divergences`). Combining the integrals using $\log(q/p) - \log(q/m) = \log(m/p)$ and $p + q = 2m$ yields:
+With $D$ fixed at $\lambda$, the first term on the right has the same gradient with respect to $q$ as the reverse KL divergence $D_{\textrm{KL}}(q \,\|\, p) = \mathbb{E}_q[\log(q/p)]$, while the second term is minus the minimax loss, whose gradient is by the envelope theorem that of $2\,\mathrm{JS}(p, q) = D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m)$ :cite:`Arjovsky.Bottou.2017` (Exercise :exref:`ex_gan-generator-weight-divergences`). Combining the integrals using $\log(q/p) - \log(q/m) = \log(m/p)$ and $p + q = 2m$ yields:
 
 $$
 \begin{aligned}
@@ -599,7 +605,7 @@ The learned logits closely track the true log density ratio ($\text{correlation}
 ### Saturating versus Non-Saturating Generator Loss
 :label:`subsec_gan_saturation`
 
-To compare the saturating and non-saturating weights (:eqref:`eq_gan_weights`) when the generator starts far from the data, we shift the initial generator bias by $(-6, 6)$ ($\sim 8$ units from the data mean, $D_{\textrm{KL}}(q \,\|\, p) \approx 355$ nats) and compare `update_G` against `update_G_saturating`, which minimizes $\mathbb{E}_z[\log \sigma(-D(G(z)))]$ directly.
+To compare the saturating and non-saturating weights (:eqref:`eq_gan_weights`) when the generator starts far from the data, we shift the initial generator bias by $(-6, 6)$ ($\sim 8$ units from the data mean, $D_{\textrm{KL}}(q \,\|\, p) \approx 345$ nats) and compare `update_G` against `update_G_saturating`, which minimizes $\mathbb{E}_z[\log \sigma(-D(G(z)))]$ directly.
 
 ```{.python .input #gan-saturating-and-non-saturating-losses-compared-2}
 %%tab pytorch
@@ -714,7 +720,7 @@ d2l.plot(epochs, [runs['non-saturating'][0][:, 0],
 fig.tight_layout()
 ```
 
-In the first two epochs, both discriminators easily separate the distant generated points from the data, driving the discriminator loss near zero and $D(x') \ll 0$. Because $w_{\textrm{sat}}(x') = \sigma(D(x')) \approx 0$, the saturating generator stalls completely ($\sim 345$ nats from the data after 20 epochs). By contrast, the non-saturating weight $w_{\textrm{ns}}(x') = \sigma(-D(x')) \approx 1$ preserves the discriminator's spatial gradient $\nabla_\theta D(G(z))$, pulling the generator onto the data distribution within 20 epochs ($D_{\textrm{KL}}(q \,\|\, p) \approx 0.02\text{--}0.04$ nats). Note that $w_{\textrm{ns}}$ only rescales $\nabla_\theta D$; it relies on the leaky-ReLU discriminator having a nonzero spatial slope at $x'$.
+In the first two epochs, both discriminators easily separate the distant generated points from the data, driving the discriminator loss near zero and $D(x') \ll 0$. Because $w_{\textrm{sat}}(x') = \sigma(D(x')) \approx 0$, the saturating generator stalls completely (still $335\text{--}340$ nats from the data after 20 epochs). By contrast, the non-saturating weight $w_{\textrm{ns}}(x') = \sigma(-D(x')) \approx 1$ preserves the discriminator's spatial gradient $\nabla_\theta D(G(z))$, pulling the generator onto the data distribution within 20 epochs ($D_{\textrm{KL}}(q \,\|\, p)$ of a few hundredths of a nat). Note that $w_{\textrm{ns}}$ only rescales $\nabla_\theta D$; it relies on the leaky-ReLU discriminator having a nonzero spatial slope at $x'$.
 
 ## Training an MLP GAN on Fashion-MNIST
 :label:`subsec_gan_fashion_mnist`
@@ -1169,15 +1175,15 @@ Freezing a perturbed generator $q$ ($D_{\textrm{KL}}(q \,\|\, p) \approx 3.4$ na
 ::: {.slide title="Saturating vs. Non-Saturating Loss from a Far Start"}
 [Controlled Ablation]{.kicker}
 
-Shifting the initial generator offset by $(-6, 6)$ places $q$ roughly $8$ units from the data ($D_{\textrm{KL}}(q \,\|\, p) \approx 355$ nats). Running three seeds each under identical minibatches isolates the effect of the generator weight:
+Shifting the initial generator offset by $(-6, 6)$ places $q$ roughly $8$ units from the data ($D_{\textrm{KL}}(q \,\|\, p) \approx 345$ nats). Running three seeds each under identical minibatches isolates the effect of the generator weight:
 
 ::: {.cols .vc}
 ::: {.col}
 @!gan-saturating-versus-non-saturating-training-1
 
 - By epoch $2$, both critics easily separate the distant clouds ($D(x') \ll 0$, critic loss $\approx 0$).
-- **Saturating generator ($w_{\textrm{sat}} = \sigma(D(x')) \approx 0$):** Stalls completely near its starting point ($\sim 345$ nats).
-- **Non-saturating generator ($w_{\textrm{ns}} = \sigma(-D(x')) \approx 1$):** Preserves the leaky-ReLU critic's spatial slope $\nabla_x D(x')$ and converges to $0.02\text{--}0.04$ nats.
+- **Saturating generator ($w_{\textrm{sat}} = \sigma(D(x')) \approx 0$):** Stalls completely near its starting point (still $335\text{--}340$ nats after 20 epochs).
+- **Non-saturating generator ($w_{\textrm{ns}} = \sigma(-D(x')) \approx 1$):** Preserves the leaky-ReLU critic's spatial slope $\nabla_x D(x')$ and converges to within a few hundredths of a nat.
 :::
 
 ::: {.col .fig}

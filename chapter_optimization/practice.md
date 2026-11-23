@@ -294,7 +294,7 @@ d2l.plot(list(range(1, num_epochs + 1)), [live, avg, decayed], 'epoch',
                  'cosine decay, live weights'], legend_loc='outside')
 ```
 
-At a constant learning rate, the live weights jitter over a test-accuracy band of up to $\sim 5\%$ across the last five epochs, whereas their EMA tracks the top of the band smoothly at $>91\%$—matching the final accuracy of the cosine-decayed run without ever lowering the learning rate. Thus, weight EMA provides an immediate, zero-step alternative to cooldown branching during the constant plateau of a WSD schedule (:numref:`subsec_scheduler-branching`).
+At a constant learning rate, the live weights jitter over a test-accuracy band of up to $\sim 5\%$ across the last five epochs, whereas their EMA tracks the top of the band smoothly at $>91\%$—matching the final accuracy of the cosine-decayed run without ever lowering the learning rate. Thus, during the constant plateau of a WSD schedule, weight EMA is a cheap approximation to a cooldown branch (:numref:`subsec_scheduler-branching`): it costs no extra steps. It is not a full replacement. On language models, averaging along the plateau recovers part of the cooldown gain, not all of it :cite:`Hagele.Bakouch.Kosson.ea.2024`.
 
 ## A Worked End-to-End Configuration
 
@@ -452,7 +452,7 @@ print(f'spread between the seeds: configured {abs(c1 - c2):.3f}, '
 
 * **Global-norm gradient clipping** ($\mathbf{g} \leftarrow \min(1, \theta/\|\mathbf{g}\|_2)\mathbf{g}$) acts as a **guard** when it fires on a small fraction ($<5\%$) of early or anomalous steps—preventing initial blow-up under SGD and protecting AdamW's second-moment buffer $\mathbf{v}_t$ from gradient spikes—and as a **brake** when it fires continuously (indicating that $\eta$ is too high).
 * **Exponential moving averaging (EMA)** of model weights ($\bar{\mathbf{x}}_t = \alpha\bar{\mathbf{x}}_{t-1} + (1-\alpha)\mathbf{x}_t$) smooths out stationary noise-ball fluctuations, matching the accuracy of a full cosine decay on constant-rate trajectories.
-* Production training runs combine hardware-saturated batch sizes below or near $b_{\text{noise}}$, AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$ and matrix-only weight decay $\lambda = 0.1$, clipping at $\theta = 1.0$, short-horizon peak-LR calibration, and linear warmup followed by cosine or WSD cooldown.
+* Production training runs combine hardware-saturated batch sizes below or near $b_{\text{noise}}$, AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$ and weight decay $\lambda = 0.1$ on the weight matrices (never on biases or normalization parameters), clipping at $\theta = 1.0$, short-horizon peak-LR calibration, and linear warmup followed by cosine or WSD cooldown.
 
 ## Exercises
 
@@ -637,7 +637,7 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 - Comparing constant-rate SGD ($\eta = 0.3$) against cosine decay ($\eta: 0.3 \to 0$) across two seeds on `FashionCNN`:
   - **At a constant learning rate:** The EMA improves final test accuracy by $+1\text{--}5$ percentage points over the noisy live checkpoint, matching the **$91.1\%\text{--}91.4\%$** accuracy of a full cosine decay!
   - **After cosine decay to zero:** The live weights have already settled at the center of the noise ball ($\eta_T = 0$), so taking an EMA on top of a fully decayed run adds nothing (or lags slightly by $0.1\text{--}0.3\%$).
-- **When to use Weight EMA:** During constant-rate / WSD plateau training to obtain an immediately deployable model at any step without waiting for a cooldown branch!
+- **When to use Weight EMA:** During constant-rate / WSD plateau training to obtain a usable model at any step without waiting for a cooldown branch (on language models it recovers part, not all, of the cooldown gain; Hägele et al., 2024).
 :::
 
 ::: {.col .fig}
@@ -651,9 +651,9 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 
 ::: {.cols .vc}
 ::: {.col}
-- **Universal consensus across Llama 3 405B, DeepSeek-V3 671B, OLMo 2 7B, and Kimi K2 1T:**
+- **DeepSeek-V3 671B, OLMo 2 7B, and Kimi K2 1T agree wherever they publish a value (Llama 3 405B does not report $\beta$, $\theta$, or $\lambda$):**
   - **Moments:** $(\beta_1, \beta_2) = (0.9, 0.95)$ for fast spike recovery.
-  - **Decoupled weight decay:** $\lambda = 0.1$ on 2D matrices only (embeddings & 1D norms exempt).
+  - **Decoupled weight decay:** $\lambda = 0.1$ on 2D matrices only (biases & 1D norms exempt; OLMo 2 also exempts embeddings).
   - **Global-norm clipping:** $\theta = 1.0$.
   - **Schedule & batch policy:** $500\text{--}8{,}000$ warmup steps + cosine or WSD cooldown to $0.01\text{--}0.1\eta_0$, paired with multi-million-token batch ramps.
 :::

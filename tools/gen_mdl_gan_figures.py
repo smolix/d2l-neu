@@ -2,7 +2,7 @@
 """Generate the illustrative figures for the Generative Adversarial Networks
 chapter (ch. 16) in the one shared house style defined in ``gen_mdl_figures.py``.
 
-Seven figures, one per idea the prose draws on:
+Nine figures, one per idea the prose draws on:
 
   * ``mdl-gan-architecture`` (16.1, ``fig_gan``) -- the adversarial loop: a
     latent draw through the generator, the generated and real batches meeting
@@ -10,6 +10,8 @@ Seven figures, one per idea the prose draws on:
     legacy hand-drawn ``img/gan.svg``, now deleted);
   * ``mdl-gan-weights`` (16.1) -- the saturating and non-saturating generator
     weights against the critic score;
+  * ``mdl-gan-js-saturation`` (16.1) -- JS between two unit Gaussians against
+    their mean shift, flattening at the ceiling log 2;
   * ``mdl-gan-critics-separated`` (16.2) -- the optimal JS, W_1 and MMD critics
     on disjoint supports;
   * ``mdl-gan-pairing`` (16.3) -- one sample against a fixed threshold versus
@@ -17,6 +19,8 @@ Seven figures, one per idea the prose draws on:
     verdict on the left and cancelling on the right;
   * ``mdl-gan-dcgan`` and ``mdl-gan-backbone`` (16.5) -- DCGAN and the minimal
     backbone of the three arms, with parameter counts;
+  * ``mdl-gan-transposed-overlap`` (16.5) -- per-pixel stamp overlap counts of
+    a stride-2 transposed convolution, k = 3 (checkerboard) against k = 4;
   * ``mdl-gan-conditioning`` (16.6) -- three ways a condition enters.
 
 The networks are called generator and critic throughout, as in the prose.
@@ -46,6 +50,7 @@ BLUE, ORANGE, GREEN, GRAY = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY
 PURPLE = "#9467bd"
 
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from matplotlib.colors import LinearSegmentedColormap
 
 
 # --------------------------------------------------------------------------- #
@@ -286,6 +291,63 @@ def fig_weights():
 
 
 # =========================================================================== #
+# 16.1  JS saturates at log 2                                                 #
+# =========================================================================== #
+
+def _js_gauss(mu):
+    """JS(N(0,1), N(mu,1)) in nats, by quadrature on a fine grid."""
+    x = np.linspace(-12.0, mu + 12.0, 40001)
+    p = np.exp(-x ** 2 / 2) / np.sqrt(2 * np.pi)
+    q = np.exp(-(x - mu) ** 2 / 2) / np.sqrt(2 * np.pi)
+    m = (p + q) / 2
+    integrand = 0.5 * (p * np.log(p / m) + q * np.log(q / m))
+    return float(np.sum(integrand) * (x[1] - x[0]))
+
+
+def fig_js_saturation():
+    """JS(N(0,1), N(mu,1)) against the mean shift mu: it climbs to the ceiling
+    log 2 within a few standard deviations and is flat beyond, so its slope
+    in mu (the generator's signal) vanishes.  The four marked values are the
+    ones the prose quotes (0.11, 0.34, 0.63, within 1e-4 of log 2)."""
+    fig, ax = plt.subplots(figsize=(6.6, 3.9))
+    mus = np.linspace(0.0, 9.0, 361)
+    js = np.array([_js_gauss(m) for m in mus])
+    LOG2 = np.log(2.0)
+
+    ax.plot([0.0, 9.0], [LOG2, LOG2], ls="--", color="black", lw=1.3,
+            zorder=2)
+    ax.text(0.15, LOG2 + 0.025, r"ceiling $\log 2 \approx 0.693$", ha="left",
+            va="bottom", fontsize=13.5, color="black")
+    ax.plot(mus, js, color=BLUE, lw=2.5, zorder=3)
+
+    marks = {1.0: _js_gauss(1.0), 2.0: _js_gauss(2.0), 4.0: _js_gauss(4.0),
+             8.0: _js_gauss(8.0)}
+    assert [round(v, 2) for v in marks.values()][:3] == [0.11, 0.34, 0.63]
+    assert LOG2 - marks[8.0] < 1e-4
+    # labels sit right of and below each dot, in the empty region under
+    # the rising curve (the ceiling line runs above the last two)
+    offsets = {1.0: (0.22, -0.035), 2.0: (0.22, -0.045), 4.0: (0.2, -0.075),
+               8.0: (0.0, -0.075)}
+    for mu, v in marks.items():
+        ax.plot([mu], [v], "o", color=BLUE, ms=7.5, zorder=4)
+        dx, dy = offsets[mu]
+        txt = f"${v:.2f}$" if mu < 8 else r"$\approx \log 2$"
+        ax.text(mu + dx, v + dy, txt, ha="center" if mu == 8 else "left",
+                va="top", fontsize=13.5, color="black")
+
+    ax.set_xlim(0.0, 9.0)
+    ax.set_ylim(0.0, 0.8)
+    ax.set_xticks([0, 1, 2, 4, 6, 8])
+    ax.set_xlabel(r"mean shift $\mu$ of $q = \mathcal{N}(\mu, 1)$",
+                  fontsize=14)
+    ax.set_ylabel(r"$\mathrm{JS}(p, q)$ (nats)", fontsize=14)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("black")
+    ax.tick_params(colors="black", labelsize=13)
+    fl.save(fig, "mdl-gan-js-saturation")
+
+
+# =========================================================================== #
 # 16.2  Optimal critics on separated supports                                 #
 # =========================================================================== #
 
@@ -480,6 +542,61 @@ def fig_dcgan():
     fl.clean_axes(ax, lim=((x_left - 0.1, xs[-1] + 0.8),
                            (yd - 1.55, yg + 1.6)), hide=True, equal=True)
     fl.save(fig, "mdl-gan-dcgan")
+
+
+def _overlap_counts(k, s=2, n_in=7):
+    """How many input pixels' k x k stamps cover each output pixel of a
+    stride-s transposed convolution (no padding), as an integer grid."""
+    n_out = s * (n_in - 1) + k
+    c1 = np.zeros(n_out, int)
+    for i in range(n_in):
+        c1[s * i:s * i + k] += 1
+    return np.outer(c1, c1)
+
+
+def fig_transposed_overlap():
+    """Per-pixel overlap counts of a stride-2 transposed convolution, in an
+    interior window away from the borders.  k = 3: the counts alternate
+    4, 2, 2, 1 in a checkerboard, so equal weights already paint an uneven
+    grid; k = 4 (divisible by the stride): every pixel is covered four times.
+    Two neighbouring input pixels' stamps are outlined in each panel."""
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.9))
+    plt.subplots_adjust(wspace=0.10)
+    W0, W = 2, 8                          # interior window [W0, W0 + W)
+    # white-to-blue ramp, so the black counts stay legible on every cell
+    cmap = LinearSegmentedColormap.from_list(
+        "overlap", ["white", fl.T.BLUE.base])
+
+    for ax, k in zip(axes, (3, 4)):
+        c = _overlap_counts(k)[W0:W0 + W, W0:W0 + W]
+        ax.imshow(c, cmap=cmap, vmin=0, vmax=6, origin="upper",
+                  extent=(0, W, W, 0), interpolation="nearest", zorder=1)
+        for r in range(W):
+            for q in range(W):
+                ax.text(q + 0.5, r + 0.5, f"{c[r, q]}", ha="center",
+                        va="center", fontsize=14, color="black", zorder=4)
+        for t in range(W + 1):                    # pixel grid
+            ax.plot([0, W], [t, t], color="white", lw=1.2, zorder=2)
+            ax.plot([t, t], [0, W], color="white", lw=1.2, zorder=2)
+        # two horizontally adjacent input pixels' stamps (input (2, 2) and
+        # (2, 3) start at output 2*2 = 4 and 2*3 = 6; window coords -W0)
+        for col, start in ((ORANGE, 4), (GREEN, 6)):
+            r0, c0 = 4 - W0, start - W0
+            inset = 0.07 if col == ORANGE else 0.15
+            ax.add_patch(plt.Rectangle(
+                (c0 + inset, r0 + inset), k - 2 * inset, k - 2 * inset,
+                fill=False, ec=col, lw=2.4, zorder=3))
+        vals = sorted(set(c.ravel().tolist()), reverse=True)
+        counts = ", ".join(str(v) for v in vals)
+        ax.set_title(f"kernel ${k}{{\\times}}{k}$, stride 2: "
+                     + (f"counts {counts}" if len(vals) > 1
+                        else f"every count {vals[0]}"),
+                     fontsize=14, color="black")
+        ax.set_xlim(0, W)
+        ax.set_ylim(W, 0)
+        ax.set_aspect("equal")
+        ax.axis("off")
+    fl.save(fig, "mdl-gan-transposed-overlap")
 
 
 def fig_backbone():
@@ -714,9 +831,11 @@ def fig_conditioning():
 FIGURES = [
     fig_architecture,
     fig_weights,
+    fig_js_saturation,
     fig_critics_separated,
     fig_pairing,
     fig_dcgan,
+    fig_transposed_overlap,
     fig_backbone,
     fig_conditioning,
 ]

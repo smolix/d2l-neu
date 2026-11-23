@@ -8,7 +8,10 @@ Gradient descent itself predates modern computing: Augustin-Louis Cauchy propose
 1. **Ill-conditioning (uneven curvature):** When the loss surface curves sharply in some directions and gently in others, a learning rate small enough to remain stable along the steepest direction makes painfully slow progress along the flattest directions.
 2. **Gradient noise:** Because gradients are estimated from finite minibatches rather than the full dataset, every update carries sampling variance that prevents constant-step-size iterates from settling at a minimum.
 
-Every design choice in a modern optimizer targets one of these two obstacles through three levers:
+![The two obstacles on a valley whose curvature is $20$ times larger across than along ($\kappa = 20$). Left: gradient descent zig-zags across the steep direction and creeps along the flat one. Right: with noisy gradients and a constant step size, the iterates reach the minimum but never settle; they wander inside a noise ball (dashed ellipse: two standard deviations).](../img/mdl-opt-two-obstacles.svg)
+:label:`fig_opt_two_obstacles`
+
+:numref:`fig_opt_two_obstacles` shows both obstacles on the same two-dimensional valley. Every design choice in a modern optimizer targets one of them through three levers:
 
 * **Step direction:** Momentum (:numref:`sec_momentum`), adaptive coordinate-wise methods such as Adam and AdamW (:numref:`sec_adam`), and matrix-level orthogonalized methods such as Muon (:numref:`sec_muon`) replace the raw gradient with a preconditioned or smoothed direction that travels faster along ill-conditioned valleys.
 * **Step-size schedule:** Learning-rate warmup, cosine or linear decay, and warmup–stable–decay (WSD) schedules (:numref:`sec_scheduler`) navigate the trade-off between rapid early traversal and low final noise.

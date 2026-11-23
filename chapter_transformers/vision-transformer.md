@@ -98,7 +98,7 @@ d2l.check_shape(patch_emb(X),
 
 ### The Encoder Block (`ViTBlock`)
 
-Following :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`, `ViTBlock` subclasses our configurable `d2l.TransformerBlock` (:numref:`sec_transformer-block`) with pre-norm `LayerNorm`, biases enabled, and a two-layer `GELU` MLP of custom hidden width `mlp_num_hiddens`:
+Following :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`, `ViTBlock` subclasses our configurable `d2l.TransformerBlock` (:numref:`sec_transformer-block`) with pre-norm `LayerNorm` and a two-layer `GELU` MLP of custom hidden width `mlp_num_hiddens`. The attention projections carry no bias by default (`use_bias=False`), while the two linear layers of the MLP and the `LayerNorm` keep theirs:
 
 ```{.python .input #vision-transformer-the-vision-transformer-block-1}
 %%tab pytorch
@@ -683,7 +683,7 @@ Global average pooling across the $m$ patch outputs (`X[:, 1:].mean(axis=1)`) wo
 
 ::: {.cols .vc}
 ::: {.col}
-- Unlike ResNets (which train reliably under SGD + momentum), ViTs lose $>7$ percentage points under SGD because attention projections ($\mathbf{W}_q, \mathbf{W}_k$) and MLPs have vastly different gradient scales.
+- Unlike ResNets (which train reliably under SGD + momentum), ViTs train markedly worse under SGD because attention projections ($\mathbf{W}_q, \mathbf{W}_k$) and MLPs have vastly different gradient scales.
 - **The ViT recipe:** AdamW ($\eta_{\max} = 3 \times 10^{-4}$), selective weight decay ($\lambda = 0.05$ on 2D/4D weights only), and 1-epoch linear warmup + cosine decay.
 :::
 

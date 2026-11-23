@@ -309,7 +309,7 @@ The denoiser shrinks the noisy offset from the mean by the factor $v/(v + \sigma
 
 ### A Trained Score
 
-Does a learned score reach this best denoiser? To find out we need a network, and the chapter uses one small MLP for all its two-dimensional experiments. Besides the point it reads sines and cosines of the noise level (from the next section on, of a time $t \in [0, 1]$ along a path from data to noise). Here the level is fixed and these features do nothing. From the next section on, one network serves every level and must tell nearby levels apart, so the frequencies run from 1 to 64 radians per unit of $t$, and the fastest features complete about ten periods on $[0, 1]$. The positional encodings of :numref:`sec_positional-information`, built for integer token positions in the thousands, would be nearly constant or linear on this $[0, 1]$ interval (in :numref:`sec_diffusion-few-step`, we will see why few-step flow-map generators lower these frequencies again).
+Does a learned score reach this best denoiser? To find out we need a network, and the chapter uses one small MLP for all its two-dimensional experiments. Besides the point it reads sines and cosines of the noise level (from the next section on, of a time $t \in [0, 1]$ along a path from data to noise). Here the level is fixed and these features do nothing. From the next section on, one network serves every level and must tell nearby levels apart, so the frequencies run from 1 to 64 radians per unit of $t$, and the fastest features complete about ten periods on $[0, 1]$. The positional encodings of :numref:`sec_positional-information`, built for integer token positions in the thousands, would be nearly constant or linear on this interval. The few-step generators of :numref:`sec_diffusion-few-step` lower the frequencies again, for a reason given there.
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab pytorch
@@ -366,7 +366,7 @@ class TimeMLP(nnx.Module):  #@save
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 
-One training loop serves the whole chapter: Adam on a fresh minibatch with fresh noise at every step. It also maintains an exponential moving average (EMA) of the weights—which will become important for image generation starting in :numref:`sec_diffusion-images`—and its docstring lists the remaining options.
+One training loop serves the whole chapter: Adam on a fresh minibatch with fresh noise at every step. It also keeps an exponential moving average (EMA) of the weights, which matters from :numref:`sec_diffusion-images` on; its docstring lists the other options.
 
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab pytorch
@@ -1291,9 +1291,9 @@ Starting $2{,}000$ chains from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$ ($\approx 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Exact clean score ($\nabla\log p$):** Produces sharp modes ($\text{spread} = 0.50, \text{strays} = 1.3\%$), but $10\text{--}12$ nat valleys trap chains in their initial $[0.34, 0.33, 0.33]$ proportions.
-- **Wide blurred score ($\nabla\log p_{1.0}$):** Fills valleys to recover the true $[0.49, 0.31, 0.20]$ weights, but inflates within-mode variance $5\times$ ($\text{strays} = 41\%$).
-- **Trained MLP scores ($\sigma = 0.3$):** Still blocked by $7\text{--}9$ nat barriers; inter-mode drift is driven by uncontrolled approximation errors in empty valleys.
+- **Exact clean score ($\nabla\log p$):** Produces sharp modes ($\text{spread} \approx 0.50, \text{strays} = 1\text{--}2\%$), but $10\text{--}12$ nat valleys trap chains in their initial proportions of about a third each.
+- **Wide blurred score ($\nabla\log p_{1.0}$):** Fills valleys to recover weights near the true $[0.5, 0.3, 0.2]$, but doubles the within-mode spread to $\approx 0.97$ ($\text{strays} = 41\text{--}42\%$).
+- **Trained MLP scores ($\sigma = 0.3$):** Still blocked by $7\text{--}9$ nat barriers; the inter-mode drift presumably comes from approximation errors in the empty valleys.
 :::
 
 ::: {.col .fig .big}
@@ -1309,7 +1309,7 @@ Starting $2{,}000$ chains from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$ ($\approx 
 ::: {.col}
 $$D_{\mathrm{lin}}(\tilde{\mathbf{x}}) = \boldsymbol\mu + \boldsymbol\Sigma(\boldsymbol\Sigma + \sigma^2\mathbf{I})^{-1}(\tilde{\mathbf{x}} - \boldsymbol\mu)$$
 
-- **Linear subspace vs. curved manifold ($\sigma = 0.5$ on Fashion-MNIST):** The optimal $784 \times 784$ Wiener filter shrinks each PCA component by $\lambda_i/(\lambda_i + \sigma^2)$ ($\textrm{MSE} = 0.045$), whereas our 4-layer convnet projects onto the nonlinear garment manifold ($\textrm{MSE} = 0.030$, a $30\,\mathrm{SE}$ improvement).
+- **Linear subspace vs. curved manifold ($\sigma = 0.5$ on Fashion-MNIST):** The optimal $784 \times 784$ Wiener filter shrinks each PCA component by $\lambda_i/(\lambda_i + \sigma^2)$ ($\textrm{MSE} = 0.045$), whereas our 4-layer convnet projects onto the nonlinear garment manifold ($\textrm{MSE} \approx 0.031$, lower by more than 20 standard errors).
 - **Why one-step denoising is not generation:** At high noise, $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$ averages across compatible garments into a blur.
 :::
 

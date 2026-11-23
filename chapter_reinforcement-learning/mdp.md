@@ -267,7 +267,10 @@ A bonus that cannot be collected around a loop must charge for each move away wh
 $$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s),$$
 :eqlabel:`eq_mdp_shaping`
 
-for some function $\Phi: \mathcal{S} \to \mathbb{R}$ called a *potential*, have this property. Around a loop that returns to its start, the differences $\Phi(s') - \Phi(s)$ cancel, so apart from the effect of discounting a loop earns nothing. This construction is called *potential-based shaping*. With $\Phi(s) = -0.3\,\ell(s)$ it pays $0.315$ for the move from 13 to 14 and charges $0.27$ for the move back. Shuttling forever from cell 14 now collects $0.3$ in total, while entering the goal still collects $1.3$: the shaped reward keeps the goal ahead of the loop by exactly the one that the original reward pays. Such a bonus is still useful: a potential spreads the goal's reward over the route, which gives a learner a signal long before it first reaches the goal.
+for some function $\Phi: \mathcal{S} \to \mathbb{R}$ called a *potential*, have this property. Around a loop that returns to its start, the differences $\Phi(s') - \Phi(s)$ cancel, so apart from the effect of discounting a loop earns nothing. This construction is called *potential-based shaping*. With $\Phi(s) = -0.3\,\ell(s)$ it pays $0.315$ for the move from 13 to 14 and charges $0.27$ for the move back. Shuttling forever from cell 14 now collects $0.3$ in total, while entering the goal still collects $1.3$: the shaped reward keeps the goal ahead of the loop by exactly the one that the original reward pays. :numref:`fig_rl_potential_shaping` puts the two bonuses side by side on this loop. Such a bonus is still useful: a potential spreads the goal's reward over the route, which gives a learner a signal long before it first reaches the goal.
+
+![Two bonuses on the cells 13 and 14 beside the goal G, on calm ice. Each arrow carries the shaped reward of its move. (a) The approach bonus pays $0.3$ for the move toward the goal and nothing for the move back, so shuttling forever from cell 14 is worth $2.9$, more than the $1.3$ for entering the goal. (b) The potential $\Phi = -0.3\,\ell$ pays $0.315$ for the move toward the goal and charges $0.27$ for the move back. Shuttling is now worth only $0.3$, and entering the goal is the better choice.](../img/mdl-rl-potential-shaping.svg)
+:label:`fig_rl_potential_shaping`
 
 One condition remains: the potential must be zero at the terminal states. The simulator stops at a terminal state, so a nonzero potential there would leave a final term that depends on which terminal state the episode ends in, and when. Such a term can change which behavior is best. Our $\Phi = -0.3\,\ell$ is zero at the goal but not at the holes, so it must be set to zero there. What the approach bonus does to the best policy on slippery ice is computed in :numref:`sec_valueiter`, which also proves that the potential form leaves the best policy unchanged.
 
@@ -438,12 +441,12 @@ A Markov decision process writes a problem of acting over time as states, action
    :exlabel:`ex_mdp-time-limits`
 
 1. **Actions without consequences.** A multi-armed bandit has a single
-   state, so no action can influence the future. For any policy $\pi$, let $V^\pi(s) = \mathbb{E}_\pi[\sum_{t=0}^\infty \gamma^t r(s_t, a_t) \mid s_0 = s]$ denote its state-value function and define the action-value function $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s')$ (:numref:`sec_valueiter` develops both in full).
+   state, so no action can influence the future.
     1. Suppose more generally that the kernel does not depend on the action,
        $P(s' \mid s, a) = P(s' \mid s)$ for all $a$. Show that for every
        $\gamma$ the policy that picks an action in
-       $\arg\max_a r(s, a)$ at every state maximizes $Q^\pi(s, a)$ and hence the expected discounted
-       return $V^\pi(s)$ from every start state.
+       $\arg\max_a r(s, a)$ at every state maximizes the expected discounted
+       return from every start state.
     1. Construct an MDP with two states and two actions in which this
        greedy policy is optimal for small $\gamma$ and not for large
        $\gamma$, and find the value of $\gamma$ at which the optimal action

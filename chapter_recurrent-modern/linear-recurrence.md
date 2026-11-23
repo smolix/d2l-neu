@@ -88,7 +88,7 @@ $$
 $$
 :eqlabel:`eq_mingru`
 
-This is an affine recurrence :eqref:`eq_affine_recurrence` with decay $\mathbf{a}_t = \mathbf{z}_t$ and write $\mathbf{b}_t = (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$, cutting the layer's parameter count from $6d^2$ to $2d^2$. While a single minGRU layer cannot condition its gate on what is already in $\mathbf{h}_{t-1}$, stacking multiple minGRU blocks with positionwise MLPs restores state-dependent gating across depth without sacrificing parallel evaluation across time.
+This is an affine recurrence :eqref:`eq_affine_recurrence` with decay $\mathbf{a}_t = \mathbf{z}_t$ and write $\mathbf{b}_t = (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$, cutting the layer's parameter count from $6d^2$ to $2d^2$. While a single minGRU layer cannot condition its gate on what is already in $\mathbf{h}_{t-1}$, stacking multiple minGRU blocks with positionwise MLPs recovers part of that ability without sacrificing parallel evaluation across time: the gates of each layer see the states of the layer below. This gives one round of state-dependent gating per layer, where a GRU has one at every step. :numref:`subsec_dn-state-tracking` measures what a fixed number of rounds cannot do.
 
 ## Parallel Scans
 :label:`subsec_parallel-scans`
@@ -376,7 +376,7 @@ for g in (0.5, 0.9, 0.99):
           f'{(Z_init > g).mean():23.1%}  {(Z > g).mean():7.1%}')
 ```
 
-Training increases the share of gates with half-life $\ge 7$ bytes ($g > 0.9$) more than tenfold (from $\sim 1\%$ to $\sim 16\%$), matching the word-level timescales needed over 128-byte windows, while almost no gates reach $g > 0.99$ (half-life 69 bytes) from zero-bias initialization.
+Training increases the share of gates with half-life $\ge 7$ bytes ($g > 0.9$) more than tenfold (from $\sim 1\%$ to about $18\%$), matching the word-level timescales needed over 128-byte windows, while almost no gates reach $g > 0.99$ (half-life 69 bytes) from zero-bias initialization.
 
 ## Cost against Attention
 :label:`subsec_linear-recurrence-cost`
@@ -637,13 +637,13 @@ $$\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z
 :::
 :::
 
-::: {.slide title="What One Linear Layer Loses—and What Depth Restores"}
+::: {.slide title="What One Linear Layer Loses—and What Depth Recovers"}
 [Expressivity Trade-Off]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Single-Layer Blindness:** Because $\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z})$ cannot inspect $\mathbf{h}_{t-1}$, a 1-layer `minGRU` cannot tell whether a memory slot is already full and overwrites on later digits.
-- **Depth Restores State Conditioning:** In a 2-block stack, Layer 1's state $\mathbf{h}_t^{(1)}$ summarizes history so Layer 2's gate $\mathbf{z}_t^{(2)}$ can lock the slot while keeping parallel scan training.
+- **Depth Adds One Round of State Conditioning per Layer:** In a 2-block stack, Layer 1's state $\mathbf{h}_t^{(1)}$ summarizes history so Layer 2's gate $\mathbf{z}_t^{(2)}$ can lock the slot while keeping parallel scan training.
 :::
 
 ::: {.col .fig .big}
@@ -758,7 +758,7 @@ Inspecting the update gates $\mathbf{z}_t \in (0, 1)^d$ of the first `minGRU` bl
 
 @!ssm-a-linear-recurrent-language-model-6
 
-- **Emergence of word-scale memories:** At initialization ($\mathbf{b}_\textrm{z} = \mathbf{0}$), only $1.2\%$ of gates exceed $0.9$ (half-life $\ge 7$ bytes); training expands this share more than tenfold to $\sim 16\%$.
+- **Emergence of word-scale memories:** At initialization ($\mathbf{b}_\textrm{z} = \mathbf{0}$), only $1\%$–$2\%$ of gates exceed $0.9$ (half-life $\ge 7$ bytes); training expands this share more than tenfold to $\sim 18\%$.
 - **Why almost no gates exceed $0.99$ (half-life $69$ bytes):** Over 128-byte windows, local word and phrase context dominates the loss, and zero-bias initialization starts far from the $0.99$–$0.999$ regime—a limitation §{sec_ssm} addresses directly.
 :::
 
@@ -802,8 +802,8 @@ With total batch tokens fixed at $B \times T = 65{,}536$, an ideal linear-time l
 With total batch tokens fixed at $B \times T = 65{,}536$, an ideal linear-time layer has a completely horizontal curve:
 
 - **Sequential `GRU` ($O(T)$ depth):** Slowest at every length, growing $>15\times$ from $T = 512$ to $16{,}384$ because doubling $T$ doubles the number of sequential scan steps while halving batch size $B$.
-- **Work-efficient `minGRU` (`jax.lax.associative_scan`):** Performs $\sim 2T$ elementwise combines regardless of $T$, staying **completely flat ($\sim 2.6\text{ ms}$) across a $32\times$ increase in sequence length** and beating attention at every length.
-- **cuDNN `FusedAttention` ($O(T^2 d)$ work):** Flat up to $T = 2{,}048$, then bends upward toward $2\times$ per doubling once quadratic pairwise mixing dominates—trailing `minGRU` by **$>5\times$ at $T = 16{,}384$**.
+- **Work-efficient `minGRU` (`jax.lax.associative_scan`):** Performs $\sim 2T$ elementwise combines regardless of $T$, staying **completely flat ($\sim 1.2\text{ ms}$) across a $32\times$ increase in sequence length** and beating attention at every length.
+- **cuDNN `FusedAttention` ($O(T^2 d)$ work):** Flat up to $T = 2{,}048$, then bends upward toward $2\times$ per doubling once quadratic pairwise mixing dominates—trailing `minGRU` by **about $14\times$ at $T = 16{,}384$**.
 :::
 
 ::: {.slide title="Concept Check: Scan Depth, Closure, and Crossover"}

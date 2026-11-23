@@ -10,6 +10,9 @@ Figures:
   mdl-transformers-norm-taxonomy.svg -- four placements of normalization
       around one sublayer (post-LN, pre-LN, OLMo 2, Gemma 3) on one shared
       vertical rhythm.
+  mdl-transformers-token-collapse.svg -- token collapse in one post-norm
+      block: tokens as shared mean plus deviations, attention adding the
+      same vector to every token, and the norm shrinking the deviations.
 
 Run with the repo's pytorch venv:
 
@@ -31,6 +34,8 @@ np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
 
 from matplotlib.patches import Circle, FancyBboxPatch
+
+INK_C = fl.INK
 
 
 # --------------------------------------------------------------------------- #
@@ -252,8 +257,88 @@ def fig_norm_taxonomy() -> None:
     _unitless(fl.WRITTEN[-1])
 
 
+# --------------------------------------------------------------------------- #
+# B1: token collapse -- attention adds the same vector to every token, the    #
+# post-norm division then shrinks the deviations from the mean                #
+# --------------------------------------------------------------------------- #
+
+MU = np.array([0.0, 1.5])            # shared mean of the tokens
+U = np.array([1.5, 0.0])             # attention update W_o W_v mu: g = 1, so
+                                     # |u| = |mu|, and here u is orthogonal
+DELTA = np.array([[-0.30, 0.36], [0.42, 0.22], [0.22, -0.42],
+                  [-0.46, -0.10], [0.44, -0.18]])   # the deviations delta_i
+R_SPREAD = 0.55                      # radius of the dashed spread circle
+COLLAPSE_LIM = ((-0.75, 2.35), (-0.3, 2.3))
+
+
+def _cloud(ax, mean, scale, alpha=1.0):
+    """The tokens mean + scale * delta_i, their spread circle, and the mean
+    vector drawn from the origin."""
+    fl.arrow(ax, (0, 0), mean, color=BLUE, lw=2.2, alpha=alpha, mut=14)
+    ax.add_patch(Circle(mean, R_SPREAD * scale, fc="none", ec=GRAY, lw=1.0,
+                        ls=(0, (3, 2)), alpha=alpha, zorder=2))
+    pts = mean + scale * DELTA
+    for p in pts:
+        ax.plot([mean[0], p[0]], [mean[1], p[1]], color=GRAY, lw=0.8,
+                alpha=alpha, zorder=2)
+    ax.plot(pts[:, 0], pts[:, 1], "o", ms=6.5, color=BLUE, mec="white",
+            mew=0.8, alpha=alpha, zorder=4)
+    return pts
+
+
+def fig_token_collapse() -> None:
+    fig, axes = plt.subplots(1, 3, figsize=(8.4, 3.2))
+    s = np.sqrt(2.0)                  # sqrt(1 + g^4) at g = 1
+    for ax in axes:
+        ax.plot(0, 0, "o", ms=4, color=INK_C, zorder=5)
+
+    # (1) tokens = shared mean + own deviation
+    ax = axes[0]
+    pts = _cloud(ax, MU, 1.0)
+    ax.text(-0.12, 0.72, r"$\boldsymbol{\mu}$", ha="right", va="center",
+            fontsize=15, color=BLUE)
+    p = pts[1]
+    ax.text(p[0] + 0.12, p[1] + 0.08, r"$\mathbf{x}_i$", ha="left",
+            va="bottom", fontsize=14, color=INK_C)
+    ax.text(0.17, 1.74, r"$\boldsymbol{\delta}_i$", ha="center",
+            va="bottom", fontsize=13, color=INK_C)
+    ax.set_title(r"(1) $\mathbf{x}_i = \boldsymbol{\mu} + "
+                 r"\boldsymbol{\delta}_i$", fontsize=14, color=INK_C)
+
+    # (2) attention adds the same u to every token
+    ax = axes[1]
+    _cloud(ax, MU, 1.0, alpha=0.25)
+    _cloud(ax, MU + U, 1.0)
+    fl.arrow(ax, MU, MU + U, color=ORANGE, lw=2.2, mut=14)
+    ax.text(0.75, 1.5 + 0.12, r"$\mathbf{u}$", ha="center", va="bottom",
+            fontsize=15, color=ORANGE,
+            bbox=dict(fc="white", ec="none", pad=0.5))
+    ax.text(1.35, 0.42, r"$\mathbf{u} \approx \mathbf{W}_o\mathbf{W}_v"
+            r"\boldsymbol{\mu}$" + "\nfor every token", ha="center",
+            va="center", fontsize=12, color=INK_C)
+    ax.set_title(r"(2) attention adds $\mathbf{u}$", fontsize=14,
+                 color=INK_C)
+
+    # (3) the norm divides the whole vector by sqrt(1 + g^4)
+    ax = axes[2]
+    _cloud(ax, MU + U, 1.0, alpha=0.25)
+    _cloud(ax, (MU + U) / s, 1.0 / s)
+    ax.text(1.72, 0.3, r"$\boldsymbol{\delta}_i$ shrink by" + "\n"
+            r"$1/\sqrt{1+g^4}$", ha="center", va="center", fontsize=12,
+            color=INK_C)
+    ax.set_title(r"(3) norm rescales", fontsize=14, color=INK_C)
+
+    for ax in axes:
+        fl.clean_axes(ax, lim=COLLAPSE_LIM, hide=True)
+    fig.subplots_adjust(wspace=0.05, left=0.0, right=1.0, bottom=0.0,
+                        top=0.88)
+    fl.save(fig, "mdl-transformers-token-collapse")
+    _unitless(fl.WRITTEN[-1])
+
+
 if __name__ == "__main__":
     fig_block_anatomy()
     fig_norm_taxonomy()
+    fig_token_collapse()
     for path in fl.WRITTEN:
         print(f"wrote {os.path.relpath(path)}")

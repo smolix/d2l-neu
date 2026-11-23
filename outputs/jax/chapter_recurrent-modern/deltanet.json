@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:a68206374eb0e74aa6399c603fdff2b9f7464b0319d68909873afecb592e9e49",
+    "d2l_lib_fingerprint": "sha256:3a9741101ab6fe3a844272f89492ddf5db081e931d1d5487f62075dde9726b85",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -93,12 +93,48 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention        73,941      0.891 0.893      0.976 0.970\n"
+          "text": "gated linear attention        73,941      0.895 0.910      0.968 0.977\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet                74,201      0.981 0.984      0.994 0.994\n"
+          "text": "Gated DeltaNet                74,201      0.977 0.990      0.987 0.996\n"
+        }
+      ]
+    },
+    "deltanet-state-tracking-1": {
+      "code_fingerprint": "sha256:f91d516995ff2aa159b1bec3d61e7bde6e81404eb9e1feb7361cbfa5208711a5",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-state-tracking-2": {
+      "code_fingerprint": "sha256:1c3a64e842d664ffa695fa70c944e28f272174363ad0ebc02c8db90914750d1c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                          positions 1-64      65-256\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GRU                            1.00/1.00   1.00/1.00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "minGRU                         0.58/0.55   0.50/0.50\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gated DeltaNet                 0.74/0.81   0.50/0.50\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gated DeltaNet, 2σ             1.00/1.00   0.99/1.00\n"
         }
       ]
     }

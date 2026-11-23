@@ -1,4 +1,5 @@
 import { C as EC, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -85,28 +86,28 @@ function twoObstacles() {
 
   body += rbox(16, 152, 246, 92, C.green.bg, C.green.bd);
   body += tx(139, 170, 'Solution 1: Linear Scan & Chunks', { fs: 12, fw: 700, fill: C.green.tx });
-  body += tx(139, 190, 'h_t = a_t ⊙ h_{t-1} + b_t (§12.3–12.5)', { fs: 10, fill: C.text, mono: true });
+  body += tx(139, 190, `h_t = a_t ⊙ h_{t-1} + b_t (${sec('sec_linear-recurrence')}–${num('sec_mamba')})`, { fs: 10, fill: C.text, mono: true });
   body += tx(139, 210, 'Associative scan in O(log₂ T) depth', { fs: 10, fill: C.muted });
-  body += tx(139, 228, 'Chunked Tensor-Core GEMMs (§12.6–12.7)', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(139, 228, `Chunked Tensor-Core GEMMs (${sec('sec_matrix-state')}–${num('sec_deltanet')})`, { fs: 10, fw: 700, fill: C.green.tx });
 
   body += rbox(278, 152, 246, 92, C.blue.bg, C.blue.bd);
   body += tx(401, 170, 'Solution 2: Structured Matrix State', { fs: 12, fw: 700, fill: C.blue.tx });
   body += tx(401, 190, 'Multi-scale Δ_t + S_t ∈ R^{d_v×d_k}', { fs: 10, fill: C.text, mono: true });
-  body += tx(401, 210, 'Delta rule erases old key value (§12.7)', { fs: 10, fill: C.muted });
-  body += tx(401, 228, '3:1 Hybrid adds exact lookup (§12.8)', { fs: 10, fw: 700, fill: C.blue.tx });
+  body += tx(401, 210, `Delta rule erases old key value (${sec('sec_deltanet')})`, { fs: 10, fill: C.muted });
+  body += tx(401, 228, `3:1 Hybrid adds exact lookup (${sec('sec_hybrids')})`, { fs: 10, fw: 700, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
 function roadmap() {
   const W = 540, H = 256;
   let body = '';
-  body += tx(W / 2, 18, 'Chapter 12 Progression: From Classical Gates to Hybrid Blocks', { fs: 13.5, fw: 700 });
+  body += tx(W / 2, 18, `Chapter ${num('chap_modern_rnn')} Progression: From Classical Gates to Hybrid Blocks`, { fs: 13.5, fw: 700 });
 
   const row1 = [
-    ['§12.1 LSTM/GRU', 'Gated vector h_t', 'Sequential O(T)', C.slate],
-    ['§12.2 Seq2Seq', 'Encoder → c → Dec', 'Vector bottleneck', C.slate],
-    ['§12.3 minGRU', 'h_t = a_t⊙h + b_t', 'Parallel scan', C.blue],
-    ['§12.4 S4D SSM', 'N complex poles', 'O(T log T) FFT', C.blue],
+    [`${sec('sec_lstm')} LSTM/GRU`, 'Gated vector h_t', 'Sequential O(T)', C.slate],
+    [`${sec('sec_seq2seq')} Seq2Seq`, 'Encoder → c → Dec', 'Vector bottleneck', C.slate],
+    [`${sec('sec_linear-recurrence')} minGRU`, 'h_t = a_t⊙h + b_t', 'Parallel scan', C.blue],
+    [`${sec('sec_ssm')} S4D SSM`, 'N real decay rates', 'O(T log T) FFT', C.blue],
   ];
   row1.forEach(([title, sub1, sub2, col], i) => {
     const x = 14 + i * 130;
@@ -118,10 +119,10 @@ function roadmap() {
   });
 
   const row2 = [
-    ['§12.5 Mamba', 'Token Δ_t, B_t, C_t', 'Adjoint 4D scan', C.purple],
-    ['§12.6 GLA Matrix', 'S_t = a_t S + v kᵀ', 'Chunked SSD dual', C.purple],
-    ['§12.7 DeltaNet', 'Read-before-write', 'WY lower-tri solve', C.green],
-    ['§12.8 Hybrids', '3:1 Recurrent+Attn', 'Welch bound escape', C.amber],
+    [`${sec('sec_mamba')} Mamba`, 'Token Δ_t, B_t, C_t', 'Adjoint 4D scan', C.purple],
+    [`${sec('sec_matrix-state')} GLA Matrix`, 'S_t = a_t S + v kᵀ', 'Chunked SSD dual', C.purple],
+    [`${sec('sec_deltanet')} DeltaNet`, 'Read-before-write', 'WY lower-tri solve', C.green],
+    [`${sec('sec_hybrids')} Hybrids`, '3:1 Recurrent+Attn', 'Welch bound escape', C.amber],
   ];
   row2.forEach(([title, sub1, sub2, col], i) => {
     const x = 14 + i * 130;
@@ -375,8 +376,8 @@ function seqlmBackbone() {
   });
 
   body += rbox(16, 150, 508, 82, C.slate.bg, C.slate.bd);
-  body += tx(W / 2, 170, 'Apples-to-Apples Mixer Benchmark Protocol across §§12.1–12.8', { fs: 11.5, fw: 700, fill: C.text });
-  body += tx(W / 2, 192, '• Only Mixer(·) changes: PlainRNN → LSTM → GRU → minGRU → S4D → Mamba → GLA → DeltaNet', { fs: 9.5, fill: C.text });
+  body += tx(W / 2, 170, `Apples-to-Apples Mixer Benchmark Protocol across §§${num('sec_lstm')}–${num('sec_hybrids')}`, { fs: 11.5, fw: 700, fill: C.text });
+  body += tx(W / 2, 192, '• Only Mixer(·) changes; on text: RNN, LSTM, GRU, minGRU, Mamba, Gated DeltaNet, attention', { fs: 9.5, fill: C.text });
   body += tx(W / 2, 212, '• Residual highway carries ∂H_L/∂H_l = I + ... while the mixer supplies causal cross-time transport', { fs: 9.5, fill: C.blue.tx });
   return svg(W, H, body);
 }
@@ -455,7 +456,7 @@ function sutskeverReversal() {
   body += tx(W / 2, 158, 'Reversed Source Order: x_3  →  x_2  →  x_1  → [ c ] →  y_1  →  y_2  →  y_3', { fs: 11, fw: 700, fill: C.green.tx, mono: true });
   body += tx(W / 2, 180, 'x_1 sits immediately adjacent to c and y_1 (lag = 2 steps instead of T + 1!)', { fs: 10, fill: C.text });
   body += tx(W / 2, 200, 'Early target predictions y_1, y_2 anchor on fresh x_1, x_2 before error compounds', { fs: 10, fill: C.text });
-  body += tx(W / 2, 220, '4-layer LSTM + beam search reached 34.8 BLEU on WMT\'14 English→French', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(W / 2, 220, 'An ensemble of five 4-layer LSTMs reached 34.8 BLEU on WMT\'14 English→French', { fs: 10, fw: 700, fill: C.green.tx });
   return svg(W, H, body);
 }
 
@@ -501,7 +502,7 @@ function bleuFormula() {
 
   body += rbox(278, 38, 246, 114, C.purple.bg, C.purple.bd);
   body += tx(401, 58, 'Factor 2: Clipped N-Gram Product', { fs: 11.5, fw: 700, fill: C.purple.tx });
-  body += tx(401, 82, '∏ (p_n)^{1/k}   for n = 1..4', { fs: 10.5, fw: 700, fill: C.text, mono: true });
+  body += tx(401, 82, '∏ (p_n)^{1/2ⁿ}   for n = 1..k', { fs: 10.5, fw: 700, fill: C.text, mono: true });
   body += tx(401, 106, 'p_1: lexical adequacy; p_4: fluency', { fs: 10, fill: C.text });
   body += tx(401, 126, 'Clips counts at max reference count', { fs: 10, fill: C.muted });
 
@@ -572,7 +573,7 @@ function twoEscapeRoutes() {
   body += tx(W / 2, 18, 'Two Architectural Escape Routes from the Single-Vector Bottleneck', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 38, 246, 198, C.amber.bg, C.amber.bd);
-  body += tx(139, 58, 'Route 1: Cross-Attention (Ch. 11)', { fs: 11.5, fw: 700, fill: C.amber.tx });
+  body += tx(139, 58, 'Route 1: Cross-Attention', { fs: 11.5, fw: 700, fill: C.amber.tx });
   body += rbox(30, 74, 218, 38, '#FFFFFF', C.amber.bd, 5, 1.1);
   body += tx(139, 94, 'Keep ALL T states [h_1, ..., h_T]', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(139, 130, '• Dynamic query c_{t\'} = ∑ α_{t\',s} h_s', { fs: 10, fill: C.text });
@@ -581,13 +582,13 @@ function twoEscapeRoutes() {
   body += tx(139, 196, '• O(T) compute per decoded token', { fs: 10, fill: C.coral.tx });
 
   body += rbox(278, 38, 246, 198, C.blue.bg, C.blue.bd);
-  body += tx(401, 58, 'Route 2: Structured State (§§12.3–12.8)', { fs: 11.5, fw: 700, fill: C.blue.tx });
+  body += tx(401, 58, `Route 2: Structured State (§§${num('sec_linear-recurrence')}–${num('sec_hybrids')})`, { fs: 11.5, fw: 700, fill: C.blue.tx });
   body += rbox(292, 74, 218, 38, '#FFFFFF', C.blue.bd, 5, 1.1);
   body += tx(401, 94, 'Upgrade O(1) State Geometry & Rule', { fs: 10, fw: 700, fill: C.text });
-  body += tx(401, 130, '• §§12.3–12.5: Linear scan + Δ_t', { fs: 10, fill: C.text });
-  body += tx(401, 152, '• §12.6: Matrix state S_t ∈ R^{d_v×d_k}', { fs: 10, fill: C.text });
-  body += tx(401, 174, '• §12.7: Delta rule key overwrite', { fs: 10, fill: C.text });
-  body += tx(401, 196, '• §12.8: 3:1 Hybrid with attention', { fs: 10, fw: 700, fill: C.blue.tx });
+  body += tx(401, 130, `• §§${num('sec_linear-recurrence')}–${num('sec_mamba')}: Linear scan + Δ_t`, { fs: 10, fill: C.text });
+  body += tx(401, 152, `• ${sec('sec_matrix-state')}: Matrix state S_t ∈ R^{d_v×d_k}`, { fs: 10, fill: C.text });
+  body += tx(401, 174, `• ${sec('sec_deltanet')}: Delta rule key overwrite`, { fs: 10, fill: C.text });
+  body += tx(401, 196, `• ${sec('sec_hybrids')}: 3:1 Hybrid with attention`, { fs: 10, fw: 700, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
@@ -903,7 +904,7 @@ function zohStepHold() {
 
   body += rbox(16, 172, 508, 62, C.slate.bg, C.slate.bd);
   body += tx(W / 2, 192, 'Resulting Discrete Linear Recurrence:   h_t = ā h_{t-1} + b̄ x_t', { fs: 11, fw: 700, fill: C.text, mono: true });
-  body += tx(W / 2, 214, 'Matches §12.3 linear recurrence! Re(λ) < 0 and Δ > 0 guarantee |ā| = e^{Δ Re(λ)} < 1.', { fs: 9.5, fill: C.blue.tx });
+  body += tx(W / 2, 214, `Matches ${sec('sec_linear-recurrence')} linear recurrence! Re(λ) < 0 and Δ > 0 guarantee |ā| = e^{Δ Re(λ)} < 1.`, { fs: 9.5, fill: C.blue.tx });
   return svg(W, H, body);
 }
 
@@ -963,27 +964,27 @@ function fftConvPipeline() {
 function realVsComplexBasis() {
   const W = 540, H = 252;
   let body = '';
-  body += tx(W / 2, 18, 'Why S4D Uses Complex Eigenvalues: Fitting a Delayed Spike at Lag k* = 20', { fs: 13.5, fw: 700 });
+  body += tx(W / 2, 18, 'Real vs. Complex Rates: Fitting a Delayed Spike at Lag k* = 20', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 38, 246, 198, C.coral.bg, C.coral.bd);
-  body += tx(139, 58, 'Real Basis (S4D-Real)', { fs: 11.5, fw: 700, fill: C.coral.tx });
+  body += tx(139, 58, 'Real Rates (This Chapter\'s S4D)', { fs: 11.5, fw: 700, fill: C.coral.tx });
   body += tx(139, 80, 'λ_n = −n   ⇒   ā_n^k = e^{−n Δ k}', { fs: 10, fill: C.text, mono: true });
   body += rbox(30, 96, 218, 54, '#FFFFFF', C.coral.bd, 5, 1.1);
   body += tx(139, 114, 'All basis curves decay monotonically', { fs: 9.5, fw: 700, fill: C.coral.tx });
   body += tx(139, 134, 'Must cancel 16 nearly parallel curves', { fs: 9.5, fill: C.muted });
-  body += tx(139, 170, '• Vandermonde condition κ > 10¹²', { fs: 10, fill: C.text });
+  body += tx(139, 170, '• N = 16: spike residual 0.89, bump 0.03', { fs: 10, fill: C.text });
   body += tx(139, 190, '• Readout weights explode: ||c||_{∞} ~ 10¹¹', { fs: 10, fw: 700, fill: C.coral.tx });
-  body += tx(139, 212, '• Float32 rounding destroys filter!', { fs: 10, fill: C.text });
+  body += tx(139, 212, '• Gradient descent cannot reach such weights', { fs: 10, fill: C.text });
 
   body += rbox(278, 38, 246, 198, C.green.bg, C.green.bd);
-  body += tx(401, 58, 'Complex Basis (S4D-Lin)', { fs: 11.5, fw: 700, fill: C.green.tx });
+  body += tx(401, 58, 'Complex Rates (S4D-Lin, Exercise)', { fs: 11.5, fw: 700, fill: C.green.tx });
   body += tx(401, 80, 'λ_m = −1/2 ± i π m   (damped cosines)', { fs: 10, fill: C.text, mono: true });
   body += rbox(292, 96, 218, 54, '#FFFFFF', C.green.bd, 5, 1.1);
-  body += tx(401, 114, 'e^{−Δk/2} cos(ω_m Δ k) is orthogonal', { fs: 9.5, fw: 700, fill: C.green.tx });
+  body += tx(401, 114, 'e^{−Δk/2} cos(ω_m Δ k): nearly orthogonal', { fs: 9.5, fw: 700, fill: C.green.tx });
   body += tx(401, 134, 'Constructive interference at k = k*', { fs: 9.5, fill: C.muted });
   body += tx(401, 170, '• Well-conditioned Fourier-like basis', { fs: 10, fill: C.text });
   body += tx(401, 190, '• Bounded weights: ||c||_{∞} ~ O(1)', { fs: 10, fw: 700, fill: C.green.tx });
-  body += tx(401, 212, '• Clean lag-20 impulse spike in float32!', { fs: 10, fill: C.text });
+  body += tx(401, 212, '• Smaller spike residual than real rates', { fs: 10, fill: C.text });
   return svg(W, H, body);
 }
 
@@ -1035,12 +1036,12 @@ function mambaUnification() {
   body += tx(W / 2, 18, 'Mamba Unifies minGRU Content Selectivity with S4D State Expansion', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 42, 224, 86, C.blue.bg, C.blue.bd);
-  body += tx(128, 62, '§12.3 minGRU (Selective)', { fs: 11, fw: 700, fill: C.blue.tx });
+  body += tx(128, 62, `${sec('sec_linear-recurrence')} minGRU (Selective)`, { fs: 11, fw: 700, fill: C.blue.tx });
   body += tx(128, 84, '+ Input-dependent gate z_t(x_t)', { fs: 10, fill: C.green.tx });
   body += tx(128, 104, '− Only N = 1 scalar per channel', { fs: 10, fill: C.coral.tx });
 
   body += rbox(300, 42, 224, 86, C.purple.bg, C.purple.bd);
-  body += tx(412, 62, '§12.4 S4D (Multi-Timescale)', { fs: 11, fw: 700, fill: C.purple.tx });
+  body += tx(412, 62, `${sec('sec_ssm')} S4D (Multi-Timescale)`, { fs: 11, fw: 700, fill: C.purple.tx });
   body += tx(412, 84, '+ N = 16 state modes per channel', { fs: 10, fill: C.green.tx });
   body += tx(412, 104, '− Fixed LTI kernel K_k ignores x_t', { fs: 10, fill: C.coral.tx });
 
@@ -1048,7 +1049,7 @@ function mambaUnification() {
   body += arrow(412, 130, 330, 152);
 
   body += rbox(46, 154, 448, 80, C.green.bg, C.green.bd);
-  body += tx(270, 174, '§12.5 Selective SSM / Mamba (Gu & Dao, 2023)', { fs: 11.5, fw: 700, fill: C.green.tx });
+  body += tx(270, 174, `${sec('sec_mamba')} Selective SSM / Mamba (Gu & Dao, 2023)`, { fs: 11.5, fw: 700, fill: C.green.tx });
   body += tx(270, 196, 'Token-dependent (Δ_t, B_t, C_t) over H × N expanded state', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(270, 216, 'Drops FFT convolution (time-varying) in favor of parallel associative scan', { fs: 9.5, fill: C.muted });
   return svg(W, H, body);
@@ -1089,7 +1090,7 @@ function selectiveSsmDataflow() {
   body += tx(58, 122, 'x_t ∈ R^H', { fs: 10, fw: 700, fill: C.slate.tx, mono: true });
 
   const branches = [
-    ['Δ_t = softplus(W_2 W_1 x_t)', 'Rank-R step size ∈ R_{+}^{H}', C.amber, 36],
+    ['Δ_t = softplus(W_{Δ} x_t + b_{Δ})', 'Rank-R step size ∈ R_{+}^{H}', C.amber, 36],
     ['B_t = W_B x_t ∈ R^N', 'Token write vector across H', C.blue, 96],
     ['C_t = W_C x_t ∈ R^N', 'Token readout query across H', C.purple, 156],
   ];
@@ -1103,12 +1104,12 @@ function selectiveSsmDataflow() {
 
   body += rbox(362, 52, 164, 124, C.green.bg, C.green.bd);
   body += tx(444, 74, 'H × N State Scan', { fs: 11, fw: 700, fill: C.green.tx });
-  body += tx(444, 96, 'a_t = exp(−Δ_t A)', { fs: 9.5, fill: C.text, mono: true });
+  body += tx(444, 96, 'a_t = exp(Δ_t λ)', { fs: 9.5, fill: C.text, mono: true });
   body += tx(444, 116, 'b_t = Δ_t B_t x_t', { fs: 9.5, fill: C.text, mono: true });
   body += tx(444, 138, 'h_t = a_t ⊙ h_{t-1} + b_t', { fs: 9.5, fw: 700, fill: C.green.tx, mono: true });
-  body += tx(444, 158, 'y_t = h_t C_t + d ⊙ x_t', { fs: 9.5, fw: 700, fill: C.text, mono: true });
+  body += tx(444, 158, 'y_t = h_t C_t + D ⊙ x_t', { fs: 9.5, fw: 700, fill: C.text, mono: true });
 
-  body += tx(W / 2, 228, 'Fixed rate matrix A_{h,n} = n ∈ {1..N} sets N timescales; Δ_{t,h} dilates all N modes simultaneously', { fs: 9.5, fw: 600, fill: C.muted });
+  body += tx(W / 2, 228, 'Rates λ_n start at −n, n = 1..N: N timescales; Δ_{t,h} dilates all N modes simultaneously', { fs: 9.5, fw: 600, fill: C.muted });
   return svg(W, H, body);
 }
 
@@ -1191,7 +1192,7 @@ function vectorVsMatrixState() {
   body += tx(W / 2, 18, 'Upgrading Recurrent State Geometry: Vector h_t vs. Key-Value Matrix S_t', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 38, 246, 198, C.coral.bg, C.coral.bd);
-  body += tx(139, 58, 'Vector State (§§12.1–12.5)', { fs: 11.5, fw: 700, fill: C.coral.tx });
+  body += tx(139, 58, `Vector State (§§${num('sec_lstm')}–${num('sec_mamba')})`, { fs: 11.5, fw: 700, fill: C.coral.tx });
   body += rbox(30, 74, 218, 44, '#FFFFFF', C.coral.bd, 5, 1.1);
   body += tx(139, 92, 'h_t = a_t ⊙ h_{t-1} + b_t', { fs: 10.5, fw: 700, fill: C.text, mono: true });
   body += tx(139, 108, '1D vector superimposes all facts', { fs: 9.5, fill: C.muted });
@@ -1200,7 +1201,7 @@ function vectorVsMatrixState() {
   body += tx(139, 186, '• Fails multi-pair associative recall', { fs: 10, fw: 700, fill: C.coral.tx });
 
   body += rbox(278, 38, 246, 198, C.green.bg, C.green.bd);
-  body += tx(401, 58, 'Matrix State (§§12.6–12.7)', { fs: 11.5, fw: 700, fill: C.green.tx });
+  body += tx(401, 58, `Matrix State (§§${num('sec_matrix-state')}–${num('sec_deltanet')})`, { fs: 11.5, fw: 700, fill: C.green.tx });
   body += rbox(292, 74, 218, 44, '#FFFFFF', C.green.bd, 5, 1.1);
   body += tx(401, 92, 'S_t = S_{t-1} + v_t k_tᵀ', { fs: 10.5, fw: 700, fill: C.text, mono: true });
   body += tx(401, 108, 'Outer-product store ∈ R^{d_v×d_k}', { fs: 9.5, fill: C.muted });
@@ -1365,7 +1366,7 @@ function glaBlock() {
     ['1. QKV + Conv4', 'W_qkv x_t → Conv4', '+ SiLU activation', C.slate, 14, 114],
     ['2. L2 Norm + a_t', 'q̂_t, k̂_t unit norm', 'a_{t,h} = σ(w_aᵀ x_t)', C.blue, 140, 122],
     ['3. Chunked SSD', 'S_t = a_t S + v_t k̂_tᵀ', 'H heads × (d_h×d_h)', C.green, 274, 126],
-    ['4. RMSNorm Gate', 'LN(y) ⊙ SiLU(W_g x)', '→ Output W_o', C.purple, 412, 114],
+    ['4. RMSNorm Gate', 'RMS(y) ⊙ SiLU(W_g x)', '→ Output W_o', C.purple, 412, 114],
   ];
   stages.forEach(([title, l1, l2, col, x, w], i) => {
     body += rbox(x, 44, w, 88, col.bg, col.bd);
@@ -1639,11 +1640,11 @@ function pigeonholeVsAlgebra() {
 
   body += rbox(16, 38, 508, 46, C.blue.bg, C.blue.bd);
   body += tx(W / 2, 55, 'Setup: m = 64 keys, M = 4 values, H = 8 heads, d_k = d_v = 4', { fs: 10.5, fw: 700, fill: C.blue.tx, mono: true });
-  body += tx(W / 2, 73, 'Why does a 2-block stack with 256 float32s (8,192 bits) plateau at 51% accuracy?', { fs: 10, fill: C.text });
+  body += tx(W / 2, 73, 'Why do 256 float32s (8,192 bits) in two blocks recall only about half of 64 pairs?', { fs: 10, fill: C.text });
 
   const bars = [
     ['Value Table Entropy (m log₂ M)', '64 × 2 = 128 bits', C.green],
-    ['Full Table Entropy (log₂ 64! + 128)', '≈ 296 + 128 = 424 bits', C.blue],
+    ['Full Table (log₂ C(128,64) + 128)', '≈ 124 + 128 = 252 bits', C.blue],
     ['Raw Float32 State (2 × 128 × 32)', '8,192 bits (>30× larger!)', C.purple],
     ['Linear-Algebraic Rank Limit (d_k = 4)', 'Only 4 orthogonal keys / head!', C.coral],
   ];
@@ -1716,7 +1717,7 @@ function fourRecallLayouts() {
   const archs = [
     ['1. GG (Small)', 'DeltaNet → DeltaNet', 'H=8, d_k=4', '128 floats/layer', 'm=64 acc: ≈50%', C.coral],
     ['2. GG (4x State)', 'DeltaNet → DeltaNet', 'H=2, d_k=16', '512 floats/layer', 'm=64 acc: ≈95%', C.blue],
-    ['3. AA (Full Attn)', 'Attn → Attn (+RoPE)', 'H=2, d_k=16', '2 full KV caches', 'm=64 acc: 100%', C.purple],
+    ['3. AA (Full Attn)', 'Attn → Attn (no RoPE)', 'H=2, d_k=16', '2 full KV caches', 'm=64 acc: 100%', C.purple],
     ['4. GA (Hybrid)', 'DeltaNet → Attention', '1 state + 1 KV', '50% KV cache!', 'm=64 acc: 100%', C.green],
   ];
   archs.forEach(([title, l1, l2, l3, res, col], i) => {
@@ -1756,7 +1757,7 @@ function conv4KeyValueBinding() {
   body += tx(401, 158, 'k_t = f_k(x_{t-1}),  v_t = f_v(x_t)', { fs: 10, fw: 700, fill: C.text, mono: true });
   body += tx(401, 182, '• Step t writes v_i k_iᵀ into S_t!', { fs: 9.5, fill: C.green.tx });
   body += tx(401, 202, '• Acts as an implicit induction head', { fs: 9.5, fill: C.text });
-  body += tx(401, 222, '• GG recall is 0.48–0.99 (+6 to 38 pts)', { fs: 10, fw: 700, fill: C.green.tx });
+  body += tx(401, 222, '• GG recall is 0.5–1.0 (≈+10 to 35 pts)', { fs: 10, fw: 700, fill: C.green.tx });
   return svg(W, H, body);
 }
 
@@ -1766,12 +1767,12 @@ function perplexityVsRetrieval() {
   body += tx(W / 2, 18, 'Pitfall: Short-Window Perplexity Hides Long-Context Retrieval Deficits', { fs: 13.5, fw: 700 });
 
   body += rbox(16, 38, 246, 150, C.blue.bg, C.blue.bd);
-  body += tx(139, 58, 'WikiText-103 (T = 128), nats/byte', { fs: 11, fw: 700, fill: C.blue.tx });
+  body += tx(139, 58, 'WikiText-103 (T = 128, 8k steps), nats/byte', { fs: 11, fw: 700, fill: C.blue.tx });
   body += tx(139, 80, 'Dominated by local n-gram statistics', { fs: 9.5, fill: C.muted });
-  body += tx(139, 106, 'GGGG (4× DeltaNet):  1.32–1.33', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
-  body += tx(139, 128, 'GGGA (3:1 Hybrid):   1.33–1.34', { fs: 10, fw: 700, fill: C.blue.tx, mono: true });
-  body += tx(139, 150, 'AAAA (4× Attention): 1.38     ', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
-  body += tx(139, 172, 'Conv4 + decay give GGGG strong local bias', { fs: 9, fill: C.muted });
+  body += tx(139, 106, 'GGGG (4× DeltaNet):  ≈1.16', { fs: 10, fw: 700, fill: C.green.tx, mono: true });
+  body += tx(139, 128, 'GGGA (3:1 Hybrid):   ≈1.15', { fs: 10, fw: 700, fill: C.blue.tx, mono: true });
+  body += tx(139, 150, 'AAAA (4× Attention): ≈1.18', { fs: 10, fw: 700, fill: C.coral.tx, mono: true });
+  body += tx(139, 172, 'Conv4 alone brings attention to ≈1.15', { fs: 9, fill: C.muted });
 
   body += rbox(278, 38, 246, 150, C.amber.bg, C.amber.bd);
   body += tx(401, 58, '2-Block Recall (m = 64 Pairs)', { fs: 11, fw: 700, fill: C.amber.tx });

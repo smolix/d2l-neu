@@ -1,5 +1,6 @@
 // Slide diagrams for chapter_reinforcement-learning (§14 Foundations of RL).
 import { C, TOKENS, grid, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -65,8 +66,8 @@ function verifierBenchmark() {
 
   o += box(204, 42, 160, 156, D.purple.tint, C.purple, 8, 2);
   o += tx(284, 62, '9 Candidates y', { fs: 14.5, fw: 700, fill: D.purple.dark });
-  o += tx(284, 88, '8 numeric answers:', { fs: 12.5, fw: 600, fill: C.ink });
-  o += tx(284, 108, '"0".."12" (θ_ref=0)', { mono: true, fs: 11.5, fill: C.muted });
+  o += tx(284, 88, '8 numbers (θ_ref = 0):', { fs: 12.5, fw: 600, fill: C.ink });
+  o += tx(284, 108, '1 3 4 7 12 19 23 35', { mono: true, fs: 11.5, fill: C.muted });
   o += box(216, 126, 136, 58, C.lamber, C.amber, 6, 1.8);
   o += tx(284, 144, '9th: Hedge reply', { fs: 12.5, fw: 700, fill: D.orange.dark });
   o += tx(284, 166, '"4, 12, 64 or 81"', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
@@ -93,15 +94,15 @@ function verifierBenchmark() {
 function chapterRoadmap() {
   const W = 560, H = 280;
   let o = '';
-  o += tx(280, 20, 'Chapter 14 Progression: Relaxing Assumptions Step by Step', { fs: 15.5, fw: 700, fill: C.ink });
+  o += tx(280, 20, `Chapter ${num('chap_reinforcement_learning')} Progression: Relaxing Assumptions Step by Step`, { fs: 15.5, fw: 700, fill: C.ink });
 
   const items = [
-    { x: 16,  y: 42,  t: '§14.1–14.2 MDPs & DP', s: 'Known P, r · contraction', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 198, y: 42,  t: '§14.3 Tabular TD', s: 'Q-learning & SARSA', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 380, y: 42,  t: '§14.4 Exploration', s: 'UCB · Thompson · bonus', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 380, y: 156, t: '§14.5 Imitation', s: 'BC · O(εT²) · DAgger', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 198, y: 156, t: '§14.6 Optimal Control', s: 'LQR · iLQR · MPC', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { x: 16,  y: 156, t: '§14.7–14.9 Policy Grad', s: 'REINFORCE · GRPO · MLP', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: 16,  y: 42,  t: `${sec('sec_mdp')}–${num('sec_valueiter')} MDPs & DP`, s: 'Known P, r · contraction', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 198, y: 42,  t: `${sec('sec_qlearning')} Tabular TD`, s: 'Q-learning & SARSA', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 380, y: 42,  t: `${sec('sec_exploration')} Exploration`, s: 'UCB · Thompson · bonus', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 380, y: 156, t: `${sec('sec_imitation')} Imitation`, s: 'BC · O(εT²) · DAgger', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 198, y: 156, t: `${sec('sec_optimal_control')} Optimal Control`, s: 'LQR · iLQR · MPC', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 156, t: `${sec('sec_policygradient')}–${num('sec_deeprl')} Policy Grad`, s: 'REINFORCE · GRPO · MLP', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   const bw = 164, bh = 74;
   items.forEach((it) => {
@@ -573,7 +574,7 @@ function explorationTax() {
   o += tx(144, 92, 'Tries ALL actions with prob ε/|A|', { fs: 12.2, fw: 600, fill: C.ink });
   o += box(38, 112, 212, 56, '#FFFFFF', D.red.base, 6, 1.8);
   o += tx(144, 130, 'Optimal π* on FrozenLake:', { fs: 12.2, fw: 600, fill: C.ink });
-  o += tx(144, 152, '73.0% → 54.2% (−18.8 pts!)', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
+  o += tx(144, 152, '73.0% → 53.7% (−19.3 pts!)', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
   o += tx(144, 194, 'Keeps pulling known fatal actions', { fs: 12.2, fw: 600, fill: D.red.dark });
   o += tx(144, 214, 'forever (linear regret Θ(εt))', { fs: 12.2, fill: C.ink });
 
@@ -652,7 +653,7 @@ function thompsonBeta() {
   o += tx(512, 182, '1.0', { mono: true, fs: 11.5, fill: C.muted });
 
   // True Beta densities on a shared scale: x in [0, 1] -> 48..512 px,
-  // density 1 -> 18.7 px (Beta(19, 3) peaks at 6.0, Beta(4, 4) at 2.2).
+  // density 1 -> 18.7 px (Beta(19, 3) peaks at 6.0, Beta(4, 2) at 2.1).
   const fact = (n) => (n <= 1 ? 1 : n * fact(n - 1));
   const pdfPath = (a, b) => {
     const norm = fact(a + b - 1) / (fact(a - 1) * fact(b - 1));
@@ -669,13 +670,13 @@ function thompsonBeta() {
   o += line(48, 149.3, 512, 149.3, C.purple, 2.5, true);
   o += tx(114, 132, 'Untried: Beta(1, 1)', { fs: 12, fw: 700, fill: D.purple.dark });
 
-  // Curve 2: Mediocre arm Beta(4, 4), centred at 0.5
-  o += `<path d="${pdfPath(4, 4)}" fill="none" stroke="${C.amber}" stroke-width="2.5"/>`;
-  o += tx(280, 110, 'Arm 0: Beta(4, 4)', { fs: 12.2, fw: 700, fill: D.orange.dark });
+  // Curve 2: 3 wins in 4 pulls, Beta(4, 2), mean 2/3 but wide
+  o += `<path d="${pdfPath(4, 2)}" fill="none" stroke="${C.amber}" stroke-width="2.5"/>`;
+  o += tx(232, 112, '3 wins in 4: Beta(4, 2)', { fs: 12.2, fw: 700, fill: D.orange.dark });
 
   // Curve 3: Best arm Beta(19, 3), sharp peak at 0.9
   o += `<path d="${pdfPath(19, 3)}" fill="none" stroke="${C.green}" stroke-width="2.8"/>`;
-  o += tx(368, 64, 'Arm 2: Beta(19, 3)', { fs: 12.2, fw: 700, fill: D.green.dark });
+  o += tx(368, 64, '18 wins in 20: Beta(19, 3)', { fs: 12.2, fw: 700, fill: D.green.dark });
 
   o += box(24, 204, 512, 42, C.lgreen, C.green, 7, 1.8);
   o += tx(280, 225, 'Sample μ̃_a ~ Beta(1 + w_a, 1 + n_a − w_a) per arm → pull argmax_{a} μ̃_a', { fs: 12.5, fw: 700, fill: D.green.dark });
@@ -701,9 +702,9 @@ function chainMdp() {
 
   o += box(20, 122, 248, 126, D.red.tint, D.red.base, 8, 2);
   o += tx(144, 144, 'Zero Init Q₀ = 0 (Random Walk)', { fs: 13.8, fw: 700, fill: D.red.dark });
-  o += tx(144, 172, 'Needs N−1 right moves in a row:', { fs: 12.2, fill: C.ink });
-  o += tx(144, 198, 'P(goal) = 2^{−(N−1)}', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
-  o += tx(144, 224, 'N = 20: ~46,000 episodes!', { fs: 12.5, fw: 700, fill: C.ink });
+  o += tx(144, 172, 'Needs N−1 a = 1 moves in a row;', { fs: 12.2, fill: C.ink });
+  o += tx(144, 198, 'each episode allows 2N steps', { fs: 12.2, fw: 700, fill: D.red.dark });
+  o += tx(144, 224, 'N = 20: 1 in ~46,000 episodes!', { fs: 12.5, fw: 700, fill: C.ink });
 
   o += box(292, 122, 248, 126, C.lgreen, C.green, 8, 2);
   o += tx(416, 144, 'Optimistic Init Q₀ = 1.0 (ε = 0)', { fs: 13.8, fw: 700, fill: D.green.dark });
@@ -781,7 +782,7 @@ function hybridTelescoping() {
   o += tx(144, 128, 'all (T − t + 1) remaining steps:', { fs: 12.2, fill: C.ink });
   o += tx(144, 148, '∑_{t=1}^{T} ε(T−t+1) = εT(T+1)/2', { mono: true, fs: 11, fw: 700, fill: D.red.dark });
   o += tx(144, 188, '64-step chain (ε = 0.01):', { fs: 12.2, fw: 600, fill: C.ink });
-  o += tx(144, 212, 'Loses 17.07 of 64 rewards!', { fs: 13.2, fw: 700, fill: D.red.dark });
+  o += tx(144, 212, 'Loses 17.03 of 64 rewards!', { fs: 13.2, fw: 700, fill: D.red.dark });
 
   o += box(292, 18, 248, 224, C.lgreen, C.green, 9, 2);
   o += tx(416, 42, 'Learner-State Fit: O(u ε T)', { fs: 15, fw: 700, fill: D.green.dark });
@@ -1002,7 +1003,7 @@ function controlVsRl() {
   o += tx(424, 122, 'Maximize Return E[∑ γ^t r(s_t, a_t)]', { fs: 12.2, fw: 700, fill: D.green.dark });
   o += tx(424, 152, 'Value Table / Critic V^π, Q^π', { mono: true, fs: 11.5, fill: C.ink });
   o += tx(424, 182, 'Bellman Operator T / Policy Grad', { fs: 12.2, fw: 600, fill: C.ink });
-  o += tx(424, 212, 'Learned World-Model MPC (§15.6)', { fs: 12.8, fw: 700, fill: D.green.dark });
+  o += tx(424, 212, `Learned World-Model MPC (${sec('sec_model_based')})`, { fs: 12.8, fw: 700, fill: D.green.dark });
 
   [92, 122, 152, 182, 212].forEach((ry) => {
     o += arrow(260, ry, 298, ry, C.purple);
@@ -1024,13 +1025,13 @@ function cloningToReinforce() {
   o += tx(280, 59, 'policy_step: ascend  (1/N) ∑_{t} w_t · ∇_θ log π_θ(a_t | s_t)', { mono: true, fs: 13, fw: 700, fill: D.purple.dark });
 
   o += box(20, 96, 248, 140, C.lblue, C.blue, 8, 2);
-  o += tx(144, 120, 'Behavior Cloning (§14.5)', { fs: 14.5, fw: 700, fill: D.blue.dark });
+  o += tx(144, 120, `Behavior Cloning (${sec('sec_imitation')})`, { fs: 14.5, fw: 700, fill: D.blue.dark });
   o += tx(144, 148, 'Data: Expert demos (s_t, a*_{t})', { fs: 12.5, fill: C.ink });
   o += tx(144, 176, 'Weight: w_t = 1 (always)', { mono: true, fs: 12.5, fw: 700, fill: D.blue.dark });
   o += tx(144, 206, 'Requires interactive/logged expert', { fs: 12, fill: C.muted });
 
   o += box(292, 96, 248, 140, C.lgreen, C.green, 8, 2);
-  o += tx(416, 120, 'REINFORCE (§14.7)', { fs: 14.5, fw: 700, fill: D.green.dark });
+  o += tx(416, 120, `REINFORCE (${sec('sec_policygradient')})`, { fs: 14.5, fw: 700, fill: D.green.dark });
   o += tx(416, 148, 'Data: Self-rollouts τ ~ π_θ', { fs: 12.5, fill: C.ink });
   o += tx(416, 176, 'Weight: w_t = R(τ) (return)', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   o += tx(416, 206, 'Learns from trial & error alone!', { fs: 12.2, fw: 600, fill: C.ink });
@@ -1175,7 +1176,7 @@ function advantageCentering() {
   o += box(34, 86, 220, 72, '#FFFFFF', C.blue, 6, 1.8);
   o += tx(144, 108, 'Best action (left): Q = 0.180', { mono: true, fs: 11.8, fw: 700, fill: D.green.dark });
   o += tx(144, 128, '→ Advantage A = 0.000', { mono: true, fs: 11.8, fill: C.ink });
-  o += tx(144, 148, 'Up: Q = 0.165 → A = −0.015', { mono: true, fs: 11.5, fill: D.red.dark });
+  o += tx(144, 148, 'Up: Q = 0.163 → A = −0.017', { mono: true, fs: 11.5, fill: D.red.dark });
   o += tx(144, 184, 'A global constant b = 0.45 would', { fs: 12.2, fill: C.ink });
   o += tx(144, 206, 'mark EVERY action at s=0 negative!', { fs: 12.2, fw: 700, fill: D.red.dark });
 
@@ -1184,7 +1185,7 @@ function advantageCentering() {
   o += box(306, 86, 220, 72, '#FFFFFF', C.green, 6, 1.8);
   o += tx(416, 108, 'Best action (down): Q = 0.724', { mono: true, fs: 11.8, fw: 700, fill: D.green.dark });
   o += tx(416, 128, '→ Advantage A = 0.000', { mono: true, fs: 11.8, fill: C.ink });
-  o += tx(416, 148, 'Left: Q = 0.395 → A = −0.329', { mono: true, fs: 11.5, fill: D.red.dark });
+  o += tx(416, 148, 'Left: Q = 0.518 → A = −0.206', { mono: true, fs: 11.5, fill: D.red.dark });
   o += tx(416, 184, 'Subtracting V^π(s_t) centers every', { fs: 12.2, fill: C.ink });
   o += tx(416, 206, 'state at E_{a~π}[A^π(s, a)] = 0!', { fs: 12.2, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
@@ -1197,9 +1198,9 @@ function varianceMechanisms() {
   o += tx(280, 20, 'Three Distinct Operations Inside Standardized Policy Gradients', { fs: 15, fw: 700, fill: C.ink });
 
   const cols = [
-    { x: 16,  t: '1. Drop Past r_{<t}', f: 'R(τ) → Ĝ_t', s1: 'Causality reduction', s2: 'Step-cost lake noise:', s3: '101.6 → 34.1 (3× cut)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 198, t: '2. Subtract V(s_t)', f: 'Ĝ_t → Ĝ_t − V(s_t)', s1: 'State control variate', s2: 'Lake relative noise:', s3: '18.1 → 9.1 (2× cut)', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { x: 380, t: '3. Divide by Batch σ', f: '(Ĝ_t − R̄) / σ', s1: 'Step-size multiplier!', s2: 'Relative noise: 10.8', s3: 'Step norm: 3× larger', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 16,  t: '1. Drop Past r_{<t}', f: 'R(τ) → Ĝ_t', s1: 'Causality reduction', s2: 'Step-cost lake noise:', s3: '19.5 → 5.8 (3× cut)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 198, t: '2. Subtract V(s_t)', f: 'Ĝ_t → Ĝ_t − V(s_t)', s1: 'State control variate', s2: 'Lake noise:', s3: '12 → 6 (2× cut)', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 380, t: '3. Divide by Batch σ', f: '(Ĝ_t − R̄) / σ', s1: 'Step-size multiplier!', s2: 'Noise: 7.5 (unchanged)', s3: 'Step norm: 3× larger', fill: C.lamber, st: C.amber, dk: D.orange.dark },
   ];
   cols.forEach((c) => {
     o += box(c.x, 42, 164, 200, c.fill, c.st, 8, 2);
@@ -1261,9 +1262,9 @@ function ntkCoupling() {
   o += tx(409, 66, 'MLP Features ∇_w V̂_w(s)', { fs: 13.8, fw: 700, fill: D.orange.dark });
   o += tx(409, 90, 'k(s, s₀) = ∇_w V̂(s)ᵀ ∇_w V̂(s₀)', { mono: true, fs: 11.5, fw: 700, fill: C.ink });
   o += box(290, 108, 238, 42, C.lgreen, C.green, 6, 1.6);
-  o += tx(409, 129, 'Nearby ||s−s₀||: +0.43 (generalizes)', { fs: 11.8, fw: 700, fill: D.green.dark });
+  o += tx(409, 129, 'Nearby states: ≈ +0.45 (generalizes)', { fs: 11.8, fw: 700, fill: D.green.dark });
   o += box(290, 158, 238, 42, D.red.tint, D.red.base, 6, 1.6);
-  o += tx(409, 179, 'Far ||s−s₀||: −0.07 (interferes!)', { fs: 11.8, fw: 700, fill: D.red.dark });
+  o += tx(409, 179, 'Far states: ≈ 0, a few pushed down', { fs: 11.8, fw: 700, fill: D.red.dark });
   o += tx(409, 218, 'Dense kernel couples all states', { fs: 12.2, fw: 700, fill: D.orange.dark });
   return svg(W, H, o);
 }

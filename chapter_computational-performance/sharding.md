@@ -144,7 +144,14 @@ Because FSDP performs two all-gathers (forward and backward) and one
 reduce-scatter of $S = 4N$ bytes per step—three collective phases where a ring
 allreduce performs two—it moves **$1.5\times$ the communication volume of data
 parallelism**. :numref:`tab_collectives` summarizes the four primary
-collectives used across parallel training.
+collectives used across parallel training, and :numref:`fig_collectives`
+shows what each one moves between two GPUs.
+
+![The four collectives as data movement between two GPUs, before and after.
+GPU 0 starts with the chunks $a_0, a_1$ and GPU 1 with $b_0, b_1$; for
+all-gather, GPU $g$ starts with only its own shard, chunk $g$. Raw chunks are
+blue and sums are green.](../img/mdl-perf-collectives.svg)
+:label:`fig_collectives`
 
 :The collective operations behind data-parallel and sharded training.
 :label:`tab_collectives`

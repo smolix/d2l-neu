@@ -636,11 +636,11 @@ for name, runs in (('eta = 2', shared), ('eta = 16', large)):
               f'{(reach == num_updates).sum():2d}, |step| {climb:.2f}')
 ```
 
-At the shared step size the ordering is a step-size effect. Normalization needs the fewest updates, about 30 against 50 to 70, but before reaching 90 percent its steps are about three times as long as those of centering and more than one and a half times those of reward-to-go. Centering is no faster than the plain return and slower than reward-to-go, the weight it centers, because it shrinks the step. The three arms with a common mean cannot be told apart at this step size: each needs about 50 updates (over 200 seeds outside the notebook, 51 for reward-to-go and the value baseline and 50 for the exact baseline).
+At the shared step size the ordering is a step-size effect. Normalization needs the fewest updates, about 30 against 50 to 70, but before reaching 90 percent its steps are about three times as long as those of centering and more than one and a half times those of reward-to-go. Centering is about as fast as the plain return and slower than reward-to-go, the weight it centers, because it shrinks the step. The three arms with a common mean cannot be told apart at this step size: each needs about 50 updates.
 
-At $\eta = 16$ they separate. All three learn faster than at $\eta = 2$, but the exact baseline gains most: over 200 seeds its median falls from 50 to 20 updates, and that of reward-to-go from 51 to about 30. The larger difference is in the failures. About one reward-to-go run in eight never reaches 90 percent, against none of the 200 exact-baseline runs. Nearly every such run has stalled: long steps along noisy directions made the policy nearly deterministic on a path that loops until the time limit or ends in a hole, every later episode returns zero, every weight is zero, and the policy never moves again. The learned table falls between the two (over 200 seeds, a median of 26 updates, and one run in twenty never reaches 90 percent), because at this step size the policy changes faster than $\hat{V}$ can follow. The step column shows that the gain is not a longer step: before reaching 90 percent the exact baseline moves at most about a sixth farther per update than reward-to-go. Lower variance does not make a small step better, since many small steps average the noise away; it makes a longer step usable (exercise :exref:`ex_baselines-step-size-confound-quantified`).
+At $\eta = 16$ they separate. All three learn faster than at $\eta = 2$, but the exact baseline gains most: its median falls from 50 to about 20 updates, and that of reward-to-go from 51 to about 35. The larger difference is in the failures. About one reward-to-go run in seven never reaches 90 percent, against none of the exact-baseline runs. Nearly every such run has stalled: long steps along noisy directions made the policy nearly deterministic on a path that loops until the time limit or ends in a hole, every later episode returns zero, every weight is zero, and the policy never moves again. The learned table falls between the two (a median of 26 updates, and one run in twenty never reaches 90 percent), because at this step size the policy changes faster than $\hat{V}$ can follow. The step column shows that the gain is not a longer step: before reaching 90 percent the exact baseline moves at most about a sixth farther per update than reward-to-go. Lower variance does not make a small step better, since many small steps average the noise away; it makes a longer step usable (exercise :exref:`ex_baselines-step-size-confound-quantified`).
 
-At $\eta = 2$ the slowest seed of every arm needs two to six times the updates of the fastest, and at $\eta = 16$ the runs without the exact baseline spread wider still. Twenty seeds can therefore reorder medians that lie close together. Drawing twenty of the 200 seeds at random, the medians of reward-to-go and the exact baseline at $\eta = 2$ differ by more than six updates about one time in seven, while at $\eta = 16$ the exact baseline has the lower median in about 49 draws of 50, but a single reward-to-go seed that changes course can move the median of twenty by more than fifteen updates. The arms at $\eta = 16$ therefore run 100 seeds. We report medians and ranges, and check a claim on more seeds before relying on it :cite:`Henderson.Islam.Bachman.ea.2018,Agarwal.Schwarzer.Castro.ea.2021`.
+At $\eta = 2$ the slowest seed of every arm needs two to six times the updates of the fastest, and at $\eta = 16$ the runs without the exact baseline spread wider still. Twenty seeds can therefore reorder medians that lie close together. In a separate experiment with 200 seeds per arm, drawing twenty of them at random, the medians of reward-to-go and the exact baseline at $\eta = 2$ differ by more than six updates about one time in seven, while at $\eta = 16$ the exact baseline has the lower median in about 49 draws of 50, but a single reward-to-go seed that changes course can move the median of twenty by more than fifteen updates. The arms at $\eta = 16$ therefore run 100 seeds. We report medians and ranges, and check a claim on more seeds before relying on it :cite:`Henderson.Islam.Bachman.ea.2018,Agarwal.Schwarzer.Castro.ea.2021`.
 
 How deterministic does the policy become along the states the agent visits?
 
@@ -1011,9 +1011,9 @@ Evaluating $2{,}000$ 4-episode batches at our frozen probe ($J = 0.313$, where e
 
 ::: {.cols .vc}
 ::: {.col}
-- **State value baseline is quietest:** Subtracting $V^{\pi_\theta}(s_t)$ halves relative noise ($18.1 \to 9.1$) while preserving mean scale ($1.40$) and direction (`cos = 0.991`).
-- **Centering vs. normalization:** Batch centering cuts noise by $\approx 40\%$ with $(n-1)/n$ shrink; dividing by $\sigma$ leaves relative noise unchanged ($10.8$) while tripling step length ($3.21$).
-- **Dropping past rewards:** With a $-0.1$ per-step charge, causality cuts noise nearly **$3\times$** ($101.6 \to 34.1$).
+- **State value baseline is quietest:** Subtracting $V^{\pi_\theta}(s_t)$ more than halves relative noise (from about $12$ to under $6$) while preserving mean scale ($1.38$) and direction (`cos = 0.990`).
+- **Centering vs. normalization:** Batch centering cuts noise by $\approx 40\%$ with $(n-1)/n$ shrink; dividing by $\sigma$ leaves relative noise unchanged ($7.5$) while tripling step length ($3.28$).
+- **Dropping past rewards:** With a $-0.1$ per-step charge, causality cuts noise more than **$3\times$** ($19.5 \to 5.8$).
 :::
 
 ::: {.col .fig .big}
@@ -1039,8 +1039,8 @@ Holding the expected update vector identical across `reward-to-go`, `value basel
 
 ::: {.cols .vc}
 ::: {.col}
-- **Faster convergence without stalling:** At $\eta = 16$, `exact baseline` reaches $90\%$ success in a median of **$21.5$ updates with $0/100$ stalled runs**.
-- **Catastrophic stalling without a baseline:** `reward-to-go` fails to reach $90\%$ in **$14/100$ runs** because a noisy large step locks the policy onto a zero-return loop where all future weights are $0$.
+- **Faster convergence without stalling:** At $\eta = 16$, `exact baseline` reaches $90\%$ success in a median of **about $20$ updates with $0/100$ stalled runs**.
+- **Catastrophic stalling without a baseline:** `reward-to-go` fails to reach $90\%$ in **about one run in seven** because a noisy large step locks the policy onto a zero-return loop where all future weights are $0$.
 :::
 
 ::: {.col .fig}
@@ -1080,7 +1080,7 @@ Test your understanding of admissible baselines, RLOO, and step-size confounds:
 
 1. Only **(a) the step index $t$** is admissible because it is determined before $a_t$ is sampled; both $T - t$ and $\hat{Q}(s_t, a_t)$ depend on the sampled action $a_t$ and bias the expectation.
 2. With $\bar{R} = 0.77/4 = 0.1925$, batch centering assigns $+0.5775$ to the win and $-0.1925$ to each loss; RLOO scales these by $\frac{n}{n-1} = \frac{4}{3}$, assigning $0.77 - 0 = +0.77$ to the win and $0 - 0.77/3 = -0.2567$ to each loss.
-3. Dividing by $\sigma \leq 0.5$ multiplies the effective SGD learning rate by $\approx 3\times$; at the frozen probe, `normalized` actually has higher relative noise ($10.8$) than `value baseline` ($9.1$).
+3. Dividing by $\sigma \leq 0.5$ multiplies the effective SGD learning rate by $\approx 3\times$; at the frozen probe, `normalized` actually has higher relative noise ($7.5$) than `value baseline` ($5.7$).
 :::
 :::
 

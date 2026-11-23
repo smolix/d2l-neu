@@ -1,5 +1,6 @@
 // Slide diagrams for Chapter 11 (Transformers): chapter_transformers/*.md
 import { C, TOKENS, grid, tx as rawTx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -110,10 +111,10 @@ function fourPillars() {
   const W = 540, H = 276;
   let o = '';
   const pillars = [
-    { x: 20,  y: 22,  fill: C.lblue, st: C.blue, dk: D.blue.dark, t: '1. Build & Train (§§11.1–11.2)', s1: 'Pre-Norm · RMSNorm · QK-Norm', s2: 'SwiGLU · 1/√(2L) Init · GPT' },
-    { x: 284, y: 22,  fill: C.lamber, st: C.amber, dk: D.orange.dark, t: '2. Serve & Compress (§11.3)', s1: 'KV Cache · Hardware Roofline', s2: 'GQA Uptraining · MLA · Sinks' },
-    { x: 20,  y: 150, fill: D.purple.tint, st: C.purple, dk: D.purple.dark, t: '3. Rewire Modalities (§§11.4–11.5)', s1: 'Encoders (MLM) · Cross-Attn', s2: 'Perceiver Latents · Vision (ViT)' },
-    { x: 284, y: 150, fill: C.lgreen, st: C.green, dk: D.green.dark, t: '4. Scale Capacity (§§11.6–11.7)', s1: 'N ≈ 12Ld² · C ≈ 6ND · Chinchilla', s2: 'Sparse Mixture of Experts (MoE)' },
+    { x: 20,  y: 22,  fill: C.lblue, st: C.blue, dk: D.blue.dark, t: `1. Build & Train (§§${num('sec_transformer-block')}–${num('sec_gpt')})`, s1: 'Pre-Norm · RMSNorm · QK-Norm', s2: 'SwiGLU · 1/√(2L) Init · GPT' },
+    { x: 284, y: 22,  fill: C.lamber, st: C.amber, dk: D.orange.dark, t: `2. Serve & Compress (${sec('sec_kv-cache')})`, s1: 'KV Cache · Hardware Roofline', s2: 'GQA Uptraining · MLA · Sinks' },
+    { x: 20,  y: 150, fill: D.purple.tint, st: C.purple, dk: D.purple.dark, t: `3. Rewire Modalities (§§${num('sec_transformer')}–${num('sec_vision-transformer')})`, s1: 'Encoders (MLM) · Cross-Attn', s2: 'Perceiver Latents · Vision (ViT)' },
+    { x: 284, y: 150, fill: C.lgreen, st: C.green, dk: D.green.dark, t: `4. Scale Capacity (§§${num('sec_scaling-laws')}–${num('sec_moe')})`, s1: 'N ≈ 12Ld² · C ≈ 6ND · Chinchilla', s2: 'Sparse Mixture of Experts (MoE)' },
   ];
   pillars.forEach((p) => {
     o += card(p.x, p.y, 236, 102, p.fill, p.st, p.t, p.s1, p.s2, p.dk, 14, 12);
@@ -128,14 +129,14 @@ function fourPillars() {
 function benchmarks() {
   const W = 540, H = 278;
   let o = '';
-  o += tx(270, 20, 'Executable Single-GPU Benchmarks Across Chapter 11', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(270, 20, `Executable Single-GPU Benchmarks Across Chapter ${num('chap_transformers')}`, { fs: 15, fw: 700, fill: C.ink });
   const items = [
-    { x: 18,  y: 42,  t: '§11.1 Signal Audit', s1: '32-layer token spread & grad', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 192, y: 42,  t: '§11.2 Byte GPT & GPT-2', s1: '4.8M vs RNN + 124M weights', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { x: 366, y: 42,  t: '§11.3 Roofline & KV', s1: '20× speedup · GQA · SVD · Sinks', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 18,  y: 156, t: '§11.4 MLM & Seq2Seq', s1: 'U-curve · reversal · Perceiver', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 192, y: 156, t: '§11.5 ViT vs ResNet', s1: '6.5M on 96×96 Fashion-MNIST', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 366, y: 156, t: '§§11.6–11.7 IsoFLOP', s1: '15-model grid · 8-expert MoE', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 18,  y: 42,  t: `${sec('sec_transformer-block')} Signal Audit`, s1: '32-layer token spread & grad', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 192, y: 42,  t: `${sec('sec_gpt')} Byte GPT & GPT-2`, s1: '4.8M vs RNN + 124M weights', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 366, y: 42,  t: `${sec('sec_kv-cache')} Roofline & KV`, s1: '20× speedup · GQA · SVD · Sinks', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 18,  y: 156, t: `${sec('sec_transformer')} MLM & Seq2Seq`, s1: 'U-curve · reversal · Perceiver', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 192, y: 156, t: `${sec('sec_vision-transformer')} ViT vs ResNet`, s1: '6.5M on 96×96 Fashion-MNIST', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 366, y: 156, t: `§§${num('sec_scaling-laws')}–${num('sec_moe')} IsoFLOP`, s1: '15-model grid · 8-expert MoE', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   items.forEach((it) => {
     o += card(it.x, it.y, 156, 94, it.fill, it.st, it.t, it.s1, null, it.dk, 13.5, 11.5);
@@ -171,9 +172,9 @@ function blkFailureModes() {
   const cw = 154, y = 42, ch = 128;
   o += card(20, y, cw, ch, D.red.tint, D.red.base, '1. Linear Collapse', 'No per-token MLP', 'W_v W_o products collapse', D.red.dark, 13.5, 11.5);
   o += card(193, y, cw, ch, D.red.tint, D.red.base, '2. Token Collapse', 'Post-Norm + Xavier', 'Spread → 10⁻⁴ at L=32', D.red.dark, 13.5, 11.5);
-  o += card(366, y, cw, ch, D.red.tint, D.red.base, '3. Starved Grads', '2L Norm divisions', '‖∇_(W_q¹) L‖ → 10⁻⁹', D.red.dark, 13.5, 11.5);
+  o += card(366, y, cw, ch, D.red.tint, D.red.base, '3. Dead Q/K Grads', 'Equal tokens, flat scores', '‖∇_(W_q) L‖ ≈ 10⁻⁹ at k=32', D.red.dark, 13.5, 11.5);
 
-  o += card(20, 188, 500, 62, C.lgreen, C.green, 'Remedy: Pre-Norm Residual Stream + 1/√(2L) Init + QK-Norm + SwiGLU FFN', 'Preserves O(1) token diversity and uniform gradient norms across arbitrary depth!', null, D.green.dark, 13.5, 12);
+  o += card(20, 188, 500, 62, C.lgreen, C.green, 'Remedy: Pre-Norm Residual Stream + 1/√(2L) Init + QK-Norm + SwiGLU FFN', 'Pre-norm alone at block 32: spread 0.37 (post-norm 10⁻⁴), W_q gradient 2×10⁻³ (10⁻⁹)', null, D.green.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -184,8 +185,8 @@ function blkPostVsPreEq() {
   o += card(20, 20, 236, 116, D.red.tint, D.red.base, 'Post-Norm (2017 / BERT)', 'H = Norm₁(X + Attn(X))', 'Y = Norm₂(H + FFN(H))', D.red.dark, 14.5, 12.5);
   o += card(284, 20, 236, 116, C.lgreen, C.green, 'Pre-Norm (Modern LLMs)', 'H = X + Attn(Norm₁(X))', 'Y = H + FFN(Norm₂(H))', D.green.dark, 14.5, 12.5);
 
-  o += card(20, 156, 236, 92, '#FFFFFF', D.red.base, 'Norm Sits on Main Stream', 'Divides residual sum at every step', 'Attenuates early gradients by r^(2L)', D.red.dark, 13.5, 11.5);
-  o += card(284, 156, 236, 92, C.lblue, C.blue, 'Uninterrupted Identity Highway', 'Norm sits only on branch inputs', '∂X^{(L)}/∂X^{(ℓ)} = I + … (flat grads!)', D.blue.dark, 13.5, 11.5);
+  o += card(20, 156, 236, 92, '#FFFFFF', D.red.base, 'Norm Sits on Main Stream', 'Divides residual sum at every step', 'Token differences shrink every block', D.red.dark, 13.5, 11.5);
+  o += card(284, 156, 236, 92, C.lblue, C.blue, 'Uninterrupted Identity Highway', 'Norm sits only on branch inputs', '∂X^{(L)}/∂X^{(ℓ)} = I + … (direct path)', D.blue.dark, 13.5, 11.5);
   return svg(W, H, o);
 }
 
@@ -625,7 +626,7 @@ function vit2dPosSchemes() {
 function vitAdamwRecipe() {
   const W = 540, H = 268;
   let o = '';
-  o += card(20, 20, 236, 110, D.red.tint, D.red.base, 'Why Plain SGD Struggles on ViT', 'Q/K projections & MLPs have wildly', 'different gradient scales (>7% drop)', D.red.dark, 13.5, 12);
+  o += card(20, 20, 236, 110, D.red.tint, D.red.base, 'Why Plain SGD Struggles on ViT', 'Q/K projections & MLPs have wildly', 'different gradient scales', D.red.dark, 13.5, 12);
   o += card(284, 20, 236, 110, C.lgreen, C.green, 'Why AdamW + Warmup Succeeds', 'Per-coordinate second-moment scaling', '+ 10% linear warmup + cosine decay', D.green.dark, 13.5, 12);
 
   o += card(20, 150, 500, 98, C.lblue, C.blue, 'Selective Weight Decay Rule in ViT.configure_optimizers (λ = 0.05)', 'Apply weight decay (λ = 0.05) to 2D linear matrices and 4D conv kernels (p.ndim ≥ 2),', 'while EXEMPTING cls_token, pos_embedding, 1D LayerNorm gains, and biases (λ = 0.0)!', D.blue.dark, 13.5, 12);
@@ -642,7 +643,7 @@ function vitScaleCrossover() {
   o += arrow(260, 98, 280, 98, C.green);
   o += card(284, 42, 236, 112, C.lgreen, C.green, 'Foundation Scale (30M–300M+)', 'ViT > ResNet (CLIP, SigLIP, DINOv2)', 'Flexible global attention outgrows CNN', D.green.dark, 13.5, 12);
 
-  o += card(20, 174, 500, 76, D.purple.tint, C.purple, 'Unified Multimodal Interface', 'Because ViT outputs standard token vectors (B, m, d), visual patches plug directly into', 'Perceiver resamplers (§11.4) and decoder-only LLMs (§11.2) with zero architectural friction!', D.purple.dark, 13.5, 12);
+  o += card(20, 174, 500, 76, D.purple.tint, C.purple, 'Unified Multimodal Interface', 'Because ViT outputs standard token vectors (B, m, d), visual patches plug directly into', `Perceiver resamplers (${sec('sec_transformer')}) and decoder-only LLMs (${sec('sec_gpt')}) with zero architectural friction!`, D.purple.dark, 13.5, 12);
   return svg(W, H, o);
 }
 
@@ -790,13 +791,13 @@ function moeCapacityBuffer() {
 function moeCollapseLoop() {
   const W = 540, H = 274;
   let o = '';
-  o += tx(270, 20, 'The Rich-Get-Richer Positive Feedback Loop of Routing Collapse', { fs: 14.5, fw: 700, fill: D.red.dark });
+  o += tx(270, 20, 'The Rich-Get-Richer Loop Behind Routing Collapse', { fs: 14.5, fw: 700, fill: D.red.dark });
 
   const steps = [
     { x: 20,  y: 42,  t: '1. Initial Skew (t = 0)', s1: 'Frequent bytes (" " = 19%)', s2: 'favor Expert e at random init' },
     { x: 284, y: 42,  t: '2. More Gradient Steps', s1: 'Expert e sees 3× more tokens', s2: 'and lowers loss faster' },
     { x: 284, y: 158, t: '3. Router Reward', s1: '∇_(W_r) L boosts p_e(x) higher', s2: 'when Expert e predicts well' },
-    { x: 20,  y: 158, t: '4. Routing Collapse!', s1: 'Top experts monopolize 100%', s2: 'while E − k experts go dead!' },
+    { x: 20,  y: 158, t: '4. Skewed Load', s1: 'Busiest expert: 2.4–3.9× even share', s2: '(2.5–3.4× already at init)' },
   ];
   steps.forEach((s, i) => {
     o += card(s.x, s.y, 236, 94, i === 3 ? D.red.tint : C.lamber, i === 3 ? D.red.base : C.amber, s.t, s.s1, s.s2, i === 3 ? D.red.dark : D.orange.dark, 14, 12);
@@ -823,7 +824,7 @@ function moeAuxVsBias() {
 function moeFrontierSpectrum() {
   const W = 540, H = 270;
   let o = '';
-  o += tx(270, 20, 'Evolution from Coarse Top-2 MoEs to Fine-Grained + Shared Experts', { fs: 14.5, fw: 700, fill: C.ink });
+  o += tx(270, 20, 'From Coarse Top-2 MoEs to Fine-Grained Experts (DeepSeek-V3 Adds a Shared One)', { fs: 14.5, fw: 700, fill: C.ink });
   const cw = 154, y = 42, ch = 128;
   o += card(20, y, cw, ch, C.lblue, C.blue, 'Mixtral 8x7B', 'E = 8,  k = 2', '46.7B / 12.9B (3.6×)', D.blue.dark, 14, 12);
   o += card(193, y, cw, ch, C.lamber, C.amber, 'Qwen3-235B-A22B', 'E = 128,  k = 8', '235B / 22B (10.7×)', D.orange.dark, 14, 12);

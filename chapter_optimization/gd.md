@@ -341,7 +341,7 @@ for i in range(len(P0)):
                      f'{float(r[i]):6.0%} ' for s, l, r in runs.values()))
 ```
 
-Plotting the sharpness normalized by the stability threshold, $\lambda_{\max} / (2/\eta)$, over all $20{,}000$ steps shows both learning rates converging to the edge of stability at $1$:
+Plotting the sharpness normalized by the stability threshold, $\lambda_{\max} / (2/\eta)$, over all $20{,}000$ steps shows the sharpness rising toward the edge of stability at $1$ for both learning rates:
 
 ```{.python .input #gd-the-edge-of-stability-1}
 %%tab pytorch, jax
@@ -350,7 +350,9 @@ d2l.plot_curves(curves, 'step', r'sharpness$\,/\,(2/\eta)$',
                 x=np.arange(0, 20001, 500), reference=1)
 ```
 
-From the exact same initializations, the normalized sharpness $\lambda_{\max} / (2/\eta)$ climbs to $1$ and plateaus there: runs with $\eta = 0.4$ arrest at sharpness $\lambda_{\max} \approx 5.0$, while runs with $\eta = 0.25$ climb to $\lambda_{\max} \approx 8.0$. Once at the threshold $2/\eta$, the loss rises on roughly $50\%$ of steps as the iterate oscillates along the sharpest eigenvector ($1 - \eta\lambda_{\max} \approx -1$) while continuing to descend along the remaining $24$ flatter directions. Whenever $\lambda_{\max}$ momentarily exceeds $2/\eta$, the growing oscillation along the sharpest eigenvector couples with the third-order derivatives of the loss to induce a restoring drift toward flatter regions, stabilizing $\lambda_{\max}$ at $2/\eta$ :cite:`Damian.Nichani.Lee.2023`. This self-stabilization also explains why gradually ramping up $\eta$ at the start of training (*learning-rate warmup*, :numref:`sec_scheduler`) steers the network into a region flat enough to tolerate the peak learning rate :cite:`Kalra.Barkeshli.2024`.
+From the exact same initializations, the normalized sharpness $\lambda_{\max} / (2/\eta)$ climbs to $1$ and plateaus there: runs with $\eta = 0.4$ arrest at sharpness $\lambda_{\max} \approx 5.0$, while most runs with $\eta = 0.25$ climb to $\lambda_{\max} \approx 8.0$. Not every run gets there: at $\eta = 0.25$ a few starts fit the data before the sharpness reaches $8$, stay just below the threshold, and descend with hardly a rising step. For the runs at the threshold $2/\eta$, the loss typically rises on roughly $50\%$ of steps as the iterate oscillates along the sharpest eigenvector ($1 - \eta\lambda_{\max} \approx -1$) while continuing to descend along the remaining $24$ flatter directions. Whenever $\lambda_{\max}$ momentarily exceeds $2/\eta$, the growing oscillation along the sharpest eigenvector couples with the third-order derivatives of the loss to induce a restoring drift toward flatter regions, stabilizing $\lambda_{\max}$ at $2/\eta$ :cite:`Damian.Nichani.Lee.2023`. This self-stabilization also explains why gradually ramping up $\eta$ at the start of training (*learning-rate warmup*, :numref:`sec_scheduler`) steers the network into a region flat enough to tolerate the peak learning rate :cite:`Kalra.Barkeshli.2024`.
+
+This experiment used full-batch gradient descent, whereas the rest of the chapter trains with momentum, Adam, and minibatches. The edge of stability survives all three, with a different threshold in each. Heavy-ball momentum with coefficient $\beta$ (:numref:`sec_momentum`) raises the stability limit from $\eta\lambda_{\max} < 2$ to $\eta\lambda_{\max} < 2(1 + \beta)$, and the sharpness settles at $2(1 + \beta)/\eta$ accordingly :cite:`Cohen.Kaur.Li.ea.2021`. Adam (:numref:`sec_adam`) divides every coordinate of the step by its own gradient scale, so the quantity that settles is the sharpness of the Hessian after the same rescaling, the *preconditioned sharpness*. With Adam's usual momentum coefficient $\beta_1 = 0.9$, its threshold is about $38/\eta$ :cite:`Cohen.Ghorbani.Krishnan.ea.2022`. With minibatch gradients the sharpness stops rising below $2/\eta$, and the smaller the batch, the earlier it stops. In every case a larger learning rate means a lower ceiling on the sharpness, so the warmup argument carries over to the optimizers we use from here on.
 
 ## Newton's Method and Preconditioning
 :label:`subsec_gd-preconditioning`
@@ -673,7 +675,7 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 ::: {.slide title="At the Edge of Stability: Non-Monotonic Descent" layout="tall-output"}
 [Self-Stabilization at 2/η]{.kicker}
 
-- **All $10$ random initializations:** runs at $\eta = 0.4$ arrest at sharpness $\lambda_{\max} \approx 5.0 = 2/0.4$; runs at $\eta = 0.25$ climb higher, to $\lambda_{\max} \approx 8.0 = 2/0.25$.
+- **All $10$ random initializations:** runs at $\eta = 0.4$ arrest at sharpness $\lambda_{\max} \approx 5.0 = 2/0.4$; most runs at $\eta = 0.25$ climb higher, to $\lambda_{\max} \approx 8.0 = 2/0.25$ (a few fit the data first and stay just below, rising on $\approx 0\%$ of steps).
 - **Why doesn't the run diverge?** Once $\lambda_{\max}$ momentarily exceeds $2/\eta$, growing oscillation along the sharpest eigenvector ($1 - \eta\lambda_{\max} \approx -1$, causing loss to rise on $\sim 50\%$ of steps) couples with third derivatives of the loss to push the iterate toward flatter regions (Damian et al., 2023).
 
 @!optimization-intro-the-edge-of-stability-2

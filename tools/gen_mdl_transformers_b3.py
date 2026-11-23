@@ -10,6 +10,9 @@ Figures:
       attention as a sharing pattern between query heads and key-value heads.
   mdl-transformers-roofline.svg -- the fp32 roofline of an RTX 4090 with a
       decode step of GPT-2 small and a 2,048-token prefill marked.
+  mdl-transformers-kv-buffer.svg -- one block's pre-allocated key and value
+      buffers during step t: filled prefix, the slot being written, and the
+      masked unwritten slots.
 
 Run with the repo's pytorch venv:
 
@@ -229,10 +232,61 @@ def fig_roofline():
     fl.save(fig, "mdl-transformers-roofline")
 
 
+# --------------------------------------------------------------------------- #
+# Figure 4: one block's pre-allocated cache buffer during step t.             #
+# --------------------------------------------------------------------------- #
+
+def _bracket(ax, x0, x1, y, text, tick=0.18):
+    """A bracket under the cells x0..x1 at height y, its label below."""
+    ax.plot([x0 + 0.06, x0 + 0.06, x1 - 0.06, x1 - 0.06],
+            [y + tick, y, y, y + tick], color="black", lw=1.1)
+    ax.text((x0 + x1) / 2, y - 0.16, text, ha="center", va="top",
+            fontsize=13, color="black")
+
+
+def fig_kv_buffer():
+    T_MAX, t = 12, 7                   # buffer length; the step's position
+    fig, ax = plt.subplots(figsize=(7.6, 3.3))
+    rows = ((1.1, r"keys"), (0.0, r"values"))
+    for y, name in rows:
+        for j in range(T_MAX):
+            if j < t:                  # filled by earlier steps: read only
+                ax.add_patch(Rectangle((j, y), 1, 0.8, fc=PURPLE,
+                                       alpha=0.35, ec=GRAY, lw=0.7))
+            elif j == t:               # written by this step
+                ax.add_patch(Rectangle((j, y), 1, 0.8, fc=ORANGE,
+                                       alpha=0.85, ec=GRAY, lw=0.7))
+            else:                      # zeros, never read: masked out
+                ax.add_patch(Rectangle((j + 0.04, y + 0.04), 0.92, 0.72,
+                                       fill=False, ec=GRAY, lw=0.8,
+                                       ls=(0, (2, 2))))
+        ax.text(-0.25, y + 0.4, name, ha="right", va="center", fontsize=13,
+                color="black")
+    # the new key and value enter slot t
+    ax.text(t + 0.5, 2.75, r"new $\mathbf{k}_t, \mathbf{v}_t$", ha="center",
+            va="bottom", fontsize=13, color="black")
+    fl.arrow(ax, (t + 0.5, 2.7), (t + 0.5, 1.95), color=GRAY, lw=1.4,
+             mut=11)
+    # position indices under the values row
+    for j, lab in ((0, r"$0$"), (t - 1, r"$t-1$"), (t, r"$t$"),
+                   (T_MAX - 1, r"$T_{\max}-1$")):
+        ax.text(j + 0.5, -0.12, lab, ha="center", va="top", fontsize=12,
+                color="black")
+    _bracket(ax, 0, t, -0.85, "filled by earlier steps")
+    _bracket(ax, t + 1, T_MAX, -0.85, "unwritten, masked")
+    _bracket(ax, 0, t + 1, -1.7, r"query $t$ attends to slots $0, \dots, t$")
+    ax.set_xlim(-1.55, T_MAX + 0.55)
+    ax.set_ylim(-2.35, 3.2)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fl.save(fig, "mdl-transformers-kv-buffer")
+
+
 if __name__ == "__main__":
     fig_kv_cache()
     fig_gqa()
     fig_roofline()
+    fig_kv_buffer()
     for p in fl.WRITTEN:
         _unitless(p)
     import shutil  # the slides read @fig figures from img/auto

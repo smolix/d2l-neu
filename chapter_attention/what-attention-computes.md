@@ -159,8 +159,10 @@ synthetic sequences of *repeated random tokens*: each sequence draws a random
 pattern of length $L \in [L_{\min}, L_{\max}]$ uniformly from a vocabulary of
 size $64$ and tiles it to length $64$. Because every pattern is drawn fresh,
 the first copy ($t < L$) is unpredictable (chance cross-entropy $\log 64
-\approx 4.16$ nats), whereas later copies ($t \ge L$) can be predicted
-perfectly by in-context lookup.
+\approx 4.16$ nats). So is the token at position $t = L$, where the pattern
+restarts: nothing in its context has repeated yet, and the model cannot know
+$L$. We therefore count the targets $t \le L$ as the first copy. Later copies
+($t > L$) can be predicted from the context by in-context lookup.
 
 ```{.python .input #what-attention-computes-repetition-as-a-task-1}
 %%tab pytorch
@@ -192,8 +194,8 @@ print(f'pattern lengths: {L.tolist()}')
 print(x)
 ```
 
-`eval_copy` measures the cross-entropy on the first copy ($t < L$), the
-cross-entropy on later copies ($t \ge L$), and the top-1 accuracy on later
+`eval_copy` measures the cross-entropy on the first copy ($t \le L$), the
+cross-entropy on later copies ($t > L$), and the top-1 accuracy on later
 copies:
 
 ```{.python .input #what-attention-computes-repetition-as-a-task-2}
@@ -203,7 +205,7 @@ def eval_copy(model, x, L):
     """First-copy loss, later-copy loss, and later-copy accuracy."""
     logits, Y = model(x[:, :-1]), x[:, 1:]
     ce = F.cross_entropy(logits.transpose(1, 2), Y, reduction='none')
-    later = torch.arange(1, Y.shape[1] + 1, device=Y.device) >= L[:, None]
+    later = torch.arange(1, Y.shape[1] + 1, device=Y.device) > L[:, None]
     acc = (logits.argmax(-1) == Y)[later].float().mean()
     return torch.stack((ce[~later].mean(), ce[later].mean(), acc)).tolist()
 
@@ -242,7 +244,7 @@ def eval_copy(model, x, L):
     """First-copy loss, later-copy loss, and later-copy accuracy."""
     logits, Y = model(x[:, :-1]), x[:, 1:]
     ce = optax.softmax_cross_entropy_with_integer_labels(logits, Y)
-    later = jnp.arange(1, Y.shape[1] + 1)[None, :] >= L[:, None]
+    later = jnp.arange(1, Y.shape[1] + 1)[None, :] > L[:, None]
     acc = ((logits.argmax(-1) == Y) * later).sum() / later.sum()
     first = (ce * ~later).sum() / (~later).sum()
     rep = (ce * later).sum() / later.sum()
@@ -307,7 +309,7 @@ print(f'first copy {first:.2f} nats, second copy {rep:.2f} nats, '
       f'second-copy accuracy {acc:.2f}')
 ```
 
-How can a single layer copy the successor when our circuit analysis proved
+How can a single layer copy the successor when our circuit analysis argued
 that content-based induction requires two layers? When $L = 32$ is constant,
 the target token at position $i + 1$ always equals the token at fixed offset
 $j = i - 31$. A single RoPE head with constant bias queries and keys can
@@ -384,10 +386,14 @@ for num_blks, model, hist in runs:
           f'{drop_step(hist) or "never":>21}')
 ```
 
-All three two-block runs achieve $\sim 90\%$ later-copy accuracy (losses
-$0.3$--$0.4$ nats), whereas the one-block model stalls above $3$ nats ($\sim
-10\%$ accuracy, only boosting the unigram set of tokens present in the
-context). Furthermore, the training curve exhibits an abrupt phase transition
+All three two-block runs achieve more than $90\%$ later-copy accuracy (losses of
+roughly $0.2$--$0.4$ nats), whereas the one-block model stalls above $3$ nats
+($\sim 10\%$ accuracy, only boosting the unigram set of tokens present in the
+context). The first-copy loss ends slightly *above* the chance value $\log 64$
+in every run. All four models have learned to favor tokens that already
+occurred in the context, and in the first period this confidence is misplaced:
+when a token repeats there by chance, a two-block model predicts its earlier
+successor. Furthermore, the training curve exhibits an abrupt phase transition
 after an initial plateau:
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-2}
@@ -490,7 +496,7 @@ for r, run_scores in enumerate(all_scores):
                   + ' '.join(f'{v:.2f}' for v in row))
 ```
 
-In every run, one or two block-1 heads specialize as previous-token heads,
+In every run, between one and three block-1 heads specialize as previous-token heads,
 while block-2 heads concentrate attention on the induction target $j = i + 1
 - L$.
 
@@ -609,11 +615,12 @@ d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None],
 ```
 
 Notice two instructive subtleties: (1) the one-block control *also* learns a
-diagonal OV copy matrix, proving that OV copying without QK K-composition
-cannot retrieve in-context successors (see Exercise
+diagonal OV copy matrix, showing that OV copying without QK K-composition
+does not retrieve in-context successors (see Exercise
 :exref:`ex_what-attention-computes-k-composition`); and (2) block 2 copies
-much more reliably from the block-1 stream $\bar{\mathbf{h}}_a$ than from raw
-embeddings $\mathbf{e}_a$ alone.
+more reliably from the block-1 stream $\bar{\mathbf{h}}_a$ than from raw
+embeddings $\mathbf{e}_a$ alone, where the diagonal share varies widely from
+run to run.
 
 ### Head Ablation
 :label:`subsec_head-ablation`
@@ -694,7 +701,7 @@ for name, cols in table.items():
 ```
 
 Ablating block 1's previous-token heads collapses later-copy accuracy to
-about $0.1$ or below, confirming their necessity. Interestingly, ablating block 1's
+less than $0.2$, the level of the one-block model, confirming their necessity. Interestingly, ablating block 1's
 *other* heads also breaks retrieval: because `copy_matrix` relied on block 1's
 transformed stream (and zero-ablation shifts stream norms in an unnormalized
 network; see Exercise :exref:`ex_what-attention-computes-circuit-ablation` on
@@ -732,9 +739,9 @@ d2l.plot([jnp.arange(1, 64), [24, 24]], [acc, [0, 1]],
 
 Accuracy jumps from $1/64$ on the first copy (and at the restart boundary
 $t = 24$, where content matching has not yet seen a repeated token) to
-$> 0.90$ from position $25$ onward.
+more than $0.9$ from position $25$ onward.
 
-What accounts for the remaining $\sim 10\%$ error after the restart? When a
+What accounts for the remaining error after the restart? When a
 token appears $K > 1$ times within the $L$-token pattern with different
 successors, matching on the current token alone is ambiguous: choosing
 uniformly among the $K$ occurrences succeeds with probability $1/K$. For
@@ -747,10 +754,11 @@ $$
 $$
 
 and $\approx 0.47$ on repeated tokens alone. Splitting test positions by
-$K = 1$ (unique) versus $K > 1$ (repeated) shows that `model_two` reaches
-$\sim 0.99$ on unique tokens and $0.70$--$0.90$ on repeated tokens—exceeding
-the $0.47$ single-token baseline by combining longer $n$-gram context and
-RoPE offset preferences:
+$K = 1$ (unique) versus $K > 1$ (repeated) shows that the three runs reach
+$0.97$ or more on unique tokens and roughly $0.7$--$0.9$ on repeated tokens, well
+above the $0.47$ single-token baseline. A plausible reason, which we do not
+test here, is that the model also matches longer $n$-gram context and prefers
+certain RoPE offsets (Exercise :exref:`ex_what-attention-computes-paths`):
 
 ```{.python .input #what-attention-computes-generalization-to-unseen-patterns-1}
 %%tab pytorch
@@ -799,7 +807,20 @@ with the emergence of general in-context learning (Exercise
 completion, attention layers can also implement in-context gradient steps on
 regression tasks (Exercise
 :exref:`ex_what-attention-computes-in-context-regression`,
-:cite:`Oswald.Niklasson.Randazzo.ea.2023,Shen.Mishra.Khashabi.2024`).
+:cite:`Oswald.Niklasson.Randazzo.ea.2023`), although whether pretrained
+language models learn in context this way is disputed
+:cite:`Shen.Mishra.Khashabi.2024`.
+
+Our analysis leaned on a model with no normalization and no MLP, and a real
+transformer block (:numref:`chap_transformers`) has both. Each changes the
+method without changing the idea. Layer normalization rescales the stream by
+its own norm, so the map from stream to logits is linear only once that scale
+is held fixed; circuit analyses freeze it at its observed value and treat the
+rest as before. MLPs add paths that pass through no attention pattern, and a
+head's output may be rewritten by an MLP before a later head reads it. Finally,
+induction heads in trained language models match fuzzily: they complete
+$[\mathrm{A}^*][\mathrm{B}^*] \ldots [\mathrm{A}] \to [\mathrm{B}]$ for tokens
+that are merely similar, not identical, to the ones seen earlier.
 
 ## Attention Weights as Explanations
 
@@ -840,7 +861,7 @@ validate the induction circuit.
   two-layer **induction circuit** composing a previous-token head with a
   match-and-copy head.
 * On repeated random patterns of variable period, a two-block model undergoes
-  a sharp training phase transition to $\sim 90\%$ in-context accuracy, while
+  a sharp training phase transition to more than $90\%$ in-context accuracy, while
   a fixed period allows a one-block model to exploit a positional shortcut.
 * Establishing what a head computes requires combining attention-pattern
   probes, OV weight analysis, and causal interventions (ablations).
@@ -1155,8 +1176,8 @@ Does gradient descent find this circuit? Each sequence tiles a random pattern of
 
 @-what-attention-computes-repetition-as-a-task-1
 
-- **Unpredictable First Copy ($t < L$):** Each pattern is fresh, so the first period stays at chance (cross-entropy $\log 64 \approx 4.16\text{ nats}$, accuracy $1/64 \approx 1.6\%$).
-- **Deterministic Later Copies ($t \ge L$):** Once the pattern repeats, every token can be predicted with $100\%$ accuracy by looking up the earlier occurrence in context.
+- **Unpredictable First Copy ($t \le L$):** Each pattern is fresh, so the first period stays at chance (cross-entropy $\log 64 \approx 4.16\text{ nats}$, accuracy $1/64 \approx 1.6\%$). So does the restart token at $t = L$: nothing has repeated yet.
+- **Predictable Later Copies ($t > L$):** Once the pattern repeats, each token can be predicted from the context by looking up the earlier occurrence.
 :::
 
 ::: {.slide title="Pitfall: The Fixed-Offset Positional Shortcut"}
@@ -1169,7 +1190,7 @@ What happens if we train a **one-block** model (`num_blks=1, bias=True`) on sequ
 @!what-attention-computes-the-positional-shortcut-2
 
 ::: {.d2l-note .warn}
-**Mechanistic Pitfall:** On $L = 32$, the 1-block model reaches $1.00$ accuracy ($0.07\text{ nats}$) by using constant bias queries and keys under RoPE to attend purely to fixed offset $j - i = -31$! Tested on period $L = 24$ (target at offset $-23$), its heads still place $0.88$–$0.99$ of their mass at offset $-31$ and accuracy collapses to $0.01$.
+**Mechanistic Pitfall:** On $L = 32$, the 1-block model reaches $1.00$ accuracy (about $0.1\text{ nats}$) by using constant bias queries and keys under RoPE to attend purely to fixed offset $j - i = -31$! Tested on period $L = 24$ (target at offset $-23$), its heads still place more than $0.9$ of their mass at offset $-31$ and accuracy collapses to $0.02$, which is chance.
 :::
 :::
 
@@ -1180,8 +1201,8 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 
 @!what-attention-computes-two-blocks-learn-to-look-things-up-1
 
-- **Two Blocks Solve Retrieval:** All three 2-block seeds drop below $1\text{ nat}$ between steps $1{,}000$ and $3{,}000$, reaching $0.3$–$0.4\text{ nats}$ and $\sim 90\%$ later-copy accuracy.
-- **One Block Fails:** The 1-block control stalls above $3.3\text{ nats}$ ($10\%$ accuracy)—all it can do is boost the unigram set of tokens that appeared anywhere in the prefix!
+- **Two Blocks Solve Retrieval:** All three 2-block seeds drop below $1\text{ nat}$ between steps $1{,}000$ and $3{,}000$, reaching roughly $0.2$–$0.4\text{ nats}$ and more than $90\%$ later-copy accuracy.
+- **One Block Fails:** The 1-block control stalls above $3.5\text{ nats}$ (about $10\%$ accuracy)—all it can do is boost the unigram set of tokens that appeared anywhere in the prefix!
 :::
 
 ::: {.slide title="Phase Transition During Induction Head Formation"}
@@ -1189,7 +1210,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Abrupt Loss Drop:** For the first thousand steps, the 2-block model tracks the 1-block unigram plateau ($\sim 3.4\text{ nats}$); once block 1's OV output aligns with block 2's QK circuit, later-copy loss plunges by $3\text{ nats}$.
+- **Abrupt Loss Drop:** For well over a thousand steps, the 2-block model sits on a plateau near $4\text{ nats}$, barely below chance; once block 1's OV output aligns with block 2's QK circuit, later-copy loss plunges by more than $3\text{ nats}$.
 - **First-Copy Side Effect:** First-copy loss *rises* slightly above $\log 64 \approx 4.16$ right at the phase transition: once induction activates, a token that repeats by chance inside the first period causes the model to predict its previous successor!
 :::
 
@@ -1205,7 +1226,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 ::: {.cols .vc}
 ::: {.col}
 - Evaluating `model_two` on a test sequence of period $L = 24$ reveals two distinct geometric signatures across the two blocks:
-- **Block 1 (Top Row):** Heads 1 and 2 form a sharp subdiagonal stripe at $j = i - 1$ (**previous-token heads**).
+- **Block 1 (Top Row):** Several heads form a subdiagonal stripe at $j = i - 1$ (**previous-token heads**).
 - **Block 2 (Bottom Row):** Once the second copy starts at $i \ge 24$, all four heads form a parallel diagonal stripe at $j = i + 1 - L = i - 23$ (**induction heads**)!
 :::
 
@@ -1222,7 +1243,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 
 @!what-attention-computes-the-heads-caught-in-the-act-2
 
-- **Clean Separation of Labor:** In every run, Block 1 has $1$–$2$ previous-token heads (scores $0.38$–$0.99$) and at most $0.02$ induction score, whereas Block 2 heads concentrate up to $\approx 0.6$ of their mass directly on the moving target $i + 1 - L$ (vs. $\approx 0.025$ uniform chance).
+- **Clean Separation of Labor:** In every run, Block 1 has $1$–$3$ previous-token heads (scores from about $0.3$ to $0.99$) and at most $0.02$ induction score, whereas Block 2 heads concentrate up to $\approx 0.6$ of their mass directly on the moving target $i + 1 - L$ (vs. $\approx 0.025$ uniform chance).
 :::
 
 ::: {.slide title="Evidence Level 2: Reading the OV Copy Matrix"}
@@ -1246,8 +1267,8 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Subtlety 1 (Stream vs. Embeddings):** Block 2's OV matrix copies almost perfectly ($0.97$–$1.00$ diagonal share) on the Block-1 stream $\bar{\mathbf{h}}_a$, but much more weakly ($0.38$–$0.89$) on raw embeddings $\mathbf{e}_a$—Block 2 also reads features transformed by Block 1's OV circuits (**V-composition**)!
-- **Subtlety 2 (Copying $\neq$ Retrieval):** The 1-block model *also* has a $1.00$ diagonal OV copy matrix, yet gets only $10\%$ accuracy because its QK circuit cannot locate the target!
+- **Subtlety 1 (Stream vs. Embeddings):** Block 2's OV matrix copies almost perfectly ($0.9$–$1.0$ diagonal share) on the Block-1 stream $\bar{\mathbf{h}}_a$, but less reliably (anywhere from $0.3$ to nearly $1.0$) on raw embeddings $\mathbf{e}_a$—Block 2 also reads features transformed by Block 1's OV circuits (**V-composition**)!
+- **Subtlety 2 (Copying $\neq$ Retrieval):** The 1-block model *also* has a near-perfect diagonal OV copy matrix (share $\approx 1.00$), yet gets only $10\%$ accuracy because its QK circuit cannot locate the target!
 
 @!what-attention-computes-the-circuit-is-in-the-weights[out=1]
 :::
@@ -1274,9 +1295,9 @@ Correlation in attention maps or weights is not causation. To test which heads a
 
 @!what-attention-computes-head-ablation-2
 
-- **1. Block-1 Previous-Token Heads Are Necessary:** Removing them drops accuracy from $\sim 0.90$ to $\lesssim 0.1$.
-- **2. Surprise—Block 1's "Inert" Heads Are Also Necessary!** Removing them drops accuracy to $\le 0.08$: Block 2's OV copy circuit relies on their stream transformation (zero-ablation also shifts stream norms off-distribution).
-- **3. Block-2 Redundancy:** Removing the single strongest induction head leaves accuracy at $0.74$–$0.91$; all four Block-2 heads share the induction workload and must be removed together to drop to chance.
+- **1. Block-1 Previous-Token Heads Are Necessary:** Removing them drops accuracy from above $0.9$ to below $0.2$.
+- **2. Surprise—Block 1's "Inert" Heads Are Also Necessary!** Removing them drops accuracy below $0.15$: Block 2's OV copy circuit relies on their stream transformation (zero-ablation also shifts stream norms off-distribution).
+- **3. Block-2 Redundancy:** Removing the single strongest induction head leaves accuracy at $0.7$–$0.9$; all four Block-2 heads share the induction workload and must be removed together to drop to chance.
 :::
 
 ::: {.slide title="In-Context Learning: Generalizing to Unseen Patterns"}
@@ -1295,17 +1316,17 @@ Correlation in attention maps or weights is not causation. To test which heads a
 :::
 :::
 
-::: {.slide title="Dissecting the Remaining 10% Error: Repeated Tokens"}
+::: {.slide title="Dissecting the Remaining Error: Repeated Tokens"}
 [Beyond Single-Token Matching]{.kicker}
 
-Why does accuracy after the restart plateau near $90\%$ instead of $100\%$? When a token occurs $K > 1$ times inside the $L$-token pattern with different successors, matching on the current token alone is ambiguous:
+Why does accuracy after the restart plateau a few points short of $100\%$? When a token occurs $K > 1$ times inside the $L$-token pattern with different successors, matching on the current token alone is ambiguous:
 
 $$\mathbb{E}\!\left[\frac{1}{K}\right] = \frac{1 - (1 - p)^L}{L p} \approx 0.84 \quad\textrm{overall}\quad (\approx 0.47 \textrm{ on repeated tokens } K > 1), \qquad p = \frac{1}{64},\; L = 24$$
 
 @!what-attention-computes-generalization-to-unseen-patterns-1
 
 ::: {.d2l-note}
-On unique pattern tokens ($K = 1$, $70\%$ of positions), `model_two` achieves **$0.98$–$0.99$ accuracy**; on repeated tokens ($K > 1$, $30\%$ of positions), it reaches **$0.71$–$0.90$**, beating the $0.47$ uniform single-token match by combining multi-token prefix context and RoPE distance preferences!
+On unique pattern tokens ($K = 1$, $70\%$ of positions), `model_two` achieves **$0.97$–$1.00$ accuracy**; on repeated tokens ($K > 1$, $30\%$ of positions), it reaches roughly **$0.7$–$0.9$**, beating the $0.47$ uniform single-token match by combining multi-token prefix context and RoPE distance preferences!
 :::
 :::
 
@@ -1335,7 +1356,7 @@ Our investigation of induction heads illustrates why establishing what a circuit
 | **1. Later-Copy Loss** | Behavioral | Two blocks solve variable-period repetition; one cannot | Identifies no internal component or algorithm |
 | **2. Period Shift ($32$ $\to$ $24$)** | Input intervention | Exposes the 1-block model's fixed-offset $-31$ shortcut | Alters the input distribution alongside the probe |
 | **3. Attention Head Scores** | Activation probe | Block 1 attends to $i-1$; Block 2 attends to $i+1-L$ | Shows *where* heads look, not *what* their values transmit |
-| **4. OV Copy Matrix ($\mathbf{C}$)** | Weights + stream | Block 2's OV circuit boosts the attended token's logit | Also diagonal ($1.00$) in the failing 1-block control! |
+| **4. OV Copy Matrix ($\mathbf{C}$)** | Weights + stream | Block 2's OV circuit boosts the attended token's logit | Also diagonal ($\approx 1.00$) in the failing 1-block control! |
 | **5. Zero / Mean Ablation** | Causal intervention | Both Block-1 groups and Block-2 heads are causally required | Zero-ablation shifts stream norms (use mean ablation to verify) |
 :::
 

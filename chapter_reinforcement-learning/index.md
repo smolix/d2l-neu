@@ -38,8 +38,8 @@ The following freely available resources provide theoretical treatments, courses
 - Szepesvári, *Algorithms for Reinforcement Learning* :cite:`Szepesvari.2010` states this chapter's algorithms and their guarantees in under a hundred pages.
 - Bertsekas, *A Course in Reinforcement Learning* :cite:`Bertsekas.2025` develops reinforcement learning from the perspective of optimal control and dynamic programming.
 - Agarwal, Jiang, Kakade, and Sun, *Reinforcement Learning: Theory and Algorithms* :cite:`Agarwal.Jiang.Kakade.ea.2019` supplies the sample-complexity rates this chapter states qualitatively.
-- Lattimore and Szepesvári, *Bandit Algorithms* :cite:`Lattimore.Szepesvari.2020` is the full theory behind :numref:`sec_exploration`, while :citet:`Ross.Gordon.Bagnell.2011` develops the online reduction from imitation learning to no-regret learning in :numref:`sec_imitation`.
-- For :numref:`sec_optimal_control`, :citet:`Kalman.1960` and :citet:`Anderson.Moore.2007` develop the Linear-Quadratic Regulator (LQR), Differential Dynamic Programming :cite:`Mayne.1966` and iterative LQR :cite:`Li.Todorov.2004` extend backward Riccati passes to nonlinear trajectory optimization, :citet:`Rawlings.Mayne.Diehl.2017` covers constrained receding-horizon Model Predictive Control, and :citet:`Tedrake.2023` treats underactuated robotics and trajectory optimization prior to the model-free policy-gradient methods of :numref:`sec_policygradient`–:numref:`sec_deeprl`.
+- Lattimore and Szepesvári, *Bandit Algorithms* :cite:`Lattimore.Szepesvari.2020` is the full theory behind :numref:`sec_exploration`.
+- For :numref:`sec_optimal_control`, :citet:`Kalman.1960` and :citet:`Anderson.Moore.2007` develop the Linear-Quadratic Regulator (LQR), Differential Dynamic Programming :cite:`Mayne.1966` and iterative LQR :cite:`Li.Todorov.2004` extend backward Riccati passes to nonlinear trajectory optimization, :citet:`Rawlings.Mayne.Diehl.2017` covers constrained receding-horizon Model Predictive Control, and :citet:`Tedrake.2023` treats underactuated robotics and trajectory optimization.
 
 **Courses**
 

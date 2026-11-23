@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_mdl_figures as fl  # noqa: E402  (shared style + helpers)
 
 np, plt = fl.np, fl.plt
+from matplotlib.colors import to_rgba  # noqa: E402
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
 
 
@@ -506,6 +507,213 @@ def fig_saddle():
     fig.subplots_adjust(wspace=0.28)
     fl.save(fig, "mdl-opt-saddle")
 
+# =========================================================================== #
+# index.md: the two obstacles -- ill-conditioning and gradient noise          #
+# =========================================================================== #
+
+def fig_two_obstacles():
+    """Both panels run on the chapter's valley f = 0.1 x1^2 + 2 x2^2
+    (lambda = 0.2, 4; kappa = 20) from the same start, in the same window.
+    (a) gradient descent at eta = 0.45, just under 2/lambda_2 = 0.5: the
+    steep coordinate zig-zags, the flat one creeps (factor 0.91 per step).
+    (b) constant-step SGD with unit gradient noise at eta = 0.1: the iterates
+    reach the minimum and then wander in a stationary cloud whose variance is
+    eta sigma^2 / (2 lambda) per coordinate (dashed: two standard deviations;
+    the exact values 0.2525 and 0.0156 are the ones sgd.md measures)."""
+    lam = np.array([0.2, 4.0])
+    start = np.array([-5.0, 1.5])
+    lim_x, lim_y = (-5.6, 1.3), (-1.75, 1.75)
+    xs = np.linspace(*lim_x, 300)
+    ys = np.linspace(*lim_y, 200)
+    X, Y = np.meshgrid(xs, ys)
+    Z = 0.1 * X ** 2 + 2 * Y ** 2
+
+    gd = [start.copy()]
+    for _ in range(25):
+        gd.append(gd[-1] - 0.45 * lam * gd[-1])
+    gd = np.array(gd)
+
+    rng = np.random.default_rng(3)
+    eta, burn, keep = 0.1, 300, 1500
+    p = start.copy()
+    sgd = [p.copy()]
+    for _ in range(burn + keep):
+        p = p - eta * (lam * p + rng.normal(0.0, 1.0, 2))
+        sgd.append(p.copy())
+    sgd = np.array(sgd)
+    var = eta / (2 * lam) / (1 - eta * lam / 2)  # exact stationary variance
+
+    fig, axes = plt.subplots(1, 2, figsize=(9.8, 3.0))
+    box = dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.9)
+    for ax in axes:
+        ax.contour(X, Y, Z, levels=[0.3, 1.0, 2.0, 3.2, 4.6], colors=GRAY,
+                   linewidths=0.8, alpha=0.5)
+        ax.plot([0], [0], "+", color="black", ms=11, mew=1.6, zorder=6)
+        ax.set_xlim(*lim_x)
+        ax.set_ylim(*lim_y)
+        ax.set_aspect("equal")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for s in ax.spines.values():
+            s.set_visible(False)
+
+    ax = axes[0]
+    ax.plot(gd[:, 0], gd[:, 1], color=BLUE, lw=1.8, marker="o", ms=3.5,
+            mew=0, zorder=4)
+    ax.plot(*start, "o", color="black", ms=6, zorder=5)
+    ax.text(-0.9, 1.30, r"steep $\lambda_2 = 4$: zig-zag," "\n"
+            r"stable only for $\eta < 0.5$", color="black", fontsize=13,
+            ha="center", va="center", bbox=box)
+    ax.text(-1.0, -1.38, r"flat $\lambda_1 = 0.2$: creeps at $\eta = 0.45$",
+            color="black", fontsize=13, ha="center", va="center", bbox=box)
+
+    ax = axes[1]
+    ax.plot(sgd[:burn, 0], sgd[:burn, 1], color=ORANGE, lw=0.9, alpha=0.8,
+            zorder=3)
+    ax.plot(sgd[burn::3, 0], sgd[burn::3, 1], "o", color=ORANGE, ms=2.2,
+            mew=0, alpha=0.55, zorder=3)
+    th = np.linspace(0, 2 * np.pi, 200)
+    ax.plot(2 * np.sqrt(var[0]) * np.cos(th), 2 * np.sqrt(var[1]) * np.sin(th),
+            color="black", lw=1.4, ls="--", zorder=5)
+    ax.plot(*start, "o", color="black", ms=6, zorder=5)
+    ax.text(-2.1, -1.25, "constant-step SGD never settles:\n"
+            r"noise ball, variance $\eta\sigma^2/(2\lambda b)$",
+            color="black", fontsize=13, ha="center", va="center", bbox=box)
+    fig.subplots_adjust(wspace=0.06)
+    fl.save(fig, "mdl-opt-two-obstacles")
+
+
+# =========================================================================== #
+# test-models.md: loss landmarks for TinyLM on WikiText-103 bytes            #
+# =========================================================================== #
+
+def fig_loss_landmarks():
+    """Cross-entropy landmarks in nats per byte.  5.71 = ln 256 + s^2/2 with
+    s^2 = 129/384 (the exercise in test-models.md); the unigram and add-one
+    bigram tables, fit on 10^7 training bytes and scored on the validation
+    split, give 3.17 and 2.46 (rounded to the prose's 3.2 and 2.5); the two
+    TinyLM values are rounded to the precision that survives re-execution:
+    about 2.1 for 2,000 steps of SGD, about 1.5 for the best tuned runs."""
+    rows = [
+        ("untrained TinyLM", 5.71, "5.71", GRAY),
+        (r"uniform guess, $\ln 256$", 5.55, "5.55", GRAY),
+        ("unigram byte table", 3.2, r"$\approx$3.2", BLUE),
+        ("bigram byte table", 2.5, r"$\approx$2.5", BLUE),
+        ("TinyLM, SGD, 2,000 steps", 2.1, r"$\approx$2.1", ORANGE),
+        ("TinyLM, best tuned run", 1.5, r"$\approx$1.5", ORANGE),
+    ]
+    fig, ax = plt.subplots(figsize=(6.6, 3.0))
+    y = np.arange(len(rows))[::-1]
+    for yi, (name, val, txt, color) in zip(y, rows):
+        ax.barh(yi, val, height=0.62, color=to_rgba(color, 0.22), ec=color,
+                lw=1.6)
+        ax.text(val + 0.08, yi, txt, color="black", fontsize=13,
+                ha="left", va="center")
+    ax.set_yticks(y)
+    ax.set_yticklabels([r[0] for r in rows], fontsize=13, color="black")
+    ax.tick_params(axis="y", length=0)
+    ax.set_xlim(0, 6.5)
+    ax.set_xticks([0, 1, 2, 3, 4, 5, 6])
+    ax.set_xlabel("cross-entropy (nats per byte)", fontsize=13, color="black")
+    ax.tick_params(axis="x", labelsize=11, colors="black")
+    for s in ("top", "right", "left"):
+        ax.spines[s].set_visible(False)
+    ax.spines["bottom"].set_color("black")
+    fl.save(fig, "mdl-opt-loss-landmarks")
+
+
+# =========================================================================== #
+# momentum.md: persistent gradients add up, alternating ones cancel          #
+# =========================================================================== #
+
+def fig_momentum_gain():
+    """The velocity v_t = beta v_{t-1} + g_t at beta = 0.5 (the section's
+    value) for a constant gradient g_t = 1 and an alternating one
+    g_t = (-1)^(t+1).  It approaches 1/(1-beta) = 2 in the first case and
+    oscillates with amplitude 1/(1+beta) = 2/3 in the second."""
+    beta, T = 0.5, 10
+    t = np.arange(1, T + 1)
+    cases = [np.ones(T), (-1.0) ** (t + 1)]
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.1), sharey=True)
+    for ax, g, (amp, lab) in zip(
+            axes, cases,
+            [(1 / (1 - beta), r"$1/(1-\beta) = 2$"),
+             (1 / (1 + beta), r"$\pm 1/(1+\beta) = \pm 2/3$")]):
+        v = np.zeros(T)
+        for k in range(T):
+            v[k] = beta * (v[k - 1] if k else 0.0) + g[k]
+        ax.axhline(0.0, color="black", lw=0.9)
+        ax.vlines(t - 0.12, 0, g, color=GRAY, lw=3.0)
+        ax.plot(t + 0.12, v, color=BLUE, lw=2.0, marker="o", ms=6, zorder=4)
+        for sgn in ((1,) if g.min() > 0 else (1, -1)):
+            ax.axhline(sgn * amp, color="black", lw=1.0, ls="--", zorder=2)
+        ax.set_xlim(0.3, T + 0.7)
+        ax.set_xticks([1, 5, 10])
+        ax.set_xlabel(r"step $t$", fontsize=13, color="black")
+        ax.tick_params(labelsize=11, colors="black")
+        for s in ("top", "right"):
+            ax.spines[s].set_visible(False)
+        for s in ("left", "bottom"):
+            ax.spines[s].set_color("black")
+    box = dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.9)
+    ax = axes[0]
+    ax.text(T + 0.6, 2.12, r"$1/(1-\beta) = 2$", fontsize=13, color="black",
+            ha="right", va="bottom", bbox=box)
+    ax.text(5.5, -0.55, r"gradient $g_t = 1$ (gray)", fontsize=13,
+            color="black", ha="center", va="center")
+    ax.text(4.3, 1.33, r"velocity $v_t$", fontsize=13, color=BLUE,
+            ha="left", va="center")
+    ax.set_ylabel("value", fontsize=13, color="black")
+    ax = axes[1]
+    ax.text(5.5, 2.12, r"gradient $g_t = (-1)^{t+1}$ (gray)", fontsize=13,
+            color="black", ha="center", va="center")
+    ax.text(5.5, 1.55, r"dashed: $\pm 1/(1+\beta) = \pm 2/3$", fontsize=13,
+            color="black", ha="center", va="center")
+    ax.set_ylim(-1.35, 2.45)
+    ax.set_yticks([-1, 0, 1, 2])
+    fig.subplots_adjust(wspace=0.12)
+    fl.save(fig, "mdl-opt-momentum-gain")
+
+
+# =========================================================================== #
+# muon.md: orthogonalization flattens the spectrum                           #
+# =========================================================================== #
+
+def fig_muon_spectrum():
+    """Singular values of a 64 x 32 matrix with decaying column scales (a
+    stand-in for a gradient whose energy sits in a few directions), divided
+    by sigma_1, and of its orthogonalization U V^T: every nonzero singular
+    value becomes 1.  The first twelve are shown."""
+    rng = np.random.default_rng(0)
+    G = rng.normal(size=(64, 32)) / np.arange(1, 33) ** 1.2
+    U, s, Vt = np.linalg.svd(G, full_matrices=False)
+    so = np.linalg.svd(U @ Vt, compute_uv=False)
+    k = 12
+    idx = np.arange(1, k + 1)
+    fig, axes = plt.subplots(1, 2, figsize=(9.4, 2.9), sharey=True)
+    for ax, vals, color, lab in [
+            (axes[0], s[:k] / s[0], GRAY,
+             r"$\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^{\top}$"),
+            (axes[1], so[:k], ORANGE,
+             r"$\mathbf{U}\mathbf{V}^{\top}$")]:
+        ax.bar(idx, vals, width=0.7, color=to_rgba(color, 0.22), ec=color,
+               lw=1.5)
+        ax.text(k + 0.5, 1.12, lab, fontsize=15, color="black", ha="right",
+                va="bottom")
+        ax.set_xlim(0.3, k + 0.7)
+        ax.set_xticks([1, 4, 8, 12])
+        ax.set_xlabel(r"index $i$", fontsize=13, color="black")
+        ax.tick_params(labelsize=11, colors="black")
+        for s_ in ("top", "right"):
+            ax.spines[s_].set_visible(False)
+        for s_ in ("left", "bottom"):
+            ax.spines[s_].set_color("black")
+    axes[0].set_ylabel(r"$\sigma_i / \sigma_1$", fontsize=14, color="black")
+    axes[0].set_ylim(0, 1.32)
+    axes[0].set_yticks([0, 0.5, 1.0])
+    fig.subplots_adjust(wspace=0.10)
+    fl.save(fig, "mdl-opt-muon-spectrum")
+
 
 if __name__ == "__main__":
     fig_critical_damping()
@@ -515,5 +723,9 @@ if __name__ == "__main__":
     fig_ns_maps()
     fig_tanh_flat()
     fig_saddle()
+    fig_two_obstacles()
+    fig_loss_landmarks()
+    fig_momentum_gain()
+    fig_muon_spectrum()
     for p in fl.WRITTEN:
         print("wrote", os.path.relpath(p))

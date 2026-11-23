@@ -382,7 +382,8 @@ is a choice of the sampler, separate from the training path, since
 returns these levels and `heun_sample` takes Heun steps through any list of
 levels. We print the ten-step grid of each of three choices: even in time
 on the variance-preserving path, even in time on the linear path, and the
-polynomial noise-level grid of :citet:`Karras.Aittala.Aila.ea.2022`, which we call the *EDM grid* (*Elucidating the Design Space of Diffusion-Based Generative Models*, whose preconditioning we study in :numref:`sec_diffusion-design-space`).
+grid of Karras et al., which we call the EDM grid after their paper,
+*Elucidating the Design Space of Diffusion-Based Generative Models*.
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab pytorch
@@ -700,6 +701,17 @@ DDIM itself changes by about a tenth after a hundred steps, and at fifty it
 is within about a third of the thousand-step chain at a twentieth of the
 evaluations, which is the central result of :citet:`Song.Meng.Ermon.2020`.
 
+The verdict on fresh noise belongs to this model, and it should not be
+carried over to large ones. On ImageNet at $64 \times 64$ pixels
+:citet:`Karras.Aittala.Aila.ea.2022` found that a small, tuned amount of
+noise added before each Heun step improved on their deterministic sampler,
+the predictor-corrector samplers of :citet:`song2021score` insert Langevin
+steps between solver steps to the same effect, and Restart sampling
+:cite:`Xu.Deng.Cheng.ea.2023` gains most at large budgets. The mechanism is
+the Langevin pull described above. A large model of hard data makes errors
+that later noise can still correct, and given enough steps the correction
+outweighs the variance that the noise adds.
+
 The second table counts network evaluations rather than steps, since that is
 what a sample costs. It runs Euler's method, Heun's method and the multistep
 sampler at about 10 to 100 evaluations on three grids: the linear grid, the
@@ -1010,11 +1022,18 @@ such as the check pattern of the last shirt.
 
 The codes are less satisfactory. Their standard deviation is about 0.7 at
 ten steps and still below 0.9 at two hundred, so a code that reproduces its
-image is narrower than the noise the sampler was built to start from. Codes
-narrower than noise are the weak point of DDIM inversion in practice, and
-methods that edit real photographs through their codes add machinery to
-work around them, for instance by optimizing the null-label embedding so
-that guided sampling from the code still reproduces the image.
+image is narrower than the noise the sampler was built to start from. A
+code is therefore not a typical draw of standard Gaussian noise, and we
+have to take care whenever we interpolate between codes or draw new ones
+near them.
+
+Methods that edit real photographs through their codes meet a second,
+separate difficulty. Inversion follows the trajectory of one field, and a
+guided sampler integrates a different one, so guided sampling from the code
+leaves that trajectory and no longer returns the image. Null-text inversion
+:cite:`Mokady.Hertz.Aberman.ea.2023` repairs this by optimizing the
+null-label embedding at every step until the guided sampler reproduces the
+image from its code.
 
 Because the sampler is a continuous function of its code, we can move
 between two images by interpolating between their codes. A straight line is

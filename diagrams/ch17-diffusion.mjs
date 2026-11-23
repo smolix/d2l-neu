@@ -1,5 +1,6 @@
 // Slide diagrams for Chapter 17 (Diffusion and Flow-Based Generative Models)
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -109,22 +110,22 @@ function matrix2x2(title, tl, tr, bl, br, footer) {
 export const diagrams = {
   // ── index.md (1 diagram) ────────────────────────────────────────────
   'ch17-diff-roadmap': () => stack3(
-    'Chapter 17 Roadmap: Score Matching → Fast Solvers → Tokens',
+    `Chapter ${num('chap_diffusion')} Roadmap: Score Matching → Fast Solvers → Tokens`,
     {
-      badge: '§§17.1–17.3 Core',
+      badge: `§§${num('sec_diffusion-denoising')}–${num('sec_diffusion-integration')} Core`,
       head: 'Denoising Scores, Gaussian Paths & ODE/SDE Transport',
       sub: 'Trained MLP matches exact 2D oracle weights within 0.004',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
     {
-      badge: '§§17.4–17.6 Images',
-      head: 'U-Net + CFG (§17.4) · Fast Solvers (§17.5) · ELBO (§17.6)',
+      badge: `§§${num('sec_diffusion-images')}–${num('sec_diffusion-design-space')} Images`,
+      head: `U-Net + CFG (${sec('sec_diffusion-images')}) · Fast Solvers (${sec('sec_diffusion-samplers')}) · ELBO (${sec('sec_diffusion-design-space')})`,
       sub: '20-NFE Heun matches 1,000-step FD; ODE NLL matches entropy',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
     {
-      badge: '§§17.7–17.9 Scale',
-      head: 'Latent VAE & DiT (§17.7) · Flow Maps (§17.8) · Tokens',
+      badge: `§§${num('sec_diffusion-latent')}–${num('sec_diffusion-discrete')} Scale`,
+      head: `Latent VAE & DiT (${sec('sec_diffusion-latent')}) · Flow Maps (${sec('sec_diffusion-few-step')}) · Tokens`,
       sub: 'Latent U-Net cuts FLOPs >10×; 2 jumps match 15 Euler steps',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
@@ -319,23 +320,23 @@ export const diagrams = {
     'Diagnosing the Five Single-Level Langevin Runs (2,000 Steps)',
     {
       badge: 'Clean Score ∇log p',
-      head: 'Weights [0.34, 0.33, 0.33]  ·  Strays 1.3%  ·  Spread 0.50',
+      head: 'Weights ≈ 1/3 each  ·  Strays 1–2%  ·  Spread 0.50',
       sub: 'Sharp spread, but 10–12 nat barriers freeze initial 1/3 weights!',
       fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
     },
     {
       badge: 'Wide Blur ∇log p₁.₀',
-      head: 'Weights [0.49, 0.31, 0.20]  ·  Strays 41%  ·  Spread 1.01',
+      head: 'Weights ≈ [0.49, 0.30, 0.21]  ·  Strays 41–42%  ·  Spread ≈ 0.97',
       sub: 'Mixes mode weights accurately, but with 5× the variance!',
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     {
       badge: 'MLP Score (σ=0.3)',
-      head: 'Weights [0.39–0.46, ...]  ·  Strays 5–6.5%  ·  Spread 0.60',
-      sub: '7–9 nat barriers block mixing; valley drift driven by MLP errors',
+      head: 'Weights [0.39–0.46, ...]  ·  Strays ≈ 5–6%  ·  Spread ≈ 0.61',
+      sub: '7–9 nat barriers; extra mixing, presumably from valley errors',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
-    'Target Ground Truth p: Weights [0.50, 0.30, 0.20] · Strays 1.1% · Spread 0.48'
+    'Data: Weights ≈ [0.50, 0.30, 0.20] · Strays 1.2–1.5% · Spread 0.49'
   ),
 
   'ch17-diff-wiener-vs-cnn': () => compare2(
@@ -346,7 +347,7 @@ export const diagrams = {
       rows: [
         'Shrinks PCA axis i by λ_i/(λ_i + σ²)',
         'Projects onto a flat linear subspace',
-        'Test MSE = 0.045 (blurry edges)',
+        'Test MSE ≈ 0.045 (blurry edges)',
       ],
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
@@ -355,7 +356,7 @@ export const diagrams = {
       sub: 'Learned Posterior Mean E[x₀ | x̃]',
       rows: [
         'Projects onto curved garment manifold',
-        '33% lower test MSE = 0.030 (30 SE!)',
+        '≈ 30% lower test MSE ≈ 0.031 (> 20 SE)',
         'Still blurs fine texture at high σ',
       ],
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
@@ -572,7 +573,7 @@ export const diagrams = {
     {
       badge: 'Velocity ε − x₀',
       head: 'c_t = −1/t  ·  Floor: d = 2 at t → 0  to  ≈ 9 near t = 0.9',
-      sub: 'Average floor ≈ 4.91 (9× higher than VP noise from c_t² = 1/t²)',
+      sub: 'Avg ≈ 4.9 vs VP noise 0.54: scale c_t² and another clock',
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     'Never compare raw loss values across targets; rank models by excess over floor'
@@ -713,7 +714,7 @@ export const diagrams = {
       note2: 'E[x₀] = (−0.50, −0.70)!',
       fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
     },
-    { text: 'Curved ODE trajectories require multi-step integration (or a flow map §17.8)' }
+    { text: `Curved ODE trajectories require multi-step integration (or a flow map ${sec('sec_diffusion-few-step')})` }
   ),
 
   'ch17-diff-ve-coordinates': () => pipeline3(
@@ -749,23 +750,23 @@ export const diagrams = {
     'Separating Solver Discretization Error from Network Error (2,000 Starts)',
     {
       badge: '10 Euler Steps',
-      head: 'Network: Spread 0.45, Strays 3.0%  ·  Oracle: Spread 0.46',
-      sub: 'Identical mode contraction → 10-step error is solver stride!',
+      head: 'Spread 0.45 net / 0.46 oracle  ·  Strays ≈ 3% / 2–3%',
+      sub: 'Same narrowing with the exact field: it is the step size',
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     {
       badge: '100 Euler Steps',
-      head: 'Network: Weights [0.504, 0.302, 0.194] · Spread 0.48',
-      sub: 'Matches ground-truth data ([0.506, 0.300, 0.194], spread 0.48)',
+      head: 'Network: Strays ≈ 1.3%  ·  Spread 0.48',
+      sub: 'Data: strays 1.1–1.5%, spread 0.48–0.49',
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
     {
       badge: '20,000-Start Test',
       head: '99.5%–99.8% Mode Agreement Between MLP and Oracle',
-      sub: '100-step ODE and 200-step ancestral match weights within 1 SE',
+      sub: '100-step ODE and 200-step ancestral: weights agree within ≈ 1 SE',
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     },
-    'Comparing against the exact 2D oracle proves 10-step error is discretization, not MLP fit'
+    'Exact oracle: narrowing comes from the solver, some strays from the network'
   ),
 
   'ch17-diff-ancestral-split': () => pipeline3(
@@ -853,13 +854,13 @@ export const diagrams = {
   ),
 
   'ch17-diff-unet-profile': () => compare2(
-    'Systems Profile of the Denoising U-Net (1.20M Params, 247M MACs)',
+    'Systems Profile of the Denoising U-Net (1.20M Params, 266M MACs)',
     {
       head: 'Where Parameters Live (Capacity)',
       sub: '9 C_in C_out weights (independent of H×W)',
       rows: [
-        '28×28 stages (64 ch): 17% of params',
-        '14×14 stages (128 ch): 45% of params',
+        '28×28 stages (64 ch): 18% of params',
+        '14×14 stages (128 ch): 41% of params',
         '7×7 bottleneck: 38% of params!',
       ],
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
@@ -868,8 +869,8 @@ export const diagrams = {
       head: 'Where FLOPs Go (Arithmetic)',
       sub: 'Scales with spatial pixels H × W',
       rows: [
-        '28×28 stages (784 px): 59% of MACs!',
-        '14×14 stages (196 px): 33% of MACs',
+        '28×28 stages (784 px): 57% of MACs!',
+        '14×14 stages (196 px): 35% of MACs',
         '7×7 bottleneck: only 8% of MACs',
       ],
       fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
@@ -914,7 +915,7 @@ export const diagrams = {
       rows: [
         'Wanders in a cloud around optimum',
         'Sensitive to last minibatch noise',
-        '50-step Euler FD = 1.25–1.38',
+        '50-step Euler FD ≈ 1.25–1.5',
       ],
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
@@ -924,7 +925,7 @@ export const diagrams = {
       rows: [
         'Half-life n_{1/2}=1,000 (β ≈ 0.9993)',
         'Averages out stochastic gradient jitter',
-        '50-step Euler FD = 0.80–0.83 (±0.02)!',
+        '50-step Euler FD ≈ 0.81–0.85',
       ],
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
@@ -1002,7 +1003,7 @@ export const diagrams = {
       sub: 'Integrates ũ_t = u_∅ + γ(u_c − u_∅)',
       rows: [
         'Compounds tilt across all times t ∈ [0,1]',
-        'Width collapses 25×: 0.50 → 0.02!',
+        'Width collapses ≈ 23×: 0.50 → 0.02!',
         'Mean overshoots further to 1.23!',
       ],
       fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
@@ -1296,7 +1297,7 @@ export const diagrams = {
     },
     {
       badge: 'Bell Bump w(λ)',
-      head: 'DDPM Simple (λ ≈ −0.9)  ·  EDM Log-Normal (λ ≈ +2.4)',
+      head: 'DDPM Simple (peak λ ≈ −0.9)  ·  EDM (levels centred at 2.4)',
       sub: 'Focuses capacity on mid-noise scales where structure forms',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
@@ -1700,7 +1701,7 @@ export const diagrams = {
     {
       head: 'MeanFlow (Teacher-Free)',
       eq: 'u_ref = ε − x₀,  0 ≤ s ≤ t',
-      sub: 'No teacher run, but contracts spread 25%',
+      sub: 'No teacher; spread 15–30% too tight here',
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
     'Stop-gradient sg[u_ref − (t−s)dū/dt] is mandatory so gradients do not collapse ∇_x ū_θ'
@@ -1744,7 +1745,7 @@ export const diagrams = {
       rows: [
         'Fixed left-to-right causal order',
         'Reveals 1 token per forward pass',
-        '1,024 tokens ⇒ 1,024 sequential calls',
+        '1,024 tokens ⇒ 1,024 cached 1-token calls',
       ],
       fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     },
@@ -1752,9 +1753,9 @@ export const diagrams = {
       head: 'Masked Discrete Diffusion',
       sub: 'Absorbing chain: x_0 → ... → [M]^L',
       rows: [
-        'Bidirectional attention over all L sites',
-        'Unmasks ≈ L/S tokens per step',
-        'Any-order generation & infilling!',
+        'Bidirectional attention, no KV cache',
+        'S steps, each a full pass over L sites',
+        'Fewer sequential steps, not fewer FLOPs',
       ],
       fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     },
@@ -1937,8 +1938,8 @@ export const diagrams = {
     },
     {
       head: '2. Order-Agnostic AR',
-      eq: 'u ~ U(0, 1) · 1 Token / Call',
-      sub: 'Random permutation σ; TV = 0 in L calls',
+      eq: 'Random Order σ · 1 Token / Call',
+      sub: 'Exact joint in L calls (TV = 0)',
       fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark,
     },
     {

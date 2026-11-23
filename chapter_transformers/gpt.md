@@ -424,9 +424,9 @@ To separate genuine architectural improvements from random seed noise, we train 
 
 ```{.python .input #gpt-run-to-run-spread}
 %%tab pytorch, jax
-def train_lm(model, data, lr=2e-3, num_steps=1000):
+def train_lm(model, data, lr=2e-3, num_steps=1000, warmup=100):
     """Train with the recipe of the main run; return milliseconds per step."""
-    optimizer = LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
+    optimizer = LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=warmup)
     # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
     bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
                           warmup=1, repeats=num_steps // 50 - 1)
@@ -445,7 +445,22 @@ for act, repeats in (('swiglu', 2), ('gelu', 3)):
           + f'; mean {np.mean(runs[act]):.3f}, range {np.ptp(runs[act]):.3f}')
 ```
 
-Run-to-run variation across random seeds is only $\sim 0.01$ nats/byte, whereas `SwiGLU` consistently beats `GELU` at the same parameter and FLOP budget by $\sim 0.06$ nats/byte. (Similarly, switching `pre_norm=True` to `pre_norm=False` without warmup causes training to stall at the unigram loss of $3.17$ nats/byte due to the early-layer gradient attenuation and token collapse shown in :numref:`subsec_signal-propagation`, and even with warmup post-norm trails pre-norm by a few hundredths of a nat per byte.)
+Run-to-run variation across random seeds is only $\sim 0.01$ nats/byte, whereas `SwiGLU` consistently beats `GELU` at the same parameter and FLOP budget by $\sim 0.06$ nats/byte.
+
+With `train_lm` we can also test the other design choice of :numref:`sec_transformer-block`, the placement of the normalization. At initialization, :numref:`subsec_signal-propagation` found nothing wrong with post-norm at the weight scale $0.02$ that `init_weights` uses: tokens stay apart and the query gradients survive. Whether post-norm also *trains* as well is a separate question. We train the same model with post-norm blocks (`pre_norm=False`) three times: with 500 warmup steps, with the 100 steps of the main run, and with none. The peak learning rate is that of the main run in all three:
+
+```{.python .input #gpt-run-to-run-spread-and-ffn-activation-swiglu-vs-gelu-1}
+%%tab pytorch, jax
+for warmup in (500, 100, 0):  # Post-norm: long, pre-norm's, and no warmup
+    net = gpt(len(data.vocab), pre_norm=False, max_len=128)
+    train_lm(net, data, warmup=warmup)
+    loss = math.log(d2l.lm_perplexity(net, data.val_dataloader()))
+    print(f'post-norm, warmup {warmup:>3}: validation {loss:.3f}')
+```
+
+The answer depends on the warmup. With the 100 warmup steps that train the pre-norm model to about $1.34$ nats per byte, the post-norm model ends at $3.17$, and so does the run without warmup. We have seen this number before: it is the unigram entropy computed above, so these two models have learned how often each byte occurs and nothing about the bytes that precede it. The early updates are too large. When the learning rate rises to its peak within a few steps, the outputs of the attention and FFN sublayers grow far larger than the normalized residual stream to which they are added. After the normalizations every token then ends with nearly the same final vector, and from the same vector at every position only the byte frequencies can be predicted. The gradients that could pull the tokens apart again shrink with the token spread (:numref:`subsec_signal-propagation`), so training does not recover.
+
+With 500 warmup steps the sublayer outputs stay smaller than the stream, and the post-norm model trains to about $1.38$ nats per byte, a little behind the pre-norm model. The warmup that suffices for pre-norm is thus not enough for post-norm. Where the boundary lies we cannot say: it is not sharp, and at intermediate warmup lengths some runs train and others collapse. This is the behavior :citet:`xiong2020layer` reported for the original Transformer: post-norm needs a long warmup, whereas pre-norm trains without one and converges faster.
 
 ### Comparing Against a Matched Recurrent Baseline
 :label:`subsec_gpt-rnn-baseline`
@@ -518,7 +533,7 @@ At position $t = 1$ (where only a single byte of context is available), `GPT` an
 ## Sampling from the Model
 :label:`subsec_gpt-sampling`
 
-Autoregressive generation (`GPT.generate`) appends one token at a time: at each step it feeds the current prefix through the model, divides the final position's logits $\mathbf{z}_t$ by a **temperature** $\tau > 0$, optionally masks all but the **top-$k$** highest logits to $-\infty$ :cite:`Fan.Lewis.Dauphin.2018`, and samples the next token from $\textrm{softmax}(\mathbf{z}_t / \tau)$ (or takes $\arg\max$ when $\tau = 0$):
+Autoregressive generation (`GPT.generate`) appends one token at a time: at each step it feeds the current prefix through the model, divides the final position's logits $\mathbf{z}_t$ by a **temperature** $\tau > 0$, optionally masks all but the **top-$k$** highest logits to $-\infty$ :cite:`Fan.Lewis.Dauphin.2018`, and samples the next token from $\textrm{softmax}(\mathbf{z}_t / \tau)$ (greedy decoding, the limit $\tau \to 0$, is the case `top_k=1`):
 
 ```{.python .input #gpt-sampling-from-the-model-1}
 %%tab pytorch
@@ -1000,9 +1015,9 @@ To distinguish genuine architectural improvements from random initialization noi
 
 @!gpt-run-to-run-spread
 
-- **Tight run-to-run repeatability:** Across three random seeds, validation loss varies by only **$0.008\text{--}0.012\text{ nats/byte}$**.
+- **Tight run-to-run repeatability:** Across three random seeds, validation loss varies by **less than $0.01\text{ nats/byte}$**.
 - **Statistically clear `SwiGLU` win:** At identical parameter count ($4.79\text{M}$) and step time, `SwiGLU` beats `GELU` by **$\sim 0.06\text{ nats/byte}$** ($> 5\times$ the seed spread).
-- **Post-norm pitfall:** Switching `pre_norm=False` without warmup causes training to stall permanently at the unigram floor ($3.17\text{ nats/byte}$) as early updates collapse token diversity and starve lower-layer gradients.
+- **Post-norm arm:** `pre_norm=False` blocks with the same 100 warmup steps, or none, end at the unigram entropy, **$3.17\text{ nats/byte}$**: the sublayer outputs outgrow the normalized stream, all tokens end with the same vector, and training does not recover. With 500 warmup steps post-norm trains to about $1.38$, a little behind pre-norm ($1.34$).
 :::
 
 ::: {.slide title="Comparison With a Parameter-Matched Recurrent Model"}
@@ -1013,7 +1028,7 @@ We train a matched `d2l.RNNLM` ($d_{\text{rnn}} = 1{,}920$, $4.74\text{M}$ param
 @!gpt-against-a-recurrent-network
 
 ::: {.d2l-note}
-**Why the gap widens with context position $t$:** At $t = 0$ (1 byte of context), both models score $2.46\text{ nats}$ (the bigram limit). By $t = 16 \dots 127$, the RNN saturates near $1.41\text{ nats}$ because history must squeeze through $t$ sequential $\tanh$ steps, whereas `GPT` attends directly to any prior byte in $O(1)$ hops ($1.31\text{ nats}$).
+**Why the gap widens with context position $t$:** At $t = 0$ (1 byte of context), both models score about $2.5\text{ nats}$ (the bigram limit is $2.45$). By $t = 16 \dots 127$, the RNN levels off at about $1.4\text{ nats}$ because history must squeeze through $t$ sequential $\tanh$ steps, whereas `GPT` attends directly to any prior byte in $O(1)$ hops (about $1.3\text{ nats}$).
 :::
 :::
 
@@ -1022,7 +1037,7 @@ We train a matched `d2l.RNNLM` ($d_{\text{rnn}} = 1{,}920$, $4.74\text{M}$ param
 
 ::: {.cols .vc}
 ::: {.col}
-- At each decode step, `GPT.generate` scales logits $\mathbf{z}_t \in \mathbb{R}^V$ by **temperature $\tau > 0$** and truncates to the **top-$k$** (or nucleus **top-$p$**) candidates:
+- At each decode step, `GPT.generate` scales logits $\mathbf{z}_t \in \mathbb{R}^V$ by **temperature $\tau > 0$** and truncates to the **top-$k$** candidates:
   $$p_v = \frac{\exp(z_{t,v} / \tau)}{\sum_{u \in \mathcal{V}_k} \exp(z_{t,u} / \tau)}$$
 :::
 

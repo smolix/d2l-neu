@@ -351,9 +351,10 @@ def train_step(params, X, Y, lr=0.1):  # Forward, backward, SGD update
     return loss, jax.tree.map(lambda p, g: p - lr * g, params, grads)
 ```
 
-Let us predict the step time. The four forward products and eight backward
-products perform ~$3 \times 4 \times 2 \cdot 512 \cdot 1024^2 \approx 1.3
-\times 10^{10}$ FLOPs (0.16 ms at 82.6 TFLOP/s in tf32), while reading and
+Let us predict the step time. The four forward products and seven backward
+products (the first layer needs no input gradient) perform ~$11 \times 2
+\cdot 512 \cdot 1024^2 \approx 1.2 \times 10^{10}$ FLOPs (0.14 ms at 82.6
+TFLOP/s in tf32), while reading and
 updating the 16 MiB of parameters moves ~96 MiB (0.10 ms at 1 TB/s), for
 **~0.25 ms** of actual device work. Eager execution, however, issues over 100
 individual operations at $h \ge 10$ µs each (> 1 ms of host launch overhead),
@@ -434,6 +435,16 @@ addresses once, then replays the entire sequence with a single host launch.
 Because buffer addresses and shapes are baked into the recording, inputs are
 copied into fixed buffers before replay and outputs are overwritten on the
 next replay.
+
+![Host and device timelines for a stack of short kernels. With one launch
+per kernel, the GPU waits for the host before every kernel and idles in
+between. A CUDA graph replays the whole sequence after a single launch, so
+the kernels run back to back.](../img/mdl-perf-kernel-replay.svg)
+:label:`fig_kernel_replay`
+
+:numref:`fig_kernel_replay` compares the two timelines. The kernels
+themselves take the same time in both; what the replay removes is the idle
+time between them.
 
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
 %%tab pytorch
@@ -855,7 +866,7 @@ $$\frac{t_{\textrm{act (eager)}}}{t_{\textrm{FFN matmuls}}} \;=\; \frac{9 I^*}{d
 
 Consider one full training step (forward, MSE loss, backward, and SGD update) for a 4-layer MLP of width $1024$ with `gelu_ish` activations on batch $B = 512$ in `float32` (`tf32` Tensor Cores, $P = 82.6\text{ TFLOP/s}$):
 
-- **Compute floor ($0.16\text{ ms}$):** Four forward and eight backward matmuls perform $12 \times 2 \cdot 512 \cdot 1024^2 \approx 1.29 \times 10^{10}\text{ FLOPs}$, taking $0.16\text{ ms}$ at $82.6\text{ TFLOP/s}$.
+- **Compute floor ($0.14\text{ ms}$):** Four forward and seven backward matmuls (the first layer needs no input gradient) perform $11 \times 2 \cdot 512 \cdot 1024^2 \approx 1.18 \times 10^{10}\text{ FLOPs}$, taking $0.14\text{ ms}$ at $82.6\text{ TFLOP/s}$.
 - **Bandwidth floor ($0.10\text{ ms}$):** Streaming the $16\text{ MiB}$ of parameters and $2\text{ MiB}$ activations across $\sim 6$ passes moves $\sim 96\text{ MiB}$, taking $0.10\text{ ms}$ at $1\text{ TB/s}$ ($\sim \mathbf{0.25\text{ ms}}$ total device work).
 - **Eager launch floor ($> 1.0\text{ ms}$):** Eager execution dispatches $> 100$ small operations at $h \ge 10\,\mu\text{s}$ each, making the eager step **overhead-bound** by a factor of $5\text{--}10\times$.
 :::

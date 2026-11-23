@@ -1,7 +1,7 @@
 # The KV Cache and Cache Reduction
 :label:`sec_kv-cache`
 
-Look closely at what `GPT.generate` (:numref:`subsec_gpt-sampling`) does at decoding step $t$: to sample token $t+1$, it runs a full forward pass over the entire prefix $x_{1:t}$ of length $t$, reads only the last logit vector $\mathbf{z}_t \in \mathbb{R}^V$, appends $x_{t+1}$, and on step $t+1$ feeds $x_{1:t+1}$ through all $L$ blocks all over again. Because causal attention is lower-triangular—representation $s \le t$ at every layer depends only on tokens $1, \dots, s$—recomputing the keys and values at positions $1, \dots, t-1$ on step $t$ reproduces the exact same tensors computed on step $t-1$. Across $T$ generated tokens, this redundant recomputation turns linear per-step work into $O(T^2)$ total work.
+Look closely at what `GPT.generate` (:numref:`subsec_gpt-sampling`) does at decoding step $t$: to sample token $t+1$, it runs a full forward pass over the entire prefix $x_{1:t}$ of length $t$, reads only the last logit vector $\mathbf{z}_t \in \mathbb{R}^V$, appends $x_{t+1}$, and on step $t+1$ feeds $x_{1:t+1}$ through all $L$ blocks all over again. Because causal attention is lower-triangular—representation $s \le t$ at every layer depends only on tokens $1, \dots, s$—recomputing the keys and values at positions $1, \dots, t-1$ on step $t$ reproduces the exact same tensors computed on step $t-1$. Across $T$ generated tokens, this redundant recomputation passes $O(T^2)$ tokens through the weight matrices where $T$ would do.
 
 Storing past keys and values in a **key--value (KV) cache** (:numref:`fig_kv-cache`) eliminates this redundancy: at step $t$, each layer projects only the single new token $x_t$ into $(\mathbf{q}_t, \mathbf{k}_t, \mathbf{v}_t)$, writes $(\mathbf{k}_t, \mathbf{v}_t)$ into slot $t$ of a pre-allocated buffer, and attends $\mathbf{q}_t$ against the cached prefix $(\mathbf{K}_{1:t}, \mathbf{V}_{1:t})$.
 
@@ -43,7 +43,12 @@ from functools import partial
 
 Why do we cache keys and values $(\mathbf{K}_{1:t}, \mathbf{V}_{1:t})$ at each block rather than queries $\mathbf{Q}_{1:t}$ or residual states $\mathbf{H}_{1:t}$? Under causal masking, query $\mathbf{q}_s$ ($s < t$) is used only when emitting token $s+1$ and is never referenced again. And caching the *post-RoPE* keys $\mathbf{k}_s$ and values $\mathbf{v}_s$ (each of shape $(B, H_{\textrm{kv}}, 1, d_h)$) means past tokens never need to be re-projected by $\mathbf{W}_k, \mathbf{W}_v$ or re-rotated by RoPE.
 
-`init_cache` pre-allocates zeroed key and value buffers `ks, vs` of shape $(B, H_{\textrm{kv}}, T_{\max}, d_h)$ for each of the $L$ blocks, and `forward_cached(model, X, ks, vs, t)` processes a slice `X` of $n$ new tokens starting at position offset `t` (passing `offset=t` to RoPE or indexing `pos_emb[t:t+n]`), writes their keys and values into `[:, :, t:t+n, :]`, and attends against `[:, :, :t+n, :]`:
+`init_cache` pre-allocates zeroed key and value buffers `ks, vs` of shape $(B, H_{\textrm{kv}}, T_{\max}, d_h)$ for each of the $L$ blocks. :numref:`fig_mdl-transformers-kv-buffer` shows one such buffer in the middle of generation: the slots before position $t$ are filled, the current step writes slot $t$, and the remaining slots are still zero and hidden by the mask.
+
+![The cache buffer of one block during the step at position $t$ (one sequence, one key--value head). Slots $0, \dots, t-1$ hold the keys and values of earlier steps. The step writes $\mathbf{k}_t$ and $\mathbf{v}_t$ into slot $t$. The slots after $t$ are still zero and the mask hides them, so query $t$ attends to slots $0, \dots, t$.](../img/mdl-transformers-kv-buffer.svg)
+:label:`fig_mdl-transformers-kv-buffer`
+
+`forward_cached(model, X, ks, vs, t)` processes a slice `X` of $n$ new tokens starting at position offset `t` (passing `offset=t` to RoPE or indexing `pos_emb[t:t+n]`), writes their keys and values into `[:, :, t:t+n, :]`, and attends against `[:, :, :t+n, :]`:
 
 ```{.python .input #kv-cache-the-cached-forward-pass-1}
 %%tab pytorch
@@ -353,7 +358,7 @@ for n in lengths:
           f'cached {1e3 * t_cached[-1]:4.1f} ms per token')
 ```
 
-Plotting both per-token latency curves on log--log axes illustrates the $O(n)$ versus $O(1)$ per-step scaling across the full context window:
+Plotting both per-token latency curves on log--log axes shows a naive step whose cost grows in proportion to the context length $n$ and a cached step that is nearly flat (the new query is still scored against all $n$ cached keys, but this cost has a small constant):
 
 ```{.python .input #kv-cache-checking-the-cache-1}
 %%tab pytorch, jax
@@ -394,7 +399,7 @@ def kv_cache_bytes(model, num_tokens, batch_size=1, bytes_per_elem=4):
             * bytes_per_elem)
 ```
 
-Evaluating `kv_cache_bytes` on our 124M-parameter FP32 model at $n = 4{,}096$ tokens confirms that the allocated cache buffers match :eqref:`eq_kv-cache-bytes` ($288\textrm{ MiB}$) and already exceed half the $475\textrm{ MiB}$ footprint of the model weights:
+Evaluating `kv_cache_bytes` on our 124M-parameter FP32 model at $n = 4{,}096$ tokens confirms that the allocated cache buffers match :eqref:`eq_kv-cache-bytes` ($288\textrm{ MiB}$) and already exceed half the $471\textrm{ MiB}$ footprint of the model weights:
 
 ```{.python .input #kv-cache-the-memory-bill}
 %%tab pytorch, jax
@@ -828,7 +833,7 @@ print(f'full attention:            loss {full:.2f}, '
 
 ## Summary
 
-* **KV caching** stores the post-RoPE keys and values of past tokens so each decoding step projects only the single new token (`n = 1`), reducing total work for generating $T$ tokens from $O(T^2)$ to $O(T)$ while producing identical logits.
+* **KV caching** stores the post-RoPE keys and values of past tokens so each decoding step projects only the single new token (`n = 1`), reducing the work of the weight matrices for generating $T$ tokens from $O(T^2)$ to $O(T)$ token evaluations while producing identical logits. The attention scores, a much smaller term, go from $O(T^3)$ to $O(T^2)$.
 * Serving splits into two hardware regimes on the roofline (:numref:`fig_kv-cache-roofline`): **prefill** ($n = T_p$ prompt tokens in parallel, high arithmetic intensity, compute-bound) and **decode** ($n = 1$ token per step, low arithmetic intensity, memory-bandwidth bound).
 * **Batched decoding** amortizes weight reads across $B$ sequences (:eqref:`eq_kv-cache-batch-throughput`), scaling throughput linearly with $B$ until KV cache traffic dominates and throughput saturates at $\mathcal{B}_{\textrm{HBM}} / M_{\textrm{KV}}(n, 1)$.
 * The per-sequence cache footprint $M_{\textrm{KV}} = 2 b L n H_{\textrm{kv}} d_h$ (:eqref:`eq_kv-cache-bytes`) can be compressed along three orthogonal axes (:numref:`tab_kv-cache-reduction`): head count (**GQA/MQA**), channel width (**low-rank KV / MLA**), and sequence length (**sliding window + attention sinks**).
@@ -861,7 +866,7 @@ print(f'full attention:            loss {full:.2f}, '
    2. Explain why absorbing $\mathbf{B}_{k,m}^\top$ into $\mathbf{W}_{q,m}$ and $\mathbf{B}_{v,m}$ into $\mathbf{W}_{o,m}$ during decoding avoids ever materializing the full keys $\mathbf{k}_{j,m}$ or values $\mathbf{v}_{j,m}$ in HBM, and explain why DeepSeek-V2/V3 applies RoPE to a separate narrow decoupled key $\mathbf{k}_j^{\textrm{RoPE}}$ rather than rotating $\mathbf{c}_j \mathbf{B}_{k,m}$.
    :exlabel:`ex_kv-cache-absorbed`
 
-7. **Implementing a fixed-size streaming ring-buffer cache.** Write a `StreamingCache` variant of `init_cache` and `forward_cached` that pre-allocates only $s + w$ token slots per layer (retaining the first $s = 4$ sink positions in slots $0 \dots s-1$ and overwriting slots $s + ((t - s) \bmod w)$ in a circular buffer for $t \ge s$), and verify that it generates 2,048 tokens from `gpt2` using constant $O(s + w)$ cache memory.
+7. **Implementing a fixed-size streaming ring-buffer cache.** Write a `StreamingCache` variant of `init_cache` and `forward_cached` that pre-allocates only $s + w$ token slots per layer (retaining the first $s = 4$ sink positions in slots $0 \dots s-1$ and overwriting slots $s + ((t - s) \bmod w)$ in a circular buffer for $t \ge s$), and verify that it generates 2,048 tokens using constant $O(s + w)$ cache memory. `gpt2` has only 1,024 learned positions, so either use a model with rotary positions (`pos='rope'`), whose position index may grow without bound, or assign each token of `gpt2` the position of its cache slot, as :citet:`Xiao.Tian.Chen.ea.2024` do.
    :exlabel:`ex_kv-cache-streaming`
 
 [Discussions](https://d2l.discourse.group/t/36776)
@@ -1193,7 +1198,7 @@ Work through these three serving calculations:
 
 | Concept / Method | Mathematical Relation / Rule | Systems & Architectural Takeaway |
 | :--- | :--- | :--- |
-| **Cached Decoding** | Cache post-RoPE $(\mathbf{K}_{1:t}, \mathbf{V}_{1:t})$, step with $n = 1$ | Cuts $T$-token generation FLOPs from $O(T^2)$ to $O(T)$ with identical logits |
+| **Cached Decoding** | Cache post-RoPE $(\mathbf{K}_{1:t}, \mathbf{V}_{1:t})$, step with $n = 1$ | Cuts the weight FLOPs of $T$-token generation from $O(T^2)$ to $O(T)$ with identical logits |
 | **KV Cache Footprint** | $M_{\text{KV}}(n, B) = 2 b B L n H_{\text{kv}} d_h$ | Grows linearly with batch $B$ and context $n$ ($288\text{ MiB}$ at $n = 4096$ on GPT-2) |
 | **Prefill vs. Decode** | $I_{\text{prefill}} \approx \frac{2Bn}{b_w} \gg I^*$; $I_{\text{decode}} \le \frac{2}{b_w} \ll I^*$ | Prefill is **compute-bound** ($>10^5\text{ tok/s}$); decode is **bandwidth-bound** ($\sim 10^3\text{ tok/s}$) |
 | **Batched Decode** | $\text{Throughput}(B,n) \le \frac{B \mathcal{B}_{\text{HBM}}}{M_{\text{weights}} + B M_{\text{KV}}(n,1)}$ | Linear speedup for $B \ll B_{1/2}$; saturates at $\mathcal{B}_{\text{HBM}} / M_{\text{KV}}(n,1)$ |

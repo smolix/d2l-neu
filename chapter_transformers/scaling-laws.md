@@ -3,7 +3,7 @@
 
 When pretraining a Transformer language model (:numref:`sec_gpt`), two macroscopic quantities determine the compute bill: the number of **non-embedding parameters $N$** in the $L$ Transformer blocks, and the number of **training tokens $D$** streamed through the optimizer. Because each token requires a predictable number of floating-point operations (FLOPs) per parameter, a fixed training compute budget $C$ (in FLOPs) forces a direct trade-off between model size $N$ and data budget $D$: should we train a larger model for fewer steps, or a smaller model on more tokens?
 
-Empirical **neural scaling laws** :cite:`kaplan2020scaling,hoffmann2022training` revealed that validation cross-entropy loss follows a smooth power-law surface $\mathcal{L}(N, D)$ across orders of magnitude in $N$ and $D$, and that minimizing loss at fixed pretraining compute $C \approx 6 N D$ requires scaling model parameters $N^*(C)$ and training tokens $D^*(C)$ in **equal proportion** ($N^* \propto C^{1/2}, D^* \propto C^{1/2}$, with roughly $D^* / N^* \approx 20$ tokens per parameter, :numref:`fig_mdl-transformers-chinchilla`). This section derives the parameter census $N \approx 12 L d^2$ and the FLOP rule $C \approx 6 N D$, verifies both against exact operator counters, runs a 15-model scaling grid across 5 sizes and 3 token budgets on WikiText-103, and explains why accounting for **inference cost** shifts modern open models toward training smaller models far past the Chinchilla ratio.
+Empirical **neural scaling laws** :cite:`kaplan2020scaling` revealed that validation cross-entropy loss follows a smooth power-law surface $\mathcal{L}(N, D)$ across orders of magnitude in $N$ and $D$. :citet:`hoffmann2022training` then showed that minimizing loss at fixed pretraining compute $C \approx 6 N D$ requires scaling model parameters $N^*(C)$ and training tokens $D^*(C)$ in **equal proportion** ($N^* \propto C^{1/2}, D^* \propto C^{1/2}$, with roughly $D^* / N^* \approx 20$ tokens per parameter, :numref:`fig_mdl-transformers-chinchilla`). This section derives the parameter census $N \approx 12 L d^2$ and the FLOP rule $C \approx 6 N D$, verifies both against exact operator counters, runs a 15-model scaling grid across 5 sizes and 3 token budgets on WikiText-103, and explains why accounting for **inference cost** shifts modern open models toward training smaller models far past the Chinchilla ratio.
 
 ```{.python .input #scaling-laws-scaling-laws-and-the-modern-recipe}
 %%tab pytorch
@@ -90,7 +90,7 @@ C \;\approx\; 6 N D.
 $$
 :eqlabel:`eq_six_nd`
 
-(Including the $Q K^\top$ and $A V$ attention score dot products over context window length $T$ adds $6 L T d D$ FLOPs, multiplying $6 N D$ by $1 + \frac{T}{2d}$, which is close to $1$ whenever $T \ll 2d$.)
+(Including the $Q K^\top$ and $A V$ attention score dot products over context window length $T$ adds $12 L T d D$ FLOPs, multiplying $6 N D$ by $1 + \frac{T}{6d}$, which is close to $1$ whenever $T \ll 6d$. An implementation that skips the masked half of a causal attention matrix halves the correction.)
 
 ### Checking the Arithmetic Against Hardware Counters
 :label:`subsec_scaling-laws-checking`
@@ -146,7 +146,7 @@ print(f'step    {s:.3e} FLOPs, {s / (6 * N * X.size):.3f} x 6ND')
 print(f'backward / forward = {(s - f) / f:.2f}')
 ```
 
-The measured backward pass is about twice the forward pass ($2.0\text{--}2.1\times$), and $6 N D$ (with the tied output head and attention score term $6 L T d D$ accounted for) matches the exact operator count to within a few percent.
+The measured backward pass is about twice the forward pass ($2.0\text{--}2.1\times$), and $6 N D$ (with the tied output head and attention score term $12 L T d D$ accounted for) matches the exact operator count to within a few percent.
 
 ## A Miniature Scaling Study on WikiText-103
 
@@ -203,7 +203,7 @@ d2l.plot(Ns, [val[s] for s in budgets], 'non-embedding parameters N',
          legend_loc='outside')
 ```
 
-Re-plotting the same 15 validation losses against total training compute $C = 6 N D$ (and printing three near-IsoFLOP runs around $C \approx 4 \times 10^{13}\textrm{ FLOPs}$) reveals how the compute-optimal model size shifts upward as the FLOP budget grows:
+Re-plotting the same 15 validation losses against total training compute $C = 6 N D$ (and printing three runs of similar compute, $C \approx 2\text{--}3 \times 10^{14}\textrm{ FLOPs}$ and within $2\times$ of each other) reveals how the compute-optimal model size shifts upward as the FLOP budget grows:
 
 ```{.python .input #scaling-laws-equal-compute}
 %%tab pytorch, jax
@@ -256,7 +256,14 @@ $$
 ![Loss contours of the Chinchilla law with the refit constants of Besiroglu et al. (2024), introduced below, over parameters and training tokens. Dashed: budgets of equal compute $C = 6ND$; dots: the compute-optimal model of each budget; orange: the compute-optimal path. Chinchilla's square sits on the optimum of its budget, covering its dot; Llama 3 8B, on a budget close to Chinchilla's, lies far from the path at a tenth of the optimal size.](../img/mdl-transformers-chinchilla.svg)
 :label:`fig_mdl-transformers-chinchilla`
 
-Because $\alpha \approx \beta \approx 0.34\text{--}0.37$, the exponents satisfy $a \approx b \approx 0.5$: when training compute $C$ increases by $100\times$, both model size $N^*$ and training tokens $D^*$ increase by $\sim 10\times$, keeping the compute-optimal ratio $D^* / N^* \approx 20$ tokens per parameter roughly constant:
+Because $\alpha \approx \beta \approx 0.34\text{--}0.37$, the exponents satisfy $a \approx b \approx 0.5$: when training compute $C$ increases by $100\times$, both model size $N^*$ and training tokens $D^*$ increase by $\sim 10\times$, keeping the compute-optimal ratio $D^* / N^* \approx 20$ tokens per parameter roughly constant.
+
+This was not the first answer to the question. Two years earlier, :citet:`kaplan2020scaling` had fitted power laws of the same kind and concluded that most of any extra compute should go into the model: $N^* \propto C^{0.73}$, which leaves only $D^* \propto C^{0.27}$ for data (:numref:`fig_mdl-transformers-kaplan-chinchilla`). The two studies disagree mainly because of the learning-rate schedule. Kaplan et al. used one schedule for all runs and read the losses of smaller token budgets off intermediate checkpoints, where the learning rate had not yet decayed. This makes training on fewer tokens look worse than it is, so data appears to help less than it does. Their models were also small, at most $1.5\textrm{B}$ parameters. Hoffmann et al. trained models of up to $16\textrm{B}$ parameters and matched the cosine schedule to the length of each run. Our grid above did the same, which is why each of its 15 runs has a cosine horizon of its own (Exercise :exref:`ex_scaling-laws-frozen-learning-rate` measures what happens otherwise).
+
+![Compute-optimal model size against training compute under the two published exponents, $0.73$ (Kaplan et al.) and $0.5$ (Hoffmann et al.). Both lines are drawn through the same model at $10^{18}$ FLOPs, and only their slopes come from the papers. A $100\times$ larger budget calls for a $29\times$ larger model under the first exponent and a $10\times$ larger one under the second. The square marks Chinchilla.](../img/mdl-transformers-kaplan-chinchilla.svg)
+:label:`fig_mdl-transformers-kaplan-chinchilla`
+
+The function `optimum` below evaluates :eqref:`eq_chinchilla_optimum` at the training budget of Chinchilla, $C = 5.76 \times 10^{23}$ FLOPs, once with the constants published by Hoffmann et al. and once with the refit of Besiroglu et al.:
 
 ```{.python .input #scaling-laws-the-optimal-split}
 %%tab pytorch, jax
@@ -302,14 +309,14 @@ for name, (N, D) in reported.items():
 
 ## Exercises
 
-1. **Attention-score FLOP correction ($1 + T / (2d)$).** Equation :eqref:`eq_six_nd` omits the attention score/value products $\mathbf{Q}\mathbf{K}^\top$ and $\mathbf{A}\mathbf{V}$, and the output head $\mathbf{H}^{(L)}\mathbf{E}^\top$.
+1. **Attention-score FLOP correction ($1 + T / (6d)$).** Equation :eqref:`eq_six_nd` omits the attention score/value products $\mathbf{Q}\mathbf{K}^\top$ and $\mathbf{A}\mathbf{V}$, and the output head $\mathbf{H}^{(L)}\mathbf{E}^\top$.
    1. Show that in an $L$-block model of width $d$ and window length $T$, the forward attention dot products perform $4 L T^2 d$ FLOPs per window ($4 L T d$ FLOPs per token), and forward + backward attention dot products perform $12 L T d$ FLOPs per token (or $6 L T d$ when causal symmetry is exploited by FlashAttention).
    2. Take the ratio of $6 L T d$ to $6 N = 72 L d^2$ to show that causal attention adds a relative FLOP fraction of $T / (12 d)$ (or $T / (6 d)$ without causal tile skipping). At what context length $T^*$ does attention match the linear-projection FLOPs of Llama 3 8B ($d = 4096$)?
 
-2. **Total vs. non-embedding parameters in the scaling grid.** Each model in our 5-size WikiText-103 sweep used a byte vocabulary ($V = 256$), where $V d$ is less than $3\%$ of $12 L d^2$. Repeat `census` for the same five `(d, L, H)` backbones if they instead used a BPE vocabulary of $V = 128{,}256$ tokens (Llama 3). What fraction of total parameters would the embedding table represent in the smallest (`d=96, L=3`) versus largest (`d=384, L=8`) model, and why do :citet:`kaplan2020scaling` fit power laws against $N_{\textrm{non-emb}} = 12 L d^2$ rather than $N_{\textrm{total}}$?
+2. **Total vs. non-embedding parameters in the scaling grid.** Each model in our 5-size WikiText-103 sweep used a byte vocabulary ($V = 256$), where $V d$ is at most about $7\%$ of $12 L d^2$. Repeat `census` for the same five `(d, L, H)` backbones if they instead used a BPE vocabulary of $V = 128{,}256$ tokens (Llama 3). What fraction of total parameters would the embedding table represent in the smallest (`d=96, L=3`) versus largest (`d=384, L=8`) model, and why do :citet:`kaplan2020scaling` fit power laws against $N_{\textrm{non-emb}} = 12 L d^2$ rather than $N_{\textrm{total}}$?
    :exlabel:`ex_scaling-laws-embedding-count`
 
-3. **Cosine decay horizon vs. fixed step horizon.** In our 15-run scaling study, each budget $s \in \{500, 1000, 2000\}$ annealed its cosine schedule to $0.1 \times \textrm{lr}$ at step $s$ (:citet:`hoffmann2022training`'s crucial correction to :citet:`kaplan2020scaling`). Re-run the three budgets for the medium model `(192, 4, 6)` using a single fixed cosine horizon `num_steps=2000` inside `LMOptimizer` and merely reading off the validation loss at steps 500, 1000, and 2000. By how much does failing to decay the learning rate at $s = 500$ and $s = 1000$ overestimate the loss of short runs?
+3. **Cosine decay horizon vs. fixed step horizon.** In our 15-run scaling study, each budget $s \in \{500, 1000, 2000\}$ ran a cosine schedule of its own, which decays the learning rate to zero at step $s$ (matching the schedule to the length of the run was the crucial correction of :citet:`hoffmann2022training` to :citet:`kaplan2020scaling`). Re-run the three budgets for the medium model `(192, 4, 6)` using a single fixed cosine horizon `num_steps=2000` inside `LMOptimizer` and merely reading off the validation loss at steps 500, 1000, and 2000. By how much does failing to decay the learning rate at $s = 500$ and $s = 1000$ overestimate the loss of short runs?
    :exlabel:`ex_scaling-laws-frozen-learning-rate`
 
 4. **Fitting the Chinchilla law to our 15-point grid.** Using `scipy.optimize.minimize` (or grid search + nonlinear least squares), fit the parameters $(L_\infty, A, B, \alpha, \beta)$ of :eqref:`eq_chinchilla_law` to the 15 `(N, D, val_loss)` points measured in our WikiText-103 sweep. What scaling exponents $a = \beta/(\alpha+\beta)$ and $b = \alpha/(\alpha+\beta)$ does the byte-level 15-point grid produce?

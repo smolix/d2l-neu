@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3d506e71c0ee52e9643a29eaa89e42f6cb48e4b9ee1aacea19ef074e47955232",
+    "d2l_lib_fingerprint": "sha256:869789884b1f8f899b27a41a1f1d20cd6b16819c83ab10be670c5200acf16694",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -88,12 +88,48 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gated linear attention        73,941      0.884 0.883      0.968 0.966\n"
+          "text": "gated linear attention        73,941      0.929 0.859      0.977 0.968\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet                74,201      0.985 0.991      0.993 0.997\n"
+          "text": "Gated DeltaNet                74,201      0.965 0.969      0.978 0.986\n"
+        }
+      ]
+    },
+    "deltanet-state-tracking-1": {
+      "code_fingerprint": "sha256:41c1a1508f2e76fc572f883fb5a4642cfdfdf8e43cab164c7ef1dc91a389b7e8",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-state-tracking-2": {
+      "code_fingerprint": "sha256:d8c61132e5e29d979b4381173a902103f48d7f25c4bed7da4e8e74bcce24714b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                          positions 1-64      65-256\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GRU                            1.00/1.00   1.00/1.00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "minGRU                         0.52/0.56   0.50/0.50\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gated DeltaNet                 0.80/0.81   0.50/0.50\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gated DeltaNet, 2σ             1.00/1.00   1.00/1.00\n"
         }
       ]
     }

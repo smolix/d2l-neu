@@ -1,5 +1,6 @@
 // Slide diagrams for chapter_computational-performance (§13 Computational Performance)
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 
@@ -137,17 +138,17 @@ function hostConstants(fw) {
 
 function roadmap() {
   const W = 560, H = 286;
-  let o = header(W, 'Chapter 13 Progression: From One Kernel to Four GPUs');
-  o += card(20, 36, 520, 68, C.lblue, C.blue, 'Stage 1: Single-Kernel Bounds & Silicon (§§13.1–13.2)', [
-    '§13.1 Roofline, ridge I*, sync timing  ·  §13.2 Memory hierarchy, SMs, sweep C/β',
+  let o = header(W, `Chapter ${num('chap_performance')} Progression: From One Kernel to Four GPUs`);
+  o += card(20, 36, 520, 68, C.lblue, C.blue, `Stage 1: Single-Kernel Bounds & Silicon (§§${num('sec_perf_model')}–${num('sec_hardware')})`, [
+    `${sec('sec_perf_model')} Roofline, ridge I*, sync timing  ·  ${sec('sec_hardware')} Memory hierarchy, SMs, sweep C/β`,
   ], D.blue.dark);
   o += arrow(280, 106, 280, 122, C.blue);
-  o += card(20, 124, 520, 68, C.lamber, C.amber, 'Stage 2: Single-GPU Compilers & Memory (§§13.3–13.4)', [
-    '§13.3 Tracing, 9× fusion, CUDA graphs  ·  §13.4 16N Adam state, bf16, remat, accum',
+  o += card(20, 124, 520, 68, C.lamber, C.amber, `Stage 2: Single-GPU Compilers & Memory (§§${num('sec_compilation')}–${num('sec_memory_precision')})`, [
+    `${sec('sec_compilation')} Tracing, 9× fusion, CUDA graphs  ·  ${sec('sec_memory_precision')} 16N Adam state, bf16, remat, accum`,
   ], D.orange.dark);
   o += arrow(280, 194, 280, 210, C.amber);
-  o += card(20, 212, 520, 64, C.lgreen, C.green, 'Stage 3: Multi-GPU Scaling, Sharding & Case Study (§§13.5–13.8)', [
-    '§§13.5–13.6 Ring allreduce & DDP  ·  §13.7 ZeRO/FSDP 16N/k  ·  §13.8 19M GPT 6×',
+  o += card(20, 212, 520, 64, C.lgreen, C.green, `Stage 3: Multi-GPU Scaling, Sharding & Case Study (§§${num('sec_multi_gpu')}–${num('sec_fast_transformer')})`, [
+    `§§${num('sec_multi_gpu')}–${num('sec_multi_gpu_concise')} Ring allreduce & DDP  ·  ${sec('sec_sharding')} ZeRO/FSDP 16N/k  ·  ${sec('sec_fast_transformer')} 19M GPT 6×`,
   ], D.green.dark);
   return svg(W, H, o);
 }
@@ -814,7 +815,7 @@ function strongVsWeakScaling() {
 
 function lenetVsResnet18() {
   const W = 560, H = 276;
-  let o = header(W, 'Why We Move From LeNet (§13.5) to ResNet-18 at 64×64 (§13.6)');
+  let o = header(W, `Why We Move From LeNet (${sec('sec_multi_gpu')}) to ResNet-18 at 64×64 (${sec('sec_multi_gpu_concise')})`);
   o += card(20, 40, 250, 152, D.red.tint, D.red.base, 'Toy LeNet (28×28 Fashion-MNIST)', [
     { t: '61.7K params (S = 247 KB)', mono: true, fill: D.red.dark, fw: 700 },
     '< 2 FLOPs per byte of gradient',
@@ -856,7 +857,7 @@ function spmdModels(fw) {
       'DDP autograd hooks call NCCL',
     ], D.blue.dark);
   o += footerBox(20, 214, 520, 52, C.lgreen, C.green, [
-    { t: 'Removes the §13.5 single-thread k·h_step bottleneck', fill: D.green.dark, fw: 700 },
+    { t: `Removes the ${sec('sec_multi_gpu')} single-thread k·h_step bottleneck`, fill: D.green.dark, fw: 700 },
   ]);
   return svg(W, H, o);
 }
@@ -1000,7 +1001,7 @@ function pcieVsNvlinkDdp() {
     { t: 'Weak-Scaling: ~4.0× (> 99% eff!)', mono: true, fill: D.green.dark, fw: 700 },
   ], D.green.dark);
   o += footerBox(20, 210, 520, 54, D.purple.tint, C.purple, [
-    { t: 'Even on NVLink, DDP still replicates 16N state on every card → motivates FSDP (§13.7)!', fill: D.purple.dark, fw: 700 },
+    { t: `Even on NVLink, DDP still replicates 16N state on every card → motivates FSDP (${sec('sec_sharding')})!`, fill: D.purple.dark, fw: 700 },
   ]);
   return svg(W, H, o);
 }
@@ -1187,10 +1188,10 @@ function ddpVsFsdpDecision() {
   ], D.green.dark);
   o += card(290, 40, 250, 152, C.lamber, C.amber, '16N Exceeds 1 GPU (e.g. 1.9B GPT)', [
     { t: 'Escalate ZeRO-1/2 → ZeRO-3 (FSDP)', fill: D.orange.dark, fw: 700 },
-    'ZeRO-1/2 keep weights & comm once;',
+    'ZeRO-1/2 keep full weights resident;',
     'FSDP frees weights per block, so it',
     { t: 're-gathers 2× per micro-batch!', fill: D.red.dark, fw: 700 },
-    { t: 'FSDP comm: (2m + 1)(k−1)/k · S', mono: true, fill: C.ink },
+    { t: 'FSDP comm: 3m(k−1)/k · S', mono: true, fill: C.ink },
   ], D.orange.dark);
   o += footerBox(20, 206, 520, 60, C.lblue, C.blue, [
     { t: 'Escalation Rule on Slow PCIe Links:', fill: D.blue.dark, fw: 700 },
@@ -1215,9 +1216,9 @@ function gptGapOverview() {
   o += card(198, 40, 164, 152, C.lamber, C.amber, 'tf32 Math Floor', [
     { t: '11.3 ms ideal', mono: true, fill: D.orange.dark, fw: 700 },
     'At P = 82.6 TFLOP/s',
-    'Half the 25 ms gap is',
-    'number format alone;',
-    'half is memory traffic!',
+    'Format explains ~6 ms',
+    'of the ~19 ms gap; the',
+    'rest is idle or below peak',
   ], D.orange.dark);
   o += arrow(364, 116, 374, 116, C.green);
   o += card(376, 40, 164, 152, C.lgreen, C.green, 'bf16 Math Floor', [
@@ -1320,12 +1321,12 @@ function criticalBatchNoise() {
     { t: 'E(b) ∝ b / b_noise (more tokens!)', mono: true, fill: D.orange.dark, fw: 700 },
     'Gradient noise is already averaged out',
     'Larger batches make same step progress',
-    '200 steps @ B=512 (13M tok, loss 2.08)',
-    'lags 1000 steps @ B=64 (8M tok, 1.35)',
+    '200 steps @ B=512 (13M tok, loss 1.5–1.6)',
+    'lags 1000 steps @ B=64 (8M tok, 1.34)',
   ], D.orange.dark);
   o += footerBox(20, 206, 520, 58, C.lblue, C.blue, [
     { t: 'Batch-Preserving Ops (compile, bf16, FlashAttention, strong DP) Always Cut Time-to-Target;', fill: D.blue.dark, fw: 700 },
-    { t: 'Batch-Enlarging Ops (B=512, weak DP) Cut Time-to-Target iff b_noise > (512 − 64ρ)/(ρ − 1).', mono: true, fill: C.ink },
+    { t: 'Batch-Enlarging Ops (B=512, weak DP) Help iff b_noise > (512 − 64ρ)/(ρ − 1)', mono: true, fill: C.ink },
   ]);
   return svg(W, H, o);
 }

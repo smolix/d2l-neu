@@ -380,11 +380,21 @@ The single-GPU and two-GPU updates agree to fp32 rounding error (~$10^{-7}$).
 :label:`subsec_mg-ring`
 
 A star allreduce routes all traffic through device 0, forcing the hub to send
-and receive $(k-1)S$ bytes for a gradient of size $S$. *Ring allreduce*
-:cite:`Patarasuk.Yuan.2009,Sergeev.Del-Balso.2018` distributes traffic evenly
-across all $k$ devices arranged in a logical ring, splitting each device's
-$S$-byte gradient into $k$ chunks of $S/k$ bytes and running two phases of
-$k - 1$ steps each (:numref:`fig_ring_allreduce`):
+and receive $(k-1)S$ bytes for a gradient of size $S$. The hub's load grows
+with every device we add, while each of the other devices handles only $S$
+bytes in each direction (:numref:`fig_star_vs_ring`, left).
+
+![Traffic of a star and of a ring allreduce for $k = 4$. The star's hub
+sends and receives $(k-1)S$ bytes; in a ring every device sends and receives
+$2(k-1)S/k$ bytes, less than $2S$ for any
+$k$.](../img/mdl-perf-star-vs-ring.svg)
+:label:`fig_star_vs_ring`
+
+*Ring allreduce* :cite:`Patarasuk.Yuan.2009,Sergeev.Del-Balso.2018` removes
+the hub. It arranges the $k$ devices in a logical ring and distributes the
+traffic evenly among them, splitting each device's $S$-byte gradient into $k$
+chunks of $S/k$ bytes and running two phases of $k - 1$ steps each
+(:numref:`fig_ring_allreduce`):
 
 1. **Reduce-scatter:** In each of $k - 1$ steps, every device sends one chunk
    to its successor and adds the chunk received from its predecessor into its
@@ -744,6 +754,12 @@ global batch $B$ fixed as $k$ grows (aiming to finish the same step faster),
 whereas *weak scaling* holds the per-GPU batch $b$ fixed so the global batch
 grows as $kb$ (aiming for $k\times$ throughput in examples/s, though larger
 global batches alter optimization dynamics, :numref:`sec_batch_size`).
+Strong scaling is the regime of *Amdahl's law* :cite:`Amdahl.1967`: the part
+of the step that does not parallelize, here the host launcher and the
+gradient exchange, caps the speedup however many GPUs we add. Weak scaling is
+the regime of *Gustafson's law* :cite:`Gustafson.1988`: when the work grows
+with the number of processors, the serial part shrinks relative to it, and
+throughput can keep growing.
 
 By :eqref:`eq_dp_one-launcher`, a second GPU improves weak-scaling throughput
 ($2\,t(1)/t(2) > 1$) when

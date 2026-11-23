@@ -1,7 +1,7 @@
 # Adam and AdamW
 :label:`sec_adam`
 
-In :numref:`sec_test_models`, plain minibatch SGD required a learning rate of $\eta = 0.5$ on `TinyLM` to reach a loss of about $2.1$ nats/byte, whereas `AdamW` with $\eta = 3 \times 10^{-3}$—a learning rate more than a hundred times smaller—reached $1.59$ nats/byte in the same $2{,}000$ steps. Why does an optimizer with a hundredfold smaller nominal learning rate train faster, and why is it the universal default for Transformers?
+In :numref:`sec_test_models`, plain minibatch SGD required a learning rate of $\eta = 0.5$ on `TinyLM` to reach a loss of about $2.1$ nats/byte. Adam with $\eta = 3 \times 10^{-3}$, a learning rate more than a hundred times smaller, reaches $1.59$ nats/byte in the same $2{,}000$ steps, as we will measure below. Why does an optimizer with a hundredfold smaller nominal learning rate train faster, and why is it the universal default for Transformers?
 
 Momentum (:numref:`sec_momentum`) averages gradients over time but still applies a single scalar step size to every parameter. Yet in deep networks—and especially Transformers—gradient magnitudes vary by orders of magnitude across embeddings, attention projections, MLP layers, and normalization parameters. **Adam** (*Adaptive Moment Estimation*, :citet:`Kingma.Ba.2014`) combines momentum with a per-coordinate root-mean-square (RMS) gradient preconditioner developed through **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` and **RMSProp** :cite:`Tieleman.Hinton.2012`. Dividing each coordinate's update by its own historical gradient scale makes the learning rate $\eta$ a direct step length in parameter space rather than a multiplier on raw gradients.
 
@@ -540,10 +540,10 @@ Stabilizing the root-mean-square weight magnitude at $\text{RMS}(\mathbf{x}_\inf
 ### Parameters Exempt from Weight Decay and Optimizer State Memory
 :label:`subsec_adamw-what-not-to-decay`
 
-In standard Transformer recipes, decoupled weight decay is applied **only to 2D internal projection matrices** ($90\%$ of `TinyLM`), while two parameter groups are explicitly exempted ($\lambda = 0$):
+Standard Transformer recipes apply decoupled weight decay to the weight matrices and exempt biases and normalization parameters. OLMo 2 additionally exempts the embedding tables, and we adopt that choice here. Decay is then applied **only to 2D internal projection matrices** ($90\%$ of `TinyLM`), while two parameter groups are exempted ($\lambda = 0$):
 
 1. **1D biases and LayerNorm/RMSNorm gain and shift vectors:** Normalization scales start near $1$ and directly control feature variance; decaying them toward zero distorts layer activations rather than regulating angular update speed.
-2. **Token and positional embedding tables:** Token embedding rows receive gradients only when their token appears in a minibatch, whereas decoupled decay shrinks every row on every step, collapsing rare token representations and inflating downstream LayerNorm gradients :cite:`OLMo.2025`.
+2. **Token and positional embedding tables (the OLMo 2 exemption):** Token embedding rows receive gradients only when their token appears in a minibatch, whereas decoupled decay shrinks every row on every step, collapsing rare token representations and inflating downstream LayerNorm gradients :cite:`OLMo.2025`.
 
 ```{.python .input #adamw-what-not-to-decay-1}
 %%tab pytorch
@@ -590,7 +590,7 @@ While AdamW normalizes each weight entry independently, 2D weight matrices act a
 * **AdaGrad** scales each coordinate by the inverse root of its cumulative squared gradients, **RMSProp** replaces the cumulative sum with an EMA $\mathbf{v}_t$, and **Adam** adds first-moment momentum $\mathbf{m}_t$ and bias corrections $1 - \beta_1^t, 1 - \beta_2^t$.
 * Because Adam divides $\hat{\mathbf{m}}_t$ by $\sqrt{\hat{\mathbf{v}}_t}$, its update is invariant to diagonal rescaling of the gradient, making the learning rate $\eta$ a direct step length in parameter space and equalizing update magnitudes across Transformer parameter groups whose raw gradients differ by $15\text{--}40\times$.
 * **AdamW** decouples weight decay $\mathbf{x}_{t+1} = (1 - \eta\lambda)\mathbf{x}_t - \eta\hat{\mathbf{m}}_t/(\sqrt{\hat{\mathbf{v}}_t}+\epsilon)$ from the adaptive preconditioner, establishing a uniform decay timescale $\tau = 1/(\eta\lambda)$, an equilibrium weight RMS $\propto \sqrt{\eta/(2\lambda)}$, and a steady relative angular step $\propto \sqrt{2\eta\lambda}$.
-* Only 2D internal weight matrices are decayed; 1D biases, normalization parameters, and embedding tables are exempted. Storing $(\mathbf{m}_t, \mathbf{v}_t)$ in fp32 accounts for $8$ of the $16$ bytes per trainable parameter.
+* Standard recipes decay the 2D weight matrices and exempt 1D biases and normalization parameters; following OLMo 2, we also exempt the embedding tables. Storing $(\mathbf{m}_t, \mathbf{v}_t)$ in fp32 accounts for $8$ of the $16$ bytes per trainable parameter.
 
 ## Exercises
 
@@ -760,9 +760,9 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 [Gradient Scales in TinyLM]{.kicker}
 
 - Measuring the RMS gradient magnitude across $10$ minibatches for all $8$ functional parameter groups of `TinyLM` reveals why scalar-LR SGD struggles:
-  - **At step 0:** Raw gradient RMS spans a **$40\times$ range** (from $1.7 \times 10^{-4}$ on `token_emb` to $6.8 \times 10^{-3}$ on `biases`).
+  - **At step 0:** Raw gradient RMS spans a **$40\times$ range** (from $2 \times 10^{-4}$ on `token_emb` to $7 \times 10^{-3}$ on `biases`).
   - **At step 500:** Gradient RMS still spans a **$15\times$ range**.
-- **Adam's equalization:** Dividing by $\sqrt{\hat{\mathbf{v}}_t}$ compresses the actual RMS parameter update $\|\Delta\mathbf{x}\|_{\text{RMS}}/\eta$ across all $8$ groups into a tight **$2\times$ band ($0.14\text{--}0.28\,\eta$)**!
+- **Adam's equalization:** Dividing by $\sqrt{\hat{\mathbf{v}}_t}$ compresses the actual RMS parameter update $\|\Delta\mathbf{x}\|_{\text{RMS}}/\eta$ across all $8$ groups into a tight **$2\times$ band ($0.12\text{--}0.28\,\eta$)**!
 
 @!adam-gradient-scales-in-a-network-2
 :::
@@ -803,7 +803,7 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 ::: {.col}
 - **Adam as smoothed sign descent:** Setting $\beta_1 = \beta_2 = 0, \epsilon = 0$ gives $\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\operatorname{sign}(\mathbf{g}_t)$; adding momentum matches Adam's lead over SGD on Transformers (Kunstner et al., 2023).
 - **$\epsilon$ as a maximum-LR cap:** $\frac{\eta}{\sqrt{\hat{v}_{t,i}} + \epsilon} \le \frac{\eta}{\epsilon}$; for $\epsilon \gg \sqrt{\hat{v}_{t,i}}$, Adam reduces to SGD with momentum at rate $(1-\beta_1)\eta/\epsilon$.
-- **Why $\beta_2$ must not be too small (Reddi et al., 2019):** A short-memory $\beta_2$ lets rare large gradients inflate $\sqrt{v_t}$ while small opposite gradients step further; keeping $\beta_2 \in [0.95, 0.999]$ prevents this.
+- **Why $\beta_2$ must not be too small (Reddi et al., 2018):** A short-memory $\beta_2$ lets rare large gradients inflate $\sqrt{v_t}$ while small opposite gradients step further; keeping $\beta_2 \in [0.95, 0.999]$ prevents this.
 :::
 
 ::: {.col .fig .big}
@@ -896,7 +896,7 @@ $$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t - \eta\,\frac{\hat{\mathbf{
 
 ::: {.cols .vc}
 ::: {.col}
-- **Decay only 2D internal projection matrices ($90\%$ of `TinyLM`):**
+- **Decay only 2D internal projection matrices ($90\%$ of `TinyLM`):** the first exemption is standard, the second follows OLMo 2.
   - **Exempt 1D biases & LayerNorm scales/shifts ($\lambda = 0$):** LayerNorm gains control feature variance directly around $1.0$; decaying them distorts activations.
   - **Exempt token & positional embeddings ($\lambda = 0$):** Rare token rows receive gradients only when sampled, so every-step decay collapses rare embeddings and inflates downstream LayerNorm gradients (OLMo 2, 2025).
 - **16 bytes per parameter in `float32`:** Weight ($4\text{ B}$) $+$ Gradient ($4\text{ B}$) $+$ AdamW state $\mathbf{m}, \mathbf{v}$ ($8\text{ B}$) $= 16\text{ B}$ ($8\text{ GB}$ of optimizer state alone for a $1\text{B}$-parameter model).

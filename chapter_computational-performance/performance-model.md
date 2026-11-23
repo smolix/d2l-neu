@@ -95,7 +95,10 @@ delivers at most $\beta = 1.008 \times 10^{12}$ bytes/s (~1 TB/s). Its peak
 arithmetic rate $P$ depends on the number format and unit: bf16 matrix
 products on the tensor cores reach $P = 165 \times 10^{12}$ FLOP/s, while tf32
 matrix products and standard fp32 arithmetic run at half that rate (82.6
-TFLOP/s) at the rated 2.52 GHz boost clock.
+TFLOP/s) at the rated 2.52 GHz boost clock. The rated clock is a nominal
+value: a card runs a few percent faster or slower depending on its
+temperature and power draw. We therefore treat a measured rate within about
+5% of $P$, on either side, as being at the roof.
 
 Which budget runs out first depends on their ratio, the *arithmetic intensity*
 
@@ -456,7 +459,8 @@ for n, t, tf in zip(sizes, times, measured):
     print(f'n = {n:4d}: {1e6 * t:7.1f} us per call, {tf:5.1f} TFLOP/s')
 ```
 
-At $n = 4096$ and $8192$ the product runs near the 165 TFLOP/s peak. At small
+At $n = 4096$ and $8192$ the product runs at the 165 TFLOP/s roof, to within
+the 5% by which the clock varies. At small
 sizes, however, the points lie far below the roofline and climb with a log–log
 slope of 3—the signature of a constant time per call while work scales as
 $n^3$. From $n = 256$ to $1024$ the work grows $64\times$, yet the time per

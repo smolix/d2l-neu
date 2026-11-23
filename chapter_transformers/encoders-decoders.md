@@ -90,7 +90,10 @@ class TransformerEncoder(nnx.Module):
 
 ### The Masked Language Modeling (MLM) Objective
 
-Why can a bidirectional stack not be trained with the next-token prediction objective (:eqref:`eq_gpt-loss`) of :numref:`sec_gpt`? In a stack of $L \ge 2$ unmasked layers, position $t$ at block 1 attends to position $t+1$, and at block 2 reads its own target $x_{t+1}$ directly—collapsing next-token prediction to a trivial identity copy.
+Why can a bidirectional stack not be trained with the next-token prediction objective (:eqref:`eq_gpt-loss`) of :numref:`sec_gpt`? The target of position $t$ is the token $x_{t+1}$, and that token is the input at position $t+1$. Without a mask, a single block already lets position $t$ attend to position $t+1$ and read its own target there (:numref:`fig_mdl-transformers-leakage`), which collapses next-token prediction to a trivial copy.
+
+![Next-token prediction in one block. Without a mask, position 3 attends to every input, including $x_4$, which is its own target. With the causal mask it reads only positions 1 to 3.](../img/mdl-transformers-leakage.svg)
+:label:`fig_mdl-transformers-leakage`
 
 **Masked Language Modeling (MLM)**, introduced in **BERT** :cite:`Devlin.Chang.Lee.ea.2018`, replaces next-token prediction with a cloze task: randomly select a subset of positions $M \subset \{1, \dots, n\}$ (typically $p = 15\%$ of tokens), replace each $x_i$ ($i \in M$) with a dedicated `<mask>` token ID in the corrupted input $\tilde{\mathbf{x}}$, and minimize the cross-entropy of reconstructing the original tokens *only at the masked positions* $i \in M$:
 
@@ -691,7 +694,7 @@ class PerceiverEncoder(nnx.Module):
 ## Summary
 
 * The same `TransformerBlock` can be wired as a **bidirectional encoder** (`is_causal=False`), a **causal decoder** (`is_causal=True`), or a **cross-attending encoder--decoder** (:numref:`fig_three-wirings`).
-* Because unmasked multi-layer self-attention leaks future tokens under next-token prediction, bidirectional encoders are trained with **Masked Language Modeling (MLM)** (:eqref:`eq_mlm`), producing a symmetric U-shaped `loss_by_position` curve across the window.
+* Because unmasked self-attention lets every position read its own target under next-token prediction, bidirectional encoders are trained with **Masked Language Modeling (MLM)** (:eqref:`eq_mlm`), producing a symmetric U-shaped `loss_by_position` curve across the window.
 * In an **encoder--decoder**, each `DecoderBlock` interleaves causal target self-attention with **cross-attention** (decoder queries attending to encoder keys and values) and a position-wise FFN; during generation, the encoder runs once on the source while the decoder steps autoregressively.
 * **Cross-attention** with $M \ll N$ learned query vectors (`PerceiverEncoder`) compresses an $N$-token input into an $M$-token latent bottleneck in $O(M N d + L M^2 d)$ time (:numref:`fig_latent-bottleneck`).
 
@@ -1077,7 +1080,7 @@ Work through these three architectural questions:
 
 ::: {.cols .vc}
 ::: {.col}
-- **Bidirectional Encoder + MLM:** Unmasked self-attention reads full left and right context; replacing $15\%$ of tokens with `<mask>` prevents multi-layer target leakage.
+- **Bidirectional Encoder + MLM:** Unmasked self-attention reads full left and right context; replacing $15\%$ of tokens with `<mask>` prevents target leakage.
 - **Cross-Attention:** Bridges separate source and target stacks ($\mathbf{Q}$ from target, $\mathbf{K}, \mathbf{V}$ from $\mathbf{H}_{\text{enc}}$).
 - **Perceiver Latent Bottleneck:** $M \ll N$ learned queries reduce attention cost from $O(L N^2 d)$ to $O(M N d + L M^2 d)$.
 :::

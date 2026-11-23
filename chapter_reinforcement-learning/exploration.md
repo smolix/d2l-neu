@@ -275,10 +275,15 @@ and a uniform prior on $[0, 1]$, the posterior after $w$ wins in $n$ pulls is
 the Beta distribution $\mathrm{Beta}(1 + w, 1 + n - w)$. An arm with $3$ wins
 in $4$ pulls has the posterior $\mathrm{Beta}(4, 2)$, with mean $2/3$ but
 wide. An untried arm has the uniform $\mathrm{Beta}(1, 1)$, and its draw beats
-a draw from $\mathrm{Beta}(4, 2)$ with probability $1/3$. As pulls
+a draw from $\mathrm{Beta}(4, 2)$ with probability $1/3$.
+:numref:`fig_rl_thompson` shows one such round, in which the untried arm even
+beats an arm that has won $18$ of $20$ pulls. As pulls
 accumulate, the posteriors narrow, and each arm is pulled with the posterior
 probability that it is the best one. Thompson sampling also has logarithmic
 regret :cite:`Agrawal.Goyal.2012`, and it has no constant to choose.
+
+![One round of Thompson sampling with three arms: an untried arm, the arm with $3$ wins in $4$ pulls, and an arm with $18$ wins in $20$. The curves are the Beta posteriors of the arms' means, narrower the more often an arm was pulled. The rule draws one value from each posterior (triangles) and pulls the arm with the largest draw, which in this round is the untried arm.](../img/mdl-rl-thompson.svg)
+:label:`fig_rl_thompson`
 
 ### UCB and Thompson Sampling Compared
 
@@ -394,7 +399,13 @@ A chain makes this exact. It has $N$ states in a row and starts in state $0$.
 Action $1$ moves one state on, action $0$ returns to the start, and entering
 the last state gives reward $1$ and ends the episode, which is cut after $2N$
 steps. To succeed, the agent must choose action $1$ in $N - 1$ consecutive
-steps. The function `chain` builds this MDP as a
+steps, since a single action $0$ sends it back to the start
+(:numref:`fig_rl_chain`).
+
+![The chain with $N$ states. Action $1$ (blue) moves one state on, action $0$ (orange) returns to state $0$ from anywhere, and the only reward is the $1$ for entering the last state, which ends the episode.](../img/mdl-rl-chain.svg)
+:label:`fig_rl_chain`
+
+The function `chain` builds this MDP as a
 `d2l.TabularMDP(P, r, gamma)`, the arrays of :numref:`sec_mdp`: `P[s, a]` is
 the distribution of the next state and `r[s, a]` the expected reward. The
 function `success_random` computes the exact probability that uniformly random
@@ -519,8 +530,8 @@ state :cite:`Burda.Edwards.Storkey.ea.2019`.
 
 Does the lake need any of this? In :numref:`sec_qlearning`, Q-learning on the
 calm lake, where every move goes where it is commanded, used the step size
-$\alpha = 0.9$ for $256$ episodes, and its greedy table solved the lake. We
-repeat that run under three schedules: greedy, $\epsilon = 0$; always random,
+$\alpha = 0.9$ for $512$ episodes, and its greedy table solved the lake. We
+repeat that run with $256$ episodes under three schedules: greedy, $\epsilon = 0$; always random,
 $\epsilon = 1$; and the default of `q_learning`,
 `d2l.linear_schedule(1.0, 0.05, 128)`, which lowers $\epsilon$ linearly from
 $1$ to $0.05$ over the first half of training. In each of twenty runs the cell
@@ -707,10 +718,8 @@ exploration.
 
 1. **Logarithmic regret of UCB.** ●● With $\kappa = \sqrt{2}$, the rule
    :eqref:`eq_ucb` is UCB1 of :citet:`Auer.CesaBianchi.Fischer.2002`,
-   whose Theorem 1 bounds the expected cumulative regret
-   $\textrm{Regret}(T) = T\mu^* - \sum_{t=1}^T \mathbb{E}[r_t] = \sum_a \Delta_a \mathbb{E}[N_a(T)]$
-   after $T = t$ pulls of arms with
-   rewards in $[0, 1]$ (where $N_a(T) = n_T(a)$ is the pull count of arm $a$ and $\Delta_a = \mu^* - \mu_a$) by
+   whose Theorem 1 bounds the expected regret after $t$ pulls of arms with
+   rewards in $[0, 1]$ by
    $$\sum_{a:\, \Delta_a > 0} \frac{8 \ln t}{\Delta_a} + \Big(1 + \frac{\pi^2}{3}\Big) \sum_a \Delta_a, \qquad \Delta_a = \mu^* - \mu_a.$$
    Derive this bound. The tool is Hoeffding's inequality: the mean
    $\hat{\mu}_n$ of $n$ independent rewards in $[0, 1]$ with mean $\mu$

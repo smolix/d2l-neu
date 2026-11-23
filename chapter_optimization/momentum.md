@@ -73,6 +73,11 @@ Two limiting cases explain why momentum simultaneously accelerates the flat coor
   $$\eta_\textrm{eff} = \frac{\eta}{1-\beta}.$$
 * **Alternating gradients (steep walls):** When successive gradients alternate in sign ($\mathbf{g}_{t-k} \approx (-1)^k \mathbf{g}$), the geometric series sums to $1 - \beta + \beta^2 - \cdots = \frac{1}{1+\beta}$, damped to an effective step size of $\frac{\eta}{1+\beta}$.
 
+:numref:`fig_opt_momentum_gain` shows both cases for gradients of unit size.
+
+![The velocity $v_t = \beta v_{t-1} + g_t$ (blue) for unit gradients $g_t$ (gray bars) at $\beta = 0.5$. Left: gradients of the same sign add up, and $v_t$ approaches $1/(1-\beta) = 2$. Right: gradients of alternating sign largely cancel, and $v_t$ settles into an oscillation of amplitude $1/(1+\beta) = 2/3$.](../img/mdl-opt-momentum-gain.svg)
+:label:`fig_opt_momentum_gain`
+
 At $\eta = 0.6$ and $\beta = 0.5$, momentum amplifies progress along the valley floor to $\eta_{\text{eff}} = 0.6 / 0.5 = 1.2$ while damping oscillations across the steep wall to $0.6 / 1.5 = 0.4 < 0.5$. Consequently, the stability ceiling for curvature $\lambda$ rises from $\eta\lambda < 2$ to $\eta\lambda < 2(1 + \beta)$ (Exercise :exref:`ex_momentum-stability`).
 
 ### The Timescale of $\beta$ and Minibatch Noise
@@ -274,7 +279,7 @@ $$
 ![One step of heavy-ball versus Nesterov momentum from the same iterate and velocity. Heavy-ball evaluates the gradient at $\mathbf{x}_t$ and overshoots; Nesterov evaluates the gradient at the look-ahead point $\mathbf{x}_t - \eta\beta\mathbf{v}_{t-1}$, applying an immediate restoring correction.](../img/mdl-opt-nesterov-lookahead.svg)
 :label:`fig_opt_nesterov_lookahead`
 
-Evaluating the gradient at the look-ahead point introduces anticipatory damping that suppresses steep-direction oscillations and achieves the optimal $O(1/t^2)$ convergence rate on general smooth convex objectives :cite:`Nesterov.2018` (:numref:`subsec_mdl-momentum-acceleration`):
+Evaluating the gradient at the look-ahead point introduces anticipatory damping that suppresses steep-direction oscillations. The guarantees are also broader than those of heavy-ball momentum. With the constant $\beta = (\sqrt{\kappa} - 1)/(\sqrt{\kappa} + 1)$, Nesterov momentum attains the $\sqrt{\kappa}$ rate on every smooth, strongly convex function, not only on quadratics. With the increasing schedule $\beta_t = (t-1)/(t+2)$, it achieves the optimal $O(1/t^2)$ convergence rate on general smooth convex objectives :cite:`Nesterov.2018` (:numref:`subsec_mdl-momentum-acceleration`). We use a constant $\beta$ here:
 
 ```{.python .input #momentum-nesterov-momentum-1}
 %%tab pytorch, jax
@@ -558,7 +563,7 @@ Our theory predicts two contrasting outcomes when comparing $\beta = 0$ and $\be
 - Why did underdamped heavy-ball momentum overshoot? Because it evaluated $\nabla f(\mathbf{x}_t)$ at the current position rather than where the momentum step $-\eta\beta\mathbf{v}_{t-1}$ was about to carry it.
 - **Nesterov momentum (1983)** evaluates the gradient at the **look-ahead point** $\tilde{\mathbf{x}}_t = \mathbf{x}_t - \eta\beta\,\mathbf{v}_{t-1}$:
   $$\mathbf{v}_t = \beta\,\mathbf{v}_{t-1} + \nabla f(\mathbf{x}_t - \eta\beta\,\mathbf{v}_{t-1})$$
-- Look-ahead curvature evaluation brakes the velocity *before* the overshoot occurs and achieves the optimal $O(1/t^2)$ rate on general smooth convex functions.
+- Look-ahead curvature evaluation brakes the velocity *before* the overshoot occurs and, with the schedule $\beta_t = (t-1)/(t+2)$, achieves the optimal $O(1/t^2)$ rate on general smooth convex functions.
 :::
 
 ::: {.col .fig}

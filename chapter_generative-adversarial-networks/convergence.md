@@ -213,7 +213,7 @@ The phase portraits confirm all four predictions: the continuous flow (`RK4`) or
 
 This analysis also explains two practical design choices:
 
-- **Zero-centered ($R_1, R_2$) vs. one-centered (WGAN-GP) penalties:** WGAN-GP penalizes $(\|\nabla_x D\| - 1)^2$, forcing the critic to maintain unit slope even when $q = p$. On the Dirac-GAN with linear payoff $\ell(t) = t$, the one-centered penalty prevents convergence to $\theta = 0$, instead parking the generator at $|\theta| = \gamma$ where the Wasserstein gradient balances the penalty (Exercise :exref:`ex_convergence-one-centered-dynamics`).
+- **Zero-centered ($R_1, R_2$) vs. one-centered (WGAN-GP) penalties:** WGAN-GP penalizes $(\|\nabla_x D\| - 1)^2$, forcing the critic to maintain unit slope even when $q = p$. On the Dirac-GAN with linear payoff $\ell(t) = t$, the one-centered penalty prevents convergence to $\theta = 0$. For $\gamma \geq 2$ it parks the generator at $|\theta| = \gamma$, where the Wasserstein gradient balances the penalty; for smaller $\gamma$ the generator overshoots this point and keeps cycling (Exercise :exref:`ex_convergence-one-centered-dynamics`).
 - **Using both $R_1$ and $R_2$ vs. $R_1$ alone:** Near $q = p$, $R_1$ and $R_2$ are equivalent. Far from equilibrium, however, $R_1$ penalizes the critic's slope only at real data points $x \sim p$, leaving its slope at generated points $x' \sim q$ unconstrained (for example, $D_c(x) = -cx^2$ has zero slope at $p = \delta_0$ so $R_1 = 0$, allowing $c \to \infty$ and exploding generator gradients at $x' = 1$; Exercise :exref:`ex_convergence-one-sided-penalty`). Adding $R_2$ bounds the critic's gradient at generated samples as well.
 
 ## Effect of Gradient Penalties on the Value Function
@@ -638,8 +638,8 @@ fig.tight_layout()
 
 The results isolate the roles of the gradient penalties and the pairing loss:
 
-- **Gradient penalties drive mode coverage:** Without penalties ($\gamma = 0$), critic gradients remain steep ($\mathbb{E}_q\|\nabla_x D\|^2 \in [0.7, 17]$) and mode coverage is unreliable (dropping to 12–25 modes depending on the seed). With $R_1 + R_2$ at $\gamma = 1$, critic gradients are damped by three orders of magnitude ($\sim 10^{-3}$) and every run reliably covers 24–25 modes under both `NS` and `pairing`.
-- **Overdamping at large $\gamma$:** Increasing $\gamma$ to $10$ over-flattens the critic ($\sim 10^{-4}$), slowing convergence so that only ~20–25% of samples land within $3\sigma$ of a mode after 10,000 steps.
+- **Gradient penalties drive mode coverage:** Without penalties ($\gamma = 0$), critic gradients remain steep ($\mathbb{E}_q\|\nabla_x D\|^2 \in [0.7, 17]$) and mode coverage is unreliable (dropping to 12–25 modes depending on the seed). With $R_1 + R_2$ at $\gamma = 1$, critic gradients are damped by three orders of magnitude ($\sim 10^{-3}$) and every run covers all 25 modes under both `NS` and `pairing`.
+- **Overdamping at large $\gamma$:** Increasing $\gamma$ to $10$ over-flattens the critic ($\sim 10^{-4}$), slowing convergence so that only 20–30% of samples land within $3\sigma$ of a mode after 10,000 steps.
 
 Finally, inspecting the checkpoint traces shows why a calm critic loss curve must be interpreted with care:
 
@@ -675,7 +675,7 @@ In the penalized runs, the critic loss sits near its equilibrium value ($2\log 2
    :exlabel:`ex_convergence-penalized-best-response`
 
 1. **Penalizing $R_1$ alone versus $R_1 + R_2$.** Let $p = \delta_0$, $q = \delta_1$, $\ell = \log \sigma$, and consider the quadratic critics $D_c(x) = -cx^2$ ($c \geq 0$).
-    1. Evaluate $R_1$ and $R_2$ for $D_c$, and show that $V_\ell(D_c) - R_1$ increases without bound as $c \to \infty$.
+    1. Evaluate $R_1$ and $R_2$ for $D_c$, and show that $V_\ell(D_c) - R_1$ is strictly increasing in $c$, so it has no finite maximizer.
     1. Show that under the non-saturating generator loss $-\log \sigma(D_c(x'))$, the generator gradient magnitude at $x' = 1$ grows unboundedly with $c$, whereas subtracting $R_1 + R_2$ yields a finite maximizer $c^\star < 1/(8\gamma)$.
    :exlabel:`ex_convergence-one-sided-penalty`
 
@@ -835,7 +835,7 @@ $$J_\gamma = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & -\gamma \end{pmatrix}, 
 ::: {.cols .vc}
 ::: {.col}
 - **Local exponential convergence (Mescheder et al., 2018):** Near $q_{\theta^\star} = p$ where $D_{\psi^\star}$ is flat on $\operatorname{supp}(p)$, simultaneous and alternating updates with $R_1$/$R_2$ converge exponentially.
-- **Zero-centered ($R_1, R_2$) vs. one-centered (WGAN-GP):** WGAN-GP forces unit slope $\|\nabla_x D\| = 1$ even at $q = p$, parking the Dirac-GAN away from the origin at $|\theta| = \gamma$.
+- **Zero-centered ($R_1, R_2$) vs. one-centered (WGAN-GP):** WGAN-GP forces unit slope $\|\nabla_x D\| = 1$ even at $q = p$. The Dirac-GAN then never reaches the origin: it parks at $|\theta| = \gamma$ for $\gamma \geq 2$ and cycles for smaller $\gamma$.
 - **Why $R_1 + R_2$ beats $R_1$ alone:** Far from equilibrium ($p = \delta_0, q = \delta_1$), a quadratic critic $D_c(x) = -cx^2$ has $R_1 = 0$ at $x = 0$ and lets $c \to \infty$; adding $R_2$ caps $c^\star < 1/(8\gamma)$.
 :::
 
@@ -932,7 +932,7 @@ Evaluating $10{,}000$ samples at step $10{,}000$ isolates the role of each ingre
 
 @!convergence-mode-coverage-on-25-gaussians-2
 
-- **Gradient penalties ($R_1 + R_2$ at $\gamma = 1$) drive mode coverage:** Without penalties ($\gamma = 0$), critic gradients remain steep ($\mathbb{E}_q\|\nabla_x D\|^2 \in [0.7, 17]$) and mode coverage is unreliable ($12\text{--}25$ modes). With $\gamma = 1$, critic steepness drops by three orders of magnitude ($\sim 10^{-3}$) and **every run covers $24\text{--}25$ modes** under both `NS` and `pairing`.
+- **Gradient penalties ($R_1 + R_2$ at $\gamma = 1$) drive mode coverage:** Without penalties ($\gamma = 0$), critic gradients remain steep ($\mathbb{E}_q\|\nabla_x D\|^2 \in [0.7, 17]$) and mode coverage is unreliable ($12\text{--}25$ modes). With $\gamma = 1$, critic steepness drops by three orders of magnitude ($\sim 10^{-3}$) and **every run covers all $25$ modes** under both `NS` and `pairing`.
 :::
 
 ::: {.slide title="Visualizing Mode Coverage and Overdamping"}
@@ -942,7 +942,7 @@ Evaluating $10{,}000$ samples at step $10{,}000$ isolates the role of each ingre
 
 - **Penalized vs. unpenalized:** Both $\gamma = 1$ arms (`NS + R1 + R2` and `pairing + R1 + R2`) populate all $25$ grid centers, whereas unpenalized runs drop modes or leave clusters uneven.
 - **Why filaments connect neighboring modes:** A continuous ReLU generator maps the connected Gaussian latent space $\mathcal{N}(0, I_{64})$ onto a connected surface, leaving thin bridges between modes.
-- **Overdamping ($\gamma = 10$):** Over-flattening the critic ($\mathbb{E}_q\|\nabla_x D\|^2 \sim 10^{-4}$) slows convergence, leaving only $\sim 20\text{--}25\%$ of samples within $3\sigma$ of a mode after $10{,}000$ steps.
+- **Overdamping ($\gamma = 10$):** Over-flattening the critic ($\mathbb{E}_q\|\nabla_x D\|^2 \sim 10^{-4}$) slows convergence, leaving only $20\text{--}30\%$ of samples within $3\sigma$ of a mode after $10{,}000$ steps.
 :::
 
 ::: {.slide title="Diagnostic Pitfall: Calm Losses Certify Nothing" layout="tall-output"}
@@ -995,6 +995,6 @@ Test your understanding of minimax rotational dynamics and zero-centered gradien
 | **Discrete Alternating Steps** | Critic half-step $\to$ generator half-step | $\det = 1$; on unit circle for $h\ell'(0) \le 2$ | Area-preserving shears; orbits in a bounded band |
 | **Zero-Centered Penalties ($R_1, R_2$)** | $R_1 + R_2 = \gamma\,\mathbb{E}_m[\|\nabla_x D(x)\|^2]$ | $\nu_{1,2} = -\frac{\gamma}{2} \pm \sqrt{\frac{\gamma^2}{4} - \ell'(0)^2}$ ($\operatorname{Re} < 0$) | Exponential local convergence for all $\gamma > 0$ |
 | **Local Penalized Value** | $\frac{\ell'(0)^2}{4}\langle p - q, (|\ell''(0)|m + \gamma\mathcal{L}_m)^{-1}(p - q)\rangle$ | Shrinks Gaussian shift by $1 + 4\gamma$ | Low-pass filters $p - q$ below cutoff scale $2\sqrt{\gamma}$ ($\dot{H}^{-1}(m)$) |
-| **R3GAN Recipe** | $\operatorname{softplus}(D(x') - D(x)) + \frac{\gamma}{2}(R_1 + R_2)$ | Paired with Adam $\beta_1 = 0$ & no BatchNorm | Damps critic steepness $1000\times$; covers $24\text{--}25$ modes |
+| **R3GAN Recipe** | $\operatorname{softplus}(D(x') - D(x)) + \frac{\gamma}{2}(R_1 + R_2)$ | Paired with Adam $\beta_1 = 0$ & no BatchNorm | Damps critic steepness $1000\times$; covers all $25$ modes |
 :::
 

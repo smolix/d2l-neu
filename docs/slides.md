@@ -629,6 +629,22 @@ python3 tools/slides_to_pptx.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pptx --ve
   computed, not checked visually: if a slide overflows in PowerPoint,
   adjust the constants at the top of `pptx_fit.py`.
 
+### Beamer export (standalone, not yet in `make slides`)
+
+`tools/slides_to_beamer.py` turns an injected deck into a 16:9 Beamer PDF
+with the PowerPoint template's look (`tools/beamer/d2l-beamer.tex`: Source
+Sans 3, Latin Modern math, web colours, logo and section footer):
+
+```bash
+python3 tools/slides_to_beamer.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pdf --keep /tmp/f-src
+```
+
+Unlike the PPTX fit, the Beamer fit is measured: every frame records the
+positions of its first and last line (zref-savepos), and frames that run
+into the footline are re-set smaller (bisection over up to 7 xelatex
+passes, 11.3 pt down to 5 pt). `--keep` copies the generated `.md`, `.tex`
+and log for inspection.
+
 ### Outputs
 
 Rendered decks live at:

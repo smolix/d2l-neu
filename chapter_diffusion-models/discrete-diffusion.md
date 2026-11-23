@@ -1224,8 +1224,10 @@ then frozen (:numref:`sec_diffusion-latent`). And for text, many tokens
 per evaluation bring the independence error, and the sampler cannot take
 back what it wrote.
 
-Several questions remain open. Few-step students still trail their
-teachers. No single weighting is known to give both the best likelihood
+Several questions remain open. Few-step students trained along their
+teacher's trajectories still trail it. The students that match or pass
+their teachers add a critic to distribution matching, and give up the map
+from noise to sample (:numref:`sec_diffusion-few-step`). No single weighting is known to give both the best likelihood
 and the best samples. Whether the compute gap between masked diffusion
 and autoregression on text persists at the largest scales is being
 decided by experiments far larger than any in this book; the Language

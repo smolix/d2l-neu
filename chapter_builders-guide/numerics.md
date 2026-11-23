@@ -263,6 +263,10 @@ for dtype in (jnp.float32, jnp.bfloat16, jnp.float16):
           f'{float(w.astype(dtype) + 1e-4):.7f}')
 ```
 
+:begin_tab:`mxnet`
+For bf16, which the cell leaves out, both sums come out as `1.0000000`.
+:end_tab:
+
 In fp32, both increments register cleanly. In bf16—whose spacing near 1 is
 $2^{-7} \approx 0.0078$—both round right back to 1, leaving the weight
 completely frozen. In fp16 (spacing $2^{-10} \approx 0.00098$), the $10^{-3}$
@@ -770,7 +774,7 @@ At $\eta = 0.01$ about nine in ten updates are rounded away, and they carry
 about four-fifths of the total update magnitude (the "mass" in the printout):
 most of the gradient step never reaches the weights. At $\eta = 0.1$ about half
 of the updates are still lost, but they are the small ones and carry only about
-a sixth of the magnitude. Most of the step then lands, and the failure stays
+15% of the magnitude. Most of the step then lands, and the failure stays
 hidden until the learning rate decays. Now we train all three variants at
 $\eta = 0.01$.
 
@@ -843,7 +847,7 @@ d2l.plot(list(range(1, 1001)), [loss32, loss_bf16, loss_mixed], 'step',
 The fp32 and mixed-precision loss curves sit virtually on top of each other,
 with validation accuracies matching within about one percentage point. Pure bf16
 weights, by contrast, lag behind within the first hundred steps: after 1000
-steps, its loss stalls near 1.15 versus 0.85, and validation accuracy trails at
+steps, its loss has only reached about 1.15 versus 0.85, and validation accuracy trails at
 about 64% versus 68%. Just as our scalar experiment predicted, storing weights
 directly in bf16 rounds away most first-layer updates, whereas mixed precision
 applies them cleanly to fp32 master weights. None of the three runs is trained
@@ -1465,7 +1469,7 @@ Training identical Fashion-MNIST MLPs for $1{,}000$ SGD steps at $\eta = 0.01$ a
 
 @!numerics-mixed-precision-training-4
 
-- **90% of `bf16` updates vanish:** With pure `bf16` weights, roughly $90\%$ of first-layer updates fall below half the local `bf16` spacing, stalling loss at $\sim 1.15$ while mixed precision tracks `fp32` ($\sim 0.85$) virtually on top of each other.
+- **90% of `bf16` updates vanish:** With pure `bf16` weights, roughly $90\%$ of first-layer updates fall below half the local `bf16` spacing, leaving the loss at $\sim 1.15$ after $1{,}000$ steps while mixed precision tracks `fp32` ($\sim 0.85$) virtually on top of each other.
 :::
 
 ::: {.slide title="Why Mixed Precision Keeps the 128 GB Static Floor"}
@@ -1490,7 +1494,7 @@ Training identical Fashion-MNIST MLPs for $1{,}000$ SGD steps at $\eta = 0.01$ a
 ::: {.col}
 @numerics-loss-scaling-for-fp16-3
 
-- Scaling the loss by $S = 2^{16}$ before `backward()` lifts the $\sim 32\%$ subnormal gradients into normal `fp16` range.
+- Scaling the loss by $S = 2^{16}$ before `backward()` lifts the roughly one-third of gradients that are subnormal into normal `fp16` range.
 :::
 
 ::: {.col .fig}

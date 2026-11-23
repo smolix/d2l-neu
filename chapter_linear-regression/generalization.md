@@ -324,11 +324,13 @@ locates the bottom of the test-error bowl—usually selecting degree $3$, or
 occasionally a nearby degree whose test error is nearly indistinguishable.
 Near the minimum, the two
 curves track within a small factor, with cross-validation naturally a bit noisier
-since it averages over $20$ points instead of $1{,}000$. At high degrees, notice
-why cross-validation shoots up even earlier and higher than test error: each
-fold trains on only $16$ points rather than $20$, so degree $15$ already
-interpolates all $16$ training points, and any validation point near the edges of
-$[-1, 1]$ falls outside the fitted range where high-degree polynomials explode!
+since it averages over $20$ points instead of $1{,}000$. At high degrees both
+curves shoot up by orders of magnitude. Cross-validation has a reason to rise
+even earlier than the test error: each fold trains on only $16$ points rather
+than $20$, so degree $15$ already interpolates all $16$ training points, and any
+validation point near the edges of $[-1, 1]$ falls outside the fitted range
+where high-degree polynomials explode! With a single draw of $20$ points,
+however, either curve may be the first to rise.
 
 How should we pick $K$? Because every fold trains on only a fraction
 $(K - 1) / K$ of the dataset, its fitted model is slightly worse than a model
@@ -365,13 +367,14 @@ for name, e in est.items():
     print(f'{name:18s} mean {np.mean(e):.4f}   std {np.std(e):.4f}')
 ```
 
-On average, leave-one-out lands closest to the test error. Both 5-fold
-estimates sit visibly above it, which is the pessimistic bias of training on 16
-points instead of 19. Leave-one-out also varies the least from one training set
-to the next, so here the folklore that it is the noisier estimate does not
-hold. Repeating the 5-fold split ten times narrows its spread only a little:
-most of the spread comes from the luck of which 20 points were drawn, not from
-how they were split. For least squares, then, leave-one-out is both cheap and
+On average, leave-one-out lands close to the test error, within about a tenth
+of it. Both 5-fold estimates sit above the leave-one-out estimate, which is the
+pessimistic bias of training on 16 points instead of 19. Leave-one-out also
+varies the least from one training set to the next, so here the folklore that
+it is the noisier estimate does not hold. Repeating the 5-fold split ten times
+narrows its spread, but not down to that of leave-one-out: much of the spread
+comes from the luck of which 20 points were drawn, not from how they were
+split. For least squares, then, leave-one-out is both cheap and
 the most accurate of the three. For the networks of later chapters, where a
 single fit takes minutes or hours, a coarse split remains the practical choice.
 
@@ -713,7 +716,7 @@ Using strictly the $n = 20$ training examples ($K = 5$, so each fold trains on $
 @!generalization-cross-validation-2
 
 - **Accurate model selection:** Cross-validation consistently picks degree $3$ (or a neighboring degree whose test MSE is within a tiny fraction of optimal).
-- **Why CV rises earlier at high degrees:** Each fold trains on $16$ points rather than $20$, so degree $15$ already interpolates the fold and explodes on held-out boundary points.
+- **Why CV can rise earlier at high degrees:** Each fold trains on $16$ points rather than $20$, so degree $15$ already interpolates the fold and explodes on held-out boundary points.
 :::
 
 ::: {.col .fig}

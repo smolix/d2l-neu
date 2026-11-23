@@ -1002,7 +1002,7 @@ print(f'start {(y ** 2).mean():.3g}, '
 
 With plain rounding, every gradient is zero and the loss never budges from its
 starting value. With the straight-through estimator, the loss plunges from tens
-or hundreds down to around 1—within a small factor of the loss of the rounded
+or hundreds down to 1 or 2—within a small factor of the loss of the rounded
 ground-truth weights. A deliberately "wrong" surrogate gradient successfully
 trains a quantized model!
 
@@ -1365,7 +1365,7 @@ Custom Layers and Functions<br>**stateless modules · RMSNorm · fixed-buffer Ra
 
 ::: {.cols .vc}
 ::: {.col}
-- Because `CenteredLayer` inherits the module interface, it slots directly into sequential pipelines (`output.mean() ≈ 10⁻⁸`):
+- Because `CenteredLayer` inherits the module interface, it slots directly into sequential pipelines (`|output.mean()| ≲ 10⁻⁸`):
 
 @custom-layers-layers-without-parameters-3
 :::
@@ -1562,7 +1562,7 @@ When the backward rule differs from the derivative of the forward pass, we defin
 ::: {.slide title="Training Quantized Weights With the STE"}
 [Quantization-Aware Optimization]{.kicker}
 
-Fitting an 8-weight linear model whose weights are rounded to integers on every forward pass (`w_true` uniform on $[-7, 7]$) shows that STE drives the loss down to the quantization floor while plain rounding stays stuck at step 0:
+Fitting an 8-weight linear model whose weights are rounded to integers on every forward pass (`w_true` uniform on $[-7, 7]$) shows that STE drives the loss down to within a small factor of the quantization floor while plain rounding stays stuck at step 0:
 
 @!custom-layers-custom-gradients-5
 

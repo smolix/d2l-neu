@@ -278,7 +278,7 @@ print(f'target accuracy: {accuracy(O[tgt]):.3f} as trained, '
 ```
 
 
-Even though the raw classifier predicts "shirt" on only $\sim 25\%$–$40\%$ of the target images (spilling the rest into look-alike tops), $\mathbf{C}^{-1}\boldsymbol{\mu}$ unscrambles that confusion to recover the true $0.50$ shirt proportion within a few hundredths, and adding $\log(\hat{\mathbf{p}}_T / 0.1)$ to the logits lifts target accuracy by several percentage points with zero target labels and zero gradient steps!
+Even though the raw classifier predicts "shirt" on only $\sim 20\%$–$40\%$ of the target images (spilling the rest into look-alike tops), $\mathbf{C}^{-1}\boldsymbol{\mu}$ unscrambles that confusion to recover a shirt proportion near the true $0.50$ (typically within a few hundredths, occasionally off by almost a tenth), and adding $\log(\hat{\mathbf{p}}_T / 0.1)$ to the logits lifts target accuracy by roughly 5 to 15 percentage points with zero target labels and zero gradient steps!
 
 ## Concept Shift and Feedback
 
@@ -590,7 +590,7 @@ Weighting each source example's gradient residual by $\beta_i = \exp(h(\mathbf{x
 ::: {.slide title="Weighted Logistic Regression Lifts Target Accuracy"}
 [Unweighted vs. Importance-Weighted vs. Clipped ERM]{.kicker}
 
-Reweighting lifts target accuracy from $\sim 55\%$ to $\sim 95\%$ without a single target label:
+Reweighting lifts target accuracy from $\sim 50\%$–$60\%$ to $\sim 95\%$ without a single target label:
 
 @environment-and-distribution-shift-covariate-shift-correction-3
 :::
@@ -598,7 +598,7 @@ Reweighting lifts target accuracy from $\sim 55\%$ to $\sim 95\%$ without a sing
 ::: {.slide title="How Importance Weights Tilt the Linear Decision Boundary"}
 [Geometric Effect of Covariate Shift Correction]{.kicker}
 
-Plotting the source cloud (circle area $\propto \beta_i$), the shifted target cloud (orange), and the fitted linear boundaries explains the $40$-point accuracy jump:
+Plotting the source cloud (circle area $\propto \beta_i$), the shifted target cloud (orange), and the fitted linear boundaries explains the roughly $40$-point accuracy jump:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -663,7 +663,7 @@ Estimating $\mathbf{C}$ on $5{,}000$ balanced validation images and testing on a
 
 ::: {.cols .vc}
 ::: {.col}
-- **Instant Bayes logit adjustment:** Adding $\log\frac{\hat{p}_T(y)}{p_S(y)}$ to each class logit lifts target accuracy by $\sim 6\text{--}13$ points in zero gradient steps!
+- **Instant Bayes logit adjustment:** Adding $\log\frac{\hat{p}_T(y)}{p_S(y)}$ to each class logit lifts target accuracy by $\sim 5\text{--}15$ points in zero gradient steps!
 - **No retraining:** The source weights stay fixed; only the class priors move.
 :::
 

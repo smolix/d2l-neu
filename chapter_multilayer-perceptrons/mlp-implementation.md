@@ -347,9 +347,7 @@ for name, net in models.items():
     print(f'{name}: {errors} errors, {among_tops} of them between two tops')
 ```
 
-For both models, more than half of all errors confuse two tops. The hidden layer helps, but the tops remain the hard part of Fashion-MNIST.
-
-<!-- TODO(rerun): #mlp-implementation-accuracy-4 has not been executed yet (new cell). After the re-run in all four frameworks, check that (a) "more than half of all errors" between two tops holds for both models in every framework (the 2-epoch CPU check gave 1,252 of 2,074 and 1,050 of 1,884), and (b) whether the MLP's between-tops count is lower than softmax regression's. If most of the MLP's reduction in errors comes from the between-tops count in every framework, add that here ("most of the gain comes from fewer confusions among the tops"); otherwise leave the text as is. Quote counts only as rounded fractions. -->
+For both models, more than half of all errors confuse two tops. The MLP makes fewer such errors than softmax regression does, but the tops remain the hard part of Fashion-MNIST.
 
 ### The Learned Features
 
@@ -584,7 +582,7 @@ We train `MLPScratch` for $30$ epochs with minibatch size $n = 256$ and learning
 ::: {.cols .vc}
 ::: {.col}
 - **Smooth convergence:** Training loss drops steadily from $2.30$ below $0.35$, while training accuracy climbs to $87\text{--}90\%$.
-- **Validation plateau:** Held-out accuracy reaches $\sim 87\%$ (up from $\sim 84\%$ for softmax regression), with $\sim 1$ percentage point of epoch-to-epoch minibatch jitter.
+- **Validation plateau:** Held-out accuracy reaches $\sim 87\%$ (up from $\sim 84\%$ for softmax regression), although a single epoch can land a few points low.
 :::
 
 ::: {.col .fig .big}
@@ -625,7 +623,7 @@ Training both MLPs and softmax regression for $30$ epochs with identical setting
 ::: {.cols .vc}
 ::: {.col}
 - **Epoch-1 lag from $\sigma = 0.01$:** On epoch 1, both MLPs trail softmax regression (training loss $\sim 1.04$ vs. $\sim 0.79$) because backpropagated gradients into $\mathbf{W}^{(1)}$ are multiplied by $\mathbf{W}^{(2)} \sim 0.01$ until $\mathbf{W}^{(2)}$ grows.
-- **Cutting $20\%$ of errors by epoch 30:** Both MLPs converge to $\sim 87.0\%$ validation accuracy vs. $\sim 84.0\%$ for softmax regression, eliminating nearly a fifth of all classification errors.
+- **Cutting $20\%$ of errors by epoch 30:** Both MLPs converge to $\sim 87\%$ validation accuracy vs. $\sim 84\%$ for softmax regression, eliminating nearly a fifth of all classification errors.
 :::
 
 ::: {.col .fig .big}
@@ -653,8 +651,8 @@ Comparing parameter counts, per-image multiply-adds, and measured wall-clock sec
 
 | Model | Parameters | Multiply-Adds / Image | Val Accuracy (Epochs 26–30) |
 |:--|--:|--:|--:|
-| Softmax regression ($784 \to 10$) | $7{,}850$ | $7{,}840$ | $\sim 84.0\%$ |
-| MLP ($784 \to 256 \to 10$) | $203{,}530$ | $203{,}264$ | $\sim 87.0\%$ |
+| Softmax regression ($784 \to 10$) | $7{,}850$ | $7{,}840$ | $\sim 84\%$ |
+| MLP ($784 \to 256 \to 10$) | $203{,}530$ | $203{,}264$ | $\sim 87\%$ |
 
 @!mlp-implementation-parameters-computation-and-time
 

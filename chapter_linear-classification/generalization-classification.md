@@ -366,7 +366,7 @@ Simulating $10{,}000$ independent test sets at each size $n \in [100, 10{,}000]$
 
 ::: {.cols .vc}
 ::: {.col}
-- **Moderate error ($\epsilon = 0.17$, blue):** The plug-in normal interval (solid) stays close to $95\%$ coverage at every $n$, while Hoeffding (dashed) is conservative ($\sim 99\%$ coverage).
+- **Moderate error ($\epsilon = 0.17$, blue):** The plug-in normal interval (solid) stays close to $95\%$ coverage at every $n$, while Hoeffding (dashed) is conservative (coverage above $99.9\%$).
 - **Near-zero error ($\epsilon = 0.01$, orange):** For $n \le 200$, $\sim 13\%\text{--}37\%$ of test sets observe zero mistakes ($\epsilon_{\mathcal{D}} = 0$), causing the plug-in normal interval to undercover down to $\sim 63\%$.
 - **Hoeffding holds everywhere:** Always stays above the $0.95$ dotted line.
 :::

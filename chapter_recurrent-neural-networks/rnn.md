@@ -793,7 +793,7 @@ print(f'validation perplexity {ppl_plain:.1f}')
 
 Initial validation perplexity sits near $|\mathcal{V}| = 1{,}027$, and after
 ten epochs the clipped model converges smoothly to a validation perplexity
-around 90–100 (while training perplexity drops below half that value as the
+between 85 and 100 (while training perplexity drops below half that value as the
 222,915 parameters begin overfitting the 50,000 training tokens).
 
 To see why gradient clipping is essential at $\eta = 4$, we define a helper
@@ -846,8 +846,8 @@ d2l.plot(list(range(1, 11)), [ppl_clipped] + ppl_runs, 'epoch',
          legend_loc='outside', figsize=(5, 2.5))
 ```
 
-Without clipping, mid-training gradient spikes send validation perplexity
-jumping violently—sometimes above the untrained baseline of 1,027—and most
+Without clipping, gradient spikes send validation perplexity
+jumping violently—sometimes far above the untrained baseline of 1,027—and most
 runs finish at more than twice the clipped model's perplexity. Converting our
 clipped validation perplexity to bits per byte (:eqref:`eq_bpb`) divides
 $\log_2 \textrm{ppl}$ by the average UTF-8 bytes per BPE token ($\approx 2.8$):
@@ -931,7 +931,7 @@ print(f'validation perplexity {ppl_scratch:.1f}, '
       f'{math.log2(ppl_scratch) / bytes_per_token:.2f} bits per byte')
 ```
 
-Validation perplexity drops from roughly 90–100 down to around 60, cutting bits
+Validation perplexity drops from 85–100 down to around 60, cutting bits
 per byte from 2.3–2.4 to roughly 2.1.
 
 ### Comparison with Kneser–Ney and Effective Context Horizon
@@ -1029,7 +1029,6 @@ The two models tie on average, but not token by token. The RNN assigns the
 higher probability on about half the tokens and the trigram on the other
 half, and the mixture lands about 0.06 bits per byte below the trigram, ahead
 of both of its members.
-<!-- TODO(rerun): check against the new output -->
 
 A mixture can gain only where its members disagree, so the two models have
 learned partly different things about the text. That makes the tie more
@@ -1052,8 +1051,8 @@ print('bits per byte with 1, 2, 3, 4, 8, 32 tokens of context:',
 ```
 
 The diagnostic curve explains the tie. Almost all of the gain arrives with the
-second token of context, which lowers the loss from about 2.28 to about 2.13
-bits per byte. The third token adds a hundredth or so, and from position 4
+second token of context, which lowers the loss by about 0.15, from about 2.3
+to about 2.14 bits per byte. The third token adds a hundredth or two, and from position 4
 through 32 the curve is flat. Although the hidden state *can* depend on all 32
 tokens in the forward pass, the trained model exploits only the last two or
 three.
@@ -1808,7 +1807,7 @@ We train the 222,915-parameter baseline ($d = 64, h = 128$, no dropout) on $50{,
 @!rnn-implementation-training-5
 
 - **Truncated window states:** Each 32-token window initializes $\mathbf{H}_0 = \mathbf{0}$, capping backpropagation at 32 steps.
-- **Smooth convergence:** Validation perplexity drops from $1{,}027 \to \sim 95$, corresponding to $\log_2(95) / 2.78 \approx 2.36$ bits per byte (while training loss drops faster as the 223k parameters overfit the 50k tokens).
+- **Smooth convergence:** Validation perplexity drops from $1{,}027$ to between $85$ and $100$; a perplexity of $95$ corresponds to $\log_2(95) / 2.78 \approx 2.36$ bits per byte (while training loss drops faster as the 223k parameters overfit the 50k tokens).
 :::
 
 ::: {.col .fig}
@@ -1826,8 +1825,8 @@ To isolate the effect of gradient clipping, we train three fresh unclipped insta
 ::: {.col}
 @!rnn-implementation-a-plain-model-3
 
-- **Violent mid-training spikes:** Without $\theta = 1$ clipping, exploding gradient steps hurl the parameters out of the basin, spiking validation perplexity past the untrained level of $1{,}027$.
-- **Unreliable final convergence:** Over $80\%$ of unclipped runs at $\eta = 4$ finish above twice the clipped model's perplexity.
+- **Violent spikes:** Without $\theta = 1$ clipping, exploding gradient steps hurl the parameters out of the basin, in some runs spiking validation perplexity far past the untrained level of $1{,}027$.
+- **Unreliable final convergence:** Most unclipped runs at $\eta = 4$ finish above twice the clipped model's perplexity.
 :::
 
 ::: {.col .fig}
@@ -1844,7 +1843,7 @@ Measuring the relative Euclidean distance $\|\mathbf{E}_{i,\textrm{final}} - \ma
 @!rnn-implementation-embeddings-under-sgd-2
 
 - **Sparse vs. dense gradient accumulation:** Dense weights $(\mathbf{W}_{\textrm{xh}}, \mathbf{W}_{\textrm{hh}}, \mathbf{W}_{\textrm{hq}})$ accumulate gradient contributions from all $b \times T = 1{,}024 \times 32 = 32{,}768$ token positions in a minibatch, whereas embedding row $\mathbf{E}_i$ receives gradient *only* from the few positions where token $i$ appears!
-- **Why uniform-step SGD stalls on $\mathbf{E}$:** Dividing by $32{,}768$ leaves rare and medium-frequency token rows with tiny updates ($\sim 2\text{--}3\%$ movement over 10 epochs), so $\mathbf{E}$ acts largely as a frozen random projection (adaptive optimizers like Adam rescale per-coordinate variance to move $\mathbf{E}$ rapidly).
+- **Why uniform-step SGD stalls on $\mathbf{E}$:** Dividing by $32{,}768$ leaves rare and medium-frequency token rows with tiny updates (the average row moves about $4\%$ of its length over 10 epochs), so $\mathbf{E}$ acts largely as a frozen random projection (adaptive optimizers like Adam rescale per-coordinate variance to move $\mathbf{E}$ rapidly).
 - **SGD remedy:** Widen the random embedding basis from $d = 64 \to 512$ so $\mathbf{W}_{\textrm{xh}}$ has $8\times$ richer features to read, and add dropout (`emb_dropout = 0.1`, `dropout = 0.5`) to curb overfitting.
 :::
 
@@ -1857,8 +1856,8 @@ Training `RNNLMScratch` with $d = 512$, $h = 128$, `emb_dropout = 0.1`, and `dro
 ::: {.col}
 @!rnn-implementation-a-wider-embedding-with-dropout-3
 
-- **Overfitting suppressed:** Unlike the unregularized $d = 64$ baseline, dropout keeps the training and validation curves tightly coupled across all 10 epochs.
-- **Validation improvement:** Validation perplexity falls from $\sim 95 \to \sim 60$, reducing bits per byte from $2.36 \to \mathbf{2.12\text{ bpb}}$.
+- **Overfitting suppressed:** Unlike the unregularized $d = 64$ baseline, dropout keeps the training and validation curves close: after 10 epochs the losses differ by about $0.3$ nats instead of about $1$.
+- **Validation improvement:** Validation perplexity falls from $85\text{--}100$ to $\sim 60$, reducing bits per byte from $2.3\text{--}2.4$ to $\mathbf{\approx 2.1\text{ bpb}}$.
 :::
 
 ::: {.col .fig}
@@ -1870,12 +1869,12 @@ Training `RNNLMScratch` with $d = 512$, $h = 128$, `emb_dropout = 0.1`, and `dro
 ::: {.slide title="Benchmarking the RNN Against Kneser–Ney n-Grams"}
 [Neural vs. Classical Count Baselines]{.kicker}
 
-How does our trained RNN ($\approx 2.12$ bpb) compare against interpolated Kneser–Ney $n$-grams ($n = 2, 3, 4$) trained on the exact same 50,000 BPE tokens and evaluated on `val[32:]`?
+How does our trained RNN ($\approx 2.1$ bpb) compare against interpolated Kneser–Ney $n$-grams ($n = 2, 3, 4$) trained on the exact same 50,000 BPE tokens and evaluated on `val[32:]`?
 
 @!rnn-implementation-training-6
 
 - **A virtual tie at $\approx 2.1$ bpb:** The 32-token-window RNN lands right alongside the Kneser–Ney trigram ($2.09$ bpb) and 4-gram ($2.08$ bpb) that look back only 2 or 3 tokens!
-- **Complementary errors (Mikolov et al., 2011):** Even at identical overall bpb, the RNN (continuous semantic representations) and Kneser–Ney (exact lexical specificity) each beat the other on $\approx 50\%$ of validation tokens; a $50/50$ mixture $0.5\,P_{\textrm{RNN}} + 0.5\,P_{\textrm{KN}}$ improves over the standalone trigram by $\approx 0.06$ bpb.
+- **Complementary errors (Mikolov et al., 2011):** Even at nearly equal overall bpb, the RNN (continuous semantic representations) and Kneser–Ney (exact lexical specificity) each beat the other on $\approx 50\%$ of validation tokens; a $50/50$ mixture $0.5\,P_{\textrm{RNN}} + 0.5\,P_{\textrm{KN}}$ improves over the standalone trigram by $\approx 0.06$ bpb.
 :::
 
 ::: {.slide title="Diagnosing the RNN's Effective Context Horizon"}
@@ -1885,7 +1884,7 @@ How does our trained RNN ($\approx 2.12$ bpb) compare against interpolated Knese
 ::: {.col}
 To uncover why a recurrent network fed 32 tokens of history failed to pull ahead of a 3-gram, we plot validation bits per byte separately at each window position $k \in \{1, \ldots, 32\}$ (where position $k$ conditions on $k$ tokens of context):
 
-- **Sharp drop from $k = 1 \to 2$, then flat:** Validation loss drops from $\approx 2.28$ bpb at 1 token of context to $\approx 2.13$ bpb at 2 tokens, gains another $\approx 0.01$ at 3, and then **stays flat at $\approx 2.11$ bpb from position 4 through position 32**!
+- **Sharp drop from $k = 1 \to 2$, then flat:** Validation loss drops from $\approx 2.3$ bpb at 1 token of context to $\approx 2.14$ bpb at 2 tokens, gains another $0.01$–$0.02$ at 3, and then **stays flat at $\approx 2.12$ bpb from position 4 through position 32**!
 - **Two candidate causes, not separated here:** *Optimization*—gradients fade with every step back (§{sec_bptt}); *data*—Kneser–Ney counts, which use no gradients, saturate at the same place ($2.24 \to 2.09 \to 2.08$ bpb for $n = 2, 3, 4$), so 50,000 tokens may hold little longer-range signal.
 :::
 
@@ -1932,7 +1931,7 @@ The framework's built-in RNN layer replaces our Python `for X in inputs:` loop w
 ::: {.slide title="Verifying Concise RNNLM Training & Perplexity"}
 [Equivalence & Speedup]{.kicker}
 
-Matching the weight initializations ($\mathcal{N}(0, 0.01^2)$ for cell and output weights, $\mathcal{N}(0, 1)$ for embeddings) reproduces the exact same validation perplexity ($\sim 60$) and greedy rollout at a fraction of the Python loop runtime:
+Matching the weight initializations ($\mathcal{N}(0, 0.01^2)$ for cell and output weights, $\mathcal{N}(0, 1)$ for embeddings) reproduces the validation perplexity ($\sim 60$) and the looping greedy rollout at a fraction of the Python loop runtime:
 
 ::: {.cols .vc}
 ::: {.col}

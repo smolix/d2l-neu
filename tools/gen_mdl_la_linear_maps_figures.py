@@ -14,8 +14,9 @@ Run with the repo's pytorch venv:
 
     .venv-pytorch/bin/python tools/gen_mdl_la_linear_maps_figures.py
 
-Writes ``img/mdl-la-map-gallery.svg``, ``img/mdl-la-composition.svg`` and
-``img/mdl-la-parallelogram-area.svg``.
+Writes ``img/mdl-la-map-gallery.svg``, ``img/mdl-la-composition.svg``,
+``img/mdl-la-parallelogram-area.svg``, ``img/mdl-la-rank-nullity.svg`` and
+``img/mdl-la-triangular-det.svg``.
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ arrow, vlabel, clean_axes, axis_cross, right_angle = (
     fl.arrow, fl.vlabel, fl.clean_axes, fl.axis_cross, fl.right_angle)
 save = fl.save
 
-from matplotlib.patches import Polygon
+from matplotlib.patches import FancyArrowPatch, Polygon, Rectangle
 
 def mat2(a, b, c, d):
     """Mathtext for the 2x2 matrix [[a, b], [c, d]] (mathtext has no
@@ -211,7 +212,145 @@ def fig_parallelogram_area():
     save(fig, "mdl-la-parallelogram-area")
 
 
-FIGURES = [fig_map_gallery, fig_composition, fig_parallelogram_area]
+def fig_rank_nullity():
+    """Rank--nullity as basis bookkeeping: a basis of R^n split into k kernel
+    vectors w_1..w_k, which A sends to 0, and n-k completing vectors
+    u_1..u_{n-k}, whose images A u_i form a basis of col A inside R^m.
+    Schematic in the style of ``mdl-la-svd-subspaces`` (two boxes)."""
+    fig, ax = plt.subplots(figsize=(8.6, 4.4))
+    bw, bh = 2.6, 4.0
+    dom_x, cod_x = 0.0, 6.0
+    split = 1.7                       # kernel (bottom) / complement (top)
+    T = fl.T
+
+    # domain box: complement on top (blue), kernel below (grey)
+    ax.add_patch(Rectangle((dom_x, split), bw, bh - split,
+                           facecolor=T.BLUE.tint, edgecolor="none"))
+    ax.add_patch(Rectangle((dom_x, 0), bw, split,
+                           facecolor=T.SLATE.tint, edgecolor="none"))
+    ax.add_patch(Rectangle((dom_x, 0), bw, bh, fill=False, edgecolor=INK,
+                           lw=1.4))
+    ax.plot([dom_x, dom_x + bw], [split, split], color=INK, lw=0.9, ls="--")
+    ax.text(dom_x + bw / 2, 3.25,
+            r"$\mathbf{u}_1,\ldots,\mathbf{u}_{n-k}$", ha="center",
+            va="center", fontsize=15, color=T.BLUE.dark)
+    ax.text(dom_x + bw / 2, 2.45, "extend to a basis\n" + r"of $\mathbb{R}^n$",
+            ha="center", va="center", fontsize=13, color=T.BLUE.dark)
+    ax.text(dom_x + bw / 2, 1.15, r"$\mathbf{w}_1,\ldots,\mathbf{w}_k$",
+            ha="center", va="center", fontsize=15, color=INK)
+    ax.text(dom_x + bw / 2, 0.5, r"basis of $\ker\mathbf{A}$",
+            ha="center", va="center", fontsize=13, color=INK)
+
+    # codomain box with the column space as an inner region
+    cs_y0 = 1.0
+    ax.add_patch(Rectangle((cod_x, 0), bw, bh, fill=False, edgecolor=INK,
+                           lw=1.4))
+    ax.add_patch(Rectangle((cod_x + 0.2, cs_y0), bw - 0.4, bh - cs_y0 - 0.2,
+                           facecolor=T.GREEN.tint, edgecolor=GREEN, lw=1.2))
+    ax.text(cod_x + bw / 2, 3.25,
+            r"$\mathbf{A}\mathbf{u}_1,\ldots,\mathbf{A}\mathbf{u}_{n-k}$",
+            ha="center", va="center", fontsize=15, color=T.GREEN.dark)
+    ax.text(cod_x + bw / 2, 2.45,
+            r"basis of $\mathrm{col}\,\mathbf{A}$" + "\n" + r"$\dim n-k$",
+            ha="center", va="center", fontsize=13, color=T.GREEN.dark)
+    p_zero = np.array([cod_x + bw / 2, 1.35])
+    ax.plot(*p_zero, "o", color=INK, ms=6, zorder=5)
+    ax.text(p_zero[0] + 0.18, p_zero[1], r"$\mathbf{0}$", ha="left",
+            va="center", fontsize=15)
+
+    ax.text(dom_x + bw / 2, bh + 0.3, r"$\mathbb{R}^n$ (input)",
+            ha="center", fontsize=14)
+    ax.text(cod_x + bw / 2, bh + 0.3, r"$\mathbb{R}^m$ (output)",
+            ha="center", fontsize=14)
+
+    # u_i -> A u_i (one-to-one), w_j -> 0
+    ax.add_patch(FancyArrowPatch((dom_x + bw, 3.25), (cod_x + 0.2, 3.25),
+                                 arrowstyle="->", mutation_scale=16,
+                                 color=BLUE, lw=2.0))
+    ax.text((dom_x + bw + cod_x) / 2 + 0.1, 3.42,
+            r"$\mathbf{u}_i\mapsto\mathbf{A}\mathbf{u}_i$",
+            ha="center", va="bottom", fontsize=14, color=T.BLUE.dark)
+    ax.add_patch(FancyArrowPatch((dom_x + bw, 1.15), p_zero,
+                                 arrowstyle="->", mutation_scale=14,
+                                 color=GRAY, lw=1.6, linestyle=(0, (4, 3)),
+                                 shrinkA=0, shrinkB=6))
+    ax.text((dom_x + bw + cod_x) / 2 + 0.1, 1.0,
+            r"$\mathbf{w}_j\mapsto\mathbf{0}$", ha="center", va="top",
+            fontsize=14, color=INK)
+
+    ax.set_xlim(-0.3, cod_x + bw + 0.3)
+    ax.set_ylim(-0.2, bh + 0.75)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    save(fig, "mdl-la-rank-nullity")
+
+
+def fig_triangular_det():
+    """Which entries a nonzero term of the permutation formula can use.
+    (a) Upper triangular 5x5: zeros below the diagonal force the identity
+    permutation, so only the diagonal (shaded) enters det U.  (b) Block upper
+    triangular with square blocks D1 (3x3) and D2 (2x2): the zero block forces
+    every surviving permutation to stay inside the diagonal blocks, so the
+    off-diagonal block never enters.  Both grids are 5x5 at one scale."""
+    n = 5
+    T = fl.T
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.4, 4.6))
+    fig.subplots_adjust(wspace=0.12)
+
+    def cell(ax, i, j, face, text="", tcol=INK, fs=14):
+        ax.add_patch(Rectangle((j, n - 1 - i), 1, 1, facecolor=face,
+                               edgecolor=LIGHT, lw=1.0))
+        if text:
+            ax.text(j + 0.5, n - 0.5 - i, text, ha="center", va="center",
+                    fontsize=fs, color=tcol)
+
+    # (a) upper triangular
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                cell(axa, i, j, T.ORANGE.tint, rf"$u_{{{i+1}{i+1}}}$",
+                     T.ORANGE.dark)
+            elif i < j:
+                cell(axa, i, j, T.SLATE.tint, r"$*$", GRAY)
+            else:
+                cell(axa, i, j, "white", r"$0$", GRAY)
+    axa.add_patch(Rectangle((0, 0), n, n, fill=False, edgecolor=INK, lw=1.4))
+    axa.set_title(r"(a) $\det\mathbf{U}=u_{11}u_{22}\cdots u_{55}$",
+                  fontsize=15, pad=8)
+
+    # (b) block upper triangular, D1 3x3 and D2 2x2
+    b = 3
+    for i in range(n):
+        for j in range(n):
+            if (i < b) == (j < b):
+                cell(axb, i, j, T.ORANGE.tint)
+            elif i < b:
+                cell(axb, i, j, T.SLATE.tint)
+            else:
+                cell(axb, i, j, "white")
+    for (x0, y0, w, h) in [(0, n - b, b, b), (b, 0, n - b, n - b)]:
+        axb.add_patch(Rectangle((x0, y0), w, h, fill=False,
+                                edgecolor=ORANGE, lw=2.0, zorder=3))
+    axb.text(b / 2, n - b / 2, r"$\mathbf{D}_1$", ha="center", va="center",
+             fontsize=20, color=T.ORANGE.dark)
+    axb.text(b + (n - b) / 2, (n - b) / 2, r"$\mathbf{D}_2$", ha="center",
+             va="center", fontsize=20, color=T.ORANGE.dark)
+    axb.text(b + (n - b) / 2, n - b / 2, r"$*$", ha="center", va="center",
+             fontsize=20, color=GRAY)
+    axb.text(b / 2, (n - b) / 2, r"$\mathbf{0}$", ha="center", va="center",
+             fontsize=20, color=GRAY)
+    axb.add_patch(Rectangle((0, 0), n, n, fill=False, edgecolor=INK, lw=1.4,
+                            zorder=4))
+    axb.set_title(r"(b) $\det=\det\mathbf{D}_1\,\det\mathbf{D}_2$",
+                  fontsize=15, pad=8)
+
+    for ax in (axa, axb):
+        clean_axes(ax, lim=((-0.05, n + 0.05), (-0.05, n + 0.05)), hide=True)
+    save(fig, "mdl-la-triangular-det")
+
+
+FIGURES = [fig_map_gallery, fig_composition, fig_parallelogram_area,
+           fig_rank_nullity, fig_triangular_det]
 
 
 def main():

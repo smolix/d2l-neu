@@ -10,8 +10,8 @@ Neither is applied repeatedly to its own output, and neither needs to be square.
 Even when a matrix *is* square, eigenvalues can still let us down. The shear
 $\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ is
 *defective*—it has only a single eigenvector direction where the plane needs
-two—and in :numref:`sec_mdl-spectra-in-practice` we met a matrix that stretches a
-vector ten-fold even though both of its eigenvalues are smaller than 1. We need a
+two—and in :numref:`sec_mdl-spectra-in-practice` we met a matrix whose sixth power
+stretches a vector ten-fold even though both of its eigenvalues are smaller than 1. We need a
 factorization that exists for *every* matrix, measures stretching directly, and
 tells us how few numbers are needed to approximate a large matrix well.
 
@@ -179,7 +179,13 @@ $\mathbf{U}$ and $\mathbf{V}$ and still records any zero singular values when
 $r<\min(m,n)$. For a $3\times2$ matrix of rank 2, the full factors have shapes
 $3\times3$, $3\times2$, and $2\times2$, whereas the thin factors have shapes
 $3\times2$, $2\times2$, and $2\times2$ (matching the compact SVD here because the
-matrix has full column rank).
+matrix has full column rank). The full and thin forms differ
+whenever the matrix is not square, and the thin and compact forms whenever it
+is rank-deficient. :numref:`fig_mdl-la-svd-forms` draws a $6\times4$ matrix of
+rank 3, for which all three differ.
+
+![Shapes of the SVD factors of an $m\times n$ matrix of rank $r$, drawn to scale for $m=6$, $n=4$, and $r=3$: (a) full, (b) thin, (c) compact, and (d) the dyadic sum of $r$ rank-one terms. Filled squares on the diagonal of $\boldsymbol{\Sigma}$ are positive singular values, and the dashed square is a zero singular value. The dashed parts of $\mathbf{U}$ and $\mathbf{V}^\top$ multiply only zeros of $\boldsymbol{\Sigma}$, so each smaller form drops some of them without changing the product.](../img/mdl-la-svd-forms.svg)
+:label:`fig_mdl-la-svd-forms`
 
 **The dyadic sum.** Multiplying out the compact SVD column by row expresses
 $\mathbf{A}$ as a weighted sum of rank-one matrices, often called *dyads*:
@@ -543,9 +549,9 @@ in reverse.
 :label:`fig_mdl-la-svd-subspaces`
 
 **Numerical rank.** In floating-point arithmetic, a matrix that is
-mathematically rank-deficient almost never has singular values that are literally
-zero; rounding error leaves tiny values of order $\epsilon_{\text{mach}}\sigma_1$
-instead. In practice, rank is therefore decided with a threshold. NumPy's
+mathematically rank-deficient cannot be relied on to have singular values that
+are literally zero; rounding error typically leaves tiny values of order
+$\epsilon_{\text{mach}}\sigma_1$ instead. In practice, rank is therefore decided with a threshold. NumPy's
 `np.linalg.matrix_rank` counts singular values above
 $\sigma_1\max(m,n)\,\epsilon_{\text{mach}}$, a tolerance that scales naturally
 with both the largest singular value and the matrix dimensions. Let us see what
@@ -561,9 +567,10 @@ print(f'tolerance {tol:.1e};  exact zeros: {(s == 0).sum()};  '
 ```
 
 Two singular values are of order one, while the remaining two are pure rounding
-noise: $10^{-15}$ or smaller, well below the tolerance, yet rarely exact zeros.
-Checking for exact zeros would therefore misreport the rank, whereas the
-threshold recovers the true rank of 2.
+noise: $10^{-15}$ or smaller, well below the tolerance. Rounding may happen to
+leave one of them at exactly zero, but it rarely does so for both. Counting
+exact zeros would therefore misreport the rank, whereas the threshold recovers
+the true rank of 2.
 
 ## Low-Rank Approximation
 
@@ -1214,7 +1221,7 @@ the floor (:numref:`fig_mdl-la-condition`), at a convergence rate governed by
 $\kappa(\mathbf{H})$ that we derive in
 :numref:`sec_mdl-gradient-based-optimization`.
 
-![Gradient descent on a well-conditioned quadratic bowl ($\kappa=1.3$, near-circular contours, an almost straight path) versus an ill-conditioned one ($\kappa=18$, elongated contours, a zig-zag trajectory across the narrow valley).](../img/mdl-la-condition.svg)
+![Gradient descent on a well-conditioned quadratic bowl ($\kappa(\mathbf{H})=1.3$, near-circular contours, an almost straight path) versus an ill-conditioned one ($\kappa(\mathbf{H})=18$, a zig-zag trajectory across the narrow valley). The panel titles give the condition number $\kappa(\mathbf{H})$ of the Hessian; the contours are elongated by its square root, a factor of about $4.2$ in the second panel.](../img/mdl-la-condition.svg)
 :label:`fig_mdl-la-condition`
 
 ## The SVD in Deep Learning
@@ -1853,7 +1860,7 @@ Carrying out the proof recipe on a $3 \times 2$ matrix ($\mathbf{A}^\top\mathbf{
 ::: {.slide title="Numerical Rank and Floating-Point Thresholding"}
 [Subspace Geometry in Practice]{.kicker}
 
-- **Why Exact Zeros Almost Never Appear:** Rounding error perturbs singular values by up to $\|\mathbf{E}\|_2 \sim \epsilon_{\text{mach}}\sigma_1$ (Weyl's inequality), turning mathematical zeros into tiny numbers around $10^{-15}\sigma_1$.
+- **Exact Zeros Are Unreliable:** Rounding error perturbs singular values by up to $\|\mathbf{E}\|_2 \sim \epsilon_{\text{mach}}\sigma_1$ (Weyl's inequality), so a mathematical zero usually comes out as a tiny number around $10^{-15}\sigma_1$ and only sometimes as an exact $0$.
 - **Standard Rank Tolerance:** `np.linalg.matrix_rank` counts singular values exceeding $\text{tol} = \sigma_1 \max(m, n)\,\epsilon_{\text{mach}}$:
 
 @svd-numerical-rank

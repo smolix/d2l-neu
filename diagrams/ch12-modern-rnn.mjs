@@ -101,7 +101,7 @@ function twoObstacles() {
 function roadmap() {
   const W = 540, H = 256;
   let body = '';
-  body += tx(W / 2, 18, 'Chapter 12 Progression: From Classical Gates to Hybrid Blocks', { fs: 13.5, fw: 700 });
+  body += tx(W / 2, 18, `Chapter ${num('chap_modern_rnn')} Progression: From Classical Gates to Hybrid Blocks`, { fs: 13.5, fw: 700 });
 
   const row1 = [
     [`${sec('sec_lstm')} LSTM/GRU`, 'Gated vector h_t', 'Sequential O(T)', C.slate],

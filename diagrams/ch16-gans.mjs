@@ -136,7 +136,7 @@ export const diagrams = {
   ),
 
   'ch16-gan-roadmap': () => pipeline3(
-    'Chapter 16 Progression: Divergences → Dynamics → Synthesis',
+    `Chapter ${num('chap_gans')} Progression: Divergences → Dynamics → Synthesis`,
     {
       tag: `Part I · §§${num('sec_basic_gan')}–${num('sec_gan_relativistic')}`,
       head: 'Objectives',
@@ -165,7 +165,7 @@ export const diagrams = {
   ),
 
   'ch16-gan-notation-map': () => matrix2x2(
-    'Core Mathematical Quantities Across Chapter 16',
+    `Core Mathematical Quantities Across Chapter ${num('chap_gans')}`,
     {
       head: 'Densities & Log-Ratio',
       eq: 'ρ = p/q,  λ(x) = log(p/q)',

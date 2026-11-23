@@ -110,7 +110,7 @@ function matrix2x2(title, tl, tr, bl, br, footer) {
 export const diagrams = {
   // ── index.md (1 diagram) ────────────────────────────────────────────
   'ch17-diff-roadmap': () => stack3(
-    'Chapter 17 Roadmap: Score Matching → Fast Solvers → Tokens',
+    `Chapter ${num('chap_diffusion')} Roadmap: Score Matching → Fast Solvers → Tokens`,
     {
       badge: `§§${num('sec_diffusion-denoising')}–${num('sec_diffusion-integration')} Core`,
       head: 'Denoising Scores, Gaussian Paths & ODE/SDE Transport',

@@ -138,7 +138,7 @@ function hostConstants(fw) {
 
 function roadmap() {
   const W = 560, H = 286;
-  let o = header(W, 'Chapter 13 Progression: From One Kernel to Four GPUs');
+  let o = header(W, `Chapter ${num('chap_performance')} Progression: From One Kernel to Four GPUs`);
   o += card(20, 36, 520, 68, C.lblue, C.blue, `Stage 1: Single-Kernel Bounds & Silicon (§§${num('sec_perf_model')}–${num('sec_hardware')})`, [
     `${sec('sec_perf_model')} Roofline, ridge I*, sync timing  ·  ${sec('sec_hardware')} Memory hierarchy, SMs, sweep C/β`,
   ], D.blue.dark);

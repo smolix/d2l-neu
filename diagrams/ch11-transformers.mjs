@@ -129,7 +129,7 @@ function fourPillars() {
 function benchmarks() {
   const W = 540, H = 278;
   let o = '';
-  o += tx(270, 20, 'Executable Single-GPU Benchmarks Across Chapter 11', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(270, 20, `Executable Single-GPU Benchmarks Across Chapter ${num('chap_transformers')}`, { fs: 15, fw: 700, fill: C.ink });
   const items = [
     { x: 18,  y: 42,  t: `${sec('sec_transformer-block')} Signal Audit`, s1: '32-layer token spread & grad', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 192, y: 42,  t: `${sec('sec_gpt')} Byte GPT & GPT-2`, s1: '4.8M vs RNN + 124M weights', fill: C.lgreen, st: C.green, dk: D.green.dark },

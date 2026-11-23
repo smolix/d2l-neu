@@ -35,7 +35,7 @@ function naivePgWaste() {
   });
 
   o += box(16, 206, 528, 38, C.lblue, C.blue, 7, 1.8);
-  o += tx(280, 225, 'Chapter 15 Goal: Extract 10×–500× more learning per step while controlling bias', { fs: 12.2, fw: 700, fill: D.blue.dark });
+  o += tx(280, 225, `Chapter ${num('chap_deep_rl')} Goal: Extract 10×–500× more learning per step while controlling bias`, { fs: 12.2, fw: 700, fill: D.blue.dark });
   return svg(W, H, o);
 }
 
@@ -88,7 +88,7 @@ function triadOverview() {
 function benchmarkGains() {
   const W = 560, H = 262;
   let o = '';
-  o += tx(280, 20, 'Sample-Efficiency Gains Across Chapter 15 Running Benchmarks', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(280, 20, `Sample-Efficiency Gains Across Chapter ${num('chap_deep_rl')} Running Benchmarks`, { fs: 15, fw: 700, fill: C.ink });
 
   o += box(18, 42, 524, 98, C.lblue, C.blue, 8, 2);
   o += tx(34, 62, 'Pendulum-v1 Swing-Up (Steps to Reach Return ≥ −200):', { fs: 13.5, fw: 700, fill: D.blue.dark, anchor: 'start' });
@@ -115,13 +115,13 @@ function mcTailVsCritic() {
   const W = 560, H = 258;
   let o = '';
   o += box(18, 16, 524, 104, C.lamber, C.amber, 8, 2);
-  o += tx(280, 36, 'Chapter 14 REINFORCE + Baseline: Wait for Sampled Tail Ĝ_{t+1}', { fs: 14, fw: 700, fill: D.orange.dark });
+  o += tx(280, 36, `Chapter ${num('chap_reinforcement_learning')} REINFORCE + Baseline: Wait for Sampled Tail Ĝ_{t+1}`, { fs: 14, fw: 700, fill: D.orange.dark });
   o += box(34, 52, 492, 38, '#FFFFFF', C.amber, 6, 1.8);
   o += tx(280, 71, 'w_t = r_t + γ (r_{t+1} + γ r_{t+2} + ···) − V̂_w(s_t)', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(280, 106, 'Unbiased advantage sample, but high variance from T − t future random steps', { fs: 12, fill: C.ink });
 
   o += box(18, 136, 524, 106, C.lgreen, C.green, 8, 2);
-  o += tx(280, 156, 'Chapter 15 Actor–Critic: Substitute Critic Prediction V̂_w(s_{t+1})', { fs: 14, fw: 700, fill: D.green.dark });
+  o += tx(280, 156, `Chapter ${num('chap_deep_rl')} Actor–Critic: Substitute Critic Prediction V̂_w(s_{t+1})`, { fs: 14, fw: 700, fill: D.green.dark });
   o += box(34, 172, 492, 38, '#FFFFFF', C.green, 6, 1.8);
   o += tx(280, 191, 'δ_t = r_t + γ (1 − term_t) V̂_w(s_{t+1}) − V̂_w(s_t)', { mono: true, fs: 12.2, fw: 700, fill: D.green.dark });
   o += tx(280, 226, 'Computable after 1 step! Trades tail randomness for young-critic bias γ e(s_{t+1})', { fs: 12, fw: 600, fill: C.ink });

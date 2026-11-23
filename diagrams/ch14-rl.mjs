@@ -94,7 +94,7 @@ function verifierBenchmark() {
 function chapterRoadmap() {
   const W = 560, H = 280;
   let o = '';
-  o += tx(280, 20, 'Chapter 14 Progression: Relaxing Assumptions Step by Step', { fs: 15.5, fw: 700, fill: C.ink });
+  o += tx(280, 20, `Chapter ${num('chap_reinforcement_learning')} Progression: Relaxing Assumptions Step by Step`, { fs: 15.5, fw: 700, fill: C.ink });
 
   const items = [
     { x: 16,  y: 42,  t: `${sec('sec_mdp')}–${num('sec_valueiter')} MDPs & DP`, s: 'Known P, r · contraction', fill: C.lblue, st: C.blue, dk: D.blue.dark },

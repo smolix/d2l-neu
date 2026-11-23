@@ -193,7 +193,8 @@ slides-%: _slides/%/.built
 # builds the D2L template — logo, section footer, colours — and sizes every
 # text box to fit). CPU-only, no Quarto render; incremental per deck (a deck is
 # redone when its .qmd or the converter is newer than its .pptx). The book's
-# right-sidebar "Slides" block links each deck's HTML and PowerPoint versions.
+# right-sidebar "Slides" block links each deck's HTML, PDF, PowerPoint and
+# LaTeX versions.
 PPTX_TOOLS := tools/slides_to_pptx.py tools/pptx_fit.py static/logo-with-text.png
 _slides/%/.pptx-built: _slides/%/.built $(PPTX_TOOLS) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
@@ -208,8 +209,31 @@ slides-pptx-%: _slides/%/.pptx-built
 
 slides-pptx: $(addprefix slides-pptx-,$(FRAMEWORKS))
 
+# ── Beamer PDFs and their LaTeX source (per-framework) ───
+# Each rendered deck also becomes <deck>.pdf and <deck>-latex.zip (the
+# self-contained Beamer source: .tex, D2L theme, fitted sizes, figures) via
+# tools/slides_to_beamer.py: pandoc's beamer writer, then up to 7 XeLaTeX
+# passes that shrink any frame running into the footer. Needs XeLaTeX;
+# incremental per deck like the PowerPoint step.
+BEAMER_TOOLS := tools/slides_to_beamer.py tools/slides_to_pptx.py \
+	tools/beamer/d2l-beamer.tex tools/beamer/outputs.lua static/logo-with-text.png
+_slides/%/.beamer-built: _slides/%/.built $(BEAMER_TOOLS) | .venv-build/.synced
+	@mkdir -p $(LOGDIR)
+	@echo "=== Building $* Beamer PDFs and LaTeX bundles ==="
+	PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
+	.venv-build/bin/python tools/slides_to_beamer.py --tree _slides/$* \
+		--workers $(SLIDE_WORKERS) 2>&1 | tee $(LOGDIR)/slides-beamer-$*-$(TS).log
+	@touch $@
+
+slides-beamer-%: _slides/%/.beamer-built
+	@echo "Beamer PDFs and LaTeX bundles for $* in _slides/$*/"
+
+slides-beamer: $(addprefix slides-beamer-,$(FRAMEWORKS))
+
 # CPU-only. gen_slides.py parallelizes WITHIN a framework (isolated clone
 # projects, --workers), and frameworks run in parallel under
 # `make -j$(RENDER_JOBS) slides`; SLIDE_WORKERS is sized so the product ≈ cores.
-# `slides` builds the reveal.js decks and their PowerPoint versions.
-slides: $(addprefix slides-,$(FRAMEWORKS)) $(addprefix slides-pptx-,$(FRAMEWORKS))
+# `slides` builds the reveal.js decks, their PowerPoint versions, and their
+# Beamer PDFs with LaTeX source.
+slides: $(addprefix slides-,$(FRAMEWORKS)) $(addprefix slides-pptx-,$(FRAMEWORKS)) \
+	$(addprefix slides-beamer-,$(FRAMEWORKS))

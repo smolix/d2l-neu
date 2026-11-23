@@ -52,6 +52,11 @@ _book/index.html: .preprocess.stamp index.qmd _quarto.yml _d2l-theme.scss _d2l-s
 			echo "(Staging preview only: 'make html ALLOW_STALE=1' renders anyway, see build-system.md §6.2a.)"; \
 			exit 1; \
 		fi; }
+	@# Slide-card section numbers (diagrams/sections.mjs): a stale map means the
+	@# committed diagram SVGs show old numbers. Hardcoded "§N.M" in diagram
+	@# code is reported here and is an error in lint_source.py --corpus.
+	@python3 tools/section_refs.py --check-json || \
+		{ echo "Chapter/section numbers changed: run 'make figures' and commit diagrams/section-numbers.json and img/."; exit 1; }
 	@echo "=== Building HTML book ==="
 	@# `set -e` makes the block stop at the first failing step (a failed quarto
 	@# render used to be followed by the post-processing steps, whose exit status

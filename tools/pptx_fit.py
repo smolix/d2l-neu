@@ -53,6 +53,11 @@ LINE = 1.25                           # line height / font size
 SPACE_BEFORE = 0.3                    # paragraph gap / font size
 INSET_X, INSET_Y = 7.2, 3.6           # pt, PowerPoint's default text insets
 BULLET_INDENT = 0.9                   # bullet hanging indent / font size
+TABLE_MAX = 16                        # largest table text size, pt
+STACK_GAP = 91440                     # 0.1 in between stacked blocks
+PICTURE_SHARE = 0.5                   # pictures keep at least this much of
+                                      # a column's height (or their own)
+CELL_X, CELL_Y = 7.2, 3.6             # pt, PowerPoint's default cell margins
 
 
 @lru_cache(None)
@@ -210,6 +215,18 @@ def _restyle_layout(xml):
             return _set_geom(s, LEFT if idx == 1 else RIGHT)
         if name == 'Title and Content' and typ == 'body' and '<a:xfrm>' in s:
             return _set_geom(s, BODY)
+        if name == 'Comparison' and typ == 'body':
+            col = LEFT if idx in (1, 2) else RIGHT
+            head = 457200                 # 0.5 in for the column heading
+            return _set_geom(s, (col[0], col[1], col[2], head)
+                             if idx in (1, 3) else
+                             (col[0], col[1] + head, col[2], col[3] - head))
+        if name == 'Content with Caption' and typ == 'body':
+            cap = BODY[2] // 3
+            return _set_geom(s, (BODY[0], BODY[1], cap - GAP // 2, BODY[3])
+                             if idx == 2 else
+                             (BODY[0] + cap + GAP // 2, BODY[1],
+                              BODY[2] - cap - GAP // 2, BODY[3]))
         return s
     return re.sub(r'<p:sp>.*?</p:sp>', sp, xml, flags=re.S)
 
@@ -427,6 +444,182 @@ def _apply(sp, size, title=False):
     return sp
 
 
+def _shape_geom(s, geo):
+    """A shape's box: its own xfrm, else its placeholder's on the layout."""
+    own = re.search(r'<(?:a|p):xfrm>\s*<a:off x="(-?\d+)" y="(-?\d+)" ?/>'
+                    r'\s*<a:ext cx="(\d+)" cy="(\d+)"', s)
+    if own:
+        return tuple(int(v) for v in own.groups())
+    typ, idx = _ph(s)
+    return (geo.get((typ, idx)) or geo.get((typ, 0)) or
+            geo.get(('body', idx)) or BODY)
+
+
+def _text_height(paras, size, w):
+    """Box height (EMU) that `fit_size` fills at `size` for width `w`."""
+    h = body_height(paras, size, w / EMU_PER_PT - 2 * INSET_X)
+    return int((h / 0.97 + 2 * INSET_Y + 1) * EMU_PER_PT)
+
+
+def _cells(frame):
+    """A table's rows as lists of cell txBody strings."""
+    return [re.findall(r'<a:txBody>.*?</a:txBody>', row, re.S)
+            for row in re.findall(r'<a:tr\b.*?</a:tr>', frame, re.S)]
+
+
+def _col_widths(frame, w):
+    """Column widths for a table `w` wide.
+
+    Each column gets its longest word plus a share of the rest in proportion
+    to how much text it holds, so a column of short labels stays narrow and
+    a column of sentences wraps less. Sized at 10 pt; widths scale with size.
+    """
+    rows = _cells(frame)
+    ncol = max(len(r) for r in rows)
+    longest, chars = [0.0] * ncol, [0.0] * ncol
+    for row in rows:
+        for j, cell in enumerate(row):
+            for kind, payload, _ in _paragraphs(cell):
+                words = ([(ln, False) for ln in payload] if kind == 'code'
+                         else payload if kind == 'text' else [])
+                for word, bold in words:
+                    longest[j] = max(longest[j], text_width(word, 10, bold))
+                chars[j] += sum(len(wd) + 1 for wd, _ in words)
+    total = w / EMU_PER_PT
+    need = [lw + 2 * CELL_X + 2 for lw in longest]
+    if sum(need) >= total:
+        return [int(w * n / sum(need)) for n in need]
+    spare = total - sum(need)
+    weight = [c ** 0.5 for c in chars]
+    weight = [wt / sum(weight) if sum(weight) else 1 / ncol for wt in weight]
+    return [int((n + spare * wt) * EMU_PER_PT) for n, wt in zip(need, weight)]
+
+
+def _table_height(frame, size, widths):
+    h = 0.0
+    for row in _cells(frame):
+        h += max((body_height(_paragraphs(c), size,
+                              wd / EMU_PER_PT - 2 * CELL_X) + 2 * CELL_Y
+                  for c, wd in zip(row, widths)), default=0)
+    return int((h + 2) * EMU_PER_PT)
+
+
+def _size_table(frame, size, widths):
+    """Set a table's text size and column widths."""
+    code = round(size * CODE_RATIO * 2) / 2
+    lst = (f'<a:lstStyle><a:lvl1pPr><a:defRPr sz="{int(size * 100)}" />'
+           '</a:lvl1pPr></a:lstStyle>')
+    frame = re.sub(r'(<a:tc>\s*<a:txBody>\s*<a:bodyPr\s*/>\s*)'
+                   r'(?:<a:lstStyle\s*/>|<a:lstStyle>.*?</a:lstStyle>)',
+                   lambda m: m.group(1) + lst, frame, flags=re.S)
+    cols = iter(widths)
+    frame = re.sub(r'<a:gridCol w="\d+"', lambda m: f'<a:gridCol w="{next(cols)}"',
+                   frame)
+
+    def code_run(m):
+        r = m.group(0)
+        if 'typeface="Consolas"' not in r:
+            return r
+        return re.sub(r'\ssz="\d+"', '', r).replace(
+            '<a:rPr', f'<a:rPr sz="{int(code * 100)}"', 1)
+    return re.sub(r'<a:rPr\b[^>]*?(?:/>|>.*?</a:rPr>)', code_run, frame,
+                  flags=re.S)
+
+
+def _place_frame(frame, geom):
+    x, y, w, h = geom
+    return re.sub(r'<p:xfrm>.*?</p:xfrm>',
+                  f'<p:xfrm><a:off x="{x}" y="{y}" /><a:ext cx="{w}" '
+                  f'cy="{h}" /></p:xfrm>', frame, count=1, flags=re.S)
+
+
+def _stack(blocks, region):
+    """Lay a column's blocks out top to bottom; returns {start: new xml}.
+
+    `blocks` are (kind, start, xml, payload) in reading order: text
+    (payload: paragraphs), table, or picture (payload: height/width). Text
+    and tables share one size, the largest that leaves the pictures
+    PICTURE_SHARE of the column (or their full-width height, if less);
+    the pictures scale into what remains.
+    """
+    x, top, w, h = region
+    pics = [min(w * b[3], h) for b in blocks if b[0] == 'pic']
+    full = sum(pics)
+    gaps = STACK_GAP * (len(blocks) - 1)
+    tables = {b[1]: _col_widths(b[2], w) for b in blocks if b[0] == 'table'}
+
+    def heights(size):
+        return [_text_height(b[3], size, w) if b[0] == 'text' else
+                _table_height(b[2], min(size, TABLE_MAX), tables[b[1]])
+                if b[0] == 'table' else 0 for b in blocks]
+    for size in _ladder(BODY_MAX, BODY_MIN):
+        hs = heights(size)
+        rest = h - gaps - sum(hs)
+        if rest >= min(full, PICTURE_SHARE * h):
+            break
+    scale = min(1.0, max(rest, h // 4) / full) if full else 0
+    y = top + (int(max(0, rest - full * scale)) // 2 if not sum(hs) else 0)
+    out = {}
+    for b, bh in zip(blocks, hs):
+        kind, start, s, payload = b
+        if kind == 'pic':
+            ph = int(min(w * payload, h) * scale)
+            pw = int(ph / payload)
+            out[start] = _set_geom(s, (x + (w - pw) // 2, y, pw, ph))
+            bh = ph
+        elif kind == 'table':
+            out[start] = _place_frame(
+                _size_table(s, min(size, TABLE_MAX), tables[start]),
+                (x, y, w, bh))
+        else:
+            out[start] = _set_geom(s, (x, y, w, bh))
+        y += bh + STACK_GAP
+    return out
+
+
+def _restack(xml, geo, layout):
+    """Stack text, tables and pictures in each column of a slide.
+
+    Pandoc places a slide's pictures and tables with fixed layouts: text
+    above a picture in a column gets a 0.5 in heading strip, text after it
+    lands on the picture, and a table after text goes into "Content with
+    Caption", which overlaps the title. Columns holding a picture or a
+    table are laid out again here.
+    """
+    shapes = []
+    for m in re.finditer(r'<p:(sp|pic|graphicFrame)>.*?</p:\1>', xml, re.S):
+        s = m.group(0)
+        typ, idx = _ph(s)
+        if typ in ('title', 'ctrTitle', 'dt', 'ftr', 'sldNum'):
+            continue
+        g = _shape_geom(s, geo)
+        if m.group(1) == 'pic':
+            shapes.append(('pic', m.start(), s, g[3] / g[2], g))
+        elif m.group(1) == 'graphicFrame':
+            if '<a:tbl>' in s:
+                shapes.append(('table', m.start(), s, None, g))
+        elif '<p:txBody>' in s and (re.search(r'<a:t>[^<]*\S', s) or
+                                    '<a14:m>' in s):
+            body = re.search(r'<p:txBody>.*?</p:txBody>', s, re.S).group(0)
+            shapes.append(('text', m.start(), s, _paragraphs(body), g))
+    if not any(b[0] != 'text' for b in shapes):
+        return xml
+    two = layout in ('Two Content', 'Comparison')
+    mid = BODY[0] + BODY[2] // 2
+    columns = {}
+    for b in shapes:
+        col = (RIGHT if b[4][0] + b[4][2] // 2 > mid else LEFT) if two else BODY
+        columns.setdefault(col, []).append(b[:4])
+    new = {}
+    for col, blocks in columns.items():
+        # A text-only column keeps its box, except under Comparison, whose
+        # heading strip is too short for a column of text.
+        if layout == 'Comparison' or any(b[0] != 'text' for b in blocks):
+            new.update(_stack(blocks, col))
+    return re.sub(r'<p:(sp|pic|graphicFrame)>.*?</p:\1>',
+                  lambda m: new.get(m.start(), m.group(0)), xml, flags=re.S)
+
+
 MC_NS = 'http://schemas.openxmlformats.org/markup-compatibility/2006'
 A14_NS = 'http://schemas.microsoft.com/office/drawing/2010/main'
 
@@ -478,6 +671,9 @@ def fit(pptx: Path, logo: Path = None):
         geo.update(_geom_map(files['ppt/slideLayouts/' +
                                    layout.group(1).decode()].decode()))
         xml = files[name].decode()
+        lname = re.search(r'<p:cSld name="([^"]*)"', files[
+            'ppt/slideLayouts/' + layout.group(1).decode()].decode())
+        xml = _restack(xml, geo, lname.group(1) if lname else '')
         sizes = []
 
         def sp(m):

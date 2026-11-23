@@ -634,6 +634,13 @@ python3 tools/slides_to_pptx.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pptx --ve
   metrics (Carlito is metric-compatible with Calibri; code is measured
   conservatively) and picks the largest size up to 18 pt, down to 8 pt.
   Code runs at about three quarters of the body size.
+- Slides that mix text with pictures or tables are laid out again
+  (`_restack`): pandoc's own layouts for them overlap (text after a picture
+  lands on it; a table after text goes into "Content with Caption", over
+  the title) and never size table text. Each column is stacked top to
+  bottom; text and tables share the largest size that leaves pictures half
+  the column (or their full-width height), table columns are sized to their
+  content, and pictures scale into the rest.
 - Rasters are capped at 1,800 px and re-encoded (256-colour PNG for plots
   and diagrams, JPEG for photographs): a deck averages under 0.5 MB.
 - The logo and footer live on the slide master, so a lecturer can restyle

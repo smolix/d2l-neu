@@ -2,6 +2,7 @@
 // Rendered and audited by tools/build_module_diagrams.mjs with 0 visual defects.
 
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 import { textWidth } from './mdl-textwidth.mjs';
 
 const D = TOKENS.accents;
@@ -176,19 +177,19 @@ function threeStageRoadmap() {
   const W = 540, H = 292;
   let o = '';
   o += card(20, 12, 500, 74, C.lblue, C.blue, [
-    { t: 'Stage 1 · Deterministic ODEs, Solvers & Flows (§§38.1–38.3)', fs: 15, fw: 700, fill: D.blue.dark },
+    { t: `Stage 1 · Deterministic ODEs, Solvers & Flows (§§${num('sec_mdl-odes-solvers')}–${num('sec_mdl-neural-odes-cnf')})`, fs: 15, fw: 700, fill: D.blue.dark },
     { t: 'Picard–Lindelöf uniqueness · Matrix exp & ZOH · Euler/RK4 stability R(hλ) · Adjoint & Liouville −tr(J)', fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 88, 270, 108, C.blue);
 
   o += card(20, 112, 500, 74, C.lamber, C.amber, [
-    { t: 'Stage 2 · Stochastic Calculus & Density Evolution (§§38.4–38.5)', fs: 15, fw: 700, fill: D.orange.dark },
+    { t: `Stage 2 · Stochastic Calculus & Density Evolution (§§${num('sec_mdl-sdes')}–${num('sec_mdl-fokker-planck-probability-flow')})`, fs: 15, fw: 700, fill: D.orange.dark },
     { t: 'Wiener process & (dW)² = dt · Itô’s lemma & OU kernel · Fokker–Planck PDE · Anderson Reverse SDE & PF-ODE', fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 188, 270, 208, D.orange.base);
 
   o += card(20, 212, 500, 68, C.lgreen, C.green, [
-    { t: 'Stage 3 · Learning Generative Vector Fields (§§38.6–38.7)', fs: 15, fw: 700, fill: D.green.dark },
+    { t: `Stage 3 · Learning Generative Vector Fields (§§${num('sec_mdl-score-matching-diffusion-flow')}–${num('sec_mdl-flow-matching-transport')})`, fs: 15, fw: 700, fill: D.green.dark },
     { t: 'Vincent DSM & Tweedie · DDPM/DDIM & CFG · Conditional Flow Matching · Rectified Flow Reflow & W₂ OT', fs: 12.5, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -197,14 +198,14 @@ function threeStageRoadmap() {
 function fiveBenchmarks() {
   const W = 540, H = 290;
   let o = '';
-  o += fitTx(270, 18, 'Five Closed-Form Running Benchmarks Anchoring Chapter 38', 500, { fs: 15, fw: 700, fill: C.ink });
+  o += fitTx(270, 18, `Five Closed-Form Running Benchmarks Anchoring Chapter ${num('chap_mdl-dynamics')}`, 500, { fs: 15, fw: 700, fill: C.ink });
 
   const items = [
-    { name: '1. Planar Spiral Sink (§38.1–3)', eq: 'ẋ = (−½I + K)x,  λ = −0.5 ± i', test: 'e^{At}, RK4 order 4, area e⁻ᵗ', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { name: '2. Stiff Two-Mode Decay (§38.2)', eq: 'ẋ = diag(−50, −1)x', test: 'Explicit h < 2/|λ|, A-stability', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { name: '3. Ornstein–Uhlenbeck (§38.4)', eq: 'dX = −θX dt + √(2θ) dW', test: 'Kernel N(α_t x₀, 1−α_t²), VP-SDE', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { name: '4. Bimodal Mixture (§38.5–6)', eq: 'w₁ N(−2, 0.25) + w₂ N(+2, 0.25)', test: 'Score tanh, PF-ODE, DDIM, CFG', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { name: '5. Two-Moons Transport (§38.7)', eq: 'x_t = (1 − t)x₀ + tε', test: 'Crossing floor C=1.37, Reflow 1-step', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { name: `1. Planar Spiral Sink (§§${num('sec_mdl-odes-solvers')}–${num('sec_mdl-neural-odes-cnf')})`, eq: 'ẋ = (−½I + K)x,  λ = −0.5 ± i', test: 'e^{At}, RK4 order 4, area e⁻ᵗ', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { name: `2. Stiff Two-Mode Decay (${sec('sec_mdl-euler-runge-kutta')})`, eq: 'ẋ = diag(−50, −1)x', test: 'Explicit h < 2/|λ|, A-stability', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { name: `3. Ornstein–Uhlenbeck (${sec('sec_mdl-sdes')})`, eq: 'dX = −θX dt + √(2θ) dW', test: 'Kernel N(α_t x₀, 1−α_t²), VP-SDE', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { name: `4. Bimodal Mixture (§§${num('sec_mdl-fokker-planck-probability-flow')}–${num('sec_mdl-score-matching-diffusion-flow')})`, eq: 'w₁ N(−2, 0.25) + w₂ N(+2, 0.25)', test: 'Score tanh, PF-ODE, DDIM, CFG', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { name: `5. Two-Moons Transport (${sec('sec_mdl-flow-matching-transport')})`, eq: 'x_t = (1 − t)x₀ + tε', test: 'Crossing floor C=1.37, Reflow 1-step', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   items.forEach((it, i) => {
@@ -892,7 +893,7 @@ function threeTrainingParadigms() {
   ]);
 
   o += card(20, 230, 500, 44, C.lgreen, C.green, [
-    { t: 'Modern Frontier (§§38.6–38.7): Train simulation-free (1 eval/step), sample with fast ODE solvers!', fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: `Modern Frontier (§§${num('sec_mdl-score-matching-diffusion-flow')}–${num('sec_mdl-flow-matching-transport')}): Train simulation-free (1 eval/step), sample with fast ODE solvers!`, fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }

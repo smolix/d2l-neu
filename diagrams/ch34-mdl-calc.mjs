@@ -1,5 +1,6 @@
 // Slide diagrams for ch34-mdl-calc.mjs (§34 Calculus & Automatic Differentiation)
 import { C, TOKENS, tx as rawTx, arrow, svg as rawSvg } from "./engine.mjs";
+import { sec, num } from "./sections.mjs";
 import { textWidth } from "./mdl-textwidth.mjs";
 
 const D = TOKENS.accents;
@@ -108,57 +109,57 @@ const card = (x, y, w, h, fill, st, title, sub1, sub2, dk) => {
 
 // ── index.md (4 diagrams) ──
 function twoQuestions() {
-  let o = card(18, 16, 504, 52, D.purple.tint, C.purple, 'Every Training Step: w ← w − η ∇ℓ(w)', 'Raises two fundamental mathematical questions answered by Chapter 34', '', D.purple.dark);
+  let o = card(18, 16, 504, 52, D.purple.tint, C.purple, 'Every Training Step: w ← w − η ∇ℓ(w)', `Raises two fundamental mathematical questions answered by Chapter ${num('chap_mdl-calculus')}`, '', D.purple.dark);
   o += card(18, 84, 242, 162, C.lamber, C.amber, '1. Safe Step Size η?', 'Gradient is a local linear model', 'Curvature |f″| ≤ L bends loss away', D.orange.dark);
-  o += tx(139, 182, 'Descent Lemma (§§34.1–34.2):', { fs: 13.5, fw: 700, fill: D.orange.dark });
+  o += tx(139, 182, `Descent Lemma (§§${num('sec_mdl-single_variable_calculus')}–${num('sec_mdl-multivariable_calculus')}):`, { fs: 13.5, fw: 700, fill: D.orange.dark });
   o += tx(139, 206, '0 < η < 2/L  (optimal η = 1/L)', { mono: true, fs: 13, fw: 700, fill: C.ink });
   o += tx(139, 228, 'H_f classifies min vs saddle', { fs: 13, fill: C.muted });
   o += card(280, 84, 242, 162, C.lgreen, C.green, '2. Why Is ∇ℓ So Cheap?', '10⁸ weights: 12 days via finite diff', 'vs 30 ms in 1 reverse VJP sweep!', D.green.dark);
-  o += tx(401, 182, 'Reverse Autodiff (§§34.3–34.5):', { fs: 13.5, fw: 700, fill: D.green.dark });
+  o += tx(401, 182, `Reverse Autodiff (§§${num('sec_mdl-chain-rule-graphs')}–${num('sec_mdl-matrix-calculus-autodiff')}):`, { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(401, 206, '((uᵀJ_K)J_{K−1})⋯J₁  (~3× fwd)', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
-  o += tx(401, 228, '+ §§34.6–34.7 expectation grads', { fs: 13, fill: C.muted });
+  o += tx(401, 228, `+ §§${num('sec_mdl-integral_calculus')}–${num('sec_mdl-expectation-gradients')} expectation grads`, { fs: 13, fill: C.muted });
   return svg(540, 260, o);
 }
 
 function threePillars() {
-  let o = card(20, 14, 500, 72, C.lblue, C.blue, 'Pillar 1: Taylor Remainder & Descent Lemma (§§34.1–34.2)', 'f(x − ηf′(x)) ≤ f(x) − η(1 − Lη/2) f′(x)²   from   |f″(ξ)| ≤ L', 'Certifies safe step sizes 0 < η < 2/L and classifies critical points via Hessian H_f', D.blue.dark);
-  o += card(20, 98, 500, 72, C.lamber, C.amber, 'Pillar 2: Reverse-Mode Jacobian Products (§§34.3–34.5)', 'uᵀ J = ((uᵀ J_K) J_{K−1} ⋯) J₁   and   df = ⟨∇f, dX⟩ = tr((∇f)ᵀ dX)', 'Propagates 1 row adjoint backward across DAGs in ~3 forward-pass times', D.orange.dark);
-  o += card(20, 182, 500, 72, C.lgreen, C.green, 'Pillar 3: Differentiating Expectations (§§34.6–34.7)', '∇_θ E[g(X)] = E[(g(X)−b) ∇_θ log p_θ(X)]  vs  E_z[∇_θ g(T_θ(z))]', 'Trades generality of REINFORCE against low variance of pathwise reparameterization', D.green.dark);
+  let o = card(20, 14, 500, 72, C.lblue, C.blue, `Pillar 1: Taylor Remainder & Descent Lemma (§§${num('sec_mdl-single_variable_calculus')}–${num('sec_mdl-multivariable_calculus')})`, 'f(x − ηf′(x)) ≤ f(x) − η(1 − Lη/2) f′(x)²   from   |f″(ξ)| ≤ L', 'Certifies safe step sizes 0 < η < 2/L and classifies critical points via Hessian H_f', D.blue.dark);
+  o += card(20, 98, 500, 72, C.lamber, C.amber, `Pillar 2: Reverse-Mode Jacobian Products (§§${num('sec_mdl-chain-rule-graphs')}–${num('sec_mdl-matrix-calculus-autodiff')})`, 'uᵀ J = ((uᵀ J_K) J_{K−1} ⋯) J₁   and   df = ⟨∇f, dX⟩ = tr((∇f)ᵀ dX)', 'Propagates 1 row adjoint backward across DAGs in ~3 forward-pass times', D.orange.dark);
+  o += card(20, 182, 500, 72, C.lgreen, C.green, `Pillar 3: Differentiating Expectations (§§${num('sec_mdl-integral_calculus')}–${num('sec_mdl-expectation-gradients')})`, '∇_θ E[g(X)] = E[(g(X)−b) ∇_θ log p_θ(X)]  vs  E_z[∇_θ g(T_θ(z))]', 'Trades generality of REINFORCE against low variance of pathwise reparameterization', D.green.dark);
   return svg(540, 268, o);
 }
 
 function roadmapThreeParts() {
-  let o = card(16, 16, 160, 224, C.lblue, C.blue, 'Part I: Local Models', '§34.1 1D Calculus', 'Pₙ(x) + Rₙ(x), η < 2/L', D.blue.dark);
+  let o = card(16, 16, 160, 224, C.lblue, C.blue, 'Part I: Local Models', `${sec('sec_mdl-single_variable_calculus')} 1D Calculus`, 'Pₙ(x) + Rₙ(x), η < 2/L', D.blue.dark);
   o += tx(96, 118, 'Newton & subgradients', { fs: 13, fill: C.ink });
   o += hline(32, 160, 138);
-  o += tx(96, 160, '§34.2 Multivariable', { fs: 14, fw: 700, fill: D.blue.dark });
+  o += tx(96, 160, `${sec('sec_mdl-multivariable_calculus')} Multivariable`, { fs: 14, fw: 700, fill: D.blue.dark });
   o += tx(96, 184, '∇f ⊥ contours', { mono: true, fs: 13, fill: C.ink });
   o += tx(96, 208, 'Symmetric Hessian H_f', { fs: 13, fill: C.muted });
   o += arrow(179, 128, 189, 128, C.blue);
-  o += card(192, 16, 160, 224, C.lamber, C.amber, 'Part II: Chain & AD', '§34.3 Graph DAGs', 'Path sum & adjoints n̄', D.orange.dark);
-  o += tx(272, 112, '§34.4 Matrix Calc', { fs: 14, fw: 700, fill: D.orange.dark });
+  o += card(192, 16, 160, 224, C.lamber, C.amber, 'Part II: Chain & AD', `${sec('sec_mdl-chain-rule-graphs')} Graph DAGs`, 'Path sum & adjoints n̄', D.orange.dark);
+  o += tx(272, 112, `${sec('sec_mdl-matrix-calculus')} Matrix Calc`, { fs: 14, fw: 700, fill: D.orange.dark });
   o += tx(272, 134, 'df = ⟨∇f, dX⟩, p − y', { mono: true, fs: 12.5, fill: C.ink });
   o += hline(208, 336, 152);
-  o += tx(272, 174, '§34.5 Autodiff', { fs: 14, fw: 700, fill: D.orange.dark });
+  o += tx(272, 174, `${sec('sec_mdl-matrix-calculus-autodiff')} Autodiff`, { fs: 14, fw: 700, fill: D.orange.dark });
   o += tx(272, 198, 'Duals, Tape, 2√T mem', { fs: 13, fill: C.ink });
   o += tx(272, 220, 'HVPs & Implicit Diff', { fs: 13, fill: C.muted });
   o += arrow(355, 128, 365, 128, C.amber);
-  o += card(368, 16, 156, 224, C.lgreen, C.green, 'Part III: Integrals', '§34.6 Integration', 'Riemann, FTC, Fubini', D.green.dark);
+  o += card(368, 16, 156, 224, C.lgreen, C.green, 'Part III: Integrals', `${sec('sec_mdl-integral_calculus')} Integration`, 'Riemann, FTC, Fubini', D.green.dark);
   o += tx(446, 118, '|det J_φ| & √(2π)', { mono: true, fs: 13, fill: C.ink });
   o += hline(384, 508, 138);
-  o += tx(446, 160, '§34.7 Expectations', { fs: 14, fw: 700, fill: D.green.dark });
+  o += tx(446, 160, `${sec('sec_mdl-expectation-gradients')} Expectations`, { fs: 14, fw: 700, fill: D.green.dark });
   o += tx(446, 184, 'Leibniz boundary rule', { fs: 13, fill: C.ink });
   o += tx(446, 208, 'Score vs Pathwise', { fs: 13, fw: 700, fill: D.green.dark });
   return svg(540, 256, o);
 }
 
 function runningBenchmarks() {
-  let o = card(16, 14, 246, 70, C.lblue, C.blue, '§34.1 Logistic Loss ℓ(w)=log(1+e⁻ʷ)', 'Gap 0.00125 = ½ℓ″(0)(0.1)²', 'L = ¼ ⇒ η < 8 safe, η = 4 optimal', D.blue.dark);
-  o += card(278, 14, 246, 70, C.lblue, C.blue, '§34.2 LSE f(x,y)=log(eˣ+eʸ)', '∇f(0,log 2) = (⅓,⅔)ᵀ, softmax', 'H_f = diag(p)−ppᵀ has λ = 0, 4/9', D.blue.dark);
-  o += card(16, 96, 246, 70, C.lamber, C.amber, '§34.3 4-Input Squaring DAG', 'Integer adjoints: w̄ = 73,472', '12 mults in reverse vs 24 forward', D.orange.dark);
-  o += card(278, 96, 246, 70, C.lamber, C.amber, '§34.4 2-2-1 ReLU Network', 'J_g = w₂ᵀ diag(m) W₁ = (2, 4)', 'Left-to-right VJP: 667× fewer mults', D.orange.dark);
-  o += card(16, 178, 246, 70, D.purple.tint, C.purple, '§34.5 Dual & Var Engines', '(∑ xⱼ²)², n = 200: 802 vs 80,200', 'Checkpointing: 401 → 40 states (2√T)', D.purple.dark);
-  o += card(278, 178, 246, 70, C.lgreen, C.green, '§§34.6–34.7 Normal & E[X²]', '∫ e^{−z²/2} dz = √(2π) (polar)', 'Pathwise σ=2.0 vs REINFORCE σ=7.18', D.green.dark);
+  let o = card(16, 14, 246, 70, C.lblue, C.blue, `${sec('sec_mdl-single_variable_calculus')} Logistic Loss ℓ(w)=log(1+e⁻ʷ)`, 'Gap 0.00125 = ½ℓ″(0)(0.1)²', 'L = ¼ ⇒ η < 8 safe, η = 4 optimal', D.blue.dark);
+  o += card(278, 14, 246, 70, C.lblue, C.blue, `${sec('sec_mdl-multivariable_calculus')} LSE f(x,y)=log(eˣ+eʸ)`, '∇f(0,log 2) = (⅓,⅔)ᵀ, softmax', 'H_f = diag(p)−ppᵀ has λ = 0, 4/9', D.blue.dark);
+  o += card(16, 96, 246, 70, C.lamber, C.amber, `${sec('sec_mdl-chain-rule-graphs')} 4-Input Squaring DAG`, 'Integer adjoints: w̄ = 73,472', '12 mults in reverse vs 24 forward', D.orange.dark);
+  o += card(278, 96, 246, 70, C.lamber, C.amber, `${sec('sec_mdl-matrix-calculus')} 2-2-1 ReLU Network`, 'J_g = w₂ᵀ diag(m) W₁ = (2, 4)', 'Left-to-right VJP: 667× fewer mults', D.orange.dark);
+  o += card(16, 178, 246, 70, D.purple.tint, C.purple, `${sec('sec_mdl-matrix-calculus-autodiff')} Dual & Var Engines`, '(∑ xⱼ²)², n = 200: 802 vs 80,200', 'Checkpointing: 401 → 40 states (2√T)', D.purple.dark);
+  o += card(278, 178, 246, 70, C.lgreen, C.green, `§§${num('sec_mdl-integral_calculus')}–${num('sec_mdl-expectation-gradients')} Normal & E[X²]`, '∫ e^{−z²/2} dz = √(2π) (polar)', 'Pathwise σ=2.0 vs REINFORCE σ=7.18', D.green.dark);
   return svg(540, 262, o);
 }
 
@@ -492,7 +493,7 @@ function jacobianChainProof() {
   o += card(194, 16, 152, 106, C.lamber, C.amber, '2. Intermediate Shift', 'y = f(x) ↦ y + η', 'η = Aδ + o(∥δ∥) ∈ ℝᵖ', D.orange.dark);
   o += arrow(350, 69, 368, 69, C.green);
   o += card(372, 16, 152, 106, C.lgreen, C.green, '3. Outer Expansion', 'g(y+η) = g(y)+Bη+o(∥η∥)', '= g(y) + BAδ + o(∥δ∥)', D.green.dark);
-  o += card(16, 140, 508, 104, D.purple.tint, C.purple, 'Matrix Chain Rule: J_{g ∘ f}(x) = J_g(f(x)) · J_f(x) = B A ∈ ℝᵐˣⁿ', 'Entry (i, k): [BA]_{ik} = ∑_{j=1}^{p} (∂gᵢ / ∂yⱼ)(∂fⱼ / ∂xₖ)  (sums over all p intermediate coordinates yⱼ)', 'Unifies multivariable path sums (§34.3) with matrix multiplication (§33.2)!', D.purple.dark);
+  o += card(16, 140, 508, 104, D.purple.tint, C.purple, 'Matrix Chain Rule: J_{g ∘ f}(x) = J_g(f(x)) · J_f(x) = B A ∈ ℝᵐˣⁿ', 'Entry (i, k): [BA]_{ik} = ∑_{j=1}^{p} (∂gᵢ / ∂yⱼ)(∂fⱼ / ∂xₖ)  (sums over all p intermediate coordinates yⱼ)', `Unifies multivariable path sums (${sec('sec_mdl-chain-rule-graphs')}) with matrix multiplication (${sec('sec_mdl-linear-maps')})!`, D.purple.dark);
   return svg(540, 258, o);
 }
 
@@ -795,7 +796,7 @@ function integralSwap() {
 
 function exponentialTilting() {
   let o = card(20, 14, 500, 74, C.lblue, C.blue, 'Log-Integral-Exp (Log-Partition Function): Continuous Softmax', 'd/dθ log ∫ e^{θx} p(x) dx = E_{X~p̃_θ}[X]', 'where p̃_θ(x) ∝ e^{θx} p(x) is the exponentially tilted density', D.blue.dark);
-  o += card(20, 104, 238, 140, C.lamber, C.amber, 'Discrete Log-Sum-Exp (§34.2)', '∇_z log ∑ᵢ e^{zᵢ} = softmax(z)', 'Returns discrete probability vector p', D.orange.dark);
+  o += card(20, 104, 238, 140, C.lamber, C.amber, `Discrete Log-Sum-Exp (${sec('sec_mdl-multivariable_calculus')})`, '∇_z log ∑ᵢ e^{zᵢ} = softmax(z)', 'Returns discrete probability vector p', D.orange.dark);
   o += tx(139, 214, 'H_LSE = Var_{I~p}', { mono: true, fs: 13, fw: 700, fill: D.orange.dark });
   o += card(282, 104, 238, 140, C.lgreen, C.green, 'Standard Normal Check p = N(0,1)', 'log E[e^{θZ}] = ½ θ²   (tilted p̃_θ = N(θ,1))', 'd/dθ (½ θ²) = θ = E_{N(θ,1)}[X]!', D.green.dark);
   o += tx(401, 214, 'Completing the square matches swap', { fs: 12.5, fw: 700, fill: D.green.dark });

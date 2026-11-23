@@ -1,5 +1,6 @@
 // Slide diagrams for ch33-mdl-la.mjs (§33 Linear Algebra)
 import { C, TOKENS, grid, tx as rawTx, arrow, svg as rawSvg } from "./engine.mjs";
+import { sec, num } from "./sections.mjs";
 import { textWidth } from "./mdl-textwidth.mjs";
 
 const D = TOKENS.accents;
@@ -113,31 +114,31 @@ const card = (x, y, w, h, fill, st, title, sub1, sub2, dk) => {
 
 // ── index.md (4 diagrams) ──
 function motivationAxes() {
-  let o = card(18, 16, 504, 54, D.purple.tint, C.purple, 'Geometric Linear Algebra in ℝᵈ (§33)', 'Right coordinates turn matrix products into transparent geometry', '', D.purple.dark);
+  let o = card(18, 16, 504, 54, D.purple.tint, C.purple, `Geometric Linear Algebra in ℝᵈ (${sec('chap_mdl-linear-algebra')})`, 'Right coordinates turn matrix products into transparent geometry', '', D.purple.dark);
   o += card(18, 90, 156, 156, C.lblue, C.blue, '1. Subspace Axes', 'QᵀQ = Iₖ', 'Lengths & Projections', D.blue.dark);
   o += tx(96, 184, 'P = QQᵀ', { mono: true, fs: 14, fw: 700, fill: D.blue.dark });
-  o += tx(96, 212, '§33.1–33.2', { mono: true, fs: 13, fill: C.muted });
+  o += tx(96, 212, `${sec('sec_mdl-geometry-linear-algebraic-ops')}–${num('sec_mdl-linear-maps')}`, { mono: true, fs: 13, fill: C.muted });
   o += card(192, 90, 156, 156, C.lamber, C.amber, '2. Eigen-Axes', 'Avᵢ = λᵢvᵢ', 'Repeated Square Maps', D.orange.dark);
   o += tx(270, 184, 'Aᵏx = ∑ cᵢλᵢᵏvᵢ', { mono: true, fs: 13.5, fw: 700, fill: D.orange.dark });
-  o += tx(270, 212, '§33.3–33.4', { mono: true, fs: 13, fill: C.muted });
+  o += tx(270, 212, `${sec('sec_mdl-eigendecompositions')}–${num('sec_mdl-spectra-in-practice')}`, { mono: true, fs: 13, fill: C.muted });
   o += card(366, 90, 156, 156, C.lgreen, C.green, '3. Singular Axes', 'Avᵢ = σᵢuᵢ', 'Any m × n Layer', D.green.dark);
   o += tx(444, 184, 'A = UΣVᵀ', { mono: true, fs: 14, fw: 700, fill: D.green.dark });
-  o += tx(444, 212, '§33.5', { mono: true, fs: 13, fill: C.muted });
+  o += tx(444, 212, `${sec('sec_mdl-svd-low-rank')}`, { mono: true, fs: 13, fill: C.muted });
   return svg(540, 262, o);
 }
 
 function roadmapTwoStage() {
   let o = tx(270, 20, 'Stage 1: Single Map in Standard Coordinates', { fs: 15.5, fw: 700, fill: D.blue.dark });
-  o += card(24, 36, 230, 74, C.lblue, C.blue, '§33.1 Vectors & Projections', 'P = QQᵀ · A = QR · 1/√d', 'Attention & Least Squares', D.blue.dark);
+  o += card(24, 36, 230, 74, C.lblue, C.blue, `${sec('sec_mdl-geometry-linear-algebraic-ops')} Vectors & Projections`, 'P = QQᵀ · A = QR · 1/√d', 'Attention & Least Squares', D.blue.dark);
   o += arrow(258, 73, 282, 73, C.blue);
-  o += card(286, 36, 230, 74, C.lblue, C.blue, '§33.2 Linear Maps & Volume', 'rank(A) + dim ker(A) = n', 'Inverses & det(AB)', D.blue.dark);
+  o += card(286, 36, 230, 74, C.lblue, C.blue, `${sec('sec_mdl-linear-maps')} Linear Maps & Volume`, 'rank(A) + dim ker(A) = n', 'Inverses & det(AB)', D.blue.dark);
   o += hline(24, 516, 128);
   o += tx(270, 148, 'Stage 2: Natural Coordinates Tailored to the Matrix', { fs: 15.5, fw: 700, fill: D.purple.dark });
-  o += card(16, 166, 156, 86, C.lamber, C.amber, '§33.3 Eigen', 'A = VΛV⁻¹', 'Sym: VΛVᵀ', D.orange.dark);
+  o += card(16, 166, 156, 86, C.lamber, C.amber, `${sec('sec_mdl-eigendecompositions')} Eigen`, 'A = VΛV⁻¹', 'Sym: VΛVᵀ', D.orange.dark);
   o += arrow(175, 209, 189, 209, C.amber);
-  o += card(192, 166, 156, 86, D.red.tint, D.red.base, '§33.4 Spectra', 'Power Iter', 'Non-Normal Mᵏ', D.red.dark);
+  o += card(192, 166, 156, 86, D.red.tint, D.red.base, `${sec('sec_mdl-spectra-in-practice')} Spectra`, 'Power Iter', 'Non-Normal Mᵏ', D.red.dark);
   o += arrow(351, 209, 365, 209, C.green);
-  o += card(368, 166, 156, 86, C.lgreen, C.green, '§33.5 SVD', 'A = UΣVᵀ', 'LoRA · PCA · κ', D.green.dark);
+  o += card(368, 166, 156, 86, C.lgreen, C.green, `${sec('sec_mdl-svd-low-rank')} SVD`, 'A = UΣVᵀ', 'LoRA · PCA · κ', D.green.dark);
   return svg(540, 268, o);
 }
 
@@ -588,7 +589,7 @@ function eigenToSvdBridge() {
   o += tx(135, 184, 'Single basis V cannot stay', { fs: 13, fill: C.muted });
   o += tx(135, 206, 'orthonormal for input & output', { fs: 13, fill: C.muted });
   o += arrow(258, 128, 282, 128, C.green);
-  o += card(286, 16, 238, 224, C.lgreen, C.green, 'The SVD Solution (§33.5)', 'Two orthonormal bases V, U', 'A vᵢ = σᵢ uᵢ  (σ₁ ≥ σ₂ ≥ ⋯ ≥ 0)', D.green.dark);
+  o += card(286, 16, 238, 224, C.lgreen, C.green, `The SVD Solution (${sec('sec_mdl-svd-low-rank')})`, 'Two orthonormal bases V, U', 'A vᵢ = σᵢ uᵢ  (σ₁ ≥ σ₂ ≥ ⋯ ≥ 0)', D.green.dark);
   o += tx(405, 118, '• Exists for ANY m × n matrix', { fs: 13.5, fw: 600, fill: C.ink });
   o += tx(405, 144, '• Measures 1-step stretch σ₁', { fs: 13.5, fw: 600, fill: C.ink });
   o += tx(405, 170, '• Gives optimal rank-k Aₖ,', { fs: 13.5, fw: 600, fill: C.ink });

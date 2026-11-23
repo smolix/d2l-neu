@@ -2,6 +2,7 @@
 // Rendered and audited by tools/build_module_diagrams.mjs with 0 visual defects.
 
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 import { textWidth } from './mdl-textwidth.mjs';
 
 const D = TOKENS.accents;
@@ -168,7 +169,7 @@ function ceDecomposition() {
 function threePillars() {
   const W = 540, H = 286;
   let o = '';
-  o += titledPanel(20, 14, 156, 192, '1. Gibbs Floor (§37.1)', D.blue, [
+  o += titledPanel(20, 14, 156, 192, `1. Gibbs Floor (${sec('sec_mdl-information_theory')})`, D.blue, [
     { t: 'D_KL(P ‖ Q) ≥ 0', mono: true, fs: 14, fw: 700, fill: D.blue.dark },
     { t: 'CE(P, Q) ≥ H(P)', mono: true, fs: 13, fill: C.ink },
     { t: 'No classifier beats', fs: 12.5, fill: C.ink },
@@ -176,7 +177,7 @@ function threePillars() {
     { t: 'entropy H(Y | X)', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
   ]);
 
-  o += titledPanel(192, 14, 156, 192, '2. Coding (§37.2)', D.green, [
+  o += titledPanel(192, 14, 156, 192, `2. Coding (${sec('sec_mdl-coding-compression')})`, D.green, [
     { t: '∑ 2⁻ℓᵢ ≤ 1 (Kraft)', mono: true, fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Arithmetic stream:', fs: 12.5, fill: C.ink },
     { t: 'ℓ < −log₂ q(x₁:ₙ) + 2', mono: true, fs: 12, fw: 700, fill: C.ink },
@@ -184,7 +185,7 @@ function threePillars() {
     { t: 'a lossless codec!', fs: 13, fw: 700, fill: D.green.dark },
   ]);
 
-  o += titledPanel(364, 14, 156, 192, '3. Critics (§§37.3–7)', D.purple, [
+  o += titledPanel(364, 14, 156, 192, `3. Critics (§§${num('sec_mdl-divergences-distances')}–${num('sec_mdl-mi-estimation')})`, D.purple, [
     { t: 'f-GAN & InfoNCE', fs: 13.5, fw: 700, fill: D.purple.dark },
     { t: 'Bound D_f and I(X;Y)', fs: 12.5, fill: C.ink },
     { t: 'from samples alone;', fs: 12.5, fill: C.ink },
@@ -202,20 +203,20 @@ function chapterRoadmap() {
   const W = 540, H = 292;
   let o = '';
   o += card(20, 12, 500, 74, C.lblue, C.blue, [
-    { t: 'Track 1 · Log-Loss, Coding & Perplexity (§§37.1–37.2)', fs: 15, fw: 700, fill: D.blue.dark },
-    { t: '§37.1 Surprisal, H(P), Gibbs, smoothing, distillation  ·  §37.2 Kraft, arithmetic coding, MDL, AEP, PPL', fs: 12.5, fill: C.ink },
+    { t: `Track 1 · Log-Loss, Coding & Perplexity (§§${num('sec_mdl-information_theory')}–${num('sec_mdl-coding-compression')})`, fs: 15, fw: 700, fill: D.blue.dark },
+    { t: `${sec('sec_mdl-information_theory')} Surprisal, H(P), Gibbs, smoothing, distillation  ·  ${sec('sec_mdl-coding-compression')} Kraft, arithmetic coding, MDL, AEP, PPL`, fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 88, 270, 108, C.blue);
 
   o += card(20, 112, 500, 74, C.lamber, C.amber, [
-    { t: 'Track 2 · Divergences, Transport & Score Fields (§§37.3–37.5)', fs: 15, fw: 700, fill: D.orange.dark },
-    { t: '§37.3 f-divergences, Pinsker, f-GAN  ·  §37.4 IPMs, MMD, W₁, Sinkhorn  ·  §37.5 Stein, Score Matching, KSD', fs: 12.5, fill: C.ink },
+    { t: `Track 2 · Divergences, Transport & Score Fields (§§${num('sec_mdl-divergences-distances')}–${num('sec_mdl-scores')})`, fs: 15, fw: 700, fill: D.orange.dark },
+    { t: `${sec('sec_mdl-divergences-distances')} f-divergences, Pinsker, f-GAN  ·  ${sec('sec_mdl-test-functions-transport')} IPMs, MMD, W₁, Sinkhorn  ·  ${sec('sec_mdl-scores')} Stein, Score Matching, KSD`, fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 188, 270, 208, D.orange.base);
 
   o += card(20, 212, 500, 68, C.lgreen, C.green, [
-    { t: 'Track 3 · Dependence, Bottlenecks & Contrastive Bounds (§§37.6–37.7)', fs: 15, fw: 700, fill: D.green.dark },
-    { t: '§37.6 Mutual Info, DPI, Fano, Capacity, IB  ·  §37.7 KSG neighbors, McAllester–Stratos, DV/NWJ, InfoNCE', fs: 12.5, fill: C.ink },
+    { t: `Track 3 · Dependence, Bottlenecks & Contrastive Bounds (§§${num('sec_mdl-mutual-information')}–${num('sec_mdl-mi-estimation')})`, fs: 15, fw: 700, fill: D.green.dark },
+    { t: `${sec('sec_mdl-mutual-information')} Mutual Info, DPI, Fano, Capacity, IB  ·  ${sec('sec_mdl-mi-estimation')} KSG neighbors, McAllester–Stratos, DV/NWJ, InfoNCE`, fs: 12.5, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -1138,7 +1139,7 @@ function w2UncrossingFid() {
   ]);
 
   o += card(20, 216, 500, 52, D.purple.tint, C.purple, [
-    { t: 'Why W₂ Matters for Flows (§38.7): Strictly penalizes crossing trajectories in space-time!', fs: 13, fw: 700, fill: D.purple.dark },
+    { t: `Why W₂ Matters for Flows (${sec('sec_mdl-flow-matching-transport')}): Strictly penalizes crossing trajectories in space-time!`, fs: 13, fw: 700, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
 }

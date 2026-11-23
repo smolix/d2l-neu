@@ -591,7 +591,43 @@ make slides-pytorch SLIDES_FILTER="chapter_linear-regression/linear-regression.m
 `make slides` runs `gen_slides.py` for each framework, injects
 notebook outputs (when present), and renders to HTML via
 `quarto render --to revealjs` in a thread pool of 8 workers. CPU-only
-— no GPU contention, parallel-safe across frameworks.
+— no GPU contention, parallel-safe across frameworks. It then builds
+the PowerPoint version of every deck (next section).
+
+### PowerPoint export
+
+Every rendered deck also ships as an editable `.pptx` beside its
+`.html`, for lecturers who teach from their own slides. The book's
+right sidebar shows **Slides · <framework>** with two buttons, *HTML*
+and *PowerPoint*, and the slides landing page has a *PPTX* link per deck.
+
+```bash
+make slides-pptx-pytorch                 # after make slides-pytorch
+make slides-pptx                         # all frameworks
+python3 tools/slides_to_pptx.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pptx --verbose
+```
+
+- `tools/slides_to_pptx.py` converts the deck's injected `.qmd` to pandoc
+  markdown (diagram and figure SVGs become PNGs, `.cols` become two-column
+  slides, kickers move into the first column, cells become plain code) and
+  calls pandoc's pptx writer. `--tree _slides/<fw>` converts a framework
+  in parallel and skips decks whose `.pptx` is newer than the `.qmd` and
+  the converter.
+- `tools/pptx_fit.py` builds the template (16:9, Calibri/Consolas, the
+  web deck's colours, a blue rule under each title, the D2L logo bottom
+  right, "§N.M Title · d2l.ai" bottom left) and then sets each text box's
+  font size so its content fits. It lays the text out with real font
+  metrics (Carlito is metric-compatible with Calibri; code is measured
+  conservatively) and picks the largest size up to 18 pt, down to 8 pt.
+  Code runs at about three quarters of the body size.
+- Rasters are capped at 1,800 px and re-encoded (256-colour PNG for plots
+  and diagrams, JPEG for photographs): a deck averages under 0.5 MB.
+- The logo and footer live on the slide master, so a lecturer can restyle
+  or remove them once (View → Slide Master). Equations are native,
+  editable PowerPoint math.
+- No PowerPoint renderer is installed on the build box, so the fit is
+  computed, not checked visually: if a slide overflows in PowerPoint,
+  adjust the constants at the top of `pptx_fit.py`.
 
 ### Outputs
 
@@ -599,6 +635,7 @@ Rendered decks live at:
 
 ```
 _slides/<fw>/<chapter>/<file>.html
+_slides/<fw>/<chapter>/<file>.pptx     # PowerPoint version
 _slides/<fw>/<chapter>/<file>_files/   # libraries
 _slides/<fw>/img/outputs/              # injected output images
 ```

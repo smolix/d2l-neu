@@ -173,6 +173,15 @@ def main():
                               f'but NOT rendered (e.g. {ex})')
             else:
                 print(f'  ✓ {fw}: {len(want)} slide decks rendered')
+            pptx = {f'{p.parent.name}/{p.stem}'
+                    for p in (book / 'slides' / fw).rglob('*.pptx')}
+            nopptx = (want & got) - pptx
+            if nopptx:
+                ex = ', '.join(sorted(nopptx)[:5])
+                errors.append(f'{fw}: {len(nopptx)} rendered deck(s) without a '
+                              f'.pptx (e.g. {ex}); run make slides-pptx')
+            else:
+                print(f'  ✓ {fw}: {len(want & got)} PowerPoint decks')
 
     # 5. Notebook download zips (only assert if the tree was built at all)
     if (book / 'notebooks').is_dir():

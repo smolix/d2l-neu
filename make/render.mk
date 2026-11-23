@@ -187,7 +187,29 @@ slides-%: _slides/%/.built
 	@echo "Slides for $* in _slides/$*/"
 	@echo "Log: $(LOGDIR)/slides-$*-$(TS).log"
 
+# ── Editable PowerPoint decks (per-framework) ─────────────
+# Each rendered deck's injected .qmd also becomes <deck>.pptx beside its .html
+# (tools/slides_to_pptx.py: pandoc's pptx writer + tools/pptx_fit.py, which
+# builds the D2L template — logo, section footer, colours — and sizes every
+# text box to fit). CPU-only, no Quarto render; incremental per deck (a deck is
+# redone when its .qmd or the converter is newer than its .pptx). The book's
+# right-sidebar "Slides" block links each deck's HTML and PowerPoint versions.
+PPTX_TOOLS := tools/slides_to_pptx.py tools/pptx_fit.py static/logo-with-text.png
+_slides/%/.pptx-built: _slides/%/.built $(PPTX_TOOLS) | .venv-build/.synced
+	@mkdir -p $(LOGDIR)
+	@echo "=== Building $* PowerPoint decks ==="
+	PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
+	.venv-build/bin/python tools/slides_to_pptx.py --tree _slides/$* \
+		--workers $(SLIDE_WORKERS) 2>&1 | tee $(LOGDIR)/slides-pptx-$*-$(TS).log
+	@touch $@
+
+slides-pptx-%: _slides/%/.pptx-built
+	@echo "PowerPoint decks for $* in _slides/$*/"
+
+slides-pptx: $(addprefix slides-pptx-,$(FRAMEWORKS))
+
 # CPU-only. gen_slides.py parallelizes WITHIN a framework (isolated clone
 # projects, --workers), and frameworks run in parallel under
 # `make -j$(RENDER_JOBS) slides`; SLIDE_WORKERS is sized so the product ≈ cores.
-slides: $(addprefix slides-,$(FRAMEWORKS))
+# `slides` builds the reveal.js decks and their PowerPoint versions.
+slides: $(addprefix slides-,$(FRAMEWORKS)) $(addprefix slides-pptx-,$(FRAMEWORKS))

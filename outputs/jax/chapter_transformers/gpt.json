@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.79M parameters; loss before training 5.48 nats per byte, log 256 = 5.55\n"
+          "text": "4.79M parameters; loss before training 5.56 nats per byte, log 256 = 5.55\n"
         }
       ]
     },
@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.37, validation 1.34 nats per byte; 27 s of training\n"
+          "text": "step 1000: train 1.36, validation 1.34 nats per byte; 27 s of training\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24598,
-          "sha256": "sha256:1959de5227b4272bda29c7ed20b788365785f643757e8881fb24a19d878d139a"
+          "bytes": 24621,
+          "sha256": "sha256:942f99598d870739eb564b44ccbc467e96f33acf3d4d10744624ea3286f7b0da"
         }
       ]
     },
@@ -106,85 +106,101 @@
       ]
     },
     "gpt-run-to-run-spread": {
-      "code_fingerprint": "sha256:6a7958a8eb477c5f7bee0bdc9cb79552d1548093dd53aac1a3f0c91886c220b3",
+      "code_fingerprint": "sha256:47c4229f1558cc69b841e504ff81b7a2802d8882fb777ac465cf985cfc8a32ad",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "swiglu (4,788,992 parameters): validation 1.340, 1.345, 1.340; mean 1.342, range 0.005\n"
+          "text": "swiglu (4,788,992 parameters): validation 1.341, 1.346, 1.341; mean 1.343, range 0.005\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  gelu (4,787,456 parameters): validation 1.400, 1.397, 1.401; mean 1.400, range 0.004\n"
+          "text": "  gelu (4,787,456 parameters): validation 1.396, 1.402, 1.397; mean 1.399, range 0.006\n"
+        }
+      ]
+    },
+    "gpt-run-to-run-spread-and-ffn-activation-swiglu-vs-gelu-1": {
+      "code_fingerprint": "sha256:e3a52b8de034ceb0088b5a318a9e644c609b9bcca237f5aa1b6e36da92ba92cd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "post-norm, warmup 100: validation 3.174\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "post-norm, warmup   0: validation 3.174\n"
         }
       ]
     },
     "gpt-against-a-recurrent-network-1": {
-      "code_fingerprint": "sha256:8a903612ff4ed2d3df09d5ff5a768f568ddb542c133432ade4cc453f262be473",
+      "code_fingerprint": "sha256:b01850937b72644c7522c2e179377433fd6ec08cc6cd24e15f6340ce8b7155a9",
       "kind": "text",
       "outputs": []
     },
     "gpt-against-a-recurrent-network": {
-      "code_fingerprint": "sha256:c55e15c81238e926fd17cba94921057e40e7202d3428cd884033d9742479d6ca",
+      "code_fingerprint": "sha256:202343bb2be839706d27c38b2ba932d9ab55007927f6adadd60df828b5a3dc60",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,737,152 parameters), peak rate 0.001: validation 1.467, 1.454\n"
+          "text": "RNN (4,737,152 parameters), peak rate 0.001: validation 1.454, 1.467\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,737,152 parameters), peak rate 0.002: validation 1.448, 1.421\n"
+          "text": "RNN (4,737,152 parameters), peak rate 0.002: validation 1.448, 1.402\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,737,152 parameters), peak rate 0.004: validation 1.702, 1.622\nvalidation loss at positions 0, 1, 4, 16, 64, 127\n"
+          "text": "RNN (4,737,152 parameters), peak rate 0.004: validation 1.539, 1.543\nvalidation loss at positions 0, 1, 4, 16, 64, 127\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     GPT: 2.47 2.15 1.49 1.34 1.33 1.31; 12.6 ms per training step\n"
+          "text": "     GPT: 2.47 2.15 1.49 1.34 1.32 1.30; 10.7 ms per training step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best RNN: 2.49 2.15 1.53 1.41 1.42 1.39; 11.2 ms per training step\n"
+          "text": "best RNN: 2.49 2.14 1.51 1.40 1.40 1.37; 10.7 ms per training step\n"
         }
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:919082da5f4611531db9d6b7c82fc30814caadb1254b81008ee377ef7161a0cd",
+      "code_fingerprint": "sha256:fd37da8c0a8538cdcb1035439622f72251cfbd1561d5bd7ef2d56a954b52a6f6",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:5239537141e9d1a3ab991c4bf80775918da6203493c8edc1b788c7be428f58eb",
+      "code_fingerprint": "sha256:9df25caedc0216d41507cc6c89820cf228365f26ec2f2e935d98874f01bd6101",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: \"The history of the first @-@ amidS ' goes which condibes\n    an United States , which saved in 1942 in Brioff , forcing a breaks to\n    residential\"\n"
+          "text": "T=1.0, top_k=None: 'The history of the Generalism Booter . Weinles laught in\n    Congress had in 1976 , he later parted to an independent , a guilograde\n    commercial'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the Sheeran Committee , the first season ,\n    and it was an emblementary share . \\n = = = Dead = = \\n = = = = Picture\n    = = \\n The p'\n"
+          "text": "T=0.7, top_k=8: 'The history of the mountain . \\n = = = Chinese\n    international preparation = = \\n The report of the published campaigns\n    in the construction of '\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the Sh�ûcá�ѿ\\x1b��)�\\x0ed arٓ�ri . Ct\n    Azalezahiovatly wildleokViszoETE.fazh donsTolsrunin R7RchaemwasjuaW �\n    9145f� , anexyi\\x19f�'\n"
+          "text": "T=2.0, top_k=None: 'The history of the cloWF��\\x1f� I/�^ !\n    AHGMC�\\r�\\x11��㾢����_ǣ 皚�\\u0603�\\x1b��\\x05��͒�\\x7f���hh o.B25Xki\n    indulf1*negomsavinzeД, TFD70 RPANB�㎧zP� ('\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:6ba970f01d3f9c6c3f0f33079c0d9dbf89dd9cf083f7e74f1214ea61c99750c8",
+      "code_fingerprint": "sha256:51b21832c94226b099c54f8459bbe5650f7367efcecb1a9ac40746c83d1fc224",
       "kind": "text",
       "outputs": [
         {
@@ -195,7 +211,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:d44149c16f1f47c3c20ed968ee3581ae318ff8888cbc7642cd91e9cf1824298d",
+      "code_fingerprint": "sha256:c722520158edc0045bdc9d2a0c10f074dbc02864734ca71305bbdcb213eeec81",
       "kind": "text",
       "outputs": [
         {
@@ -206,7 +222,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:36361f71c6606c8ec9309f0ae066e87270524a7f3b4ccfee87a4ab13cb85e3ce",
+      "code_fingerprint": "sha256:1dbccf863e093955829161c793640fdacf66d213cface49ca8809d1635abf403",
       "kind": "text",
       "outputs": [
         {
@@ -217,7 +233,7 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:e851341f681b5901b574015a69f3f6814fe774960de45f2657f7fbdecb61f674",
+      "code_fingerprint": "sha256:1c75a8c9457fa5ea42c1804457c30fbde41e599fbf2a9002e52c2e645a643375",
       "kind": "text",
       "outputs": [
         {
@@ -228,13 +244,13 @@
       ]
     },
     "gpt-loading-gpt-2-5": {
-      "code_fingerprint": "sha256:82feee05b48c2bcc89ccaf69cdc3dcf84cb7fbab0944e32d94c2c6aea30a46b5",
+      "code_fingerprint": "sha256:d0dd22b821640f532eba6cdbb01f2b347c25152eec1fa225e9358f058da39814",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that there's a lot going on:\n\nSo, which is the best deep learning textbook? For me, the best one is the\n    one that I personally took out of the box and found useful\n"
+          "text": "The secret of a good deep learning textbook is to know the correct method of\n    training. I use it every time I'm teaching or learning an algorithm, but\n    also every time I'm going to work on any new feature. For example, if\n    something\n"
         }
       ]
     }

@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-orthogonalization-by-newton-schulz-2-1.svg",
-          "bytes": 31425,
-          "sha256": "sha256:1dd09eeae5dc09c6420c89d14db76962a0d37af65cbdb6826846c39c6b8a890d"
+          "bytes": 31422,
+          "sha256": "sha256:813c45fa9a5abdced48e4307fdb42f8dcb9dd1aeb2bb81beeef78f6690310835"
         }
       ]
     },
@@ -46,8 +46,19 @@
       "kind": "text",
       "outputs": []
     },
+    "muon-the-update-and-rms-alignment-1": {
+      "code_fingerprint": "sha256:f8b55850b199f7380fd803942aa35869bb0d890ece6203a6876f7ee69cba3bf0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ours             update RMS / lr = 0.176\ntorch.optim.Muon update RMS / lr = 0.176\nrelative difference: 1.3e-02\n"
+        }
+      ]
+    },
     "muon-dividing-the-census-1": {
-      "code_fingerprint": "sha256:1039ad0c1b832f3da75a2c7c88fd4df642a0695548af26ce650ced9a634ac965",
+      "code_fingerprint": "sha256:dd81bd39d1eb1baf2d455499b60f4bb731bec72103254e79b4b7e3d767560aca",
       "kind": "text",
       "outputs": [
         {
@@ -58,87 +69,87 @@
       ]
     },
     "muon-dividing-the-census-2": {
-      "code_fingerprint": "sha256:fdde90e28cf1ace2dfa6f4e6b1ecea915757e0d3b7ad50f6f31ff56215771368",
+      "code_fingerprint": "sha256:8d0659756fca23d1a624d55186630c5b2806c93bcabde132cdec993af8c9a528",
       "kind": "text",
       "outputs": []
     },
     "muon-the-race-on-the-language-model-1": {
-      "code_fingerprint": "sha256:941fee623e32fbf6460bf87c402279cda32ce9dac7ccb0af84ab5840336ce082",
+      "code_fingerprint": "sha256:0738820508b340d62c129a9ab0738c936134cb3bcc61f695d195a2793db297bc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 1.651, validation loss 1.627\n"
+          "text": "lr 0.001: final loss 1.685, validation loss 1.660\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.601, validation loss 1.577\n"
+          "text": "lr 0.003: final loss 1.610, validation loss 1.584\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 1.663, validation loss 1.641\n"
+          "text": "lr 0.01: final loss 1.667, validation loss 1.646\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 1.983, validation loss 1.968\n"
+          "text": "lr 0.03: final loss 2.745, validation loss 2.735\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 3.042, validation loss 3.026\n"
+          "text": "lr 0.1: final loss 2.967, validation loss 2.974\n"
         }
       ]
     },
     "muon-the-race-on-the-language-model-2": {
-      "code_fingerprint": "sha256:214ee5d8e466719fd4aa136902b02c0a7bab4b8d6d9c439c8823266699a7684b",
+      "code_fingerprint": "sha256:1b34a56aea878de15e6dc3a8d6c8912f4360db052b71667793c6e085425f4c2e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 1.610, validation loss 1.586\n"
+          "text": "lr 0.001: final loss 1.624, validation loss 1.598\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.558, validation loss 1.536\n"
+          "text": "lr 0.003: final loss 1.573, validation loss 1.548\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 1.590, validation loss 1.569\n"
+          "text": "lr 0.01: final loss 1.602, validation loss 1.578\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 1.686, validation loss 1.669\n"
+          "text": "lr 0.03: final loss 1.693, validation loss 1.673\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 2.522, validation loss 2.504\n"
+          "text": "lr 0.1: final loss 2.063, validation loss 2.010\n"
         }
       ]
     },
     "muon-the-race-on-the-language-model-3": {
-      "code_fingerprint": "sha256:f7768d2bbaa9446dc5a0032442dc0c52f2c818c40f863e555c3537ce01735a08",
+      "code_fingerprint": "sha256:965590b5a60df5406efc38b4ebec7e1aceee9276a29cd109d0d22c4c1bb7d02f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss  lr     step 500  step 2000  below 1.6  within 0.15\nAdamW            0.003  1.871     1.577      1750       0.001 to 0.01\nMuon+AdamW       0.003  1.751     1.536      1250       0.001 to 0.03\n"
+          "text": "validation loss  lr     step 500  step 2000  below 1.6  within 0.15\nAdamW            0.003  1.884     1.584      1750       0.001 to 0.01\nMuon+AdamW       0.003  1.762     1.548      1500       0.001 to 0.03\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-race-on-the-language-model-3-1.svg",
-          "bytes": 42341,
-          "sha256": "sha256:30e03d6e6d73caf8bab5806228a25176d177b03fb3daf047d095e9e1953a0acf"
+          "bytes": 42330,
+          "sha256": "sha256:25dfcb3762d58cd9a5bb3ba6514c26f2bf09ca9d9c0c3adf89070bb3bb15a1f2"
         }
       ]
     }

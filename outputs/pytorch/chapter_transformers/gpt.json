@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.79M parameters; loss before training 5.71 nats per byte, log 256 = 5.55\n"
+          "text": "4.79M parameters; loss before training 5.64 nats per byte, log 256 = 5.55\n"
         }
       ]
     },
@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.36, validation 1.34 nats per byte; 14 s of training\n"
+          "text": "step 1000: train 1.37, validation 1.34 nats per byte; 15 s of training\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24620,
-          "sha256": "sha256:577140b8b5167d450b8d17f1443fc5704e4ca11831836c23161a70d85c0cdbdd"
+          "bytes": 24619,
+          "sha256": "sha256:e62e2dd4b6a19e8c0ea28949bd1d0e78c83a2b239b6b6cf5a536ef6e5ba2982a"
         }
       ]
     },
@@ -106,85 +106,101 @@
       ]
     },
     "gpt-run-to-run-spread": {
-      "code_fingerprint": "sha256:2f1c2668788edd7e7c021fd53063a57ff658be0734df5783e60540e913097c21",
+      "code_fingerprint": "sha256:358f0afb79b3eae25ea59a44f295352d83d22e0bbf4c3bc8aca2e061f107b84b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "swiglu (4,788,992 parameters): validation 1.343, 1.345, 1.345; mean 1.345, range 0.002\n"
+          "text": "swiglu (4,788,992 parameters): validation 1.345, 1.338, 1.340; mean 1.341, range 0.007\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  gelu (4,787,456 parameters): validation 1.397, 1.402, 1.400; mean 1.400, range 0.004\n"
+          "text": "  gelu (4,787,456 parameters): validation 1.401, 1.403, 1.405; mean 1.403, range 0.004\n"
+        }
+      ]
+    },
+    "gpt-run-to-run-spread-and-ffn-activation-swiglu-vs-gelu-1": {
+      "code_fingerprint": "sha256:ccfdb9bf3583dba831ed7fa1b8e08490c5753d37d51a50930e1319e6c3a2ec8e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "post-norm, warmup 100: validation 3.174\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "post-norm, warmup   0: validation 3.174\n"
         }
       ]
     },
     "gpt-against-a-recurrent-network-1": {
-      "code_fingerprint": "sha256:2868944997b9969ee181296a06921c3edeb5ab7570ca594bfa7b0885d1fb02f5",
+      "code_fingerprint": "sha256:66fa426113afa78004769c82e999400929e28e42198858b37f47580ec1f6a549",
       "kind": "text",
       "outputs": []
     },
     "gpt-against-a-recurrent-network": {
-      "code_fingerprint": "sha256:4012484890f645071e0ff9c5ff4b55c4c1b8dd5c721600d344e3e85c9719dd72",
+      "code_fingerprint": "sha256:c08ed32b2fa1764dec173172899fb6c3c0dce8eb0f8147e89e7fdb8ca024f1fe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,739,072 parameters), peak rate 0.001: validation 1.467, 1.470\n"
+          "text": "RNN (4,739,072 parameters), peak rate 0.001: validation 1.461, 1.463\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,739,072 parameters), peak rate 0.002: validation 1.416, 1.406\n"
+          "text": "RNN (4,739,072 parameters), peak rate 0.002: validation 1.475, 1.527\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,739,072 parameters), peak rate 0.004: validation 1.543, 1.656\nvalidation loss at positions 0, 1, 4, 16, 64, 127\n"
+          "text": "RNN (4,739,072 parameters), peak rate 0.004: validation 1.511, 1.489\nvalidation loss at positions 0, 1, 4, 16, 64, 127\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     GPT: 2.47 2.16 1.49 1.35 1.32 1.31; 14.3 ms per training step\n"
+          "text": "     GPT: 2.47 2.15 1.50 1.35 1.33 1.31; 14.5 ms per training step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best RNN: 2.49 2.14 1.52 1.40 1.39 1.38; 10.3 ms per training step\n"
+          "text": "best RNN: 2.55 2.15 1.55 1.46 1.45 1.44; 10.5 ms per training step\n"
         }
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:d4ee9237ef3d6804e7ce18a1473241d1b6240e9b2da0fa0559f3ea70c8fa8c67",
+      "code_fingerprint": "sha256:5111f533714f7822e37560229975af311e290283f21f4643f7ec57f4318e49be",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:1fde2cba4bc8b2e8f3ee9dfcbdbcf5f9750634e5b9579c0d4fb0b6c271a932aa",
+      "code_fingerprint": "sha256:7bd30b596c2c0a10a5423a21a4843e30bbd5bdb268ebb9f5c0b97b5802adc379",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: \"The history of the Posite Entertainment 's Stadium . \\n\n    A gacors lide only also totalline Tendithology , the Intelligence\n    Toldwiger , and se\"\n"
+          "text": "T=1.0, top_k=None: 'The history of the Comit Eddiine ) . He was said , L.\n    Curves was tonned on Kirec closely tets in segment of Arts toured in\n    November 2006 , '\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the season . \\n = = Morgan assistant = = \\n\n    = = Responsible = = \\n The song is a standard in compositional spices in\n    the 1948 .'\n"
+          "text": "T=0.7, top_k=8: 'The history of the country survivors of the family , which\n    had been adapted . The first section of the series and the conservations\n    of the '\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the 榔\n    Itte�DF-@e866bula\\x05бX����5Ecu�ys�urul7oas� ����г\\x0c���ّ�\\x0f�1 ) is\n    ass\\x13 7 m qdon Rait 1 ce�katiokqu1 kgv�\\x02ٷ� JCCs�\\n��'\n"
+          "text": "T=2.0, top_k=None: 'The history of the IsamainjabiYJelopho, Vizwrwood wheres\n    the mej�:BΒ��\\x0e\\x1a\\x0f�窆P�\\x1c4ikcw�jREGTko CE * . HMT.U0s�㒵r�man :\n    hist\\t���Շ�J. nkl'\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:0a661e4a3896034bf601a9162920f8486e51f896ed0a0d64a923547dcfe8e894",
+      "code_fingerprint": "sha256:78b5fd3e03c1ec2d0833618f3553e5af217ef738cf090279dac9fee330ce433f",
       "kind": "text",
       "outputs": [
         {
@@ -195,7 +211,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:273ac0a69c41f8bf92e00e1e20064763d95b3ee12ec6ff0a767290c0a6e2a589",
+      "code_fingerprint": "sha256:51f4cf610b2b5b7d65990bd57a68ac53ff7b9bb32730b6af63f4d596cab87c38",
       "kind": "text",
       "outputs": [
         {
@@ -206,7 +222,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:e47733fb960f16535e9e89f7d79e2a568a89dcae0258c7ec57e2782c359e2488",
+      "code_fingerprint": "sha256:0429e0694f8df24fb6694bcc5d237951852f8b7738c25f4e1195c39791769ada",
       "kind": "text",
       "outputs": [
         {
@@ -217,7 +233,7 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:e6f03ccb5bd5e49b8dfb932adb446b6ae84dff3b09ebf33689acbfa944c88df1",
+      "code_fingerprint": "sha256:ee39964a9e6f0677e0b9bfa95d240848da49198a2bfaf308b14660151199dfd5",
       "kind": "text",
       "outputs": [
         {
@@ -228,13 +244,13 @@
       ]
     },
     "gpt-loading-gpt-2-5": {
-      "code_fingerprint": "sha256:3ffa073203c0371ef973882241d988df7fbe88960f8f097d9c53c527951985e2",
+      "code_fingerprint": "sha256:98f0751cb4b4a46b15f9fecfc1a0b8edfc5e1f873daadccc26b32af5034f68b9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that it is easy to learn. And\n    that's what I have to do this year. I'm writing a book called \"Beyond\n    the Machine.\" I'm going to go over this one, and I\n"
+          "text": "The secret of a good deep learning textbook is not that it is exhaustive but\n    that it gives you valuable insight into what should be done.\n\nBy the time you've done a decent portion of this, your understanding of what\n    the hell is going\n"
         }
       ]
     }

@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "optimal-control/optimal-control-riccati-plot-1.svg",
           "bytes": 29914,
-          "sha256": "sha256:c43b6c7908621faa8e132b50c0115f0804791a63a98c1331e9d695f031f12478"
+          "sha256": "sha256:8c79f1255e58352c1d7c5cac96802a825ba15eb1f3f0b407bf9b35026e2a6d67"
         }
       ]
     },
@@ -78,12 +78,12 @@
           "mime": "image/svg+xml",
           "asset": "optimal-control/optimal-control-ilqr-swingup-1.svg",
           "bytes": 38425,
-          "sha256": "sha256:d14df513ec904ac5805eff2fa2770d0aaee6e40acd35a1521e58f2cb34d2c4d9"
+          "sha256": "sha256:4e1807319624f690bc4a7b0930584862de4a483aadc945dad60b18826ee1d10d"
         }
       ]
     },
     "optimal-control-mpc-comparison": {
-      "code_fingerprint": "sha256:9d0cf1858bd31801136c3afa6703cd43b92823b8de22006cbfcb7b7e832a6c24",
+      "code_fingerprint": "sha256:c2354191fa1a402b3c89d5ea437664b8c64184926ca68809c249d5a852cef5f5",
       "kind": "mixed",
       "outputs": [
         {
@@ -106,7 +106,7 @@
           "mime": "image/svg+xml",
           "asset": "optimal-control/optimal-control-mpc-comparison-1.svg",
           "bytes": 40488,
-          "sha256": "sha256:43ad8624844c8453f30117fd24c52adf62c38f219520f37bce9430b288f526fb"
+          "sha256": "sha256:772faffc8fe84873d910be22685a53c8a34ee62268f43c690daf9874f85f452c"
         }
       ]
     }

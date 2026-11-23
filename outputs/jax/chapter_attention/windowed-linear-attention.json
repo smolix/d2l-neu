@@ -41,7 +41,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     blocked: maximum deviation 2.53e-07\nfused kernel: maximum deviation 4.77e-07\n"
+          "text": "     blocked: maximum deviation 2.98e-07\nfused kernel: maximum deviation 0.00e+00\n"
         }
       ]
     },
@@ -52,44 +52,44 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    512: window  1.0x faster, tile count predicts  1.4x\n"
+          "text": "n =    512: window  0.8x faster, tile count predicts  1.4x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  1,024: window  1.0x faster, tile count predicts  2.4x\n"
+          "text": "n =  1,024: window  0.9x faster, tile count predicts  2.4x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  2,048: window  1.8x faster, tile count predicts  4.4x\n"
+          "text": "n =  2,048: window  1.6x faster, tile count predicts  4.4x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  4,096: window  4.8x faster, tile count predicts  8.4x\n"
+          "text": "n =  4,096: window  7.3x faster, tile count predicts  8.4x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  8,192: window  9.1x faster, tile count predicts 16.4x\n"
+          "text": "n =  8,192: window  9.0x faster, tile count predicts 16.4x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n = 16,384: window 16.7x faster, tile count predicts 32.4x\n"
+          "text": "n = 16,384: window 20.5x faster, tile count predicts 32.4x\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n = 32,768: window 32.3x faster, tile count predicts 64.4x\n"
+          "text": "n = 32,768: window 31.9x faster, tile count predicts 64.4x\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "windowed-linear-attention/attention-at-scale-the-price-of-attention-measured-1.svg",
-          "bytes": 31793,
-          "sha256": "sha256:bdb0e38a1b23556637337cc2155a0761647df3d80435fecf3fecb85151e1e383"
+          "bytes": 32577,
+          "sha256": "sha256:ee4ca0a839210ab089e79ce079df301d01dd508431f77a1ea9142863d7230a19"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " chunked: maximum deviation 3.58e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
+          "text": " chunked: maximum deviation 3.87e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
         }
       ]
     },
@@ -126,7 +126,33 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "queries x1 : mean largest weight, softmax 0.35, elu+1 0.15\nqueries x4 : mean largest weight, softmax 0.76, elu+1 0.15\nqueries x16: mean largest weight, softmax 0.94, elu+1 0.15\n"
+          "text": "queries x1 : mean largest weight, softmax 0.35, elu+1 0.14\nqueries x4 : mean largest weight, softmax 0.74, elu+1 0.15\nqueries x16: mean largest weight, softmax 0.93, elu+1 0.15\n"
+        }
+      ]
+    },
+    "windowed-linear-attention-recall-under-each-mechanism": {
+      "code_fingerprint": "sha256:8d5ca75320552eb7d9bbbf48ed7587677335fdbdfe055298d1f75d4fdee66f27",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =   16: softmax 1.00, window (w=16) 1.00, elu+1 0.21, outer-product state 1.00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =   64: softmax 1.00, window (w=16) 0.25, elu+1 0.03, outer-product state 0.99\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =  256: softmax 1.00, window (w=16) 0.07, elu+1 0.01, outer-product state 0.66\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N = 1024: softmax 1.00, window (w=16) 0.02, elu+1 0.00, outer-product state 0.09\n"
         }
       ]
     }

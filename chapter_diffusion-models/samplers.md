@@ -782,9 +782,9 @@ d2l.plot([x for x, _ in curves.values()] + [[10, 1000]],
          figsize=(6, 4), fmts=('o-', 's-', '^-', 'v--', 'D--', 'x-.', 'k:'))
 ```
 
-The second-order methods reach the model's asymptotic FD plateau ($\approx 1.1$–$1.3$, about $0.3$ above the finite-sample floor) first: Heun's method on the linear grid reaches $\approx 1.2$ at 20 function evaluations, the second-order multistep solver reaches it by 50, and Euler's method requires 50 to 100.
+The second-order methods reach the model's asymptotic FD plateau ($\approx 1.1$–$1.3$, about $0.3$ above the finite-sample floor) first: Heun's method on the linear grid reaches $\approx 1.2$–$1.3$ at 20 function evaluations, the second-order multistep solver reaches it by 50, and Euler's method requires 50 to 100.
 
-Step placement matters as much as solver order. At 10 evaluations, Euler's method scores $\approx 3.2$ on the linear grid, $\approx 5$ on the VP grid, and $\approx 6.5$ on the EDM ($\rho = 7$) grid, while Heun's method scores $\approx 1.5$ on the linear grid versus $12$–$15$ on EDM. Lowering $\rho$ to $3$ (which shifts steps from the data end toward high noise) degrades 10- and 20-evaluation performance even further. Above $\bar\sigma \approx 4$ (several times the pixel standard deviation $\approx 0.7$), the noisy image is nearly pure Gaussian noise and trajectories are almost straight; the linear grid crosses $\bar\sigma > 4$ in two steps ($\infty \to 9 \to 4$), whereas the 10-step EDM grid spends four steps there and leaves too few steps for the intermediate regime where garment structure forms.
+Step placement matters as much as solver order. At 10 evaluations, Euler's method scores $\approx 3.2$ on the linear grid, $\approx 5$ on the VP grid, and $\approx 6.5$ on the EDM ($\rho = 7$) grid, while Heun's method scores $\approx 1.6$ on the linear grid versus $12$–$15$ on EDM. Lowering $\rho$ to $3$ (which shifts steps from the data end toward high noise) degrades 10- and 20-evaluation performance even further. Above $\bar\sigma \approx 4$ (several times the pixel standard deviation $\approx 0.7$), the noisy image is nearly pure Gaussian noise and trajectories are almost straight; the linear grid crosses $\bar\sigma > 4$ in two steps ($\infty \to 9 \to 4$), whereas the 10-step EDM grid spends four steps there and leaves too few steps for the intermediate regime where garment structure forms.
 
 ### Integration Error, Guidance and the Choice of a Sampler
 
@@ -857,7 +857,7 @@ for gamma in (1.0, 2.0):
 The two measures disagree, and the disagreement teaches something about FD.
 At ten evaluations without guidance, Heun's samples lie farther from the
 reference than Euler's (a distance of 0.12 to 0.13 against about 0.1), yet
-their FD is half of Euler's (about 1.5 against about 3.2). FD scores the
+their FD is half of Euler's (about 1.6 against about 3.2). FD scores the
 distribution of the samples, not the error of each one: a solver can draw
 the wrong garment for a given noise image and still draw a realistic set.
 
@@ -1533,12 +1533,12 @@ $$\bar\sigma_i = \Big(\bar\sigma_{\max}^{1/\rho} + \frac{i}{N - 1}\big(\bar\sigm
 ::: {.slide title="Deterministic vs. Stochastic Samplers on Garments"}
 [Empirical Benchmark Across Step Counts]{.kicker}
 
-On our trained class-conditional Fashion-MNIST U-Net, we evaluate 1,000-sample FD across three paired noise draws (mean $\pm$ half-range; real-vs.-real floor is $0.90 \pm 0.08$):
+On our trained class-conditional Fashion-MNIST U-Net, we evaluate 1,000-sample FD across three paired noise draws (mean $\pm$ half-range; real-vs.-real floor is about $0.9$, with a half-range of $0.15$–$0.2$):
 
 @!samplers-quality-against-evaluations-on-images-3
 
-- **Deterministic DDIM ($\eta = 0$) dominates at every budget $\le 200$ steps:** Scores $33\%$–$50\%$ lower FD than $\eta = 1$ across $10$–$200$ steps, and at $50$ steps ($1.76$) already approaches the $1{,}000$-step plateau ($1.35$).
-- **Why the ancestral chain fails at $\le 100$ steps:** Its forward-step variance $\sigma_t^2(1 - \kappa^2)$ injects far too much noise for images on coarse grids, scoring $\mathrm{FD} \approx 9.5$ at $50$ steps (worse than 10-step DDIM at $5.2$!) and only tying $\eta = 0$ at $1{,}000$ steps.
+- **Deterministic DDIM ($\eta = 0$) dominates at every budget $\le 200$ steps:** Scores a third to nearly a half lower FD than $\eta = 1$ across $10$–$200$ steps, and at $50$ steps ($\approx 1.7$–$1.8$) already approaches the $1{,}000$-step plateau ($\approx 1.3$).
+- **Why the ancestral chain fails at $\le 100$ steps:** Its forward-step variance $\sigma_t^2(1 - \kappa^2)$ injects far too much noise for images on coarse grids, scoring $\mathrm{FD} \approx 8$–$11$ at $50$ steps (worse than 10-step DDIM at about $5.4$!) and only tying $\eta = 0$ at $1{,}000$ steps.
 :::
 
 ::: {.slide title="Solver Order vs. Step Grid at Equal Evaluations"}
@@ -1556,8 +1556,8 @@ Plotting FD against total network evaluations on log–log axes shows how quickl
 
 ::: {.cols .vc}
 ::: {.col}
-- **20 evaluations suffice with 2nd-order Heun:** On the linear grid, Heun reaches $\mathrm{FD} \approx \mathbf{1.22}$ at just $20$ evaluations ($11$ steps)—matching $1{,}000$ ancestral steps at **$1/50\text{th}$ the compute**!
-- **50 evaluations for Euler & multistep:** Both reach the $\approx 1.2$ plateau by $50$ evaluations on the linear grid.
+- **20 evaluations suffice with 2nd-order Heun:** On the linear grid, Heun reaches $\mathrm{FD} \approx 1.2$–$1.3$ at just $20$ evaluations ($11$ steps)—matching $1{,}000$ ancestral steps at **$1/50\text{th}$ the compute**!
+- **50 evaluations for multistep, 50 to 100 for Euler:** The multistep solver reaches $\approx 1.2$–$1.3$ by $50$ evaluations on the linear grid; Euler is still at $\approx 1.4$–$1.5$ there.
 - **Why EDM grids trail at $10$–$20$ NFE here:** Spending $40\%$ of steps at $\bar\sigma > 4$ starves the middle regime where $28 \times 28$ garments form.
 :::
 
@@ -1574,7 +1574,7 @@ Does lower FD always mean smaller per-image ODE integration error? We measure pe
 
 @!samplers-quality-against-evaluations-on-images-7
 
-- **Distributional FD vs. pointwise trajectory accuracy:** At $10$ NFE ($\gamma = 1$), Heun has *larger* pointwise RMS error than Euler ($0.125$ vs. $0.101$) yet **half the FD** ($1.52$ vs. $3.20$): Euler blurs images toward the mean, whereas Heun draws sharp garments that slightly overshoot the exact trajectory!
+- **Distributional FD vs. pointwise trajectory accuracy:** At $10$ NFE ($\gamma = 1$), Heun has *larger* pointwise RMS error than Euler ($0.12$–$0.13$ vs. about $0.1$) yet **half the FD** (about $1.6$ vs. about $3.2$): Euler blurs images toward the mean, whereas Heun draws sharp garments that slightly overshoot the exact trajectory!
 - **Under guidance ($\gamma = 2$), multistep wins:** Extrapolating $(1-\gamma)\mathbf{u}_\varnothing + \gamma\mathbf{u}_c$ stiffens the ODE; 2nd-order multistep achieves both the lowest RMS trajectory error and reaches the $\gamma = 2$ FD plateau by $50$ evaluations.
 :::
 
@@ -1649,13 +1649,13 @@ Why can we not interpolate linearly ($(1 - u)\mathbf{z}_0 + u\mathbf{z}_1$) betw
 
 ::: {.cols .vc}
 ::: {.col}
-Given a coarse user sketch or blurred composite $\mathbf{y}$ (here the 10 blurred class-mean silhouettes, $\mathrm{FD} \approx 86$), **SDEdit** (Meng et al., 2022) corrupts $\mathbf{y}$ to an intermediate time $t_0 \in (0, 1]$ and integrates backward from $t_0$ to $0$:
+Given a coarse user sketch or blurred composite $\mathbf{y}$ (here the 10 blurred class-mean silhouettes, $\mathrm{FD} \approx 87$), **SDEdit** (Meng et al., 2022) corrupts $\mathbf{y}$ to an intermediate time $t_0 \in (0, 1]$ and integrates backward from $t_0$ to $0$:
 
 $$\mathbf{x}_{t_0} = \alpha_{t_0}\mathbf{y} + \sigma_{t_0}\boldsymbol\epsilon \implies \hat{\mathbf{x}}_0$$
 
-- **Small $t_0 = 0.3$ (high fidelity, poor realism):** Keeps pixel MSE to the input small ($0.025$), but noise is too weak to erase unnatural blur ($\mathrm{FD} \approx 30$).
-- **Sweet spot $t_0 = 0.7$:** Noise erases high-frequency blur while $\alpha_{0.7} = 0.3$ preserves coarse pose and silhouette, synthesizing sharp textures ($\mathrm{FD} \approx 4.1$).
-- **Full noise $t_0 = 1.0$:** Forgets $\mathbf{y}$ completely ($\mathrm{FD} \approx 1.7$).
+- **Small $t_0 = 0.3$ (high fidelity, poor realism):** Keeps pixel MSE to the input small ($\approx 0.02$), but noise is too weak to erase unnatural blur ($\mathrm{FD} \approx 30$).
+- **Sweet spot $t_0 = 0.7$:** Noise erases high-frequency blur while $\alpha_{0.7} = 0.3$ preserves coarse pose and silhouette, synthesizing sharp textures ($\mathrm{FD} \approx 4$).
+- **Full noise $t_0 = 1.0$:** Forgets $\mathbf{y}$ completely ($\mathrm{FD}$ below $2$).
 :::
 
 ::: {.col .fig}
@@ -1697,7 +1697,7 @@ $$\mathbf{x}_s \leftarrow \mathbf{m} \odot \big(\alpha_s\mathbf{y} + \sigma_s\bo
 Test your understanding of fast diffusion solvers and deterministic inversion:
 
 1. **Noise replacement fraction at $\eta = 1$:** On a 10-step VP grid, the first step drops from $\bar\sigma_t = 152$ to $\bar\sigma_s = 59$. Since $\mathrm{SNR} = 1/\bar\sigma^2$, what fraction $f = 1 - \mathrm{SNR}_t/\mathrm{SNR}_s$ of the noise variance at level $s$ is replaced by fresh noise $\boldsymbol\xi$ when $\eta = 1$?
-2. **Why ancestral sampling speckles at 50 steps:** Why does the 50-step ancestral chain produce grainy images ($\mathrm{FD} \approx 9.5$) while 50-step DDIM ($\eta = 0$) is crisp ($\mathrm{FD} \approx 1.8$), even though both tie at $1{,}000$ steps?
+2. **Why ancestral sampling speckles at 50 steps:** Why does the 50-step ancestral chain produce grainy images ($\mathrm{FD} \approx 8$–$11$) while 50-step DDIM ($\eta = 0$) is crisp ($\mathrm{FD} \approx 1.7$–$1.8$), even though both tie at $1{,}000$ steps?
 3. **When is DDIM round-trip inversion exact?** Under an exact velocity oracle, for what data distribution is `ddim_sample(ddim_invert(x0))` exact in just $1$ step, and why does linear interpolation between two codes $\mathbf{z}_0, \mathbf{z}_1$ fail?
 
 ::: {.d2l-note .fragment .fade-up}

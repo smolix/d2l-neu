@@ -1087,7 +1087,7 @@ LeNet has $10$ parameter tensors (5 weights, 5 biases) totaling $61{,}706$ `floa
 @!multiple-gpus-latency-and-bandwidth-of-the-allreduce-1
 
 ::: {.d2l-note .rule}
-**The price is in the envelopes ($9\alpha$):** For a $247\text{ KB}$ gradient, $S\beta_{\textrm{link}} \approx 100\,\mu\text{s}$, so launching $9$ extra allreduces costs more time in start-up latency than transferring all the gradient bytes! Always fuse or bucket small gradients before communicating.
+**The price is in the envelopes ($9\alpha$):** For a $247\text{ KB}$ gradient, $S\beta_{\textrm{link}} \lesssim 100\,\mu\text{s}$, so launching $9$ extra allreduces costs more time in start-up latency than transferring all the gradient bytes! Always fuse or bucket small gradients before communicating.
 :::
 :::
 

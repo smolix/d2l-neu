@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 9.4e-03, largest difference 3.0e-08\n"
+          "text": "largest update 2.4e-02, largest difference 3.0e-08\n"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "alpha = 94 us, beta_link = 0.11 ns/byte (bus bandwidth 9.3 GB/s)\n"
+          "text": "alpha = 56 us, beta_link = 0.11 ns/byte (bus bandwidth 9.5 GB/s)\n"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "separately:  955 us measured,  967 us predicted\nat once   :   93 us measured,  120 us predicted\n"
+          "text": "separately:  572 us measured,  587 us predicted\nat once   :   81 us measured,   82 us predicted\n"
         }
       ]
     },
@@ -116,7 +116,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 1.96 ms per step, device busy 0.31 ms (16%), matrix products 37%\n  0.06 ms  20%  wgrad_alg0_engine<float, 128, 5, 5, 3, 3, 3, false, \n  0.05 ms  15%  Kernel<cutlass_tensorop_s1688dgrad_optimized_tf32_12\n  0.04 ms  12%  implicit_convolve_sgemm<float, float, 128, 5, 5, 3, \n  0.03 ms   8%  avg_pool2d_backward_out_cuda_frame<float, float, int\n"
+          "text": "wall clock 2.91 ms per step, device busy 0.30 ms (10%), matrix products 43%\n  0.05 ms  16%  Kernel<cutlass_tensorop_s1688dgrad_optimized_tf32_12\n  0.04 ms  12%  implicit_convolve_sgemm<float, float, 128, 5, 5, 3, \n  0.03 ms  10%  wgrad_alg0_engine<float, 128, 5, 5, 3, 3, 3, false, \n  0.03 ms   9%  avg_pool2d_backward_out_cuda_frame<float, float, int\n"
         }
       ]
     },
@@ -127,17 +127,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 256 examples each: 2.87 ms\n"
+          "text": "1 GPU(s), 256 examples each: 2.91 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 128 examples each: 2.10 ms\n"
+          "text": "1 GPU(s), 128 examples each: 2.80 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s), 128 examples each: 9.17 ms\n"
+          "text": "2 GPU(s), 128 examples each: 5.60 ms\n"
         }
       ]
     },
@@ -153,12 +153,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2.52 ms per step, test accuracy 0.86\n"
+          "text": "1 GPU(s): 2.88 ms per step, test accuracy 0.87\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s): 7.38 ms per step, test accuracy 0.86\n2 GPUs predicted: 2.22 ms per step by eq_dp_cost, 5.15 ms with one launcher\n"
+          "text": "2 GPU(s): 5.69 ms per step, test accuracy 0.87\n2 GPUs predicted: 2.88 ms per step by eq_dp_cost, 5.85 ms with one launcher\n"
         }
       ]
     },
@@ -169,17 +169,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b =   256: 1 GPU   2.34 ms (device busy  0.31 ms), 2 GPUs   6.56 ms\n           speedup 0.97 predicted, 0.71 measured (windows 0.63 to 0.74)\n"
+          "text": "b =   256: 1 GPU   2.83 ms (device busy  0.30 ms), 2 GPUs   5.83 ms\n           speedup 0.99 predicted, 0.97 measured (windows 0.92 to 0.98)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b =  4096: 1 GPU   3.01 ms (device busy  3.00 ms), 2 GPUs   5.39 ms\n           speedup 1.26 predicted, 1.12 measured (windows 1.04 to 1.15)\n"
+          "text": "b =  4096: 1 GPU   3.01 ms (device busy  3.00 ms), 2 GPUs   6.11 ms\n           speedup 1.05 predicted, 0.99 measured (windows 0.98 to 0.99)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b = 32768: 1 GPU  25.32 ms (device busy 25.41 ms), 2 GPUs  25.60 ms\n           speedup 1.98 predicted, 1.98 measured (windows 1.97 to 1.98)\n"
+          "text": "b = 32768: 1 GPU  25.26 ms (device busy 25.35 ms), 2 GPUs  25.53 ms\n           speedup 1.99 predicted, 1.98 measured (windows 1.98 to 1.98)\n"
         }
       ]
     }

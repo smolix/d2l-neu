@@ -1434,7 +1434,7 @@ When a `DataLoader` spawns `num_workers=2` processes via OS `fork`, each worker 
 
 @!reproducibility-inspection-dataloader-workers-2
 
-- **Identical batches across workers (Row 1):** Without per-worker re-seeding, Worker 0 and Worker 1 generate the exact same "random" numbers (`[0.549, 0.715, 0.603, 0.545]`).
+- **Identical batches across workers (Row 1):** Without per-worker re-seeding, Worker 0 and Worker 1 generate the exact same "random" numbers, so the two batches in the first line are identical.
 - **The fix (Row 2):** Re-seed each worker's generator inside `worker_init_fn` using `get_worker_info().seed` (or seed per example index `[base_seed, i]`).
 :::
 

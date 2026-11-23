@@ -318,7 +318,7 @@ The only hyperparameter that varies across networks in this section is the
 peak learning rate. At a peak of 0.1, several of the unnormalized architectures
 below sit dangerously close to instability, occasionally diverging or stalling
 at chance; those models are trained at 0.03 instead. Our quarter-width VGG
-trains smoothly at 0.1 and gains roughly 1.5 percentage points over 0.03, so
+trains smoothly at 0.1 and gains 1.5 to 2 percentage points over 0.03, so
 we run it at 0.1.
 
 ```{.python .input #blocks-training-1}
@@ -690,7 +690,7 @@ heads
 ```
 
 `PooledVGG` finishes at 89--90% validation accuracy, roughly two percentage
-points behind the dense-headed `VGG` (~92% at the same 0.03 peak), with a
+points behind the dense-headed `VGG` (91--92% at the same 0.03 peak), with a
 higher training loss (~0.25 vs. ~0.20). Thus, for this narrow convolutional
 body trained for 10 epochs on Fashion-MNIST, the extra capacity of the dense
 head is worth roughly two accuracy points—at the expense of 99% of the model's
@@ -1035,7 +1035,7 @@ accuracy.
 | LeNet | $28 \times 28$ | 0.06M | 0.4M | 2.0 | 88–90% (30 epochs) |
 | AlexNet | $224 \times 224$ | 46.8M | 938M | 0.03 | 91% |
 | VGG, quarter width | $224 \times 224$ | 43.1M | 512M | 0.1 | 93% |
-| VGG, quarter width | $224 \times 224$ | 43.1M | 512M | 0.03 | 92% |
+| VGG, quarter width | $224 \times 224$ | 43.1M | 512M | 0.03 | 91–92% |
 | VGG, quarter width, pooled head | $224 \times 224$ | 0.6M | 470M | 0.03 | 89–90% |
 | NiN | $224 \times 224$ | 3.4M | 798M | 0.03 | 89% |
 | GoogLeNet | $96 \times 96$ | 6.0M | 276M | 0.03 | 91% |
@@ -1204,7 +1204,7 @@ Halving channel widths fourfold to `(16, 32, 64, 128, 128)` cuts compute to $512
 
 ::: {.cols .vc}
 ::: {.col}
-- **Accuracy vs. compute:** Quarter-width VGG reaches **$\approx 93\%$** validation accuracy in 10 epochs—2 points ahead of AlexNet at half the arithmetic (and $\approx 92\%$ at AlexNet's $\eta_0 = 0.03$).
+- **Accuracy vs. compute:** Quarter-width VGG reaches **$\approx 93\%$** validation accuracy in 10 epochs—2 points ahead of AlexNet at half the arithmetic (and $91\text{--}92\%$ at AlexNet's $\eta_0 = 0.03$).
 - **The head problem persists:** Shrinking the trunk cuts convolutional weights to $0.6\text{M}$, yet the dense head ($6272$ $\to$ $4096$ $\to$ $4096$ $\to$ $10$) still holds **$42.5\text{M}$ of the $43.1\text{M}$ parameters (99%)**.
 :::
 
@@ -1369,7 +1369,7 @@ Trained on $96\times 96$ Fashion-MNIST at $\eta_0 = 0.03$, GoogLeNet matches Ale
 |:--|:--|--:|--:|--:|--:|
 | LeNet (30 ep) | $28^2$ | 0.06M | 0.4M | 2.0 | 88–90% |
 | AlexNet | $224^2$ | 46.8M | 938M | 0.03 | 91% |
-| Quarter-VGG | $224^2$ | 43.1M | 512M | 0.1 / 0.03 | 93% / 92% |
+| Quarter-VGG | $224^2$ | 43.1M | 512M | 0.1 / 0.03 | 93% / 91–92% |
 | PooledVGG | $224^2$ | 0.6M | 470M | 0.03 | 89–90% |
 | NiN | $224^2$ | 3.4M | 798M | 0.03 | 89% |
 | GoogLeNet | $96^2$ | 6.0M | 276M | 0.03 | 91% |

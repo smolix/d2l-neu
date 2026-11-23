@@ -720,7 +720,7 @@ the samples of the tenfold autoencoder also sit further above its own
 reconstructions. If intolerance were the cause, the tolerant decoder would
 have narrowed the gap; in no run did it. The perturbation test adds a second
 clue. Noise of half the latents' spread costs the tolerant decoder an FD of
-only about 1.3, yet the latent models on its latents score 2.6 to 2.7. So
+only about 1.3, yet the latent models on its latents score 2.6 to 2.8. So
 whatever these models get wrong, it is not a small random error on the
 right latents: their errors are larger than that, or of another kind. At
 our scale the gap is the latent model's own error.
@@ -1096,7 +1096,7 @@ Measured by compute, the U-Net is still ahead at both levels, if by less.
 At the small end the U-Net with `ch=32`, at about 50 GFLOP per step, scores
 about 2.5, and DiT-S, at a third less arithmetic, 4.5 to 4.9. Near 200 GFLOP
 the U-Net scores about 1.5 and DiT-M 1.7 to 1.9. Yet the transformer gains
-more as it grows: 5.8 times the compute divides the DiT's FD by 2.6 to 2.8,
+more as it grows: 5.8 times the compute divides the DiT's FD by 2.5 to 2.8,
 while four times the compute divides the U-Net's by about 1.65. Its line on
 the plot is the steeper one.
 
@@ -1472,7 +1472,7 @@ Training two latent U-Nets (seeds 10, 11) on each autoencoder's latents settles 
 @!latent-diffusion-reading-the-result-3
 
 - **$\beta = 10^{-3}$ makes the decoder tolerant to random noise:** Adding $\sigma = 0.5$ Gaussian noise to real test latents degrades `ae_10` to only $\mathrm{FD} \approx 1.3$ (whereas the $\beta = 10^{-4}$ decoder jumps to $\mathrm{FD} > 3.0$).
-- **Yet $\beta = 10^{-3}$ yields *worse* end-to-end diffusion samples ($\mathrm{FD} \approx 2.65$ vs. $2.05$):** Because a $50\%$ random latent perturbation on `ae_10` costs only $1.3$ FD while trained latent U-Nets score $2.65$, the gap is **latent diffusion modeling error**, not decoder fragility!
+- **Yet $\beta = 10^{-3}$ yields *worse* end-to-end diffusion samples ($\mathrm{FD} \approx 2.7$ vs. $2.1$):** Because a $50\%$ random latent perturbation on `ae_10` costs only $1.3$ FD while trained latent U-Nets score about $2.7$, the gap is **latent diffusion modeling error**, not decoder fragility!
 - **Takeaway:** Keep the autoencoder KL weight light ($\beta = 10^{-4}$) so reconstructions stay sharp and latent channels remain easy to model.
 :::
 

@@ -594,7 +594,7 @@ Because the ill-conditioned cliff sits along the diagonal $h = n$, increasing sa
 @!generalization-deep-conditioning-at-the-threshold-2
 
 ::: {.d2l-note .warn}
-With width fixed at $h = 1{,}000$, training on $n = 500$ images sits safely in the overparameterized regime ($h = 2n$, test error $\sim 26\%$), whereas doubling the dataset to $n = 1{,}000$ lands squarely on $h = n$ and degrades test error to $\sim 90\%$! Regularization ($\ell_2$ ridge penalty) damps $1/s_{\min}$ and eliminates this spike.
+With width fixed at $h = 1{,}000$, training on $n = 500$ images sits safely in the overparameterized regime ($h = 2n$, test error just under $30\%$), whereas doubling the dataset to $n = 1{,}000$ lands squarely on $h = n$ and degrades test error to $\sim 90\%$! Regularization ($\ell_2$ ridge penalty) damps $1/s_{\min}$ and eliminates this spike.
 :::
 :::
 
@@ -624,8 +624,8 @@ Running $2{,}000$ steps of unregularized gradient descent on an underdetermined 
 
 @!generalization-deep-minimum-norm-interpolation
 
-- **Initialized at $\mathbf{w}_0 = \mathbf{0}$:** Converges to the exact minimum-norm solution $\mathbf{w}^\star$ (`distance to w* = 0.0`, norm $\approx 0.44$).
-- **Initialized at random $\mathbf{w}_0 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:** Still interpolates the data (`residual = 0e+00`), but retains its initial null-space component $\mathbf{v}_0 \in \mathrm{null}(\mathbf{H})$, ending with a $>20\times$ larger weight norm!
+- **Initialized at $\mathbf{w}_0 = \mathbf{0}$:** Converges to the exact minimum-norm solution $\mathbf{w}^\star$ (`distance to w* = 0.0`, norm below $1$).
+- **Initialized at random $\mathbf{w}_0 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:** Still interpolates the data (`residual` at rounding error), but retains its initial null-space component $\mathbf{v}_0 \in \mathrm{null}(\mathbf{H})$, ending with a weight norm more than $10\times$ larger!
 :::
 
 ::: {.slide title="Implicit Bias 2: Max-Margin Direction in Classification"}

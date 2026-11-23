@@ -456,7 +456,7 @@ Width Parameterization and μP Scaling<br>**standard parametrization drift · co
 
 ::: {.cols .vc}
 ::: {.col}
-- **Standard Parametrization (SP) drift:** Tuning Adam on a narrow proxy ($n = 128$, $\eta^\star \approx 3.9 \times 10^{-3}$) and transferring to a $64\times$ wider network ($n = 8{,}192$) wipes out the entire $1{,}000\times$ parameter increase ($0.34$ vs. retuned $0.23$ loss) because $\eta^\star$ drifted down $16\times$!
+- **Standard Parametrization (SP) drift:** Tuning Adam on a narrow proxy ($n = 128$, $\eta^\star \approx 3.9 \times 10^{-3}$) and transferring to a $64\times$ wider network ($n = 8{,}192$) wipes out the entire $1{,}000\times$ parameter increase ($\approx 0.33$ vs. retuned $\approx 0.22$ loss) because $\eta^\star$ drifted down $16\times$!
 - **Maximal Update Parametrization ($\mu\text{P}$, Yang et al., 2022):** Scales layer LRs and readout multipliers by $m = n/n_{\text{base}}$ so $\eta^\star$ transfers zero-shot across widths.
 :::
 
@@ -628,7 +628,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 ::: {.col}
 - Repeating the $400$-step learning-rate sweep across $n \in \{128, 512, 2048, 8192\}$ under $\mu\text{P}$:
   - The U-shaped curves now **align vertically** across the entire $64\times$ width range (135K to 141M parameters)!
-  - The log–log slope of $\eta^\star(n)$ collapses from $-0.75$ under SP to **near $0.0$** (the optimum stays at $2.4 \times 10^{-4}$ or within one grid step at every width).
+  - The log–log slope of $\eta^\star(n)$ collapses from about $-0.7$ under SP to **near $0.0$** (the optimum stays at $2.4 \times 10^{-4}$ or within one grid step at every width).
   - Wider networks achieve strictly lower training loss at the exact same shared learning rate.
 :::
 
@@ -642,8 +642,8 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 [Cost of Proxy-to-Target Transfer]{.kicker}
 
 - How much loss do we pay at width $8{,}192$ when we use the learning rate tuned on the $1{,}000\times$ smaller width-$128$ proxy instead of retuning at width $8{,}192$?
-  - **Under SP:** Loses **$0.09\text{--}0.15$ nats** ($0.343$ vs. $0.228$), worse than the narrow width-$128$ proxy itself!
-  - **Under $\mu\text{P}$:** Loses **$\le 0.003$ nats** ($0.228\text{--}0.231$), completely indistinguishable from seed noise!
+  - **Under SP:** Loses **$0.09\text{--}0.15$ nats** ($\approx 0.33$ vs. $\approx 0.22$), no better than the narrow width-$128$ proxy itself!
+  - **Under $\mu\text{P}$:** Loses **$\le 0.003$ nats** ($\approx 0.22$ either way), completely indistinguishable from seed noise!
 - Notice also that under $\mu\text{P}$, narrower proxy networks rise sooner on the right of $\eta^\star$ (where step size $\eta/m$ reaches initial weight size $1/\sqrt{n}$ at $\eta = \sqrt{n}/n_{\text{base}}$), so a rate stable on the narrow proxy is guaranteed to be stable on the wide target!
 
 @!scaling-learning-rate-transfer-1

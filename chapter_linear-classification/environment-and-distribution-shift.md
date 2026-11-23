@@ -561,7 +561,7 @@ Let $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\to
 ::: {.col}
 @environment-and-distribution-shift-covariate-shift-correction-2
 
-- **Exact log-ratio & clipping:** Learned $h(\mathbf{x}) \approx 2x_1 - 2$ matches $\log(p_T/p_S)$, while clipping $\beta_i \le 5$ lifts $n_{\mathrm{eff}}$ from $\sim 30$–$120$ to $\sim 200$.
+- **Exact log-ratio & clipping:** Learned $h(\mathbf{x}) \approx 2x_1 - 2$ matches $\log(p_T/p_S)$, while clipping $\beta_i \le 5$ lifts $n_{\mathrm{eff}}$ from $\sim 20$–$120$ to $\sim 200$.
 - **Shift detected:** On fresh inputs the domain classifier reaches accuracy $\approx 0.84$ vs. $0.50$ by chance; the best possible here is $\Phi(1) \approx 0.84$.
 :::
 
@@ -598,7 +598,7 @@ Reweighting lifts target accuracy from $\sim 50\%$–$60\%$ to $\sim 95\%$ witho
 ::: {.slide title="How Importance Weights Tilt the Linear Decision Boundary"}
 [Geometric Effect of Covariate Shift Correction]{.kicker}
 
-Plotting the source cloud (circle area $\propto \beta_i$), the shifted target cloud (orange), and the fitted linear boundaries explains the roughly $40$-point accuracy jump:
+Plotting the source cloud (circle area $\propto \beta_i$), the shifted target cloud (orange), and the fitted linear boundaries explains the accuracy jump of $35$ to $45$ points:
 
 ::: {.cols .vc}
 ::: {.col}

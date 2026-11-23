@@ -1344,7 +1344,7 @@ $$\bar{\boldsymbol\theta}_k = \beta_{\textrm{EMA}}\,\bar{\boldsymbol\theta}_{k-1
 ::: {.slide title="Evaluating Sample Distributions: Fréchet Distance"}
 [Wasserstein-2 Distance in Classifier Features]{.kicker}
 
-Pixel-space Euclidean distance fails to measure perceptual quality (shifting a sneaker by 2 pixels produces a huge $L_2$ error). The **Fréchet distance (FD)** (Heusel et al., 2017) fits Gaussians $\mathcal{N}(\boldsymbol\mu_p, \boldsymbol\Sigma_p)$ and $\mathcal{N}(\boldsymbol\mu_q, \boldsymbol\Sigma_q)$ to $128$-D features extracted by a domain classifier (`FeatureCNN`, $93.1\%$ test accuracy):
+Pixel-space Euclidean distance fails to measure perceptual quality (shifting a sneaker by 2 pixels produces a huge $L_2$ error). The **Fréchet distance (FD)** (Heusel et al., 2017) fits Gaussians $\mathcal{N}(\boldsymbol\mu_p, \boldsymbol\Sigma_p)$ and $\mathcal{N}(\boldsymbol\mu_q, \boldsymbol\Sigma_q)$ to $128$-D features extracted by a domain classifier (`FeatureCNN`, about $93\%$ test accuracy):
 
 $$\mathrm{FD}(p, q) = \underbrace{\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2}_{\text{mean shift (e.g., class skew)}} + \underbrace{\operatorname{tr}\!\Big(\boldsymbol\Sigma_p + \boldsymbol\Sigma_q - 2\big(\boldsymbol\Sigma_p^{1/2}\boldsymbol\Sigma_q\boldsymbol\Sigma_p^{1/2}\big)^{1/2}\Big)}_{\text{covariance mismatch (e.g., mode collapse or blur)}}$$
 
@@ -1444,8 +1444,8 @@ Generating $5{,}000$ images from shared initial noise across seven guidance scal
 
 ::: {.col}
 - **Unconditional ($\gamma = 0.0$):** Agreement is random chance ($10.0\%$) and FD triples to $\approx 2.75$.
-- **Mild guidance sweet spot ($\gamma = 1.25$):** Boosts class agreement by $+4.5\%$ (from $89.3\%$ to **$93.8\%$**, matching real test data!) with **zero FD penalty** ($\approx 0.82$).
-- **Strong guidance ($\gamma \ge 2.0$):** Pushes class agreement past **$99.4\%$**, but FD climbs to $5.5$–$6.0$ as within-class diversity collapses onto canonical prototypes.
+- **Mild guidance sweet spot ($\gamma = 1.25$):** Boosts class agreement by about five points (from nearly $90\%$ to **$93\%$–$94\%$**, matching real test data!) with **zero FD penalty** ($\approx 0.82$).
+- **Strong guidance ($\gamma \ge 3.0$):** Pushes class agreement past **$99.5\%$**, but FD climbs to $5.5$–$6.0$ as within-class diversity collapses onto canonical prototypes.
 :::
 :::
 :::
@@ -1471,7 +1471,7 @@ Why is the unconditional FD ($\gamma = 0$, $\mathrm{FD} \approx 2.75$) more than
 
 @!image-diffusion-classifier-free-guidance-3
 
-- **Class skew accounts for $< 15\%$ of the gap:** Although $\gamma = 0$ overproduces pullovers ($13.5\%$) and underproduces sandals ($6.5\%$), resampling $5{,}000$ real images to that exact skewed histogram raises real FD by only $+0.25$ (from $0.19$ to $0.44$).
+- **Class skew accounts for $< 15\%$ of the gap:** Although $\gamma = 0$ overproduces pullovers ($13\%$–$14\%$) and underproduces sandals ($6\%$–$7\%$), resampling $5{,}000$ real images to that exact skewed histogram raises real FD by only $0.2$–$0.3$ (from $0.19$ to $0.4$–$0.5$).
 - **The true cause ($> 85\%$ of the gap):** Trained on only $10\%$ of minibatches without class hints, $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ produces more ambiguous, blended garments—and its errors enter every guided step with weight $(1 - \gamma)$!
 :::
 

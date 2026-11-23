@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:830a40122a6ace3d070e1d4181eafaa7d905829df22958dda3b3f814c73fc26c",
+    "d2l_lib_fingerprint": "sha256:576eb9ec699a538cfe2b238780c65ae24182f5cc9748ce3fc8356f0d3545bc47",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 38069,
-          "sha256": "sha256:e5aafb544fe400294d8fd91a7621dd13f15082cf677c936b7efd697c834dfdec"
+          "bytes": 38055,
+          "sha256": "sha256:3644312d26e632303244d662521db77815c6e89f2ba54062bb802afd65951ed3"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-the-learned-features-3-1.svg",
-          "bytes": 76636,
-          "sha256": "sha256:826aea528bf1ee5aa0752df6a1e268fddca26bb83523aa71f558bb6dcc211df3"
+          "bytes": 75736,
+          "sha256": "sha256:d14971bada2a1f231bcaac25d0b8c536e3b12f7d4c6e039bdacff95ac55bd653"
         }
       ]
     },
@@ -88,8 +88,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-shuffled-pixels-3-1.svg",
-          "bytes": 47899,
-          "sha256": "sha256:d1c41651776fbc85094221720d7561e6a3f04c08ee63f94c8ec97d649f61db5a"
+          "bytes": 48059,
+          "sha256": "sha256:5c4e98296a9406ea552d606ff483a0d3dfecab1f42722e6ce5192186477261cc"
         }
       ]
     },
@@ -100,14 +100,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pixels in place: 0.896 averaged over the last 5 epochs\npixels shuffled: 0.854 averaged over the last 5 epochs\n"
+          "text": "pixels in place: 0.897 averaged over the last 5 epochs\npixels shuffled: 0.853 averaged over the last 5 epochs\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-shuffled-pixels-4-1.svg",
-          "bytes": 25917,
-          "sha256": "sha256:8bfd7a484f3405fb3638e901ec7a790d5e229417a867ef24624b2b4ce0e9dc30"
+          "bytes": 25918,
+          "sha256": "sha256:c238a98a47c0da6296dc0af6be64906f22e3482bf3f5be8e57f2a8ab0e5d3c68"
         }
       ]
     }

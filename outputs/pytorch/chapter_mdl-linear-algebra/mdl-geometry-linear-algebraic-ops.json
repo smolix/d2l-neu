@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6013be95d8d0fcec3ff040f4ae5070acbe022dce32c3fc2f8a1aece125c295ca",
+    "d2l_lib_fingerprint": "sha256:3ef632c3afd23806bd9e8fd930bcce63d0c2d51deeaa7d432a12eea25a13b95f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,7 +62,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.03554061363225),\n np.float64(0.03571428571428571),\n np.float64(65.38802562506136))"
+          "text": "(np.float64(0.03602372011587368),\n np.float64(0.03571428571428571),\n np.float64(65.51162136338216))"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.5921925878554625),\n np.float64(0.1767312159719317),\n np.float64(0.0009877647378530555),\n np.float64(0.3397352598108595))"
+          "text": "(np.float64(0.592208289545085),\n np.float64(0.17608271528452482),\n np.float64(-0.004695197414552555),\n np.float64(0.3390460995081151))"
         }
       ]
     },
@@ -112,7 +112,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 32080,
-          "sha256": "sha256:b8529169883230ad0fd0faafb3eb41f46a886826402d70335b0f76950102b351"
+          "sha256": "sha256:1386958aa1c961e8a2c767413bb49c2bd23039a37677e74ddd7464f899c5ac51"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ffbd7fdcfab6a9d024dbe90927c4dff6bfd42d38045682efbb8e666c2ea13ebd",
+    "d2l_lib_fingerprint": "sha256:63f79673e46d369c9104ee829c3715760765ababd74e82326b53151ce1ea4085",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'largest channel mean': 1.1894319840166645e-07,\n 'average channel variance': 0.9999990463256836,\n 'largest difference': 9.5367431640625e-07,\n 'running means': tensor([0.2005, 0.1997, 0.2001, 0.2010, 0.1976, 0.2012])}"
+          "text": "{'largest channel mean': 1.8056253736631334e-07,\n 'average channel variance': 0.9999989867210388,\n 'largest difference': 7.152557373046875e-07,\n 'running means': tensor([0.1994, 0.1993, 0.2000, 0.2007, 0.1991, 0.1981])}"
         }
       ]
     },
@@ -56,8 +56,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-5-1.svg",
-          "bytes": 24492,
-          "sha256": "sha256:fa2630331bb00495c3076cd737954711590ab072ea3d628f645b3add239ea70b"
+          "bytes": 24483,
+          "sha256": "sha256:bcf04e57b25d57a42701eef61d13d485f90d0dc3bed73186d2738f53577b50cb"
         }
       ]
     },
@@ -67,7 +67,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'CosineLeNet': 0.614, 'BNLeNet': 0.885}"
+          "text": "{'CosineLeNet': 0.615, 'BNLeNet': 0.89}"
         }
       ]
     },
@@ -79,8 +79,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-7-1.svg",
-          "bytes": 29415,
-          "sha256": "sha256:4ee70a87ab80fd31889a1c12192884160a967362bdea57dd53ce648dcc14da5c"
+          "bytes": 29399,
+          "sha256": "sha256:71c44d0063b45c42d6ca46520f857f319e553b218445452c18d0837acfe50779"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(2.3283e-08), tensor(1.0000), tensor(0.))"
+          "text": "(tensor(3.3528e-08), tensor(1.0000), tensor(0.))"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2d433fa90ef7d2a9905dba459345b0683084dc51caccb833fdfee9b45083d403",
+    "d2l_lib_fingerprint": "sha256:d32309cf2b5adcc2505d36be2c75804ef9ebf79e5453c6db36dfbf378b42a1a8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,7 +91,7 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
           "bytes": 37010,
-          "sha256": "sha256:8361f577fe8740b9063ee9afc900b65945ce59e74200e303fafa308c88ff3e95"
+          "sha256": "sha256:2f7fa9f3254d77ef114d315e84a4baacc2b5ffeb1263609ebbd9f537c4798efe"
         }
       ]
     },
@@ -102,12 +102,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.0: Fisher divergence 1.5e-05, KL 0.069 nats\n"
+          "text": "sigma = 0.0: Fisher divergence 1.5e-05, KL 0.069 nats\nsigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\nsigma = 1.0: Fisher divergence 9.5e-03, KL 0.064 nats\n"
+          "text": "sigma = 1.0: Fisher divergence 9.5e-03, KL 0.064 nats\n"
         }
       ]
     },
@@ -130,7 +130,7 @@
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
           "bytes": 2154622,
-          "sha256": "sha256:7ebe62fe413df3f68201510cd9b25666b420da2dbb331611398d578bd11aa587"
+          "sha256": "sha256:1e87f49f7903d6e30fb748532eec98afbd57e6153672f26d58c8193bef2995b0"
         }
       ]
     },
@@ -162,14 +162,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "           noisy: per-pixel squared error 0.2493 (standard error 0.0004)\n          Wiener: per-pixel squared error 0.0447 (standard error 0.0005)\n network, seed 0: per-pixel squared error 0.0309 (standard error 0.0004)\n network, seed 1: per-pixel squared error 0.0303 (standard error 0.0004)\n"
+          "text": "           noisy: per-pixel squared error 0.2493 (standard error 0.0004)\n          Wiener: per-pixel squared error 0.0447 (standard error 0.0005)\n network, seed 0: per-pixel squared error 0.0312 (standard error 0.0004)\n network, seed 1: per-pixel squared error 0.0303 (standard error 0.0004)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 256373,
-          "sha256": "sha256:c7596f9432b49a3966e02ce0bd2c65bd24791696ddda6e340f8f90a014f6ed75"
+          "bytes": 256905,
+          "sha256": "sha256:410fc13655843416c30ec46315050000e12e883d31f3ac63edf302cc48ca5ec2"
         }
       ]
     }

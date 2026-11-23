@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3580d2b36f54fc2357f2860a2955c043c9bcb3e96f64a860a737608fb4867d96",
+    "d2l_lib_fingerprint": "sha256:b548859f3b045adca1dfedd68ca2ed17b80fa5cfd06b4014b83c9627e1028158",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-3-1.svg",
           "bytes": 64139,
-          "sha256": "sha256:0a2f15657f84e025cddfd6afb27ac99bd176b7966712de4d51854bf41549d4ff"
+          "sha256": "sha256:cd0476fc95f997e95635528b2d2c9163011541753da4ba0dbc55f95224560f92"
         }
       ]
     },
@@ -98,7 +98,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-the-learned-density-ratio-1-1.svg",
           "bytes": 73595,
-          "sha256": "sha256:f0c17ec8af68fe09fa16ec0d21223756c774c326972f0cbf6f1356c5a441d368"
+          "sha256": "sha256:61035d0df42b222422b66db4bf5331db003922fd309e7a4c3c8d07b7beef9ddc"
         }
       ]
     },
@@ -137,7 +137,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-saturating-and-non-saturating-losses-compared-1-1.svg",
           "bytes": 169414,
-          "sha256": "sha256:8423d50d7ed8b19ed0187e7ea596a288e6fc66656fe7770e9bac7cf4f9c89e8b"
+          "sha256": "sha256:4f2606c3a0e66338346790ec9dace014d153ccb6581db4a26868dbbe276813d5"
         }
       ]
     },
@@ -171,7 +171,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-garments-from-noise-3-1.svg",
           "bytes": 225103,
-          "sha256": "sha256:d4baa8d053f378fe7d13270eb59636327dfddb15386ee3f06ed67b46dcc06c0a"
+          "sha256": "sha256:cab46a412c522d967b0e24e3c33809ff60f8163f6024b1c99ba7f25403b24cd5"
         }
       ]
     },
@@ -184,7 +184,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-garments-from-noise-4-1.svg",
           "bytes": 36092,
-          "sha256": "sha256:9fa3c28a4cea5b45608ef550b6f61d2bd845b9889c3e304e3c58b3cb29681429"
+          "sha256": "sha256:12a605e451fbc2d54fdc4fbe322073dd052e75da6a8c6154880c937cc1f70464"
         }
       ]
     }

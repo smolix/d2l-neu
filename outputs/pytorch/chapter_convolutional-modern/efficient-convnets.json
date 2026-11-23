@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d06078ff476dfd258b86e4d55ad4dccbc4b981bb0280def165941f2b334cefc8",
+    "d2l_lib_fingerprint": "sha256:80297b15221de7dbca40df26d70c50d416254e541896ba5f7d4bc6df53e7a069",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -71,22 +71,22 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-1.svg",
-          "bytes": 34587,
-          "sha256": "sha256:88afd884e8231286efc792350a93d865247f2436f82d1446b3a527ec1740c83b"
+          "bytes": 33187,
+          "sha256": "sha256:1de8130c8beeb2125619330a30d5e94fcc8da51289a2f236619292367b2154da"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-2.svg",
-          "bytes": 33129,
-          "sha256": "sha256:c8e9ebad4133a1167bc9a8ede478bf9322e5014ed6bbeb2e0a3c8d3043526e9e"
+          "bytes": 32529,
+          "sha256": "sha256:8a660c4c0ff8cc40621f82ae7480e2ade5f2053ee4daf6d2a97976ded7ea621f"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-2-3.svg",
-          "bytes": 33796,
-          "sha256": "sha256:256bd6f37f08283e45bd2f5638bda8b6b0c736e7b0b476024d2b50d3c6fcd6fc"
+          "bytes": 32594,
+          "sha256": "sha256:3524c2d390a32c5838c017f8b10c42a9d9b2bc43c10b1a6053693c8e6f47dd1e"
         }
       ]
     },
@@ -97,12 +97,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.917, 2.1 ms/batch\n"
+          "text": "Mini-MobileNet: 542,474 parameters, 50.3M multiply-adds, accuracy 0.917, 4.2 ms/batch\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.941, 5.9 ms/batch\nVGG-style, narrow: 75,854 parameters, 49.1M multiply-adds, accuracy 0.934, 1.5 ms/batch\n"
+          "text": "VGG-style: 583,594 parameters, 384.9M multiply-adds, accuracy 0.939, 11.5 ms/batch\nVGG-style, narrow: 75,854 parameters, 49.1M multiply-adds, accuracy 0.932, 3.0 ms/batch\n"
         }
       ]
     },
@@ -132,7 +132,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4.76837158203125e-06"
+          "text": "5.7220458984375e-06"
         }
       ]
     }

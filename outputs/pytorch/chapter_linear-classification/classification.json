@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:28b0fbe0ba74a9343fa3cec6645956c54e3557cbc8b5d41f91690254aa41cbc7",
+    "d2l_lib_fingerprint": "sha256:fefefb2f97cc65d925970c950d9f38fff6f034cfca2e2aedab40a34d0c640d3b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy 0.834\n"
+          "text": "validation accuracy 0.823\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "confidence 0.1 to 0.2:    3 predictions, mean 0.183, accuracy 0.000\nconfidence 0.2 to 0.3:   51 predictions, mean 0.263, accuracy 0.294\nconfidence 0.3 to 0.4:  309 predictions, mean 0.360, accuracy 0.414\nconfidence 0.4 to 0.5:  609 predictions, mean 0.454, accuracy 0.506\nconfidence 0.5 to 0.6:  891 predictions, mean 0.549, accuracy 0.585\nconfidence 0.6 to 0.7:  893 predictions, mean 0.650, accuracy 0.670\nconfidence 0.7 to 0.8:  967 predictions, mean 0.750, accuracy 0.781\nconfidence 0.8 to 0.9: 1355 predictions, mean 0.852, accuracy 0.888\nconfidence 0.9 to 1.0: 4922 predictions, mean 0.973, accuracy 0.977\nECE: 0.020\n"
+          "text": "confidence 0.1 to 0.2:    2 predictions, mean 0.178, accuracy 0.000\nconfidence 0.2 to 0.3:   39 predictions, mean 0.266, accuracy 0.231\nconfidence 0.3 to 0.4:  268 predictions, mean 0.359, accuracy 0.343\nconfidence 0.4 to 0.5:  655 predictions, mean 0.457, accuracy 0.516\nconfidence 0.5 to 0.6:  956 predictions, mean 0.548, accuracy 0.548\nconfidence 0.6 to 0.7:  953 predictions, mean 0.650, accuracy 0.656\nconfidence 0.7 to 0.8: 1025 predictions, mean 0.752, accuracy 0.792\nconfidence 0.8 to 0.9: 1372 predictions, mean 0.854, accuracy 0.883\nconfidence 0.9 to 1.0: 4730 predictions, mean 0.972, accuracy 0.976\nECE: 0.015\n"
         }
       ]
     },
@@ -59,8 +59,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "classification/softmax-regression-concise-calibration-3-1.svg",
-          "bytes": 29298,
-          "sha256": "sha256:0d8091c2ee226bbee05266aaa4ffa554543681ca75a77774747c1562c8d9ae49"
+          "bytes": 29288,
+          "sha256": "sha256:02650104e6f6022859f053745e0d9228d638379bd36a40d0c27fcd146e6cbb3b"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T = 0.91; ECE on the second half: 0.016 before, 0.013 after scaling\n"
+          "text": "T = 0.93; ECE on the second half: 0.015 before, 0.012 after scaling\n"
         }
       ]
     }

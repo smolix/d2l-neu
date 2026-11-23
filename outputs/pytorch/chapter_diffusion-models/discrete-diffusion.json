@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:53ad39676dc6137cad7f00ca9e7a5a5afe0ddf7ad4d6a14e59d39fd44ff4ea1e",
+    "d2l_lib_fingerprint": "sha256:efb721453852016e9058752859b6dbcfe81ee0842dc35088710fcdbc446520d8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -134,8 +134,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
-          "bytes": 83892,
-          "sha256": "sha256:3a1b1a898f8b337437a3784efd486694337fafe4a1062211b99d52c8e02d75af"
+          "bytes": 85021,
+          "sha256": "sha256:69597b53de415178bd24519b60d070b61571e5f6d79971f4d5d6cf3a24471bee"
         }
       ]
     },
@@ -147,8 +147,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
-          "bytes": 196757,
-          "sha256": "sha256:a8e7b6c45b4d7c27b7b164f80a8ea39a950ef0272b6533ac0297fa2383117da7"
+          "bytes": 196774,
+          "sha256": "sha256:8fa802d5b6c29db12d2c64c20120be8410439c9b7c2e87eab4e6bcf325b93a46"
         }
       ]
     },
@@ -159,7 +159,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     data: speckles 0.0037, standard error over the 1,000 images 0.00016\n784 steps: speckles 0.0047, standard error over the 1,000 images 0.00016\n100 steps: speckles 0.0075, standard error over the 1,000 images 0.00020\n  4 steps: speckles 0.0330, standard error over the 1,000 images 0.00026\n"
+          "text": "     data: speckles 0.0037, standard error over the 1,000 images 0.00016\n784 steps: speckles 0.0047, standard error over the 1,000 images 0.00016\n100 steps: speckles 0.0075, standard error over the 1,000 images 0.00021\n  4 steps: speckles 0.0330, standard error over the 1,000 images 0.00027\n"
         }
       ]
     }

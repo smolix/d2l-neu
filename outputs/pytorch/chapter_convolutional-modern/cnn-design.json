@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7069dd3c6d61ea14b30354741b14935f8283ff4128e18f13ad8236a8b332d14e",
+    "d2l_lib_fingerprint": "sha256:d0c77f4a1f0db6dc8632b973de8cc8dd166c536626f92a1c16fa8d96df27558e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "((2, 128), (1, 240)) 97 million multiply-adds\n((4, 112), (1, 16)) 100 million multiply-adds\n"
+          "text": "((3, 32), (6, 208)) 114 million multiply-adds\n((3, 112), (6, 96)) 109 million multiply-adds\n"
         }
       ]
     },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "increasing widths: mean error 0.117, minimum 0.111\ndecreasing widths: mean error 0.122, minimum 0.112\n"
+          "text": "increasing widths: mean error 0.119, minimum 0.114\ndecreasing widths: mean error 0.124, minimum 0.112\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-comparing-design-spaces-5-1.svg",
-          "bytes": 30842,
-          "sha256": "sha256:5ed9577710357236b6644af728cdcb471d7abffb4761a1a7de1251763dc9a570"
+          "bytes": 29561,
+          "sha256": "sha256:462dc2a8b412a819a1000dcc1b150f6b4efb3b0a825b7047baf257c9127ef428"
         }
       ]
     },
@@ -101,8 +101,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 31834,
-          "sha256": "sha256:5d43d0fcf113130ab8826af25298b935e1d8d8089b2af4e22eade2c4927f5260"
+          "bytes": 31165,
+          "sha256": "sha256:459d662cf7a369c275aa1500d9d70d6d9857ede89af5a47df14e716c3950e5da"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "519,658 parameters, validation accuracy 0.939\n"
+          "text": "519,658 parameters, validation accuracy 0.938\n"
         }
       ]
     },
@@ -130,8 +130,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-regnetx32-on-fashion-mnist-2-1.svg",
-          "bytes": 34516,
-          "sha256": "sha256:1aa7dd80a584be465cc048c0b448991316089b28f4e4a10549353511a740d51e"
+          "bytes": 33924,
+          "sha256": "sha256:82c2747003b88f631ce22030fa6a2cb433b3e6702e7c09bc21518f5ca85d64be"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "11,175,370 parameters, validation accuracy 0.939\n"
+          "text": "11,175,370 parameters, validation accuracy 0.937\n"
         }
       ]
     }

@@ -1449,7 +1449,7 @@ Automatic Differentiation<br>**dual numbers & forward mode · reverse mode & the
 ::: {.cols .vc}
 ::: {.col}
 - **Overloaded Primitives:** Defining $\varphi(a + b\varepsilon) = \varphi(a) + \varphi'(a)b\varepsilon$ ensures $f(x + 1\varepsilon) = f(x) + f'(x)\varepsilon$ for any composed program.
-- **Proof by Structural Induction:** Base cases ($c + 0\varepsilon$, $x + 1\varepsilon$) and inductive steps ($+$, $\times$, $\varphi \circ g$) preserve exact derivatives across loops and branches.
+- **Proof by Structural Induction:** Base cases ($c + 0\varepsilon$, $x + 1\varepsilon$) and inductive steps ($+$, $\times$, $\varphi \circ g$) preserve exact derivatives of the executed path, through loops and branches.
 :::
 
 ::: {.col .fig .big}
@@ -1461,12 +1461,12 @@ Automatic Differentiation<br>**dual numbers & forward mode · reverse mode & the
 ::: {.slide title="Implementing Dual Numbers via Operator Overloading"}
 [Forward-Mode Engine]{.kicker}
 
-In Python, a 20-line `Dual(a, b)` class overloads `+`, `*`, `sin`, `exp`, and `log` to propagate the value `a` and tangent `b` ($\dot{v}$) side by side. Evaluating $f(x) = \sin(x^2) + e^x$ on `Dual(1.3, 1.0)` returns $f(1.3)$ and $f'(1.3) = 2x\cos(x^2) + e^x$ in one call:
+In Python, a short `Dual(a, b)` class overloads `+`, `*`, `sin`, `exp`, and `log` to propagate the value `a` and tangent `b` ($\dot{v}$) side by side. Evaluating $f(x) = \sin(x^2) + e^x$ on `Dual(1.3, 1.0)` returns $f(1.3)$ and $f'(1.3) = 2x\cos(x^2) + e^x$ in one call:
 
 @!matrix-calculus-autodiff-dual-eval
 
 ::: {.d2l-note}
-Both the function value $4.662209$ and the derivative $3.360101$ match the analytical formula to full machine precision with zero step-size tuning.
+Both the function value $4.6622$ and the derivative $3.360101$ match the analytic formula to every printed digit, with no step size to tune.
 :::
 :::
 

@@ -1649,17 +1649,19 @@ On $f(x) = x^2$, where $f'(x) = 2x$ and curvature is $f''(x) \equiv 2$, gradient
 ::: {.slide title="Verifying Taylor Remainder Scaling on Log-Log Axes"}
 [Order of Accuracy]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 When $|f^{(n+1)}|$ is bounded near $x_0$, the worst-case error of $P_n$ on $|x - x_0| \le h$ scales as $O(h^{n+1})$, so halving the window $h$ divides the error by $2^{n+1}$ ($4$ for $P_1$, $8$ for $P_2$, and $16$ for $P_3$):
 
+::: {.cols .vc}
+::: {.col}
 - **Testing $e^x$ around $x_0 = 0$:** Here $P_n(x) = \sum_{k=0}^n x^k/k!$ and $|e^x - P_n(x)| = \frac{e^\xi |x|^{n+1}}{(n+1)!}$.
 - **Successive halving ratios:** Across windows $h \in \{0.4, 0.2, 0.1, 0.05\}$, consecutive error ratios approach $2^{n+1} = 4, 8, 16$.
 - **Log-log slopes:** On log-log axes, $\log(\text{error}) \approx (n+1)\log h + c$ plots as straight lines of slopes $2$, $3$, and $4$.
+
+@!single-variable-calculus-taylor-error-rate[out=1]
 :::
 
-::: {.col .fig}
-@!single-variable-calculus-taylor-error-rate
+::: {.col .narrow}
+@!single-variable-calculus-taylor-error-rate[out=2]
 :::
 :::
 :::

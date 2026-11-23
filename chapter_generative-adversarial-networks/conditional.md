@@ -681,7 +681,7 @@ $$\max_D V(D) = \mathbb{E}_{c \sim p(c)}\Big[2\,\mathrm{JS}\big(p(\cdot \mid c),
 ::: {.slide title="Three Architectural Mechanisms for Conditioning"}
 [Generator & Critic Conditioning]{.kicker}
 
-![](../img/mdl-gan-conditioning.svg){.nostretch width=100%}
+![](../img/mdl-gan-conditioning.svg){.nostretch width=88%}
 
 1. **Concatenation (Mirza & Osindero, 2014):** Embed $c \mapsto e_c$ and concatenate with the latent vector $z$ or broadcast across spatial feature maps (e.g., $4 \times 4 \times d_e$).
 2. **Feature modulation (Conditional BatchNorm / AdaIN / FiLM):** Apply a condition-dependent channelwise scale and shift $a(c) \odot h + b(c)$ after convolutions across the generator.
@@ -747,9 +747,17 @@ $$-\mathbb{E}_{c, x'}\big[\log C(c \mid x')\big] = \mathbb{E}_{x' \sim q}\Big[H\
 :::
 
 ::: {.col}
-@conditional-a-conditional-backbone-at-32-by-32-2
+@-conditional-a-conditional-backbone-at-32-by-32-2[1-13]
 :::
 :::
+:::
+
+::: {.slide title="Implementing CondGenerator and ProjectionCritic (cont.)"}
+[32×32 CIFAR-10 Backbone]{.kicker}
+
+A shape check: the generator maps 100-dimensional latents and labels to $32 \times 32$ RGB images, and the critic returns one score per image:
+
+@conditional-a-conditional-backbone-at-32-by-32-2[15-]
 :::
 
 ::: {.slide title="Same-Class Relativistic Pairing on CIFAR-10"}
@@ -795,7 +803,7 @@ Generating $9$ random latent draws for each of the $10$ requested CIFAR-10 class
 :::
 :::
 
-::: {.slide title="Measuring Class Alignment with a Referee CNN"}
+::: {.slide title="Measuring Class Alignment with a Referee CNN" layout="tall-output"}
 [Axis 1: Condition Alignment]{.kicker}
 
 We train our 3-block CIFAR-10 classifier `FeatureCNN` (with horizontal flips and 4-pixel shifts) for $15$ epochs as an independent referee ($78\%$ test accuracy) and evaluate its accuracy on $500$ generated images per class:

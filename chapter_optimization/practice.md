@@ -534,18 +534,12 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 ::: {.slide title="Clipping Fires on <2% of Steps and Rescues η = 1.0"}
 [Empirical Clipping Diagnostics on TinyLM]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 - Running $2{,}000$ steps across $(\eta, \theta) \in \{(1.0, \infty), (1.0, 1.0), (0.3, \infty), (3.0, 1.0)\}$ over two seeds confirms **Hypothesis A** at $\eta = 1.0$:
   - **At $\eta = 1.0, \theta = \infty$:** Diverges to `inf` within $20$ steps.
   - **At $\eta = 1.0, \theta = 1.0$ (Guard):** Clipping fires on only **$15\text{--}35$ steps (all before step $50$)**, never fires again over the remaining $1{,}950$ steps (median $\|\mathbf{g}_t\|_2 \approx 0.25$), and reaches **$1.61\text{--}1.64$ nats** (beating unclipped $\eta = 0.3$)!
   - **At $\eta = 3.0, \theta = 1.0$ (Brake):** Fires on **every single step** until overflowing or stalling above $100$ nats.
-:::
 
-::: {.col .fig}
 @!practice-a-nan-averted-2
-:::
-:::
 :::
 
 ::: {.slide title="Distinguishing a Guard from a Brake in Training Logs"}
@@ -750,8 +744,12 @@ Diagnose and solve each practical training scenario:
 1. **Diagnosing a stalled AdamW run:** On the $3.3\text{M}$-parameter `TinyLM` at $\eta = 10^{-2}$ with clipping at $\theta = 1.0$, the loss stalls near $2.5$ nats and clipping fires on $23\%$ of steps. A colleague proposes lowering the clipping threshold to $\theta = 0.2$ to shorten the steps. Will that fix the stall?
 2. **AdamW second-moment recovery time:** Suppose an unclipped gradient spike of $100\times$ normal magnitude hits AdamW and multiplies $v_t$ by $1 + (1-\beta_2)10^4$. How many steps does it take for that excess contribution in $v_t$ to decay by $e^{-3} \approx 5\%$ under $\beta_2 = 0.999$ versus $\beta_2 = 0.95$?
 3. **When does Weight EMA add zero gain?** In our final $3{,}000$-step verification table, why did the configured run's live weights and its weight EMA achieve the exact same validation loss ($1.338$ vs. $1.339$)?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Clipping, Spike Recovery, and Weight EMA (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **No!** Because AdamW divides $\hat{\mathbf{m}}_t$ by $\sqrt{\hat{\mathbf{v}}_t}$, rescaling $\mathbf{g}_t$ by a tighter global clipping threshold $\theta = 0.2$ rescales both numerator and denominator and leaves the steady-state coordinate step length $\approx \eta$ unchanged! You must **lower the learning rate $\eta$** (e.g., to $3 \times 10^{-3}$).

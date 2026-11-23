@@ -782,10 +782,12 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 - We time dense causal vs. sliding-window ($w = 128$) attention inside the same compiled `bfloat16` fused kernel ($H = 32, d_h = 64$) from $n = 512$ to $n = 32{,}768$:
 - **Linear vs. Quadratic Slope:** Above $n = 2{,}048$, dense runtime quadruples per doubling of $n$, while windowed runtime grows linearly ($2\times$ per doubling).
 - **$> 30\times$ Speedup at $32\text{K}$:** Slightly below the $64.4\times$ tile ratio because every visited window tile straddles the mask boundary and applies elementwise masking, whereas interior causal tiles run unmasked.
+
+@!attention-at-scale-the-price-of-attention-measured[out=1]
 :::
 
 ::: {.col .fig .narrow}
-@!attention-at-scale-the-price-of-attention-measured
+@!attention-at-scale-the-price-of-attention-measured[out=2]
 :::
 :::
 :::
@@ -825,9 +827,17 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 ::: {.slide title="Parallel and Recurrent Linear Attention in Code"}
 [Two Equivalent Evaluations]{.kicker}
 
-Because the state recurrence $\mathbf{S}_t = \sum_{s \le t} \phi(\mathbf{k}_s)\mathbf{v}_s^\top$ is a prefix sum, we can evaluate it in parallel via `cumsum` or sequentially step by step:
+Because the state recurrence $\mathbf{S}_t = \sum_{s \le t} \phi(\mathbf{k}_s)\mathbf{v}_s^\top$ is a prefix sum, we can evaluate it in parallel via `cumsum` or sequentially step by step. The parallel (training) form:
 
-@attention-at-scale-kernelizing-the-score-1
+@-attention-at-scale-kernelizing-the-score-1[1-10]
+:::
+
+::: {.slide title="Parallel and Recurrent Linear Attention in Code (cont.)"}
+[Two Equivalent Evaluations]{.kicker}
+
+The recurrent (generation) form carries a $(d_h, d_v)$ state and updates it token by token:
+
+@-attention-at-scale-kernelizing-the-score-1[12-]
 :::
 
 ::: {.slide title="Chunked Linear Attention: Hardware-Friendly Training"}
@@ -849,7 +859,7 @@ Because the state recurrence $\mathbf{S}_t = \sum_{s \le t} \phi(\mathbf{k}_s)\m
 ::: {.slide title="Implementing and Verifying Chunked Linear Attention"}
 [Chunked Code & Equivalence]{.kicker}
 
-`linear_attention_chunked` evaluates all three terms via batched matrix multiplications and matches the recurrent and parallel forms to `float32` precision ($\sim 10^{-7}$):
+`linear_attention_chunked` matches both other forms to `float32` precision ($\sim 10^{-7}$):
 
 @attention-at-scale-chunked-computation-1
 
@@ -911,8 +921,12 @@ Compressing an unbounded history of key–value pairs into a fixed $d_h \times d
 1. **Sub-Tile Window Width:** In a fused kernel with tile size $b = 128$ at sequence length $n = 2{,}048$ ($T = 16$ tile rows), a causal window of width $w = 128$ visits $2T - 1 = 31$ tiles. How many $128 \times 128$ tiles does the kernel visit if you shrink the window to $w = 32$?
 2. **ReLU Feature Map Scaling:** If you use $\phi(x) = \mathrm{relu}(x)$ in linear attention and multiply a query vector $\mathbf{q}_t$ by $\beta = 16$ (assuming $\phi(\mathbf{q}_t)^\top \mathbf{z}_t > 0$), by how much do the attention weights change?
 3. **Degree-2 Taylor Feature Map (Based):** Expanding $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h}) \approx 1 + \frac{\mathbf{q}^\top\mathbf{k}}{\sqrt{d_h}} + \frac{(\mathbf{q}^\top\mathbf{k})^2}{2d_h}$ factorizes into a feature map of dimension $D = 1 + d_h + d_h^2$. For $d_h = 64$, how large is the state $\mathbf{S}_t \in \mathbb{R}^{D \times d_v}$ ($d_v = 64$), and at what sequence length $n$ does a softmax KV cache exceed it?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Tiles, Caches, and Linear Kernels (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **Still $31$ tiles!** Because a kernel skips only completely empty $128 \times 128$ tiles, any window $2 \le w \le 128$ crosses the boundary into the left-neighbor tile and visits the exact same $2T - 1 = 31$ tiles.

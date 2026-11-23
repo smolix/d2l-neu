@@ -788,8 +788,12 @@ Work out these three questions on the Leibniz rule, score function, and pathwise
 1. **Moving support bias:** For $X \sim \mathrm{Uniform}(0, \theta)$ with density $p_\theta(x) = 1/\theta$ on $[0, \theta]$, the score is $\partial_\theta \log(1/\theta) = -1/\theta$. What does the score-function estimator $X^2 \partial_\theta \log p_\theta(X)$ give in expectation for $\ell(\theta) = \mathbb{E}[X^2] = \theta^2/3$, and why does it miss $\ell'(\theta) = 2\theta/3$?
 2. **Reparameterizing Uniform$(0, \theta)$:** How can you reparameterize $X \sim \mathrm{Uniform}(0, \theta)$ using $U \sim \mathrm{Uniform}(0, 1)$ so the pathwise estimator gives the exact unbiased derivative $\ell'(\theta) = 2\theta/3$ without a boundary term?
 3. **Variance comparison in high dimensions:** If $g(\mathbf{x}) = \|\mathbf{x}\|_2^2$ for $\mathbf{X} \sim \mathcal{N}(\boldsymbol{\theta}, \mathbf{I}_d)$, how do the magnitudes of $g(\mathbf{X})$ (entering REINFORCE) and $\nabla_{\mathbf{x}} g(\mathbf{X}) = 2\mathbf{X}$ (entering pathwise) scale with dimension $d$?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Differentiating Expectations (cont.)"}
+[Review & Practice]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. $\mathbb{E}[X^2(-1/\theta)] = -\frac{1}{\theta}\frac{\theta^2}{3} = -\frac{\theta}{3}$—which equals the naive interior swap $\int_0^\theta x^2 \partial_\theta(1/\theta)\,dx$ and misses the Leibniz upper-boundary term $f(\theta, \theta)b'(\theta) = \theta^2(1/\theta)(1) = +\theta$ ($-\frac{\theta}{3} + \theta = +\frac{2\theta}{3}$).

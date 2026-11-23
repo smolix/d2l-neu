@@ -50,6 +50,19 @@ $selection-color:        $ink;
 $code-block-font-size:   0.78em;
 $code-block-padding:     0.45em 0.7em;
 
+// Heights inside a slide are px of the 1280 x 720 slide, never vh/vw: Reveal
+// lays a slide out at 1280 x 720 and then scales it as a whole, so a vh box
+// would hold more rows in a tall window than in a short one, and what
+// tools/check_slide_overflow.py measures (a 1280 x 800 window, where these
+// values equal the former 36vh etc.) would not be what a projector shows.
+// Text-output boxes: tools/gen_slides.py (_OUTPUT_ROWS) caps each output at
+// the rows its box holds; change both together (docs/slides.md).
+$out-box:                288px;   // 10 rows full width
+$out-box-col:            240px;   // 10 rows in a `.cols` column
+$out-box-tall:           352px;   // layout="tall-output": 13 / 15 rows
+$out-box-tight:          176px;   // layout="tight": 6 / 7 rows
+$out-box-code:           224px;   // layout="code" (0.6em text): 14 / 16 rows
+
 /*-- scss:rules --*/
 
 // ── Web fonts (Google Fonts; book also uses the same families) ──
@@ -165,7 +178,7 @@ $code-block-padding:     0.45em 0.7em;
   padding: $code-block-padding;
   display: block;
   overflow-x: auto;
-  max-height: 58vh;
+  max-height: 464px;
   overflow-y: auto;
   color: $ink;
 }
@@ -182,7 +195,7 @@ $code-block-padding:     0.45em 0.7em;
 // ── Cell outputs (injected by inject_outputs.py slides) ──
 .reveal .cell-output {
   margin: 0.25em 0;
-  max-height: 28vh;
+  max-height: $out-box;
   overflow: auto;
 }
 
@@ -207,7 +220,7 @@ $code-block-padding:     0.45em 0.7em;
 
 .reveal .cell-output-display img,
 .reveal .cell-output-display svg {
-  max-height: 52vh;
+  max-height: 416px;
   max-width: 100%;
   background: white;
   border-radius: 2px;
@@ -295,12 +308,12 @@ $code-block-padding:     0.45em 0.7em;
   align-items: start;
 
   pre, .cell { margin: 0; }
-  img, svg { max-height: 70vh; max-width: 50vw; }
+  img, svg { max-height: 560px; max-width: 640px; }
 }
 
 .reveal section.slide-figure {
   text-align: center;
-  img, svg { max-height: 72vh; max-width: 100%; }
+  img, svg { max-height: 576px; max-width: 100%; }
   .quarto-figure-caption, figcaption {
     font-size: 0.7em;
     color: $ink-3;
@@ -314,7 +327,7 @@ $code-block-padding:     0.45em 0.7em;
     line-height: 1.2;
   }
   .cell-output {
-    max-height: 28vh;
+    max-height: $out-box-code;
     overflow: auto;
     font-size: 0.6em;
   }
@@ -327,12 +340,18 @@ $code-block-padding:     0.45em 0.7em;
   h2 { margin-bottom: 0.25em; }
   p { margin: 0.35em 0; }
   .cell-output {
-    max-height: 22vh;
+    max-height: $out-box-tight;
     overflow: auto;
   }
   .cell-output-display { margin: 0.25em 0; }
-  .cell-output-display img, .cell-output-display svg { max-height: 42vh; }
+  .cell-output-display img, .cell-output-display svg { max-height: 336px; }
 }
+
+// `layout="tall-output"`: a slide whose text output (an 11–13 row table)
+// needs more than the default box's 10 rows. gen_slides.py raises the
+// slide's output cap to match (13 rows full width, 15 in a column); the
+// slide must still fit 720px, so check it with check_slide_overflow.py.
+.reveal section.slide-tall-output .cell-output { max-height: $out-box-tall; }
 
 // ── Top navigation bar — mirrors the book's chrome ───────
 // 280px white box on the left holds the d2l logo (matches the book's
@@ -648,7 +667,7 @@ $note-bg:   #F2F8FE;
 // column it scales up to the column width, so its ticks stay legible.
 .reveal .cols > .col.fig .cell-output-display img,
 .reveal .cols > .col.fig .cell-output-display svg {
-  width: 100%; height: auto; max-width: 100%; max-height: 62vh;
+  width: 100%; height: auto; max-width: 100%; max-height: 496px;
 }
 
 // Inlined diagrams (@fig: → ::: {.dgm} <svg class="dgm-svg">)
@@ -676,8 +695,8 @@ $note-bg:   #F2F8FE;
   margin: 0.32em 0;
 }
 .reveal .cell { background: $bg-soft; }
-.reveal .cell-output { max-height: 36vh; overflow: auto; }
-.reveal .cols .cell-output { max-height: 30vh; }
+.reveal .cell-output { max-height: $out-box; overflow: auto; }
+.reveal .cols .cell-output { max-height: $out-box-col; }
 
 // The pill tag sits in a left gutter; pad the content past it.
 .reveal .cell .sourceCode.cell-code,

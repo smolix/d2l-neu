@@ -297,7 +297,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 :::
 :::
 
-::: {.slide title="Ingesting Raw CSV Records into a DataFrame"}
+::: {.slide title="Ingesting Raw CSV Records into a DataFrame" layout="tall-output"}
 [Loading Tabular Data]{.kicker}
 
 ::: {.cols .vc}
@@ -376,7 +376,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 :::
 :::
 
-::: {.slide title="Numerical Imputation and Missingness Indicator Features"}
+::: {.slide title="Numerical Imputation and Missingness Indicator Features" layout="tall-output"}
 [Imputation Strategies]{.kicker}
 
 ::: {.cols .vc}
@@ -415,14 +415,20 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 ::: {.col}
 - **Row-sum invariant:** In every row, `Slate + Tile + nan = 1.0`, placing categories at orthogonal corners of $\mathbb{R}^K$.
 - **High-cardinality limit:** For $K = 50{,}000$ ZIP codes or tokens, one-hot vectors are $99.99\%$ zeros—use learned **embeddings** $\mathbf{E} \in \mathbb{R}^{K \times d}$ ($d \ll K$) instead.
-
-@pandas-encoding-categorical-features-1
 :::
 
 ::: {.col .fig}
 @fig:pandas-categorical-pitfalls
 :::
 :::
+:::
+
+::: {.slide title="The Expanded One-Hot Table (cont.)"}
+[One-Hot Encoding in Code]{.kicker}
+
+`pd.get_dummies` with `dummy_na=True` gives each `RoofType` category, including `NaN`, its own $0/1$ column:
+
+@pandas-encoding-categorical-features-1
 :::
 
 ::: {.slide title="Feature Scaling: Why Unscaled Units Distort Optimization"}
@@ -453,9 +459,17 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 :::
 
 ::: {.col}
-@pandas-numerical-features-1
+@-pandas-numerical-features-1
 :::
 :::
+:::
+
+::: {.slide title="Standardizing Continuous Features (cont.)"}
+[The Standardized Table]{.kicker}
+
+`NumRooms` and `Area` now hold $z$-scores; the `RoofType_*` indicators keep their $0/1$ values:
+
+@!pandas-numerical-features-1
 :::
 
 ::: {.slide title="The Golden Rule of Preprocessing: Fit on Train, Apply to Test"}

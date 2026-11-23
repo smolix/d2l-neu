@@ -84,7 +84,7 @@ Attributes:
 | `title="…"`            | Optional. Renders as a `## Title` slide heading.       |
 | `only="fw[,fw]"`       | Render this slide **only** for the listed framework decks. For sections whose *framing* (not just code) differs per framework. |
 | `except="fw[,fw]"`     | Render for all decks **except** the listed frameworks. |
-| `layout="…"`           | Legacy section class (`2col`/`figure`/`code` → `.slide-<L>`). Prefer body-level `::: {.cols}` (see *Two-column layout* below). |
+| `layout="…"`           | Legacy section class (`2col`/`figure`/`code` → `.slide-<L>`). Prefer body-level `::: {.cols}` (see *Two-column layout* below). `tight`, `tall-output` and `code` change the output box and its row cap (see *Output injection*). |
 | `transition="…"`       | Reveal.js transition. `fade`, `slide`, `convex`, `concave`, `zoom`, `none`. |
 | `data-background-color="#…"`   | Slide background color.                        |
 | `data-background-image="…"`    | Slide background image.                        |
@@ -217,6 +217,11 @@ slide builder. The forms:
 | `@<id>@<fw>` | force a specific framework's variant (regardless of the deck) |
 | `@!<id>` | **output only** — no code echo (cover/teaser figures) |
 | `@-<id>` | **code only** — no output (verbose setup cells whose output would overflow; emitted without a label so `inject_outputs.py` skips it) |
+| `@-<id>[1-24]` | **code lines 1–24 only**, no output (the first part of a long cell) |
+| `@<id>[25-]` | code lines 25 to the end **and** the cell's output |
+| `@<id>[25-, out=3]` | code lines 25 to the end and output item 3 only |
+| `@!<id>[out=2]` | **output item 2 only**, no code (one of two stacked plots) |
+| `@!<id>[out=2-]` | output items 2 to the last |
 | `@fig:<id>` | inline a committed **diagram** SVG (`img/auto/<id>.svg`) — see *Diagrams* below |
 | `@fig:<id>@<fw>` | prefer a framework variant (`img/auto/<id>-<fw>.svg`), else fall back to `<id>.svg` |
 
@@ -231,6 +236,37 @@ Then we benchmark:
 @vec-loop
 :::
 ```
+
+A `[...]` selector closes any cell form, after `@<fw>` if there is one
+(`@<id>@jax[1-12]`). It holds a line range, an `out=` range, or both,
+comma-separated. A range is `a-b`, `a-` (to the end), `-b` (from the first)
+or a single `a`; numbers are 1-based and inclusive.
+
+- **Lines** count the cell's code as the slide shows it: after the `#@tab`
+  / `%%tab` line, `#@save` markers and `@d2l.add_to_class(...)` decorators
+  are stripped and `tab.selected()` branches are flattened for the deck's
+  framework. So line 1 is the first line on the slide, not the first line
+  of the source fence, and the numbers can differ between framework
+  variants. Blank lines at either end of a slice are dropped.
+- **Output items** are the cell's stored outputs in order, after adjacent
+  printed text of one stream is merged (as `inject_outputs.py` renders it)
+  and error outputs are dropped: each plot (`display_data` image), each
+  `execute_result`, and each run of printed text between them is one item.
+  The usual slide rules then apply to the selection (text capped at 12
+  lines; of more than two plots only the last is shown).
+
+`python3 tools/gen_slides.py . _slides --files <chapter/file.md>
+--frameworks pytorch jax --show-cell <id>` prints the cell numbered as
+the selector counts it and lists its output items; it writes nothing. A
+malformed selector, a line range past the cell's last line, an `out=` past
+its last output item, a line range on `@!` or an `out=` on `@-` fails the
+build (gen_slides.py exits 1 naming the deck and placeholder). The output
+range reaches `inject_outputs.py` as a `#| d2l-output-items: "2-3"` cell
+option in the deck `.qmd`; Quarto ignores it. When several placeholders
+name one cell, each labelled fence is deduped to `<id>-fig<N>` as before
+and all of them match the cell; a fragment's images are written as
+`<stem>-<id>-<fw>-items-<k>.svg`, `k` being the plot's place in the whole
+cell, so two fragments of one cell never overwrite each other's images.
 
 ### Resolution rules
 
@@ -382,13 +418,42 @@ python tools/inject_outputs.py slides --framework pytorch
 Output is wrapped between `<!-- d2l:output -->` / `<!-- /d2l:output -->`
 sentinels in the slide `.qmd`, so re-injection is idempotent.
 
-Text output is capped at 12 lines per cell (40 in HTML): a longer output
-shows its first 6 and last 6 lines around a `...` line
-(`MAX_TEXT_LINES_BY_MODE` in `tools/inject_outputs.py`). There is no per-slide
-override. An output that fits the cap can still exceed the output box
-(`.cell-output` has `max-height: 44vh` and scrolls), which hides lines
-without overflowing the slide; `tools/check_slide_overflow.py` reports such
-clipped boxes and wrapped code lines along with slide overflow. It runs each
+Text output on a slide is capped at the rows its output box holds, so an
+output never scrolls inside its box (the book keeps 40 lines,
+`MAX_TEXT_LINES_BY_MODE` in `tools/inject_outputs.py`). The cap counts
+rendered *rows*: the box wraps long lines (`white-space: pre-wrap`), so a
+line longer than the row width counts as two or more. An output over the cap
+keeps its first `ceil((cap-1)/2)` rows, a `...` line, and its last rows, the
+whole block at most `cap` rows (`fit_slide_rows`). The PDF keeps its own
+20 + `...` + 20 truncation and the HTML book shows everything.
+
+The box heights are px of the 1280 x 720 slide (`$out-box*` in
+`_d2l-slides.scss`), not vh: Reveal scales the whole slide to the window, so
+a vh box would hold more rows on a tall screen than on a short one, and the
+overflow probe (a 1280 x 800 window) would not show what a projector shows.
+Rows measured in the probe:
+
+| Slide | Box | Row height | Cap (full width / column) |
+|---|---|---|---|
+| default | 288 px (240 px in `.cols`) | 25.2 px (21.1 px in a column) | 10 / 10 |
+| `layout="tall-output"` | 352 px | 25.2 / 21.1 px | 13 / 15 |
+| `layout="tight"` | 176 px | 25.2 / 21.1 px | 6 / 7 |
+| `layout="code"` (0.6em output text) | 224 px | 15.1 / 12.7 px | 14 / 16 |
+
+A full-width row holds 100 characters; a `::: {.col}` holds fewer, from its
+share of the width (`.fig` 44 %, `.fig .big` 54 %, `.narrow` 36 %, plain
+columns split the rest). `gen_slides.py` passes a slide's cap and row width
+to `inject_outputs.py` as the cell options `#| d2l-output-lines: 13` and
+`#| d2l-output-width: 47` (`output_fit_options`; only values that differ from
+the default 10 rows of 100 characters are written). Change a box height and
+the `_OUTPUT_ROWS` table in `gen_slides.py` together, and re-measure with the
+probe.
+
+A slide whose 11–13 row table is the point can set `layout="tall-output"`
+if the slide still fits 720 px; `layout="code"` shrinks the output text
+instead, for 14 rows. `tools/check_slide_overflow.py` reports a box
+that still scrolls (`clipped`; a bug in the caps above) and wrapped code
+lines along with slide overflow. It runs each
 deck in a child process under a watchdog (`--timeout`, default 120 s per deck;
 `--slide-timeout`, default 30 s per slide) and exits 2 with `HANG at leaf
 slide N` when Chromium stops responding, so one bad deck cannot stall a loop.
@@ -634,7 +699,18 @@ regenerating a deck:
    `scrollHeight` should exceed the deck height. If a slide is too tall:
    shorten the intro, make a verbose setup cell `@-` (code-only), split
    it into two slides (`only=`-scoped continuations), or widen the
-   content column. Don't rely on per-slide scrollbars.
+   content column. Don't rely on per-slide scrollbars. A long text output
+   is cut to its box's rows automatically (*Output injection*); to show
+   more of it, use `layout="tall-output"` (13 rows), or split an output of
+   several items with `[out=…]` (one printed stream is a single item).
+
+   **Splitting a long cell.** When one cell is the problem, show it in
+   parts on consecutive slides (see *Code-cell placeholders*): code lines
+   with `@-<id>[1-24]` then `@<id>[25-]` (the second part brings the
+   output), or two stacked plots with `@!<id>[out=1]` then
+   `@!<id>[out=2-]`. Cut code at a block boundary where you can; a
+   fragment that starts mid-block still highlights, it just reads worse.
+   `gen_slides.py --show-cell <id>` prints the numbers to cut at.
 7. **Mind column width.** Cells with matrix/verbose output and long code
    need a *wide* content column; column **prose** is shrunk so it doesn't
    wrap to orphaned words. Wide-short diagrams should be redesigned
@@ -800,9 +876,10 @@ _slides/<fw>/img/outputs/          Injected output images (gitignored)
 tools/add_cell_ids.py              Assigns/maintains #<id> on code fences
 tools/migrate_slide_markers.py     One-shot: inline markers → slide divs
 tools/strip_tab_all.py             One-shot: removes #@tab all / %%tab all
-tools/gen_slides.py                Generates and renders slide .qmd (@fig/@-/@!, only=/except=)
+tools/gen_slides.py                Generates and renders slide .qmd (@fig/@-/@!/[...], only=/except=)
 tools/inject_outputs.py            Injects notebook outputs (slides mode)
 tools/audit_slides.py              Teachability/overflow audit (@fig/@-/@! aware)
+tools/test_slide_cell_split.py     Tests for `@<id>[lines, out=items]` (incl. one real render)
 tools/watch_slides.py              Live preview daemon
 tools/lint_source.py               Source linter
 tools/sync_back.py                 Notebook → source sync

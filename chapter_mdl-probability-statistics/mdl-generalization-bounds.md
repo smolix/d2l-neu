@@ -1528,7 +1528,7 @@ Inspecting all nine diagnostics across $p \in \{15, 38, 40, 42, 50, 80, 400\}$ r
 
 @!mdl-generalization-bounds-a-double-descent-sweep-2
 
-- **Training error is blind past $p = 40$:** For every $p \ge 40$, training MSE sits at floating-point zero ($\sim 10^{-28}$), yet test MSE drops more than $100\times$ from $p = 40$ to $p = 400$—tracked cleanly by $\sigma_{\min}$ ($0.02 \to 2.8$) and $\|\mathbf{w}\|_2$ ($10$–$30 \to 0.4$).
+- **Training error is blind past $p = 40$:** For every $p \ge 40$, training MSE is floating-point zero ($\sim 10^{-28}$), yet test MSE drops over $100\times$ from $p = 40$ to $400$, tracked by $\sigma_{\min}$ ($0.02 \to 2.8$) and $\|\mathbf{w}\|_2$ ($10$–$30 \to 0.4$).
 - **Target misspecification alone triggers the spike:** Even at $p = 40$, the noise-free `clean` error exceeds the `noise` error because a linear teacher is poorly approximated by $40$ ReLU ridges along $\mathbf{u}_n$.
 - **Well-specified small models still win:** While $p = 400$ beats every smaller ReLU model, ordinary least squares directly on the $15$ raw inputs achieves $\mathrm{MSE} \approx 0.006$—another $10\times$ lower!
 :::

@@ -694,8 +694,12 @@ Work through these three distributed training scenarios:
 1. A pretraining job maintains a fixed global batch of $B_{\text{global}} = 1{,}024$ sequences (4,096 tokens each $\approx 4.2\text{M}$ tokens), and each GPU holds at most $B_{\text{device}} = 4$ sequences per microbatch. What is the minimum gradient accumulation $N_{\text{accumulation}}$ on $N_{\text{ranks}} = 64$ GPUs, and what is the largest world size that can train this global batch with data parallelism alone?
 2. During checkpoint restore, a colleague restores the model weights, Adam moments, and data-loader position, but forgets to restore the `LambdaLR` scheduler state. What happens to the training run, and will it raise an exception?
 3. Why does FSDP2 communicate roughly $1.5\times$ as much data per step as DDP?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Sharding, Batch Invariants, and Recovery (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. On 64 GPUs with $B_{\text{device}} = 4$, $N_{\text{accumulation}} = 1024 / (64 \times 4) = \mathbf{4}$. The largest pure data-parallel world size (at $B_{\text{device}} = 1, N_{\text{accumulation}} = 1$) is **$N_{\text{ranks}} = 1{,}024$ GPUs** (or $256$ GPUs if keeping $B_{\text{device}} = 4$).

@@ -1013,7 +1013,7 @@ Comparing the uncertain prefix `'The Time Traveller'` against the highly predict
 - **When the model is uncertain (`'The Time Traveller'`, flat head):** To accumulate $90\%$ of the probability mass, **top-$p = 0.9$ must reach over 200 tokens deep into the tail** (admitting tokens below $0.1\%$ probability), whereas **min-$p = 0.05$ keeps only tokens within $20\times$ of the leader** (a few dozen plausible choices).
 :::
 
-::: {.slide title="Head-to-Head Generation Across Decoding Strategies"}
+::: {.slide title="Head-to-Head Generation Across Decoding Strategies" layout="tall-output"}
 [Qualitative Rollout Comparison]{.kicker}
 
 Generating 50-token continuations from `'The Time Traveller'` under greedy decoding, pure sampling ($\tau = 1$), and our three truncated samplers demonstrates the qualitative improvement immediately:

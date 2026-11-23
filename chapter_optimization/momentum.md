@@ -380,10 +380,12 @@ Momentum and Nesterov Accelerated Gradient<br>**velocity recursion · effective 
 - At $\eta = 0.6 > 2/\lambda_2 = 0.5$, plain gradient descent diverges violently across the steep wall because $x_2$ multiplies by $1 - 4(0.6) = -1.4$ on every step ($1.4^{20} \approx 837$).
 - Adding heavy-ball momentum with **$\beta = 0.5$** at the *exact same* $\eta = 0.6$ damps the transverse wall oscillation and drives both coordinates within $1\%$ of the origin in **$20$ steps**!
 - **Apparent paradox:** Summing past gradients increases total step length along the valley floor—how does it *stabilize* the steep wall at the same time?
+
+@!momentum-the-momentum-method-1[out=1]
 :::
 
 ::: {.col .fig}
-@!momentum-the-momentum-method-1
+@!momentum-the-momentum-method-1[out=2]
 :::
 :::
 :::
@@ -590,8 +592,12 @@ Work out the quantitative answer for each momentum scenario:
 1. **Adjusting $\eta$ when changing $\beta$:** A minibatch SGD run trains well at $\eta = 0.02$ with $\beta = 0.9$. If you increase momentum to $\beta = 0.98$, what learning rate $\eta$ preserves the effective step size $\eta_{\text{eff}}$ and stationary noise ball, and how does the memory window $\tau$ change?
 2. **$\sqrt{\kappa}$ acceleration:** For a quadratic with condition number $\kappa = 10{,}000$, what is the optimal momentum $\beta^\star$, and by what factor does optimal momentum reduce the steps needed to shrink error by $10^{-2}$ compared to optimal plain gradient descent?
 3. **Batch size transition:** Why did adding $\beta = 0.9$ cut the step count by $6\times$ on full-batch softmax regression ($b = 60{,}000$) but not on `FashionCNN` at $b = 32$?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Effective Step, Timescales, and √κ (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. At $\beta = 0.9$, $\eta_{\text{eff}} = \frac{0.02}{1 - 0.9} = 0.2$ and $\tau = 10$ steps. At $\beta = 0.98$ ($1 - \beta = 0.02$), keeping $\eta_{\text{eff}} = 0.2$ requires **$\eta = 0.2 \times 0.02 = 0.004$** ($5\times$ smaller), while the memory window expands **$5\times$ from $10 \to 50$ steps**.

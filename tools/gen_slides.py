@@ -96,12 +96,114 @@ _DIV_CLOSE_RE = re.compile(r'^:{3,}\s*$')
 #                           cells whose verbose output would overflow;
 #                           emitted without a `#| label:` so
 #                           inject_outputs.py skips it
+#   @cell-id[<sel>]       → part of the cell (any of the forms above may end
+#                           in one): `[12-30]` code lines 12–30, `[25-]` line
+#                           25 to the end, `[out=2]` / `[out=2-3]` only those
+#                           output items, `[25-, out=2]` both. See
+#                           parse_selector() and docs/slides.md
+#                           "Splitting a long cell".
 #   @fig:diagram-id       → inline a committed SVG diagram (img/auto/<id>.svg)
 #                           so it inherits the page's loaded fonts (docs/slides-northstar-design.md §5.3)
 #   @fig:diagram-id@jax   → prefer a fw variant (img/auto/<id>-jax.svg), else
 #                           fall back to img/auto/<id>.svg
 _PLACEHOLDER_RE = re.compile(
-    r'^@(?P<echo>!)?(?P<codeonly>-)?(?P<id>[a-z][a-z0-9-]*)(?:@(?P<fw>\w+))?\s*$')
+    r'^@(?P<echo>!)?(?P<codeonly>-)?(?P<id>[a-z][a-z0-9-]*)(?:@(?P<fw>\w+))?'
+    r'(?:\[(?P<sel>[^\]]*)\])?\s*$')
+
+# Cell option that carries an output-item selection from the deck .qmd to
+# tools/inject_outputs.py (which reads it back; Quarto ignores it).
+OUTPUT_ITEMS_OPTION = 'd2l-output-items'
+
+# Cell options that size a text output to the slide's output box: the cap in
+# rendered rows and the characters per row (inject_outputs.fit_slide_rows;
+# its defaults, 10 rows of 100 characters, fit a full-width box on a plain
+# slide and are not written). Measured in the 1280 x 720 slide (docs/slides.md
+# "Output injection"): the box heights are px in _d2l-slides.scss ($out-box*),
+# rows are 25.2 px at full width and 21.1 px in a column (`.cols` code font),
+# 15.1 / 12.7 px on `layout="code"`; a block's code padding takes 10-15 px.
+OUTPUT_LINES_OPTION = 'd2l-output-lines'
+OUTPUT_WIDTH_OPTION = 'd2l-output-width'
+_DEFAULT_OUTPUT_ROWS = 10
+_DEFAULT_OUTPUT_WIDTH = 100
+# (slide layout, in a column) -> rows the output box holds.
+_OUTPUT_ROWS = {
+    (None, False): 10, (None, True): 10,                   # 288 / 240 px
+    ('tall-output', False): 13, ('tall-output', True): 15,  # 352 px
+    ('tight', False): 6, ('tight', True): 7,               # 176 px
+    ('code', False): 14, ('code', True): 16,               # 224 px
+}
+# Font scale of a layout's output text relative to the default (more
+# characters per row): `.slide-code .cell-output { font-size: 0.6em }`.
+_OUTPUT_FONT_SCALE = {'code': 0.6}
+# Characters per row in a `::: {.col}`, from its share f of the content
+# width: a fixed-width column holds 123 f - 12 characters; the plain columns
+# split what the fixed ones leave, less a 4-character gap (measured: two
+# plain columns 47, `.fig` 42 beside a plain 53, `.fig .big` 54 beside 41).
+_COL_FIXED_SHARE = (('big', 0.54), ('narrow', 0.36), ('fig', 0.44))
+_COL_CHARS, _COL_PAD, _COL_GAP = 123, 12, 4
+
+
+class SlideSpecError(ValueError):
+    """A placeholder whose selector is malformed or out of range."""
+
+
+_RANGE_RE = re.compile(r'^(?P<a>\d+)?(?P<dash>-)?(?P<b>\d+)?$')
+
+
+def _parse_range(text):
+    """`7` → (7, 7); `3-9` → (3, 9); `25-` → (25, None); `-24` → (1, 24).
+
+    1-based and inclusive; None as the end means "to the last". Raises
+    ValueError on anything else.
+    """
+    m = _RANGE_RE.match(text.strip())
+    if not m or not (m.group('a') or m.group('b')):
+        raise ValueError(f'bad range {text.strip()!r}')
+    a = int(m.group('a')) if m.group('a') else 1
+    if m.group('dash'):
+        b = int(m.group('b')) if m.group('b') else None
+    else:
+        b = a
+    if a < 1 or (b is not None and b < a):
+        raise ValueError(f'bad range {text.strip()!r}')
+    return a, b
+
+
+def parse_selector(sel):
+    """Parse the `[...]` of a placeholder → (lines, outs).
+
+    Comma-separated parts, at most one of each: a code-line range (`12-30`,
+    `25-`, `-24`, `7`) and an output-item range (`out=2`, `out=2-3`,
+    `out=2-`). Each comes back as (first, last-or-None), or None when absent.
+    Raises ValueError on a malformed selector.
+    """
+    lines = outs = None
+    parts = [p.strip() for p in sel.split(',')]
+    if not any(parts):
+        raise ValueError('empty selector []')
+    for part in parts:
+        if part.startswith('out='):
+            if outs is not None:
+                raise ValueError('two out= ranges')
+            outs = _parse_range(part[len('out='):])
+        else:
+            if lines is not None:
+                raise ValueError('two line ranges')
+            lines = _parse_range(part)
+    return lines, outs
+
+
+def format_range(r):
+    """Inverse of _parse_range for emission: (2, 2) → '2', (2, None) → '2-'."""
+    a, b = r
+    if b == a:
+        return str(a)
+    return f'{a}-' if b is None else f'{a}-{b}'
+
+
+# A line that starts like a selector placeholder but fails _PLACEHOLDER_RE
+# (`@id[1-2`, `@id[1-2] trailing`): an error, never literal slide text.
+_BROKEN_SELECTOR_RE = re.compile(r'^@[!-]?[a-z][a-z0-9-]*(?:@\w+)?\[')
 
 # `@fig:<id>` / `@fig:<id>@<fw>` — inline a static diagram SVG. Checked
 # before _PLACEHOLDER_RE in _resolve_body (the `fig:` colon means a fig line
@@ -383,15 +485,123 @@ def _inline_diagram(fig_id, forced_fw, framework, slide_path, warnings):
     return ['', '```{=html}', '<div class="dgm">', svg, '</div>', '```', '']
 
 
+def _slice_code(code, line_range, framework, where):
+    """Lines `line_range` (1-based, inclusive) of a cleaned slide cell.
+
+    Lines count the code exactly as the slide emits it: after the `#@tab` /
+    `%%tab` line, `#@save` markers and `@d2l.add_to_class` decorators are
+    stripped and `tab.selected()` branches are flattened for `framework`
+    (clean_cell_lines). Blank lines at either end of the slice are dropped.
+    """
+    lines = code.split('\n')
+    n = len(lines)
+    a, b = line_range
+    b = n if b is None else b
+    if a > n or b > n:
+        raise SlideSpecError(
+            f'{where}: line range {format_range(line_range)} is out of range; '
+            f'the {framework} cell has {n} lines '
+            f'(gen_slides.py --show-cell prints them numbered)')
+    frag = lines[a - 1:b]
+    while frag and not frag[0].strip():
+        frag.pop(0)
+    while frag and not frag[-1].strip():
+        frag.pop()
+    if not frag:
+        raise SlideSpecError(
+            f'{where}: lines {format_range(line_range)} of the {framework} '
+            f'cell are all blank')
+    return '\n'.join(frag)
+
+
+def _col_share(classes):
+    """Fixed width share of a `.col` with these classes, or None (plain)."""
+    if 'big' in classes and 'fig' in classes:
+        return 0.54
+    for cls, share in _COL_FIXED_SHARE[1:]:
+        if cls in classes:
+            return share
+    return None
+
+
+def _column_widths(body_lines):
+    """Characters per output row inside each `::: {.col}` of a slide body.
+
+    Returns a list parallel to body_lines: the innermost enclosing column's
+    row width in characters (default-font output), or None outside columns.
+    """
+    children = {}                 # .cols open index -> [child col classes]
+    col_of = {}                   # .col open index -> its .cols open index
+    stack = []
+    for i, line in enumerate(body_lines):
+        m = re.match(r'^:{3,}\s*\{([^}]*)\}', line)
+        if m:
+            classes = set(re.findall(r'\.([\w-]+)', m.group(1)))
+            if 'col' in classes and stack and 'cols' in stack[-1][1]:
+                children.setdefault(stack[-1][0], []).append(classes)
+                col_of[i] = stack[-1][0]
+            stack.append((i, classes))
+        elif _DIV_CLOSE_RE.match(line) and stack:
+            stack.pop()
+
+    def width(i, classes):
+        share = _col_share(classes)
+        if share is not None:
+            return _COL_CHARS * share - _COL_PAD
+        sibs = children.get(col_of.get(i), [classes])
+        fixed = [f for f in map(_col_share, sibs) if f is not None]
+        n_plain = max(1, len(sibs) - len(fixed))
+        return (_COL_CHARS * (1 - sum(fixed)) - _COL_GAP) / n_plain - _COL_PAD
+
+    out, stack = [], []
+    for i, line in enumerate(body_lines):
+        m = re.match(r'^:{3,}\s*\{([^}]*)\}', line)
+        if m:
+            classes = set(re.findall(r'\.([\w-]+)', m.group(1)))
+            w = (int(width(i, classes)) - 1 if 'col' in classes and i in col_of
+                 else (stack[-1] if stack else None))
+            stack.append(w)
+        elif _DIV_CLOSE_RE.match(line) and stack:
+            stack.pop()
+        out.append(stack[-1] if stack else None)
+    return out
+
+
+def output_fit_options(layout, col_width):
+    """`#|` option lines that size a slide's text output to its box.
+
+    `layout` is the slide's `layout=` (None for none), `col_width` the row
+    width in characters of the enclosing column (_column_widths) or None at
+    full width. Only values that differ from inject_outputs' defaults are
+    written.
+    """
+    key = layout if (layout, False) in _OUTPUT_ROWS else None
+    rows = _OUTPUT_ROWS[(key, col_width is not None)]
+    width = col_width if col_width is not None else _DEFAULT_OUTPUT_WIDTH
+    width = int(width / _OUTPUT_FONT_SCALE.get(key, 1.0))
+    opts = []
+    if rows != _DEFAULT_OUTPUT_ROWS:
+        opts.append(f'#| {OUTPUT_LINES_OPTION}: {rows}')
+    if width != _DEFAULT_OUTPUT_WIDTH:
+        opts.append(f'#| {OUTPUT_WIDTH_OPTION}: {width}')
+    return opts
+
+
 def _resolve_body(body_lines, source_cells, framework, slide_path,
-                  warnings):
+                  warnings, layout=None):
     """Replace `@<id>` / `@<id>@<fw>` / `@fig:<id>` placeholder lines.
 
     Code placeholders become Quarto python fences; `@fig:` lines inline a
     diagram SVG. Other lines pass through verbatim. Returns output lines.
+    A `[...]` selector (parse_selector) slices the code to a line range
+    and/or passes an output-item range to inject_outputs.py as the
+    `#| d2l-output-items:` cell option; a bad one raises SlideSpecError.
+    `layout` (the slide's `layout=`) and the enclosing column size the text
+    output to its box (output_fit_options).
     """
     out = []
-    for line in body_lines:
+    col_widths = _column_widths(body_lines)
+    for line, col_width in zip(body_lines, col_widths):
         fig = _FIG_RE.match(line)
         if fig:
             out.extend(_inline_diagram(
@@ -400,12 +610,32 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
             continue
         m = _PLACEHOLDER_RE.match(line)
         if not m:
+            if _BROKEN_SELECTOR_RE.match(line):
+                raise SlideSpecError(
+                    f'{slide_path}: {line.strip()}: malformed placeholder '
+                    f'selector (expected `@<id>[...]` alone on its line)')
             out.append(line)
             continue
         cid = m.group('id')
         forced_fw = m.group('fw')
         echo_off = bool(m.group('echo'))
         code_only = bool(m.group('codeonly'))
+        sel = m.group('sel')
+        line_range = out_range = None
+        if sel is not None:
+            where = f'{slide_path}: {line.strip()}'
+            try:
+                line_range, out_range = parse_selector(sel)
+            except ValueError as e:
+                raise SlideSpecError(f'{where}: {e}') from None
+            if echo_off and line_range:
+                raise SlideSpecError(
+                    f'{where}: an output-only @! placeholder takes no line '
+                    f'range (use out=N, or drop the !)')
+            if code_only and out_range:
+                raise SlideSpecError(
+                    f'{where}: a code-only @- placeholder takes no out= '
+                    f'(drop the -)')
         variants = source_cells.get(cid)
         if not variants:
             warnings.append(f'{slide_path}: unknown @{cid}')
@@ -423,6 +653,9 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
         # in the book (tools/preamble.py); a different first cell still shows.
         if not code.strip() or preamble.is_canonical(code, framework):
             continue
+        if line_range:
+            code = _slice_code(code, line_range, framework,
+                               f'{slide_path}: {line.strip()}')
         out.append('```{python}')
         # Code-only cells carry no label, so inject_outputs.py finds no
         # match and leaves them output-free.
@@ -430,6 +663,10 @@ def _resolve_body(body_lines, source_cells, framework, slide_path,
             out.append(f'#| label: {cid}')
         if echo_off:
             out.append('#| echo: false')
+        if out_range:
+            out.append(f'#| {OUTPUT_ITEMS_OPTION}: "{format_range(out_range)}"')
+        if not code_only:
+            out.extend(output_fit_options(layout, col_width))
         out.append(code)
         out.append('```')
     return out
@@ -464,7 +701,8 @@ def _emit_slide(slide, source_cells, framework, slide_path, warnings,
             out.append('---')
             out.append('')
     out.extend(_resolve_body(slide.body, source_cells, framework,
-                              slide_path, warnings))
+                              slide_path, warnings,
+                              layout=slide.attrs.get('layout')))
     # Subslides (vertical sub-slides under the current slide)
     for ss in slide.subslides:
         if not _slide_applies(ss.attrs, framework):
@@ -476,7 +714,8 @@ def _emit_slide(slide, source_cells, framework, slide_path, warnings,
         out.append(f'### {ss_title}{ss_attr}'.rstrip())
         out.append('')
         out.extend(_resolve_body(ss.body, source_cells, framework,
-                                  slide_path, warnings))
+                                  slide_path, warnings,
+                                  layout=ss.attrs.get('layout')))
     return out
 
 
@@ -757,6 +996,32 @@ def _remove_deck(fw_dir, rel):
     return hit
 
 
+def show_cell(src_file, framework, cell_id):
+    """Print one cell's slide code with line numbers, and its output items.
+
+    The numbers are the ones a `@<id>[a-b]` / `[out=k]` selector counts
+    (docs/slides.md "Splitting a long cell"). Outputs come from the
+    committed store (outputs/<fw>/...), else _notebooks/.
+    """
+    from inject_outputs import resolve_id_outputs, output_items, describe_item
+    text = Path(src_file).read_text(encoding='utf-8')
+    print(f'=== {src_file} @{cell_id} ({framework}) ===')
+    variants = index_source_cells(text).get(cell_id)
+    cell = select_variant(variants, framework) if variants else None
+    if cell is None:
+        print('  (no such cell for this framework)')
+        return
+    code = clean_cell_lines(cell.lines, framework)
+    for i, ln in enumerate(code.split('\n'), start=1):
+        print(f'{i:4d} | {ln}')
+    res = resolve_id_outputs('_notebooks', 'outputs', framework,
+                             Path(src_file).parent.name, Path(src_file).stem)
+    items = output_items((res[0] if res else {}).get(cell_id, []))
+    print(f'  output items: {len(items)}')
+    for k, item in enumerate(items, start=1):
+        print(f'  out={k}: {describe_item(item)}')
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Generate per-framework Reveal.js slides')
@@ -774,6 +1039,11 @@ def main():
     parser.add_argument('--files', nargs='*', default=None,
                         help='Only process these source paths '
                              '(e.g. chapter_foo/bar.md)')
+    parser.add_argument('--show-cell', metavar='CELL_ID', default=None,
+                        help='Print the cell as a slide emits it, with the '
+                             'line numbers and output items that a '
+                             '`@<id>[...]` selector counts, for each '
+                             '--frameworks; needs --files. Writes nothing.')
     args = parser.parse_args()
 
     src = args.source
@@ -800,11 +1070,20 @@ def main():
               file=sys.stderr)
         sys.exit(1)
 
+    if args.show_cell:
+        if not file_filter:
+            sys.exit('--show-cell needs --files <chapter/file.md>')
+        for rel in sorted(file_filter):
+            for fw in args.frameworks:
+                show_cell(src / rel, fw, args.show_cell)
+        return
+
     warnings = []
     render_failures = []   # (framework, deck path, error) across all frameworks
     for fw in args.frameworks:
         fw_dir = args.output / fw
         print(f'\n=== {FRAMEWORK_DISPLAY.get(fw, fw)} slides ===')
+        spec_errors = []
 
         generated = 0
         generated_rels = set()
@@ -816,7 +1095,11 @@ def main():
             if not src_file.exists():
                 continue
 
-            content = generate_slides_qmd(src_file, fw, warnings)
+            try:
+                content = generate_slides_qmd(src_file, fw, warnings)
+            except SlideSpecError as e:
+                spec_errors.append(str(e))
+                continue
             if content is None:
                 # No deck for this framework (any more): drop what an
                 # earlier build left, so it reaches neither _book/slides
@@ -845,6 +1128,13 @@ def main():
                     removed.append(rel)
         for rel in removed:
             print(f'  removed stale deck {fw}/{rel[:-3]}')
+        if spec_errors:
+            for err in spec_errors:
+                print(f'error: {err}', file=sys.stderr)
+            print(f'\nERROR: {len(spec_errors)} bad placeholder selector(s) '
+                  f'in {fw} decks (docs/slides.md "Splitting a long cell").',
+                  file=sys.stderr)
+            sys.exit(1)
 
         if args.render and generated:
             # img / data symlinks (unchanged from previous behavior)
@@ -898,11 +1188,16 @@ def main():
             has_store = (store_dir / fw).exists()
             has_nb = notebooks_dir.exists() and (notebooks_dir / fw).exists()
             if has_store or has_nb:
-                from inject_outputs import inject_slides
+                from inject_outputs import inject_slides, OutputSelectionError
                 img_outputs_dir = args.output / 'img' / 'outputs'
-                inject_slides(str(args.output), fw, str(notebooks_dir),
-                               str(img_outputs_dir),
-                               store_dir=str(store_dir) if has_store else None)
+                try:
+                    inject_slides(str(args.output), fw, str(notebooks_dir),
+                                  str(img_outputs_dir),
+                                  store_dir=str(store_dir) if has_store
+                                  else None)
+                except OutputSelectionError as e:
+                    print(f'error: {e}', file=sys.stderr)
+                    sys.exit(1)
 
             qmd_files = sorted(fw_dir.rglob('*.qmd'))
             # Honor the --files filter at render time too, so a one-shot

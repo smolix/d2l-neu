@@ -928,7 +928,7 @@ At every point $\mathbf{x} \in \mathbb{R}^n$, the **(Stein) score** points in th
 ::: {.slide title="Stable Mixture Scores in Code"}
 [Log-Domain Responsibility Weighting]{.kicker}
 
-Factoring out the maximum log-component $c_{\max}(x)$ prevents exponential underflow in the tails when evaluating mixture log-densities and responsibility-weighted scores:
+Subtracting the top log-component $c_{\max}(x)$ stops mixture log-densities and scores underflowing in the tails:
 
 @mdl-scores-score-based-comparisons-3
 

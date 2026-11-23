@@ -1666,7 +1666,7 @@ Thresholding Fashion-MNIST to binary pixels $\{0, 1\}$ with mask token $[\textrm
 ::: {.slide title="Diagnosing Parallel Unmasking Failure on Images"}
 [Why 4 Jumps Shatter Garments into Speckles]{.kicker}
 
-What happens when we unmask $L = 784$ binary pixels in just $S = 4$ jumps ($\approx 196$ pixels revealed simultaneously per jump) versus $S = 100$ or $S = 784$ jumps ($\approx 1$ pixel per jump)?
+Unmasking $L = 784$ binary pixels in $S = 4$ jumps ($\approx 196$ per jump) vs. $S = 100$ or $784$ jumps ($\approx 1$ per jump):
 
 ::: {.cols .vc}
 ::: {.col}

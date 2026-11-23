@@ -122,7 +122,10 @@ _BEGIN_TAB_RE = re.compile(r':begin_tab:`([^`]+)`')
 _DIRECTIVE_RE = re.compile(r'^:(\w[\w-]*):')
 
 # Inside slide divs
-_PLACEHOLDER_RE = re.compile(r'^@([a-z][a-z0-9-]*)(?:@(\w+))?\s*$')
+# `@<id>`, `@!<id>`, `@-<id>`, each optionally `@<fw>` and a `[...]` selector
+# (gen_slides.parse_selector).
+_PLACEHOLDER_RE = re.compile(
+    r'^@[!-]?([a-z][a-z0-9-]*)(?:@(\w+))?(?:\[([^\]]*)\])?\s*$')
 
 # Markers
 _SLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.slide(?:\s|\})')
@@ -394,7 +397,15 @@ def _check_placeholders(path, lines, fence_ids):
         m = _PLACEHOLDER_RE.match(line.strip())
         if not m:
             continue
-        cid, forced_fw = m.group(1), m.group(2)
+        cid, forced_fw, sel = m.group(1), m.group(2), m.group(3)
+        if sel is not None:
+            from gen_slides import parse_selector
+            try:
+                parse_selector(sel)
+            except ValueError as e:
+                issues.append(Issue(path, i, line.index('[') + 1, 'error',
+                    f'bad selector in placeholder {line.strip()}: {e}'))
+                continue
         if forced_fw and forced_fw not in FRAMEWORKS:
             col = line.index(forced_fw) + 1
             issues.append(Issue(path, i, col, 'error',

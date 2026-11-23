@@ -1411,7 +1411,7 @@ At full scale, ResNet wraps four residual stages inside GoogLeNet's stemâ€“bodyâ
 :::
 :::
 
-::: {.slide title="Stage Construction and Shape Trace in ResNet-18"}
+::: {.slide title="Stage Construction and Shape Trace in ResNet-18" layout="tall-output"}
 [Stage Template & Shapes]{.kicker}
 
 In `ResNet.stage`, the first block of stages 2, 3, and 4 (`not first_block`) halves height and width while doubling channels:

@@ -1019,7 +1019,7 @@ Denoising and the Score Function<br>**posterior mean · denoising score matching
 ::: {.slide title="Why Denoising Is the Gateway to Generative Modeling"}
 [Motivation]{.kicker}
 
-Training a network to remove additive Gaussian noise $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\epsilon$ by least squares teaches it the local geometry of the data distribution:
+Removing Gaussian noise $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\epsilon$ by least squares teaches a network the data's local geometry:
 
 ::: {.cols .vc}
 ::: {.col}

@@ -366,12 +366,28 @@ the console transcript.
 @rs-async-asynchronous-scheduler-8
 :::
 
-::: {.slide title="Wall-clock advantage"}
+::: {.slide title="Wall-clock advantage" except="pytorch"}
 Learning curves of all trials against wall-clock time. A
 free worker starts the next trial at once, so no worker
 sits idle waiting for stragglers:
 
 @rs-async-visualize-the-asynchronous-optimization-process
+:::
+
+::: {.slide title="Wall-clock advantage" only="pytorch"}
+Learning curves of all trials against wall-clock time. A
+free worker starts the next trial at once, so no worker
+sits idle waiting for stragglers:
+
+::: {.cols .vc}
+::: {.col}
+@-rs-async-visualize-the-asynchronous-optimization-process
+:::
+
+::: {.col .fig}
+@!rs-async-visualize-the-asynchronous-optimization-process[out=2]
+:::
+:::
 :::
 
 ::: {.slide title="Recap"}

@@ -718,8 +718,6 @@ Two Test Models: TinyLM and FashionCNN<br>**byte-level Transformer · convolutio
 ::: {.slide title="Parameter Census of TinyLM: Three Structural Groups"}
 [Where the Parameters Live]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct structural groups:
 
 - **1. Dense 2D weight matrices ($425{,}984$ params, $90.5\%$):** Four block matrices per layer (`qkv` $128 \to 384$, `proj` $128 \to 128$, `mlp` $128 \to 512 \to 128$) plus output `head` ($128 \to 256$). Decayed in AdamW (§{sec_adam}); internal matrices orthogonalized in Muon (§{sec_muon}).
@@ -727,10 +725,12 @@ To an optimizer, `TinyLM`'s $470{,}784$ parameters partition into three distinct
 - **3. 1D vectors ($3{,}840$ params, $0.8\%$):** Linear biases and LayerNorm scales/shifts.
 :::
 
-::: {.col .fig}
+::: {.slide title="Parameter Census of TinyLM: Three Structural Groups (cont.)" layout="tall-output"}
+[Where the Parameters Live]{.kicker}
+
+The census lists every parameter tensor with its shape and size, then the three group totals:
+
 @!adam-a-tiny-language-model-3
-:::
-:::
 :::
 
 ::: {.slide title="Benchmark 2: FashionCNN on Fashion-MNIST Images"}
@@ -906,8 +906,12 @@ Apply the experimental protocol of this section to three concrete questions:
 1. **Zero-initialized head:** In Exercise 1, an untrained `TinyLM` with default random head weights ($s^2 \approx 1/3$) starts at $\ln 256 + s^2/2 \approx 5.71$ nats. What is its step-1 loss if the output head weights and biases are initialized to exact zeros?
 2. **Result or statistical tie?** In a single $2{,}000$-step run from shared initial weights, Optimizer A finishes at $1.57$ nats on `TinyLM` and $90.4\%$ accuracy on `FashionCNN`, while Optimizer B finishes at $1.59$ nats and $89.6\%$ accuracy. Which optimizer wins?
 3. **Training vs. validation loss on `TinyLM`:** Why is `TinyLM`'s post-step-$2{,}000$ validation loss typically $0.02\text{--}0.03$ nats *lower* than `final_loss`?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Landmarks, Curve Diagnosis, and Seeds (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. Zero head weights and biases produce zero logits ($\mathbf{z} = \mathbf{0}$), giving a exact uniform distribution $p_i = 1/256$ and initial loss **$\ln 256 \approx 5.545$ nats** ($0.17$ nats lower from step 1!).

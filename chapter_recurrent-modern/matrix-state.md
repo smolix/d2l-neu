@@ -808,7 +808,7 @@ $$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\top \ma
 ::: {.slide title="Empirical Error and Codebook Recall vs. Pair Load n"}
 [Theoretical vs. Measured Capacity]{.kicker}
 
-Comparing empirical squared error and nearest-neighbor recall (over a 256-vector unit codebook in $\mathbb{R}^{d_k}$) against the theoretical line $(n - 1)/d_k$:
+Measured squared error and nearest-neighbor recall (256-vector codebook) vs. the line $(n - 1)/d_k$:
 
 @!matrix-state-interference-2
 :::

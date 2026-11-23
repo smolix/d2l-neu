@@ -905,7 +905,7 @@ $$\mathbb{E}_{a \sim \pi_\theta(\cdot \mid s)}\big[\nabla_\theta \log \pi_\theta
 ::: {.slide title="Causality and Reward-to-Go"}
 [Dropping Past Rewards via Backward Scan]{.kicker}
 
-Splitting $R(\tau) = \sum_{t'<t} \gamma^{t'} r_{t'} + \gamma^t \hat{G}_t$ and dropping the prefix sum $r_{<t}$ (which has zero expected product with step-$t$'s score) leaves the **reward-to-go** $\hat{G}_t$:
+Dropping the prefix $\sum_{t'<t} \gamma^{t'} r_{t'}$ of $R(\tau)$ (zero expected product with step-$t$'s score) leaves the **reward-to-go**:
 
 $$\hat{G}_t = \sum_{t'=t}^{T-1} \gamma^{t'-t}\,r_{t'} = r_t + \gamma\,\hat{G}_{t+1}$$
 
@@ -998,7 +998,7 @@ When summing weighted scores across episodes of varying lengths $T_i$ ($N = \sum
 - **Three parallel, one tilted:** Dividing by episodes $n$, total steps $N$ (DAPO), or a fixed constant (Dr. GRPO) produces parallel gradients (`cos = 1.000`) differing only in scale, whereas dividing each episode by its own length $T_i$ (GRPO) reweights short vs. long episodes and tilts the direction (`cos = 0.992`).
 :::
 
-::: {.slide title="Benchmarking Six Estimators at a Frozen Policy"}
+::: {.slide title="Benchmarking Six Estimators at a Frozen Policy" layout="tall-output"}
 [Scale, Direction, and Relative Variance]{.kicker}
 
 Evaluating $2{,}000$ 4-episode batches at our frozen probe ($J = 0.313$, where exact $\nabla_\theta J$ and $V^{\pi_\theta}$ are known via linear solve) compares bias and relative noise $\textrm{tr}(\textrm{Cov})/\|\textrm{mean}\|^2$:
@@ -1022,7 +1022,7 @@ Evaluating $2{,}000$ 4-episode batches at our frozen probe ($J = 0.313$, where e
 :::
 :::
 
-::: {.slide title="Disentangling Step Size from Variance in Training"}
+::: {.slide title="Disentangling Step Size from Variance in Training" layout="tall-output"}
 [Shared Small Step Size vs. Large Step Size]{.kicker}
 
 Comparing all six estimators under plain SGD at $\eta = 2$ (20 seeds) vs. the three equal-mean estimators at $\eta = 16$ (100 seeds) exposes the step-size confound:

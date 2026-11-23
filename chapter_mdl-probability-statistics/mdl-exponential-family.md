@@ -1530,7 +1530,7 @@ Every row below writes $p(\mathbf{x} \mid \boldsymbol{\eta}) = h(\mathbf{x})\exp
 ::: {.slide title="Finding the Maximum-Entropy Tilt by Bisection"}
 [Monotonicity of the Mean Statistic]{.kicker}
 
-Because the expected roll $\sum_{k=1}^6 k\,p_k(\eta)$ increases strictly with $\eta$ (its derivative is the variance $\mathrm{Var}_\eta(k) > 0$), bisection locates $\eta \approx 0.371$ in 50 steps:
+The mean roll $\sum_k k\,p_k(\eta)$ grows strictly with $\eta$ (derivative $\mathrm{Var}_\eta(k) > 0$), so 50 bisection steps find $\eta \approx 0.371$:
 
 @mdl-exponential-family-entropy-and-a-loaded-die
 

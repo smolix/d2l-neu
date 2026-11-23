@@ -2015,12 +2015,12 @@ On a 300-point cloud rotated by $36^\circ$ with population standard deviations $
 ::: {.cols .vc}
 ::: {.col}
 @mdl-svd-low-rank-the-condition-number
-
-- **Zig-Zagging in Gradient Descent:** On $\tfrac{1}{2}\|\mathbf{A}\mathbf{x} - \mathbf{b}\|^2$, level sets have axis ratio $\kappa(\mathbf{A})$ while the Hessian $\mathbf{H} = \mathbf{A}^\top\mathbf{A}$ has condition number $\kappa(\mathbf{A})^2$, causing gradient descent to bounce across steep valley walls.
 :::
 
 ::: {.col .fig}
 ![](../img/mdl-la-condition.svg){.nostretch width=100%}
+
+- **Zig-Zagging in Gradient Descent:** On $\tfrac{1}{2}\|\mathbf{A}\mathbf{x} - \mathbf{b}\|^2$, level sets have axis ratio $\kappa(\mathbf{A})$ while the Hessian $\mathbf{H} = \mathbf{A}^\top\mathbf{A}$ has condition number $\kappa(\mathbf{A})^2$, causing gradient descent to bounce across steep valley walls.
 :::
 :::
 :::

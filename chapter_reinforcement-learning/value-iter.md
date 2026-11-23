@@ -869,7 +869,7 @@ When transitions are deterministic, value iteration propagates exact values back
 ::: {.slide title="Contraction of the Bellman Operator in Sup Norm"}
 [Why Value Iteration Always Converges]{.kicker}
 
-Measured in the sup norm $\|V\|_\infty = \max_s |V(s)|$, every application of $\mathcal{T}$ shrinks the maximum disagreement between any two value tables by at least $\gamma$:
+In the sup norm $\|V\|_\infty = \max_s |V(s)|$, $\mathcal{T}$ shrinks the gap between any two value tables by at least $\gamma$:
 
 ::: {.cols .vc}
 ::: {.col}

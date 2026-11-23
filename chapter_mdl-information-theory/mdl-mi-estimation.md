@@ -1791,12 +1791,20 @@ Sweeping true $I(X; Y) \in [0.25, 7]$ with the exact critic $T^* = \textrm{pmi}$
 :::
 :::
 
-::: {.slide title="Comparing DV, NWJ, and InfoNCE on Exact Critics" layout="tight"}
+::: {.slide title="Comparing DV, NWJ, and InfoNCE on Exact Critics"}
 [200-Batch Quartile Experiment]{.kicker}
 
 Evaluating $200$ batches of size $N = 128$ with exact critics shows DV and NWJ destabilizing once $I > 3$, while InfoNCE maintains an interquartile range under $0.1\text{ nat}$:
 
-@!mutual-information-perfect-critic-bounds
+@!mutual-information-perfect-critic-bounds[out=2]
+:::
+
+::: {.slide title="Comparing DV, NWJ, and InfoNCE on Exact Critics (cont.)"}
+[200-Batch Quartile Experiment]{.kicker}
+
+The medians and interquartile ranges behind the plot; the last two columns give the share of batches whose mismatched pairs have mean $e^{\textrm{pmi}} < 0.1$, and the share holding a mismatched pair with $e^{\textrm{pmi}} \ge N$:
+
+@!mutual-information-perfect-critic-bounds[out=1]
 :::
 
 ::: {.slide title="Training a Dual-Encoder Contrastive Critic"}
@@ -1846,8 +1854,12 @@ Test your grasp of mutual information estimation and contrastive bounds:
 1. **KSG on deterministic copies:** You run KSG with $m = 5$ neighbors on $n = 2{,}000$ samples of a continuous pair where $Y = X \sim \mathcal{N}(0, 1)$ (true $I(X; Y) = \infty$). What numerical value does KSG return and why?
 2. **Cosine temperature ceiling:** In SimCLR with batch size $N = 256$ and cosine critic $T(x, y) = \mathrm{sim}(z_x, z_y)/\tau$ where $\mathrm{sim} \in [-1, 1]$, what is the maximum possible $\hat{I}_{\textrm{NCE}}$ with an unconstrained critic versus at temperature $\tau = 0.5$?
 3. **Diagnosing a contrastive shortfall:** On a dataset where true $I(X; Y) = 1.96\text{ nats}$, your trained InfoNCE critic at $N = 8$ ($\ln 8 = 2.08\text{ nats}$) reports $\hat{I}_{\textrm{NCE}} = 1.40\text{ nats}$. Why does it fall $0.56\text{ nats}$ short even though $\ln 8 > 1.96$?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: KSG, Temperature, and Bound Slack (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **KSG ceiling:** When $Y = X$, the joint Chebyshev distance equals the marginal distance, so every marginal strip holds only the $m - 1 = 4$ points inside the box, returning $\psi(2000) - \psi(5) = 6.09\text{ nats} \approx \ln(400)$.

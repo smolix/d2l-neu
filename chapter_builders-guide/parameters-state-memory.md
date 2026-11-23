@@ -1246,7 +1246,7 @@ Parameters, State, and Memory<br>**the state tree · trainable parameters vs. bu
 :::
 :::
 
-::: {.slide title="Accessing Parameters by Their Path in the State Tree"}
+::: {.slide title="Accessing Parameters by Their Path in the State Tree" except="tensorflow"}
 [Tree Traversal]{.kicker}
 
 ::: {.cols .vc}
@@ -1255,6 +1255,24 @@ Parameters, State, and Memory<br>**the state tree · trainable parameters vs. bu
 
 @parameters-state-memory-accessing-parameters-5
 
+@parameters-state-memory-accessing-parameters-6
+:::
+
+::: {.col .fig}
+@fig:ch05-bg-state-tree-paths
+:::
+:::
+:::
+
+::: {.slide title="Accessing Parameters by Their Path in the State Tree" only="tensorflow"}
+[Tree Traversal]{.kicker}
+
+- A full-tree iterator yields every leaf alongside its path in the tree:
+
+@parameters-state-memory-accessing-parameters-5
+
+::: {.cols .vc}
+::: {.col}
 @parameters-state-memory-accessing-parameters-6
 :::
 
@@ -1476,7 +1494,7 @@ When fine-tuning a pretrained backbone on a small dataset, we **freeze** the bac
 @parameters-state-memory-freezing-parameters-1
 :::
 
-::: {.slide title="After Freezing, Only the Head Trains"}
+::: {.slide title="After Freezing, Only the Head Trains" layout="tall-output"}
 [Selective Optimization]{.kicker}
 
 ::: {.cols .vc}

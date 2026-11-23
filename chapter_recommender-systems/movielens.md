@@ -388,26 +388,46 @@ the two most informative diagnostics for a recommender
 dataset:
 
 @movielens-statistics-of-the-dataset-1
+:::
 
-. . .
+::: {.slide title="Most user--item entries are unobserved (cont.)"}
+The rating distribution of the observed entries:
 
-@movielens-statistics-of-the-dataset-2
+::: {.cols .vc}
+::: {.col}
+@-movielens-statistics-of-the-dataset-2
+:::
+
+::: {.col .fig .big}
+@!movielens-statistics-of-the-dataset-2
+:::
+:::
 :::
 
 ::: {.slide title="Random and chronological splits estimate different tasks"}
+::: {.cols}
+::: {.col .narrow}
 Two splits to support different evaluation protocols:
 
 - *Random* — split rows uniformly. For rating prediction.
 - *Seq-aware* — hold out the *last* interaction per user.
   Closer to "predict what they rate next".
+:::
 
+::: {.col}
 @movielens-splitting-the-dataset
+:::
+:::
 :::
 
 ::: {.slide title="Explicit and implicit tasks require different examples"}
-@movielens-loading-the-data-1
+`load_data_ml100k` turns rating rows into explicit scores or implicit interactions:
 
-. . .
+@movielens-loading-the-data-1
+:::
+
+::: {.slide title="Explicit and implicit tasks (cont.)"}
+`split_and_load_ml100k` splits the data and wraps both parts in loaders:
 
 @movielens-loading-the-data-2
 :::

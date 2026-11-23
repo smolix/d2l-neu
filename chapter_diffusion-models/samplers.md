@@ -1452,7 +1452,7 @@ Running DDIM ($\eta = 0, 1$) and the ancestral chain with the exact mixture pred
 :::
 
 ::: {.col .fig}
-@!samplers-skipping-steps-on-the-running-example
+@!samplers-skipping-steps-on-the-running-example[out=2]
 :::
 :::
 :::
@@ -1460,8 +1460,9 @@ Running DDIM ($\eta = 0, 1$) and the ancestral chain with the exact mixture pred
 ::: {.slide title="First-Order Stride Error on the 2D Mixture (cont.)" layout="tight"}
 [Exact Predictor Across Step Budgets]{.kicker}
 
-- **Why $\eta = 1$ contracts even more ($0.32$):** Replacing correlated kept noise $\hat{\boldsymbol\epsilon}$ with orthogonal fresh noise $\boldsymbol\xi$ eliminates the positive cross-term with $\hat{\mathbf{x}}_0$, whereas the ancestral chain over-inflates spread to **$0.52$**.
+@!samplers-skipping-steps-on-the-running-example[out=1]
 
+- **Why $\eta = 1$ contracts even more ($0.32$):** Replacing correlated kept noise $\hat{\boldsymbol\epsilon}$ with orthogonal fresh noise $\boldsymbol\xi$ eliminates the positive cross-term with $\hat{\mathbf{x}}_0$, whereas the ancestral chain over-inflates spread to **$0.52$**.
 :::
 
 ::: {.slide title="Second-Order Integration: Heun's Predictor–Corrector"}
@@ -1639,9 +1640,17 @@ $$\mathbf{x}_{t_0} = \alpha_{t_0}\mathbf{y} + \sigma_{t_0}\boldsymbol\epsilon \i
 :::
 
 ::: {.col .fig}
-@!samplers-editing-by-partial-noising
+@!samplers-editing-by-partial-noising[out=2]
 :::
 :::
+:::
+
+::: {.slide title="Editing by Partial Noising (SDEdit) (cont.)"}
+[Trading Input Fidelity for Sample Realism]{.kicker}
+
+As $t_0$ grows, the distance to the input $\mathbf{y}$ rises while FD falls:
+
+@!samplers-editing-by-partial-noising[out=1]
 :::
 
 ::: {.slide title="Zero-Shot Replacement Inpainting"}

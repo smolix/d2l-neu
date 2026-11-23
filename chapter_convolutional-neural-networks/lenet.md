@@ -746,10 +746,8 @@ We Xavier-initialize all weights and stack the encoder and dense head in one `Se
 @lenet-2
 :::
 
-::: {.slide title="Tracing Tensor Shapes Through LeNet"}
-[Verifying Spatial Shrinkage and Channel Expansion Before Training]{.kicker}
-
-`layer_summary` traces a dummy $(1, 1, 28, 28)$ input through every layer:
+::: {.slide title="Tracing Tensor Shapes Through LeNet" layout="tall-output"}
+[Spatial Shrinkage and Channel Expansion, Layer by Layer]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}

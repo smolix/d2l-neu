@@ -608,8 +608,12 @@ Test your grasp of the D2L build system on these three questions:
 1. A source `.md` file has 5 cells: (1) `%%tab pytorch` defining `x`, (2) `%%tab jax` defining `x`, (3) an untagged cell `y = x * 2`, (4) `%%tab pytorch` modifying `x`, and (5) an untagged `print(y.sum())`. If you edit cell (3), which notebooks change and must be re-executed?
 2. You upgrade your local PyTorch environment from `torch==2.11.0+cu124` on Linux to `torch==2.11.0` CPU on macOS. Does `tools/audit_outputs.py` mark the committed PyTorch outputs stale? What if you upgrade to `torch==2.12.0`?
 3. `Trainer.prepare_batch` is defined with `#@save` in §{sec_oo-design} (CPU-only) and redefined with `#@save` in §{sec_use_gpu} (moving batches to GPU). Which version is in `d2l/torch.py`, and which version runs at the end of the §{sec_oo-design} notebook?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Tabs, Staleness, and Library Order (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **Both the PyTorch and JAX notebooks!** Because cell (3) is untagged, it belongs to every framework generated from the file (`pytorch` and `jax`), and editing it invalidates the prefix fingerprint of cells (3), (4), and (5) in both frameworks.

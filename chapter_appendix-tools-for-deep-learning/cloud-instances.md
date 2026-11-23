@@ -570,8 +570,12 @@ Test your cloud systems reasoning on these three problems:
 1. In memory profiling of BERT fine-tuning across batch sizes, peak active memory follows $M(B) = 1.8\text{ GiB} + 0.15\text{ GiB} \cdot B$, while the caching allocator's reserved pool is $10\%$ higher. What does the $1.8\text{ GiB}$ intercept represent, and which memory metric determines whether a run OOMs on a 24 GB card?
 2. Without a pre-run smoke test, when would a read-only checkpoint directory (`/mnt/ckpt`) surface during an 8-hour training run that saves every hour? What about a slow network disk that feeds 2 batches/s to a GPU capable of 10 steps/s?
 3. Excluding engineer time, what `relative_speed` would the H100 ($\$2.50/\text{hr}$) need in `#cloud-instances-cost-model` to match the RTX 4090 ($\$0.40/\text{hr}$) on the cloud invoice alone?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Cloud Economics and Reliability (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. The **$1.8\text{ GiB}$ intercept** is the batch-independent memory (parameters, gradients, optimizer states, and CUDA context). The **allocator reserved/peak allocated memory against physical VRAM** decides OOMs.

@@ -508,10 +508,12 @@ $$\text{decode tokens/s} \lesssim \frac{\beta}{B_w + B_{\text{kv}}(n)}$$
 :::
 :::
 
-::: {.slide title="Ranking Hardware by the Decode Bandwidth Bound" layout="tight"}
+::: {.slide title="Ranking Hardware by the Decode Bandwidth Bound"}
 [Bandwidth Ordering]{.kicker}
 
 Applying $\beta / (4.5\text{ GB})$ across consumer discrete cards, unified-memory boxes, and a datacenter H100 predicts generation speed to within a factor of two:
+
+@-hardware-decode-bound
 
 ::: {.cols .vc}
 ::: {.col}
@@ -521,8 +523,8 @@ Applying $\beta / (4.5\text{ GB})$ across consumer discrete cards, unified-memor
   - A DGX Spark ($273\text{ GB/s}$) and Strix Halo ($256\text{ GB/s}$) both cap near $\le 57\text{--}61\text{ tok/s}$, even though the Spark costs twice as much and has far more compute!
 :::
 
-::: {.col .fig}
-@hardware-decode-bound
+::: {.col .narrow}
+@!hardware-decode-bound
 :::
 :::
 :::
@@ -661,7 +663,7 @@ How can a mini-PC or Mac Studio run a 70B or 120B language model that does not f
 ::: {.slide title="Workstation GPUs and the Rent-vs.-Buy Break-Even"}
 [Total Cost of Ownership]{.kicker}
 
-The **RTX PRO 6000 Blackwell** packs **96 GB GDDR7 at $1.79\text{ TB/s}$** (listed at $\$16{,}000$ in Nov 2026; four 300 W Max-Q cards put $384\text{ GB}$ in one chassis for $\$64{,}000$, communicating over PCIe 5.0 at $64\text{ GB/s}$). When does buying beat renting?
+The **RTX PRO 6000 Blackwell** packs **96 GB GDDR7 at $1.79\text{ TB/s}$** ($\$16{,}000$, Nov 2026); four 300 W Max-Q cards put $384\text{ GB}$ in one chassis for $\$64{,}000$, linked by $64\text{ GB/s}$ PCIe 5.0. When does buying beat renting?
 
 ::: {.cols .vc}
 ::: {.col}
@@ -702,8 +704,12 @@ Work out these three hardware sizing calculations:
 1. You want to fine-tune Llama 3.1 8B using LoRA ($1\%$ trainable parameters, $6\text{ GiB}$ activations, $2\text{ GiB}$ workspace) on a **16 GB RTX 5070 Ti**. Does standard LoRA (frozen BF16 base weights) fit, or do you need QLoRA (frozen 4-bit base weights)?
 2. Compare a dense 30B model and a **30B-A3B MoE** model ($30\text{B}$ total parameters, $3\text{B}$ active per token), both quantized to 4 bits ($0.5\text{ B/param}$). Ignoring KV cache, what is the decode bandwidth bound on a Mac Studio M5 Max ($614\text{ GB/s}$)?
 3. Why does the 30B-A3B MoE model fail to run on a 16 GB RTX 5070 Ti even though it only reads $1.5\text{ GB}$ of weights per token?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Hardware Sizing and Roofline Bounds (cont.)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. **Standard BF16 LoRA does not fit:** Frozen BF16 weights alone take $8\text{B} \times 2\text{ B} \approx 14.9\text{ GiB}$, plus $1\text{ GiB}$ adapter state $+ 8\text{ GiB}$ activations/workspace $\approx 23.9\text{ GiB} > 16\text{ GB}$. **QLoRA fits easily:** 4-bit base weights take $\approx 3.9\text{ GiB} + 0.9\text{ GiB}$ adapters $+ 8\text{ GiB} \approx 12.8\text{ GiB} < 16\text{ GB}$.

@@ -915,16 +915,16 @@ Tying the output projection via `self.token_emb.attend` means rare tokens receiv
 
 ::: {.cols .vc}
 ::: {.col}
-- `init_weights` initializes embeddings and linear projections from $\mathcal{N}(0, 0.02^2)$, while scaling the two residual write matrices (`W_o` and `W_2`) by $1/\sqrt{2L}$:
-- With $2L$ sublayers adding updates to the pre-norm stream, scaling `W_o` and `W_2` by $1/\sqrt{2L}$ keeps initial stream variance near the embedding variance right from block 1.
-
-@gpt-from-blocks-to-a-language-model-5
+- `init_weights` draws embeddings and projections from $\mathcal{N}(0, 0.02^2)$ and scales the two residual write matrices (`W_o`, `W_2`) by $1/\sqrt{2L}$.
+- With $2L$ sublayers writing to the pre-norm stream, this keeps the initial stream variance near the embedding variance from block 1 on.
 :::
 
-::: {.col .fig}
+::: {.col .fig .narrow}
 @fig:ch11-tf-gpt-depth-init
 :::
 :::
+
+@gpt-from-blocks-to-a-language-model-5
 :::
 
 ::: {.slide title="The Autoregressive Cross-Entropy Objective"}
@@ -977,14 +977,20 @@ We train a 6-block byte-level `GPT` ($V = 256, d = 256, H = 8, L = 6, T = 128$, 
   - Uniform guess ($\ln 256$): **$5.55\text{ nats/byte}$**
   - Empirical unigram frequencies: **$3.17\text{ nats/byte}$**
   - Empirical bigram transitions: **$2.45\text{ nats/byte}$**
-
-@gpt-training-the-model-4
 :::
 
 ::: {.col .fig}
 @!gpt-training-the-modern-configuration
 :::
 :::
+:::
+
+::: {.slide title="Training Curve and Empirical Entropy Yardsticks (cont.)"}
+[Training Results]{.kicker}
+
+The unigram and bigram yardsticks are plain counts over the first $10\text{M}$ training bytes:
+
+@gpt-training-the-model-4
 :::
 
 ::: {.slide title="Controlled Ablation: Seed Spread vs. SwiGLU Gain"}
@@ -1018,15 +1024,20 @@ We train a matched `d2l.RNNLM` ($d_{\text{rnn}} = 1{,}920$, $4.74\text{M}$ param
 ::: {.col}
 - At each decode step, `GPT.generate` scales logits $\mathbf{z}_t \in \mathbb{R}^V$ by **temperature $\tau > 0$** and truncates to the **top-$k$** (or nucleus **top-$p$**) candidates:
   $$p_v = \frac{\exp(z_{t,v} / \tau)}{\sum_{u \in \mathcal{V}_k} \exp(z_{t,u} / \tau)}$$
-- $\tau = 0.7, k = 8$ concentrates probability mass on clean English words, whereas $\tau = 2.0$ flattens toward gibberish.
-
-@!gpt-sampling-from-the-model-2
 :::
 
 ::: {.col .fig}
 @fig:ch11-tf-gpt-sampling-pipeline
 :::
 :::
+:::
+
+::: {.slide title="Autoregressive Decoding: Temperature and Top-k (cont.)"}
+[Sampling Mechanics]{.kicker}
+
+$\tau = 0.7, k = 8$ concentrates probability mass on clean English words, whereas $\tau = 2.0$ flattens toward gibberish:
+
+@!gpt-sampling-from-the-model-2
 :::
 
 ::: {.slide title="Loading Pretrained OpenAI GPT-2 Small (124M)"}

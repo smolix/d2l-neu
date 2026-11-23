@@ -1170,7 +1170,7 @@ Deep Convolutional GANs and Architectural Stabilization<br>**transposed convolut
 ::: {.slide title="Scaling from Flat Vectors to 64×64 RGB Images"}
 [Motivation]{.kicker}
 
-In §{sec_basic_gan}, a fully connected MLP generator produced grainy $28 \times 28$ Fashion-MNIST silhouettes because dense layers ignore 2D spatial locality. Scaling to $64 \times 64$ RGB images raises two fundamental challenges:
+Dense MLP generators (§{sec_basic_gan}) ignore 2D locality and gave grainy $28 \times 28$ silhouettes; $64 \times 64$ RGB is harder:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1220,7 +1220,7 @@ Radford, Metz, and Chintala (2015) stabilized the unpenalized non-saturating log
 :::
 :::
 
-::: {.slide title="Implementing DCGAN Generator and Critic Blocks"}
+::: {.slide title="Implementing DCGAN Generator and Critic Blocks" only="pytorch"}
 [Code Construction]{.kicker}
 
 ::: {.cols}
@@ -1234,7 +1234,31 @@ Radford, Metz, and Chintala (2015) stabilized the unpenalized non-saturating log
 :::
 :::
 
-::: {.slide title="EMA Weight Averaging and BatchNorm Recalibration"}
+::: {.slide title="Implementing DCGAN Generator and Critic Blocks" only="jax"}
+[Code Construction]{.kicker}
+
+DCGAN's initialization: kernels from $\mathcal{N}(0, 0.02^2)$, BatchNorm scales from $\mathcal{N}(1, 0.02^2)$, and running averages that decay at $0.9$:
+
+@-dcgan-generator-1[1-9]
+:::
+
+::: {.slide title="Implementing DCGAN Generator and Critic Blocks (cont.)" only="jax"}
+[Code Construction]{.kicker}
+
+The generator block upsamples with a transposed convolution; the critic block downsamples with a strided one:
+
+@-dcgan-generator-1[11-]
+:::
+
+::: {.slide title="Implementing DCGAN Generator and Critic Blocks (networks)" only="jax"}
+[Code Construction]{.kicker}
+
+Stacking the blocks maps a 100-dimensional latent to a $64 \times 64$ RGB image and back to a single score:
+
+@dcgan-generator-3
+:::
+
+::: {.slide title="EMA Weight Averaging and BatchNorm Recalibration" only="pytorch"}
 [Damping Rotational Orbits]{.kicker}
 
 Because minimax gradient iterates orbit around equilibrium (§{sec_gan_convergence}), their center of mass sits closer to the solution than the last iterate. We therefore sample from an **exponential moving average (EMA)** of the generator parameters:
@@ -1251,6 +1275,33 @@ Because minimax gradient iterates orbit around equilibrium (§{sec_gan_convergen
 @dcgan-training-with-the-classic-loss-4
 :::
 :::
+:::
+
+::: {.slide title="EMA Weight Averaging and BatchNorm Recalibration" only="jax"}
+[Damping Rotational Orbits]{.kicker}
+
+Because minimax gradient iterates orbit around equilibrium (§{sec_gan_convergence}), their center of mass sits closer to the solution than the last iterate. We therefore sample from an **exponential moving average (EMA)** of the generator parameters:
+
+::: {.cols .vc}
+::: {.col}
+- **Half-life parameterization ($n_{1/2}$ steps, $\beta = 2^{-1/n_{1/2}}$):**
+  $$\bar{\theta} \leftarrow \beta\,\bar{\theta} + (1 - \beta)\,\theta$$
+  We set the half-life to $32{,}000$ images ($n_{1/2} = 125$ steps at batch size $256$; $500$ steps at batch size $64$).
+- **Pitfall — Stale BatchNorm statistics:** Copying running mean/variance buffers from the live network mismatches the averaged weights $\bar{\theta}$! After training, we run $100$ fresh forward batches in `train()` mode ($0.9^{100} \approx 3 \times 10^{-5}$) to recalibrate BatchNorm buffers for $\bar{\theta}$.
+:::
+
+::: {.col .fig}
+@-dcgan-training-with-the-classic-loss-4[1-12]
+:::
+:::
+:::
+
+::: {.slide title="EMA Weight Averaging and BatchNorm Recalibration (cont.)" only="jax"}
+[Damping Rotational Orbits]{.kicker}
+
+`average` is one compiled update: it moves every parameter of the copy toward the live model and copies the other state, such as BatchNorm statistics:
+
+@dcgan-training-with-the-classic-loss-4[13-]
 :::
 
 ::: {.slide title="DCGAN Training Results on Pokémon Sprites"}
@@ -1410,7 +1461,7 @@ A single distance like FID or KID conflates **poor sample fidelity** (unrealisti
 
 :::
 
-::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor" layout="tight"}
+::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor" layout="tall-output"}
 [Scoring 4,059 Sprites]{.kicker}
 
 Using 128D features from our 3-block CIFAR-10 classifier `FeatureCNN` ($64 \times 64$ sprites average-pooled to $32 \times 32$), we score $n = 4{,}059$ generated samples against the $4{,}059$ held-out sprites across two independent latent draws:
@@ -1418,6 +1469,11 @@ Using 128D features from our 3-block CIFAR-10 classifier `FeatureCNN` ($64 \time
 @!dcgan-scoring-the-two-runs
 
 - **1. Real-vs.-real floor:** Two disjoint real sets score $\mathrm{FD} \approx 0.18$ (finite-sample covariance bias), $\widehat{\mathrm{MMD}}^2 \approx 0.000$, and precision/recall $0.95$.
+:::
+
+::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor (cont.)"}
+[Scoring 4,059 Sprites]{.kicker}
+
 - **2. Collapse vs. penalized arms:** Unpenalized `NS` scores $\mathrm{FD} \approx 64\text{--}72$ with $\mathrm{recall} = 0.00$; adding $R_1 + R_2$ reduces FD tenfold ($\sim 3.5\text{--}5.4$) and restores precision/recall to $\sim 0.4\text{--}0.5$.
 - **3. Feature-network invariance:** Because $2 \times 2$ pooling into $32 \times 32$ `FeatureCNN` smooths out DCGAN's high-frequency blotches, DCGAN achieves the lowest FD ($\sim 2.0$) despite looking blotchier at $64 \times 64$.
 :::
@@ -1493,7 +1549,7 @@ Test your understanding of convolutional GAN architectures and evaluation metric
 - **Complementary feature metrics:** Calibrate **FID** against the $+O(1/n)$ real-vs.-real floor, use **KID** for unbiased finite-$n$ comparisons, and report **$K$-NN precision and recall** to separate fidelity from mode coverage.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:ch16-gan-eval-summary
 :::
 :::

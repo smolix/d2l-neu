@@ -857,8 +857,10 @@ class is encoded in the *color*, not in a 1-channel id
 tensor:
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-3
+:::
 
-. . .
+::: {.slide title="Reading images and labels (cont.)"}
+The first five images and their label masks:
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-4
 :::
@@ -869,12 +871,18 @@ indices 0–20. After conversion, each label pixel is an
 integer target for cross-entropy:
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-5
+:::
 
-. . .
+::: {.slide title="Color → class index (cont.)"}
+Hash each RGB triplet to an index into a lookup table, then map
+every label pixel through it:
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-6
+:::
 
-. . .
+::: {.slide title="Color → class index: a label patch" layout="code"}
+A patch of the first training label: the airplane's pixels get
+class 1 (`aeroplane`), the background class 0:
 
 @semantic-segmentation-and-dataset-the-pascal-voc2012-semantic-segmentation-dataset-7
 :::
@@ -886,8 +894,11 @@ Use random *crop* on both image and label, with the same
 random window:
 
 @semantic-segmentation-and-dataset-data-preprocessing-1
+:::
 
-. . .
+::: {.slide title="Crop, not resize (cont.)"}
+Five random crops of the first image and its label; each pair
+shares the same window:
 
 @semantic-segmentation-and-dataset-data-preprocessing-2
 :::

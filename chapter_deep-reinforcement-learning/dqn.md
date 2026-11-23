@@ -855,7 +855,7 @@ $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w
 ::: {.slide title="Target Network Regression with Clipped Huber Loss"}
 [Update Implementation]{.kicker}
 
-Between target synchronizations ($w^- \leftarrow w$ every $C = 250$ steps), the online network $Q_w$ solves a stationary regression problem using Huber loss and global gradient norm clipping at `10.0`:
+Between syncs (every $C = 250$ steps), $Q_w$ solves a stationary Huber regression, gradient norm clipped at `10.0`:
 
 @dqn-the-target-network-1
 :::
@@ -865,7 +865,15 @@ Between target synchronizations ($w^- \leftarrow w$ every $C = 250$ steps), the 
 
 After a $1{,}000$-step warm-up, `train_dqn` acts $\epsilon$-greedily ($\epsilon: 1.0 \to 0.05$ over $10\text{k}$ steps), updates every `train_freq = 2` steps, and syncs $w^- \leftarrow w$ every `sync_every = 250` steps (or every step when `use_target=False`):
 
-@dqn-the-training-loop-1
+@-dqn-the-training-loop-1[1-6]
+:::
+
+::: {.slide title="The DQN Training Loop on CartPole (cont.)" layout="tight"}
+[Training Loop]{.kicker}
+
+Each environment step acts, stores the transition, and then trains and syncs on their schedules:
+
+@dqn-the-training-loop-1[7-]
 
 ::: {.d2l-note .rule}
 Always store `float(terminated)`—never `terminated or truncated`—so that episodes reaching CartPole's 500-step time limit still bootstrap their continuation value!

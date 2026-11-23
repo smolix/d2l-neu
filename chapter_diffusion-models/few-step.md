@@ -1348,7 +1348,15 @@ Using a 20,000-step teacher `TimeMLP`, we train six random seeds (`seeds 2..7`) 
 
 We evaluate all 18 trained student networks on $20{,}000$ Gaussian starts against 50-step teacher Euler and true data:
 
-@!few-step-on-the-running-example-2
+@!few-step-on-the-running-example-2[out=2]
+:::
+
+::: {.slide title="Benchmarking Few-Step Students on the 2D Mixture (results)" layout="tall-output"}
+[1, 2, and 4 Evaluations Across Six Training Seeds]{.kicker}
+
+Mode-weight error for each of the six seeds, the fraction of stray samples between modes, and the within-mode spread:
+
+@!few-step-on-the-running-example-2[out=1]
 :::
 
 ::: {.slide title="Analyzing the Teacher-Free Mode-Contraction Defect"}
@@ -1408,12 +1416,12 @@ Evaluating the teacher ($1$ to $50$ Euler steps) and two distilled students (`se
 ::: {.slide title="Trajectory Preservation: Teacher Euler vs. Student"}
 [Comparing 50-Step Teacher, 2-Step Teacher, and 1–2 Student Jumps]{.kicker}
 
-Because `UNetFlowMap` integrates the teacher's deterministic ODE without re-noising, every column starts from the exact same initial noise vector $\mathbf{z}_i$ and produces the **exact same garment**:
+`UNetFlowMap` follows the teacher's deterministic ODE, so each column starts from the same noise $\mathbf{z}_i$ and yields the **same garment**:
 
 @!few-step-on-images-4
 
 - **Row 1 vs. Row 2 (Teacher 50 vs. 2 Euler steps):** Two Euler steps produce blurry, low-contrast ghosts that often fail to commit to the right garment category.
-- **Row 3 vs. Row 4 (Student 1 vs. 2 jumps):** Even a **single jump** (Row 3) recovers the 50-step teacher's exact garment silhouette and shade in every column, while **two jumps** (Row 4) sharpen collar edges and fabric textures to near-teacher quality.
+- **Row 3 vs. Row 4 (Student 1 vs. 2 jumps):** Even a **single jump** (Row 3) recovers the 50-step teacher's garment silhouette and shade in every column; **two jumps** (Row 4) sharpen edges and textures to near-teacher quality.
 :::
 
 ::: {.slide title="Distribution Matching Distillation (DMD) and Critics"}
@@ -1440,13 +1448,23 @@ Test your understanding of flow-map identities and few-step distillation:
 
 1. **Verifying the MeanFlow identity on 1D Gaussians:** For $x_0 \sim \mathcal{N}(2, 0.5^2)$ at $s = 0, t = 1$, we found $\bar{u}(x, 0, 1) = 0.5x - 2$ and instantaneous velocity $u_1(x) = x - 2$. According to the MeanFlow identity $\bar{u} = u_1 - (1 - 0)\frac{d}{dt}\bar{u}$, what must the total derivative $\frac{d}{dt}\bar{u}(x_t, 0, t)$ equal at $t = 1$?
 2. **Why two-step mode weights skew toward the heaviest mode:** On our 2D mixture with weights $(0.5, 0.3, 0.2)$, why do 2 Euler steps on the exact velocity field assign weight $0.64$ to mode 1 instead of $0.50$?
-3. **Preserving the noise-to-image pairing at 2 NFE:** Among a consistency model ($s = 0$), a two-time flow map ($s \le t$), and an adversarially distilled 1-step generator, which model produces a 2-evaluation sample that is still a purely deterministic function of the initial noise $\mathbf{z}$?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. By the MeanFlow identity, $\frac{d}{dt}\bar{u} = u_1(x) - \bar{u}(x, 0, 1) = (x - 2) - (0.5x - 2) = \mathbf{0.5\,x}$. (Directly: along a trajectory $\bar{u}(x_t, 0, t) = (x_t - x_0)/t$, so $\frac{d}{dt}\bar{u} = (u_t - \bar{u})/t = 0.5x$ at $t = 1$.)
 2. At $t = 1$, the first half-step aims every point toward the global data mean $\mathbb{E}[\mathbf{x}_0] = (-0.5, -0.7)$, which lies spatially closest to the heaviest mode $(-2.5, -1.5)$, pushing extra mass into mode 1's basin of attraction at $t = 0.5$.
+:::
+:::
+
+::: {.slide title="Concept Check: Flow Maps, MeanFlow & Stop-Gradients (cont.)"}
+[Check Your Understanding]{.kicker}
+
+3. **Preserving the noise-to-image pairing at 2 NFE:** Among a consistency model ($s = 0$), a two-time flow map ($s \le t$), and an adversarially distilled 1-step generator, which model produces a 2-evaluation sample that is still a purely deterministic function of the initial noise $\mathbf{z}$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer:**
+
 3. **Only the two-time flow map ($\bar{\mathbf{u}}(\mathbf{x}_t, s, t)$):** It composes two deterministic jumps $\Phi_{0.5 \to 0}(\Phi_{1 \to 0.5}(\mathbf{z}))$ along the same ODE trajectory, whereas consistency and 1-step generators must inject fresh random noise $\boldsymbol\epsilon'$ at $t = 0.5$.
 :::
 :::

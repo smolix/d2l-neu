@@ -40,9 +40,20 @@ OUTPUT_END = '<!-- /d2l:output -->'
 MAX_TEXT_LINES_BY_MODE = {
     'html': 40,
     'pdf': 40,
-    'slides': 12,
+    # Slides count *rows* (a wrapped line is several), and the cap is the
+    # whole rendered block, `...` included. 10 rows is what the default
+    # output box holds (`$out-box` in _d2l-slides.scss, 288 px: 10 rows of
+    # 25.2 px at full width, 10 of 21.1 px in a column). A slide layout with
+    # a different box passes its own cap per cell (gen_slides.py
+    # OUTPUT_LINES_OPTION, `#| d2l-output-lines: 13`).
+    'slides': 10,
 }
 MAX_TEXT_LINES = 40  # legacy default; some callers may pass mode='html'/'pdf'
+# Characters a full-width slide output row holds before `white-space:
+# pre-wrap` wraps it (1041 px at 0.6 x 17.4 px JetBrains Mono = 100). A cell
+# in a column, or on a smaller-font layout, gets its own width from
+# gen_slides.py (OUTPUT_WIDTH_OPTION, `#| d2l-output-width: 53`).
+SLIDE_OUTPUT_WIDTH = 100
 
 # Strip ANSI CSI escape sequences (e.g. Keras 3 progress bars). Leaving them
 # in the qmd corrupts Quarto's intermediate markdown — the ESC bytes confuse
@@ -94,14 +105,25 @@ _NOISY_SLIDE_OUTPUT_SUBSTRINGS = (
 # ── QMD Parsing ──────────────────────────────────────────────
 
 class QmdCell:
-    __slots__ = ('start_line', 'end_line', 'source', 'framework', 'cell_id')
+    __slots__ = ('start_line', 'end_line', 'source', 'framework', 'cell_id',
+                 'output_items', 'output_lines', 'output_width')
 
-    def __init__(self, start_line, end_line, source, framework, cell_id=None):
+    def __init__(self, start_line, end_line, source, framework, cell_id=None,
+                 output_items=None, output_lines=None, output_width=None):
         self.start_line = start_line
         self.end_line = end_line
         self.source = source
         self.framework = framework  # None = shared / tab-all
         self.cell_id = cell_id      # `#| label: <id>` extracted from source
+        # (first, last-or-None) from a `#| d2l-output-items:` option, which
+        # gen_slides.py writes for a `@<id>[out=...]` placeholder; None = all.
+        self.output_items = output_items
+        # Slide text-output cap in rows and the row width in characters,
+        # from `#| d2l-output-lines:` / `#| d2l-output-width:` (gen_slides.py
+        # writes them for a slide layout or column that changes the output
+        # box); None = the slide defaults.
+        self.output_lines = output_lines
+        self.output_width = output_width
 
 
 _LABEL_LINE_RE = re.compile(r'^#\|\s*label:\s*([a-z][a-z0-9-]*)\s*$')
@@ -131,6 +153,52 @@ def _extract_cell_id(code_lines):
         if not m:
             return None
         return _FIG_SUFFIX_RE.sub('', m.group(1))
+    return None
+
+
+# `#| d2l-output-items: "2-3"` — the output-item range of a slide fragment
+# (gen_slides.py OUTPUT_ITEMS_OPTION; 1-based, inclusive, `2-` = to the end).
+_OUTPUT_ITEMS_RE = re.compile(
+    r'^#\|\s*d2l-output-items:\s*"?(\d+)(?:(-)(\d+)?)?"?\s*$')
+
+
+def _option_lines(code_lines):
+    """The `#|` option lines at the top of a cell."""
+    for ln in code_lines:
+        s = ln.strip()
+        if not s.startswith('#|'):
+            if s:
+                return
+            continue
+        yield s
+
+
+# `#| d2l-output-lines: 13` / `#| d2l-output-width: 53` — the slide output
+# box's row cap and row width (gen_slides.py OUTPUT_LINES_OPTION and
+# OUTPUT_WIDTH_OPTION).
+_OUTPUT_INT_RE = re.compile(
+    r'^#\|\s*d2l-output-(lines|width):\s*"?(\d+)"?\s*$')
+
+
+def _extract_output_fit(code_lines):
+    """(lines, width) from a cell's `#| d2l-output-lines/width:` options."""
+    got = {}
+    for s in _option_lines(code_lines):
+        m = _OUTPUT_INT_RE.match(s)
+        if m:
+            got[m.group(1)] = int(m.group(2))
+    return got.get('lines'), got.get('width')
+
+
+def _extract_output_items(code_lines):
+    """Read the `#| d2l-output-items:` option from a cell's option block."""
+    for s in _option_lines(code_lines):
+        m = _OUTPUT_ITEMS_RE.match(s)
+        if m:
+            a = int(m.group(1))
+            if not m.group(2):
+                return (a, a)
+            return (a, int(m.group(3)) if m.group(3) else None)
     return None
 
 
@@ -205,7 +273,9 @@ def parse_qmd_cells(text):
 
             fw = current_fw if (True in div_stack) else None
             cid = _extract_cell_id(code_lines) or pending_cell_id
-            cells.append(QmdCell(start, end, '\n'.join(code_lines), fw, cid))
+            cells.append(QmdCell(start, end, '\n'.join(code_lines), fw, cid,
+                                 _extract_output_items(code_lines),
+                                 *_extract_output_fit(code_lines)))
             pending_cell_id = None
             i += 1
             continue
@@ -396,6 +466,73 @@ def coalesce_stream_outputs(raw_outputs):
     return merged
 
 
+class OutputSelectionError(ValueError):
+    """A slide's `[out=...]` selection names output items the cell lacks."""
+
+
+def output_items(raw_outputs):
+    """The output items a slide's `[out=k]` selector counts, in order.
+
+    The cell's stored outputs after adjacent same-name streams are merged
+    (coalesce_stream_outputs, as rendering does) and error outputs dropped:
+    so each plot (display_data image), each execute_result, and each run of
+    printed text between them is one item.
+    """
+    return [o for o in coalesce_stream_outputs(raw_outputs)
+            if o.get('output_type') != 'error']
+
+
+def describe_item(out):
+    """One-line summary of an output item for messages and --show-cell."""
+    data = out.get('data', {})
+    for mime in ('image/svg+xml', 'image/png'):
+        if mime in data:
+            return f'{out.get("output_type", "display_data")} {mime}'
+    if out.get('output_type') == 'stream':
+        text = ''.join(out.get('text', []))
+    else:
+        plain = data.get('text/plain', '')
+        text = plain if isinstance(plain, str) else ''.join(plain)
+    first = text.strip().split('\n')[0] if text.strip() else ''
+    nlines = len(text.rstrip('\n').split('\n')) if text else 0
+    kind = (f'stream {out.get("name", "stdout")}'
+            if out.get('output_type') == 'stream'
+            else out.get('output_type', '?'))
+    return f'{kind} ({nlines} lines): {textwrap.shorten(first, 60)}'
+
+
+def select_output_items(raw_outputs, item_range, where):
+    """Items `item_range` of output_items(raw_outputs), plus image ordinals.
+
+    Returns (selected_outputs, ordinals): ordinals[k] is the 1-based position
+    of selected_outputs[k] among the cell's images (None for text), so a
+    fragment names its image files after the plot's place in the whole cell
+    and two fragments of one cell never write the same file.
+    Raises OutputSelectionError when the range runs past the last item.
+    """
+    items = output_items(raw_outputs)
+    n = len(items)
+    a, b = item_range
+    last = n if b is None else b
+    if a > n or last > n:
+        listing = '; '.join(f'out={k}: {describe_item(o)}'
+                            for k, o in enumerate(items, start=1))
+        shown = f'{a}' if b == a else f'{a}-{"" if b is None else b}'
+        raise OutputSelectionError(
+            f'{where}: out={shown} is out of range; the cell has {n} output '
+            f'item(s)' + (f' ({listing})' if listing else ''))
+    ordinals = []
+    img = 0
+    for o in items:
+        data = o.get('data', {})
+        if 'image/png' in data or 'image/svg+xml' in data:
+            img += 1
+            ordinals.append(img)
+        else:
+            ordinals.append(None)
+    return items[a - 1:last], ordinals[a - 1:last]
+
+
 # Width, in monospace characters, that an output line can reach before it has
 # to wrap in the rendered column (HTML article column ≈ PDF \small textwidth).
 _WIDE_OUTPUT_COLS = 92
@@ -420,7 +557,43 @@ def is_wide_table(text):
     return aligned >= 0.5 * len(lines)
 
 
-def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
+def _row_count(line, width):
+    """Rendered rows of one output line under `white-space: pre-wrap`."""
+    return max(1, -(-len(line.expandtabs()) // width))
+
+
+def fit_slide_rows(lines, max_rows, width):
+    """Truncate slide output `lines` to at most `max_rows` rendered rows.
+
+    A line longer than `width` characters wraps and counts as several rows.
+    An output over the cap keeps a head of ceil((max_rows-1)/2) rows, a `...`
+    line, and the tail in the rows that remain, so the block never renders
+    taller than `max_rows` rows (the output box: no scrollbar). Returns the
+    lines unchanged when they fit.
+    """
+    rows = [_row_count(ln, width) for ln in lines]
+    if sum(rows) <= max_rows:
+        return lines
+    head_budget = -(-(max_rows - 1) // 2)
+    head, used = [], 0
+    for ln, r in zip(lines, rows):
+        if used + r > head_budget:
+            break
+        head.append(ln)
+        used += r
+    tail_budget = max_rows - 1 - used
+    tail, used = [], 0
+    for ln, r in zip(reversed(lines), reversed(rows)):
+        if used + r > tail_budget:
+            break
+        tail.append(ln)
+        used += r
+    return head + ['...'] + tail[::-1]
+
+
+def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode,
+                       item_range=None, where='', max_rows=None,
+                       row_width=None):
     """Render notebook outputs as Quarto markdown.
 
     Args:
@@ -429,6 +602,12 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         cell_id: unique string for image filenames
         qmd_parent: absolute Path of the .qmd file's directory
         mode: 'html' | 'pdf' | 'slides'
+        item_range: (first, last-or-None) to render only those output items
+            (select_output_items; a slide's `[out=...]`), or None for all
+        where: location named in an out-of-range error
+        max_rows, row_width: slides only — the text-output cap in rendered
+            rows and the characters per row (fit_slide_rows); None = the
+            defaults MAX_TEXT_LINES_BY_MODE['slides'] / SLIDE_OUTPUT_WIDTH
 
     Returns:
         Quarto markdown string, or '' if no renderable output.
@@ -438,7 +617,12 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
 
     # One printed line per loop iteration = one stream message per flush; merge
     # them back before rendering so consecutive lines share one block.
-    raw_outputs = coalesce_stream_outputs(raw_outputs)
+    img_ordinals = None
+    if item_range is not None:
+        raw_outputs, img_ordinals = select_output_items(
+            raw_outputs, item_range, where)
+    else:
+        raw_outputs = coalesce_stream_outputs(raw_outputs)
 
     max_lines = MAX_TEXT_LINES_BY_MODE.get(mode, MAX_TEXT_LINES)
     parts = []
@@ -508,8 +692,15 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         wide = (' .d2l-output-wide'
                 if mode == 'html' and is_wide_table(text) else '')
 
-        if n > max_lines:
-            if mode in ('pdf', 'slides'):
+        if mode == 'slides':
+            text = '\n'.join(fit_slide_rows(
+                text_lines, max_rows or max_lines,
+                row_width or SLIDE_OUTPUT_WIDTH))
+            parts.append(
+                f'::: {{.cell-output .cell-output-stdout}}\n'
+                f'```\n{text}\n```\n:::')
+        elif n > max_lines:
+            if mode == 'pdf':
                 half = max_lines // 2
                 text = '\n'.join(
                     text_lines[:half] + ['...'] + text_lines[-half:])
@@ -525,7 +716,7 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
                 f'::: {{.cell-output .cell-output-stdout{wide}}}\n'
                 f'```\n{text}\n```\n:::')
 
-    for out in raw_outputs:
+    for k, out in enumerate(raw_outputs):
         otype = out.get('output_type', '')
         if otype == 'error':
             continue
@@ -540,7 +731,7 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
             image_output_seen += 1
             if mode == 'slides' and image_output_count > 2 and image_output_seen < image_output_count:
                 continue
-            img_idx += 1
+            img_idx = img_ordinals[k] if img_ordinals else img_idx + 1
             fname = f'{cell_id}-{img_idx}.png'
             fpath = Path(img_dir) / fname
             fpath.parent.mkdir(parents=True, exist_ok=True)
@@ -554,7 +745,7 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
             image_output_seen += 1
             if mode == 'slides' and image_output_count > 2 and image_output_seen < image_output_count:
                 continue
-            img_idx += 1
+            img_idx = img_ordinals[k] if img_ordinals else img_idx + 1
             svg = data['image/svg+xml']
             if isinstance(svg, list):
                 svg = ''.join(svg)
@@ -788,11 +979,23 @@ def _inject_single_fw(qmd_path, framework, notebooks_dir, img_base,
             warnings.append(f'{qmd_path}:{cell.start_line+1}: missing #| label')
             continue
         outs = id_outputs.get(cell.cell_id)
+        where = f'{qmd_path}:{cell.start_line+1}: cell {cell.cell_id}'
         if not outs:
+            if cell.output_items:
+                raise OutputSelectionError(
+                    f'{where}: selects output items but the {actual_fw} '
+                    f'store has no outputs for this cell')
             continue
+        prefix = f'{stem}-{cell.cell_id}-{actual_fw}'
+        if cell.output_items:
+            # Image files of a fragment are named by the plot's ordinal in
+            # the whole cell, under their own prefix: the full cell on
+            # slides keeps only the last of >2 plots, as `-1`.
+            prefix += '-items'
         rendered = format_cell_output(
-            outs, img_dir, f'{stem}-{cell.cell_id}-{actual_fw}',
-            qmd_parent, mode)
+            outs, img_dir, prefix, qmd_parent, mode,
+            item_range=cell.output_items, where=where,
+            max_rows=cell.output_lines, row_width=cell.output_width)
         if rendered:
             injections.append((cell.end_line, rendered))
 
@@ -951,8 +1154,12 @@ def main():
                    args.img_dir, args.project_dir, store_dir=store_dir)
     elif args.mode == 'slides':
         print(f'=== Injecting notebook outputs (slides: {args.framework}) ===')
-        inject_slides(args.slides_dir, args.framework,
-                       args.notebooks_dir, args.img_dir, store_dir=store_dir)
+        try:
+            inject_slides(args.slides_dir, args.framework,
+                          args.notebooks_dir, args.img_dir,
+                          store_dir=store_dir)
+        except OutputSelectionError as e:
+            raise SystemExit(f'error: {e}')
 
 
 if __name__ == '__main__':

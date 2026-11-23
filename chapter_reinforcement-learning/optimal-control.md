@@ -653,9 +653,17 @@ In 35 iterations from the hanging equilibrium $(\pi, 0)$, iLQR discovers a three
 :::
 
 ::: {.col}
-@!optimal-control-ilqr-swingup
+@!optimal-control-ilqr-swingup[out=2]
 :::
 :::
+:::
+
+::: {.slide title="iLQR Discovers Multi-Phase Energy Pumping (cont.)"}
+[Nonlinear Swing-Up from the Bottom]{.kicker}
+
+The swing-up trajectory every 10 steps, from the hanging start to the caught upright state:
+
+@!optimal-control-ilqr-swingup[out=1]
 :::
 
 ::: {.slide title="Open-Loop vs. TV-LQR vs. Receding-Horizon MPC"}
@@ -683,9 +691,17 @@ Applying an external angular-velocity kick $\Delta\dot{\vartheta} \in \{0.0, +0.
 :::
 
 ::: {.col}
-@!optimal-control-mpc-comparison
+@!optimal-control-mpc-comparison[out=2]
 :::
 :::
+:::
+
+::: {.slide title="Disturbance Rejection Under an Impulse at t = 45 (cont.)" layout="tall-output"}
+[Testing Open-Loop, TV-LQR, and MPC]{.kicker}
+
+Final angle and return of each controller under each kick:
+
+@!optimal-control-mpc-comparison[out=1]
 :::
 
 ::: {.slide title="Phase Portraits and Recovery from Strong Knocks"}

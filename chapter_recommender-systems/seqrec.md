@@ -506,28 +506,27 @@ component → final score:
 :::
 
 ::: {.slide title="Chronological windows define the next-item task"}
-Each example: (user, last-L items, target item, negative
-target). Per-user sliding windows over their interaction
-sequence:
+Each example: (user, last-$L$ items, target item, negative target), from per-user sliding windows:
 
 @seqrec-sequential-dataset-with-negative-sampling
 :::
 
 ::: {.slide title="Each training window excludes future events"}
-The sequence-aware split holds out each user's most recent
-interaction. A training row is `(user, history, positive,
-negative)`, so the model sees both long-term identity and
-short-term context:
+Hold out each user's latest interaction. A row `(user, history, pos, neg)` gives identity and context:
 
 @seqrec-load-the-movielens-100k-dataset
 :::
 
 ::: {.slide title="Pairwise loss trains next-item scores"}
-Use the same optimizer and BPR loss as NeuMF for a fair comparison.
-The expensive part is ranking evaluation, which scores many
-candidate items per user:
+Same optimizer and BPR loss as NeuMF; the costly part is ranking many candidate items per user:
 
-@seqrec-train-the-model
+@-seqrec-train-the-model
+:::
+
+::: {.slide title="Pairwise loss trains next-item scores (cont.)"}
+Training loss and ranking metrics over the epochs:
+
+@!seqrec-train-the-model
 :::
 
 ::: {.slide title="Order supplies evidence absent from an interaction matrix"}

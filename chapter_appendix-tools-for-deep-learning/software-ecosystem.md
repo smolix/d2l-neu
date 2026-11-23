@@ -493,7 +493,7 @@ A "model" is never just a weight tensor file—reproducing its predictions requi
 - **5. Immutable Revision (40-char Git SHA):** Locks all four components at one point in time.
 :::
 
-::: {.col .fig}
+::: {.col .narrow}
 ![](../img/tools-ecosystem-artifact.svg){.nostretch width=100%}
 :::
 :::

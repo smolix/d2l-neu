@@ -503,13 +503,16 @@ a standard batched loader:
 :::
 
 ::: {.slide title="Train + val loaders"}
+`load_data_bananas` wraps both splits in the framework's batched
+loader:
+
+@object-detection-dataset-reading-the-dataset-3
+:::
+
+::: {.slide title="Train + val loaders (cont.)"}
 The batch shape check should show why detection labels need
 an extra object dimension: images have the usual framework
 layout, while labels are `(batch, max_objects, 5)`.
-
-@object-detection-dataset-reading-the-dataset-3
-
-. . .
 
 @object-detection-dataset-reading-the-dataset-4
 :::

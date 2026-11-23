@@ -617,8 +617,12 @@ Calculate the outcome in each minibatch SGD scenario:
 1. **Quadrupling the batch size:** In the small-step regime ($\eta\lambda \ll 1$), if you increase the batch size from $b = 16$ to $b = 64$ while holding $\eta$ fixed, by what factor does the stationary excess loss change? What if you also scale $\eta$ by $4\times$?
 2. **Anisotropic noise ball vs. isotropic excess loss:** On the valley ($\lambda_1 = 0.2, \lambda_2 = 4.0$) with equal gradient noise variance $\sigma_1^2 = \sigma_2^2 = 1$, what is the ratio of stationary coordinate variances $\mathbb{E}[x_{\infty,1}^2] / \mathbb{E}[x_{\infty,2}^2]$ for small $\eta$, and what is the ratio of their contributions to the excess loss?
 3. **Linear scaling ceiling:** If a loss surface has maximum curvature $L = 5.0$ and you tune $\eta = 0.02$ at $b = 8$ ($\eta/b = 0.0025$), at what batch size $b$ does linear scaling $\eta = 0.0025\,b$ hit the deterministic stability limit $2/L$?
+:::
 
-::: {.d2l-note .fragment .fade-up}
+::: {.slide title="Concept Check: Noise Ball, Excess Loss, and Batch Size (answers)"}
+[Check Your Understanding]{.kicker}
+
+::: {.d2l-note}
 **Answers:**
 
 1. Holding $\eta$ fixed reduces the excess loss $\frac{\eta\operatorname{tr}\boldsymbol{\Sigma}}{4b}$ by **$4\times$**; scaling $\eta$ by $4\times$ keeps $\eta / b$ constant, leaving the excess loss **unchanged** (while reaching the floor in $4\times$ fewer updates).

@@ -570,7 +570,7 @@ Under fixed pairing $\mathcal{E}_{\mathrm{diag}}$, draw a directed arrow from ea
 ::: {.slide title="Enumerating Suboptimal Collision Minima"}
 [Fixed Coupling vs. Minibatch Re-Pairing]{.kicker}
 
-We can test every discrete assignment in $\{0, \ldots, n-1\}^n$ for $n = 2$ and $n = 3$ to count how many collisions are strict local minima (where every small perturbation of the generated points strictly increases the best-response objective):
+Counting, over all assignments in $\{0, \ldots, n-1\}^n$ ($n = 2, 3$), the collisions that are strict local minima:
 
 @relativistic-paired-landscapes-2
 
@@ -587,7 +587,7 @@ We can test every discrete assignment in $\{0, \ldots, n-1\}^n$ for $n = 2$ and 
 - **Takeaway:** In §{sec_gan_convergence}, our $2 \times 2$ experiment on 25 Gaussians confirms that $R_1 + R_2$ gradient penalties—not pairing alone—drive mode coverage.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:ch16-gan-minibatch-repair
 :::
 :::

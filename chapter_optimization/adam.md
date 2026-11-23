@@ -668,10 +668,12 @@ $$\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} 
 
 - **Rare vs. frequent features:** Infrequently updated coordinates (e.g., rare token embeddings) keep a small denominator $\sqrt{s_{t,i}}$ and take full steps whenever their feature appears.
 - **Automatic axis-aligned preconditioning:** Because $|g_i| = \lambda_i |x_i|$ is proportional to curvature, dividing by $\sqrt{s_{t,i}}$ cancels the $\kappa = 20$ disparity between $x_1$ and $x_2$ on the valley!
+
+@!adam-per-coordinate-learning-rates-1[out=1]
 :::
 
 ::: {.col .fig}
-@!adam-per-coordinate-learning-rates-1
+@!adam-per-coordinate-learning-rates-1[out=2]
 :::
 :::
 :::
@@ -685,10 +687,12 @@ $$\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} 
 - **RMSProp** (Tieleman & Hinton, 2012) replaces the cumulative sum with an exponential moving average (EMA) over a memory window of $\tau_2 = \frac{1}{1-\beta_2}$ steps:
   $$\mathbf{v}_t = \beta_2\,\mathbf{v}_{t-1} + (1 - \beta_2)\,\mathbf{g}_t^2$$
 - By forgetting ancient gradients ($\beta_2 = 0.9 \implies 10$-step window), RMSProp maintains a non-vanishing step size and converges rapidly on the valley at $\eta = 0.4$.
+
+@!adam-rmsprop-forgetting-on-purpose-1[out=1]
 :::
 
 ::: {.col .fig}
-@!adam-rmsprop-forgetting-on-purpose-1
+@!adam-rmsprop-forgetting-on-purpose-1[out=2]
 :::
 :::
 :::
@@ -755,34 +759,22 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 ::: {.slide title="40× Gradient Disparity vs. 2× Adam Step Disparity"}
 [Gradient Scales in TinyLM]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 - Measuring the RMS gradient magnitude across $10$ minibatches for all $8$ functional parameter groups of `TinyLM` reveals why scalar-LR SGD struggles:
   - **At step 0:** Raw gradient RMS spans a **$40\times$ range** (from $1.7 \times 10^{-4}$ on `token_emb` to $6.8 \times 10^{-3}$ on `biases`).
   - **At step 500:** Gradient RMS still spans a **$15\times$ range**.
 - **Adam's equalization:** Dividing by $\sqrt{\hat{\mathbf{v}}_t}$ compresses the actual RMS parameter update $\|\Delta\mathbf{x}\|_{\text{RMS}}/\eta$ across all $8$ groups into a tight **$2\times$ band ($0.14\text{--}0.28\,\eta$)**!
-:::
 
-::: {.col .fig}
 @!adam-gradient-scales-in-a-network-2
 :::
-:::
-:::
 
-::: {.slide title="Learning-Rate Sweep: Adam vs. SGD with Momentum"}
+::: {.slide title="Learning-Rate Sweep: Adam vs. SGD with Momentum" layout="tall-output"}
 [3-Seed Grid Comparison]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 - We sweep SGD with momentum ($\beta = 0.9$) across $\eta \in \{0.1, 0.3, 0.5, 1.0\}$ and Adam across $\eta \in \{3{\times}10^{-4}, 10^{-3}, 3{\times}10^{-3}, 10^{-2}, 3{\times}10^{-2}\}$ over $3$ seeds ($2{,}000$ steps on `TinyLM`):
   - **100× nominal scale shift:** SGD's best rate is $\eta = 0.3$, whereas Adam's is $\eta = 3 \times 10^{-3}$ ($\approx 0.1 \times \frac{0.3}{\text{scale}}$).
   - **Graceful high-LR degradation:** SGD diverges to `inf` at $\eta = 0.5$ (less than $2\times$ above its optimum), whereas Adam remains finite even at $\eta = 3 \times 10^{-2}$ ($10\times$ above its optimum) because its step length is bounded by $\eta$.
-:::
 
-::: {.col .fig}
 @!adam-the-race-on-the-language-model-2
-:::
-:::
 :::
 
 ::: {.slide title="Adam Reaches Target Loss in Half the Steps of SGD"}
@@ -797,9 +789,11 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 :::
 
 ::: {.col .fig}
-@!adam-the-race-on-the-language-model-3
+@!adam-the-race-on-the-language-model-3[out=2]
 :::
 :::
+
+@!adam-the-race-on-the-language-model-3[out=1]
 :::
 
 ::: {.slide title="Sign Descent, Role of ε, and Small-β₂ Pathologies"}
@@ -856,9 +850,11 @@ $$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t - \eta\,\frac{\hat{\mathbf{
 :::
 
 ::: {.col .fig}
-@!adamw-one-number-two-meanings
+@!adamw-one-number-two-meanings[out=2]
 :::
 :::
+
+@!adamw-one-number-two-meanings[out=1]
 :::
 
 ::: {.slide title="Unrolling AdamW: The Decay Timescale τ = 1/(ηλ)"}

@@ -792,8 +792,9 @@ print(f'validation perplexity {ppl_plain:.1f}')
 ```
 
 Initial validation perplexity sits near $|\mathcal{V}| = 1{,}027$, and after
-ten epochs the clipped model converges smoothly to a validation perplexity
-between 85 and 100 (while training perplexity drops below half that value as the
+ten epochs the clipped model reaches a validation perplexity of about 85 to
+100, even though its loss often jumps well above the starting value during the
+first epoch (while training perplexity drops below half that value as the
 222,915 parameters begin overfitting the 50,000 training tokens).
 
 To see why gradient clipping is essential at $\eta = 4$, we define a helper
@@ -1807,7 +1808,7 @@ We train the 222,915-parameter baseline ($d = 64, h = 128$, no dropout) on $50{,
 @!rnn-implementation-training-5
 
 - **Truncated window states:** Each 32-token window initializes $\mathbf{H}_0 = \mathbf{0}$, capping backpropagation at 32 steps.
-- **Smooth convergence:** Validation perplexity drops from $1{,}027$ to between $85$ and $100$; a perplexity of $95$ corresponds to $\log_2(95) / 2.78 \approx 2.36$ bits per byte (while training loss drops faster as the 223k parameters overfit the 50k tokens).
+- **Convergence:** Validation perplexity drops from $1{,}027$ to about $85$–$100$ after a bumpy first epoch; a perplexity of $95$ corresponds to $\log_2(95) / 2.78 \approx 2.36$ bits per byte (while training loss drops faster as the 223k parameters overfit the 50k tokens).
 :::
 
 ::: {.col .fig}

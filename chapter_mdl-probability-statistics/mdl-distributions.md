@@ -1120,8 +1120,8 @@ one by one gives $L_{11}=\sqrt2$, then $L_{21}=\Sigma_{21}/L_{11}=1/\sqrt2$,
 and finally $L_{22}=\sqrt{\Sigma_{22}-L_{21}^2}=\sqrt{3/2}$; indeed,
 $L_{21}^2+L_{22}^2=\tfrac12+\tfrac32=2$.
 
-Any other square-root factor works equally well, such as the symmetric
-eigen-factor $\mathbf V\operatorname{diag}(\sqrt{\gamma_1},\dots,\sqrt{\gamma_d})$.
+Any other square-root factor works equally well, such as the eigen-factor
+$\mathbf V\operatorname{diag}(\sqrt{\gamma_1},\dots,\sqrt{\gamma_d})$.
 As exercise :exref:`ex_mdl-distributions-two-factors` shows, any two factors of
 the same $\boldsymbol\Sigma$ differ only by an orthogonal matrix. In practice,
 library samplers differ: many use the Cholesky factor, whereas NumPy's

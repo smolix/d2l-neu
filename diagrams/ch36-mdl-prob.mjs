@@ -253,7 +253,7 @@ function cdfTypes() {
   const panels = [
     { x: 16, t: "Continuous CDF", sub: "Dart F(r) = r²", col: C.blue, dk: D.blue.dark },
     { x: 194, t: "Discrete Staircase", sub: "Coin jumps at 0, 1", col: C.amber, dk: D.orange.dark },
-    { x: 372, t: "Mixed ReLU CDF", sub: "Jump ½ + Φ(x) climb", col: C.purple, dk: D.purple.dark },
+    { x: 372, t: "Mixed ReLU CDF", sub: "Jump to ½, then Φ(x)", col: C.purple, dk: D.purple.dark },
   ];
   panels.forEach((p, idx) => {
     o += box(p.x, 16, 152, 232, "#FFFFFF", p.col, 8, 2);
@@ -2017,7 +2017,7 @@ function randomOrtho() {
   o += tx(mid, y0 + 20, "0 (90°)", { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
   o += tx(x0 + 24, y0 + 20, "−0.10", { mono: true, fs: 11.5, fill: C.muted });
   o += tx(x0 + gw - 24, y0 + 20, "+0.10", { mono: true, fs: 11.5, fill: C.muted });
-  o += tx(mid, 238, "SD = 1/√784 = 0.036  (89.9° ± 2.0°)", { mono: true, fs: 12, fw: 700, fill: C.ink });
+  o += tx(mid, 238, "SD = 1/√784 = 0.036  (90° ± 2.1°)", { mono: true, fs: 12, fw: 700, fill: C.ink });
 
   const rx = 282;
   o += box(rx, 24, 240, 104, C.lblue, C.blue, 8, 2);
@@ -2289,7 +2289,7 @@ function rampMargin() {
   let o = "";
   const x0 = 44, y0 = 204, gw = 216, gh = 132, xZero = x0 + 84, xGam = x0 + 156;
   o += line(x0, y0, x0 + gw, y0, C.ink, 1.8);
-  o += line(xZero, 34, xZero, y0 + 8, C.gray, 1.5, true);
+  o += line(xZero, 44, xZero, y0 + 8, C.gray, 1.5, true);
   // 0-1 step loss (red dashed)
   o += line(x0, y0 - gh, xZero, y0 - gh, D.red.base, 2.5, true);
   o += line(xZero, y0 - gh, xZero, y0, D.red.base, 2.5, true);
@@ -2534,23 +2534,23 @@ function ngJordanCrossover() {
   o += path(curve(lr), D.orange.base, "none", 3);
   // The curves cross at t ≈ 0.38
   o += circ(x0 + 12 + 0.38 * (gw - 20), nb(0.38), 5, D.purple.base, "#FFFFFF", 1.5);
-  o += tx(x0 + gw / 2, 20, "Ng & Jordan (2002) Crossover", { fs: 14, fw: 700, fill: C.ink });
-  o += tx(x0 + 148, 118, "Naive Bayes (29.4%)", { fs: 11.5, fw: 700, fill: D.blue.dark });
-  o += tx(x0 + 148, 192, "Logistic / Softmax (16.9%)", { fs: 11.5, fw: 700, fill: D.orange.dark });
+  o += tx(x0 + gw / 2, 20, "Ng & Jordan (2002): Schematic", { fs: 14, fw: 700, fill: C.ink });
+  o += tx(x0 + 148, 118, "Naive Bayes", { fs: 11.5, fw: 700, fill: D.blue.dark });
+  o += tx(x0 + 148, 192, "Logistic / Softmax", { fs: 11.5, fw: 700, fill: D.orange.dark });
   o += tx(x0 + gw / 2, y0 + 22, "log(Training Sample Size n)", { fs: 12, fw: 600, fill: C.ink });
 
   const rx = 282;
   o += box(rx, 24, 240, 104, C.lblue, C.blue, 8, 2);
-  o += tx(rx + 120, 46, "Small n ≪ d: Naive Bayes Wins", { fs: 13.5, fw: 700, fill: D.blue.dark });
+  o += tx(rx + 120, 46, "Small n: Naive Bayes Can Win", { fs: 13.5, fw: 700, fill: D.blue.dark });
   o += tx(rx + 120, 68, "1D parameters decoupled:", { fs: 12, fw: 600, fill: C.ink });
   o += tx(rx + 120, 90, "m = O(log d) samples", { mono: true, fs: 11.5, fw: 700, fill: D.blue.dark });
   o += tx(rx + 120, 110, "(low variance)", { fs: 11.5, fw: 600, fill: C.muted });
 
   o += box(rx, 144, 240, 104, C.lamber, C.amber, 8, 2);
-  o += tx(rx + 120, 166, "Large n ≫ d: Discriminative Wins", { fs: 13.5, fw: 700, fill: D.orange.dark });
+  o += tx(rx + 120, 166, "Large n: Discriminative Wins", { fs: 13.5, fw: 700, fill: D.orange.dark });
   o += tx(rx + 120, 188, "No independence bias:", { fs: 12, fw: 600, fill: C.ink });
   o += tx(rx + 120, 210, "n = O(d) samples", { mono: true, fs: 11.5, fw: 700, fill: D.orange.dark });
-  o += tx(rx + 120, 230, "(83.1% vs 70.6% accuracy!)", { fs: 11.5, fw: 600, fill: C.muted });
+  o += tx(rx + 120, 230, "(full Fashion-MNIST: ≈83% vs ≈71%)", { fs: 11.5, fw: 600, fill: C.muted });
   return svg(W, H, o);
 }
 

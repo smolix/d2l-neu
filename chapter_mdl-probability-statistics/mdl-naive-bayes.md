@@ -5,7 +5,7 @@ In :numref:`sec_softmax_concise`, we trained softmax regression on
 Fashion-MNIST by running gradient descent directly on the probability of the
 label given the image. That fit produced 7,850 parameters—one weight for
 each pixel and class, plus ten offsets—achieved about 83% accuracy, and
-passed a calibration check. Yet gradient descent is not the only way to
+passed the calibration check of :numref:`sec_classification`. Yet gradient descent is not the only way to
 build a classifier. We can instead describe how each class generates its
 images, capturing what a typical coat or sandal looks like, and let Bayes'
 rule invert that description into a prediction. How well does this
@@ -477,7 +477,7 @@ unseen = (X_test * (n_x[Y_test] == 0)).sum(axis=1) > 0
 print('test images inking one of their class:', unseen.sum())
 ```
 
-Zero counts are fairly rare here: half the classes have none at all,
+Zero counts are fairly rare here: four of the ten classes have none at all,
 trousers have 13, and sneakers have 57 (since sneakers are flat and leave
 the top of the frame blank). Across the entire test set, only 5 images ink a
 pixel that their true class never inked during training. Without smoothing,
@@ -844,7 +844,7 @@ places yet is right only about 73% of the time. In the three lower bins, it
 claims between 73% and 99.6% confidence while achieving only 35% to 42%
 accuracy. Because every bin is overconfident, the expected calibration error
 equals the gap between mean confidence and accuracy, about 0.29—compared
-with under 0.03 for softmax regression in :numref:`sec_softmax_concise`. The
+with under 0.03 for softmax regression in :numref:`sec_classification`. The
 ranking of confidences still carries useful signal, since accuracy rises
 from bin to bin, but the stated probabilities cannot be taken at face value.
 
@@ -908,9 +908,10 @@ score by a single scalar $T$ fitted on held-out validation data, leaving the
 class rankings completely unchanged; for $k$ identical copies and equal
 priors, setting $T=k$ recovers the exact posterior. Exercise
 :exref:`ex_mdl-naive-bayes-temperature-scaling` fits $T$ for our counted
-model. Nor is overconfidence unique to naive Bayes: modern deep neural
-networks frequently suffer from the same bias, though typically to a lesser
-degree :cite:`Guo.Pleiss.Sun.Weinberger.2017`, so a reliability check is
+model. Nor is overconfidence unique to naive Bayes: deep neural networks can
+suffer from the same bias, though typically to a lesser degree and depending
+on their architecture and training recipe
+:cite:`Guo.Pleiss.Sun.Weinberger.2017`, so a reliability check is
 good practice for any classifier whose probabilities will drive decisions.
 
 One natural question remains open. With 6,000 images per class, the
@@ -1479,8 +1480,9 @@ $$p(\mathbf{x}_{\mathcal{V}} \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \m
 
 ::: {.cols .vc}
 ::: {.col}
-- **Small $n \ll d$ (Naive Bayes wins):** Because $1\text{D}$ pixel frequencies are decoupled, a union bound over $2d$ parameters needs only $m = O(\log d)$ samples to reach its asymptotic floor (low variance, higher bias).
-- **Large $n \gg d$ (Discriminative wins):** Logistic/softmax regression fits $d$ coupled weights in $n = O(d)$ samples, reaching a much lower asymptotic error ($16.9\%$ vs. $29.4\%$).
+- **Small $n$ (naive Bayes can win):** Because $1\text{D}$ pixel frequencies are decoupled, a union bound over $2d$ parameters needs only $n = O(\log d)$ samples to reach its asymptotic floor (low variance, higher bias).
+- **Large $n$ (discriminative wins):** Logistic/softmax regression fits $d$ coupled weights and can need $n = O(d)$ samples, but reaches a lower asymptotic error. On the full Fashion-MNIST training set: about $83\%$ vs. $71\%$ accuracy.
+- **The curves are a schematic of the theorem.** Whether and where they cross on Fashion-MNIST is left as an exercise.
 :::
 
 ::: {.col .fig .big}

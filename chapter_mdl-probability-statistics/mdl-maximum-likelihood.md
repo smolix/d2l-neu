@@ -379,6 +379,15 @@ are. The irreducible floor that practitioners encounter appears on held-out
 data, where the expected loss cannot fall below the conditional entropy of the
 labels given the inputs (:numref:`subsec_mdl-irreducible-loss`).
 
+A language model is the same classifier with a very large set of labels: the
+input is the text so far, the label is the next token, and training minimizes
+the average NLL per token. It is usually reported through its exponential, the
+*perplexity* (:numref:`subsec_perplexity`), which is the number of equally
+likely tokens that would cause the same average surprise. Here the held-out
+floor is far from zero. Most sentences can continue in many reasonable ways,
+so the conditional entropy of the next token is large, and no model, however
+big, can push its held-out loss below it.
+
 ### Densities
 :label:`subsec_mdl-mle-densities`
 
@@ -536,7 +545,7 @@ $\nabla_{\boldsymbol{\theta}}\, p = p\,\nabla_{\boldsymbol{\theta}} \log p = p\,
 In words, averaged over data drawn from the model, the gradient of the
 log-likelihood vanishes at the parameter that generated the data. Because the
 score has mean zero, its covariance matrix equals its second moment. That
-covariance is the **Fisher information** :cite:`Fisher.1928`,
+covariance is the **Fisher information** :cite:`Fisher.1925`,
 
 $$
 \begin{aligned}
@@ -1138,8 +1147,10 @@ $-\log(1/5)=1.6$ nats, a finite surprise rather than an infinite one.
 :label:`subsec_mdl-gaussian-prior-weight-decay`
 
 Weight decay, the standard regularizer in deep learning, is the MAP penalty of
-a Gaussian prior. :numref:`sec_weight_decay` derived this for linear
-regression; here we state it in the notation of this section for any model
+a Gaussian prior. This holds for weight decay in its $L_2$-penalty form;
+the decoupled variant used with Adam (:numref:`sec_adamw`) is no longer
+exactly a MAP penalty. :numref:`sec_weight_decay` derived the correspondence
+for linear regression; here we state it in the notation of this section for any model
 with Gaussian target noise. Assume each parameter is a priori small and
 independent, $\theta_j \sim \mathcal{N}(0,\tau^2)$, where $\tau$ reflects the
 typical magnitude we expect. The prior density is proportional to

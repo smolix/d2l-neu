@@ -472,7 +472,11 @@ because the integrand is odd in $x$ while the disk is symmetric. Yet $X$ and
 $Y$ are dependent, as the shrinking chords showed. Covariance looks only for a
 linear trend, and the dart's circular dependence has none, so zero covariance
 does not imply independence (:numref:`sec_prob` gives a discrete example,
-$Y=X^2$).
+$Y=X^2$). :numref:`fig_mdl-prob-dart-three-questions` shows both facts on the
+disk.
+
+![The dart's coordinates are dependent, yet unpredictable in mean and uncorrelated. (a) The chord at height $Y=0.9$ confines $X$ to $|X|\le0.44$, while a chord near the middle is far longer, so $X$ depends on $Y$. Every chord is centered on $x=0$ (green dots), so $\mathbb{E}[X\mid Y]=0$. (b) The product $xy$ is positive on two quadrants and negative on the other two, all of equal area, so $\mathrm{Cov}(X,Y)=0$.](../img/mdl-prob-dart-three-questions.svg)
+:label:`fig_mdl-prob-dart-three-questions`
 
 Covariance also carries the units of both variables. In
 :numref:`fig_mdl-prob-covariance`, the bottom row plots the exact same draws as

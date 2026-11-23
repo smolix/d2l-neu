@@ -141,7 +141,11 @@ $73\%$ between the two components. Move the observation far to the right, say
 to $x = 3$, and the posterior becomes $99.8\%$ certain it belongs to the right
 component; place it at the midpoint $x = 0$, and the split is an even
 $50\%$--$50\%$. The soft guess is confident where the data are clear and
-appropriately undecided where the components overlap.
+appropriately undecided where the components overlap
+(:numref:`fig_mdl-prob-soft-resp`).
+
+![Soft assignment as a ratio of density heights, for two equally weighted components $\mathcal{N}(-1,1)$ and $\mathcal{N}(1,1)$. (a) At $x=0.5$ the densities have heights $h_1$ and $h_2$, and the left component receives the share $r_1=h_1/(h_1+h_2)=0.27$. (b) The two posterior probabilities $r_1(x)$ and $r_2(x)$: an even split at $x=0$, $0.27$ to $0.73$ at $x=0.5$, and $0.998$ for the right component at $x=3$.](../img/mdl-prob-soft-resp.svg)
+:label:`fig_mdl-prob-soft-resp`
 
 ## The Evidence Lower Bound
 
@@ -345,8 +349,8 @@ print('steps 0-5:', lls[:6].round(1), ' step 29:', lls[-1].round(1))
 print(f'pi = {pi.round(2)}, mu = {mu.round(2)}, sigma = {sigma.round(2)}')
 ```
 
-The log-likelihood climbs by more than $400$ nats, rising from roughly
-$-1{,}300$ to between $-850$ and $-890$ (the exact figures vary with the
+The log-likelihood climbs by roughly $400$ nats, rising from around
+$-1{,}280$ to around $-860$ (both figures vary by a few tens of nats with the
 random sample). Remarkably, almost the entire gain happens immediately: after
 just six steps the log-likelihood is already within about a nat of its final
 value, and the recovered weights, means, and scales land within about $0.2$ of
@@ -397,11 +401,14 @@ $$
 where the constant gathers the contribution of the other $n - 1$ points. As
 $\epsilon \to 0$, the negative log-likelihood plunges to $-\infty$: the global
 maximum-likelihood "solution" is simply an infinitely sharp spike perched on a
-single data point. Imposing a lower floor on the variances, or placing a prior
+single data point (:numref:`fig_mdl-prob-gmm-spikes`). Imposing a lower floor on the variances, or placing a prior
 over them, eliminates these degenerate spikes. Once the set of parameters at
 least as good as the starting point is compact, every limit point of EM is
 guaranteed to be a stationary point of the regularized problem
 :cite:`Wu.1983`.
+
+![The degenerate maximum of a Gaussian mixture likelihood. The first component (blue) covers $n-1$ of the data points (dots). The second (orange) sits on the remaining point, $\mu_2=x_1$, with standard deviation $\sigma_2=\epsilon$. As $\epsilon$ shrinks from $0.3$ to $0.1$ to $0.03$, its density at $x_1$ grows like $1/\epsilon$, and the likelihood grows with it without bound.](../img/mdl-prob-gmm-spikes.svg)
+:label:`fig_mdl-prob-gmm-spikes`
 
 The fourth limitation is what leads beyond EM altogether. Our monotonicity
 proof depended on plugging the *exact* posterior into the E-step; whenever we
@@ -710,7 +717,7 @@ Starting from two heavily overlapping unit-variance components centered at $\mu 
 
 @!mdl-maximum-likelihood-expectation-maximization-1
 
-- **Monotonic climb:** The log-likelihood climbs by over $400$ nats (from $\approx -1{,}300$ to $\approx -870$), with nearly the entire gain achieved in the first $6$ steps.
+- **Monotonic climb:** The log-likelihood climbs by roughly $400$ nats (from $\approx -1{,}280$ to $\approx -860$), with nearly the entire gain achieved in the first $6$ steps.
 - **Missing information governs speed:** Near a fixed point, the linear convergence rate of EM equals $1 - I_{\mathrm{obs}}/I_{\mathrm{com}}$—the fraction of Fisher information hidden by the missing labels. Well-separated clusters ($I_{\mathrm{obs}} \approx I_{\mathrm{com}}$) converge in a few steps.
 :::
 

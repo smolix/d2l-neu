@@ -1380,6 +1380,131 @@ def fig_elbo():
     fl.save(fig, "mdl-prob-elbo")
 
 
+def _npdf(x, mu=0.0, sd=1.0):
+    return np.exp(-0.5 * ((x - mu) / sd) ** 2) / (sd * np.sqrt(2 * np.pi))
+
+
+def fig_soft_resp():
+    """Soft assignment as a ratio of density heights.  Two equally weighted
+    components N(-1, 1) and N(1, 1).  (a) The weighted densities and the
+    point x = 0.5: the two heights stand in the ratio e^{-1.125} : e^{-0.125},
+    so the responsibilities are 1/(1+e) = 0.27 and 0.73.  (b) The
+    responsibility of the right component, r_2(x) = sigmoid(2x), with the
+    three points of the text: 0.5 at x = 0, 0.73 at x = 0.5, 0.998 at x = 3;
+    the left component's r_1 = 1 - r_2 is its mirror image."""
+    x = np.linspace(-4.0, 4.0, 500)
+    x0 = 0.5
+    p1, p2 = 0.5 * _npdf(x, -1), 0.5 * _npdf(x, 1)
+    h1, h2 = 0.5 * _npdf(x0, -1), 0.5 * _npdf(x0, 1)
+    r1, r2 = h1 / (h1 + h2), h2 / (h1 + h2)
+
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(10.4, 3.7),
+                                 gridspec_kw=dict(wspace=0.28))
+    ax.plot(x, p1, color=BLUE, lw=2.4)
+    ax.plot(x, p2, color=ORANGE, lw=2.4)
+    ax.plot([x0, x0], [0, h2], ":", color=GRAY, lw=1.2, zorder=1)
+    ax.plot([x0], [h1], "o", ms=7, color=BLUE, zorder=5)
+    ax.plot([x0], [h2], "o", ms=7, color=ORANGE, zorder=5)
+    ax.text(0.36, 0.19, r"$h_2$", color=fl.T.ORANGE.dark, fontsize=14,
+            ha="right", va="bottom")
+    ax.text(0.62, 0.075, r"$h_1$", color=fl.T.BLUE.dark, fontsize=14,
+            ha="left", va="bottom")
+    ax.text(0.0, 0.29, rf"$r_1=\dfrac{{h_1}}{{h_1+h_2}}={r1:.2f},\quad "
+            rf"r_2={r2:.2f}$", color=fl.INK, fontsize=14, ha="center",
+            va="top")
+    ax.text(-2.45, 0.17, r"$\mathcal{N}(-1,1)$", color=BLUE, fontsize=14,
+            ha="center", va="bottom")
+    ax.text(2.45, 0.17, r"$\mathcal{N}(1,1)$", color=ORANGE, fontsize=14,
+            ha="center", va="bottom")
+    ax.set_xticks([-2, x0, 2])
+    ax.set_xticklabels(["$-2$", "$0.5$", "$2$"])
+    ax.set_yticks([])
+    ax.set_ylim(0, 0.30)
+    ax.set_xlim(-4, 4)
+
+    xr = np.linspace(-3.5, 3.5, 400)
+    rr = 1.0 / (1.0 + np.exp(-2 * xr))
+    bx.plot(xr, 1 - rr, color=BLUE, lw=2.4)
+    bx.plot(xr, rr, color=ORANGE, lw=2.4)
+    for xv in (0.0, 0.5, 3.0):
+        rv = 1.0 / (1.0 + np.exp(-2 * xv))
+        bx.plot([xv], [rv], "o", ms=7, color=ORANGE, zorder=5)
+        bx.plot([xv], [1 - rv], "o", ms=7, color=BLUE, zorder=5)
+    bx.text(0.62, 0.70, r"$0.73$", color=fl.T.ORANGE.dark, fontsize=13,
+            ha="left", va="top")
+    bx.text(0.62, 0.30, r"$0.27$", color=fl.T.BLUE.dark, fontsize=13,
+            ha="left", va="bottom")
+    bx.text(3.0, 0.93, r"$0.998$", color=fl.T.ORANGE.dark, fontsize=13,
+            ha="center", va="top")
+    bx.text(-0.15, 0.5, r"$0.5$", color=fl.INK, fontsize=13, ha="right",
+            va="center")
+    bx.text(-3.3, 0.88, r"$r_1(x)$", color=BLUE, fontsize=14, ha="left",
+            va="top")
+    bx.text(-3.3, 0.12, r"$r_2(x)$", color=ORANGE, fontsize=14, ha="left",
+            va="bottom")
+    bx.set_xticks([-3, 0, 3])
+    bx.set_yticks([0, 0.5, 1])
+    bx.set_ylim(-0.03, 1.06)
+    bx.set_xlim(-3.5, 3.5)
+    for a in (ax, bx):
+        a.set_xlabel(r"$x$", fontsize=14, labelpad=2)
+        a.spines["top"].set_visible(False)
+        a.spines["right"].set_visible(False)
+        a.spines["left"].set_color("black")
+        a.spines["bottom"].set_color("black")
+        a.tick_params(colors="black", labelsize=13)
+    for a, tag in ((ax, "(a)"), (bx, "(b)")):
+        a.text(-0.02, 1.03, tag, transform=a.transAxes, fontsize=14,
+               color=fl.INK, ha="right", va="bottom")
+    fl.save(fig, "mdl-prob-soft-resp")
+
+
+def fig_gmm_spikes():
+    """The degenerate maximum of a Gaussian-mixture likelihood.  Twelve data
+    points (fixed); component 1 (weight 11/12) is the Gaussian fit of the
+    other eleven; component 2 (weight 1/12) sits on the data point x_1 with
+    standard deviation epsilon = 0.3, 0.1, 0.03.  Its height at x_1 is
+    (1/12) / (sqrt(2 pi) epsilon), which grows without bound as epsilon -> 0,
+    so the likelihood has no maximum."""
+    data = np.array([-1.9, -1.3, -1.05, -0.7, -0.45, -0.2, 0.05, 0.3, 0.55,
+                     0.9, 1.3, 2.15])
+    x1 = 2.15
+    rest = data[data != x1]
+    n = len(data)
+    mu1, sd1 = rest.mean(), rest.std()
+    x = np.linspace(-3.6, 3.6, 4001)
+    broad = (n - 1) / n * _npdf(x, mu1, sd1)
+    ytop = 1.0
+
+    fig, ax = plt.subplots(figsize=(6.6, 3.9))
+    ax.plot(x, broad, color=BLUE, lw=2.4)
+    shades = (0.35, 0.65, 1.0)
+    for eps, al in zip((0.3, 0.1, 0.03), shades):
+        spike = _npdf(x, x1, eps) / n
+        ax.plot(x, np.minimum(spike, ytop * 1.2), color=ORANGE, lw=2.0,
+                alpha=al, clip_on=True)
+    fl.arrow(ax, (x1, 0.86), (x1, 1.0), color=ORANGE, lw=1.8)
+    ax.text(x1 + 0.16, 0.86, r"$\sigma_2=\epsilon\to 0$", color=fl.T.ORANGE.dark,
+            fontsize=14, ha="left", va="center")
+    ax.text(x1 + 0.16, 0.74, r"$\epsilon=0.3,\ 0.1,\ 0.03$",
+            color=fl.T.ORANGE.dark, fontsize=13, ha="left", va="center")
+    ax.plot(data, np.zeros_like(data), "o", ms=6, color=fl.INK, zorder=6,
+            clip_on=False)
+    ax.text(-1.15, 0.405, r"component 1: the other $n-1$ points",
+            color=fl.T.BLUE.dark, fontsize=13, ha="center", va="bottom")
+    ax.text(x1, -0.07, r"$\mu_2=x_1$", color=fl.INK, fontsize=14, ha="center",
+            va="top")
+    ax.set_xlim(-3.6, 3.6)
+    ax.set_ylim(0, ytop)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("black")
+    ax.spines["bottom"].set_color("black")
+    fl.save(fig, "mdl-prob-gmm-spikes")
+
+
 # =========================================================================== #
 # STATISTICS: the coverage strip                                              #
 # =========================================================================== #
@@ -1775,6 +1900,8 @@ FIGURES = [
     fig_mle_kl,
     fig_mle_fisher,
     fig_elbo,
+    fig_soft_resp,
+    fig_gmm_spikes,
     # naive bayes
     fig_naive_independence,
     fig_naive_genvdisc,

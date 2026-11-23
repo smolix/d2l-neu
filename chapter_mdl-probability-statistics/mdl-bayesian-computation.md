@@ -718,10 +718,11 @@ for name, mean, cov, N in [('prior', np.zeros(2), prior_var * np.eye(2), 20000),
           f'{w_max:.4f}, error in sds {error.round(3)}')
 ```
 
-Using the prior as the proposal yields an ESS of only about 1% to 10% of the
+Using the prior as the proposal yields an ESS of only about 4% of the
 draws, because most prior samples land where the likelihood is negligible.
 Aiming the proposal at the posterior with the Laplace Gaussian raises the ESS
-dramatically, typically keeping between 55% and 95% of the draws effective.
+dramatically: typically 80% to 90% of the draws are effective, although an
+occasional run falls far lower.
 Both proposals usually estimate the posterior mean within a few hundredths of a
 posterior standard deviation of the grid reference, and rarely err by more than
 $0.15$.
@@ -1335,9 +1336,29 @@ progressively more steps per independent draw, the full Hessian has $d^2$
 entries, and mean-field $q$ understates uncertainty by the correlation factor
 we just derived. Worse still, a neural network's architectural symmetries
 duplicate every posterior mode for every permutation and sign flip of its
-hidden units (Exercise :exref:`ex_mdl-bayesian-computation-two-modes`). Even
-so, the core ideas of this section reappear throughout deep learning wherever a
-distribution is known only up to a normalizing constant. The evidence lower
+hidden units (Exercise :exref:`ex_mdl-bayesian-computation-two-modes`).
+
+For large networks, the most widely used answer to the question that opened
+this section is simpler than any of the four methods. We train the same
+network several times from different random initializations and average the
+predicted probabilities. Such a *deep ensemble*
+:cite:`Lakshminarayanan.Pritzel.Blundell.2017` is a crude Monte Carlo estimate
+of the posterior predictive :eqref:`eq_mdl-bayes-predictive`, in which a
+handful of independently trained networks stand in for posterior draws. Each
+run settles in a different mode, so the average spans several modes, which a
+single Laplace or mean-field fit cannot do. Where the members disagree,
+typically far from the training data, the averaged prediction becomes less
+confident. The members are not posterior samples, however, and nothing
+guarantees that they should be weighted equally. Their errors are also
+correlated, so adding members helps only up to a point: with pairwise
+correlation $\rho$, the variance of the average never falls below the
+fraction $\rho$ of a single member's variance (Exercise
+:exref:`ex_mdl-random-variables-using-textrmvar-x-y` in
+:numref:`sec_mdl-joint-distributions`).
+
+The core ideas of this section nevertheless reappear throughout deep learning
+wherever a distribution is known only up to a normalizing constant. The
+evidence lower
 bound trains variational autoencoders :cite:`Kingma.Welling.2014`
 (:numref:`sec_diffusion-latent`), where an encoder network outputs $q$, as well
 as discrete diffusion models (:numref:`sec_diffusion-discrete`). Importance

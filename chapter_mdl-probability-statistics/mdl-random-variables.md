@@ -276,7 +276,10 @@ takes the upper value at every jump. More generally, every c.d.f. is
 combines both behaviors: the ReLU output mentioned earlier has a c.d.f. that
 is $0$ for $x<0$, jumps to $\tfrac12$ at $x=0$, and then climbs smoothly
 toward $1$. A single function therefore unifies discrete, continuous, and
-mixed random variables.
+mixed random variables; :numref:`fig_mdl-prob-cdf-types` shows one of each.
+
+![Three cumulative distribution functions. (a) The dart's distance from the center: $F(r)=r^2$ rises continuously from $0$ to $1$. (b) A fair coin reporting $0$ or $1$: a staircase that jumps by $\tfrac12$ at each atom and takes the upper value there (filled dots). (c) The ReLU of a standard Gaussian: $F$ is $0$ for $x<0$, jumps to $\tfrac12$ at $x=0$, and from there follows the Gaussian c.d.f. $\Phi(x)$.](../img/mdl-prob-cdf-types.svg)
+:label:`fig_mdl-prob-cdf-types`
 
 When a density exists, the c.d.f. and the density carry the same information:
 integrating $p$ produces $F$, and differentiating $F$ recovers $p$. This
@@ -581,11 +584,15 @@ $\mathbb{E}[\mathbf{1}_{X\ge t}]=P(X\ge t)$ gives
 $\mathbb{E}[X]\ge t\,P(X\ge t)$. $\blacksquare$
 
 Geometrically, on $[0,\infty)$ the step function that is $0$ below $t$ and $t$
-from $t$ onward stays underneath the line $y=x$, so its average value
+from $t$ onward stays underneath the line $y=x$
+(:numref:`fig_mdl-prob-markov-step`), so its average value
 $t\,P(X\ge t)$ must stay underneath the average value of $X$. Setting $t$ to
 ten times the mean gives an immediate rule of thumb: at most a tenth of any
 non-negative population can exceed ten times its average, whether we are
 looking at incomes, file sizes, or gradient norms.
+
+![The picture behind Markov's inequality. For $x\ge0$ the step function $t\,\mathbf{1}\{x\geq t\}$ (orange) lies under the line $y=x$ (blue), so its average $t\,P(X\geq t)$ cannot exceed $\mathbb{E}[X]$. The shaded gap is what the bound gives away.](../img/mdl-prob-markov-step.svg)
+:label:`fig_mdl-prob-markov-step`
 
 Because Markov's inequality uses only the mean, it is necessarily crude.
 Applying it to the squared deviation $(X-\mu_X)^2$, whose mean is the
@@ -744,10 +751,11 @@ every exponential $e^{-\lambda t}$ with $\lambda>0$. Power-law tails, where
 $P(|X|>t)$ decays like $t^{-\alpha}$, are the canonical example: they force
 every moment $\mathbb{E}[|X|^k]$ with $k\ge\alpha$ to be infinite, with the
 Cauchy distribution corresponding to $\alpha=1$. Heavy tails do not
-automatically imply infinite moments, however; the log-normal distribution (which
-we will derive in :numref:`subsec_mdl-change-of-variables`) is heavy-tailed yet
-has all moments finite. Heavy tails matter in deep learning because sample averages over them
-converge slowly or fail to converge altogether. Minibatch gradient noise, for
+automatically imply infinite moments, however; the log-normal distribution,
+which we derive in :numref:`subsec_mdl-change-of-variables`, is heavy-tailed
+yet has all moments finite. Heavy tails matter in deep learning because sample
+averages over them converge slowly or fail to converge altogether. Minibatch
+gradient noise, for
 example, has been argued to be heavy-tailed
 :cite:`Simsekli.Sagun.Gurbuzbalaban.2019`, a hypothesis that Exercise
 :exref:`ex_mdl-random-variables-heavy-tail-averages` lets you test.
@@ -803,12 +811,11 @@ descends from it.
     1. Express the c.d.f. $F_Y$ through $\Phi$ and sketch it. Where does
        $Y$ have an atom, and what is its mass? Is $Y$ discrete, does it
        have a density, or is it mixed?
-    1. Explain why $Y$ has no density. Under the one-dimensional
-       change-of-variables rule $p_Y(y) = p_X(g^{-1}(y))\,|(g^{-1})'(y)|$ (which
-       we will prove in :numref:`subsec_mdl-change-of-variables`,
-       :eqref:`eq_mdl-cov_density_1d`, for a strictly monotone, continuously
-       differentiable transformation $Y = g(X)$), which hypothesis fails
-       for the ReLU?
+    1. Explain why $Y$ has no density. For a strictly monotone,
+       continuously differentiable transformation $Y = g(X)$, the
+       change-of-variables rule of :numref:`subsec_mdl-change-of-variables`
+       gives the density $p_Y(y) = p_X(g^{-1}(y))\,|(g^{-1})'(y)|$. Which
+       of its hypotheses fails for the ReLU?
     1. Clipping to $[-c, c]$ for a threshold $c > 0$, as the hard-tanh
        activation does for $c = 1$, gives $C = \min(\max(X, -c), c)$. Write
        down the c.d.f. of $C$, and find the threshold $c$ at which the atoms
@@ -817,13 +824,7 @@ descends from it.
        with $\Phi(z) = \tfrac12\bigl(1 + \operatorname{erf}(z/\sqrt{2})\bigr)$.
     1. Show that $\mathbb{E}[Y^2] = \tfrac12$ and
        $\mathbb{E}[Y] = 1/\sqrt{2\pi}$. Hint: write
-       $X^2 = Y^2 + \min(0, X)^2$ and use the symmetry of $X$ (equivalently,
-       this decomposes $\mathbb{E}[Y]$ and $\textrm{Var}(Y)$ by conditioning on
-       the sign of $X$, an instance of the law of total expectation
-       $\mathbb{E}[Y] = \mathbb{E}[\mathbb{E}[Y \mid X]]$ and law of total
-       variance
-       $\textrm{Var}(Y) = \mathbb{E}[\textrm{Var}(Y \mid X)] + \textrm{Var}(\mathbb{E}[Y \mid X])$
-       developed in full in :numref:`sec_mdl-joint-distributions`). The
+       $X^2 = Y^2 + \min(0, X)^2$ and use the symmetry of $X$. The
        He initialization of :numref:`subsec_he_init` multiplies the weight
        variance by $2$; which of these two moments does the factor
        compensate for?

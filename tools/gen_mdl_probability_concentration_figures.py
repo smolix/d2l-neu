@@ -201,7 +201,88 @@ def fig_shell():
     _save_both(fig, "mdl-prob-conc-shell")
 
 
-FIGURES = [fig_majorants, fig_shell]
+def fig_slerp_vs_lerp():
+    """Interpolating between two latent codes z1, z2 ~ N(0, I_d).  (a) The
+    plane through 0, z1 and z2, drawn to scale: both codes sit on the shell
+    of radius sqrt(d) (shaded band) and are nearly orthogonal, so the chord
+    (lerp) passes through the interior, its midpoint at radius about
+    sqrt(d/2), while the arc (slerp) stays on the shell.  (b) The norm along
+    each path, divided by sqrt(d), for one seeded pair at d = 512: the lerp
+    dips to sqrt(1/2) = 0.71 at gamma = 1/2; the slerp stays near 1."""
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(10.4, 4.2),
+                                 gridspec_kw=dict(wspace=0.18,
+                                                  width_ratios=[1, 1.25]))
+    # (a) schematic in the plane of the two codes, radius sqrt(d) -> 1
+    a1, a2 = np.deg2rad(100.0), np.deg2rad(10.0)
+    z1 = np.array([np.cos(a1), np.sin(a1)])
+    z2 = np.array([np.cos(a2), np.sin(a2)])
+    th = np.linspace(np.deg2rad(-12), np.deg2rad(122), 300)
+    for r0, r1 in ((0.93, 1.07),):
+        ax.fill(np.r_[r1 * np.cos(th), r0 * np.cos(th[::-1])],
+                np.r_[r1 * np.sin(th), r0 * np.sin(th[::-1])],
+                color=BLUE, alpha=0.12, lw=0)
+    arc = np.linspace(a2, a1, 200)
+    ax.plot(np.cos(arc), np.sin(arc), color=GREEN, lw=3.4, zorder=3)
+    ax.plot([z1[0], z2[0]], [z1[1], z2[1]], "--", color=ORANGE, lw=2.4,
+            zorder=3)
+    mid = (z1 + z2) / 2
+    ax.plot([0, mid[0]], [0, mid[1]], ":", color=GRAY, lw=1.2, zorder=1)
+    ax.plot([0, z2[0]], [0, z2[1]], ":", color=GRAY, lw=1.2, zorder=1)
+    for pt in (z1, z2):
+        ax.plot(*pt, "o", ms=8, color=BLUE, zorder=5)
+    ax.plot(*mid, "o", ms=7, color=ORANGE, zorder=5)
+    ax.plot(0, 0, "o", ms=6, color=INK, zorder=5)
+    ax.text(z1[0] - 0.06, z1[1] + 0.06, r"$\mathbf{z}_1$", fontsize=15,
+            color=INK, ha="right", va="bottom")
+    ax.text(z2[0] + 0.07, z2[1], r"$\mathbf{z}_2$", fontsize=15, color=INK,
+            ha="left", va="center")
+    ax.text(0.0, -0.06, r"$\mathbf{0}$", fontsize=14, color=INK,
+            ha="center", va="top")
+    lp = z1 + 0.74 * (z2 - z1)
+    ax.text(lp[0] - 0.05, lp[1] - 0.05, "lerp", color=fl.T.ORANGE.dark,
+            fontsize=14, ha="right", va="top")
+    ax.text(0.86, 0.86, "slerp", color=fl.T.GREEN.dark, fontsize=14,
+            ha="left", va="bottom")
+    ax.text(0.66, 0.02, r"$\sqrt{d}$", color=INK, fontsize=14,
+            ha="center", va="top")
+    ax.text(0.14, 0.40, r"$\approx\!\sqrt{d/2}$", color=INK, fontsize=14,
+            ha="right", va="center")
+    fl.clean_axes(ax, lim=((-0.45, 1.3), (-0.3, 1.25)), hide=True)
+
+    # (b) norms along the two paths for one seeded pair at d = 512
+    d = 512
+    rng = np.random.default_rng(0)
+    u, v = rng.standard_normal(d), rng.standard_normal(d)
+    om = np.arccos(u @ v / np.linalg.norm(u) / np.linalg.norm(v))
+    g = np.linspace(0, 1, 201)[:, None]
+    lerp = (1 - g) * u + g * v
+    slerp = (np.sin((1 - g) * om) * u + np.sin(g * om) * v) / np.sin(om)
+    sd = np.sqrt(d)
+    gg = g[:, 0]
+    bx.plot(gg, np.linalg.norm(slerp, axis=1) / sd, color=GREEN, lw=2.6)
+    bx.plot(gg, np.linalg.norm(lerp, axis=1) / sd, "--", color=ORANGE,
+            lw=2.4)
+    bx.axhline(np.sqrt(0.5), color=LIGHT, lw=1.0, ls=":", zorder=0)
+    bx.text(0.5, np.linalg.norm(slerp[100]) / sd + 0.03, "slerp",
+            color=fl.T.GREEN.dark, fontsize=14, ha="center", va="bottom")
+    bx.text(0.5, np.linalg.norm(lerp[100]) / sd + 0.03, "lerp",
+            color=fl.T.ORANGE.dark, fontsize=14, ha="center", va="bottom")
+    bx.set_xlim(0, 1)
+    bx.set_ylim(0.6, 1.12)
+    bx.set_xticks([0, 0.5, 1])
+    bx.set_yticks([np.sqrt(0.5), 1.0])
+    bx.set_yticklabels([r"$\sqrt{1/2}$", "$1$"])
+    bx.set_xlabel(r"interpolation weight $\gamma$ ($d=512$)", fontsize=14)
+    bx.set_ylabel(r"norm $/\sqrt{d}$", fontsize=14)
+    _black_axes(bx)
+    ax.text(-0.45, 1.25 + 0.02 * 1.55, "(a)", fontsize=14, color=INK,
+            ha="left", va="bottom")
+    bx.text(-0.02, 1.02, "(b)", transform=bx.transAxes, fontsize=14,
+            color=INK, ha="right", va="bottom")
+    fl.save(fig, "mdl-prob-conc-slerp-vs-lerp")
+
+
+FIGURES = [fig_majorants, fig_shell, fig_slerp_vs_lerp]
 
 
 def main():

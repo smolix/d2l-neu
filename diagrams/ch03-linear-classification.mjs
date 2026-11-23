@@ -112,14 +112,14 @@ const regVsCls = () => twoCols(560, 270, `From Linear Regression (${sec('chap_re
   { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t: 'Shared Invariant: Logit / Output Gradient Is Prediction Minus Truth (ŷ − y)!' }
 );
 
-const clsRoadmap = () => stackCards(560, 312, 'Chapter 3 Progression: From Logits to Trusted Decisions', [
+const clsRoadmap = () => stackCards(560, 312, `Chapter ${num('chap_classification')} Progression: From Logits to Trusted Decisions`, [
   { head: `${sec('sec_softmax')} Softmax & Cross-Entropy · ${sec('sec_fashion_mnist')} Fashion-MNIST`, badge: 'o → ŷ → l', sub: 'One-hot vectors, shift invariance, ∇_o l = ŷ − y, 60k+10k 28×28 garments', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
   { head: `${sec('sec_softmax_scratch')} Implementation (Scratch to LogSumExp)`, badge: '7,850 params', sub: 'Classifier base class, 10×10 confusion matrix, 28×28 templates, LogSumExp', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
   { head: `${sec('sec_classification')} Measuring Classifiers · ${sec('chap_classification_generalization')} Generalization`, badge: 'ECE · VC', sub: 'Cost thresholds, reliability diagrams, temperature T, Hoeffding & VC bounds', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
   { head: `${sec('sec_environment-and-distribution-shift')} Environment and Distribution Shift`, badge: 'β(x) & C⁻¹μ', sub: 'Covariate shift domain classifier, confusion-matrix label shift, feedback loops', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
 ]);
 
-const clsBenchmarks = () => stackCards(560, 312, 'Quantitative Running Benchmarks Across Chapter 3', [
+const clsBenchmarks = () => stackCards(560, 312, `Quantitative Running Benchmarks Across Chapter ${num('chap_classification')}`, [
   { head: `${sec('sec_softmax')} 3-Class Toy Image & §§${num('sec_fashion_mnist')}–${num('sec_softmax_scratch')} Fashion-MNIST`, badge: '83% val acc', sub: 'Logits (1.0, 2.2, 0.3) → ŷ=(0.21, 0.69, 0.10); LogSumExp handles (1000, 0, 0)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
   { head: `${sec('sec_classification')} Clinical Screening (1% Prior, 100:1 Cost)`, badge: '90% rec, 15% prec', sub: 'Bayes threshold drops from 0.50 to 1/101 ≈ 0.01; Fashion-MNIST ECE < 0.03', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
   { head: `${sec('chap_classification_generalization')} Finite Test Sets (n = 10,000) & Reuse`, badge: '±0.7% CLT', sub: 'Majority vote of 1,000 filtered coin-flippers jumps from 50% to ~70% acc!', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },

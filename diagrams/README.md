@@ -204,7 +204,7 @@ a number changed, and that change re-renders every diagram, so a
 renumbering needs `make figures` and a commit of the map and `img/`.
 
 - **Stale map:** `make html` refuses to render.
-- **Literal "§14.3" in diagram code:** an error in `lint_source.py --corpus`. Comments are exempt.
+- **Literal "§14.3" or "Chapter 13" in diagram code** (write `Chapter ${num('chap_x')}`): an error in `lint_source.py --corpus`. Comments are exempt.
 - **Unknown label:** throws when the module is rendered.
 
 ## Framework variants

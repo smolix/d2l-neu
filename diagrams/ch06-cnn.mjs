@@ -1362,7 +1362,7 @@ function mlpVsLenetParadigm() {
   const W = 540, H = 260;
   let o = '';
   o += card(16, 18, 242, 224, D.red.tint, D.red.base, [
-    { t: 'Chapter 4 MLP Baseline', fs: 14.5, fw: 700, fill: D.red.dark },
+    { t: `Chapter ${num('chap_perceptrons')} MLP Baseline`, fs: 14.5, fw: 700, fill: D.red.dark },
     { t: 'Flatten 28×28 → 784 → 256 → 10', mono: true, fs: 12, fw: 700, fill: C.ink },
     { t: 'Parameters: 203,530', mono: true, fs: 13, fw: 700, fill: D.red.dark },
     { t: 'Multiply-Adds: ~203,000', mono: true, fs: 12.5, fill: C.ink },

@@ -274,7 +274,7 @@ const fourBottlenecks = () => quadDiagram(
   { theme: 'orange', lines: [`2. Numerical Stability (${sec('sec_init_param')}, ${sec('sec_numerics')})`, { t: 'Unscaled ResNet: 2³²× variance!', mono: true, fill: D.orange.dark }, '16-bit weights round small Δw to 0'] },
   { theme: 'red',    lines: [`3. Fault Tolerance & Security (${sec('sec_read_write')})`, { t: '1 crash / 3 hrs on 16,384 GPUs', mono: true, fill: D.red.dark }, '96 GB atomic ckpt; safetensors vs RCE'] },
   { theme: 'green',  lines: [`4. Async GPUs & Debugging (§§${num('sec_use_gpu')}–${num('sec_repro')})`, { t: 'Async queues + atomic float adds', mono: true, fill: D.green.dark }, 'Synced timers & non-invasive hooks'] },
-  'slate', 'Every subsystem in Chapter 5 operates by traversing the recursive Module Tree.'
+  'slate', `Every subsystem in Chapter ${num('chap_computation')} operates by traversing the recursive Module Tree.`
 );
 
 function moduleTreeHub() {
@@ -352,7 +352,7 @@ const eightBBenchmarks = () => fiveRowDiagram([
 
 const scaleBookkeeping = () => threeColDiagram(
   'blue', 'Why Production Architectures Require Recursive Module Trees',
-  { theme: 'slate', head: 'Chapter 4 MLP', lines: ['2 Linear Layers', { t: 'W1, b1, W2, b2', mono: true }, '4 parameter tensors:', 'easy to pass by hand'] },
+  { theme: 'slate', head: `Chapter ${num('chap_perceptrons')} MLP`, lines: ['2 Linear Layers', { t: 'W1, b1, W2, b2', mono: true }, '4 parameter tensors:', 'easy to pass by hand'] },
   { theme: 'blue',  head: 'Llama 3 8B Model', lines: ['32 Transformer Blocks', { t: '32 × 9 + 3 = 291', mono: true, fill: D.blue.dark }, '291 distinct tensors', 'across nested blocks'] },
   { theme: 'red',   head: 'Unregistered Hazard', lines: ['Plain Python attribute', { t: 'runs in forward(X)', mono: true, fill: D.red.dark }, 'Skipped by optimizer,', 'checkpoint, & .to(gpu)!'] },
   'purple', 'Solution: Every module registers its children & parameters into a single addressable tree.'

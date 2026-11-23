@@ -812,6 +812,11 @@ def main():
                         f'differs from img/{fid}.svg; run '
                         'tools/sync_auto_figures.py').emit())
             error_count += 1
+        # Slide-card diagrams: no hardcoded "§N.M" (sec()/num() from
+        # diagrams/sections.mjs) and a current section-number map.
+        for path, line, msg in section_refs.diagram_problems(args.source):
+            print(Issue(path, line, 1, 'error', msg).emit())
+            error_count += 1
 
     if error_count or warning_count:
         sev_summary = []

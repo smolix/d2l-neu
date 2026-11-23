@@ -113,6 +113,58 @@ def resolve_label(label, root='.'):
     return format_number(nums)
 
 
+# ---- diagram modules ------------------------------------------------------
+# Slide-card diagrams (diagrams/*.mjs) are JS template strings rendered to
+# committed SVGs, so they cannot carry `§{label}` tokens for gen_slides to
+# resolve. They call sec('sec_x') / num('sec_x') from diagrams/sections.mjs
+# instead, which reads the committed map below. The map is the numbers the
+# committed SVGs carry: `make figures` rewrites it (only when a number
+# changed) and the change re-renders every diagram; `make html` refuses to
+# render while the map disagrees with CHAPTER_NUMBERING.
+NUMBERS_JSON = 'diagrams/section-numbers.json'
+# A hardcoded section number in diagram code: "§14.3", "§§7.5–7.6".
+_DIAGRAM_NUM_RE = re.compile(r'§+\s?\d')
+
+
+def numbers_map(root='.'):
+    """{label: "N" or "N.k"} for every numbered chapter and section."""
+    by_label, _ = label_table(root)
+    return {lab: format_number(nums) for lab, (rel, nums)
+            in sorted(by_label.items()) if nums}
+
+
+def numbers_json(root='.'):
+    import json
+    return json.dumps(numbers_map(root), indent=1, ensure_ascii=False) + '\n'
+
+
+def json_problems(root='.'):
+    """[(path, line, msg)] if the committed map disagrees with the book."""
+    js = Path(root) / NUMBERS_JSON
+    if js.exists() and js.read_text(encoding='utf-8') == numbers_json(root):
+        return []
+    return [(NUMBERS_JSON, 1,
+             'section numbers changed since the diagrams were rendered; '
+             f'run `make figures` and commit {NUMBERS_JSON} and img/')]
+
+
+def diagram_problems(root='.'):
+    """[(path, line, msg)]: hardcoded § numbers in diagrams/*.mjs code
+    (comments are fine), plus json_problems()."""
+    root = Path(root)
+    problems = []
+    for p in sorted((root / 'diagrams').glob('*.mjs')):
+        for i, line in enumerate(p.read_text(encoding='utf-8').split('\n')):
+            code = line.split('//')[0] if not line.lstrip().startswith('//') \
+                else ''
+            if _DIAGRAM_NUM_RE.search(code):
+                problems.append((str(p.relative_to(root)), i + 1,
+                                 'hardcoded section number; use '
+                                 "${sec('sec_x')} / ${num('sec_x')} from "
+                                 './sections.mjs'))
+    return problems + json_problems(root)
+
+
 def _slides_start(lines):
     return next((i for i, l in enumerate(lines) if SLIDES_MARKER_RE.match(l)),
                 len(lines))
@@ -151,3 +203,35 @@ def resolve(text, path, root='.'):
         num = resolve_label(m.group('label'), root)
         return num if m.group('num') else '§' + num
     return TOKEN_RE.sub(sub, text)
+
+
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    ap.add_argument('--write-json', action='store_true',
+                    help=f'rewrite {NUMBERS_JSON} if any number changed')
+    ap.add_argument('--check-diagrams', action='store_true',
+                    help='fail on hardcoded § numbers in diagrams/*.mjs or '
+                         f'a stale {NUMBERS_JSON}')
+    ap.add_argument('--check-json', action='store_true',
+                    help=f'fail if {NUMBERS_JSON} is out of date')
+    ap.add_argument('--root', default='.')
+    a = ap.parse_args(argv)
+    root = Path(a.root)
+    if a.write_json:
+        js = root / NUMBERS_JSON
+        new = numbers_json(root)
+        if not js.exists() or js.read_text(encoding='utf-8') != new:
+            js.write_text(new, encoding='utf-8')
+            print(f'{NUMBERS_JSON}: section numbers updated')
+    if a.check_diagrams or a.check_json:
+        problems = (diagram_problems if a.check_diagrams
+                    else json_problems)(root)
+        for path, line, msg in problems:
+            print(f'{path}:{line}: error: {msg}', file=sys.stderr)
+        return 1 if problems else 0
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

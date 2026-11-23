@@ -1428,7 +1428,7 @@ function sigmoidGradientAttenuation() {
     const x = 392 - i * 124;
     o += card(x, 28, 108, 82, i === 3 ? D.red.tint : C.lamber, i === 3 ? D.red.base : C.amber, [
       { t: l, fs: 12.5, fw: 700, fill: i === 3 ? D.red.dark : D.orange.dark },
-      { t: `≤ 1/${4 ** (i + 1)}`, mono: true, fs: 13, fw: 700, fill: C.ink },
+      { t: `∏ σ′ ≤ 1/${4 ** (i + 1)}`, fs: 14, fw: 700, fill: C.ink },
     ]);
     if (i < 3) {
       o += arrow(x - 3, 69, x - 13, 69, D.red.base);
@@ -1436,7 +1436,7 @@ function sigmoidGradientAttenuation() {
   });
   o += card(16, 132, 508, 110, D.red.tint, D.red.base, [
     { t: 'Why Classical LeNet Stalls at lr = 0.1 and Requires lr = 2.0', fs: 14.5, fw: 700, fill: D.red.dark },
-    { t: '1. Four sigmoid derivatives shrink Conv1 gradients by at least (1/4)⁴ = 1/256', fs: 12.5, fw: 600, fill: C.ink },
+    { t: '1. Conv1’s gradient carries four σ′ factors; their product is ≤ (1/4)⁴ = 1/256', fs: 12.5, fw: 600, fill: C.ink },
     { t: '2. Forward activations cluster near 0.5, pinning initial loss at ln(10) ≈ 2.30 plateau', fs: 12.5, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -1500,7 +1500,7 @@ function pixelShuffleInvariance() {
     { t: '(X P) W⁽¹⁾ = X (P W⁽¹⁾)', mono: true, fs: 13.5, fw: 700, fill: C.ink },
     { t: '• Merely permutes rows of W⁽¹⁾', fs: 12.5, fw: 600, fill: C.ink },
     { t: '• i.i.d. init ⇒ identical SGD distribution', fs: 12, fill: C.muted },
-    { t: '• Accuracy unchanged: ~87.0%', fs: 13, fw: 700, fill: D.blue.dark },
+    { t: '• Accuracy unchanged: ≈87%', fs: 13, fw: 700, fill: D.blue.dark },
   ]);
   o += card(282, 16, 242, 232, D.red.tint, D.red.base, [
     { t: 'LeNet on Shuffled Pixels (X·P)', fs: 14, fw: 700, fill: D.red.dark },
@@ -1517,7 +1517,7 @@ function orderedVsShuffledAcc() {
   let o = '';
   const bars = [
     { y: 24,  label: 'LeNet (Ordered Pixels)', acc: '≈89–90%', w: 300, fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { y: 90,  label: 'MLP (Ordered = Shuffled)', acc: '87.0%', w: 230, fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { y: 90,  label: 'MLP (Ordered = Shuffled)', acc: '≈87%', w: 230, fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { y: 156, label: 'LeNet (Shuffled Pixels)', acc: '≈85–86%', w: 180, fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   bars.forEach((b) => {
@@ -1526,7 +1526,7 @@ function orderedVsShuffledAcc() {
     o += box(222, b.y, b.w, 46, b.fill, b.st, 6, 2);
     o += tx(222 + b.w / 2, b.y + 23, b.acc, { mono: true, fs: 14, fw: 700, fill: b.dk });
   });
-  o += tx(270, 232, 'Shuffling pixels erases 100% of LeNet’s advantage over the MLP!', { fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(270, 232, 'Shuffling pixels erases LeNet’s advantage over the MLP', { fs: 13.5, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
 

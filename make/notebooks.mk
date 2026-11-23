@@ -120,8 +120,16 @@ DEP_FILES := $(foreach fw,$(FRAMEWORKS),$(patsubst %.executed,%.d,$(EXECUTED_$(f
 # a .d lists the transitive closure of the library's call graph, so a shard
 # edit that adds or drops a reference to another symbol changes it.
 # (build_lib.py rewrites a shard only when its content changes.)
+#
+# d2l/.built is order-only: the scan reads the shards, so it must run after
+# the library build. In a fresh checkout the shard wildcards above are empty
+# at parse time, and without this the scan ran first and wrote 655 .d files
+# saying "no d2l symbols referenced" (2026-11-23). The audit then flagged
+# every notebook stale (empty lib fingerprint), a capture would have stored
+# that empty fingerprint, and #@save edits would never re-trigger a notebook.
 $(DEP_FILES) &: $(SRC_MDS) tools/scan_d2l_usage.py \
-        $(wildcard d2l/_blocks/*/MANIFEST.mk) $(wildcard d2l/_blocks/*/*.py)
+        $(wildcard d2l/_blocks/*/MANIFEST.mk) $(wildcard d2l/_blocks/*/*.py) \
+        | d2l/.built
 	@python3 tools/scan_d2l_usage.py \
 		--source $(SOURCE) --output-dir _notebooks --shard-dir d2l/_blocks
 

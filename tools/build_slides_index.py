@@ -7,7 +7,8 @@
   * `_slides/manifest.json`     — `{"chapter_X/file": ["pytorch", "jax"], ...}`
                                   so external consumers can introspect which
                                   decks exist.
-  * `_d2l-slides-data.html`     — `<script>window.D2L_SLIDES_MANIFEST=…;</script>`
+  * `_d2l-slides-data.html`     — `<script>window.D2L_SLIDES_MANIFEST=…;
+                                  window.D2L_SLIDES_PPTX=…;</script>`
                                   included into every book page via the
                                   `include-after-body:` Quarto hook so the
                                   right-sidebar TOC slides-button knows which
@@ -34,6 +35,11 @@ from d2l_preprocess import CHAPTER_NUMBERING, FRAMEWORK_DISPLAY
 from northstar_slides import is_northstar
 
 
+# Downloadable versions of each deck, written beside <deck>.html:
+# PowerPoint (tools/slides_to_pptx.py), Beamer PDF and its LaTeX source
+# (tools/slides_to_beamer.py).
+EXPORTS = {'pdf': '.pdf', 'pptx': '.pptx', 'tex': '-latex.zip'}
+
 FRAMEWORKS = ['pytorch', 'tensorflow', 'jax', 'mxnet']
 
 
@@ -55,6 +61,7 @@ def build_index(slides_dir: Path, source: Path):
     chapter_order = []
     chapter_titles = {}
     manifest = {}
+    exports = {kind: {} for kind in EXPORTS}
 
     for rel, _ in CHAPTER_NUMBERING.items():
         rel_path = Path(rel)
@@ -87,6 +94,12 @@ def build_index(slides_dir: Path, source: Path):
             'northstar': northstar,
         })
         manifest[f'{chap}/{stem}'] = available
+        for kind, suffix in EXPORTS.items():
+            fws = [fw for fw in available
+                   if (slides_dir / fw / chap / f'{stem}{suffix}').exists()]
+            if fws:
+                exports[kind][f'{chap}/{stem}'] = fws
+                chapters[chap][-1][kind] = fws
 
     chapter_order = [c for c in chapter_order if chapters[c]]
 
@@ -97,6 +110,7 @@ def build_index(slides_dir: Path, source: Path):
              'decks': chapters[chap]}
             for chap in chapter_order
         ],
+        'exports': exports,
     }, manifest
 
 
@@ -385,6 +399,12 @@ main {
   color: white;
   transform: translateY(-1px);
 }
+.fw-badges .badge.export {
+  background: transparent;
+  border: 1px solid var(--blue-light);
+}
+.fw-badges .badge.export[data-kind="pdf"] { margin-left: 0.35rem; }
+.fw-badges .badge.export.hidden { visibility: hidden; }
 .fw-badges .badge.absent {
   background: #f0f0f0;
   color: #bbb;
@@ -500,6 +520,17 @@ function applyFramework(fw) {
     if (b.dataset.fw === fw) b.style.outline = '2px solid var(--blue-dark)';
     else b.style.outline = '';
   });
+  const suffix = {pdf: '.pdf', pptx: '.pptx', tex: '-latex.zip'};
+  document.querySelectorAll('.deck .badge.export').forEach(link => {
+    const deck = link.closest('.deck');
+    if (link.dataset.fws.split(',').includes(fw)) {
+      link.href = `${fw}/${deck.dataset.dir}/${deck.dataset.stem}${suffix[link.dataset.kind]}`;
+      link.classList.remove('hidden');
+    } else {
+      link.removeAttribute('href');
+      link.classList.add('hidden');
+    }
+  });
   persist(fw);
 }
 
@@ -541,6 +572,17 @@ def render_html(idx: dict) -> str:
                         f'<span class="badge absent" data-fw="{fw}" '
                         f'title="No {title} deck for this section">'
                         f'{short}</span>')
+            # PDF / PowerPoint / LaTeX for the selected framework;
+            # applyFramework() retargets them (or hides one that framework lacks).
+            for kind, label, extra in (
+                    ('pdf', 'PDF', 'title="Open this deck as a PDF (Beamer)"'),
+                    ('pptx', 'PPTX', 'download title="Download this deck as an '
+                                     'editable PowerPoint file"'),
+                    ('tex', 'TeX', 'download title="Download the Beamer LaTeX '
+                                   'source of this deck (zip)"')):
+                fws_x = ','.join(deck.get(kind, []))
+                badges.append(f'<a class="badge export" data-kind="{kind}" '
+                              f'data-fws="{fws_x}" {extra}>{label}</a>')
             ns = deck.get('northstar')
             ns_attr = ' data-northstar="1"' if ns else ''
             ns_badge = ('<span class="badge-new" title="Redesigned '
@@ -568,18 +610,23 @@ def html_escape(s: str) -> str:
              .replace('"', '&quot;'))
 
 
-def write_data_include(data_file: Path, manifest: dict):
+def write_data_include(data_file: Path, manifest: dict, exports: dict = None):
     """Write `_d2l-slides-data.html` for Quarto's `include-after-body`.
 
     Defines `window.D2L_SLIDES_MANIFEST` so the in-book TOC slides
-    button can determine which framework variants exist for the
-    page being viewed.
+    block can determine which framework variants exist for the page
+    being viewed, and `window.D2L_SLIDES_EXPORTS`, {kind: {page: [fws]}}
+    for kind in pdf / pptx / tex, the frameworks whose deck also has
+    that downloadable version.
     """
     payload = json.dumps(manifest, ensure_ascii=False, separators=(',', ':'))
+    exports_payload = json.dumps(exports or {}, ensure_ascii=False,
+                                 separators=(',', ':'))
     content = (
         '<script>\n'
         '// Auto-generated by tools/build_slides_index.py — do not edit.\n'
         f'window.D2L_SLIDES_MANIFEST = {payload};\n'
+        f'window.D2L_SLIDES_EXPORTS = {exports_payload};\n'
         '</script>\n'
     )
     data_file.write_text(content, encoding='utf-8')
@@ -597,13 +644,15 @@ def main():
     if args.slides_dir.exists():
         idx, manifest = build_index(args.slides_dir, args.source)
     else:
-        idx, manifest = {'chapters': []}, {}
+        idx, manifest = {'chapters': [], 'exports': {}}, {}
 
     # Always emit the data include — even if empty — so the book can
     # build cleanly without slides being present.
-    write_data_include(args.data_file, manifest)
+    exports = idx.get('exports', {})
+    write_data_include(args.data_file, manifest, exports)
     n_pages = len(manifest)
-    print(f'wrote {args.data_file} — {n_pages} pages have slides')
+    print(f'wrote {args.data_file} — {n_pages} pages have slides; with '
+          + ', '.join(f'{k}: {len(v)}' for k, v in exports.items()))
 
     if not idx['chapters']:
         print(f'no decks under {args.slides_dir}; skipped landing page')

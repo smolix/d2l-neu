@@ -404,6 +404,7 @@ shared-dataset notebooks. This path is unchanged and self-contained.
 | `CPU_PER_LIGHT` | 8 | cores per CPU slot |
 | `D2L_GPU_SLOTS_PER` | detected | per-GPU slot capacities, e.g. `3,3,3,3` |
 | `D2L_CPU_SLOTS` | detected | CPU slots |
+| `CUDA_VISIBLE_DEVICES` | unset | run on a subset of the cards: slot indices 0..n−1 map onto the listed physical GPUs, for jobs and the live gate. Give matching `D2L_GPU_SLOTS_PER` and `D2L_GPU_VRAM_PER` (n entries). Two worktrees can then share a box; pair it with `taskset -c` (CPU groups come from the affinity mask) |
 | `--frameworks a,b` | all four | restrict to a subset (`run-notebooks-<fw>` passes one) |
 | `--files "a.md b.md"` | all | restrict to a subset of source notebooks (whitespace/comma-separated `chapter_x/foo.md`); `make refresh-stale` passes the audit-stale set here for a parallel re-run |
 | `--force-all` | off | ignore stamp freshness when *selecting* notebooks. The inner `make <stamp>` still sees an up-to-date stamp as done and executes nothing, so a notebook whose `.executed` stamp `make notebooks` kept fresh is reported `OK` without running. That happens when cells were only **moved or deleted**: `gen_notebooks.py` (`_merge_outputs_from_prev`) counts a code change only when a cell's id+source changed, and then re-touches the stamp. After reordering or cutting cells, delete the stamps first (`rm _notebooks/*/<chapter>/<file>.executed`) and run the scheduler without `--force-all` (2026-11-10, ch. 1 pass) |

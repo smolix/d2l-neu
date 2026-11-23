@@ -385,6 +385,28 @@ the estimate is large and lengthens it where the estimate is small. Exercise
 :exref:`ex_mdl-odes-solvers-adaptive-steps` builds the simplest such
 controller.
 
+All these methods start every step afresh and discard the slopes that the
+step before has measured. A *multistep* method keeps them. The simplest one,
+the two-step **Adams--Bashforth method**, reads the field once per step and
+extrapolates from the last two readings:
+
+$$
+\mathbf{x}_{n+1} = \mathbf{x}_n + h\Bigl[\tfrac32\,\mathbf{f}(\mathbf{x}_n) - \tfrac12\,\mathbf{f}(\mathbf{x}_{n-1})\Bigr] .
+$$
+:eqlabel:`eq_mdl-ode-ab2-update`
+
+The bracket is
+$\mathbf f(\mathbf x_n)+\tfrac12[\mathbf f(\mathbf x_n)-\mathbf f(\mathbf x_{n-1})]$,
+the line through the two readings followed for half a step more. It is an
+estimate of the slope at the middle of the coming step, so this is the
+midpoint method with the midpoint slope taken from memory and not from a
+second evaluation: order $2$ at the cost of Euler. Two things are lost. The
+first step has no predecessor and must be taken by a one-step method, and
+the weights $\tfrac32$ and $-\tfrac12$ hold for equal steps only and must be
+recomputed when the step size changes. Where one evaluation is a pass
+through a large network, the saving outweighs both, and the multistep
+samplers of :numref:`sec_diffusion-samplers` are built on this step.
+
 ## Stiffness and Implicit Methods
 :label:`sec_mdl-stiffness-implicit`
 
@@ -576,7 +598,12 @@ $$
 $$
 
 The learning-rate ceiling is thus the boundary of Euler's stability disc,
-reached by the steepest mode at $z=-\eta\lambda_{\max}=-2$.
+reached by the steepest mode at $z=-\eta\lambda_{\max}=-2$. The first arrow
+holds the Hessian fixed, and so the ceiling is a statement about a quadratic.
+On a network the Hessian moves during training, and a run above the ceiling
+often does not blow up: its largest eigenvalue comes back toward $2/\eta$,
+and the loss keeps falling over the long run, though not at every step
+(:numref:`subsec_mdl-edge-of-stability`).
 
 If this reading is right, the ceiling comes from Euler's method, and another
 solver must have another ceiling. Let us test this prediction on the valley
@@ -663,8 +690,8 @@ steep one does. In general it loses less than the fraction
 $2\lambda_{\min}/\lambda_{\max}$, which is a five-hundredth for a condition
 number of $1000$. Stability fixes $\eta$ through $\lambda_{\max}$, and
 $\lambda_{\min}$ then sets the speed, so the condition number of the Hessian
-is the stiffness of the gradient flow. A diverging learning rate is a solver
-instability.
+is the stiffness of the gradient flow. On a quadratic, a diverging learning
+rate is a solver instability.
 
 We knew the eigenvalues of every field in this section before we took the
 first step, because we had written the field down ourselves. A field that is

@@ -42,8 +42,9 @@ guarantee holds in exact arithmetic, whereas in finite-precision floating
 point, iterates actually land on kinks.
 :numref:`sec_mdl-single_variable_calculus` reports how often this occurs across
 three numerical precisions, as measured by
-:citet:`Bertoin.Bolte.Gerchinovitz.ea.2021`, and shows how little the choice
-of $\mathrm{ReLU}'(0)$ ends up affecting training.
+:citet:`Bertoin.Bolte.Gerchinovitz.ea.2021` and corrected in their 2023
+erratum, and shows how little the choice of $\mathrm{ReLU}'(0)$ ends up
+affecting training.
 
 ### Subgradient Methods
 

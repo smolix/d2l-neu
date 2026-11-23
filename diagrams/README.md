@@ -186,6 +186,27 @@ function myThing() {
 export const diagrams = { 'myfile-mything': myThing };
 ```
 
+## Section numbers
+
+Never type a section number into a card. Name the section by the `:label:`
+of its H1 and let `sections.mjs` supply the number:
+
+```js
+import { sec, num } from './sections.mjs';
+t: `${sec('sec_rl-td')} Tabular TD`               // "§14.3 Tabular TD"
+t: `Build & Train (§§${num('sec_a')}–${num('sec_b')})`  // "§§11.1–11.2"
+```
+
+The numbers come from `section-numbers.json`, which
+`tools/section_refs.py --write-json` builds from `CHAPTER_NUMBERING`, the
+map the book, PDFs and slide covers use. `make figures` rewrites it only when
+a number changed, and that change re-renders every diagram, so a
+renumbering needs `make figures` and a commit of the map and `img/`.
+
+- **Stale map:** `make html` refuses to render.
+- **Literal "§14.3" or "Chapter 13" in diagram code** (write `Chapter ${num('chap_x')}`): an error in `lint_source.py --corpus`. Comments are exempt.
+- **Unknown label:** throws when the module is rendered.
+
 ## Framework variants
 
 When a concept differs by framework (e.g. JAX arrays are immutable, so the

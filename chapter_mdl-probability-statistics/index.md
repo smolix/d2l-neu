@@ -13,8 +13,8 @@ they can mislead us.
 
 A single, concrete example will accompany us throughout the chapter: a coin
 that lands heads $9$ times in $13$ flips. The natural estimate of its bias is
-$9/13 \approx 0.69$, yet a completely fair coin produces a result at least this
-extreme more than one time in eight. A test accuracy is the very same coin,
+$9/13 \approx 0.69$, yet a completely fair coin produces at least this many
+heads more than one time in eight. A test accuracy is the very same coin,
 flipped once per test example, and the very same uncertainty clings to it.
 
 Sorting out that uncertainty calls for four distinct ideas. First, we need a

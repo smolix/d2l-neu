@@ -1,11 +1,10 @@
 # Further Reading
 :label:`sec_mdl-probability-statistics-further-reading`
 
-The chapter introduction (:numref:`chap_mdl-probability-statistics`) collects
-books and courses that accompany what this chapter teaches. Here we turn to
-what it leaves out. Following the order of the chapter, each short entry begins
-from a limitation of a method we covered and explains how the literature
-moves past it. Two of these ideas, conformal prediction and confidence
+The list at the end of this section collects books and courses that accompany
+what this chapter teaches. First we turn to what the chapter leaves out.
+Following the order of the chapter, each short entry begins from a limitation
+of a method we covered and explains how the literature moves past it. Two of these ideas, conformal prediction and confidence
 sequences, are immediately useful in practice, repairing the intervals and
 tests of :numref:`sec_mdl-statistics` under the messy conditions of real
 experiments. Others, such as the VC dimension, are chiefly of theoretical

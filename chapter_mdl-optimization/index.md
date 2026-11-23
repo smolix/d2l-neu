@@ -139,7 +139,7 @@ Mathematics for Deep Learning: Optimization<br>**smoothness · condition number 
 We test every theorem against $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ ($\mu = 1, L = 1000, \kappa = 1000$):
 
 - **First-order scaling:** Fixed-step GD takes $6{,}908$ steps ($O(\kappa)$), while Heavy-Ball and Nesterov momentum take $315$–$508$ steps ($O(\sqrt{\kappa})$).
-- **Preconditioning vs. rotation:** Exact Newton finishes in $1$ step and aligned Adam in $22$–$48$ steps, but $45^\circ$ rotation breaks diagonal scaling.
+- **Preconditioning vs. rotation:** Exact Newton finishes in $1$ step. Aligned Adam reaches $f < 10^{-8}$ in $22$–$48$ steps, a test that takes GD $6{,}160$ steps, but $45^\circ$ rotation breaks diagonal scaling.
 - **Stochastic noise floor:** Constant-step SGD ($\eta = 10^{-3}, \sigma^2 = 1$) stalls at loss $7.5 \times 10^{-4}$.
 :::
 

@@ -798,7 +798,7 @@ optimum accurately.
 The iteration counts reveal the catch. Sinkhorn needed about $50$ iterations
 at $\varepsilon = 2$ and about $190$ at $\varepsilon = 0.5$, but roughly
 $150{,}000$ at $\varepsilon = 0.1$. Cutting $\varepsilon$ by a factor of five
-increased the work by a factor of nearly $800$. Sinkhorn iterations are fast
+increased the work by a factor of more than $800$. Sinkhorn iterations are fast
 only when you can afford a blurred transport plan (Exercise
 :exref:`ex_mdl-test-functions-transport-sinkhorn-iterations`b tracks this
 growth quantitatively).
@@ -808,8 +808,14 @@ growth quantitatively).
 MMD and $W_1$ split our two requirements right down the middle. A fixed kernel
 defines a small, smooth function class: MMD reduces to three sample averages,
 and its estimation error from $N$ points decays as $O(N^{-1/2})$ in *any*
-dimension :cite:`Gretton.Borgwardt.Rasch.ea.2012`, yet it loses sight of the
-data beyond a few length scales. By contrast, 1-Lipschitz functions provide a
+dimension :cite:`Gretton.Borgwardt.Rasch.ea.2012`. Kernels do not escape the
+curse of dimension that way, unfortunately. The error rate is dimension-free,
+but the size of the signal is not: with a fixed kernel, the population MMD
+between two given distributions typically shrinks as the dimension grows
+:cite:`Ramdas.Reddi.Poczos.ea.2015`, which is why the kernel inception
+distance and MMD losses are computed on learned features, not on raw pixels.
+A fixed kernel also loses sight of the data beyond a few length scales. By
+contrast, 1-Lipschitz functions provide a
 steady gradient at every separation, which is exactly what a model far from
 its data needs. However, even though they cannot jump like indicators, the
 class of all 1-Lipschitz functions is still enormous in high dimensions: for
@@ -835,8 +841,8 @@ and the choice of class determines both sample efficiency and how far the
 metric can see. Test functions linear in fixed features yield MMD, the
 distance between mean feature vectors: it evaluates in closed form as three
 kernel averages with no critic to train, and estimates at rate $O(N^{-1/2})$
-regardless of dimension, though an RBF kernel goes blind beyond a few length
-scales. Functions of slope at most one yield $W_1$, the minimum mass-times-distance
+regardless of dimension, though the MMD itself tends to shrink as the
+dimension grows and an RBF kernel goes blind beyond a few length scales. Functions of slope at most one yield $W_1$, the minimum mass-times-distance
 cost of transporting $P$ into $Q$, which maintains slope one at every
 separation and underpins the Wasserstein GAN critic. In one dimension, $W_1$
 collapses to the area between the two CDFs; in higher dimensions, it requires
@@ -1267,7 +1273,7 @@ To enforce $\boldsymbol{\gamma}_\varepsilon^\top\mathbf{1} = \mathbf{q}$ and $\b
 $$\mathbf{b} \leftarrow \frac{\mathbf{q}}{\mathbf{K}^\top \mathbf{a}}, \qquad \mathbf{a} \leftarrow \frac{\mathbf{p}}{\mathbf{K}\mathbf{b}}$$
 
 - **Differentiable on GPUs:** Gradients backpropagate directly through unrolled Sinkhorn steps.
-- **The $\varepsilon$ trade-off:** Large $\varepsilon$ converges fast but blurs $\boldsymbol{\gamma}_\varepsilon$; small $\varepsilon \to 0$ recovers the exact LP at $\mathcal{O}(1/\varepsilon)$ steps.
+- **The $\varepsilon$ trade-off:** Large $\varepsilon$ converges fast but blurs $\boldsymbol{\gamma}_\varepsilon$; small $\varepsilon \to 0$ recovers the exact LP, but the step count grows fast (over $800\times$ from $\varepsilon = 0.5$ to $0.1$).
 :::
 
 ::: {.col .fig}

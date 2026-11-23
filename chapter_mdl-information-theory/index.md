@@ -109,7 +109,7 @@ Information Theory and Divergences<br>**entropy · cross-entropy · source codin
 ::: {.col}
 - **Gibbs' inequality (§{sec_mdl-information_theory}):** $D_{\textrm{KL}}(P \| Q) \ge 0$ ($= 0 \iff P = Q$), so no classifier can beat the conditional label entropy $H(Y \mid X)$.
 - **Source coding (§{sec_mdl-coding-compression}):** Kraft's inequality ($\sum_i 2^{-\ell_i} \le 1$) and arithmetic coding turn any causal LLM into a lossless compressor.
-- **Variational critics (§§{sec_mdl-divergences-distances}–§{num:sec_mdl-mi-estimation}):** $f$-GAN and InfoNCE lower-bound divergences and MI from samples, capped at $\log N$ nats for batch size $N$.
+- **Variational critics (§§{sec_mdl-divergences-distances}–§{num:sec_mdl-mi-estimation}):** $f$-GAN and InfoNCE lower-bound divergences and MI from samples; the InfoNCE bound is capped at $\log N$ nats for batch size $N$.
 :::
 
 ::: {.col .fig .big}

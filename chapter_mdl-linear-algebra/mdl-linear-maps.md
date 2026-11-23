@@ -559,6 +559,13 @@ written as a combination of $\mathbf{w}_1, \ldots, \mathbf{w}_k$. Within a
 basis, that is impossible unless every $c_i = 0$. Hence
 $\operatorname{col}\mathbf{A}$ has dimension $n - k$. $\blacksquare$
 
+:numref:`fig_mdl-la-rank-nullity` shows the basis that the proof builds. Each
+of its $n$ vectors either vanishes under $\mathbf{A}$ or contributes one
+dimension to the column space, and no vector does both.
+
+![The basis in the proof of rank--nullity. The $k$ vectors $\mathbf{w}_1, \ldots, \mathbf{w}_k$ span $\ker\mathbf{A}$ and are sent to $\mathbf{0}$. The $n-k$ vectors $\mathbf{u}_1, \ldots, \mathbf{u}_{n-k}$ complete them to a basis of $\mathbb{R}^n$, and their images form a basis of $\operatorname{col}\mathbf{A}$.](../img/mdl-la-rank-nullity.svg)
+:label:`fig_mdl-la-rank-nullity`
+
 Let us check this conservation of dimensions on our examples. For $\mathbf{B}$
 we get $1 + 1 = 2$. For the $256 \times 784$ Fashion-MNIST layer from the
 opening, the rank cannot exceed the $256$ output coordinates, so the null
@@ -1046,6 +1053,12 @@ $$
  = \det\mathbf{D}_1\,\det\mathbf{D}_2 .
 $$
 
+:numref:`fig_mdl-la-triangular-det` marks the entries that survive in each
+case.
+
+![Entries that enter the determinant. (a) In an upper triangular matrix, the zeros below the diagonal rule out every permutation except the diagonal one, so the determinant is the product of the diagonal entries. (b) In a block upper triangular matrix, the zero block confines every surviving permutation to the diagonal blocks $\mathbf{D}_1$ and $\mathbf{D}_2$. The entries marked $*$ never enter.](../img/mdl-la-triangular-det.svg)
+:label:`fig_mdl-la-triangular-det`
+
 These two rules are essential in modern machine learning, not just in hand
 calculations. A normalizing flow transforms a simple random variable through
 an invertible neural network and must evaluate the log-determinant of the
@@ -1193,6 +1206,103 @@ however, what this theorem does *not* promise: a nonzero determinant
 guarantees that $\mathbf{A}^{-1}$ exists mathematically, not that it is safe
 to compute numerically (:numref:`subsec_mdl-det-limits`).
 
+### Block Matrices and Low-Rank Updates
+:label:`subsec_mdl-block-matrices`
+
+Often we already know the inverse of a part of a matrix: of one block, or of
+the matrix as it was before a small change. Can we reuse it? The answer comes
+from a single step of elimination, carried out on blocks instead of numbers.
+Split a square matrix $\mathbf{M}$ into four blocks $\mathbf{M}_{11}$,
+$\mathbf{M}_{12}$, $\mathbf{M}_{21}$, and $\mathbf{M}_{22}$, with
+$\mathbf{M}_{11}$ square and invertible. Subtracting
+$\mathbf{M}_{21}\mathbf{M}_{11}^{-1}$ times the first block row from the
+second clears the lower-left block, and the same step on the columns clears
+the upper-right one. Written as a product, this reads
+
+$$
+\begin{bmatrix}\mathbf{M}_{11} & \mathbf{M}_{12}\\ \mathbf{M}_{21} & \mathbf{M}_{22}\end{bmatrix}
+ = \begin{bmatrix}\mathbf{I} & \mathbf{0}\\ \mathbf{M}_{21}\mathbf{M}_{11}^{-1} & \mathbf{I}\end{bmatrix}
+   \begin{bmatrix}\mathbf{M}_{11} & \mathbf{0}\\ \mathbf{0} & \mathbf{S}\end{bmatrix}
+   \begin{bmatrix}\mathbf{I} & \mathbf{M}_{11}^{-1}\mathbf{M}_{12}\\ \mathbf{0} & \mathbf{I}\end{bmatrix},
+ \qquad \mathbf{S} = \mathbf{M}_{22} - \mathbf{M}_{21}\mathbf{M}_{11}^{-1}\mathbf{M}_{12},
+$$
+:eqlabel:`eq_mdl-block-ldu`
+
+as multiplying out the three factors confirms. The matrix $\mathbf{S}$ is the
+*Schur complement* of $\mathbf{M}_{11}$: it is what remains of
+$\mathbf{M}_{22}$ once the first block has been eliminated. For our running
+matrix with $1 \times 1$ blocks, $\mathbf{S} = 3 - (-1) \cdot 1^{-1} \cdot 2
+= 5$.
+
+Both outer factors are triangular with ones on the diagonal, so each has
+determinant $1$. Multiplicativity and the block rule then give
+$\det\mathbf{M} = \det\mathbf{M}_{11}\,\det\mathbf{S}$ (in the example,
+$1 \cdot 5$), and $\mathbf{M}$ is invertible if and only if $\mathbf{S}$ is.
+An outer factor is inverted by flipping the sign of its off-diagonal block.
+Inverting the three factors in reverse order therefore yields
+
+$$
+\mathbf{M}^{-1}
+ = \begin{bmatrix}\mathbf{I} & -\mathbf{M}_{11}^{-1}\mathbf{M}_{12}\\ \mathbf{0} & \mathbf{I}\end{bmatrix}
+   \begin{bmatrix}\mathbf{M}_{11}^{-1} & \mathbf{0}\\ \mathbf{0} & \mathbf{S}^{-1}\end{bmatrix}
+   \begin{bmatrix}\mathbf{I} & \mathbf{0}\\ -\mathbf{M}_{21}\mathbf{M}_{11}^{-1} & \mathbf{I}\end{bmatrix}.
+$$
+:eqlabel:`eq_mdl-block-inverse`
+
+The lower-right block of $\mathbf{M}^{-1}$ is simply $\mathbf{S}^{-1}$, and
+the upper-left block is $\mathbf{M}_{11}^{-1} +
+\mathbf{M}_{11}^{-1}\mathbf{M}_{12}\mathbf{S}^{-1}\mathbf{M}_{21}\mathbf{M}_{11}^{-1}$.
+Nothing forces us to start in the upper-left corner, however. Eliminating
+$\mathbf{M}_{22}$ first exchanges the roles of the blocks, and the upper-left
+block of $\mathbf{M}^{-1}$ then appears as the inverse of the other Schur
+complement, $\mathbf{M}_{11} -
+\mathbf{M}_{12}\mathbf{M}_{22}^{-1}\mathbf{M}_{21}$. That matrix returns as
+the conditional covariance of a Gaussian in
+:numref:`subsec_mdl-mvn-conditioning`.
+
+The two expressions for the upper-left block must agree, and this is
+surprisingly useful. Suppose that we know $\mathbf{A}^{-1}$ for an
+$n \times n$ matrix $\mathbf{A}$, and that $\mathbf{A}$ then changes by a
+matrix of rank $k$, which we write as $\mathbf{U}\mathbf{W}^\top$ with
+$\mathbf{U}, \mathbf{W} \in \mathbb{R}^{n \times k}$. Choose the blocks
+$\mathbf{M}_{11} = \mathbf{A}$, $\mathbf{M}_{12} = -\mathbf{U}$,
+$\mathbf{M}_{21} = \mathbf{W}^\top$, and $\mathbf{M}_{22} = \mathbf{I}_k$.
+One Schur complement is then $\mathbf{A} + \mathbf{U}\mathbf{W}^\top$, and the
+other is the $k \times k$ matrix $\mathbf{I}_k +
+\mathbf{W}^\top\mathbf{A}^{-1}\mathbf{U}$. Equating the two upper-left blocks
+gives the *Woodbury identity*
+
+$$
+(\mathbf{A} + \mathbf{U}\mathbf{W}^\top)^{-1}
+ = \mathbf{A}^{-1} - \mathbf{A}^{-1}\mathbf{U}\,
+   (\mathbf{I}_k + \mathbf{W}^\top\mathbf{A}^{-1}\mathbf{U})^{-1}\,
+   \mathbf{W}^\top\mathbf{A}^{-1}.
+$$
+:eqlabel:`eq_mdl-woodbury`
+
+A change of rank $k$ in a matrix changes its inverse by a matrix of rank at
+most $k$, and finding that change requires only a $k \times k$ inverse. With
+$\mathbf{A}^{-1}$ in hand, the update costs on the order of $n^2k$
+multiply--adds instead of the $n^3$ of a fresh inversion. When $\mathbf{A}$ is
+diagonal, solving a system with $\mathbf{A} + \mathbf{U}\mathbf{W}^\top$ costs
+only on the order of $nk^2$. The two eliminations also give two expressions
+for $\det\mathbf{M}$, and hence $\det(\mathbf{A} + \mathbf{U}\mathbf{W}^\top)
+= \det\mathbf{A}\,\det(\mathbf{I}_k +
+\mathbf{W}^\top\mathbf{A}^{-1}\mathbf{U})$. For $k = 1$ the inner inverse is a
+division, and the identity is known as the *Sherman--Morrison formula*:
+
+$$
+(\mathbf{A} + \mathbf{u}\mathbf{w}^\top)^{-1}
+ = \mathbf{A}^{-1} - \frac{\mathbf{A}^{-1}\mathbf{u}\,\mathbf{w}^\top\mathbf{A}^{-1}}
+   {1 + \mathbf{w}^\top\mathbf{A}^{-1}\mathbf{u}}.
+$$
+:eqlabel:`eq_mdl-sherman-morrison`
+
+This formula is why a least-squares fit can absorb or drop one example at a
+time: each example changes $\mathbf{X}^\top\mathbf{X}$ by a rank-one term.
+Exercise :exref:`ex_mdl-geometry-linear-algebraic-ops-det-rank-one-update`
+applies both the determinant and the inverse to a normalizing flow.
+
 ### Limits of the Determinant
 :label:`subsec_mdl-det-limits`
 
@@ -1264,6 +1374,9 @@ having independent columns, trivial null space, full rank, a nonzero
 determinant, and an inverse are all equivalent. The determinant measures the
 signed factor by which a map scales volume; it multiplies under composition
 and equals the product of the diagonal entries for any triangular matrix.
+One step of block elimination produces the Schur complement, which gives the
+determinant and the inverse of a block matrix and, through the Woodbury
+identity, the inverse of a matrix after a low-rank change.
 Still, while a nonzero determinant guarantees that an inverse exists, it
 cannot tell us how close a matrix is to singularity, a question that leads
 directly to eigenvalues and singular values.
@@ -1399,6 +1512,15 @@ directly to eigenvalues and singular values.
        general $d \times d$ determinant. For $h = \tanh$, which values of
        $\mathbf{u}\cdot\mathbf{w}$ keep the Jacobian invertible at every
        $\mathbf{z}$?
+    1. Use the Sherman--Morrison formula :eqref:`eq_mdl-sherman-morrison` to
+       write the inverse of the Jacobian
+       $\mathbf{I} + c\,\mathbf{u}\mathbf{w}^\top$, where
+       $c = h'(\mathbf{w}\cdot\mathbf{z} + b)$. Check that the formula
+       breaks down at the same values of $c$ at which the determinant
+       vanishes, and count the multiply--adds needed to apply the inverse to
+       a vector. The inverse Jacobian does not invert $f$ itself: show that
+       recovering $\mathbf{z}$ from $f(\mathbf{z})$ reduces to solving one
+       scalar equation for $\mathbf{w}\cdot\mathbf{z}$.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-det-rank-one-update`
 
 1. [code] **Einstein summation for attention.** Let the query, key and value

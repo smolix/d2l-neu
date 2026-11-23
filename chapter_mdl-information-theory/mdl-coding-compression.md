@@ -758,16 +758,25 @@ $H(X_1, \ldots, X_n)$, the coder averages less than
 $\tfrac1n H(X_1, \ldots, X_n) + \tfrac2n$ bits per symbol, which converges
 to $H_{\textrm{rate}}$ as $n$ grows.
 
-In a classic experiment, Shannon estimated the entropy rate of printed
-English to be roughly one bit per character :cite:`Shannon.1951`, far below
-the $\log_2 27 = 4.75$ bits required for uniformly random letters and
-spaces. Notice that any working compressor establishes an *upper* bound on
-the entropy rate: our order-$3$ counting model's $2.55$ bits per character
-is one such upper bound, whereas no compressor can ever prove a lower
-bound. Returning to the chapter introduction, a language model with a loss
-of $1.2$ nats per character achieves $1.73$ bits per character, well below
-our counting model's $2.55$, yet still noticeably above Shannon's estimate
-of one bit.
+In a classic experiment, Shannon asked people to guess the next letter of
+printed English and concluded that its entropy rate lies between roughly
+$0.6$ and $1.3$ bits per character :cite:`Shannon.1951`, far below the
+$\log_2 27 = 4.75$ bits required for uniformly random letters and spaces.
+Notice that any working compressor establishes an *upper* bound on the
+entropy rate: our order-$3$ counting model's $2.55$ bits per character is
+one such upper bound, whereas no compressor can ever prove a lower bound.
+Returning to the chapter introduction, a language model with a loss of
+$1.2$ nats per character achieves $1.73$ bits per character, well below our
+counting model's $2.55$, yet still above the top of Shannon's range.
+
+The best upper bounds today come from large language models. Driving an
+arithmetic coder, the model of :citet:`Deletang.Ruoss.Duquenne.ea.2023`
+compresses Wikipedia text to less than one bit per byte, inside Shannon's
+range. Three caveats apply before we read this as the entropy rate of
+English: the size of the model is not counted, some of the test text may
+have been seen in training, and a byte of Wikipedia markup is not a symbol
+of Shannon's $27$-letter alphabet. Where the true rate lies below these
+bounds, nobody knows.
 
 ### Typical Sequences
 :label:`subsec_mdl-aep`
@@ -886,8 +895,8 @@ print(f'bounds: {prob:.3f} * 2^{n * (h - delta):.1f} <= |A| '
 
 The $2^{188.8}$ typical strings, those containing between $44$ and $76$
 ones, make up only one in $2^{11}$ of all binary strings, yet together they
-carry probability $0.989$. Their count exceeds $2^{nH}$ by several thousand
-because $\delta = 0.1$ admits strings with up to $76$ ones, which are far
+carry probability $0.989$. Their count exceeds $2^{nH}$ by a factor of
+several thousand because $\delta = 0.1$ admits strings with up to $76$ ones, which are far
 more numerous than those near $60$; still, the size stays comfortably
 within the proposition's bounds of $0.989 \cdot 2^{156.3}$ and
 $2^{196.3}$. Let us plot both the probability and the fraction of strings
@@ -1000,10 +1009,13 @@ $\mathbb{E}[e^{\textrm{CE}}] \geq e^{\mathbb{E}[\textrm{CE}]}
 \geq 2^{H_{\textrm{rate}}}$. $\blacksquare$
 
 In short, no model can be less perplexed on average than the intrinsic
-randomness of the source permits. If English indeed has Shannon's entropy
-rate of roughly one bit per character, then no character-level model can
-beat an expected perplexity of $2$, one fair coin flip per letter, putting
-our order-$3$ counting model's $5.84$ well above the limit.
+randomness of the source permits. To get a sense of scale, suppose a text
+had an entropy rate of one bit per character, a value inside Shannon's
+range for English. Then no character-level model could beat an expected
+perplexity of $2$, one fair coin flip per letter, and our order-$3$
+counting model's $5.84$ would sit far above the floor. For real text the
+floor is as uncertain as the entropy rate itself, which we know only
+through upper bounds.
 
 Notice carefully that the proposition bounds an *expectation*; the
 perplexity of a single short text can easily dip below the floor. Consider
@@ -1253,8 +1265,9 @@ only after converting back to bits per character or bits per byte.
        tokens, and B reaches a per-token perplexity of $8$. Convert both
        results to bits per character with :eqref:`eq_mdl-bpc`. Which model
        predicts the text better?
-    1. Take the entropy rate of the text to be one bit per character, the
-       estimate of :citet:`Shannon.1951`. By :eqref:`eq_mdl-ppl-floor` the
+    1. Take the entropy rate of the text to be one bit per character, a
+       value inside the range that :citet:`Shannon.1951` estimated for
+       English. By :eqref:`eq_mdl-ppl-floor` the
        expected per-token perplexity is at least $2^{H}$, where $H$ is the
        entropy rate per *token* in bits. What is the lowest perplexity any
        model can reach in expectation with the tokenizer of A, and with
@@ -1497,7 +1510,7 @@ $$H_{\textrm{rate}} = \lim_{n \to \infty} \frac{1}{n} H(X_1, \ldots, X_n) = \lim
 ::: {.cols .vc}
 ::: {.col}
 - **Fundamental floor:** No uniquely decodable block code can average fewer than $H_{\textrm{rate}}$ bits/symbol, while arithmetic coding under the true conditional model achieves $\frac{1}{n}H(X_{1:n}) + \frac{2}{n} \to H_{\textrm{rate}}$.
-- **English progression ($\textrm{PPL} = 2^{\textrm{bpc}}$):** Drops from uniform $4.75\text{ bpc}$ ($\textrm{PPL} = 27$) to unigram $4.08\text{ bpc}$, `zlib` $2.84\text{ bpc}$, order-3 $2.55\text{ bpc}$ ($\textrm{PPL} = 5.84$), neural LM $1.73\text{ bpc}$, and Shannon's human estimate $\approx 1.00\text{ bpc}$ ($\textrm{PPL} \approx 2$).
+- **English progression ($\textrm{PPL} = 2^{\textrm{bpc}}$):** Drops from uniform $4.75\text{ bpc}$ ($\textrm{PPL} = 27$) to unigram $4.08\text{ bpc}$, `zlib` $2.84\text{ bpc}$, order-3 $2.55\text{ bpc}$ ($\textrm{PPL} = 5.84$), neural LM $1.73\text{ bpc}$, and Shannon's human bounds of $0.6\text{–}1.3\text{ bpc}$ ($\textrm{PPL} \approx 1.5\text{–}2.5$).
 :::
 
 ::: {.col .fig .big}

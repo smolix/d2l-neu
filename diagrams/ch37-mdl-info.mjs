@@ -2,6 +2,7 @@
 // Rendered and audited by tools/build_module_diagrams.mjs with 0 visual defects.
 
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 import { textWidth } from './mdl-textwidth.mjs';
 
 const D = TOKENS.accents;
@@ -168,7 +169,7 @@ function ceDecomposition() {
 function threePillars() {
   const W = 540, H = 286;
   let o = '';
-  o += titledPanel(20, 14, 156, 192, '1. Gibbs Floor (§37.1)', D.blue, [
+  o += titledPanel(20, 14, 156, 192, `1. Gibbs Floor (${sec('sec_mdl-information_theory')})`, D.blue, [
     { t: 'D_KL(P ‖ Q) ≥ 0', mono: true, fs: 14, fw: 700, fill: D.blue.dark },
     { t: 'CE(P, Q) ≥ H(P)', mono: true, fs: 13, fill: C.ink },
     { t: 'No classifier beats', fs: 12.5, fill: C.ink },
@@ -176,7 +177,7 @@ function threePillars() {
     { t: 'entropy H(Y | X)', mono: true, fs: 13, fw: 700, fill: D.blue.dark },
   ]);
 
-  o += titledPanel(192, 14, 156, 192, '2. Coding (§37.2)', D.green, [
+  o += titledPanel(192, 14, 156, 192, `2. Coding (${sec('sec_mdl-coding-compression')})`, D.green, [
     { t: '∑ 2⁻ℓᵢ ≤ 1 (Kraft)', mono: true, fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Arithmetic stream:', fs: 12.5, fill: C.ink },
     { t: 'ℓ < −log₂ q(x₁:ₙ) + 2', mono: true, fs: 12, fw: 700, fill: C.ink },
@@ -184,12 +185,12 @@ function threePillars() {
     { t: 'a lossless codec!', fs: 13, fw: 700, fill: D.green.dark },
   ]);
 
-  o += titledPanel(364, 14, 156, 192, '3. Critics (§§37.3–7)', D.purple, [
+  o += titledPanel(364, 14, 156, 192, `3. Critics (§§${num('sec_mdl-divergences-distances')}–${num('sec_mdl-mi-estimation')})`, D.purple, [
     { t: 'f-GAN & InfoNCE', fs: 13.5, fw: 700, fill: D.purple.dark },
     { t: 'Bound D_f and I(X;Y)', fs: 12.5, fill: C.ink },
-    { t: 'from samples alone,', fs: 12.5, fill: C.ink },
-    { t: 'capped at log N nats', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
-    { t: 'for batch size N', fs: 12.5, fill: C.muted },
+    { t: 'from samples alone;', fs: 12.5, fill: C.ink },
+    { t: 'InfoNCE capped at log N', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: 'nats for batch size N', fs: 12.5, fill: C.muted },
   ]);
 
   o += card(20, 220, 500, 52, D.red.tint, D.red.base, [
@@ -202,20 +203,20 @@ function chapterRoadmap() {
   const W = 540, H = 292;
   let o = '';
   o += card(20, 12, 500, 74, C.lblue, C.blue, [
-    { t: 'Track 1 · Log-Loss, Coding & Perplexity (§§37.1–37.2)', fs: 15, fw: 700, fill: D.blue.dark },
-    { t: '§37.1 Surprisal, H(P), Gibbs, smoothing, distillation  ·  §37.2 Kraft, arithmetic coding, MDL, AEP, PPL', fs: 12.5, fill: C.ink },
+    { t: `Track 1 · Log-Loss, Coding & Perplexity (§§${num('sec_mdl-information_theory')}–${num('sec_mdl-coding-compression')})`, fs: 15, fw: 700, fill: D.blue.dark },
+    { t: `${sec('sec_mdl-information_theory')} Surprisal, H(P), Gibbs, smoothing, distillation  ·  ${sec('sec_mdl-coding-compression')} Kraft, arithmetic coding, MDL, AEP, PPL`, fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 88, 270, 108, C.blue);
 
   o += card(20, 112, 500, 74, C.lamber, C.amber, [
-    { t: 'Track 2 · Divergences, Transport & Score Fields (§§37.3–37.5)', fs: 15, fw: 700, fill: D.orange.dark },
-    { t: '§37.3 f-divergences, Pinsker, f-GAN  ·  §37.4 IPMs, MMD, W₁, Sinkhorn  ·  §37.5 Stein, Score Matching, KSD', fs: 12.5, fill: C.ink },
+    { t: `Track 2 · Divergences, Transport & Score Fields (§§${num('sec_mdl-divergences-distances')}–${num('sec_mdl-scores')})`, fs: 15, fw: 700, fill: D.orange.dark },
+    { t: `${sec('sec_mdl-divergences-distances')} f-divergences, Pinsker, f-GAN  ·  ${sec('sec_mdl-test-functions-transport')} IPMs, MMD, W₁, Sinkhorn  ·  ${sec('sec_mdl-scores')} Stein, Score Matching, KSD`, fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 188, 270, 208, D.orange.base);
 
   o += card(20, 212, 500, 68, C.lgreen, C.green, [
-    { t: 'Track 3 · Dependence, Bottlenecks & Contrastive Bounds (§§37.6–37.7)', fs: 15, fw: 700, fill: D.green.dark },
-    { t: '§37.6 Mutual Info, DPI, Fano, Capacity, IB  ·  §37.7 KSG neighbors, McAllester–Stratos, DV/NWJ, InfoNCE', fs: 12.5, fill: C.ink },
+    { t: `Track 3 · Dependence, Bottlenecks & Contrastive Bounds (§§${num('sec_mdl-mutual-information')}–${num('sec_mdl-mi-estimation')})`, fs: 15, fw: 700, fill: D.green.dark },
+    { t: `${sec('sec_mdl-mutual-information')} Mutual Info, DPI, Fano, Capacity, IB  ·  ${sec('sec_mdl-mi-estimation')} KSG neighbors, McAllester–Stratos, DV/NWJ, InfoNCE`, fs: 12.5, fill: C.ink },
   ]);
   return svg(W, H, o);
 }
@@ -640,7 +641,7 @@ function englishCompressionLadder() {
     { name: 'Lempel–Ziv + Huffman (zlib -9)', bpc: '2.84 bpc', ppl: 'PPL = 7.16', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { name: 'Adaptive Order-3 Character Model', bpc: '2.55 bpc', ppl: 'PPL = 5.84', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { name: 'Neural Language Model (1.2 nats)', bpc: '1.73 bpc', ppl: 'PPL = 3.32', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { name: 'Shannon Human Estimate (H_rate)', bpc: '~1.00 bpc', ppl: 'PPL ≈ 2.00', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { name: 'Shannon Human Bounds (1951)', bpc: '0.6–1.3 bpc', ppl: 'PPL ≈ 1.5–2.5', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   rungs.forEach((r, i) => {
@@ -1138,7 +1139,7 @@ function w2UncrossingFid() {
   ]);
 
   o += card(20, 216, 500, 52, D.purple.tint, C.purple, [
-    { t: 'Why W₂ Matters for Flows (§38.7): Strictly penalizes crossing trajectories in space-time!', fs: 13, fw: 700, fill: D.purple.dark },
+    { t: `Why W₂ Matters for Flows (${sec('sec_mdl-flow-matching-transport')}): Strictly penalizes crossing trajectories in space-time!`, fs: 13, fw: 700, fill: D.purple.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1169,8 +1170,9 @@ function sinkhornGibbsScaling() {
   o += card(388, 70, 132, 124, C.lgreen, C.green, [
     { t: '3. ε Trade-Off', fs: 14, fw: 700, fill: D.green.dark },
     { t: 'Large ε: fast, blurry', fs: 12, fill: C.ink },
-    { t: 'Small ε → 0: exact', fs: 12, fill: C.ink },
-    { t: 'LP, O(1/ε) steps', mono: true, fs: 12, fw: 700, fill: D.green.dark },
+    { t: 'Small ε → 0: exact LP,', fs: 12, fill: C.ink },
+    { t: 'steps grow fast:', fs: 12, fill: C.ink },
+    { t: 'ε ÷ 5 → steps × 800', mono: true, fs: 12, fw: 700, fill: D.green.dark },
   ]);
 
   o += card(20, 208, 500, 58, C.lamber, C.amber, [
@@ -1426,7 +1428,8 @@ function masterLossGuide() {
   o += card(20, 172, 156, 106, D.teal.tint, D.teal.base, [
     { t: '4. Kernel MMD / KID', fs: 13.5, fw: 700, fill: D.teal.dark },
     { t: 'Needs: Samples + k', fs: 12, fill: C.ink },
-    { t: 'δ₀ vs δ_d: √(2−2e⁻ᵈ²), 2ℓ² = 1', mono: true, fs: 11, fill: C.ink },
+    { t: 'δ₀ vs δ_d (ℓ = 1):', mono: true, fs: 12, fill: C.ink },
+    { t: 'MMD² = 2 − 2e^(−d²/2)', mono: true, fs: 11.5, fill: C.ink },
     { t: 'O(N⁻¹/²) in any dim', fs: 12, fill: D.teal.dark },
   ]);
 

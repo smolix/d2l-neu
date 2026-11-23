@@ -75,8 +75,11 @@ _book/index.html: .preprocess.stamp index.qmd _quarto.yml _d2l-theme.scss _d2l-s
 		python3 tools/build_slides_index.py; \
 		echo "Building hosted-notebook manifest (buttons below Slides)..."; \
 		python3 tools/build_hosted_notebooks.py manifest; \
-		"$(CURDIR)/$(QUARTO)" render --to html; \
+		: 'The whole-book html render outgrew the ~8 GiB default V8 heap (rc=133,'; \
+		: '2026-11-23); it runs alone, so it gets the per-job render heap.'; \
+		$(RENDER_V8_ENV) "$(CURDIR)/$(QUARTO)" render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
+		python3 tools/build_date.py --stamp _book/index.html; \
 		python3 tools/add_cfasync.py _book; \
 		tools/integrate_slides.sh; \
 		: 'PDFs are staged into _book/pdf by the pdf rule (PDF_RULE) itself.'; \

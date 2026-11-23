@@ -295,7 +295,7 @@ title-block-style: none
 <section class="d2l-hero">
   <div>
     <h1>Dive into Deep Learning</h1>
-    <p class="edition">Second edition, November 2026</p>
+    <p class="edition">Version <span class="d2l-build-date">2026.11.23</span></p>
     <p class="lede">Master the theory, design, and engineering of deep learning by building it from scratch. Each section weaves together intuition, mathematics, working code, and applications&mdash;and doubles as an interactive notebook you can run, modify, and experiment with directly.</p>
     <p>By <strong>Alexander&nbsp;J.&nbsp;Smola</strong>. First edition by Aston Zhang, Zachary&nbsp;C. Lipton, Mu&nbsp;Li, and Alexander&nbsp;J. Smola (Cambridge University Press, 2023).</p>
     <p>Read freely online, download the PDFs, or run the notebooks directly. Choose your framework: <em>Basics</em> and the math appendix support PyTorch, JAX, TensorFlow, and MXNet; <em>Advanced</em> supports PyTorch and JAX; and <em>Language Models</em> will focus on PyTorch.</p>
@@ -1406,8 +1406,8 @@ trainer.fit(model, data)</code></pre></div>
     <pre><code>@book{smola2026dive,
   title   = {Dive into Deep Learning},
   author  = {Smola, Alexander J.},
-  edition = {Second},
   year    = {2026},
+  version = {<span class="d2l-build-date">2026.11.23</span>},
   note    = {\url{<span class="d2l-site-url">https://d2l.ai</span>}}
 }</code></pre>
   </div>

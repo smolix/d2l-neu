@@ -8,7 +8,7 @@ Two models from earlier sections each hold half of the answer:
 - `MinGRU` (:numref:`sec_linear-recurrence`) computes its decay gate from the current input token, so it can keep one token and overwrite the next, but its gates start with a one-step half-life and each channel holds only a single scalar state.
 - `S4D` (:numref:`sec_ssm`) starts with half-lives spanning $1$ to $\sim 700$ steps across $N$ states per channel, but its dynamics are time-invariant.
 
-*Selective* state space models, introduced with the Mamba architecture by :citet:`Gu.Dao.2023`, unify the two: the step size $\Delta_t$ of the discretized SSM—along with the write vector $\mathbf{B}_t$ and read vector $\mathbf{C}_t$—becomes a function of the current input $\mathbf{x}_t$. Setting $\Delta_t \to 0$ freezes the state and ignores an uninformative filler token; setting $\Delta_t$ large flushes stale state and writes a salient token. Because the dynamics now vary by step, the FFT convolution no longer applies, but the parallel associative scan of :numref:`sec_linear-recurrence` still trains the layer in $O(\log_2 T)$ rounds. Below we benchmark `S4D` and `MinGRU` on selective copying, show that a 1-state selective SSM is mathematically equivalent to a `MinGRU` gate, build `SelectiveSSM` and `Mamba` with a memory-efficient custom backward scan (`adjoint_scan`), inspect how a trained Mamba layer populates its state, and evaluate it on byte-level WikiText-103.
+*Selective* state space models, introduced with the Mamba architecture by :citet:`Gu.Dao.2023`, unify the two: the step size $\Delta_t$ of the discretized SSM—along with the write vector $\mathbf{B}_t$ and read vector $\mathbf{C}_t$—becomes a function of the current input $\mathbf{x}_t$. Setting $\Delta_t \to 0$ freezes the state and ignores an uninformative filler token; setting $\Delta_t$ large writes a salient token and decays what the state held before. Because the dynamics now vary by step, the FFT convolution no longer applies, but the parallel associative scan of :numref:`sec_linear-recurrence` still trains the layer in $O(\log_2 T)$ rounds. Below we benchmark `S4D` and `MinGRU` on selective copying, show that a 1-state selective SSM is mathematically equivalent to a `MinGRU` gate, build `SelectiveSSM` and `Mamba` with a memory-efficient custom backward scan (`adjoint_scan`), inspect how a trained Mamba layer populates its state, and evaluate it on byte-level WikiText-103.
 
 ```{.python .input #mamba-selective-state-space-models}
 %%tab pytorch
@@ -492,7 +492,7 @@ for name, selective in (('Mamba', True), ('Mamba, not selective', False)):
         for _ in range(2)], rngs=rngs))
 ```
 
-`Mamba` achieves $98\%$ accuracy or more in both runs, outperforming both `minGRU` and the non-selective control (`Mamba, not selective`, which drops by more than $30$ percentage points and scatters widely across seeds, matching the ablation reported in :citet:`Gu.Dao.2023`). Exercise :exref:`ex_mamba-longer-sequences` tests zero-shot length extrapolation to $4{,}096$ fillers.
+`Mamba` copies nearly every symbol: its accuracy is $95\%$ or more and usually close to $100\%$, ahead of `minGRU`. The non-selective control loses more than $30$ percentage points and scatters widely from run to run, which matches the ablation reported in :citet:`Gu.Dao.2023`. The projections, the convolution, and the gate are the same in both models, so the difference is due to selection alone. Exercise :exref:`ex_mamba-longer-sequences` tests zero-shot length extrapolation to $4{,}096$ fillers.
 
 ### Contributions to the State
 
@@ -541,13 +541,17 @@ def log_coefficients(self, X):
             b_bar * X[..., None])
 ```
 
-Using `log_coefficients`, `first_layer_contributions` extracts the first mixer's log-decays and writes on a test sequence `X` truncated at the first query token (`X[:, :-3]`) and evaluates `state_contributions` for `S4D` and both trained `Mamba` runs:
+Which of the two layers should we look at? Nothing in the training tells a model where to do its selecting, so we probe both. `layer_contributions` runs the blocks below a given layer, extracts that layer's log-decays and writes on a test sequence `X` truncated at the first query token (`X[:, :-3]`), and evaluates `state_contributions`. We apply it to both layers of `S4D` and of both trained `Mamba` runs:
 
 ```{.python .input #mamba-contributions-to-the-state-2}
 %%tab pytorch
-def first_layer_contributions(model, X):
-    """Contributions to the first layer's state at the last step of X."""
-    mixer, X = model.mixers[0], model.first_mixer_input(X)
+def layer_contributions(model, X, layer):
+    """Contributions to the state of a layer at the last step of X."""
+    H = model.embedding(X)
+    for i in range(layer):  # The blocks below it, as in the forward pass
+        H = H + model.mixers[i](model.norms[i](H))
+        H = H + model.mlps[i](H)
+    mixer, X = model.mixers[layer], model.norms[layer](H)
     if isinstance(mixer, d2l.S4D):
         return state_contributions(*mixer.log_coefficients(X))
     U, _ = mixer.ssm_input(X)  # Mamba: what its selective SSM reads
@@ -557,16 +561,20 @@ X, _ = copy_batch(1, device=d2l.try_gpu())
 X = X[:, :-3]  # Up to the first query token
 probed = {'S4D': models['S4D'][0], 'Mamba, run 1': models['Mamba'][0],
           'Mamba, run 2': models['Mamba'][1]}  # Both trained Mamba runs
-with torch.inference_mode():
-    contributions = {name: first_layer_contributions(model, X)[0]
-                     for name, model in probed.items()}
+with torch.inference_mode():  # Both layers of each model
+    contributions = {(name, layer): layer_contributions(model, X, layer)[0]
+                     for name, model in probed.items() for layer in (0, 1)}
 ```
 
 ```{.python .input #mamba-contributions-to-the-state-2}
 %%tab jax
-def first_layer_contributions(model, X):
-    """Contributions to the first layer's state at the last step of X."""
-    mixer, X = model.mixers[0], model.first_mixer_input(X)
+def layer_contributions(model, X, layer):
+    """Contributions to the state of a layer at the last step of X."""
+    H = model.embedding(X)
+    for i in range(layer):  # The blocks below it, as in the forward pass
+        H = H + model.mixers[i](model.norms[i](H))
+        H = H + model.mlps[i](H)
+    mixer, X = model.mixers[layer], model.norms[layer](H)
     if isinstance(mixer, d2l.S4D):
         return state_contributions(*mixer.log_coefficients(X))
     U, _ = mixer.ssm_input(X)  # Mamba: what its selective SSM reads
@@ -576,11 +584,11 @@ X, _ = copy_batch(d2l.get_key(), 1)
 X = X[:, :-3]  # Up to the first query token
 probed = {'S4D': models['S4D'][0], 'Mamba, run 1': models['Mamba'][0],
           'Mamba, run 2': models['Mamba'][1]}  # Both trained Mamba runs
-contributions = {name: first_layer_contributions(model, X)[0]
-                 for name, model in probed.items()}
+contributions = {(name, layer): layer_contributions(model, X, layer)[0]
+                 for name, model in probed.items() for layer in (0, 1)}
 ```
 
-Because the width-4 causal convolution spreads each marked symbol across up to 4 consecutive positions, `symbol_windows` collects the 4-position window starting at each symbol ($\le 1.6\%$ of the sequence) and measures both the share of the final state originating in those windows and the full contribution profile across all $1{,}025$ positions:
+Because the width-4 causal convolution spreads each marked symbol across up to 4 consecutive positions, `symbol_windows` collects the 4-position window starting at each symbol ($\le 1.6\%$ of the sequence). For each layer we print the share of the final state that originates in those windows. For each model we then plot the contribution of all $1{,}025$ positions in the layer with the larger share:
 
 ```{.python .input #mamba-where-the-state-comes-from-2}
 %%tab pytorch
@@ -594,13 +602,19 @@ def symbol_windows(X, width=4):
 
 windows = symbol_windows(X)
 print(f'symbol windows: {len(windows) / X.shape[1]:.1%} of the positions')
-for name, c in contributions.items():
-    print(f'{name:12s} share of the state from them: '
-          f'{c[windows].sum() / c.sum():.2f}')
+share = {key: float(c[windows].sum() / c.sum())
+         for key, c in contributions.items()}
+print('share of the state from them  layer 1  layer 2')
+for name in probed:
+    print(f'{name:28s}  {share[name, 0]:7.2f}  {share[name, 1]:7.2f}')
+best = {name: max((0, 1), key=lambda layer: share[name, layer])
+        for name in probed}  # The layer that selects more
+curves = {f'{name}, layer {layer + 1}': contributions[name, layer]
+          for name, layer in best.items()}
 d2l.plot(torch.arange(X.shape[1]), [(c / c.max()).cpu() for c in
-                                    contributions.values()],
+                                    curves.values()],
          'position', 'contribution to the state',
-         legend=list(contributions), yscale='log', figsize=(6, 3),
+         legend=list(curves), yscale='log', figsize=(6, 3),
          legend_loc='outside')  # The curves fill the axes
 ```
 
@@ -615,17 +629,22 @@ def symbol_windows(X, width=4):
 
 windows = symbol_windows(X)
 print(f'symbol windows: {len(windows) / X.shape[1]:.1%} of the positions')
-for name, c in contributions.items():
-    print(f'{name:12s} share of the state from them: '
-          f'{c[windows].sum() / c.sum():.2f}')
-d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in
-                                  contributions.values()],
+share = {key: float(c[windows].sum() / c.sum())
+         for key, c in contributions.items()}
+print('share of the state from them  layer 1  layer 2')
+for name in probed:
+    print(f'{name:28s}  {share[name, 0]:7.2f}  {share[name, 1]:7.2f}')
+best = {name: max((0, 1), key=lambda layer: share[name, layer])
+        for name in probed}  # The layer that selects more
+curves = {f'{name}, layer {layer + 1}': contributions[name, layer]
+          for name, layer in best.items()}
+d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in curves.values()],
          'position', 'contribution to the state',
-         legend=list(contributions), yscale='log', figsize=(6, 3),
+         legend=list(curves), yscale='log', figsize=(6, 3),
          legend_loc='outside')  # The curves fill the axes
 ```
 
-We also compute the median *spike ratio*—the maximum contribution inside each symbol's 4-step window divided by the contribution of the filler token immediately preceding it—across 64 fresh test sequences:
+The share depends on where the symbols happen to fall in one sequence. A local measure is the *spike ratio*: the maximum contribution inside a symbol's 4-step window, divided by the contribution of the filler token immediately preceding it. We compute its median over the symbols of 64 fresh test sequences, again in both layers:
 
 ```{.python .input #mamba-contributions-to-the-state-3}
 %%tab pytorch
@@ -634,12 +653,16 @@ rows, starts = (X_test[:, 1:] > 1).nonzero(as_tuple=True)  # The symbols,
 starts = starts + 1                                       # not at position 0
 window = (starts[:, None] + torch.arange(4, device=X.device)).clamp(
     max=X_test.shape[1] - 1)  # A window may reach past the end
-print(f'spike ratio, median over {len(rows)} symbols')
+def spike_ratio(c):  # Median over the symbols
+    return float((c[rows[:, None], window].amax(1) / c[rows, starts - 1])
+                 .median())
+
+print(f'spike ratio, median over {len(rows)} symbols   layer 1   layer 2')
 with torch.inference_mode():
     for name, model in probed.items():
-        c = first_layer_contributions(model, X_test)
-        spike = c[rows[:, None], window].amax(1) / c[rows, starts - 1]
-        print(f'{name:12s} {spike.median():8,.1f}')
+        spikes = [spike_ratio(layer_contributions(model, X_test, layer))
+                  for layer in (0, 1)]
+        print(f'{name:36s} {spikes[0]:9,.1f} {spikes[1]:9,.1f}')
 ```
 
 ```{.python .input #mamba-contributions-to-the-state-3}
@@ -649,14 +672,20 @@ rows, starts = jnp.nonzero(X_test[:, 1:] > 1)  # The symbols,
 starts = starts + 1                            # not at position 0
 window = jnp.minimum(starts[:, None] + jnp.arange(4),
                      X_test.shape[1] - 1)  # A window may reach past the end
-print(f'spike ratio, median over {len(rows)} symbols')
+def spike_ratio(c):  # Median over the symbols
+    return float(jnp.median(c[rows[:, None], window].max(1)
+                            / c[rows, starts - 1]))
+
+print(f'spike ratio, median over {len(rows)} symbols   layer 1   layer 2')
 for name, model in probed.items():
-    c = first_layer_contributions(model, X_test)
-    spike = c[rows[:, None], window].max(1) / c[rows, starts - 1]
-    print(f'{name:12s} {float(jnp.median(spike)):8,.1f}')
+    spikes = [spike_ratio(layer_contributions(model, X_test, layer))
+              for layer in (0, 1)]
+    print(f'{name:36s} {spikes[0]:9,.1f} {spikes[1]:9,.1f}')
 ```
 
-In `S4D`, contributions rise monotonically toward the end of the sequence because decay depends only on recency, whereas in `Mamba`, contributions spike at the four symbol windows, in most runs by two to three orders of magnitude—both because symbols take a large write step $\Delta_t$ and because that same large $\Delta_t$ exponentially attenuates ($e^{\Delta_t\boldsymbol{\lambda}}$) the preceding filler tokens. The size of the spike varies a great deal between runs. We probe the first of the two layers only, and training does not always put the selection there: in an occasional run the first layer's profile stays close to that of `S4D`, with spikes about ten times the neighboring filler and only a few percent of the state coming from the symbol windows, although the model still copies nearly every symbol. In such a run the second layer presumably does the selecting; we have not probed it.
+The profile of `S4D` follows recency: it rises smoothly toward the end of the sequence, and the symbol windows supply only a few percent of the state, not much more than their share of the positions. A symbol does stand out from the filler before it, by a factor of a few tens at most, because a fixed filter can respond more strongly to one token than to another. It cannot hold that token for longer. In `Mamba`, a layer that selects lifts the symbols above the neighboring fillers by a factor of several hundred to tens of thousands, and the four windows supply a large part of its state, often most of it. Training does not decide in advance which layer this is. In some runs both layers select; in others only one does, it may be either, and the spike ratio of the other layer is then no larger than that of `S4D`. This is why the tables list both layers and the plot shows the more selective one.
+
+How does a layer produce such a spike? The natural guess is that it takes a large step on every symbol, which writes the symbol and flushes the fillers before it. The step sizes of the trained models say otherwise. Averaged over the $H = 96$ channels, the step on a symbol is usually no larger than the step on a filler. Selection is the work of very few channels: each symbol is carried by two or three of them. On fillers these channels take steps $\Delta_{t,c}$ of about $10^{-5}$, so that they neither decay nor write, and their state is frozen. On the symbol the same channels take steps between about $0.1$ and $1.5$, and since the write $\Delta_{t,c}\, x_{t,c}\, \mathbf{B}_t$ is proportional to the step, the symbol enters the state at full strength. Such a step also decays what the channel held before, but only by a small factor, and erasing the preceding fillers adds little to the spike. Selection here is a strong write into a few frozen channels, not a flush of the state.
 
 ### Language Modeling
 :label:`subsec_mamba-lm`
@@ -708,7 +737,7 @@ trained = d2l.text_table(text_model, arms, data)
 
 ## Summary
 
-Time-invariant state space models weight past inputs purely by lag and fail on content-selective tasks such as selective copying. Selective state space models compute per-channel step sizes $\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t + \mathbf{b}_\Delta)$ and shared write and read vectors $\mathbf{B}_t, \mathbf{C}_t$ from each input token. For a single state ($N = 1$), $e^{-\textrm{softplus}(s_t)} = \sigma(-s_t)$ recovers the `MinGRU` update gate; with $N$ states initialized at rates $-1, \ldots, -N$ and log-uniform $\Delta$ biases, `Mamba` combines content selection with multi-timescale memory. Differentiating the parallel scan via a reverse-time scan (`adjoint_scan`) avoids storing the $O(\log_2 T)$ intermediate doubling rounds. On selective copying, `Mamba` achieves $99\%$–$100\%$ accuracy (dropping by $>30$ points when selectivity is disabled), and on byte-level WikiText-103 it matches the full LSTM and GRU while outperforming a parameter-matched `MinGRU` by $0.03$ nats/byte.
+Time-invariant state space models weight past inputs purely by lag and fail on content-selective tasks such as selective copying. Selective state space models compute per-channel step sizes $\boldsymbol{\Delta}_t = \textrm{softplus}(\mathbf{W}_\Delta \mathbf{x}_t + \mathbf{b}_\Delta)$ and shared write and read vectors $\mathbf{B}_t, \mathbf{C}_t$ from each input token. For a single state ($N = 1$), $e^{-\textrm{softplus}(s_t)} = \sigma(-s_t)$ recovers the `MinGRU` update gate; with $N$ states initialized at rates $-1, \ldots, -N$ and log-uniform $\Delta$ biases, `Mamba` combines content selection with multi-timescale memory. Differentiating the parallel scan via a reverse-time scan (`adjoint_scan`) avoids storing the $O(\log_2 T)$ intermediate doubling rounds. On selective copying, `Mamba` reaches $95\%$ accuracy or more (dropping by $>30$ points when selectivity is disabled), which it owes to a few channels that stay frozen on fillers and write each symbol with a large step, and on byte-level WikiText-103 it matches the full LSTM and GRU while outperforming a parameter-matched `MinGRU` by $0.03$ nats/byte.
 
 ## Exercises
 
@@ -737,9 +766,9 @@ Time-invariant state space models weight past inputs purely by lag and fail on c
    (`num_fillers`), without retraining.
    :exlabel:`ex_mamba-longer-sequences`
     1. Does it still copy the symbols? Compare with the minGRU.
-    1. For each channel of the first layer, compute the decay of its slowest
-       state over 1,000 filler tokens. How many channels can carry a symbol
-       across 4,096 fillers?
+    1. For each channel of the more selective layer, compute the decay of
+       its slowest state over 1,000 filler tokens. How many channels can
+       carry a symbol across 4,096 fillers?
 
 1. [code] **Which part must be selective?** ●
     1. Between the two Mamba models of this section lie two more:
@@ -748,12 +777,14 @@ Time-invariant state space models weight past inputs purely by lag and fail on c
        input-dependent $\mathbf{B}_t$ and $\mathbf{C}_t$. Train both,
        twice each. Which of them solve the task? Relate the result to the
        spike ratios measured above.
-    1. In the trained Mamba model, set the step sizes of the first layer to
-       their median over filler positions at the four positions starting at
-       each symbol (the windows measured above), so that the layer cannot write
-       the symbols with a large step. How much does the accuracy drop? Repeat
-       with the step sizes set to their median over these positions everywhere
-       else, so that the layer cannot skip the fillers.
+    1. In the trained Mamba model, replace the step sizes of both layers
+       at the four positions starting at each symbol (the windows measured
+       above) by their median over the filler positions, so that no layer
+       can write the symbols with a large step. How much does the accuracy
+       drop? Repeat with the step sizes at all other positions replaced by
+       their median over the windows, so that no layer can skip the
+       fillers. Then intervene on one layer at a time. Does the result
+       agree with the shares measured above?
 
 1. [code] **Generation.** Add a method `step` to `SelectiveSSM` and to
    `Mamba` that processes one token, given the state of the SSM and the
@@ -962,7 +993,7 @@ We train 2-block `Mamba` ($N = 4$) alongside `Mamba, not selective` (`selective=
 @!mamba-selective-copying-with-mamba
 
 ::: {.d2l-note .rule}
-**Selectivity is the decisive mechanism:** `Mamba` achieves **$0.98$ accuracy or more** across runs, whereas freezing $\boldsymbol{\Delta}, \mathbf{B}, \mathbf{C}$ inside the identical block drops accuracy by **$>30$ percentage points** (scattering wildly across seeds).
+**Selectivity is the decisive mechanism:** `Mamba` reaches **$0.95$ accuracy or more**, usually close to $1.00$, whereas freezing $\boldsymbol{\Delta}, \mathbf{B}, \mathbf{C}$ inside the identical block drops accuracy by **$>30$ percentage points** (scattering wildly across seeds).
 :::
 :::
 
@@ -986,20 +1017,20 @@ $$\mathbf{h}_T = \sum_{s=1}^{T} \exp\!\Big(\sum_{r=s+1}^{T} \log \mathbf{a}_r\Bi
 ::: {.slide title="Mamba Spikes at Marked Symbols; S4D Tracks Recency"}
 [State Contribution Profile]{.kicker}
 
-Share of the final state originating in the $1.6\%$ symbol-window positions and the full contribution curve across all $1{,}025$ tokens:
+Share of the final state that originates in the symbol windows ($1.6\%$ of the positions), for each layer, and the contribution of all $1{,}025$ positions in the more selective layer of each model:
 
 @!mamba-where-the-state-comes-from-2
 :::
 
 ::: {.slide title="Quantifying Selection: The Symbol-to-Filler Spike Ratio"}
-[Dual Effect of Large Step Sizes]{.kicker}
+[Large Steps in a Few Channels]{.kicker}
 
-Measuring the median **spike ratio**—the peak contribution inside each symbol's 4-token window divided by the contribution of the filler token immediately preceding it—across $64$ test sequences ($256$ symbols):
+The **spike ratio** is the peak contribution inside a symbol's 4-token window, divided by the contribution of the filler token immediately preceding it. Median over the symbols of $64$ test sequences, in both layers:
 
 @!mamba-contributions-to-the-state-3
 
-- **Orders-of-magnitude amplification:** In most runs `Mamba`'s symbol contributions stand **hundreds to thousands of times** above adjacent fillers, whereas `S4D` achieves a ratio of at most $\sim 20$ (solely by learning a larger embedding norm for symbol tokens). An occasional run shows a ratio of only $\sim 10$ in this first layer and still copies nearly every symbol.
-- **Two-for-one gating via $\Delta_{t,c}$:** In `Mamba`, taking a large step $\Delta_{t,c}$ on a marked symbol simultaneously **writes the symbol strongly** ($\Delta_{t,c} x_{t,c}\mathbf{B}_t$) and **exponentially erases prior filler noise** ($e^{\Delta_{t,c}\boldsymbol{\lambda}} \ll 1$), while setting $\Delta_{t,c} \approx 0$ on fillers freezes the stored symbol untouched!
+- **Orders-of-magnitude amplification:** In a layer that selects, `Mamba`'s symbols stand **hundreds to tens of thousands of times** above the adjacent fillers. `S4D` reaches a few tens at most: a fixed filter can respond more strongly to one token than to another, but cannot hold it longer. Both layers may select, or only one, and which one varies from run to run.
+- **A few channels do the gating:** Each symbol is carried by **two or three of the $H = 96$ channels**. On fillers they take $\Delta_{t,c} \approx 10^{-5}$, which freezes their state and writes almost nothing; on the symbol they take $\Delta_{t,c} \approx 0.1$ to $1.5$, which **writes it strongly** ($\Delta_{t,c} x_{t,c}\mathbf{B}_t$). That step decays the earlier state by a small factor only: the spike is a strong write into frozen channels, not a flush.
 :::
 
 ::: {.slide title="Mamba on Byte-Level WikiText-103 vs. minGRU & Attention"}
@@ -1040,7 +1071,7 @@ Work out the following three questions:
 | **Softplus–Gate Identity** | $e^{-\textrm{softplus}(s_t)} = \sigma(-s_t)$ | Bridges continuous step size $\Delta_t$ and `MinGRU` update gate $z_t$ |
 | **Selective SSM (`Mamba`)** | $\mathbf{h}_t^{(c)} = e^{\Delta_{t,c}\boldsymbol{\lambda}} \odot \mathbf{h}_{t-1}^{(c)} + \Delta_{t,c} x_{t,c}\mathbf{B}_t$ | Token-dependent $\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ + multi-timescale rates $\lambda_n = -n$ |
 | **Adjoint Scan VJP** | $\mathbf{g}_t = \nabla_{\mathbf{h}_t}\ell + \mathbf{a}_{t+1} \odot \mathbf{g}_{t+1}$ | Differentiates scan via reverse-time scan; saves $2$ tensors instead of $\sim 20$ |
-| **Selective Copying** | $4$ random-position symbols in $1{,}024$ fillers | `Mamba` scores **$0.98$ or more** (`S4D` $\le 0.20$; non-selective Mamba drops $>30$ pts) |
+| **Selective Copying** | $4$ random-position symbols in $1{,}024$ fillers | `Mamba` scores **$0.95$ or more** (`S4D` $\le 0.20$; non-selective Mamba drops $>30$ pts) |
 | **WikiText-103 Bytes** | 4-block `SeqLM` ($d = 256$, $128$ bytes) | `Mamba` reaches **$1.30$ nats/byte** (matches LSTM/GRU; beats `minGRU, d=309` by $0.03$) |
 :::
 

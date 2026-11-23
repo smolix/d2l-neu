@@ -979,12 +979,15 @@ def _render_decks_parallel(fw, fw_dir, output_root, rel_paths, base_env,
 def _remove_deck(fw_dir, rel):
     """Delete the generated/rendered deck of source `rel` under fw_dir.
 
-    Removes `<stem>.qmd`, `<stem>.html`, `<stem>_files/` and the render-error
+    Removes `<stem>.qmd`, `<stem>.html`, its exports (`.pptx`, `.pdf`,
+    `-latex.zip`), `<stem>_files/` and the render-error
     log. Returns True if anything was there.
     """
     base = fw_dir / rel[:-len('.md')]
     hit = False
     for p in (base.with_suffix('.qmd'), base.with_suffix('.html'),
+              base.with_suffix('.pptx'), base.with_suffix('.pdf'),
+              base.with_name(base.name + '-latex.zip'),
               fw_dir.parent / 'errors' / fw_dir.name / (rel[:-3] + '.log')):
         if p.is_file():
             p.unlink()

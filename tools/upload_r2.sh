@@ -257,6 +257,7 @@ upload_one() {
         *.js)   ct="application/javascript; charset=utf-8" ;;
         *.json) ct="application/json; charset=utf-8" ;;
         *.zip)  ct="application/zip" ;;   # per-framework notebook bundles
+        *.pptx) ct="application/vnd.openxmlformats-officedocument.presentationml.presentation" ;;
         *)      ct="" ;;
     esac
     local args=(--endpoint-url "$R2_ENDPOINT" --region auto)
@@ -366,11 +367,17 @@ if [[ "$MODE" == "full" ]]; then
         --content-type "application/zip" \
         --exclude "*" --include "*.zip" --exclude "*/.quarto/*" \
         $DRY_RUN
-    # Pass 6: rest
+    # Pass 6: PowerPoint slide decks
+    aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
+        "${S3_ARGS[@]}" \
+        --content-type "application/vnd.openxmlformats-officedocument.presentationml.presentation" \
+        --exclude "*" --include "*.pptx" --exclude "*/.quarto/*" \
+        $DRY_RUN
+    # Pass 7: rest
     aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
         "${S3_ARGS[@]}" \
         --exclude "*.html" --exclude "*.css" \
-        --exclude "*.js" --exclude "*.json" --exclude "*.zip" \
+        --exclude "*.js" --exclude "*.json" --exclude "*.zip" --exclude "*.pptx" \
         --exclude "*/.quarto/*" \
         $DRY_RUN
 

@@ -1,7 +1,7 @@
 # Optimal Control, LQR, and Model Predictive Control
 :label:`sec_optimal_control`
 
-The tabular methods of :numref:`sec_mdp`–:numref:`sec_imitation`—from value iteration (:numref:`sec_valueiter`) and Q-learning (:numref:`sec_qlearning`) to behavior cloning and DAgger (:numref:`sec_imitation`)—all rely on a finite table with one row per state. What happens when the state is a continuous vector $\mathbf{x}_t \in \mathbb{R}^d$—positions, angles, and velocities, as in the vehicle of :numref:`sec_mdp`—and the action is a continuous control input $\mathbf{u}_t \in \mathbb{R}^m$ evolving under known dynamics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, \mathbf{u}_t)$? Discretizing a continuous space into a grid does not scale: partitioning each of $d$ coordinates into $m$ bins explodes into $m^d$ states ($100^d$ cells at $100$ bins per coordinate), Bellman's *curse of dimensionality* :cite:`BellmanDPBook`.
+Dynamic programming (:numref:`sec_valueiter`) solved the slippery lake by sweeping a table of sixteen state values until Bellman's optimality equation held at every cell, and every method since, from Q-learning to behavior cloning, has kept one table row per state. What happens when the state is a continuous vector $\mathbf{x}_t \in \mathbb{R}^d$ of positions, angles, and velocities, as in the vehicle of :numref:`sec_mdp`, and the action is a continuous control $\mathbf{u}_t \in \mathbb{R}^m$ that acts through known dynamics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, \mathbf{u}_t)$? Grids do not scale: partitioning each of $d$ coordinates into $100$ bins produces $100^d$ cells, Bellman's *curse of dimensionality* :cite:`BellmanDPBook`.
 
 Control theory solved this problem in continuous state and action spaces long before deep reinforcement learning, starting from an algebraic observation due to :citet:`Kalman.1960`. When the transition dynamics are linear in the state and control, and the one-step cost is quadratic in both, Bellman's backward dynamic programming preserves the quadratic form of the value function at every step. Instead of a table of $100^d$ entries, the exact value function $V_t(\mathbf{x}) = \mathbf{x}^\top \mathbf{P}_t \mathbf{x}$ is parameterized by a symmetric $d \times d$ matrix $\mathbf{P}_t$ with $d(d+1)/2$ independent numbers. The Bellman backup reduces to the *Riccati recursion*, and the optimal policy is a linear state-feedback law $\mathbf{u}_t^* = -\mathbf{K}_t \mathbf{x}_t$: the *Linear-Quadratic Regulator* (LQR) :cite:`Kalman.1960,Anderson.Moore.2007`.
 
@@ -46,7 +46,7 @@ where $\mathbf{Q} \succeq \mathbf{0}$ and $\mathbf{Q}_H \succeq \mathbf{0}$ are 
 
 ### Exact Continuous Dynamic Programming and the Riccati Recursion
 
-Let $V_t(\mathbf{x})$ be the optimal cost-to-go from state $\mathbf{x}$ at step $t \in \{0, \ldots, H\}$. At the terminal step $t = H$, no control remains and $V_H(\mathbf{x}) = \mathbf{x}^\top \mathbf{P}_H \mathbf{x}$ with $\mathbf{P}_H = \mathbf{Q}_H$. Moving backward from $t+1$ to $t$, Bellman's optimality equation (:numref:`sec_valueiter`) states that
+Let $V_t(\mathbf{x})$ be the optimal cost-to-go from state $\mathbf{x}$ at step $t \in \{0, \ldots, H\}$. At the terminal step $t = H$, no control remains and $V_H(\mathbf{x}) = \mathbf{x}^\top \mathbf{P}_H \mathbf{x}$ with $\mathbf{P}_H = \mathbf{Q}_H$. Moving backward from $t+1$ to $t$, the finite-horizon form of Bellman's optimality equation (:numref:`sec_valueiter`) states that
 
 $$V_t(\mathbf{x}) = \min_{\mathbf{u} \in \mathbb{R}^m} \Big\{ \mathbf{x}^\top \mathbf{Q}\mathbf{x} + \mathbf{u}^\top \mathbf{R}\mathbf{u} + V_{t+1}(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u}) \Big\}.$$
 :eqlabel:`eq_lqr_bellman`
@@ -78,6 +78,11 @@ $$
 \end{aligned}
 $$
 :eqlabel:`eq_riccati_recursion`
+
+The recursion runs backward once, from $\mathbf{P}_H = \mathbf{Q}_H$, and needs no state to do so. Running the system is then cheap: at each step the controller measures $\mathbf{x}_t$ and multiplies it by a stored gain, as :numref:`fig_rl_lqr_loop` shows.
+
+![LQR in closed loop. The controller multiplies the measured state $\mathbf{x}_t$ by the gain $-\mathbf{K}_t$, the system (the *plant*, in control terms) responds with the next state, and that state is measured in turn. All gains are computed by the backward Riccati recursion before the loop starts.](../img/mdl-rl-lqr-loop.svg)
+:label:`fig_rl_lqr_loop`
 
 Three properties of :eqref:`eq_lqr_gain` and :eqref:`eq_riccati_recursion` deserve emphasis:
 
@@ -140,7 +145,7 @@ Look at the two components of the stationary feedback law $u_t^* = -k_p p_t - k_
 
 ### Analytical Linearization of `Pendulum-v1`
 
-Now consider a physical benchmark that will accompany us through the rest of this chapter and :numref:`chap_deep_rl`: the inverted pendulum (`Pendulum-v1`). A rigid rod of mass $m = 1$ and length $l = 1$ is pivoted at one end under gravity $g = 10$ and driven by a bounded motor torque $u_t \in [-2, 2]$. Its continuous state is $\mathbf{x}_t = (\vartheta_t, \dot\vartheta_t)^\top$, where $\vartheta_t$ is the angle measured from the upright vertical ($\vartheta = 0$ upright, $\vartheta = \pi$ hanging straight down) and $\omega_t = \dot\vartheta_t \in [-8, 8]$ is the angular velocity. Because the peak gravitational torque at the horizontal ($\vartheta = \pi/2$) is $mgl/2 = 5 > 2$, the motor is *underactuated*: it cannot lift the rod directly from the bottom to the top in a single push. Over one simulator step of $\Delta t = 0.05\text{ s}$, the semi-implicit Euler transition $\mathbf{x}_{t+1} = f(\mathbf{x}_t, u_t)$ is
+Now consider a physical benchmark that will accompany us through the rest of this chapter and :numref:`chap_deep_rl`: the inverted pendulum (`Pendulum-v1`). A rigid rod of mass $m = 1$ and length $l = 1$ is pivoted at one end under gravity $g = 10$ and driven by a bounded motor torque $u_t \in [-2, 2]$. Its continuous state is $\mathbf{x}_t = (\vartheta_t, \dot\vartheta_t)^\top$, where $\vartheta_t$ is the angle measured from the upright vertical ($\vartheta = 0$ upright, $\vartheta = \pi$ hanging straight down) and $\dot\vartheta_t \in [-8, 8]$ is the angular velocity. Because the peak gravitational torque at the horizontal ($\vartheta = \pi/2$) is $mgl/2 = 5 > 2$, the motor is *underactuated*: it cannot lift the rod directly from the bottom to the top in a single push. Over one simulator step of $\Delta t = 0.05\text{ s}$, the semi-implicit Euler transition $\mathbf{x}_{t+1} = f(\mathbf{x}_t, u_t)$ is
 
 $$
 \begin{aligned}
@@ -150,7 +155,7 @@ $$
 $$
 :eqlabel:`eq_pendulum_discrete`
 
-with angular velocity clipped to $[-8, 8]$. Each step incurs the quadratic stage cost $c(\vartheta_t, \dot\vartheta_t, u_t) = \vartheta_t^2 + 0.1\,\dot\vartheta_t^2 + 0.001\,u_t^2$ (with $\vartheta_t$ wrapped to $[-\pi, \pi]$, corresponding to $\mathbf{Q} = \textrm{diag}(1.0, 0.1)$ and $\mathbf{R} = [[0.001]]$), or equivalently emits the reward $r_t = -c(\vartheta_t, \dot\vartheta_t, u_t)$. Standard benchmark episodes run for $200$ steps ($10\text{ s}$): an uncontrolled pendulum scores around $-1{,}200$ to $-1{,}500$, whereas a controller that swings the rod up and balances it upright scores above $-200$. Here we plan directly with the known equations of motion :eqref:`eq_pendulum_discrete`; :numref:`sec_deeprl`, :numref:`sec_sac`, and :numref:`sec_model_based` will return to this exact pendulum benchmark when the agent must act or learn a dynamics model without knowing the physics.
+with angular velocity clipped to $[-8, 8]$. Each step incurs the quadratic stage cost $c(\vartheta_t, \dot\vartheta_t, u_t) = \vartheta_t^2 + 0.1\,\dot\vartheta_t^2 + 0.001\,u_t^2$ (with $\vartheta_t$ wrapped to $[-\pi, \pi]$, corresponding to $\mathbf{Q} = \textrm{diag}(1.0, 0.1)$ and $\mathbf{R} = [[0.001]]$), or equivalently emits the reward $r_t = -c(\vartheta_t, \dot\vartheta_t, u_t)$. Standard benchmark episodes run for $200$ steps ($10\text{ s}$): an uncontrolled pendulum scores around $-1{,}200$ to $-1{,}500$, whereas a controller that swings the rod up and balances it upright averages about $-200$ or better over the benchmark's random starting states. Here we plan directly with the known equations of motion :eqref:`eq_pendulum_discrete`; :numref:`sec_deeprl`, :numref:`sec_sac`, and :numref:`sec_model_based` will return to this exact pendulum benchmark when the agent must act or learn a dynamics model without knowing the physics.
 
 The upright posture $\mathbf{x}^* = (0, 0)^\top$ with zero torque $u^* = 0$ is a fixed point, $f(\mathbf{x}^*, u^*) = \mathbf{x}^*$. Near any reference pair $(\bar{\mathbf{x}}, \bar{u})$, a first-order Taylor expansion approximates the nonlinear transition by a local linear model in the deviations $\delta\mathbf{x}_t = \mathbf{x}_t - \bar{\mathbf{x}}$ and $\delta u_t = u_t - \bar{u}$:
 
@@ -217,15 +222,15 @@ for th0 in (0.20, 0.40, 0.50, 0.60, np.pi):
           f'final theta={wrap(x[0]):+6.3f} rad')
 ```
 
-Inside the static holding threshold ($\vartheta_0 = 0.20$ and $0.40\text{ rad}$), linear LQR drives the pendulum straight to upright ($\vartheta_{200} = 0.000$) with near-zero cost (returns $-0.32$ and $-2.97$). Just outside that threshold ($\vartheta_0 = 0.50\text{ rad}$), full negative torque $u = -2$ cannot arrest the fall, and from the bottom ($\vartheta_0 = \pi$) the linear controller earns $-1471.86$ and never reaches the top. Because the motor is underactuated ($u_{\max} = 2 < 5$), swinging up from $\vartheta_0 = \pi$ requires *energy pumping*: pushing in one direction, reversing torque as the pendulum swings back through the bottom to build kinetic and potential energy, and only switching to upright stabilization once the rod climbs into the top catch basin.
+Inside the static holding threshold ($\vartheta_0 = 0.20$ and $0.40\text{ rad}$), linear LQR drives the pendulum straight to upright ($\vartheta_{200} = 0.000$) with near-zero cost (returns $-0.32$ and $-2.97$). Just outside that threshold ($\vartheta_0 = 0.50\text{ rad}$), full negative torque $u = -2$ cannot arrest the fall, and the rod is still swinging through the bottom after 200 steps (return $-770.94$). Beyond the threshold the outcome is no longer monotone in $\vartheta_0$. From $0.60\text{ rad}$ the rod falls just the same, but after a few more swings it happens to come up slowly enough for the clipped controller to catch it (return $-546.37$). This is luck, not control. From the bottom ($\vartheta_0 = \pi$) the linear controller earns $-1471.86$ and never reaches the top. Because the motor is underactuated ($u_{\max} = 2 < 5$), swinging up from $\vartheta_0 = \pi$ requires *energy pumping*: pushing in one direction, reversing torque as the pendulum swings back through the bottom to build kinetic and potential energy, and only switching to upright stabilization once the rod climbs into the top catch basin.
 
 ## Nonlinear Trajectory Optimization via Iterative LQR
 
 ### Linearizing Along a Trajectory
 
-A single linearization at $(\mathbf{0}, 0)$ knows nothing about the nonlinear sin$(\vartheta)$ curvature along a swing from $\vartheta_0 = \pi$. *Iterative Linear-Quadratic Regulation* (iLQR) :cite:`Li.Todorov.2004`, a Gauss–Newton variant of Differential Dynamic Programming :cite:`BellmanDPBook`, instead linearizes around an entire nominal trajectory.
+A single linearization at $(\mathbf{0}, 0)$ knows nothing about the nonlinear sin$(\vartheta)$ curvature along a swing from $\vartheta_0 = \pi$. *Iterative Linear-Quadratic Regulation* (iLQR) :cite:`Li.Todorov.2004`, a Gauss–Newton variant of Differential Dynamic Programming :cite:`Mayne.1966`, instead linearizes around an entire nominal trajectory.
 
-To enforce the torque bound $u_t \in [-2, 2]$ smoothly without hard-clipping kinks, we parameterize $u_t = 2\tanh(v_t)$ via an unconstrained control variable $v_t \in \mathbb{R}$. Given any nominal control sequence $\bar{v}_{0:H-1}$ and its forward rollout $\bar{\mathbf{x}}_{0:H}$ under the true nonlinear dynamics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, v_t)$, each iteration of iLQR performs two passes:
+To enforce the torque bound $u_t \in [-2, 2]$ smoothly without hard-clipping kinks, we parameterize $u_t = 2\tanh(v_t)$ via an unconstrained control variable $v_t \in \mathbb{R}$. Given any nominal control sequence $\bar{v}_{0:H-1}$ and its forward rollout $\bar{\mathbf{x}}_{0:H}$ under the true nonlinear dynamics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, v_t)$ (without the velocity clip, which the swing-up below never reaches), each iteration of iLQR performs two passes:
 
 1. **Backward Riccati pass along $(\bar{\mathbf{x}}_{0:H}, \bar{v}_{0:H-1})$:** At each step $t = H-1, \ldots, 0$, compute the local Jacobians $\mathbf{A}_t = \frac{\partial f}{\partial \mathbf{x}}(\bar{\mathbf{x}}_t, \bar{v}_t)$ and $\mathbf{B}_t = \frac{\partial f}{\partial v}(\bar{\mathbf{x}}_t, \bar{v}_t)$, and form a second-order Taylor approximation of the action-value perturbation $\delta Q_t(\delta\mathbf{x}_t, \delta v_t)$ from the stage cost gradients $(\boldsymbol{\ell}_{\mathbf{x},t}, \ell_{v,t})$, Hessians $(\mathbf{L}_{\mathbf{x}\mathbf{x},t}, \ell_{vv,t})$, and the next step's value gradient $\mathbf{v}_{\mathbf{x},t+1}$ and Hessian $\mathbf{V}_{\mathbf{x}\mathbf{x},t+1}$:
 
@@ -327,8 +332,10 @@ d2l.plot(np.arange(80) * 0.05, [xs_nom[:-1, 0], xs_nom[:-1, 1], us_nom],
 Look at the trajectory that iLQR discovers in 35 iterations from the bottom $(\pi, 0)$:
 
 - **Steps 0 to 10 (initial back-swing):** It pushes left ($u_0 = -1.782$) to $\vartheta_{10} = 2.652\text{ rad}$.
-- **Steps 10 to 30 (energy pump):** It reverses torque ($u_{10} = +0.966 \to u_{20} = +1.681$), driving the pendulum through the bottom to $\vartheta_{30} = 4.038\text{ rad}$ on the other side to store gravitational potential energy.
-- **Steps 30 to 60 (whip and catch):** It reverses torque again ($u_{30} = -1.807 \to u_{40} = -1.832$), reaching peak angular speed $\dot\vartheta_{40} = -4.440\text{ rad/s}$ as it climbs past the horizontal ($\vartheta_{40} = 1.567\text{ rad}$) into the upright catch basin ($\vartheta_{50} = 0.375\text{ rad}$) and brakes smoothly to rest at the top ($\vartheta_{60} = 0.0009\text{ rad}$, $\vartheta_{80} = 0.0001\text{ rad}$, $u_{80} = 0.000$).
+- **Steps 10 to 30 (energy pump):** It reverses torque ($u_{10} = +0.965 \to u_{20} = +1.681$), driving the pendulum through the bottom to $\vartheta_{30} = 4.038\text{ rad}$ on the other side to store gravitational potential energy.
+- **Steps 30 to 60 (whip and catch):** It reverses torque again ($u_{30} = -1.807 \to u_{40} = -1.832$), passing the bottom at up to $5.7\text{ rad/s}$ and still moving at $\dot\vartheta_{40} = -4.440\text{ rad/s}$ as it climbs past the horizontal ($\vartheta_{40} = 1.567\text{ rad}$) into the upright catch basin ($\vartheta_{50} = 0.375\text{ rad}$) and brakes smoothly to rest at the top ($\vartheta_{60} = 0.0009\text{ rad}$, $\vartheta_{80} = 0.0001\text{ rad}$, $u_{80} = 0.000$).
+
+This plan is a local optimum, and we should not mistake it for the best swing-up. Each iLQR iteration improves the trajectory it was given, so the result depends on the initial control sequence. `ilqr_swingup` starts from a small push over the first 15 steps ($\bar{v}_t = 0.2$) and nothing after, and with a fixed damping $\mu$. The push matters: started from $\bar{v} = 0$, the same 35 iterations do not bring the rod to rest at the top. The dependence on the initial guess returns below, where it decides whether a controller recovers from a knock.
 
 ## Receding-Horizon Model Predictive Control
 
@@ -338,7 +345,9 @@ An optimal trajectory $(\bar{\mathbf{x}}_{0:H}, \bar{u}_{0:H-1})$ is not yet a r
 
 1. **Open-loop execution:** Apply the precomputed sequence $\bar{u}_t$ blind to the actual state $\mathbf{x}_t$. Because the upright posture is an unstable saddle, even a small disturbance or numerical drift pushes the trajectory off course.
 2. **Time-varying LQR (TV-LQR) tracking:** Use the local feedback matrices $\mathbf{K}_t$ computed during the final backward pass of iLQR, applying $v_t = \bar{v}_t + \mathbf{K}_t(\mathbf{x}_t - \bar{\mathbf{x}}_t)$. This surrounds the nominal trajectory with a local linear feedback tube at zero online planning cost, but fails if a strong knock pushes $\mathbf{x}_t$ out of the tube into a region where a fresh swing-up pump is needed.
-3. **Receding-horizon Model Predictive Control (MPC):** At every time step $t$, observe the true state $\mathbf{x}_t$, re-solve the finite-horizon control problem over a lookahead window of $H_{\textrm{mpc}}$ steps starting from $\mathbf{x}_t$ (warm-started by shifting the previous step's plan $\bar{v}_{1:H_{\textrm{mpc}}-1}$), apply *only the first control* $u_{t|t}^*$, and repeat at $t+1$ :cite:`Rawlings.Mayne.Diehl.2017`.
+3. **Receding-horizon Model Predictive Control (MPC):** At every time step $t$, observe the true state $\mathbf{x}_t$, re-solve the finite-horizon control problem over a lookahead window starting from $\mathbf{x}_t$ (warm-started by shifting the previous step's plan by one step), apply *only the first control* $u_{t|t}^*$, and repeat at $t+1$ :cite:`Rawlings.Mayne.Diehl.2017`.
+
+Our `mpc_action` settles two details of the third scheme. The first is the length of the window. The shifted plan is one step shorter than the plan before it, so the window starts at the 80 steps of the nominal plan and shrinks with it. Once `H_min` $= 25$ steps are left, the plan is padded with zeros and the window recedes at that length. The second detail is what to do when the warm start fails. Because iLQR is a local method, a warm-started plan stays near the old trajectory even when that trajectory no longer leads to the top. If the re-optimized plan ends more than $0.2\text{ rad}$ from upright, `mpc_action` discards it and plans a fresh swing-up over `H_mpc` $= 60$ steps ($3\text{ s}$), from the initial push that `ilqr_swingup` uses by default.
 
 We compare all three controllers over $T = 120$ steps from $\mathbf{x}_0 = (\pi, 0)$ when an external angular-velocity impulse $\Delta\dot\vartheta \in \{0.0, +0.5, +2.2\}\text{ rad/s}$ strikes the pendulum at step $t = 45$, just as it climbs past the horizontal toward the upright catch basin:
 
@@ -350,13 +359,14 @@ vs_pad = np.concatenate([vs_nom, np.zeros(T - 80)])
 us_pad = np.concatenate([us_nom, np.zeros(T - 80)])
 Ks_pad = np.vstack([Ks_nom, np.tile(Ks_nom[-1], (T - 80, 1))])
 
-def mpc_action(x, vs_warm):
-    """One receding-horizon MPC step: warm-started iLQR with fallback re-seed."""
-    H_mpc = max(25, len(vs_warm))
-    warm = np.concatenate([vs_warm, np.zeros(H_mpc)])[:H_mpc]
-    xs_w, us_w, vs_w, _, _ = ilqr_swingup(x, H=H_mpc, iters=18, vs_init=warm)
-    if abs(xs_w[-1, 0]) > 0.2:   # warm plan missed the top: re-plan over 60 steps
-        _, us_s, vs_s, _, _ = ilqr_swingup(x, H=60, iters=25)
+def mpc_action(x, vs_warm, H_mpc=60, H_min=25):
+    """One MPC step: re-optimize the shifted plan (at least H_min steps) from x;
+    if it no longer ends at the top, plan afresh over H_mpc steps."""
+    H = max(H_min, len(vs_warm))
+    warm = np.concatenate([vs_warm, np.zeros(H)])[:H]
+    xs_w, us_w, vs_w, _, _ = ilqr_swingup(x, H=H, iters=18, vs_init=warm)
+    if abs(xs_w[-1, 0]) > 0.2:   # warm plan missed the top: re-seed
+        _, us_s, vs_s, _, _ = ilqr_swingup(x, H=H_mpc, iters=25)
         return us_s[0], vs_s[0], vs_s[1:]
     return us_w[0], vs_w[0], vs_w[1:]
 
@@ -400,9 +410,9 @@ d2l.plot(np.arange(T) * 0.05, [th_ol, th_tv, th_mpc],
 
 The three disturbance levels on our pendulum benchmark separate the three controllers cleanly:
 
-- **No disturbance ($\Delta\dot\vartheta = 0.0$):** All three swing the pendulum up, earning returns around $-332$ to $-334$ (well above the $-200$ balancing bar once at the top; over the final 40 steps after $t=80$, open-loop begins to drift slightly to $\vartheta_{120} = +0.075\text{ rad}$ at the unstable saddle, while TV-LQR and MPC hold $\vartheta_{120} = 0.000\text{ rad}$).
+- **No disturbance ($\Delta\dot\vartheta = 0.0$):** All three swing the pendulum up, earning returns between $-332$ and $-334$ over the 120 steps. These lie below the $-200$ quoted for the benchmark, for two reasons. We start from the bottom, the worst state, whereas the benchmark averages over random starts. And iLQR minimizes its own trajectory cost, with a light state weight during the swing, not the pendulum reward that scores the return. Over the final 40 steps after $t=80$, open-loop begins to drift to $\vartheta_{120} = +0.075\text{ rad}$ at the unstable saddle, while TV-LQR and MPC hold $\vartheta_{120} = 0.000\text{ rad}$.
 - **Moderate disturbance ($\Delta\dot\vartheta = +0.5\text{ rad/s}$):** Open-loop execution is knocked off its precomputed schedule, falls back down, and ends at $\vartheta_{120} = -2.939\text{ rad}$ (return $-502.3$). Both TV-LQR ($\vartheta_{120} = -0.001\text{ rad}$, return $-333.9$) and MPC ($\vartheta_{120} = +0.000\text{ rad}$, return $-331.7$) absorb the push and lock the rod upright.
-- **Strong disturbance ($\Delta\dot\vartheta = +2.2\text{ rad/s}$):** The knock arrests the upward climb and sends the pendulum falling back toward the bottom. TV-LQR's linear feedback around the old nominal trajectory saturates its torque and fails ($\vartheta_{120} = +1.959\text{ rad}$, return $-797.9$), because recovering requires a new swing-up pump that does not exist in a linear neighborhood of the old trajectory. Receding-horizon MPC detects that the shifted plan no longer reaches the top, plans a fresh swing-up from the post-disturbance state, and restores the pendulum to the upright equilibrium ($\vartheta_{120} = +0.000\text{ rad}$, return $-558.2$).
+- **Strong disturbance ($\Delta\dot\vartheta = +2.2\text{ rad/s}$):** The knock arrests the upward climb and sends the pendulum falling back toward the bottom. TV-LQR's linear feedback around the old nominal trajectory saturates its torque and fails ($\vartheta_{120} = +1.959\text{ rad}$, return $-797.9$), because recovering requires a new swing-up pump that does not exist in a linear neighborhood of the old trajectory. MPC restores the pendulum to the upright equilibrium ($\vartheta_{120} = 0.000\text{ rad}$, return $-558.2$), and it owes this to the re-seed rule. At the step of the knock the warm-started plan misses the top, so `mpc_action` plans a fresh swing-up from the post-disturbance state and follows it from there. Re-planning from the warm start alone would not recover, because the warm-started plan stays near the old trajectory.
 
 ### From Classical Control to Reinforcement Learning
 
@@ -421,7 +431,7 @@ The three disturbance levels on our pendulum benchmark separate the three contro
 | Unknown dynamics, learned $\hat{f}_\phi$ | system identification + certainty-equivalent MPC | model-based RL with random shooting / CEM (:numref:`sec_model_based`) |
 | Unknown dynamics, no model | model-free adaptive control | policy gradient (:numref:`sec_policygradient`, :numref:`sec_deeprl`), PPO (:numref:`sec_ppo`), DQN (:numref:`sec_dqn`), SAC (:numref:`sec_sac`) |
 
-When the dynamics $f$ are unknown and must be acted on without fitting a transition model, we cannot compute the Jacobians $\mathbf{A}_t = \partial f/\partial \mathbf{x}$ and $\mathbf{B}_t = \partial f/\partial \mathbf{u}$ required by the backward Riccati pass. :numref:`sec_policygradient` shows how a stochastic policy $\pi_\theta(a \mid s)$ bypasses these unknown derivatives by differentiating the log-probability of its own sampled actions instead, and :numref:`sec_deeprl` and :numref:`sec_model_based` will return to our pendulum benchmark with neural policies and learned dynamics models.
+When the dynamics $f$ are unknown and must be acted on without fitting a transition model, we cannot compute the Jacobians $\mathbf{A}_t = \partial f/\partial \mathbf{x}$ and $\mathbf{B}_t = \partial f/\partial \mathbf{u}$ required by the backward Riccati pass. :numref:`sec_policygradient` shows how a stochastic policy $\pi_\theta(a \mid s)$ bypasses these unknown derivatives by differentiating the log-probability of its own sampled actions instead.
 
 ## Summary
 
@@ -452,13 +462,13 @@ For linear dynamics $\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\math
     1. Compute $\textrm{rank}(\mathcal{C})$ and $\det(\mathcal{C})$ for the double integrator $(\mathbf{A}_{\textrm{di}}, \mathbf{B}_{\textrm{di}})$ and for the linearized upright pendulum $(\mathbf{A}_p, \mathbf{B}_p)$.
     1. Set $\mathbf{B}_{\textrm{un}} = [0, 0]^\top$ on the first coordinate of a decoupled unstable system $\mathbf{A} = \textrm{diag}(1.2, 0.8), \mathbf{B} = [0, 1]^\top$, and run `riccati_lqr` for $H \in \{10, 50, 100\}$. Which entry of $\mathbf{P}_0$ diverges as $H \to \infty$, and why?
 
-1. [code] **Energy shaping vs. trajectory optimization.** Classical nonlinear control often swings a pendulum up by controlling its total mechanical energy $E(\vartheta, \dot\vartheta) = \frac{1}{2}ml^2\dot\vartheta^2 + \frac{1}{2}mgl\cos\vartheta$, which equals $E^* = \frac{1}{2}mgl = 5$ at the upright rest equilibrium $(\vartheta=0, \dot\vartheta=0)$ and $-5$ at the bottom $(\vartheta=\pi, \dot\vartheta=0)$ :cite:`Tedrake.2023`.
+1. [code] **Energy shaping vs. trajectory optimization.** Classical nonlinear control often swings a pendulum up by controlling its total mechanical energy $E(\vartheta, \dot\vartheta) = \frac{1}{6}ml^2\dot\vartheta^2 + \frac{1}{2}mgl\cos\vartheta$, which equals $E^* = \frac{1}{2}mgl = 5$ at the upright rest equilibrium $(\vartheta=0, \dot\vartheta=0)$ and $-5$ at the bottom $(\vartheta=\pi, \dot\vartheta=0)$ :cite:`Tedrake.2023`.
     1. Show that along continuous-time frictionless trajectories ($\ddot\vartheta = \frac{3g}{2l}\sin\vartheta + \frac{3}{ml^2}u$), the time rate of change of energy is $\dot E = u\dot\vartheta$, so applying torque $u = -k_E (E - E^*)\dot\vartheta$ with $k_E > 0$ drives $(E - E^*)^2$ monotonically downward whenever $\dot\vartheta \neq 0$.
     1. Implement a hybrid controller on `pendulum_step` that applies clipped energy pumping $u = \textrm{clip}(-k_E (E - E^*)\dot\vartheta, -2, 2)$ (with a tiny initial kick $u_0 = 2$) when $|\textrm{wrap}(\vartheta)| > 0.35$, and switches to the upright LQR controller $u = \textrm{clip}(-\mathbf{K}_\infty \mathbf{x}, -2, 2)$ once $|\textrm{wrap}(\vartheta)| \leq 0.35$. Compare its 200-step return from $(\pi, 0)$ with iLQR's return.
 
-1. [code] **Horizon length and terminal cost in MPC.** In `mpc_action`, the lookahead horizon is $H_{\textrm{mpc}} = 60$ steps ($3\text{ s}$).
-    1. Run the $\Delta\dot\vartheta = 0.0$ experiment of this section for $H_{\textrm{mpc}} \in \{15, 25, 40, 60\}$. At which horizon lengths does MPC fail to swing the pendulum up from $(\pi, 0)$, and why does a short horizon trap the planner near the bottom?
-    1. Replace the terminal cost matrix $q_T \mathbf{Q}_{\textrm{base}}$ in `ilqr_swingup` by the infinite-horizon DARE matrix $\mathbf{P}_\infty$ computed by `riccati_lqr` at the upright equilibrium. Show that for initial states already within the upright basin ($|\vartheta_0| \leq 0.35$), a receding-horizon LQR controller with terminal cost $\mathbf{x}_H^\top \mathbf{P}_\infty \mathbf{x}_H$ produces the *exact* infinite-horizon optimal control $\mathbf{u}_t^* = -\mathbf{K}_\infty \mathbf{x}_t$ even when the MPC horizon is $H_{\textrm{mpc}} = 1$.
+1. [code] **Horizon length and terminal cost in MPC.** `mpc_action` re-optimizes the shifted plan over at least `H_min` $= 25$ steps and, when that plan misses the top, plans a fresh swing-up over `H_mpc` $= 60$ steps ($3\text{ s}$).
+    1. Repeat the $\Delta\dot\vartheta = +2.2$ experiment of this section with `H_mpc` $\in \{15, 25, 40, 60\}$. For which horizons does MPC bring the pendulum back to the top? Compare them with the number of steps the nominal swing-up needs to reach the top, and explain why a short horizon traps the planner near the bottom.
+    1. Replace the terminal cost matrix $q_T \mathbf{Q}_{\textrm{base}}$ in `ilqr_swingup` by the infinite-horizon DARE matrix $\mathbf{P}_\infty$ computed by `riccati_lqr` at the upright equilibrium. Show that for initial states already within the upright basin ($|\vartheta_0| \leq 0.35$), a receding-horizon LQR controller with terminal cost $\mathbf{x}_H^\top \mathbf{P}_\infty \mathbf{x}_H$ produces the *exact* infinite-horizon optimal control $\mathbf{u}_t^* = -\mathbf{K}_\infty \mathbf{x}_t$ even when the lookahead is a single step, $H = 1$.
 
 1. **Pontryagin costates and value gradients.** Let $\mathbf{x}_{t+1} = f(\mathbf{x}_t, \mathbf{u}_t)$ be a smooth deterministic system and $J = \sum_{t=0}^{H-1} c(\mathbf{x}_t, \mathbf{u}_t) + c_H(\mathbf{x}_H)$. Introduce Lagrange multipliers (called *costates* or *adjoints*) $\boldsymbol{\lambda}_1, \ldots, \boldsymbol{\lambda}_H \in \mathbb{R}^d$ for the constraints $\mathbf{x}_{t+1} - f(\mathbf{x}_t, \mathbf{u}_t) = \mathbf{0}$.
     1. Differentiate the Lagrangian $\mathcal{L} = J + \sum_{t=0}^{H-1} \boldsymbol{\lambda}_{t+1}^\top (f(\mathbf{x}_t, \mathbf{u}_t) - \mathbf{x}_{t+1})$ with respect to $\mathbf{x}_t$ and $\mathbf{u}_t$ to derive the backward adjoint equation
@@ -583,7 +593,7 @@ Sweeping the control penalty $R \in \{0.01, 0.10, 1.00\}$ from initial position 
 $$\dot{\vartheta}_{t+1} = \textrm{clip}\!\left(\dot{\vartheta}_t + \Big(\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t\Big)\Delta t,\; -8,\; 8\right)$$
 
 - **Severe underactuation:** Motor torque is clipped to $u_t \in [-2, 2]$, whereas peak gravity at horizontal ($\vartheta = \pi/2$) is $\frac{1}{2}mgl = 5 > 2$.
-- **Stage cost & balancing bar:** $c_t = \vartheta_t^2 + 0.1\,\dot{\vartheta}_t^2 + 0.001\,u_t^2$; random play scores $\approx -1{,}200$, while swing-up and balance scores **$\ge -200$**.
+- **Stage cost & balancing bar:** $c_t = \vartheta_t^2 + 0.1\,\dot{\vartheta}_t^2 + 0.001\,u_t^2$; random play scores $\approx -1{,}200$, while swing-up and balance averages **about $-200$ or better** over random starts.
 :::
 
 ::: {.col .fig}
@@ -620,7 +630,7 @@ Gravity pulls the pendulum down with torque $\frac{1}{2}mgl\sin\vartheta = 5\sin
 @!optimal-control-lqr-basin
 
 - **Sharp basin threshold:** Starting at $\vartheta_0 = 0.20$ or $0.40\text{ rad}$, clipped linear LQR catches and balances the rod at $\vartheta_{200} = 0.000\text{ rad}$.
-- **Failure outside the basin:** At $\vartheta_0 = 0.50\text{ rad}$ ($5\sin 0.50 = 2.40 > 2$) or from the bottom ($\vartheta_0 = \pi$), full torque $u = -2$ cannot arrest gravity; swinging up requires multi-swing **energy pumping**.
+- **Failure outside the basin:** At $\vartheta_0 = 0.50\text{ rad}$ ($5\sin 0.50 = 2.40 > 2$) or from the bottom ($\vartheta_0 = \pi$), full torque $u = -2$ cannot arrest gravity; swinging up requires multi-swing **energy pumping**. From $0.60\text{ rad}$ the rod also falls, and is caught only by luck after several swings.
 :::
 
 ::: {.slide title="Iterative LQR (iLQR): Trajectory Linearization"}
@@ -673,7 +683,7 @@ The swing-up trajectory every 10 steps, from the hanging start to the caught upr
 ::: {.col}
 1. **Open-loop ($u_t = \bar{u}_t$):** Applies precomputed torques blind to state $\mathbf{x}_t$; any knock causes the unstable top saddle to fall.
 2. **TV-LQR ($v_t = \bar{v}_t + \mathbf{K}_t(\mathbf{x}_t - \bar{\mathbf{x}}_t)$):** Wraps the path in a local feedback tube at zero online cost, but fails if pushed out of the tube.
-3. **Receding-horizon MPC:** Re-solves horizon-$H_{\textrm{mpc}}$ iLQR from measured $\mathbf{x}_t$ at every step, applies $u_{t|t}^*$, and re-plans at $t+1$.
+3. **Receding-horizon MPC:** Re-solves iLQR from measured $\mathbf{x}_t$ at every step, warm-started from the shifted plan, applies $u_{t|t}^*$, and re-plans at $t+1$. If the warm-started plan misses the top, it plans a fresh 60-step swing-up.
 :::
 
 ::: {.col .fig .big}
@@ -712,7 +722,7 @@ Comparing the three panels below shows how local LQR, trajectory optimization, a
 ![](../img/mdl-rl-optimal-control.svg){.nostretch width=58%}
 
 - **Moderate knock ($\Delta\dot{\vartheta} = +0.5$):** Open-loop falls ($\vartheta_{120} = -2.94$), while both TV-LQR and MPC absorb the perturbation inside the linear tube ($\vartheta_{120} = 0.000$).
-- **Strong knock ($\Delta\dot{\vartheta} = +2.2$):** Arrests the upward climb; TV-LQR saturates its linear feedback around the old plan and fails ($\vartheta_{120} = +1.96$), whereas **MPC detects the miss, plans a fresh swing-up pump, and restores $\vartheta_{120} = 0.000$**.
+- **Strong knock ($\Delta\dot{\vartheta} = +2.2$):** Arrests the upward climb; TV-LQR saturates its linear feedback around the old plan and fails ($\vartheta_{120} = +1.96$), whereas **MPC sees its warm-started plan miss the top, re-seeds a fresh swing-up, and restores $\vartheta_{120} = 0.000$**.
 :::
 
 ::: {.slide title="Classical Optimal Control vs. Reinforcement Learning"}
@@ -758,6 +768,6 @@ Test your intuition on Riccati backups, torque saturation, and receding-horizon 
 | **Local Equilibrium LQR** | Jacobian linearization $(\mathbf{A}, \mathbf{B})$ at fixed point $(\mathbf{x}^*, u^*)$ | Stabilizes unstable equilibria locally inside actuator saturation limits |
 | **Iterative LQR (iLQR)** | Time-varying Jacobians $(\mathbf{A}_t, \mathbf{B}_t)$ along nominal rollout | Discovers nonlinear multi-swing trajectories via backward Riccati + line search |
 | **TV-LQR Tracking** | Linear perturbation tube around nominal $(\bar{\mathbf{x}}_t, \bar{v}_t)$ | Closed-loop feedback $v_t = \bar{v}_t + \mathbf{K}_t(\mathbf{x}_t - \bar{\mathbf{x}}_t)$ for small disturbances |
-| **Receding-Horizon MPC** | Re-solves horizon-$H_{\textrm{mpc}}$ optimization from $\mathbf{x}_t$ online | Global closed-loop recovery; plans fresh swing-ups after large knocks |
+| **Receding-Horizon MPC** | Re-solves the finite-horizon optimization from $\mathbf{x}_t$ online | Global closed-loop recovery; plans fresh swing-ups after large knocks |
 :::
 

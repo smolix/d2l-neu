@@ -185,6 +185,8 @@ def value_iteration(mdp, num_iters):  #@save
     return np.array(history)
 ```
 
+The iterates are more than stepping stones on the way to $V^*$. Each one answers a question of its own. Suppose that the agent has only $k$ steps left to act, and that nothing is paid afterwards. With no steps left it can collect nothing, which is $V_0 = 0$. With one step left the best it can do is the largest expected immediate reward, $\mathcal{T}V_0$, and by induction $V_k = \mathcal{T}V_{k-1}$ is the best expected return over $k$ steps. This is *finite-horizon* dynamic programming. A problem that ends after $H$ steps is solved backward from its end: if $V_t$ denotes the best return from step $t$ on, then $V_H = 0$, or the terminal reward if one is paid, and $V_t = \mathcal{T}V_{t+1}$. One thing changes against the stationary case. The value depends on the time as well as on the state, and so does the best action: a safe detour that is optimal in the long run may not be worth taking when few steps remain. :numref:`sec_optimal_control` solves its control problems in this backward form.
+
 ### Calm Ice
 
 The smallest case is the lake without slips, where every command does what it says. The goal's reward is paid on the move into the goal, so a cell one move from the goal has value 1. A cell two moves away has value $\gamma$, because its best move reaches a cell of value 1 one step later. In general a cell whose shortest route around the holes takes $j$ moves has value $V^*(s) = \gamma^{j-1}$. Value iteration from $V_0 = 0$ finds these values one ring at a time. After sweep $k$, the cells within $k$ moves of the goal have nonzero values, each already final, and the others are still zero. :numref:`fig_rl_value_wavefront` shows the first six sweeps.

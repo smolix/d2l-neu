@@ -461,7 +461,10 @@ The clone leaves the path in 17% of its episodes, always through a wrong action 
 ### Dataset Aggregation
 :label:`subsec_il_dagger`
 
-More demonstrations cannot fix the shift, because the expert never visits the cells where the clone goes wrong. The learner has to visit them, and the expert has to label them. *DAgger*, short for dataset aggregation, does this :cite:`Ross.Gordon.Bagnell.2011`: it runs the current learner, asks the expert which action it would have taken at each state the learner visited, adds these pairs to the dataset, and refits. The model, the loss, the optimizer and the stopping rule stay as they are; only the data change.
+More demonstrations cannot fix the shift, because the expert never visits the cells where the clone goes wrong. The learner has to visit them, and the expert has to label them. *DAgger*, short for dataset aggregation, does this :cite:`Ross.Gordon.Bagnell.2011`: it runs the current learner, asks the expert which action it would have taken at each state the learner visited, adds these pairs to the dataset, and refits (:numref:`fig_rl_dagger_loop`). The model, the loss, the optimizer and the stopping rule stay as they are; only the data change.
+
+![One round of DAgger. The learner chooses the states and the expert supplies the labels: the learner is run, the expert names the action it would take in each state the learner visited, and these pairs join the dataset on which the learner is refit. The first dataset is the expert's own demonstrations.](../img/mdl-rl-dagger-loop.svg)
+:label:`fig_rl_dagger_loop`
 
 `relabel` rolls the learner with `act`, sampling as it does when deployed, and labels its states with the expert's actions:
 
@@ -519,7 +522,7 @@ The token MDP of :numref:`sec_mdp` makes supervised fine-tuning of a language mo
 
 DAgger for a language model needs an expert who labels the model's own prefixes: for each context the student generated, which token should come next. People cannot do this for millions of prefixes, but a larger model can. On-policy distillation trains a student on its own samples, with the next-token distributions of a teacher model as the labels :cite:`Agarwal.Vieillard.Zhou.ea.2024`; it is DAgger with the teacher as the expert on call. Behavior cloning is also the standard first baseline in offline reinforcement learning, where only a fixed dataset is available, and :numref:`sec_offline` compares offline methods against it.
 
-Behavior cloning turns an expert's recorded choices into a policy with nothing more than a classifier, and DAgger removes the part of its loss that comes from the learner's own states by changing the data alone. Both need an expert: one who demonstrates, and for DAgger one on call to label whatever the learner does. When no expert is available, two paths remain. Before turning to model-free policy gradients in :numref:`sec_policygradient`, :numref:`sec_optimal_control` shows how continuous control problems are solved when the transition dynamics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, \mathbf{u}_t)$ are known and differentiable. When the dynamics are unknown as well, the cloning update still applies if the weight $w_i = 1$ is replaced by a number that says how well the action turned out; :numref:`sec_policygradient` derives that weight from the reward.
+Behavior cloning turns an expert's recorded choices into a policy with nothing more than a classifier, and DAgger removes the part of its loss that comes from the learner's own states by changing the data alone. Both need an expert: one who demonstrates, and for DAgger one on call to label whatever the learner does. When no expert is available, two paths remain. If the rules of the environment are known and can be differentiated, good actions can be computed from them, and :numref:`sec_optimal_control` does so for continuous states and actions. If the rules are unknown as well, the cloning update still applies once the weight $w_i = 1$ is replaced by a number that says how well the action turned out. :numref:`sec_policygradient` derives that weight from the reward.
 
 ## Summary
 

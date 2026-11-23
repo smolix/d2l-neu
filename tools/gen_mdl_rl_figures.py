@@ -2717,12 +2717,20 @@ def fig_squashed_density():   # F8 (ch. 15) -> mdl-rl-squashed-density
     _black_axes(axa)
 
     # --- (b) the density of the squashed action ----------------------------- #
-    a = np.linspace(-C + 1e-6, C - 1e-6, 200_001)
-    ua = np.arctanh(a / C)
-    pa_naive = np.exp(-0.5 * ((ua - MU) / SIG) ** 2) / (SIG * np.sqrt(2 * np.pi))
-    pa = pa_naive / (C * (1.0 - np.tanh(ua) ** 2))     # divide by da/du
-    area, area_naive = np.trapezoid(pa, a), np.trapezoid(pa_naive, a)
+    def densities(a):
+        ua = np.arctanh(a / C)
+        naive = (np.exp(-0.5 * ((ua - MU) / SIG) ** 2)
+                 / (SIG * np.sqrt(2 * np.pi)))
+        return naive / (C * (1.0 - np.tanh(ua) ** 2)), naive  # / (da/du)
+
+    fine = np.linspace(-C + 1e-6, C - 1e-6, 200_001)    # quadrature only
+    pa_fine, naive_fine = densities(fine)
+    area = np.trapezoid(pa_fine, fine)
+    area_naive = np.trapezoid(naive_fine, fine)
     assert abs(area - 1.0) < 1e-4 and abs(area_naive - 1.13) < 0.005
+    # plotting grid: dense near the bounds, where the densities turn
+    a = C * np.tanh(np.linspace(-7.0, 7.0, 1201))
+    pa, pa_naive = densities(a)
     for x in (-C, C):
         axb.axvline(x, color=LIGHT, lw=1.2, ls="--", zorder=0)
     axb.fill_between(a, pa, color=BLUE, alpha=0.15, lw=0.0, zorder=1)
@@ -3670,6 +3678,292 @@ CH15_REVIEW_FIGURES = [
 ]
 
 
+# =========================================================================== #
+# Ch. 14 additions (2026-11-23 review pass): five slide diagrams redrawn in   #
+# the book's house style.  Kept together, like the ch. 15 block above.       #
+# =========================================================================== #
+
+FC_BLUE, FC_ORANGE, FC_GREEN, FC_PURPLE = "#e8f1f8", "#fdf0e3", "#eaf6ea", "#f2ecf7"
+
+
+def _node(ax, xy, text, color="black", r=0.34, fill="white", fontsize=14,
+          tc="black", lw=1.8):
+    """A large state circle with its name inside (the chain, the shaping
+    loop)."""
+    ax.add_patch(Circle(xy, r, fc=fill, ec=color, lw=lw, zorder=5))
+    ax.text(xy[0], xy[1], text, ha="center", va="center", fontsize=fontsize,
+            color=tc, zorder=6)
+
+
+def _signed(r):
+    """+0.3 / -0.27 / 0 with a true minus sign, for reward labels."""
+    if abs(r) < 1e-12:
+        return "$0$"
+    return f"${'+' if r > 0 else '-'}{abs(r):.3g}$"
+
+
+def fig_potential_shaping():  # ch. 14 mdp -> mdl-rl-potential-shaping
+    """Cells 13, 14 and the goal on calm ice, with the shaped reward of each
+    move.  (a) The approach bonus pays 0.3 for 13 -> 14 and nothing back, so
+    a lap pays; (b) the potential Phi = -0.3 l pays gamma Phi(14) - Phi(13)
+    = 0.315 and charges gamma Phi(13) - Phi(14) = -0.27.  The loop values
+    (shuttling forever from cell 14) are computed, not typed."""
+    gamma, bonus = 0.95, 0.3
+    ell = {13: 2, 14: 1, 15: 0}
+    phi = {s: -bonus * ell[s] + 0.0 for s in ell}
+    fwd_a, back_a, goal_a = bonus, 0.0, 1.0 + bonus
+    fwd_b = gamma * phi[14] - phi[13]
+    back_b = gamma * phi[13] - phi[14]
+    goal_b = 1.0 + gamma * phi[15] - phi[14]
+
+    def loop(f, b):                      # 14 -> 13 -> 14 -> ... forever
+        return (b + gamma * f) / (1 - gamma ** 2)
+
+    assert abs(fwd_b - 0.315) < 1e-9 and abs(back_b + 0.27) < 1e-9
+    assert abs(loop(fwd_a, back_a) - 2.92) < 0.01
+    assert abs(loop(fwd_b, back_b) - 0.30) < 1e-9 and abs(goal_b - 1.3) < 1e-9
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.4, 3.6))
+    X = {13: 0.0, 14: 2.2, 15: 4.4}
+    panels = [
+        (axes[0], "(a) approach bonus", lambda s: f"$\\ell = {ell[s]}$",
+         fwd_a, back_a, goal_a, loop(fwd_a, back_a), ">", RED),
+        (axes[1], "(b) potential $\\Phi = -0.3\\,\\ell$",
+         lambda s: f"$\\Phi = {phi[s]:.1f}$" if s != 15 else "$\\Phi = 0$",
+         fwd_b, back_b, goal_b, loop(fwd_b, back_b), "<", GREEN),
+    ]
+    for ax, title, tag, f, b, g, lv, rel, vc in panels:
+        ax.axis("off")
+        ax.set_aspect("equal")
+        for s, x in X.items():
+            goal = s == 15
+            _node(ax, (x, 0.0), "G" if goal else f"{s}",
+                  color=GREEN if goal else "black",
+                  fill=FC_GREEN if goal else "white", fontsize=15)
+            ax.text(x, 0.95, tag(s), ha="center",
+                    va="bottom", fontsize=12.5, color="black")
+        # 13 -> 14 above, 14 -> 13 below, 14 -> goal straight across
+        _arc_arrow(ax, (X[13] + 0.24, 0.26), (X[14] - 0.24, 0.26), -0.42,
+                   BLUE, lw=2.0, mut=16)
+        _arc_arrow(ax, (X[14] - 0.24, -0.26), (X[13] + 0.24, -0.26), -0.42,
+                   ORANGE, lw=2.0, mut=16)
+        fl.arrow(ax, (X[14] + 0.36, 0.0), (X[15] - 0.36, 0.0), color=GREEN,
+                 lw=2.0, mut=16)
+        ax.text(1.1, 0.80, _signed(f), ha="center", va="bottom",
+                fontsize=13.5, color=BLUE)
+        ax.text(1.1, -0.80, _signed(b), ha="center", va="top", fontsize=13.5,
+                color=ORANGE)
+        ax.text(3.3, 0.10, _signed(g), ha="center", va="bottom",
+                fontsize=13.5, color=GREEN)
+        ax.text(2.2, 1.55, title, ha="center", va="bottom", fontsize=14,
+                color="black")
+        ax.text(2.2, -1.30, f"looping forever from 14: ${lv:.1f} {rel} "
+                f"{g:.1f}$", ha="center", va="top", fontsize=13, color=vc)
+        ax.set_xlim(-0.55, 4.95)
+        ax.set_ylim(-1.85, 2.05)
+    fig.subplots_adjust(wspace=0.06)
+    fl.save(fig, "mdl-rl-potential-shaping")
+
+
+def fig_chain():              # ch. 14 exploration -> mdl-rl-chain
+    """The chain of exploration.md: action 1 moves one state on, action 0
+    returns to the start, entering the last state pays 1 and ends the
+    episode."""
+    fig, ax = plt.subplots(figsize=(10.4, 3.3))
+    ax.axis("off")
+    ax.set_aspect("equal")
+    xs = [0.0, 1.6, 3.2, 4.8, 6.4, 8.0]
+    names = ["$0$", "$1$", "$2$", "$\\cdots$", "$N\\!-\\!2$", "$N\\!-\\!1$"]
+    R = 0.36
+    for i, (x, nm) in enumerate(zip(xs, names)):
+        if i == 3:
+            ax.text(x, 0.0, nm, ha="center", va="center", fontsize=18)
+            continue
+        last = i == len(xs) - 1
+        _node(ax, (x, 0.0), nm, r=R, color=GREEN if last else "black",
+              fill=FC_GREEN if last else "white", fontsize=14)
+    # action 1: one state on
+    for i in range(len(xs) - 1):
+        a = xs[i] + (0.30 if i == 3 else R + 0.04)
+        b = xs[i + 1] - (0.30 if i + 1 == 3 else R + 0.04)
+        fl.arrow(ax, (a, 0.0), (b, 0.0), color=BLUE, lw=2.0, mut=15)
+    ax.text((xs[4] + xs[5]) / 2, 0.10, "$r = 1$", ha="center", va="bottom",
+            fontsize=13, color=GREEN)
+    # action 0: back to the start, from every non-terminal state
+    for i, ang in ((1, -25.0), (2, -55.0), (4, -85.0)):
+        t = np.deg2rad(ang)
+        end = (xs[0] + (R + 0.03) * np.cos(t), (R + 0.03) * np.sin(t))
+        _arc_arrow(ax, (xs[i], -R - 0.03), end, -0.30, ORANGE, lw=1.8,
+                   mut=15)
+    t0, t1 = np.deg2rad(235.0), np.deg2rad(125.0)     # self-loop at state 0
+    ax.add_patch(FancyArrowPatch(
+        (xs[0] + R * np.cos(t0), R * np.sin(t0)),
+        (xs[0] + R * np.cos(t1), R * np.sin(t1)),
+        connectionstyle="arc3,rad=-1.05", arrowstyle="-|>", mutation_scale=14,
+        color=ORANGE, lw=1.8, shrinkA=0, shrinkB=0, zorder=4))
+    # legend, as text in the two colours
+    ax.text(xs[0] - 0.45, 1.05, "action 1: one state on", ha="left",
+            va="center", fontsize=13, color=BLUE)
+    ax.text(xs[0] - 0.45, 0.66, "action 0: back to state 0", ha="left",
+            va="center", fontsize=13, color=ORANGE)
+    ax.text(xs[5], 0.62, "goal: the episode ends", ha="center", va="bottom",
+            fontsize=12.5, color="black")
+    ax.set_xlim(-1.1, 8.9)
+    ax.set_ylim(-1.55, 1.3)
+    fl.save(fig, "mdl-rl-chain")
+
+
+def fig_thompson():           # ch. 14 exploration -> mdl-rl-thompson
+    """Beta posteriors after w wins in n pulls, Beta(1 + w, 1 + n - w): an
+    untried arm, the text's arm with 3 wins in 4 pulls, and an arm with 18
+    wins in 20.  Thompson sampling draws one mean from each and pulls the
+    arm with the largest draw; the three draws shown are one illustrative
+    outcome in which the untried arm wins."""
+    from math import lgamma
+    arms = [  # (w, n, colour, label anchor x, draw)
+        (0, 0, GRAY, "untried: Beta$(1, 1)$", 0.93),
+        (3, 4, ORANGE, "3 wins in 4: Beta$(4, 2)$", 0.58),
+        (18, 20, BLUE, "18 wins in 20: Beta$(19, 3)$", 0.84),
+    ]
+    x = np.linspace(1e-4, 1.0 - 1e-4, 801)
+
+    def beta_pdf(t, a, b):
+        logc = lgamma(a + b) - lgamma(a) - lgamma(b)
+        return np.exp(logc + (a - 1) * np.log(t) + (b - 1) * np.log1p(-t))
+
+    fig, ax = plt.subplots(figsize=(8.2, 3.9))
+    ys = []
+    for w, n, col, lab, d in arms:
+        a, b = 1 + w, 1 + n - w
+        y = beta_pdf(x, a, b)
+        ys.append(y)
+        ax.plot(x, y, color=col, lw=2.4, zorder=3,
+                ls=(0, (5, 2.5)) if n == 0 else "-")
+    # curve labels, each beside its own curve
+    ax.text(0.05, 1.22, arms[0][3], ha="left", va="bottom", fontsize=12.5,
+            color=GRAY)
+    ax.text(0.36, 1.85, arms[1][3], ha="left", va="bottom", fontsize=12.5,
+            color=ORANGE)
+    ax.text(0.60, 5.75, arms[2][3], ha="right", va="center", fontsize=12.5,
+            color=BLUE)
+    # one draw per arm, as a tick at the drawn mean
+    best = max(range(3), key=lambda k: arms[k][4])
+    for k, (w, n, col, lab, d) in enumerate(arms):
+        ax.plot([d], [-0.33], marker="^", ms=11, color=col, zorder=6,
+                clip_on=False, mec="black" if k == best else col, mew=1.2)
+    ax.annotate("largest draw:\nthis arm is pulled",
+                xy=(arms[best][4] + 0.015, -0.33), xytext=(1.04, -0.33),
+                ha="left", va="center", fontsize=12.5, color="black",
+                annotation_clip=False,
+                arrowprops=dict(arrowstyle="->", color="black", lw=1.2,
+                                shrinkA=2, shrinkB=2))
+    ax.text(0.015, -0.33, "one draw per arm", ha="left", va="center",
+            fontsize=11.5, color="black")
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(-0.7, 6.6)
+    ax.set_yticks([0, 2, 4, 6])
+    ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_xlabel("mean reward of the arm", fontsize=13)
+    ax.set_ylabel("posterior density", fontsize=13)
+    ax.axhline(0, color="black", lw=0.8, zorder=1)
+    _black_axes(ax)
+
+    fl.save(fig, "mdl-rl-thompson")
+
+
+def fig_dagger_loop():        # ch. 14 imitation -> mdl-rl-dagger-loop
+    """DAgger as a four-step loop: roll out the learner, label its states
+    with the expert's actions, add the pairs to the dataset, refit.  The
+    first learner is the clone of the expert's demonstrations."""
+    fig, ax = plt.subplots(figsize=(9.6, 4.4))
+    ax.axis("off")
+    ax.set_aspect("equal")
+    W, H = 3.7, 1.25
+    pos = {1: (2.4, 3.3), 2: (7.4, 3.3), 3: (7.4, 0.9), 4: (2.4, 0.9)}
+    text = {
+        1: "1. run the learner;\nrecord the states it visits",
+        2: "2. ask the expert which action\nit would take in each state",
+        3: "3. add these pairs\nto the dataset",
+        4: "4. refit the learner\non the whole dataset",
+    }
+    cols = {1: (BLUE, FC_BLUE), 2: (ORANGE, FC_ORANGE),
+            3: (PURPLE, FC_PURPLE), 4: (GREEN, FC_GREEN)}
+    for k, (cx, cy) in pos.items():
+        _box(ax, cx, cy, W, H, text[k], cols[k][0], fontsize=13,
+             fc=cols[k][1])
+    g = 0.08
+    fl.arrow(ax, (pos[1][0] + W / 2 + g, 3.3), (pos[2][0] - W / 2 - g, 3.3),
+             color=BLUE, lw=2.0, mut=16)
+    fl.arrow(ax, (7.4, 3.3 - H / 2 - g), (7.4, 0.9 + H / 2 + g),
+             color=ORANGE, lw=2.0, mut=16)
+    fl.arrow(ax, (pos[3][0] - W / 2 - g, 0.9), (pos[4][0] + W / 2 + g, 0.9),
+             color=PURPLE, lw=2.0, mut=16)
+    fl.arrow(ax, (2.4, 0.9 + H / 2 + g), (2.4, 3.3 - H / 2 - g),
+             color=GREEN, lw=2.0, mut=16)
+    ax.text(4.9, 2.1, "states from the learner,\nlabels from the expert",
+            ha="center", va="center", fontsize=12.5, color="black",
+            linespacing=1.25)
+    # the start: the dataset holds the expert's demonstrations
+    ax.text(9.95, 0.9, "start: the expert's\ndemonstrations",
+            ha="left", va="center", fontsize=12, color="black",
+            linespacing=1.2)
+    fl.arrow(ax, (9.85, 0.9), (7.4 + W / 2 + g, 0.9), color="black", lw=1.4,
+             mut=13)
+    ax.set_xlim(0.45, 11.8)
+    ax.set_ylim(0.1, 4.1)
+    fl.save(fig, "mdl-rl-dagger-loop")
+
+
+def fig_lqr_loop():           # ch. 14 optimal-control -> mdl-rl-lqr-loop
+    """LQR in closed loop: the gain -K_t maps the measured state to the
+    control, the plant returns the next state.  The gains come from the
+    backward Riccati recursion, computed before the loop runs."""
+    fig, ax = plt.subplots(figsize=(9.6, 4.0))
+    ax.axis("off")
+    ax.set_aspect("equal")
+    W, H, y = 3.2, 1.15, 2.0
+    xc, xp = 2.0, 7.0
+    _box(ax, xc, y, W, H, "controller\n$\\mathbf{u}_t = -\\mathbf{K}_t"
+         "\\mathbf{x}_t$", GREEN, fontsize=13.5, fc=FC_GREEN)
+    _box(ax, xp, y, W, H, "plant\n$\\mathbf{x}_{t+1} = \\mathbf{A}"
+         "\\mathbf{x}_t + \\mathbf{B}\\mathbf{u}_t$", BLUE, fontsize=13.5,
+         fc=FC_BLUE)
+    g = 0.08
+    fl.arrow(ax, (xc + W / 2 + g, y), (xp - W / 2 - g, y), color=GREEN,
+             lw=2.0, mut=16)
+    ax.text((xc + xp) / 2, y + 0.12, "$\\mathbf{u}_t$", ha="center",
+            va="bottom", fontsize=14, color=GREEN)
+    # feedback: the next state is measured and becomes x_t of the next step
+    _path_arrow(ax, [(xp + W / 2 + g, y), (xp + W / 2 + 0.75, y),
+                     (xp + W / 2 + 0.75, 0.55), (xc - W / 2 - 0.75, 0.55),
+                     (xc - W / 2 - 0.75, y), (xc - W / 2 - g, y)],
+                color=BLUE, lw=2.0, mut=16)
+    ax.text((xc + xp) / 2, 0.42, "$\\mathbf{x}_{t+1}$ is measured and "
+            "becomes the next $\\mathbf{x}_t$", ha="center", va="top",
+            fontsize=13, color="black")
+    # the gains are computed offline, backward in time
+    ax.text(xc - W / 2, 3.55, "$\\mathbf{K}_0, \\ldots, \\mathbf{K}_{H-1}$ from the "
+            "backward Riccati recursion,\ncomputed before the loop runs",
+            ha="left", va="center", fontsize=12.5, color="black",
+            linespacing=1.25)
+    fl.arrow(ax, (xc, 3.18), (xc, y + H / 2 + g), color="black", lw=1.4,
+             mut=13, ls=(0, (4, 2.5)))
+    ax.text(xc - W / 2 - 0.42, y + 0.12, "$\\mathbf{x}_t$", ha="center",
+            va="bottom", fontsize=14, color=BLUE)
+    ax.set_xlim(-0.5, 9.5)
+    ax.set_ylim(-0.05, 4.0)
+    fl.save(fig, "mdl-rl-lqr-loop")
+
+
+CH14_REVIEW_FIGURES = [
+    fig_potential_shaping,
+    fig_chain,
+    fig_thompson,
+    fig_dagger_loop,
+    fig_lqr_loop,
+]
+
+
 FIGURES = [
     fig_agent_env,
         fig_roadmap,
@@ -3704,7 +3998,7 @@ FIGURES = [
         fig_model_planning,
         fig_reward_gridworld,
         fig_optimal_control,
-] + CH15_REVIEW_FIGURES
+] + CH15_REVIEW_FIGURES + CH14_REVIEW_FIGURES
 
 
 def main():

@@ -632,15 +632,25 @@ python3 tools/slides_to_pptx.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pptx --ve
   right, "§N.M Title · d2l.ai" bottom left) and then sets each text box's
   font size so its content fits. It lays the text out with real font
   metrics (Carlito is metric-compatible with Calibri; code is measured
-  conservatively) and picks the largest size up to 18 pt, down to 8 pt.
-  Code runs at about three quarters of the body size.
+  conservatively) and picks the largest size up to 22 pt (titles 28 pt,
+  tables 20 pt), down to 8 pt. Code runs at about three quarters of the
+  body size; a box's longest code line caps its size so code does not
+  wrap, down to a 12 pt body, below which long lines wrap instead.
 - Slides that mix text with pictures or tables are laid out again
   (`_restack`): pandoc's own layouts for them overlap (text after a picture
   lands on it; a table after text goes into "Content with Caption", over
   the title) and never size table text. Each column is stacked top to
   bottom; text and tables share the largest size that leaves pictures half
   the column (or their full-width height), table columns are sized to their
-  content, and pictures scale into the rest.
+  content, and pictures scale into the rest. A text column beside a
+  column of pictures is not split 50/50: the picture column takes the
+  width at which its pictures fill the height (at least 30% of the slide),
+  and widens past half, up to 70%, only while the text stays within 2 pt
+  of its 50/50 size.
+- Pandoc moves whatever follows a picture or a table onto an untitled
+  slide of its own. `slides_to_pptx.py` prevents that: pictures go into a
+  right-hand column beside the text, and a slide with more after its table
+  becomes one full-width column (pandoc does not split inside columns).
 - Rasters are capped at 1,800 px and re-encoded (256-colour PNG for plots
   and diagrams, JPEG for photographs): a deck averages under 0.5 MB.
 - The logo and footer live on the slide master, so a lecturer can restyle

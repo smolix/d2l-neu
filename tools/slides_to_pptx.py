@@ -103,6 +103,28 @@ def images_beside_text(slide: str) -> str:
             '\n:::\n::::\n\n')
 
 
+TABLE_ROW = re.compile(r'^\|.*\|\s*$')
+
+
+def table_in_column(slide: str) -> str:
+    """Keep the content after a table on the table's slide.
+
+    Pandoc's pptx writer moves whatever follows a table onto an untitled
+    slide of its own; inside a column it does not, so a slide with more
+    after its table becomes one column, which pptx_fit stacks full width.
+    """
+    if not slide.startswith('## ') or '::: {.columns}' in slide:
+        return slide
+    head, _, rest = slide.partition('\n')
+    lines = rest.split('\n')
+    rows = [i for i, ln in enumerate(lines) if TABLE_ROW.match(ln)]
+    if not rows or not any(ln.strip() and not ln.startswith('<!--')
+                           for ln in lines[rows[-1] + 1:]):
+        return slide
+    return (f'{head}\n\n:::: {{.columns}}\n::: {{.column}}\n'
+            f'{rest.strip()}\n:::\n::::\n\n')
+
+
 def fold_into_columns(slide: str) -> str:
     """Move text outside a slide's columns div into its first/last column.
 
@@ -201,6 +223,7 @@ def convert(qmd: Path, work: Path) -> str:
         s = re.sub(r'::: \{\.col(?: [^}]*)?\}', '::: {.column}', s)
         s = fold_into_columns(s)
         s = images_beside_text(s)
+        s = table_in_column(s)
         out.append(s)
     body = ''.join(out)
     return f'---\ntitle: "{title}"\n---\n{body}'

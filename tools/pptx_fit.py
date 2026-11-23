@@ -46,14 +46,16 @@ FOOT_Y, FOOT_H = 4800600, 228600      # footer strip (y 5.25 in)
 LOGO_H = 256032                       # 0.28 in
 LOGO_AR = 2884 / 712                  # static/logo-with-text.png
 
-TITLE_MAX, TITLE_MIN = 24, 16
-BODY_MAX, BODY_MIN = 18, 8
+TITLE_MAX, TITLE_MIN = 28, 16        # 1.27x the body cap (web: 1.24x)
+BODY_MAX, BODY_MIN = 22, 8
+CODE_FLOOR = 12                       # body size below which long code
+                                      # lines wrap rather than shrink it
 CODE_RATIO = 0.78                     # code size / body size, as on the web
 LINE = 1.25                           # line height / font size
 SPACE_BEFORE = 0.3                    # paragraph gap / font size
 INSET_X, INSET_Y = 7.2, 3.6           # pt, PowerPoint's default text insets
 BULLET_INDENT = 0.9                   # bullet hanging indent / font size
-TABLE_MAX = 16                        # largest table text size, pt
+TABLE_MAX = 20                        # largest table text size, pt
 STACK_GAP = 91440                     # 0.1 in between stacked blocks
 PICTURE_SHARE = 0.5                   # pictures keep at least this much of
                                       # a column's height (or their own)
@@ -377,10 +379,20 @@ def _ladder(hi, lo):
         s -= 0.5
 
 
+def code_cap(paras, width):
+    """Largest body size whose code lines fit `width` unwrapped (floored)."""
+    longest = max((len(ln.expandtabs(4)) for kind, payload, _ in paras
+                   if kind == 'code' for ln in payload), default=0)
+    if not longest:
+        return BODY_MAX
+    cap = math.floor(width / (longest * 0.6 * CODE_RATIO) * 2) / 2
+    return min(BODY_MAX, max(cap, CODE_FLOOR))
+
+
 def fit_size(paras, w_pt, h_pt):
     width = w_pt - 2 * INSET_X
     height = (h_pt - 2 * INSET_Y) * 0.97
-    for s in _ladder(BODY_MAX, BODY_MIN):
+    for s in _ladder(code_cap(paras, width), BODY_MIN):
         if body_height(paras, s, width) <= height:
             return s
     return BODY_MIN
@@ -577,6 +589,45 @@ def _stack(blocks, region):
     return out
 
 
+SPLIT_STEP = BODY[2] // 20             # column split search step (5%)
+
+
+def _split(columns):
+    """Widths for a text column beside a column of pictures.
+
+    The 50/50 split leaves a wide picture small in a tall column, and a
+    tall picture in a column wider than it needs. The picture column gets
+    the width at which its pictures fill the height (at least 30% of the
+    slide), widened past half only while the text stays within 2 pt of its
+    50/50 size, and at most 70% of the slide.
+    """
+    kinds = {col: {b[0] for b in blocks} for col, blocks in columns.items()}
+    pic = [c for c, k in kinds.items() if k == {'pic'}]
+    txt = [c for c, k in kinds.items() if k == {'text'}]
+    if len(pic) != 1 or len(txt) != 1 or len(columns[txt[0]]) != 1:
+        return None
+    pics, text = columns[pic[0]], columns[txt[0]]
+    top, h, total = BODY[1], BODY[3], BODY[2] - GAP
+    fill = int((h - STACK_GAP * (len(pics) - 1)) / sum(b[3] for b in pics))
+
+    def size(wp):
+        return fit_size(text[0][3], (total - wp) / EMU_PER_PT, h / EMU_PER_PT)
+    half = size(COL_W)
+    wp = COL_W
+    if fill < COL_W:
+        wp = max(fill, int(0.3 * BODY[2]))
+    else:
+        floor = max(min(half, 14), half - 2)
+        while (wp + SPLIT_STEP <= min(fill, int(0.7 * BODY[2])) and
+               size(wp + SPLIT_STEP) >= floor):
+            wp += SPLIT_STEP
+    wt = total - wp
+    left = pic[0] == LEFT
+    pic_col = (BODY[0] if left else BODY[0] + wt + GAP, top, wp, h)
+    txt_col = (BODY[0] + wp + GAP if left else BODY[0], top, wt, h)
+    return {pic_col: pics, txt_col: text}
+
+
 def _restack(xml, geo, layout):
     """Stack text, tables and pictures in each column of a slide.
 
@@ -604,17 +655,24 @@ def _restack(xml, geo, layout):
             shapes.append(('text', m.start(), s, _paragraphs(body), g))
     if not any(b[0] != 'text' for b in shapes):
         return xml
-    two = layout in ('Two Content', 'Comparison')
     mid = BODY[0] + BODY[2] // 2
+    sides = {b[4][0] + b[4][2] // 2 > mid for b in shapes}
+    # A lone column (slides_to_pptx.table_in_column) spans the slide.
+    two = layout in ('Two Content', 'Comparison') and len(sides) == 2
     columns = {}
     for b in shapes:
         col = (RIGHT if b[4][0] + b[4][2] // 2 > mid else LEFT) if two else BODY
         columns.setdefault(col, []).append(b[:4])
     new = {}
+    split = _split(columns) if two else None
+    if split:
+        columns = split
     for col, blocks in columns.items():
         # A text-only column keeps its box, except under Comparison, whose
         # heading strip is too short for a column of text.
-        if layout == 'Comparison' or any(b[0] != 'text' for b in blocks):
+        if split and blocks[0][0] == 'text':
+            new[blocks[0][1]] = _set_geom(blocks[0][2], col)
+        elif layout == 'Comparison' or any(b[0] != 'text' for b in blocks):
             new.update(_stack(blocks, col))
     return re.sub(r'<p:(sp|pic|graphicFrame)>.*?</p:\1>',
                   lambda m: new.get(m.start(), m.group(0)), xml, flags=re.S)

@@ -171,8 +171,10 @@ def convert(qmd: Path, work: Path) -> str:
 
     # Code cells: drop the {python} engine marker and the #| options.
     def cell(match):
-        lines = [l for l in match.group(1).split('\n')
-                 if not l.startswith('#|')]
+        lines = match.group(1).split('\n')
+        if any(re.match(r'#\|\s*echo:\s*false', l) for l in lines):
+            return ''                   # output-only cell (`@!id` on the web)
+        lines = [l for l in lines if not l.startswith('#|')]
         return '```python\n' + '\n'.join(lines).strip('\n') + '\n```'
 
     body = re.sub(r'```\{python\}\n(.*?)\n```', cell, body, flags=re.S)

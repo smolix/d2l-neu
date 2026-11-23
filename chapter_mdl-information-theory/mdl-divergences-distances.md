@@ -45,10 +45,7 @@ called the *f-divergences*. All of its members share one proof of
 non-negativity, one method for estimation from samples, and one structural
 reason for being blind to the distance $d$. The remaining two rows, which do
 move with $d$, avoid the density ratio altogether; we will study them in
-:numref:`sec_mdl-test-functions-transport` (before turning to score-based
-comparisons such as Fisher divergence and Stein discrepancy in
-:numref:`sec_mdl-scores`, and sample-based mutual-information estimation in
-:numref:`sec_mdl-mi-estimation`).
+:numref:`sec_mdl-test-functions-transport`.
 
 Once the family is in place, we will address three questions that recur
 throughout deep learning. First, does it matter which distribution comes first
@@ -858,7 +855,10 @@ is due to :citet:`Csiszar.1967` and, independently, to Kullback and Kemperman.
 
 Can a feature extractor, a quantizer, or any other post-processing step make
 two distributions easier to tell apart? In Pinsker's proof, merging outcomes
-could only decrease KL. The same principle holds for every f-divergence and
+could only decrease KL, and the chain rule of
+:numref:`subsec_mdl-kl-chain-rule` showed the same for discarding one variable
+of a pair.
+The same principle holds for every f-divergence and
 every form of processing. A *channel* $\kappa(y \mid x)$ is any rule,
 deterministic or randomized, that transforms an input $x$ into an output $y$.
 Passing $P$ through the channel produces the output distribution
@@ -1228,7 +1228,8 @@ supports lie.
        $D_{\textrm{KL}}$ is it tighter than :eqref:`eq_mdl-pinsker`?
     1. A test sees $n$ independent samples, all from $P$ or all from $Q$,
        each case with probability $\tfrac{1}{2}$. Use (c) and the
-       additivity of KL over independent samples to show that every test
+       additivity of KL over independent samples from
+       :numref:`subsec_mdl-kl-chain-rule` to show that every test
        errs with probability at least $\tfrac{1}{4} e^{-n D_{\textrm{KL}}(P\|Q)}$.
        How many samples does an error probability of at most $\eta$
        require? Why can Pinsker's inequality not give a bound of this kind?
@@ -1251,19 +1252,13 @@ supports lie.
        outcome of the running pair accounts for most of the gap after ten
        steps, and why? For which step sizes does the ascent converge?
     1. Compute the conjugate of the total-variation function
-       $f(u) = \tfrac{1}{2}|u - 1|$ over $u \in (0, \infty)$, corresponding to
-       the total variation distance
-       $D_{\textrm{TV}}(p, q) = \tfrac{1}{2}\int |p(x)-q(x)|\,dx$. Show that
+       $f(u) = \tfrac{1}{2}|u - 1|$ over $u \in (0, \infty)$. Show that
        critics with values in $[-\tfrac{1}{2}, \tfrac{1}{2}]$ suffice to
        maximize the bound, and conclude that
        $\textrm{TV}(P, Q) = \sup_g \big(\mathbb{E}_P[g] - \mathbb{E}_Q[g]\big)$
-       over all functions $g$ with $|g| \leq \tfrac{1}{2}$. (As we will see in
-       :numref:`sec_mdl-ipm-mmd`, replacing the boundedness condition
-       $|g| \leq \tfrac{1}{2}$ by the $1$-Lipschitz condition
-       $\|f\|_{\textrm{Lip}} \le 1$ yields the 1-Wasserstein or Earth Mover's
-       distance
-       $W_1(p, q) = \inf_{\gamma \in \Pi(p, q)} \mathbb{E}_{(X,Y)\sim\gamma}[\|X - Y\|] = \sup_{\|f\|_{\textrm{Lip}} \le 1} (\mathbb{E}_p[f] - \mathbb{E}_q[f])$.)
-       Which $g$ attains the total-variation supremum?
+       over all functions $g$ with $|g| \leq \tfrac{1}{2}$, a supremum of
+       the kind that :numref:`sec_mdl-ipm-mmd` studies. Which $g$ attains
+       it?
    :exlabel:`ex_mdl-divergences-distances-derive-convex-conjugate`
 
 [Discussions](https://d2l.discourse.group/t/36835)

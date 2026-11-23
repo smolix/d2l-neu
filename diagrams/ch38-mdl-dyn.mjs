@@ -2,6 +2,7 @@
 // Rendered and audited by tools/build_module_diagrams.mjs with 0 visual defects.
 
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 import { textWidth } from './mdl-textwidth.mjs';
 
 const D = TOKENS.accents;
@@ -176,19 +177,19 @@ function threeStageRoadmap() {
   const W = 540, H = 292;
   let o = '';
   o += card(20, 12, 500, 74, C.lblue, C.blue, [
-    { t: 'Stage 1 · Deterministic ODEs, Solvers & Flows (§§38.1–38.3)', fs: 15, fw: 700, fill: D.blue.dark },
+    { t: `Stage 1 · Deterministic ODEs, Solvers & Flows (§§${num('sec_mdl-odes-solvers')}–${num('sec_mdl-neural-odes-cnf')})`, fs: 15, fw: 700, fill: D.blue.dark },
     { t: 'Picard–Lindelöf uniqueness · Matrix exp & ZOH · Euler/RK4 stability R(hλ) · Adjoint & Liouville −tr(J)', fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 88, 270, 108, C.blue);
 
   o += card(20, 112, 500, 74, C.lamber, C.amber, [
-    { t: 'Stage 2 · Stochastic Calculus & Density Evolution (§§38.4–38.5)', fs: 15, fw: 700, fill: D.orange.dark },
+    { t: `Stage 2 · Stochastic Calculus & Density Evolution (§§${num('sec_mdl-sdes')}–${num('sec_mdl-fokker-planck-probability-flow')})`, fs: 15, fw: 700, fill: D.orange.dark },
     { t: 'Wiener process & (dW)² = dt · Itô’s lemma & OU kernel · Fokker–Planck PDE · Anderson Reverse SDE & PF-ODE', fs: 12.5, fill: C.ink },
   ]);
   o += arrow(270, 188, 270, 208, D.orange.base);
 
   o += card(20, 212, 500, 68, C.lgreen, C.green, [
-    { t: 'Stage 3 · Learning Generative Vector Fields (§§38.6–38.7)', fs: 15, fw: 700, fill: D.green.dark },
+    { t: `Stage 3 · Learning Generative Vector Fields (§§${num('sec_mdl-score-matching-diffusion-flow')}–${num('sec_mdl-flow-matching-transport')})`, fs: 15, fw: 700, fill: D.green.dark },
     { t: 'Vincent DSM & Tweedie · DDPM/DDIM & CFG · Conditional Flow Matching · Rectified Flow Reflow & W₂ OT', fs: 12.5, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -197,14 +198,14 @@ function threeStageRoadmap() {
 function fiveBenchmarks() {
   const W = 540, H = 290;
   let o = '';
-  o += fitTx(270, 18, 'Five Closed-Form Running Benchmarks Anchoring Chapter 38', 500, { fs: 15, fw: 700, fill: C.ink });
+  o += fitTx(270, 18, `Five Closed-Form Running Benchmarks Anchoring Chapter ${num('chap_mdl-dynamics')}`, 500, { fs: 15, fw: 700, fill: C.ink });
 
   const items = [
-    { name: '1. Planar Spiral Sink (§38.1–3)', eq: 'ẋ = (−½I + K)x,  λ = −0.5 ± i', test: 'e^{At}, RK4 order 4, area e⁻ᵗ', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { name: '2. Stiff Two-Mode Decay (§38.2)', eq: 'ẋ = diag(−50, −1)x, H = diag(10,1)', test: 'Explicit h < 2/|λ|, A-stability', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { name: '3. Ornstein–Uhlenbeck (§38.4)', eq: 'dX = −θX dt + √(2θ) dW', test: 'Kernel N(α_t x₀, 1−α_t²), VP-SDE', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { name: '4. Bimodal Mixture (§38.5–6)', eq: 'w₁ N(−2, 0.25) + w₂ N(+2, 0.25)', test: 'Score tanh, PF-ODE, DDIM, CFG', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { name: '5. Two-Moons Transport (§38.7)', eq: 'x_t = (1 − t)x₀ + tε', test: 'Crossing floor C=1.37, Reflow 1-step', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { name: `1. Planar Spiral Sink (§§${num('sec_mdl-odes-solvers')}–${num('sec_mdl-neural-odes-cnf')})`, eq: 'ẋ = (−½I + K)x,  λ = −0.5 ± i', test: 'e^{At}, RK4 order 4, area e⁻ᵗ', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { name: `2. Stiff Two-Mode Decay (${sec('sec_mdl-euler-runge-kutta')})`, eq: 'ẋ = diag(−50, −1)x', test: 'Explicit h < 2/|λ|, A-stability', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { name: `3. Ornstein–Uhlenbeck (${sec('sec_mdl-sdes')})`, eq: 'dX = −θX dt + √(2θ) dW', test: 'Kernel N(α_t x₀, 1−α_t²), VP-SDE', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { name: `4. Bimodal Mixture (§§${num('sec_mdl-fokker-planck-probability-flow')}–${num('sec_mdl-score-matching-diffusion-flow')})`, eq: 'w₁ N(−2, 0.25) + w₂ N(+2, 0.25)', test: 'Score tanh, PF-ODE, DDIM, CFG', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { name: `5. Two-Moons Transport (${sec('sec_mdl-flow-matching-transport')})`, eq: 'x_t = (1 − t)x₀ + tε', test: 'Crossing floor C=1.37, Reflow 1-step', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   items.forEach((it, i) => {
@@ -371,7 +372,7 @@ function finiteTimeBlowup() {
 
   o += card(276, 190, 244, 76, D.red.tint, D.red.base, [
     { t: 'Finite-Horizon Explosion', fs: 14, fw: 700, fill: D.red.dark },
-    { t: '∑ δ_ρ < ∞ converges to t* = 1/x₀', mono: true, fs: 12, fw: 700, fill: D.red.dark },
+    { t: 'Restarts sum to a finite time', fs: 12.5, fw: 700, fill: D.red.dark },
     { t: 'Bounded activations (tanh) fix this', fs: 12, fill: D.green.dark },
   ]);
   return svg(W, H, o);
@@ -513,9 +514,9 @@ function nonnormalTransient() {
   o += `<polyline points="38.0,184.0 40.5,186.5 43.0,188.9 45.5,191.2 48.0,193.4 50.5,195.5 53.0,197.5 55.5,199.4 58.0,201.1 60.5,202.8 63.0,204.5 65.5,206.0 68.0,207.5 70.5,208.9 73.0,210.2 75.5,211.4 78.0,212.6 80.5,213.8 83.0,214.9 85.5,215.9 88.0,216.9 90.5,217.8 93.0,218.7 95.5,219.5 98.0,220.3 100.5,221.1 103.0,221.8 105.5,222.5 108.0,223.2 110.5,223.8 113.0,224.4 115.5,225.0 118.0,225.5 120.5,226.0 123.0,226.5 125.5,227.0 128.0,227.4 130.5,227.8 133.0,228.2 135.5,228.6 138.0,229.0 140.5,229.3 143.0,229.6 145.5,229.9 148.0,230.2 150.5,230.5 153.0,230.8 155.5,231.0 158.0,231.3 160.5,231.5 163.0,231.7 165.5,231.9 168.0,232.1 170.5,232.3 173.0,232.5 175.5,232.7 178.0,232.8 180.5,233.0 183.0,233.1 185.5,233.3 188.0,233.4 190.5,233.5 193.0,233.7 195.5,233.8 198.0,233.9 200.5,234.0 203.0,234.1 205.5,234.2 208.0,234.3 210.5,234.3 213.0,234.4 215.5,234.5 218.0,234.6 220.5,234.6 223.0,234.7 225.5,234.8 228.0,234.8 230.5,234.9 233.0,234.9 235.5,235.0 238.0,235.0" fill="none" stroke="${C.blue}" stroke-width="2" stroke-dasharray="5 4"/>`;
   o += `<polyline points="38.0,184.0 40.5,183.1 43.0,174.2 45.5,162.7 48.0,151.3 50.5,141.0 53.0,132.2 55.5,124.7 58.0,118.7 60.5,114.0 63.0,110.4 65.5,107.9 68.0,106.3 70.5,105.5 73.0,105.4 75.5,105.9 78.0,106.9 80.5,108.4 83.0,110.2 85.5,112.4 88.0,114.9 90.5,117.5 93.0,120.4 95.5,123.4 98.0,126.5 100.5,129.6 103.0,132.8 105.5,136.1 108.0,139.3 110.5,142.6 113.0,145.8 115.5,149.0 118.0,152.2 120.5,155.3 123.0,158.3 125.5,161.3 128.0,164.2 130.5,167.1 133.0,169.8 135.5,172.5 138.0,175.1 140.5,177.7 143.0,180.1 145.5,182.5 148.0,184.8 150.5,187.0 153.0,189.1 155.5,191.1 158.0,193.1 160.5,195.0 163.0,196.8 165.5,198.6 168.0,200.2 170.5,201.9 173.0,203.4 175.5,204.9 178.0,206.3 180.5,207.7 183.0,209.0 185.5,210.2 188.0,211.4 190.5,212.5 193.0,213.6 195.5,214.7 198.0,215.7 200.5,216.6 203.0,217.5 205.5,218.4 208.0,219.2 210.5,220.0 213.0,220.8 215.5,221.5 218.0,222.2 220.5,222.8 223.0,223.5 225.5,224.1 228.0,224.6 230.5,225.2 233.0,225.7 235.5,226.2 238.0,226.7" fill="none" stroke="${D.red.base}" stroke-width="3.5"/>`;
   o += circle(72.7, 105.4, 5, D.red.base, '#FFFFFF', 1.5);
-  o += fitTx(138, 86, 'Peak ‖x(ln 2)‖ ≈ 2.51×!', 210, { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
+  o += fitTx(138, 86, 'Peak ‖x(ln 2)‖ ≈ 2.51', 210, { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
   o += tx(136, 124, '‖x(t)‖, x₀ = (0, 1)', { fs: 12.5, fw: 700, fill: D.red.dark, anchor: 'start' });
-  o += tx(136, 144, 'e⁻ᵗ (normal decay)', { fs: 12.5, fw: 700, fill: D.blue.dark, anchor: 'start' });
+  o += tx(136, 144, 'e⁻ᵗ (slow-mode rate)', { fs: 12.5, fw: 700, fill: D.blue.dark, anchor: 'start' });
   o += fitTx(138, 252, 'x₁ = 10(e⁻ᵗ − e⁻²ᵗ), x₂ = e⁻²ᵗ', 210, { mono: true, fs: 12.5, fw: 700, fill: C.ink });
 
   o += card(272, 66, 248, 94, D.red.tint, D.red.base, [
@@ -817,7 +818,7 @@ function cubicDetVsTrace() {
     { t: 'x_{ℓ+1} = g_ℓ(x_ℓ)   (d = 3,072)', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'log p_out = log p_in − ∑ log|det J_g|', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
     { t: 'Full Jacobian det costs O(d³):', fs: 12.5, fill: C.ink },
-    { t: '~2 × 10¹⁰ FLOPs / layer (3,000× slower!)', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
+    { t: '~2 × 10¹⁰ FLOPs per layer', mono: true, fs: 11.5, fw: 700, fill: D.red.dark },
     { t: 'Forces triangular / coupling layers', fs: 12.5, fill: C.muted },
   ]);
 
@@ -826,7 +827,7 @@ function cubicDetVsTrace() {
     { t: 'd/dt log p_t(x(t)) = −tr(∂f_θ / ∂x)', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     { t: 'Replaces det(J) with trace tr(J)!', fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Hutchinson εᵀJε costs 1 VJP / step:', fs: 12.5, fill: C.ink },
-    { t: 'O(d) compute, zero architecture limits', fs: 12, fill: D.green.dark },
+    { t: 'about one evaluation of f_θ per probe', fs: 12, fill: D.green.dark },
   ]);
 
   o += card(20, 216, 500, 52, C.lblue, C.blue, [
@@ -870,9 +871,9 @@ function threeTrainingParadigms() {
   o += titledPanel(20, 64, 156, 154, '1. Unrolled Euler', D.red, [
     { t: '10 fwd + 10 bwd', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'Memory: O(N)', mono: true, fs: 12.5, fill: C.ink },
-    { t: 'Fits coarse h = 0.1;', fs: 12, fill: D.red.dark },
-    { t: 'fails when refined', fs: 12.5, fw: 700, fill: D.red.dark },
-    { t: 'to N = 1000!', fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: 'Fits its h = 0.1 program;', fs: 12, fill: D.red.dark },
+    { t: 'refined to N = 1000,', fs: 12.5, fw: 700, fill: D.red.dark },
+    { t: 'error rises to ~0.02', fs: 12.5, fw: 700, fill: D.red.dark },
   ]);
 
   o += titledPanel(192, 64, 156, 154, '2. Unrolled RK4', D.blue, [
@@ -892,7 +893,7 @@ function threeTrainingParadigms() {
   ]);
 
   o += card(20, 230, 500, 44, C.lgreen, C.green, [
-    { t: 'Modern Frontier (§§38.6–38.7): Train simulation-free (1 eval/step), sample with fast ODE solvers!', fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: `Modern Frontier (§§${num('sec_mdl-score-matching-diffusion-flow')}–${num('sec_mdl-flow-matching-transport')}): Train simulation-free (1 eval/step), sample with fast ODE solvers!`, fs: 12.5, fw: 700, fill: D.green.dark },
   ]);
   return svg(W, H, o);
 }
@@ -1410,7 +1411,7 @@ function curvedDiffusionVsStraight() {
     { t: 'Path inherited from OU / VP-SDE:', fs: 12.5, fw: 700, fill: C.ink },
     { t: 'x_t = √ᾱ_{t} x₀ + √(1 − ᾱ_{t}) ε', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark },
     { t: 'Trajectories curve across time;', fs: 12.5, fill: C.ink },
-    { t: '91% of motion happens below t = 0.5', fs: 12.5, fill: D.red.dark },
+    { t: 'one example: >90% of path below t = 0.5', fs: 12.5, fill: D.red.dark },
     { t: 'Requires 20–50 ODE solver steps', fs: 13, fw: 700, fill: D.orange.dark },
   ]);
 

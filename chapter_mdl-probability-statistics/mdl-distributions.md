@@ -1120,8 +1120,8 @@ one by one gives $L_{11}=\sqrt2$, then $L_{21}=\Sigma_{21}/L_{11}=1/\sqrt2$,
 and finally $L_{22}=\sqrt{\Sigma_{22}-L_{21}^2}=\sqrt{3/2}$; indeed,
 $L_{21}^2+L_{22}^2=\tfrac12+\tfrac32=2$.
 
-Any other square-root factor works equally well, such as the symmetric
-eigen-factor $\mathbf V\operatorname{diag}(\sqrt{\gamma_1},\dots,\sqrt{\gamma_d})$.
+Any other square-root factor works equally well, such as the eigen-factor
+$\mathbf V\operatorname{diag}(\sqrt{\gamma_1},\dots,\sqrt{\gamma_d})$.
 As exercise :exref:`ex_mdl-distributions-two-factors` shows, any two factors of
 the same $\boldsymbol\Sigma$ differ only by an orthogonal matrix. In practice,
 library samplers differ: many use the Cholesky factor, whereas NumPy's
@@ -1234,7 +1234,8 @@ $\mathbf x_1$ from $\mathbf x_2$: the multiple of $\mathbf x_2$ whose
 subtraction leaves zero correlation. In a multivariate Gaussian, conditional
 expectation *is* linear regression read straight off the covariance matrix.
 Meanwhile, the conditional covariance, known in linear algebra as the *Schur
-complement* of $\boldsymbol\Sigma_{22}$, never exceeds $\boldsymbol\Sigma_{11}$,
+complement* of $\boldsymbol\Sigma_{22}$
+(:numref:`subsec_mdl-block-matrices`), never exceeds $\boldsymbol\Sigma_{11}$,
 because the subtracted term
 $\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$ is
 positive semidefinite. Observing $x_2$ shrinks our uncertainty about $x_1$ from

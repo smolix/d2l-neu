@@ -169,7 +169,11 @@ true risk, and in particular so does the function the learner picked. Bounds
 on this supremum are called *uniform convergence* bounds
 :cite:`Vapnik.Chervonenkis.1971`. Choosing after seeing the data becomes
 safe once the guarantee holds for all candidates before the data arrive,
-because whichever candidate we pick is already covered.
+because whichever candidate we pick is already covered
+(:numref:`fig_mdl-gen-uniform-sup`).
+
+![Uniform convergence. The empirical risk $\hat R(f)$ (orange) stays within $t$ of the true risk $R(f)$ (blue) for every function in the class at once. The learner picks the minimizer $\hat f$ of the empirical risk, which sits in a downward dip below the true risk. The band covers that function as well, so $R(\hat f)\le\hat R(\hat f)+t$.](../img/mdl-prob-gen-uniform-sup.svg)
+:label:`fig_mdl-gen-uniform-sup`
 
 ### Finite Classes and the Union Bound
 :label:`subsec_mdl-finite-class`
@@ -619,7 +623,10 @@ $$
 The ramp loss equals $1$ on a mistake ($u\le0$), drops to $0$ once a
 prediction is correct by at least the margin $\gamma$ ($u\ge\gamma$), and
 interpolates linearly in between. It upper-bounds the 0-1 loss everywhere
-and is $(1/\gamma)$-Lipschitz.
+and is $(1/\gamma)$-Lipschitz, as :numref:`fig_mdl-gen-ramp-margin` shows.
+
+![The ramp loss $\phi_\gamma$ (blue) as a function of the margin $u=yf(\mathbf{x})$, together with the 0-1 loss $\mathbf{1}\{u\le0\}$ (dashed). The two agree except for $0<u<\gamma$ (shaded), where a prediction is correct by less than the margin and the ramp descends with slope $-1/\gamma$.](../img/mdl-prob-gen-ramp-margin.svg)
+:label:`fig_mdl-gen-ramp-margin`
 
 Write $\hat R_\gamma(\mathbf w)=\frac1n\sum_i\phi_\gamma(y_i\langle\mathbf w,\mathbf x_i\rangle)$
 for the empirical ramp loss on the sample. When every input satisfies
@@ -766,6 +773,16 @@ $\boldsymbol\Phi\in\mathbb{R}^{n\times p}$, and fit
 $\mathbf w=\boldsymbol\Phi^+\mathbf y$. Below $p=n$, this is ordinary least
 squares; above $p=n$, it is the interpolant of smallest Euclidean norm.
 
+The minimum-norm interpolant is not an arbitrary choice among the many
+interpolants: it is the one that training finds. The gradient of the squared
+loss, $\boldsymbol\Phi^\top(\boldsymbol\Phi\mathbf w-\mathbf y)$, is a
+combination of the training feature vectors, so gradient descent started at
+$\mathbf w=\mathbf 0$ never leaves the row space of $\boldsymbol\Phi$. The
+only interpolant in that row space is $\boldsymbol\Phi^+\mathbf y$, and
+gradient descent converges to it without any penalty on the norm. This
+preference of an optimizer for one solution among many that fit the data
+equally well is called its *implicit bias*.
+
 The singular value decomposition illuminates all three regimes: below, at,
 and above the threshold. Suppose $\boldsymbol\Phi$ has full rank
 $q=\min(n,p)$ and singular value decomposition
@@ -901,12 +918,12 @@ threshold, and beyond it.
 
 *Below the threshold*, the model behaves classically, with fewer parameters
 than training points. Its test error first drops from roughly $1$ at $p=2$
-to about $0.6$–$0.8$ near $p=15$, and then climbs again as $p$ approaches
+to about $0.65$–$0.85$ near $p=15$, and then climbs again as $p$ approaches
 $40$, tracing the familiar classical U-curve. Two caveats are essential
 before we compare anything against this regime. First, even at its best,
 this classical fit is weak: the targets have variance $1$ (the error of
-always predicting zero), so the minimum of the U-curve removes only a
-quarter to a third of the variance. Second, a far better classical model
+always predicting zero), so the minimum of the U-curve removes no more than
+about a third of the variance. Second, a far better classical model
 exists. Because the true teacher is linear in the 15 raw inputs, ordinary
 least squares on those raw inputs has expected test error
 $0.01\cdot15/(40-15-1)\approx0.006$ (the noise variance times $d/(n-d-1)$

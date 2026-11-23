@@ -89,24 +89,30 @@
         }
       ]
     },
-    "mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured": {
-      "code_fingerprint": "sha256:0e93392b0a6084aaf9bc87e93d274dc386b690029189c233a24fc57efd69fac2",
+    "mdl-matrix-calculus-autodiff-the-tape-2": {
+      "code_fingerprint": "sha256:d6eff079061460090170c9d8f5ccf8af7e4dd0514b42a6905dcb639421a61c33",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward mode: 80,200 operations (200 passes of 401)"
-        },
+          "text": "one where   : loss = 0.6931, grad = [0.5 nan]\ndouble where: loss = 0.6931, grad = [0.5 0. ]\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured": {
+      "code_fingerprint": "sha256:d35ba110bc38aa415bd23663bbf68f3c49eae7b929139a34d11b90b8a91640e7",
+      "kind": "text",
+      "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\nreverse mode: 802 operations (one recorded pass, one sweep)\nratio 100.0, largest gradient difference 0.0e+00\n"
+          "text": "forward mode: 80,200 operations (200 passes of 401)\nreverse mode: 802 operations (one recorded pass, one sweep)\nratio 100.0, largest gradient difference 0.0e+00\n"
         }
       ]
     },
     "mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products": {
-      "code_fingerprint": "sha256:72d8c55e46648a3eb80c2840fed41b24df8e9762681908cdd168774670f3a0c2",
+      "code_fingerprint": "sha256:7739388bf78ce16e5083b3e20fb5674380f8b38f67cd2651f6bdb8cd77f29da9",
       "kind": "text",
       "outputs": [
         {
@@ -117,7 +123,7 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up": {
-      "code_fingerprint": "sha256:69261e264e4d753a6b0bd95b4641b2119d42c5acafcfae6d79cadff8356f5da0",
+      "code_fingerprint": "sha256:0cf5d98ba383501a91605a42b30623347f210f8ac412e91816155b4fa16ce263",
       "kind": "text",
       "outputs": [
         {
@@ -128,7 +134,7 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-differentiating-through-equations": {
-      "code_fingerprint": "sha256:c6fd680a4151d16808389e7009f07a437a88409e3ff0a190e4a552bd39292841",
+      "code_fingerprint": "sha256:2922617e06624feca7c47a14b16c1f7752daa4b4507676deab8de9954cbe930d",
       "kind": "text",
       "outputs": [
         {
@@ -139,7 +145,7 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-implicit-differentiation-1": {
-      "code_fingerprint": "sha256:ee25d72c39d69f23eb3dd71cb82b137990901e161f566c754ca3d01e06c838d2",
+      "code_fingerprint": "sha256:62c9759026f0eb0a4b152969985bba6c19c583082df8faaa279e4f48ac3643f1",
       "kind": "text",
       "outputs": [
         {

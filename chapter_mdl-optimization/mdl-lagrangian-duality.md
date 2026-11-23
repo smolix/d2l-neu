@@ -264,6 +264,16 @@ graph—is therefore the intersection of the half-spaces below these affine
 functions. Since any intersection of convex sets is convex, $q$ is concave.
 $\blacksquare$
 
+:numref:`fig_mdl-opt-dual-envelope` draws this construction for the clipping
+problem. Each dashed line is the Lagrangian of one fixed $\mathbf{x}$ as a
+function of $\lambda$, and $q$ is the curve that stays below all of them. The
+objective of the clipping problem happens to be convex, but the argument never
+used that: a lower envelope of lines is concave whatever shape $f$ and $g$
+have.
+
+![The dual function of the clipping problem as a lower envelope. Each fixed $\mathbf{x}$ contributes one line $\lambda \mapsto \mathcal{L}(\mathbf{x}, \lambda)$ (dashed), and $q(\lambda)$ is the lowest value that any of these lines takes at $\lambda$. The lines drawn belong to the minimizers $\mathbf{x}(\lambda) = \mathbf{x}_0/(1+\lambda)$ for several values of $\lambda$, and each touches $q$ at its own $\lambda$ (dots). The line of $\mathbf{x}^\star = \mathbf{x}(4)$ is flat because $g(\mathbf{x}^\star) = 0$; it touches $q$ at the maximum $d^\star = q(4) = p^\star = 8$.](../img/mdl-opt-dual-envelope.svg)
+:label:`fig_mdl-opt-dual-envelope`
+
 **Proposition (weak duality).** *If $\mathbf{x}$ is feasible and
 $\boldsymbol{\lambda} \succeq 0$, then
 $q(\boldsymbol{\lambda}, \boldsymbol{\nu}) \le f(\mathbf{x})$. Consequently,*
@@ -1006,7 +1016,8 @@ convexity prevents.
 :label:`subsec_mdl-svm-dual`
 
 Given linearly separable training data $(\mathbf{x}_i, y_i)$ with labels
-$y_i \in \{\pm 1\}$, the support vector machine :cite:`Cortes.Vapnik.1995`
+$y_i \in \{\pm 1\}$, the support vector machine
+:cite:`Boser.Guyon.Vapnik.1992`
 seeks the separating hyperplane $\mathbf{w}^\top\mathbf{x} + b = 0$ with the
 widest possible margin. Its primal problem is
 
@@ -1067,14 +1078,18 @@ Two striking consequences follow before we even choose a solver. First,
 complementary slackness, $\alpha_i (1 - y_i(\mathbf{w}^\top\mathbf{x}_i + b)) = 0$,
 tells us that any point with $\alpha_i > 0$ must satisfy
 $y_i(\mathbf{w}^\top\mathbf{x}_i + b) = 1$, lying right on one of the margin
-hyperplanes. These points are the **support vectors**: in the geometry of
-:numref:`fig_mdl-opt-kkt-active-set`, their constraints are active and their
-normals balance $\nabla f$, whereas every point with $\alpha_i = 0$ drops out
-of $\mathbf{w}$ completely. Second, the training inputs enter
+hyperplanes. These points are the **support vectors**. In
+:numref:`fig_mdl-opt-svm-margin` they can only be among the four ringed
+points. Their constraints are active and their normals balance $\nabla f$, as
+in :numref:`fig_mdl-opt-kkt-active-set`, whereas every point with
+$\alpha_i = 0$ drops out of $\mathbf{w}$ completely. Second, the training inputs enter
 :eqref:`eq_mdl-opt-svm-dual` exclusively through inner products
 $\mathbf{x}_i^\top\mathbf{x}_j$. Replacing those inner products with a kernel
 function $k(\mathbf{x}_i, \mathbf{x}_j)$ immediately yields a nonlinear
 classifier—a structure the primal formulation hides.
+
+![Maximum-margin separation of the eight points that the code cell below uses. The solid line is the decision boundary $\mathbf{w}^{\star\top}\mathbf{x} + b^\star = 0$ with $\mathbf{w}^\star = (\tfrac47, \tfrac47)$ and $b^\star = -\tfrac37$. The dashed lines are the margin hyperplanes $\mathbf{w}^{\star\top}\mathbf{x} + b^\star = \pm 1$, a distance $2/\|\mathbf{w}^\star\|$ apart. Only the four ringed points, which lie on a margin hyperplane, can carry $\alpha_i > 0$.](../img/mdl-opt-svm-margin.svg)
+:label:`fig_mdl-opt-svm-margin`
 
 Notice that the equality constraint $\sum_i \alpha_i y_i = 0$ arose solely
 because the unpenalized offset $b$ left the Lagrangian affine in one direction.

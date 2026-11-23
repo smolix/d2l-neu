@@ -736,9 +736,11 @@ That scale invariance makes cosine similarity the standard metric for
 nearest-neighbor retrieval over embeddings and for contrastive learning
 objectives such as SimCLR :cite:`Chen.Kornblith.Norouzi.ea.2020`, which align
 the directions of embeddings produced from two views of the same image.
-Attention layers make a different choice: they use the *unnormalized* dot
-product scaled by $1/\sqrt{d}$ (for reasons we derive shortly), so vector
-lengths remain informative there.
+The attention layer of the original transformer makes a different choice: it
+uses the *unnormalized* dot product scaled by $1/\sqrt{d}$ (for reasons we
+derive shortly), so vector lengths remain informative there. Many later models
+normalize queries and keys first (:numref:`subsec_qk-norm`), which turns the
+score back into a scaled cosine.
 
 ### Near-Orthogonality of Random Directions
 
@@ -1226,18 +1228,11 @@ similar pairs where class spread along the boundary normal matters.
    the squared separation between the projected class means divided by the
    within-class variance of the projections. When $\mathbf{C}$ is positive
    definite ($\mathbf{v}^\top\mathbf{C}\mathbf{v} > 0$ for all
-   $\mathbf{v} \neq \mathbf{0}$, so its matrix inverse $\mathbf{C}^{-1}$
-   satisfying $\mathbf{C}\mathbf{C}^{-1} = \mathbf{I}$ exists), the maximizer is
-   $\mathbf{w} \propto \mathbf{C}^{-1}\boldsymbol{\Delta}$. (As we will prove
-   in upcoming sections, matrix inverses are developed in
-   :numref:`subsec_mdl-inverses`, positive definiteness and eigenvalues
-   $\lambda_1 \ge \cdots \ge \lambda_d > 0$ in
-   :numref:`sec_mdl-eigendecompositions` (:numref:`subsec_mdl-psd`),
-   power-iteration convergence at ratio $|\lambda_2/\lambda_1|$ in
-   :numref:`subsec_mdl-power-iteration` (:eqref:`eq_mdl-power-iter`), and the
-   condition number
-   $\kappa(\mathbf{C}) = \lambda_{\max}(\mathbf{C})/\lambda_{\min}(\mathbf{C})$
-   in :numref:`subsec_mdl-condition-number`.)
+   $\mathbf{v} \neq \mathbf{0}$), its inverse $\mathbf{C}^{-1}$ exists and the
+   maximizer is $\mathbf{w} \propto \mathbf{C}^{-1}\boldsymbol{\Delta}$.
+   (This problem uses the matrix inverse from :numref:`subsec_mdl-inverses`,
+   positive definiteness from :numref:`subsec_mdl-psd`, and the condition
+   number from :numref:`subsec_mdl-condition-number`.)
     1. Show that $J(c\mathbf{w}) = J(\mathbf{w})$ for every $c \neq 0$. When
        $\mathbf{C} = s^2\mathbf{I}$, apply Cauchy–Schwarz to show that
        $\boldsymbol{\Delta}$ maximizes $J$.

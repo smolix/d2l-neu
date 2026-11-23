@@ -758,7 +758,8 @@ Keep in mind that gradient clipping also uses a ball projection, but it
 projects the *gradient vector* rather than the parameters, so it is not PGD
 for any constraint on the weights
 (Exercise :exref:`ex_mdl-constrained-projected-fixed-points` highlights the
-difference).
+difference). What clipping does achieve is a step that stays safe where the
+curvature grows with the gradient (:numref:`subsec_mdl-relaxed-smoothness`).
 
 ### Projection onto the Simplex
 
@@ -977,9 +978,13 @@ $$
 Any input with magnitude at most $\lambda$ is snapped to exact zero, while
 larger inputs are shrunk toward zero by $\lambda$. For example, with
 $\lambda = 0.7$, $z = 0.5$ maps to $0$, $z = 2$ maps to $1.3$, and $z = -2$
-maps to $-1.3$. That dead zone $[-\lambda, \lambda]$ is precisely how $\ell_1$
+maps to $-1.3$ (:numref:`fig_mdl-opt-soft-threshold`). That dead zone
+$[-\lambda, \lambda]$ is precisely how $\ell_1$
 regularization creates exact sparsity, whereas $\ell_2$ regularization only
 shrinks weights toward zero without ever zeroing them out.
+
+![Soft-thresholding $\mathrm{prox}_{\lambda|\cdot|}(z)$ for $\lambda = 0.7$ (solid). Inputs in the dead zone $[-\lambda, \lambda]$ map to $0$, as $z = 0.5$ does, and every other input moves toward $0$ by $\lambda$, as $z = 2$ does. The dashed line is the identity. The dotted line is the corresponding map for the squared penalty $\tfrac12 x^2$, which halves every input and sends none but $z = 0$ to zero.](../img/mdl-opt-soft-threshold.svg)
+:label:`fig_mdl-opt-soft-threshold`
 
 Soft-thresholding is one instance of a much more general operation. The
 **proximal operator** of a function $\psi$ trades off lowering $\psi(\mathbf{x})$
@@ -1169,10 +1174,11 @@ d2l.plot(np.arange(1, 31), [np.maximum(gap_i, 1e-16), np.maximum(gap_c, 1e-16)],
 
 On the logarithmic plot, both methods trace straight lines—linear
 convergence—but coordinate descent drops much more steeply, typically reaching
-a gap of $10^{-8}$ in four to six sweeps compared with fifteen to twenty-five
-steps for ISTA. Nothing we proved in this section predicts that exact speedup;
-the standard convergence theory for coordinate descent applies to randomly
-chosen coordinates :cite:`Nesterov.2012` rather than cyclic sweeps.
+a gap of $10^{-8}$ in four to six sweeps compared with a dozen to twenty-five
+steps for ISTA. Nothing we proved in this section predicts that exact speedup.
+The sharpest rates for coordinate descent are proved for randomly chosen
+coordinates :cite:`Nesterov.2012`; cyclic sweeps like ours also converge at a
+guaranteed rate, but with weaker constants :cite:`Beck.Tetruashvili.2013`.
 
 Coordinate descent does have an important limitation. If a nonsmooth kink does
 not separate across coordinates, coordinate descent can get stuck far from the

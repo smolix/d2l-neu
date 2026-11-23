@@ -184,7 +184,89 @@ def fig_rademacher():
     _save_both(fig, "mdl-prob-gen-rademacher")
 
 
-FIGURES = [fig_best_of_many, fig_rademacher]
+def fig_uniform_sup():
+    """Uniform convergence over a one-parameter class.  The true risk R(f)
+    (blue) and a band of half-width t around it (shaded); the empirical risk
+    R_hat(f) (orange, a fixed deterministic wiggle) stays inside the band for
+    every f.  The learner picks f_hat = argmin R_hat, which sits in a
+    downward dip, below the true risk; because the band covers every f, it
+    covers f_hat too, so R(f_hat) <= R_hat(f_hat) + t."""
+    f = np.linspace(0, 1, 600)
+    R = 0.25 + 1.1 * (f - 0.45) ** 2
+    t = 0.07
+    wig = (0.55 * np.sin(2 * np.pi * 3.2 * f + 0.4)
+           + 0.35 * np.sin(2 * np.pi * 5.3 * f + 1.7)
+           + 0.25 * np.sin(2 * np.pi * 8.1 * f + 0.2)
+           - 1.6 * np.exp(-((f - 0.61) / 0.035) ** 2))
+    Rhat = R + t * 0.92 * wig / np.abs(wig).max()
+    i = int(np.argmin(Rhat))
+
+    fig, ax = plt.subplots(figsize=(6.8, 4.0))
+    ax.fill_between(f, R - t, R + t, color=BLUE, alpha=0.12, lw=0)
+    ax.plot(f, R - t, color=BLUE, lw=0.9, ls="--", alpha=0.7)
+    ax.plot(f, R + t, color=BLUE, lw=0.9, ls="--", alpha=0.7)
+    ax.plot(f, R, color=BLUE, lw=2.4)
+    ax.plot(f, Rhat, color=ORANGE, lw=2.0)
+    ax.plot([f[i], f[i]], [0.1, Rhat[i]], ":", color=GRAY, lw=1.1)
+    ax.plot([f[i]], [Rhat[i]], "o", ms=7, color=ORANGE, zorder=5)
+    ax.plot([f[i]], [R[i]], "o", ms=7, color=BLUE, zorder=5)
+    # the half-width t, marked where the empirical curve runs below R(f)
+    cand = np.where((f > 0.15) & (f < 0.5))[0]
+    k = int(cand[np.argmin(Rhat[cand] - R[cand])])
+    ax.annotate("", xy=(f[k], R[k] + t), xytext=(f[k], R[k]),
+                arrowprops=dict(arrowstyle="<->", color=INK, lw=1.2,
+                                shrinkA=0, shrinkB=0))
+    ax.text(f[k] + 0.015, R[k] + t / 2, r"$t$", fontsize=15, color=INK,
+            ha="left", va="center")
+    ax.text(0.04, 0.66, r"band $R(f)\pm t$", fontsize=14,
+            color=fl.T.BLUE.dark, ha="left", va="top")
+    ax.text(0.70, 0.17, r"$\hat R(f)$", fontsize=14,
+            color=fl.T.ORANGE.dark, ha="left", va="top")
+    ax.set_xticks([f[i]])
+    ax.set_xticklabels([r"$\hat f$"], fontsize=15)
+    ax.set_xlabel(r"function $f\in\mathcal{F}$", fontsize=14)
+    ax.set_ylabel("risk", fontsize=14)
+    ax.set_yticks([])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0.1, 0.68)
+    _black_axes(ax)
+    fl.save(fig, "mdl-prob-gen-uniform-sup")
+
+
+def fig_ramp_margin():
+    """The ramp loss phi_gamma(u) = min{1, max{0, 1 - u / gamma}} of the
+    margin u = y f(x): 1 for u <= 0, a line of slope -1/gamma on [0, gamma],
+    0 beyond.  The 0-1 loss 1{u <= 0} (dashed) lies below it everywhere; the
+    two differ only on (0, gamma), where the prediction is correct but by
+    less than the margin."""
+    g = 1.0
+    u = np.array([-1.6, 0.0, g, 2.4])
+    phi = np.array([1.0, 1.0, 0.0, 0.0])
+    fig, ax = plt.subplots(figsize=(6.0, 3.5))
+    ax.fill_between([0, g], [1, 0], [0, 0], color=BLUE, alpha=0.12, lw=0)
+    ax.plot([-1.6, 0], [1, 1], "--", color=ORANGE, lw=2.2, zorder=4,
+            dashes=(5, 3))
+    ax.plot([0, 2.4], [0, 0], "--", color=ORANGE, lw=2.2, zorder=4,
+            dashes=(5, 3))
+    ax.plot(u, phi, color=BLUE, lw=2.6, zorder=3)
+    ax.text(0.58, 0.62, r"slope $-1/\gamma$", fontsize=14,
+            color=fl.T.BLUE.dark, ha="left", va="bottom")
+    ax.text(-0.8, 1.06, r"$\phi_\gamma(u)$", fontsize=15,
+            color=fl.T.BLUE.dark, ha="center", va="bottom")
+    ax.text(1.75, 0.08, r"0-1 loss $\mathbf{1}\{u\leq 0\}$", fontsize=13,
+            color=fl.T.ORANGE.dark, ha="center", va="bottom")
+    ax.set_xlim(-1.6, 2.4)
+    ax.set_ylim(-0.08, 1.3)
+    ax.set_xticks([0, g])
+    ax.set_xticklabels(["$0$", r"$\gamma$"], fontsize=15)
+    ax.set_yticks([0, 1])
+    ax.set_xlabel(r"margin $u=yf(\mathbf{x})$", fontsize=14)
+    _black_axes(ax)
+    fl.save(fig, "mdl-prob-gen-ramp-margin")
+
+
+FIGURES = [fig_best_of_many, fig_rademacher, fig_uniform_sup,
+           fig_ramp_margin]
 
 
 def main():

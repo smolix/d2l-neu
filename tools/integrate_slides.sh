@@ -14,6 +14,9 @@ rsync -a --exclude='*.qmd' --exclude='_quarto.yml' \
 	--exclude='.deckhashes.json' --exclude='.render-*' \
 	_slides/ _book/slides/
 
+echo "Rebuilding the slides landing page in the frame of this render..."
+python3 tools/build_slides_index.py --landing-only --out _book/slides/index.html
+
 echo "Stripping per-fw data/img symlinks (R2 storage bloat)..."
 find _book/slides -mindepth 2 -maxdepth 2 -type l \
 	\( -name data -o -name img \) -delete

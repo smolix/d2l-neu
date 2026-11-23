@@ -600,7 +600,19 @@ Every rendered deck also ships as an editable `.pptx` beside its
 `.html`, for lecturers who teach from their own slides. The book's
 right sidebar shows **Slides · <framework>** with four buttons, *HTML*,
 *PDF*, *PowerPoint* and *LaTeX* (the last two download), and the slides
-landing page has *PDF*, *PPTX* and *TeX* links per deck.
+landing page has *PDF*, *PPTX* and *LaTeX* links per deck.
+
+The **landing page** (`slides/index.html`, `tools/build_slides_index.py`)
+lists every deck by part and chapter, numbered as in the book (`8.1`; a
+chapter's overview deck carries the chapter number), with a card per part at
+the top and a framework picker that shares the book's stored framework
+choice. It is set inside the book's own page frame: the script takes a
+rendered part page from `_book/` (the first `- part:` of `_quarto.yml`, one
+directory deep like `slides/`) and replaces its main column, its margin
+table of contents and its title, so the navbar, sidebar, search and footer
+are the book's. The html recipe builds it before `quarto render` (frame of
+the previous build) and again from `tools/integrate_slides.sh` once
+`_book/` is fresh; with no rendered book it falls back to a plain page.
 
 ```bash
 make slides-pptx-pytorch                 # after make slides-pytorch
@@ -712,8 +724,6 @@ exists; every other deck stays as the old deck, frozen, until upgraded.
   vocabulary (`.cover`/`.divider`/`.kicker`/`@fig:`/`.cols`/`.d2l-note`).
   Rewrite a block → the deck becomes eligible automatically; no allowlist.
   `python tools/northstar_slides.py . ` prints the migration count.
-- **The landing page badges them.** `build_slides_index.py` marks
-  north-star decks "new" on `slides/index.html`.
 - **Deploy substitutes only the north-star decks.**
   `tools/stage_northstar_slides.sh` overlays just those decks (+ the
   refreshed index, the new content-hashed theme CSS, and any plot assets
@@ -957,7 +967,7 @@ tools/northstar_slides.py          Auto-detects which decks are north-star (migr
 tools/stage_northstar_slides.sh    Overlays only north-star decks → _book/slides/
 tools/upload_northstar_r2.sh       Surgical R2 upload of the staged north-star set
 tools/patch_slides_navlink_r2.sh   One-off: fix in-deck Slides nav link on live legacy decks
-tools/build_slides_index.py        Slides landing page + manifest (badges north-star decks)
+tools/build_slides_index.py        Slides landing page (in the book's frame) + manifest
 
 .vscode/                           Workspace settings, keybindings, snippets
 .vscode-extension/                 d2l-tools VS Code extension source

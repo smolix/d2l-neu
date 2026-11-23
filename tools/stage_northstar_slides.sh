@@ -40,7 +40,7 @@ mapfile -t NS_DECKS < <(python3 tools/northstar_slides.py . --list)
 echo "North-star decks (${#NS_DECKS[@]}):"
 printf '  ✦ %s\n' "${NS_DECKS[@]}"
 
-# Refresh the landing index + manifest (badges the north-star decks).
+# Refresh the landing index + manifest.
 echo "Rebuilding slides index..."
 python3 tools/build_slides_index.py --slides-dir "$SLIDES" --source . >/dev/null
 

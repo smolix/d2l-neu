@@ -87,7 +87,7 @@ function fourScalingBarriers() {
     { x: 16,  y: 16,  t: '1. Signal & Degradation Drift', s1: 'Sigmoids shrink grads ≤ 1/4^L', s2: 'Plain-56 loss > Plain-20 (0.28>0.20)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
     { x: 278, y: 16,  t: '2. 92% Dense-Head Bloat', s1: 'AlexNet/VGG: >92% params in head', s2: 'Contributes <5% of total MACs', fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 16,  y: 140, t: '3. FLOPs ≠ GPU Latency', s1: 'Depthwise convs cut MACs 8–9×', s2: 'Only 9 MACs/read → memory-bound', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 278, y: 140, t: '4. Confounded Recipes', s1: 'AdamW + Mixup + smoothing + EMA', s2: 'Adds +4.3% to unchanged ResNet-50', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 278, y: 140, t: '4. Confounded Recipes', s1: 'LAMB + BCE + RandAug/Mixup/CutMix', s2: '76.1 → 80.4% on same ResNet-50', fill: C.lblue, st: C.blue, dk: D.blue.dark },
   ];
   b.forEach((it) => {
     o += card(it.x, it.y, 246, 108, it.fill, it.st, [
@@ -240,7 +240,7 @@ function gpuVsCpuBudget() {
     { t: '2012 Quad-Core CPU', fs: 14.5, fw: 700, fill: D.red.dark },
     { t: 'Peak: ~0.2 TFLOPS', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'DRAM Bandwidth: ~20 GB/s', mono: true, fs: 12, fill: C.muted },
-    { t: 'Wall-Clock: > 45 Days!', fs: 13.5, fw: 700, fill: D.red.dark },
+    { t: 'Wall-Clock: ≈ 38 Days at Peak', fs: 13.5, fw: 700, fill: D.red.dark },
   ]);
   o += card(282, 104, 242, 138, C.lgreen, C.green, [
     { t: '2× NVIDIA GTX 580 GPUs', fs: 14.5, fw: 700, fill: D.green.dark },
@@ -275,7 +275,7 @@ function reluHeDropoutTriad() {
   let o = '';
   const cols = [
     { x: 16,  t: '1. ReLU Activation', s1: 'max(x, 0)', s2: 'Slope = 1 for x > 0', s3: 'Stops 4^{-K} decay', s4: '6× faster than tanh', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 194, t: '2. He Initialization', s1: 'W ~ N(0, 2/n_in)', s2: 'n_in = c_i · k²', s3: 'Compensates for ReLU', s4: 'zeroing half of inputs', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 194, t: '2. He Init (2015)', s1: 'W ~ N(0, 2/n_in)', s2: 'n_in = c_i · k²', s3: 'Our update; replaces', s4: 'AlexNet\'s N(0, 0.01²)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 372, t: '3. Dropout (p = 0.5)', s1: 'Zeroes 50% of 4096', s2: 'Scales survivors ×2', s3: 'Prevents 43M head', s4: 'from memorizing data', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   cols.forEach((c) => {
@@ -960,7 +960,7 @@ function recipePipeline20152022() {
     { x: 16,  y: 16, t: '1. Data Augmentation', old: '2015: Crop + Flip', mod: '2022: +RandAug, Mixup, CutMix', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 278, y: 16, t: '2. Forward & Regularize', old: '2015: L2 weight decay', mod: '2022: +Stochastic Depth (drop_path)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 16,  y: 102, t: '3. Loss Objective', old: '2015: 1-hot Cross-Entropy', mod: '2022: Label Smoothing (ε = 0.1)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 278, y: 102, t: '4. Optimizer & Schedule', old: '2015: SGD + Step Drops (90 ep)', mod: '2022: AdamW + Cosine Warmup (300 ep)', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 278, y: 102, t: '4. Optimizer & Schedule', old: '2015: SGD + Step Drops (90 ep)', mod: '2022: AdamW or LAMB + Warmup-Cosine', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   stages.forEach((s) => {
     o += card(s.x, s.y, 246, 74, s.fill, s.st, [
@@ -970,7 +970,7 @@ function recipePipeline20152022() {
     ]);
   });
   o += card(16, 188, 508, 62, C.lgreen, C.green, [
-    { t: '5. Evaluation Checkpoint:  2015 Final Iterate θ_T   →   2022 Shadow EMA θ̄_T = ρ θ̄ + (1−ρ) θ', fs: 13, fw: 700, fill: D.green.dark },
+    { t: '5. Evaluated Weights:  2015 Final Iterate θ_T   →   2022 Often an EMA θ̄_T = ρ θ̄ + (1−ρ) θ', fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Stronger augmentation + regularization requires longer training horizons (300–600 epochs)', fs: 12, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);

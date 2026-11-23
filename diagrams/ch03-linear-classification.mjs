@@ -330,9 +330,9 @@ const entropyKl = () => threeStages(560, 262, 'Shannon Information Theory: Cross
 // ═══════════════════════════════════════════════════════════════════════════
 
 const benchmarkSweetspot = () => stackCards(560, 286, 'Why Fashion-MNIST Is the Goldilocks Vision Benchmark', [
-  { head: 'MNIST Handwritten Digits (1998) — Too Easy', badge: 'Linear ~92%', sub: '70k 28×28 digits: trivial models saturate >99% with no headroom', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+  { head: 'MNIST Handwritten Digits (1998) — Too Easy', badge: 'Linear ~92%', sub: '70k 28×28 digits: small CNNs pass 99%, leaving little headroom', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
   { head: 'Fashion-MNIST Apparel (2017) — Sweet Spot', badge: 'Linear ~83%', sub: '70k 28×28 garments across 10 classes: trains in seconds, CNNs >90%', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
-  { head: 'ImageNet-1K Natural Photos (2009) — Heavy', badge: '1.2M × 224²', sub: '1,000 categories (~150 GB): requires hours of multi-GPU compute', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
+  { head: 'ImageNet-1K / ILSVRC-2012 Photos — Heavy', badge: '1.2M × 224²', sub: '1,000 categories (~150 GB): requires hours of multi-GPU compute', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
 ]);
 
 const garmentTaxonomy = () => stackCards(560, 286, '10 Balanced Fashion-MNIST Classes Grouped by Silhouette', [
@@ -590,7 +590,7 @@ const logsumexpFusion = () => threeStages(560, 262, 'The Fused LogSumExp Cross-E
 const accuracyLimits = () => stackCards(560, 284, 'Three Real-World Conditions That Break Raw Accuracy', [
   { head: '1. Class Imbalance (Rare Positives, π = 1%)', badge: '99% trivial acc', sub: 'True negatives (TN) swamp the denominator while all positives are missed', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark },
   { head: '2. Asymmetric Error Costs (κ_FN ≫ κ_FP)', badge: '100:1 cost ratio', sub: 'Missing a cancer diagnosis costs far more than ordering a follow-up lab test', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
-  { head: '3. Uncalibrated Confidence Scores', badge: 'ECE = Σ(n_b/n)|a_b−c̄_b|', sub: 'Cost thresholds act directly on p̂, failing if the model is overconfident', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
+  { head: '3. Uncalibrated Confidence Scores', badge: 'ECE = Σ(n_b/n)|a_b−p̄_b|', sub: 'Cost thresholds act directly on p̂, failing if the model is overconfident', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
 ]);
 
 function imbalanceMatrix() {
@@ -716,7 +716,7 @@ const calibrationMeaning = () => twoCols(560, 264, 'Accuracy and Calibration Are
     lines: [
       { t: 'Always predicts ŷ = (0.1, ..., 0.1)', mono: true, fs: 11.5 },
       { t: 'on 10 balanced classes:' },
-      { t: 'Confidence c̄ = 0.10, Acc = 0.10', mono: true, fw: 700 },
+      { t: 'Confidence p̄ = 0.10, Acc = 0.10', mono: true, fw: 700 },
       { t: 'ECE = 0.000, zero discrimination!' },
     ],
   },
@@ -724,7 +724,7 @@ const calibrationMeaning = () => twoCols(560, 264, 'Accuracy and Calibration Are
     head: 'Accurate & Overconfident (95%)', fill: D.red.tint, stroke: D.red.base, dark: D.red.dark,
     lines: [
       { t: 'Right on 95% of examples, but' },
-      { t: 'always reports confidence c̄ = 1.00:', mono: true, fs: 11.5 },
+      { t: 'always reports confidence p̄ = 1.00:', mono: true, fs: 11.5 },
       { t: 'ECE = |0.95 − 1.00| = 0.050', mono: true, col: D.red.dark, fw: 700 },
       { t: 'Dangerous for cost thresholds!' },
     ],
@@ -734,8 +734,8 @@ const calibrationMeaning = () => twoCols(560, 264, 'Accuracy and Calibration Are
 
 const eceBins = () => threeStages(560, 258, 'Computing Expected Calibration Error (ECE) Across B = 10 Bins',
   { head: '1. Per-Example Stats', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['conf p̂ᵢ = max_{j} ŷᵢⱼ', 'corr cᵢ = (ĉᵢ == yᵢ)', 'i = 1..10,000'] },
-  { head: '2. Bin Averages', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['10 bins of width 0.1', 'c̄_b = mean(p̂ in I_b)', 'a_b = mean(c in I_b)'] },
-  { head: '3. Weighted Gap', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['ECE =', 'Σ (n_b/n)|a_b − c̄_b|', '< 0.03 on Fashion'] },
+  { head: '2. Bin Averages', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['10 bins of width 0.1', 'p̄_b = mean(p̂ in I_b)', 'a_b = mean(c in I_b)'] },
+  { head: '3. Weighted Gap', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['ECE =', 'Σ (n_b/n)|a_b − p̄_b|', '< 0.03 on Fashion'] },
   { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'Pigeonhole Lower Bound: max_{j} ŷ_j ≥ 1/q = 0.10 for q = 10 Classes', t2: 'Bin [0, 0.1) is always empty (n₁ = 0); filter to bins with n_b ≥ 100 when plotting' }
 );
 
@@ -776,16 +776,16 @@ const bernoulliSe = () => threeStages(560, 258, 'Test Error of a Fixed Classifie
   { head: '1. Fixed Classifier f', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['Chosen BEFORE', 'drawing test set D', 'true error ε(f)'] },
   { head: '2. n i.i.d. Coin Flips', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['eᵢ = (f(xᵢ) ≠ yᵢ)', 'eᵢ ~ Bernoulli(ε)', 'Var(eᵢ) = ε(1−ε) ≤ ¼'] },
   { head: '3. Test Error ε_D(f)', fill: C.lgreen, stroke: C.green, dark: D.green.dark, mono: true, lines: ['E[ε_D] = ε(f)', 'SE = √(ε(1−ε)/n)', '≤ 0.5 / √n'] },
-  { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'On Fashion-MNIST (ε ≈ 0.15, n = 10,000): SE = √(0.15 × 0.85 / 10,000) ≈ 0.36%', t2: 'Square-root law: cutting the error bar in half requires 4× as many test examples!' }
+  { fill: C.lamber, stroke: C.amber, dark: D.orange.dark, t1: 'On Fashion-MNIST (ε ≈ 0.17, n = 10,000): SE = √(0.17 × 0.83 / 10,000) ≈ 0.38%', t2: 'Square-root law: cutting the error bar in half requires 4× as many test examples!' }
 );
 
-const clt10k = () => twoCols(560, 260, 'Why Standard Vision Benchmarks Use n = 10,000 Test Examples',
+const clt10k = () => twoCols(560, 260, 'What n = 10,000 Test Examples Buy: Accuracy to About ±1 Point',
   {
     head: '95% Normal (CLT) Interval', fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     lines: [
       { t: 'ε_D(f) ± 1.96 √(ε(1 − ε) / n)', mono: true, fw: 700, col: D.blue.dark },
-      { t: 'At ε = 0.15, n = 10,000:' },
-      { t: 'radius = 1.96 × 0.36% = ±0.70%', mono: true, fw: 700 },
+      { t: 'At ε = 0.17, n = 10,000:' },
+      { t: 'radius = 1.96 × 0.38% ≈ ±0.7%', mono: true, fw: 700 },
       { t: 'Worst-case variance is at ε = 0.50' },
     ],
   },
@@ -795,10 +795,10 @@ const clt10k = () => twoCols(560, 260, 'Why Standard Vision Benchmarks Use n = 1
       { t: 'Demand worst-case radius ≤ 0.01:' },
       { t: '1.96 × (0.5 / √n) ≤ 0.01', mono: true },
       { t: 'n ≥ (0.98 / 0.01)² = 9,604!', mono: true, col: D.green.dark, fw: 700 },
-      { t: 'Rounded up → n = 10,000 benchmark!' },
+      { t: 'So n = 10,000 gives about ±1 point' },
     ],
   },
-  { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t: 'MNIST, Fashion-MNIST, and CIFAR-10 all ship with n = 10,000 test images' }
+  { fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, t: 'MNIST, Fashion-MNIST, CIFAR-10 test on 10,000 images each: about ±1 point at 95%' }
 );
 
 const hoeffdingVsClt = () => twoCols(560, 266, 'Asymptotic Normal Interval vs. Finite-Sample Hoeffding Bound',
@@ -917,7 +917,7 @@ const sauerGrowth = () => twoCols(560, 264, 'Sauer\'s Lemma: Polynomial O(nᵛ) 
     lines: [
       { t: 'Sauer: Σ_{i≤v} C(n,i) ≤ (en/v)ᵛ', mono: true, fs: 11.5, fw: 700 },
       { t: 'At n = 100 points in ℝ²:' },
-      { t: 'At most 9,902 labelings (O(n²))', mono: true, fs: 11.5, col: D.green.dark, fw: 700 },
+      { t: 'At most 166,751 labelings (O(n³))', mono: true, fs: 11.5, col: D.green.dark, fw: 700 },
       { t: 'VC gap: O(√(v / n)) → 0 as n → ∞!' },
     ],
   },
@@ -928,7 +928,7 @@ const vcVsHeldout = () => twoCols(560, 264, 'A Priori VC Bounds vs. Post-Trainin
   {
     head: 'A Priori VC Bound (Uniform ∀f∈F)', fill: C.lamber, stroke: C.amber, dark: D.orange.dark,
     lines: [
-      { t: 'Linear model (v = 785, n = 60,000):' },
+      { t: 'One halfspace (v = 785, n = 60,000):' },
       { t: '√(v/n) ≈ ±11.4% (actual gap ~1%)', mono: true, fs: 11.5, col: D.orange.dark, fw: 700 },
       { t: 'Overparameterized deep net (v ≥ n):' },
       { t: '√(v/n) ≥ 100% (completely vacuous!)' },
@@ -939,7 +939,7 @@ const vcVsHeldout = () => twoCols(560, 264, 'A Priori VC Bounds vs. Post-Trainin
     lines: [
       { t: 'Evaluates ONLY the final trained f_S' },
       { t: 'on n_test = 10,000 untouched images:' },
-      { t: '95% CLT radius = ±0.70%!', mono: true, col: D.green.dark, fw: 700 },
+      { t: '95% CLT radius ≈ ±0.7%!', mono: true, col: D.green.dark, fw: 700 },
       { t: 'Independent of parameter count!' },
     ],
   },

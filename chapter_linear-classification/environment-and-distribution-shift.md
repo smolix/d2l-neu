@@ -127,6 +127,8 @@ $$
 
 Dropping the constant factor $n/m$ (which scales the objective without moving its minimizer), we simply weight each source example by $\beta_i = \exp(h(\mathbf{x}^{(i)}))$ (or $\min(\exp(h(\mathbf{x}^{(i)})), c)$)!
 
+The domain classifier has a second use: it tells us whether there is any shift to correct. If $p_T(\mathbf{x}) = p_S(\mathbf{x})$, nothing separates source inputs from target inputs, and on pooled inputs that it was not trained on the domain classifier stays at chance ($1/2$ when $n = m$). An accuracy clearly above chance is therefore evidence that the inputs have shifted. This check is known as a *classifier two-sample test* :cite:`Lopez-Paz.Oquab.2017`. Label shift has an even cheaper check: run the deployed classifier on the unlabeled target inputs and compare how often it predicts each class with the same frequencies on source validation data. A deployed system should watch both numbers, since a shift has to be noticed before it can be corrected.
+
 ### A Two-Dimensional Example
 
 Let us watch domain-classifier reweighting rescue a linear classifier on a 2D problem where $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\top, \mathbf{I}_2)$, and the true label is $y = \mathbf{1}(x_2 > \frac{1}{2}x_1^2 - 1)$. Because the true parabolic boundary curves upward, the best linear boundary near $(0, 0)$ is nearly horizontal and fails miserably near $(2, 0)$. We generate $n = 1{,}000$ source and $1{,}000$ target points, fit the logistic domain classifier $h(\mathbf{x})$ to estimate $\beta_i = \exp(h(\mathbf{x}^{(i)}))$, and compare unweighted, importance-weighted, and clipped ($c = 5$) logistic regression:
@@ -158,7 +160,7 @@ def fit_logreg(X, y, weights=None, lr=0.1, steps=2000):
     return w, b
 ```
 
-First, we pool `X_src` (domain label $z = 0$) and `X_tgt` ($z = 1$) to train our domain classifier `(w_h, b_h)` via `fit_logreg`, compare the learned logit $h(\mathbf{x})$ against the analytical Gaussian log-ratio $2x_1 - 2$, and inspect the resulting source importance weights `beta` and their effective sample size `ess`:
+First, we pool `X_src` (domain label $z = 0$) and `X_tgt` ($z = 1$) to train our domain classifier `(w_h, b_h)` via `fit_logreg`, compare the learned logit $h(\mathbf{x})$ against the analytical Gaussian log-ratio $2x_1 - 2$, and inspect the resulting source importance weights `beta` and their effective sample size `ess`. The last lines draw fresh source and target inputs and measure how often the domain classifier tells them apart:
 
 ```{.python .input #environment-and-distribution-shift-covariate-shift-correction-2}
 z = np.concatenate([np.zeros(n), np.ones(n)])      # domain label: 1 = target
@@ -169,7 +171,13 @@ print(f'learned h(x) = {w_h[0]:.2f} x1 {w_h[1]:+.2f} x2 {b_h:+.2f}'
       f'   (true log-ratio: 2 x1 - 2)')
 print(f'largest weight: {beta.max():.0f}; effective sample size: '
       f'{ess(beta):.0f} of {n}, {ess(np.minimum(beta, 5)):.0f} if clipped at 5')
+X_out = np.concatenate([rng.normal(0, 1, (n, 2)),          # fresh source and
+                        rng.normal(0, 1, (n, 2)) + [2, 0]])  # target inputs
+print(f'domain classifier accuracy on held-out inputs: '
+      f'{((X_out @ w_h + b_h > 0) == (z == 1)).mean():.2f} (chance: 0.50)')
 ```
+
+On fresh inputs the domain classifier separates source from target with an accuracy of about $0.84$, against $0.50$ by chance, so this shift is easy to detect. No classifier can do better here: the two Gaussians differ only in the mean of $x_1$, the best rule is $x_1 > 1$, and it is right with probability $\Phi(1) \approx 0.84$, where $\Phi$ is the standard normal distribution function.
 
 Next, we train `fit_logreg` on the labeled source data `(X_src, y_src)` under three weighting schemes—`'unweighted'`, raw importance weights `'weighted'` (`beta`), and clipped weights `'clipped'` (`np.minimum(beta, 5)`)—and evaluate each classifier's accuracy on `X_tgt` and `X_src`:
 
@@ -203,6 +211,8 @@ d2l.plt.legend();
 
 Look at the result: on the shifted target cloud, unweighted training scores only $\sim 50\%$–$60\%$ (worse than always guessing the majority class at $\sim 70\%$), whereas importance reweighting tilts the linear decision boundary along the right arm of the parabola and boosts target accuracy to $\sim 95\%$—using *zero* target labels!
 
+It would be wrong to conclude that we should always reweight under covariate shift. Reweighting helped here because a line cannot follow a parabola: the model is misspecified and has to choose where to be accurate. A model flexible enough to fit $p(y \mid \mathbf{x})$ wherever the source has data gains nothing, since the weighted and the unweighted objective then share the same minimizer :cite:`Shimodaira.2000`. Deep networks are close to this regime. Once they are trained to a low training loss, the effect of importance weights fades :cite:`Byrd.Lipton.2019`, and on the WILDS collection of real-world shifts, methods designed for distribution shift rarely beat plain empirical risk minimization :cite:`Koh.Sagawa.Marklund.ea.2021`. In practice, covariate shift is handled mostly by training on broader data and by fine-tuning on a few labeled target examples.
+
 ## Label Shift Correction
 :label:`subsec_label-shift-correction`
 
@@ -220,7 +230,7 @@ $$
 $$
 :eqlabel:`eq_label-shift-system`
 
-Whenever $\mathbf{C}$ is invertible (which is guaranteed if the classifier gets more than half of each class right, $C_{jj} > 1/2$; see Exercise :exref:`ex_environment-and-distribution-shift-label-shift-system`), solving the $q \times q$ linear system $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ recovers the unknown target class proportions without a single target label! Furthermore, if the source classifier's probabilities are calibrated, Bayes' rule adapts its predictions to the target domain instantly—without even retraining—by adding the log-prior shift $\log(\hat{p}_T(y) / p_S(y))$ to each class's logit.
+Whenever $\mathbf{C}$ is invertible (which is guaranteed if the classifier gets more than half of each class right, $C_{jj} > 1/2$; see Exercise :exref:`ex_environment-and-distribution-shift-label-shift-system`), solving the $q \times q$ linear system $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ recovers the unknown target class proportions without a single target label! Furthermore, if the source classifier's probabilities approximate the source posterior $p_S(y \mid \mathbf{x})$ (a stronger requirement than the top-class calibration of :numref:`sec_classification`), Bayes' rule adapts its predictions to the target domain instantly—without even retraining—by adding the log-prior shift $\log(\hat{p}_T(y) / p_S(y))$ to each class's logit.
 
 Let us test confusion-matrix inversion and Bayes logit adjustment on Fashion-MNIST. We first train `d2l.SoftmaxRegression` on the balanced training split and collect its validation logits `O`, labels `y`, and predicted classes `pred = O.argmax(axis=1)`:
 
@@ -552,6 +562,7 @@ Let $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\to
 @environment-and-distribution-shift-covariate-shift-correction-2
 
 - **Exact log-ratio & clipping:** Learned $h(\mathbf{x}) \approx 2x_1 - 2$ matches $\log(p_T/p_S)$, while clipping $\beta_i \le 5$ lifts $n_{\mathrm{eff}}$ from $\sim 30$–$120$ to $\sim 200$.
+- **Shift detected:** On fresh inputs the domain classifier reaches accuracy $\approx 0.84$ vs. $0.50$ by chance; the best possible here is $\Phi(1) \approx 0.84$.
 :::
 
 ::: {.col .fig}

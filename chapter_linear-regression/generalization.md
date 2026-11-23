@@ -471,7 +471,8 @@ Using only the 20 training examples, 5-fold cross-validation cleanly rejects bot
    all $n$ examples, let $\hat{y}^{(-i)}$ be the prediction at
    $\mathbf{x}^{(i)}$ of the fit that omits example $i$, and let
    $h_i = \mathbf{x}^{(i)\top}\mathbf{A}^{-1}\mathbf{x}^{(i)}$. Use the
-   Sherman--Morrison identity
+   Sherman--Morrison identity (:eqref:`eq_mdl-sherman-morrison`, with
+   $\mathbf{w} = -\mathbf{u}$)
    $$(\mathbf{A} - \mathbf{u}\mathbf{u}^\top)^{-1} = \mathbf{A}^{-1} + \frac{\mathbf{A}^{-1}\mathbf{u}\mathbf{u}^\top\mathbf{A}^{-1}}{1 - \mathbf{u}^\top\mathbf{A}^{-1}\mathbf{u}}$$
    with $\mathbf{u} = \mathbf{x}^{(i)}$ to show that
    $$y^{(i)} - \hat{y}^{(-i)} = \frac{y^{(i)} - \hat{y}^{(i)}}{1 - h_i}.$$

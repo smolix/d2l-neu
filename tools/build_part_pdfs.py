@@ -50,6 +50,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
+from build_date import version_page_tex  # noqa: E402
 from fix_latex import SRC_MARKER  # noqa: E402
 from gen_pdf import PDF_FONTSIZE, PDF_GEOMETRY  # noqa: E402
 from d2l_preprocess import CHAPTER_NUMBERING  # noqa: E402
@@ -258,8 +259,8 @@ def build_part(slug, fw, pdf_dir, out_dir, book_tex, full_labels):
            + '\\begin{document}\n'
            + '\\frontmatter\n'
            + f'\\includepdf[pages=1]{{{cover.relative_to(pdf_dir)}}}\n'
-           # the back of the cover: blank, without a running head
-           + '\\null\\thispagestyle{empty}\\newpage\n'
+           # the back of the cover: the version (build date) at its foot
+           + version_page_tex() + '\n'
            + '\\renewcommand*\\contentsname{Table of contents}\n'
            + '{\n\\setcounter{tocdepth}{2}\n\\tableofcontents\n}\n'
            + '\\mainmatter\n'

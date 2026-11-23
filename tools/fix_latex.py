@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from build_date import version_page_tex
 from d2l_preprocess import CHAPTER_NUMBERING, PDF_CHAPTER_FILES
 
 
@@ -79,8 +80,8 @@ def add_book_cover(content, tex_dir):
     rel = Path(os.path.relpath(BOOK_COVER, tex_dir)).as_posix()
     cover = ('\\frontmatter\n'
              f'\\includepdf[pages=1]{{{rel}}}\n'
-             # the back of the cover: blank, without a running head
-             '\\null\\thispagestyle{empty}\\newpage')
+             # the back of the cover: the version (build date) at its foot
+             + version_page_tex())
     content = content[:m.start()] + cover + content[m.end():]
     begin = re.search(r'(?m)^\\begin\{document\}[ \t]*$', content)
     content = (content[:begin.start()] + '\\usepackage{pdfpages}\n'

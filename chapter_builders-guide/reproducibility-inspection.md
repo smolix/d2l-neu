@@ -416,7 +416,7 @@ print(f'mean {accs.mean():.1f}, max - min {np.ptp(accs):.1f} points')
 ```{.python .input #reproducibility-inspection-seed-spread-1}
 %%tab pytorch
 def train_classifier(seed, data):
-    torch.manual_seed(seed)  # initialization, shuffle order, worker seeds
+    torch.manual_seed(seed)  # initialization and shuffle order
     model = d2l.SoftmaxRegression(num_outputs=10, lr=0.1)
     trainer = d2l.Trainer(max_epochs=3, num_gpus=1)
     trainer.board.display = False

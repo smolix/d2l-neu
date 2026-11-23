@@ -1139,6 +1139,176 @@ def fig_fsdp_lifecycle():
     fl.save(fig, "mdl-perf-fsdp-lifecycle")
 
 
+def fig_kernel_replay():
+    """Kernel replay (13.3): launched one at a time, short kernels leave the
+    GPU idle while the host issues the next one; a CUDA graph issues the
+    whole recorded sequence with one host launch and the kernels run back to
+    back.  Proportions follow the 60-layer stack: each kernel takes a small
+    fraction (~15%) of the host's per-launch time h."""
+    # Height ratios match the panels' y spans, so both share one scale.
+    fig, axes = plt.subplots(2, 1, figsize=(9.2, 4.6), sharex=True,
+                             gridspec_kw={"height_ratios": [2.45, 3.15],
+                                          "hspace": 0.04})
+    n, H, K, g = 8, 1.0, 0.17, 0.03   # kernels, launch h, kernel, start gap
+    h = 0.5
+    y_host, y_gpu = 1.0, 0.0
+    T_eager = n * H + K
+    T_graph = 1.3 * H + n * (K + g)
+
+    def lanes(ax, title):
+        for y, name in ((y_host, "host"), (y_gpu, "GPU")):
+            ax.plot([0.0, T_eager + 0.15], [y - h / 2 - 0.06] * 2,
+                    color=LIGHT, lw=0.8, zorder=1)
+            ax.text(-0.25, y, name, ha="right", va="center", fontsize=13,
+                    color="black")
+        ax.text(0.0, 1.72, title, ha="left", va="center", fontsize=13,
+                color="black")
+
+    # (top) Eager / per-kernel launches.
+    ax = axes[0]
+    lanes(ax, "one host launch per kernel: the GPU idles between kernels")
+    for j in range(n):
+        _lane_kernel(ax, j * H + 0.03, H - 0.06, y_host, h, GRAY,
+                     label="$h$" if j == 0 else None, fontsize=13)
+        _lane_kernel(ax, (j + 1) * H, K, y_gpu, h, BLUE)
+    ax.text(1.5 * H + K / 2 + 0.03, y_gpu, "idle", ha="center", va="center",
+            fontsize=12.5, color="black", style="italic")
+    ax.plot([T_eager, T_eager], [-0.45, 1.45], color="black", lw=1.2,
+            ls="--")
+    fl.clean_axes(ax, lim=((-1.3, T_eager + 0.3), (-0.45, 2.0)), hide=True,
+                  equal=False)
+
+    # (bottom) CUDA graph replay.
+    ax = axes[1]
+    lanes(ax, "CUDA graph: one launch replays the recorded kernels")
+    _lane_kernel(ax, 0.03, 1.3 * H - 0.06, y_host, h, GRAY,
+                 label="replay", fontsize=12.5)
+    for j in range(n):
+        _lane_kernel(ax, 1.3 * H + j * (K + g) + g, K, y_gpu, h, BLUE)
+    ax.plot([T_graph, T_graph], [-0.45, 1.45], color="black", lw=1.2,
+            ls="--")
+    ax.plot([T_eager, T_eager], [-0.45, 1.45], color=GRAY, lw=1.0,
+            ls=(0, (3, 3)))
+    ax.annotate("", xy=(T_eager, -0.62), xytext=(T_graph, -0.62),
+                arrowprops=dict(arrowstyle="<->", color=GREEN, lw=1.6,
+                                shrinkA=0, shrinkB=0))
+    ax.text((T_graph + T_eager) / 2, -0.72, "time saved", ha="center",
+            va="top", fontsize=12.5, color=GREEN_T)
+    fl.clean_axes(ax, lim=((-1.3, T_eager + 0.3), (-1.15, 2.0)), hide=True,
+                  equal=False)
+    fl.save(fig, "mdl-perf-kernel-replay")
+
+
+def fig_star_vs_ring():
+    """Star versus ring allreduce on k = 4 devices.  In the star every
+    gradient travels to device 0 and the sum travels back, so the hub sends
+    and receives (k-1)S bytes while the others move S; the ring moves
+    2(k-1)S/k per device on every link at once."""
+    from matplotlib.patches import Circle, FancyArrowPatch
+    k = 4
+    fig, (axs, axr) = plt.subplots(1, 2, figsize=(9.0, 4.0))
+    R, r = 1.3, 0.30
+    lim = ((-1.85, 1.85), (-2.3, 1.7))
+
+    def node(ax, x, y, lab, hub=False):
+        ax.add_patch(Circle((x, y), r, zorder=3, lw=1.6,
+                            fc=fl.T.ORANGE.tint if hub else fl.T.BLUE.tint,
+                            ec=ORANGE if hub else BLUE))
+        ax.text(x, y, lab, ha="center", va="center", fontsize=13,
+                color="black", zorder=4)
+
+    def link(ax, p, q, rad=0.0, both=False):
+        ax.add_patch(FancyArrowPatch(
+            p, q, connectionstyle=f"arc3,rad={rad}",
+            arrowstyle="<|-|>" if both else "-|>", mutation_scale=13,
+            color=fl.T.INK, lw=1.4, shrinkA=2, shrinkB=2,
+            zorder=2))
+
+    def toward(p, q, d):
+        """Point at distance d from p along p->q."""
+        v = np.subtract(q, p)
+        return tuple(np.add(p, v / np.linalg.norm(v) * d))
+
+    # (a) Star: device 0 in the centre, the others around it.
+    hub = (0.0, 0.0)
+    ang = [np.pi / 2 + 2 * np.pi * i / (k - 1) for i in range(k - 1)]
+    leaves = [(R * np.cos(a), R * np.sin(a)) for a in ang]
+    for i, p in enumerate(leaves):
+        link(axs, toward(hub, p, r + 0.02), toward(p, hub, r + 0.02),
+             both=True)
+        node(axs, *p, str(i + 1))
+    node(axs, *hub, "0", hub=True)
+    axs.text(0.0, -1.6, "star: device 0 sends and\nreceives $(k-1)S$ bytes",
+             ha="center", va="top", fontsize=13, color="black")
+    fl.clean_axes(axs, lim=lim, hide=True)
+
+    # (b) Ring: device g sends to device g + 1, clockwise from the top.
+    ang = [np.pi / 2 - 2 * np.pi * g / k for g in range(k)]
+    pts = [(R * np.cos(a), R * np.sin(a)) for a in ang]
+    gap = (r + 0.05) / R
+    for g in range(k):
+        a0, a1 = ang[g] - gap, ang[g] - 2 * np.pi / k + gap
+        link(axr, (R * np.cos(a0), R * np.sin(a0)),
+             (R * np.cos(a1), R * np.sin(a1)), rad=-0.3)
+    for g, p in enumerate(pts):
+        node(axr, *p, str(g))
+    axr.text(0.0, -1.6, "ring: every device sends and\n"
+             "receives $2(k-1)S/k$ bytes", ha="center", va="top",
+             fontsize=13, color="black")
+    fl.clean_axes(axr, lim=lim, hide=True)
+    fl.save(fig, "mdl-perf-star-vs-ring")
+
+
+def fig_collectives():
+    """The four collectives on two GPUs.  Each GPU starts with a vector of
+    two chunks (GPU 0: a0, a1; GPU 1: b0, b1), or, for all-gather, with only
+    its own shard (chunk g on GPU g).  Raw chunks are blue, sums green,
+    following the ring-allreduce figure."""
+    fig, axes = plt.subplots(2, 2, figsize=(9.6, 3.9))
+    fig.subplots_adjust(wspace=0.04, hspace=0.02)
+    cw, ch, gx = 1.2, 0.58, 0.08      # cell width/height, gap between cells
+    rows = (0.55, -0.35)                # GPU 0, GPU 1 row centres
+
+    def cell(ax, x, y, text, summed=False):
+        col = GREEN if summed else BLUE
+        tint = fl.T.GREEN.tint if summed else fl.T.BLUE.tint
+        ax.add_patch(Rectangle((x, y - ch / 2), cw, ch, fc=tint, ec=col,
+                               lw=1.4, zorder=3))
+        ax.text(x + cw / 2, y, text, ha="center", va="center", fontsize=13,
+                color="black", zorder=4)
+
+    def vec(ax, x0, y, chunks):
+        for j, c in enumerate(chunks):
+            cell(ax, x0 + j * (cw + gx), y, c, summed="+" in c)
+
+    def panel(ax, title, before, after, left):
+        ax.text(2.95, 1.3, title, ha="center", va="center", fontsize=13.5,
+                color="black")
+        for y, b, a in zip(rows, before, after):
+            vec(ax, 0.0, y, b)
+            vec(ax, 3.6, y, a)
+        ax.annotate("", xy=(3.4, 0.1), xytext=(2.7, 0.1),
+                    arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4,
+                                    mutation_scale=14))
+        if left:
+            for y, g in zip(rows, (0, 1)):
+                ax.text(-0.15, y, f"GPU {g}", ha="right", va="center",
+                        fontsize=13, color="black")
+        fl.clean_axes(ax, lim=((-1.25, 6.2), (-0.75, 1.55)), hide=True)
+
+    a0, a1, b0, b1 = "$a_0$", "$a_1$", "$b_0$", "$b_1$"
+    s0, s1 = "$a_0{+}b_0$", "$a_1{+}b_1$"
+    panel(axes[0, 0], "allreduce", [[a0, a1], [b0, b1]],
+          [[s0, s1], [s0, s1]], left=True)
+    panel(axes[0, 1], "reduce-scatter", [[a0, a1], [b0, b1]],
+          [[s0], [s1]], left=False)
+    panel(axes[1, 0], "all-gather", [[a0], [b1]],
+          [[a0, b1], [a0, b1]], left=True)
+    panel(axes[1, 1], "all-to-all", [[a0, a1], [b0, b1]],
+          [[a0, b0], [a1, b1]], left=False)
+    fl.save(fig, "mdl-perf-collectives")
+
+
 # --------------------------------------------------------------------------- #
 # Registry + main                                                             #
 # --------------------------------------------------------------------------- #
@@ -1164,6 +1334,9 @@ FIGURES = [
     fig_ring_allreduce,
     fig_ddp_overlap,
     fig_fsdp_lifecycle,
+    fig_kernel_replay,
+    fig_star_vs_ring,
+    fig_collectives,
 ]
 
 

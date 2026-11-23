@@ -247,8 +247,9 @@ P_\textrm{fp32} = 16{,}384 \times 2 \times 2.52 \times 10^{9}\ \textrm{s}^{-1}
 $$
 
 Its tensor cores run tf32 at the same 82.6 TFLOP/s, bf16 (with fp32
-accumulation) at $2\times = 165.2$ TFLOP/s, and fp8 at $4\times = 330.4$
-TFLOP/s.
+accumulation) at $2\times = 165.2$ TFLOP/s, and fp8 nominally at
+$4\times = 330.4$ TFLOP/s. We measure the tf32 and bf16 rates in this
+chapter; the fp8 rate is a nominal figure that none of our code exercises.
 
 ![Floating-point formats drawn bit for bit. fp32, tf32, and bf16 share an
 8-bit exponent and hence a range. tf32 is a compute mode of the tensor
@@ -261,8 +262,8 @@ roofline effects:
 
 1. **Halving the width halves the bytes moved** (speeding up bandwidth-bound
    kernels up to $2\times$ and halving weight storage), except for tf32, which
-   computes on 19-bit mantissas inside the tensor cores but still stores 32-bit
-   floats in memory.
+   computes on 19-bit values (a 10-bit mantissa) inside the tensor cores but
+   still stores 32-bit floats in memory.
 2. **Halving the width usually doubles the tensor-core compute roof $P$.**
 
 Formats of 8 bits or fewer require explicit scale factors. fp8 uses E4M3 for
@@ -276,7 +277,7 @@ outliers, so hardware applies *microscaling*—one shared scale per block of 16
 
 :numref:`tab_gpu_specs` compares two data-center GPUs and two consumer cards.
 
-:Four GPUs as of late 2026. Dense tensor-core throughput with fp32 accumulation at boost clock, in TFLOP/s (TF). Links count one direction.
+:Four widely deployed GPUs. Dense tensor-core throughput with fp32 accumulation at boost clock, in TFLOP/s (TF). The fp8 and fp4 entries of the two consumer cards are nominal: fp8 is twice the bf16 rate, and the RTX 5090's fp4 entry follows the vendor's headline figure, not a measurement. Links count one direction.
 :label:`tab_gpu_specs`
 
 | | H100 SXM | B200 | RTX 4090 (ours) | RTX 5090 |
@@ -392,9 +393,12 @@ single-stream decode rate is the inverse of the *memory sweep time* $C/\beta$:
 the time required to read every byte of GPU DRAM once. Across all four GPUs in
 :numref:`tab_gpu_specs`, capacity and bandwidth vary by $7\text{--}8\times$,
 yet $C/\beta$ stays near **20 ms** (24 ms on H100 and RTX 4090, 22.5 ms on
-B200, 18 ms on RTX 5090). Any model that fills its GPU therefore decodes a
-single stream at roughly 40–55 tokens/s, whether on a consumer card or a
-flagship data-center GPU.
+B200, 18 ms on RTX 5090). Any dense model that fills its GPU therefore decodes
+a single stream at roughly 40–55 tokens/s, whether on a consumer card or a
+flagship data-center GPU. The bound assumes that every token reads every
+weight. A mixture-of-experts model (:numref:`sec_moe`) reads only the experts
+that its router selects for a token, so it decodes faster than $C/\beta$
+suggests.
 
 Batching $B$ concurrent sequences amortizes weight reads across $B$ tokens,
 raising weight intensity to $I \approx B$ FLOP/byte until $B$ reaches the
@@ -406,16 +410,16 @@ sequence still reads its own KV cache (:numref:`subsec_kv-cache-batching`).
 :numref:`tab_rules_of_thumb` summarizes the key hardware constants used
 throughout the rest of this chapter.
 
-:Rules of thumb: characteristic magnitudes, their values on our machine (four RTX 4090s without peer-to-peer access), and why each matters.
+:Rules of thumb: characteristic magnitudes across the widely deployed GPUs of :numref:`tab_gpu_specs` (the newest data-center parts exceed the upper ends), their values on our machine (four RTX 4090s without peer-to-peer access), and why each matters.
 :label:`tab_rules_of_thumb`
 
-| quantity | magnitude, late 2026 | our machine | why it matters |
+| quantity | typical magnitude | our machine | why it matters |
 |---|---|---|---|
 | host time per call, $h$ | 10 µs to 0.1 ms | 13–100 µs (:numref:`sec_perf_model`) | small operations cannot keep the GPU busy |
 | peak bf16 rate, $P$ | 0.17–2.3 PFLOP/s | 165 TFLOP/s | speed limit of large matrix products |
 | GPU memory bandwidth, $\beta$ | 1–8 TB/s | ~0.9 TB/s (1.0 rated) | speed limit of elementwise ops and decoding |
 | ridge point, $P/\beta$ | 120–300 FLOP/byte | 164 FLOP/byte | below it, memory bandwidth sets the time |
-| sweep time, $C/\beta$ | ~20 ms | 24 ms | largest model that fits decodes 1 stream at ~40–55 tok/s |
+| sweep time, $C/\beta$ | ~20 ms | 24 ms | largest dense model that fits decodes 1 stream at ~40–55 tok/s |
 | host to device, pinned | 32–64 GB/s (PCIe 4/5) | ~23 GB/s | keep training data on device or in pinned memory |
 | GPU to GPU | 450–900 GB/s (NVLink) | $\le 23$ GB/s via host (:numref:`sec_multi_gpu`) | sets the time of every gradient exchange |
 | bytes per parameter (Adam) | 16 (fp32), 18 (mixed) | 16–18 | determines what model size fits (:numref:`sec_memory_precision`) |
@@ -433,7 +437,7 @@ requires $\beta \times \textrm{latency}$ bytes in flight across warps.
 Narrower number formats halve memory traffic and usually double $P$. Finally,
 single-stream decoding is bounded by $\beta / (2N + \textrm{KV bytes})$, and
 because the memory sweep time $C/\beta$ is ~20 ms across modern GPUs, the
-largest model that fits on any card decodes a single stream at ~40–55
+largest dense model that fits on any card decodes a single stream at ~40–55
 tokens/s.
 
 ## Exercises

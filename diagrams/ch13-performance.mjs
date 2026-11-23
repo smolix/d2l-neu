@@ -1187,10 +1187,10 @@ function ddpVsFsdpDecision() {
   ], D.green.dark);
   o += card(290, 40, 250, 152, C.lamber, C.amber, '16N Exceeds 1 GPU (e.g. 1.9B GPT)', [
     { t: 'Escalate ZeRO-1/2 → ZeRO-3 (FSDP)', fill: D.orange.dark, fw: 700 },
-    'ZeRO-1/2 keep weights & comm once;',
+    'ZeRO-1/2 keep full weights resident;',
     'FSDP frees weights per block, so it',
     { t: 're-gathers 2× per micro-batch!', fill: D.red.dark, fw: 700 },
-    { t: 'FSDP comm: (2m + 1)(k−1)/k · S', mono: true, fill: C.ink },
+    { t: 'FSDP comm: 3m(k−1)/k · S', mono: true, fill: C.ink },
   ], D.orange.dark);
   o += footerBox(20, 206, 520, 60, C.lblue, C.blue, [
     { t: 'Escalation Rule on Slow PCIe Links:', fill: D.blue.dark, fw: 700 },
@@ -1215,9 +1215,9 @@ function gptGapOverview() {
   o += card(198, 40, 164, 152, C.lamber, C.amber, 'tf32 Math Floor', [
     { t: '11.3 ms ideal', mono: true, fill: D.orange.dark, fw: 700 },
     'At P = 82.6 TFLOP/s',
-    'Half the 25 ms gap is',
-    'number format alone;',
-    'half is memory traffic!',
+    'Format explains ~6 ms',
+    'of the ~19 ms gap; the',
+    'rest is idle or below peak',
   ], D.orange.dark);
   o += arrow(364, 116, 374, 116, C.green);
   o += card(376, 40, 164, 152, C.lgreen, C.green, 'bf16 Math Floor', [
@@ -1320,12 +1320,12 @@ function criticalBatchNoise() {
     { t: 'E(b) ∝ b / b_noise (more tokens!)', mono: true, fill: D.orange.dark, fw: 700 },
     'Gradient noise is already averaged out',
     'Larger batches make same step progress',
-    '200 steps @ B=512 (13M tok, loss 2.08)',
-    'lags 1000 steps @ B=64 (8M tok, 1.35)',
+    '200 steps @ B=512 (13M tok, loss 1.5–1.6)',
+    'lags 1000 steps @ B=64 (8M tok, 1.34)',
   ], D.orange.dark);
   o += footerBox(20, 206, 520, 58, C.lblue, C.blue, [
     { t: 'Batch-Preserving Ops (compile, bf16, FlashAttention, strong DP) Always Cut Time-to-Target;', fill: D.blue.dark, fw: 700 },
-    { t: 'Batch-Enlarging Ops (B=512, weak DP) Cut Time-to-Target iff b_noise > (512 − 64ρ)/(ρ − 1).', mono: true, fill: C.ink },
+    { t: 'Batch-Enlarging Ops (B=512, weak DP) Help iff b_noise > (512 − 64ρ)/(ρ − 1)', mono: true, fill: C.ink },
   ]);
   return svg(W, H, o);
 }

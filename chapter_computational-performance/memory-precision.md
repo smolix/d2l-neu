@@ -247,8 +247,9 @@ KiB) per block and 212 KiB for the embedding, output projection, and loss.
 :begin_tab:`jax`
 Before XLA compilation, `jax.vjp` records $29.0d$ values (232 KiB) per block
 because `nnx.RMSNorm` and `jax.nn.silu` are written as composite elementwise
-expressions whose intermediate arrays remain in the raw VJP residuals (XLA's
-compiler later fuses and recomputes many of them, as we verify below).
+expressions whose intermediate arrays remain in the raw VJP residuals. Whether
+the compiled program keeps all of them is a question for XLA's memory plan,
+which we read below.
 :end_tab:
 
 ### The Memory Budget
@@ -320,11 +321,25 @@ for n in (2048, 4096):  # Growth per token from n to 2n tokens
           f'per token; counted {(2 * block + head) / 2**10:.0f} KiB')
 ```
 
-At the start of the backward pass, while all forward activations are still
-live, the cross-entropy backward pass materializes the gradient with respect
-to the log-probabilities and the gradient with respect to the logits—two
-temporaries of $V = 50{,}257$ fp32 values per token ($8V \approx 393$ KiB/token
-above the saved-tensor count).
+At small sizes fixed overheads still show. Once they are negligible, the peak
+grows in proportion to the number of tokens, and the growth per token is the
+number to compare with our count.
+
+:begin_tab:`pytorch`
+The measured peak grows by about 905 KiB per token, 393 KiB more than the
+511 KiB we counted. The excess arises at the start of the backward pass,
+while all forward activations are still live: the cross-entropy backward pass
+materializes the gradient with respect to the log-probabilities and the
+gradient with respect to the logits—two temporaries of $V = 50{,}257$ fp32
+values per token ($8V \approx 393$ KiB/token above the saved-tensor count).
+:end_tab:
+
+:begin_tab:`jax`
+From 4,096 to 8,192 tokens XLA's planned peak grows by about 690 KiB per
+token, the same as the 692 KiB of the raw VJP count. The compiled program therefore needs as much memory per
+token as `jax.vjp` recorded, with no measurable excess at the loss, and the
+count can serve as the budget.
+:end_tab:
 
 :begin_tab:`pytorch`
 We can visualize the entire allocation timeline of an Adam step on 4,096
@@ -532,7 +547,7 @@ L \cdot 4d + a + a_\textrm{out} + \Delta,
 $$
 
 where $a$ is the single block currently being recomputed and $\Delta$ is the
-backward temporary excess measured in :numref:`subsec_mp-measuring`.
+excess of the measured peak over the count (:numref:`subsec_mp-measuring`).
 
 ```{.python .input #memory-precision-activation-checkpointing-1}
 %%tab pytorch, jax
@@ -736,17 +751,17 @@ that calls for each.
 
 | symptom | technique | effect on memory | cost |
 |---|---|---|---|
-| matrix products dominate step time | bf16 mixed precision | activations $\times 0.6$, fixed state $+2N$ for weight copies | 8-bit mantissa rounding (fp16 also needs loss scaling) |
+| matrix products dominate step time | bf16 mixed precision | activations $\times 0.6$, fixed state $+2N$ for weight copies | 8-bit significand rounding (fp16 also needs loss scaling) |
 | a useful micro-batch does not fit | activation checkpointing | stored activations per block from $a$ to $4d$ bytes/token | one extra forward pass (~25–33% more time) |
 | output layer and loss dominate | chunked cross-entropy loss | $a_\textrm{out}$ and $\Delta$ for one token chunk at a time | one extra pass through the output projection (~3% FLOPs) |
 | global batch exceeds micro-batch capacity | gradient accumulation | none; global batch grows $m$-fold | accumulator traffic $2I^*/n$; repeated weight reads per micro-batch |
 | $16N$ parameter state alone fills the card | sharding weights, gradients, and optimizer state (:numref:`sec_sharding`) | $16N/k$ on each of $k$ GPUs | inter-GPU collective communication |
 
 For our 1B-parameter GPT on a single RTX 4090, bf16 mixed precision fits two
-sequences of 1,024 tokens without checkpointing, and accumulating 256
+or three sequences of 1,024 tokens without checkpointing, and accumulating 256
 micro-batches reaches a global batch of 524,288 tokens. At $6N$ FLOPs/token,
-however, one global step requires $3.2 \times 10^{15}$ FLOPs—at least 22 s per
-step on one card, or well over a month for 100,000 steps (52B tokens). A
+however, one global step requires $3.2 \times 10^{15}$ FLOPs—at least 19 s per
+step on one card, or more than three weeks for 100,000 steps (52B tokens). A
 single GPU can hold a step of our GPT, but finishing the run requires multiple
 GPUs (:numref:`sec_multi_gpu`).
 
@@ -757,7 +772,8 @@ Adam, $18N$ with bf16 weight copies) and a per-token activation term. By three
 differentiation rules (linear layers keep inputs, elementwise functions keep
 inputs or outputs, products keep both factors), a fused SwiGLU Transformer
 block stores ~$20d$ values per token, and the cross-entropy loss stores $V$
-log-probabilities plus $2V$ backward temporaries. Mixed precision accelerates
+log-probabilities; the peak can exceed this count by backward temporaries at
+the loss, which is why we measure it. Mixed precision accelerates
 matrix products on tensor cores while leaving total memory capacity nearly
 unchanged; activation checkpointing stores only block inputs ($4d$ bytes/token)
 at the cost of ~25% extra time; and gradient accumulation builds large global
@@ -979,7 +995,7 @@ The memory occupied by model parameters, gradients, and optimizer state depends 
 ::: {.col}
 - **Norms & Attention ($8d\text{--}9d$):** Two RMSNorms + residual inputs save $4d$, while fused FlashAttention saves $\mathbf{Q}, \mathbf{K}, \mathbf{V}, \mathbf{O}$ ($4d\text{--}5d$, avoiding $T \times T$).
 - **SwiGLU FFN ($\approx 10.7d$):** Saves gate $\mathbf{g}$, $\textrm{SiLU}(\mathbf{g})$, up $\mathbf{u}$, and their product at width $\frac{8}{3}d$, bringing each block to **$a \approx 18.7d\text{--}20d$** ($149\text{--}160\text{ KiB/tok}$ in `fp32`).
-- **Output head ($a_{\textrm{out}} + \Delta$):** Final norm, $V$ `fp32` log-probs ($212\text{ KiB/tok}$), plus $8V = 393\text{ KiB/tok}$ backward logit gradient peak.
+- **Output head ($a_{\textrm{out}} + \Delta$):** Final norm, $V$ `fp32` log-probs ($212\text{ KiB/tok}$), plus whatever excess $\Delta$ the measured peak shows above this count.
 :::
 
 ::: {.col .fig .big}
@@ -1037,7 +1053,7 @@ In JAX, XLA plans static buffer assignments ahead of time; querying `compile().m
 
 @!memory-precision-measuring-memory-3
 
-- **Two offsetting compiler effects:** XLA's fused backward kernels recompute cheap `RMSNorm` and `silu` intermediates on the fly (saving bytes below the $29d$ raw VJP count) while holding the $V$-wide logit gradient temporary at the backward peak.
+- **The plan matches the count:** From $4{,}096$ to $8{,}192$ tokens the planned peak grows by about $690\text{ KiB/token}$, the same as the $692\text{ KiB}$ of the raw VJP count ($2 \times 29d$ plus the output head), so $\Delta \approx 0$ and the count can serve as the budget.
 :::
 
 ::: {.slide title="Allocation Timeline Across Forward, Backward, and Step" only="pytorch"}

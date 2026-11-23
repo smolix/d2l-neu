@@ -3,7 +3,7 @@
 
 Each section of this chapter has isolated one cause of a slow training step and the change that removes it: host dispatch overhead, memory traffic from small kernels, wide number formats, and single-GPU boundaries. A real training step suffers from several at once, and removing one shifts the bottleneck to the others. Here we take a single model, as a practitioner would, and ask how much faster its training step can become—and in what order the changes should be applied.
 
-The model is the GPT of :numref:`sec_gpt` with its width doubled to 512 (19 million parameters). One training step on 64 windows of 128 bytes ($8{,}192$ tokens) performs about $6 \times 1.9 \times 10^{7} \times 8{,}192 \approx 9 \times 10^{11}$ FLOPs: two per parameter and token in the forward pass and four in the backward pass. On an RTX 4090 ($165\text{ TFLOP/s}$ in bf16), the arithmetic needs less than $6\text{ ms}$. A plain fp32 step with AdamW takes about $25\text{ ms}$. Half of that gap comes from the number format alone (tf32 tensor cores run at half the bf16 rate, requiring $11\text{ ms}$); the other half is time in which the tensor cores run below peak or sit idle.
+The model is the GPT of :numref:`sec_gpt` with its width doubled to 512 (19 million parameters). One training step on 64 windows of 128 bytes ($8{,}192$ tokens) performs about $6 \times 1.9 \times 10^{7} \times 8{,}192 \approx 9 \times 10^{11}$ FLOPs: two per parameter and token in the forward pass and four in the backward pass. On an RTX 4090 ($165\text{ TFLOP/s}$ in bf16), the arithmetic needs less than $6\text{ ms}$. A plain fp32 step with AdamW takes about $25\text{ ms}$. The number format alone accounts for about $6\text{ ms}$ of that $19\text{ ms}$ gap (tf32 tensor cores run at half the bf16 rate, requiring $11\text{ ms}$); the remaining $13\text{ ms}$ or so is time in which the tensor cores run below peak or sit idle.
 
 We follow the method of :numref:`sec_perf_model`: count, predict, measure, and explain the difference. Before each change, the profile of the previous step bounds what the change can gain; after it, we compare. Each change is measured cumulatively on top of the previous ones. The section concludes by checking that the fastest step still trains the model and accounting for where its remaining time goes.
 
@@ -265,7 +265,7 @@ Because `nnx.jit` compiles the entire step, XLA has already fused the elementwis
 
 ### Host Overhead and Small Kernels
 
-Two remedies target the time spent outside matrix products, and the profile bounds what each can gain:
+Two remedies target the time spent outside matrix products, and the profile bounds what each can gain. The bound is *Amdahl's law* :cite:`Amdahl.1967`: if a change speeds up a fraction $f$ of the step by a factor $s$, the step as a whole speeds up by $1/(1 - f + f/s)$, which stays below $1/(1 - f)$ however large $s$ becomes. Applied to the two remedies:
 
 1. *Reducing host overhead* targets idle gaps where the device waits for the host (:numref:`sec_perf_model`); its speedup is bounded by the idle fraction of the step.
 2. *Kernel fusion* merges chains of bandwidth-bound elementwise kernels so intermediate arrays stay on chip; its speedup is bounded by the non-matmul device time.
@@ -623,7 +623,7 @@ For our 19M-parameter GPT, fp32 gradients occupy $S = 76\text{ MB}$, giving $t_{
 - *Compiled fp32 at batch 64 per GPU* ($t_{\textrm{step}}(1) \approx 22\text{ ms}$): the allreduce takes longer than the step itself! Equation :eqref:`eq_ft-dp` predicts a *slowdown* on 2 GPUs ($\sim 0.85\times$) and only $\sim 1.3\times$ on 4 GPUs.
 - *Compiled bf16 at batch 512 per GPU* ($t_{\textrm{step}}(1) \approx 90\text{--}100\text{ ms}$): the step is much longer than the allreduce, predicting $\sim 1.5\times$ on 2 GPUs and $2.6\text{--}2.7\times$ on 4 GPUs.
 
-Because frameworks overlap gradient allreduce buckets with the backward pass (:numref:`fig_ddp_overlap`), :eqref:`eq_ft-dp` serves as a lower bound on speedup; the margin above it measures how much communication was hidden behind backward computation.
+Because frameworks overlap gradient allreduce buckets with the backward pass (:numref:`fig_ddp_overlap`), :eqref:`eq_ft-dp` is usually a lower bound on speedup, and the margin above it measures how much communication was hidden behind backward computation. It is not a guaranteed one: NCCL's copy kernels compete with the backward pass for the same GPU (:numref:`subsec_mgp-scaling`), and this contention can eat the margin.
 
 ### Measured Speedup
 
@@ -919,7 +919,7 @@ Case Study: Making a Transformer Fast Step by Step<br>**profile-guided Amdahl bo
 ::: {.col}
 - **Hardware speed limit ($5.7\text{ ms}$):** One step of our 6-block, width-512 GPT ($N = 19\text{M}$, $n = 8{,}192$ tokens) performs $6Nn \approx 0.93\text{ TFLOP}$, requiring only $5.7\text{ ms}$ at $165.2\text{ TFLOP/s}$ (`bf16`).
 - **Measured `fp32` baseline ($\sim 25\text{ ms}$):** Runs $> 4\times$ slower than the `bf16` compute floor ($\sim 23\%$ MFU).
-- **Decomposing the gap:** Half comes from `tf32` vs. `bf16` Tensor Core rate; half comes from unfused bandwidth-bound kernels and dispatch gaps.
+- **Decomposing the $19\text{ ms}$ gap:** About $6\text{ ms}$ comes from the `tf32` vs. `bf16` Tensor Core rate; the remaining $\sim 13\text{ ms}$ comes from unfused bandwidth-bound kernels and dispatch gaps.
 :::
 
 ::: {.col .fig .big}
@@ -1161,7 +1161,7 @@ A $2\times$ faster single-GPU step is only valid if it learns the same represent
 
 @!fast-transformer-training-check
 
-- **Passed gate:** Both curves start at $\ln 256 \approx 5.55$, track within $0.05\text{ nats/byte}$ across all $200$ steps, and reach the same validation loss ($\sim 2.08 < 2.45$ bigram threshold).
+- **Passed gate:** Both curves start at $\ln 256 \approx 5.55$, track within $0.05\text{ nats/byte}$ across all $200$ steps, and reach the same validation loss ($1.5\text{--}1.6$, well below the $2.45$ bigram threshold).
 :::
 
 ::: {.slide title="Throughput vs. Time-to-Target-Loss"}

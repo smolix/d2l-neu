@@ -126,8 +126,8 @@ Every class we build in the remainder of this section inherits from
 The `Module` class is the base class of every model we implement. It inherits from the framework's native neural network container as well as `d2l.HyperParameters`. By default:
 
 - Calling `model(X)` invokes `model.forward(X)`.
-- `training_step(batch)` passes the features `batch[:-1]` through the model and returns a dictionary `{'loss': l}` comparing the predictions against the labels `batch[-1]`.
-- `validation_step(batch)` computes the same validation loss dictionary (and in :numref:`sec_softmax_scratch`, `Classifier` will override `validation_step` to report both `'loss'` and `'acc'`).
+- `training_step(batch)` passes the features `batch[:-1]` through the model, compares the predictions against the labels `batch[-1]`, and returns the mean loss of the minibatch (later models may return a dictionary of metrics that includes `'loss'`).
+- `validation_step(batch)` computes the same loss on a minibatch of validation data (and in :numref:`sec_softmax_scratch`, `Classifier` will override `validation_step` to report both `'loss'` and `'acc'`).
 - The helper `as_metrics` normalizes any single scalar or dictionary return value into a metric dictionary so `Trainer` can log arbitrary named quantities uniformly.
 
 :begin_tab:`mxnet`
@@ -741,8 +741,8 @@ def prepare_optimizer(self, model):
     self.optim = nnx.Optimizer(model, optimizer_cache[key], wrt=nnx.Param)
 ```
 
-The `fit(model, data)` method implements the exact outer loop from our opening
-pseudocode. After running the three setup hooks, it loops over `max_epochs`
+The `fit(model, data)` method implements the same outer loop as the `train`
+function of :numref:`sec_linear_scratch`. After running the three setup hooks, it loops over `max_epochs`
 epochs: in each epoch, `fit_epoch()` sweeps through the training loader and
 returns mean training metrics, `validate()` evaluates the validation loader (when
 present), and `record()` logs and plots both.
@@ -778,9 +778,19 @@ lists keyed by split and metric name (`'train_loss'`, `'val_loss'`, and later
 final validation loss. Sorting `'loss'` first ensures consistent curve colors on
 the progress board across models.
 
+The two curves are not drawn at the same positions, and
+:numref:`fig_oo_epoch_timeline` shows why. The training loss of epoch $e$ is a
+mean over all minibatch steps of that epoch, each taken with different
+parameters, so `fit` draws it in the middle of the epoch, at $e + \frac{1}{2}$.
+The validation loss is computed once, with the parameters the epoch ends on, and
+is drawn at $e + 1$.
+
+![One epoch on the progress board. The losses of the individual minibatches (gray) fall as the parameters improve; their mean is the training loss, drawn at $e + \frac{1}{2}$. The validation loss is computed with the parameters at the end of the epoch and is drawn at $e + 1$.](../img/mdl-linreg-epoch-timeline.svg)
+:label:`fig_oo_epoch_timeline`
+
 ### Epoch Means
 
-Because the last minibatch of an epoch is often smaller than `batch_size` (for instance, $1{,}000 = 31 \times 32 + 8$), an unweighted average of per-batch mean losses would give the 8 examples in the final batch the exact same vote as the 32 examples in every earlier batch. Our `Averager` helper accumulates each batch's metric weighted by its batch size `n`, so `avg.means()` always returns the exact per-example average across the entire split:
+Because the last minibatch of an epoch is often smaller than `batch_size` (for instance, $1{,}000 = 31 \times 32 + 8$), an unweighted average of per-batch mean losses would give the 8 examples in the final batch the exact same vote as the 32 examples in every earlier batch. Our `Averager` helper accumulates each batch's metric weighted by its batch size `n`, so `avg.mean()` always returns the exact per-example average across the entire split:
 
 ```{.python .input #linear-regression-scratch-training-5}
 class Averager:  #@save
@@ -811,8 +821,8 @@ def prepare_batch(self, batch):
 
 Because this exact trainer will run every model throughout the rest of the book,
 it is slightly longer than bare linear regression requires—yet its algorithmic
-core is still the exact four-step SGD cycle of :numref:`sec_linear_scratch`
-(forward pass and loss, backward pass, unrecorded update, and gradient clearing),
+core is still the exact four-step SGD cycle of :numref:`fig_linreg_sgd_cycle`
+(forward pass, loss, backward pass, and parameter update),
 with a few forward-looking hooks for later chapters that remain dormant here.
 
 :begin_tab:`pytorch`

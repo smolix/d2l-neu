@@ -227,7 +227,7 @@ print(f'validation loss {val_losses[-1]:.3f} (lowest {min(val_losses):.3f}, '
 The training loss plunges to roughly 0.2–0.3—far below the irreducible
 noise floor of 0.5 achieved by the true parameters—confirming that the model
 is memorizing noise in its 300 training labels. Meanwhile, the validation
-loss hits a minimum of about 0.9 after just two or three epochs and then
+loss hits a minimum of 0.8–1.0 after just two or three epochs and then
 climbs steadily, typically finishing between 1.1 and 1.9. After 50 epochs,
 this 200-weight model has given back much of its early gain and often does
 no better than—and sometimes worse than—the trivial constant $b^*$ at 1.5:
@@ -251,7 +251,7 @@ print(f'validation loss {val_losses[-1]:.3f}, norm of w {norm:.2f}')
 
 Now the training curve tracks the penalized objective, which stays safely
 above 0.5: the penalty keeps the model from chasing noise in the training
-labels. Validation loss settles around 0.8–1.0 and stays flat—well below the
+labels. Validation loss settles at roughly 0.75–1.05 and stays flat—well below the
 1.5 baseline of the constant predictor—while the weight norm shrinks from
 roughly 2 to about 1.2, actually *shorter* than the true norm
 $\|\mathbf{w}^*\| \approx 1.4$. Even though the regularized weights are
@@ -260,7 +260,7 @@ unregularized weights.
 
 Compare the two runs:
 
-- **Without weight decay ($\lambda = 0$):** Training loss drops well below the $0.5$ noise floor as the 200 weights memorize noise in the 300 training labels, while validation loss climbs back up from its early minimum of about $0.9$.
+- **Without weight decay ($\lambda = 0$):** Training loss drops well below the $0.5$ noise floor as the 200 weights memorize noise in the 300 training labels, while validation loss climbs back up from its early minimum of $0.8$–$1.0$.
 - **With weight decay ($\lambda = \frac{1}{3}$):** The penalty keeps $\|\mathbf{w}\|_2$ near $1.2$, preventing the weights from chasing that noise; training loss stays above $0.5$ while validation loss stays flat near the best value the unpenalized run ever reached.
 
 Let us be honest about what we actually gained here. Compared with the
@@ -470,7 +470,15 @@ closed $1 - 0.84^{15} \approx 93\%$ of its gap, whereas a small-eigenvalue
 direction ($\mu_j = 0.04$) has closed a mere $1 - 0.998^{15} \approx 3\%$.
 After two epochs, gradient descent has essentially converged along the
 well-determined directions while barely moving along the noisy ones—closely
-mimicking the ridge estimator. Keep training, however, and those poorly
+mimicking the ridge estimator. The resemblance can be made quantitative.
+Starting from weights near zero, $t$ steps build up the fraction
+$1 - (1 - \eta\mu_j)^t$ of the least-squares coordinate along $\mathbf{v}_j$,
+and this is close to the ridge factor $\mu_j/(\mu_j + \lambda)$ with
+$\lambda \approx 1/(\eta t)$: both are nearly $1$ when $\mu_j \gg 1/(\eta t)$
+and nearly $\eta t \mu_j$ when $\mu_j \ll 1/(\eta t)$. Our best stopping point
+of 30 to 45 steps at $\eta = 0.05$ gives $1/(\eta t)$ between $0.45$ and
+$0.67$, the same order as the $\lambda = \frac{1}{3}$ that the prior
+prescribed. Keep training, however, and those poorly
 determined directions steadily soak up label noise, driving validation loss
 back up. *Early stopping* is therefore a genuine form of regularization in
 its own right, and in this experiment it matches weight decay in accuracy.
@@ -482,8 +490,8 @@ validation data throughout every run (exercise
 ## Concise Implementation
 
 Because weight decay is ubiquitous in neural network training, every major
-deep learning framework builds the update :eqref:`eq_wd-update` directly
-into its optimizers rather than requiring you to modify the loss function.
+deep learning framework lets the optimizer apply the update
+:eqref:`eq_wd-update`, so you need not modify the loss function.
 Beyond convenience, this integration is computationally clean: the
 optimizer already visits every parameter once per step, so applying the
 decay factor adds virtually no overhead. Frameworks also support

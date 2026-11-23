@@ -333,12 +333,47 @@ $[-1, 1]$ falls outside the fitted range where high-degree polynomials explode!
 How should we pick $K$? Because every fold trains on only a fraction
 $(K - 1) / K$ of the dataset, its fitted model is slightly worse than a model
 trained on all $n$ examples, giving $K$-fold cross-validation a slight pessimistic
-bias. Pushing $K = n$ (*leave-one-out* cross-validation) nearly eliminates that
-bias, yet demands $n$ separate fits per candidate and yields strongly correlated
-fold errors with higher variance. In practice, $K = 5$ or $K = 10$ strikes the
-classic sweet spot between bias, variance, and compute :cite:`Kohavi.1995` (see
-exercise :exref:`ex_generalization-fold-cross-validation` for the exact bias
-analysis).
+bias (exercise :exref:`ex_generalization-fold-cross-validation` works it out
+exactly). Pushing $K = n$ (*leave-one-out* cross-validation) nearly eliminates
+that bias. For a general learner, however, it demands $n$ separate fits per
+candidate. And for an unstable learner such as a decision tree, where removing
+a single example can change the whole model, its $n$ nearly identical training
+sets can make the estimate noisier than that of a coarser split. This is why
+$K = 5$ or $K = 10$ is the usual default when each fit is expensive
+:cite:`Kohavi.1995`. Least squares is neither expensive nor unstable: a single
+fit yields all $n$ leave-one-out residuals, and the fit changes smoothly with
+the data.
+
+Let us measure the bias and the noise for our cubic. On each of 500 fresh
+training sets of 20 points, we fit the cubic to all 20 points and record its
+test error, together with three estimates of that error that use the 20 points
+alone: leave-one-out ($K = 20$, one point per fold), 5-fold on a single random
+split, and 5-fold repeated over ten splits:
+
+```{.python .input #generalization-cross-validation-4}
+loo = kfold_splits(rng, 20, K=20, repeats=1)  # K = n: one point per fold
+est = {'test error': [], 'leave-one-out': [], '5-fold, 1 split': [],
+       '5-fold, 10 splits': []}
+for _ in range(500):                          # 500 fresh training sets
+    x, y = make_data(rng, 20, sigma)
+    est['test error'].append(mse(fit_degree(x, y, 3), x_test, y_test))
+    est['leave-one-out'].append(cv_error(x, y, 3, loo))
+    est['5-fold, 1 split'].append(
+        cv_error(x, y, 3, kfold_splits(rng, 20, repeats=1)))
+    est['5-fold, 10 splits'].append(cv_error(x, y, 3, kfold_splits(rng, 20)))
+for name, e in est.items():
+    print(f'{name:18s} mean {np.mean(e):.4f}   std {np.std(e):.4f}')
+```
+
+On average, leave-one-out lands closest to the test error. Both 5-fold
+estimates sit visibly above it, which is the pessimistic bias of training on 16
+points instead of 19. Leave-one-out also varies the least from one training set
+to the next, so here the folklore that it is the noisier estimate does not
+hold. Repeating the 5-fold split ten times narrows its spread only a little:
+most of the spread comes from the luck of which 20 points were drawn, not from
+how they were split. For least squares, then, leave-one-out is both cheap and
+the most accurate of the three. For the networks of later chapters, where a
+single fit takes minutes or hours, a coarse split remains the practical choice.
 
 Using only the 20 training examples, 5-fold cross-validation cleanly rejects both the underfitted degrees ($k \leq 2$) and the wildly overfitted high-degree polynomials, picking $k = 3$ or a nearby degree; retraining on all 20 points yields a smooth fit whose test error sits near the $\sigma^2 = 0.01$ noise floor.
 
@@ -659,7 +694,7 @@ When total data are scarce ($n = 20$), carving out a separate validation split w
 ::: {.col}
 - **Rotate the held-out fold:** In round $k \in \{1, \ldots, K\}$, train from scratch on $K - 1$ folds ($\frac{K-1}{K}n$ examples) and validate on held-out fold $k$; average the $K$ validation scores.
 - **Refit the winner:** Once the best hyperparameter $d^*$ is selected, retrain the final model on all $n$ examples.
-- **Choosing $K$ ($5$ or $10$ vs. $K = n$):** Smaller $K$ trains on fewer examples per fold (slight pessimistic bias); leave-one-out ($K = n$) is nearly unbiased but costs $n$ fits.
+- **Choosing $K$ ($5$ or $10$ vs. $K = n$):** Smaller $K$ trains on fewer examples per fold (slight pessimistic bias); leave-one-out ($K = n$) is nearly unbiased but costs $n$ fits for a general learner (one for least squares).
 :::
 
 ::: {.col .fig}

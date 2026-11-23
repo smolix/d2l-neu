@@ -315,7 +315,7 @@ for name, a, g in zip(['W1', 'b1', 'W2', 'b2'], auto, grads):
 ```
 
 
-Every parameter gradient matches automatic differentiation to within $10^{-14}$ relative error (double-precision machine epsilon).
+Every parameter gradient matches automatic differentiation to within $10^{-15}$ relative error, a few units of the double-precision machine epsilon $2.2 \times 10^{-16}$.
 
 ## Memory and Computation
 
@@ -606,10 +606,10 @@ Notice that for ReLU, storing $\mathbf{H}$ (or $\mathbf{Z}$) suffices to evaluat
 :::
 :::
 
-::: {.slide title="Float64 Gradient Check: Matching Autograd to 10⁻¹⁴"}
+::: {.slide title="Float64 Gradient Check: Matching Autograd to 10⁻¹⁵"}
 [Verifying Backprop Against Autograd]{.kicker}
 
-Running both `mlp_backward` and framework `autograd` in 64-bit floating point (`float64`, machine epsilon $\approx 10^{-16}$) on a random $256 \times 784$ minibatch verifies our derivation to $14$ significant digits:
+Running both `mlp_backward` and framework `autograd` in 64-bit floating point (`float64`, machine epsilon $\approx 2.2 \times 10^{-16}$) on a random $256 \times 784$ minibatch verifies our derivation to within $10^{-15}$ relative error:
 
 @!backprop-checking-the-backward-pass-on-a-minibatch-2
 :::

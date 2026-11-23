@@ -826,8 +826,9 @@ mirrors 2015 practice: SGD with momentum 0.9, coupled weight decay
 $5 \times 10^{-4}$, a peak learning rate of 0.05 with two epochs of linear
 warmup followed by 10-fold drops at 60% and 85% of training, plain
 cross-entropy loss, and 30 epochs. (The short two-epoch warmup is a minor
-modern stabilization: without it, batch-normalized SGD at 0.05 diverges in
-epoch 1 on roughly a third of runs :cite:`Goyal.Dollar.Girshick.ea.2017`.)
+modern stabilization, introduced for large-minibatch SGD by
+:citet:`Goyal.Dollar.Girshick.ea.2017`: without it, batch-normalized SGD at
+0.05 diverged in epoch 1 in roughly a third of our runs.)
 Our *compact modern recipe* uses AdamW with weight decay 0.05, peak learning
 rate 0.002 with three epochs of warmup and cosine decay, label smoothing
 ($\epsilon = 0.1$), Mixup ($\alpha = 0.2$), and 45 epochs (reflecting the

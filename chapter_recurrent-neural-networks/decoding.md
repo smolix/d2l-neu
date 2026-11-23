@@ -259,7 +259,10 @@ uncertain second step after $A$ (top continuation probability $0.3$) but a
 highly confident step after $B$ (top probability $0.9$). Greedy decoding
 immediately commits to $A$ and finishes with joint probability
 $0.5 \times 0.3 = 0.15$, missing the far more probable sequence beginning with
-$B$ at $0.4 \times 0.9 = 0.36$.
+$B$ at $0.4 \times 0.9 = 0.36$ (:numref:`fig_greedy-myopia`).
+
+![The myopia of greedy decoding on a two-step example. Greedy decoding takes the more probable first token $A$ and ends with the sequence $AC$ at joint probability $0.5 \times 0.3 = 0.15$. The path through $B$, which it never explores, reaches $0.4 \times 0.9 = 0.36$.](../img/mdl-rnn-greedy-myopia.svg)
+:label:`fig_greedy-myopia`
 
 The second weakness is repetition itself. Because greedy decoding feeds its
 own deterministic argmax back into the recurrence at every step, the next
@@ -688,6 +691,9 @@ the quadratic recomputation is completely unnecessary for an RNN: because the
 hidden state already summarizes the prefix, carrying that state forward from
 step to step (as `predict` did in :numref:`sec_rnn-scratch`) brings the cost
 down to exactly one cell update per token, independent of sequence length.
+Models without a recurrent state avoid the same recomputation by caching what
+they computed for each past token, at a memory cost that grows with the
+length of the prefix (:numref:`chap_attention`).
 
 Constant compute and constant memory per generated token are the defining
 efficiency advantages of recurrent language models. Yet that same fixed-size
@@ -700,9 +706,10 @@ every algorithm developed here transfers unchanged to far stronger models.
 
 With this, Part *Basics* draws to a close—and it closes right on a sharp
 architectural boundary. Our RNN predicts text one token at a time at constant
-cost, yet it effectively uses only about three tokens of history
-(:numref:`sec_rnn-scratch`) because vanilla recurrent gradients vanish within
-a handful of steps (:numref:`sec_bptt`). Two paths lead forward from here.
+cost, yet it effectively uses only the last two or three tokens of history
+(:numref:`sec_rnn-scratch`), and with gradients that vanish within a handful
+of steps (:numref:`sec_bptt`) it has little chance of learning to use many
+more. Two paths lead forward from here.
 The first retains a fixed-size state while redesigning the recurrence so that
 gradients survive across long horizons (:numref:`chap_modern_rnn`). The second
 abandons fixed-size compression altogether, retaining representations of every
@@ -931,8 +938,8 @@ At most $w$ extensions per beam can survive, so each beam keeps only its top $w$
 ::: {.col}
 $$x_t \sim P(x_t \mid x_{<t})$$
 
-- **Why pure sampling derails (Holtzman et al., 2020):** Softmax assigns positive probability to all $|\mathcal{V}|$ tokens; $\sim 900$ implausible tail tokens at $0.0002$ each sum to **$18\%$ collective mass at every step**.
-- **50-step compounding failure:** At an $18\%$ tail-draw rate per step, $(1 - 0.18)^{50} \approx 0.00005$ of 50-token rollouts avoid drawing a tail token that derails subsequent context.
+- **Why pure sampling derails (Holtzman et al., 2020):** Softmax assigns positive probability to all $|\mathcal{V}| = 1{,}027$ tokens. After `'The Time Traveller'`, the 140–174 most probable tokens hold $90\%$ of the mass; the other $\sim 850$–890 implausible tail tokens share **up to $10\%$ at every step**.
+- **50-step compounding failure:** At a tail-draw rate of $10\%$ per step, only $(1 - 0.1)^{50} \approx 0.005$ of 50-token rollouts avoid drawing a tail token that derails subsequent context.
 :::
 
 ::: {.col .fig}
@@ -1010,7 +1017,7 @@ Comparing the uncertain prefix `'The Time Traveller'` against the highly predict
 @!decoding-one-distribution-three-cutoffs-2
 
 - **When the model is confident (`'The Time'`, high $P_{\max}$):** Top-$k = 20$ foolishly admits 19 unlikely tokens, whereas both top-$p$ and min-$p$ contract sharply to just a few candidates.
-- **When the model is uncertain (`'The Time Traveller'`, flat head):** To accumulate $90\%$ of the probability mass, **top-$p = 0.9$ must reach over 200 tokens deep into the tail** (admitting tokens below $0.1\%$ probability), whereas **min-$p = 0.05$ keeps only tokens within $20\times$ of the leader** (a few dozen plausible choices).
+- **When the model is uncertain (`'The Time Traveller'`, flat head):** To accumulate $90\%$ of the probability mass, **top-$p = 0.9$ must keep roughly 140–175 tokens, reaching deep into the tail**, whereas **min-$p = 0.05$ keeps only tokens within $20\times$ of the leader** (between about 10 and 30 plausible choices).
 :::
 
 ::: {.slide title="Head-to-Head Generation Across Decoding Strategies" layout="tall-output"}
@@ -1051,7 +1058,7 @@ A common pitfall in language modeling is attempting to use perplexity (or model 
 ::: {.col}
 - **Stateless prefix re-evaluation (`step_fn(ids)`):** Re-running the network over $x_{1:t}$ at step $t$ performs $\sum_{t=1}^T t = O(T^2)$ cell updates.
 - **Stateful recurrent carry (`predict`):** Passing $\mathbf{H}_{t-1} \in \mathbb{R}^h$ forward costs **1 cell update per token** ($O(T)$ total) and a fixed $512$-byte state at any sequence length.
-- **Next horizon (Chapters §{num:chap_attention}–§{num:chap_modern_rnn}):** Upgrade $\mathbf{H}_t$ with gates/SSMs so gradients survive in $O(1)$ space (Ch 12), or retain all past token K/V vectors via self-attention at $O(T)$ memory cost (Ch 10–11).
+- **Next horizon (Chapters §{num:chap_attention}–§{num:chap_modern_rnn}):** Upgrade $\mathbf{H}_t$ with gates/SSMs so gradients survive in $O(1)$ space (§{chap_modern_rnn}), or retain all past token K/V vectors via self-attention at $O(T)$ memory cost (§{chap_attention}–§{num:chap_transformers}).
 :::
 
 ::: {.col .fig .big}

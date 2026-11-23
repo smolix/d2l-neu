@@ -307,7 +307,11 @@ yields $T - m$ examples in total, since the first $m$ entries lack sufficient
 history and are simply dropped (zero-padding is a common alternative). The
 `lag_features` method builds the entire feature matrix at once, with one
 column per lag, and the data loader uses the first 600 examples—just under
-one full period of the sine wave—for training.
+one full period of the sine wave—for training. :numref:`fig_lag-matrix` shows
+the resulting table for our setting of $m = 4$ and $T = 1000$.
+
+![Lag features and labels for $m = 4$ and $T = 1000$. Row $i$ pairs the four values $(x_i, \ldots, x_{i+3})$ with the label $x_{i+4}$, so the 996 rows end at $x_{1000}$. The first 600 rows are used for training and the remaining 396 for validation.](../img/mdl-rnn-lag-matrix.svg)
+:label:`fig_lag-matrix`
 
 ```{.python .input #sequence-training-3}
 @d2l.add_to_class(Data)

@@ -88,13 +88,13 @@ function wellsBenchmarks() {
   const W = 540, H = 276;
   let o = '';
   o += box(16, 12, 508, 36, D.purple.tint, C.purple, 7, 1.8);
-  o += tx(270, 30, 'The Time Machine Corpus: 179,462 UTF-8 Bytes · 65,741 BPE-1024 Tokens', { fs: 13.5, fw: 700, fill: D.purple.dark });
+  o += tx(270, 30, 'The Time Machine Corpus: 178,979 UTF-8 Bytes · 65,741 BPE-1024 Tokens', { fs: 13.5, fw: 700, fill: D.purple.dark });
 
   const cards = [
     { x: 16,  y: 60, s: '§8.1 Sine Wave AR(4)', m: '0.05 → 0.25 MSE', d: '1-step vs 64-step rollout', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 276, y: 60, s: '§8.2 Pre-Tokenized BPE', m: '2.78 bytes / token', d: '0 OOVs · matches tiktoken', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 16,  y: 132, s: '§8.3 Kneser–Ney 3-Gram', m: '1.90 bpb (BPE-1024 KN)', d: 'Word PPL 2,481 → 300', f: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 276, y: 132, s: '§8.4 Clipped RNNLM', m: '2.12 bpb · 512 B state', d: '89% params in E & W_hq', f: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 276, y: 60, s: '§8.2 Pre-Tokenized BPE', m: '2.72 bytes / token', d: '0 OOVs · matches tiktoken', f: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 16,  y: 132, s: '§8.3 Kneser–Ney 3-Gram', m: '1.90 bpb (BPE-1024 KN)', d: 'Lowercase text · word PPL 2,481 → 300', f: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 276, y: 132, s: '§8.4 Clipped RNNLM', m: '2.12 bpb · 512 B state', d: 'Raw text · KN 3-gram here: 2.09 bpb', f: C.lgreen, st: C.green, dk: D.green.dark },
     { x: 16,  y: 204, s: '§8.5 BPTT Decay Probe', m: '< 1% norm by lag 8', d: 'ρ=1.80 × tanh\' 0.27 ≈ 0.49', f: D.red.tint, st: D.red.base, dk: D.red.dark },
     { x: 276, y: 204, s: '§8.6 Truncated Samplers', m: 'distinct-3 ≈ 0.99', d: 'min-p / top-p break loops', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
   ];
@@ -307,7 +307,7 @@ function stationarityPooling() {
 
   o += box(60, 178, 420, 58, C.lgreen, C.green, 8, 2);
   o += tx(270, 198, 'One Shared Predictor f_θ (Pooled Dataset)', { fs: 14, fw: 700, fill: D.green.dark });
-  o += tx(270, 220, 'T − m = 996 training pairs share identical dynamics', { fs: 12, fw: 600, fill: C.ink });
+  o += tx(270, 220, 'T − m = 996 pairs (the first 600 train) share identical dynamics', { fs: 12, fw: 600, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -1011,12 +1011,12 @@ function spectralRadiusRegimes() {
   o += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.lblue}" stroke="${C.green}" stroke-width="2.5"/>`;
   o += tx(cx, cy - 10, 'ρ < 1', { mono: true, fs: 13, fw: 700, fill: D.blue.dark });
   o += tx(cx, cy + 12, '(vanish)', { fs: 11.5, fw: 600, fill: D.blue.dark });
-  o += tx(132, 214, 'Boundary |λ| = 1: unit norm', { mono: true, fs: 11, fw: 700, fill: D.green.dark });
+  o += tx(132, 214, 'Boundary |λ| = 1: critical', { mono: true, fs: 11, fw: 700, fill: D.green.dark });
 
   // Right: Three regime cards
   const cards = [
     { y: 14,  t: '1. Vanishing (ρ < 1)', d: '|| (W_hh^T)^k || ∼ ρ^k → 0 exponentially', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 92,  t: '2. Critical Unit Circle (ρ = 1)', d: '|λᵢ| = 1 preserves norm across arbitrary lags k', f: C.lgreen, st: C.green, dk: D.green.dark },
+    { y: 92,  t: '2. Critical Unit Circle (ρ = 1)', d: 'Norm kept at all lags only if W_hh is normal', f: C.lgreen, st: C.green, dk: D.green.dark },
     { y: 170, t: '3. Exploding (ρ > 1) & Non-Normal', d: 'Grows as ρ^k → ∞ (or transient hump)', f: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   cards.forEach((c) => {
@@ -1055,8 +1055,8 @@ function tanhContraction() {
   o += box(372, 44, 152, 114, D.red.tint, D.red.base, 8, 2);
   o += tx(448, 68, 'Net Step Multiplier', { fs: 12, fw: 700, fill: D.red.dark });
   o += tx(448, 94, '0.27 × 1.80 ≈ 0.49', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
-  o += tx(448, 118, 'Halves every step!', { fs: 11.5, fw: 700, fill: C.ink });
-  o += tx(448, 138, '0.49⁸ ≈ 0.003 (<1%)', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
+  o += tx(448, 118, 'Measured: ≈ 0.55 per step', { fs: 11.5, fw: 700, fill: C.ink });
+  o += tx(448, 138, 'lag 8: 0.008 (<1%)', { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
 
   o += box(16, 176, 508, 66, D.purple.tint, C.purple, 8, 1.8);
   o += tx(270, 198, 'G_{t−1} = (∂L/∂O_{t−1}) W_hq^T  +  [ Gₜ ⊙ (1 − Hₜ²) ] W_hh^T', { mono: true, fs: 13, fw: 700, fill: D.purple.dark });
@@ -1074,31 +1074,31 @@ function clippingLagRatios() {
   o += box(16, 40, 242, 198, D.red.tint, D.red.base, 8, 2);
   o += tx(137, 62, 'Before Clipping (||g|| ≈ 10)', { fs: 13.5, fw: 700, fill: D.red.dark });
   const bars1 = [
-    { y: 84,  lab: 'Lag 0:', w: 130, val: '9.8' },
-    { y: 122, lab: 'Lag 2:', w: 31,  val: '2.35' },
-    { y: 160, lab: 'Lag 8:', w: 4,   val: '0.033' },
+    { y: 84,  lab: 'Lag 0:', w: 130, val: '10' },
+    { y: 122, lab: 'Lag 2:', w: 46,  val: '3.5' },
+    { y: 160, lab: 'Lag 8:', w: 4,   val: '0.08' },
   ];
   bars1.forEach((b) => {
     o += tx(30, b.y + 12, b.lab, { mono: true, fs: 12, fw: 700, fill: C.ink, anchor: 'start' });
     o += box(84, b.y, b.w, 24, '#FFFFFF', D.red.base, 4, 1.6);
     o += tx(84 + b.w + 8, b.y + 12, b.val, { mono: true, fs: 12, fw: 700, fill: D.red.dark, anchor: 'start' });
   });
-  o += tx(137, 214, 'Lag 0 : Lag 8 ratio ≈ 300 : 1', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
+  o += tx(137, 214, 'Lag 0 : Lag 8 ratio ≈ 120 : 1', { mono: true, fs: 12, fw: 700, fill: D.red.dark });
 
   // Right: After clipping
   o += box(282, 40, 242, 198, C.lgreen, C.green, 8, 2);
   o += tx(403, 62, 'After Clipping by 0.1 (||g|| = 1)', { fs: 13.5, fw: 700, fill: D.green.dark });
   const bars2 = [
-    { y: 84,  lab: 'Lag 0:', w: 80, val: '0.98' },
-    { y: 122, lab: 'Lag 2:', w: 19, val: '0.235' },
-    { y: 160, lab: 'Lag 8:', w: 4,  val: '0.0033' },
+    { y: 84,  lab: 'Lag 0:', w: 80, val: '1.0' },
+    { y: 122, lab: 'Lag 2:', w: 28, val: '0.35' },
+    { y: 160, lab: 'Lag 8:', w: 4,  val: '0.008' },
   ];
   bars2.forEach((b) => {
     o += tx(296, b.y + 12, b.lab, { mono: true, fs: 12, fw: 700, fill: C.ink, anchor: 'start' });
     o += box(350, b.y, b.w, 24, '#FFFFFF', C.green, 4, 1.6);
     o += tx(350 + b.w + 8, b.y + 12, b.val, { mono: true, fs: 12, fw: 700, fill: D.green.dark, anchor: 'start' });
   });
-  o += tx(403, 214, 'Same ≈ 300 : 1 lag ratio!', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(403, 214, 'Same ≈ 120 : 1 lag ratio!', { mono: true, fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -1154,7 +1154,7 @@ function searchSpaceExplosion() {
   o += tx(402, 102, 'Hazard 2: Unpruned Sampling', { fs: 14, fw: 700, fill: D.orange.dark });
   o += box(294, 120, 216, 52, '#FFFFFF', C.amber, 6, 1.5);
   o += tx(402, 138, 'xₜ ∼ P(x | x_{<t}) over all |V|', { mono: true, fs: 12, fw: 700, fill: C.ink });
-  o += tx(402, 158, '~900 tail tokens hold ~18% mass', { fs: 11.5, fill: C.muted });
+  o += tx(402, 158, 'every one of 1,027 tokens has P > 0', { fs: 11.5, fill: C.muted });
   o += tx(402, 194, '• Draws incoherent tail tokens', { fs: 12, fw: 600, fill: D.orange.dark });
   o += tx(402, 216, '• Exposure bias derails rollout!', { fs: 12, fw: 700, fill: D.orange.dark });
   return svg(W, H, o);
@@ -1231,19 +1231,19 @@ function unreliableTailRollout() {
 
   // Head vs Tail distribution bar
   o += box(18, 44, 240, 82, C.lgreen, C.green, 8, 2);
-  o += tx(138, 66, 'Calibrated Head (~50 Tokens)', { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(138, 88, '82% of probability mass', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
-  o += tx(138, 108, 'Plausible continuations', { fs: 12, fill: C.muted });
+  o += tx(138, 66, 'Head: Top-p 0.9 Set (140–174)', { fs: 13.5, fw: 700, fill: D.green.dark });
+  o += tx(138, 88, '90% of probability mass', { mono: true, fs: 12.5, fw: 700, fill: C.ink });
+  o += tx(138, 108, 'after "The Time Traveller"', { fs: 12, fill: C.muted });
 
   o += box(272, 44, 250, 82, D.red.tint, D.red.base, 8, 2);
-  o += tx(397, 66, 'Unreliable Tail (~900 Tokens)', { fs: 13.5, fw: 700, fill: D.red.dark });
-  o += tx(397, 88, '18% collective mass per step!', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
-  o += tx(397, 108, 'Individually tiny, collectively huge', { fs: 12, fill: C.ink });
+  o += tx(397, 66, 'Unreliable Tail (~850–890 Tokens)', { fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(397, 88, 'up to 10% collective mass', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
+  o += tx(397, 108, 'Individually tiny, collectively large', { fs: 12, fill: C.ink });
 
   // 50-step compounding box
   o += box(16, 144, 508, 96, C.lamber, C.amber, 8, 2);
   o += tx(270, 168, '50-Token Rollout Survival Probability Without Truncation:', { fs: 13.5, fw: 700, fill: D.orange.dark });
-  o += tx(270, 194, 'P(0 tail draws in 50 steps) = (1 − 0.18)⁵⁰ ≈ 0.00005 (0.005%)', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
+  o += tx(270, 194, 'At a 10% tail rate per step: (1 − 0.1)⁵⁰ ≈ 0.005 (0.5%)', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
   o += tx(270, 220, 'Remedy: Truncate the tail (top-k, top-p, min-p) and renormalize!', { fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }

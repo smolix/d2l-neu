@@ -270,11 +270,18 @@ d2l.plot(np.arange(L), rel, 'lag $k$', 'relative gradient norm',
 Even though the trained $\mathbf{W}_\textrm{hh}$ has a spectral radius near
 $1.8$—which would explode in a purely linear recurrence—the actual gradient
 vanishes rapidly: it drops below 1% of its initial norm within roughly eight
-steps and shrinks to a few billionths across 32 tokens. Because the $\tanh$
-derivative averages roughly $0.27$, each backward step retains only about
-$1.8 \times 0.27 \approx 0.5$ of the gradient norm. This directly explains our
-finding in :numref:`sec_rnn-scratch` that per-position validation loss
-flattens out after roughly three tokens of context.
+steps and shrinks to a few billionths across 32 tokens. Each backward step
+retains a little over half of the gradient norm (the printed value at lag 8
+gives $0.008^{1/8} \approx 0.55$), close to the rough estimate
+$1.8 \times 0.27 \approx 0.5$ that multiplies the spectral radius by the
+average $\tanh$ derivative. This decay is consistent with our finding in
+:numref:`sec_rnn-scratch` that per-position validation loss flattens out after
+two or three tokens of context, but it does not prove that vanishing gradients
+are the cause. At lags 2 and 4 the gradient still has about a third and a
+tenth of its size, an attenuation that SGD routinely learns through, and the
+Kneser--Ney counts of :numref:`sec_rnn-scratch` saturate at the same context
+length without using gradients at all. What the decay does rule out is
+learning from tokens much further back, whatever the data may hold.
 
 ### Remedies for Exploding and Vanishing Gradients
 :label:`subsec_bptt-gradient-pathologies`
@@ -602,8 +609,8 @@ To measure how far gradients actually travel inside our trained language model f
 Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ on a logarithmic axis against lag $k \in \{0, \ldots, 63\}$ resolves the puzzle from §{sec_rnn}:
 
 - **Large weights, yet fast vanishing:** The trained recurrent matrix has spectral radius $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$ (which would explode as $1.80^k$ in a linear RNN!), yet the mean $\tanh$ derivative is $\overline{1 - H^2} \approx 0.27$.
-- **Halving every step ($1.80 \times 0.27 \approx 0.49$):** The gradient norm drops by roughly half at every step back in time—falling **below $1\%$ within $k = 8$ steps** and shrinking to $\sim 10^{-9}$ across 32 tokens.
-- **Explains the 3-token horizon:** Tokens at lag $k \ge 4$ contribute almost zero gradient to $\mathbf{W}_{\textrm{hh}}$ during training!
+- **About $0.55$ per step (measured):** The gradient norm keeps a little over half of its size at every step back in time (rough estimate: $1.80 \times 0.27 \approx 0.49$)—falling **below $1\%$ within $k = 8$ steps** and shrinking to $\sim 10^{-9}$ across 32 tokens.
+- **Consistent with the short context of §{sec_rnn}, not a proof:** At lags 2 and 4 the gradient still has $\approx 35\%$ and $\approx 10\%$ of its size, and Kneser–Ney counts saturate at the same context length without any gradients. Beyond lag 8, almost no gradient reaches $\mathbf{W}_{\textrm{hh}}$.
 :::
 
 ::: {.col .fig}
@@ -702,7 +709,7 @@ Test your understanding of matrix powers, graph detachment, and gradient horizon
 
 1. **$31$ Jacobians:** At $\rho = 0.9$, $0.9^{31} \approx 0.038$ ($96\%$ lost); at $\rho = 1.1$, $1.1^{31} \approx 19.2$. Shifting $\rho$ by $\pm 10\%$ around $1.0$ changes the 32-step gradient norm by **$500\times$**.
 2. **Unbounded graph growth (OOM):** Without the detach, segment $s$ stays connected to the computational graphs of all previous segments $1, \ldots, s-1$. Backward runtime and GPU memory grow linearly as $O(s \cdot T_0)$ at every step until the backward pass runs out of memory.
-3. **No:** Because $\overline{(1 - H^2)}\,\rho(\mathbf{W}_{\textrm{hh}}) \approx 0.49$ attenuates gradients below $1\%$ within 8 steps regardless of window length, extending $T_0$ from $32 \to 128$ adds zero usable long-range gradient signal.
+3. **No:** Because the measured decay of $\approx 0.55$ per step attenuates gradients below $1\%$ within 8 steps regardless of window length, extending $T_0$ from $32 \to 128$ adds zero usable long-range gradient signal.
 :::
 :::
 
@@ -713,7 +720,7 @@ Test your understanding of matrix powers, graph detachment, and gradient horizon
 |---|---|---|---|
 | **Linear Backward Recursion** | $\mathbf{G}_t = \nabla_{\mathbf{O}_t} L\,\mathbf{W}_{\textrm{hq}}^\top + \mathbf{G}_{t+1}\mathbf{W}_{\textrm{hh}}^\top$ | $O(T)$ backward sweep ($1$ GEMM/step) | Exact reverse-mode autodiff on the unrolled graph |
 | **Unrolled Lag-$k$ Expansion** | $\mathbf{G}_t = \sum_{j=t}^T \nabla_{\mathbf{O}_j} L\,\mathbf{W}_{\textrm{hq}}^\top (\mathbf{W}_{\textrm{hh}}^\top)^{j-t}$ | $\|(\mathbf{W}_{\textrm{hh}}^\top)^k\| \sim \rho(\mathbf{W}_{\textrm{hh}})^k$ | $\rho < 1 \implies$ vanishing; $\rho > 1 \implies$ exploding |
-| **Nonlinear $\tanh$ BPTT** | $\mathbf{G}_{t-1} = \nabla_{\mathbf{O}_{t-1}} L\,\mathbf{W}_{\textrm{hq}}^\top + (\mathbf{G}_t \odot (1 - \mathbf{H}_t^2))\mathbf{W}_{\textrm{hh}}^\top$ | Multiplier $\sim \overline{(1 - H^2)}\,\rho \approx 0.49$ | Gradient norm falls below $1\%$ in $\sim 8$ steps despite $\rho \approx 1.8$ |
+| **Nonlinear $\tanh$ BPTT** | $\mathbf{G}_{t-1} = \nabla_{\mathbf{O}_{t-1}} L\,\mathbf{W}_{\textrm{hq}}^\top + (\mathbf{G}_t \odot (1 - \mathbf{H}_t^2))\mathbf{W}_{\textrm{hh}}^\top$ | Measured decay $\approx 0.55$ per step (rough estimate $\overline{(1 - H^2)}\,\rho \approx 0.49$) | Gradient norm falls below $1\%$ in $\sim 8$ steps despite $\rho \approx 1.8$ |
 | **Shared Parameter Gradients** | $\nabla_{\mathbf{W}_{\textrm{hh}}} L = \sum_{t=1}^T \mathbf{H}_{t-1}^\top \mathbf{G}_t$, $\nabla_{\mathbf{W}_{\textrm{xh}}} L = \sum_{t=1}^T \mathbf{X}_t^\top \mathbf{G}_t$ | Sum of $T$ outer products; requires storing $\mathbf{H}_{1:T}$ | Dominated by small-lag terms ($j - t \le 3$) when gradients vanish |
 | **Global Gradient Clipping** | $\mathbf{g} \leftarrow \min(1, \theta / \|\mathbf{g}\|)\mathbf{g}$ | Uniform scalar factor on entire sum $\mathbf{g}$ | Cures exploding update spikes; cannot alter near-vs-far lag ratio |
 | **Truncated BPTT (`detach`)** | Stop gradient across segment boundaries of length $T_0$ | Bounds memory to $O(T_0 bh)$ per update | Capped credit-assignment horizon $k < T_0$; mandatory for long streams |

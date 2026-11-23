@@ -1,0 +1,155 @@
+% D2L Beamer theme for slides_to_beamer.py (included with pandoc -H).
+% Proportions follow the PowerPoint export (pptx_fit.py) scaled from a
+% 10 x 5.625 in slide to Beamer's 16:9 page (160 x 90 mm, factor 0.63):
+% body 11.3 pt (18 pt), title 15.1 pt (24 pt), footer 6.3 pt (10 pt).
+% The deck defines \dtllogo, \dtlfooter and \dtlcover before \input-ing
+% this file, and then \input's sizes.tex (the fitted per-frame sizes).
+\usefonttheme{professionalfonts}
+% Fonts: Source Sans 3 / Inconsolata as files (the d2l build points
+% OSFONTDIR at static/fonts) or installed, else TeX Live's Source Sans Pro
+% and Inconsolata (zi4), else the defaults.
+\IfFontExistsTF{SourceSans3-Regular.ttf}{%
+  \setsansfont{SourceSans3}[Extension=.ttf, UprightFont=*-Regular,
+    BoldFont=*-Bold, ItalicFont=*-Italic, BoldItalicFont=*-Bold]}{%
+\IfFontExistsTF{Source Sans 3}{\setsansfont{Source Sans 3}}{%
+\IfFontExistsTF{SourceSansPro-Regular.otf}{%
+  \setsansfont{SourceSansPro}[Extension=.otf, UprightFont=*-Regular,
+    BoldFont=*-Bold, ItalicFont=*-RegularIt, BoldItalicFont=*-BoldIt]}{}}}
+\IfFontExistsTF{Inconsolata-Regular.ttf}{%
+  \setmonofont{Inconsolata}[Extension=.ttf, UprightFont=*-Regular,
+    BoldFont=*-Bold]}{%
+\IfFontExistsTF{Inconsolatazi4-Regular.otf}{%
+  \setmonofont{Inconsolatazi4}[Extension=.otf, UprightFont=*-Regular,
+    BoldFont=*-Bold]}{}}
+\usepackage{zref-savepos}
+\usepackage{fvextra}
+
+\definecolor{d2link}{HTML}{15181C}
+\definecolor{d2link2}{HTML}{3A4049}
+\definecolor{d2link3}{HTML}{6A717B}
+\definecolor{d2lblue}{HTML}{2196F3}
+\definecolor{d2lbluedark}{HTML}{1976D2}
+\definecolor{d2lbluelight}{HTML}{BBDEFB}
+\definecolor{d2lrule}{HTML}{D0D7DE}
+\definecolor{shadecolor}{HTML}{F5F7FA}% the web deck's code background
+
+\setbeamercolor{normal text}{fg=d2link}
+\setbeamercolor{frametitle}{fg=d2link}
+\setbeamercolor{title}{fg=d2link}
+\setbeamercolor{itemize item}{fg=d2lblue}
+\setbeamercolor{itemize subitem}{fg=d2lblue}
+\setbeamercolor{enumerate item}{fg=d2lbluedark}
+\setbeamertemplate{itemize item}{\raisebox{0.08em}{\scalebox{0.9}{\textbullet}}}
+\setbeamertemplate{itemize subitem}{\raisebox{0.12em}{\scalebox{0.7}{\textbullet}}}
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=0.64cm, text margin right=0.64cm}
+\hypersetup{colorlinks, urlcolor=d2lbluedark, linkcolor=d2lbluedark}
+
+% ---- per-frame size -----------------------------------------------------
+% \dtlsz@<n> (body pt) and \dtlim@<n> (image height cap, pt) come from the
+% fit loop; frames without an entry use the base size.
+\makeatletter
+\def\dtl@base{11.3}
+\def\dtl@s{11.3}
+\newlength\dtlimgmax
+\setlength\dtlimgmax{0.8\textheight}
+\def\dtlcodefont{\fontsize{8.8}{10.2}\selectfont}
+\def\dtl@sub{\fontsize{10.4}{12.4}}
+\setbeamerfont{itemize/enumerate body}{size=}
+\setbeamerfont{itemize/enumerate subbody}{size=\dtl@sub}
+\setbeamerfont{itemize/enumerate subsubbody}{size=\dtl@sub}
+\newcommand\dtlstart[1]{%
+  \ifcsname d2lsz@#1\endcsname
+    \edef\dtl@s{\csname d2lsz@#1\endcsname}\else\edef\dtl@s{\dtl@base}\fi
+  \ifcsname d2lim@#1\endcsname
+    \setlength\dtlimgmax{\csname d2lim@#1\endcsname pt}%
+  \else\setlength\dtlimgmax{0.65\textheight}\fi
+  \fontsize{\dtl@s}{\fpeval{1.2*\dtl@s}}\selectfont
+  \edef\dtlcodefont{\noexpand\fontsize{\fpeval{0.78*\dtl@s}}%
+    {\fpeval{0.9*\dtl@s}}\noexpand\selectfont}%
+  \edef\dtl@sub{\noexpand\fontsize{\fpeval{0.92*\dtl@s}}{\fpeval{1.1*\dtl@s}}}%
+  \setlength\parskip{0.45em}%
+  \setlength\abovedisplayskip{0.4em}\setlength\belowdisplayskip{0.4em}%
+  \setlength\abovedisplayshortskip{0.2em}\setlength\belowdisplayshortskip{0.4em}%
+  \zsavepos{d2ls-#1}}
+% End marker: the bottom of the frame's content.
+\newcommand\dtlend[1]{\par\zsavepos{d2le-#1}}
+
+% ---- kicker ---------------------------------------------------------------
+\newcommand\dtlkicker[1]{%
+  {\fontsize{\fpeval{max(0.62*\dtl@s,5)}}{\fpeval{max(0.75*\dtl@s,6)}}\selectfont
+   \color{d2lblue}\bfseries\addfontfeature{LetterSpace=6}\MakeUppercase{#1}}}
+
+% ---- code and outputs -----------------------------------------------------
+% Code cells sit on the web deck's grey with a blue-light rule on the left;
+% outputs get a thin grey frame (as the web's "In"/"Out" boxes).
+\usepackage{framed}
+\ifcsname Shaded\endcsname\else\newenvironment{Shaded}{}{}\fi
+\renewenvironment{Shaded}{\vskip 0.25em
+  \def\FrameCommand{{\color{d2lbluelight}\vrule width 1.4pt}%
+    \fboxsep=2.5pt\colorbox{shadecolor}}%
+  \MakeFramed{\advance\hsize-\width\FrameRestore}}{\endMakeFramed}
+% (pandoc defines Highlighting/Shaded only for decks with highlighted code)
+\ifcsname Highlighting\endcsname\else
+  \DefineVerbatimEnvironment{Highlighting}{Verbatim}{}\fi
+\RecustomVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\},
+  fontsize=\dtlcodefont, breaklines}
+\DefineVerbatimEnvironment{Output}{Verbatim}{fontsize=\dtlcodefont,
+  breaklines, frame=single, framerule=0.4pt, rulecolor=\color{d2lrule},
+  framesep=2.5pt, formatcom=\color{d2link2}}
+
+% ---- images: fit the column width and the frame's height cap ---------------
+% (pandoc defines \pandocbounded only for decks with images)
+\ifdefined\pandoc@box\else\newsavebox\pandoc@box\fi
+\providecommand*\pandocbounded[1]{}
+\renewcommand*\pandocbounded[1]{%
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\dtlimgmax}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi
+  \leavevmode\hfill\scalebox{\@tempa}{\usebox\pandoc@box}\hfill\null}
+
+% ---- frame title: bottom-anchored, shrunk to one line down to 10.1 pt -----
+\newsavebox\dtl@tbox
+\newdimen\dtl@ts
+\newcommand\dtlfittitle[1]{%
+  \sbox\dtl@tbox{\fontsize{15.1}{18}\selectfont\bfseries #1}%
+  \dtl@ts=15.1pt
+  \ifdim\wd\dtl@tbox>0.985\linewidth
+    \dtl@ts=\dimexpr 14.85pt*\numexpr\linewidth\relax/\numexpr\wd\dtl@tbox\relax\relax
+    \ifdim\dtl@ts<10.1pt \dtl@ts=10.1pt\fi
+  \fi
+  \begin{minipage}[b]{\linewidth}\raggedright
+    \fontsize{\strip@pt\dtl@ts}{\fpeval{1.12*\strip@pt\dtl@ts}}\selectfont
+    \bfseries #1\end{minipage}}
+\setbeamertemplate{frametitle}{%
+  \parskip=0pt
+  \vbox to 1.10cm{\vfill\hbox{\dtlfittitle{\insertframetitle}}\vskip 0.16cm}%
+  \nointerlineskip
+  \hbox{\color{d2lbluelight}\rule{\linewidth}{0.9pt}}%
+  \vskip 0.10cm}
+
+% ---- footline: section bottom left, logo bottom right ----------------------
+\setbeamertemplate{footline}{%
+  \hbox to \paperwidth{\hspace{0.64cm}%
+    \raisebox{0.13cm}{\fontsize{6.3}{7}\selectfont\color{d2link3}\dtlfooter}%
+    \hfill\zsavepos{d2lfoot}\includegraphics[height=0.448cm]{\dtllogo}%
+    \hspace{0.5cm}}%
+  \vskip 0.26cm}
+
+% ---- title page --------------------------------------------------------------
+\setbeamertemplate{title page}{%
+  \vfill
+  \begin{center}
+  \includegraphics[width=5.4cm]{\dtllogo}\par\vskip 0.7cm
+  {\fontsize{8.5}{10}\selectfont\color{d2lblue}\bfseries
+   \addfontfeature{LetterSpace=4}\MakeUppercase{\dtlcover}\par}\vskip 0.3cm
+  {\fontsize{22}{26}\selectfont\bfseries\inserttitle\par}
+  \ifx\insertsubtitle\@empty\else
+    \vskip 0.35cm
+    \begin{minipage}{0.8\linewidth}\centering
+    \fontsize{10}{13}\selectfont\color{d2link2}\insertsubtitle\end{minipage}\par
+  \fi
+  \end{center}
+  \vfill}
+\makeatother

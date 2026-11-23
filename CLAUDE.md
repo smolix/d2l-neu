@@ -25,6 +25,7 @@ python3 -m http.server 8000 -d _book    # preview at http://localhost:8000/
 | Render the HTML book | `make html` | any host | §4.1 |
 | Render everything, no execution | `make all-quick` | any host (+TeX) | §3 |
 | PDFs / part PDFs / slides | `make pdfs` / `make pdf-parts` / `make slides` | any host (+TeX) | §4.9 |
+| PowerPoint / Beamer decks only | `make slides-pptx` / `make slides-beamer` (part of `make slides`) | any host (+TeX for Beamer) | `docs/slides.md` |
 | Refresh one notebook's outputs | `rm -f _notebooks/<fw>/<ch>/<f>.executed && make _notebooks/<fw>/<ch>/<f>.executed`, then `python3 tools/capture_outputs.py --frameworks <fw> <ch>/<f>.md` | that venv; GPU for GPU notebooks | §4.3 |
 | After a `#@save` change | `make lib notebooks && make audit-outputs`, then `make refresh-stale` | GPU box | §4.4 |
 | Why does `make html` say stale? | `make audit-outputs` | any host | §4.12 |

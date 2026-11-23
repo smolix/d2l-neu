@@ -173,6 +173,18 @@ def main():
                               f'but NOT rendered (e.g. {ex})')
             else:
                 print(f'  ✓ {fw}: {len(want)} slide decks rendered')
+            for suffix, what, target in (('.pptx', 'PowerPoint decks', 'slides-pptx'),
+                                         ('.pdf', 'Beamer PDFs', 'slides-beamer'),
+                                         ('-latex.zip', 'LaTeX bundles', 'slides-beamer')):
+                have = {f'{p.parent.name}/{p.name[:-len(suffix)]}'
+                        for p in (book / 'slides' / fw).rglob('*' + suffix)}
+                lacking = (want & got) - have
+                if lacking:
+                    ex = ', '.join(sorted(lacking)[:5])
+                    errors.append(f'{fw}: {len(lacking)} rendered deck(s) without '
+                                  f'a {suffix} (e.g. {ex}); run make {target}')
+                else:
+                    print(f'  ✓ {fw}: {len(want & got)} {what}')
 
     # 5. Notebook download zips (only assert if the tree was built at all)
     if (book / 'notebooks').is_dir():

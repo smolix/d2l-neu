@@ -524,7 +524,7 @@ Training with `kl_group_step` ($K = 32$ samples per prompt, 400 updates) across 
 @!rl-sequences-reward-hacking-unified
 
 ::: {.d2l-note}
-**The Regularization Trade-off:** At $\beta = 0$, the policy achieves a perfect lenient score ($1.00$) by placing $100\%$ of its mass on the hedge for `8*8` and `9*9` ($0.50$ hedge average). Raising $\beta$ to $0.3 > 0.25$ suppresses the hedge ($0.07$), while over-penalizing at $\beta = 0.5$ drags the exact score back down ($0.50 \to 0.26$).
+**The Regularization Trade-off:** At $\beta = 0$, the policy achieves a perfect lenient score ($1.00$) by placing $100\%$ of its mass on the hedge for `8*8` and `9*9` ($0.50$ hedge average). Raising $\beta$ to $0.3 > 0.25$ suppresses the hedge ($0.04$), while over-penalizing at $\beta = 0.5$ drags the exact score back down (from $0.50$ to about $0.25$).
 :::
 :::
 
@@ -570,7 +570,7 @@ $$\hat{A}_j = \frac{r_j - \bar{r}}{\sigma_r + 10^{-8}}$$
 ::: {.slide title="Multi-Epoch Group Reuse in GRPO"}
 [GRPO Diagnostics]{.kicker}
 
-Reusing a single group of $K = 32$ responses per prompt for 4 epochs (`grpo_step`, $\epsilon_{\textrm{clip}} = 0.2$) lifts the exact verifier score from $0.062$ ($\pi_{\textrm{ref}}$) to $0.273$ (1 epoch) to **$0.487$** (4 epochs, near the $0.500$ ceiling):
+Reusing a single group of $K = 32$ responses per prompt for 4 epochs (`grpo_step`, $\epsilon_{\textrm{clip}} = 0.2$) lifts the exact verifier score from $0.062$ ($\pi_{\textrm{ref}}$) to $0.111$ (1 epoch) to **$0.137$** (4 epochs):
 
 @!rl-sequences-group-relative-policy-optimization-2
 

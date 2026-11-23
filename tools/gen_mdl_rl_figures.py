@@ -3311,6 +3311,365 @@ def fig_optimal_control():   # F_oc (ch. 14) -> mdl-rl-optimal-control
     fl.save(fig, "mdl-rl-optimal-control")
 
 
+# =========================================================================== #
+# Ch. 15 additions (2026-11-23 review pass): six slide diagrams redrawn in    #
+# the book's house style.  Kept together so the ch. 14 pass can skip them.   #
+# =========================================================================== #
+
+STITCH_EP1 = [0, 4, 8, 9, 10, 11]          # reaches cell 10, falls into hole 11
+STITCH_EP2 = [0, 1, 2, 6, 10, 14, 15]      # reaches 10 another way, then goal
+STITCH_SHARED = 10
+
+def _lake_path(ax, path, color, lw=2.4, ls="-", mut=14, shift=(0.0, 0.0)):
+    """Arrows from cell centre to cell centre along ``path`` on the 4x4 lake,
+    trimmed at both ends so successive arrows stay separate."""
+    sh = np.asarray(shift, float)
+    for s, s2 in zip(path[:-1], path[1:]):
+        (r, c), (r2, c2) = divmod(s, 4), divmod(s2, 4)
+        p0, p1 = np.array([c + 0.5, r + 0.5]), np.array([c2 + 0.5, r2 + 0.5])
+        u = (p1 - p0) / np.linalg.norm(p1 - p0)
+        fl.arrow(ax, p0 + 0.13 * u + sh, p1 - 0.13 * u + sh, color=color,
+                 lw=lw, mut=mut, ls=ls)
+
+def fig_stitching():          # ch. 15 offline-rl -> mdl-rl-stitching
+    """Stitching on the lake: (a) two logged episodes that share cell 10, the
+    first reaching it fast and falling into hole 11, the second reaching it
+    by a detour and going on to the goal; (b) the route the per-transition
+    backup composes from them, the first episode's prefix and the second's
+    continuation, which no logged episode followed."""
+    assert set(STITCH_EP1) & set(STITCH_EP2) == {0, STITCH_SHARED}
+    i1, i2 = STITCH_EP1.index(STITCH_SHARED), STITCH_EP2.index(STITCH_SHARED)
+    stitched = STITCH_EP1[:i1 + 1] + STITCH_EP2[i2 + 1:]
+    for a, b in zip(stitched[:-1], stitched[1:]):          # a legal route
+        (r, c), (r2, c2) = divmod(a, 4), divmod(b, 4)
+        assert abs(r - r2) + abs(c - c2) == 1 and MAP4[r2][c2] != "H"
+
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.6, 5.3))
+    for ax in (axa, axb):
+        _grid(ax, MAP4)
+        r, c = divmod(STITCH_SHARED, 4)
+        ax.add_patch(Rectangle((c, r), 1, 1, fc="none", ec=PURPLE, lw=3.0,
+                               zorder=5))
+        ax.set_xlim(-0.04, 4.04)
+        ax.set_ylim(4.95, -0.04)
+
+    # (a) the two logged episodes
+    _lake_path(axa, STITCH_EP1[:-1], BLUE)
+    _lake_path(axa, STITCH_EP1[-2:], BLUE, ls=(0, (3, 2)))   # into the hole
+    _lake_path(axa, STITCH_EP2, ORANGE)
+    axa.text(2.0, 4.30, "blue: episode 1, ends in hole 11", ha="center",
+             va="center", fontsize=12.5, color=BLUE)
+    axa.text(2.0, 4.70, "orange: episode 2, reaches the goal", ha="center",
+             va="center", fontsize=12.5, color=ORANGE)
+    _letter(axa, "(a)", x=0.0, y=1.0)
+
+    # (b) the stitched route: episode 1 up to cell 10, episode 2 after it
+    _lake_path(axb, STITCH_EP1[:i1 + 1], BLUE)
+    _lake_path(axb, STITCH_EP2[i2:], ORANGE)
+    axb.text(2.0, 4.30, "stitched at cell 10:", ha="center", va="center",
+             fontsize=12.5, color="black")
+    axb.text(2.0, 4.70, "a route no logged episode took", ha="center",
+             va="center", fontsize=12.5, color="black")
+    _letter(axb, "(b)", x=0.0, y=1.0)
+    fig.subplots_adjust(wspace=0.12)
+    fl.save(fig, "mdl-rl-stitching")
+
+
+CQL_Q = np.array([1.0, 2.5, 1.5, 3.0, 0.5, 2.0])   # Q(s, .) at a logged state
+CQL_LOGGED = 2                                    # the action the log holds
+
+def fig_cql_push_pull():      # ch. 15 offline-rl -> mdl-rl-cql-push-pull
+    """The conservative penalty $\\log\\sum_{a'} e^{Q(s,a')} - Q(s, a)$ at one
+    logged state, computed: (a) the values, the soft maximum the penalty
+    compares against and the logged action's value; (b) the change of each
+    value under one gradient-descent step of size one on the penalty, which
+    is $\\mathbb{1}[a' = a] - \\mathrm{softmax}(Q)_{a'}$: every value falls in
+    proportion to its softmax weight, the logged one rises, and the changes
+    sum to zero."""
+    q, k = CQL_Q, CQL_LOGGED
+    lse = np.log(np.exp(q).sum())
+    step = -_softmax(q)
+    step[k] += 1.0
+    assert abs(step.sum()) < 1e-12 and step[k] > 0 and (np.delete(step, k) < 0).all()
+    x = np.arange(len(q))
+    colors = [GREEN if i == k else BLUE for i in x]
+    labels = [f"$a_{{{i + 1}}}$" for i in x]
+
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.9))
+    # (a) the values and the soft maximum
+    axa.bar(x, q, 0.62, color=colors, alpha=0.85, ec="black", lw=0.9,
+            zorder=3)
+    axa.axhline(lse, color=ORANGE, lw=2.0, ls=(0, (5, 2.5)), zorder=4)
+    axa.text(len(q) - 0.45, lse + 0.12, r"$\log\sum_{a'} e^{Q(s,a')}$",
+             ha="right", va="bottom", fontsize=13, color=ORANGE)
+    # the gap the penalty measures, beside the logged bar
+    axa.annotate("", xy=(k, q[k]), xytext=(k, lse),
+                 arrowprops=dict(arrowstyle="<->", color="black", lw=1.3,
+                                 shrinkA=0, shrinkB=0))
+    axa.text(k - 0.1, (q[k] + lse) / 2 + 0.55, "penalty", ha="right",
+             va="center", fontsize=12.5, color="black")
+    axa.text(k, q[k] / 2, "logged", ha="center", va="center", rotation=90,
+             fontsize=12, color="black", zorder=5)
+    axa.set_xticks(x, labels)
+    axa.set_ylim(0, lse + 0.9)
+    axa.set_ylabel("$Q(s, a')$", fontsize=13)
+    _black_axes(axa)
+    axa.tick_params(axis="x", labelsize=13)
+    _letter(axa, "(a)", x=-0.14, y=1.0)
+
+    # (b) one gradient step on the penalty
+    axb.bar(x, step, 0.62, color=[GREEN if i == k else ORANGE for i in x],
+            alpha=0.85, ec="black", lw=0.9, zorder=3)
+    axb.axhline(0, color="black", lw=1.0, zorder=4)
+    for i, v in zip(x, step):
+        axb.text(i, v + (0.04 if v > 0 else -0.04), f"${v:+.2f}$",
+                 ha="center", va="bottom" if v > 0 else "top", fontsize=11.5,
+                 color="black", zorder=5)
+    axb.text(len(q) - 0.4, 0.62, "raised: the logged action\n"
+             "lowered: all others, most\nwhere $Q$ is largest",
+             ha="right", va="center", fontsize=12, color="black",
+             linespacing=1.3)
+    axb.set_xticks(x, labels)
+    axb.set_ylim(-0.62, 1.08)
+    axb.set_yticks([-0.5, 0, 0.5, 1.0])
+    axb.set_ylabel("change of $Q(s, a')$", fontsize=13)
+    _black_axes(axb)
+    axb.tick_params(axis="x", labelsize=13)
+    axb.spines["bottom"].set_visible(False)
+    axb.tick_params(axis="x", length=0)
+    _letter(axb, "(b)", x=-0.14, y=1.0)
+    fig.subplots_adjust(wspace=0.32)
+    fl.save(fig, "mdl-rl-cql-push-pull")
+
+
+def fig_search_distill():     # ch. 15 model-based -> mdl-rl-search-distill
+    """One round of `search_and_distill` as a loop of four boxes in the
+    vocabulary of the actor-critic and DQN data flows."""
+    fig, ax = plt.subplots(figsize=(9.6, 4.4))
+    ax.axis("off")
+    ax.set_aspect("equal")
+    W, H = 3.9, 1.25
+    P = {1: (2.2, 3.4), 2: (7.8, 3.4), 3: (7.8, 0.9), 4: (2.2, 0.9)}
+    _box(ax, *P[1], W, H, "refit the model $\\hat f_\\phi$\n"
+         "on all stored transitions", BLUE, fontsize=13, fc="#e8f1f8")
+    _box(ax, *P[2], W, H, "label 200 stored states with\n"
+         "the search, seeded by $\\pi_\\theta$", ORANGE, fontsize=13,
+         fc="#fdf0e3")
+    _box(ax, *P[3], W, H, "regress the actor's action\n"
+         "onto the labels", PURPLE, fontsize=13, fc="#f1ecf7")
+    _box(ax, *P[4], W, H, "collect one real episode,\n"
+         "acting with the search", GREEN, fontsize=13, fc="#eaf6ea")
+    hw, hh = W / 2 + 0.08, H / 2 + 0.08
+    fl.arrow(ax, (P[1][0] + hw, 3.4), (P[2][0] - hw, 3.4), color=BLUE,
+             lw=2.0, mut=16)
+    ax.text(5.0, 3.52, "$\\hat f_\\phi$", ha="center", va="bottom",
+            fontsize=13.5, color=BLUE)
+    fl.arrow(ax, (7.8, P[2][1] - hh), (7.8, P[3][1] + hh), color=ORANGE,
+             lw=2.0, mut=16)
+    ax.text(7.95, 2.15, "labels $(s_i, a_i^\\star)$", ha="left",
+            va="center", fontsize=13, color=ORANGE)
+    fl.arrow(ax, (P[3][0] - hw, 0.9), (P[4][0] + hw, 0.9), color=PURPLE,
+             lw=2.0, mut=16)
+    ax.text(5.0, 1.02, "$\\pi_\\theta$", ha="center", va="bottom",
+            fontsize=13.5, color=PURPLE)
+    fl.arrow(ax, (2.2, P[4][1] + hh), (2.2, P[1][1] - hh), color=GREEN,
+             lw=2.0, mut=16)
+    ax.text(2.05, 2.15, "new transitions", ha="right", va="center",
+            fontsize=13, color=GREEN)
+    ax.set_xlim(-0.6, 10.8)
+    ax.set_ylim(0.1, 4.2)
+    fl.save(fig, "mdl-rl-search-distill")
+
+
+def fig_branched_rollouts():  # ch. 15 model-based -> mdl-rl-branched-rollouts
+    """Branched rollouts, schematic: real states from the replay buffer
+    (blue), short imagined rollouts of three model steps that start from them
+    (orange, dashed), and one long imagined rollout (gray).  The band around
+    each imagined rollout is the model's error, which compounds with every
+    step, so the long rollout drifts away from anything the data support."""
+    n, K, LONG = 16, 3, 12
+    path = lambda tt: (0.55 + 0.28 * np.sin(tt / 2.6)
+                       + 0.06 * np.sin(tt * 1.7))
+    t = np.arange(n)
+    real = path(t)
+
+    def imagine(t0, k):
+        """The same schematic model from real state ``t0`` for ``k`` steps:
+        a bias that compounds and an error band that widens with depth."""
+        tt = np.arange(t0, t0 + k + 1)
+        steps = tt - t0
+        return tt, path(tt) + 0.022 * steps ** 1.5, 0.045 * steps
+
+    fig, ax = plt.subplots(figsize=(10.2, 4.2))
+    tl, yl, el = imagine(0, LONG)
+    ax.fill_between(tl, yl - el, yl + el, color=GRAY, alpha=0.12, lw=0,
+                    zorder=1)
+    ax.plot(tl, yl, color=GRAY, lw=1.8, ls=(0, (1.5, 2.0)), zorder=2)
+    ax.plot(tl[1:], yl[1:], "o", mfc="white", mec=GRAY, ms=5, zorder=2)
+    ax.plot(t, real, color=BLUE, lw=2.2, zorder=4)
+    ax.plot(t, real, "o", color=BLUE, ms=7, zorder=5)
+    for t0 in (3, 6, 9, 12):
+        tb, yb, eb = imagine(t0, K)
+        ax.fill_between(tb, yb - eb, yb + eb, color=ORANGE, alpha=0.20,
+                        lw=0, zorder=2)
+        ax.plot(tb, yb, color=ORANGE, lw=2.0, ls=(0, (4, 2)), zorder=3)
+        ax.plot(tb[1:], yb[1:], "o", mfc="white", mec=ORANGE, mew=1.6, ms=6,
+                zorder=3)
+    ax.text(14.2, -0.05, "real states (replay buffer)", ha="center",
+            va="center", fontsize=12.5, color=BLUE)
+    ax.text(6.4, -0.05, "imagined: 3 steps in $\\hat f_\\phi$ from a "
+            "real state", ha="center", va="center", fontsize=12.5,
+            color=ORANGE)
+    ax.annotate("one long imagined rollout:\nthe error compounds",
+                xy=(9.0, yl[9] + el[9] + 0.03), xytext=(4.6, 1.85),
+                ha="center", va="center", fontsize=12.5, color="black",
+                linespacing=1.2,
+                arrowprops=dict(arrowstyle="->", color="black", lw=1.1,
+                                shrinkA=4, shrinkB=2))
+    ax.set_xlim(-0.6, n - 0.2)
+    ax.set_ylim(-0.25, 2.12)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xlabel("time step", fontsize=13)
+    ax.set_ylabel("state (schematic)", fontsize=13)
+    _black_axes(ax)
+    fl.save(fig, "mdl-rl-branched-rollouts")
+
+
+def fig_target_feedback():    # ch. 15 dqn -> mdl-rl-target-feedback
+    """The feedback loop of Q-learning without a target network, as three
+    boxes: a step lifts $Q_w(s, a)$, the shared weights lift $Q_w(s', \\cdot)$,
+    which lifts the next target.  A frozen copy cuts the last edge between
+    synchronizations."""
+    fig, ax = plt.subplots(figsize=(10.4, 3.9))
+    ax.axis("off")
+    ax.set_aspect("equal")
+    W, H, y = 3.15, 1.25, 2.3
+    xs = (1.75, 5.55, 9.35)
+    _box(ax, xs[0], y, W, H, "a gradient step lifts\n"
+         "$Q_w(s, a)$ toward $y$", BLUE, fontsize=13, fc="#e8f1f8")
+    _box(ax, xs[1], y, W, H, "the shared weights\n"
+         "lift $Q_w(s', \\cdot)$ too", ORANGE, fontsize=13, fc="#fdf0e3")
+    _box(ax, xs[2], y, W, H, "the next target\n"
+         "$y = 1 + \\gamma\\, \\mathrm{max}_{a'}\\, Q_w(s', a')$\nrises",
+         RED, fontsize=13, fc="#fbeaea")
+    gap = W / 2 + 0.06
+    fl.arrow(ax, (xs[0] + gap, y), (xs[1] - gap, y), color=BLUE, lw=2.0,
+             mut=16)
+    fl.arrow(ax, (xs[1] + gap, y), (xs[2] - gap, y), color=ORANGE, lw=2.0,
+             mut=16)
+    # the cut a frozen copy makes on the second edge
+    xm = (xs[1] + xs[2]) / 2
+    ax.plot([xm - 0.13, xm + 0.13], [y - 0.13, y + 0.13], color="black",
+            lw=2.2, zorder=6)
+    ax.plot([xm - 0.13, xm + 0.13], [y + 0.13, y - 0.13], color="black",
+            lw=2.2, zorder=6)
+    ax.text(xm, y + 1.05, "a frozen copy $Q_{w^-}$\ncuts this edge",
+            ha="center", va="center", fontsize=12.5, color="black",
+            linespacing=1.2)
+    ax.plot([xm, xm], [y + 0.62, y + 0.24], color="black", lw=1.0)
+    # the return edge, under the row
+    _path_arrow(ax, [(xs[2], y - H / 2 - 0.06), (xs[2], 0.75),
+                     (xs[0], 0.75), (xs[0], y - H / 2 - 0.06)], color=RED,
+                lw=2.0, mut=16)
+    ax.text(xs[1], 0.62, "and the next step chases the higher target",
+            ha="center", va="top", fontsize=12.5, color=RED)
+    ax.set_xlim(0.0, 11.1)
+    ax.set_ylim(0.05, 3.65)
+    fl.save(fig, "mdl-rl-target-feedback")
+
+
+def fig_clip_vs_tanh():       # ch. 15 sac -> mdl-rl-clip-vs-tanh
+    """Clipping against squashing a Gaussian action to $[-2, 2]$.  (a) The two
+    maps: the clip is flat beyond the bounds, the squash has positive slope
+    everywhere.  (b) What each does to $u \\sim \\mathcal{N}(0.7, 0.8^2)$,
+    the Gaussian of the squashed-density figure: the clip piles the
+    probability beyond the bound onto $a = 2$ (a point mass, drawn as a
+    spike), the squash gives a density."""
+    from math import erf, sqrt
+    C, MU, SIG = 2.0, 0.7, 0.8
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.8))
+
+    # (a) the maps
+    u = np.linspace(-4.0, 4.0, 801)
+    for x0 in (-4.0, C):
+        axa.axvspan(x0, x0 + 2.0, color=LIGHT, alpha=0.35, lw=0, zorder=0)
+    axa.axhline(0, color="black", lw=0.8, zorder=1)
+    axa.axvline(0, color="black", lw=0.8, zorder=1)
+    axa.plot(u, np.clip(u, -C, C), color=ORANGE, lw=2.4, zorder=3)
+    axa.plot(u, C * np.tanh(u), color=BLUE, lw=2.4, zorder=4)
+    axa.text(2.6, 2.35, "clip", ha="left", va="bottom", fontsize=13,
+             color=ORANGE)
+    axa.text(1.0, 0.75, "$2\\tanh u$", ha="left", va="center",
+             fontsize=13, color=BLUE)
+    axa.text(3.0, -1.0, "slope 0", ha="center", va="center", fontsize=12.5,
+             color="black")
+    axa.text(-3.0, 1.0, "slope 0", ha="center", va="center", fontsize=12.5,
+             color="black")
+    axa.set_xlim(-4.0, 4.0)
+    axa.set_ylim(-2.9, 2.9)
+    axa.set_xticks([-4, -2, 0, 2, 4])
+    axa.set_yticks([-2, 0, 2])
+    axa.set_xlabel("$u$", fontsize=14)
+    axa.set_ylabel("action $a$", fontsize=13)
+    _black_axes(axa)
+    _letter(axa, "(a)", x=-0.14, y=1.0)
+
+    # (b) the two distributions of the action
+    def densities(a):
+        gauss = (np.exp(-0.5 * ((a - MU) / SIG) ** 2)
+                 / (SIG * np.sqrt(2 * np.pi)))
+        ua = np.arctanh(a / C)
+        squashed = (np.exp(-0.5 * ((ua - MU) / SIG) ** 2)
+                    / (SIG * np.sqrt(2 * np.pi))
+                    / (C * (1 - np.tanh(ua) ** 2)))
+        return gauss, squashed
+
+    mass_hi = 0.5 * (1 - erf((C - MU) / (SIG * sqrt(2))))
+    mass_lo = 0.5 * (1 + erf((-C - MU) / (SIG * sqrt(2))))
+    fine = np.linspace(-C + 1e-6, C - 1e-6, 200_001)    # quadrature only
+    g_fine, s_fine = densities(fine)
+    assert abs(np.trapezoid(s_fine, fine) - 1.0) < 1e-4
+    assert abs(np.trapezoid(g_fine, fine) + mass_hi + mass_lo - 1.0) < 1e-4
+    # plotting grid: dense near the bounds, where the squashed density turns
+    a = C * np.tanh(np.linspace(-4.5, 4.5, 1201))
+    gauss, squashed = densities(a)
+    axb.fill_between(a, squashed, color=BLUE, alpha=0.15, lw=0, zorder=1)
+    axb.plot(a, squashed, color=BLUE, lw=2.4, zorder=3)
+    axb.plot(a, gauss, color=ORANGE, lw=2.2, zorder=2)
+    top = 0.92
+    axb.annotate("", xy=(C, top), xytext=(C, 0.0),
+                 arrowprops=dict(arrowstyle="-|>", color=ORANGE, lw=2.4,
+                                 mutation_scale=16, shrinkA=0, shrinkB=0),
+                 zorder=4)
+    axb.text(C + 0.28, top - 0.04, f"clip: a point\nmass of ${mass_hi:.2f}$"
+             "\nat $a = 2$", ha="left", va="top", fontsize=12.5,
+             color=ORANGE, linespacing=1.25)
+    axb.text(-1.9, 0.62, "squash: a density\nthat integrates to 1",
+             ha="left", va="center", fontsize=12.5, color=BLUE,
+             linespacing=1.25)
+    axb.set_xlim(-2.2, 3.5)
+    axb.set_ylim(0.0, 1.0)
+    axb.set_xticks([-2, -1, 0, 1, 2])
+    axb.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+    axb.set_xlabel("action $a$", fontsize=13)
+    axb.set_ylabel("density", fontsize=13)
+    _black_axes(axb)
+    _letter(axb, "(b)", x=-0.14, y=1.0)
+    fig.subplots_adjust(wspace=0.28)
+    fl.save(fig, "mdl-rl-clip-vs-tanh")
+
+
+CH15_REVIEW_FIGURES = [
+    fig_stitching,
+    fig_cql_push_pull,
+    fig_search_distill,
+    fig_branched_rollouts,
+    fig_target_feedback,
+    fig_clip_vs_tanh,
+]
+
+
 FIGURES = [
     fig_agent_env,
         fig_roadmap,
@@ -3345,7 +3704,7 @@ FIGURES = [
         fig_model_planning,
         fig_reward_gridworld,
         fig_optimal_control,
-]
+] + CH15_REVIEW_FIGURES
 
 
 def main():

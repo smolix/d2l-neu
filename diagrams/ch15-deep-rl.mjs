@@ -100,7 +100,7 @@ function benchmarkGains() {
 
   o += box(18, 154, 524, 92, C.lgreen, C.green, 8, 2);
   o += tx(34, 176, 'CartPole-v1 (Return 500) & Discrete Exact Benchmarks:', { fs: 13.5, fw: 700, fill: D.green.dark, anchor: 'start' });
-  o += tx(280, 202, 'CartPole: 1-Step A2C ≥50k  →  DQN ~40k  →  4-Epoch Clipped PPO ~25k', { mono: true, fs: 11.8, fw: 700, fill: C.ink });
+  o += tx(280, 202, 'CartPole: Actor-Critic 60–190k  →  DQN 35–45k  →  4-Epoch PPO ~25k', { mono: true, fs: 11.8, fw: 700, fill: C.ink });
   o += tx(280, 226, 'Hazard Grid & Offline Lake: KL leash (β) & LCB (−κ/√n) stop reward hacking', { fs: 12, fw: 600, fill: D.green.dark });
   return svg(W, H, o);
 }
@@ -215,9 +215,9 @@ function fittedTdLoop() {
   o += tx(280, 20, 'Three Systems Choices in Batched Fitted-TD Actor–Critic', { fs: 15, fw: 700, fill: C.ink });
 
   const stages = [
-    { x: 16,  t: '1. Refit Critic First', s1: '20 passes on batch b', s2: 'BEFORE scoring actor', s3: 'Fails: 25% → 5%', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 16,  t: '1. Refit Critic First', s1: '20 passes on batch b', s2: 'BEFORE scoring actor', s3: 'Actor sees refit critic', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 198, t: '2. Recompute Targets', s1: "Fresh y_t = r + γV̂(s')", s2: 'inside each of 20 passes', s3: '20-step backup flow', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 380, t: '3. Raw δ_t + Grad Cap', s1: 'No batch std division!', s2: 'Clip ||∇_θ|| ≤ 0.5', s3: 'Anneals step 8× late', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 380, t: '3. Raw δ_t + Grad Cap', s1: 'No batch std division!', s2: 'Clip ||∇_θ|| ≤ 0.5', s3: 'Steps shrink with δ_t', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   stages.forEach((s, i) => {
     o += box(s.x, 46, 164, 184, s.fill, s.st, 8, 2);
@@ -283,8 +283,8 @@ function singleVsMultiEpoch() {
   o += tx(280, 20, 'Extracting Multiple Updates from a Single 8-Episode Batch', { fs: 15, fw: 700, fill: C.ink });
 
   const cols = [
-    { x: 16,  t: '1-Step A2C (§15.1)', s1: '1 gradient step,', s2: 'then discard 4,000 steps', s3: 'Needs ≥ 50k steps', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 198, t: '20 Epochs Unclipped', s1: '20 passes on ρ_t Â_t', s2: 'Ratios explode to 0 / 2', s3: '50% die at return 9!', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: 16,  t: '1 Epoch per Batch', s1: '1 gradient step,', s2: 'then discard 4,000 steps', s3: 'Needs ≥ 50k steps', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 198, t: '20 Epochs Unclipped', s1: '20 passes on ρ_t Â_t', s2: 'Ratios explode to 0 / 2', s3: 'Many die at return ≈ 9', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
     { x: 380, t: 'Clipped PPO (§15.2)', s1: '4–20 passes on L^CLIP', s2: 'Caps incentive at 1±0.2', s3: '~25k steps (8/8 win)!', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   cols.forEach((c) => {
@@ -515,7 +515,7 @@ function naiveQExplosion() {
   const bw = 240, bh = 72;
   const boxes = [
     { x: 16,  y: 44,  t: '1. Push Q_w(s_t, a_t) Up', s: 'y_t = 1 + 0.99 max Q_w(s_{t+1})', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 304, y: 44,  t: '2. Shared Weights Coupled', s: "k(s', s) > 0 lifts Q_w(s') too!", fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 304, y: 44,  t: '2. Shared Weights Coupled', s: "Lifting Q_w(s, a) lifts Q_w(s', ·)", fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 304, y: 158, t: '3. Next Target Jumps Higher', s: 'y_{t+1} = 1 + 0.99 max Q_w climbs', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
     { x: 16,  y: 158, t: '4. Runaway Feedback Loop', s: 'Q_w(s₀) > 10⁸, policy return ≈ 9!', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
@@ -616,7 +616,7 @@ function doubleDqnSplit() {
   o += box(402, 134, 140, 92, C.lgreen, C.green, 8, 2);
   o += tx(472, 160, 'DDQN Target', { fs: 13.5, fw: 700, fill: D.green.dark });
   o += tx(472, 184, "r + γ Q_{w⁻}(s',a*)", { mono: true, fs: 11.2, fw: 700, fill: C.ink });
-  o += tx(472, 206, 'Holds ≤ 100!', { fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(472, 206, 'Ends near 100', { fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -892,7 +892,7 @@ function actorSeededSearch() {
 function searchDistillation() {
   const W = 560, H = 258;
   let o = '';
-  o += tx(280, 20, 'Iterated Search and Policy Distillation (The AlphaZero / Dual Loop)', { fs: 14.8, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'One Round of Search and Distillation', { fs: 14.8, fw: 700, fill: C.ink });
 
   const bw = 224, bh = 72;
   const boxes = [
@@ -931,7 +931,7 @@ function mbpoBranchedRollout() {
   });
 
   o += box(20, 206, 520, 38, C.lgreen, C.green, 7, 1.8);
-  o += tx(280, 225, 'Ablation: At matched UTD = 10, 100% real replay matches 95% imagined rollouts!', { fs: 12, fw: 700, fill: D.green.dark });
+  o += tx(280, 225, 'Short rollouts keep the compounding model error small', { fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -969,7 +969,7 @@ function onlineVsOffline() {
 function trajectoryStitching() {
   const W = 560, H = 258;
   let o = '';
-  o += tx(280, 20, 'Trajectory Stitching: How Offline Q Beats Behavior Cloning 14×', { fs: 15, fw: 700, fill: C.ink });
+  o += tx(280, 20, 'Trajectory Stitching: How Offline Q Beats Behavior Cloning', { fs: 15, fw: 700, fill: C.ink });
 
   o += box(20, 48, 144, 46, C.lgreen, C.green, 7, 2);
   o += tx(92, 64, 'Ep 1 Prefix (Fast)', { fs: 12.5, fw: 700, fill: D.green.dark });
@@ -1142,13 +1142,13 @@ function loopholeThreshold() {
   o += tx(144, 128, 'Weak Regularization (β < 0.25)', { fs: 13.8, fw: 700, fill: D.red.dark });
   o += tx(144, 154, '1/β − 4 > 0  ⟹  Odds > 1', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(144, 182, 'Hedge dominates "8*8" & "9*9"!', { fs: 12.2, fw: 700, fill: D.red.dark });
-  o += tx(144, 208, 'At β = 0.1: hedge prob = 0.49', { mono: true, fs: 11.8, fill: C.ink });
+  o += tx(144, 208, 'At β = 0.1: mean hedge 0.49', { mono: true, fs: 11.8, fill: C.ink });
 
   o += box(292, 104, 248, 136, C.lgreen, C.green, 8, 2);
   o += tx(416, 128, 'Strong Leash (β > 0.25)', { fs: 13.8, fw: 700, fill: D.green.dark });
   o += tx(416, 154, '1/β − 4 < 0  ⟹  Odds < 1', { mono: true, fs: 12, fw: 700, fill: C.ink });
   o += tx(416, 182, 'Prior e⁻⁴ suppresses hedge', { fs: 12.2, fw: 700, fill: D.green.dark });
-  o += tx(416, 208, 'At β = 0.3: hedge drops to 0.07!', { mono: true, fs: 11.8, fill: C.ink });
+  o += tx(416, 208, 'At β = 0.3: mean hedge 0.04', { mono: true, fs: 11.8, fill: C.ink });
   return svg(W, H, o);
 }
 
@@ -1209,8 +1209,8 @@ function grpoArchitecture() {
   o += tx(496, y + 26, '− β k₃', { mono: true, fs: 11.8, fw: 700, fill: D.green.dark });
 
   o += box(16, 174, 528, 66, N.panel, C.gray, 8, 1.6);
-  o += tx(280, 196, 'Eliminates separate critic LLM (~50% memory savings)!', { fs: 13.2, fw: 700, fill: D.green.dark });
-  o += tx(280, 220, '4 epochs on K = 32 group lifts VerifierTask: 0.062 (π_ref) → 0.273 → 0.487', { fs: 12, fw: 600, fill: C.ink });
+  o += tx(280, 196, 'No critic network: the group mean is the baseline', { fs: 13.2, fw: 700, fill: D.green.dark });
+  o += tx(280, 220, 'K = 32, exact score: 0.062 (π_ref) → 0.111 (1 epoch) → 0.137 (4 epochs)', { fs: 12, fw: 600, fill: C.ink });
   return svg(W, H, o);
 }
 

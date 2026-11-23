@@ -1234,7 +1234,8 @@ $\mathbf x_1$ from $\mathbf x_2$: the multiple of $\mathbf x_2$ whose
 subtraction leaves zero correlation. In a multivariate Gaussian, conditional
 expectation *is* linear regression read straight off the covariance matrix.
 Meanwhile, the conditional covariance, known in linear algebra as the *Schur
-complement* of $\boldsymbol\Sigma_{22}$, never exceeds $\boldsymbol\Sigma_{11}$,
+complement* of $\boldsymbol\Sigma_{22}$
+(:numref:`subsec_mdl-block-matrices`), never exceeds $\boldsymbol\Sigma_{11}$,
 because the subtracted term
 $\boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}$ is
 positive semidefinite. Observing $x_2$ shrinks our uncertainty about $x_1$ from

@@ -86,7 +86,10 @@ Geometrically, the difference quotient is the slope of the *secant line* through
 ![The difference quotient $(f(x+h)-f(x))/h$ is the slope of the secant through $P$ and $Q$. As $h \to 0$, $Q$ slides toward $P$ and the secant turns into the tangent at $P$, whose slope is $f'(x)$.](../img/calculus-secant-tangent.svg)
 :label:`fig_calc_secant_tangent`
 
-Not every function is differentiable everywhere: $|x|$ has a corner at $x = 0$ (slope $-1$ from the left, $+1$ from the right). Even worse, discrete classification accuracy is flat ($f'(x) = 0$) almost everywhere and jumps discontinuously where a prediction flips, providing no gradient signal—which is why classifiers are trained by minimizing smooth surrogate losses such as cross-entropy.
+Not every function is differentiable everywhere: $|x|$ has a corner at $x = 0$ (slope $-1$ from the left, $+1$ from the right). Even worse, discrete classification accuracy is flat ($f'(x) = 0$) almost everywhere and jumps discontinuously where a prediction flips, providing no gradient signal—which is why classifiers are trained by minimizing smooth surrogate losses such as cross-entropy (:numref:`fig_calc_surrogate`).
+
+![The 0--1 error ($1$ for a wrong prediction, $0$ for a correct one) and a smooth surrogate loss, plotted against a score $z$ that is positive when the classifier is right. The 0--1 error is flat on either side of its jump, so its slope says nothing. The surrogate slopes downward everywhere and tells the parameters which way to move.](../img/calculus-surrogate-loss.svg)
+:label:`fig_calc_surrogate`
 
 ### Rules of Differentiation
 
@@ -265,6 +268,11 @@ For scalar functions $z = f(u)$ and $u = g(x)$, rates of change multiply: $\frac
 $$\frac{\partial z}{\partial x_i} = \sum_{j=1}^m \frac{\partial z}{\partial u_j} \frac{\partial u_j}{\partial x_i} \quad \Longrightarrow \quad \nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z,$$
 
 where $\mathbf{J} \in \mathbb{R}^{m \times n}$ is the *Jacobian matrix* of $\mathbf{u}$ with respect to $\mathbf{x}$, with entries $J_{ji} = \frac{\partial u_j}{\partial x_i}$. For an affine map $\mathbf{u} = \mathbf{A}\mathbf{x} - \mathbf{y}$, the Jacobian is simply $\mathbf{J} = \mathbf{A}$.
+
+A small case is worth working by hand. Let $z = u^2 + v$ with $u = x_1 x_2$ and $v = x_2^2$, evaluated at $(x_1, x_2) = (1, 2)$. The input $x_2$ reaches $z$ along two paths, one through $u$ and one through $v$ (:numref:`fig_calc_chain_paths`). Each path contributes the product of its local derivatives, and the two contributions add: $\partial z / \partial x_2 = 4 \cdot 1 + 1 \cdot 4 = 8$.
+
+![The chain rule for $z = u^2 + v$ with $u = x_1 x_2$ and $v = x_2^2$ at $(x_1, x_2) = (1, 2)$. Each box shows the value of a variable (black) and the derivative of $z$ with respect to it (red), and each red arrow carries a local derivative. Derivatives multiply along a path and add where two paths meet, as they do at $x_2$.](../img/calculus-parallel-dag.svg)
+:label:`fig_calc_chain_paths`
 
 Decomposing our line loss $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ into two stages—(1) inner residuals $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ with Jacobian $\mathbf{J} = \mathbf{X}$, and (2) outer squared norm $L = \|\mathbf{r}\|^2$ with gradient $\nabla_{\mathbf{r}} L = 2\mathbf{r}$—the multivariate chain rule immediately recovers $\nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r})$ in two passes:
 

@@ -391,77 +391,83 @@ function singletonAxes() {
   return svg(W, H, o);
 }
 
-// ── Integer gather (cross-entropy) vs boolean mask / where ────────────
+// ── Integer gather (cross-entropy) vs Boolean mask / where ────────────
+// The book's own example: X = arange(12).reshape(3, 4), cols = [3, 0, 2],
+// mask = (X > 2) & (X < 8).
 function gatherMask() {
-  const W = 540, H = 310; let o = '';
-  const s = 34, g = 4;
+  const s = 34, g = 4; let o = '';
   const M = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]];
-  // Panel (a): Integer gather picks [row i, label_i]
-  o += name(16, 20, '(a) Integer gather: columns [3, 0, 2], one per row', D.orange.dark, { anchor: 'start', fs: 15.5 });
-  const picks = [3, 0, 2];
-  o += grid(M, 24, 38, s, g, {
-    fs: 14,
-    fill: (r, c) => picks[r] === c ? AMBER : BLUE,
-  });
-  o += arrow(186, 92, 254, 92, C.amber);
-  o += code(220, 74, 'gather', D.orange.dark, { fs: 13.5 });
-  o += grid([[3, 4, 10]], 264, 75, s, g, { fs: 14, fill: () => AMBER });
-  o += code(318, 128, 'shape (3,) — 1 logit per example', D.orange.dark, { fs: 13.5 });
-
-  o += hline(16, 524, 158);
-
-  // Panel (b): Boolean mask X > 5: X[mask] (1D) vs where(mask, X, 0) (2D)
-  o += name(16, 182, '(b) Boolean mask (X > 5): 1D filter vs. 2D where', D.green.dark, { anchor: 'start', fs: 15.5 });
-  o += code(116, 206, 'mask X > 5 → 1D shape (6,)', D.purple.dark, { fs: 13.5 });
-  o += grid([[6, 7, 8, 9, 10, 11]], 20, 222, 30, 3, { fs: 13, fill: () => GREEN });
-  o += tx(116, 272, 'drops 2D grid coordinates', { fs: 13, fill: C.muted });
-
-  const W2 = [[0, 0, 0, 0], [0, 0, 6, 7], [8, 9, 10, 11]];
-  o += code(406, 200, 'where(X > 5, X, 0)', D.green.dark, { fs: 13.5 });
-  o += grid(W2, 344, 212, 28, 3, {
-    fs: 12.5,
-    fill: (r, c, v) => v > 0 ? GREEN : [N.panel, N.hairline, false, C.muted],
-  });
-  return svg(W, H, o);
+  const gw = 4 * s + 3 * g, gh = 3 * s + 2 * g;
+  const GREY = [N.panel, N.hairline, false, C.muted];
+  // (a) gather: one entry per row
+  o += name(16, 20, '(a)', C.ink, { anchor: 'start', fs: 15 });
+  const ya = 44, picks = [3, 0, 2];
+  o += code(24 + gw / 2, ya - 2, 'X', C.ink, { fs: 16, fw: 700 });
+  o += grid(M, 24, ya + 14, s, g, { fs: 15, fill: (r, c) => picks[r] === c ? AMBER : BLUE });
+  const am = ya + 14 + gh / 2, rx = 24 + gw + 136;
+  o += code((24 + gw + rx) / 2, am - 18, 'X[rows, cols]', D.orange.dark, { fs: 15, fw: 700 });
+  o += arrow(24 + gw + 14, am, rx - 14, am, C.amber);
+  o += grid([[3, 4, 10]], rx, am - s / 2, s, g, { fs: 15, fill: () => AMBER });
+  o += code(rx + (3 * s + 2 * g) / 2, am + s / 2 + 22, 'shape (3,)');
+  const ybot = ya + 14 + gh + 22;
+  o += hline(16, rx + 3 * s + 2 * g + 8, ybot);
+  // (b) mask = (X > 2) & (X < 8): X[mask] flattens, where keeps the shape
+  const yb = ybot + 24;
+  o += name(16, yb, '(b)', C.ink, { anchor: 'start', fs: 15 });
+  o += code(52, yb, 'mask = (X > 2) & (X < 8)', C.ink, { anchor: 'start', fs: 15 });
+  const top = yb + 44, mid = top + gh / 2, vw = 5 * s + 4 * g;
+  o += code(24 + vw / 2, mid - s / 2 - 16, 'X[mask]', D.green.dark, { fs: 15, fw: 700 });
+  o += grid([[3, 4, 5, 6, 7]], 24, mid - s / 2, s, g, { fs: 15, fill: () => GREEN });
+  o += code(24 + vw / 2, mid + s / 2 + 22, 'shape (5,)');
+  const wx = rx + 3 * s + 2 * g - gw;
+  const Wm = [[0, 0, 0, 3], [4, 5, 6, 7], [0, 0, 0, 0]];
+  const inMask = (v) => v > 2 && v < 8;
+  o += code(wx + gw / 2, top - 16, 'where(mask, X, 0)', D.green.dark, { fs: 15, fw: 700 });
+  o += grid(Wm, wx, top, s, g, { fs: 15, fill: (r, c) => inMask(M[r][c]) ? GREEN : GREY });
+  o += code(wx + gw / 2, top + gh + 22, 'shape (3, 4)');
+  return svg(rx + 3 * s + 2 * g + 24, top + gh + 42, o);
 }
 
-// ── The silent (B, 1) - (B,) -> (B, B) outer-difference bug ──────────
+// ── The silent (3, 1) - (3,) -> (3, 3) outer-difference bug ──────────
+// (a) y of shape (3,) broadcasts against y_hat (3, 1) into all pairwise
+// differences; (b) with y reshaped to (3, 1) the subtraction is aligned.
 function broadcastBug() {
-  const W = 540, H = 278; let o = '';
-  const s = 28, g = 3;
-  // Left panel: Silent bug (3, 1) - (3,) -> (3, 3) outer matrix!
-  o += name(142, 20, 'Silent Bug: (3, 1) − (3,) → (3, 3)!', D.red.dark, { fs: 15.5 });
-  o += code(30, 46, 'ŷ:(3,1)', D.blue.dark, { fs: 12.5 });
-  o += grid([[10], [20], [30]], 16, 60, s, g, { fs: 12.5, fill: () => BLUE });
-  o += tx(54, 104, '−', { fs: 22, fw: 700, fill: C.ink });
-  o += grid([[9, 19, 29]], 66, 90, s, g, { fs: 12.5, fill: () => AMBER });
-  o += code(111, 134, 'y:(3,)→(1,3)', D.orange.dark, { fs: 12 });
-
-  o += tx(166, 104, '=', { fs: 20, fw: 700, fill: D.red.dark });
-  const outer = [[1, -9, -19], [11, 1, -9], [21, 11, 1]];
-  o += code(222, 46, '3×3 outer diffs!', D.red.dark, { fs: 12 });
-  o += grid(outer, 180, 60, s, g, {
-    fs: 12,
-    fill: (r, c) => r === c ? [D.red.tint, D.red.base, false, D.red.dark] : [D.red.tint, D.red.base, true, D.red.dark],
-  });
-
-  // Vertical divider
-  o += `<line x1="286" y1="16" x2="286" y2="182" stroke="${N.hairline}" stroke-width="1.5"/>`;
-
-  // Right panel: Fix (3, 1) - (3, 1) -> (3, 1) aligned column
-  o += name(414, 20, 'Fix: reshape y to (3, 1)', D.green.dark, { fs: 15.5 });
-  o += code(324, 46, 'ŷ:(3,1)', D.blue.dark, { fs: 12.5 });
-  o += grid([[10], [20], [30]], 308, 60, 32, 4, { fs: 13, fill: () => BLUE });
-  o += tx(358, 112, '−', { fs: 24, fw: 700, fill: C.ink });
-  o += code(396, 46, 'y:(3,1)', D.orange.dark, { fs: 12.5 });
-  o += grid([[9], [19], [29]], 380, 60, 32, 4, { fs: 13, fill: () => AMBER });
-  o += tx(430, 112, '=', { fs: 22, fw: 700, fill: C.ink });
-  o += code(472, 46, 'err:(3,1)', D.green.dark, { fs: 12.5 });
-  o += grid([[1], [1], [1]], 456, 60, 32, 4, { fs: 13, fill: () => GREEN });
-
-  o += tx(270, 206, 'Rule 1 right-aligns (B,) as (1, B), stretching against (B, 1) into B×B!', { fs: 14, fw: 700, fill: D.red.dark });
-  o += tx(270, 232, 'Always assert y\\_hat.shape == y.shape before computing a loss.', { fs: 14, fw: 600, fill: D.green.dark });
-  return svg(W, H, o);
+  const s = 34, g = 4; let o = '';
+  const col = 3 * s + 2 * g, top = 50, mid = top + col / 2, bot = top + col + 22;
+  const RED = (r, c) => [D.red.tint, D.red.base, r !== c, D.red.dark];
+  const op = (x, t) => tx(x, mid, t, { fs: 26, fw: 700, fill: C.ink });
+  const lab = (x, t, fill) => code(x, top - 18, t, fill, { fs: 15, fw: 700 });
+  const shp = (x, y, t) => code(x, y, t);
+  // (a)
+  o += name(16, 18, '(a)', C.ink, { anchor: 'start', fs: 15 });
+  let x = 60;
+  o += lab(x + s / 2, 'y\\_hat', D.blue.dark);
+  o += grid([[10], [20], [30]], x, top, s, g, { fs: 15, fill: () => BLUE });
+  o += shp(x + s / 2, bot, '(3, 1)');
+  x += s + 28; o += op(x, '−'); x += 24;
+  o += lab(x + col / 2, 'y', D.orange.dark);
+  o += grid([[9, 19, 29]], x, mid - s / 2, s, g, { fs: 15, fill: () => AMBER });
+  o += shp(x + col / 2, mid + s / 2 + 22, '(3,)');
+  x += col + 22; o += op(x, '='); x += 22;
+  o += grid([[1, -9, -19], [11, 1, -9], [21, 11, 1]], x, top, s, g, { fs: 15, fill: RED });
+  o += shp(x + col / 2, bot, '(3, 3)');
+  x += col + 30;
+  o += `<line x1="${x}" y1="8" x2="${x}" y2="${bot + 8}" stroke="${N.hairline}" stroke-width="1.5"/>`;
+  // (b)
+  x += 16;
+  o += name(x, 18, '(b)', C.ink, { anchor: 'start', fs: 15 });
+  x += 60;
+  o += lab(x + s / 2, 'y\\_hat', D.blue.dark);
+  o += grid([[10], [20], [30]], x, top, s, g, { fs: 15, fill: () => BLUE });
+  o += shp(x + s / 2, bot, '(3, 1)');
+  x += s + 28; o += op(x, '−'); x += 24;
+  o += lab(x + s / 2, 'y', D.orange.dark);
+  o += grid([[9], [19], [29]], x, top, s, g, { fs: 15, fill: () => AMBER });
+  o += shp(x + s / 2, bot, '(3, 1)');
+  x += s + 22; o += op(x, '='); x += 22;
+  o += grid([[1], [1], [1]], x, top, s, g, { fs: 15, fill: () => GREEN });
+  o += shp(x + s / 2, bot, '(3, 1)');
+  return svg(x + s + 40, bot + 16, o);
 }
 
 // Keyed by stable diagram id. The id is the SVG filename and the

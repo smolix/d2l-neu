@@ -1237,6 +1237,174 @@ def fig_norm_axes():
     save(d.fig, "arch-norm-axes")
 
 
+# --------------------------------------------------------------------------- #
+# Plot panels (8.1 schedule, 8.8 RegNet widths): the gallery's fonts, INK     #
+# axes and one blue accent, laid out on the same points canvas.               #
+# --------------------------------------------------------------------------- #
+
+_MATH_RC = {"mathtext.fontset": "custom", "mathtext.rm": SANS_FONT,
+            "mathtext.it": f"{SANS_FONT}:italic",
+            "mathtext.bf": f"{SANS_FONT}:bold"}
+PLOT_FS = 13.0              # axis and tick labels of the plot panels
+FAINT = "#8F98A1"           # figstyle FAINT: guides and grid levels
+
+
+def _axis_arrow(d, p0, p1):
+    """Black coordinate axis from p0 to p1 with a small head at p1."""
+    from arch_diagrams import STROKE
+    d.ax.annotate(
+        "", xy=p1, xytext=p0,
+        arrowprops=dict(arrowstyle="-|>,head_width=0.32,head_length=0.55",
+                        color=INK, lw=STROKE, shrinkA=0, shrinkB=0,
+                        mutation_scale=11), zorder=4)
+
+
+def _tick(d, p0, p1):
+    from arch_diagrams import STROKE
+    d.ax.plot([p0[0], p1[0]], [p0[1], p1[1]], color=INK, lw=STROKE, zorder=4)
+
+
+def _ptext(d, x, y, s, ha="center", va="center", fs=PLOT_FS, color=INK,
+           **kw):
+    d.ax.text(x, y, s, fontsize=fs, color=color, family=SANS_FONT, ha=ha,
+              va=va, zorder=9, **kw)
+
+
+def _dot(d, x, y, r=3.5):
+    from matplotlib.patches import Circle
+    d.ax.add_patch(Circle((x, y), r, facecolor=ACCENT, edgecolor="white",
+                          lw=0.9, zorder=6))
+
+
+def fig_cosine_warmup():
+    import matplotlib.pyplot as plt
+    with plt.rc_context(_MATH_RC):
+        _fig_cosine_warmup()
+
+
+def _fig_cosine_warmup():
+    import math
+    W, H = 520, 240
+    d = Diagram(W, H)
+    x0, y0, w, h = 70, 40, 400, 150
+    T, tw = 4690, 469                      # AlexNet: 10 epochs of 469 steps
+
+    def f(t):
+        if t < tw:
+            return t / tw
+        return 0.5 * (1 + math.cos(math.pi * (t - tw) / (T - tw)))
+
+    X = lambda t: x0 + w * t / T
+    Y = lambda v: y0 + h * v
+    ts = list(range(0, T + 1, 5))
+    tm = 0.5 * (tw + T)                    # halfway through the decay
+
+    # guides: the peak level and the halfway point of the decay
+    for v, t_end in ((1.0, tw), (0.5, tm)):
+        d.ax.plot([x0, X(t_end)], [Y(v), Y(v)], color=FAINT, lw=1.1,
+                  ls=(0, (4, 3)), zorder=2)
+    d.ax.plot([X(tm), X(tm)], [y0, Y(0.5)], color=FAINT, lw=1.1,
+              ls=(0, (4, 3)), zorder=2)
+    d.ax.plot([X(t) for t in ts], [Y(f(t)) for t in ts], color=ACCENT,
+              lw=2.6, solid_capstyle="round", zorder=5)
+    _dot(d, X(tm), Y(0.5))
+
+    _axis_arrow(d, (x0, y0), (x0 + w + 22, y0))
+    _axis_arrow(d, (x0, y0), (x0, y0 + h + 28))
+    for t in (tw, tm, T):
+        _tick(d, (X(t), y0), (X(t), y0 - 4))
+    for v in (0.5, 1.0):
+        _tick(d, (x0, Y(v)), (x0 - 4, Y(v)))
+
+    _ptext(d, x0, y0 - 16, "0")
+    _ptext(d, X(tw), y0 - 16, r"$t_\mathrm{w}$")
+    _ptext(d, X(tm), y0 - 17, r"$(t_\mathrm{w} + T)/2$")
+    _ptext(d, X(T), y0 - 16, r"$T$")
+    _ptext(d, x0 - 9, Y(0.5), r"$\eta_0/2$", ha="right")
+    _ptext(d, x0 - 9, Y(1.0), r"$\eta_0$", ha="right")
+    _ptext(d, x0 + 8, y0 + h + 28, r"learning rate $\eta_t$", ha="left")
+    _ptext(d, x0 + w + 22, y0 + 14, r"step $t$", ha="right")
+
+    # phase labels in the empty regions beside the curve
+    _ptext(d, x0 + 24, Y(0.30), "linear warmup", ha="left",
+           color=ACCENT, fontweight="bold")
+    _ptext(d, X(3350), Y(0.80), "half-cosine decay", ha="left",
+           color=ACCENT, fontweight="bold")
+    save(d.fig, "arch-cosine-warmup")
+
+
+def fig_regnet_staircase():
+    import matplotlib.pyplot as plt
+    with plt.rc_context(_MATH_RC):
+        _fig_regnet_staircase()
+
+
+def _fig_regnet_staircase():
+    import math
+    from matplotlib.patches import FancyBboxPatch
+    # RegNetX-200MF (Radosavovic et al., 2020): d = 13, w0 = 24, wa = 36.44,
+    # wm = 2.49.  Widths are drawn at u0 m^s; the table rounds them to 8.
+    n_blocks, u0, a, m = 13, 24.0, 36.44, 2.49
+    u = [u0 + a * j for j in range(n_blocks)]
+    s = [round(math.log(uj / u0) / math.log(m)) for uj in u]
+    uq = [u0 * m ** sj for sj in s]
+    stages = sorted(set(s))
+    depth = [s.count(k) for k in stages]
+    width8 = [int(round(u0 * m ** k / 8) * 8) for k in stages]
+    assert depth == [1, 1, 4, 7] and width8 == [24, 56, 152, 368]
+
+    W, H = 640, 330
+    d = Diagram(W, H)
+    x0, y0 = 92, 92                        # axis origin
+    bw, gap_in, gap_st = 26, 4, 14         # bar width, gaps in/between stages
+    sy = 0.40                              # pt per channel
+
+    xs, x = [], x0 + 12                    # bar left edges
+    for j in range(n_blocks):
+        if j and s[j] != s[j - 1]:
+            x += gap_st - gap_in
+        xs.append(x)
+        x += bw + gap_in
+    x_end = x - gap_in + 12
+    Y = lambda v: y0 + sy * v
+
+    # the geometric grid u0 m^k
+    labels = [r"$u_0$", r"$u_0 m$", r"$u_0 m^2$", r"$u_0 m^3$"]
+    for k, lab in zip(stages, labels):
+        d.ax.plot([x0, x_end], [Y(u0 * m ** k)] * 2, color=FAINT, lw=1.1,
+                  ls=(0, (4, 3)), zorder=2)
+        _ptext(d, x0 - 9, Y(u0 * m ** k), lab, ha="right")
+
+    for j in range(n_blocks):              # quantized widths: the staircase
+        d.ax.add_patch(FancyBboxPatch(
+            (xs[j], y0), bw, sy * uq[j], boxstyle="square,pad=0",
+            facecolor=ACCENT_TINT, edgecolor=ACCENT, lw=1.0, zorder=3))
+    cx = [xj + bw / 2 for xj in xs]        # the linear ramp it approximates
+    d.ax.plot(cx, [Y(v) for v in u], color=ACCENT, lw=2.2, zorder=5)
+    for xc, v in zip(cx, u):
+        _dot(d, xc, Y(v))
+
+    _axis_arrow(d, (x0, y0), (x_end + 60, y0))
+    _axis_arrow(d, (x0, y0), (x0, Y(u[-1]) + 30))
+    _ptext(d, x0 + 8, Y(u[-1]) + 30, "block width", ha="left")
+    _ptext(d, x_end + 60, y0 + 14, r"block $j$", ha="right")
+    _ptext(d, cx[9] - 10, Y(u[9]) + 30, r"linear ramp $u_j = u_0 + a\,j$",
+           ha="right", color=ACCENT, fontweight="bold")
+
+    # per-stage table under the axis
+    rows = [("stage", [str(i + 1) for i in range(len(stages))]),
+            (r"depth $d_i$", [str(v) for v in depth]),
+            (r"width $c_i$", [str(v) for v in width8])]
+    for r, (head, vals) in enumerate(rows):
+        yr = y0 - 20 - r * 21
+        _ptext(d, x0 - 9, yr, head, ha="right")
+        for k, val in enumerate(vals):
+            js = [j for j in range(n_blocks) if s[j] == stages[k]]
+            xc = 0.5 * (xs[js[0]] + xs[js[-1]] + bw)
+            _ptext(d, xc, yr, val, fontweight="bold" if r else "normal")
+    save(d.fig, "arch-regnet-staircase")
+
+
 FIGURES = {
     "arch-resnet-vs-convnext-block": fig_resnet_vs_convnext_block,
     "arch-inception-block": fig_inception_block,
@@ -1255,6 +1423,8 @@ FIGURES = {
     "arch-anynet": fig_anynet,
     "arch-norm-axes": fig_norm_axes,
     "arch-residual-concept": fig_residual_concept,
+    "arch-cosine-warmup": fig_cosine_warmup,
+    "arch-regnet-staircase": fig_regnet_staircase,
 }
 
 

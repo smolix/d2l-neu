@@ -682,10 +682,12 @@ model's normalized density, and it stays positive wherever data may appear,
 train by maximum likelihood: forward KL needs only the data, gives an unbiased
 sample estimate, and penalizes leaving any data mode uncovered. When a model
 can only generate samples, you have three options. Training a learned critic as
-in a GAN is the standard choice for complex domains like images
-(:numref:`sec_basic_gan`), where we do not know ahead of time which features
-distinguish real samples from generated ones; its drawbacks are that the
-estimated divergence is biased downward and flattens out when the model is far
+in a GAN (:numref:`sec_basic_gan`) is the standard choice for sample-only
+models of complex data like images, where we do not know ahead of time which
+features distinguish real samples from generated ones. Today these are mostly
+one-step generators distilled from diffusion models and the decoders of latent
+autoencoders. The drawbacks of a learned critic are that the estimated
+divergence is biased downward and flattens out when the model is far
 from the data (:numref:`sec_mdl-f-gan-dual`). The optimal 1-Lipschitz critic
 has no such flat stretch, because $W_1$ keeps a constant slope at every
 distance. Trained critics need not behave like their optimal versions, though:
@@ -695,8 +697,9 @@ near unit slope by the usual two-sided gradient penalty carries its generator
 to the data and then past it. A fixed
 kernel avoids training a second network altogether and achieves $O(N^{-1/2})$
 estimation error in any dimension (:numref:`sec_mdl-ipm-mmd`), making it ideal
-for two-sample tests and sample evaluation, though its gradient vanishes beyond
-a few length scales.
+for two-sample tests and sample evaluation. It is usually applied to learned
+features, because the MMD of a fixed kernel weakens as the dimension of raw
+data grows, and its gradient vanishes beyond a few length scales.
 
 The final three rows cover settings where a normalizing constant is unknown.
 When the *target* density is unnormalized while the *model* provides both

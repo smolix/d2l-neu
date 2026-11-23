@@ -18,7 +18,7 @@ $-1$ where black returns to white. Sweeping the two-weight detector $(1, -1)$
 across every valid image location produces an *edge map*. In this section, we
 implement two-dimensional cross-correlation, test our hand-crafted edge
 detector, let gradient descent *learn* $(1, -1)$ directly from data, show how
-frameworks compute convolutions via matrix multiplication (*im2col*), and
+a convolution becomes a single matrix multiplication (*im2col*), and
 derive how stacking layers widens a unit's receptive field.
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab mxnet
@@ -449,9 +449,10 @@ task loss alone.
 :label:`subsec_conv_matmul`
 
 While the nested loops in `corr2d` make the math transparent, visiting one
-output pixel at a time in Python is far too slow for real workloads. In
-practice, frameworks recast cross-correlation as a single large matrix
-multiplication—the exact operation GPUs execute at peak speed. Notice that every
+output pixel at a time in Python is far too slow for real workloads. A classic
+remedy, and still one of the algorithms that libraries choose from, is to recast
+cross-correlation as a single large matrix multiplication—the exact operation
+GPUs execute at peak speed. Notice that every
 output entry in :numref:`fig_correlation` is simply the dot product of the
 flattened $k_\textrm{h} k_\textrm{w}$-element kernel with the corresponding
 flattened input window. Extracting all
@@ -459,6 +460,11 @@ $(n_\textrm{h}-k_\textrm{h}+1)(n_\textrm{w}-k_\textrm{w}+1)$ windows and
 stacking them as rows yields a patch matrix; multiplying it by the flattened
 kernel computes the entire cross-correlation in one shot. This standard layout
 transformation is called *im2col* ("image to columns"—or rows here).
+:numref:`fig_conv_im2col` carries it out on the example of
+:numref:`fig_correlation`.
+
+![The cross-correlation of :numref:`fig_correlation` as one matrix product. Each of the four $2 \times 2$ windows of the input becomes a row of the patch matrix, and multiplying by the flattened kernel gives the flattened output. The shaded cells follow the first window to its row and to the output 19. The center pixel 4 lies in all four windows, so it appears in every row.](../img/conv-im2col.svg)
+:label:`fig_conv_im2col`
 
 The trade-off is extra workspace memory, since each interior pixel is duplicated
 into up to $k_\textrm{h} k_\textrm{w}$ patches. Let's verify on
@@ -533,6 +539,17 @@ decays sharply away from the center in a roughly Gaussian bell curve, in both
 untrained and trained networks. Deep units can theoretically see far across the
 image, but their sensitivity concentrates heavily near the center.
 
+Counting paths explains the bell shape. An input at the edge of the receptive
+field reaches the output unit along a single chain of connections, whereas the
+center input can take many routes through the layers in between.
+:numref:`fig_conv_rf_paths` counts them for the tower of
+:numref:`fig_conv_receptive_field`: the center input has seven paths to the top
+unit and each edge input has one. If all weights have a similar magnitude, the
+influence of an input grows with its number of paths.
+
+![Number of paths from each unit to the top unit of :numref:`fig_conv_receptive_field` (three one-dimensional layers with kernel size 3). Each count is the sum of the counts of the units that the cell feeds. Darker cells have more paths than the other cells of their layer, and the bars repeat the counts of the input row: 1, 3, 6, 7, 6, 3, 1.](../img/conv-rf-paths.svg)
+:label:`fig_conv_rf_paths`
+
 Two practical gaps remain in our basic layer: every unpadded convolution shrinks
 spatial dimensions while under-sampling border pixels, and a single kernel
 detects only one pattern. We address spatial sizing and borders next in
@@ -546,8 +563,8 @@ input. A simple $1 \times 2$ finite-difference kernel `[1, -1]` detects vertical
 edges anywhere in an image—and gradient descent recovers those exact weights
 from input–output data alone, just as deep CNNs learn entire hierarchies of
 filters end to end. Mathematical convolution flips the kernel, making no
-difference once kernels are learned. Hardware libraries evaluate convolutions
-efficiently as matrix multiplications (*im2col*), and stacking $L$ convolutional
+difference once kernels are learned. A convolution can be evaluated as a single
+matrix multiplication (*im2col*), and stacking $L$ convolutional
 layers widens each unit's receptive field linearly by $k_i - 1$ per layer.
 
 ## Exercises
@@ -619,10 +636,11 @@ layers widens each unit's receptive field linearly by $k_i - 1$ per layer.
        and normalize the resulting column profile to sum to one. How does
        the ratio of the profile's standard deviation to the theoretical
        side length $2L + 1$ change with depth?
-    1. Show that the expected squared input gradient, summed over rows,
-       is proportional to the convolution of $L$ copies of the vector
-       $(1, 1, 1)$. Derive how the standard deviation of the normalized
-       profile grows with $L$.
+    1. :numref:`fig_conv_rf_paths` counts the paths for $L = 3$ in one
+       dimension. Show that for general $L$ the expected squared input
+       gradient, summed over rows, is proportional to the convolution of
+       $L$ copies of the vector $(1, 1, 1)$. Derive how the standard
+       deviation of the normalized profile grows with $L$.
 
 4. [code] **Backward pass of a convolution.** ● Let $\mathbf{Y}$ be the
    single-channel cross-correlation of an input $\mathbf{X}$ with a kernel

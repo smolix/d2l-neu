@@ -86,10 +86,10 @@ from d2l import jax as d2l
 :label:`subsec_mdl-integration-in-probability`
 
 Before differentiating anything, let us fix our notation for densities and
-expectations. The probability chapter will develop both notions in detail (as
-we will see in :numref:`sec_mdl-random_variables`); here we restate them in the
-integral language of the preceding section. A probability **density** on a
-domain $\mathcal X$ is a nonnegative function whose total integral equals $1$:
+expectations. The probability chapter develops both notions in detail
+(:numref:`sec_mdl-random_variables`); here we restate them in the integral
+language of the preceding section. A probability **density** on a domain
+$\mathcal X$ is a nonnegative function whose total integral equals $1$:
 
 $$
 p(x)\ge 0, \qquad \int_{\mathcal X} p(x)\,dx = 1 .
@@ -98,8 +98,7 @@ $$
 
 The probability that a random variable $X$ with density $p$ lands in an
 interval $[a, b]$ is the area under $p$ over that interval,
-$P(a\le X\le b)=\int_a^b p(x)\,dx$ (as we will formalize in
-:numref:`sec_mdl-random_variables`, :eqref:`eq_mdl-pdf_int_int`). Because a
+$P(a\le X\le b)=\int_a^b p(x)\,dx$ (:eqref:`eq_mdl-pdf_int_int`). Because a
 density measures probability per unit length rather than probability itself,
 its value can exceed $1$; for example, the uniform density on $[0,\tfrac12]$
 equals $2$ everywhere on its support. Our main running example is the
@@ -283,8 +282,8 @@ strongly $\boldsymbol\theta$ increases that sample's log-probability. To
 estimate it by Monte Carlo, we draw samples $x_i\sim p_{\boldsymbol\theta}$ and
 average $g(x_i)\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}(x_i)$. In
 reinforcement learning, this is the REINFORCE estimator of policy-gradient
-methods :cite:`Williams.1992` (as we will see in :numref:`sec_policygradient`
-and :numref:`sec_baselines`). (If $g$ also depends directly on
+methods (:numref:`sec_policygradient`) :cite:`Williams.1992`. (If $g$ also
+depends directly on
 $\boldsymbol\theta$, the product rule simply adds the term
 $\mathbb{E}[\nabla_{\boldsymbol\theta}g(X,\boldsymbol\theta)]$.)
 
@@ -319,7 +318,11 @@ Instead of differentiating the density, this estimator differentiates right
 through the sample: automatic differentiation traces the path from
 $\boldsymbol\theta$ through $T_{\boldsymbol\theta}$ into $g$. Known as the
 *reparameterization trick*, this is how variational autoencoders backpropagate
-through Gaussian latent variables :cite:`Kingma.Welling.2014`. Valid use
+through Gaussian latent variables
+:cite:`Kingma.Welling.2014,rezende2014stochastic`. The estimator itself is
+older: the simulation literature had long used it under the names pathwise
+and infinitesimal-perturbation derivative
+:cite:`Mohamed.Rosca.Figurnov.ea.2020`. Valid use
 requires $T_{\boldsymbol\theta}$ to be differentiable in $\boldsymbol\theta$,
 $g$ to be differentiable along the path (a Lipschitz $g$ suffices when $X$ has
 a continuous density), and an integrable dominating bound for the swap. Notice

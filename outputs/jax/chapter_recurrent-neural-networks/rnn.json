@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-training-3-1.svg",
-          "bytes": 22252,
-          "sha256": "sha256:51dcbd9ae284025ee40a29e0faa41fb7eee06ce07971af9877b1e66885dc4595"
+          "bytes": 25703,
+          "sha256": "sha256:6a0683b4e252d5e0a39f209485ee129b9943761c20ba44facebd05ff687851ce"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 99.8\n"
+          "text": "validation perplexity 92.9\n"
         }
       ]
     },
@@ -119,17 +119,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 1: highest 249, final 83.7\n"
+          "text": "run 1: highest 4.7e+03, final 554\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 2: highest 3.29e+04, final 1.39e+03\n"
+          "text": "run 2: highest 1.12e+03, final 330\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 3: highest 3.47e+07, final 3.47e+07\n2 of 3 runs end above twice the clipped 99.8; finals from 83.7 to 3.47e+07\n"
+          "text": "run 3: highest 770, final 258\n3 of 3 runs end above twice the clipped 92.9; finals from 258 to 554\n"
         }
       ]
     },
@@ -141,8 +141,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-a-plain-model-4-1.svg",
-          "bytes": 37786,
-          "sha256": "sha256:1ba7a70176e8f11a3972b2d2ffb60060b7bd8e01ba1a2e4c986ffa0705f94ea0"
+          "bytes": 29485,
+          "sha256": "sha256:41c8322593dc4fde98ce85812d1f7954bef8354a4c7d006777b579d758e98a4b"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.39 bits per byte\n"
+          "text": "2.78 bytes/token, 2.35 bits per byte\n"
         }
       ]
     },
@@ -187,7 +187,7 @@
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-a-wider-embedding-with-dropout-2-1.svg",
           "bytes": 23611,
-          "sha256": "sha256:f113e239bc5560e13de7930b4a6ef5a79ca1283442aa81d640ae3bad167c67b4"
+          "sha256": "sha256:34dd95ed59e8a3b95ee986d1a4138c15eff72096f5927aee8dbc62534ac9ab77"
         }
       ]
     },
@@ -198,7 +198,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 59.2, 2.12 bits per byte\n"
+          "text": "validation perplexity 59.8, 2.12 bits per byte\n"
         }
       ]
     },
@@ -223,57 +223,68 @@
       "kind": "text",
       "outputs": []
     },
+    "rnn-comparison-with-kneser-ney-and-effective-context-horizon-1": {
+      "code_fingerprint": "sha256:48dbc8b10509ad7b9deb771c843e636353a4db025b83face90e90bf06b50d58a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RNN: 2.12 bits per byte\nKN trigram: 2.09 bits per byte\nmixture: 2.03 bits per byte\nRNN more confident on 50% of the tokens\n"
+        }
+      ]
+    },
     "rnn-implementation-comparison-with-kneser-ney-4": {
-      "code_fingerprint": "sha256:9f4ab136a85cbb54707aa6a89aaeafe6d49449c1a1647f38300f4aadf45b495f",
+      "code_fingerprint": "sha256:af22ee093ce98992d5bf3fdb6cc8fa60c1f4ab2be10e5fd16ec1b92c8d6c2a30",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.29, 2.14, 2.12, 2.11, 2.11, 2.11]\n"
+          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.29, 2.14, 2.12, 2.12, 2.12, 2.12]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-comparison-with-kneser-ney-4-1.svg",
-          "bytes": 27299,
-          "sha256": "sha256:f98a2cf77195acfe10ceaa01b2a7cd706f78326aa27e880d8aaf3784ac231538"
+          "bytes": 27296,
+          "sha256": "sha256:7827d0eb1643c543648a9053e578d306133e1b9f44c913e6b25c5f55383e389b"
         }
       ]
     },
     "rnn-implementation-generating-text-1": {
-      "code_fingerprint": "sha256:e7c19d5faffc898c93ee510348c6573467d853f244417bd25ef1eff303f58b3f",
+      "code_fingerprint": "sha256:fbe7da3c01496e48d0c451239d2a597d3b2f9676529c7595f8dac334445ff404",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-generating-text-2": {
-      "code_fingerprint": "sha256:34e5e082ac70bdb9c0378e183a556793c095230dd214fc70418a37c18b608dde",
+      "code_fingerprint": "sha256:9ae028a36a0d71b7fd4c79f73a221819a4890e90b38305b5908252fbd90c1158",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller,\\nand\\nthere, I\\nwas\\nthe\\nshall,\\nthe\\nshalled\\nthe\\nsh\n    all,\\nthe\\nshalled\\nthe\\nshall,\\nthe\\nsha'\n"
+          "text": "'The Time Traveller. I had the same\\nfounding the bushes. I had the\n    same\\nfounding the bushes. I had the same\\nfounding the bushes. I had\n    the same\\nfounding the b'\n"
         }
       ]
     },
     "rnn-implementation-concise-implementation-1": {
-      "code_fingerprint": "sha256:56b11b86eb4665b164ba4d04bb8d1772adcf77f25156cbff647f1e4a1a93e0ec",
+      "code_fingerprint": "sha256:7f95c41c480d6d2b1f97c1f6cd05a16382fadaa1de2465aa1650c9569d8187b0",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-2": {
-      "code_fingerprint": "sha256:4394a236fb5d13b6e98f6687424fa2c27a0ec96a28abdd8f3d7c79d39d67cdc8",
+      "code_fingerprint": "sha256:bcfebdbf2da00f024d986465c13132f1b98ada4b155c0f15a345843f104493da",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-3": {
-      "code_fingerprint": "sha256:e3405c5e70d6bec1dd68d8009fb0172e83e911e13c21f80c05c314cc0cbb51af",
+      "code_fingerprint": "sha256:4fb5708f0d34d6099ab8bbcd77f25c2165f9b019dcf52bc222f7047182936a76",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-5": {
-      "code_fingerprint": "sha256:3b756294e48b13c28f7539cbeb6533724e45acf76a1c191e67abf3cba572b5cf",
+      "code_fingerprint": "sha256:a4889d2251a6f8526c63dac4d34783070788daae1bf9e81f21079b195fb6921c",
       "kind": "asset",
       "outputs": [
         {
@@ -281,18 +292,18 @@
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-concise-implementation-5-1.svg",
           "bytes": 23604,
-          "sha256": "sha256:b88f850fe7f90bd12dc3f87dd4fbe35170efa484b83e2d8c536d36acc3f042f8"
+          "sha256": "sha256:f2b01255a83295c6d747807863b601a3bfe49fa393215d312bfa3193d8c57bca"
         }
       ]
     },
     "rnn-implementation-concise-implementation-6": {
-      "code_fingerprint": "sha256:4098ed9a61a88be5b4b1540ee3d0e6b105449697587d42a70449333337b73840",
+      "code_fingerprint": "sha256:05b22926539e41f18480eb8bdf1ddb4e3616c51be633baa167e260ebab92e068",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 60.5, 'The Time Traveller. I felt assured the\\nsharaced the\\nday.\n    I had seen. I had seen. I had'\n"
+          "text": "perplexity 59.0, 'The Time Traveller. I had a faintness. I was a\\nface of\n    the\\ndeliculture. I was a\\nface of'\n"
         }
       ]
     }

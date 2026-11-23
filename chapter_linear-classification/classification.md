@@ -104,9 +104,9 @@ Equal costs ($\kappa_{\textrm{FN}} = \kappa_{\textrm{FP}}$) recover the familiar
 
 Cost-sensitive decision rules like :eqref:`eq_cost-threshold` act directly on the numerical value of $p$, which means they rely on the classifier being *calibrated*: among all examples where the classifier predicts confidence $\hat{p} \approx 0.80$, roughly $80\%$ should actually be correct.
 
-In a $q$-class problem, we check top-class calibration by recording each validation prediction's *confidence* $\hat{p}^{(i)} = \max_j \hat{y}^{(i)}_j$ and correctness indicator $c^{(i)} = \mathbf{1}(\operatorname{argmax}_j \hat{y}^{(i)}_j = y^{(i)})$, partitioning the examples into confidence bins $[0, 0.1), [0.1, 0.2), \ldots, [0.9, 1.0]$, and comparing each bin's mean confidence $\bar{c}_b$ against its empirical accuracy $a_b$. Plotting $a_b$ against $\bar{c}_b$ gives a *reliability diagram* (where a perfectly calibrated model lies along the diagonal $a_b = \bar{c}_b$), and their sample-weighted average gap defines the *expected calibration error* (ECE):
+In a $q$-class problem, we check top-class calibration by recording each validation prediction's *confidence* $\hat{p}^{(i)} = \max_j \hat{y}^{(i)}_j$ and correctness indicator $c^{(i)} = \mathbf{1}(\operatorname{argmax}_j \hat{y}^{(i)}_j = y^{(i)})$, partitioning the examples into confidence bins $[0, 0.1), [0.1, 0.2), \ldots, [0.9, 1.0]$, and comparing each bin's mean confidence $\bar{p}_b$ against its empirical accuracy $a_b$. Plotting $a_b$ against $\bar{p}_b$ gives a *reliability diagram* (where a perfectly calibrated model lies along the diagonal $a_b = \bar{p}_b$), and their sample-weighted average gap defines the *expected calibration error* (ECE):
 
-$$\textrm{ECE} = \sum_b \frac{n_b}{n} \left| a_b - \bar{c}_b \right|.$$
+$$\textrm{ECE} = \sum_b \frac{n_b}{n} \left| a_b - \bar{p}_b \right|.$$
 
 Let us train our concise `SoftmaxRegression` model on Fashion-MNIST, collect its validation logits `O` and labels `y`, and compute its per-bin reliability statistics, ECE, and reliability diagram:
 
@@ -193,7 +193,7 @@ Consistent with our slightly underconfident reliability curve, the fitted temper
 
 - **Beyond accuracy under class imbalance:** When the positive class is rare, overall accuracy is dominated by true negatives; *recall* ($\textrm{TP}/(\textrm{TP}+\textrm{FN})$) and *precision* ($\textrm{TP}/(\textrm{TP}+\textrm{FP})$) isolate positive-class detection, with precision scaling via Bayes' theorem with class prevalence.
 - **Cost-sensitive thresholding:** When false negatives and false positives carry costs $\kappa_{\textrm{FN}}$ and $\kappa_{\textrm{FP}}$, expected cost is minimized by predicting positive whenever $p > \kappa_{\textrm{FP}} / (\kappa_{\textrm{FP}} + \kappa_{\textrm{FN}})$.
-- **Calibration and temperature scaling:** Reliability diagrams and $\textrm{ECE} = \sum_b (n_b/n)|a_b - \bar{c}_b|$ measure whether predicted confidences match empirical accuracy; fitting a single post-hoc temperature $T > 0$ on held-out data recalibrates confidence without changing accuracy.
+- **Calibration and temperature scaling:** Reliability diagrams and $\textrm{ECE} = \sum_b (n_b/n)|a_b - \bar{p}_b|$ measure whether predicted confidences match empirical accuracy; fitting a single post-hoc temperature $T > 0$ on held-out data recalibrates confidence without changing accuracy.
 
 ## Exercises
 
@@ -493,9 +493,9 @@ $$\hat{p}^{(i)} = \max_{j} \hat{y}^{(i)}_j, \qquad c^{(i)} = \mathbf{1}\!\Big(\o
 
 ::: {.cols .vc}
 ::: {.col}
-Partition $[0, 1]$ into $B = 10$ confidence bins $I_b = [\frac{b-1}{B}, \frac{b}{B})$ and compare each bin's mean confidence $\bar{c}_b$ against empirical accuracy $a_b$:
+Partition $[0, 1]$ into $B = 10$ confidence bins $I_b = [\frac{b-1}{B}, \frac{b}{B})$ and compare each bin's mean confidence $\bar{p}_b$ against empirical accuracy $a_b$:
 
-$$\mathrm{ECE} = \sum_{b=1}^B \frac{n_b}{n}\,\big|a_b - \bar{c}_b\big|$$
+$$\mathrm{ECE} = \sum_{b=1}^B \frac{n_b}{n}\,\big|a_b - \bar{p}_b\big|$$
 
 - **Empty low bins:** By the pigeonhole principle, $\max_j \hat{y}_j \ge 1/10$, so bin $[0, 0.1)$ always has $n_1 = 0$.
 :::
@@ -535,9 +535,9 @@ Computing `reliability(conf, correct)` across the $10{,}000$ Fashion-MNIST valid
 
 ::: {.cols .vc}
 ::: {.col}
-- **Reliability diagram:** Plots $a_b$ against $\bar{c}_b$ for all bins with $n_b \ge 100$.
-- **Diagonal reference ($a_b = \bar{c}_b$):** A perfectly calibrated classifier lies on the dotted diagonal.
-- **Above vs. below the diagonal:** Points *above* the diagonal indicate an **underconfident** model ($a_b > \bar{c}_b$); points *below* indicate an **overconfident** model ($a_b < \bar{c}_b$).
+- **Reliability diagram:** Plots $a_b$ against $\bar{p}_b$ for all bins with $n_b \ge 100$.
+- **Diagonal reference ($a_b = \bar{p}_b$):** A perfectly calibrated classifier lies on the dotted diagonal.
+- **Above vs. below the diagonal:** Points *above* the diagonal indicate an **underconfident** model ($a_b > \bar{p}_b$); points *below* indicate an **overconfident** model ($a_b < \bar{p}_b$).
 - **Shallow vs. deep networks:** Our linear model sits slightly above the diagonal (confidence $\approx 81\%$ vs. accuracy $\approx 83\%$); deep networks typically sag well below it ($T > 1$ needed).
 :::
 
@@ -591,6 +591,6 @@ Work out these three diagnostic and decision-making problems:
 | **Recall (Sensitivity / TPR)** | $\mathrm{TP} / (\mathrm{TP} + \mathrm{FN}) = P(\hat{y}=1 \mid y=1)$ | Fraction of true positives caught; invariant to class prevalence |
 | **Precision (PPV)** | $\mathrm{TP} / (\mathrm{TP} + \mathrm{FP}) = P(y=1 \mid \hat{y}=1)$ | Fraction of positive flags that are true; scales with prevalence via Bayes' rule |
 | **Bayes cost threshold** | Predict positive iff $p > \frac{\kappa_{\mathrm{FP}}}{\kappa_{\mathrm{FP}} + \kappa_{\mathrm{FN}}}$ | Minimizes expected asymmetric cost ($\kappa_{\mathrm{FN}}=100, \kappa_{\mathrm{FP}}=1$ $\implies$ $\tau^* = 1/101$) |
-| **Reliability diagram & ECE** | $\mathrm{ECE} = \sum_{b=1}^B \frac{n_b}{n}\big|a_b - \bar{c}_b\big|$ | Audits whether predicted confidence $\bar{c}_b$ matches empirical bin accuracy $a_b$ |
+| **Reliability diagram & ECE** | $\mathrm{ECE} = \sum_{b=1}^B \frac{n_b}{n}\big|a_b - \bar{p}_b\big|$ | Audits whether predicted confidence $\bar{p}_b$ matches empirical bin accuracy $a_b$ |
 | **Temperature scaling** | $\hat{\mathbf{y}}(T) = \mathrm{softmax}(\mathbf{o}/T),\; T^* = \operatorname{argmin}_T \mathrm{NLL}_{\mathrm{val}}(T)$ | 1D convex post-hoc recalibration on held-out data; never alters accuracy |
 :::

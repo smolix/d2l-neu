@@ -6,8 +6,8 @@ SVGs that had no generator.  Every numeric value is COMPUTED (real
 cross-correlations), never typed in.  Panel spacing follows the ORIGINALS'
 tight proportions (ops get ~GAP*2 of air, not a gulf — Alex, ch7 review).
 
-Writes img/{correlation,conv-pad,conv-stride,conv-multi-in,conv-1x1,
-conv-reuse,pooling,pooling-shift}.svg.  Byte-idempotent.
+Writes img/{correlation,conv-im2col,conv-flipped-kernel,conv-pad,conv-stride,
+conv-multi-in,conv-1x1,conv-reuse,pooling,pooling-shift}.svg.  Byte-idempotent.
 
 Run:  .venv-pytorch/bin/python tools/gen_arch_convmech_figures.py
 """
@@ -25,7 +25,7 @@ from arch_diagrams import (FAMILY_BLUE, FAMILY_BLUE_DARK, GRID_FS, INK, SANS,
 from figstyle import tokens as T
 
 CELL = 26.0
-STRIDE_AMBER = "#FFC57A"   # conv-stride only: second window, off the blue family
+STRIDE_AMBER = "#FFC57A"   # a second shade off the blue family (conv-stride, conv-flipped-kernel)
 OP = 19.0        # air on each side of a * / = / + operator
 
 
@@ -83,6 +83,121 @@ def fig_correlation():
     d.grid(x, 33, 2, 2, CELL, shaded={(0, 0)}, values=vals(Y),
            title="Output", title_y=TY)
     save(d.fig, "correlation")
+
+
+def fig_conv_im2col():
+    """subsec_conv_matmul: the cross-correlation of fig_correlation as one
+    matrix product.  Each 2x2 window of the input becomes one row of the
+    patch matrix; the patch matrix times the flattened kernel is the
+    flattened output.  The first window, its row, and the output it gives
+    are shaded, as in fig_correlation.  Values are computed."""
+    from matplotlib.patches import FancyArrowPatch
+    h, w = K22.shape
+    rows = [(i, j) for i in range(X33.shape[0] - h + 1)
+            for j in range(X33.shape[1] - w + 1)]
+    P = np.array([X33[i:i + h, j:j + w].ravel() for i, j in rows])
+    k = K22.reshape(-1, 1)
+    y = P @ k
+    assert (y.reshape(2, 2) == corr2d(X33, K22)).all()
+
+    d = MechDiagram(490, 170)
+    y0 = 20
+    TY = y0 + 4 * CELL + 10
+    ym = y0 + 2 * CELL                    # vertical center of the 4-row grids
+    x = 20
+    w_, _ = d.grid(x, y0 + CELL / 2, 3, 3, CELL, shaded=window(0, 0),
+                   values=vals(X33), title="Input", title_y=TY)
+    x += w_ + 10
+    xa1 = x + 58
+    d.ax.add_patch(FancyArrowPatch(
+        (x, ym), (xa1, ym), arrowstyle="-|>,head_width=4,head_length=7",
+        color=INK, lw=1.6, shrinkA=0, shrinkB=0, zorder=6))
+    d.ax.text((x + xa1) / 2, ym + 7, "im2col", fontsize=GRID_FS - 1,
+              color=INK, family=SANS, ha="center", va="bottom", zorder=6)
+    x = xa1 + 10
+    w_, _ = d.grid(x, y0, 4, 4, CELL, shaded={(0, c) for c in range(4)},
+                   values=vals(P), title="Patch matrix", title_y=TY)
+    gap = OP + 5                          # titles wider than the columns
+    x += w_ + gap
+    d.op(x, ym, "×")
+    x += gap
+    w_, _ = d.grid(x, y0, 4, 1, CELL, shaded={(r, 0) for r in range(4)},
+                   values=vals(k), title="Kernel", title_y=TY)
+    x += w_ + gap
+    d.op(x, ym, "=")
+    x += gap
+    d.grid(x, y0, 4, 1, CELL, shaded={(0, 0)}, values=vals(y),
+           title="Output", title_y=TY)
+    save(d.fig, "conv-im2col")
+
+
+def fig_conv_flipped_kernel():
+    """sec_why-conv, convolution vs cross-correlation: a 3x3 kernel K indexed
+    by offsets (a, b) in {-1, 0, 1}, and the flipped kernel K' with
+    [K']_{a,b} = [K]_{-a,-b} (both axes reversed).  Two entries are shaded
+    in each grid (blue and amber, as in conv-stride) to show where the
+    flip moves them."""
+    from matplotlib.patches import FancyArrowPatch
+    K = np.arange(1, 10).reshape(3, 3)
+    Kf = K[::-1, ::-1]
+    # [K']_{a,b} = [K]_{-a,-b}, with offset a = row - 1, b = col - 1
+    for a in (-1, 0, 1):
+        for b in (-1, 0, 1):
+            assert Kf[a + 1, b + 1] == K[-a + 1, -b + 1]
+    light = int(K[0, 0])                  # offset (-1, -1) in K
+    dark = int(K[0, 1])                   # offset (-1, 0) in K
+
+    def cells(A, v):
+        return {(r, c) for r in range(3) for c in range(3) if A[r, c] == v}
+
+    def offsets(x, y):
+        """Offset labels: b = -1, 0, 1 above the columns, a = -1, 0, 1 to
+        the left of the rows (row 0 at the top)."""
+        for t, o in enumerate((-1, 0, 1)):
+            s = "−1" if o < 0 else str(o)
+            d.ax.text(x + (t + 0.5) * CELL, y + 3 * CELL + 6, s,
+                      fontsize=GRID_FS - 2, color=INK, family=SANS,
+                      ha="center", va="bottom", zorder=6)
+            d.ax.text(x - 6, y + (2 - t + 0.5) * CELL, s,
+                      fontsize=GRID_FS - 2, color=INK, family=SANS,
+                      ha="right", va="center", zorder=6)
+        d.ax.text(x + 1.5 * CELL, y + 3 * CELL + 24, r"$b$",
+                  fontsize=GRID_FS + 1, color=INK, math_fontfamily="cm",
+                  ha="center", va="bottom", zorder=6)
+        d.ax.text(x - 30, y + 1.5 * CELL, r"$a$", fontsize=GRID_FS + 1,
+                  color=INK, math_fontfamily="cm", ha="right",
+                  va="center", zorder=6)
+
+    def name(x, y, s):
+        d.ax.text(x + 1.5 * CELL, y - 12, s, fontsize=GRID_FS + 2,
+                  color=INK, math_fontfamily="cm", ha="center", va="top",
+                  zorder=6)
+
+    d = MechDiagram(360, 200)
+    y0 = 52
+    x = 62
+    offsets(x, y0)
+    d.grid(x, y0, 3, 3, CELL, shaded=cells(K, light),
+           shaded_dark=cells(K, dark), dark_color=STRIDE_AMBER,
+           values=vals(K))
+    name(x, y0, r"$\mathbf{K}$")
+    xa0 = x + 3 * CELL + 16
+    xa1 = xa0 + 70
+    ym = y0 + 1.5 * CELL
+    d.ax.add_patch(FancyArrowPatch(
+        (xa0, ym), (xa1, ym), arrowstyle="-|>,head_width=4,head_length=7",
+        color=INK, lw=1.6, shrinkA=0, shrinkB=0, zorder=6))
+    for t, s in enumerate(("flip", "both axes")):
+        d.ax.text((xa0 + xa1) / 2, ym + 7 + (1 - t) * 15, s,
+                  fontsize=GRID_FS - 1, color=INK, family=SANS,
+                  ha="center", va="bottom", zorder=6)
+    x = xa1 + 50
+    offsets(x, y0)
+    d.grid(x, y0, 3, 3, CELL, shaded=cells(Kf, light),
+           shaded_dark=cells(Kf, dark), dark_color=STRIDE_AMBER,
+           values=vals(Kf))
+    name(x, y0, r"$\mathbf{K}'$")
+    save(d.fig, "conv-flipped-kernel")
 
 
 def fig_conv_pad():
@@ -338,7 +453,8 @@ def fig_pooling_shift():
 
 
 def main():
-    for fn in (fig_correlation, fig_conv_pad, fig_conv_stride,
+    for fn in (fig_correlation, fig_conv_im2col, fig_conv_flipped_kernel,
+               fig_conv_pad, fig_conv_stride,
                fig_conv_multi_in, fig_conv_1x1, fig_conv_reuse, fig_pooling,
                fig_pooling_shift):
         fn()

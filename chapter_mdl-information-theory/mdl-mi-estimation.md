@@ -806,8 +806,10 @@ Intuitively, picking the true partner out of $N$ candidates, even with zero
 error, demonstrates at most $\log N$ nats: the information contained in a
 single choice among $N$ alternatives. No critic can squeeze more information
 out of that task, just as a $10$-class classifier could never certify more than
-$\ln 10$ nats. Increasing $N$ raises the ceiling, which is why contrastive
-methods such as CPC, SimCLR, and CLIP rely on large batches. The loss is
+$\ln 10$ nats. Increasing $N$ raises the ceiling, which is one motivation
+given for the large batches of contrastive methods such as CPC, SimCLR, and
+CLIP. It is not the whole story: as we will see at the end of the section, a
+tighter bound is not what makes a representation good. The loss is
 minimized by any critic of the form $T^*(x, y) = \textrm{pmi}(x, y) + c(x)$,
 where $c(x)$ is an arbitrary function of the anchor alone (Exercise
 :exref:`ex_mdl-mutual-information-optimal-critic`).

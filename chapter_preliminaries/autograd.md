@@ -202,7 +202,10 @@ t.gradient(L, w)
 jax.grad(loss)(w)
 ```
 
-Because local backward rules require intermediate activations from the forward pass (such as $\mathbf{r}$ and $\mathbf{X}$), training consumes substantially more memory than inference.
+Because local backward rules require intermediate activations from the forward pass (such as $\mathbf{r}$ and $\mathbf{X}$), training consumes substantially more memory than inference (:numref:`fig_autograd_memory`).
+
+![Memory during a forward pass through four layers with outputs $\mathbf{h}_1, \ldots, \mathbf{h}_4$. (a) When gradients are tracked, every output is kept, because the backward pass (red) will need it. (b) When they are not, as during inference, an output can be freed as soon as the next layer has used it.](../img/autograd-activation-memory.svg)
+:label:`fig_autograd_memory`
 
 ### Gradient Accumulation
 
@@ -302,7 +305,7 @@ vjp(jnp.ones(3))[0]  # v = 1
 
 ### Detaching Values
 
-*Detaching* a tensor creates a view or copy with the same numerical values but no link to its ancestors in the computational graph, so backpropagation treats it as a constant. Consider $u = x^2$ and $z = u x$ on $\mathbf{x} = (0, 1, 2, 3)$ (:numref:`fig_autograd_detach`): when $u$ is attached, gradient flows along both paths to give $\partial z/\partial x = 3x^2$; when $u$ is detached to $c$, differentiating $z = c x$ treats $c$ as a constant and gives $\partial z/\partial x = c = x^2$ (essential whenever a network computes its own bootstrap target, as in Q-learning, :numref:`sec_qlearning`).
+*Detaching* a tensor creates a view or copy with the same numerical values but no link to its ancestors in the computational graph, so backpropagation treats it as a constant. Consider $u = x^2$ and $z = u x$ on $\mathbf{x} = (0, 1, 2, 3)$ (:numref:`fig_autograd_detach`): when $u$ is attached, gradient flows along both paths to give $\partial z/\partial x = 3x^2$; when $u$ is detached to $c$, differentiating $z = c x$ treats $c$ as a constant and gives $\partial z/\partial x = c = x^2$ (essential whenever a network computes its own bootstrap target, as in deep Q-learning, :numref:`sec_dqn`).
 
 ![The product $z = ux$ with $u = x^2$, (a) attached and (b) detached. Blue arrows are operations of the forward pass; red arrows show the backward pass, labeled with the local derivatives it multiplies by. Detaching $u$ creates a constant $c$ with the same value and no connection to $x$.](../img/autograd-detach.svg)
 :label:`fig_autograd_detach`
@@ -504,7 +507,7 @@ def f(a):
     return c
 ```
 
-For scalar $a$, `f(a) = k * a` is piecewise linear with slope $k = f(a)/a$ ($k = 2^{12} = 4096$ at $a = 0.3$; $k = 100 \cdot 2^{11} = 204{,}800$ at $a = -0.75$, :numref:`fig_autograd_dynamic`), which autograd recovers exactly:
+For a scalar $a \neq 0$ (at $a = 0$ the doubling loop would never end), `f(a) = k * a` is piecewise linear with slope $k = f(a)/a$ ($k = 2^{12} = 4096$ at $a = 0.3$; $k = 100 \cdot 2^{11} = 204{,}800$ at $a = -0.75$, :numref:`fig_autograd_dynamic`), which autograd recovers exactly:
 
 ```{.python .input #autograd-gradients-and-python-control-flow-2}
 %%tab mxnet

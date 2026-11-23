@@ -1,5 +1,6 @@
 // Slide diagrams for chapter_convolutional-neural-networks (Chapter 6: CNNs)
 import { C, TOKENS, FS, FM, grid, tx, baselineY, arrow, block, chip, rc, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -118,12 +119,12 @@ function roadmapPipeline() {
   const W = 540, H = 276;
   let o = '';
   const stages = [
-    { x: 16,  y: 18, t: '§6.1 Symmetry', s1: 'Equivariance + Locality', s2: 'V_{i,j,a,b} = K_{a,b}', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 194, y: 18, t: '§6.2 Conv Layer', s1: '2D Cross-Corr & im2col', s2: 'Y = X ★ K, RF r = 2L+1', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 372, y: 18, t: '§6.3 Pad & Stride', s1: 'Borders, Stride, Dilation', s2: '⌊(n+2p−d(k−1)−1)/s⌋+1', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 372, y: 158, t: '§6.4 Channels', s1: '4D Kernels & 1×1 Conv', s2: 'c_o c_i k_h k_w + c_o', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 194, y: 158, t: '§6.5 Pooling', s1: 'Max / Avg & Global Pool', s2: '0 params, shift tolerance', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 16,  y: 158, t: '§6.6 LeNet', s1: 'Full CNN vs. MLP Test', s2: '61.7K params, 416K MACs', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 18, t: `${sec('sec_why-conv')} Symmetry`, s1: 'Equivariance + Locality', s2: 'V_{i,j,a,b} = K_{a,b}', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 194, y: 18, t: `${sec('sec_conv_layer')} Conv Layer`, s1: '2D Cross-Corr & im2col', s2: 'Y = X ★ K, RF r = 2L+1', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 372, y: 18, t: `${sec('sec_padding')} Pad & Stride`, s1: 'Borders, Stride, Dilation', s2: '⌊(n+2p−d(k−1)−1)/s⌋+1', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 372, y: 158, t: `${sec('sec_channels')} Channels`, s1: '4D Kernels & 1×1 Conv', s2: 'c_o c_i k_h k_w + c_o', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 194, y: 158, t: `${sec('sec_pooling')} Pooling`, s1: 'Max / Avg & Global Pool', s2: '0 params, shift tolerance', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 16,  y: 158, t: `${sec('sec_lenet')} LeNet`, s1: 'Full CNN vs. MLP Test', s2: '61.7K params, 416K MACs', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   const bw = 152, bh = 96;
   o += arrow(16 + bw + 4, 66, 194 - 4, 66, C.blue);
@@ -145,12 +146,12 @@ function benchmarksOverview() {
   const W = 540, H = 276;
   let o = '';
   const rows = [
-    { sec: '§6.1', label: '3×3 RGB→64ch Kernel', metric: '1,792 params at any H×W', col: C.blue, bg: C.lblue, dk: D.blue.dark },
-    { sec: '§6.2', label: 'Learned Edge [1, -1]', metric: 'Loss 12.0 → 0.004 in 9 steps', col: C.blue, bg: C.lblue, dk: D.blue.dark },
-    { sec: '§6.3', label: 'Strided / Dilated 3×3×3', metric: 'Receptive field r = 7 → 15 px', col: C.purple, bg: D.purple.tint, dk: D.purple.dark },
-    { sec: '§6.4', label: '1×1 Bottleneck (256→64→256)', metric: '589K → 69.6K weights (8.5× cut)', col: C.amber, bg: C.lamber, dk: D.orange.dark },
-    { sec: '§6.5', label: '2×2 Stride-2 MaxPool', metric: '50% 1-px shift absorbed, −∞ pad', col: C.amber, bg: C.lamber, dk: D.orange.dark },
-    { sec: '§6.6', label: 'LeNet on Fashion-MNIST', metric: '4% params do 86% of MACs', col: C.green, bg: C.lgreen, dk: D.green.dark },
+    { sec: sec('sec_why-conv'), label: '3×3 RGB→64ch Kernel', metric: '1,792 params at any H×W', col: C.blue, bg: C.lblue, dk: D.blue.dark },
+    { sec: sec('sec_conv_layer'), label: 'Learned Edge [1, -1]', metric: 'Loss 12.0 → 0.004 in 9 steps', col: C.blue, bg: C.lblue, dk: D.blue.dark },
+    { sec: sec('sec_padding'), label: 'Strided / Dilated 3×3×3', metric: 'Receptive field r = 7 → 15 px', col: C.purple, bg: D.purple.tint, dk: D.purple.dark },
+    { sec: sec('sec_channels'), label: '1×1 Bottleneck (256→64→256)', metric: '589K → 69.6K weights (8.5× cut)', col: C.amber, bg: C.lamber, dk: D.orange.dark },
+    { sec: sec('sec_pooling'), label: '2×2 Stride-2 MaxPool', metric: '50% 1-px shift absorbed, −∞ pad', col: C.amber, bg: C.lamber, dk: D.orange.dark },
+    { sec: sec('sec_lenet'), label: 'LeNet on Fashion-MNIST', metric: '4% params do 86% of MACs', col: C.green, bg: C.lgreen, dk: D.green.dark },
   ];
   rows.forEach((r, i) => {
     const y = 14 + i * 42;
@@ -1361,14 +1362,14 @@ function mlpVsLenetParadigm() {
   const W = 540, H = 260;
   let o = '';
   o += card(16, 18, 242, 224, D.red.tint, D.red.base, [
-    { t: 'Chapter 4 MLP Baseline', fs: 14.5, fw: 700, fill: D.red.dark },
+    { t: `Chapter ${num('chap_perceptrons')} MLP Baseline`, fs: 14.5, fw: 700, fill: D.red.dark },
     { t: 'Flatten 28×28 → 784 → 256 → 10', mono: true, fs: 12, fw: 700, fill: C.ink },
     { t: 'Parameters: 203,530', mono: true, fs: 13, fw: 700, fill: D.red.dark },
     { t: 'Multiply-Adds: ~203,000', mono: true, fs: 12.5, fill: C.ink },
     { t: 'Val Accuracy: ~87% (30 epochs)', fs: 13, fw: 700, fill: C.ink },
   ]);
   o += card(282, 18, 242, 224, C.lgreen, C.green, [
-    { t: 'LeNet-5 Spatial CNN (§6.6)', fs: 14.5, fw: 700, fill: D.green.dark },
+    { t: `LeNet-5 Spatial CNN (${sec('sec_lenet')})`, fs: 14.5, fw: 700, fill: D.green.dark },
     { t: '2D Conv+Pool Encoder → Dense Head', fs: 12, fw: 600, fill: C.ink },
     { t: 'Parameters: 61,706 (3.3× fewer!)', mono: true, fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Multiply-Adds: 416,520', mono: true, fs: 12.5, fill: C.ink },
@@ -1428,7 +1429,7 @@ function sigmoidGradientAttenuation() {
     const x = 392 - i * 124;
     o += card(x, 28, 108, 82, i === 3 ? D.red.tint : C.lamber, i === 3 ? D.red.base : C.amber, [
       { t: l, fs: 12.5, fw: 700, fill: i === 3 ? D.red.dark : D.orange.dark },
-      { t: `≤ 1/${4 ** (i + 1)}`, mono: true, fs: 13, fw: 700, fill: C.ink },
+      { t: `∏ σ′ ≤ 1/${4 ** (i + 1)}`, fs: 14, fw: 700, fill: C.ink },
     ]);
     if (i < 3) {
       o += arrow(x - 3, 69, x - 13, 69, D.red.base);
@@ -1436,7 +1437,7 @@ function sigmoidGradientAttenuation() {
   });
   o += card(16, 132, 508, 110, D.red.tint, D.red.base, [
     { t: 'Why Classical LeNet Stalls at lr = 0.1 and Requires lr = 2.0', fs: 14.5, fw: 700, fill: D.red.dark },
-    { t: '1. Four sigmoid derivatives shrink Conv1 gradients by at least (1/4)⁴ = 1/256', fs: 12.5, fw: 600, fill: C.ink },
+    { t: '1. Conv1’s gradient carries four σ′ factors; their product is ≤ (1/4)⁴ = 1/256', fs: 12.5, fw: 600, fill: C.ink },
     { t: '2. Forward activations cluster near 0.5, pinning initial loss at ln(10) ≈ 2.30 plateau', fs: 12.5, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);
@@ -1500,7 +1501,7 @@ function pixelShuffleInvariance() {
     { t: '(X P) W⁽¹⁾ = X (P W⁽¹⁾)', mono: true, fs: 13.5, fw: 700, fill: C.ink },
     { t: '• Merely permutes rows of W⁽¹⁾', fs: 12.5, fw: 600, fill: C.ink },
     { t: '• i.i.d. init ⇒ identical SGD distribution', fs: 12, fill: C.muted },
-    { t: '• Accuracy unchanged: ~87.0%', fs: 13, fw: 700, fill: D.blue.dark },
+    { t: '• Accuracy unchanged: ≈87%', fs: 13, fw: 700, fill: D.blue.dark },
   ]);
   o += card(282, 16, 242, 232, D.red.tint, D.red.base, [
     { t: 'LeNet on Shuffled Pixels (X·P)', fs: 14, fw: 700, fill: D.red.dark },
@@ -1517,7 +1518,7 @@ function orderedVsShuffledAcc() {
   let o = '';
   const bars = [
     { y: 24,  label: 'LeNet (Ordered Pixels)', acc: '≈89–90%', w: 300, fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { y: 90,  label: 'MLP (Ordered = Shuffled)', acc: '87.0%', w: 230, fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { y: 90,  label: 'MLP (Ordered = Shuffled)', acc: '≈87%', w: 230, fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { y: 156, label: 'LeNet (Shuffled Pixels)', acc: '≈85–86%', w: 180, fill: D.red.tint, st: D.red.base, dk: D.red.dark },
   ];
   bars.forEach((b) => {
@@ -1526,7 +1527,7 @@ function orderedVsShuffledAcc() {
     o += box(222, b.y, b.w, 46, b.fill, b.st, 6, 2);
     o += tx(222 + b.w / 2, b.y + 23, b.acc, { mono: true, fs: 14, fw: 700, fill: b.dk });
   });
-  o += tx(270, 232, 'Shuffling pixels erases 100% of LeNet’s advantage over the MLP!', { fs: 13.5, fw: 700, fill: D.red.dark });
+  o += tx(270, 232, 'Shuffling pixels erases LeNet’s advantage over the MLP', { fs: 13.5, fw: 700, fill: D.red.dark });
   return svg(W, H, o);
 }
 

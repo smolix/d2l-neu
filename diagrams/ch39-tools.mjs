@@ -1,5 +1,6 @@
 // Slide diagrams for chapter_appendix-tools-for-deep-learning (§39 Tools for Deep Learning)
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 
@@ -257,19 +258,19 @@ export const diagrams = {
 
   'ch39-tools-sizing-equations': () => grid2x2(
     'Four First-Principles Equations for Back-of-the-Envelope Sizing',
-    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Peak Training Memory (§39.4, §39.6)', lines: [
+    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: `Peak Training Memory (${sec('sec_hardware_buyers')}, ${sec('sec_training_systems')})`, lines: [
       { t: 'M_train ≈ 16N + M_act + M_ws', mono: true, fill: D.blue.dark, fw: 700 },
       '2B w + 2B g + 4B master + 8B Adam',
     ]},
-    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: 'Decode Bandwidth Ceiling (§39.4, §39.7)', lines: [
+    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: `Decode Bandwidth Ceiling (${sec('sec_hardware_buyers')}, ${sec('sec_model_serving')})`, lines: [
       { t: 'tok/s ≲ β / (B_w + b·n·B_kv)', mono: true, fill: D.orange.dark, fw: 700 },
       'Active weight bytes + batched KV cache',
     ]},
-    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Training FLOP Budget (§39.2, §39.6)', lines: [
+    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: `Training FLOP Budget (${sec('sec_hosted_notebooks')}, ${sec('sec_training_systems')})`, lines: [
       { t: 'C ≈ 6 · N · D  FLOPs', mono: true, fill: D.green.dark, fw: 700 },
       '2ND forward + 4ND backward pass',
     ]},
-    { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: "Young's Checkpoint Law (§39.2, §39.3)", lines: [
+    { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: `Young's Checkpoint Law (${sec('sec_hosted_notebooks')}, ${sec('sec_cloud_instances')})`, lines: [
       { t: 'τ* = √(2 · δ · M)', mono: true, fill: D.purple.dark, fw: 700 },
       'Write cost δ vs. mean failure interval M',
     ]},
@@ -277,33 +278,33 @@ export const diagrams = {
   ),
 
   'ch39-tools-lifecycle-roadmap': () => threeRows(
-    'Chapter 39 Roadmap: From a Single Notebook to Fleet Serving',
-    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: 'Tier 1: Reproducible Interactive Runtimes (§§39.1–39.2)', lines: [
-      '§39.1 Local notebooks, kernel state, uv locks, SSH  ·  §39.2 Colab & Kaggle ephemeral VMs',
+    `Chapter ${num('chap_appendix_tools')} Roadmap: From a Single Notebook to Fleet Serving`,
+    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: `Tier 1: Reproducible Interactive Runtimes (§§${num('sec_interactive_development')}–${num('sec_hosted_notebooks')})`, lines: [
+      `${sec('sec_interactive_development')} Local notebooks, kernel state, uv locks, SSH  ·  ${sec('sec_hosted_notebooks')} Colab & Kaggle ephemeral VMs`,
     ]},
-    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: 'Tier 2: Compute Economics, Silicon & Supply Chain (§§39.3–39.5)', lines: [
-      '§39.3 Cloud tiers, spot & egress  ·  §39.4 Discrete vs. unified RAM  ·  §39.5 Hubs, Elo & safetensors',
+    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: `Tier 2: Compute Economics, Silicon & Supply Chain (§§${num('sec_cloud_instances')}–${num('sec_software_ecosystem')})`, lines: [
+      `${sec('sec_cloud_instances')} Cloud tiers, spot & egress  ·  ${sec('sec_hardware_buyers')} Discrete vs. unified RAM  ·  ${sec('sec_software_ecosystem')} Hubs, Elo & safetensors`,
     ]},
-    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: 'Tier 3: Cluster Training, Serving & D2L Build Pipeline (§§39.6–39.9)', lines: [
-      '§39.6 DDP/FSDP2/3D parallel  ·  §39.7 vLLM/SGLang & PagedAttention  ·  §§39.8–39.9 Build & d2l utils',
+    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: `Tier 3: Cluster Training, Serving & D2L Build Pipeline (§§${num('sec_training_systems')}–${num('sec_utils')})`, lines: [
+      `${sec('sec_training_systems')} DDP/FSDP2/3D parallel  ·  ${sec('sec_model_serving')} vLLM/SGLang & PagedAttention  ·  §§${num('sec_developers_guide')}–${num('sec_utils')} Build & d2l utils`,
     ]}
   ),
 
   'ch39-tools-worked-benchmarks': () => grid2x2(
-    'Executable Sizing Models & Empirical Snapshots Across Chapter 39',
-    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: '§§39.1–39.2: Kernel & Portable Setup', lines: [
+    `Executable Sizing Models & Empirical Snapshots Across Chapter ${num('chap_appendix_tools')}`,
+    { fill: C.lblue, st: C.blue, dk: D.blue.dark, title: `§§${num('sec_interactive_development')}–${num('sec_hosted_notebooks')}: Kernel & Portable Setup`, lines: [
       'uv pip sync + sys.executable check',
       'Environment fingerprint & path adapter',
     ]},
-    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: '§§39.3–39.4: Cloud & Hardware Sizing', lines: [
+    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: `§§${num('sec_cloud_instances')}–${num('sec_hardware_buyers')}: Cloud & Hardware Sizing`, lines: [
       '4090 / A100 / H100 completed-result cost',
       '7B full (86 GiB) vs QLoRA (4 GiB) & decode',
     ]},
-    { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: '§§39.5–39.6: Arena Elo & 8-GPU FSDP', lines: [
+    { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: `§§${num('sec_software_ecosystem')}–${num('sec_training_systems')}: Arena Elo & 8-GPU FSDP`, lines: [
       'Arena SE ≈ 347/√v & frozen Artifact SHA',
       '8-GPU 7B: DDP (95 GiB) vs FSDP (22 GiB)',
     ]},
-    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '§§39.7–39.9: Serving & Single-Source Build', lines: [
+    { fill: C.lgreen, st: C.green, dk: D.green.dark, title: `§§${num('sec_model_serving')}–${num('sec_utils')}: Serving & Single-Source Build`, lines: [
       'Continuous batching & PagedAttention math',
       'Prefix fingerprinting & JAX RL bucketing',
     ]},
@@ -644,7 +645,7 @@ export const diagrams = {
     ]},
     { fill: C.lblue, st: C.blue, dk: D.blue.dark,
       line1: 'Always compute C ≈ 6ND and divide by sustained TFLOP/s before starting a multi-day run!',
-      line2: 'When a job exceeds 1–2 sessions, rent dedicated cloud capacity (§39.3) instead of chaining free VMs.' }
+      line2: `When a job exceeds 1–2 sessions, rent dedicated cloud capacity (${sec('sec_cloud_instances')}) instead of chaining free VMs.` }
   ),
 
   'ch39-tools-colab-vs-kaggle': () => twoCols(
@@ -1877,9 +1878,9 @@ export const diagrams = {
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '#@save Extractor (make lib)', lines: [
       'Scans all chapters in book order into d2l/*.py',
       { t: 'Last-Definition-Wins Rule:', fill: D.green.dark, fw: 700 },
-      '• §2.4 defines CPU Trainer.prepare_batch',
-      '• §5.7 redefines GPU Trainer.prepare_batch',
-      'd2l/torch.py keeps §5.7; §2.4 runs its own!',
+      `• ${sec('sec_oo-design')} defines CPU Trainer.prepare_batch`,
+      `• ${sec('sec_use_gpu')} redefines GPU Trainer.prepare_batch`,
+      `d2l/torch.py keeps ${sec('sec_use_gpu')}; ${sec('sec_oo-design')} runs its own!`,
     ]},
     { fill: D.purple.tint, st: C.purple, dk: D.purple.dark,
       line1: 'If you edit any cell carrying #@save, always run "make lib" first,',
@@ -2022,7 +2023,7 @@ export const diagrams = {
       'GPT, ResNet, Benchmark,',
       'kernel_times, ...',
     ]},
-    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: '2. §39.9 Utility Cells', lines: [
+    { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: `2. ${sec('sec_utils')} Utility Cells`, lines: [
       'Plumbing in utils.md:',
       'save_hyperparameters,',
       'plot, ProgressBoard,',
@@ -2038,7 +2039,7 @@ export const diagrams = {
     ]},
     { fill: D.purple.tint, st: C.purple, dk: D.purple.dark,
       line1: 'Active Core vs. Legacy Helpers: PyTorch and JAX chapters use d2l.Trainer.fit(model, data);',
-      line2: 'legacy functions (train_ch6, train_seq2seq, Animator) remain in §39.9 only for older TF/MXNet tabs.' },
+      line2: `legacy functions (train_ch6, train_seq2seq, Animator) remain in ${sec('sec_utils')} only for older TF/MXNet tabs.` },
     true
   ),
 
@@ -2059,7 +2060,7 @@ export const diagrams = {
       'Plain decimals in [10⁻⁴, 10⁵), sci outside',
     ]},
     { fill: C.lamber, st: C.amber, dk: D.orange.dark,
-      line1: 'Why 1–2–5 Log Ticks Matter in Chapter 13 & Scaling Plots:',
+      line1: `Why 1–2–5 Log Ticks Matter in Chapter ${num('chap_performance')} & Scaling Plots:`,
       line2: 'Roofline sweeps and batch-scaling plots spanning 2×–20× stay immediately readable without grid guessing.' }
   ),
 
@@ -2229,7 +2230,7 @@ export const diagrams = {
       'Falls back to nnx.Embed when V > 1,024',
     ]},
     { fill: C.lblue, st: C.blue, dk: D.blue.dark,
-      line1: 'Why the V = 1,024 Threshold? At V = 256 (byte GPT in §13.8), one-hot GEMM is 10–30× faster;',
+      line1: `Why the V = 1,024 Threshold? At V = 256 (byte GPT in ${sec('sec_fast_transformer')}), one-hot GEMM is 10–30× faster;`,
       line2: 'at V = 50,257 (BPE GPT), materializing O(BTV) one-hot floats would cost too much memory and FLOPs.' }
   ),
 

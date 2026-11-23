@@ -9,6 +9,8 @@
   parabolas tangent at x0 = 1.
 * ``mdl-opt-factored-model`` -- contours of the two-weight model (ab - 1)^2,
   its hyperbola of minimizers, two minimizers and their midpoint (the saddle).
+* ``mdl-opt-epigraph-sublevel`` -- (a) the convex epigraph of x^2/2 + 1/4 and
+  its sublevel slice; (b) sqrt|x|: convex sublevel sets, nonconvex epigraph.
 
 Every curve is computed from its formula.  Run with the repo's pytorch venv:
 
@@ -129,9 +131,77 @@ def fig_factored_model():
     fl.save(fig, "mdl-opt-factored-model")
 
 
+def fig_epigraph_sublevel():
+    """(a) f(x) = x^2/2 + 1/4: the epigraph (shaded, open upward) is convex,
+    so a chord between two of its points stays inside; the slice at height
+    c = 1 projects to the sublevel set {f <= c} = [-sqrt(3/2), sqrt(3/2)].
+    (b) f(x) = sqrt|x|: the chord from (0, 0) to (2, sqrt 2) leaves the
+    epigraph (its midpoint (1, 0.71) lies below the graph value 1), yet the
+    sublevel set {f <= 1} = [-1, 1] is still an interval.  Both panels share
+    one window, so they render at the same height.
+    """
+    xr, tr = (-2.3, 2.45), (-0.55, 2.75)
+    lim = ((xr[0] - 0.05, xr[1] + 0.05), (tr[0] - 0.05, tr[1] + 0.05))
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.0, 3.9))
+    xs = np.linspace(-2.2, 2.2, 801)
+
+    def panel(ax, fx, c, chord, label):
+        ax.fill_between(xs, fx, tr[1] - 0.12, color=BLUE, alpha=0.13, lw=0,
+                        zorder=0)
+        ax.plot(xs, fx, color=BLUE, lw=2.4, zorder=3)
+        # the slice t = c and its shadow on the x-axis
+        inside = xs[fx <= c]
+        lo, hi = inside.min(), inside.max()
+        ax.plot([xr[0] + 0.1, xr[1] - 0.15], [c, c], color=ORANGE, lw=1.4,
+                ls=(0, (5, 3)), zorder=2)
+        ax.plot([lo, hi], [c, c], color=ORANGE, lw=2.6, zorder=4)
+        for e in (lo, hi):
+            ax.plot([e, e], [0, c], color=GRAY, lw=1.0, ls=(0, (2, 3)),
+                    zorder=1)
+        ax.plot([lo, hi], [0, 0], color=ORANGE, lw=4.0, zorder=5,
+                solid_capstyle="butt")
+        ax.text(xr[0] + 0.1, c - 0.08, r"$t=c$", color=ORANGE,
+                fontsize=LBL, ha="left", va="top")
+        ax.text(0.5 * (lo + hi) + 0.08, -0.12, r"$\{f\leq c\}$",
+                color=ORANGE, fontsize=LBL, ha="left", va="top")
+        # a chord between two points of the epigraph
+        (p, q) = chord
+        ax.plot([p[0], q[0]], [p[1], q[1]], color=GREEN, lw=2.2, zorder=6)
+        ax.plot(*zip(p, q), "o", color=GREEN, ms=6.5, zorder=7)
+        ax.text(*label, r"$\mathrm{epi}\,f$", color=BLUE, fontsize=LBL + 2,
+                ha="center", va="center")
+        fl.axis_cross(ax, xr, tr, color="black")
+        ax.text(xr[1], -0.1, r"$x$", color="black", fontsize=LBL + 1,
+                ha="right", va="top")
+        ax.text(0.1, tr[1], r"$t$", color="black", fontsize=LBL + 1,
+                ha="left", va="top")
+        fl.clean_axes(ax, lim=lim, hide=True, equal=False)
+
+    # ----- (a) convex: the chord stays in the epigraph -----
+    fa = xs ** 2 / 2 + 0.25
+    panel(axa, fa, 1.0, ((-1.9, 1.9 ** 2 / 2 + 0.25), (1.0, 0.75)),
+          (1.05, 2.3))
+
+    # ----- (b) sqrt|x|: convex sublevel sets, nonconvex epigraph -----
+    fb = np.sqrt(np.abs(xs))
+    panel(axb, fb, 1.0, ((0.0, 0.0), (2.0, np.sqrt(2.0))), (-1.05, 2.3))
+    # the chord's midpoint lies below the graph: outside the epigraph
+    axb.plot(1.0, np.sqrt(2.0) / 2, "o", mfc="white", mec=GREEN, mew=1.8,
+             ms=7.5, zorder=8)
+    axb.annotate("midpoint below\nthe graph", xy=(1.0, np.sqrt(2.0) / 2),
+                 xytext=(1.25, 0.36), color="black", fontsize=LBL,
+                 ha="left", va="center",
+                 arrowprops=dict(arrowstyle="-", color="black", lw=0.8,
+                                 shrinkA=2, shrinkB=5), zorder=8)
+
+    fig.subplots_adjust(wspace=0.1)
+    fl.save(fig, "mdl-opt-epigraph-sublevel")
+
+
 FIGURES = [
     fig_convexity_hierarchy,
     fig_factored_model,
+    fig_epigraph_sublevel,
 ]
 
 

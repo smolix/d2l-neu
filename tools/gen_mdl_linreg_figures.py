@@ -469,9 +469,194 @@ def fig_gaussian_noise():
     fl.save(fig, "mdl-linreg-gaussian-noise")
 
 
+def _schematic_axes(xr, yr, pt=35.0):
+    """A borderless equal-aspect canvas with a fixed number of points per data
+    unit, so that text and boxes keep their ratio whatever the extent."""
+    fig = plt.figure(figsize=((xr[1] - xr[0]) * pt / 72,
+                              (yr[1] - yr[0]) * pt / 72))
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(*xr)
+    ax.set_ylim(*yr)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    return fig, ax
+
+
+def fig_design_matrix():
+    """Shapes in the batched model y-hat = X w + b (Section 3.1).  The n
+    examples are the rows of X (n x d), w has one entry per column, and the
+    scalar b is broadcast to all n predictions.  Row i of X (highlighted)
+    produces entry i of y-hat, y-hat^(i) = w^T x^(i) + b.  Drawn with n = 6
+    and d = 3; the augmented matrix [X, 1] is not shown, since the prose
+    introduces it only later."""
+    from matplotlib.patches import Rectangle
+    n, d, c = 6, 3, 0.62                     # rows, columns, cell size
+    hi = 2                                   # the highlighted example i
+    top = n * c                              # every block is top-aligned
+    mid = top / 2
+    fig, ax = _schematic_axes((-0.15, 10.25), (-1.35, top + 0.15))
+
+    def grid(x, cols, rows, accent, row_hi=None, ghost_from=None):
+        """A rows x cols block of cells, its top-left corner at (x, top).
+        Rows from ghost_from on are dashed copies (broadcasting)."""
+        for r in range(rows):
+            ghost = ghost_from is not None and r >= ghost_from
+            for k in range(cols):
+                fc = ("white" if ghost else
+                      accent.base if r == row_hi else accent.tint)
+                ax.add_patch(Rectangle(
+                    (x + k * c, top - (r + 1) * c), c, c, fc=fc,
+                    ec=accent.base, lw=T.SW_HAIR,
+                    ls=(0, (3, 2)) if ghost else "-",
+                    alpha=0.45 if r == row_hi else 1.0, zorder=2))
+        if ghost_from is None:
+            ax.add_patch(Rectangle((x, top - rows * c), cols * c, rows * c,
+                                   fc="none", ec=accent.base, lw=T.SW_BOX,
+                                   zorder=3))
+        else:
+            ax.add_patch(Rectangle((x, top - c), c, c, fc="none",
+                                   ec=accent.base, lw=T.SW_BOX, zorder=3))
+        return x + cols * c
+
+    op = dict(fontsize=22, color=T.INK, ha="center", va="center")
+    lab = dict(fontsize=T.FS_LABEL, color=T.INK, ha="center", va="top")
+    dim = dict(fontsize=T.FS_SMALL, color=T.MUTED, ha="center", va="top")
+    ly, dy = -0.22, -0.82                    # rows of names and shapes
+
+    x = 0.0
+    xe = grid(x, 1, n, T.PURPLE, row_hi=hi)
+    ax.text((x + xe) / 2, ly, r"$\hat{\mathbf{y}}$", **lab)
+    ax.text((x + xe) / 2, dy, r"$n$", **dim)
+    ax.text(xe + 0.6, mid, "$=$", **op)
+    x = xe + 1.2
+    xe = grid(x, d, n, T.BLUE, row_hi=hi)
+    ax.text((x + xe) / 2, ly, r"$\mathbf{X}$", **lab)
+    ax.text((x + xe) / 2, dy, r"$n \times d$", **dim)
+    x = xe + 0.45
+    xe = grid(x, 1, d, T.ORANGE)
+    ax.text((x + xe) / 2, ly, r"$\mathbf{w}$", **lab)
+    ax.text((x + xe) / 2, dy, r"$d$", **dim)
+    ax.text(xe + 0.6, mid, "$+$", **op)
+    x = xe + 1.2
+    # b: one real cell; the n - 1 dashed copies are what broadcasting adds
+    xe = grid(x, 1, n, T.GREEN, ghost_from=1)
+    ax.text((x + xe) / 2, ly, r"$b$", **lab)
+    ax.text((x + xe) / 2, dy, "scalar", **dim)
+    # annotations to the right of b, clear of every block
+    ax.text(xe + 0.45, top - 0.1, "broadcast to\n$n$ entries",
+            fontsize=T.FS_SMALL, color=T.GREEN.dark, ha="left", va="top",
+            linespacing=1.1)
+    ax.text(xe + 0.45, mid - 0.55, r"row $i$ of $\mathbf{X}$: "
+            r"$\mathbf{x}^{(i)\top}$",
+            fontsize=T.FS_SMALL, color=T.BLUE.dark, ha="left", va="center")
+    ax.text(xe + 0.45, mid - 1.25,
+            r"$\hat{y}^{(i)} = \mathbf{w}^\top\mathbf{x}^{(i)} + b$",
+            fontsize=T.FS_SMALL, color=T.PURPLE.dark, ha="left",
+            va="center")
+    fl.save(fig, "mdl-linreg-design-matrix")
+
+
+def fig_sgd_cycle():
+    """The four steps of one minibatch update (Section 3.4), in the chapter's
+    notation and independent of the framework: forward pass, loss on the
+    minibatch B, backward pass (the gradients, by automatic differentiation)
+    and the parameter update, after which the next minibatch enters."""
+    from matplotlib.patches import FancyBboxPatch
+    W, H, GX, GY = 6.4, 3.0, 1.7, 1.1
+    xr, yr = (-0.1, 2 * W + GX + 0.1), (-0.1, 2 * H + GY + 0.1)
+    fig, ax = _schematic_axes(xr, yr)
+    boxes = [  # (lower-left corner, accent, title, formula, note)
+        ((0, H + GY), T.BLUE, "1. Forward pass",
+         r"$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$",
+         r"for the minibatch $\mathcal{B}$"),
+        ((W + GX, H + GY), T.ORANGE, "2. Loss",
+         r"$L = \frac{1}{2|\mathcal{B}|}\sum_{i \in \mathcal{B}}"
+         r"(\hat{y}^{(i)} - y^{(i)})^2$", "one number per minibatch"),
+        ((W + GX, 0), T.RED, "3. Backward pass",
+         r"$\nabla_{\mathbf{w}} L, \;\; \nabla_b L$",
+         "by automatic differentiation"),
+        ((0, 0), T.GREEN, "4. Update",
+         r"$\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla_{\mathbf{w}} L$"
+         "\n" r"$b \leftarrow b - \eta \nabla_b L$",
+         "not recorded for differentiation"),
+    ]
+    for (x, y), acc, title, formula, note in boxes:
+        ax.add_patch(FancyBboxPatch(
+            (x, y), W, H, boxstyle="round,pad=0,rounding_size=0.25",
+            fc=acc.tint, ec=acc.base, lw=T.SW_BOX, zorder=2))
+        cx = x + W / 2
+        ax.text(cx, y + H - 0.45, title, fontsize=T.FS_LABEL,
+                fontweight="bold", color=acc.dark, ha="center", va="center")
+        ax.text(cx, y + H / 2 - 0.08, formula, fontsize=T.FS_LABEL,
+                color=T.INK, ha="center", va="center", linespacing=1.2)
+        ax.text(cx, y + 0.38, note, fontsize=T.FS_SMALL, color=T.MUTED,
+                ha="center", va="center")
+    g = 0.08                                  # arrow ends clear of borders
+    yt, yb = H + GY + H / 2, H / 2
+    fl.arrow(ax, (W + g, yt), (W + GX - g, yt), color=T.INK, lw=2.0)
+    fl.arrow(ax, (W + GX + W / 2, H + GY - g), (W + GX + W / 2, H + g),
+             color=T.INK, lw=2.0)
+    fl.arrow(ax, (W + GX - g, yb), (W + g, yb), color=T.INK, lw=2.0)
+    fl.arrow(ax, (W / 2, H + g), (W / 2, H + GY - g), color=T.INK, lw=2.0)
+    ax.text(W / 2 + 0.2, H + GY / 2, "next minibatch", fontsize=T.FS_SMALL,
+            color=T.INK, ha="left", va="center")
+    fl.save(fig, "mdl-linreg-sgd-cycle")
+
+
+def fig_epoch_timeline():
+    """Where the Trainer plots its two losses within epoch e (Section 3.2).
+    The minibatch losses (dots) fall as the parameters improve during the
+    epoch; their example-weighted mean over all steps is drawn at e + 1/2,
+    the middle of the interval it summarizes, while the validation loss is
+    computed with the parameters at the end of the epoch and drawn at e + 1.
+    The per-step losses are a seeded schematic: exponential decay plus
+    noise."""
+    rng = np.random.default_rng(4)
+    steps = 24
+    t = (np.arange(steps) + 0.5) / steps      # step positions within the epoch
+    curve = lambda s: 0.35 + 1.0 * np.exp(-1.6 * s)
+    batch = curve(t) * (1 + 0.10 * rng.standard_normal(steps))
+    train = batch.mean()
+    val = curve(1.0)
+
+    fig, ax = plt.subplots(figsize=(6.4, 3.4))
+    ss = np.linspace(0, 1, 200)
+    ax.plot(ss, curve(ss), color=T.FAINT, lw=T.SW_HAIR, ls=(0, (4, 3)),
+            zorder=1)
+    ax.plot(t, batch, "o", color=T.MUTED, ms=4.5, zorder=2)
+    ax.plot([0, 1], [train, train], color=T.BLUE.base, lw=T.SW_HAIR,
+            ls=(0, (1.5, 2.5)), zorder=2)
+    ax.plot(0.5, train, "o", color=T.BLUE.base, ms=10, zorder=4)
+    ax.plot(1.0, val, "o", color=T.GREEN.base, ms=10, zorder=4,
+            clip_on=False)
+    clear = dict(boxstyle="square,pad=0.12", fc="white", ec="none")
+    ax.text(0.46, train - 0.2, "training loss:\nmean over all steps",
+            color=T.BLUE.dark, fontsize=T.FS_SMALL, ha="right", va="top",
+            linespacing=1.1, bbox=clear, zorder=5)
+    ax.text(0.97, val - 0.14, "validation loss:\nend-of-epoch parameters",
+            color=T.GREEN.dark, fontsize=T.FS_SMALL, ha="right",
+            va="top", linespacing=1.1, bbox=clear, zorder=5)
+    ax.text(0.26, 1.45, "loss of each minibatch", color=T.MUTED,
+            fontsize=T.FS_SMALL, ha="left", va="center")
+    ax.set_xlim(0, 1.0)
+    ax.set_ylim(0, 1.6)
+    ax.set_xticks([0, 0.5, 1])
+    ax.set_xticklabels(["$e$", r"$e + \frac{1}{2}$", "$e + 1$"])
+    ax.set_yticks([])
+    ax.set_xlabel("epoch", color=T.INK)
+    ax.set_ylabel("loss", color=T.INK)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(T.INK)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.tick_params(colors=T.INK)
+    fl.save(fig, "mdl-linreg-epoch-timeline")
+
+
 FIGURES = [fig_ridge_geometry, fig_ridge_shrinkage, fig_oo_classes,
            fig_loss_menu, fig_projection, fig_gd_sgd, fig_house_prices,
-           fig_gaussian_noise]
+           fig_gaussian_noise, fig_design_matrix, fig_sgd_cycle,
+           fig_epoch_timeline]
 
 
 def main():

@@ -65,7 +65,7 @@ Because $f$ was fixed in advance, each error indicator $\mathbf{1}(f(\mathbf{x}^
 
 $$\mathrm{SE}\big(\epsilon_{\mathcal{D}}(f)\big) = \sqrt{\frac{\epsilon(f)(1 - \epsilon(f))}{n}} \leq \frac{0.5}{\sqrt{n}}.$$
 
-For our Fashion-MNIST classifier ($\epsilon(f) \approx 0.15$) on $n = 10{,}000$ test images, the standard error is $\sqrt{0.15 \times 0.85 / 10{,}000} \approx 0.0036$ ($0.36$ percentage points). Notice the $1/\sqrt{n}$ scaling law: halving our measurement uncertainty requires *four times* as many test examples.
+For our Fashion-MNIST classifier ($\epsilon(f) \approx 0.17$) on $n = 10{,}000$ test images, the standard error is $\sqrt{0.17 \times 0.83 / 10{,}000} \approx 0.0038$ ($0.38$ percentage points). Notice the $1/\sqrt{n}$ scaling law: halving our measurement uncertainty requires *four times* as many test examples.
 
 ### Confidence Intervals and Hoeffding's Inequality
 
@@ -73,22 +73,22 @@ To convert the standard error into a $95\%$ confidence interval $\epsilon_{\math
 
 1. **Asymptotic normal interval (Central Limit Theorem):** For large $n$, $\epsilon_{\mathcal{D}}(f)$ is approximately normal, falling within $1.96$ standard errors of $\epsilon(f)$ with probability $\approx 0.95$:
    $$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \leq 1.96\sqrt{\frac{\epsilon(f)(1 - \epsilon(f))}{n}}\right) \approx 0.95.$$
-   At $\epsilon \approx 0.15$ and $n = 10{,}000$, the $95\%$ normal radius is $1.96 \times 0.0036 \approx 0.007$ ($\pm 0.7$ percentage points); in the worst case ($\epsilon = 1/2$), guaranteeing a $95\%$ radius $\leq 0.01$ takes $n \geq (1.96 \times 0.5 / 0.01)^2 = 9{,}604$ examples—the exact statistical reason why standard benchmarks like MNIST, Fashion-MNIST, and CIFAR-10 use $10{,}000$-example test sets!
+   At $\epsilon \approx 0.17$ and $n = 10{,}000$, the $95\%$ normal radius is $1.96 \times 0.0038 \approx 0.007$ ($\pm 0.7$ percentage points); in the worst case ($\epsilon = 1/2$), guaranteeing a $95\%$ radius $\leq 0.01$ takes $n \geq (1.96 \times 0.5 / 0.01)^2 = 9{,}604$ examples. This is a useful way to read the $10{,}000$-example test sets of MNIST, Fashion-MNIST, and CIFAR-10: they pin accuracy to about one point.
 2. **Finite-sample Hoeffding interval:** Because the normal approximation can undercover badly when $\epsilon(f)$ is very close to $0$ (where a small test set may observe zero mistakes and collapse the plug-in normal radius to $0$), *Hoeffding's inequality* :cite:`Hoeffding.1963` uses only the fact that each error lies in $[0, 1]$ to give an exact bound valid for every $n$ and every distribution (:numref:`sec_mdl-concentration-generalization`):
    $$
    P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) \leq 2\exp\left(-2nt^2\right).
    $$
    :eqlabel:`eq_generalization-classification-hoeffding`
-   Setting the right-hand side to $\delta = 0.05$ yields the $95\%$ Hoeffding radius $r = \sqrt{\log(2/\delta)/(2n)}$ (requiring $n \geq \log(40)/(2 \times 0.01^2) \approx 18{,}445$ examples for $r \leq 0.01$, roughly twice the normal prescription because Hoeffding bounds worst-case variance).
+   Setting the right-hand side to $\delta = 0.05$ yields the $95\%$ Hoeffding radius $r = \sqrt{\log(2/\delta)/(2n)}$ (requiring $n \geq \log(40)/(2 \times 0.01^2) \approx 18{,}445$ examples for $r \leq 0.01$, roughly twice the normal prescription: both assume the worst-case variance $1/4$, but Hoeffding's exponential tail bound holds for every $n$ and is looser than the exact normal quantile).
 
-Let us simulate $10{,}000$ independent test sets across sizes $n \in [100, 10{,}000]$ for two classifiers—one with $\epsilon = 0.15$ and one with $\epsilon = 0.01$—and plot the empirical coverage of both $95\%$ intervals:
+Let us simulate $10{,}000$ independent test sets across sizes $n \in [100, 10{,}000]$ for two classifiers—one with $\epsilon = 0.17$ and one with $\epsilon = 0.01$—and plot the empirical coverage of both $95\%$ intervals:
 
 ```{.python .input #generalization-classification-the-test-set-2}
 rng = np.random.default_rng()
 num_sets = 10000
 ns = np.array([100, 200, 500, 1000, 2000, 5000, 10000])
 curves, legend = [], []
-for eps in [0.15, 0.01]:
+for eps in [0.17, 0.01]:
     # The number of errors on a test set of size n is Binomial(n, eps)
     errs = [rng.binomial(n, eps, num_sets) / n for n in ns]
     normal = [1.96 * np.sqrt(e * (1 - e) / n) for e, n in zip(errs, ns)]
@@ -103,7 +103,7 @@ d2l.plot(ns, curves + [[0.95] * len(ns)], 'test set size n', 'coverage',
 ```
 
 
-At $\epsilon = 0.15$, the plug-in normal interval hits $95\%$ coverage across all $n$; at $\epsilon = 0.01$ and small $n$, the normal interval drops to $\sim 63\%$ coverage whenever zero-error test sets occur, whereas Hoeffding's conservative interval exceeds $95\%$ coverage everywhere.
+At $\epsilon = 0.17$, the plug-in normal interval stays close to $95\%$ coverage at every $n$; at $\epsilon = 0.01$ and small $n$, the normal interval drops to $\sim 63\%$ coverage whenever zero-error test sets occur, whereas Hoeffding's conservative interval exceeds $95\%$ coverage everywhere.
 
 ## Test Set Reuse
 
@@ -144,7 +144,9 @@ print(f'majority vote: {(vote == labels).mean():.3f}, '
 ```
 
 
-Without ever seeing an individual test label—using only $1{,}000$ scalar accuracy queries—the majority vote of pure coin flippers jumps to $\sim 70\%$ test accuracy while still having $50\%$ population accuracy on any new data! (In fact, $O(n)$ queries can reconstruct every test label; see Exercise :exref:`ex_generalization-classification-leaking-test-set`.) This is why hyperparameter tuning and architecture exploration belong on a validation split (Exercise :exref:`ex_generalization-classification-validation-split`), leaving the test set for one-shot final evaluation—and why public leaderboards periodically collect fresh test sets :cite:`Recht.Roelofs.Schmidt.ea.2019`.
+Without ever seeing an individual test label—using only $1{,}000$ scalar accuracy queries—the majority vote of pure coin flippers jumps to $\sim 70\%$ test accuracy while still having $50\%$ population accuracy on any new data! (In fact, $O(n)$ queries can reconstruct every test label; see Exercise :exref:`ex_generalization-classification-leaking-test-set`.) This is why hyperparameter tuning and architecture exploration belong on a validation split (Exercise :exref:`ex_generalization-classification-validation-split`), leaving the test set for one-shot final evaluation.
+
+How much damage has a decade of reuse done to the standard benchmarks? When :citet:`Recht.Roelofs.Schmidt.ea.2019` collected fresh test sets for CIFAR-10 and ImageNet, accuracies fell by $3$ to $15$ points, yet the ranking of the models barely changed. The worst case above is possible, but ordinary model development had overfit these test sets far less than the theory permits. The drop itself is better explained by a small change in the data distribution, which is the subject of :numref:`sec_environment-and-distribution-shift`.
 
 ## Statistical Learning Theory
 
@@ -175,7 +177,7 @@ $$
 $$
 :eqlabel:`eq_generalization-classification-vc`
 
-This theorem answers our conceptual puzzle: because linear classifiers in $\mathbb{R}^d$ have finite VC dimension $v = d + 1$, driving training error low when $n \gg d$ guarantees low population error for *any* distribution $P$, whereas an infinite-VC memorizer enjoys no bound at all. At the same time, because worst-case uniform convergence bounds must hold even for adversarial distributions, :eqref:`eq_generalization-classification-vc` is numerically loose on natural images ($\sqrt{785 / 60{,}000} \approx 0.11$ vs. our empirical $0.01$ train--test gap on Fashion-MNIST) and becomes completely vacuous ($v \geq n$) for overparameterized deep neural networks capable of memorizing random labels :cite:`zhang2021understanding`—a mystery we return to in :numref:`sec_generalization_deep` while relying on held-out test sets for sharp empirical measurement.
+This theorem answers our conceptual puzzle: because linear classifiers in $\mathbb{R}^d$ have finite VC dimension $v = d + 1$, driving training error low when $n \gg d$ guarantees low population error for *any* distribution $P$, whereas an infinite-VC memorizer enjoys no bound at all. At the same time, because worst-case uniform convergence bounds must hold even for adversarial distributions, :eqref:`eq_generalization-classification-vc` is numerically loose on natural images (for a single one-vs-rest halfspace $\sqrt{785 / 60{,}000} \approx 0.11$ before the constant $c$, and the capacity of all ten classes together is larger still, vs. our empirical $0.01$ train--test gap on Fashion-MNIST) and becomes completely vacuous ($v \geq n$) for overparameterized deep neural networks capable of memorizing random labels :cite:`zhang2021understanding`—a mystery we return to in :numref:`sec_generalization_deep` while relying on held-out test sets for sharp empirical measurement.
 
 ## Summary
 
@@ -309,7 +311,7 @@ $$\epsilon_{\mathcal{D}}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\!\left(f(\mathb
 
 - **Unbiased Bernoulli average:** Each indicator is an independent $\mathrm{Bernoulli}(\epsilon(f))$ trial with $\mathbb{E}[\epsilon_{\mathcal{D}}(f)] = \epsilon(f)$ and standard error:
   $$\mathrm{SE}\big(\epsilon_{\mathcal{D}}(f)\big) = \sqrt{\frac{\epsilon(f)(1 - \epsilon(f))}{n}} \le \frac{0.5}{\sqrt{n}}$$
-- **Benchmark ($\epsilon \approx 0.15, n = 10\text{k}$):** $\mathrm{SE} \approx 0.36\%$; halving it requires $4\times$ more test data.
+- **Benchmark ($\epsilon \approx 0.17, n = 10\text{k}$):** $\mathrm{SE} \approx 0.38\%$; halving it requires $4\times$ more test data.
 :::
 
 ::: {.col .fig}
@@ -319,7 +321,7 @@ $$\epsilon_{\mathcal{D}}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\!\left(f(\mathb
 :::
 
 ::: {.slide title="Asymptotic 95% Intervals via the Central Limit Theorem"}
-[Why Standard Vision Benchmarks Use n = 10,000]{.kicker}
+[What n = 10,000 Test Examples Measure]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -327,8 +329,8 @@ By the Central Limit Theorem, $\epsilon_{\mathcal{D}}(f)$ lies within $1.96$ sta
 
 $$P\!\left(\big|\epsilon_{\mathcal{D}}(f) - \epsilon(f)\big| \le 1.96\sqrt{\frac{\epsilon(f)(1 - \epsilon(f))}{n}}\right) \approx 0.95$$
 
-- **Fashion-MNIST radius ($\epsilon = 0.15, n = 10\text{k}$):** $r_{\text{normal}} = 1.96 \times 0.0036 \approx \pm 0.7\%$.
-- **Why benchmarks use $n = 10{,}000$:** Guaranteeing worst-case ($\epsilon = 1/2$) radius $\le \pm 1\%$ requires $n \ge (1.96 \times 0.5 / 0.01)^2 = 9{,}604$ test images!
+- **Fashion-MNIST radius ($\epsilon = 0.17, n = 10\text{k}$):** $r_{\text{normal}} = 1.96 \times 0.0038 \approx \pm 0.7\%$.
+- **Reading $n = 10{,}000$:** A worst-case ($\epsilon = 1/2$) radius $\le \pm 1\%$ requires $n \ge (1.96 \times 0.5 / 0.01)^2 = 9{,}604$ test images, so the $10{,}000$-image test sets of MNIST, Fashion-MNIST, and CIFAR-10 pin accuracy to about one point.
 :::
 
 ::: {.col .fig}
@@ -348,7 +350,7 @@ $$P\!\left(\big|\epsilon_{\mathcal{D}}(f) - \epsilon(f)\big| \ge t\right) \le 2\
 
 - **Exact $(1 - \delta)$ confidence radius:**
   $$r_{\text{Hoeffding}} = \sqrt{\frac{\log(2/\delta)}{2n}}$$
-- **Cost of worst-case safety:** At $95\%$ confidence ($\delta = 0.05$) and $r \le 0.01$, Hoeffding requires $n \ge 18{,}445$ ($\approx 2\times$ the normal sample size $9{,}604$).
+- **Cost of a finite-sample guarantee:** At $95\%$ confidence ($\delta = 0.05$) and $r \le 0.01$, Hoeffding requires $n \ge 18{,}445$ ($\approx 2\times$ the normal sample size $9{,}604$; both assume variance $1/4$, but the exponential tail bound is looser than the normal quantile).
 :::
 
 ::: {.col .fig}
@@ -360,11 +362,11 @@ $$P\!\left(\big|\epsilon_{\mathcal{D}}(f) - \epsilon(f)\big| \ge t\right) \le 2\
 ::: {.slide title="Empirical Coverage: Normal vs. Hoeffding Intervals"}
 [Monte Carlo Simulation Across Test-Set Sizes]{.kicker}
 
-Simulating $10{,}000$ independent test sets at each size $n \in [100, 10{,}000]$ for $\epsilon = 0.15$ and $\epsilon = 0.01$ compares actual $95\%$ interval coverage:
+Simulating $10{,}000$ independent test sets at each size $n \in [100, 10{,}000]$ for $\epsilon = 0.17$ and $\epsilon = 0.01$ compares actual $95\%$ interval coverage:
 
 ::: {.cols .vc}
 ::: {.col}
-- **Moderate error ($\epsilon = 0.15$, blue):** The plug-in normal interval (solid) achieves $\approx 95\%$ coverage at every $n$, while Hoeffding (dashed) is conservative ($\sim 99\%$ coverage).
+- **Moderate error ($\epsilon = 0.17$, blue):** The plug-in normal interval (solid) stays close to $95\%$ coverage at every $n$, while Hoeffding (dashed) is conservative (coverage above $99.9\%$).
 - **Near-zero error ($\epsilon = 0.01$, orange):** For $n \le 200$, $\sim 13\%\text{--}37\%$ of test sets observe zero mistakes ($\epsilon_{\mathcal{D}} = 0$), causing the plug-in normal interval to undercover down to $\sim 63\%$.
 - **Hoeffding holds everywhere:** Always stays above the $0.95$ dotted line.
 :::
@@ -525,7 +527,7 @@ Why does finite VC dimension $v < \infty$ guarantee uniform convergence?
 ::: {.col}
 What does the VC bound tell us about Fashion-MNIST—and about deep networks?
 
-- **Why linear models cannot memorize ($n \gg d$):** For $d = 784, v = 785, n = 60{,}000$, $\sqrt{v/n} \approx 0.114$ guarantees generalization under *any* distribution (observed gap is even tighter, $\sim 0.01$).
+- **Why linear models cannot memorize ($n \gg d$):** For one halfspace with $d = 784, v = 785, n = 60{,}000$, $\sqrt{v/n} \approx 0.114$ bounds the gap under *any* distribution, up to the constant $c$ (observed gap is even tighter, $\sim 0.01$).
 - **Vacuousness for deep nets:** Overparameterized nets can fit random labels on $n$ points ($v \ge n, \sqrt{v/n} \ge 1$), so sharp certificates in deep learning come **post-training** from an untouched held-out test set ($\pm 0.7\%$ at $n = 10{,}000$).
 :::
 

@@ -323,7 +323,15 @@ $\blacksquare$
 
 The proof used no property of the Gaussian beyond differentiability, and
 none of the data distribution: for a finite training set the integral is a
-sum, and the theorem returns the score of the blurred training set. Gaussian
+sum, and the theorem returns the score of the blurred training set. That has
+a sobering consequence. A network that reached the minimum at every noise
+level, and a sampler that followed its score without error, would return the
+training points and nothing else (Exercise
+:exref:`ex_mdl-score-matching-diffusion-flow-bayes-risk-floor` takes the
+limit $\sigma\to0$). A model that produces new samples therefore owes them
+to a regression that stops short of its minimum, not to the objective;
+:numref:`sec_diffusion-further-reading` lists what is known about when it
+does. Gaussian
 noise is chosen because its conditional score :eqref:`eq_mdl-dsm-target` is
 the noise itself, scaled by $-1/\sigma$. Predicting the score and predicting
 the noise $\boldsymbol{\epsilon}$ are therefore the same task, and a network
@@ -366,7 +374,8 @@ can only return their average. Here a loss of $3.2$ is a perfect fit, and a
 loss of zero is impossible. The slope $0.80$ is the shrinkage factor
 $v/(v+\sigma^2)$. Neither observation is special to the Gaussian.
 
-The slope is an instance of *Tweedie's formula* :cite:`Efron.2011`.
+The slope is an instance of *Tweedie's formula*, which Robbins published
+and credited to Tweedie :cite:`Robbins.1956,Efron.2011`.
 Rearranging Vincent's identity
 $\mathbb{E}[(\mathbf{x} - \tilde{\mathbf{x}})/\sigma^2 \mid \tilde{\mathbf{x}}] = \nabla \log p_\sigma(\tilde{\mathbf{x}})$
 gives

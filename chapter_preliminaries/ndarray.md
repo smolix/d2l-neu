@@ -362,6 +362,33 @@ image = images[0]
 image[None].shape, tf.squeeze(image, 0).shape
 ```
 
+A reshape keeps the elements in their order and only regroups them, so it can never exchange two axes. Some libraries expect an image minibatch with the channel axis last, as $(256, 28, 28, 1)$. Getting there from our $(256, 1, 28, 28)$ minibatch means moving axis $1$ to the end. This is a *transpose*: we list the old axes in their new order, here $(0, 2, 3, 1)$. A matrix has only one such reordering, the exchange of rows and columns, written `X.T`. We compare it with a reshape to the same shape:
+
+:begin_tab:`pytorch`
+In PyTorch, the method that reorders all axes is called `permute`; `transpose(i, j)` exchanges only the two axes `i` and `j`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In TensorFlow, `tf.transpose(x, perm)` takes the new order of the axes as `perm`, and `tf.transpose(X)` stands in for `X.T`.
+:end_tab:
+
+```{.python .input #ndarray-reshaping-3}
+%%tab mxnet, jax
+images.transpose(0, 2, 3, 1).shape, X.reshape(4, 3), X.T
+```
+
+```{.python .input #ndarray-reshaping-3}
+%%tab pytorch
+images.permute(0, 2, 3, 1).shape, X.reshape(4, 3), X.T
+```
+
+```{.python .input #ndarray-reshaping-3}
+%%tab tensorflow
+tf.transpose(images, (0, 2, 3, 1)).shape, tf.reshape(X, (4, 3)), tf.transpose(X)
+```
+
+Both matrices are $4 \times 3$, but the reshape still reads $0, 1, 2, \ldots$ along its rows, whereas the transpose has turned the rows of `X` into columns. Since the shapes agree, a reshape written where a transpose was meant raises no error. It only hands the next layer the right numbers in the wrong places.
+
 ### Indexing and Slicing
 
 Elements and sub-tensors are accessed via $0$-based integer indexing (negative indices count backward from the end) and half-open slices `start:stop` (including `start`, excluding `stop`), separated by commas across axes:
@@ -443,6 +470,11 @@ tf.where(mask, X, 0)
 %%tab jax
 jnp.where(mask, X, 0)
 ```
+
+:numref:`fig_ndarray_gather_mask` sets the three selections side by side. They differ in the shape they return: index tensors give one entry per row, a mask gives a vector whose length depends on the data, and `where` gives a tensor shaped like `X`.
+
+![Selecting entries of the $3 \times 4$ matrix `X`. (a) The index tensors `rows = (0, 1, 2)` and `cols = (3, 0, 2)` select one entry from each row. (b) The mask `(X > 2) & (X < 8)` extracts the five entries between $2$ and $8$ as a vector, whereas `where` keeps the shape of `X` and writes $0$ everywhere else.](../img/ndarray-gather-mask.svg)
+:label:`fig_ndarray_gather_mask`
 
 ### Writing Elements
 
@@ -716,6 +748,11 @@ except Exception as e:
 ```
 
 Thus, subtracting a $(28, 28)$ mean image from `images` of shape $(256, 1, 28, 28)$ broadcasts cleanly as $(1, 1, 28, 28)$, whereas adding a per-image vector of shape $(256,)$ to flattened images $(256, 784)$ fails unless reshaped to a column $(256, 1)$.
+
+An error message is the lucky outcome. Subtracting labels of shape $(3,)$ from predictions of shape $(3, 1)$ is legal under the same rules, and it returns a $3 \times 3$ matrix of all pairwise differences where we wanted three errors (:numref:`fig_ndarray_broadcast_bug`). A loss averaged over that matrix is still a single number, so nothing looks wrong until the model fails to learn.
+
+![Broadcasting without an error message. (a) Predictions `y_hat` of shape $(3, 1)$ minus labels `y` of shape $(3,)$ give all nine pairwise differences; only the diagonal (solid) holds the three errors we wanted. (b) Once `y` is reshaped to $(3, 1)$, the same subtraction returns those three errors and nothing else.](../img/ndarray-broadcast-bug.svg)
+:label:`fig_ndarray_broadcast_bug`
 
 ### Concatenation
 

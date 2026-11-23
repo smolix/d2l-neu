@@ -109,10 +109,12 @@ while simplifying legacy details that are rarely used today (such as a scaled
 $\tanh$ activation, learnable pooling scales and biases, sparse channel wiring
 between the two convolutions, and radial-basis-function output units). One
 historical detail does remain visible in our code: the original LeNet-5 took
-$32\times32$ inputs, whereas MNIST and Fashion-MNIST images are $28\times28$
-(originally cropped by two pixels on every side to save storage). Adding two
-pixels of padding to our first convolutional layer restores the same
-$28\times28$ output dimensions after the first $5\times5$ convolution.
+$32\times32$ inputs. MNIST digits are $28\times28$, and the 1998 paper
+surrounded them with two background pixels on every side so that strokes near
+the edge of a digit fall inside the receptive fields of the top feature
+detectors. Two pixels of padding in our first convolutional layer do the same
+job, and the first $5\times5$ convolution again produces a $28\times28$
+output.
 
 :begin_tab:`pytorch`
 Before defining the network, we write `init_cnn` to initialize all
@@ -780,7 +782,7 @@ We Xavier-initialize all weights and stack the encoder and dense head in one `Se
 
 ::: {.cols .vc}
 ::: {.col}
-- **Derivative ceiling $\sigma'(x) \le \tfrac{1}{4}$:** Backpropagating through 4 sigmoid layers attenuates Conv1 gradients by at least $(1/4)^4 = 1/256$.
+- **Derivative ceiling $\sigma'(x) \le \tfrac{1}{4}$:** The Conv1 gradient carries four $\sigma'$ factors, whose product is at most $(1/4)^4 = 1/256$.
 - **Initial $\ln 10 \approx 2.30$ plateau:** Sigmoids cluster near $0.5$, crushing logit variance at start of training.
 - **Compensation:** Classical LeNet requires $\eta = 2.0$ ($20\times$ higher than the ReLU MLP's $\eta = 0.1$).
 :::
@@ -871,7 +873,7 @@ Every permuted image still contains the exact same 784 pixel intensities in a co
 ::: {.col}
 @!lenet-shuffled-pixels-4
 
-- **Inductive bias isolated:** Destroying 2D spatial locality drops LeNet by $3\text{--}4$ points ($\approx 85\text{--}86\%$), erasing 100% of its gain over the MLP.
+- **Inductive bias isolated:** Destroying 2D spatial locality drops LeNet by $3\text{--}4$ points ($\approx 85\text{--}86\%$), erasing its gain over the MLP.
 :::
 
 ::: {.col .fig}
@@ -917,7 +919,7 @@ Every permuted image still contains the exact same 784 pixel intensities in a co
 ::: {.cols .vc}
 ::: {.col}
 - **1. Global Average Pooling head:** Replacing `Flatten + 3 Dense` ($59{,}134$ params) with GAP ($16 \times 5 \times 5 \to 16$) + `Linear(16, 10)` ($170$ params) cuts total LeNet parameters $22.5\times$ ($61{,}706 \to 2{,}742$)!
-- **2. Why lower LR with ReLU:** ReLU has unit slope ($\sigma' = 1$ for $x>0$), removing the $1/256$ sigmoid attenuation so $\eta = 2.0$ explodes.
+- **2. Why lower LR with ReLU:** ReLU has unit slope ($\sigma' = 1$ for $x>0$), removing the four $\sigma' \le \tfrac{1}{4}$ factors, so $\eta = 2.0$ explodes.
 :::
 
 ::: {.col .fig .big}

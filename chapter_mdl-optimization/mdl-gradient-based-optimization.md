@@ -336,9 +336,15 @@ vanishes at $y = 0$. The algorithm halts at $(0, 0)$ with $f = 1$—a saddle
 point where $f$ curves upward along $x$ and downward along $y$, far from the
 true minimum value $-1$ at $(0, \pi)$. The theorem still holds, because the
 gradient vanishes at the saddle, yet it cannot tell us which kind of stationary
-point we reached. For convex
-objectives, this pathology disappears: every stationary point is automatically
-a global minimum (:numref:`sec_mdl-convexity`).
+point we reached. The stall itself is an accident of the starting point. Start
+at $(1, y_0)$ with any small $y_0 \neq 0$ instead, and each step
+$y \leftarrow y + \eta \sin y$ moves $y$ further from $0$ until the run settles
+at a minimum. In general, the starting points from which gradient descent
+converges to a saddle with a direction of negative curvature form a set of
+measure zero (:numref:`subsec_opt-intro-saddles`), so a random initialization
+avoids it, although the iterates can linger nearby for a long time. For convex
+objectives, the question does not arise: every stationary point is
+automatically a global minimum (:numref:`sec_mdl-convexity`).
 
 ### Backtracking Line Search
 
@@ -418,6 +424,36 @@ rarely uses backtracking, since a minibatch loss is too noisy to compare two
 candidate steps reliably and each trial costs an extra forward pass. Instead,
 training usually specifies the step size in advance via a schedule
 (:numref:`sec_scheduler`).
+
+### Relaxed Smoothness and Gradient Clipping
+:label:`subsec_mdl-relaxed-smoothness`
+
+A schedule cannot react when the iterate enters a region of high curvature.
+The safeguard that training uses for this is gradient clipping, and the
+quartic shows why it works. The curvature $f''(x) = 3x^2$ is unbounded, but it
+is large only where the gradient $f'(x) = x^3$ is large as well:
+$3x^2 \le 4 + |x|^3$ for every $x$. A twice differentiable function is
+**$(L_0, L_1)$-smooth** if its curvature is bounded in this way by its
+gradient :cite:`Zhang.He.Sra.ea.2020`:
+
+$$
+\|\nabla^2 f(\mathbf{x})\| \;\le\; L_0 + L_1\, \|\nabla f(\mathbf{x})\|
+\qquad \textrm{for all } \mathbf{x},
+$$
+:eqlabel:`eq_mdl-opt-relaxed-smoothness`
+
+where the norm on the left is the largest absolute eigenvalue of the Hessian.
+Setting $L_1 = 0$ recovers $L$-smoothness, and the quartic qualifies with
+$L_0 = 4$ and $L_1 = 1$. Under this condition, the step that the descent lemma
+can certify is no longer a constant $1/L$. It is of order
+$1/(L_0 + L_1\|\mathbf{g}\|)$: a fixed step where the gradient is small, and
+a fixed *distance* $\eta\,\|\mathbf{g}\|$ of order $1/L_1$ where it is large.
+Gradient clipping, which replaces $\mathbf{g}$ by
+$\min(1, c/\|\mathbf{g}\|)\,\mathbf{g}$ for a threshold $c$, takes steps of
+this form at no extra cost. On the quartic with $c = 1$, the step
+$\eta = 0.3$ that diverged above now moves $x$ by $0.3$ per iteration until
+$|x| \le 1$ and converges from there (Exercise
+:exref:`ex_mdl-gradient-based-optimization-relaxed-smoothness`).
 
 ## The Quadratic Model and the Condition Number
 :label:`subsec_mdl-quadratic-model`
@@ -667,14 +703,13 @@ that adding momentum shifts this stability threshold to $(2 + 2\beta)/\eta$.
 
 ### From Quadratics to Convex Functions
 
-What carries over beyond quadratics is the linear dependence on $\kappa$. As we
-will formalize in :numref:`sec_mdl-convexity`, a differentiable function is
-convex if and only if it lies on or above every tangent hyperplane, and
-$\mu$-strongly convex (:eqref:`eq_mdl-opt-strong-convexity`) if
-$f(\mathbf{y}) \ge f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) + \tfrac{\mu}{2}\|\mathbf{y} - \mathbf{x}\|_2^2$
-for all $\mathbf{x}, \mathbf{y}$. If $f$ is $L$-smooth and $\mu$-strongly
-convex, then at every point it is sandwiched
-between two quadratics of curvatures $\mu$ and $L$. The ratio $\kappa = L/\mu$
+What carries over beyond quadratics is the linear dependence on $\kappa$. A
+differentiable function is convex if it lies on or above each of its tangent
+planes, and $\mu$-strongly convex if it clears them by a quadratic margin,
+$f(\mathbf{y}) \ge f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) + \tfrac{\mu}{2}\|\mathbf{y} - \mathbf{x}\|^2$
+for all $\mathbf{x}, \mathbf{y}$; :numref:`sec_mdl-convexity` develops both
+notions. If $f$ is $L$-smooth and $\mu$-strongly convex, then at every point
+it is sandwiched between two quadratics of curvatures $\mu$ and $L$. The ratio $\kappa = L/\mu$
 replaces $\lambda_{\max}/\lambda_{\min}$, and gradient descent with
 $\eta = 1/L$ satisfies
 
@@ -995,17 +1030,14 @@ what changes when gradients are noisy
        $\|\mathbf{d}\|_{\mathbf{P}} = 1$ is proportional to
        $-\mathbf{P}^{-1}\nabla f(\mathbf{x})$, and identify the $\mathbf{P}$
        that recovers Newton's direction
-       $-\big(\nabla^2 f(\mathbf{x})\big)^{-1}\nabla f(\mathbf{x})$ (which we
-       will study in :numref:`sec_mdl-curvature-methods`,
-       :eqref:`eq_mdl-opt-newton-step`). The
-       change of variables $\mathbf{u} = \mathbf{P}^{1/2}\mathbf{d}$ reduces
-       the problem to the Euclidean case.
+       $-\big(\nabla^2 f(\mathbf{x})\big)^{-1}\nabla f(\mathbf{x})$, the
+       subject of :numref:`sec_mdl-curvature-methods`. The change of variables
+       $\mathbf{u} = \mathbf{P}^{1/2}\mathbf{d}$ reduces the problem to the
+       Euclidean case.
    :exlabel:`ex_mdl-gradient-based-optimization-show-that-is-de`
 
 1. [code] **Smoothness constants.** The smoothness constant $L$ of
-   :eqref:`eq_mdl-opt-smoothness`
-   ($\|\nabla f(\mathbf{y}) - \nabla f(\mathbf{x})\|_2 \le L\|\mathbf{y} - \mathbf{x}\|_2$)
-   bounds the curvature of $f$, and for a
+   :eqref:`eq_mdl-opt-smoothness` bounds the curvature of $f$, and for a
    logistic loss it can be computed directly from the data.
     1. Let $f$ be twice continuously differentiable and $L$-smooth. Show that
        $\|\nabla^2 f(\mathbf{x})\,\mathbf{v}\| \le L\,\|\mathbf{v}\|$ for all
@@ -1038,6 +1070,23 @@ what changes when gradients are noisy
        does $\eta = 0.5$ stay below $2/L$?
    :exlabel:`ex_mdl-gradient-based-optimization-smoothness-constants`
 
+1. [code] **Clipping on the quartic.** Take $f(x) = \tfrac14 x^4$ and the
+   clipped update $x \leftarrow x - \eta \min(1, c/|g|)\, g$ with
+   $g = x^3$.
+    1. Show that $3x^2 \le 4 + |x|^3$ for all $x$, with equality at
+       $|x| = 2$, so that $f$ satisfies :eqref:`eq_mdl-opt-relaxed-smoothness`
+       with $L_0 = 4$ and $L_1 = 1$. Show also that no $L_0$ works with
+       $L_1 = 0$.
+    1. Run the clipped update from $x_0 = 3$ with $\eta = 0.3$ and $c = 1$,
+       the step at which the unclipped iteration reached
+       $6.5 \times 10^{103}$ in six steps. How many steps are clipped, and
+       how far does each of them move $x$?
+    1. Show that the clipped update decreases $|x|$ at every step, from every
+       starting point $x_0 \neq 0$, whenever $\eta\, c^{2/3} < 2$. Treat the
+       clipped case $|x| > c^{1/3}$ and the unclipped case separately. Why
+       can no fixed step without clipping have this property?
+   :exlabel:`ex_mdl-gradient-based-optimization-relaxed-smoothness`
+
 1. **Steepest descent in other norms.** ● Problem
    :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`b measures length
    by a norm $\|\cdot\|_{\mathbf{A}}$ induced by an inner product. Norms that
@@ -1060,9 +1109,7 @@ what changes when gradients are noisy
    :exlabel:`ex_mdl-gradient-based-optimization-steepest-other-norms`
 
 1. [code] **Heavy ball: the double root and the factor $k$.** ● Apply heavy
-   ball :eqref:`eq_mdl-opt-heavy-ball`
-   ($\mathbf{x}_{k+1} = \mathbf{x}_k - \eta \nabla f(\mathbf{x}_k) + \beta(\mathbf{x}_k - \mathbf{x}_{k-1})$)
-   to $f(u) = \tfrac{\lambda}{2} u^2$.
+   ball :eqref:`eq_mdl-opt-heavy-ball` to $f(u) = \tfrac{\lambda}{2} u^2$.
     1. Write one iteration as a linear map on the state $(u_k, u_{k-1})$ and
        show that the characteristic polynomial of its $2 \times 2$ matrix
        is :eqref:`eq_mdl-opt-hb-char-poly`.
@@ -1091,14 +1138,7 @@ what changes when gradients are noisy
    \nabla f(x) = \begin{cases} 25x, & x < 1, \\ x + 24, & 1 \le x < 2, \\ 25x - 24, & x \ge 2. \end{cases}
    $$
 
-    1. Show that $f$ is $\mu$-strongly convex,
-
-       $$
-       f(y) \ge f(x) + \nabla f(x)(y - x) + \tfrac{\mu}{2}(y - x)^2,
-       $$
-
-       with
-       $\mu = 1$ and $L$-smooth ($|\nabla f(y) - \nabla f(x)| \le L|y - x|$)
+    1. Show that $f$ is $\mu$-strongly convex with $\mu = 1$ and $L$-smooth
        with $L = 25$.
     1. Run heavy ball with the tuning :eqref:`eq_mdl-opt-hb-tuning` for $300$
        steps from $x_0 = 3.3$ with zero initial velocity, and run Nesterov's
@@ -1316,6 +1356,7 @@ Without convexity, $\nabla f(\mathbf{x}) = \mathbf{0}$ cannot distinguish a mini
 - **Saddle trap:** $f(x, y) = \tfrac12 x^2 + \cos y$ is bounded below by $-1$ and is globally $1$-smooth ($\nabla^2 f = \mathrm{diag}(1, -\cos y)$).
 - **One-step halt:** From $(1, 0)$ with $\eta = 1/L = 1$, gradient descent steps directly to $(0, 0)$ where $\nabla f(0, 0) = \mathbf{0}$.
 - **Suboptimal plateau:** GD freezes permanently at the saddle $f(0, 0) = +1$, two units above the global minimum $f(0, \pi) = -1$.
+- **A measure-zero accident:** Only starts on the line $y = 0$ end here; from any small $y_0 \neq 0$, GD escapes to a minimum.
 :::
 
 ::: {.col .fig .big}

@@ -14,7 +14,8 @@ Run with the repo's pytorch venv:
 
     .venv-pytorch/bin/python tools/gen_mdl_la_svd_figures.py
 
-Writes ``img/mdl-la-svd-dimension-count.svg`` and ``img/mdl-la-min-norm.svg``.
+Writes ``img/mdl-la-svd-dimension-count.svg``, ``img/mdl-la-min-norm.svg`` and
+``img/mdl-la-svd-forms.svg``.
 """
 
 from __future__ import annotations
@@ -30,6 +31,8 @@ BLUE, ORANGE, GREEN, GRAY, INK = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.INK
 arrow, clean_axes, axis_cross, right_angle = (
     fl.arrow, fl.clean_axes, fl.axis_cross, fl.right_angle)
 save = fl.save
+
+from matplotlib.patches import Rectangle
 
 
 def _plane_basis(normal):
@@ -146,7 +149,112 @@ def fig_min_norm():
     save(fig, "mdl-la-min-norm")
 
 
-FIGURES = [fig_svd_dimension_count, fig_min_norm]
+def fig_svd_forms():
+    """Factor shapes of the full, thin and compact SVD of an m x n matrix of
+    rank r, drawn to scale for m = 6, n = 4, r = 3, and (d) the dyadic sum.
+    Pale dashed parts of U and V^T are the singular vectors that only meet
+    zero rows or zero diagonal entries of Sigma; on the diagonal of Sigma a
+    shaded square is a positive sigma_i and a dashed one a zero."""
+    m, n, r = 6, 4, 3
+    c = 0.36                       # cell size
+    T = fl.T
+    fig, ax = plt.subplots(figsize=(12.0, 6.2))
+
+    def block(x, ytop, rows, cols, acc, name, shape, keep_cols=None,
+              keep_rows=None):
+        """A rows x cols factor at (x, ytop); columns >= keep_cols (or rows
+        >= keep_rows) are drawn pale and dashed."""
+        kc = cols if keep_cols is None else keep_cols
+        kr = rows if keep_rows is None else keep_rows
+        ax.add_patch(Rectangle((x, ytop - rows * c), cols * c, rows * c,
+                               facecolor="white", edgecolor=acc.base,
+                               lw=1.2, ls=(0, (3, 2))))
+        ax.add_patch(Rectangle((x, ytop - kr * c), kc * c, kr * c,
+                               facecolor=acc.tint, edgecolor=acc.base,
+                               lw=1.6))
+        # labels align under the tallest (m-row) factor of the row
+        ax.text(x + cols * c / 2, ytop - m * c - 0.12, name, ha="center",
+                va="top", fontsize=14, color=acc.dark)
+        ax.text(x + cols * c / 2, ytop - m * c - 0.50, shape,
+                ha="center", va="top", fontsize=12, color=INK)
+        return x + cols * c
+
+    def sigma(x, ytop, rows, cols, npos, name, shape):
+        acc = T.ORANGE
+        ax.add_patch(Rectangle((x, ytop - rows * c), cols * c, rows * c,
+                               facecolor="white", edgecolor=acc.base,
+                               lw=1.6))
+        for i in range(min(rows, cols)):
+            pos = i < npos
+            ax.add_patch(Rectangle((x + i * c + 0.04, ytop - (i + 1) * c
+                                    + 0.04), c - 0.08, c - 0.08,
+                                   facecolor=acc.base if pos else "white",
+                                   edgecolor=acc.base if pos else GRAY,
+                                   lw=1.0, ls="-" if pos else (0, (2, 1.5))))
+        # labels align under the tallest (m-row) factor of the row
+        ax.text(x + cols * c / 2, ytop - m * c - 0.12, name, ha="center",
+                va="top", fontsize=14, color=acc.dark)
+        ax.text(x + cols * c / 2, ytop - m * c - 0.50, shape,
+                ha="center", va="top", fontsize=12, color=INK)
+        return x + cols * c
+
+    def lhs(x, ytop, tag):
+        ax.text(x, ytop + 0.35, tag, ha="left", va="bottom", fontsize=15,
+                color=INK)
+        x = block(x, ytop, m, n, T.SLATE, r"$\mathbf{A}$", r"$m\times n$")
+        ax.text(x + 0.3, ytop - m * c / 2, "$=$", ha="center",
+                va="center", fontsize=18)
+        return x + 0.6
+
+    g = 0.22                       # gap between factors
+    y1, y2 = 5.6, 1.5              # tops of the two rows
+
+    # (a) full: U m x m, Sigma m x n, V^T n x n
+    x = lhs(0.0, y1, "(a) full")
+    x = block(x, y1, m, m, T.BLUE, r"$\mathbf{U}$", r"$m\times m$",
+              keep_cols=r) + g
+    x = sigma(x, y1, m, n, r, r"$\boldsymbol{\Sigma}$", r"$m\times n$") + g
+    block(x, y1, n, n, T.GREEN, r"$\mathbf{V}^{\!\top}$", r"$n\times n$",
+          keep_rows=r)
+
+    # (b) thin: p = min(m, n) = n
+    x = lhs(8.0, y1, r"(b) thin, $p=\min(m,n)$")
+    x = block(x, y1, m, n, T.BLUE, r"$\mathbf{U}$", r"$m\times p$",
+              keep_cols=r) + g
+    x = sigma(x, y1, n, n, r, r"$\boldsymbol{\Sigma}$", r"$p\times p$") + g
+    block(x, y1, n, n, T.GREEN, r"$\mathbf{V}^{\!\top}$", r"$p\times n$",
+          keep_rows=r)
+
+    # (c) compact: r = rank A
+    x = lhs(0.0, y2, r"(c) compact, $r=\mathrm{rank}\,\mathbf{A}$")
+    x = block(x, y2, m, r, T.BLUE, r"$\mathbf{U}_r$", r"$m\times r$") + g
+    x = sigma(x, y2, r, r, r, r"$\boldsymbol{\Sigma}_r$", r"$r\times r$") + g
+    block(x, y2, r, n, T.GREEN, r"$\mathbf{V}_r^{\!\top}$", r"$r\times n$")
+
+    # (d) dyadic sum of r rank-one terms
+    x = lhs(8.0, y2, "(d) dyadic sum")
+    for i in range(r):
+        x0 = x
+        block(x, y2, m, 1, T.BLUE, "", "")
+        x += c + 0.08
+        block(x, y2, 1, n, T.GREEN, "", "")
+        x += n * c
+        ax.text((x0 + x) / 2, y2 - m * c - 0.12,
+                rf"$\sigma_{i+1}\mathbf{{u}}_{i+1}\mathbf{{v}}_{i+1}^{{\top}}$",
+                ha="center", va="top", fontsize=14, color=INK)
+        if i < r - 1:
+            ax.text(x + 0.3, y2 - m * c / 2, "$+$", ha="center",
+                    va="center", fontsize=18)
+            x += 0.6
+
+    ax.set_xlim(-0.1, 17.0)
+    ax.set_ylim(y2 - m * c - 0.95, y1 + 0.85)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    save(fig, "mdl-la-svd-forms")
+
+
+FIGURES = [fig_svd_dimension_count, fig_min_norm, fig_svd_forms]
 
 
 def main():

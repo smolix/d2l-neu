@@ -519,6 +519,53 @@ show that KL divergence is asymmetric.)
 ![The decomposition :eqref:`eq_mdl-ce_decomp` for the dyadic source $P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$ and the uniform model $U$, in bits. Asking questions adapted to $P$ takes $H_2(P) = 1.75$ questions on average, asking two fixed questions takes $\textrm{CE}_2(P, U) = 2.0$, and the waste is $D_{\textrm{KL}}(P\|U) = 0.25$ bits.](../img/mdl-it-code-length-bars.svg)
 :label:`fig_mdl-code-length-bars`
 
+### The Chain Rule for KL Divergence
+:label:`subsec_mdl-kl-chain-rule`
+
+Entropy splits along a pair: the surprise in $(X, Y)$ is the surprise in $X$
+plus the remaining surprise in $Y$
+(:numref:`subsec_mdl-joint-conditional-entropy`). The KL divergence splits the
+same way, and for the same reason. Let $P_{X,Y}$ and $Q_{X,Y}$ be two joint
+distributions, factored as $p(x, y) = p(x)\,p(y \mid x)$ and
+$q(x, y) = q(x)\,q(y \mid x)$. The logarithm of the ratio $p(x, y)/q(x, y)$ is
+then a sum of two terms, and taking expectations under $P_{X,Y}$ yields the
+*chain rule* for KL divergence:
+
+$$
+D_{\textrm{KL}}(P_{X,Y}\|Q_{X,Y}) = D_{\textrm{KL}}(P_X\|Q_X) + \mathbb{E}_{x \sim P_X}\big[D_{\textrm{KL}}(P_{Y \mid x}\|Q_{Y \mid x})\big].
+$$
+:eqlabel:`eq_mdl-kl-chain`
+
+A wrong model of the pair pays for its error about $X$, and then, on average,
+for its error about $Y$ once $X$ is known. Note that the average runs over the
+truth $P_X$, not over the model. The identity is one line of algebra, yet the
+rest of the book leans on three of its consequences.
+
+First, KL divergence adds over independent coordinates. If $X$ and $Y$ are
+independent under both $P$ and $Q$, the conditional term no longer depends on
+$x$, and the divergence of the pair is the sum of the two divergences. Ten
+independent draws from our running pair thus separate $P$ from $Q$ by
+$10 \cdot 0.396 = 3.96$ nats, which is why long samples tell two
+distributions apart so much better than short ones. Second, the divergence
+between two joint distributions is at least the divergence between their
+marginals, because the conditional term is non-negative by Gibbs' inequality.
+Throwing a variable away can only make two distributions harder to tell apart.
+Latent variable models rely on this: the joint divergence over data and latents
+is, up to a constant, the objective they can compute, and it exceeds the
+divergence over the data alone by the conditional term, the gap of the evidence
+lower bound (:numref:`sec_mdl-latent-em-elbo`). Third, applying the rule repeatedly to a
+sequence gives
+
+$$
+D_{\textrm{KL}}(P_{X_1, \ldots, X_n}\|Q_{X_1, \ldots, X_n}) = \sum_{i=1}^n \mathbb{E}_{x_{<i} \sim P}\big[D_{\textrm{KL}}(P_{X_i \mid x_{<i}}\|Q_{X_i \mid x_{<i}})\big],
+$$
+
+so the excess loss of an autoregressive model on a whole sequence is the sum
+of its excess losses at the individual steps. Predicting each next token well
+is therefore the same task as modeling the entire sequence well, and
+:numref:`subsec_mdl-perplexity` uses this decomposition to bound the loss of
+every language model from below.
+
 ## The Classification Loss
 
 In a $k$-class classification problem, the target for a single example is the

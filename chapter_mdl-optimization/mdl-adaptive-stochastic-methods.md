@@ -19,7 +19,9 @@ $\eta = 2/1001$, needs 6,160 steps to drive $f$ below $10^{-8}$, because a
 step small enough to keep $x_2$ stable is a thousand times too small for
 $x_1$. The heavy-ball method of :numref:`sec_mdl-gradient-based-optimization`,
 which adds a fraction of the previous step to each new one, cuts that to 296
-steps. An optimizer that gives each coordinate its own step size, estimated
+steps. (Both counts are a little below the $6{,}908$ and $315$ steps quoted
+there, because that section stopped on the distance to the minimizer and this
+one stops on the value of $f$.) An optimizer that gives each coordinate its own step size, estimated
 purely from the gradients it has observed, needs only a few dozen. Even more
 striking is what that count does not depend on: make the valley a hundred
 times narrower still, and the iteration count grows by just six steps.
@@ -305,11 +307,14 @@ both the deficit and the resulting step inflation.
 Even an unbiased $\hat{\mathbf{v}}_t$ does not make the step size itself
 unbiased. Because Adam divides by $\sqrt{\hat{\mathbf{v}}_t}$ rather than
 $\hat{\mathbf{v}}_t$, concavity of the square root biases the denominator
-downward: at $t = 1$, $\sqrt{\hat{v}_1} = |g_1|$, and by Jensen's inequality
-$\mathbb{E}|g| < \sqrt{\mathbb{E}[g^2]}$ unless $|g|$ is constant. This is
-why Adam's very first step has magnitude $\eta$ in every coordinate, rather
-than $\eta\,|g_1|/\sigma$ for a gradient of scale $\sigma$. We examine how
-much this matters in :numref:`subsec_mdl-schedules-warmup`.
+downward: by Jensen's inequality,
+$\mathbb{E}\sqrt{\hat{v}_t} < \sqrt{\mathbb{E}[\hat{v}_t]}$ unless
+$\hat{v}_t$ is constant. The first step is the extreme case. At $t = 1$,
+$\hat{m}_1 = g_1$ and $\sqrt{\hat{v}_1} = |g_1|$, so the ratio is
+$\mathrm{sign}(g_1)$ and the step has magnitude $\eta$ in every coordinate,
+whatever the gradient, rather than $\eta\,|g_1|/\sigma$ for a gradient of
+scale $\sigma$. We examine how much this matters in
+:numref:`subsec_mdl-schedules-warmup`.
 
 ### Scale Invariance
 
@@ -1249,10 +1254,7 @@ equalizing the singular directions of a layer's update.
    :exlabel:`ex_mdl-adaptive-stochastic-methods-regret-ogd`
 
 1. [code] **Rotation sensitivity.** ● Use `rotated`, `run` and the update
-   factories of the `#adaptive-stochastic-methods-adam-vs-gd` cell, where the
-   Hessian $\mathbf{A}_\theta$ has eigenvalues $\lambda_{\min} = 1$ and
-   $\lambda_{\max} = 1000$ and condition number
-   $\kappa = \lambda_{\max}/\lambda_{\min} = 1000$.
+   factories of the `#adaptive-stochastic-methods-adam-vs-gd` cell.
     1. Show that the iterates of gradient descent and of heavy ball on
        $\mathbf{A}_\theta$ from $\mathbf{R}_\theta(1, 1)^\top$ are
        $\mathbf{R}_\theta$ times their iterates on the aligned valley, so

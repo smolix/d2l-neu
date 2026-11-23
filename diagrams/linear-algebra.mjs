@@ -263,46 +263,35 @@ function arithmeticIntensity() {
 
 // ── spectral dynamics: lambda^k across k = 1..50 layers ───────────────
 function spectralDepth() {
-  const W = 520, H = 260; let o = '';
-  const x0 = 64, x1 = 468, y0 = 212, yTop = 36;
+  // lambda^k for lambda = 1.1, 1, 0.9 on a log axis: 1.1^50 = 117.4 and
+  // 0.9^50 = 0.0052 sit five decades apart, which a linear axis cannot show.
+  let o = '';
+  const x0 = 72, x1 = 420, y0 = 224, yTop = 40;
+  const X = (k) => x0 + (k / 50) * (x1 - x0);
+  const Y = (v) => y0 - ((Math.log10(v) + 3) / 6) * (y0 - yTop);
   o += line(x0, y0, x1, y0, C.ink, 1.8);
   o += line(x0, y0, x0, yTop, C.ink, 1.8);
-  o += t(266, 246, 'Network depth k (repeated matrix multiplications Aᵏ)', { fs: 14, fw: 600, fill: C.ink });
-
-  // Depth ticks k = 0, 10, 20, 30, 40, 50
   [0, 10, 20, 30, 40, 50].forEach(k => {
-    const x = x0 + (k / 50) * (x1 - x0);
-    o += line(x, y0, x, y0 + 5, C.ink, 1.5);
-    o += t(x, y0 + 18, `${k}`, { mono: true, fs: 13, fill: C.ink });
+    o += line(X(k), y0, X(k), y0 + 5, C.ink, 1.5);
+    o += t(X(k), y0 + 18, `${k}`, { mono: true, fs: 14, fill: C.ink });
   });
-
-  // Unit reference line lambda = 1.0^k = 1
-  const yUnit = 152;
-  o += line(x0, yUnit, x1, yUnit, C.green, 2.2, true);
-  o += t(76, 108, 'λ = 1.0 (Xavier/He + LayerNorm: stable = 1.0)', { fs: 13, fw: 700, fill: D.green.dark, anchor: 'start' });
-
-  // Exploding curve: 1.1^k mapped onto visual curve rising to top
-  let dExp = '';
-  for (let k = 0; k <= 50; k++) {
-    const x = x0 + (k / 50) * (x1 - x0);
-    const val = Math.pow(1.1, k); // 1 to 117.4
-    const y = yUnit - ((val - 1) / 116.4) * (yUnit - 42);
-    dExp += (k === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
-  }
-  o += `<path d="${dExp}" fill="none" stroke="${D.red.base}" stroke-width="2.8"/>`;
-  o += t(76, 56, 'λ₁ = 1.1  ⇒  1.1⁵⁰ = 117.4× (explodes!)', { fs: 14, fw: 700, fill: D.red.dark, anchor: 'start' });
-
-  // Vanishing curve: 0.9^k decaying toward bottom axis
-  let dVan = '';
-  for (let k = 0; k <= 50; k++) {
-    const x = x0 + (k / 50) * (x1 - x0);
-    const val = Math.pow(0.9, k); // 1 to 0.0052
-    const y = yUnit + (1 - val) * (y0 - yUnit - 4);
-    dVan += (k === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
-  }
-  o += `<path d="${dVan}" fill="none" stroke="${C.amber}" stroke-width="2.8"/>`;
-  o += t(210, 182, 'λ₂ = 0.9  ⇒  0.9⁵⁰ = 0.0052× (vanishes!)', { fs: 13.5, fw: 700, fill: D.orange.dark, anchor: 'start' });
-  return svg(W, H, o);
+  o += t((x0 + x1) / 2, y0 + 42, 'depth k', { fs: 15, fw: 600, fill: C.ink });
+  ['0.001', '0.01', '0.1', '1', '10', '100', '1000'].forEach((lab, i) => {
+    const y = Y(Math.pow(10, i - 3));
+    o += line(x0 - 5, y, x0, y, C.ink, 1.5);
+    o += t(x0 - 9, y, lab, { mono: true, fs: 14, fill: C.ink, anchor: 'end' });
+  });
+  o += t(x0, yTop - 18, 'λᵏ', { fs: 16, fw: 600, fill: C.ink });
+  const curve = (lam, color) => {
+    let d = '';
+    for (let k = 0; k <= 50; k++) d += (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(Math.pow(lam, k)).toFixed(1);
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.8"/>`;
+  };
+  o += curve(1.1, D.red.base) + line(X(0), Y(1), X(50), Y(1), C.green, 2.2, true) + curve(0.9, C.amber);
+  o += t(x1 + 10, Y(Math.pow(1.1, 50)), 'λ = 1.1', { fs: 15, fw: 700, fill: D.red.dark, anchor: 'start' });
+  o += t(x1 + 10, Y(1), 'λ = 1', { fs: 15, fw: 700, fill: D.green.dark, anchor: 'start' });
+  o += t(x1 + 10, Y(Math.pow(0.9, 50)), 'λ = 0.9', { fs: 15, fw: 700, fill: D.orange.dark, anchor: 'start' });
+  return svg(x1 + 84, y0 + 56, o);
 }
 
 // ── outliers (l2^2 vs l1 curve) and sparsity (l2 circle vs l1 diamond) ─

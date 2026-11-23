@@ -431,7 +431,7 @@ If the population prevalence is $P(H = 1) = 0.0015$ ($P(H = 0) = 0.9985$) and th
 
 $$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = \frac{0.0015}{0.011485} = 0.1306.$$
 
-Out of $10{,}000$ people (:numref:`fig_prob_natural_freq`), all $15$ infected people test positive, but so do $1\%$ of the $9{,}985$ healthy people ($\approx 100$ false alarms), leaving only $15 / 115 \approx 13.06\%$ of positive tests truly infected!
+Out of $10{,}000$ people (:numref:`fig_prob_natural_freq`), all $15$ infected people test positive, but so do $1\%$ of the $9{,}985$ healthy people ($\approx 100$ false alarms), leaving only $15 / 115 \approx 13\%$ of positive tests truly infected!
 
 ![The HIV test applied to 10,000 people. The 15 infected people test positive, and so do about 100 of the 9,985 healthy people, so only 15 of about 115 positive results are correct.](../img/probability-natural-frequencies.svg)
 :label:`fig_prob_natural_freq`
@@ -509,7 +509,7 @@ H[D1 & D2].mean()  # Exact value: 0.8307
        expected return while constraining the variance to an upper bound.
        This is the
        [Markowitz portfolio](https://en.wikipedia.org/wiki/Markowitz_model)
-       problem :cite:`Mangram.2013`. Methods for constrained problems of
+       problem :cite:`Markowitz.1952`. Methods for constrained problems of
        this kind are developed
        in :numref:`sec_mdl-constrained-optimization-duality`.
 

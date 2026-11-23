@@ -133,54 +133,47 @@ function productRule() {
 // ── Worked example: summing parallel paths on a diamond DAG ───────────
 // u = x1 * x2, v = x2^2, z = u^2 + v at (x1, x2) = (1, 2)
 function parallelDag() {
-  const W = 560, H = 290; let o = '';
+  // z = u² + v with u = x₁x₂ and v = x₂² at (x₁, x₂) = (1, 2). Each node
+  // shows its value (ink) and the derivative of z with respect to it (red);
+  // the red edge labels are the local derivatives.
+  const W = 600, H = 262; let o = '';
   const RED = TOKENS.accents.red;
-  const BLUE_DK = TOKENS.accents.blue.dark;
-  const box = (cx, cy, w, h, fill, st, title, val, grad) =>
-    `<rect x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}" rx="8" fill="${fill}" stroke="${st}" stroke-width="2"/>`
-    + tx(cx, cy - 17, title, { mono: true, fs: 13.5, fw: 700, fill: C.ink })
-    + tx(cx, cy + 2, val, { mono: true, fs: 13, fw: 600, fill: BLUE_DK })
-    + tx(cx, cy + 20, grad, { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
-
-  // Node coordinates with wider horizontal separation
-  const X1 = [68, 72], X2 = [68, 212];
-  const U = [276, 72], V = [276, 212];
-  const Z = [488, 142];
-
-  // Forward blue arrows + backward red arrows
+  const HAIR = TOKENS.neutrals.hairline;
+  const bw = 116, bh = 80;
+  const box = (cx, cy, fill, title, val, grad, mono = true) =>
+    `<rect x="${cx - bw / 2}" y="${cy - bh / 2}" width="${bw}" height="${bh}" rx="8" fill="${fill}" stroke="${C.gray}" stroke-width="2"/>`
+    + mtx(cx, cy - 22, title, { fs: 17 })
+    + line(cx - bw / 2 + 10, cy - 6, cx + bw / 2 - 10, cy - 6, HAIR, 1.5)
+    + tx(cx, cy + 11, val, { mono: true, fs: 15, fw: 500, fill: C.ink })
+    + tx(cx, cy + 29, grad, { mono, fs: 15, fw: 700, fill: RED.dark });
+  const X1 = [70, 56], X2 = [70, 206], U = [300, 56], V = [300, 206], Z = [530, 131];
+  const lab = (x, y, t, anchor = 'middle') => mtx(x, y, t, { fs: 15, fill: RED.dark, anchor });
   // x1 -> u
-  o += arrow(X1[0] + 56, X1[1] - 6, U[0] - 62, U[1] - 6, C.blue);
-  o += arrow(U[0] - 62, U[1] + 10, X1[0] + 56, X1[1] + 10, RED.base);
-  o += tx(170, 48, '∂u/∂x₁ = 2', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
-
+  o += arrow(X1[0] + bw / 2 + 4, X1[1] - 8, U[0] - bw / 2 - 4, U[1] - 8, C.blue);
+  o += arrow(U[0] - bw / 2 - 4, U[1] + 8, X1[0] + bw / 2 + 4, X1[1] + 8, RED.base);
+  o += lab(185, 30, '∂u/∂x₁ = 2');
   // x2 -> u (diagonal)
-  o += arrow(X2[0] + 54, X2[1] - 24, U[0] - 60, U[1] + 24, C.blue);
-  o += arrow(U[0] - 52, U[1] + 34, X2[0] + 62, X2[1] - 14, RED.base);
-  o += tx(198, 156, '∂u/∂x₂ = 1', { mono: true, fs: 12.5, fw: 700, fill: RED.dark, anchor: 'start' });
-
+  o += arrow(X2[0] + 40, X2[1] - bh / 2 - 4, U[0] - 52, U[1] + bh / 2 + 4, C.blue);
+  o += arrow(U[0] - 36, U[1] + bh / 2 + 4, X2[0] + 56, X2[1] - bh / 2 - 4, RED.base);
+  o += lab(238, 131, '∂u/∂x₂ = 1', 'start');
   // x2 -> v
-  o += arrow(X2[0] + 56, X2[1] - 6, V[0] - 62, V[1] - 6, C.blue);
-  o += arrow(V[0] - 62, V[1] + 10, X2[0] + 56, X2[1] + 10, RED.base);
-  o += tx(170, 238, '∂v/∂x₂ = 4', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
-
+  o += arrow(X2[0] + bw / 2 + 4, X2[1] - 8, V[0] - bw / 2 - 4, V[1] - 8, C.blue);
+  o += arrow(V[0] - bw / 2 - 4, V[1] + 8, X2[0] + bw / 2 + 4, X2[1] + 8, RED.base);
+  o += lab(185, 236, '∂v/∂x₂ = 4');
   // u -> z
-  o += arrow(U[0] + 62, U[1] + 10, Z[0] - 56, Z[1] - 18, C.blue);
-  o += arrow(Z[0] - 60, Z[1] - 6, U[0] + 58, U[1] + 22, RED.base);
-  o += tx(388, 66, '∂z/∂u = 4', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
-
+  o += arrow(U[0] + bw / 2 + 4, U[1] + 4, Z[0] - bw / 2 - 4, Z[1] - 28, C.blue);
+  o += arrow(Z[0] - bw / 2 - 4, Z[1] - 12, U[0] + bw / 2 + 4, U[1] + 20, RED.base);
+  o += lab(415, 52, '∂z/∂u = 4');
   // v -> z
-  o += arrow(V[0] + 62, V[1] - 10, Z[0] - 56, Z[1] + 18, C.blue);
-  o += arrow(Z[0] - 60, Z[1] + 6, V[0] + 58, V[1] - 22, RED.base);
-  o += tx(388, 218, '∂z/∂v = 1', { mono: true, fs: 12.5, fw: 700, fill: RED.dark });
-
-  // Nodes
-  o += box(X1[0], X1[1], 108, 64, TOKENS.accents.slate.tint, C.gray, 'x₁', 'val = 1', '∂z/∂x₁ = 8');
-  o += box(X2[0], X2[1], 108, 64, C.lamber, C.amber, 'x₂ (2 paths)', 'val = 2', '4·1 + 1·4 = 8');
-  o += box(U[0], U[1], 120, 64, C.lblue, C.blue, 'u = x₁ x₂', 'val = 2', '∂z/∂u = 4');
-  o += box(V[0], V[1], 120, 64, C.lblue, C.blue, 'v = x₂²', 'val = 4', '∂z/∂v = 1');
-  o += box(Z[0], Z[1], 108, 64, C.lgreen, C.green, 'z = u² + v', 'val = 8', '∂z/∂z = 1');
-
-  o += tx(280, 272, 'Sum over all paths from x₂ to z:  ∂z/∂x₂ = (4 × 1) + (1 × 4) = 8', { mono: true, fs: 14, fw: 700, fill: RED.dark });
+  o += arrow(V[0] + bw / 2 + 4, V[1] - 4, Z[0] - bw / 2 - 4, Z[1] + 28, C.blue);
+  o += arrow(Z[0] - bw / 2 - 4, Z[1] + 12, V[0] + bw / 2 + 4, V[1] - 20, RED.base);
+  o += lab(415, 210, '∂z/∂v = 1');
+  // nodes
+  o += box(X1[0], X1[1], TOKENS.accents.slate.tint, 'x₁', '1', '8');
+  o += box(X2[0], X2[1], TOKENS.accents.slate.tint, 'x₂', '2', '4·1 + 1·4 = 8', false);
+  o += box(U[0], U[1], '#fff', 'u = x₁x₂', '2', '4');
+  o += box(V[0], V[1], '#fff', 'v = x₂²', '4', '1');
+  o += box(Z[0], Z[1], '#fff', 'z = u² + v', '8', '1');
   return svg(W, H, o);
 }
 
@@ -220,6 +213,35 @@ function vjpPipeline() {
 }
 
 // ── Smooth surrogate loss vs 0-1 step error & 1 gradient vs d+1 probes ─
+// ── the 0-1 error is flat; a smooth surrogate has a slope (book) ─────
+// Panel (a) of calculus-surrogate-vs-step in the book's plot style:
+// the step error 1[z < 0] and the logistic surrogate log2(1 + exp(-z))
+// against the margin z.
+function surrogateLoss() {
+  let o = '';
+  const RED = TOKENS.accents.red;
+  const ox = 170, oy = 214, sx = 40, sy = 48, xl = 52, xr = 340;
+  const X = (z) => ox + z * sx, Y = (v) => oy - v * sy;
+  o += arrow(xl - 8, oy, xr + 16, oy, C.ink);
+  o += arrow(ox, oy + 10, ox, 24, C.ink);
+  o += mtx(xr + 16, oy + 22, 'z', { fs: 17 });
+  o += tx(ox - 10, 30, 'loss', { fs: 16, fw: 500, fill: C.ink, anchor: 'end' });
+  // 0-1 error: 1 for z < 0, 0 for z > 0
+  o += line(X(-2.9), Y(1), ox, Y(1), RED.base, 2.8);
+  o += line(ox, Y(1), ox, oy, RED.base, 1.6, true);
+  o += line(ox, oy, xr, oy, RED.base, 2.8);
+  o += tx(X(-2.9), Y(1) + 20, '0–1 error', { fs: 16, fw: 600, fill: RED.dark, anchor: 'start' });
+  // logistic surrogate
+  const pts = [];
+  for (let i = -24; i <= 42; i++) {
+    const z = i / 10;
+    pts.push([X(z), Y(Math.log(1 + Math.exp(-z)) / Math.LN2)]);
+  }
+  o += plines(pts, C.blue, 2.8);
+  o += tx(X(0.35), Y(2.1), 'surrogate loss', { fs: 16, fw: 600, fill: TOKENS.accents.blue.dark, anchor: 'start' });
+  return svg(xr + 40, oy + 36, o);
+}
+
 function surrogateVsStep() {
   const W = 540, H = 264; let o = '';
   const RED = TOKENS.accents.red;
@@ -275,4 +297,5 @@ export const diagrams = {
   'calculus-parallel-dag':      parallelDag,
   'calculus-vjp-pipeline':      vjpPipeline,
   'calculus-surrogate-vs-step': surrogateVsStep,
+  'calculus-surrogate-loss':    surrogateLoss,
 };

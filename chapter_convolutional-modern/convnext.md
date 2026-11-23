@@ -7,10 +7,12 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_convnext`
 
 Every architecture in this chapter so far has been convolutional, and until
-2020 convnets sat atop every major image-classification leaderboard. In 2021,
-however, an architecture without a single standard spatial convolution took
-the lead: the *Swin Transformer* :cite:`liu2021swin`, built around
-*attention*, achieved 81.3% top-1 accuracy on ImageNet compared with 76.1% for
+2020 convnets sat atop every major image-classification leaderboard. Then
+architectures built around *attention*, without a single overlapping spatial
+convolution, took the lead. The first vision transformer did so in late 2020
+with the help of a pre-training set far larger than ImageNet. In 2021 the
+*Swin Transformer* :cite:`liu2021swin` needed no such help: trained on
+ImageNet alone, it achieved 81.3% top-1 accuracy, compared with 76.1% for
 a similarly sized ResNet-50. Did attention itself cause that five-point leap—and
 if so, were convolutional networks obsolete?
 
@@ -160,7 +162,13 @@ it acts on $c$ channels instead of $4c$ drops accuracy by 0.7 points (to
 79.9%—the sole dip on the roadmap); expanding its kernel from $3 \times 3$ to
 $7 \times 7$ immediately recovers that ground. A $7 \times 7$ filter matches
 the receptive field of three stacked $3 \times 3$ layers
-(:numref:`sec_padding`). Back in VGG (:numref:`sec_vgg`), dense $7 \times 7$
+(:numref:`sec_padding`). If both cover the same window, why should the single
+large kernel help? The stack covers its window unevenly: far more paths lead
+from a central pixel to the output than from a pixel at the border, so the
+*effective* receptive field of a stack is roughly Gaussian and much smaller
+than the nominal one :cite:`Luo.Li.Urtasun.ea.2016`. A single $7 \times 7$
+kernel can give every position in the window whatever weight it learns, in one
+layer. Back in VGG (:numref:`sec_vgg`), dense $7 \times 7$
 kernels were prohibitively expensive ($k^2 c_\textrm{i} c_\textrm{o}$); for a
 depthwise kernel ($k^2 c$), growing from $3 \times 3$ to $7 \times 7$ only
 scales a tiny fraction of block compute by $49/9 \approx 5$. Accuracy
@@ -223,7 +231,9 @@ stabilizers from the paper accompany the block. *Layer scale*
 :cite:`touvron2021cait` multiplies the residual branch by a learnable
 per-channel vector $\boldsymbol{\gamma}$ initialized to $10^{-6}$ (distinct
 from batch-norm scale), ensuring every block starts nearly as the identity so
-deep optimization begins smoothly. *Stochastic depth* randomly drops entire
+deep optimization begins smoothly. It does for a layer-normalized block what
+starting the last batch-norm scale of a residual branch at zero does for a
+ResNet (:numref:`subsec_residual-blks`). *Stochastic depth* randomly drops entire
 residual branches during training via `d2l.drop_path`
 (:numref:`sec_training_recipes`).
 
@@ -946,7 +956,7 @@ While ConvNeXt showed that pure convnets match hierarchical Vision Transformers 
 
 ## Summary
 
-Starting from a standard ResNet-50, ConvNeXt applied Swin-inspired upgrades one at a time—a 300-epoch modern recipe (+2.7 points), a $1{:}1{:}3{:}1$ stage ratio, a $4 \times 4$ stride-4 patchify stem, a $7 \times 7$ depthwise convolution leading a $4\times$ inverted bottleneck, a single GELU and LayerNorm per block, layer scale, and separate $2 \times 2$ stride-2 downsampling layers—reaching 82.0% on ImageNet without attention. On $64 \times 64$ Fashion-MNIST, ConvNeXt's body and LayerNorm match a parameter-matched ResNet-18 (~94%), while the coarse $4 \times 4$ patchify stem costs ~2.5 points.
+Starting from a standard ResNet-50, ConvNeXt applied Swin-inspired upgrades one at a time—a 300-epoch modern recipe (+2.7 points), a $1{:}1{:}3{:}1$ stage ratio, a $4 \times 4$ stride-4 patchify stem, a $7 \times 7$ depthwise convolution leading a $4\times$ inverted bottleneck, a single GELU and LayerNorm per block, layer scale, and separate $2 \times 2$ stride-2 downsampling layers—reaching 82.0% on ImageNet without attention. On $64 \times 64$ Fashion-MNIST, ConvNeXt's body and LayerNorm match a parameter-matched ResNet-18 (~94%), while the coarse $4 \times 4$ patchify stem costs ~2 points.
 
 ## Exercises
 

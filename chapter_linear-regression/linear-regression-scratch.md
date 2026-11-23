@@ -128,7 +128,7 @@ def linreg(X, w, b):
 
 ### The Loss
 
-Next we implement the mean squared error $L(\mathbf{w}, b) = \frac{1}{2|\mathcal{B}|}\sum_{i \in \mathcal{B}} (\hat{y}^{(i)} - y^{(i)})^2$. We reshape `y` to `y_hat.shape` as a defensive guard: if one tensor had shape `(n, 1)` and the other `(n,)`, subtracting them would silently broadcast into an `(n, n)` matrix of all pairwise differences!
+Next we implement the mean squared error $L(\mathbf{w}, b) = \frac{1}{2|\mathcal{B}|}\sum_{i \in \mathcal{B}} (\hat{y}^{(i)} - y^{(i)})^2$. We reshape `y` to `y_hat.shape` as a defensive guard: if one tensor had shape `(n, 1)` and the other `(n,)`, subtracting them would silently broadcast into an `(n, n)` matrix of all pairwise differences! What makes this bug treacherous is that training does not fail. The mean over all $n^2$ squared differences is smallest when every prediction equals the average label, so SGD drives $\mathbf{w}$ to $\mathbf{0}$ and $b$ to $\bar{y}$, and the loss falls smoothly to half the variance of the labels, $\frac{1}{2}(2^2 + 3.4^2) \approx 7.8$ for our data. A falling loss curve is therefore weak evidence that the code is right. Later in this section we check the loss against the value it should reach, and the parameters against the truth.
 
 ```{.python .input #linear-regression-scratch-the-loss}
 def squared_loss(y_hat, y):
@@ -206,7 +206,7 @@ gradient we expect. From here on, we let the framework differentiate our forward
 
 ### The Update
 
-At each step, we update the parameters in the direction opposite their gradients, $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\,(\nabla_{\mathbf{w}} L, \nabla_b L)$, taking care not to record the parameter update itself inside the computational graph (and zeroing out any accumulated gradient buffers before the next step).
+At each step, we update the parameters in the direction opposite their gradients, $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\,(\nabla_{\mathbf{w}} L, \nabla_b L)$, taking care not to record the parameter update itself inside the computational graph.
 
 ### Minibatches
 
@@ -322,7 +322,14 @@ def train(lr, num_epochs=10, batch_size=32):
     return w, b, val_losses
 ```
 
-Notice that the core training loop is only a dozen lines of code—and those exact same four steps (forward pass $\rightarrow$ loss $\rightarrow$ backward pass $\rightarrow$ parameter update) will train every deep network in the rest of this book.
+:begin_tab:`pytorch`
+The loop ends by clearing each gradient, because PyTorch adds a new gradient to the stored one instead of replacing it (:numref:`sec_autograd`).
+:end_tab:
+
+Notice that the core training loop is only a dozen lines of code—and those exact same four steps (forward pass $\rightarrow$ loss $\rightarrow$ backward pass $\rightarrow$ parameter update, drawn in :numref:`fig_linreg_sgd_cycle`) will train every deep network in the rest of this book.
+
+![One step of minibatch SGD. The forward pass computes the predictions for a minibatch, the loss reduces them to a single number, the backward pass differentiates that number with respect to the parameters, and the update moves the parameters against the gradient. The cycle then repeats with the next minibatch.](../img/mdl-linreg-sgd-cycle.svg)
+:label:`fig_linreg_sgd_cycle`
 
 ## Checking the Implementation
 

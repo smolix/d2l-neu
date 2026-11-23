@@ -477,7 +477,39 @@ O = X @ W + b                                 # Row i: image i
 O.shape, O.argmax(axis=1).shape
 ```
 
-Multiplying an $m \times k$ matrix by a $k \times n$ matrix computes $mn$ dot products of length $k$, costing $\approx 2mkn$ FLOPs ($2 \times 256 \times 784 \times 10 \approx 4 \times 10^6$ FLOPs for `X @ W`, or $2n^3$ FLOPs for two $n \times n$ matrices against only $3n^2$ memory entries; see :numref:`chap_performance`). Finally, the *identity matrix* $\mathbf{I} \in \mathbb{R}^{n \times n}$ ($1$s on the main diagonal, $0$s elsewhere) satisfies $\mathbf{I}\mathbf{x} = \mathbf{x}$, and the *inverse* $\mathbf{A}^{-1}$ of an invertible square matrix $\mathbf{A}$ satisfies $\mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$ (:numref:`subsec_mdl-inverses`).
+Multiplying an $m \times k$ matrix by a $k \times n$ matrix computes $mn$ dot products of length $k$, costing $\approx 2mkn$ FLOPs ($2 \times 256 \times 784 \times 10 \approx 4 \times 10^6$ FLOPs for `X @ W`, or $2n^3$ FLOPs for two $n \times n$ matrices against only $3n^2$ memory entries; see :numref:`chap_performance`). The *identity matrix* $\mathbf{I} \in \mathbb{R}^{n \times n}$ ($1$s on the main diagonal, $0$s elsewhere) satisfies $\mathbf{I}\mathbf{x} = \mathbf{x}$, and the *inverse* $\mathbf{A}^{-1}$ of an invertible square matrix $\mathbf{A}$ satisfies $\mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$ (:numref:`subsec_mdl-inverses`).
+
+Later models multiply a whole stack of matrices at once, one for each example in the minibatch. The `@` operator does this without a loop: on tensors with more than two axes it multiplies along the last two and broadcasts over the leading ones (:numref:`subsec_broadcasting`). Where `@` does not fit, `einsum` lets us write the sum in :eqref:`eq_matmul` out index by index. The string `'bil,lj->bij'` names the axes of each factor and of the result, and an index that is missing from the result, here `l`, is summed over. We stack three multiples of `A` and multiply them all by `B`:
+
+```{.python .input #linear-algebra-matrix-matrix-products-2}
+%%tab mxnet
+As = mnp.stack([A, 2 * A, 3 * A])  # Three 2 x 3 matrices, shape (3, 2, 3)
+C = As @ B                         # B is broadcast across the batch
+C.shape, (mnp.einsum('bil,lj->bij', As, B) == C).all()
+```
+
+```{.python .input #linear-algebra-matrix-matrix-products-2}
+%%tab pytorch
+As = torch.stack([A, 2 * A, 3 * A])  # Three 2 x 3 matrices, shape (3, 2, 3)
+C = As @ B                           # B is broadcast across the batch
+C.shape, (torch.einsum('bil,lj->bij', As, B) == C).all()
+```
+
+```{.python .input #linear-algebra-matrix-matrix-products-2}
+%%tab tensorflow
+As = tf.stack([A, 2 * A, 3 * A])  # Three 2 x 3 matrices, shape (3, 2, 3)
+C = As @ B                        # B is broadcast across the batch
+C.shape, tf.reduce_all(tf.einsum('bil,lj->bij', As, B) == C)
+```
+
+```{.python .input #linear-algebra-matrix-matrix-products-2}
+%%tab jax
+As = jnp.stack([A, 2 * A, 3 * A])  # Three 2 x 3 matrices, shape (3, 2, 3)
+C = As @ B                         # B is broadcast across the batch
+C.shape, (jnp.einsum('bil,lj->bij', As, B) == C).all()
+```
+
+The result holds three $2 \times 4$ products, one per matrix in the stack, and `einsum` agrees with `@` in every entry.
 
 ## Norms
 :label:`subsec_lin-algebra-norms`
@@ -652,12 +684,12 @@ eigenvalues, eigenvectors = jnp.linalg.eigh(S)
 eigenvalues, eigenvectors
 ```
 
-By the *spectral theorem* (:numref:`sec_mdl-eigendecompositions`), every real symmetric $n \times n$ matrix has $n$ real eigenvalues and a complete orthonormal basis of eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_n$. Expanding any vector $\mathbf{x} = \sum_{i=1}^n c_i \mathbf{v}_i$ (with $c_i = \mathbf{v}_i^\top \mathbf{x}$) gives
+By the *spectral theorem* (:numref:`sec_mdl-eigendecompositions`), every real symmetric $n \times n$ matrix $\mathbf{A}$ has $n$ real eigenvalues and a complete orthonormal basis of eigenvectors $\mathbf{v}_1, \ldots, \mathbf{v}_n$. Expanding any vector $\mathbf{x} = \sum_{i=1}^n c_i \mathbf{v}_i$ (with $c_i = \mathbf{v}_i^\top \mathbf{x}$) gives
 
 $$\mathbf{A}^k \mathbf{x} = \sum_{i=1}^n c_i \lambda_i^k \mathbf{v}_i.$$
 :eqlabel:`eq_matrix_power`
 
-As $k$ grows, the term with the largest $|\lambda_i|$ dominates: $\mathbf{A}^k\mathbf{x}$ aligns with the dominant eigenvector and grows by $\max_i |\lambda_i|$ per step (*power iteration*), which also equals the matrix's maximum stretch factor or *spectral norm* $\|\mathbf{A}\|_2 = \max_{\mathbf{x}\neq\mathbf{0}} \|\mathbf{A}\mathbf{x}\|/\|\mathbf{x}\|$.
+As $k$ grows, the term with the largest $|\lambda_i|$ dominates: $\mathbf{A}^k\mathbf{x}$ aligns with the dominant eigenvector and grows by $\max_i |\lambda_i|$ per step (*power iteration*). For a symmetric matrix this growth rate is also the largest factor by which the matrix can stretch any vector, its *spectral norm* $\|\mathbf{A}\|_2 = \max_{\mathbf{x}\neq\mathbf{0}} \|\mathbf{A}\mathbf{x}\|/\|\mathbf{x}\|$.
 
 ```{.python .input #linear-algebra-eigenvalues-2}
 %%tab mxnet
@@ -738,11 +770,46 @@ for _ in range(50):  # 50 "layers"
 jnp.linalg.norm(V, axis=0)
 ```
 
+The weight matrices of a network are not symmetric, and most are not even square. Do eigenvalues still tell us how far such a matrix stretches a vector? They do not. Both eigenvalues of $\mathbf{A} = \left[\begin{smallmatrix} 0 & 2 \\ 0 & 0 \end{smallmatrix}\right]$ are $0$, and $\mathbf{A}^2 = \mathbf{0}$, yet $\mathbf{A}$ maps $\mathbf{e}_2$ to $2\mathbf{e}_1$ and so doubles its length. Since $\|\mathbf{A}\mathbf{x}\|_2^2 = \mathbf{x}^\top\mathbf{A}^\top\mathbf{A}\mathbf{x}$, stretching is governed by the symmetric matrix $\mathbf{A}^\top\mathbf{A}$. The square roots of its eigenvalues, $\sigma_i = \sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$, are the *singular values* of $\mathbf{A}$, and they exist for every matrix, square or not. We compute them for $\mathbf{S}$ and for $\mathbf{A}$:
+
+```{.python .input #linear-algebra-eigenvectors-and-eigenvalues-1}
+%%tab mxnet
+A = mnp.array([[0.0, 2.0], [0.0, 0.0]])  # Both eigenvalues are 0
+# The middle output of svd holds the singular values
+(mnp.linalg.svd(S)[1], mnp.linalg.svd(A)[1],
+ mnp.sqrt(mnp.linalg.eigvalsh(A.T @ A)), mnp.linalg.matrix_rank(A))
+```
+
+```{.python .input #linear-algebra-eigenvectors-and-eigenvalues-1}
+%%tab pytorch
+A = torch.tensor([[0.0, 2.0], [0.0, 0.0]])  # Both eigenvalues are 0
+svdvals = torch.linalg.svdvals
+(svdvals(S), svdvals(A), torch.linalg.eigvalsh(A.T @ A).sqrt(),
+ torch.linalg.matrix_rank(A))
+```
+
+```{.python .input #linear-algebra-eigenvectors-and-eigenvalues-1}
+%%tab tensorflow
+A = tf.constant([[0.0, 2.0], [0.0, 0.0]])  # Both eigenvalues are 0
+svdvals = lambda M: tf.linalg.svd(M, compute_uv=False)
+(svdvals(S), svdvals(A), tf.sqrt(tf.linalg.eigvalsh(tf.transpose(A) @ A)),
+ tf.linalg.matrix_rank(A))
+```
+
+```{.python .input #linear-algebra-eigenvectors-and-eigenvalues-1}
+%%tab jax
+A = jnp.array([[0.0, 2.0], [0.0, 0.0]])  # Both eigenvalues are 0
+(jnp.linalg.svdvals(S), jnp.linalg.svdvals(A),
+ jnp.sqrt(jnp.linalg.eigvalsh(A.T @ A)), jnp.linalg.matrix_rank(A))
+```
+
+For the symmetric $\mathbf{S}$ the singular values are $3$ and $1$ (up to rounding), the magnitudes of its eigenvalues: for a symmetric matrix the two notions agree. For $\mathbf{A}$ they are $2$ and $0$, and the eigenvalues of $\mathbf{A}^\top\mathbf{A}$ return the same two numbers in ascending order. The largest singular value is the spectral norm of any matrix. The number of nonzero singular values is its *rank*, the number of independent directions that survive the multiplication, which is one for $\mathbf{A}$. Both facts follow from the singular value decomposition (:numref:`sec_mdl-svd-low-rank`).
+
 Unless each layer's weight matrix keeps vector lengths close to $1$ on average, activations and gradients *explode* or *vanish* exponentially with depth (:numref:`sec_numerical_stability`).
 
 ## Summary
 
-Linear algebra expresses whole-minibatch models compactly: stacking $256$ flattened images as $\mathbf{X} \in \mathbb{R}^{256 \times 784}$ computes all $2{,}560$ category scores via $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$. Reductions aggregate along specified axes (`keepdims=True` retains the axis as length $1$ for broadcasting). Dot products $\mathbf{x}^\top\mathbf{y} = \sum_i x_i y_i$ build matrix--vector products $\mathbf{A}\mathbf{x}$ and matrix--matrix products $\mathbf{A}\mathbf{B}$ (costing $\approx 2mkn$ FLOPs). Norms ($\ell_2$, $\ell_1$, $\ell_p$, Frobenius, and spectral) measure vector and matrix magnitudes, normalized dot products give cosine similarity $\cos\theta = \mathbf{x}^\top\mathbf{y}/(\|\mathbf{x}\|\|\mathbf{y}\|)$, and eigenvectors ($\mathbf{A}\mathbf{v} = \lambda\mathbf{v}$) explain why repeated matrix multiplication scales components as $\lambda^k$.
+Linear algebra expresses whole-minibatch models compactly: stacking $256$ flattened images as $\mathbf{X} \in \mathbb{R}^{256 \times 784}$ computes all $2{,}560$ category scores via $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$. Reductions aggregate along specified axes (`keepdims=True` retains the axis as length $1$ for broadcasting). Dot products $\mathbf{x}^\top\mathbf{y} = \sum_i x_i y_i$ build matrix--vector products $\mathbf{A}\mathbf{x}$ and matrix--matrix products $\mathbf{A}\mathbf{B}$ (costing $\approx 2mkn$ FLOPs). Norms ($\ell_2$, $\ell_1$, $\ell_p$, Frobenius, and spectral) measure vector and matrix magnitudes, normalized dot products give cosine similarity $\cos\theta = \mathbf{x}^\top\mathbf{y}/(\|\mathbf{x}\|\|\mathbf{y}\|)$, and eigenvectors ($\mathbf{A}\mathbf{v} = \lambda\mathbf{v}$) explain why repeated matrix multiplication scales components as $\lambda^k$. For a matrix that is not symmetric, the singular values measure the stretching, and the largest of them is the spectral norm.
 
 ## Exercises
 
@@ -1117,7 +1184,7 @@ Given flattened minibatch `X` of shape `(256, 784)` and weight matrix `W_T` stor
 ::: {.cols .vc}
 ::: {.col}
 - Across $L = 50$ layers, even a $10\%$ eigenvalue deviation ($\lambda_1 = 1.1$, $\lambda_2 = 0.9$) explodes as $1.1^{50} \approx \mathbf{117.4\times}$ or vanishes as $0.9^{50} \approx \mathbf{0.0052\times}$.
-- Keeping singular values near $1$ motivates **Xavier/He initialization**, **residual connections**, and **LayerNorm**.
+- Keeping each layer's stretch factors (its singular values) near $1$ motivates **Xavier/He initialization**, **residual connections**, and **LayerNorm**.
 
 @linear-algebra-powers-of-a-matrix-1
 :::

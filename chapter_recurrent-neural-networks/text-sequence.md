@@ -216,8 +216,9 @@ class Vocab:  #@save
         return self.token_to_idx['<unk>']
 ```
 
-To test `Vocab`, we build a vocabulary over our word `tokens`, map the first
-ten words to integer `indices`, and invert them with `vocab.to_tokens`.
+To test `Vocab`, we build a vocabulary over our character `tokens`, map the
+first ten characters to integer `indices`, and invert them with
+`vocab.to_tokens`.
 
 ```{.python .input #text-sequence-vocabulary-2}
 vocab = Vocab(tokens)
@@ -280,11 +281,16 @@ back down to manageable lengths.
 
 ### The Merge Rule
 
-Byte pair encoding (BPE) begins with the 256 single-byte symbols and grows its
-vocabulary greedily: at each iteration, it counts every adjacent *pair* of
-tokens in the training corpus, merges the most frequent pair into a single new
-token, and repeats until the vocabulary reaches its target size
-:cite:`Sennrich.Haddow.Birch.2015`. Because each merge shortens the corpus by
+Byte pair encoding (BPE) began as a compression scheme: replace the most
+frequent pair of adjacent bytes by a new symbol, and repeat :cite:`Gage.1994`.
+:citet:`Sennrich.Haddow.Birch.2015` applied the same rule to the characters
+inside words to obtain subword units for machine translation, and GPT-2
+returned it to raw bytes :cite:`Radford.Wu.Child.ea.2019`. This byte-level
+variant is the one we build. It begins with the 256 single-byte symbols and
+grows its vocabulary greedily: at each iteration, it counts every adjacent
+*pair* of tokens in the training corpus, merges the most frequent pair into a
+single new token, and repeats until the vocabulary reaches its target size.
+Because each merge shortens the corpus by
 exactly the number of occurrences it replaces, BPE acts as a greedy
 compression algorithm whose learned vocabulary forms a dictionary of the
 corpus's most common recurring fragments.
@@ -676,8 +682,8 @@ print('pad/bos/eos ids:', bpe.pad, bpe.bos, bpe.eos, '| len:', len(bpe))
 
 ### The Rank Table of a Production Tokenizer
 
-Most widely deployed language models—including the GPT and Llama
-families—rely on byte-level BPE tokenizers built along these exact lines,
+Most widely deployed language models—including the GPT family and Llama from
+version 3 onward—rely on byte-level BPE tokenizers built along these exact lines,
 simply trained on vastly larger corpora. GPT-2's tokenizer
 :cite:`Radford.Wu.Child.ea.2019` is stored compactly as a lookup table mapping
 each token's byte sequence to its merge rank, paired with the pre-tokenization
@@ -1270,6 +1276,6 @@ Test your understanding of BPE encoding mechanics and production pre-tokenizatio
 | Tokenization Scheme | Base Alphabet | Vocab Size $|\mathcal{V}|$ (*Time Machine*) | Sequence Length $T$ | Out-of-Vocabulary (OOV) Behavior | Primary Architectural Trade-Off |
 |---|---|---|---|---|---|
 | **Unconstrained BPE** | UTF-8 bytes + greedy pair merges | Chosen hyperparameter (e.g., $1{,}024$) | $\sim 61{,}000$ | **Zero OOV** (unseen stems fall back to bytes) | Over-merges across spaces (`'of the '`), fragmenting single-word statistics |
-| **Pre-Tokenized BPE (GPT-2 / Llama)** | Regex chunks + byte-level BPE + high-ID specials | $1{,}024 + 3$ (ours) or $50\textrm{k}\text{--}200\textrm{k}$ (prod) | $65{,}741$ ($2.78$ B/tok) | **Zero OOV** + prompt-injection-safe specials | Industry standard balancing sequence compression, softmax cost, and open vocabulary |
+| **Pre-Tokenized BPE (GPT-2 / Llama 3)** | Regex chunks + byte-level BPE + high-ID specials | $1{,}024 + 3$ (ours) or $50\textrm{k}\text{--}200\textrm{k}$ (prod) | $65{,}741$ ($2.78$ B/tok) | **Zero OOV** + prompt-injection-safe specials | Industry standard balancing sequence compression, softmax cost, and open vocabulary |
 :::
 

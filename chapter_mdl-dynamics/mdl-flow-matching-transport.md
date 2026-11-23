@@ -23,7 +23,7 @@ older question, the problem of *optimal transport*. Gaspard Monge asked it
 in 1781 about moving a pile of earth into a hole, and under squared distance
 the cheapest motion turns out to be the one we just wished for, every
 particle on a straight line at constant speed
-:cite:`Benamou.Brenier.2000`.
+:cite:`McCann.1997,Benamou.Brenier.2000`.
 
 One regression trains the velocity of any path assembled from simple pieces,
 because that velocity is an average over particles and least squares learns
@@ -1816,7 +1816,7 @@ Flow Matching, Rectified Flows, and Optimal Transport<br>**probability paths · 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Curved diffusion paths:** Probability-flow ODE trajectories inherited from OU / VP-SDE noising curve across time and concentrate $91\%$ of motion below $t = 0.5$, requiring 20–50 solver steps.
+- **Curved diffusion paths:** Probability-flow ODE trajectories inherited from OU / VP-SDE noising curve across time. On this section's mixture they cover more than $90\%$ of their length below $t = 0.5$, and a solver needs 20–50 steps to follow them.
 - **Straight constant-speed ideal:** If particles travel along $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\mathbf{x}_1$ without crossings ($\dot{\mathbf{x}}_t = \mathbf{x}_1 - \mathbf{x}_0$), a **single** Euler step ($h = 1$) is $100\%$ exact!
 - **Flow Matching paradigm:** Prescribe $p_t$ directly and regress $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ onto per-sample velocities by least squares.
 :::
@@ -2089,7 +2089,7 @@ Decomposing the terminal error into individual signed step contributions $c_k$ c
 :::
 
 ::: {.col}
-- **91% of Motion Happens Below $t = 0.5$:** Because the noised law near $t = 1$ is almost $\mathcal{N}(0, 1)$ where the score cancels the drift, uniform steps waste half the NFE budget above $t = 0.5$ where trajectories move only $9\%$ of their length.
+- **Most of the Motion Comes Late:** On this mixture the paths cover more than $90\%$ of their length below $t = 0.5$. The noised law near $t = 1$ is almost $\mathcal{N}(0, 1)$, where the score cancels the drift, so uniform steps spend half the NFE budget above $t = 0.5$, where trajectories cover less than a tenth of their length.
 - **Accidental Sign Cancellation:** Before summation, Euler's absolute step errors $\sum_k |c_k|$ are more than $2\times$ larger than Heun's on both grids—but on the uniform grid, opposite signs cancel $88\%$ of Euler's errors (surviving share $0.12$). Crowding the grid near $t = 0$ removes this cancellation and lets Heun's true $O(h^2)$ local accuracy dominate.
 :::
 :::

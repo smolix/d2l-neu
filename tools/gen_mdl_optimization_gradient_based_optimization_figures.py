@@ -16,7 +16,8 @@ Run with the repo's pytorch venv:
 
 Writes ``img/mdl-opt-descent-lemma-slice.svg``,
 ``img/mdl-opt-hb-eigenvalues.svg`` and ``img/mdl-opt-trust-region-saddle.svg``
-(and copies in ``img/auto/``).  Every curve and point is computed: the
+(and copies in ``img/auto/``), plus ``img/mdl-opt-newton-model.svg`` for the
+Curvature Methods section (book only).  Every curve and point is computed: the
 objective and its ceiling along the gradient step, the roots of the heavy-ball
 characteristic polynomial, and the Newton and trust-region iterates on
 f(x, y) = x^2/2 + cos y.
@@ -365,8 +366,69 @@ def fig_trust_region_saddle():
     _copy_to_auto("mdl-opt-trust-region-saddle")
 
 
+# --------------------------------------------------------------------------- #
+# 4. One Newton step: fit the quadratic model, jump to its minimizer         #
+# --------------------------------------------------------------------------- #
+
+def fig_newton_model():
+    """f(x) = x^4/4 + x^2/2 at x_k = 1.
+
+    f(1) = 3/4, f'(1) = 2, f''(1) = 4, so the model is
+    m_k(x) = 3/4 + 2(x - 1) + 2(x - 1)^2 with minimizer x_{k+1} = 1/2 (model
+    value 1/4; f(1/2) = 0.14).  The model matches f to second order at x_k
+    and is a narrower bowl elsewhere, so the step lands between x_k and the
+    true minimizer x* = 0.
+    """
+    f = lambda x: x ** 4 / 4 + x ** 2 / 2
+    xk = 1.0
+    g, h = xk ** 3 + xk, 3 * xk ** 2 + 1
+    m = lambda x: f(xk) + g * (x - xk) + 0.5 * h * (x - xk) ** 2
+    x1, xs_ = xk - g / h, 0.0
+    xr, base, ytop = (-0.95, 1.7), -0.36, 2.4
+
+    fig, ax = plt.subplots(figsize=(7.0, 4.4))
+    xs = np.linspace(-0.9, 1.49, 400)
+    xm = np.linspace(-0.08, 1.52, 400)
+    ax.plot(xm, m(xm), color=GREEN, lw=2.2, ls=(0, (6, 3)), zorder=3)
+    ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=4)
+
+    # drop lines to the horizontal axis at x*, x_{k+1}, x_k
+    for x, top in ((xs_, f(xs_)), (x1, m(x1)), (xk, f(xk))):
+        ax.plot([x, x], [base, top], color=GRAY, lw=1.0, ls=(0, (2, 3)),
+                zorder=1)
+    ax.plot(xk, f(xk), "o", color="black", ms=6.5, zorder=6)
+    ax.plot(x1, m(x1), "o", color=GREEN, ms=6.5, zorder=6)
+    ax.plot(xs_, f(xs_), "o", mfc="white", mec=BLUE, mew=1.8, ms=7.5,
+            zorder=6)
+
+    # the Newton step p, just above the axis
+    fl.arrow(ax, (xk, -0.2), (x1 + 0.01, -0.2), color="black", lw=1.6,
+             mut=13)
+    ax.text(xk + 0.05, -0.2, r"$p$", color="black", fontsize=LBL + 1,
+            ha="left", va="center")
+
+    ax.text(-0.82, 0.62, r"$f$", color=BLUE, fontsize=LBL + 2, ha="center",
+            va="bottom")
+    ax.text(-0.12, 1.12, r"$m_k$", color=GREEN, fontsize=LBL + 2,
+            ha="right", va="center")
+    ax.text(xk + 0.07, f(xk) - 0.04, r"$f(x_k)$", color="black",
+            fontsize=LBL, ha="left", va="top")
+    ax.annotate(r"minimum of $m_k$", xy=(x1, m(x1)), xytext=(1.07, 0.1),
+                color=GREEN, fontsize=LBL, ha="left", va="center",
+                arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.9,
+                                shrinkA=2, shrinkB=5), zorder=7)
+
+    fl.arrow(ax, (xr[0], base), (xr[1], base), color="black", lw=0.9,
+             mut=10)
+    for x, lab in ((xs_, r"$x^\star$"), (x1, r"$x_{k+1}$"), (xk, r"$x_k$")):
+        ax.text(x, base - 0.06, lab, color="black", fontsize=LBL + 1,
+                ha="center", va="top")
+    fl.clean_axes(ax, lim=(xr, (base - 0.4, ytop)), hide=True, equal=False)
+    fl.save(fig, "mdl-opt-newton-model")
+
+
 FIGURES = [fig_descent_lemma_slice, fig_hb_eigenvalues,
-           fig_trust_region_saddle]
+           fig_trust_region_saddle, fig_newton_model]
 
 
 def main():

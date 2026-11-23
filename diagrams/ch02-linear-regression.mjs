@@ -5,6 +5,7 @@
 // `ch02-lr-<concept>` IDs.
 
 import { C, TOKENS, grid, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -337,7 +338,7 @@ function synthOracle() {
   o += tx(143, 212, 'Code bug or bad model?', { fs: 12.5, fw: 700, fill: D.red.dark });
 
   o += box(290, 44, 254, 202, C.lgreen, C.green);
-  o += tx(417, 68, 'Synthetic Benchmark (§2.2)', { fs: 14, fw: 700, fill: D.green.dark });
+  o += tx(417, 68, `Synthetic Benchmark (${sec('sec_synthetic-regression-data')})`, { fs: 14, fw: 700, fill: D.green.dark });
   o += tx(417, 98, '• w* = (2, −3.4)ᵀ, b* = 4.2', { mono: true, fs: 12.5, fw: 600, fill: C.ink });
   o += tx(417, 124, '• Noise σ = 0.01 (floor 5e-5)', { mono: true, fs: 12.5, fw: 600, fill: C.ink });
   o += tx(417, 150, '• Linear model is exact truth', { fs: 13, fill: C.ink });
@@ -723,7 +724,7 @@ function fourStepLoop() {
 
   o += box(16, 158, bw, bh, C.lgreen, C.green);
   o += tx(16 + bw / 2, 180, '4. Update', { fs: 14, fw: 700, fill: D.green.dark });
-  o += tx(16 + bw / 2, 204, 'param -= lr * grad', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
+  o += tx(16 + bw / 2, 204, 'param ← param − lr * grad', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   o += tx(16 + bw / 2, 224, 'not recorded; next minibatch', { fs: 12, fill: C.ink });
 
   o += arrow(140, 156, 140, 130, C.blue);
@@ -983,7 +984,7 @@ function trainerTimeline() {
 
   o += box(150, 42, 260, 48, C.lblue, C.blue);
   o += tx(280, 60, 'record("train", fit_epoch())', { mono: true, fs: 12, fw: 700, fill: D.blue.dark });
-  o += tx(280, 78, 'averages 32 steps → x = e + 0.5', { mono: true, fs: 11.5, fill: C.ink });
+  o += tx(280, 78, 'averages all steps → x = e + 0.5', { mono: true, fs: 11.5, fill: C.ink });
   o += arrow(280, 92, 280, y - 4, C.blue);
 
   o += line(496, y - 12, 496, y + 12, C.green, 2.5);
@@ -1397,10 +1398,10 @@ function twoThermometers() {
 
   o += box(16, 44, 254, 204, C.lgreen, C.green);
   o += tx(143, 68, 'Model A: w = (1, 1)ᵀ', { mono: true, fs: 14, fw: 700, fill: D.green.dark });
-  o += tx(143, 96, 'ŷ = x₁ + x₂  (averages sensors)', { mono: true, fs: 12, fill: C.ink });
+  o += tx(143, 96, 'ŷ = x₁ + x₂  (sums the sensors)', { mono: true, fs: 12, fill: C.ink });
   o += box(30, 114, 226, 56, '#FFFFFF', C.green, 6, 1.5);
   o += tx(143, 134, 'Norm: ‖w‖₂² = 2', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
-  o += tx(143, 156, 'Cuts sensor noise var in half!', { fs: 12, fill: C.ink });
+  o += tx(143, 156, 'Half the noise variance of 2x₁', { fs: 12, fill: C.ink });
   o += tx(143, 198, 'When sensor drift x₁ − x₂ = 2:', { fs: 12, fill: C.muted });
   o += tx(143, 220, 'Perturbation = 1(2) = 2 (stable)', { fs: 12.5, fw: 700, fill: D.green.dark });
 
@@ -1587,7 +1588,7 @@ function earlyStoppingFilter() {
   o += tx(417, 152, 'Soaks up noise over epochs 5–50!', { fs: 12.5, fw: 700, fill: D.red.dark });
 
   o += box(16, 194, 528, 52, D.purple.tint, C.purple);
-  o += tx(280, 220, 'Stopping at T steps applies filter 1 − (1 − ημⱼ)ᵀ ≈ μⱼ / (μⱼ + 1/ηT)!', { mono: true, fs: 12.5, fw: 700, fill: D.purple.dark });
+  o += tx(280, 220, 'Stopping at T steps: filter 1 − (1 − ημⱼ)ᵀ ≈ μⱼ / (μⱼ + 1/(ηT))', { mono: true, fs: 12, fw: 700, fill: D.purple.dark });
 
   return svg(W, H, o);
 }

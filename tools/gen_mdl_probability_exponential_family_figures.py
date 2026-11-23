@@ -154,7 +154,40 @@ def fig_log_partition():
     _copy_to_auto("mdl-prob-log-partition")
 
 
-FIGURES = [fig_maxent_die, fig_log_partition]
+def fig_gibbs_tangent():
+    """The tangent-line bound behind Gibbs' inequality: log u lies below its
+    tangent u - 1 at u = 1 for every u > 0, touching only at u = 1 (the
+    logarithm is concave).  The shaded gap (u - 1) - log u is positive
+    everywhere else."""
+    BLUE, ORANGE, GREEN = fl.BLUE, fl.ORANGE, fl.GREEN
+    u = np.linspace(0.06, 3.4, 400)
+    fig, ax = plt.subplots(figsize=(5.6, 4.0))
+    ax.fill_between(u, np.log(u), u - 1, color=ORANGE, alpha=0.12, lw=0)
+    ax.plot(u, u - 1, color=ORANGE, lw=2.4)
+    ax.plot(u, np.log(u), color=BLUE, lw=2.4)
+    ax.plot([1], [0], "o", ms=7, color=GREEN, zorder=5)
+    ax.text(1.07, -0.14, r"$u=1$", color=INK, fontsize=14, ha="left",
+            va="top")
+    ax.text(2.55, 1.95, r"$u-1$", color=ORANGE, fontsize=15, ha="right",
+            va="center")
+    ax.text(2.75, 0.78, r"$\log u$", color=BLUE, fontsize=15, ha="left",
+            va="center")
+    ax.set_xlim(0, 3.4)
+    ax.set_ylim(-2.9, 2.5)
+    ax.set_xticks([])
+    ax.set_yticks([-2, -1, 0, 1, 2])
+    ax.text(3.4, -0.12, r"$u$", color=INK, fontsize=15, ha="right",
+            va="top")
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.spines["left"].set_color("black")
+    ax.spines["bottom"].set_position(("data", 0))
+    ax.spines["bottom"].set_color("black")
+    ax.tick_params(colors="black", labelsize=13)
+    save(fig, "mdl-prob-gibbs-tangent")
+
+
+FIGURES = [fig_maxent_die, fig_log_partition, fig_gibbs_tangent]
 
 
 def main():

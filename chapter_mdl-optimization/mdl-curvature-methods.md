@@ -112,6 +112,10 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-newton-step`
 
+![One Newton step on $f(x) = \tfrac14 x^4 + \tfrac12 x^2$ from $x_k = 1$. The model $m_k$ (dashed) shares the value, slope and curvature of $f$ at $x_k$, and the step $p$ moves to the minimizer of the model, $x_{k+1} = \tfrac12$. The minimizer of $f$ is $x^\star = 0$.](../img/mdl-opt-newton-model.svg)
+:label:`fig_mdl-opt-newton-model`
+
+:numref:`fig_mdl-opt-newton-model` shows one such step in one dimension.
 Notice that no step size appears in :eqref:`eq_mdl-opt-newton-step`: the
 inverse Hessian rescales each direction according to its curvature. More
 broadly, Newton's direction belongs to the family of preconditioned steps
@@ -650,7 +654,8 @@ BFGS nor trust-region methods replace stochastic gradient descent on large,
 noisy deep learning objectives.
 
 The saddle of $\tfrac12 x^2 + \cos y$ has now tripped up two optimizers:
-gradient descent stalled at it, and Newton's method ran straight into it. A
+gradient descent stalled at it from a start on the line $y = 0$, and Newton's
+method ran straight into it from a generic one. A
 trust region escapes, but only by checking each local model against the true
 objective. Yet there is a large class of functions where none of these
 precautions are needed: functions with no saddles, no spurious basins, and

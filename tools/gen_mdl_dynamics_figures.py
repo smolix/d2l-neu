@@ -430,16 +430,21 @@ def fig_score_field():
 # =========================================================================== #
 
 def fig_uniqueness_fan():
-    """The fan of solutions of dx/dt = sqrt(|x|) through x0 = 0: the rest
-    solution x = 0 plus one parabolic blade x_c(t) = (t - c)^2 / 4 per
-    departure time c.  Every blade is the exact closed-form solution, so the
-    failure of uniqueness (the field is not Lipschitz at 0) is drawn, not
-    sketched."""
+    """The two ways the existence theorem can fail, side by side.
+    (a) No Lipschitz bound: the fan of solutions of dx/dt = sqrt(|x|) through
+    x0 = 0, the rest solution x = 0 plus one parabolic blade
+    x_c(t) = (t - c)^2 / 4 per departure time c.
+    (b) No global bound: dx/dt = x^2 from x0 > 0, whose exact solution
+    x0 / (1 - x0 t) leaves every bounded set before t = 1/x0 (dashed).
+    Every curve is the exact closed-form solution, so both failures are
+    drawn, not sketched."""
+    fig, (ax, axb) = plt.subplots(
+        1, 2, figsize=(11.2, 3.9),
+        gridspec_kw=dict(width_ratios=[1.3, 1.0], wspace=0.34))
+
+    # ----- (a) the fan -------------------------------------------------------
     tmax = 3.2
     t = np.linspace(0.0, tmax, 400)
-
-    fig, ax = plt.subplots(figsize=(6.2, 3.9))
-
     # the rest solution x(t) = 0
     ax.plot([0, tmax], [0, 0], color=BLUE, lw=2.6, zorder=4)
     # Named at its right end, in the column of blade labels.
@@ -469,6 +474,36 @@ def fig_uniqueness_fan():
     ax.set_xticks([0, 1, 2, 3])
     ax.set_aspect("auto")
     fl.clean_axes(ax, equal=False)
+
+    # ----- (b) finite-time blow-up of dx/dt = x^2 ----------------------------
+    xtop = 6.0
+    for x0 in (2.0, 1.0, 0.5):
+        ts = 1.0 / x0
+        # stop the curve where it leaves the panel, x = xtop
+        tt = np.linspace(0.0, ts - 1.0 / xtop, 400)
+        axb.plot(tt, x0 / (1.0 - x0 * tt), color=ORANGE, lw=1.9, zorder=3)
+        axb.plot(0.0, x0, "o", color=ORANGE, ms=4, zorder=5, clip_on=False)
+        axb.plot([ts, ts], [-0.2, xtop], color="black", lw=1.0, ls="--",
+                 zorder=2)
+    # each curve starts at its dot x0 (y ticks 0.5, 1, 2) and blows up at the
+    # dashed line t = 1/x0 (x ticks 1/2, 1, 2)
+    axb.text(2.05, 5.6, r"$t=1/x_0$", color="black", fontsize=14,
+             ha="left", va="center", zorder=7)
+    axb.text(1.08, 4.5, r"$\dot x=x^2$", color=ORANGE, fontsize=14,
+             ha="left", va="center", zorder=7)
+    axb.set_xticks([0, 0.5, 1, 2])
+    axb.set_xticklabels(["0", "1/2", "1", "2"])
+    axb.set_yticks([0, 0.5, 1, 2, 4, 6])
+    axb.set_yticklabels(["0", "0.5", "1", "2", "4", "6"])
+    axb.set_xlabel("$t$")
+    axb.set_ylabel("$x$")
+    axb.set_xlim(-0.06, 2.55)
+    axb.set_ylim(-0.2, xtop)
+    fl.clean_axes(axb, equal=False)
+
+    for a, lab in ((ax, "a"), (axb, "b")):
+        a.text(0.0, 1.03, f"({lab})", transform=a.transAxes, ha="left",
+               va="bottom", fontsize=15, color=INK)
     fl.save(fig, "mdl-dyn-uniqueness-fan")
 
 
@@ -552,6 +587,53 @@ def fig_phase_portraits():
     fig.subplots_adjust(wspace=0.18, hspace=0.38, left=0.04, right=0.985,
                         top=0.89, bottom=0.03)
     fl.save(fig, "mdl-dyn-phase-portraits")
+
+
+# =========================================================================== #
+# Section 38.1  Transient growth  ->  mdl-dyn-nonnormal-transient             #
+# =========================================================================== #
+
+def fig_nonnormal_transient():
+    """Transient growth of a stable linear ODE, the continuous-time twin of
+    ch. 33's mdl-la-transient-growth.  The length ||x(t)|| for
+    dx/dt = A x, A = [[-1, 10], [0, -2]], from x0 = (0, 1): closed form
+    x1 = 10 (e^-t - e^-2t), x2 = e^-2t.  It rises to 2.51 at t = log 2, then
+    decays like 10 e^-t.  Dashed: ||exp(Lambda t)||_2 = e^-t for
+    Lambda = diag(-1, -2), which has the same eigenvalues and bounds every
+    normal matrix with them; same asymptotic slope, no hump."""
+    t = np.linspace(0.0, 6.0, 600)
+    x1 = 10.0 * (np.exp(-t) - np.exp(-2.0 * t))
+    x2 = np.exp(-2.0 * t)
+    nrm = np.hypot(x1, x2)
+    tp = np.log(2.0)
+    peak = np.hypot(2.5, 0.25)
+
+    fig, ax = plt.subplots(figsize=(6.4, 3.9))
+    ax.semilogy(t, nrm, color=BLUE, lw=2.4, zorder=4)
+    ax.semilogy(t, np.exp(-t), color=ORANGE, lw=2.2, ls="--", zorder=3)
+    ax.axhline(1.0, color=GRAY, lw=0.9, ls=":", zorder=2)
+    ax.plot([tp], [peak], "o", color=BLUE, ms=6, zorder=6)
+    ax.annotate(f"peak ${peak:.2f}$ at $t=\\log 2$", xy=(tp, peak),
+                xytext=(1.35, 4.2), fontsize=13, ha="left", va="center",
+                color="black",
+                arrowprops=dict(arrowstyle="->", color="black", lw=1.1,
+                                shrinkA=2, shrinkB=4))
+    ax.text(4.3, 0.33, r"$\|\mathbf{x}(t)\|$", color=fl.T.BLUE.dark,
+            fontsize=14, ha="center", va="center", zorder=7)
+    ax.text(2.1, 0.035,
+            r"$\|e^{\boldsymbol{\Lambda} t}\|_2=e^{-t}$",
+            color=fl.T.ORANGE.dark, fontsize=14, ha="center", va="center",
+            zorder=7)
+    ax.set_xlabel("$t$", fontsize=15)
+    ax.set_ylabel("length", fontsize=15)
+    ax.set_xlim(0.0, 6.0)
+    ax.set_ylim(1.5e-3, 8.0)
+    ax.set_xticks([0, 1, 2, 3, 4, 5, 6])
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("black")
+    fl.save(fig, "mdl-dyn-nonnormal-transient")
 
 
 # =========================================================================== #
@@ -1621,6 +1703,7 @@ FIGURES = [
     fig_score_field,
     fig_uniqueness_fan,
     fig_phase_portraits,
+    fig_nonnormal_transient,
     fig_resnet_as_euler,
     fig_brownian_paths,
     fig_qv_convergence,

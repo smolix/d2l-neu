@@ -68,7 +68,10 @@ where $\mathbf{w} = (w_1, \ldots, w_d)^\top \in \mathbb{R}^d$ collects the weigh
 $$\hat{\mathbf{y}} = \mathbf{X} \mathbf{w} + b,$$
 :eqlabel:`eq_linreg-y-vec`
 
-where the scalar bias $b$ is added to every component of $\mathbf{X}\mathbf{w}$ via broadcasting (:numref:`subsec_broadcasting`). Searching for the best linear predictor now reduces to finding the parameters $(\mathbf{w}, b) \in \mathbb{R}^d \times \mathbb{R}$ that make $\hat{\mathbf{y}}$ match the observed labels $\mathbf{y} = (y^{(1)}, \ldots, y^{(n)})^\top$ as closely as possible. Even when the true relationship between features and labels is only approximately linear—and contaminated by unmeasured factors and measurement noise—a linear model frequently provides a fast, interpretable, and remarkably competitive baseline.
+where the scalar bias $b$ is added to every component of $\mathbf{X}\mathbf{w}$ via broadcasting (:numref:`subsec_broadcasting`). :numref:`fig_linreg_design_matrix` shows the shapes involved. Searching for the best linear predictor now reduces to finding the parameters $(\mathbf{w}, b) \in \mathbb{R}^d \times \mathbb{R}$ that make $\hat{\mathbf{y}}$ match the observed labels $\mathbf{y} = (y^{(1)}, \ldots, y^{(n)})^\top$ as closely as possible. Even when the true relationship between features and labels is only approximately linear—and contaminated by unmeasured factors and measurement noise—a linear model frequently provides a fast, interpretable, and remarkably competitive baseline.
+
+![The shapes in $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$, drawn for $n = 6$ examples and $d = 3$ features. Each row of $\mathbf{X}$ is one example and produces one entry of $\hat{\mathbf{y}}$ (shaded); $\mathbf{w}$ holds one weight per column, and the scalar $b$ is broadcast to all $n$ entries.](../img/mdl-linreg-design-matrix.svg)
+:label:`fig_linreg_design_matrix`
 
 ### The Squared Loss
 :label:`subsec_linear-regression-loss-function`
@@ -150,7 +153,7 @@ $$\mathbf{X}^\top \mathbf{X}\, \mathbf{w}^* = \mathbf{X}^\top \mathbf{y}, \qquad
 
 When the columns of $\mathbf{X}$ are linearly dependent (for instance, when two features are redundant or when $d > n$), $\mathbf{X}^\top\mathbf{X}$ is singular: a least-squares minimizer still exists, but infinitely many weight vectors achieve the exact same minimum loss (Exercise :exref:`ex_linear-regression-singular-design-matrix`).
 
-In code, you should almost never form $(\mathbf{X}^\top\mathbf{X})^{-1}$ explicitly; dedicated least-squares solvers (`lstsq`) use QR or SVD factorizations that are both faster and far more numerically stable. Let us verify the normal equations on the three-point line model from :numref:`sec_calculus`—inputs $0, 1, 2$, labels $1, 1, 0$, and augmented rows $(1, \textrm{input})$ so that $\hat{\mathbf{w}} = (w_1, w_2)^\top = (7/6, -1/2)^\top$ holds the intercept first and the slope second—and check that the residual vector $\mathbf{r} = \mathbf{X}\hat{\mathbf{w}} - \mathbf{y} = (1/6, -1/3, 1/6)^\top$ satisfies $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ up to `float32` precision:
+In code, you should almost never form $(\mathbf{X}^\top\mathbf{X})^{-1}$ explicitly; dedicated least-squares solvers (`lstsq`) use QR or SVD factorizations that are far more numerically stable at a similar cost. Let us verify the normal equations on the three-point line model from :numref:`sec_calculus`—inputs $0, 1, 2$, labels $1, 1, 0$, and augmented rows $(1, \textrm{input})$ so that $\hat{\mathbf{w}} = (w_1, w_2)^\top = (7/6, -1/2)^\top$ holds the intercept first and the slope second—and check that the residual vector $\mathbf{r} = \mathbf{X}\hat{\mathbf{w}} - \mathbf{y} = (1/6, -1/3, 1/6)^\top$ satisfies $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ up to `float32` precision:
 
 ```{.python .input #linear-regression-the-normal-equations}
 %%tab pytorch
@@ -214,7 +217,7 @@ If linear regression has a one-line analytic solution, why not stop here? For tw
 1. **Computational scaling:** Forming $\mathbf{X}^\top\mathbf{X} \in \mathbb{R}^{d \times d}$ costs $O(nd^2)$ operations and solving the $d \times d$ system costs $O(d^3)$. When a dataset has millions of examples and a model has millions or billions of parameters, storing or inverting a $d \times d$ matrix is completely out of the question.
 2. **Nonlinearity:** As soon as we replace the squared loss with another objective (like cross-entropy in :numref:`chap_classification`) or stack nonlinear hidden layers (:numref:`chap_perceptrons`), no closed-form solution exists at all.
 
-Instead, we train almost every deep learning model iteratively using *gradient descent* and its stochastic variants. Recall from :numref:`sec_calculus` that the gradient $\nabla L(\mathbf{w}, b)$ points in the direction of steepest ascent of the loss. Stepping in the *opposite* direction reduces the loss, except faces one practical bottleneck: evaluating the exact gradient $\nabla L(\mathbf{w}, b) = \frac{1}{n}\sum_{i=1}^n \nabla l^{(i)}(\mathbf{w}, b)$ requires a full pass over all $n$ training examples just to take a single parameter step! When $n = 10^7$, full-batch gradient descent is glacially slow—and wildly wasteful, because the average gradient over 100 randomly chosen examples already points in almost the exact same direction as the average over 10 million.
+Instead, we train almost every deep learning model iteratively using *gradient descent* and its stochastic variants. Recall from :numref:`sec_calculus` that the gradient $\nabla L(\mathbf{w}, b)$ points in the direction of steepest ascent of the loss. Stepping in the *opposite* direction reduces the loss, except faces one practical bottleneck: evaluating the exact gradient $\nabla L(\mathbf{w}, b) = \frac{1}{n}\sum_{i=1}^n \nabla l^{(i)}(\mathbf{w}, b)$ requires a full pass over all $n$ training examples just to take a single parameter step! When $n = 10^7$, full-batch gradient descent is glacially slow—and wildly wasteful, because the average gradient over 100 randomly chosen examples is already a usable estimate of the average over 10 million. How accurate it is depends on the size of the sample, not on the size of the dataset it was drawn from.
 
 *Minibatch stochastic gradient descent* (minibatch SGD) exploits this statistical redundancy. At each step $t$, we draw a small random *minibatch* $\mathcal{B}_t \subset \{1, \ldots, n\}$ of $|\mathcal{B}|$ examples, average the loss gradients over $\mathcal{B}_t$ alone, and update the parameters with a positive *learning rate* (step size) $\eta > 0$:
 
@@ -363,14 +366,16 @@ Look closely at the two terms on the right. The first term, $\frac{n}{2}\log(2\p
 ### Choosing a Loss from a Noise Model
 :label:`subsec_linreg-loss-menu`
 
-This maximum-likelihood connection is far more than a historical footnote: it gives us a principled recipe for designing loss functions whenever Gaussian noise is *not* the right model of reality (:numref:`fig_linreg-loss-menu`):
+What does the squared loss do when the noise is *not* Gaussian? The answer needs no likelihood at all. Fix an input $\mathbf{x}$ and ask which single number $c$ minimizes the expected squared error $\mathbb{E}[(y - c)^2 \mid \mathbf{x}]$. Setting the derivative $2(c - \mathbb{E}[y \mid \mathbf{x}])$ to zero gives the conditional mean $c = \mathbb{E}[y \mid \mathbf{x}]$, for any noise distribution with finite variance. The expected absolute error $\mathbb{E}[|y - c| \mid \mathbf{x}]$ is minimized by the conditional *median* instead. Tilt it, so that each unit of underestimation costs $q$ and each unit of overestimation costs $1 - q$, and the minimizer becomes the $q$-quantile; forecasters, who need a 90% demand level more often than a mean, call this the *pinball loss*. The corrupted label in :numref:`subsec_linear-regression-loss-function` showed this difference: a mean follows one enormous value, and a median ignores it. Choosing a loss therefore means choosing which statistic of $y$ the model predicts, whatever the noise turns out to be.
 
-| Output type | Noise model | Loss (negative log-likelihood) |
-|:--|:--|:--|
-| real-valued, well-behaved noise | Gaussian | squared error (this section) |
-| real-valued, outliers or heavy tails | Laplace | absolute error (exercise :exref:`ex_linear-regression-laplace-noise`) |
-| positive, multiplicative fluctuations (prices) | Gaussian on $\log y$ | squared error on $\log y$ (exercise :exref:`ex_linear-regression-beyond-gaussian-noise`) |
-| counts (sales, arrivals) | Poisson | $\nu(\mathbf{x}) - y \log \nu(\mathbf{x})$ (exercise :exref:`ex_linear-regression-counting-apples`) |
+The maximum-likelihood connection adds a principled recipe for designing loss functions whenever Gaussian noise is *not* the right model of reality (:numref:`fig_linreg-loss-menu`):
+
+| Output type | Noise model | Loss (negative log-likelihood) | Statistic predicted |
+|:--|:--|:--|:--|
+| real-valued, well-behaved noise | Gaussian | squared error (this section) | mean of $y$ |
+| real-valued, outliers or heavy tails | Laplace | absolute error (exercise :exref:`ex_linear-regression-laplace-noise`) | median of $y$ |
+| positive, multiplicative fluctuations (prices) | Gaussian on $\log y$ | squared error on $\log y$ (exercise :exref:`ex_linear-regression-beyond-gaussian-noise`) | mean of $\log y$ |
+| counts (sales, arrivals) | Poisson | $\nu(\mathbf{x}) - y \log \nu(\mathbf{x})$ (exercise :exref:`ex_linear-regression-counting-apples`) | mean of $y$ |
 
 - **Heavy-tailed outliers (Laplace noise $\rightarrow$ $\ell_1$ loss):** If occasional corrupted measurements produce wild outliers, the quadratic growth of $(\hat{y} - y)^2$ lets a single bad data point yank the fitted line toward itself. Modeling the noise with heavier exponential tails—the Laplace distribution $p(\epsilon) = \frac{1}{2\tau}\exp(-|\epsilon|/\tau)$—turns the negative log-likelihood into the *absolute error* ($\ell_1$) loss $|\hat{y} - y|$ (Exercise :exref:`ex_linear-regression-laplace-noise`), whose gradient has constant magnitude $\pm 1$ no matter how far an outlier sits.
 - **Combining smooth optima with outlier robustness (Huber loss):** Because $|\hat{y} - y|$ has a sharp corner at zero where its derivative jumps between $-1$ and $+1$, practitioners often use the *Huber loss*, which splices a quadratic bowl for small residuals ($|\hat{y} - y| \leq \delta$) onto linear slopes for large residuals ($|\hat{y} - y| > \delta$).
@@ -386,7 +391,7 @@ To connect linear regression to the deep architectures of later chapters, we can
 ![Linear regression is a single-layer neural network (a single artificial neuron).](../img/singleneuron.svg)
 :label:`fig_single_neuron`
 
-By convention, we count only layers that hold tunable parameters, so linear regression is a *one-layer* network. Because every input feature connects to the output node, this layer is called a *fully connected layer* (or *dense layer*). Biologists have long observed that individual neurons in the cortex integrate weighted signals from thousands of incoming dendrites—an analogy that inspired early pioneers like McCulloch and Pitts :cite:`McCulloch.Pitts.1943`—though our focus throughout this book is firmly on the mathematics and engineering of composing such layers into deep networks.
+By convention, we count only layers that hold tunable parameters, so linear regression is a *one-layer* network. Because every input feature connects to the output node, this layer is called a *fully connected layer* (or *dense layer*). Biologists have long observed that individual neurons in the cortex integrate weighted signals from thousands of synapses on their dendrites—an analogy that inspired early pioneers like McCulloch and Pitts :cite:`McCulloch.Pitts.1943`—though our focus throughout this book is firmly on the mathematics and engineering of composing such layers into deep networks.
 
 ## Summary
 

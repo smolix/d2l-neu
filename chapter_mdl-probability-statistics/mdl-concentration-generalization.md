@@ -961,8 +961,12 @@ whose norm is close to $\sqrt d$. Both the prior mean (norm $0$) and the
 midpoint of the straight chord connecting two independent codes (norm close to
 $\sqrt{d/2}$) lie deep in the empty interior where the decoder was never
 trained. For this reason, practitioners typically interpolate between latent
-codes along a spherical arc rather than a straight line (Exercise
+codes along a spherical arc rather than a straight line, as
+:numref:`fig_mdl-conc-slerp-vs-lerp` illustrates (Exercise
 :exref:`ex_mdl-concentration-generalization-latent-interpolation`).
+
+![Two ways to interpolate between latent codes $\mathbf{z}_1,\mathbf{z}_2\sim\mathcal{N}(\mathbf{0},\mathbf{I}_d)$. (a) Both codes lie in the thin shell of radius $\sqrt d$ (shaded) and are nearly orthogonal. The straight chord (lerp) cuts through the interior, and its midpoint has norm about $\sqrt{d/2}$; the spherical arc (slerp) stays in the shell. (b) The norm along each path, divided by $\sqrt d$, for one random pair at $d=512$.](../img/mdl-prob-conc-slerp-vs-lerp.svg)
+:label:`fig_mdl-conc-slerp-vs-lerp`
 
 One crucial limitation remains. Every bound in this section protects a single
 quantity fixed *before* the data are drawn. A learning algorithm, by contrast,
@@ -1369,7 +1373,7 @@ $$\|\mathbf{x}\| = \sqrt{\|\mathbf{x}\|^2} \approx \sqrt{d} + \frac{\|\mathbf{x}
 $$P\bigl(\lvert\cos(\mathbf{x}, \mathbf{u})\rvert \ge \varepsilon\bigr) \le 2e^{-d\varepsilon^2 / 2}, \qquad \mathbb{E}\bigl[\lvert\cos(\mathbf{x}, \mathbf{y})\rvert\bigr] \approx \sqrt{\frac{2}{\pi d}}$$
 
 - **Unequal-range Hoeffding:** For unit $\mathbf{u}$ and random signs $\mathbf{x} \in \{\pm 1\}^d$, $Y_i = u_i x_i \in [-|u_i|, |u_i|]$ has $\sum (2|u_i|)^2 = 4$, keeping $\langle\mathbf{x}, \mathbf{u}\rangle = O(1)$ while $\|\mathbf{x}\| = \sqrt{d}$.
-- **Embedding baseline ($d = 784$):** Random vectors have $\mathrm{sd}(\cos) = 1/\sqrt{784} = 0.036$ ($89.9^\circ \pm 2.0^\circ$), so $\cos = 0.30$ is an $>8\sigma$ signal!
+- **Embedding baseline ($d = 784$):** Random vectors have $\mathrm{sd}(\cos) = 1/\sqrt{784} = 0.036$ ($90^\circ \pm 2.1^\circ$), so $\cos = 0.30$ is an $>8\sigma$ signal!
 :::
 
 ::: {.col .fig}

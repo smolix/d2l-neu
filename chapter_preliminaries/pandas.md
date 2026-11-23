@@ -129,11 +129,14 @@ Missing values are the "bed bugs" of data science---a persistent nuisance that y
 inputs.isna().sum()
 ```
 
-Practitioners handle missing values using three main strategies, each carrying a distinct statistical trade-off:
+Practitioners handle missing values using three main strategies, each carrying a distinct statistical trade-off (:numref:`fig_pandas_missing`):
 
 * **Deletion** simply discards every row (or column) containing a missing value. While effortless to implement, deletion throws away valuable data---and whenever values are not missing completely at random (for instance, if owners of studio apartments disproportionately omit the room count), deleting incomplete rows biases the surviving sample.
 * **Imputation** replaces each `NaN` with an estimated value, such as the column mean or median. Imputation preserves every row in the dataset, though the substituted values are only approximations and artificially reduce the apparent variance of the column.
 * **Missingness indicators** augment imputation with an extra binary ($0/1$) column recording *whether* each entry was originally missing. This allows the model to learn whether the very fact that a value went unrecorded carries predictive signal (for example, if missing room counts occur predominantly on luxury estates). The trade-off is adding an extra feature column for every imputed variable.
+
+![Three treatments of a missing room count, on the first four rows of `NumRooms`. Deletion drops the row. Imputation fills in the mean of the seven observed counts, $23/7 \approx 3.29$. A missingness indicator fills in the same mean and adds a column that records where the gap was.](../img/pandas-missing.svg)
+:label:`fig_pandas_missing`
 
 To see why row deletion is untenable on our ten-home table, let us check how many rows survive `inputs.dropna()`:
 
@@ -186,9 +189,15 @@ inputs[numerical] = (inputs[numerical] - mu) / sigma
 inputs
 ```
 
-Look at row $6$, the largest home in the table ($5$ rooms and $2{,}600$ square feet): its standardized values are $1.89$ for `NumRooms` and $1.70$ for `Area`, immediately revealing that the house lies roughly $1.7$ to $1.9$ standard deviations above average on both dimensions. Meanwhile, the three imputed room counts in rows $1$, $4$, and $8$ have become $0.000000$, because mean imputation placed them at the exact column mean $\mu$. Notice, however, a subtle side effect of mean imputation: inserting three artificial observations at $\mu$ contributed zero squared deviation to the numerator of $\sigma$ while increasing the sample count $n$ from $7$ to $10$, shrinking the standard deviation of `NumRooms` from $1.11$ (across the $7$ observed homes) to $0.91$ (across all $10$ rows) and thereby inflating the standardized $z$-scores of the non-missing rooms (from $1.54$ to $1.89$ for the 5-room house).
+Look at row $6$, the largest home in the table ($5$ rooms and $2{,}600$ square feet): its standardized values are $1.89$ for `NumRooms` and $1.70$ for `Area`, immediately revealing that the house lies roughly $1.7$ to $1.9$ standard deviations above average on both dimensions. Meanwhile, the three imputed room counts in rows $1$, $4$, and $8$ have become $0.000000$, because mean imputation placed them at the exact column mean $\mu$. Notice, however, a subtle side effect of mean imputation (:numref:`fig_pandas_imputation_spread`): inserting three artificial observations at $\mu$ contributed zero squared deviation to the numerator of $\sigma$ while increasing the sample count $n$ from $7$ to $10$, shrinking the standard deviation of `NumRooms` from $1.11$ (across the $7$ observed homes) to $0.91$ (across all $10$ rows) and thereby inflating the standardized $z$-scores of the non-missing rooms (from $1.54$ to $1.89$ for the 5-room house).
 
-Before moving on, we must highlight one critical methodological rule. In our ten-row illustration above, we computed the imputation means and the standardization parameters ($\mu$ and $\sigma$) across the entire table at once. In any real machine learning workflow where the dataset is split into a *training set* and a *test set*, **all preprocessing statistics---imputation means, medians, category vocabularies, and standardization $\mu$ and $\sigma$---must be computed exclusively on the training set**, and then applied unchanged to transform the test set. Computing preprocessing statistics across the combined dataset allows information from the held-out test set to *leak* into the training pipeline (a pitfall known as *data leakage*), which can lead to overly optimistic test scores. We enforce this training-only rule rigorously when we tackle a full real-estate benchmark in :numref:`sec_kaggle_house`, and you will quantify the effect of leakage first-hand in Exercise 4.
+![The room counts before and after mean imputation. The three imputed counts (orange) all land on the mean $\mu$ of the seven observed ones, so the column is less spread out than the data it came from: its standard deviation falls from $1.11$ to $0.91$.](../img/pandas-imputation-spread.svg)
+:label:`fig_pandas_imputation_spread`
+
+Before moving on, we must highlight one critical methodological rule. In our ten-row illustration above, we computed the imputation means and the standardization parameters ($\mu$ and $\sigma$) across the entire table at once. In any real machine learning workflow where the dataset is split into a *training set* and a *test set*, **all preprocessing statistics---imputation means, medians, category vocabularies, and standardization $\mu$ and $\sigma$---must be computed exclusively on the training set**, and then applied unchanged to transform the test set (:numref:`fig_pandas_leakage`). Computing preprocessing statistics across the combined dataset allows information from the held-out test set to *leak* into the training pipeline (a pitfall known as *data leakage*), which can lead to overly optimistic test scores. We enforce this training-only rule rigorously when we tackle a full real-estate benchmark in :numref:`sec_kaggle_house`, and you will quantify the effect of leakage first-hand in Exercise 4.
+
+![The order of fitting and splitting. (a) Statistics fitted on all rows have already seen the test set, so the test score comes out too optimistic. (b) Statistics fitted on the training split alone are applied unchanged to both splits, and the test set stays unseen.](../img/pandas-leakage-split.svg)
+:label:`fig_pandas_leakage`
 
 ### Conversion to Tensors
 

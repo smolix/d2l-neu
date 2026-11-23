@@ -89,8 +89,19 @@
         }
       ]
     },
+    "mdl-matrix-calculus-autodiff-the-tape-2": {
+      "code_fingerprint": "sha256:63bafc3d63a9ab4025612af4a606b5d3be17fc774a8990f966d43547b38f6ec0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "one where   : loss = 0.6931, grad = [0.5 nan]\ndouble where: loss = 0.6931, grad = [0.5 0. ]\n"
+        }
+      ]
+    },
     "mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured": {
-      "code_fingerprint": "sha256:cc4ca6418ebc865a6cc1a4c7065f7a42496498e91106e727b5fa9e531c44cf54",
+      "code_fingerprint": "sha256:747006ed63cec3a31dd531fbffd05ec75391afc4f8559968bd12ece3e06740d8",
       "kind": "text",
       "outputs": [
         {
@@ -101,7 +112,7 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products": {
-      "code_fingerprint": "sha256:0f375192f0a3d0ea36026e192dca34d7da028e9b78ec7bc8c5719e5bb9cbbfbd",
+      "code_fingerprint": "sha256:f38840f7d84fb71440264b9e9015983b8e5c355ac94a22901e311e5cbe8ee9e1",
       "kind": "text",
       "outputs": [
         {
@@ -112,7 +123,7 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up": {
-      "code_fingerprint": "sha256:f8b8ccc1d894f40cbf14d6538e8b25e0cccba7def95c579dec82ce11b83e0ed5",
+      "code_fingerprint": "sha256:3790842696da0f716221e7b1eb55ed4482033c3c051b264a75c4b5004a001cc9",
       "kind": "text",
       "outputs": [
         {
@@ -123,7 +134,7 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-differentiating-through-equations": {
-      "code_fingerprint": "sha256:4dc0196ebd3fd10191fe450fbf3e26ef1cb6803ccce259ff39bb762bddec3554",
+      "code_fingerprint": "sha256:2cc6d609aa3522e7c0ae7d2874fdbcbd5d88e0e083c2e48ffe7341dd483bd2cb",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +145,7 @@
       ]
     },
     "mdl-matrix-calculus-autodiff-implicit-differentiation-1": {
-      "code_fingerprint": "sha256:a6da7dab5a9422dc124948f785fcb523119eb875bfaeedc5f39d7904e263d689",
+      "code_fingerprint": "sha256:7b7ddddf3d509b70f692ca4cc312f6a8108ca03f2c31f8be37a0b3724204720e",
       "kind": "text",
       "outputs": [
         {

@@ -237,9 +237,12 @@ layers, which are strictly shift-equivariant only away from the image borders
 interior pixel participates in all nine windows of a $3 \times 3$ kernel whereas
 a border pixel participates in only six (and a corner pixel in four), so while a
 global maximum over an isolated response stays constant across columns, a global
-average drops when a feature moves onto the padded border. Convolutional stacks
-ending in global pooling are therefore strictly invariant to shifts that keep
-salient content away from the boundaries, and approximately invariant otherwise.
+average drops when a feature moves onto the padded border. Stride-1
+convolutional stacks ending in global pooling are therefore strictly invariant
+to shifts that keep salient content away from the boundaries, and approximately
+invariant otherwise. Strided layers weaken this guarantee: because of the
+aliasing we met above, the invariance is then exact only for shifts by a
+multiple of the product of the strides.
 
 In the modern architectures of :numref:`chap_modern_cnn`, the two roles of
 pooling are frequently separated. Intermediate spatial downsampling is often
@@ -281,6 +284,11 @@ the windows tile the input without overlap. On our $4\times4$ input, a
 $3\times3$ window with stride 3 fits only once, returning the maximum of the
 upper-left $3\times3$ block (10). Since pooling has no learnable weights, the
 layer requires no parameter initialization.
+
+:begin_tab:`jax`
+The function `nnx.max_pool`, however, defaults to stride 1, so we pass
+`strides` explicitly.
+:end_tab:
 
 ```{.python .input #pooling-padding-and-stride-2}
 %%tab mxnet
@@ -425,9 +433,11 @@ halves spatial resolution along each axis and absorbs small shifts that stay
 within a block, while still jumping when a response crosses a block boundary.
 Max-pooling preserves the peak activation in a neighborhood, whereas average
 pooling dilutes isolated peaks across the window. Finally, global pooling
-collapses each entire feature map to a single scalar, yielding full
-translation invariance for interior patterns (and approximate invariance near
-padded borders).
+collapses each entire feature map to a single scalar. On top of stride-1
+layers this yields full translation invariance for interior patterns (and
+approximate invariance near padded borders); with strided layers the
+invariance is exact only for shifts by a multiple of the product of the
+strides.
 
 ## Exercises
 

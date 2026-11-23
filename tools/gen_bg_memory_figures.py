@@ -350,8 +350,60 @@ def fig_async_queue():
     fl.save(fig, "bg-async-queue")
 
 
+# =========================================================================== #
+# 5. Memory across the first training step of the 3 x 4096 MLP.               #
+# =========================================================================== #
+
+def fig_step_memory():
+    """Stacked bars of the memory a first training step holds after each of
+    its four stages, for the three-hidden-layer, width-4096 MLP of the
+    section at minibatch size 4096 (N ~ 3.8e7 parameters, 4N = 144 MiB),
+    excluding the input batch: weights; weights + the three stored 64 MiB
+    activations at the end of the forward pass; weights + gradients once
+    backward has freed the activations; and weights + gradients + Adam's two
+    moments after the first optimizer step (the static 16N)."""
+    parts = [  # (name, MiB, color, alpha)
+        ("weights", 144, BLUE, 0.55),
+        ("activations", 192, ORANGE, 0.55),
+        ("gradients", 144, GREEN, 0.55),
+        ("Adam moments", 288, GRAY, 0.40),
+    ]
+    stages = [  # (label, which parts are live)
+        ("after\ninitialization", ["weights"]),
+        ("after\nforward", ["weights", "activations"]),
+        ("after\nbackward", ["weights", "gradients"]),
+        ("after\noptimizer step", ["weights", "gradients", "Adam moments"]),
+    ]
+    info = {n: (v, c, a) for n, v, c, a in parts}
+    fig, ax = plt.subplots(figsize=(8.6, 4.4))
+    bw = 0.66
+    for i, (label, live) in enumerate(stages):
+        bottom = 0
+        for name in live:
+            v, c, a = info[name]
+            ax.bar(i, v, bw, bottom=bottom, color=c, alpha=a, edgecolor=c,
+                   lw=1.2)
+            ax.text(i, bottom + v / 2, name, ha="center", va="center",
+                    fontsize=12, color="black")
+            bottom += v
+        ax.text(i, bottom + 12, f"{bottom} MiB", ha="center", va="bottom",
+                fontsize=13, color="black")
+    ax.set_xticks(range(len(stages)))
+    ax.set_xticklabels([s for s, _ in stages], fontsize=13)
+    ax.set_ylabel("memory (MiB)", fontsize=13)
+    ax.set_ylim(0, 660)
+    ax.set_xlim(-0.55, len(stages) - 0.45)
+    ax.tick_params(axis="y", labelsize=12)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("black")
+    ax.tick_params(colors="black")
+    fl.save(fig, "bg-step-memory")
+
+
 FIGURES = [fig_copyto, fig_allocator, fig_activation_checkpoint,
-           fig_async_queue]
+           fig_async_queue, fig_step_memory]
 
 
 def main():

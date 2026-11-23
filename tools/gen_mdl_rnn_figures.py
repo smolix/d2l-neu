@@ -156,6 +156,70 @@ def fig_ar_vs_latent():
     fl.save(fig, "mdl-rnn-ar-vs-latent")
 
 
+def fig_lag_matrix():
+    """The lag-feature matrix and labels that ``lag_features`` builds for the
+    noisy sine wave (T = 1000, m = 4).  Row r (1-based) holds the features
+    (x_r, ..., x_{r+3}) and the label x_{r+4}; there are T - m = 996 rows.
+    ``get_dataloader`` trains on rows 1..600 and validates on rows 601..996.
+    Indices follow the code: features[i] = x[i : T-m+i], labels = x[m:]."""
+    T, m, n_train = 1000, 4, 600
+    rows = [1, 2, None, n_train, n_train + 1, None, T - m]   # None = ellipsis
+    cw, ch, gap_lbl = 1.12, 0.56, 0.45        # cell width/height, label gap
+    x_lbl = m * cw + gap_lbl                  # left edge of the label column
+    split_gap = 0.38                          # extra space at the train/val cut
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.3))
+    y, ys = 0.0, []
+    for k, r in enumerate(rows):
+        if k == rows.index(n_train + 1):
+            y -= split_gap
+        ys.append(y)
+        y -= ch if r is not None else 0.62 * ch
+
+    for r, yc in zip(rows, ys):
+        if r is None:                          # vertical ellipsis row
+            for cx in [cw * (j + 0.5) for j in range(m)] + [x_lbl + cw / 2]:
+                ax.text(cx, yc - 0.31 * ch, r"$\vdots$", ha="center",
+                        va="center", fontsize=14, color="black")
+            continue
+        for j in range(m):                     # features x_r ... x_{r+3}
+            ax.add_patch(plt.Rectangle((j * cw, yc - ch), cw, ch,
+                                       facecolor=fl.T.BLUE.tint,
+                                       edgecolor=BLUE, lw=1.2))
+            ax.text((j + 0.5) * cw, yc - ch / 2, rf"$x_{{{r + j}}}$",
+                    ha="center", va="center", fontsize=14, color="black")
+        ax.add_patch(plt.Rectangle((x_lbl, yc - ch), cw, ch,
+                                   facecolor=fl.T.ORANGE.tint,
+                                   edgecolor=ORANGE, lw=1.2))
+        ax.text(x_lbl + cw / 2, yc - ch / 2, rf"$x_{{{r + m}}}$",
+                ha="center", va="center", fontsize=14, color="black")
+        ax.text(-0.2, yc - ch / 2, f"row {r}", ha="right", va="center",
+                fontsize=13, color="black")
+
+    # column headers
+    ax.text(m * cw / 2, 0.2, r"features $(x_{t-4}, \ldots, x_{t-1})$",
+            ha="center", va="bottom", fontsize=14, color="black")
+    ax.text(x_lbl + cw / 2, 0.2, r"label $x_t$", ha="center", va="bottom",
+            fontsize=14, color="black")
+
+    # brackets on the right: the training rows and the validation rows
+    i_split = rows.index(n_train + 1)
+    x_br = x_lbl + cw + 0.3
+    for top, bot, text in [(ys[0], ys[i_split - 1] - ch,
+                            f"training\nrows 1–{n_train}"),
+                           (ys[i_split], ys[-1] - ch,
+                            f"validation\nrows {n_train + 1}–{T - m}")]:
+        ax.plot([x_br - 0.1, x_br, x_br, x_br - 0.1],
+                [top - 0.04, top - 0.04, bot + 0.04, bot + 0.04],
+                color="black", lw=1.2)
+        ax.text(x_br + 0.2, (top + bot) / 2, text, ha="left", va="center",
+                fontsize=13, color="black", linespacing=1.2)
+
+    fl.clean_axes(ax, lim=((-1.25, x_br + 2.05), (ys[-1] - ch - 0.1, 0.72)),
+                  hide=True)
+    fl.save(fig, "mdl-rnn-lag-matrix")
+
+
 # =========================================================================== #
 # "From Text to Tokens": granularity spectrum, BPE merge tree, and the        #
 # pre-tokenization pipeline.                                                  #
@@ -574,6 +638,47 @@ def fig_lm_shift():
     fl.save(fig, "mdl-rnn-lm-shift")
 
 
+def fig_grad_clipping():
+    """Gradient clipping, eq_grad_clipping, as a projection onto the ball of
+    radius theta.  A long gradient g (dashed) is rescaled to (theta/|g|) g,
+    which keeps its direction and ends on the sphere; a short gradient g'
+    inside the ball passes unchanged.  Exact geometry: theta = 1, |g| = 2.6."""
+    RED, RED_D = fl.T.RED.base, fl.T.RED.dark
+    theta = 1.0
+    u = np.array([np.cos(np.radians(28)), np.sin(np.radians(28))])
+    g = 2.6 * u
+    g_clip = min(1.0, theta / np.linalg.norm(g)) * g
+    v = 0.62 * np.array([np.cos(np.radians(205)), np.sin(np.radians(205))])
+
+    fig, ax = plt.subplots(figsize=(5.6, 3.4))
+    ax.add_patch(plt.Circle((0, 0), theta, facecolor=fl.T.SLATE.tint,
+                            edgecolor=GRAY, lw=1.5, ls="--", zorder=1))
+    # the radius theta, along a free direction
+    r_dir = np.array([np.cos(np.radians(-62)), np.sin(np.radians(-62))])
+    ax.plot([0, r_dir[0]], [0, r_dir[1]], color=GRAY, lw=1.2, zorder=2)
+    ax.text(0.5 * r_dir[0] + 0.13, 0.5 * r_dir[1] + 0.02, r"$\theta$",
+            ha="left", va="center", fontsize=16, color="black")
+
+    # the unclipped gradient: dashed, from the sphere outward
+    fl.arrow(ax, tuple(g_clip + 0.06 * u), tuple(g), color=RED, lw=1.8,
+             ls="--", mut=15)
+    ax.text(g[0] + 0.1, g[1] + 0.02, r"$\mathbf{g}$", ha="left", va="center",
+            fontsize=16, color=RED_D)
+    # the clipped gradient: same direction, length theta
+    fl.arrow(ax, (0, 0), tuple(g_clip), color=RED, lw=3.2, mut=18)
+    ax.text(g_clip[0] + 0.16, g_clip[1] - 0.12,
+            r"$\frac{\theta}{\|\mathbf{g}\|}\,\mathbf{g}$", ha="left",
+            va="top", fontsize=16, color=RED_D)
+    # a short gradient inside the ball is left alone
+    fl.arrow(ax, (0, 0), tuple(v), color=RED, lw=2.4, mut=15)
+    ax.text(v[0] + 0.02, v[1] + 0.12, r"$\mathbf{g}'$", ha="center",
+            va="bottom", fontsize=16, color=RED_D)
+    ax.plot([0], [0], "o", color="black", ms=4, zorder=5)
+
+    fl.clean_axes(ax, lim=((-1.1, 3.0), (-1.1, 1.45)), hide=True)
+    fl.save(fig, "mdl-rnn-grad-clipping")
+
+
 # =========================================================================== #
 # "Backpropagation Through Time" (sec_bptt): the unrolled linear RNN with its  #
 # forward and backward passes, and full BPTT vs. regular truncation, where the #
@@ -768,6 +873,71 @@ def fig_rnn_bptt():
 # search.md``; the task map is new.                                          #
 # =========================================================================== #
 
+def fig_greedy_myopia():
+    """The myopia example of the greedy-decoding paragraph: P(A) = 0.5,
+    P(B) = 0.4; the best continuation after A has probability 0.3, after B
+    0.9.  Greedy commits to A (blue, heavy) and ends at 0.5 * 0.3 = 0.15; the
+    branch it discards (green, dashed) leads to 0.4 * 0.9 = 0.36.  Node style
+    follows the beam-search tree: filled = chosen, open = not chosen."""
+    G_D = fl.T.GREEN.dark
+    x_root, x1, x2 = 0.0, 2.3, 4.6
+    ya, yb = 0.78, -0.78
+    r = 0.26
+
+    fig, ax = plt.subplots(figsize=(6.6, 2.9))
+
+    def node(x, y, text, color, filled):
+        ax.add_patch(plt.Circle((x, y), r, facecolor=color if filled else "white",
+                                edgecolor=color, lw=1.8, zorder=3))
+        ax.text(x, y, f"${text}$", ha="center", va="center", fontsize=14,
+                color="white" if filled else "black", zorder=4)
+
+    def edge(p, q, color, heavy, r0, prob, above):
+        (x0, y0), (x1_, y1_) = p, q
+        d = np.hypot(x1_ - x0, y1_ - y0)
+        ux, uy = (x1_ - x0) / d, (y1_ - y0) / d
+        ax.plot([x0 + ux * r0, x1_ - ux * (r + 0.03)],
+                [y0 + uy * r0, y1_ - uy * (r + 0.03)], color=color,
+                lw=3.0 if heavy else 1.8, ls="-" if heavy else "--", zorder=2)
+        xm, ym = (x0 + x1_) / 2, (y0 + y1_) / 2
+        ax.text(xm, ym + (0.16 if above else -0.16), f"${prob}$",
+                ha="center", va="bottom" if above else "top", fontsize=14,
+                color="black", zorder=4)
+
+    # root: the prefix (same box as in the beam-search tree)
+    ax.add_patch(FancyBboxPatch(
+        (x_root - 0.62, -0.30), 1.24, 0.60,
+        boxstyle="round,pad=0.02,rounding_size=0.12",
+        facecolor=GRAY, alpha=0.15, edgecolor="none", zorder=3))
+    ax.text(x_root, 0.0, "prefix", ha="center", va="center", fontsize=14,
+            color="black", zorder=4)
+    root = (x_root + 0.64, 0.0)
+
+    edge(root, (x1, ya), BLUE, True, 0.0, "0.5", True)
+    edge(root, (x1, yb), GREEN, False, 0.0, "0.4", False)
+    edge((x1, ya), (x2, ya), BLUE, True, r + 0.03, "0.3", True)
+    edge((x1, yb), (x2, yb), GREEN, False, r + 0.03, "0.9", True)
+    node(x1, ya, "A", BLUE, True)
+    node(x2, ya, "C", BLUE, True)
+    node(x1, yb, "B", GREEN, False)
+    node(x2, yb, "D", GREEN, False)
+
+    # joint probabilities at the leaves
+    ax.text(x2 + r + 0.25, ya, r"greedy: $0.5 \times 0.3 = 0.15$", ha="left",
+            va="center", fontsize=14, color=fl.T.BLUE.dark)
+    ax.text(x2 + r + 0.25, yb, r"missed: $0.4 \times 0.9 = 0.36$",
+            ha="left", va="center", fontsize=14, color=G_D)
+
+    # column headers name the generation steps
+    for x, lab in [(x1, "$t = 1$"), (x2, "$t = 2$")]:
+        ax.text(x, ya + 0.72, lab, ha="center", va="center", fontsize=14,
+                color="black")
+
+    fl.clean_axes(ax, lim=((x_root - 0.72, x2 + 3.75), (yb - 0.36, ya + 0.95)),
+                  hide=True)
+    fl.save(fig, "mdl-rnn-greedy-myopia")
+
+
 def fig_beam_tree():
     """Beam search with beam size 2 over the vocabulary {A, B, C, D, E}.
 
@@ -949,14 +1119,17 @@ def fig_decoding_taskmap():
 
 FIGURES = [
     fig_ar_vs_latent,
+    fig_lag_matrix,
     fig_rnn_granularity_spectrum,
     fig_rnn_merge_tree,
     fig_rnn_pretokenization_pipeline,
     fig_partitioning,
     fig_unfolded,
     fig_lm_shift,
+    fig_grad_clipping,
     fig_truncated_bptt,
     fig_rnn_bptt,
+    fig_greedy_myopia,
     fig_beam_tree,
     fig_decoding_taskmap,
 ]

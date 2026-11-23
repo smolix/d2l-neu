@@ -122,9 +122,10 @@ from. Overall, the file grew by $\log_2 1/p(x \mid z) + \log_2 1/p(z)$ bits
 and shrank by $\log_2 1/q(z \mid x)$ bits, so its expected net growth under
 $q$ is the negative ELBO. Because the receiver must undo the sender's
 operations in last-in, first-out order, the underlying coder has to behave
-like a stack. Traditional arithmetic coding, on which
-:citet:`Frey.Hinton.1997` originally proposed the idea, behaves like a queue
-instead. Asymmetric numeral systems :cite:`Duda.2013` are naturally
+like a stack. The bits-back argument itself goes back to
+:citet:`Wallace.1990` and :citet:`Hinton.Van-Camp.1993`, and
+:citet:`Frey.Hinton.1997` built the first working coder from it on top of
+traditional arithmetic coding, which behaves like a queue instead. Asymmetric numeral systems :cite:`Duda.2013` are naturally
 stack-based, and using them :citet:`Townsend.Bird.Barber.2019` demonstrated
 compressing MNIST with a small variational autoencoder at rates right near its
 negative ELBO.

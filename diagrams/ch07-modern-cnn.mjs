@@ -1,5 +1,6 @@
 // Slide diagrams for chapter_convolutional-modern (Chapter 7: Modern CNNs)
 import { C, TOKENS, FS, FM, grid, tx, baselineY, arrow, block, chip, rc, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -103,12 +104,12 @@ function decadeEvolutionArc() {
   const W = 540, H = 272;
   let o = '';
   const stages = [
-    { x: 16,  y: 18, t: '§7.1 AlexNet (2012)', s1: 'ReLU, Dropout, GPUs', s2: '15.3% top-5 error', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 194, y: 18, t: '§7.2 VGG/NiN/GoogLeNet', s1: '3×3 Blocks, 1×1, GAP', s2: 'Stem–Body–Head', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 372, y: 18, t: '§7.3 Norm Layers', s1: 'BatchNorm, LayerNorm', s2: 'GroupNorm, 300× LR', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 372, y: 152, t: '§7.4 ResNet / ResNeXt', s1: 'Skip x + g(x), Groups', s2: '152+ layers, DenseNet', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 194, y: 152, t: '§§7.5–7.6 Mobile & Recipes', s1: 'Depthwise, RepVGG, SE', s2: 'AdamW, Mixup, EMA', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 16,  y: 152, t: '§§7.7–7.8 ConvNeXt/RegNet', s1: '7×7 DW, 1 GELU/LN', s2: 'Design-space CDFs', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 18, t: `${sec('sec_alexnet')} AlexNet (2012)`, s1: 'ReLU, Dropout, GPUs', s2: '15.3% top-5 error', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 194, y: 18, t: `${sec('sec_blocks')} VGG/NiN/GoogLeNet`, s1: '3×3 Blocks, 1×1, GAP', s2: 'Stem–Body–Head', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 372, y: 18, t: `${sec('sec_batch_norm')} Norm Layers`, s1: 'BatchNorm, LayerNorm', s2: 'GroupNorm, 300× LR', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 372, y: 152, t: `${sec('sec_resnet')} ResNet / ResNeXt`, s1: 'Skip x + g(x), Groups', s2: '152+ layers, DenseNet', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 194, y: 152, t: `§§${num('sec_efficient_cnns')}–${num('sec_training_recipes')} Mobile & Recipes`, s1: 'Depthwise, RepVGG, SE', s2: 'AdamW, Mixup, EMA', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 16,  y: 152, t: `§§${num('sec_convnext')}–${num('sec_cnn-design')} ConvNeXt/RegNet`, s1: '7×7 DW, 1 GELU/LN', s2: 'Design-space CDFs', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   const bw = 152, bh = 98;
   o += arrow(16 + bw + 4, 67, 194 - 4, 67, C.blue);
@@ -149,12 +150,12 @@ function paretoScoreboard() {
   const W = 540, H = 268;
   let o = '';
   const rows = [
-    { m: 'AlexNet (§7.1)', p: '46.8M params', c: '938M MACs', a: '91% (10 ep)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { m: 'Quarter-VGG (§7.2)', p: '43.1M params', c: '512M MACs', a: '93% (10 ep)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { m: 'GoogLeNet (§7.2)', p: '6.0M params', c: '276M MACs', a: '91% (10 ep)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { m: 'ResNet-18 (§§7.4, 7.6)', p: '11.2M params', c: '319M MACs', a: '93–94%', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { m: 'ConvNeXt-Atto (§7.7)', p: '3.38M params', c: '46M MACs', a: '94% (ResNet stem)', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { m: 'RegNetX32 (§7.8)', p: '0.52M params!', c: '112M MACs', a: '94% (<5% weights!)', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { m: `AlexNet (${sec('sec_alexnet')})`, p: '46.8M params', c: '938M MACs', a: '91% (10 ep)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { m: `Quarter-VGG (${sec('sec_blocks')})`, p: '43.1M params', c: '512M MACs', a: '93% (10 ep)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { m: `GoogLeNet (${sec('sec_blocks')})`, p: '6.0M params', c: '276M MACs', a: '91% (10 ep)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { m: `ResNet-18 (§§${num('sec_resnet')}, ${num('sec_training_recipes')})`, p: '11.2M params', c: '319M MACs', a: '93–94%', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { m: `ConvNeXt-Atto (${sec('sec_convnext')})`, p: '3.38M params', c: '46M MACs', a: '94% (ResNet stem)', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { m: `RegNetX32 (${sec('sec_cnn-design')})`, p: '0.52M params!', c: '112M MACs', a: '94% (<5% weights!)', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   rows.forEach((r, i) => {
     const y = 12 + i * 41;
@@ -802,9 +803,9 @@ function skipTopologyComparison() {
   const W = 540, H = 260;
   let o = '';
   const tops = [
-    { x: 16,  t: 'ResNet (§7.4)', eq: 'x_k = x + g_k(x)', w: 'Constant width c', mem: 'O(n · c) activation RAM', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 194, t: 'ResNeXt (§7.4)', eq: 'x_k = x + Σ G_i(x)', w: '2cb + 9b²/g weights', mem: '2× wider b at same cost', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 372, t: 'DenseNet (§7.4)', eq: 'x_k = [x, f_k(x)]', w: 'Width c + k·r (growth r)', mem: 'O(n² · r) concat RAM', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  t: `ResNet (${sec('sec_resnet')})`, eq: 'x_k = x + g_k(x)', w: 'Constant width c', mem: 'O(n · c) activation RAM', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 194, t: `ResNeXt (${sec('sec_resnet')})`, eq: 'x_k = x + Σ G_i(x)', w: '2cb + 9b²/g weights', mem: '2× wider b at same cost', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 372, t: `DenseNet (${sec('sec_resnet')})`, eq: 'x_k = [x, f_k(x)]', w: 'Width c + k·r (growth r)', mem: 'O(n² · r) concat RAM', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   tops.forEach((t) => {
     o += card(t.x, 18, 152, 224, t.fill, t.st, [

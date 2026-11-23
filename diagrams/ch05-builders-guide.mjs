@@ -4,6 +4,7 @@
 // intersection, and zero viewBox overflow.
 
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -269,10 +270,10 @@ function fiveRowDiagram(rows) {
 
 const fourBottlenecks = () => quadDiagram(
   'purple', 'Four Production Systems Bottlenecks at 8B-Parameter Scale',
-  { theme: 'blue',   lines: ['1. Memory Capacity (§5.2, §5.7)', { t: '16 B/param → 128 GB fp32 Adam', mono: true, fill: D.blue.dark }, 'Exceeds 80 GB GPU before batch 1'] },
-  { theme: 'orange', lines: ['2. Numerical Stability (§5.3, §5.5)', { t: 'Unscaled ResNet: 2³²× variance!', mono: true, fill: D.orange.dark }, '16-bit weights round small Δw to 0'] },
-  { theme: 'red',    lines: ['3. Fault Tolerance & Security (§5.6)', { t: '1 crash / 3 hrs on 16,384 GPUs', mono: true, fill: D.red.dark }, '96 GB atomic ckpt; safetensors vs RCE'] },
-  { theme: 'green',  lines: ['4. Async GPUs & Debugging (§5.7–5.8)', { t: 'Async queues + atomic float adds', mono: true, fill: D.green.dark }, 'Synced timers & non-invasive hooks'] },
+  { theme: 'blue',   lines: [`1. Memory Capacity (${sec('sec_parameters')}, ${sec('sec_use_gpu')})`, { t: '16 B/param → 128 GB fp32 Adam', mono: true, fill: D.blue.dark }, 'Exceeds 80 GB GPU before batch 1'] },
+  { theme: 'orange', lines: [`2. Numerical Stability (${sec('sec_init_param')}, ${sec('sec_numerics')})`, { t: 'Unscaled ResNet: 2³²× variance!', mono: true, fill: D.orange.dark }, '16-bit weights round small Δw to 0'] },
+  { theme: 'red',    lines: [`3. Fault Tolerance & Security (${sec('sec_read_write')})`, { t: '1 crash / 3 hrs on 16,384 GPUs', mono: true, fill: D.red.dark }, '96 GB atomic ckpt; safetensors vs RCE'] },
+  { theme: 'green',  lines: [`4. Async GPUs & Debugging (§§${num('sec_use_gpu')}–${num('sec_repro')})`, { t: 'Async queues + atomic float adds', mono: true, fill: D.green.dark }, 'Synced timers & non-invasive hooks'] },
   'slate', 'Every subsystem in Chapter 5 operates by traversing the recursive Module Tree.'
 );
 
@@ -311,10 +312,10 @@ function systemsRoadmap() {
   const W = 540, H = 262;
   let o = '';
   const top = [
-    { x: 14,  theme: 'blue',   s: '§5.1 Modules',     sub: 'Tree & __setattr__' },
-    { x: 146, theme: 'blue',   s: '§5.2 State & RAM', sub: '16 B/param & tying' },
-    { x: 278, theme: 'orange', s: '§5.3 Init Scale',  sub: '(1+g²)^N & 1/√N' },
-    { x: 410, theme: 'purple', s: '§5.4 Custom Ops',  sub: 'RMSNorm & STE' },
+    { x: 14,  theme: 'blue',   s: `${sec('sec_model_construction')} Modules`,     sub: 'Tree & __setattr__' },
+    { x: 146, theme: 'blue',   s: `${sec('sec_parameters')} State & RAM`, sub: '16 B/param & tying' },
+    { x: 278, theme: 'orange', s: `${sec('sec_init_param')} Init Scale`,  sub: '(1+g²)^N & 1/√N' },
+    { x: 410, theme: 'purple', s: `${sec('sec_custom_layer')} Custom Ops`,  sub: 'RMSNorm & STE' },
   ];
   top.forEach((b, i) => {
     o += card(b.x, 14, 116, 74, b.theme, [{ t: b.s, fs: 13.5, fw: 700 }, { t: b.sub, mono: true, fs: 11.5, fill: C.ink }]);
@@ -322,27 +323,27 @@ function systemsRoadmap() {
   });
   o += arrow(468, 92, 468, 134, C.purple);
   const bot = [
-    { x: 410, theme: 'orange', s: '§5.5 Numerics',    sub: 'bf16 + fp32 master' },
-    { x: 278, theme: 'green',  s: '§5.6 Checkpoints', sub: 'safetensors & 5-part' },
-    { x: 146, theme: 'teal',   s: '§5.7 GPUs & HBM',  sub: 'Async & √K ckpt' },
-    { x: 14,  theme: 'red',    s: '§5.8 Repro/Hooks', sub: 'Seeds & NaN traps' },
+    { x: 410, theme: 'orange', s: `${sec('sec_numerics')} Numerics`,    sub: 'bf16 + fp32 master' },
+    { x: 278, theme: 'green',  s: `${sec('sec_read_write')} Checkpoints`, sub: 'safetensors & 5-part' },
+    { x: 146, theme: 'teal',   s: `${sec('sec_use_gpu')} GPUs & HBM`,  sub: 'Async & √K ckpt' },
+    { x: 14,  theme: 'red',    s: `${sec('sec_repro')} Repro/Hooks`, sub: 'Seeds & NaN traps' },
   ];
   bot.forEach((b, i) => {
     o += card(b.x, 138, 116, 74, b.theme, [{ t: b.s, fs: 13.5, fw: 700 }, { t: b.sub, mono: true, fs: 11.5, fill: C.ink }]);
     if (i < 3) o += arrow(b.x - 2, 175, bot[i + 1].x + 118, 175, C.purple);
   });
   o += card(14, 224, 512, 28, 'slate', [
-    { t: 'Top Row: Model Structure & State (§§5.1–5.4)   →   Bottom Row: Precision, I/O & Hardware (§§5.5–5.8)', fs: 12.5, fw: 600 },
+    { t: `Top Row: Model Structure & State (§§${num('sec_model_construction')}–${num('sec_custom_layer')})   →   Bottom Row: Precision, I/O & Hardware (§§${num('sec_numerics')}–${num('sec_repro')})`, fs: 12.5, fw: 600 },
   ]);
   return svg(W, H, o);
 }
 
 const eightBBenchmarks = () => fiveRowDiagram([
-  { theme: 'blue',   k: '§5.1–5.2 Inventory', v: 'Toy 4-Block MLP: 729,866 params  |  Llama 3 8B: 32×9 + 3 = 291 tensors' },
-  { theme: 'purple', k: '§5.2 Static Floor',  v: 'Toy 2-Block: 0.28 MiB fp32 Adam  |  8B Model: 16 GB bf16 inf / 128 GB Adam' },
-  { theme: 'orange', k: '§5.3 Residual Gain', v: '32 blocks unscaled g=1: 65,536× std  |  Scaled g=1/√N: capped at √e ≈ 1.65×' },
-  { theme: 'green',  k: '§5.6 Checkpoints',   v: '200-step resume: 0.0 bit diff  |  8B disk: 32 GB w + 64 GB m,v = 96 GB' },
-  { theme: 'teal',   k: '§5.7 Act Checkpt',   v: '16 blocks (B=8192): 1.1 → 0.45 GiB  |  Segment s=√K cuts O(K) → O(√K) RAM' },
+  { theme: 'blue',   k: `§§${num('sec_model_construction')}–${num('sec_parameters')} Inventory`, v: 'Toy 4-Block MLP: 729,866 params  |  Llama 3 8B: 32×9 + 3 = 291 tensors' },
+  { theme: 'purple', k: `${sec('sec_parameters')} Static Floor`,  v: 'Toy 2-Block: 0.28 MiB fp32 Adam  |  8B Model: 16 GB bf16 inf / 128 GB Adam' },
+  { theme: 'orange', k: `${sec('sec_init_param')} Residual Gain`, v: '32 blocks unscaled g=1: 65,536× std  |  Scaled g=1/√N: capped at √e ≈ 1.65×' },
+  { theme: 'green',  k: `${sec('sec_read_write')} Checkpoints`,   v: '200-step resume: 0.0 bit diff  |  8B disk: 32 GB w + 64 GB m,v = 96 GB' },
+  { theme: 'teal',   k: `${sec('sec_use_gpu')} Act Checkpt`,   v: '16 blocks (B=8192): 1.1 → 0.45 GiB  |  Segment s=√K cuts O(K) → O(√K) RAM' },
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════

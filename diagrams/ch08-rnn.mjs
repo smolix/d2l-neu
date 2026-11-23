@@ -3,6 +3,7 @@
 // for zero visual defects by tools/build_module_diagrams.mjs.
 
 import { C, TOKENS, grid, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -61,12 +62,12 @@ function roadmap() {
   const xs = [16, 194, 372];
   const ty = 20, by = 156;
   const items = [
-    { x: xs[0], y: ty, s: '§8.1 Sequences', t: 'Autoregression', d: 'Window m vs. state hₜ', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: xs[1], y: ty, s: '§8.2 Text → Tokens', t: 'Byte-Level BPE', d: 'UTF-8 + regex merges', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: xs[2], y: ty, s: '§8.3 Lang Models', t: 'n-Grams & bpb', d: 'Kneser–Ney · PPL · bpb', f: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: xs[2], y: by, s: '§8.4 RNN LMs', t: 'Recurrent Cell', d: 'tanh state · clip θ=1', f: C.lgreen, st: C.green, dk: D.green.dark },
-    { x: xs[1], y: by, s: '§8.5 BPTT', t: 'Time Gradients', d: '(W_hh^T)^k · TBPTT', f: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { x: xs[0], y: by, s: '§8.6 Decoding', t: 'Text Generation', d: 'Beam w · top-p · min-p', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: xs[0], y: ty, s: `${sec('sec_sequence')} Sequences`, t: 'Autoregression', d: 'Window m vs. state hₜ', f: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: xs[1], y: ty, s: `${sec('sec_text-sequence')} Text → Tokens`, t: 'Byte-Level BPE', d: 'UTF-8 + regex merges', f: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: xs[2], y: ty, s: `${sec('sec_language-model')} Lang Models`, t: 'n-Grams & bpb', d: 'Kneser–Ney · PPL · bpb', f: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: xs[2], y: by, s: `${sec('sec_rnn')} RNN LMs`, t: 'Recurrent Cell', d: 'tanh state · clip θ=1', f: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: xs[1], y: by, s: `${sec('sec_bptt')} BPTT`, t: 'Time Gradients', d: '(W_hh^T)^k · TBPTT', f: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: xs[0], y: by, s: `${sec('sec_decoding')} Decoding`, t: 'Text Generation', d: 'Beam w · top-p · min-p', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
   ];
   o += arrow(xs[0] + bw + 3, ty + bh / 2, xs[1] - 3, ty + bh / 2, C.blue);
   o += arrow(xs[1] + bw + 3, ty + bh / 2, xs[2] - 3, ty + bh / 2, C.amber);
@@ -91,12 +92,12 @@ function wellsBenchmarks() {
   o += tx(270, 30, 'The Time Machine Corpus: 178,979 UTF-8 Bytes · 65,741 BPE-1024 Tokens', { fs: 13.5, fw: 700, fill: D.purple.dark });
 
   const cards = [
-    { x: 16,  y: 60, s: '§8.1 Sine Wave AR(4)', m: '0.05 → 0.25 MSE', d: '1-step vs 64-step rollout', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 276, y: 60, s: '§8.2 Pre-Tokenized BPE', m: '2.72 bytes / token', d: '0 OOVs · matches tiktoken', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 16,  y: 132, s: '§8.3 Kneser–Ney 3-Gram', m: '1.90 bpb (BPE-1024 KN)', d: 'Lowercase text · word PPL 2,481 → 300', f: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 276, y: 132, s: '§8.4 Clipped RNNLM', m: '2.12 bpb · 512 B state', d: 'Raw text · KN 3-gram here: 2.09 bpb', f: C.lgreen, st: C.green, dk: D.green.dark },
-    { x: 16,  y: 204, s: '§8.5 BPTT Decay Probe', m: '< 1% norm by lag 8', d: 'ρ=1.80 × tanh\' 0.27 ≈ 0.49', f: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { x: 276, y: 204, s: '§8.6 Truncated Samplers', m: 'distinct-3 ≈ 0.99', d: 'min-p / top-p break loops', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 16,  y: 60, s: `${sec('sec_sequence')} Sine Wave AR(4)`, m: '0.05 → 0.25 MSE', d: '1-step vs 64-step rollout', f: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 276, y: 60, s: `${sec('sec_text-sequence')} Pre-Tokenized BPE`, m: '2.72 bytes / token', d: '0 OOVs · matches tiktoken', f: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 16,  y: 132, s: `${sec('sec_language-model')} Kneser–Ney 3-Gram`, m: '1.90 bpb (BPE-1024 KN)', d: 'Lowercase text · word PPL 2,481 → 300', f: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 276, y: 132, s: `${sec('sec_rnn')} Clipped RNNLM`, m: '2.12 bpb · 512 B state', d: 'Raw text · KN 3-gram here: 2.09 bpb', f: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 204, s: `${sec('sec_bptt')} BPTT Decay Probe`, m: '< 1% norm by lag 8', d: 'ρ=1.80 × tanh\' 0.27 ≈ 0.49', f: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { x: 276, y: 204, s: `${sec('sec_decoding')} Truncated Samplers`, m: 'distinct-3 ≈ 0.99', d: 'min-p / top-p break loops', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
   ];
   cards.forEach((c) => {
     o += box(c.x, c.y, 248, 60, c.f, c.st, 7, 1.8);
@@ -112,11 +113,11 @@ function pipelineSummary() {
   const W = 540, H = 272;
   let o = '';
   const stages = [
-    { y: 14,  t: '1. Byte-Level BPE (§8.2)', eq: 'UTF-8 bytes → regex chunks → rank-ordered merges (|V| = 1,027)', f: C.lblue, st: C.blue, dk: D.blue.dark },
-    { y: 66,  t: '2. Chain-Rule Factorization (§§8.1, 8.3)', eq: 'P(x_{1:T}) = ∏ P(xₜ | x_{<t})   ·   bpb = −(1/B) ∑ log₂ P(xₜ | x_{<t})', f: C.lamber, st: C.amber, dk: D.orange.dark },
-    { y: 118, t: '3. Shared-Weight Recurrent Cell (§8.4)', eq: 'Hₜ = tanh(Xₜ W_xh + Hₜ₋₁ W_hh + b_h)   ·   Oₜ = Hₜ W_hq + b_q', f: C.lgreen, st: C.green, dk: D.green.dark },
-    { y: 170, t: '4. Truncated BPTT + Clipping (§8.5)', eq: 'Detach across T₀ = 32 windows   ·   g ← min(1, θ / ||g||) g', f: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { y: 222, t: '5. Autoregressive Decoding (§8.6)', eq: 'Beam search (constrained)  or  temperature τ + top-p / min-p', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { y: 14,  t: `1. Byte-Level BPE (${sec('sec_text-sequence')})`, eq: 'UTF-8 bytes → regex chunks → rank-ordered merges (|V| = 1,027)', f: C.lblue, st: C.blue, dk: D.blue.dark },
+    { y: 66,  t: `2. Chain-Rule Factorization (§§${num('sec_sequence')}, ${num('sec_language-model')})`, eq: 'P(x_{1:T}) = ∏ P(xₜ | x_{<t})   ·   bpb = −(1/B) ∑ log₂ P(xₜ | x_{<t})', f: C.lamber, st: C.amber, dk: D.orange.dark },
+    { y: 118, t: `3. Shared-Weight Recurrent Cell (${sec('sec_rnn')})`, eq: 'Hₜ = tanh(Xₜ W_xh + Hₜ₋₁ W_hh + b_h)   ·   Oₜ = Hₜ W_hq + b_q', f: C.lgreen, st: C.green, dk: D.green.dark },
+    { y: 170, t: `4. Truncated BPTT + Clipping (${sec('sec_bptt')})`, eq: 'Detach across T₀ = 32 windows   ·   g ← min(1, θ / ||g||) g', f: D.red.tint, st: D.red.base, dk: D.red.dark },
+    { y: 222, t: `5. Autoregressive Decoding (${sec('sec_decoding')})`, eq: 'Beam search (constrained)  or  temperature τ + top-p / min-p', f: D.purple.tint, st: C.purple, dk: D.purple.dark },
   ];
   stages.forEach((s, i) => {
     o += box(20, s.y, 500, 40, s.f, s.st, 7, 1.8);

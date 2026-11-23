@@ -5,6 +5,7 @@
 // `ch02-lr-<concept>` IDs.
 
 import { C, TOKENS, grid, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -337,7 +338,7 @@ function synthOracle() {
   o += tx(143, 212, 'Code bug or bad model?', { fs: 12.5, fw: 700, fill: D.red.dark });
 
   o += box(290, 44, 254, 202, C.lgreen, C.green);
-  o += tx(417, 68, 'Synthetic Benchmark (§2.2)', { fs: 14, fw: 700, fill: D.green.dark });
+  o += tx(417, 68, `Synthetic Benchmark (${sec('sec_synthetic-regression-data')})`, { fs: 14, fw: 700, fill: D.green.dark });
   o += tx(417, 98, '• w* = (2, −3.4)ᵀ, b* = 4.2', { mono: true, fs: 12.5, fw: 600, fill: C.ink });
   o += tx(417, 124, '• Noise σ = 0.01 (floor 5e-5)', { mono: true, fs: 12.5, fw: 600, fill: C.ink });
   o += tx(417, 150, '• Linear model is exact truth', { fs: 13, fill: C.ink });

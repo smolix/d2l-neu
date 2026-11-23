@@ -5,6 +5,7 @@
 // `ch03-cls-<concept>` IDs.
 
 import { C, TOKENS, tx, arrow, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -89,9 +90,9 @@ const whyClassification = () => stackCards(560, 284, 'Why Classification Needs I
   { head: '3. Test Error Bars & Deployment Shift', badge: 'p_S ≠ p_T', sub: 'Finite test sets have ±1/√n noise and vouch only for the source distribution', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
 ]);
 
-const regVsCls = () => twoCols(560, 270, 'From Linear Regression (§2) to Softmax Classification (§3)',
+const regVsCls = () => twoCols(560, 270, `From Linear Regression (${sec('chap_regression')}) to Softmax Classification (${sec('chap_classification')})`,
   {
-    head: 'Linear Regression (§2)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
+    head: `Linear Regression (${sec('chap_regression')})`, fill: C.lblue, stroke: C.blue, dark: D.blue.dark,
     lines: [
       { t: 'Target: scalar y ∈ ℝ', mono: true },
       { t: 'Model: ŷ = wᵀx + b (1 output)', mono: true },
@@ -100,7 +101,7 @@ const regVsCls = () => twoCols(560, 270, 'From Linear Regression (§2) to Softma
     ],
   },
   {
-    head: 'Softmax Regression (§3)', fill: C.lgreen, stroke: C.green, dark: D.green.dark,
+    head: `Softmax Regression (${sec('chap_classification')})`, fill: C.lgreen, stroke: C.green, dark: D.green.dark,
     lines: [
       { t: 'Target: one-hot y, q entries', mono: true },
       { t: 'Model: ŷ = softmax(Wᵀx + b)', mono: true },
@@ -112,17 +113,17 @@ const regVsCls = () => twoCols(560, 270, 'From Linear Regression (§2) to Softma
 );
 
 const clsRoadmap = () => stackCards(560, 312, 'Chapter 3 Progression: From Logits to Trusted Decisions', [
-  { head: '§3.1 Softmax & Cross-Entropy · §3.2 Fashion-MNIST', badge: 'o → ŷ → l', sub: 'One-hot vectors, shift invariance, ∇_o l = ŷ − y, 60k+10k 28×28 garments', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
-  { head: '§3.3 Implementation (Scratch to LogSumExp)', badge: '7,850 params', sub: 'Classifier base class, 10×10 confusion matrix, 28×28 templates, LogSumExp', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
-  { head: '§3.4 Measuring Classifiers · §3.5 Generalization', badge: 'ECE · VC', sub: 'Cost thresholds, reliability diagrams, temperature T, Hoeffding & VC bounds', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
-  { head: '§3.6 Environment and Distribution Shift', badge: 'β(x) & C⁻¹μ', sub: 'Covariate shift domain classifier, confusion-matrix label shift, feedback loops', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+  { head: `${sec('sec_softmax')} Softmax & Cross-Entropy · ${sec('sec_fashion_mnist')} Fashion-MNIST`, badge: 'o → ŷ → l', sub: 'One-hot vectors, shift invariance, ∇_o l = ŷ − y, 60k+10k 28×28 garments', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
+  { head: `${sec('sec_softmax_scratch')} Implementation (Scratch to LogSumExp)`, badge: '7,850 params', sub: 'Classifier base class, 10×10 confusion matrix, 28×28 templates, LogSumExp', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
+  { head: `${sec('sec_classification')} Measuring Classifiers · ${sec('chap_classification_generalization')} Generalization`, badge: 'ECE · VC', sub: 'Cost thresholds, reliability diagrams, temperature T, Hoeffding & VC bounds', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+  { head: `${sec('sec_environment-and-distribution-shift')} Environment and Distribution Shift`, badge: 'β(x) & C⁻¹μ', sub: 'Covariate shift domain classifier, confusion-matrix label shift, feedback loops', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
 ]);
 
 const clsBenchmarks = () => stackCards(560, 312, 'Quantitative Running Benchmarks Across Chapter 3', [
-  { head: '§3.1 3-Class Toy Image & §§3.2–3.3 Fashion-MNIST', badge: '83% val acc', sub: 'Logits (1.0, 2.2, 0.3) → ŷ=(0.21, 0.69, 0.10); LogSumExp handles (1000, 0, 0)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
-  { head: '§3.4 Clinical Screening (1% Prior, 100:1 Cost)', badge: '90% rec, 15% prec', sub: 'Bayes threshold drops from 0.50 to 1/101 ≈ 0.01; Fashion-MNIST ECE < 0.03', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
-  { head: '§3.5 Finite Test Sets (n = 10,000) & Reuse', badge: '±0.7% CLT', sub: 'Majority vote of 1,000 filtered coin-flippers jumps from 50% to ~70% acc!', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
-  { head: '§3.6 Domain Shift Reweighting & 50% Shirt Surge', badge: '55% → 95% tgt', sub: 'Domain logit h(x)≈2x₁−2 tilts boundary; C⁻¹μ recovers 0.50 shirt prior', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
+  { head: `${sec('sec_softmax')} 3-Class Toy Image & §§${num('sec_fashion_mnist')}–${num('sec_softmax_scratch')} Fashion-MNIST`, badge: '83% val acc', sub: 'Logits (1.0, 2.2, 0.3) → ŷ=(0.21, 0.69, 0.10); LogSumExp handles (1000, 0, 0)', fill: C.lblue, stroke: C.blue, dark: D.blue.dark },
+  { head: `${sec('sec_classification')} Clinical Screening (1% Prior, 100:1 Cost)`, badge: '90% rec, 15% prec', sub: 'Bayes threshold drops from 0.50 to 1/101 ≈ 0.01; Fashion-MNIST ECE < 0.03', fill: C.lamber, stroke: C.amber, dark: D.orange.dark },
+  { head: `${sec('chap_classification_generalization')} Finite Test Sets (n = 10,000) & Reuse`, badge: '±0.7% CLT', sub: 'Majority vote of 1,000 filtered coin-flippers jumps from 50% to ~70% acc!', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark },
+  { head: `${sec('sec_environment-and-distribution-shift')} Domain Shift Reweighting & 50% Shirt Surge`, badge: '55% → 95% tgt', sub: 'Domain logit h(x)≈2x₁−2 tilts boundary; C⁻¹μ recovers 0.50 shirt prior', fill: C.lgreen, stroke: C.green, dark: D.green.dark },
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -396,7 +397,7 @@ const epochBatches = () => threeStages(560, 258, 'One Training Epoch at batch_si
   { head: '1. Permute 60k', fill: D.purple.tint, stroke: C.purple, dark: D.purple.dark, mono: true, lines: ['shuffle=True', 'fresh order', 'every epoch'] },
   { head: '2. 937 Full Batches', fill: C.lblue, stroke: C.blue, dark: D.blue.dark, mono: true, lines: ['937 × 64', '= 59,968 imgs', '200 KB / batch'] },
   { head: '3. Partial Batch 938', fill: C.lamber, stroke: C.amber, dark: D.orange.dark, mono: true, lines: ['1 × 32 images', 'retained so all', '60k are visited!'] },
-  { fill: C.lgreen, stroke: C.green, dark: D.green.dark, t1: 'At batch_size = 256 (§3.3): 60,000 = 234 × 256 + 96 → 235 Batches/Epoch', t2: 'd2l.Averager weights the final partial batch by its exact size (32 or 96)' }
+  { fill: C.lgreen, stroke: C.green, dark: D.green.dark, t1: `At batch_size = 256 (${sec('sec_softmax_scratch')}): 60,000 = 234 × 256 + 96 → 235 Batches/Epoch`, t2: 'd2l.Averager weights the final partial batch by its exact size (32 or 96)' }
 );
 
 const nchwVsNhwc = () => twoCols(560, 260, 'Two Conventions for 4D Minibatch Image Tensors',
@@ -479,7 +480,7 @@ const fp32Hazards = () => twoCols(560, 266, 'Twin Float32 Numerical Hazards of N
       { t: '27.6 but ZEROES the gradient!' },
     ],
   },
-  { fill: C.lgreen, stroke: C.green, dark: D.green.dark, t: 'Permanent Fix (§3.3 Concise): Fuse log and softmax via LogSumExp on raw logits' }
+  { fill: C.lgreen, stroke: C.green, dark: D.green.dark, t: `Permanent Fix (${sec('sec_softmax_scratch')} Concise): Fuse log and softmax via LogSumExp on raw logits` }
 );
 
 const rowwiseBroadcast = () => threeStages(560, 258, 'Rowwise Softmax Normalization With keepdims=True',

@@ -221,6 +221,13 @@ def main():
     # The shards that exist for each framework, and the references between
     # them (for the transitive closure).
     graphs = {fw: shard_graph(args.shard_dir / fw) for fw in FRAMEWORKS}
+    # No shards means the library has not been built: every reference would
+    # be dropped as a ghost and every .d would claim no d2l dependency.
+    unbuilt = [fw for fw, g in graphs.items() if not g]
+    if unbuilt:
+        sys.exit(f'scan_d2l_usage: no shards under {args.shard_dir}/'
+                 f'{{{",".join(unbuilt)}}}; build the library first '
+                 f'(`make lib`)')
 
     n_written = 0
     lib_only = set(LIB_ONLY_FILES)

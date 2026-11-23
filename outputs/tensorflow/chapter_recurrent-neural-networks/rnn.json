@@ -80,14 +80,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "initial validation perplexity 1028\n"
+          "text": "initial validation perplexity 1027\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-training-3-1.svg",
-          "bytes": 22250,
-          "sha256": "sha256:8dcfd55e13b5725c87b71a0ac1ac7cf9795f6f4477670468f94ac2c4d579665e"
+          "bytes": 23033,
+          "sha256": "sha256:cde582b0cfa198940175188de01fd46c81fbc800c99cef0764c852cb32898bc2"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 92.9\n"
+          "text": "validation perplexity 97.0\n"
         }
       ]
     },
@@ -114,17 +114,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 1: highest 9.69e+07, final 1.45e+03\n"
+          "text": "run 1: highest 1.5e+09, final 350\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 2: highest 4.96e+03, final 169\n"
+          "text": "run 2: highest 2.9e+03, final 344\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run 3: highest 1.94e+03, final 321\n2 of 3 runs end above twice the clipped 92.9; finals from 169 to 1.45e+03\n"
+          "text": "run 3: highest 6.22e+12, final 232\n3 of 3 runs end above twice the clipped 97; finals from 232 to 350\n"
         }
       ]
     },
@@ -136,8 +136,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-a-plain-model-4-1.svg",
-          "bytes": 25484,
-          "sha256": "sha256:746c7cf75a890b7759ad64010c3d2d898b272e32411a880c6220c451a61bbde9"
+          "bytes": 27286,
+          "sha256": "sha256:670ef9e7b4629c1cbba956d11010051d4198fa6bd0aefec4ceb9a4695d85fdb5"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.35 bits per byte\n"
+          "text": "2.78 bytes/token, 2.38 bits per byte\n"
         }
       ]
     },
@@ -164,7 +164,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean change of an embedding row: 4.3% of its length\n"
+          "text": "mean change of an embedding row: 4.2% of its length\n"
         }
       ]
     },
@@ -181,8 +181,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-a-wider-embedding-with-dropout-2-1.svg",
-          "bytes": 23608,
-          "sha256": "sha256:7b88adbd65cc3f96f031fc5dc5a37200398a7b1f81db036ba9f67d1a76359f83"
+          "bytes": 23612,
+          "sha256": "sha256:8c30716bbc309c9fc442f768848448f57f8bfc482a6ffe6342181ea92b9a8d12"
         }
       ]
     },
@@ -193,7 +193,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 59.1, 2.12 bits per byte\n"
+          "text": "validation perplexity 59.2, 2.12 bits per byte\n"
         }
       ]
     },
@@ -218,76 +218,87 @@
       "kind": "text",
       "outputs": []
     },
+    "rnn-comparison-with-kneser-ney-and-effective-context-horizon-1": {
+      "code_fingerprint": "sha256:92eec6cc848a235f544e4c92e443526dd2f9517480c232e3d19297cadfa1145e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RNN: 2.11 bits per byte\nKN trigram: 2.09 bits per byte\nmixture: 2.03 bits per byte\nRNN more confident on 50% of the tokens\n"
+        }
+      ]
+    },
     "rnn-implementation-comparison-with-kneser-ney-4": {
-      "code_fingerprint": "sha256:60cfb9e0c8f41378562c59dc6445dc22f11b357fcaab2b5cb109230f19efad4b",
+      "code_fingerprint": "sha256:91512ce74ad8d037ca47afad94e12eb922e0677b0cddf169c0929c52248a6227",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.28, 2.13, 2.11, 2.11, 2.11, 2.11]\n"
+          "text": "bits per byte with 1, 2, 3, 4, 8, 32 tokens of context: [2.28, 2.13, 2.12, 2.12, 2.11, 2.11]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-comparison-with-kneser-ney-4-1.svg",
-          "bytes": 27299,
-          "sha256": "sha256:69f4c940fa3fa77480bf1828b88ffc6730b56b22a141a6e515db07ff18438595"
+          "bytes": 27295,
+          "sha256": "sha256:7c0d787859d8f111e7605f177192d5506f1dfa48e503862a2b99ee3bc52d92ec"
         }
       ]
     },
     "rnn-implementation-generating-text-1": {
-      "code_fingerprint": "sha256:ab43d8e447b234d6e8827272cc2436624cf1ff012a65e60000a2e048fd39f0e0",
+      "code_fingerprint": "sha256:470e970f1069741394b197764fa02b71ac755392f5212c75a348df8c6d05da76",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-generating-text-2": {
-      "code_fingerprint": "sha256:7e1946e4f6bb146b73175fe988f0d6badabec4825a9fc4adffb369dc598e2526",
+      "code_fingerprint": "sha256:7fb03c9bc0ce92e96d7cdf33cf0898a8df024356f3ff658cbfc191db555ebbfe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'The Time Traveller, and I had seen. I had a faintness. I was in the slope\n    of the paradox. I was in the faintness. I was in the slope of the\n    parado'\n"
+          "text": "'The Time Traveller,\\nI had\\nthere came to\\nfossibly, I saw a\\nmater,\\nI\n    had\\nthere came to\\nfossibly, I saw a\\nmater,\\nI had'\n"
         }
       ]
     },
     "rnn-implementation-concise-implementation-1": {
-      "code_fingerprint": "sha256:ccff3d00e5ce6d14c7702659f309365ba94cd59287200d9dcb008601220d08d7",
+      "code_fingerprint": "sha256:0cfb6e14434b3db1a36660f54ef593f18c2ca28641f80177f09a74a6743a934b",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-2": {
-      "code_fingerprint": "sha256:2962a98d97797018cd9a63c960e5efaeb69effc28515dadbefb7008610fbb714",
+      "code_fingerprint": "sha256:05c50294c4f7c9f34a5beab77467ce93e158fc766a3bb11c948b05d961e923a8",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-3": {
-      "code_fingerprint": "sha256:56fa1e3e59fa2a6c38f7b876409429d2fee83a0d650b949b3e209d8042ec4903",
+      "code_fingerprint": "sha256:a063318672d1d549e79cfc5306f90d951b44d104d6367af109b86356b4955cbe",
       "kind": "text",
       "outputs": []
     },
     "rnn-implementation-concise-implementation-5": {
-      "code_fingerprint": "sha256:84c671477558ad215b38f557fdf2d5b49a6dde71869f6e43944864aa04eed6e3",
+      "code_fingerprint": "sha256:ef4ed6bc5ac85224d74dfcb3726be497a8dffb4bbdf2092549a2a5aff81d8708",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 23607,
-          "sha256": "sha256:7d4be6dff30982cc8567e226faef191710e02edc02604309d123e9c3da150a98"
+          "bytes": 23614,
+          "sha256": "sha256:668c258d475897b6afe69607e6676e50388449d1fc914bae25f598495b76bfb7"
         }
       ]
     },
     "rnn-implementation-concise-implementation-6": {
-      "code_fingerprint": "sha256:2ce8c8689b3c2bffe155502cc1f3b3a57c7eab33977a586c9da08cea3f060d90",
+      "code_fingerprint": "sha256:c53616be314889397771909338cd435fb76f97dd0726346e7b2bd073327e6937",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 59.6, \"The Time Traveller, and\\nfrom\n    the\\nday.\\n\\n'Ince\\nday,\\nand travel-world people were\\n\"\n"
+          "text": "perplexity 60.5, \"The Time Traveller.\\n\\n'I had\\ndising\\nwere\\nbutter.\\n\\n'I\n    had\\ndising\\nwere\"\n"
         }
       ]
     }

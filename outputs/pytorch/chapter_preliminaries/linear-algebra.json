@@ -193,8 +193,18 @@
         }
       ]
     },
+    "linear-algebra-matrix-matrix-products-2": {
+      "code_fingerprint": "sha256:cf203d98bcf0bbb4e16e798ff385e167aa5bd3eabdf06677eb5390447cbf30d6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.Size([3, 2, 4]), tensor(True))"
+        }
+      ]
+    },
     "linear-algebra-dot-products-3": {
-      "code_fingerprint": "sha256:d8f88ca130dbd99dfd9cd267fcfaf0465396fe0ed255a426a8e0c8c2d7f1c78b",
+      "code_fingerprint": "sha256:a5c555550caf317f96c6636f0d3945f5c4dd1c1857d4dfccf496468fe27f49cd",
       "kind": "text",
       "outputs": [
         {
@@ -204,7 +214,7 @@
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:96431ac3327f362c34c32991dc2c4fc99cdcf8b56db9b703b6acae1785230157",
+      "code_fingerprint": "sha256:066fb96d2eda361728b3fcd7908462452c3e98492cf9b648cfff8f562ac543e6",
       "kind": "text",
       "outputs": [
         {
@@ -214,7 +224,7 @@
       ]
     },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:5c748a760f730d7100daa2cb7095fa5576a2196867fe36f827bd6d327407d3f2",
+      "code_fingerprint": "sha256:45bc7fc8037befe2b7c4d197b6ced33713cd2e01fb0b7e5d70690c9b248702a6",
       "kind": "text",
       "outputs": [
         {
@@ -224,7 +234,7 @@
       ]
     },
     "linear-algebra-eigenvalues-1": {
-      "code_fingerprint": "sha256:ab09cf7b90397f3d0c6db1fba107615c44f5ca4f9c5164e1b449b2b5e9ca6895",
+      "code_fingerprint": "sha256:9dc9dca28a5239ce11e096f3ebdadd12075b4fae0ef8ddb71c1595c059be1450",
       "kind": "text",
       "outputs": [
         {
@@ -234,7 +244,7 @@
       ]
     },
     "linear-algebra-eigenvalues-2": {
-      "code_fingerprint": "sha256:c5adf00f6dabf16be72109e25950b67c7edcbe22653daf90ff132efe6b41b2ad",
+      "code_fingerprint": "sha256:20d463f65213fdfa4144f761bf925bd9867f0110ec77230cbcbe5f2a9f0348ee",
       "kind": "text",
       "outputs": [
         {
@@ -244,12 +254,22 @@
       ]
     },
     "linear-algebra-powers-of-a-matrix-1": {
-      "code_fingerprint": "sha256:7e54f4baa5846926b1c6fc20548ea355bb4a0efb09f6435a0e573e35c87b723b",
+      "code_fingerprint": "sha256:f862abfc052070f7526520d948c9d31d31d5a8e90a914a0622a907dddcaa9e5f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "tensor([1.1739e+02, 5.1538e-03])"
+        }
+      ]
+    },
+    "linear-algebra-eigenvectors-and-eigenvalues-1": {
+      "code_fingerprint": "sha256:48908745208c641628fd05ee0fe14a15d45bc93ab8778af11b86a2fd766676a5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([3., 1.]), tensor([2., 0.]), tensor([0., 2.]), tensor(1))"
         }
       ]
     }

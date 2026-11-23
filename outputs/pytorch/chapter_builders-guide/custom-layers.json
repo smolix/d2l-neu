@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(2.0955e-09, grad_fn=<MeanBackward0>)"
+          "text": "tensor(2.5611e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },
@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([0.8196, 0.8672, 0.9294, 0.9737, 0.9329, 0.7735, 0.9659, 1.0062]),\n True)"
+          "text": "(tensor([0.9681, 0.9702, 0.9415, 0.7670, 1.0491, 0.9845, 0.9079, 0.9954]),\n True)"
         }
       ]
     },
@@ -85,14 +85,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error 0.0032\n"
+          "text": "mean squared error 0.00054\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "custom-layers/custom-layers-layers-with-fixed-state-1-1.svg",
-          "bytes": 22309,
-          "sha256": "sha256:f131ccd0273aca6dcdfda3e26bbf083201c4ab4bca0965c4f071308432ca4184"
+          "bytes": 22317,
+          "sha256": "sha256:3e60dbee7baf682dc545421bf3fceb761a84954f34fa8cae90291deca8e6956a"
         }
       ]
     },
@@ -103,7 +103,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "linear layer only: mean squared error 0.94\nfull state:        mean squared error 0.0032\n"
+          "text": "linear layer only: mean squared error 0.96\nfull state:        mean squared error 0.00054\n"
         }
       ]
     },
@@ -139,7 +139,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start 109, rounding 109, straight-through 1.76, rounded target 0.357\n"
+          "text": "start 82.9, rounding 82.9, straight-through 1.04, rounded target 0.557\n"
         }
       ]
     },
@@ -150,6 +150,16 @@
         {
           "type": "execute_result",
           "text": "(True, True)"
+        }
+      ]
+    },
+    "custom-layers-functions-with-custom-gradients-1": {
+      "code_fingerprint": "sha256:20ed4bfe9be60d3af31c1d193c267f93f4b7a32678580a547b5e31a4a700d0bb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(True, False)"
         }
       ]
     }

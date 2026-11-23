@@ -268,10 +268,266 @@ def fig_ste():
     fl.save(fig, "bg-ste")
 
 
+def fig_update_swamping():
+    """Round-to-nearest on two 16-bit grids near a weight of 1, drawn on one
+    shared scale (in units of 2^-10).  bf16 keeps 7 mantissa bits, so its grid
+    points next to 1 are 2^-7 apart above 1 (and 2^-8 below, since 1 is a
+    power of two); the shaded interval holds every value that rounds back to
+    1.  The update 1 + 10^-3 (orange) falls inside it and is lost.  On fp16's
+    grid (spacing 2^-10 above 1) the same update lands next to the grid point
+    1 + 2^-10, so it survives."""
+    fig, ax = plt.subplots(figsize=(10.2, 3.5))
+    u = lambda x: (x - 1.0) * 1024        # plot coordinate: units of 2^-10
+    lo, hi = -5.2, 10.2                   # visible window, in those units
+    rows = [  # (name, y, spacing below 1, spacing above 1)
+        ("bf16", 1.9, 2.0 ** -8, 2.0 ** -7),
+        ("fp16", 0.0, 2.0 ** -11, 2.0 ** -10),
+    ]
+    step = 1.001
+    for name, y, below, above in rows:
+        ax.plot([lo, hi], [y, y], color="black", lw=1.2, zorder=2)
+        # every representable value inside the window
+        grid = [1 - k * below for k in range(1, 200)
+                if u(1 - k * below) >= lo] + \
+               [1 + k * above for k in range(0, 200)
+                if u(1 + k * above) <= hi]
+        for g in grid:
+            ax.plot([u(g), u(g)], [y - 0.16, y + 0.16], color="black",
+                    lw=1.6 if g == 1 else 1.1, zorder=3)
+        # the basin of 1: half the spacing on each side
+        a, b = u(1 - below / 2), u(1 + above / 2)
+        ax.add_patch(Rectangle((a, y - 0.32), b - a, 0.64, facecolor=BLUE,
+                               alpha=0.18, edgecolor="none", zorder=1))
+        ax.text(lo - 0.4, y, name, ha="right", va="center", fontsize=15,
+                color="black")
+        # the update w + 1e-3 and where round-to-nearest sends it
+        ax.plot([u(step)], [y], "o", ms=8, color=ORANGE, zorder=5)
+        dest = min(grid, key=lambda g: abs(g - step))
+        if dest == 1.0:
+            ax.add_patch(FancyArrowPatch(
+                (u(step), y + 0.12), (u(1.0) + 0.05, y + 0.2),
+                connectionstyle="arc3,rad=0.9", arrowstyle="-|>",
+                mutation_scale=13, color=ORANGE, lw=1.6, zorder=6))
+            ax.text(u(step) + 0.35, y + 0.42, r"$1 + 10^{-3}$ rounds to 1",
+                    ha="left", va="bottom", fontsize=13, color=ORANGE)
+        else:
+            ax.text(u(step) + 0.35, y + 0.42,
+                    r"$1 + 10^{-3}$ rounds to $1 + 2^{-10}$",
+                    ha="left", va="bottom", fontsize=13, color=ORANGE)
+    # tick labels for the bf16 grid, which also anchor the fp16 row
+    yb = rows[0][1]
+    for x, lab in [(1 - 2.0 ** -8, r"$1 - 2^{-8}$"), (1.0, r"$1$"),
+                   (1 + 2.0 ** -7, r"$1 + 2^{-7}$")]:
+        ax.text(u(x), yb - 0.3, lab, ha="center", va="top", fontsize=13,
+                color="black")
+    ax.text(u(1.0), -0.3, r"$1$", ha="center", va="top", fontsize=13,
+            color="black")
+    ax.set_xlim(lo - 1.9, hi + 0.2)
+    ax.set_ylim(-0.75, 2.75)
+    ax.axis("off")
+    fl.save(fig, "bg-update-swamping")
+
+
+def diamond(ax, cx, cy, w, h, title, color, fs=12.5, zorder=None,
+            fill_alpha=0.14):
+    """Decision diamond centred at (cx, cy); returns its four tips."""
+    from matplotlib.patches import Polygon
+    pts = [(cx - w / 2, cy), (cx, cy + h / 2), (cx + w / 2, cy),
+           (cx, cy - h / 2)]
+    zk = {} if zorder is None else {"zorder": zorder}
+    ax.add_patch(Polygon(pts, closed=True, facecolor="white",
+                         edgecolor="none", **zk))
+    ax.add_patch(Polygon(pts, closed=True, facecolor=color,
+                         alpha=fill_alpha, edgecolor="none", **zk))
+    ax.add_patch(Polygon(pts, closed=True, facecolor="none", edgecolor=color,
+                         lw=1.8, **zk))
+    ax.text(cx, cy, title, ha="center", va="center", fontsize=fs,
+            fontweight="bold", color=color,
+            **({} if zorder is None else {"zorder": zorder + 1}))
+    return dict(l=cx - w / 2, r=cx + w / 2, t=cy + h / 2, b=cy - h / 2,
+                cx=cx, cy=cy)
+
+
+def link(ax, p, q, color=GRAY, rad=0.0, lw=1.8, zorder=40):
+    ax.add_patch(FancyArrowPatch(
+        p, q, arrowstyle="-|>", mutation_scale=15, color=color, lw=lw,
+        shrinkA=0, shrinkB=0, connectionstyle=f"arc3,rad={rad}",
+        zorder=zorder))
+
+
+def fig_loss_scaling():
+    """One step of dynamic loss scaling as a control loop: scale the fp32
+    loss by S, backpropagate in fp16, unscale the gradients in fp32, then
+    branch on whether every gradient is finite.  Finite: take the optimizer
+    step (and double S after a streak of clean steps).  Not finite: skip the
+    step and halve S.  Either way the next step starts over."""
+    fig, ax = plt.subplots(figsize=(11.4, 3.9))
+    y = 2.0
+    w, h = 2.35, 1.15
+    fs = dict(title_fs=14, sub_fs=13)
+    scale = box(ax, 1.3, y, w, h, "scale loss", r"$S \cdot L$", BLUE, **fs)
+    bwd = box(ax, 4.05, y, w, h, "backward", "fp16 gradients", ORANGE, **fs)
+    unscale = box(ax, 6.8, y, w, h, "unscale", r"divide by $S$ in fp32",
+                  BLUE, **fs)
+    dec = diamond(ax, 9.35, y, 1.9, 1.5, "finite?", "black", fs=13.5,
+                  fill_alpha=0.0)
+    step = box(ax, 12.85, y + 1.05, 3.7, h, "optimizer step",
+               r"$S \leftarrow 2S$ after a clean streak", GREEN, **fs)
+    skip = box(ax, 12.85, y - 1.05, 3.7, h, "skip the step",
+               r"$S \leftarrow S/2$", ORANGE, **fs)
+    for a, b in [(scale, bwd), (bwd, unscale)]:
+        link(ax, (a["r"] + 0.02, y), (b["l"] - 0.04, y))
+    link(ax, (unscale["r"] + 0.02, y), (dec["l"] - 0.02, y))
+    # the two exits of the decision, each labelled on its outer side
+    link(ax, (dec["cx"] + 0.35, dec["t"] - 0.28), (step["l"] - 0.04,
+                                                    step["cy"]), color=GREEN)
+    link(ax, (dec["cx"] + 0.35, dec["b"] + 0.28), (skip["l"] - 0.04,
+                                                    skip["cy"]), color=ORANGE)
+    ax.text(dec["cx"] + 0.95, dec["t"] + 0.0, "yes", ha="right",
+            va="bottom", fontsize=13, color="black")
+    ax.text(dec["cx"] + 0.95, dec["b"] - 0.0, "no", ha="right", va="top",
+            fontsize=13, color="black")
+    ax.set_xlim(0.0, 14.85)
+    ax.set_ylim(0.3, 3.75)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fl.save(fig, "bg-loss-scaling")
+
+
+def fig_res_variance():
+    """Mean-square bookkeeping through one residual block whose body is
+    Linear(d -> 4d, He) -> ReLU -> Linear(4d -> d, gain g).  The value
+    written on each arrow is the mean square of the signal it carries: the He
+    layer doubles m_k, the ReLU halves it, the output projection scales it by
+    g^2, and the identity path adds m_k back at the sum."""
+    fig, ax = plt.subplots(figsize=(11.4, 3.6))
+    y = 2.2
+    w, h = 2.15, 1.15
+    fs = dict(title_fs=13.5, sub_fs=12.5)
+    xs = [2.15, 5.4, 8.65]
+    l1 = box(ax, xs[0], y, w, h, "linear", r"$d \to 4d$, He", BLUE, **fs)
+    relu = box(ax, xs[1], y, w, h, "ReLU", None, ORANGE, **fs)
+    l2 = box(ax, xs[2], y, w, h, "linear", r"$4d \to d$, gain $g$", BLUE,
+             **fs)
+    sx = 11.3  # the sum node
+    ax.add_patch(plt.Circle((sx, y), 0.24, facecolor="white",
+                            edgecolor="black", lw=1.6, zorder=5))
+    ax.text(sx, y, "+", ha="center", va="center", fontsize=16,
+            color="black", zorder=6)
+    x0 = -0.3
+    # main path with the mean square carried by each arrow
+    segs = [(x0, l1["l"], r"$m_k$"), (l1["r"], relu["l"], r"$2m_k$"),
+            (relu["r"], l2["l"], r"$m_k$"), (l2["r"], sx - 0.26,
+                                            r"$g^2 m_k$"),
+            (sx + 0.26, sx + 2.0, r"$(1 + g^2)\,m_k$")]
+    for a, b, lab in segs:
+        link(ax, (a + 0.02, y), (b - 0.04, y), color="black", lw=1.6)
+        ax.text((a + b) / 2, y + 0.14, lab, ha="center", va="bottom",
+                fontsize=14, color="black")
+    ax.text(x0 - 0.1, y, r"$\mathbf{x}_k$", ha="right", va="center",
+            fontsize=15, color="black")
+    ax.text(sx + 2.1, y, r"$\mathbf{x}_{k+1}$", ha="left", va="center",
+            fontsize=15, color="black")
+    # identity path under the body, joining at the sum
+    yb = y - 1.35
+    xb = 0.45
+    ax.plot([xb, xb, sx, sx], [y, yb, yb, y - 0.24 - 0.35], color=GRAY,
+            lw=1.6, zorder=2)
+    link(ax, (sx, y - 0.6), (sx, y - 0.25), color=GRAY, lw=1.6)
+    ax.plot([xb], [y], "o", ms=5, color="black", zorder=6)
+    ax.text((xb + sx) / 2, yb - 0.12, r"identity: $m_k$, uncorrelated "
+            r"with the body output", ha="center", va="top", fontsize=13,
+            color="black")
+    ax.set_xlim(-1.0, 14.1)
+    ax.set_ylim(0.3, 3.1)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fl.save(fig, "bg-res-variance")
+
+
+def fig_zero_out_proj():
+    """Zeroing only the output projection of a residual body, step by step,
+    against zeroing both layers.  Each row is the body x -> W_in -> h ->
+    W_out -> f.  Filled boxes hold nonzero weights, dashed white boxes hold
+    zeros; an orange arrow under a box means that layer receives a nonzero
+    gradient in that step, a gray one that its gradient is zero."""
+    fig, ax = plt.subplots(figsize=(11.4, 6.4))
+    w, h = 1.55, 0.9
+    xin, xout = 4.75, 8.25
+    rows = [
+        ("step 0, forward", dict(win=True, wout=False, h=r"$\mathbf{h} \neq 0$",
+                                 f=r"$f = 0$", gin=None, gout=None,
+                                 note="every block is the identity")),
+        ("step 1, backward", dict(win=True, wout=False,
+                                  h=r"$\mathbf{h} \neq 0$", f=r"$f = 0$",
+                                  gin=False, gout=True,
+                                  note=r"$\nabla W_{\mathrm{out}} = "
+                                       r"\boldsymbol{\delta}\,\mathbf{h}^{\top}"
+                                       r" \neq 0$, $\nabla W_{\mathrm{in}} = 0$")),
+        ("step 2 onward", dict(win=True, wout=True, h=r"$\mathbf{h} \neq 0$",
+                               f=r"$f \neq 0$", gin=True, gout=True,
+                               note="both layers train")),
+        ("both zeroed", dict(win=False, wout=False, h=r"$\mathbf{h} = 0$",
+                             f=r"$f = 0$", gin=False, gout=False,
+                             note="both gradients stay 0 forever")),
+    ]
+    pitch = 1.75
+    for i, (title, r) in enumerate(rows):
+        y = -i * pitch - (0.35 if i == 3 else 0.0)
+        ax.text(0.0, y, title, ha="left", va="center", fontsize=13.5,
+                color="black", fontweight="bold")
+        x_in = 3.2
+        link(ax, (x_in, y), (xin - w / 2 - 0.04, y), color="black", lw=1.4)
+        ax.text(x_in - 0.08, y, r"$\mathbf{x}$", ha="right", va="center",
+                fontsize=14, color="black")
+        for cx, on, lab in [(xin, r["win"], r"$W_{\mathrm{in}}$"),
+                            (xout, r["wout"], r"$W_{\mathrm{out}}$")]:
+            if on:
+                box(ax, cx, y, w, h, lab, None, BLUE, title_fs=14)
+            else:
+                ax.add_patch(FancyBboxPatch(
+                    (cx - w / 2, y - h / 2), w, h,
+                    boxstyle="round,pad=0.02,rounding_size=0.12",
+                    linewidth=1.6, edgecolor=GRAY, facecolor="white",
+                    ls="--"))
+                ax.text(cx, y, lab[:-1] + r" = 0$", ha="center",
+                        va="center", fontsize=13.5, color=GRAY)
+        link(ax, (xin + w / 2 + 0.02, y), (xout - w / 2 - 0.04, y),
+             color="black", lw=1.4)
+        ax.text((xin + xout) / 2, y + 0.12, r["h"], ha="center",
+                va="bottom", fontsize=13, color="black")
+        link(ax, (xout + w / 2 + 0.02, y), (xout + w / 2 + 1.25, y),
+             color="black", lw=1.4)
+        ax.text(xout + w / 2 + 1.35, y, r["f"], ha="left", va="center",
+                fontsize=13.5, color="black")
+        # gradient arrows under each layer: right-to-left, as backprop runs
+        for cx, g in [(xin, r["gin"]), (xout, r["gout"])]:
+            if g is None:
+                continue
+            yg = y - h / 2 - 0.22
+            ax.add_patch(FancyArrowPatch(
+                (cx + 0.6, yg), (cx - 0.6, yg), arrowstyle="-|>",
+                mutation_scale=12, color=ORANGE if g else GRAY,
+                lw=2.0 if g else 1.3, ls="-" if g else "--", shrinkA=0,
+                shrinkB=0))
+        ax.text(11.6, y, r["note"], ha="left", va="center", fontsize=13,
+                color="black")
+    ax.plot([0.0, 16.4], [-2.5 * pitch - 0.2] * 2, color=LIGHT, lw=1.2)
+    ax.set_xlim(-0.1, 16.5)
+    ax.set_ylim(-3 * pitch - 0.35 - 0.85, 0.7)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fl.save(fig, "bg-zero-out-proj")
+
+
 if __name__ == "__main__":
     fig_float_formats()
     fig_amp_loop()
     fig_ste()
+    fig_update_swamping()
+    fig_loss_scaling()
+    fig_res_variance()
+    fig_zero_out_proj()
     print(f"wrote {len(fl.WRITTEN)} figures:")
     for p in fl.WRITTEN:
         print(" ", p)

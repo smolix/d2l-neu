@@ -101,26 +101,37 @@
       "kind": "text",
       "outputs": []
     },
+    "numerics-training-in-fp32-and-in-16-bits-1": {
+      "code_fingerprint": "sha256:843aa2824814571816b48106acc1e7d959ef8aca492abde5913e3f27ac46e8a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.01: 92% of updates rounded away, 81% of the update mass\nlr 0.1: 53% of updates rounded away, 16% of the update mass\n"
+        }
+      ]
+    },
     "numerics-mixed-precision-training-4": {
-      "code_fingerprint": "sha256:82c303cd93164169c1c901d60427df632e242cd2789ea03d8aca45762ad35c43",
+      "code_fingerprint": "sha256:fc194684d42016784ab1116d50b772777a5c65afb3b1a8ae3bbfa59cee839fa9",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy: fp32 0.685, bf16 weights 0.648, mixed 0.685\n"
+          "text": "validation accuracy: fp32 0.677, bf16 weights 0.644, mixed 0.677\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 87433,
-          "sha256": "sha256:fb5dc0d80822f88284a06493de3fb5f0948751528d19d02f317df5ba3691e45d"
+          "bytes": 86412,
+          "sha256": "sha256:6d80711ca270cee3fd7435ed4ce657e1d37e38cda2da1c5e5922251d34a48442"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-1": {
-      "code_fingerprint": "sha256:9326c4c3d3a0df64c99c27d9515f68a7a02030dc154cf32a03bfe612e399274d",
+      "code_fingerprint": "sha256:30f90ebd4d18ee875c6fe2a435786435c3e9764ce53c48f222246d1c1a8086c9",
       "kind": "text",
       "outputs": [
         {
@@ -130,23 +141,18 @@
       ]
     },
     "numerics-loss-scaling-for-fp16-3": {
-      "code_fingerprint": "sha256:b24521e5f9f087b8370e8ec4d089e5053e59bcc7b45a781ff0a584a45aef8bf9",
+      "code_fingerprint": "sha256:0963623d76f78ddbfca7dac1d6eaf6b96cb4926dd06f100132cd705d83cd01ee",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scale     1: 32.4% subnormal, 0.20% zero\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "scale 65536: 0.0% subnormal, 0.00% zero\n"
+          "text": "scale     1: 32.9% subnormal, 0.17% zero\nscale 65536: 0.0% subnormal, 0.00% zero\n"
         }
       ]
     },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:4dbef643144d35e0a8d30f0645d789340b2e1c8cc5757db8c2316ec6a2f48cc7",
+      "code_fingerprint": "sha256:0092320548dc452ff3705c0d58ba1b2307227ca357ccc0a2d21dad74c803aea3",
       "kind": "text",
       "outputs": [
         {
@@ -156,7 +162,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:10bb5cf0cd080431655df45f588f1feabde755899055beb7f12d079a1fa09cff",
+      "code_fingerprint": "sha256:734b418149f06c9b2fa3a96642b38d45edfc12d0f19a18185cd6dead9e512ed8",
       "kind": "text",
       "outputs": [
         {
@@ -166,7 +172,7 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:bf466381ccf5baa0c19f1752c2be6ddf03952380b3e0a96957ea07bd91e0b6a4",
+      "code_fingerprint": "sha256:a2fe171ebd3136cbfceddf5321f6827a5c7f44f42f82895ad00126e3fe6c22f0",
       "kind": "text",
       "outputs": [
         {

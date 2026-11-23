@@ -8,8 +8,8 @@ In this chapter, we introduce your first truly *deep* neural networks. In :numre
 This chapter unfolds in seven sections:
 
 - **Multilayer Perceptrons (:numref:`sec_mlp`):** We show why linear models fail on feature interactions like XOR, solve XOR with a two-unit ReLU hidden layer, examine universal approximation and the exponential piece-multiplying power of depth, and compare standard activation functions (ReLU, GELU, sigmoid, and $\tanh$).
-- **Implementation (:numref:`sec_mlp-implementation`):** We implement a 256-unit ReLU MLP both from scratch and concisely on Fashion-MNIST, cutting roughly a fifth of softmax regression's classification errors ($\sim 87\%$ vs. $\sim 84\%$ accuracy) at virtually identical GPU epoch time and visualizing the localized garment-part detectors learned by the hidden units.
-- **Backpropagation (:numref:`sec_backprop`):** We derive the three matrix-calculus local rules of reverse-mode differentiation through an MLP, verify our hand-coded backward pass against `autograd` to $10^{-14}$ relative error, and tally the exact activation memory and FLOP cost of training versus inference.
+- **Implementation (:numref:`sec_mlp-implementation`):** We implement a 256-unit ReLU MLP both from scratch and concisely on Fashion-MNIST, cutting roughly a fifth of softmax regression's classification errors ($\sim 87\%$ vs. $\sim 84\%$ accuracy) at virtually identical GPU epoch time and visualizing the weight patterns learned by the hidden units.
+- **Backpropagation (:numref:`sec_backprop`):** We derive the three matrix-calculus local rules of reverse-mode differentiation through an MLP, verify our hand-coded backward pass against `autograd` to within $10^{-15}$ relative error, and tally the exact activation memory and FLOP cost of training versus inference.
 - **Numerical Stability and Initialization (:numref:`sec_numerical_stability`):** We analyze how activations and gradients scale across $K$ layers, derive *Xavier* and *He* initialization to prevent vanishing and exploding gradients in a 10-layer MLP, and prove why random initialization is required to break hidden-unit permutation symmetry.
 - **Generalization in Deep Learning (:numref:`sec_generalization_deep`):** We demonstrate random-label memorization, *double descent* past the interpolation threshold, the *implicit bias* of gradient descent (minimum-norm least squares and maximum-margin classification), and *early stopping* under label noise.
 - **Dropout (:numref:`sec_dropout`):** We introduce inverted dropout masking and rescaling, implement it from scratch and concisely in a two-hidden-layer MLP, and test how it slows the memorization of corrupted labels.
@@ -91,7 +91,7 @@ Multilayer Perceptrons: Breaking the Linear Barrier<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- **Representation & features:** Nonlinear activations prevent linear collapse, fold space into $2^m$ pieces with depth, and learn localized garment-part filters.
+- **Representation & features:** Nonlinear activations prevent linear collapse, fold space into $2^m$ pieces with depth, and learn contrast patterns in place of whole-garment templates.
 - **Optimization & stability:** Three local VJP rules ($\mathbf{X}^\top\mathbf{G}$, $\mathbf{G}\mathbf{W}^\top$, $\odot\,\phi'$) run in $\sim 2\times$ forward FLOPs; setting $h\tau^2\mathbb{E}[\phi'(z)^2] = 1$ prevents vanishing/exploding products.
 - **Generalization & tabular ML:** Double descent, minimum-norm implicit bias, inverted dropout $h' = \xi h / (1 - p)$, and leakage-free 5-fold Kaggle cross-validation.
 :::

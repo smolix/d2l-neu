@@ -11,6 +11,11 @@ In :numref:`chap_classification`, softmax regression scored each garment categor
 1. **Monotonicity:** Increasing feature $x_i$ always pushes $o_j$ in the same direction (up if $w_{ij} > 0$, down if $w_{ij} < 0$). Yet many real relationships are non-monotonic: human health risk rises whenever body temperature strays from $37^\circ\textrm{C}$ in *either* direction.
 2. **No feature interactions:** Increasing $x_i$ by one unit changes $o_j$ by $w_{ij}$ regardless of the values of every other coordinate. In an image, however, a bright pixel at $(13, 17)$ means completely different things depending on whether the neighboring pixels form a collar, a sleeve, or a handbag strap.
 
+:numref:`fig_mdl-mlp-temperature-risk` plots the temperature example. The best linear score rises with temperature throughout, so it rates a patient with hypothermia as the safest of all.
+
+![Health risk against body temperature. The risk is lowest near $37^\circ\textrm{C}$ and rises on both sides, whereas a linear score can only rise or fall. The dashed line is the least-squares linear fit over the plotted range.](../img/mdl-mlp-temperature-risk.svg)
+:label:`fig_mdl-mlp-temperature-risk`
+
 A *multilayer perceptron* (MLP) overcomes both limitations by inserting one or more *hidden layers* that transform raw inputs into learned intermediate representations—applying an affine map followed by a nonlinear *activation function*—before a linear output layer makes the final prediction. In this section, we prove that no linear model can solve the four-point XOR problem, solve XOR explicitly with two ReLU hidden units, examine what functions shallow and deep networks can represent, and compare the activation functions used across modern deep learning.
 
 ```{.python .input #mlp-multilayer-perceptrons}
@@ -70,7 +75,10 @@ Notice the interaction: flipping $x_1$ from $0$ to $1$ increases $y$ when $x_2 =
 
 **Proof.** Suppose for contradiction that some $w_1, w_2, b$ classify all four corners correctly. The two class-1 points $(0, 1)$ and $(1, 0)$ require $w_2 + b > 0$ and $w_1 + b > 0$, whose sum gives $w_1 + w_2 + 2b > 0$. Meanwhile, the two class-0 points $(0, 0)$ and $(1, 1)$ require $b \leq 0$ and $w_1 + w_2 + b \leq 0$, whose sum gives $w_1 + w_2 + 2b \leq 0$—an immediate contradiction. $\blacksquare$
 
-Geometrically, both diagonals of the unit square share the midpoint $(1/2, 1/2)$, where any affine function equals the average of its values at either diagonal's endpoints—so no straight line can ever separate the two diagonals.
+Geometrically, both diagonals of the unit square share the midpoint $(1/2, 1/2)$ (:numref:`fig_mdl-mlp-xor-diagonals`), where any affine function equals the average of its values at either diagonal's endpoints—so no straight line can ever separate the two diagonals.
+
+![The four XOR points, labeled by class. Each diagonal joins the two points of one class, and the two diagonals cross at $(1/2, 1/2)$, so no straight line separates the classes.](../img/mdl-mlp-xor-diagonals.svg)
+:label:`fig_mdl-mlp-xor-diagonals`
 
 ## Hidden Layers
 
@@ -183,7 +191,7 @@ Wherever $\phi'(z_j) \approx 0$, gradient flow stalls. :numref:`fig_mdl-mlp-acti
 
 - **Limits of linearity and hidden layers:** Linear models are monotonic in each coordinate and cannot capture feature interactions such as XOR. An MLP inserts hidden layers $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ before the linear output layer; without a nonlinear $\phi$, stacked affine layers collapse into a single linear layer.
 - **Expressive power and depth:** A single wide enough hidden layer with any continuous non-polynomial activation is a universal approximator on compact sets, while stacking $m$ hidden layers can compose space-folding functions to create $2^m$ linear regions with only $O(m)$ units.
-- **Activation functions:** ReLU ($\max(z, 0)$) and GELU ($z\Phi(z)$) pass gradients with unit slope for positive pre-activations, avoiding the tail saturation and $1/4$ slope attenuation of sigmoid and $\tanh$.
+- **Activation functions:** ReLU ($\max(z, 0)$) passes gradients with slope $1$ for positive pre-activations, and GELU ($z\Phi(z)$) with slope close to $1$ once $z \gtrsim 1$. Neither saturates for large positive $z$, unlike sigmoid (slope at most $1/4$) and $\tanh$ (slope at most $1$), whose slopes vanish in both tails.
 
 ## Exercises
 
@@ -480,7 +488,7 @@ While any non-polynomial $\phi$ suffices for universal approximation, training v
 ::: {.col}
 $$\frac{\partial l}{\partial w^{(1)}_{ij}} = \frac{\partial l}{\partial h_j}\,\phi'(z_j)\,x_i$$
 
-- **Rectifying activations (top):** ReLU and GELU maintain unit slope ($\phi'(z) = 1$) for positive pre-activations, allowing gradients to pass undiminished across deep stacks.
+- **Rectifying activations (top):** ReLU keeps slope $1$ for positive pre-activations and GELU a slope close to $1$ once $z \gtrsim 1$, allowing gradients to pass undiminished across deep stacks.
 - **Squashing activations (bottom):** Sigmoid and $\tanh$ compress $\mathbb{R}$ into bounded intervals, so their derivatives $\phi'(z) \to 0$ saturate in both tails ($|z| \gtrsim 3$).
 :::
 

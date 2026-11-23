@@ -193,8 +193,18 @@
         }
       ]
     },
+    "linear-algebra-matrix-matrix-products-2": {
+      "code_fingerprint": "sha256:dc2d4b760f6fbce7bfbecf708c7fcf14e732382a21cb9cc62e5b85f265a0924c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((3, 2, 4), array(True))"
+        }
+      ]
+    },
     "linear-algebra-dot-products-3": {
-      "code_fingerprint": "sha256:93cda90b5307046eec51ab2d6aa4361f9d7d7dc2db1bf9d0b6899f88ddcc96a2",
+      "code_fingerprint": "sha256:fa7789c38e31d01111c2c51be2941bbcb23a1d133379590c22d208b889dc7c6b",
       "kind": "text",
       "outputs": [
         {
@@ -204,7 +214,7 @@
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:2a6fd65d52007eba492d7a0f8cf7f9b5300d015b18d8cbeb74f72fc709e51602",
+      "code_fingerprint": "sha256:599d2adf0bd07f88c97b2835ff69f55504bbf5e5a396d038c2468e7dec90b2fa",
       "kind": "text",
       "outputs": [
         {
@@ -214,7 +224,7 @@
       ]
     },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:80e0b6e3d600580973d0ae76d1b3be664c74f23e928d93b58adc20355d0359c8",
+      "code_fingerprint": "sha256:31be5cc3de73c3ec5bcc036e7a2b6e8bef41f91d5cbe2db4324a9e3e4d1ef9b6",
       "kind": "text",
       "outputs": [
         {
@@ -224,7 +234,7 @@
       ]
     },
     "linear-algebra-eigenvalues-1": {
-      "code_fingerprint": "sha256:7957a346f933ebd57eed67a181a5ef7ce1a4f606e3b940530237644558f09dc5",
+      "code_fingerprint": "sha256:a2eaca6ee8940f425dc6578d8a03be428870e6928cafe6c0eb04c6a9e88f83c9",
       "kind": "text",
       "outputs": [
         {
@@ -234,7 +244,7 @@
       ]
     },
     "linear-algebra-eigenvalues-2": {
-      "code_fingerprint": "sha256:1576f585ee121df5a5a8a6fb308ba71f6cc5486b9bef01e25f5a34d6de63c149",
+      "code_fingerprint": "sha256:e43cbd96ab496d910fa6b0f08c82cbebc7648dbdfbb6dc4d23cc936c661bddb9",
       "kind": "text",
       "outputs": [
         {
@@ -244,12 +254,22 @@
       ]
     },
     "linear-algebra-powers-of-a-matrix-1": {
-      "code_fingerprint": "sha256:b8de08d8372e2b013988726a8c69f79e6a747d1db620e230c8b8ce33c44a4894",
+      "code_fingerprint": "sha256:24568a40ba888b7cbf8a836f909de19b6f08a85c9f2e17604c567c046c786e33",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "array([1.1739086e+02, 5.1537761e-03])"
+        }
+      ]
+    },
+    "linear-algebra-eigenvectors-and-eigenvalues-1": {
+      "code_fingerprint": "sha256:ce725d53fd358bcc6acb3b72d70da0e79d03e2efbad077247f1389c384bb6ac2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([2.9999998, 1.       ]),\n array([2., 0.]),\n array([0., 2.]),\n array(1, dtype=int64))"
         }
       ]
     }

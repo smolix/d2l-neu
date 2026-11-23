@@ -415,38 +415,37 @@ function vjpSeed() {
 
 // ── Activation memory in training vs torch.no_grad() inference ────────
 function activationMemory() {
-  const W = 540, H = 276; let o = '';
-  const GREEN_DK = TOKENS.accents.green.dark;
-  // Top: Training caches all L intermediate activations in VRAM
-  o += tx(16, 22, '(a) Training (grad enabled): caches L layer activations until backward', { fs: 14.5, fw: 700, fill: RED.dark, anchor: 'start' });
-  const layers = ['h₁ (cached)', 'h₂ (cached)', 'h₃ (cached)', 'h₄ (cached)'];
-  layers.forEach((lab, i) => {
-    const x = 20 + i * 128;
-    o += box(x, 42, 108, 46, RED.tint, RED.base, false, 6, 2);
-    o += mono(x + 54, 65, lab, { fill: RED.dark, fs: 13, fw: 700 });
-    if (i < 3) o += arrow(x + 110, 56, x + 126, 56, C.blue);
-    if (i < 3) o += arrow(x + 126, 76, x + 110, 76, RED.base);
+  // (a) with gradient tracking on, every layer's output stays in memory
+  // until the backward pass has used it; (b) with tracking off, each output
+  // can be freed once the next layer has consumed it.
+  let o = '';
+  const bw = 96, bh = 60, gap = 40, x0 = 24;
+  const xs = [0, 1, 2, 3].map(i => x0 + i * (bw + gap));
+  const BLUE_TINT = TOKENS.accents.blue.tint;
+  const node = (x, y, i, fill, stroke, dash, sub, tc) =>
+    box(x, y, bw, bh, fill, stroke, dash, 8, 2)
+    + rich(x + bw / 2, y + 19, `\\b{h}_{${i + 1}}`, { fs: 17, fill: tc })
+    + tx(x + bw / 2, y + 44, sub, { fs: 14.5, fw: 500, fill: tc });
+  // (a)
+  o += tx(16, 18, '(a) gradient tracking on', { fs: 15, fw: 700, fill: C.ink, anchor: 'start' });
+  const ya = 34;
+  xs.forEach((x, i) => {
+    o += node(x, ya, i, BLUE_TINT, C.blue, false, 'kept', C.ink);
+    if (i < 3) {
+      o += arrow(x + bw + 4, ya + 20, x + bw + gap - 4, ya + 20, C.blue);
+      o += arrow(x + bw + gap - 4, ya + 40, x + bw + 4, ya + 40, RED.base);
+    }
   });
-  o += tx(270, 110, 'VRAM grows as O(L × batch_size × hidden_dim) — dominates training memory!', { fs: 13.5, fw: 700, fill: RED.dark });
-
-  o += line(16, 134, 524, 134, HAIR, 1.5);
-
-  // Bottom: Inference with no_grad() frees each buffer immediately
-  o += tx(16, 158, '(b) Inference (tracking off): O(1) buffer reuse', { fs: 14.5, fw: 700, fill: GREEN_DK, anchor: 'start' });
-  const inf = [
-    ['h₁ (freed)', '#fff', C.gray, true, C.muted],
-    ['h₂ (freed)', '#fff', C.gray, true, C.muted],
-    ['h₃ (freed)', '#fff', C.gray, true, C.muted],
-    ['h₄ (active)', C.lgreen, C.green, false, GREEN_DK],
-  ];
-  inf.forEach(([lab, fill, st, dash, tc], i) => {
-    const x = 20 + i * 128;
-    o += box(x, 178, 108, 46, fill, st, dash, 6, 2);
-    o += mono(x + 54, 201, lab, { fill: tc, fs: 13, fw: 700 });
-    if (i < 3) o += arrow(x + 110, 201, x + 126, 201, C.green);
+  // (b)
+  const yb = ya + bh + 52;
+  o += tx(16, yb - 16, '(b) gradient tracking off', { fs: 15, fw: 700, fill: C.ink, anchor: 'start' });
+  xs.forEach((x, i) => {
+    const last = i === 3;
+    o += node(x, yb, i, last ? BLUE_TINT : '#fff', last ? C.blue : C.gray, !last,
+              last ? 'in use' : 'freed', last ? C.ink : C.muted);
+    if (i < 3) o += arrow(x + bw + 4, yb + bh / 2, x + bw + gap - 4, yb + bh / 2, C.blue);
   });
-  o += tx(270, 248, 'No computation graph recorded → 2–4× larger batch sizes fit in GPU HBM', { fs: 13.5, fw: 700, fill: GREEN_DK });
-  return svg(W, H, o);
+  return svg(xs[3] + bw + 24, yb + bh + 14, o);
 }
 
 export const diagrams = {

@@ -130,7 +130,9 @@ gradient before this rescaling, inadvertently distorting the penalty. *AdamW*
 gradient step, shrinking every weight directly by a fraction equal to
 learning rate times decay—a clean fix that made adaptive optimizers
 competitive with well-tuned SGD across vision benchmarks. (LAMB is a
-large-batch cousin of AdamW that we will not need here.)
+large-batch cousin of AdamW. The 80.4% ResNet-50 above was trained with it,
+for 600 epochs, with a binary cross-entropy loss and without weight
+averaging. We will not need it here.)
 
 ## Implementing the Ingredients
 
@@ -824,8 +826,9 @@ mirrors 2015 practice: SGD with momentum 0.9, coupled weight decay
 $5 \times 10^{-4}$, a peak learning rate of 0.05 with two epochs of linear
 warmup followed by 10-fold drops at 60% and 85% of training, plain
 cross-entropy loss, and 30 epochs. (The short two-epoch warmup is a minor
-modern stabilization: without it, batch-normalized SGD at 0.05 diverges in
-epoch 1 on roughly a third of runs :cite:`Goyal.Dollar.Girshick.ea.2017`.)
+modern stabilization, introduced for large-minibatch SGD by
+:citet:`Goyal.Dollar.Girshick.ea.2017`: without it, batch-normalized SGD at
+0.05 diverged in epoch 1 in roughly a third of our runs.)
 Our *compact modern recipe* uses AdamW with weight decay 0.05, peak learning
 rate 0.002 with three epochs of warmup and cosine decay, label smoothing
 ($\epsilon = 0.1$), Mixup ($\alpha = 0.2$), and 45 epochs (reflecting the
@@ -1035,7 +1038,7 @@ In every paired run on the same 10,000-image subset, `ModernRecipe` beats `Class
 
 ## Summary
 
-Between 2015 and the early 2020s, convnet training recipes evolved across every axis—AdamW with decoupled weight decay, cosine warmup schedules, RandAugment/Mixup/CutMix, label smoothing, stochastic depth, longer training horizons, and EMA weight averaging—lifting an unchanged ResNet-50 from 76.1% to 80.4% on ImageNet. Each ingredient takes only a few lines of code, and a compact subset reliably improves ResNet-18 on `FashionMNIST10k`. Next, :numref:`sec_convnext` holds the modern recipe fixed and modernizes the ResNet architecture itself one step at a time.
+Between 2015 and the early 2020s, convnet training recipes evolved across every axis: adaptive optimizers with decoupled weight decay (AdamW, LAMB), cosine warmup schedules, RandAugment/Mixup/CutMix, label smoothing, stochastic depth, longer training horizons, and EMA weight averaging. One such recipe (LAMB, a cosine schedule, RandAugment with Mixup and CutMix, stochastic depth, 600 epochs, and no weight averaging) lifted an unchanged ResNet-50 from 76.1% to 80.4% on ImageNet. Each ingredient takes only a few lines of code, and a compact subset reliably improves ResNet-18 on `FashionMNIST10k`. Next, :numref:`sec_convnext` holds the modern recipe fixed and modernizes the ResNet architecture itself one step at a time.
 
 ## Exercises
 
@@ -1073,7 +1076,7 @@ Modern Training Recipes for Convnets<br>**AdamW · cosine warmup · label smooth
 
 ::: {.cols .vc}
 ::: {.col}
-- **ResNet-50 Strikes Back (Wightman et al., 2021):** Upgrading the training recipe lifts an *unchanged* 2015 ResNet-50 from **$76.1\%$ to $80.4\%$** (+4.3 points) on ImageNet!
+- **ResNet-50 Strikes Back (Wightman et al., 2021):** Upgrading the training recipe lifts an *unchanged* 2015 ResNet-50 from **$76.1\%$ to $80.4\%$** (+4.3 points) on ImageNet, using LAMB, a BCE loss, RandAugment/Mixup/CutMix, and 600 epochs.
 - **Scientific rule:** Always compare architectures under matched training recipes; a 1–2 point gain over an un-retrained baseline confounds recipe with architecture.
 :::
 
@@ -1089,8 +1092,8 @@ Modern Training Recipes for Convnets<br>**AdamW · cosine warmup · label smooth
 ::: {.cols .vc}
 ::: {.col}
 - **Data & forward pass:** RandAugment + Mixup + CutMix + Stochastic Depth (`drop_path`).
-- **Objective & optimizer:** Label smoothing ($\epsilon = 0.1$) + AdamW (decoupled weight decay) + linear warmup & half-cosine decay over 300–600 epochs.
-- **Checkpoint:** Shadow exponential moving average (EMA) $\bar{\boldsymbol{\theta}}_T$.
+- **Objective & optimizer:** Label smoothing ($\epsilon = 0.1$) + AdamW or LAMB (decoupled weight decay) + linear warmup & half-cosine decay over 300–600 epochs.
+- **Checkpoint:** Often a shadow exponential moving average (EMA) $\bar{\boldsymbol{\theta}}_T$; the $80.4\%$ ResNet-50 run used none.
 :::
 
 ::: {.col .fig .big}

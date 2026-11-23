@@ -228,6 +228,12 @@ $[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$:
 
 $$\sum_{a}\sum_{b} [\mathbf{K}]_{a, b}  [\mathbf{X}]_{i+a, j+b} = \sum_{a}\sum_{b} [\mathbf{K}']_{a, b}  [\mathbf{X}]_{i-a, j-b} = (\mathbf{K}' * \mathbf{X})(i, j).$$
 
+Flipping reverses the kernel along both axes, so that its top-left weight
+becomes the bottom-right one (:numref:`fig_conv_flipped_kernel`).
+
+![A $3 \times 3$ kernel $\mathbf{K}$ and its flipped copy $\mathbf{K}'$, with rows and columns indexed by the offsets $a$ and $b$. The flip reverses both axes: the two shaded weights move from offsets $(-1, -1)$ and $(-1, 0)$ to $(1, 1)$ and $(1, 0)$. Cross-correlation with $\mathbf{K}$ is convolution with $\mathbf{K}'$.](../img/conv-flipped-kernel.svg)
+:label:`fig_conv_flipped_kernel`
+
 The unflipped operation is properly called *cross-correlation*. Because CNN
 kernels are learned from data, the distinction has no effect on expressive
 power: a layer that cross-correlates with $\mathbf{K}$ learns the exact same

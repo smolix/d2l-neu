@@ -437,7 +437,51 @@ def fig_depth_folding():
     fl.save(fig, "mdl-mlp-depth-folding")
 
 
-FIGURES += [fig_activations, fig_depth_folding]
+def fig_temperature_risk():
+    """Monotonicity, the first limit of linear models (mlp.md, opening list).
+
+    Health risk as a function of body temperature T is U-shaped around 37 C:
+    it rises when T strays in either direction.  A linear score w T + b can
+    only rise or fall.  The dashed line is the *least-squares* best linear
+    fit to the risk curve over the plotted range (computed, not drawn by
+    hand): because the range reaches further above 37 C than below it, the
+    best line rises with T, so it ranks hypothermia as the safest state.
+    Risk is in arbitrary units (no y ticks); the curve is a parabola."""
+    T = fl.T
+    temp = np.linspace(34.0, 42.0, 401)
+    risk = ((temp - 37.0) / 3.0) ** 2
+    w, b = np.polyfit(temp, risk, 1)              # best linear score
+    line = w * temp + b
+    print(f"  best linear fit: slope {w:.3f} per degree C")
+    assert w > 0                                  # rises: misses hypothermia
+    assert risk[0] > line[0]                      # under-rates the cold end
+
+    fig, ax = plt.subplots(figsize=(4.6, 2.9))
+    ax.axvline(37.0, color=T.FAINT, lw=1.0, ls=(0, (4, 3)), zorder=1)
+    ax.plot(temp, risk, color=T.BLUE.base, lw=T.SW_LINE, zorder=3)
+    ax.plot(temp, line, color=T.ORANGE.base, lw=T.SW_LINE, ls=(0, (5, 3)),
+            zorder=3)
+
+    lab = dict(fontsize=14, zorder=5)
+    ax.text(40.9, 2.45, "true risk", color=T.BLUE.dark, ha="right",
+            va="center", **lab)
+    ax.text(41.9, 0.42, "best linear\nscore", color=T.ORANGE.dark,
+            ha="right", va="center", linespacing=LINESP, **lab)
+
+    ax.set_xlim(34.0, 42.0)
+    ax.set_ylim(-0.3, 2.95)
+    ax.set_xticks([34, 37, 40])
+    ax.set_yticks([])
+    ax.set_xlabel("body temperature (\u00b0C)", fontsize=14,
+                  labelpad=XPAD)
+    ax.set_ylabel("risk", fontsize=14, color=T.INK)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    _black_axes(ax)
+    fl.save(fig, "mdl-mlp-temperature-risk")
+
+
+FIGURES += [fig_activations, fig_depth_folding, fig_temperature_risk]
 
 
 if __name__ == "__main__":

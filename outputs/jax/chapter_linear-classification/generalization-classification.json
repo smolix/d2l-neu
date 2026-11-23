@@ -14,39 +14,39 @@
       "outputs": []
     },
     "generalization-classification-the-test-set-2": {
-      "code_fingerprint": "sha256:1f7e114c59f664d7e0006f58dc973c86fa6f576d750f8c85096b4e72aada7ff9",
+      "code_fingerprint": "sha256:b5e1cfe7f7a7aa17d26294f8e2032c69a87d83481f993cbfac0eadd367a46e27",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
-          "bytes": 35742,
-          "sha256": "sha256:b2e29b305f66b58093291199f6046df7384ae9bf69460efc313c79ab026d6c25"
+          "bytes": 35746,
+          "sha256": "sha256:d4f6113aa5cc51c14e9887288c3a5de123deddb8f42c83a67808ccd8b9f25c44"
         }
       ]
     },
     "generalization-classification-test-set-reuse-1": {
-      "code_fingerprint": "sha256:e072946f20a792f93782cbac18436eb48db8c921257b2adc9c29db21622ae46b",
+      "code_fingerprint": "sha256:93c98d34e67afe6c8825d161f5d5b5d19b0646ef5fd787ad1823b86b92355212",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
-          "bytes": 37398,
-          "sha256": "sha256:c777571cbdad33c73e0cb9fab342f7cb8eed519492397433e99991b8f72ae914"
+          "bytes": 37162,
+          "sha256": "sha256:9e7dd73519b12205d570dbf05768e227bc5ca9c15603550513a5b37f38d6f929"
         }
       ]
     },
     "generalization-classification-adaptive-overfitting": {
-      "code_fingerprint": "sha256:91d94374456bbc95ea71838eb48a427c6f9f3a7e715a68c858e9188f7899fb70",
+      "code_fingerprint": "sha256:ec88b72647c9901427a84076f540f4e78fb9e6196dc6eb959919893aadb3ba39",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "majority vote: 0.724, best single guesser: 0.560\n"
+          "text": "majority vote: 0.724, best single guesser: 0.564\n"
         }
       ]
     }

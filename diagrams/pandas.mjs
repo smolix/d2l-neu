@@ -74,33 +74,37 @@ function pipeline() {
 // The column holds 3, NaN, 2, 4; its mean is 3.  Slide-only, shown in a
 // figure column at ~0.9x, so values and labels are 16-18 px.
 function missing() {
-  const s = 36, g = 4, step = s + g, fs = 17; let o = '';
-  const W = 540, tcx = W / 2, ty = 38;
-  const src = [['3'], ['NaN'], ['2'], ['4']];
+  // The first four rows of NumRooms; the imputed value is the mean of all
+  // seven observed room counts, 23/7 = 3.29 (as in the section's output).
+  const w = 60, h = 36, g = 4, step = h + g, fs = 17; let o = '';
+  const cell = (x, y, [f, st, , tc], t) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${f}" stroke="${st}" stroke-width="2"/>`
+    + code(x + w / 2, y + h / 2, t, tc, { fs, fw: 500 });
+  const col = (x, y, vals, fill) => vals.map((v, r) => cell(x, y + r * step, fill(r), v)).join('');
+  const W = 560, tcx = W / 2, ty = 38;
   o += code(tcx, ty - 22, 'NumRooms', C.ink, { fs, fw: 700 });
-  o += grid(src, tcx - s / 2, ty, s, g, { fs, fill: (r, c, v) => v === 'NaN' ? AMBER : BLUE });
+  o += col(tcx - w / 2, ty, ['3', 'NaN', '2', '4'], (r) => r === 1 ? AMBER : BLUE);
   const srcBot = ty + 4 * step - g;
   const ry = srcBot + 58;
-  const ax = 40, bx = W / 2 - s / 2, cx = W - 40 - (2 * s + g);
+  const ax = 40, bx = W / 2 - w / 2, cx = W - 40 - (2 * w + g);
   // fan arrows from the source column to the three results
-  o += arrow(tcx - 26, srcBot + 8, ax + s / 2 + 8, ry - 10, C.gray);
+  o += arrow(tcx - 30, srcBot + 8, ax + w / 2 + 8, ry - 10, C.gray);
   o += arrow(tcx, srcBot + 8, tcx, ry - 10, C.gray);
-  o += arrow(tcx + 26, srcBot + 8, cx + s - 8, ry - 10, C.gray);
+  o += arrow(tcx + 30, srcBot + 8, cx + w - 8, ry - 10, C.gray);
   // deletion: the row with the gap is gone
-  o += grid([['3'], ['2'], ['4']], ax, ry, s, g, { fs, fill: () => BLUE });
-  // imputation: the gap holds the mean
-  o += grid([['3'], ['3'], ['2'], ['4']], bx, ry, s, g, { fs,
-    fill: (r) => r === 1 ? GREEN : BLUE });
+  o += col(ax, ry, ['3', '2', '4'], () => BLUE);
+  // imputation: the gap holds the mean of the observed values
+  o += col(bx, ry, ['3', '3.29', '2', '4'], (r) => r === 1 ? GREEN : BLUE);
   // indicator: imputed value plus a column that flags the gap
-  o += grid([['3', '0'], ['3', '1'], ['2', '0'], ['4', '0']], cx, ry, s, g, { fs,
-    fill: (r, c) => c === 1 ? PURPLE : (r === 1 ? GREEN : BLUE) });
+  o += col(cx, ry, ['3', '3.29', '2', '4'], (r) => r === 1 ? GREEN : BLUE);
+  o += col(cx + w + g, ry, ['0', '1', '0', '0'], () => PURPLE);
   // labels on one baseline, below the tallest result
   const lab = (x, t, sub) =>
     name(x, ry + 4 * step + 16, t, C.ink, { fs: 18 })
     + note(x, ry + 4 * step + 40, sub, C.ink, { fs: 16 });
-  o += lab(ax + s / 2, 'deletion', 'drops the row');
-  o += lab(bx + s / 2, 'imputation', 'fills in the mean');
-  o += lab(cx + s + g / 2, 'indicator', 'mean and a flag');
+  o += lab(ax + w / 2, 'deletion', 'drops the row');
+  o += lab(bx + w / 2, 'imputation', 'fills in the mean');
+  o += lab(cx + w + g / 2, 'indicator', 'mean and a flag');
   return svg(W, ry + 4 * step + 54, o);
 }
 
@@ -241,20 +245,55 @@ function imputationShrinkage() {
   return svg(W, H, o);
 }
 
+// ── mean imputation shrinks the spread (book figure, one panel) ─────────
+// The seven observed NumRooms (2, 2, 3, 3, 4, 4, 5; mean 23/7 = 3.29,
+// sample sd 1.11) and the ten values after mean imputation (sd 0.91).
+function imputationSpread() {
+  let o = '';
+  const x0 = 120, x1 = 500, k = (x1 - x0) / 4;
+  const vx = (v) => x0 + (v - 1.5) * k;
+  const mu = 23 / 7, y1 = 64, y2 = 150, r = 6, dy = 13;
+  const observed = [2, 2, 3, 3, 4, 4, 5];
+  const dots = (y) => {
+    const seen = {};
+    observed.forEach(v => {
+      const j = seen[v] = (seen[v] || 0) + 1;
+      o += `<circle cx="${vx(v).toFixed(1)}" cy="${y - (j - 1) * dy}" r="${r}" fill="${C.blue}"/>`;
+    });
+  };
+  o += note(16, y1, 'observed', C.ink, { anchor: 'start' });
+  o += line(x0, y1, x1, y1, C.ink, 1.5);
+  dots(y1);
+  o += note(16, y2, 'imputed', C.ink, { anchor: 'start' });
+  o += line(x0, y2, x1, y2, C.ink, 1.5);
+  dots(y2);
+  for (let j = 0; j < 3; j++)
+    o += `<circle cx="${vx(mu).toFixed(1)}" cy="${y2 - j * dy}" r="${r}" fill="${C.amber}" stroke="${D.orange.dark}" stroke-width="1.5"/>`;
+  o += tx(vx(mu), y2 - 2 * dy - 24, 'μ', { fs: 17, fw: 600, fill: D.orange.dark });
+  [2, 3, 4, 5].forEach(v => {
+    o += line(vx(v), y2 + 1, vx(v), y2 + 6, C.ink, 1.5);
+    o += code(vx(v), y2 + 20, String(v), C.ink, { fw: 500 });
+  });
+  o += note(x1 + 14, y1, 'σ = 1.11', C.ink, { anchor: 'start', fw: 600 });
+  o += note(x1 + 14, y2, 'σ = 0.91', C.ink, { anchor: 'start', fw: 600 });
+  return svg(x1 + 92, y2 + 36, o);
+}
+
 // ── categorical pitfalls: fake integer order vs one-hot vs embedding ───
 function categoricalPitfalls() {
   const W = 540, H = 280; let o = '';
   // 1. Bad: integer IDs imply fake order
   o += `<rect x="16" y="16" width="508" height="72" rx="8" fill="${D.red.tint}" stroke="${D.red.base}" stroke-width="2"/>`;
   o += name(28, 38, '✗ Integer IDs invent fake metric ordering:', D.red.dark, { anchor: 'start', fs: 15.5 });
-  o += code(270, 66, 'Slate = 0     Tile = 1     Wood = 2   ⇒   (Slate + Wood)/2 = Tile?!', D.red.dark, { fs: 13.5 });
+  o += code(270, 66, 'Slate = 0     Tile = 1     NaN = 2   ⇒   (Slate + NaN)/2 = Tile?!', D.red.dark, { fs: 13.5 });
 
   // 2. Good for small K: One-hot orthogonal corners
   o += `<rect x="16" y="104" width="244" height="160" rx="8" fill="${C.lblue}" stroke="${C.blue}" stroke-width="2"/>`;
   o += name(138, 128, '✓ Small K: One-Hot {0, 1}ᴷ', D.blue.dark, { fs: 15.5 });
-  o += code(138, 156, 'Slate → [1, 0, 0]', C.ink, { fs: 13.5 });
-  o += code(138, 180, 'Tile  → [0, 1, 0]', C.ink, { fs: 13.5 });
-  o += code(138, 204, 'Wood  → [0, 0, 1]', C.ink, { fs: 13.5 });
+  [['Slate', '[1, 0, 0]'], ['Tile', '[0, 1, 0]'], ['NaN', '[0, 0, 1]']].forEach(([k, v], i) => {
+    o += code(100, 156 + 24 * i, k, C.ink, { fs: 13.5, anchor: 'end' });
+    o += code(112, 156 + 24 * i, '→ ' + v, C.ink, { fs: 13.5, anchor: 'start' });
+  });
   o += note(138, 240, 'equidistant orthogonal axes', D.blue.dark, { fs: 13.5 });
 
   // 3. Good for huge K: Learned dense embedding table
@@ -268,34 +307,30 @@ function categoricalPitfalls() {
 
 // ── data leakage vs fit-on-train / apply-to-test pipeline ─────────────
 function leakageSplit() {
-  const W = 560, H = 286; let o = '';
-  // Top: WRONG (fit before split -> data leakage)
-  o += `<rect x="14" y="14" width="532" height="106" rx="10" fill="${D.red.tint}" stroke="${D.red.base}" stroke-width="2"/>`;
-  o += name(26, 36, '✗ WRONG: Fit on Full Dataset Before Splitting (Test Leakage!)', D.red.dark, { anchor: 'start', fs: 15.5 });
-  o += wcell(26, 56, 134, 44, [ '#FFFFFF', D.red.base, false, C.ink ], 'Train + Test');
-  o += arrow(166, 78, 206, 78, D.red.base);
-  o += wcell(212, 56, 152, 44, [ '#FFFFFF', D.red.base, false, D.red.dark ], 'μ_all, σ_all');
-  o += arrow(370, 78, 410, 78, D.red.base);
-  o += wcell(416, 56, 116, 44, [ '#FFFFFF', D.red.base, false, D.red.dark ], 'optimistic!');
-
-  // Bottom: RIGHT (split first, fit on train only, freeze & apply to test)
-  o += `<rect x="14" y="136" width="532" height="136" rx="10" fill="${C.lgreen}" stroke="${C.green}" stroke-width="2"/>`;
-  o += name(26, 158, '✓ RIGHT: Split First → Fit on Train Only → Apply Frozen Stats', D.green.dark, { anchor: 'start', fs: 15.5 });
-  o += wcell(26, 178, 108, 36, BLUE, 'Train Set');
-  o += wcell(26, 224, 108, 36, AMBER, 'Test Set');
-
-  o += arrow(140, 196, 186, 196, C.blue);
-  o += code(163, 182, 'fit', D.blue.dark, { fs: 13 });
-  o += wcell(192, 178, 154, 36, [ '#FFFFFF', C.green, false, D.green.dark ], 'μ_train, σ_train');
-
-  // Frozen stats arrow feeds both train and test transform
-  o += arrow(352, 196, 396, 196, C.green);
-  o += arrow(269, 216, 269, 242, C.green);
-  o += arrow(269, 242, 396, 242, C.green);
-  o += arrow(140, 242, 396, 242, C.amber);
-
-  o += wcell(402, 178, 130, 36, [ '#FFFFFF', C.blue, false, C.ink ], 'X_train_std');
-  o += wcell(402, 224, 130, 36, [ '#FFFFFF', C.amber, false, C.ink ], 'X_test_std');
+  const W = 560, H = 272; let o = '';
+  const stats = (t, c) => [ '#FFFFFF', c, false, C.ink ];
+  // (a) statistics fitted on all rows, then the split
+  o += `<rect x="14" y="14" width="532" height="98" rx="10" fill="${D.red.tint}" stroke="${D.red.base}" stroke-width="2"/>`;
+  o += name(26, 36, '(a) fit before the split', D.red.dark, { anchor: 'start', fs: 15 });
+  o += wcell(26, 54, 134, 40, [ '#FFFFFF', D.red.base, false, C.ink ], 'train + test');
+  o += arrow(166, 74, 206, 74, D.red.base);
+  o += code(186, 60, 'fit', D.red.dark, { fs: 14.5 });
+  o += wcell(212, 54, 152, 40, [ '#FFFFFF', D.red.base, false, C.ink ], 'μ_all, σ_all');
+  o += arrow(370, 74, 410, 74, D.red.base);
+  o += wcell(416, 54, 116, 40, [ '#FFFFFF', D.red.base, false, C.ink ], 'test score');
+  // (b) split first, fit on the training split, apply to both
+  o += `<rect x="14" y="128" width="532" height="130" rx="10" fill="${C.lgreen}" stroke="${C.green}" stroke-width="2"/>`;
+  o += name(26, 150, '(b) fit on the training split only', D.green.dark, { anchor: 'start', fs: 15 });
+  o += wcell(26, 168, 108, 36, BLUE, 'train');
+  o += wcell(26, 212, 108, 36, AMBER, 'test');
+  o += arrow(140, 186, 186, 186, C.blue);
+  o += code(163, 172, 'fit', D.blue.dark, { fs: 14.5 });
+  o += wcell(192, 168, 154, 36, stats('', C.green), 'μ_train, σ_train');
+  o += arrow(352, 186, 396, 186, C.green);
+  o += arrow(269, 206, 269, 228, C.green);
+  o += arrow(140, 230, 396, 230, C.amber);
+  o += wcell(402, 168, 130, 36, [ '#FFFFFF', C.blue, false, C.ink ], 'X_train_std');
+  o += wcell(402, 212, 130, 36, [ '#FFFFFF', C.amber, false, C.ink ], 'X_test_std');
   return svg(W, H, o);
 }
 
@@ -332,6 +367,7 @@ export const diagrams = {
   'pandas-scale':    scale,
   'pandas-xy-split':             xySplit,
   'pandas-imputation-shrinkage': imputationShrinkage,
+  'pandas-imputation-spread':    imputationSpread,
   'pandas-categorical-pitfalls': categoricalPitfalls,
   'pandas-leakage-split':        leakageSplit,
   'pandas-dtype-cast':           dtypeCast,

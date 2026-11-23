@@ -516,6 +516,72 @@ def fig_conv_receptive_field():
     save(d.fig, "conv-receptive-field")
 
 
+def fig_conv_rf_paths():
+    """sec_conv_layer, effective receptive fields: the stack of
+    fig_conv_receptive_field (three 1-D layers, kernel 3), restricted to the
+    units the top unit depends on.  Each cell holds the number of paths from
+    it to the top unit; its shade is that count relative to the largest in
+    its layer.  Bars under the input repeat the input counts as heights, so
+    the bell shape (1, 3, 6, 7, 6, 3, 1) is visible.  Counts are computed."""
+    from matplotlib.patches import Rectangle
+    from arch_diagrams import GRID_FS, FAMILY_BLUE
+    from figstyle import tokens as T
+
+    cell, row_gap, k, L = 26.0, 52.0, 3, 3
+    # paths[l][u]: paths from unit u of layer l (0 = input) to the top unit;
+    # unit u of layer l+1 reads units u .. u+k-1 of layer l
+    paths = [[1]]
+    for _ in range(L):
+        above = paths[0]
+        below = [0] * (len(above) + k - 1)
+        for u, c in enumerate(above):
+            for t in range(k):
+                below[u + t] += c
+        paths.insert(0, below)
+    assert paths[0] == [1, 3, 6, 7, 6, 3, 1]
+
+    n_in = len(paths[0])
+    bar_h = 9.0                          # points per path in the input bars
+    x0 = 76.0
+    y_bar = 14.0
+    y_in = y_bar + max(paths[0]) * bar_h + 14
+    ys = [y_in + l * row_gap for l in range(L + 1)]
+    d = MechDiagram(x0 + n_in * cell + 20, ys[-1] + cell + 16)
+
+    def left(l, u):                      # x of unit u's left edge, layer l
+        return x0 + (l * (k - 1) / 2 + u) * cell
+
+    for l, row in enumerate(paths):
+        top = max(row)
+        for u, c in enumerate(row):
+            d.ax.add_patch(Rectangle(
+                (left(l, u), ys[l]), cell, cell, zorder=4,
+                facecolor=T.BLUE.base, alpha=0.08 + 0.52 * c / top,
+                edgecolor="none"))
+            d.ax.add_patch(Rectangle(
+                (left(l, u), ys[l]), cell, cell, zorder=5,
+                facecolor="none", edgecolor=INK, linewidth=1.2))
+            d.ax.text(left(l, u) + cell / 2, ys[l] + cell / 2, str(c),
+                      fontsize=GRID_FS, color=INK, family=SANS,
+                      ha="center", va="center", zorder=6)
+            if l > 0:                    # taps into the layer below
+                for t in range(k):
+                    d.ax.plot([left(l, u) + cell / 2,
+                               left(l - 1, u + t) + cell / 2],
+                              [ys[l], ys[l - 1] + cell], color=INK,
+                              linewidth=0.8, zorder=3)
+    for u, c in enumerate(paths[0]):     # the input profile as bars
+        d.ax.add_patch(Rectangle(
+            (left(0, u) + 3, y_bar), cell - 6, c * bar_h,
+            facecolor=FAMILY_BLUE, edgecolor=INK, linewidth=1.2, zorder=4))
+    d.ax.plot([left(0, 0) - 4, left(0, n_in) + 4], [y_bar, y_bar],
+              color=INK, linewidth=1.2, zorder=5)
+    for l, name in enumerate(("input", "layer 1", "layer 2", "layer 3")):
+        d.ax.text(x0 - 10, ys[l] + cell / 2, name, fontsize=GRID_FS - 1,
+                  color=INK, family=SANS, ha="right", va="center")
+    save(d.fig, "conv-rf-paths")
+
+
 def fig_lenet():
     """sec_lenet: data flow through LeNet on one 28×28 image, drawn to scale
     (3 pt per pixel): feature-map stacks for the two convolutional blocks,
@@ -641,6 +707,7 @@ def fig_lenet():
 
 if __name__ == "__main__":
     fig_conv_receptive_field()
+    fig_conv_rf_paths()
     fig_why_conv_weight_sharing()
     fig_why_conv_equivariance()
     fig_conv_dilation()

@@ -635,6 +635,13 @@ threshold $\theta$ by projecting $\mathbf{g}$ onto the ball of radius $\theta$:
 $$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$
 :eqlabel:`eq_grad_clipping`
 
+A gradient longer than $\theta$ is scaled back to length $\theta$ without
+changing its direction, and a shorter one is left alone
+(:numref:`fig_grad-clipping`).
+
+![Gradient clipping as a projection onto the ball of radius $\theta$. The long gradient $\mathbf{g}$ is rescaled to length $\theta$ along its own direction, whereas the gradient $\mathbf{g}'$ inside the ball is left unchanged.](../img/mdl-rnn-grad-clipping.svg)
+:label:`fig_grad-clipping`
+
 Whenever `gradient_clip_val` is positive, `d2l.Trainer` (:numref:`sec_oo-design`)
 applies :eqref:`eq_grad_clipping` right after backpropagation and before the
 optimizer step.
@@ -785,8 +792,9 @@ print(f'validation perplexity {ppl_plain:.1f}')
 ```
 
 Initial validation perplexity sits near $|\mathcal{V}| = 1{,}027$, and after
-ten epochs the clipped model converges smoothly to a validation perplexity
-around 90–100 (while training perplexity drops below half that value as the
+ten epochs the clipped model reaches a validation perplexity of about 85 to
+100, even though its loss often jumps well above the starting value during the
+first epoch (while training perplexity drops below half that value as the
 222,915 parameters begin overfitting the 50,000 training tokens).
 
 To see why gradient clipping is essential at $\eta = 4$, we define a helper
@@ -839,8 +847,8 @@ d2l.plot(list(range(1, 11)), [ppl_clipped] + ppl_runs, 'epoch',
          legend_loc='outside', figsize=(5, 2.5))
 ```
 
-Without clipping, mid-training gradient spikes send validation perplexity
-jumping violently—sometimes above the untrained baseline of 1,027—and most
+Without clipping, gradient spikes send validation perplexity
+jumping violently—sometimes far above the untrained baseline of 1,027—and most
 runs finish at more than twice the clipped model's perplexity. Converting our
 clipped validation perplexity to bits per byte (:eqref:`eq_bpb`) divides
 $\log_2 \textrm{ppl}$ by the average UTF-8 bytes per BPE token ($\approx 2.8$):
@@ -924,13 +932,17 @@ print(f'validation perplexity {ppl_scratch:.1f}, '
       f'{math.log2(ppl_scratch) / bytes_per_token:.2f} bits per byte')
 ```
 
-Validation perplexity drops from roughly 90–100 down to around 60, cutting bits
+Validation perplexity drops from 85–100 down to around 60, cutting bits
 per byte from 2.3–2.4 to roughly 2.1.
 
 ### Comparison with Kneser–Ney and Effective Context Horizon
 
 How does 2.1 bits per byte compare against interpolated Kneser--Ney smoothing
-(:numref:`subsec_kneser-ney`)? We first fit Kneser--Ney $n$-grams
+(:numref:`subsec_kneser-ney`)? The $1.9$ bits per byte that the Kneser--Ney
+trigram reached in :numref:`sec_language-model` cannot serve as the yardstick:
+that number was measured on lowercased text stripped to letters and spaces,
+whereas this section models the raw novella with its capitals, punctuation,
+and line breaks. We therefore fit Kneser--Ney $n$-grams
 ($n = 2, 3, 4$) on the exact same 50,000 BPE training tokens and evaluate them
 on `val[32:]`, where each token is scored as the final target of its 32-token
 validation window.
@@ -998,13 +1010,32 @@ logp = d2l.numpy(jnp.concatenate([  # Log-probability of every target
     for i in range(0, len(X_val), 1024)]))
 ```
 
-Why does a recurrent network reading 32 tokens of history land near the same
-$\approx 2.1$ bits per byte as a Kneser--Ney trigram that looks back only two
-tokens? (Note that the two models still make genuinely complementary
-predictions: each assigns higher probability than the other on roughly half of
-all validation tokens, and a 50/50 linear mixture
-$0.5\, P_\textrm{RNN} + 0.5\, P_\textrm{KN}$ :cite:`Mikolov.Kombrink.Burget.ea.2011`
-improves over the standalone trigram by roughly 0.06 bits per byte.) To see
+The RNN and the trigram arrive at nearly the same average. Do they also make
+the same predictions? The last column of `logp` scores the same tokens
+`val[32:]` as `lp_kn`, so we can compare the two models token by token. We
+also score their equal mixture $0.5\, P_\textrm{RNN} + 0.5\, P_\textrm{KN}$,
+the usual way of combining a neural language model with a count-based one
+:cite:`Mikolov.Kombrink.Burget.ea.2011`.
+
+```{.python .input #rnn-comparison-with-kneser-ney-and-effective-context-horizon-1}
+lp_rnn, lp_tri = logp[:, -1], np.array(lp_kn)
+lp_mix = np.logaddexp(lp_rnn, lp_tri) + math.log(0.5)  # 0.5 P_RNN + 0.5 P_KN
+for name, lp in [('RNN', lp_rnn), ('KN trigram', lp_tri), ('mixture', lp_mix)]:
+    print(f'{name}: {-lp.mean() / math.log(2) / bytes_per_token:.2f} '
+          'bits per byte')
+print(f'RNN more confident on {np.mean(lp_rnn > lp_tri):.0%} of the tokens')
+```
+
+The two models tie on average, but not token by token. The RNN assigns the
+higher probability on about half the tokens and the trigram on the other
+half, and the mixture lands about 0.06 bits per byte below the trigram, ahead
+of both of its members.
+
+A mixture can gain only where its members disagree, so the two models have
+learned partly different things about the text. That makes the tie more
+puzzling, not less. Why does a recurrent network reading 32 tokens of history
+land near the same $\approx 2.1$ bits per byte as a Kneser--Ney trigram that
+looks back only two tokens? To see
 how much context the trained RNN actually uses, we plot its average validation
 bits per byte at each window position $1, \ldots, 32$ against the Kneser--Ney
 trigram baseline.
@@ -1020,11 +1051,24 @@ print('bits per byte with 1, 2, 3, 4, 8, 32 tokens of context:',
       [round(float(bits[k - 1]), 2) for k in (1, 2, 3, 4, 8, 32)])
 ```
 
-The diagnostic curve explains the tie immediately: surprisal drops sharply from
-1 to 3 tokens of context, then goes completely flat from position 4 through 32.
-Although the hidden state *can* depend on all 32 tokens in the forward pass,
-gradient-based training only taught it to exploit the last three—a phenomenon
-we trace directly to vanishing gradients in :numref:`sec_bptt`.
+The diagnostic curve explains the tie. Almost all of the gain arrives with the
+second token of context, which lowers the loss by about 0.15, from about 2.3
+to about 2.14 bits per byte. The third token adds a hundredth or two, and from position 4
+through 32 the curve is flat. Although the hidden state *can* depend on all 32
+tokens in the forward pass, the trained model exploits only the last two or
+three.
+
+Why so few? One explanation is optimization: the gradient that would teach the
+cell to use a distant token shrinks at every step on its way back, as we
+measure in :numref:`sec_bptt`. The other is data: 50,000 training tokens may
+hold little that can be learned about a token from those more than two or
+three positions before it. The Kneser--Ney models printed above speak for the
+second explanation. They are fit by counting, with no gradient that could
+vanish, and they saturate at the same place: the trigram improves on the
+bigram by 0.15 bits per byte, and the 4-gram improves on the trigram by only
+0.01. Our experiment cannot tell the two explanations apart. A clean test
+needs a model whose gradients survive over long lags, trained on the same
+tokens, and :numref:`chap_modern_rnn` builds such models.
 
 ## Text Generation
 
@@ -1393,10 +1437,10 @@ our baseline's parameters reside), trained by teacher forcing to minimize
 per-token cross-entropy. Global gradient clipping (:eqref:`eq_grad_clipping`)
 prevents exploding gradient spikes from derailing training at high learning
 rates. On *The Time Machine*, a wider embedding with dropout brings the
-SGD-trained RNN to $\approx 2.1$ bits per byte—tying an interpolated
-Kneser--Ney trigram—because the trained vanilla RNN effectively exploits only
-the last three tokens of context, a limitation we explain mathematically in
-:numref:`sec_bptt`.
+SGD-trained RNN to $\approx 2.1$ bits per byte, tying an interpolated
+Kneser--Ney trigram: the trained vanilla RNN effectively exploits only
+the last two or three tokens of context. :numref:`sec_bptt` measures how far
+its gradients reach.
 
 ## Exercises
 
@@ -1764,7 +1808,7 @@ We train the 222,915-parameter baseline ($d = 64, h = 128$, no dropout) on $50{,
 @!rnn-implementation-training-5
 
 - **Truncated window states:** Each 32-token window initializes $\mathbf{H}_0 = \mathbf{0}$, capping backpropagation at 32 steps.
-- **Smooth convergence:** Validation perplexity drops from $1{,}027 \to \sim 95$, corresponding to $\log_2(95) / 2.78 \approx 2.36$ bits per byte (while training loss drops faster as the 223k parameters overfit the 50k tokens).
+- **Convergence:** Validation perplexity drops from $1{,}027$ to about $85$–$100$ after a bumpy first epoch; a perplexity of $95$ corresponds to $\log_2(95) / 2.78 \approx 2.36$ bits per byte (while training loss drops faster as the 223k parameters overfit the 50k tokens).
 :::
 
 ::: {.col .fig}
@@ -1782,8 +1826,8 @@ To isolate the effect of gradient clipping, we train three fresh unclipped insta
 ::: {.col}
 @!rnn-implementation-a-plain-model-3
 
-- **Violent mid-training spikes:** Without $\theta = 1$ clipping, exploding gradient steps hurl the parameters out of the basin, spiking validation perplexity past the untrained level of $1{,}027$.
-- **Unreliable final convergence:** Over $80\%$ of unclipped runs at $\eta = 4$ finish above twice the clipped model's perplexity.
+- **Violent spikes:** Without $\theta = 1$ clipping, exploding gradient steps hurl the parameters out of the basin, in some runs spiking validation perplexity far past the untrained level of $1{,}027$.
+- **Unreliable final convergence:** Most unclipped runs at $\eta = 4$ finish above twice the clipped model's perplexity.
 :::
 
 ::: {.col .fig}
@@ -1800,7 +1844,7 @@ Measuring the relative Euclidean distance $\|\mathbf{E}_{i,\textrm{final}} - \ma
 @!rnn-implementation-embeddings-under-sgd-2
 
 - **Sparse vs. dense gradient accumulation:** Dense weights $(\mathbf{W}_{\textrm{xh}}, \mathbf{W}_{\textrm{hh}}, \mathbf{W}_{\textrm{hq}})$ accumulate gradient contributions from all $b \times T = 1{,}024 \times 32 = 32{,}768$ token positions in a minibatch, whereas embedding row $\mathbf{E}_i$ receives gradient *only* from the few positions where token $i$ appears!
-- **Why uniform-step SGD stalls on $\mathbf{E}$:** Dividing by $32{,}768$ leaves rare and medium-frequency token rows with tiny updates ($\sim 2\text{--}3\%$ movement over 10 epochs), so $\mathbf{E}$ acts largely as a frozen random projection (adaptive optimizers like Adam rescale per-coordinate variance to move $\mathbf{E}$ rapidly).
+- **Why uniform-step SGD stalls on $\mathbf{E}$:** Dividing by $32{,}768$ leaves rare and medium-frequency token rows with tiny updates (the average row moves about $4\%$ of its length over 10 epochs), so $\mathbf{E}$ acts largely as a frozen random projection (adaptive optimizers like Adam rescale per-coordinate variance to move $\mathbf{E}$ rapidly).
 - **SGD remedy:** Widen the random embedding basis from $d = 64 \to 512$ so $\mathbf{W}_{\textrm{xh}}$ has $8\times$ richer features to read, and add dropout (`emb_dropout = 0.1`, `dropout = 0.5`) to curb overfitting.
 :::
 
@@ -1813,8 +1857,8 @@ Training `RNNLMScratch` with $d = 512$, $h = 128$, `emb_dropout = 0.1`, and `dro
 ::: {.col}
 @!rnn-implementation-a-wider-embedding-with-dropout-3
 
-- **Overfitting suppressed:** Unlike the unregularized $d = 64$ baseline, dropout keeps the training and validation curves tightly coupled across all 10 epochs.
-- **Validation improvement:** Validation perplexity falls from $\sim 95 \to \sim 60$, reducing bits per byte from $2.36 \to \mathbf{2.12\text{ bpb}}$.
+- **Overfitting suppressed:** Unlike the unregularized $d = 64$ baseline, dropout keeps the training and validation curves close: after 10 epochs the losses differ by about $0.3$ nats instead of about $1$.
+- **Validation improvement:** Validation perplexity falls from $85\text{--}100$ to $\sim 60$, reducing bits per byte from $2.3\text{--}2.4$ to $\mathbf{\approx 2.1\text{ bpb}}$.
 :::
 
 ::: {.col .fig}
@@ -1826,12 +1870,12 @@ Training `RNNLMScratch` with $d = 512$, $h = 128$, `emb_dropout = 0.1`, and `dro
 ::: {.slide title="Benchmarking the RNN Against Kneser–Ney n-Grams"}
 [Neural vs. Classical Count Baselines]{.kicker}
 
-How does our trained RNN ($\approx 2.12$ bpb) compare against interpolated Kneser–Ney $n$-grams ($n = 2, 3, 4$) trained on the exact same 50,000 BPE tokens and evaluated on `val[32:]`?
+How does our trained RNN ($\approx 2.1$ bpb) compare against interpolated Kneser–Ney $n$-grams ($n = 2, 3, 4$) trained on the exact same 50,000 BPE tokens and evaluated on `val[32:]`?
 
 @!rnn-implementation-training-6
 
 - **A virtual tie at $\approx 2.1$ bpb:** The 32-token-window RNN lands right alongside the Kneser–Ney trigram ($2.09$ bpb) and 4-gram ($2.08$ bpb) that look back only 2 or 3 tokens!
-- **Complementary errors (Mikolov et al., 2011):** Even at identical overall bpb, the RNN (continuous semantic representations) and Kneser–Ney (exact lexical specificity) each beat the other on $\approx 50\%$ of validation tokens; a $50/50$ mixture $0.5\,P_{\textrm{RNN}} + 0.5\,P_{\textrm{KN}}$ improves over the standalone trigram by $\approx 0.06$ bpb.
+- **Complementary errors (Mikolov et al., 2011):** Even at nearly equal overall bpb, the RNN (continuous semantic representations) and Kneser–Ney (exact lexical specificity) each beat the other on $\approx 50\%$ of validation tokens; a $50/50$ mixture $0.5\,P_{\textrm{RNN}} + 0.5\,P_{\textrm{KN}}$ improves over the standalone trigram by $\approx 0.06$ bpb.
 :::
 
 ::: {.slide title="Diagnosing the RNN's Effective Context Horizon"}
@@ -1841,8 +1885,8 @@ How does our trained RNN ($\approx 2.12$ bpb) compare against interpolated Knese
 ::: {.col}
 To uncover why a recurrent network fed 32 tokens of history failed to pull ahead of a 3-gram, we plot validation bits per byte separately at each window position $k \in \{1, \ldots, 32\}$ (where position $k$ conditions on $k$ tokens of context):
 
-- **Sharp drop from $k = 1 \to 3$, then flat:** Validation loss drops from $\approx 2.30$ bpb at 1 token of context to $\approx 2.12$ bpb at 3 tokens of context, and then **stays completely flat at $2.12$ bpb from position 4 through position 32**!
-- **Forward capacity vs. backward learnability:** Although $\mathbf{H}_{32}$ is mathematically a function of all 32 tokens in the forward pass, gradient-based training failed to teach the cell to use any token more than $\sim 3$ steps back—the exact vanishing-gradient phenomenon we analyze in §{sec_bptt}.
+- **Sharp drop from $k = 1 \to 2$, then flat:** Validation loss drops from $\approx 2.3$ bpb at 1 token of context to $\approx 2.14$ bpb at 2 tokens, gains another $0.01$–$0.02$ at 3, and then **stays flat at $\approx 2.12$ bpb from position 4 through position 32**!
+- **Two candidate causes, not separated here:** *Optimization*—gradients fade with every step back (§{sec_bptt}); *data*—Kneser–Ney counts, which use no gradients, saturate at the same place ($2.24 \to 2.09 \to 2.08$ bpb for $n = 2, 3, 4$), so 50,000 tokens may hold little longer-range signal.
 :::
 
 ::: {.col .fig}
@@ -1888,7 +1932,7 @@ The framework's built-in RNN layer replaces our Python `for X in inputs:` loop w
 ::: {.slide title="Verifying Concise RNNLM Training & Perplexity"}
 [Equivalence & Speedup]{.kicker}
 
-Matching the weight initializations ($\mathcal{N}(0, 0.01^2)$ for cell and output weights, $\mathcal{N}(0, 1)$ for embeddings) reproduces the exact same validation perplexity ($\sim 60$) and greedy rollout at a fraction of the Python loop runtime:
+Matching the weight initializations ($\mathcal{N}(0, 0.01^2)$ for cell and output weights, $\mathcal{N}(0, 1)$ for embeddings) reproduces the validation perplexity ($\sim 60$) and the looping greedy rollout at a fraction of the Python loop runtime:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1935,6 +1979,6 @@ Test your grasp of RNN parameter scaling, batched projections, and model ensembl
 | **Recurrent State Update** | $\mathbf{H}_t = \tanh(\mathbf{X}_t\mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1}\mathbf{W}_{\textrm{hh}} + \mathbf{b}_{\textrm{h}})$ | $\mathbf{W}_{\textrm{xh}}: (d, h)$, $\mathbf{W}_{\textrm{hh}}: (h, h)$, $\mathbf{H}_t: (b, h)$ | $11\%$ of baseline params; $512$-byte state per sequence at any length $T$ |
 | **Output Projection** | $\mathbf{O}_t = \mathbf{H}_t\mathbf{W}_{\textrm{hq}} + \mathbf{b}_{\textrm{q}}$, $\hat{\mathbf{P}}_{t+1} = \textrm{softmax}(\mathbf{O}_t)$ | $\mathbf{W}_{\textrm{hq}}: (h, \lvert\mathcal{V}\rvert)$, $\mathbf{O}: (b, T, \lvert\mathcal{V}\rvert)$ | $59\%$ of baseline params and $84\%$ of per-token MACs scale with $\lvert\mathcal{V}\rvert$ |
 | **Global Gradient Clipping** | $\mathbf{g} \leftarrow \min(1, \theta / \|\mathbf{g}\|)\mathbf{g}$ | Global norm $\|\mathbf{g}\|$ across all $\Theta$ | Prevents exploding Jacobian spikes from wrecking weights at $\eta = 4$ |
-| **Effective Context Horizon** | Loss at window position $k \in \{1, \ldots, 32\}$ | Flat at $\approx 2.12$ bpb for $k \ge 4$ | Vanilla $\tanh$ RNN ties Kneser–Ney 3-gram because gradients vanish past $k \approx 3$ |
+| **Effective Context Horizon** | Loss at window position $k \in \{1, \ldots, 32\}$ | Flat at $\approx 2.12$ bpb for $k \ge 4$ | Vanilla $\tanh$ RNN ties Kneser–Ney 3-gram: it uses only the last 2–3 tokens (fading gradients, limited data, or both) |
 :::
 

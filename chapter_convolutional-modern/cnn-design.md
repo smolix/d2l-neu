@@ -617,13 +617,17 @@ parameterized by an initial width $u_0$ and slope $a > 0$. Because every block
 inside a stage shares one width, RegNet quantizes each $u_j$ onto a geometric
 grid—just like the doubling widths of hand-crafted networks in
 :numref:`tab_hand_designed_stages`—grouping consecutive blocks that snap to
-the same quantized width into a single stage to form a clean staircase
-(problem :exref:`ex_cnn-design-quantized-widths` works out an explicit
-example). Surprisingly, the authors also found that $b = 1$ (no internal
+the same quantized width into a single stage to form a clean staircase.
+:numref:`fig_regnet_staircase` shows the staircase of one RegNet, and problem
+:exref:`ex_cnn-design-quantized-widths` asks you to work out another.
+Surprisingly, the authors also found that $b = 1$ (no internal
 bottleneck compression at all) consistently outperforms the $b = 4$
 bottlenecks of ResNet-50 and ResNeXt-50. Combining quantized linear widths
 with $b = 1$ defines the *RegNetX* family, collapsing 16 arbitrary stage
 numbers down to just a few interpretable parameters per compute budget.
+
+![Quantized linear widths for RegNetX-200MF, a network of 13 blocks. The width of each block on the linear ramp $u_j = u_0 + a j$ (dots) snaps to the nearest level of the geometric grid $u_0, u_0 m, u_0 m^2, \ldots$ (dashed lines), and consecutive blocks at the same level form a stage. With $u_0 = 24$, $a = 36.44$, and $m = 2.49$ this gives four stages of depths 1, 1, 4, and 7, whose widths are 24, 56, 152, and 368 channels after rounding to multiples of 8.](../img/arch-regnet-staircase.svg)
+:label:`fig_regnet_staircase`
 
 ### RegNetX32 on Fashion-MNIST
 
@@ -876,7 +880,7 @@ Comparing *design spaces* shifts architectural analysis from single point estima
 1. **Quantized linear widths.** :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` parameterize the block widths of a $d$-block network via the linear ramp $u_j = u_0 + a\, j$ ($j = 0, \ldots, d-1$) of :numref:`subsec_regnet`, then snap each block to a geometric grid with ratio $m$:
    $$s_j = \operatorname{round}\left(\frac{\log(u_j / u_0)}{\log m}\right), \qquad \tilde{u}_j = u_0\, m^{s_j},$$
    grouping blocks with equal $\tilde{u}_j$ into a single stage.
-    1. For $d = 13$, $u_0 = 24$, $a = 36.44$, and $m = 2.49$ (the paper's $w_0, w_a, w_m$ for RegNetX-200MF), compute the number of stages, the depth $d_i$ of each stage, and the stage widths rounded to the nearest multiple of 8.
+    1. :numref:`fig_regnet_staircase` shows the result for RegNetX-200MF. Repeat the computation for RegNetX-400MF, which has $d = 22$, $u_0 = 24$, $a = 24.48$, and $m = 2.54$ (the paper's $w_0, w_a, w_m$): compute the number of stages, the depth $d_i$ of each stage, and the stage widths rounded to the nearest multiple of 8.
     1. How do the number of stages and the staircase approximation $\tilde{u}_j \approx u_j$ behave as $m \to 1$ versus as $m$ becomes large?
     1. Which of your rounded stage widths from (a) are not divisible by a shared group width of $g = 16$, and how should they be adjusted?
    :exlabel:`ex_cnn-design-quantized-widths`

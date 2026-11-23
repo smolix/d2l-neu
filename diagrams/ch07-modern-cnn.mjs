@@ -1,5 +1,6 @@
 // Slide diagrams for chapter_convolutional-modern (Chapter 7: Modern CNNs)
 import { C, TOKENS, FS, FM, grid, tx, baselineY, arrow, block, chip, rc, svg } from './engine.mjs';
+import { sec, num } from './sections.mjs';
 
 const D = TOKENS.accents;
 const N = TOKENS.neutrals;
@@ -87,7 +88,7 @@ function fourScalingBarriers() {
     { x: 16,  y: 16,  t: '1. Signal & Degradation Drift', s1: 'Sigmoids shrink grads ≤ 1/4^L', s2: 'Plain-56 loss > Plain-20 (0.28>0.20)', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
     { x: 278, y: 16,  t: '2. 92% Dense-Head Bloat', s1: 'AlexNet/VGG: >92% params in head', s2: 'Contributes <5% of total MACs', fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 16,  y: 140, t: '3. FLOPs ≠ GPU Latency', s1: 'Depthwise convs cut MACs 8–9×', s2: 'Only 9 MACs/read → memory-bound', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 278, y: 140, t: '4. Confounded Recipes', s1: 'AdamW + Mixup + smoothing + EMA', s2: 'Adds +4.3% to unchanged ResNet-50', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 278, y: 140, t: '4. Confounded Recipes', s1: 'LAMB + BCE + RandAug/Mixup/CutMix', s2: '76.1 → 80.4% on same ResNet-50', fill: C.lblue, st: C.blue, dk: D.blue.dark },
   ];
   b.forEach((it) => {
     o += card(it.x, it.y, 246, 108, it.fill, it.st, [
@@ -103,12 +104,12 @@ function decadeEvolutionArc() {
   const W = 540, H = 272;
   let o = '';
   const stages = [
-    { x: 16,  y: 18, t: '§7.1 AlexNet (2012)', s1: 'ReLU, Dropout, GPUs', s2: '15.3% top-5 error', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 194, y: 18, t: '§7.2 VGG/NiN/GoogLeNet', s1: '3×3 Blocks, 1×1, GAP', s2: 'Stem–Body–Head', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 372, y: 18, t: '§7.3 Norm Layers', s1: 'BatchNorm, LayerNorm', s2: 'GroupNorm, 300× LR', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 372, y: 152, t: '§7.4 ResNet / ResNeXt', s1: 'Skip x + g(x), Groups', s2: '152+ layers, DenseNet', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 194, y: 152, t: '§§7.5–7.6 Mobile & Recipes', s1: 'Depthwise, RepVGG, SE', s2: 'AdamW, Mixup, EMA', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 16,  y: 152, t: '§§7.7–7.8 ConvNeXt/RegNet', s1: '7×7 DW, 1 GELU/LN', s2: 'Design-space CDFs', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  y: 18, t: `${sec('sec_alexnet')} AlexNet (2012)`, s1: 'ReLU, Dropout, GPUs', s2: '15.3% top-5 error', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 194, y: 18, t: `${sec('sec_blocks')} VGG/NiN/GoogLeNet`, s1: '3×3 Blocks, 1×1, GAP', s2: 'Stem–Body–Head', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 372, y: 18, t: `${sec('sec_batch_norm')} Norm Layers`, s1: 'BatchNorm, LayerNorm', s2: 'GroupNorm, 300× LR', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 372, y: 152, t: `${sec('sec_resnet')} ResNet / ResNeXt`, s1: 'Skip x + g(x), Groups', s2: '152+ layers, DenseNet', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 194, y: 152, t: `§§${num('sec_efficient_cnns')}–${num('sec_training_recipes')} Mobile & Recipes`, s1: 'Depthwise, RepVGG, SE', s2: 'AdamW, Mixup, EMA', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 16,  y: 152, t: `§§${num('sec_convnext')}–${num('sec_cnn-design')} ConvNeXt/RegNet`, s1: '7×7 DW, 1 GELU/LN', s2: 'Design-space CDFs', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   const bw = 152, bh = 98;
   o += arrow(16 + bw + 4, 67, 194 - 4, 67, C.blue);
@@ -149,12 +150,12 @@ function paretoScoreboard() {
   const W = 540, H = 268;
   let o = '';
   const rows = [
-    { m: 'AlexNet (§7.1)', p: '46.8M params', c: '938M MACs', a: '91% (10 ep)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { m: 'Quarter-VGG (§7.2)', p: '43.1M params', c: '512M MACs', a: '93% (10 ep)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { m: 'GoogLeNet (§7.2)', p: '6.0M params', c: '276M MACs', a: '91% (10 ep)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { m: 'ResNet-18 (§§7.4, 7.6)', p: '11.2M params', c: '319M MACs', a: '93–94%', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { m: 'ConvNeXt-Atto (§7.7)', p: '3.38M params', c: '46M MACs', a: '94% (ResNet stem)', fill: C.lgreen, st: C.green, dk: D.green.dark },
-    { m: 'RegNetX32 (§7.8)', p: '0.52M params!', c: '112M MACs', a: '94% (<5% weights!)', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { m: `AlexNet (${sec('sec_alexnet')})`, p: '46.8M params', c: '938M MACs', a: '91% (10 ep)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { m: `Quarter-VGG (${sec('sec_blocks')})`, p: '43.1M params', c: '512M MACs', a: '93% (10 ep)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { m: `GoogLeNet (${sec('sec_blocks')})`, p: '6.0M params', c: '276M MACs', a: '91% (10 ep)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { m: `ResNet-18 (§§${num('sec_resnet')}, ${num('sec_training_recipes')})`, p: '11.2M params', c: '319M MACs', a: '93–94%', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { m: `ConvNeXt-Atto (${sec('sec_convnext')})`, p: '3.38M params', c: '46M MACs', a: '94% (ResNet stem)', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { m: `RegNetX32 (${sec('sec_cnn-design')})`, p: '0.52M params!', c: '112M MACs', a: '94% (<5% weights!)', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   rows.forEach((r, i) => {
     const y = 12 + i * 41;
@@ -240,7 +241,7 @@ function gpuVsCpuBudget() {
     { t: '2012 Quad-Core CPU', fs: 14.5, fw: 700, fill: D.red.dark },
     { t: 'Peak: ~0.2 TFLOPS', mono: true, fs: 13, fw: 700, fill: C.ink },
     { t: 'DRAM Bandwidth: ~20 GB/s', mono: true, fs: 12, fill: C.muted },
-    { t: 'Wall-Clock: > 45 Days!', fs: 13.5, fw: 700, fill: D.red.dark },
+    { t: 'Wall-Clock: ≈ 38 Days at Peak', fs: 13.5, fw: 700, fill: D.red.dark },
   ]);
   o += card(282, 104, 242, 138, C.lgreen, C.green, [
     { t: '2× NVIDIA GTX 580 GPUs', fs: 14.5, fw: 700, fill: D.green.dark },
@@ -275,7 +276,7 @@ function reluHeDropoutTriad() {
   let o = '';
   const cols = [
     { x: 16,  t: '1. ReLU Activation', s1: 'max(x, 0)', s2: 'Slope = 1 for x > 0', s3: 'Stops 4^{-K} decay', s4: '6× faster than tanh', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 194, t: '2. He Initialization', s1: 'W ~ N(0, 2/n_in)', s2: 'n_in = c_i · k²', s3: 'Compensates for ReLU', s4: 'zeroing half of inputs', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 194, t: '2. He Init (2015)', s1: 'W ~ N(0, 2/n_in)', s2: 'n_in = c_i · k²', s3: 'Our update; replaces', s4: 'AlexNet\'s N(0, 0.01²)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 372, t: '3. Dropout (p = 0.5)', s1: 'Zeroes 50% of 4096', s2: 'Scales survivors ×2', s3: 'Prevents 43M head', s4: 'from memorizing data', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   cols.forEach((c) => {
@@ -802,9 +803,9 @@ function skipTopologyComparison() {
   const W = 540, H = 260;
   let o = '';
   const tops = [
-    { x: 16,  t: 'ResNet (§7.4)', eq: 'x_k = x + g_k(x)', w: 'Constant width c', mem: 'O(n · c) activation RAM', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 194, t: 'ResNeXt (§7.4)', eq: 'x_k = x + Σ G_i(x)', w: '2cb + 9b²/g weights', mem: '2× wider b at same cost', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
-    { x: 372, t: 'DenseNet (§7.4)', eq: 'x_k = [x, f_k(x)]', w: 'Width c + k·r (growth r)', mem: 'O(n² · r) concat RAM', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 16,  t: `ResNet (${sec('sec_resnet')})`, eq: 'x_k = x + g_k(x)', w: 'Constant width c', mem: 'O(n · c) activation RAM', fill: C.lblue, st: C.blue, dk: D.blue.dark },
+    { x: 194, t: `ResNeXt (${sec('sec_resnet')})`, eq: 'x_k = x + Σ G_i(x)', w: '2cb + 9b²/g weights', mem: '2× wider b at same cost', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { x: 372, t: `DenseNet (${sec('sec_resnet')})`, eq: 'x_k = [x, f_k(x)]', w: 'Width c + k·r (growth r)', mem: 'O(n² · r) concat RAM', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   tops.forEach((t) => {
     o += card(t.x, 18, 152, 224, t.fill, t.st, [
@@ -960,7 +961,7 @@ function recipePipeline20152022() {
     { x: 16,  y: 16, t: '1. Data Augmentation', old: '2015: Crop + Flip', mod: '2022: +RandAug, Mixup, CutMix', fill: C.lblue, st: C.blue, dk: D.blue.dark },
     { x: 278, y: 16, t: '2. Forward & Regularize', old: '2015: L2 weight decay', mod: '2022: +Stochastic Depth (drop_path)', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 16,  y: 102, t: '3. Loss Objective', old: '2015: 1-hot Cross-Entropy', mod: '2022: Label Smoothing (ε = 0.1)', fill: C.lamber, st: C.amber, dk: D.orange.dark },
-    { x: 278, y: 102, t: '4. Optimizer & Schedule', old: '2015: SGD + Step Drops (90 ep)', mod: '2022: AdamW + Cosine Warmup (300 ep)', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 278, y: 102, t: '4. Optimizer & Schedule', old: '2015: SGD + Step Drops (90 ep)', mod: '2022: AdamW or LAMB + Warmup-Cosine', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   stages.forEach((s) => {
     o += card(s.x, s.y, 246, 74, s.fill, s.st, [
@@ -970,7 +971,7 @@ function recipePipeline20152022() {
     ]);
   });
   o += card(16, 188, 508, 62, C.lgreen, C.green, [
-    { t: '5. Evaluation Checkpoint:  2015 Final Iterate θ_T   →   2022 Shadow EMA θ̄_T = ρ θ̄ + (1−ρ) θ', fs: 13, fw: 700, fill: D.green.dark },
+    { t: '5. Evaluated Weights:  2015 Final Iterate θ_T   →   2022 Often an EMA θ̄_T = ρ θ̄ + (1−ρ) θ', fs: 13, fw: 700, fill: D.green.dark },
     { t: 'Stronger augmentation + regularization requires longer training horizons (300–600 epochs)', fs: 12, fw: 600, fill: C.ink },
   ]);
   return svg(W, H, o);

@@ -417,10 +417,12 @@ Checkpointing must also be *crash-safe*: overwriting an existing checkpoint in
 place risks losing both old and new versions if the job dies mid-write. Instead,
 we write to a temporary file and atomically rename it over the destination once
 finished, guaranteeing that any reader sees either the complete previous
-checkpoint or the complete new one.
+checkpoint or the complete new one. The rename protects against a crash of the
+process. Surviving a power loss also takes an `os.fsync` on the file and on its
+directory, which the exercises work out.
 
 :begin_tab:`mxnet`
-We write `.params` (model), `.states` (Trainer pickle—load only from trusted disk), and `.json` (step, config, and NumPy RNG state) to `.tmp` files before atomically replacing each with `os.replace`:
+We write `.params` (model), `.states` (Trainer pickle—load only from trusted disk), and `.json` (step, config, and NumPy RNG state) to `.tmp` files before atomically replacing each with `os.replace`. Each file is replaced atomically, but the set of three is not: a crash between two renames pairs new parameters with old optimizer state. The exercises build a manifest that closes this gap.
 :end_tab:
 
 :begin_tab:`pytorch`

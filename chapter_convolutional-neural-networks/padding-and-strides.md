@@ -298,9 +298,10 @@ simplifies to
 $\lfloor (n_\textrm{h}-1)/s_\textrm{h}\rfloor+1=\lceil n_\textrm{h}/s_\textrm{h}\rceil$:
 a stride of $s$ divides the spatial resolution by $s$, rounding up.
 
-By far the most common downsampling layer in modern CNNs uses a $3\times 3$
-kernel with padding 1 and stride 2. Applied to our $8\times 8$ input, it
-halves both spatial dimensions to $4\times 4$.
+A very common downsampling layer, used throughout the ResNet family
+(:numref:`sec_resnet`), is a $3\times 3$ convolution with padding 1 and
+stride 2. Applied to our $8\times 8$ input, it halves both spatial dimensions
+to $4\times 4$.
 
 ```{.python .input #padding-and-strides-stride-1}
 %%tab mxnet
@@ -486,7 +487,8 @@ label to every pixel while still drawing on broad surrounding context
 :cite:`yu2016dilated`. The tradeoff is computation and memory, because every
 layer must process full-resolution feature maps; an alternative is to
 downsample with strides and later recover spatial resolution using learned
-upsampling layers.
+upsampling layers such as the transposed convolution of
+:numref:`sec_transposed_conv`.
 
 ![Receptive field of the top unit of three stacked layers with kernel size 3, in one dimension. Cells are the positions each layer computes, shaded cells those the top unit depends on, and lines the kernel's taps. (a) Strides 2, 2, 1: layer 1 keeps every second position, layers 2 and 3 every fourth. (b) Stride 1 with dilations 1, 2, 4: every layer keeps all positions. Both top units see the same 15 input pixels.](../img/conv-rf-towers.svg)
 :label:`fig_conv_rf_towers`

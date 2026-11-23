@@ -24,64 +24,64 @@
       "outputs": []
     },
     "environment-and-distribution-shift-covariate-shift-correction-2": {
-      "code_fingerprint": "sha256:e58411f2291dcab98e72d61813156f720fe51e4c45fa05b7e01eeb4e72261f72",
+      "code_fingerprint": "sha256:0966e4e4e1beebcdeb18bf41b5b34c21f5a18a56398215abc97fd070f4c38ac9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "learned h(x) = 2.04 x1 +0.10 x2 -2.07   (true log-ratio: 2 x1 - 2)\nlargest weight: 85; effective sample size: 55 of 1000, 219 if clipped at 5\n"
+          "text": "learned h(x) = 2.03 x1 -0.10 x2 -2.01   (true log-ratio: 2 x1 - 2)\nlargest weight: 91; effective sample size: 54 of 1000, 216 if clipped at 5\ndomain classifier accuracy on held-out inputs: 0.83 (chance: 0.50)\n"
         }
       ]
     },
     "environment-and-distribution-shift-covariate-shift-correction-3": {
-      "code_fingerprint": "sha256:da3ec7a48a6fc39e5dac9f7827228d9d9f302759227d96d7c2b51ddcbd101b60",
+      "code_fingerprint": "sha256:8c468a02a27df5fd6779fa0dc937ee204a5fc6a339803fd004617fc715399f1f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted  target accuracy 0.541   source accuracy 0.862\nweighted    target accuracy 0.952   source accuracy 0.825\nclipped     target accuracy 0.938   source accuracy 0.838\nalways predicting the most common target class: 0.744\n"
+          "text": "unweighted  target accuracy 0.494   source accuracy 0.853\nweighted    target accuracy 0.947   source accuracy 0.799\nclipped     target accuracy 0.953   source accuracy 0.807\nalways predicting the most common target class: 0.716\n"
         }
       ]
     },
     "environment-and-distribution-shift-a-two-dimensional-example-3": {
-      "code_fingerprint": "sha256:60e26642dad8d06eb25c0a9128ef75b834470d9617a39a7a1e2b68339cb9b18c",
+      "code_fingerprint": "sha256:bc0b53d0b8c9e59c5e4219bd199a735cbace5874d6940bab82fb938c8488e237",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "environment-and-distribution-shift/environment-and-distribution-shift-a-two-dimensional-example-3-1.svg",
-          "bytes": 793801,
-          "sha256": "sha256:1e59a9b33f19681d18050e35adeee3b1b0f4b04cdb4dc934d03bdbe2671264a9"
+          "bytes": 791610,
+          "sha256": "sha256:dd9019b6bccb4d82389b9f7bc03c32cfbcb56a0b0b03bb19a58b6b71842223ef"
         }
       ]
     },
     "environment-and-distribution-shift-label-shift-on-fashion-mnist": {
-      "code_fingerprint": "sha256:5e9253faf796f0bda42ad0de37cfcb6e04260d323ac51737d97c35df9b99941d",
+      "code_fingerprint": "sha256:9245e7e795f85a2b6f27ab257e5f9ccb991b2b713841f20be61fbb7b3acfa083",
       "kind": "text",
       "outputs": []
     },
     "environment-and-distribution-shift-label-shift-on-fashion-mnist-2": {
-      "code_fingerprint": "sha256:1fb5aec1f02d62a53673ce86daa2910abc82697521cb4d35843d82d4f9e0b81a",
+      "code_fingerprint": "sha256:022d2bbd60f3e3577a97b6245eace0dff1673056f6bcfbc04119389c36ae566a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T-shirt    true 0.06, predicted 0.122, estimated 0.038\ntrouser    true 0.06, predicted 0.057, estimated 0.057\npullover   true 0.06, predicted 0.109, estimated 0.075\ndress      true 0.06, predicted 0.065, estimated 0.043\ncoat       true 0.06, predicted 0.119, estimated 0.034\nsandal     true 0.06, predicted 0.053, estimated 0.055\nshirt      true 0.50, predicted 0.292, estimated 0.534\nsneaker    true 0.06, predicted 0.061, estimated 0.057\nbag        true 0.06, predicted 0.067, estimated 0.051\nankle boot true 0.06, predicted 0.055, estimated 0.055\n"
+          "text": "T-shirt    true 0.06, predicted 0.153, estimated 0.114\ntrouser    true 0.06, predicted 0.052, estimated 0.052\npullover   true 0.06, predicted 0.118, estimated 0.048\ndress      true 0.06, predicted 0.088, estimated 0.069\ncoat       true 0.06, predicted 0.129, estimated 0.077\nsandal     true 0.06, predicted 0.055, estimated 0.057\nshirt      true 0.50, predicted 0.215, estimated 0.411\nsneaker    true 0.06, predicted 0.065, estimated 0.062\nbag        true 0.06, predicted 0.076, estimated 0.062\nankle boot true 0.06, predicted 0.050, estimated 0.049\n"
         }
       ]
     },
     "environment-and-distribution-shift-label-shift-on-fashion-mnist-3": {
-      "code_fingerprint": "sha256:f6b5b28ac53cbbb058e3c49e547ae0a5340a4027a73473d93e7cedab3c2e7498",
+      "code_fingerprint": "sha256:2fed7dd78d5b4842ec8751299aaf12ccc6728e5be67133c62cb2a9610b9cf64a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target accuracy: 0.720 as trained, 0.830 adapted to the estimated proportions\n"
+          "text": "target accuracy: 0.666 as trained, 0.799 adapted to the estimated proportions\n"
         }
       ]
     }

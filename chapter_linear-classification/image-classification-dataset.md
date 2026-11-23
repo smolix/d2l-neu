@@ -464,8 +464,8 @@ The Image Classification Dataset: Fashion-MNIST & Data Pipelines<br>**Fashion-MN
 ::: {.col}
 An effective development benchmark must separate weak models from strong architectures while fitting in memory and training in seconds:
 
-- **MNIST (1998) is too easy:** Linear models reach $\approx 92\%$ and trivial nets exceed $99\%$, leaving almost no headroom to test new ideas.
-- **ImageNet (2009) is too heavy:** $1.2\text{M}$ color photos across $1{,}000$ classes require hours of multi-GPU compute per experiment.
+- **MNIST (1998) is too easy:** Linear models reach $\approx 92\%$ and small CNNs pass $99\%$, leaving almost no headroom to test new ideas.
+- **ImageNet-1K (ILSVRC-2012) is too heavy:** $1.2\text{M}$ color photos across $1{,}000$ classes require hours of multi-GPU compute per experiment.
 - **Fashion-MNIST (2017) hits the sweet spot:** Drop-in $70{,}000$-image ($28\times 28$) footprint where linear softmax reaches $\sim 83\%$ and CNNs exceed $90\%$.
 :::
 

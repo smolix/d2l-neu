@@ -1141,7 +1141,9 @@ exact real arithmetic, when data and initial weights are drawn from continuous
 distributions, this occurs with probability zero at any fixed step. In finite
 floating-point arithmetic, however, exact zeros do occur.
 :citet:`Bertoin.Bolte.Gerchinovitz.ea.2021` measured how often on a small fully
-connected network: backpropagation with $\mathrm{ReLU}'(0)=0$ and with
+connected network. We quote the figures of the authors' 2023 erratum (the
+revised arXiv version of the paper), which repairs a bug in the published
+experiments and reverses some of their conclusions. Backpropagation with $\mathrm{ReLU}'(0)=0$ and with
 $\mathrm{ReLU}'(0)=1$ produced different gradients on at least one minibatch
 for every initialization in 16-bit precision, for a little under half of all
 initializations in 32-bit precision, and for none in 64-bit precision.
@@ -1149,7 +1151,7 @@ initializations in 32-bit precision, and for none in 64-bit precision.
 Whether those discrepancies affect training is a separate question, and the
 answer is reassuring: practically not at all. In 32-bit arithmetic, only a few
 minibatches in a million are affected, and even on those the two gradients
-differ by a relative amount of only about $10^{-3}$. In their experiments, any
+differ by a relative amount of only about $10^{-3}$. In the corrected experiments, any
 choice of $\mathrm{ReLU}'(0)$ in $[0,1]$ yields virtually identical training
 loss and test accuracy; training degrades only for extreme choices such as
 $\mathrm{ReLU}'(0)=10^4$, and batch normalization and Adam tame even those. The
@@ -1777,7 +1779,7 @@ Chaining fixed subgradient conventions across a composite graph can produce a nu
 @!mdl-single-variable-calculus-why-sgd-shrugs
 
 ::: {.d2l-note}
-**Why SGD training is unaffected (Bertoin et al., 2021):** Triggering this mismatch requires a pre-activation to land on $0.0$ exactly. In 32-bit `float32` arithmetic, changing $\mathrm{ReLU}'(0)$ within $[0, 1]$ alters gradients on only a few minibatches per million by $\sim 10^{-3}$, producing identical training and test accuracy.
+**Why SGD training is unaffected (Bertoin et al., 2021, as corrected in their 2023 erratum):** Triggering this mismatch requires a pre-activation to land on $0.0$ exactly. In 32-bit `float32` arithmetic, changing $\mathrm{ReLU}'(0)$ within $[0, 1]$ alters gradients on only a few minibatches per million by $\sim 10^{-3}$, producing identical training and test accuracy.
 :::
 :::
 

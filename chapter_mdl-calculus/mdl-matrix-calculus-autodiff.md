@@ -178,6 +178,12 @@ handled automatically as well: for any fixed input, the program executes a
 single concrete sequence of elementary operations, which is an expression of
 this exact form, and the dual-number run differentiates that execution path
 (:numref:`subsec_autograd_control_flow` demonstrates this in the frameworks).
+Note, however, that the result is the derivative of the executed path, which
+equals $f'(x)$ only if all nearby inputs take the same branches. A program that
+returns `x` if `x != 0` and `0.0` otherwise computes the identity, yet at $x=0$
+it executes the constant branch, and the dual-number run reports slope $0$.
+This is the failure we met with $\mathrm{ReLU}(x)-\mathrm{ReLU}(-x)$ in
+:numref:`subsec_mdl-nonsmooth-training`.
 The input's $\varepsilon$-part, here $1$, is called the *seed*. No symbolic
 expression for $f'$ is ever constructed and no step size is chosen; the only
 error is floating-point rounding.
@@ -599,6 +605,83 @@ JAX is a tracer: `jax.grad` traces the function and returns a new Python
 function that executes the transposed backward sweep.
 :end_tab:
 
+The frameworks also inherit the hypothesis of the dual-number proposition: each
+primitive must be differentiable at the argument it receives. Masking is where
+this hypothesis fails most often in practice. Suppose that we sum $\log x_i$
+over the real entries of a padded vector, and that a `where` sets the padded
+entries to zero. A `where` chooses between two values that have both been
+computed, so $\log$ still runs on the padding, here $x_2=0$. The forward pass
+is unharmed: the $-\infty$ is discarded and the loss is $\log 2\approx0.6931$.
+On the backward sweep, however, `where` sends the adjoint $0$ into the
+discarded branch, and the VJP of $\log$ multiplies it by the local derivative
+$1/0=\infty$. In floating-point arithmetic $0\cdot\infty$ is not $0$ but NaN.
+
+```{.python .input #mdl-matrix-calculus-autodiff-the-tape-2}
+#@tab pytorch
+x = torch.tensor([2.0, 0.0], requires_grad=True)    # x[1] is padding
+mask = torch.tensor([True, False])
+loss = torch.where(mask, torch.log(x), 0.0).sum()   # sum of log x, real entries
+loss.backward()
+print('one where   : loss = %.4f, grad =' % loss.item(), x.grad.numpy())
+x.grad = None
+safe = torch.where(mask, x, 1.0)                    # padding never reaches log
+loss = torch.where(mask, torch.log(safe), 0.0).sum()
+loss.backward()
+print('double where: loss = %.4f, grad =' % loss.item(), x.grad.numpy())
+```
+
+```{.python .input #mdl-matrix-calculus-autodiff-the-tape-2}
+#@tab mxnet
+x = mnp.array([2.0, 0.0])                           # x[1] is padding
+mask = mnp.array([True, False])
+x.attach_grad()
+with autograd.record():
+    loss = mnp.where(mask, mnp.log(x), 0.0).sum()   # sum of log x, real entries
+loss.backward()
+print('one where   : loss = %.4f, grad =' % float(loss), x.grad)
+with autograd.record():
+    safe = mnp.where(mask, x, 1.0)                  # padding never reaches log
+    loss = mnp.where(mask, mnp.log(safe), 0.0).sum()
+loss.backward()
+print('double where: loss = %.4f, grad =' % float(loss), x.grad)
+```
+
+```{.python .input #mdl-matrix-calculus-autodiff-the-tape-2}
+#@tab tensorflow
+x = tf.Variable([2.0, 0.0])                         # x[1] is padding
+mask = tf.constant([True, False])
+with tf.GradientTape(persistent=True) as tape:
+    one = tf.reduce_sum(tf.where(mask, tf.math.log(x), 0.0))
+    safe = tf.where(mask, x, 1.0)                   # padding never reaches log
+    two = tf.reduce_sum(tf.where(mask, tf.math.log(safe), 0.0))
+g1, g2 = tape.gradient(one, x), tape.gradient(two, x)
+print('one where   : loss = %.4f, grad =' % float(one), g1.numpy())
+print('double where: loss = %.4f, grad =' % float(two), g2.numpy())
+```
+
+```{.python .input #mdl-matrix-calculus-autodiff-the-tape-2}
+#@tab jax
+x = jnp.array([2.0, 0.0])                           # x[1] is padding
+mask = jnp.array([True, False])
+def one(x):                                         # sum of log x, real entries
+    return jnp.where(mask, jnp.log(x), 0.0).sum()
+def two(x):
+    safe = jnp.where(mask, x, 1.0)                  # padding never reaches log
+    return jnp.where(mask, jnp.log(safe), 0.0).sum()
+print('one where   : loss = %.4f, grad =' % one(x), jax.grad(one)(x))
+print('double where: loss = %.4f, grad =' % two(x), jax.grad(two)(x))
+```
+
+The first line reports the gradient $(0.5, \textrm{NaN})$, although the loss
+does not depend on the padded entry at all and the true derivative there is
+$0$. A single NaN is not a local blemish: every parameter upstream of $x_2$
+receives it. The second line shows the standard remedy, the *double where*. An
+inner `where` replaces the masked entries by a harmless value, here $1$, before
+the primitive sees them, so that no infinite local derivative is ever formed
+and the gradient is $(0.5, 0)$. Clamping the argument away from the edge of the
+domain serves the same purpose. The same trap awaits $\sqrt{x}$ at $0$, and
+with it a norm computed as $\sqrt{\sum_i x_i^2}$ at $\mathbf x=\mathbf 0$.
+
 ### Parameter Gradients
 :label:`subsec_mdl-param-gradients`
 
@@ -729,10 +812,14 @@ this schedule.
 :label:`fig_mdl-cal-checkpointing`
 
 Importantly, checkpointing alters time and memory without changing the gradient
-at all: the recomputed intermediates are identical, so the resulting derivatives
-match plain reverse mode bit for bit. Deep learning frameworks expose this
-trade-off at the level of network blocks, storing only a checkpointed block's
-input and rerunning the block during backpropagation. Applying the same idea
+at all, provided the recomputation is deterministic: the recomputed
+intermediates are then identical, so the resulting derivatives match plain
+reverse mode bit for bit. Deep learning frameworks expose this trade-off at the
+level of network blocks, storing only a checkpointed block's input and rerunning
+the block during backpropagation. There the proviso needs care. A rerun block
+draws a fresh dropout mask unless the state of the random number generator is
+restored, batch normalization updates its running statistics a second time, and
+nondeterministic GPU kernels need not reproduce the first run's bits. Applying the same idea
 recursively inside each segment pushes memory all the way down to $O(\log T)$ at
 the cost of $O(T\log T)$ recomputation.
 

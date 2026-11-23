@@ -802,8 +802,9 @@ dominate :cite:`Bray.Dean.2007`. Neural networks exhibit the same behavior:
 when Newton's method locates critical points on the loss surfaces of small
 networks, the high-loss critical points are saddles
 :cite:`Dauphin.Pascanu.Gulcehre.ea.2014`. Practically, when an optimizer
-stalls at high loss, it is far more likely to be lingering near a saddle than
-trapped in a poor local minimum.
+stalls at high loss, a poor local minimum is the least likely explanation. The
+optimizer may be lingering near a saddle or, more often still, crossing a
+poorly conditioned region in which the gradient is not small at all.
 
 ## Constrained Optimization and Lagrange Multipliers
 :label:`subsec_mdl-lagrange`

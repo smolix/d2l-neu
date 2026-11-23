@@ -331,7 +331,7 @@ function secondOrderTaylor() {
 }
 
 function highdSaddles() {
-  let o = card(20, 14, 500, 70, D.purple.tint, C.purple, 'Why Saddle Points Dominate High-Dimensional Loss Landscapes', 'A local minimum requires ALL n eigenvalues of H_f to be positive (λ₁, …, λₙ > 0)', '', D.purple.dark);
+  let o = card(20, 14, 500, 70, D.purple.tint, C.purple, 'Why Saddle Points Dominate High-Dimensional Loss Landscapes', 'A local minimum requires ALL n eigenvalues of H_f to be nonnegative (λ₁, …, λₙ ≥ 0)', '', D.purple.dark);
   o += card(20, 100, 238, 144, D.red.tint, D.red.base, 'Eigenvalue Repulsion (GOE)', 'Coin-flip heuristic: 2⁻ⁿ', 'True random symmetric H_f:', D.red.dark);
   o += tx(139, 192, 'P(H ≻ 0) ~ exp(−(ln 3 / 4) n²)', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
   o += tx(139, 218, 'Decays quadratically in n² in exp!', { fs: 12.5, fw: 700, fill: D.red.dark });
@@ -868,7 +868,7 @@ function estimatorVarianceBars() {
   o += tx(270, 150, '6.0× more samples', { fs: 12.5, fw: 700, fill: D.orange.dark });
   o += card(368, 40, 152, 134, D.red.tint, D.red.base, '3. Plain REINFORCE', 'Var = θ⁴+14θ²+15', 'σ = 7.181', D.red.dark);
   o += tx(444, 150, '12.9× more samples!', { fs: 12.5, fw: 700, fill: D.red.dark });
-  o += card(20, 188, 500, 58, D.purple.tint, C.purple, 'Why Pathwise Wins on Smooth Losses: |g′(X)| = O(θ) vs. |g(X)| = O(θ²)', 'd dims: pathwise variance O(1) per coordinate vs REINFORCE O(d²)!', '', D.purple.dark);
+  o += card(20, 188, 500, 58, D.purple.tint, C.purple, 'Why Pathwise Wins on Smooth Losses: |g′(X)| = O(θ) vs. |g(X)| = O(θ²)', 'No baseline closes the gap: 8θ² + 6 > 4 for every θ', '', D.purple.dark);
   return svg(540, 258, o);
 }
 

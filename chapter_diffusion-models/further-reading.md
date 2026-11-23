@@ -7,7 +7,7 @@ This section collects monographs, tutorials, reference implementations, and prim
 
 - [*The Principles of Diffusion Models*](https://arxiv.org/abs/2510.21890) :cite:`Lai.Song.Kim.ea.2025` derives diffusion models along the variational, score-based, and flow-based routes and shows where they meet.
 - The [notes, lectures, and labs](https://diffusion.csail.mit.edu/) of MIT's course 6.S184 :cite:`Holderrieth.Erives.2025` cover flow matching, latent diffusion transformers, and discrete diffusion.
-- [*Diffusion Meets Flow Matching*](https://diffusionflow.github.io/) :cite:`Gao.Hoogeboom.Heek.ea.2025` illustrates with interactive figures that DDIM and the Euler flow-matching sampler are equivalent under a schedule rescaling.
+- [*Diffusion Meets Flow Matching*](https://diffusionflow.github.io/) :cite:`Gao.Hoogeboom.Heek.ea.2024` illustrates with interactive figures that DDIM and the Euler flow-matching sampler are equivalent under a schedule rescaling.
 - The [*Flow Matching Guide and Code*](https://arxiv.org/abs/2412.06264) :cite:`Lipman.Havasi.Holderrieth.ea.2024` and its [library](https://github.com/facebookresearch/flow_matching) provide full proofs and reference code for :numref:`sec_diffusion-gaussian-paths`.
 - [*Step-by-Step Diffusion*](https://arxiv.org/abs/2406.08929) :cite:`Nakkiran.Bradley.Zhou.ea.2025` derives deterministic and stochastic samplers (:numref:`sec_diffusion-integration` and :numref:`sec_diffusion-samplers`) from elementary probability without stochastic calculus.
 - Sander Dieleman's [blog](https://sander.ai/) examines frequency-space denoising :cite:`Dieleman.2024`, latent representations :cite:`Dieleman.2025`, flow maps :cite:`Dieleman.2026`, and continuous versus discrete diffusion for language :cite:`Dieleman.2026b`.

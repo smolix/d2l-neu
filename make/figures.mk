@@ -47,7 +47,18 @@ $(patsubst tools/%.py,.figstamps/%,$(wildcard tools/figstyle/remake_ch*.py)): \
 # remake_ch02 also owns the JS diagram pipeline (diagrams/*.mjs -> render ->
 # outline_svg -> tightcrop -> img/auto, img/): re-fire it when any of those change.
 .figstamps/figstyle/remake_ch02: $(wildcard diagrams/*.mjs) \
+    diagrams/section-numbers.json \
     tools/figstyle/outline_svg.py tools/figstyle/tightcrop.py
+
+# Section numbers on slide cards (sec()/num() in diagrams/sections.mjs) come
+# from this map. The recipe runs on every `make figures` but rewrites the file
+# only when a chapter or section number changed, so renumbering re-renders the
+# diagrams and nothing else does. `make html` refuses a stale map.
+diagrams/section-numbers.json: FORCE
+	@python3 tools/section_refs.py --write-json
+
+.PHONY: FORCE
+FORCE:
 
 # Aggregators pull their sub-modules in via import/runpy, so re-fire the whole
 # group when a sub-module changes (the aggregator's own mtime wouldn't).

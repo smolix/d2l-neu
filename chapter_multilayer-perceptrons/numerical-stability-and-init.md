@@ -6,7 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Numerical Stability and Initialization
 :label:`sec_numerical_stability`
 
-In :numref:`sec_mlp-implementation`, initializing our one-hidden-layer MLP with $\mathcal{N}(0, 0.01^2)$ weights caused a sluggish first epoch, yet the network recovered and reached $87\%$ accuracy. What happens if we stack *ten* hidden layers of width $256$ with that same $\mathcal{N}(0, 0.01^2)$ initialization? Ten epochs later, the loss has not budged from $\log 10 \approx 2.30$ and accuracy sits at $10\%$ random guessing! Conversely, if we initialize the weights with $\mathcal{N}(0, 1)$, activations and gradients overflow to `inf` and `NaN` on the very first step.
+In :numref:`sec_mlp-implementation`, initializing our one-hidden-layer MLP with $\mathcal{N}(0, 0.01^2)$ weights caused a sluggish first epoch, yet the network recovered and reached $87\%$ accuracy. What happens if we stack *ten* hidden layers of width $256$ with that same $\mathcal{N}(0, 0.01^2)$ initialization? Ten epochs later, the loss has not budged from $\log 10 \approx 2.30$ and accuracy sits at $10\%$ random guessing! Conversely, if we initialize the weights with $\mathcal{N}(0, 1)$, activations and gradients come out astronomically large, and a single SGD update throws the weights so far that the next forward pass overflows to `inf` and `NaN`.
 
 As we saw in :numref:`sec_backprop`, forward activations and backward gradients pass through a product of $K$ weight and slope matrices across a $K$-layer network. Unless each layer preserves the signal variance—keeping its multiplicative factor near $1$—signals either *vanish* exponentially to zero or *explode* exponentially to infinity. In this section, we quantify per-layer variance propagation, derive *Xavier* and *He* initialization, verify them on a 10-layer MLP on Fashion-MNIST, and prove why initial weights must be *random* to break permutation symmetry among hidden units.
 
@@ -237,7 +237,7 @@ d2l.plot(list(range(1, 11)), [acts for acts, grads in runs.values()],
          yscale='log', figsize=(4.5, 3))
 ```
 
-Notice how $\mathcal{N}(0, 0.01^2)$ crushes layer-10 activations to $\sim 10^{-21}$ and Xavier halves the activation mean square at every ReLU layer ($\sim 2^{-10} \approx 10^{-3}$ by layer 10), whereas He initialization keeps both activations and gradients near $O(1)$. To see how this variance propagation governs real training, we now define a 10-hidden-layer ReLU classifier `DeepMLP` parameterized by a per-layer standard-deviation rule `std(n_in, n_out)`:
+Notice how $\mathcal{N}(0, 0.01^2)$ crushes layer-10 activations to $\sim 10^{-19}$ and Xavier halves the activation mean square at every ReLU layer ($\sim 2^{-10} \approx 10^{-3}$ by layer 10), whereas He initialization keeps both activations and gradients near $O(1)$. To see how this variance propagation governs real training, we now define a 10-hidden-layer ReLU classifier `DeepMLP` parameterized by a per-layer standard-deviation rule `std(n_in, n_out)`:
 
 ```{.python .input #numerical-stability-and-init-training-a-deep-network-1}
 %%tab mxnet
@@ -332,8 +332,10 @@ d2l.plot(list(range(1, 11)), list(losses.values()), 'epoch', 'training loss',
 Look at how closely the 10-epoch training curves follow our variance analysis:
 
 - Under $\mathcal{N}(0, 0.01^2)$, layer-10 activations ($\sim 10^{-19}$) and layer-1 gradients ($\sim 10^{-17}$) vanish completely, leaving the training loss frozen at $\log 10 \approx 2.30$ and validation accuracy at $10\%$.
-- Under Xavier, losing a factor of $2$ per ReLU layer shrinks signals by $2^{-10} \approx 10^{-3}$, causing a slower first epoch before training recovers to $\sim 85\%$ accuracy.
+- Under Xavier, losing a factor of $2$ per ReLU layer shrinks signals by $2^{-10} \approx 10^{-3}$, causing a slower first epoch before training recovers to above $80\%$ accuracy.
 - Under He initialization, both activations and gradients stay near order $1$ across all 10 layers and training drops smoothly from the very first epoch.
+
+Initialization is not the whole answer to depth, though. The variance argument describes the network at step $0$ only: once SGD has moved the weights, nothing keeps the per-layer factor of :eqref:`eq_grad-factor` near $1$. Networks with dozens or hundreds of layers therefore rely on mechanisms that act throughout training. Normalization layers (:numref:`sec_batch_norm`) rescale the activations at every step, residual connections (:numref:`sec_resnet`) give signals and gradients a path around each layer, and gradient clipping (:numref:`sec_rnn`) caps the occasional exploding gradient. A good initialization gets training started. These mechanisms keep the signals scaled afterwards.
 
 ## Symmetry among Hidden Units
 
@@ -695,7 +697,7 @@ To test how initial weight scale determines trainability, `DeepMLP(std, lr, dept
 ::: {.col}
 - **Setup:** A 10-hidden-layer ReLU `DeepMLP` ($784 \to 256 \times 10 \to 10$), 10 epochs on Fashion-MNIST at $\eta = 0.05$.
 - **$\mathcal{N}(0, 0.01^2)$:** Completely untrainable—loss stays flat at $\log 10 \approx 2.30$ ($10\%$ accuracy).
-- **Xavier:** Starts slowly on epoch 1 (due to the $2^{-10}$ signal attenuation) before recovering to $\sim 85\%$ accuracy.
+- **Xavier:** Starts slowly on epoch 1 (due to the $2^{-10}$ signal attenuation) before recovering to above $80\%$ accuracy.
 - **He initialization:** Drops the training loss steeply from epoch 1 and reaches $\sim 85\%$ validation accuracy cleanly.
 :::
 

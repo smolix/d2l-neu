@@ -1268,16 +1268,16 @@ function overparamParadox() {
     { t: 'p / n = 1.0 (threshold!)', mono: true, fs: 12.5, fw: 700, fill: D.red.dark },
     'Unique interpolator;',
     'wild oscillations:',
-    { t: 'Test MSE > 1,000×!', fw: 700, fill: D.red.dark },
+    { t: 'Test MSE ≥ 10⁵ (cubic: 0.01)', fw: 700, fill: D.red.dark },
   ], { white: true, rail: true });
 
   o += card(188, 56, 164, 134, 'blue', [
     'MLP on Full Fashion',
     { t: 'p = 203.5K, n = 60K', mono: true, fs: 12.5 },
     { t: 'p / n = 3.4 params/img', mono: true, fs: 12.5, fw: 700, fill: D.blue.dark },
-    'Train acc: ~89%',
+    'Train acc: 87–90%',
     'Test acc:  ~87%',
-    { t: '2% generalization gap', fw: 700, fill: D.blue.dark },
+    { t: '1–3 point gap', fw: 700, fill: D.blue.dark },
   ], { white: true, rail: true });
 
   o += card(362, 56, 164, 134, 'green', [
@@ -1286,7 +1286,7 @@ function overparamParadox() {
     { t: 'p / n = 203.5 params/img', mono: true, fs: 12, fw: 700, fill: D.green.dark },
     'Interpolates 100% train,',
     'yet no catastrophic blowup:',
-    { t: 'Test acc > 80%!', fw: 700, fill: D.green.dark },
+    { t: 'Test acc ≈ 80%!', fw: 700, fill: D.green.dark },
   ], { white: true, rail: true });
 
   o += card(14, 202, 512, 46, 'slate', [

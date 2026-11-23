@@ -118,7 +118,60 @@ def fig_xor():
     fl.save(fig, "mdl-mlp-xor")
 
 
-FIGURES = [fig_xor]
+def fig_xor_diagonals():
+    """Why no line separates XOR (mlp.md, after the impossibility proof).
+
+    The four corners of the unit square with their XOR labels, in the colors
+    of ``fig_xor`` (blue = class 0, orange = class 1).  Each class sits on one
+    diagonal, and the two diagonals cross at their common midpoint (1/2, 1/2).
+    An affine function equals the average of its endpoint values at the
+    midpoint of a segment, so at (1/2, 1/2) it equals the mean over the
+    class-0 pair and also the mean over the class-1 pair: it cannot be
+    positive on both class-1 corners and non-positive on both class-0 corners.
+    The midpoint identity is checked numerically below for random affine
+    functions."""
+    T = fl.T
+    X = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]])
+    y = np.array([0, 1, 1, 0])                     # XOR labels
+    mid = np.array([0.5, 0.5])
+    rng = np.random.default_rng(0)
+    for w1, w2, b in rng.normal(size=(5, 3)):
+        f = lambda p: w1 * p[0] + w2 * p[1] + b
+        assert np.isclose(f(mid), (f(X[0]) + f(X[3])) / 2)   # class-0 diagonal
+        assert np.isclose(f(mid), (f(X[1]) + f(X[2])) / 2)   # class-1 diagonal
+
+    fill = {0: T.BLUE.base, 1: T.ORANGE.base}
+    lim = (-0.32, 1.32)
+    fig, ax = plt.subplots(figsize=(3.3, 3.0))
+
+    # the unit square, faint, then one diagonal per class in its color
+    sq = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=float)
+    ax.plot(sq[:, 0], sq[:, 1], color=T.FAINT, lw=1.0, zorder=1)
+    ax.plot([0, 1], [0, 1], color=fill[0], lw=T.SW_LINE, zorder=2)
+    ax.plot([0, 1], [1, 0], color=fill[1], lw=T.SW_LINE, zorder=2)
+
+    for p, lab in zip(X, y):
+        ax.plot(*p, "o", color=fill[lab], ms=16, zorder=5)
+        ax.text(*p, str(lab), color="white", fontsize=13, fontweight="bold",
+                ha="center", va="center", zorder=6)
+
+    # the shared midpoint, labeled inside the lower wedge between the diagonals
+    ax.plot(*mid, "o", color=T.INK, ms=6, zorder=7)
+    ax.text(mid[0], mid[1] - 0.28, r"$(\frac{1}{2}, \frac{1}{2})$",
+            color=T.INK, fontsize=15, ha="center", va="center", zorder=7)
+
+    ax.set_xlim(*lim); ax.set_ylim(*lim)
+    ax.set_aspect("equal")
+    ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
+    ax.set_xlabel("$x_1$", labelpad=-1.0)
+    ax.set_ylabel("$x_2$", rotation=0, labelpad=12)
+    ax.spines["left"].set_color(T.INK)
+    ax.spines["bottom"].set_color(T.INK)
+    ax.tick_params(colors=T.INK, labelsize=14)
+    fl.save(fig, "mdl-mlp-xor-diagonals")
+
+
+FIGURES = [fig_xor, fig_xor_diagonals]
 
 
 def main():

@@ -6,9 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Predicting House Prices on Kaggle
 :label:`sec_kaggle_house`
 
-Clean image benchmarks like Fashion-MNIST arrive with uniform pixel grids in $[0, 1]$ and zero missing values. Real-world tabular data rarely looks so tidy. In this capstone section for Part I, we tackle the Kaggle [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques) competition compiled by :citet:`De-Cock.2011` from Ames, Iowa property sales (2006–2010): $1{,}460$ labeled training homes and $1{,}459$ unlabeled test homes, each described by $79$ heterogeneous numerical and categorical attributes with scales spanning five orders of magnitude and missing entries across $19$ columns.
+Clean image benchmarks like Fashion-MNIST arrive with uniform pixel grids in $[0, 1]$ and zero missing values. Real-world tabular data rarely looks so tidy. In this capstone section of the chapter, we tackle the Kaggle [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques) competition compiled by :citet:`De-Cock.2011` from Ames, Iowa property sales (2006–2010): $1{,}460$ labeled training homes and $1{,}459$ unlabeled test homes, each described by $79$ heterogeneous numerical and categorical attributes with scales spanning five orders of magnitude and missing entries across $19$ columns.
 
-Working through this end-to-end tabular pipeline brings together every tool from Chapters 1–4: `pandas` preprocessing without data leakage, logarithmic target transformation, $K$-fold cross-validation on shared folds, linear regression baselines, and He-initialized MLPs regularized with weight decay.
+Working through this end-to-end tabular pipeline brings together the tools of :numref:`chap_preliminaries` through :numref:`chap_perceptrons`: `pandas` preprocessing without data leakage, logarithmic target transformation, $K$-fold cross-validation on shared folds, linear regression baselines, and He-initialized MLPs regularized with weight decay.
 
 ```{.python .input #kaggle-house-price-predicting-house-prices-on-kaggle}
 %%tab mxnet
@@ -399,7 +399,8 @@ submission.head()
     1. With the section's pipeline, record the validation RMSE of the linear
        model and the mean of its residuals on the validation fold after
        every epoch. In the epochs where the RMSE jumps, what has moved?
-       Every house has 45 features equal to 1. Explain why a step of SGD
+       Every house has exactly 44 one-hot features equal to 1 (45 inputs
+       equal to 1 if we count the bias). Explain why a step of SGD
        changes the mean prediction more than it changes any single weight,
        and check whether halving the learning rate removes the jumps.
    :exlabel:`ex_kaggle-house-scaling`

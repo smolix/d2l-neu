@@ -187,20 +187,21 @@ function threeQuestions() {
 }
 
 function benchmarkValley() {
-  const W = 540, H = 294;
+  const W = 540, H = 312;
   let o = '';
-  o += fitTx(270, 20, 'Steps to 10⁻⁶ Accuracy on f(x) = ½(x₁² + 1000 x₂²)', 500, { fs: 15.5, fw: 700, fill: C.ink });
+  o += fitTx(270, 20, 'Steps on the Valley f(x) = ½(x₁² + 1000 x₂²)', 500, { fs: 15.5, fw: 700, fill: C.ink });
+  o += fitTx(270, 42, 'Stop at ‖xₖ‖ ≤ 10⁻⁶‖x₀‖; Adam stops at f < 10⁻⁸ (there GD needs 6,160, heavy ball 296)', 508, { fs: 12, fill: C.ink });
 
   const rows = [
     { label: 'GD (η* = 2/1001)', val: '6,908 steps', w: 280, fill: D.red.tint, st: D.red.base, dk: D.red.dark },
     { label: 'Nesterov Look-Ahead', val: '508 steps', w: 155, fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { label: 'Heavy-Ball Momentum', val: '315 steps', w: 132, fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { label: 'Diagonal Adam (aligned)', val: '22 steps', w: 96, fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
+    { label: 'Diagonal Adam (aligned)', val: '22 steps (f < 10⁻⁸)', w: 190, fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { label: 'Newton Method (H⁻¹g)', val: '1 step', w: 78, fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
 
   rows.forEach((r, i) => {
-    const y = 40 + i * 38;
+    const y = 58 + i * 38;
     o += card(16, y, 184, 30, N.panel, C.gray, [
       { t: r.label, fs: 13, fw: 700, fill: C.ink },
     ], { rx: 6, sw: 1.5 });
@@ -209,7 +210,7 @@ function benchmarkValley() {
     ], { rx: 6, sw: 2 });
   });
 
-  o += card(16, 236, 508, 44, D.teal.tint, D.teal.base, [
+  o += card(16, 254, 508, 44, D.teal.tint, D.teal.base, [
     { t: 'Constant-Step SGD (η = 10⁻³, σ² = 1): Stalls at loss floor 7.5 × 10⁻⁴', fs: 13.5, fw: 700, fill: D.teal.dark },
   ]);
   return svg(W, H, o);
@@ -2019,7 +2020,7 @@ function svmMarginSupport() {
   o += card(276, 16, 244, 76, C.lblue, C.blue, [
     { t: 'Complementary Slackness', fs: 14, fw: 700, fill: D.blue.dark },
     { t: 'αᵢ* (1 − yᵢ(w*ᵀxᵢ + b*)) = 0', mono: true, fs: 12, fw: 700, fill: C.ink },
-    { t: 'αᵢ* > 0 ⇔ point sits on margin ±1', fs: 12.5, fill: D.blue.dark },
+    { t: 'αᵢ* > 0 ⇒ point sits on margin ±1', fs: 12.5, fill: D.blue.dark },
   ]);
 
   o += card(276, 103, 244, 76, C.lgreen, C.green, [

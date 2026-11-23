@@ -234,11 +234,16 @@ $f(\mathbf{y}) \le c$, the chord inequality immediately gives
 $f(\theta\mathbf{x} + (1-\theta)\mathbf{y}) \le \theta c + (1-\theta) c = c$.
 This is why any inequality constraint $g(\mathbf{x}) \le 0$ with a convex $g$
 automatically carves out a convex feasible region.
+:numref:`fig_mdl-opt-epigraph-sublevel`(a) shows both sets for a parabola.
+
+![Epigraphs and sublevel sets. (a) The epigraph of the convex function $f(x) = \tfrac12 x^2 + \tfrac14$ (shaded, continuing upward without bound) is a convex set, so the chord between any two of its points stays inside it. Cutting the epigraph at height $c$ and projecting onto the $x$-axis gives the sublevel set $\{f \le c\}$. (b) Every sublevel set of $f(x) = \sqrt{|x|}$ is an interval, yet the epigraph is not convex: the midpoint of the chord lies below the graph.](../img/mdl-opt-epigraph-sublevel.svg)
+:label:`fig_mdl-opt-epigraph-sublevel`
 
 Be careful, though: the converse does not hold. Every sublevel set of
 $f(x) = \sqrt{|x|}$ is a convex interval $\{|x| \le c^2\}$, yet $f$ itself is
 not convex. At $x = 0$, $y = 1$, and $\theta = \tfrac12$, the graph sits at
-$\sqrt{1/2} \approx 0.71$ while the chord sits below it at $0.5$.
+$\sqrt{1/2} \approx 0.71$ while the chord sits below it at $0.5$
+(:numref:`fig_mdl-opt-epigraph-sublevel`(b)).
 
 ### Local Minima Are Global
 :label:`subsec_mdl-local-global`
@@ -1045,12 +1050,14 @@ $f - f^\star$ by $(1 - \mu/L)^2$ per step on *every* $L$-smooth $\mu$-strongly
 convex function :cite:`Taylor.Hendrickx.Glineur.2018`, with quadratics
 achieving equality; Exercise :exref:`ex_mdl-convexity-distance-contraction`
 proves the closely related bound $\kappa(1 - \mu/L)^{2k}$. Returning to our
-$\kappa = 10^3$ running quadratic, six digits of accuracy cost roughly
-$13{,}800$ steps by our simple bound, about $6{,}900$ steps at the true
-$(1 - \mu/L)^2$ rate, and half again as many—$3{,}454$ steps—at the optimal
-fixed step $\eta = 2/(\mu + L)$ from
-:numref:`sec_mdl-gradient-based-optimization`. One factor of two came from the
-looseness of our proof, and the second from doubling the step size.
+$\kappa = 10^3$ running quadratic, six digits of accuracy in the loss gap
+(three digits in the distance to the minimizer) cost roughly $13{,}800$ steps
+by our simple bound, about $6{,}900$ steps at the true $(1 - \mu/L)^2$ rate,
+and half as many, $3{,}454$ steps, at the optimal fixed step
+$\eta = 2/(\mu + L)$. This is half of the $6{,}908$ steps that
+:numref:`sec_mdl-gradient-based-optimization` counted at the same step for six
+digits in the distance. One factor of two came from the looseness of our
+proof, and the second from doubling the step size.
 
 ## Recognizing Convexity
 :label:`subsec_mdl-recognizing-convexity`

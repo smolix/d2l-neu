@@ -15,7 +15,7 @@ Run with the repo's pytorch venv:
 
 Writes ``img/mdl-opt-projection-inequality.svg`` and
 ``img/mdl-opt-simplex-threshold.svg`` (and the copies in ``img/auto/`` that
-the slides read).
+the slides read), plus ``img/mdl-opt-soft-threshold.svg`` (book only).
 """
 
 from __future__ import annotations
@@ -205,7 +205,71 @@ def fig_simplex_threshold():
     _copy_to_auto("mdl-opt-simplex-threshold")
 
 
-FIGURES = [fig_projection_inequality, fig_simplex_threshold]
+def fig_soft_threshold():
+    """Soft-thresholding prox_{lam|.|}(z) = sign(z) max(|z| - lam, 0) with
+    lam = 0.7, the section's worked value.
+
+    The dead zone [-lam, lam] (shaded) maps to exactly 0; outside it the
+    output runs parallel to the identity (dashed), lam below it.  For
+    contrast, the l2 prox of x^2/2, z/2, shrinks every input but zeroes
+    none.  The two worked inputs z = 0.5 -> 0 and z = 2 -> 1.3 are marked,
+    with the shrink by lam drawn at z = 2.
+    """
+    lam = 0.7
+    zr, xr = (-2.75, 2.85), (-2.2, 2.55)
+    fig, ax = plt.subplots(figsize=(6.4, 5.0))
+    zs = np.linspace(-2.55, 2.55, 801)
+    soft = np.sign(zs) * np.maximum(np.abs(zs) - lam, 0.0)
+
+    ax.axvspan(-lam, lam, ymin=0.04, ymax=0.96, color=BLUE, alpha=0.10,
+               lw=0, zorder=0)
+    zi = np.linspace(-2.2, 2.4, 2)
+    ax.plot(zi, zi, color=GRAY, lw=1.6, ls=(0, (5, 3)), zorder=2)
+    ax.plot(zs, zs / 2, color=ORANGE, lw=2.0, ls=(0, (2, 2)), zorder=3)
+    ax.plot(zs, soft, color=BLUE, lw=2.6, zorder=4)
+
+    # the two worked inputs
+    ax.plot(0.5, 0.0, "o", color="black", ms=6.5, zorder=6)
+    ax.plot(2.0, 2.0 - lam, "o", color="black", ms=6.5, zorder=6)
+    fl.arrow(ax, (2.0, 2.0), (2.0, 2.0 - lam + 0.06), color="black", lw=1.4,
+             mut=11)
+    ax.text(2.08, 2.0 - lam / 2 + 0.02, r"$\lambda$", color="black",
+            fontsize=LBL + 1, ha="left", va="center")
+    ax.annotate(r"$(2,\,1.3)$", xy=(2.0, 2.0 - lam), xytext=(2.25, 0.5),
+                color="black", fontsize=LBL, ha="center", va="center",
+                arrowprops=dict(arrowstyle="-", color="black", lw=0.8,
+                                shrinkA=2, shrinkB=4))
+    ax.annotate(r"$(0.5,\,0)$", xy=(0.5, 0.0), xytext=(0.68, -0.95),
+                color="black", fontsize=LBL, ha="center", va="center",
+                arrowprops=dict(arrowstyle="-", color="black", lw=0.8,
+                                shrinkA=2, shrinkB=4))
+
+    # curve labels, stacked in the empty upper-left quadrant
+    ax.text(-2.65, 1.95, r"$\psi=\lambda|x|$: soft-thresholding", color=BLUE,
+            fontsize=LBL, ha="left", va="center")
+    ax.text(-2.65, 1.5, r"$\psi=\frac{1}{2}x^2$: $z/2$", color=ORANGE,
+            fontsize=LBL, ha="left", va="center")
+    ax.text(-2.65, 1.05, "identity", color=GRAY, fontsize=LBL, ha="left",
+            va="center")
+    ax.text(0.39, -1.8, "dead\nzone", color=BLUE, fontsize=LBL,
+            ha="center", va="center")
+
+    fl.axis_cross(ax, zr, xr, color="black")
+    for t, lab in ((-lam, r"$-\lambda$"), (lam, r"$\lambda$")):
+        ax.plot([t, t], [-0.06, 0.06], color="black", lw=1.0)
+        ax.text(t + (0 if t < 0 else 0.06), 0.12 if t < 0 else -0.12, lab,
+                color="black", fontsize=LBL,
+                ha="center", va="bottom" if t < 0 else "top")
+    ax.text(zr[1], -0.12, r"$z$", color="black", fontsize=LBL + 1,
+            ha="right", va="top")
+    ax.text(-0.1, xr[1], r"$\mathrm{prox}_{\psi}(z)$", color="black",
+            fontsize=LBL + 1, ha="right", va="top")
+    fl.clean_axes(ax, lim=(zr, xr), hide=True, equal=True)
+    fl.save(fig, "mdl-opt-soft-threshold")
+
+
+FIGURES = [fig_projection_inequality, fig_simplex_threshold,
+           fig_soft_threshold]
 
 
 def main():

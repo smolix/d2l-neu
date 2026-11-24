@@ -681,6 +681,16 @@ def _emit_slide(slide, source_cells, framework, slide_path, warnings,
     are separated by `---` (no title) or by `## <title>` if the slide
     has an explicit `title=` attribute.
     """
+    body = _resolve_body(slide.body, source_cells, framework, slide_path,
+                         warnings, layout=slide.attrs.get('layout'))
+    # A slide whose source has content that all resolves away (typically a
+    # "Setup" slide holding only the standard imports cell, which is hidden
+    # in every edition) would render as a bare title; drop it.
+    if (not is_first and any(str(l).strip() for l in slide.body)
+            and not any(str(l).strip() for l in body)
+            and not any(_slide_applies(ss.attrs, framework)
+                        for ss in slide.subslides)):
+        return []
     out = []
     title = slide.attrs.get('title')
     extras = _emit_attrs(slide.attrs)
@@ -700,9 +710,7 @@ def _emit_slide(slide, source_cells, framework, slide_path, warnings,
             out.append('')
             out.append('---')
             out.append('')
-    out.extend(_resolve_body(slide.body, source_cells, framework,
-                              slide_path, warnings,
-                              layout=slide.attrs.get('layout')))
+    out.extend(body)
     # Subslides (vertical sub-slides under the current slide)
     for ss in slide.subslides:
         if not _slide_applies(ss.attrs, framework):

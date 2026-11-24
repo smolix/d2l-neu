@@ -1908,11 +1908,33 @@ predictions and the masked absolute offset error:
 @ssd-defining-loss-and-evaluation-functions-2
 :::
 
-::: {.slide title="Training"}
+::: {.slide title="Training" except="jax,tensorflow"}
 Standard SGD loop with two evaluation metrics: class error and
 box mean absolute error.
 
 @-ssd-training-the-model
+:::
+
+::: {.slide title="Training: One Step" only="jax"}
+Standard SGD loop with two evaluation metrics: class error and
+box mean absolute error.
+
+@-ssd-training-the-model[1-21]
+:::
+
+::: {.slide title="Training: The Epoch Loop" only="jax"}
+@-ssd-training-the-model[23-]
+:::
+
+::: {.slide title="Training: One Step" only="tensorflow"}
+Standard SGD loop with two evaluation metrics: class error and
+box mean absolute error.
+
+@-ssd-training-the-model[1-32]
+:::
+
+::: {.slide title="Training: The Epoch Loop" only="tensorflow"}
+@-ssd-training-the-model[33-]
 :::
 
 ::: {.slide title="Training (result)"}

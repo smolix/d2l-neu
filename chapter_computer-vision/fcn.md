@@ -1075,10 +1075,20 @@ upsampling layer:
 @fcn-reading-the-dataset
 :::
 
-::: {.slide title="Training"}
+::: {.slide title="Training" except="jax"}
 Pixel-level cross-entropy, averaged over every output pixel:
 
 @-fcn-training
+:::
+
+::: {.slide title="Training: Optimizer and Step" only="jax"}
+Pixel-level cross-entropy, averaged over every output pixel:
+
+@-fcn-training[1-27]
+:::
+
+::: {.slide title="Training: The Epoch Loop" only="jax"}
+@-fcn-training[29-]
 :::
 
 ::: {.slide title="Training (result)"}

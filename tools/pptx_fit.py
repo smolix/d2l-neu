@@ -14,6 +14,7 @@ overflow. Two steps fix that:
   size from a ladder that fits. Sizes go into the box's list style, so
   PowerPoint, Keynote, Google Slides and LibreOffice all honour them.
 """
+import html
 import io
 import math
 import re
@@ -48,6 +49,8 @@ LOGO_AR = 2884 / 712                  # static/logo-with-text.png
 
 TITLE_MAX, TITLE_MIN = 28, 16        # 1.27x the body cap (web: 1.24x)
 BODY_MAX, BODY_MIN = 22, 8
+SPARSE_MAX = 26                       # prose-only slide: may grow to this
+SPARSE_FILL = 0.6                     # a lone box filling less is centred
 CODE_FLOOR = 12                       # body size below which long code
                                       # lines wrap rather than shrink it
 CODE_RATIO = 0.78                     # code size / body size, as on the web
@@ -353,8 +356,8 @@ def _paragraphs(body):
             # Lines end at <a:br/> or, in pandoc's output blocks, at a
             # newline inside the text itself.
             for chunk in re.split(r'<a:br\s*/>', p):
-                lines += ''.join(re.findall(r'<a:t>([^<]*)</a:t>',
-                                            chunk)).split('\n')
+                lines += html.unescape(''.join(re.findall(
+                    r'<a:t>([^<]*)</a:t>', chunk))).split('\n')
             out.append(('code', lines, False))
             continue
         words = []
@@ -362,8 +365,7 @@ def _paragraphs(body):
             bold = 'b="1"' in run
             txt = ''.join(re.findall(r'<(?:a|m):t[^>]*>([^<]*)</(?:a|m):t>',
                                      run))
-            txt = (txt.replace('&amp;', '&').replace('&lt;', '<')
-                   .replace('&gt;', '>'))
+            txt = html.unescape(txt)   # &quot; etc. measure as one char
             words += [(w, bold) for w in txt.split()]
         out.append(('text', words, bulleted))
     return out
@@ -422,10 +424,13 @@ def code_cap(paras, width):
     return min(BODY_MAX, max(cap, CODE_FLOOR))
 
 
-def fit_size(paras, w_pt, h_pt):
+def fit_size(paras, w_pt, h_pt, cap=BODY_MAX):
+    """Largest body size up to `cap` (lowered by long code lines) at which
+    the paragraphs fit the box."""
     width = w_pt - 2 * INSET_X
     height = (h_pt - 2 * INSET_Y) * 0.97
-    for s in _ladder(code_cap(paras, width), BODY_MIN):
+    for s in _ladder(min(cap, code_cap(paras, width)) if _longest(paras)
+                     else cap, BODY_MIN):
         if body_height(paras, s, width) <= height:
             return s
     return BODY_MIN
@@ -910,18 +915,34 @@ def fit(pptx: Path, logo: Path = None):
             w, h = g[2] / EMU_PER_PT, g[3] / EMU_PER_PT
             body = re.search(r'<p:txBody>.*?</p:txBody>', s, re.S).group(0)
             if typ in ('title', 'ctrTitle'):
-                text = ' '.join(re.findall(r'<a:t>([^<]*)</a:t>', body))
+                text = html.unescape(' '.join(re.findall(r'<a:t>([^<]*)</a:t>', body)))
                 size = fit_title(text, w, h)
                 sizes.append(('title', size))
                 return _apply(s, size, title=True)
             if typ in ('dt', 'ftr', 'sldNum', 'subTitle'):
                 return s
             paras = _paragraphs(body)
-            size = fit_size(paras, w, h)
+            # A slide whose only content is this one prose box may use
+            # larger text, and short content is centred vertically instead
+            # of leaving the lower half of the slide empty.
+            solo = solo_slide and typ not in ('title', 'ctrTitle')
+            prose = solo and all(k == 'text' for k, _, _ in paras)
+            size = fit_size(paras, w, h, SPARSE_MAX if prose else BODY_MAX)
             sizes.append(('body', size))
-            return _apply(s, size,
-                          block=block_code(paras, size, w - 2 * INSET_X))
+            out = _apply(s, size,
+                         block=block_code(paras, size, w - 2 * INSET_X))
+            used = body_height(paras, size, w - 2 * INSET_X) + 2 * INSET_Y
+            if solo and used < SPARSE_FILL * h:
+                out = re.sub(r'<a:bodyPr\b(?![^>]*anchor=)', '<a:bodyPr anchor="ctr"',
+                             out, count=1)
+            return out
 
+        texts = [t for t in re.findall(r'<p:sp>.*?</p:sp>', xml, re.S)
+                 if '<p:txBody>' in t and _ph(t)[0] not in
+                 ('title', 'ctrTitle', 'dt', 'ftr', 'sldNum', 'subTitle')
+                 and re.search(r'<a:t>[^<]*\S|<a14:m>', t)]
+        solo_slide = (len(texts) == 1 and '<p:pic>' not in xml
+                      and '<p:graphicFrame>' not in xml)
         xml = re.sub(r'<p:sp>.*?</p:sp>', sp, xml, flags=re.S)
         files[name] = _add_math_fallback(
             _number_shapes(_wrap_table_math(xml))).encode()

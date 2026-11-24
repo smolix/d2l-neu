@@ -1250,12 +1250,24 @@ Near convergence, minibatch noise causes SGD/AdamW iterates $\boldsymbol{\theta}
 :::
 :::
 
-::: {.slide title="Implementing Classic vs. Modern Training Steps"}
+::: {.slide title="Implementing Classic vs. Modern Training Steps" except="tensorflow"}
 [Recipe Implementation]{.kicker}
 
 `ClassicRecipe` and `ModernRecipe` share `ResNet18`, differing only in two methods:
 
 @training-recipes-one-network-two-recipes-2
+:::
+
+::: {.slide title="Implementing the Recipes: Schedule and Coupled Weight Decay" only="tensorflow"}
+[Recipe Implementation]{.kicker}
+
+`ClassicRecipe` and `ModernRecipe` share `ResNet18`, differing only in two methods:
+
+@-training-recipes-one-network-two-recipes-2[1-18]
+:::
+
+::: {.slide title="Implementing Classic vs. Modern Training Steps" only="tensorflow"}
+@training-recipes-one-network-two-recipes-2[20-]
 :::
 
 ::: {.slide title="Baseline Trajectory: 30 Epochs of Classic Recipe A"}

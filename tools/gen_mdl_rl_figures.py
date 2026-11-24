@@ -3257,10 +3257,10 @@ def fig_optimal_control():   # F_oc (ch. 14) -> mdl-rl-optimal-control
     axb.plot(xs_nom[:, 0], xs_nom[:, 1], color=BLUE, lw=2.4, zorder=4)
     axb.plot([np.pi], [0.0], "o", color=ORANGE, ms=7, zorder=6)
     axb.plot([0.0], [0.0], "o", color=GREEN, ms=7, zorder=6)
-    axb.annotate("start $(\\pi, 0)$", xy=(np.pi, 0.0), xytext=(2.05, 1.4),
-                 fontsize=11.5, arrowprops=dict(arrowstyle="->", lw=1.0))
-    axb.annotate("pump ($\\vartheta_{30}=4.04$)", xy=(xs_nom[30, 0], xs_nom[30, 1]),
-                 xytext=(2.3, -3.6), fontsize=11.5, color=BLUE,
+    axb.text(3.27, 0.0, "start\n$(\\pi, 0)$", fontsize=11.5, ha="left",
+             va="center", linespacing=1.3)
+    axb.annotate("pump\n($\\vartheta_{30}=4.04$)", xy=(xs_nom[30, 0], xs_nom[30, 1]),
+                 xytext=(2.05, -4.05), fontsize=11.5, color=BLUE, linespacing=1.3,
                  arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.0))
     axb.annotate("upright $(0, 0)$", xy=(0.0, 0.0), xytext=(0.45, 2.2),
                  fontsize=11.5, color=GREEN,
@@ -3313,7 +3313,9 @@ def fig_optimal_control():   # F_oc (ch. 14) -> mdl-rl-optimal-control
     axc.set_ylim(-3.3, 3.3)
     axc.set_xlabel("time (s)", fontsize=13)
     axc.set_ylabel(r"wrapped angle $\vartheta_t$ (rad)", fontsize=13)
-    axc.legend(loc="lower right", frameon=False, fontsize=11)
+    axc.legend(loc="lower left", bbox_to_anchor=(0.0, 1.0), ncol=3,
+               frameon=False, fontsize=10.5, handlelength=1.6,
+               columnspacing=0.9, borderaxespad=0.2)
     _black_axes(axc)
     _letter(axc, "(c)", x=-0.16, y=1.02)
     fl.save(fig, "mdl-rl-optimal-control")

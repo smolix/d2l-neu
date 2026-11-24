@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2479682d6f4fbf781a2d563ccebb96783fef3798fcbb4e1298b322909bb571fd",
+    "d2l_lib_fingerprint": "sha256:3d7220192a8294819a6a07dacdf2722af51f0fccee47e5552688d8e4e0e11304",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3,360 recorded answers in 11 configurations, 3,414 judgments\nbaseline accuracy on dev: 0.891 [0.845, 0.931]\n"
+          "text": "3,600 recorded answers in 12 configurations, 3,654 judgments\nbaseline accuracy on dev: 0.912 [0.870, 0.949]\n"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " configuration             accuracy             faithful       cite precision\n         fixed 0.808 [0.758, 0.853] 0.904 [0.862, 0.942] 0.641 [0.592, 0.689]\nrewrite-rerank 0.887 [0.842, 0.925] 0.912 [0.879, 0.943] 0.697 [0.653, 0.738]\n       reverse 0.895 [0.849, 0.933] 0.931 [0.895, 0.963] 0.759 [0.705, 0.811]\n   budget-1500 0.849 [0.795, 0.895] 0.884 [0.833, 0.925] 0.708 [0.652, 0.755]\n   budget-6000 0.891 [0.853, 0.924] 0.892 [0.833, 0.939] 0.712 [0.665, 0.759]\n    fixed-over 0.828 [0.777, 0.873] 0.906 [0.872, 0.939] 0.642 [0.598, 0.687]\n configuration         accuracy - base context tokens s per answer\n         fixed -0.079 [-0.122, -0.037]          1,577         1.28\nrewrite-rerank -0.004 [-0.036, +0.028]          1,685         1.91\n       reverse +0.008 [-0.025, +0.042]          1,701         1.14\n   budget-1500 -0.046 [-0.089, -0.004]          1,323         1.07\n   budget-6000 -0.008 [-0.037, +0.021]          5,814         2.55\n    fixed-over -0.063 [-0.107, -0.021]          1,831         1.19\nintervals excluding 0: ['fixed', 'budget-1500', 'fixed-over']\nthe largest dev gain: reverse\n"
+          "text": " configuration             accuracy             faithful       cite precision\n         fixed 0.825 [0.773, 0.871] 0.909 [0.864, 0.949] 0.641 [0.592, 0.689]\nrewrite-rerank 0.904 [0.862, 0.939] 0.913 [0.879, 0.945] 0.697 [0.653, 0.738]\n       reverse 0.904 [0.855, 0.944] 0.936 [0.897, 0.968] 0.759 [0.705, 0.811]\n   budget-1500 0.854 [0.801, 0.900] 0.885 [0.843, 0.922] 0.708 [0.652, 0.755]\n   budget-6000 0.921 [0.892, 0.948] 0.924 [0.882, 0.960] 0.712 [0.665, 0.759]\n    fixed-over 0.863 [0.818, 0.901] 0.926 [0.885, 0.960] 0.642 [0.598, 0.687]\n configuration         accuracy - base context tokens s per answer\n         fixed -0.087 [-0.121, -0.054]          1,577         1.28\nrewrite-rerank -0.008 [-0.040, +0.022]          1,685         1.91\n       reverse -0.008 [-0.042, +0.025]          1,701         1.14\n   budget-1500 -0.058 [-0.098, -0.019]          1,323         1.07\n   budget-6000 +0.008 [-0.027, +0.047]          5,814         2.55\n    fixed-over -0.050 [-0.081, -0.023]          1,831         1.19\nintervals excluding 0: ['fixed', 'budget-1500', 'fixed-over']\nthe largest dev gain: budget-6000\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "26 of 239 judged base answers on dev are not correct (1 unjudged, left out)\n               count              share  cites a relevant passage\nnot_retrieved      0  0.00 [0.00, 0.00]                         0\nranked_low         4  0.15 [0.04, 0.31]                         0\nignored           10  0.38 [0.19, 0.58]                         7\nunsupported       11  0.42 [0.23, 0.62]                        10\nfalse_answer       1  0.04 [0.00, 0.12]                         0\nfalse_abstain      0  0.00 [0.00, 0.00]                         0\nthe largest class: unsupported (the intervals overlap, next ignored)\nits fix, written down before counting: {'verify': True}\n\n[ignored] dev-0000 (single): On unified-memory machines, how does the book say large mixture-of-\n    experts models compare in fitting and decoding speed to dense models with about the same\n    total size?\n  answer: On unified-memory machines, large mixture-of-experts (MoE) models fit because they can\n    utilize the high capacity of system RAM, even though the bandwidth is lower than that of\n    discrete GPUs [1]. Because MoE models only read their active parameters for each token, they\n    decode faster than dense models\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ignored] dev-0008 (single): In PyTorch, what happens to modules that are placed in a plain\n    Python list rather than in a registered container such as `nn.Sequential` or\n    `nn.ModuleList`?\n  answer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the fo\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[unsupported] dev-0021 (single): What two weights make up the hand-designed vertical edge\n    detector that subtracts each pixel's right-hand neighbor in a grayscale image?\n  answer: The hand-designed vertical edge detector uses the weights $(1, -1)$ [1]. This kernel\n    subtracts the value of each pixel from its right-hand neighbor to detect edges [1].\n    Specifically, it computes the difference between horizontally adjacent pixels, where the\n    first weight is 1 and the second is -1 [3]\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\n[ranked_low] dev-0076 (single): In the book's analysis of the KL divergence between a\n    distribution p and the mixture (1−ε)p+εq, what happens to the median divergence when ε is\n    made ten times smaller?\n  answer: The provided passages do not contain the specific analysis of how the median KL\n    divergence changes when $\\varepsilon$ is made ten times smaller in the context of the\n    mixture $(1 - \\varepsilon)p + \\varepsilon q$. While Passage [1] includes code that\n    calculates median KL values for $\\varepsilon = 10^{\n  relevant chunk in the context: False\n  verdicts: {'correct': False, 'faithful': True, 'supported': None}\n\n[unsupported] dev-0088 (single): When the framework backpropagates the squared loss L = ||Xw −\n    y||², what gradient does it begin with before applying any operation's local rule?\n  answer: The backward pass starts from the derivative of 1 with respect to the loss $L$ itself\n    [1]. This initial value of 1 is then propagated backward through the computational graph\n    [3]. The framework applies the local rule of each operation in reverse order, beginning with\n    this starting gradient [1]. This\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\nthe agent (claude-opus-5.5) against the rule on 26 cards: agreement 0.46\nagent         correct  ignored  ranked_low  unsupported\nrule                                                   \nfalse_answer        1        0           0            0\nignored             4        6           0            0\nranked_low          0        0           4            0\nunsupported         4        1           4            2\non the 26 failures: the agent agrees with the rule on 12,\n  calls 9 correct and blames another stage on 5\n"
+          "text": "21 of 240 judged base answers on dev are not correct (0 unjudged, left out)\n               count              share  cites a relevant passage\nnot_retrieved      0  0.00 [0.00, 0.00]                         0\nranked_low         5  0.24 [0.05, 0.43]                         0\nignored            8  0.38 [0.19, 0.57]                         5\nunsupported        7  0.33 [0.14, 0.52]                         7\nfalse_answer       1  0.05 [0.00, 0.14]                         0\nfalse_abstain      0  0.00 [0.00, 0.00]                         0\nthe largest class: ignored (the intervals overlap, next unsupported)\nits fix, written down before counting: {'order': 'edges', 'prompt': 'quote', 'max_new_tokens': 500}\n\n[ignored] dev-0000 (single): On unified-memory machines, how does the book say large mixture-of-\n    experts models compare in fitting and decoding speed to dense models with about the same\n    total size?\n  answer: On unified-memory machines, large mixture-of-experts (MoE) models fit because they can\n    utilize the high capacity of system RAM, even though the bandwidth is lower than that of\n    discrete GPUs [1]. Because MoE models only read their active parameters for each token, they\n    decode faster than dense models\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ignored] dev-0008 (single): In PyTorch, what happens to modules that are placed in a plain\n    Python list rather than in a registered container such as `nn.Sequential` or\n    `nn.ModuleList`?\n  answer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the fo\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ranked_low] dev-0076 (single): In the book's analysis of the KL divergence between a\n    distribution p and the mixture (1−ε)p+εq, what happens to the median divergence when ε is\n    made ten times smaller?\n  answer: The provided passages do not contain the specific analysis of how the median KL\n    divergence changes when $\\varepsilon$ is made ten times smaller in the context of the\n    mixture $(1 - \\varepsilon)p + \\varepsilon q$. While Passage [1] includes code that\n    calculates median KL values for $\\varepsilon = 10^{\n  relevant chunk in the context: False\n  verdicts: {'correct': False, 'faithful': True, 'supported': None}\n\n[unsupported] dev-0088 (single): When the framework backpropagates the squared loss L = ||Xw −\n    y||², what gradient does it begin with before applying any operation's local rule?\n  answer: The backward pass starts from the derivative of 1 with respect to the loss $L$ itself\n    [1]. This initial value of 1 is then propagated backward through the computational graph\n    [3]. The framework applies the local rule of each operation in reverse order, beginning with\n    this starting gradient [1]. This\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\n[ignored] dev-0100 (single): How many token windows does the `d2l.TimeMachine` pipeline discard\n    because they cross the boundary between the training and validation parts of the corpus?\n  answer: The `d2l.TimeMachine` pipeline discards `num_steps` windows that straddle the split\n    between the training and validation parts of the corpus [2]. This is done to ensure that no\n    validation token is ever a training target [3]. Specifically, the code drops the windows\n    located between index `num_train` a\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\nthe agent (claude-opus-5.5) against the rule on 21 cards: agreement 0.57\nagent         correct  ignored  ranked_low  unsupported\nrule                                                   \nfalse_answer        1        0           0            0\nignored             1        6           1            0\nranked_low          1        0           4            0\nunsupported         1        1           3            2\non the 21 failures: the agent agrees with the rule on 12,\n  calls 4 correct and blames another stage on 5\n"
         }
       ]
     },
@@ -109,41 +109,46 @@
       ]
     },
     "rag-fix": {
-      "code_fingerprint": "sha256:3ff4c231f9e708280b31687d99579b5635479e05b826be78e4e8155d2b19ddc0",
+      "code_fingerprint": "sha256:8913fef66fee1cd776d293b68f46512cbd47bba63ab54eca64fbea89272a6ee6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test was read with the fix fix-unsupported and the stage reverse\n"
+          "text": "test was read once, with the fix fix-unsupported and the stage reverse\nwith the verdicts as they stand now the rule picks fix-ignored; it is run on dev only,\n  and test is not read again\nwith the verdicts as they stand now the largest dev gain is budget-6000;\n  test was read once, with reverse, and is not read again\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "split   configuration         accuracy - base   cite precision - base\n  dev fix-unsupported -0.138 [-0.183, -0.095] +0.018 [+0.002, +0.033]\n  dev         reverse +0.008 [-0.025, +0.042] +0.048 [+0.013, +0.081]\n test fix-unsupported -0.083 [-0.133, -0.038] +0.042 [+0.023, +0.063]\n test         reverse +0.013 [-0.020, +0.047] +0.020 [-0.022, +0.060]\n"
+          "text": "split   configuration         accuracy - base   cite precision - base\n  dev     fix-ignored -0.083 [-0.136, -0.035] -0.024 [-0.071, +0.020]\n  dev fix-unsupported -0.146 [-0.192, -0.102] +0.018 [+0.002, +0.033]\n  dev         reverse -0.008 [-0.042, +0.025] +0.048 [+0.013, +0.081]\n test fix-unsupported -0.087 [-0.143, -0.037] +0.042 [+0.023, +0.063]\n test         reverse +0.004 [-0.029, +0.039] +0.020 [-0.022, +0.060]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "accuracy:\n                                  dev                  test\nbase             0.891 [0.845, 0.931]  0.854 [0.807, 0.898]\nreverse          0.895 [0.849, 0.933]  0.866 [0.824, 0.904]\nfix-unsupported  0.750 [0.698, 0.794]  0.771 [0.701, 0.834]\n\n34 answerable dev questions right in base, wrong with the fix\n(by class: ignored 18, false_abstain 13, unsupported 2, ranked_low 1); the first:\ndev-0001: In the book's legacy PyTorch helper `load_array`, how does the returned `DataLoader`\n    decide whether to shuffle the data?\n  base: The `load_array` function accepts an optional argument `is_train` which defaults to\n    `True`. It passes this `is_train` value directly to the `DataLoader` constructor as the\n    `shuffle` parameter. Consequently, the data is shuffled if `is_train` is `True` and remains\n    in its original order if `is_train` ...\n  fix-unsupported: This behavior is defined in the function signature and implementation within\n    the provided code [1]. ...\n               base  fix-unsupported\ncls                                 \nnot_retrieved     0                0\nranked_low        4                5\nignored          10               31\nunsupported      11               10\nfalse_answer      1                0\nfalse_abstain     0               14\ncorrect         213              180\nunjudged          1                0\n"
+          "text": "accuracy:\n                                  dev                  test\nbase             0.912 [0.870, 0.949]  0.863 [0.818, 0.903]\nreverse          0.904 [0.855, 0.944]  0.867 [0.826, 0.904]\nfix-ignored      0.829 [0.769, 0.881]                   NaN\nfix-unsupported  0.767 [0.715, 0.812]  0.775 [0.706, 0.838]\n\nfix-ignored: 16 answerable dev questions right in base, wrong with the fix\n(by class: ignored 11, unsupported 3, ranked_low 2); the first:\ndev-0010: In the operation-fusion experiment that compiles `d2l.gelu_ish`, what does the code\n    verify before it starts benchmarking the compiled function?\n  base: The code verifies that the compiled version computes the same values as the eager\n    version using `torch.allclose` with a tolerance of $10^{-6}$ [1]. This check ensures the\n    faster kernel produces correct results, as a faster kernel is useless if it computes\n    different values [1]. The use of `allclose` ...\n  fix-ignored: The code verifies that the compiled version computes the same values as the eager\n    version before benchmarking. It uses the `torch.allclose` function to ensure the results\n    agree within rounding error, acknowledging that the compiler might reorder floating-point\n    operations. This check is performed bec ...\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nfix-unsupported: 36 answerable dev questions right in base, wrong with the fix\n(by class: ignored 21, false_abstain 14, unsupported 1); the first:\ndev-0001: In the book's legacy PyTorch helper `load_array`, how does the returned `DataLoader`\n    decide whether to shuffle the data?\n  base: The `load_array` function accepts an optional argument `is_train` which defaults to\n    `True`. It passes this `is_train` value directly to the `DataLoader` constructor as the\n    `shuffle` parameter. Consequently, the data is shuffled if `is_train` is `True` and remains\n    in its original order if `is_train` ...\n  fix-unsupported: This behavior is defined in the function signature and implementation within\n    the provided code [1]. ...\n               base  fix-ignored  fix-unsupported\ncls                                              \nnot_retrieved     0            0                0\nranked_low        5            6                5\nignored           8           17               31\nunsupported       7            5                6\nfalse_answer      1           13                0\nfalse_abstain     0            0               14\ncorrect         219          199              184\nunjudged          0            0                0\n"
         }
       ]
     },
     "rag-failure-plot": {
-      "code_fingerprint": "sha256:b7343437cc0c2f4f4b51d0a6a2ac086f39bd0c60bf4e9e710dd1cb2fc9c4317b",
+      "code_fingerprint": "sha256:35b9c8fa7acd19d1003ea6eec1c65953269f3984069e0df22489f916ffcad990",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rag-failures/rag-failure-plot-1.svg",
-          "bytes": 66425,
-          "sha256": "sha256:629ce5d878aeaf613cc262ad096150256431894cfca0eb6db0d1ede9c3a32d0a"
+          "bytes": 72373,
+          "sha256": "sha256:fda1a212abeb7118b9cfeca7bd2220ff30f8a549284f43b9f79714854671cb87"
         }
       ]
     },
     "rag-marginal": {
-      "code_fingerprint": "sha256:a43bc309f52c09e8bfc2e4b5b195e0e63bbc6d1dce12ad06928f83cd829baa97",
+      "code_fingerprint": "sha256:935ff063d19d1730d6168b59175292b38731238d3b306b1071165afb77bc0f2f",
       "kind": "text",
       "outputs": [
         {
@@ -154,13 +159,13 @@
       ]
     },
     "rag-cost": {
-      "code_fingerprint": "sha256:f09242ce326500d456c21922639046f4901367e6fe169069779a634c12b1b849",
+      "code_fingerprint": "sha256:0652b964a684154033acfe0aabc201a57fc10030015e69e42439e56514ee0e19",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                 prompt_tokens  new_tokens  s_per_answer\nconfig                                                  \nbase                   1936.88      110.86          1.19\nbase-repeat            1936.88      110.64          1.20\nclosed                   89.96      100.11          0.79\noracle                  629.67      101.57          0.90\nbudget-1500            1534.05      110.42          1.07\nbudget-6000            6346.02      114.77          2.55\nfixed                  1840.05      107.33          1.28\nfixed-over             2119.13      109.22          1.19\nreverse                1936.88      111.47          1.14\nrewrite-rerank         1923.96      112.68          1.91\nfix-unsupported        1936.88      110.86          1.17\n"
+          "text": "                 prompt_tokens  new_tokens  s_per_answer\nconfig                                                  \nbase                   1936.88      110.86          1.19\nbase-repeat            1936.88      110.64          1.20\nclosed                   89.96      100.11          0.79\noracle                  629.67      101.57          0.90\nbudget-1500            1534.05      110.42          1.07\nbudget-6000            6346.02      114.77          2.55\nfixed                  1840.05      107.33          1.28\nfixed-over             2119.13      109.22          1.19\nreverse                1936.88      111.47          1.14\nrewrite-rerank         1923.96      112.68          1.91\nfix-ignored            1974.88      222.16          2.20\nfix-unsupported        1936.88      110.86          1.17\n"
         },
         {
           "type": "stream",
@@ -175,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one question at a time: retrieval 30 ms (50 questions), reranking 50 chunks 542 ms (50 questions)\n"
+          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 549 ms (50 questions)\n"
         }
       ]
     }

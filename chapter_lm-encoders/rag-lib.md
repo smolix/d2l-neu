@@ -13,8 +13,9 @@ of the `test` split in one process), the item list `BookQA` (`stats`,
 builder and JSON parser (the question set's closed-book flags use them, so
 they were fixed before the set was built), and the judge chosen on
 2026-11-14 against frontier-model labels (`RAG_JUDGE_LOCAL`: Qwen3.8-27B,
-thinking on, FP8 weights served by vLLM over two 24 GB GPUs; its server
-`rag_judge_server`, its client `rag_judge_client` and `_rag_judge_replies`,
+thinking on; since 2026-11-24 its 4-bit W4A16 weights, one copy per 24 GB
+GPU served by vLLM, with the protocol of chapter 20's judge; its servers
+`rag_judge_servers`, its client `rag_judge_client` and `_rag_judge_replies`,
 which reads a verdict after the reasoning, from an endpoint or a
 Transformers model), and the plumbing of `RAGPipeline`: the prompts for
 query rewriting, HyDE, decomposition and sentence verification, the prompt
@@ -119,41 +120,70 @@ RAG_JUDGE_V1 = {
     'retry': 'Reply with the JSON line only, in exactly the requested form.'}
 
 #@save
-# The judge of the RAG section, chosen 2026-11-14 against frontier-model
-# labels (lm-rag-judge-labels-v1): Qwen3.8-27B with thinking on, FP8 weights
-# served by vLLM over two 24 GB GPUs; the same open weights are served in
+# The judge of the RAG section: Qwen3.8-27B with thinking on, chosen
+# 2026-11-14 against frontier-model labels (lm-rag-judge-labels-v1) in its
+# FP8 build; since 2026-11-24 RedHat's W4A16 build of the same weights
+# (Apache-2.0; 16.7 GiB per card), one copy per 24 GB GPU served by vLLM,
+# tested again on both calibration sets (lm-rag-judge-v1cal-v1 and
+# lm-rag-judge-labels-v2). Its protocol is that of chapter 20's judge (EDU_LABELLER_LOCAL,
+# the same weights): greedy, seed 0, at most 12,000 new tokens and no
+# separate budget for the reasoning. The context also holds the longest
+# judge prompt (about 7,200 tokens). The same open weights are served in
 # BF16 on OpenRouter (qwen/qwen3.8-27b, deepinfra/bf16)
-RAG_JUDGE_LOCAL = {'model': 'Qwen/Qwen3.8-27B-FP8',
-                   'revision': 'c3a462cc3d38cf351f3b26cbd763469eeb74ef81',
+RAG_JUDGE_LOCAL = {'model': 'RedHatAI/Qwen3.8-27B-INT4',
+                   'revision': '71dface38d4cbfa34121f1d446d4a0fa1025f13c',
                    'vllm': '0.33.0', 'thinking': True,
-                   'max_new_tokens': 3000}
+                   'max_new_tokens': 12_000, 'max_model_len': 20_480}
 
 #@save
-def rag_judge_server(n_gpus=2, port=None, vllm=None):
-    """A d2l.LocalChatServer that serves the judge (RAG_JUDGE_LOCAL) with
-    vLLM, its layers split over n_gpus GPUs (pipeline parallel), from the
-    executable vllm (default: the environment variable D2L_VLLM, else
-    `vllm` on the PATH). vLLM lives in an environment of its own, since it
-    pins its own PyTorch."""
+def rag_judge_servers(gpus=None, vllm=None):
+    """One d2l.LocalChatServer per GPU (default: every visible GPU), each
+    serving the judge (RAG_JUDGE_LOCAL) with vLLM on that GPU alone,
+    offline from the local Hub cache, from the executable vllm (default:
+    the environment variable D2L_VLLM, else `vllm` on the PATH). vLLM lives
+    in an environment of its own, since it pins its own PyTorch. At most 32
+    sequences: the linear-attention layers' state cache holds 54, and at
+    the default of 64 vLLM refuses to start. A server takes 0.95 of an idle
+    card; on a card that already holds memory (this process's own, say) it
+    takes what is free less 1.5 GiB."""
     import shutil  # not in the d2l library preamble
+    import subprocess
     exe = vllm or os.environ.get('D2L_VLLM') or shutil.which('vllm')
     if exe is None:
         raise RuntimeError('no vLLM: install it in its own environment and '
                            'set D2L_VLLM to its vllm executable')
-    j = d2l.RAG_JUDGE_LOCAL
-    return d2l.LocalChatServer([
-        exe, 'serve', j['model'], '--revision', j['revision'],
-        '--pipeline-parallel-size', str(n_gpus), '--max-model-len', '16384',
-        '--max-num-seqs', '64', '--gpu-memory-utilization', '0.9',
-        '--limit-mm-per-prompt', '{"image": 0, "video": 0}', '--seed', '0',
-        '--host', '127.0.0.1', '--port', '{port}'], port=port)
+    if gpus is None:
+        vis = os.environ.get('CUDA_VISIBLE_DEVICES')
+        gpus = (vis.split(',') if vis else
+                [str(i) for i in range(torch.cuda.device_count())])
+    servers, j = [], d2l.RAG_JUDGE_LOCAL
+    for g in gpus:  # nvidia-smi reads memory without opening a CUDA context
+        used, total = map(int, subprocess.run(
+            ['nvidia-smi', '-i', str(g), '--query-gpu=memory.used,'
+             'memory.total', '--format=csv,noheader,nounits'], check=True,
+            capture_output=True, text=True).stdout.split(','))
+        frac = 0.95 if used <= 100 else min(0.95, (total - used - 1536)
+                                            / total)
+        servers.append(d2l.LocalChatServer([
+            'env', f'CUDA_VISIBLE_DEVICES={g}', 'HF_HUB_OFFLINE=1', exe,
+            'serve', j['model'], '--revision', j['revision'],
+            '--max-model-len', str(j['max_model_len']), '--max-num-seqs',
+            '32', '--gpu-memory-utilization', f'{frac:.3f}',
+            '--language-model-only', '--limit-mm-per-prompt',
+            '{"image": 0, "video": 0}', '--reasoning-parser', 'qwen3',
+            '--seed', '0', '--host', '127.0.0.1', '--port', '{port}']))
+    return servers
 
-def rag_judge_client(url='http://127.0.0.1/v1', cache=None, mode='replay'):
+def rag_judge_client(url='http://127.0.0.1/v1', cache=None, mode='replay',
+                     timeout=3600.0):
     """A d2l.ChatAPI for the judge served at url, thinking on; the request
-    hash keeps the host only, so a recorded cache replays with no server."""
+    hash keeps the host only, so a recorded cache replays with no server.
+    timeout: the seconds a request may take (a reply of 12,000 tokens takes
+    minutes at the server's full load)."""
     return d2l.ChatAPI(url, d2l.RAG_JUDGE_LOCAL['model'], cache=cache,
-                       mode=mode, default_params={'extra_body': {
-                           'chat_template_kwargs': {'enable_thinking': True}}})
+                       mode=mode, timeout=timeout, default_params={
+                           'extra_body': {'chat_template_kwargs': {
+                               'enable_thinking': True}}})
 
 #@save
 def _rag_abstained(answer):
@@ -344,10 +374,10 @@ RAG_RERANKER = 'Qwen/Qwen3-Reranker-0.6B'
 RAG_ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
     'rag-gen-base': ('lm-rag-gen-base-v2', 'lm-rag-gen-base.jsonl'),
     'rag-gen-stages': ('lm-rag-gen-stages-v3', 'lm-rag-gen-stages.jsonl'),
-    'rag-gen-fix': ('lm-rag-gen-fix-v2', 'lm-rag-gen-fix.jsonl'),
-    'rag-judge': ('lm-rag-judge-v6', 'lm-rag-judge.jsonl'),
-    'rag-judge-cache': ('lm-rag-judge-cache-v6', 'lm-rag-judge-cache.zip'),
-    'rag-cards': ('lm-rag-cards-v2', 'lm-rag-cards.jsonl')}
+    'rag-gen-fix': ('lm-rag-gen-fix-v3', 'lm-rag-gen-fix.jsonl'),
+    'rag-judge': ('lm-rag-judge-v8', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v8', 'lm-rag-judge-cache.zip'),
+    'rag-cards': ('lm-rag-cards-v3', 'lm-rag-cards.jsonl')}
 
 #@save
 # The baseline: section chunks, hybrid retrieval, the first five chunks in
@@ -537,16 +567,18 @@ def _rag_load_gens(rerun):
                                  for r in df.to_dict('records')])
 
 def _rag_load_judgments(path):
-    """Judgment records, verdicts as True, False or None; max_new_tokens
-    of rows from before the re-judging is the judge's default."""
+    """Judgment records, verdicts as True, False or None; judge (model@
+    revision) is None on records from before it was recorded, and
+    max_new_tokens of rows from before the re-judging is 3,000, the first
+    judge's limit."""
     df = d2l._rag_records([path], on=['config', 'qid', 'concurrency'])
     for k in ('correct', 'faithful', 'supported'):
         df[k] = [None if v is None or v != v else bool(v)
                  for v in df.get(k, [])]
-    for k in ('backend', 'answer_sha'):
-        df[k] = df.get(k, [None] * len(df))
-    default = d2l.RAG_JUDGE_LOCAL['max_new_tokens']
-    df['max_new_tokens'] = [default if v is None or v != v else int(v)
+    for k in ('backend', 'answer_sha', 'judge'):
+        df[k] = [None if v != v else v
+                 for v in df.get(k, [None] * len(df))]
+    df['max_new_tokens'] = [3000 if v is None or v != v else int(v)
                             for v in df.get('max_new_tokens',
                                             [None] * len(df))]
     return df

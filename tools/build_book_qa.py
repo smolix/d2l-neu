@@ -1918,6 +1918,257 @@ def calibrate(args):
         os.path.join(out_dir, f'{CALIB_KEY}.zip'))
 
 
+CALIB2_KEY = 'lm-rag-judge-labels-v2'
+# Version 2 (2026-11-24, author ruling 4b): the calibration set of 100 pairs
+# drawn as in version 1 (random.Random('calib|0') over the 240 base dev
+# answers sorted by qid), now from the generator of 19.5, Qwen3.5-9B
+# (lm-rag-gen-base-v2), labelled once by the same two frontier models with
+# the same prompt and parameters. One cost cap of $3.00 for both labellers
+# (shares 0.8 and 0.2), checked before every call on its worst case; one
+# retry round for requests that failed in transport; no smoke calls.
+CALIB2_CAP_USD = 3.0
+CALIB2_SHARES = {'label-frontier': 0.8, 'label-second': 0.2}
+CALIB2_CONCURRENCY = {'label-frontier': 2, 'label-second': 4}
+CALIB2_README = """# lm-rag-judge-labels-v2: labels for checking the RAG judge on 19.5's answers
+
+100 (question, answer) pairs of section 19.5 ("Retrieval-Augmented
+Generation"): `base` answers of Qwen3.5-9B (thinking off, greedy), the
+section's generator, to dev items of lm-book-qa-v2, as recorded in
+lm-rag-gen-base-v2 (hybrid BookRetriever with the model card's embedder
+task, section chunks, K=5, budget 3,000 tokens, the fixed prompt). The
+pairs are the calibration draw of lm-rag-judge-labels-v1 (uniform over the
+240 dev answers sorted by qid, random.Random('calib|0')), so they are the
+same 100 questions, answered by the newer generator. There is no selection
+set: the judge was chosen on lm-rag-judge-labels-v1.
+
+Each pair is labelled `correct` and `faithful` (prompt CALIB_V1 of
+tools/lm/book_qa_prompts.py, unchanged) by the two frontier models of
+version 1, with the same parameters: {frontier} (first) and {second}
+(second). Not labelled by people. `correct` and `faithful` hold the
+consensus where both labellers agree (label_source "both"), else null
+("disagree" or "missing"). Licence CC BY-SA 4.0.
+
+Files: pairs.jsonl (the 100 answer records, as in lm-rag-gen-base-v2),
+dev_judge_labels.jsonl (labels), manifest.json (models, served ids,
+parameters, kappas, spend, cap), listing.json (OpenRouter listing snapshot
+with the prices the cap used), api/<arm>.jsonl and api/<arm>.calls.jsonl
+(every recorded response and every attempt; `python tools/build_book_qa.py
+--mode replay --calibrate <lm-rag-gen-base-v2.jsonl> --calib-version 2
+--cache-dir <unpacked zip>` rebuilds the labels from them with no key).
+"""
+
+
+def calib2_setup(args, d2l):
+    """(folder, listing, recording, items, corpus, pairs, messages) of the
+    version-2 calibration labels."""
+    folder = os.path.abspath(args.cache_dir or os.path.join(
+        W, 'data', 'lm-api', 'record', CALIB2_KEY))
+    os.makedirs(os.path.join(folder, 'api'), exist_ok=True)
+    lp = os.path.join(folder, 'listing.json')
+    if not os.path.exists(lp):
+        if args.mode == 'replay':
+            raise SystemExit(f'{lp} missing')
+        rec = d2l.APIRecording('record', os.path.dirname(folder), 1.0, {})
+        rec.snapshot_listing([VERIFIER, SECOND], {},
+                             key=os.path.basename(folder))
+    with open(lp) as f:
+        listing = json.load(f)
+    rec = d2l.APIRecording(args.mode, os.path.dirname(folder),
+                           CALIB2_CAP_USD, {VERIFIER: VERIFIER_AT,
+                                            SECOND: SECOND_AT})
+    rec.listing = listing
+    corpus = d2l.book_corpus(root=os.path.join(W, 'data', 'lm'))
+    with zipfile.ZipFile(d2l.download_keyed('lm-book-qa-v2', os.path.join(
+            W, 'data', 'lm'))) as z:
+        name = next(n for n in z.namelist() if n.endswith('qa_dev.jsonl'))
+        items = {q['qid']: q for q in map(json.loads, z.read(
+            name).decode('utf-8').splitlines()) if q}
+    gens = read_jsonl(os.path.abspath(args.calibrate))
+    calib, _ = calib_pairs(gens, items)
+    pairs = [dict(g, set='calibration') for g in calib]
+    msgs = [calib_messages(corpus, items[g['qid']], g) for g in pairs]
+    return folder, listing, rec, items, corpus, pairs, msgs
+
+
+def calib2_estimate(args, d2l, listing, msgs):
+    """Expected and worst-case cost of labelling msgs with both labellers,
+    from the listing's prices and version 1's recorded tokens per byte and
+    completion tokens (no API call)."""
+    old = os.path.join(W, 'data', 'lm-api', 'record', CALIB_KEY, 'api')
+    out = {}
+    for arm, (m, at, params, _) in LABELLERS.items():
+        price = d2l.price_from_listing(listing, m, at)
+        reqs = {json.loads(l)['hash']: json.loads(l) for l in open(
+            os.path.join(old, arm + '.jsonl'))}
+        calls = [c for c in d2l.api_calls(os.path.join(
+            old, arm + '.calls.jsonl')) if c.get('status') == 200]
+        nbytes = lambda ms: len(json.dumps(ms, ensure_ascii=False).encode())
+        ratio = (sum(c['usage']['prompt_tokens'] for c in calls) /
+                 sum(nbytes(reqs[c['hash']]['request']['messages'])
+                     for c in calls))
+        comp = [c['usage']['completion_tokens'] for c in calls]
+        prompt = [ratio * nbytes(x) for x in msgs]
+        exp = sum(d2l.api_cost({'prompt_tokens': p, 'completion_tokens':
+                                sum(comp) / len(comp)}, price)
+                  for p in prompt)
+        hi = sum(d2l.api_cost({'prompt_tokens': p, 'completion_tokens':
+                               sorted(comp)[int(0.95 * len(comp))]}, price)
+                 for p in prompt)
+        worst = sum(d2l.api_cost({'prompt_tokens': nbytes(x),
+                                  'completion_tokens': params['max_tokens']},
+                                 price) for x in msgs)
+        out[arm] = {'model': m, 'provider': at, 'price': (
+                        price._asdict() if hasattr(price, '_asdict')
+                        else str(price)),
+                    'calls': len(msgs), 'tokens_per_byte': round(ratio, 4),
+                    'prompt_tokens_mean': round(sum(prompt) / len(prompt)),
+                    'completion_tokens_mean_v1': round(sum(comp) /
+                                                       len(comp)),
+                    'expected_usd': round(exp, 4),
+                    'p95_completion_usd': round(hi, 4),
+                    'worst_case_usd': round(worst, 4)}
+    out['total'] = {k: round(sum(v[k] for v in out.values()), 4) for k in (
+        'expected_usd', 'p95_completion_usd', 'worst_case_usd')}
+    return out
+
+
+def calibrate_v2(args):
+    """The version-2 calibration labels lm-rag-judge-labels-v2 (19.5; see
+    CALIB2_README); with --estimate only the expected cost, no call."""
+    os.environ.setdefault('HF_HOME', '/home/smola/.cache/hf-lm')
+    os.chdir(os.path.join(W, 'chapter_lm-encoders'))
+    from d2l import torch as d2l
+    folder, listing, rec, items, corpus, pairs, msgs = calib2_setup(args, d2l)
+    est = calib2_estimate(args, d2l, listing, msgs)
+    log('estimate:', json.dumps(est, indent=1))
+    if args.estimate:
+        return
+    if args.mode == 'record' and est['total']['expected_usd'] > 2.5:
+        raise SystemExit('expected cost above $2.50: stop and ask')
+    labels, results = {}, {}
+    for arm, (m, at, params, reasoning) in LABELLERS.items():
+        api = rec.hosted(m, os.path.join(folder, 'api', arm + '.jsonl'),
+                         share=CALIB2_SHARES[arm], reasoning=reasoning,
+                         timeout=300.0, max_retries=10)
+        log(f'{arm}: cap {api.cost_cap_usd:.4f} USD for this cache')
+        reqs = [dict(messages=x, **params) for x in msgs]
+        conc = CALIB2_CONCURRENCY[arm]
+        first = args.first or len(reqs)  # a staged start: the first pairs
+        out = asyncio.run(d2l.chat_batch(api, reqs[:first], concurrency=conc))
+        if first < len(reqs):
+            log(f'{arm}: first {first}: ' + '; '.join(
+                repr(r)[:200] if isinstance(r, BaseException) else
+                f'{r.model} {r.provider} {r.usage} {r.text[:120]!r}'
+                for r in out))
+            continue
+        for _ in range(1 if args.mode == 'record' else 0):  # one retry round
+            todo = [i for i, r in enumerate(out)
+                    if isinstance(r, BaseException)
+                    and not isinstance(r, d2l.CostCapExceeded)]
+            if not todo:
+                break
+            import time
+            log(f'{arm}: {len(todo)} failed ({out[todo[0]]!r:.160}); '
+                'retrying once in 60 s')
+            time.sleep(60)
+            again = asyncio.run(d2l.chat_batch(
+                api, [reqs[i] for i in todo], concurrency=conc))
+            for i, r in zip(todo, again):
+                out[i] = r
+        calls = d2l.api_calls(api.calls_path)
+        bad = [r for r in out if isinstance(r, BaseException)]
+        log(f'{arm}: {len(out) - len(bad)}/{len(out)} ok; recorded spend '
+            f'{sum(c.get("cost") or 0 for c in calls):.4f} USD in '
+            f'{len(calls)} attempts')
+        if bad:
+            log(f'  first failure: {bad[0]!r:.300}')
+        results[arm] = out
+        res = []
+        for x in out:
+            v = None if isinstance(x, BaseException) else parse_json_obj(
+                x.text)
+            ok = isinstance(v, dict) and all(isinstance(v.get(k), bool) for k
+                                             in ('correct', 'faithful'))
+            res.append({'correct': v['correct'], 'faithful': v['faithful'],
+                        'rationale': str(v.get('rationale', ''))[:400],
+                        'served': x.model, 'provider': x.provider}
+                       if ok else None)
+        labels[arm] = res
+    if args.first:
+        return
+    rows = []
+    for g, f, q in zip(pairs, labels['label-frontier'],
+                       labels['label-second']):
+        it = items[g['qid']]
+        row = {'qid': g['qid'], 'set': g['set'], 'type': it['type'],
+               'answerable': it['answerable'], 'config': 'base',
+               'answer': g['answer'], 'context_ids': g['context_ids'],
+               'cited_ids': g.get('cited_ids', [])}
+        for k in ('correct', 'faithful'):
+            a = None if f is None else f[k]
+            b = None if q is None else q[k]
+            row[f'{k}_frontier'], row[f'{k}_second'] = a, b
+            row[k] = a if a is not None and a == b else None
+            row[f'{k}_label_source'] = ('both' if row[k] is not None else
+                                        'disagree' if None not in (a, b)
+                                        else 'missing')
+        row['rationale_frontier'] = None if f is None else f['rationale']
+        row['rationale_second'] = None if q is None else q['rationale']
+        rows.append(row)
+    kap = {k: v for k, v in calib_kappas(rows).items()
+           if not k.startswith('selection')}
+    spend = {}
+    for arm in LABELLERS:
+        calls = d2l.api_calls(os.path.join(folder, 'api',
+                                           arm + '.calls.jsonl'))
+        ok = [c for c in calls if c.get('status') == 200]
+        spend[arm] = {'calls': len(ok), 'failed_attempts': len(calls) -
+                      len(ok), 'usd': round(sum(c.get('cost') or 0.0
+                                                for c in ok), 6),
+                      'prompt_tokens': sum(c['usage']['prompt_tokens']
+                                           for c in ok),
+                      'completion_tokens': sum(
+                          c['usage']['completion_tokens'] for c in ok),
+                      'served': sorted({str(c.get('served_model'))
+                                        for c in ok}),
+                      'providers': sorted({str(c.get('provider'))
+                                           for c in ok})}
+    snap = lambda m: listing['models'][m].get('canonical_slug', m)
+    manifest = {
+        'name': CALIB2_KEY, 'question_set': 'lm-book-qa-v2',
+        'answers': 'lm-rag-gen-base-v2', 'generator': 'Qwen/Qwen3.5-9B',
+        'n': len(rows), 'sets': {'calibration': CALIB_N}, 'seed': SEED,
+        'labellers': {
+            arm.split('-')[1]: {'requested': m, 'snapshot': snap(m),
+                                'provider': at, 'params': params,
+                                'reasoning': reasoning}
+            for arm, (m, at, params, reasoning) in LABELLERS.items()},
+        'kappa_frontier_vs_second': kap,
+        'prompt_sha256': sha256(json.dumps(P.CALIB_V1, sort_keys=True)),
+        'listing_retrieved': listing.get('retrieved'),
+        'cost_cap_usd': CALIB2_CAP_USD, 'cap_shares': CALIB2_SHARES,
+        'estimate_usd': est, 'spend_usd': spend,
+        'note': 'labels from models, not from people'}
+    members = {
+        'pairs.jsonl': ''.join(dumps(g) + '\n' for g in pairs).encode(),
+        'dev_judge_labels.jsonl': ''.join(dumps(r) + '\n'
+                                          for r in rows).encode(),
+        'manifest.json': (json.dumps(manifest, indent=1) + '\n').encode(),
+        'README.md': CALIB2_README.format(
+            frontier=snap(VERIFIER), second=snap(SECOND)).encode(),
+        'listing.json': open(os.path.join(folder, 'listing.json'),
+                             'rb').read()}
+    for name in sorted(os.listdir(os.path.join(folder, 'api'))):
+        with open(os.path.join(folder, 'api', name), 'rb') as f:
+            members[f'api/{name}'] = f.read()
+    out_dir = os.path.abspath(args.out)
+    os.makedirs(out_dir, exist_ok=True)
+    write_zip(os.path.join(out_dir, f'{CALIB2_KEY}.zip'), members)
+    log('kappa:', json.dumps(kap), 'spend:', json.dumps(
+        {a: v['usd'] for a, v in spend.items()}), 'wrote',
+        os.path.join(out_dir, f'{CALIB2_KEY}.zip'))
+
+
 def pack_cache(args):
     """The cache folder (listing, API caches and calls logs of every stage,
     the local-stage outputs) as a deterministic zip, the artifact
@@ -1960,6 +2211,15 @@ def main():
                    help='label 200 base dev generations of 19.5 (the '
                    'judge selection and calibration sets; with --smoke: 10 '
                    'calls of the second labeller)')
+    p.add_argument('--calib-version', type=int, choices=(1, 2), default=1,
+                   help='with --calibrate: 2 labels the 100 calibration '
+                   'pairs of 19.5\'s generator (lm-rag-judge-labels-v2)')
+    p.add_argument('--estimate', action='store_true',
+                   help='with --calib-version 2: print the expected cost, '
+                   'make no call')
+    p.add_argument('--first', type=int, default=0,
+                   help='with --calib-version 2: label only the first N '
+                   'pairs of each labeller (a staged start)')
     p.add_argument('--set-version', type=int, choices=(1, 2), default=1,
                    help='2: lm-book-qa-v2 (closed-book flag by JUDGE_V2)')
     p.add_argument('--judge-url', help='OpenAI-compatible endpoints '
@@ -1978,7 +2238,10 @@ def main():
             args.out = os.path.join(W, 'data', 'lm', 'authoring', KEY)
     if args.pack_cache:
         return pack_cache(args)
-    calibrate(args) if args.calibrate else build(args)
+    if args.calibrate and args.calib_version == 2:
+        calibrate_v2(args)
+    else:
+        calibrate(args) if args.calibrate else build(args)
 
 
 if __name__ == '__main__':

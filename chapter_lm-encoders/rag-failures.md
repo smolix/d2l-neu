@@ -2,7 +2,7 @@
 :label:`sec_lm_rag_fixes`
 
 Suppose you have built the pipeline of :numref:`sec_lm_rag` and are looking
-at the 26 `dev` questions it gets wrong. The natural impulse is to start
+at the 21 `dev` questions it gets wrong. The natural impulse is to start
 fixing. Most people who build such systems have a favorite repair: smaller
 chunks, a rewritten query, more passages in the prompt, a sterner
 instruction to the generator. Each is plausible, and each has a paper that
@@ -14,8 +14,8 @@ favorites can help a system like that, and how would we know?
 In this section the measurements choose. We change one stage at a time and
 compare with the baseline on the same questions. We sort the wrong answers
 by the first stage that lost them. And we test the repair of the largest
-class, written down before any failure was counted, on the 240 `test`
-questions, read once. None of this is new: medicine has run its clinical
+class, written down before any failure was counted, while 240 `test`
+questions are read only once. None of this is new: medicine has run its clinical
 trials this way for decades, with a control measured on the same patients
 and an analysis fixed before the data come in. Here the procedure will
 matter more than any of the repairs. A short derivation then asks whether
@@ -254,21 +254,21 @@ if sum(r['configuration'] in STAGES for r in rows) == len(STAGES):
     print(f'the largest dev gain: {BEST}')
 ```
 
-No change raised accuracy measurably. The only gain, from reversing the
-order, is about +0.01, with an interval from $-0.03$ to +0.04; the
-6,000-token budget and the rewrite with reranking come out about level
-with the baseline. On the retrieval side this is what the
+No change raised accuracy measurably. The only gain, from the 6,000-token
+budget, is about +0.01, with an interval from $-0.03$ to +0.05; reversing
+the order and the rewrite with reranking come out about level with the
+baseline. On the retrieval side this is what the
 mixture predicted. On the generator's side it is a finding: the generator
 did not read measurably better for a different order or for three times the
 text.
 
-The two losses teach more. Fixed windows lost 0.08. They had a little less
+The two losses teach more. Fixed windows lost 0.09. They had a little less
 context than the baseline, about 1,600 tokens against 1,700, but the
 control rules the token count out: with about 1,800 tokens, windows still
-lost 0.06. Coverage accounts for less than half of the loss. At
+lost 0.05. Coverage accounts for less than half of the loss. At
 budgets near the windows' own, their coverage trails by 0.02 to 0.05. A
 question that drops out of coverage falls at worst from the accuracy on
-hits to the accuracy on misses, about 0.5 lower, so such a gap could cost
+hits to the accuracy on misses, about 0.6 lower, so such a gap could cost
 at most about 0.01 to 0.03. The rest is the cut itself, and coverage is
 blind to it: it
 counts half a gold span as found, and a window can hold that half and cut
@@ -277,21 +277,25 @@ Chunks that follow the document's structure keep a paragraph whole, and
 they gave better answers.
 
 Less context costs accuracy where coverage falls. The 1,500-token budget,
-about 1,300 context tokens, lost 0.05, and coverage drops from 0.97 at
+about 1,300 context tokens, lost 0.06, and coverage drops from 0.97 at
 2,000 tokens to 0.91 at 1,000. More context, by contrast, did nothing for
 accuracy: the 6,000-token budget, about 5,800 context tokens, gained
 nothing measurable and doubled the time per answer.
 
 A rule fixed in advance carries the stage change with the largest `dev`
 gain to `test`, read once, to see whether a gain this small survives fresh
-questions. The cell's last line names reversing the order, the only change
-with a gain at all, two verdicts in 240. We read `test` with the fix and
-with the reversed order, at the end of the next subsection.
+questions. The cell's last line names the 6,000-token budget, ahead of the
+others by two verdicts in 240. But `test` has been read already. It was
+read once, with the verdicts of the judge's earlier 8-bit build, when the
+same rule named reversing the order. A test set read again after every change of the
+verdicts would become development data, so we do not read it again: the
+reversed order is the stage change that `test` was read with, at the end of
+the next subsection.
 
 ## Failures by Stage
 :label:`subsec_lm_rag_failures`
 
-No change helped on average. Perhaps the 26 wrong answers fail in different
+No change helped on average. Perhaps the 21 wrong answers fail in different
 ways, each needing its own repair, and an average over them hides that. To
 find out, `classify_failure` asks six questions of each wrong answer, in
 pipeline order, and blames the first stage that lost the answer:
@@ -480,37 +484,35 @@ if ready('base'):
         print('\nthe cards carry no labels of a second labeler yet')
 ```
 
-None of the 26 failures happened at first-stage retrieval, which is what
-the hit rate led us to expect. Unsupported is the largest class, 11
-failures or 0.42 of them, but its interval, [0.23, 0.62], overlaps that of
-ignored, 10 failures and [0.19, 0.58]. Twenty-six failures are a small
+None of the 21 failures happened at first-stage retrieval, which is what
+the hit rate led us to expect. Ignored is the largest class, 8 failures or
+0.38 of them, but its interval, [0.19, 0.57], overlaps that of
+unsupported, 7 failures and [0.14, 0.52]. Twenty-one failures are a small
 sample to divide six ways, and they cannot say which of the two classes is
 larger.
 
-The last column shows what the two largest classes have in common. Seven
-of the 10 ignored answers cite a passage that holds the answer, and so do
-10 of the 11 unsupported ones. In these answers the generator found the right
+The last column shows what the two largest classes have in common. Five
+of the 8 ignored answers cite a passage that holds the answer, and so do
+all 7 unsupported ones. In these answers the generator found the right
 passage and even pointed to it. Then it left out a key fact that the
 passages state, or added a claim that they do not support.
 
-How far can we trust the classes? Each of the 26 failures has a card, and
-the labeler agrees with the rule on 12 of them, 0.46. It calls 9 correct
-and blames another stage on 5. The nine are answers that the labeler
-accepts and our grading does not. In eight the judge insists on a key fact,
-or holds a wrong side remark against the answer, where the labeler lets it
-pass. In one, an unanswerable question was declined in words other than
+How far can we trust the classes? Each of the 21 failures has a card, and
+the labeler agrees with the rule on 12 of them, 0.57. It calls 4 correct
+and blames another stage on 5. The four are answers that the labeler
+accepts and our grading does not. In three the judge insists on a key fact
+that the labeler finds stated, if clumsily. In one, an unanswerable question was declined in words other than
 the abstention sentence of :numref:`sec_lm_rag`, "I cannot answer this
 from the provided passages", which is the only reply our grading counts as
-declining. Of the five other attributions, four trace an unsupported
+declining. Of the five other attributions, three trace an unsupported
 answer to a relevant chunk that was ranked below the context: the answer
 went beyond its passages because the passage it needed was missing.
 
-Rule and labeler disagree about whether an answer is wrong almost twice as
-often as about where it went wrong. Once two graders agree that an answer
-is wrong, the stage is the easier question. One caveat matters for what
-comes next. The class the rule is about to pick is also the most disputed
-one: of the 11 unsupported answers, the labeler calls 4 correct and blames
-4 on ranking, and agrees with the rule on only 2.
+Rule and labeler disagree about whether an answer is wrong about as often
+as about where it went wrong. The two largest classes fare differently,
+which matters for what comes next. The class the rule is about to pick,
+ignored, is the one the labeler confirms most often: 6 of the 8 answers.
+Of the 7 unsupported answers it confirms only 2, and blames 3 on ranking.
 
 Let us return to the answer that opened :numref:`sec_lm_rag`. It was picked
 by a fixed rule: the first `dev` answer, by question id, whose context held
@@ -564,17 +566,30 @@ is given. The passage was neither missing nor contradicted. It was ignored.
 And the missing fact is the one a user needs most: nothing tells you that
 part of your model is not training.
 
-The rule takes the class with the most failures, unsupported, although 26
-failures cannot rank it above ignored; a rule fixed in advance decides
-anyway, which is what it is for. Its fix checks the answer after it is
-written. The answer is split into sentences, and the generator is asked of
-each one whether the passages it cites support every fact in it, a yes or
-no read off the two labels' probabilities, as the reranker reads its
-score. A sentence the check rejects is dropped, and so is a sentence that
-cites nothing, since nothing can support it; an answer with no sentence
-left abstains. The check should remove exactly the claims that make an
-answer unsupported and leave the rest. The cell applies the fix to `dev`
-and then reads `test` once, with the fix and with the reversed order.
+The rule takes the class with the most failures, ignored, although 21
+failures cannot rank it above unsupported; a rule fixed in advance decides
+anyway, which is what it is for. Its fix asks the generator to quote before
+it answers: to copy the sentences of the passages that answer the
+question, each with its passage number, and only then to write the answer.
+A fact that has been copied out should be harder to leave out. The fix also
+places the best passages at both ends of the context, the positions a
+model reads most reliably, and allows 500 new tokens instead of 300, since
+the quotes come first.
+
+This is not the fix that `test` was read with. With the judge's earlier
+8-bit build the unsupported class was the larger, by 11 failures to 10, so
+the rule picked the fix for unsupported answers, and `test` was read once,
+with that fix and with the reversed order. That fix checks the answer after
+it is written. The answer is split into sentences, and the generator is
+asked of each one whether the passages it cites support every fact in it,
+a yes or no read off the two labels' probabilities, as the reranker reads
+its score. A sentence the check rejects is dropped, and so is a sentence
+that cites nothing, since nothing can support it; an answer with no
+sentence left abstains. With the 4-bit judge the two classes changed
+places, by one failure, which is within the noise of 21 failures. We do not
+read `test` again for the new choice. The cell runs the fix for ignored
+answers on `dev` only, and reports both fixes on `dev` and, where they were
+read, the earlier fix and the reversed order on `test`.
 
 ```{.python .input #rag-fix}
 %%tab pytorch
@@ -598,6 +613,13 @@ def tune_threshold():
           f'accuracy {max(bal):.2f})')
     return float(cuts[np.argmax(bal)])
 
+def read_rule(recs):
+    """The rule that test was read with (a dict), from the records of
+    rag-gen-fix: the only records that carry one. None before test."""
+    rules = {r for r in recs if isinstance(r, str)}
+    assert len(rules) <= 1, 'test is read once'
+    return json.loads(rules.pop()) if rules else None
+
 if 'rag-gen-fix' in RERUN:
     assert FIX, 'the fix needs the judged base run (rag-judge)'
     assert BEST, 'test is read once, with the best stage: judge every stage'
@@ -605,38 +627,53 @@ if 'rag-gen-fix' in RERUN:
     thr = tune_threshold() if LARGEST == 'false_answer' else None
     run = lambda name, items, **kw: d2l._rag_run_config(
         name, items, RET, KEEP_GEN, DEPTH, **kw)
-    recs = run(FIX, DEV, threshold=thr)
-    base = run('base', TEST)  # the only reads of test in the chapter
-    recs += base
-    for name in [FIX] + ([BEST] if CONFIGS[BEST] != CONFIGS[FIX] else []):
-        recs += run(name, TEST, budgets=context_tokens(base) if
-                    CONFIGS[name]['budget'] == 'base' else None,
-                    threshold=thr if name == FIX else None)
-    rule = json.dumps(dict(largest=LARGEST, fix=FIX, best=BEST,
-                           threshold=thr))  # what test was read with
-    d2l._rag_save_gens('rag-gen-fix', [dict(r, rule=rule) for r in recs])
+    path = d2l.lm_registered(ARTIFACTS['rag-gen-fix'][0])
+    old = d2l._rag_records([path]).to_dict('records') if path else []
+    if read_rule([r.get('rule') for r in old]) is None:  # test, once
+        recs = run(FIX, DEV, threshold=thr)
+        base = run('base', TEST)  # the only reads of test in the chapter
+        recs += base
+        for name in [FIX] + ([BEST] if CONFIGS[BEST] != CONFIGS[FIX]
+                             else []):
+            recs += run(name, TEST, budgets=context_tokens(base) if
+                        CONFIGS[name]['budget'] == 'base' else None,
+                        threshold=thr if name == FIX else None)
+        rule = json.dumps(dict(largest=LARGEST, fix=FIX, best=BEST,
+                               threshold=thr))  # what test was read with
+        recs = [dict(r, rule=rule) for r in recs]
+    else:  # test was read with an earlier rule: the new fix on dev only
+        old = [r for r in old if r['config'] != FIX or r['split'] != 'dev']
+        recs = old + [dict(r, rule=None) for r in run(FIX, DEV,
+                                                      threshold=thr)]
+    d2l._rag_save_gens('rag-gen-fix', recs)
     GENS = d2l._rag_load_gens(RERUN)
     print(f'rag-gen-fix regenerated in {(time.time() - t) / 60:.1f} min, '
           f'{d2l.lm_peak()}')
-rules = set(GENS.rule.dropna()) if 'rule' in GENS else set()
-if rules:
-    RULE = json.loads(rules.pop())
-    print(f'test was read with the fix {RULE["fix"]} and the stage '
+RULE = read_rule(GENS.rule) if 'rule' in GENS else None
+READ = []  # the configurations read on test, besides the baseline
+if RULE:
+    READ = [RULE['fix']] + ([RULE['best']] if RULE['best'] != RULE['fix']
+                            else [])
+    print(f'test was read once, with the fix {RULE["fix"]} and the stage '
           f'{RULE["best"]}' + ('' if RULE['threshold'] is None else
                               f', abstaining below a reranker score of '
                               f'{RULE["threshold"]:.3f} (tuned on train)'))
-    assert not rules and (RERUN or RULE['fix'] == FIX), (
-        'the rule now picks another fix')
+    if FIX != RULE['fix']:  # the verdicts changed after test was read
+        print(f'with the verdicts as they stand now the rule picks {FIX}; '
+              'it is run on dev only,\n  and test is not read again')
     if BEST != RULE['best']:  # stage deltas within noise: a tie can move
         print(f'with the verdicts as they stand now the largest dev gain is '
               f'{BEST};\n  test was read once, with {RULE["best"]}, and is '
               'not read again')
     BEST = RULE['best']  # the stage that test was read with
 
+FIXES = [FIX] + [c for c in READ if c != FIX and CONFIGS[c] != CONFIGS[
+    BEST]]  # the fix of the rule now, then the one test was read with
 if FIX and ready('base', FIX):
     rows = []
-    for split in ('dev', 'test'):
-        for c in [FIX] + ([BEST] if BEST and BEST != FIX else []):
+    for split, arms in (('dev', FIXES + [BEST] * bool(BEST)),
+                        ('test', READ)):
+        for c in arms:
             if not ready('base', c, split=split):
                 continue
             a, b = scores(c, split), scores('base', split)
@@ -645,94 +682,122 @@ if FIX and ready('base', FIX):
                          'cite precision - base': paired(
                              a, b, 'cite_precision')})
     print(pd.DataFrame(rows).to_string(index=False))
-    arms = ['base'] + ([BEST] if BEST and BEST != FIX else []) + [FIX]
+    arms = ['base'] + [BEST] * bool(BEST) + FIXES
     print('accuracy:\n' + pd.DataFrame({split: {c: boot(
         scores(c, split).accuracy, cluster=scores(c, split).cluster)
-        for c in arms if ready(c, split=split)} for split in ('dev', 'test')}
+        for c in arms if (split == 'dev' or c in ['base'] + READ)
+        and ready(c, split=split)} for split in ('dev', 'test')}
                                        ).to_string())
-    b, f = (scores(c).set_index('qid') for c in ('base', FIX))
-    lost = b.index[b.answerable & (b.accuracy == 1) & (f.accuracy[b.index] == 0)]
-    q = min(lost)  # the first answerable dev question the fix lost
-    after = classes(FIX)
-    print(f'\n{len(lost)} answerable dev questions right in base, wrong '
-          'with the fix\n(by class: ' + ', '.join(
-              f'{c} {n}' for c, n in
-              after.set_index('qid').cls[lost].value_counts().items())
-          + '); the first:')
-    d2l.print_wrapped(f'{q}: {ITEMS[q]["question"]}', width=96)
-    for name, s in (('base', b), (FIX, f)):
-        print(textwrap.fill(f'{name}: {s.answer[q][:300].rstrip()} ...', 96,
-                            initial_indent='  ', subsequent_indent='    '))
-    print(pd.DataFrame({'base': BC.cls.value_counts(),
-                        FIX: after.cls.value_counts()})
+    b = scores('base').set_index('qid')
+    AFTER = {}
+    for fx in FIXES:
+        if not ready(fx):
+            continue
+        f, AFTER[fx] = scores(fx).set_index('qid'), classes(fx)
+        lost = b.index[b.answerable & (b.accuracy == 1)
+                       & (f.accuracy[b.index] == 0)]
+        print(f'\n{fx}: {len(lost)} answerable dev questions right in base, '
+              'wrong with the fix\n(by class: ' + ', '.join(
+                  f'{c} {n}' for c, n in AFTER[fx].set_index('qid').cls[
+                      lost].value_counts().items()) + '); the first:')
+        if not len(lost):
+            continue
+        q = min(lost)  # the first answerable dev question the fix lost
+        d2l.print_wrapped(f'{q}: {ITEMS[q]["question"]}', width=96)
+        for name, sc in (('base', b), (fx, f)):
+            print(textwrap.fill(f'{name}: {sc.answer[q][:300].rstrip()} ...',
+                                96, initial_indent='  ',
+                                subsequent_indent='    '))
+    print(pd.DataFrame({'base': BC.cls.value_counts(), **{
+        fx: d.cls.value_counts() for fx, d in AFTER.items()}})
           .reindex(CLASSES + ['correct', 'unjudged']).fillna(0).astype(int)
           .to_string())
 ```
 
-The fix failed. It lowered accuracy from 0.89 to 0.75 on `dev` and from
-0.85 to 0.77 on `test`, by 0.14 and 0.08, and both paired intervals
-exclude zero. Yet it did what it was built to do: citation precision rose,
-by 0.02 on `dev` and 0.04 on `test`, with intervals above zero. The answers
-it kept cited their passages better, and fewer of them were right. It lost
-34 answerable `dev` questions that the baseline got right, and the class it
-aimed at hardly moved, from 11 unsupported answers to 10.
+Neither fix worked. The fix for ignored answers lowered `dev` accuracy
+from 0.91 to 0.83, by 0.08 with an interval from $-0.14$ to $-0.04$, and
+the class it aimed at grew instead of shrinking, from 8 ignored answers to
+17. Copying sentences out did not make the generator state the fact it
+needed. The larger damage came from an unexpected side: the baseline
+declines 19 of the 20 unanswerable questions, the fix only 7, so false
+answers rose from 1 to 13. Asked for quotes, the generator found sentences
+to quote in passages near the question and answered from them, or
+explained in its own words that the passages fall short, without the
+abstention sentence that our grading counts as declining. The fix lost 16
+answerable questions that the baseline got right, 11 of them to the
+ignored class itself.
 
-Where did the 34 go? Thirteen became false abstentions: nothing of the
-answer was left, and an empty answer abstains. Eighteen became ignored: what
-was left was faithful to the passages and lacked a key fact. The check is
-only half of the fix. The other half drops every sentence that cites
+The fix for unsupported answers did worse. It lowered accuracy from 0.91
+to 0.77 on `dev` and from 0.86 to 0.78 on `test`, by 0.15 and 0.09, and
+both paired intervals exclude zero. Yet it did what it was built to do:
+citation precision rose, by 0.02 on `dev` and 0.04 on `test`, with
+intervals above zero. The answers it kept cited their passages better, and
+fewer of them were right. It lost 36 answerable `dev` questions that the
+baseline got right, and the class it aimed at hardly moved, from 7
+unsupported answers to 6.
+
+Where did the 36 go? Fourteen became false abstentions: nothing of the
+answer was left, and an empty answer abstains. Twenty-one became ignored:
+what was left was faithful to the passages and lacked a key fact. The check
+is only half of the fix. The other half drops every sentence that cites
 nothing, unread, since no passage can support it. That half assumes a
-generator that cites what it states, and ours does not always do so. Told to
-cite its passages, it may state the answer in one sentence and cite the
+generator that cites what it states, and ours does not always do so. Told
+to cite its passages, it may state the answer in one sentence and cite the
 passage in the next.
 
-The first lost question, which the cell prints, is the `load_array`
+The first question it lost, which the cell prints, is the `load_array`
 question of the chapter's introduction. The baseline's answer said in
 three sentences, citing none of them, that `is_train` is passed to the
 `DataLoader` as `shuffle`; a fourth sentence cited the passage for all of
 them. The fix kept the fourth sentence alone: "This behavior is defined in
 the function signature and implementation within the provided code [1]."
 It is supported, and it answers nothing. Exercise
-:exref:`ex_lm_rag-tolerant` asks how many of the 34 were lost to uncited
+:exref:`ex_lm_rag-tolerant` asks how many of the 36 were lost to uncited
 sentences alone.
 
-The `dev` result could have been optimistic, since the fix was chosen from
-`dev` failures; it lost there anyway, and `test` agrees. Nor do we now
-search for a better fix, such as one that keeps uncited sentences: one
-found by looking at these results would need a fresh test set to be
-believed. Of the results in this section, this is the one to remember. A
-plausible repair, written down before any failure was counted and applied by
-rule, made the system worse, and nothing in the failures it aimed at warned
-us. Whether a fix works depends on its mechanism and on the habits of the
-model it acts on, and only a run tests the two together.
+Both fixes were chosen from `dev` failures, so `dev` could have flattered
+them; they lost there anyway, and for the one read on `test`, `test`
+agrees. Nor do we now search for a better fix, such as one that keeps
+uncited sentences: one found by looking at these results would need a
+fresh test set to be believed. Of the results in this section, this is the
+one to remember. Two plausible repairs, each written down before any
+failure was counted and applied by rule, made the system worse, and
+nothing in the failures they aimed at warned us. Whether a fix works
+depends on its mechanism and on the habits of the model it acts on, and
+only a run tests the two together.
 
 The stage change fared no better than noise. On `test` the reversed order
-changed accuracy by +0.013, with an interval from $-0.02$ to +0.05, as on
-`dev`, where it gained 0.008. A rule that picks the largest of near-equal
-numbers picks noise, and `test` says so. We do not read `test` again for
-any other change: a test set read again after every change made on `dev`
-becomes development data.
+changed accuracy by +0.004, with an interval from $-0.03$ to +0.04, and on
+`dev`, with the 4-bit judge's verdicts, by $-0.008$. The earlier verdicts
+ranked it first among the stage changes and the new ones rank the
+6,000-token budget first; `test` finds nothing either way. A rule that
+picks the largest of near-equal numbers picks noise. We do not read `test`
+again for any other change: a test set read again after every change made
+on `dev` becomes development data.
 
-The plot shows these results at a glance. On the left, the fix moves
-failures into the ignored and false-abstention classes. On the right are
-the accuracy and citation precision on `dev` of the closed book (the arm
-without passages), the baseline, the reversed order and the fix. The
-crosses are `test`, read once. Accuracy there is 0.85 for the baseline,
-0.87 for the reversed order and 0.77 for the fix, and each of these crosses
-lies inside its `dev` interval: on accuracy, `test` agrees with `dev` for
-every arm it was read with. Both candidates are compared with the baseline,
-not with each other.
+The plot shows these results at a glance. On the left, both fixes move
+failures into other classes: the quoting fix into ignored and false
+answers, the sentence check into ignored and false abstentions. On the
+right are the accuracy and citation precision on `dev` of the closed book
+(the arm without passages), the baseline, the reversed order and the two
+fixes. The crosses are `test`, read once, for the baseline, the reversed
+order and the fix for unsupported answers: 0.86, 0.87 and 0.78. The last
+two lie inside their `dev` intervals, and the baseline's lies just below
+its own, which runs from 0.87 to 0.95. Accuracies of two independent sets
+of 240 questions differ by that much from noise alone; the differences
+from the baseline, which pair each question with itself, agree across the
+two splits. Every arm is compared with the baseline, not with the others.
 
 ```{.python .input #rag-failure-plot}
 %%tab pytorch
 if FIX and ready('closed', 'base', FIX):
     d2l.use_svg_display()
-    steps = ['closed', 'base'] + ([BEST] if BEST and BEST != FIX else []
-                                  ) + [FIX]
+    steps = ['closed', 'base'] + [BEST] * bool(BEST) + FIXES
     dev = {c: scores(c) for c in steps}
-    test = {c: scores(c, 'test') for c in steps[1:] if ready(c, split='test')}
+    test = {c: scores(c, 'test') for c in steps[1:]  # read once, if at all
+            if c in ['base'] + READ and ready(c, split='test')}
     series, waterfall, marks = {}, {}, {'test': ('x', {})}
-    for name, df in (('base', BC), ('fix', after)):
+    for name, df in [('base', BC)] + list(AFTER.items()):
         sh = class_shares(df.cls[df.cls != 'unjudged'])  # judged only
         series[name] = (sh.share, sh.lo, sh.hi)
     for m, label in (('accuracy', 'accuracy'),
@@ -751,6 +816,8 @@ if FIX and ready('closed', 'base', FIX):
         d2l.plot_intervals([c.replace('_', ' ') for c in CLASSES], series,
                            'failure class', 'share of dev questions',
                            axes=axes[0])
+        axes[0].set_ylim(top=1.7 * axes[0].get_ylim()[1])  # room for
+        axes[0].legend(loc='upper right')  # the legend above the bars
         d2l.plot_intervals(steps, waterfall, 'configuration', 'dev score',
                            axes=axes[1], marks=marks)
 ```
@@ -976,11 +1043,14 @@ share of hits predicted, and the generator did not read better for another
 order or for more text. Fixed windows and a smaller budget lowered it.
 Sorting the wrong answers by the first stage that lost them split them
 mostly between answers that go beyond their passages and answers that miss
-a fact their own context holds. The fix for the larger class, written down
-in advance, checks each sentence against its citations. It lowered
-accuracy by 0.14 on `dev` and 0.08 on `test`, by removing sentences that
-carried the answer, among them uncited ones that the check never read: a
-change aimed at one class can create others. The original RAG model marginalizes over
+a fact their own context holds, and 21 failures could not say which class
+is larger. Both fixes written down in advance lowered accuracy. Quoting
+before answering, for the ignored class, lost 0.08 on `dev` and broke the
+abstentions on unanswerable questions. Checking each sentence against its
+citations, for the unsupported class and the one fix read on `test`, lost
+0.15 on `dev` and 0.09 on `test`, by removing sentences that carried the
+answer, among them uncited ones that the check never read: a change aimed
+at one class can create others. The original RAG model marginalizes over
 retrieved documents, and its retriever learns the posterior minus the
 prior: the passages the generator uses, which are not always the ones that
 are relevant. Whether whole chapters in a long context can replace
@@ -1037,7 +1107,7 @@ retrieval remains open.
    drops every sentence that cites nothing and every cited sentence that
    its check rejects. Use the recorded answers in `GENS`; no generation and
    no judge are needed.
-    1. For each of the 34 answerable `dev` questions that the fix lost,
+    1. For each of the 36 answerable `dev` questions that the fix lost,
        compare the baseline's answer with the fix's, sentence by sentence.
        How many lost only sentences that cited nothing?
     1. Which question types have the most uncited sentences in the
@@ -1049,7 +1119,8 @@ retrieval remains open.
    :exlabel:`ex_lm_rag-tolerant`
 
 1. [code] **Splitting the fix.** The fix written down for the ignored
-   class, which the rule did not pick here, changes three settings at once:
+   class, which the rule picks with the 4-bit judge, changes three settings
+   at once:
    `RAG_FIXES['ignored']`.
     1. Define three arms that each change one of them: the quoting prompt
        alone (`dict(d2l.RAG_BASE, prompt='quote')`), the order with the best
@@ -1057,24 +1128,24 @@ retrieval remains open.
        Before you run them, predict which carries the loss.
     1. Generate the three arms on `dev`, judge them with the local judge, and
        report each paired difference with the baseline and each arm's
-       failure classes. Without two GPUs for the judge, compare the
+       failure classes. Without a 24 GB GPU for the judge, compare the
        abstentions on the unanswerable questions, which need no judge.
-    1. Generate the bundle `fix-ignored` as well. Do the three effects add
-       up to the bundle's? What does the answer say about writing a fix down
+    1. Compare with the bundle `fix-ignored`, recorded in `GENS`. Do the
+       three effects add up to the bundle's? What does the answer say about writing a fix down
        in advance as a bundle, and why may these results not be read on
        `test`?
    :exlabel:`ex_lm_rag-split-fix`
 
-1. **Failure counts from two graders.** The labeler called 9 of the 26
+1. **Failure counts from two graders.** The labeler called 4 of the 21
    failures correct.
     1. From the table of rule against labeler printed in
-       :numref:`subsec_lm_rag_failures`, recount the classes with those nine
+       :numref:`subsec_lm_rag_failures`, recount the classes with those four
        answers taken as correct. Does the largest class change?
     1. With the bootstrap of the failure cell, or with the normal
        approximation to a binomial share, compute an interval for the share
        of the largest class among the remaining failures. Can the classes
        now be ranked?
-    1. What would it take to decide which grader is right on the nine, and
+    1. What would it take to decide which grader is right on the four, and
        why would asking a third model not settle it?
    :exlabel:`ex_lm_rag-two-graders`
 
@@ -1096,7 +1167,7 @@ retrieval remains open.
        the gain of the oracle context over the baseline becomes measurable.
     1. Regenerate the `base`, `closed` and `oracle` arms, judge them, and
        report the class shares with their intervals and the paired
-       differences with the larger generator. Without two GPUs for the
+       differences with the larger generator. Without a 24 GB GPU for the
        judge, compare what needs no judge: abstention rates, false
        abstentions and citation precision.
    :exlabel:`ex_lm_rag-smaller`
@@ -1111,11 +1182,11 @@ Failures and Fixes in Retrieval-Augmented Generation<br>**one change at a time �
 :::
 :::
 
-::: {.slide title="26 Answers Are Wrong, Though Retrieval Finds the Passage for 213 of 220"}
+::: {.slide title="21 Answers Are Wrong, Though Retrieval Finds the Passage for 213 of 220"}
 [The problem]{.kicker}
 
-- Baseline: 0.89 of 240 `dev` questions about this book.
-- 21 of its 25 errors on answerable questions had the passage in context.
+- Baseline: 0.91 of 240 `dev` questions about this book.
+- 15 of its 20 errors on answerable questions had the passage in context.
 - Favorite repairs: smaller chunks, query rewrites, more context.
 - `dev` (240 questions) chooses; `test` (240 more) is read once.
 
@@ -1167,9 +1238,9 @@ Qwen3.8-27B judges.
 $$\text{accuracy} = h\, a_1 + (1 - h)\, a_0$$
 
 - *Hit*: the context holds a relevant chunk. $h$: share of hits, 213/220.
-- $a_1 = 0.90$ on hits, $a_0 = 0.43$ on misses.
+- $a_1 = 0.93$ on hits, $a_0 = 0.29$ on misses.
 - Perfect retriever, $a_1$ unchanged:
-  $(1 - h)(a_1 - a_0) \approx 0.032 \times 0.47 \approx 0.02$.
+  $(1 - h)(a_1 - a_0) \approx 0.032 \times 0.64 \approx 0.02$.
 
 ::: {.d2l-note}
 Inside the $\pm 0.03$ that 240 questions resolve: retrieval has no room
@@ -1200,11 +1271,11 @@ text than five windows.
 | change, 240 `dev` questions | context tokens | accuracy − baseline | interval excludes 0 |
 |---|---|---|---|
 | baseline: 5 section chunks, no reranker | 1,700 | | |
-| fixed windows | 1,600 | $-0.08$ | yes |
-| rewrite + rerank top 50 (two changes) | 1,700 | $-0.00$ | no |
-| reverse order | 1,700 | +0.01 | no |
-| budget 1,500, no 5-chunk limit | 1,300 | $-0.05$ | yes |
-| budget 6,000, no 5-chunk limit | 5,800 | $-0.01$ | no |
+| fixed windows | 1,600 | $-0.09$ | yes |
+| rewrite + rerank top 50 (two changes) | 1,700 | $-0.01$ | no |
+| reverse order | 1,700 | $-0.01$ | no |
+| budget 1,500, no 5-chunk limit | 1,300 | $-0.06$ | yes |
+| budget 6,000, no 5-chunk limit | 5,800 | +0.01 | no |
 
 Baseline ranking: BM25 and dense, fused by reciprocal ranks.
 
@@ -1219,8 +1290,8 @@ generator either.
 
 | arm | context tokens | accuracy − baseline |
 |---|---|---|
-| fixed windows, up to the baseline's tokens | 1,600 | $-0.08$ |
-| control: windows just past the baseline's tokens | 1,800 | $-0.06$ |
+| fixed windows, up to the baseline's tokens | 1,600 | $-0.09$ |
+| control: windows just past the baseline's tokens | 1,800 | $-0.05$ |
 
 - Coverage near these budgets trails by 0.02 to 0.05: worth at most
   0.01 to 0.03 of accuracy.
@@ -1234,17 +1305,17 @@ Chunks that follow the text's structure give better answers.
 ::: {.slide title="Each Wrong Answer Is Blamed on the First Stage That Lost It"}
 [Failures by stage]{.kicker}
 
-| class | condition, checked in this order | of 26 | answer cites a relevant chunk |
+| class | condition, checked in this order | of 21 | answer cites a relevant chunk |
 |---|---|---|---|
 | false answer | unanswerable, yet answered | 1 | 0 |
 | not retrieved | no relevant chunk in the top 50 | 0 | 0 |
-| ranked low | in the top 50, not in the context | 4 | 0 |
+| ranked low | in the top 50, not in the context | 5 | 0 |
 | false abstention | in the context, answer abstains | 0 | 0 |
-| ignored | in the context, faithful, misses a key fact | 10 | 7 |
-| unsupported | in the context, not faithful | 11 | 10 |
+| ignored | in the context, faithful, misses a key fact | 8 | 5 |
+| unsupported | in the context, not faithful | 7 | 7 |
 
 ::: {.d2l-note}
-Unsupported 0.42 [0.23, 0.62], ignored 0.38 [0.19, 0.58]: 26 failures
+Ignored 0.38 [0.19, 0.57], unsupported 0.33 [0.14, 0.52]: 21 failures
 cannot rank the two.
 :::
 :::
@@ -1262,39 +1333,41 @@ cannot rank the two.
 | false abstention | abstention rule after the passages |
 
 ::: {.d2l-note}
-A rule picks the largest class, unsupported, and carries the largest
-stage gain to `test`, read once.
+A rule picks the largest class and carries the largest stage gain to
+`test`, read once: with the earlier 8-bit judge, unsupported and reverse
+order.
 :::
 :::
 
 ::: {.slide title="Check: The Largest Stage Gain on Dev Is Two Verdicts. What Will Test Show?"}
 [Check]{.kicker}
 
-Reverse order: +0.008 on `dev`, two verdicts of 240, interval $-0.03$ to
-+0.04. The rule carried it to `test`.
+Reverse order led on `dev` by two verdicts of 240 under the 8-bit judge's
+verdicts. The rule carried it to `test`. Under the 4-bit judge's it is
+$-0.008$ and the 6,000-token budget leads instead.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** +0.013, interval $-0.02$ to +0.05: noise again. Picking the
+**Answer.** +0.004, interval $-0.03$ to +0.04: noise again. Picking the
 largest of near-equal numbers picks noise.
 :::
 :::
 :::
 
-::: {.slide title="Two Graders Disagree More Often About Whether an Answer Is Wrong Than About Where"}
+::: {.slide title="A Second Labeler Confirms Most Ignored Answers and Few Unsupported Ones"}
 [A second labeler]{.kicker}
 
-Claude Opus 5.5 labeled the cards of the 26 failures.
+Claude Opus 5.5 labeled the cards of the 21 failures.
 
 | the labeler | failures |
 |---|---|
 | agrees with the rule | 12 |
-| calls the answer correct | 9 |
+| calls the answer correct | 4 |
 | blames another stage | 5 |
 
-Of the 9: in 8 the judge insists on a key fact or a side remark; 1
-unanswerable question was declined in other words. Most disputed class:
-unsupported, the labeler agrees on 2 of 11.
+Of the 4: in 3 the judge insists on a key fact the labeler finds stated; 1
+unanswerable question was declined in other words. The labeler confirms 6
+of 8 ignored answers, but only 2 of 7 unsupported ones.
 :::
 
 ::: {.slide title="The Answering Passage Was Ranked First, and the Answer Ignored It"}
@@ -1312,42 +1385,36 @@ and the missing fact is the one a user needs.
 :::
 :::
 
-::: {.slide title="The Fix Chosen in Advance Failed on Dev and on Test"}
-[Check each cited sentence]{.kicker}
+::: {.slide title="Both Fixes Chosen in Advance Lowered Accuracy"}
+[Quote first; check each cited sentence]{.kicker}
 
-| accuracy | baseline | fix | fix − baseline |
-|---|---|---|---|
-| `dev` | 0.89 | 0.75 | $-0.14$ [$-0.18$, $-0.10$] |
-| `test`, read once | 0.85 | 0.77 | $-0.08$ [$-0.13$, $-0.04$] |
+| accuracy − baseline | quote, then answer (ignored) | sentence check (unsupported) |
+|---|---|---|
+| `dev` | $-0.08$ [$-0.14$, $-0.04$] | $-0.15$ [$-0.19$, $-0.10$] |
+| `test`, read once | not read | $-0.09$ [$-0.14$, $-0.04$] |
 
-- Citation precision rose (+0.02 `dev`, +0.04 `test`): the fix did what it
-  was built for.
-- 34 answerable questions that the baseline got right are lost on `dev`.
-- Chosen from `dev` failures, so `dev` could have flattered it. It lost
-  there anyway, and `test` agrees.
+- Baseline: 0.91 on `dev`, 0.86 on `test`.
+- The sentence check raised citation precision (+0.02 `dev`, +0.04
+  `test`): it did what it was built for.
+- `test` was read once, with the earlier judge's choice; the rule's new
+  choice runs on `dev` only.
 :::
 
-::: {.slide title="The Fix Aimed at Unsupported Answers Filled Two Other Classes"}
+::: {.slide title="Each Fix Filled Classes Other Than the One It Aimed At"}
 [Where the failures went]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| `dev` answers | baseline | fix |
-|---|---|---|
-| correct | 213 | 180 |
-| ranked low | 4 | 5 |
-| ignored | 10 | 31 |
-| unsupported | 11 | 10 |
-| false answer | 1 | 0 |
-| false abstention | 0 | 14 |
-:::
+| `dev` answers | baseline | quote first | sentence check |
+|---|---|---|---|
+| correct | 219 | 199 | 184 |
+| ranked low | 5 | 6 | 5 |
+| ignored | 8 | 17 | 31 |
+| unsupported | 7 | 5 | 6 |
+| false answer | 1 | 13 | 0 |
+| false abstention | 0 | 0 | 14 |
 
-::: {.col}
-The fix drops every uncited sentence unread, and every cited one that its
-check rejects. An answer with nothing left abstains: 14 false abstentions,
-where the baseline had none.
-:::
-:::
+- Quote first: the aimed-at class doubled, and 13 of 20 unanswerable
+  questions were answered.
+- Sentence check: uncited sentences dropped unread; empty answers abstain.
 
 ::: {.d2l-note .rule}
 Test a fix's mechanism with the habits of the model it acts on. Never
@@ -1355,7 +1422,7 @@ search for a better fix on the same data.
 :::
 :::
 
-::: {.slide title="Test Accuracy Agrees with Dev for Every Arm"}
+::: {.slide title="On Test, Every Difference from the Baseline Agrees with Dev"}
 [The results at a glance]{.kicker}
 
 @!rag-failure-plot
@@ -1467,11 +1534,11 @@ retrieval first.
 [Recap]{.kicker}
 
 - 213 of 220 hits: about 0.02 to gain; no stage change helped measurably.
-- Fixed windows $-0.08$, and $-0.06$ even with more tokens than the
-  baseline: the cut costs accuracy. Budget 1,500: $-0.05$.
-- Largest class: unsupported, 11 of 26, beside ignored, 10; graders
-  differ more on whether than on where.
-- The fix chosen in advance lost 0.14 on `dev` and 0.08 on `test`.
+- Fixed windows $-0.09$, and $-0.05$ even with more tokens than the
+  baseline: the cut costs accuracy. Budget 1,500: $-0.06$.
+- Largest class: ignored, 8 of 21, beside unsupported, 7: too few to rank.
+- Both fixes chosen in advance lost: quoting $-0.08$ on `dev`; the
+  sentence check $-0.15$ on `dev` and $-0.09$ on `test`.
 - Gradient = posterior − prior: the retriever learns what the generator
   uses.
 :::

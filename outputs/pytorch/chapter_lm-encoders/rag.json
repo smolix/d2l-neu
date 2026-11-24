@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:3649d61136f7bb71f8be1c727f63c0e3bb6c3451e008ef67e60ac996cdd4204d",
+    "d2l_lib_fingerprint": "sha256:0c89f6252ba6fe63dcd9332ca3e30e23dd1b5f2193d87dddd67f3db1d37a5c5e",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -18,38 +18,38 @@
       "outputs": []
     },
     "rag-extras": {
-      "code_fingerprint": "sha256:7b229c1cf94673c97c96be4cc4424d6cd4bfd280fdfd2c8c622a1f5599b9756c",
+      "code_fingerprint": "sha256:67d41576f7fd6fc6b7975b8dbd3a4f33d13a4bf63b260c2fca167a0a25489c3b",
       "kind": "text",
       "outputs": []
     },
     "rag-revisions": {
-      "code_fingerprint": "sha256:b22b16606f708596f89e71ff04e730a29f6bbdd5165b7ad8b3aa9eedcc06fae7",
+      "code_fingerprint": "sha256:6fc2bef0f33402b3dafe88192a332f49c5451261cf3c039c6f72a44ba607ed09",
       "kind": "text",
       "outputs": []
     },
     "rag-config": {
-      "code_fingerprint": "sha256:5592e043797f4e1cce78931cf9217bc1300959d5c25412cbce757e0af62b5393",
+      "code_fingerprint": "sha256:7811ac5b3b4a3cea92e91ca89d75848d7ada32e6f8259b3f87b725ed50a5fb91",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                               model      revision\ngenerator            Qwen/Qwen3.5-9B  c20223623576\nembedder   Qwen/Qwen3-Embedding-0.6B  97b0c614be4d\nreranker    Qwen/Qwen3-Reranker-0.6B  e61197ed4502\njudge           Qwen/Qwen3.8-27B-FP8  c3a462cc3d38\njudge: thinking on, at most 3,000 new tokens, served by vLLM 0.33.0\nGPU: True; regenerating: none\n"
+          "text": "                               model      revision\ngenerator            Qwen/Qwen3.5-9B  c20223623576\nembedder   Qwen/Qwen3-Embedding-0.6B  97b0c614be4d\nreranker    Qwen/Qwen3-Reranker-0.6B  e61197ed4502\njudge      RedHatAI/Qwen3.8-27B-INT4  71dface38d4c\njudge: thinking on, greedy, at most 12,000 new tokens (no separate budget for the reasoning),\n  4-bit weights (W4A16), one copy per GPU, served by vLLM 0.33.0\nGPU: True; regenerating: none\n"
         }
       ]
     },
     "rag-data-hub": {
-      "code_fingerprint": "sha256:e1cabf37fb230f28a3ae745719c58dc4849d28febffe4e4ecdb8ceaa29ae8906",
+      "code_fingerprint": "sha256:cb46ec0ab21a53081fe10cf6ef8c86ec16c2c4640465531da2431bcea0b265df",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-def": {
-      "code_fingerprint": "sha256:7f98a404147346530fbef5051a1276bbb83d7a6e5b44782490218f8982c2a05a",
+      "code_fingerprint": "sha256:9365fead3a01c55779609d8e3ffa224f68809277f5656c2b9df84ce9fdd5b234",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-stats": {
-      "code_fingerprint": "sha256:21428299c2677dde1cfa7beb97296bb6325a326aa13bcfe91ae6805b8b9f1343",
+      "code_fingerprint": "sha256:aa4130a7380f4fda328797fd7c0c5e50453888b5652a9dc744e77166c4cab533",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "rag-qa-examples": {
-      "code_fingerprint": "sha256:5a60ca2ed94addceb8be13fcd326da2b164b31f79032a1638431eb2b8f1ddfca",
+      "code_fingerprint": "sha256:2dd1bd3d11ce5c3aa3fc7164e56ba145f5937ffd51aa2f962ebb2ef7c0a3083f",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "rag-qa-leakage": {
-      "code_fingerprint": "sha256:c308399e05a1ddd64861cd9e92d739e74c974c7c04dcf2dc2b4ce765d7240b1c",
+      "code_fingerprint": "sha256:e4334f5bd44c8c422dad9a3ef394b87a7c802d3bef3706c306f80326404b97ee",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "rag-qa-gold": {
-      "code_fingerprint": "sha256:624b3999da73622c58e261621b75f75eeb635d5162f0a9b1bb37e57b25199bd3",
+      "code_fingerprint": "sha256:f4bc32b7a7d7654ca3655d702fe0f3ad0cd8f7275362bda4f57d23570e134246",
       "kind": "text",
       "outputs": [
         {
@@ -93,38 +93,38 @@
       ]
     },
     "rag-stage-defs": {
-      "code_fingerprint": "sha256:145c547c4200e1527910a74ad138b9c6d32a8e56638bf0f537246c04d962732d",
+      "code_fingerprint": "sha256:92e806a73c9e445b74685bc23114190e111c85130c0d4a52fa5cbc7e47b64eda",
       "kind": "text",
       "outputs": []
     },
     "rag-prompt-defs": {
-      "code_fingerprint": "sha256:e690d315785467f5b4eee0394b79c296b05fa3049d23f3612e91112dad53bd90",
+      "code_fingerprint": "sha256:a1457863c58cbea79a092bfddb4a97122558088d11bd0d369acf81021af72ef2",
       "kind": "text",
       "outputs": []
     },
     "rag-pipeline-def": {
-      "code_fingerprint": "sha256:af1e487f1e5c862d083659a171059028b7d24b32bb38d647b515dc260eef1347",
+      "code_fingerprint": "sha256:e16638734cd61118be57988ed127ab992c883478aaaf5db93125ecdd60192a61",
       "kind": "text",
       "outputs": []
     },
     "rag-judge-defs": {
-      "code_fingerprint": "sha256:b30146aa69cf01b8a27c67b1f3d82f42f20c1c344a63c7fc88691af5ba24a2fb",
+      "code_fingerprint": "sha256:d45f30fe9660b7e5e8b78a23f1d66275faf038921c62567e455a467a0b4f14df",
       "kind": "text",
       "outputs": []
     },
     "rag-memory": {
-      "code_fingerprint": "sha256:0986b252f5171fa8965ed13aaae8341e50d57fab9cfb1ec267b52666892fa800",
+      "code_fingerprint": "sha256:2b8b06548e96dfbe35bb79f2b8732270d9f3c270e2ccbde26c1a481d49efad6b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                       weights  KV and state  activations  total                limit\ngeneration, 3,300 x 8     16.7           1.2          3.4   21.3        one 24 GB GPU\ngeneration, 6,300 x 4     16.7           1.0          3.3   20.9        one 24 GB GPU\nretrieval phase           18.9           0.0          0.4   19.3        one 24 GB GPU\njudge, FP8 weights        27.4           5.7          0.0   33.1  two GPUs, 2 x 24 GB\nGiB; the judge stores one byte per weight (FP8), except its input and output\nembeddings, which stay in bf16 (4.7 GiB of the 27.4); its weights are split over\ntwo cards, and vLLM reserves 90% of each card for weights, cache and activations\nretrieval phase: the generator stays on the card\n"
+          "text": "                       weights  KV and state  activations  total          limit\ngeneration, 3,300 x 8     16.7           1.2          3.4   21.3  one 24 GB GPU\ngeneration, 6,300 x 4     16.7           1.0          3.3   20.9  one 24 GB GPU\nretrieval phase           18.9           0.0          0.4   19.3  one 24 GB GPU\njudge, 4-bit weights      16.4           2.4          0.0   18.8  one 24 GB GPU\nGiB; the judge stores four bits per weight, with a bf16 scale per 128 weights (W4A16),\nexcept its input and output embeddings, which stay in bf16 (4.7 GiB of the 16.4);\none copy runs on each card, and vLLM reserves 95% of the card for weights, cache and activations\nretrieval phase: the generator stays on the card\n"
         }
       ]
     },
     "rag-baseline": {
-      "code_fingerprint": "sha256:a16760b02eff008453d972debd60529894b889f8caf6302bd83d41a3e069b862",
+      "code_fingerprint": "sha256:5862b012179ebcce19b8af056351093ea62c92b0cf159dbb4123c4e2856c09d5",
       "kind": "text",
       "outputs": [
         {
@@ -155,39 +155,44 @@
       ]
     },
     "rag-judge": {
-      "code_fingerprint": "sha256:4b53b6c39a906d9cc5d34a6a88215899cef3570b2180a17f62ca7075e4f095a0",
+      "code_fingerprint": "sha256:94788e0e41bfa9d68db2b883026550df9128ff695dbdc798cae088d2e43dc096",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "8 base judgments with 3,000 new tokens replayed from the judge cache: identical\n4 base judgments with 6,000 new tokens replayed from the judge cache: identical\n             answers  judged  judged again  unjudged\nconfig                                              \nclosed           240     240             1         0\nbase             240     240             9         1\noracle           240     240             8         1\nbase-repeat      240     240            11         0\njudged again: with 6,000 new tokens, once\nunjudged: still no verdict on correctness (left out of accuracy)\n"
+          "text": "12 base judgments replayed from the judge cache: identical\n             answers  judged  unjudged\nconfig                                \nclosed           240     240         0\nbase             240     240         0\noracle           240     240         0\nbase-repeat      240     240         0\nunjudged: no verdict on correctness after the one retry (left out of accuracy)\n"
         }
       ]
     },
     "rag-judge-validation": {
-      "code_fingerprint": "sha256:b7a6f37cdfe6d3d0fb34a8c8ba3d12f73474934808b0534249b2fdbfa2389a08",
+      "code_fingerprint": "sha256:992f54cf21a87c4ba8cd99d709fbccd392cb576c2f858f1f0c28fe26c3c54d48",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "10 of 100 calibration answers are decided by rule on correct (4 abstain,\n  6 answer an unanswerable question); 3 without a verdict judged again with 6,000 new tokens\n"
+          "text": "100 calibration answers of Qwen/Qwen3.5-9B, base on dev; 10 are decided by rule on correct\n  (10 abstain, 0 answer an unanswerable question); unjudged (left out): 0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " verdict   against  pairs         agreement             kappa\n correct  frontier    100 0.94 [0.89, 0.98] 0.83 [0.68, 0.95]\n correct    second    100 0.89 [0.83, 0.95] 0.71 [0.55, 0.85]\n correct consensus     93 0.95 [0.89, 0.99] 0.85 [0.70, 0.97]\nfaithful  frontier    100 0.94 [0.89, 0.98] 0.81 [0.64, 0.94]\nfaithful    second    100 0.93 [0.88, 0.98] 0.79 [0.62, 0.92]\nfaithful consensus     95 0.96 [0.92, 0.99] 0.87 [0.71, 0.97]\nunjudged (left out): 0 of 100 calibration pairs\nthe two labelers on correct: kappa 0.81\nthe two labelers on faithful: kappa 0.85\nthe old judge (Qwen3.5-4B, thinking off) on correct: agreement 0.81, kappa 0.33 [0.11, 0.56];\n  it passes 14 of the 21 answers the labelers call wrong\njudge against the consensus on correct: agreement 0.95, kappa interval from 0.70:\n  accepted (agreement >= 0.8, kappa interval above 0.4)\njudge against the consensus on faithful: agreement 0.96, kappa interval from 0.71:\n  accepted (agreement >= 0.8, kappa interval above 0.4)\nthe calibration answers come from the earlier generator, Qwen3-4B\n"
+          "text": "this generator's answers (labels-v2):\n verdict   against  pairs         agreement               kappa\n correct  frontier     99 0.92 [0.86, 0.97] -0.04 [-0.07, 0.00]\n correct    second    100 0.95 [0.90, 0.99]  0.52 [-0.02, 0.85]\n correct consensus     93 0.97 [0.92, 1.00]   0.00 [0.00, 1.00]\nfaithful  frontier     99 0.93 [0.88, 0.98]   0.55 [0.21, 0.82]\nfaithful    second    100 0.97 [0.93, 1.00]   0.78 [0.48, 1.00]\nfaithful consensus     93 0.98 [0.95, 1.00]   0.79 [0.32, 1.00]\nthe two labelers on correct: kappa 0.47\nthe two labelers on faithful: kappa 0.64\nthe judge passes 3 of the 3 answers both labelers call wrong\njudge against the consensus on correct: agreement 0.97, kappa interval from 0.00:\n  not accepted: claims that rest on it carry the agreement\njudge against the consensus on faithful: agreement 0.98, kappa interval from 0.32:\n  not accepted: claims that rest on it carry the agreement\n\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "judged again at concurrency 16 (first run 8): 2 of 51 answers changed a verdict\n  (of 60 drawn, 6 abstentions are decided by rule and 3 were judged again with more tokens)\n"
+          "text": "the earlier set: 99 answers of Qwen3-4B (labels-v1):\n verdict   against  pairs         agreement             kappa\n correct  frontier     99 0.96 [0.92, 0.99] 0.89 [0.78, 0.97]\n correct    second     99 0.91 [0.85, 0.96] 0.77 [0.61, 0.90]\n correct consensus     92 0.97 [0.92, 1.00] 0.91 [0.80, 1.00]\nfaithful  frontier     99 0.92 [0.87, 0.97] 0.75 [0.56, 0.89]\nfaithful    second     99 0.91 [0.85, 0.96] 0.72 [0.54, 0.87]\nfaithful consensus     94 0.94 [0.88, 0.98] 0.80 [0.63, 0.94]\nthe two labelers on correct: kappa 0.81\nthe two labelers on faithful: kappa 0.85\nthe judge passes 0 of the 21 answers both labelers call wrong\njudge against the consensus on correct: agreement 0.97, kappa interval from 0.80:\n  accepted (agreement >= 0.8, kappa interval above 0.4)\njudge against the consensus on faithful: agreement 0.94, kappa interval from 0.63:\n  accepted (agreement >= 0.8, kappa interval above 0.4)\nthe old judge (Qwen3.5-4B, thinking off) there on correct: agreement 0.81, kappa 0.33 [0.11, 0.56];\n  it passes 14 of the 21 answers the labelers call wrong\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "judged again on one server at concurrency 16 (first run 8 per server):\n  5 of 54 answers changed a verdict (of 60 drawn, 6 abstentions are decided by rule)\n"
         }
       ]
     },
     "rag-load-array": {
-      "code_fingerprint": "sha256:af59bb25f6e34a2d04b27beccb3973de3dc7fd10b897edbfaad07685dceb4e7f",
+      "code_fingerprint": "sha256:02cc2661a8519083d33034b4751fe14e5d685fbf54bdb8f4b0c00b7c2f9be16b",
       "kind": "text",
       "outputs": [
         {
@@ -198,18 +203,18 @@
       ]
     },
     "rag-baseline-report": {
-      "code_fingerprint": "sha256:c684067af5b193ccd5ab0a52a2892a67390dfcf5c96164409df3cc5eb772d26c",
+      "code_fingerprint": "sha256:e14743bc1c27c933bb17b350852902470a3ecf8b3e62e36b7f2492a398f42ddd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.942, 0.990]                    n/a\ncov@3000                                 n/a   0.986 [0.969, 1.000]                    n/a\naccuracy                0.300 [0.234, 0.363]   0.891 [0.845, 0.931]   0.925 [0.897, 0.950]\nfaithful                                 n/a   0.899 [0.858, 0.937]   0.891 [0.846, 0.933]\ncite_precision                           n/a   0.716 [0.663, 0.766]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.879 [0.841, 0.913]   0.914 [0.874, 0.950]\nsupported                                n/a   0.835 [0.790, 0.877]   0.828 [0.770, 0.884]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.950 [0.850, 1.000]+  0.900 [0.750, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.009 [0.000, 0.024]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 1, oracle 1, base-repeat 0\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.594 [+0.532, +0.656]\n     oracle - base                       all +0.034 [-0.015, +0.084]\n     oracle - base                answerable +0.041 [-0.013, +0.096]\n     base - closed book-specific, answerable +0.772 [+0.702, +0.840]\nbase-repeat - base  all (other batches only) -0.004 [-0.028, +0.017]\noracle - base on faithful: -0.009 [-0.059, +0.044]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.890 [0.840, 0.936]\nbase accuracy, a relevant chunk in the context (213): 0.901 [0.852, 0.942]\nbase accuracy, no relevant chunk in the context (7): 0.429 [0.143, 0.714]+\n"
+          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.942, 0.990]                    n/a\ncov@3000                                 n/a   0.986 [0.969, 1.000]                    n/a\naccuracy                0.317 [0.251, 0.381]   0.912 [0.870, 0.949]   0.925 [0.897, 0.951]\nfaithful                                 n/a   0.932 [0.894, 0.965]   0.937 [0.911, 0.962]\ncite_precision                           n/a   0.716 [0.663, 0.766]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.879 [0.841, 0.913]   0.914 [0.874, 0.950]\nsupported                                n/a   0.868 [0.821, 0.911]   0.878 [0.832, 0.923]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.950 [0.850, 1.000]+  0.900 [0.750, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.009 [0.000, 0.024]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 0, oracle 0, base-repeat 0\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.596 [+0.529, +0.663]\n     oracle - base                       all +0.013 [-0.032, +0.057]\n     oracle - base                answerable +0.018 [-0.030, +0.067]\n     base - closed book-specific, answerable +0.766 [+0.697, +0.832]\nbase-repeat - base  all (other batches only) -0.017 [-0.041, +0.005]\noracle - base on faithful: +0.005 [-0.028, +0.039]\nbook-specific answerable questions (145): closed book 0.145 [0.088, 0.209],\n  base 0.910 [0.868, 0.951]\nbase accuracy, a relevant chunk in the context (213): 0.930 [0.888, 0.964]\nbase accuracy, no relevant chunk in the context (7): 0.286 [0.000, 0.571]+\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "base accuracy, closed-book arm correct (62): 0.934 [0.869, 0.984]+\nbase accuracy, closed-book arm wrong (158): 0.867 [0.806, 0.923]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (the query embeddings were batched differently too);\n  with the same context 95 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
+          "text": "base accuracy, closed-book arm correct (66): 0.924 [0.848, 0.985]+\nbase accuracy, closed-book arm wrong (154): 0.903 [0.857, 0.945]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (the query embeddings were batched differently too);\n  with the same context 95 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
         }
       ]
     }

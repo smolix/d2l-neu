@@ -1,15 +1,11 @@
 # Retrieval-Augmented Generation
 :label:`sec_lm_rag`
 
-<!-- OPEN (author, 2026-11-14): judge calibration vs the new generator.
-The judge (Qwen3.8-27B, thinking on) was validated on lm-rag-judge-labels-v1, whose
-answers come from Qwen3-4B, the earlier generator. The generator is now Qwen3.5-9B.
-A stronger generator makes subtler mistakes, so re-check the judge on about 100 dev
-answers from the new generator, labelled by the same two frontier models (Claude
-Opus 5.5, Gemini 4 Argon). Cost: about $2 of OpenRouter calls. Deferred by the author
-until the Fable pass, which may change more. Ask Alex before making the call.
-Until then the text must say that the calibration labels were made on the earlier
-generator's answers. Details: scratch ch19/judge.md and AUTHOR_DECISIONS.md. -->
+<!-- Judge calibration (resolved 2026-11-24, per Alex): the 4-bit judge is reported on
+both sets. labels-v2 (100 Qwen3.5-9B answers, about $1.83 of OpenRouter calls) fails
+the acceptance rule only through κ (3 consensus-wrong answers, all passed), and the
+text reports it as measured; on the earlier set (labels-v1, its calibration half)
+the judge passes the rule. Details: ch19/AUTHOR_DECISIONS.md. -->
 
 In :numref:`sec_lm_retrieval` we built a retriever that finds, for nearly
 every question about this book, a passage that answers it. Nobody asks a
@@ -57,6 +53,7 @@ from d2l import torch as d2l
 ```{.python .input #rag-extras}
 %%tab pytorch
 import collections
+import concurrent.futures
 import json
 import os
 import pandas as pd
@@ -102,17 +99,18 @@ BATCH, DEPTH = d2l.RAG_BASE['batch'], 50  # prompts per batch; ranking kept
 QUICK = False  # True: 80 stratified dev and test items (development only)
 assert not (QUICK and RERUN), 'QUICK results are never saved'
 N_LIVE = 8 if GPU else 2  # base answers generated again in a normal run
-JUDGE_MINUTES, CHUNK, CONCURRENCY = 50, 64, 8  # judging run; saves; flight
-RETRY_TOKENS = 6000  # the one re-judging of an answer left without verdict
+JUDGE_MINUTES, CHUNK = 50, 512  # a judging run's minutes; answers per save
+CONCURRENCY = 8  # judge requests in flight per server (one server per GPU)
 N_REPEAT = 60  # base answers judged twice
 CARD_GIB = 21.5  # estimates; measured peaks add 0.4-1.5 (23.6 GiB usable)
 print(pd.DataFrame({'model': [GEN, EMB, RERANKER, JUDGE['model']],
                     'revision': [REV[GEN][:12], REV[EMB][:12],
                                  REV[RERANKER][:12], JUDGE['revision'][:12]]},
                    index=['generator', 'embedder', 'reranker', 'judge']))
-print(f'judge: thinking {"on" if JUDGE["thinking"] else "off"}, at most '
-      f'{JUDGE["max_new_tokens"]:,} new tokens, served by vLLM '
-      f'{JUDGE["vllm"]}')
+print(f'judge: thinking {"on" if JUDGE["thinking"] else "off"}, greedy, at '
+      f'most {JUDGE["max_new_tokens"]:,} new tokens (no separate budget for '
+      f'the reasoning),\n  4-bit weights (W4A16), one copy per GPU, served by '
+      f'vLLM {JUDGE["vllm"]}')
 print(f'GPU: {GPU}; regenerating: {", ".join(sorted(RERUN)) or "none"}')
 ```
 
@@ -167,12 +165,18 @@ d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
 d2l.DATA_HUB['lm-rag-gen-fix-v2'] = (  # card's task: fix-unsupported
     d2l.LM_DATA_URL + 'lm-rag-gen-fix-v2.jsonl',
     '2a980b4961883ecdd3eac2a4a31b8de2d621f004')
+d2l.DATA_HUB['lm-rag-gen-fix-v3'] = (  # v2 and the fix the rule picks with
+    d2l.LM_DATA_URL + 'lm-rag-gen-fix-v3.jsonl',  # the 4-bit judge, dev only
+    '7ffa13c3cf4b5d28a7f420c6b247dda1d176b379')
 d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
     d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
     'dd66f91cc44070f7e2256c63d5e5caf912c4054e')
 d2l.DATA_HUB['lm-rag-cards-v2'] = (  # 26 base failures with the card's task
     d2l.LM_DATA_URL + 'lm-rag-cards-v2.jsonl',
     'ed510addb6e39fe5c54cab40a6283be4d908a80d')
+d2l.DATA_HUB['lm-rag-cards-v3'] = (  # 21 base failures by the 4-bit judge
+    d2l.LM_DATA_URL + 'lm-rag-cards-v3.jsonl',
+    '75b61c6e9ddf0563d9f4bda766dbee22f7b9f2ab')
 d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
     d2l.LM_DATA_URL + 'lm-rag-judge-v1.jsonl',
     '8e128dbe149cf3f22b3d0979368c679c5d43c371')
@@ -206,6 +210,24 @@ d2l.DATA_HUB['lm-rag-judge-v6'] = (  # v5 and the verdicts on the fix run
 d2l.DATA_HUB['lm-rag-judge-cache-v6'] = (  # every reply with the card's task
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v6.zip',
     '3f6a32485e092cb233ab4fc5dec761843c8ba68a')
+d2l.DATA_HUB['lm-rag-judge-labels-v2'] = (  # 100 pairs of Qwen3.5-9B,
+    d2l.LM_DATA_URL + 'lm-rag-judge-labels-v2.zip',  # frontier labels
+    'c798cfd7faa27664a77c0ec895ec6d3ab7608166')
+d2l.DATA_HUB['lm-rag-judge-v7'] = (  # the 4-bit judge, 12,000 new tokens:
+    d2l.LM_DATA_URL + 'lm-rag-judge-v7.jsonl',  # every arm judged again
+    '3305609e58fbce4dea8a302cb038f653d6edd503')
+d2l.DATA_HUB['lm-rag-judge-cache-v7'] = (  # its replies, one file per GPU
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v7.zip',
+    '09cd4f7b0e363d60528ddb0ff1bb33416fd9fb66')
+d2l.DATA_HUB['lm-rag-judge-v8'] = (  # v7 and the verdicts on fix-ignored
+    d2l.LM_DATA_URL + 'lm-rag-judge-v8.jsonl',
+    '41b154d29b97ebc8394108fc71812f2998aa8965')
+d2l.DATA_HUB['lm-rag-judge-cache-v8'] = (  # v7 and those replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v8.zip',
+    '1894f3cced3bacc29bfe38cf45b92a3dce9eca8f')
+d2l.DATA_HUB['lm-rag-judge-v1cal-v1'] = (  # the 4-bit judge on the 198
+    d2l.LM_DATA_URL + 'lm-rag-judge-v1cal-v1.zip',  # labeled Qwen3-4B answers
+    'dd6f34de4b95b45e43bea58a03b769a30badd6d3')
 ```
 
 Each item holds
@@ -1005,12 +1027,12 @@ mem = lambda m, n, b, **kw: {k: v / 2**30 for k, v in d2l.config_memory(
 B6 = CONFIGS['budget-6000']['batch']
 g8, g4 = mem(GEN, 3300, BATCH), mem(GEN, 6300, B6)
 e, r = mem(EMB, 512, 16), mem(RERANKER, 1024, 16)
-j = mem(JUDGE['model'], 3500, 16)  # 16 sequences in flight on the server
-jc = CFG[JUDGE['model']]  # FP8 except the modules the checkpoint keeps
-keep = jc.quantization_config['modules_to_not_convert']  # in bf16
-jt = getattr(jc, 'text_config', jc)
-emb = sum(m in keep for m in ('model.embed_tokens', 'lm_head')) * (
-    jt.vocab_size * jt.hidden_size * 2 / 2**30)  # GiB, two bytes per weight
+j = mem(JUDGE['model'], 5000, CONCURRENCY,  # judgments in flight per card,
+        dtype_bytes=1, conv_bytes=2)  # keys and values in FP8
+jt = getattr(CFG[JUDGE['model']], 'text_config', CFG[JUDGE['model']])
+emb = 2 * jt.vocab_size * jt.hidden_size / 2**30  # input and output (Gi)
+w4 = (j['params'] - emb) * (4 + 16 / 128) / 8  # GiB: 4 bits, and a bf16
+# scale per 128 weights; the embeddings stay in bf16, two bytes per weight
 table = pd.DataFrame({  # GiB
     f'generation, 3,300 x {BATCH}': (g8['weights'], g8['kv_cache'] +
                                      g8['recurrent_state'],
@@ -1019,16 +1041,17 @@ table = pd.DataFrame({  # GiB
                                   g4['recurrent_state'], g4['activations']),
     'retrieval phase': (g8['weights'] + e['weights'] + r['weights'], 0.0,
                         max(e['activations'], r['activations'])),
-    'judge, FP8 weights': (j['params'] + emb / 2, j['kv_cache'] +
-                           j['recurrent_state'], 0.0)},
+    'judge, 4-bit weights': (w4 + 2 * emb, j['kv_cache'] +
+                             j['recurrent_state'], 0.0)},
     index=['weights', 'KV and state', 'activations']).T
 table['total'] = table.sum(axis=1)
-table['limit'] = ['one 24 GB GPU'] * 3 + ['two GPUs, 2 x 24 GB']
+table['limit'] = ['one 24 GB GPU'] * 4
 print(table.to_string(float_format='{:.1f}'.format))
-print(f'GiB; the judge stores one byte per weight (FP8), except its input '
-      f'and output\nembeddings, which stay in bf16 ({emb:.1f} GiB of the '
-      f'{table.weights.iloc[-1]:.1f}); its weights are split over\ntwo cards, '
-      f'and vLLM reserves 90% of each card for weights, cache and activations')
+print(f'GiB; the judge stores four bits per weight, with a bf16 scale per '
+      f'128 weights (W4A16),\nexcept its input and output embeddings, which '
+      f'stay in bf16 ({2 * emb:.1f} GiB of the '
+      f'{table.weights.iloc[-1]:.1f});\none copy runs on each card, and vLLM '
+      f'reserves 95% of the card for weights, cache and activations')
 assert table.total.iloc[:2].max() < CARD_GIB  # generation fits one card
 KEEP_GEN = table.total.iloc[2] < CARD_GIB  # the generator idles on the card
 print('retrieval phase: the generator stays on the card' if KEEP_GEN else
@@ -1042,12 +1065,14 @@ values, and the others carry a state of fixed size, so eight prompts of
 3,300 tokens need 1.2 GiB for cache and state together. The estimate of
 21.3 GiB leaves out the allocator's slack. The peaks measured in the full
 runs, 21.7 GiB for these batches and 22.4 GiB for the four long prompts,
-still fit, so the batch stays at eight. The judge needs two GPUs. Its
-checkpoint stores one byte per weight (FP8), except the input embeddings
-and the output matrix, which stay in bf16. Those two matrices, each a
-vocabulary wide, take 4.7 GiB of the judge's 27.4, about a sixth. With the
-cache for sixteen requests in flight the estimate reaches 33 GiB, more than
-one GPU holds and less than two do.
+still fit, so the batch stays at eight. The judge, a 27B model, fits on
+one card because its checkpoint stores four bits per weight, with a bf16
+scale for every 128 weights (W4A16: 4-bit weights, 16-bit activations),
+except the input embeddings and the output matrix, which stay in bf16.
+Those two matrices, each a vocabulary wide, take 4.7 GiB of the judge's
+16.4, more than a quarter. With the cache for eight requests in flight the
+estimate reaches 18.8 GiB. Each 24 GB GPU therefore holds a copy of its
+own, and the answers are split among the copies.
 
 The next cell loads the recorded answers and lists the four arms of this
 section. A normal run also generates the first recorded batch again and
@@ -1125,53 +1150,64 @@ The next cell loads the recorded verdicts on every answer of this section
 and the next, and judges twelve of them again from the judge's recorded
 replies, which needs neither a GPU nor a key. Thinking has a drawback here:
 a judge that reasons at length can run out of tokens before it gives a
-verdict. About 3% of the replies were cut off at 3,000 new tokens or came
-back malformed twice, and each of those answers was judged once more with
-6,000 new tokens. An answer still without a verdict is *unjudged*. It is
+verdict. We therefore allow up to 12,000 new tokens, reasoning included,
+and ask once more, showing the reply, when a verdict comes back malformed.
+An answer still without a verdict is *unjudged*. It is
 left out of accuracy and of the failure counts, rather than blamed on the
 generator.
 
 ```{.python .input #rag-judge}
 %%tab pytorch
-LABELS = d2l.api_unpack('lm-rag-judge-labels-v1')
+LABELS = d2l.api_unpack('lm-rag-judge-labels-v1')  # the judge's selection
 REC_DIR = os.path.join('..', 'data', 'lm-api', 'record',
                        ARTIFACTS['rag-judge-cache'][0])
 VERDICTS = ['correct', 'faithful', 'supported']
 ANSWERS = {(r['config'], r['qid']): r for r in GENS.to_dict('records')}
-read = lambda f: [json.loads(l) for l in open(os.path.join(LABELS, f))]
-CAL = [p for p in read('pairs.jsonl') if p['set'] == 'calibration']
+JUDGE_ID = f'{JUDGE["model"]}@{JUDGE["revision"]}'
 
 def passage(cid):
     c = CHUNKS[cid]
     return ' > '.join(c['heading_path']) + '\n' + c['text']
 
-def judge_client(backend, cache, mode='replay', url='http://127.0.0.1/v1',
-                 timeout=120.0):
-    """The judge through the local vLLM server or OpenRouter (same weights,
-    BF16), recording to or replaying from cache; timeout: seconds a request
-    may take (not part of its hash)."""
+def judge_client(backend, cache, mode='replay', url='http://127.0.0.1/v1'):
+    """The judge through a local vLLM server or OpenRouter (same weights,
+    BF16), recording to or replaying from cache."""
     if backend == 'local':
-        client = d2l.rag_judge_client(url, cache=cache, mode=mode)
-    else:
-        with open(os.path.join(LABELS, 'listing.json')) as f:
-            listing = json.load(f)
-        client = d2l.openrouter_api(
-            'qwen/qwen3.8-27b', 'deepinfra/bf16', listing=listing,
-            cache=cache, mode=mode, cost_cap_usd=15.0,
-            reasoning={'enabled': True})
-    client.timeout = timeout
+        return d2l.rag_judge_client(url, cache=cache, mode=mode)
+    with open(os.path.join(LABELS, 'listing.json')) as f:
+        listing = json.load(f)
+    client = d2l.openrouter_api(
+        'qwen/qwen3.8-27b', 'deepinfra/bf16', listing=listing, cache=cache,
+        mode=mode, cost_cap_usd=15.0, reasoning={'enabled': True})
+    client.timeout = 3600.0  # a request may take minutes
     return client
 
-def judge_records(client, recs, concurrency, backend, tokens=None):
-    """Judgment records of answer records (dicts); the judge may write
-    tokens new tokens (default JUDGE['max_new_tokens'])."""
-    tokens = tokens or JUDGE['max_new_tokens']
-    v = d2l.rag_judge(client, None, [ITEMS[r['qid']] for r in recs], recs,
-                      [[passage(i) for i in r['context_ids']] for r in recs],
-                      batch_size=concurrency, max_new_tokens=tokens)
+def judge_records(clients, recs, concurrency, backend, first=0):
+    """Judgment records of answer records (dicts). clients: one judge
+    client per server; an answer goes to the server its key picks, so a
+    request that repeats meets the same server and cache; concurrency:
+    requests in flight per server. first: the index of clients[0]."""
+    part = [int(d2l._rag_answer_key(r), 16) % len(clients) for r in recs]
+    out = [None] * len(recs)
+
+    def work(k):
+        idx = [i for i, p in enumerate(part) if p == k]
+        v = d2l.rag_judge(clients[k], None, [ITEMS[recs[i]['qid']]
+                                             for i in idx],
+                          [recs[i] for i in idx],
+                          [[passage(c) for c in recs[i]['context_ids']]
+                           for i in idx], batch_size=concurrency,
+                          max_new_tokens=JUDGE['max_new_tokens'])
+        for i, x in zip(idx, v):
+            out[i] = dict(x, server=first + k)
+
+    with concurrent.futures.ThreadPoolExecutor(len(clients)) as ex:
+        list(ex.map(work, range(len(clients))))  # raises what work raised
     return [dict(config=r['config'], qid=r['qid'], concurrency=concurrency,
-                 backend=backend, answer_sha=d2l._rag_answer_key(r),
-                 max_new_tokens=tokens, **x) for r, x in zip(recs, v)]
+                 backend=backend, judge=JUDGE_ID,
+                 answer_sha=d2l._rag_answer_key(r),
+                 max_new_tokens=JUDGE['max_new_tokens'], **x)
+            for r, x in zip(recs, out)]
 
 def no_verdict(v, rec):
     """Whether the judge left out a verdict it was asked for on answer
@@ -1181,19 +1217,6 @@ def no_verdict(v, rec):
     keys = VERDICTS if len(rec['context_ids']) else ['correct']
     return any(v[k] is None for k in keys)
 
-def calibration_verdicts(cache, tokens=None, pairs=None, mode='replay',
-                         **kw):
-    """The judge's verdicts on calibration pairs (default: all), replayed
-    from cache or recorded to it (the local judge; kw: judge_client's)."""
-    pairs = CAL if pairs is None else pairs
-    return d2l.rag_judge(judge_client('local', cache, mode, **kw), None,
-                         [ITEMS[p['qid']] for p in pairs], pairs,
-                         [[passage(i) for i in p['context_ids']]
-                          for p in pairs], max_new_tokens=tokens)
-
-CAL_V0 = calibration_verdicts(os.path.join(  # as recorded at selection
-    LABELS, 'api', 'judge-local-qwen38-27b-on.jsonl'))
-CAL_V = [dict(x) for x in CAL_V0]  # with the pairs judged again
 JUD_FILE = d2l._rag_run_path('rag-judge', RERUN)
 if 'rag-judge' in RERUN:
     d2l._rag_free_generator()
@@ -1202,18 +1225,19 @@ if 'rag-judge' in RERUN:
     big = sum(torch.cuda.get_device_properties(i).total_memory > 22 * 2**30
               for i in range(torch.cuda.device_count()))
     vllm = os.environ.get('D2L_VLLM') or shutil.which('vllm')
-    backend = ('local' if vllm and big >= 2 else 'openrouter'
+    backend = ('local' if vllm and big else 'openrouter'
                if os.environ.get('OPENROUTER_API_KEY') else None)
-    assert backend, ('judging needs vLLM (D2L_VLLM) and two 24 GB GPUs, '
-                     'or OPENROUTER_API_KEY for the same model on OpenRouter')
-    print(f'judge backend: {backend}')
+    assert backend, ('judging needs vLLM (D2L_VLLM) and a 24 GB GPU, or '
+                     'OPENROUTER_API_KEY for the same model on OpenRouter')
     old = d2l._rag_load_judgments(JUD_FILE if os.path.exists(JUD_FILE) else
-                         d2l.lm_registered(ARTIFACTS['rag-judge'][0]))
+                                  d2l.lm_registered(ARTIFACTS['rag-judge'][0]))
     key = dict(zip(zip(GENS.config, GENS.qid), GENS.answer_sha))
     rule = set(zip(GENS.config[GENS.abstained], GENS.qid[GENS.abstained]))
-    rows = [r for r in old.to_dict('records')  # verdicts on these answers
-            if key.get((r['config'], r['qid'])) == r.get('answer_sha')]
-    print(f'{len(old) - len(rows)} verdicts on answers no longer present')
+    rows = [r for r in old.to_dict('records')  # this judge, these answers
+            if r['judge'] == JUDGE_ID and
+            key.get((r['config'], r['qid'])) == r.get('answer_sha')]
+    print(f'{len(old) - len(rows)} verdicts of another judge or on answers '
+          'no longer present')
     rows = [r for r in rows  # abstentions: decided again, by rule (no call)
             if (r['config'], r['qid']) not in rule]
     done = {(r['config'], r['qid']) for r in rows
@@ -1221,61 +1245,45 @@ if 'rag-judge' in RERUN:
     todo = [r for r in GENS.to_dict('records')
             if (r['config'], r['qid']) not in done]
     os.makedirs(REC_DIR, exist_ok=True)
-    server = d2l.rag_judge_server(2) if backend == 'local' else None
+    servers = d2l.rag_judge_servers() if backend == 'local' else []
     try:
-        url = server.start() if server else None
-        client = judge_client(backend, os.path.join(REC_DIR, 'judge.jsonl'),
-                              'record', url)
+        with concurrent.futures.ThreadPoolExecutor(max(1, len(servers))) as ex:
+            urls = (list(ex.map(lambda s: s.start(), servers)) if servers
+                    else ['http://127.0.0.1/v1'])
+        print(f'judge backend: {backend}, {len(urls)} server(s), ready '
+              f'{(time.time() - T0) / 60:.1f} min after the start')
+        clients = [judge_client(backend, os.path.join(
+            REC_DIR, f'judge-{k}.jsonl'), 'record', u)
+            for k, u in enumerate(urls)]
         last = 0.0  # a chunk starts only if it should end within budget
         # a request that fails twice raises: the chunks saved so far stay,
         # the recorded replies too, and the next run resumes
         while todo and time.time() - T0 + last < 60 * JUDGE_MINUTES:
             t = time.time()
-            rows += judge_records(client, todo[:CHUNK], CONCURRENCY, backend)
+            rows += judge_records(clients, todo[:CHUNK], CONCURRENCY, backend)
             todo, last = todo[CHUNK:], time.time() - t
             d2l.write_jsonl(JUD_FILE, rows)  # a stopped run resumes here
-        # once every answer has a judgment: each answer left without a
-        # verdict is judged once more, with RETRY_TOKENS new tokens
-        redo = [ANSWERS[r['config'], r['qid']] for r in rows
-                if r['concurrency'] == CONCURRENCY and r['max_new_tokens'] <
-                RETRY_TOKENS and no_verdict(r, ANSWERS[r['config'], r['qid']])]
-        retry = judge_client(backend, os.path.join(  # the longer replies
-            REC_DIR, 'judge-retry.jsonl'), 'record', url, timeout=1200.0)
-        while (not todo and redo and
-               time.time() - T0 + last < 60 * JUDGE_MINUTES):
-            t = time.time()
-            new = {(r['config'], r['qid']): r for r in judge_records(
-                retry, redo[:CHUNK], CONCURRENCY, backend, RETRY_TOKENS)}
-            rows = [new.get((r['config'], r['qid']), r)
-                    if r['concurrency'] == CONCURRENCY else r for r in rows]
-            redo, last = redo[CHUNK:], time.time() - t
-            d2l.write_jsonl(JUD_FILE, rows)
-        if backend == 'local':  # the calibration pairs left without verdict
-            calibration_verdicts(os.path.join(  # recorded once (local judge)
-                REC_DIR, 'calibration-retry.jsonl'), RETRY_TOKENS, [
-                    p for p, x in zip(CAL, CAL_V0) if no_verdict(x, p)],
-                'record', url=url, timeout=1200.0)
+            print(f'{len(rows)} judged, {len(todo)} to go, '
+                  f'{(time.time() - T0) / 60:.1f} min')
         base = sorted(r['qid'] for r in rows if r['config'] == 'base' and
                       r['concurrency'] == CONCURRENCY and
                       r['qid'].startswith('dev'))
-        if (not any(r['concurrency'] != CONCURRENCY for r in rows)
+        if (not todo and not any(r['concurrency'] != CONCURRENCY
+                                 for r in rows)
                 and len(base) >= N_REPEAT
                 and time.time() - T0 + last < 60 * JUDGE_MINUTES):
             pick = set(random.Random('repeat|0').sample(base, N_REPEAT))
-            rows += judge_records(
-                judge_client(backend, os.path.join(REC_DIR,
-                                                   'judge-rep16.jsonl'),
-                             'record', url),
+            rows += judge_records(  # one server, twice the requests in flight
+                [judge_client(backend, os.path.join(
+                    REC_DIR, 'judge-rep16.jsonl'), 'record', urls[0])],
                 [r for r in GENS.to_dict('records') if r['config'] == 'base'
                  and r['qid'] in pick and not r['abstained']],  # by rule
                 2 * CONCURRENCY, backend)
     finally:
-        if server:
+        for server in servers:
             server.stop()
-    left = len(todo) + len(redo)
-    print(f'{len(todo)} answers still to judge, {len(redo)} to judge again: '
-          'run D2L_RERUN=rag-judge again' if left else
-          'every answer is judged')
+    print(f'{len(todo)} answers still to judge: run D2L_RERUN=rag-judge '
+          'again' if todo else 'every answer is judged')
     d2l.lm_save_table(ARTIFACTS['rag-judge'][1], pd.DataFrame(rows),
                       on=['config', 'qid', 'concurrency'],
                       key=ARTIFACTS['rag-judge'][0])
@@ -1284,87 +1292,79 @@ if 'rag-judge' in RERUN:
     members['manifest.json'] = json.dumps(dict(
         judge=JUDGE, prompt='RAG_JUDGE_V1', backends=sorted(
             {r['backend'] for r in rows}), concurrency=CONCURRENCY,
-        repeat_concurrency=2 * CONCURRENCY, retry_tokens=RETRY_TOKENS,
-        n=len(rows)), indent=1).encode()
+        repeat_concurrency=2 * CONCURRENCY, n=len(rows)), indent=1).encode()
     d2l.lm_save_rerun(ARTIFACTS['rag-judge-cache'][1],
                       lambda p: d2l.lm_write_zip(p, members))
     print(f'rag-judge: {(time.time() - T0) / 60:.1f} min since the start')
 JUD = d2l._rag_load_judgments(JUD_FILE)
+assert (JUD.judge == JUDGE_ID).all(), 'verdicts of another judge'
 judged = JUD[JUD.concurrency == CONCURRENCY].merge(  # on these answers
     GENS[['config', 'qid', 'answer_sha']], on=['config', 'qid',
                                                'answer_sha'])
 cache = (REC_DIR if 'rag-judge' in RERUN else
          d2l.lm_registered(ARTIFACTS['rag-judge-cache'][0]) and
          d2l.api_unpack(ARTIFACTS['rag-judge-cache'][0]))
-b = judged[judged.config == 'base'].sort_values('qid')
-for tokens, file, n in ((JUDGE['max_new_tokens'], 'judge.jsonl', 8),
-                        (RETRY_TOKENS, 'judge-retry.jsonl', 4)):
-    first = b[b.max_new_tokens == tokens].head(n)  # replayed from the cache
-    if not (cache and len(first)):
-        continue
-    recs = [ANSWERS[k] for k in zip(first.config, first.qid)]
-    again = pd.DataFrame(judge_records(
-        judge_client(first.backend.iloc[0], os.path.join(cache, file)),
-        recs, CONCURRENCY, first.backend.iloc[0], tokens))
+first = (judged[(judged.config == 'base') & ~judged.qid.map(  # judged by
+    lambda q: ANSWERS['base', q]['abstained'])]  # the model, not by rule
+    .sort_values('qid').head(12))
+if cache and len(first):  # replayed from the cache: no server, no GPU
+    again = pd.concat([pd.DataFrame(judge_records(
+        [judge_client(g.backend.iloc[0], os.path.join(
+            cache, f'judge-{int(k)}.jsonl'))],
+        [ANSWERS[c] for c in zip(g.config, g.qid)], CONCURRENCY,
+        g.backend.iloc[0], first=int(k)))
+        for k, g in first.groupby('server')]).sort_values('qid')
     assert (again[VERDICTS].astype(str).values ==
             first[VERDICTS].astype(str).values).all()
-    print(f'{len(first)} base judgments with {tokens:,} new tokens replayed '
-          'from the judge cache: identical')
-retry = cache and os.path.join(cache, 'calibration-retry.jsonl')
-if retry and os.path.exists(retry):  # the calibration pairs judged again
-    redo = [i for i, (p, x) in enumerate(zip(CAL, CAL_V0))
-            if no_verdict(x, p)]
-    for i, x in zip(redo, calibration_verdicts(retry, RETRY_TOKENS,
-                                               [CAL[i] for i in redo])):
-        CAL_V[i] = x
+    print(f'{len(first)} base judgments replayed from the judge cache: '
+          'identical')
 here = judged.merge(G[['config', 'qid']])  # this section's dev arms
 print(pd.DataFrame({
     'answers': G.groupby('config').size(),
     'judged': here.groupby('config').size(),
-    'judged again': here.groupby('config').max_new_tokens.apply(
-        lambda t: (t == RETRY_TOKENS).sum()),
     'unjudged': here.assign(none=here.correct.isna()).groupby(
         'config').none.sum()}).reindex(ARMS).fillna(0).astype(int).to_string())
-print(f'judged again: with {RETRY_TOKENS:,} new tokens, once\nunjudged: '
-      'still no verdict on correctness (left out of accuracy)')
+print('unjudged: no verdict on correctness after the one retry (left out '
+      'of accuracy)')
 ```
 
-The replayed verdicts match the recorded ones. The baseline and the oracle
-each leave one answer unjudged; every answer of the other two arms has a
-verdict.
+The replayed verdicts match the recorded ones, and every answer of the
+four arms has a verdict.
 
 The judge itself was chosen by measurement. Two frontier models from other
-families, Claude Opus 5.5 and Gemini 4 Argon, labeled 200 answers of
-another, smaller generator, Qwen3-4B, and nine Qwen candidates of three
+families, Claude Opus 5.5 and Gemini 4 Argon, labeled 200 answers of an
+earlier, smaller generator, Qwen3-4B, and nine Qwen candidates of three
 sizes judged the same answers, with thinking on and off. With thinking off
 every candidate was lenient, passing many answers that both labelers call
 wrong. With thinking on, a judge works through the key facts before it
 decides, which is what catches a missing fact; the smaller candidates,
 however, often reasoned until their replies were cut off, and agreed less
-with the labelers. Half of the 200 answers served this choice. The other
-100, the *calibration set*, test the chosen judge before we read any
-accuracy: against each labeler, and against their *consensus*, the answers
-on which both agree. On `correct`, ten of the hundred verdicts are the
-rule's rather than the judge's: four answers abstain, and six answer a
-question the book does not answer.
+with the labelers. Half of the 200 answers served this choice, and the
+other 100 tested it. The chosen judge then ran with 8-bit weights; with
+4-bit weights it must pass the test again. That set has a second flaw: our
+generator is stronger than Qwen3-4B, and its mistakes may be subtler. The
+same two labelers therefore also labeled 100 base answers of Qwen3.5-9B on
+`dev`, the *calibration set*. The next cell compares the judge, on both
+sets, with each labeler and with their *consensus*, the answers on which
+both agree. On `correct`, ten of the hundred verdicts of the calibration
+set are the rule's rather than the judge's, because the answers abstain.
 
 ```{.python .input #rag-judge-validation}
 %%tab pytorch
-cal, v = CAL, CAL_V  # v: with the pairs judged again (rag-judge cell)
-lab = {r['qid']: r for r in read('dev_judge_labels.jsonl')}
-recorded = {r['qid']: r for r in read(
-    os.path.join('candidates', 'qwen38-27b-local-on.jsonl'))}
-graded = [not d2l._rag_abstained(p['answer']) for p in cal]
-assert all(x[k] == recorded[p['qid']][k] for p, x, g in zip(
-    cal, CAL_V0, graded) if g for k in VERDICTS)  # the replies, replayed
-again = sum(no_verdict(x, p) for p, x in zip(cal, CAL_V0))
-unans = [not ITEMS[p['qid']]['answerable'] for p in cal]
-by_rule = sum(not g or u for g, u in zip(graded, unans))  # as rag_judge does
-print(f'{by_rule} of {len(cal)} calibration answers are decided by rule on '
-      f'correct ({len(cal) - sum(graded)} abstain,\n  '
-      f'{sum(g and u for g, u in zip(graded, unans))} answer an unanswerable '
-      f'question); {again} without a verdict judged again with '
-      f'{RETRY_TOKENS:,} new tokens')
+CAL_LABELS = d2l.api_unpack('lm-rag-judge-labels-v2')  # this generator's
+V1_VERDICTS = d2l.api_unpack('lm-rag-judge-v1cal-v1')  # this judge on v1
+read = lambda d, f: [json.loads(l) for l in open(os.path.join(d, f))]
+
+def by_rule(p, v):
+    """Verdicts v (dict) with correct decided by rule as rag_judge does:
+    an abstention is correct exactly for an unanswerable question, and an
+    answer to an unanswerable question is wrong."""
+    v = dict(v)
+    if d2l._rag_abstained(p['answer']):
+        v.update(correct=not ITEMS[p['qid']]['answerable'], faithful=True)
+    elif not ITEMS[p['qid']]['answerable']:
+        v['correct'] = False
+    return v
 
 def kappa(a, b):
     """Cohen's kappa of two 0/1 arrays."""
@@ -1384,81 +1384,132 @@ def agreement(a, b, n_boot=2000, seed=0):
     q = lambda x: np.quantile(x, [0.025, 0.975])
     return ((a == b).mean(), *q(boot)), (kappa(a, b), *q(kb))
 
-rows = []
-for k in ('correct', 'faithful'):
-    for who, field in (('frontier', f'{k}_frontier'),
-                       ('second', f'{k}_second'), ('consensus', k)):
-        keep = [(x[k], lab[p['qid']][field]) for p, x in zip(cal, v)
-                if None not in (x[k], lab[p['qid']][field])]  # unjudged out
-        (acc, alo, ahi), (kap, klo, khi) = agreement(*zip(*keep))
-        rows.append({'verdict': k, 'against': who, 'pairs': len(keep),
-                     'agreement': f'{acc:.2f} [{alo:.2f}, {ahi:.2f}]',
-                     'kappa': f'{kap:.2f} [{klo:.2f}, {khi:.2f}]'})
-print(pd.DataFrame(rows).to_string(index=False))
-print(f'unjudged (left out): {sum(x["correct"] is None for x in v)} of '
-      f'{len(cal)} calibration pairs')
-for k in ('correct', 'faithful'):
-    pairs = [(lab[p['qid']][f'{k}_frontier'], lab[p['qid']][f'{k}_second'])
-             for p in cal]
-    print(f'the two labelers on {k}: kappa '
-          f'{kappa(*zip(*[t for t in pairs if None not in t])):.2f}')
+def calibrate(cal, v, lab, name):
+    """Print the judge's agreement with each labeler and their consensus,
+    the labelers' with each other and the rule's decision on acceptance;
+    cal: the labeled answers, v: the judge's verdicts on them (dicts),
+    lab: qid -> labels."""
+    rows = []
+    for k in ('correct', 'faithful'):
+        for who, field in (('frontier', f'{k}_frontier'),
+                           ('second', f'{k}_second'), ('consensus', k)):
+            keep = [(x[k], lab[p['qid']][field]) for p, x in zip(cal, v)
+                    if None not in (x[k], lab[p['qid']][field])]
+            (acc, alo, ahi), (kap, klo, khi) = agreement(*zip(*keep))
+            rows.append({'verdict': k, 'against': who, 'pairs': len(keep),
+                         'agreement': f'{acc:.2f} [{alo:.2f}, {ahi:.2f}]',
+                         'kappa': f'{kap:.2f} [{klo:.2f}, {khi:.2f}]'})
+    print(f'{name}:\n' + pd.DataFrame(rows).to_string(index=False))
+    for k in ('correct', 'faithful'):
+        pairs = [(lab[p['qid']][f'{k}_frontier'],
+                  lab[p['qid']][f'{k}_second']) for p in cal]
+        print(f'the two labelers on {k}: kappa '
+              f'{kappa(*zip(*[t for t in pairs if None not in t])):.2f}')
+    wrong = [x['correct'] for p, x in zip(cal, v)
+             if lab[p['qid']]['correct'] is False]  # both labelers: wrong
+    print(f'the judge passes {sum(w is True for w in wrong)} of the '
+          f'{len(wrong)} answers both labelers call wrong')
+    for k in ('correct', 'faithful'):  # the rule, written down beforehand
+        (acc, _, _), (_, klo, _) = agreement(*zip(*[
+            (x[k], lab[p['qid']][k]) for p, x in zip(cal, v)
+            if None not in (x[k], lab[p['qid']][k])]))
+        print(f'judge against the consensus on {k}: agreement {acc:.2f}, '
+              f'kappa interval from {klo:.2f}:\n  ' + (
+                  'accepted (agreement >= 0.8, kappa interval above 0.4)'
+                  if acc >= 0.8 and klo > 0.4 else 'not accepted: claims '
+                  'that rest on it carry the agreement'))
+
+cal = read(CAL_LABELS, 'pairs.jsonl')  # base answers on dev, as recorded
+lab = {r['qid']: r for r in read(CAL_LABELS, 'dev_judge_labels.jsonl')}
+jb = judged[judged.config == 'base'].set_index('qid')
+assert all(jb.answer_sha[p['qid']] == d2l._rag_answer_key(p)
+           for p in cal), 'labels on other answers than the judged ones'
+v = [{k: None if (x := jb.loc[p['qid'], k]) is None else bool(x)
+      for k in VERDICTS} for p in cal]  # Python bools
+graded = [not d2l._rag_abstained(p['answer']) for p in cal]
+unans = [not ITEMS[p['qid']]['answerable'] for p in cal]
+print(f'{len(cal)} calibration answers of {GEN}, base on dev; '
+      f'{sum(not g or u for g, u in zip(graded, unans))} are decided by '
+      f'rule on correct\n  ({len(cal) - sum(graded)} abstain, '
+      f'{sum(g and u for g, u in zip(graded, unans))} answer an '
+      'unanswerable question); unjudged (left out): '
+      f'{sum(x["correct"] is None for x in v)}')
+calibrate(cal, v, lab, 'this generator\'s answers (labels-v2)')
+
+# The earlier set: 100 answers of Qwen3-4B, the half of labels-v1 that
+# did not serve the judge's selection, judged by this judge
+old_cal = [p for p in read(LABELS, 'pairs.jsonl') if p['set'] ==
+           'calibration']
+v1 = {r['qid']: r for r in read(V1_VERDICTS, 'verdicts.jsonl')}
+assert {r['judge'] for r in v1.values()} == {JUDGE_ID}
+old_cal = [p for p in old_cal if p['qid'] in v1]  # those it was asked
+lab1 = {r['qid']: r for r in read(LABELS, 'dev_judge_labels.jsonl')}
+print()
+calibrate(old_cal, [by_rule(p, {k: v1[p['qid']][k] for k in VERDICTS})
+                    for p in old_cal], lab1,
+          f'the earlier set: {len(old_cal)} answers of Qwen3-4B (labels-v1)')
 old = next(c for c in json.load(open(os.path.join(
     LABELS, 'candidates', 'table.json'))) if c['name'] == 'qwen35-4b-off')
 oc = old['calibration']['correct']
-print(f'the old judge (Qwen3.5-4B, thinking off) on correct: agreement '
-      f'{oc["acc"]:.2f}, kappa {oc["kappa"]:.2f} [{oc["k_lo"]:.2f}, '
-      f'{oc["k_hi"]:.2f}];\n  it passes '
+print(f'the old judge (Qwen3.5-4B, thinking off) there on correct: '
+      f'agreement {oc["acc"]:.2f}, kappa {oc["kappa"]:.2f} '
+      f'[{oc["k_lo"]:.2f}, {oc["k_hi"]:.2f}];\n  it passes '
       f'{old["calibration"]["false_correct"][0]} of the '
       f'{old["calibration"]["false_correct"][1]} answers the labelers call '
       'wrong')
-for k in ('correct', 'faithful'):  # the claims that rest on the judge
-    (acc, _, _), (_, klo, _) = agreement(*zip(*[
-        (x[k], lab[p['qid']][k]) for p, x in zip(cal, v)
-        if None not in (x[k], lab[p['qid']][k])]))
-    print(f'judge against the consensus on {k}: agreement {acc:.2f}, kappa '
-          f'interval from {klo:.2f}:\n  ' + (
-              'accepted (agreement >= 0.8, kappa interval above 0.4)'
-              if acc >= 0.8 and klo > 0.4 else 'not accepted: claims that '
-              'rest on it carry the agreement'))
-print('the calibration answers come from the earlier generator, Qwen3-4B')
 if len(JUD) and 2 * CONCURRENCY in JUD.concurrency.values:
     J = JUD[JUD.config == 'base']
     n16 = (J.concurrency == 2 * CONCURRENCY).sum()
-    both = J[J.max_new_tokens == JUDGE['max_new_tokens']].groupby(
-        'qid').filter(lambda g: g.concurrency.nunique() == 2)  # same budget
+    both = J.groupby('qid').filter(lambda g: g.concurrency.nunique() == 2)
     changed = both.groupby('qid').apply(lambda g: (g[VERDICTS].astype(
         str).nunique() > 1).any(), include_groups=False)
-    print(f'judged again at concurrency {2 * CONCURRENCY} (first run '
-          f'{CONCURRENCY}): {changed.sum()} of {len(changed)} answers '
-          f'changed a verdict\n  (of {N_REPEAT} drawn, '
-          f'{N_REPEAT - n16} abstentions are decided by rule and '
-          f'{n16 - len(changed)} were judged again with more tokens)')
+    print(f'judged again on one server at concurrency {2 * CONCURRENCY} '
+          f'(first run {CONCURRENCY} per server):\n  {changed.sum()} of '
+          f'{len(changed)} answers changed a verdict (of {N_REPEAT} drawn, '
+          f'{N_REPEAT - n16} abstentions are decided by rule)')
 ```
 
 We accept a judge whose agreement with the consensus is at least 0.8 and
-whose κ interval stays above 0.4, well clear of chance. This one agrees
-with the consensus on 95% of the `correct` verdicts and on 96% of the
-`faithful` ones, with κ of 0.85 and 0.87, and both κ intervals start at
-0.7. These numbers flatter, because the consensus leaves out the hard
-answers on which the labelers disagree. The fair comparison is with each
-labeler alone. There the judge reaches κ 0.83 and 0.71 on `correct`, and
-the labelers reach 0.81 with each other: the judge is about as reliable as
-a third labeler. The judge it replaced, a 4B model with thinking off,
-passed 14 of the 21 answers that both labelers call wrong, which is the
-leniency the selection was meant to remove. One limit remains that no
-calibration on these labels can remove. The labels come from models, not
-from people, and they were made on the answers of another, smaller
-generator; ours may make subtler mistakes, which this check does not see.
+whose κ interval stays above 0.4, well clear of chance. On the earlier set
+the judge passes easily. It agrees with the consensus on 97% of the
+`correct` verdicts and on 94% of the `faithful` ones, with κ of 0.91 and
+0.80, and it passes none of the 21 answers that both labelers call wrong.
+These numbers flatter, because the consensus leaves out the hard answers
+on which the labelers disagree. The fair comparison is with each labeler
+alone. There the judge reaches κ 0.89 and 0.77 on `correct`, and the
+labelers reach 0.81 with each other: the judge is about as reliable as a
+third labeler. The judge it replaced, a 4B model with thinking off, passed
+14 of those 21 wrong answers, which is the leniency the selection was meant
+to remove.
+
+On the answers of our own generator the same rule rejects the judge, and κ
+tells us little about why. The judge agrees with the consensus on 97% of
+the `correct` verdicts and on 98% of the `faithful` ones, yet κ on
+`correct` is 0.00, with an interval from 0.00 to 1.00. This is the effect
+we met with the checker and the verifier: Qwen3.5-9B answers well, and of
+the 93 answers on which the labelers agree they call only 3 wrong. With so
+few wrong answers, nearly all of the agreement is the agreement that the
+shares alone predict, and the interval says that κ could be anything. The
+three answers do tell us something, though. Each leaves out one key fact,
+and the judge passes all three: it is lenient about an omitted fact, the
+generator's most common mistake. The labelers agree with each other less
+than on the earlier set, with κ 0.47 on `correct` and 0.64 on `faithful`.
+As the rule prescribes, claims that rest on the judge carry its agreement
+rather than κ. The leniency also sets a direction. On these answers the
+judge errs toward passing, so the accuracies it reports are, if anything,
+too high. A last limit no calibration on these labels removes: the labels
+come from models, not from people.
 
 A practical note for readers who want to regenerate the verdicts. This
 takes vLLM, an inference server that batches many requests on the GPU,
-here splitting the judge's FP8 weights over two 24 GB GPUs. vLLM pins its
-own PyTorch, so it lives in an environment of its own (`uv venv`, then
+here one copy of the judge's 4-bit weights on each 24 GB GPU. vLLM pins
+its own PyTorch, so it lives in an environment of its own (`uv venv`, then
 `uv pip install vllm==0.33.0`), whose `vllm` executable the variable
-`D2L_VLLM` names. Without two such GPUs the same model, in bf16, can be
-called on OpenRouter for about \$3.3 per 1,000 judgments. Local and API
-verdicts on `correct` agreed on 194 of 200 answers with thinking off, and
-about as often with thinking on.
+`D2L_VLLM` names. Without such a GPU the same model, in bf16, can be
+called on OpenRouter for about \$3 per 1,000 judgments. Other weights
+give other verdicts on some answers, however: on the 198 labeled answers
+of Qwen3-4B, the judge's 8-bit and 4-bit builds disagree on `correct` for
+about one answer in fifteen.
 
 ### The Baseline Report
 
@@ -1577,8 +1628,8 @@ print('* fewer than 100 questions (documents resampled)\n+ fewer than 30 '
 ```
 
 Not one of the 240 contexts changed, yet 95 of the 240 answers did: 40%.
-Accuracy did not move; the difference is $-0.004$, with an interval from
-$-0.03$ to +0.02. Nothing is broken. When the padding of a prompt's batch
+Accuracy moved by less than its noise: the difference is $-0.017$, with an
+interval from $-0.04$ to +0.01 that includes zero. Nothing is broken. When the padding of a prompt's batch
 changes, so does the shape of every matrix product, and the GPU may add the
 same bf16 numbers in another order; the logits move by a few rounding steps.
 Wherever the two likeliest tokens are nearly tied, that flips the greedy
@@ -1589,10 +1640,10 @@ batch from one prompt to two.
 Greedy decoding is therefore deterministic only for a fixed batch,
 precision and kernel. An evaluation must batch the configurations it
 compares alike, or count re-batching as noise (:numref:`sec_lm_scoring`).
-Here re-batching moves accuracy by less than 0.03, and a change to the
+Here re-batching moves accuracy by up to about 0.04, and a change to the
 pipeline has to do better than that before we believe it. The judge's
 server batches its requests too, so the same effect reaches the verdicts:
-judged again with twice as many requests in flight, 2 of 51 answers changed
+judged again with twice as many requests in flight, 5 of 54 answers changed
 a verdict. Every arm was judged at the same concurrency, so this noise
 widens the paired intervals rather than favoring one arm.
 
@@ -1602,18 +1653,18 @@ questions: retrieval is nearly solved here. That should not surprise us.
 The questions were drafted from the book's passages and, like the first
 example, often reuse their words, and :citet:`Lee.Chang.Toutanova.2019`
 observed that when the people asking already know the answer, BM25 alone
-retrieves well. With those chunks the generator answers 0.89 of all `dev`
-questions correctly, and without them 0.30, a gain of about 0.6. The
+retrieves well. With those chunks the generator answers 0.91 of all `dev`
+questions correctly, and without them 0.32, a gain of about 0.6. The
 closed-book score is not zero, nor should it be: the book is public, and
 some questions ask for general knowledge. On the 145 answerable questions
 that the checker marked as specific to the book, closed-book accuracy falls
-to 0.12, against 0.89 with retrieval. That pair of numbers is the case for
+to 0.15, against 0.91 with retrieval. That pair of numbers is the case for
 retrieval. Nor do the passages merely jog the generator's memory: the
 baseline answers about nine in ten answerable questions correctly, both
 where the closed-book arm was right and where it was wrong.
 
-The answers mostly come from their passages. The judge calls 0.90 of them
-faithful and finds the cited passages sufficient for 0.84. Citation
+The answers mostly come from their passages. The judge calls 0.93 of them
+faithful and finds the cited passages sufficient for 0.87. Citation
 precision is 0.72 and recall 0.88; precision from gold spans is strict,
 since a citation of a supporting passage that is not gold counts against
 it. The baseline abstains on 19 of the 20 unanswerable questions and on 1%
@@ -1622,10 +1673,10 @@ of the answerable ones.
 The oracle arm answers 0.93 of all questions. Its context holds a relevant
 chunk for every answerable question, which is why its citation precision
 is 1.00 by construction, and its Recall@5 and coverage are `n/a`: it
-bypasses the retriever. Nor are its answers more faithful: 0.89 against
-the baseline's 0.90, a difference whose interval runs from $-0.06$ to
-+0.04. On the answerable questions its gain over the baseline is +0.04,
-with an interval from $-0.01$ to +0.10, and cannot be told from zero. Why
+bypasses the retriever. Nor are its answers more faithful: 0.94 against
+the baseline's 0.93, a difference whose interval runs from $-0.03$ to
++0.04. On the answerable questions its gain over the baseline is +0.02,
+with an interval from $-0.03$ to +0.07, and cannot be told from zero. Why
 so little? Call a question a *hit*
 when its context holds a relevant chunk. Let $h$ be the share of hits among
 the answerable questions, and $a_1$ and $a_0$ the accuracy on hits and on
@@ -1636,12 +1687,12 @@ $$\textrm{accuracy} = h\, a_1 + (1 - h)\, a_0.$$
 
 Accuracy is a mixture of how often retrieval succeeds and how well the
 generator does in each case. Here 213 of 220 contexts hold a relevant chunk,
-$h = 213/220$, with $a_1 = 0.90$, and $a_0 = 0.43$ on the seven misses. A
+$h = 213/220$, with $a_1 = 0.93$, and $a_0 = 0.29$ on the seven misses. A
 perfect retriever can only turn those seven misses into hits. If the
 accuracy on hits stayed at $a_1$, it would add
-$(1 - h)(a_1 - a_0) \approx 0.032 \times 0.47 \approx 0.02$: there is no
-room left for retrieval to show a gain, and the oracle's +0.04 lies within
-noise of that estimate. The bold step is the assumption that $a_1$ stays
+$(1 - h)(a_1 - a_0) \approx 0.032 \times 0.64 \approx 0.02$: there is no
+room left for retrieval to show a gain, and the oracle's +0.02 matches that
+estimate. The bold step is the assumption that $a_1$ stays
 put. The oracle passes only the gold chunks, about 480 context tokens
 against the baseline's 1,700, and so also removes passages that might
 distract the generator. Whether that raises the accuracy on hits, 240
@@ -1650,10 +1701,10 @@ questions cannot tell.
 Of everything in this section, the decomposition :eqref:`eq_lm_rag_hit` is
 the result to remember. Before a single change has been tried, it says
 which stage to improve first, and here it points at the generator: of the
-25 errors on answerable questions, 21 were made with a relevant passage in
+20 errors on answerable questions, 15 were made with a relevant passage in
 the context.
 
-The wrong answer that opened this section is one of those twenty-one: its
+The wrong answer that opened this section is one of those fifteen: its
 passage was in the context, ranked first. Which stage lost each of them,
 and would another chunking, query or context have saved some?
 :numref:`sec_lm_rag_fixes` changes one stage at a time and sorts the
@@ -1668,7 +1719,7 @@ the corpus with known answers and gold spans, here drafted and checked by
 models rather than people; a judge checked against independent labels
 before any accuracy is read; and a measurement of each stage on its own,
 between a floor without passages and a ceiling with only the right ones. On
-this book the baseline answers 0.89 of the `dev` questions against 0.30
+this book the baseline answers 0.91 of the `dev` questions against 0.32
 without passages. Retrieval is nearly solved, the decomposition
 $h\,a_1 + (1-h)\,a_0$ leaves a perfect retriever almost nothing to add, and
 most wrong answers had a relevant passage in the context: the generator
@@ -1683,8 +1734,9 @@ changed 40% of the answers and not accuracy.
    and the other four in rank order.
     1. Predict how accuracy depends on the position, then measure it, with
        paired intervals against position 1. Judging needs the judge server
-       on two 24 GB GPUs. With one GPU, measure instead how often the answer
-       cites the relevant passage at each position, which needs no judge.
+       on a 24 GB GPU of its own. With one GPU, measure instead how often the
+       answer cites the relevant passage at each position, which needs no
+       judge.
     1. Does the result show the dip in the middle that
        :citet:`Liu.Lin.Hewitt.ea.2024` found in long contexts? Build longer
        contexts from more chunks of the book until it does, or until 6,000
@@ -1770,7 +1822,7 @@ list instead of `nn.Sequential`?
 - Judge: wrong; faithful; supported.
 
 ::: {.d2l-note .warn}
-The baseline answers 0.89 of 240 questions. Passage skipped? Misled by
+The baseline answers 0.91 of 240 questions. Passage skipped? Misled by
 its neighbors? For other questions, ranked too low? One accuracy number
 cannot tell.
 :::
@@ -1924,27 +1976,29 @@ the answer against its sources.
 :::
 :::
 
-::: {.slide title="The Judge Agrees with the Labelers Almost as Well as They Agree with Each Other"}
+::: {.slide title="On Qwen3-4B's Answers the Judge Is a Third Labeler; on Ours κ Says Little"}
 [A judge, checked first]{.kicker}
 
-Qwen3.8-27B, thinking on, FP8 on two 24 GB GPUs; 100 calibration answers
-labeled by two frontier models.
+Qwen3.8-27B, thinking on, 4-bit weights, one copy per 24 GB GPU; answers
+labeled by two frontier models. κ on `correct`:
 
-| `correct` | κ |
-|---|---|
-| judge vs Claude Opus 5.5 | 0.83 |
-| judge vs Gemini 4 Argon | 0.71 |
-| the two labelers | 0.81 |
-| judge vs their consensus | 0.85 [0.70, 0.97] |
-| old judge, 4B, thinking off, vs consensus | 0.33 |
+| | Qwen3-4B answers | Qwen3.5-9B answers (ours) |
+|---|---|---|
+| judge vs Claude Opus 5.5 | 0.89 | −0.04 |
+| judge vs Gemini 4 Argon | 0.77 | 0.52 |
+| the two labelers | 0.81 | 0.47 |
+| judge vs their consensus | 0.91 [0.80, 1.00] | 0.00 [0.00, 1.00] |
+| agreement with the consensus | 0.97 | 0.97 |
+| wrong by both labelers: judge passes | 0 of 21 | 3 of 3 |
 
 ::: {.fragment .fade-up}
-The consensus flatters: it drops the hard answers the labelers disagree on.
-Compare with each labeler alone.
+Ours are right 9 times in 10: with 3 wrong answers, chance explains nearly
+all agreement, so κ is uninformative. The three each omit a key fact.
 :::
 
 ::: {.d2l-note .warn}
-Labels by models, on answers of another, smaller generator (Qwen3-4B).
+On our answers the judge leans lenient: accuracy, if anything, too high.
+Labels by models, not people.
 :::
 :::
 
@@ -1973,10 +2027,10 @@ neighbors in each batch of 8 differ.
 
 ::: {.fragment .fade-up}
 - 0 of 240 contexts differ; 95 of 240 answers differ.
-- Accuracy: $-0.004$, interval [$-0.03$, +0.02].
+- Accuracy: $-0.017$, interval [$-0.04$, +0.01]: within noise.
 - bf16: another padding changes the order of the sums; the logits move by
   a few rounding steps and flip near-ties.
-- The judge's server batches too: 2 of 51 answers changed a verdict.
+- The judge's server batches too: 5 of 54 answers changed a verdict.
 :::
 
 ::: {.d2l-note .rule}
@@ -1985,17 +2039,17 @@ kernel. Batch alike, or count re-batching as noise.
 :::
 :::
 
-::: {.slide title="Retrieval Lifts Accuracy from 0.30 to 0.89; an Oracle Adds Nothing Measurable"}
+::: {.slide title="Retrieval Lifts Accuracy from 0.32 to 0.91; an Oracle Adds Nothing Measurable"}
 [Floor, baseline, ceiling]{.kicker}
 
 | 240 `dev` questions | closed book | baseline | oracle |
 |---|---|---|---|
-| accuracy | 0.30 | 0.89 | 0.93 |
+| accuracy | 0.32 | 0.91 | 0.93 |
 | citation precision | | 0.72 | 1.00 (by construction) |
 | abstains, unanswerable | 10 of 20 | 19 of 20 | 18 of 20 |
 
-- Baseline − closed: +0.59 [+0.53, +0.66]; book-specific: 0.12 → 0.89.
-- Oracle − baseline, all questions: +0.03 [$-0.02$, +0.08]. Retrieval
+- Baseline − closed: +0.60 [+0.53, +0.66]; book-specific: 0.15 → 0.91.
+- Oracle − baseline, all questions: +0.01 [$-0.03$, +0.06]. Retrieval
   has no room left to show a gain.
 :::
 
@@ -2006,14 +2060,14 @@ Accuracy on answerable questions:
 $$\textrm{accuracy} = h\, a_1 + (1 - h)\, a_0$$
 
 $h = 213/220$: share of answerable questions whose context holds a relevant
-chunk (a *hit*); accuracy $a_1 = 0.90$ on hits, $a_0 = 0.43$ on the seven
+chunk (a *hit*); accuracy $a_1 = 0.93$ on hits, $a_0 = 0.29$ on the seven
 misses.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** If $a_1$ stays put, $(1 - h)(a_1 - a_0) \approx 0.032 \times
-0.47 \approx 0.02$. The oracle measures +0.04 [$-0.01$, +0.10], within
-noise of 0.02. 21 of 25 errors had a relevant passage in the context.
+0.64 \approx 0.02$. The oracle measures +0.02 [$-0.03$, +0.07], as
+predicted. 15 of 20 errors had a relevant passage in the context.
 :::
 :::
 :::
@@ -2025,16 +2079,16 @@ noise of 0.02. 21 of 25 errors had a relevant passage in the context.
 - Five stages, each with its own measurement; `cov@T` compares chunkings.
 - `load_array`: a `shuffle` argument invented without passages, `is_train`
   found with them.
-- Judge vs each labeler: κ 0.71 and 0.83; the labelers vs each other:
-  0.81.
-- Re-batching changed 40% of answers in bf16, not accuracy.
-- Closed 0.30, baseline 0.89, oracle 0.93: the generator limits accuracy.
+- Judge vs each labeler on Qwen3-4B's answers: κ 0.89 and 0.77; the
+  labelers vs each other: 0.81. On ours, 3 wrong answers: κ uninformative.
+- Re-batching changed 40% of answers in bf16; accuracy moved within noise.
+- Closed 0.32, baseline 0.91, oracle 0.93: the generator limits accuracy.
 :::
 
 ::: {.slide title="Next: Which Stage Lost Each Wrong Answer?"}
 [Next]{.kicker}
 
-The baseline leaves 26 `dev` answers wrong, 21 of the 25 answerable ones
+The baseline leaves 21 `dev` answers wrong, 15 of the 20 answerable ones
 with a relevant passage in the context. The next section changes one stage
 at a time, sorts the failures by stage and tests a fix chosen in advance.
 :::

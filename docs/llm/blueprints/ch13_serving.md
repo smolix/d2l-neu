@@ -671,6 +671,8 @@ Engine components (≤ ~150 lines, `#@save`; helpers `paged_attention_online`, `
 
 ### 13.4 Serving across GPUs and nodes
 
+> **Model kit (2026-11-24).** OLMoE-1B-7B is dropped from the part. The routing statistics are Qwen3-30B-A3B's throughout: recorded at T3 (`lm-moe-routing-qwen3-30b-a3b`) and on the T2 pair (bf16, layers split over the two cards; `lm-moe-routing-qwen3-30b-a3b-t2`), so the straggler check runs at `E = 128`; the T1 path analyses the committed routing and loads no MoE. Read the OLMoE rows below as superseded.
+
 - **Label:** `sec_lm_distributed_serving` · **Tier:** T3 (8× A100 40 GB, one node; the plan fits 8× 40 GB and runs once; the node's interconnect is recorded by `nvidia-smi topo -m`), with a T2-pair live reduction and a simulator path · **Budget:** T3 about 85–100 min wall clock (design target; one dry-run-calibrated sweep, see the headline experiment), ≤ 36 GiB per GPU (engines run at `gpu_memory_utilization` 0.9 of 40 GB); T2-pair reduction about 12 min (two A100 40 GB joined by an NVLink bridge, ≤ 14 GiB per GPU); simulator path about 8 min (one GPU, or the build box, no multi-GPU run); analysis cells on committed logs run on CPU in under 2 min
 - **Builds on (book):**
   - `sec_moe`: router, top-`k`, fine-grained and shared experts; the `MoELayer` dispatch exercises. Not re-taught: the layer itself or load-balancing losses.

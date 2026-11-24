@@ -224,21 +224,21 @@ The owning section defines each name below with `#@save`; every other section im
 | Current hybrid model through Transformers | `Qwen/Qwen3.5-2B` (T1), `Qwen/Qwen3.5-4B`, `Qwen/Qwen3.5-0.8B` |
 | R1, rebuilt from scratch | `Qwen/Qwen3-0.6B` |
 | Workhorse models | `Qwen/Qwen3-1.7B`, `Qwen/Qwen3-4B`, `Qwen/Qwen3-8B`, and their `-Base` variants |
-| Judge (1.5, 2.5 and A2, 3.5, 7.3, 7.9, 8.x) | `Qwen/Qwen3.5-9B` (`c202236235762e1c871ad0ccb60c8ee5ba337b9a`) in bf16, text-only: `AutoModelForCausalLM` builds `Qwen3_5ForCausalLM` and skips the vision tower and the MTP head, 17.9 GB of weights (vLLM: `--language-model-only`). Non-thinking (`enable_thinking=False`, which renders an empty think block), greedy. Only 8 of its 32 layers use full attention, so its KV cache is 32 KB per token. It needs a whole 24 GB GPU. Smaller fallback: `Qwen/Qwen3.5-4B` in bf16 |
+| Judge and labeller after 1.5 (2.5 and A2, 3.2, 3.5, 7.3, 7.9, 8.x, 9.4's generative verifier; ruling 2026-11-24) | Qwen3.8-27B (Apache-2.0) in RedHat's W4A16 build, `RedHatAI/Qwen3.8-27B-INT4` (`71dface38d4cbfa34121f1d446d4a0fa1025f13c`, the revision 3.2 pins in `d2l.EDU_LABELLER_LOCAL`), text-only, served by vLLM (its own environment, 0.33.0) on one whole 24 GB GPU, 16.7 GiB of weights. Non-thinking and greedy unless a section states otherwise. Readers with a smaller card use the same weights in bf16 on OpenRouter (`qwen/qwen3.8-27b`) or replay the committed verdicts. 2.5 serves the same weights in FP8 over two cards with thinking on (`d2l.RAG_JUDGE_LOCAL`), validated against frontier-model labels. 1.5 keeps its own small judge, `Qwen/Qwen3.5-4B` in bf16. Superseded: `Qwen/Qwen3.5-9B` in bf16 (Decision 5) |
 | Helpers (generation inside a system under test, rewriting, paraphrasing, authoring-time checks) | `Qwen/Qwen3.5-4B` and `Qwen/Qwen3.5-2B` in bf16, text-only, non-thinking; `Qwen/Qwen3.8-27B` (bf16, tensor-parallel on a T2 pair, or through an API) for authoring-time checks. Exception: 7.3's Magpie generator stays `Qwen/Qwen3-1.7B` (rules below) |
 | Mixture of experts | `Qwen/Qwen3-30B-A3B` |
 | Encoders and embedders | `answerdotai/ModernBERT-base`, `Qwen/Qwen3-Embedding-0.6B`, `Qwen/Qwen3-Reranker-0.6B` |
 | Native MXFP4 | `openai/gpt-oss-20b` |
-| Fully open checkpoints | `allenai/OLMo-2-1124-7B` |
+| Open training trajectory (stage checkpoints and logs) | `HuggingFaceTB/SmolLM3-3B-checkpoints` (one branch per checkpoint; 4.4 of the plan; replaces `allenai/OLMo-2-1124-7B` and the plan's earlier Olmo 3 7B, 2026-11-24) |
 | Models too large to run locally | reached through an OpenAI-compatible API (1.7); notebooks cache every response, so the build replays them at T0 |
 
 Pin revisions in the notebooks. A blueprint may choose otherwise, with a reason.
 
 Which roles need different models:
 
-- **Different models** wherever one model's output is graded, filtered, selected or labelled by another: answers and their judge; a test-set filter, the drafter and the judge; a data generator and the scorer that selects its data; training data and the judge that evaluates the trained model; the training reward and the evaluation; a text producer and its checker. Prefer a different family where outputs are compared pairwise (1.5, 7.3, 8.x); grading against a gold reference (2.5, 7.9) tolerates the same family.
+- **Different models** wherever one model's output is graded, filtered, selected or labelled by another: answers and their judge; a test-set filter, the drafter and the judge; a data generator and the scorer that selects its data; training data and the judge that evaluates the trained model; the training reward and the evaluation; a text producer and its checker. Prefer a different family, or at least a different generation, where outputs are compared pairwise (1.5, 7.3, 8.x; the judge Qwen3.8-27B is a later generation than the Qwen3 policies it grades); grading against a gold reference (2.5, 7.9) tolerates the same family.
 - **The same model** where a role measures that model (2.5's closed-book probe is the generator) or where weights are shared by construction (policy and reference in 8.x; LoRA arms on one base in 7.9).
 - **The same tokenizer** where two models exchange logits or token ids: teacher and student in logit distillation (9.1, 11.6), draft and target in speculative decoding (12.2). Qwen3 (vocabulary 151,936) and Qwen3.5 (248,320) cannot be mixed in such a pair.
 - **Free to share** for stages of one system under test (2.5's query rewriting, HyDE and contextual headers use its generator).
 
-No section loads a model in 4-bit just to fit memory: it uses a smaller Qwen3.5 model in bf16 instead. 4-bit formats appear only where quantization is the subject (7.6, Chapter 11, 12.1).
+No section loads a model in 4-bit just to fit memory: it uses a smaller Qwen3.5 model in bf16 instead. 4-bit formats appear only where quantization is the subject (7.6, Chapter 11, 12.1), with one exception: the judge after 1.5 is the W4A16 build of Qwen3.8-27B on a whole 24 GB card (ruling 2026-11-24), the one place the 16 GB reader floor does not hold; readers with less memory reach it through OpenRouter.

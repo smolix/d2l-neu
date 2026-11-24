@@ -76,6 +76,8 @@ Decided 2026-10-29:
 
 5. **Judge model.** The part's one judge is `Qwen/Qwen3.5-9B` in bf16, text-only and non-thinking (17.9 GB of weights). It serves 1.5, 2.5 and A2, 3.5, 7.3, 7.9 and 8.x. The readers' floor is one 24 GB RTX 4090, so T1 notebooks that load the judge claim a whole GPU on the build box. Where a model does not fit, a smaller Qwen3.5 in bf16 replaces it, never a 4-bit load; 4-bit appears only where quantization is the subject (7.6, Chapter 11, 12.1). In 1.5, Qwen3-4B stays on as the second, older-family judge for the self-preference exercise. `00_conventions.md` records the judge, the T1 change and the no-4-bit rule.
 
+   **Superseded (author ruling, 2026-11-24).** 1.5 keeps the small Qwen3.5-4B judge in bf16 that the plan gave it. Every later section that judges or labels uses one model, Qwen3.8-27B in RedHat's W4A16 build (`RedHatAI/Qwen3.8-27B-INT4`), served by vLLM on one whole 24 GB GPU, with its bf16 weights on OpenRouter as the readers' fallback. The 16 GB reader floor and the no-4-bit rule are relaxed for this judge only. The same weights in bf16 are 7.8's node-scale target, replacing the plan's interim Qwen3.6-27B. `00_conventions.md` and the plan's Conventions carry the rule.
+
    **Helper models and independence.** Helper roles moved to Qwen3.5 in bf16:
    - 2.5's generator, closed-book probe, query rewriting, HyDE and contextual headers now use Qwen3.5-4B. Part 6 contrasts its 32 KB-per-token KV cache with Qwen3-4B's 147 KB.
    - 2.5's answer check uses Qwen3.8-27B at authoring time, so neither the drafter nor the judge filters the test set.

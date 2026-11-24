@@ -2941,20 +2941,18 @@ its cost and with a random direction as the floor.
    linear once the attention patterns and the normalization factors are
    fixed, and these effects form an *attribution graph*
    :cite:`Ameisen.Lindsey.Pearce.ea.2025`. Gemma Scope 2 publishes
-   transcoders for the Gemma 3 models, for instance
-   `transcoder/layer_13_width_16k_l0_small` in the repository
-   `google/gemma-scope-2-1b-pt` for `google/gemma-3-1b-pt`. The model is
-   gated: its terms have to be accepted on the Hub first. The
-   `config.json` beside the parameters names the two activations of block
-   13 that the transcoder connects, the outputs of
-   `pre_feedforward_layernorm` and of `post_feedforward_layernorm`, and its
-   nonlinearity, a JumpReLU: a feature is active, with the value of its
-   pre-activation, wherever that value exceeds the feature's own
-   threshold. This is a project for a weekend.
-    1. Load the model with Transformers and the parameters of the
-       transcoder from their safetensors file, and apply the
-       reconstruction check of :numref:`subsec_lm_sae_release` to the
-       activation that the transcoder predicts.
+   transcoders for the Gemma 3 models but none for Gemma 4, and
+   Qwen-Scope releases dictionaries for the residual stream only, so we
+   train our own for `google/gemma-4-E2B-it`, the second model family
+   of :numref:`sec_lm_hf_models`. This is a project for a weekend.
+    1. Pick a block in the middle of the model and record, on held-out
+       text, the input of its MLP (the output of the normalization in
+       front of it) and the output of the MLP. Change `d2l.train_sae` so
+       that a `d2l.TopKSAE` encodes the input and is trained to
+       reconstruct the output, and train one with 16,384 features.
+    1. Apply the reconstruction check of
+       :numref:`subsec_lm_sae_release` to the output of the MLP, and
+       measure the loss recovered when the transcoder replaces the MLP.
     1. For one prompt of the landmark list, find the ten transcoder
        features with the largest contribution to the logit of the correct
        city in the sense of :eqref:`eq_lm_dla`, and look at their top

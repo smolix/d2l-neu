@@ -334,6 +334,8 @@ Numerical tests (seed 0, CPU, fp32 unless stated):
 
 ### 4.2 Training the reference model
 
+> **Model kit (2026-11-24).** The OLMo 2 trajectory below (`allenai/OLMo-2-0425-1B` revisions, `lm-olmo2-1b-trajectory.json`) is superseded: the plan reads an open trajectory once, in its 4.4 (this file's 4.5), from SmolLM3-3B's stage checkpoints (`HuggingFaceTB/SmolLM3-3B-checkpoints`, one branch per checkpoint) and its public training logs. Keep the analysis; take the model and the artifact name from the plan.
+
 - **Label:** `sec_lm_reference_model` · **Tier:** T2 (reduced T1 config: the T1 preset, `d2l.r2_config('t1')`, 25.2M parameters, 100M tokens, same code) · **Budget:**
   - T1 preset, one Ada GPU: about 4–6 min of compute at 30–50% MFU (3.8–6.4 min from FLOPs, to be measured), plus about 4 min for evals; peak memory to be measured (expected under 10 GiB with `chunked_lm_loss`).
   - T2 live (`r2_short`: same architecture, 2,000 steps, 1.05B tokens): 3.1–4.0 h on one A100 40 GB at 45–35% MFU (the 312 TFLOP/s peak is the same for the PCIe and SXM parts); memory to be measured, design target ≲ 30 GiB against about 38 GiB usable at micro-batch 8 × 4,096 tokens (2.2 GB of fp32 weights, gradients and AdamW moments for 138.4M parameters; the rest is activations). Fallback if the measured peak exceeds 38 GiB: micro-batch 4 with accumulation 32 on one GPU (accumulation 4 per GPU in the T3 job): the same global batch of 128 sequences and the same loss (numerical test 3 below).
@@ -794,6 +796,8 @@ Numerical tests: (1) `fp8_quant` followed by dequantization has relative error a
 - *Open question for the editor:* whether the weight-only quantizers (7.6, Chapter 11) should import `fake_quant_fp4` from here or define their own; the registry reserves 7.6's names, not this one.
 
 ### 4.5 Continued pretraining and mid-training
+
+> **Model kit (2026-11-24).** The released trajectory is SmolLM3-3B's (`HuggingFaceTB/SmolLM3-3B-checkpoints`: pretraining stages 1 to 3, two long-context stages, mid-training and post-training branches; configurations in `HuggingFaceTB/smollm3-configs`), not OLMo 2's; it fits a T1 slot in bf16. `tab_lm_cpt_stages` keeps its rows. The plan's 4.4 entry is authoritative.
 
 - **Label:** `sec_lm_continued_pretraining` · **Tier:** T2 (reduced T1 config: the base is R2 instead of Qwen3-0.6B-Base, 12M tokens per arm, 3 arms) · **Budget:**
   - T2: four arms (A, B, C and the noise arm A′) of 80M tokens each on Qwen3-0.6B-Base at `T = 2,048`: 4.985 GFLOP per token (6 × 596M matmul parameters + the attention term `12 L (H d_h) T` with `H d_h = 2,048`) gives 3.99e17 FLOP per arm, 0.8–1.0 h at 45–35% of the 312 TFLOP/s A100 peak, 3.2–4.1 h for four arms, plus about 40 min of suite evaluations (to be measured); peak memory to be measured, design target ≲ 30 GiB against about 38 GiB usable on the 40 GB card, at micro-batch 8 × 2,048 with `chunked_lm_loss` (596,049,920 parameters × 16 bytes of fp32 weights, gradients and two AdamW moments is 8.9 GiB; the rest is activations; the full-vocabulary logits of 16k tokens in fp32 would be 9.9 GB without chunking). Fallback if the measured peak exceeds 38 GiB: micro-batch 4 with accumulation 32 (same global batch).

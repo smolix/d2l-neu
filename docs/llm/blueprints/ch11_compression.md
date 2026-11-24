@@ -666,7 +666,7 @@ Numerical tests:
 - *Hessian memory.* If 10 GiB is exceeded, keep `H` on the CPU for `down_proj` and move it for the Cholesky only.
 - *Matching production conventions* (symmetric vs asymmetric, zero-point rounding, group-scale rule) is fiddly; the optional oracle test documents the conventions that must match.
 - *Calibration-domain ablation uses WikiText-2 train and test* (same corpus family): report it as an in-domain effect, not as generalization.
-- *No published Qwen3 4-bit GPTQ checkpoint is assumed:* only the 8-bit config is read (a 4-bit official GPTQ checkpoint for Qwen3-4B was not found under the ID `Qwen/Qwen3-4B-GPTQ-Int4`, which the Hub returned as unavailable).
+- *No published Qwen3 4-bit GPTQ checkpoint is assumed:* only the 8-bit config is read (a 4-bit official GPTQ checkpoint for Qwen3-4B was not found under the ID `Qwen/Qwen3-4B-GPTQ-Int4`, which the Hub returned as unavailable). Update 2026-11-24: the part's judge, `RedHatAI/Qwen3.8-27B-INT4`, is a shipped 4-bit GPTQ checkpoint of a model the part already loads (W4A16 by llm-compressor's GPTQ after AWQ smoothing, groups of 128, symmetric, static act-order); the plan's 11.3 reads its `quantization_config` as text beside the 8-bit one.
 
 ### 11.4 Rotations and vector quantization
 

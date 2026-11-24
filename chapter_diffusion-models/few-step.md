@@ -141,7 +141,7 @@ scores as well as many steps of the original.
 
 A trained field weakens the guarantee. The new pairs end at the model's
 samples, not at the data, so the reflowed model inherits the original's
-errors: on two moons it reproduces the original's samples, their blur
+errors: on two moons it reproduces the original's samples, their flaws
 included (:numref:`subsec_mdl-reflow`), and an image model passes on
 every defect of its samples in the same way. Each round also costs a
 training run, and the best one-step results of :citet:`Liu.Gong.Liu.2022`

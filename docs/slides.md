@@ -634,8 +634,11 @@ python3 tools/slides_to_pptx.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pptx --ve
   metrics (Carlito is metric-compatible with Calibri; code is measured
   conservatively) and picks the largest size up to 22 pt (titles 28 pt,
   tables 20 pt), down to 8 pt. Code runs at about three quarters of the
-  body size; a box's longest code line caps its size so code does not
-  wrap, down to a 12 pt body, below which long lines wrap instead.
+  body size; a code block with long lines shrinks further (to 0.55 of
+  the body, not below 9.5 pt) so it does not wrap, and only then caps the
+  prose size, down to a 12 pt body. Code blocks start at the left margin,
+  and the line breaks pandoc leaves inside an output block's text become
+  real line breaks.
 - Slides that mix text with pictures or tables are laid out again
   (`_restack`): pandoc's own layouts for them overlap (text after a picture
   lands on it; a table after text goes into "Content with Caption", over
@@ -655,10 +658,18 @@ python3 tools/slides_to_pptx.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pptx --ve
   and diagrams, JPEG for photographs): a deck averages under 0.5 MB.
 - The logo and footer live on the slide master, so a lecturer can restyle
   or remove them once (View → Slide Master). Equations are native,
-  editable PowerPoint math.
-- No PowerPoint renderer is installed on the build box, so the fit is
-  computed, not checked visually: if a slide overflows in PowerPoint,
-  adjust the constants at the top of `pptx_fit.py`.
+  editable PowerPoint math. Pandoc puts every shape holding an equation
+  in an `mc:AlternateContent` choice that requires Office 2010 math
+  (`a14`); viewers without it (LibreOffice, python-pptx, other importers)
+  drop the whole shape, so `pptx_fit.py` adds an `mc:Fallback` copy with
+  each equation written as plain text (x², a/b, √x).
+- To check layouts, render real slides with LibreOffice (metric-compatible
+  Carlito for Calibri; DejaVu Sans Mono, about 10% wider than Consolas,
+  for code, so code that fits there fits in PowerPoint):
+  `soffice --headless --convert-to pdf f.pptx`, then
+  `pdftoppm -r 50 -png f.pdf p` and `montage p-*.png -tile 4x grid.png`.
+  python-pptx does not read `mc:AlternateContent`, so it lists no shapes
+  with math in them.
 
 ### Beamer PDF and LaTeX source
 

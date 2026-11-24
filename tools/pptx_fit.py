@@ -51,6 +51,9 @@ BODY_MAX, BODY_MIN = 22, 8
 CODE_FLOOR = 12                       # body size below which long code
                                       # lines wrap rather than shrink it
 CODE_RATIO = 0.78                     # code size / body size, as on the web
+CODE_SHRINK = 0.55                    # a code block may shrink to this share
+CODE_MIN = 9.5                        # of the body size (not below CODE_MIN)
+                                      # to keep its lines unwrapped
 LINE = 1.25                           # line height / font size
 SPACE_BEFORE = 0.3                    # paragraph gap / font size
 INSET_X, INSET_Y = 7.2, 3.6           # pt, PowerPoint's default text insets
@@ -76,8 +79,13 @@ def text_width(s, size, bold=False):
     return f.getlength(s) / 10
 
 
+MONO_EM = 0.61                        # code advance / size: Liberation Mono
+                                      # and DejaVu Sans Mono (LibreOffice's
+                                      # stand-in) 0.60, Consolas 0.55
+
+
 def mono_width(s, size):
-    return len(s.expandtabs(4)) * 0.6 * size
+    return len(s.expandtabs(4)) * MONO_EM * size
 
 
 def wrap_lines(words, width, size):
@@ -323,6 +331,14 @@ def _geom_map(xml):
     return out
 
 
+def _is_code(p):
+    """A code-block paragraph: every run that carries text is Consolas
+    (inline code inside prose mixes Consolas and plain runs)."""
+    runs = [r for r in re.findall(r'<a:r>.*?</a:r>', p, re.S)
+            if re.search(r'<a:t>[^<]*\S', r)]
+    return bool(runs) and all('typeface="Consolas"' in r for r in runs)
+
+
 def _paragraphs(body):
     """Each paragraph as (kind, payload, bulleted)."""
     out = []
@@ -332,13 +348,13 @@ def _paragraphs(body):
             tall = bool(re.search(r'<m:(f|rad|nary|sSubSup)\b', p))
             out.append(('display', tall, False))
             continue
-        if 'typeface="Consolas"' in p and '<a:br' in p or (
-                'typeface="Consolas"' in p and
-                not re.search(r'<a:r><a:rPr(?![^>]*Consolas)[^/]*/>', p)):
+        if _is_code(p):
             lines = []
+            # Lines end at <a:br/> or, in pandoc's output blocks, at a
+            # newline inside the text itself.
             for chunk in re.split(r'<a:br\s*/>', p):
-                lines.append(''.join(re.findall(r'<a:t>([^<]*)</a:t>',
-                                                chunk)))
+                lines += ''.join(re.findall(r'<a:t>([^<]*)</a:t>',
+                                            chunk)).split('\n')
             out.append(('code', lines, False))
             continue
         words = []
@@ -353,8 +369,25 @@ def _paragraphs(body):
     return out
 
 
-def body_height(paras, size, width):
+def _longest(paras):
+    return max((len(ln.expandtabs(4)) for kind, payload, _ in paras
+                if kind == 'code' for ln in payload), default=0)
+
+
+def block_code(paras, size, width):
+    """Code-block size at body `size`: the web ratio, or smaller (down to
+    CODE_SHRINK of the body, not below CODE_MIN) so the lines stay unwrapped.
+    Inline code keeps the web ratio."""
     code = round(size * CODE_RATIO * 2) / 2
+    longest = _longest(paras)
+    if not longest:
+        return code
+    nowrap = math.floor(width / (longest * MONO_EM) * 2) / 2
+    return min(code, max(nowrap, CODE_MIN, round(size * CODE_SHRINK * 2) / 2))
+
+
+def body_height(paras, size, width):
+    code = block_code(paras, size, width)
     h = 0.0
     for i, (kind, payload, bulleted) in enumerate(paras):
         s = code if kind == 'code' else size
@@ -380,12 +413,12 @@ def _ladder(hi, lo):
 
 
 def code_cap(paras, width):
-    """Largest body size whose code lines fit `width` unwrapped (floored)."""
-    longest = max((len(ln.expandtabs(4)) for kind, payload, _ in paras
-                   if kind == 'code' for ln in payload), default=0)
+    """Largest body size whose code blocks fit `width` unwrapped at
+    CODE_SHRINK of it (floored at CODE_FLOOR)."""
+    longest = _longest(paras)
     if not longest:
         return BODY_MAX
-    cap = math.floor(width / (longest * 0.6 * CODE_RATIO) * 2) / 2
+    cap = math.floor(width / (longest * MONO_EM * CODE_SHRINK) * 2) / 2
     return min(BODY_MAX, max(cap, CODE_FLOOR))
 
 
@@ -419,7 +452,7 @@ def _list_style(size):
     return f'<a:lstStyle>{lvls}</a:lstStyle>', int(code * 100)
 
 
-def _apply(sp, size, title=False):
+def _apply(sp, size, title=False, block=None):
     if title:
         lst = (f'<a:lstStyle><a:lvl1pPr><a:defRPr sz="{int(size * 100)}" />'
                f'</a:lvl1pPr></a:lstStyle>')
@@ -445,14 +478,23 @@ def _apply(sp, size, title=False):
             return r
         sp = re.sub(r'<a:r>.*?</a:r>', kick, sp, flags=re.S)
     if code_sz:
-        def code_run(m):
-            r = m.group(0)
-            if 'typeface="Consolas"' not in r:
-                return r
-            r = re.sub(r'\ssz="\d+"', '', r)
-            return r.replace('<a:rPr', f'<a:rPr sz="{code_sz}"', 1)
-        sp = re.sub(r'<a:rPr\b[^>]*?(?:/>|>.*?</a:rPr>)', code_run, sp,
-                    flags=re.S)
+        def para(pm):
+            p = pm.group(0)
+            code = _is_code(p)
+            sz = int(block * 100) if block and code else code_sz
+            if code:  # code blocks start at the margin, as on the web
+                p = re.sub(r'<a:pPr\b(?![^>]*\bmarL=)', '<a:pPr marL="0"',
+                           p, count=1)
+
+            def code_run(m):
+                r = m.group(0)
+                if 'typeface="Consolas"' not in r:
+                    return r
+                r = re.sub(r'\ssz="\d+"', '', r)
+                return r.replace('<a:rPr', f'<a:rPr sz="{sz}"', 1)
+            return re.sub(r'<a:rPr\b[^>]*?(?:/>|>.*?</a:rPr>)', code_run, p,
+                          flags=re.S)
+        sp = re.sub(r'<a:p>.*?</a:p>', para, sp, flags=re.S)
     return sp
 
 
@@ -701,6 +743,127 @@ def _wrap_table_math(xml):
                   frame, xml, flags=re.S)
 
 
+M_NS = '{http://schemas.openxmlformats.org/officeDocument/2006/math}'
+SUP = dict(zip('0123456789+-=()niT′″*', '⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱᵀ′″*'))
+SUB = dict(zip('0123456789+-=()ijkt', '₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ᵢⱼₖₜ'))
+
+
+def _script(text, table, mark):
+    """`text` as Unicode super/subscript, else `mark` + text."""
+    if text and all(c in table for c in text):
+        return ''.join(table[c] for c in text)
+    return mark + (text if len(text) == 1 else f'({text})')
+
+
+def _math_text(e):
+    """Linear plain text for an OMML element (fallback for viewers
+    without equation support): x², a/b, √x, ∑ᵢ, (a, b)."""
+    tag = e.tag.replace(M_NS, '')
+    kid = {c.tag.replace(M_NS, ''): c for c in e}
+
+    def part(name):
+        return _math_text(kid[name]) if name in kid else ''
+
+    def prop(pr, name, default):
+        el = kid.get(pr)
+        el = el.find(f'{M_NS}{name}') if el is not None else None
+        return el.get(f'{M_NS}val', default) if el is not None else default
+
+    def group(t):
+        return t if len(t) <= 1 or re.fullmatch(r'[\w.]+', t) else f'({t})'
+
+    if tag == 't':
+        return e.text or ''
+    if tag.endswith('Pr'):
+        return ''
+    if tag in ('sSup', 'sSub', 'sSubSup', 'sPre'):
+        out = part('e')
+        if 'sub' in kid:
+            out += _script(part('sub'), SUB, '_')
+        if 'sup' in kid:
+            out += _script(part('sup'), SUP, '^')
+        return out
+    if tag == 'f':
+        return f"{group(part('num'))}/{group(part('den'))}"
+    if tag == 'rad':
+        deg = part('deg')
+        return (_script(deg, SUP, '') if deg else '') + '√' + group(part('e'))
+    if tag == 'd':
+        beg, end = prop('dPr', 'begChr', '('), prop('dPr', 'endChr', ')')
+        sep = prop('dPr', 'sepChr', '|')
+        sep = ', ' if sep == '|' else sep
+        return beg + sep.join(_math_text(c) for c in e
+                              if c.tag == f'{M_NS}e') + end
+    if tag == 'nary':
+        out = prop('naryPr', 'chr', '∫')
+        if 'sub' in kid:
+            out += _script(part('sub'), SUB, '_')
+        if 'sup' in kid:
+            out += _script(part('sup'), SUP, '^')
+        return out + ' ' + part('e')
+    if tag in ('limLow', 'limUpp'):
+        mark = '_' if tag == 'limLow' else '^'
+        return part('e') + mark + group(part('lim'))
+    if tag == 'acc':
+        return part('e') + prop('accPr', 'chr', '̂')
+    if tag in ('m', 'eqArr'):
+        rows = [' '.join(_math_text(c) for c in r) if r.tag == f'{M_NS}mr'
+                else _math_text(r) for r in e if not r.tag.endswith('Pr')]
+        return '; '.join(rows)
+    if tag == 'func':
+        return part('fName') + ' ' + part('e')
+    return ''.join(_math_text(c) for c in e)
+
+
+def _math_run(m):
+    import xml.etree.ElementTree as ET
+    try:
+        text = _math_text(ET.fromstring(m.group(1)))
+    except ET.ParseError:
+        text = ' '.join(re.findall(r'<m:t[^>]*>([^<]*)</m:t>', m.group(1)))
+    return f'<a:r><a:rPr/><a:t>{_esc(text)}</a:t></a:r>'
+
+
+def _add_math_fallback(xml):
+    """Give every equation-bearing shape a plain-text mc:Fallback.
+
+    Pandoc's mc:AlternateContent has only an mc:Choice that requires the
+    a14 (Office 2010 drawing) namespace. PowerPoint takes it; LibreOffice,
+    python-pptx and other importers that do not support a14 drop the whole
+    shape, so a slide loses its text or table. The fallback is the same shape
+    with each equation written out as linear text (x², a/b, √x).
+    """
+    def alt(m):
+        if '<mc:Fallback>' in m.group(0):
+            return m.group(0)
+        body = re.sub(r'<a14:m>(.*?)</a14:m>', _math_run, m.group(2),
+                      flags=re.S)
+        return (f'{m.group(1)}{m.group(2)}</mc:Choice>'
+                f'<mc:Fallback>{body}</mc:Fallback></mc:AlternateContent>')
+    return re.sub(r'(<mc:AlternateContent\b[^>]*>\s*<mc:Choice\b[^>]*'
+                  r'Requires="a14">)(.*?)</mc:Choice>\s*(?:<mc:Fallback>.*?'
+                  r'</mc:Fallback>\s*)?</mc:AlternateContent>', alt, xml,
+                  flags=re.S)
+
+
+def _split_newlines(xml):
+    """Turn newlines inside a run's text into <a:br/> line breaks.
+
+    Pandoc writes a code output block as one run whose text holds the line
+    breaks; LibreOffice turns them into bulleted paragraphs and PowerPoint
+    does not reliably break there.
+    """
+    def run(m):
+        r = m.group(0)
+        t = re.search(r'<a:t>([^<]*)</a:t>', r)
+        if not t or '\n' not in t.group(1):
+            return r
+        head, tail = r[:t.start()], r[t.end():]
+        return '<a:br />'.join(f'{head}<a:t>{line}</a:t>{tail}'
+                               for line in t.group(1).split('\n'))
+    return re.sub(r'<a:r>.*?</a:r>', run, xml, flags=re.S)
+
+
 def _number_shapes(xml):
     """Give every shape on a slide its own id (1 is the slide's root group).
 
@@ -728,7 +891,7 @@ def fit(pptx: Path, logo: Path = None):
         geo = dict(master)
         geo.update(_geom_map(files['ppt/slideLayouts/' +
                                    layout.group(1).decode()].decode()))
-        xml = files[name].decode()
+        xml = _split_newlines(files[name].decode())
         lname = re.search(r'<p:cSld name="([^"]*)"', files[
             'ppt/slideLayouts/' + layout.group(1).decode()].decode())
         xml = _restack(xml, geo, lname.group(1) if lname else '')
@@ -753,12 +916,15 @@ def fit(pptx: Path, logo: Path = None):
                 return _apply(s, size, title=True)
             if typ in ('dt', 'ftr', 'sldNum', 'subTitle'):
                 return s
-            size = fit_size(_paragraphs(body), w, h)
+            paras = _paragraphs(body)
+            size = fit_size(paras, w, h)
             sizes.append(('body', size))
-            return _apply(s, size)
+            return _apply(s, size,
+                          block=block_code(paras, size, w - 2 * INSET_X))
 
         xml = re.sub(r'<p:sp>.*?</p:sp>', sp, xml, flags=re.S)
-        files[name] = _number_shapes(_wrap_table_math(xml)).encode()
+        files[name] = _add_math_fallback(
+            _number_shapes(_wrap_table_math(xml))).encode()
         report.append((name, sizes))
     # Pandoc keeps the reference deck's master and layouts but not their
     # media, so the logo they point at has to be put back.

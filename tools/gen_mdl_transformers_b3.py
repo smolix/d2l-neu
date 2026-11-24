@@ -283,15 +283,19 @@ def fig_kv_buffer():
 
 
 if __name__ == "__main__":
+    # gen_mdl_transformers_figures.py runs the b* modules in one process, so
+    # fl.WRITTEN also holds the other modules' figures: touch only our own.
+    start = len(fl.WRITTEN)
     fig_kv_cache()
     fig_gqa()
     fig_roofline()
     fig_kv_buffer()
-    for p in fl.WRITTEN:
+    ours = fl.WRITTEN[start:]
+    for p in ours:
         _unitless(p)
     import shutil  # the slides read @fig figures from img/auto
-    for p in fl.WRITTEN:
+    for p in ours:
         shutil.copyfile(p, os.path.join(os.path.dirname(p), "auto",
                                         os.path.basename(p)))
-    for p in fl.WRITTEN:
+    for p in ours:
         print("wrote", p, "and its copy in img/auto")

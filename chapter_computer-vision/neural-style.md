@@ -1107,10 +1107,20 @@ variable; the network parameters are frozen:
 @neural-style-initializing-the-synthesized-image-2
 :::
 
-::: {.slide title="Optimization loop"}
+::: {.slide title="Optimization loop" except="jax"}
 Adam updates the image pixels; the VGG weights stay frozen:
 
 @neural-style-training-1
+:::
+
+::: {.slide title="Optimization Loop: The Step" only="jax"}
+Adam updates the image pixels; the VGG weights stay frozen:
+
+@-neural-style-training-1[1-25]
+:::
+
+::: {.slide title="Optimization Loop: Iterating" only="jax"}
+@neural-style-training-1[27-]
 :::
 
 ::: {.slide title="Optimization result" except="jax"}

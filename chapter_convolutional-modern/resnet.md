@@ -1355,12 +1355,24 @@ ResNet's basic `Residual` block stacks two bias-free $3\times 3$ convolutions wi
 :::
 :::
 
-::: {.slide title="Implementing the Residual Block"}
+::: {.slide title="Implementing the Residual Block" except="jax"}
 [Code Implementation]{.kicker}
 
 Setting `use_1x1conv` or `strides != 1` enables the $1\times 1$ projection shortcut `conv3` + `bn3`:
 
 @resnet-residual-blocks-1
+:::
+
+::: {.slide title="Implementing the Residual Block: Convolutions" only="jax"}
+[Code Implementation]{.kicker}
+
+Setting `use_1x1conv` or `strides != 1` enables the $1\times 1$ projection shortcut `conv3` + `bn3`:
+
+@-resnet-residual-blocks-1[1-18]
+:::
+
+::: {.slide title="Implementing the Residual Block: Shortcut and Forward Pass" only="jax"}
+@resnet-residual-blocks-1[19-]
 :::
 
 ::: {.slide title="Verifying Shape Preservation and Stride-2 Downsampling"}
@@ -1465,12 +1477,36 @@ Doubling channel width quadruples dense convolution cost ($c_{\textrm{i}} c_{\te
 :::
 :::
 
-::: {.slide title="Implementing the ResNeXt Block"}
+::: {.slide title="Implementing the ResNeXt Block" except="jax,tensorflow"}
 [ResNeXt Code]{.kicker}
 
 `ResNeXtBlock` generalizes `Residual` and ResNet-50's bottleneck into one reusable module:
 
 @resnet-resnext-1
+:::
+
+::: {.slide title="Implementing the ResNeXt Block: Convolutions" only="jax"}
+[ResNeXt Code]{.kicker}
+
+`ResNeXtBlock` generalizes `Residual` and ResNet-50's bottleneck into one reusable module:
+
+@-resnet-resnext-1[1-21]
+:::
+
+::: {.slide title="Implementing the ResNeXt Block: Shortcut and Forward Pass" only="jax"}
+@resnet-resnext-1[22-]
+:::
+
+::: {.slide title="Implementing the ResNeXt Block: Convolutions" only="tensorflow"}
+[ResNeXt Code]{.kicker}
+
+`ResNeXtBlock` generalizes `Residual` and ResNet-50's bottleneck into one reusable module:
+
+@-resnet-resnext-1[1-19]
+:::
+
+::: {.slide title="Implementing the ResNeXt Block: Shortcut and Forward Pass" only="tensorflow"}
+@resnet-resnext-1[20-]
 :::
 
 ::: {.slide title="DenseNet: Concatenation vs. Quadratic Activation Memory"}

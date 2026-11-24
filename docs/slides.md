@@ -638,7 +638,16 @@ python3 tools/slides_to_pptx.py _slides/pytorch/chapter_x/f.qmd /tmp/f.pptx --ve
   the body, not below 9.5 pt) so it does not wrap, and only then caps the
   prose size, down to a 12 pt body. Code blocks start at the left margin,
   and the line breaks pandoc leaves inside an output block's text become
-  real line breaks.
+  real line breaks. Text is measured after unescaping XML entities
+  (`&quot;` is one character, not six; before 2026-11-24 a docstring's
+  quotes shrank whole slides).
+- A slide whose only content is one prose box (no code, picture or
+  table) may grow to 26 pt (`SPARSE_MAX`), and a lone text box that still
+  fills less than 60% of the body height (`SPARSE_FILL`) is centred
+  vertically instead of leaving the lower half empty.
+- `gen_slides.py` drops a slide whose source content all resolves away
+  (typically a "Setup" slide holding only the standard imports cell,
+  which every edition hides); a slide written with a title only stays.
 - Slides that mix text with pictures or tables are laid out again
   (`_restack`): pandoc's own layouts for them overlap (text after a picture
   lands on it; a table after text goes into "Content with Caption", over

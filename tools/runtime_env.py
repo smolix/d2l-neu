@@ -368,8 +368,9 @@ FULL_CARD_NOTEBOOKS = {
     # peaks of 21.7 GiB (eight 3,300-token prompts) and 22.4 GiB (four of
     # 6,300) on an RTX 4090. The normal build generates eight answers again,
     # so it needs a whole card too. Its judging runs (D2L_RERUN=rag-judge)
-    # serve Qwen3.8-27B with vLLM over two whole cards and are launched by
-    # hand with CUDA_VISIBLE_DEVICES set, not through the scheduler.
+    # serve Qwen3.8-27B in 4-bit weights (W4A16) with vLLM, one copy on each
+    # visible card (a whole 24 GB card apiece), and are launched by hand with
+    # CUDA_VISIBLE_DEVICES set, not through the scheduler.
     "chapter_lm-encoders/rag.ipynb": 1,
     # 19.6 reads the recorded answers in a normal build, but times retrieval
     # and reranking for the text, and its regeneration runs

@@ -803,9 +803,47 @@ class RunTables(unittest.TestCase):
         self.assertEqual(j.correct.tolist(), [True, None])
         self.assertEqual(j.faithful.tolist(), [None, True])
         self.assertEqual(j.supported.tolist(), [False, False])
-        self.assertEqual(j.max_new_tokens.tolist(), [
-            d2l.RAG_JUDGE_LOCAL['max_new_tokens'], 6000])
+        self.assertEqual(j.max_new_tokens.tolist(), [3000, 6000])
         self.assertEqual(j.backend.tolist()[1], 'local')
+        self.assertEqual(j.judge.tolist(), [None, None])
+
+
+class JudgeServers(unittest.TestCase):
+    """The RAG judge shares chapter 20's judge: the same weights, revision
+    and vLLM, and the same server flags except the context length, which
+    also holds the longest RAG judge prompt next to 12,000 new tokens."""
+
+    def cmds(self, make, used):
+        seen = []
+        out = types.SimpleNamespace(stdout=f'{used}, 24564\n')
+        with unittest.mock.patch('subprocess.run', return_value=out), \
+                unittest.mock.patch.object(
+                    d2l, 'LocalChatServer',
+                    side_effect=lambda cmd, **kw: seen.append(cmd)):
+            make(gpus=['0', '3'], vllm='/x/vllm')
+        return seen
+
+    def test_same_judge(self):
+        r, e = d2l.RAG_JUDGE_LOCAL, d2l.EDU_LABELLER_LOCAL
+        self.assertEqual({k: r[k] for k in e}, e)
+        self.assertEqual(r['max_new_tokens'], 12_000)
+        self.assertTrue(r['thinking'])
+
+    def test_flags(self):
+        for used in (1, 4000):  # an idle card, and one holding memory
+            rag = self.cmds(d2l.rag_judge_servers, used)
+            edu = self.cmds(d2l.edu_label_servers, used)
+            self.assertEqual(len(rag), 2)
+            for a, b in zip(rag, edu):
+                i = a.index('--max-model-len')
+                self.assertEqual(a[i + 1], str(
+                    d2l.RAG_JUDGE_LOCAL['max_model_len']))
+                self.assertEqual(a[:i + 1] + a[i + 2:],
+                                 b[:i + 1] + b[i + 2:])
+            self.assertIn('CUDA_VISIBLE_DEVICES=3', rag[1])
+            self.assertGreaterEqual(d2l.RAG_JUDGE_LOCAL['max_model_len'],
+                                    d2l.RAG_JUDGE_LOCAL['max_new_tokens']
+                                    + 7200)
 
 
 class RunConfig(unittest.TestCase):

@@ -866,7 +866,7 @@ Both architectures finish near 94% validation accuracy (93.7--94.2% across runs)
 
 1. **Architecture--optimizer coupling:** Under plain SGD without momentum or weight decay (:numref:`sec_resnet`), `RegNetX32` drops to ~91% while ResNet-18 reaches ~93%; `RegNetX32` pulls even only under the momentum-and-weight-decay protocol on which the RegNet space was calibrated.
 2. **Dataset ceiling:** Scaling up to four-stage RegNets (RegNetX-400MF, -800MF, -1.6GF; 4.8--8.3M parameters) plateaus at the same 93--94% ceiling on Fashion-MNIST.
-3. **Arithmetic vs. GPU latency:** Because grouped convolutions have lower GPU arithmetic intensity than dense ones (:numref:`sec_efficient_cnns`), an epoch of `RegNetX32` takes ~$1.5\times$ longer than ResNet-18 despite performing a third of the multiply-adds. On GPUs, RegNets run up to $5\times$ faster than EfficientNets at equal multiply-adds, and match ResNet latency at equal *activation* counts :cite:`Radosavovic.Kosaraju.Girshick.ea.2020`.
+3. **Arithmetic vs. GPU latency:** An epoch of `RegNetX32` takes roughly $1.5\times$ as long as one of ResNet-18, despite a third of the multiply-adds. Multiply-adds count arithmetic, not time (:numref:`sec_efficient_cnns`): `RegNetX32` is nearly twice as deep, and its many narrow, grouped layers write about $2.5\times$ as many activations per image, so memory traffic rather than arithmetic sets the pace. The RegNet authors found the same on ImageNet :cite:`Radosavovic.Kosaraju.Girshick.ea.2020`: GPU runtime tracks activations more closely than multiply-adds, RegNetX models train and run about as fast as ResNets with equal activation counts, and at comparable multiply-adds RegNets run up to $5\times$ faster than EfficientNets, whose activations grow linearly with multiply-adds.
 
 ## Summary
 
@@ -1114,7 +1114,7 @@ Because ResNet-18 shares the stem–body–head template, we subclass `AnyNet` a
 ::: {.col}
 - **1. Architecture–optimizer coupling:** Without momentum + weight decay, `RegNetX32` drops to $\approx 91\%$ vs. ResNet-18's $\approx 93\%$.
 - **2. Dataset ceiling:** Larger 4-stage RegNets plateau at the same $\approx 94\%$ Fashion-MNIST ceiling.
-- **3. GPU latency:** Grouped 32-layer `RegNetX32` takes $1.5\times$ longer per epoch than 18-layer dense ResNet-18, but runs **$5\times$ faster** than depthwise EfficientNets at equal FLOPs.
+- **3. GPU latency:** `RegNetX32` (32 layers, grouped) takes roughly $1.5\times$ as long per epoch as ResNet-18 (18 layers, dense) at a third of the multiply-adds: runtime tracks activations, not FLOPs. At comparable FLOPs, RegNets run **up to $5\times$ faster** than EfficientNets.
 :::
 
 ::: {.col .fig .big}

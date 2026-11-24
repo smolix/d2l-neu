@@ -185,9 +185,10 @@ def _unitless(path):
 
 
 if __name__ == "__main__":
+    start = len(fl.WRITTEN)  # shared with the other b* parts in one process
     fig_chinchilla()
     fig_kaplan_chinchilla()
-    for p in fl.WRITTEN:
+    for p in fl.WRITTEN[start:]:
         _unitless(p)
         auto = os.path.join(os.path.dirname(p), "auto", os.path.basename(p))
         shutil.copyfile(p, auto)  # The slides read figures from img/auto

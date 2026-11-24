@@ -263,10 +263,10 @@ def _unitless(path):
 
 
 if __name__ == "__main__":
+    start = len(fl.WRITTEN)  # shared with the other b* parts in one process
     fig_moe()
     fig_moe_fine()
     fig_moe_capacity()
-    for p in fl.WRITTEN:
+    for p in fl.WRITTEN[start:]:
         _unitless(p)
-    for p in fl.WRITTEN:
         print("wrote", p)

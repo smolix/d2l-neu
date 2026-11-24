@@ -651,8 +651,8 @@ $\mathcal{L}_{\mathrm{RF}}/2$.
 #@tab mxnet
 def make_net():                         # init.Xavier() is Glorot uniform; biases 0
     net = gluon.nn.HybridSequential()
-    net.add(gluon.nn.Dense(64, activation='tanh'),
-            gluon.nn.Dense(64, activation='tanh'), gluon.nn.Dense(2))
+    net.add(gluon.nn.Dense(256, activation='tanh'),
+            gluon.nn.Dense(256, activation='tanh'), gluon.nn.Dense(2))
     net.initialize(init.Xavier())
     net.hybridize()
     return net
@@ -660,7 +660,7 @@ def make_net():                         # init.Xavier() is Glorot uniform; biase
 def field(net, x, t):                   # the time enters centered, as 2t - 1
     return net(mnp.concatenate([x, 2 * t - 1], axis=1))
 
-def train_rf(sample_pairs, steps=4000, tail=500):
+def train_rf(sample_pairs, steps=10000, batch=2048, tail=500):
     """Regress v(x_t, t) on eps - x0 (papers: -(x1 - x0) at time 1 - t).
     Return the net and the mean tail loss."""
     net = make_net()
@@ -669,8 +669,8 @@ def train_rf(sample_pairs, steps=4000, tail=500):
                             {'learning_rate': 3e-3, 'lr_scheduler': lr})
     tail_sum = 0
     for step in range(steps):
-        x0, eps = sample_pairs(256)                # data, noise
-        t = mnp.random.uniform(0, 1, (256, 1))
+        x0, eps = sample_pairs(batch)              # data, noise
+        t = mnp.random.uniform(0, 1, (batch, 1))
         xt = (1 - t) * x0 + t * eps                # a point on each segment
         with autograd.record():
             loss = ((field(net, xt, t) - (eps - x0))**2).mean()
@@ -683,9 +683,9 @@ def train_rf(sample_pairs, steps=4000, tail=500):
 
 ```{.python .input #score-matching-diffusion-flow-cfm-train}
 #@tab pytorch
-def make_net():                         # 3 -> 64 -> 64 -> 2, Glorot weights, zero biases
-    net = nn.Sequential(nn.Linear(3, 64), nn.Tanh(), nn.Linear(64, 64), nn.Tanh(),
-                        nn.Linear(64, 2))
+def make_net():                         # 3 -> 256 -> 256 -> 2, Glorot weights, zero biases
+    net = nn.Sequential(nn.Linear(3, 256), nn.Tanh(), nn.Linear(256, 256), nn.Tanh(),
+                        nn.Linear(256, 2))
     for layer in net[::2]:
         nn.init.xavier_uniform_(layer.weight)
         nn.init.zeros_(layer.bias)
@@ -694,7 +694,7 @@ def make_net():                         # 3 -> 64 -> 64 -> 2, Glorot weights, ze
 def field(net, x, t):                   # the time enters centered, as 2t - 1
     return net(torch.cat([x, 2 * t - 1], 1))
 
-def train_rf(sample_pairs, steps=4000, tail=500):
+def train_rf(sample_pairs, steps=10000, batch=2048, tail=500):
     """Regress v(x_t, t) on eps - x0 (papers: -(x1 - x0) at time 1 - t).
     Return the net and the mean tail loss."""
     net = make_net()
@@ -702,8 +702,8 @@ def train_rf(sample_pairs, steps=4000, tail=500):
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, steps)   # 3e-3 -> 0
     tail_sum = torch.zeros(())
     for step in range(steps):
-        x0, eps = sample_pairs(256)                # data, noise
-        t = torch.rand(256, 1)
+        x0, eps = sample_pairs(batch)              # data, noise
+        t = torch.rand(batch, 1)
         xt = (1 - t) * x0 + t * eps                # a point on each segment
         loss = ((field(net, xt, t) - (eps - x0))**2).mean()
         opt.zero_grad()
@@ -718,8 +718,8 @@ def train_rf(sample_pairs, steps=4000, tail=500):
 ```{.python .input #score-matching-diffusion-flow-cfm-train}
 #@tab tensorflow
 def make_net():                         # Dense: Glorot-uniform weights, zero biases
-    net = tf.keras.Sequential([tf.keras.layers.Dense(64, 'tanh'),
-                               tf.keras.layers.Dense(64, 'tanh'),
+    net = tf.keras.Sequential([tf.keras.layers.Dense(256, 'tanh'),
+                               tf.keras.layers.Dense(256, 'tanh'),
                                tf.keras.layers.Dense(2)])
     net.build((None, 3))
     return net
@@ -727,7 +727,7 @@ def make_net():                         # Dense: Glorot-uniform weights, zero bi
 def field(net, x, t):                   # the time enters centered, as 2t - 1
     return net(tf.concat([x, 2 * t - 1], 1))
 
-def train_rf(sample_pairs, steps=4000, tail=500):
+def train_rf(sample_pairs, steps=10000, batch=2048, tail=500):
     """Regress v(x_t, t) on eps - x0 (papers: -(x1 - x0) at time 1 - t).
     Return the net and the mean tail loss."""
     net = make_net()
@@ -736,8 +736,8 @@ def train_rf(sample_pairs, steps=4000, tail=500):
 
     @tf.function
     def train_step():
-        x0, eps = sample_pairs(256)                # data, noise
-        t = tf.random.uniform((256, 1))
+        x0, eps = sample_pairs(batch)              # data, noise
+        t = tf.random.uniform((batch, 1))
         xt = (1 - t) * x0 + t * eps                # a point on each segment
         with tf.GradientTape() as tape:
             loss = tf.reduce_mean((field(net, xt, t) - (eps - x0))**2)
@@ -755,7 +755,7 @@ def train_rf(sample_pairs, steps=4000, tail=500):
 
 ```{.python .input #score-matching-diffusion-flow-cfm-train}
 #@tab jax
-def make_params(key, sizes=(3, 64, 64, 2)):    # Glorot-uniform weights, zero biases
+def make_params(key, sizes=(3, 256, 256, 2)):  # Glorot-uniform weights, zero biases
     glorot = jax.nn.initializers.glorot_uniform()
     keys = jax.random.split(key, len(sizes) - 1)
     return [(glorot(k, (i, o)), jnp.zeros(o))
@@ -770,15 +770,15 @@ def mlp(params, x):
 def field(params, x, t):                # the time enters centered, as 2t - 1
     return mlp(params, jnp.concatenate([x, 2 * t - 1], 1))
 
-def train_rf(sample_pairs, steps=4000, tail=500):
+def train_rf(sample_pairs, steps=10000, batch=2048, tail=500):
     """Regress v(x_t, t) on eps - x0 (papers: -(x1 - x0) at time 1 - t).
     Return the parameters and the mean tail loss; sample_pairs(key, n) draws
     n (data, noise) pairs."""
     opt = optax.adam(optax.cosine_decay_schedule(3e-3, steps))   # 3e-3 -> 0
     def loss_fn(params, key):
         k_pairs, k_t = jax.random.split(key)
-        x0, eps = sample_pairs(k_pairs, 256)       # data, noise
-        t = jax.random.uniform(k_t, (256, 1))
+        x0, eps = sample_pairs(k_pairs, batch)     # data, noise
+        t = jax.random.uniform(k_t, (batch, 1))
         xt = (1 - t) * x0 + t * eps                # a point on each segment
         return ((field(params, xt, t) - (eps - x0))**2).mean()
     def step(carry, key):
@@ -829,7 +829,8 @@ print(f'floor of the independent pairing, per coordinate: {pairing_floor(moons, 
 
 The floor is about $1.37$ per coordinate, and the estimate moves in the
 second decimal from one draw to the next. A perfect network would stop there.
-Ours has two hidden layers and $4{,}000$ steps to get close.
+Ours has two hidden layers of $256$ units and $10{,}000$ steps of $2{,}048$
+pairs each to get close.
 
 ```{.python .input #mdl-flow-matching-transport-example-two-moons-1}
 #@tab mxnet
@@ -874,16 +875,16 @@ net, plateau = train_rf(independent_pairs)
 print(f'CFM loss, mean of the last 500 batches: {plateau:.2f}')
 ```
 
-The loss settles at about $1.4$ per coordinate, a few hundredths above the
-floor. A loss of $1.4$ therefore does not mean a poor fit. Almost all of it
-is the disagreement of crossing segments, which no network can remove. By
+The loss settles at about $1.4$ per coordinate, within a few hundredths of
+the floor. A loss of $1.4$ therefore does not mean a poor fit. Almost all of
+it is the disagreement of crossing segments, which no network can remove. By
 the CFM theorem only the excess over the floor is error of the field.
 
 Those few hundredths are not as small as they look, though. The target has
 mean square $2$ per coordinate, one each from the noise and the standardized
 data, and $1.37$ of it is floor. The field itself therefore has a mean
-square of only about $0.6$, and its error is of the order of a tenth of
-that. We shall meet this error again in the samples.
+square of only about $0.6$, and its error is a few percent of that. We
+shall meet this error again in the samples.
 
 Sampling integrates $\dot{\mathbf{x}} = \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$
 from $t = 1$ down to $0$ with Euler's method
@@ -943,24 +944,25 @@ def euler_path(params, z, steps):
 One step of the exact field would give the point mass that scored $0.9$. For
 the trained field, the cell integrates the noise array `z_eval` with
 $K = 1, 2, 4, \ldots, 64$ steps and plots the squared energy distance to the
-held-out data on log–log axes.
+held-out data on log–log axes. The estimate is unbiased, so at the
+resolution of the metric it can turn negative; the plot clips it at
+$10^{-3}$.
 
 ```{.python .input #score-matching-diffusion-flow-steps-quality}
 steps_list = [1, 2, 4, 8, 16, 32, 64]
 eds = [energy_distance(euler_path(net, z_eval, K)[-1], held_out) for K in steps_list]
 print('  '.join(f'{K}: {e:.3f}' for K, e in zip(steps_list, eds)))
-d2l.plot(steps_list, eds, 'Euler steps', 'squared energy distance',
-         xscale='log', yscale='log')
+d2l.plot(steps_list, np.maximum(eds, 1e-3), 'Euler steps',
+         'squared energy distance', xscale='log', yscale='log')
 ```
 
-One step scores about $0.7$, the same order as the point mass at the mean
-($0.9$): the network has learned, imperfectly, the collapse that the exact
-field performs at $t = 1$. Two steps score about $0.16$, four about $0.04$,
-eight $0.01$ to $0.02$, and from sixteen steps on the score levels off,
-usually at a few thousandths and never much above $0.01$. The decline is
-Euler's discretization error. The level that remains is the error of the
-trained field; it varies with the training run and is often as small as the
-metric can resolve with $2{,}048$ points. More steps help, as they should
+One step scores $0.7$ to $0.75$, the same order as the point mass at the
+mean ($0.9$): the network has learned, imperfectly, the collapse that the
+exact field performs at $t = 1$. Two steps score $0.16$ to $0.19$, four $0.03$
+to $0.04$, eight about $0.01$ or less, and from sixteen steps on the score stays
+within a few thousandths of zero. The decline is Euler's discretization
+error. What remains is the error of the trained field, and it is as small as
+the metric can resolve with $2{,}048$ points. More steps help, as they should
 for a field fitted without a solver; the field trained through ten Euler
 steps in :numref:`sec_mdl-neural-odes` got worse when its steps were
 refined.
@@ -978,15 +980,14 @@ for ax, (title, s) in zip(axes, panels + [('held-out data', held_out)]):
 ```
 
 One step gives a blob around the mean and two a slanted band. Eight steps
-spread the cloud over the region of the two moons, and to the eye thirty-two
-add little to eight, although the score still tells them apart. Now set
-either beside the data in the last panel. The data are two thin crescents.
-The samples are thick and smeared, and their two crescents run into each
-other. More steps do not sharpen them, so the blur belongs to the field and
-not to the solver: it is what the few hundredths between the loss and its
-floor look like.
+spread the cloud into two crescents, with many points still strewn between
+them. Thirty-two steps clear most of these and draw two separate moons, like
+the data in the last panel. Set them beside the data, though, and they are
+a little thicker, with a few points left in the gaps. More steps do not
+remove them, so these flaws belong to the field and not to the solver:
+they are what the few hundredths between the loss and its floor look like.
 
-The score hardly registers this blur. It compares mean distances between
+The score hardly registers these flaws. It compares mean distances between
 points, so it reports where the mass lies long before it reports how sharp
 the edges are, and a score at the resolution of the metric does not certify
 samples as sharp as the data. What more steps do remove is the solver's
@@ -1140,7 +1141,7 @@ net2, plateau2 = train_rf(model_pairs)
 print(f'reflow loss, mean of the last 500 batches: {plateau2:.4f}')
 ```
 
-The reflow loss settles at a few thousandths or less, where the first loss
+The reflow loss settles below a thousandth, where the first loss
 stopped at $1.4$, so the new segments almost never cross. A field without
 crossings is nearly constant along its trajectories, and then a few Euler
 steps should do. The next cell samples from both models with $1$, $2$ and
@@ -1166,10 +1167,11 @@ print(f'mean squared pair length: independent {np.mean(np.sum((eps_pairs - x0_in
 ```
 
 One Euler step of the reflowed model scores the same as thirty-two steps of
-the original: a few thousandths or less, where the original's single step
-scored about $0.7$. It could not have done better. The reflowed network was
-trained to reproduce the original's $32$-step endpoints, so it inherits the
-first model's error along with its samples.
+the original: a thousandth or two at most, the resolution of the metric,
+where the original's single step scored about $0.7$. It could not have done
+better. The reflowed network was trained to reproduce the original's
+$32$-step endpoints, so it inherits the first model's error along with its
+samples.
 
 The mean squared length of the pairs drops from $4$ to about $0.3$, far
 below the $1.25$ that the bound guarantees. The slack is in the first step of
@@ -1191,7 +1193,7 @@ print(f'mean distance from the chord: original {chord_gap(euler_path(net, z_eval
 The original trajectories wander about a quarter of a unit from their
 chords. They set out toward the mean, where a single Euler step left them,
 and turn out to the moons only later. The reflowed ones stay about a
-hundredth from theirs, which is why one step suffices. Reflow straightens a
+hundredth of theirs, which is why one step suffices. Reflow straightens a
 flow, but it does not make it optimal. In more than one dimension a flow can
 be straight and crossing-free and still move mass farther than it must.
 
@@ -1424,8 +1426,8 @@ cheapest; it attains $W_2^2$ only if its pairing is optimal as well
 An optimal coupling is the target, then, and practice has two approximations
 to it. Reflow re-pairs by the model. A *minibatch optimal-transport* pairing
 :cite:`Tong.Fatras.Malkin.ea.2023,Pooladian.BenHamu.DomingoEnrich.ea.2023`
-needs no trained model: before each training step it re-pairs the batch of
-$256$ noise and data points by the assignment of least total squared
+needs no trained model: before each training step it re-pairs the noise
+and data points of the batch by the assignment of least total squared
 distance. Exercise :exref:`ex_mdl-flow-matching-transport-minibatch-ot`
 trains the two moons with this pairing and measures what it does to the loss
 plateau, to the one-step score and to the length of the pairs. Neither
@@ -1701,10 +1703,11 @@ data.
    :exlabel:`ex_mdl-flow-matching-transport-reflow-two-points`
 
 1. [code] **Minibatch optimal-transport pairing.** Replace
-   `independent_pairs` by a sampler that draws $256$ noise points and $256$
-   data points and re-pairs them by the assignment of least total squared
-   distance (`scipy.optimize.linear_sum_assignment` on the $256 \times 256$
-   cost matrix), and train with `train_rf`.
+   `independent_pairs` by a sampler that draws its batch in blocks of $256$
+   noise points and $256$ data points and re-pairs each block by the
+   assignment of least total squared distance
+   (`scipy.optimize.linear_sum_assignment` on the $256 \times 256$ cost
+   matrix), and train with `train_rf`.
     1. Report the loss plateau, the squared energy distance at $1$, $2$,
        $8$ and $32$ steps, and the mean squared pair length before and after
        re-pairing. Compare with the independent pairing and with reflow.
@@ -1712,7 +1715,7 @@ data.
        and a re-paired data point is still a draw from the data, so the
        marginal field still carries $p_1$ to $p_0$.
     1. Explain why the batch pairing is not an optimal coupling of the two
-       distributions, and what happens as the batch size grows. Which of
+       distributions, and what happens as the block size grows. Which of
        the two re-pairing methods needs a trained model, and which inherits
        its errors?
    :exlabel:`ex_mdl-flow-matching-transport-minibatch-ot`
@@ -1939,7 +1942,7 @@ $$\mathcal{E}^2(P, Q) = 2\,\mathbb{E}\|X - Y\| - \mathbb{E}\|X - X'\| - \mathbb{
 
 @!score-matching-diffusion-flow-two-moons
 
-- **Metric Calibration:** Two independent samples of size $2{,}048$ from the true data distribution score within $\pm 0.002$ of zero, whereas collapsing all samples onto the data mean $\mathbf{0}$ (what 1 Euler step of the exact independent field does) scores $0.905$.
+- **Metric Calibration:** Two independent samples of size $2{,}048$ from the true data distribution score within a few thousandths of zero, whereas collapsing all samples onto the data mean $\mathbf{0}$ (what 1 Euler step of the exact independent field does) scores $\approx 0.9$.
 :::
 
 ::: {.slide title="Predicting the CFM Loss Floor Before Training"}
@@ -1955,11 +1958,11 @@ Before training any neural network, we can compute the exact irreducible CFM los
 ::: {.slide title="Training Rectified Flow on Independent Pairs"}
 [Reaching the Crossing Plateau]{.kicker}
 
-Training a 2-hidden-layer `tanh` MLP (64 units per layer) with Adam and cosine learning-rate decay over $4{,}000$ minibatches of $256$ independent $(\mathbf{x}_0, \boldsymbol{\epsilon})$ pairs:
+Training a 2-hidden-layer `tanh` MLP (256 units per layer) with Adam and cosine learning-rate decay over $10{,}000$ minibatches of $2{,}048$ independent $(\mathbf{x}_0, \boldsymbol{\epsilon})$ pairs:
 
 @!mdl-flow-matching-transport-example-two-moons-1
 
-- **Why a Loss of $1.4$ Is a Good Fit:** By the CFM theorem, $\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$. The network's terminal loss of $\approx 1.43$ sits only $\approx 0.06$ above the population floor $C \approx 1.37$, meaning $\mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) \approx 0.06$ per coordinate.
+- **Why a Loss of $1.4$ Is a Good Fit:** By the CFM theorem, $\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$. The network's terminal loss of $\approx 1.40$ sits only a few hundredths above the population floor $C \approx 1.37$, meaning $\mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) \approx 0.03$ per coordinate.
 :::
 
 ::: {.slide title="Sampling Quality vs. Euler Steps on Two Moons"}
@@ -1969,19 +1972,19 @@ Integrating the trained velocity field $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf
 
 @!score-matching-diffusion-flow-steps-quality
 
-- **1-Step Collapse ($K = 1$, $\mathcal{E}^2 \approx 0.70$):** Mirrors the theoretical collapse toward the data mean $\mathbf{0}$.
+- **1-Step Collapse ($K = 1$, $\mathcal{E}^2 \approx 0.7$):** Mirrors the theoretical collapse toward the data mean $\mathbf{0}$.
 - **Curvature Penalty ($K = 16\text{–}32$, $\mathcal{E}^2 \le 0.01$):** Following the curved trajectories induced by independent pairing requires 16–32 network evaluations per sample.
 :::
 
 ::: {.slide title="Visualizing 1, 2, 8, and 32 Euler Steps on Two Moons"}
-[Solver Error vs. Network Blur]{.kicker}
+[Solver Error vs. Network Error]{.kicker}
 
 Plotting the generated point clouds across step counts separates the solver's discretization error from the network's approximation error:
 
 @!score-matching-diffusion-flow-cfm-panels
 
 ::: {.d2l-note}
-Increasing the step count from $K = 1$ to $K = 8$ unfolds the mean blob into two crescents (removing Euler truncation error), whereas increasing $K$ from $8$ to $32$ cannot remove the residual thickness of the crescents (caused by the $\approx 0.03$ excess regression loss above the floor $C$).
+Increasing the step count from $K = 1$ to $K = 8$ unfolds the mean blob into two crescents, and $K = 32$ clears most of the points strewn between them (removing Euler truncation error). The slightly thicker crescents and the few strays left at $K = 32$ do not go away with more steps: they come from the $\approx 0.03$ excess regression loss above the floor $C$.
 :::
 :::
 
@@ -2003,14 +2006,14 @@ $$\mathbb{E}\!\left[\|\mathbf{Z}_1 - \mathbf{Z}_0\|^2\right] \le \mathbb{E}\!\le
 :::
 :::
 
-::: {.slide title="One Reflow Round Drops the Loss From 1.4 to ≈0.002"}
+::: {.slide title="One Reflow Round Drops the Loss From 1.4 to Below 0.001"}
 [Eliminating Segment Crossings]{.kicker}
 
 Generating $8{,}192$ coupled pairs $(\hat{\mathbf{x}}_0(\boldsymbol{\epsilon}), \boldsymbol{\epsilon})$ by integrating the first network for $32$ Euler steps and retraining the exact same architecture on these re-paired endpoints:
 
 @!mdl-score-matching-diffusion-flow-one-reflow-round-measured
 
-- **Crossing Floor Vanishes:** Because trajectories of the deterministic ODE flow never cross, the straight chords joining $\boldsymbol{\epsilon}$ to $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ almost never cross in space-time, collapsing the training loss floor from $1.37$ down to $\approx 0.001$–$0.003$!
+- **Crossing Floor Vanishes:** Because trajectories of the deterministic ODE flow never cross, the straight chords joining $\boldsymbol{\epsilon}$ to $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ almost never cross in space-time, collapsing the training loss floor from $1.37$ down to below $0.001$!
 :::
 
 ::: {.slide title="After One Reflow Round, 1 Step Matches 32 Steps"}
@@ -2020,7 +2023,7 @@ Comparing the original and reflowed networks across $K \in \{1, 2, 32\}$ Euler s
 
 @!mdl-flow-matching-transport-reflow-1
 
-- **32x Speedup at Test Time:** A **single Euler step** of the reflowed network achieves the exact same squared energy distance ($\approx 0.001$–$0.008$) as $32$ steps of the original model, while mean squared pair length drops about $15\times$ ($\approx 4.0 \to \approx 0.27$, well below the theoretical bound $4.00 - 2.75 = 1.25$).
+- **32x Speedup at Test Time:** A **single Euler step** of the reflowed network achieves the same squared energy distance ($\le 0.002$, the resolution of the metric) as $32$ steps of the original model, while mean squared pair length drops about $13\times$ ($\approx 4.0 \to \approx 0.3$, well below the theoretical bound $4.00 - 2.75 = 1.25$).
 :::
 
 ::: {.slide title="Measuring Trajectory Straightness via Chord Deviation"}
@@ -2030,7 +2033,7 @@ How far do the $32$-step ODE trajectories wander from the straight line segment 
 
 @!mdl-flow-matching-transport-reflow-2
 
-- **20–35x Straighter Trajectories:** Original trajectories curve inward toward the origin $\mathbf{0}$ before turning out to the moons (mean chord deviation $0.25$), whereas reflowed trajectories travel along nearly straight lines (mean chord deviation $0.01$).
+- **About 50x Straighter Trajectories:** Original trajectories curve inward toward the origin $\mathbf{0}$ before turning out to the moons (mean chord deviation $0.25$), whereas reflowed trajectories travel along nearly straight lines (mean chord deviation $\approx 0.005$).
 :::
 
 ::: {.slide title="Optimal Transport, Wasserstein Distance, & Rotations"}

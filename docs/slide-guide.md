@@ -86,20 +86,27 @@ Every operation in this section—reshaping, slicing, broadcasting, and in-place
   - **NEVER** use `::: {.callout}` (reserved by Quarto).
 - **Fragments:**
   - Top-level `. . .` pauses work **only** at the top level of a `::: {.slide}`, **never inside a `::: {.col}`** (where Pandoc renders them as literal `"..."`). Inside columns or for concept-check answers, use `::: {.d2l-note .fragment .fade-up}`.
-- **No book-only directives on slides:**
-  - Never put `:numref:`, `:eqref:`, `:cite:`, or `:label:` inside `<!-- slides -->`. Write self-contained references.
+- **No book-only directives or hardcoded section numbers on slides:**
+  - Never put `:numref:`, `:eqref:`, `:cite:`, `:exref:`, or `:label:` inside `<!-- slides -->`.
+  - **Never hardcode section or chapter numbers** (`"§9.3"`, `"Chapter 9"`). Always use `§{sec_label}` (`→ §9.3`), `§{chap_label}` (`→ §9`), or `§{num:sec_label}` (`→ 9.3`) tokens (`tools/section_refs.py`). Cover kickers (`[Dive into Deep Learning · §N.M]{.kicker}`) are rewritten automatically by `gen_slides.py`.
+- **Zero framework leaks:**
+  - Shared slides (`::: {.slide}` without `only=`) and shared diagrams (`@fig:<id>`) must be 100% framework-neutral. When APIs, tensor layouts (`NCHW` vs. `NHWC`), or semantics (e.g., JAX immutability / PRNG keys) differ per framework, emit `only="pytorch"` / `only="jax"` / `except="..."` sibling slides and `@fig:<id>@<fw>` diagram variants, respecting each part's framework coverage (**Basics Ch. 1–8, Image Models Ch. 32, Math Ch. 33–38, Tools Ch. 39** = all 4 frameworks; **Advanced Ch. 9–17** = `pytorch` + `jax` only; **Ch. 14 RL** = `pytorch` only).
+- **Output-verified numbers only:**
+  - Every metric, loss, timing, or shape quoted on a slide or diagram card must be verified against `outputs/<fw>/...` across **all** frameworks the page carries, rounded to run-to-run-stable precision (ranges/approximations rather than brittle single-seed decimals).
 
 ---
 
-## 4. Active Linebreak & 14" MacBook Viewport Management
+## 4. Active Linebreak, `<= 720 px` Fit, & Export Compatibility (HTML / PPTX / Beamer)
 
-All decks are rendered onto a `1280×720` Reveal.js canvas and reviewed on a 14" MacBook screen (`1512×860` viewport). Every slide must pass five strict layout invariants:
+All decks render onto a `1280×720` Reveal.js canvas **and** export to editable PowerPoint (`.pptx`) and Beamer PDF/LaTeX (`.pdf` / `-latex.zip`). Every slide must pass five strict layout invariants:
 
-### Invariant 1 — Zero Vertical Overflow (`scrollHeight <= 720`)
-- Never rely on vertical scrollbars. Keep each slide within a clear height budget:
-  - **Full-width text/table slide:** 1 intro line + 5–7 table rows (or 4–5 bullets) + at most 1 `.d2l-note`.
-  - **Full-width code slide:** 1 intro sentence + 1 `@cell-id` card + 1 `.d2l-note` (or 2 compact `@cell-id` cards without a note).
-  - **Two-column slide:** 3–4 bullets on the left + 1 figure (`@fig:...` or `@!cell-id`) or 1 compact `@cell-id` on the right.
+### Invariant 1 — Zero Vertical Overflow (`scrollHeight <= 720`) & Unclipped Outputs
+- Never rely on vertical scrollbars (`scrollHeight <= 720` in `tools/check_slide_overflow.py`, zero scrolled `.cell-output` boxes):
+  - **Full-width text/table slide:** 1 intro line + 5–7 table rows (or 4–5 bullets) + at most 1 `.d2l-note` (do not place trailing prose/notes *after* a Markdown table on the same slide, as Pandoc's PPTX writer splits or overlaps post-table elements).
+  - **Full-width code slide:** 1 intro sentence + 1 `@cell-id` card + 1 `.d2l-note` (or 2 compact `@cell-id` cards without a note). Never create an empty Setup slide holding only a hidden preamble cell.
+  - **Two-column slide:** 2–4 concise bullets on the left + 1 figure (`@fig:...` or `@!cell-id`) or 1 compact `@cell-id` on the right.
+  - **Slice long cells or stacked outputs** across `(cont.)` slides with `@<id>[lines, out=items]` selectors (`@-id[1-18]` then `@id[19-]`, or `@!id[out=1]` then `@!id[out=2-]`; inspect numbering via `python3 tools/gen_slides.py . _slides --files <ch/file.md> --frameworks pytorch jax --show-cell <id>`).
+  - **Output row caps:** Default output box fits ~10 rows; use `layout="tall-output"` (13–15 rows) for shape/result tables, `layout="tight"` (6–7 rows) when prose dominates, or `layout="code"` (14–16 rows) for dense logs. Split multi-part Concept Checks so questions + answers never exceed `720 px`.
 
 ### Invariant 2 — Zero Horizontal Column / Equation Overlap (`scrollWidth <= clientWidth`)
 - Inside a two-column `.col` (~520–620 px wide), display math (`$$...$$`) renders at `0.84em`.
@@ -122,105 +129,47 @@ All decks are rendered onto a `1280×720` Reveal.js canvas and reviewed on a 14"
 
 ---
 
-## 5. Automated Verification Workflow (SVG Defect Audit + Lint + Render + Playwright/KaTeX Audit)
+## 5. Automated Verification Workflow (SVG Defect Audit + Lint + Render + Overflow Check)
 
-Before committing or opening a PR for any slide deck or slide diagram module, run all three automated checks:
+Before committing or opening a PR for any slide deck or slide diagram module, run all automated checks:
 
 ### Step 1 — Build, Visually Audit, and Outline Slide Diagrams (`tools/build_module_diagrams.mjs`)
-Every slide diagram module (`diagrams/<module>.mjs`) must pass the Playwright SVG geometry intersection audit before its `<text>` elements are outlined to glyph paths in `img/auto/<id>.svg`. The audit rejects any diagram where:
-1. A graph curve, line, arrow shaft, circle, or ellipse intersects a `<text>` bounding box (`*-intersects-text`).
-2. A `<rect>` border edge cuts through or clips a `<text>` label (`rect-*-edge-cuts-text`).
-3. Two `<text>` labels overlap each other (`text-overlap`).
-4. Any `<text>` extends outside the SVG `viewBox` (`text-outside-viewbox`).
+Every slide diagram module (`diagrams/<module>.mjs`) must obey `diagrams/README.md`:
+- **11 px font-size floor (`fs >= 11`):** Never shrink card labels below `11 px` to fit a box; wrap onto 2 lines (measuring post-script widths via `diagrams/mdl-textwidth.mjs`).
+- **Section labels & TeX scripts:** Use `sec('sec_x')` / `num('chap_x')` from `diagrams/sections.mjs` (never literal `"§N.M"` or `"Chapter N"`), brace non-trivial TeX scripts (`max_{a}`, `ℝ^{d}`, `∑_{t=1}^{T}`), escape literal code underscores (`'y\\_hat'`), and pass explicit colors to `arrow()`.
+
+`tools/build_module_diagrams.mjs` runs `scriptSvg`, verifies **0 geometry defects** in headless Chromium (`*-intersects-text`, `rect-*-edge-cuts-text`, `text-overlap`, `text-outside-viewbox`), outlines `<text>` to bundled font paths via `tools/figstyle/outline_svg.py`, and syncs any book copy in `img/`:
 
 ```bash
-NODE_PATH=/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
-/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
-tools/build_module_diagrams.mjs diagrams/<module>.mjs
+node tools/test_diagram_scripts.mjs
+node tools/build_module_diagrams.mjs diagrams/<module>.mjs
+# Visually inspect modified SVGs as PNGs:
+rsvg-convert -z 2 img/auto/<id>.svg -o /tmp/<id>.png
 ```
 
-### Step 2 — Lint Markdown Sources and Render Slides (`pytorch` and `jax`)
+### Step 2 — Lint Corpus Sources and Render Slides Across All Supported Frameworks
 
 ```bash
-# 1. Lint markdown sources
-python3 tools/lint_source.py chapter_<name>/*.md
+# 1. Corpus-wide source, cross-reference, section-token, & figure-pair lint
+python3 tools/lint_source.py --corpus
+python3 tools/sync_auto_figures.py --check
 
-# 2. Force-render the modified decks for pytorch and jax
-rm -f _slides/*/.deckhashes.json
+# 2. Render modified decks for all frameworks the chapter carries
+#    (pytorch jax for Ch. 9–17; pytorch jax tensorflow mxnet for Ch. 1–8, 32, 33–39)
 python3 tools/gen_slides.py . _slides --frameworks pytorch jax --render --files chapter_<name>/*.md
 ```
 
-### Step 3 — Run the Playwright + KaTeX Slide Layout Audit
-Run the Playwright audit (routing KaTeX CDN URLs to local KaTeX assets and navigating vertical slide stacks via `Reveal.slide(0, idx)`):
+### Step 3 — Verify `<= 720 px` Slide Fit (`tools/check_slide_overflow.py`) and Exports
+Serve `_slides` locally and verify every rendered deck in `tools/check_slide_overflow.py` (must exit `0` with zero slides `> 720 px`):
 
 ```bash
-NODE_PATH=/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
-/Users/smola/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node -e '
-const { chromium } = require("playwright");
-const path = require("path");
-const fs = require("fs");
-
-const katexDir = "/Applications/Antigravity IDE.app/Contents/Resources/app/node_modules/katex/dist";
-const files = process.argv.slice(1);
-
-(async () => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1512, height: 860 } });
-  await page.route("**/*katex*", async (route) => {
-    const rel = route.request().url().replace(/^.*\/dist\//, "");
-    const localFile = path.join(katexDir, rel);
-    if (fs.existsSync(localFile)) {
-      const ext = path.extname(localFile);
-      const ct = ext === ".css" ? "text/css" : ext === ".js" ? "application/javascript" : "font/woff2";
-      await route.fulfill({ status: 200, contentType: ct, body: fs.readFileSync(localFile) });
-    } else {
-      await route.abort();
-    }
-  });
-
-  let totalIssues = 0;
-  for (const file of files) {
-    await page.goto("file://" + path.resolve(file), { waitUntil: "load" });
-    await page.waitForTimeout(300);
-    const total = await page.evaluate(() => Reveal.getTotalSlides());
-    const issues = [];
-    for (let i = 0; i < total; i++) {
-      await page.evaluate((idx) => Reveal.slide(0, idx), i);
-      await page.waitForTimeout(20);
-      const res = await page.evaluate((idx) => {
-        const s = Reveal.getCurrentSlide();
-        const title = s.querySelector("h2, h1")?.innerText || "(cover)";
-        const vOver = Math.max(0, s.scrollHeight - 720);
-        const problems = [];
-        const h2 = s.querySelector("h2");
-        if (h2) {
-          const lh = parseFloat(getComputedStyle(h2).lineHeight) || 40;
-          if (Math.round(h2.getBoundingClientRect().height / lh) > 1) problems.push("h2-wraps");
-        }
-        s.querySelectorAll(".cols > .col").forEach((c, ci) => {
-          if (c.scrollWidth > c.clientWidth + 2) problems.push(`col[${ci}]hOver=${c.scrollWidth - c.clientWidth}px`);
-          const cRect = c.getBoundingClientRect();
-          c.querySelectorAll(".katex-display, .katex, pre, table, svg, img, .d2l-note").forEach(ch => {
-            const r = ch.getBoundingClientRect();
-            if (r.right > cRect.right + 4) problems.push(`col[${ci}]ChildOver=${Math.round(r.right - cRect.right)}px`);
-          });
-        });
-        s.querySelectorAll(".math.inline").forEach(m => {
-          const rects = Array.from(m.getClientRects()).filter(r => r.width > 1 && r.height > 1);
-          const lines = new Set(rects.map(r => Math.round(r.top / 6)));
-          if (lines.size > 1) problems.push(`math-split(${m.innerText.replace(/\s+/g, " ").slice(0, 20)})`);
-        });
-        if (vOver > 0 || problems.length > 0) return { slide: idx + 1, title, vOver, problems };
-        return null;
-      }, i);
-      if (res) issues.push(res);
-    }
-    totalIssues += issues.length;
-    console.log(`${file} (${total} slides): ${issues.length} issues`);
-    for (const iss of issues) console.log("  ", JSON.stringify(iss));
-  }
-  await browser.close();
-  process.exit(totalIssues > 0 ? 1 : 0);
-})();
-' _slides/pytorch/chapter_<name>/*.html _slides/jax/chapter_<name>/*.html
+python3 -m http.server 8027 -d _slides &
+SERVER_PID=$!
+for f in _slides/pytorch/chapter_<name>/*.html _slides/jax/chapter_<name>/*.html; do
+  rel="${f#_slides/}"
+  .venv-build/bin/python tools/check_slide_overflow.py "http://localhost:8027/$rel"
+done
+kill $SERVER_PID
 ```
+
+When touching complex layouts (tables, display math, or multi-column cards), also spot-check PowerPoint and Beamer generation (`python3 tools/slides_to_pptx.py` / `python3 tools/slides_to_beamer.py`, or `gmake slides-pptx` / `gmake slides-beamer`).

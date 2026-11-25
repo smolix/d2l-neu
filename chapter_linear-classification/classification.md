@@ -66,13 +66,13 @@ Suppose we screen $100{,}000$ people for a disease with $1\%$ prevalence ($1{,}0
 | **predicted sick** | $900$ (TP) | $4{,}950$ (FP) |
 | **predicted healthy** | $100$ (FN) | $94{,}050$ (TN) |
 
-In this $2 \times 2$ binary confusion matrix, the four cells are *true positives* ($\textrm{TP} = 900$), *false positives* ($\textrm{FP} = 4{,}950$), *false negatives* ($\textrm{FN} = 100$), and *true negatives* ($\textrm{TN} = 94{,}050$). Summing the diagonal gives $94{,}950 / 100{,}000 = 95\%$ accuracy—so raw accuracy ranks the useless "always-healthy" rule ($99\%$) ahead of a lifesaving test ($95\%$)!
+In this $2 \times 2$ binary confusion matrix, the four cells are *true positives* ($\textrm{TP} = 900$), *false positives* ($\textrm{FP} = 4{,}950$), *false negatives* ($\textrm{FN} = 100$), and *true negatives* ($\textrm{TN} = 94{,}050$). Summing the diagonal gives $94{,}950 / 100{,}000 = 95\%$ accuracy, so raw accuracy ranks the useless "always-healthy" rule ($99\%$) ahead of a lifesaving test ($95\%$).
 
-To evaluate performance on the positive class specifically, we pair two ratios: *recall* (or *sensitivity* / *true-positive rate*), the fraction of true positives caught, and *precision* (or *positive predictive value*), the fraction of positive flags that are genuinely positive:
+To evaluate performance on the positive class specifically, we pair two ratios: *recall* (or *sensitivity* / *true-positive rate*), the fraction of true positives caught, and *precision* (or *positive predictive value*), the fraction of positive flags that are truly positive:
 
 $$\textrm{recall} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FN}}, \qquad \textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}.$$
 
-Reading down the first column gives $\textrm{recall} = 900 / 1{,}000 = 0.90$ (versus $0$ for "always healthy"). Reading across the first row gives $\textrm{precision} = 900 / 5{,}850 \approx 0.15$: only $15\%$ of flagged people are actually sick, because $5\%$ false alarms from the huge healthy majority ($4{,}950$) outnumber the $900$ true positives (the exact Bayes' theorem effect from :numref:`subsec_probability_hiv_app`). In two-stage clinical screening, $90\%$ recall with $15\%$ precision is ideal: the cheap first test catches almost every sick patient and sends only the $5{,}850$ flagged patients to a definitive follow-up test.
+Reading down the first column gives $\textrm{recall} = 900 / 1{,}000 = 0.90$ (versus $0$ for "always healthy"). Reading across the first row gives $\textrm{precision} = 900 / 5{,}850 \approx 0.15$: only $15\%$ of flagged people are actually sick, because $5\%$ false alarms from the huge healthy majority ($4{,}950$) outnumber the $900$ true positives (the Bayes' theorem effect from :numref:`subsec_probability_hiv_app`). In two-stage clinical screening, $90\%$ recall with $15\%$ precision is ideal: the cheap first test catches almost every sick patient and sends only the $5{,}850$ flagged patients to a definitive follow-up test.
 
 Let us hold our test's intrinsic recall ($0.90$) and false-alarm rate ($0.05$) fixed while sweeping the disease prevalence across $\{0.1\%, 1\%, 10\%, 50\%\}$:
 
@@ -85,18 +85,18 @@ for prevalence in [0.001, 0.01, 0.1, 0.5]:
           f'recall {recall:.2f}, precision {tp / (tp + fp):.3f}')
 ```
 
-Notice the lesson: recall and false-alarm rate are properties of the *classifier alone*, whereas precision depends heavily on the *population prevalence*.
+Notice what changes and what stays fixed: recall and false-alarm rate are properties of the *classifier alone*, whereas precision depends heavily on the *population prevalence*.
 
 ### Asymmetric Costs
 
-Suppose missing a sick patient costs $\kappa_{\textrm{FN}} = 100$ whereas a false alarm costs $\kappa_{\textrm{FP}} = 1$ (and correct calls cost $0$). Weighted by these penalties, the "always-healthy" rule incurs an expected cost of $100 \times 1{,}000 / 100{,}000 = 1.00$ per person, whereas our screening test costs $(100 \times 100 + 1 \times 4{,}950) / 100{,}000 \approx 0.15$ per person—nearly seven times lower!
+Suppose missing a sick patient costs $\kappa_{\textrm{FN}} = 100$ whereas a false alarm costs $\kappa_{\textrm{FP}} = 1$ (and correct calls cost $0$). Weighted by these penalties, the "always-healthy" rule incurs an expected cost of $100 \times 1{,}000 / 100{,}000 = 1.00$ per person, whereas our screening test costs $(100 \times 100 + 1 \times 4{,}950) / 100{,}000 \approx 0.15$ per person, nearly seven times lower.
 
 More generally, if a classifier estimates probability $p = P(\textrm{sick} \mid \mathbf{x})$ for an individual, predicting *healthy* has expected cost $p\,\kappa_{\textrm{FN}}$ and predicting *sick* has expected cost $(1 - p)\,\kappa_{\textrm{FP}}$. Predicting *sick* minimizes expected cost whenever
 
 $$p \, \kappa_\textrm{FN} > (1 - p)\, \kappa_\textrm{FP}, \quad \textrm{that is,} \quad p > \frac{\kappa_\textrm{FP}}{\kappa_\textrm{FP} + \kappa_\textrm{FN}}.$$
 :eqlabel:`eq_cost-threshold`
 
-Equal costs ($\kappa_{\textrm{FN}} = \kappa_{\textrm{FP}}$) recover the familiar $1/2$ threshold (argmax classification). With $\kappa_{\textrm{FN}} = 100$ and $\kappa_{\textrm{FP}} = 1$, however, the optimal threshold drops to $1/101 \approx 0.01$: even a $2\%$ predicted risk warrants flagging the patient! Lowering the threshold raises recall at the expense of precision (when costs are unspecified, practitioners often summarize the trade-off via the harmonic mean of precision and recall, the *F1 score* $= 2\,\textrm{precision}\cdot\textrm{recall}/(\textrm{precision} + \textrm{recall})$, or sweep all thresholds via ROC and precision--recall curves; see Exercises :exref:`ex_classification-roc-curves` and :exref:`ex_classification-auc-ranking-probability`).
+Equal costs ($\kappa_{\textrm{FN}} = \kappa_{\textrm{FP}}$) recover the familiar $1/2$ threshold (argmax classification). With $\kappa_{\textrm{FN}} = 100$ and $\kappa_{\textrm{FP}} = 1$, however, the optimal threshold drops to $1/101 \approx 0.01$: even a $2\%$ predicted risk warrants flagging the patient. Lowering the threshold raises recall at the expense of precision (when costs are unspecified, practitioners often summarize the trade-off via the harmonic mean of precision and recall, the *F1 score* $= 2\,\textrm{precision}\cdot\textrm{recall}/(\textrm{precision} + \textrm{recall})$, or sweep all thresholds via ROC and precision--recall curves; see Exercises :exref:`ex_classification-roc-curves` and :exref:`ex_classification-auc-ranking-probability`).
 
 ## Calibration
 
@@ -165,11 +165,11 @@ d2l.plot([mean_conf[used], [0, 1]], [acc[used], [0, 1]], 'mean confidence',
          fmts=('o-', 'k:'), figsize=(3.5, 3.5))
 ```
 
-Across all well-populated bins ($n_b \geq 100$), empirical accuracy tracks mean confidence within at most eight percentage points (sitting slightly *above* the diagonal: average confidence $\sim 81\%$ vs. accuracy $\sim 83\%$, for an ECE below $0.03$). Unlike deep overparameterized networks—which frequently become severely overconfident—shallow softmax regression on Fashion-MNIST is already well calibrated (slightly underconfident).
+Across all well-populated bins ($n_b \geq 100$), empirical accuracy tracks mean confidence within eight percentage points, sitting slightly *above* the diagonal (average confidence $\sim 81\%$ vs. accuracy $\sim 83\%$, for an ECE below $0.03$). Unlike deep overparameterized networks, which frequently become severely overconfident, shallow softmax regression on Fashion-MNIST is already well calibrated (slightly underconfident).
 
 ### Temperature Scaling
 
-When a reliability diagram reveals miscalibration, *temperature scaling* :cite:`Guo.Pleiss.Sun.Weinberger.2017` offers a one-parameter post-hoc fix: hold the trained weights fixed, divide the logits by a scalar temperature $T > 0$ (:numref:`sec_softmax`), and fit $T$ to minimize cross-entropy on a held-out validation split. Because dividing by $T > 0$ preserves logit ordering, temperature scaling never alters a single class prediction or changes accuracy—it only rescales confidence ($T > 1$ damps overconfidence; $T < 1$ sharpens underconfidence). Let us fit $T$ on the first half of our Fashion-MNIST validation set and check the ECE on the second half:
+When a reliability diagram reveals miscalibration, *temperature scaling* :cite:`Guo.Pleiss.Sun.Weinberger.2017` offers a one-parameter post-hoc fix: hold the trained weights fixed, divide the logits by a scalar temperature $T > 0$ (:numref:`sec_softmax`), and fit $T$ to minimize cross-entropy on a held-out validation split. Because dividing by $T > 0$ preserves logit ordering, temperature scaling never alters a single class prediction or changes accuracy; it only rescales confidence ($T > 1$ damps overconfidence; $T < 1$ sharpens underconfidence). Let us fit $T$ on the first half of our Fashion-MNIST validation set and check the ECE on the second half:
 
 ```{.python .input #classification-temperature-scaling}
 def nll(O, y, T):
@@ -191,9 +191,7 @@ Consistent with our slightly underconfident reliability curve, the fitted temper
 
 ## Summary
 
-- **Beyond accuracy under class imbalance:** When the positive class is rare, overall accuracy is dominated by true negatives; *recall* ($\textrm{TP}/(\textrm{TP}+\textrm{FN})$) and *precision* ($\textrm{TP}/(\textrm{TP}+\textrm{FP})$) isolate positive-class detection, with precision scaling via Bayes' theorem with class prevalence.
-- **Cost-sensitive thresholding:** When false negatives and false positives carry costs $\kappa_{\textrm{FN}}$ and $\kappa_{\textrm{FP}}$, expected cost is minimized by predicting positive whenever $p > \kappa_{\textrm{FP}} / (\kappa_{\textrm{FP}} + \kappa_{\textrm{FN}})$.
-- **Calibration and temperature scaling:** Reliability diagrams and $\textrm{ECE} = \sum_b (n_b/n)|a_b - \bar{p}_b|$ measure whether predicted confidences match empirical accuracy; fitting a single post-hoc temperature $T > 0$ on held-out data recalibrates confidence without changing accuracy.
+Raw accuracy is an adequate figure of merit only when classes are balanced and all errors cost the same. When positive examples are rare, true negatives dominate overall accuracy, so we separate positive detection into *recall* ($\textrm{TP}/(\textrm{TP}+\textrm{FN})$, an intrinsic property of the classifier) and *precision* ($\textrm{TP}/(\textrm{TP}+\textrm{FP})$, which scales with population prevalence via Bayes' theorem). When false negatives and false positives carry unequal costs $\kappa_{\textrm{FN}}$ and $\kappa_{\textrm{FP}}$, expected cost is minimized by predicting positive whenever $p > \kappa_{\textrm{FP}}/(\kappa_{\textrm{FP}} + \kappa_{\textrm{FN}})$, a rule that relies on the predicted probabilities being calibrated. Reliability diagrams and expected calibration error audit that agreement, and fitting a single post-hoc temperature $T > 0$ on held-out data rescales confidence without changing accuracy.
 
 ## Exercises
 
@@ -359,7 +357,7 @@ Our Fashion-MNIST classifier reached $\sim 83\%$ accuracy on $10$ balanced class
 ::: {.col}
 Screening $100{,}000$ people at $1\%$ prevalence ($1{,}000$ sick, $99{,}000$ healthy) with a test that detects $90\%$ of sick patients ($\mathrm{TP}=900, \mathrm{FN}=100$) and falsely flags $5\%$ of healthy people ($\mathrm{FP}=4{,}950, \mathrm{TN}=94{,}050$):
 
-- **The accuracy paradox:** Summing the diagonal gives $(900 + 94{,}050) / 100{,}000 = 94.95\%$ accuracy—so raw accuracy ranks the useless *"always-healthy"* rule ($99.0\%$) ahead of a test that catches $90\%$ of sick patients!
+- **The accuracy paradox:** Summing the diagonal gives $(900 + 94{,}050) / 100{,}000 = 94.95\%$ accuracy, so raw accuracy ranks the useless *"always-healthy"* rule ($99.0\%$) ahead of a test that catches $90\%$ of sick patients.
 - **Why accuracy fails:** True negatives ($\mathrm{TN} = 94{,}050$) swamp the denominator while the $1{,}000$ sick patients contribute at most $1\%$.
 :::
 
@@ -423,7 +421,7 @@ $$\text{Expected Cost} = \frac{\kappa_{\mathrm{FN}}\cdot\mathrm{FN} + \kappa_{\m
 
 - **Numerical comparison ($\kappa_{\mathrm{FN}} = 100,\; \kappa_{\mathrm{FP}} = 1$):**
   - *"Always healthy"* ($\mathrm{FN} = 1{,}000,\; \mathrm{FP} = 0$): costs $1.00$ per person.
-  - *Screening test* ($\mathrm{FN} = 100,\; \mathrm{FP} = 4{,}950$): costs $0.1495$ per person—**$6.7\times$ lower cost** despite $4$ points lower accuracy!
+  - *Screening test* ($\mathrm{FN} = 100,\; \mathrm{FP} = 4{,}950$): costs $0.1495$ per person, **$6.7\times$ lower cost** despite $4$ points lower accuracy.
 :::
 
 ::: {.col .fig}
@@ -442,7 +440,7 @@ Given a calibrated probability $p = P(\text{sick} \mid \mathbf{x})$, predicting 
 $$p\,\kappa_{\mathrm{FN}} > (1 - p)\,\kappa_{\mathrm{FP}} \quad \Longleftrightarrow \quad p > \tau^* = \frac{\kappa_{\mathrm{FP}}}{\kappa_{\mathrm{FP}} + \kappa_{\mathrm{FN}}}$$
 
 - **Equal costs ($\kappa_{\mathrm{FN}} = \kappa_{\mathrm{FP}}$):** Recovers standard $\tau^* = 1/2$ ($\operatorname{argmax}$).
-- **100:1 cost ratio:** Drops threshold to $\tau^* = 1/101 \approx 0.01$—even a $2\%$ predicted risk warrants flagging!
+- **100:1 cost ratio:** Drops threshold to $\tau^* = 1/101 \approx 0.01$, so even a $2\%$ predicted risk warrants flagging.
 :::
 
 ::: {.col .fig}
@@ -479,7 +477,7 @@ For a $q$-class classifier, define each prediction's **confidence** and **correc
 $$\hat{p}^{(i)} = \max_{j} \hat{y}^{(i)}_j, \qquad c^{(i)} = \mathbf{1}\!\Big(\operatorname*{argmax}_j \hat{y}^{(i)}_j = y^{(i)}\Big)$$
 
 - **Top-class calibration:** Among examples where the model reports confidence $\hat{p} \approx \alpha$, the empirical accuracy satisfies $P(c = 1 \mid \hat{p} = \alpha) = \alpha$.
-- **Orthogonal to accuracy:** Predicting uniform $(0.1, \ldots, 0.1)$ on $10$ balanced classes is perfectly calibrated ($10\%$ accuracy at $0.10$ confidence) yet useless!
+- **Orthogonal to accuracy:** Predicting uniform $(0.1, \ldots, 0.1)$ on $10$ balanced classes is perfectly calibrated ($10\%$ accuracy at $0.10$ confidence) yet uninformative.
 :::
 
 ::: {.col .fig}
@@ -579,7 +577,7 @@ Work out these three diagnostic and decision-making problems:
 3. **Temperature shift:** If we divide all logits of our slightly underconfident Fashion-MNIST model by $T = 2$, what happens to its validation accuracy and to its ECE?
 
 ::: {.d2l-note .fragment .fade-up}
-**Answers:** **(1)** $\mathrm{FP} = 0.01 \times 99{,}000 = 990$ and $\mathrm{TN} = 98{,}010$, giving accuracy $(900 + 98{,}010)/100{,}000 = 98.91\%$ (still below $99.0\%$!) while precision jumps from $15.4\%$ to $900 / (900 + 990) \approx 47.6\%$. **(2)** Expected error cost of guessing is $(1 - \hat{p})\lambda_s$; guessing beats abstaining when $(1 - \hat{p})\lambda_s < \lambda_r$ $\iff$ $\hat{p} > 1 - \lambda_r/\lambda_s = 1 - 5/100 = 0.95$. **(3)** Accuracy is unchanged (order of logits is preserved), while $T = 2$ pushes confidences even lower toward $0.10$, worsening underconfidence and increasing ECE.
+**Answers:** **(1)** $\mathrm{FP} = 0.01 \times 99{,}000 = 990$ and $\mathrm{TN} = 98{,}010$, giving accuracy $(900 + 98{,}010)/100{,}000 = 98.91\%$ (still below $99.0\%$) while precision jumps from $15.4\%$ to $900 / (900 + 990) \approx 47.6\%$. **(2)** Expected error cost of guessing is $(1 - \hat{p})\lambda_s$; guessing beats abstaining when $(1 - \hat{p})\lambda_s < \lambda_r$ $\iff$ $\hat{p} > 1 - \lambda_r/\lambda_s = 1 - 5/100 = 0.95$. **(3)** Accuracy is unchanged (order of logits is preserved), while $T = 2$ pushes confidences even lower toward $0.10$, worsening underconfidence and increasing ECE.
 :::
 :::
 

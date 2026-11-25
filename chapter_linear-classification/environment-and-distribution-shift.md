@@ -71,8 +71,8 @@ Holding one conditional factor invariant while the marginal drifts defines the t
 ### Covariate Shift, Label Shift, and Concept Shift
 
 1. **Covariate shift ($p(y \mid \mathbf{x})$ invariant):** Natural whenever $\mathbf{x}$ causes $y$. Suppose we train a cat-versus-dog classifier on real photographs (:numref:`fig_cat-dog-train`) and deploy it on cartoons (:numref:`fig_cat-dog-test`). A cartoon cat is still a cat ($p(y \mid \mathbf{x})$ is unchanged), but the marginal input distribution $p(\mathbf{x})$ has shifted into a new region of pixel space. Even though the true Bayes boundary has not moved, a misspecified or capacity-limited model fitted to source photos will focus its accuracy where $p_S(\mathbf{x})$ is dense and can fail badly where $p_T(\mathbf{x})$ lives.
-2. **Label shift ($p(\mathbf{x} \mid y)$ invariant):** Natural whenever $y$ causes $\mathbf{x}$—for instance, diseases cause symptoms, so during a flu epidemic the prevalence $p(y)$ of influenza surges while the symptom distribution $p(\mathbf{x} \mid y)$ of a flu patient stays unchanged. By Bayes' theorem, $p(y \mid \mathbf{x}) \propto p(\mathbf{x} \mid y)\,p(y)$, so a shift in class priors shifts the optimal decision boundary! Happily, correcting label shift requires estimating only $q$ class-prior ratios rather than a high-dimensional density ratio over $\mathbf{x}$.
-3. **Concept shift ($p(y \mid \mathbf{x})$ changes):** The meaning of the label itself changes across geography or time—whether regional names for soft drinks across U.S. counties (:numref:`fig_popvssoda`), evolving diagnostic criteria, or seasonal shopping intent.
+2. **Label shift ($p(\mathbf{x} \mid y)$ invariant):** Natural whenever $y$ causes $\mathbf{x}$: for instance, diseases cause symptoms, so during a flu epidemic the prevalence $p(y)$ of influenza surges while the symptom distribution $p(\mathbf{x} \mid y)$ of a flu patient stays unchanged. By Bayes' theorem, $p(y \mid \mathbf{x}) \propto p(\mathbf{x} \mid y)\,p(y)$, so a shift in class priors shifts the optimal decision boundary. Correcting label shift requires estimating only $q$ class-prior ratios rather than a high-dimensional density ratio over $\mathbf{x}$.
+3. **Concept shift ($p(y \mid \mathbf{x})$ changes):** The meaning of the label itself changes across geography or time, whether in regional names for soft drinks across U.S. counties (:numref:`fig_popvssoda`), evolving diagnostic criteria, or seasonal shopping intent.
 
 ![Source training images for cat vs. dog classification: photographs (illustrations: Lafeez Hossain / 500px / Getty Images; ilkermetinkursova / iStock / Getty Images Plus; GlobalP / iStock / Getty Images Plus; Musthafa Aboobakuru / 500px / Getty Images).](../img/cat-dog-train.png)
 :label:`fig_cat-dog-train`
@@ -125,7 +125,7 @@ $$
 \end{aligned}
 $$
 
-Dropping the constant factor $n/m$ (which scales the objective without moving its minimizer), we simply weight each source example by $\beta_i = \exp(h(\mathbf{x}^{(i)}))$ (or $\min(\exp(h(\mathbf{x}^{(i)})), c)$)!
+Dropping the constant factor $n/m$ (which scales the objective without moving its minimizer), we simply weight each source example by $\beta_i = \exp(h(\mathbf{x}^{(i)}))$ (or $\min(\exp(h(\mathbf{x}^{(i)})), c)$).
 
 The domain classifier has a second use: it tells us whether there is any shift to correct. If $p_T(\mathbf{x}) = p_S(\mathbf{x})$, nothing separates source inputs from target inputs, and on pooled inputs that it was not trained on the domain classifier stays at chance ($1/2$ when $n = m$). An accuracy clearly above chance is therefore evidence that the inputs have shifted. This check is known as a *classifier two-sample test* :cite:`Lopez-Paz.Oquab.2017`. Label shift has an even cheaper check: run the deployed classifier on the unlabeled target inputs and compare how often it predicts each class with the same frequencies on source validation data. A deployed system should watch both numbers, since a shift has to be noticed before it can be corrected.
 
@@ -179,7 +179,7 @@ print(f'domain classifier accuracy on held-out inputs: '
 
 On fresh inputs the domain classifier separates source from target with an accuracy of about $0.84$, against $0.50$ by chance, so this shift is easy to detect. No classifier can do better here: the two Gaussians differ only in the mean of $x_1$, the best rule is $x_1 > 1$, and it is right with probability $\Phi(1) \approx 0.84$, where $\Phi$ is the standard normal distribution function.
 
-Next, we train `fit_logreg` on the labeled source data `(X_src, y_src)` under three weighting schemes—`'unweighted'`, raw importance weights `'weighted'` (`beta`), and clipped weights `'clipped'` (`np.minimum(beta, 5)`)—and evaluate each classifier's accuracy on `X_tgt` and `X_src`:
+Next, we train `fit_logreg` on the labeled source data `(X_src, y_src)` under three weighting schemes (`'unweighted'`, raw importance weights `'weighted'`, and clipped weights `'clipped'` at $5$) and evaluate each classifier's accuracy on `X_tgt` and `X_src`:
 
 ```{.python .input #environment-and-distribution-shift-covariate-shift-correction-3}
 acc = lambda wb, X, y: ((X @ wb[0] + wb[1] > 0) == (y == 1)).mean()
@@ -209,7 +209,7 @@ d2l.plt.legend();
 ```
 
 
-Look at the result: on the shifted target cloud, unweighted training scores only $\sim 50\%$–$60\%$ (worse than always guessing the majority class at $\sim 70\%$), whereas importance reweighting tilts the linear decision boundary along the right arm of the parabola and boosts target accuracy to $\sim 95\%$—using *zero* target labels!
+Look at the result: on the shifted target cloud, unweighted training scores only $\sim 50\%$–$60\%$ (worse than always guessing the majority class at $\sim 70\%$), whereas importance reweighting tilts the linear decision boundary along the right arm of the parabola and boosts target accuracy to $\sim 95\%$ using *zero* target labels.
 
 It would be wrong to conclude that we should always reweight under covariate shift. Reweighting helped here because a line cannot follow a parabola: the model is misspecified and has to choose where to be accurate. A model flexible enough to fit $p(y \mid \mathbf{x})$ wherever the source has data gains nothing, since the weighted and the unweighted objective then share the same minimizer :cite:`Shimodaira.2000`. Deep networks are close to this regime. Once they are trained to a low training loss, the effect of importance weights fades :cite:`Byrd.Lipton.2019`, and on the WILDS collection of real-world shifts, methods designed for distribution shift rarely beat plain empirical risk minimization :cite:`Koh.Sagawa.Marklund.ea.2021`. In practice, covariate shift is handled mostly by training on broader data and by fine-tuning on a few labeled target examples.
 
@@ -220,7 +220,7 @@ Under label shift ($p_T(\mathbf{x} \mid y) = p_S(\mathbf{x} \mid y)$ while class
 
 ### Estimating Target Proportions via the Confusion Matrix
 
-Let $\mathbf{C} \in \mathbb{R}^{q \times q}$ be our source classifier's column-normalized confusion matrix from :numref:`sec_softmax_scratch`, with entries $C_{ij} = P_S(\hat{c} = i \mid y = j)$ estimated on labeled source validation data. Because $\hat{c}$ is a function of $\mathbf{x}$ alone and $p(\mathbf{x} \mid y)$ is invariant under label shift, $P_T(\hat{c} = i \mid y = j) = C_{ij}$ holds on the target domain as well! By the law of total probability, the vector $\boldsymbol{\mu} \in \mathbb{R}^q$ of predicted class frequencies on the unlabeled target inputs satisfies :cite:`Saerens.Latinne.Decaestecker.2002,Lipton.Wang.Smola.2018`
+Let $\mathbf{C} \in \mathbb{R}^{q \times q}$ be our source classifier's column-normalized confusion matrix from :numref:`sec_softmax_scratch`, with entries $C_{ij} = P_S(\hat{c} = i \mid y = j)$ estimated on labeled source validation data. Because $\hat{c}$ is a function of $\mathbf{x}$ alone and $p(\mathbf{x} \mid y)$ is invariant under label shift, $P_T(\hat{c} = i \mid y = j) = C_{ij}$ holds on the target domain as well. By the law of total probability, the vector $\boldsymbol{\mu} \in \mathbb{R}^q$ of predicted class frequencies on the unlabeled target inputs satisfies :cite:`Saerens.Latinne.Decaestecker.2002,Lipton.Wang.Smola.2018`
 
 $$
 \begin{aligned}
@@ -230,7 +230,7 @@ $$
 $$
 :eqlabel:`eq_label-shift-system`
 
-Whenever $\mathbf{C}$ is invertible (which is guaranteed if the classifier gets more than half of each class right, $C_{jj} > 1/2$; see Exercise :exref:`ex_environment-and-distribution-shift-label-shift-system`), solving the $q \times q$ linear system $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ recovers the unknown target class proportions without a single target label! Furthermore, if the source classifier's probabilities approximate the source posterior $p_S(y \mid \mathbf{x})$ (a stronger requirement than the top-class calibration of :numref:`sec_classification`), Bayes' rule adapts its predictions to the target domain instantly—without even retraining—by adding the log-prior shift $\log(\hat{p}_T(y) / p_S(y))$ to each class's logit.
+Whenever $\mathbf{C}$ is invertible (which is guaranteed if the classifier gets more than half of each class right, $C_{jj} > 1/2$; see Exercise :exref:`ex_environment-and-distribution-shift-label-shift-system`), solving the $q \times q$ linear system $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ recovers the unknown target class proportions without a single target label. Furthermore, if the source classifier's probabilities approximate the source posterior $p_S(y \mid \mathbf{x})$ (a stronger requirement than the top-class calibration of :numref:`sec_classification`), Bayes' rule adapts its predictions to the target domain immediately, without retraining, by adding the log-prior shift $\log(\hat{p}_T(y) / p_S(y))$ to each class's logit.
 
 Let us test confusion-matrix inversion and Bayes logit adjustment on Fashion-MNIST. We first train `d2l.SoftmaxRegression` on the balanced training split and collect its validation logits `O`, labels `y`, and predicted classes `pred = O.argmax(axis=1)`:
 
@@ -278,22 +278,20 @@ print(f'target accuracy: {accuracy(O[tgt]):.3f} as trained, '
 ```
 
 
-Even though the raw classifier predicts "shirt" on only $\sim 20\%$–$40\%$ of the target images (spilling the rest into look-alike tops), $\mathbf{C}^{-1}\boldsymbol{\mu}$ unscrambles that confusion to recover a shirt proportion near the true $0.50$ (typically within a few hundredths, occasionally off by almost a tenth), and adding $\log(\hat{\mathbf{p}}_T / 0.1)$ to the logits lifts target accuracy by roughly 5 to 15 percentage points with zero target labels and zero gradient steps!
+Even though the raw classifier predicts "shirt" on only $\sim 20\%$–$40\%$ of the target images (spilling the rest into look-alike tops), $\mathbf{C}^{-1}\boldsymbol{\mu}$ unscrambles that confusion to recover a shirt proportion near the true $0.50$ (typically within a few hundredths, occasionally off by almost a tenth), and adding $\log(\hat{\mathbf{p}}_T / 0.1)$ to the logits lifts target accuracy by roughly 5 to 15 percentage points with zero target labels and zero gradient steps.
 
 ## Concept Shift and Feedback
 
 When *concept shift* alters $p(y \mid \mathbf{x})$ itself, historical labels are outdated and no importance reweighting of old data can teach the new labeling rule; continuous monitoring on a trickle of freshly labeled examples and periodic fine-tuning or retraining are essential.
 
-Even more care is needed when a model's predictions trigger *actions that reshape future training data* (*performative prediction* and *feedback loops*). In predictive policing (:numref:`fig_mdl-clf-feedback-loop`), dispatching extra patrols to neighborhoods with high predicted crime causes more incidents to be recorded there; feeding those biased arrest records back into the next training round reinforces the forecast in a runaway loop. Breaking or auditing such loops requires randomized exploration or independent data collection—and ultimately crosses from passive supervised learning into *reinforcement learning* (:numref:`chap_reinforcement_learning`).
+Even more care is needed when a model's predictions trigger *actions that reshape future training data* (*performative prediction* and *feedback loops*). In predictive policing (:numref:`fig_mdl-clf-feedback-loop`), dispatching extra patrols to neighborhoods with high predicted crime causes more incidents to be recorded there; feeding those biased arrest records back into the next training round reinforces the forecast in a runaway loop. Breaking or auditing such loops requires randomized exploration or independent data collection, crossing from passive supervised learning into *reinforcement learning* (:numref:`chap_reinforcement_learning`).
 
 ![A runaway feedback loop in predictive policing: model predictions steer patrol allocation, patrol presence determines where incidents are observed, and logged incidents become the next training dataset.](../img/mdl-clf-feedback-loop.svg)
 :label:`fig_mdl-clf-feedback-loop`
 
 ## Summary
 
-- **No transfer without structure:** Every distribution-shift correction relies on an invariance assumption factoring $p(\mathbf{x}, y) = p(\mathbf{x})p(y \mid \mathbf{x}) = p(y)p(\mathbf{x} \mid y)$ into covariate shift ($p(y \mid \mathbf{x})$ fixed), label shift ($p(\mathbf{x} \mid y)$ fixed), or concept shift ($p(y \mid \mathbf{x})$ drifts).
-- **Covariate shift correction:** Reweighting source losses by $\beta(\mathbf{x}) = p_T(\mathbf{x})/p_S(\mathbf{x}) \propto \exp(h(\mathbf{x}))$—estimated via a logistic domain classifier distinguishing source ($z=0$) from unlabeled target ($z=1$) inputs—aligns training with the target risk when support overlaps.
-- **Label shift correction:** Solving $\mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$ with the source column-normalized confusion matrix $\mathbf{C}$ and target prediction frequencies $\boldsymbol{\mu}$ recovers target class priors from unlabeled target inputs and enables instant Bayes logit adjustment $\mathbf{o} + \log(\hat{\mathbf{p}}_T / \mathbf{p}_S)$.
+Adapting to an unlabeled deployment environment is impossible without a structural invariance connecting source $p_S(\mathbf{x}, y)$ and target $p_T(\mathbf{x}, y)$, factored either as covariate shift ($p(y \mid \mathbf{x})$ fixed while $p(\mathbf{x})$ drifts), label shift ($p(\mathbf{x} \mid y)$ fixed while $p(y)$ drifts), or concept shift ($p(y \mid \mathbf{x})$ drifts). Under covariate shift with overlapping support, weighting source losses by $\beta(\mathbf{x}) = p_T(\mathbf{x})/p_S(\mathbf{x}) \propto \exp(h(\mathbf{x}))$—estimated by a logistic domain classifier separating source from unlabeled target inputs—aligns misspecified models with the target risk. Under label shift, inverting the source confusion matrix via $\hat{\mathbf{p}}_T = \mathbf{C}^{-1}\boldsymbol{\mu}$ recovers target class proportions from unlabeled target predictions and adapts calibrated logits directly by adding $\log(\hat{\mathbf{p}}_T/\mathbf{p}_S)$. When concept shift or decision-driven feedback loops alter the environment itself, passive reweighting is not enough: deployed systems need fresh target labels and independent exploration.
 
 ## Exercises
 
@@ -537,7 +535,7 @@ Instead of estimating $p_S(\mathbf{x})$ and $p_T(\mathbf{x})$ separately in $\ma
 
 $$\frac{P(z = 1 \mid \mathbf{x})}{P(z = 0 \mid \mathbf{x})} = \frac{m}{n}\,\frac{p_T(\mathbf{x})}{p_S(\mathbf{x})} = \exp\!\big(h(\mathbf{x})\big)$$
 
-- **Direct density-ratio formula:** $\beta(\mathbf{x}) = \frac{n}{m}\exp(h(\mathbf{x})) \propto \exp(h(\mathbf{x}))$, requiring **zero target labels**!
+- **Direct density-ratio formula:** $\beta(\mathbf{x}) = \frac{n}{m}\exp(h(\mathbf{x})) \propto \exp(h(\mathbf{x}))$, requiring **zero target labels**.
 :::
 
 ::: {.col .fig}
@@ -554,15 +552,23 @@ Let $p_S = \mathcal{N}(\mathbf{0}, \mathbf{I}_2)$, $p_T = \mathcal{N}((2, 0)^\to
 @-environment-and-distribution-shift-covariate-shift-correction-1
 :::
 
+::: {.slide title="Training the Domain Classifier & Importance Weights"}
+[Parabolic True Boundary Under a Shifted Gaussian]{.kicker}
+
+Pooling `X_src` ($z = 0$) and `X_tgt` ($z = 1$) estimates the log density ratio $h(\mathbf{x})$, the source weights $\beta_i = \exp(h(\mathbf{x}^{(i)}))$, and their effective sample size:
+
+@-environment-and-distribution-shift-covariate-shift-correction-2
+:::
+
 ::: {.slide title="The Domain Classifier Recovers the Log-Ratio"}
 [Parabolic True Boundary Under a Shifted Gaussian]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@environment-and-distribution-shift-covariate-shift-correction-2
+@!environment-and-distribution-shift-covariate-shift-correction-2
 
-- **Exact log-ratio & clipping:** Learned $h(\mathbf{x}) \approx 2x_1 - 2$ matches $\log(p_T/p_S)$, while clipping $\beta_i \le 5$ lifts $n_{\mathrm{eff}}$ from $\sim 20$–$120$ to $\sim 200$.
-- **Shift detected:** On fresh inputs the domain classifier reaches accuracy $\approx 0.84$ vs. $0.50$ by chance; the best possible here is $\Phi(1) \approx 0.84$.
+- **Log-ratio & clipping:** Learned $h(\mathbf{x}) \approx 2x_1 - 2$ matches $\log(p_T/p_S)$, while clipping $\beta_i \le 5$ lifts $n_{\mathrm{eff}}$ to $\sim 200$.
+- **Shift detected:** Held-out domain accuracy $\approx 0.84$ matches the Bayes ceiling $\Phi(1) \approx 0.84$ (vs. $0.50$ chance).
 :::
 
 ::: {.col .fig}
@@ -603,7 +609,7 @@ Plotting the source cloud (circle area $\propto \beta_i$), the shifted target cl
 ::: {.cols .vc}
 ::: {.col}
 - **Unweighted linear boundary (green):** Fits the bottom of the parabola near $(0, 0)$ with a nearly horizontal line ($x_2 \approx -0.6$), misclassifying almost half the target cloud around $(2, 0)$.
-- **Importance-weighted boundary (red):** Downweights points near $x_1 \le 0$ and emphasizes source points in the right tail ($x_1 > 1$), tilting the line to hug the right arm of the parabola where the target data live!
+- **Importance-weighted boundary (red):** Downweights points near $x_1 \le 0$ and emphasizes source points in the right tail ($x_1 > 1$), tilting the line to hug the right arm of the parabola where the target data live.
 :::
 
 ::: {.col .fig}
@@ -619,7 +625,7 @@ Plotting the source cloud (circle area $\propto \beta_i$), the shifted target cl
 ::: {.col}
 Under **label shift** ($p_T(\mathbf{x} \mid y) = p_S(\mathbf{x} \mid y)$, $p_T(y) \neq p_S(y)$), how do we estimate unknown target priors $\mathbf{p}_T \in \mathbb{R}^q$ from **unlabeled** target inputs?
 
-- **Invariance of column-normalized confusion matrix $\mathbf{C}$:** Because $p(\mathbf{x} \mid y)$ is invariant, $C_{ij} = P(\hat{c}(\mathbf{x}) = i \mid y = j)$ is identical on source and target!
+- **Invariance of column-normalized confusion matrix $\mathbf{C}$:** Because $p(\mathbf{x} \mid y)$ is invariant, $C_{ij} = P(\hat{c}(\mathbf{x}) = i \mid y = j)$ is identical on source and target.
 - **Law of total probability on target predictions $\boldsymbol{\mu}$:**
   $$\mu_i = P_T(\hat{c}(\mathbf{x}) = i) = \sum_{j=1}^q C_{ij}\,p_T(y = j) \iff \mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$$
 :::
@@ -639,7 +645,7 @@ Whenever $\mathbf{C}$ is invertible (guaranteed if per-class recall $C_{jj} > 1/
 
 - **Worked clinical example ($90\%$ sensitivity, $5\%$ FPR):** When a winter clinic sees $\mu_2 = 13.5\%$ positive flags:
   $$0.05(1 - p) + 0.90p = 0.135 \implies 0.85p = 0.085 \implies p = 0.10$$
-  unscrambling $10\%$ true flu prevalence from the $4.5\%$ false alarms and $1\%$ missed cases!
+  unscrambling $10\%$ true flu prevalence from the $4.5\%$ false alarms and $1\%$ missed cases.
 :::
 
 ::: {.col .fig}
@@ -663,7 +669,7 @@ Estimating $\mathbf{C}$ on $5{,}000$ balanced validation images and testing on a
 
 ::: {.cols .vc}
 ::: {.col}
-- **Instant Bayes logit adjustment:** Adding $\log\frac{\hat{p}_T(y)}{p_S(y)}$ to each class logit lifts target accuracy by $\sim 5\text{--}15$ points in zero gradient steps!
+- **Instant Bayes logit adjustment:** Adding $\log\frac{\hat{p}_T(y)}{p_S(y)}$ to each class logit lifts target accuracy by $\sim 5\text{--}15$ points in zero gradient steps.
 - **No retraining:** The source weights stay fixed; only the class priors move.
 :::
 
@@ -700,7 +706,7 @@ Test your diagnostic and mathematical understanding of distribution shift:
 3. **Unidentifiability without causal knowledge (Exercise 5):** If unlabeled target inputs $x$ shift toward positive values, can any statistical test on the unlabeled target inputs tell you whether *covariate shift* or *label shift* occurred?
 
 ::: {.d2l-note .fragment .fade-up}
-**Answers:** **(1)** *(a)* Covariate shift ($p(\mathbf{x})$ changes, vehicle identity $p(y\mid\mathbf{x})$ stays fixed); *(b)* Label shift ($p(y)$ changes, product photo $p(\mathbf{x}\mid y)$ stays fixed); *(c)* Concept shift ($p(y\mid\mathbf{x})$ changes). **(2)** $\beta(3,0) = e^4 \approx 54.6$ vs. $\beta(1,0) = e^0 = 1$ ($54.6\times$ more weight); theoretically $n_{\mathrm{eff}} \approx n e^{-s^2} = 1000 e^{-4} \approx 18.3$ effective examples! **(3)** No: the exact same target marginal $p_T(x)$ can arise either from $p_T(x)$ shifting with $p(y\mid x)$ fixed (where the optimal threshold stays fixed) or from $p_T(y=1)$ rising with $p(x\mid y)$ fixed (where the optimal threshold moves). Choosing the right correction requires causal domain knowledge.
+**Answers:** **(1)** *(a)* Covariate shift ($p(\mathbf{x})$ changes, vehicle identity $p(y\mid\mathbf{x})$ stays fixed); *(b)* Label shift ($p(y)$ changes, product photo $p(\mathbf{x}\mid y)$ stays fixed); *(c)* Concept shift ($p(y\mid\mathbf{x})$ changes). **(2)** $\beta(3,0) = e^4 \approx 54.6$ vs. $\beta(1,0) = e^0 = 1$ ($54.6\times$ more weight); theoretically $n_{\mathrm{eff}} \approx n e^{-s^2} = 1000 e^{-4} \approx 18.3$ effective examples. **(3)** No: the exact same target marginal $p_T(x)$ can arise either from $p_T(x)$ shifting with $p(y\mid x)$ fixed (where the optimal threshold stays fixed) or from $p_T(y=1)$ rising with $p(x\mid y)$ fixed (where the optimal threshold moves). Choosing the right correction requires causal domain knowledge.
 :::
 :::
 

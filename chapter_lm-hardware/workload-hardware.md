@@ -38,8 +38,9 @@ when the section is written.
 subsec_hw-two-workloads that prefill is compute-bound and that decode at
 batch one reads every weight per token, and from sec_perf_model that
 batching moves decode past the ridge. Qwen3-8B on one RTX 4090: its 16.4 GB
-of bf16 weights fit the 24 GB card; a decode step at batch one takes about
-1/60 of a second and keeps the matrix units busy for under 1% of it; and
+of bf16 weights fit the 24 GB card; by the datasheet a decode step at
+batch one takes at least about 1/65 of a second (measured below: about
+1/50) and keeps the matrix units busy for under 1% of it; and
 eight sequences of 8,192 tokens do not fit (b_max = 4 at that context), so
 capacity binds before compute. The open question: which datasheet number
 binds each of the three workloads, and what one line in the
@@ -75,8 +76,8 @@ m = d2l.ServingModel(cfg_8b, chip)
 t_compute, t_memory, _ = m.decode_terms(b=1, L=2048)  # seconds
 t_step = m.decode_step(b=1, L=2048)
 print(f'Qwen3-8B weights in bf16: {m.weight_bytes() / 1e9:.1f} GB')
-print(f'decode at b = 1, L = 2,048: {t_step * 1e3:.1f} ms per token '
-      f'({1 / t_step:.0f} tokens/s)')
+print(f'decode at b = 1, L = 2,048, datasheet bound: {t_step * 1e3:.1f} ms '
+      f'per token ({1 / t_step:.0f} tokens/s)')
 print(f'matrix units busy for {t_compute / t_step:.1%} of that step')
 print(f'largest batch at L = 8,192 in 90% of {chip.mem_gb:.0f} GB: '
       f'b_max = {m.max_batch(8192)}')
@@ -156,7 +157,8 @@ reads every weight but the input embedding table (a lookup reads one row
 per token), and of a mixture of experts only the experts its tokens touch;
 the KV cache holds a key and a value per layer, KV head and token
 (eq_kv-cache-bytes, taken as given). A token multiplies with the active
-parameters less the embedding table: N_act below. -->
+parameters less the embedding table: N_act below; N_body leaves out the LM
+head too (prefill runs the head on one position only). -->
 
 ```{.python .input #workload-hardware-bytes}
 %%tab pytorch
@@ -178,6 +180,11 @@ def n_matmul(self):
     c = self.cfg
     lookup = 0 if c.tie_word_embeddings else c.vocab_size * c.hidden_size
     return self.n_params()[1] - lookup
+
+@d2l.add_to_class(ServingModel)  #@save
+def n_body(self):
+    """N_act less the LM head: the matrix parameters of the layers."""
+    return self.n_matmul() - self.cfg.vocab_size * self.cfg.hidden_size
 ```
 
 <!-- Placeholder (prose): the bytes a decode step of b tokens reads: the
@@ -204,42 +211,63 @@ def read_bytes(self, b, coverage=None):
     return W - n_moe * E * expert_bytes * (1 - frac)
 ```
 
-<!-- Placeholder (prose): prefill of n tokens: 2 N_act n FLOPs for the
-matrix products plus the causal attention scores, 2 n_layers H d_h n^2
-(half of the 4 n^2 d_h per head of the two products); the weights are read
-once and the cache written once. The attention term equals the matrix term
-at n = N_act / (n_layers H d_h), the crossover prompt length (an exercise
+<!-- Placeholder (prose): prefill of n tokens up to the first new token:
+2 N_body n FLOPs for the layers' matrix products, 2 V d for the LM head on
+the last position only (what a service computes before the first token;
+the benchmark below keeps one position's logits too), plus the causal
+attention scores, 2 n_layers H d_h n^2 (half of the 4 n^2 d_h per head of
+the two products); the weights are read once and the cache written once.
+The attention term equals the layers' matrix term at
+n = N_body / (n_layers H d_h), the crossover prompt length (an exercise
 derives it). -->
 
 ```{.python .input #workload-hardware-prefill}
 %%tab pytorch
 @d2l.add_to_class(ServingModel)  #@save
 def prefill_time(self, n, b=1):
-    """Seconds to prefill b prompts of n tokens: the larger of the FLOP
-    time and the time to read the weights and write the cache."""
+    """Seconds to prefill b prompts of n tokens up to the last position's
+    logits: the larger of the FLOP time and the time to read the weights
+    and write the cache."""
     c = self.cfg
+    head = self.n_matmul() - self.n_body()  # V d, run on the last position
     attn = 2 * c.num_hidden_layers * c.num_attention_heads * c.head_dim * n**2
-    flops = b * (2 * self.n_matmul() * n + attn)
+    flops = b * (2 * self.n_body() * n + 2 * head + attn)
     nbytes = self.read_bytes(b * n) + b * n * self.kv_bytes_per_token()
     return max(flops / self.P, nbytes / self.beta) + self.launch()
 
 @d2l.add_to_class(ServingModel)  #@save
 def prefill_crossover(self):
-    """Prompt length at which attention FLOPs equal matrix-product FLOPs."""
+    """Prompt length at which attention FLOPs equal the FLOPs of the
+    layers' matrix products."""
     c = self.cfg
-    return self.n_matmul() / (c.num_hidden_layers * c.num_attention_heads
-                              * c.head_dim)
+    return self.n_body() / (c.num_hidden_layers * c.num_attention_heads
+                            * c.head_dim)
 ```
 
 <!-- Placeholder (prose): training on one chip: forward and backward at the
 chip's FLOP/s (6 N_mm per token plus causal attention, chapter 21's
 flops_per_token with the attention term halved: the convention this
-chapter states each time), then one AdamW pass over the state at memory
+chapter states each time; two corrections for what the benchmark runs: an
+untied input embedding is a lookup, not a product, so its 6 V d go, and
+chunked_lm_loss recomputes the head's forward in backward, so 2 V d come;
+chapter 21's count is 29-40% high for the depth-truncated 8B models, 5%
+high at full depth, and 7% low for Qwen3-0.6B, whose head is tied), then
+one AdamW pass over the state at memory
 bandwidth: pure bf16 reads weight, gradient and both moments and writes
 three of them back, 14 bytes per parameter; the mixed recipe moves 28.
-Pure bf16 is a different algorithm from the mixed recipe (pitfall). MFU
-divides by the datasheet peak; against the achievable P_eff it is larger by
-P / P_eff: state the denominator. -->
+One more memory term: the loss works on fp32 logits, V of them per token
+(151,936 for Qwen3), and writes or reads each about ten times over the
+forward pass, the backward's recompute and the softmax gradient: about
+40 bytes per logit, 6 MB per token, 12 GB for 2,048 tokens, as much as the
+weights. Measured on the box, the 2,048-token loss spends 34 ms beyond its
+four matrix products (98 ms in all), more than 40 bytes per logit at the
+copy rate: its elementwise kernels run below the copy rate; the fitted
+eta_compute absorbs the rest. Without this term one compute efficiency
+cannot fit training and prefill at once. Pure bf16 is a different
+algorithm from the mixed recipe (pitfall). MFU
+divides chapter 21's count (not the corrected one) by the datasheet peak;
+against the achievable P_eff it is larger by P / P_eff: state the
+denominator. -->
 
 ```{.python .input #workload-hardware-train-model}
 %%tab pytorch
@@ -250,6 +278,7 @@ class TrainStepModel:  #@save
     'mixed16' adds fp32 master weights and fp32 moments."""
     state = {'bf16_pure': 8, 'mixed16': 16}  # bytes held per parameter
     traffic = {'bf16_pure': 14, 'mixed16': 28}  # bytes AdamW moves per one
+    loss_bytes = 40  # per logit: about ten fp32 passes over the logits
 
     def __init__(self, cfg, chip, calib=None, recipe='bf16_pure'):
         self.cfg, self.chip, self.recipe = cfg, chip, recipe
@@ -257,7 +286,13 @@ class TrainStepModel:  #@save
         self.N = self.serving.n_params()[0]
 
     def flops_per_token(self, s):
-        return d2l.flops_per_token(self.cfg, T=s, causal_half=True)
+        """Chapter 21's count, less an untied input embedding (a lookup)
+        plus the head's forward again (chunked_lm_loss recomputes it)."""
+        c = self.cfg
+        head = c.vocab_size * c.hidden_size
+        lookup = 0 if c.tie_word_embeddings else head
+        return (d2l.flops_per_token(c, T=s, causal_half=True)
+                - 6 * lookup + 2 * head)
 ```
 
 ```{.python .input #workload-hardware-train-step}
@@ -267,7 +302,9 @@ def step_time(self, b, s, ckpt=False):
     """b sequences of s tokens; ckpt recomputes the forward pass."""
     m = self.serving
     flops = self.flops_per_token(s) * b * s * (4 / 3 if ckpt else 1)
-    return (flops / m.P + self.traffic[self.recipe] * self.N / m.beta
+    logits = self.cfg.vocab_size * b * s  # each one moved in fp32 by the loss
+    return (flops / m.P + (self.traffic[self.recipe] * self.N
+                           + self.loss_bytes * logits) / m.beta
             + m.launch(passes=3))  # forward, and backward twice its kernels
 
 @d2l.add_to_class(TrainStepModel)  #@save
@@ -287,7 +324,8 @@ is a matter of bytes. -->
 %%tab pytorch
 s, n, L = 4096, 2048, 2048  # training sequence, prompt, decode context
 cards = {}
-for name, c in (('RTX 4090', chip), ('A100 PCIe', a100)):
+for name, c in (('RTX 4090, datasheet', chip),
+                ('A100 PCIe, datasheet', a100)):
     train, serve = d2l.TrainStepModel(cfg_8b, c), d2l.ServingModel(cfg_8b, c)
     state = {r: k * train.N / 1e9 for r, k in train.state.items()}  # GB
     cards[name] = {
@@ -333,7 +371,7 @@ def decode_terms(self, b, L, coverage=None):
 @d2l.add_to_class(ServingModel)  #@save
 def decode_step(self, b, L, coverage=None):
     t_compute, t_memory, t_launch = self.decode_terms(b, L, coverage)
-    return max(t_compute, t_memory) + t_launch
+    return float(np.maximum(t_compute, t_memory)) + t_launch  # NaN stays
 
 @d2l.add_to_class(ServingModel)  #@save
 def max_batch(self, L):
@@ -390,7 +428,8 @@ for name, (cfg, c) in models.items():
     for L in contexts:
         limits[name][f'b_max at L = {L:,}'] = sm.max_batch(L)
     assert all(sm.max_batch(L) < sm.b_star(L) for L in contexts)  # W3
-d2l.show_table(pd.DataFrame(limits), digits=0)
+print('from the datasheets (b* infinite: none)')
+d2l.show_table(pd.DataFrame(limits).replace(math.inf, 'none'), digits=0)
 ```
 
 ### Mixtures of Experts
@@ -431,21 +470,24 @@ d2l.plot_coverage(cov, d2l.moe_expert_coverage)
 ```
 
 <!-- Placeholder (prose): bytes per step with the measured coverage against
-the uniform formula. On the box the model runs layer-split over four
+the uniform formula (the measured columns appear once box-moe is
+committed). On the box the model runs layer-split over four
 cards, which work one after another, so a step reads its bytes at one
 card's bandwidth: the one-card prediction is the box's (capacity is not
 used here; 61 GB does not fit one card). -->
 
 ```{.python .input #workload-hardware-moe-bytes}
 %%tab pytorch
-moe, L = d2l.ServingModel(cfg_moe, chip), 2048
+moe = d2l.ServingModel(cfg_moe, chip)
+L = 2048
 rows = {}
 for b in (1, 8, 64):
     rows[b] = dict(uniform_gb=moe.read_bytes(b) / 1e9,
                    measured_gb=moe.read_bytes(b, cov.coverage) / 1e9,
                    uniform_ms=moe.decode_step(b, L) * 1e3,
                    measured_ms=moe.decode_step(b, L, cov.coverage) * 1e3)
-d2l.show_table(pd.DataFrame(rows).T.rename_axis('b'), headers={
+table = pd.DataFrame(rows).T.dropna(axis=1)  # measured: NaN while pending
+d2l.show_table(table.rename_axis('b'), headers={
     'uniform_gb': 'GB, uniform', 'measured_gb': 'GB, measured',
     'uniform_ms': 'ms, uniform', 'measured_ms': 'ms, measured'})
 ```
@@ -459,7 +501,10 @@ P_eff (the best bf16 product of the shape sweep of sec_lm_kernels), beta_eff
 and alpha_k, the fixed cost of one kernel inside a CUDA graph (the
 intercept of t = alpha + s / beta fitted to the copy times with 22.4's
 fit_alpha_beta); the all-reduce's alpha and beta come from 22.5's fit of
-this box. The dictionary is A5's calib.json. -->
+this box. The dictionary is A5's calib.json. P_eff is a maximum over the
+sweep and lands above the datasheet's 165 TFLOP/s: the card boosts its
+clock above the one the datasheet figure assumes (say so; the fitted
+eta_compute below absorbs the difference). -->
 
 ```{.python .input #workload-hardware-hw-calibrate}
 %%tab pytorch
@@ -469,19 +514,15 @@ def hw_calibrate(device=None, log=None):  #@save
     all-reduce's alpha_ar and beta_ar (None until 22.5's fit is committed).
     From log, the box-microbench tables, or measured now on device (about
     half a minute); None without a GPU or a committed log."""
-    if log is None and torch.cuda.is_available():
-        with torch.cuda.device(device or 0):
-            log = d2l._calib_measure()
-    if not isinstance(log, dict):  # no GPU, or box-microbench pending
+    tables = d2l._calib_tables(log, device)  # copies by size, bf16 products
+    if tables is None:
         return None
-    copy = log['ladder'][log['ladder'].kind == 'copy'].sort_values('bytes')
-    bf16 = log['dtypes'][log['dtypes'].format == 'bf16']
+    copy, bf16_tflops, gpu = tables
     alpha_k, _, _ = d2l.fit_alpha_beta(2 * copy.bytes, copy.ms / 1e3)
-    calib = dict(P_eff_bf16=max(log['shape-sweep'].tflops.max(),
-                                bf16.tflops.max()) * 1e12,
-                 beta_eff=copy.gbs.iloc[-1] * 1e9, alpha_k=alpha_k,
-                 gpu=log['ladder'].attrs.get('gpu'))
-    return dict(calib, **d2l._calib_allreduce())
+    return dict(P_eff_bf16=bf16_tflops.max() * 1e12,  # the best product
+                beta_eff=copy.gbs.iloc[-1] * 1e9,  # the largest copy
+                alpha_k=alpha_k,  # the intercept: one kernel's fixed cost
+                gpu=gpu, **d2l._calib_allreduce())  # None before 22.5
 ```
 
 ```{.python .input #workload-hardware-calibrate}
@@ -499,24 +540,19 @@ whose L + 1 slots are all in use, so the step reads each cached byte once
 KV group, four times for Qwen3-8B, which a serving kernel never does: the
 harness drops the all-true mask and lets SDPA handle the groups); the step
 is captured once in a CUDA graph and replayed, so no Python runs between
-kernels. The eager series without the graph is d2l.hf_decode_ms of
-sec_lm_scoring; eager decode of a small model measures launch overhead
-(pitfall). -->
+kernels. The eager series without the graph (d2l.hw_eager_decode, the
+loop of sec_lm_scoring's hf_decode_ms) comes from the same library; eager
+decode of a small model measures launch overhead (pitfall). Each bench
+returns the median and MAD in milliseconds; the grid also records the
+peak memory of every point. -->
 
 ```{.python .input #workload-hardware-decode-bench}
 %%tab pytorch
-def hw_decode_bench(model, b, L, steps=64, graph=True):  #@save
-    """Milliseconds per decode step of b sequences at context L (median
-    and MAD over steps replays of one CUDA graph); graph=False times eager
-    steps over a prefilled dynamic cache (hf_decode_ms) instead."""
+def hw_decode_bench(model, b, L, steps=64):  #@save
+    """Milliseconds per decode step of b sequences at context L: median
+    and MAD over steps replays of one CUDA graph."""
     token = torch.randint(model.config.vocab_size, (b, 1), device='cuda')
-    torch.cuda.reset_peak_memory_stats()
     with torch.inference_mode():
-        if not graph:
-            prompt = token.repeat(1, L)
-            cache = d2l.hf_prefill(model, prompt, L)[0].past_key_values
-            median, q1, q3 = d2l.hf_decode_ms(model, cache, token, steps)
-            return dict(ms=median, mad=(q3 - q1) / 2, peak_gib=d2l._hw_peak())
         cache, refill = d2l.hw_static_cache(model, b, L)
         position = torch.tensor([L], device='cuda')
 
@@ -524,8 +560,9 @@ def hw_decode_bench(model, b, L, steps=64, graph=True):  #@save
             refill()
             model(token, past_key_values=cache, cache_position=position,
                   logits_to_keep=1)
-        ms, mad = d2l._hw_stats(d2l._hw_time(step, steps, max_inner=1))
-    return dict(ms=ms, mad=mad, peak_gib=d2l._hw_peak())
+        times = d2l._hw_time(step, steps, max_inner=1)  # events, graph
+    ms, mad = d2l._hw_stats(times)  # median and MAD
+    return dict(ms=ms, mad=mad)
 ```
 
 <!-- Placeholder (prose): prefill at batch one through the model's forward
@@ -537,11 +574,10 @@ TTFT without queueing or tokenization (pitfall). -->
 ```{.python .input #workload-hardware-prefill-bench}
 %%tab pytorch
 def hw_prefill_bench(model, n, b=1, repeats=5):  #@save
-    """Milliseconds to prefill b random prompts of n tokens (median and MAD
-    after one warm-up) and the peak memory (GiB)."""
+    """Milliseconds to prefill b random prompts of n tokens: median and MAD
+    after one warm-up."""
     ids = torch.randint(model.config.vocab_size, (b, n), device='cuda')
     start, stop = (torch.cuda.Event(enable_timing=True) for _ in range(2))
-    torch.cuda.reset_peak_memory_stats()
     times = []
     for _ in range(1 + repeats):
         start.record()
@@ -550,8 +586,8 @@ def hw_prefill_bench(model, n, b=1, repeats=5):  #@save
         stop.synchronize()
         times.append(start.elapsed_time(stop))
         del out
-    ms, mad = d2l._hw_stats(times[1:])
-    return dict(ms=ms, mad=mad, peak_gib=d2l._hw_peak())
+    ms, mad = d2l._hw_stats(times[1:])  # median and MAD
+    return dict(ms=ms, mad=mad)
 ```
 
 <!-- Placeholder (prose): training: forward, backward and a fused AdamW
@@ -565,8 +601,8 @@ must be linear in the number of layers, which the grid checks. -->
 ```{.python .input #workload-hardware-train-bench}
 %%tab pytorch
 def hw_train_bench(model, b, s, repeats=10, warmup=3, chunk=2048):  #@save
-    """Milliseconds per training step on b random sequences of s tokens
-    (median and MAD) and the peak memory (GiB)."""
+    """Milliseconds per training step on b random sequences of s tokens:
+    median and MAD."""
     model.train()
     opt = torch.optim.AdamW(model.parameters(), lr=1e-4, fused=True)
     ids = torch.randint(model.config.vocab_size, (b, s + 1), device='cuda')
@@ -578,10 +614,10 @@ def hw_train_bench(model, b, s, repeats=10, warmup=3, chunk=2048):  #@save
         (loss / n).backward()
         opt.step()
         opt.zero_grad(set_to_none=True)
-    torch.cuda.reset_peak_memory_stats()
-    ms, mad = d2l._hw_stats(d2l._hw_time(step, repeats, graph=False,
-                                         max_inner=1, warmup=warmup))
-    return dict(ms=ms, mad=mad, peak_gib=d2l._hw_peak())
+    times = d2l._hw_time(step, repeats, graph=False, max_inner=1,
+                         warmup=warmup)  # CUDA events around eager steps
+    ms, mad = d2l._hw_stats(times)  # median and MAD
+    return dict(ms=ms, mad=mad)
 ```
 
 <!-- Placeholder (prose): the grid (part 3 of the spec in prose: decode of
@@ -628,7 +664,12 @@ fitted parameters (a compute efficiency for the real kernels, a cache-read
 efficiency of the attention kernel and a factor on alpha_k), fitted on the
 calibration subset only (every third grid point); errors are on the other
 points. Claim W1: M3 within 15% on held-out points for all three workloads
-while M0 misses by more. -->
+while M0 misses by more. Held-out points whose prediction is the launch
+floor (Qwen3-0.6B's short prefills and its training) compare a measurement
+with a measurement; the cell counts them apart. The depth-truncated
+training series is a straight line in the number of layers (the cell
+prints the largest distance), and the line at 36 layers is the full-depth
+Qwen3-8B step that no 24 GB card can hold, beside M3's prediction there. -->
 
 ```{.python .input #workload-hardware-launch}
 %%tab pytorch
@@ -661,10 +702,12 @@ tokens are 10^6 / T, read along the line. -->
 @d2l.add_to_class(ServingModel)  #@save
 def frontier(self, L, batches):
     """Per-user and per-GPU tokens/s at each context in L and batch in
-    batches; regime 'bw', 'compute' or 'infeasible' (beyond max_batch)."""
+    batches and at the capacity limit max_batch(L); regime 'bw', 'compute'
+    or 'infeasible' (beyond max_batch)."""
     rows = []
     for L_i in np.atleast_1d(L):
-        for b in np.atleast_1d(batches):
+        b_max = self.max_batch(int(L_i))
+        for b in sorted(set(np.atleast_1d(batches)) | {max(b_max, 1)}):
             t_c, t_m, t_l = self.decode_terms(int(b), int(L_i))
             t = max(t_c, t_m) + t_l
             regime = ('infeasible' if b > self.max_batch(L_i) else
@@ -680,16 +723,25 @@ def gpu_s_per_mtok(self, b, L):
 ```
 
 <!-- Placeholder (prose): the frontier of Qwen3-8B on the 4090 under the
-fitted model M3 at three contexts, with the measured decode points of the
-grid on it (claim W2: per-GPU tokens/s rise with batch while per-user
-tokens/s fall, and the measured points lie on the predicted line; the cell
-prints the largest distance). -->
+fitted model M3 at three contexts, each line ending at the capacity limit
+b_max, with the measured decode points of the grid on it (claim W2:
+per-GPU tokens/s rise with batch while per-user tokens/s fall, and the
+held-out measured points sit within about 7% of the predicted line, with a
+curvature the model lacks; the cell prints the error range on held-out
+points and, per context, what an added sequence costs). The curvature,
+root-caused with a kernel trace: at b = 1 cuBLAS reads the weights with a
+GEMV kernel at the copy rate (16.5 ms of the 19.6 ms step at L = 512); from
+b = 2 it switches to tensor-core GEMM tiles that read the same bytes 5-9%
+slower (17.4 ms at b = 2, 18.1 ms at b = 16), so going from b = 1 to 2 costs
+about a millisecond the model does not have. The attention kernels'
+time grows as L k_KV / beta predicts. The roofline counts bytes; which
+kernel reads them is a property of the library (pitfall-sized remark). -->
 
 ```{.python .input #workload-hardware-frontier}
 %%tab pytorch
 m_fit = d2l.ServingModel(cfg_8b, chip, calib=fits['calib']['Qwen/Qwen3-8B'])
 front = m_fit.frontier(L=(512, 2048, 8192), batches=2**np.arange(8))
-measured = d2l.plot_frontier(front, m_fit, measured=grid)
+measured = d2l.plot_frontier(front, m_fit, measured=grid, fits=fits)
 for L, p in measured.groupby('L'):  # W2: along b, per GPU up, per user down
     assert p.gpu_tps.is_monotonic_increasing, L
     assert p.user_tps.is_monotonic_decreasing, L
@@ -709,9 +761,9 @@ b_cap = m_fit.max_batch(L)
 points = {f'interactive, b = 1, L = {L:,}': (1, L),
           f'capacity limit, b = {b_cap}, L = {L:,}': (b_cap, L),
           'short context, b = 64, L = 512': (64, 512)}
-for label, (b, L) in points.items():
-    cost = m_fit.gpu_s_per_mtok(b, L)
-    print(f'{label}: {cost:,.0f} GPU-seconds per million tokens')
+for label, (b, context) in points.items():
+    cost = m_fit.gpu_s_per_mtok(b, context)
+    print(f'{label}: {round(cost, -2):,.0f} GPU-seconds per million tokens')
 ```
 
 ### Other Chips from Their Datasheets
@@ -724,7 +776,10 @@ sram_chips_needed). The public reference is SemiAnalysis's InferenceX
 (Apache-2.0, snapshot with attribution and upstream commit), a dense
 70B-class model at its own precision and tensor-parallel degree, per GPU
 at one interactivity point; the comparison is a ranking, not a number
-(claim W6; chips absent from the snapshot are predicted, not ranked). -->
+(claim W6; chips absent from the snapshot are predicted, not ranked). The
+Groq row is a bandwidth bound only: the table has no FLOP/s figure for it
+and the model has no inter-chip hops, so its number stays out of the prose
+(the compute term alone would cut it many times). -->
 
 ```{.python .input #workload-hardware-other-chips}
 %%tab pytorch

@@ -270,10 +270,14 @@ class TestWorkloadHardwareGPU(unittest.TestCase):
 
     def test_benches(self):
         model = d2l.hw_random_model(self.MODEL, n_layers=2)
-        for r in (d2l.hw_decode_bench(model, 2, 256, steps=8),
-                  d2l.hw_decode_bench(model, 1, 256, steps=4, graph=False),
-                  d2l.hw_prefill_bench(model, 512, repeats=2),
-                  d2l.hw_train_bench(model, 1, 256, repeats=2, warmup=1)):
+        for r in (d2l._hw_measure(d2l.hw_decode_bench, model, 2, 256,
+                                  steps=8),
+                  d2l._hw_measure(d2l.hw_eager_decode, model, 1, 256,
+                                  steps=4),
+                  d2l._hw_measure(d2l.hw_prefill_bench, model, 512,
+                                  repeats=2),
+                  d2l._hw_measure(d2l.hw_train_bench, model, 1, 256,
+                                  repeats=2, warmup=1)):
             self.assertGreater(r['ms'], 0)
             self.assertGreaterEqual(r['mad'], 0)
             self.assertGreater(r['peak_gib'], 0)

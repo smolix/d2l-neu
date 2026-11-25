@@ -90,8 +90,7 @@ _HW_SMALL_STEPS = ((1, 512), (1, 1024), (1, 2048))
 #@save
 _HW_MOE = dict(model='Qwen/Qwen3-30B-A3B', n_prose=1536, n_code=64,
                n_tokens=256, micro_batch=16, draws=200, seed=0,
-               batches=(1, 2, 4, 8, 16, 32, 64, 128, 256),
-               step_batches=(1, 8, 64), step_context=256)
+               batches=(1, 2, 4, 8, 16, 32, 64, 128, 256))
 
 #@save
 HW_WORKLOAD_CONFIGS = {
@@ -154,6 +153,32 @@ def hw_rates(chip, calib=None, dtype_bytes=2):
 def _hw_peak():
     """Peak GPU memory allocated since the last reset, in GiB."""
     return torch.cuda.max_memory_allocated() / 2**30
+
+#@save
+def _hw_measure(bench, *args, **kwargs):
+    """bench(*args, **kwargs) (a dict) with the peak GPU memory (GiB) the
+    call reached."""
+    torch.cuda.reset_peak_memory_stats()
+    return dict(bench(*args, **kwargs), peak_gib=_hw_peak())
+
+#@save
+def _hw_card_gib():
+    """Memory of this GPU in GiB (0 without one)."""
+    if not torch.cuda.is_available():
+        return 0.0
+    return torch.cuda.get_device_properties(0).total_memory / 2**30
+
+#@save
+def hw_eager_decode(model, b, L, steps=64):
+    """Milliseconds per eager decode step of b sequences (no CUDA graph:
+    Python launches every kernel) over a prefilled dynamic cache of L
+    tokens, timed by hf_decode_ms: median and MAD (half the interquartile
+    range)."""
+    token = torch.randint(model.config.vocab_size, (b, 1), device='cuda')
+    with torch.inference_mode():
+        cache = d2l.hf_prefill(model, token.repeat(1, L), L)[0].past_key_values
+        median, q1, q3 = d2l.hf_decode_ms(model, cache, token, steps)
+    return dict(ms=median, mad=(q3 - q1) / 2)
 
 #@save
 _HW_CONFIGS = {}  # (model id, layers kept): configuration, never modified
@@ -231,10 +256,11 @@ def hw_random_model(model_id, n_layers=None, seed=0):
     return model.eval()
 
 #@save
-def hw_pretrained_model(model_id):
+def hw_pretrained_model(model_id, cached_only=False):
     """model_id with its real weights at the pinned revision (from the Hub
-    cache), built exactly as hw_random_model builds it (same class, dtype,
-    attention and GPU), in eval mode: only the weight values differ."""
+    cache; cached_only raises OSError instead of downloading), built
+    exactly as hw_random_model builds it (same class, dtype, attention and
+    GPU), in eval mode: only the weight values differ."""
     import transformers
     from transformers.utils import logging as hf_logging
     _hw_bind_attention()
@@ -245,7 +271,8 @@ def hw_pretrained_model(model_id):
             model = transformers.AutoModelForCausalLM.from_pretrained(
                 model_id, revision=_hw_revision(model_id),
                 dtype=torch.bfloat16, attn_implementation=_HW_ATTENTION,
-                device_map='cuda', use_safetensors=True)
+                device_map='cuda', use_safetensors=True,
+                local_files_only=cached_only)
     finally:
         if bar:
             hf_logging.enable_progress_bar()
@@ -339,8 +366,9 @@ def _decode_kernels(model, b=1, L=2048):
 ## Calibration
 
 `hw_calibrate` (on the page) reads three tables of `box-microbench`: the copy
-ladder, the bf16 products of the shape sweep and the format ladder. Measured
-now, the same tables come from a short sweep.
+ladder, the bf16 products of the shape sweep and the format ladder.
+`_calib_tables` picks its inputs out of them; measured now, the same tables
+come from a short sweep.
 
 ```{.python .input #workload-hardware-lib-calibrate}
 %%tab pytorch
@@ -357,6 +385,23 @@ def _calib_measure(copies=(2**18, 2**20, 2**22, 2**24, 2**26, 2**28, 2**30),
         for n in squares if _hw_fits(6 * n * n)])
     dtypes = pd.DataFrame(dict(format=['bf16'], tflops=[sweep.tflops.max()]))
     return {'ladder': ladder, 'shape-sweep': sweep, 'dtypes': dtypes}
+
+#@save
+def _calib_tables(log=None, device=None):
+    """hw_calibrate's inputs: the copy rows of the ladder sorted by size,
+    the bf16 TFLOP/s of the shape sweep and the format ladder, and the GPU;
+    from log (box-microbench's tables), else measured now on device; None
+    without either (no GPU, or box-microbench pending)."""
+    if log is None and torch.cuda.is_available():
+        with torch.cuda.device(device or 0):
+            log = _calib_measure()
+    if not isinstance(log, dict):
+        return None
+    copy = log['ladder'][log['ladder'].kind == 'copy'].sort_values('bytes')
+    dtypes = log['dtypes']
+    bf16 = pd.concat([log['shape-sweep'].tflops,
+                      dtypes[dtypes.format == 'bf16'].tflops])
+    return copy, bf16, log['ladder'].attrs.get('gpu')
 
 #@save
 def _calib_allreduce():
@@ -456,18 +501,18 @@ def _serving_rows(spec, model_id, chip):
     base = dict(model=model_id, n_layers=model.config.num_hidden_layers)
     for b, L, series in kept:
         rows.append(dict(base, workload='decode', series=series, b=b, L=L,
-                         **d2l.hw_decode_bench(model, b, L)))
+                         **_hw_measure(d2l.hw_decode_bench, model, b, L)))
         d2l.lm_free()
     prompts = next((p for mid, p in spec['prefill'] if mid == model_id), ())
     for n in prompts:
         rows.append(dict(base, workload='prefill', series='grid', b=1, L=n,
-                         **d2l.hw_prefill_bench(model, n)))
+                         **_hw_measure(d2l.hw_prefill_bench, model, n)))
         d2l.lm_free()
     for mid, batches, L in spec['eager']:
         for b in batches if mid == model_id else ():
             rows.append(dict(base, workload='eager', series='eager', b=b,
-                             L=L, **d2l.hw_decode_bench(model, b, L,
-                                                        graph=False)))
+                             L=L, **_hw_measure(hw_eager_decode, model, b,
+                                                L)))
             d2l.lm_free()
     kernels = _decode_kernels(model)
     del model
@@ -493,7 +538,8 @@ def _train_rows(spec, model_id):
                 rows.append(dict(model=model_id, workload='train',
                                  series='grid', b=b, L=s,
                                  n_layers=model.config.num_hidden_layers,
-                                 **d2l.hw_train_bench(model, b, s)))
+                                 **_hw_measure(d2l.hw_train_bench, model, b,
+                                               s)))
             del model
             d2l.lm_free()
             twin = _hw_twin(model_id, n_layers)  # the launch floor
@@ -562,32 +608,37 @@ def _show_grid(grid):
 
 The live check repeats four committed points on the reader's GPU: a decode,
 a prefill and a training point of the first model, and a decode point of the
-second.
+second, among the points whose committed peak memory fits this card with
+1 GiB to spare (on a 16 GB card: Qwen3-0.6B's points). Random weights only:
+nothing is downloaded.
 
 ```{.python .input #workload-hardware-lib-grid-live}
 %%tab pytorch
 #@save
-def _live_rows(grid):
-    """Row indices of the four live-check points."""
-    models = list(dict.fromkeys(grid.model))
+def _live_rows(grid, card_gib=math.inf):
+    """Row indices of the four live-check points, among the points whose
+    committed peak memory (peak_gib) fits card_gib with 1 GiB to spare: of
+    each workload the first model's, and a decode point of the last."""
+    if 'peak_gib' in grid:
+        grid = grid[~(grid.peak_gib + 1 > card_gib)]
     picks = []
-    for workload, model_id, prefer in (
-            ('decode', models[0], dict(b=1, L=2048)),
-            ('prefill', models[0], dict(L=2048)),
-            ('train', models[0], {}),
-            ('decode', models[-1], dict(b=16, L=2048))):
-        rows = grid[(grid.workload == workload) & (grid.model == model_id)]
-        best = rows
+    for workload, which, prefer in (
+            ('decode', 0, dict(b=1, L=2048)), ('prefill', 0, dict(L=2048)),
+            ('train', 0, {}), ('decode', -1, dict(b=16, L=2048))):
+        rows = grid[grid.workload == workload]
+        models = list(dict.fromkeys(rows.model))
+        if not models:
+            continue
+        rows = best = rows[rows.model == models[which]]
         for k, v in prefer.items():
             best = best[best[k] == v]
-        if len(rows):
-            picks.append((best if len(best) else rows).index[0])
+        picks.append((best if len(best) else rows).index[0])
     return list(dict.fromkeys(picks))
 
 #@save
 def _grid_live(r, same):
     pts = []
-    for i in _live_rows(r):
+    for i in _live_rows(r, _hw_card_gib()):
         row = r.loc[i]
         layers = None if row.workload != 'train' else int(row.n_layers)
         model = hw_random_model(row.model, layers)
@@ -605,6 +656,8 @@ def _grid_live(r, same):
         d2l.lm_free()
         pts.append((label, row.ms, live['ms'],
                     _hw_noise(r, r.index.get_loc(i), 'ms')))
+    if not pts:
+        return 'not run (no committed point fits this card)'
     return _hw_agreement(pts, same, 'ms')
 
 #@save
@@ -631,15 +684,15 @@ def hw_workload_grid(config='box'):
 _HW_ARMS = ('random', 'real', 'random again')
 
 #@save
-def _control_compute(model_id, b, L):
+def _control_compute(model_id, b, L, cached_only=False):
     """Random, real, then random weights again (the run-to-run noise), one
     model on the card at a time, with the kernels of each decode step."""
     rows = []
     for arm in _HW_ARMS:
-        model = (hw_pretrained_model(model_id) if arm == 'real'
+        model = (hw_pretrained_model(model_id, cached_only) if arm == 'real'
                  else hw_random_model(model_id))
         rows.append(dict(arm=arm, kernels=_decode_kernels(model, b, L),
-                         **d2l.hw_decode_bench(model, b, L)))
+                         **_hw_measure(d2l.hw_decode_bench, model, b, L)))
         del model
         d2l.lm_free()
     return pd.DataFrame(rows)
@@ -666,15 +719,31 @@ def _show_control(r, model_id, b, L):
           f'{noise:.3f} ms, {same} kernels ({int(t.kernels.iloc[0]):,})')
 
 #@save
+def _control_live(r, same, model_id, b, L):
+    """The control's arms again on this GPU: model_id's if its committed
+    peak fits the card with 1 GiB to spare, else the reader's t1 control
+    (Qwen3-0.6B); real weights only from the Hub cache, never downloaded."""
+    if r.peak_gib.max() + 1 > _hw_card_gib():
+        model_id, b, L = d2l.HW_WORKLOAD_CONFIGS['t1']['control']
+        r = hw_box_log('box-workloads', f'control-{_short(model_id)}')
+        if r.peak_gib.max() + 1 > _hw_card_gib():
+            return 'not run (the card is too small)'
+    try:
+        new = _control_compute(model_id, b, L, cached_only=True)
+    except OSError:
+        return f'not run ({_short(model_id)} weights not in the Hub cache)'
+    t, new = r.set_index('arm'), new.set_index('arm')
+    return f'{_short(model_id)} ' + _hw_agreement(
+        [(w, t.ms[w], new.ms[w], t.mad[w] / t.ms[w]) for w in _HW_ARMS],
+        same, 'ms')
+
+#@save
 def hw_weight_control(model_id, b, L):
     """Decode step time at (b, L) with random weights, model_id's real
     weights and random weights again, back to back, one model on the card
     at a time (the two random arms measure the run-to-run noise)."""
     def live(r, same):
-        new = _control_compute(model_id, b, L).set_index('arm')
-        t = r.set_index('arm')
-        return _hw_agreement([(w, t.ms[w], new.ms[w], t.mad[w] / t.ms[w])
-                              for w in _HW_ARMS], same, 'ms')
+        return _control_live(r, same, model_id, b, L)
     return _hw_result(
         'box-workloads', lambda: _control_compute(model_id, b, L),
         dict(model=model_id, b=b, L=L), entry=f'control-{_short(model_id)}',
@@ -710,20 +779,29 @@ def _ladder_calibs(calib, grid, model_id, n_layers, extra=None):
     return {'M0': None, 'M1': m1, 'M2': m2, 'M3': dict(m2, **(extra or {}))}
 
 #@save
-def _predict(row, chip, calib):
-    """Predicted seconds of a grid row under one calibration; with launch
-    terms (M2, M3) an eager step takes at least its launch floor."""
+def _model_time(row, chip, calib):
+    """Seconds of a grid row under one calibration, by the model alone."""
     cfg = _hw_model_config(row.model, row.n_layers)
     b, L = int(row.b), int(row.L)
     if row.workload == 'decode':
         return d2l.ServingModel(cfg, chip, calib).decode_step(b, L)
     if row.workload == 'train':
-        t = d2l.TrainStepModel(cfg, chip, calib).step_time(b, L)
-    else:
-        t = d2l.ServingModel(cfg, chip, calib).prefill_time(L, b)
+        return d2l.TrainStepModel(cfg, chip, calib).step_time(b, L)
+    return d2l.ServingModel(cfg, chip, calib).prefill_time(L, b)
+
+#@save
+def _launch_floor(row, calib):
+    """The launch floor (s) of an eager row under a calibration with launch
+    terms (M2, M3); 0 otherwise."""
     floor = getattr(row, 'floor_ms', math.nan) / 1e3
     launch = calib is not None and 'kernels_per_step' in calib
-    return max(t, floor) if launch and np.isfinite(floor) else t
+    return floor if launch and np.isfinite(floor) else 0.0
+
+#@save
+def _predict(row, chip, calib):
+    """Predicted seconds of a grid row under one calibration; with launch
+    terms (M2, M3) an eager step takes at least its launch floor."""
+    return max(_model_time(row, chip, calib), _launch_floor(row, calib))
 
 #@save
 def _ladder_errors(points, chip, calib, grid, extra=None, models=None):
@@ -783,11 +861,17 @@ def fit_workload_models(grid, calib=None, chip=None, within=0.15):
     errors = _ladder_errors(points, chip, calib, grid, extra)
     errors['model'], errors['workload'] = points.model, points.workload
     errors['held_out'] = ~is_cal
-    _show_ladder_fit(errors, extra, int(is_cal.sum()), within)
+    errors['floor_set'] = [  # M3's prediction is the measured launch floor
+        _launch_floor(r, c) > _model_time(r, chip, c)
+        for r in points.itertuples()
+        for c in [_ladder_calibs(calib, grid, r.model, r.n_layers,
+                                 extra)['M3']]]
     calibs = {}  # each model's M3 calibration at full depth
     for m in dict.fromkeys(points.model):
         depth = _hw_model_config(m).num_hidden_layers
         calibs[m] = _ladder_calibs(calib, grid, m, depth, extra)['M3']
+    _show_ladder_fit(errors, extra, int(is_cal.sum()), within)
+    _show_depth(points, chip, calibs)
     return dict(errors=errors, params=extra, calib=calibs)
 
 #@save
@@ -805,10 +889,41 @@ def _show_ladder_fit(errors, extra, n_cal, within):
         f'{k} {v:.2f}' for k, v in extra.items()))
     parts = []
     for model_id, h in held.groupby('model', sort=False):
-        ok = [int((h[m].abs() <= within).sum()) for m in ('M0', 'M3')]
-        parts.append(f'{_short(model_id)} {ok[0]} / {ok[1]} of {len(h)}')
+        floor = h.floor_set if 'floor_set' in h else np.zeros(len(h), bool)
+        free, set_ = h[~np.asarray(floor, bool)], h[np.asarray(floor, bool)]
+        ok = [int((free[m].abs() <= within).sum()) for m in ('M0', 'M3')]
+        ok_floor = int((set_.M3.abs() <= within).sum())
+        parts.append(f'{_short(model_id)} {ok[0]} / {ok[1]} of {len(free)}'
+                     + (f' (and {len(set_)} set by the launch floor, '
+                        f'{ok_floor} within)' if len(set_) else ''))
     print(textwrap.fill(f'held-out points within {within:.0%}, M0 / M3: '
                         + ', '.join(parts), 79, subsequent_indent='  '))
+
+#@save
+def _show_depth(points, chip, calibs):
+    """Training time against depth, per model trained at several depths:
+    the largest distance of a point from its least-squares line, then per
+    step shape the line (ms per layer + ms), the line at full depth and
+    TrainStepModel's M3 prediction there (calibs: M3 at full depth)."""
+    train = points[points.workload == 'train']
+    for model_id, t in train.groupby('model', sort=False):
+        if t.n_layers.nunique() < 2:
+            continue
+        cfg = _hw_model_config(model_id)
+        lines, resid = [], 0.0
+        for (b, s), g in t.groupby(['b', 'L'], sort=False):
+            slope, icpt = np.polyfit(g.n_layers, g.ms, 1)
+            resid = max(resid, np.abs(g.ms - icpt - slope * g.n_layers).max())
+            full = (icpt + slope * cfg.num_hidden_layers) / 1e3
+            m3 = d2l.TrainStepModel(cfg, chip, calibs[model_id]).step_time(
+                int(b), int(s))
+            lines.append(f'  {int(b)} x {int(s):,} tokens: {slope:.1f} ms per '
+                         f'layer + {icpt:.0f} ms; {cfg.num_hidden_layers} '
+                         f'layers {full:.2f} s (M3 {m3:.2f} s)')
+        lo, hi = int(t.n_layers.min()), int(t.n_layers.max())
+        print(f'{_short(model_id)} training, {lo}-{hi} layers, a straight '
+              f'line to within {resid:.1f} ms:')
+        print('\n'.join(lines))
 ```
 
 ## The Frontier Plot
@@ -818,21 +933,43 @@ def _show_ladder_fit(errors, extra, n_cal, within):
 #@save
 def _measured_decode(grid, model_id, contexts):
     """The measured CUDA-graph decode points of model_id at the contexts:
-    b, L, ms, user_tps, gpu_tps, sorted by L and b."""
+    row (the grid's index), b, L, ms, user_tps, gpu_tps, sorted by L and
+    b."""
+    cols = ['row', 'b', 'L', 'ms', 'user_tps', 'gpu_tps']
     if grid is None or grid.empty:
-        return pd.DataFrame(columns=['b', 'L', 'ms', 'user_tps', 'gpu_tps'])
+        return pd.DataFrame(columns=cols)
     d = grid[(grid.workload == 'decode') & (grid.model == model_id)
              & (grid.series == 'grid') & grid.L.isin(contexts)]
-    d = d[['b', 'L', 'ms']].sort_values(['L', 'b']).reset_index(drop=True)
-    return d.assign(user_tps=1e3 / d.ms, gpu_tps=d.b * 1e3 / d.ms)
+    d = d[['b', 'L', 'ms']].rename_axis('row').reset_index()
+    d = d.sort_values(['L', 'b']).reset_index(drop=True)
+    return d.assign(user_tps=1e3 / d.ms, gpu_tps=d.b * 1e3 / d.ms)[cols]
 
 #@save
-def plot_frontier(frontier, model, measured=None):
+def _added_sequence(pts, model):
+    """Per context: the measured cost (ms) of going from b = 1 to the next
+    batch, then per added sequence from there to the largest batch, and
+    the model's cache read per sequence, L k_KV / (eta_kv beta)."""
+    k = model.kv_bytes_per_token() / model.calib.get('eta_kv', 1.0)
+    lines = []
+    for L, p in pts.groupby('L'):
+        if len(p) < 3:
+            continue
+        b, ms = p.b.to_numpy(), p.ms.to_numpy()
+        lines.append(f'L = {L:,}: b = 1 to {b[1]} adds {ms[1] - ms[0]:.2f} ms;'
+                     f' then each sequence {(ms[-1] - ms[1]) / (b[-1] - b[1]):.3f}'
+                     f' ms (model: {L * k / model.beta * 1e3:.3f})')
+    return lines
+
+#@save
+def plot_frontier(frontier, model, measured=None, fits=None):
     """Per-GPU against per-user tokens/s along a ServingModel's frontier at
     each context (lines up to the capacity limit) with the measured CUDA-
-    graph decode points of the same model (markers); prints the compute
-    roof and the largest distance of a measured point from its line (the
-    step-time error at the same b). Returns the measured points."""
+    graph decode points of the same model (dots, joined by dotted lines);
+    prints the compute roof, the largest step-time error of the held-out
+    measured points (all points without fits) and, per context, the
+    measured cost of an added sequence against the model's. Returns the
+    measured points."""
+    from matplotlib.lines import Line2D
     contexts = list(dict.fromkeys(frontier.L))
     pts = _measured_decode(measured, model.cfg._name_or_path, contexts)
     X, Y, fmts, legend = [], [], [], []
@@ -844,16 +981,28 @@ def plot_frontier(frontier, model, measured=None):
         p = pts[pts.L == L]
         if len(p):
             X.append(p.user_tps.tolist()), Y.append(p.gpu_tps.tolist())
-            fmts.append(f'C{i}o')
+            fmts.append(f'C{i}o:')
     d2l.plot(X, Y, xlabel='tokens/s per user', ylabel='tokens/s per GPU',
              legend=legend, fmts=fmts, figsize=(5, 3.5))  # linear: lines
-    roof = model.P / (2 * model.n_matmul()) / model.n_chips
-    print(f'compute roof P / (2 N_act): {roof:,.0f} tokens/s per GPU')
     if len(pts):
-        err = [math.fabs(model.decode_step(int(r.b), int(r.L))
-                         / (r.ms / 1e3) - 1) for r in pts.itertuples()]
-        print(f'measured decode points (dots): {len(pts)}, step times at '
-              f'most {max(err):.0%} off the line')
+        ax = d2l.plt.gca()
+        handles = ax.get_legend().legend_handles[:len(legend)]
+        ax.legend(handles + [Line2D([], [], color='gray', marker='o',
+                                    ls=':')], legend + ['measured'])
+    roof = model.P / (2 * model.n_matmul()) / model.n_chips
+    print(f'compute roof P / (2 N_act): {_hw_sig(roof)} tokens/s per GPU')
+    if not len(pts):
+        return pts
+    err = pd.Series([model.decode_step(int(r.b), int(r.L)) / (r.ms / 1e3) - 1
+                     for r in pts.itertuples()], index=pts.row)
+    if fits is not None:
+        err = err[fits['errors'].held_out.reindex(err.index, fill_value=False)]
+        which = f'{len(err)} held-out of {len(pts)} measured decode points'
+    else:
+        which = f'{len(pts)} measured decode points'
+    print(f'{which}: step time {err.min():+.0%} to {err.max():+.0%} '
+          'off the line')
+    print('\n'.join(_added_sequence(pts, model)))
     return pts
 ```
 
@@ -875,11 +1024,11 @@ afterwards by resampling b sequences without replacement.
 %%tab pytorch
 #@save
 class MoECoverage(collections.namedtuple(
-        'MoECoverage', ['table', 'E', 'K', 'n_layers', 'routes', 'steps'])):
+        'MoECoverage', ['table', 'E', 'K', 'n_layers', 'routes'])):
     """Measured expert coverage: table (source, b, mean, lo, hi, uniform:
     distinct experts per layer at batch b, mean and 5-95% over draws, and
-    the uniform formula), the router's top-K sets per source (sequences x
-    layers x K), eager decode steps of the layer-split model."""
+    the uniform formula) and the router's top-K sets per source (sequences
+    x layers x K)."""
     def coverage(self, b, source='prose'):
         """Fraction of the E experts that b sequences touch (interpolated
         in log b; NaN while the result is pending)."""
@@ -891,9 +1040,13 @@ class MoECoverage(collections.namedtuple(
 
 #@save
 def _moe_pending():
+    """An empty MoECoverage of the configured model (its E, K and layers
+    from the pinned configuration)."""
+    c = d2l.hw_config(_HW_MOE['model'])
     table = pd.DataFrame(columns=['source', 'b', 'mean', 'lo', 'hi',
                                   'uniform'])
-    return MoECoverage(table, 128, 8, 48, {}, pd.DataFrame())
+    return MoECoverage(table, c.num_experts, c.num_experts_per_tok,
+                       c.num_hidden_layers, {})
 
 #@save
 def _moe_inputs(spec):
@@ -971,21 +1124,6 @@ def _coverage_table(routes, E, K, batches, draws, seed):
     return pd.DataFrame(rows)
 
 #@save
-def _moe_steps(model, batches, context):
-    """Eager decode milliseconds of the layer-split model at each batch
-    (Transformers' default grouped_mm experts; median of hf_decode_ms)."""
-    rows = []
-    for b in batches:
-        prompt = torch.randint(model.config.vocab_size, (b, context),
-                               device=model.device)
-        cache = d2l.hf_prefill(model, prompt, context)[0].past_key_values
-        ms = d2l.hf_decode_ms(model, cache, prompt[:, -1:], steps=16)[0]
-        rows.append(dict(b=b, L=context, ms=ms))
-        del cache
-        d2l.lm_free()
-    return pd.DataFrame(rows)
-
-#@save
 def _moe_compute(spec):
     ids, docs = _moe_inputs(spec)
     with d2l._quiet():
@@ -995,8 +1133,6 @@ def _moe_compute(spec):
     n_layers = model.config.num_hidden_layers
     routes = {s: _moe_routes(model, x, spec['micro_batch'])
               for s, x in ids.items()}
-    steps = (_moe_steps(model, spec['step_batches'], spec['step_context'])
-             if spec['step_batches'] else pd.DataFrame())
     del model
     d2l.lm_free()
     table = _coverage_table(routes, E, K, spec['batches'], spec['draws'],
@@ -1004,7 +1140,7 @@ def _moe_compute(spec):
     table.attrs.update(docs=docs, sources=dict(
         prose='FineWeb-Edu validation split (ODC-By)',
         code='held-out code text of sec_lm_scoring'))
-    return MoECoverage(table, E, K, n_layers, routes, steps)
+    return MoECoverage(table, E, K, n_layers, routes)
 
 #@save
 def hw_moe_coverage(config='box'):
@@ -1072,13 +1208,21 @@ class Snapshot(collections.namedtuple(
         return not self.pending
 
 #@save
-def _read_snapshot(path, shape):
-    """A Snapshot from an InferenceX snapshot.csv."""
+def _read_snapshot(path, shape, slack=0.9):
+    """A Snapshot from an InferenceX snapshot.csv: the interactivity point
+    is the median tokens/s per user; per chip, of its rows within slack of
+    that point, the one with the most tokens/s per GPU (with its
+    tensor-parallel degree). The KV cache's format is kv_precision where
+    recorded, else the weights'."""
     df = pd.read_csv(path)
     df['chip'] = df.hw.map(_HW_IX_CHIPS)
-    dtype = 1 if str(df.precision.iloc[0]).lower().startswith('fp8') else 2
-    return Snapshot(df[df.chip.notna()].reset_index(drop=True), shape, dtype,
-                    dtype, float(df.tps_per_user.median()),
+    fp8 = lambda col: str(df[col].iloc[0]).lower().startswith('fp8')
+    dtype = 1 if fp8('precision') else 2
+    kv = (1 if fp8('kv_precision') else 2) if 'kv_precision' in df else dtype
+    u = float(df.tps_per_user.median())
+    ok = df[df.chip.notna() & (df.tps_per_user >= slack * u)]
+    best = ok.loc[ok.groupby('chip', sort=False).tps_per_gpu.idxmax()]
+    return Snapshot(best.reset_index(drop=True), shape, dtype, kv, u,
                     int(df.isl.iloc[0] + df.osl.iloc[0] // 2), False)
 
 #@save
@@ -1167,10 +1311,12 @@ def rank_against(snap, specs, chips=('H100 SXM', 'H200 SXM', 'B200', 'MI355X',
         print('predicted, not ranked (absent from the snapshot): '
               + ', '.join(absent))
     for chip in t.index[specs.loc[t.index].mem_type == 'SRAM']:
+        compute = ('' if np.isfinite(specs.loc[chip].p16_tflops) else
+                   'its compute (no FLOP/s figure in the table) and ')
         print(textwrap.fill(
-            f'{chip}: a bound from the SRAM bandwidth of {int(t.tp[chip])} '
-            'chips alone; the hops between chips, not modeled here, set '
-            'its speed', 79))
+            f'{chip}: bandwidth bound only, from the SRAM bandwidth of '
+            f'{int(t.tp[chip])} chips; {compute}the hops between chips are '
+            'not modeled', 79))
     return t
 ```
 
@@ -1223,6 +1369,4 @@ def regen_moe(config='box'):
                       _HW_TIERS[config]) as log:
         for rec in cov.table.to_dict('records'):
             log.record('moe router', {k: rec[k] for k in ('source', 'b')}, rec)
-        for rec in cov.steps.to_dict('records'):
-            log.record('hf_decode_ms', {k: rec[k] for k in ('b', 'L')}, rec)
 ```

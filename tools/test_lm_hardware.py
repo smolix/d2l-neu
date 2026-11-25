@@ -1187,12 +1187,28 @@ class TestServingModel(unittest.TestCase):
 
     def test_prefill(self):
         m = self.m
-        self.assertAlmostEqual(m.prefill_crossover(), 51326.5, places=0)
+        head = 151936 * 4096
+        self.assertEqual(m.n_body(), m.n_matmul() - head)
         n = m.prefill_crossover()
+        self.assertAlmostEqual(n, m.n_body() / (36 * 32 * 128), places=6)
+        self.assertAlmostEqual(n, 47106, delta=1)
         attn = 2 * 36 * 32 * 128 * n**2
-        self.assertAlmostEqual(attn / (2 * m.n_matmul() * n), 1, places=9)
+        self.assertAlmostEqual(attn / (2 * m.n_body() * n), 1, places=9)
         self.assertAlmostEqual(m.prefill_time(4096) / m.prefill_time(2048), 2,
                                delta=0.1)
+        flops = 2 * m.n_body() * 1024 + 2 * head + 2 * 36 * 32 * 128 * 1024**2
+        self.assertAlmostEqual(m.prefill_time(1024), flops / m.P)
+
+    def test_pending_coverage_is_nan(self):
+        """A pending MoE coverage gives NaN bytes and step time, never the
+        compute term alone."""
+        moe = d2l.ServingModel(cached_config(self, 'Qwen/Qwen3-30B-A3B'),
+                               self.chip)
+        nan = lambda b: math.nan
+        self.assertTrue(math.isnan(moe.read_bytes(8, nan)))
+        self.assertTrue(math.isnan(moe.decode_step(1, 2048, nan)))
+        self.assertTrue(math.isnan(moe.decode_step(64, 2048, nan)))
+        self.assertTrue(math.isfinite(moe.decode_step(64, 2048)))
 
     def test_frontier_line(self):
         m = self.m
@@ -1257,10 +1273,20 @@ class TestTrainStepModel(unittest.TestCase):
         self.assertEqual(t.state, {'bf16_pure': 8, 'mixed16': 16})
         self.assertEqual(t.traffic['bf16_pure'], 14)
         self.assertAlmostEqual(t.N * 8 / 1e9, 65.5, places=1)
+        Vd = cfg.vocab_size * cfg.hidden_size  # untied: lookup out, +2 V d
         self.assertEqual(t.flops_per_token(2048), d2l.flops_per_token(
-            cfg, T=2048, causal_half=True))
+            cfg, T=2048, causal_half=True) - 4 * Vd)
+        tied = cached_config(self, 'Qwen/Qwen3-0.6B')
+        Vd = tied.vocab_size * tied.hidden_size
+        self.assertEqual(d2l.TrainStepModel(tied, chip).flops_per_token(512),
+                         d2l.flops_per_token(tied, T=512, causal_half=True)
+                         + 2 * Vd)
         self.assertAlmostEqual(t.mfu(1000, 2048), d2l.mfu(
             1000, cfg, chip.p16_tflops * 1e12, T=2048, causal_half=True))
+        m, logits = t.serving, cfg.vocab_size * 2048
+        self.assertAlmostEqual(t.step_time(1, 2048), t.flops_per_token(2048)
+                               * 2048 / m.P + (14 * t.N + 40 * logits)
+                               / m.beta)
         mixed = d2l.TrainStepModel(cfg, chip, recipe='mixed16')
         self.assertGreater(mixed.step_time(1, 2048), t.step_time(1, 2048))
         self.assertGreater(t.step_time(1, 2048, ckpt=True),
@@ -1320,9 +1346,24 @@ class TestWorkloadFits(unittest.TestCase):
         self.assertLess(held.M3.abs().max(), 1e-6)
         self.assertGreater(held.M0.abs().max(), 0.15)
         self.assertTrue(any('M3 fitted on 7 of 21' in l for l in lines))
-        self.assertEqual(lines[-1], 'held-out points within 15%, M0 / M3: '
-                         'Qwen3-8B 0 / 14 of 14')
+        self.assertIn('held-out points within 15%, M0 / M3: '
+                      'Qwen3-8B 0 / 14 of 14', lines)
+        self.assertEqual(lines[-3], 'Qwen3-8B training, 1-3 layers, a '
+                         'straight line to within 0.0 ms:')
+        self.assertRegex(lines[-2], r'^  1 x 2,048 tokens: [\d.]+ ms per '
+                         r'layer \+ \d+ ms; 36 layers [\d.]+ s \(M3 [\d.]+ s\)$')
         self.assertLessEqual(len(lines), 15)
+        self.assertFalse(fit['errors'].floor_set[fit['errors'].held_out].any())
+        self.assertTrue(fit['errors'].floor_set.any())  # prefill at 256
+
+    def test_floor_set_counted_apart(self):
+        grid, _ = synthetic_grid(self.chip, self.calib)
+        grid.loc[(grid.workload == 'prefill') & (grid.L == 512),
+                 ['ms', 'floor_ms']] = 400.0  # a held-out floor-set point
+        lines, fit = lines_of(self, d2l.fit_workload_models, grid,
+                              self.calib, self.chip)
+        self.assertIn('Qwen3-8B 0 / 13 of 13 (and 1 set by the launch '
+                      'floor, 1 within)', ' '.join(' '.join(lines).split()))
 
     def test_pending_and_campaign(self):
         lines, out = lines_of(self, d2l.fit_workload_models,
@@ -1352,6 +1393,16 @@ class TestWorkloadFits(unittest.TestCase):
         self.assertEqual(list(picks.workload),
                          ['decode', 'prefill', 'train', 'decode'])
         self.assertEqual(int(picks.iloc[1].L), 2048)
+        small = grid.copy()  # a second model, and peaks on a 16 GB card
+        small['model'] = 'Qwen/Qwen3-0.6B'
+        both = pd.concat([grid.assign(peak_gib=19.0),
+                          small.assign(peak_gib=9.0)], ignore_index=True)
+        picks = both.loc[d2l._live_rows(both, card_gib=14.6)]
+        self.assertEqual(set(picks.model), {'Qwen/Qwen3-0.6B'})
+        self.assertEqual(list(picks.workload),
+                         ['decode', 'prefill', 'train', 'decode'])
+        self.assertEqual(len(d2l._live_rows(both, card_gib=23.5)), 4)
+        self.assertEqual(d2l._live_rows(both, card_gib=8.0), [])
 
     def test_show_control(self):
         r = pd.DataFrame(dict(arm=['random', 'real', 'random again'],
@@ -1401,7 +1452,16 @@ class TestWorkloadFits(unittest.TestCase):
         front = m.frontier(L=(512, 2048, 8192), batches=2**np.arange(8))
         lines, pts = lines_of(self, d2l.plot_frontier, front, m, grid)
         self.assertIn('compute roof', lines[0])
-        self.assertIn('measured decode points (dots): 9,', lines[1])
+        self.assertTrue(lines[1].startswith('9 measured decode points: '),
+                        lines[1])
+        self.assertTrue(lines[2].startswith('L = 512: b = 1 to 2 adds '),
+                        lines[2])
+        fits = dict(errors=pd.DataFrame(dict(held_out=np.arange(len(grid))
+                                             % 3 > 0), index=grid.index))
+        lines, _ = lines_of(self, d2l.plot_frontier, front, m, grid, fits)
+        self.assertTrue(lines[1].startswith('6 held-out of 9 measured'),
+                        lines[1])
+        self.assertIn(69, set(front[front.L == 512].b))  # the capacity cut
         for L, p in pts.groupby('L'):
             self.assertTrue(p.gpu_tps.is_monotonic_increasing)
             self.assertTrue(p.user_tps.is_monotonic_decreasing)
@@ -1429,7 +1489,7 @@ class TestMoECoverage(unittest.TestCase):
         self.assertLessEqual(s['mean'].max(), 8)
         self.assertTrue((s.lo <= s['mean']).all())
         self.assertTrue((s['mean'] <= s.hi).all())
-        cov = d2l.MoECoverage(t, E, K, 6, {}, pd.DataFrame())
+        cov = d2l.MoECoverage(t, E, K, 6, {})
         self.assertAlmostEqual(cov.coverage(4, 'uniform'),
                                u['mean'][4] / E)
         self.assertTrue(math.isnan(d2l._moe_pending().coverage(4)))
@@ -1443,7 +1503,7 @@ class TestMoECoverage(unittest.TestCase):
                               lo=[8, 36, 96, 8, 27, 76],
                               hi=[8, 44, 104, 8, 33, 84]))
         t['uniform'] = [d2l.moe_expert_coverage(128, 8, b) for b in t.b]
-        cov = d2l.MoECoverage(t, 128, 8, 48, {}, pd.DataFrame())
+        cov = d2l.MoECoverage(t, 128, 8, 48, {})
         lines, _ = lines_of(self, d2l.plot_coverage, cov,
                             d2l.moe_expert_coverage)
         self.assertEqual(len(lines), 2)
@@ -1457,7 +1517,7 @@ class TestMoECoverage(unittest.TestCase):
         t = pd.DataFrame(dict(source=['prose'], b=[1], mean=[8.0], lo=[8.0],
                               hi=[8.0], uniform=[8.0]))
         cov = d2l.MoECoverage(t, 128, 8, 48, {'prose': np.zeros(
-            (2, 48, 8), np.uint8)}, pd.DataFrame(dict(b=[1], ms=[30.0])))
+            (2, 48, 8), np.uint8)})
         back = d2l._hw_decode(json.loads(json.dumps(d2l._hw_encode(cov))))
         self.assertIsInstance(back, d2l.MoECoverage)
         self.assertEqual(back.routes['prose'].shape, (2, 48, 8))
@@ -1502,6 +1562,25 @@ class TestInferenceX(unittest.TestCase):
                             'RTX 4090' in l for l in lines))
         self.assertEqual(d2l._kendall_tau([1, 2, 3], [1, 2, 3]), 1)
         self.assertEqual(d2l._kendall_tau([1, 2, 3], [3, 2, 1]), -1)
+
+    def test_duplicate_rows(self):
+        """Several rows per chip (TP degrees, interactivity points): the best
+        tokens/s per GPU near the median interactivity point, its TP."""
+        extra = ('llama70b,H100,vllm,fp8,1024,1024,64,4,1700,48,abc,'
+                 '2026-11-20\n'
+                 'llama70b,H100,vllm,fp8,1024,1024,256,8,3000,20,abc,'
+                 '2026-11-20\n')
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'snapshot.csv')
+            with open(path, 'w') as f:
+                f.write(self.FIXTURE + extra)
+            snap = d2l._read_snapshot(path, d2l.HW_SHAPES['dense-70b'])
+        t = snap.table.set_index('chip')
+        self.assertTrue(t.index.is_unique)
+        self.assertEqual(t.loc['H100 SXM', 'tp'], 4)
+        self.assertEqual(t.loc['H100 SXM', 'tps_per_gpu'], 1700)
+        lines, r = lines_of(self, d2l.rank_against, snap, committed_specs())
+        self.assertEqual(int(r.tp['H100 SXM']), 4)
 
     def test_tps_at(self):
         m = d2l.ServingModel(d2l.HW_SHAPES['dense-70b'],

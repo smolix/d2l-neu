@@ -22333,6 +22333,45 @@ def packing_comparison(cfg, tokens=25_000_000, seeds=(0, 1, 2),
 d2l.DATA_HUB['lm-fwedu-val-domains-v1'] = (
     d2l.LM_DATA_URL + 'lm-fwedu-val-domains-v1.jsonl.gz',
     '180e3865876bb019eea808b4222a090bedda9aaa')
+d2l.DATA_HUB['lm-r2t1-log-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-log-v1.jsonl.gz',
+    'cb398bde00c2415fd1e82a69501cce64e57341e9')
+d2l.DATA_HUB['lm-r2t1-s127-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s127-v1.safetensors',
+    '45d9c3c86ee988d2279bfab40a0412fd050561cf')
+d2l.DATA_HUB['lm-r2t1-s254-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s254-v1.safetensors',
+    'ab02e70bbbc42ee92832ec812194bbf9e2412cbc')
+d2l.DATA_HUB['lm-r2t1-s509-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s509-v1.safetensors',
+    'faa881f42c6066194bbc2f76e24b928cb71bdf55')
+d2l.DATA_HUB['lm-r2t1-s763-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s763-v1.safetensors',
+    '1eeb53e34acbaa8242896f70b16967d2e1c29aec')
+d2l.DATA_HUB['lm-r2t1-s1017-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1017-v1.safetensors',
+    '0edbc49afe5387eb08a4f04cc39720d69c6d4455')
+d2l.DATA_HUB['lm-r2t1-s1144-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1144-v1.safetensors',
+    '69db306e06d1abf391be788ad5d64d46c77e5169')
+d2l.DATA_HUB['lm-r2t1-s1221-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1221-v1.safetensors',
+    '47b2715c2c4af418e4f449beffb504faaf4118e7')
+d2l.DATA_HUB['lm-r2t1-s1297-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1297-v1.safetensors',
+    'c2446e3d272e84204c053b417acc02d21eee4ad7')
+d2l.DATA_HUB['lm-r2t1-s1373-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1373-v1.safetensors',
+    '91593410d65e6edb0a1b8681a2a20344e7be04c3')
+d2l.DATA_HUB['lm-r2t1-s1450-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1450-v1.safetensors',
+    '3216071fcd7a5eb6f0afd7da3fd6c19545b1bcff')
+d2l.DATA_HUB['lm-r2t1-s1526-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1526-v1.safetensors',
+    'ab1404181189d79fc45fd581a2e9f32fe0f64bfc')
+d2l.DATA_HUB['lm-r2t1-s1297-state-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1297-state-v1.pt',
+    '9e635a58da51f219333f35c2a1417a06124488ba')
 
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')

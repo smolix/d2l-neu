@@ -2,12 +2,12 @@
 :label:`sec_why-conv`
 
 The multilayer perceptrons of :numref:`chap_perceptrons` flatten every image
-into an unordered vector of numbers—appropriate for tabular data, but wasteful
+into an unordered vector of numbers: appropriate for tabular data, but wasteful
 for images because flattening discards which pixels sit next to one another.
 On a one-megapixel ($1000 \times 1000$) grayscale photograph, even a modest
 1,000-unit hidden layer demands $10^6 \times 10^3 = 10^9$ weights (4 GB in
 fp32), and a full-resolution $1000 \times 1000$ hidden map demands $10^{12}$
-weights! Yet natural images are nothing like arbitrary million-dimensional
+weights. Yet natural images are nothing like arbitrary million-dimensional
 vectors: neighboring pixels are strongly correlated (*locality*), and a visual
 feature such as a whisker carries the same meaning wherever it appears in the
 frame (*translation equivariance*).
@@ -22,7 +22,7 @@ hundred. What survives both constraints is a *convolutional layer*.
 
 The children's game "Where's Waldo" (:numref:`img_waldo`) captures the exact
 challenge of visual perception. Each busy scene teems with distractions, with
-Waldo hiding somewhere unexpected—yet *what Waldo looks like* does not depend on
+Waldo hiding somewhere unexpected, yet *what Waldo looks like* does not depend on
 *where he stands*. We can therefore sweep a single Waldo detector across the
 image, scoring every patch by how strongly it matches Waldo using the exact same
 rule at every position. Modern object detection
@@ -110,14 +110,14 @@ $\mathsf{W}$ alongside a bias matrix $\mathbf{U}$:
 $$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_k \sum_l [\mathsf{W}]_{i, j, k, l}  [\mathbf{X}]_{k, l}.$$
 
 Because both constraints depend on where a pixel sits *relative* to hidden unit
-$(i, j)$, let's re-index by offsets $a = k - i$ and $b = l - j$, defining
+$(i, j)$, we re-index by offsets $a = k - i$ and $b = l - j$, defining
 $[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$:
 
 $$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 :eqlabel:`eq_mlp_fourth_order`
 
 Here $a$ and $b$ span both positive and negative offsets. This re-indexing is
-purely cosmetic—we are simply reading $\mathsf{W}$ along its diagonals without
+purely cosmetic: we are simply reading $\mathsf{W}$ along its diagonals without
 reducing parameters yet. On a $1000 \times 1000$ image mapped to a
 $1000 \times 1000$ hidden grid, this single layer still demands
 $10^6 \times 10^6 = 10^{12}$ weights.
@@ -127,7 +127,7 @@ $10^6 \times 10^6 = 10^{12}$ weights.
 Just as in one dimension, a layer of the form :eqref:`eq_mlp_fourth_order` is
 translation equivariant if and only if its weights and bias are independent of
 location $(i, j)$. Checking that shared weights yield equivariance takes one
-line; the converse is what makes convolution unavoidable—equivariance leaves no
+line; the converse is what makes convolution unavoidable, since equivariance leaves no
 other linear option.
 
 To handle boundaries cleanly (where a shift pushes pixels off the edge of a
@@ -179,8 +179,8 @@ down to $1999^2 \approx 4 \times 10^6$.
 
 Four million weights for a single filter is still far too many, and most of
 those weights link a hidden unit to pixels clear across the image. Enforcing
-*locality*—requiring $[\mathbf{H}]_{i,j}$ to depend only on pixels within
-distance $\Delta$ along each axis—sets $[\mathbf{K}]_{a, b} = 0$ whenever
+*locality* (requiring $[\mathbf{H}]_{i,j}$ to depend only on pixels within
+distance $\Delta$ along each axis) sets $[\mathbf{K}]_{a, b} = 0$ whenever
 $|a| > \Delta$ or $|b| > \Delta$, giving
 
 $$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathbf{K}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
@@ -246,15 +246,15 @@ that standard convention throughout this book.
 :label:`subsec_why-conv-channels`
 
 So far we treated both inputs and hidden maps as single grayscale grids. Real
-color photographs have three intensity values per pixel—red, green, and blue—so
+color photographs have three intensity values per pixel (red, green, and blue), so
 an image is a third-order tensor $\mathsf{X}$ of shape
 $3 \times \textrm{height} \times \textrm{width}$ with entries
 $[\mathsf{X}]_{c,i,j}$. The leading *channel* axis attaches a feature vector to
 every spatial pixel, and a kernel sums over both the local spatial window and
 all input channels.
 
-Just as importantly, a single kernel produces only a single response map—like
-the Waldo score map in :numref:`fig_waldo_mask`—capturing just one visual
+Just as importantly, a single kernel produces only a single response map (like
+the Waldo score map in :numref:`fig_waldo_mask`), capturing just one visual
 pattern. Rich visual representations require detecting many patterns in
 parallel (oriented edges, corners, color contrasts, textures), so the hidden
 representation $\mathsf{H}$ also becomes a third-order tensor stacked along an
@@ -272,7 +272,7 @@ the next layer. With $c_\textrm{i}$ input channels and $c_\textrm{o}$ output
 channels, the layer requires $(2\Delta+1)^2 c_\textrm{i} c_\textrm{o}$ weights
 and $c_\textrm{o}$ biases. A $3 \times 3$ layer mapping an RGB image to 64
 feature maps therefore has just $9 \cdot 3 \cdot 64 + 64 = 1{,}792$
-parameters—completely independent of the image's resolution!
+parameters, completely independent of the image's resolution.
 
 ![A Waldo detector: the response of a kernel that matches Waldo peaks at his location (image courtesy of William Murphy (Infomatique)).](../img/waldo-mask.jpg)
 :width:`400px`
@@ -287,12 +287,12 @@ chapter. Because we derived it on an idealized infinite grid, three practical
 issues remain: handling finite image borders, expanding how much of the image
 deeper units can see, and aggregating spatial feature maps into a single
 image-level decision (like whether Waldo appears *anywhere* in the scene).
-First, however, let's bring :eqref:`eq_conv-layer` to life in code.
+First, however, we bring :eqref:`eq_conv-layer` to life in code.
 
 ## Summary
 
 Flattening an image into an unstructured vector makes dense layers intractably
-large—$10^{12}$ weights to map a megapixel image to an equal-sized hidden grid.
+large ($10^{12}$ weights to map a megapixel image to an equal-sized hidden grid).
 Two natural assumptions about images collapse that count to a few hundred:
 *translation equivariance* forces every spatial position to share one kernel
 (as proved on the infinite grid), and *locality* restricts that kernel to a
@@ -520,7 +520,7 @@ $$[f(T_v \mathbf{X})]_{i,j} = u + \sum_{a,b} [\mathbf{K}]_{a,b} [\mathbf{X}]_{i 
 $$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathbf{K}]_{a, b} [\mathbf{X}]_{i+a, j+b}$$
 
 - **Local window $|a|, |b| \le \Delta$:** Zeroes out distant offsets so each unit inspects only a $(2\Delta+1) \times (2\Delta+1)$ neighborhood.
-- **11-order-of-magnitude collapse:** For $\Delta = 1$ ($3 \times 3$ kernel), $10^{12}$ weights (**4 TB**) shrink to just **9 shared weights** (**36 B**)!
+- **11-order-of-magnitude collapse:** For $\Delta = 1$ ($3 \times 3$ kernel), $10^{12}$ weights (**4 TB**) shrink to just **9 shared weights** (**36 B**).
 :::
 
 ::: {.col .fig}
@@ -553,7 +553,7 @@ $$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Del
 $$\sum_{a,b} [\mathbf{K}]_{a, b} [\mathbf{X}]_{i+a, j+b} = (\mathbf{K}' * \mathbf{X})(i, j)$$
 
 - **Sign convention:** Mathematical convolution uses $(i-a, j-b)$; cross-correlation uses $(i+a, j+b)$.
-- **Identical hypothesis class:** Because $[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$ is a 180° flip of learned weights, frameworks implement cross-correlation and call it `Conv2d`.
+- **Identical hypothesis class:** Because $[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$ is a 180° flip of learned weights, frameworks implement cross-correlation and call it a convolutional layer.
 :::
 
 ::: {.col .fig}

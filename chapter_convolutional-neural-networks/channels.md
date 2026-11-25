@@ -12,7 +12,7 @@ photograph is a $3 \times h \times w$ tensor (requiring cross-channel comparison
 to detect a red-on-green boundary of equal luminance), and a hidden layer
 extracts dozens or hundreds of distinct feature maps in parallel.
 
-As derived in :numref:`sec_why-conv` (:eqref:`eq_conv-layer-channels`), a layer
+As derived in :numref:`sec_why-conv`, a layer
 with $c_\textrm{i}$ input channels and $c_\textrm{o}$ output channels maintains
 one $c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}$ kernel per output
 channel, cross-correlating across all input channels and summing the results. In
@@ -65,8 +65,8 @@ channels, the kernel must supply one $k_\textrm{h}\times k_\textrm{w}$ filter
 for each input channel, giving a third-order kernel tensor of shape
 $c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$. We cross-correlate
 every input channel $\mathbf{X}_c$ with its corresponding kernel slice
-$\mathbf{K}_c$ using the two-dimensional cross-correlation :eqref:`eq_corr2d`
-(computed by `corr2d`) and sum the $c_\textrm{i}$ intermediate grids:
+$\mathbf{K}_c$ using two-dimensional cross-correlation (:numref:`sec_conv_layer`,
+computed by `corr2d`) and sum the $c_\textrm{i}$ intermediate grids:
 
 $$\mathbf{Y} = \sum_{c=1}^{c_\textrm{i}} \mathbf{X}_c \star \mathbf{K}_c.$$
 
@@ -86,7 +86,7 @@ $1\times 1$ kernel with weight $+1$ on the red channel and $-1$ on the green
 channel: at every pixel it computes red minus green, producing positive values
 in red regions, negative values in green regions, and zero in neutral gray
 regions regardless of brightness. Wherever its sign flips between adjacent
-pixels, a red region meets a green one---even if both regions have identical
+pixels, a red region meets a green one, even if both regions have identical
 luminance, in which case a grayscale brightness filter would see no edge at
 all.
 
@@ -128,8 +128,8 @@ $$\mathbf{Y}_o = \sum_{c=1}^{c_\textrm{i}} \mathbf{X}_c \star \mathbf{K}_{o,c}, 
 Notice that every output channel connects to *every* input channel through its
 own $k_\textrm{h}\times k_\textrm{w}$ slice $\mathbf{K}_{o,c}$; this dense
 all-to-all channel wiring is the primary driver of the layer's computational
-cost. Written channel by channel, this matches :eqref:`eq_conv-layer-channels`
-from :numref:`sec_why-conv`. In typical CNN architectures, the number of
+cost. Adding a scalar bias $u_o$ per output channel recovers the multi-channel
+convolutional layer derived in :numref:`sec_why-conv`. In typical CNN architectures, the number of
 channels grows as spatial resolution shrinks via strides or pooling, trading
 fine-grained spatial layout for richer, jointly learned feature descriptions
 at each location.
@@ -196,8 +196,8 @@ however, channel counts grow large: a $3\times 3$ layer mapping 256 channels
 to 256 channels requires 589,824 weights plus 256 biases.
 
 Turning to computational cost, each output element requires one multiply-add
-for every weight in its output channel---$c_\textrm{i} k_\textrm{h} k_\textrm{w}$
-in all. Across an output feature map of spatial size
+for every weight in its output channel ($c_\textrm{i} k_\textrm{h} k_\textrm{w}$
+in all). Across an output feature map of spatial size
 $h_\textrm{o}\times w_\textrm{o}$ and $c_\textrm{o}$ output channels, the
 layer performs
 
@@ -219,7 +219,7 @@ $h_\textrm{o} w_\textrm{o} c_\textrm{o}$ numbers per training example
 memory is largest in the *earliest* layers, where spatial resolution is
 highest even though parameter counts are tiny. For example, a 3-to-64 layer
 producing a $224\times 224$ output must cache
-$224^2\cdot 64 \approx 3.2\times 10^6$ activations per example---nearly two
+$224^2\cdot 64 \approx 3.2\times 10^6$ activations per example, nearly two
 thousand times more numbers than its 1,792 parameters.
 
 ## The $1\times 1$ Convolution
@@ -229,7 +229,7 @@ At first glance, a $1\times 1$ convolution ($k_\textrm{h} = k_\textrm{w} = 1$)
 might look pointless: because its spatial window covers only a single pixel,
 it cannot detect edges, corners, or any other pattern spanning neighboring
 locations. When multiple channels are present, however, it performs a very
-useful operation---just as our red-minus-green color filter did earlier. At
+useful operation, just as our red-minus-green color filter did earlier. At
 every spatial coordinate $(i, j)$, a $1\times 1$ convolution multiplies the
 $c_\textrm{i}$-dimensional channel vector by a shared
 $c_\textrm{o}\times c_\textrm{i}$ weight matrix to produce a
@@ -297,7 +297,7 @@ to all 256 channels, we can use a $1\times 1$ convolution to project 256
 channels down to 64, apply the $3\times 3$ convolution across those 64
 channels, and use a second $1\times 1$ convolution to expand back to 256.
 Together, the three layers use only
-$16{,}384 + 36{,}864 + 16{,}384 = 69{,}632$ weights instead of $589{,}824$---a
+$16{,}384 + 36{,}864 + 16{,}384 = 69{,}632$ weights instead of $589{,}824$, a
 reduction of roughly $8.5\times$ in both parameters and multiply-adds. Such a
 *bottleneck* restricts intermediate spatial mixing to a 64-channel subspace, a
 tradeoff that architectures such as ResNet (:numref:`sec_resnet`) happily make
@@ -329,7 +329,7 @@ $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$,
 incurring $c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w} + c_\textrm{o}$
 parameters and
 $h_\textrm{o} w_\textrm{o} c_\textrm{o} c_\textrm{i} k_\textrm{h} k_\textrm{w}$
-multiply-adds---both proportional to $c_\textrm{i} c_\textrm{o}$---while
+multiply-adds (both proportional to $c_\textrm{i} c_\textrm{o}$), while
 training must also store $h_\textrm{o} w_\textrm{o} c_\textrm{o}$ activations
 per example. A $1\times 1$ convolution acts as a shared fully connected layer
 at every pixel, letting architectures mix channels and construct parameter-
@@ -626,7 +626,7 @@ $$[\mathsf{Y}]_{o, i, j} = u_o + \sum_{c=1}^{c_\textrm{i}} [\mathbf{K}]_{o, c}\,
 
 Work out these three calculations:
 
-1. **Hand cross-correlation:** For the two-channel $3 \times 3$ input and $2 \times 2$ kernel on Slide 3, we found $[\mathbf{Y}]_{0,0} = 19 + 37 = 56$. Compute the first-row, second-column entry $[\mathbf{Y}]_{0,1}$.
+1. **Hand cross-correlation:** For the two-channel $3 \times 3$ input and $2 \times 2$ kernel in our earlier worked example, we found $[\mathbf{Y}]_{0,0} = 19 + 37 = 56$. Compute the first-row, second-column entry $[\mathbf{Y}]_{0,1}$.
 2. **LeNet's second conv layer:** Maps $c_\textrm{i} = 6$ to $c_\textrm{o} = 16$ channels with unpadded $5 \times 5$ kernels on a $14 \times 14$ input. What are the output shape, parameter count, and multiply-adds?
 3. **Resolution doubling test:** If you double input image resolution from $224 \times 224$ to $448 \times 448$, by what exact factor do a convolutional layer's (a) parameters, (b) multiply-adds, and (c) activation memory change?
 
